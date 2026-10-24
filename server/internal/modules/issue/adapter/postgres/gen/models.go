@@ -95,6 +95,20 @@ type IssueLabel struct {
 	DeletedAt   *time.Time
 }
 
+type IssueReaction struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	IssueID     uuid.UUID
+	ActorID     uuid.UUID
+	Reaction    string
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
 type IssueRelation struct {
 	ID             uuid.UUID
 	WorkspaceID    uuid.UUID

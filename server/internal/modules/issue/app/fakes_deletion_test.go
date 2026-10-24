@@ -61,3 +61,8 @@ func (f *fakeIssues) DeleteIssueActivityRows(ctx context.Context, d app.IssueDel
 func (f *fakeIssues) DeleteIssueCommentRows(ctx context.Context, d app.IssueDeletion) error {
 	return f.deleteRows(ctx, "DeleteIssueCommentRows", d)
 }
+
+// DeleteIssueReactionRows soft-deletes reaction rows in the existing deletion sequence.
+func (f *fakeIssues) DeleteIssueReactionRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueReactionRows", d)
+}

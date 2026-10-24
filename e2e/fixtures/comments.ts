@@ -22,3 +22,13 @@ export async function createIssueComment(
   }
   return data;
 }
+
+/** Creates a live work item reaction through the API for deletion and archival stories. */
+export async function createIssueReaction(api: Api, token: string, issueId: string): Promise<void> {
+  const { error, response } = await api.POST("/api/v0/issues/{issue_id}/reactions", {
+    params: { path: { issue_id: issueId } },
+    body: { reaction: "128077" },
+    headers: bearer(token),
+  });
+  expect(response.status, `create a reaction on ${issueId}: ${JSON.stringify(error)}`).toBe(201);
+}

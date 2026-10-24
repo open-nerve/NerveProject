@@ -111,10 +111,10 @@ func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx
 // transaction (M4 design 3.5), and answers w, on its project unless it is
 // on either of two work items, with what it lets through to the lock
 // (scope). For a write that names a work item: the work item read without
-// a lock and the decision on it (see); a work item that is not there,
+// a lock and the decision on it (seeAs); a work item that is not there,
 // whose project actor does not see, or that the guest rule hides from
-// him, is issue.not_found; across projects, then, each work item it
-// reaches (reachAll). For one on either of two work items: both read
+// him, answers the caller's w.notFound; across projects, then, each work item
+// it reaches (reachAll). For one on either of two work items: both read
 // without a lock, and the decisions on them (eitherOf).
 // For one on a project: the project read without a lock and the decision
 // on it; a project that is not there, or not visible to actor, is

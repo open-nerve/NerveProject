@@ -68,6 +68,9 @@ var batchStatements = []batchStatement{
 	{"issue_relations", (*postgresadapter.Store).DeleteProjectRelationRows, aRelation},
 	{"issue_subscribers", (*postgresadapter.Store).DeleteProjectSubscriberRows, child("issue_subscribers", "subscriber_id", anAccount)},
 	{"issue_comments", (*postgresadapter.Store).DeleteProjectCommentRows, child("issue_comments", "actor_id", anAccount)},
+	{"issue_reactions", (*postgresadapter.Store).DeleteProjectReactionRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {
+		exec(t, pool, "INSERT INTO issue_reactions(id,workspace_id,project_id,issue_id,actor_id,reaction,created_by_id,updated_by_id,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$5,$5,$7,$7)", id, p.workspace, p.id, issue, by, fmt.Sprint(n), now)
+	}},
 	{"issue_activities", (*postgresadapter.Store).DeleteProjectActivityRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id,
 		by uuid.UUID, _ int) {
 		exec(t, pool, `INSERT INTO issue_activities (id, workspace_id, project_id, issue_id, actor_id, created_by_id, updated_by_id, created_at,

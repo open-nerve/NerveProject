@@ -239,6 +239,20 @@ type IssueDetail struct {
 // IssuePriority A work item's priority, from the most to the least urgent.
 type IssuePriority string
 
+// IssueReaction defines model for IssueReaction.
+type IssueReaction struct {
+	ActorID   uuid.UUID `json:"actor_id"`
+	CreatedAt time.Time `json:"created_at"`
+	ID        uuid.UUID `json:"id"`
+	IssueID   uuid.UUID `json:"issue_id"`
+	Reaction  string    `json:"reaction"`
+}
+
+// IssueReactionCollection defines model for IssueReactionCollection.
+type IssueReactionCollection struct {
+	Data []IssueReaction `json:"data"`
+}
+
 // IssueRelation A relation of a work item to another, as the work item reads it; issue is the other, as a list shows it.
 type IssueRelation struct {
 	CreatedAt time.Time `json:"created_at"`
@@ -295,6 +309,11 @@ type IssueUpdate struct {
 	TargetDate nullable.Nullable[shared.Date] `json:"target_date,omitempty"`
 }
 
+// ReactionCreate defines model for ReactionCreate.
+type ReactionCreate struct {
+	Reaction string `json:"reaction"`
+}
+
 // SubIssuesAdd defines model for SubIssuesAdd.
 type SubIssuesAdd struct {
 	// SubIssueIds 1–100 work items of the project, each named once, to put under the work item.
@@ -337,6 +356,9 @@ type UpdateIssueJSONRequestBody = IssueUpdate
 // CreateIssueCommentJSONRequestBody defines body for CreateIssueComment for application/json ContentType.
 type CreateIssueCommentJSONRequestBody = IssueCommentCreate
 
+// AddIssueReactionJSONRequestBody defines body for AddIssueReaction for application/json ContentType.
+type AddIssueReactionJSONRequestBody = ReactionCreate
+
 // CreateIssueRelationsJSONRequestBody defines body for CreateIssueRelations for application/json ContentType.
 type CreateIssueRelationsJSONRequestBody = IssueRelationsCreate
 
@@ -375,6 +397,15 @@ type ServerInterface interface {
 	// CreateIssueComment Create a comment on a visible work item
 	// (POST /api/v0/issues/{issue_id}/comments)
 	CreateIssueComment(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// ListIssueReactions List reactions on a visible work item
+	// (GET /api/v0/issues/{issue_id}/reactions)
+	ListIssueReactions(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// AddIssueReaction Add the caller's reaction
+	// (POST /api/v0/issues/{issue_id}/reactions)
+	AddIssueReaction(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// RemoveIssueReaction Remove the caller's reaction
+	// (DELETE /api/v0/issues/{issue_id}/reactions/{reaction})
+	RemoveIssueReaction(w http.ResponseWriter, r *http.Request, issueID IssueID, reaction string)
 	// ListIssueRelations List a work item's relations
 	// (GET /api/v0/issues/{issue_id}/relations)
 	ListIssueRelations(w http.ResponseWriter, r *http.Request, issueID IssueID)
@@ -661,6 +692,93 @@ func (siw *ServerInterfaceWrapper) CreateIssueComment(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateIssueComment(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListIssueReactions operation middleware
+func (siw *ServerInterfaceWrapper) ListIssueReactions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIssueReactions(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddIssueReaction operation middleware
+func (siw *ServerInterfaceWrapper) AddIssueReaction(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddIssueReaction(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveIssueReaction operation middleware
+func (siw *ServerInterfaceWrapper) RemoveIssueReaction(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reaction" -------------
+	var reaction string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reaction", r.PathValue("reaction"), &reaction, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reaction", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveIssueReaction(w, r, issueID, reaction)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -993,6 +1111,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/relations", wrapper.CreateIssueRelations)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issue-relations/{relation_id}", wrapper.DeleteIssueRelation)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/issues/{identifier}", wrapper.GetIssueByIdentifier)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/reactions", wrapper.ListIssueReactions)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/reactions", wrapper.AddIssueReaction)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issues/{issue_id}/reactions/{reaction}", wrapper.RemoveIssueReaction)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.ListIssueComments)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.CreateIssueComment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}", wrapper.DeleteIssueComment)
@@ -1411,6 +1532,140 @@ func (response CreateIssueCommentdefaultApplicationProblemPlusJSONResponse) Visi
 	return err
 }
 
+type ListIssueReactionsRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type ListIssueReactionsResponseObject interface {
+	VisitListIssueReactionsResponse(w http.ResponseWriter) error
+}
+
+type ListIssueReactions200JSONResponse IssueReactionCollection
+
+func (response ListIssueReactions200JSONResponse) VisitListIssueReactionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIssueReactionsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListIssueReactionsdefaultApplicationProblemPlusJSONResponse) VisitListIssueReactionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddIssueReactionRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+	Body    *AddIssueReactionJSONRequestBody
+}
+
+type AddIssueReactionResponseObject interface {
+	VisitAddIssueReactionResponse(w http.ResponseWriter) error
+}
+
+type AddIssueReaction201JSONResponse IssueReaction
+
+func (response AddIssueReaction201JSONResponse) VisitAddIssueReactionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddIssueReactiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response AddIssueReactiondefaultApplicationProblemPlusJSONResponse) VisitAddIssueReactionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveIssueReactionRequestObject struct {
+	IssueID  IssueID `json:"issue_id"`
+	Reaction string  `json:"reaction"`
+}
+
+type RemoveIssueReactionResponseObject interface {
+	VisitRemoveIssueReactionResponse(w http.ResponseWriter) error
+}
+
+type RemoveIssueReaction204Response struct {
+}
+
+func (response RemoveIssueReaction204Response) VisitRemoveIssueReactionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveIssueReactiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response RemoveIssueReactiondefaultApplicationProblemPlusJSONResponse) VisitRemoveIssueReactionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListIssueRelationsRequestObject struct {
 	IssueID IssueID `json:"issue_id"`
 }
@@ -1766,6 +2021,15 @@ type StrictServerInterface interface {
 	// CreateIssueComment Create a comment on a visible work item
 	// (POST /api/v0/issues/{issue_id}/comments)
 	CreateIssueComment(ctx context.Context, request CreateIssueCommentRequestObject) (CreateIssueCommentResponseObject, error)
+	// ListIssueReactions List reactions on a visible work item
+	// (GET /api/v0/issues/{issue_id}/reactions)
+	ListIssueReactions(ctx context.Context, request ListIssueReactionsRequestObject) (ListIssueReactionsResponseObject, error)
+	// AddIssueReaction Add the caller's reaction
+	// (POST /api/v0/issues/{issue_id}/reactions)
+	AddIssueReaction(ctx context.Context, request AddIssueReactionRequestObject) (AddIssueReactionResponseObject, error)
+	// RemoveIssueReaction Remove the caller's reaction
+	// (DELETE /api/v0/issues/{issue_id}/reactions/{reaction})
+	RemoveIssueReaction(ctx context.Context, request RemoveIssueReactionRequestObject) (RemoveIssueReactionResponseObject, error)
 	// ListIssueRelations List a work item's relations
 	// (GET /api/v0/issues/{issue_id}/relations)
 	ListIssueRelations(ctx context.Context, request ListIssueRelationsRequestObject) (ListIssueRelationsResponseObject, error)
@@ -2077,6 +2341,92 @@ func (sh *strictHandler) CreateIssueComment(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateIssueCommentResponseObject); ok {
 		if err := validResponse.VisitCreateIssueCommentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListIssueReactions operation middleware
+func (sh *strictHandler) ListIssueReactions(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request ListIssueReactionsRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListIssueReactions(ctx, request.(ListIssueReactionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListIssueReactions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListIssueReactionsResponseObject); ok {
+		if err := validResponse.VisitListIssueReactionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddIssueReaction operation middleware
+func (sh *strictHandler) AddIssueReaction(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request AddIssueReactionRequestObject
+
+	request.IssueID = issueID
+
+	var body AddIssueReactionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddIssueReaction(ctx, request.(AddIssueReactionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddIssueReaction")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddIssueReactionResponseObject); ok {
+		if err := validResponse.VisitAddIssueReactionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveIssueReaction operation middleware
+func (sh *strictHandler) RemoveIssueReaction(w http.ResponseWriter, r *http.Request, issueID IssueID, reaction string) {
+	var request RemoveIssueReactionRequestObject
+
+	request.IssueID = issueID
+	request.Reaction = reaction
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveIssueReaction(ctx, request.(RemoveIssueReactionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveIssueReaction")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveIssueReactionResponseObject); ok {
+		if err := validResponse.VisitRemoveIssueReactionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

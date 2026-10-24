@@ -1070,6 +1070,57 @@ export interface paths {
         patch: operations["updateIssueComment"];
         trace?: never;
     };
+    "/api/v0/issues/{issue_id}/reactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List reactions on a visible work item
+         * @description Uses issue.read, including guest visibility. Live reactions are ordered by (created_at,id) ascending in one independent read snapshot.
+         */
+        get: operations["listIssueReactions"];
+        put?: never;
+        /**
+         * Add the caller's reaction
+         * @description Admins, members and guests may react to visible issues. Invalid decimal codes answer validation_failed before reads. Visibility and role are checked before the write gate and again under the project lock. Project archival precedes issue archival, then an existing live reaction of this caller answers issue.reaction_exists. Success updates the issue audit and adds the reaction at one moment, without activity or subscription changes.
+         */
+        post: operations["addIssueReaction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}/reactions/{reaction}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+                reaction: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove the caller's reaction
+         * @description Uses addIssueReaction's role, visibility, validation and archive order. Only the caller's own live reaction is removed; absence answers issue.reaction_not_found, even when another actor has the same reaction. Success updates the issue audit and soft-deletes the reaction at one moment, without activity or subscription changes.
+         */
+        delete: operations["removeIssueReaction"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/issues/{issue_id}/comments": {
         parameters: {
             query?: never;
@@ -2128,6 +2179,23 @@ export interface components {
             updated_at: string;
             reactions: components["schemas"]["CommentReaction"][];
         };
+        IssueReaction: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            issue_id: string;
+            /** Format: uuid */
+            actor_id: string;
+            reaction: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        IssueReactionCollection: {
+            data: components["schemas"]["IssueReaction"][];
+        };
+        ReactionCreate: {
+            reaction: string;
+        };
         IssueCommentPage: {
             data: components["schemas"]["IssueComment"][];
             next_cursor: components["schemas"]["NextCursor"];
@@ -2303,6 +2371,9 @@ export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
 export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
 export type CommentReaction = components['schemas']['CommentReaction'];
 export type IssueComment = components['schemas']['IssueComment'];
+export type IssueReaction = components['schemas']['IssueReaction'];
+export type IssueReactionCollection = components['schemas']['IssueReactionCollection'];
+export type ReactionCreate = components['schemas']['ReactionCreate'];
 export type IssueCommentPage = components['schemas']['IssueCommentPage'];
 export type IssueRelationType = components['schemas']['IssueRelationType'];
 export type IssueRelation = components['schemas']['IssueRelation'];
@@ -3994,6 +4065,81 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["IssueComment"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listIssueReactions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Live reactions, including an empty data array. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueReactionCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addIssueReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactionCreate"];
+            };
+        };
+        responses: {
+            /** @description The new reaction. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueReaction"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    removeIssueReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+                reaction: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's reaction was removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

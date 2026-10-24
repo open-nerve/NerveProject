@@ -1658,6 +1658,91 @@ paths:
           description: The comment was deleted.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/reactions:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: listIssueReactions
+      tags:
+        - issue
+      summary: List reactions on a visible work item
+      description: Uses issue.read, including guest visibility. Live reactions are ordered by (created_at,id) ascending in one independent read snapshot.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - issue.not_found
+        - forbidden
+      responses:
+        '200':
+          description: Live reactions, including an empty data array.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueReactionCollection'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: addIssueReaction
+      tags:
+        - issue
+      summary: Add the caller's reaction
+      description: Admins, members and guests may react to visible issues. Invalid decimal codes answer validation_failed before reads. Visibility and role are checked before the write gate and again under the project lock. Project archival precedes issue archival, then an existing live reaction of this caller answers issue.reaction_exists. Success updates the issue audit and adds the reaction at one moment, without activity or subscription changes.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.not_found
+        - forbidden
+        - project.archived
+        - issue.archived
+        - issue.reaction_exists
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReactionCreate'
+      responses:
+        '201':
+          description: The new reaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueReaction'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/reactions/{reaction}:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+      - name: reaction
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9]{1,7}(-[0-9]{1,7}){0,15}$
+          maxLength: 128
+    delete:
+      operationId: removeIssueReaction
+      tags:
+        - issue
+      summary: Remove the caller's reaction
+      description: Uses addIssueReaction's role, visibility, validation and archive order. Only the caller's own live reaction is removed; absence answers issue.reaction_not_found, even when another actor has the same reaction. Success updates the issue audit and soft-deletes the reaction at one moment, without activity or subscription changes.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.not_found
+        - forbidden
+        - project.archived
+        - issue.archived
+        - issue.reaction_not_found
+        - server_busy
+      responses:
+        '204':
+          description: The caller's reaction was removed.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/issues/{issue_id}/comments:
     parameters:
       - $ref: '#/components/parameters/IssueID'
@@ -3651,6 +3736,50 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CommentReaction'
+    IssueReaction:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - issue_id
+        - actor_id
+        - reaction
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+        reaction:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    IssueReactionCollection:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueReaction'
+    ReactionCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - reaction
+      properties:
+        reaction:
+          type: string
+          pattern: ^[0-9]{1,7}(-[0-9]{1,7}){0,15}$
+          maxLength: 128
     IssueCommentPage:
       type: object
       additionalProperties: false

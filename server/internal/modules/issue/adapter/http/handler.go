@@ -89,8 +89,26 @@ type DeleteIssueCommentUseCase interface {
 	Execute(context.Context, uuid.UUID) error
 }
 
+// AddIssueReactionUseCase adds the caller's reaction.
+type AddIssueReactionUseCase interface {
+	Execute(context.Context, uuid.UUID, string) (domain.IssueReaction, error)
+}
+
+// RemoveIssueReactionUseCase removes the caller's reaction.
+type RemoveIssueReactionUseCase interface {
+	Execute(context.Context, uuid.UUID, string) error
+}
+
+// ListIssueReactionsUseCase reads live reactions.
+type ListIssueReactionsUseCase interface {
+	Execute(context.Context, uuid.UUID) ([]domain.IssueReaction, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	AddIssueReaction     AddIssueReactionUseCase
+	RemoveIssueReaction  RemoveIssueReactionUseCase
+	ListIssueReactions   ListIssueReactionsUseCase
 	UpdateIssueComment   UpdateIssueCommentUseCase
 	DeleteIssueComment   DeleteIssueCommentUseCase
 	CreateIssueComment   CreateIssueCommentUseCase

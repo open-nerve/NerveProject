@@ -3,6 +3,7 @@ package migrations_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -13,7 +14,7 @@ import (
 
 // issueNames are the constraints and indexes of the issue module's tables
 // (M4 design 4.2–4.6, 4.11), as TestConstraintAndIndexNames reads them: the
-// part of its want that the migrations 00015–00020 add.
+// part of its want that the migrations 00015–00022 add.
 var issueNames = []string{
 	"issue_activities_actor_id_fkey f n",
 	"issue_activities_created_by_id_fkey f n",
@@ -65,6 +66,19 @@ var issueNames = []string{
 	"issue_labels_updated_by_id_fkey f n",
 	"issue_labels_workspace_id_fkey f c",
 	"issue_labels_workspace_id_idx i",
+	"issue_reactions_actor_id_fkey f c",
+	"issue_reactions_created_by_id_fkey f n",
+	"issue_reactions_issue_id_actor_id_reaction_key iuw",
+	"issue_reactions_issue_id_fkey f c",
+	"issue_reactions_issue_id_idx i",
+	"issue_reactions_pkey iu",
+	"issue_reactions_pkey p",
+	"issue_reactions_project_id_fkey f c",
+	"issue_reactions_project_id_idx i",
+	"issue_reactions_reaction_check c",
+	"issue_reactions_updated_by_id_fkey f n",
+	"issue_reactions_workspace_id_fkey f c",
+	"issue_reactions_workspace_id_idx i",
 	"issue_relations_created_by_id_fkey f n",
 	"issue_relations_issue_id_fkey f c",
 	"issue_relations_issue_id_idx i",
@@ -300,5 +314,41 @@ func TestCommentDefaultsAndRequiredActor(t *testing.T) {
 	var pe *pgconn.PgError
 	if !errors.As(err, &pe) || pe.Code != "23502" || pe.ColumnName != "actor_id" {
 		t.Fatalf("null actor: %v", err)
+	}
+}
+
+// The database enforces the same decimal shape and partial uniqueness as the domain.
+func TestIssueReactionConstraints(t *testing.T) {
+	pool := newIssueDatabase(t)
+	ctx := context.Background()
+	insert := "INSERT INTO issue_reactions(id,workspace_id,project_id,issue_id,actor_id,reaction) VALUES(gen_random_uuid()," + issueAcme + "," + issueWeb + "," + webIssue + "," + issueBob + ",$1)"
+	for _, value := range []string{"128077", "10084-65039", strings.Repeat("1234567-", 15) + "1234567"} {
+		if _, err := pool.Exec(ctx, insert, value); err != nil {
+			t.Fatal(value, err)
+		}
+	}
+	for _, value := range []string{"", "-1", "12345678", "1--2", strings.Repeat("1-", 16) + "1", strings.Repeat("1", 129)} {
+		_, err := pool.Exec(ctx, insert, value)
+		var pe *pgconn.PgError
+		if !errors.As(err, &pe) || pe.Code != "23514" || pe.ConstraintName != "issue_reactions_reaction_check" {
+			t.Fatalf("invalid %q: %v", value, err)
+		}
+	}
+	_, err := pool.Exec(ctx, insert, "128077")
+	var pe *pgconn.PgError
+	if !errors.As(err, &pe) || pe.Code != "23505" || pe.ConstraintName != "issue_reactions_issue_id_actor_id_reaction_key" {
+		t.Fatal("duplicate", err)
+	}
+	if _, err := pool.Exec(ctx, "UPDATE issue_reactions SET deleted_at=now() WHERE reaction='128077'"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, insert, "128077"); err != nil {
+		t.Fatal("re-add", err)
+	}
+	for _, column := range []string{"actor_id", "reaction"} {
+		_, err := pool.Exec(ctx, "UPDATE issue_reactions SET "+column+"=NULL WHERE reaction='128077'")
+		if !errors.As(err, &pe) || pe.Code != "23502" || pe.ColumnName != column {
+			t.Fatal(column, err)
+		}
 	}
 }

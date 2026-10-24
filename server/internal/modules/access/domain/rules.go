@@ -135,6 +135,7 @@ var rules = map[shared.Action]Rule{
 	// own work items finds no other, the issue module's guest rule (M4
 	// design 3.4).
 	"issue_comment.write":  {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	"issue_reaction.write": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	"issue_comment.create": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	"issue.read":           {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// As issue.create (M4 design 3.4).

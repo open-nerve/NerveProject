@@ -123,6 +123,10 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 		return route.answerWithin(t, w.contract, http.MethodPost, path, caller, body, want)
 	}
 
+	reactionID := w.newWorkItem(t)
+	route.answerWithin(t, w.contract, http.MethodPost, reactionsOf(reactionID), alice, `{"reaction":"128077"}`, http.StatusCreated)
+	route.answerWithin(t, w.contract, http.MethodGet, reactionsOf(reactionID), alice, "", http.StatusOK)
+	route.answerWithin(t, w.contract, http.MethodDelete, reactionsOf(reactionID)+"/128077", alice, "", http.StatusNoContent)
 	var comment answeredComment
 	decodeAnswer(t, route.answerWithin(t, w.contract, http.MethodPost, commentsOf(w.newWorkItem(t)), alice, `{"comment_html":"<p>Hi</p>"}`, http.StatusCreated), &comment)
 	route.answerWithin(t, w.contract, http.MethodPatch, commentPath(comment.ID), alice, `{"comment_html":"<p>Changed</p>"}`, http.StatusOK)

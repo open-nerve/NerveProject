@@ -16,6 +16,9 @@ func (s issueSeed) comments(sd seeded) {
 		slug, _, _ := strings.Cut(i.key, "/")
 		by := s.ids[i.by]
 		c := issuedomain.Comment{ID: sd.comment(i.key, i.name), WorkspaceID: s.workspaces[slug], ProjectID: s.projects[i.key], IssueID: sd.issue(i.key, i.name), ActorID: by, HTML: "<p>Seeded comment</p>", Text: "Seeded comment"}
+		if err := s.store.InsertIssueReaction(context.Background(), issueapp.IssueReactionWrite{Reaction: issuedomain.IssueReaction{ID: uuid.NewV7(), WorkspaceID: c.WorkspaceID, ProjectID: c.ProjectID, IssueID: c.IssueID, ActorID: by, Reaction: "1"}, By: by, At: s.now}); err != nil {
+			s.t.Fatal(err)
+		}
 		if err := s.store.InsertComment(context.Background(), issueapp.CommentWrite{Comment: c, By: by, At: s.now}); err != nil {
 			s.t.Fatal(err)
 		}
@@ -23,6 +26,11 @@ func (s issueSeed) comments(sd seeded) {
 }
 func (s issueSeed) seededCommentRows(sd seeded) {
 	for _, i := range seededItems() {
+		reactions, e := s.store.IssueReactions(context.Background(), sd.issue(i.key, i.name))
+		goneReaction := strings.HasPrefix(i.key, "gone/")
+		if e != nil || !goneReaction && (len(reactions) != 1 || reactions[0].Reaction != "1") || goneReaction && len(reactions) != 0 {
+			s.t.Fatal("seeded reactions", reactions, e)
+		}
 		got, err := s.store.Comments(context.Background(), sd.issue(i.key, i.name), nil, 100)
 		gone := strings.HasPrefix(i.key, "gone/")
 		if err != nil || !gone && (len(got) != 1 || got[0].HTML != "<p>Seeded comment</p>" || got[0].ActorID != s.ids[i.by]) || gone && len(got) != 0 {

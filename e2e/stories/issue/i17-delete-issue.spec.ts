@@ -10,7 +10,7 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectIssueDeleted } from "../../fixtures/assert/issue";
-import { createIssueComment } from "../../fixtures/comments";
+import { createIssueComment, createIssueReaction } from "../../fixtures/comments";
 import { newAccount } from "../../fixtures/auth";
 import {
   createIssue,
@@ -26,7 +26,7 @@ import { expect, test } from "../../fixtures/test";
 // I17, deleting a work item and the work items under it (M4 design 2, 3.4, 3.6, 3.9, 3.10): the API version, with
 // P3's assertions (the work item, two levels of work items under it, an archived one among them, and their assignees,
 // labels, subscribers, activity and relations either way deleted at one moment by its deleter; who may delete it).
-// Comments are furnished through P4's API; reactions, mentions and versions are later in P4, the links P7's, the page version P14's.
+// Comments and issue reactions are furnished through P4's API; comment reactions, mentions and versions are later in P4, the links P7's, the page version P14's.
 
 test("I17 (API): a member does not delete another's work item (403), a guest his own (403), nor a creator who has left the private project his own (404); a member deletes her own, which has two levels of work items under it, the lower archived, and relates to two work items of another project, one relation stored from each end: with it, at that moment and by her, every row under it, the work items under it and its relations either way among them; none of the three is found again (404), and the other work items list no relation", async ({
   api,
@@ -78,6 +78,7 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
   await Promise.all(
     [plan, notes, mirrors].map((item) => createIssueComment(api, bob.token, item.id, "<p>Delete discussion</p>"))
   );
+  await Promise.all([plan, notes, mirrors].map((item) => createIssueReaction(api, bob.token, item.id)));
   expect((await issueArchived(api, ann.token, mirrors.id)).status).toBe(200);
   const deploy = await createIssue(api, ann.token, ops.id, { name: "Deploy the site" });
   const ship = await createIssue(api, ann.token, ops.id, { name: "Ship it" });

@@ -3,6 +3,9 @@ package bootstrap
 import (
 	"net/http"
 	"testing"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 func collaborationMatrixRows() []matrixRow {
@@ -46,6 +49,31 @@ func collaborationMatrixRows() []matrixRow {
 		}
 		rows = append(rows, matrixRow{op: op, variant: "archived issue", write: true, columns: issueColumns, prepare: inDone(true), request: toComment(method, body), cells: onArchived})
 	}
+
+	listReactions := toWorkItem(http.MethodGet, "/reactions", "")
+	rows = append(rows, matrixRow{op: "listIssueReactions", columns: issueColumns, request: listReactions, cells: onAWorkItem(cellOK, cellOK, cellOK, cellOK), check: func(t *testing.T, _ caller, _ seeded, answer string) {
+		got := listIn[answeredReaction](t, answer)
+		if len(got) != 1 || got[0].Reaction != "1" {
+			t.Fatal(answer)
+		}
+	}}, matrixRow{op: "listIssueReactions", variant: "archived", columns: archivedColumns, request: listReactions, cells: issueRows.ofArchived(cellOK, cellForbidden)})
+	for _, remove := range []bool{false, true} {
+		op, method, after, body, success := "addIssueReaction", http.MethodPost, "/reactions", `{"reaction":"128077"}`, cellCreated
+		var prepare func(*testing.T, caller, seeded, string)
+		if remove {
+			op, method, after, body, success = "removeIssueReaction", http.MethodDelete, "/reactions/128077", "", cellNoContent
+			prepare = ownReaction
+		}
+		request := toWorkItem(method, after, body)
+		rows = append(rows, matrixRow{op: op, write: true, columns: issueColumns, prepare: prepare, request: request, cells: onAWorkItem(success, success, success, success)}, matrixRow{op: op, variant: "archived", write: true, columns: archivedColumns, prepare: prepare, request: request, cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)})
+		archivedPrepare := func(t *testing.T, c caller, s seeded, url string) {
+			if prepare != nil {
+				prepare(t, c, s, url)
+			}
+			inDone(true)(t, c, s, url)
+		}
+		rows = append(rows, matrixRow{op: op, variant: "both archived", write: true, columns: archivedColumns, prepare: archivedPrepare, request: request, cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)}, matrixRow{op: op, variant: "archived issue", write: true, columns: issueColumns, prepare: archivedPrepare, request: request, cells: onAWorkItem(cellIssueArchived, cellIssueArchived, cellIssueArchived, cellIssueArchived)})
+	}
 	return rows
 }
 func toComment(method, body string) func(caller, seeded) (string, string, string) {
@@ -60,4 +88,14 @@ func commentCells(cells map[caller]cell) map[caller]cell {
 		}
 	}
 	return cells
+}
+
+// ownReaction puts the caller's live row in this write cell before its app starts.
+func ownReaction(t *testing.T, c caller, s seeded, url string) {
+	t.Helper()
+	pool := openPool(t, url)
+	defer pool.Close()
+	if _, err := pool.Exec(pgtest.Soon(t), `INSERT INTO issue_reactions(id,workspace_id,project_id,issue_id,actor_id,reaction,created_by_id,updated_by_id) SELECT $1,workspace_id,project_id,id,$3,'128077',$3,$3 FROM issues WHERE id=$2`, uuid.NewV7(), s.issue(projectOf(c), issueOf(c)), s.account(accountOf(c))); err != nil {
+		t.Fatal(err)
+	}
 }
