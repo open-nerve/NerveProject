@@ -14,7 +14,7 @@
 
 - 按[交接入口](../../claude_to_gpt/README.md)的顺序读取 01、03、02、04、05、06，核对 M4 设计的 P4–收尾、完成标准、进度表，以及 P3 的 spec、plan、review 样板和此前交给 P4 的事项。
 - 依交接 02 §3 调整计划产出方式：保留文件、接口、验收、执行命令与关键性质的变异计划，不把尚未运行的原型或逐块重放写成已验证。架构子任务负责 spec/plan 草案，主任务核对既有代码与基线。暂停时保存了 spec 和 16 个任务纲要（`573e8eb6`）；负责人批准 A1 后恢复计划细化与预检。
-- 在准备 Task 1 时发现 A1，曾停止进入预检和产品实现；负责人已批准推荐方案，现恢复推进。当前 T1 已实施并执行验证，正在整理证据，尚未独立 Task 评审；后续 Task 与 Claude 整分支终审待执行。下表保留起步基线和架构放置探针，不与 T1 结果混淆。
+- 在准备 Task 1 时发现 A1，曾停止进入预检和产品实现；负责人已批准推荐方案，现恢复推进。当前 T1 已实施并执行验证；首轮独立评审后，推进者核验差异外证据确认 F1 基础标签缺失，已进入第1轮修正并等待定向复审；后续 Task 与 Claude 整分支终审待执行。下表保留起步基线和架构放置探针，不与 T1 结果混淆。
 
 ## 2. 验收标准核对
 
@@ -30,9 +30,17 @@
 | 架构放置合成图探针 | domain 放置失败；adapter 放置通过 | §3/A1；只验证依赖方向，未安装或运行 bluemonday |
 | 移除临时探针后 `go -C server test -count=1 ./internal/archtest` | 退出 0；1.481s | 现有架构守卫未改动 |
 
-### 2.2 T1 执行进度（待独立评审）
+### 2.2 T1 执行进度（F1 修正待定向复审）
 
 T1 已实施清洗适配器、领域纯值、共享编辑器往返样例，以及本节下方记录的局部解析/导出修复。已执行定位红绿、清洗/投影/序列化的可编译变异、纯层架构检查、并发清洗 race 检查及适用的 Go/Web 完整门禁；详细命令、首次失败与最终结果保存在工作树的 `.superpowers/sdd/P4-issue-collaboration/task-1-report.md`。此处记录执行进度，独立评审结论和精确提交范围随后补入。
+
+#### T1 / F1：锁定上游基础标签遗漏（Important，第1轮修正）
+
+首轮规格/代码独立评审均给出 Approved，但规格评审把 Plane 放行表一致性列为差异外证据。推进者追溯锁定来源后确认实际存在规格差距：首版清洗策略遗漏25个 nh3 默认标签，且额外允许 `tfoot`；此前 Approved 不代表该差距已闭合，也不据此宣称 T1 完成。
+
+只读来源链为 Plane `requirements/base.txt:75` 的 nh3==0.2.18、`content_validator.py:71–82` 的默认标签与四个自定义标签合并；[nh3 v0.2.18 源码](https://raw.githubusercontent.com/messense/nh3/v0.2.18/src/lib.rs)第232–234行从 ammonia 默认 Builder 导出标签，[其 Cargo.lock](https://raw.githubusercontent.com/messense/nh3/v0.2.18/Cargo.lock)锁定 ammonia 4.0.0，[ammonia v4.0.0 默认表](https://raw.githubusercontent.com/rust-ammonia/ammonia/v4.0.0/src/lib.rs)第359–369行定义75个标签。以该表加四个自定义标签修复；`tfoot`没有真实编辑器必需证据，按裁定移除。本轮只对齐基础标签集合；属性、CSS和值校验仍沿 Nerve 已批准的较窄策略，不宣称与 Plane 任意属性逐字全等。保留原URL约束，不引入 nh3/ammonia 依赖或修改守卫。
+
+新增独立行为回归按合法父子上下文、空元素和表结构逐项覆盖默认标签，并固定 unknown/script/tfoot 删除断言。先看到标签丢失及 tfoot 留存的业务红，再补齐；另明确允许 area/bdo/data/map/rtc 的无属性形式，避免 bluemonday 隐式集合仍丢标签。删除 ruby 的实际可编译变异被 `TestCleanPlaneDefaultTags/ruby` 检出，恢复后 domain/content（含既有 S3 与恶意样例）、content race、lint-go、真实 Editor S3 均通过；具体命令和原始日志在 `task-1-report.md` 的“F1 修正第1轮”追加节。本轮未重跑无关容器全套。F1 修复已实施，独立定向复审及 T1 验收仍待推进者记录。
 
 ### 2.3 尚未完成的 P4 验收
 

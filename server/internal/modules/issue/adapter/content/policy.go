@@ -11,10 +11,20 @@ import (
 
 func editorPolicy(color *regexp.Regexp) *bluemonday.Policy {
 	p := bluemonday.NewPolicy()
-	p.AllowElements("a", "abbr", "b", "blockquote", "br", "caption", "code", "col", "colgroup", "dd", "del", "details", "div", "dl", "dt", "em", "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "ins", "kbd", "li", "mark", "ol", "p", "pre", "s", "small", "span", "strike", "strong", "sub", "summary", "sup", "table", "tbody", "td", "th", "thead", "tfoot", "tr", "u", "ul", "mention-component", "image-component", "label", "input")
+	// Plane pins nh3 0.2.18, whose ammonia 4.0.0 defaults define the base tags.
+	p.AllowElements(
+		"a", "abbr", "acronym", "area", "article", "aside", "b", "bdi", "bdo", "blockquote", "br",
+		"caption", "center", "cite", "code", "col", "colgroup", "data", "dd", "del", "details", "dfn", "div", "dl", "dt",
+		"em", "figcaption", "figure", "footer", "h1", "h2", "h3", "h4", "h5", "h6", "header", "hgroup", "hr",
+		"i", "img", "ins", "kbd", "li", "map", "mark", "nav", "ol", "p", "pre", "q", "rp", "rt", "rtc", "ruby",
+		"s", "samp", "small", "span", "strike", "strong", "sub", "summary", "sup", "table", "tbody", "td", "th", "thead",
+		"time", "tr", "tt", "u", "ul", "var", "wbr",
+		"mention-component", "image-component", "label", "input",
+	)
 	p.AllowAttrs("class", "id", "title", "role", "aria-label", "aria-hidden", "start", "type", "xmlns", "data-tight", "data-node-type", "data-type", "data-checked", "data-background-color", "data-text-color", "data-name", "data-id").Globally()
 	p.AllowAttrs("data-icon-name", "data-icon-color", "data-background", "data-emoji-unicode", "data-emoji-url", "data-logo-in-use", "data-block-type").OnElements("div")
-	p.AllowNoAttrs().OnElements("label")
+	// These permitted tags are absent from bluemonday's implicit no-attribute set.
+	p.AllowNoAttrs().OnElements("label", "area", "bdo", "data", "map", "rtc")
 	p.AllowAttrs("href", "target", "rel").OnElements("a")
 	p.AllowAttrs("width", "height", "aspectratio", "src", "alignment", "status", "alt", "title").OnElements("image-component", "img")
 	p.AllowAttrs("entity_identifier", "entity_name").OnElements("mention-component")
