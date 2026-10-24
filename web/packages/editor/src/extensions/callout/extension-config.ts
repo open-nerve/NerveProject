@@ -23,6 +23,14 @@ declare module "@tiptap/core" {
   }
 }
 
+const escapeCalloutHTML = (value: string | null | undefined): string =>
+  (value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
 export const CustomCalloutExtensionConfig: CustomCalloutExtensionType = Node.create({
   name: CORE_EXTENSIONS.CALLOUT,
   group: "block",
@@ -63,10 +71,10 @@ export const CustomCalloutExtensionConfig: CustomCalloutExtensionType = Node.cre
           // add callout logo
           if (logoInUse === "emoji") {
             state.write(
-              `> <img src="${attrs["data-emoji-url"]}" alt="${attrs["data-emoji-unicode"]}" width="30px" />\n`
+              `> <img src="${escapeCalloutHTML(attrs["data-emoji-url"])}" alt="${escapeCalloutHTML(attrs["data-emoji-unicode"])}" width="30px" />\n`
             );
           } else {
-            state.write(`> <icon>${attrs["data-icon-name"]} icon</icon>\n`);
+            state.write(`> <icon>${escapeCalloutHTML(attrs["data-icon-name"])} icon</icon>\n`);
           }
           // add an empty line after the logo
           state.write("> \n");
