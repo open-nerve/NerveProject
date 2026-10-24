@@ -361,29 +361,29 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** `ListIssueActivities.Execute(ctx context.Context,issueID uuid.UUID,limit *int,cursor *string)(ActivityPage,error)`；Deps `Locks, Activities ActivityLister, Projects VisibleProjects, ReadTx`。Lister的`Activities(ctx context.Context,issueID,actorID uuid.UUID,projects []VisibleProject,after *domain.ActivityCursor,limit int)([]ActivityRecord,error)`；存储把目录拆为全可见projectIDs/ownOnlyProjectIDs两数组，nil规范为空数组；每次请求重新从目录生成，不从cursor读项目范围。
 
-- [ ] **Step 1 红测试。** `TestActivityReferenceVisibility`遍历parent/relates_to/duplicate/blocked_by/blocking，old/new两端任一隐藏整行略去；NULL标识不须查，状态/标签/用户标识不当issue；软删issue、软删project历史可见，物理清理引用略去，inactive成员不可见；隐藏父的old_value编号也不能泄漏。`TestActivityPagesFilterBeforeLimit`隐藏/可见交错、limit1、相同created_at逆id、最后页重读、他人合法cursor不能改变结果域。
+- [x] **Step 1 红测试。** `TestActivityReferenceVisibility`遍历parent/relates_to/duplicate/blocked_by/blocking，old/new两端任一隐藏整行略去；NULL标识不须查，状态/标签/用户标识不当issue；软删issue、软删project历史可见，物理清理引用略去，inactive成员不可见；隐藏父的old_value编号也不能泄漏。`TestActivityPagesFilterBeforeLimit`隐藏/可见交错、limit1、相同created_at逆id、最后页重读、他人合法cursor不能改变结果域。
   ```go
   if len(page.Data) != 1 || page.Data[0].ID != visibleAfterHidden { t.Fatal("filtered after limit") }
   if decoded.ID != page.Data[0].ID { t.Fatal("cursor names hidden or probe row") }
   ```
-- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(ActivityReferenceVisibility|ActivityPagesFilterBeforeLimit)' -count=1`；`go -C server test ./internal/modules/issue/adapter/postgres -run TestActivityVisibilityQuery -count=1`。
-- [ ] **Step 3 实现。** 独立ReadTx包第一次see→Historical→Activities；SQL只JOINissue模块表，所有引用条件在WHERE里先于ORDER/LIMIT，活的activity自身deleted_at仍过滤。引用issue只要求存在/目录项目可读/OwnOnly匹配CreatedBy，不看它deleted_at和archived_at；两个非NULL标识均须满足。ASC keyset>，limit+1仅为判断更多；cursor用已返回最后一行。响应严格设计字段、不含comment或detail。
-- [ ] **Step 4 绿/变异。** HTTP全包、原命令、`go -C server test ./internal/bootstrap -run 'Test(ActivityReferences|ActivityPages|ActivityIncremental)' -count=1`；增量从最后一页请求cursor（不是null next）再取，新增和description合并行按id重排；实际漏一端引用过滤/用GetIssues软删口径/过滤在limit后/以cursor授权各失败。
-- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): 按历史引用可见性过滤动态分页`。
+- [x] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(ActivityReferenceVisibility|ActivityPagesFilterBeforeLimit)' -count=1`；`go -C server test ./internal/modules/issue/adapter/postgres -run TestActivityVisibilityQuery -count=1`。
+- [x] **Step 3 实现。** 独立ReadTx包第一次see→Historical→Activities；SQL只JOINissue模块表，所有引用条件在WHERE里先于ORDER/LIMIT，活的activity自身deleted_at仍过滤。引用issue只要求存在/目录项目可读/OwnOnly匹配CreatedBy，不看它deleted_at和archived_at；两个非NULL标识均须满足。ASC keyset>，limit+1仅为判断更多；cursor用已返回最后一行。响应严格设计字段、不含comment或detail。
+- [x] **Step 4 绿/变异。** HTTP全包、原命令、`go -C server test ./internal/bootstrap -run 'Test(ActivityReferences|ActivityPages|ActivityIncremental)' -count=1`；增量从最后一页请求cursor（不是null next）再取，新增和description合并行按id重排；实际漏一端引用过滤/用GetIssues软删口径/过滤在limit后/以cursor授权各失败。
+- [x] **Step 5 H/G评审提交。** `feat(M4/P4): 按历史引用可见性过滤动态分页`。
 
 ### Task 13: 交错14/15和最后一把锁后的时钟
 
-**Files:** Create `server/internal/bootstrap/issue_collaboration_interleaving_test.go`、`issue_collaboration_clock_test.go`；Modify现有`issue_interleaving_test.go`仅扩确实缺少的帮手参数，不复制pgtest锁探针。
+**Files:** Create `server/internal/bootstrap/issue_collaboration_interleaving_test.go`、`issue_collaboration_clock_test.go`、`issue_collaboration_membership_test.go`；Modify `issue_writes_test.go`为既有路由构造增加测试Clock参数并保留默认入口，`issue_world_test.go`只修workItemStamps过时的固定表数注释；现有`issue_interleaving_test.go`仅在确有需要时局部扩帮手参数，不复制pgtest锁探针。
 
-**Interfaces:** Consumes现有`itemWrite`、`inBothOrdersAt`、`pgtest.RowWaits`、固定Clock及T3/T9 APIs；本Task不新增业务端口。新增测试`TestCommentAndIssueDeletionSerialize`、`TestDescriptionSavesSerialize`、`TestCollaborationReadsClockUnderLock`、`TestActivityCreatedAtDoesNotGoBack`。
+**Interfaces:** Consumes现有`itemWrite`、`inBothOrdersAt`、`pgtest.RowWaits`、固定Clock及T3/T9 APIs；本Task不新增业务端口。新增测试`TestCommentAndIssueDeletionSerialize`、`TestDescriptionSavesSerialize`、`TestCollaborationReadsClockUnderLock`、`TestActivityCreatedAtDoesNotGoBack`、`TestCollaborationRechecksMembership`、`TestCommentAndReactionsSerialize`、`TestCommentWritesAndArchivalSerialize`。
 
-- [ ] **Step 1 写断言。** 交错14两顺序：评论先提交，其评论/关注随后被同删除者同刻连带；删除先提交，评论404/零新关注评论。交错15先取得项目N再读clock，后请求在锁下读取前结果；同actor两次修改动态/版本各合并、最终HTML第二个、old_value仍首次之前、created_at不减；不同actor应分行/版。锁前持者与写入者不同，项目id/时间/id都不能只选自然升序数据。
+- [ ] **Step 1 写断言。** 交错14两顺序：评论先提交，其评论/关注随后被同删除者同刻连带；删除先提交，评论404/零新关注评论。交错15先取得项目N再读clock，后请求在锁下读取前结果；同actor两次修改动态/版本各合并、最终HTML第二个、old_value仍首次之前、created_at不减；不同actor应分行/版。锁前持者与写入者不同，项目id/时间/id都不能只选自然升序数据。另外用真实交错覆盖成员被移出/降guest后的重判、评论编辑/删除与评论表情添加/删除的两个顺序、评论写与归档的两个顺序；OwnOnly隐藏404和自己描述降guest后的403分开，副表与审计断言零写/连带结果。测试侧Clock须有同步保证，既有clocktest.Fixed本身非并发安全，不修改平台生产时钟。
   ```go
   if len(descriptionActivities) != 1 || len(windowVersions) != 1 { t.Fatal("serialized coalescing") }
   if activity.NewValue == nil || *activity.NewValue != secondHTML || *activity.OldValue != initialHTML { t.Fatal("lost description transition") }
   if secondAt.Before(firstAt) { t.Fatal("time moved before lock") }
   ```
-- [ ] **Step 2 运行定位。** `go -C server test ./internal/bootstrap -run 'Test(CommentAndIssueDeletionSerialize|DescriptionSavesSerialize|CollaborationReadsClockUnderLock|ActivityCreatedAtDoesNotGoBack)' -count=1`。若前序实现已使新增测试直接绿，先做针对性质可编译变异确认业务红再恢复，记录真实经过，不伪造首次红。
+- [ ] **Step 2 运行定位。** `go -C server test ./internal/bootstrap -run 'Test(CommentAndIssueDeletionSerialize|DescriptionSavesSerialize|CollaborationReadsClockUnderLock|ActivityCreatedAtDoesNotGoBack|CollaborationRechecksMembership|CommentAndReactionsSerialize|CommentWritesAndArchivalSerialize)' -count=1`。若前序实现已使新增测试直接绿，先做针对性质可编译变异确认业务红再恢复，记录真实经过，不伪造首次红。
 - [ ] **Step 3 完善交错夹具/必要根因修复。** 先探测请求确实等在持者项目锁之后，再推进固定clock并释放；每次条件等待有截止期限，后台请求错误/取消可收回，不sleep同步。两个并发写的连接和事务分开；后写时钟与所有副表戳一致，不能仅断言最后HTTP状态。
 - [ ] **Step 4 强化验证。** 上一命令改`-race -count=5`；无40P01/业务失败。实际把clock移到Locks.run前、跳过锁下重读、用初版时间判断窗口各须触发具体断言失败；基础设施/超时不当杀死，恢复后定向绿。
 - [ ] **Step 5 G/独立评审/提交。** 重推HEAD全部写的gate→连接→项目N→各表锁关系，无反向边；`feat(M4/P4): 验证协作写入交错与锁后时钟`。

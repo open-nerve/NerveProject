@@ -2518,7 +2518,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P1b `issue-update` | 工作项的取、改与写闸门（后端，12）；同上 | 已完成：[spec](specs/P1b-issue-update.md)、[plan](plans/P1b-issue-update.md)、[评审](reviews/P1b-issue-update-review.md)（执行时 15 个 Task；整分支评审之后一个修复轮） |
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 已完成：[spec](specs/P2-issue-access.md)、[plan](plans/P2-issue-access.md)、[评审](reviews/P2-issue-access-review.md)（执行时 14 个 Task；整分支评审之后一个修复轮） |
 | P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
-| P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 进行中：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)；负责人已批准清洗适配器方案（2026-10-25），保留纯层架构守卫；T1–T11（含S3）已完成实施与独立Task评审，T9两项Minor已由T10复核关闭；T12动态分页已实施验证，待独立评审，T13起继续实施，见[评审记录](reviews/P4-issue-collaboration-review.md)；完成后由负责人安排 Claude 整分支终审，尚未合并 |
+| P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 进行中：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)；负责人已批准清洗适配器方案（2026-10-25），保留纯层架构守卫；T1–T12（含S3）已完成实施与独立Task评审，T9两项Minor已由T10复核关闭；T13起继续实施，见[评审记录](reviews/P4-issue-collaboration-review.md)；完成后由负责人安排 Claude 整分支终审，尚未合并 |
 | P5 `issue-list` | 列表引擎与显示设置（后端，15） | 未开始 |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，11） | 未开始 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12） | 未开始 |
