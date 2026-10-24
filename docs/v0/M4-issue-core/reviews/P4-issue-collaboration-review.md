@@ -108,7 +108,15 @@ T1 已交付清洗适配器、领域纯值、共享编辑器往返样例，以�
 
 定向报告`task-6-fix-1-review.md`审查`132da60e..48bb532c`，确认I1已解决、无新增Critical/Important/Minor，两个反例只改各自临时副本。Task 6规格与质量门由首审和定向复审共同闭合，无遗留发现。差异外边界由推进者核对：既有Locks/HiddenFrom/角色集合、gate唯一映射和独立ReadOnlySnapshot未变；创建评论显式空表情、HTTP映射及两个locale key仍正确消费；实际日志、只读Plane、串行容器与主目录main状态均有执行证据。阶段尚未到Claude终审。
 
-### 2.8 尚未完成的 P4 验收
+### 2.8 T7 实施证据（待独立评审）
+
+描述纯模型、字段存在性和已有列读写已提交为`2eb31d8c`，基线为`5e8edee4`，共25个生产/测试/生成文件。内部Issue/IssueRow/IssueFields以指针保留stripped的NULL，创建明确保存默认HTML与空文本；普通字段PATCH从锁下旧值透传两列。仅描述写入只改两列，不动审计。GetIssue/GetIssues/SubIssues共享完整映射；HTTP字段、迁移与完整描述副作用留待T9。
+
+领域、存储和真实旧API回归都有业务红绿；八项实际变异覆盖Unicode误按字节、忽略skip=false出现、漏可清空字段、误改审计、创建零值、普通PATCH丢值、适配器漏映射、NULL归一化，均触发业务断言并恢复。锁下再读回归也检出了PATCH零值变异；邻居和三种真实持久值均有保持断言。完整证据为`task-7-report.md`与`logs/task-7-*`，推进者已核对。
+
+最终gen-go、Go lint两段0 issues、全Go（server63包、bootstrap98.351s、tools）及提交后gen-check通过；没有适用的Web/E2E业务改动。首个临时Postgres端口映射异常及一次仅进程API1.44诊断单独保存，原环境1.55重跑取得业务红、随后定位与全量通过，未改Docker配置或已有容器。全量命令在各包结束后曾较久未退出，只读确认无测试子进程，等待自然退出0，没有杀进程或清理缓存。尚待独立规格与质量结论，不勾选Task 7完成。
+
+### 2.9 尚未完成的 P4 验收
 
 描述/提及/版本与动态读取、跨资源权限矩阵增量、交错 14/15、接口故事、目录驱动删除增量、其他关键性质的实际变异、阶段完整门禁与 Claude 整分支终审尚未完成。M4 设计 §14 不新增勾选；P4 不标已完成。
 
@@ -214,7 +222,7 @@ T6准备时确认：T5的共享表情错误文案当前限定“on the work item
 
 ### T7 旧可空列的值保持（后续实施要求）
 
-预核对发现00015的description_stripped为可空text，P1–P3 INSERT省略该列，旧行实际为NULL。原T7的string映射会在普通字段PATCH透传时把NULL改成空串，违背保存两列原值。局部裁定：domain.Issue及app.IssueRow/IssueFields用`*string`保留NULL；新增创建/明确描述保存写已知文本，普通PATCH从锁下旧值原样透传。DescriptionWrite.Text与RichText.Text仍是string，不用COALESCE、不改迁移或公开API。新增NULL/空串分别保留的真实回归和归一化变异；skip结构检查同时覆盖可清空字段的存在性bool。spec、plan与T7/T9简报同步，待T7实施验证。
+预核对发现00015的description_stripped为可空text，P1–P3 INSERT省略该列，旧行实际为NULL。原T7的string映射会在普通字段PATCH透传时把NULL改成空串，违背保存两列原值。局部裁定：domain.Issue及app.IssueRow/IssueFields用`*string`保留NULL；新增创建/明确描述保存写已知文本，普通PATCH从锁下旧值原样透传。DescriptionWrite.Text与RichText.Text仍是string，不用COALESCE、不改迁移或公开API。新增NULL/空串分别保留的真实回归和归一化变异；skip结构检查同时覆盖可清空字段的存在性bool。spec、plan与T7/T9简报同步；T7实现已有真实NULL/空串回归及变异，待独立评审核对。SubIssues既有Go转换直接复用扩展后的GetIssueRow/issueOf，因此本Task改查询与生成类型并验证实际读取，无需为原计划文件枚举制造无效Go差异；文件清单同步实际职责。
 
 ## 4. 整分支评审的发现与处理
 

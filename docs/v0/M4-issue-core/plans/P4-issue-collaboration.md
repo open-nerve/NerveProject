@@ -273,7 +273,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 ### Task 7: 描述纯模型、存在性和已有列存储
 
-**Files:** Create `I/domain/{description.go,description_test.go}`、`I/app/description_rows.go`、`I/adapter/postgres/{description.go,description_test.go,queries/description.sql}`；Modify `I/domain/{issue.go,patch.go}`及测试、`I/app/{rows.go,create_issue.go,update_issue.go}`、`I/adapter/postgres/{issues.go,update.go,sub_issues.go}`及`queries/{issues,update,sub_issues}.sql`；Create `B/issue_description_preservation_test.go`；HTTP契约不变。
+**Files:** Create `I/domain/{description.go,description_test.go}`、`I/app/description_rows.go`、`I/adapter/postgres/{description.go,description_test.go,queries/description.sql}`；Modify `I/domain/{issue.go,patch.go}`及测试、`I/app/{rows.go,create_issue.go,update_issue.go}`、`I/adapter/postgres/{issues.go,update.go}`及`queries/{issues,update,sub_issues}.sql`；Create `B/issue_description_preservation_test.go`；HTTP契约不变。SubIssues沿既有生成行→GetIssueRow→issueOf转换复用新增字段，查询与生成类型同步；没有独立Go映射需要重复修改。
 
 **Interfaces:** domain.Issue增加`DescriptionHTML string`、`DescriptionStripped *string`（保留既有NULL）；domain.NewIssue/IssuePatch增加`DescriptionHTML *string`，IssuePatch加`SkipActivity *bool`保留存在性。公共CompareDescription产出Write（要保存HTML）/Changed（普通审计变化）。app.DescriptionWrite及存储`WriteDescription(ctx context.Context,w DescriptionWrite)error`只改两列；IssueRow/IssueFields同样用`DescriptionHTML string`和`DescriptionStripped *string`保留SQL可空性；app.create_issue构造IssueRow时显式给HTML为`<p></p>`、stripped指向空字符串（非nil）；app.update_issue构造IssueFields从本次锁下旧Issue透传两列；postgres.update映射到对应sqlc参数，插入/更新主查询保持这些值。T9前create/update不消费新增HTTP输入，现有请求行为维持默认描述。
 
