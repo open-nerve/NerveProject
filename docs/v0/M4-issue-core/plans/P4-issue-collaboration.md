@@ -195,16 +195,16 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** Produces `shared.PageSize(limit *int) (int,error)`、常量DefaultPageSize=50/MaxPageSize=100；`postgres.ReadOnlySnapshot() Option`；issue.Deps.ReadTx `shared.TxManager`。三个domain类型：`CommentCursor/ActivityCursor{CreatedAt time.Time;ID uuid.UUID}`、`DescriptionVersionCursor{LastSavedAt time.Time;ID uuid.UUID}`，各自MarshalJSON/UnmarshalJSON严格两元素数组，复用shared封套，不复用identity类型。
 
-- [ ] **Step 1 红测试。** `TestPageSize`固定nil→50、1/100可用、0/101→422 limit/out_of_range；`TestCollaborationCursors`钉UTC、非零UUID、两项、null/额外项/非法时间/未知封套400、相同时间不同id不相等。`TestReadOnlySnapshotWithLockTimeout`两种Option顺序分别读回transaction_isolation=repeatable read、transaction_read_only=on、lock_timeout指定值；事务内写失败、不同连接提交后第二读不变、新事务可见、事务后参数不留。
+- [x] **Step 1 红测试。** `TestPageSize`固定nil→50、1/100可用、0/101→422 limit/out_of_range；`TestCollaborationCursors`钉UTC、非零UUID、两项、null/额外项/非法时间/未知封套400、相同时间不同id不相等。`TestReadOnlySnapshotWithLockTimeout`两种Option顺序分别读回transaction_isolation=repeatable read、transaction_read_only=on、lock_timeout指定值；事务内写失败、不同连接提交后第二读不变、新事务可见、事务后参数不留。
   ```go
   size, err := shared.PageSize(nil)
   if err != nil || size != 50 { t.Fatalf("default = %d, %v", size, err) }
   // 对limit=0/101核对shared.Error全体Fields，不仅status。
   ```
-- [ ] **Step 2 跑红。** `go -C server test ./internal/shared ./internal/modules/identity/domain ./internal/modules/identity/app ./internal/modules/issue/domain -count=1`；`go -C server test ./internal/platform/postgres -run TestReadOnlySnapshot -count=1`（真实库）。
-- [ ] **Step 3 实现。** 移动PageSize并删identity副本；Options保存配置，NewTxManager在所有Option应用后组合最终BeginQuery，含READ ONLY/REPEATABLE READ/SET LOCAL lock_timeout，避免后Option覆盖前Option；写事务无ReadOnlySnapshot时保持旧语义。bootstrap构造ReadTx并注入所有issue.New测试组合。列表在独立ReadTx内完成首次目标读取、授权、所有目录和SQL；WithinTx嵌套不提升既有写事务隔离，不从写事务调用这些列表用例。
-- [ ] **Step 4 绿/变异。** 同命令绿；实际去掉隔离、只读、配置组合各变异必须业务失败；PAT既有分页/篡改测试保持通过。不要把写被拒绝的事务继续拿来做后续成功读取断言，应回滚再开新事务。
-- [ ] **Step 5 G评审/提交。** `feat(M4/P4): 共享分页限制并支持可重复读快照`；移交P5复用此接缝，不重复实现。
+- [x] **Step 2 跑红。** `go -C server test ./internal/shared ./internal/modules/identity/domain ./internal/modules/identity/app ./internal/modules/issue/domain -count=1`；`go -C server test ./internal/platform/postgres -run TestReadOnlySnapshot -count=1`（真实库）。
+- [x] **Step 3 实现。** 移动PageSize并删identity副本；Options保存配置，NewTxManager在所有Option应用后组合最终BeginQuery，含READ ONLY/REPEATABLE READ/SET LOCAL lock_timeout，避免后Option覆盖前Option；写事务无ReadOnlySnapshot时保持旧语义。bootstrap构造ReadTx并注入所有issue.New测试组合。列表在独立ReadTx内完成首次目标读取、授权、所有目录和SQL；WithinTx嵌套不提升既有写事务隔离，不从写事务调用这些列表用例。
+- [x] **Step 4 绿/变异。** 同命令绿；实际去掉隔离、只读、配置组合各变异必须业务失败；PAT既有分页/篡改测试保持通过。不要把写被拒绝的事务继续拿来做后续成功读取断言，应回滚再开新事务。
+- [x] **Step 5 G评审/提交。** `feat(M4/P4): 共享分页限制并支持可重复读快照`；移交P5复用此接缝，不重复实现。
 
 ### Task 3: 评论创建和分页、成员可见性与00021
 
