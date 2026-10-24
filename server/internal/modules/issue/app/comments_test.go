@@ -115,7 +115,7 @@ func TestListComments(t *testing.T) {
 			} else if len(page.Data) != 2 || page.NextCursor != "" {
 				t.Fatal(page)
 			}
-			if !slices.Equal(w.log.calls, []string{"Begin", line("GetIssue", id), line("Authorize", alice, domain.ActionRead, acme, web), line("Comments", id)}) {
+			if !slices.Equal(w.log.calls, []string{"Begin", line("GetIssue", id), line("Authorize", alice, domain.ActionRead, acme, web), line("Comments", id), line("CommentReactions", f.reactionIDs)}) {
 				t.Fatal(w.log.calls)
 			}
 		})

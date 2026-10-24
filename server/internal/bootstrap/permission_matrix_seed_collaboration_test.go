@@ -22,6 +22,9 @@ func (s issueSeed) comments(sd seeded) {
 		if err := s.store.InsertComment(context.Background(), issueapp.CommentWrite{Comment: c, By: by, At: s.now}); err != nil {
 			s.t.Fatal(err)
 		}
+		if err := s.store.InsertCommentReaction(context.Background(), issueapp.CommentReactionWrite{Reaction: issuedomain.CommentReaction{ID: uuid.NewV7(), WorkspaceID: c.WorkspaceID, ProjectID: c.ProjectID, CommentID: c.ID, ActorID: by, Reaction: "1"}, By: by, At: s.now}); err != nil {
+			s.t.Fatal(err)
+		}
 	}
 }
 func (s issueSeed) seededCommentRows(sd seeded) {
@@ -30,6 +33,10 @@ func (s issueSeed) seededCommentRows(sd seeded) {
 		goneReaction := strings.HasPrefix(i.key, "gone/")
 		if e != nil || !goneReaction && (len(reactions) != 1 || reactions[0].Reaction != "1") || goneReaction && len(reactions) != 0 {
 			s.t.Fatal("seeded reactions", reactions, e)
+		}
+		cr, ce := s.store.CommentReactions(context.Background(), []uuid.UUID{sd.comment(i.key, i.name)})
+		if ce != nil || !goneReaction && (len(cr) != 1 || cr[0].Reaction != "1") || goneReaction && len(cr) != 0 {
+			s.t.Fatal("seeded comment reactions", cr, ce)
 		}
 		got, err := s.store.Comments(context.Background(), sd.issue(i.key, i.name), nil, 100)
 		gone := strings.HasPrefix(i.key, "gone/")

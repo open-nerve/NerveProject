@@ -52,7 +52,7 @@ func (u *UpdateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 			return domain.ErrIssueArchived
 		}
 		if current.HTML == clean.HTML {
-			return nil
+			return embedCommentReactions(ctx, u.d.Comments, []domain.Comment{current}, func(rows []domain.Comment) { current = rows[0] })
 		}
 		targets, err := visibleMentionSubscribers(ctx, u.d.Members, h.issue, actor.UserID, clean.Identity.MentionIDs)
 		if err != nil {
@@ -67,7 +67,10 @@ func (u *UpdateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 		if err := u.d.Comments.InsertSubscribers(ctx, stamp.links(targets)); err != nil {
 			return err
 		}
-		return u.d.Comments.UpdateComment(ctx, CommentWrite{Comment: current, By: actor.UserID, At: at})
+		if err := u.d.Comments.UpdateComment(ctx, CommentWrite{Comment: current, By: actor.UserID, At: at}); err != nil {
+			return err
+		}
+		return embedCommentReactions(ctx, u.d.Comments, []domain.Comment{current}, func(rows []domain.Comment) { current = rows[0] })
 	})
 	if err != nil {
 		return domain.Comment{}, err
@@ -113,28 +116,37 @@ func (u *DeleteIssueComment) Execute(ctx context.Context, id uuid.UUID) error {
 		if err := u.d.Comments.MarkChanged(ctx, ChangedRows{IDs: []uuid.UUID{h.issue.ID}, By: actor.UserID, At: at}); err != nil {
 			return err
 		}
-		return u.d.Comments.DeleteComment(ctx, CommentDeletion{ID: id, By: actor.UserID, At: at})
+		d := CommentDeletion{ID: id, By: actor.UserID, At: at}
+		if err := u.d.Comments.DeleteComment(ctx, d); err != nil {
+			return err
+		}
+		return u.d.Comments.DeleteCommentReactionRows(ctx, d)
 	})
 }
 
-// commentReader is the relative check's only read dependency.
-type commentReader interface {
-	GetComment(context.Context, uuid.UUID) (domain.Comment, bool, error)
+// commentCheck adds the author constraint to the shared live target check.
+func commentCheck(comments CommentReader, id, actorID uuid.UUID, allowAdmin bool, current *domain.Comment) func(context.Context, domain.Issue, shared.Grant) error {
+	check := commentTargetCheck(comments, id, current)
+	return func(ctx context.Context, i domain.Issue, g shared.Grant) error {
+		if err := check(ctx, i, g); err != nil {
+			return err
+		}
+		if current.ActorID != actorID && (!allowAdmin || !g.ProjectAdmin) {
+			return domain.ErrNotAuthor
+		}
+		return nil
+	}
 }
 
-// commentCheck re-reads the child after visibility, both before the gate and
-// under the parent project's lock, capturing the latest row for the callback.
-func commentCheck(comments commentReader, id, actorID uuid.UUID, allowAdmin bool, current *domain.Comment) func(context.Context, domain.Issue, shared.Grant) error {
-	return func(ctx context.Context, i domain.Issue, g shared.Grant) error {
+// commentTargetCheck validates existence and parent membership before and under the lock.
+func commentTargetCheck(comments CommentReader, id uuid.UUID, current *domain.Comment) func(context.Context, domain.Issue, shared.Grant) error {
+	return func(ctx context.Context, i domain.Issue, _ shared.Grant) error {
 		c, found, err := comments.GetComment(ctx, id)
 		if err != nil {
 			return err
 		}
 		if !found || c.IssueID != i.ID {
 			return domain.ErrCommentNotFound
-		}
-		if c.ActorID != actorID && (!allowAdmin || !g.ProjectAdmin) {
-			return domain.ErrNotAuthor
 		}
 		*current = c
 		return nil

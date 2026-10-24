@@ -85,7 +85,7 @@ func targetViolation(pattern, path string, c caller, s seeded, passOver func(par
 		switch {
 		case !strings.HasPrefix(segment, "{") || !strings.HasSuffix(segment, "}"):
 		case passOver(segment):
-		case segment == "{reaction}" && pattern == "/api/v0/issues/{issue_id}/reactions/{reaction}":
+		case segment == "{reaction}" && (pattern == "/api/v0/issues/{issue_id}/reactions/{reaction}" || pattern == "/api/v0/issue-comments/{comment_id}/reactions/{reaction}"):
 			if got[i] != "128077" {
 				return "{reaction} must name the caller's prepared decimal reaction 128077"
 			}

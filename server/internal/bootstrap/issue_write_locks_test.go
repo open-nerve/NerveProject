@@ -41,6 +41,10 @@ type issueWrite struct {
 // issueWrites are the work-item side's writes, each with its row: every
 // operation of the contract tagged issue but GET (writesOnIssues).
 var issueWrites = []issueWrite{
+	{op: "addCommentReaction", method: http.MethodPost, path: "/api/v0/issue-comments/{comment_id}/reactions", target: func(t *testing.T, w issueWorld) string {
+		return commentReactionsOf(w.newComment(t, "alice", w.newWorkItem(t)).ID)
+	}, body: func(*testing.T, issueWorld) string { return `{"reaction":"128077"}` }, want: http.StatusCreated, waits: "comment_reactions", mode: "SHARE"},
+	{op: "removeCommentReaction", method: http.MethodDelete, path: "/api/v0/issue-comments/{comment_id}/reactions/{reaction}", target: func(t *testing.T, w issueWorld) string { return w.newCommentReactionPath(t) }, body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "comment_reactions", mode: "SHARE"},
 	{op: "addIssueReaction", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/reactions", target: func(t *testing.T, w issueWorld) string { return reactionsOf(w.newWorkItem(t)) }, body: func(*testing.T, issueWorld) string { return `{"reaction":"128077"}` }, want: http.StatusCreated, waits: "issues", mode: "SHARE"},
 	{op: "removeIssueReaction", method: http.MethodDelete, path: "/api/v0/issues/{issue_id}/reactions/{reaction}", target: func(t *testing.T, w issueWorld) string { return w.newReactionPath(t) }, body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
 	{op: "updateIssueComment", method: http.MethodPatch, path: "/api/v0/issue-comments/{comment_id}", target: func(t *testing.T, w issueWorld) string {
@@ -126,7 +130,7 @@ var issueWrites = []issueWrite{
 // memberships its decision reads, the states and labels it checks, and
 // the work-item side's own.
 const issueTables = "workspaces, workspace_members, projects, project_members, states, labels, issues, issue_assignees, issue_labels, " +
-	"issue_relations, issue_subscribers, issue_comments, issue_reactions, issue_activities"
+	"issue_relations, issue_subscribers, issue_comments, issue_reactions, comment_reactions, issue_activities"
 
 // writesOnIssues lists the operations of ops tagged issue, but GET, sorted.
 func writesOnIssues(ops []apitest.Operation) []string {

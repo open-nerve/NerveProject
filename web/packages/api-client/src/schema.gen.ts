@@ -1070,6 +1070,51 @@ export interface paths {
         patch: operations["updateIssueComment"];
         trace?: never;
     };
+    "/api/v0/issue-comments/{comment_id}/reactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add the caller's reaction
+         * @description Admins, members and guests may react to visible comments, regardless of comment author. Invalid decimal codes answer validation_failed before reads. Visibility and role are checked before the write gate and again under the project lock. Project archival precedes issue archival, then an existing live reaction of this caller answers issue.reaction_exists. Success adds only the reaction, preserving all issue and comment audit fields, activities and subscriptions.
+         */
+        post: operations["addCommentReaction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issue-comments/{comment_id}/reactions/{reaction}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+                reaction: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove the caller's reaction
+         * @description Uses addCommentReaction's role, visibility, validation and archive order. Only the caller's own live reaction is removed; absence answers issue.reaction_not_found, even when another actor has the same reaction. Success soft-deletes only the reaction, preserving all parent audit fields, activities and subscriptions.
+         */
+        delete: operations["removeCommentReaction"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/issues/{issue_id}/reactions": {
         parameters: {
             query?: never;
@@ -2179,6 +2224,9 @@ export interface components {
             updated_at: string;
             reactions: components["schemas"]["CommentReaction"][];
         };
+        ReactionCreate: {
+            reaction: string;
+        };
         IssueReaction: {
             /** Format: uuid */
             id: string;
@@ -2192,9 +2240,6 @@ export interface components {
         };
         IssueReactionCollection: {
             data: components["schemas"]["IssueReaction"][];
-        };
-        ReactionCreate: {
-            reaction: string;
         };
         IssueCommentPage: {
             data: components["schemas"]["IssueComment"][];
@@ -2371,9 +2416,9 @@ export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
 export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
 export type CommentReaction = components['schemas']['CommentReaction'];
 export type IssueComment = components['schemas']['IssueComment'];
+export type ReactionCreate = components['schemas']['ReactionCreate'];
 export type IssueReaction = components['schemas']['IssueReaction'];
 export type IssueReactionCollection = components['schemas']['IssueReactionCollection'];
-export type ReactionCreate = components['schemas']['ReactionCreate'];
 export type IssueCommentPage = components['schemas']['IssueCommentPage'];
 export type IssueRelationType = components['schemas']['IssueRelationType'];
 export type IssueRelation = components['schemas']['IssueRelation'];
@@ -4065,6 +4110,55 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["IssueComment"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addCommentReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactionCreate"];
+            };
+        };
+        responses: {
+            /** @description The new reaction. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentReaction"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    removeCommentReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+                reaction: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's reaction was removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

@@ -187,7 +187,9 @@ func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *
 	route := newIssueRoute(t, pool, postgres.NewTxManager(pool, 2*time.Second))
 	for _, item := range queryIDs(t, pool, "SELECT id FROM issues WHERE workspace_id=$1", id) {
 		route.answerWithin(t, contract, http.MethodPost, reactionsOf(item), member, `{"reaction":"128077"}`, http.StatusCreated)
-		route.answerWithin(t, contract, http.MethodPost, commentsOf(item), member, `{"comment_html":"<p>Workspace comment</p>"}`, http.StatusCreated)
+		var comment answeredComment
+		decodeAnswer(t, route.answerWithin(t, contract, http.MethodPost, commentsOf(item), member, `{"comment_html":"<p>Workspace comment</p>"}`, http.StatusCreated), &comment)
+		route.answerWithin(t, contract, http.MethodPost, commentReactionsOf(comment.ID), member, `{"reaction":"128077"}`, http.StatusCreated)
 	}
 	return id
 }

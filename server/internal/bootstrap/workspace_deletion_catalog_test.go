@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 	"uuid"
@@ -83,6 +84,27 @@ func keysTo(t testing.TB, pool *pgxpool.Pool, parent string) []foreignKey {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// This table deliberately has no issue_id; include its rows through the
+	// exact owned comment FK, preserving the refusal for every unknown path.
+	if parent == "issues" {
+		if n := slices.Index(unkeyed, "comment_reactions (through issue_comments)"); n >= 0 {
+			var endpoints int
+			if err := pool.QueryRow(context.Background(), `
+ SELECT count(*) FROM pg_constraint c
+ JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=c.conkey[1]
+ JOIN pg_attribute b ON b.attrelid=c.confrelid AND b.attnum=c.confkey[1]
+ WHERE c.contype='f' AND cardinality(c.conkey)=1 AND cardinality(c.confkey)=1 AND b.attname='id' AND
+ ((c.conrelid='comment_reactions'::regclass AND a.attname='comment_id' AND c.confrelid='issue_comments'::regclass)
+ OR (c.conrelid='issue_comments'::regclass AND a.attname='issue_id' AND c.confrelid='issues'::regclass))`).Scan(&endpoints); err != nil {
+				t.Fatal(err)
+			}
+			if endpoints != 2 {
+				t.Fatalf("comment_reactions: unsupported FK endpoints; require comment_id -> issue_comments.id -> issue_id -> issues.id")
+			}
+			keys = append(keys, foreignKey{parent, "comment_reactions", "comment_id"})
+			unkeyed = append(unkeyed[:n], unkeyed[n+1:]...)
+		}
+	}
 	if len(unkeyed) > 0 {
 		t.Fatalf("%s: under %s with no foreign key to %s of its own, so no check here sees its rows: add %s_id, or extend the guard",
 			strings.Join(unkeyed, "; "), parent, parent, rowOf(parent))
@@ -106,8 +128,7 @@ func (k foreignKey) deleted(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) []uu
 // deleted_at is as state says, in order.
 func (k foreignKey) idsUnder(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, state string) []uuid.UUID {
 	t.Helper()
-	rows, err := pool.Query(context.Background(), "SELECT id FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
-		" = $1 AND deleted_at "+state+" ORDER BY id", id)
+	rows, err := pool.Query(context.Background(), "SELECT r.id FROM "+k.table+" r WHERE "+k.scope()+" AND r.deleted_at "+state+" ORDER BY r.id", id)
 	if err != nil {
 		t.Fatalf("%s: %v", k, err)
 	}
@@ -150,7 +171,7 @@ func (k foreignKey) rows(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) string 
 	t.Helper()
 	var s string
 	if err := pool.QueryRow(context.Background(), "SELECT coalesce(string_agg(r::text, E'\\n' ORDER BY r::text), '') FROM "+k.table+
-		" r WHERE r."+pgx.Identifier{k.column}.Sanitize()+" = $1", id).Scan(&s); err != nil {
+		" r WHERE "+k.scope(), id).Scan(&s); err != nil {
 		t.Fatalf("%s: %v", k, err)
 	}
 	return s
@@ -179,5 +200,47 @@ func TestKeysRefuseATableWithoutItsParent(t *testing.T) {
 		if failed := fatalOf(func(tb testing.TB) { keysTo(tb, pool, parent) }); failed != want {
 			t.Errorf("keysTo(%s) with widgets and gadgets: failed with %q, want %q", parent, failed, want)
 		}
+	}
+}
+
+// scope selects this key's actual descendants without filtering a soft-deleted parent.
+func (k foreignKey) scope() string {
+	if k.parent == "issues" && k.table == "comment_reactions" && k.column == "comment_id" {
+		return "r.comment_id IN (SELECT c.id FROM issue_comments c WHERE c.issue_id=$1)"
+	}
+	return "r." + pgx.Identifier{k.column}.Sanitize() + " = $1"
+}
+
+func TestKeysRefuseUnknownIssueDescendants(t *testing.T) {
+	pool := openPool(t, pgtest.NewDatabase(t))
+	for _, stmt := range []string{
+		"CREATE TABLE issue_widgets(id uuid PRIMARY KEY,issue_id uuid NOT NULL REFERENCES issues)",
+		"CREATE TABLE issue_gadgets(id uuid PRIMARY KEY,widget_id uuid NOT NULL REFERENCES issue_widgets)",
+	} {
+		if _, err := pool.Exec(context.Background(), stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	failed := fatalOf(func(tb testing.TB) { keysTo(tb, pool, "issues") })
+	want := "issue_gadgets (through issue_widgets): under issues with no foreign key to issues of its own, so no check here sees its rows: add issue_id, or extend the guard"
+	if failed != want {
+		t.Fatalf("unknown issue chain: %q, want %q", failed, want)
+	}
+}
+func TestKeysRequireExactCommentReactionEndpoints(t *testing.T) {
+	for _, stmt := range []string{
+		"ALTER TABLE issue_comments ADD UNIQUE(actor_id); ALTER TABLE comment_reactions DROP CONSTRAINT comment_reactions_comment_id_fkey; ALTER TABLE comment_reactions ADD FOREIGN KEY(comment_id) REFERENCES issue_comments(actor_id)",
+		"ALTER TABLE issues ADD UNIQUE(created_by_id); ALTER TABLE issue_comments DROP CONSTRAINT issue_comments_issue_id_fkey; ALTER TABLE issue_comments ADD FOREIGN KEY(issue_id) REFERENCES issues(created_by_id)",
+	} {
+		t.Run(stmt, func(t *testing.T) {
+			pool := openPool(t, pgtest.NewDatabase(t))
+			if _, err := pool.Exec(context.Background(), stmt); err != nil {
+				t.Fatal(err)
+			}
+			failed := fatalOf(func(tb testing.TB) { keysTo(tb, pool, "issues") })
+			if !strings.Contains(failed, "unsupported FK endpoints") {
+				t.Fatal("accepted a names-only path", failed)
+			}
+		})
 	}
 }

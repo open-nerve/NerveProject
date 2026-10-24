@@ -514,6 +514,72 @@ paths:
           description: The caller's reaction was removed.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issue-comments/{comment_id}/reactions:
+    parameters:
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: addCommentReaction
+      tags: [issue]
+      summary: Add the caller's reaction
+      description: >-
+        Admins, members and guests may react to visible comments, regardless of comment author. Invalid decimal
+        codes answer validation_failed before reads. Visibility and role are checked
+        before the write gate and again under the project lock. Project archival
+        precedes issue archival, then an existing live reaction of this caller
+        answers issue.reaction_exists. Success adds only the reaction, preserving all issue and comment audit fields, activities and subscriptions.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, issue.comment_not_found, forbidden, project.archived, issue.archived, issue.reaction_exists, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReactionCreate'
+      responses:
+        '201':
+          description: The new reaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentReaction'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issue-comments/{comment_id}/reactions/{reaction}:
+    parameters:
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: reaction
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[0-9]{1,7}(-[0-9]{1,7}){0,15}$'
+          maxLength: 128
+    delete:
+      operationId: removeCommentReaction
+      tags: [issue]
+      summary: Remove the caller's reaction
+      description: >-
+        Uses addCommentReaction's role, visibility, validation and archive order.
+        Only the caller's own live reaction is removed; absence answers
+        issue.reaction_not_found, even when another actor has the same reaction.
+        Success soft-deletes only the reaction, preserving all parent audit fields, activities and subscriptions.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, issue.comment_not_found, forbidden, project.archived, issue.archived, issue.reaction_not_found, server_busy]
+      responses:
+        '204':
+          description: The caller's reaction was removed.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/issues/{issue_id}/comments:
     parameters:
       - $ref: '#/components/parameters/IssueID'

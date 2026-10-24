@@ -89,6 +89,11 @@ type DeleteIssueCommentUseCase interface {
 	Execute(context.Context, uuid.UUID) error
 }
 
+// AddCommentReactionUseCase adds the caller's reaction on a comment.
+type AddCommentReactionUseCase interface {
+	Execute(context.Context, uuid.UUID, string) (domain.CommentReaction, error)
+}
+
 // AddIssueReactionUseCase adds the caller's reaction.
 type AddIssueReactionUseCase interface {
 	Execute(context.Context, uuid.UUID, string) (domain.IssueReaction, error)
@@ -106,25 +111,27 @@ type ListIssueReactionsUseCase interface {
 
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	AddIssueReaction     AddIssueReactionUseCase
-	RemoveIssueReaction  RemoveIssueReactionUseCase
-	ListIssueReactions   ListIssueReactionsUseCase
-	UpdateIssueComment   UpdateIssueCommentUseCase
-	DeleteIssueComment   DeleteIssueCommentUseCase
-	CreateIssueComment   CreateIssueCommentUseCase
-	ListIssueComments    ListIssueCommentsUseCase
-	CreateIssue          CreateIssueUseCase
-	GetIssue             GetIssueUseCase
-	GetIssueByIdentifier GetIssueByIdentifierUseCase
-	UpdateIssue          UpdateIssueUseCase
-	DeleteIssue          DeleteIssueUseCase
-	ArchiveIssue         ArchiveIssueUseCase
-	UnarchiveIssue       ArchiveIssueUseCase
-	ListSubIssues        ListSubIssuesUseCase
-	AddSubIssues         AddSubIssuesUseCase
-	ListIssueRelations   ListIssueRelationsUseCase
-	CreateIssueRelations CreateIssueRelationsUseCase
-	DeleteIssueRelation  DeleteIssueRelationUseCase
+	AddCommentReaction    AddCommentReactionUseCase
+	RemoveCommentReaction RemoveIssueReactionUseCase
+	AddIssueReaction      AddIssueReactionUseCase
+	RemoveIssueReaction   RemoveIssueReactionUseCase
+	ListIssueReactions    ListIssueReactionsUseCase
+	UpdateIssueComment    UpdateIssueCommentUseCase
+	DeleteIssueComment    DeleteIssueCommentUseCase
+	CreateIssueComment    CreateIssueCommentUseCase
+	ListIssueComments     ListIssueCommentsUseCase
+	CreateIssue           CreateIssueUseCase
+	GetIssue              GetIssueUseCase
+	GetIssueByIdentifier  GetIssueByIdentifierUseCase
+	UpdateIssue           UpdateIssueUseCase
+	DeleteIssue           DeleteIssueUseCase
+	ArchiveIssue          ArchiveIssueUseCase
+	UnarchiveIssue        ArchiveIssueUseCase
+	ListSubIssues         ListSubIssuesUseCase
+	AddSubIssues          AddSubIssuesUseCase
+	ListIssueRelations    ListIssueRelationsUseCase
+	CreateIssueRelations  CreateIssueRelationsUseCase
+	DeleteIssueRelation   DeleteIssueRelationUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

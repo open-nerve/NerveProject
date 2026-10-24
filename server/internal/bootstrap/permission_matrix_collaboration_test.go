@@ -74,6 +74,25 @@ func collaborationMatrixRows() []matrixRow {
 		}
 		rows = append(rows, matrixRow{op: op, variant: "both archived", write: true, columns: archivedColumns, prepare: archivedPrepare, request: request, cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)}, matrixRow{op: op, variant: "archived issue", write: true, columns: issueColumns, prepare: archivedPrepare, request: request, cells: onAWorkItem(cellIssueArchived, cellIssueArchived, cellIssueArchived, cellIssueArchived)})
 	}
+	for _, remove := range []bool{false, true} {
+		op, method, after, body, success := "addCommentReaction", http.MethodPost, "/reactions", `{"reaction":"128077"}`, cellCreated
+		var prepare func(*testing.T, caller, seeded, string)
+		if remove {
+			op, method, after, body, success = "removeCommentReaction", http.MethodDelete, "/reactions/128077", "", cellNoContent
+			prepare = ownCommentReaction
+		}
+		request := func(c caller, s seeded) (string, string, string) {
+			return method, commentReactionsOf(s.comment(projectOf(c), issueOf(c))) + after[len("/reactions"):], body
+		}
+		rows = append(rows, matrixRow{op: op, write: true, columns: issueColumns, prepare: prepare, request: request, cells: commentCells(onAWorkItem(success, success, success, success))}, matrixRow{op: op, variant: "archived", write: true, columns: archivedColumns, prepare: prepare, request: request, cells: commentCells(issueRows.ofArchived(cellProjectArchived, cellForbidden))})
+		archivedPrepare := func(t *testing.T, c caller, s seeded, url string) {
+			if prepare != nil {
+				prepare(t, c, s, url)
+			}
+			inDone(true)(t, c, s, url)
+		}
+		rows = append(rows, matrixRow{op: op, variant: "both archived", write: true, columns: archivedColumns, prepare: archivedPrepare, request: request, cells: commentCells(issueRows.ofArchived(cellProjectArchived, cellForbidden))}, matrixRow{op: op, variant: "archived issue", write: true, columns: issueColumns, prepare: archivedPrepare, request: request, cells: commentCells(onAWorkItem(cellIssueArchived, cellIssueArchived, cellIssueArchived, cellIssueArchived))})
+	}
 	return rows
 }
 func toComment(method, body string) func(caller, seeded) (string, string, string) {
@@ -96,6 +115,15 @@ func ownReaction(t *testing.T, c caller, s seeded, url string) {
 	pool := openPool(t, url)
 	defer pool.Close()
 	if _, err := pool.Exec(pgtest.Soon(t), `INSERT INTO issue_reactions(id,workspace_id,project_id,issue_id,actor_id,reaction,created_by_id,updated_by_id) SELECT $1,workspace_id,project_id,id,$3,'128077',$3,$3 FROM issues WHERE id=$2`, uuid.NewV7(), s.issue(projectOf(c), issueOf(c)), s.account(accountOf(c))); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func ownCommentReaction(t *testing.T, c caller, s seeded, url string) {
+	t.Helper()
+	pool := openPool(t, url)
+	defer pool.Close()
+	if _, err := pool.Exec(pgtest.Soon(t), `INSERT INTO comment_reactions(id,workspace_id,project_id,comment_id,actor_id,reaction,created_by_id,updated_by_id) SELECT $1,workspace_id,project_id,id,$3,'128077',$3,$3 FROM issue_comments WHERE id=$2`, uuid.NewV7(), s.comment(projectOf(c), issueOf(c)), s.account(accountOf(c))); err != nil {
 		t.Fatal(err)
 	}
 }

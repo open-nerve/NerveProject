@@ -87,6 +87,16 @@ WHERE t.id IN (
     ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
 RETURNING t.id;
 
+-- name: DeleteProjectCommentReactionRows :many
+-- DeleteProjectIssueRows' batch, of the work items' reactions.
+UPDATE comment_reactions AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM comment_reactions r
+    WHERE r.comment_id IN (SELECT c.id FROM issue_comments c WHERE c.project_id = sqlc.arg(project_id)) AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
+    ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
+RETURNING t.id;
+
 -- name: DeleteProjectActivityRows :many
 -- DeleteProjectIssueRows' batch, of the work items' activity.
 UPDATE issue_activities AS t

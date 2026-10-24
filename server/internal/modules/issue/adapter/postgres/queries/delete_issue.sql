@@ -68,6 +68,12 @@ UPDATE issue_reactions
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE issue_id = ANY (sqlc.arg(issue_ids)::uuid[]) AND deleted_at IS NULL;
 
+-- name: DeleteIssueCommentReactionRows :exec
+-- DeleteIssueAssigneeRows' statement, of the deleted work items' reactions.
+UPDATE comment_reactions
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE comment_id IN (SELECT id FROM issue_comments WHERE issue_id = ANY (sqlc.arg(issue_ids)::uuid[])) AND deleted_at IS NULL;
+
 -- name: DeleteIssueActivityRows :exec
 -- DeleteIssueAssigneeRows' statement, of the deleted work items' activity (3.6: it goes with its work item); the index
 -- on (issue_id, created_at, id) serves it.

@@ -16,6 +16,19 @@ import (
 // (M4 design 4.2–4.6, 4.11), as TestConstraintAndIndexNames reads them: the
 // part of its want that the migrations 00015–00022 add.
 var issueNames = []string{
+	"comment_reactions_actor_id_fkey f c",
+	"comment_reactions_created_by_id_fkey f n",
+	"comment_reactions_comment_id_actor_id_reaction_key iuw",
+	"comment_reactions_comment_id_fkey f c",
+	"comment_reactions_comment_id_idx i",
+	"comment_reactions_pkey iu",
+	"comment_reactions_pkey p",
+	"comment_reactions_project_id_fkey f c",
+	"comment_reactions_project_id_idx i",
+	"comment_reactions_reaction_check c",
+	"comment_reactions_updated_by_id_fkey f n",
+	"comment_reactions_workspace_id_fkey f c",
+	"comment_reactions_workspace_id_idx i",
 	"issue_activities_actor_id_fkey f n",
 	"issue_activities_created_by_id_fkey f n",
 	"issue_activities_issue_id_created_at_idx i",

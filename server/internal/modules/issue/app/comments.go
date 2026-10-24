@@ -110,7 +110,9 @@ func (u *ListIssueComments) Execute(ctx context.Context, id uuid.UUID, limit *in
 				return err
 			}
 		}
-		page.Data = append(page.Data, rows...)
+		if err := embedCommentReactions(ctx, u.d.Comments, rows, func(rows []domain.Comment) { page.Data = append(page.Data, rows...) }); err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {

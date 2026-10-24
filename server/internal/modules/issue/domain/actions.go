@@ -5,7 +5,7 @@ import "github.com/open-nerve/NerveProject/server/internal/shared"
 // The issue module's actions: the keys of its rows in the access module's
 // rule table (M4 design 3.4).
 const (
-	// ActionWriteReaction adds or removes the caller's reaction on a visible issue.
+	// ActionWriteReaction adds or removes the caller's reaction on a visible issue or comment.
 	ActionWriteReaction shared.Action = "issue_reaction.write"
 	// ActionCreateComment creates a comment on a visible work item.
 	ActionCreateComment shared.Action = "issue_comment.create"

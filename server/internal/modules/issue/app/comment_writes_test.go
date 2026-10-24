@@ -241,7 +241,7 @@ func TestCommentWritePortFailures(t *testing.T) {
 		if edit {
 			ports = append(ports, "InsertSubscribers", "UpdateComment")
 		} else {
-			ports = append(ports, "DeleteComment")
+			ports = append(ports, "DeleteComment", "DeleteCommentReactionRows")
 		}
 		for _, port := range ports {
 			t.Run(line("edit", edit, port), func(t *testing.T) {
@@ -287,5 +287,28 @@ func TestCommentWriteValidationAndMentionSubscriptions(t *testing.T) {
 	w.log.fail = "MentionMembers"
 	if _, err := u.Execute(as(alice), f.current.ID, html); err != errDisk {
 		t.Fatal("mention port error lost", err)
+	}
+}
+
+func (f *writableComments) DeleteCommentReactionRows(ctx context.Context, d app.CommentDeletion) error {
+	return f.log.add(ctx, "DeleteCommentReactionRows", d.ID)
+}
+
+func TestDeletingCommentReactions(t *testing.T) {
+	_, d, w, f := newCommentWrites()
+	if err := d.Execute(as(alice), f.current.ID); err != nil {
+		t.Fatal(err)
+	}
+	comment, reactions := -1, -1
+	for n, c := range w.log.calls {
+		if strings.HasPrefix(c, "DeleteComment ") {
+			comment = n
+		}
+		if strings.HasPrefix(c, "DeleteCommentReactionRows ") {
+			reactions = n
+		}
+	}
+	if f.deleted == nil || comment < 0 || reactions <= comment {
+		t.Fatal("must delete comment before its reactions", w.log.calls)
 	}
 }

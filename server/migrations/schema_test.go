@@ -64,14 +64,14 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 22 {
-		t.Fatalf("Up() = %d migrations, %v; want 22", len(up), err)
+	if err != nil || len(up) != 23 {
+		t.Fatalf("Up() = %d migrations, %v; want 23", len(up), err)
 	}
 	for _, want := range []struct {
 		query string
 		names []string
 	}{
-		{tablesQuery, []string{"api_tokens", "auth_sessions", "issue_activities", "issue_assignees", "issue_comments", "issue_labels", "issue_reactions", "issue_relations",
+		{tablesQuery, []string{"api_tokens", "auth_sessions", "comment_reactions", "issue_activities", "issue_assignees", "issue_comments", "issue_labels", "issue_reactions", "issue_relations",
 			"issue_subscribers", "issues", "labels", "profiles", "project_members", "project_user_properties", "projects", "river_job",
 			"river_leader", "river_notification", "river_queue", "states", "users", "workspace_member_invites", "workspace_members",
 			"workspace_user_properties", "workspaces"}},
@@ -92,8 +92,8 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 22 {
-		t.Errorf("Up() again = %d migrations, %v; want 22", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 23 {
+		t.Errorf("Up() again = %d migrations, %v; want 23", len(again), err)
 	}
 }
 

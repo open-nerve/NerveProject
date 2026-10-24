@@ -88,6 +88,7 @@ sql:
       - migrations/sql/00020_issue_issue_relations.sql
       - migrations/sql/00021_issue_issue_comments.sql
       - migrations/sql/00022_issue_issue_reactions.sql
+      - migrations/sql/00023_issue_comment_reactions.sql
     queries: internal/modules/issue/adapter/postgres/queries
     gen:
       go:

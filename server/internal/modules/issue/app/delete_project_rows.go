@@ -33,6 +33,7 @@ type ProjectRowsDeleter interface {
 	DeleteProjectSubscriberRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectCommentRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectReactionRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteProjectCommentReactionRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectActivityRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 }
 
@@ -41,7 +42,7 @@ type ProjectRowsDeleter interface {
 func rowSteps(d ProjectRowsDeleter) []func(context.Context, RowBatch) ([]uuid.UUID, error) {
 	return []func(context.Context, RowBatch) ([]uuid.UUID, error){
 		d.DeleteProjectIssueRows, d.DeleteProjectAssigneeRows, d.DeleteProjectLabelRows, d.DeleteProjectRelationRows,
-		d.DeleteProjectSubscriberRows, d.DeleteProjectCommentRows, d.DeleteProjectReactionRows, d.DeleteProjectActivityRows,
+		d.DeleteProjectSubscriberRows, d.DeleteProjectCommentRows, d.DeleteProjectReactionRows, d.DeleteProjectCommentReactionRows, d.DeleteProjectActivityRows,
 	}
 }
 

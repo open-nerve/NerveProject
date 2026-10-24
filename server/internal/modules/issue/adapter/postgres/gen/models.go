@@ -10,6 +10,20 @@ import (
 	"uuid"
 )
 
+type CommentReaction struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	CommentID   uuid.UUID
+	ActorID     uuid.UUID
+	Reaction    string
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
 type Issue struct {
 	ID                  uuid.UUID
 	WorkspaceID         uuid.UUID

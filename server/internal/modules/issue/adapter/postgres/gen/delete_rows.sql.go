@@ -102,6 +102,51 @@ func (q *Queries) DeleteProjectAssigneeRows(ctx context.Context, arg DeleteProje
 	return items, nil
 }
 
+const deleteProjectCommentReactionRows = `-- name: DeleteProjectCommentReactionRows :many
+UPDATE comment_reactions AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM comment_reactions r
+    WHERE r.comment_id IN (SELECT c.id FROM issue_comments c WHERE c.project_id = $3) AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteProjectCommentReactionRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// DeleteProjectIssueRows' batch, of the work items' reactions.
+func (q *Queries) DeleteProjectCommentReactionRows(ctx context.Context, arg DeleteProjectCommentReactionRowsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectCommentReactionRows,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteProjectCommentRows = `-- name: DeleteProjectCommentRows :many
 UPDATE issue_comments AS t
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid

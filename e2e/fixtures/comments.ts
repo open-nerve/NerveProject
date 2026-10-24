@@ -32,3 +32,13 @@ export async function createIssueReaction(api: Api, token: string, issueId: stri
   });
   expect(response.status, `create a reaction on ${issueId}: ${JSON.stringify(error)}`).toBe(201);
 }
+
+/** Creates a comment reaction through the API for directory-based stories. */
+export async function createCommentReaction(api: Api, token: string, commentId: string): Promise<void> {
+  const { error, response } = await api.POST("/api/v0/issue-comments/{comment_id}/reactions", {
+    params: { path: { comment_id: commentId } },
+    body: { reaction: "128077" },
+    headers: bearer(token),
+  });
+  expect(response.status, `create a reaction on comment ${commentId}: ${JSON.stringify(error)}`).toBe(201);
+}

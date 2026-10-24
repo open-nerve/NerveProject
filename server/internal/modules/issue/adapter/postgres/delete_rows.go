@@ -79,3 +79,9 @@ func (s *Store) DeleteProjectReactionRows(ctx context.Context, b app.RowBatch) (
 	ids, err := s.queries(ctx).DeleteProjectReactionRows(ctx, gen.DeleteProjectReactionRowsParams(batch(b)))
 	return deleted(ids, err, "reactions")
 }
+
+// DeleteProjectCommentReactionRows soft-deletes comment reaction rows in the existing deletion sequence.
+func (s *Store) DeleteProjectCommentReactionRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteProjectCommentReactionRows(ctx, gen.DeleteProjectCommentReactionRowsParams(batch(b)))
+	return deleted(ids, err, "comment reactions")
+}

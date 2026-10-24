@@ -31,7 +31,7 @@ func newDelete() (*app.DeleteIssue, *world, uuid.UUID) {
 // activity.
 func deletingRows(ids []uuid.UUID) []string {
 	return []string{line("DeleteIssueRows", ids), line("DeleteIssueAssigneeRows", ids), line("DeleteIssueLabelRows", ids),
-		line("DeleteIssueRelationRows", ids), line("DeleteIssueSubscriberRows", ids), line("DeleteIssueCommentRows", ids), line("DeleteIssueReactionRows", ids), line("DeleteIssueActivityRows", ids)}
+		line("DeleteIssueRelationRows", ids), line("DeleteIssueSubscriberRows", ids), line("DeleteIssueCommentRows", ids), line("DeleteIssueReactionRows", ids), line("DeleteIssueCommentReactionRows", ids), line("DeleteIssueActivityRows", ids)}
 }
 
 // A deletion, in the order of M4 design 3.5: Locks' calls, its decisions
@@ -68,7 +68,7 @@ func TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows(t *testing.T) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
 			deletion := app.IssueDeletion{IssueIDs: subtree, By: alice, At: clockNow}
-			if want := slices.Repeat([]app.IssueDeletion{deletion}, 8); !reflect.DeepEqual(w.issues.deletions, want) {
+			if want := slices.Repeat([]app.IssueDeletion{deletion}, 9); !reflect.DeepEqual(w.issues.deletions, want) {
 				t.Errorf("the deletions %+v, want %+v", w.issues.deletions, want)
 			}
 		})
@@ -114,7 +114,7 @@ func TestDeleteIssueRefusals(t *testing.T) {
 // call after it runs: the transaction rolls back whatever was deleted.
 func TestDeleteIssueStopsAtAFailingPort(t *testing.T) {
 	for _, port := range []string{"GetIssue", "Authorize", "Lock", "Subtree", "DeleteIssueRows", "DeleteIssueAssigneeRows",
-		"DeleteIssueLabelRows", "DeleteIssueRelationRows", "DeleteIssueSubscriberRows", "DeleteIssueCommentRows", "DeleteIssueReactionRows", "DeleteIssueActivityRows"} {
+		"DeleteIssueLabelRows", "DeleteIssueRelationRows", "DeleteIssueSubscriberRows", "DeleteIssueCommentRows", "DeleteIssueReactionRows", "DeleteIssueCommentReactionRows", "DeleteIssueActivityRows"} {
 		t.Run(port, func(t *testing.T) {
 			uc, w, id := newDelete()
 			w.log.fail = port

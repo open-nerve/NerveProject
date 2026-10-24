@@ -38,6 +38,7 @@ type IssueRowsDeleter interface {
 	DeleteIssueSubscriberRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueCommentRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueReactionRows(ctx context.Context, d IssueDeletion) error
+	DeleteIssueCommentReactionRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueActivityRows(ctx context.Context, d IssueDeletion) error
 }
 
@@ -47,7 +48,7 @@ type IssueRowsDeleter interface {
 func issueRowSteps(d IssueRowsDeleter) []func(context.Context, IssueDeletion) error {
 	return []func(context.Context, IssueDeletion) error{
 		d.DeleteIssueRows, d.DeleteIssueAssigneeRows, d.DeleteIssueLabelRows, d.DeleteIssueRelationRows, d.DeleteIssueSubscriberRows,
-		d.DeleteIssueCommentRows, d.DeleteIssueReactionRows, d.DeleteIssueActivityRows,
+		d.DeleteIssueCommentRows, d.DeleteIssueReactionRows, d.DeleteIssueCommentReactionRows, d.DeleteIssueActivityRows,
 	}
 }
 

@@ -347,7 +347,9 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 	for _, tt := range []struct {
 		pattern, path string
 		valid         bool
-	}{{reactionPattern, reactionPath + "128077", true}, {reactionPattern, reactionPath + "1", false}, {"/api/v0/reactions/{reaction}", "/api/v0/reactions/128077", false}} {
+	}{{reactionPattern, reactionPath + "128077", true},
+		{"/api/v0/issue-comments/{comment_id}/reactions/{reaction}", commentReactionsOf(s.comment(projectOf(callerProjectAdmin), issueOf(callerProjectAdmin))) + "/128077", true},
+		{"/api/v0/issue-comments/{comment_id}/reactions/{reaction}", commentReactionsOf(s.comment(projectOf(callerProjectAdmin), issueOf(callerProjectAdmin))) + "/1", false}, {reactionPattern, reactionPath + "1", false}, {"/api/v0/reactions/{reaction}", "/api/v0/reactions/128077", false}} {
 		v := targetViolation(tt.pattern, tt.path, callerProjectAdmin, s, func(string) bool { return false })
 		if (v == "") != tt.valid {
 			t.Errorf("reaction target %s: %q", tt.path, v)

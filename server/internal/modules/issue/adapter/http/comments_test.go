@@ -21,6 +21,7 @@ type fakeCommentCreate struct {
 	html      string
 	calls     int
 	err       error
+	reactions []domain.CommentReaction
 }
 
 func (f *fakeCommentCreate) Execute(ctx context.Context, id uuid.UUID, html string) (domain.Comment, error) {
@@ -29,7 +30,7 @@ func (f *fakeCommentCreate) Execute(ctx context.Context, id uuid.UUID, html stri
 		return domain.Comment{}, err
 	}
 	f.actor, f.id, f.html, f.calls = a.UserID, id, html, f.calls+1
-	return domain.Comment{ID: bobComment, IssueID: id, ActorID: a.UserID, HTML: html, Text: "secret", CreatedAt: created, UpdatedAt: created}, f.err
+	return domain.Comment{ID: bobComment, IssueID: id, ActorID: a.UserID, HTML: html, Text: "secret", CreatedAt: created, UpdatedAt: created, Reactions: f.reactions}, f.err
 }
 
 type fakeCommentList struct {

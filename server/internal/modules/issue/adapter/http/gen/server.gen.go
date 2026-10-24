@@ -350,6 +350,9 @@ type ListIssueCommentsParams struct {
 // UpdateIssueCommentJSONRequestBody defines body for UpdateIssueComment for application/json ContentType.
 type UpdateIssueCommentJSONRequestBody = IssueCommentCreate
 
+// AddCommentReactionJSONRequestBody defines body for AddCommentReaction for application/json ContentType.
+type AddCommentReactionJSONRequestBody = ReactionCreate
+
 // UpdateIssueJSONRequestBody defines body for UpdateIssue for application/json ContentType.
 type UpdateIssueJSONRequestBody = IssueUpdate
 
@@ -376,6 +379,12 @@ type ServerInterface interface {
 	// UpdateIssueComment Edit a comment as its author
 	// (PATCH /api/v0/issue-comments/{comment_id})
 	UpdateIssueComment(w http.ResponseWriter, r *http.Request, commentID uuid.UUID)
+	// AddCommentReaction Add the caller's reaction
+	// (POST /api/v0/issue-comments/{comment_id}/reactions)
+	AddCommentReaction(w http.ResponseWriter, r *http.Request, commentID uuid.UUID)
+	// RemoveCommentReaction Remove the caller's reaction
+	// (DELETE /api/v0/issue-comments/{comment_id}/reactions/{reaction})
+	RemoveCommentReaction(w http.ResponseWriter, r *http.Request, commentID uuid.UUID, reaction string)
 	// DeleteIssueRelation Delete a relation
 	// (DELETE /api/v0/issue-relations/{relation_id})
 	DeleteIssueRelation(w http.ResponseWriter, r *http.Request, relationID RelationID)
@@ -481,6 +490,67 @@ func (siw *ServerInterfaceWrapper) UpdateIssueComment(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateIssueComment(w, r, commentID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddCommentReaction operation middleware
+func (siw *ServerInterfaceWrapper) AddCommentReaction(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "comment_id" -------------
+	var commentID uuid.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "comment_id", r.PathValue("comment_id"), &commentID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "comment_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddCommentReaction(w, r, commentID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveCommentReaction operation middleware
+func (siw *ServerInterfaceWrapper) RemoveCommentReaction(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "comment_id" -------------
+	var commentID uuid.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "comment_id", r.PathValue("comment_id"), &commentID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "comment_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reaction" -------------
+	var reaction string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reaction", r.PathValue("reaction"), &reaction, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reaction", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveCommentReaction(w, r, commentID, reaction)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1114,6 +1184,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/reactions", wrapper.ListIssueReactions)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/reactions", wrapper.AddIssueReaction)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issues/{issue_id}/reactions/{reaction}", wrapper.RemoveIssueReaction)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}/reactions", wrapper.AddCommentReaction)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}/reactions/{reaction}", wrapper.RemoveCommentReaction)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.ListIssueComments)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.CreateIssueComment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}", wrapper.DeleteIssueComment)
@@ -1202,6 +1274,94 @@ type UpdateIssueCommentdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UpdateIssueCommentdefaultApplicationProblemPlusJSONResponse) VisitUpdateIssueCommentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddCommentReactionRequestObject struct {
+	CommentID uuid.UUID `json:"comment_id"`
+	Body      *AddCommentReactionJSONRequestBody
+}
+
+type AddCommentReactionResponseObject interface {
+	VisitAddCommentReactionResponse(w http.ResponseWriter) error
+}
+
+type AddCommentReaction201JSONResponse CommentReaction
+
+func (response AddCommentReaction201JSONResponse) VisitAddCommentReactionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddCommentReactiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response AddCommentReactiondefaultApplicationProblemPlusJSONResponse) VisitAddCommentReactionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveCommentReactionRequestObject struct {
+	CommentID uuid.UUID `json:"comment_id"`
+	Reaction  string    `json:"reaction"`
+}
+
+type RemoveCommentReactionResponseObject interface {
+	VisitRemoveCommentReactionResponse(w http.ResponseWriter) error
+}
+
+type RemoveCommentReaction204Response struct {
+}
+
+func (response RemoveCommentReaction204Response) VisitRemoveCommentReactionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveCommentReactiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response RemoveCommentReactiondefaultApplicationProblemPlusJSONResponse) VisitRemoveCommentReactionResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2000,6 +2160,12 @@ type StrictServerInterface interface {
 	// UpdateIssueComment Edit a comment as its author
 	// (PATCH /api/v0/issue-comments/{comment_id})
 	UpdateIssueComment(ctx context.Context, request UpdateIssueCommentRequestObject) (UpdateIssueCommentResponseObject, error)
+	// AddCommentReaction Add the caller's reaction
+	// (POST /api/v0/issue-comments/{comment_id}/reactions)
+	AddCommentReaction(ctx context.Context, request AddCommentReactionRequestObject) (AddCommentReactionResponseObject, error)
+	// RemoveCommentReaction Remove the caller's reaction
+	// (DELETE /api/v0/issue-comments/{comment_id}/reactions/{reaction})
+	RemoveCommentReaction(ctx context.Context, request RemoveCommentReactionRequestObject) (RemoveCommentReactionResponseObject, error)
 	// DeleteIssueRelation Delete a relation
 	// (DELETE /api/v0/issue-relations/{relation_id})
 	DeleteIssueRelation(ctx context.Context, request DeleteIssueRelationRequestObject) (DeleteIssueRelationResponseObject, error)
@@ -2144,6 +2310,66 @@ func (sh *strictHandler) UpdateIssueComment(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateIssueCommentResponseObject); ok {
 		if err := validResponse.VisitUpdateIssueCommentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddCommentReaction operation middleware
+func (sh *strictHandler) AddCommentReaction(w http.ResponseWriter, r *http.Request, commentID uuid.UUID) {
+	var request AddCommentReactionRequestObject
+
+	request.CommentID = commentID
+
+	var body AddCommentReactionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddCommentReaction(ctx, request.(AddCommentReactionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddCommentReaction")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddCommentReactionResponseObject); ok {
+		if err := validResponse.VisitAddCommentReactionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveCommentReaction operation middleware
+func (sh *strictHandler) RemoveCommentReaction(w http.ResponseWriter, r *http.Request, commentID uuid.UUID, reaction string) {
+	var request RemoveCommentReactionRequestObject
+
+	request.CommentID = commentID
+	request.Reaction = reaction
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveCommentReaction(ctx, request.(RemoveCommentReactionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveCommentReaction")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveCommentReactionResponseObject); ok {
+		if err := validResponse.VisitRemoveCommentReactionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

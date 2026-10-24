@@ -123,13 +123,15 @@ func New(d Deps) *Module {
 	sanitizer := content.NewSanitizer()
 	archive := app.ArchiveIssueDeps{Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	return &Module{uc: httpadapter.UseCases{
-		AddIssueReaction:    app.NewAddIssueReaction(app.AddIssueReactionDeps{Locks: locks, Reactions: store, Clock: d.Clock}),
-		RemoveIssueReaction: app.NewRemoveIssueReaction(app.RemoveIssueReactionDeps{Locks: locks, Reactions: store, Clock: d.Clock}),
-		ListIssueReactions:  app.NewListIssueReactions(app.ListIssueReactionsDeps{Locks: locks, Reactions: store, ReadTx: d.ReadTx}),
-		UpdateIssueComment:  app.NewUpdateIssueComment(app.UpdateIssueCommentDeps{Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
-		DeleteIssueComment:  app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Locks: locks, Comments: store, Clock: d.Clock}),
-		CreateIssueComment:  app.NewCreateIssueComment(app.CreateIssueCommentDeps{Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
-		ListIssueComments:   app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
+		AddCommentReaction:    app.NewAddCommentReaction(app.AddCommentReactionDeps{Locks: locks, Comments: store, Reactions: store, Clock: d.Clock}),
+		RemoveCommentReaction: app.NewRemoveCommentReaction(app.RemoveCommentReactionDeps{Locks: locks, Comments: store, Reactions: store, Clock: d.Clock}),
+		AddIssueReaction:      app.NewAddIssueReaction(app.AddIssueReactionDeps{Locks: locks, Reactions: store, Clock: d.Clock}),
+		RemoveIssueReaction:   app.NewRemoveIssueReaction(app.RemoveIssueReactionDeps{Locks: locks, Reactions: store, Clock: d.Clock}),
+		ListIssueReactions:    app.NewListIssueReactions(app.ListIssueReactionsDeps{Locks: locks, Reactions: store, ReadTx: d.ReadTx}),
+		UpdateIssueComment:    app.NewUpdateIssueComment(app.UpdateIssueCommentDeps{Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
+		DeleteIssueComment:    app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Locks: locks, Comments: store, Clock: d.Clock}),
+		CreateIssueComment:    app.NewCreateIssueComment(app.CreateIssueCommentDeps{Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
+		ListIssueComments:     app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
 		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{
 			Locks: locks, Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
 			Profiles: d.Profiles, Clock: d.Clock,

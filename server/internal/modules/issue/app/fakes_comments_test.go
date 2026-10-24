@@ -10,11 +10,13 @@ import (
 
 type fakeComments struct {
 	*fakeRelations
-	inserted   *app.CommentWrite
-	subscribed *app.LinkRows
-	listed     []domain.Comment
-	limit      int
-	after      *domain.CommentCursor
+	inserted    *app.CommentWrite
+	subscribed  *app.LinkRows
+	listed      []domain.Comment
+	reactions   []domain.CommentReaction
+	reactionIDs []uuid.UUID
+	limit       int
+	after       *domain.CommentCursor
 }
 
 func (f *fakeComments) InsertComment(ctx context.Context, w app.CommentWrite) error {
@@ -43,4 +45,12 @@ func (f *fakeProject) MentionMembers(ctx context.Context, id uuid.UUID, ids []uu
 		return nil, err
 	}
 	return f.mentionVisibility, nil
+}
+
+func (f *fakeComments) CommentReactions(ctx context.Context, ids []uuid.UUID) ([]domain.CommentReaction, error) {
+	if err := f.log.add(ctx, "CommentReactions", ids); err != nil {
+		return nil, err
+	}
+	f.reactionIDs = ids
+	return f.reactions, nil
 }

@@ -115,6 +115,10 @@ paths:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issues~1{issue_id}~1sub-issues'
   /api/v0/issue-comments/{comment_id}:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issue-comments~1{comment_id}'
+  /api/v0/issue-comments/{comment_id}/reactions:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issue-comments~1{comment_id}~1reactions'
+  /api/v0/issue-comments/{comment_id}/reactions/{reaction}:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issue-comments~1{comment_id}~1reactions~1{reaction}'
   /api/v0/issues/{issue_id}/reactions:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issues~1{issue_id}~1reactions'
   /api/v0/issues/{issue_id}/reactions/{reaction}:

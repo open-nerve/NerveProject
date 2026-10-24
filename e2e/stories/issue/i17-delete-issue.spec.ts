@@ -10,7 +10,7 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectIssueDeleted } from "../../fixtures/assert/issue";
-import { createIssueComment, createIssueReaction } from "../../fixtures/comments";
+import { createCommentReaction, createIssueComment, createIssueReaction } from "../../fixtures/comments";
 import { newAccount } from "../../fixtures/auth";
 import {
   createIssue,
@@ -76,7 +76,11 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
     parent_id: notes.id,
   });
   await Promise.all(
-    [plan, notes, mirrors].map((item) => createIssueComment(api, bob.token, item.id, "<p>Delete discussion</p>"))
+    [plan, notes, mirrors].map((item) =>
+      createIssueComment(api, bob.token, item.id, "<p>Delete discussion</p>").then((comment) =>
+        createCommentReaction(api, bob.token, comment.id)
+      )
+    )
   );
   await Promise.all([plan, notes, mirrors].map((item) => createIssueReaction(api, bob.token, item.id)));
   expect((await issueArchived(api, ann.token, mirrors.id)).status).toBe(200);
