@@ -26,7 +26,7 @@ Nerve 是从 Plane（AGPL-3.0，`plane/` 只读）裁剪出来的轻量项目管
 | P1a `issues` | 已完成（15 个 Task） | `5ce30a1a`（2026-10-18） | 第 337 次通过 | [spec](../M4-issue-core/specs/P1a-issues.md)、[plan](../M4-issue-core/plans/P1a-issues.md)、[评审](../M4-issue-core/reviews/P1a-issues-review.md) |
 | P1b `issue-update` | 已完成（15 个 Task） | `7db78788`（2026-10-19） | 第 338 次通过 | [spec](../M4-issue-core/specs/P1b-issue-update.md)、[plan](../M4-issue-core/plans/P1b-issue-update.md)、[评审](../M4-issue-core/reviews/P1b-issue-update-review.md) |
 | P2 `issue-access` | 已完成（14 个 Task） | `f8696490`（2026-10-21） | 第 339 次通过 | [spec](../M4-issue-core/specs/P2-issue-access.md)、[plan](../M4-issue-core/plans/P2-issue-access.md)、[评审](../M4-issue-core/reviews/P2-issue-access-review.md) |
-| P3 `issue-hierarchy` | 已完成（16 个 Task） | `dfc9378b`（2026-10-24） | **第 340 次失败**：一个 M3 的老故事 W11，不是 P3 的改动，见 [04](04-next-steps.md) 第 1 节 | [spec](../M4-issue-core/specs/P3-issue-hierarchy.md)、[plan](../M4-issue-core/plans/P3-issue-hierarchy.md)、[评审](../M4-issue-core/reviews/P3-issue-hierarchy-review.md) |
+| P3 `issue-hierarchy` | 已完成（16 个 Task） | `dfc9378b`（2026-10-24） | **第 340 次失败**：一个 M3 的老故事 W11 偶发失败，不是 P3 的改动，见 [06](06-ci-w11-flake.md) | [spec](../M4-issue-core/specs/P3-issue-hierarchy.md)、[plan](../M4-issue-core/plans/P3-issue-hierarchy.md)、[评审](../M4-issue-core/reviews/P3-issue-hierarchy-review.md) |
 | P4–P9（后端）、P10a–P16（前端）、收尾 | 未开始 | — | — | 设计第 12 节各段 |
 
 P1 在实施前按 D2 拆成 P1a、P1b。P3 在实施前重新切成 16 个 Task。每段都是整分支终审之后一个修复轮。
@@ -47,6 +47,5 @@ P1 在实施前按 D2 拆成 P1a、P1b。P3 在实施前重新切成 16 个 Task
 - **动态**：已写入，还没有读动态的接口（P4 的 `listIssueActivities`）。
 
 ## 5. 本机仓库的状态
-- 本地 `main` = `origin/main` = `dfc9378b`（P3 的合并）。远端只有 `main`。
-- 只剩一个工作树 `.claude/worktrees/m4-p1b`（分支 `worktree-m4-p1b`，在 `7db78788`，没有自己的提交）：是客户端重启时自动建出来的空工作树，删不删由负责人定（见 [04](04-next-steps.md) 第 1 节）。
+- 本地 `main` 与 `origin/main` 一致，P3 的合并（`dfc9378b`）之后只有本交接的文档。远端只有 `main`，本地只有 `main` 和主目录一个工作树（空的 `m4-p1b` 已在 2026-10-25 删除）。
 - 交接文件的 `status` 都还是 `open`，按惯例在 M4 收尾时随评审关闭；P1a–P3 在其中写了"处理结果（M4/P<k>）"。

@@ -11,11 +11,12 @@
 仓库里的设计、spec、plan、评审记录是事实的来源，本目录不重复它们。本目录写的是只在 Claude 本机（会话的临时目录）里才有的东西：做到哪了、怎么做的、哪些规矩和坑、下一步和遗留。临时目录重启就没了，值得留的已复制到本机的持久目录，见 [05](05-local-materials.md)。
 
 按这个顺序读：
-1. [01-progress.md](01-progress.md)：进度。M0–M3 已完成；M4 的设计已裁定，P1a、P1b、P2、P3 已合并；main 上 P3 那次合并的持续集成红在一个 M3 的老故事上。
+1. [01-progress.md](01-progress.md)：进度。M0–M3 已完成；M4 的设计已裁定，P1a、P1b、P2、P3 已合并；main 上 P3 那次合并的持续集成红在一个 M3 的老故事上（偶发，不阻塞主线，见 06）。
 2. [03-rules-and-pitfalls.md](03-rules-and-pitfalls.md)：负责人的纪律和代码标准、硬规则、M4 的技术不变式、反复出现的坑、环境的坑。
 3. [02-method.md](02-method.md)：一个 Phase 怎么推进，每一步的产物和检查。
 4. [04-next-steps.md](04-next-steps.md)：马上要处理的、P4 的起步清单、P5 以后的顺序、M4 收尾清单、和 Claude 的审查节点。
 5. [05-local-materials.md](05-local-materials.md)：本机保留的简报模板、过程记录和工具在哪，怎么用。
+6. [06-ci-w11-flake.md](06-ci-w11-flake.md)：问题记录：持续集成上 W11 页面故事偶发失败，根因未明；阻塞主线时再由负责人协调解决。
 
 ## 最要紧的五条
 1. **事实以仓库为准**：[M4 设计](../M4-issue-core/M4-design.md)（第 10、11 节和 17.4 是负责人的裁定，不重开）、各 Phase 的 spec 第 3、5 节和评审第 6 节（交给后面 Phase 的事项）、[handoffs](../M4-issue-core/handoffs/)。

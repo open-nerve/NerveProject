@@ -41,6 +41,8 @@
 
 P3 的变异定义（`mutants_p3*.py`）只对 P3 的树有效，没有复制。
 
+**`m4-handoff/w11-probes/`**：排查 W11 偶发失败时用的脚本和探针，说明见 [06](06-ci-w11-flake.md) 第 7 节。
+
 ## 2. 会话的临时目录（重启就没了）
 `/private/tmp/claude-501/-Users-xiaoruan-project-nerve-project/271ea4af-9c2b-4e77-aad3-44f0c397be7d/scratchpad/nerve-m4/`
 
