@@ -73,11 +73,12 @@ type Changed[T any] struct {
 }
 
 // Update is what an update of a work item changes, as its activity names
-// it (M4 design 3.13): its name, its parent, its priority, its state and
+// it (M4 design 3.13): its name, its cleaned HTML description, its parent, its priority, its state and
 // its dates, each nil when it is left as it is; the labels and the
 // accounts it adds and removes, each in id order.
 type Update struct {
 	Name             *Changed[string]
+	Description      *Changed[string]
 	Parent           *Changed[*Ref]
 	Priority         *Changed[Priority]
 	State            *Changed[Named]
@@ -90,7 +91,7 @@ type Update struct {
 }
 
 // UpdateActivity is the rows an update writes, in the order of M4 design
-// 3.13's table: row 3, the name; row 5, the parent (ParentActivity); row 6,
+// 3.13's table: row 3, the name; row 4, the description; row 5, the parent (ParentActivity); row 6,
 // the priority; row 7, the state, by its names and its ids; rows 8 and 9,
 // the start and the target dates, as YYYY-MM-DD or "" for none; then each
 // label added (row 10) and removed (row 11), by its name and its id; then
@@ -102,6 +103,10 @@ func UpdateActivity(u Update) []Activity {
 	if u.Name != nil {
 		rows = append(rows, Activity{Field: ptr("name"), Verb: VerbUpdated, OldValue: ptr(u.Name.Old), NewValue: ptr(u.Name.New),
 			Comment: "updated the name to"})
+	}
+	if u.Description != nil {
+		rows = append(rows, Activity{Field: ptr("description"), Verb: VerbUpdated, OldValue: ptr(u.Description.Old), NewValue: ptr(u.Description.New),
+			Comment: "updated the description to"})
 	}
 	if u.Parent != nil {
 		rows = append(rows, ParentActivity(*u.Parent))

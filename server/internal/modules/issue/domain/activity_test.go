@@ -123,3 +123,21 @@ func TestArchiveActivity(t *testing.T) {
 		t.Errorf("UnarchiveActivity() = %+v, want %+v", got, want)
 	}
 }
+
+func TestUpdateDescriptionActivityOrder(t *testing.T) {
+	row := func(field, old, next, comment string) Activity {
+		return Activity{Field: &field, Verb: VerbUpdated, OldValue: &old, NewValue: &next, Comment: comment}
+	}
+	title := Changed[string]{Old: "old", New: "new"}
+	html := Changed[string]{Old: "<p>before</p>", New: "<p>after</p>"}
+	priority := Changed[Priority]{Old: PriorityHigh, New: PriorityLow}
+	got := UpdateActivity(Update{Name: &title, Description: &html, Priority: &priority})
+	want := []Activity{
+		row("name", title.Old, title.New, "updated the name to"),
+		row("description", html.Old, html.New, "updated the description to"),
+		row("priority", "high", "low", "updated the priority to"),
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("UpdateActivity() = %+v, want title, cleaned HTML description, priority: %+v", got, want)
+	}
+}
