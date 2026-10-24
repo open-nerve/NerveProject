@@ -41,6 +41,7 @@ type issueWrite struct {
 // issueWrites are the work-item side's writes, each with its row: every
 // operation of the contract tagged issue but GET (writesOnIssues).
 var issueWrites = []issueWrite{
+	{op: "createIssueComment", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/comments", target: func(t *testing.T, w issueWorld) string { return commentsOf(w.newWorkItem(t)) }, body: func(*testing.T, issueWorld) string { return `{"comment_html":"<p>Hello</p>"}` }, want: http.StatusCreated, waits: "issues", mode: "SHARE"},
 	{op: "createIssue", method: http.MethodPost, path: "/api/v0/projects/{project_id}/issues",
 		target: func(_ *testing.T, w issueWorld) string { return "/api/v0/projects/" + w.web.String() + "/issues" },
 		body:   func(_ *testing.T, w issueWorld) string { return w.fullIssue() }, want: http.StatusCreated, waits: "states", mode: "ACCESS EXCLUSIVE"},
@@ -117,7 +118,7 @@ var issueWrites = []issueWrite{
 // memberships its decision reads, the states and labels it checks, and
 // the work-item side's own.
 const issueTables = "workspaces, workspace_members, projects, project_members, states, labels, issues, issue_assignees, issue_labels, " +
-	"issue_relations, issue_subscribers, issue_activities"
+	"issue_relations, issue_subscribers, issue_comments, issue_activities"
 
 // writesOnIssues lists the operations of ops tagged issue, but GET, sorted.
 func writesOnIssues(ops []apitest.Operation) []string {

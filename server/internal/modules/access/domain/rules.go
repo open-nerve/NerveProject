@@ -134,7 +134,8 @@ var rules = map[shared.Action]Rule{
 	// The project's admins, members and guests; a guest who sees only his
 	// own work items finds no other, the issue module's guest rule (M4
 	// design 3.4).
-	"issue.read": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	"issue_comment.create": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	"issue.read":           {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// As issue.create (M4 design 3.4).
 	"issue.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	// The project's admins, and the work item's creator while he is a member

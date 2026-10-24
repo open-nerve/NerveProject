@@ -17,6 +17,7 @@ import (
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 	"github.com/open-nerve/NerveProject/server/migrations"
@@ -183,6 +184,10 @@ func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *
 	}
 	seedProject(t, pool, id, admin, member, "Web")
 	seedProject(t, pool, id, admin, member, "Ops")
+	route := newIssueRoute(t, pool, postgres.NewTxManager(pool, 2*time.Second))
+	for _, item := range queryIDs(t, pool, "SELECT id FROM issues WHERE workspace_id=$1", id) {
+		route.answerWithin(t, contract, http.MethodPost, commentsOf(item), member, `{"comment_html":"<p>Workspace comment</p>"}`, http.StatusCreated)
+	}
 	return id
 }
 

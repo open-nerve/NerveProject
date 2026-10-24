@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -71,6 +72,15 @@ func (e IssueRelationType) Valid() bool {
 	}
 }
 
+// CommentReaction defines model for CommentReaction.
+type CommentReaction struct {
+	ActorID   uuid.UUID `json:"actor_id"`
+	CommentID uuid.UUID `json:"comment_id"`
+	CreatedAt time.Time `json:"created_at"`
+	ID        uuid.UUID `json:"id"`
+	Reaction  string    `json:"reaction"`
+}
+
 // Issue A work item of a project, as a list shows it.
 type Issue struct {
 	// ArchivedAt When it was archived; null when it is not.
@@ -123,6 +133,31 @@ type Issue struct {
 // IssueCollection Work items, all of them, without pages.
 type IssueCollection struct {
 	Data []Issue `json:"data"`
+}
+
+// IssueComment defines model for IssueComment.
+type IssueComment struct {
+	ActorID     uuid.UUID                    `json:"actor_id"`
+	CommentHTML string                       `json:"comment_html"`
+	CreatedAt   time.Time                    `json:"created_at"`
+	EditedAt    nullable.Nullable[time.Time] `json:"edited_at"`
+	ID          uuid.UUID                    `json:"id"`
+	IssueID     uuid.UUID                    `json:"issue_id"`
+	Reactions   []CommentReaction            `json:"reactions"`
+	UpdatedAt   time.Time                    `json:"updated_at"`
+}
+
+// IssueCommentCreate defines model for IssueCommentCreate.
+type IssueCommentCreate struct {
+	CommentHTML string `json:"comment_html"`
+}
+
+// IssueCommentPage defines model for IssueCommentPage.
+type IssueCommentPage struct {
+	Data []IssueComment `json:"data"`
+
+	// NextCursor The cursor of the next page; null on the last page.
+	NextCursor nullable.Nullable[externalRef0.NextCursor] `json:"next_cursor"`
 }
 
 // IssueCreate defines model for IssueCreate.
@@ -284,8 +319,20 @@ type Slug = string
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
 
+// ListIssueCommentsParams defines parameters for ListIssueComments.
+type ListIssueCommentsParams struct {
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // UpdateIssueJSONRequestBody defines body for UpdateIssue for application/json ContentType.
 type UpdateIssueJSONRequestBody = IssueUpdate
+
+// CreateIssueCommentJSONRequestBody defines body for CreateIssueComment for application/json ContentType.
+type CreateIssueCommentJSONRequestBody = IssueCommentCreate
 
 // CreateIssueRelationsJSONRequestBody defines body for CreateIssueRelations for application/json ContentType.
 type CreateIssueRelationsJSONRequestBody = IssueRelationsCreate
@@ -313,6 +360,12 @@ type ServerInterface interface {
 	// ArchiveIssue Archive a work item
 	// (POST /api/v0/issues/{issue_id}/archive)
 	ArchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// ListIssueComments List comments on a visible work item
+	// (GET /api/v0/issues/{issue_id}/comments)
+	ListIssueComments(w http.ResponseWriter, r *http.Request, issueID IssueID, params ListIssueCommentsParams)
+	// CreateIssueComment Create a comment on a visible work item
+	// (POST /api/v0/issues/{issue_id}/comments)
+	CreateIssueComment(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// ListIssueRelations List a work item's relations
 	// (GET /api/v0/issues/{issue_id}/relations)
 	ListIssueRelations(w http.ResponseWriter, r *http.Request, issueID IssueID)
@@ -466,6 +519,87 @@ func (siw *ServerInterfaceWrapper) ArchiveIssue(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ArchiveIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListIssueComments operation middleware
+func (siw *ServerInterfaceWrapper) ListIssueComments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListIssueCommentsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIssueComments(w, r, issueID, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateIssueComment operation middleware
+func (siw *ServerInterfaceWrapper) CreateIssueComment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateIssueComment(w, r, issueID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -798,6 +932,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/relations", wrapper.CreateIssueRelations)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issue-relations/{relation_id}", wrapper.DeleteIssueRelation)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/issues/{identifier}", wrapper.GetIssueByIdentifier)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.ListIssueComments)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.CreateIssueComment)
 
 	return m
 }
@@ -1014,6 +1150,100 @@ type ArchiveIssuedefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response ArchiveIssuedefaultApplicationProblemPlusJSONResponse) VisitArchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIssueCommentsRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+	Params  ListIssueCommentsParams
+}
+
+type ListIssueCommentsResponseObject interface {
+	VisitListIssueCommentsResponse(w http.ResponseWriter) error
+}
+
+type ListIssueComments200JSONResponse IssueCommentPage
+
+func (response ListIssueComments200JSONResponse) VisitListIssueCommentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIssueCommentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListIssueCommentsdefaultApplicationProblemPlusJSONResponse) VisitListIssueCommentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIssueCommentRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+	Body    *CreateIssueCommentJSONRequestBody
+}
+
+type CreateIssueCommentResponseObject interface {
+	VisitCreateIssueCommentResponse(w http.ResponseWriter) error
+}
+
+type CreateIssueComment201JSONResponse IssueComment
+
+func (response CreateIssueComment201JSONResponse) VisitCreateIssueCommentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIssueCommentdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CreateIssueCommentdefaultApplicationProblemPlusJSONResponse) VisitCreateIssueCommentResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1374,6 +1604,12 @@ type StrictServerInterface interface {
 	// ArchiveIssue Archive a work item
 	// (POST /api/v0/issues/{issue_id}/archive)
 	ArchiveIssue(ctx context.Context, request ArchiveIssueRequestObject) (ArchiveIssueResponseObject, error)
+	// ListIssueComments List comments on a visible work item
+	// (GET /api/v0/issues/{issue_id}/comments)
+	ListIssueComments(ctx context.Context, request ListIssueCommentsRequestObject) (ListIssueCommentsResponseObject, error)
+	// CreateIssueComment Create a comment on a visible work item
+	// (POST /api/v0/issues/{issue_id}/comments)
+	CreateIssueComment(ctx context.Context, request CreateIssueCommentRequestObject) (CreateIssueCommentResponseObject, error)
 	// ListIssueRelations List a work item's relations
 	// (GET /api/v0/issues/{issue_id}/relations)
 	ListIssueRelations(ctx context.Context, request ListIssueRelationsRequestObject) (ListIssueRelationsResponseObject, error)
@@ -1566,6 +1802,66 @@ func (sh *strictHandler) ArchiveIssue(w http.ResponseWriter, r *http.Request, is
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ArchiveIssueResponseObject); ok {
 		if err := validResponse.VisitArchiveIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListIssueComments operation middleware
+func (sh *strictHandler) ListIssueComments(w http.ResponseWriter, r *http.Request, issueID IssueID, params ListIssueCommentsParams) {
+	var request ListIssueCommentsRequestObject
+
+	request.IssueID = issueID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListIssueComments(ctx, request.(ListIssueCommentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListIssueComments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListIssueCommentsResponseObject); ok {
+		if err := validResponse.VisitListIssueCommentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateIssueComment operation middleware
+func (sh *strictHandler) CreateIssueComment(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request CreateIssueCommentRequestObject
+
+	request.IssueID = issueID
+
+	var body CreateIssueCommentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateIssueComment(ctx, request.(CreateIssueCommentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateIssueComment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateIssueCommentResponseObject); ok {
+		if err := validResponse.VisitCreateIssueCommentResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

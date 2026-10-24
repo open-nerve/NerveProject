@@ -20,6 +20,7 @@ import {
   relatedRow,
   restoredRow,
 } from "../../fixtures/assert/issue";
+import { createIssueComment } from "../../fixtures/comments";
 import { newAccount } from "../../fixtures/auth";
 import {
   createIssue,
@@ -88,6 +89,7 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
 
   // Moved to Done, she archives it: archived at its moment, one row of its activity; archived again, nothing is
   // written, and the answer is the work item as it is.
+  await createIssueComment(api, ann.token, id, "<p>Archive discussion</p>");
   await updateIssue(api, ann.token, id, { state_id: done });
   const toDone = changed("state", "In Progress", "Done", "updated the state to", "Done", "In Progress");
   const archiving = await issueArchived(api, ann.token, id);

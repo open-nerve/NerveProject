@@ -52,6 +52,24 @@ func (q *Queries) DeleteIssueAssigneeRows(ctx context.Context, arg DeleteIssueAs
 	return err
 }
 
+const deleteIssueCommentRows = `-- name: DeleteIssueCommentRows :exec
+UPDATE issue_comments
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE issue_id = ANY ($3::uuid[]) AND deleted_at IS NULL
+`
+
+type DeleteIssueCommentRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	IssueIds  []uuid.UUID
+}
+
+// DeleteIssueAssigneeRows' statement, of the deleted work items' comments.
+func (q *Queries) DeleteIssueCommentRows(ctx context.Context, arg DeleteIssueCommentRowsParams) error {
+	_, err := q.db.Exec(ctx, deleteIssueCommentRows, arg.At, arg.DeletedBy, arg.IssueIds)
+	return err
+}
+
 const deleteIssueLabelRows = `-- name: DeleteIssueLabelRows :exec
 UPDATE issue_labels
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid

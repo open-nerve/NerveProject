@@ -273,6 +273,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		{"a deletion", http.MethodDelete, "/api/v0/issues/" + w.newWorkItem(t).String(), "", http.StatusNoContent},
 		{"an archiving", http.MethodPost, "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive", "", http.StatusOK},
 		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", "", http.StatusOK},
+		{"a comment", http.MethodPost, commentsOf(w.newWorkItem(t)), `{"comment_html":"<p>Queued comment</p>"}`, http.StatusCreated},
 		{"an addition of sub-items", http.MethodPost, subIssues(w.newWorkItem(t)), subIssueIDs(w.newWorkItem(t)), http.StatusOK},
 		{"an addition of relations", http.MethodPost, relationsOf(w.newWorkItem(t)), relating("relates_to", w.newWorkItem(t)),
 			http.StatusCreated},
@@ -305,6 +306,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		w.wantBusy(t, write.name, req, a.res, a.body)
 	}
 	for _, shape := range []struct{ name, path, body, want string }{
+		{"an empty comment", commentsOf(item), `{"comment_html":"<script>removed()</script>"}`, "comment_html required"},
 		{"an addition of sub-items naming one twice", subIssues(item), subIssueIDs(archived, archived), "sub_issue_ids[1] duplicate"},
 		{"an addition of relations naming 21", relationsOf(item), relating("relates_to", slices.Repeat([]uuid.UUID{archived}, 21)...),
 			"issue_ids too_long"},

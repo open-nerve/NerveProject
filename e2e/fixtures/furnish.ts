@@ -1,5 +1,7 @@
 import { changeWorkspacePreferences, createLabel, createProject, invite, inviteAndAccept, type Api } from "./api";
+
 import { accountId } from "./auth";
+import { createIssueComment } from "./comments";
 import { createIssue, createIssueRelations } from "./issues";
 
 // The rows a deletion story furnishes a workspace or a project with first, so that its deletion has a row of each
@@ -24,6 +26,7 @@ export async function furnishIssueRows(
     assignee_ids: [assigneeId],
     label_ids: [labelId],
   });
+  await createIssueComment(api, token, fix.id, "<p>Ready to fix</p>");
   const test = await createIssue(api, token, projectId, { name: "Test the login" });
   await createIssueRelations(api, token, fix.id, { relation_type: "blocking", issue_ids: [test.id] });
 }

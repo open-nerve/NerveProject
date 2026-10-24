@@ -185,3 +185,15 @@ func (p issueProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[u
 	}
 	return names, nil
 }
+
+func (p issueProjects) MentionMembers(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]issue.MemberVisibility, error) {
+	members, err := p.projects.IssueMentionMembers(ctx, id, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.MemberVisibility, len(members))
+	for n, m := range members {
+		out[n] = issue.MemberVisibility(m)
+	}
+	return out, nil
+}

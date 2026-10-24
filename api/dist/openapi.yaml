@@ -1599,6 +1599,64 @@ paths:
                 $ref: '#/components/schemas/IssueCollection'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/comments:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: listIssueComments
+      tags:
+        - issue
+      summary: List comments on a visible work item
+      description: Uses issue.read, including its guest visibility rule. Comments are in ascending (created_at, id) order. The cursor is only an exclusive position and never grants access to its source work item. Invalid cursor (400 bad_request) is checked before limit (422 validation_failed). The target, authorization and page are read in one snapshot.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - bad_request
+        - validation_failed
+        - issue.not_found
+        - forbidden
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Comments, with null next_cursor on the final page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueCommentPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createIssueComment
+      tags:
+        - issue
+      summary: Create a comment on a visible work item
+      description: For the project's admins, members and guests who can read the work item. Missing or hidden work items answer issue.not_found before forbidden. The project is locked first and the decision repeated. An archived project refuses with project.archived before an archived issue with issue.archived. Sanitized content must contain text, a mention or image; otherwise validation_failed on comment_html, required. At most 500000 Unicode characters before sanitization. The caller and active mentioned members who can read it automatically subscribe. Existing subscriptions keep their identity and timestamps. All new rows have one writer and moment; this creates no activity or issue_mentions. Busy projects answer 503 server_busy with Retry-After.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.not_found
+        - forbidden
+        - project.archived
+        - issue.archived
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueCommentCreate'
+      responses:
+        '201':
+          description: The new comment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueComment'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/issues/{issue_id}/relations:
     parameters:
       - $ref: '#/components/parameters/IssueID'
@@ -3462,6 +3520,91 @@ components:
           items:
             type: string
             format: uuid
+    CommentReaction:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - comment_id
+        - actor_id
+        - reaction
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        comment_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+        reaction:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    IssueComment:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - issue_id
+        - actor_id
+        - comment_html
+        - edited_at
+        - created_at
+        - updated_at
+        - reactions
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+        comment_html:
+          type: string
+        edited_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        reactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommentReaction'
+    IssueCommentPage:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - next_cursor
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueComment'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+    IssueCommentCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - comment_html
+      properties:
+        comment_html:
+          type: string
+          maxLength: 500000
     IssueRelationType:
       description: 'A relation''s type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.'
       type: string

@@ -101,6 +101,8 @@ type ProjectMembershipCounts interface {
 // write of a state, a label or a membership holds too, so they stay as
 // read until the write commits (M4 design 3.5).
 type IssueProjects interface {
+	// IssueMentionMembers reads active candidates and their effective guest scope.
+	IssueMentionMembers(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]IssueMemberVisibility, error)
 	// ProjectWorkspace is the workspace of the undeleted project id,
 	// archived or not, read without a lock; found is false when there is
 	// none.
@@ -136,6 +138,7 @@ type IssueProjects interface {
 // values IssueProjects hands over: bootstrap converts them into issue's
 // (M4 design 6.5).
 type (
+	IssueMemberVisibility  = app.IssueMemberVisibility
 	IssueProject           = app.IssueProject
 	IssueState             = app.IssueState
 	IssueLabel             = app.IssueLabel

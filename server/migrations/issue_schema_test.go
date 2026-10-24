@@ -40,6 +40,18 @@ var issueNames = []string{
 	"issue_assignees_updated_by_id_fkey f n",
 	"issue_assignees_workspace_id_fkey f c",
 	"issue_assignees_workspace_id_idx i",
+	"issue_comments_actor_id_fkey f c",
+	"issue_comments_created_by_id_fkey f n",
+	"issue_comments_issue_id_created_at_idx iw",
+	"issue_comments_issue_id_fkey f c",
+	"issue_comments_issue_id_idx i",
+	"issue_comments_pkey iu",
+	"issue_comments_pkey p",
+	"issue_comments_project_id_fkey f c",
+	"issue_comments_project_id_idx i",
+	"issue_comments_updated_by_id_fkey f n",
+	"issue_comments_workspace_id_fkey f c",
+	"issue_comments_workspace_id_idx i",
 	"issue_labels_created_by_id_fkey f n",
 	"issue_labels_issue_id_fkey f c",
 	"issue_labels_issue_id_idx i",
@@ -272,4 +284,21 @@ func TestIssueUniqueKeys(t *testing.T) {
 			}
 		}
 	})
+}
+
+// Comments require a human actor and default to an unedited empty document.
+func TestCommentDefaultsAndRequiredActor(t *testing.T) {
+	pool := newIssueDatabase(t)
+	ctx := context.Background()
+	insert := "INSERT INTO issue_comments (id,workspace_id,project_id,issue_id,actor_id) VALUES (gen_random_uuid()," + issueAcme + "," + issueWeb + "," + webIssue + ","
+	var html, text string
+	var unedited bool
+	if err := pool.QueryRow(ctx, insert+issueBob+") RETURNING comment_html,comment_stripped,edited_at IS NULL").Scan(&html, &text, &unedited); err != nil || html != "<p></p>" || text != "" || !unedited {
+		t.Fatal(html, text, unedited, err)
+	}
+	_, err := pool.Exec(ctx, insert+"NULL)")
+	var pe *pgconn.PgError
+	if !errors.As(err, &pe) || pe.Code != "23502" || pe.ColumnName != "actor_id" {
+		t.Fatalf("null actor: %v", err)
+	}
 }

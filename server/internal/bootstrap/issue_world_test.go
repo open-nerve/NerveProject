@@ -218,6 +218,7 @@ func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
 			WHERE issue_id = $1 OR related_issue_id = $1
 		UNION ALL SELECT 'issue_subscribers', created_by_id, created_at, updated_by_id, updated_at, deleted_at, subscriber_id
 			FROM issue_subscribers WHERE issue_id = $1
+		UNION ALL SELECT 'issue_comments', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_comments WHERE issue_id = $1
 		UNION ALL SELECT 'issue_activities', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_activities
 			WHERE issue_id = $1`, id)
 	if err != nil {

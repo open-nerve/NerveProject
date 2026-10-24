@@ -72,3 +72,8 @@ func (s *Store) DeleteIssueSubscriberRows(ctx context.Context, d app.IssueDeleti
 func (s *Store) DeleteIssueActivityRows(ctx context.Context, d app.IssueDeletion) error {
 	return deletedRows(s.queries(ctx).DeleteIssueActivityRows(ctx, gen.DeleteIssueActivityRowsParams(deletion(d))), "the activity", d)
 }
+
+// DeleteIssueCommentRows soft-deletes comment rows in the existing deletion sequence.
+func (s *Store) DeleteIssueCommentRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueCommentRows(ctx, gen.DeleteIssueCommentRowsParams(deletion(d))), "the comments", d)
+}

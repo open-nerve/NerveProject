@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/content"
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
@@ -77,6 +78,7 @@ type ProjectPorts interface {
 // ProjectIdentifier are the values ProjectPorts hand over: bootstrap
 // converts project's into them (M4 design 6.5).
 type (
+	MemberVisibility  = app.MemberVisibility
 	LockedProject     = app.LockedProject
 	StateRef          = app.StateRef
 	StateGroup        = domain.StateGroup
@@ -118,8 +120,11 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
+	sanitizer := content.NewSanitizer()
 	archive := app.ArchiveIssueDeps{Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	return &Module{uc: httpadapter.UseCases{
+		CreateIssueComment: app.NewCreateIssueComment(app.CreateIssueCommentDeps{Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
+		ListIssueComments:  app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
 		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{
 			Locks: locks, Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
 			Profiles: d.Profiles, Clock: d.Clock,

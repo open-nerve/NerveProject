@@ -66,6 +66,22 @@ type IssueAssignee struct {
 	DeletedAt   *time.Time
 }
 
+type IssueComment struct {
+	ID              uuid.UUID
+	WorkspaceID     uuid.UUID
+	ProjectID       uuid.UUID
+	IssueID         uuid.UUID
+	ActorID         uuid.UUID
+	CommentHtml     string
+	CommentStripped string
+	EditedAt        *time.Time
+	CreatedByID     *uuid.UUID
+	UpdatedByID     *uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	DeletedAt       *time.Time
+}
+
 type IssueLabel struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID

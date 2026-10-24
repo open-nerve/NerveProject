@@ -118,6 +118,46 @@ func (q *Queries) IssueLabels(ctx context.Context, arg IssueLabelsParams) ([]Iss
 	return items, nil
 }
 
+const issueMentionMembers = `-- name: IssueMentionMembers :many
+SELECT m.member_id, m.role, (m.role = 5 AND NOT p.guest_view_all_features)::boolean AS own_only
+FROM project_members m JOIN projects p ON p.id = m.project_id
+WHERE m.project_id = $1 AND m.member_id = ANY ($2::uuid[])
+  AND m.is_active AND m.deleted_at IS NULL AND p.deleted_at IS NULL
+ORDER BY m.member_id
+`
+
+type IssueMentionMembersParams struct {
+	ProjectID uuid.UUID
+	Ids       []uuid.UUID
+}
+
+type IssueMentionMembersRow struct {
+	MemberID uuid.UUID
+	Role     int16
+	OwnOnly  bool
+}
+
+// Read active mention candidates and the guest flag in the same statement.
+func (q *Queries) IssueMentionMembers(ctx context.Context, arg IssueMentionMembersParams) ([]IssueMentionMembersRow, error) {
+	rows, err := q.db.Query(ctx, issueMentionMembers, arg.ProjectID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []IssueMentionMembersRow
+	for rows.Next() {
+		var i IssueMentionMembersRow
+		if err := rows.Scan(&i.MemberID, &i.Role, &i.OwnOnly); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const issueStates = `-- name: IssueStates :many
 SELECT id, name, "group", "default"
 FROM states

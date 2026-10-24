@@ -104,7 +104,7 @@ func twoProjects(web, ops uuid.UUID) *fakeRows {
 // zero id, then after the greatest id of each batch, until one finds none.
 func batches(f *fakeRows, project uuid.UUID) []string {
 	var calls []string
-	for _, statement := range []string{"issues", "assignees", "labels", "relations", "subscribers", "activities"} {
+	for _, statement := range []string{"issues", "assignees", "labels", "relations", "subscribers", "comments", "activities"} {
 		rows := f.rows[statement][project]
 		after := uuid.UUID{}
 		for i := 0; ; i += 2 {
@@ -165,7 +165,7 @@ func TestTheCascadeDeletesEachProjectsRowsInBatches(t *testing.T) {
 // A failing batch comes back as itself, and no batch runs after it.
 func TestTheCascadeStopsAtAFailingBatch(t *testing.T) {
 	web, ops, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	for _, statement := range []string{"issues", "assignees", "labels", "relations", "subscribers", "activities"} {
+	for _, statement := range []string{"issues", "assignees", "labels", "relations", "subscribers", "comments", "activities"} {
 		f := twoProjects(web, ops)
 		f.fail = statement
 		want := batches(f, web)
@@ -176,4 +176,9 @@ func TestTheCascadeStopsAtAFailingBatch(t *testing.T) {
 			t.Errorf("failing %s: %v, the batches\n%q\nwant %v after\n%q", statement, err, f.calls, errDisk, want)
 		}
 	}
+}
+
+// DeleteProjectCommentRows soft-deletes comment rows in the existing deletion sequence.
+func (f *fakeRows) DeleteProjectCommentRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.batch(ctx, "comments", b)
 }

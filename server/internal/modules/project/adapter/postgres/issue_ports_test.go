@@ -190,3 +190,32 @@ func TestIssueCatalogs(t *testing.T) {
 		t.Errorf("ActiveRoles(Web, …) = %v, %v; want alice, bob and carol's roles", roles, err)
 	}
 }
+
+// Mention visibility uses only active project memberships and the same project's
+// guest flag. A guest's workspace role must not widen this restriction.
+func TestIssueMentionMembers(t *testing.T) {
+	s, pool := newStore(t)
+	owner := newAccount(t, pool, "owner@corp.com")
+	guest := newAccount(t, pool, "guest@corp.com")
+	ended := newAccount(t, pool, "ended@corp.com")
+	gone := newAccount(t, pool, "gone@corp.com")
+	other := newAccount(t, pool, "other@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web := newProject(t, s, acme, "Web", "WEB", owner)
+	ops := newProject(t, s, acme, "Ops", "OPS", owner)
+	seedMember(t, pool, acme, web, owner, 20, true)
+	seedMember(t, pool, acme, web, guest, 5, true)
+	seedMember(t, pool, acme, web, ended, 15, false)
+	dead := seedMember(t, pool, acme, web, gone, 15, true)
+	exec(t, pool, "UPDATE project_members SET deleted_at=$2 WHERE id=$1", dead, now)
+	seedMember(t, pool, acme, ops, other, 15, true)
+	ids := []uuid.UUID{other, guest, ended, owner, gone}
+	for _, all := range []bool{false, true} {
+		exec(t, pool, "UPDATE projects SET guest_view_all_features=$2 WHERE id=$1", web, all)
+		got, err := s.IssueMentionMembers(context.Background(), web, ids)
+		want := []app.IssueMemberVisibility{{ID: owner, Role: shared.RoleAdmin}, {ID: guest, Role: shared.RoleGuest, OwnOnly: !all}}
+		if err != nil || !slices.Equal(got, want) {
+			t.Fatalf("all=%v: got %+v, %v; want %+v", all, got, err, want)
+		}
+	}
+}

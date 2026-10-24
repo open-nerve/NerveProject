@@ -127,17 +127,18 @@ func (f *fakeAuthorizer) Authorize(ctx context.Context, actor shared.Actor, acti
 // other projects LockMany answers; waited, when set, runs as a lock waits,
 // before it answers: what commits meanwhile.
 type fakeProject struct {
-	log       *callLog
-	id        uuid.UUID
-	workspace uuid.UUID
-	found     bool
-	locked    *app.LockedProject
-	across    map[uuid.UUID]app.LockedProject
-	waited    func()
-	last      int
-	states    []app.StateRef
-	labels    []app.LabelRef
-	roles     map[uuid.UUID]shared.Role
+	log               *callLog
+	id                uuid.UUID
+	workspace         uuid.UUID
+	found             bool
+	locked            *app.LockedProject
+	across            map[uuid.UUID]app.LockedProject
+	waited            func()
+	last              int
+	states            []app.StateRef
+	labels            []app.LabelRef
+	roles             map[uuid.UUID]shared.Role
+	mentionVisibility []app.MemberVisibility
 }
 
 func (f *fakeProject) Find(ctx context.Context, id uuid.UUID) (uuid.UUID, bool, error) {

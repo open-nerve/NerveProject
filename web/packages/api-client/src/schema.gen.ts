@@ -1044,6 +1044,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issues/{issue_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List comments on a visible work item
+         * @description Uses issue.read, including its guest visibility rule. Comments are in ascending (created_at, id) order. The cursor is only an exclusive position and never grants access to its source work item. Invalid cursor (400 bad_request) is checked before limit (422 validation_failed). The target, authorization and page are read in one snapshot.
+         */
+        get: operations["listIssueComments"];
+        put?: never;
+        /**
+         * Create a comment on a visible work item
+         * @description For the project's admins, members and guests who can read the work item. Missing or hidden work items answer issue.not_found before forbidden. The project is locked first and the decision repeated. An archived project refuses with project.archived before an archived issue with issue.archived. Sanitized content must contain text, a mention or image; otherwise validation_failed on comment_html, required. At most 500000 Unicode characters before sanitization. The caller and active mentioned members who can read it automatically subscribe. Existing subscriptions keep their identity and timestamps. All new rows have one writer and moment; this creates no activity or issue_mentions. Busy projects answer 503 server_busy with Retry-After.
+         */
+        post: operations["createIssueComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/issues/{issue_id}/relations": {
         parameters: {
             query?: never;
@@ -2045,6 +2072,40 @@ export interface components {
             /** @description 1–100 work items of the project, each named once, to put under the work item. */
             sub_issue_ids: string[];
         };
+        CommentReaction: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            comment_id: string;
+            /** Format: uuid */
+            actor_id: string;
+            reaction: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        IssueComment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            issue_id: string;
+            /** Format: uuid */
+            actor_id: string;
+            comment_html: string;
+            /** Format: date-time */
+            edited_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            reactions: components["schemas"]["CommentReaction"][];
+        };
+        IssueCommentPage: {
+            data: components["schemas"]["IssueComment"][];
+            next_cursor: components["schemas"]["NextCursor"];
+        };
+        IssueCommentCreate: {
+            comment_html: string;
+        };
         /**
          * @description A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
          * @enum {string}
@@ -2213,6 +2274,10 @@ export type IssueUpdate = components['schemas']['IssueUpdate'];
 export type Issue = components['schemas']['Issue'];
 export type IssueCollection = components['schemas']['IssueCollection'];
 export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
+export type CommentReaction = components['schemas']['CommentReaction'];
+export type IssueComment = components['schemas']['IssueComment'];
+export type IssueCommentPage = components['schemas']['IssueCommentPage'];
+export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
 export type IssueRelationType = components['schemas']['IssueRelationType'];
 export type IssueRelation = components['schemas']['IssueRelation'];
 export type IssueRelationCollection = components['schemas']['IssueRelationCollection'];
@@ -3854,6 +3919,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listIssueComments: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Comments, with null next_cursor on the final page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueCommentPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createIssueComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueCommentCreate"];
+            };
+        };
+        responses: {
+            /** @description The new comment. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueComment"];
                 };
             };
             default: components["responses"]["Problem"];

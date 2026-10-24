@@ -252,14 +252,17 @@ func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
 // fakeIssueProjects answers project's IssueProjects of one project, web,
 // and records each question; err, when set, is every answer's failure.
 type fakeIssueProjects struct {
-	web         uuid.UUID
-	locked      project.IssueProject
-	states      []project.IssueState
-	labels      []project.IssueLabel
-	roles       map[uuid.UUID]shared.Role
-	identifiers []project.IssueProjectIdentifier
-	err         error
-	asked       []string
+	mentionProject uuid.UUID
+	mentionIDs     []uuid.UUID
+	mentionMembers []project.IssueMemberVisibility
+	web            uuid.UUID
+	locked         project.IssueProject
+	states         []project.IssueState
+	labels         []project.IssueLabel
+	roles          map[uuid.UUID]shared.Role
+	identifiers    []project.IssueProjectIdentifier
+	err            error
+	asked          []string
 }
 
 func (f *fakeIssueProjects) ProjectWorkspace(_ context.Context, id uuid.UUID) (uuid.UUID, bool, error) {
@@ -387,5 +390,24 @@ func TestIssueProfilesConvertsIdentitysAnswer(t *testing.T) {
 	fake.err = failure
 	if got, err := p.DisplayNames(context.Background(), ids); !errors.Is(err, failure) || got != nil {
 		t.Errorf("DisplayNames() = %v, %v; want no names and %v", got, err, failure)
+	}
+}
+
+func (f *fakeIssueProjects) IssueMentionMembers(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]project.IssueMemberVisibility, error) {
+	f.mentionProject, f.mentionIDs = id, slices.Clone(ids)
+	return f.mentionMembers, f.err
+}
+func TestIssueMentionMembersConversion(t *testing.T) {
+	projectID, memberID := uuid.NewV7(), uuid.NewV7()
+	f := &fakeIssueProjects{mentionMembers: []project.IssueMemberVisibility{{ID: memberID, Role: shared.RoleGuest, OwnOnly: true}}}
+	p := issueProjects{projects: f}
+	got, err := p.MentionMembers(context.Background(), projectID, []uuid.UUID{memberID})
+	if err != nil || !slices.Equal(got, []issue.MemberVisibility{{ID: memberID, Role: shared.RoleGuest, OwnOnly: true}}) || f.mentionProject != projectID || !slices.Equal(f.mentionIDs, []uuid.UUID{memberID}) {
+		t.Fatal(got, err, f.mentionProject, f.mentionIDs)
+	}
+	f.err = errors.New("disk full")
+	got, err = p.MentionMembers(context.Background(), projectID, nil)
+	if err != f.err || got != nil {
+		t.Fatal(got, err)
 	}
 }

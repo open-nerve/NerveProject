@@ -123,6 +123,7 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 		return route.answerWithin(t, w.contract, http.MethodPost, path, caller, body, want)
 	}
 
+	route.answerWithin(t, w.contract, http.MethodPost, commentsOf(w.newWorkItem(t)), alice, `{"comment_html":"<p>Hi</p>"}`, http.StatusCreated)
 	var first struct {
 		ID uuid.UUID `json:"id"`
 	}

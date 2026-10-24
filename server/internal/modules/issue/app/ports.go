@@ -100,6 +100,8 @@ type LabelRef struct {
 // ProjectMembers reads a project's memberships (M4 design 6.5), under its
 // lock: project.Provide's.
 type ProjectMembers interface {
+	// MentionMembers reads effective roles and guest restrictions of active candidates.
+	MentionMembers(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]MemberVisibility, error)
 	// Roles reads the project roles of those of the accounts ids that are
 	// its active members, by account.
 	Roles(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error)

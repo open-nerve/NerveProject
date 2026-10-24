@@ -46,6 +46,12 @@ func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *p
 	for _, project := range []uuid.UUID{web, ops} {
 		seedLabels(t, pool, project, aliceID)
 		seedIssues(t, pool, project, aliceID)
+		for _, id := range queryIDs(t, pool, "SELECT id FROM issues WHERE project_id=$1", project) {
+			status, body := call(t, contract, http.MethodPost, base+commentsOf(id), alice, `{"comment_html":"<p>Seeded</p>"}`)
+			if status != http.StatusCreated {
+				t.Fatal(status, body)
+			}
+		}
 	}
 	return contract, base, pool, alice, aliceID, web, ops
 }

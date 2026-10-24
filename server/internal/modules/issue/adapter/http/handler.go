@@ -69,8 +69,20 @@ type DeleteIssueRelationUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) error
 }
 
+// CreateIssueCommentUseCase creates a comment on the named issue.
+type CreateIssueCommentUseCase interface {
+	Execute(context.Context, uuid.UUID, string) (domain.Comment, error)
+}
+
+// ListIssueCommentsUseCase lists a page, retaining absent query values.
+type ListIssueCommentsUseCase interface {
+	Execute(context.Context, uuid.UUID, *int, *string) (app.CommentPage, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	CreateIssueComment   CreateIssueCommentUseCase
+	ListIssueComments    ListIssueCommentsUseCase
 	CreateIssue          CreateIssueUseCase
 	GetIssue             GetIssueUseCase
 	GetIssueByIdentifier GetIssueByIdentifierUseCase

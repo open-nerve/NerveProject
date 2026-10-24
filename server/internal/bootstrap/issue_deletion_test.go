@@ -73,6 +73,10 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 		}
 		decodeAnswer(t, answer, &created)
 		made[i] = created.ID
+		status, answer = call(t, contract, http.MethodPost, base+commentsOf(created.ID), token, `{"comment_html":"<p>Seeded</p>"}`)
+		if status != http.StatusCreated {
+			t.Fatal(status, answer)
+		}
 	}
 	gone := made[0]
 	underWorkItem(t, pool, gone, made[1])
@@ -106,6 +110,7 @@ func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	w := newIssueWorld(t)
 	deleted, kept := w.newWorkItemBy(t, "bob", w.web, w.fullIssue()), w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
 	for _, parent := range []uuid.UUID{deleted, kept} {
+		w.send(t, "bob", http.MethodPost, commentsOf(parent), `{"comment_html":"<p>Seeded</p>"}`, http.StatusCreated)
 		underWorkItem(t, w.pool, parent, w.newWorkItemBy(t, "bob", w.web, `{"name":"Part"}`))
 	}
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
@@ -223,6 +228,9 @@ func TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment(t *testing.T) {
 	p := w.newWorkItem(t)
 	root := w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
 	a, b, c := w.newWorkItem(t), w.newWorkItemBy(t, "bob", w.web, `{"name":"Fix"}`), w.doneWorkItem(t)
+	for _, id := range []uuid.UUID{p, root, a, b, c} {
+		w.send(t, "bob", http.MethodPost, commentsOf(id), `{"comment_html":"<p>Subtree</p>"}`, http.StatusCreated)
+	}
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+c.String()+"/archive", "", http.StatusOK)
 	s, d, o := w.newWorkItem(t), w.newWorkItem(t), w.newWorkItem(t)
 	underWorkItem(t, w.pool, p, root)
