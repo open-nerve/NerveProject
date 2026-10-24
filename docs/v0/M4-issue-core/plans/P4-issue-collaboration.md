@@ -229,15 +229,15 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** `UpdateIssueComment.Execute(ctx context.Context,commentID uuid.UUID,html string)(domain.Comment,error)`、`DeleteIssueComment.Execute(ctx context.Context,commentID uuid.UUID)error`；Deps分别为`Locks, Comments CommentUpdater, Members ProjectMembers, Sanitizer HTMLSanitizer, Clock`与`Locks, Comments CommentDeleter, Clock`。Updater=GetComment+`UpdateComment(ctx context.Context,w CommentWrite)error`+InsertSubscribers+MarkChanged；Deleter=GetComment+`DeleteComment(ctx context.Context,d CommentDeletion)error`+MarkChanged。Locks增加`write.check func(context.Context,domain.Issue,shared.Grant)error`；`seeAs(ctx context.Context,actor shared.Actor,id uuid.UUID,action shared.Action,notFound error)(domain.Issue,shared.Grant,error)`，现有see委托它以ErrIssueNotFound。write.notFound用于指名issue的预检及锁下，不再被硬编码issue错误盖掉。按设计§3.4/3.5复用动作`issue_comment.write`，project级角色集合为Admin/Member/Guest，再由check执行作者/ProjectAdmin相对收窄。
 
-- [ ] **Step 1 红测试。** `TestCommentWritePermissions`逐格：作者能改删，管理员不能改别人/能删别人，工作项创建者不等于评论作者；adminGuest自己的issue可管理员删，别人issue404；缺失/隐藏/已删comment同一404。`TestCommentWritePrecheck`非作者403不进gate/tx/clock；锁下被删、降级、移出再判。`TestUnchangedCommentWritesNothing`HTML相同无写，归档仍409；新清洗HTML不同时edited_at/主issue审计同刻。
+- [x] **Step 1 红测试。** `TestCommentWritePermissions`逐格：作者能改删，管理员不能改别人/能删别人，工作项创建者不等于评论作者；adminGuest自己的issue可管理员删，别人issue404；缺失/隐藏/已删comment同一404。`TestCommentWritePrecheck`非作者403不进gate/tx/clock；锁下被删、降级、移出再判。`TestUnchangedCommentWritesNothing`HTML相同无写，归档仍409；新清洗HTML不同时edited_at/主issue审计同刻。
   ```go
   if !reflect.DeepEqual(hidden, missing) { t.Fatal("child existence leaked") }
   if callsContain("Enter", "Begin", "Now") { t.Fatal("refusal acquired resources") }
   ```
-- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(CommentWrite|UnchangedComment|Locks)' -count=1`；`go -C server test ./internal/bootstrap -run TestCommentPermissions -count=1`。
-- [ ] **Step 3 实现。** 不加锁GetComment定位issue；run的check在seeAs/decide成功之后、gate之前执行一次，在锁下decide之后再执行一次。check每次GetComment确认未删且IssueID相同，作者/ProjectAdmin规则在其中；捕获当前评论给本次回调（同请求顺序执行）。先404后作者403再归档；普通端口错误原样透出。编辑先issue→新订阅→comment，删除先issue→comment，T6扩连带。编辑时新增可见提及者关注，删提及不退订。新码comment_not_found/not_author同Task文案。
-- [ ] **Step 4 绿/变异。** 原红命令及HTTP全包绿；变异允许管理员编辑、只在gate后验作者、忘记锁下重读、子资源映射漏掉隐藏issue、同HTML改edited_at分别失败。用真实组合验证预检持外部项目锁时仍即时拒绝，不能只看fake调用日志。
-- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): 在取锁前校验评论作者权限`。
+- [x] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(CommentWrite|UnchangedComment|Locks)' -count=1`；`go -C server test ./internal/bootstrap -run TestCommentPermissions -count=1`。
+- [x] **Step 3 实现。** 不加锁GetComment定位issue；run的check在seeAs/decide成功之后、gate之前执行一次，在锁下decide之后再执行一次。check每次GetComment确认未删且IssueID相同，作者/ProjectAdmin规则在其中；捕获当前评论给本次回调（同请求顺序执行）。先404后作者403再归档；普通端口错误原样透出。编辑先issue→新订阅→comment，删除先issue→comment，T6扩连带。编辑时新增可见提及者关注，删提及不退订。新码comment_not_found/not_author同Task文案。
+- [x] **Step 4 绿/变异。** 原红命令及HTTP全包绿；变异允许管理员编辑、只在gate后验作者、忘记锁下重读、子资源映射漏掉隐藏issue、同HTML改edited_at分别失败。用真实组合验证预检持外部项目锁时仍即时拒绝，不能只看fake调用日志。
+- [x] **Step 5 H/G评审提交。** `feat(M4/P4): 在取锁前校验评论作者权限`。
 
 ### Task 5: 工作项表情与00022
 
