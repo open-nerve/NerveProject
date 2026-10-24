@@ -31,6 +31,8 @@ type ProjectRowsDeleter interface {
 	// end is a work item of the project.
 	DeleteProjectRelationRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectSubscriberRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteProjectMentionRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteProjectDescriptionVersionRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectCommentRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectReactionRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectCommentReactionRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
@@ -42,7 +44,7 @@ type ProjectRowsDeleter interface {
 func rowSteps(d ProjectRowsDeleter) []func(context.Context, RowBatch) ([]uuid.UUID, error) {
 	return []func(context.Context, RowBatch) ([]uuid.UUID, error){
 		d.DeleteProjectIssueRows, d.DeleteProjectAssigneeRows, d.DeleteProjectLabelRows, d.DeleteProjectRelationRows,
-		d.DeleteProjectSubscriberRows, d.DeleteProjectCommentRows, d.DeleteProjectReactionRows, d.DeleteProjectCommentReactionRows, d.DeleteProjectActivityRows,
+		d.DeleteProjectSubscriberRows, d.DeleteProjectMentionRows, d.DeleteProjectCommentRows, d.DeleteProjectReactionRows, d.DeleteProjectCommentReactionRows, d.DeleteProjectActivityRows, d.DeleteProjectDescriptionVersionRows,
 	}
 }
 

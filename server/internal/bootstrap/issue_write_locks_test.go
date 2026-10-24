@@ -61,7 +61,9 @@ var issueWrites = []issueWrite{
 	// state, so the states are read under the lock.
 	{op: "updateIssue", method: http.MethodPatch, path: "/api/v0/issues/{issue_id}",
 		target: func(t *testing.T, w issueWorld) string { return "/api/v0/issues/" + w.newWorkItem(t).String() },
-		body:   func(_ *testing.T, w issueWorld) string { return `{"state_id":"` + w.done.String() + `"}` }, want: http.StatusOK,
+		body: func(_ *testing.T, w issueWorld) string {
+			return `{"description_html":"<p>Under lock</p>","state_id":"` + w.done.String() + `"}`
+		}, want: http.StatusOK,
 		waits: "states", mode: "ACCESS EXCLUSIVE"},
 	// A work item the send deletes: it reads nothing under the lock that
 	// its precheck did not, so it waits for the work items' table, which

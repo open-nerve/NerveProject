@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"slices"
 	"testing"
@@ -46,7 +47,11 @@ func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *p
 		seedLabels(t, pool, project, aliceID)
 		seedIssues(t, pool, project, aliceID)
 		for _, id := range queryIDs(t, pool, "SELECT id FROM issues WHERE project_id=$1", project) {
-			status, body := call(t, contract, http.MethodPost, base+reactionsOf(id), alice, `{"reaction":"128077"}`)
+			status, body := call(t, contract, http.MethodPatch, base+"/api/v0/issues/"+id.String(), alice, fmt.Sprintf(`{"description_html":%q}`, mentionHTML(aliceID)))
+			if status != http.StatusOK {
+				t.Fatal(status, body)
+			}
+			status, body = call(t, contract, http.MethodPost, base+reactionsOf(id), alice, `{"reaction":"128077"}`)
 			if status != http.StatusCreated {
 				t.Fatal(status, body)
 			}

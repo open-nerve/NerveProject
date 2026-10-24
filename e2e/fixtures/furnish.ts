@@ -23,6 +23,7 @@ export async function furnishIssueRows(
 ): Promise<void> {
   const fix = await createIssue(api, token, projectId, {
     name: "Fix the login",
+    description_html: `<mention-component entity_name="user_mention" entity_identifier="${assigneeId}"></mention-component>`,
     assignee_ids: [assigneeId],
     label_ids: [labelId],
   });

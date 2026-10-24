@@ -258,6 +258,8 @@ type IssueNumbers interface {
 // them, in the transaction ctx carries (M4 design 3.5).
 type IssueCreator interface {
 	IssueReader
+	InsertMentions(context.Context, LinkRows) error
+	InsertDescriptionVersion(context.Context, domain.DescriptionVersion) error
 	// GreatestSortOrder reads the greatest sort order of the project's
 	// undeleted work items in the state, archived ones too, nil for none.
 	GreatestSortOrder(ctx context.Context, projectID, stateID uuid.UUID) (*float64, error)
@@ -275,6 +277,10 @@ type IssueCreator interface {
 // them, in the transaction ctx carries (M4 design 3.5).
 type IssueUpdater interface {
 	IssueReader
+	MentionStore
+	DescriptionVersions
+	DescriptionActivityStore
+	WriteDescription(context.Context, DescriptionWrite) error
 	// Ancestry reads the work item and those above it, its parent, its
 	// parent's parent and so on, each once, in no order: a work item that
 	// is in it may not be put under it (M4 design 3.9).

@@ -2,8 +2,10 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -45,6 +47,7 @@ func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
 	}
 	activity := "issue_activities made by alice made, changed by alice made, of alice"
 	want := []string{activity, activity, "issue_assignees made by alice made, changed by alice made, of bob",
+		"issue_description_versions made by alice made, changed by alice made, of alice",
 		"issue_labels made by alice made, changed by alice made", "issue_subscribers made by alice made, changed by alice made, of alice",
 		"issue_subscribers made by alice made, changed by alice made, of bob", "issues made by alice made, changed by alice made"}
 	if got := w.workItemStamps(t, item); !slices.Equal(got, want) {
@@ -137,7 +140,8 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	var first struct {
 		ID uuid.UUID `json:"id"`
 	}
-	decodeAnswer(t, send(alice, w.fullIssue(), http.StatusCreated), &first)
+	decodeAnswer(t, send(alice, strings.TrimSuffix(w.fullIssue(), "}")+fmt.Sprintf(`,"description_html":%q}`, mentionHTML(w.ids["bob"])), http.StatusCreated), &first)
+	route.answerWithin(t, w.contract, http.MethodPatch, "/api/v0/issues/"+first.ID.String(), alice, fmt.Sprintf(`{"description_html":%q}`, mentionHTML(w.ids["alice"])), 200)
 	if _, err := w.pool.Exec(context.Background(), "UPDATE projects SET default_assignee_id = $2 WHERE id = $1", w.web, w.ids["bob"]); err != nil {
 		t.Fatal(err)
 	}

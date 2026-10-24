@@ -12,6 +12,11 @@ func collaborationMatrixRows() []matrixRow {
 	list := toWorkItem(http.MethodGet, "/comments", "")
 	create := toWorkItem(http.MethodPost, "/comments", `{"comment_html":"<p>New comment</p>"}`)
 	rows := []matrixRow{
+		{op: "createIssue", variant: "description", write: true, columns: issueColumns, request: toProject(http.MethodPost, "/issues", `{"name":"Description","description_html":"<p>Rich</p>"}`), cells: onTheIssues(cellCreated, cellCreated, cellForbidden)},
+		{op: "updateIssue", variant: "description", write: true, columns: issueColumns, request: toWorkItem(http.MethodPatch, "", `{"description_html":"<p>Rich</p>"}`), cells: onAWorkItem(cellOK, cellOK, cellOK, cellForbidden)},
+		{op: "updateIssue", variant: "skip description", write: true, columns: issueColumns, request: toWorkItem(http.MethodPatch, "", `{"description_html":"<p></p>","skip_activity":true}`), cells: onAWorkItem(cellOK, cellOK, cellOK, cellForbidden)},
+		{op: "updateIssue", variant: "description archived project", write: true, columns: archivedColumns, request: toWorkItem(http.MethodPatch, "", `{"description_html":"<p>Rich</p>"}`), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
+		{op: "updateIssue", variant: "description archived issue", write: true, columns: issueColumns, prepare: inDone(true), request: toWorkItem(http.MethodPatch, "", `{"description_html":"<p>Rich</p>"}`), cells: onAWorkItem(cellIssueArchived, cellIssueArchived, cellIssueArchived, cellForbidden)},
 		{op: "listIssueComments", columns: issueColumns, request: list, cells: onAWorkItem(cellOK, cellOK, cellOK, cellOK), check: func(t *testing.T, _ caller, _ seeded, answer string) {
 			if got := listIn[answeredComment](t, answer); len(got) != 1 || got[0].HTML != "<p>Seeded comment</p>" {
 				t.Fatal(answer)

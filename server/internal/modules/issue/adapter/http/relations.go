@@ -45,7 +45,7 @@ func (h handler) DeleteIssueRelation(ctx context.Context, req gen.DeleteIssueRel
 func issueRelationCollection(relations []app.IssueRelation) gen.IssueRelationCollection {
 	data := make([]gen.IssueRelation, len(relations))
 	for n, r := range relations {
-		data[n] = gen.IssueRelation{ID: r.ID, RelationType: gen.IssueRelationType(r.Type), Issue: gen.Issue(issueDetail(r.Issue)), CreatedAt: r.CreatedAt}
+		data[n] = gen.IssueRelation{ID: r.ID, RelationType: gen.IssueRelationType(r.Type), Issue: issueRow(r.Issue), CreatedAt: r.CreatedAt}
 	}
 	return gen.IssueRelationCollection{Data: data}
 }

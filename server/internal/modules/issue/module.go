@@ -134,14 +134,14 @@ func New(d Deps) *Module {
 		ListIssueComments:     app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
 		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{
 			Locks: locks, Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
-			Profiles: d.Profiles, Clock: d.Clock,
+			Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
 		}),
 		GetIssue: app.NewGetIssue(locks),
 		GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
 			Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store,
 		}),
 		UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{
-			Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock,
+			Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
 		}),
 		DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Locks: locks, Rows: store, Clock: d.Clock}),
 		ArchiveIssue:       app.NewArchiveIssue(archive),

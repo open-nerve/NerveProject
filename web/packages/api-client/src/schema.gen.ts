@@ -2004,6 +2004,8 @@ export interface components {
          */
         IssuePriority: "urgent" | "high" | "medium" | "low" | "none";
         IssueCreate: {
+            /** @description Sanitized rich text HTML; at most 500000 characters on input. */
+            description_html?: string;
             /** @description 1–255 characters without the white space around it, which is not stored. */
             name: string;
             /**
@@ -2034,6 +2036,8 @@ export interface components {
         };
         /** @description A work item of a project. */
         IssueDetail: {
+            /** @description Sanitized rich text HTML; at most 500000 characters on input. */
+            description_html: string;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -2096,6 +2100,10 @@ export interface components {
         };
         /** @description Changes the fields it names; a field left out keeps its value. */
         IssueUpdate: {
+            /** @description Only with description_html alone; preserves audit when content identity is unchanged. */
+            skip_activity?: boolean;
+            /** @description Sanitized rich text HTML; at most 500000 characters on input. */
+            description_html?: string;
             /** @description 1–255 characters without the white space around it, which is not stored. */
             name?: string;
             /**

@@ -165,6 +165,9 @@ type IssueCreate struct {
 	// AssigneeIds At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for the project's default assignee while he is one, else no one.
 	AssigneeIds *[]uuid.UUID `json:"assignee_ids,omitempty"`
 
+	// DescriptionHTML Sanitized rich text HTML; at most 500000 characters on input.
+	DescriptionHTML *string `json:"description_html,omitempty"`
+
 	// LabelIds At most 100 of the project's labels, each named once.
 	LabelIds *[]uuid.UUID `json:"label_ids,omitempty"`
 
@@ -201,7 +204,10 @@ type IssueDetail struct {
 
 	// CreatedByID The account that created it; null for none.
 	CreatedByID nullable.Nullable[uuid.UUID] `json:"created_by_id"`
-	ID          uuid.UUID                    `json:"id"`
+
+	// DescriptionHTML Sanitized rich text HTML; at most 500000 characters on input.
+	DescriptionHTML string    `json:"description_html"`
+	ID              uuid.UUID `json:"id"`
 
 	// LabelIds Its labels, by id.
 	LabelIds []uuid.UUID `json:"label_ids"`
@@ -287,6 +293,9 @@ type IssueUpdate struct {
 	// AssigneeIds The work item's new assignees, empty for none: at most 100 accounts, each named once; each it is not assigned to yet an active member of the project who is not its guest.
 	AssigneeIds *[]uuid.UUID `json:"assignee_ids,omitempty"`
 
+	// DescriptionHTML Sanitized rich text HTML; at most 500000 characters on input.
+	DescriptionHTML *string `json:"description_html,omitempty"`
+
 	// LabelIds The work item's new labels, empty for none: at most 100 of the project's labels, each named once.
 	LabelIds *[]uuid.UUID `json:"label_ids,omitempty"`
 
@@ -298,6 +307,9 @@ type IssueUpdate struct {
 
 	// Priority A work item's priority, from the most to the least urgent.
 	Priority *IssuePriority `json:"priority,omitempty"`
+
+	// SkipActivity Only with description_html alone; preserves audit when content identity is unchanged.
+	SkipActivity *bool `json:"skip_activity,omitempty"`
 
 	// StartDate The day it starts, as YYYY-MM-DD; null for none. Not after the target date the work item then has.
 	StartDate nullable.Nullable[shared.Date] `json:"start_date,omitempty"`

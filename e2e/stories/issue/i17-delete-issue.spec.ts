@@ -26,7 +26,7 @@ import { expect, test } from "../../fixtures/test";
 // I17, deleting a work item and the work items under it (M4 design 2, 3.4, 3.6, 3.9, 3.10): the API version, with
 // P3's assertions (the work item, two levels of work items under it, an archived one among them, and their assignees,
 // labels, subscribers, activity and relations either way deleted at one moment by its deleter; who may delete it).
-// Comments and issue reactions are furnished through P4's API; comment reactions, mentions and versions are later in P4, the links P7's, the page version P14's.
+// Comments, reactions, mentions and versions are furnished through P4's API; links are P7's and the page version P14's.
 
 test("I17 (API): a member does not delete another's work item (403), a guest his own (403), nor a creator who has left the private project his own (404); a member deletes her own, which has two levels of work items under it, the lower archived, and relates to two work items of another project, one relation stored from each end: with it, at that moment and by her, every row under it, the work items under it and its relations either way among them; none of the three is found again (404), and the other work items list no relation", async ({
   api,
@@ -64,14 +64,21 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
   // ann's Plan the release, assigned to bob and labelled Bug; Write the notes under it, and Check the mirrors, in Done,
   // under that, archived. Plan the release relates to Deploy the site, of Ops, stored from it, and blocks Ship it, of
   // Ops, stored from Ship it as its blocked_by: under Plan the release, a row of each key of the catalog.
+  const description = `<mention-component entity_name="user_mention" entity_identifier="${bob.id}"></mention-component>`;
   const plan = await createIssue(api, ann.token, web.id, {
     name: "Plan the release",
+    description_html: description,
     assignee_ids: [bob.id],
     label_ids: [bug.id],
   });
-  const notes = await createIssue(api, ann.token, web.id, { name: "Write the notes", parent_id: plan.id });
+  const notes = await createIssue(api, ann.token, web.id, {
+    name: "Write the notes",
+    description_html: description,
+    parent_id: plan.id,
+  });
   const mirrors = await createIssue(api, ann.token, web.id, {
     name: "Check the mirrors",
+    description_html: description,
     state_id: done,
     parent_id: notes.id,
   });

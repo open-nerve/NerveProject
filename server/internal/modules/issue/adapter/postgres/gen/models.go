@@ -96,12 +96,41 @@ type IssueComment struct {
 	DeletedAt       *time.Time
 }
 
+type IssueDescriptionVersion struct {
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	ProjectID           uuid.UUID
+	IssueID             uuid.UUID
+	DescriptionHtml     string
+	DescriptionStripped *string
+	LastSavedAt         time.Time
+	OwnedByID           uuid.UUID
+	CreatedByID         *uuid.UUID
+	UpdatedByID         *uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	DeletedAt           *time.Time
+}
+
 type IssueLabel struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
 	ProjectID   uuid.UUID
 	IssueID     uuid.UUID
 	LabelID     uuid.UUID
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
+type IssueMention struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	IssueID     uuid.UUID
+	MentionID   uuid.UUID
 	CreatedByID *uuid.UUID
 	UpdatedByID *uuid.UUID
 	CreatedAt   time.Time

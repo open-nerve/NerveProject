@@ -218,7 +218,9 @@ func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
 			WHERE issue_id = $1 OR related_issue_id = $1
 		UNION ALL SELECT 'issue_subscribers', created_by_id, created_at, updated_by_id, updated_at, deleted_at, subscriber_id
 			FROM issue_subscribers WHERE issue_id = $1
-		UNION ALL SELECT 'issue_comments', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_comments WHERE issue_id = $1
+		UNION ALL SELECT 'issue_mentions',created_by_id,created_at,updated_by_id,updated_at,deleted_at,mention_id FROM issue_mentions WHERE issue_id=$1
+ UNION ALL SELECT 'issue_description_versions',created_by_id,created_at,updated_by_id,updated_at,deleted_at,owned_by_id FROM issue_description_versions WHERE issue_id=$1
+ UNION ALL SELECT 'issue_comments', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_comments WHERE issue_id = $1
 		UNION ALL SELECT 'issue_reactions', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_reactions WHERE issue_id = $1
 		UNION ALL SELECT 'comment_reactions', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM comment_reactions WHERE comment_id IN (SELECT id FROM issue_comments WHERE issue_id=$1)
 		UNION ALL SELECT 'issue_activities', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_activities

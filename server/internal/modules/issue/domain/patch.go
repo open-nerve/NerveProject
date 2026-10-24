@@ -95,14 +95,15 @@ func diffOf(from, to []uuid.UUID) Diff {
 // gives the new set. An account or a label the work item has and the new
 // set keeps is left as it is: its row is not written again.
 type Changes struct {
-	Name       *string
-	Priority   *Priority
-	StateID    *uuid.UUID
-	StartDate  *DateChange
-	TargetDate *DateChange
-	Parent     *ParentChange
-	Assignees  Diff
-	Labels     Diff
+	Description *DescriptionChange
+	Name        *string
+	Priority    *Priority
+	StateID     *uuid.UUID
+	StartDate   *DateChange
+	TargetDate  *DateChange
+	Parent      *ParentChange
+	Assignees   Diff
+	Labels      Diff
 }
 
 // ChangesOf is what p, checked (CheckIssuePatch), changes in i.
@@ -153,7 +154,7 @@ func Unassignable(asked, added []uuid.UUID, roles map[uuid.UUID]shared.Role) []s
 
 // None reports whether c changes nothing: then the update writes no row.
 func (c Changes) None() bool {
-	return c.Name == nil && c.Priority == nil && c.StateID == nil && c.StartDate == nil && c.TargetDate == nil && c.Parent == nil &&
+	return (c.Description == nil || !c.Description.Write) && c.Name == nil && c.Priority == nil && c.StateID == nil && c.StartDate == nil && c.TargetDate == nil && c.Parent == nil &&
 		len(c.Assignees.Added) == 0 && len(c.Assignees.Removed) == 0 && len(c.Labels.Added) == 0 && len(c.Labels.Removed) == 0
 }
 

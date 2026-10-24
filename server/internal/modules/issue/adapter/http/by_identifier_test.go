@@ -22,8 +22,8 @@ func TestGetIssueByIdentifier(t *testing.T) {
 	} {
 		get := &fakeGetByIdentifier{answer: webSeven}
 		res, body := do(t, newServer(t, httpadapter.UseCases{GetIssueByIdentifier: get}), request(http.MethodGet, tt.path, "alice", ""))
-		if res.StatusCode != http.StatusOK || body != webSevenJSON+"\n" {
-			t.Errorf("GET %s = %d %s, want 200 %s", tt.path, res.StatusCode, body, webSevenJSON)
+		if res.StatusCode != http.StatusOK || body != webSevenDetailJSON+"\n" {
+			t.Errorf("GET %s = %d %s, want 200 %s", tt.path, res.StatusCode, body, webSevenDetailJSON)
 		}
 		if want := []string{aliceID.String() + " " + tt.slug + " " + tt.identifier}; !slices.Equal(get.calls, want) {
 			t.Errorf("GET %s: calls %q, want %q", tt.path, get.calls, want)

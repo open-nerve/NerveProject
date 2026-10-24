@@ -80,3 +80,16 @@ WHERE comment_id IN (SELECT id FROM issue_comments WHERE issue_id = ANY (sqlc.ar
 UPDATE issue_activities
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE issue_id = ANY (sqlc.arg(issue_ids)::uuid[]) AND deleted_at IS NULL;
+
+-- name: DeleteIssueMentionRows :exec
+-- DeleteIssueAssigneeRows' statement, of the deleted work items' subscribers.
+UPDATE issue_mentions
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE issue_id = ANY (sqlc.arg(issue_ids)::uuid[]) AND deleted_at IS NULL;
+
+
+-- name: DeleteIssueDescriptionVersionRows :exec
+-- DeleteIssueAssigneeRows' statement, of the deleted work items' subscribers.
+UPDATE issue_description_versions
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE issue_id = ANY (sqlc.arg(issue_ids)::uuid[]) AND deleted_at IS NULL;

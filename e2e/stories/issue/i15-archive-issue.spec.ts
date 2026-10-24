@@ -77,6 +77,7 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   // the started group it is not archived.
   const { id } = await createIssue(api, ann.token, web.id, {
     name: "Fix the login",
+    description_html: `<mention-component entity_name="user_mention" entity_identifier="${ann.id}"></mention-component>`,
     state_id: inProgress,
     assignee_ids: [ann.id],
     label_ids: [bug.id],

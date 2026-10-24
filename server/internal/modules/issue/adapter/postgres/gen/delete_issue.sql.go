@@ -88,6 +88,24 @@ func (q *Queries) DeleteIssueCommentRows(ctx context.Context, arg DeleteIssueCom
 	return err
 }
 
+const deleteIssueDescriptionVersionRows = `-- name: DeleteIssueDescriptionVersionRows :exec
+UPDATE issue_description_versions
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE issue_id = ANY ($3::uuid[]) AND deleted_at IS NULL
+`
+
+type DeleteIssueDescriptionVersionRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	IssueIds  []uuid.UUID
+}
+
+// DeleteIssueAssigneeRows' statement, of the deleted work items' subscribers.
+func (q *Queries) DeleteIssueDescriptionVersionRows(ctx context.Context, arg DeleteIssueDescriptionVersionRowsParams) error {
+	_, err := q.db.Exec(ctx, deleteIssueDescriptionVersionRows, arg.At, arg.DeletedBy, arg.IssueIds)
+	return err
+}
+
 const deleteIssueLabelRows = `-- name: DeleteIssueLabelRows :exec
 UPDATE issue_labels
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -103,6 +121,24 @@ type DeleteIssueLabelRowsParams struct {
 // DeleteIssueAssigneeRows' statement, of the deleted work items' labels.
 func (q *Queries) DeleteIssueLabelRows(ctx context.Context, arg DeleteIssueLabelRowsParams) error {
 	_, err := q.db.Exec(ctx, deleteIssueLabelRows, arg.At, arg.DeletedBy, arg.IssueIds)
+	return err
+}
+
+const deleteIssueMentionRows = `-- name: DeleteIssueMentionRows :exec
+UPDATE issue_mentions
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE issue_id = ANY ($3::uuid[]) AND deleted_at IS NULL
+`
+
+type DeleteIssueMentionRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	IssueIds  []uuid.UUID
+}
+
+// DeleteIssueAssigneeRows' statement, of the deleted work items' subscribers.
+func (q *Queries) DeleteIssueMentionRows(ctx context.Context, arg DeleteIssueMentionRowsParams) error {
+	_, err := q.db.Exec(ctx, deleteIssueMentionRows, arg.At, arg.DeletedBy, arg.IssueIds)
 	return err
 }
 

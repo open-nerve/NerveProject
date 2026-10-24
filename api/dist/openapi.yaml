@@ -3417,6 +3417,9 @@ components:
       required:
         - name
       properties:
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
         name:
           description: 1–255 characters without the white space around it, which is not stored.
           type: string
@@ -3455,6 +3458,7 @@ components:
       type: object
       additionalProperties: false
       required:
+        - description_html
         - id
         - workspace_id
         - project_id
@@ -3476,6 +3480,9 @@ components:
         - created_at
         - updated_at
       properties:
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
         id:
           type: string
           format: uuid
@@ -3566,6 +3573,12 @@ components:
       type: object
       additionalProperties: false
       properties:
+        skip_activity:
+          description: Only with description_html alone; preserves audit when content identity is unchanged.
+          type: boolean
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
         name:
           description: 1–255 characters without the white space around it, which is not stored.
           type: string

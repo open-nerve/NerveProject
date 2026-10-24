@@ -85,3 +85,15 @@ func (s *Store) DeleteProjectCommentReactionRows(ctx context.Context, b app.RowB
 	ids, err := s.queries(ctx).DeleteProjectCommentReactionRows(ctx, gen.DeleteProjectCommentReactionRowsParams(batch(b)))
 	return deleted(ids, err, "comment reactions")
 }
+
+// DeleteProjectMentionRows soft deletes one keyset batch of live project rows.
+func (s *Store) DeleteProjectMentionRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteProjectMentionRows(ctx, gen.DeleteProjectMentionRowsParams(batch(b)))
+	return deleted(ids, err, "Mention")
+}
+
+// DeleteProjectDescriptionVersionRows soft deletes one keyset batch of live project rows.
+func (s *Store) DeleteProjectDescriptionVersionRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteProjectDescriptionVersionRows(ctx, gen.DeleteProjectDescriptionVersionRowsParams(batch(b)))
+	return deleted(ids, err, "DescriptionVersion")
+}

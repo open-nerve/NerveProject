@@ -192,6 +192,51 @@ func (q *Queries) DeleteProjectCommentRows(ctx context.Context, arg DeleteProjec
 	return items, nil
 }
 
+const deleteProjectDescriptionVersionRows = `-- name: DeleteProjectDescriptionVersionRows :many
+UPDATE issue_description_versions AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM issue_description_versions r
+    WHERE r.project_id = $3 AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteProjectDescriptionVersionRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// DeleteProjectIssueRows' batch, of the work items' subscribers.
+func (q *Queries) DeleteProjectDescriptionVersionRows(ctx context.Context, arg DeleteProjectDescriptionVersionRowsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectDescriptionVersionRows,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteProjectIssueRows = `-- name: DeleteProjectIssueRows :many
 UPDATE issues AS t
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -263,6 +308,51 @@ type DeleteProjectLabelRowsParams struct {
 // DeleteProjectIssueRows' batch, of the work items' labels.
 func (q *Queries) DeleteProjectLabelRows(ctx context.Context, arg DeleteProjectLabelRowsParams) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, deleteProjectLabelRows,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deleteProjectMentionRows = `-- name: DeleteProjectMentionRows :many
+UPDATE issue_mentions AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM issue_mentions r
+    WHERE r.project_id = $3 AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteProjectMentionRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// DeleteProjectIssueRows' batch, of the work items' subscribers.
+func (q *Queries) DeleteProjectMentionRows(ctx context.Context, arg DeleteProjectMentionRowsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectMentionRows,
 		arg.At,
 		arg.DeletedBy,
 		arg.ProjectID,

@@ -54,6 +54,7 @@ func TestUpdatingAWorkItemStampsItsRows(t *testing.T) {
 	want := []string{creation, creation, update, update, update, update, update, update,
 		"issue_assignees made by alice made, changed by bob changed, deleted changed, of alice",
 		"issue_assignees made by bob changed, changed by bob changed, of walt",
+		"issue_description_versions made by alice made, changed by alice made, of alice",
 		"issue_labels made by alice made, changed by bob changed, deleted changed",
 		"issue_subscribers made by alice made, changed by alice made, of alice",
 		"issue_subscribers made by bob changed, changed by bob changed, of walt",

@@ -87,3 +87,13 @@ func (s *Store) DeleteIssueReactionRows(ctx context.Context, d app.IssueDeletion
 func (s *Store) DeleteIssueCommentReactionRows(ctx context.Context, d app.IssueDeletion) error {
 	return deletedRows(s.queries(ctx).DeleteIssueCommentReactionRows(ctx, gen.DeleteIssueCommentReactionRowsParams(deletion(d))), "the comment reactions", d)
 }
+
+// DeleteIssueMentionRows soft deletes live rows in the requested subtree.
+func (s *Store) DeleteIssueMentionRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueMentionRows(ctx, gen.DeleteIssueMentionRowsParams(deletion(d))), "Mention", d)
+}
+
+// DeleteIssueDescriptionVersionRows soft deletes live rows in the requested subtree.
+func (s *Store) DeleteIssueDescriptionVersionRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueDescriptionVersionRows(ctx, gen.DeleteIssueDescriptionVersionRowsParams(deletion(d))), "DescriptionVersion", d)
+}

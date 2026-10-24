@@ -228,23 +228,26 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // sub-items it answers, and parented the last addition of sub-items' rows
 // (fakes_parents_test.go).
 type fakeIssues struct {
-	log        *callLog
-	greatest   map[uuid.UUID]float64
-	issue      *app.IssueRow
-	changed    *app.IssueFields
-	archival   *app.IssueArchival
-	archivedAt *time.Time
-	assignees  []uuid.UUID
-	labels     []uuid.UUID
-	activities []app.ActivityRow
-	subtree    []uuid.UUID
-	deletions  []app.IssueDeletion
-	others     map[uuid.UUID]domain.Issue
-	ancestry   map[uuid.UUID][]uuid.UUID
-	counts     map[uuid.UUID]app.SubIssueCount
-	subItems   []domain.Issue
-	parented   *app.ParentRows
-	lost       bool
+	log               *callLog
+	versions          []domain.DescriptionVersion
+	mentions          []uuid.UUID
+	descriptionWrites int
+	greatest          map[uuid.UUID]float64
+	issue             *app.IssueRow
+	changed           *app.IssueFields
+	archival          *app.IssueArchival
+	archivedAt        *time.Time
+	assignees         []uuid.UUID
+	labels            []uuid.UUID
+	activities        []app.ActivityRow
+	subtree           []uuid.UUID
+	deletions         []app.IssueDeletion
+	others            map[uuid.UUID]domain.Issue
+	ancestry          map[uuid.UUID][]uuid.UUID
+	counts            map[uuid.UUID]app.SubIssueCount
+	subItems          []domain.Issue
+	parented          *app.ParentRows
+	lost              bool
 }
 
 func (f *fakeIssues) GreatestSortOrder(ctx context.Context, projectID, stateID uuid.UUID) (*float64, error) {

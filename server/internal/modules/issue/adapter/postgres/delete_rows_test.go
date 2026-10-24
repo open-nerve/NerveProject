@@ -60,6 +60,10 @@ func aRelation(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.U
 }
 
 var batchStatements = []batchStatement{
+	{"issue_mentions", (*postgresadapter.Store).DeleteProjectMentionRows, child("issue_mentions", "mention_id", anAccount)},
+	{"issue_description_versions", (*postgresadapter.Store).DeleteProjectDescriptionVersionRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, _ int) {
+		exec(t, pool, "INSERT INTO issue_description_versions(id,workspace_id,project_id,issue_id,owned_by_id,last_saved_at,created_by_id,updated_by_id,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$5,$5,$6,$6)", id, p.workspace, p.id, issue, by, now)
+	}},
 	{"issues", (*postgresadapter.Store).DeleteProjectIssueRows, func(t *testing.T, pool *pgxpool.Pool, p project, _, id, by uuid.UUID, n int) {
 		newIssue(t, pool, p, id, 100+n, by)
 	}},

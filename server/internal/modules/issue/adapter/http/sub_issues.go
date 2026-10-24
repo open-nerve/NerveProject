@@ -33,7 +33,7 @@ func (h handler) AddSubIssues(ctx context.Context, req gen.AddSubIssuesRequestOb
 func issueCollection(items []domain.Issue) gen.IssueCollection {
 	data := make([]gen.Issue, len(items))
 	for n, i := range items {
-		data[n] = gen.Issue(issueDetail(i))
+		data[n] = issueRow(i)
 	}
 	return gen.IssueCollection{Data: data}
 }

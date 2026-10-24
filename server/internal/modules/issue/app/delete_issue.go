@@ -36,6 +36,8 @@ type IssueRowsDeleter interface {
 	// in id order first (convention 5's exception).
 	DeleteIssueRelationRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueSubscriberRows(ctx context.Context, d IssueDeletion) error
+	DeleteIssueMentionRows(ctx context.Context, d IssueDeletion) error
+	DeleteIssueDescriptionVersionRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueCommentRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueReactionRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueCommentReactionRows(ctx context.Context, d IssueDeletion) error
@@ -47,8 +49,8 @@ type IssueRowsDeleter interface {
 // the rows under them.
 func issueRowSteps(d IssueRowsDeleter) []func(context.Context, IssueDeletion) error {
 	return []func(context.Context, IssueDeletion) error{
-		d.DeleteIssueRows, d.DeleteIssueAssigneeRows, d.DeleteIssueLabelRows, d.DeleteIssueRelationRows, d.DeleteIssueSubscriberRows,
-		d.DeleteIssueCommentRows, d.DeleteIssueReactionRows, d.DeleteIssueCommentReactionRows, d.DeleteIssueActivityRows,
+		d.DeleteIssueRows, d.DeleteIssueAssigneeRows, d.DeleteIssueLabelRows, d.DeleteIssueRelationRows, d.DeleteIssueSubscriberRows, d.DeleteIssueMentionRows,
+		d.DeleteIssueCommentRows, d.DeleteIssueReactionRows, d.DeleteIssueCommentReactionRows, d.DeleteIssueActivityRows, d.DeleteIssueDescriptionVersionRows,
 	}
 }
 

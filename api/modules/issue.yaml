@@ -779,9 +779,12 @@ components:
       description: A work item of a project.
       type: object
       additionalProperties: false
-      required: [id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
+      required: [description_html, id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
         completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, created_by_id, updated_by_id, created_at, updated_at]
       properties:
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
         id:
           type: string
           format: uuid
@@ -1023,6 +1026,9 @@ components:
       additionalProperties: false
       required: [name]
       properties:
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
         name:
           description: 1–255 characters without the white space around it, which is not stored.
           type: string
@@ -1066,6 +1072,12 @@ components:
       type: object
       additionalProperties: false
       properties:
+        skip_activity:
+          description: Only with description_html alone; preserves audit when content identity is unchanged.
+          type: boolean
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
         name:
           description: 1–255 characters without the white space around it, which is not stored.
           type: string

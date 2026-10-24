@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -31,7 +32,7 @@ var (
 	archived  = created.Add(30 * time.Second)
 	updated   = created.Add(time.Minute)
 	webSeven  = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e7"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 7,
-		Name: "Fix the login", StateID: stateID, Priority: domain.PriorityHigh, StartDate: &startDay, TargetDate: &targetDay, ParentID: &webSixID,
+		Name: "Fix the login", DescriptionHTML: "<p>Seven</p>", StateID: stateID, Priority: domain.PriorityHigh, StartDate: &startDay, TargetDate: &targetDay, ParentID: &webSixID,
 		SortOrder: 75535.5, CompletedAt: &completed, ArchivedAt: &archived, AssigneeIDs: []uuid.UUID{bobID}, LabelIDs: []uuid.UUID{bugID},
 		SubIssuesCount: 2, CreatedByID: &aliceID, UpdatedByID: &bobID, CreatedAt: created, UpdatedAt: updated}
 	webSevenJSON = `{"archived_at":"2026-10-17T10:00:30.123456Z","assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],` +
@@ -43,13 +44,18 @@ var (
 		`"updated_at":"2026-10-17T10:01:00.123456Z",` +
 		`"updated_by_id":"0199a2b4-0000-7000-8000-000000000002","workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
 	webEight = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e8"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 8,
-		Name: "Fix", StateID: stateID, Priority: domain.PriorityNone, SortOrder: 65535, CreatedAt: created, UpdatedAt: created}
+		Name: "Fix", DescriptionHTML: "<p></p>", StateID: stateID, Priority: domain.PriorityNone, SortOrder: 65535, CreatedAt: created, UpdatedAt: created}
 	webEightJSON = `{"archived_at":null,"assignee_ids":[],"completed_at":null,"created_at":"2026-10-17T10:00:00.123456Z",` +
 		`"created_by_id":null,"id":"0199a2b4-0000-7000-8000-0000000000e8","label_ids":[],"name":"Fix","parent_id":null,"priority":"none",` +
 		`"project_id":"0199a2b4-0000-7000-8000-0000000000a1","sequence_id":8,"sort_order":65535,"start_date":null,` +
 		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","sub_issues_count":0,"target_date":null,"updated_at":"2026-10-17T10:00:00.123456Z",` +
 		`"updated_by_id":null,` +
 		`"workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
+)
+
+var (
+	webSevenDetailJSON = strings.Replace(webSevenJSON, `"id":`, `"description_html":"\u003cp\u003eSeven\u003c/p\u003e","id":`, 1)
+	webEightDetailJSON = strings.Replace(webEightJSON, `"id":`, `"description_html":"\u003cp\u003e\u003c/p\u003e","id":`, 1)
 )
 
 // POST goes to the use case for the caller and the path's project, with
@@ -60,6 +66,7 @@ var (
 func TestCreateIssue(t *testing.T) {
 	path := "/api/v0/projects/" + webID.String() + "/issues"
 	high := domain.PriorityHigh
+	html := "<p>Rich</p>"
 	for _, tt := range []struct {
 		body   string
 		want   domain.NewIssue
@@ -70,10 +77,11 @@ func TestCreateIssue(t *testing.T) {
 			`"assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"],` +
 			`"start_date":"2026-10-12","target_date":"2026-10-19","parent_id":"0199a2b4-0000-7000-8000-0000000000e6"}`,
 			domain.NewIssue{Name: " Fix the login ", StateID: &stateID, Priority: &high, AssigneeIDs: []uuid.UUID{bobID},
-				LabelIDs: []uuid.UUID{bugID}, StartDate: &startDay, TargetDate: &targetDay, ParentID: &webSixID}, webSeven, webSevenJSON},
-		{`{"name":"Fix"}`, domain.NewIssue{Name: "Fix"}, webEight, webEightJSON},
+				LabelIDs: []uuid.UUID{bugID}, StartDate: &startDay, TargetDate: &targetDay, ParentID: &webSixID}, webSeven, webSevenDetailJSON},
+		{`{"name":"Fix","description_html":"<p>Rich</p>"}`, domain.NewIssue{Name: "Fix", DescriptionHTML: &html}, webSeven, webSevenDetailJSON},
+		{`{"name":"Fix"}`, domain.NewIssue{Name: "Fix"}, webEight, webEightDetailJSON},
 		{`{"name":"Fix","assignee_ids":[],"label_ids":[]}`, domain.NewIssue{Name: "Fix", AssigneeIDs: []uuid.UUID{}, LabelIDs: []uuid.UUID{}},
-			webEight, webEightJSON},
+			webEight, webEightDetailJSON},
 	} {
 		create := &fakeCreate{answer: tt.answer}
 		h := newServer(t, httpadapter.UseCases{CreateIssue: create})
@@ -114,7 +122,7 @@ func TestCreateIssueHoldsTheBodyToItsStructure(t *testing.T) {
 	create := &fakeCreate{}
 	h := newServer(t, httpadapter.UseCases{CreateIssue: create})
 	for _, body := range []string{`{}`, `{"priority":"high"}`, `{"name":1}`, `{"name":"A","sequence_id":3}`, `{"name":"A","sort_order":1}`,
-		`{"name":"A","description_html":"<p>x</p>"}`, `{"name":"A","state_id":"Backlog"}`, `{"name":"A","state_id":null}`,
+		`{"name":"A","description_html":null}`, `{"name":"A","state_id":"Backlog"}`, `{"name":"A","state_id":null}`,
 		`{"name":"A","target_date":null}`, `{"name":"A","assignee_ids":"bob"}`, `{"name":"A","label_ids":["Bug"]}`,
 		`{"name":"A","start_date":"2026-02-30"}`, `{"name":"A","target_date":"2026-10-19T00:00:00Z"}`} {
 		res, got := do(t, h, request(http.MethodPost, "/api/v0/projects/"+webID.String()+"/issues", "alice", body))
@@ -169,7 +177,7 @@ func TestGetIssue(t *testing.T) {
 	for _, tt := range []struct {
 		answer domain.Issue
 		json   string
-	}{{webSeven, webSevenJSON}, {webEight, webEightJSON}} {
+	}{{webSeven, webSevenDetailJSON}, {webEight, webEightDetailJSON}} {
 		get := &fakeGet{answer: tt.answer}
 		res, body := do(t, newServer(t, httpadapter.UseCases{GetIssue: get}), request(http.MethodGet, "/api/v0/issues/"+tt.answer.ID.String(),
 			"alice", ""))

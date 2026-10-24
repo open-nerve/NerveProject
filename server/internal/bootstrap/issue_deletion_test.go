@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -64,6 +65,7 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 	var made [3]uuid.UUID
 	for i, body := range []string{`{"name":"Gone","assignee_ids":["` + account.String() + `"],"label_ids":["` + bug.String() + `"]}`,
 		`{"name":"Part"}`, `{"name":"Kin"}`} {
+		body = strings.TrimSuffix(body, "}") + `,"description_html":"<mention-component entity_name=\"user_mention\" entity_identifier=\"` + account.String() + `\"></mention-component>"}`
 		status, answer := call(t, contract, http.MethodPost, base+"/api/v0/projects/"+project.String()+"/issues", token, body)
 		if status != http.StatusCreated {
 			t.Fatalf("creating the work item = %d %s, want 201", status, answer)
@@ -120,6 +122,9 @@ func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	w := newIssueWorld(t)
 	deleted, kept := w.newWorkItemBy(t, "bob", w.web, w.fullIssue()), w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
 	for _, parent := range []uuid.UUID{deleted, kept} {
+		for _, html := range []string{mentionHTML(w.ids["bob"]), "<p>Removed</p>", mentionHTML(w.ids["bob"])} {
+			w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+parent.String(), fmt.Sprintf(`{"description_html":%q}`, html), 200)
+		}
 		w.send(t, "bob", http.MethodPost, reactionsOf(parent), `{"reaction":"128077"}`, http.StatusCreated)
 		w.send(t, "bob", http.MethodPost, reactionsOf(parent), `{"reaction":"1"}`, http.StatusCreated)
 		w.send(t, "bob", http.MethodDelete, reactionsOf(parent)+"/1", "", http.StatusNoContent)
