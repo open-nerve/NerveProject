@@ -197,3 +197,15 @@ func (p issueProjects) MentionMembers(ctx context.Context, id uuid.UUID, ids []u
 	}
 	return out, nil
 }
+
+func (p issueProjects) Historical(ctx context.Context, workspaceID, actorID uuid.UUID) ([]issue.VisibleProject, error) {
+	projects, err := p.projects.HistoricalIssueProjects(ctx, workspaceID, actorID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.VisibleProject, len(projects))
+	for i, project := range projects {
+		out[i] = issue.VisibleProject(project)
+	}
+	return out, nil
+}

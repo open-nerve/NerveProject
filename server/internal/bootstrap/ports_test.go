@@ -252,17 +252,21 @@ func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
 // fakeIssueProjects answers project's IssueProjects of one project, web,
 // and records each question; err, when set, is every answer's failure.
 type fakeIssueProjects struct {
-	mentionProject uuid.UUID
-	mentionIDs     []uuid.UUID
-	mentionMembers []project.IssueMemberVisibility
-	web            uuid.UUID
-	locked         project.IssueProject
-	states         []project.IssueState
-	labels         []project.IssueLabel
-	roles          map[uuid.UUID]shared.Role
-	identifiers    []project.IssueProjectIdentifier
-	err            error
-	asked          []string
+	historical          []project.HistoricalIssueProject
+	historicalWorkspace uuid.UUID
+	historicalActor     uuid.UUID
+	historicalContext   context.Context
+	mentionProject      uuid.UUID
+	mentionIDs          []uuid.UUID
+	mentionMembers      []project.IssueMemberVisibility
+	web                 uuid.UUID
+	locked              project.IssueProject
+	states              []project.IssueState
+	labels              []project.IssueLabel
+	roles               map[uuid.UUID]shared.Role
+	identifiers         []project.IssueProjectIdentifier
+	err                 error
+	asked               []string
 }
 
 func (f *fakeIssueProjects) ProjectWorkspace(_ context.Context, id uuid.UUID) (uuid.UUID, bool, error) {
@@ -410,4 +414,9 @@ func TestIssueMentionMembersConversion(t *testing.T) {
 	if err != f.err || got != nil {
 		t.Fatal(got, err)
 	}
+}
+
+func (f *fakeIssueProjects) HistoricalIssueProjects(ctx context.Context, workspaceID, actorID uuid.UUID) ([]project.HistoricalIssueProject, error) {
+	f.historicalContext, f.historicalWorkspace, f.historicalActor = ctx, workspaceID, actorID
+	return f.historical, f.err
 }

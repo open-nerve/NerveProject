@@ -62,7 +62,8 @@ func Provide(pool *pgxpool.Pool) Provided {
 // ProjectPorts are what the module asks of a project (M4 design 6.5): its
 // gate, its numbers, its states', labels' and members' catalogs, for its
 // writes; a workspace's projects' identifiers, for a read by identifier;
-// which projects are archived, for a list across projects (3.8).
+// which projects are archived, for a list across projects (3.8); historical
+// memberships, for filtering activity references after target authorization.
 // project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
 type ProjectPorts interface {
 	app.ProjectGate
@@ -72,12 +73,14 @@ type ProjectPorts interface {
 	app.ProjectMembers
 	app.ProjectIdentifiers
 	app.ArchivedProjects
+	app.VisibleProjects
 }
 
 // LockedProject, StateRef and its StateGroup, LabelRef and
 // ProjectIdentifier are the values ProjectPorts hand over: bootstrap
 // converts project's into them (M4 design 6.5).
 type (
+	VisibleProject    = app.VisibleProject
 	MemberVisibility  = app.MemberVisibility
 	LockedProject     = app.LockedProject
 	StateRef          = app.StateRef

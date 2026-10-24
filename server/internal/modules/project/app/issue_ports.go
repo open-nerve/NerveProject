@@ -74,3 +74,10 @@ type IssueMemberVisibility struct {
 	Role    shared.Role
 	OwnOnly bool
 }
+
+// HistoricalIssueProject is an actor's historical project role and guest scope.
+type HistoricalIssueProject struct {
+	ID      uuid.UUID
+	Role    shared.Role
+	OwnOnly bool
+}
