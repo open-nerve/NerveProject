@@ -1,36 +1,15 @@
 # 04 下一步与遗留
 
-## 1. 马上要处理的
-### 1.1 main 的持续集成第 340 次红了（P3 的合并 `dfc9378b`）
-- **现象**：server、web 两个任务通过，e2e 失败：125 个通过、1 个失败。
-- **失败的故事**：M3 的 W11 页面版本，`e2e/stories/workspace/w11-guest-bounds.spec.ts:190`。在 `endsOnBack("ControlOrMeta+k")` 里：
-  1. `moveWithinApp` 到 acme 的项目页；
-  2. 等到"Add Project"可见；
-  3. 按 Ctrl+K；
-  4. 期望出现一个 `[role="dialog"][aria-modal="true"]`，5 秒内 14 次都是 0 个。
-- **与 P3 无关的依据**：
-  - P3 没有改这个故事，没有改命令面板、`ModalCore`，也没有改工作区的布局；P3 在前端只改了 `error-messages.ts`、两份 `errors.json` 和生成的 `schema.gen.ts`；
-  - 第 336–339 次运行这个故事都通过。
-- **本机复现不出来**：
-  - 照持续集成的方式（chromium、2 个 worker、`CI=1`），整套 3 遍 372 个、I 系列 5 遍 30 个，全部通过；
-  - 用 CDP 把 CPU 降速 4 倍、6 倍跑 W11，5/5 通过；
-  - 照 Linux 用 Ctrl（而不是 macOS 的 Meta），5/5 通过；
-  - 按键时焦点在 `BODY`。
-- **读过的代码**：
-  - 面板的开关在 power-K 的 store（`core/store/power-k.store.ts`）；
-  - 键盘的监听在 `core/components/power-k/global-shortcuts.tsx`，用 `useEffect` 挂在 `document` 上；
-  - 面板的宿主 `projects-app-provider.tsx` 卸载时关掉面板；
-  - `ModalCore`（`web/packages/ui/src/modals/modal-core.tsx`）从挂载之后的那次渲染才打开。
-  - 没有找到会自己关掉面板的路径。
-- **还没有根因。** 需要的证据是第 340 次运行第一次尝试的 `playwright-report` 产物：里面有 trace、按键前后的 DOM 快照、两个页面的截图、nerve 的日志。在 Actions 页面的 Artifacts 下载，要负责人的权限。
-- **建议**：
-  1. 负责人下载这份报告，放到本机给你；
-  2. 从 trace 找根因，在新分支上修（是测试的等待条件不对就改测试，是应用的竞态就改应用），合并；
-  3. 若负责人选择先在页面上"Re-run failed jobs"，重跑通过只说明它是偶发的，根因仍要查，记进 M4 收尾的"不稳定的故事修正"（收尾第 2 条）。
-- **注意**：本交接的提交推送之后，`main` 会再跑一次持续集成，看那一次 W11 是否通过。
+## 1. 已知的问题
+### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
+main 的持续集成第 340 次（P3 的合并 `dfc9378b`）在 M3 的 W11 页面故事上失败：管理员切到另一个工作区、按 Ctrl+K，命令面板 5 秒内没有出现。与 P3 的改动无关，本机复现不出来，根因未明。
 
-### 1.2 空的工作树 `m4-p1b`
-`.claude/worktrees/m4-p1b`（分支 `worktree-m4-p1b`，在 `7db78788`，没有自己的提交）是客户端重启时自动建出来的，Claude 问过负责人，还没有答复。建议删除：`git worktree remove .claude/worktrees/m4-p1b`，再 `git branch -D worktree-m4-p1b`。要负责人点头。
+**负责人 2026-10-25 的决定**：不阻塞主线推进，不专门去查。等它阻塞主线时（某次合并的持续集成因它失败、重跑也不过），停下来告诉负责人，由负责人协调 Codex 一起解决。
+
+问题背景、证据、排除过的方向、没证实的假设和下次要收集的东西都在 [06-ci-w11-flake.md](06-ci-w11-flake.md)。
+
+### 1.2 空的工作树 `m4-p1b`：已删除
+它是客户端重启时自动建出来的空工作树（分支 `worktree-m4-p1b`，在 `7db78788`，已在 `main` 里，远端没有）。负责人同意之后，2026-10-25 删除了工作树和本地分支。
 
 ## 2. P4 `issue-collaboration` 的起步清单
 - **设计**：第 12 节 P4 一段：16 个 Task，目标、任务、关闭、完成线都写好了。还要读它点名的 3.7（清洗、`skip_activity`）、3.12（评论、表情、关注、提及）、3.13（动态）、3.14（描述的历史，D5）、5.x、8.2（富文本）、8.6（游标的篡改），以及 D6（不做回复）、D8（项目管理员删别人的评论）。
@@ -83,6 +62,7 @@
 
 ## 4. M4 收尾的清单
 设计第 12 节收尾一段有 14 个 Task，第 14 节是完成标准。此外，P1a–P3 的评审还留下这些：
+- W11 的偶发失败（[06](06-ci-w11-flake.md)）若到收尾仍未解决，归收尾第 2 条"不稳定的故事修正"。
 - P1b spec §5 "收尾"一行：测试里手写的 `55P03` 改用 `postgres.LockNotAvailable`。HEAD 上剩 13 个测试文件里的 16 处，用 `git grep '"55P03"'` 找，去掉 `tx.go` 自己、它的测试和 `gate_test.go` 造的错误。
 - `workspace` 的 `deactivation_test.go` 的 `waitsFor` 是 `pgtest.RowWaits` 的近似副本，合并掉。
 - M3 的几个测试世界（`project_*`、`membership_world`、`ending_world`、`interleaving_*`、`permission_matrix_*`）手拼项目成员的请求，可以收进共享的帮手。这是测试整理，可选。
