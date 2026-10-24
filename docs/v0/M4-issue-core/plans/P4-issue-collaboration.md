@@ -296,15 +296,15 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** 公共T8值；`DescriptionActivityStore`消费现有InsertActivities及`LatestActivity(ctx context.Context,issueID uuid.UUID)(ActivityRecord,bool,error)`、`MergeDescriptionActivity(ctx context.Context,m DescriptionActivityMerge)error`。app内部`writeDescriptionActivity(ctx context.Context,store DescriptionActivityStore,s stamp,change domain.Changed[string]) error`，T9消费；domain.Update增加`Description *Changed[string]`，纯`UpdateActivity`第4行的旧/新值为清洗后HTML，comment按Plane无品牌句子。
 
-- [ ] **Step 1 红测试。** `TestDescriptionActivityMerge`最新活行同actor description才合并，保留id/old_value/created_by，更新new/created_at/updated_at/updated_by；最新其他字段或其他actor不合并，即使更早有本人description；同时间id决定最新。`TestDescriptionVersionMergeWindow`599s、600s合并，600s+1µs不合并，不同owner/未来saved_at不合并，第二次以last_saved_at滑动。
+- [x] **Step 1 红测试。** `TestDescriptionActivityMerge`最新活行同actor description才合并，保留id/old_value/created_by，更新new/created_at/updated_at/updated_by；最新其他字段或其他actor不合并，即使更早有本人description；同时间id决定最新。`TestDescriptionVersionMergeWindow`599s、600s合并，600s+1µs不合并，不同owner/未来saved_at不合并，第二次以last_saved_at滑动。
   ```go
   if !domain.CanMergeDescriptionVersion(v, v.OwnedByID, v.LastSavedAt.Add(600*time.Second)) { t.Fatal("inclusive bound") }
   if domain.CanMergeDescriptionVersion(v, v.OwnedByID, v.LastSavedAt.Add(600*time.Second+time.Microsecond)) { t.Fatal("outside window") }
   ```
-- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/domain ./internal/modules/issue/app -run 'TestDescription(ActivityMerge|VersionMergeWindow)' -count=1`；存储同名TestLatestActivity在description_activity_test.go。
-- [ ] **Step 3 实现。** LatestActivity WHERE issue_id与deleted_at IS NULL，ORDER BY created_at DESC,id DESC LIMIT1，不能WHERE field=description提前筛。WriteDescriptionActivity仅写描述行；T9协调标题行先入库，再调用它，再写后续字段行，避免同PATCH标题被合并跨过。版本纯函数独立于动态，found=false由T9走新建；不用“最新动态”决定版本合并。
-- [ ] **Step 4 绿/变异。** 原命令加`go -C server test ./internal/modules/issue/adapter/postgres -run TestLatestActivity -count=1`；改成最近description、比较created_at、600改<、不更新new_value、去id tie-breaker各被对应业务断言杀死。普通UpdateActivity顺序回归通过；T9补组合和回滚证据。
-- [ ] **Step 5 G评审提交。** `feat(M4/P4): 合并描述动态并定义版本窗口`。
+- [x] **Step 2 跑红。** `go -C server test ./internal/modules/issue/domain ./internal/modules/issue/app -run 'TestDescription(ActivityMerge|VersionMergeWindow)' -count=1`；存储同名TestLatestActivity在description_activity_test.go。
+- [x] **Step 3 实现。** LatestActivity WHERE issue_id与deleted_at IS NULL，ORDER BY created_at DESC,id DESC LIMIT1，不能WHERE field=description提前筛。WriteDescriptionActivity仅写描述行；T9协调标题行先入库，再调用它，再写后续字段行，避免同PATCH标题被合并跨过。版本纯函数独立于动态，found=false由T9走新建；不用“最新动态”决定版本合并。
+- [x] **Step 4 绿/变异。** 原命令加`go -C server test ./internal/modules/issue/adapter/postgres -run TestLatestActivity -count=1`；改成最近description、比较created_at、600改<、不更新new_value、去id tie-breaker各被对应业务断言杀死。普通UpdateActivity顺序回归通过；T9补组合和回滚证据。
+- [x] **Step 5 G评审提交。** `feat(M4/P4): 合并描述动态并定义版本窗口`。
 
 ### Task 9: 描述API、提及和版本原子写入及00024–00025
 
@@ -319,7 +319,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
   // href/checked样例另断言issue审计==at，动态新值正确、版本last_saved_at==at。
   ```
 - [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(DescriptionWriteIsAtomic|SkipDescriptionPreservesAudit)' -count=1`；`go -C server test ./internal/bootstrap -run TestIssueDescriptionAnswers -count=1`（description尚未入契约时HTTP请求应失败，不能只靠编译红）。
-- [ ] **Step 3 实现。** 两表同Task建出并M全接。Create：清洗一次→项目N下资格→一个clock→issue含描述→assignees→labels→关注并集→mentions→创建动态→初版。Update：重读后清洗旧/新（无description时完全不读提及目录、不触碰mentions/版本），应用CompareDescription；skip同内容专用分支只WriteDescription与关系同步，正常分支先主issue+字段关系再subscribers/mentions/活动/版本。新增关注目标与实际新负责人合并去重排序，按顺序写全局表序。最新版本ORDER BY last_saved_at DESC,id DESC，活行过滤；600秒内同owner原位更新，保留id/created_at/created_by，其他情况新UUIDv7。旧工作项没有版本不伪造初版，首次实际修改时新建一版；skip同内容不新建。
+- [ ] **Step 3 实现。** 两表同Task建出并M全接。Create：清洗一次→项目N下资格→一个clock→issue含描述→assignees→labels→关注并集→mentions→创建动态→初版。Update：重读后清洗旧/新（无description时完全不读提及目录、不触碰mentions/版本），应用CompareDescription；普通相同HTML且其他字段无变化时零写且不读提及目录；skip同内容专用分支只WriteDescription与关系同步，正常分支先主issue+字段关系再subscribers/mentions/活动/版本。新增关注目标与实际新负责人合并去重排序，描述修改者不因编辑而额外关注，按顺序写全局表序。最新版本ORDER BY last_saved_at DESC,id DESC，活行过滤；600秒内同owner原位更新，保留id/created_at/created_by，其他情况新UUIDv7。旧工作项没有版本不伪造初版，首次实际修改时新建一版；skip同内容不新建。
 - [ ] **Step 4 公开完整契约并验证。** 同Task加IssueCreate/IssueUpdate/IssueDetail.description_html、IssueUpdate.skip_activity；Detail和Issue显式各映射（不再强转），apitest比较properties及required精确差一字段；create/get/by-identifier/update/archive/unarchive仍seen，子项/关联Issue不含description。定位：`go -C server test ./internal/platform/httpserver/apitest -run TestIssueDetailShape -count=1`、HTTP全包、`go -C server test ./internal/modules/issue/adapter/postgres -run 'Test(Mentions|DescriptionVersions)' -count=1`、`go -C server test ./internal/bootstrap -run 'Test(IssueDescription|DescriptionWrite|SkipDescription)' -count=1`。fixture经创建或PATCH造mentions/versions，不临时写SQL。
 - [ ] **Step 5 变异/G/评审提交。** 实际删mentions差集/角色过滤、skip审计保护、version写入、回滚、seen调用各由组合断言失败；另把version条件按created_at算验证滑动。M/H/G全过，独立评审这个原子交付；`feat(M4/P4): 原子保存描述提及与版本历史`。如评审判断体量不可控，先按D2重切，不提前公开缺少提及/版本的描述接口。
 
