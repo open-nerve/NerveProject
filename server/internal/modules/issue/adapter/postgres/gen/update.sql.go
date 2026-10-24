@@ -91,23 +91,26 @@ func (q *Queries) SetArchivedAt(ctx context.Context, arg SetArchivedAtParams) er
 
 const updateIssue = `-- name: UpdateIssue :exec
 UPDATE issues
-SET name = $1, state_id = $2, priority = $3, start_date = $4,
-    target_date = $5, parent_id = $6, completed_at = $7,
-    updated_by_id = $8::uuid, updated_at = $9::timestamptz
-WHERE id = $10
+SET description_html = $1, description_stripped = $2,
+    name = $3, state_id = $4, priority = $5, start_date = $6,
+    target_date = $7, parent_id = $8, completed_at = $9,
+    updated_by_id = $10::uuid, updated_at = $11::timestamptz
+WHERE id = $12
 `
 
 type UpdateIssueParams struct {
-	Name        string
-	StateID     uuid.UUID
-	Priority    string
-	StartDate   *time.Time
-	TargetDate  *time.Time
-	ParentID    *uuid.UUID
-	CompletedAt *time.Time
-	By          uuid.UUID
-	At          time.Time
-	ID          uuid.UUID
+	DescriptionHtml     string
+	DescriptionStripped *string
+	Name                string
+	StateID             uuid.UUID
+	Priority            string
+	StartDate           *time.Time
+	TargetDate          *time.Time
+	ParentID            *uuid.UUID
+	CompletedAt         *time.Time
+	By                  uuid.UUID
+	At                  time.Time
+	ID                  uuid.UUID
 }
 
 // updateIssue's work item (M4 design 3.7, 3.9), under the project's FOR NO KEY UPDATE, read again under it: its name,
@@ -116,6 +119,8 @@ type UpdateIssueParams struct {
 // first (3.5), so the row is as the use case read it; it is not locked by id first (M3 design 3.6, convention 5).
 func (q *Queries) UpdateIssue(ctx context.Context, arg UpdateIssueParams) error {
 	_, err := q.db.Exec(ctx, updateIssue,
+		arg.DescriptionHtml,
+		arg.DescriptionStripped,
 		arg.Name,
 		arg.StateID,
 		arg.Priority,

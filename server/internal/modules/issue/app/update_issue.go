@@ -212,7 +212,9 @@ func labelNames(labels []LabelRef, ids []uuid.UUID) ([]domain.Named, error) {
 // then those added; its labels' rows, the same; its subscribers', the
 // accounts added; its activity's.
 func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c domain.Changes, n named) error {
+	// Preserve the lock-time description, including a legacy NULL stripped value.
 	f := IssueFields{ID: i.ID, Name: i.Name, StateID: i.StateID, Priority: i.Priority, StartDate: i.StartDate, TargetDate: i.TargetDate,
+		DescriptionHTML: i.DescriptionHTML, DescriptionStripped: i.DescriptionStripped,
 		ParentID: i.ParentID, CompletedAt: i.CompletedAt, By: s.by, At: s.at}
 	activity := domain.Update{Parent: n.parent, State: n.state, LabelsAdded: n.labelsAdded, LabelsRemoved: n.labelsRemoved}
 	if c.Parent != nil {

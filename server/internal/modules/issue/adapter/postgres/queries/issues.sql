@@ -10,12 +10,14 @@ LIMIT 1;
 
 -- name: InsertIssue :exec
 -- createIssue's work item (M4 design 3.5), under the project's FOR NO KEY UPDATE; created and last changed at the
--- moment and by the account given. The fields of later phases keep their defaults.
+-- moment and by the account given. Description values are explicit, including nullable legacy text.
 INSERT INTO issues (id, workspace_id, project_id, state_id, name, priority, start_date, target_date, parent_id, sequence_id,
-                    sort_order, completed_at, created_by_id, updated_by_id, created_at, updated_at)
+                    sort_order, completed_at, description_html, description_stripped, created_by_id, updated_by_id,
+                    created_at, updated_at)
 VALUES (sqlc.arg(id), sqlc.arg(workspace_id), sqlc.arg(project_id), sqlc.arg(state_id), sqlc.arg(name), sqlc.arg(priority),
         sqlc.narg(start_date), sqlc.narg(target_date), sqlc.narg(parent_id), sqlc.arg(sequence_id), sqlc.arg(sort_order),
-        sqlc.narg(completed_at), sqlc.arg(by)::uuid, sqlc.arg(by), sqlc.arg(at)::timestamptz, sqlc.arg(at));
+        sqlc.narg(completed_at), sqlc.arg(description_html), sqlc.narg(description_stripped), sqlc.arg(by)::uuid, sqlc.arg(by),
+        sqlc.arg(at)::timestamptz, sqlc.arg(at));
 
 -- name: InsertAssignees :exec
 -- A work item's new assignees' rows, one statement: ids[i] the row of assignee_ids[i], in the order given (the
@@ -52,8 +54,8 @@ VALUES (sqlc.arg(id), sqlc.arg(workspace_id), sqlc.arg(project_id), sqlc.arg(iss
 -- The undeleted work item, archived or not, as the API shows it (M4 design 5.2): with the accounts of its undeleted
 -- assignees' rows and the labels of its undeleted labels' rows, in the accounts' and the labels' id order, NULL for
 -- none; an assignee who left the project is still one (3.6).
-SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority, i.start_date, i.target_date,
-       i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
+SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_html, i.description_stripped,
+       i.state_id, i.priority, i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l
@@ -64,8 +66,8 @@ WHERE i.id = sqlc.arg(id) AND i.deleted_at IS NULL;
 -- name: GetIssues :many
 -- The undeleted work items among ids, archived or not, each as GetIssue reads it, in id order (M4 design 3.4, 3.9), in a
 -- write's transaction, under its project's lock, or without a lock.
-SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority, i.start_date, i.target_date,
-       i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
+SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_html, i.description_stripped,
+       i.state_id, i.priority, i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l

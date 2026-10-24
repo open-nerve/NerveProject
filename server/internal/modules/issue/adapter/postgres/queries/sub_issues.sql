@@ -12,8 +12,8 @@ GROUP BY parent_id;
 -- The undeleted, unarchived work items directly under the work item parent_id, each as GetIssue reads it, those the
 -- account created_by created when it is given, in the order of their creation (M4 design 3.4, 3.9): listSubIssues',
 -- read without a lock. issues_parent_id_idx serves it.
-SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority, i.start_date, i.target_date,
-       i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
+SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_html, i.description_stripped,
+       i.state_id, i.priority, i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l

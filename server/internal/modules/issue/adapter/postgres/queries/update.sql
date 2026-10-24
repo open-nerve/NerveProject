@@ -4,7 +4,8 @@
 -- are, last changed at the moment and by the account given. Every write of a work item's row holds its project's lock
 -- first (3.5), so the row is as the use case read it; it is not locked by id first (M3 design 3.6, convention 5).
 UPDATE issues
-SET name = sqlc.arg(name), state_id = sqlc.arg(state_id), priority = sqlc.arg(priority), start_date = sqlc.narg(start_date),
+SET description_html = sqlc.arg(description_html), description_stripped = sqlc.narg(description_stripped),
+    name = sqlc.arg(name), state_id = sqlc.arg(state_id), priority = sqlc.arg(priority), start_date = sqlc.narg(start_date),
     target_date = sqlc.narg(target_date), parent_id = sqlc.narg(parent_id), completed_at = sqlc.narg(completed_at),
     updated_by_id = sqlc.arg(by)::uuid, updated_at = sqlc.arg(at)::timestamptz
 WHERE id = sqlc.arg(id);

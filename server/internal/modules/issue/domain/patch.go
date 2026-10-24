@@ -16,17 +16,19 @@ import (
 // and SetParentID tell whether the field is given, StartDate, TargetDate
 // and ParentID its value, nil for none.
 type IssuePatch struct {
-	Name          *string
-	StateID       *uuid.UUID
-	Priority      *Priority
-	AssigneeIDs   *[]uuid.UUID
-	LabelIDs      *[]uuid.UUID
-	SetStartDate  bool
-	StartDate     *shared.Date
-	SetTargetDate bool
-	TargetDate    *shared.Date
-	SetParentID   bool
-	ParentID      *uuid.UUID
+	DescriptionHTML *string
+	SkipActivity    *bool
+	Name            *string
+	StateID         *uuid.UUID
+	Priority        *Priority
+	AssigneeIDs     *[]uuid.UUID
+	LabelIDs        *[]uuid.UUID
+	SetStartDate    bool
+	StartDate       *shared.Date
+	SetTargetDate   bool
+	TargetDate      *shared.Date
+	SetParentID     bool
+	ParentID        *uuid.UUID
 }
 
 // CheckIssuePatch checks the fields p gives by createIssue's rules (M4
@@ -40,7 +42,7 @@ type IssuePatch struct {
 // project's lock, and so is the order of the dates the change leaves
 // (DatesOutOfOrder): they are the work item's, merged with those given.
 func CheckIssuePatch(p IssuePatch) (IssuePatch, error) {
-	var found []*shared.FieldError
+	found := []*shared.FieldError{checkDescription(p.DescriptionHTML), checkSkipActivity(p)}
 	if p.Name != nil {
 		name := strings.TrimSpace(*p.Name)
 		p.Name = &name

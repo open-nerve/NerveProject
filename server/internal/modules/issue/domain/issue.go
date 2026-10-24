@@ -56,25 +56,27 @@ func Archivable(group StateGroup) bool {
 // the caller's view of it. The fields of later phases come with them (M4
 // design 12, constraint 5).
 type Issue struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	ProjectID   uuid.UUID
-	SequenceID  int
-	Name        string
-	StateID     uuid.UUID
-	Priority    Priority
-	StartDate   *shared.Date
-	TargetDate  *shared.Date
-	ParentID    *uuid.UUID
-	SortOrder   float64
-	CompletedAt *time.Time
-	ArchivedAt  *time.Time
-	AssigneeIDs []uuid.UUID
-	LabelIDs    []uuid.UUID
-	CreatedByID *uuid.UUID
-	UpdatedByID *uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	ProjectID           uuid.UUID
+	SequenceID          int
+	Name                string
+	DescriptionHTML     string
+	DescriptionStripped *string
+	StateID             uuid.UUID
+	Priority            Priority
+	StartDate           *shared.Date
+	TargetDate          *shared.Date
+	ParentID            *uuid.UUID
+	SortOrder           float64
+	CompletedAt         *time.Time
+	ArchivedAt          *time.Time
+	AssigneeIDs         []uuid.UUID
+	LabelIDs            []uuid.UUID
+	CreatedByID         *uuid.UUID
+	UpdatedByID         *uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 	// The caller's view (M4 design 3.9): the number of its undeleted,
 	// unarchived direct sub-items that he sees, by his grant on its
 	// project. A read of the store leaves it 0; it is counted when an
@@ -98,14 +100,15 @@ func (i Issue) HiddenFrom(actor uuid.UUID, ownOnly bool) bool {
 // none, ParentID nil for no parent. A field given is checked as given, a
 // priority given empty too.
 type NewIssue struct {
-	Name        string
-	StateID     *uuid.UUID
-	Priority    *Priority
-	AssigneeIDs []uuid.UUID
-	LabelIDs    []uuid.UUID
-	StartDate   *shared.Date
-	TargetDate  *shared.Date
-	ParentID    *uuid.UUID
+	DescriptionHTML *string
+	Name            string
+	StateID         *uuid.UUID
+	Priority        *Priority
+	AssigneeIDs     []uuid.UUID
+	LabelIDs        []uuid.UUID
+	StartDate       *shared.Date
+	TargetDate      *shared.Date
+	ParentID        *uuid.UUID
 }
 
 // maxName is the length of issues.name, varchar(255), in characters.
@@ -137,10 +140,13 @@ const (
 // project's lock.
 func CheckNewIssue(n NewIssue) (NewIssue, error) {
 	n.Name = strings.TrimSpace(n.Name)
+	if n.DescriptionHTML == nil {
+		n.DescriptionHTML = ptr(defaultDescriptionHTML)
+	}
 	if n.Priority == nil {
 		n.Priority = ptr(PriorityNone)
 	}
-	found := []*shared.FieldError{checkName(n.Name), checkPriority(*n.Priority)}
+	found := []*shared.FieldError{checkName(n.Name), checkPriority(*n.Priority), checkDescription(n.DescriptionHTML)}
 	found = append(found, checkIDs("assignee_ids", n.AssigneeIDs, MaxAssignees)...)
 	found = append(found, checkIDs("label_ids", n.LabelIDs, MaxLabels)...)
 	found = append(found, checkNewDates(n.StartDate, n.TargetDate))

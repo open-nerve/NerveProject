@@ -127,7 +127,7 @@ func TestCreateIssueWritesTheWorkItemAndItsRows(t *testing.T) {
 	if !slices.Equal(w.log.calls, want) {
 		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, want)
 	}
-	row := app.IssueRow{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix the login", StateID: done.ID,
+	row := app.IssueRow{DescriptionHTML: "<p></p>", DescriptionStripped: new(string), ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix the login", StateID: done.ID,
 		Priority: domain.PriorityHigh, StartDate: october(12), TargetDate: october(19), SortOrder: 95535, CompletedAt: &clockNow, By: alice,
 		At: clockNow}
 	if !reflect.DeepEqual(*w.issues.issue, row) {

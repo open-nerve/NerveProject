@@ -14,7 +14,7 @@ import (
 // any violation is a bug: an internal error (500), not a domain error.
 func (s *Store) UpdateIssue(ctx context.Context, f app.IssueFields) error {
 	err := s.queries(ctx).UpdateIssue(ctx, gen.UpdateIssueParams{
-		ID: f.ID, Name: f.Name, StateID: f.StateID, Priority: string(f.Priority), StartDate: timeOf(f.StartDate),
+		ID: f.ID, Name: f.Name, DescriptionHtml: f.DescriptionHTML, DescriptionStripped: f.DescriptionStripped, StateID: f.StateID, Priority: string(f.Priority), StartDate: timeOf(f.StartDate),
 		TargetDate: timeOf(f.TargetDate), ParentID: f.ParentID, CompletedAt: f.CompletedAt, By: f.By, At: f.At,
 	})
 	if err != nil {

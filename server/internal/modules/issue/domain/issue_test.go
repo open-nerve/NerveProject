@@ -54,6 +54,7 @@ func TestCheckNewIssueAccepts(t *testing.T) {
 	for _, tt := range tests {
 		got, err := CheckNewIssue(tt.in)
 		tt.want.AssigneeIDs, tt.want.LabelIDs = tt.in.AssigneeIDs, tt.in.LabelIDs
+		tt.want.DescriptionHTML = ptr("<p></p>")
 		if err != nil || !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("%s: CheckNewIssue() = %+v, %v; want %+v", tt.name, got, err, tt.want)
 		}

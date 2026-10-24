@@ -284,6 +284,7 @@ func (f *fakeIssues) UpdateIssue(ctx context.Context, r app.IssueFields) error {
 	if f.issue == nil || r.ID != f.issue.ID {
 		return fmt.Errorf("UpdateIssue: %+v is not the work item %+v", r, f.issue)
 	}
+	f.issue.DescriptionHTML, f.issue.DescriptionStripped = r.DescriptionHTML, r.DescriptionStripped
 	f.issue.Name, f.issue.StateID, f.issue.Priority, f.issue.CompletedAt = r.Name, r.StateID, r.Priority, r.CompletedAt
 	f.issue.StartDate, f.issue.TargetDate, f.issue.ParentID = r.StartDate, r.TargetDate, r.ParentID
 	f.changed = &r
@@ -383,6 +384,7 @@ func (f *fakeIssues) read(id uuid.UUID) (domain.Issue, bool) {
 	r := f.issue
 	by, at := f.writer()
 	return domain.Issue{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: r.SequenceID, Name: r.Name,
+		DescriptionHTML: r.DescriptionHTML, DescriptionStripped: r.DescriptionStripped,
 		StateID: r.StateID, Priority: r.Priority, StartDate: r.StartDate, TargetDate: r.TargetDate, ParentID: r.ParentID, SortOrder: r.SortOrder,
 		CompletedAt: r.CompletedAt, ArchivedAt: f.archivedAt,
 		AssigneeIDs: slices.SortedFunc(slices.Values(f.assignees), uuid.UUID.Compare), LabelIDs: slices.SortedFunc(slices.Values(f.labels),

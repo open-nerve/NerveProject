@@ -88,6 +88,7 @@ func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domai
 		}
 		row := IssueRow{ID: uuid.NewV7(), WorkspaceID: project.WorkspaceID, ProjectID: projectID, SequenceID: sequence, Name: in.Name,
 			StateID: c.state.ID, Priority: *in.Priority, StartDate: in.StartDate, TargetDate: in.TargetDate, ParentID: c.parent,
+			DescriptionHTML: "<p></p>", DescriptionStripped: new(string),
 			SortOrder: domain.SortOrderAfter(greatest), CompletedAt: domain.CompletedAt(c.state.Group, now), By: actor.UserID, At: now}
 		if err := u.write(ctx, row, c); err != nil {
 			return err
