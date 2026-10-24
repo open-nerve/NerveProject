@@ -2,18 +2,18 @@
 
 | 项 | 内容 |
 |---|---|
-| 状态 | 独立预检及六项局部修订复核通过；A1已于2026-10-25获负责人批准；T1含F1修正、T2实施及独立评审完成；T3起后续任务和阶段验收待执行 |
+| 状态 | 独立预检及六项局部修订复核通过；A1已于2026-10-25获负责人批准；T1含F1修正、T2/T3实施及独立评审完成；T4已交付待独立评审，T5起后续任务和阶段验收待执行 |
 | 日期 | 2026-10-25 |
 | 代码基线 | `56d575fb8ff6575880d1edef65219728a81f2b12`；P3 已合并；P4 启动提交已把关键词 phase 改为 `M4/P4` |
 | 工作树 | `.codex/worktress/codex/m4-p4`，分支 `codex/m4-p4`；主目录保持 `main` |
 | 上级 | [M4 设计](../M4-design.md) §3.4–3.8、3.12–3.14、3.23、4、5、6.5、8.2、8.6、9、12/P4、14、15；D1–D8 和 §11 不重开 |
 | 输入 | [交接入口](../../claude_to_gpt/README.md)及其规定顺序；P1b/P2/P3 spec §5、review §6；本规格 §7 的交接 |
 | 执行计划 | [P4 plan](../plans/P4-issue-collaboration.md)；16 个 Task，顺序不同于设计任务清单，映射见 §3 |
-| 证据边界 | 本文规定阶段契约，逐Task执行证据见review §2；T1/T2已实际验证，后续任务仍待实现。附录 A 保留准备阶段记录，不代表整个P4通过 |
+| 证据边界 | 本文规定阶段契约，逐Task执行证据见review §2；T1–T3已通过独立评审，T4已实际验证待评审，后续任务仍待实现。附录 A 保留准备阶段记录，不代表整个P4通过 |
 
 ## 1. 目标
 
-**A1已批准（2026-10-25）：** “清洗放到 issue/adapter/content，app 声明小接口，domain 保持纯净，不放宽架构守卫。同步修订设计、spec 和 plan 后继续 P4，完成后先别合并，我安排 Claude 做整分支终审。”据此清洗由 `adapter/content` 实现，`app.HTMLSanitizer` 声明端口，domain只保留纯值与规则，module.New组合；本规格与plan已按该决定细化，独立预检及修订复核已完成，T1实施、验证、独立Task评审与F1修正复核均完成，T2实施及独立评审通过；后续实现仍待执行。
+**A1已批准（2026-10-25）：** “清洗放到 issue/adapter/content，app 声明小接口，domain 保持纯净，不放宽架构守卫。同步修订设计、spec 和 plan 后继续 P4，完成后先别合并，我安排 Claude 做整分支终审。”据此清洗由 `adapter/content` 实现，`app.HTMLSanitizer` 声明端口，domain只保留纯值与规则，module.New组合；本规格与plan已按该决定细化，独立预检及修订复核已完成，T1实施、验证、独立Task评审与F1修正复核均完成，T2/T3实施及独立评审通过；T4已交付待独立评审，后续实现仍待执行。
 
 完整交付设计 §12/P4：描述及清洗、内容标识与 `skip_activity`、提及的集合同步和自动关注、描述版本及其读取、评论的增删改与分页、工作项和评论的表情、动态的分页与历史引用过滤。增加 12 个操作；修改创建/修改/详情的描述契约；不增加回复、快照、事件或版本保留任务。
 
@@ -75,7 +75,7 @@ S3实际执行时，允许局部修复已有CustomColor解析：仅匹配自己�
 
 ### 2.6 评论编辑与删除（Task 4）
 
-`PATCH/DELETE /api/v0/issue-comments/{comment_id}`；更新 200 评论，删除 204。只有作者编辑；作者或 `Grant.ProjectAdmin` 删除。违反相对权限答 `issue.not_author`，权限预检与锁下复核均执行。作者由评论 `actor_id` 判断，不是工作项创建者。子资源/工作项隐藏与不存在统一 `issue.comment_not_found`，404 在作者 403 前。
+`PATCH/DELETE /api/v0/issue-comments/{comment_id}`；更新 200 评论，删除 204。按设计使用`issue_comment.write`动作（project级Admin/Member/Guest），再相对收窄为只有作者编辑；作者或 `Grant.ProjectAdmin` 删除。违反相对权限答 `issue.not_author`，权限预检与锁下复核均执行。作者由评论 `actor_id` 判断，不是工作项创建者。子资源/工作项隐藏与不存在统一 `issue.comment_not_found`，404 在作者 403 前。
 
 新旧清洗后 HTML 相同时不写任何行、不设 `edited_at`；不同则 `edited_at=updated_at=now`，工作项同步 MarkChanged，新的可见提及者关注，旧关注不取消。删除保留已删行原审计，连带仍活的 comment_reactions（Task 6 补接），不触及邻居评论；不写动态。实际写表序：issues → subscribers（编辑需要时）→ comments → comment_reactions（删除需要时）。归档项目先于归档工作项，归档拒绝先于无改动。
 

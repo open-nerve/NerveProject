@@ -76,7 +76,15 @@ T1 已交付清洗适配器、领域纯值、共享编辑器往返样例，以�
 
 独立报告为`task-3-review.md`。差异外边界由推进者闭合：运行日志与会话记录对应实际生成/变异/串行容器过程，主目录仍为干净的main；`server/configs/config.yaml:17`及`platform/httpserver/api.go`保留1 MiB默认请求体限制，生产`bootstrap/app.go`和测试`issue_writes_test.go`注入T2验证过的独立ReadOnlySnapshot；`bootstrap/gate.go`仍是503映射点，`issue/module.go`的删除批大小仍为1000。后续清洗器复用、评论表情、描述和完整阶段性质分别由T4/T6/T9等任务继续，不计为本任务交付。
 
-### 2.5 尚未完成的 P4 验收
+### 2.5 T4 实施交付（独立评审待执行）
+
+评论编辑/删除及共享Locks的子资源检查已提交为`de2c43ed`，基线为`1e5db490`。预检和锁下都重读评论并执行作者/ProjectAdmin规则；隐藏或缺失统一评论404，作者403先于归档，归档先于无改动。编辑按issues→subscribers→comments写入并使用同一时刻，删除只软删目标活评论，T6再补真实表情及删除连带。新增动作、接口契约、错误文案、矩阵、503、锁形状和事务连接均同步。
+
+推进者核对`task-4-report.md`及`logs/task-4-*`原始证据：app可编译桩和真实HTTP均先出现业务红；最终`make lint-go`两段0 issues，`make test`全部通过（bootstrap96.730s），`make gen`和提交后`make gen-check`通过。最后顺序运行Web lint54/54（38缓存）、knip退出0、test17/17（全缓存）；首轮test-web17/17中1项缓存。初轮lint-go格式提示已修正；误并行Web lint/test引发共享editor构建目录EEXIST，保留失败日志，命令结束后顺序复跑通过，未改构建脚本或清理他人资源。后续生成/Web门禁统一串行。
+
+五项实际可编译变异分别覆盖管理员误获编辑权、作者检查移到gate后、遗漏锁下重读、隐藏父项404形状、无改动仍写审计，均业务红并恢复。第二项另用真实外部事务持项目锁，1秒期限内应直接答403；移除预检后该业务断言失败，恢复后通过，不将它计成第六项变异。本Task未改迁移/furnish/e2e故事，未运行`make e2e`，不宣称端到端全绿。独立规格/质量评审尚待执行，不能据实施报告标Task完成。
+
+### 2.6 尚未完成的 P4 验收
 
 描述/提及/版本、评论/表情/动态、权限矩阵增量、交错 14/15、接口故事、目录驱动删除增量、其他关键性质的实际变异、阶段完整门禁与 Claude 整分支终审尚未完成。M4 设计 §14 不新增勾选；P4 不标已完成。
 
@@ -161,6 +169,12 @@ T1 共享金样 `api/testdata/issue-richtext.json` 单列文件规模例外：�
 H文件清单补充`api/openapi.yaml`的新路径根转引，以及`bootstrap/gate_test.go`的逐写503枚举。首次HTTP契约定位实证根转引缺失会使新操作不在文档契约内；闸门测试也须显式枚举新写。这是已要求的API/503接线，没有新增架构或改变守卫。
 
 M同时覆盖公共furnish及已有故事独立构造的目录行。T3首轮端到端实际发现I15/I17缺少评论前置，故新增窄`e2e/fixtures/comments.ts`供公共夹具与两故事复用：I15在转Done前创建评论，I17在归档末级前为目标、两层子树与邻居创建评论；评论者与删除者不同。保持目录断言与API前置纪律，不等T15才修、不新增豁免。plan/spec与任务简报同步记录此局部调整。
+
+### T4 中的错误文案与测试边界
+
+沿设计既定`issue_comment.write`动作实现相对权限。`issue.not_author`文案明确“Only the author can edit a comment; only the author or a project administrator can delete it.”，避免笼统only-author变更误述管理员删除权限；中文同义。`issue.comment_not_found`统一“The comment does not exist, or you cannot see it.”，不增加存在性信息。
+
+带日志gate的失败端口测试先断言成功Enter后恰有一次末尾的预期项目Leave、且已离开事务，再仅去掉该末项复用既有helper；预检拒绝仍要求零Enter/Begin/Now/Lock/Leave。未放宽共享helper。完整工作项会产生初始活动，故用活动整行快照前后相等证明未修改，而非硬编码活动数量或只比ID。G中的迁移/furnish/故事门禁不扩成所有bootstrap种子：本Task矩阵种子由完整Go测试覆盖，不重复无关e2e。
 
 ## 4. 整分支评审的发现与处理
 
