@@ -74,7 +74,7 @@ M的签名沿现有删除端口：工作项方法`(ctx context.Context, d IssueD
 | T9 mentions | DeleteIssueMentionRows | DeleteProjectMentionRows |
 | T9 description_versions | DeleteIssueDescriptionVersionRows | DeleteProjectDescriptionVersionRows |
 
-**M的共同反例：** 两层子树+归档子项+相邻另一工作项，创建者≠删除者，先前已删行戳不同；删除目标全部活行同删除时刻/删除者，邻居和旧删戳不变。每张新表至少一次实际变异漏删或删宽，另少grants、漏二层comment外键各一。定位`go -C server test ./migrations ./internal/modules/issue/adapter/postgres -count=1`和`go -C server test ./internal/bootstrap -run 'Test(DeletingAWorkItem|DeletingAProject|DeletingAWorkspace|TheGrantsFile)' -count=1`，记录实际匹配的现有函数名；M最后仍跑G全量覆盖。
+**M的共同反例：** 两层子树+归档子项+相邻另一工作项，创建者≠删除者，先前已删行戳不同；删除目标全部活行同删除时刻/删除者，邻居和旧删戳不变。每张新表至少一次实际变异漏删或删宽，并验证本表grants；T6在comment_reactions建出时另实际变异其经issue_comments连到issues的二层外键，不要求无该表的Task提前创建或重复既有comments变异。定位`go -C server test ./migrations ./internal/modules/issue/adapter/postgres -count=1`和`go -C server test ./internal/bootstrap -run 'Test(DeletingAWorkItem|DeletingAProject|DeletingAWorkspace|TheGrantsFile)' -count=1`，记录实际匹配的现有函数名；M最后仍跑G全量覆盖。
 
 ### HTTP参数绑定与用例归属
 
@@ -241,7 +241,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 ### Task 5: 工作项表情与00022
 
-**Files:** Create `server/migrations/sql/00022_issue_issue_reactions.sql`；`I/domain/{reaction.go,reaction_test.go}`、`I/app/{reactions.go,reactions_test.go,reaction_ports.go,reaction_rows.go,fakes_reactions_test.go}`；`I/adapter/postgres/{reactions.go,reactions_test.go,queries/reactions.sql}`、`I/adapter/http/{reactions.go,reactions_test.go}`、`B/issue_reactions_test.go`；Modify actions/errors/access规则，M/H。
+**Files:** Create `server/migrations/sql/00022_issue_issue_reactions.sql`；`I/domain/{reaction.go,reaction_test.go}`、`I/app/{reactions.go,reactions_test.go,reaction_ports.go,reaction_rows.go,fakes_reactions_test.go}`；`I/adapter/postgres/{reactions.go,reactions_test.go,queries/reactions.sql}`、`I/adapter/http/{reactions.go,reactions_test.go}`、`B/issue_reactions_test.go`；Modify actions/errors/access规则、`B/permission_matrix_targets_test.go`及`B/permission_matrix_columns_test.go`的精确路径值与自检、`I/app/lock.go`的T4旧预检注释，M/H。
 
 **Interfaces:** `AddIssueReaction.Execute(ctx context.Context,issueID uuid.UUID,reaction string)(domain.IssueReaction,error)`；`RemoveIssueReaction.Execute(ctx context.Context,issueID uuid.UUID,reaction string)error`；`ListIssueReactions.Execute(ctx context.Context,issueID uuid.UUID)([]domain.IssueReaction,error)`。Add/Remove Deps为`Locks, Reactions IssueReactionWriter, Clock`，List为`Locks, Reactions IssueReactionLister, ReadTx`。Writer的`IssueReaction(ctx context.Context,key ReactionKey)(domain.IssueReaction,bool,error)`、`InsertIssueReaction(ctx context.Context,w IssueReactionWrite)error`、`DeleteIssueReaction(ctx context.Context,d ReactionDeletion)error`及MarkChanged；Lister的`IssueReactions(ctx context.Context,issueID uuid.UUID)([]domain.IssueReaction,error)`；domain `CheckReaction(reaction string)error`给字段reaction的422。
 

@@ -86,7 +86,15 @@ T1 已交付清洗适配器、领域纯值、共享编辑器往返样例，以�
 
 独立审查范围`1e5db490..6dc99e6b`，报告`task-4-review.md`给出规格通过、质量Approved，Critical/Important均无；复核共享Locks的P3 reach/instead路径、错误顺序和外部锁测试清理后未发现行为回归。一项Minor为`app/lock.go`的precheck注释仍称see/issue.not_found，而实际已用seeAs/w.notFound；记录为T5顺手同步的注释修正，由T5差异审查确认，不因注释重跑套件。过程证据已由推进者关联实际日志/会话，主目录仍保持干净main；T6的真实表情读删明确进入后续任务，没有把它算作T4交付。
 
-### 2.6 尚未完成的 P4 验收
+### 2.6 T5 实施交付（独立评审待执行）
+
+工作项表情和迁移00022已提交为`8470a689`，基线为`0eb813d9`。三个操作使用既定动作和同一Locks路径，列表从首次可见性检查起使用独立ReadTx；添加/移除只处理调用者自己的活行，先改主工作项审计再写表情，不新增动态或关注。新表同步授权、部分唯一/CHECK/外键、工作项及项目删除步骤、三层目录和公共/I15/I17接口前置。T4的旧预检注释已同步，随本任务差异复核。
+
+九项实际可编译变异覆盖Add/Remove各漏审计、删除缺actor范围、已删仍存在、部分唯一改全量唯一、去CHECK、工作项/项目漏删步骤、缺grants，全部触发业务断言并恢复。原始证据在`.superpowers/sdd/P4-issue-collaboration/task-5-report.md`和`logs/task-5-*`，推进者已核对业务红/绿、变异和完整门禁，不把编译或夹具错误计入变异。
+
+最终`make gen`、`make lint-go`两段0 issues、`make test`（bootstrap99.734s及tools）和提交后`make gen-check`通过；Web lint54/54（4缓存）、knip退出0、test17/17（10缓存）。`make e2e`为124通过/2失败，只有A4已知Firefox可执行文件缺失；I15/I17和公共目录故事通过，不宣称端到端全绿。一轮迁移/存储定位因测试容器reaper消失失败，保留原日志，未操作已有容器；原命令重跑及最终全套均通过。初轮迁移计数/表名排序、旧删除测试表数与格式问题均修正后复验。独立规格/质量评审待执行。
+
+### 2.7 尚未完成的 P4 验收
 
 描述/提及/版本、评论/表情/动态、权限矩阵增量、交错 14/15、接口故事、目录驱动删除增量、其他关键性质的实际变异、阶段完整门禁与 Claude 整分支终审尚未完成。M4 设计 §14 不新增勾选；P4 不标已完成。
 
@@ -177,6 +185,12 @@ M同时覆盖公共furnish及已有故事独立构造的目录行。T3首轮端�
 沿设计既定`issue_comment.write`动作实现相对权限。`issue.not_author`文案明确“Only the author can edit a comment; only the author or a project administrator can delete it.”，避免笼统only-author变更误述管理员删除权限；中文同义。`issue.comment_not_found`统一“The comment does not exist, or you cannot see it.”，不增加存在性信息。
 
 带日志gate的失败端口测试先断言成功Enter后恰有一次末尾的预期项目Leave、且已离开事务，再仅去掉该末项复用既有helper；预检拒绝仍要求零Enter/Begin/Now/Lock/Leave。未放宽共享helper。完整工作项会产生初始活动，故用活动整行快照前后相等证明未修改，而非硬编码活动数量或只比ID。G中的迁移/furnish/故事门禁不扩成所有bootstrap种子：本Task矩阵种子由完整Go测试覆盖，不重复无关e2e。
+
+### T5 中的矩阵参数与迁移反例适用范围
+
+`{reaction}`是设计点名的值参数，不是UUID。矩阵目标守卫只在`/api/v0/issues/{issue_id}/reactions/{reaction}`精确路径接受固定种子值`128077`，其他值或未知路径仍拒绝，既有矩阵自检补反例；没有增加notTargets豁免。T6新增评论路径时再按其精确契约扩展，不泛放行未知参数。
+
+M中“漏二层comment外键”的实际变异明确属于T6的`comment_reactions→issue_comments→issues`，该表未建出的T5不提前创建它或重复变异已有comments。每张新表仍同步本表外键、授权、目录与实际漏删/删宽反例；T5自己的两个删除步骤和grants均已实际变异。此为计划测试范围消歧，不改变数据库规则或降低守卫。
 
 ## 4. 整分支评审的发现与处理
 
