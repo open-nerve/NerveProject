@@ -119,26 +119,6 @@ func checkText(field, s string, nonEmpty bool, maxLen int) *shared.FieldError {
 	return nil
 }
 
-// Page sizes of a list (api/common.yaml Limit).
-const (
-	DefaultPageSize = 50
-	MaxPageSize     = 100
-)
-
-// PageSize returns the page size that limit asks for: DefaultPageSize when
-// it is nil. Outside 1–MaxPageSize it is 422 validation_failed on limit
-// (M2 design 3.11); a limit that is no integer never gets here, the
-// parameter binding answers 400.
-func PageSize(limit *int) (int, error) {
-	switch {
-	case limit == nil:
-		return DefaultPageSize, nil
-	case *limit < 1 || *limit > MaxPageSize:
-		return 0, shared.Invalid(shared.FieldError{Field: "limit", Code: shared.FieldOutOfRange, Message: "must be between 1 and 100"})
-	}
-	return *limit, nil
-}
-
 // errCursorShape is a token list cursor that is not [created_at, id].
 var errCursorShape = errors.New("the cursor is not [created_at, id]")
 

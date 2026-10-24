@@ -46,9 +46,11 @@ func DB(ctx context.Context, pool *pgxpool.Pool) Querier {
 // the failure and keeps only the text of fn's error, so a domain error behind
 // it is answered as a logged 500, not as itself.
 type TxManager struct {
-	pool          *pgxpool.Pool
-	commitTimeout time.Duration
-	begin         pgx.TxOptions
+	pool             *pgxpool.Pool
+	commitTimeout    time.Duration
+	begin            pgx.TxOptions
+	lockTimeout      time.Duration
+	readOnlySnapshot bool
 }
 
 // Option sets how a TxManager begins its transactions.
@@ -63,8 +65,17 @@ type Option func(m *TxManager)
 // lock_timeout of 0 as no limit.
 func LockTimeout(d time.Duration) Option {
 	return func(m *TxManager) {
-		m.begin.BeginQuery = fmt.Sprintf("BEGIN; SET LOCAL lock_timeout = %d", (d + time.Millisecond - 1).Milliseconds())
+		m.lockTimeout = d
 	}
+}
+
+// ReadOnlySnapshot begins an independent transaction as REPEATABLE READ,
+// READ ONLY. All reads, including authorization and directory lookups, must
+// use its context. WithinTx joins an existing transaction without changing
+// its isolation or access mode; callers must not nest snapshot lists in a
+// write transaction.
+func ReadOnlySnapshot() Option {
+	return func(m *TxManager) { m.readOnlySnapshot = true }
 }
 
 // NewTxManager returns a TxManager on pool, with opts.
@@ -72,6 +83,16 @@ func NewTxManager(pool *pgxpool.Pool, commitTimeout time.Duration, opts ...Optio
 	m := &TxManager{pool: pool, commitTimeout: commitTimeout}
 	for _, opt := range opts {
 		opt(m)
+	}
+	if m.readOnlySnapshot || m.lockTimeout > 0 {
+		query := "BEGIN"
+		if m.readOnlySnapshot {
+			query += " ISOLATION LEVEL REPEATABLE READ READ ONLY"
+		}
+		if m.lockTimeout > 0 {
+			query += fmt.Sprintf("; SET LOCAL lock_timeout = %d", (m.lockTimeout + time.Millisecond - 1).Milliseconds())
+		}
+		m.begin.BeginQuery = query
 	}
 	return m
 }

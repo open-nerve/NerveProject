@@ -90,6 +90,11 @@ type Deps struct {
 	// Tx are the transactions of the module's writes, each of which waits
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
+	// ReadTx supplies independent, read-only repeatable-read transactions for
+	// collaboration lists. The first target read, authorization, directories
+	// and list queries must all use its context; never call such a list from
+	// an existing write transaction, which WithinTx would join unchanged.
+	ReadTx shared.TxManager
 	// WriteGate is the write gate of each project (bootstrap/gate.go).
 	WriteGate  app.WriteGate
 	Clock      app.Clock
