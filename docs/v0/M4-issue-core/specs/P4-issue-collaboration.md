@@ -2,7 +2,7 @@
 
 | 项 | 内容 |
 |---|---|
-| 状态 | 草案；A1 架构放置冲突待负责人裁定，暂停进入预检/实现 |
+| 状态 | 细化完成待独立预检；A1已于2026-10-25获负责人批准；实现和验收待执行 |
 | 日期 | 2026-10-25 |
 | 代码基线 | `56d575fb8ff6575880d1edef65219728a81f2b12`；P3 已合并；P4 启动提交已把关键词 phase 改为 `M4/P4` |
 | 工作树 | `.codex/worktress/codex/m4-p4`，分支 `codex/m4-p4`；主目录保持 `main` |
@@ -13,9 +13,9 @@
 
 ## 1. 目标
 
-**阻塞 A1：** 设计点名 `issue/domain/sanitize.go` 直接使用 bluemonday，但现有 `archtest` 的纯层及传递依赖守卫禁止 domain/app/shared 直接或间接依赖第三方。尚未找到已批准例外。推荐 domain 只保留 RichText/内容标识纯值，app 声明 `HTMLSanitizer` 小端口，`issue/adapter/content` 实现 bluemonday 与 x/net/html，`module.New` 组合，保留现有架构守卫；备选为放宽纯层守卫，不推荐。该推荐尚未批准，本文涉及 sanitizer 放置、构造与接口的细化全部暂停，不作为执行授权。其余已完成细化留作可审阅草案。
+**A1已批准（2026-10-25）：** “清洗放到 issue/adapter/content，app 声明小接口，domain 保持纯净，不放宽架构守卫。同步修订设计、spec 和 plan 后继续 P4，完成后先别合并，我安排 Claude 做整分支终审。”据此清洗由 `adapter/content` 实现，`app.HTMLSanitizer` 声明端口，domain只保留纯值与规则，module.New组合；本规格与plan已按该决定细化，预检与实现结果仍待执行。
 
-完整交付设计 §12/P4：描述及清洗、内容标识与 `skip_activity`、提及的集合同步和自动关注、描述版本及其读取、评论的增删改与分页、工作项和评论的表情、动态的分页与历史引用过滤。增加 13 个操作；修改创建/修改/详情的描述契约；不增加回复、快照、事件或版本保留任务。
+完整交付设计 §12/P4：描述及清洗、内容标识与 `skip_activity`、提及的集合同步和自动关注、描述版本及其读取、评论的增删改与分页、工作项和评论的表情、动态的分页与历史引用过滤。增加 12 个操作；修改创建/修改/详情的描述契约；不增加回复、快照、事件或版本保留任务。
 
 所有写复用 `Locks.run`：不加锁的资源读取及权限预检 → 项目写闸门 → 事务 → 项目 `FOR NO KEY UPDATE` → 重读/重新判定 → 项目归档/工作项归档检查 → 依赖检查 → 时钟 → 写。同一次改动的全部行同一时刻、同一个写者。子资源按自身 id 寻址时，隐藏和不存在返回同一份子资源 404；访客规则先于角色拒绝和作者拒绝。普通访客可评论、回应自己可见的工作项，不能读描述历史；工作区管理员兼项目访客仍受 `OwnOnly` 约束。
 
@@ -29,36 +29,37 @@ P4 的完成线是 I11–I13 接口故事、I1/I2/I15/I17 的增量断言、交�
 
 | 范围 | 文件/目录 | 职责 |
 |---|---|---|
-| 领域 | `server/internal/modules/issue/domain/{description,description_version,comment,reaction,collaboration_cursor}.go`；原设计的 `domain/sanitize.go` 放置待A1裁定；现有 `issue.go`、`patch.go`、`activity.go`、`actions.go`、`errors.go` | 内容标识纯值、评论有效性、版本窗口、表情格式和三个游标载荷；清洗实现位置待A1裁定 |
-| 用例 | `server/internal/modules/issue/app/{comments,comment_writes,reactions,comment_reactions,description,description_versions,activities,mentions,collaboration_ports,collaboration_rows}.go`；现有 create/update/lock/删除文件 | 小端口、同一加锁路径、订阅资格、描述写入协调、分页 |
+| 领域 | `server/internal/modules/issue/domain/{rich_text,description,description_version,comment,reaction,collaboration_cursor}.go`；现有 `issue.go`、`patch.go`、`activity.go`、`actions.go`、`errors.go` | 内容标识纯值、评论有效性、版本窗口、表情格式和三个游标载荷 |
+| 清洗适配器 | `server/internal/modules/issue/adapter/content/{sanitize,policy,projection}.go`及测试；`issue/app/content.go` | bluemonday与x/net/html只在适配器；app.HTMLSanitizer小接口，module.New组合（A1已批准） |
+| 用例 | `server/internal/modules/issue/app/{comments,comment_writes,reactions,comment_reactions,description,description_activity,description_versions,activities,mentions,visible_projects}.go及各自小端口/写入值文件`；现有 create/update/lock/删除文件 | 小端口、同一加锁路径、订阅资格、描述写入协调、分页 |
 | 存储 | `server/internal/modules/issue/adapter/postgres/{comments,reactions,comment_reactions,description,description_versions,mentions,activities}.go` 及对应 `queries/*.sql` | 只访问 issue 模块表，经事务 context/sqlc；分页先过滤再截断 |
 | 迁移 | `server/migrations/00021_issue_issue_comments.sql` 至 `00025_issue_issue_description_versions.sql` | 五表，设计 §4.7、4.9、4.10、4.12、4.14 原样；各在首个可用接口的 Task 建出 |
 | 平台/成员目录 | `server/internal/shared/page.go`；`server/internal/platform/postgres/tx.go`；project 的 `app/issue_ports.go`、`adapter/postgres/issue_ports.go` 和 `queries/issue_ports.sql` | 共享页大小、只读快照、提及成员目录、历史项目目录 |
-| 边界与组合 | `api/modules/issue.yaml`；issue `adapter/http`、`module.go`；`server/internal/bootstrap/{ports,app}.go` 和新的 `issue_collaboration_*_test.go` | 闭合请求体、生成类型、错误码、唯一组合根、矩阵与真实库测试 |
+| 边界与组合 | `api/modules/issue.yaml`；issue `adapter/http`、`module.go`；`server/internal/bootstrap/{ports,app}.go` 和plan列出的评论/描述/活动、矩阵及 `issue_collaboration_*_test.go` | 闭合请求体、生成类型、错误码、唯一组合根、矩阵与真实库测试 |
 | 模式/授权/生成 | `server/sqlc.yaml`、`deploy/runtime-grants.sql`、`server/migrations/issue_schema_test.go`；`api/dist`、issue/project 的 `gen`、TS schema | 每张新表同时纳入授权/删除；生成物只由生成器产出 |
-| S3 | `api/testdata/issue-richtext.json`；`web/packages/editor/src/sanitization-roundtrip.test.ts`；清洗测试（位置待A1裁定） | 同一个样例集由 Go 与真实 TipTap editor 消费，覆盖编辑器输出与 API 输入往返 |
+| S3 | `api/testdata/issue-richtext.json`；`web/packages/editor/src/sanitization-roundtrip.test.ts`；`server/internal/modules/issue/adapter/content/sanitize_test.go` | 同一个样例集由 Go 与真实 TipTap editor 消费，覆盖编辑器输出与 API 输入往返 |
 | 故事 | `e2e/fixtures/{furnish.ts,assert/issue.ts}`；`e2e/stories/issue/i{1,2,11,12,13,15,17}-*.spec.ts` | 前置数据经接口；不为新表增加目录断言豁免 |
 | 文案/文档 | `web/apps/web/core/lib/error-messages.ts`、两份 `errors.json`；总体设计/M2设计/差异清单/相关交接/P4 review | 新码与实现同 Task；交接只写已证实的处理结果 |
 
 ### 2.2 接口与依赖约定
 
-沿用标准库 `uuid.UUID`、`shared.Actor/Grant/TxManager`、现有 `Clock`、`IssueReader`、`ProjectMembers`、`stamp`、`LinkRows`、`ChangedRows`；不引入第二套事务或角色判断。新增 Go 依赖仅设计点名的 bluemonday 及其传递依赖（`x/net`、douceur、gorilla/css）；选择的确切版本和许可证由 Task 1 留下实际解析记录，不在本规格伪造已安装版本。
+沿用标准库 `uuid.UUID`、`shared.Actor/Grant/TxManager`、现有 `Clock`、`IssueReader`、`ProjectMembers`、`stamp`、`LinkRows`、`ChangedRows`；不引入第二套事务或角色判断。新增 Go 依赖仅设计点名的 bluemonday 及其传递依赖（`x/net`、douceur、gorilla/css）；Task 1固定bluemonday v1.0.27与x/net v0.60.0以保持既有模块组，实施时核对实际解析与许可证；本规格不声称已安装。
 
-对外用例遵循现有 `Execute` 接口：列表 `(ctx, issueID uuid.UUID, limit *int, cursor *string) (对应 Page, error)`；评论创建 `(ctx, issueID, html string)`（`issueID` 为 `uuid.UUID`），更新 `(ctx, commentID uuid.UUID, html string)`；删除 `(ctx, commentID uuid.UUID) error`；表情加/去 `(ctx, resourceID uuid.UUID, reaction string)`；版本详情 `(ctx, versionID uuid.UUID) (DescriptionVersion, error)`。精确 Go 声明须在 A1 裁定后补齐到 plan 并逐一自检；当前 plan 仅是任务纲要。所有 Page 的 `NextCursor string` 在 HTTP 空时转 `null`，`Data` 空时转 `[]`。
+对外用例遵循现有 `Execute` 风格；列表参数为 `ctx context.Context, issueID uuid.UUID, limit *int, cursor *string`，评论写参数为 `ctx context.Context, resourceID uuid.UUID, html string`，表情写参数为 `ctx context.Context, resourceID uuid.UUID, reaction string`。精确签名、消费端口和返回类型在plan的公共接口表与各Task。所有Page的NextCursor为空时在HTTP映射null，Data为空映射[]。
 
 ### 2.3 清洗和内容标识（Task 1；设计 §3.7、8.2，S3）
 
-**本段是设计原意的行为规格，放置与构造签名因A1未决不得直接实现。** 候选 `HTMLSanitizer.Clean(string) domain.RichText` 返回 `HTML`、`Text`、内容标识和评论是否有内容。无全局可变 policy。标签与逐标签属性照只读 Plane `apps/api/plane/utils/content_validator.py`，包括 mention/image 自定义元素、任务列表、表格、代码语言、块 id；URL 仅 `http/https/mailto/tel`，脚本、事件属性和危险 URL/CSS 去掉，不因清洗而拒绝请求。不能用一条“所有属性都放行”代替枚举。bluemonday内建URL校验不会自动覆盖自定义 `image-component[src]`，必须有显式校验与恶意src变异，不能把允许属性当成协议校验。显式区分可保留的 style 属性与其安全 CSS 值，S3 用实际 editor 输出证明。
+`app.HTMLSanitizer.Clean(string) domain.RichText`由`content.NewSanitizer()`构造的适配器实现，module.New每个模块构造一次并注入需要的用例；返回 `HTML`、`Text`、内容标识和评论是否有内容。无全局可变 policy。标签与逐标签属性照只读 Plane `apps/api/plane/utils/content_validator.py`，包括 mention/image 自定义元素、任务列表、表格、代码语言、块 id；URL 仅 `http/https/mailto/tel`，脚本、事件属性和危险 URL/CSS 去掉，不因清洗而拒绝请求。不能用一条“所有属性都放行”代替枚举。bluemonday内建URL校验不会自动覆盖自定义 `image-component[src]`，必须有显式校验与恶意src变异；callout的data-emoji-url会成为editor导出Markdown的img src，也复用唯一URL值检查/规整并测试危险scheme、空白/控制、引号/实体及安全https保留。不能把允许属性当成协议校验。显式区分可保留的 style 属性与其安全 CSS 值，S3 用实际 editor 输出证明。
 
 纯文本由清洗后 HTML 经 StrictPolicy、实体解码和空白规整得到。内容标识是纯文本、按出现顺序（保留重复）的 user mention UUID、`a[href]`、每个 `input` 的 checked 布尔；集合去重只发生在关系写入，不发生在内容标识。非 UUID/非 user mention 不参与成员同步。`image-component` 在放行表，但图片 src 的内容标识等 M5，见 §5。
 
-S3 以真实 `CoreEditorExtensions` 生成每种保留节点/mark 的 HTML，不手写一个“看起来像 editor”的替身。块 id 采用固定测试值。API HTML 至少有无块 id 的列表、标题、嵌套 mark；样例保留 raw、sanitized、editorReserialized、再次 sanitized 及预期内容标识。只改链接、只改 checked 的两个样例必须判为普通修改。恶意输入与 Unicode/实体/空白分开测；样例未实际往返前不得填“已通过”。
+S3 以真实 `CoreEditorExtensions` 生成每种保留节点/mark 的 HTML，不手写一个“看起来像 editor”的替身。块 id 采用固定测试值。API HTML 至少有无块 id 的列表、标题、嵌套 mark；样例保留 raw、sanitized、editorReserialized、再次 sanitized 及预期内容标识。只改链接、只改 checked 的两个样例必须判为普通修改。恶意输入与 Unicode/实体/空白分开测；样例未实际往返前不得填“已通过”。固定sanitized期望并检查保留节点/属性，CSS分号等合法规范化不当作格式丢失，宽松DOM比较也不能掩盖属性丢失；真实schema的node/mark增长必须触发样例覆盖检查。
 
 ### 2.4 页大小、载荷与读快照（Task 2）
 
 页大小从 identity 移至 `shared.PageSize(*int) (int,error)`，默认 50，范围 1–100；越界 422 `validation_failed`/`limit`/`out_of_range`。删去 identity 的重复实现，PAT 列表行为不变。`CommentCursor`、`ActivityCursor` 是 `[created_at,id]`，`DescriptionVersionCursor` 是 `[last_saved_at,id]`，各有严格 JSON marshal/unmarshal；UTC、非零 UUID、精确两元素，复用 `shared.EncodeCursor/DecodeCursor` 封套。坏形状 400 `bad_request`，同时坏 limit 时 400 优先；合法他人位置不签名、不当作权限证明。
 
-`postgres.ReadOnlySnapshot() Option` 与 `LockTimeout(d)` 可任意顺序组合；最终 BEGIN 同时包含 `ISOLATION LEVEL REPEATABLE READ READ ONLY` 和 `SET LOCAL lock_timeout`。列表的目标判定、project 目录、issue 查询和评论表情批读都在一个 `ReadTx.WithinTx` 中。原有写事务保持原语义；没有模块 SQL `SET`。目录与查询快照一致、禁止写入和事务后配置不泄漏均需真实库证明。
+`postgres.ReadOnlySnapshot() Option` 与 `LockTimeout(d)` 可任意顺序组合；最终 BEGIN 同时包含 `ISOLATION LEVEL REPEATABLE READ READ ONLY` 和 `SET LOCAL lock_timeout`。列表的首次目标读取/判定、project 目录、issue 查询和评论表情批读都在独立的 `ReadTx.WithinTx` 中；嵌套既有写事务不会提高隔离级别，不能当作读快照。原有写事务保持原语义；没有模块 SQL `SET`。目录与查询快照一致、禁止写入和事务后配置不泄漏均需真实库证明。
 
 ### 2.5 评论创建和列表（Task 3；迁移 00021）
 
@@ -90,7 +91,7 @@ Task 7 只准备内部类型、已有两列存储与规则测试，HTTP 字段�
 
 ### 2.10 描述动态和版本合并决策（Task 8）
 
-普通描述改动写动态表第 4 行；仅当工作项最新活动态（`created_at DESC,id DESC`）就是同 actor 的 description 行时原地合并，保留 old_value、id、created_by_id，更新 new_value、created_at、updated_at、updated_by_id。不是“找到最近一条 description 就合并”；不同 actor、其间其他字段动态均中断。一个 PATCH 同时改标题与描述时按设计表顺序先写标题行，再判描述合并，故新标题行会中断合并；其余字段随后写。
+普通描述改动写动态表第 4 行；仅当工作项最新活动态（`created_at DESC,id DESC`）就是同 actor 的 description 行时原地合并，保留 old_value、id、created_by_id，更新 new_value、created_at、updated_at、updated_by_id。不是“找到最近一条 description 就合并”；不同 actor、其间其他字段动态均中断。一个 PATCH 同时改标题与描述时按设计表顺序先写标题行，再判描述合并，故新标题行会中断合并；其余字段随后写。两条业务规则分别测试，不把描述行优先写以迁就合并。
 
 版本决策 `CanMergeDescriptionVersion(latest,actor,now)` 与动态合并独立：最新活版本按 `(last_saved_at,id) DESC`；同 owned_by_id 且 `0 <= now-last_saved_at <= 600s` 合并，窗口随每次保存滑动。600 秒恰好合并，600 秒加 1 微秒新建；更换作者新建。创建总有初版；普通描述修改后保存新内容。此 Task 实现已有动态表查询/合并以及版本纯决策，版本表和其实际写入在 Task 9。
 
@@ -134,15 +135,15 @@ I11 评论与两类表情；I12 评论/动态翻页与增量新增；I13 历史�
 
 ## 3. 与设计的差异和补充
 
-**A1（待负责人裁定）：清洗实现的层放置。** 事实是 `server/internal/archtest/rules_test.go` 的 `innerLayersArePure` 与 `purity_test.go` 禁止纯层第三方依赖，与设计3.7/6.2/P4 Task1冲突。推荐端口与内容适配器方案，备选架构例外，代价分别为修订设计接缝、或削弱现有边界。没有实证允许直接放domain。A1未决前停止生产方案细化与实现；T1、T3、T7–9依赖其结果，需裁定后更新文件表/签名，再独立预检。
+**A1（负责人已批准，2026-10-25）：清洗在适配器层。** 原设计点名domain/sanitize与纯层守卫冲突；最终按负责人原话采用`issue/adapter/content`、`app.HTMLSanitizer`、纯domain，保留`server/internal/archtest/rules_test.go`和`purity_test.go`的直接/间接依赖检查。基线提交573e8eb6记录了暂停，当前恢复只修改文档，不代表新实现验证通过。
 
-以下是已完成的局部细化草案，尚未独立预检；尤其ProjectMembers扩展只有代码阅读与方案比较，没有实现或验证证据。A1之外不改变负责人已批准的产品/架构决定。
+以下是局部工程裁定，尚待独立预检；新增端口与实现均未验证。A1之外不改变负责人已批准的产品/架构决定。
 
 1. **裁定：不做整段原型/逐字代码重放，采用接口、文件、测试、命令驱动的紧凑 plan。** 依据交接02 §3，这两项属于可调整做法。保留独立预检、TDD、逐Task独立评审、关键性质实际变异与负责人安排的Claude终审；代价是没有原型快照可逐字比较，执行中必须把接口变化同步回plan，不能把未运行预期当结果。
 2. **裁定：迁移按首个可用API分批交付。** T3=00021，T5=00022，T6=00023，T9=00024–00025；每批同Task扩展删除及接口fixture，避免目录豁免。设计任务映射：原1→T1；原2→T3/5/6/9；原3→T2；原4→T7/8/9；原5/6→T9（政策准备T1/3/8）；原7→T10；原8→T3；原9→T4/6；原10→T5；原11→T6；原12→T11/12；原13→T13；原14→T14并随每个API长矩阵；原15→T15并随迁移长fixture；原16→T16。T7/8内部准备由T9消费，终态不得留无使用者。
 3. **裁定：只读快照接缝从P5提前到P4/T2。** P4分页目录/查询同快照是设计3.4的要求；保留设计名`ReadOnlySnapshot()`，同时组合lock_timeout，避免P1b交接指出的BeginQuery盖过TxOptions。代价是提前触及平台/组合根，P5复用并删重复实现步骤。
 4. **裁定：子资源相对权限纳入同一个Locks.run的两次检查。** 增加可选小回调，见plan T4；调用者无权编辑别人的评论在进闸门前就403，锁下重读后再判。`seeAs`让子资源404在源头统一，不靠HTTP层翻译所有错误。只变更同一加锁机制，不复制它。
-5. **候选（待预检）：在既有ProjectMembers目录内补齐提及者可见性。** 现有Roles缺被提及者OwnOnly，调用者的Grant不能代表他；逐候选Authorizer需要代构Actor且重复读取相同项目，使用已有目录职责的窄方法批读成员角色/OwnOnly更合适。project读自己的表、bootstrap转值，issue用HiddenFrom统一过滤关注，不增顶层目录、不改变Lock值；代价是要测转换和端口失败。
+5. **裁定：在既有ProjectMembers目录内补齐提及者可见性。** 现有Roles缺被提及者OwnOnly，调用者的Grant不能代表他；逐候选Authorizer需要代构Actor且重复读取相同项目，使用已有目录职责的窄方法批读成员角色/OwnOnly更合适。project读自己的表、bootstrap转值，issue用HiddenFrom统一过滤关注，不增顶层目录、不改变Lock值；代价是要测转换和端口失败。
 6. **裁定：skip_activity出现与值分开。** false仍受“只能与描述一起、不能带其他字段”约束，只有true且标识相同才抑制审计。保存仍同步提及，确保“每次描述被写入”成立；普通相同HTML不写。设计未钉死的版本同刻选取以id降序确定，窗口600秒含端点，墙钟倒退不合并；墙钟回拨的时间线全局保证仍不在范围内。
 7. **裁定：同一PATCH动态按表顺序插入/合并。** 新标题动态先于description合并检查，避免跨过刚发生的其他字段改动。动态不带时间窗口，版本有600秒滑动窗口，两者不得共用一个“最近修改”条件。
 8. **裁定：分页操作显式声明400/422。** 设计5.1主要错误表未逐行列坏cursor/limit，沿identity既有契约补全；删除reaction路径值同格式检查，非法格式422，先权限预检后资源相对不存在检查，避免暴露别人表情。
@@ -153,12 +154,12 @@ I11 评论与两类表情；I12 评论/动态翻页与增量新增；I13 历史�
 - [ ] S3覆盖保留节点与API输入，去除危险HTML，skip的文字/提及/href/checked四个维度有可失败断言。
 - [ ] 五表结构、grants、sqlc scope、删除图及无豁免的目录fixture通过；删除子树/项目/工作区保留旧删除戳和邻居行。
 - [ ] 描述与其提及、订阅、动态、版本同事务进入API；所有详情仍经seen；600秒边界和回滚通过。
-- [ ] 13个新操作、分页、错误码和中英文文案、矩阵、隐藏逐值相同、作者规则与归档次序通过。
+- [ ] 12个新操作、分页、错误码和中英文文案、矩阵、隐藏逐值相同、作者规则与归档次序通过。
 - [ ] 三种游标篡改只改变合法可见结果起点；动态历史引用软删/项目删除/is_active=false/物理清理各例通过；同一只读快照成立。
 - [ ] 交错14/15与新写锁形状/闸门/事务连接测试通过；交错用`-race -count=5`无死锁。
 - [ ] I11–I13及I1/I2/I15/I17增量全部通过；前置通过API。
 - [ ] 关键安全、锁、游标、删除、合并性质实际变异被业务断言发现，构建失败/基础设施失败不算；只单元层覆盖的安全性质有明确补证或风险裁定。
-- [ ] `make gen`、提交后`make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make e2e`及main CI完成；本机缺Firefox/已有W11偶发如实分类。
+- [ ] `make gen`、提交后`make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make e2e`及分支CI完成；main CI在负责人批准合并后记录，不提前要求合并；本机缺Firefox/已有W11偶发如实分类。
 - [ ] 独立预检、逐Task评审、Claude终审和修复轮有记录；相关上级文档/差异/交接已同步；没有未经证实的通过项。
 
 ## 5. 不在P4范围内
@@ -219,7 +220,7 @@ I11 评论与两类表情；I12 评论/动态翻页与增量新增；I13 历史�
 | 交错14/15、锁形状、快照一致性 | 待执行 | -race重复结果、条件等待证据 |
 | 关键变异 | 待执行 | 变异定义、基线绿、变异红的具体断言、恢复后绿；不得填假hash |
 | 独立预检与Claude终审 | 待安排/待执行 | review§1/3/4及分诊台账 |
-| 全量CI与合并清理 | 待执行 | 实际run链接及结论 |
+| 全量CI与合并清理 | CI待执行；合并/清理等待负责人另行批准 | 实际run链接及结论 |
 
 ### A.3 变异最低集合
 
