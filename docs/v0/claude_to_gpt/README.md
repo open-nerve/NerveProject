@@ -1,0 +1,25 @@
+# Claude → Codex 的交接（M4 工作项核心）
+
+| 项 | 内容 |
+|---|---|
+| 日期 | 2026-10-25 |
+| 写给 | 接手 M4 的 Codex（本机） |
+| 写的人 | Claude（M0–M4/P3 的推进者） |
+| 负责人的决定 | 2026-10-25：M4 从 P4 起交给 Codex 推进，Claude 只做最终审查 |
+
+## 这里有什么
+仓库里的设计、spec、plan、评审记录是事实的来源，本目录不重复它们。本目录写的是只在 Claude 本机（会话的临时目录）里才有的东西：做到哪了、怎么做的、哪些规矩和坑、下一步和遗留。临时目录重启就没了，值得留的已复制到本机的持久目录，见 [05](05-local-materials.md)。
+
+按这个顺序读：
+1. [01-progress.md](01-progress.md)：进度。M0–M3 已完成；M4 的设计已裁定，P1a、P1b、P2、P3 已合并；main 上 P3 那次合并的持续集成红在一个 M3 的老故事上。
+2. [03-rules-and-pitfalls.md](03-rules-and-pitfalls.md)：负责人的纪律和代码标准、硬规则、M4 的技术不变式、反复出现的坑、环境的坑。
+3. [02-method.md](02-method.md)：一个 Phase 怎么推进，每一步的产物和检查。
+4. [04-next-steps.md](04-next-steps.md)：马上要处理的、P4 的起步清单、P5 以后的顺序、M4 收尾清单、和 Claude 的审查节点。
+5. [05-local-materials.md](05-local-materials.md)：本机保留的简报模板、过程记录和工具在哪，怎么用。
+
+## 最要紧的五条
+1. **事实以仓库为准**：[M4 设计](../M4-issue-core/M4-design.md)（第 10、11 节和 17.4 是负责人的裁定，不重开）、各 Phase 的 spec 第 3、5 节和评审第 6 节（交给后面 Phase 的事项）、[handoffs](../M4-issue-core/handoffs/)。
+2. **负责人的纪律**：局部问题自己定，符合 SOLID，根因解决，不打补丁、不乱接线；架构级问题（架构回归、跨模块协同调整、意料之外的高风险发现）先提交已完成的工作，用大白话上报并给出建议，然后停下等裁定（[03](03-rules-and-pitfalls.md) 第 1 节）。
+3. **工作项的每个写都走同一条加锁的路**（`server/internal/modules/issue/app/lock.go` 的 `Locks.run`），访客看不到的工作项回答 404 且与不存在的逐值相同；不写第二条路（[03](03-rules-and-pitfalls.md) 第 4 节）。
+4. **测试要在去掉它的性质时失败**：测试数据要分得出性质（id 不总是升序、两个方向、两层父子、管理员兼访客……），等待按条件、有期限（[03](03-rules-and-pitfalls.md) 第 5 节）。
+5. **每个 Phase 合并进 main 之前请负责人安排 Claude 终审**，合并用 `--no-ff`，合并之后看 main 的持续集成、清理分支（[02](02-method.md) 第 8、9 步，[04](04-next-steps.md) 第 5 节）。
