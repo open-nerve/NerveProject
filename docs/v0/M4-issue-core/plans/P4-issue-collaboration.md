@@ -245,15 +245,15 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** `AddIssueReaction.Execute(ctx context.Context,issueID uuid.UUID,reaction string)(domain.IssueReaction,error)`；`RemoveIssueReaction.Execute(ctx context.Context,issueID uuid.UUID,reaction string)error`；`ListIssueReactions.Execute(ctx context.Context,issueID uuid.UUID)([]domain.IssueReaction,error)`。Add/Remove Deps为`Locks, Reactions IssueReactionWriter, Clock`，List为`Locks, Reactions IssueReactionLister, ReadTx`。Writer的`IssueReaction(ctx context.Context,key ReactionKey)(domain.IssueReaction,bool,error)`、`InsertIssueReaction(ctx context.Context,w IssueReactionWrite)error`、`DeleteIssueReaction(ctx context.Context,d ReactionDeletion)error`及MarkChanged；Lister的`IssueReactions(ctx context.Context,issueID uuid.UUID)([]domain.IssueReaction,error)`；domain `CheckReaction(reaction string)error`给字段reaction的422。
 
-- [ ] **Step 1 红测试。** `TestIssueReactions`、`TestCheckReaction`：128077/10084-65039合法，空/负/8位段/17段/空段/超过128非法；同actor同value重复409，其他actor同value独立；只能去掉自己的，无自己的404，删除后重新添加新id；成功Add/Remove同步issue审计且零动态/订阅；列表ASC同时间逆id/软删过滤。
+- [x] **Step 1 红测试。** `TestIssueReactions`、`TestCheckReaction`：128077/10084-65039合法，空/负/8位段/17段/空段/超过128非法；同actor同value重复409，其他actor同value独立；只能去掉自己的，无自己的404，删除后重新添加新id；成功Add/Remove同步issue审计且零动态/订阅；列表ASC同时间逆id/软删过滤。
   ```go
   if got.ActorID != caller || got.Reaction != "10084-65039" { t.Fatal("wrong reaction") }
   if !issue.UpdatedAt.Equal(at) || issue.UpdatedByID == nil || *issue.UpdatedByID != caller { t.Fatal("audit") }
   ```
-- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/domain ./internal/modules/issue/app -run 'Test(CheckReaction|IssueReactions)' -count=1`。
-- [ ] **Step 3 实现。** 正则`^[0-9]{1,7}(-[0-9]{1,7}){0,15}$`与128字符上限在domain/OpenAPI/CHECK一致；不验证emoji名录。锁下先project/issue归档，再检查活reaction存在，成功先MarkChanged后insert/delete；查询/删除绑定issue_id、actor_id、reaction、deleted_at IS NULL。新action issue_reaction.write允许Admin/Member/Guest；list用issue.read。三个API按设计路径/201/204/200，列表mapper将用例slice映射`IssueReactionCollection={data:[…]}`，空集合必须`{data:[]}`而非裸数组；HTTP契约同时断言空/非空封套，新增reaction_exists/reaction_not_found及文案。M加00022及furnish。
-- [ ] **Step 4 绿/变异。** 目标、存储和`go -C server test ./internal/bootstrap -run TestIssueReactions -count=1`绿；去掉actor谓词、部分唯一/CHECK、漏MarkChanged、已删仍算存在各实际失败；HTTP全包与M。
-- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): 增加工作项表情及删除连带`。
+- [x] **Step 2 跑红。** `go -C server test ./internal/modules/issue/domain ./internal/modules/issue/app -run 'Test(CheckReaction|IssueReactions)' -count=1`。
+- [x] **Step 3 实现。** 正则`^[0-9]{1,7}(-[0-9]{1,7}){0,15}$`与128字符上限在domain/OpenAPI/CHECK一致；不验证emoji名录。锁下先project/issue归档，再检查活reaction存在，成功先MarkChanged后insert/delete；查询/删除绑定issue_id、actor_id、reaction、deleted_at IS NULL。新action issue_reaction.write允许Admin/Member/Guest；list用issue.read。三个API按设计路径/201/204/200，列表mapper将用例slice映射`IssueReactionCollection={data:[…]}`，空集合必须`{data:[]}`而非裸数组；HTTP契约同时断言空/非空封套，新增reaction_exists/reaction_not_found及文案。M加00022及furnish。
+- [x] **Step 4 绿/变异。** 目标、存储和`go -C server test ./internal/bootstrap -run TestIssueReactions -count=1`绿；去掉actor谓词、部分唯一/CHECK、漏MarkChanged、已删仍算存在各实际失败；HTTP全包与M。
+- [x] **Step 5 H/G评审提交。** `feat(M4/P4): 增加工作项表情及删除连带`。
 
 ### Task 6: 评论表情、页内嵌入和00023
 
@@ -267,7 +267,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
   if len(firstPage.Data[0].Reactions) != 2 { t.Fatal("embedded reactions") }
   ```
 - [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(CommentReactions|CommentPageIncludesReactions|CommentPatchIncludesReactions|DeletingCommentReactions)' -count=1`。
-- [ ] **Step 3 实现。** 目标定位及check复用T4的同一机制，但check仅确认comment活且归属一致，不要求作者；Authorize action=issue_reaction.write。写仅comment_reactions；删除评论实际序issues→comments→comment_reactions。ListComments在同一ReadTx取本页commentIDs后批读活reactions按created_at/id排序并分组，空页不查询，不能N+1；T4更新和无改动分支均在当前Locks.run写事务内用单个commentID调用同一窄读取接口，组装完整Comment后再返回，不能在无改动早退时漏组装，也不另开ReadTx。创建的新评论确定没有表情仍返回[]。不新增单独GET表情接口。M的二层FK删除必须经comments，不错用反应表不存在的issue_id。
+- [ ] **Step 3 实现。** 目标定位及check复用T4的同一机制，但check仅确认comment活且归属一致，不要求作者；Authorize action=issue_reaction.write。写仅comment_reactions；删除评论实际序issues→comments→comment_reactions。ListComments在同一ReadTx取本页commentIDs后批读活reactions按created_at/id排序并分组，空页不查询，不能N+1；T4更新和无改动分支均在当前Locks.run写事务内用单个commentID调用同一窄读取接口，组装完整Comment后再返回，不能在无改动早退时漏组装，也不另开ReadTx。创建的新评论确定没有表情仍返回[]。不新增单独GET表情接口。M的二层FK删除必须经comments，不错用反应表不存在的issue_id。 两个共享reaction业务码开始用于评论时，将detail统一为资源中性的“You already have this reaction.”与“You do not have this reaction.”，同步domain文案及中英翻译；既有action的注释也涵盖评论，不新增码或动作。
 - [ ] **Step 4 绿/变异。** 原红命令、`go -C server test ./internal/bootstrap -run 'Test(CommentReactions|CommentPageIncludesReactions|CommentPatchIncludesReactions|DeletingCommentReactions)' -count=1`、HTTP全包/M绿；误改父审计、漏comment范围、漏已删过滤、漏二层删除各被业务断言杀死；分别将同HTML、改HTML应答的Reactions清空，两个PATCH组合/HTTP断言均须失败；读取错误原样传播，改HTML分支回滚写入。分页读取夹具在目录/查询间更改表情，证明同快照（T14扩整程序）。
 - [ ] **Step 5 M/H/G评审提交。** furnish在新建评论上加一表情；`feat(M4/P4): 维护评论表情并补齐内嵌响应`。
 
