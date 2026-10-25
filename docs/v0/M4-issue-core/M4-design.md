@@ -179,11 +179,12 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
     - `Sequences`：在项目行的锁之下 `UPDATE projects SET last_issue_sequence = last_issue_sequence + 1 … RETURNING`（总体设计 5.3，M3 交接第 4 节）。
     - `StateCatalog`：项目的未删除状态（id、名称、组、`default`、是否分诊）；按 id 取一个；列表引擎按目录排序、分组用（3.16）。
     - `LabelCatalog`：项目的未删除标签（id、名称）；按 id 集合核对。
+    - P5另用 `ListStateCatalog.ListStates` / `ListLabelCatalog.ListLabels` 取得所选项目完整批量状态/标签目录，含未被当前页使用的值；仅列表状态排triage，既有写States不变。负责人ID从issue自身未删除指派行取得，再读PublicProfiles显示名。
     - `ProjectMembers`：一组账户在这个项目里是否是有效成员、角色（负责人的检查、提及的过滤、默认负责人）。
-    - `VisibleProjects`：调用者在一个工作区里是有效成员的项目、各自的角色和 `guest_view_all_features`（个人主页、搜索按它过滤，3.4；关联列表不经它：逐个项目照单个工作项的判定，3.4、3.10）；另一个方法给动态的过滤：调用者的成员关系（`is_active`）所在的全部项目，不看项目和成员关系的 `deleted_at`、不看归档（3.13）。
+    - `VisibleProjects`：`Visible` 给调用者有效加入、成员和项目均未删除且项目未归档的普通目录，逐项目返回角色/`OwnOnly`；P5个人主页及P3关联列表消费它。`Historical` 单独给动态引用过滤：只要求成员 `is_active`，忽略项目/成员 `deleted_at` 和项目归档（3.13），不合并成布尔开关。
     - `ArchivePolicies`：设了 `archive_in`、未归档、未删除的项目（自动归档，3.8）。
-  - **向 `workspace` 要**：`WorkspaceDirectory`：`workspace.Provide` 今天交给 `project` 的同一个目录（`workspace/module.go:33-49`），已有 `WorkspaceBySlug`（不加锁，个人主页、搜索、草稿、按编号取）和 `ShareWorkspaceByID`（`FOR SHARE`，草稿的写的第一把锁，3.5），`workspace` 不必加方法。
-  - **向 `identity` 要**：`PublicProfiles`：按 id 批量读显示名。按负责人名排序的目录要它：目录是这个项目（个人主页：可读的项目）里**出现在负责人行上的每个账户**的显示名，含已离开、已降为访客的（他们仍是已有工作项的负责人，3.6），不只是有效成员（第二稿用 `ProjectMembers` 的有效成员，对他们排序键为空，与页面从含已结束的成员关系的成员列表取名字的本地重排对不上，对抗性评审 M22）。端口在 `bootstrap/ports.go` 由 `identity` 的读接成（P5）。
+  - **向 `workspace` 要**：`WorkspaceDirectory`：`workspace.Provide` 今天交给 `project` 的同一个目录（`workspace/module.go:33-49`），已有 `WorkspaceBySlug`（不加锁，个人主页、搜索、草稿、按编号取）和 `ShareWorkspaceByID`（`FOR SHARE`，草稿的写的第一把锁，3.5），`workspace` 不必加方法。P5另以窄 `WorkspaceMemberDirectory.MemberExists` 消费 `WorkspaceMemberExists`，基于未删除成员记录判断目标账户存在，允许inactive，不用FOR SHARE。
+  - **向 `identity` 要**：`PublicProfiles`：按 id 批量读显示名。按负责人名排序的目录要它：目录是这个项目（个人主页：可读的项目）里**出现在负责人行上的每个账户**的显示名，含已离开、已降为访客的（他们仍是已有工作项的负责人，3.6），不只是有效成员（第二稿用 `ProjectMembers` 的有效成员，对他们排序键为空，与页面从含已结束的成员关系的成员列表取名字的本地重排对不上，对抗性评审 M22）。该端口已在P1a交付，P5复用；负责人ID先从所选项目未删除指派行取得，再由 `bootstrap/ports.go` 接 `identity` 的批量显示名。
   - **`issue` 给 `project`**：两个端口，声明在 `project/app`，由 `issue.Provide` 交出（都不要 `issue.New` 的东西）：
     - `IssueCascade`，由 `issue/app` 的 `cascade.go` 实现，`project` 的状态、标签的写调用它：
       - `StateInUse(ctx, stateID) (bool, error)`：删除状态时，在项目 N 之下数用它的未删除工作项（含已归档的），有则 `project.state_in_use`（3.7）；
@@ -209,7 +210,7 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
 - **`ProjectFacts` 多读一列**：`access` 读项目事实的端口（`project/adapter/postgres/queries/access.sql:1-8`）加读 `guest_view_all_features`，判定时算出 `OwnOnly`。
 - **一条访客规则，用在每个地方**：访客（`OwnOnly`）只看到自己创建的工作项；看不到的工作项和挂在它下面的一切（评论、链接、关联、子工作项、动态、表情、描述的历史）都是 404。Plane 只在约 6 处执行这条规则，别处泄露（R2 第 0.8 节：动态和评论列表、子工作项、关联、链接、表情、全局搜索、个人主页都不检查），Nerve 处处执行。
   - 单个工作项：用例读工作项（得到项目和 `created_by_id`）→ 判定 → `grant.OwnOnly && issue.CreatedByID != actor` 时答 `issue.not_found`（与不存在相同，不透露存在；角色不允许时也先看访客规则，404 先于 403，6.7）。按资源 id 寻址的子资源（`/issue-comments/{id}`、`/issue-links/{id}`、`/issue-relations/{id}`、`/issue-description-versions/{id}`）先读子资源得到工作项，同样处理，答子资源自己的 404 码。
-  - 列表和搜索：同一条规则，在 SQL 中（`OwnOnly` 的项目加 `created_by_id = $actor`：子工作项的列表、P5 的列表引擎），或者读出之后逐个（关联的列表：`seeEach` 按每个对方的项目的 `Grant`）。个人主页、搜索跨项目，每个项目按它自己的 `OwnOnly` 过滤（`VisibleProjects` 回答每个项目的角色和标志）；关联列表照单个工作项的判定（`see`）对每个对方的项目判定一次 `issue.read`、再照那个项目的访客规则（`seeEach`），别的已归档的项目经不加锁的 `ArchivedProjects` 读出（3.8、3.10）。
+  - 列表和搜索：同一条规则，SQL按各项目 `OwnOnly` 加 `created_by_id = $actor`；个人主页按调用者的普通 `VisibleProjects.Visible` 目录过滤，关系目标账户与caller分离。P5已把P3关联列表的逐项目 `seeEach`/`ArchivedProjects` 链替换为普通目录，仍由既有 `HiddenFrom`/seen裁剪；源项目先显式授权，已归档源的完整grant覆盖或补入目录，使同项目可读目标保留，其他归档项目仍排除（3.10）。全部读取在同一独立RO/RR快照，历史动态继续用 `Historical`。
   - 关联：对方工作项必须对调用者可见（他在它的项目上有 `issue.read`，即那个项目的有效成员，公开项目也一样；并且过了那个项目的访客规则），不然加关联 422（`issue_ids[i]`，`not_allowed`），关联列表不含它（3.10）。
   - 计数：`sub_issues_count` 按调用者的规则数（`OwnOnly` 的项目里只数他自己建的子工作项），按它排序也用同一个数（3.9、3.16）。
   - 父工作项：回答里 `parent_id` 指名调用者看不到的工作项时为 `null`（每个回答经同一处，P3 的 `seen`；与动态的行不指名看不到的工作项同一个规则，3.13）。修改的 `parent_id` 同调用者得到的回答比，他看不到的父工作项算没有：送回这个 `null` 什么都不改，指名它像指名不存在的工作项一样 422（负责人裁定 A，2026-10-24）。
@@ -445,7 +446,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **行的 `project_id`** 是存储的 `issue_id` 那一端的项目（Plane 写成请求路径里的项目，`relation.py:237-238`，缺陷）。
 - **加关联**：`POST /issues/{issue_id}/relations`，`{relation_type, issue_ids: [...]}`（1–20 个，不重复）。每个对方都要：同一个工作区、对调用者可见（他在它的项目上有 `issue.read`、并且过了那个项目的访客规则，3.4）、未删除、未归档、所在项目未归档、不是自己，否则 422（`issue_ids[i]`，`not_allowed`）；这一对已有关联（任何类型、任何方向）422（`duplicate`）。可以跨项目（Plane 的关联选择器有工作区开关，R2 第 3 节）。Plane 不检查类型（任意字符串）、不检查自己、不检查调用者能否看到对方的项目（R2 第 3 节）。登记差异。
 - **响应**：201，`{data: IssueRelation[]}`：新建的关联，从本工作项看。
-- **关联列表**：`GET /issues/{issue_id}/relations`，集合型，`{data: IssueRelation[]}`，按关联行的 `(created_at, id)` 升序。只含对调用者可见、未删除、未归档的对方（Plane 显示调用者看不到的项目里的工作项的标题和状态，泄露）。
+- **关联列表**：`GET /issues/{issue_id}/relations`，集合型，`{data: IssueRelation[]}`，按关联行的 `(created_at, id)` 升序。只含对调用者可见、未删除、未归档的对方（Plane 显示调用者看不到的项目里的工作项的标题和状态，泄露）。P5已用普通Visible目录替换逐项目旧链；源授权、关系、目录、目标/计数/父项均同一独立只读快照，已归档源同项目目标按源grant保留。无消费者的seeEach/ArchivedProjects端口、适配与专属SQL已删，Historical不变；证据见P5 T11/T14。
 - **`IssueRelation`**：`{id, relation_type, issue, created_at}`（5.2）。`relation_type` 是从本工作项看的类型（存为对方 `blocked_by` 本工作项的，本工作项看到的是 `blocking`）；`issue` 是对方的列表行（`Issue`，5.2）。这是总体设计 3.6"关联对象只返回 ID"的又一个例外（M3 的成员内嵌用户资料是第一个，M3 设计 11.3）：对方可以在另一个项目里，页面没有它的数据；只给 id，页面要为每个对方再取一次。理由与 M3 相同，登记到总体设计 3.6（3.23）。对方的状态名由页面从工作区的状态列表（M3 的 `listWorkspaceStates`）读出。
 - **删除关联**：`DELETE /issue-relations/{relation_id}`，204。调用者能改两端任一个工作项（`issue.update`，在那一端的项目上判定）即可：先判定存储的 `issue_id` 那一端，看不到或不能做时判定另一端；两端都看不到 404 `issue.relation_not_found`，看得到而都不能做 403。Plane 的 `remove-relation` 从任一端的页面调用、只看那个项目的角色（`relation.py:271-293`），关联不存在时 500（缺陷）。两端任一个已归档 409 `issue.archived`。任一端的项目已删除（它的删除任务还没软删除这一行，3.6）时也是 404 `issue.relation_not_found`：与任务做完之后的答案相同。
 - **动态**：每次增减两条，正向一条写在本工作项上、反向一条写在对方工作项上，各用从自己看的类型（3.13 第 20–23 行）。两边的 `updated_at` 都改（Plane 的动态任务对两边都改）。
@@ -633,12 +634,12 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **行的完整数组和计数**只为返回的行算（关联子查询 `ARRAY(SELECT label_id …)`、`count(*)`）；按计数、名字排序时，排序键要为全部满足筛选的行算出（Plane 干脆不支持，R4 第 E.2 节第 6 条）。
 - **代价与规模的目标**：按 CTE 里的键 `CASE` 排序用不上索引，每个请求扫描、排序这个项目满足筛选的全部行（S1）。实测：1 万个工作项 2–100 ms；10 万个工作项，默认的一页约 55–125 ms，`label_name` 约 210–430 ms，分组约 0.2–0.7 s，泳道约 0.7–1.0 s。**v0 的目标**（决策点 7 的一部分，负责人已裁定）：一个项目至多约 2 万个未删除的工作项时，列表在这个实测的代价之内；更大的项目是 M8 的性能工作（13.2）。删除在这个规模上能否完成见决策点 7，不在 M4 加索引式的特化（例如为 `-created_at` 单列一条可用 `(project_id, created_at DESC, id DESC)` 的查询，S1 测到 0.3 ms，留给 M8 按数字决定）。
 - **连接的参数由 nerve 自己设**：JIT 的编译（每次 150–500 ms）和预备语句的通用计划都让这几条查询更慢（S1）。`platform/postgres` 建连接池时在每个连接的运行参数里设 `jit = off`、`plan_cache_mode = force_custom_plan`（pgx 的 `RuntimeParams`），不交给部署；一个测试从池里的连接读回这两个值（P5）。M8 的部署交接只核对它们（13.2）。
-- **索引**：`issues_project_id_state_id_idx` 等部分索引（4.2）服务筛选和单组的等值条件，不服务排序；P5 的 spec 按 S1 的计划记下实际用到的索引，没有用到的不建。
-- **两个已知的代价写进 P5 的 spec**（独立评审 M26）：个人主页的跨项目列表按 `VisibleProjects` 的项目哈希连接、顺序扫描这个工作区的全部工作项，随工作区变大；通用计划和 JIT 的耗时（上一条已处理）。前者交给 M8 测量（13.2）。
+- **索引与最终P5实测**：未新增排序索引；实际索引/最终生产SQL/typed参数/EXPLAIN以 [P5 spec §2.6](specs/P5-issue-list.md#26-查询结构与性能完成线) 与 [review T12b](reviews/P5-issue-list-review.md#t12b真实规模性能修正与单一排序收口已验收) 为准，采用f73e85ed源码的32轮，两规模各13场景、1预热+5实测。100k默认/label_name/state组/label组/泳道SQL中位105.53/231.55/205.16/287.62/622.38ms；v0每项目约20k目标不变，100k验证不承诺更大规模。原S1 seed未留存，不称同seed复现。
+- **已知成本交M8**：普通Visible跨项目连接可能扫描整个工作区。最终Flat唯一窗口业务全序，按序位选limit+1后只回表51行，但窗口前仍完整排序102000候选，external merge 6592kB、temp read/write1173/2364 blocks；默认独立EXPLAIN execution143.621ms，不等于请求样本计时。成员分页前仍有102256次相关关系索引扫描；sort_order/分配/订阅相对旧22中位约+59.5%/+87.2%/+83.2%，保留退化与小目录/0–2关系度边界。完整排序/temp、相关过滤、大目录/跨项目及索引特化交M8，不提前批准新索引路线；名字/子项数跨页变化可使行漂移。JIT/custom_plan已由T1双连接读回和最终池验证，部署仍须核未覆盖。
 
 **集合型的列表**（M3 设计 3.12、11.3 的延伸，3.23 同步总体设计 3.4）：子工作项、关联、链接、工作项的表情一次返回全部，`{data}`，不分页：它们的大小由人对一个工作项的操作决定，页面要整个集合。评论、动态、描述的历史、草稿、工作项的列表按游标分页。
 
-**一处不同于 v0 3.4 的示例**：示例写 `group_by=state_id&sub_group_by=priority`，结构 `{groups: [{key, total, data, next_cursor}]}`；子分组时组里是 `subgroups` 而不是 `data`（上面）。3.23 同步。
+**总体设计已同步**：v0 §3.4的子分组示例使用组内 `subgroups` 与顶层 `subgroup_totals`；一组/格续页保留原筛选另加键，三形状与精确total见P5 spec §2.4。
 
 ### 3.17 项目的工作项显示设置（架构问题 10）
 - **存在 `project_user_properties`**（M3 设计 3.18 留给 M4 的三列）：迁移 `00026_project_project_user_properties_issue_display.sql` 归 `project` 模块（M2 设计 3.14 的所有权规则），加三列 `jsonb NOT NULL`，各有默认值和 CHECK（4.15）：
@@ -647,7 +648,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - `display_properties`：显示哪些属性，M4 的 11 个键：`assignee`、`start_date`、`due_date`、`labels`、`key`、`priority`、`state`、`sub_issue_count`、`link`、`created_on`、`updated_on`，都是布尔值，默认全为真（Plane `API/db/models/issue.py:73-88` 去掉 `estimate`）。`attachment_count` 由 M5、`modules`、`cycle` 由 M6 随各自的迁移加键（改默认值和 CHECK，给已有的行补上键）。
   - Plane 的 `rich_filters`（筛选的表达式）不建：前端的 store 把表达式翻译成上面的 `filters`（3.22）。Plane 的旧 `filters` 格式（`state`、`labels`、`assignees`……）也不建。登记差异清单二·按表。
 - **数据库的 CHECK 只查形状**（键的集合、值的类型，M2 设计 3.13），不查取值：取值由 `issue` 的列表词汇检查（下一条）。M6 给分组、排序加 `cycle_id`、`module_id` 一类的取值时不必改 CHECK。
-- **列表的词汇在 `issue/domain`，`project` 经端口用它**（控制者的裁定，独立评审 M13）：`issue/domain/listvocab.go` 定义筛选参数名和每个参数的取值语法（id、`none`、`me`、优先级、状态组、日期的条件）、分组码和排序码，以及每种页面（项目、个人主页）允许哪些。`issue` 用它解析列表的查询参数；`project` 检查显示设置的 `PATCH` 时经它声明的端口 `IssueListSettings`（`Validate(filters, displayFilters, displayProperties) []FieldError`），由 `issue.Provide` 交出、就是这份词汇（纯函数，不要连接池，与 `IssueCascade` 放在一起，3.3）。两处用同一份规则：存下来的设置就是下一次的查询参数。
+- **列表的词汇在 `issue/domain`，`project` 经端口用它**（控制者的裁定，独立评审 M13）：`issue/domain/listvocab.go` 定义筛选参数名和每个参数的取值语法（id、`none`、`me`、优先级、状态组、日期的条件）、分组码和排序码，以及每种页面（项目、个人主页）允许哪些。`issue` 用它解析列表的查询参数；`project` 检查显示设置的 `PATCH` 时经它声明的端口 `IssueListSettings`（`Validate(filters, displayFilters, displayProperties) []FieldError`），由 `issue.Provide` 交出 `issue/app.ListSettings` 纯实现，复用这份domain词汇（不要连接池；project/issue各自声明app小值，只有bootstrap逐字段转换，3.3）。两处用同一份规则；列表不会自动应用保存的偏好，由客户端显式把保存值转换为查询参数，T15 I5已验证同参数等价与无参数不自动套用。
   - 为什么不放进 `shared`（第一稿的做法，M3 设计 11.4 的"两个模块必须一致的纯取值规则"）：这份词汇随 M5–M7 一直长（附件数、迭代、模块、视图），放进 `shared` 就让所有模块共享一份不断变大的工作项领域的词汇；端口的方向（`project` 声明、`issue` 实现）与 `IssueCascade` 相同，没有新的依赖方向（11.10）。
 - **接口**：M3 的 `getProjectPreferences`、`updateProjectPreferences`（`api/modules/project.yaml:744-797`）的结构加三个字段（5.2）；`PATCH` 带上哪一个就整体替换哪一个（与 `navigation` 相同）。不合格 422（`filters.label_id[0]`、`display_filters.group_by` 等，`not_allowed`）。谁能读写：项目的任何有效成员，只有自己那一行（M3 照旧）。
 - **只存在浏览器的**（Plane 相同，R4 第 C.8 节）：已归档的列表、个人主页的筛选和显示设置（`localStorage` 的 `issue_local_filters`；草稿页没有筛选和显示设置，3.15，对抗性评审 M11）；看板折叠的组（`kanban_filters`）。Plane 的已归档列表读写的键不一致（`archived/filter.store.ts:131` 读 `richFilters`、`:175` 写 `rich_filters`），筛选从不恢复；P13 改为同一个键。
@@ -816,11 +817,11 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 | P4 | 总体设计 | 5.2、5.3、6.6、6.7 | 表数 45 改为 44，删去 `issue_versions`；6.6 删去"同时写 `issue_versions`"；6.7 的保留任务写明"每个工作项最新的 20 个描述版本"（3.14） |
 | P4 | M2 设计 | 3.12 | 页大小的规则移到 `shared`（M3 交接第 9 节） |
 | P4 | 差异清单 | 一、二·按表、四 | 一：`issue_versions` 不保留；二：`issue_comments`、`issue_reactions`、`comment_reactions`、`issue_mentions`、`issue_description_versions` 逐列（4.7、4.9、4.10、4.12、4.14）；四：4.17 中标 P4 的行 |
-| P5 | 总体设计 | 3.3 | 筛选的写法补上 `none`（含日期的 `none`）、可重复的日期参数、单日、不合格的取值 422（3.16） |
-| P5 | 总体设计 | 3.4 | 不分组的列表带 `total`；子分组的结构 `subgroups` 和泳道的总数 `subgroup_totals`；只返回非空的组；分组时不带 `group_key` 的游标 422；列表的读在一个 `REPEATABLE READ` 的快照里；一组（一格）的"加载更多"是同一个请求加 `group_key`（`sub_group_key`），不再是"加上这一组的筛选"；游标的载荷写明排序、以 `id` 结尾；未知的 `order_by`、`group_by` 422（3.16，架构问题 6） |
-| P5 | 总体设计 | 6.2 | 列表的词汇在 `issue/domain`，`project` 经它声明、`issue.Provide` 实现的 `IssueListSettings` 检查显示设置（3.17，架构问题 10） |
-| P5 | M3 设计 | 3.18 | 项目的显示设置加 `filters`、`display_filters`、`display_properties` 三列，格式见本文 3.17 |
-| P5 | 差异清单 | 二·按表、三、四 | `project_user_properties` 加三列、不建 `rich_filters`（4.15）；三：列表的响应、排序键、分组键的名字；四：4.17 中标 P5 的行 |
+| P5 | 总体设计 | 3.3 | 筛选的写法补上 `none`（含日期的 `none`）、可重复的日期参数、单日、不合格的取值 422（3.16）；已在P5/T16同步，实际依据见 [P5 review §2](reviews/P5-issue-list-review.md#2-验收标准逐条核对) |
+| P5 | 总体设计 | 3.4 | 不分组的列表带 `total`；子分组的结构 `subgroups` 和泳道的总数 `subgroup_totals`；只返回非空的组；分组时不带 `group_key` 的游标 422；列表的读在一个 `REPEATABLE READ` 的快照里；一组（一格）的"加载更多"是同一个请求加 `group_key`（`sub_group_key`），不再是"加上这一组的筛选"；游标的载荷写明排序、以 `id` 结尾；未知的 `order_by`、`group_by` 422（3.16，架构问题 6）；已在P5/T16同步，实际依据见 [P5 review §2](reviews/P5-issue-list-review.md#2-验收标准逐条核对) |
+| P5 | 总体设计 | 6.2 | 列表的词汇在 `issue/domain`，`project` 经它声明、`issue.Provide` 实现的 `IssueListSettings` 检查显示设置（3.17，架构问题 10）；已在P5/T16同步，实际依据见 [P5 review §2](reviews/P5-issue-list-review.md#2-验收标准逐条核对) |
+| P5 | M3 设计 | 3.18 | 项目的显示设置加 `filters`、`display_filters`、`display_properties` 三列，格式见本文 3.17；已在P5/T16同步，实际依据见 [P5 review §2](reviews/P5-issue-list-review.md#2-验收标准逐条核对) |
+| P5 | 差异清单 | 二·按表、三、四 | `project_user_properties` 加三列、不建 `rich_filters`（4.15）；三：列表的响应、排序键、分组键的名字；四：4.17 中标 P5 的行；已在P5/T16同步，实际依据见 [P5 review §2](reviews/P5-issue-list-review.md#2-验收标准逐条核对) |
 | P6 | 总体设计 | 6.2、6.3 | `shared` 加事件的值和 `EventPublisher`；6.3 第 3 条写明订阅者的写法：同步、在事务里、出错回滚，异步的事经 `InsertTx`（3.19，决策点 3） |
 | P6 | 总体设计 | 6.7 | 定时任务的清单和间隔、两个队列；测试的时钟偏移（3.20，架构问题 7） |
 | P6 | M2 设计 | 3.15、3.17 | 事务内投递经只投递的 River 客户端（在模块之前建出）；队列与并发；定时任务和模块声明会投递的种类没有 worker 时构造失败（3.20） |
@@ -897,7 +898,7 @@ M4 的 13 张表都带 `workspace_id`、`project_id`（草稿的可空）、`del
 | `deleted_at` | `timestamptz` | — |
 
 - **删除的列**：`point`、`estimate_point_id`、`type_id`（估算、工作项类型已砍）、`is_draft`（草稿是另一张表）、`description_binary`（协同编辑的遗留）、`external_source`、`external_id`（差异清单已登记）；`description_json`（没有读者，3.7；新登记）。
-- **索引**：`issues_project_id_sequence_id_key UNIQUE (project_id, sequence_id)`（全表唯一，3.7；也服务按编号取）；`issues_workspace_id_idx`、`issues_project_id_idx`、`issues_parent_id_idx`、`issues_state_id_idx`（不带条件：物理级联、子工作项、`StateInUse`）；`issues_project_id_state_id_idx ON (project_id, state_id) WHERE deleted_at IS NULL`（`sort_order` 的最大值、按状态筛选）；列表的排序用不上索引（S1，3.16），P5 的 spec 按实测的计划只加用得到的；`issues_name_trgm_idx ON issues USING gin (name gin_trgm_ops) WHERE deleted_at IS NULL`（P8）。Plane 只有外键列的 btree 索引，没有任何唯一约束（R1 第 1 节）。
+- **索引**：`issues_project_id_sequence_id_key UNIQUE (project_id, sequence_id)`（全表唯一，3.7；也服务按编号取）；`issues_workspace_id_idx`、`issues_project_id_idx`、`issues_parent_id_idx`、`issues_state_id_idx`（不带条件：物理级联、子工作项、`StateInUse`）；`issues_project_id_state_id_idx ON (project_id, state_id) WHERE deleted_at IS NULL`（`sort_order` 的最大值、按状态筛选）；列表CASE排序仍扫描匹配候选；P5最终32轮记录实际使用的现存索引（3.16），没有新增索引，后续特化归M8；`issues_name_trgm_idx ON issues USING gin (name gin_trgm_ops) WHERE deleted_at IS NULL`（P8）。Plane 只有外键列的 btree 索引，没有任何唯一约束（R1 第 1 节）。
 
 ### 4.3 `issue_assignees`（Plane 10 列 → 10 列）
 | 列 | 类型与约束 | 与 Plane 的差异 |
@@ -1128,7 +1129,7 @@ issue_comments
 
 | 方法与路径 | operationId | 请求 | 成功 | 主要错误 |
 |---|---|---|---|---|
-| `GET /api/v0/projects/{project_id}/issues` | `listIssues` | 查询：3.16 的筛选、`group_by`、`sub_group_by`、`group_key`、`sub_group_key`、`order_by`、`archived`、`limit`、`cursor` | 200 `IssueList` | 404 `project.not_found`；403 F（`archived=true` 的访客）；422 V |
+| `GET /api/v0/projects/{project_id}/issues` | `listIssues` | 查询：3.16 的筛选、`group_by`、`sub_group_by`、`group_key`、`sub_group_key`、`order_by`、`archived`、`limit`、`cursor` | 200 `IssueListPage` | 404 `project.not_found`；403 F（`archived=true` 的访客）；422 V |
 | `POST /api/v0/projects/{project_id}/issues` | `createIssue` | `IssueCreate {name, description_html?, state_id?, priority?, assignee_ids?, label_ids?, start_date?, target_date?, parent_id?}` | 201 `IssueDetail` | 404 `project.not_found`；403 F；422 V；409 `project.archived` |
 | `GET /api/v0/issues/{issue_id}` | `getIssue` | — | 200 `IssueDetail` | 404 `issue.not_found`；403 F |
 | `PATCH /api/v0/issues/{issue_id}` | `updateIssue` | `IssueUpdate {name?, description_html?, skip_activity?, state_id?, priority?, assignee_ids?, label_ids?, start_date?, target_date?, parent_id?, sort_order?}`（三个可空的用 `nullable.Nullable`） | 200 `IssueDetail` | 404；403 F；422 V；409 IA；409 PA |
@@ -1163,7 +1164,7 @@ issue_comments
 | `PATCH /api/v0/drafts/{draft_id}` | `updateDraft` | `DraftUpdate {project_id?, payload?}` | 200 `Draft` | 404 `issue.draft_not_found`；403 F；422 V；409 `issue.draft_changed` |
 | `DELETE /api/v0/drafts/{draft_id}` | `deleteDraft` | — | 204 | 404 `issue.draft_not_found`；403 F；409 `issue.draft_changed` |
 | `POST /api/v0/drafts/{draft_id}/publish` | `publishDraft` | — | 201 `IssueDetail` | 404 `issue.draft_not_found`；404 `project.not_found`；403 F；400（载荷的结构，与 `createIssue` 相同）；422 V；409 `issue.draft_changed`；409 `project.archived` |
-| `GET /api/v0/workspaces/{slug}/members/{user_id}/issues` | `listMemberIssues` | 查询：`relation`、3.16 的筛选（个人主页的那些）、`group_by`、`group_key`、`order_by`、`limit`、`cursor` | 200 `IssueList` | 404 `workspace.not_found`；404 `workspace.member_not_found`；403 F；422 V |
+| `GET /api/v0/workspaces/{slug}/members/{user_id}/issues` | `listMemberIssues` | 查询：`relation`、3.16 的筛选（个人主页的那些）、`group_by`、`group_key`、`order_by`、`limit`、`cursor` | 200 `IssueListPage` | 404 `workspace.not_found`；404 `workspace.member_not_found`；403 F；422 V |
 | `GET /api/v0/workspaces/{slug}/issue-search` | `searchIssues` | 查询：`q`（可选）、`project_id`、`for`、`issue_id`、`start_date`、`target_date`、`limit` | 200 `IssueCollection` | 404 `workspace.not_found`；404 `project.not_found`；404 `issue.not_found`；422 V |
 
 **改动的 `project` 操作**：
@@ -1182,7 +1183,7 @@ issue_comments
 - **`Issue`**（列表行）：`{id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order, completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, link_count, created_by_id, updated_by_id, created_at, updated_at}`。日期是 `format: date`，时间是 `date-time`。没有 Plane 的 `estimate_point`、`cycle_id`、`module_ids`、`attachment_count`、`is_draft`、`is_intake`、`is_subscribed`、`state__group`（3.2；状态组由页面从状态目录读）。字段随它的数据进入接口（第 12 节约束 5）：`start_date`、`target_date` 在 P2，`sub_issues_count` 在 P3，`link_count` 在 P8，其余在 P1a（随 `createIssue`）。
 - **`IssueDetail`** = `Issue` 加 `description_html`（取单个、创建、修改、归档、恢复、发布）。不用 `allOf`（生成器不支持，M2 设计 3.11），字段写两遍，`apitest` 的一个检查核对 `IssueDetail` 的字段是 `Issue` 的加一个。描述在 P4 才进入接口（3.7，第 12 节约束 5）：P1–P3 的 `IssueDetail` 与 `Issue` 同形，`IssueCreate`、`IssueUpdate` 没有 `description_html`、`skip_activity`；P4 加上它们和这个检查。
 - **`IssueCreate`**：`name`（必填，1–255）、`description_html`（≤ 500000）、`state_id`、`priority`、`assignee_ids`、`label_ids`（各 ≤ 100，`uniqueItems` 不用：重复由用例答 422 `duplicate`，路径带下标）、`start_date`、`target_date`、`parent_id`。**`IssueUpdate`**：同样的字段都可选，加 `skip_activity`（布尔）和 `sort_order`；`start_date`、`target_date`、`parent_id` 可清空。**`IssueDraftPayload`**：`IssueCreate` 的字段全部可选，`name` 可以为空串（3.15）。
-- **`IssueList`**：`{total, data?, next_cursor?, groups?, subgroup_totals?}`：不带 `group_by`、或带 `group_key`（一组的"加载更多"）时有 `data`、`next_cursor`，否则有 `groups`；子分组时另有 `subgroup_totals`（3.16）。不用 `oneOf`（同上），接口描述写明哪一种出现；前端按 `groups` 是否存在分支（7.2）。`IssueGroup {key, total, data?, next_cursor?, subgroups?}`、`IssueSubgroup {key, total, data, next_cursor}`、`IssueSubgroupTotal {key, total}`。
+- **`IssueListPage`**：`{total, data?, next_cursor?, groups?, subgroup_totals?}`：不带 `group_by`、或带 `group_key`（一组的"加载更多"）时有 `data`、`next_cursor`，否则有 `groups`；子分组时另有 `subgroup_totals`（3.16）。不用 `oneOf`（同上），接口描述写明哪一种出现；前端按 `groups` 是否存在分支（7.2）。`IssueListGroup {key, total, data?, next_cursor?, subgroups?}`、`IssueListSubgroup {key, total, data, next_cursor}`、`IssueListTotal {key, total}`。
 - **`IssueCollection`**、`IssueRelationCollection`、`IssueLinkCollection`、`IssueReactionCollection`：`{data: [...]}`（集合型，3.16）。
 - **`IssueRelation`**：`{id, relation_type, issue: Issue, created_at}`：`relation_type` 是 `relates_to`、`duplicate`、`blocked_by`、`blocking`，从路径里的工作项看；`issue` 是对方（3.10）。**`IssueRelationsCreate`**：`{relation_type, issue_ids}`。
 - **`IssueLink`**：`{id, issue_id, url, title, metadata, created_by_id, created_at, updated_at}`；**`IssueLinkMetadata`**：封闭的对象，字段 `title`、`favicon`、`url`、`favicon_url`、`error` 都可选、可为 `null`（`error` 是枚举 `blocked`、`failed`），`{}` 表示还没有抓取（3.11）。
@@ -1192,10 +1193,11 @@ issue_comments
 - **`DescriptionVersion`**：`{id, issue_id, owned_by_id, last_saved_at, created_at}`；**`DescriptionVersionDetail`** 加 `description_html`。
 - **`Draft`**：`{id, workspace_id, project_id, payload: IssueDraftPayload, created_at, updated_at}`；**`DraftCreate`** `{project_id?, payload}`、**`DraftUpdate`** `{project_id?, payload?}`（`project_id` 可清空）。
 - **分页的封套**：`IssueCommentPage`、`IssueActivityPage`、`DescriptionVersionPage` 是 `{data, next_cursor}`；`DraftPage` 另带 `total`（草稿页的计数）。
-- **`ProjectPreferences`** 加：`filters: IssueFilters`（封闭的对象，3.17 的十个键都可选，值是字符串的数组）、`display_filters: IssueDisplayFilters`（`layout`：`list`、`kanban`、`calendar`、`spreadsheet`；`group_by`、`sub_group_by`：`IssueGroupBy` 或 `null`；`order_by`：`IssueOrderBy`；`sub_issue`、`show_empty_groups`；`calendar: {layout: month | week, show_weekends}`）、`display_properties: IssueDisplayProperties`（11 个布尔值，都必有）。
-- **枚举**：`IssuePriority`、`IssueGroupBy`、`IssueOrderBy`、`IssueRelationType`、`IssueMemberRelation`（`assigned`、`created`、`subscribed`）、`IssueSearchFor`。前端的 `TIssuePriorities`、`TIssueGroupByOptions`、`TIssueOrderByOptions`、`TIssueRelationTypes` 由它们取代（7.2）。
+- **`ProjectPreferences`** 加三个必需字段：`filters: ProjectIssueFilters`（十个可选string[]键）、`display_filters: ProjectDisplayFilters`（七必需键，内嵌 `ProjectListCalendar`）、`display_properties: ProjectDisplayProperties`（十一必需boolean）；默认与精确键见3.17。PATCH外层可省略不可null，group_by/sub_group_by内层可null，false与显式[]保留。业务UUID/date/group/order/layout在契约中是string、不提前设format/enum，结构400后由纯端口回答词值422，不能写成枚举schema使错误提前变400。
+- **当前列表枚举**：`IssuePriority`、`IssueListGroupField`、`IssueListOrder`、`IssueRelationType`；个人 `relation` 参数允许assigned/created/subscribed。P10b前端TIssueGroupByOptions/TIssueOrderByOptions等消费当前生成名称；未来搜索的类型随P8数据/API再定义，不提前创建候选schema。
+
 - **查询参数**写在 `issue.yaml` 的 `components/parameters`：筛选参数是 `style: form, explode: false` 的字符串数组（逗号分隔），日期参数是 `explode: true`（可重复），值的语法由用例按 `issue/domain` 的列表词汇检查（3.17），不在接口描述里用 `pattern`：一个值可以是 id、`none` 或 `me`。
-- **结构中新的开放 map**：没有（`IssueFilters` 的键是已知的十个，是封闭的对象；M2 交接第 4 节的 map 一项写明"没有用到"）。请求体中第一次出现字符串的数组（`assignee_ids` 等）和可空的日期：`bodyshape` 的代价测试加上它们（M2 交接第 4 节）。
+- **结构中新的开放 map**：没有（`ProjectIssueFilters` 的键是已知的十个，是封闭的对象；M2 交接第 4 节的 map 一项写明"没有用到"）。请求体中第一次出现字符串的数组（`assignee_ids` 等）和可空的日期：`bodyshape` 的代价测试加上它们（M2 交接第 4 节）。
 
 ### 5.3 错误码
 | 码 | 状态 | 含义 |
@@ -1236,9 +1238,9 @@ M4 不加新的桶：需要登录的操作按凭证计数（`authenticated`，`s
 | `internal/shared` | `authorize.go`：`Target.CreatorID`、`Grant.OwnOnly`（3.4）；新 `event.go`（`Event`、`Change`、`EntityRef`、`EventPublisher`、`EventSubscriber`，3.19）；新 `date.go`（`Date`：不带时区的日期，文本形式 `YYYY-MM-DD`，比较和解析；工作项的起止日期在领域、接口、筛选里都用它，P2）；从 `identity/domain` 移来的 `PageSize`（M3 交接第 9 节，P4） | 只有标准库 |
 | `modules/issue` | 6.2 | `internal/shared`；适配器另外依赖平台、pgx、River |
 | `modules/access` | `Rule.AllowCreator`；判定读 `guest_view_all_features`、算出 `OwnOnly`；创建者的判定（3.4） | `internal/shared` |
-| `modules/project` | `Provide` 加 6.5 中 `issue` 要的七个端口的实现；`deletion.go` 的步骤加 `IssueCascade.DeleteProjectIssues`、`DeleteWorkspaceProjects` 的末尾调 `IssueCascade.DeleteWorkspaceIssues`（P1–P8 的过渡），P9 改为删除项目发布 `project.deleted`、两处调用删除（3.6）；`ProjectCascade` 加 `LockWorkspaceProjects`；`EventTypes()`（`project.deleted`）；`delete_state.go` 调 `StateInUse`；`delete_label.go` 调 `DetachLabel`；显示设置的三列，取值经它声明的 `IssueListSettings` 检查（3.17）；`Purger`（3.21） | 同 M3 |
-| `modules/workspace` | `delete_workspace.go`：先锁邀请和项目、再读时刻（3.5），P9 起发布 `workspace.deleted`；`EventTypes()`；`ProjectCascade` 端口加 `LockWorkspaceProjects`；`Purger`。`issue` 用的目录就是已有的 `WorkspaceDirectory`（`WorkspaceBySlug`、`ShareWorkspaceByID`，`workspace/module.go:33-49`），不加方法 | 同 M3 |
-| `modules/identity` | `PageSize` 移出；`Purger`（`api_tokens`）；`PublicProfiles` 的读：负责人名的目录要它，端口由 `issue` 声明（3.3，P5） | 同 M2 |
+| `modules/project` | `Provide` 加6.5中issue实际消费的窄端口实现；`deletion.go` 的步骤加 `IssueCascade.DeleteProjectIssues`、`DeleteWorkspaceProjects` 的末尾调 `IssueCascade.DeleteWorkspaceIssues`（P1–P8 的过渡），P9 改为删除项目发布 `project.deleted`、两处调用删除（3.6）；`ProjectCascade` 加 `LockWorkspaceProjects`；`EventTypes()`（`project.deleted`）；`delete_state.go` 调 `StateInUse`；`delete_label.go` 调 `DetachLabel`；显示设置的三列，取值经它声明的 `IssueListSettings` 检查（3.17）；`Purger`（3.21） | 同 M3 |
+| `modules/workspace` | `delete_workspace.go`：先锁邀请和项目、再读时刻（3.5），P9 起发布 `workspace.deleted`；`EventTypes()`；`ProjectCascade` 端口加 `LockWorkspaceProjects`；`Purger`。`issue` 的WorkspaceDirectory仍复用已有WorkspaceBySlug/ShareWorkspaceByID，P5另提供WorkspaceMemberExists供目标存在窄端口，不扩写锁目录 | 同 M3 |
+| `modules/identity` | `PageSize` 移出；`Purger`（`api_tokens`）；`PublicProfiles` 的读已在P1a提供，P5负责人名目录复用，端口由 `issue` 声明（3.3） | 同 M2 |
 | `platform/jobs` | `NewInserter(pool)`：只投递的客户端和它的 `InsertTx`；两个队列和它们的 worker 数（配置）；定时任务的种类和声明会投递的种类没有 worker 时 `New` 失败；测试的余量改成期限（3.20） | 同 M2 |
 | `platform/postgres` | `Tx(ctx) (pgx.Tx, bool)`（3.20）；`NewTxManager` 的两个选项：`LockTimeout(d)`（`BEGIN` 之后由平台发 `SET LOCAL lock_timeout`，P1b）、`ReadOnlySnapshot()`（`BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`，P4/T2已前移落地，与LockTimeout统一组合，P5复用），模块的 SQL 里没有 `SET`（`TestModulesRunSQLOnlyThroughSQLC`）；`LockNotAvailable(err)`（SQLSTATE `55P03`，与 `UniqueViolation` 同一种写法，`unique.go`）；连接池在每个连接上设 `jit = off`、`plan_cache_mode = force_custom_plan`（3.16，P5） | 同 M2 |
 | `platform/clock` | `Offset{Base, Offset}`（3.20） | 只有标准库 |
@@ -1268,18 +1270,19 @@ modules/issue/
     rich_text.go            清洗结果和内容标识的纯值；只补块 id 的保存是否"内容不变"（纯文本、按顺序的提及、链接地址、勾选框状态）；提及的集合规则（3.7、3.12），不解析 HTML、不依赖第三方
     identifier.go           按编号取和搜索的标识折叠（3.7）
     draft.go                草稿：载荷的项目、发布的检查（3.15）
-    listvocab.go            列表的词汇：参数名和取值的语法、分组码、排序码、各页面允许的集合；IssueListSettings 的实现（3.17）
-    list.go                 列表的请求：解析好的筛选、分组、group_key、排序；游标的载荷（3.16）
+    listvocab.go  list_date.go 列表/设置共用词汇与日期原子规则（3.17）
+    list_query.go  list_order.go  list_cursor.go 列表请求解析、名字键与canonical游标（3.16）
     events.go               事件的类型和 EventTypes()（3.19）
     actions.go              本模块的操作名和 Actions()（3.4）
     errors.go               本模块的错误码（5.3）
   app/
-    ports.go                仓储（按用例拆成小接口）、Clock、EventPublisher、ProjectGate、Sequences、StateCatalog、LabelCatalog、ProjectMembers、VisibleProjects、ArchivedProjects、ArchivePolicies、WorkspaceDirectory、PublicProfiles、WriteGate、LinkCrawls、RowDeletions、HTMLSanitizer（消费方的小接口，返回领域纯值）
+    ports.go                仓储（按用例拆成小接口）、Clock、EventPublisher、ProjectGate、Sequences、StateCatalog、LabelCatalog、ProjectMembers、VisibleProjects、ArchivePolicies、WorkspaceDirectory、PublicProfiles、WriteGate、LinkCrawls、RowDeletions、HTMLSanitizer（消费方的小接口，返回领域纯值）
     lock.go                 工作项一侧的写共用的一步：读资源 → 预检 → 写闸门 → 项目 N → 重读 → 判定 → 访客规则（3.5）
     create_issue.go         创建、快速添加、发布草稿共用的核心（createCore），和 createIssue 的入口
     get_issue.go  get_issue_by_identifier.go  update_issue.go  delete_issue.go  archive_issue.go
     issue_writes.go         修改共用的写：负责人、标签的差集，关注，提及，动态，版本，事件（update、create、addSubIssues 都用它）
-    list_issues.go  list_member_issues.go  search_issues.go
+    list_issues.go  list_member_issues.go  listing.go  list_ports.go  列表用例、编排与窄端口
+    list_settings.go        IssueListSettings纯校验及本模块app小值（3.17）；search_issues.go在P8
     sub_issues.go           listSubIssues、addSubIssues
     relations.go            list、create、delete
     links.go                list、create、update、delete；crawl_link.go：抓取的写回（worker 调用）
@@ -1293,7 +1296,7 @@ modules/issue/
   adapter/
     content/                HTMLSanitizer 的实现；bluemonday 的唯一放行表、StrictPolicy 纯文本、x/net/html 解析与内容投影；描述和评论共用（3.7、3.12）
     postgres/               仓储；queries/*.sql（按表、按用例分文件，列表引擎三个文件）；gen/（sqlc）；delete_rows.go：删除的任务每张表的一批（`queries/delete_rows.sql`，键集），清理的批同一种写法
-    http/                   handler，按资源分文件；查询参数到 domain/list.go 的转换；gen/
+    http/                   handler，按资源分文件；原query深拷贝后交domain/list_query.go解析，三形状typed映射；gen/
     river/                  任务的参数和 worker：crawl_link、delete_rows（default 队列）、auto_archive、trim_versions（periodic 队列）；LinkCrawls、RowDeletions 的实现（经投递端口）
     crawler/                抓取：经 platform/outbound 取页面和图标、解析 title 和 link（3.11）
   module.go                 Provide(pool)（IssueCascade、IssueListSettings、Purger）；New(Deps)；Register；Actions()；EventTypes()；Subscribers()；Jobs()；EnqueuedKinds()
@@ -1305,7 +1308,7 @@ modules/issue/
 
 ### 6.3 别的模块的改动
 - **`project`**：
-  - `Provide` 的新端口（6.5）都是 `project/adapter/postgres` 里的查询，只依赖连接池：`ProjectGate`（不加锁的读、`FOR NO KEY UPDATE` 的锁、按 `id` 升序锁几个项目）、`Sequences`、`StateCatalog`、`LabelCatalog`、`ProjectMembers`、`VisibleProjects`、`ArchivedProjects`（P3）、`ArchivePolicies`。锁项目行的那条查询与 M3 的 `lockRowAndDecide` 用的是同一张表的同一种锁，但 M3 的那一个先锁工作区（方案 E），这一个不锁（3.5）。
+  - `Provide` 的新端口（6.5）都是 `project/adapter/postgres` 里的查询，只依赖连接池：`ProjectGate`（不加锁的读、`FOR NO KEY UPDATE` 的锁、按 `id` 升序锁几个项目）、`Sequences`、`StateCatalog`、`LabelCatalog`、`ProjectMembers`、`VisibleProjects`（普通Visible/历史Historical）、`ListStateCatalog`、`ListLabelCatalog`（P5批量完整目录）、`ArchivePolicies`。锁项目行的那条查询与 M3 的 `lockRowAndDecide` 用的是同一张表的同一种锁，但 M3 的那一个先锁工作区（方案 E），这一个不锁（3.5）。
   - `project.New` 的 `Deps` 加 `IssueCascade`、`IssueListSettings`（都由 `issue.Provide` 交出），P9 起加 `EventPublisher`（删除项目发布 `project.deleted`）。`ProjectCascade` 加 `LockWorkspaceProjects`（删除工作区用，3.5），它的查询与 `ProjectGate.LockMany` 同一种写法。`ProjectGate` 另有两个不加锁的读：这个工作区未删除的项目的 id（草稿的读按它过滤，3.15）；`DeletedAt(projectIDs)`（P9 起），其中已删除的项目的 `deleted_at`（删除工作项和删除的任务据它跳过属于先删除的那一端的关联行，3.5）。`deleteWorkspace` 发布的 `workspace.deleted` 带 `LockWorkspaceProjects` 锁住的项目（3.19）。
   - `NewCascade(CascadeDeps)` 在 P1–P8 要 `IssueCascade`（`DeleteWorkspaceProjects` 的末尾调它）；命令行的组合（`bootstrap/users.go:45-46`，`nerve users deactivate` 只用 `EndMemberships`）为它传 `issue.Provide(pool)` 交出的 `IssueCascade`，不构造 `issue.New`。P9 起 `DeleteWorkspaceProjects` 不再调 `issue`（删除工作区的事件由 `workspace` 的用例发布），这一项随之从 `CascadeDeps` 删除（对抗性评审 M9）。
   - `access.sql` 的 `ProjectFacts` 加 `guest_view_all_features`（3.4）。
@@ -1330,14 +1333,15 @@ modules/issue/
 | `StateCatalog`（项目的未删除状态：id、名字、组、默认、分诊；名字的比较键） | `issue/app` | 同上 | 集成测试 |
 | `LabelCatalog`（项目的未删除标签：id、名字的比较键；按 id 集合核对） | `issue/app` | 同上 | 同上 |
 | `ProjectMembers`（一组账户在项目里的有效成员关系和角色） | `issue/app` | 同上 | 同上；交错 4、5、22 |
-| `VisibleProjects`（调用者在一个工作区里是有效成员的未归档项目、角色、`OwnOnly`；另一个方法给动态的过滤：`is_active` 的成员关系所在的全部项目，不看 `deleted_at` 和归档，3.13） | `issue/app` | 同上 | 访客规则的一致性测试（3.4）；动态引用已删除、已删除项目里、已清理的工作项的三例 |
-| `ArchivedProjects`（`Archived(projectIDs)`：给的项目中未删除、已归档的，不加锁；P3 的关联列表读它，3.4、3.10） | `issue/app` | 同 `ProjectGate`（`project` 的 `ArchivedIssueProjects`） | 存储测试；组合的转换测试；关联列表的组合测试（别的已归档的项目的对方不在其中） |
+| `VisibleProjects`（普通 `Visible`：有效成员、未删除/未归档项目、角色/OwnOnly；`Historical`：只要求active，忽略删除与归档，3.13） | `issue/app` | `project.Provide`，bootstrap转换各自app小值 | T4目录、T10个人、T11关联与T12八快照/T14回归；归档源同项目grant例外 |
+| `ListStateCatalog` / `ListLabelCatalog`（完整批量目录，列表状态排triage） | `issue/app` | project的IssueListStates/IssueListLabels，bootstrap转换本模块StateRef/LabelRef | T4完整/未使用目录，T5–7实际消费，T12快照/T14回归 |
+| `WorkspaceMemberDirectory.MemberExists`（目标账户未删除成员记录，允许inactive） | `issue/app` | workspace的WorkspaceMemberExists，复用MemberOf，无FOR SHARE | T10目标存在/不同caller与target、T14角色反例 |
 | `PublicProfiles`（按 id 批量读显示名） | `issue/app` | `identity` 的读（`bootstrap/ports.go` 接成） | 负责人名的目录含已离开、已降为访客的负责人（3.16） |
 | `WriteGate`（`Enter(ctx, projectIDs) (release, error)`；P1b 一次一个项目（`Enter(ctx, projectID) (leave, error)`），P3 加多个（P1b spec 第 3 节第 10 条）） | `issue/app` | `bootstrap/gate.go` 接 `platform/gate` | `platform/gate` 的单元测试；交错 20 经真实的连接池；满时 503 |
 | `ArchivePolicies`（设了 `archive_in`、未归档、未删除的项目） | `issue/app` | 同上 | 自动归档的集成测试 |
 | `WorkspaceDirectory`（已有的 `WorkspaceBySlug`；`ShareWorkspaceByID` 以 `FOR SHARE` 锁工作区行） | `issue/app`（照 `workspace/module.go:33-49` 的方法声明自己要的小接口） | `workspace.Provide` 交给 `project` 的同一个目录 | 已有的集成测试；交错 16、17 |
 | `IssueCascade`（`StateInUse`、`DetachLabel`；P1–P8 另有 `DeleteProjectIssues`、`DeleteWorkspaceIssues`，P9 删除） | `project/app` | `issue/app` 的 `cascade.go`（`issue.Provide`） | 用例测试；删除状态、标签的集成测试核对连带与发起者在同一事务、同一时刻；交错 6、7（P1–P8 另有 2、3、11、16、23 的同步版本） |
-| `IssueListSettings`（`Validate(filters, displayFilters, displayProperties) []FieldError`） | `project/app` | `issue/domain` 的 `listvocab.go`（`issue.Provide` 交出，纯函数） | `issue/domain` 的表测试；`updateProjectPreferences` 的 422 经它 |
+| `IssueListSettings`（`Validate(map[string][]string,*ListDisplayFilters,map[string]bool) []shared.FieldError`） | `project/app` | `issue/app.ListSettings`复用domain/listvocab，issue.Provide交纯实现；bootstrap逐字段转换两个模块app小值 | T13a纯词汇/形状与T13b真实400/422/全部组合根/并发，T14写范围及T15 I5 |
 | `ProjectCascade.LockWorkspaceProjects` | `workspace/app` | `project/app`（委托 `ProjectGate` 的同一条查询） | 交错 3、20 |
 | `EventPublisher` | `internal/shared` | `bootstrap/events.go` | 分发器的单元测试；用例测试用假的发布者 |
 | `LinkCrawls`（`Enqueue(ctx, linkID, url)`） | `issue/app` | `issue/adapter/river`（经 `bootstrap` 用只投递的客户端接成的 `Inserter`） | 集成测试：提交的事务留下 `issue.crawl_link`，回滚的不留（S4 已在 River v0.47.0 上验证） |
@@ -1350,11 +1354,11 @@ modules/issue/
 ### 6.6 组合：没有构造的环
 `bootstrap` 按下面的顺序接线（M3 设计 6.6 的延伸）：
 1. **载入签名密钥**（M3 照旧）。
-2. **适配器**：`identity.Provide(pool)`、`workspace.Provide(pool)`、`project.Provide(pool)`（加 6.5 的七个端口）、`issue.Provide(pool)`（`IssueCascade`、`IssueListSettings`、`Purger`）。都只依赖连接池。
+2. **适配器**：`identity.Provide(pool)`、`workspace.Provide(pool)`、`project.Provide(pool)`（加6.5的相关窄端口）、`issue.Provide(pool)`（`IssueCascade`、`IssueListSettings`、`Purger`）。都只依赖连接池。
 3. **平台**：时钟（3.20）；只投递的 River 客户端 `jobs.NewInserter(pool)`，和由它加 `postgres.Tx` 接成的 `Inserter`（3.20）；`outbound` 的客户端；写闸门（`platform/gate`，按配置的 K、等待的上限，3.5）。
 4. `access.New`（`WorkspaceRoles`、`ProjectAccess`）→ `Authorizer`。
 5. **分发器**：`bootstrap/events.go` 由 `issue.Subscribers()` 建出。订阅者是 `issue` 模块的函数，它要的 `LinkCrawls`、`RowDeletions` 由 `issue/adapter/river` 在 `issue.Subscribers(Inserter)` 里建出，不要 `issue.New` 的东西，所以分发器在 `issue.New`、`project.New`、`workspace.New` 之前建出、交给它们。
-6. `issue.New`（`Authorizer`、分发器、时钟、`project` 的七个端口、`WorkspaceDirectory`、`PublicProfiles`、写闸门、`Inserter`、`outbound` 的客户端；两个 `shared.TxManager`：工作项一侧的写用的带锁的期限、`55P03` 换成 503（`bootstrap/gate.go`），列表的读用的只读快照（`postgres.ReadOnlySnapshot()`，3.16））。
+6. `issue.New`（`Authorizer`、分发器、时钟、`project` 的相关窄端口、`WorkspaceDirectory`、P5的`WorkspaceMemberDirectory`、`PublicProfiles`、写闸门、`Inserter`、`outbound` 的客户端；两个 `shared.TxManager`：工作项一侧的写用的带锁的期限、`55P03` 换成 503（`bootstrap/gate.go`），列表的读用的只读快照（`postgres.ReadOnlySnapshot()`，3.16））。
 7. `project.New`（`Authorizer`、`WorkspaceDirectory`、`WorkspaceMembers`、`IssueCascade`、`IssueListSettings`；P9 起分发器）→ `Cascade()`。
 8. `workspace.New`（M3 照旧，`ProjectCascade` 多一个方法；P9 起分发器）→ `Deactivator()`、`SignupInvitations()`。
 9. `identity.New`（M3 照旧）。
@@ -1461,9 +1465,9 @@ modules/issue/
 | Plane 类型（`web/packages/types/src/`） | 生成的类型 | 说明 |
 |---|---|---|
 | `TIssue`、`TBaseIssue`、`TIssueMap` | `Issue`、`IssueDetail` | 关联字段带 `_id`（`created_by` → `created_by_id`）；没有 `estimate_point`、`cycle_id`、`module_ids`、`attachment_count`、`is_draft`、`is_intake`、`is_subscribed`、`is_epic`、`type_id`、`description_binary`（3.2，M1-P2、M1-P3 交接） |
-| `TIssuesResponse`、`TGroupedIssues`、`TSubGroupedIssues`、`TGroupedIssueCount`、`TIssuePaginationData`、`TPaginationData` | `IssueList`、`IssueGroup`、`IssueSubgroup`；本地的 `PagedGroups`（3.22） | 页面按 `groups` 是否存在分支（5.2） |
-| `TIssueOrderByOptions`、`TIssueGroupByOptions`、`TIssuePriorities`、`TIssueRelationTypes` | `IssueOrderBy`、`IssueGroupBy`、`IssuePriority`、`IssueRelationType` | 键名改为 3.16 的（`state_name`、`label_name`、`assignee_name`、`created_by_id`、`label_id`……）；`EIssueGroupByToServerOptions`、`EServerGroupByToFilterOptions` 删除 |
-| `IIssueDisplayProperties`、`IIssueDisplayFilterOptions`、`IIssueFilters`、`IIssueFiltersResponse`、`TWorkItemFilterExpression` 的存储 | `IssueDisplayProperties`、`IssueDisplayFilters`、`IssueFilters`（`ProjectPreferences` 的三个字段） | 表达式只留在富筛选的 store 里，存储和请求用 `IssueFilters`（3.17、3.22） |
+| `TIssuesResponse`、`TGroupedIssues`、`TSubGroupedIssues`、`TGroupedIssueCount`、`TIssuePaginationData`、`TPaginationData` | `IssueListPage`、`IssueListGroup`、`IssueListSubgroup`；本地的 `PagedGroups`（3.22） | 页面按 `groups` 是否存在分支（5.2） |
+| `TIssueOrderByOptions`、`TIssueGroupByOptions`、`TIssuePriorities`、`TIssueRelationTypes` | `IssueListOrder`、`IssueListGroupField`、`IssuePriority`、`IssueRelationType` | 键名改为 3.16 的（`state_name`、`label_name`、`assignee_name`、`created_by_id`、`label_id`……）；`EIssueGroupByToServerOptions`、`EServerGroupByToFilterOptions` 删除 |
+| `IIssueDisplayProperties`、`IIssueDisplayFilterOptions`、`IIssueFilters`、`IIssueFiltersResponse`、`TWorkItemFilterExpression` 的存储 | `ProjectDisplayProperties`、`ProjectDisplayFilters`、`ProjectIssueFilters`（`ProjectPreferences` 的三个字段） | 表达式只留在富筛选的 store 里，保存值用 `ProjectIssueFilters`；完整请求消费生成operation的query类型（3.17、3.22） |
 | `TIssueComment`、`TIssueCommentReaction`、`TIssueReaction` | `IssueComment`、`CommentReaction`、`IssueReaction` | 没有 `actor_detail`、`access`、`comment_json`、`is_member`、`issue_detail`、`project_detail`、`workspace_detail`；`JSONContent` 删除（M1 收尾交接） |
 | `TIssueLink` | `IssueLink`、`IssueLinkMetadata` | — |
 | `TIssueRelation`、`TIssueRelationIdMap` | `IssueRelation` | 对方是内嵌的 `Issue` |
@@ -1486,7 +1490,7 @@ modules/issue/
 
 | store（`core/store/issue/`） | 做法 |
 |---|---|
-| `helpers/base-issues.store.ts`（1,775 行）、`helpers/base-issues-utils.ts`、`helpers/issue-filter-helper.store.ts` | 重写在 `Reconciled` 和 `paged-groups.ts` 之上（3.22）：第一页、一组的下一页、确认的修改、`stale`；请求的参数由 `IssueFilters` 和显示设置拼出；本地重排用 3.16 的全序。Plane 的偏移量游标、乐观更新、按已加载条数算的游标删除；`base-issues-utils.ts` 的 `getFilteredWorkItems`（子工作项在浏览器里的筛选，含相对日期）保留（3.22） |
+| `helpers/base-issues.store.ts`（1,775 行）、`helpers/base-issues-utils.ts`、`helpers/issue-filter-helper.store.ts` | 重写在 `Reconciled` 和 `paged-groups.ts` 之上（3.22）：第一页、一组的下一页、确认的修改、`stale`；请求参数消费生成operation的query类型，由保存的 `ProjectIssueFilters` 和显示设置显式拼出；本地重排用 3.16 的全序。Plane 的偏移量游标、乐观更新、按已加载条数算的游标删除；`base-issues-utils.ts` 的 `getFilteredWorkItems`（子工作项在浏览器里的筛选，含相对日期）保留（3.22） |
 | `issue.store.ts` | 工作项的一份：按 id 的 `ReconciledByKey`，服务端的 `updated_at` 大的胜出、相等时后应答的胜出；`description_html` 只由 `IssueDetail` 写；读到别人改了成员关系时标 `stale`（3.22） |
 | `project/`（`filter.store.ts`、`issue.store.ts`） | 显示设置读写项目的显示设置（3.17）；`PATCH` 整体替换一个字段；看板折叠的组照旧在 `localStorage` |
 | `archived/`、`profile/`、`workspace-draft/` | 列表接新接口；已归档、个人主页的筛选和显示设置在 `localStorage`（已归档的键修正，3.17；草稿页没有筛选）；草稿的发布先 `PATCH` 再 `publish`（3.15） |
@@ -1494,7 +1498,7 @@ modules/issue/
 | `issue_kanban_view.store.ts`、`issue_calendar_view.store.ts` | 拖动只用确认的结果；`PATCH` 的请求体不带 `id`、`project_id`（封闭的请求体，R4 第 C.7 节） |
 | `cycle/`、`module/`、`project-views/`、`workspace/`（M6、M7） | 删除（P10a，7.2），连同它们的布局根和页面上的列表部分；M6、M7 在新的引擎上加回 |
 | `command-palette.store.ts` | 工作项弹窗的开关不变，由宿主结束（7.1） |
-| `@nerve/shared-state` 的 `rich-filters`、`work-item-filters` | 否定的一层删除（3.22）；翻译成 `IssueFilters` 的纯函数 |
+| `@nerve/shared-state` 的 `rich-filters`、`work-item-filters` | 否定的一层删除（3.22）；翻译成保存用 `ProjectIssueFilters` 与完整operation query的纯函数 |
 
 - **改调的使用方**：store 的方法签名和字段一变，调用它们的页面和组件在改这个 store 的 Phase 改到能编译、行为不变；页面的新行为在 P12–P15。
 - **错误经文案表**：工作项的创建、修改读 `error?.error` 的两处（`issue-modal/base.tsx:233,323`）改按 `code` 经 `errorMessageKey`（M3 交接第 6 节）；新码的文案与码在同一个任务里加（第 12 节的约束）。
@@ -1762,7 +1766,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - 一组的"加载更多"带 `group_key`（`sub_group_key`）和这一组的游标，应答只并入这一组，`total` 取应答的，`boundary` 取 `max(boundary, 它的最后一行)`；拖放留在窗口外的卡片在后面的页到来时按 id 去重。
 - 子工作项在浏览器里的筛选（`getFilteredWorkItems`，含相对日期 `fromnow`）在重写 `base-issues-utils.ts` 之后行为不变。
 - 全序的比较读 `api/testdata/issue-order.json`，逐个码位比较（基本平面以外的字符与 U+E000–U+FFFF 的一对）。
-- 筛选的表达式翻译成 `IssueFilters`（每种条件）；`IssueFilters` 拼成查询串。
+- 筛选表达式翻译成 `ProjectIssueFilters` 保存值（每种条件），再按生成operation的query类型拼请求串。
 - 每个修改一张表（M3 的写法）：会话改变时不写、被拒绝时不写并交回、确认之后写进每一份列表和工作项的那一份。
 - 7.1 的各项：`autorun` 的替代、按需取数被拒绝、宿主卸载时关上开关和重设数据、`WorkItemLevelModals` 在 `projectId ?? workItemIdentifier` 改变时关上开关、`followInSession` 的跟进。
 - 描述保存的"撤销再重做"（M1-P2 交接）；工作项的弹窗编辑已有的工作项、打开草稿时读 `isMigrationUpdate`，不把表单标成已改（M1 收尾交接）。
@@ -2151,8 +2155,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **关闭**：M1-P2 交接的 `skip_activity` 一项（服务端一侧）；M1-P3 交接的接口字段一项的另一半（评论没有 `access`、动态没有 `WORKLOG` 一类）和地址的另一半（描述历史的地址）；M1 收尾交接的 `comment_json`（服务端一侧不定义）；M2 交接第 2 节的一部分（评论、动态、版本的游标）、第 3 节的一部分（P4 的用例）；M3 交接第 9 节（页大小在 `shared`）。
 - **完成线**：I11–I13 的接口版本，I1 的描述、提及、版本，I2 的描述的修改与合并、只补块 id 的保存和只改链接地址或勾选框的保存，I15 的评论的 409，I17 加上评论、表情、提及、版本之后通过；交错 14、15 通过；S3 的样例全部往返。
 
-### P5 `issue-list`：列表引擎与显示设置（后端，16 个任务）
-- **起步与切分**（2026-10-25）：基线为 P4 的 main 合并 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 全部通过。原15项按决策点2的已有授权重切为16项：单列 P1b 留下的 `sort_order` PATCH 和 P3 普通可见目录替换；原访客一致性并入目录、API、分页和矩阵任务；不删原范围。正式 [spec](specs/P5-issue-list.md) 与 [plan](plans/P5-issue-list.md) 为执行依据，阶段尚未完成。
+### P5 `issue-list`：列表引擎与显示设置（后端，16个验收任务/19个实施单元）
+- **起步与切分**（2026-10-25）：基线为 P4 的 main 合并 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 全部通过。原15项按决策点2的已有授权重切为16项：单列 P1b 留下的 `sort_order` PATCH 和 P3 普通可见目录替换；原访客一致性并入目录、API、分页和矩阵任务；不删原范围。正式 [spec](specs/P5-issue-list.md) 与 [plan](plans/P5-issue-list.md) 为执行依据，T5/T12/T13各按规模拆a/b，共19实施单元；T1–T15实施与逐任务独评Approved，T16文档同步后仍待内部整分支审查/最终分支CI及负责人终审，阶段未集成，不合并。
 - **目标**：项目的列表（含已归档）、个人主页的列表：筛选、分组、子分组、排序、游标、一组的"加载更多"；项目的工作项显示设置。
 - **任务**：
   1. `platform/postgres` 的连接池在每个连接上设 `jit = off`、`plan_cache_mode = force_custom_plan`；从实际连接读回，覆盖 URL 的相反值，保留 UTC 扫描（3.16）。
@@ -2163,7 +2167,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   6. 分组静态 SQL（`ROWS FROM`、`filtered AS MATERIALIZED`、窄键CTE、窗口总数、日期键、多值/none）；组续页保留原筛选。
   7. 子分组静态 SQL 与 `subgroup_totals`；组、泳道、格各自去重，格续页不改变原筛选。
   8. `sort_order` PATCH 全链：同值无改动、零值、审计、状态与排序同改；排序不增动态字段，`skip_activity` 出现即不能与排序混用。
-  9. `listIssues`/`IssueList`：活/归档权限分支、三种响应与组格续页、严格局部的重复query错误映射；读取从首次授权起就在同快照。
+  9. `listIssues`/`IssueListPage`：活/归档权限分支、三种响应与组格续页、严格局部的重复query错误映射；读取从首次授权起就在同快照。
   10. `listMemberIssues`：三种关系、目标成员存在目录、`member_issue.list`；关系的目标成员ID与调用者的可见性/OwnOnly分开传递。
   11. P3 关联列表改用普通可见目录；保留已授权归档源项目的同项目目标，清理无消费者的 `seeEach`/`ArchivedProjects`，不改变历史引用目录。
   12. 每个排序码/方向、全部项目7种和个人5种分组及合法子分组字段、每个筛选参数的实际SQL/翻页；游标篡改、访客计数与"管理员·访客"；同快照交错；1万/10万规模和最终生产SQL计划、索引及已知代价。
@@ -2265,14 +2269,14 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 ### P10b `web-list-data`：列表一侧的数据层（14 个任务）
 - **目标**：列表的 services 和 stores 改接新接口；`reconciled.ts` 的扩展和 `paged-groups.ts`；项目页挂载时不再请求旧接口。
 - **任务**：
-  1. `issue`、`issue-list` 的 service，换掉旧 `issue.service.ts` 的列表方法和 `issue_archive.service.ts`（7.2 的过渡在列表一侧结束）；项目显示设置的三个字段并入 `preferences` 的 service；列表的形状和枚举换型（`IssueList`、`IssueOrderBy`、`IssueGroupBy`、`IssuePriority`；`TIssuesResponse` 一类、`EIssueGroupByToServerOptions`、`EServerGroupByToFilterOptions` 删除）。
+  1. `issue`、`issue-list` 的 service，换掉旧 `issue.service.ts` 的列表方法和 `issue_archive.service.ts`（7.2 的过渡在列表一侧结束）；项目显示设置的三个字段并入 `preferences` 的 service；列表的形状和枚举换型（`IssueListPage`、`IssueListOrder`、`IssueListGroupField`、`IssuePriority`；`TIssuesResponse` 一类、`EIssueGroupByToServerOptions`、`EServerGroupByToFilterOptions` 删除）。
   2. `Reconciled.fetchPart` 和 vitest。
   3. `paged-groups.ts` 的数据模型：组的行 `{id, key, updatedAt}`、固定的 `boundary`、没有回答的组按空的建出、`subgroupTotals`；全序逐个码位比较，读 `issue-order.json`。
   4. `paged-groups.ts` 的修改和重做：旧属、新属、拖放的落点、重做的三种判断、`stale`；3.22 的 vitest 表（含对抗性评审 I2 的九个反例）。
   5. `base-issues.store.ts` 重写（第一页、一组带 `group_key` 的下一页、`stale` 的重取），保留 `getFilteredWorkItems`。
   6. 工作项的一份（`ReconciledByKey`：服务端的 `updated_at`，描述只由 `IssueDetail` 写，读到成员关系改变时标 `stale`）。
   7. 项目的 `filter.store.ts` 读写显示设置；删除 `/user-properties/` 的两个旧方法、关键词的例外、e2e 的 `workItemFilters` 和三个故事里的放行（M3 交接第 5 节）。
-  8. 筛选的表达式翻译成 `IssueFilters`；否定的一层删除（M1-P3 交接）。
+  8. 筛选表达式翻译成 `ProjectIssueFilters` 保存值及生成operation query；否定的一层删除（M1-P3 交接）。
   9. 已归档、个人主页的筛选存在 `localStorage`（已归档的键修正）；草稿页没有筛选：删除 `WorkspaceDraftIssuesFilter`（`store/issue/workspace-draft/filter.store.ts`，它继承本段重写的 `IssueFilterHelperStore`）和 `store/issue/root.store.ts`、`hooks/store/use-issues.ts` 里对它的引用（聚焦复核 M7）。
   10. `IssueRootStore` 的 `autorun` 改为计算属性；`rootStore` 的三处同步读取；列表一侧的 `useSessionSWR`。
   11. 看板、日历的 store：只用确认的结果，`oneAtATime`，拖动的 `sort_order` 在轮到发出时才算，`PATCH` 不带 `id`、`project_id`。
@@ -2521,7 +2525,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 已完成：[spec](specs/P2-issue-access.md)、[plan](plans/P2-issue-access.md)、[评审](reviews/P2-issue-access-review.md)（执行时 14 个 Task；整分支评审之后一个修复轮） |
 | P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
 | P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；已以 `--no-ff` 合并main `e9782b8f`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 三任务全绿，精确SHA及接收记录见P5评审 |
-| P5 `issue-list` | 列表引擎与显示设置（后端，16；按第12节重切） | 进行中：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。P4全绿main为基线，起步规格与计划独立预检及修订复核通过；产品实现与阶段验收尚未完成 |
+| P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | T1–T15实施与逐任务独评Approved：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。T16文档已同步；内部整分支审查/最终分支CI待root，负责人终审及集成另待安排；父T16未完成，未合并，保留分支/worktree。M4总体与跨Phase交接仍open |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，11） | 未开始 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12） | 未开始 |
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13） | 未开始 |

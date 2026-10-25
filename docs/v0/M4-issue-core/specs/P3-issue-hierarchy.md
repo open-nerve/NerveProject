@@ -253,7 +253,7 @@ P3 是 M4 加锁约定的第二段（设计 12 节约束 3：P1a 起步，P1b �
 | Phase | 条目 |
 |---|---|
 | P4 | 动态的列表（`listIssueActivities`）对按标识指名别的工作项的行（第 5、20–23 行）执行访客规则：调用者看不到的工作项的标识不在他读到的行里（设计 3.13 的规则，第 3 节第 22 条）；`IssueDetail` 加 `description_html` 之后，`Issue` 与它分开，HTTP 的 `issueDetail → issue` 的转换在编译时故意断开，`apitest` 核对"`IssueDetail` 是 `Issue` 加一个字段"（第 3 节第 15 条）；分开之后的回答仍都经 `seen`（按调用者的规则数子工作项、遮住看不到的父工作项，第 3 节第 9 条） |
-| P5 | `VisibleProjects` 来了之后，`listIssueRelations` 的逐个项目的判定（`seeEach`）和已归档的项目的读（`ArchivedProjects`）可以换成它：它的项目（调用者是有效成员的、未归档的）正是 `seeEach` 放行的项目（`issue.read` 是项目级的规则，要有项目的有效成员关系，`access/domain/decide.go`；公开项目里不是成员的工作区成员读不了它的工作项，403），这个工作项自己的项目已归档时它的同项目的对方照样列出（3.8）；`ArchivedProjects` 没有别的读者时删去（第 3 节第 10 条）；列表的行按调用者的规则数子工作项（同一个 `SubIssueCounts`，第 3 节第 9 条），列表引擎的回答按同一条规则遮住 `parent_id`，P5 的访客规则的一致性测试核对它 |
+| P5 | `VisibleProjects` 来了之后，`listIssueRelations` 的逐个项目的判定（`seeEach`）和已归档的项目的读（`ArchivedProjects`）可以换成它：它的项目（调用者是有效成员的、未归档的）正是 `seeEach` 放行的项目（`issue.read` 是项目级的规则，要有项目的有效成员关系，`access/domain/decide.go`；公开项目里不是成员的工作区成员读不了它的工作项，403），这个工作项自己的项目已归档时它的同项目的对方照样列出（3.8）；`ArchivedProjects` 没有别的读者时删去（第 3 节第 10 条）；列表的行按调用者的规则数子工作项（同一个 `SubIssueCounts`，第 3 节第 9 条），列表引擎的回答按同一条规则遮住 `parent_id`，P5 的访客规则的一致性测试核对它；**P5接收结果（2026-10-26）**：T4/T11已用普通Visible替换seeEach/ArchivedProjects并删除无消费者链，保留归档源同项目grant例外、原关系顺序、HiddenFrom/隐藏父/子项数，Historical不变；T12/T14回归及T15 I19/I20通过。T1真实池读回force_custom_plan不是P3删除批次复测，原删除成本与P6事件/P9删除/P14页面仍开放，实际证据见 [P5 review §2](../reviews/P5-issue-list-review.md#2-验收标准逐条核对) |
 | P6 | 加关联、删除关联、加子工作项、移动、删除子树的事件（3.19） |
 | P7 | 链接的表进删除的连带，在全局表序里关联之后、关注之前 |
 | P8 | 选择器、搜索排除自己和后代（父工作项）、已有关联的（3.18） |

@@ -287,7 +287,7 @@ plan 是"执行时的 plan"：每个修复轮也改了它的 Task 的块，代�
 
 同一个里程碑之内的后续 Phase（spec 第 5 节的表和第 7 节的"留下的条目"照录，另加执行中交出的）：
 - **P4**：动态的列表对按标识指名别的工作项的行（第 5、20–23 行）执行访客规则（spec 第 3 节第 22 条）；`IssueDetail` 加 `description_html` 之后 `Issue` 与它分开，HTTP 的 `issueDetail → issue` 的转换在编译时故意断开，`apitest` 核对"`IssueDetail` 是 `Issue` 加一个字段"；分开之后的回答仍经 `seen`。M2 交接第 3 节的其余写工作项的用例（P4、P7）的 `updated_at`（取得全部锁之后读时钟）。
-- **P5**：`VisibleProjects` 来了之后，`listIssueRelations` 的 `seeEach` 和 `ArchivedProjects` 可以换成它（它的项目正是 `seeEach` 放行的，这个工作项自己的项目已归档时同项目的对方照样列出），`ArchivedProjects` 没有别的读者时删去；列表的行按调用者的规则数子工作项、遮住 `parent_id`，P5 的访客规则的一致性测试核对它；连接池上设 `force_custom_plan`（设计 3.16）之后，删除项目的关联一批的好处才成立（spec 第 7 节）；M3 交接第 3 节的个人主页一行。
+- **P5**：`VisibleProjects` 来了之后，`listIssueRelations` 的 `seeEach` 和 `ArchivedProjects` 可以换成它（它的项目正是 `seeEach` 放行的，这个工作项自己的项目已归档时同项目的对方照样列出），`ArchivedProjects` 没有别的读者时删去；列表的行按调用者的规则数子工作项、遮住 `parent_id`，P5 的访客规则的一致性测试核对它；连接池上设 `force_custom_plan`（设计 3.16）之后，删除项目的关联一批的好处才成立（spec 第 7 节）；M3 交接第 3 节的个人主页一行。；**P5接收结果（2026-10-26）**：T4/T11已用普通Visible替换seeEach/ArchivedProjects并删除无消费者链，保留归档源同项目grant例外、原关系顺序、HiddenFrom/隐藏父/子项数，Historical不变；T12/T14回归及T15 I19/I20通过。T1真实池读回force_custom_plan不是P3删除批次复测，原删除成本与P6事件/P9删除/P14页面仍开放，实际证据见 [P5 review §2](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
 - **P6**：加关联、删除关联、加子工作项、移动、删除子树的事件（3.19）；M2 交接第 3 节的自动归档推进固定时钟的测试；M3 交接第 4 节的 `archive_in` 的说明。
 - **P7**：链接的表进删除的连带，在全局表序里关联之后、关注之前。
 - **P8**：选择器、搜索排除自己和后代、已有关联的（3.18）；M2 交接第 4 节的草稿发布。

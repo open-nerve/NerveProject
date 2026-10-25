@@ -58,7 +58,7 @@
 
 ### 起步规模估计与共用夹具
 
-估计依据是已落地P3/P4的相近职责，不是不存在的P5完整原型：当前P3关联列表用例90行、其app测试171行、组合列表测试107行；P4动态分页用例76行、postgres适配36行、SQL17行、组合翻页测试216行（当前文件wc实读，属于代表文件，不是整Task差异量）。P3 spec附录A.1记录旧完整代码块任务约660–1560行、过密块经拆分；那些是plan块行数，不冒充P5代码实测。P5复用既有目录、事务、授权、分页与夹具，因此按下表预留测试占比和跨层接线空间。
+起步估计依据是已落地P3/P4的相近职责，不是不存在的P5完整原型：当时P3关联列表用例90行、其app测试171行、组合列表测试107行；P4动态分页用例76行、postgres适配36行、SQL17行、组合翻页测试216行（当时文件wc实读，属于代表文件，不是整Task差异量）。P3 spec附录A.1记录旧完整代码块任务约660–1560行、过密块经拆分；那些是plan块行数，不冒充P5代码实测。P5复用既有目录、事务、授权、分页与夹具，因此按下表预留测试占比和跨层接线空间。
 
 | Task | 预计新增/修改手写代码与测试行（非实测） |
 |---|---|
@@ -74,15 +74,15 @@
 
 共用helpers：pgtest模板库/RowWaits、现有issueWorld及其API建模、apitest双向契约/错误码检查；沿已有锁屏障及工作项审计断言；e2e/fixtures/issues.ts、furnish.ts、assert/issue.ts及关联assert/catalog等。只为真正缺的场景补窄helper，不重新搭数据库/认证客户端/迁移框架/断言集合。
 
-**共用收口 G（每 Task 最后一项都执行）：** 先跑该 Task 的定位命令，确认红是目标断言失败，再实现并绿。需要真实 Postgres 的包用现有 pgtest，不手造另外一套服务。按改动范围跑 `make lint-go`、`make test`；契约用 `make gen`，仅 SQL 用 `make gen-go`；契约/web/e2e 改动加 `make lint-web`、`make knip`、`make test-web`；迁移/故事跑 `make e2e`。同一依赖链完成后全量结果可按精确 HEAD 复用，后续未影响它时不无意义重跑；新故障/改动必须验证。实施验证后只 add 本 Task 精确文件、提交中文消息，再以精确BASE..HEAD交独立评审；修复另作提交并聚焦复审。带生成物的提交后 `make gen-check` 必须无差异。
+**共用收口 G（每 Task 最后一项都执行）：** 新增行为先跑该Task定位命令，分清编译红/业务红后实现并绿；已交付正确行为的补测如实记baseline绿，敏感性用指定真实生产变异的业务红与恢复绿证明，不人为制造初红。需要真实 Postgres 的包用现有 pgtest，不手造另外一套服务。按改动范围跑 `make lint-go`、`make test`；契约用 `make gen`，仅 SQL 用 `make gen-go`；契约/web/e2e 改动加 `make lint-web`、`make knip`、`make test-web`；迁移/故事跑 `make e2e`。同一依赖链完成后全量结果可按精确 HEAD 复用，后续未影响它时不无意义重跑；新故障/改动必须验证。实施验证后只 add 本 Task 精确文件、提交中文消息，再以精确BASE..HEAD交独立评审；修复另作提交并聚焦复审。带生成物的提交后 `make gen-check` 必须无差异。
 
-**本机完整e2e环境：** 默认浏览器缓存没有Firefox；已用仓库锁定的Playwright1.63将headless Chromium、Firefox及ffmpeg下载到本工作树的ignored `.superpowers/sdd/P5-issue-list/browsers`，未全局安装、未改依赖或既有缓存。需完整e2e的Task在worktree根运行 `PLAYWRIGHT_BROWSERS_PATH="$PWD/.superpowers/sdd/P5-issue-list/browsers" make e2e`，保留默认Chromium/Firefox两个project；其他Playwright定位命令同样带此环境变量。下载成功仅证明资产已准备，实际浏览器/故事结果仍待各Task运行。
+**本机完整e2e环境：** 默认浏览器缓存没有Firefox；已用仓库锁定的Playwright1.63将headless Chromium、Firefox及ffmpeg下载到本工作树的ignored `.superpowers/sdd/P5-issue-list/browsers`，未全局安装、未改依赖或既有缓存。需完整e2e的Task在worktree根运行 `PLAYWRIGHT_BROWSERS_PATH="$PWD/.superpowers/sdd/P5-issue-list/browsers" make e2e`，保留默认Chromium/Firefox两个project；其他Playwright定位命令同样带此环境变量。资产准备不等于测试通过；实际T13a/b完整135条、T15最终142条（Chromium140/Firefox2）通过，源码/命令边界见各Task评审，不外推后续页面。
 
 **共用 API 收口 H：** 当 Task 更新 api/modules/issue.yaml（或 project.yaml）、api/openapi.yaml 新路径转引、handler/UseCases/module/bootstrap；HTTP 定位命令整包，覆盖 TestMain 的错误码双向检查。定义 closed DTO，列表只 Issue 不带 description_html/link_count；缺分支省略，[] 与 null 游标明确。矩阵项当场加入 `B/permission_matrix_issue_lists_test.go` 与 `B/permission_matrix_member_lists_test.go`（分别T9/T10建），目标/种子/完整性同步，不等 T14 补授权。生成的 TS 必填 preferences 字段导致 `web/apps/web/core/store/project/fake-projects.ts` 编译变化时同 Task 补默认。
 
 ### 跨 Task 类型与签名
 
-以下为设计签名，不是实现全文。uuid 均为本仓库标准库 `"uuid"` 的 uuid.UUID，ctx 为 context.Context。已有 StateRef、LabelRef、VisibleProject、IssueReader、PublicProfiles 复用，不另造同义模型。
+以下为T16按实际实现核对后的压缩签名，不是实现全文。uuid 均为本仓库标准库 `"uuid"` 的 uuid.UUID，ctx 为 context.Context。已有 StateRef、LabelRef、VisibleProject、IssueReader、PublicProfiles 复用，不另造同义模型。
 
 ```go
 // T2–3 issue/domain；不导入HTTP、数据库或其他模块。
@@ -235,7 +235,7 @@ type IssueListSettings interface {
 - [x] 写 `TestIssueOrderSamples`、`TestListCursor`：19码roundtrip与错误order/类型/版本/base64/canonical/UUID；Go读取共享JSON，验证生产名字键归一化、键类型/可空性/规范游标，保留日期/null/逆ID、非ASCII大小写及U+FF5E<U+1F600的独立固定预期供T5真实SQL消费。时间固定六位小数UTC，拒绝亚微秒；count保持int64精度；sort有限float64且相邻值可辨、正负零规范为正零。不新增只有测试消费的生产全序比较器；null方向、UUID方向与多值min的实际排序证明在T5/T12完成。
 - [x] 红：`go -C server test ./internal/modules/issue/domain -run 'Test(ParseListQuery|IssueOrderSamples|ListCursor)' -count=1`。
 - [x] 实现ParseListQuery/NameOrderKey/cursor；精确数字不落float64通用解码；共享JSON内容可读，说明P10b消费义务，不写无消费者TS代码。
-- [x] 绿；实际变异只保留最后一个重复日期条件、名字改Unicode lower、时间截毫秒、计数先转float64各至少一次，记录真实业务失败与恢复。日期AND→OR、null降序反转、同键id方向固定及多值min→max是尚未存在的SQL行为，移到T5实际查询变异并在T12收口，不在T3提前标完成。
+- [x] 绿；实际变异只保留最后一个重复日期条件、名字改Unicode lower、时间截毫秒、计数先转float64各至少一次，记录真实业务失败与恢复。当时尚未存在的SQL日期AND→OR、null降序反转、同键id方向及多值min→max移交T5；现已由T5真实SQL变异和T12最终分页矩阵闭合，不将后续证据回写成T3当时已完成。
 - [x] G；提交 `feat(M4/P5): 解析列表参数并固定全序游标契约`。
 
 ## Task 4：普通项目与完整名字目录
@@ -265,7 +265,7 @@ T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400
 - [x] 写 `TestListingEmptyCursorTotal`：超尾cursor、仍有原筛选、total非0；同ctx去cursor且limit1，不能删group选择；无cursor真空不多查；目录故障/二次查询错误原样返回。
 - [x] 红：`go -C server test ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres -run 'Test(FlatIssueList|ListArrayParameters|ListingEmptyCursorTotal)' -count=1`。
 - [x] ListRead把TargetMemberID映射为独立sqlc参数relation_user_id；关系过滤不用ActorID。项目target=nil/Relation为空，个人二者同时有效；内部错配报错，不静默回落。
-- [x] 实现filtered MATERIALIZED/窄排序键/COLLATE C/window total与一次排序/谓词。k_num分支建议显式统一numeric，时间微秒/日期天数/整数计数不隐式转float8；sort_order和cursor使用一致的明确转换，先用相邻可表示值验证转换未合并两个键。完整数组只为输出行；Row内子项计数遵守项目OwnOnly，父ID按既有hideParents规则裁剪；主查询不读projects/states/users。
+- [x] 实现filtered MATERIALIZED/窄排序键/COLLATE C/window total与一次排序/谓词。最终k_num显式numeric，时间微秒/日期天数/整数计数无损；sort_order采用有限float位序int64再转numeric，公开cursor仍原float，两侧转换一致并经相邻值真实分页验证。T12b最终Flat在唯一row_number窗口定义全序，按序位上界及同值typed LIMIT选keys后完整投影，最终仅按page_position输出，游标谓词一份。完整数组只为输出行；Row内子项计数遵守项目OwnOnly，父ID按既有hideParents规则裁剪；主查询不读projects/states/users。
 - [x] 绿；变异过滤移到LIMIT后、删coalesce、漏nil规整、total计cursor后、名前取max、漏HiddenFrom计数，以及从T3移来的日期AND→OR、null降序反转、同键id方向固定，均须有真实SQL业务失败并恢复。SQL形状测试只辅助，不替代行为。
 - [x] G；提交 `feat(M4/P5): 实现同快照的不分组列表查询`。
 
@@ -405,17 +405,17 @@ T13a/b预计970–1350/865–1240手写行；单元接近1400先复核剩余职�
 
 ## Task 16：同步设计、交接与最终证据
 
-文件：正式P5 spec/plan/review；改 `docs/v0/v0-design.md` §3.3/3.4/6.2、`docs/v0/M3-workspace-project/M3-design.md` §3.18、`docs/v0/plane-diff.md`、M4-design §3.23/P5与§5.1子项排序残留；M2/M3/P1–P4交接对应行。
+文件：正式P5 spec/plan/review；改 `docs/v0/v0-design.md` §3.3/3.4/6.2、`docs/v0/M3-workspace-project/M3-design.md` §3.18、`docs/v0/plane-diff.md`、M4-design §3.23/P5及§5.1子项排序复核（当前已正确为created_at/id）；M2/M3/P1–P4交接对应行。
 
-- [ ] 按spec每节→Task→测试/变异/实测记录逐行核对；缺scope不以“后续可做”消失。三列逐列、列表响应/命名/none/重复日期/total/RR/游标/目录词汇全同步。
-- [ ] spec性能部分补最终生产SQL实际索引/EXPLAIN与成本，保留20k目标/100k验证、M8跨项目扫描与名字变更跨页漂移；不新增未经批准索引路线。
-- [ ] P10b交接共用issue-order.json、真实前端码点比较器/vitest与旧store迁移；P8 link_count/搜索复用词汇；P12–15页面故事；M4/交接开放状态不提前关闭。
-- [ ] 自检本计划16任务边界与签名，核对真实基线与最终签名，删除不适用候选，独立审查整分支而非只看diff；按严重度处理局部缺陷，架构/高风险上报。最终review记录命令/HEAD/环境、测试红绿、变异恢复、性能、未解决风险，不用虚构百分比。
+- [x] 按spec每节→Task→测试/变异/实测记录逐行核对；缺scope不以“后续可做”消失。三列逐列、列表响应/命名/none/重复日期/total/RR/游标/目录词汇全同步。
+- [x] spec性能部分补最终生产SQL实际索引/EXPLAIN与成本，保留20k目标/100k验证、M8跨项目扫描与名字变更跨页漂移；不新增未经批准索引路线。
+- [x] P10b交接共用issue-order.json、真实前端码点比较器/vitest与旧store迁移；P8 link_count/搜索复用词汇；P12–15页面故事；M4/交接开放状态不提前关闭。
+- [ ] 本次已自检16父任务/19实施单元、真实基线与最终签名并删除不适用候选；内部独立整分支审查仍待root，须审整分支而非只看diff；按严重度处理局部缺陷，架构/高风险上报。最终review记录命令/HEAD/环境、测试红绿、变异恢复、性能、未解决风险，不用虚构百分比。
 - [ ] 当前授权内的开发收口：按最终变更范围跑所需G、提交后make gen-check；提交 `docs(M4/P5): 同步列表契约性能证据与后续交接`，完成内部整分支审查及局部修复，核对最终提交的分支CI，交负责人安排下一步；保留分支和worktree。
 - [ ] 待负责人安排的集成收口：负责人整分支终审并处理意见后，按最终SHA分支CI→--no-ff合并→main CI→worktree清理。最新指示为阶段完成先别合并，当前不执行本项；T16整项不能在main CI与清理尚未完成时提前勾选。
 
 ## 范围核对与当前证据边界
 
-范围对照：§3.16→T1–7/T9–12；sort_order/I6→T8/T15；普通Visible/Historical/P3→T4/T11；§3.17/4.15→T2/T13；矩阵→各API Task及T14；全部P5故事→T15；§3.23→T16。ReadOnlySnapshot/PageSize直接消费；HTTP接缝已有静态预检结论；起步版本纳入四项Local/Medium及两项Low修订；后续运行验证与实施评审逐任务登记，未完成的任务不能提前声称通过。
+范围对照：§3.16→T1–7/T9–12；sort_order/I6→T8/T15；普通Visible/Historical/P3→T4/T11；§3.17/4.15→T2/T13；矩阵→各API Task及T14；全部P5故事→T15；§3.23→T16。ReadOnlySnapshot/PageSize直接消费；HTTP接缝已由T9/T10真实接口验证；起步四项Local/Medium、两项Low及L3已关闭。T1–T15实施/变异/恢复/逐任务独评见review §2；T16文档子项已同步，内部整分支审查/最终分支CI仍待root，未完成的门不能提前声称通过。
 
-局部选择和HTTP标准扩展点方案已记录，未改变架构。基线与CI已核实；起步须处理预检意见并登记复审结论。P5 TDD、变异、全部新增交错race五遍、精度/性能、门禁与终审证据待实施，不能把静态核对当产品验证。
+局部选择和HTTP标准扩展点未改变架构；T1–T15真实TDD/变异恢复、全部新增及六既有交错race五遍、三SQL精度、最终32轮性能和适用门禁已有逐Task证据。T16按文档范围核链接/章节/签名/状态语境及diff，提交后仍运行make gen-check；无源码变化复用T14 Go/race和T15最终142条e2e，不为文档HEAD重复全套。内部整分支审查、最终SHA分支CI、负责人终审/集成/main CI/清理均保留待完成；阶段先不合并。

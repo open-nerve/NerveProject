@@ -145,3 +145,12 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 - 余项保留§1负责人原话和原样转交条件；§7–13编辑器按需加载、CSP/表情图、上传、下拉框、复制hook、stores分代、clock.ts均依原M4设计13.1落点继续；本Phase没有以S3往返替代页面或CSP核对。
 
 状态保持 `open`；本次仅完成P4接收部分，待M4真正收尾逐项核对关闭条件。证据：[P4 spec §4/§7](../specs/P4-issue-collaboration.md#4-验收标准)、[P4 review §2/§6](../reviews/P4-issue-collaboration-review.md#2-验收标准核对)。
+
+## 处理结果（M4/P5）
+
+- §2：T3/T5–7/T9/T10/T12的19排序使用各自定型键和最终id的canonical载荷；合法篡改只换可见范围的起点。CSV/none/单日/重复日期AND、PageSize和闭合响应沿既有规范；三形状与各层去重total、组格续页原筛选、RO/RR同快照及空页补total均有实际SQL/HTTP/变异证据。
+- §3：T8 sort_order全链仍经原写锁、闸门、锁下时钟，同次state+sort只一条state动态；skip true/false互斥及新旧交错race五遍已验证。T14历史写/读与边界实际回归，T15 I6验证审计与落库；不把列表读引入写锁或闸门。
+- §4：T13三设置GET/PATCH使用闭合typed对象、形状400/词值422，未新增开放map或递归schema；T13a旧1–25→26→Down/Up、T13b四方向race、T14写隔离与T15 I5各有证据。T12最终32轮保留真实索引、完整排序/temp和跨项目/成员相关扫描成本，交M8，不用池参数读回替代旧删除性能。
+- 仍开放：§1原话/原样转交，草稿P8、自动归档P6/其余写P7、清理P9、§7–13页面/编辑器/CSP/上传/下拉/复制/stores/clock.ts各原落点；P10b共享issue-order.json的生产码点比较器/vitest和旧筛选store迁移、P11详情数据及P12–15页面均未由P5关闭。
+
+仅登记本输入的P5承接，`status: open`保持；M4总体、T16内部整分支审查/最终分支CI与负责人终审/集成另待收口，不合并。证据：[P5 spec §2/§7](../specs/P5-issue-list.md#2-交付物)、[P5 review §2](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。

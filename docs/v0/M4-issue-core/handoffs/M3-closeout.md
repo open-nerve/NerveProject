@@ -169,3 +169,13 @@ M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以�
 - 余项：§1全M4锁/规模、§5–8筛选/service/store/浏览器/复制/文案按原分配继续，P11新DTO/地址与comment_json、P14保存和弹窗、P15时间线页面是后续工作；本Phase不关闭整份交接。
 
 状态保持 `open`；本次仅完成P4接收部分，待M4真正收尾逐项核对关闭条件。证据：[P4 spec §4/§7](../specs/P4-issue-collaboration.md#4-验收标准)、[P4 review §2/§6](../reviews/P4-issue-collaboration-review.md#2-验收标准核对)。
+
+## 处理结果（M4/P5）
+
+- §2/§3：T8新排序写沿原Locks.run/全局表序；T9/T10扩项目列表40cells、个人三关系18cells，T13b扩既有偏好27cells完整三字段；T14实际复跑矩阵/runtime/双向契约/历史45项及所有新增和六既有交错race五遍。caller/target分离、管理员兼guest仍OwnOnly、个人目标inactive存在和隐藏先404均按原规则。
+- §3个人主页：member_issue.list只允许工作区管理员/成员；T10/T12实际三关系与跨项目caller目录，T15 I19每目标集合互异并保留自动订阅，I20补访客四格。T4普通Visible和完整名字目录、T11替换P3 seeEach/ArchivedProjects，保留归档源同项目及Historical，T14实际回归无范围倒退。
+- §5服务端：project_user_properties经00026从11→14列，只加filters/display_filters/display_properties，不建rich_filters；workspace_user_properties不变。T13a真实旧库/默认/形状CHECK/Down-Up，T13b闭合API、纯端口接线、GET无写、整字段替换、恢复保留完整行/审计及已有行四方向并发不失更；T14他人行写范围变异、T15 I5保存/查询等价已验证。
+- §9：直接复用P4的shared.PageSize（50/1–100）、独立ReadOnlySnapshot与Historical，不重复实现；T1真实双连接参数覆盖，T12八提交快照与最终32轮性能保留全排序/temp、成员相关扫描/跨项目成本，M8继续测量。T14真实满写gate及EXCLUSIVE表锁/单连接下列表均读通。
+- 仍开放：§1整体规模/锁与后续批写，§5前端旧ProjectService/user-properties/workItemFilters迁移P10b；api/testdata/issue-order.json由P10b生产前端码点比较器和vitest同文件消费。相关until:M4/P11例外到实际迁移才删；P11详情store/service/JSONContent/comment_json/is_bot、§6–8及P12–15页面、P6 archive_in/P9限时删除等保留原分配。
+
+仅登记本输入的P5承接，`status: open`保持；不以八接口故事关闭页面、M4总体或T16整项，不生成M5–M8的真正收尾文件。证据：[P5 spec §2/§7](../specs/P5-issue-list.md#2-交付物)、[P5 review §2](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。

@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-26。状态：**实施中；T1–T15完成，T16文档与最终审查待实施；阶段尚未完成，不合并**。
+日期：2026-10-26。状态：**实施中；T1–T15完成，T16文档已同步、待独评及内部整分支审查/最终分支CI；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -22,7 +22,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 ## 2. 验收标准逐条核对
 
-产品验收清单以 spec §4 为准；T1–T15已有下列实施证据，T16文档与最终审查尚未完成。下表保留起步检查，后面追加逐任务证据。
+产品验收清单以 spec §4 为准；T1–T15已有下列实施证据，T16文档已同步，独评及内部整分支审查/最终分支CI仍待完成。下表保留起步检查，后面各Task保留其实施时的证据边界；后来已完成的任务另以对应最终段落为准，不把旧未来式当当前欠项。
 
 | 检查 | 结果 |
 |---|---|
@@ -229,6 +229,26 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 最终lint-web54/54（36 cached）、knip、test-web17/17（全部cached）通过；完整默认make e2e总43.052s、142 passed（runner41.7s，140 Chromium+2 Firefox），八故事各实际匹配一次，旧W11通过且未专查。11交付文件在四个最终门、当前与提交blob完全一致；BASE/HEAD的server/api/web/tools树相同，全部变异源恢复。按G范围复用T14完整Go/race与T12最终性能，无永久生成物改动不重复无关gen-check，临时SQL的真实生成/恢复证据仍齐备。
 - 原证据 `task-15-evidence/`、实施报告 `task-15-report.md`、独评 `task-15-review.md`。root以P4/main与T1–14已批准记录承接跨任务约束；本任务批准不代替T16文档/整分支审查或合并授权。
 
+### T16：文档实施与最终完成门（待独评/整分支审查）
+
+文档实施BASE为 `9a773608fa1f08abf3d4ecbc913e2d4a66e8de1e`。本次只同步正式设计/差异/规格/计划/评审与输入交接；没有产品、API、生成物、依赖、守卫或故事变化。16父任务/19实施单元保留，逐节范围与实际证据如下；完整命令/红因/变异恢复/环境及精确产品提交均在上述各Task记录，不把编译/fixture/基础设施失败改写成业务红。
+
+| spec节/上级范围 | 已交付Task与实际证明 | 本次正式同步/边界 |
+|---|---|---|
+| §1/2.1模块、事务与完成线 | T1–T15逐任务Approved，T14 archtest/HTTP整包/runtime和Go全量；基线main e9782b8f仅证明P4 | spec/plan/M4 §12/15同步19单元；T16内部整分支审查/最终分支CI仍待root，集成另待负责人 |
+| §2.2 API/普通与历史可见性 | T4目录、T9项目、T10 actor≠target三关系、T11归档源同项目；T14真实矩阵40/18/27cells/历史回归 | v0 §3.4、M4 §3.3/3.4/3.10/6.5、plane-diff三/四及M3/P1–P4输入交接；Historical不改 |
+| §2.3词汇/query/HTTP | T2 Vocabulary、T3 ParseListQuery/ListCursor；T9/10真实重复/坏path/无token/日期AND，局部映射/浅拷贝变异恢复 | v0 §3.3、plane-diff三、M2/P2：none/单日/重复日期AND/合法空交集、422/400顺序，不改生成器或认证 |
+| §2.4封套/续页/total | T5 Flat/空页total，T6 Groups A∩C，T7 CellContinuation/四层total/完整数组；T9八完整JSON；T12全部字段；T15 I3 | v0 §3.4、plane-diff三/四；缺分支省略/[]/末页null，原筛选追加组格键，不能累加格数冒充泳道total |
+| §2.5全序/canonical/共享样例 | T3固定JSON；T5b十二变异、相邻float/宽年份/精确count；T6/7各自精度；T12四入口19序、三SQL表达式/typed cursor；T15 I4 | 时间微秒、null末尾/id方向/ASCII折叠码点/multi-min不变；P10b生产前端比较器/vitest共用JSON仍open |
+| §2.6三SQL/快照/性能 | T1双连接参数，T5 nil/NULL分别证伪；T12 7/5/42字段、八提交快照race五遍；T12b最终f73e85ed/32轮130样本/456计划和I1复审；T14再跑快照/读边界 | spec最终表完整保留并同步M4 §3.16/M8：20k目标、100k验证、小目录/关系度边界、实际索引、完整排序/temp及102256成员相关扫描，不引入索引路线 |
+| §2.7排序写/I6 | T8零/同值/skip true/false/状态组合和16方向race五遍；T14原六交错再五遍；T15 I6真实sort/state/审计/一条动态 | P1a/P1b/P4接收；M4 §5.1子项created_at/id已正确，仅核不改 |
+| §2.8三列/纯端口/闭合API | T13a真实1–25→26→Down/Up、CASE/词值/独立set/Ensure变异；T13b真实400/422/默认无写/恢复/四方向race；T14写范围变异，T15 I5 GET隔离变异 | v0 §6.2、M3 §3.18、plane-diff二/M4 §4.15：项目11→14、逐列默认/形状/词值、bootstrap小值转换；workspace不变、rich_filters不建 |
+| §2.9故事/§3裁定 | T15八故事确有匹配，四项生产变异成功build后业务红/恢复绿；最终142完整e2e，T13b等待屏障按真实transactionid局部校准 | I3–I7/I19/I20与I15仅API，P12–15页面不提前验收；历史决定保留并链接最终证明 |
+| §4验收/§6风险 | T1–T15勾选只据实施+独评；环境噪声Minor、扫描/跨页漂移如实保留 | 文档三子项可完成，内部整分支审查/最后CI及负责人终审/集成/main CI/清理未完成，父T16保持未勾 |
+| §5后续/§7输入/附录A | M2/M3/P1–P4只追加P5承接；附录A保持起步历史 | P8/P10b/P11/P12–15/M8和八输入handoff总open；M4 §14及总体§9.4不整项勾，不生成M5–M8收尾文件 |
+
+文档校验已核342个Markdown链接及其本地目标/章节，无新增失效；原有四个M5–M8未来收尾文件保持未创建。计划类型/消费签名和当前schema名、三列/三封套/状态语境及diff已核，主目录仍main，产品树/M4总体验收/总体§9.4/子项顺序/T12最终性能块均与本Task BASE一致；提交后make gen-check按T16执行，实际退出与最终提交关联留本Task交付记录，并由root继续正式收口。范围内没有产品源码差异，复用T14最终Go/race与T15最终142条e2e，不为文档HEAD重复全套。当前仅声明文档同步，不声明内部整分支审查、最终分支CI或负责人终审/合并/main CI/清理通过；由root在后续精确提交上继续登记。
+
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
@@ -252,12 +272,12 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 1. 按既有 D2 授权切成16个任务，单列 `sort_order` 全链和普通目录替换，保留原15项的全部验收范围。任务与代价见 spec §3，预计规模与重切条件见 plan。
 2. `shared.PageSize`、`ReadOnlySnapshot()` 与 Historical 已在 P4 交付，直接消费；普通 Visible 单独实现，不改变历史引用的宽目录语义。
-3. HTTP 保留 M2 绑定先于认证的既定顺序。使用生成器已有标准扩展点，只映射 P5 两条 GET 上真实重复的已声明非日期 query；其他错误回到既有400。原始 query 经 strict middleware 深拷贝传入，不重写 URL、不修改平台或生成器。真实接口矩阵仍待 T9 证明。
+3. HTTP 保留 M2 绑定先于认证的既定顺序。使用生成器已有标准扩展点，只映射 P5 两条 GET 上真实重复的已声明非日期 query；其他错误回到既有400。原始 query 经 strict middleware 深拷贝传入，不重写 URL、不修改平台或生成器。该决定当时把真实接口矩阵交T9；现T9/T10已按原query/错误顺序实际验证，T14回归通过，见§2。
 4. 个人主页的目标成员与调用者分开进入引擎：关系过滤用目标，权限/OwnOnly 用调用者；目标来自已核验的路径对象，不能由 query 覆盖。
 5. M4 §5.1 子项排序残留改回 P3 已裁定并交付的 `(created_at, id)` 升序。P5 排序 PATCH 不改变该集合接口行为。
 
 6. T3不增加只有测试调用的生产全序比较器。纯领域验证真实键归一化、类型、canonical及日期条件保留；null方向、UUID方向、多值min和日期AND/OR的实际变异移至T5真实SQL，T12收口，全部完成要求保留。
-7. 游标拼写按spec第2.5节固定：微秒UTC、按排序定型及可空性、精确int64、有限float64及正负零统一。不能把RawMessage直接回写当唯一规范拼写。Flat数值策略已由T5实证；Groups/Subgroups已由T6/T7独立分页证明，最终完整矩阵在T12继续验证。
+7. 游标拼写按spec第2.5节固定：微秒UTC、按排序定型及可空性、精确int64、有限float64及正负零统一。不能把RawMessage直接回写当唯一规范拼写。Flat数值策略已由T5实证；Groups/Subgroups已由T6/T7独立分页证明，当时移交的完整矩阵现已由T12a及T12b最终31轮验证，见§2；不回写成T3当时已有SQL证据。
 
 8. T4没有“活跃成员姓名目录”的生产消费者可供替换；新增依赖或篡改测试来源不能算生产变异。T4用真实关系ID→显示名组合证明退出/降guest仍有姓名，实际变异改取软删除关系检验目录边界；T5在Listing真实消费者再次覆盖。普通active/archived和Historical删除条件仍逐项真实变异。代价是T4不宣称完成一个尚无合法调用点的替代来源变异，姓名来源完成线不减少。
 
@@ -292,27 +312,36 @@ T12拆分已获独立文档预检Approved，无阻断项，记录为ignored `tas
 | L2 / Low | app fake Rows 无法证明 Store 构造出的 sqlc 数组非nil | T5 核对生产参数映射或真实执行边界，直接NULL的SQL防御另测 | 已修订，独立复核关闭 |
 | L3 / Low（复核发现） | 文档修订误把本仓库标准库 `"uuid"` 写成第三方包 | 对照现有 rows.go 等导入，spec/plan恢复标准库；未改产品或依赖 | 已定点复读关闭 |
 
-2026-10-25独立聚焦复核结论 **Approved**；首轮4项Medium、2项Low及修订中新发现的L3全部关闭。批准仅限起步规格与计划，后续任务的产品证据仍待实施。
+2026-10-25独立聚焦复核结论 **Approved**；首轮4项Medium、2项Low及修订中新发现的L3全部关闭。该批准仅限起步规格与计划，当时产品尚待实施；当前T1–T15的实际实施/独评另见§2，不以静态批准代替。
 
-本轮没有发现需负责人重新裁定的架构问题。SQL数值键的无损转换仍是 T5/T12 必须实证的实施风险，不能将候选 `numeric` 转换写成已验证结果。
+起步预检未发现需负责人重新裁定的架构问题。当时列出的SQL数值键风险现已由T5三SQL后续精度及T12最终矩阵/表达式探针实证：numeric显式分支、有限float位序键与公开cursor同义；不是仅把候选numeric写成通过。最终Flat单一排序修复及成本见§2 T12b。
 
 ## 5. 最终实现与 plan 的差异
 
-阶段尚未结束。T1与计划一致，生产仅增加两项参数；测试额外核对无关application_name保留。T2提前定义共用日期原子解析，T3复用；T3将SQL特有变异留到T5真实查询，样例修正未改变产品行为。T4验证分工与T5规模切分调整见第3节。后续差异随任务登记。
+T1只增加两项池参数并额外验证无关application_name保留；T2提前定义日期原子解析供T3/T13复用。T3样例修正反向UUID/min-max反例，SQL特有变异在T5/T12实际完成，不添加无消费者比较器。T4完整历史负责人姓名通过真实指派ID→PublicProfiles组合验证，不为尚无调用点的替代源伪造变异。
+
+T5/T12/T13各a/b，共16父验收任务/19实施单元。实际sqlc接缝使用私有text日期端点与独立名字null位，公开契约不变；数值键采用显式numeric及有限float位序。T12b因完整回表超预算局部延后投影，首版复制全序被独评I1指出后修为唯一row_number全序、序位上界和同值typed LIMIT，完整重验最终正确性/快照/规模，退化与temp/成员过滤成本完整保留。
+
+T13b实际测试名为IssuePreferencesAPI/AsRuntimeRole；已有冲突偏好行的Upsert等待为transactionid，按真实诊断复用WaitForKeyWaitOn并以RowWaits核已有行持有，再放行；原tuple分支不变。T14复用已有矩阵/runtime/契约并真实回归，只补缺口318手写差异行，不为估计600–1000填充重复实现。T15仅11个e2e文件954手写差异行，普通CSV/日期重复由生成客户端逐调用序列化；补测已正确API如实baseline绿，指定真实生产变异提供业务红，lint无语义整理由最终142条e2e覆盖。所有失败/恢复与源码关系见各Task证据，不虚构原型、百分比或同seed复现。
+
+T16清理上级设计候选schema名：实际为IssueListPage/IssueListGroup/IssueListSubgroup/IssueListTotal、IssueListOrder/IssueListGroupField及project侧ProjectIssueFilters/ProjectDisplayFilters/ProjectListCalendar/ProjectDisplayProperties；偏好业务词保留string由纯端口给422。没有改实际API。
+
+T16仅文档，按root授权复用无源码变化的T14 Go/race与T15最终142条e2e；提交后仍须make gen-check。当前不合并，内部整分支审查/最终分支CI与负责人终审/集成分门登记。
 
 ## 6. 移交事项
 
 | 接收方 | 范围 |
 |---|---|
-| P5 实施者 | T1–T10已完成；从T11继续按spec/plan逐任务交付、测试与评审 |
+| root/负责人 | T1–T15实施与逐任务独评Approved，T16文档同步；内部整分支审查与最终SHA分支CI待root，负责人整分支终审/意见处理及集成另待安排，父T16未勾，保留分支/worktree，不合并 |
 | P8 | `link_count` 字段与两个排序码；列表/搜索共用词汇 |
-| P10b | 共用排序样例、生产前端码点比较器与vitest；旧筛选store和 `/user-properties/` 迁移 |
+| P10b | api/testdata/issue-order.json必须由生产前端码点比较器与vitest同文件消费；旧列表/筛选store、workItemFilters和 `/user-properties/` 迁移，相关until:M4/P11例外到迁移才删 |
+| P11 | 详情store/service换型、JSONContent/comment_json/is_bot等清理及详情分页数据；P5不关闭此范围 |
 | P12–P15 | 接口故事增长为页面故事，列表/看板/日历/详情与访客页面 |
-| M8 | 大规模与跨项目扫描成本、是否需要排序索引特化；接收最终生产SQL性能证据 |
+| M8 | 最终32轮f73e85ed源码10k/100k、五样本/typed计划/实际索引；保留20k目标、完整排序/temp、成员相关扫描/跨项目与大目录/高关系度、名字/计数跨页漂移；索引特化按后续实测决定，部署核jit/custom_plan未覆盖 |
 | M4 收尾 | handoffs仍open，按各阶段处理结果最终关闭；不能用P4完成代替M4整体完成 |
 
 ## 7. 已知限制
 
-当前三条列表SQL、公共编排、排序PATCH及项目/个人主页列表API已有上述实施证据；关联目录替换、偏好迁移和100k性能等后续任务尚未完成，不能从已通过结果外推。
+T1–T15包含三SQL、排序PATCH、项目/个人主页API、关联普通目录替换、三偏好列/API/并发、最终100k性能、权限/历史回归和八接口故事，均有§2逐Task实施/独评证据。剩余门是T16内部整分支审查/最终分支CI及负责人安排的终审/集成/main CI/清理，当前不合并，不能把逐Task批准冒称整分支终审。P8/P10b/P11/P12–15/M8和M4总收尾仍开放。
 
-默认缓存的Firefox缺失已通过项目本地资产目录准备解决，实际e2e仍待后续任务运行；已知W11偶发按既定纪律处理。各分支检查点的远端完整结果按上文精确SHA登记，不代表未提交的后续任务。
+默认缓存缺Firefox的历史限制通过项目本地资产目录解决；T13a/b完整135条、T15最终142条（Chromium140/Firefox2）已实际运行，未声称每故事双浏览器。T15本轮旧W11通过，既有Ryuk Shell/NO_COLOR提示保留为环境维护Minor，不为消噪重跑或改变他人容器。各分支检查点CI仅证明各精确SHA，不代表本次最终文档提交的远端结果。

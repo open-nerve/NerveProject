@@ -212,7 +212,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 |---|---|
 | P2 | 访客规则：判定的 `Grant` 重新由 `decide`、`precheck`、`lockAndDecide` 带出（附录 A.2 删去的 `held`；`OwnOnly` 的拒绝也在预检里答，设计 3.4、3.5）；`OwnOnly` 由 `access` 的 `ProjectFacts` 算出，`ProjectGate.Lock` 要不要 `guest_view_all_features` 由 P2 定；起止日期进接口；按编号取（`identifier`）；`project.state_in_use` 的说明和文案要不要加补救由 P2 的文案定：P1b 的修改和 P2 的恢复都有了才做得到（例如"先把它们移到别的状态，已归档的先恢复"） |
 | P3 | `LockMany`（约定七）、`DeletedAt`；关联进删除的语句；加关联与删除工作区的交错（两个项目同属一个工作区，两种顺序）：`LockWorkspaceProjects` 的 `id` 升序从这时起承重（P1a 只由存储测试钉住） |
-| P5 | `Issue`（列表的行）；状态的名称进 `StateCatalog` |
+| P5 | `Issue`（列表的行）；状态的名称进 `StateCatalog`；**P5接收结果（2026-10-26）**：已有Issue/Detail已在P4分离，状态名已在P1b、PublicProfiles已在P1a交付；P5 T4/T9/T10实际消费而非重复交付，T8及T15 I6沿原锁/审计路径，T12精度/快照与T14回归通过。P6事件、P8草稿、P9删除和页面范围仍开放，实际证据见 [P5 review §2](../reviews/P5-issue-list-review.md#2-验收标准逐条核对) |
 | P6 | `archive_in` |
 | P8 | `DeleteWorkspaceIssues` 加工作区的 id（没有项目的草稿，第 3 节第 4 条） |
 | P9 | `DeleteProjectIssues`、`DeleteWorkspaceIssues` 换成事件和任务，删去这两个方法 |

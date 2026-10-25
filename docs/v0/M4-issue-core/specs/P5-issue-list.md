@@ -3,7 +3,7 @@
 | 项 | 内容 |
 |---|---|
 | Phase | M4/P5 issue-list |
-| 状态 | 实施中；独立静态预检及修订复核通过，实际进度见第4节与阶段评审 |
+| 状态 | T1–T15实施/独评通过；T16文档已同步，内部整分支审查/最终分支CI待root，负责人终审与集成另待安排，不合并 |
 | 基线 | `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`，P4 合并 main |
 | 基线验证 | [main CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 全部成功；此证据不代表 P5 验证 |
 | 上级设计 | [M4-design](../M4-design.md) §0.3、§2、§3.4、§3.7、§3.16/3.17、§3.23、§4.15、§5.1/5.2、§6.5/6.6、§12 |
@@ -76,7 +76,7 @@ CSV 内 OR，字段间 AND；none 与 UUID 可并列。日期范围闭合，缺�
 | group_key/sub_group_key/cursor：string | form / true，单值 | key词法422；cursor载荷400 |
 | limit：integer，默认50，范围1–100 | form / true，单值 | 生成绑定检查整数，shared.PageSize检查范围 |
 
-**HTTP 接缝的选定方案（静态预检已核对，仍需实施验证）：** M2 已明确参数绑定错误可以在认证/限流前回答，保留此顺序。Register 的标准 StdHTTPServerOptions.ErrorHandlerFunc 仅在两条P5 GET路由、errors.As 为 gen.InvalidParamFormatError、ParamName属于该路由已声明的非日期query且真实 r.URL.Query()[name] 长度>1时，映射422/not_allowed；其余全部调用既有 api.Errors.BadRequest。不检查错误文本，不误用未实际产生的 TooManyValuesForParamError。正常请求通过 gen.NewStrictHandlerWithOptions 的 StrictMiddlewareFunc，只对 ListIssues/ListMemberIssues 把真实query深拷贝为纯 map[string][]string 放入私有context，随后handler交给用例完整解析。无URL改写、无占位、无BaseRouter装饰、无第二路由、无平台/生成器/守卫改动。缺token+重复在绑定阶段仍422；坏path先400，其他API原绑定错误仍400；绑定成功的缺token请求仍401。日期重复不走错误映射，保留全部值AND。来源与静态核对证据写入 [P5 review](../reviews/P5-issue-list-review.md)；原401优先假设与占位候选均撤销。
+**HTTP 接缝的最终方案（T9/T10真实接口与T14回归已验证）：** M2 已明确参数绑定错误可以在认证/限流前回答，保留此顺序。Register 的标准 StdHTTPServerOptions.ErrorHandlerFunc 仅在两条P5 GET路由、errors.As 为 gen.InvalidParamFormatError、ParamName属于该路由已声明的非日期query且真实 r.URL.Query()[name] 长度>1时，映射422/not_allowed；其余全部调用既有 api.Errors.BadRequest。不检查错误文本，不误用未实际产生的 TooManyValuesForParamError。正常请求通过 gen.NewStrictHandlerWithOptions 的 StrictMiddlewareFunc，只对 ListIssues/ListMemberIssues 把真实query深拷贝为纯 map[string][]string 放入私有context，随后handler交给用例完整解析。无URL改写、无占位、无BaseRouter装饰、无第二路由、无平台/生成器/守卫改动。缺token+重复在绑定阶段仍422；坏path先400，其他API原绑定错误仍400；绑定成功的缺token请求仍401。日期重复不走错误映射，保留全部值AND。来源与静态核对证据写入 [P5 review](../reviews/P5-issue-list-review.md)；原401优先假设与占位候选均撤销。
 
 ### 2.4 分组与响应
 
@@ -103,7 +103,7 @@ P5 恰好 19 码：sort_order 仅升序；created_at/updated_at/start_date/targe
 
 - priority 数值 urgent=4/high=3/medium=2/low=1/none=0；排序与分组序分开。
 - 名字只折 ASCII A–Z，按 Unicode 码点序；Go UTF-8 比较、SQL COLLATE C。label/assignee 总取最小名字键，降序也不改成最大值。没有名字为 null。
-- 两方向 null 都在最后；同键 UUID 与主键同方向。时间保留 PostgreSQL 微秒，日期保持纯日期；计数用精确整数，不经 float64 丢失。sort_order 是有限浮点数，按存储值排序。SQL CASE 不能因 sort_order 的 float8 分支隐式把微秒/计数转为 float8；建议 k_num 统一 numeric 并对每分支显式转换，游标键使用同一转换与全序。相邻可表示 sort_order、整数精度边界和逆 UUID 必须在真实 SQL 对照验证。T5已证明Flat的有限浮点位序、时间微秒/宽日期及精确count表达式；T6已对Groups自身验证邻接浮点/2^53微秒/null两方向续页；T7也已对Subgroups自身验证同类精度/双向日期null及公开游标。最终19排序与全部字段组合仍由T12逐项验证，不把代表性结果外推。
+- 两方向 null 都在最后；同键 UUID 与主键同方向。时间保留 PostgreSQL 微秒，日期保持纯日期；计数用精确整数，不经 float64 丢失。sort_order 是有限浮点数，按存储值排序。SQL CASE 不因 sort_order 的 float8 分支把微秒/计数转为 float8；最终k_num各分支显式numeric，sort_order先转有限浮点位序int64，游标使用同一转换与全序。相邻可表示 sort_order、整数精度边界和逆 UUID 必须在真实 SQL 对照验证。T5已证明Flat的有限浮点位序、时间微秒/宽日期及精确count表达式；T6已对Groups自身验证邻接浮点/2^53微秒/null两方向续页；T7也已对Subgroups自身验证同类精度/双向日期null及公开游标。最终T12已对四入口各19排序及项目7/个人5/42字段组对分别验证，不把两维扩成笛卡尔积，也不把代表性结果外推。
 - 子项数只计调用者可见、未删、未归档的直接子项；排序键与行中 sub_issues_count 同义。
 - payload 为 `[order,key,id]`，经现有 shared.EncodeCursor/DecodeCursor 的 v1 canonical base64url 封套；key 按排序为 UTC 时间字符串、日期字符串、名字字符串、数值或 null。形状、键类型、非法 UUID、非 canonical、版本、排序码与请求不符均 400。数值解码使用 json.Number/明确类型，不能 unmarshal 到 interface{} 后默认为 float64。
 - 时间游标输出为UTC固定六位小数，拒绝亚微秒及四位年份范围以外输入；日期和名字族允许null，created_at/updated_at、sort_order、priority、sub_issues_count的key不可null；priority为0–4整数，子项数为非负int64，sort_order为有限float64，正负零统一编码为正零。两页之间姓名/子项数量变化可导致行移动，这是现有全序键集方案的已知代价，不宣称跨请求固定快照。
@@ -145,7 +145,7 @@ T12最终源码为 `f73e85ed46303e813c8cee44b5145e22607e474d`。32轮采样时HE
 
 现有 updateIssue 请求新增可省略、不可 null 的 number；零允许，省略保持旧值。IssuePatch.SortOrder *float64、Changes.SortOrder *Changed[float64]、Changes.None、IssueFields.SortOrder、合并/SQL/HTTP 全链同 Task 加齐，拒绝非有限纯用例输入。排序修改是有效写，锁下更新 updated_at/by；相同值为无变更，仍服从归档拒绝顺序。
 
-与 state_id 同改时按既有状态变更设置 completed_at，产生一条状态动态；排序本身不创造新 activity field。`skip_activity` 只要出现（true/false）且带 sort_order 都 422 skip_activity/not_allowed。只补块 ID 的 P4 路径不能混入排序写。创建最大值+步长逻辑不变。P3 子工作项列表继续 created_at/id；修正 M4 §5.1 残留的 sort_order 描述，不改现有产品行为。
+与 state_id 同改时按既有状态变更设置 completed_at，产生一条状态动态；排序本身不创造新 activity field。`skip_activity` 只要出现（true/false）且带 sort_order 都 422 skip_activity/not_allowed。只补块 ID 的 P4 路径不能混入排序写。创建最大值+步长逻辑不变。P3 子工作项列表继续 created_at/id；M4 §5.1已正确写(created_at,id)升序，T16仅复核，不改现有产品行为。
 
 ### 2.8 三类项目显示设置
 
@@ -188,7 +188,7 @@ I3/I4/I5/I6/I7/I19/I20 API 故事各文件，I15 增加归档列表；全部前�
 
 ## 4. 逐项验收
 
-T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T12a及T12b均经独立评审，T12b排序定义问题经修复及范围复审关闭；T13a迁移/持久化/纯校验和T13b接线/API/并发均已独立Approved，父T13已验收。T14矩阵/读边界/写隔离/完整回归与T15八接口故事/四变异/完整142条e2e均已独立Approved；T16文档与最终审查尚未完成，集成仍待负责人安排。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
+T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T12a及T12b均经独立评审，T12b排序定义问题经修复及范围复审关闭；T13a迁移/持久化/纯校验和T13b接线/API/并发均已独立Approved，父T13已验收。T14矩阵/读边界/写隔离/完整回归与T15八接口故事/四变异/完整142条e2e均已独立Approved；T16文档/差异/输入交接已同步，内部整分支审查与最终分支CI待root，负责人终审及集成仍待安排，父T16不提前勾选。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
 
 | 完成 | Task | 完成线 |
 |---|---|---|
@@ -216,7 +216,8 @@ T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b�
 | P6 | 事件与自动归档；沿已有写锁与审计语义，P5不提前发布事件 |
 | P7/P8 | 链接数据P7；link_count字段和两排序码P8；P8搜索复用列表词汇/普通可见目录，草稿另交付 |
 | P9 | 清理/异步删除与规模成本；不因P5新增三偏好列建立新删除图 |
-| P10b/P11 | issue-order.json交生产前端比较器与vitest；旧/user-properties/筛选store迁移P10b，相关until:M4/P11例外保留到迁移 |
+| P10b | api/testdata/issue-order.json交生产前端码点比较器与vitest同文件消费；旧/user-properties/列表筛选store/workItemFilters迁移，相关until:M4/P11例外保留到迁移 |
+| P11 | 详情store/service换型、JSONContent/comment_json/is_bot等清理与详情分页数据；P5不关闭详情范围 |
 | P12/P13 | 列表/看板/日历与I3–I7页面，项目偏好与个人主页页面、浏览器本地归档/个人设置 |
 | P14/P15 | 详情与协作页面故事增长，P5接口故事不冒充页面完成 |
 | M5–M7 | 附件、迭代、模块等字段/词汇随所属数据加入，不预埋未来枚举 |
@@ -230,7 +231,7 @@ T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b�
 | 目录与SQL不在同一快照 | 新状态/退出成员导致漏项、total漂移；ReadOnlySnapshot与屏障交错-race -count=5 |
 | 数值转换/同键游标方向不一致 | 分页重复遗漏；精度边界/相邻sort_order/逆UUID，不能仅靠原S1小seed |
 | 多值展开层错误 | 整体/组/泳道/格total错、续页换筛选；完整字段与双多值矩阵 |
-| CASE排序与跨项目扫描成本 | 10k/100k最终生产SQL测量，保留20k目标；M8负责新架构/索引特化 |
+| CASE排序与跨项目扫描成本 | 已测最终32轮10k/100k，仍全排序/有temp与成员相关扫描，名字/计数跨请求可漂移；保留20k目标，M8负责更大目录/关系度/跨项目与索引特化 |
 | 偏好整行覆盖、sort_order漏互斥 | 丢并发更新或改变描述免活动语义；每列set标志与true/false反例、交错五遍race |
 | 局部HTTP映射放大 | 旧端点/非法path错误码退化；route+typed-error+声明参数+重复值四重限定及契约测试 |
 
@@ -245,7 +246,7 @@ T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b�
 | [M2收尾交接](../handoffs/M2-closeout.md) | 日期/页大小/游标与闭合schema沿现状；无新开放map schema；锁下时钟与真实验证保留 | 其他Phase条目不提前关闭 |
 | [M3收尾交接](../handoffs/M3-closeout.md) | 三偏好列及端口、成员退出恢复保留设置、个人主页规则、列表目录；T10/T13/T14 | P10b旧筛选store、后续页面 |
 
-关闭前必须：§4全部逐项有证据；方法调整与静态预检意见已处理；安全/权限/锁/快照性质有实际变异失败与恢复；新增快照/偏好并发/sort_order相关交错全部 `-race -count=5`；性能报告含最终SQL/参数/分布/环境/实际计划；生成物无差异、适用全量门禁通过。完成后先交负责人安排整分支终审，再处理意见并按既定 --no-ff、分支CI/main CI、清理流程完成，除非负责人另作安排。M4及跨Phase交接总体status仍到M4收尾才关闭。
+当前文档收口已逐节关联review §2的Task/实际测试/变异/性能清单，并登记M2/M3/P1–P4的P5接收结果，其他范围仍open。T16分两门：开发门中文档已同步，内部整分支审查/最终分支CI由root继续；集成门待负责人安排，当前不合并，保留分支/worktree。关闭前必须：§4全部逐项有证据；方法调整与静态预检意见已处理；安全/权限/锁/快照性质有实际变异失败与恢复；新增快照/偏好并发/sort_order相关交错全部 `-race -count=5`；性能报告含最终SQL/参数/分布/环境/实际计划；生成物无差异、适用全量门禁通过。完成后先交负责人安排整分支终审，再处理意见并按既定 --no-ff、分支CI/main CI、清理流程完成，除非负责人另作安排。M4及跨Phase交接总体status仍到M4收尾才关闭。
 
 ## 附录 A. 起步时的证据边界（历史）
 

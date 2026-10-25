@@ -187,7 +187,7 @@ I11 评论与两类表情；I12 评论/动态翻页与增量新增；I13 历史�
 
 | 接收方 | 移交 |
 |---|---|
-| P5 | 普通VisibleProjects方法、列表引擎、force_custom_plan；复用已提前的PageSize/ReadOnlySnapshot，勿重复实现；替换P3 seeEach/ArchivedProjects仍归P5 |
+| P5 | 普通VisibleProjects方法、列表引擎、force_custom_plan；复用已提前的PageSize/ReadOnlySnapshot，勿重复实现；替换P3 seeEach/ArchivedProjects仍归P5；**P5接收结果（2026-10-26）**：P5直接消费P4已交付的shared.PageSize/ReadOnlySnapshot/Historical，T1强制池参数，T4/T11完成普通Visible/P3替换；T8/T14验证sort_order不破坏skip_activity true/false互斥与既有历史回归，T12最终快照/精度/性能已收口。P11详情数据、P14保存/弹窗、P15时间线/评论与P9保留清理仍开放，实际证据见 [P5 review §2](../reviews/P5-issue-list-review.md#2-验收标准逐条核对) |
 | P6 | 描述/评论/表情的领域事件与任务；skip=true且内容相同不发布事件；每次写的事件共用当前锁下时刻；不得由P4加空事件端口 |
 | P9 | 每工作项最新20个版本的保留、60天物理清理、项目/工作区异步删除；P4只完成同步连带与批量语句；新表与comment FK都纳入后续清理 |
 | P11 | service/store换型、description_json/comment_json删除；版本新地址、评论内嵌表情、分页契约 |
