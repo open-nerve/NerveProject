@@ -45,3 +45,24 @@ type ListDirectories struct {
 	States            []ListState
 	Labels, Assignees []ListName
 }
+
+// ListRead carries a validated query, its caller and independently selected
+// relation target, and complete directories from the caller's read snapshot.
+type ListRead struct {
+	ActorID        uuid.UUID
+	TargetMemberID *uuid.UUID
+	Query          domain.ListQuery
+	Directories    ListDirectories
+}
+
+// ListRecord keeps the public typed cursor key alongside a projected issue.
+type ListRecord struct {
+	Issue    domain.Issue
+	Position domain.ListCursor
+	Total    int64
+}
+
+// ListRows reads flat rows plus one lookahead row, without trimming the page.
+type ListRows interface {
+	Flat(context.Context, ListRead) ([]ListRecord, error)
+}

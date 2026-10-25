@@ -79,9 +79,9 @@ type Issue struct {
 	UpdatedAt           time.Time
 	// The caller's view (M4 design 3.9): the number of its undeleted,
 	// unarchived direct sub-items that he sees, by his grant on its
-	// project. A read of the store leaves it 0; it is counted when an
-	// answer is built (the app's Locks.seen), and a creation answers 0, a
-	// new work item having none.
+	// project. Flat list reads include this count. Other reads count it when an
+	// answer is built (the app's Locks.seen); creation answers 0, a new
+	// work item having none.
 	SubIssuesCount int
 }
 
