@@ -329,13 +329,13 @@ T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400
 
 ## Task 11：P3 关联列表改用普通可见目录
 
-文件：改 `I/app/list_relations.go/list_relations_test.go/seen.go`、`I/module.go`、B/ports.go；清理确认无消费者的ArchivedProjects端口/查询/测试；扩B/issue_relation_lists_test.go。
+文件：改 `I/app/list_relations.go/list_relations_test.go/seen.go`、`I/module.go`、B/ports.go；清理确认无消费者的ArchivedProjects端口/查询/测试；扩B/issue_relation_lists_test.go与issue_lists_snapshot_test.go，复用真实只读快照组合。
 
-- [ ] `TestRelationListUsesVisibleProjects`：跨项目可见/退出/归档/软删/OwnOnly、源项目归档但同项目目标可见、目标issue归档排除；顺序仍沿relation，父ID与subcount不泄漏，目录/seen错误传播。
-- [ ] 红：`go -C server test ./internal/modules/issue/app ./internal/bootstrap -run 'Test(RelationListUsesVisibleProjects|ListIssueRelationsListsWhatTheCallerSees|ListIssueRelationsRefusals|ARelationListShowsWhatTheCallerSees|HistoricalProjectsConversion|HistoricalProjectsComposition)$' -count=1`；project adapter另跑 `go -C server test ./internal/modules/project/adapter/postgres -run '^Test(VisibleIssueProjects|HistoricalIssueProjects|IssueCatalogs|AFailedReadIsAnErrorNotAnAnswer)$' -count=1`。核对实际匹配并按改动整包补旧集合/活动回归，不以首条命令冒称已覆盖project adapter。
-- [ ] 源授权与读取在ReadTx；普通目录映射grants，加入明确已授权源项目grant；替换seeEach/Archived链，保留seen语义。rg确认无消费者后同步删旧port/provider/fake，Historical完全保留。
-- [ ] 绿；变异不补源grant、跨项目目标不用OwnOnly、误用Historical；恢复。矩阵原I9列表行为不变。
-- [ ] G；提交 `refactor(M4/P5): 用普通可读目录统一关联列表过滤`。
+- [x] `TestRelationListUsesVisibleProjects`：跨项目可见/退出/归档/软删/OwnOnly、源项目归档但同项目目标可见、目标issue归档排除；顺序仍沿relation，父ID与subcount不泄漏，目录/seen错误传播。
+- [x] 红：`go -C server test ./internal/modules/issue/app ./internal/bootstrap -run 'Test(RelationListUsesVisibleProjects|RelationListReadSnapshot|ListIssueRelationsListsWhatTheCallerSees|ListIssueRelationsRefusals|ARelationListShowsWhatTheCallerSees|HistoricalProjectsConversion|HistoricalProjectsComposition)$' -count=1`；project adapter另跑 `go -C server test ./internal/modules/project/adapter/postgres -run '^Test(VisibleIssueProjects|HistoricalIssueProjects|IssueCatalogs|AFailedReadIsAnErrorNotAnAnswer)$' -count=1`。核对实际匹配并按改动整包补旧集合/活动回归，不以首条命令冒称已覆盖project adapter。
+- [x] 源授权与读取在ReadTx；普通目录映射grants，加入明确已授权源项目grant；替换seeEach/Archived链，保留seen语义。rg确认无消费者后同步删旧port/provider/fake，Historical完全保留。
+- [x] 绿；变异不补源grant、跨项目目标不用OwnOnly、误用Historical；恢复。矩阵原I9列表行为不变。
+- [x] G；提交 `refactor(M4/P5): 用普通可读目录统一关联列表过滤`。
 
 ## Task 12：完整分页、快照与最终 SQL 性能
 

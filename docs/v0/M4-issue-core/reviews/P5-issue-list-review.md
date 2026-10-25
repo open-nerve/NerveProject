@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-25。状态：**实施中；T1–T10完成，T11待开始；阶段尚未完成，不合并**。
+日期：2026-10-25。状态：**实施中；T1–T11完成，T12待开始；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -137,6 +137,16 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 24全量发生在C-only补强前；25补强定位实际命中13顶层和18格；29lint要求测试if链改switch，30全量已覆盖补强，31等价调整后lint通过。作者为逐字节SHA再次跑full，root纠正无需仅为证据整齐重复；已启动32自然结束（48成功包、129.50s），之后未再追加。最终Web54/17任务、knip及提交后gen-check均通过，28文件SHA与最终提交一致、status干净。
 - 原始证据 `task-10-evidence/`，报告 `task-10-report.md`，独立记录 `task-10-review.md`；审查独立核对28项当前SHA、最终full manifest和变异恢复，gen-check自身metadata未存28项SHA，不混同两份记录。本Task无迁移/故事、未跑e2e；后续接口故事、并发/性能仍按原完成门推进。
 
+### T11：关联列表普通目录替换与旧链清理，已验收
+
+- 实施提交 `1292ceb80b6847d10687a950c4791eb5f2f2fe59`，基线 `b733b60186265915587d518b6875b5f9e4aff4b3`；独立评审Spec compliant、Approved，C0/I0/M1。唯一Minor为既有容器Shell诊断，定位随后ready并通过，按既有环境噪声保留记录，不改容器或依赖。手写15文件249+/272−，生成1文件删除29行，总16文件；ListIssueRelations生产文件90行。
+- ListIssueRelationsDeps加入既有shared.TxManager的ReadTx，RequireActor后从首次源读取/授权到关系、目标、Visible、子计数及隐藏父批读均在同一独立快照；issue.New显式传d.ReadTx，无写闸门/FOR锁。普通目录按caller映射，再用完整已授权sourceGrant覆盖或补入源项目，保留归档源同项目目标；两向冲突grant反例防止普通目录扩大或收窄源权限。
+- 保留seen/HiddenFrom/hideParents及All/Own子计数，按原relations顺序组装ID/TypeFrom/CreatedAt，不按目标ID重排；目标归档/软删排除，OwnOnly和父项遮挡不退化。删除前确认唯一产品入口，清理seeEach/projectsBut、Archived双方端口/provider/module/bootstrap/fake、专属测试及SQL；仅make gen-go删除对应生成查询。全server及外部Go/SQL旧符号无匹配，Historical完整保留，普通/Historical/relations/sub_issues查询与基线无差异。
+- 初始编译成功业务红：app未消费Begin/Visible、真实ReadSnapshot的tx.calls=0；普通集合新增场景在旧实现已绿，明确作为行为保持控制组。最终准确8顶层app/bootstrap关系/历史测试、4项project adapter目录测试通过。新增单连接实查READ ONLY/RR及真实父/计数读取，无并发屏障，不声称race五遍。
+- 四项实际生产变异业务红并原SHA恢复、同8顶层控制组绿：漏sourceGrant导致归档源同项目目标丢失，跨项目OwnOnly漏判导致他人/未知创建者泄漏，Visible误用Historical带回软删/归档目录，Visible外ctx触发真实单连接deadline。没有以fake panic或编译错误代替业务失败。
+- 唯一完整`make test`48成功包、127.675s、stderr空；`make lint-go`两段0 issues、提交后`make gen-check`通过，status干净。15个存续文件SHA及删除状态与最终提交一致，full后未改产品/测试或重复全量。无API/迁移/前端/故事变动，未跑Web/e2e；verbose既有Ryuk Shell诊断随后ready，未操作容器或依赖。
+- 原始证据 `task-11-evidence/`，报告 `task-11-report.md`，独立记录 `task-11-review.md`。T12仍须完成全面分页、真实提交交错和10k/100k性能，不能由单连接结果替代。
+
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
@@ -147,7 +157,8 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - `1c318ddc7dc7f1f0e4b733c081a7018d2883c0a9`（含T7）已由系统Git推送；[CI 40198919892](https://github.com/open-nerve/NerveProject/actions/runs/40198919892) server、web、e2e全部success。此检查点不包含T8。
 - `add5f6d9e9e7363d1d7b80b717df38066d50ebe3`（含T8）已由系统Git推送；[CI 40200997593](https://github.com/open-nerve/NerveProject/actions/runs/40200997593) server、web、e2e全部success。此检查点不包含T9。
 - `0b599e6860da5212084776abd2d6f6dc4df0acdb`（含T9）已由系统Git推送；[CI 40202959281](https://github.com/open-nerve/NerveProject/actions/runs/40202959281) server、web、e2e全部success。此检查点不包含T10。
-- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
+- `b733b60186265915587d518b6875b5f9e4aff4b3`（含T10）已由系统Git推送；[CI 40205751190](https://github.com/open-nerve/NerveProject/actions/runs/40205751190) server、web、e2e全部success。此检查点不包含T11。
+- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`、`ci-40205751190-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
 
 ## 3. 执行中的决定
 
