@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-25。状态：**实施中；T1–T7完成，T8待开始；阶段尚未完成，不合并**。
+日期：2026-10-25。状态：**实施中；T1–T8完成，T9待开始；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -22,7 +22,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 ## 2. 验收标准逐条核对
 
-产品验收清单以 spec §4 为准；T1–T7已有下列实施证据，T8及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
+产品验收清单以 spec §4 为准；T1–T8已有下列实施证据，T9及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
 
 | 检查 | 结果 |
 |---|---|
@@ -32,7 +32,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 | 阶段关键词 | `phase=M4/P5`；没有在 P4/P5 到期的例外，`/user-properties/` 的 M4/P11 例外保留；`node tools/keywords.mjs` 为72规则、23例外、无命中 |
 | 起步文档自检 | 16个任务顺序完整、产品验收均未勾选；53处本地链接无新增缺失。M4设计原有4个M5–M8收尾文件链接仍是未来交付，不提前创建或标完成 |
 | 独立预检 | 首轮4项 Medium、2项 Low，均为局部计划/文档缺口；修订聚焦复核Approved，新增L3也已关闭，见§4 |
-| P5 产品测试、性能、交错及变异 | T1–T7证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
+| P5 产品测试、性能、交错及变异 | T1–T8证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
 
 ### T1：连接运行参数，已完成
 
@@ -104,6 +104,16 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 唯一完整`make test`48成功包/119.278s/stderr空后，自查仅将交集测试改为label-only/assignee-only/both，避免两原筛选互相掩盖。两新增独立案经实际变异、最终三包定位和`make lint-go`验证；产品/其余测试字节未变，不重复全量，也不声称先前full已执行后来两案。提交后`make gen-check`通过。
 - 原始证据 `task-7-evidence/`，独立记录 `task-7-review.md`。三SQL核心已齐；全部19排序、7/5/42字段矩阵、并发快照及规模成本仍按T12完成线推进，阶段尚未完成。
 
+### T8：排序更新、描述互斥与写交错，已完成
+
+- 实施提交 `48c744ae958fb110512d4ef8e476a501f32838f2`，基线 `1c318ddc7dc7f1f0e4b733c081a7018d2883c0a9`；独立审查Spec compliant、Approved，无Critical/Important/Minor。28文件，手写604+/22−，生成41+/30−；新增最长文件243行，沿用既有IssueFields和Locks.run。
+- nil省略、明确0写入、同值含正负零不写；纯domain拒绝NaN/±Inf。锁下完整行携带原排序，sort-only只更新审计，无活动/描述版本/提及/订阅副作用；state+sort保持完成时间和一条状态动态，同state不重置完成时间。普通description+sort可写，skip_activity出现时true/false均与sort互斥，即便排序同值。
+- 初始真实HTTP行为红为未知sort返回400、组合预期422却400；缺字段编译红另行记录。四项实际生产变异：None漏排序、明确0当省略、skip=false漏互斥、只合并state未写sort，均业务断言失败且按原字节恢复后的同组通过。
+- 完整原始issues/旁表逐值检查拒绝和无副作用，不以行数代替；state组合核对全活动集合恰一新增。新交错覆盖项目/工作项归档、退出/降级（own/another）、另一sort、state-only的16方向；最终 `TestIssueSortOrderInterleaving -race -count=5` 精确80方向通过。最初state夹具误读取创建者NULL活动，分离创建者与写者并增加全原始活动集合断言后通过，未改生产语义。
+- 六个既有顶层交错各 `-race -count=5` 通过：`TestTwoChangesOfAWorkItemSerialize`、`TestAWorkItemGoneWhileItsChangeWaitsIsNotFound`、`TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`、`TestArchivingAWorkItemAndMovingItSerialize`、`TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize`、`TestDeletingAWorkItemAndChangingItSerialize`。权限矩阵及原写锁/闸门/busy定位也通过，不以复用路径免除验证。
+- 最终 `make gen`、Go定位及issue HTTP整包、`make lint-go`、`make test`（48成功包，bootstrap123.094s）、`make lint-web`、`make knip`、`make test-web`、提交后 `make gen-check` 均通过。Web测试17任务中11缓存，如实记录；本任务未跑e2e，I6完整故事和排序落库断言仍属T15。
+- 原始证据 `task-8-evidence/`；01–16普通diff仅含tracked文件，变异另有源diff/SHA；18起含新文件内容，最终提交覆盖全文件，不倒填早期证据。独立记录 `task-8-review.md`，原始最终28文件哈希逐项一致。未变Locks内部和全局表序沿已验收基线，审查另核当前路径与既有锁/闸门回归；没有把单Task审查冒称全库证明。创建排序/P3子项排序未改，不将巨大有限数静态加法疑点当溢出复现。
+
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
@@ -111,7 +121,8 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - `b12ffbf234b7a914c597fe986d9fd390378b6eac`（含T5a）已由系统Git推送；[CI 40193812287](https://github.com/open-nerve/NerveProject/actions/runs/40193812287) server、web、e2e全部success。此检查点不包含后续T5b。
 - `dad6a560a8e0ff509385f9d20a71979c8bddb11a`（含全部T5）已由系统Git推送；[CI 40195404827](https://github.com/open-nerve/NerveProject/actions/runs/40195404827) server、web、e2e全部success。此检查点不包含T6。
 - `b550992c4a8babf711befea10bb3d0a26eceaf61`（含T6）已由系统Git推送；[CI 40196872428](https://github.com/open-nerve/NerveProject/actions/runs/40196872428) server、web、e2e全部success。此检查点不包含T7。
-- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
+- `1c318ddc7dc7f1f0e4b733c081a7018d2883c0a9`（含T7）已由系统Git推送；[CI 40198919892](https://github.com/open-nerve/NerveProject/actions/runs/40198919892) server、web、e2e全部success。此检查点不包含T8。
+- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
 
 ## 3. 执行中的决定
 
@@ -163,7 +174,7 @@ T12拆分已获独立文档预检Approved，无阻断项，记录为ignored `tas
 
 | 接收方 | 范围 |
 |---|---|
-| P5 实施者 | T1–T4及T5a已完成；从T5b继续按spec/plan逐任务交付、测试与评审 |
+| P5 实施者 | T1–T8已完成；从T9继续按spec/plan逐任务交付、测试与评审 |
 | P8 | `link_count` 字段与两个排序码；列表/搜索共用词汇 |
 | P10b | 共用排序样例、生产前端码点比较器与vitest；旧筛选store和 `/user-properties/` 迁移 |
 | P12–P15 | 接口故事增长为页面故事，列表/看板/日历/详情与访客页面 |
@@ -172,6 +183,6 @@ T12拆分已获独立文档预检Approved，无阻断项，记录为ignored `tas
 
 ## 7. 已知限制
 
-本阶段只完成起步时，新的 SQL、API、迁移、性能和测试尚不存在。数值转换、生成器具体接线及100k成本须以实施证据落定；这里不预报通过。
+当前三条列表SQL、公共编排及排序PATCH已有上述实施证据；列表API、偏好迁移和100k性能等后续任务尚未完成，不能从已通过结果外推。
 
 本地Firefox缺失和已知W11偶发仍按既定纪律处理；绿色P4 main CI已覆盖该基线的完整浏览器任务，不代表未来P5变更已经获得同样证据。

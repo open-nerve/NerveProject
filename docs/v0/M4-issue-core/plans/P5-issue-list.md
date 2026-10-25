@@ -291,15 +291,15 @@ T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400
 
 ## Task 8：sort_order PATCH 全链
 
-文件：改 `api/modules/issue.yaml`、`I/domain/patch.go/description.go`、`I/app/rows.go/update_issue.go`、`I/adapter/http/issues.go`、`I/adapter/postgres/update.go/queries/update.sql`；各层既有测试与B/issue_updates_test.go、issue_description_skip_test.go、写锁测试。
+文件：改 `api/modules/issue.yaml`、`I/domain/patch.go/description.go`、`I/app/rows.go/update_issue.go`、`I/adapter/http/issues.go`、`I/adapter/postgres/update.go/queries/update.sql`；各层既有测试与新增domain/app/postgres的sort_order_test.go、B/issue_sort_order_test.go、issue_sort_order_interleaving_test.go，补权限矩阵及原写锁测试。
 
-- [ ] `TestIssueSortOrderPatch`：省略保持、0写入、同值不写、有限值、纯domain非有限拒绝；单独排序更新审计但无新activity，state+sort设置completed_at且只一条state动态；归档/访客/锁后角色变动沿既有规则。
-- [ ] `TestSkipActivityRejectsSortOrder`：true与false各带description+sort都422skip_activity/not_allowed，DB时间戳/描述/排序/动态/版本无变化；HTTP null/字符串400。
-- [ ] 红：`go -C server test ./internal/modules/issue/domain ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(IssueSortOrderPatch|SkipActivityRejectsSortOrder)' -count=1`；HTTP整包红也要定位到预期新增字段/错误断言。
-- [ ] 补IssuePatch/Changes/None、I/app/rows.go中现有IssueFields、合并/UpdateSQL/HTTP与相应映射测试；不把IssueFields复制到ports.go；不误改创建排序和P3子项列表created_at/id，不扩activity枚举。
-- [ ] 绿；变异漏Changes.None、零值当省略、漏skip=false组合拒绝、只改state未写sort；恢复。已有PATCH的锁/闸门/归档回归保留。
-- [ ] 新 `TestIssueSortOrderInterleaving` 覆盖排序PATCH与归档、成员退出/降级、另一排序/状态写的锁前后两种顺序；使用既有锁屏障，断言锁下重判、拒绝无副作用、成功审计与最终状态一致。强制 `go -C server test ./internal/bootstrap -run 'TestIssueSortOrderInterleaving' -race -count=5`；同步复跑该写复用的现有锁路径交错，以实际测试名列入review命令，不以“复用”免除验证。
-- [ ] H/G；提交 `feat(M4/P5): 支持工作项排序更新并保留描述互斥规则`。
+- [x] `TestIssueSortOrderPatch`：省略保持、0写入、同值不写、有限值、纯domain非有限拒绝；单独排序更新审计但无新activity，state+sort设置completed_at且只一条state动态；归档/访客/锁后角色变动沿既有规则。
+- [x] `TestSkipActivityRejectsSortOrder`：true与false各带description+sort都422skip_activity/not_allowed，DB时间戳/描述/排序/动态/版本无变化；HTTP null/字符串400。
+- [x] 红：`go -C server test ./internal/modules/issue/domain ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(IssueSortOrderPatch|SkipActivityRejectsSortOrder)' -count=1`；HTTP整包红也要定位到预期新增字段/错误断言。
+- [x] 补IssuePatch/Changes/None、I/app/rows.go中现有IssueFields、合并/UpdateSQL/HTTP与相应映射测试；不把IssueFields复制到ports.go；不误改创建排序和P3子项列表created_at/id，不扩activity枚举。
+- [x] 绿；变异漏Changes.None、零值当省略、漏skip=false组合拒绝、只改state未写sort；恢复。已有PATCH的锁/闸门/归档回归保留。
+- [x] 新 `TestIssueSortOrderInterleaving` 覆盖排序PATCH与归档、成员退出/降级、另一排序/状态写的锁前后两种顺序；使用既有锁屏障，断言锁下重判、拒绝无副作用、成功审计与最终状态一致。强制 `go -C server test ./internal/bootstrap -run 'TestIssueSortOrderInterleaving' -race -count=5`；同步复跑该写复用的现有锁路径交错，以实际测试名列入review命令，不以“复用”免除验证。
+- [x] H/G；提交 `feat(M4/P5): 支持工作项排序更新并保留描述互斥规则`。
 
 ## Task 9：项目列表 API 与 HTTP 边界
 
