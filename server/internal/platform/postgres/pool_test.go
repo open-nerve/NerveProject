@@ -2,9 +2,12 @@ package postgres_test
 
 import (
 	"context"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -54,6 +57,55 @@ func TestNewPoolRejectsUnusableURLWithoutLeakingPassword(t *testing.T) {
 		_, err := postgres.NewPool(context.Background(), config.DatabaseConfig{URL: url, MaxConns: 1})
 		if err == nil || err.Error() != want || strings.Contains(err.Error(), "secret") {
 			t.Errorf("NewPool(%q) error = %v, want %q", url, err, want)
+		}
+	}
+}
+
+func TestPoolForcesListRuntimeParams(t *testing.T) {
+	u, err := url.Parse(pgtest.NewEmptyDatabase(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	params := u.Query()
+	params.Set("jit", "on")
+	params.Set("plan_cache_mode", "auto")
+	params.Set("application_name", "list-runtime-params-test")
+	u.RawQuery = params.Encode()
+	pool := newPool(t, u.String())
+	ctx := context.Background()
+
+	first, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatalf("acquire first connection: %v", err)
+	}
+	defer first.Release()
+	second, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatalf("acquire second connection: %v", err)
+	}
+	defer second.Release()
+
+	for i, conn := range []*pgxpool.Conn{first, second} {
+		var jit, planCacheMode, applicationName string
+		var scanned time.Time
+		err := conn.QueryRow(ctx, `SELECT current_setting('jit'), current_setting('plan_cache_mode'),
+			current_setting('application_name'), '2026-09-25 18:00:00+08'::timestamptz`).Scan(
+			&jit, &planCacheMode, &applicationName, &scanned)
+		if err != nil {
+			t.Fatalf("connection %d: read runtime parameters and timestamp: %v", i+1, err)
+		}
+		if jit != "off" {
+			t.Errorf("connection %d: jit = %q, want off", i+1, jit)
+		}
+		if planCacheMode != "force_custom_plan" {
+			t.Errorf("connection %d: plan_cache_mode = %q, want force_custom_plan", i+1, planCacheMode)
+		}
+		if applicationName != "list-runtime-params-test" {
+			t.Errorf("connection %d: application_name = %q, want list-runtime-params-test", i+1, applicationName)
+		}
+		want := time.Date(2026, 9, 25, 10, 0, 0, 0, time.UTC)
+		if scanned.Location() != time.UTC || !scanned.Equal(want) {
+			t.Errorf("connection %d: scanned %v, want %v in UTC", i+1, scanned, want)
 		}
 	}
 }
