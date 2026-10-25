@@ -226,12 +226,12 @@ type IssueListSettings interface {
 
 文件：新 `I/domain/list_query.go/list_order.go/list_cursor.go` 及对应测试、`api/testdata/issue-order.json`；shared/page.go/cursor.go只消费。
 
-- [ ] 写 `TestParseListQuery`：CSV OR/字段AND、UUID+none、me、重复日期闭区间、none互斥、合法空交集、非法/反向/空token、重复每个非日期参数、未知参数、个人专用边界、group_key/sub_group_key所有组合、limit省略/0/101。
-- [ ] 写 `TestIssueOrderSamples`、`TestListCursor`：19码roundtrip与错误order/类型/版本/base64/canonical/UUID；Go读取共享JSON，验证生产名字键归一化、键类型/可空性/规范游标，保留日期/null/逆ID、非ASCII大小写及U+FF5E<U+1F600的独立固定预期供T5真实SQL消费。时间固定六位小数UTC，拒绝亚微秒；count保持int64精度；sort有限float64且相邻值可辨、正负零规范为正零。不新增只有测试消费的生产全序比较器；null方向、UUID方向与多值min的实际排序证明在T5/T12完成。
-- [ ] 红：`go -C server test ./internal/modules/issue/domain -run 'Test(ParseListQuery|IssueOrderSamples|ListCursor)' -count=1`。
-- [ ] 实现ParseListQuery/NameOrderKey/cursor；精确数字不落float64通用解码；共享JSON内容可读，说明P10b消费义务，不写无消费者TS代码。
-- [ ] 绿；实际变异只保留最后一个重复日期条件、名字改Unicode lower、时间截毫秒、计数先转float64各至少一次，记录真实业务失败与恢复。日期AND→OR、null降序反转、同键id方向固定及多值min→max是尚未存在的SQL行为，移到T5实际查询变异并在T12收口，不在T3提前标完成。
-- [ ] G；提交 `feat(M4/P5): 解析列表参数并固定全序游标契约`。
+- [x] 写 `TestParseListQuery`：CSV OR/字段AND、UUID+none、me、重复日期闭区间、none互斥、合法空交集、非法/反向/空token、重复每个非日期参数、未知参数、个人专用边界、group_key/sub_group_key所有组合、limit省略/0/101。
+- [x] 写 `TestIssueOrderSamples`、`TestListCursor`：19码roundtrip与错误order/类型/版本/base64/canonical/UUID；Go读取共享JSON，验证生产名字键归一化、键类型/可空性/规范游标，保留日期/null/逆ID、非ASCII大小写及U+FF5E<U+1F600的独立固定预期供T5真实SQL消费。时间固定六位小数UTC，拒绝亚微秒；count保持int64精度；sort有限float64且相邻值可辨、正负零规范为正零。不新增只有测试消费的生产全序比较器；null方向、UUID方向与多值min的实际排序证明在T5/T12完成。
+- [x] 红：`go -C server test ./internal/modules/issue/domain -run 'Test(ParseListQuery|IssueOrderSamples|ListCursor)' -count=1`。
+- [x] 实现ParseListQuery/NameOrderKey/cursor；精确数字不落float64通用解码；共享JSON内容可读，说明P10b消费义务，不写无消费者TS代码。
+- [x] 绿；实际变异只保留最后一个重复日期条件、名字改Unicode lower、时间截毫秒、计数先转float64各至少一次，记录真实业务失败与恢复。日期AND→OR、null降序反转、同键id方向固定及多值min→max是尚未存在的SQL行为，移到T5实际查询变异并在T12收口，不在T3提前标完成。
+- [x] G；提交 `feat(M4/P5): 解析列表参数并固定全序游标契约`。
 
 ## Task 4：普通项目与完整名字目录
 
@@ -241,7 +241,7 @@ type IssueListSettings interface {
 - [ ] 写 `TestListDirectories`：范围内完整状态/标签，triage排除但既有States保留；负责人先曾被指派后退出/降级仍取名，软删负责人行/外项目排除；空输入零目录、不nil，端口故障原样传播/ctx一致。
 - [ ] 红：`go -C server test ./internal/modules/project/adapter/postgres ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(VisibleIssueProjects|ListDirectories|HistoricalIssueProjects|HistoricalProjects)' -count=1`。
 - [ ] 实现上表端口与bootstrap转换，sqlc生成；只取所属模块表，数组配对由ID映射构建，不依赖map随机顺序。
-- [ ] 绿；变异删除is_active/archived条件、用active成员当姓名目录、误改Historical删过滤，每类对应反例红；恢复。
+- [ ] 绿；实际变异删除is_active/archived条件、负责人目录误取软删除关系、误改Historical删过滤，每类对应反例红；恢复。退出/降guest后仍取姓名由真实AssigneeIDs→PublicProfiles组合验证，T5实际Listing消费者再覆盖。T4尚无可替换成活跃成员名单的生产调用点，不为强造该变异添加跨模块SQL/端口或修改测试来源来冒充生产变异。
 - [ ] G；提交 `feat(M4/P5): 提供普通可读项目与列表名字目录`。
 
 ## Task 5：不分组静态查询与公共编排
