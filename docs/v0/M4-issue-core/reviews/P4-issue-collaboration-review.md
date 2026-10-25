@@ -356,6 +356,8 @@ T6准备时确认：T5的共享表情错误文案当前限定“on the work item
 
 **负责人提供的失败日志。** 本轮E2E为134通过/1失败；唯一失败是Chromium的 `e2e/stories/smoke/s2-web-app.spec.ts:319`：工作区菜单中“Leave workspace”已可见，按Escape后5秒内该menuitem仍为1，预期0。Firefox A4通过。因此本轮不能归为W11，也不是本地缺Firefox；菜单未关闭的根因待定位，尚不判断是产品行为还是测试时序。已启动只读诊断，未扩展为无关W11调查；原始用户日志节选保存于 `logs/task-16-ci-s2-owner-excerpt.txt`。
 
+**S2定向诊断边界。** 只读核对确认S2、菜单实现和相关依赖相对P4基线未改。临时浏览器观察器保持原点击、可见、Escape及卸载断言，记录真实按键目标、焦点、`aria-expanded`和过渡状态：普通运行10/10通过（UTC07:18:09–38，28.2s）；仅菜单操作前启用CDP CPU8倍限速后10/10通过（UTC07:19:35–07:20:07，31.0s）。两轮均单worker、串行套件；按键目标始终是menu，限速轮最终expanded=false且菜单已卸载。原S2源码逐字恢复，未改生产、测试断言或超时。这不能证明CI失败已修复；“Escape未到菜单”与“关闭后的动画未卸载”仍需真实失败快照区分，已请负责人提供该次 `error-context.md` 的菜单片段。完整静态分析见 `task-16-s2-diagnosis.md`，观察脚本、原始/观察版及 `logs/s2-observe-baseline.{log,json}`、`logs/s2-cpu8.{log,json}` 保留；不继续盲目重复或将本地通过冒充CI通过。
+
 同轮root使用系统git的普通push、PTY dry-run和显式指定系统osxkeychain助手的dry-run均报 `-25308` / exit128；`ls-remote`和fetch成功，公开读取不证明认证推送恢复。未改变Git配置、未读取凭据；实际命令与起止记录见 `logs/task-16-root-ci-commands.jsonl`、`logs/git-auth-fetch-check-20261025.json`、`logs/git-auth-explicit-system-helper-check.json`。负责人说明SSH操作没有看到授权弹窗，已指导通过本机或屏幕共享的图形桌面为系统Git助手完成正常钥匙串授权，之后必须由root实际推送验证；当前不能声称自主推送已恢复。此后本地文档提交不在上述CI的精确SHA覆盖范围内，恢复推送后另记最新HEAD的运行。
 
 ## 5. 最终实现与 plan 的差异
