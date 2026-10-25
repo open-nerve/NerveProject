@@ -172,6 +172,47 @@ func TestListingHistoricalAssignees(t *testing.T) {
 				t.Fatalf("absent selected group %+v", empty)
 			}
 		})
+		t.Run("cell pages and same-snapshot totals", func(t *testing.T) {
+			input := issueapp.ListingInput{ActorID: w.ids["walt"], Projects: visible, Query: issuedomain.ListQuery{Order: "assignee_name", GroupBy: "priority", SubGroupBy: "target_date", Limit: 1, Filters: issuedomain.ListFilters{SubIssues: true}}}
+			page, err := listing.Read(ctx, input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if page.Total != 3 || page.Data != nil || len(page.Groups) != 1 || len(page.SubgroupTotals) != 1 || page.SubgroupTotals[0].Key != "none" || page.SubgroupTotals[0].Total != 3 {
+				t.Fatalf("lane envelope %+v", page)
+			}
+			group := page.Groups[0]
+			if group.Key != "none" || group.Total != 3 || group.Data != nil || len(group.Subgroups) != 1 {
+				t.Fatalf("lane group %+v", group)
+			}
+			cell := group.Subgroups[0]
+			if cell.Key != "none" || cell.Total != 3 || len(cell.Data) != 1 || cell.Data[0].ID != former || cell.Data[0].ParentID != nil || !slices.Equal(cell.Data[0].AssigneeIDs, []uuid.UUID{w.ids["bob"]}) {
+				t.Fatalf("cell parent/array %+v", cell)
+			}
+			c, err := issuedomain.DecodeListCursor(cell.NextCursor, input.Query.Order)
+			if err != nil {
+				t.Fatal(err)
+			}
+			key := "none"
+			input.Query.GroupKey, input.Query.SubGroupKey, input.Query.Cursor = &key, &key, &c
+			continued, err := listing.Read(ctx, input)
+			if err != nil || continued.Total != 3 || continued.Groups != nil || continued.SubgroupTotals != nil || len(continued.Data) != 1 || continued.Data[0].ID != guest || continued.NextCursor == "" {
+				t.Fatalf("continued cell %+v %v", continued, err)
+			}
+			input.Query.Filters.Assignees = issuedomain.IDFilter{IDs: []uuid.UUID{w.ids["bob"]}}
+			input.Query.Filters.Target = []issuedomain.DateFilter{{None: true}}
+			input.Query.Cursor = &issuedomain.ListCursor{Order: input.Query.Order, Key: []byte("null"), ID: none}
+			empty, err := listing.Read(ctx, input)
+			if err != nil || empty.Total != 1 || empty.Data == nil || len(empty.Data) != 0 || empty.NextCursor != "" || empty.Groups != nil || empty.SubgroupTotals != nil {
+				t.Fatalf("filtered cell past end %+v %v", empty, err)
+			}
+			missing := "2026-01-01"
+			input.Query.SubGroupKey = &missing
+			empty, err = listing.Read(ctx, input)
+			if err != nil || empty.Total != 0 || empty.Data == nil || len(empty.Data) != 0 {
+				t.Fatalf("absent cell %+v %v", empty, err)
+			}
+		})
 
 		return nil
 	})

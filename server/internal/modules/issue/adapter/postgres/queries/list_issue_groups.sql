@@ -107,6 +107,7 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.
        i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at,
        i.created_by_id, i.updated_by_id, i.created_at, i.updated_at, k.total::bigint AS total,
        k.group_key::text AS group_key, k.group_total::bigint AS group_total,
+       ''::text AS sub_group_key, 0::bigint AS subgroup_total, 0::bigint AS cell_total,
        coalesce(k.k_text,'')::text AS name_key, (k.k_text IS NULL)::boolean AS name_null,
        coalesce(k.child_count,(SELECT count(*) FROM issues c WHERE c.parent_id=i.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
                               AND (NOT k.own_only OR c.created_by_id=sqlc.arg(actor_id)::uuid)))::bigint AS sub_issues_count,

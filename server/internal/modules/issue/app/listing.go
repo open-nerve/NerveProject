@@ -22,18 +22,26 @@ type ListingInput struct {
 // IssueListPage contains either Data or Groups, selected by the query.
 // An empty NextCursor represents the last page.
 type IssueListPage struct {
-	Total      int64
-	Data       []domain.Issue
-	NextCursor string
-	Groups     []IssueListGroup
+	Total          int64
+	Data           []domain.Issue
+	NextCursor     string
+	Groups         []IssueListGroup
+	SubgroupTotals []ListTotal
 }
 
-// IssueListGroup contains one nonempty group and its independent cursor.
+// ListTotal is the independent, deduplicated total for one lane.
+type ListTotal struct {
+	Key   string
+	Total int64
+}
+
+// IssueListGroup contains a group or cell, with either rows or subgroups.
 type IssueListGroup struct {
 	Key        string
 	Total      int64
 	Data       []domain.Issue
 	NextCursor string
+	Subgroups  []IssueListGroup
 }
 
 type ListingDeps struct {
@@ -60,12 +68,15 @@ func (l *Listing) Read(ctx context.Context, input ListingInput) (IssueListPage, 
 	if q.Limit < 1 || q.Limit > shared.MaxPageSize {
 		return IssueListPage{}, fmt.Errorf("invalid list page size")
 	}
-	if q.SubGroupBy != "" || q.SubGroupKey != nil {
-		return IssueListPage{}, fmt.Errorf("unsupported list subgroup")
+	if q.SubGroupKey != nil && q.SubGroupBy == "" || q.SubGroupBy != "" && (q.GroupBy == "" || q.GroupBy == q.SubGroupBy || (q.GroupKey == nil) != (q.SubGroupKey == nil)) {
+		return IssueListPage{}, fmt.Errorf("invalid list subgroup")
 	}
 	page := IssueListPage{Data: make([]domain.Issue, 0)}
 	if q.GroupBy != "" && q.GroupKey == nil {
 		page = IssueListPage{Groups: make([]IssueListGroup, 0)}
+		if q.SubGroupBy != "" {
+			page.SubgroupTotals = make([]ListTotal, 0)
+		}
 	}
 	if len(input.Projects) == 0 {
 		return page, nil
@@ -78,6 +89,9 @@ func (l *Listing) Read(ctx context.Context, input ListingInput) (IssueListPage, 
 	fetch := l.deps.Rows.Flat
 	if q.GroupBy != "" {
 		fetch = l.deps.Rows.Groups
+	}
+	if q.SubGroupBy != "" {
+		fetch = l.deps.Rows.Subgroups
 	}
 	rows, err := fetch(ctx, read)
 	if err != nil {
@@ -98,6 +112,9 @@ func (l *Listing) Read(ctx context.Context, input ListingInput) (IssueListPage, 
 		return page, nil
 	}
 	if q.GroupBy != "" && q.GroupKey == nil {
+		if q.SubGroupBy != "" {
+			return l.subgroups(ctx, input, rows)
+		}
 		return l.groups(ctx, input, rows)
 	}
 	page.Total = selectedTotal(q, rows[0])
@@ -114,6 +131,9 @@ func (l *Listing) Read(ctx context.Context, input ListingInput) (IssueListPage, 
 }
 
 func selectedTotal(q domain.ListQuery, r ListRecord) int64 {
+	if q.SubGroupKey != nil {
+		return r.CellTotal
+	}
 	if q.GroupKey != nil {
 		return r.GroupTotal
 	}

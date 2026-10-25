@@ -86,3 +86,42 @@ func TestIssueGroupParameters(t *testing.T) {
 		}
 	}
 }
+
+func TestIssueSubgroupsParameters(t *testing.T) {
+	actor, target := uuid.NewV7(), uuid.NewV7()
+	key := "none"
+	in := app.ListRead{ActorID: actor, TargetMemberID: &target, Query: domain.ListQuery{Order: "sort_order", Relation: "assigned", Limit: 1, GroupBy: "label_id", GroupKey: &key, SubGroupBy: "assignee_id", SubGroupKey: &key, Cursor: &domain.ListCursor{Order: "sort_order", Key: []byte("1"), ID: actor}}}
+	p, err := subgroupParameters(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.ActorID != actor || p.RelationUserID == nil || *p.RelationUserID != target || p.GroupBy != "label_id" || p.SubGroupBy != "assignee_id" || p.GroupKey == nil || *p.GroupKey != key || p.SubGroupKey == nil || *p.SubGroupKey != key || !p.HasCursor || p.CursorNum == nil || *p.CursorNum != 4607182418800017408 || p.PageSize != 2 {
+		t.Fatalf("cell parameters %+v", p)
+	}
+	for name, isNil := range map[string]bool{
+		"projects": p.ProjectIds == nil, "own": p.ProjectOwn == nil, "states": p.StateIds == nil, "state groups": p.StateGroups == nil, "state keys": p.StateKeys == nil,
+		"labels": p.LabelIds == nil, "label keys": p.LabelKeys == nil, "assignees": p.AssigneeIds == nil, "assignee keys": p.AssigneeKeys == nil,
+		"filter projects": p.FilterProjects == nil, "filter states": p.FilterStates == nil, "filter groups": p.FilterGroups == nil, "priorities": p.FilterPriorities == nil,
+		"creators": p.FilterCreators == nil, "mentions": p.FilterMentions == nil, "subscribers": p.FilterSubscribers == nil, "filter labels": p.FilterLabels == nil, "filter assignees": p.FilterAssignees == nil,
+		"start none": p.StartNone == nil, "start from": p.StartFrom == nil, "start to": p.StartTo == nil, "target none": p.TargetNone == nil, "target from": p.TargetFrom == nil, "target to": p.TargetTo == nil,
+	} {
+		if isNil {
+			t.Errorf("nil cell sqlc array: %s", name)
+		}
+	}
+	for _, bad := range []domain.ListQuery{
+		{GroupBy: "label_id"}, {SubGroupBy: "assignee_id"}, {GroupBy: "priority", SubGroupBy: "priority"},
+		{GroupBy: "project_id", SubGroupBy: "priority"}, {GroupBy: "label_id", SubGroupBy: "project_id"},
+		{GroupBy: "label_id", SubGroupBy: "assignee_id", GroupKey: &key},
+		{GroupBy: "label_id", SubGroupBy: "assignee_id", SubGroupKey: &key},
+		{GroupBy: "state_id", SubGroupBy: "assignee_id", GroupKey: &key, SubGroupKey: &key},
+		{GroupBy: "label_id", SubGroupBy: "state_group", GroupKey: &key, SubGroupKey: &key},
+		{GroupBy: "label_id", SubGroupBy: "assignee_id", Cursor: in.Query.Cursor},
+	} {
+		in.Query = bad
+		in.Query.Order, in.Query.Relation, in.Query.Limit = "sort_order", "assigned", 1
+		if _, err := subgroupParameters(in); err == nil {
+			t.Fatalf("accepted invalid cell query %+v", bad)
+		}
+	}
+}

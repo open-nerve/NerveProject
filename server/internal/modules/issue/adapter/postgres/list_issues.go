@@ -36,7 +36,7 @@ func listRecord(r gen.FlatIssuesRow, order domain.ListOrder) (app.ListRecord, er
 	if err != nil {
 		return app.ListRecord{}, err
 	}
-	return app.ListRecord{Total: r.Total, GroupKey: r.GroupKey, GroupTotal: r.GroupTotal, Position: position, Issue: domain.Issue{
+	return app.ListRecord{Total: r.Total, GroupKey: r.GroupKey, GroupTotal: r.GroupTotal, SubGroupKey: r.SubGroupKey, SubgroupTotal: r.SubgroupTotal, CellTotal: r.CellTotal, Position: position, Issue: domain.Issue{
 		ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: int(r.SequenceID), Name: r.Name, StateID: r.StateID,
 		Priority: domain.Priority(r.Priority), StartDate: dayOf(r.StartDate), TargetDate: dayOf(r.TargetDate), ParentID: r.ParentID,
 		SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, ArchivedAt: r.ArchivedAt, CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
