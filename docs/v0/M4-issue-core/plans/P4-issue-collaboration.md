@@ -8,7 +8,7 @@
 
 **技术栈：** Go 1.27/toolchain go1.27.1、pgx v5.11.0、sqlc v1.31.1、oapi-codegen v2.8.0、PostgreSQL 18.6、Node 24、pnpm 11.10.0和仓库锁定的TipTap/vitest/Playwright；仅新增已批准bluemonday及设计点名的传递依赖。
 
-**规格：** [P4规格](../specs/P4-issue-collaboration.md)；[上级设计](../M4-design.md)。代码基线56d575fb8ff6575880d1edef65219728a81f2b12，恢复文档HEAD 573e8eb6。本plan为紧凑可执行计划，不转录整份实现；没有整段原型或其生成SHA；实际Task验证进度见review；T1–T15独立评审通过，T16文档/两项Minor和适用验证完成待独立复核，分支CI/Claude终审未执行。
+**规格：** [P4规格](../specs/P4-issue-collaboration.md)；[上级设计](../M4-design.md)。代码基线56d575fb8ff6575880d1edef65219728a81f2b12，恢复文档HEAD 573e8eb6。本plan为紧凑可执行计划，不转录整份实现；没有整段原型或其生成SHA；实际Task验证进度见review；T1–T16独立评审通过，T15两项Minor已由T16关闭；分支CI因系统git推送认证失败尚未启动，Claude终审待负责人安排。
 
 ## Global Constraints
 
@@ -428,7 +428,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** review沿P3§1–7（方式、验收证据、局部决定、终审发现、plan差异、移交、限制）；消费实际每Task日志/提交/变异/门禁，不用计划预期填结果。T16专属文档职责：执行者可修改Files所列跟踪文档，根任务在其实施期间冻结这些文件的并发修改；保留原有真实失败/修复和逐Task证据，修正当前状态与过时措辞，不覆盖历史。根任务随后维护独立评审及实际分支CI记录。
 
-- [x] **Step 0 关闭T15两项Minor。** 读取task-15-review.md的M1/M2原文。以纯值检查先复现RFC3339Nano的尾零/整秒比较误判，抽取I12已用的小型定宽排序函数给I2/I12/I13，禁止改用丢微秒的Date。确认小数精度不同、无小数秒、微秒差和相同时刻后，只定位三份受影响故事。保留原颜色冲突警告，在本已需要的命令中移除冲突变量，不改全局环境、不为噪声单独重跑。T16独立评审须逐项确认M1/M2处理。
+- [x] **Step 0 关闭T15两项Minor。** 读取task-15-review.md的M1/M2原文。以纯值检查先复现RFC3339Nano的尾零/整秒比较误判，抽取I12已用的小型定宽排序函数给I2/I12/I13，禁止改用丢微秒的Date。确认小数精度不同、无小数秒、微秒差和相同时刻后，只定位三份受影响故事。保留原颜色冲突警告，在本已需要的命令中移除冲突变量，不改全局环境、不为噪声单独重跑。T16独立评审已逐项确认M1/M2为ADDRESSED（499cf108..3c0446ea，task-16-review.md）。
 - [x] **Step 1 收集验收。** 对spec§4每项指向可复核日志/提交；没有证据保持未勾选。同步A1原话与content最终放置、纯层守卫实测；填写16Task实际大小/依赖变化，不补造原型或全量重放。
 - [x] **Step 2 更新上级。** 按设计3.23/P4：无回复、仅描述历史、44表/无issue_versions、20版保留交P9、PageSize共享；五表逐列差异、500000上限、skip内容标识/审计代价、空评论、表情格式、作者权限、动态分页/过滤/增量限制。未做保留任务不能写为正在运行。
 - [x] **Step 3 移交。** 五份handoff追加“处理结果（M4/P4）”与余项，status仍open；P5复用ReadOnlySnapshot/历史目录，P6事件且skip相同不发布，P9保留/清理，P11新DTO/地址及comment_json，P14撤销重做/isMigrationUpdate，P15末页cursor重取，M5图片src投影经收尾交接；没有遗漏原spec§5/7。
@@ -439,6 +439,6 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 16个任务与设计原任务映射在spec§3.2；12个新操作/五表全部有拥有Task，表与fixture同批交付。Task7/8内部准备由Task9消费，不提前公开描述字段；Task11历史目录由Task12消费。公共类型与方法按上面的公共表和各Interfaces定义，不依赖代码转录。Review Focus五项分别绑定实际测试和变异。作者自检报告保存于工作树的`.superpowers/sdd/P4-issue-collaboration/plan-author-report.md`（过程记录，不作为已完成测试证据）。
 
-原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检及六项修订复核、T1–T15实施/适用验证与独立Task评审均已完成；T1/F1、T6/I1及T9/T13 Minor的复核闭合见review。T16已完成授权文档交接、T15两项Minor处理及适用Web G/故事验证，待独立复核；完整e2e133通过/2项Firefox缺失失败。Step4总项仍未勾：最终提交后gen-check证据见task-16-report，分支CI及Claude整分支终审由root/负责人接续，尚未合并。16Task实际实现/修复numstat及依赖变化见review §5；T16精确SHA和最终规模见执行报告，不在将提交文档中预造自己的SHA。106次生产变异不包含T16纯值边界红绿，不称全面杀死率。
+原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检及六项修订复核、T1–T16实施/适用本地验证与独立Task评审均已完成；T1/F1、T6/I1及T9/T13 Minor的复核闭合见review。T16已完成授权文档交接、T15两项Minor处理及适用Web G/故事验证，独立审查C/I/M均0；完整e2e133通过/2项Firefox缺失失败。Step4总项仍未勾：最终提交后gen-check已通过（3c0446ea，见task-16-report）；系统git推送exit128因本机GitHub认证失败，分支CI尚未启动；Claude整分支终审待负责人安排，尚未合并。16Task实际实现/修复numstat及依赖变化见review §5；T16精确SHA和最终规模见执行报告，不在将提交文档中预造自己的SHA。106次生产变异不包含T16纯值边界红绿，不称全面杀死率。
 
 T16本次验证入口：工作树 `.superpowers/sdd/P4-issue-collaboration/logs/task-16-commands.jsonl`；纯值红绿、三故事6通过、Web54/17/knip、完整e2e133通过/2环境失败及全部首次失败保留于task-16-report。T15两项Minor处理待独立评审确认；表数口径为Nerve44=Plane43+新增1，五份handoff仍open，M4整体完成标准未勾。

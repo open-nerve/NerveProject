@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M4/P4 `issue-collaboration` |
 | 日期 | 2026-10-25 |
-| 状态 | **实现/适用验证完成，待终审**：T1–T15独立评审通过，T16文档/Minor处理待独立复核；Firefox两项环境失败、分支CI与Claude终审未通过/未执行，尚未合并 |
+| 状态 | **实现/适用验证完成，待终审**：T1–T16独立评审通过，T15两项Minor已由T16复核关闭；Firefox两项环境失败、分支CI与Claude终审未通过/未执行，尚未合并 |
 | spec / plan | [spec](../specs/P4-issue-collaboration.md) / [plan](../plans/P4-issue-collaboration.md) |
 | 分支 | `codex/m4-p4` |
 | main 基线 | `56d575fb8ff6575880d1edef65219728a81f2b12` |
@@ -14,7 +14,7 @@
 
 - 按[交接入口](../../claude_to_gpt/README.md)的顺序读取 01、03、02、04、05、06，核对 M4 设计的 P4–收尾、完成标准、进度表，以及 P3 的 spec、plan、review 样板和此前交给 P4 的事项。
 - 依交接 02 §3 调整计划产出方式：保留文件、接口、验收、执行命令与关键性质的变异计划，不把尚未运行的原型或逐块重放写成已验证。架构子任务负责 spec/plan 草案，主任务核对既有代码与基线。暂停时保存了 spec 和 16 个任务纲要（`573e8eb6`）；负责人批准 A1 后恢复计划细化与预检。
-- 在准备 Task 1 时发现 A1，曾停止进入预检和产品实现；负责人已批准推荐方案，现恢复推进。T1 已完成独立 Task 评审、F1 修正与定向复核，T2–T15 独立评审通过，T9/T13两项Minor分别在T10/T14关闭；T15两项Minor由T16处理待独立复核，Claude整分支终审待执行。下表保留起步基线和架构放置探针，不与 T1 结果混淆。
+- 在准备 Task 1 时发现 A1，曾停止进入预检和产品实现；负责人已批准推荐方案，现恢复推进。T1 已完成独立 Task 评审、F1 修正与定向复核，T2–T16 独立评审通过，T9/T13两项Minor分别在T10/T14关闭；T15两项Minor已由T16独立复核关闭，Claude整分支终审待执行。下表保留起步基线和架构放置探针，不与 T1 结果混淆。
 
 ## 2. 验收标准核对
 
@@ -200,7 +200,7 @@ T13 M1已通过发送后关闭结果channel修正，纯调度回归有原实现�
 
 推进者已读task-14-report.md、原始命令账本与十份变异源差异/失败断言。全部定位27.278s通过，Go lint两段0 issues，唯一完整Go通过（server63包及tools，bootstrap113.121s），提交后gen-check通过且工作树干净。容器命令串行自然退出；只有测试/helper变化，不重跑无变化Web/E2E，也未重跑T13整套race，受影响交错已定位及完整Go覆盖。首次M1绿运行因新security调用少参数构建失败、首次非法HTTP用例误用CheckRequest失败均已修正并原样保留；早期口头17注错已校正为实际16。无架构/平台/模块生产/依赖改动。独立报告task-14-review.md审查2f89db6f..08326569，规格通过、质量Approved，Critical/Important/Minor均0，T13 M1/M2均ADDRESSED。差异外约束由推进者闭合：沿用T1–T13已验收的操作集合/锁图/503及fake故障证据，保留本Task实际恢复范围、最终Go与生成检查、主目录main和提交状态的核对；既有首读包装、历史目录ctx、完整答复规整及清理依赖均已由评审定点确认。
 
-### 2.16 T15 验收与独立评审（已完成，Minor交T16）
+### 2.16 T15 验收与独立评审（已完成，Minor由T16关闭）
 
 故事与fixture提交为`f331174b`，基线`3bf89f02`；十二个e2e文件新增567行、删除7行，无最终Go/SQL/契约/Web产品改动。新增七个真实API用例：I11评论与两类表情，I12多页增量联合时间线及隐藏引用，I13版本分页/detail与普通还原，I2普通描述和独立href/checked审计；已有I1/I15/I17增长。所有前置经API，数据库仅事后断言；跨600秒边界沿用T8/T9固定时钟证据，不以故事等待或SQL造时间替代。
 
@@ -208,25 +208,27 @@ I12分别保留评论、动态末页的请求cursor，合并描述沿原id更新
 
 推进者已核对task-15-report.md、62条命令台账、五份源变异差异及业务红/恢复绿日志。skip误审计、忽略href、忽略checked、隐藏引用过滤失效、漏comment_reactions连带五个独立变体均先重建当前bin再运行；SQL两侧经gen-go。删除变体在旧分支的五表已删除断言被杀，没有冒称到达后续父树目录断言。首次定位直接15/15通过，恢复后定位15/15；首轮lint的十处no-await-in-loop修正后受影响故事4/4、Web lint54/54、knip、test-web17/17任务通过，后者全部缓存。完整make e2e为133通过、两个Firefox A4因可执行文件缺失无法启动，exit2；本轮无业务失败，不能写全绿。提交后gen-check exit0，工作树干净，容器套件无重叠，临时生产变异全部恢复。独立报告task-15-review.md审查3bf89f02..ff4845e6，规格通过、质量Approved，Critical/Important均0、Minor两项：I2/I13原始RFC3339Nano字符串大小比较可能因尾零截断偶发误判；通过日志仍有NO_COLOR与FORCE_COLOR冲突警告。两项登记并纳入T16，时间比较使用保留微秒的定宽值，日志警告如实记录并在已需运行时统一颜色变量，不为消除噪声单独重跑。差异外约束由推进者沿T1–T14已验收的固定时钟、锁图、快照、权限、五表目录和守卫闭合；本Task生产范围为空、变异逐字恢复、最终门禁与main状态已核对。
 
-### 2.17 T16 文档交接及 T15 Minor 处理（待独立复核）
+### 2.17 T16 文档交接及 T15 Minor 独立复核（已完成）
 
 基线为 `499cf108246a21bcff9aa3ee20a5f34a2f17723f`，时间修复 `960b00d37fdcf3de7e79832f6c2d31df41aada79`。本Task只承接授权的12份文档、一个fixture和三个API故事，不改生产/其他测试。完整执行报告为工作树 `.superpowers/sdd/P4-issue-collaboration/task-16-report.md`，原始命令台账 `logs/task-16-commands.jsonl`，新过程文件/日志均用task16-/task-16-前缀，未覆盖前序证据。
 
 | 项 | 实际处理与证据 | 边界 |
 |---|---|---|
-| T15/M1 | 先以纯值复现 `.12Z→.123Z`、整秒→`.000001Z` 原字符串比较反向（`task-16-instant-red[-boundaries].log` exit1）；抽取I12的九位补零为 `e2e/fixtures/instant.ts` 的instantKey，三故事复用。七对正/反序、微秒/纳秒、同语义时刻定点通过（`task-16-instant-green.log`），定位三故事六项通过 | UTC API RFC3339Nano窄排序键，不是通用日期解析器，不使用Date、不丢微秒、不改生产时间；待独立评审逐项复核 |
+| T15/M1 | 先以纯值复现 `.12Z→.123Z`、整秒→`.000001Z` 原字符串比较反向（`task-16-instant-red[-boundaries].log` exit1）；抽取I12的九位补零为 `e2e/fixtures/instant.ts` 的instantKey，三故事复用。七对正/反序、微秒/纳秒、同语义时刻定点通过（`task-16-instant-green.log`），定位三故事六项通过 | UTC API RFC3339Nano窄排序键，不是通用日期解析器，不使用Date、不丢微秒、不改生产时间；独立评审已确认ADDRESSED |
 | T15/M2 | 原 `task-15-lint-fix-focus.log:4/6/8`、`task-15-final-focus.log:4` 的NO_COLOR被FORCE_COLOR忽略警告保留；本已需要的定位/Web/e2e以 `env -u NO_COLOR` 运行，当前这些日志未再检出该冲突 | 不改全局环境、不为消噪单独重跑，不把历史通过日志说成从无警告 |
 | 上级同步 | 总体无回复/仅描述历史/业务表44=Plane43+新增1；差异清单Plane保留43/不留53（96业务+14系统=110不变），五表逐列对照快照/迁移；PageSize共享、500000/skip/作者/动态分页等已登记 | 每工作项最新20版任务仍P9待实现；M4总体9.4及设计§14不提前完成 |
 | 交接 | 五份handoff追加处理结果且status=open；spec §5/7、本文§6列出后续接收内容 | 不产生M5–M8真正收尾交接，不关闭既有handoff |
 | Web G | lint-web54/54（36缓存）exit0、knip修正后exit0、test-web17/17任务（17缓存）exit0；分别 `task-16-lint-web.log`、`task-16-knip-fixed.log`、`task-16-test-web.log` | 首次knip exit2发现本Task忽略目录两个纯值.mjs过程脚本unused，原脚本改存.mjs.txt并保留失败日志，不改knip配置/守卫 |
 | 故事 | `task-16-focus.log` 6 passed；完整 `make e2e` 的 `task-16-full-e2e.log` 133 passed/2 failed，make exit2 | 两失败分别Firefox A4 navigator.locks/localStorage lease缺firefox-1543可执行文件、均launch前止；没有新增业务失败；未安装浏览器或重跑全量 |
-| 收口门 | `git diff --check`及相对链接/新fixture文件名核对，最终提交后gen-check由执行报告与root续记；Go lint/test沿最近T14、race沿T13 | 本Task无Go变化，不重复Go/race；T16独立复核/分支CI/Claude终审由root和负责人接续，不以自查冒充 |
+| 收口门 | `git diff --check`及相对链接/新fixture文件名核对，最终提交3c0446ea后gen-check自然exit0（UTC01:16:36–39）；Go lint/test沿最近T14、race沿T13 | 本Task无Go变化，不重复Go/race；T16独立审查已通过；分支CI与Claude终审仍待完成，不以自查冒充 |
 
 首次定位的过程包装器因从e2e cwd推导日志目录错误，在启动Playwright前即FileNotFoundError；修正记录器根目录后仅启动一次定位套件，自然退出后才执行完整e2e。首次纯值脚本遇首个反例即退出，随后保留原日志并另跑两边界合并红；均是纯值业务断言，未把包装器错误当测试红。所有真实开始/结束/退出见task-16-report，不删除历史失败。
 
+推进者已读完整task-16-report.md、原始红绿/18条命令台账及实际提交，最终文档后lint-web54/54（38缓存）、232处相对路径/11个新增锚点检查、提交后gen-check均通过，工作树干净。独立task-16-review.md审查499cf108..3c0446ea，规格通过、质量Approved，Critical/Important/Minor均0；T15 M1/M2逐项ADDRESSED，当前无未关闭任务级发现。差异外的spec前八项沿本文T1–T15逐项验收、原始变异/运行记录与T14最终Go/T13 race闭合；本Task五表文档静态对应及时间修正证据已由审查者定点核对。本Task最终无新依赖或生产差异，架构守卫未改，原始失败与Firefox限制仍保留。
+
 ### 2.18 尚未完成的 P4 验收
 
-T16实现/适用验证完成待独立复核；分支CI、Claude整分支终审及其发现修复轮未执行。完整e2e的两项Firefox环境失败未通过。M4设计§14不新增勾选，总体9.4仍进行中，P4不标最终完成；没有push、PR、merge或清理。
+T1–T16实现及独立Task评审已完成；分支CI因系统git推送认证失败尚未启动，Claude整分支终审及其发现修复轮未执行。完整e2e的两项Firefox环境失败未通过。M4设计§14不新增勾选，总体9.4仍进行中，P4不标最终完成；没有成功推送、PR、merge或清理。
 
 ## 3. 准备阶段的决定与裁定记录
 
@@ -346,7 +348,9 @@ T6准备时确认：T5的共享表情错误文案当前限定“on the work item
 
 ## 4. 整分支评审的发现与处理
 
-尚未送 Claude 终审。A1 是实施前发现，负责人已批准 A 方案。T16独立评审与分支CI由root在可审查提交上接续；随后按用户要求交付分支 `codex/m4-p4`、原基线 `56d575fb8ff6575880d1edef65219728a81f2b12`、spec/plan/本review和106次变异台账，等待负责人安排Claude整分支终审。终审发现按一个修复轮处理，必要时复审；未获批准前不合并、不push main或清理。
+尚未送 Claude 终审。A1 是实施前发现，负责人已批准 A 方案。T16独立审查已通过；分支CI待负责人恢复推送认证后由root接续。按用户要求交付分支 `codex/m4-p4`、原基线 `56d575fb8ff6575880d1edef65219728a81f2b12`、spec/plan/本review和106次变异台账，等待负责人安排Claude整分支终审。终审发现按一个修复轮处理，必要时复审；未获批准前不合并、不push main或清理。
+
+**分支CI推送阻塞（2026-10-25）。** 推进者在可审提交3c0446ea使用系统`/usr/bin/git push -u origin codex/m4-p4`，UTC01:20:59–01:21:00自然exit128，错误为`failed to get: -25308`及`could not read Username for https://github.com: Device not configured`。无成功推送、无分支CI运行，不能归因W11或借用原main CI成功。原始记录在工作树`.superpowers/sdd/P4-issue-collaboration/logs/task-16-root-push-first.log`及`task-16-root-ci-commands.jsonl`。已请负责人自行恢复终端GitHub认证，不发送密码/token；遵守[03规则§3](../../claude_to_gpt/03-rules-and-pitfalls.md)“不去钥匙串或别处取凭据”。在认证恢复前保留本地分支、完整提交和终审材料，尚未合并。
 
 ## 5. 最终实现与 plan 的差异
 
@@ -373,7 +377,7 @@ T1实施中增加了CustomColor既有解析的局部根因修复，以及颜色�
 | T13 | 53f1b479 | 7 | +695/−6 | 无 |
 | T14 | db7cfc10 | 6 | +591/−18 | 无 |
 | T15 | f331174b | 12 | +567/−7 | 无 |
-| T16 | 960b00d3及本文同批文档提交（精确SHA/numstat见task-16-report.md） | 16（4代码/故事、12文档） | +219/−68（代码+12/−9；文档+207/−59） | 无 |
+| T16 | 960b00d3、3c0446ea（精确SHA/numstat见task-16-report.md） | 16（4代码/故事、12文档） | +219/−68（代码+12/−9；文档+207/−59） | 无 |
 
 T7/8内部类型与决策由T9消费，T11 Historical由T12消费，无空端口。T3/T9实际规模较大包含契约/生成物，独立评审未要求再拆；保持16Task，没有新增第17Task或缩减scope。新时间fixture仅3行；既有契约/生成物和共享S3数据契约的大小例外沿原裁定，未放宽其他逻辑约400行规则。
 
@@ -391,13 +395,13 @@ T7/8内部类型与决策由T9消费，T11 Historical由T12消费，无空端口
 | M6（经M4收尾） | 继续消费furnishIssueRows与目录删除断言，新表建出同步API前置；后续异步删除需限时轮询。P4五表已接入，未提前完成迭代/模块前端 |
 | M7/M8（经M4收尾） | 关注只在加入瞬间可读，通知发送前再判权限；评论/表情不写动态，通知从P6事件；stripped只做摘要/Webhook、不作搜索。收集箱来源和旧显示分支按M1-P3原交接继续 |
 | M4真正收尾 | 五份交接及其余输入共八份统一逐项核对closed，浏览器C12、整体性能及M5–M8交接；main CI与W11按06，当前不得关闭或冒称M4完成 |
-| root/负责人 | T16独立复核M1/M2及12文档；使用系统git推送分支后核验分支CI（push触发，不必建PR）；给负责人整分支材料后等待Claude终审。上述均尚未执行，由后续真实run/审查记录补证 |
+| root/负责人 | T16独立复核M1/M2及12文档已通过；系统git推送因本机认证失败，恢复后核验分支CI（push触发，不必建PR）；给负责人整分支材料并等待Claude终审。后续只追加真实run/审查记录 |
 
 原spec §7的P1b/P2/P3输入已分别由T7–9/15、T3–6/10/12/14/15、T9/11–14消费。五份handoff只追加“处理结果（M4/P4）”及明确余项，均保持open；原关闭条件未删除，M4§14和总体§9.4不提前完成。
 
 ## 7. 已知限制
 
-- P4实现/适用验证完成待T16独立复核、分支CI及Claude终审；完整e2e两项Firefox缺失仍未通过。M4仍有P5–收尾，没有推送、PR、合并或清理，也没有P4合并main CI。原main CI342/343成功仅是历史证据，不能替代本分支CI。
+- P4实现/适用本地验证及T1–T16独立评审完成，尚待分支CI及Claude终审；完整e2e两项Firefox缺失仍未通过。M4仍有P5–收尾，系统git推送因认证失败，没有成功推送、PR、合并或清理，也没有P4合并main CI。原main CI342/343成功仅是历史证据，不能替代本分支CI。
 - W11 既有偶发失败按 [06](../../claude_to_gpt/06-ci-w11-flake.md) 的裁定不调查；未来某次合并被它阻塞且重跑仍失败时再上报。
 - 独立预检及六项局部修订的定向复核已完成；只代表计划层可执行，不代表产品测试或阶段终审通过。
 
