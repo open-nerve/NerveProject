@@ -407,7 +407,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 ### Task 15: I11–I13接口故事与旧故事增长
 
-**Files:** Create `e2e/stories/issue/i11-comments-reactions.spec.ts`、`i12-activity.spec.ts`、`i13-description-history.spec.ts`；Modify `i1-create-issue.spec.ts`、`i2-update-issue.spec.ts`、`i15-archive-issue.spec.ts`、`i17-delete-issue.spec.ts`、`e2e/fixtures/assert/issue.ts`、`e2e/fixtures/furnish.ts`。已有I2为352行、assert/issue.ts为397行；新增描述故事可独立为`i2-description.spec.ts`，协作断言可独立为`e2e/fixtures/assert/issue-collaboration.ts`，原文件保留职责并引用/说明，不为估计清单制造无效修改。复用既有activity工厂与删除目录，不复制；furnish已有五表API前置，按实际缺口增补并更新说明。
+**Files:** Create `e2e/stories/issue/i11-comments-reactions.spec.ts`、`i12-activity.spec.ts`、`i13-description-history.spec.ts`；Modify `i1-create-issue.spec.ts`、`i2-update-issue.spec.ts`、`i15-archive-issue.spec.ts`、`i17-delete-issue.spec.ts`、`e2e/fixtures/assert/issue.ts`、`e2e/fixtures/furnish.ts`、`e2e/fixtures/comments.ts`（评论/表情专用API帮手）、`e2e/fixtures/issues.ts`（动态/描述版本专用API帮手）。已有I2为352行、assert/issue.ts为397行；新增描述故事可独立为`i2-description.spec.ts`，协作断言可独立为`e2e/fixtures/assert/issue-collaboration.ts`，原文件保留职责并引用/说明，不为估计清单制造无效修改。复用既有activity工厂与删除目录，不复制；furnish已有五表API前置，按实际缺口增补并更新说明。
 
 **Interfaces:** Consumes真实12 APIs与create/update描述，使用既有api fixture、activityRow/byId/madeBy/expectIssueDeleted；新增动态断言经已有activityRow，不另写一套shape。故事准备只能API，库仅用于事后断言。跨600秒边界由T8/T9固定clock测试，不在故事SQL造时间或等待600秒。
 
