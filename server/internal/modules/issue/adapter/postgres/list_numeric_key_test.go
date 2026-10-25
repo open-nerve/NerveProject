@@ -8,6 +8,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres/gen"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 )
 
@@ -36,6 +37,16 @@ func TestListNumericCursor(t *testing.T) {
 		cursor := domain.ListCursor{Order: "sub_issues_count", Key: json.RawMessage(strconv.FormatInt(count, 10)), ID: uuid.NewV7()}
 		if err := cursorParameters(&p, cursor, cursor.Order); err != nil || p.CursorNum == nil || *p.CursorNum != count {
 			t.Fatalf("count %d cursor %+v, %v", count, p, err)
+		}
+		in := app.ListRead{ActorID: uuid.NewV7(), Query: domain.ListQuery{Order: cursor.Order, Cursor: &cursor, Limit: 1, GroupBy: "label_id", GroupKey: new("none")}}
+		g, err := groupParameters(in)
+		if err != nil || g.CursorNum == nil || *g.CursorNum != count || g.PageSize != 2 {
+			t.Fatalf("group typed count/lookahead %d: %+v %v", count, g, err)
+		}
+		in.Query.SubGroupBy, in.Query.SubGroupKey = "assignee_id", new("none")
+		s, err := subgroupParameters(in)
+		if err != nil || s.CursorNum == nil || *s.CursorNum != count || s.PageSize != 2 {
+			t.Fatalf("subgroup typed count/lookahead %d: %+v %v", count, s, err)
 		}
 	}
 }

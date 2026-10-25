@@ -173,9 +173,9 @@ func TestFlatIssueListWideDates(t *testing.T) {
 // Read the exact numeric CASE from the production SQL, rather than a second
 // handwritten approximation. Only its source row is a synthetic one: enormous
 // child counts cannot be seeded. This probe does not claim a 2^53-child page.
-func numericExpression(t *testing.T) string {
+func numericExpression(t *testing.T, file string) string {
 	t.Helper()
-	data, err := os.ReadFile("queries/list_issues.sql")
+	data, err := os.ReadFile("queries/" + file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,9 +191,16 @@ func numericExpression(t *testing.T) string {
 	return strings.ReplaceAll(tail[start:end+3], "sqlc.arg(order_key)::text", "$1::text")
 }
 
-func TestFlatIssueListNumericExpression(t *testing.T) {
+func TestIssueListNumericExpressions(t *testing.T) {
+	for _, file := range []string{"list_issues.sql", "list_issue_groups.sql", "list_issue_subgroups.sql"} {
+		t.Run(file, func(t *testing.T) { checkListNumericExpression(t, file) })
+	}
+}
+
+func checkListNumericExpression(t *testing.T, file string) {
+	t.Helper()
 	_, pool := newStore(t)
-	expression := numericExpression(t)
+	expression := numericExpression(t, file)
 	query := "SELECT pg_typeof(k)::text,k::text,k=$6::numeric FROM (SELECT " + expression + " AS k FROM (SELECT pg_catalog.float8send($2::float8) AS bits,$3::timestamptz AS created_at,$3::timestamptz AS updated_at,$4::bigint AS child_count,$5::date AS start_date,$5::date AS target_date,'urgent'::text AS priority) s) probe"
 	probe := func(order string, value float64, at time.Time, count int64, date, want string) {
 		t.Helper()
