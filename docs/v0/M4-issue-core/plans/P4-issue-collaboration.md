@@ -394,16 +394,16 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** Consumes T3–12的12个新API；矩阵行在各Task已存在，T14补跨操作性质。复用已有matrixRow/issueWorld、事务/授权fake的失败注入能力；真实ReadTx从第一次目标读取开始，不能利用已有写事务嵌套来假装repeatable read（WithinTx嵌套不会改变隔离）。
 
-- [ ] **Step 1 断言与夹具。** `TestCollaborationSecurity`目标隐藏/随机不存在整份状态+Problem+稳定头一致；非作者update/非admin delete的403不占gate、不取得写事务连接（预检只读查询仍可短暂借用池连接）；project+issue归档同时存在先project，归档相同comment也拒绝。adminGuest自己issue有管理员相对权限，别人404；普通guest仅可见评论/表情、version403。`TestCollaborationSnapshot`分别覆盖评论页+表情批读、活动目标+历史目录+查询、版本目标+列表：首读后外连接改权限/行，当前页同快照、下一请求新状态。
+- [x] **Step 1 断言与夹具。** `TestCollaborationSecurity`目标隐藏/随机不存在整份状态+Problem+稳定头一致；非作者update/非admin delete的403不占gate、不取得写事务连接（预检只读查询仍可短暂借用池连接）；project+issue归档同时存在先project，归档相同comment也拒绝。adminGuest自己issue有管理员相对权限，别人404；普通guest仅可见评论/表情、version403。`TestCollaborationSnapshot`分别覆盖评论页+表情批读、活动目标+历史目录+查询、版本目标+列表：首读后外连接改权限/行，当前页同快照、下一请求新状态。
   ```go
   if !reflect.DeepEqual(hiddenReply, absentReply) { t.Fatal("not-found differs") }
   if !reflect.DeepEqual(firstSnapshotRows, stillSameSnapshotRows) { t.Fatal("mixed snapshots") }
   if reflect.DeepEqual(nextRequestRows, firstSnapshotRows) { t.Fatal("next request kept old snapshot") }
   ```
-- [ ] **Step 2 定位。** `go -C server test ./internal/bootstrap -run 'Test(PermissionMatrix|ThePermissionMatrixCoversEveryOperation|EachIssueWriteLocksItsProjectFirst|EachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy|TheWritesOnAWorkItemRunOnTheirTransactionsConnection|CollaborationSecurity|CollaborationSnapshot|CollaborationRollsBackPortFailures)' -count=1`。覆盖的写操作集合应与契约相等，不能用空表/无匹配通过。
-- [ ] **Step 3 补根因与错误边界。** 每个新写都经项目N/gate/事务context，故障每个端口都回滚、错误原值；TestCollaborationRollsBackPortFailures复用真实Store，在七个新写的写端口完成SQL后返回同一sentinel，逐项验证整份状态回滚与原错误传播，读取/授权/锁端口的既有故障证据另列；新body非法结构400、HTML/反应业务422、limit422/cursor400都经真实HTTP。删除反应合法不存在404只针对自己，不借其他人的reaction泄漏；目标归档与不存在的顺序照spec。别端修改/删除旧评论不承诺增量即时更新。
-- [ ] **Step 4 实际变异矩阵。** 至少运行：漏一个operation矩阵行、作者校验移gate后、主查询用pool非tx、ReadTx包晚于see、历史过滤只看一端、把cursor当scope、跳过自定义src清洗、漏新表删除。每个记录业务失败测试/层；安全/锁只有fake单元结果则补组合结果，不能靠“已覆盖”措辞。
-- [ ] **Step 5 G评审提交。** 对照全部12操作与5新表自查，关闭T13两项Minor：调度完成结果被held消费后清理仍能识别已结束，不重复等空channel；同时间逆id候选的合并资格不同，错误id升序必须触发具体业务断言。定向运行受影响交错（含ActivityCreatedAtDoesNotGoBack），记录一次排序变异及恢复；独立评审逐项给M1/M2结论。`feat(M4/P4): 验证协作权限与快照边界`。
+- [x] **Step 2 定位。** `go -C server test ./internal/bootstrap -run 'Test(PermissionMatrix|ThePermissionMatrixCoversEveryOperation|EachIssueWriteLocksItsProjectFirst|EachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy|TheWritesOnAWorkItemRunOnTheirTransactionsConnection|CollaborationSecurity|CollaborationSnapshot|CollaborationRollsBackPortFailures)' -count=1`。覆盖的写操作集合应与契约相等，不能用空表/无匹配通过。
+- [x] **Step 3 补根因与错误边界。** 每个新写都经项目N/gate/事务context，故障每个端口都回滚、错误原值；TestCollaborationRollsBackPortFailures复用真实Store，在七个新写的写端口完成SQL后返回同一sentinel，逐项验证整份状态回滚与原错误传播，读取/授权/锁端口的既有故障证据另列；新body非法结构400、HTML/反应业务422、limit422/cursor400都经真实HTTP。删除反应合法不存在404只针对自己，不借其他人的reaction泄漏；目标归档与不存在的顺序照spec。别端修改/删除旧评论不承诺增量即时更新。
+- [x] **Step 4 实际变异矩阵。** 至少运行：漏一个operation矩阵行、作者校验移gate后、主查询用pool非tx、ReadTx包晚于see、历史过滤只看一端、把cursor当scope、跳过自定义src清洗、漏新表删除。每个记录业务失败测试/层；安全/锁只有fake单元结果则补组合结果，不能靠“已覆盖”措辞。
+- [x] **Step 5 G评审提交。** 对照全部12操作与5新表自查，关闭T13两项Minor：调度完成结果被held消费后清理仍能识别已结束，不重复等空channel；同时间逆id候选的合并资格不同，错误id升序必须触发具体业务断言。定向运行受影响交错（含ActivityCreatedAtDoesNotGoBack），记录一次排序变异及恢复；独立评审逐项给M1/M2结论。`feat(M4/P4): 验证协作权限与快照边界`。
 
 ### Task 15: I11–I13接口故事与旧故事增长
 
