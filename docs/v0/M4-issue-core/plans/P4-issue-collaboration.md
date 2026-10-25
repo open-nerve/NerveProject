@@ -386,7 +386,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 运行定位。** `go -C server test ./internal/bootstrap -run 'Test(CommentAndIssueDeletionSerialize|DescriptionSavesSerialize|CollaborationReadsClockUnderLock|ActivityCreatedAtDoesNotGoBack|CollaborationRechecksMembership|CommentAndReactionsSerialize|CommentWritesAndArchivalSerialize)' -count=1`。若前序实现已使新增测试直接绿，先做针对性质可编译变异确认业务红再恢复，记录真实经过，不伪造首次红。
 - [ ] **Step 3 完善交错夹具/必要根因修复。** 先探测请求确实等在持者项目锁之后，再推进固定clock并释放；每次条件等待有截止期限，后台请求错误/取消可收回，不sleep同步。两个并发写的连接和事务分开；后写时钟与所有副表戳一致，不能仅断言最后HTTP状态。
 - [ ] **Step 4 强化验证。** 上一命令改`-race -count=5`；无40P01/业务失败。实际把clock移到Locks.run前、跳过锁下重读、用初版时间判断窗口各须触发具体断言失败；基础设施/超时不当杀死，恢复后定向绿。
-- [ ] **Step 5 G/独立评审/提交。** 重推HEAD全部写的gate→连接→项目N→各表锁关系，无反向边；`feat(M4/P4): 验证协作写入交错与锁后时钟`。
+- [ ] **Step 5 G/独立评审/提交。** 重推HEAD全部写的gate→连接→项目N→各表锁关系；P4新写按全局表序，既有P3双端关联路径沿P3 spec§3第3条的双方项目锁证明，确认无新增等待环；`feat(M4/P4): 验证协作写入交错与锁后时钟`。
 
 ### Task 14: 逐操作矩阵、整程序快照与安全补证
 
