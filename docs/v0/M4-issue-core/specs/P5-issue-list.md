@@ -188,7 +188,7 @@ I3/I4/I5/I6/I7/I19/I20 API 故事各文件，I15 增加归档列表；全部前�
 
 ## 4. 逐项验收
 
-T1–T12已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T12a及T12b均经独立评审，T12b排序定义问题经修复及范围复审关闭；T13a的迁移、持久化与纯校验已独立Approved，T13b接线/API/并发及后续任务尚未验收，父T13保持未勾选。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
+T1–T13已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T12a及T12b均经独立评审，T12b排序定义问题经修复及范围复审关闭；T13a迁移/持久化/纯校验和T13b接线/API/并发均已独立Approved，父T13已验收。T14及后续尚未完成。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
 
 | 完成 | Task | 完成线 |
 |---|---|---|
@@ -204,7 +204,7 @@ T1–T12已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b�
 | [x] | T10 | A≠B三关系实际SQL、target存在语义、caller OwnOnly与个人主页权限 |
 | [x] | T11 | P3关联替换、归档源同项目例外、父项/计数及Historical不退化 |
 | [x] | T12 | 19排序、项目7/个人5全部group及全部合法subgroup实际SQL/total/续页；快照-race -count=5；10k/100k最终SQL实测 |
-| [ ] | T13 | 00026三列默认/CHECK/Down-Up、三偏好闭合校验/整字段替换/用户隔离；并发-race -count=5 |
+| [x] | T13 | 00026三列默认/CHECK/Down-Up、三偏好闭合校验/整字段替换/用户隔离；并发-race -count=5 |
 | [ ] | T14 | 矩阵、运行角色、双向契约、全部新增交错强制race五遍、旧功能回归和全量门禁 |
 | [ ] | T15 | I3–I7/I19/I20 API故事、I15增长、全部API前置及完整e2e |
 | [ ] | T16 | 文档/差异/交接、实际证据、整分支终审意见处理、分支/main CI及既定合并清理 |

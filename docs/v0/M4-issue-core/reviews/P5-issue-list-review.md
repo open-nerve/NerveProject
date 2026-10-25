@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-26。状态：**实施中；T1–T12及T13a完成，T13b待实施；阶段尚未完成，不合并**。
+日期：2026-10-26。状态：**实施中；T1–T13完成，T14待实施；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -22,7 +22,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 ## 2. 验收标准逐条核对
 
-产品验收清单以 spec §4 为准；T1–T12及T13a已有下列实施证据，T13b及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
+产品验收清单以 spec §4 为准；T1–T13已有下列实施证据，T14及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
 
 | 检查 | 结果 |
 |---|---|
@@ -32,7 +32,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 | 阶段关键词 | `phase=M4/P5`；没有在 P4/P5 到期的例外，`/user-properties/` 的 M4/P11 例外保留；`node tools/keywords.mjs` 为72规则、23例外、无命中 |
 | 起步文档自检 | 16个任务顺序完整、产品验收均未勾选；53处本地链接无新增缺失。M4设计原有4个M5–M8收尾文件链接仍是未来交付，不提前创建或标完成 |
 | 独立预检 | 首轮4项 Medium、2项 Low，均为局部计划/文档缺口；修订聚焦复核Approved，新增L3也已关闭，见§4 |
-| P5 产品测试、性能、交错及变异 | T1–T12及T13a证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
+| P5 产品测试、性能、交错及变异 | T1–T13证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
 
 ### T1：连接运行参数，已完成
 
@@ -197,6 +197,16 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 最终lint两段0 issues，完整make test48包通过（148.234s、stderr空）；完整make e2e总53.187s，135 passed（133 Chromium、2 Firefox A4，Playwright自身46.4s），含旧P8及烟测。提交后gen-check通过（2.985s、空diff）。21源文件SHA与完整测试/e2e及最终提交逐一一致。唯一Minor是NO_COLOR/FORCE_COLOR及testcontainers探测日志噪声，登记环境维护，不为消噪重复suite或修改容器。
 - 原始证据 `task-13a-evidence/`，实施报告 `task-13a-report.md`，独评 `task-13a-review.md`。评审中T13b接口、闭合DTO、真实API422、GET无写/用户隔离/恢复及真实并发的跨任务未验收项已逐项归入b完成门，不以a批准代替。
 
+### T13b：应用接线、闭合API与并发闭环，已验收
+
+- 基线 `c4ad379e0fbc752c459999a6952969bd3b487cc8`，实施提交 `7672525e220639c8d4e47ab47781d36d1b1034fe`；独立评审Spec compliant、Approved，C0/I0/M1。26文件、手写777+/44−共821行，生成物另计；与T13a一起验收父T13。唯一Minor仍为testcontainers/颜色变量日志噪声，保留环境维护记录，不重复suite消噪。
+- project/app声明必需IssueListSettings与自己的小值，issue提供真实纯实现，bootstrap逐字段转换；三个project.New组合根和两处Update构造者全部接通，无nil旁路。RequireActor先行、旧navigation错误在前、新词错误追加，一次返回确定性字段错误，读写仍按actor.UserID。
+- 闭合GET/PATCH三字段、十filters键、七display键/两calendar键、十一properties布尔值真实生成；nil/显式[]、{}/省略、内层null和false双向typed转换分别验证。结构错误400不进入用例，合法形状的非法UUID/日期/词值由真实API返回422；HTTP整包双向错误码检查通过，未放宽守卫或新增错误码。
+- 真实 `TestIssuePreferencesAPI` / `TestIssuePreferencesAsRuntimeRole` 覆盖GET缺行默认且不写、首次保存、整体替换/省略/清空、两actor与另一项目隔离、归档规则，以及真实leave→add后完整原偏好行及审计不变。runtime使用独立登录与最终grants；既有GET/PATCH/归档PATCH的27权限cell均用完整新JSON断言。P8 API/页面故事及TS默认同步，SQL直接核三列持久化，没有新增UI。
+- `TestPreferenceFieldsDoNotOverwrite` 在已有同一行上验证两组各双方向：navigation↔filters、display_filters↔display_properties。首次tuple探针超时后，真实锁诊断证明UPSERT在transactionid等待；改为既有key wait加精确已存行RowWaits后再释放A，旧tuple调用及清理保持。真实store预读整行并五set=true变异，四方向均在两个成功响应后出现终态失字段；漏词校验使坏UUID由422变200、Ensure覆盖使退出恢复丢自定义三列，均业务红并恢复绿。
+- 新增三包测试 `-p 1 -race -count=5` 通过（146.37s），7顶层及4并发子项逐项各五次；race后唯一变化为删除未读取的误加CascadeDeps字段及注释，精确旧源重建SHA和清理patch闭合映射，不伪称全部SHA相同。后续完整make test48包155.66s通过；lint-go两段0 issues、lint-web54/54（8 cached）、knip、test-web17/17（11 cached）通过；完整make e2e总46.38s、135 passed（133 Chromium、2 Firefox，runner40.7s）。提交后gen-check2.76s、空diff；26最终源SHA与六个最终门及提交一致。
+- 原始证据 `task-13b-evidence/`、实施报告 `task-13b-report.md`、独评 `task-13b-review.md`。编译红、非法fixture、未用import、探针超时及编辑工具错误均保留且不算有效变异红。评审跨任务项由a已批准记录闭合；actor写范围专门退化仍归T14，本阶段普通两actor隔离不代替该证据。实际文件/测试名已同步plan，后续命令不沿用未存在的拟名。
+
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
@@ -211,6 +221,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - `26fa7cf8aa179473d77160fca95d90eea09ec6da`（含T11）已由系统Git推送；[CI 40207373659](https://github.com/open-nerve/NerveProject/actions/runs/40207373659) server、web、e2e全部success。此检查点不包含T12a。
 - `c08e1061b2ec5188fd8e1a8f3eb9a22c2f157957`（含T12a）已由系统Git推送；[CI 40210086901](https://github.com/open-nerve/NerveProject/actions/runs/40210086901) server、web、e2e全部success。此检查点不包含T12b及修复。
 - `bd5702883aa04cdd98d2a1a23179a9fff4e6e73b`（含T12全部及修复）已由系统Git推送；[CI 40215557907](https://github.com/open-nerve/NerveProject/actions/runs/40215557907) server、web、e2e全部success。此检查点不包含T13a。
+- `c4ad379e0fbc752c459999a6952969bd3b487cc8`（含T13a）已由系统Git推送；[CI 40217399252](https://github.com/open-nerve/NerveProject/actions/runs/40217399252) server、web、e2e全部success。此检查点不包含T13b。公开jobs元数据为ignored `ci-40217399252-jobs.json`。
 - 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`、`ci-40205751190-jobs.json`、`ci-40207373659-jobs.json`、`ci-40210086901-jobs.json`、`ci-40215557907-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
 
 ## 3. 执行中的决定

@@ -361,24 +361,24 @@ T12a/b预计1000–1320/1080–1450手写行，接近1400先核剩余职责；�
 
 ## Task 13：三类项目显示设置与纯词汇端口
 
-文件：新 `server/migrations/sql/00026_project_project_user_properties_issue_display.sql`；改 `server/migrations/project_schema_test.go`、`server/migrations/schema_test.go`、`server/sqlc.yaml`的project迁移映射、P/domain/preferences.go与测试、P/app/update_preferences.go/get_preferences.go/ports及完整默认fake、P/adapter/http/preferences.go/测试、P/adapter/postgres/preferences.go/queries/preferences.sql/测试；新I/app/list_settings.go/测试；改双方module、B/ports.go/app.go/project_connection_test.go/ending_connection_test.go、新B/project_preferences_runtime_test.go、api/modules/project.yaml、相关Go/TS/e2e精确响应fixture。新迁移/存储/并发测试按职责分文件，不把整组追加到已有大文件。
+文件：新 `server/migrations/sql/00026_project_project_user_properties_issue_display.sql`；改 `server/migrations/project_schema_test.go`、`server/migrations/schema_test.go`、`server/sqlc.yaml`的project迁移映射、P/domain/preferences.go与测试、P/app/update_preferences.go及完整默认fake、P/adapter/http/preferences.go/测试、P/adapter/postgres/preferences.go/queries/preferences.sql/测试；新I/app/list_settings.go/测试、P/app/list_settings.go/issue_preferences_test.go、P/adapter/http/issue_preferences.go/测试；改双方module、B/ports.go/app.go/project_connection_test.go/ending_connection_test.go、新B/project_issue_preferences_test.go（普通与runtime共用真实语义）及project_preferences_interleaving_test.go、api/modules/project.yaml、相关Go/TS/e2e精确响应fixture。GET实现保持已有缺行默认不写，消费接口落在app/list_settings.go。新迁移/存储/并发测试按职责分文件，不把整组追加到已有大文件。
 
 **顺序实施与独立评审（全部仍属T13）：**
 
 - [x] **T13a：迁移、域值、持久化与纯校验。** 真实1–25旧库升级00026、Down/Up与精确CHECK反例；闭合domain值/默认/Patch/Apply、完整JSON存储、五列独立set标志、Create/Ensure默认及不覆盖；完整issue纯settings实现与词汇/日期测试。同步Go默认fixture，不改变既有Update构造器，不建空消费端口或nil跳过校验旁路；HTTP暂沿旧契约。SQL生成及迁移/旧故事G，独立审查后交b；不宣称新API已交付。
-- [ ] **T13b：应用接线、闭合API与并发闭环。** 新实现者接手；project声明app小值消费端口、一次接通双module/bootstrap及全部测试组合根，聚合旧navigation和新字段错误；闭合API/HTTP双向契约、TS/e2e默认、真实GET无写/整体替换/清空/actor隔离/归档/退出恢复；两组真实锁交错及生产丢更新变异、race五遍。H/G和完整e2e通过、独立审查后才验收全部T13；纯校验通过不能代替真实API422证据。
+- [x] **T13b：应用接线、闭合API与并发闭环。** 新实现者接手；project声明app小值消费端口、一次接通双module/bootstrap及全部测试组合根，聚合旧navigation和新字段错误；闭合API/HTTP双向契约、TS/e2e默认、真实GET无写/整体替换/清空/actor隔离/归档/退出恢复；两组真实锁交错及生产丢更新变异、race五遍。H/G和完整e2e通过、独立审查后才验收全部T13；纯校验通过不能代替真实API422证据。
 
 T13a/b预计970–1350/865–1240手写行；单元接近1400先复核剩余职责，按D2再切而不削测试。a承担CHECK/独立set/纯词汇/Ensure变异，b承担整行覆盖丢更新/接线漏词值及跨层恢复反例；下列验收全部保留。
 
-- [ ] `TestIssueDisplayMigration`：老行获得精确默认；三列NOTNULL；逐列对象/数组/标量/JSONnull，未知/缺键/错误嵌套类型/string[]中非string均check_violation；合法形状非法词值DB允许、应用拒绝；Up→Down→Up且旧navigation/sort保持。
-- [ ] `TestIssueListSettings`：same词汇合法/非法对应查询；filters.label_id[0]、日期none混合、filters空数组、单个元素含逗号拒绝；group/subgroup组合、布局/日历/19排序与未来词拒绝；纯adapter无pool。
-- [ ] `TestProjectIssuePreferences`：GET缺行默认且不写、PATCH每个字段整体替换/省略保持/{}清空、其他用户不变、归档规则保持；null/未知body400、非法词值422路径准确；成员离开再恢复保留偏好。
-- [ ] `TestPreferenceFieldsDoNotOverwrite`：navigation与filters、display_filters与display_properties两个连接交错PATCH，最终两边修改都在；读整行全覆盖的变异要实际杀死。
-- [ ] 红：`go -C server test ./migrations ./internal/modules/project/domain ./internal/modules/project/app ./internal/modules/project/adapter/postgres ./internal/modules/issue/app ./internal/bootstrap -run 'Test(IssueDisplayMigration|IssueListSettings|ProjectIssuePreferences|PreferenceFieldsDoNotOverwrite)' -count=1`；project HTTP整包。
-- [ ] CHECK用CASE object保护、形状only，filters jsonb_path_exists；domain闭合结构及defaults；IssueListSettings app小值/纯issue提供/bootstrap转换；Upsert每列set标志，首次INSERT用默认值叠加本次patch的候选以保留显式输入；Create/Ensure省略新列依赖DB默认，Ensure冲突不覆盖已有行；生成closedAPI，不加rich_filters。
-- [ ] 绿；变异漏set标志/去CASE/只校形状不校词/误用未来group/改成员恢复覆盖行；恢复。检查现有grants仍覆盖原表，无新表/权限豁免/删除步骤；如显式列权限需要更新，按实际grant验证决定。
-- [ ] 偏好并发与新增恢复/快照交错全部强制 `go -C server test ./internal/bootstrap -run 'TestPreferenceFieldsDoNotOverwrite' -race -count=5`；若新增交错在其他测试包，逐包列实际名字同样执行-race -count=5。恢复所有变异后重跑，记录无数据竞争/无死锁/无丢更新。
-- [ ] H/G（含make e2e验证迁移与旧偏好故事）；提交 `feat(M4/P5): 保存项目工作项筛选与显示设置`。
+- [x] `TestIssueDisplayMigration`：老行获得精确默认；三列NOTNULL；逐列对象/数组/标量/JSONnull，未知/缺键/错误嵌套类型/string[]中非string均check_violation；合法形状非法词值DB允许、应用拒绝；Up→Down→Up且旧navigation/sort保持。
+- [x] `TestIssueListSettings`：same词汇合法/非法对应查询；filters.label_id[0]、日期none混合、filters空数组、单个元素含逗号拒绝；group/subgroup组合、布局/日历/19排序与未来词拒绝；纯adapter无pool。
+- [x] `TestIssuePreferencesAPI`、`TestIssuePreferencesAsRuntimeRole`：GET缺行默认且不写、PATCH每个字段整体替换/省略保持/{}清空、其他用户不变、归档规则保持；null/未知body400、非法词值422路径准确；成员离开再恢复保留偏好。
+- [x] `TestPreferenceFieldsDoNotOverwrite`：navigation与filters、display_filters与display_properties两个连接交错PATCH，最终两边修改都在；读整行全覆盖的变异要实际杀死。
+- [x] 红绿索引：`go -C server test ./migrations ./internal/modules/project/domain ./internal/modules/project/app ./internal/modules/project/adapter/postgres ./internal/modules/issue/app ./internal/bootstrap -run 'Test(IssueDisplayMigration|IssueListSettings|ProjectIssuePreferences|IssuePreferences|PreferenceFieldsDoNotOverwrite)' -count=1`；project HTTP整包。实际执行分a/b与包逐步记录，初始编译红、fixture错误、屏障超时不算业务变异红，见评审。
+- [x] CHECK用CASE object保护、形状only，filters jsonb_path_exists；domain闭合结构及defaults；IssueListSettings app小值/纯issue提供/bootstrap转换；Upsert每列set标志，首次INSERT用默认值叠加本次patch的候选以保留显式输入；Create/Ensure省略新列依赖DB默认，Ensure冲突不覆盖已有行；生成closedAPI，不加rich_filters。
+- [x] 绿；变异漏set标志/去CASE/只校形状不校词/误用未来group/改成员恢复覆盖行；恢复。检查现有grants仍覆盖原表，无新表/权限豁免/删除步骤；如显式列权限需要更新，按实际grant验证决定。
+- [x] 偏好并发与新增恢复/快照交错全部强制 `go -C server test ./internal/bootstrap -run 'TestPreferenceFieldsDoNotOverwrite' -race -count=5`；若新增交错在其他测试包，逐包列实际名字同样执行-race -count=5。恢复所有变异后重跑，记录无数据竞争/无死锁/无丢更新。
+- [x] H/G（含make e2e验证迁移与旧偏好故事）；提交 `feat(M4/P5): 保存项目工作项筛选与显示设置`。
 
 ## Task 14：矩阵、整程序边界与回归闭环
 
@@ -386,9 +386,9 @@ T13a/b预计970–1350/865–1240手写行；单元接近1400先复核剩余职�
 
 - [ ] 审核listIssues两权限分支、listMemberIssues的所有目标、preferences三字段进入既有矩阵；角色按集合：workspace admin兼project guest、无project成员、deleted/inactive、公开/私有、隐藏先404。
 - [ ] 新 `TestP5ReadBoundary` 证实读无FOR锁/写连接/写闸门，源/目录/SQL/补total一个ctx；sort_order仍原写锁/闸门路径。复跑历史activities、description skip、relations、subissues与原preferences，确保没有范围倒退。
-- [ ] 定位 `go -C server test ./internal/bootstrap -run 'Test(PermissionMatrix|P5ReadBoundary|IssueListPermissions|ProjectIssuePreferences)' -count=1`；再跑 `go -C server test ./internal/archtest ./internal/bootstrap -count=1`，HTTP issue/project整包覆盖所有码。
+- [ ] 定位 `go -C server test ./internal/bootstrap -run 'Test(PermissionMatrix|P5ReadBoundary|IssueListPermissions|IssuePreferences(API|AsRuntimeRole))' -count=1`；再跑 `go -C server test ./internal/archtest ./internal/bootstrap -count=1`，HTTP issue/project整包覆盖所有码。
 - [ ] 对前面漏测处先红再修，不写镜像实现测试；至少额外实际变异去member_issue.list角色限制、readonly目录ctx外移、settings按用户更新范围丢actor条件；恢复后绿。
-- [ ] 强制完成门：`go -C server test ./internal/bootstrap -run 'Test(IssueListSnapshot|PreferenceFieldsDoNotOverwrite|IssueSortOrderInterleaving)' -race -count=5`；核对所有新增快照/偏好并发/sort_order相关交错均被匹配，其余包或名称追加对应同参数命令，不允许“需要时”。sort_order复用锁路径的相应既有交错同样五遍race，review列出完整匹配清单。
+- [ ] 强制完成门：`go -C server test ./internal/bootstrap -run '^Test(IssueListSnapshot|IssueListTraceArguments|IssueListTraceBoundary|PreferenceFieldsDoNotOverwrite|IssueSortOrderInterleaving|P5ReadBoundary)$' -race -count=5`；核对所有新增快照/偏好并发/sort_order相关交错均被匹配，其余包或名称追加对应同参数命令，不允许“需要时”。sort_order复用锁路径的相应六个既有交错同样五遍race，review列出完整匹配清单；b的普通app/HTTP/API五遍结果不构成T14再跑全部普通API五遍的要求。
 - [ ] `make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web` 及已提交生成物的 `make gen-check`，记录真实命令/HEAD/结果，失败不包装为通过。
 - [ ] G；提交 `test(M4/P5): 补齐列表权限矩阵与跨层回归`。
 
