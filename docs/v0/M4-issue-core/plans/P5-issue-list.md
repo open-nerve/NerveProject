@@ -40,7 +40,7 @@
 | Task | 主文件/职责 | 依赖 |
 |---|---|---|
 | 1 | platform/postgres/pool.go、pool_test.go：连接运行参数 | 基线 |
-| 2 | I/domain/listvocab.go、测试：词汇和各页面能力 | 基线 |
+| 2 | I/domain/listvocab.go、list_date.go及测试：词汇、页面能力和单一日期原子解析 | 基线 |
 | 3 | I/domain/list_query.go、list_order.go、list_cursor.go、测试；api/testdata/issue-order.json | 2 |
 | 4 | I/app/visible_projects.go/list_ports.go；P 的 issue_ports/普通目录；B/ports.go；负责人 ID 查询 | 2、3 |
 | 5 | I/app/listing.go；I/adapter/postgres/list_issues.go、queries/list_issues.sql、测试 | 3、4 |
@@ -214,23 +214,23 @@ type IssueListSettings interface {
 
 ## Task 2：列表词汇与页面能力
 
-文件：新 `I/domain/listvocab.go`、`listvocab_test.go`。提供项目/个人允许的过滤、分组、排序与字面值语法，供T3/T13共同消费。
+文件：新 `I/domain/listvocab.go`、`listvocab_test.go`、`list_date.go`、`list_date_test.go`。词汇、页面能力和单一日期原子解析供T3/T13消费；ListScope/ListOrder/ListGroup与DateFilter在T2定义，T3直接复用。
 
-- [ ] 写 `TestListVocabulary` 表：19排序码全接受；-sort_order/±link_count拒绝；项目7分组、个人5分组；个人拒state_id/assignee_id/creator/archived/subgroup；UUID/me/none权限按字段区分。
-- [ ] 红：`go -C server test ./internal/modules/issue/domain -run 'TestListVocabulary' -count=1`。
-- [ ] 纯值与枚举实现；日期复用shared.Date；不把动态词汇搬shared，不引入HTTP或SQL依赖。
-- [ ] 绿；变异放行link_count或个人assignee分组，具体表行失败；恢复。
-- [ ] G；提交 `feat(M4/P5): 定义列表与显示设置共用词汇`。
+- [x] 写 `TestListVocabulary` 表：19排序码全接受；-sort_order/±link_count拒绝；项目7分组、个人5分组；个人拒state_id/assignee_id/creator/archived/subgroup；UUID/me/none权限按字段区分。
+- [x] 红：`go -C server test ./internal/modules/issue/domain -run 'TestListVocabulary' -count=1`。
+- [x] 纯值与枚举实现；日期复用shared.Date；不把动态词汇搬shared，不引入HTTP或SQL依赖。
+- [x] 绿；变异放行link_count或个人assignee分组，具体表行失败；恢复。
+- [x] G；提交 `feat(M4/P5): 定义列表与显示设置共用词汇`。
 
 ## Task 3：查询、全序与 canonical 游标
 
 文件：新 `I/domain/list_query.go/list_order.go/list_cursor.go` 及对应测试、`api/testdata/issue-order.json`；shared/page.go/cursor.go只消费。
 
 - [ ] 写 `TestParseListQuery`：CSV OR/字段AND、UUID+none、me、重复日期闭区间、none互斥、合法空交集、非法/反向/空token、重复每个非日期参数、未知参数、个人专用边界、group_key/sub_group_key所有组合、limit省略/0/101。
-- [ ] 写 `TestIssueOrderSamples`、`TestListCursor`：19码roundtrip和错误order/类型/版本/base64/canonical/UUID；UTC微秒同秒不同值、整数精度边界（领域游标层）、相邻可表示sort_order值、日期、整数计数、null两方向、逆ID、非ASCII大小写、U+FF5E<U+1F600；label/assignee降序仍min。
+- [ ] 写 `TestIssueOrderSamples`、`TestListCursor`：19码roundtrip与错误order/类型/版本/base64/canonical/UUID；Go读取共享JSON，验证生产名字键归一化、键类型/可空性/规范游标，保留日期/null/逆ID、非ASCII大小写及U+FF5E<U+1F600的独立固定预期供T5真实SQL消费。时间固定六位小数UTC，拒绝亚微秒；count保持int64精度；sort有限float64且相邻值可辨、正负零规范为正零。不新增只有测试消费的生产全序比较器；null方向、UUID方向与多值min的实际排序证明在T5/T12完成。
 - [ ] 红：`go -C server test ./internal/modules/issue/domain -run 'Test(ParseListQuery|IssueOrderSamples|ListCursor)' -count=1`。
 - [ ] 实现ParseListQuery/NameOrderKey/cursor；精确数字不落float64通用解码；共享JSON内容可读，说明P10b消费义务，不写无消费者TS代码。
-- [ ] 绿；实际变异日期AND→OR、null降序反转、同键id方向固定、名字Unicode lower、时间截毫秒各至少一次，记录杀死测试。
+- [ ] 绿；实际变异只保留最后一个重复日期条件、名字改Unicode lower、时间截毫秒、计数先转float64各至少一次，记录真实业务失败与恢复。日期AND→OR、null降序反转、同键id方向固定及多值min→max是尚未存在的SQL行为，移到T5实际查询变异并在T12收口，不在T3提前标完成。
 - [ ] G；提交 `feat(M4/P5): 解析列表参数并固定全序游标契约`。
 
 ## Task 4：普通项目与完整名字目录
@@ -239,7 +239,7 @@ type IssueListSettings interface {
 
 - [ ] 写 `TestVisibleIssueProjects`：有效普通成员、guest OwnOnly、管理员兼guest、管理员非项目成员、退出/软删成员、软删/归档项目；同fixture单独断言Historical历史语义仍不变。
 - [ ] 写 `TestListDirectories`：范围内完整状态/标签，triage排除但既有States保留；负责人先曾被指派后退出/降级仍取名，软删负责人行/外项目排除；空输入零目录、不nil，端口故障原样传播/ctx一致。
-- [ ] 红：`go -C server test ./internal/modules/project/adapter/postgres ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(VisibleIssueProjects|ListDirectories|HistoricalProjects)' -count=1`。
+- [ ] 红：`go -C server test ./internal/modules/project/adapter/postgres ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(VisibleIssueProjects|ListDirectories|HistoricalIssueProjects|HistoricalProjects)' -count=1`。
 - [ ] 实现上表端口与bootstrap转换，sqlc生成；只取所属模块表，数组配对由ID映射构建，不依赖map随机顺序。
 - [ ] 绿；变异删除is_active/archived条件、用active成员当姓名目录、误改Historical删过滤，每类对应反例红；恢复。
 - [ ] G；提交 `feat(M4/P5): 提供普通可读项目与列表名字目录`。
@@ -248,13 +248,13 @@ type IssueListSettings interface {
 
 文件：新 `I/app/list_ports.go/listing.go/listing_test.go`、`I/adapter/postgres/list_issues.go/list_issues_test.go/queries/list_issues.sql`，sqlc生成。
 
-- [ ] 写 `TestFlatIssueList`：所有筛选各有命中/邻居，组合筛选、OwnOnly、triage/软删/归档、重复关联不重复issue；全部19排序与limit+1；label/assignee完整数组；子项计数含隐藏/归档邻居。
+- [ ] 写 `TestFlatIssueList`：所有筛选各有命中/邻居，组合筛选、OwnOnly、triage/软删/归档、重复关联不重复issue；全部19排序与limit+1；label/assignee完整数组；子项计数含隐藏/归档邻居。 真实SQL消费T3的issue-order.json固定预期（适用的名字/日期/null/同键ID），返回ID直接比较独立期望，不复用生产比较器重算；超大整数边界另作精确表达式探针，不伪造海量子项。
 - [ ] 写 `TestListArrayParameters`：每个可空数组字段分别nil与[]等价；测试直接sqlc传NULL以证明SQLcoalesce防御；另直接验证生产Store实际调用的参数映射函数产出的各sqlc slice均非nil、并列目录长度一致，或用既有测试tracer捕获真实执行边界；不以app层fake Rows证明adapter规整、不新增生产测试注入。SQL直接NULL的coalesce与adapter规整须分别变异证伪。
 - [ ] 写 `TestListingEmptyCursorTotal`：超尾cursor、仍有原筛选、total非0；同ctx去cursor且limit1，不能删group选择；无cursor真空不多查；目录故障/二次查询错误原样返回。
 - [ ] 红：`go -C server test ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres -run 'Test(FlatIssueList|ListArrayParameters|ListingEmptyCursorTotal)' -count=1`。
 - [ ] ListRead把TargetMemberID映射为独立sqlc参数relation_user_id；关系过滤不用ActorID。项目target=nil/Relation为空，个人二者同时有效；内部错配报错，不静默回落。
 - [ ] 实现filtered MATERIALIZED/窄排序键/COLLATE C/window total与一次排序/谓词。k_num分支建议显式统一numeric，时间微秒/日期天数/整数计数不隐式转float8；sort_order和cursor使用一致的明确转换，先用相邻可表示值验证转换未合并两个键。完整数组只为输出行；Row内子项计数遵守项目OwnOnly，父ID按既有hideParents规则裁剪；主查询不读projects/states/users。
-- [ ] 绿；变异过滤移到LIMIT后、删coalesce、漏nil规整、total计cursor后、名前取max、漏HiddenFrom计数，各有真正失败；恢复。测试SQL形状只作辅助，不取代行为。
+- [ ] 绿；变异过滤移到LIMIT后、删coalesce、漏nil规整、total计cursor后、名前取max、漏HiddenFrom计数，以及从T3移来的日期AND→OR、null降序反转、同键id方向固定，均须有真实SQL业务失败并恢复。SQL形状测试只辅助，不替代行为。
 - [ ] G；提交 `feat(M4/P5): 实现同快照的不分组列表查询`。
 
 ## Task 6：分组查询与组续页

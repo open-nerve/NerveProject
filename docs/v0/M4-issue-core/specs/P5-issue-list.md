@@ -106,7 +106,7 @@ P5 恰好 19 码：sort_order 仅升序；created_at/updated_at/start_date/targe
 - 两方向 null 都在最后；同键 UUID 与主键同方向。时间保留 PostgreSQL 微秒，日期保持纯日期；计数用精确整数，不经 float64 丢失。sort_order 是有限浮点数，按存储值排序。SQL CASE 不能因 sort_order 的 float8 分支隐式把微秒/计数转为 float8；建议 k_num 统一 numeric 并对每分支显式转换，游标键使用同一转换与全序。相邻可表示 sort_order、整数精度边界和逆 UUID 必须在真实 SQL 对照验证，当前未证明该策略。
 - 子项数只计调用者可见、未删、未归档的直接子项；排序键与行中 sub_issues_count 同义。
 - payload 为 `[order,key,id]`，经现有 shared.EncodeCursor/DecodeCursor 的 v1 canonical base64url 封套；key 按排序为 UTC 时间字符串、日期字符串、名字字符串、数值或 null。形状、键类型、非法 UUID、非 canonical、版本、排序码与请求不符均 400。数值解码使用 json.Number/明确类型，不能 unmarshal 到 interface{} 后默认为 float64。
-- 时间输出按微秒确定格式；两页之间姓名/子项数量变化可导致行移动，这是现有全序键集方案的已知代价，不宣称跨请求固定快照。
+- 时间游标输出为UTC固定六位小数，拒绝亚微秒及四位年份范围以外输入；日期和名字族允许null，created_at/updated_at、sort_order、priority、sub_issues_count的key不可null；priority为0–4整数，子项数为非负int64，sort_order为有限float64，正负零统一编码为正零。两页之间姓名/子项数量变化可导致行移动，这是现有全序键集方案的已知代价，不宣称跨请求固定快照。
 
 `api/testdata/issue-order.json` 固定名字、日期、null、同键逆 ID、ASCII 与非 ASCII 大小写、U+FF5E/U+1F600 的期望序。P5 Go 消费；P10b 必须让生产前端比较器及 vitest 消费同一文件，不提前创建无消费者的 TS 排序器。
 
@@ -176,7 +176,7 @@ I3/I4/I5/I6/I7/I19/I20 API 故事各文件，I15 增加归档列表；全部前�
 | 完成 | Task | 完成线 |
 |---|---|---|
 | [x] | T1 | 真实池多连接参数覆盖URL且UTC读取不退化 |
-| [ ] | T2 | 页面词汇、19排序与未来字段拒绝的纯表测试/变异 |
+| [x] | T2 | 页面词汇、19排序与未来字段拒绝的纯表测试/变异 |
 | [ ] | T3 | 原始query、日期AND、全序与canonical游标；共享顺序样例 |
 | [ ] | T4 | 普通目录/Historical区别、全量状态标签/历史负责人姓名与同ctx |
 | [ ] | T5 | 平面SQL筛选前limit、数组防御、精确键、空页补total、OwnOnly |
