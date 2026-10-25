@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-26。状态：**实施中；T1–T15完成，T16文档已同步、待独评及内部整分支审查/最终分支CI；阶段尚未完成，不合并**。
+日期：2026-10-26。状态：**实施中；T1–T15完成，T16文档子项独评Approved，内部整分支审查/最终分支CI待完成；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -22,7 +22,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 ## 2. 验收标准逐条核对
 
-产品验收清单以 spec §4 为准；T1–T15已有下列实施证据，T16文档已同步，独评及内部整分支审查/最终分支CI仍待完成。下表保留起步检查，后面各Task保留其实施时的证据边界；后来已完成的任务另以对应最终段落为准，不把旧未来式当当前欠项。
+产品验收清单以 spec §4 为准；T1–T15已有下列实施证据，T16文档子项已独评Approved，内部整分支审查/最终分支CI仍待完成。下表保留起步检查，后面各Task保留其实施时的证据边界；后来已完成的任务另以对应最终段落为准，不把旧未来式当当前欠项。
 
 | 检查 | 结果 |
 |---|---|
@@ -229,7 +229,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 最终lint-web54/54（36 cached）、knip、test-web17/17（全部cached）通过；完整默认make e2e总43.052s、142 passed（runner41.7s，140 Chromium+2 Firefox），八故事各实际匹配一次，旧W11通过且未专查。11交付文件在四个最终门、当前与提交blob完全一致；BASE/HEAD的server/api/web/tools树相同，全部变异源恢复。按G范围复用T14完整Go/race与T12最终性能，无永久生成物改动不重复无关gen-check，临时SQL的真实生成/恢复证据仍齐备。
 - 原证据 `task-15-evidence/`、实施报告 `task-15-report.md`、独评 `task-15-review.md`。root以P4/main与T1–14已批准记录承接跨任务约束；本任务批准不代替T16文档/整分支审查或合并授权。
 
-### T16：文档实施与最终完成门（待独评/整分支审查）
+### T16：文档子项已独评，整分支审查与最终完成门待完成
 
 文档实施BASE为 `9a773608fa1f08abf3d4ecbc913e2d4a66e8de1e`。本次只同步正式设计/差异/规格/计划/评审与输入交接；没有产品、API、生成物、依赖、守卫或故事变化。16父任务/19实施单元保留，逐节范围与实际证据如下；完整命令/红因/变异恢复/环境及精确产品提交均在上述各Task记录，不把编译/fixture/基础设施失败改写成业务红。
 
@@ -249,8 +249,11 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 文档校验已核342个Markdown链接及其本地目标/章节，无新增失效；原有四个M5–M8未来收尾文件保持未创建。计划类型/消费签名和当前schema名、三列/三封套/状态语境及diff已核，主目录仍main，产品树/M4总体验收/总体§9.4/子项顺序/T12最终性能块均与本Task BASE一致；提交后make gen-check按T16执行，实际退出与最终提交关联留本Task交付记录，并由root继续正式收口。范围内没有产品源码差异，复用T14最终Go/race与T15最终142条e2e，不为文档HEAD重复全套。当前仅声明文档同步，不声明内部整分支审查、最终分支CI或负责人终审/合并/main CI/清理通过；由root在后续精确提交上继续登记。
 
+文档实施提交 `1258b93a9de509f88e8b4a52f73037a8e72b109c` 已独立评审为 Spec compliant / Approved（C0/I0/M1）。M1为M4设计§3.3仍写“由 issue/domain 实现端口”，实际是issue/app.ListSettings复用domain词汇，纳入最终统一修复；不放宽架构守卫。19份文档SHA与最终静态核对、提交后make gen-check（3.243s，exit 0）、最终审计一致，产品整树无变化；root已全文核对报告、独评及原始输出。文档任务批准不代替内部整分支审查或用户集成安排。
+
 ### 分支检查点 CI
 
+- `9a773608fa1f08abf3d4ecbc913e2d4a66e8de1e` 已由系统Git自主推送；[CI 40224012093](https://github.com/open-nerve/NerveProject/actions/runs/40224012093) 的 server、web、e2e 全部 success。此检查点包含T15验收，不代表T16及后续最终提交。
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
 - `6a94c5ce4abd9a6d1c0f66a9a22ecf365a7a1ff8`（含T4）也已由系统Git推送；[CI 40191919305](https://github.com/open-nerve/NerveProject/actions/runs/40191919305) server、web、e2e全部success。此检查点不包含后续T5a。
 - `b12ffbf234b7a914c597fe986d9fd390378b6eac`（含T5a）已由系统Git推送；[CI 40193812287](https://github.com/open-nerve/NerveProject/actions/runs/40193812287) server、web、e2e全部success。此检查点不包含后续T5b。

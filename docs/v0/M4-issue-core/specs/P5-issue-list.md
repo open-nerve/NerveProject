@@ -3,7 +3,7 @@
 | 项 | 内容 |
 |---|---|
 | Phase | M4/P5 issue-list |
-| 状态 | T1–T15实施/独评通过；T16文档已同步，内部整分支审查/最终分支CI待root，负责人终审与集成另待安排，不合并 |
+| 状态 | T1–T15实施/独评通过；T16文档子项已独评Approved，内部整分支审查/最终分支CI待root，负责人终审与集成另待安排，不合并 |
 | 基线 | `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`，P4 合并 main |
 | 基线验证 | [main CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 全部成功；此证据不代表 P5 验证 |
 | 上级设计 | [M4-design](../M4-design.md) §0.3、§2、§3.4、§3.7、§3.16/3.17、§3.23、§4.15、§5.1/5.2、§6.5/6.6、§12 |
