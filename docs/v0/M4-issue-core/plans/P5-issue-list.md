@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置实施计划
 
-> **执行方式：** 按 Task 使用 superpowers:subagent-driven-development 或 superpowers:executing-plans。状态：起步，独立静态预检及修订复核通过；产品尚未实施。Task 实施评审与运行证据待产生。P5 起步/局部实现按既有自主授权与独立预检继续；本阶段完成后先交负责人安排整分支终审，再处理意见并合并，除非负责人另作安排。确需架构裁定仍上报。
+> **执行方式：** 按 Task 使用 superpowers:subagent-driven-development 或 superpowers:executing-plans。状态：实施中；独立静态预检及修订复核通过。已执行步骤按各Task勾选，真实证据见阶段评审。P5 起步/局部实现按既有自主授权与独立预检继续；本阶段完成后先交负责人安排整分支终审，再处理意见并合并，除非负责人另作安排。确需架构裁定仍上报。
 
 **目标：** 交付 M4 §12/P5 的列表引擎、两个 API、可见性目录及关联替换、sort_order PATCH、三类项目偏好、性能和接口故事。
 
@@ -23,7 +23,7 @@
 - 无新增依赖；生成物只经 make gen/gen-go，提交后 make gen-check。不能手改生成代码；闭合 body/schema，不加 oneOf/allOf/开放 map schema。
 - 新 API 当 Task 加权限矩阵、HTTP 双向契约；只修改已有 PATCH 不创造新 operation/503 枚举，仍扩该写的锁与归档反例。新增错误码才同 Task 改 error-messages/en/zh-CN；复用 workspace.member_not_found 也要在 issue HTTP 覆盖。
 - 每个命令须确认确有匹配测试；空匹配不是通过。测试名为拟新增名字，实施者须以最终文件核对。一次只跑一套容器 suite，使用 pgtest 模板库；变异恢复后复跑控制组，不固定 sleep 协调。
-- 以下命令用于P5实施，当前尚未执行；每Task在review登记实际HEAD、命令、匹配测试、红因、绿结果、变异差异/失败/恢复结果、独立评审及修复，不能只记“通过”。
+- 以下命令用于P5实施，执行状态按各Task勾选；每Task在review登记实际HEAD、命令、匹配测试、红因、绿结果、变异差异/失败/恢复结果、独立评审及修复，不能只记“通过”。
 
 ## Review Focus
 
@@ -206,11 +206,11 @@ type IssueListSettings interface {
 
 文件：改 `server/internal/platform/postgres/pool.go`、`pool_test.go`；保留 UTC AfterConnect。
 
-- [ ] 写 `TestPoolForcesListRuntimeParams`：URL明确传 jit=on/plan_cache_mode=auto；同时借出两连接，SELECT current_setting 读到 off/force_custom_plan；另断言UTC timestamptz扫描仍成立。
-- [ ] 红：`go -C server test ./internal/platform/postgres -run 'TestPoolForcesListRuntimeParams' -count=1`，必须因真实连接值错误失败。
-- [ ] ParseConfig 后赋 RuntimeParams 两项，不靠模块SQL SET，不破坏其他参数或AfterConnect。
-- [ ] 绿同命令；实际变异删其中一项/让URL覆盖，测试必须红；恢复重跑。
-- [ ] G；提交 `feat(M4/P5): 固定列表连接的 JIT 与计划缓存参数`。
+- [x] 写 `TestPoolForcesListRuntimeParams`：URL明确传 jit=on/plan_cache_mode=auto；同时借出两连接，SELECT current_setting 读到 off/force_custom_plan；另断言UTC timestamptz扫描仍成立。
+- [x] 红：`go -C server test ./internal/platform/postgres -run 'TestPoolForcesListRuntimeParams' -count=1`，必须因真实连接值错误失败。
+- [x] ParseConfig 后赋 RuntimeParams 两项，不靠模块SQL SET，不破坏其他参数或AfterConnect。
+- [x] 绿同命令；实际变异删其中一项/让URL覆盖，测试必须红；恢复重跑。
+- [x] G；提交 `feat(M4/P5): 固定列表连接的 JIT 与计划缓存参数`。
 
 ## Task 2：列表词汇与页面能力
 
@@ -387,6 +387,6 @@ type IssueListSettings interface {
 
 ## 范围核对与当前证据边界
 
-范围对照：§3.16→T1–7/T9–12；sort_order/I6→T8/T15；普通Visible/Historical/P3→T4/T11；§3.17/4.15→T2/T13；矩阵→各API Task及T14；全部P5故事→T15；§3.23→T16。ReadOnlySnapshot/PageSize直接消费；HTTP接缝已有静态预检结论；本版纳入四项Local/Medium及两项Low修订，尚无P5运行验证或实施评审通过声明。
+范围对照：§3.16→T1–7/T9–12；sort_order/I6→T8/T15；普通Visible/Historical/P3→T4/T11；§3.17/4.15→T2/T13；矩阵→各API Task及T14；全部P5故事→T15；§3.23→T16。ReadOnlySnapshot/PageSize直接消费；HTTP接缝已有静态预检结论；起步版本纳入四项Local/Medium及两项Low修订；后续运行验证与实施评审逐任务登记，未完成的任务不能提前声称通过。
 
 局部选择和HTTP标准扩展点方案已记录，未改变架构。基线与CI已核实；起步须处理预检意见并登记复审结论。P5 TDD、变异、全部新增交错race五遍、精度/性能、门禁与终审证据待实施，不能把静态核对当产品验证。
