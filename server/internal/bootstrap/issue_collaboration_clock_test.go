@@ -233,24 +233,28 @@ func TestActivityCreatedAtDoesNotGoBack(t *testing.T) {
 	if at.Before(old) || !at.Equal(c.Now()) || value != "<p>Second</p>" {
 		t.Fatal("activity time moved before lock", at, old, value)
 	}
-	// Equal times still use descending id to select the last activity. Two
-	// preceding title rows have the opposite insertion/id order.
+	// Equal times use descending id. The eligible description has the greatest id
+	// but was inserted before the ineligible title, whose id is the smallest.
 	high, low := uuid.MustParse("ffffffff-ffff-7fff-bfff-ffffffffffff"), uuid.MustParse("00000000-0000-7000-8000-000000000001")
-	for n, actor := range []string{"alice", "bob"} {
-		route := newIssueRouteWithClock(t, w.pool, postgres.NewTxManager(w.pool, 2*time.Second), c)
-		route.answerWithin(t, w.contract, http.MethodPatch, path, w.ids[actor], fmt.Sprintf(`{"name":"Title %d"}`, n), 200)
-		rowID := low
-		if n == 0 {
-			rowID = high
-		}
-		if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issue_activities SET id=$2 WHERE issue_id=$1 AND field='name' AND actor_id=$3", id, rowID, w.ids[actor]); err != nil {
-			t.Fatal(err)
-		}
+	var oldValue string
+	if err := w.pool.QueryRow(pgtest.Soon(t), "UPDATE issue_activities SET id=$2 WHERE issue_id=$1 AND field='description' RETURNING old_value", id, high).Scan(&oldValue); err != nil {
+		t.Fatal(err)
 	}
 	route := newIssueRouteWithClock(t, w.pool, postgres.NewTxManager(w.pool, 2*time.Second), c)
-	route.answerWithin(t, w.contract, http.MethodPatch, path, w.ids["bob"], `{"description_html":"<p>After titles</p>"}`, 200)
-	// Either title interrupts coalescing; no earlier description can be merged.
-	if rows := queryIDs(t, w.pool, "SELECT id FROM issue_activities WHERE issue_id=$1 AND field='description'", id); len(rows) != 2 {
-		t.Fatal("same-time title did not interrupt description merge", rows)
+	route.answerWithin(t, w.contract, http.MethodPatch, path, w.ids["alice"], `{"name":"Same time title"}`, 200)
+	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issue_activities SET id=$2 WHERE issue_id=$1 AND field='name'", id, low); err != nil {
+		t.Fatal(err)
+	}
+	route.answerWithin(t, w.contract, http.MethodPatch, path, w.ids["bob"], `{"description_html":"<p>After tied candidates</p>"}`, 200)
+	rows := queryIDs(t, w.pool, "SELECT id FROM issue_activities WHERE issue_id=$1 AND field='description'", id)
+	if len(rows) != 1 || rows[0] != high {
+		t.Fatal("same-time descending id did not merge eligible description", rows)
+	}
+	var retained, latest string
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT old_value,new_value FROM issue_activities WHERE id=$1", high).Scan(&retained, &latest); err != nil {
+		t.Fatal(err)
+	}
+	if retained != oldValue || latest != "<p>After tied candidates</p>" {
+		t.Fatal("tied candidate lost original transition", retained, latest)
 	}
 }

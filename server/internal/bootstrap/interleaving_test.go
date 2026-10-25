@@ -161,8 +161,30 @@ func (r race) state(t *testing.T) (active bool, workspaces, members, activeMembe
 // run starts fn and returns the channel of its result.
 func run(fn func() error) <-chan error {
 	done := make(chan error, 1)
-	go func() { done <- fn() }()
+	go func() {
+		defer close(done)
+		done <- fn()
+	}()
 	return done
+}
+
+// A consumed result remains observable by failure cleanup after held returns.
+func TestInterleavingCompletionRemainsObservable(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	sentinel := errors.New("first request ended before gate")
+	done := run(func() error { return sentinel })
+	if got := result(t, ctx, done, "immediate first request"); got != sentinel {
+		t.Fatal(got)
+	}
+	select {
+	case _, ok := <-done:
+		if ok {
+			t.Fatal("request completed twice")
+		}
+	case <-ctx.Done():
+		t.Fatal("cleanup cannot observe already consumed completion")
+	}
 }
 
 func held(t *testing.T, ctx context.Context, g *gate, done <-chan error, what string) {
