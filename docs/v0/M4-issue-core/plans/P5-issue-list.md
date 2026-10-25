@@ -251,7 +251,7 @@ type IssueListSettings interface {
 
 **顺序实施与独立评审（全部仍属T5）：**
 
-- [ ] **T5a：Flat仓储。** 创建Flat当前实际使用的端口/模型、三职责适配文件与唯一Flat静态SQL；从首版实现精确numeric/有限浮点位序转换，不留已知有损占位。覆盖全部筛选、OwnOnly/triage/软删/归档、完整数组/子项数、19排序基础与limit+1、同ctx、relation/target配对、nil与[]及直接sqlc NULL两层防御；至少以微秒和相邻float逆UUID真实分页证明数值策略。共享JSON的适用固定行序直接对照，不由生产比较器生成预期。过滤放到LIMIT后、漏adapter nil规整、漏SQL coalesce三类真实变异在本单元完成。精确生成物、定位/lint/必要全量及提交后gen-check，独立评审通过后交下一单元。
+- [x] **T5a：Flat仓储。** 创建Flat当前实际使用的端口/模型、三职责适配文件与唯一Flat静态SQL；从首版实现精确numeric/有限浮点位序转换，不留已知有损占位。覆盖全部筛选、OwnOnly/triage/软删/归档、完整数组/子项数、19排序基础与limit+1、同ctx、relation/target配对、nil与[]及直接sqlc NULL两层防御；至少以微秒和相邻float逆UUID真实分页证明数值策略。共享JSON的适用固定行序直接对照，不由生产比较器生成预期。过滤放到LIMIT后、漏adapter nil规整、漏SQL coalesce三类真实变异在本单元完成。精确生成物、定位/lint/必要全量及提交后gen-check，独立评审通过后交下一单元。
 - [ ] **T5b：精度收口与公共编排。** 新实现者接手；补有限浮点全边界、时间宽年份/超过2^53整数表达式、共享JSON全部适用码limit=1分页及其余T5真实变异；实现Listing同ctx目录→Flat→裁父→空cursor补total，实际消费者验证退出/停用/降guest的历史负责人姓名。Rows仍只有Flat；Groups/Subgroups留T6/T7。新增行为按TDD，补测既有正确行为如实记基线绿，由真实变异给业务失败证据，不故意造错误初红。独立评审通过、下列全部验收齐备后才勾T5。
 
 T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400时先核职责和余量，不压缩测试或把生成物/测试搬目录掩盖规模。需要再切按D2登记，不能用任务拆分改变架构或消失完成线。

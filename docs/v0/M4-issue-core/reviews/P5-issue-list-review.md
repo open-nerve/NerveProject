@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-25。状态：**实施中；T1–T4完成，T5a进行中；阶段尚未完成，不合并**。
+日期：2026-10-25。状态：**实施中；T1–T4及T5a完成，T5b进行中；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -22,7 +22,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 ## 2. 验收标准逐条核对
 
-产品验收清单以 spec §4 为准；T1–T4已有下列实施证据，其他任务尚未完成。下表保留起步检查，后面追加逐任务证据。
+产品验收清单以 spec §4 为准；T1–T4及T5a已有下列实施证据，整个T5与其他任务尚未完成。下表保留起步检查，后面追加逐任务证据。
 
 | 检查 | 结果 |
 |---|---|
@@ -65,10 +65,21 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 五包定位回归、最终三包定位、`make lint-go`两段0 issues、完整`make test`48包/117.035s/stderr空通过；提交后`make gen-check`无差异，工作树干净。首次goimports失败及修复保留。未改契约、前端、迁移或故事，未额外运行web/E2E。
 - 原始证据 `task-4-evidence/`，独立记录 `task-4-review.md`；名字编排与真实Listing消费交T5，不提前删除ArchivedProjects/seeEach。
 
+### T5a：Flat仓储，已完成；整个T5仍待T5b
+
+- 实施提交 `ff9127c9417c4687ca81364651bacbbef718329b`；独立审查 Spec compliant、Approved，无Critical/Important。手写919+/3−，生成263行；只引入Flat实际需要的输入/记录/接口及三职责私有适配，不提前实现Listing/Groups。
+- 唯一Flat静态SQL按范围/OwnOnly/triage/全部筛选后分页，total在cursor前，完整关系数组仅对输出行取值，子项数与seen同义。数值CASE明确numeric，sort_order采用有限浮点位序int64；公开cursor仍原值。19码基础排序、微秒及邻接float逆UUID/limit=1真实分页通过。
+- 直接sqlc NULL与空数组防御、生产mapper非nil并列数组分别验证。提前LIMIT、遗漏mapper规整、删SQL coalesce三个实际变异均有明确目标失败与恢复。首次API编译红单列；共享标签样例因项目lower(name)唯一约束失败后，调整为每行独立全可读项目，保留原JSON IDs/固定期望并通过。
+- 实际sqlc接缝：开放日期端点改为私有text数组+NULLIF转date；nullable名字生成string，采用coalesce文本+NameNull布尔。公开领域/API类型未改。合法状态目录无法构造state_name=null行，真实样例明确去该行；count超大值不伪造海量子项，T5b另做精确证明。
+- 完整`make test`48成功包/119.036s/stderr空、`make lint-go`两段0 issues、提交后`make gen-check`均通过。09 mapper变异恢复后只有literal排版/尾逗号调整；内存重建SHA精确匹配原恢复记录，最终lint/full覆盖排版后版本，不声称两个整文件SHA相同。
+- 审查Minor：事务ctx测试接受任意非nil错误，已交T5b修成精确rollback sentinel；另记录定位日志中的testcontainers/ryuk `Shell not found in container`诊断，后续ready及测试成功，不清洗日志或为此改产品/依赖/已有容器。
+- 原始证据 `task-5a-evidence/`，独立记录 `task-5a-review.md`。T5b继续Listing、父项裁剪/空页total、真实历史姓名消费、完整精度边界/其余逐页与剩余变异；当前不勾整个T5。
+
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
-- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
+- `6a94c5ce4abd9a6d1c0f66a9a22ecf365a7a1ff8`（含T4）也已由系统Git推送；[CI 40191919305](https://github.com/open-nerve/NerveProject/actions/runs/40191919305) server、web、e2e全部success。此检查点不包含后续T5a。
+- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
 
 ## 3. 执行中的决定
 
@@ -84,6 +95,8 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 8. T4没有“活跃成员姓名目录”的生产消费者可供替换；新增依赖或篡改测试来源不能算生产变异。T4用真实关系ID→显示名组合证明退出/降guest仍有姓名，实际变异改取软删除关系检验目录边界；T5在Listing真实消费者再次覆盖。普通active/archived和Historical删除条件仍逐项真实变异。代价是T4不宣称完成一个尚无合法调用点的替代来源变异，姓名来源完成线不减少。
 
 9. T5执行前静态估算1900–2400手写行，超过单任务目标。按D2在同一范围拆成T5a Flat仓储（1050–1350）与T5b精度收口/Listing（850–1300），分别由新实现者交付并独立审查，全部完成后才验收T5。首版必须正确实现数值策略，后续单元深化验证而非接手已知错误。当前16验收任务/17实施单元，估算不是实际diff或测试证据；若再超界继续按D2核对切分，不削测试。
+
+10. T5a按真实sqlc输出采用私有text日期端点与独立名字null位，详见T5a证据；公开契约不变。共享标签样例以合法多项目数据保留固定排序反例，state_name不可构造null与超大count的验证边界明确交接，不改预期来迎合结果。
 
 ## 4. 预检发现与处理
 
@@ -109,7 +122,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 | 接收方 | 范围 |
 |---|---|
-| P5 实施者 | T1–T4已完成；从T5a继续按spec/plan逐任务交付、测试与评审 |
+| P5 实施者 | T1–T4及T5a已完成；从T5b继续按spec/plan逐任务交付、测试与评审 |
 | P8 | `link_count` 字段与两个排序码；列表/搜索共用词汇 |
 | P10b | 共用排序样例、生产前端码点比较器与vitest；旧筛选store和 `/user-properties/` 迁移 |
 | P12–P15 | 接口故事增长为页面故事，列表/看板/日历/详情与访客页面 |
