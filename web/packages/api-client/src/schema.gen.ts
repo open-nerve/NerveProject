@@ -927,7 +927,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List a project's work items
+         * @description Active work items require issue.read; archived=true selects archived work items and requires issue.archive. An archived project remains readable. Only the explicit project's grant applies, including the caller's OwnOnly restriction. Deleted and triage work items are excluded. CSV alternatives use OR, different filters use AND; repeated date conditions also use AND. Unknown parameters, invalid business values and repeated non-date parameters are 422 not_allowed. Parameter binding precedes authentication: malformed paths and non-integer limits are 400, repeated non-date query parameters are 422 even without a token. Group and cell continuation retains the original filters and returns the flat envelope with the selected group or cell total.
+         */
+        get: operations["listIssues"];
         put?: never;
         /**
          * Create a work item in a project
@@ -2067,10 +2071,109 @@ export interface components {
             sort_order?: number;
         };
         /**
+         * @description Project lists exclude project_id; member lists use their narrower page vocabulary.
+         * @enum {string}
+         */
+        IssueListGroupField: "state_id" | "state_group" | "priority" | "label_id" | "assignee_id" | "created_by_id" | "target_date" | "project_id";
+        /** @enum {string} */
+        IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "sub_issues_count" | "-sub_issues_count" | "sort_order";
+        /**
          * @description A work item's priority, from the most to the least urgent.
          * @enum {string}
          */
         IssuePriority: "urgent" | "high" | "medium" | "low" | "none";
+        /** @description A work item of a project, as a list shows it. */
+        Issue: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            /** @description Its number in its project, from 1; with the project's identifier, as in WEB-12. */
+            sequence_id: number;
+            name: string;
+            /** Format: uuid */
+            state_id: string;
+            priority: components["schemas"]["IssuePriority"];
+            /**
+             * Format: date
+             * @description The day it starts; null for none.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, not before its start date; null for none.
+             */
+            target_date: string | null;
+            /**
+             * Format: uuid
+             * @description The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
+             */
+            parent_id: string | null;
+            /** @description Its place among its state's work items, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was put in a state of the completed group; null in any other state.
+             */
+            completed_at: string | null;
+            /**
+             * Format: date-time
+             * @description When it was archived; null when it is not.
+             */
+            archived_at: string | null;
+            /** @description The accounts it is assigned to, by id; one who has left the project since is still one. */
+            assignee_ids: string[];
+            /** @description Its labels, by id. */
+            label_ids: string[];
+            /** @description The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own. */
+            sub_issues_count: number;
+            /**
+             * Format: uuid
+             * @description The account that created it; null for none.
+             */
+            created_by_id: string | null;
+            /**
+             * Format: uuid
+             * @description The account that changed it last; null for none.
+             */
+            updated_by_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        IssueListSubgroup: {
+            key: string;
+            /** Format: int64 */
+            total: number;
+            data: components["schemas"]["Issue"][];
+            next_cursor: components["schemas"]["NextCursor"];
+        };
+        /** @description A group page has data and next_cursor; a lane group has subgroups instead. */
+        IssueListGroup: {
+            key: string;
+            /** Format: int64 */
+            total: number;
+            data?: components["schemas"]["Issue"][];
+            next_cursor?: components["schemas"]["NextCursor"];
+            subgroups?: components["schemas"]["IssueListSubgroup"][];
+        };
+        IssueListTotal: {
+            key: string;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description Flat pages and selected group/cell pages have total, data and next_cursor. Grouped pages have total and groups. Lanes have total, groups and subgroup_totals. Other branch fields are omitted. Arrays are never null. */
+        IssueListPage: {
+            /** Format: int64 */
+            total: number;
+            data?: components["schemas"]["Issue"][];
+            next_cursor?: components["schemas"]["NextCursor"];
+            groups?: components["schemas"]["IssueListGroup"][];
+            subgroup_totals?: components["schemas"]["IssueListTotal"][];
+        };
         IssueCreate: {
             /** @description Sanitized rich text HTML; at most 500000 characters on input. */
             description_html?: string;
@@ -2201,68 +2304,6 @@ export interface components {
              * @description The work item it is under, null for none: one of the project's that the caller sees, not archived, and neither this work item nor one under it. It is compared with the parent the caller is answered, a parent he does not see counting as none: sending back the null he was answered changes nothing, and naming a work item he does not see is refused as naming one not there.
              */
             parent_id?: string | null;
-        };
-        /** @description A work item of a project, as a list shows it. */
-        Issue: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            workspace_id: string;
-            /** Format: uuid */
-            project_id: string;
-            /** @description Its number in its project, from 1; with the project's identifier, as in WEB-12. */
-            sequence_id: number;
-            name: string;
-            /** Format: uuid */
-            state_id: string;
-            priority: components["schemas"]["IssuePriority"];
-            /**
-             * Format: date
-             * @description The day it starts; null for none.
-             */
-            start_date: string | null;
-            /**
-             * Format: date
-             * @description The day it is due, not before its start date; null for none.
-             */
-            target_date: string | null;
-            /**
-             * Format: uuid
-             * @description The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
-             */
-            parent_id: string | null;
-            /** @description Its place among its state's work items, the lowest first. */
-            sort_order: number;
-            /**
-             * Format: date-time
-             * @description When it was put in a state of the completed group; null in any other state.
-             */
-            completed_at: string | null;
-            /**
-             * Format: date-time
-             * @description When it was archived; null when it is not.
-             */
-            archived_at: string | null;
-            /** @description The accounts it is assigned to, by id; one who has left the project since is still one. */
-            assignee_ids: string[];
-            /** @description Its labels, by id. */
-            label_ids: string[];
-            /** @description The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own. */
-            sub_issues_count: number;
-            /**
-             * Format: uuid
-             * @description The account that created it; null for none.
-             */
-            created_by_id: string | null;
-            /**
-             * Format: uuid
-             * @description The account that changed it last; null for none.
-             */
-            updated_by_id: string | null;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
         };
         /** @description Work items, all of them, without pages. */
         IssueCollection: {
@@ -2537,11 +2578,17 @@ export type Label = components['schemas']['Label'];
 export type LabelList = components['schemas']['LabelList'];
 export type LabelCreate = components['schemas']['LabelCreate'];
 export type LabelUpdate = components['schemas']['LabelUpdate'];
+export type IssueListGroupField = components['schemas']['IssueListGroupField'];
+export type IssueListOrder = components['schemas']['IssueListOrder'];
 export type IssuePriority = components['schemas']['IssuePriority'];
+export type Issue = components['schemas']['Issue'];
+export type IssueListSubgroup = components['schemas']['IssueListSubgroup'];
+export type IssueListGroup = components['schemas']['IssueListGroup'];
+export type IssueListTotal = components['schemas']['IssueListTotal'];
+export type IssueListPage = components['schemas']['IssueListPage'];
 export type IssueCreate = components['schemas']['IssueCreate'];
 export type IssueDetail = components['schemas']['IssueDetail'];
 export type IssueUpdate = components['schemas']['IssueUpdate'];
-export type Issue = components['schemas']['Issue'];
 export type IssueCollection = components['schemas']['IssueCollection'];
 export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
 export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
@@ -3995,6 +4042,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Label"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listIssues: {
+        parameters: {
+            query?: {
+                /** @description UUID alternatives. CSV; repeated parameters are not allowed. */
+                state_id?: string[];
+                /** @description backlog, unstarted, started, completed or cancelled. CSV; repeated parameters are not allowed. */
+                state_group?: string[];
+                /** @description urgent, high, medium, low or none. CSV; repeated parameters are not allowed. */
+                priority?: string[];
+                /** @description UUID or none alternatives. CSV; repeated parameters are not allowed. */
+                label_id?: string[];
+                /** @description UUID, me or none alternatives. CSV; repeated parameters are not allowed. */
+                assignee_id?: string[];
+                /** @description UUID or me alternatives. CSV; repeated parameters are not allowed. */
+                created_by_id?: string[];
+                /** @description UUID or me alternatives. CSV; repeated parameters are not allowed. */
+                mention_id?: string[];
+                /** @description UUID or me alternatives. CSV; repeated parameters are not allowed. */
+                subscriber_id?: string[];
+                /** @description A day, a..b, ..b, a.. or none; repeated conditions use AND. */
+                start_date?: string[];
+                /** @description A day, a..b, ..b, a.. or none; repeated conditions use AND. */
+                target_date?: string[];
+                /** @description Whether to include child work items. Only the strings true and false are allowed. */
+                sub_issue?: string;
+                /** @description Select only archived work items when true. Only the strings true and false are allowed. */
+                archived?: string;
+                group_by?: components["schemas"]["IssueListGroupField"];
+                sub_group_by?: components["schemas"]["IssueListGroupField"];
+                order_by?: components["schemas"]["IssueListOrder"];
+                /** @description The selected group key; checked against its grouping field. */
+                group_key?: string;
+                /** @description The selected group key; checked against its grouping field. */
+                sub_group_key?: string;
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A flat page, grouped pages, or lanes. Absent branches are omitted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueListPage"];
                 };
             };
             default: components["responses"]["Problem"];

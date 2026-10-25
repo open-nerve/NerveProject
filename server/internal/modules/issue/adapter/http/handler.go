@@ -124,8 +124,14 @@ type ListIssueActivitiesUseCase interface {
 	Execute(context.Context, uuid.UUID, *int, *string) (app.ActivityPage, error)
 }
 
+// ListIssuesUseCase reads the explicitly authorized project scope.
+type ListIssuesUseCase interface {
+	Execute(context.Context, uuid.UUID, map[string][]string) (app.IssueListPage, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	ListIssues              ListIssuesUseCase
 	ListIssueActivities     ListIssueActivitiesUseCase
 	ListDescriptionVersions ListDescriptionVersionsUseCase
 	GetDescriptionVersion   GetDescriptionVersionUseCase
@@ -156,7 +162,7 @@ type UseCases struct {
 // middlewares; api.Errors answers binding, decoding and handler errors.
 // Every operation needs a token.
 func Register(router *httpserver.Router, api *httpserver.API, uc UseCases) {
-	strict := gen.NewStrictHandlerWithOptions(handler{uc: uc}, nil, gen.StrictHTTPServerOptions{
+	strict := gen.NewStrictHandlerWithOptions(handler{uc: uc}, []gen.StrictMiddlewareFunc{withListQuery}, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc:  api.Errors.BodyError,
 		ResponseErrorHandlerFunc: api.Errors.Write,
 	})
@@ -167,7 +173,7 @@ func Register(router *httpserver.Router, api *httpserver.API, uc UseCases) {
 	gen.HandlerWithOptions(strict, gen.StdHTTPServerOptions{
 		BaseRouter:       router,
 		Middlewares:      middlewares,
-		ErrorHandlerFunc: api.Errors.BadRequest,
+		ErrorHandlerFunc: listQueryBindingError(api),
 	})
 }
 
