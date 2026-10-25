@@ -168,6 +168,15 @@ func (d issueWorkspaces) WorkspaceBySlug(ctx context.Context, slug string) (uuid
 	return w.ID, found, err
 }
 
+// issueMembers exposes workspace's lock-free historical membership lookup.
+type issueMembers struct {
+	members workspace.WorkspaceMemberDirectory
+}
+
+func (d issueMembers) MemberExists(ctx context.Context, wid, uid uuid.UUID) (bool, error) {
+	return d.members.WorkspaceMemberExists(ctx, wid, uid)
+}
+
 // issueProfiles is identity's PublicProfiles as issue's: each account's
 // display name, by account.
 type issueProfiles struct {

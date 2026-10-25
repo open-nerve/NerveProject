@@ -114,6 +114,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: clock.System{}, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
+		Members:    issueMembers{members: workspacePorts.WorkspaceMemberDirectory},
 		Profiles:   issueProfiles{profiles: identityPorts.PublicProfiles},
 	})
 	// project before workspace: workspace's writes take its cascade.

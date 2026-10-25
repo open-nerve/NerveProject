@@ -142,7 +142,7 @@ func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []m
 // test a public exemption names is one of the package's, so that renaming
 // or deleting it fails here too.
 func TestThePermissionMatrixCoversEveryOperation(t *testing.T) {
-	for _, v := range matrixViolations(apitest.Load(t).Operations(), matrixExempt, matrixRows(), newSeeded().in(t), packageTests(t, ".")) {
+	for _, v := range matrixViolations(apitest.Load(t).Operations(), matrixExempt, matrixRows(), memberTargetSeed(t), packageTests(t, ".")) {
 		t.Error(v)
 	}
 }

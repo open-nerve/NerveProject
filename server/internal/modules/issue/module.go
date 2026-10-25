@@ -111,6 +111,7 @@ type Deps struct {
 	// Workspaces is workspace's WorkspaceDirectory, converted
 	// (bootstrap/ports.go).
 	Workspaces app.WorkspaceDirectory
+	Members    app.WorkspaceMemberDirectory
 	// Profiles is identity's PublicProfiles, converted (bootstrap/ports.go).
 	Profiles app.PublicProfiles
 }
@@ -129,6 +130,7 @@ func New(d Deps) *Module {
 	listing := app.NewListing(app.ListingDeps{Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
 	archive := app.ArchiveIssueDeps{Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	return &Module{uc: httpadapter.UseCases{
+		ListMemberIssues:        app.NewListMemberIssues(app.ListMemberIssuesDeps{ReadTx: d.ReadTx, Authorizer: d.Authorizer, Workspaces: d.Workspaces, Members: d.Members, Projects: d.Projects, Listing: listing}),
 		ListIssues:              app.NewListIssues(app.ListIssuesDeps{ReadTx: d.ReadTx, Locks: locks, Listing: listing}),
 		ListIssueActivities:     app.NewListIssueActivities(app.ListIssueActivitiesDeps{Locks: locks, Activities: store, Projects: d.Projects, ReadTx: d.ReadTx}),
 		ListDescriptionVersions: app.NewListDescriptionVersions(app.ListDescriptionVersionsDeps{Locks: locks, Versions: store, ReadTx: d.ReadTx}),

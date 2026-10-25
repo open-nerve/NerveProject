@@ -917,6 +917,31 @@ export interface paths {
         patch: operations["updateLabel"];
         trace?: never;
     };
+    "/api/v0/workspaces/{slug}/members/{user_id}/issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+                /** @description The target account UUID, not a workspace membership row UUID. */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List a workspace member's work item relationships
+         * @description Workspace admins and members may read; workspace guests are forbidden. A target needs an undeleted workspace membership, active or ended. Only projects the caller actively belongs to that are undeleted and unarchived are included, applying the caller's OwnOnly restriction. Deleted, archived and triage work items are excluded. project_id only intersects this scope. Relationship filtering uses the path account, never the caller's identity or the target's project permissions. CSV alternatives use OR; different filters and repeated dates use AND. Unknown parameters and repeated non-date parameters answer 422. Binding precedes authentication: malformed paths or a missing relation answer 400; repeated declared non-date queries answer 422 even without a token. A group continuation retains filters and returns a flat page.
+         */
+        get: operations["listMemberIssues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/projects/{project_id}/issues": {
         parameters: {
             query?: never;
@@ -4042,6 +4067,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Label"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listMemberIssues: {
+        parameters: {
+            query: {
+                /** @description The target account's relationship; visibility always follows the caller. */
+                relation: "assigned" | "created" | "subscribed";
+                /** @description UUID alternatives intersected with the caller's ordinary visible projects. */
+                project_id?: string[];
+                /** @description backlog, unstarted, started, completed or cancelled. CSV; repeated parameters are not allowed. */
+                state_group?: string[];
+                /** @description urgent, high, medium, low or none. CSV; repeated parameters are not allowed. */
+                priority?: string[];
+                /** @description UUID or none alternatives. CSV; repeated parameters are not allowed. */
+                label_id?: string[];
+                /** @description A day, a..b, ..b, a.. or none; repeated conditions use AND. */
+                start_date?: string[];
+                /** @description A day, a..b, ..b, a.. or none; repeated conditions use AND. */
+                target_date?: string[];
+                /** @description Whether to include child work items. Only the strings true and false are allowed. */
+                sub_issue?: string;
+                group_by?: components["schemas"]["IssueListGroupField"];
+                order_by?: components["schemas"]["IssueListOrder"];
+                /** @description The selected group key; checked against its grouping field. */
+                group_key?: string;
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+                /** @description The target account UUID, not a workspace membership row UUID. */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A flat page or grouped pages. Group continuation returns a flat page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueListPage"];
                 };
             };
             default: components["responses"]["Problem"];

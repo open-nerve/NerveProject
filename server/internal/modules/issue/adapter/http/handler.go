@@ -124,6 +124,11 @@ type ListIssueActivitiesUseCase interface {
 	Execute(context.Context, uuid.UUID, *int, *string) (app.ActivityPage, error)
 }
 
+// ListMemberIssuesUseCase reads target relationships in the caller scope.
+type ListMemberIssuesUseCase interface {
+	Execute(context.Context, string, uuid.UUID, map[string][]string) (app.IssueListPage, error)
+}
+
 // ListIssuesUseCase reads the explicitly authorized project scope.
 type ListIssuesUseCase interface {
 	Execute(context.Context, uuid.UUID, map[string][]string) (app.IssueListPage, error)
@@ -131,6 +136,7 @@ type ListIssuesUseCase interface {
 
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	ListMemberIssues        ListMemberIssuesUseCase
 	ListIssues              ListIssuesUseCase
 	ListIssueActivities     ListIssueActivitiesUseCase
 	ListDescriptionVersions ListDescriptionVersionsUseCase

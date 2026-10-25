@@ -373,3 +373,18 @@ func (s seeded) workspaceOfRow(id uuid.UUID) (string, bool) {
 
 // matrixAdmins are the creators of the prepared workspaces, their admins.
 var matrixAdmins = map[string]caller{"acme": callerAdmin, "gone": callerDeleted, "other": callerNever}
+
+// memberAccount identifies an account through its workspace's historical seed,
+// never by a membership or invitation row ID. Nil static account IDs are ambiguous.
+func (s seeded) memberAccount(slug string, id uuid.UUID) bool {
+	if id == uuid.Nil() {
+		return false
+	}
+	for _, m := range matrixMemberships {
+		if m.slug == slug && s.accounts[m.c] == id {
+			_, found := s.memberships[slug+"/"+string(m.c)]
+			return found
+		}
+	}
+	return false
+}

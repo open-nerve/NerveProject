@@ -5,6 +5,114 @@ info:
   title: Nerve issue API
   version: v0
 paths:
+  /api/v0/workspaces/{slug}/members/{user_id}/issues:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+      - name: user_id
+        in: path
+        required: true
+        description: The target account UUID, not a workspace membership row UUID.
+        schema: {type: string, format: uuid}
+    get:
+      operationId: listMemberIssues
+      tags: [issue]
+      summary: List a workspace member's work item relationships
+      description: >-
+        Workspace admins and members may read; workspace guests are forbidden.
+        A target needs an undeleted workspace membership, active or ended.
+        Only projects the caller actively belongs to that are undeleted and
+        unarchived are included, applying the caller's OwnOnly restriction.
+        Deleted, archived and triage work items are excluded. project_id only
+        intersects this scope. Relationship filtering uses the path account,
+        never the caller's identity or the target's project permissions.
+        CSV alternatives use OR; different filters and repeated dates use AND.
+        Unknown parameters and repeated non-date parameters answer 422.
+        Binding precedes authentication: malformed paths or a missing relation
+        answer 400; repeated declared non-date queries answer 422 even without
+        a token. A group continuation retains filters and returns a flat page.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, workspace.not_found, workspace.member_not_found, forbidden]
+      parameters:
+        - name: relation
+          in: query
+          required: true
+          description: The target account's relationship; visibility always follows the caller.
+          schema: {type: string, enum: [assigned, created, subscribed]}
+        - name: project_id
+          in: query
+          description: UUID alternatives intersected with the caller's ordinary visible projects.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {type: string}
+        - name: state_group
+          in: query
+          description: backlog, unstarted, started, completed or cancelled. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {type: string}
+        - name: priority
+          in: query
+          description: urgent, high, medium, low or none. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {type: string}
+        - name: label_id
+          in: query
+          description: UUID or none alternatives. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {type: string}
+        - name: start_date
+          in: query
+          description: A day, a..b, ..b, a.. or none; repeated conditions use AND.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: {type: string}
+        - name: target_date
+          in: query
+          description: A day, a..b, ..b, a.. or none; repeated conditions use AND.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: {type: string}
+        - name: sub_issue
+          in: query
+          description: Whether to include child work items. Only the strings true and false are allowed.
+          schema: {type: string, default: 'true'}
+        - name: group_by
+          in: query
+          schema:
+            $ref: '#/components/schemas/IssueListGroupField'
+        - name: order_by
+          in: query
+          schema:
+            $ref: '#/components/schemas/IssueListOrder'
+        - name: group_key
+          in: query
+          description: The selected group key; checked against its grouping field.
+          schema: {type: string}
+        - $ref: '../common.yaml#/components/parameters/Limit'
+        - $ref: '../common.yaml#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A flat page or grouped pages. Group continuation returns a flat page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueListPage'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/projects/{project_id}/issues:
     parameters:
       - $ref: '#/components/parameters/ProjectID'

@@ -177,6 +177,27 @@ func (e IssueRelationType) Valid() bool {
 	}
 }
 
+// Defines values for ListMemberIssuesParamsRelation.
+const (
+	ListMemberIssuesParamsRelationAssigned   ListMemberIssuesParamsRelation = "assigned"
+	ListMemberIssuesParamsRelationCreated    ListMemberIssuesParamsRelation = "created"
+	ListMemberIssuesParamsRelationSubscribed ListMemberIssuesParamsRelation = "subscribed"
+)
+
+// Valid indicates whether the value is a known member of the ListMemberIssuesParamsRelation enum.
+func (e ListMemberIssuesParamsRelation) Valid() bool {
+	switch e {
+	case ListMemberIssuesParamsRelationAssigned:
+		return true
+	case ListMemberIssuesParamsRelationCreated:
+		return true
+	case ListMemberIssuesParamsRelationSubscribed:
+		return true
+	default:
+		return false
+	}
+}
+
 // CommentReaction defines model for CommentReaction.
 type CommentReaction struct {
 	ActorID   uuid.UUID `json:"actor_id"`
@@ -633,6 +654,47 @@ type ListIssuesParams struct {
 	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// ListMemberIssuesParams defines parameters for ListMemberIssues.
+type ListMemberIssuesParams struct {
+	// Relation The target account's relationship; visibility always follows the caller.
+	Relation ListMemberIssuesParamsRelation `form:"relation" json:"relation"`
+
+	// ProjectID UUID alternatives intersected with the caller's ordinary visible projects.
+	ProjectID *[]string `form:"project_id,omitempty" json:"project_id,omitempty"`
+
+	// StateGroup backlog, unstarted, started, completed or cancelled. CSV; repeated parameters are not allowed.
+	StateGroup *[]string `form:"state_group,omitempty" json:"state_group,omitempty"`
+
+	// Priority urgent, high, medium, low or none. CSV; repeated parameters are not allowed.
+	Priority *[]string `form:"priority,omitempty" json:"priority,omitempty"`
+
+	// LabelID UUID or none alternatives. CSV; repeated parameters are not allowed.
+	LabelID *[]string `form:"label_id,omitempty" json:"label_id,omitempty"`
+
+	// StartDate A day, a..b, ..b, a.. or none; repeated conditions use AND.
+	StartDate *[]string `form:"start_date,omitempty" json:"start_date,omitempty"`
+
+	// TargetDate A day, a..b, ..b, a.. or none; repeated conditions use AND.
+	TargetDate *[]string `form:"target_date,omitempty" json:"target_date,omitempty"`
+
+	// SubIssue Whether to include child work items. Only the strings true and false are allowed.
+	SubIssue *string              `form:"sub_issue,omitempty" json:"sub_issue,omitempty"`
+	GroupBy  *IssueListGroupField `form:"group_by,omitempty" json:"group_by,omitempty"`
+	OrderBy  *IssueListOrder      `form:"order_by,omitempty" json:"order_by,omitempty"`
+
+	// GroupKey The selected group key; checked against its grouping field.
+	GroupKey *string `form:"group_key,omitempty" json:"group_key,omitempty"`
+
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListMemberIssuesParamsRelation defines parameters for ListMemberIssues.
+type ListMemberIssuesParamsRelation string
+
 // UpdateIssueCommentJSONRequestBody defines body for UpdateIssueComment for application/json ContentType.
 type UpdateIssueCommentJSONRequestBody = IssueCommentCreate
 
@@ -734,6 +796,9 @@ type ServerInterface interface {
 	// GetIssueByIdentifier Read a work item by its identifier
 	// (GET /api/v0/workspaces/{slug}/issues/{identifier})
 	GetIssueByIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier IssueIdentifier)
+	// ListMemberIssues List a workspace member's work item relationships
+	// (GET /api/v0/workspaces/{slug}/members/{user_id}/issues)
+	ListMemberIssues(w http.ResponseWriter, r *http.Request, slug Slug, userID uuid.UUID, params ListMemberIssuesParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -1759,6 +1824,213 @@ func (siw *ServerInterfaceWrapper) GetIssueByIdentifier(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListMemberIssues operation middleware
+func (siw *ServerInterfaceWrapper) ListMemberIssues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "user_id" -------------
+	var userID uuid.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "user_id", r.PathValue("user_id"), &userID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMemberIssuesParams
+
+	// ------------- Required query parameter "relation" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "relation", r.URL.Query(), &params.Relation, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "relation"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "relation", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "project_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "project_id", r.URL.Query(), &params.ProjectID, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "state_group" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "state_group", r.URL.Query(), &params.StateGroup, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state_group"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state_group", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "priority" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "priority", r.URL.Query(), &params.Priority, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "priority"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "priority", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "label_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "label_id", r.URL.Query(), &params.LabelID, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "label_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "label_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "start_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_date", r.URL.Query(), &params.StartDate, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target_date", r.URL.Query(), &params.TargetDate, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sub_issue" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sub_issue", r.URL.Query(), &params.SubIssue, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sub_issue"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sub_issue", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "group_by" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "group_by", r.URL.Query(), &params.GroupBy, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "group_by"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group_by", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order_by" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order_by", r.URL.Query(), &params.OrderBy, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order_by"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order_by", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "group_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "group_key", r.URL.Query(), &params.GroupKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "group_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group_key", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMemberIssues(w, r, slug, userID, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -1879,6 +2151,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/members/{user_id}/issues", wrapper.ListMemberIssues)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.ListIssues)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.CreateIssue)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.DeleteIssue)
@@ -3053,6 +3326,54 @@ func (response GetIssueByIdentifierdefaultApplicationProblemPlusJSONResponse) Vi
 	return err
 }
 
+type ListMemberIssuesRequestObject struct {
+	Slug   Slug      `json:"slug"`
+	UserID uuid.UUID `json:"user_id"`
+	Params ListMemberIssuesParams
+}
+
+type ListMemberIssuesResponseObject interface {
+	VisitListMemberIssuesResponse(w http.ResponseWriter) error
+}
+
+type ListMemberIssues200JSONResponse IssueListPage
+
+func (response ListMemberIssues200JSONResponse) VisitListMemberIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMemberIssuesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListMemberIssuesdefaultApplicationProblemPlusJSONResponse) VisitListMemberIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// DeleteIssueComment Delete a comment as its author or project administrator
@@ -3130,6 +3451,9 @@ type StrictServerInterface interface {
 	// GetIssueByIdentifier Read a work item by its identifier
 	// (GET /api/v0/workspaces/{slug}/issues/{identifier})
 	GetIssueByIdentifier(ctx context.Context, request GetIssueByIdentifierRequestObject) (GetIssueByIdentifierResponseObject, error)
+	// ListMemberIssues List a workspace member's work item relationships
+	// (GET /api/v0/workspaces/{slug}/members/{user_id}/issues)
+	ListMemberIssues(ctx context.Context, request ListMemberIssuesRequestObject) (ListMemberIssuesResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -3877,6 +4201,34 @@ func (sh *strictHandler) GetIssueByIdentifier(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetIssueByIdentifierResponseObject); ok {
 		if err := validResponse.VisitGetIssueByIdentifierResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMemberIssues operation middleware
+func (sh *strictHandler) ListMemberIssues(w http.ResponseWriter, r *http.Request, slug Slug, userID uuid.UUID, params ListMemberIssuesParams) {
+	var request ListMemberIssuesRequestObject
+
+	request.Slug = slug
+	request.UserID = userID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMemberIssues(ctx, request.(ListMemberIssuesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMemberIssues")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMemberIssuesResponseObject); ok {
+		if err := validResponse.VisitListMemberIssuesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

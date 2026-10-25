@@ -124,6 +124,11 @@ func targetViolation(pattern, path string, c caller, s seeded, passOver func(par
 			if got[i] != workspaceOf(c) {
 				return fmt.Sprintf("targets the workspace %s, not its column's %s", got[i], workspaceOf(c))
 			}
+		case segment == "{user_id}" && pattern == memberIssuesPattern:
+			id, err := uuid.Parse(got[i])
+			if err != nil || !s.memberAccount(workspaceOf(c), id) {
+				return fmt.Sprintf("{user_id} %s is no member account seeded in its column's workspace %s", got[i], workspaceOf(c))
+			}
 		case strings.HasSuffix(segment, "_id}"):
 			id, err := uuid.Parse(got[i])
 			slug, isRow := s.workspaceOfRow(id)
