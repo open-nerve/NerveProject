@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M4/P4 `issue-collaboration` |
 | 日期 | 2026-10-25 |
-| 状态 | **实现/适用验证完成，待终审**：T1–T16独立评审通过，T15两项Minor已由T16复核关闭；本地Firefox两项环境失败；分支CI 40170883949中Web/服务端通过、S2关闭后动画未卸载，负责人已批准A，修复进行中；Claude终审未执行，尚未合并 |
+| 状态 | **实现/适用验证完成，待终审**：T1–T16独立评审通过，T15两项Minor已由T16复核关闭；本地Firefox两项环境失败；分支CI 40170883949中Web/服务端通过、S2关闭后动画未卸载，A2修复54866c8f已通过独立评审（C/I/M均0）及分支CI 40175286547（server/web/e2e全部成功）；Claude终审未执行，尚未合并 |
 | spec / plan | [spec](../specs/P4-issue-collaboration.md) / [plan](../plans/P4-issue-collaboration.md) |
 | 分支 | `codex/m4-p4` |
 | main 基线 | `56d575fb8ff6575880d1edef65219728a81f2b12` |
@@ -220,15 +220,32 @@ I12分别保留评论、动态末页的请求cursor，合并描述沿原id更新
 | 交接 | 五份handoff追加处理结果且status=open；spec §5/7、本文§6列出后续接收内容 | 不产生M5–M8真正收尾交接，不关闭既有handoff |
 | Web G | lint-web54/54（36缓存）exit0、knip修正后exit0、test-web17/17任务（17缓存）exit0；分别 `task-16-lint-web.log`、`task-16-knip-fixed.log`、`task-16-test-web.log` | 首次knip exit2发现本Task忽略目录两个纯值.mjs过程脚本unused，原脚本改存.mjs.txt并保留失败日志，不改knip配置/守卫 |
 | 故事 | `task-16-focus.log` 6 passed；完整 `make e2e` 的 `task-16-full-e2e.log` 133 passed/2 failed，make exit2 | 两失败分别Firefox A4 navigator.locks/localStorage lease缺firefox-1543可执行文件、均launch前止；没有新增业务失败；未安装浏览器或重跑全量 |
-| 收口门 | `git diff --check`及相对链接/新fixture文件名核对，最终提交3c0446ea后gen-check自然exit0（UTC01:16:36–39）；Go lint/test沿最近T14、race沿T13 | 本Task无Go变化，不重复Go/race；T16独立审查已通过；分支CI的S2关闭后动画未卸载，负责人已批准A，修复进行中、Claude终审待完成，不以自查冒充 |
+| 收口门 | `git diff --check`及相对链接/新fixture文件名核对，最终提交3c0446ea后gen-check自然exit0（UTC01:16:36–39）；Go lint/test沿最近T14、race沿T13 | 本Task无Go变化，不重复Go/race；T16独立审查已通过；分支CI的S2关闭后动画未卸载，A2修复54866c8f已通过独立评审（C/I/M均0）及分支CI 40175286547（server/web/e2e全部成功）、Claude终审待完成，不以自查冒充 |
 
 首次定位的过程包装器因从e2e cwd推导日志目录错误，在启动Playwright前即FileNotFoundError；修正记录器根目录后仅启动一次定位套件，自然退出后才执行完整e2e。首次纯值脚本遇首个反例即退出，随后保留原日志并另跑两边界合并红；均是纯值业务断言，未把包装器错误当测试红。所有真实开始/结束/退出见task-16-report，不删除历史失败。
 
 推进者已读完整task-16-report.md、原始红绿/18条命令台账及实际提交，最终文档后lint-web54/54（38缓存）、232处相对路径/11个新增锚点检查、提交后gen-check均通过，工作树干净。独立task-16-review.md审查499cf108..3c0446ea，规格通过、质量Approved，Critical/Important/Minor均0；T15 M1/M2逐项ADDRESSED，当前无未关闭任务级发现。差异外的spec前八项沿本文T1–T15逐项验收、原始变异/运行记录与T14最终Go/T13 race闭合；本Task五表文档静态对应及时间修正证据已由审查者定点核对。本Task最终无新依赖或生产差异，架构守卫未改，原始失败与Firefox限制仍保留。
 
-### 2.18 尚未完成的 P4 验收
+### 2.18 A2 共用动画收尾修复（实现、独立评审及分支CI通过）
 
-T1–T16实现及独立Task评审已完成；负责人已推送a0526ade，分支CI 40170883949的Web/服务端通过、S2关闭后动画未卸载，负责人已批准A，修复进行中；root自主推送授权尚未恢复，Claude整分支终审及其发现修复轮未执行。完整e2e的两项Firefox环境失败未通过。M4设计§14不新增勾选，总体9.4仍进行中，P4不标最终完成；没有PR、merge或清理。
+负责人批准A后，实施范围为`95c72c46..54866c8f`，仅改四个文件：固定`@headlessui/react@2.2.10`的pnpm版本补丁、workspace配置、锁文件及UI窄回归。`waitForTransition`在每轮捕获的动画结束后重新读取尚未完成的动画，直到没有待完成项才调用收尾；每轮保留取消检查。ESM、CJS开发和CJS生产三个实际发布入口语义一致，保留MIT声明和上游PR出处，没有改产品组件、S2故事、依赖版本或守卫。
+
+| A2证据 | 实际结果与边界 |
+|---|---|
+| 真实组件红绿与原包对照 | 三入口各覆盖动画A被B替换、等待中重开/再关闭、卸载取消；原包3失败/6通过，修正9/9；最终提交夹具撤回补丁后同样3失败/6通过，按正常pnpm流程恢复后9/9。B仍被getAnimations列出但已finished也能收尾 |
+| 发布入口与真实产物 | 原生Node确认三个真实组件出口；329个发布文件只有三处wait函数改变，其余字节及MIT LICENSE不变。构建后的`dist-DlQudYn1.js`含修正逻辑，整份bundle实际嵌入`bin/nerve`，非旧产物 |
+| Web门禁 | lint54/54、knip退出0、test17/17任务（14缓存，UI22/22测试）；54866c8f提交后gen-check退出0（UTC07:58:11–15），期间跟踪文件冻结 |
+| 浏览器回归 | S2四角色及S6/A11/W9/S8五个完整故事文件19/19；完整E2E133通过，仅2项A4 Firefox在launch时报本机浏览器缺失。真实浏览器故事验证消费者行为，受控动画竞态由新增组件测试证明，二者不混称 |
+| 保留的首次失败 | 首轮直接process.env被既有frontend-env拒绝，改用vi.stubEnv；第二轮测试await-in-loop超既有警告额度，改逐帧推进。守卫和额度未变，最终门禁通过 |
+| 独立评审与CI | 独立任务评审规格通过、质量Approved，C/I/M均0；[CI 40175286547](https://github.com/open-nerve/NerveProject/actions/runs/40175286547)精确54866c8f，server/web/e2e全部成功；Claude整分支终审另由负责人安排 |
+
+过程文件在本工作树`.superpowers/sdd/P4-issue-collaboration/`：`a2-implementation-report.md`、`a2-existing-story-coverage.md`及`logs/a2-*`，每个命令的JSON记录真实参数、目录、起止和exit。最终原包对照/恢复为`a2-final-counterfactual-red`与`a2-final-restored-green`；发布范围为`a2-patch-scope`，嵌入产物为`a2-bundle-provenance-final`。A2的撤回对照单列，不加进T1–T15的106次生产变异。上游PR3906仍未合并，未来升级时核对并在正式版本已包含修复后移除此版本补丁，保留行为回归。
+
+独立评审`a2-review.md`审查`95c72c46..54866c8f`，规格与质量均通过，无Critical/Important/Minor。评审者独立核对压缩文件函数外字节、真实三入口和嵌入产物，未重跑已完成套件。差异外边界逐项处理：精确54866c8f的CI已全绿，E2E包含Firefox；真实浏览器未强制复现低概率时序的限制如上保留，不把常规故事当作受控竞态证明；过程约束由实际命令台账与干净工作树、主目录main、串行套件自然退出记录核对，没有新缺口需修复轮。
+
+### 2.19 尚未完成的 P4 验收
+
+T1–T16及A2实现、适用本地验证、独立任务评审和分支CI均已通过；自主Git推送恢复。待负责人安排Claude整分支终审、处理终审发现，再按阶段门合并并核验main CI。本机两项Firefox环境失败仍如实保留，54866c8f的CI已补足该环境验证。M4设计§14不新增勾选，总体9.4仍进行中，P4不标最终完成；没有PR、merge或清理。
 
 ## 3. 决定与裁定记录
 
@@ -357,9 +374,9 @@ T6准备时确认：T5的共享表情错误文案当前限定“on the work item
 | 173322.146 | 按钮`aria-expanded=false`且有`data-focus`；菜单逻辑状态已关闭，但DOM保留`data-enter data-transition data-closed`和opacity-0/scale-95 |
 | 178328.755 | 5秒断言结束后菜单仍是同一残留状态；失败截图中按钮聚焦、菜单透明，页面快照仍列出menuitem |
 
-因此，本次Escape已生效，失败发生在过渡完成与卸载；等待焦点、延长超时或重复Escape没有针对本次失败原因。两轮此前本地20次通过只代表未自然复现，不推翻CI实际失败。S2、菜单及相关依赖相对P4原基线未改，当前也未改这些生产/测试文件。
+因此，本次Escape已生效，失败发生在过渡完成与卸载；等待焦点、延长超时或重复Escape没有针对本次失败原因。两轮此前本地20次通过只代表未自然复现，不推翻CI实际失败。诊断时S2、菜单及相关依赖相对P4原基线未改；A2实施仍未改S2与菜单文件，固定版本的共用库修正另见§2.18。
 
-**源码与上游核对。** 已安装Headless UI 2.2.10的`useTransition`在进入中被关闭打断时设置Enter|Closed；`waitForTransition`只订阅一次捕获的动画集合，而`done`遇后续仍在运行的动画会直接返回、不再被调用。本次残留标志对应这条中断路径。上游[3902](https://github.com/tailwindlabs/headlessui/issues/3902)记录相同现象与晚提交时序，[PR3906](https://github.com/tailwindlabs/headlessui/pull/3906)提出每轮动画完成后重新读取未完成集合的根因修正；截至2026-10-25该PR仍open，[最新正式版](https://github.com/tailwindlabs/headlessui/releases)仍2.2.10。PR的测试通过是上游作者报告，不是本仓库验证；本仓库尚未执行可控动画A→B回归或应用该修正。
+**源码与上游核对。** 已安装Headless UI 2.2.10的`useTransition`在进入中被关闭打断时设置Enter|Closed；`waitForTransition`只订阅一次捕获的动画集合，而`done`遇后续仍在运行的动画会直接返回、不再被调用。本次残留标志对应这条中断路径。上游[3902](https://github.com/tailwindlabs/headlessui/issues/3902)记录相同现象与晚提交时序，[PR3906](https://github.com/tailwindlabs/headlessui/pull/3906)提出每轮动画完成后重新读取未完成集合的根因修正；截至2026-10-25该PR仍open，[最新正式版](https://github.com/tailwindlabs/headlessui/releases)仍2.2.10。PR的测试通过是上游作者报告，不是本仓库验证；该诊断时本仓库尚未执行可控动画A→B回归或应用修正；批准后的实施证据见§2.18。
 
 **为何上报。** `web/apps/web`和`@nerve/ui`共用此依赖。统一修复会改变其菜单、弹窗等消费者的过渡完成流程，属于负责人明确要求先停下的“跨模块协同调整”，而非P4 issue模块的局部实现问题。现有证据只证明这次工作区菜单故障，不把所有消费者都宣称为已复现。没有升级、回退、修改安装目录或改守卫。
 
@@ -367,11 +384,11 @@ T6准备时确认：T5的共享表情错误文案当前限定“on the work item
 
 **方案B（未采用）：仅让工作区菜单直接卸载。** 移除WorkspaceMenuRoot外层Transition，使用仓库CustomMenu已有的Menu.Items默认卸载方式，职责与代码都局限于此菜单。代价是取消这处100ms进入/75ms退出动效，需登记Plane差异；其他消费者仍使用原库逻辑。不能把它记成共享库根因修复。
 
-**负责人裁定（2026-10-25）。** 在证据与方案提交6cfba775后，负责人明确选择“A：统一修复共用库，保留动效（推荐）”。A2暂停解除，先同步设计/spec/plan，再按A实施、补可控红绿与跨模块回归，并做独立任务评审。此前CI仍是a0526ade的失败，不能提前写修复通过；Claude终审与合并门保持未完成。已批准A1保持不变。
+**负责人裁定（2026-10-25）。** 在证据与方案提交6cfba775后，负责人明确选择“A：统一修复共用库，保留动效（推荐）”。A2暂停解除，先同步设计/spec/plan，再按A实施、补可控红绿与跨模块回归，并做独立任务评审。批准时CI仍是a0526ade的失败，不能提前写修复通过；后续实际验收见§2.18，Claude终审与合并门保持未完成。已批准A1保持不变。
 
 ## 4. 整分支评审的发现与处理
 
-尚未送 Claude 终审。A1 是实施前发现，负责人已批准 A 方案。T16独立审查已通过；负责人已推送a0526ade，分支CI的S2关闭后动画未卸载，负责人已批准A，修复进行中；root自主推送仍受钥匙串授权阻塞。按用户要求交付分支 `codex/m4-p4`、原基线 `56d575fb8ff6575880d1edef65219728a81f2b12`、spec/plan/本review和106次变异台账，等待负责人安排Claude整分支终审。终审发现按一个修复轮处理，必要时复审；未获批准前不合并、不push main或清理。
+尚未送 Claude 终审。A1 是实施前发现，负责人已批准 A 方案。T16独立审查已通过；负责人已推送a0526ade，分支CI的S2关闭后动画未卸载，A2修复54866c8f已通过独立评审（C/I/M均0）及分支CI 40175286547（server/web/e2e全部成功）；系统git经本仓库SSH推送地址已实际推送成功。按用户要求交付分支 `codex/m4-p4`、原基线 `56d575fb8ff6575880d1edef65219728a81f2b12`、spec/plan/本review和106次变异台账，等待负责人安排Claude整分支终审。终审发现按一个修复轮处理，必要时复审；未获批准前不合并、不push main或清理。
 
 **分支CI推送阻塞（2026-10-25）。** 推进者在可审提交3c0446ea使用系统`/usr/bin/git push -u origin codex/m4-p4`，UTC01:20:59–01:21:00自然exit128，错误为`failed to get: -25308`及`could not read Username for https://github.com: Device not configured`。当次无成功推送、无分支CI运行，不能归因W11或借用原main CI成功。原始记录在工作树`.superpowers/sdd/P4-issue-collaboration/logs/task-16-root-push-first.log`及`task-16-root-ci-commands.jsonl`。已请负责人自行恢复终端GitHub认证，不发送密码/token；遵守[03规则§3](../../claude_to_gpt/03-rules-and-pitfalls.md)“不去钥匙串或别处取凭据”。在认证恢复前保留本地分支、完整提交和终审材料，尚未合并。
 
@@ -381,7 +398,11 @@ T6准备时确认：T5的共享表情错误文案当前限定“on the work item
 
 **收到报告前的S2定向诊断。** 只读核对确认S2、菜单实现和相关依赖相对P4基线未改。临时浏览器观察器保持原点击、可见、Escape及卸载断言，记录真实按键目标、焦点、`aria-expanded`和过渡状态：普通运行10/10通过（UTC07:18:09–38，28.2s）；仅菜单操作前启用CDP CPU8倍限速后10/10通过（UTC07:19:35–07:20:07，31.0s）。两轮均单worker、串行套件；按键目标始终是menu，限速轮最终expanded=false且菜单已卸载。原S2源码逐字恢复，未改生产、测试断言或超时。这不能证明CI失败已修复；“Escape未到菜单”与“关闭后的动画未卸载”当时仍需真实失败快照区分，已请负责人提供该次 `error-context.md` 的菜单片段。完整静态分析见 `task-16-s2-diagnosis.md`，观察脚本、原始/观察版及 `logs/s2-observe-baseline.{log,json}`、`logs/s2-cpu8.{log,json}` 保留；不继续盲目重复或将本地通过冒充CI通过。
 
-同轮root使用系统git的普通push、PTY dry-run和显式指定系统osxkeychain助手的dry-run均报 `-25308` / exit128；`ls-remote`和fetch成功，公开读取不证明认证推送恢复。未改变Git配置、未读取凭据；实际命令与起止记录见 `logs/task-16-root-ci-commands.jsonl`、`logs/git-auth-fetch-check-20261025.json`、`logs/git-auth-explicit-system-helper-check.json`。负责人说明SSH操作没有看到授权弹窗，已指导通过本机或屏幕共享的图形桌面为系统Git助手完成正常钥匙串授权，之后必须由root实际推送验证；当前不能声称自主推送已恢复。此后本地文档提交不在上述CI的精确SHA覆盖范围内，恢复推送后另记最新HEAD的运行。
+同轮root使用系统git的普通push、PTY dry-run和显式指定系统osxkeychain助手的dry-run均报 `-25308` / exit128；`ls-remote`和fetch成功，公开读取不证明认证推送恢复。未改变Git配置、未读取凭据；实际命令与起止记录见 `logs/task-16-root-ci-commands.jsonl`、`logs/git-auth-fetch-check-20261025.json`、`logs/git-auth-explicit-system-helper-check.json`。负责人说明SSH操作没有看到授权弹窗，已指导通过本机或屏幕共享的图形桌面为系统Git助手完成正常钥匙串授权，之后必须由root实际推送验证；当时不能声称自主推送已恢复。后续恢复实证如下；上述旧CI不覆盖其后的提交。
+
+**自主推送恢复实证（2026-10-25）。** 负责人完成图形桌面“始终允许”后，HTTPS dry-run仍报-25308。标准SSH客户端在`UseKeychain=no`下通过GitHub身份及本仓库推送预检；仅将本仓库`remote.origin.pushurl`设为同一仓库的`git@github.com:open-nerve/NerveProject.git`，fetch仍为原HTTPS，没有改全局认证或提取凭据。随后普通系统`/usr/bin/git push -u origin codex/m4-p4`在UTC08:05:44–51退出0，远端从a0526ade推进到54866c8f，且追踪分支已建立。公开API确认远端与[CI 40175286547](https://github.com/open-nerve/NerveProject/actions/runs/40175286547)的head均为`54866c8f07e49e7c1aec642c30c83a35bff26721`，UTC08:05:52启动。恢复的是正常自主Git推送；没有声称HTTPS钥匙串错误已修好。命令证据为`logs/a2-owner-keychain-dry-run.json`、`a2-ssh-push-dry-run.json`、`a2-origin-ssh-dry-run.json`、`a2-actual-push.json`，CI元数据为`a2-ci-54866c8f.json`。
+
+**修复后的分支CI（2026-10-25）。** [CI 40175286547](https://github.com/open-nerve/NerveProject/actions/runs/40175286547)在`54866c8f07e49e7c1aec642c30c83a35bff26721`上于UTC08:05:52–08:17:41完成，结论success；server、web、e2e三个作业全部success，annotations均0。通过公开run/jobs/steps核对，没有读取需授权的作业日志或产物；这里只记录作业/步骤结论，不编造该次日志中的测试数量。完整元数据为`logs/a2-ci-54866c8f.json`。本记录后的提交只同步四份验收文档；其最新HEAD仍由推进者推送并核验CI，最终交付消息给出该次运行，避免为记录自身SHA反复产生文档提交。
 
 ## 5. 最终实现与 plan 的差异
 
@@ -409,6 +430,7 @@ T1实施中增加了CustomColor既有解析的局部根因修复，以及颜色�
 | T14 | db7cfc10 | 6 | +591/−18 | 无 |
 | T15 | f331174b | 12 | +567/−7 | 无 |
 | T16 | 960b00d3、3c0446ea（精确SHA/numstat见task-16-report.md） | 16（4代码/故事、12文档） | +219/−68（代码+12/−9；文档+207/−59） | 无 |
+| A2 CI修复 | 54866c8f | 4 | +269/−4 | 固定2.2.10的pnpm补丁；没有新增依赖或版本升级 |
 
 T7/8内部类型与决策由T9消费，T11 Historical由T12消费，无空端口。T3/T9实际规模较大包含契约/生成物，独立评审未要求再拆；保持16Task，没有新增第17Task或缩减scope。新时间fixture仅3行；既有契约/生成物和共享S3数据契约的大小例外沿原裁定，未放宽其他逻辑约400行规则。
 
@@ -426,13 +448,13 @@ T7/8内部类型与决策由T9消费，T11 Historical由T12消费，无空端口
 | M6（经M4收尾） | 继续消费furnishIssueRows与目录删除断言，新表建出同步API前置；后续异步删除需限时轮询。P4五表已接入，未提前完成迭代/模块前端 |
 | M7/M8（经M4收尾） | 关注只在加入瞬间可读，通知发送前再判权限；评论/表情不写动态，通知从P6事件；stripped只做摘要/Webhook、不作搜索。收集箱来源和旧显示分支按M1-P3原交接继续 |
 | M4真正收尾 | 五份交接及其余输入共八份统一逐项核对closed，浏览器C12、整体性能及M5–M8交接；main CI与W11按06，当前不得关闭或冒称M4完成 |
-| root/负责人 | T16独立复核M1/M2及12文档已通过；已核验a0526ade的分支CI，S2关闭后动画未卸载，负责人已批准A，修复进行中；恢复root自主推送授权后继续验证，不必建PR；给负责人整分支材料并等待Claude终审。后续只追加真实run/审查记录 |
+| root/负责人 | T16独立复核M1/M2及12文档已通过；已核验a0526ade的分支CI，S2关闭后动画未卸载，A2修复54866c8f已通过独立评审（C/I/M均0）及分支CI 40175286547（server/web/e2e全部成功）；最终文档推送后核验最新HEAD的CI，不必建PR；给负责人整分支材料并等待Claude终审。后续只追加真实run/审查记录 |
 
 原spec §7的P1b/P2/P3输入已分别由T7–9/15、T3–6/10/12/14/15、T9/11–14消费。五份handoff只追加“处理结果（M4/P4）”及明确余项，均保持open；原关闭条件未删除，M4§14和总体§9.4不提前完成。
 
 ## 7. 已知限制
 
-- P4实现/适用本地验证及T1–T16独立评审完成，分支CI 40170883949的Web/服务端通过、S2关闭后动画未卸载，负责人已批准A，修复进行中，Claude终审待安排；本地完整e2e两项Firefox缺失仍未通过。M4仍有P5–收尾，负责人已推送a0526ade，root自主推送仍报钥匙串-25308；没有PR、合并或清理，也没有P4合并main CI。原main CI342/343成功仅是历史证据，不能替代本分支CI。
+- P4实现/适用本地验证及T1–T16独立评审完成，分支CI 40170883949的Web/服务端通过、S2关闭后动画未卸载，A2修复54866c8f已通过独立评审（C/I/M均0）及分支CI 40175286547（server/web/e2e全部成功），Claude终审待安排；本地完整e2e两项Firefox缺失仍保留，修复提交的CI已覆盖该环境。M4仍有P5–收尾；root已自主推送54866c8f，CI结果按精确SHA另记；没有PR、合并或清理，也没有P4合并main CI。原main CI342/343成功仅是历史证据，不能替代本分支CI。
 - W11 既有偶发失败按 [06](../../claude_to_gpt/06-ci-w11-flake.md) 的裁定不调查；未来某次合并被它阻塞且重跑仍失败时再上报。
 - 独立预检及六项局部修订的定向复核已完成；只代表计划层可执行，不代表产品测试或阶段终审通过。
 

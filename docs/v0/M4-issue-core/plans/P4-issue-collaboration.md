@@ -8,7 +8,7 @@
 
 **技术栈：** Go 1.27/toolchain go1.27.1、pgx v5.11.0、sqlc v1.31.1、oapi-codegen v2.8.0、PostgreSQL 18.6、Node 24、pnpm 11.10.0和仓库锁定的TipTap/vitest/Playwright；仅新增已批准bluemonday及设计点名的传递依赖。
 
-**规格：** [P4规格](../specs/P4-issue-collaboration.md)；[上级设计](../M4-design.md)。代码基线56d575fb8ff6575880d1edef65219728a81f2b12，恢复文档HEAD 573e8eb6。本plan为紧凑可执行计划，不转录整份实现；没有整段原型或其生成SHA；实际Task验证进度见review；T1–T16独立评审通过，T15两项Minor已由T16关闭；负责人已推送a0526ade；分支CI 40170883949中Web/服务端通过、S2关闭后动画未卸载，负责人已批准A，修复进行中；root自主推送授权尚未恢复，Claude终审待负责人安排。
+**规格：** [P4规格](../specs/P4-issue-collaboration.md)；[上级设计](../M4-design.md)。代码基线56d575fb8ff6575880d1edef65219728a81f2b12，恢复文档HEAD 573e8eb6。本plan为紧凑可执行计划，不转录整份实现；没有整段原型或其生成SHA；实际Task验证进度见review；T1–T16独立评审通过，T15两项Minor已由T16关闭；首次分支CI的S2动画残留已修复；A2修复54866c8f已通过独立评审（C/I/M均0）及分支CI 40175286547（server/web/e2e全部成功）；系统git已通过SSH实际推送54866c8f，Claude终审待负责人安排。
 
 ## Global Constraints
 
@@ -432,22 +432,23 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [x] **Step 1 收集验收。** 对spec§4每项指向可复核日志/提交；没有证据保持未勾选。同步A1原话与content最终放置、纯层守卫实测；填写16Task实际大小/依赖变化，不补造原型或全量重放。
 - [x] **Step 2 更新上级。** 按设计3.23/P4：无回复、仅描述历史、44表/无issue_versions、20版保留交P9、PageSize共享；五表逐列差异、500000上限、skip内容标识/审计代价、空评论、表情格式、作者权限、动态分页/过滤/增量限制。未做保留任务不能写为正在运行。
 - [x] **Step 3 移交。** 五份handoff追加“处理结果（M4/P4）”与余项，status仍open；P5复用ReadOnlySnapshot/历史目录，P6事件且skip相同不发布，P9保留/清理，P11新DTO/地址及comment_json，P14撤销重做/isMigrationUpdate，P15末页cursor重取，M5图片src投影经收尾交接；没有遗漏原spec§5/7。
-- [ ] **Step 4 核验/预备终审。** `git diff --check`，纯值定点检查及三故事定位；因承接时间断言变更，顺序执行`make lint-web`、`make knip`、`make test-web`、完整`make e2e`及提交后`make gen-check`；已通过G全量门禁的日志集中列出，新增修复只按影响复测，未有完整门禁则补齐。检查文档相对链接和新文件名。分支CI由根任务在可审查提交上使用系统git推送codex/m4-p4后核验，执行者保留未执行状态及证据落点，不虚填结论；根任务给负责人分支、基线、spec/plan/review和变异台账，等待负责人安排Claude整分支终审；终审发现按一个修复轮处理、必要时复审。
+- [x] **Step 4 核验/预备终审。** `git diff --check`，纯值定点检查及三故事定位；因承接时间断言变更，顺序执行`make lint-web`、`make knip`、`make test-web`、完整`make e2e`及提交后`make gen-check`；已通过G全量门禁的日志集中列出，新增修复只按影响复测，未有完整门禁则补齐。检查文档相对链接和新文件名。分支CI由根任务在可审查提交上使用系统git推送codex/m4-p4后核验，执行者保留未执行状态及证据落点，不虚填结论；根任务给负责人分支、基线、spec/plan/review和变异台账，等待负责人安排Claude整分支终审；终审发现按一个修复轮处理、必要时复审。
 - [x] **Step 5 提交与停止。** `docs(M4/P4): 记录协作验收证据与后续交接`。**负责人2026-10-25明确要求完成后先别合并；不得merge、push main或清理本分支。** Claude终审前进度写实现/验证完成待终审，不冒称Phase已最终完成。
 
-### CI修复轮 A2：共用动画收尾（负责人已批准A，实施中）
+### CI修复轮 A2：共用动画收尾（实现、独立评审及分支CI通过）
 
 - 依据负责人提供的run40170883949 trace和review§3/A2，负责人已选择A，允许在此修复轮统一修正现用库并验证；T1–T16既有实施/任务评审不重开。
 - **已批准A的范围：** 新增现用`@headlessui/react@2.2.10`的版本修正文件到既有`patches/`，同步`pnpm-workspace.yaml`的`patchedDependencies`及锁文件；核对实际ESM/CJS入口，把已替换的动画集合重新纳入完成等待。保留取消清理、焦点/键盘和现有动画时长；不引入新的库、不直接改安装目录。
 - **先证伪再修：** 在`web/packages/ui/src/`的既有Vitest/jsdom环境补真实Headless UI组件回归，受控呈现旧动画A被新动画B替代；原版本须因B完成后仍残留DOM而红，修复后在B完成才卸载。另验证过程中重新打开/再次关闭及卸载取消，回退库修正时回归重新失败；实现路径/控制方式在本修复轮细化，不把未执行预期记结果。
 - **修复门禁：** 定位S2所有角色和菜单/弹窗关联故事，顺序执行`make lint-web`、`make knip`、`make test-web`、完整`make e2e`及提交后`make gen-check`；无Go变化沿已有Go证据，最新分支CI另验精确HEAD；本机Firefox限制仍单列。共享库修正需独立评审，随后同整分支交负责人安排Claude终审。
 - **未采用B（保留取舍记录）：** 仅移除WorkspaceMenuRoot外层Transition，复用Menu.Items直接随关闭卸载的既有模式；取消该菜单100ms进入/75ms退出动效，登记Plane差异并做快速关闭/重开回归。此方案不修复其他组件的共享库路径，不能写成全局缺陷已解决。
-- **执行边界：** 负责人已批准A，按此范围推进，不再请求同一范围确认。Git自主推送授权是独立未解决项，不因收到CI报告而视为恢复；不合并、不清理。
+- **实际结果：** 54866c8f；三入口回归9/9，最终原包撤回对照3失败/6通过后恢复9/9；Web54/54、knip0、test17/17、gen-check0，定向浏览器19/19、完整本地133通过/2已知Firefox缺失；独立评审C/I/M0，CI 40175286547全部成功。详见review§2.18及§4，未把A2撤回对照加进106次生产变异。
+- **执行边界：** 负责人已批准A，按此范围推进，不再请求同一范围确认。Git自主推送已通过实际SSH推送验证，详情见review§4；不合并、不清理。
 
 ## 自检结果与大小
 
 16个任务与设计原任务映射在spec§3.2；12个新操作/五表全部有拥有Task，表与fixture同批交付。Task7/8内部准备由Task9消费，不提前公开描述字段；Task11历史目录由Task12消费。公共类型与方法按上面的公共表和各Interfaces定义，不依赖代码转录。Review Focus五项分别绑定实际测试和变异。作者自检报告保存于工作树的`.superpowers/sdd/P4-issue-collaboration/plan-author-report.md`（过程记录，不作为已完成测试证据）。
 
-原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检及六项修订复核、T1–T16实施/适用本地验证与独立Task评审均已完成；T1/F1、T6/I1及T9/T13 Minor的复核闭合见review。T16已完成授权文档交接、T15两项Minor处理及适用Web G/故事验证，独立审查C/I/M均0；完整e2e133通过/2项Firefox缺失失败。Step4总项仍未勾：最终提交后gen-check已通过（3c0446ea，见task-16-report）；负责人已推送a0526ade并触发分支CI 40170883949，Web/服务端通过、E2E 134通过/1失败（S2按Escape后未卸载），负责人报告已确认动画中断后残留，负责人已批准A，修复进行中；root系统git自主推送仍报钥匙串-25308，等待图形桌面授权；Claude整分支终审待负责人安排，尚未合并。16Task实际实现/修复numstat及依赖变化见review §5；T16精确SHA和最终规模见执行报告，不在将提交文档中预造自己的SHA。106次生产变异不包含T16纯值边界红绿，不称全面杀死率。
+原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检及六项修订复核、T1–T16实施/适用本地验证与独立Task评审均已完成；T1/F1、T6/I1及T9/T13 Minor的复核闭合见review。T16已完成授权文档交接、T15两项Minor处理及适用Web G/故事验证，独立审查C/I/M均0；完整e2e133通过/2项Firefox缺失失败。Step4已完成预备终审核验：T16的gen-check及适用Web门禁通过；首次分支CI 40170883949的S2动画残留按批准A修复，54866c8f独立评审C/I/M均0，CI 40175286547的server/web/e2e全部成功。本机缺Firefox仍单列，CI覆盖该环境。系统git经本仓库SSH推送地址已自主推送；Claude整分支终审待负责人安排，尚未合并。16Task实际实现/修复numstat及依赖变化见review §5；T16精确SHA和最终规模见执行报告，不在将提交文档中预造自己的SHA。106次生产变异不包含T16纯值边界红绿，不称全面杀死率。
 
 T16本次验证入口：工作树 `.superpowers/sdd/P4-issue-collaboration/logs/task-16-commands.jsonl`；纯值红绿、三故事6通过、Web54/17/knip、完整e2e133通过/2环境失败及全部首次失败保留于task-16-report。T15两项Minor处理已由T16独立评审确认；表数口径为Nerve44=Plane43+新增1，五份handoff仍open，M4整体完成标准未勾。
