@@ -8,7 +8,7 @@
 
 **技术栈：** Go 1.27/toolchain go1.27.1、pgx v5.11.0、sqlc v1.31.1、oapi-codegen v2.8.0、PostgreSQL 18.6、Node 24、pnpm 11.10.0和仓库锁定的TipTap/vitest/Playwright；仅新增已批准bluemonday及设计点名的传递依赖。
 
-**规格：** [P4规格](../specs/P4-issue-collaboration.md)；[上级设计](../M4-design.md)。代码基线56d575fb8ff6575880d1edef65219728a81f2b12，恢复文档HEAD 573e8eb6。本plan为紧凑可执行计划，不转录整份实现；没有整段原型或其生成SHA；实际Task验证进度见review；T1–T16独立评审通过，T15两项Minor已由T16关闭；分支CI因系统git推送认证失败尚未启动，Claude终审待负责人安排。
+**规格：** [P4规格](../specs/P4-issue-collaboration.md)；[上级设计](../M4-design.md)。代码基线56d575fb8ff6575880d1edef65219728a81f2b12，恢复文档HEAD 573e8eb6。本plan为紧凑可执行计划，不转录整份实现；没有整段原型或其生成SHA；实际Task验证进度见review；T1–T16独立评审通过，T15两项Minor已由T16关闭；负责人已推送a0526ade；分支CI 40170883949中Web/服务端通过、E2E的S2失败待定位；root自主推送授权尚未恢复，Claude终审待负责人安排。
 
 ## Global Constraints
 
@@ -439,6 +439,6 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 16个任务与设计原任务映射在spec§3.2；12个新操作/五表全部有拥有Task，表与fixture同批交付。Task7/8内部准备由Task9消费，不提前公开描述字段；Task11历史目录由Task12消费。公共类型与方法按上面的公共表和各Interfaces定义，不依赖代码转录。Review Focus五项分别绑定实际测试和变异。作者自检报告保存于工作树的`.superpowers/sdd/P4-issue-collaboration/plan-author-report.md`（过程记录，不作为已完成测试证据）。
 
-原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检及六项修订复核、T1–T16实施/适用本地验证与独立Task评审均已完成；T1/F1、T6/I1及T9/T13 Minor的复核闭合见review。T16已完成授权文档交接、T15两项Minor处理及适用Web G/故事验证，独立审查C/I/M均0；完整e2e133通过/2项Firefox缺失失败。Step4总项仍未勾：最终提交后gen-check已通过（3c0446ea，见task-16-report）；系统git推送exit128因本机GitHub认证失败，分支CI尚未启动；Claude整分支终审待负责人安排，尚未合并。16Task实际实现/修复numstat及依赖变化见review §5；T16精确SHA和最终规模见执行报告，不在将提交文档中预造自己的SHA。106次生产变异不包含T16纯值边界红绿，不称全面杀死率。
+原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检及六项修订复核、T1–T16实施/适用本地验证与独立Task评审均已完成；T1/F1、T6/I1及T9/T13 Minor的复核闭合见review。T16已完成授权文档交接、T15两项Minor处理及适用Web G/故事验证，独立审查C/I/M均0；完整e2e133通过/2项Firefox缺失失败。Step4总项仍未勾：最终提交后gen-check已通过（3c0446ea，见task-16-report）；负责人已推送a0526ade并触发分支CI 40170883949，Web/服务端通过、E2E 134通过/1失败（S2菜单按Escape未关闭），已获负责人日志，待定位；root系统git自主推送仍报钥匙串-25308，等待图形桌面授权；Claude整分支终审待负责人安排，尚未合并。16Task实际实现/修复numstat及依赖变化见review §5；T16精确SHA和最终规模见执行报告，不在将提交文档中预造自己的SHA。106次生产变异不包含T16纯值边界红绿，不称全面杀死率。
 
-T16本次验证入口：工作树 `.superpowers/sdd/P4-issue-collaboration/logs/task-16-commands.jsonl`；纯值红绿、三故事6通过、Web54/17/knip、完整e2e133通过/2环境失败及全部首次失败保留于task-16-report。T15两项Minor处理待独立评审确认；表数口径为Nerve44=Plane43+新增1，五份handoff仍open，M4整体完成标准未勾。
+T16本次验证入口：工作树 `.superpowers/sdd/P4-issue-collaboration/logs/task-16-commands.jsonl`；纯值红绿、三故事6通过、Web54/17/knip、完整e2e133通过/2环境失败及全部首次失败保留于task-16-report。T15两项Minor处理已由T16独立评审确认；表数口径为Nerve44=Plane43+新增1，五份handoff仍open，M4整体完成标准未勾。
