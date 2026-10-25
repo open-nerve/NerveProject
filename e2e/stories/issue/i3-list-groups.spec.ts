@@ -7,7 +7,7 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { byId, expectIssuePage } from "../../fixtures/assert/issue";
-import { newAccount } from "../../fixtures/auth";
+import { bearer, newAccount } from "../../fixtures/auth";
 import { createIssue, issuesListed, listIssues, updateIssue, type IssueQuery } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
@@ -154,6 +154,30 @@ test("I3 (API): state groups and priority-label lanes count unique issues; compl
   const second = await read({ label_id: [a.id], group_by: "label_id", group_key: c.id, cursor: cGroup.next_cursor });
   expectIssuePage(second, [p2.id], 2);
   expect(second.data?.[0]).toMatchObject({ label_ids: both, assignee_ids: [x.id] });
+  // Use the public client directly: CSV alternatives and repeated dates must
+  // work without a fixture-only query serializer.
+  const alternatives = await api.GET("/api/v0/projects/{project_id}/issues", {
+    params: { path: { project_id: project.id }, query: { label_id: [a.id, c.id], order_by: "sort_order" } },
+    headers: bearer(x.token),
+  });
+  expect(alternatives.response.status, JSON.stringify(alternatives.error)).toBe(200);
+  if (!alternatives.data) throw new Error("CSV list omitted page");
+  expectIssuePage(alternatives.data, [p1.id, pc.id, p2.id, pa.id], 4);
+  await updateIssue(api, x.token, p1.id, { start_date: "2026-10-05" });
+  await updateIssue(api, x.token, pc.id, { start_date: "2026-10-15" });
+  await updateIssue(api, x.token, pa.id, { start_date: "2026-10-25" });
+  await updateIssue(api, x.token, p2.id, { start_date: "2026-11-05" });
+  await updateIssue(api, x.token, p0.id, { label_ids: [a.id], start_date: "2026-09-25" });
+  const dated = await api.GET("/api/v0/projects/{project_id}/issues", {
+    params: {
+      path: { project_id: project.id },
+      query: { label_id: [a.id, c.id], start_date: ["2026-10-01..", "..2026-10-31"], order_by: "sort_order" },
+    },
+    headers: bearer(x.token),
+  });
+  expect(dated.response.status, JSON.stringify(dated.error)).toBe(200);
+  if (!dated.data) throw new Error("dated CSV list omitted page");
+  expectIssuePage(dated.data, [p1.id, pc.id, pa.id], 3);
   expect(
     await issuesListed(api, x.token, project.id, {
       // @ts-expect-error -- a future sort is rejected by the real endpoint

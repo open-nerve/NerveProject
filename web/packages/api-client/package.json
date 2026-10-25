@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "test": "node --test test/*.test.mjs",
     "gen": "openapi-typescript ../../../api/dist/openapi.yaml --root-types --root-types-no-schema-prefix --output src/schema.gen.ts",
     "check:types": "tsc --noEmit",
     "check:lint": "node ../../../tools/lint-cap.mjs 0",

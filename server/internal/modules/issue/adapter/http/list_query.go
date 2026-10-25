@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"slices"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http/gen"
@@ -48,8 +49,13 @@ func withListQuery(next gen.StrictHandlerFunc, operationID string) gen.StrictHan
 		return next
 	}
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		raw := copyListQuery(r.URL.Query())
-		return next(context.WithValue(ctx, listQueryKey{}, raw), w, r, request)
+		// URL.Query silently drops malformed pairs; a list must never lose a
+		// filter or cursor and execute the remaining, broader query instead.
+		raw, err := url.ParseQuery(r.URL.RawQuery)
+		if err != nil {
+			return nil, shared.NewError(shared.KindBadRequest, shared.CodeBadRequest, "The request query could not be decoded.")
+		}
+		return next(context.WithValue(ctx, listQueryKey{}, copyListQuery(raw)), w, r, request)
 	}
 }
 func copyListQuery(raw map[string][]string) map[string][]string {

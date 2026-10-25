@@ -591,6 +591,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - 逗号分隔的列表是"属于其中之一"，不同参数之间是 AND（v0 3.3）。`none` 可以与 id 并列（`label_id=none,<id>`：没有标签，或有这个标签）。
 - 日期是不带时区的日期（工作项的日期本来就是），不涉及时区。Plane 的富筛选对 `created_at`、`updated_at` 的单日按用户的时区算（`API/utils/filters/filterset.py:171-189`），页面没有启用这两个筛选（R4 第 B.1 节），Nerve 不提供。
 - 取值不合格（不是 id、不认识的词、日期写错、范围倒置）422，`errors[].field` 是参数名、`code` 是 `not_allowed`。同一个非日期参数出现两次 422。
+- 公共API客户端为这两条列表GET默认将普通数组编码为单键CSV，日期保留重复键；显式serializer覆盖仍优先，故事不维护私有副本。绑定成功后的strict列表边界显式ParseQuery，损坏的百分号转义/裸分号返回400/bad_request，不丢字段后继续查询；成功解码后的非法词仍422。原绑定/认证顺序及其他接口保持，详见[P5追加整审](../../reviews/re-02-M4P5整体审核.md)。
 - 迭代、模块的筛选（`cycle_id`、`module_id`）在 M6 随它们的表加入；在 M4 是未知的参数。
 - Plane 的富筛选只生成"条件的 AND"，每个条件是等于、属于、范围（R4 第 B.1 节），上面的写法完整表达它；前端的 store 把筛选的表达式翻译成这些参数（3.22），接口不接收表达式。
 
@@ -2525,7 +2526,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 已完成：[spec](specs/P2-issue-access.md)、[plan](plans/P2-issue-access.md)、[评审](reviews/P2-issue-access-review.md)（执行时 14 个 Task；整分支评审之后一个修复轮） |
 | P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
 | P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；已以 `--no-ff` 合并main `e9782b8f`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 三任务全绿，精确SHA及接收记录见P5评审 |
-| P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | T1–T15实施与逐任务独评Approved：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。T16文档与内部整审完成，首审2项Important/1项Minor经49623057统一修复、范围复审全部关闭；交付核精确HEAD分支CI，负责人终审及集成另待安排；父T16未完成，未合并，保留分支/worktree。M4总体与跨Phase交接仍open |
+| P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | T1–T15实施与逐任务独评Approved：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。T16文档与内部整审完成，首审2项Important/1项Minor经49623057统一修复、范围复审全部关闭；负责人追加的本轮[deep-review](../../reviews/re-02-M4P5整体审核.md)另记录客户端/查询编码修复及验证；交付核精确HEAD分支CI，负责人终审及集成另待安排；父T16未完成，未合并，保留分支/worktree。M4总体与跨Phase交接仍open |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，11） | 未开始 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12） | 未开始 |
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13） | 未开始 |

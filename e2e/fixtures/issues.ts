@@ -15,25 +15,10 @@ export type IssuePage = components["schemas"]["IssueListPage"];
 type IssueRelation = components["schemas"]["IssueRelation"];
 type IssueRelationsCreate = components["schemas"]["IssueRelationsCreate"];
 
-/** CSV atoms share one key; each date condition keeps its own repeated key. */
-function issueQueryString(query: Record<string, unknown>): string {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query)) {
-    if (value === undefined) continue;
-    if (Array.isArray(value)) {
-      if (key === "start_date" || key === "target_date") {
-        for (const atom of value) params.append(key, String(atom));
-      } else if (value.length) params.set(key, value.join(","));
-    } else params.set(key, String(value));
-  }
-  return params.toString();
-}
-
 /** The real project's list response, retaining refusal fields for negative stories. */
 export async function issuesListed(api: Api, token: string, projectId: string, query: IssueQuery = {}) {
   const { data, error, response } = await api.GET("/api/v0/projects/{project_id}/issues", {
     params: { path: { project_id: projectId }, query },
-    querySerializer: issueQueryString,
     headers: bearer(token),
   });
   return data ? { status: response.status, page: data } : answer(response, error);
@@ -62,7 +47,6 @@ export async function memberIssuesListed(
 ) {
   const { data, error, response } = await api.GET("/api/v0/workspaces/{slug}/members/{user_id}/issues", {
     params: { path: { slug, user_id: userId }, query },
-    querySerializer: issueQueryString,
     headers: bearer(token),
   });
   return data ? { status: response.status, page: data } : answer(response, error);

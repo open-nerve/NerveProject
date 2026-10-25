@@ -207,6 +207,8 @@ type IssueListSettings interface {
 
 参数schema精确按spec§2.3：9个CSV筛选array/items string、form/explode=false；两日期array/items string、explode=true；sub_issue/archived为string单值而非boolean，由domain校true/false；group/order/relation为枚举string单值（relation required）；group/subgroup key与cursor为string；limit为integer。保留原设计的数组，不能为绕绑定改scalar。未认证+重复在绑定阶段422；坏path先400；其他API重复仍400；绑定成功但无token仍401。Task9专测该矩阵及原query未经改写，不建立新的认证优先规则。
 
+**负责人追加整分支 deep-review（2026-10-26）：** 按既有局部修复授权补齐两个接缝：公共客户端按两列表路由序列化混合数组、故事移除私有转换；strict 列表边界显式解析 RawQuery 并拒绝编码错误。先跑真实失败，再局部修复及独立范围复审；补公共客户端/类型回归、I3实际集合和两入口HTTP错误矩阵。适用 G 的 Go/Web/e2e/lint/knip、提交后生成检查及最终SHA分支CI仍须完成。结果以[本轮报告](../../../reviews/re-02-M4P5整体审核.md)为准，T16集成项保持未勾，不合并。
+
 ## Task 1：固定池运行参数
 
 文件：改 `server/internal/platform/postgres/pool.go`、`pool_test.go`；保留 UTC AfterConnect。

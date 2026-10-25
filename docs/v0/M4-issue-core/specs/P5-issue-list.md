@@ -78,6 +78,8 @@ CSV 内 OR，字段间 AND；none 与 UUID 可并列。日期范围闭合，缺�
 
 **HTTP 接缝的最终方案（T9/T10真实接口与T14回归已验证）：** M2 已明确参数绑定错误可以在认证/限流前回答，保留此顺序。Register 的标准 StdHTTPServerOptions.ErrorHandlerFunc 仅在两条P5 GET路由、errors.As 为 gen.InvalidParamFormatError、ParamName属于该路由已声明的非日期query且真实 r.URL.Query()[name] 长度>1时，映射422/not_allowed；其余全部调用既有 api.Errors.BadRequest。不检查错误文本，不误用未实际产生的 TooManyValuesForParamError。正常请求通过 gen.NewStrictHandlerWithOptions 的 StrictMiddlewareFunc，只对 ListIssues/ListMemberIssues 把真实query深拷贝为纯 map[string][]string 放入私有context，随后handler交给用例完整解析。无URL改写、无占位、无BaseRouter装饰、无第二路由、无平台/生成器/守卫改动。缺token+重复在绑定阶段仍422；坏path先400，其他API原绑定错误仍400；绑定成功的缺token请求仍401。日期重复不走错误映射，保留全部值AND。来源与静态核对证据写入 [P5 review](../reviews/P5-issue-list-review.md)；原401优先假设与占位候选均撤销。
 
+**追加整审明确的编码边界：** 公共 `@nerve/api-client.createClient` 为两条列表 GET（含 `request("get")`）默认按参数区分 CSV 数组与重复日期；调用者显式 serializer 仍优先，其他路由/方法不变。故事直接消费此生产实现。绑定成功后，strict middleware 用 `url.ParseQuery` 读取 RawQuery；非法百分号转义或裸分号不得静默丢字段，返回400/bad_request；可解码但非法的业务词仍422。该校验在既有认证之后，缺token仍401；先发生的路径/必填/整数/重复绑定错误顺序不变，不扩展到旧接口。根因、局部裁定及真实红绿见[本轮 deep-review](../../../reviews/re-02-M4P5整体审核.md)。
+
 ### 2.4 分组与响应
 
 项目 group_by：state_id/state_group/priority/label_id/assignee_id/created_by_id/target_date。个人主页：state_group/priority/label_id/target_date/project_id。sub_group_by 仅项目，使用项目同组词汇，必须有 group_by 且不同。组键按字段为 UUID/枚举/日期/none；UUID类的group_key/sub_group_key按UUID值规范化，大写、compact等合法拼写与标准文本指向同一组，首段、续页及空页total一致；none 仅适用可为空或多值为空的字段，不接受 state_group=none 等虚构键。
