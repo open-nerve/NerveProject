@@ -107,7 +107,7 @@ func copyListPointer[T any](p *T) *T {
 	return &v
 }
 
-func listTracePool(t *testing.T, url string, trace *listTrace) *pgxpool.Pool {
+func listTracePool(t *testing.T, url string, trace *listTrace, configure ...func(*pgxpool.Config)) *pgxpool.Pool {
 	t.Helper()
 	cfg := testConfig(t, url, false).Database
 	source, err := postgres.NewPool(context.Background(), cfg)
@@ -116,6 +116,9 @@ func listTracePool(t *testing.T, url string, trace *listTrace) *pgxpool.Pool {
 	}
 	copied := source.Config()
 	copied.ConnConfig.Tracer = trace
+	for _, change := range configure {
+		change(copied)
+	}
 	if source.Config().ConnConfig.Tracer != nil {
 		t.Fatal("Config mutated source pool")
 	}
