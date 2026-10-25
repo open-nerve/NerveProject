@@ -95,8 +95,7 @@ type ProjectMembershipCounts interface {
 // numbers (Sequences), and its states', labels' and members' catalogs
 // (StateCatalog, LabelCatalog, ProjectMembers), for its writes; a
 // workspace's projects' identifiers (ProjectIdentifiers), for a read by
-// identifier; and which projects are archived (ArchivedProjects), for a
-// list across projects; ordinary and historical memberships; and complete
+// identifier; ordinary and historical memberships; and complete
 // state and label catalogs for lists. Each reads, or locks, in the transaction
 // ctx carries. Write catalogs are read under the project's lock, which every
 // write of a state, a label or a membership holds too, so they stay as
@@ -139,9 +138,6 @@ type IssueProjects interface {
 	// ProjectIdentifiers reads the workspace's undeleted projects, archived
 	// or not, each with its identifier, in id order, without a lock.
 	ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) ([]IssueProjectIdentifier, error)
-	// ArchivedIssueProjects reads those of ids that are undeleted,
-	// archived projects, each true, without a lock.
-	ArchivedIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error)
 }
 
 // IssueProject, IssueState, IssueLabel and IssueProjectIdentifier are the

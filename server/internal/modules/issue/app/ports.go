@@ -236,15 +236,6 @@ type ProjectIdentifier struct {
 	Identifier string
 }
 
-// ArchivedProjects reads which projects are archived, for a list across
-// projects, which leaves out the work items of an archived project (M4
-// design 3.8): project.Provide's, converted (bootstrap/ports.go).
-type ArchivedProjects interface {
-	// Archived reads those of projectIDs that are undeleted, archived
-	// projects, each true, without a lock.
-	Archived(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]bool, error)
-}
-
 // IssueNumbers finds a work item by its number in its project (M4 design
 // 3.7).
 type IssueNumbers interface {

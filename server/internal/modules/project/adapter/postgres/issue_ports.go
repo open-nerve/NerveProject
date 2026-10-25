@@ -103,20 +103,6 @@ func (s *Store) ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) (
 	return out, nil
 }
 
-// ArchivedIssueProjects reads those of ids that are undeleted, archived
-// projects, each true, without a lock (M4 design 3.8).
-func (s *Store) ArchivedIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
-	rows, err := s.queries(ctx).ArchivedIssueProjects(ctx, ids)
-	if err != nil {
-		return nil, fmt.Errorf("read which of %d projects are archived: %w", len(ids), err)
-	}
-	archived := make(map[uuid.UUID]bool, len(rows))
-	for _, id := range rows {
-		archived[id] = true
-	}
-	return archived, nil
-}
-
 // ActiveRoles reads the project roles of those of the accounts ids that
 // are active members of the project, by account (M4 design 6.5).
 func (s *Store) ActiveRoles(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {

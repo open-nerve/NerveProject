@@ -165,9 +165,6 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if list, err := s.ProjectIdentifiers(cancelled, acme); !failed(err) || list != nil {
 		t.Errorf("ProjectIdentifiers() = %+v, %v; want context.Canceled, not none", list, err)
 	}
-	if archived, err := s.ArchivedIssueProjects(cancelled, []uuid.UUID{web}); !failed(err) || archived != nil {
-		t.Errorf("ArchivedIssueProjects() = %v, %v; want context.Canceled, not none", archived, err)
-	}
 }
 
 // seedLabel stores a label of project, under parent, made by by at now, and

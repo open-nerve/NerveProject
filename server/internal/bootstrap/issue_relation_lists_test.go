@@ -1,12 +1,19 @@
 package bootstrap
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 	"uuid"
 
+	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
+	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -19,6 +26,81 @@ func (w issueWorld) listedRelations(t *testing.T, name string, id uuid.UUID) []s
 		said = append(said, r.RelationType+" "+r.Issue.Name)
 	}
 	return said
+}
+
+// Ordinary scope excludes ended/deleted memberships and archived/deleted
+// projects, while the explicitly authorized archived source keeps its scope.
+func TestRelationListUsesVisibleProjects(t *testing.T) {
+	w := newIssueWorld(t)
+	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
+	w.makeMember(t, "walt", ops, shared.RoleGuest)
+	w.adminGuest(t)
+	source := w.newWorkItemBy(t, "walt", w.web, `{"name":"Source"}`)
+	local := w.newWorkItemBy(t, "walt", w.web, `{"name":"Local"}`)
+	localOther := w.newWorkItemIn(t, w.web, `{"name":"Local other"}`)
+	parent := w.newWorkItemIn(t, ops, `{"name":"Hidden parent"}`)
+	own := w.newWorkItemBy(t, "walt", ops, `{"name":"Own"}`)
+	other := w.newWorkItemIn(t, ops, `{"name":"Other"}`)
+	unknown := w.newWorkItemIn(t, ops, `{"name":"Unknown"}`)
+	w.send(t, "alice", http.MethodPatch, "/api/v0/issues/"+own.String(), fmt.Sprintf(`{"parent_id":%q}`, parent), 200)
+	w.newWorkItemBy(t, "walt", ops, fmt.Sprintf(`{"name":"Own child","parent_id":%q}`, own))
+	w.newWorkItemIn(t, ops, fmt.Sprintf(`{"name":"Other child","parent_id":%q}`, own))
+	archived := w.newWorkItemIn(t, ops, fmt.Sprintf(`{"name":"Archived","state_id":%q,"parent_id":%q}`, stateID(t, w.pool, ops, "Done"), own))
+	gone := w.newWorkItemIn(t, ops, fmt.Sprintf(`{"name":"Gone","parent_id":%q}`, own))
+	for _, target := range []uuid.UUID{local, other, own, unknown, archived, gone, localOther} {
+		w.send(t, "alice", http.MethodPost, relationsOf(source), relating("blocking", target), 201)
+	}
+	for _, kind := range []string{"Left", "Deleted member", "Deleted project", "Archived project"} {
+		p := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", kind, "P"+fmt.Sprint(len(kind)))
+		w.makeMember(t, "walt", p, shared.RoleAdmin)
+		id := w.newWorkItemBy(t, "walt", p, `{"name":"Excluded"}`)
+		w.send(t, "alice", http.MethodPost, relationsOf(source), relating("relates_to", id), 201)
+		statement := "UPDATE project_members SET is_active=false WHERE project_id=$1 AND member_id=$2"
+		switch kind {
+		case "Deleted member":
+			statement = "UPDATE project_members SET deleted_at=now() WHERE project_id=$1 AND member_id=$2"
+		case "Deleted project":
+			statement = "UPDATE projects SET deleted_at=now(),updated_by_id=$2 WHERE id=$1"
+		case "Archived project":
+			statement = "UPDATE projects SET archived_at=now(),updated_by_id=$2 WHERE id=$1"
+		}
+		if _, err := w.pool.Exec(context.Background(), statement, p, w.ids["walt"]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+archived.String()+"/archive", "", 200)
+	w.send(t, "alice", http.MethodDelete, "/api/v0/issues/"+gone.String(), "", 204)
+	if _, err := w.pool.Exec(context.Background(), "UPDATE issues SET created_by_id=NULL WHERE id=$1", unknown); err != nil {
+		t.Fatal(err)
+	}
+	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/archive", "", 200)
+	rows := listIn[answeredRelation](t, w.send(t, "walt", http.MethodGet, relationsOf(source), "", 200))
+	if len(rows) != 2 || rows[0].Issue.ID != local || rows[1].Issue.ID != own || rows[1].RelationType != "blocking" || rows[1].Issue.ParentID != nil || rows[1].Issue.SubIssuesCount != 1 {
+		t.Fatalf("caller scope/order/parent/count: %+v", rows)
+	}
+}
+
+// One connection is occupied by the independent RO/RR transaction. Any source,
+// authorization, directory, relation, count or parent read escaping ctx times out.
+func TestRelationListReadSnapshot(t *testing.T) {
+	w := newIssueWorld(t)
+	w.adminGuest(t)
+	source := w.newWorkItemBy(t, "walt", w.web, `{"name":"Source"}`)
+	parent := w.newWorkItem(t)
+	other := w.newWorkItemBy(t, "walt", w.web, `{"name":"Other"}`)
+	w.send(t, "alice", http.MethodPatch, "/api/v0/issues/"+other.String(), fmt.Sprintf(`{"parent_id":%q}`, parent), 200)
+	w.send(t, "alice", http.MethodPost, relationsOf(source), relating("duplicate", other), 201)
+	one := poolOfOne(t, w.pool.Config().ConnString())
+	dirs := issueProjects{projects: project.Provide(one).IssueProjects}
+	store := issuepg.New(one)
+	tx := &checkedListSnapshot{t: t, pool: one, tx: postgres.NewTxManager(one, 3*time.Second, postgres.ReadOnlySnapshot())}
+	u := issueapp.NewListIssueRelations(issueapp.ListIssueRelationsDeps{Locks: issueapp.NewLocks(dirs, store, authorizerOn(one), versionReadOnly{}, versionReadOnly{}), Relations: store, Projects: dirs, ReadTx: tx})
+	ctx, cancel := context.WithTimeout(shared.WithActor(context.Background(), shared.Actor{UserID: w.ids["walt"]}), 5*time.Second)
+	defer cancel()
+	rows, err := u.Execute(ctx, source)
+	if err != nil || len(rows) != 1 || rows[0].Issue.ID != other || rows[0].Issue.ParentID != nil || tx.calls != 1 {
+		t.Fatal("relation read escaped snapshot", rows, err, tx.calls)
+	}
 }
 
 // relationList is a list of relations a test expects: the account name

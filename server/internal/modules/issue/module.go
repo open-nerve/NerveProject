@@ -62,8 +62,8 @@ func Provide(pool *pgxpool.Pool) Provided {
 // ProjectPorts are what the module asks of a project (M4 design 6.5): its
 // gate, its numbers, its states', labels' and members' catalogs, for its
 // writes; a workspace's projects' identifiers, for a read by identifier;
-// which projects are archived, for a list across projects (3.8); ordinary and
-// historical memberships, and complete list state and label catalogs.
+// ordinary and historical memberships, and complete list state and label
+// catalogs.
 // project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
 type ProjectPorts interface {
 	app.ProjectGate
@@ -72,7 +72,6 @@ type ProjectPorts interface {
 	app.LabelCatalog
 	app.ProjectMembers
 	app.ProjectIdentifiers
-	app.ArchivedProjects
 	app.VisibleProjects
 	app.ListStateCatalog
 	app.ListLabelCatalog
@@ -160,7 +159,7 @@ func New(d Deps) *Module {
 		UnarchiveIssue:     app.NewUnarchiveIssue(archive),
 		ListSubIssues:      app.NewListSubIssues(locks, store),
 		AddSubIssues:       app.NewAddSubIssues(app.AddSubIssuesDeps{Locks: locks, Issues: store, Clock: d.Clock}),
-		ListIssueRelations: app.NewListIssueRelations(locks, store, d.Projects),
+		ListIssueRelations: app.NewListIssueRelations(app.ListIssueRelationsDeps{Locks: locks, Relations: store, Projects: d.Projects, ReadTx: d.ReadTx}),
 		CreateIssueRelations: app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{
 			Locks: locks, Relations: store, Clock: d.Clock,
 		}),

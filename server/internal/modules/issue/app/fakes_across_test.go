@@ -36,19 +36,3 @@ func (f *fakeProject) LockMany(ctx context.Context, ids []uuid.UUID) (map[uuid.U
 	}
 	return locked, nil
 }
-
-// Archived logs the read, each project its own argument, and answers
-// those of ids the fake holds archived, each true: its project, when Lock
-// answers it archived, and those of across that are (fakeProject).
-func (f *fakeProject) Archived(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
-	if err := f.log.add(ctx, "Archived", anys(ids)...); err != nil {
-		return nil, err
-	}
-	archived := map[uuid.UUID]bool{}
-	for _, id := range ids {
-		if f.across[id].Archived || id == f.id && f.locked != nil && f.locked.Archived {
-			archived[id] = true
-		}
-	}
-	return archived, nil
-}
