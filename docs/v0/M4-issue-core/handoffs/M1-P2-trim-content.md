@@ -52,3 +52,10 @@ M4 合并时：
 仍未处理，状态保持 `open`：搜索结果没有 `page` 类型（M4 的 P8）；`skip_activity`（M4 的 P4，随描述）；描述保存的"撤销再重做"（M4 的 P14）。
 
 来源：[M4/P1a spec](../specs/P1a-issues.md) 第 7 节。
+
+## 处理结果（M4/P4）
+
+- 服务端描述已清洗并以 boolean `skip_activity` 表达字段存在性；仅 true 且纯文本、按顺序提及、href、checked 内容标识相同才抑制主审计/动态/版本，仍保存 HTML/stripped 并同步提及资格。旧字符串 `"true"` 不兼容，不把所有 skip 一律免审计。T1/T7/T9及I2普通保存、块id、href/checked独立变异有证据。
+- 保留余项：P8 搜索结果无 page；P14 修描述保存撤销再重做、创建/编辑弹窗 `isMigrationUpdate`（本Phase未改页面）。M5 图片开启时将按序 src 纳入标识并扩S3，经M4真正收尾转交。
+
+状态保持 `open`；本次仅完成P4接收部分，待M4真正收尾逐项核对关闭条件。证据：[P4 spec §4/§7](../specs/P4-issue-collaboration.md#4-验收标准)、[P4 review §2/§6](../reviews/P4-issue-collaboration-review.md#2-验收标准核对)。

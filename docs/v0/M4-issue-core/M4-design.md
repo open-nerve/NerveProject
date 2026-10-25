@@ -52,7 +52,7 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
   - 一个陷阱：Go 的 `nil` 切片作为 `NULL` 传出，`cardinality(NULL) = 0` 的谓词滤掉全部行。
   - 写法、规模的目标和连接的参数写进 3.16；P5 不再有 spike 的任务。
 - **S2 pg_trgm（做了一部分）**：sqlc 只在扩展的迁移列在模块的 `schema:` 里时才把 `similarity()` 定为 `float32`，否则静默地是 `interface{}`；名为 `q` 的参数与接收者同名，生成为 `q_`；10 万行上 `'%a3f9%'` 走位图索引扫描（0.09 ms）、`'webhook'` 12 ms，两个字符的 `'ab'` 退到顺序扫描（45 ms）；只有 `SELECT`、`USAGE` 的角色经 PUBLIC 的 `EXECUTE` 能调用 `similarity()`，授权测试的预期不变。迁移角色在镜像里建扩展、中文的查询（多是两个字）的耗时留给 P8 的第 6、12 个任务（3.18）。
-- **S3 bluemonday（P4/T1 已验证清洗与真实编辑器往返，2026-10-25）**：14 份共享样例覆盖 API 形状的 HTML（无块 id 的列表、标题、嵌套标记）及实际编辑器全部 22 个 node / 8 个 mark，逐边固定清洗、重序列化及再次清洗输出；纯文本、提及、链接地址、勾选框投影与安全边界通过，15 项实际可编译变异均被业务断言检出并恢复。默认标签经锁定上游核对后补齐，独立评审及修正复核通过，证据见 [P4 review §2.2](reviews/P4-issue-collaboration-review.md#22-t1-验收与独立评审已完成)。这不表示描述/评论 API 已交付，首个消费在 T3，描述及 skip_activity 的接口消费在 T9/T15 验证。
+- **S3 bluemonday（P4/T1 已验证清洗与真实编辑器往返，2026-10-25）**：14 份共享样例覆盖 API 形状的 HTML（无块 id 的列表、标题、嵌套标记）及实际编辑器全部 22 个 node / 8 个 mark，逐边固定清洗、重序列化及再次清洗输出；纯文本、提及、链接地址、勾选框投影与安全边界通过，15 项实际可编译变异均被业务断言检出并恢复。默认标签经锁定上游核对后补齐，独立评审及修正复核通过，证据见 [P4 review §2.2](reviews/P4-issue-collaboration-review.md#22-t1-验收与独立评审已完成)。首个评论API在T3消费，描述及skip_activity在T9/T15完成接口验证并通过独立评审；T16只收口文档及时间断言，阶段终审仍待负责人安排。
 - **S4 River（已做）**：只投递的客户端（`&river.Config{}`，没有 `Workers`）在事务里 `InsertTx` 一个没有登记 worker 的种类可以，回滚不留、提交留下一条；以空的 `river.NewWorkers()` 建的工作客户端在 `AddWorker` 之前 `InsertTx` 失败（`UnknownJobKindError`，`river@v0.47.0/client.go:2270-2277`），`NewClient` 之后 `AddWorkerSafely` 可以（共用同一个 `*Workers`，可用但没有写进文档），`Start` 之前 `PeriodicJobs().Add`、`InsertTx` 都可以；一个 worker 都没有时 `Start` 失败。组合因此用只投递的客户端投递（6.6）。
 - **S5 取锁的等待（已做）**：E1：方案 A 之下，新的 `FOR SHARE` 在等待中的 `FOR NO KEY UPDATE` 之前 1 ms 得到；60 ms 一个、每 30 ms 新来一个的 `FOR SHARE` 持续 3 秒，工作区的 N 等了 2.753 秒（M3 17.4 的探针 B 复现）。E2：方案 B 之下，N 的等待者先来先得，3 秒首尾相连的工作项写之后，删除工作区只等了 319 ms（排在它前面的写）。E3：工作项写的链进行中，10 次 `UPDATE workspaces` 最长 2 ms；插入经外键取工作区行的 `FOR KEY SHARE`，与 `FOR NO KEY UPDATE` 不冲突。E4：`… WHERE id = ANY($1) ORDER BY id FOR NO KEY UPDATE` 按 `id` 的顺序取锁。E5、E5b、E6：约定七和关联行按 `id` 先锁的论证（3.5）。这些结论是决策点 1 的依据；交错 20、21 是它们的回归测试。
 - 第二稿的对抗性评审另做了三个 spike（同样在临时的 `postgres:18.6` 上，pgx v5.11.0，程序和输出不进仓库）：
@@ -541,7 +541,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **写入**：创建时一行；每次描述的修改（只补块 id 而内容相同的保存除外）一行，内容是修改之后的描述。**合并**：这个工作项最新的版本（按 `last_saved_at`）属于同一个人、`last_saved_at` 在 600 秒之内时，原地改它（描述、纯文本、`last_saved_at`、`updated_at`、`updated_by_id`），这是一个滑动的窗口（Plane 相同，`API/bgtasks/issue_description_version_task.py:15-40,56-66`）。
   - 写入在修改的同一个事务里（Plane 在 Celery 里）。
   - `owned_by_id`、`created_by_id` 是写这一版的人（Plane 的审计列抄工作项的，`API/db/models/issue.py:806-818`，与 `owned_by_id` 不一致）。
-- **保留**：每个工作项只留最新的 20 行（按 `last_saved_at`），每天一次的定时任务 `issue.trim_description_versions`，每个未删除的项目一个事务（项目 N），物理删除多出的行（P9，与清理同一段，两者不能相遇，对抗性评审 M21）（Plane 相同，`API/bgtasks/cleanup_task.py:128-146`，按 `created_at`）。它只看未删除的工作项的未删除的版本（`deleted_at IS NULL` 的两边）；软删除的版本（随工作项删除）只归 60 天清理，两个任务碰不到同一行（3.5）。
+- **保留（P9待实现，P4未运行）**：每个工作项只留最新的 20 行（按 `last_saved_at`），每天一次的定时任务 `issue.trim_description_versions`，每个未删除的项目一个事务（项目 N），物理删除多出的行（P9，与清理同一段，两者不能相遇，对抗性评审 M21）（Plane 相同，`API/bgtasks/cleanup_task.py:128-146`，按 `created_at`）。它只看未删除的工作项的未删除的版本（`deleted_at IS NULL` 的两边）；软删除的版本（随工作项删除）只归 60 天清理，两个任务碰不到同一行（3.5）。
 - **读取**：`GET /issues/{issue_id}/description-versions`，最新的在前（`last_saved_at` 降序、`id` 降序），游标分页，每行不带描述；`GET /issue-description-versions/{version_id}` 带描述。规则 `issue_description_version.read`（管理员、成员，3.4）；工作项的访客规则同样适用。
 - **还原**：没有专门的接口（Plane 也没有）。页面把旧的描述放进编辑器，经普通的 `PATCH` 保存：产生新的版本、一条描述动态。已归档的工作项不能还原（409，页面也禁用）。
 
@@ -1240,7 +1240,7 @@ M4 不加新的桶：需要登录的操作按凭证计数（`authenticated`，`s
 | `modules/workspace` | `delete_workspace.go`：先锁邀请和项目、再读时刻（3.5），P9 起发布 `workspace.deleted`；`EventTypes()`；`ProjectCascade` 端口加 `LockWorkspaceProjects`；`Purger`。`issue` 用的目录就是已有的 `WorkspaceDirectory`（`WorkspaceBySlug`、`ShareWorkspaceByID`，`workspace/module.go:33-49`），不加方法 | 同 M3 |
 | `modules/identity` | `PageSize` 移出；`Purger`（`api_tokens`）；`PublicProfiles` 的读：负责人名的目录要它，端口由 `issue` 声明（3.3，P5） | 同 M2 |
 | `platform/jobs` | `NewInserter(pool)`：只投递的客户端和它的 `InsertTx`；两个队列和它们的 worker 数（配置）；定时任务的种类和声明会投递的种类没有 worker 时 `New` 失败；测试的余量改成期限（3.20） | 同 M2 |
-| `platform/postgres` | `Tx(ctx) (pgx.Tx, bool)`（3.20）；`NewTxManager` 的两个选项：`LockTimeout(d)`（`BEGIN` 之后由平台发 `SET LOCAL lock_timeout`，P1b）、`ReadOnlySnapshot()`（`BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`，经 pgx 的 `TxOptions`，P5），模块的 SQL 里没有 `SET`（`TestModulesRunSQLOnlyThroughSQLC`）；`LockNotAvailable(err)`（SQLSTATE `55P03`，与 `UniqueViolation` 同一种写法，`unique.go`）；连接池在每个连接上设 `jit = off`、`plan_cache_mode = force_custom_plan`（3.16，P5） | 同 M2 |
+| `platform/postgres` | `Tx(ctx) (pgx.Tx, bool)`（3.20）；`NewTxManager` 的两个选项：`LockTimeout(d)`（`BEGIN` 之后由平台发 `SET LOCAL lock_timeout`，P1b）、`ReadOnlySnapshot()`（`BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`，P4/T2已前移落地，与LockTimeout统一组合，P5复用），模块的 SQL 里没有 `SET`（`TestModulesRunSQLOnlyThroughSQLC`）；`LockNotAvailable(err)`（SQLSTATE `55P03`，与 `UniqueViolation` 同一种写法，`unique.go`）；连接池在每个连接上设 `jit = off`、`plan_cache_mode = force_custom_plan`（3.16，P5） | 同 M2 |
 | `platform/clock` | `Offset{Base, Offset}`（3.20） | 只有标准库 |
 | `platform/outbound` | 新：防 SSRF 的 HTTP 客户端（6.8） | 标准库 |
 | `platform/gate` | 新：带 `context` 的按键的信号量（`Keyed[K comparable]`：每个键至多 K 个持有者、等待者至多若干个、等待有上限），工作项的写闸门用它（3.5，架构问题 11，P1b） | 标准库 |
@@ -1251,7 +1251,7 @@ M4 不加新的桶：需要登录的操作按凭证计数（`authenticated`，`s
 | `deploy/runtime-grants.sql` | 13 张新表的读写（4.18） | — |
 | `server/configs/config.yaml`、`config.test.yaml` | 上面的配置项；测试配置的间隔都是 `2s` | — |
 
-- **新的依赖只有一个**：`github.com/microcosm-cc/bluemonday`（HTML 的清洗，总体设计 6.9 早已写明；`server/go.mod` 今天没有它），连同它带来的 `golang.org/x/net`、`github.com/aymerick/douceur`、`github.com/gorilla/css`；P4 随描述和评论加入，`archtest/binary_test.go` 的禁用清单不受影响。HTML 的解析（取 `<title>`、图标、提及）用 `golang.org/x/net/html`。River、pgx 已有。
+- **新增依赖组（P4已落地）**：`github.com/microcosm-cc/bluemonday`（HTML 的清洗，总体设计 6.9 早已写明；P4/T1已加入bluemonday v1.0.27），连同它带来的 `golang.org/x/net`、`github.com/aymerick/douceur`、`github.com/gorilla/css`；P4/T1直接锁定x/net v0.60.0，间接douceur v0.2.0、gorilla/css v1.0.1，无其他新增依赖；`archtest/binary_test.go` 的禁用清单不受影响。HTML 的解析（取 `<title>`、图标、提及）用 `golang.org/x/net/html`。River、pgx 已有。
 
 ### 6.2 `issue` 模块的结构
 ```
@@ -2518,7 +2518,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P1b `issue-update` | 工作项的取、改与写闸门（后端，12）；同上 | 已完成：[spec](specs/P1b-issue-update.md)、[plan](plans/P1b-issue-update.md)、[评审](reviews/P1b-issue-update-review.md)（执行时 15 个 Task；整分支评审之后一个修复轮） |
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 已完成：[spec](specs/P2-issue-access.md)、[plan](plans/P2-issue-access.md)、[评审](reviews/P2-issue-access-review.md)（执行时 14 个 Task；整分支评审之后一个修复轮） |
 | P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
-| P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 进行中：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)；负责人已批准清洗适配器方案（2026-10-25），保留纯层架构守卫；T1–T15（含S3）已完成实施与独立Task评审，T9/T13两项Minor分别由T10/T14复核关闭，T15两项Minor与文档收口交T16，见[评审记录](reviews/P4-issue-collaboration-review.md)；完成后由负责人安排 Claude 整分支终审，尚未合并 |
+| P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 进行中：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)；负责人已批准清洗适配器方案（2026-10-25），保留纯层架构守卫；T1–T15（含S3）已完成实施与独立Task评审，T9/T13两项Minor分别由T10/T14复核关闭，T16文档交接、T15两项Minor处理与适用验证已完成，待独立复核及分支CI，见[评审记录](reviews/P4-issue-collaboration-review.md)；完成后由负责人安排 Claude 整分支终审，尚未合并 |
 | P5 `issue-list` | 列表引擎与显示设置（后端，15） | 未开始 |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，11） | 未开始 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12） | 未开始 |
@@ -2542,7 +2542,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | 删除一个大的项目、工作区（SP2：2 万个工作项的项目 8.6 秒，五个这样的项目的工作区 36.5 秒，请求的期限 15 秒） | 同步的连带在规模目标上删不掉一个工作区，期间工作区的每个项目的写都在等 | 决策点 7（负责人裁定 A）：工作项一侧的行由任务分批软删除，请求只做 M3 的几步；每个删除的项目一个任务，按 `id` 的键集（SP4：没有键集的语句是平方的，一个项目的 40 万行动态 53.9 秒，键集 1.8 秒），每次运行 45 秒的预算、用完就 snooze 而不算一次尝试；窗口里的读写经项目的门当作不存在（3.6，逐条测试）；任务失败时行留在窗口的样子，随项目的物理清理消失；P1b 在规模目标上量，P9 的通过线是每个任务一次运行做完 |
 | 工作项一侧的删除任务是第一个跨模块的异步效果（决策点 7 的 A） | 窗口里某个读写漏了项目的门，就会看到已删除的项目里的工作项；一条行写成了别的删除的时刻和删除者 | 3.6 逐条列出读写的路径和它经过的门；9.3 的窗口测试在任务之前、之后各问一次；矩阵的"项目已删除"一列在任务前后各跑一次；每个项目只由它自己的任务写，跨项目的关联行属于先删除的那一端（3.5），交错 24、25 断言每一行写下的是谁的删除；P1–P8 的过渡写法与任务用同一组语句和编排 |
 | 一个热的项目占满连接池（SP1：200 个写排在一个项目上时，别的项目的读等约 875 ms；A、B 相同） | 整个实例的请求变慢 | 写闸门（11.11）：每个项目每个进程至多 K 个写在数据库里，其余在进程里等，不持连接，等不到 503 `server_busy`；`lock_timeout` 兜底；交错 20 经真实的连接池断言别的项目的读的耗时。代价是热的项目上排得太久的写得到 503、要由客户端重试（决策点 1）；K 和池的大小在多进程时由 M8 定 |
-| `issue_activities` 的增长（每个改动一行，描述的动态存完整的 HTML，3.13） | 表和索引变大，列表的动态读得慢 | 动态按工作项分页读（`(issue_id, created_at, id)` 的索引）；描述的动态 600 秒内合并；Nerve 与 Plane 一样不清理活的动态；M8 的性能测量量它的大小 |
+| `issue_activities` 的增长（每个改动一行，描述的动态存完整的 HTML，3.13） | 表和索引变大，列表的动态读得慢 | 动态按工作项分页读（`(issue_id, created_at, id)` 的索引）；仅最新动态仍是同作者description时合并，无600秒限制；描述版本才有600秒滑动窗口；Nerve 与 Plane 一样不清理活的动态；M8 的性能测量量它的大小 |
 | 前端换型（`Issue` 取代 Plane 的类型）：131 个使用方，列表、详情、浮层、收集箱读同一份工作项 | 一个任务改不完；中途不能编译 | P10a"先收窄、后换型"：先删掉对 `Issue` 没有的字段的读取（`TIssue` 还在，每个任务能编译），最后一个任务只剩导入、改名和可空性的机械替换（7.2）；列表的形状在 P10b、详情的类型在 P11 随各自的 store 换掉 |
 | M6、M7 的工作项列表在 P10a 删除（7.2） | M6、M7 之前，迭代、模块、项目视图、工作区视图的页面没有工作项列表 | 可见的代价写进前端改动清单；不留兼容层（项目的规则）；M6、M7 照 Plane 的源码在新的引擎上加回，写进它们的交接（13.2） |
 | 收尾超出（M3 的收尾实际 16 个任务，另有多轮修复和浏览器核对之后的修复） | 合并推迟 | 浏览器核对分在各页面段（C1–C11），收尾只做 C12；收尾的任务数按 M3 的实际定为 14，修复轮按 M3 的写法另计 |

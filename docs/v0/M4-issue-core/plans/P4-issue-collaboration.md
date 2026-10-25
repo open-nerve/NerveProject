@@ -8,7 +8,7 @@
 
 **技术栈：** Go 1.27/toolchain go1.27.1、pgx v5.11.0、sqlc v1.31.1、oapi-codegen v2.8.0、PostgreSQL 18.6、Node 24、pnpm 11.10.0和仓库锁定的TipTap/vitest/Playwright；仅新增已批准bluemonday及设计点名的传递依赖。
 
-**规格：** [P4规格](../specs/P4-issue-collaboration.md)；[上级设计](../M4-design.md)。代码基线56d575fb8ff6575880d1edef65219728a81f2b12，恢复文档HEAD 573e8eb6。本plan为紧凑可执行计划，不转录整份实现；没有整段原型或其生成SHA；实际Task验证进度见review。
+**规格：** [P4规格](../specs/P4-issue-collaboration.md)；[上级设计](../M4-design.md)。代码基线56d575fb8ff6575880d1edef65219728a81f2b12，恢复文档HEAD 573e8eb6。本plan为紧凑可执行计划，不转录整份实现；没有整段原型或其生成SHA；实际Task验证进度见review；T1–T15独立评审通过，T16文档/两项Minor和适用验证完成待独立复核，分支CI/Claude终审未执行。
 
 ## Global Constraints
 
@@ -20,7 +20,7 @@
 - 角色按集合、可见性复用HiddenFrom；模块不互相import、不跨模块JOIN、SQL只经sqlc、模块SQL不写SET；端口错误原样传播，不留无消费者代码。新逻辑文件约400行以内，契约/生成物沿既有例外；`api/testdata/issue-richtext.json`作为单个Go/TS共用的固定数据契约另列规模例外，保留完整editor文档与节点/属性证据及可读排版。
 - 新错误码同Task更新PROBLEM_MESSAGES和en/zh-CN errors.json并跑make test-web；每个新API当Task加入矩阵、HTTP双向契约、锁形状/闸门测试。
 - 新表随首个可用API建出，同时grants/sqlc、删除连带、目录断言及furnishIssueRows；不新增临时目录豁免。迁移顺序00021→00022→00023→00024–25保持原编号。
-- 实现阶段生成物只经make gen/gen-go，提交后make gen-check；server改动跑lint-go/test，契约/web/e2e改动加lint-web/knip/test-web，迁移/fixture/故事跑e2e；一次只跑一套容器套件。本次文档细化不运行这些步骤。
+- 实现阶段生成物只经make gen/gen-go，提交后make gen-check；server改动跑lint-go/test，契约/web/e2e改动加lint-web/knip/test-web，迁移/fixture/故事跑e2e；一次只跑一套容器套件。实际已按适用范围执行；T16无Go改动复用T14完整Go与T13 race证据，时间故事变化顺序执行Web G/e2e及最终提交后gen-check。
 - 测试复用issueWorld、activityBy、workItemStamps、listIn、matrixRow.prepare、itemWrite、inBothOrdersAt、pgtest.RowWaits；e2e复用activityRow/byId/madeBy/tablesUnder/keysBelow。等待有条件、有期限，不sleep同步；逆id、同时间、两方向、两层子树、邻居/已删行让数据区分性质。
 
 
@@ -428,15 +428,17 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** review沿P3§1–7（方式、验收证据、局部决定、终审发现、plan差异、移交、限制）；消费实际每Task日志/提交/变异/门禁，不用计划预期填结果。T16专属文档职责：执行者可修改Files所列跟踪文档，根任务在其实施期间冻结这些文件的并发修改；保留原有真实失败/修复和逐Task证据，修正当前状态与过时措辞，不覆盖历史。根任务随后维护独立评审及实际分支CI记录。
 
-- [ ] **Step 0 关闭T15两项Minor。** 读取task-15-review.md的M1/M2原文。以纯值检查先复现RFC3339Nano的尾零/整秒比较误判，抽取I12已用的小型定宽排序函数给I2/I12/I13，禁止改用丢微秒的Date。确认小数精度不同、无小数秒、微秒差和相同时刻后，只定位三份受影响故事。保留原颜色冲突警告，在本已需要的命令中移除冲突变量，不改全局环境、不为噪声单独重跑。T16独立评审须逐项确认M1/M2处理。
-- [ ] **Step 1 收集验收。** 对spec§4每项指向可复核日志/提交；没有证据保持未勾选。同步A1原话与content最终放置、纯层守卫实测；填写16Task实际大小/依赖变化，不补造原型或全量重放。
-- [ ] **Step 2 更新上级。** 按设计3.23/P4：无回复、仅描述历史、44表/无issue_versions、20版保留交P9、PageSize共享；五表逐列差异、500000上限、skip内容标识/审计代价、空评论、表情格式、作者权限、动态分页/过滤/增量限制。未做保留任务不能写为正在运行。
-- [ ] **Step 3 移交。** 五份handoff追加“处理结果（M4/P4）”与余项，status仍open；P5复用ReadOnlySnapshot/历史目录，P6事件且skip相同不发布，P9保留/清理，P11新DTO/地址及comment_json，P14撤销重做/isMigrationUpdate，P15末页cursor重取，M5图片src投影经收尾交接；没有遗漏原spec§5/7。
+- [x] **Step 0 关闭T15两项Minor。** 读取task-15-review.md的M1/M2原文。以纯值检查先复现RFC3339Nano的尾零/整秒比较误判，抽取I12已用的小型定宽排序函数给I2/I12/I13，禁止改用丢微秒的Date。确认小数精度不同、无小数秒、微秒差和相同时刻后，只定位三份受影响故事。保留原颜色冲突警告，在本已需要的命令中移除冲突变量，不改全局环境、不为噪声单独重跑。T16独立评审须逐项确认M1/M2处理。
+- [x] **Step 1 收集验收。** 对spec§4每项指向可复核日志/提交；没有证据保持未勾选。同步A1原话与content最终放置、纯层守卫实测；填写16Task实际大小/依赖变化，不补造原型或全量重放。
+- [x] **Step 2 更新上级。** 按设计3.23/P4：无回复、仅描述历史、44表/无issue_versions、20版保留交P9、PageSize共享；五表逐列差异、500000上限、skip内容标识/审计代价、空评论、表情格式、作者权限、动态分页/过滤/增量限制。未做保留任务不能写为正在运行。
+- [x] **Step 3 移交。** 五份handoff追加“处理结果（M4/P4）”与余项，status仍open；P5复用ReadOnlySnapshot/历史目录，P6事件且skip相同不发布，P9保留/清理，P11新DTO/地址及comment_json，P14撤销重做/isMigrationUpdate，P15末页cursor重取，M5图片src投影经收尾交接；没有遗漏原spec§5/7。
 - [ ] **Step 4 核验/预备终审。** `git diff --check`，纯值定点检查及三故事定位；因承接时间断言变更，顺序执行`make lint-web`、`make knip`、`make test-web`、完整`make e2e`及提交后`make gen-check`；已通过G全量门禁的日志集中列出，新增修复只按影响复测，未有完整门禁则补齐。检查文档相对链接和新文件名。分支CI由根任务在可审查提交上使用系统git推送codex/m4-p4后核验，执行者保留未执行状态及证据落点，不虚填结论；根任务给负责人分支、基线、spec/plan/review和变异台账，等待负责人安排Claude整分支终审；终审发现按一个修复轮处理、必要时复审。
-- [ ] **Step 5 提交与停止。** `docs(M4/P4): 记录协作验收证据与后续交接`。**负责人2026-10-25明确要求完成后先别合并；不得merge、push main或清理本分支。** Claude终审前进度写实现/验证完成待终审，不冒称Phase已最终完成。
+- [x] **Step 5 提交与停止。** `docs(M4/P4): 记录协作验收证据与后续交接`。**负责人2026-10-25明确要求完成后先别合并；不得merge、push main或清理本分支。** Claude终审前进度写实现/验证完成待终审，不冒称Phase已最终完成。
 
 ## 自检结果与大小
 
 16个任务与设计原任务映射在spec§3.2；12个新操作/五表全部有拥有Task，表与fixture同批交付。Task7/8内部准备由Task9消费，不提前公开描述字段；Task11历史目录由Task12消费。公共类型与方法按上面的公共表和各Interfaces定义，不依赖代码转录。Review Focus五项分别绑定实际测试和变异。作者自检报告保存于工作树的`.superpowers/sdd/P4-issue-collaboration/plan-author-report.md`（过程记录，不作为已完成测试证据）。
 
-原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检和六项局部修订复核已完成，结论可进入T1；T1的S3与适用测试/变异/门禁已执行，待独立Task评审，后续Task尚未执行；不写虚构哈希或通过率。
+原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检及六项修订复核、T1–T15实施/适用验证与独立Task评审均已完成；T1/F1、T6/I1及T9/T13 Minor的复核闭合见review。T16已完成授权文档交接、T15两项Minor处理及适用Web G/故事验证，待独立复核；完整e2e133通过/2项Firefox缺失失败。Step4总项仍未勾：最终提交后gen-check证据见task-16-report，分支CI及Claude整分支终审由root/负责人接续，尚未合并。16Task实际实现/修复numstat及依赖变化见review §5；T16精确SHA和最终规模见执行报告，不在将提交文档中预造自己的SHA。106次生产变异不包含T16纯值边界红绿，不称全面杀死率。
+
+T16本次验证入口：工作树 `.superpowers/sdd/P4-issue-collaboration/logs/task-16-commands.jsonl`；纯值红绿、三故事6通过、Web54/17/knip、完整e2e133通过/2环境失败及全部首次失败保留于task-16-report。T15两项Minor处理待独立评审确认；表数口径为Nerve44=Plane43+新增1，五份handoff仍open，M4整体完成标准未勾。
