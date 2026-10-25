@@ -87,3 +87,50 @@ func TestParseListQueryGroups(t *testing.T) {
 		assertListProblem(t, err, shared.KindBadRequest, "cursor", shared.FieldInvalidFormat)
 	}
 }
+
+// Accepted UUID spellings must select the same group, while enum/date/none
+// retain their field-specific meaning and spelling.
+func TestParseListQueryCanonicalGroupKeys(t *testing.T) {
+	const canonical = "0199a2b4-0000-7000-8000-000000000001"
+	actor := uuid.MustParse(canonical)
+	for _, field := range []ListGroup{"state_id", "label_id", "assignee_id", "created_by_id", "project_id"} {
+		for _, spelling := range []string{"0199A2B4-0000-7000-8000-000000000001", "0199a2b4000070008000000000000001", "{0199a2b4-0000-7000-8000-000000000001}", "urn:uuid:0199a2b4-0000-7000-8000-000000000001"} {
+			t.Run(string(field)+"/"+spelling, func(t *testing.T) {
+				scope := ProjectList
+				raw := map[string][]string{"group_by": {string(field)}, "group_key": {spelling}}
+				if field == "project_id" {
+					scope = MemberList
+					raw["relation"] = []string{"created"}
+				}
+				q, err := ParseListQuery(raw, scope, actor)
+				if err != nil || q.GroupKey == nil || *q.GroupKey != canonical {
+					t.Fatalf("group=%+v / %v", q, err)
+				}
+				if field == "project_id" {
+					return
+				}
+				raw = map[string][]string{"group_by": {"priority"}, "group_key": {"high"}, "sub_group_by": {string(field)}, "sub_group_key": {spelling}}
+				q, err = ParseListQuery(raw, scope, actor)
+				if err != nil || q.SubGroupKey == nil || *q.SubGroupKey != canonical || *q.GroupKey != "high" {
+					t.Fatalf("cell=%+v / %v", q, err)
+				}
+			})
+		}
+	}
+	for _, tc := range []struct{ field, key string }{
+		{"label_id", "none"}, {"assignee_id", "none"}, {"created_by_id", "none"}, {"priority", "none"}, {"priority", "urgent"}, {"state_group", "started"}, {"target_date", "none"}, {"target_date", "2030-03-01"},
+	} {
+		q, err := ParseListQuery(map[string][]string{"group_by": {tc.field}, "group_key": {tc.key}}, ProjectList, actor)
+		if err != nil || q.GroupKey == nil || *q.GroupKey != tc.key {
+			t.Fatalf("non-UUID %v: %+v / %v", tc, q, err)
+		}
+		group, key := "priority", "high"
+		if tc.field == group {
+			group, key = "state_group", "started"
+		}
+		q, err = ParseListQuery(map[string][]string{"group_by": {group}, "group_key": {key}, "sub_group_by": {tc.field}, "sub_group_key": {tc.key}}, ProjectList, actor)
+		if err != nil || q.SubGroupKey == nil || *q.SubGroupKey != tc.key {
+			t.Fatalf("non-UUID cell %v: %+v / %v", tc, q, err)
+		}
+	}
+}

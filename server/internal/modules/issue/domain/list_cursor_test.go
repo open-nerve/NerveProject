@@ -164,3 +164,30 @@ func TestListCursorCanonicalTypedKeys(t *testing.T) {
 	_, err := DecodeListCursor(bad, "priority")
 	assertListProblem(t, err, shared.KindBadRequest, "cursor", shared.FieldInvalidFormat)
 }
+
+// NUL cannot be represented by PostgreSQL text; canonical JSON alone is not
+// enough to make a name position a valid public cursor.
+func TestListCursorRejectsNULNames(t *testing.T) {
+	id := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	for _, order := range []ListOrder{"state_name", "-state_name", "label_name", "-label_name", "assignee_name", "-assignee_name"} {
+		t.Run(string(order), func(t *testing.T) {
+			for _, key := range []string{`"\u0000"`, `"a\u0000名"`} {
+				_, err := EncodeListCursor(ListCursor{Order: order, Key: json.RawMessage(key), ID: id})
+				assertListProblem(t, err, shared.KindBadRequest, "cursor", shared.FieldInvalidFormat)
+				raw := fmt.Sprintf(`{"v":1,"p":[%q,%s,%q]}`, order, key, id.String())
+				_, err = DecodeListCursor(base64.RawURLEncoding.EncodeToString([]byte(raw)), order)
+				assertListProblem(t, err, shared.KindBadRequest, "cursor", shared.FieldInvalidFormat)
+			}
+			for _, key := range []string{`null`, `""`, `"Ä名😀\n"`} {
+				value, err := EncodeListCursor(ListCursor{Order: order, Key: json.RawMessage(key), ID: id})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := DecodeListCursor(value, order)
+				if err != nil || string(got.Key) != key {
+					t.Fatalf("valid name %s: %s / %v", key, got.Key, err)
+				}
+			}
+		})
+	}
+}

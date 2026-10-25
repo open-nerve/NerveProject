@@ -113,6 +113,8 @@ func ParseListQuery(raw map[string][]string, scope ListScope, actorID uuid.UUID)
 	if err := q.validateGroups(hasCursor); err != nil {
 		return ListQuery{}, err
 	}
+	canonicalizeListGroupKey(q.GroupBy, q.GroupKey)
+	canonicalizeListGroupKey(q.SubGroupBy, q.SubGroupKey)
 	if hasCursor {
 		cursor, err := DecodeListCursor(raw["cursor"][0], q.Order)
 		if err != nil {
@@ -140,6 +142,20 @@ func (q ListQuery) validateGroups(hasCursor bool) error {
 		return listNotAllowed("sub_group_key")
 	}
 	return nil
+}
+
+// Group syntax and relationships have already been checked. SQL exposes UUID
+// group keys as canonical text; preserve none and every non-UUID vocabulary.
+func canonicalizeListGroupKey(group ListGroup, key *string) {
+	if key == nil || *key == "none" {
+		return
+	}
+	switch group {
+	case "state_id", "project_id", "label_id", "assignee_id", "created_by_id":
+		if id, err := uuid.Parse(*key); err == nil {
+			*key = id.String()
+		}
+	}
 }
 
 func listNotAllowed(field string) *shared.Error {

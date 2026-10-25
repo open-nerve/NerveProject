@@ -47,7 +47,7 @@ func canonicalListKey(order ListOrder, raw json.RawMessage) (json.RawMessage, er
 		return json.Marshal(day.String())
 	case "state_name", "label_name", "assignee_name":
 		var value string
-		if err := json.Unmarshal(raw, &value); err != nil {
+		if err := json.Unmarshal(raw, &value); err != nil || strings.ContainsRune(value, '\x00') {
 			return nil, shared.InvalidCursor()
 		}
 		return json.Marshal(NameOrderKey(value))

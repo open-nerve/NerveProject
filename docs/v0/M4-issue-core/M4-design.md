@@ -190,7 +190,7 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
       - `StateInUse(ctx, stateID) (bool, error)`：删除状态时，在项目 N 之下数用它的未删除工作项（含已归档的），有则 `project.state_in_use`（3.7）；
       - `DetachLabel(ctx, labelIDs, by, now)`：删除标签（连同子标签）时软删除它们的 `issue_labels` 行。
       - P1–P8 的过渡：另有 `DeleteProjectIssues(ctx, projectID, by, now)`、`DeleteWorkspaceIssues(ctx, workspaceID, projectIDs, by, now)`（这次锁住、删除的项目，加没有项目的草稿），在删除项目、工作区的事务里同步软删除工作项一侧的行，调的是任务用的同一份编排和语句（6.2）。P9 把它们换成事件和后台任务（3.6，决策点 7），这两个方法随之删除。过渡是因为后台任务要 P6 的事件和只投递的客户端，而 P1a 起删除项目就要带走工作项的表（M3 的删除故事，2 节）。
-    - `IssueListSettings`：检查项目的显示设置的取值（`filters`、`display_filters`、`display_properties`），由 `issue/domain` 的列表词汇实现：纯函数，不要连接池（3.17）。
+    - `IssueListSettings`：检查项目的显示设置的取值（`filters`、`display_filters`、`display_properties`），由 `issue/app.ListSettings` 实现，复用 `issue/domain` 的列表词汇：纯校验，不要连接池（3.17）。
   - **`project`、`workspace` 发布事件**（P9，决策点 3、7）：`deleteProject` 在事务里发布 `project.deleted`，`deleteWorkspace` 发布 `workspace.deleted`，带这次锁住、删除的项目（3.19）；`issue` 的订阅者在同一个事务里投递删除工作项一侧的任务。两个模块的 `Deps` 加 `EventPublisher`，不知道谁订阅。
   - **写闸门**（P1b，架构问题 11）：`issue/app` 声明端口 `WriteGate`，由 `bootstrap` 用 `platform/gate` 接成（3.5）。
   - **`project` 给 `workspace`**：`ProjectCascade` 加一个方法 `LockWorkspaceProjects(ctx, workspaceID)`：删除工作区在工作区 N 之后、读时刻之前，按 `id` 升序以 `FOR NO KEY UPDATE` 锁住它的未删除项目（决策点 1，3.5）。
