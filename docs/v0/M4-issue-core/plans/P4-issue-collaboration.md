@@ -407,7 +407,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 ### Task 15: I11–I13接口故事与旧故事增长
 
-**Files:** Create `e2e/stories/issue/i11-comments-reactions.spec.ts`、`i12-activity.spec.ts`、`i13-description-history.spec.ts`；Modify `i1-create-issue.spec.ts`、`i2-update-issue.spec.ts`、`i15-archive-issue.spec.ts`、`i17-delete-issue.spec.ts`、`e2e/fixtures/assert/issue.ts`、`e2e/fixtures/furnish.ts`。
+**Files:** Create `e2e/stories/issue/i11-comments-reactions.spec.ts`、`i12-activity.spec.ts`、`i13-description-history.spec.ts`；Modify `i1-create-issue.spec.ts`、`i2-update-issue.spec.ts`、`i15-archive-issue.spec.ts`、`i17-delete-issue.spec.ts`、`e2e/fixtures/assert/issue.ts`、`e2e/fixtures/furnish.ts`。已有I2为352行、assert/issue.ts为397行；新增描述故事可独立为`i2-description.spec.ts`，协作断言可独立为`e2e/fixtures/assert/issue-collaboration.ts`，原文件保留职责并引用/说明，不为估计清单制造无效修改。复用既有activity工厂与删除目录，不复制；furnish已有五表API前置，按实际缺口增补并更新说明。
 
 **Interfaces:** Consumes真实12 APIs与create/update描述，使用既有api fixture、activityRow/byId/madeBy/expectIssueDeleted；新增动态断言经已有activityRow，不另写一套shape。故事准备只能API，库仅用于事后断言。跨600秒边界由T8/T9固定clock测试，不在故事SQL造时间或等待600秒。
 
@@ -417,7 +417,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
   expect(new Set(merged.map(row => row.id)).size).toBe(merged.length);
   expect(afterIssue.updated_at).toBe(beforeIssue.updated_at); // only block-id save
   ```
-- [ ] **Step 2 定位运行。** `make build`，`pnpm exec playwright test e2e/stories/issue --project=chromium`。若新增断言直接绿，按对应skip/过滤/删除变异确认业务红后恢复；不能用构建失败充当业务失败。
+- [ ] **Step 2 定位运行。** `make build`，`pnpm -C e2e exec playwright test stories/issue --project=chromium`。若新增断言直接绿，按对应skip/过滤/删除变异确认业务红后恢复；不能用构建失败充当业务失败。
 - [ ] **Step 3 补fixture/实现。** 每项目furnish的每新表已在各迁移Task进入，这里补子树和两actor反例。I13用不同作者制造独立版本，普通还原按600秒合并政策断言，不盲数“必加一版”。一次同时写标题/描述的动态顺序也由I2抽样。
 - [ ] **Step 4 变异和全量门禁。** 实际故事断言至少杀死skip审计、href/checked、活动隐藏引用、删除漏一表四类；恢复绿。G的web门禁、`make e2e`串行；缺Firefox或既有W11偶发分别如实记录，不能说全绿。W11按负责人交接06，不擅修无关功能。
 - [ ] **Step 5 独立评审提交。** `feat(M4/P4): 覆盖评论动态和描述历史接口故事`。不计未经运行的故事数量。
