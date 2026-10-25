@@ -394,14 +394,14 @@ T13a/b预计970–1350/865–1240手写行；单元接近1400先复核剩余职�
 
 ## Task 15：接口故事与既有归档故事增长
 
-文件：新 `e2e/stories/issue/i3-list-groups.spec.ts`、`i4-list-order-calendar.spec.ts`、`i5-list-preferences.spec.ts`、`i6-board-order.spec.ts`、`i7-quick-add.spec.ts`、`i19-member-issues.spec.ts`、`i20-guest-boundary.spec.ts`；改i15-archive-issue.spec.ts、e2e/fixtures/issues.ts与assert/issue.ts。每故事一个文件，尚无页面版本。
+文件：新 `e2e/stories/issue/i3-list-groups.spec.ts`、`i4-list-order-calendar.spec.ts`、`i5-list-preferences.spec.ts`、`i6-board-order.spec.ts`、`i7-quick-add.spec.ts`、`i19-member-issues.spec.ts`、`i20-guest-boundary.spec.ts`；改i15-archive-issue.spec.ts、e2e/fixtures/issues.ts、api.ts与assert/issue.ts。每故事一个文件，尚无页面版本；typed偏好GET仅补既有api fixture，排序落库用窄expectIssuePosition与原更新断言组合，不扩大旧UpdatedIssue。
 
-- [ ] I3按state组/priority×label泳道、总数/完整数组/加载更多A∩C；I4每排序码翻页、日期范围及none；I5三类设置按人隔离、同参数GET等价；I6 state+sort同时写、completed_at/单条state动态；I7复用I1创建并验证状态与末尾排序，无新API。
-- [ ] I19三关系/跨项目caller可见性/guest403，A/B/C在每种关系下都有不同的明确期望集合（含A-only与C-only项，保留自动订阅）；I20四格（别人的详情404、创建403、列表own、自己项评论201），访客项由member建后API降级；I15新增仅归档列表及恢复后的消失/活列表出现。
-- [ ] 数据全部经生成客户端API，断言复用assert helpers；数据库仅验证结果。需要第二页至少limit+1不同值，不能只断言200/数组长度；所有负例检查错误码/字段。
-- [ ] 新增故事/fixtures/断言后记录真实基线：`make build` 后 `pnpm --dir e2e exec playwright test --project=chromium 'issue/i(3-|4-|5-|6-|7-|15-|19-|20-)'`；实际runner参数若按path regex须核对匹配8文件，不匹配不能当绿。若缺接口或helper导致编译红须明确记录；已交付API的正确行为补测可基线绿，不故意破坏生产制造初红。下项真实生产变异必须给出业务断言红及恢复绿。
-- [ ] 至少变异删组续页filter、I6排序赋值、preferences用户隔离、I20 own过滤对应一个故事红；恢复重跑。异步栏为空，不固定等待；旧评论功能仅作为P5故事依赖。
-- [ ] G并完整 `make e2e`；提交 `test(M4/P5): 验证列表显示设置与个人主页接口故事`。
+- [x] I3按state组/priority×label泳道、总数/完整数组/加载更多A∩C；I4每排序码翻页、日期范围及none；I5三类设置按人隔离、同参数GET等价；I6 state+sort同时写、completed_at/单条state动态；I7复用I1创建并验证状态与末尾排序，无新API。
+- [x] I19三关系/跨项目caller可见性/guest403，A/B/C在每种关系下都有不同的明确期望集合（含A-only与C-only项，保留自动订阅）；I20四格（别人的详情404、创建403、列表own、自己项评论201），访客项由member建后API降级；I15新增仅归档列表及恢复后的消失/活列表出现。
+- [x] 数据全部经生成客户端API，断言复用assert helpers；数据库仅验证结果。需要第二页至少limit+1不同值，不能只断言200/数组长度；所有负例检查错误码/字段。
+- [x] 新增故事/fixtures/断言后记录真实基线：`make build` 后 `pnpm --dir e2e exec playwright test --project=chromium 'issue/i(3-|4-|5-|6-|7-|15-|19-|20-)'`；实际runner参数若按path regex须核对匹配8文件，不匹配不能当绿。若缺接口或helper导致编译红须明确记录；已交付API的正确行为补测可基线绿，不故意破坏生产制造初红。下项真实生产变异必须给出业务断言红及恢复绿。
+- [x] 至少变异删组续页filter、I6排序赋值、preferences用户隔离、I20 own过滤对应一个故事红；恢复重跑。异步栏为空，不固定等待；旧评论功能仅作为P5故事依赖。
+- [x] G并完整 `make e2e`；提交 `test(M4/P5): 验证列表显示设置与个人主页接口故事`。
 
 ## Task 16：同步设计、交接与最终证据
 
