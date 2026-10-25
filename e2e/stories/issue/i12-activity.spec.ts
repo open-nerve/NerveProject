@@ -5,16 +5,14 @@ import { byId } from "../../fixtures/assert/issue";
 import { newAccount } from "../../fixtures/auth";
 import { commentPage, createIssueComment } from "../../fixtures/comments";
 import { activityPage, createIssue, createIssueRelations, updateIssue } from "../../fixtures/issues";
+import { instantKey } from "../../fixtures/instant";
 import { expect, test } from "../../fixtures/test";
 
 type Activity = components["schemas"]["IssueActivity"];
 type Comment = components["schemas"]["IssueComment"];
 type TimelineRow = Activity | Comment;
-// RFC3339Nano trims trailing zeros; pad them before comparing sub-millisecond positions.
-const timestamp = (value: string) =>
-  value.replace(/(?:\.(\d+))?Z$/, (_, fraction = "") => `.${fraction.padEnd(9, "0")}Z`);
 const timelineOrder = (a: TimelineRow, b: TimelineRow) =>
-  timestamp(a.created_at).localeCompare(timestamp(b.created_at)) || byId(a, b);
+  instantKey(a.created_at).localeCompare(instantKey(b.created_at)) || byId(a, b);
 
 /** Exhausts multiple real pages and retains the request cursor that produced the last page. */
 async function exhaust<T>(read: (cursor?: string) => Promise<{ data: T[]; next_cursor: string | null }>) {
@@ -70,7 +68,7 @@ test("I12 (API): comments and activities traverse multiple pages then incrementa
   expect(moved).toMatchObject({ id: description.id, old_value: issue.description_html, new_value: "<p>Final</p>" });
   if (!moved) throw new Error("incremental activity omitted merged description");
   expect(timelineOrder(inserted, moved)).toBeLessThan(0);
-  expect(timestamp(moved.created_at) > timestamp(description.created_at)).toBe(true);
+  expect(instantKey(moved.created_at) > instantKey(description.created_at)).toBe(true);
   const byIdentity = new Map<string, TimelineRow>();
   for (const row of [...comments.rows, ...activities.rows, ...commentDelta.data, ...activityDelta.data])
     byIdentity.set(row.id, row);

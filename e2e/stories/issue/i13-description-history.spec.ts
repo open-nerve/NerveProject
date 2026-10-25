@@ -9,6 +9,7 @@ import {
   updateIssue,
 } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
+import { instantKey } from "../../fixtures/instant";
 import { expect, test } from "../../fixtures/test";
 
 // I13 creates independent history by changing author, without manipulating time.
@@ -34,7 +35,7 @@ test("I13 (API): versions paginate newest first and details restore through ordi
   await updateIssue(api, ann.token, issue.id, { description_html: "<p>Ann final</p>" });
   const merged = await descriptionPage(api, admin.token, issue.id);
   expect(merged.data.map((row) => row.id)).toEqual([draft?.id, initial.id]);
-  expect((merged.data[0]?.last_saved_at ?? "") > (draft?.last_saved_at ?? "")).toBe(true);
+  expect(instantKey(merged.data[0]?.last_saved_at ?? "") > instantKey(draft?.last_saved_at ?? "")).toBe(true);
   await updateIssue(api, admin.token, issue.id, { description_html: "<p>Admin final</p>" });
   const first = await descriptionPage(api, ann.token, issue.id, undefined, 1);
   expect(first.next_cursor).not.toBeNull();

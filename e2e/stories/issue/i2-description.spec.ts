@@ -2,6 +2,7 @@ import { addProjectMembers, createProject, createWorkspace, inviteAndAccept, slu
 import { expectDescriptionActivity } from "../../fixtures/assert/issue-collaboration";
 import { newAccount } from "../../fixtures/auth";
 import { activityPage, createIssue, descriptionPage, descriptionVersion, updateIssue } from "../../fixtures/issues";
+import { instantKey } from "../../fixtures/instant";
 import { expect, test } from "../../fixtures/test";
 
 // These description cases extend I2 without adding a second activity expectation shape.
@@ -31,7 +32,7 @@ test("I2 (API): ordinary title/description writes audit in order, repeated saves
   await expectDescriptionActivity(db, issue.id, issue.description_html, changed.description_html);
   const merged = await descriptionPage(api, admin.token, issue.id);
   expect(merged.data.map((row) => row.id)).toEqual(firstSave.data.map((row) => row.id));
-  expect(changed.updated_at > renamed.updated_at).toBe(true);
+  expect(instantKey(changed.updated_at) > instantKey(renamed.updated_at)).toBe(true);
   const activity = await activityPage(api, ann.token, issue.id, undefined, 100);
   const version = merged.data[0];
   if (!version) throw new Error("no merged version");
@@ -68,13 +69,13 @@ for (const property of ["href", "checked"] as const) {
     });
     const initial = await descriptionPage(api, admin.token, issue.id);
     const changed = await updateIssue(api, admin.token, issue.id, { description_html: nextHtml, skip_activity: true });
-    expect(changed.updated_at > issue.updated_at).toBe(true);
+    expect(instantKey(changed.updated_at) > instantKey(issue.updated_at)).toBe(true);
     await expectDescriptionActivity(db, issue.id, issue.description_html, changed.description_html);
     const versions = await descriptionPage(api, admin.token, issue.id);
     expect(versions.data.map((row) => row.id)).toEqual(initial.data.map((row) => row.id));
     const latest = versions.data[0];
     if (!latest) throw new Error("no latest description version");
-    expect(latest.last_saved_at > (initial.data[0]?.last_saved_at ?? "")).toBe(true);
+    expect(instantKey(latest.last_saved_at) > instantKey(initial.data[0]?.last_saved_at ?? "")).toBe(true);
     expect((await descriptionVersion(api, admin.token, latest.id)).description_html).toBe(changed.description_html);
   });
 }
