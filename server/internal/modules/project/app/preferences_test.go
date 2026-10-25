@@ -112,7 +112,7 @@ func TestGetProjectPreferencesRefuses(t *testing.T) {
 // fakes, its clock logged.
 func newUpdatePreferences() (*app.UpdateProjectPreferences, *writeFixture) {
 	f := newPreferences()
-	return app.NewUpdateProjectPreferences(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}), f
+	return app.NewUpdateProjectPreferences(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}, &capturedSettings{}), f
 }
 
 // changed are the calls of user's change p of his display settings in

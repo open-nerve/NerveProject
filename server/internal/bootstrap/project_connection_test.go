@@ -77,7 +77,7 @@ func newProjectRouteOn(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, au
 	t.Helper()
 	return newRoute(t, project.New(project.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members,
-		Issues: issue.Provide(pool).IssueCascade}).Register)
+		Issues: issue.Provide(pool).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool).ListSettings}}).Register)
 }
 
 // send sends method path as caller, with body when it is not empty, and

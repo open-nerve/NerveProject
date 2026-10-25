@@ -231,6 +231,13 @@ func serializeOnTable(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *
 func serializeOnTableAfter(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, table string, first, second func() error,
 	afterWait func()) (opened time.Time, firstErr, secondErr error) {
 	t.Helper()
+	return serializeWaiting(t, ctx, g, first, second, func() { pgtest.WaitForLockWaitOn(t, pool, table, 5*time.Second) }, afterWait)
+}
+
+// serializeWaiting holds the first write until probe proves the second waits.
+// Callers select the actual PostgreSQL row or unique-key wait for their operation.
+func serializeWaiting(t *testing.T, ctx context.Context, g *gate, first, second func() error, probe, afterWait func()) (opened time.Time, firstErr, secondErr error) {
+	t.Helper()
 	var done, answered <-chan error
 	defer func() {
 		select {
@@ -254,7 +261,7 @@ func serializeOnTableAfter(t *testing.T, ctx context.Context, pool *pgxpool.Pool
 	done = run(first)
 	held(t, ctx, g, done, "the first write")
 	answered = run(second)
-	pgtest.WaitForLockWaitOn(t, pool, table, 5*time.Second)
+	probe()
 	if afterWait != nil {
 		afterWait()
 	}

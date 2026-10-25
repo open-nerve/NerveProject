@@ -27,6 +27,32 @@ import { anotherBrowser } from "../../fixtures/workspace-pages";
 // P8, a member's display settings in a project (M3 design 2, 3.18): through the API, and through the project's header
 // and the sidebar (7.6).
 
+const issueDefaults = {
+  filters: {},
+  display_filters: {
+    layout: "list",
+    group_by: null,
+    sub_group_by: null,
+    order_by: "-created_at",
+    sub_issue: true,
+    show_empty_groups: true,
+    calendar: { layout: "month", show_weekends: false },
+  },
+  display_properties: {
+    assignee: true,
+    start_date: true,
+    due_date: true,
+    labels: true,
+    key: true,
+    priority: true,
+    state: true,
+    sub_issue_count: true,
+    link: true,
+    created_on: true,
+    updated_on: true,
+  },
+} satisfies Pick<ProjectPreferences, "filters" | "display_filters" | "display_properties">;
+
 /** GET /api/v0/me/projects/{project_id}/preferences, which must be 200. */
 async function read(api: Api, token: string, id: string): Promise<unknown> {
   const { data, error, response } = await api.GET("/api/v0/me/projects/{project_id}/preferences", {
@@ -115,12 +141,14 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
     return made;
   });
   const memberSettings: ProjectPreferences = {
+    ...issueDefaults,
     navigation: { default_tab: "work_items", hide_in_more_menu: [] },
     sort_order: 65535,
   };
   expect(await read(api, admin, web.id)).toEqual({ ...memberSettings, sort_order: 55535 });
 
   const tabs: ProjectPreferences = {
+    ...issueDefaults,
     navigation: { default_tab: "modules", hide_in_more_menu: ["views"] },
     sort_order: 55535,
   };
@@ -167,6 +195,35 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
     }))
   );
   expect(await stored(db, web.id, adminEmail)).toEqual(row);
+
+  // Saved issue-list settings round-trip through the API and the three real JSONB columns.
+  const display = {
+    ...issueDefaults.display_filters,
+    layout: "calendar",
+    sub_issue: false,
+    group_by: "priority",
+    calendar: { layout: "week", show_weekends: true },
+  };
+  const properties = { ...issueDefaults.display_properties, link: false, assignee: false };
+  const saved = {
+    ...first,
+    filters: { priority: ["high"], label_id: [] },
+    display_filters: display,
+    display_properties: properties,
+  };
+  expect(await changeProjectPreferences(api, admin, web.id, saved)).toEqual({ status: 200, preferences: saved });
+  expect(await read(api, admin, web.id)).toEqual(saved);
+  expect(
+    await db.query(
+      `SELECT filters, display_filters, display_properties FROM project_user_properties
+     WHERE project_id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+      [web.id, await accountId(api, admin)]
+    )
+  ).toEqual([{ filters: saved.filters, display_filters: display, display_properties: properties }]);
+  expect(await changeProjectPreferences(api, admin, web.id, { filters: {} })).toEqual({
+    status: 200,
+    preferences: { ...saved, filters: {} },
+  });
 
   // The member's settings in Web are his own, as the admin's addition made them.
   expect(await read(api, member, web.id)).toEqual(memberSettings);

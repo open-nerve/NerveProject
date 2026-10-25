@@ -38,7 +38,7 @@ func (f fakeUpdatePreferences) Execute(ctx context.Context, projectID uuid.UUID,
 
 var (
 	bobsTabs = domain.Preferences{Navigation: domain.Navigation{DefaultTab: "modules", HideInMoreMenu: []string{"views", "intake"}}, SortOrder: -2.5, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}
-	tabsJSON = `{"navigation":{"default_tab":"modules","hide_in_more_menu":["views","intake"]},"sort_order":-2.5}`
+	tabsJSON = `{` + issueDefaultsJSON + `"navigation":{"default_tab":"modules","hide_in_more_menu":["views","intake"]},"sort_order":-2.5}`
 )
 
 // GET goes to the reading use case for the caller and the path's project;
@@ -46,7 +46,7 @@ var (
 // [] too, a nil one as well.
 func TestGetProjectPreferences(t *testing.T) {
 	path := "/api/v0/me/projects/" + webID.String() + "/preferences"
-	defaults := `{"navigation":{"default_tab":"work_items","hide_in_more_menu":[]},"sort_order":65535}`
+	defaults := `{` + issueDefaultsJSON + `"navigation":{"default_tab":"work_items","hide_in_more_menu":[]},"sort_order":65535}`
 	for _, tt := range []struct {
 		answer domain.Preferences
 		want   string

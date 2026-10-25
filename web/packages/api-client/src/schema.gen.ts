@@ -1377,7 +1377,7 @@ export interface paths {
         };
         /**
          * Read the caller's display settings in a project
-         * @description The caller's own settings in the project, for its active members: the tab bar of its header and its place in his sidebar. While he has none stored they are the defaults, work_items with nothing hidden and 65535, and reading them writes nothing. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
+         * @description The caller's own settings in the project, for its active members: the tab bar, sidebar place, and issue-list display settings. While he has none stored they are the defaults; reading them writes nothing. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
          */
         get: operations["getProjectPreferences"];
         put?: never;
@@ -1387,7 +1387,7 @@ export interface paths {
         head?: never;
         /**
          * Change the caller's display settings in a project
-         * @description For the project's active members, their own settings. The fields given change and the others stay; navigation is replaced whole, and the first change stores the caller's settings, the defaults with the change applied. A tab the web app does not have, work_items hidden, and a tab hidden twice are refused (validation_failed), before the project is looked at. An archived project's settings change as any other's. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
+         * @description For the project's active members, their own settings. The fields given change and the others stay; each top-level field is replaced whole, and the first change stores the caller's settings, the defaults with the change applied. A tab the web app does not have, work_items hidden, and a tab hidden twice are refused (validation_failed), before the project is looked at. Invalid saved filter or display words are also refused with indexed field paths (validation_failed). An empty filters object clears filtering, and empty arrays are retained. An archived project's settings change as any other's. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
          */
         patch: operations["updateProjectPreferences"];
         trace?: never;
@@ -2475,17 +2475,62 @@ export interface components {
             default_tab: components["schemas"]["ProjectTab"];
             hide_in_more_menu: components["schemas"]["ProjectTab"][];
         };
+        /** @description Saved filter atoms; an empty array means no filtering for its key. */
+        ProjectIssueFilters: {
+            state_id?: string[];
+            state_group?: string[];
+            priority?: string[];
+            label_id?: string[];
+            assignee_id?: string[];
+            created_by_id?: string[];
+            mention_id?: string[];
+            subscriber_id?: string[];
+            start_date?: string[];
+            target_date?: string[];
+        };
+        ProjectListCalendar: {
+            layout: string;
+            show_weekends: boolean;
+        };
+        ProjectDisplayFilters: {
+            layout: string;
+            group_by: string | null;
+            sub_group_by: string | null;
+            order_by: string;
+            sub_issue: boolean;
+            show_empty_groups: boolean;
+            calendar: components["schemas"]["ProjectListCalendar"];
+        };
+        ProjectDisplayProperties: {
+            assignee: boolean;
+            start_date: boolean;
+            due_date: boolean;
+            labels: boolean;
+            key: boolean;
+            priority: boolean;
+            state: boolean;
+            sub_issue_count: boolean;
+            link: boolean;
+            created_on: boolean;
+            updated_on: boolean;
+        };
         /** @description The caller's display settings in a project. */
         ProjectPreferences: {
             navigation: components["schemas"]["ProjectNavigation"];
             /** @description The project's place in the caller's sidebar, lowest first. */
             sort_order: number;
+            filters: components["schemas"]["ProjectIssueFilters"];
+            display_filters: components["schemas"]["ProjectDisplayFilters"];
+            display_properties: components["schemas"]["ProjectDisplayProperties"];
         };
-        /** @description Changes the fields it names; a field left out keeps its value, and navigation replaces the tab bar whole. */
+        /** @description Each named top-level field replaces that field whole; omitted fields stay unchanged. */
         ProjectPreferencesUpdate: {
             navigation?: components["schemas"]["ProjectNavigation"];
             /** @description The project's place in the caller's sidebar, lowest first. */
             sort_order?: number;
+            filters?: components["schemas"]["ProjectIssueFilters"];
+            display_filters?: components["schemas"]["ProjectDisplayFilters"];
+            display_properties?: components["schemas"]["ProjectDisplayProperties"];
         };
     };
     responses: {
@@ -2634,6 +2679,10 @@ export type IssueRelationCollection = components['schemas']['IssueRelationCollec
 export type IssueRelationsCreate = components['schemas']['IssueRelationsCreate'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
+export type ProjectIssueFilters = components['schemas']['ProjectIssueFilters'];
+export type ProjectListCalendar = components['schemas']['ProjectListCalendar'];
+export type ProjectDisplayFilters = components['schemas']['ProjectDisplayFilters'];
+export type ProjectDisplayProperties = components['schemas']['ProjectDisplayProperties'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
 export type ProjectPreferencesUpdate = components['schemas']['ProjectPreferencesUpdate'];
 export type ResponseProblem = components['responses']['Problem'];

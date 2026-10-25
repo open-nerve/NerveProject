@@ -172,6 +172,10 @@ func Provide(pool *pgxpool.Pool) Provided {
 // bootstrap converts workspace's DirectoryEntry into it (M3 design 6.5).
 type Workspace = app.Workspace
 
+// ListCalendar and ListDisplayFilters are the settings consumer boundary values.
+type ListCalendar = app.ListCalendar
+type ListDisplayFilters = app.ListDisplayFilters
+
 // Deps are what bootstrap gives the module (M3 design 6.6, step 4).
 type Deps struct {
 	Pool       *pgxpool.Pool
@@ -185,6 +189,8 @@ type Deps struct {
 	Members app.WorkspaceMembers
 	// Issues is issue's IssueCascade (issue.Provide).
 	Issues app.IssueCascade
+	// ListSettings is the pure issue-list vocabulary validator, converted by bootstrap.
+	ListSettings app.IssueListSettings
 }
 
 // Module is the wired project module.
@@ -211,7 +217,7 @@ func New(d Deps) *Module {
 		UnarchiveProject:    app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
 		DeleteProject:       app.NewDeleteProject(store, d.Issues, locks, d.Tx, d.Clock),
 		GetPreferences:      app.NewGetProjectPreferences(store, d.Authorizer),
-		UpdatePreferences:   app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock),
+		UpdatePreferences:   app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock, d.ListSettings),
 		ListMembers:         app.NewListProjectMembers(store, d.Authorizer),
 		AddMembers:          app.NewAddProjectMembers(app.AddMembersDeps{Locks: locks, Projects: store, Tx: d.Tx, Clock: d.Clock}),
 		JoinProject:         app.NewJoinProject(locks, store, d.Tx, d.Clock),

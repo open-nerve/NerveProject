@@ -250,3 +250,15 @@ func (p issueProjects) ListLabels(ctx context.Context, projectIDs []uuid.UUID) (
 	}
 	return out, nil
 }
+
+// projectListSettings converts the two modules' app values for the pure validator.
+type projectListSettings struct{ settings issue.ListSettings }
+
+func (p projectListSettings) Validate(filters map[string][]string, display *project.ListDisplayFilters, properties map[string]bool) []shared.FieldError {
+	var d *issue.ListDisplayFilters
+	if display != nil {
+		d = &issue.ListDisplayFilters{Layout: display.Layout, GroupBy: display.GroupBy, SubGroupBy: display.SubGroupBy, OrderBy: display.OrderBy,
+			SubIssue: display.SubIssue, ShowEmptyGroups: display.ShowEmptyGroups, Calendar: issue.ListCalendar{Layout: display.Calendar.Layout, ShowWeekends: display.Calendar.ShowWeekends}}
+	}
+	return p.settings.Validate(filters, d, properties)
+}

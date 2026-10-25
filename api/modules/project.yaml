@@ -752,9 +752,8 @@ paths:
       summary: Read the caller's display settings in a project
       description: >-
         The caller's own settings in the project, for its active members: the
-        tab bar of its header and its place in his sidebar. While he has none
-        stored they are the defaults, work_items with nothing hidden and
-        65535, and reading them writes nothing. A project that does not
+        tab bar, sidebar place, and issue-list display settings. While he has
+        none stored they are the defaults; reading them writes nothing. A project that does not
         exist, is deleted, or that the caller does not see answers
         project.not_found; one he sees but is not a member of, forbidden.
       security: [{bearer: []}]
@@ -774,11 +773,13 @@ paths:
       summary: Change the caller's display settings in a project
       description: >-
         For the project's active members, their own settings. The fields
-        given change and the others stay; navigation is replaced whole, and
+        given change and the others stay; each top-level field is replaced whole, and
         the first change stores the caller's settings, the defaults with the
         change applied. A tab the web app does not have, work_items hidden,
         and a tab hidden twice are refused (validation_failed), before the
-        project is looked at. An archived project's settings change as any
+        project is looked at. Invalid saved filter or display words are also
+        refused with indexed field paths (validation_failed). An empty filters
+        object clears filtering, and empty arrays are retained. An archived project's settings change as any
         other's. A project that does not exist, is deleted, or that the
         caller does not see answers project.not_found; one he sees but is
         not a member of, forbidden.
@@ -1115,21 +1116,125 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProjectTab'
+    ProjectIssueFilters:
+      description: Saved filter atoms; an empty array means no filtering for its key.
+      type: object
+      additionalProperties: false
+      properties:
+        state_id:
+          type: array
+          items:
+            type: string
+        state_group:
+          type: array
+          items:
+            type: string
+        priority:
+          type: array
+          items:
+            type: string
+        label_id:
+          type: array
+          items:
+            type: string
+        assignee_id:
+          type: array
+          items:
+            type: string
+        created_by_id:
+          type: array
+          items:
+            type: string
+        mention_id:
+          type: array
+          items:
+            type: string
+        subscriber_id:
+          type: array
+          items:
+            type: string
+        start_date:
+          type: array
+          items:
+            type: string
+        target_date:
+          type: array
+          items:
+            type: string
+    ProjectListCalendar:
+      type: object
+      additionalProperties: false
+      required: [layout, show_weekends]
+      properties:
+        layout:
+          type: string
+        show_weekends:
+          type: boolean
+    ProjectDisplayFilters:
+      type: object
+      additionalProperties: false
+      required: [layout, group_by, sub_group_by, order_by, sub_issue, show_empty_groups, calendar]
+      properties:
+        layout:
+          type: string
+        group_by:
+          type: [string, 'null']
+        sub_group_by:
+          type: [string, 'null']
+        order_by:
+          type: string
+        sub_issue:
+          type: boolean
+        show_empty_groups:
+          type: boolean
+        calendar:
+          $ref: '#/components/schemas/ProjectListCalendar'
+    ProjectDisplayProperties:
+      type: object
+      additionalProperties: false
+      required: [assignee, start_date, due_date, labels, key, priority, state, sub_issue_count, link, created_on, updated_on]
+      properties:
+        assignee:
+          type: boolean
+        start_date:
+          type: boolean
+        due_date:
+          type: boolean
+        labels:
+          type: boolean
+        key:
+          type: boolean
+        priority:
+          type: boolean
+        state:
+          type: boolean
+        sub_issue_count:
+          type: boolean
+        link:
+          type: boolean
+        created_on:
+          type: boolean
+        updated_on:
+          type: boolean
     ProjectPreferences:
       description: The caller's display settings in a project.
       type: object
       additionalProperties: false
-      required: [navigation, sort_order]
+      required: [navigation, sort_order, filters, display_filters, display_properties]
       properties:
         navigation:
           $ref: '#/components/schemas/ProjectNavigation'
         sort_order:
           description: The project's place in the caller's sidebar, lowest first.
           type: number
+        filters:
+          $ref: '#/components/schemas/ProjectIssueFilters'
+        display_filters:
+          $ref: '#/components/schemas/ProjectDisplayFilters'
+        display_properties:
+          $ref: '#/components/schemas/ProjectDisplayProperties'
     ProjectPreferencesUpdate:
-      description: >-
-        Changes the fields it names; a field left out keeps its value, and
-        navigation replaces the tab bar whole.
+      description: Each named top-level field replaces that field whole; omitted fields stay unchanged.
       type: object
       additionalProperties: false
       properties:
@@ -1138,6 +1243,12 @@ components:
         sort_order:
           description: The project's place in the caller's sidebar, lowest first.
           type: number
+        filters:
+          $ref: '#/components/schemas/ProjectIssueFilters'
+        display_filters:
+          $ref: '#/components/schemas/ProjectDisplayFilters'
+        display_properties:
+          $ref: '#/components/schemas/ProjectDisplayProperties'
     ProjectMember:
       description: An active membership of a project.
       type: object

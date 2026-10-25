@@ -46,17 +46,25 @@ type Cascade interface {
 	DetachLabel(ctx context.Context, labelIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 }
 
-// Provided are the adapters issue offers the other modules. They depend on
-// the pool alone, so bootstrap builds them before any module (M4 design
-// 6.6).
+// ListCalendar and ListDisplayFilters are the pure saved-settings boundary values.
+type ListCalendar = app.ListCalendar
+type ListDisplayFilters = app.ListDisplayFilters
+
+// ListSettings validates saved list words without a directory or actor.
+type ListSettings interface {
+	Validate(map[string][]string, *ListDisplayFilters, map[string]bool) []shared.FieldError
+}
+
+// Provided are the adapters bootstrap builds before wiring consuming modules.
 type Provided struct {
 	IssueCascade Cascade
+	ListSettings ListSettings
 }
 
 // Provide builds issue's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
-	return Provided{IssueCascade: app.NewCascade(store, store, deleteBatch)}
+	return Provided{IssueCascade: app.NewCascade(store, store, deleteBatch), ListSettings: app.ListSettings{}}
 }
 
 // ProjectPorts are what the module asks of a project (M4 design 6.5): its

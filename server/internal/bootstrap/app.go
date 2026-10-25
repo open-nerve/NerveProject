@@ -120,9 +120,10 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
 		Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: authorizer,
-		Workspaces: projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
-		Members:    workspacePorts.WorkspaceMembers,
-		Issues:     issuePorts.IssueCascade,
+		Workspaces:   projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
+		Members:      workspacePorts.WorkspaceMembers,
+		Issues:       issuePorts.IssueCascade,
+		ListSettings: projectListSettings{settings: issuePorts.ListSettings},
 	})
 	ws := workspace.New(workspace.Deps{
 		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,

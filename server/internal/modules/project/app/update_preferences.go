@@ -12,14 +12,15 @@ import (
 // project: PATCH /api/v0/me/projects/{project_id}/preferences.
 type UpdateProjectPreferences struct {
 	preferences PreferencesWriter
+	settings    IssueListSettings
 	locks       Locks
 	tx          shared.TxManager
 	clock       Clock
 }
 
 // NewUpdateProjectPreferences returns the use case.
-func NewUpdateProjectPreferences(preferences PreferencesWriter, locks Locks, tx shared.TxManager, clock Clock) *UpdateProjectPreferences {
-	return &UpdateProjectPreferences{preferences: preferences, locks: locks, tx: tx, clock: clock}
+func NewUpdateProjectPreferences(preferences PreferencesWriter, locks Locks, tx shared.TxManager, clock Clock, settings IssueListSettings) *UpdateProjectPreferences {
+	return &UpdateProjectPreferences{preferences: preferences, locks: locks, tx: tx, clock: clock, settings: settings}
 }
 
 // Execute checks p, then in one transaction (M3 design 3.6): the project's
@@ -33,7 +34,7 @@ func (u *UpdateProjectPreferences) Execute(ctx context.Context, projectID uuid.U
 	if err != nil {
 		return domain.Preferences{}, err
 	}
-	if err := domain.CheckPreferencesPatch(p); err != nil {
+	if err := checkListSettings(p, u.settings); err != nil {
 		return domain.Preferences{}, err
 	}
 	var stored domain.Preferences
