@@ -12,7 +12,8 @@ import { createIssue, createIssueRelations } from "./issues";
  * member of it, creates, assigned to the account of assigneeId, a member of it who is not its guest, and labelled the
  * label of labelId, one of its labels; the creator and the assignee its subscribers, and its activity the creation
  * and the assignee; and a second work item, which the first blocks: their relation, and a row of each one's activity
- * on it.
+ * on it. The first also carries a description mention, its initial version, a comment and both reaction resources,
+ * all created through their APIs so deletion catalog assertions cover the five collaboration tables.
  */
 export async function furnishIssueRows(
   api: Api,
