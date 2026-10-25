@@ -1175,7 +1175,7 @@ issue_comments
 | `DELETE /api/v0/states/{state_id}` | `deleteState` | `x-problem-codes` 加 409 `project.state_in_use` |
 
 - `Project` 的 `identifier`、`default_assignee_id`、`guest_view_all_features`、`archive_in` 的说明改写为它们对工作项的作用（M3 交接第 4 节）：编号的前缀；不带负责人的新工作项指派给他（他仍是项目中不是访客的有效成员时）；关时访客只看到自己建的工作项；自动归档的月数。`State.default` 的说明加"新工作项不带状态时取它"。
-- 各列表的顺序：`listIssues`、`listMemberIssues` 按 `order_by`（3.16）；子工作项按 `sort_order`、`id`（父工作项详情里的列表，与 Plane 的页面默认相同）；关联、链接、工作项的表情按 `(created_at, id)`；评论、动态按 `(created_at, id)` 升序；描述的历史按 `(last_saved_at, id)` 降序；草稿按 `(created_at, id)` 降序；搜索按 3.18。
+- 各列表的顺序：`listIssues`、`listMemberIssues` 按 `order_by`（3.16）；子工作项按 `(created_at, id)` 升序（P3 spec 第3节第13条的已交付契约；`sort_order` PATCH 不改变这个集合列表的顺序）；关联、链接、工作项的表情按 `(created_at, id)`；评论、动态按 `(created_at, id)` 升序；描述的历史按 `(last_saved_at, id)` 降序；草稿按 `(created_at, id)` 降序；搜索按 3.18。
 
 ### 5.2 结构
 - **关联字段只给 id，名字带 `_id`**（总体设计 3.2、3.6）：Plane 的 `state`、`parent`、`created_by`、`actor`、`owned_by` 改为 `state_id`、`parent_id`、`created_by_id`、`actor_id`、`owned_by_id`。
@@ -2151,24 +2151,26 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **关闭**：M1-P2 交接的 `skip_activity` 一项（服务端一侧）；M1-P3 交接的接口字段一项的另一半（评论没有 `access`、动态没有 `WORKLOG` 一类）和地址的另一半（描述历史的地址）；M1 收尾交接的 `comment_json`（服务端一侧不定义）；M2 交接第 2 节的一部分（评论、动态、版本的游标）、第 3 节的一部分（P4 的用例）；M3 交接第 9 节（页大小在 `shared`）。
 - **完成线**：I11–I13 的接口版本，I1 的描述、提及、版本，I2 的描述的修改与合并、只补块 id 的保存和只改链接地址或勾选框的保存，I15 的评论的 409，I17 加上评论、表情、提及、版本之后通过；交错 14、15 通过；S3 的样例全部往返。
 
-### P5 `issue-list`：列表引擎与显示设置（后端，15 个任务）
+### P5 `issue-list`：列表引擎与显示设置（后端，16 个任务）
+- **起步与切分**（2026-10-25）：基线为 P4 的 main 合并 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 全部通过。原15项按决策点2的已有授权重切为16项：单列 P1b 留下的 `sort_order` PATCH 和 P3 普通可见目录替换；原访客一致性并入目录、API、分页和矩阵任务；不删原范围。正式 [spec](specs/P5-issue-list.md) 与 [plan](plans/P5-issue-list.md) 为执行依据，阶段尚未完成。
 - **目标**：项目的列表（含已归档）、个人主页的列表：筛选、分组、子分组、排序、游标、一组的"加载更多"；项目的工作项显示设置。
 - **任务**：
-  1. `platform/postgres` 的连接池在每个连接上设 `jit = off`、`plan_cache_mode = force_custom_plan`，一个测试读回（3.16）。
-  2. `issue/domain/listvocab.go`（列表的词汇）和测试；`IssueListSettings` 由 `issue.Provide` 交出（3.17）。
-  3. 列表的请求的解析（422，含 `group_key`、`sub_group_key`、分组时不带 `group_key` 的 `cursor`、日期的 `none`）、游标的载荷、`api/testdata/issue-order.json`（含基本平面以外的字符的一对）和 Go 的比较。
-  4. 目录端口加比较键；`VisibleProjects`；`PublicProfiles`（`assignee_name` 的目录含每个当过负责人的账户，3.16）。
-  5. 不分组的查询和窗口的 `total`；空的一页的 `total`；数组参数从不为 `nil`；一次读在一个只读的 `REPEATABLE READ` 事务里（`platform/postgres` 的 `TxManager` 选项 `ReadOnlySnapshot`）。
-  6. 分组的查询（`ROWS FROM`、`filtered AS MATERIALIZED`、窄的 CTE、每一级的窗口总数、`to_char` 的日期键、多值的组、`none`）。
-  7. 子分组的查询和 `subgroup_totals`。
-  8. `listIssues`（含 `archived=true`、`group_key`）和 `IssueList`。
-  9. `listMemberIssues`（`relation`、可读的项目、各项目的访客规则；`member_issue.list`）。
-  10. 访客规则的一致性测试（含子工作项数、"管理员·访客"）；篡改的游标（8.6）。
-  11. 每个排序码两个方向的翻页、每个分组码、每个筛选参数的集成测试；`group_key` 的"加载更多"（含"`label_id=A` 的组 C"和日期的 `none` 组）；快照的测试；1 万、10 万个工作项的耗时；P5 的 spec 记下 S1 的计划和两个已知的代价（3.16）。
-  12. 迁移 `00026`（`project`）：三列和 CHECK；`get/updateProjectPreferences` 加三个字段，取值经 `IssueListSettings`。
-  13. 矩阵（含个人主页的一行）；整程序测试。
-  14. 端到端：I3、I4（`link_count` 之外，含 `target_date=none`）、I5、I6、I7、I19、I20 的接口版本；I15 加上已归档的列表。
-  15. 3.23 中 P5 的行；review。
+  1. `platform/postgres` 的连接池在每个连接上设 `jit = off`、`plan_cache_mode = force_custom_plan`；从实际连接读回，覆盖 URL 的相反值，保留 UTC 扫描（3.16）。
+  2. `issue/domain/listvocab.go`：项目/个人列表的词汇、19个排序码与测试；T13 的 `IssueListSettings` 复用它（3.17）。
+  3. 列表参数解析、全序和游标载荷（重复非日期参数422、日期AND/none、分组续页参数、篡改游标）；`api/testdata/issue-order.json` 与 Go 比较，包含微秒、精确数值和基本平面以外的字符。
+  4. 普通 `VisibleProjects` 与状态/标签批量目录、负责人ID和 `PublicProfiles` 名字目录；保留 P4 的 `Historical`，普通目录不放宽成员、归档和访客规则。
+  5. 不分组静态 SQL、窗口总数、空游标页补 total；数组永不 nil、SQL 防御 NULL；公共编排直接复用 P4 已交付的 `ReadOnlySnapshot` 和 `shared.PageSize`。
+  6. 分组静态 SQL（`ROWS FROM`、`filtered AS MATERIALIZED`、窄键CTE、窗口总数、日期键、多值/none）；组续页保留原筛选。
+  7. 子分组静态 SQL 与 `subgroup_totals`；组、泳道、格各自去重，格续页不改变原筛选。
+  8. `sort_order` PATCH 全链：同值无改动、零值、审计、状态与排序同改；排序不增动态字段，`skip_activity` 出现即不能与排序混用。
+  9. `listIssues`/`IssueList`：活/归档权限分支、三种响应与组格续页、严格局部的重复query错误映射；读取从首次授权起就在同快照。
+  10. `listMemberIssues`：三种关系、目标成员存在目录、`member_issue.list`；关系的目标成员ID与调用者的可见性/OwnOnly分开传递。
+  11. P3 关联列表改用普通可见目录；保留已授权归档源项目的同项目目标，清理无消费者的 `seeEach`/`ArchivedProjects`，不改变历史引用目录。
+  12. 每个排序码/方向、全部项目7种和个人5种分组及合法子分组字段、每个筛选参数的实际SQL/翻页；游标篡改、访客计数与"管理员·访客"；同快照交错；1万/10万规模和最终生产SQL计划、索引及已知代价。
+  13. `00026` 三列JSONB/默认/CHECK；项目偏好GET/PATCH与 `IssueListSettings` 纯校验端口；整字段替换及不同字段并发更新不丢值。
+  14. 权限矩阵、整程序边界与历史回归；新增交错 `-race -count=5`，适用门禁与实际变异证据闭环。
+  15. I3、I4（不含 `link_count`，含日期 `none`）、I5–I7、I19、I20 接口故事；I15 增加归档列表。
+  16. 3.23 中 P5 的行、规格验收、交接处理结果与最终评审；阶段完成后交负责人安排整分支终审，处理意见后再合并。
 - **关闭**：M2 交接第 2 节的列表一部分（每种排序有自己的载荷和测试，改过的游标只能在看得到的数据里换起点）；M3 交接第 3 节的个人主页的一行、第 5 节的服务端一侧（显示设置的格式）。
 - **完成线**：I3、I4（`link_count` 之外的排序码、日期的 `none`）、I5–I7、I19、I20 的接口版本和 I15 的已归档的列表通过；10 万个工作项的耗时在 3.16 的实测之内；连接的参数读回为预期的值。
 
@@ -2518,8 +2520,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P1b `issue-update` | 工作项的取、改与写闸门（后端，12）；同上 | 已完成：[spec](specs/P1b-issue-update.md)、[plan](plans/P1b-issue-update.md)、[评审](reviews/P1b-issue-update-review.md)（执行时 15 个 Task；整分支评审之后一个修复轮） |
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 已完成：[spec](specs/P2-issue-access.md)、[plan](plans/P2-issue-access.md)、[评审](reviews/P2-issue-access-review.md)（执行时 14 个 Task；整分支评审之后一个修复轮） |
 | P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
-| P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；最终合并main CI按精确SHA在交付和P5输入记录 |
-| P5 `issue-list` | 列表引擎与显示设置（后端，15） | 未开始 |
+| P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；已以 `--no-ff` 合并main `e9782b8f`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 三任务全绿，精确SHA及接收记录见P5评审 |
+| P5 `issue-list` | 列表引擎与显示设置（后端，16；按第12节重切） | 进行中：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。P4全绿main为基线，起步规格与计划独立预检及修订复核通过；产品实现与阶段验收尚未完成 |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，11） | 未开始 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12） | 未开始 |
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13） | 未开始 |
