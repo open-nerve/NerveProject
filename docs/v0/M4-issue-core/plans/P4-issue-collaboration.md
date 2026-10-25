@@ -377,20 +377,20 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** Consumes现有`itemWrite`、`inBothOrdersAt`、`pgtest.RowWaits`、固定Clock及T3/T9 APIs；本Task不新增业务端口。新增测试`TestCommentAndIssueDeletionSerialize`、`TestDescriptionSavesSerialize`、`TestCollaborationReadsClockUnderLock`、`TestActivityCreatedAtDoesNotGoBack`、`TestCollaborationRechecksMembership`、`TestCommentAndReactionsSerialize`、`TestCommentWritesAndArchivalSerialize`。
 
-- [ ] **Step 1 写断言。** 交错14两顺序：评论先提交，其评论/关注随后被同删除者同刻连带；删除先提交，评论404/零新关注评论。交错15先取得项目N再读clock，后请求在锁下读取前结果；同actor两次修改动态/版本各合并、最终HTML第二个、old_value仍首次之前、created_at不减；不同actor应分行/版。锁前持者与写入者不同，项目id/时间/id都不能只选自然升序数据。另外用真实交错覆盖成员被移出/降guest后的重判、评论编辑/删除与评论表情添加/删除的两个顺序、评论写与归档的两个顺序；OwnOnly隐藏404和自己描述降guest后的403分开，副表与审计断言零写/连带结果。测试侧Clock须有同步保证，既有clocktest.Fixed本身非并发安全，不修改平台生产时钟。
+- [x] **Step 1 写断言。** 交错14两顺序：评论先提交，其评论/关注随后被同删除者同刻连带；删除先提交，评论404/零新关注评论。交错15先取得项目N再读clock，后请求在锁下读取前结果；同actor两次修改动态/版本各合并、最终HTML第二个、old_value仍首次之前、created_at不减；不同actor应分行/版。锁前持者与写入者不同，项目id/时间/id都不能只选自然升序数据。另外用真实交错覆盖成员被移出/降guest后的重判、评论编辑/删除与评论表情添加/删除的两个顺序、评论写与归档的两个顺序；OwnOnly隐藏404和自己描述降guest后的403分开，副表与审计断言零写/连带结果。测试侧Clock须有同步保证，既有clocktest.Fixed本身非并发安全，不修改平台生产时钟。
   ```go
   if len(descriptionActivities) != 1 || len(windowVersions) != 1 { t.Fatal("serialized coalescing") }
   if activity.NewValue == nil || *activity.NewValue != secondHTML || *activity.OldValue != initialHTML { t.Fatal("lost description transition") }
   if secondAt.Before(firstAt) { t.Fatal("time moved before lock") }
   ```
-- [ ] **Step 2 运行定位。** `go -C server test ./internal/bootstrap -run 'Test(CommentAndIssueDeletionSerialize|DescriptionSavesSerialize|CollaborationReadsClockUnderLock|ActivityCreatedAtDoesNotGoBack|CollaborationRechecksMembership|CommentAndReactionsSerialize|CommentWritesAndArchivalSerialize)' -count=1`。若前序实现已使新增测试直接绿，先做针对性质可编译变异确认业务红再恢复，记录真实经过，不伪造首次红。
-- [ ] **Step 3 完善交错夹具/必要根因修复。** 先探测请求确实等在持者项目锁之后，再推进固定clock并释放；每次条件等待有截止期限，后台请求错误/取消可收回，不sleep同步。两个并发写的连接和事务分开；后写时钟与所有副表戳一致，不能仅断言最后HTTP状态。
-- [ ] **Step 4 强化验证。** 上一命令改`-race -count=5`；无40P01/业务失败。实际把clock移到Locks.run前、跳过锁下重读、用初版时间判断窗口各须触发具体断言失败；基础设施/超时不当杀死，恢复后定向绿。
-- [ ] **Step 5 G/独立评审/提交。** 重推HEAD全部写的gate→连接→项目N→各表锁关系；P4新写按全局表序，既有P3双端关联路径沿P3 spec§3第3条的双方项目锁证明，确认无新增等待环；`feat(M4/P4): 验证协作写入交错与锁后时钟`。
+- [x] **Step 2 运行定位。** `go -C server test ./internal/bootstrap -run 'Test(CommentAndIssueDeletionSerialize|DescriptionSavesSerialize|CollaborationReadsClockUnderLock|ActivityCreatedAtDoesNotGoBack|CollaborationRechecksMembership|CommentAndReactionsSerialize|CommentWritesAndArchivalSerialize)' -count=1`。若前序实现已使新增测试直接绿，先做针对性质可编译变异确认业务红再恢复，记录真实经过，不伪造首次红。
+- [x] **Step 3 完善交错夹具/必要根因修复。** 先探测请求确实等在持者项目锁之后，再推进固定clock并释放；每次条件等待有截止期限，后台请求错误/取消可收回，不sleep同步。两个并发写的连接和事务分开；后写时钟与所有副表戳一致，不能仅断言最后HTTP状态。
+- [x] **Step 4 强化验证。** 上一命令改`-race -count=5`；无40P01/业务失败。实际把clock移到Locks.run前、跳过锁下重读、用初版时间判断窗口各须触发具体断言失败；基础设施/超时不当杀死，恢复后定向绿。
+- [x] **Step 5 G/独立评审/提交。** 重推HEAD全部写的gate→连接→项目N→各表锁关系；P4新写按全局表序，既有P3双端关联路径沿P3 spec§3第3条的双方项目锁证明，确认无新增等待环；`feat(M4/P4): 验证协作写入交错与锁后时钟`。
 
 ### Task 14: 逐操作矩阵、整程序快照与安全补证
 
-**Files:** Create `server/internal/bootstrap/issue_collaboration_security_test.go`、`issue_collaboration_snapshot_test.go`；Modify `permission_matrix_collaboration_test.go`、`permission_matrix_seed_collaboration_test.go`、`permission_matrix_coverage_test.go`、`permission_matrix_issue_columns_test.go`、`issue_write_locks_test.go`、`issue_writes_test.go`、`gate_test.go`。若需拆已有文件保持职责和400行约束，不复制内容。
+**Files:** Create `server/internal/bootstrap/issue_collaboration_security_test.go`、`issue_collaboration_snapshot_test.go`；Modify `issue_write_locks_test.go`的issueTables，补齐`issue_mentions`、`issue_description_versions`；局部修改`interleaving_test.go`和`issue_collaboration_clock_test.go`，承接T13两项Minor。检查并复用`permission_matrix_collaboration_test.go`、`permission_matrix_seed_collaboration_test.go`、`permission_matrix_coverage_test.go`、`permission_matrix_issue_columns_test.go`、`issue_writes_test.go`、`gate_test.go`中的既有逐操作覆盖，仅有具体缺口时修改，不为文件清单制造差异。若需拆已有文件保持职责和400行约束，不复制内容。
 
 **Interfaces:** Consumes T3–12的12个新API；矩阵行在各Task已存在，T14补跨操作性质。复用已有matrixRow/issueWorld、事务/授权fake的失败注入能力；真实ReadTx从第一次目标读取开始，不能利用已有写事务嵌套来假装repeatable read（WithinTx嵌套不会改变隔离）。
 
@@ -403,7 +403,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 定位。** `go -C server test ./internal/bootstrap -run 'Test(PermissionMatrix|ThePermissionMatrixCoversEveryOperation|EachIssueWriteLocksItsProjectFirst|EachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy|TheWritesOnAWorkItemRunOnTheirTransactionsConnection|CollaborationSecurity|CollaborationSnapshot)' -count=1`。覆盖的写操作集合应与契约相等，不能用空表/无匹配通过。
 - [ ] **Step 3 补根因与错误边界。** 每个新写都经项目N/gate/事务context，故障每个端口都回滚、错误原值；新body非法结构400、HTML/反应业务422、limit422/cursor400都经真实HTTP。删除反应合法不存在404只针对自己，不借其他人的reaction泄漏；目标归档与不存在的顺序照spec。别端修改/删除旧评论不承诺增量即时更新。
 - [ ] **Step 4 实际变异矩阵。** 至少运行：漏一个operation矩阵行、作者校验移gate后、主查询用pool非tx、ReadTx包晚于see、历史过滤只看一端、把cursor当scope、跳过自定义src清洗、漏新表删除。每个记录业务失败测试/层；安全/锁只有fake单元结果则补组合结果，不能靠“已覆盖”措辞。
-- [ ] **Step 5 G评审提交。** 对照全部12操作与5新表自查，`feat(M4/P4): 验证协作权限与快照边界`。
+- [ ] **Step 5 G评审提交。** 对照全部12操作与5新表自查，关闭T13两项Minor：调度完成结果被held消费后清理仍能识别已结束，不重复等空channel；同时间逆id候选的合并资格不同，错误id升序必须触发具体业务断言。定向运行受影响交错（含ActivityCreatedAtDoesNotGoBack），记录一次排序变异及恢复；独立评审逐项给M1/M2结论。`feat(M4/P4): 验证协作权限与快照边界`。
 
 ### Task 15: I11–I13接口故事与旧故事增长
 
