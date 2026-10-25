@@ -171,7 +171,7 @@ I3/I4/I5/I6/I7/I19/I20 API 故事各文件，I15 增加归档列表；全部前�
 
 ## 4. 逐项验收
 
-T1–T8已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T9及后续任务尚未验收。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
+T1–T9已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T10及后续任务尚未验收。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
 
 | 完成 | Task | 完成线 |
 |---|---|---|
@@ -183,7 +183,7 @@ T1–T8已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b�
 | [x] | T6 | 分组total/每组limit/完整数组、A∩C续页与none |
 | [x] | T7 | 泳道总体/组/泳道/格去重计数、格续页与双多值反例 |
 | [x] | T8 | sort_order PATCH、state动态/完成时间、skip true/false互斥及锁路径交错五遍race |
-| [ ] | T9 | 两类错误映射边界、项目活/归档列表权限、三封套与闭合契约 |
+| [x] | T9 | 两类错误映射边界、项目活/归档列表权限、三封套与闭合契约 |
 | [ ] | T10 | A≠B三关系实际SQL、target存在语义、caller OwnOnly与个人主页权限 |
 | [ ] | T11 | P3关联替换、归档源同项目例外、父项/计数及Historical不退化 |
 | [ ] | T12 | 19排序、项目7/个人5全部group及全部合法subgroup实际SQL/total/续页；快照-race -count=5；10k/100k最终SQL实测 |

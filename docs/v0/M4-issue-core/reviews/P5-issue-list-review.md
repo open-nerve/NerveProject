@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-25。状态：**实施中；T1–T8完成，T9待开始；阶段尚未完成，不合并**。
+日期：2026-10-25。状态：**实施中；T1–T9完成，T10待开始；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -22,7 +22,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 ## 2. 验收标准逐条核对
 
-产品验收清单以 spec §4 为准；T1–T8已有下列实施证据，T9及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
+产品验收清单以 spec §4 为准；T1–T9已有下列实施证据，T10及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
 
 | 检查 | 结果 |
 |---|---|
@@ -32,7 +32,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 | 阶段关键词 | `phase=M4/P5`；没有在 P4/P5 到期的例外，`/user-properties/` 的 M4/P11 例外保留；`node tools/keywords.mjs` 为72规则、23例外、无命中 |
 | 起步文档自检 | 16个任务顺序完整、产品验收均未勾选；53处本地链接无新增缺失。M4设计原有4个M5–M8收尾文件链接仍是未来交付，不提前创建或标完成 |
 | 独立预检 | 首轮4项 Medium、2项 Low，均为局部计划/文档缺口；修订聚焦复核Approved，新增L3也已关闭，见§4 |
-| P5 产品测试、性能、交错及变异 | T1–T8证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
+| P5 产品测试、性能、交错及变异 | T1–T9证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
 
 ### T1：连接运行参数，已完成
 
@@ -114,6 +114,17 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 最终 `make gen`、Go定位及issue HTTP整包、`make lint-go`、`make test`（48成功包，bootstrap123.094s）、`make lint-web`、`make knip`、`make test-web`、提交后 `make gen-check` 均通过。Web测试17任务中11缓存，如实记录；本任务未跑e2e，I6完整故事和排序落库断言仍属T15。
 - 原始证据 `task-8-evidence/`；01–16普通diff仅含tracked文件，变异另有源diff/SHA；18起含新文件内容，最终提交覆盖全文件，不倒填早期证据。独立记录 `task-8-review.md`，原始最终28文件哈希逐项一致。未变Locks内部和全局表序沿已验收基线，审查另核当前路径与既有锁/闸门回归；没有把单Task审查冒称全库证明。创建排序/P3子项排序未改，不将巨大有限数静态加法疑点当溢出复现。
 
+### T9：项目列表API与HTTP边界，已完成
+
+- 实施提交 `f3c740e0d8dbf1eaef7eafd618f721bac3669ba8`，基线 `add5f6d9e9e7363d1d7b80b717df38066d50ebe3`；独立审查Spec compliant、Approved，无Critical/Important；唯一Minor为已记录的既有容器日志背景。手写14文件1154+/3−，生成3文件1056+/128−；新手写最长232行，生产新文件最长66行，未新增bootstrap生产依赖或SQL。
+- ListIssues在RequireActor/Parse后开启独立ReadTx，Find、issue.read/issue.archive授权、目录、三SQL和补total都传txctx，只给路径项目grant；显式归档项目可读。真实单连接组合核READ ONLY/RR及隐藏父/空页补total，尚不等同T12提交交错和性能。
+- 标准ErrorHandlerFunc只对精确GET路由、typed InvalidParamFormatError、该路由声明的非日期query且真实重复值映射422；其他仍400。StrictMiddleware深拷贝map和片段，不改RawQuery，不重复认证/限流。17种重复参数、缺token/坏path顺序、旧comments及日期AND真实边界通过。
+- 真实生成Page/Group可选nullable游标与可选数组，mapper按分支显式null/值/省略及[]。HTTP八种完整JSON实例和bootstrap双标签×双负责人实查三封套、原筛选交集/组格续页total、完整20字段Issue行；没有description_html/link_count。运行server角色实际执行三SQL及续页、归档项目两权限分支。
+- 权限矩阵4行40格覆盖活/归档项目与活/归档工作项，完整issueColumns/archivedColumns与独立集合/total期望；prepare行沿原harness的write:true作每格隔离，GET读写分类与守卫不变。实际初红包含缺接口编译红、未登记matrix、夹具未用import/错误message/prepare命令问题，报告逐一记录修正，未伪称全为产品业务红。
+- 七项真实变异均业务失败、原字节恢复后同组通过：归档误用read、移除ReadTx、日期重复压扁、错误映射扩旧comments、坏path同名参数误判、片段浅拷贝、末页cursor误省略。最终文件SHA与各变异恢复值核对，未残留变异。
+- 最终定位、HTTP整包反向码、`make lint-go`、唯一全量`make test`（48成功包，墙钟122.956s）、`make lint-web`54任务（8缓存）、`make knip`、`make test-web`17任务（11缓存）及提交后`make gen-check`通过，最终status干净。未改迁移/故事，未跑e2e；T15仍须实际客户端按普通CSV单键、日期重复键序列化，不以TS类型推定运行时explode。
+- 原始证据 `task-9-evidence/`，完整报告 `task-9-report.md`，独立记录 `task-9-review.md`，审查核对最终17文件SHA及七变异证据。保留既有Ryuk Shell not found诊断及随后ready成功的原日志，不为此改变既有容器/依赖。
+
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
@@ -122,7 +133,8 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - `dad6a560a8e0ff509385f9d20a71979c8bddb11a`（含全部T5）已由系统Git推送；[CI 40195404827](https://github.com/open-nerve/NerveProject/actions/runs/40195404827) server、web、e2e全部success。此检查点不包含T6。
 - `b550992c4a8babf711befea10bb3d0a26eceaf61`（含T6）已由系统Git推送；[CI 40196872428](https://github.com/open-nerve/NerveProject/actions/runs/40196872428) server、web、e2e全部success。此检查点不包含T7。
 - `1c318ddc7dc7f1f0e4b733c081a7018d2883c0a9`（含T7）已由系统Git推送；[CI 40198919892](https://github.com/open-nerve/NerveProject/actions/runs/40198919892) server、web、e2e全部success。此检查点不包含T8。
-- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
+- `add5f6d9e9e7363d1d7b80b717df38066d50ebe3`（含T8）已由系统Git推送；[CI 40200997593](https://github.com/open-nerve/NerveProject/actions/runs/40200997593) server、web、e2e全部success。此检查点不包含T9。
+- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
 
 ## 3. 执行中的决定
 
@@ -150,6 +162,10 @@ T13拆分及上述流程措辞已获一次独立文档预检Approved，无阻断
 
 T12拆分已获独立文档预检Approved，无阻断项，记录为ignored `task-12-split-review.md`；原父任务验收全部保留，未运行或宣称T12正确性/性能通过。T11定位正则另按真实函数名修正，补独立project adapter历史目录定位，避免原拟名未匹配旧集合用例。
 
+14. T10关系夹具须保留创建者/负责人自动订阅，三集合不同不等于互斥；通过真实评论构造仅订阅关系，不能假设已有取消订阅API或新增M7能力。先前只读准备的循环订阅表已修正并复核；错误代价是夹具脱离真实API，故使用明确独立集合与关系读回证伪。
+
+15. 最新授权要求P5阶段完成先不合并。T16开发收口（内部审查、文档、最终分支CI）与后续负责人安排的终审/集成分别登记；未做main CI和清理前不勾T16整项，不用这条未来完成线阻断当前已授权开发。
+
 ## 4. 预检发现与处理
 
 | 编号/级别 | 原问题 | 修订要求及证据落点 | 当前结论 |
@@ -174,7 +190,7 @@ T12拆分已获独立文档预检Approved，无阻断项，记录为ignored `tas
 
 | 接收方 | 范围 |
 |---|---|
-| P5 实施者 | T1–T8已完成；从T9继续按spec/plan逐任务交付、测试与评审 |
+| P5 实施者 | T1–T9已完成；从T10继续按spec/plan逐任务交付、测试与评审 |
 | P8 | `link_count` 字段与两个排序码；列表/搜索共用词汇 |
 | P10b | 共用排序样例、生产前端码点比较器与vitest；旧筛选store和 `/user-properties/` 迁移 |
 | P12–P15 | 接口故事增长为页面故事，列表/看板/日历/详情与访客页面 |
@@ -183,6 +199,6 @@ T12拆分已获独立文档预检Approved，无阻断项，记录为ignored `tas
 
 ## 7. 已知限制
 
-当前三条列表SQL、公共编排及排序PATCH已有上述实施证据；列表API、偏好迁移和100k性能等后续任务尚未完成，不能从已通过结果外推。
+当前三条列表SQL、公共编排、排序PATCH及项目列表API已有上述实施证据；个人主页列表API、偏好迁移和100k性能等后续任务尚未完成，不能从已通过结果外推。
 
 本地Firefox缺失和已知W11偶发仍按既定纪律处理；绿色P4 main CI已覆盖该基线的完整浏览器任务，不代表未来P5变更已经获得同样证据。

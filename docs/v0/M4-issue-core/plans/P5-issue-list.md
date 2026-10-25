@@ -303,21 +303,21 @@ T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400
 
 ## Task 9：项目列表 API 与 HTTP 边界
 
-前置：正式spec/plan及选定query局部适配已独立预检；不得靠占位绕过绑定。文件：新 `I/app/list_issues.go/list_issues_test.go`、`I/adapter/http/list_issues.go/list_issues_test.go/list_query.go`，改handler/module/bootstrap/API，新B/permission_matrix_issue_lists_test.go及issue_lists_test.go。
+前置：正式spec/plan及选定query局部适配已独立预检；不得靠占位绕过绑定。文件：新 `I/app/list_issues.go/list_issues_test.go`、`I/adapter/http/list_issues.go/list_issues_test.go/list_query.go`，改handler/module/API，复用已有bootstrap生产接线；新B/permission_matrix_issue_lists_test.go、issue_lists_test.go、issue_lists_runtime_test.go、issue_lists_snapshot_test.go及HTTP/list_query_test.go。
 
-- [ ] `TestListIssues`：活列表issue.read与归档列表issue.archive分流；已归档项目仍可读；显式项目grant只包含该项目；actor→Parse→ReadTx内授权→Listing，无ctx逃逸；端口失败不吞。
-- [ ] `TestIssueListQueryBoundary`：每个非日期参数（含CSV数组）重复422，日期重复AND，未知query422，错误UUID/date/bool语义422，limit非整数400/越界422，cursor坏400；缺token+重复仍422、坏path+重复先400、绑定成功无token401、正常认证后非法词值422；旧comments重复仍400；原始request.URL.RawQuery不变。
-- [ ] `TestIssueListEnvelope`：三形状精确字段集合、空data[]、cursor=null、组格续页平面、无description_html/link_count；BodyShapes/路由登记与客户端契约一致。
-- [ ] 红：`go -C server test ./internal/modules/issue/app -run 'TestListIssues' -count=1`；`go -C server test ./internal/modules/issue/adapter/http -count=1`；`go -C server test ./internal/bootstrap -run 'Test(IssueListQueryBoundary|IssueListEnvelope|IssueListPermissions)' -count=1`。
-- [ ] 按标准ErrorHandlerFunc局部映射和StrictMiddlewareFunc保存原query，不重复认证/限流；GET契约按spec参数表保留CSV string[]/重复日期string[]/布尔词string/limit integer；组结构不用递归schema/oneOf。ReadTx在第一个授权/目录读之前开始。
-- [ ] 绿；变异把归档当普通权限、去ReadTx、把重复压扁、错误映射扩到旧comments或坏path；边界测试应各红；恢复。
-- [ ] H/G；提交 `feat(M4/P5): 发布项目工作项列表与分组接口`。
+- [x] `TestListIssues`：活列表issue.read与归档列表issue.archive分流；已归档项目仍可读；显式项目grant只包含该项目；actor→Parse→ReadTx内授权→Listing，无ctx逃逸；端口失败不吞。
+- [x] `TestIssueListQueryBoundary`：每个非日期参数（含CSV数组）重复422，日期重复AND，未知query422，错误UUID/date/bool语义422，limit非整数400/越界422，cursor坏400；缺token+重复仍422、坏path+重复先400、绑定成功无token401、正常认证后非法词值422；旧comments重复仍400；原始request.URL.RawQuery不变。
+- [x] `TestIssueListEnvelope`：三形状精确字段集合、空data[]、cursor=null、组格续页平面、无description_html/link_count；BodyShapes/路由登记与客户端契约一致。
+- [x] 红：`go -C server test ./internal/modules/issue/app -run 'TestListIssues' -count=1`；`go -C server test ./internal/modules/issue/adapter/http -count=1`；`go -C server test ./internal/bootstrap -run 'Test(IssueListQueryBoundary|IssueListEnvelope|IssueListPermissions)' -count=1`。
+- [x] 按标准ErrorHandlerFunc局部映射和StrictMiddlewareFunc保存原query，不重复认证/限流；GET契约按spec参数表保留CSV string[]/重复日期string[]/布尔词string/limit integer；组结构不用递归schema/oneOf。ReadTx在第一个授权/目录读之前开始。
+- [x] 绿；变异把归档当普通权限、去ReadTx、把重复压扁、错误映射扩到旧comments或坏path；边界测试应各红；恢复。
+- [x] H/G；提交 `feat(M4/P5): 发布项目工作项列表与分组接口`。
 
 ## Task 10：个人主页列表与目标成员目录
 
 文件：新 `I/app/list_member_issues.go`/测试与HTTP对应文件；改 `I/domain/actions.go`、`access/domain/rules.go`及规则测试、W/module.go/目录适配/queries/members.sql、B/ports.go/app.go、API/矩阵。
 
-- [ ] `TestListMemberIssues`：assigned/created/subscribed集合互异；目标当前/已结束未删成员可读，未加入/软删404member_not_found；调用者guest403；目标权限不能代替caller权限。
+- [ ] `TestListMemberIssues`：assigned/created/subscribed集合互异（不要求互不相交；保留创建者/负责人自动订阅，可用真实评论产生仅订阅关系，不新增M7订阅接口）；目标当前/已结束未删成员可读，未加入/软删404member_not_found；调用者guest403；目标权限不能代替caller权限。
 - [ ] `TestMemberIssueRelationTarget` 用调用者A≠目标B，经真实SQL分别验证assigned/created/subscribed；为A、B、第三人布置互不相同关系，断言三次都筛B。另设A为OwnOnly项目guest而B为普通成员：只返回A创建且与B满足关系的项，不能按B权限放行。项目列表target=nil，query注入target字段被拒绝；Listing/仓储错配Relation/target返回错误。
 - [ ] `TestMemberIssueVisibility`：caller不同项目角色，管理员兼guest OwnOnly、管理员未入项目、项目归档/软删、退出项目；scope筛选project_id只能求交；workspace不存在/无权先按现有隐藏规则。
 - [ ] 红：`go -C server test ./internal/modules/issue/app ./internal/modules/workspace/adapter/postgres ./internal/bootstrap -run 'Test(ListMemberIssues|MemberIssueRelationTarget|MemberIssueVisibility|WorkspaceMemberExists)' -count=1`；access域和issue HTTP整包。
@@ -407,7 +407,8 @@ T13a/b预计970–1350/865–1240手写行；单元接近1400先复核剩余职�
 - [ ] spec性能部分补最终生产SQL实际索引/EXPLAIN与成本，保留20k目标/100k验证、M8跨项目扫描与名字变更跨页漂移；不新增未经批准索引路线。
 - [ ] P10b交接共用issue-order.json、真实前端码点比较器/vitest与旧store迁移；P8 link_count/搜索复用词汇；P12–15页面故事；M4/交接开放状态不提前关闭。
 - [ ] 自检本计划16任务边界与签名，核对真实基线与最终签名，删除不适用候选，独立审查整分支而非只看diff；按严重度处理局部缺陷，架构/高风险上报。最终review记录命令/HEAD/环境、测试红绿、变异恢复、性能、未解决风险，不用虚构百分比。
-- [ ] 按最终变更范围跑所需G、提交后make gen-check；提交 `docs(M4/P5): 同步列表契约性能证据与后续交接`。先交负责人安排整分支终审并处理意见，再按既有流程分支CI→--no-ff合并→main CI→worktree清理；不提前标完成。
+- [ ] 当前授权内的开发收口：按最终变更范围跑所需G、提交后make gen-check；提交 `docs(M4/P5): 同步列表契约性能证据与后续交接`，完成内部整分支审查及局部修复，核对最终提交的分支CI，交负责人安排下一步；保留分支和worktree。
+- [ ] 待负责人安排的集成收口：负责人整分支终审并处理意见后，按最终SHA分支CI→--no-ff合并→main CI→worktree清理。最新指示为阶段完成先别合并，当前不执行本项；T16整项不能在main CI与清理尚未完成时提前勾选。
 
 ## 范围核对与当前证据边界
 
