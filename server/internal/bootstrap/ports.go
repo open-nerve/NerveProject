@@ -209,3 +209,39 @@ func (p issueProjects) Historical(ctx context.Context, workspaceID, actorID uuid
 	}
 	return out, nil
 }
+
+func (p issueProjects) Visible(ctx context.Context, workspaceID, actorID uuid.UUID) ([]issue.VisibleProject, error) {
+	projects, err := p.projects.VisibleIssueProjects(ctx, workspaceID, actorID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.VisibleProject, len(projects))
+	for i, project := range projects {
+		out[i] = issue.VisibleProject(project)
+	}
+	return out, nil
+}
+
+func (p issueProjects) ListStates(ctx context.Context, projectIDs []uuid.UUID) ([]issue.StateRef, error) {
+	states, err := p.projects.IssueListStates(ctx, projectIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.StateRef, len(states))
+	for i, s := range states {
+		out[i] = issue.StateRef{ID: s.ID, Name: s.Name, Group: issue.StateGroup(s.Group), Default: s.Default}
+	}
+	return out, nil
+}
+
+func (p issueProjects) ListLabels(ctx context.Context, projectIDs []uuid.UUID) ([]issue.LabelRef, error) {
+	labels, err := p.projects.IssueListLabels(ctx, projectIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.LabelRef, len(labels))
+	for i, label := range labels {
+		out[i] = issue.LabelRef(label)
+	}
+	return out, nil
+}

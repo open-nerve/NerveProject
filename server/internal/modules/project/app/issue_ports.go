@@ -81,3 +81,10 @@ type HistoricalIssueProject struct {
 	Role    shared.Role
 	OwnOnly bool
 }
+
+// VisibleIssueProject is an actor's ordinary project role and guest scope.
+type VisibleIssueProject struct {
+	ID      uuid.UUID
+	Role    shared.Role
+	OwnOnly bool
+}

@@ -26,6 +26,9 @@ type activityReads struct {
 func (f *activityReads) Historical(ctx context.Context, ws, actor uuid.UUID) ([]app.VisibleProject, error) {
 	return f.projects, f.log.add(ctx, "Historical", ws, actor)
 }
+func (f *activityReads) Visible(context.Context, uuid.UUID, uuid.UUID) ([]app.VisibleProject, error) {
+	panic("activity references must use Historical, not Visible")
+}
 func (f *activityReads) Activities(ctx context.Context, id, actor uuid.UUID, projects []app.VisibleProject, after *domain.ActivityCursor, limit int) ([]app.ActivityRecord, error) {
 	f.limit, f.after, f.received, f.actor = limit, after, projects, actor
 	return f.rows, f.log.add(ctx, "Activities", id)
