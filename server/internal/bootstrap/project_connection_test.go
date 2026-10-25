@@ -84,11 +84,15 @@ func newProjectRouteOn(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, au
 // returns the request and its answer. It touches no test, so another
 // goroutine may send it.
 func (p moduleRoute) send(method, path string, caller uuid.UUID, body string) (*http.Request, *httptest.ResponseRecorder) {
+	return p.sendContext(context.Background(), method, path, caller, body)
+}
+
+func (p moduleRoute) sendContext(ctx context.Context, method, path string, caller uuid.UUID, body string) (*http.Request, *httptest.ResponseRecorder) {
 	var b io.Reader
 	if body != "" {
 		b = strings.NewReader(body)
 	}
-	req := httptest.NewRequest(method, path, b)
+	req := httptest.NewRequestWithContext(ctx, method, path, b)
 	req.Header.Set("Authorization", "Bearer "+caller.String())
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")

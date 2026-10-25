@@ -91,6 +91,7 @@ func newIssueRouteWithClock(t *testing.T, pool *pgxpool.Pool, tx shared.TxManage
 		WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock,
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory},
+		Members:    issueMembers{members: workspace.Provide(pool).WorkspaceMemberDirectory},
 		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
 }
 

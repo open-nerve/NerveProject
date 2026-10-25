@@ -10,7 +10,8 @@ WITH projects AS (
 ), assignees AS (
     SELECT * FROM ROWS FROM(unnest(sqlc.arg(assignee_ids)::uuid[]), unnest(sqlc.arg(assignee_keys)::text[])) AS a(id, name_key)
 ), filtered AS MATERIALIZED (
-    SELECT i.id, p.own_only, s.name_key AS state_key
+    SELECT i.id, p.own_only, s.name_key AS state_key,
+           i.created_at, i.updated_at, i.start_date, i.target_date, i.priority, i.sort_order
     FROM issues i JOIN projects p ON p.id = i.project_id JOIN states s ON s.id = i.state_id
     WHERE i.deleted_at IS NULL AND (i.archived_at IS NOT NULL) = sqlc.arg(archived)::boolean
       AND (NOT p.own_only OR i.created_by_id = sqlc.arg(actor_id)::uuid)
@@ -39,17 +40,17 @@ WITH projects AS (
 ), counted AS (
     SELECT f.*, count(*) OVER () AS total FROM filtered f
 ), source_keys AS (
-    SELECT f.id, f.own_only, f.total, i.created_at, i.updated_at, i.start_date, i.target_date, i.priority,
-           CASE WHEN sqlc.arg(order_key)::text='sort_order' THEN pg_catalog.float8send(i.sort_order) END AS bits,
+    SELECT f.id, f.own_only, f.total, f.created_at, f.updated_at, f.start_date, f.target_date, f.priority,
+           CASE WHEN sqlc.arg(order_key)::text='sort_order' THEN pg_catalog.float8send(f.sort_order) END AS bits,
            CASE WHEN sqlc.arg(order_key)::text='sub_issues_count' THEN
-               (SELECT count(*) FROM issues c WHERE c.parent_id=i.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
+               (SELECT count(*) FROM issues c WHERE c.parent_id=f.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
                 AND (NOT f.own_only OR c.created_by_id=sqlc.arg(actor_id)::uuid)) END AS child_count,
            CASE sqlc.arg(order_key)::text
              WHEN 'state_name' THEN f.state_key
-             WHEN 'label_name' THEN (SELECT min(l.name_key COLLATE "C") FROM issue_labels r JOIN labels l ON l.id=r.label_id WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
-             WHEN 'assignee_name' THEN (SELECT min(a.name_key COLLATE "C") FROM issue_assignees r JOIN assignees a ON a.id=r.assignee_id WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
+             WHEN 'label_name' THEN (SELECT min(l.name_key COLLATE "C") FROM issue_labels r JOIN labels l ON l.id=r.label_id WHERE r.issue_id=f.id AND r.deleted_at IS NULL)
+             WHEN 'assignee_name' THEN (SELECT min(a.name_key COLLATE "C") FROM issue_assignees r JOIN assignees a ON a.id=r.assignee_id WHERE r.issue_id=f.id AND r.deleted_at IS NULL)
            END AS k_text
-    FROM counted f JOIN issues i ON i.id=f.id
+    FROM counted f
 ), numeric_keys AS (
     SELECT s.id, s.own_only, s.total, s.child_count, s.k_text,
            CASE sqlc.arg(order_key)::text
@@ -68,18 +69,9 @@ WITH projects AS (
     FROM source_keys s
 ), keyed AS (
     SELECT n.*, (n.k_num IS NULL AND n.k_text IS NULL) AS k_null FROM numeric_keys n
-)
-SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority,
-       i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at,
-       i.created_by_id, i.updated_by_id, i.created_at, i.updated_at, k.total::bigint AS total,
-       ''::text AS group_key, 0::bigint AS group_total,
-       ''::text AS sub_group_key, 0::bigint AS subgroup_total, 0::bigint AS cell_total,
-       coalesce(k.k_text,'')::text AS name_key, (k.k_text IS NULL)::boolean AS name_null,
-       coalesce(k.child_count,(SELECT count(*) FROM issues c WHERE c.parent_id=i.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
-                              AND (NOT k.own_only OR c.created_by_id=sqlc.arg(actor_id)::uuid)))::bigint AS sub_issues_count,
-       coalesce((SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS assignee_ids,
-       coalesce((SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS label_ids
-FROM keyed k JOIN issues i ON i.id=k.id
+), paged AS MATERIALIZED (
+    -- Sort and count every match, then fetch full issue projections only for the page.
+    SELECT k.* FROM keyed k
 WHERE NOT sqlc.arg(has_cursor)::boolean OR
       (k.k_null AND NOT sqlc.arg(cursor_null)::boolean) OR
       (k.k_null=sqlc.arg(cursor_null)::boolean AND
@@ -95,4 +87,23 @@ ORDER BY k.k_null,
          CASE WHEN sqlc.arg(descending)::boolean THEN k.k_text END COLLATE "C" DESC,
          CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.id END ASC,
          CASE WHEN sqlc.arg(descending)::boolean THEN k.id END DESC
-LIMIT sqlc.arg(page_size)::integer;
+LIMIT sqlc.arg(page_size)::integer
+)
+SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority,
+       i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at,
+       i.created_by_id, i.updated_by_id, i.created_at, i.updated_at, k.total::bigint AS total,
+       ''::text AS group_key, 0::bigint AS group_total,
+       ''::text AS sub_group_key, 0::bigint AS subgroup_total, 0::bigint AS cell_total,
+       coalesce(k.k_text,'')::text AS name_key, (k.k_text IS NULL)::boolean AS name_null,
+       coalesce(k.child_count,(SELECT count(*) FROM issues c WHERE c.parent_id=i.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
+                              AND (NOT k.own_only OR c.created_by_id=sqlc.arg(actor_id)::uuid)))::bigint AS sub_issues_count,
+       coalesce((SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS assignee_ids,
+       coalesce((SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS label_ids
+FROM paged k JOIN issues i ON i.id=k.id
+ORDER BY k.k_null,
+         CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.k_num END ASC,
+         CASE WHEN sqlc.arg(descending)::boolean THEN k.k_num END DESC,
+         CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.k_text END COLLATE "C" ASC,
+         CASE WHEN sqlc.arg(descending)::boolean THEN k.k_text END COLLATE "C" DESC,
+         CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.id END ASC,
+         CASE WHEN sqlc.arg(descending)::boolean THEN k.id END DESC;

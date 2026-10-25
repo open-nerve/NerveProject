@@ -47,11 +47,17 @@ func newIssueWorld(t *testing.T) issueWorld {
 // testConfig's, configure changes first.
 func newIssueWorldWith(t *testing.T, configure func(cfg *config.Config)) issueWorld {
 	t.Helper()
-	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
+	return newIssueWorldOn(t, dbURL, openPool(t, dbURL), configure)
+}
+
+// newIssueWorldOn reuses an already migrated database for the API and assertions.
+func newIssueWorldOn(t *testing.T, dbURL string, pool *pgxpool.Pool, configure func(*config.Config)) issueWorld {
+	t.Helper()
+	contract := apitest.Load(t)
 	cfg := testConfig(t, dbURL, false)
 	configure(&cfg)
-	w := issueWorld{contract: contract, base: startApp(t, cfg, migrations.FS()), pool: openPool(t, dbURL), tokens: map[string]string{},
+	w := issueWorld{contract: contract, base: startApp(t, cfg, migrations.FS()), pool: pool, tokens: map[string]string{},
 		ids: map[string]uuid.UUID{}}
 	for _, name := range []string{"alice", "bob", "walt", "wanda", "olga"} {
 		w.tokens[name] = registerAccount(t, contract, w.base, name+"@example.com").AccessToken
