@@ -8,7 +8,7 @@
 
 **技术栈：** 仓库锁定 Go 1.27/toolchain go1.27.1、pgx 5.11.0、sqlc 1.31.1、oapi-codegen 2.8.0、PostgreSQL 18.6、Node 24、pnpm 11.10.0、Playwright；不新增依赖。
 
-**规格：** [P5 spec](../specs/P5-issue-list.md)；[P5 review](../reviews/P5-issue-list-review.md)。基线 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`；[main CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 已全部成功，仅证明P4基线。16 Task 是原设计15项的局部重切，sort_order单列，全部P5范围保留。
+**规格：** [P5 spec](../specs/P5-issue-list.md)；[P5 review](../reviews/P5-issue-list-review.md)。基线 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`；[main CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 已全部成功，仅证明P4基线。16个验收任务是原设计15项的局部重切，sort_order单列，全部P5范围保留。T5按执行前规模核对拆为T5a/T5b两个连续实施与独立评审单元，因此当前共17个实施单元；两个单元完成后才验收T5，不改变P5分支或负责人完成门。
 
 **方法调整：** 依 [02-method §3](../../claude_to_gpt/02-method.md#3-哪些是要求哪些是做法)，采用明确职责、消费/产出签名、文件、测试和命令的紧凑计划；逐Task TDD、实际变异、恢复控制组和独立评审替代完整预制原型/逐字重放。没有跑原型就不声称跑过；不减少纪律、真实文档、性质证伪、交接、终审或合并/main CI完成门。
 
@@ -63,11 +63,12 @@
 | Task | 预计新增/修改手写代码与测试行（非实测） |
 |---|---|
 | T1 / T2 / T3 / T4 | 150–300 / 250–450 / 600–900 / 700–1100 |
-| T5 / T6 / T7 / T8 | 1100–1450 / 800–1300 / 900–1400 / 600–1000 |
+| T5a / T5b（执行前重新估计） | 1050–1350 / 850–1300 |
+| T6 / T7 / T8 | 800–1300 / 900–1400 / 600–1000 |
 | T9 / T10 / T11 / T12 | 800–1200 / 800–1200 / 350–650 / 1100–1450 |
 | T13 / T14 / T15 / T16 | 1100–1450 / 600–1000 / 900–1400 / 0–100（T16主要文档另计） |
 
-每Task预计小于约1500手写代码/测试行；生成物和文档另计，复用文件的总行数不当新增差异量。T5–7/T12/T13最重，实施前后以真实diff/测试职责核对；若超约1500或Phase约16任务范围，按设计D2已批准机制重切任务或P5a/P5b并同步spec/plan/状态，不削测试、不编造完整原型SHA/逐Task精确行数，也不把局部切分升级成架构审批。
+每实施单元预计小于约1500手写代码/测试行；生成物和文档另计，复用文件的总行数不当新增差异量。T5–7/T12/T13最重，实施前后以真实diff/测试职责核对；T5静态接缝核对后粗估1900–2400行，已按D2切为两个顺序单元（估计不是实测，不能作为完成证据）；若超约1500或Phase约16任务范围，按设计D2已批准机制重切任务或P5a/P5b并同步spec/plan/状态，不削测试、不编造完整原型SHA/逐Task精确行数，也不把局部切分升级成架构审批。
 
 共用helpers：pgtest模板库/RowWaits、现有issueWorld及其API建模、apitest双向契约/错误码检查；沿已有锁屏障及工作项审计断言；e2e/fixtures/issues.ts、furnish.ts、assert/issue.ts及关联assert/catalog等。只为真正缺的场景补窄helper，不重新搭数据库/认证客户端/迁移框架/断言集合。
 
@@ -246,7 +247,14 @@ type IssueListSettings interface {
 
 ## Task 5：不分组静态查询与公共编排
 
-文件：新 `I/app/list_ports.go/listing.go/listing_test.go`、`I/adapter/postgres/list_issues.go/list_issues_test.go/queries/list_issues.sql`，sqlc生成。
+文件：扩 T4 `I/app/list_ports.go`，新 `I/app/listing.go/listing_test.go`、`I/adapter/postgres/list_issues.go/list_parameters.go/list_cursor.go`、相应聚焦测试与 `queries/list_issues.sql`，sqlc生成。父项裁剪从既有 `app/seen.go` 提取小reader函数供Locks与Listing共用，不重复HiddenFrom谓词、不重算已由SQL给出的子项数。
+
+**顺序实施与独立评审（全部仍属T5）：**
+
+- [ ] **T5a：Flat仓储。** 创建Flat当前实际使用的端口/模型、三职责适配文件与唯一Flat静态SQL；从首版实现精确numeric/有限浮点位序转换，不留已知有损占位。覆盖全部筛选、OwnOnly/triage/软删/归档、完整数组/子项数、19排序基础与limit+1、同ctx、relation/target配对、nil与[]及直接sqlc NULL两层防御；至少以微秒和相邻float逆UUID真实分页证明数值策略。共享JSON的适用固定行序直接对照，不由生产比较器生成预期。过滤放到LIMIT后、漏adapter nil规整、漏SQL coalesce三类真实变异在本单元完成。精确生成物、定位/lint/必要全量及提交后gen-check，独立评审通过后交下一单元。
+- [ ] **T5b：精度收口与公共编排。** 新实现者接手；补有限浮点全边界、时间宽年份/超过2^53整数表达式、共享JSON全部适用码limit=1分页及其余T5真实变异；实现Listing同ctx目录→Flat→裁父→空cursor补total，实际消费者验证退出/停用/降guest的历史负责人姓名。Rows仍只有Flat；Groups/Subgroups留T6/T7。新增行为按TDD，补测既有正确行为如实记基线绿，由真实变异给业务失败证据，不故意造错误初红。独立评审通过、下列全部验收齐备后才勾T5。
+
+T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400时先核职责和余量，不压缩测试或把生成物/测试搬目录掩盖规模。需要再切按D2登记，不能用任务拆分改变架构或消失完成线。
 
 - [ ] 写 `TestFlatIssueList`：所有筛选各有命中/邻居，组合筛选、OwnOnly、triage/软删/归档、重复关联不重复issue；全部19排序与limit+1；label/assignee完整数组；子项计数含隐藏/归档邻居。 真实SQL消费T3的issue-order.json固定预期（适用的名字/日期/null/同键ID），返回ID直接比较独立期望，不复用生产比较器重算；超大整数边界另作精确表达式探针，不伪造海量子项。
 - [ ] 写 `TestListArrayParameters`：每个可空数组字段分别nil与[]等价；测试直接sqlc传NULL以证明SQLcoalesce防御；另直接验证生产Store实际调用的参数映射函数产出的各sqlc slice均非nil、并列目录长度一致，或用既有测试tracer捕获真实执行边界；不以app层fake Rows证明adapter规整、不新增生产测试注入。SQL直接NULL的coalesce与adapter规整须分别变异证伪。
