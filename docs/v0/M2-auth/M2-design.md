@@ -611,6 +611,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 - **分页的公共组件由 M2 加入**：
   - `common.yaml` 加 `Limit`（1–100，默认 50）、`Cursor` 两个 parameter 和 `NextCursor`（`type: [string, 'null']`）。
   - M0/P3 原计划由 M3 的第一个列表接口加入；M2 的 PAT 列表先用到。
+  - M4/P4/T2 已把页大小值规则移到 `shared.PageSize(*int) (int, error)`：默认 50、范围 1–100，越界 422 `limit/out_of_range`；identity/PAT 和 issue 的评论、动态、描述版本列表共同消费，删除 identity 重复实现，坏 cursor 仍先于坏 limit（[P4 review §2.3](../M4-issue-core/reviews/P4-issue-collaboration-review.md#23-t2-验收与独立评审已完成)）。
 - **游标**（Codex I-9）：
   - `shared` 只定义**封套**：游标是 base64url（不补 `=`）编码的 JSON `{"v": 1, "p": <载荷>}`，`v` 是封套的版本。`shared` 负责编码、解码，解码失败、版本不认识时返回 400 `bad_request`（`errors[{field: cursor, code: invalid_format}]`）。
   - **载荷由每个列表自己定义**，按它自己的排序键，最后总是 `id`，保证顺序稳定、不重不漏。PAT 列表按 `created_at` 倒序，载荷是 `[created_at, id]`。载荷与这个列表的格式不符，同样是 400。

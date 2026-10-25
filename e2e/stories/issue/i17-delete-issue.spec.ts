@@ -9,7 +9,9 @@ import {
   projectMembershipOf,
   slugFor,
 } from "../../fixtures/api";
+import { collaborationRows } from "../../fixtures/assert/issue-collaboration";
 import { expectIssueDeleted } from "../../fixtures/assert/issue";
+import { createCommentReaction, createIssueComment, createIssueReaction } from "../../fixtures/comments";
 import { newAccount } from "../../fixtures/auth";
 import {
   createIssue,
@@ -18,6 +20,7 @@ import {
   issueDeleted,
   issueRead,
   listIssueRelations,
+  updateIssue,
 } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
@@ -25,7 +28,7 @@ import { expect, test } from "../../fixtures/test";
 // I17, deleting a work item and the work items under it (M4 design 2, 3.4, 3.6, 3.9, 3.10): the API version, with
 // P3's assertions (the work item, two levels of work items under it, an archived one among them, and their assignees,
 // labels, subscribers, activity and relations either way deleted at one moment by its deleter; who may delete it).
-// The comments, reactions, mentions and versions are P4's, the links P7's, the page version P14's.
+// Comments, reactions, mentions and versions are furnished through P4's API; links are P7's and the page version P14's.
 
 test("I17 (API): a member does not delete another's work item (403), a guest his own (403), nor a creator who has left the private project his own (404); a member deletes her own, which has two levels of work items under it, the lower archived, and relates to two work items of another project, one relation stored from each end: with it, at that moment and by her, every row under it, the work items under it and its relations either way among them; none of the three is found again (404), and the other work items list no relation", async ({
   api,
@@ -63,17 +66,61 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
   // ann's Plan the release, assigned to bob and labelled Bug; Write the notes under it, and Check the mirrors, in Done,
   // under that, archived. Plan the release relates to Deploy the site, of Ops, stored from it, and blocks Ship it, of
   // Ops, stored from Ship it as its blocked_by: under Plan the release, a row of each key of the catalog.
+  const description = `<mention-component entity_name="user_mention" entity_identifier="${bob.id}"></mention-component>`;
   const plan = await createIssue(api, ann.token, web.id, {
     name: "Plan the release",
+    description_html: description,
     assignee_ids: [bob.id],
     label_ids: [bug.id],
   });
-  const notes = await createIssue(api, ann.token, web.id, { name: "Write the notes", parent_id: plan.id });
+  const notes = await createIssue(api, ann.token, web.id, {
+    name: "Write the notes",
+    description_html: description,
+    parent_id: plan.id,
+  });
   const mirrors = await createIssue(api, ann.token, web.id, {
     name: "Check the mirrors",
+    description_html: description,
     state_id: done,
     parent_id: notes.id,
   });
+  await Promise.all(
+    [plan, notes, mirrors].map((item) =>
+      createIssueComment(api, bob.token, item.id, "<p>Delete discussion</p>").then((comment) =>
+        Promise.all([ann, bob].map((who) => createCommentReaction(api, who.token, comment.id)))
+      )
+    )
+  );
+  await Promise.all(
+    [plan, notes, mirrors].flatMap((item) => [ann, bob].map((who) => createIssueReaction(api, who.token, item.id)))
+  );
+  // An already-deleted branch keeps every collaboration table's earlier deleter and exact timestamp.
+  const old = await createIssue(api, bob.token, web.id, {
+    name: "Old branch",
+    parent_id: notes.id,
+    description_html: description,
+  });
+  const neighbor = await createIssue(api, ann.token, web.id, {
+    name: "Untouched neighbor",
+    description_html: description,
+  });
+  await Promise.all(
+    [old, neighbor].map(async (item) => {
+      const discussion = await createIssueComment(api, bob.token, item.id, "<p>Keep these stamps</p>");
+      await createCommentReaction(api, ann.token, discussion.id);
+      await createIssueReaction(api, bob.token, item.id);
+      await updateIssue(api, bob.token, item.id, { description_html: `<p>Second author</p>${description}` });
+    })
+  );
+  expect(await issueDeleted(api, bob.token, old.id)).toEqual({ status: 204 });
+  const oldRows = await collaborationRows(db, [old.id]);
+  const neighborRows = await collaborationRows(db, [neighbor.id]);
+  for (const table of oldRows) {
+    expect(table.rows.length, `${table.table} has an already-deleted row`).toBeGreaterThan(0);
+    expect(table.rows.every((row) => row.deleted_at !== null && row.updated_by_id === bob.id)).toBe(true);
+  }
+  for (const table of neighborRows)
+    expect(table.rows.length, `${table.table} has a neighboring row`).toBeGreaterThan(0);
   expect((await issueArchived(api, ann.token, mirrors.id)).status).toBe(200);
   const deploy = await createIssue(api, ann.token, ops.id, { name: "Deploy the site" });
   const ship = await createIssue(api, ann.token, ops.id, { name: "Ship it" });
@@ -102,6 +149,8 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
   // row under the three, its relations either way among them, the one stored from Ship it, of Ops, too.
   expect(await issueDeleted(api, ann.token, plan.id)).toEqual({ status: 204 });
   await expectIssueDeleted(db, plan.id, ann.email);
+  expect(await collaborationRows(db, [old.id])).toEqual(oldRows);
+  expect(await collaborationRows(db, [neighbor.id])).toEqual(neighborRows);
   // None of the three is found again, and neither Deploy the site nor Ship it lists a relation.
   const gone = [plan, notes, mirrors];
   expect(await Promise.all(gone.map(({ id }) => issueRead(api, ann.token, id)))).toEqual(

@@ -163,3 +163,36 @@ export async function issueRelationDeleted(api: Api, token: string, relationId: 
   });
   return answer(response, error);
 }
+
+/** Reads a page of visible activities in ascending position order. */
+export async function activityPage(api: Api, token: string, issueId: string, cursor?: string, limit = 2) {
+  const { data, error, response } = await api.GET("/api/v0/issues/{issue_id}/activities", {
+    params: { path: { issue_id: issueId }, query: { limit, cursor } },
+    headers: bearer(token),
+  });
+  expect(response.status, JSON.stringify(error)).toBe(200);
+  if (!data) throw new Error("activities answered 200 without a page");
+  return data;
+}
+
+/** Reads a page of saved descriptions, newest save first. */
+export async function descriptionPage(api: Api, token: string, issueId: string, cursor?: string, limit = 2) {
+  const { data, error, response } = await api.GET("/api/v0/issues/{issue_id}/description-versions", {
+    params: { path: { issue_id: issueId }, query: { limit, cursor } },
+    headers: bearer(token),
+  });
+  expect(response.status, JSON.stringify(error)).toBe(200);
+  if (!data) throw new Error("description versions answered 200 without a page");
+  return data;
+}
+
+/** Reads a historical description's HTML through its independent detail resource. */
+export async function descriptionVersion(api: Api, token: string, versionId: string) {
+  const { data, error, response } = await api.GET("/api/v0/issue-description-versions/{version_id}", {
+    params: { path: { version_id: versionId } },
+    headers: bearer(token),
+  });
+  expect(response.status, JSON.stringify(error)).toBe(200);
+  if (!data) throw new Error("description version answered 200 without its detail");
+  return data;
+}

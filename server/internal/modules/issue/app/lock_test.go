@@ -17,9 +17,9 @@ import (
 // them.
 func gated(w *world, refuse error) (*app.CreateIssue, *app.UpdateIssue) {
 	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log, refuse: refuse}, fakeTx{log: w.log})
-	create := app.NewCreateIssue(app.CreateIssueDeps{Locks: w.locks, Issues: w.issues, Sequences: w.project, States: w.project,
+	create := app.NewCreateIssue(app.CreateIssueDeps{Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: w.issues, Sequences: w.project, States: w.project,
 		Labels: w.project, Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}})
-	update := app.NewUpdateIssue(app.UpdateIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
+	update := app.NewUpdateIssue(app.UpdateIssueDeps{Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
 		Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}})
 	return create, update
 }
@@ -228,5 +228,30 @@ func wantAllAtOnce(t *testing.T, w *world, projects []uuid.UUID) {
 	if at < 0 || at+2 >= len(w.log.calls) || w.log.calls[at+1] != "Begin" || w.log.calls[at+2] != lock ||
 		w.log.calls[len(w.log.calls)-1] != line("Leave", anys(projects)...) || slices.Contains(w.log.calls[:at], "Begin") {
 		t.Errorf("calls:\n%q\nwant %q after the precheck, then the transaction and %q, and the gates left last", w.log.calls, enter, lock)
+	}
+}
+
+func TestLocksCommentUsesResourceNotFoundUnderTheLock(t *testing.T) {
+	for _, edit := range []bool{true, false} {
+		for _, kind := range []string{"project deleted", "issue deleted", "issue moved"} {
+			t.Run(line("edit", edit, kind), func(t *testing.T) {
+				u, d, w, f := newCommentWrites()
+				w.project.waited = func() {
+					switch kind {
+					case "project deleted":
+						w.project.locked = nil
+					case "issue deleted":
+						w.issues.issue = nil
+					case "issue moved":
+						w.issues.issue.ProjectID = ops
+					}
+				}
+				err := executeCommentWrite(edit, u, d, f.current.ID)
+				wantRefused(t, err, domain.ErrCommentNotFound)
+				if f.updated != nil || f.deleted != nil || slices.Contains(w.log.calls, "Now") {
+					t.Fatal("refused write", w.log.calls)
+				}
+			})
+		}
 	}
 }

@@ -13,7 +13,7 @@ import (
 // the priority, the dates and the parent nil and the lists empty when not
 // given; a value given goes to the use case as it came, which checks it.
 func (h handler) CreateIssue(ctx context.Context, req gen.CreateIssueRequestObject) (gen.CreateIssueResponseObject, error) {
-	in := domain.NewIssue{Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
+	in := domain.NewIssue{DescriptionHTML: req.Body.DescriptionHTML, Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
 		StartDate: req.Body.StartDate, TargetDate: req.Body.TargetDate, ParentID: req.Body.ParentID}
 	if req.Body.AssigneeIds != nil {
 		in.AssigneeIDs = *req.Body.AssigneeIds
@@ -53,7 +53,7 @@ func (h handler) GetIssueByIdentifier(ctx context.Context, req gen.GetIssueByIde
 // not given, a date or the parent given null given as none; a value given
 // goes to the use case as it came, which checks it.
 func (h handler) UpdateIssue(ctx context.Context, req gen.UpdateIssueRequestObject) (gen.UpdateIssueResponseObject, error) {
-	p := domain.IssuePatch{Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
+	p := domain.IssuePatch{DescriptionHTML: req.Body.DescriptionHTML, SkipActivity: req.Body.SkipActivity, Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
 		AssigneeIDs: req.Body.AssigneeIds, LabelIDs: req.Body.LabelIds}
 	p.SetStartDate, p.StartDate = given(req.Body.StartDate)
 	p.SetTargetDate, p.TargetDate = given(req.Body.TargetDate)
@@ -94,7 +94,16 @@ func (h handler) UnarchiveIssue(ctx context.Context, req gen.UnarchiveIssueReque
 // issueDetail is i as the API shows it: each field that may be null null
 // when it is nil, each list [] when it is empty.
 func issueDetail(i domain.Issue) gen.IssueDetail {
-	return gen.IssueDetail{ID: i.ID, WorkspaceID: i.WorkspaceID, ProjectID: i.ProjectID, SequenceID: i.SequenceID, Name: i.Name,
+	return gen.IssueDetail{DescriptionHTML: i.DescriptionHTML, ID: i.ID, WorkspaceID: i.WorkspaceID, ProjectID: i.ProjectID, SequenceID: i.SequenceID, Name: i.Name,
+		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
+		ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
+		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),
+		SubIssuesCount: i.SubIssuesCount, CreatedByID: orNull(i.CreatedByID), UpdatedByID: orNull(i.UpdatedByID), CreatedAt: i.CreatedAt,
+		UpdatedAt: i.UpdatedAt}
+}
+
+func issueRow(i domain.Issue) gen.Issue {
+	return gen.Issue{ID: i.ID, WorkspaceID: i.WorkspaceID, ProjectID: i.ProjectID, SequenceID: i.SequenceID, Name: i.Name,
 		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
 		ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
 		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),

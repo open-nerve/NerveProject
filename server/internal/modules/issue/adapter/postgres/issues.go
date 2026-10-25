@@ -36,6 +36,7 @@ func (s *Store) InsertIssue(ctx context.Context, r app.IssueRow) error {
 	err := s.queries(ctx).InsertIssue(ctx, gen.InsertIssueParams{
 		ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, StateID: r.StateID, Name: r.Name, Priority: string(r.Priority),
 		StartDate: timeOf(r.StartDate), TargetDate: timeOf(r.TargetDate), ParentID: r.ParentID, SequenceID: int32(r.SequenceID),
+		DescriptionHtml: r.DescriptionHTML, DescriptionStripped: r.DescriptionStripped,
 		SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, By: &r.By, At: r.At,
 	})
 	if err != nil {
@@ -142,6 +143,7 @@ func (s *Store) GetIssues(ctx context.Context, ids []uuid.UUID) ([]domain.Issue,
 func issueOf(r gen.GetIssueRow) domain.Issue {
 	return domain.Issue{
 		ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: int(r.SequenceID), Name: r.Name, StateID: r.StateID,
+		DescriptionHTML: r.DescriptionHtml, DescriptionStripped: r.DescriptionStripped,
 		Priority: domain.Priority(r.Priority), StartDate: dayOf(r.StartDate), TargetDate: dayOf(r.TargetDate), ParentID: r.ParentID,
 		SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, ArchivedAt: r.ArchivedAt, AssigneeIDs: r.AssigneeIds, LabelIDs: r.LabelIds,
 		CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,

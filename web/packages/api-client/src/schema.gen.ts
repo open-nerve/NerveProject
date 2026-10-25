@@ -1044,6 +1044,223 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issue-comments/{comment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a comment as its author or project administrator
+         * @description Uses issue_comment.write then checks author or ProjectAdmin, before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Project archiving refuses before issue archiving. Soft-deletes only the live comment, updates its parent work item using the same writer and moment, and creates no activity. Busy projects answer 503 server_busy with Retry-After.
+         */
+        delete: operations["deleteIssueComment"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit a comment as its author
+         * @description Uses issue_comment.write for project admins, members and guests, then checks the comment author before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Only the comment author can edit, even for project admins. Project archiving refuses before issue archiving, and both refuse before unchanged sanitized HTML. Identical sanitized HTML writes nothing and preserves edited_at. Changed HTML sets edited_at and updated_at together, updates the work item and subscribes newly mentioned visible members without removing subscriptions. No activity is created. Busy projects answer 503 with Retry-After.
+         */
+        patch: operations["updateIssueComment"];
+        trace?: never;
+    };
+    "/api/v0/issue-comments/{comment_id}/reactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add the caller's reaction
+         * @description Admins, members and guests may react to visible comments, regardless of comment author. Invalid decimal codes answer validation_failed before reads. Visibility and role are checked before the write gate and again under the project lock. Project archival precedes issue archival, then an existing live reaction of this caller answers issue.reaction_exists. Success adds only the reaction, preserving all issue and comment audit fields, activities and subscriptions.
+         */
+        post: operations["addCommentReaction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issue-comments/{comment_id}/reactions/{reaction}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+                reaction: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove the caller's reaction
+         * @description Uses addCommentReaction's role, visibility, validation and archive order. Only the caller's own live reaction is removed; absence answers issue.reaction_not_found, even when another actor has the same reaction. Success soft-deletes only the reaction, preserving all parent audit fields, activities and subscriptions.
+         */
+        delete: operations["removeCommentReaction"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}/reactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List reactions on a visible work item
+         * @description Uses issue.read, including guest visibility. Live reactions are ordered by (created_at,id) ascending in one independent read snapshot.
+         */
+        get: operations["listIssueReactions"];
+        put?: never;
+        /**
+         * Add the caller's reaction
+         * @description Admins, members and guests may react to visible issues. Invalid decimal codes answer validation_failed before reads. Visibility and role are checked before the write gate and again under the project lock. Project archival precedes issue archival, then an existing live reaction of this caller answers issue.reaction_exists. Success updates the issue audit and adds the reaction at one moment, without activity or subscription changes.
+         */
+        post: operations["addIssueReaction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}/reactions/{reaction}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+                reaction: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove the caller's reaction
+         * @description Uses addIssueReaction's role, visibility, validation and archive order. Only the caller's own live reaction is removed; absence answers issue.reaction_not_found, even when another actor has the same reaction. Success updates the issue audit and soft-deletes the reaction at one moment, without activity or subscription changes.
+         */
+        delete: operations["removeIssueReaction"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a work item's visible activity
+         * @description Uses issue.read, after the work item guest visibility rule. Hidden or missing work items answer issue.not_found before forbidden. Archived projects and work items remain readable. Visibility and page reads share one independent read snapshot. Activities are ordered by (created_at,id) ascending; a cursor is only a position and cannot expand the target's rows. For parent and relation fields, each nonnull identifier must name an existing issue in an active historical membership, respecting that project's guest scope. Soft deletion and archival of references and their projects do not hide history. Hidden or physically missing references remove the entire row before pagination. Only the eleven activity fields are returned.
+         */
+        get: operations["listIssueActivities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}/description-versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a work item's saved descriptions
+         * @description Uses issue_description_version.read for project admins and members, after the work item guest visibility rule. Hidden or missing work items answer issue.not_found before forbidden. Archived projects and work items remain readable. Visibility and page reads share one independent read snapshot. Versions are ordered by (last_saved_at,id) descending; a cursor is only a position and cannot expand the target's rows. No HTML is listed.
+         */
+        get: operations["listDescriptionVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issue-description-versions/{version_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Read one saved description
+         * @description Uses the same role and guest visibility rules as listDescriptionVersions. Missing, deleted and hidden versions or parents answer the identical issue.description_version_not_found problem before role refusal. Archived resources remain readable. To restore the HTML, use the ordinary issue PATCH, including its archive refusal and 600-second version merge policy.
+         */
+        get: operations["getDescriptionVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List comments on a visible work item
+         * @description Uses issue.read, including its guest visibility rule. Comments are in ascending (created_at, id) order. The cursor is only an exclusive position and never grants access to its source work item. Invalid cursor (400 bad_request) is checked before limit (422 validation_failed). The target, authorization and page are read in one snapshot.
+         */
+        get: operations["listIssueComments"];
+        put?: never;
+        /**
+         * Create a comment on a visible work item
+         * @description For the project's admins, members and guests who can read the work item. Missing or hidden work items answer issue.not_found before forbidden. The project is locked first and the decision repeated. An archived project refuses with project.archived before an archived issue with issue.archived. Sanitized content must contain text, a mention or image; otherwise validation_failed on comment_html, required. At most 500000 Unicode characters before sanitization. The caller and active mentioned members who can read it automatically subscribe. Existing subscriptions keep their identity and timestamps. All new rows have one writer and moment; this creates no activity or issue_mentions. Busy projects answer 503 server_busy with Retry-After.
+         */
+        post: operations["createIssueComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/issues/{issue_id}/relations": {
         parameters: {
             query?: never;
@@ -1855,6 +2072,8 @@ export interface components {
          */
         IssuePriority: "urgent" | "high" | "medium" | "low" | "none";
         IssueCreate: {
+            /** @description Sanitized rich text HTML; at most 500000 characters on input. */
+            description_html?: string;
             /** @description 1–255 characters without the white space around it, which is not stored. */
             name: string;
             /**
@@ -1885,6 +2104,8 @@ export interface components {
         };
         /** @description A work item of a project. */
         IssueDetail: {
+            /** @description Sanitized rich text HTML; at most 500000 characters on input. */
+            description_html: string;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -1947,6 +2168,10 @@ export interface components {
         };
         /** @description Changes the fields it names; a field left out keeps its value. */
         IssueUpdate: {
+            /** @description Only with description_html alone; preserves audit when content identity is unchanged. */
+            skip_activity?: boolean;
+            /** @description Sanitized rich text HTML; at most 500000 characters on input. */
+            description_html?: string;
             /** @description 1–255 characters without the white space around it, which is not stored. */
             name?: string;
             /**
@@ -2044,6 +2269,110 @@ export interface components {
         SubIssuesAdd: {
             /** @description 1–100 work items of the project, each named once, to put under the work item. */
             sub_issue_ids: string[];
+        };
+        IssueCommentCreate: {
+            comment_html: string;
+        };
+        CommentReaction: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            comment_id: string;
+            /** Format: uuid */
+            actor_id: string;
+            reaction: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        IssueComment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            issue_id: string;
+            /** Format: uuid */
+            actor_id: string;
+            comment_html: string;
+            /** Format: date-time */
+            edited_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            reactions: components["schemas"]["CommentReaction"][];
+        };
+        ReactionCreate: {
+            reaction: string;
+        };
+        IssueReaction: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            issue_id: string;
+            /** Format: uuid */
+            actor_id: string;
+            reaction: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        IssueReactionCollection: {
+            data: components["schemas"]["IssueReaction"][];
+        };
+        IssueActivity: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            issue_id: string;
+            /** Format: uuid */
+            project_id: string;
+            verb: string;
+            field: string | null;
+            old_value: string | null;
+            new_value: string | null;
+            /** Format: uuid */
+            old_identifier: string | null;
+            /** Format: uuid */
+            new_identifier: string | null;
+            /** Format: uuid */
+            actor_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        IssueActivityPage: {
+            data: components["schemas"]["IssueActivity"][];
+            next_cursor: components["schemas"]["NextCursor"];
+        };
+        DescriptionVersion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            issue_id: string;
+            /** Format: uuid */
+            owned_by_id: string;
+            /** Format: date-time */
+            last_saved_at: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        DescriptionVersionPage: {
+            data: components["schemas"]["DescriptionVersion"][];
+            next_cursor: components["schemas"]["NextCursor"];
+        };
+        DescriptionVersionDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            issue_id: string;
+            /** Format: uuid */
+            owned_by_id: string;
+            /** Format: date-time */
+            last_saved_at: string;
+            /** Format: date-time */
+            created_at: string;
+            description_html: string;
+        };
+        IssueCommentPage: {
+            data: components["schemas"]["IssueComment"][];
+            next_cursor: components["schemas"]["NextCursor"];
         };
         /**
          * @description A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
@@ -2213,6 +2542,18 @@ export type IssueUpdate = components['schemas']['IssueUpdate'];
 export type Issue = components['schemas']['Issue'];
 export type IssueCollection = components['schemas']['IssueCollection'];
 export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
+export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
+export type CommentReaction = components['schemas']['CommentReaction'];
+export type IssueComment = components['schemas']['IssueComment'];
+export type ReactionCreate = components['schemas']['ReactionCreate'];
+export type IssueReaction = components['schemas']['IssueReaction'];
+export type IssueReactionCollection = components['schemas']['IssueReactionCollection'];
+export type IssueActivity = components['schemas']['IssueActivity'];
+export type IssueActivityPage = components['schemas']['IssueActivityPage'];
+export type DescriptionVersion = components['schemas']['DescriptionVersion'];
+export type DescriptionVersionPage = components['schemas']['DescriptionVersionPage'];
+export type DescriptionVersionDetail = components['schemas']['DescriptionVersionDetail'];
+export type IssueCommentPage = components['schemas']['IssueCommentPage'];
 export type IssueRelationType = components['schemas']['IssueRelationType'];
 export type IssueRelation = components['schemas']['IssueRelation'];
 export type IssueRelationCollection = components['schemas']['IssueRelationCollection'];
@@ -3854,6 +4195,316 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteIssueComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The comment was deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateIssueComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueCommentCreate"];
+            };
+        };
+        responses: {
+            /** @description The edited or unchanged comment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueComment"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addCommentReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactionCreate"];
+            };
+        };
+        responses: {
+            /** @description The new reaction. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentReaction"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    removeCommentReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+                reaction: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's reaction was removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listIssueReactions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Live reactions, including an empty data array. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueReactionCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addIssueReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactionCreate"];
+            };
+        };
+        responses: {
+            /** @description The new reaction. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueReaction"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    removeIssueReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+                reaction: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's reaction was removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listIssueActivities: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visible activity, with null next_cursor on the last page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueActivityPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listDescriptionVersions: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Saved descriptions, with null next_cursor on the last page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DescriptionVersionPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getDescriptionVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The saved description including its HTML. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DescriptionVersionDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listIssueComments: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Comments, with null next_cursor on the final page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueCommentPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createIssueComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueCommentCreate"];
+            };
+        };
+        responses: {
+            /** @description The new comment. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueComment"];
                 };
             };
             default: components["responses"]["Problem"];

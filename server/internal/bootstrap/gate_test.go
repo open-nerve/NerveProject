@@ -248,8 +248,8 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 // Retry-After: 1, before a wait for Web's row could have ended, at the
 // lock timeout at the earliest. In an app that lets one write a project in
 // at once, queues none and ends a write's wait for a lock at three
-// seconds: a transaction holds Web's row, and alice's change of a work
-// item of Web enters the gate and waits for the row. A write across
+// seconds: each probe holds Web's row, and a fresh change by alice
+// enters the gate and waits for the row. A write across
 // projects enters the gate of each project it reaches: her relation of a
 // work item of Ops to one of Web is refused so too, though Ops' place is
 // free. A write refused for the shape of its body takes no place at all:
@@ -273,6 +273,13 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		{"a deletion", http.MethodDelete, "/api/v0/issues/" + w.newWorkItem(t).String(), "", http.StatusNoContent},
 		{"an archiving", http.MethodPost, "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive", "", http.StatusOK},
 		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", "", http.StatusOK},
+		{"a comment reaction", http.MethodPost, commentReactionsOf(w.newComment(t, "alice", w.newWorkItem(t)).ID), `{"reaction":"128077"}`, http.StatusCreated},
+		{"a reaction", http.MethodPost, reactionsOf(w.newWorkItem(t)), `{"reaction":"128077"}`, http.StatusCreated},
+		{"a comment reaction removal", http.MethodDelete, w.newCommentReactionPath(t), "", http.StatusNoContent},
+		{"a reaction removal", http.MethodDelete, w.newReactionPath(t), "", http.StatusNoContent},
+		{"a comment edit", http.MethodPatch, commentPath(w.newComment(t, "alice", w.newWorkItem(t)).ID), `{"comment_html":"<p>Updated</p>"}`, http.StatusOK},
+		{"a comment deletion", http.MethodDelete, commentPath(w.newComment(t, "alice", w.newWorkItem(t)).ID), "", http.StatusNoContent},
+		{"a comment", http.MethodPost, commentsOf(w.newWorkItem(t)), `{"comment_html":"<p>Queued comment</p>"}`, http.StatusCreated},
 		{"an addition of sub-items", http.MethodPost, subIssues(w.newWorkItem(t)), subIssueIDs(w.newWorkItem(t)), http.StatusOK},
 		{"an addition of relations", http.MethodPost, relationsOf(w.newWorkItem(t)), relating("relates_to", w.newWorkItem(t)),
 			http.StatusCreated},
@@ -281,48 +288,66 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		{"a deletion of a relation", http.MethodDelete, relationPath(listIn[answeredRelation](t, w.send(t, "alice", http.MethodPost,
 			relationsOf(w.newWorkItem(t)), relating("relates_to", w.newWorkItem(t)), http.StatusCreated))[0].ID), "", http.StatusNoContent},
 	}
-	change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["alice"], []byte(`{"name":"Mend"}`))
-	w.contract.CheckRequest(t, change)
-
-	held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
-	changed := sendInBackground(change)
-	pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
+	// Each probe owns its holder: adding cases or delaying the next case must
+	// not spend the current holder's three-second lock timeout.
+	changes := 0
+	whileBusy := func(t *testing.T, check func()) {
+		t.Helper()
+		changes++
+		change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["alice"], fmt.Appendf(nil, `{"name":"Mend %d"}`, changes))
+		w.contract.CheckRequest(t, change)
+		held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
+		changed := sendInBackground(change)
+		defer func() {
+			release(t, held)
+			a := receiveWithin(t, changed, 4*time.Second, "answer to alice's change")
+			if a.err != nil {
+				t.Fatal(a.err)
+			}
+			if a.res.StatusCode != http.StatusOK {
+				t.Errorf("alice's change = %d %s, want 200 once Web's row is free", a.res.StatusCode, a.body)
+			}
+		}()
+		pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
+		check()
+	}
 	for _, write := range writes {
-		var body []byte
-		if write.body != "" {
-			body = []byte(write.body)
-		}
-		req := newRequest(t, write.method, w.base+write.path, w.tokens["alice"], body)
-		w.contract.CheckRequest(t, req)
-		begun := time.Now()
-		a := receiveWithin(t, sendInBackground(req), 5*time.Second, "answer to "+write.name)
-		if a.err != nil {
-			t.Fatal(a.err)
-		}
-		if took := time.Since(begun); took >= time.Second {
-			t.Errorf("%s answered after %v; want at once, the queue full, before a wait for Web's row could end at 3s", write.name, took)
-		}
-		w.wantBusy(t, write.name, req, a.res, a.body)
+		t.Run(write.name, func(t *testing.T) {
+			whileBusy(t, func() {
+				var body []byte
+				if write.body != "" {
+					body = []byte(write.body)
+				}
+				req := newRequest(t, write.method, w.base+write.path, w.tokens["alice"], body)
+				w.contract.CheckRequest(t, req)
+				begun := time.Now()
+				a := receiveWithin(t, sendInBackground(req), 5*time.Second, "answer to "+write.name)
+				if a.err != nil {
+					t.Fatal(a.err)
+				}
+				if took := time.Since(begun); took >= time.Second {
+					t.Errorf("%s answered after %v; want at once, the queue full, before a wait for Web's row could end at 3s", write.name, took)
+				}
+				w.wantBusy(t, write.name, req, a.res, a.body)
+			})
+		})
 	}
 	for _, shape := range []struct{ name, path, body, want string }{
+		{"an empty comment", commentsOf(item), `{"comment_html":"<script>removed()</script>"}`, "comment_html required"},
 		{"an addition of sub-items naming one twice", subIssues(item), subIssueIDs(archived, archived), "sub_issue_ids[1] duplicate"},
 		{"an addition of relations naming 21", relationsOf(item), relating("relates_to", slices.Repeat([]uuid.UUID{archived}, 21)...),
 			"issue_ids too_long"},
 	} {
-		answer := w.send(t, "alice", http.MethodPost, shape.path, shape.body, http.StatusUnprocessableEntity)
-		if got := refusalOf(t, []byte(answer), false); got != "validation_failed "+shape.want {
-			t.Errorf("%s answers %s while Web's one place is taken; want %s at once, before the gate", shape.name, got, shape.want)
-		}
+		t.Run(shape.name, func(t *testing.T) {
+			whileBusy(t, func() {
+				answer := w.send(t, "alice", http.MethodPost, shape.path, shape.body, http.StatusUnprocessableEntity)
+				if got := refusalOf(t, []byte(answer), false); got != "validation_failed "+shape.want {
+					t.Errorf("%s answers %s while Web's one place is taken; want %s at once, before the gate", shape.name, got, shape.want)
+				}
+			})
+		})
 	}
 
-	release(t, held)
-	a := receiveWithin(t, changed, 4*time.Second, "answer to alice's change")
-	if a.err != nil {
-		t.Fatal(a.err)
-	}
-	if a.res.StatusCode != http.StatusOK {
-		t.Errorf("alice's change = %d %s, want 200 once Web's row is free", a.res.StatusCode, a.body)
-	}
 	for _, write := range writes {
 		w.send(t, "alice", write.method, write.path, write.body, write.want)
 	}

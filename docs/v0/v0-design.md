@@ -46,8 +46,8 @@ Nerve 是一个轻量的多人协作项目管理系统，面向企业和互联�
 | 状态与标签 | 按组划分的自定义状态（待规划 / 未开始 / 进行中 / 已完成 / 已取消 / 待分诊）、项目标签（支持层级） |
 | 工作项 | 标题、富文本描述、状态、优先级、负责人、标签、起止日期、父子任务、关联关系（阻塞 / 关联 / 重复等）、链接、附件 |
 | 列表视图 | 列表、看板、表格、日历四种布局；筛选、分组、子分组、排序 |
-| 评论与动态 | 评论（支持回复）、表情回应（工作项和评论都支持）、操作动态 |
-| 历史版本 | 工作项快照、描述修改历史（可查看、可还原） |
+| 评论与动态 | 评论、表情回应（工作项和评论都支持）、操作动态 |
+| 历史版本 | 描述修改历史（可查看、可还原） |
 | 草稿 | 个人草稿，可发布为工作项 |
 | **归档** | 工作项归档与恢复（仅限已完成或已取消的）；项目级自动归档（已完成或已取消、且 N 个月未更新的工作项自动归档）；迭代归档（仅限已结束的）；模块归档（仅限已完成或已取消的）；项目归档。已归档的对象默认不出现在列表、看板和搜索中，可以在"归档"页查看和恢复 |
 | 迭代 | 迭代（Sprint）、进度与燃尽图、把未完成的工作项转到其他迭代 |
@@ -272,7 +272,7 @@ GET   /api/v0/issues/{issue_id}/comments
 3. 把原本只写在应用代码里的默认值、非空约束和枚举检查挪进数据库。
 4. 修复明显的缺陷和不一致。
 
-### 5.2 保留的表（共 45 张：44 张来自 Plane，1 张新增）
+### 5.2 保留的表（共 44 张：43 张来自 Plane，1 张新增）
 
 | 领域 | 表 |
 |---|---|
@@ -283,7 +283,7 @@ GET   /api/v0/issues/{issue_id}/comments
 | 状态与标签 | `states`、`labels` |
 | 工作项 | `issues`、`issue_assignees`、`issue_labels`、`issue_relations`、`issue_links`、`issue_subscribers`、`issue_mentions` |
 | 评论与动态 | `issue_comments`、`issue_reactions`、`comment_reactions`、`issue_activities` |
-| 历史版本 | `issue_versions`、`issue_description_versions` |
+| 历史版本 | `issue_description_versions` |
 | 草稿 | `draft_issues`（重新设计，见 5.4） |
 | 迭代 | `cycles`、`cycle_issues`、`cycle_user_properties` |
 | 模块 | `modules`、`module_issues`、`module_members`、`module_links`、`module_user_properties` |
@@ -295,7 +295,7 @@ GET   /api/v0/issues/{issue_id}/comments
 | 接口日志 | `api_activity_logs` |
 | 文件 | `file_assets` |
 
-归档不需要单独的表，用 `issues`、`cycles`、`modules`、`projects` 上的 `archived_at` 列表示，项目的自动归档周期存在 `projects.archive_in`。另有 River 任务队列自带的表：用 River 为锁定版本导出的迁移 SQL（`river migrate-get`）写成 goose 迁移，和业务表在同一条迁移链上——一个版本表、一次 `migrate up`、一个就绪检查，e2e 的模板库也只迁移一次；不使用 River 自带的迁移命令（见 M2 的 [M0-P2-platform-notes](M2-auth/handoffs/M0-P2-platform-notes.md)）。升级 River 时，用新版本的 CLI 导出新增的版本（`--version N`），另写一份 goose 迁移，不改已发布的迁移文件（M2 设计 3.15）。Plane 原有 96 张表，未保留的 52 张及原因见[差异清单](plane-diff.md#一未保留的表)。
+归档不需要单独的表，用 `issues`、`cycles`、`modules`、`projects` 上的 `archived_at` 列表示，项目的自动归档周期存在 `projects.archive_in`。另有 River 任务队列自带的表：用 River 为锁定版本导出的迁移 SQL（`river migrate-get`）写成 goose 迁移，和业务表在同一条迁移链上——一个版本表、一次 `migrate up`、一个就绪检查，e2e 的模板库也只迁移一次；不使用 River 自带的迁移命令（见 M2 的 [M0-P2-platform-notes](M2-auth/handoffs/M0-P2-platform-notes.md)）。升级 River 时，用新版本的 CLI 导出新增的版本（`--version N`），另写一份 goose 迁移，不改已发布的迁移文件（M2 设计 3.15）。Plane 原有 96 张表，未保留的 53 张及原因见[差异清单](plane-diff.md#一未保留的表)。
 
 ### 5.3 主要改动
 
@@ -305,6 +305,7 @@ GET   /api/v0/issues/{issue_id}/comments
 | `api_tokens` 只存令牌的哈希 | Plane 存令牌原文，数据库一旦泄露，令牌就一起泄露 |
 | 工作项编号改由 `projects` 上的计数列生成（`UPDATE … RETURNING`），删除 `issue_sequences` | 同一项目内取号串行、编号不会复用，效果和原来一样，但省掉一张表和咨询锁 |
 | 删除 `project_identifiers` | 和 `projects.identifier` 存的是重复数据 |
+| 不保留 `issue_versions`；评论不支持回复，删除评论的 `parent_id` | 仅保留可查看、可还原的描述历史（M4/P4，决策点 5、6） |
 | 删除被砍功能的列：`estimate_point_id`、`type_id`、`projects.close_in`、`description_binary`、`page_view` 等 | 对应功能已经砍掉 |
 | `issues.archived_at` 由 `date` 改为 `timestamptz` | 和 `cycles`、`modules`、`projects` 的 `archived_at` 保持一致 |
 | 删除遗留列：`issues.point`、`issues.is_draft`、`projects.emoji` 和 `icon_prop`、被新字段取代的旧 URL 列和旧筛选列、账单和移动端字段、`external_source` 和 `external_id` 等 | Plane 代码中已不再使用；v0 也不做导入 |
@@ -473,7 +474,7 @@ modules/issue/
   创建者本人的规则（`AllowCreator`）随第一条用到它的规则 `issue.delete`（管理员 + `AllowCreator`）在 M4/P2 加入规则表：判定读目标的创建者（`Target.CreatorID`），调用者是它、仍是项目的有效成员、角色不低于成员时同样允许（锁下再判定，4.2），离开了项目或成了访客的创建者不能再凭它删（Plane 只看工作区成员关系，M4 设计 3.4）。访客的规则是判定交回的 `Grant.OwnOnly`：调用者是项目的访客（按项目角色算，工作区管理员在项目里是访客时同样）、项目没开 `guest_view_all_features` 时为真。同一条访客规则用在工作项的每个读、写和列表上，看不到的工作项和挂在它下面的一切都答 404，先于角色的 403，写在不加锁的预检和锁下的判定中各执行一次（Plane 只在约 6 处执行；单个工作项的读写从 M4/P2 起，列表、子资源随 M4 的各 Phase，M4 设计 3.4）。
 - **看不到与不能做**：不是有效成员、看不到的项目，判定答 `shared.ErrNotVisible`，用例换成自己资源的 404；看得到而角色不允许，403 `forbidden`。
 - **相对的规则在用例中**：改自己的角色、目标的角色更高、唯一管理员这类要比较两个人的规则，由用例用判定交回的 `Grant` 和读到的目标判断。
-- **判定的时机**：写操作在事务中取得父行（工作区行、项目行）的锁之后判定；读操作不开事务，直接判定。每个请求都读角色，不缓存。
+- **判定的时机**：写操作在事务中取得父行（工作区行、项目行）的锁之后判定；普通单资源读直接判定。需要多次读取保持一致的列表，在只读的 `REPEATABLE READ` 事务中从首次目标读取和授权开始，连同目录、分页数据一起读取（M4/P4 的评论、工作项表情、动态、描述版本列表已使用 `ReadOnlySnapshot`，M4 设计 3.16）。每个请求都读角色，不缓存。
 - **归属查询**：Plane 在每张属于项目的表上都存了 `workspace_id` 和 `project_id`，查一次资源就能知道它的归属。
 - **测试**：用一张完整的"角色 × 操作"权限矩阵逐格测试。
 
@@ -481,7 +482,7 @@ modules/issue/
 ```
 事务内（同步）：
   issue 用例：字段变更比对 → issue_activities（格式照搬 Plane）
-            → 描述变更时写 issue_description_versions；同时写 issue_versions
+            → 描述变更时写 issue_description_versions
             → 自动关注：创建人、负责人、评论人
             → 解析描述中的 @提及，同步 issue_mentions
             → 发布领域事件
@@ -507,7 +508,7 @@ modules/issue/
 | 类型 | 任务 |
 |---|---|
 | 事件触发 | 通知分发、Webhook 投递、抓取链接的标题和图标（防 SSRF） |
-| 定时 | **自动归档**（每天）；物理删除软删除超过 60 天的数据；清理 7 天内未完成上传的文件；按保留期清理接口日志、Webhook 日志、历史版本；清理过期会话 |
+| 定时 | **自动归档**（每天）；物理删除软删除超过 60 天的数据；清理 7 天内未完成上传的文件；按保留期清理接口日志、Webhook 日志；每个工作项保留最新的 20 个描述版本（M4/P9 实现，P4 尚无保留任务）；清理过期会话 |
 
 River 的具体版本和成熟度在 M0 核实。
 

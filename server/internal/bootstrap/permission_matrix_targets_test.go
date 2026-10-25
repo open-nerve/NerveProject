@@ -54,6 +54,10 @@ var underProject = map[string]struct {
 	"{issue_id}": {"work item", func(s seeded) map[string]uuid.UUID { return s.issues }, func(c caller, s seeded) (string, uuid.UUID) {
 		return issueOf(c), s.issue(projectOf(c), issueOf(c))
 	}},
+	"{version_id}": {"description version", func(s seeded) map[string]uuid.UUID { return s.descriptionVersions }, func(c caller, s seeded) (string, uuid.UUID) {
+		return issueOf(c), s.descriptionVersion(projectOf(c), issueOf(c))
+	}},
+	"{comment_id}": {"comment", func(s seeded) map[string]uuid.UUID { return s.comments }, func(c caller, s seeded) (string, uuid.UUID) { return issueOf(c), s.comment(projectOf(c), issueOf(c)) }},
 	"{relation_id}": {"relation", func(s seeded) map[string]uuid.UUID { return s.relations }, func(c caller, s seeded) (string, uuid.UUID) {
 		return relationOf(c), s.relation(projectOf(c), relationOf(c))
 	}},
@@ -84,6 +88,10 @@ func targetViolation(pattern, path string, c caller, s seeded, passOver func(par
 		switch {
 		case !strings.HasPrefix(segment, "{") || !strings.HasSuffix(segment, "}"):
 		case passOver(segment):
+		case segment == "{reaction}" && (pattern == "/api/v0/issues/{issue_id}/reactions/{reaction}" || pattern == "/api/v0/issue-comments/{comment_id}/reactions/{reaction}"):
+			if got[i] != "128077" {
+				return "{reaction} must name the caller's prepared decimal reaction 128077"
+			}
 		case segment == "{project_id}":
 			if !ofAProjectTable(c) {
 				return "{project_id} from a column of no project table (projectTables): a project's row names its columns"

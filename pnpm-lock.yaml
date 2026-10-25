@@ -319,6 +319,7 @@ overrides:
   browserslist: '>=4.28.7'
 
 patchedDependencies:
+  '@headlessui/react@2.2.10': 81acc01277f4f6c9287330a9848ad8799caa3a1a0b2cff620479cdde82344fbc
   prosemirror-codemark@0.4.2: 5ac87877c32930638653b1f89c162db590c3f2f4bb1e6fc20376a762d1353e64
   react-color@2.19.3: 311b81530f5338988f8b57718f24870a7550637159d8360d69f668cba2f2033f
 
@@ -391,7 +392,7 @@ importers:
         version: 5.2.30
       '@headlessui/react':
         specifier: 'catalog:'
-        version: 2.2.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 2.2.10(patch_hash=81acc01277f4f6c9287330a9848ad8799caa3a1a0b2cff620479cdde82344fbc)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@makeplane/propel':
         specifier: 'catalog:'
         version: 0.3.0(@date-fns/tz@1.4.1)(@types/react@19.2.17)(date-fns@4.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.1.17)
@@ -592,7 +593,7 @@ importers:
         version: 0.27.20(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@headlessui/react':
         specifier: 'catalog:'
-        version: 2.2.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 2.2.10(patch_hash=81acc01277f4f6c9287330a9848ad8799caa3a1a0b2cff620479cdde82344fbc)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@makeplane/propel':
         specifier: 'catalog:'
         version: 0.3.0(@date-fns/tz@1.4.1)(@types/react@19.2.17)(date-fns@4.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.1.17)
@@ -971,7 +972,7 @@ importers:
     dependencies:
       '@headlessui/react':
         specifier: 'catalog:'
-        version: 2.2.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 2.2.10(patch_hash=81acc01277f4f6c9287330a9848ad8799caa3a1a0b2cff620479cdde82344fbc)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@makeplane/propel':
         specifier: 'catalog:'
         version: 0.3.0(@date-fns/tz@1.4.1)(@types/react@19.2.17)(date-fns@4.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.1.17)
@@ -6416,7 +6417,7 @@ snapshots:
       protobufjs: 7.6.6
       yargs: 17.7.2
 
-  '@headlessui/react@2.2.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@headlessui/react@2.2.10(patch_hash=81acc01277f4f6c9287330a9848ad8799caa3a1a0b2cff620479cdde82344fbc)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@floating-ui/react': 0.26.28(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@react-aria/focus': 3.22.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

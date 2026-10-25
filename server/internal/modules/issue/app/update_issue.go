@@ -12,13 +12,14 @@ import (
 
 // UpdateIssueDeps are what updateIssue reads and writes through.
 type UpdateIssueDeps struct {
-	Locks    Locks
-	Issues   IssueUpdater
-	States   StateCatalog
-	Labels   LabelCatalog
-	Members  ProjectMembers
-	Profiles PublicProfiles
-	Clock    Clock
+	Locks     Locks
+	Issues    IssueUpdater
+	States    StateCatalog
+	Labels    LabelCatalog
+	Members   ProjectMembers
+	Profiles  PublicProfiles
+	Clock     Clock
+	Sanitizer HTMLSanitizer
 }
 
 // UpdateIssue changes a work item: PATCH /api/v0/issues/{issue_id} (M4
@@ -87,6 +88,10 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 			return err
 		}
 		c := domain.ChangesOf(answered, p)
+		if p.DescriptionHTML != nil {
+			change := domain.CompareDescription(u.d.Sanitizer.Clean(h.issue.DescriptionHTML), u.d.Sanitizer.Clean(*p.DescriptionHTML), p.SkipActivity != nil && *p.SkipActivity)
+			c.Description = &change
+		}
 		if c.None() {
 			updated, err = u.d.Locks.seenOne(ctx, actor.UserID, h.grant, h.issue)
 			return err
@@ -95,8 +100,12 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 		if err != nil {
 			return err
 		}
+		relations, err := prepareDescription(ctx, u.d.Issues, u.d.Members, h.issue, c.Description)
+		if err != nil {
+			return err
+		}
 		s := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: id, by: actor.UserID, at: u.d.Clock.Now()}
-		if err := u.write(ctx, s, h.issue, c, n); err != nil {
+		if err := u.write(ctx, s, h.issue, c, n, relations); err != nil {
 			return err
 		}
 		if updated, err = readBack(ctx, u.d.Issues, id); err != nil {
@@ -211,10 +220,29 @@ func labelNames(labels []LabelRef, ids []uuid.UUID) ([]domain.Named, error) {
 // order of M4 design 3.5: its fields; its assignees' rows, those removed
 // then those added; its labels' rows, the same; its subscribers', the
 // accounts added; its activity's.
-func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c domain.Changes, n named) error {
+func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c domain.Changes, n named, relations descriptionRelations) error {
+	if c.Description != nil && c.Description.Write && !c.Description.Changed {
+		clean := c.Description.Content
+		if err := u.d.Issues.WriteDescription(ctx, DescriptionWrite{IssueID: i.ID, HTML: clean.HTML, Text: clean.Text}); err != nil {
+			return err
+		}
+		if len(relations.subscribers) > 0 {
+			if err := u.d.Issues.InsertSubscribers(ctx, s.links(relations.subscribers)); err != nil {
+				return err
+			}
+		}
+		return writeMentions(ctx, u.d.Issues, s, relations.mentions)
+	}
+	// Preserve the lock-time description, including a legacy NULL stripped value.
 	f := IssueFields{ID: i.ID, Name: i.Name, StateID: i.StateID, Priority: i.Priority, StartDate: i.StartDate, TargetDate: i.TargetDate,
+		DescriptionHTML: i.DescriptionHTML, DescriptionStripped: i.DescriptionStripped,
 		ParentID: i.ParentID, CompletedAt: i.CompletedAt, By: s.by, At: s.at}
 	activity := domain.Update{Parent: n.parent, State: n.state, LabelsAdded: n.labelsAdded, LabelsRemoved: n.labelsRemoved}
+	if c.Description != nil && c.Description.Write {
+		clean := c.Description.Content
+		f.DescriptionHTML, f.DescriptionStripped = clean.HTML, &clean.Text
+		activity.Description = &domain.Changed[string]{Old: i.DescriptionHTML, New: clean.HTML}
+	}
 	if c.Parent != nil {
 		f.ParentID = c.Parent.To
 	}
@@ -242,17 +270,26 @@ func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c doma
 	if err := u.relink(ctx, s, c.Labels, u.d.Issues.RemoveLabels, u.d.Issues.InsertLabels); err != nil {
 		return err
 	}
-	if len(c.Assignees.Added) > 0 {
-		if err := u.d.Issues.InsertSubscribers(ctx, s.links(c.Assignees.Added)); err != nil {
+	if targets := ascending(slices.Concat(c.Assignees.Added, relations.subscribers)); len(targets) > 0 {
+		if err := u.d.Issues.InsertSubscribers(ctx, s.links(targets)); err != nil {
 			return err
 		}
+	}
+	if err := writeMentions(ctx, u.d.Issues, s, relations.mentions); err != nil {
+		return err
 	}
 	accounts, err := assignees(ctx, u.d.Profiles, slices.Concat(c.Assignees.Added, c.Assignees.Removed))
 	if err != nil {
 		return err
 	}
 	activity.AssigneesAdded, activity.AssigneesRemoved = accounts[:len(c.Assignees.Added)], accounts[len(c.Assignees.Added):]
-	return u.d.Issues.InsertActivities(ctx, s.activity(domain.UpdateActivity(activity)))
+	if err := writeUpdateActivities(ctx, u.d.Issues, s, activity); err != nil {
+		return err
+	}
+	if c.Description != nil && c.Description.Changed {
+		return saveDescriptionVersion(ctx, u.d.Issues, s, c.Description.Content)
+	}
+	return nil
 }
 
 // relink removes the rows of d's removed ids, then inserts those of its

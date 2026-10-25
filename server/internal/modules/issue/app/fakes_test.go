@@ -127,17 +127,18 @@ func (f *fakeAuthorizer) Authorize(ctx context.Context, actor shared.Actor, acti
 // other projects LockMany answers; waited, when set, runs as a lock waits,
 // before it answers: what commits meanwhile.
 type fakeProject struct {
-	log       *callLog
-	id        uuid.UUID
-	workspace uuid.UUID
-	found     bool
-	locked    *app.LockedProject
-	across    map[uuid.UUID]app.LockedProject
-	waited    func()
-	last      int
-	states    []app.StateRef
-	labels    []app.LabelRef
-	roles     map[uuid.UUID]shared.Role
+	log               *callLog
+	id                uuid.UUID
+	workspace         uuid.UUID
+	found             bool
+	locked            *app.LockedProject
+	across            map[uuid.UUID]app.LockedProject
+	waited            func()
+	last              int
+	states            []app.StateRef
+	labels            []app.LabelRef
+	roles             map[uuid.UUID]shared.Role
+	mentionVisibility []app.MemberVisibility
 }
 
 func (f *fakeProject) Find(ctx context.Context, id uuid.UUID) (uuid.UUID, bool, error) {
@@ -227,23 +228,26 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // sub-items it answers, and parented the last addition of sub-items' rows
 // (fakes_parents_test.go).
 type fakeIssues struct {
-	log        *callLog
-	greatest   map[uuid.UUID]float64
-	issue      *app.IssueRow
-	changed    *app.IssueFields
-	archival   *app.IssueArchival
-	archivedAt *time.Time
-	assignees  []uuid.UUID
-	labels     []uuid.UUID
-	activities []app.ActivityRow
-	subtree    []uuid.UUID
-	deletions  []app.IssueDeletion
-	others     map[uuid.UUID]domain.Issue
-	ancestry   map[uuid.UUID][]uuid.UUID
-	counts     map[uuid.UUID]app.SubIssueCount
-	subItems   []domain.Issue
-	parented   *app.ParentRows
-	lost       bool
+	log               *callLog
+	versions          []domain.DescriptionVersion
+	mentions          []uuid.UUID
+	descriptionWrites int
+	greatest          map[uuid.UUID]float64
+	issue             *app.IssueRow
+	changed           *app.IssueFields
+	archival          *app.IssueArchival
+	archivedAt        *time.Time
+	assignees         []uuid.UUID
+	labels            []uuid.UUID
+	activities        []app.ActivityRow
+	subtree           []uuid.UUID
+	deletions         []app.IssueDeletion
+	others            map[uuid.UUID]domain.Issue
+	ancestry          map[uuid.UUID][]uuid.UUID
+	counts            map[uuid.UUID]app.SubIssueCount
+	subItems          []domain.Issue
+	parented          *app.ParentRows
+	lost              bool
 }
 
 func (f *fakeIssues) GreatestSortOrder(ctx context.Context, projectID, stateID uuid.UUID) (*float64, error) {
@@ -283,6 +287,7 @@ func (f *fakeIssues) UpdateIssue(ctx context.Context, r app.IssueFields) error {
 	if f.issue == nil || r.ID != f.issue.ID {
 		return fmt.Errorf("UpdateIssue: %+v is not the work item %+v", r, f.issue)
 	}
+	f.issue.DescriptionHTML, f.issue.DescriptionStripped = r.DescriptionHTML, r.DescriptionStripped
 	f.issue.Name, f.issue.StateID, f.issue.Priority, f.issue.CompletedAt = r.Name, r.StateID, r.Priority, r.CompletedAt
 	f.issue.StartDate, f.issue.TargetDate, f.issue.ParentID = r.StartDate, r.TargetDate, r.ParentID
 	f.changed = &r
@@ -382,6 +387,7 @@ func (f *fakeIssues) read(id uuid.UUID) (domain.Issue, bool) {
 	r := f.issue
 	by, at := f.writer()
 	return domain.Issue{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: r.SequenceID, Name: r.Name,
+		DescriptionHTML: r.DescriptionHTML, DescriptionStripped: r.DescriptionStripped,
 		StateID: r.StateID, Priority: r.Priority, StartDate: r.StartDate, TargetDate: r.TargetDate, ParentID: r.ParentID, SortOrder: r.SortOrder,
 		CompletedAt: r.CompletedAt, ArchivedAt: f.archivedAt,
 		AssigneeIDs: slices.SortedFunc(slices.Values(f.assignees), uuid.UUID.Compare), LabelIDs: slices.SortedFunc(slices.Values(f.labels),

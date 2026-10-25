@@ -185,3 +185,27 @@ func (p issueProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[u
 	}
 	return names, nil
 }
+
+func (p issueProjects) MentionMembers(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]issue.MemberVisibility, error) {
+	members, err := p.projects.IssueMentionMembers(ctx, id, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.MemberVisibility, len(members))
+	for n, m := range members {
+		out[n] = issue.MemberVisibility(m)
+	}
+	return out, nil
+}
+
+func (p issueProjects) Historical(ctx context.Context, workspaceID, actorID uuid.UUID) ([]issue.VisibleProject, error) {
+	projects, err := p.projects.HistoricalIssueProjects(ctx, workspaceID, actorID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.VisibleProject, len(projects))
+	for i, project := range projects {
+		out[i] = issue.VisibleProject(project)
+	}
+	return out, nil
+}

@@ -1,0 +1,777 @@
+{
+  "source": "2026-10-25: real TipTap Editor using CoreEditorExtensions and fixed UniqueID generator; all-editor input captured from editor_document JSON; raw-api cases intentionally lack block IDs; Go sanitized and resanitized captured after reviewing retained attributes.",
+  "cases": [
+    {
+      "name": "callout-alt-injection",
+      "input": "<div data-block-type=\"callout-component\" data-logo-in-use=\"emoji\" data-emoji-url=\"https://example.test/emoji.png\" data-emoji-unicode=\"&quot; onerror=&quot;boom\"><p>Note</p></div>",
+      "sanitized": "<div data-block-type=\"callout-component\" data-logo-in-use=\"emoji\" data-emoji-url=\"https://example.test/emoji.png\" data-emoji-unicode=\"&#34; onerror=&#34;boom\"><p>Note</p></div>",
+      "reserialized": "<div data-emoji-unicode=\"&quot; onerror=&quot;boom\" data-emoji-url=\"https://example.test/emoji.png\" data-logo-in-use=\"emoji\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "resanitized": "<div data-emoji-unicode=\"&#34; onerror=&#34;boom\" data-emoji-url=\"https://example.test/emoji.png\" data-logo-in-use=\"emoji\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "expected_text": "Note",
+      "expected_mentions": [],
+      "expected_links": [],
+      "expected_checked": [],
+      "expected_markdown": "> <img src=\"https://example.test/emoji.png\" alt=\"&quot; onerror=&quot;boom\" width=\"30px\" />\n> \n> Note",
+      "markdown_element": {
+        "tag": "img",
+        "attributes": {
+          "src": "https://example.test/emoji.png",
+          "alt": "\" onerror=\"boom",
+          "width": "30px"
+        },
+        "text": ""
+      }
+    },
+    {
+      "name": "raw-api-readonly",
+      "input": "<h2>Release</h2><ul><li><p><strong><em>Ship</em></strong> now</p></li></ul>",
+      "sanitized": "<h2>Release</h2><ul><li><p><strong><em>Ship</em></strong> now</p></li></ul>",
+      "reserialized": "<h2 class=\"editor-heading-block\">Release</h2><ul class=\"list-disc pl-7 space-y-(--list-spacing-y)\"><li class=\"not-prose space-y-2\"><p class=\"editor-paragraph-block\"><strong><em>Ship</em></strong> now</p></li></ul>",
+      "resanitized": "<h2 class=\"editor-heading-block\">Release</h2><ul class=\"list-disc pl-7 space-y-(--list-spacing-y)\"><li class=\"not-prose space-y-2\"><p class=\"editor-paragraph-block\"><strong><em>Ship</em></strong> now</p></li></ul>",
+      "editable": false,
+      "expected_text": "ReleaseShip now",
+      "expected_mentions": [],
+      "expected_links": [],
+      "expected_checked": []
+    },
+    {
+      "name": "raw-api-fixed-editor-ids",
+      "input": "<h2>Release</h2><ul><li><p><strong><em>Ship</em></strong> now</p></li></ul>",
+      "sanitized": "<h2>Release</h2><ul><li><p><strong><em>Ship</em></strong> now</p></li></ul>",
+      "reserialized": "<h2 class=\"editor-heading-block\" data-id=\"fixed-heading-0\">Release</h2><ul class=\"list-disc pl-7 space-y-(--list-spacing-y)\" data-id=\"fixed-bulletList-9\"><li class=\"not-prose space-y-2\" data-id=\"fixed-listItem-10\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-11\"><strong><em>Ship</em></strong> now</p></li></ul>",
+      "resanitized": "<h2 class=\"editor-heading-block\" data-id=\"fixed-heading-0\">Release</h2><ul class=\"list-disc pl-7 space-y-(--list-spacing-y)\" data-id=\"fixed-bulletList-9\"><li class=\"not-prose space-y-2\" data-id=\"fixed-listItem-10\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-11\"><strong><em>Ship</em></strong> now</p></li></ul>",
+      "editable": true,
+      "expected_text": "ReleaseShip now",
+      "expected_mentions": [],
+      "expected_links": [],
+      "expected_checked": []
+    },
+    {
+      "name": "all-editor-nodes-and-marks",
+      "input": "<h1 class=\"editor-heading-block\" data-id=\"fixed-heading-0\" style=\"text-align: center;\">Heading</h1><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-9\"><strong>Bold</strong> <em>Italic</em> <s>Strike</s> <u>Underline</u> <span>Style</span> <span data-text-color=\"#123456\" style=\"color: rgb(18, 52, 86); background-color: rgb(171, 205, 239);\" data-background-color=\"#abcdef\">Color</span> <a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"text-accent-secondary underline underline-offset-[3px] hover:text-accent-primary transition-colors cursor-pointer\" href=\"https://example.test/a\">Link</a> <code class=\"rounded-sm bg-layer-3 px-[6px] py-[1.5px] font-code font-medium text-(--extended-color-orange-600) border-[0.5px] border-subtle\" spellcheck=\"false\">code</code><br>Next <span data-name=\"smile\" data-type=\"emoji\">😄</span><mention-component entity_identifier=\"11111111-1111-4111-8111-111111111111\" entity_name=\"user_mention\"></mention-component></p><blockquote data-id=\"fixed-blockquote-69\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-70\">Quote</p></blockquote><div class=\"py-4 border-strong-1\" data-id=\"fixed-horizontalRule-78\" data-type=\"horizontalRule\"><div></div></div><ol class=\"list-decimal pl-7 space-y-(--list-spacing-y) tight\" data-id=\"fixed-orderedList-79\" data-tight=\"true\" start=\"3\"><li class=\"not-prose space-y-2\" data-id=\"fixed-listItem-80\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-81\">Ordered</p></li></ol><ul class=\"list-disc pl-7 space-y-(--list-spacing-y) tight\" data-id=\"fixed-bulletList-92\" data-tight=\"true\"><li class=\"not-prose space-y-2\" data-id=\"fixed-listItem-93\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-94\">Bullet</p></li></ul><ul class=\"not-prose pl-2 space-y-2\" data-id=\"fixed-taskList-104\" data-type=\"taskList\"><li class=\"relative\" data-id=\"fixed-taskItem-105\" data-checked=\"true\" data-type=\"taskItem\"><label><input type=\"checkbox\" checked=\"checked\"><span></span></label><div><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-106\">Done</p></div></li><li class=\"relative\" data-id=\"fixed-taskItem-113\" data-checked=\"false\" data-type=\"taskItem\"><label><input type=\"checkbox\"><span></span></label><div><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-114\">Todo</p></div></li></ul><pre class=\"\" data-id=\"fixed-codeBlock-122\"><code class=\"language-javascript\">const x = 1;</code></pre><table data-id=\"fixed-table-136\"><tbody><tr background=\"#ffffff\" textcolor=\"#111111\" style=\"background-color: rgb(255, 255, 255); color: rgb(17, 17, 17);\"><th colspan=\"1\" rowspan=\"1\" colwidth=\"120\" background=\"#eeeeee\" style=\"background-color: rgb(238, 238, 238);\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-139\">Header</p></th><td colspan=\"1\" rowspan=\"1\" colwidth=\"140\" background=\"#ffffff\" textcolor=\"#111111\" style=\"background-color: rgb(255, 255, 255); color: rgb(17, 17, 17);\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-149\">Cell</p></td></tr></tbody></table><img data-id=\"fixed-image-158\" src=\"https://example.test/photo.png\" alt=\"Photo\" title=\"Title\" width=\"35%\" alignment=\"center\"><image-component data-id=\"fixed-imageComponent-159\" src=\"asset-1\" id=\"fixed-imageComponent-159\" width=\"35%\" height=\"auto\" alignment=\"center\" status=\"uploaded\"></image-component>",
+      "sanitized": "<h1 class=\"editor-heading-block\" data-id=\"fixed-heading-0\" style=\"text-align: center\">Heading</h1><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-9\"><strong>Bold</strong> <em>Italic</em> <s>Strike</s> <u>Underline</u> <span>Style</span> <span data-text-color=\"#123456\" style=\"color: rgb(18, 52, 86); background-color: rgb(171, 205, 239)\" data-background-color=\"#abcdef\">Color</span> <a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"text-accent-secondary underline underline-offset-[3px] hover:text-accent-primary transition-colors cursor-pointer\" href=\"https://example.test/a\">Link</a> <code class=\"rounded-sm bg-layer-3 px-[6px] py-[1.5px] font-code font-medium text-(--extended-color-orange-600) border-[0.5px] border-subtle\" spellcheck=\"false\">code</code><br>Next <span data-name=\"smile\" data-type=\"emoji\">😄</span><mention-component entity_identifier=\"11111111-1111-4111-8111-111111111111\" entity_name=\"user_mention\"></mention-component></p><blockquote data-id=\"fixed-blockquote-69\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-70\">Quote</p></blockquote><div class=\"py-4 border-strong-1\" data-id=\"fixed-horizontalRule-78\" data-type=\"horizontalRule\"><div></div></div><ol class=\"list-decimal pl-7 space-y-(--list-spacing-y) tight\" data-id=\"fixed-orderedList-79\" data-tight=\"true\" start=\"3\"><li class=\"not-prose space-y-2\" data-id=\"fixed-listItem-80\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-81\">Ordered</p></li></ol><ul class=\"list-disc pl-7 space-y-(--list-spacing-y) tight\" data-id=\"fixed-bulletList-92\" data-tight=\"true\"><li class=\"not-prose space-y-2\" data-id=\"fixed-listItem-93\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-94\">Bullet</p></li></ul><ul class=\"not-prose pl-2 space-y-2\" data-id=\"fixed-taskList-104\" data-type=\"taskList\"><li class=\"relative\" data-id=\"fixed-taskItem-105\" data-checked=\"true\" data-type=\"taskItem\"><label><input type=\"checkbox\" checked=\"checked\"><span></span></label><div><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-106\">Done</p></div></li><li class=\"relative\" data-id=\"fixed-taskItem-113\" data-checked=\"false\" data-type=\"taskItem\"><label><input type=\"checkbox\"><span></span></label><div><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-114\">Todo</p></div></li></ul><pre class=\"\" data-id=\"fixed-codeBlock-122\"><code class=\"language-javascript\">const x = 1;</code></pre><table data-id=\"fixed-table-136\"><tbody><tr background=\"#ffffff\" textcolor=\"#111111\" style=\"background-color: rgb(255, 255, 255); color: rgb(17, 17, 17)\"><th colspan=\"1\" rowspan=\"1\" colwidth=\"120\" background=\"#eeeeee\" style=\"background-color: rgb(238, 238, 238)\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-139\">Header</p></th><td colspan=\"1\" rowspan=\"1\" colwidth=\"140\" background=\"#ffffff\" textcolor=\"#111111\" style=\"background-color: rgb(255, 255, 255); color: rgb(17, 17, 17)\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-149\">Cell</p></td></tr></tbody></table><img data-id=\"fixed-image-158\" src=\"https://example.test/photo.png\" alt=\"Photo\" title=\"Title\" width=\"35%\" alignment=\"center\"><image-component data-id=\"fixed-imageComponent-159\" src=\"asset-1\" id=\"fixed-imageComponent-159\" width=\"35%\" height=\"auto\" alignment=\"center\" status=\"uploaded\"></image-component>",
+      "reserialized": "<h1 class=\"editor-heading-block\" data-id=\"fixed-heading-0\" style=\"text-align: center;\">Heading</h1><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-9\"><strong>Bold</strong> <em>Italic</em> <s>Strike</s> <u>Underline</u> Style <span data-text-color=\"#123456\" style=\"color: rgb(18, 52, 86); background-color: rgb(171, 205, 239);\" data-background-color=\"#abcdef\">Color</span> <a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"text-accent-secondary underline underline-offset-[3px] hover:text-accent-primary transition-colors cursor-pointer\" href=\"https://example.test/a\">Link</a> <code class=\"rounded-sm bg-layer-3 px-[6px] py-[1.5px] font-code font-medium text-(--extended-color-orange-600) border-[0.5px] border-subtle\" spellcheck=\"false\">code</code><br>Next <span data-name=\"smile\" data-type=\"emoji\">😄</span><mention-component entity_identifier=\"11111111-1111-4111-8111-111111111111\" entity_name=\"user_mention\"></mention-component></p><blockquote data-id=\"fixed-blockquote-69\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-70\">Quote</p></blockquote><div class=\"py-4 border-strong-1\" data-id=\"fixed-horizontalRule-78\" data-type=\"horizontalRule\"><div></div></div><ol class=\"list-decimal pl-7 space-y-(--list-spacing-y) tight\" data-id=\"fixed-orderedList-79\" data-tight=\"true\" start=\"3\"><li class=\"not-prose space-y-2\" data-id=\"fixed-listItem-80\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-81\">Ordered</p></li></ol><ul class=\"list-disc pl-7 space-y-(--list-spacing-y) tight\" data-id=\"fixed-bulletList-92\" data-tight=\"true\"><li class=\"not-prose space-y-2\" data-id=\"fixed-listItem-93\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-94\">Bullet</p></li></ul><ul class=\"not-prose pl-2 space-y-2\" data-id=\"fixed-taskList-104\" data-type=\"taskList\"><li class=\"relative\" data-id=\"fixed-taskItem-105\" data-checked=\"true\" data-type=\"taskItem\"><label><input type=\"checkbox\" checked=\"checked\"><span></span></label><div><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-106\">Done</p></div></li><li class=\"relative\" data-id=\"fixed-taskItem-113\" data-checked=\"false\" data-type=\"taskItem\"><label><input type=\"checkbox\"><span></span></label><div><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-114\">Todo</p></div></li></ul><pre class=\"\" data-id=\"fixed-codeBlock-122\"><code class=\"language-javascript\">const x = 1;</code></pre><table data-id=\"fixed-table-136\"><tbody><tr background=\"#ffffff\" textcolor=\"#111111\" style=\"background-color: rgb(255, 255, 255); color: rgb(17, 17, 17);\"><th colspan=\"1\" rowspan=\"1\" colwidth=\"120\" background=\"#eeeeee\" style=\"background-color: rgb(238, 238, 238);\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-139\">Header</p></th><td colspan=\"1\" rowspan=\"1\" colwidth=\"140\" background=\"#ffffff\" textcolor=\"#111111\" style=\"background-color: rgb(255, 255, 255); color: rgb(17, 17, 17);\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-149\">Cell</p></td></tr></tbody></table><img data-id=\"fixed-image-158\" src=\"https://example.test/photo.png\" alt=\"Photo\" title=\"Title\" width=\"35%\" alignment=\"center\"><image-component data-id=\"fixed-imageComponent-159\" src=\"asset-1\" id=\"fixed-imageComponent-159\" width=\"35%\" height=\"auto\" alignment=\"center\" status=\"uploaded\"></image-component>",
+      "resanitized": "<h1 class=\"editor-heading-block\" data-id=\"fixed-heading-0\" style=\"text-align: center\">Heading</h1><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-9\"><strong>Bold</strong> <em>Italic</em> <s>Strike</s> <u>Underline</u> Style <span data-text-color=\"#123456\" style=\"color: rgb(18, 52, 86); background-color: rgb(171, 205, 239)\" data-background-color=\"#abcdef\">Color</span> <a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"text-accent-secondary underline underline-offset-[3px] hover:text-accent-primary transition-colors cursor-pointer\" href=\"https://example.test/a\">Link</a> <code class=\"rounded-sm bg-layer-3 px-[6px] py-[1.5px] font-code font-medium text-(--extended-color-orange-600) border-[0.5px] border-subtle\" spellcheck=\"false\">code</code><br>Next <span data-name=\"smile\" data-type=\"emoji\">😄</span><mention-component entity_identifier=\"11111111-1111-4111-8111-111111111111\" entity_name=\"user_mention\"></mention-component></p><blockquote data-id=\"fixed-blockquote-69\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-70\">Quote</p></blockquote><div class=\"py-4 border-strong-1\" data-id=\"fixed-horizontalRule-78\" data-type=\"horizontalRule\"><div></div></div><ol class=\"list-decimal pl-7 space-y-(--list-spacing-y) tight\" data-id=\"fixed-orderedList-79\" data-tight=\"true\" start=\"3\"><li class=\"not-prose space-y-2\" data-id=\"fixed-listItem-80\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-81\">Ordered</p></li></ol><ul class=\"list-disc pl-7 space-y-(--list-spacing-y) tight\" data-id=\"fixed-bulletList-92\" data-tight=\"true\"><li class=\"not-prose space-y-2\" data-id=\"fixed-listItem-93\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-94\">Bullet</p></li></ul><ul class=\"not-prose pl-2 space-y-2\" data-id=\"fixed-taskList-104\" data-type=\"taskList\"><li class=\"relative\" data-id=\"fixed-taskItem-105\" data-checked=\"true\" data-type=\"taskItem\"><label><input type=\"checkbox\" checked=\"checked\"><span></span></label><div><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-106\">Done</p></div></li><li class=\"relative\" data-id=\"fixed-taskItem-113\" data-checked=\"false\" data-type=\"taskItem\"><label><input type=\"checkbox\"><span></span></label><div><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-114\">Todo</p></div></li></ul><pre class=\"\" data-id=\"fixed-codeBlock-122\"><code class=\"language-javascript\">const x = 1;</code></pre><table data-id=\"fixed-table-136\"><tbody><tr background=\"#ffffff\" textcolor=\"#111111\" style=\"background-color: rgb(255, 255, 255); color: rgb(17, 17, 17)\"><th colspan=\"1\" rowspan=\"1\" colwidth=\"120\" background=\"#eeeeee\" style=\"background-color: rgb(238, 238, 238)\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-139\">Header</p></th><td colspan=\"1\" rowspan=\"1\" colwidth=\"140\" background=\"#ffffff\" textcolor=\"#111111\" style=\"background-color: rgb(255, 255, 255); color: rgb(17, 17, 17)\"><p class=\"editor-paragraph-block\" data-id=\"fixed-paragraph-149\">Cell</p></td></tr></tbody></table><img data-id=\"fixed-image-158\" src=\"https://example.test/photo.png\" alt=\"Photo\" title=\"Title\" width=\"35%\" alignment=\"center\"><image-component data-id=\"fixed-imageComponent-159\" src=\"asset-1\" id=\"fixed-imageComponent-159\" width=\"35%\" height=\"auto\" alignment=\"center\" status=\"uploaded\"></image-component>",
+      "editable": true,
+      "expected_text": "HeadingBold Italic Strike Underline Style Color Link codeNext 😄QuoteOrderedBulletDoneTodoconst x = 1;HeaderCell",
+      "expected_mentions": [
+        "11111111-1111-4111-8111-111111111111"
+      ],
+      "expected_links": [
+        "https://example.test/a"
+      ],
+      "expected_checked": [
+        true,
+        false
+      ],
+      "editor_document": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "heading",
+            "attrs": {
+              "level": 1,
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Heading"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Bold",
+                "marks": [
+                  {
+                    "type": "bold"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              },
+              {
+                "type": "text",
+                "text": "Italic",
+                "marks": [
+                  {
+                    "type": "italic"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              },
+              {
+                "type": "text",
+                "text": "Strike",
+                "marks": [
+                  {
+                    "type": "strike"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              },
+              {
+                "type": "text",
+                "text": "Underline",
+                "marks": [
+                  {
+                    "type": "underline"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              },
+              {
+                "type": "text",
+                "text": "Style",
+                "marks": [
+                  {
+                    "type": "textStyle"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              },
+              {
+                "type": "text",
+                "text": "Color",
+                "marks": [
+                  {
+                    "type": "customColor",
+                    "attrs": {
+                      "color": "#123456",
+                      "backgroundColor": "#abcdef"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              },
+              {
+                "type": "text",
+                "text": "Link",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://example.test/a",
+                      "target": "_blank"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              },
+              {
+                "type": "text",
+                "text": "code",
+                "marks": [
+                  {
+                    "type": "code"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Next "
+              },
+              {
+                "type": "emoji",
+                "attrs": {
+                  "name": "smile"
+                }
+              },
+              {
+                "type": "mention",
+                "attrs": {
+                  "entity_identifier": "11111111-1111-4111-8111-111111111111",
+                  "entity_name": "user_mention"
+                }
+              }
+            ]
+          },
+          {
+            "type": "blockquote",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Quote"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "horizontalRule"
+          },
+          {
+            "type": "orderedList",
+            "attrs": {
+              "start": 3
+            },
+            "content": [
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Ordered"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "bulletList",
+            "content": [
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Bullet"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "taskList",
+            "content": [
+              {
+                "type": "taskItem",
+                "attrs": {
+                  "checked": true
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Done"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "taskItem",
+                "attrs": {
+                  "checked": false
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Todo"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "codeBlock",
+            "attrs": {
+              "language": "javascript"
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "const x = 1;"
+              }
+            ]
+          },
+          {
+            "type": "table",
+            "content": [
+              {
+                "type": "tableRow",
+                "attrs": {
+                  "background": "#ffffff",
+                  "textColor": "#111111"
+                },
+                "content": [
+                  {
+                    "type": "tableHeader",
+                    "attrs": {
+                      "colspan": 1,
+                      "rowspan": 1,
+                      "colwidth": [
+                        120
+                      ],
+                      "background": "#eeeeee"
+                    },
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Header"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableCell",
+                    "attrs": {
+                      "colspan": 1,
+                      "rowspan": 1,
+                      "colwidth": [
+                        140
+                      ],
+                      "background": "#ffffff",
+                      "textColor": "#111111"
+                    },
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Cell"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "image",
+            "attrs": {
+              "src": "https://example.test/photo.png",
+              "alt": "Photo",
+              "title": "Title",
+              "width": "35%",
+              "alignment": "center"
+            }
+          },
+          {
+            "type": "imageComponent",
+            "attrs": {
+              "src": "asset-1",
+              "width": "35%",
+              "alignment": "center",
+              "status": "uploaded"
+            }
+          }
+        ]
+      },
+      "preserved_elements": [
+        {
+          "selector": "h1",
+          "attributes": {
+            "data-id": "fixed-heading-0"
+          },
+          "styles": {
+            "textAlign": "center"
+          },
+          "text": "Heading"
+        },
+        {
+          "selector": "p",
+          "attributes": {
+            "data-id": "fixed-paragraph-9"
+          }
+        },
+        {
+          "selector": "strong",
+          "text": "Bold"
+        },
+        {
+          "selector": "em",
+          "text": "Italic"
+        },
+        {
+          "selector": "s",
+          "text": "Strike"
+        },
+        {
+          "selector": "u",
+          "text": "Underline"
+        },
+        {
+          "selector": "span[data-text-color]",
+          "attributes": {
+            "data-text-color": "#123456",
+            "data-background-color": "#abcdef"
+          },
+          "styles": {
+            "color": "rgb(18, 52, 86)",
+            "backgroundColor": "rgb(171, 205, 239)"
+          },
+          "text": "Color"
+        },
+        {
+          "selector": "a",
+          "attributes": {
+            "href": "https://example.test/a",
+            "target": "_blank",
+            "rel": "noopener noreferrer nofollow"
+          },
+          "text": "Link"
+        },
+        {
+          "selector": "p code",
+          "attributes": {
+            "spellcheck": "false"
+          },
+          "text": "code"
+        },
+        {
+          "selector": "br",
+          "attributes": {}
+        },
+        {
+          "selector": "span[data-type=\"emoji\"]",
+          "attributes": {
+            "data-name": "smile",
+            "data-type": "emoji"
+          },
+          "text": "😄"
+        },
+        {
+          "selector": "mention-component",
+          "attributes": {
+            "entity_identifier": "11111111-1111-4111-8111-111111111111",
+            "entity_name": "user_mention"
+          }
+        },
+        {
+          "selector": "blockquote",
+          "attributes": {
+            "data-id": "fixed-blockquote-69"
+          },
+          "text": "Quote"
+        },
+        {
+          "selector": "div[data-type=\"horizontalRule\"]",
+          "attributes": {
+            "data-id": "fixed-horizontalRule-78"
+          }
+        },
+        {
+          "selector": "ol",
+          "attributes": {
+            "start": "3",
+            "data-tight": "true"
+          },
+          "text": "Ordered"
+        },
+        {
+          "selector": "ul[data-tight=\"true\"]",
+          "text": "Bullet"
+        },
+        {
+          "selector": "ul[data-type=\"taskList\"]",
+          "attributes": {
+            "data-id": "fixed-taskList-104"
+          }
+        },
+        {
+          "selector": "li[data-checked=\"true\"] input",
+          "attributes": {
+            "type": "checkbox",
+            "checked": "checked"
+          }
+        },
+        {
+          "selector": "li[data-checked=\"false\"] input",
+          "attributes": {
+            "type": "checkbox"
+          }
+        },
+        {
+          "selector": "label",
+          "attributes": {}
+        },
+        {
+          "selector": "pre",
+          "attributes": {
+            "data-id": "fixed-codeBlock-122"
+          }
+        },
+        {
+          "selector": "pre code",
+          "attributes": {
+            "class": "language-javascript"
+          },
+          "text": "const x = 1;"
+        },
+        {
+          "selector": "table",
+          "attributes": {
+            "data-id": "fixed-table-136"
+          }
+        },
+        {
+          "selector": "tr",
+          "attributes": {
+            "background": "#ffffff",
+            "textcolor": "#111111"
+          },
+          "styles": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "color": "rgb(17, 17, 17)"
+          }
+        },
+        {
+          "selector": "th",
+          "attributes": {
+            "colspan": "1",
+            "rowspan": "1",
+            "colwidth": "120",
+            "background": "#eeeeee"
+          },
+          "styles": {
+            "backgroundColor": "rgb(238, 238, 238)"
+          },
+          "text": "Header"
+        },
+        {
+          "selector": "td",
+          "attributes": {
+            "colspan": "1",
+            "rowspan": "1",
+            "colwidth": "140",
+            "background": "#ffffff",
+            "textcolor": "#111111"
+          },
+          "styles": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "color": "rgb(17, 17, 17)"
+          },
+          "text": "Cell"
+        },
+        {
+          "selector": "img",
+          "attributes": {
+            "src": "https://example.test/photo.png",
+            "alt": "Photo",
+            "title": "Title",
+            "width": "35%",
+            "alignment": "center"
+          }
+        },
+        {
+          "selector": "image-component",
+          "attributes": {
+            "src": "asset-1",
+            "id": "fixed-imageComponent-159",
+            "width": "35%",
+            "height": "auto",
+            "alignment": "center",
+            "status": "uploaded"
+          }
+        }
+      ]
+    },
+    {
+      "name": "callout-icon-injection",
+      "input": "<div data-block-type=\"callout-component\" data-logo-in-use=\"icon\" data-icon-name=\"&lt;/icon&gt;&lt;img src=x onerror=boom&gt;\"><p>Note</p></div>",
+      "sanitized": "<div data-block-type=\"callout-component\" data-logo-in-use=\"icon\" data-icon-name=\"&lt;/icon&gt;&lt;img src=x onerror=boom&gt;\"><p>Note</p></div>",
+      "reserialized": "<div data-icon-name=\"</icon><img src=x onerror=boom>\" data-emoji-unicode=\"128161\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"icon\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "resanitized": "<div data-icon-name=\"&lt;/icon&gt;&lt;img src=x onerror=boom&gt;\" data-emoji-unicode=\"128161\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"icon\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "editable": false,
+      "expected_text": "Note",
+      "expected_mentions": [],
+      "expected_links": [],
+      "expected_checked": [],
+      "expected_markdown": "> <icon>&lt;/icon&gt;&lt;img src=x onerror=boom&gt; icon</icon>\n> \n> Note",
+      "markdown_element": {
+        "tag": "icon",
+        "attributes": {},
+        "text": "</icon><img src=x onerror=boom> icon"
+      }
+    },
+    {
+      "name": "callout-safe-icon",
+      "input": "<div data-block-type=\"callout-component\" data-logo-in-use=\"icon\" data-icon-name=\"lightbulb\" data-icon-color=\"#ff0000\" data-background=\"#ffffff\"><p>Note</p></div>",
+      "sanitized": "<div data-block-type=\"callout-component\" data-logo-in-use=\"icon\" data-icon-name=\"lightbulb\" data-icon-color=\"#ff0000\" data-background=\"#ffffff\"><p>Note</p></div>",
+      "reserialized": "<div data-icon-color=\"#ff0000\" data-icon-name=\"lightbulb\" data-emoji-unicode=\"128161\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"icon\" data-background=\"#ffffff\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "resanitized": "<div data-icon-color=\"#ff0000\" data-icon-name=\"lightbulb\" data-emoji-unicode=\"128161\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"icon\" data-background=\"#ffffff\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "editable": false,
+      "expected_text": "Note",
+      "expected_mentions": [],
+      "expected_links": [],
+      "expected_checked": [],
+      "expected_markdown": "> <icon>lightbulb icon</icon>\n> \n> Note",
+      "markdown_element": {
+        "tag": "icon",
+        "attributes": {},
+        "text": "lightbulb icon"
+      }
+    },
+    {
+      "name": "callout-safe-emoji",
+      "input": "<div data-block-type=\"callout-component\" data-logo-in-use=\"emoji\" data-emoji-unicode=\"😄\" data-emoji-url=\"https://example.test/emoji.png?a=1&amp;b=2\"><p>Note</p></div>",
+      "sanitized": "<div data-block-type=\"callout-component\" data-logo-in-use=\"emoji\" data-emoji-unicode=\"😄\" data-emoji-url=\"https://example.test/emoji.png?a=1&amp;b=2\"><p>Note</p></div>",
+      "reserialized": "<div data-emoji-unicode=\"😄\" data-emoji-url=\"https://example.test/emoji.png?a=1&amp;b=2\" data-logo-in-use=\"emoji\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "resanitized": "<div data-emoji-unicode=\"😄\" data-emoji-url=\"https://example.test/emoji.png?a=1&amp;b=2\" data-logo-in-use=\"emoji\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "editable": false,
+      "expected_text": "Note",
+      "expected_mentions": [],
+      "expected_links": [],
+      "expected_checked": [],
+      "expected_markdown": "> <img src=\"https://example.test/emoji.png?a=1&amp;b=2\" alt=\"😄\" width=\"30px\" />\n> \n> Note",
+      "markdown_element": {
+        "tag": "img",
+        "attributes": {
+          "src": "https://example.test/emoji.png?a=1&b=2",
+          "alt": "😄",
+          "width": "30px"
+        },
+        "text": ""
+      }
+    },
+    {
+      "name": "attribute-free-text-style",
+      "input": "<p><span style=\"color: red\">Style</span></p>",
+      "sanitized": "<p><span style=\"color: red\">Style</span></p>",
+      "reserialized": "<p class=\"editor-paragraph-block\"><span>Style</span></p>",
+      "resanitized": "<p class=\"editor-paragraph-block\"><span>Style</span></p>",
+      "expected_text": "Style",
+      "expected_mentions": [],
+      "expected_links": [],
+      "expected_checked": []
+    },
+    {
+      "name": "identity-base",
+      "input": "<p><a href=\"https://example.test/a\">Link</a></p><ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"false\"><label><input type=\"checkbox\"><span></span></label><div><p>Task</p></div></li></ul>",
+      "sanitized": "<p><a href=\"https://example.test/a\">Link</a></p><ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"false\"><label><input type=\"checkbox\"><span></span></label><div><p>Task</p></div></li></ul>",
+      "reserialized": "<p class=\"editor-paragraph-block\"><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"text-accent-secondary underline underline-offset-[3px] hover:text-accent-primary transition-colors cursor-pointer\" href=\"https://example.test/a\">Link</a></p><ul class=\"not-prose pl-2 space-y-2\" data-type=\"taskList\"><li class=\"relative\" data-checked=\"false\" data-type=\"taskItem\"><label><input type=\"checkbox\"><span></span></label><div><p class=\"editor-paragraph-block\">Task</p></div></li></ul>",
+      "resanitized": "<p class=\"editor-paragraph-block\"><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"text-accent-secondary underline underline-offset-[3px] hover:text-accent-primary transition-colors cursor-pointer\" href=\"https://example.test/a\">Link</a></p><ul class=\"not-prose pl-2 space-y-2\" data-type=\"taskList\"><li class=\"relative\" data-checked=\"false\" data-type=\"taskItem\"><label><input type=\"checkbox\"><span></span></label><div><p class=\"editor-paragraph-block\">Task</p></div></li></ul>",
+      "expected_text": "LinkTask",
+      "expected_mentions": [],
+      "expected_links": [
+        "https://example.test/a"
+      ],
+      "expected_checked": [
+        false
+      ]
+    },
+    {
+      "name": "identity-href-change",
+      "input": "<p><a href=\"https://example.test/b\">Link</a></p><ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"false\"><label><input type=\"checkbox\"><span></span></label><div><p>Task</p></div></li></ul>",
+      "sanitized": "<p><a href=\"https://example.test/b\">Link</a></p><ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"false\"><label><input type=\"checkbox\"><span></span></label><div><p>Task</p></div></li></ul>",
+      "reserialized": "<p class=\"editor-paragraph-block\"><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"text-accent-secondary underline underline-offset-[3px] hover:text-accent-primary transition-colors cursor-pointer\" href=\"https://example.test/b\">Link</a></p><ul class=\"not-prose pl-2 space-y-2\" data-type=\"taskList\"><li class=\"relative\" data-checked=\"false\" data-type=\"taskItem\"><label><input type=\"checkbox\"><span></span></label><div><p class=\"editor-paragraph-block\">Task</p></div></li></ul>",
+      "resanitized": "<p class=\"editor-paragraph-block\"><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"text-accent-secondary underline underline-offset-[3px] hover:text-accent-primary transition-colors cursor-pointer\" href=\"https://example.test/b\">Link</a></p><ul class=\"not-prose pl-2 space-y-2\" data-type=\"taskList\"><li class=\"relative\" data-checked=\"false\" data-type=\"taskItem\"><label><input type=\"checkbox\"><span></span></label><div><p class=\"editor-paragraph-block\">Task</p></div></li></ul>",
+      "expected_text": "LinkTask",
+      "expected_mentions": [],
+      "expected_links": [
+        "https://example.test/b"
+      ],
+      "expected_checked": [
+        false
+      ]
+    },
+    {
+      "name": "identity-checked-change",
+      "input": "<p><a href=\"https://example.test/a\">Link</a></p><ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"true\"><label><input type=\"checkbox\" checked=\"checked\"><span></span></label><div><p>Task</p></div></li></ul>",
+      "sanitized": "<p><a href=\"https://example.test/a\">Link</a></p><ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"true\"><label><input type=\"checkbox\" checked=\"checked\"><span></span></label><div><p>Task</p></div></li></ul>",
+      "reserialized": "<p class=\"editor-paragraph-block\"><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"text-accent-secondary underline underline-offset-[3px] hover:text-accent-primary transition-colors cursor-pointer\" href=\"https://example.test/a\">Link</a></p><ul class=\"not-prose pl-2 space-y-2\" data-type=\"taskList\"><li class=\"relative\" data-checked=\"true\" data-type=\"taskItem\"><label><input type=\"checkbox\" checked=\"checked\"><span></span></label><div><p class=\"editor-paragraph-block\">Task</p></div></li></ul>",
+      "resanitized": "<p class=\"editor-paragraph-block\"><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"text-accent-secondary underline underline-offset-[3px] hover:text-accent-primary transition-colors cursor-pointer\" href=\"https://example.test/a\">Link</a></p><ul class=\"not-prose pl-2 space-y-2\" data-type=\"taskList\"><li class=\"relative\" data-checked=\"true\" data-type=\"taskItem\"><label><input type=\"checkbox\" checked=\"checked\"><span></span></label><div><p class=\"editor-paragraph-block\">Task</p></div></li></ul>",
+      "expected_text": "LinkTask",
+      "expected_mentions": [],
+      "expected_links": [
+        "https://example.test/a"
+      ],
+      "expected_checked": [
+        true
+      ]
+    },
+    {
+      "name": "callout-unsafe-url",
+      "input": "<div data-block-type=\"callout-component\" data-logo-in-use=\"emoji\" data-emoji-unicode=\"😄\" data-emoji-url=\"javascript:alert(1)\"><p>Note</p></div>",
+      "sanitized": "<div data-block-type=\"callout-component\" data-logo-in-use=\"emoji\" data-emoji-unicode=\"😄\"><p>Note</p></div>",
+      "reserialized": "<div data-emoji-unicode=\"😄\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"emoji\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "resanitized": "<div data-emoji-unicode=\"😄\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"emoji\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "expected_text": "Note",
+      "expected_mentions": [],
+      "expected_links": [],
+      "expected_checked": [],
+      "expected_markdown": "> <img src=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" alt=\"😄\" width=\"30px\" />\n> \n> Note",
+      "markdown_element": {
+        "tag": "img",
+        "attributes": {
+          "src": "https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png",
+          "alt": "😄",
+          "width": "30px"
+        },
+        "text": ""
+      }
+    },
+    {
+      "name": "color-attribute-injection",
+      "input": "<p><span data-text-color=\"red; position: fixed; background-image: url(https://example.test/pixel)\">Foreground</span><span data-background-color=\"red; position: fixed; background-image: url(https://example.test/pixel)\">Background</span></p><table><tbody><tr background=\"red; position: fixed; background-image: url(https://example.test/pixel)\" textcolor=\"red; position: fixed; background-image: url(https://example.test/pixel)\"><th background=\"red; position: fixed; background-image: url(https://example.test/pixel)\"><p>Header</p></th><td background=\"red; position: fixed; background-image: url(https://example.test/pixel)\" textcolor=\"red; position: fixed; background-image: url(https://example.test/pixel)\"><p>Cell</p></td></tr></tbody></table>",
+      "sanitized": "<p><span>Foreground</span><span>Background</span></p><table><tbody><tr><th><p>Header</p></th><td><p>Cell</p></td></tr></tbody></table>",
+      "reserialized": "<p class=\"editor-paragraph-block\">ForegroundBackground</p><table><tbody><tr style=\"\"><th colspan=\"1\" rowspan=\"1\" colwidth=\"150\" background=\"none\" style=\"\"><p class=\"editor-paragraph-block\">Header</p></th><td colspan=\"1\" rowspan=\"1\" colwidth=\"150\" style=\"\"><p class=\"editor-paragraph-block\">Cell</p></td></tr></tbody></table>",
+      "resanitized": "<p class=\"editor-paragraph-block\">ForegroundBackground</p><table><tbody><tr><th colspan=\"1\" rowspan=\"1\" colwidth=\"150\" background=\"none\"><p class=\"editor-paragraph-block\">Header</p></th><td colspan=\"1\" rowspan=\"1\" colwidth=\"150\"><p class=\"editor-paragraph-block\">Cell</p></td></tr></tbody></table>",
+      "expected_text": "ForegroundBackgroundHeaderCell",
+      "expected_mentions": [],
+      "expected_links": [],
+      "expected_checked": []
+    },
+    {
+      "name": "palette-colors",
+      "input": "<p><span data-text-color=\"gray\" data-background-color=\"gray\">gray</span><span data-text-color=\"peach\" data-background-color=\"peach\">peach</span><span data-text-color=\"pink\" data-background-color=\"pink\">pink</span><span data-text-color=\"orange\" data-background-color=\"orange\">orange</span><span data-text-color=\"green\" data-background-color=\"green\">green</span><span data-text-color=\"light-blue\" data-background-color=\"light-blue\">light-blue</span><span data-text-color=\"dark-blue\" data-background-color=\"dark-blue\">dark-blue</span><span data-text-color=\"purple\" data-background-color=\"purple\">purple</span></p>",
+      "sanitized": "<p><span data-text-color=\"gray\" data-background-color=\"gray\">gray</span><span data-text-color=\"peach\" data-background-color=\"peach\">peach</span><span data-text-color=\"pink\" data-background-color=\"pink\">pink</span><span data-text-color=\"orange\" data-background-color=\"orange\">orange</span><span data-text-color=\"green\" data-background-color=\"green\">green</span><span data-text-color=\"light-blue\" data-background-color=\"light-blue\">light-blue</span><span data-text-color=\"dark-blue\" data-background-color=\"dark-blue\">dark-blue</span><span data-text-color=\"purple\" data-background-color=\"purple\">purple</span></p>",
+      "reserialized": "<p class=\"editor-paragraph-block\"><span data-text-color=\"gray\" data-background-color=\"gray\">gray</span><span data-text-color=\"peach\" data-background-color=\"peach\">peach</span><span data-text-color=\"pink\" data-background-color=\"pink\">pink</span><span data-text-color=\"orange\" data-background-color=\"orange\">orange</span><span data-text-color=\"green\" data-background-color=\"green\">green</span><span data-text-color=\"light-blue\" data-background-color=\"light-blue\">light-blue</span><span data-text-color=\"dark-blue\" data-background-color=\"dark-blue\">dark-blue</span><span data-text-color=\"purple\" data-background-color=\"purple\">purple</span></p>",
+      "resanitized": "<p class=\"editor-paragraph-block\"><span data-text-color=\"gray\" data-background-color=\"gray\">gray</span><span data-text-color=\"peach\" data-background-color=\"peach\">peach</span><span data-text-color=\"pink\" data-background-color=\"pink\">pink</span><span data-text-color=\"orange\" data-background-color=\"orange\">orange</span><span data-text-color=\"green\" data-background-color=\"green\">green</span><span data-text-color=\"light-blue\" data-background-color=\"light-blue\">light-blue</span><span data-text-color=\"dark-blue\" data-background-color=\"dark-blue\">dark-blue</span><span data-text-color=\"purple\" data-background-color=\"purple\">purple</span></p>",
+      "expected_text": "graypeachpinkorangegreenlight-bluedark-bluepurple",
+      "expected_mentions": [],
+      "expected_links": [],
+      "expected_checked": []
+    }
+  ],
+  "normalization": [
+    "CSS trailing semicolons are removed by bluemonday and restored by DOM serialization; all declarations and their values are checked separately.",
+    "The current attribute-free textStyle mark exports an unstyled span and disappears on reparse; its empty schema attrs and preserved text are explicitly characterized.",
+    "Editor serialization adds its configured classes, callout defaults, table tbody and fixed block IDs in editable mode."
+  ]
+}

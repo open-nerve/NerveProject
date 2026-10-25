@@ -20,6 +20,7 @@ type CreateIssueDeps struct {
 	Members   ProjectMembers
 	Profiles  PublicProfiles
 	Clock     Clock
+	Sanitizer HTMLSanitizer
 }
 
 // CreateIssue creates a work item in a project: POST
@@ -37,10 +38,11 @@ func NewCreateIssue(d CreateIssueDeps) *CreateIssue {
 // the project's lock: the state, the accounts the work item is assigned
 // to and its labels, each in id order, and its parent, nil for none.
 type checked struct {
-	state     StateRef
-	assignees []uuid.UUID
-	labels    []uuid.UUID
-	parent    *uuid.UUID
+	state                 StateRef
+	mentions, subscribers []uuid.UUID
+	assignees             []uuid.UUID
+	labels                []uuid.UUID
+	parent                *uuid.UUID
 }
 
 // Execute checks in (domain.CheckNewIssue), before any read; then Locks
@@ -77,6 +79,12 @@ func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domai
 		if err != nil {
 			return err
 		}
+		clean := u.d.Sanitizer.Clean(*in.DescriptionHTML)
+		mentions, subscribers, err := descriptionTargets(ctx, u.d.Members, domain.Issue{ProjectID: projectID, CreatedByID: &actor.UserID}, clean.Identity.MentionIDs)
+		if err != nil {
+			return err
+		}
+		c.mentions, c.subscribers = mentions, subscribers
 		sequence, err := u.d.Sequences.Next(ctx, projectID)
 		if err != nil {
 			return err
@@ -88,8 +96,9 @@ func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domai
 		}
 		row := IssueRow{ID: uuid.NewV7(), WorkspaceID: project.WorkspaceID, ProjectID: projectID, SequenceID: sequence, Name: in.Name,
 			StateID: c.state.ID, Priority: *in.Priority, StartDate: in.StartDate, TargetDate: in.TargetDate, ParentID: c.parent,
+			DescriptionHTML: clean.HTML, DescriptionStripped: &clean.Text,
 			SortOrder: domain.SortOrderAfter(greatest), CompletedAt: domain.CompletedAt(c.state.Group, now), By: actor.UserID, At: now}
-		if err := u.write(ctx, row, c); err != nil {
+		if err := u.write(ctx, row, c, clean); err != nil {
 			return err
 		}
 		created, err = readBack(ctx, u.d.Issues, row.ID)
@@ -168,7 +177,7 @@ func (u *CreateIssue) check(ctx context.Context, h held, actor, projectID uuid.U
 // write writes the work item row and the rows under it, in the order of M4
 // design 3.5: the work item, its assignees, its labels, its subscribers,
 // its activity.
-func (u *CreateIssue) write(ctx context.Context, row IssueRow, c checked) error {
+func (u *CreateIssue) write(ctx context.Context, row IssueRow, c checked, clean domain.RichText) error {
 	if err := u.d.Issues.InsertIssue(ctx, row); err != nil {
 		return err
 	}
@@ -183,13 +192,21 @@ func (u *CreateIssue) write(ctx context.Context, row IssueRow, c checked) error 
 			return err
 		}
 	}
-	subscribers := ascending(append([]uuid.UUID{row.By}, c.assignees...))
+	subscribers := ascending(slices.Concat([]uuid.UUID{row.By}, c.assignees, c.subscribers))
 	if err := u.d.Issues.InsertSubscribers(ctx, s.links(subscribers)); err != nil {
 		return err
+	}
+	if len(c.mentions) > 0 {
+		if err := u.d.Issues.InsertMentions(ctx, s.links(c.mentions)); err != nil {
+			return err
+		}
 	}
 	accounts, err := assignees(ctx, u.d.Profiles, c.assignees)
 	if err != nil {
 		return err
 	}
-	return u.d.Issues.InsertActivities(ctx, s.activity(domain.CreationActivity(accounts)))
+	if err := u.d.Issues.InsertActivities(ctx, s.activity(domain.CreationActivity(accounts))); err != nil {
+		return err
+	}
+	return u.d.Issues.InsertDescriptionVersion(ctx, descriptionVersion(s, clean))
 }

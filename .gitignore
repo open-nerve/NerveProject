@@ -17,6 +17,9 @@ config.local.yaml
 # Claude Code 的隔离工作区
 .claude/worktrees/
 
+# Codex 的隔离工作区（沿用 worktress 路径约定）
+.codex/worktress/
+
 # 构建与依赖产物
 bin/
 node_modules/

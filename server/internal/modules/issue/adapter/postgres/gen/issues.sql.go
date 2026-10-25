@@ -13,8 +13,8 @@ import (
 )
 
 const getIssue = `-- name: GetIssue :one
-SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority, i.start_date, i.target_date,
-       i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
+SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_html, i.description_stripped,
+       i.state_id, i.priority, i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l
@@ -24,25 +24,27 @@ WHERE i.id = $1 AND i.deleted_at IS NULL
 `
 
 type GetIssueRow struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	ProjectID   uuid.UUID
-	SequenceID  int32
-	Name        string
-	StateID     uuid.UUID
-	Priority    string
-	StartDate   *time.Time
-	TargetDate  *time.Time
-	ParentID    *uuid.UUID
-	SortOrder   float64
-	CompletedAt *time.Time
-	ArchivedAt  *time.Time
-	CreatedByID *uuid.UUID
-	UpdatedByID *uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	AssigneeIds []uuid.UUID
-	LabelIds    []uuid.UUID
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	ProjectID           uuid.UUID
+	SequenceID          int32
+	Name                string
+	DescriptionHtml     string
+	DescriptionStripped *string
+	StateID             uuid.UUID
+	Priority            string
+	StartDate           *time.Time
+	TargetDate          *time.Time
+	ParentID            *uuid.UUID
+	SortOrder           float64
+	CompletedAt         *time.Time
+	ArchivedAt          *time.Time
+	CreatedByID         *uuid.UUID
+	UpdatedByID         *uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	AssigneeIds         []uuid.UUID
+	LabelIds            []uuid.UUID
 }
 
 // The undeleted work item, archived or not, as the API shows it (M4 design 5.2): with the accounts of its undeleted
@@ -57,6 +59,8 @@ func (q *Queries) GetIssue(ctx context.Context, id uuid.UUID) (GetIssueRow, erro
 		&i.ProjectID,
 		&i.SequenceID,
 		&i.Name,
+		&i.DescriptionHtml,
+		&i.DescriptionStripped,
 		&i.StateID,
 		&i.Priority,
 		&i.StartDate,
@@ -76,8 +80,8 @@ func (q *Queries) GetIssue(ctx context.Context, id uuid.UUID) (GetIssueRow, erro
 }
 
 const getIssues = `-- name: GetIssues :many
-SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority, i.start_date, i.target_date,
-       i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
+SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_html, i.description_stripped,
+       i.state_id, i.priority, i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l
@@ -88,25 +92,27 @@ ORDER BY i.id
 `
 
 type GetIssuesRow struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	ProjectID   uuid.UUID
-	SequenceID  int32
-	Name        string
-	StateID     uuid.UUID
-	Priority    string
-	StartDate   *time.Time
-	TargetDate  *time.Time
-	ParentID    *uuid.UUID
-	SortOrder   float64
-	CompletedAt *time.Time
-	ArchivedAt  *time.Time
-	CreatedByID *uuid.UUID
-	UpdatedByID *uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	AssigneeIds []uuid.UUID
-	LabelIds    []uuid.UUID
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	ProjectID           uuid.UUID
+	SequenceID          int32
+	Name                string
+	DescriptionHtml     string
+	DescriptionStripped *string
+	StateID             uuid.UUID
+	Priority            string
+	StartDate           *time.Time
+	TargetDate          *time.Time
+	ParentID            *uuid.UUID
+	SortOrder           float64
+	CompletedAt         *time.Time
+	ArchivedAt          *time.Time
+	CreatedByID         *uuid.UUID
+	UpdatedByID         *uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	AssigneeIds         []uuid.UUID
+	LabelIds            []uuid.UUID
 }
 
 // The undeleted work items among ids, archived or not, each as GetIssue reads it, in id order (M4 design 3.4, 3.9), in a
@@ -126,6 +132,8 @@ func (q *Queries) GetIssues(ctx context.Context, ids []uuid.UUID) ([]GetIssuesRo
 			&i.ProjectID,
 			&i.SequenceID,
 			&i.Name,
+			&i.DescriptionHtml,
+			&i.DescriptionStripped,
 			&i.StateID,
 			&i.Priority,
 			&i.StartDate,
@@ -252,31 +260,35 @@ func (q *Queries) InsertAssignees(ctx context.Context, arg InsertAssigneesParams
 
 const insertIssue = `-- name: InsertIssue :exec
 INSERT INTO issues (id, workspace_id, project_id, state_id, name, priority, start_date, target_date, parent_id, sequence_id,
-                    sort_order, completed_at, created_by_id, updated_by_id, created_at, updated_at)
+                    sort_order, completed_at, description_html, description_stripped, created_by_id, updated_by_id,
+                    created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10, $11,
-        $12, $13::uuid, $13, $14::timestamptz, $14)
+        $12, $13, $14, $15::uuid, $15,
+        $16::timestamptz, $16)
 `
 
 type InsertIssueParams struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	ProjectID   uuid.UUID
-	StateID     uuid.UUID
-	Name        string
-	Priority    string
-	StartDate   *time.Time
-	TargetDate  *time.Time
-	ParentID    *uuid.UUID
-	SequenceID  int32
-	SortOrder   float64
-	CompletedAt *time.Time
-	By          *uuid.UUID
-	At          time.Time
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	ProjectID           uuid.UUID
+	StateID             uuid.UUID
+	Name                string
+	Priority            string
+	StartDate           *time.Time
+	TargetDate          *time.Time
+	ParentID            *uuid.UUID
+	SequenceID          int32
+	SortOrder           float64
+	CompletedAt         *time.Time
+	DescriptionHtml     string
+	DescriptionStripped *string
+	By                  *uuid.UUID
+	At                  time.Time
 }
 
 // createIssue's work item (M4 design 3.5), under the project's FOR NO KEY UPDATE; created and last changed at the
-// moment and by the account given. The fields of later phases keep their defaults.
+// moment and by the account given. Description values are explicit, including nullable legacy text.
 func (q *Queries) InsertIssue(ctx context.Context, arg InsertIssueParams) error {
 	_, err := q.db.Exec(ctx, insertIssue,
 		arg.ID,
@@ -291,6 +303,8 @@ func (q *Queries) InsertIssue(ctx context.Context, arg InsertIssueParams) error 
 		arg.SequenceID,
 		arg.SortOrder,
 		arg.CompletedAt,
+		arg.DescriptionHtml,
+		arg.DescriptionStripped,
 		arg.By,
 		arg.At,
 	)

@@ -10,6 +10,20 @@ import (
 	"uuid"
 )
 
+type CommentReaction struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	CommentID   uuid.UUID
+	ActorID     uuid.UUID
+	Reaction    string
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
 type Issue struct {
 	ID                  uuid.UUID
 	WorkspaceID         uuid.UUID
@@ -66,12 +80,71 @@ type IssueAssignee struct {
 	DeletedAt   *time.Time
 }
 
+type IssueComment struct {
+	ID              uuid.UUID
+	WorkspaceID     uuid.UUID
+	ProjectID       uuid.UUID
+	IssueID         uuid.UUID
+	ActorID         uuid.UUID
+	CommentHtml     string
+	CommentStripped string
+	EditedAt        *time.Time
+	CreatedByID     *uuid.UUID
+	UpdatedByID     *uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	DeletedAt       *time.Time
+}
+
+type IssueDescriptionVersion struct {
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	ProjectID           uuid.UUID
+	IssueID             uuid.UUID
+	DescriptionHtml     string
+	DescriptionStripped *string
+	LastSavedAt         time.Time
+	OwnedByID           uuid.UUID
+	CreatedByID         *uuid.UUID
+	UpdatedByID         *uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	DeletedAt           *time.Time
+}
+
 type IssueLabel struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
 	ProjectID   uuid.UUID
 	IssueID     uuid.UUID
 	LabelID     uuid.UUID
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
+type IssueMention struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	IssueID     uuid.UUID
+	MentionID   uuid.UUID
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
+type IssueReaction struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	IssueID     uuid.UUID
+	ActorID     uuid.UUID
+	Reaction    string
 	CreatedByID *uuid.UUID
 	UpdatedByID *uuid.UUID
 	CreatedAt   time.Time

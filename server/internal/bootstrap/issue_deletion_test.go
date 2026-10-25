@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -64,6 +65,7 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 	var made [3]uuid.UUID
 	for i, body := range []string{`{"name":"Gone","assignee_ids":["` + account.String() + `"],"label_ids":["` + bug.String() + `"]}`,
 		`{"name":"Part"}`, `{"name":"Kin"}`} {
+		body = strings.TrimSuffix(body, "}") + `,"description_html":"<mention-component entity_name=\"user_mention\" entity_identifier=\"` + account.String() + `\"></mention-component>"}`
 		status, answer := call(t, contract, http.MethodPost, base+"/api/v0/projects/"+project.String()+"/issues", token, body)
 		if status != http.StatusCreated {
 			t.Fatalf("creating the work item = %d %s, want 201", status, answer)
@@ -73,6 +75,20 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 		}
 		decodeAnswer(t, answer, &created)
 		made[i] = created.ID
+		status, answer = call(t, contract, http.MethodPost, base+reactionsOf(created.ID), token, `{"reaction":"128077"}`)
+		if status != http.StatusCreated {
+			t.Fatal(status, answer)
+		}
+		status, answer = call(t, contract, http.MethodPost, base+commentsOf(created.ID), token, `{"comment_html":"<p>Seeded</p>"}`)
+		if status != http.StatusCreated {
+			t.Fatal(status, answer)
+		}
+		var comment answeredComment
+		decodeAnswer(t, answer, &comment)
+		status, answer = call(t, contract, http.MethodPost, base+commentReactionsOf(comment.ID), token, `{"reaction":"128077"}`)
+		if status != http.StatusCreated {
+			t.Fatal(status, answer)
+		}
 	}
 	gone := made[0]
 	underWorkItem(t, pool, gone, made[1])
@@ -106,6 +122,16 @@ func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	w := newIssueWorld(t)
 	deleted, kept := w.newWorkItemBy(t, "bob", w.web, w.fullIssue()), w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
 	for _, parent := range []uuid.UUID{deleted, kept} {
+		for _, html := range []string{mentionHTML(w.ids["bob"]), "<p>Removed</p>", mentionHTML(w.ids["bob"])} {
+			w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+parent.String(), fmt.Sprintf(`{"description_html":%q}`, html), 200)
+		}
+		w.send(t, "bob", http.MethodPost, reactionsOf(parent), `{"reaction":"128077"}`, http.StatusCreated)
+		w.send(t, "bob", http.MethodPost, reactionsOf(parent), `{"reaction":"1"}`, http.StatusCreated)
+		w.send(t, "bob", http.MethodDelete, reactionsOf(parent)+"/1", "", http.StatusNoContent)
+		comment := w.newComment(t, "bob", parent)
+		addCommentReaction(t, w, "bob", comment.ID, "128077")
+		addCommentReaction(t, w, "bob", comment.ID, "1")
+		w.send(t, "bob", http.MethodDelete, commentReactionsOf(comment.ID)+"/1", "", 204)
 		underWorkItem(t, w.pool, parent, w.newWorkItemBy(t, "bob", w.web, `{"name":"Part"}`))
 	}
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
@@ -223,6 +249,11 @@ func TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment(t *testing.T) {
 	p := w.newWorkItem(t)
 	root := w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
 	a, b, c := w.newWorkItem(t), w.newWorkItemBy(t, "bob", w.web, `{"name":"Fix"}`), w.doneWorkItem(t)
+	for _, id := range []uuid.UUID{p, root, a, b, c} {
+		w.send(t, "bob", http.MethodPost, reactionsOf(id), `{"reaction":"128077"}`, http.StatusCreated)
+		comment := w.newComment(t, "bob", id)
+		addCommentReaction(t, w, "bob", comment.ID, "128077")
+	}
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+c.String()+"/archive", "", http.StatusOK)
 	s, d, o := w.newWorkItem(t), w.newWorkItem(t), w.newWorkItem(t)
 	underWorkItem(t, w.pool, p, root)

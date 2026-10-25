@@ -340,6 +340,21 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 			}
 		}
 	}
+
+	// Reaction codes are value parameters only in the documented issue reaction path.
+	reactionPattern := "/api/v0/issues/{issue_id}/reactions/{reaction}"
+	reactionPath := "/api/v0/issues/" + s.issue(projectOf(callerProjectAdmin), issueOf(callerProjectAdmin)).String() + "/reactions/"
+	for _, tt := range []struct {
+		pattern, path string
+		valid         bool
+	}{{reactionPattern, reactionPath + "128077", true},
+		{"/api/v0/issue-comments/{comment_id}/reactions/{reaction}", commentReactionsOf(s.comment(projectOf(callerProjectAdmin), issueOf(callerProjectAdmin))) + "/128077", true},
+		{"/api/v0/issue-comments/{comment_id}/reactions/{reaction}", commentReactionsOf(s.comment(projectOf(callerProjectAdmin), issueOf(callerProjectAdmin))) + "/1", false}, {reactionPattern, reactionPath + "1", false}, {"/api/v0/reactions/{reaction}", "/api/v0/reactions/128077", false}} {
+		v := targetViolation(tt.pattern, tt.path, callerProjectAdmin, s, func(string) bool { return false })
+		if (v == "") != tt.valid {
+			t.Errorf("reaction target %s: %q", tt.path, v)
+		}
+	}
 	// A parameter passed over before another leaves that one checked too.
 	if v := targetViolation("/api/v0/project-identifiers/{identifier}/projects/{project_id}", "/api/v0/project-identifiers/WEB/projects/"+public,
 		callerMemberPrivate, s, func(param string) bool { return param == "{identifier}" }); v == "" {

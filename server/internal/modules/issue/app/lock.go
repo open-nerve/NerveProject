@@ -60,6 +60,7 @@ type write struct {
 	action   shared.Action
 	notFound error
 	reach    []uuid.UUID
+	check    func(context.Context, domain.Issue, shared.Grant) error
 }
 
 // held is what a write holds under its lock: its project, locked; the
@@ -110,10 +111,10 @@ func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx
 // transaction (M4 design 3.5), and answers w, on its project unless it is
 // on either of two work items, with what it lets through to the lock
 // (scope). For a write that names a work item: the work item read without
-// a lock and the decision on it (see); a work item that is not there,
+// a lock and the decision on it (seeAs); a work item that is not there,
 // whose project actor does not see, or that the guest rule hides from
-// him, is issue.not_found; across projects, then, each work item it
-// reaches (reachAll). For one on either of two work items: both read
+// him, answers the caller's w.notFound; across projects, then, each work item
+// it reaches (reachAll). For one on either of two work items: both read
 // without a lock, and the decisions on them (eitherOf).
 // For one on a project: the project read without a lock and the decision
 // on it; a project that is not there, or not visible to actor, is
@@ -125,9 +126,14 @@ func (l Locks) precheck(ctx context.Context, actor shared.Actor, w write) (write
 		return w, s, err
 	}
 	if w.issue != nil {
-		i, _, err := l.see(ctx, actor, *w.issue, w.action)
+		i, grant, err := l.seeAs(ctx, actor, *w.issue, w.action, w.notFound)
 		if err != nil {
 			return write{}, scope{}, err
+		}
+		if w.check != nil {
+			if err := w.check(ctx, i, grant); err != nil {
+				return write{}, scope{}, err
+			}
 		}
 		w.project = i.ProjectID
 		if w.reach == nil {
@@ -185,6 +191,11 @@ func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write, s
 	if h.grant, err = l.decide(ctx, actor, w.action, p.WorkspaceID, w.project, on, w.notFound); err != nil {
 		return held{}, err
 	}
+	if w.check != nil {
+		if err := w.check(ctx, h.issue, h.grant); err != nil {
+			return held{}, err
+		}
+	}
 	if w.reach != nil {
 		if h.reached, err = l.reachUnder(ctx, actor, h.issue, w.reach, s, locked); err != nil {
 			return held{}, err
@@ -200,14 +211,19 @@ func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write, s
 // the Authorizer's shared.Forbidden. It answers the work item as read, and
 // the decision's grant.
 func (l Locks) see(ctx context.Context, actor shared.Actor, id uuid.UUID, action shared.Action) (domain.Issue, shared.Grant, error) {
+	return l.seeAs(ctx, actor, id, action, domain.ErrIssueNotFound)
+}
+
+// seeAs decides visibility using the named resource's not-found value.
+func (l Locks) seeAs(ctx context.Context, actor shared.Actor, id uuid.UUID, action shared.Action, notFound error) (domain.Issue, shared.Grant, error) {
 	i, found, err := l.issues.GetIssue(ctx, id)
 	switch {
 	case err != nil:
 		return domain.Issue{}, shared.Grant{}, err
 	case !found:
-		return domain.Issue{}, shared.Grant{}, domain.ErrIssueNotFound
+		return domain.Issue{}, shared.Grant{}, notFound
 	}
-	grant, err := l.decide(ctx, actor, action, i.WorkspaceID, i.ProjectID, &i, domain.ErrIssueNotFound)
+	grant, err := l.decide(ctx, actor, action, i.WorkspaceID, i.ProjectID, &i, notFound)
 	if err != nil {
 		return domain.Issue{}, shared.Grant{}, err
 	}

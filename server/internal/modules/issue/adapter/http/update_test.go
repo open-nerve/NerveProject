@@ -20,6 +20,7 @@ import (
 // work item the use case answers, as POST shows it.
 func TestUpdateIssue(t *testing.T) {
 	path := "/api/v0/issues/" + webSeven.ID.String()
+	html, skip := "<p>Rich</p>", true
 	name, high, none := " Mend ", domain.PriorityHigh, []uuid.UUID{}
 	for _, tt := range []struct {
 		body string
@@ -29,6 +30,7 @@ func TestUpdateIssue(t *testing.T) {
 			`"assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"]}`,
 			domain.IssuePatch{Name: &name, StateID: &stateID, Priority: &high, AssigneeIDs: &[]uuid.UUID{bobID}, LabelIDs: &[]uuid.UUID{bugID}}},
 		{`{}`, domain.IssuePatch{}},
+		{`{"description_html":"<p>Rich</p>","skip_activity":true}`, domain.IssuePatch{DescriptionHTML: &html, SkipActivity: &skip}},
 		{`{"assignee_ids":[],"label_ids":[]}`, domain.IssuePatch{AssigneeIDs: &none, LabelIDs: &none}},
 		{`{"start_date":"2026-10-12","target_date":null}`, domain.IssuePatch{SetStartDate: true, StartDate: &startDay, SetTargetDate: true}},
 		{`{"start_date":null,"target_date":"2026-10-19"}`, domain.IssuePatch{SetStartDate: true, SetTargetDate: true, TargetDate: &targetDay}},
@@ -37,8 +39,8 @@ func TestUpdateIssue(t *testing.T) {
 	} {
 		update := &fakeUpdate{answer: webSeven}
 		res, body := do(t, newServer(t, httpadapter.UseCases{UpdateIssue: update}), request(http.MethodPatch, path, "alice", tt.body))
-		if res.StatusCode != http.StatusOK || body != webSevenJSON+"\n" {
-			t.Errorf("PATCH %s = %d %s, want 200 %s", tt.body, res.StatusCode, body, webSevenJSON)
+		if res.StatusCode != http.StatusOK || body != webSevenDetailJSON+"\n" {
+			t.Errorf("PATCH %s = %d %s, want 200 %s", tt.body, res.StatusCode, body, webSevenDetailJSON)
 		}
 		if want := []string{aliceID.String() + " " + webSeven.ID.String()}; !slices.Equal(update.calls, want) ||
 			!reflect.DeepEqual(update.got, []domain.IssuePatch{tt.want}) {
@@ -47,15 +49,14 @@ func TestUpdateIssue(t *testing.T) {
 	}
 }
 
-// A body with a field it may not have (a number, which the project gives;
-// a sort order, a description, which IssueUpdate has not in P3: M4 design
-// 12, constraint 5), null for a field that is not nullable, a field of
-// another type, an id that is no id, or a date that is no day or has a
-// time: refused as bad_request before the use case.
+// A body with a generated number or sort order, null for a nonnullable
+// field (including description_html), a value of the wrong type, an invalid
+// id, or a date that is no day or includes a time is refused as bad_request
+// before the use case.
 func TestUpdateIssueHoldsTheBodyToItsStructure(t *testing.T) {
 	update := &fakeUpdate{}
 	h := newServer(t, httpadapter.UseCases{UpdateIssue: update})
-	for _, body := range []string{`{"sequence_id":3}`, `{"sort_order":1}`, `{"description_html":"<p>x</p>"}`,
+	for _, body := range []string{`{"sequence_id":3}`, `{"sort_order":1}`, `{"description_html":null}`, `{"skip_activity":"yes"}`,
 		`{"name":null}`, `{"state_id":null}`, `{"assignee_ids":null}`, `{"name":1}`, `{"state_id":"Backlog"}`, `{"assignee_ids":"bob"}`,
 		`{"label_ids":["Bug"]}`, `{"parent_id":"WEB-6"}`, `{"start_date":"2026-02-30"}`, `{"target_date":"2026-10-19T00:00:00Z"}`} {
 		res, got := do(t, h, request(http.MethodPatch, "/api/v0/issues/"+webSeven.ID.String(), "alice", body))

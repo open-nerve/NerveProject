@@ -159,3 +159,13 @@ M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以�
 仍未处理，状态保持 `open`：第 2 节其余各项：P3 之后各 Phase 的批量写按约定五核对（到 M4 的 P9）、物理删除账户（M4 的 P9）；第 3 节其余各项：P3 之后各 Phase 的操作在规则表、操作名、矩阵中的行（每个后端的 Phase，到 M4 的 P9）、决策点 3 的个人主页一行（M4 的 P5）和其余工作项列表的访客规则（各列表的 Phase）；第 4 节的 `archive_in`（M4 的 P6）的说明和删除断言的限时轮询（M4 的 P9）；第 1、5–9 节，按 M4 设计 13.1 的落点。
 
 来源：[M4/P3 spec](../specs/P3-issue-hierarchy.md) 第 7 节。
+
+## 处理结果（M4/P4）
+
+- §2：P4新写和五表删除遵全局表序（issues→…→mentions→comments→issue_reactions→comment_reactions→activities→description_versions），项目N先行，批删除仍用现有键集。T13复核P3既有双端关系先relations后MarkChanged沿原批准项目N证明，不扩成新逆序许可；物理清理账户与后续批写仍归P9及拥有Phase。
+- §3：12新操作同Task扩规则/操作/矩阵、HTTP双向契约/中英文错误；T14完整隐藏404与管理员兼访客OwnOnly、作者规则及归档顺序，T15 API故事通过；其余列表与个人主页仍归P5及后续Phase。
+- §4：五表均随首个API带workspace/project外键、grants/sqlc/删除与furnish，评论表情二层实际FK两端由目录核验；T6两个错误目标列反例、T15旧删除分支/邻居快照和父子孙同戳验证通过；P9异步删除后的限时轮询尚未实现，archive_in说明归P6。
+- §9：T2已将PageSize移至shared，默认50/范围1–100，PAT/评论/动态/版本共用；T2 ReadOnlySnapshot已落地并与LockTimeout正确组合，T3/10/12/14消费首读、历史目录、SQL、表情批读同一只读快照。P5复用该能力和Historical目录，新增普通VisibleProjects方法、替换P3 seeEach/ArchivedProjects及force_custom_plan，勿重复实现。
+- 余项：§1全M4锁/规模、§5–8筛选/service/store/浏览器/复制/文案按原分配继续，P11新DTO/地址与comment_json、P14保存和弹窗、P15时间线页面是后续工作；本Phase不关闭整份交接。
+
+状态保持 `open`；本次仅完成P4接收部分，待M4真正收尾逐项核对关闭条件。证据：[P4 spec §4/§7](../specs/P4-issue-collaboration.md#4-验收标准)、[P4 review §2/§6](../reviews/P4-issue-collaboration-review.md#2-验收标准核对)。

@@ -2,13 +2,13 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"slices"
 	"testing"
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
@@ -46,6 +46,26 @@ func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *p
 	for _, project := range []uuid.UUID{web, ops} {
 		seedLabels(t, pool, project, aliceID)
 		seedIssues(t, pool, project, aliceID)
+		for _, id := range queryIDs(t, pool, "SELECT id FROM issues WHERE project_id=$1", project) {
+			status, body := call(t, contract, http.MethodPatch, base+"/api/v0/issues/"+id.String(), alice, fmt.Sprintf(`{"description_html":%q}`, mentionHTML(aliceID)))
+			if status != http.StatusOK {
+				t.Fatal(status, body)
+			}
+			status, body = call(t, contract, http.MethodPost, base+reactionsOf(id), alice, `{"reaction":"128077"}`)
+			if status != http.StatusCreated {
+				t.Fatal(status, body)
+			}
+			status, body = call(t, contract, http.MethodPost, base+commentsOf(id), alice, `{"comment_html":"<p>Seeded</p>"}`)
+			if status != http.StatusCreated {
+				t.Fatal(status, body)
+			}
+			var comment answeredComment
+			decodeAnswer(t, body, &comment)
+			status, body = call(t, contract, http.MethodPost, base+commentReactionsOf(comment.ID), alice, `{"reaction":"128077"}`)
+			if status != http.StatusCreated {
+				t.Fatal(status, body)
+			}
+		}
 	}
 	return contract, base, pool, alice, aliceID, web, ops
 }
@@ -112,8 +132,7 @@ func noRowLastWrittenBy(t *testing.T, pool *pgxpool.Pool, keys []foreignKey, id,
 	t.Helper()
 	for _, k := range keys {
 		var n int
-		if err := pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
-			" = $1 AND updated_by_id = $2", id, by).Scan(&n); err != nil || n != 0 {
+		if err := pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM "+k.table+" r WHERE "+k.scope()+" AND updated_by_id = $2", id, by).Scan(&n); err != nil || n != 0 {
 			t.Fatalf("%s: %d rows under the %s %s last written by %s, %v; want none", k, n, rowOf(k.parent), id, by, err)
 		}
 	}

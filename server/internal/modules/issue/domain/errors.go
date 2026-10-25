@@ -7,6 +7,16 @@ import "github.com/open-nerve/NerveProject/server/internal/shared"
 // a workspace the workspace module's code for the workspace, which they
 // declare too (M4 design 5.1), with those modules' details.
 var (
+	// ErrDescriptionVersionNotFound conceals missing versions and hidden parent issues.
+	ErrDescriptionVersionNotFound = shared.NewError(shared.KindNotFound, "issue.description_version_not_found", "The description version does not exist, or you cannot see it.")
+	// ErrReactionExists answers a duplicate live reaction of the caller.
+	ErrReactionExists = shared.NewError(shared.KindConflict, "issue.reaction_exists", "You already have this reaction.")
+	// ErrReactionNotFound answers a missing live reaction of the caller.
+	ErrReactionNotFound = shared.NewError(shared.KindNotFound, "issue.reaction_not_found", "You do not have this reaction.")
+	// ErrCommentNotFound conceals missing comments and hidden parent issues alike.
+	ErrCommentNotFound = shared.NewError(shared.KindNotFound, "issue.comment_not_found", "The comment does not exist, or you cannot see it.")
+	// ErrNotAuthor answers relative comment permissions after visibility succeeds.
+	ErrNotAuthor = shared.NewError(shared.KindForbidden, "issue.not_author", "Only the author can edit a comment; only the author or a project administrator can delete it.")
 	// ErrWorkspaceNotFound answers a workspace that does not exist, is
 	// deleted, or of which the caller is not an active member (M3 design
 	// 5.1, 8.2).

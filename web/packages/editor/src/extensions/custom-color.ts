@@ -43,6 +43,9 @@ declare module "@tiptap/core" {
 export const CustomColorExtension = Mark.create({
   name: CORE_EXTENSIONS.CUSTOM_COLOR,
 
+  // Color spans own their data attributes before TextStyle (priority 101) can consume their CSS.
+  priority: 102,
+
   addOptions() {
     return {
       HTMLAttributes: {},
@@ -113,17 +116,15 @@ export const CustomColorExtension = Mark.create({
     };
   },
 
-  // @ts-expect-error types are incorrect
-  // TODO: check this and update types
   parseHTML() {
     return [
       {
         tag: "span",
-        getAttrs: (node) => node.getAttribute("data-text-color") && null,
+        getAttrs: (node) => (node.getAttribute("data-text-color") ? null : false),
       },
       {
         tag: "span",
-        getAttrs: (node) => node.getAttribute("data-background-color") && null,
+        getAttrs: (node) => (node.getAttribute("data-background-color") ? null : false),
       },
     ];
   },

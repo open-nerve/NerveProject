@@ -340,8 +340,8 @@ export async function expectIssueArchival(db: Database, issueId: string, want: A
  * I15, I17: the work item of issueId is deleted by the account of email, and with it, at the same moment and by the
  * same account, every row under it that was not deleted before (M4 design 3.6). A row is under it when a foreign key
  * of its table names the work item or a row under it: the catalog's graph of foreign keys is walked down from issues
- * (keysBelow, which fails on a key of more than one column), so that a row two keys below (a reaction to a comment,
- * which names the comment, or the work item under a work item under it) is under it too. Each key of the graph has
+ * (keysBelow, which requires a single source/target column and verifies its target id), so that a row two keys below
+ * (a reaction to a comment, which names the comment, or the work item under a work item under it) is under it too. Each key of the graph has
  * such a row, its sub-items' and its relations' either way among them; a row deleted before the work item is neither
  * held to its deletion nor checked here (that it keeps its deletion is
  * `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`'s).

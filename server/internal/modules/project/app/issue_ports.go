@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // IssueCascade is what the project's deletions ask of the work items (M4
@@ -64,4 +66,18 @@ type IssueLabel struct {
 type IssueProjectIdentifier struct {
 	ID         uuid.UUID
 	Identifier string
+}
+
+// IssueMemberVisibility is an active member's role and effective guest scope.
+type IssueMemberVisibility struct {
+	ID      uuid.UUID
+	Role    shared.Role
+	OwnOnly bool
+}
+
+// HistoricalIssueProject is an actor's historical project role and guest scope.
+type HistoricalIssueProject struct {
+	ID      uuid.UUID
+	Role    shared.Role
+	OwnOnly bool
 }

@@ -72,3 +72,28 @@ func (s *Store) DeleteIssueSubscriberRows(ctx context.Context, d app.IssueDeleti
 func (s *Store) DeleteIssueActivityRows(ctx context.Context, d app.IssueDeletion) error {
 	return deletedRows(s.queries(ctx).DeleteIssueActivityRows(ctx, gen.DeleteIssueActivityRowsParams(deletion(d))), "the activity", d)
 }
+
+// DeleteIssueCommentRows soft-deletes comment rows in the existing deletion sequence.
+func (s *Store) DeleteIssueCommentRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueCommentRows(ctx, gen.DeleteIssueCommentRowsParams(deletion(d))), "the comments", d)
+}
+
+// DeleteIssueReactionRows soft-deletes reaction rows in the existing deletion sequence.
+func (s *Store) DeleteIssueReactionRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueReactionRows(ctx, gen.DeleteIssueReactionRowsParams(deletion(d))), "the reactions", d)
+}
+
+// DeleteIssueCommentReactionRows soft-deletes comment reaction rows in the existing deletion sequence.
+func (s *Store) DeleteIssueCommentReactionRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueCommentReactionRows(ctx, gen.DeleteIssueCommentReactionRowsParams(deletion(d))), "the comment reactions", d)
+}
+
+// DeleteIssueMentionRows soft deletes live rows in the requested subtree.
+func (s *Store) DeleteIssueMentionRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueMentionRows(ctx, gen.DeleteIssueMentionRowsParams(deletion(d))), "Mention", d)
+}
+
+// DeleteIssueDescriptionVersionRows soft deletes live rows in the requested subtree.
+func (s *Store) DeleteIssueDescriptionVersionRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueDescriptionVersionRows(ctx, gen.DeleteIssueDescriptionVersionRowsParams(deletion(d))), "DescriptionVersion", d)
+}

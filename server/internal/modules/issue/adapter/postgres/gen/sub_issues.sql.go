@@ -84,8 +84,8 @@ func (q *Queries) SubIssueCounts(ctx context.Context, arg SubIssueCountsParams) 
 }
 
 const subIssues = `-- name: SubIssues :many
-SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority, i.start_date, i.target_date,
-       i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
+SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_html, i.description_stripped,
+       i.state_id, i.priority, i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l
@@ -102,25 +102,27 @@ type SubIssuesParams struct {
 }
 
 type SubIssuesRow struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	ProjectID   uuid.UUID
-	SequenceID  int32
-	Name        string
-	StateID     uuid.UUID
-	Priority    string
-	StartDate   *time.Time
-	TargetDate  *time.Time
-	ParentID    *uuid.UUID
-	SortOrder   float64
-	CompletedAt *time.Time
-	ArchivedAt  *time.Time
-	CreatedByID *uuid.UUID
-	UpdatedByID *uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	AssigneeIds []uuid.UUID
-	LabelIds    []uuid.UUID
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	ProjectID           uuid.UUID
+	SequenceID          int32
+	Name                string
+	DescriptionHtml     string
+	DescriptionStripped *string
+	StateID             uuid.UUID
+	Priority            string
+	StartDate           *time.Time
+	TargetDate          *time.Time
+	ParentID            *uuid.UUID
+	SortOrder           float64
+	CompletedAt         *time.Time
+	ArchivedAt          *time.Time
+	CreatedByID         *uuid.UUID
+	UpdatedByID         *uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	AssigneeIds         []uuid.UUID
+	LabelIds            []uuid.UUID
 }
 
 // The undeleted, unarchived work items directly under the work item parent_id, each as GetIssue reads it, those the
@@ -141,6 +143,8 @@ func (q *Queries) SubIssues(ctx context.Context, arg SubIssuesParams) ([]SubIssu
 			&i.ProjectID,
 			&i.SequenceID,
 			&i.Name,
+			&i.DescriptionHtml,
+			&i.DescriptionStripped,
 			&i.StateID,
 			&i.Priority,
 			&i.StartDate,

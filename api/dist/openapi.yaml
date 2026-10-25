@@ -1599,6 +1599,365 @@ paths:
                 $ref: '#/components/schemas/IssueCollection'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issue-comments/{comment_id}:
+    parameters:
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateIssueComment
+      tags:
+        - issue
+      summary: Edit a comment as its author
+      description: Uses issue_comment.write for project admins, members and guests, then checks the comment author before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Only the comment author can edit, even for project admins. Project archiving refuses before issue archiving, and both refuse before unchanged sanitized HTML. Identical sanitized HTML writes nothing and preserves edited_at. Changed HTML sets edited_at and updated_at together, updates the work item and subscribes newly mentioned visible members without removing subscriptions. No activity is created. Busy projects answer 503 with Retry-After.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.comment_not_found
+        - forbidden
+        - issue.not_author
+        - project.archived
+        - issue.archived
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueCommentCreate'
+      responses:
+        '200':
+          description: The edited or unchanged comment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueComment'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteIssueComment
+      tags:
+        - issue
+      summary: Delete a comment as its author or project administrator
+      description: Uses issue_comment.write then checks author or ProjectAdmin, before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Project archiving refuses before issue archiving. Soft-deletes only the live comment, updates its parent work item using the same writer and moment, and creates no activity. Busy projects answer 503 server_busy with Retry-After.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - issue.comment_not_found
+        - forbidden
+        - issue.not_author
+        - project.archived
+        - issue.archived
+        - server_busy
+      responses:
+        '204':
+          description: The comment was deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issue-comments/{comment_id}/reactions:
+    parameters:
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: addCommentReaction
+      tags:
+        - issue
+      summary: Add the caller's reaction
+      description: Admins, members and guests may react to visible comments, regardless of comment author. Invalid decimal codes answer validation_failed before reads. Visibility and role are checked before the write gate and again under the project lock. Project archival precedes issue archival, then an existing live reaction of this caller answers issue.reaction_exists. Success adds only the reaction, preserving all issue and comment audit fields, activities and subscriptions.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.comment_not_found
+        - forbidden
+        - project.archived
+        - issue.archived
+        - issue.reaction_exists
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReactionCreate'
+      responses:
+        '201':
+          description: The new reaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentReaction'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issue-comments/{comment_id}/reactions/{reaction}:
+    parameters:
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: reaction
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9]{1,7}(-[0-9]{1,7}){0,15}$
+          maxLength: 128
+    delete:
+      operationId: removeCommentReaction
+      tags:
+        - issue
+      summary: Remove the caller's reaction
+      description: Uses addCommentReaction's role, visibility, validation and archive order. Only the caller's own live reaction is removed; absence answers issue.reaction_not_found, even when another actor has the same reaction. Success soft-deletes only the reaction, preserving all parent audit fields, activities and subscriptions.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.comment_not_found
+        - forbidden
+        - project.archived
+        - issue.archived
+        - issue.reaction_not_found
+        - server_busy
+      responses:
+        '204':
+          description: The caller's reaction was removed.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/reactions:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: listIssueReactions
+      tags:
+        - issue
+      summary: List reactions on a visible work item
+      description: Uses issue.read, including guest visibility. Live reactions are ordered by (created_at,id) ascending in one independent read snapshot.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - issue.not_found
+        - forbidden
+      responses:
+        '200':
+          description: Live reactions, including an empty data array.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueReactionCollection'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: addIssueReaction
+      tags:
+        - issue
+      summary: Add the caller's reaction
+      description: Admins, members and guests may react to visible issues. Invalid decimal codes answer validation_failed before reads. Visibility and role are checked before the write gate and again under the project lock. Project archival precedes issue archival, then an existing live reaction of this caller answers issue.reaction_exists. Success updates the issue audit and adds the reaction at one moment, without activity or subscription changes.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.not_found
+        - forbidden
+        - project.archived
+        - issue.archived
+        - issue.reaction_exists
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReactionCreate'
+      responses:
+        '201':
+          description: The new reaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueReaction'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/reactions/{reaction}:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+      - name: reaction
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9]{1,7}(-[0-9]{1,7}){0,15}$
+          maxLength: 128
+    delete:
+      operationId: removeIssueReaction
+      tags:
+        - issue
+      summary: Remove the caller's reaction
+      description: Uses addIssueReaction's role, visibility, validation and archive order. Only the caller's own live reaction is removed; absence answers issue.reaction_not_found, even when another actor has the same reaction. Success updates the issue audit and soft-deletes the reaction at one moment, without activity or subscription changes.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.not_found
+        - forbidden
+        - project.archived
+        - issue.archived
+        - issue.reaction_not_found
+        - server_busy
+      responses:
+        '204':
+          description: The caller's reaction was removed.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/activities:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: listIssueActivities
+      tags:
+        - issue
+      summary: List a work item's visible activity
+      description: Uses issue.read, after the work item guest visibility rule. Hidden or missing work items answer issue.not_found before forbidden. Archived projects and work items remain readable. Visibility and page reads share one independent read snapshot. Activities are ordered by (created_at,id) ascending; a cursor is only a position and cannot expand the target's rows. For parent and relation fields, each nonnull identifier must name an existing issue in an active historical membership, respecting that project's guest scope. Soft deletion and archival of references and their projects do not hide history. Hidden or physically missing references remove the entire row before pagination. Only the eleven activity fields are returned.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.not_found
+        - forbidden
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Visible activity, with null next_cursor on the last page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueActivityPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/description-versions:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: listDescriptionVersions
+      tags:
+        - issue
+      summary: List a work item's saved descriptions
+      description: Uses issue_description_version.read for project admins and members, after the work item guest visibility rule. Hidden or missing work items answer issue.not_found before forbidden. Archived projects and work items remain readable. Visibility and page reads share one independent read snapshot. Versions are ordered by (last_saved_at,id) descending; a cursor is only a position and cannot expand the target's rows. No HTML is listed.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.not_found
+        - forbidden
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Saved descriptions, with null next_cursor on the last page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescriptionVersionPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issue-description-versions/{version_id}:
+    parameters:
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getDescriptionVersion
+      tags:
+        - issue
+      summary: Read one saved description
+      description: Uses the same role and guest visibility rules as listDescriptionVersions. Missing, deleted and hidden versions or parents answer the identical issue.description_version_not_found problem before role refusal. Archived resources remain readable. To restore the HTML, use the ordinary issue PATCH, including its archive refusal and 600-second version merge policy.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - issue.description_version_not_found
+        - forbidden
+      responses:
+        '200':
+          description: The saved description including its HTML.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescriptionVersionDetail'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/comments:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: listIssueComments
+      tags:
+        - issue
+      summary: List comments on a visible work item
+      description: Uses issue.read, including its guest visibility rule. Comments are in ascending (created_at, id) order. The cursor is only an exclusive position and never grants access to its source work item. Invalid cursor (400 bad_request) is checked before limit (422 validation_failed). The target, authorization and page are read in one snapshot.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - bad_request
+        - validation_failed
+        - issue.not_found
+        - forbidden
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Comments, with null next_cursor on the final page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueCommentPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createIssueComment
+      tags:
+        - issue
+      summary: Create a comment on a visible work item
+      description: For the project's admins, members and guests who can read the work item. Missing or hidden work items answer issue.not_found before forbidden. The project is locked first and the decision repeated. An archived project refuses with project.archived before an archived issue with issue.archived. Sanitized content must contain text, a mention or image; otherwise validation_failed on comment_html, required. At most 500000 Unicode characters before sanitization. The caller and active mentioned members who can read it automatically subscribe. Existing subscriptions keep their identity and timestamps. All new rows have one writer and moment; this creates no activity or issue_mentions. Busy projects answer 503 server_busy with Retry-After.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.not_found
+        - forbidden
+        - project.archived
+        - issue.archived
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueCommentCreate'
+      responses:
+        '201':
+          description: The new comment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueComment'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/issues/{issue_id}/relations:
     parameters:
       - $ref: '#/components/parameters/IssueID'
@@ -3140,6 +3499,9 @@ components:
       required:
         - name
       properties:
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
         name:
           description: 1–255 characters without the white space around it, which is not stored.
           type: string
@@ -3178,6 +3540,7 @@ components:
       type: object
       additionalProperties: false
       required:
+        - description_html
         - id
         - workspace_id
         - project_id
@@ -3199,6 +3562,9 @@ components:
         - created_at
         - updated_at
       properties:
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
         id:
           type: string
           format: uuid
@@ -3289,6 +3655,12 @@ components:
       type: object
       additionalProperties: false
       properties:
+        skip_activity:
+          description: Only with description_html alone; preserves audit when content identity is unchanged.
+          type: boolean
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
         name:
           description: 1–255 characters without the white space around it, which is not stored.
           type: string
@@ -3462,6 +3834,271 @@ components:
           items:
             type: string
             format: uuid
+    IssueCommentCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - comment_html
+      properties:
+        comment_html:
+          type: string
+          maxLength: 500000
+    CommentReaction:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - comment_id
+        - actor_id
+        - reaction
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        comment_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+        reaction:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    IssueComment:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - issue_id
+        - actor_id
+        - comment_html
+        - edited_at
+        - created_at
+        - updated_at
+        - reactions
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+        comment_html:
+          type: string
+        edited_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        reactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommentReaction'
+    ReactionCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - reaction
+      properties:
+        reaction:
+          type: string
+          pattern: ^[0-9]{1,7}(-[0-9]{1,7}){0,15}$
+          maxLength: 128
+    IssueReaction:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - issue_id
+        - actor_id
+        - reaction
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+        reaction:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    IssueReactionCollection:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueReaction'
+    IssueActivity:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - issue_id
+        - project_id
+        - verb
+        - field
+        - old_value
+        - new_value
+        - old_identifier
+        - new_identifier
+        - actor_id
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        verb:
+          type: string
+        field:
+          type:
+            - string
+            - 'null'
+        old_value:
+          type:
+            - string
+            - 'null'
+        new_value:
+          type:
+            - string
+            - 'null'
+        old_identifier:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        new_identifier:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        actor_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+    IssueActivityPage:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - next_cursor
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueActivity'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+    DescriptionVersion:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - issue_id
+        - owned_by_id
+        - last_saved_at
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        owned_by_id:
+          type: string
+          format: uuid
+        last_saved_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    DescriptionVersionPage:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - next_cursor
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DescriptionVersion'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+    DescriptionVersionDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - issue_id
+        - owned_by_id
+        - last_saved_at
+        - created_at
+        - description_html
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        owned_by_id:
+          type: string
+          format: uuid
+        last_saved_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        description_html:
+          type: string
+    IssueCommentPage:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - next_cursor
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueComment'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
     IssueRelationType:
       description: 'A relation''s type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.'
       type: string

@@ -130,3 +130,16 @@ func (s *Store) ActiveRoles(ctx context.Context, projectID uuid.UUID, ids []uuid
 	}
 	return roles, nil
 }
+
+// IssueMentionMembers reads active candidates with their guest visibility.
+func (s *Store) IssueMentionMembers(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]app.IssueMemberVisibility, error) {
+	rows, err := s.queries(ctx).IssueMentionMembers(ctx, gen.IssueMentionMembersParams{ProjectID: projectID, Ids: ids})
+	if err != nil {
+		return nil, fmt.Errorf("read mention members of project %s: %w", projectID, err)
+	}
+	out := make([]app.IssueMemberVisibility, len(rows))
+	for n, r := range rows {
+		out[n] = app.IssueMemberVisibility{ID: r.MemberID, Role: shared.Role(r.Role), OwnOnly: r.OwnOnly}
+	}
+	return out, nil
+}

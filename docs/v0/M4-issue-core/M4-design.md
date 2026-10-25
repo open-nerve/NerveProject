@@ -52,7 +52,7 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
   - 一个陷阱：Go 的 `nil` 切片作为 `NULL` 传出，`cardinality(NULL) = 0` 的谓词滤掉全部行。
   - 写法、规模的目标和连接的参数写进 3.16；P5 不再有 spike 的任务。
 - **S2 pg_trgm（做了一部分）**：sqlc 只在扩展的迁移列在模块的 `schema:` 里时才把 `similarity()` 定为 `float32`，否则静默地是 `interface{}`；名为 `q` 的参数与接收者同名，生成为 `q_`；10 万行上 `'%a3f9%'` 走位图索引扫描（0.09 ms）、`'webhook'` 12 ms，两个字符的 `'ab'` 退到顺序扫描（45 ms）；只有 `SELECT`、`USAGE` 的角色经 PUBLIC 的 `EXECUTE` 能调用 `similarity()`，授权测试的预期不变。迁移角色在镜像里建扩展、中文的查询（多是两个字）的耗时留给 P8 的第 6、12 个任务（3.18）。
-- **S3 bluemonday（未做）**：放行表是局部的，在 P4（描述、评论、清洗到来的 Phase）的第 1 个任务做；样例除了编辑器每种节点的输出，还要有经接口写入的 HTML（列表、标题、嵌套的标记）和编辑器重新序列化之后的结果（3.7）。
+- **S3 bluemonday（P4/T1 已验证清洗与真实编辑器往返，2026-10-25）**：14 份共享样例覆盖 API 形状的 HTML（无块 id 的列表、标题、嵌套标记）及实际编辑器全部 22 个 node / 8 个 mark，逐边固定清洗、重序列化及再次清洗输出；纯文本、提及、链接地址、勾选框投影与安全边界通过，15 项实际可编译变异均被业务断言检出并恢复。默认标签经锁定上游核对后补齐，独立评审及修正复核通过，证据见 [P4 review §2.2](reviews/P4-issue-collaboration-review.md#22-t1-验收与独立评审已完成)。首个评论API在T3消费，描述及skip_activity在T9/T15完成接口验证并通过独立评审；T16只收口文档及时间断言；负责人随后指定的整分支deep-review与修复复审已完成，见[P4整分支报告](../../reviews/re-01-M4P4整体审核.md)。
 - **S4 River（已做）**：只投递的客户端（`&river.Config{}`，没有 `Workers`）在事务里 `InsertTx` 一个没有登记 worker 的种类可以，回滚不留、提交留下一条；以空的 `river.NewWorkers()` 建的工作客户端在 `AddWorker` 之前 `InsertTx` 失败（`UnknownJobKindError`，`river@v0.47.0/client.go:2270-2277`），`NewClient` 之后 `AddWorkerSafely` 可以（共用同一个 `*Workers`，可用但没有写进文档），`Start` 之前 `PeriodicJobs().Add`、`InsertTx` 都可以；一个 worker 都没有时 `Start` 失败。组合因此用只投递的客户端投递（6.6）。
 - **S5 取锁的等待（已做）**：E1：方案 A 之下，新的 `FOR SHARE` 在等待中的 `FOR NO KEY UPDATE` 之前 1 ms 得到；60 ms 一个、每 30 ms 新来一个的 `FOR SHARE` 持续 3 秒，工作区的 N 等了 2.753 秒（M3 17.4 的探针 B 复现）。E2：方案 B 之下，N 的等待者先来先得，3 秒首尾相连的工作项写之后，删除工作区只等了 319 ms（排在它前面的写）。E3：工作项写的链进行中，10 次 `UPDATE workspaces` 最长 2 ms；插入经外键取工作区行的 `FOR KEY SHARE`，与 `FOR NO KEY UPDATE` 不冲突。E4：`… WHERE id = ANY($1) ORDER BY id FOR NO KEY UPDATE` 按 `id` 的顺序取锁。E5、E5b、E6：约定七和关联行按 `id` 先锁的论证（3.5）。这些结论是决策点 1 的依据；交错 20、21 是它们的回归测试。
 - 第二稿的对抗性评审另做了三个 spike（同样在临时的 `postgres:18.6` 上，pgx v5.11.0，程序和输出不进仓库）：
@@ -384,15 +384,16 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **标题**（`name`）：创建时必填；去掉首尾空白之后 1–255 个字符（Plane 的页面，`issue-modal/components/title-input.tsx:45-63`）；修改时带上就不能为空。数据库 `CHECK (name <> '')`。
 - **描述**（`description_html`）：
   - **随它的数据一起进入接口**（第 12 节约束 5）：描述、清洗、提及、描述的版本在 P4 一起到来（评论也要清洗）。P1a 建的 `issues` 已有 `description_html`、`description_stripped` 两列（取默认值），但 P1–P3 的 `IssueCreate`、`IssueUpdate`、`IssueDetail` 没有描述，`IssueDetail` 那时与 `Issue` 同形；P4 给三个结构加上它（5.2）。
-  - 用 bluemonday 清洗：放行表是 Plane 编辑器用到的标签和属性，照 Plane 的 nh3 放行表（`API/utils/content_validator.py:71-160`：nh3 的默认表，加 `mention-component`、`label`、`input`、`image-component`；按标签的属性表；网址只许 `http`、`https`、`mailto`、`tel`）。清洗不拒绝，只去掉（Plane 相同）。P4 的 S3 做往返测试（9.1）：编辑器每种节点产生的 HTML 经清洗不变；经接口写入的 HTML（列表、标题、嵌套的标记，没有块 id）经清洗、再经编辑器重新序列化，结果记进样例，下面的 `skip_activity` 用它们；另有只改了一个链接地址、只勾了一个勾选框的样例，它们必须算作修改。`image-component` 留在放行表里：M5 之前编辑器不产生它（3.1），M5 不必再改放行表。
+  - 用 bluemonday 清洗（负责人 2026-10-25 批准 P4/A1：实现集中在 `issue/adapter/content`，app 声明 `HTMLSanitizer` 小端口，domain 只保留纯值与规则，由 `issue/module.go` 组装；不放宽架构守卫）：放行表是 Plane 编辑器用到的标签和属性，照 Plane 的 nh3 放行表（`API/utils/content_validator.py:71-160`：nh3 的默认表，加 `mention-component`、`label`、`input`、`image-component`；按标签的属性表；网址只许 `http`、`https`、`mailto`、`tel`）。清洗不拒绝，只去掉（Plane 相同）。P4 的 S3 做往返测试（9.1）：编辑器每种节点产生的 HTML 经清洗不变；经接口写入的 HTML（列表、标题、嵌套的标记，没有块 id）经清洗、再经编辑器重新序列化，结果记进样例，下面的 `skip_activity` 用它们；另有只改了一个链接地址、只勾了一个勾选框的样例，它们必须算作修改。`image-component` 留在放行表里：M5 之前编辑器不产生它（3.1），M5 不必再改放行表。
+  - **保留属性的输出边界（P4预检局部加固）**：自定义 `image-component[src]`、callout 的 `data-emoji-url` 也须通过同一 URL 值检查；CSS 按实际编辑器属性和值收紧。S3 还把清洗后的 callout 送入真实 Markdown 导出，导出器对 URL/emoji 属性及 icon 文本按输出上下文转义，保留合法内容且不产生额外 HTML 属性或标签。不能只凭安全的 HTML 属性编码推断后续序列化仍安全。
   - `description_stripped`：清洗后的纯文本（bluemonday 的 `StrictPolicy` 加空白的规整），描述为空时为空。M4 只写不读；读者是 M7 通知的摘要和 M8 的 Webhook 载荷（13.2）。总体设计 6.9"供搜索使用"改写（3.23）：搜索只匹配编号和标题（3.18）。
   - 长度：接口描述 `maxLength: 500000`（字符），请求体的上限 1 MiB 照旧（`server.max_body_bytes`，`server/configs/config.yaml`）；Plane 是 10 MB（`content_validator.py:16`）。登记差异。
   - 没有 `description_json`、`description_binary`：Plane 的 `description_json` 没有读者（R1 第 1 节），Nerve 的编辑器还在发它（`core/components/editor/rich-text/description-input/root.tsx:157`），P11 删去；`description_binary` 是协同编辑的遗留，差异清单已登记删除。
   - 创建时不带描述：`<p></p>`（Plane 的默认值）。
 - **只补块 id 的保存（`skip_activity`）**（P4，与描述一起）：
   - Nerve 的编辑器在可编辑的状态下打开一段没有块 id（`data-id`，`web/packages/editor/src/extensions/unique-id/extension.ts:63,78,85`）的描述时，会补上 id 并保存一次（`use-editor.ts:93` 的 `isMigrationUpdate`；只读的编辑器不补）。这不是用户的修改。在不分人和代理的 Nerve 里，这是常态而不是少数：经 PAT 建的工作项，描述都没有块 id，第一个打开它的成员就触发这次保存；编辑器重新序列化列表、标题、嵌套的标记时，HTML 与清洗之后存下的也不逐字相同。
-  - `IssueUpdate` 有一个布尔字段 `skip_activity`。它只能与 `description_html` 一起出现、不能带别的字段，否则 422（`skip_activity`，`not_allowed`）。
-  - **服务端的判断**（控制者的裁定，独立评审 I6 的选项 b，对抗性评审 I4 补全）：带 `skip_activity` 的保存总是写下新的描述；它的**内容标识**与存着的相同时，这次保存算"内容不变"：不写动态、不写版本、不发布事件、**不改 `updated_at`、`updated_by_id`**。内容标识是清洗之后的 HTML 的一个规范的投影（`issue/domain/sanitize.go`）：纯文本（`description_stripped`）、按出现顺序的提及的 id、按出现顺序的 `a[href]`、按出现顺序的每个 `input` 的 `checked` 状态（M5 打开图片之后再加按顺序的 `image-component[src]`，写进 M5 的交接，13.2）。任何一项不同，就是一次普通的描述修改（动态、版本、事件、`updated_at` 都照常），所以这个字段不能用来隐藏文字、提及、链接的去处或勾选框的状态的改动。
+  - `IssueUpdate` 有一个布尔字段 `skip_activity`。它只能与 `description_html` 一起出现、不能带别的字段，否则 422（`skip_activity`，`not_allowed`）；显式 `false` 也受这个组合约束，但保存行为与普通修改相同，净化后的 HTML 相同时不写。
+  - **服务端的判断**（控制者的裁定，独立评审 I6 的选项 b，对抗性评审 I4 补全）：`skip_activity=true` 的保存总是写下新的描述；它的**内容标识**与存着的相同时，这次保存算"内容不变"：不写动态、不写版本、不发布事件、**不改 `updated_at`、`updated_by_id`**。内容标识是清洗之后的 HTML 的一个规范的投影（由 `issue/adapter/content` 解析生成，`issue/domain` 的纯值承载并比较）：纯文本（`description_stripped`）、按出现顺序的提及的 id、按出现顺序的 `a[href]`、按出现顺序的每个 `input` 的 `checked` 状态（M5 打开图片之后再加按顺序的 `image-component[src]`，写进 M5 的交接，13.2）。任何一项不同，就是一次普通的描述修改（动态、版本、事件、`updated_at` 都照常），所以这个字段不能用来隐藏文字、提及、链接的去处或勾选框的状态的改动。
     - 为什么要后两项：放行表留着 `a` 的 `href` 和 `input` 的 `checked`（Plane `API/utils/content_validator.py:113,153`）。只比较纯文本和提及时，把描述里的链接从 `https://docs.example` 换成 `https://evil.example`、勾上或去掉一个任务的勾，纯文本和提及都不变：任何成员或 PAT（含被盗的）带上 `skip_activity` 就能改，不留动态、不留可还原的版本、不发事件（第二稿的写法，对抗性评审 I4）。
   - **剩下的口子**：只改格式（加粗、列表的层次、标题的级别）而内容标识不变的保存，带上 `skip_activity` 就不留动态和版本。这是比较规范投影的代价，换来经接口建的工作项被打开时不产生一条算在打开者名下的修改；格式不改变描述说了什么、指向哪里、勾了什么。登记差异（4.17）、写进 8.2。
   - Plane 只看客户端的标志，并照样改 `updated_at`（`API/app/views/issue/base.py:632,684-712`）。不改 `updated_at` 是因为打开一个旧工作项不应让它在"最近更新"的排序里前移，也不应推迟它的自动归档。登记差异。
@@ -485,7 +486,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - 去掉负责人不取消他的关注（Plane 相同）。
   - 关注、取消关注的接口和 `is_subscribed` 在 M7（13.2）。
 - **提及**（`issue_mentions`）：
-  - 每次描述被写入（创建、改描述、还原），从**保存之后**的描述里取出 `<mention-component entity_name="user_mention" entity_identifier="…">`，过滤为项目的有效成员（任何角色），与已有的行做集合同步：新的插入，不在的软删除。
+  - 每次描述被写入（创建、改描述、还原；含内容不变但总是写入的 `skip_activity=true` 保存），从**保存之后**的描述里取出 `<mention-component entity_name="user_mention" entity_identifier="…">`，过滤为项目的有效成员（任何角色），与已有的行做集合同步：新的插入，不在的软删除。普通相同 HTML 的无改动请求（含 `skip_activity=false`）按 3.7 不写，也不因这次请求补关系。
   - Plane 拿请求体与旧描述比较，一个不带描述的修改（改状态）会删掉全部提及行，之后不再补回（R2 第 8 节，缺陷）。登记差异。
   - 评论里的提及不存进 `issue_mentions`，只让被提及的、能读这个工作项的人关注（Plane 让被提及的人都关注）。
   - 被提及而读不到它的"只看自己"的访客：`issue_mentions` 照样有他一行（列表的 `mention_id` 筛选按调用者的可见性过滤，他自己看不到这个工作项），但不关注它；M7 发通知时另按那一刻的读权限再判定（3.4）。
@@ -540,9 +541,9 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **写入**：创建时一行；每次描述的修改（只补块 id 而内容相同的保存除外）一行，内容是修改之后的描述。**合并**：这个工作项最新的版本（按 `last_saved_at`）属于同一个人、`last_saved_at` 在 600 秒之内时，原地改它（描述、纯文本、`last_saved_at`、`updated_at`、`updated_by_id`），这是一个滑动的窗口（Plane 相同，`API/bgtasks/issue_description_version_task.py:15-40,56-66`）。
   - 写入在修改的同一个事务里（Plane 在 Celery 里）。
   - `owned_by_id`、`created_by_id` 是写这一版的人（Plane 的审计列抄工作项的，`API/db/models/issue.py:806-818`，与 `owned_by_id` 不一致）。
-- **保留**：每个工作项只留最新的 20 行（按 `last_saved_at`），每天一次的定时任务 `issue.trim_description_versions`，每个未删除的项目一个事务（项目 N），物理删除多出的行（P9，与清理同一段，两者不能相遇，对抗性评审 M21）（Plane 相同，`API/bgtasks/cleanup_task.py:128-146`，按 `created_at`）。它只看未删除的工作项的未删除的版本（`deleted_at IS NULL` 的两边）；软删除的版本（随工作项删除）只归 60 天清理，两个任务碰不到同一行（3.5）。
+- **保留（P9待实现，P4未运行）**：每个工作项只留最新的 20 行（按 `last_saved_at`），每天一次的定时任务 `issue.trim_description_versions`，每个未删除的项目一个事务（项目 N），物理删除多出的行（P9，与清理同一段，两者不能相遇，对抗性评审 M21）（Plane 相同，`API/bgtasks/cleanup_task.py:128-146`，按 `created_at`）。它只看未删除的工作项的未删除的版本（`deleted_at IS NULL` 的两边）；软删除的版本（随工作项删除）只归 60 天清理，两个任务碰不到同一行（3.5）。
 - **读取**：`GET /issues/{issue_id}/description-versions`，最新的在前（`last_saved_at` 降序、`id` 降序），游标分页，每行不带描述；`GET /issue-description-versions/{version_id}` 带描述。规则 `issue_description_version.read`（管理员、成员，3.4）；工作项的访客规则同样适用。
-- **还原**：没有专门的接口（Plane 也没有）。页面把旧的描述放进编辑器，经普通的 `PATCH` 保存：产生新的版本、一条描述动态。已归档的工作项不能还原（409，页面也禁用）。
+- **还原**：没有专门的接口（Plane 也没有）。页面把旧的描述放进编辑器，经普通的 `PATCH` 保存，遵循普通保存的无改动、版本 600 秒合并和描述动态合并规则；不保证新增版本或动态行。已归档的工作项不能还原（409，页面也禁用）。
 
 ### 3.15 草稿（总体设计 5.4）
 - **表**：`draft_issues(id, workspace_id, project_id, payload, created_by_id, updated_by_id, created_at, updated_at, deleted_at)`（4.13）。Plane 是一张与工作项同形的表加四张关联表（R1 第 14 节），差异清单已登记"一张表 + payload"。
@@ -1239,7 +1240,7 @@ M4 不加新的桶：需要登录的操作按凭证计数（`authenticated`，`s
 | `modules/workspace` | `delete_workspace.go`：先锁邀请和项目、再读时刻（3.5），P9 起发布 `workspace.deleted`；`EventTypes()`；`ProjectCascade` 端口加 `LockWorkspaceProjects`；`Purger`。`issue` 用的目录就是已有的 `WorkspaceDirectory`（`WorkspaceBySlug`、`ShareWorkspaceByID`，`workspace/module.go:33-49`），不加方法 | 同 M3 |
 | `modules/identity` | `PageSize` 移出；`Purger`（`api_tokens`）；`PublicProfiles` 的读：负责人名的目录要它，端口由 `issue` 声明（3.3，P5） | 同 M2 |
 | `platform/jobs` | `NewInserter(pool)`：只投递的客户端和它的 `InsertTx`；两个队列和它们的 worker 数（配置）；定时任务的种类和声明会投递的种类没有 worker 时 `New` 失败；测试的余量改成期限（3.20） | 同 M2 |
-| `platform/postgres` | `Tx(ctx) (pgx.Tx, bool)`（3.20）；`NewTxManager` 的两个选项：`LockTimeout(d)`（`BEGIN` 之后由平台发 `SET LOCAL lock_timeout`，P1b）、`ReadOnlySnapshot()`（`BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`，经 pgx 的 `TxOptions`，P5），模块的 SQL 里没有 `SET`（`TestModulesRunSQLOnlyThroughSQLC`）；`LockNotAvailable(err)`（SQLSTATE `55P03`，与 `UniqueViolation` 同一种写法，`unique.go`）；连接池在每个连接上设 `jit = off`、`plan_cache_mode = force_custom_plan`（3.16，P5） | 同 M2 |
+| `platform/postgres` | `Tx(ctx) (pgx.Tx, bool)`（3.20）；`NewTxManager` 的两个选项：`LockTimeout(d)`（`BEGIN` 之后由平台发 `SET LOCAL lock_timeout`，P1b）、`ReadOnlySnapshot()`（`BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`，P4/T2已前移落地，与LockTimeout统一组合，P5复用），模块的 SQL 里没有 `SET`（`TestModulesRunSQLOnlyThroughSQLC`）；`LockNotAvailable(err)`（SQLSTATE `55P03`，与 `UniqueViolation` 同一种写法，`unique.go`）；连接池在每个连接上设 `jit = off`、`plan_cache_mode = force_custom_plan`（3.16，P5） | 同 M2 |
 | `platform/clock` | `Offset{Base, Offset}`（3.20） | 只有标准库 |
 | `platform/outbound` | 新：防 SSRF 的 HTTP 客户端（6.8） | 标准库 |
 | `platform/gate` | 新：带 `context` 的按键的信号量（`Keyed[K comparable]`：每个键至多 K 个持有者、等待者至多若干个、等待有上限），工作项的写闸门用它（3.5，架构问题 11，P1b） | 标准库 |
@@ -1250,7 +1251,7 @@ M4 不加新的桶：需要登录的操作按凭证计数（`authenticated`，`s
 | `deploy/runtime-grants.sql` | 13 张新表的读写（4.18） | — |
 | `server/configs/config.yaml`、`config.test.yaml` | 上面的配置项；测试配置的间隔都是 `2s` | — |
 
-- **新的依赖只有一个**：`github.com/microcosm-cc/bluemonday`（HTML 的清洗，总体设计 6.9 早已写明；`server/go.mod` 今天没有它），连同它带来的 `golang.org/x/net`、`github.com/aymerick/douceur`、`github.com/gorilla/css`；P4 随描述和评论加入，`archtest/binary_test.go` 的禁用清单不受影响。HTML 的解析（取 `<title>`、图标、提及）用 `golang.org/x/net/html`。River、pgx 已有。
+- **新增依赖组（P4已落地）**：`github.com/microcosm-cc/bluemonday`（HTML 的清洗，总体设计 6.9 早已写明；P4/T1已加入bluemonday v1.0.27），连同它带来的 `golang.org/x/net`、`github.com/aymerick/douceur`、`github.com/gorilla/css`；P4/T1直接锁定x/net v0.60.0，间接douceur v0.2.0、gorilla/css v1.0.1，无其他新增依赖；`archtest/binary_test.go` 的禁用清单不受影响。HTML 的解析（取 `<title>`、图标、提及）用 `golang.org/x/net/html`。River、pgx 已有。
 
 ### 6.2 `issue` 模块的结构
 ```
@@ -1264,8 +1265,7 @@ modules/issue/
     reaction.go             表情的格式（3.12）
     activity.go             动态的行：由一次修改的前后两个值算出 3.13 的行（纯函数）；描述的合并的判断
     versions.go             描述版本的合并的判断（600 秒、同一个人，3.14）
-    mentions.go             从描述取出提及的 id（3.12）
-    sanitize.go             bluemonday 的放行表和纯文本（3.7）；只补块 id 的保存是否"内容不变"（内容标识：纯文本、提及、链接的地址、勾选框的状态）
+    rich_text.go            清洗结果和内容标识的纯值；只补块 id 的保存是否"内容不变"（纯文本、按顺序的提及、链接地址、勾选框状态）；提及的集合规则（3.7、3.12），不解析 HTML、不依赖第三方
     identifier.go           按编号取和搜索的标识折叠（3.7）
     draft.go                草稿：载荷的项目、发布的检查（3.15）
     listvocab.go            列表的词汇：参数名和取值的语法、分组码、排序码、各页面允许的集合；IssueListSettings 的实现（3.17）
@@ -1274,7 +1274,7 @@ modules/issue/
     actions.go              本模块的操作名和 Actions()（3.4）
     errors.go               本模块的错误码（5.3）
   app/
-    ports.go                仓储（按用例拆成小接口）、Clock、EventPublisher、ProjectGate、Sequences、StateCatalog、LabelCatalog、ProjectMembers、VisibleProjects、ArchivedProjects、ArchivePolicies、WorkspaceDirectory、PublicProfiles、WriteGate、LinkCrawls、RowDeletions
+    ports.go                仓储（按用例拆成小接口）、Clock、EventPublisher、ProjectGate、Sequences、StateCatalog、LabelCatalog、ProjectMembers、VisibleProjects、ArchivedProjects、ArchivePolicies、WorkspaceDirectory、PublicProfiles、WriteGate、LinkCrawls、RowDeletions、HTMLSanitizer（消费方的小接口，返回领域纯值）
     lock.go                 工作项一侧的写共用的一步：读资源 → 预检 → 写闸门 → 项目 N → 重读 → 判定 → 访客规则（3.5）
     create_issue.go         创建、快速添加、发布草稿共用的核心（createCore），和 createIssue 的入口
     get_issue.go  get_issue_by_identifier.go  update_issue.go  delete_issue.go  archive_issue.go
@@ -1291,6 +1291,7 @@ modules/issue/
     crawl_on_link_change.go 链接的订阅者；delete_rows_on_deletion.go 删除的订阅者（3.19）
     purge.go                本模块的 Purger（3.21）
   adapter/
+    content/                HTMLSanitizer 的实现；bluemonday 的唯一放行表、StrictPolicy 纯文本、x/net/html 解析与内容投影；描述和评论共用（3.7、3.12）
     postgres/               仓储；queries/*.sql（按表、按用例分文件，列表引擎三个文件）；gen/（sqlc）；delete_rows.go：删除的任务每张表的一批（`queries/delete_rows.sql`，键集），清理的批同一种写法
     http/                   handler，按资源分文件；查询参数到 domain/list.go 的转换；gen/
     river/                  任务的参数和 worker：crawl_link、delete_rows（default 队列）、auto_archive、trim_versions（periodic 队列）；LinkCrawls、RowDeletions 的实现（经投递端口）
@@ -2131,7 +2132,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 ### P4 `issue-collaboration`：描述、清洗、提及、版本、评论、表情、动态的列表（后端，16 个任务）
 - **目标**：描述随它的清洗、提及、版本一起进入接口；评论和表情；动态和评论按游标列出。
 - **任务**：
-  1. S3 和清洗（`issue/domain/sanitize.go`）：加入 bluemonday；放行表、纯文本；往返的样例：编辑器每种节点的输出，经接口写入的 HTML（列表、标题、嵌套的标记）再经编辑器重新序列化的结果，只改链接地址、只改勾选框的两份（3.7）。
+  1. S3 和清洗（`issue/adapter/content`；app 的 `HTMLSanitizer` 端口、domain 的纯值）：加入 bluemonday；放行表、纯文本、内容投影，`issue/module.go` 组装，保留现有架构守卫；往返的样例：编辑器每种节点的输出，经接口写入的 HTML（列表、标题、嵌套的标记）再经编辑器重新序列化的结果，只改链接地址、只改勾选框的两份（3.7）。
   2. 迁移 `00021`–`00025`，grants；删除的语句、`deleteIssue` 自己的连带、`furnishIssueRows` 加五张表。
   3. 页大小移到 `shared`（`identity` 改用它，M3 交接第 9 节）。
   4. 描述进入接口：`IssueCreate`、`IssueUpdate`、`IssueDetail` 加 `description_html`，`apitest` 核对 `IssueDetail` = `Issue` 加它；动态第 4 行和它的合并；`skip_activity`（内容标识：纯文本、提及、链接的地址、勾选框的状态，3.7）。
@@ -2517,7 +2518,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P1b `issue-update` | 工作项的取、改与写闸门（后端，12）；同上 | 已完成：[spec](specs/P1b-issue-update.md)、[plan](plans/P1b-issue-update.md)、[评审](reviews/P1b-issue-update-review.md)（执行时 15 个 Task；整分支评审之后一个修复轮） |
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 已完成：[spec](specs/P2-issue-access.md)、[plan](plans/P2-issue-access.md)、[评审](reviews/P2-issue-access-review.md)（执行时 14 个 Task；整分支评审之后一个修复轮） |
 | P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
-| P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 未开始 |
+| P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；最终合并main CI按精确SHA在交付和P5输入记录 |
 | P5 `issue-list` | 列表引擎与显示设置（后端，15） | 未开始 |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，11） | 未开始 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12） | 未开始 |
@@ -2541,7 +2542,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | 删除一个大的项目、工作区（SP2：2 万个工作项的项目 8.6 秒，五个这样的项目的工作区 36.5 秒，请求的期限 15 秒） | 同步的连带在规模目标上删不掉一个工作区，期间工作区的每个项目的写都在等 | 决策点 7（负责人裁定 A）：工作项一侧的行由任务分批软删除，请求只做 M3 的几步；每个删除的项目一个任务，按 `id` 的键集（SP4：没有键集的语句是平方的，一个项目的 40 万行动态 53.9 秒，键集 1.8 秒），每次运行 45 秒的预算、用完就 snooze 而不算一次尝试；窗口里的读写经项目的门当作不存在（3.6，逐条测试）；任务失败时行留在窗口的样子，随项目的物理清理消失；P1b 在规模目标上量，P9 的通过线是每个任务一次运行做完 |
 | 工作项一侧的删除任务是第一个跨模块的异步效果（决策点 7 的 A） | 窗口里某个读写漏了项目的门，就会看到已删除的项目里的工作项；一条行写成了别的删除的时刻和删除者 | 3.6 逐条列出读写的路径和它经过的门；9.3 的窗口测试在任务之前、之后各问一次；矩阵的"项目已删除"一列在任务前后各跑一次；每个项目只由它自己的任务写，跨项目的关联行属于先删除的那一端（3.5），交错 24、25 断言每一行写下的是谁的删除；P1–P8 的过渡写法与任务用同一组语句和编排 |
 | 一个热的项目占满连接池（SP1：200 个写排在一个项目上时，别的项目的读等约 875 ms；A、B 相同） | 整个实例的请求变慢 | 写闸门（11.11）：每个项目每个进程至多 K 个写在数据库里，其余在进程里等，不持连接，等不到 503 `server_busy`；`lock_timeout` 兜底；交错 20 经真实的连接池断言别的项目的读的耗时。代价是热的项目上排得太久的写得到 503、要由客户端重试（决策点 1）；K 和池的大小在多进程时由 M8 定 |
-| `issue_activities` 的增长（每个改动一行，描述的动态存完整的 HTML，3.13） | 表和索引变大，列表的动态读得慢 | 动态按工作项分页读（`(issue_id, created_at, id)` 的索引）；描述的动态 600 秒内合并；Nerve 与 Plane 一样不清理活的动态；M8 的性能测量量它的大小 |
+| `issue_activities` 的增长（每个改动一行，描述的动态存完整的 HTML，3.13） | 表和索引变大，列表的动态读得慢 | 动态按工作项分页读（`(issue_id, created_at, id)` 的索引）；仅最新动态仍是同作者description时合并，无600秒限制；描述版本才有600秒滑动窗口；Nerve 与 Plane 一样不清理活的动态；M8 的性能测量量它的大小 |
 | 前端换型（`Issue` 取代 Plane 的类型）：131 个使用方，列表、详情、浮层、收集箱读同一份工作项 | 一个任务改不完；中途不能编译 | P10a"先收窄、后换型"：先删掉对 `Issue` 没有的字段的读取（`TIssue` 还在，每个任务能编译），最后一个任务只剩导入、改名和可空性的机械替换（7.2）；列表的形状在 P10b、详情的类型在 P11 随各自的 store 换掉 |
 | M6、M7 的工作项列表在 P10a 删除（7.2） | M6、M7 之前，迭代、模块、项目视图、工作区视图的页面没有工作项列表 | 可见的代价写进前端改动清单；不留兼容层（项目的规则）；M6、M7 照 Plane 的源码在新的引擎上加回，写进它们的交接（13.2） |
 | 收尾超出（M3 的收尾实际 16 个任务，另有多轮修复和浏览器核对之后的修复） | 合并推迟 | 浏览器核对分在各页面段（C1–C11），收尾只做 C12；收尾的任务数按 M3 的实际定为 14，修复轮按 M3 的写法另计 |
@@ -2549,7 +2550,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | 决策点 1 选 B 的两个代价（3.5） | 审计时工作项的写与成员关系的变更的时刻可以与生效的顺序不一致；草稿和 M3 的项目管理类的写仍可能被饿 | 写明在决策点 1，由负责人在 B、B′、A 之间选；授权本身在锁下判定，不受影响 |
 | 只投递的客户端不检查种类（S4） | 漏登记的种类安静地留在 `river_job` 里没人做 | 模块声明会投递的种类，建工作的客户端时逐个核对，有变异测试（3.20、6.6） |
 | `pg_trgm` 与迁移角色、中文的查询（S2 的余下部分） | 迁移失败；两个字的中文查询走顺序扫描 | S2 已验证 sqlc、类型、授权（0.3）；P8 的第 6 个任务在镜像里建扩展，第 12 个任务量中文的耗时；`LC_CTYPE` 写进 M8 的交接 |
-| bluemonday 的放行表与编辑器的输出不一致（S3） | 保存之后格式丢失，或放过不该放的属性 | S3 的往返测试以 `@nerve/editor` 导出的样例为准，每个扩展一例，另有经接口写入的 HTML；放行表只在 `issue/domain` 一处；新扩展加入时往返测试先失败 |
+| bluemonday 的放行表与编辑器的输出不一致（S3） | 保存之后格式丢失，或放过不该放的属性 | S3 的往返测试以 `@nerve/editor` 导出的样例为准，每个扩展一例，另有经接口写入的 HTML；放行表只在 `issue/adapter/content` 一处；新扩展加入时往返测试先失败 |
 | `skip_activity` 的内容标识不含格式（3.7） | 只改格式的保存带上标志就不留动态和版本 | 写明的口子，登记差异（4.17）和 8.2；文字、提及、链接的去处、勾选框的改动都照常记下，S3 的样例含只改链接地址、只改勾选框的两份；M5 打开图片时加上图片的地址（13.2） |
 | 拖动只在服务端确认之后移动卡片（3.22） | 慢网络下拖动显得迟钝 | 请求在路上时卡片停在放下的位置、显示更新中的遮罩，被拒绝时回到原处（3.22）；确认通常在一次往返之内；C1 在节流的网络下核对一次 |
 | 前端的列表（分组、每组分页）与服务端的总数走散（3.22） | 页面的数字与实际不符，卡片在两列里出现或消失 | 第三稿按对抗性评审 I2 重写：组存应答写下的行和它们的 `updatedAt`、固定的 `boundary`，重做只按应答自己的证据判断，那一份工作项按服务端的 `updated_at` 取；确知时加减，看不出时只把受影响的组标 `stale` 重取；九个反例各是 vitest 表的一行 |
@@ -2613,7 +2614,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | I1 | 同步的连带在规模目标上删不掉一个工作区（SP2：2 万个工作项的项目 8.6 秒、五个这样的项目的工作区 36.5 秒，请求的期限 15 秒） | 新的决策点 7（建议 A：工作项一侧的行由任务分批软删除，写下请求的时刻和删除者），连同规模目标（M15）；3.6 写请求的事务、任务、"一个改变一个时刻"、窗口期间的每个读写、任务失败、与清理的先后、e2e 的轮询；3.19 的 `project.deleted`、`workspace.deleted` 和订阅者；3.5 重新推出删除工作区的取锁、加任务的一行和交错 24；3.15、3.20、3.21；6.2、6.3、6.6；8.3、8.8；9.2、9.3、9.6；3.23 的 P9 行（总体设计 5.5）；P1 量规模、P9 落地；§16 |
 | I2 | 3.22 的重做、窗口和那一份工作项会算错（九个反例） | 3.22 重写：组存应答写下的 `{id, key, updatedAt}` 和固定的 `boundary`；修改记 `(beforeSnapshot, after)`；重做只按应答自己的证据判断；没有回答的组按空的建出；那一份取服务端 `updated_at` 大的、描述只由 `IssueDetail` 写、读到成员关系改变时标 `stale`；拖放留在落点并扩 `boundary`；九个反例各是 vitest 表的一行（9.5）；仍是 `reconciled.ts` 的一个扩展；7.3 的 store 表；P10b 的任务 3–6；§14、§16 |
 | I3 | 一个热的项目占满 10 个连接的池（SP1：别的项目的读等约 875 ms） | 架构问题 11.11 写闸门（`platform/gate`、`WriteGate` 端口、每个项目每个进程 K 个、等的上限、503 `server_busy`、`lock_timeout` 兜底）；3.5、6.1、6.2、6.5、6.6、6.7、8.8；交错 20 经真实的连接池（9.3）；决策点 1 和 §16 写代价（A、B 相同）；池的大小和 K 交给 M8（13.2）；P1 的任务 8、14 |
-| I4 | 内容标识只有纯文本和提及，改链接的去处、勾选框不留痕迹 | 内容标识加按顺序的 `a[href]` 和勾选框的状态（3.7、6.2 的 `sanitize.go`）；S3 加只改链接、只改勾选框的样例，必须算修改（9.1，P4 的任务 1）；8.2、4.17、§16 改写；I2 的 P4 断言；M5 打开图片时加 `image-component[src]`（13.2） |
+| I4 | 内容标识只有纯文本和提及，改链接的去处、勾选框不留痕迹 | 内容标识加按顺序的 `a[href]` 和勾选框的状态（3.7、6.2 的清洗与内容投影，P4/A1 裁定后位于 `adapter/content`）；S3 加只改链接、只改勾选框的样例，必须算修改（9.1，P4 的任务 1）；8.2、4.17、§16 改写；I2 的 P4 断言；M5 打开图片时加 `image-component[src]`（13.2） |
 | I5 | 选择器接到的 `issue-search` 要求 `q`；日历的"添加已有"要筛出没有截止日期的 | `q` 可选，空时给出最近更新的可见工作项（3.18、5.1）；列表和搜索都有 `target_date=none`、`start_date=none`（3.16、3.18）；`ExistingIssuesListModal` 在 P12 随日历改接（7.5，P12 的任务 9），选父工作项在 P14；I4 的页面版本含"添加已有"；7.1 的实例分配改为 P12 一处、P14 三处 |
 | I6 | 每个加表的 Phase 让 M3 的删除故事断言不到新表 | e2e 的 `furnishIssueRows(api, token, projectId, assigneeId, labelId)`（`e2e/fixtures/furnish.ts`），每个加表的 Phase 扩充它并让 M3 的 P4、W2、W3 在删除之前调它（2 节、9.6、第 12 节约束 8）；`workspaceTables` 从目录读出；P9 起删除的断言轮询；M5、M6 的交接（13.2） |
 | I7 | P10 的两段换型编译不过；M6、M7 的列表 store 没有能"行为不变"的类型 | (a) P10 预先拆成 P10a（9 个任务：先收窄、后换型，`TIssue` 一族在这里换掉）和 P10b（14 个任务）；列表的形状在 P10b、详情的类型在 P11（7.2 的"哪一段删哪一个类型"）；(b) P10a 删除 M6、M7 的列表 store、布局根、页面上的列表部分、`EIssuesStoreType` 的四个值和它们的分支（7.2、7.3、7.7）；可见的代价写进前端改动清单和 §16；M6、M7 照 Plane 的源码加回（13.2） |

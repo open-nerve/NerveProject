@@ -5,6 +5,14 @@ import "github.com/open-nerve/NerveProject/server/internal/shared"
 // The issue module's actions: the keys of its rows in the access module's
 // rule table (M4 design 3.4).
 const (
+	// ActionReadDescriptionVersion reads saved descriptions for admins and members.
+	ActionReadDescriptionVersion shared.Action = "issue_description_version.read"
+	// ActionWriteReaction adds or removes the caller's reaction on a visible issue or comment.
+	ActionWriteReaction shared.Action = "issue_reaction.write"
+	// ActionCreateComment creates a comment on a visible work item.
+	ActionCreateComment shared.Action = "issue_comment.create"
+	// ActionWriteComment gates edits and deletions before relative author checks.
+	ActionWriteComment shared.Action = "issue_comment.write"
 	// ActionCreate is creating a work item in a project.
 	ActionCreate shared.Action = "issue.create"
 	// ActionRead is reading a work item of a project.
@@ -23,5 +31,5 @@ const (
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 func Actions() []shared.Action {
-	return []shared.Action{ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive, ActionSearch}
+	return []shared.Action{ActionReadDescriptionVersion, ActionWriteReaction, ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive, ActionSearch, ActionCreateComment, ActionWriteComment}
 }

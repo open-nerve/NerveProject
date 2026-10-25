@@ -11,6 +11,7 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { byId, createdFor, expectIssueCreated } from "../../fixtures/assert/issue";
+import { expectInitialDescription } from "../../fixtures/assert/issue-collaboration";
 import { newAccount } from "../../fixtures/auth";
 import { createIssue, issueCreated } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
@@ -51,8 +52,10 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
   // ann creates Fix the login in In Progress, high, assigned to bob and the admin, labelled UI and Bug, from the 12th
   // to the 19th of October: the answer gives its accounts and labels in their ids' order.
   const assignees = [bob, admin].toSorted(byId);
+  const description = `<p>Login notes</p><mention-component entity_name="user_mention" entity_identifier="${bob.id}"></mention-component><mention-component entity_name="user_mention" entity_identifier="${admin.id}"></mention-component><mention-component entity_name="user_mention" entity_identifier="${crypto.randomUUID()}"></mention-component>`;
   const first = await createIssue(api, ann.token, web.id, {
     name: "  Fix the login ",
+    description_html: description,
     state_id: inProgress,
     priority: "high",
     assignee_ids: [bob.id, admin.id],
@@ -87,6 +90,9 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     activity: createdFor(bob, admin),
   });
 
+  expect(first.description_html).toBe(description);
+  await expectInitialDescription(db, first.id, description, [bob.id, admin.id]);
+
   // The admin makes ann Web's default assignee; bob's next work item, without a state or assignees, is in Backlog,
   // the default state, assigned to her.
   expect((await changeProject(api, admin.token, web.id, { default_assignee_id: ann.id })).status).toBe(200);
@@ -107,6 +113,9 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     subscribers: [ann.email, bob.email].toSorted(),
     activity: createdFor(ann),
   });
+  expect(second.description_html).toBe("<p></p>");
+  await expectInitialDescription(db, second.id, "<p></p>", []);
+
   // Once she has left Web, the next is assigned to no one, after the second in Backlog.
   expect((await projectMemberWrites(api, web.id).leave(ann.token)).status).toBe(204);
   const third = await createIssue(api, bob.token, web.id, { name: "Write the notes" });

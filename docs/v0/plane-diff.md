@@ -9,7 +9,7 @@
 
 ## 一、未保留的表
 
-Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。Nerve 保留 44 张，其余 52 张不保留。Django 和 Celery Beat 的 14 张系统表（`django_migrations`、`django_content_type`、`django_session`、`auth_group`、`auth_group_permissions`、`auth_permission`、`users_groups`、`users_user_permissions`，以及 6 张 `django_celery_beat_*`）同样不保留。96 + 14 = 110，正是表结构快照中的全部表（M0/P4 核对）。
+Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。Nerve 保留 43 张，其余 53 张不保留；加上新增的 `auth_sessions`，Nerve 共 44 张业务表。Django 和 Celery Beat 的 14 张系统表（`django_migrations`、`django_content_type`、`django_session`、`auth_group`、`auth_group_permissions`、`auth_permission`、`users_groups`、`users_user_permissions`，以及 6 张 `django_celery_beat_*`）同样不保留。96 + 14 = 110，正是表结构快照中的全部表（M0/P4 核对）。
 
 ### A. Plane 社区版本来就用不上（21 张）
 
@@ -33,12 +33,13 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `project_identifiers` | 和 `projects.identifier` 重复 |
 | `descriptions` | 只是评论内容的镜像副本 |
 
-### C. 砍掉的功能（24 张）
+### C. 砍掉的功能（25 张）
 
 | 功能 | 表 |
 |---|---|
 | 文档页 | `pages`、`project_pages`、`page_labels`、`page_logs`、`page_versions` |
 | 估算 | `estimates`、`estimate_points` |
+| 工作项快照 | `issue_versions`（M4/P4，决策点 5）；仅保留描述修改历史 |
 | 导出 | `exporters` |
 | 项目邀请 | `project_member_invites` |
 | 邮件通知 | `email_notification_logs`、`user_notification_preferences`（Plane 的通知偏好只用于决定是否发邮件，站内通知不受它影响） |
@@ -184,7 +185,26 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `issue_activities` | `verb`：新加 `DEFAULT 'created'` 和 `CHECK (verb IN ('created', 'updated', 'deleted'))`；`comment`：新加 `DEFAULT ''`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局）；`created_by_id`、`updated_by_id` 写执行者，删除时写删除者 | 模型的默认值；动态只有这三种动词（M7 的收集箱随它的迁移放宽）；Plane 在 Celery 里写动态，这两列实际总为空（M4 设计 4.11） |
 | `issue_activities` | 删除 `issue_comment_id`、`epoch`、`attachments` | 评论不写动态，这个 `DO_NOTHING` 的外键本会挡住物理清理；`epoch` 只写不读；`attachments` 从不写（M4 设计 4.11、3.13） |
 | `issue_activities` | 外键列的索引只留不带条件的 `issue_activities_workspace_id_idx`、`issue_activities_project_id_idx`；新加 `issue_activities_issue_id_created_at_idx ON (issue_id, created_at, id)`（不带条件） | 动态列表的游标、找"最新的一行"、物理级联都按工作项找行（M4 设计 4.11） |
-| `issue_comments` | 删除 `description_id` 及其唯一约束 | 它是指向 `descriptions`（不保留，见一 B）的一对一外键 |
+| `issue_comments` | 20 列保留 13 列（M4/P4，`00021_issue_issue_comments.sql`）；`id`、`created_by_id`、`updated_by_id`、`created_at`、`updated_at`、`deleted_at` 保留类型与可空性；主键/外键改标准名，`created_by_id`、`updated_by_id` 加 `ON DELETE SET NULL`；`created_at`、`updated_at` 加 `DEFAULT now()`，应用仍显式写锁下时刻 | 逐列以 Plane v1.4.2 快照与实际迁移核对；审计兜底不替代用例时钟 |
+| `issue_comments` | `workspace_id`、`project_id`、`issue_id`、`actor_id`：保留 uuid，全部加 `ON DELETE CASCADE`；前三列保持非空，`actor_id` 由可空改为 `NOT NULL` | 用户引用按模型 CASCADE，其余归属连带与删除图一致（comment_reactions经评论二层连到工作项） |
+| `issue_comments` | `comment_html` 保留非空 text，加 `DEFAULT '<p></p>'`；`comment_stripped` 保留非空 text，加 `DEFAULT ''`；`edited_at` 保留可空 timestamptz | 只保存清洗 HTML/文本，编辑后的审计由同一事务写 |
+| `issue_comments` | 删除 `attachments`、`comment_json`、`access`、`external_id`、`external_source`、`description_id`、`parent_id` 及后两列的外键/description 唯一约束 | 附件有独立模型；无回复、无可见范围、无 JSON 镜像、无导入或 descriptions 镜像 |
+| `issue_comments` | 保留并改名无条件 `issue_comments_{issue_id,workspace_id,project_id}_idx`；新增部分索引 `issue_comments_issue_id_created_at_idx ON (issue_id, created_at, id) WHERE deleted_at IS NULL`；不保留 actor/审计及已删 parent 列索引 | 物理级联与可见评论键集分页；不建其余无消费者索引 |
+| `issue_reactions` | 11 列照搬（M4/P4，`00022_issue_issue_reactions.sql`）；`id`、`created_by_id`、`updated_by_id`、`created_at`、`updated_at`、`deleted_at` 保留类型与可空性；主键/外键改标准名，`created_by_id`、`updated_by_id` 加 `ON DELETE SET NULL`；`created_at`、`updated_at` 加 `DEFAULT now()`，应用仍显式写锁下时刻 | 逐列以 Plane v1.4.2 快照与实际迁移核对；审计兜底不替代用例时钟 |
+| `issue_reactions` | `workspace_id`、`project_id`、`issue_id`、`actor_id`：保留 uuid/非空，全部加 `ON DELETE CASCADE` | 用户引用按模型 CASCADE，其余归属连带与删除图一致（comment_reactions经评论二层连到工作项） |
+| `issue_reactions` | `reaction` 保留非空 text；新增 `CHECK (reaction ~ '^[0-9]{1,7}(-[0-9]{1,7}){0,15}$' AND length(reaction) <= 128)` | 十进制码位格式，不是 Unicode Emoji 名录校验 |
+| `issue_reactions` | 保留部分唯一并改名 `issue_reactions_issue_id_actor_id_reaction_key ON (issue_id, actor_id, reaction) WHERE deleted_at IS NULL`，去掉含 `deleted_at` 的全表唯一约束；保留并改名 `issue_reactions_{issue_id,workspace_id,project_id}_idx` 无条件外键索引，不保留 actor/审计索引 | 同一 actor 只能有一个活的同值反应；软删后可重加，物理连带可定位 |
+| `comment_reactions` | 11 列照搬（M4/P4，`00023_issue_comment_reactions.sql`）；`id`、`created_by_id`、`updated_by_id`、`created_at`、`updated_at`、`deleted_at` 保留类型与可空性；主键/外键改标准名，`created_by_id`、`updated_by_id` 加 `ON DELETE SET NULL`；`created_at`、`updated_at` 加 `DEFAULT now()`，应用仍显式写锁下时刻 | 逐列以 Plane v1.4.2 快照与实际迁移核对；审计兜底不替代用例时钟 |
+| `comment_reactions` | `workspace_id`、`project_id`、`comment_id`、`actor_id`：保留 uuid/非空，全部加 `ON DELETE CASCADE` | 用户引用按模型 CASCADE，其余归属连带与删除图一致（comment_reactions经评论二层连到工作项） |
+| `comment_reactions` | `reaction` 保留非空 text；新增 `CHECK (reaction ~ '^[0-9]{1,7}(-[0-9]{1,7}){0,15}$' AND length(reaction) <= 128)` | 十进制码位格式，不是 Unicode Emoji 名录校验 |
+| `comment_reactions` | 保留部分唯一并改名 `comment_reactions_comment_id_actor_id_reaction_key ON (comment_id, actor_id, reaction) WHERE deleted_at IS NULL`，去掉含 `deleted_at` 的全表唯一约束；保留并改名 `comment_reactions_{comment_id,workspace_id,project_id}_idx` 无条件外键索引，不保留 actor/审计索引 | 同一 actor 只能有一个活的同值反应；软删后可重加，物理连带可定位 |
+| `issue_mentions` | 10 列照搬（M4/P4，`00024_issue_issue_mentions.sql`）；`id`、`created_by_id`、`updated_by_id`、`created_at`、`updated_at`、`deleted_at` 保留类型与可空性；主键/外键改标准名，`created_by_id`、`updated_by_id` 加 `ON DELETE SET NULL`；`created_at`、`updated_at` 加 `DEFAULT now()`，应用仍显式写锁下时刻 | 逐列以 Plane v1.4.2 快照与实际迁移核对；审计兜底不替代用例时钟 |
+| `issue_mentions` | `workspace_id`、`project_id`、`issue_id`、`mention_id`：保留 uuid/非空，全部加 `ON DELETE CASCADE` | 用户引用按模型 CASCADE，其余归属连带与删除图一致（comment_reactions经评论二层连到工作项） |
+| `issue_mentions` | 保留部分唯一并改名 `issue_mentions_issue_id_mention_id_key ON (issue_id, mention_id) WHERE deleted_at IS NULL`，去掉含 `deleted_at` 的全表唯一约束；`issue_mentions_mention_id_idx` 改为仅活行；保留并改名无条件 `issue_mentions_{issue_id,workspace_id,project_id}_idx`，不保留审计索引 | 从保存后的描述做有效成员差集；隐藏访客可被提及但不自动关注 |
+| `issue_description_versions` | 15 列保留 13 列（M4/P4，`00025_issue_issue_description_versions.sql`）；`id`、`created_by_id`、`updated_by_id`、`created_at`、`updated_at`、`deleted_at` 保留类型与可空性；主键/外键改标准名，`created_by_id`、`updated_by_id` 加 `ON DELETE SET NULL`；`created_at`、`updated_at` 加 `DEFAULT now()`，应用仍显式写锁下时刻 | 逐列以 Plane v1.4.2 快照与实际迁移核对；审计兜底不替代用例时钟 |
+| `issue_description_versions` | `workspace_id`、`project_id`、`issue_id`、`owned_by_id`：保留 uuid/非空，全部加 `ON DELETE CASCADE` | 用户引用按模型 CASCADE，其余归属连带与删除图一致（comment_reactions经评论二层连到工作项） |
+| `issue_description_versions` | `description_html` 保留非空 text，加 `DEFAULT '<p></p>'`；`description_stripped` 保留可空 text；`last_saved_at` 保留非空 timestamptz（无默认值）；删除 `description_binary`、`description_json` | 没有二进制协作/JSON 镜像；最后保存时间由锁下用例提供 |
+| `issue_description_versions` | 新增 `issue_description_versions_issue_id_last_saved_at_idx ON (issue_id, last_saved_at, id)`（无条件，替代单列 issue 索引）；保留并改名无条件 `issue_description_versions_{workspace_id,project_id}_idx`，不保留 owned_by/审计索引 | 最新行及稳定降序分页、物理连带；最新 20 版保留任务留 P9，P4 不截断 |
 | `cycle_issues` | **新增**部分唯一约束 `(issue_id)`：一个工作项最多属于一个迭代 | Plane 只在代码里检查 |
 | `modules` | 删除旧的 `description_text`、`description_html` | 遗留列 |
 | `*_user_properties`、`issue_views` | 删除旧的 `filters` 列；筛选条件按 Nerve 自己的格式存储（列名与格式在 M3/M4 确定）；`issue_views` 删除 `query` 列 | 筛选格式改变（见接口差异） |
@@ -235,7 +255,7 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 工作项的负责人、标签不合格 | 静默去掉 | 负责人不是项目中不是访客的有效成员、标签不是这个项目未删除的标签：422 `not_allowed`（`assignee_ids[i]`、`label_ids[i]`）；同一个 id 给两次：422 `duplicate`（M4 设计 3.7） |
 | 默认负责人 | 指派但不关注 | 指派并关注；建工作项时现查他仍是项目中不是访客的有效成员，不是就不指派、不报错（M4 设计 3.7、3.12） |
 | 负责人的动态 | 按请求里的 id 写，含被去掉的 | 只为实际指派的写（M4 设计 3.13） |
-| 自动关注 | 每个产生通知的动态的执行者；被提及的人都关注 | 创建者、负责人；评论者、被提及的成员中能读这个工作项的随 M4 的 P4 加入（M4 设计 3.12） |
+| 自动关注 | 每个产生通知的动态的执行者；被提及的人都关注 | 创建者、负责人、评论者，以及被提及的有效成员中能读这个工作项的人；按被提及者自身项目角色及 `OwnOnly` 检查，描述修改者不因编辑自动关注（M4/P4，设计 3.12） |
 | 删除状态 | 有工作项时 400 | 有工作项在它里面（已归档的也算）时 409 `project.state_in_use`，这一检查在默认状态的检查之前（M4 设计 3.6） |
 | 工作项的起止日期 | 两个都在请求里才检查开始不晚于截止 | 按合并之后的值检查：只给一个日期时与存着的另一个比较，开始晚于截止 422 `not_allowed`（在 `target_date`，只给了 `start_date` 时在 `start_date`）；同一天允许；数据库另有 `issues_dates_check`（M4 设计 3.7） |
 | 工作项的创建者的权限 | 只看工作区成员关系，已离开项目也能读、改、删 | 创建者只在删除上另有权限（`issue.delete` 的 `AllowCreator`）：他须仍是项目的有效成员、角色不低于成员；离开项目或成了访客之后不能再凭它删（没有别的权限的，看不到项目时 404，看得到时 403）（M4 设计 3.4） |
@@ -252,6 +272,17 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 关联的动态 | 对方 id 在 `old_identifier`；反向行的 `project_id` 是本项目；删除的反向行的 `comment` 用正向的类型（`field` 只把 `blocked_by`、`blocking` 反过来），`old_identifier` 是它自己 | 增、删各两条：正向的写在本工作项上、反向的写在对方上，各用从自己看的类型，各在自己的项目里；加的一条对方 id 在 `new_identifier`，删的一条在 `old_identifier`（M4 设计 3.13 第 20–23 行） |
 | 草稿发布 | 专门的转换逻辑 | 与"创建工作项"走同一代码路径 |
 | 归档 | 工作项、迭代、模块、项目的归档与恢复，以及项目级自动归档 | 规则一致（见 v0-design 5.5）；归档和恢复改为 `POST .../archive` 和 `POST .../unarchive` 两个动作接口；列表通过 `?archived=true` 查询已归档的对象 |
+| 描述、评论的长度 | 没有同一边界规则 | `description_html`、`comment_html` 各最多 500000 个 Unicode 字符，默认请求体仍为 1 MiB（M4/P4） |
+| 描述与清洗 | 异步动态/版本与宽泛输入 | `issue/adapter/content` 唯一清洗策略，app 小接口、domain 纯值；创建默认 `<p></p>`，保存后的描述、提及、关注、动态、版本同事务；旧工作项不伪造初版（M4/P4，A1） |
+| `skip_activity` | 沿旧字符串标志跳过动态 | 仅 JSON boolean；出现（含 false）只能与描述一起且不能带其他 patch 字段。true 且纯文本、按顺序保留重复的 user mention UUID、`a[href]`、checkbox checked 均相同时，只写清洗 HTML/stripped 并同步提及资格，不改主审计、不写动态/版本；false 或内容标识变化是普通保存。只改格式可不留审计是已批准代价，图片 src 投影留 M5（M4/P4） |
+| 空评论 | 服务端接受 | 清洗后无文字且无 mention/image 节点，422 `comment_html/required`（M4/P4） |
+| 改、删别人的评论 | 项目管理员可以改、删 | 仅作者编辑；作者或项目管理员删除，其他人 403 `issue.not_author`；隐藏先统一子资源 404，项目归档先于工作项归档 409，归档先于相同 HTML 无改动（M4/P4） |
+| 表情的值与归属 | 任意文本；重复 400 | 十进制格式 `^[0-9]{1,7}(-[0-9]{1,7}){0,15}$` 且 ≤128 字符；自己的重复 409，删除只找自己的活行，无该行 404；评论表情不推进 issue/comment 审计（M4/P4） |
+| 评论、表情的动态 | 写，从不显示 | 不写；通知事件留 P6，评论删除的痕迹仅审计，当前无事件发布（M4/P4） |
+| 提及的同步 | 与请求体比较，不带描述的修改删掉全部 | 从实际保存后的清洗描述做集合同步；普通相同 HTML 不写，skip=true 相同内容仍同步资格；去掉提及不取消旧关注（M4/P4） |
+| 描述的历史 | 访客能读；版本后台生成 | 仅管理员/成员可读，访客规则仍在先；同所有者且距最后保存 0–600 秒（含端点）滑动合并，其他情况新建；普通 PATCH 还原；仅描述历史，无 issue_versions；最新20版保留任务待 P9（M4/P4） |
+| 动态的列表 | 不分页；不带类型时 500；每行带完整工作项、项目、工作区；泄漏隐藏引用 | `(created_at,id)` 升序游标分页，只给精简 DTO/actor_id、不返回 comment；引用 old/new 两端都按历史有效成员关系和 OwnOnly 过滤，先过滤再 LIMIT。历史目录看 is_active，不看 deleted_at/归档，物理清理引用后略去；目标权限、目录与查询处于同一只读快照（M4/P4） |
+| 时间线的增量读取 | `created_at__gt`，只取新增 | 保留产生末页的请求 cursor 重取，再按 id 覆盖/重新排序；描述原地合并推进 created_at 会再出现。别端对旧评论的编辑/删除须整体重读，不能承诺仅末页自动更新（M4/P4） |
 | 自动关闭 | 项目设置 `close_in` 后，长期未更新的未完成工作项会被自动关闭 | v0 不做 |
 | 忘记密码 | 发邮件重置 | 服务器管理员用命令行重置 |
 | 管理员重置密码 | 只改密码（会话随之失效），PAT 不动 | `nerve users reset-password` 结束全部会话、撤销全部 PAT，输出撤销的数量（M2 设计 3.5、3.17） |

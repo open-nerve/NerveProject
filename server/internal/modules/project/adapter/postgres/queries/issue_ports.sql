@@ -68,3 +68,11 @@ SELECT member_id, role
 FROM project_members
 WHERE project_id = sqlc.arg(project_id) AND member_id = ANY (sqlc.arg(ids)::uuid[]) AND is_active AND deleted_at IS NULL
 ORDER BY member_id;
+
+-- name: IssueMentionMembers :many
+-- Read active mention candidates and the guest flag in the same statement.
+SELECT m.member_id, m.role, (m.role = 5 AND NOT p.guest_view_all_features)::boolean AS own_only
+FROM project_members m JOIN projects p ON p.id = m.project_id
+WHERE m.project_id = sqlc.arg(project_id) AND m.member_id = ANY (sqlc.arg(ids)::uuid[])
+  AND m.is_active AND m.deleted_at IS NULL AND p.deleted_at IS NULL
+ORDER BY m.member_id;

@@ -51,3 +51,11 @@ M1 结束时 oxlint 警告共 694 个（web 565、editor 65、ui 25、utils 18�
 - **关闭条件**：本 M 的 review 写明改到的文件的警告数（为 0）、清掉的规则和各包上限的变化。
 
 来源：[M1 收尾 spec](../../M1-frontend-trim/specs/closeout.md)第 4 节、第 8 节；弹窗描述和标注块两节来自收尾各 Task 的评审。
+
+## 处理结果（M4/P4）
+
+- T3/4服务端只定义comment_html，未引入comment_json；P11仍需将前端comment_json、JSONContent和回调死参数一起删除，不把后端DTO完成当作前端清理完成。
+- T1保留并修复callout Markdown序列化：src/alt按属性上下文转义，icon正文按文本上下文转义，URL语义在唯一content清洗器校验；共享真实Editor Markdown输出和三项转义变异检出并恢复，未声称浏览器执行。CustomColor局部解析及颜色值再解释也有真实往返/变异证据（review §2.2）。
+- 余项：P11起types/services/stores死成员、viewId收窄及各改动文件oxlint清理；P14创建/编辑弹窗isMigrationUpdate与撤销再重做；整个M4的集中规则清零/上限变化留后续及收尾，不因T1五个Editor测试而关闭本交接。
+
+状态保持 `open`；本次仅完成P4接收部分，待M4真正收尾逐项核对关闭条件。证据：[P4 spec §4/§7](../specs/P4-issue-collaboration.md#4-验收标准)、[P4 review §2/§6](../reviews/P4-issue-collaboration-review.md#2-验收标准核对)。

@@ -16,17 +16,19 @@ import (
 // and SetParentID tell whether the field is given, StartDate, TargetDate
 // and ParentID its value, nil for none.
 type IssuePatch struct {
-	Name          *string
-	StateID       *uuid.UUID
-	Priority      *Priority
-	AssigneeIDs   *[]uuid.UUID
-	LabelIDs      *[]uuid.UUID
-	SetStartDate  bool
-	StartDate     *shared.Date
-	SetTargetDate bool
-	TargetDate    *shared.Date
-	SetParentID   bool
-	ParentID      *uuid.UUID
+	DescriptionHTML *string
+	SkipActivity    *bool
+	Name            *string
+	StateID         *uuid.UUID
+	Priority        *Priority
+	AssigneeIDs     *[]uuid.UUID
+	LabelIDs        *[]uuid.UUID
+	SetStartDate    bool
+	StartDate       *shared.Date
+	SetTargetDate   bool
+	TargetDate      *shared.Date
+	SetParentID     bool
+	ParentID        *uuid.UUID
 }
 
 // CheckIssuePatch checks the fields p gives by createIssue's rules (M4
@@ -40,7 +42,7 @@ type IssuePatch struct {
 // project's lock, and so is the order of the dates the change leaves
 // (DatesOutOfOrder): they are the work item's, merged with those given.
 func CheckIssuePatch(p IssuePatch) (IssuePatch, error) {
-	var found []*shared.FieldError
+	found := []*shared.FieldError{checkDescription(p.DescriptionHTML), checkSkipActivity(p)}
 	if p.Name != nil {
 		name := strings.TrimSpace(*p.Name)
 		p.Name = &name
@@ -93,14 +95,15 @@ func diffOf(from, to []uuid.UUID) Diff {
 // gives the new set. An account or a label the work item has and the new
 // set keeps is left as it is: its row is not written again.
 type Changes struct {
-	Name       *string
-	Priority   *Priority
-	StateID    *uuid.UUID
-	StartDate  *DateChange
-	TargetDate *DateChange
-	Parent     *ParentChange
-	Assignees  Diff
-	Labels     Diff
+	Description *DescriptionChange
+	Name        *string
+	Priority    *Priority
+	StateID     *uuid.UUID
+	StartDate   *DateChange
+	TargetDate  *DateChange
+	Parent      *ParentChange
+	Assignees   Diff
+	Labels      Diff
 }
 
 // ChangesOf is what p, checked (CheckIssuePatch), changes in i.
@@ -151,7 +154,7 @@ func Unassignable(asked, added []uuid.UUID, roles map[uuid.UUID]shared.Role) []s
 
 // None reports whether c changes nothing: then the update writes no row.
 func (c Changes) None() bool {
-	return c.Name == nil && c.Priority == nil && c.StateID == nil && c.StartDate == nil && c.TargetDate == nil && c.Parent == nil &&
+	return (c.Description == nil || !c.Description.Write) && c.Name == nil && c.Priority == nil && c.StateID == nil && c.StartDate == nil && c.TargetDate == nil && c.Parent == nil &&
 		len(c.Assignees.Added) == 0 && len(c.Assignees.Removed) == 0 && len(c.Labels.Added) == 0 && len(c.Labels.Removed) == 0
 }
 

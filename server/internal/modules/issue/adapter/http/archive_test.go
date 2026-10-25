@@ -38,7 +38,7 @@ func TestArchiveAndUnarchiveIssue(t *testing.T) {
 		path   string
 		answer domain.Issue
 		json   string
-	}{{"/archive", webSeven, webSevenJSON}, {"/unarchive", webEight, webEightJSON}} {
+	}{{"/archive", webSeven, webSevenDetailJSON}, {"/unarchive", webEight, webEightDetailJSON}} {
 		archive, unarchive := &fakeArchive{answer: webSeven}, &fakeArchive{answer: webEight}
 		h := newServer(t, httpadapter.UseCases{ArchiveIssue: archive, UnarchiveIssue: unarchive})
 		res, body := do(t, h, request(http.MethodPost, "/api/v0/issues/"+tt.answer.ID.String()+tt.path, "alice", ""))

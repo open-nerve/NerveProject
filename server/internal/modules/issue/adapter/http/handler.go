@@ -69,20 +69,87 @@ type DeleteIssueRelationUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) error
 }
 
+// CreateIssueCommentUseCase creates a comment on the named issue.
+type CreateIssueCommentUseCase interface {
+	Execute(context.Context, uuid.UUID, string) (domain.Comment, error)
+}
+
+// ListIssueCommentsUseCase lists a page, retaining absent query values.
+type ListIssueCommentsUseCase interface {
+	Execute(context.Context, uuid.UUID, *int, *string) (app.CommentPage, error)
+}
+
+// UpdateIssueCommentUseCase edits a comment.
+type UpdateIssueCommentUseCase interface {
+	Execute(context.Context, uuid.UUID, string) (domain.Comment, error)
+}
+
+// DeleteIssueCommentUseCase deletes a comment.
+type DeleteIssueCommentUseCase interface {
+	Execute(context.Context, uuid.UUID) error
+}
+
+// AddCommentReactionUseCase adds the caller's reaction on a comment.
+type AddCommentReactionUseCase interface {
+	Execute(context.Context, uuid.UUID, string) (domain.CommentReaction, error)
+}
+
+// AddIssueReactionUseCase adds the caller's reaction.
+type AddIssueReactionUseCase interface {
+	Execute(context.Context, uuid.UUID, string) (domain.IssueReaction, error)
+}
+
+// RemoveIssueReactionUseCase removes the caller's reaction.
+type RemoveIssueReactionUseCase interface {
+	Execute(context.Context, uuid.UUID, string) error
+}
+
+// ListIssueReactionsUseCase reads live reactions.
+type ListIssueReactionsUseCase interface {
+	Execute(context.Context, uuid.UUID) ([]domain.IssueReaction, error)
+}
+
+// ListDescriptionVersionsUseCase retains optional page query values.
+type ListDescriptionVersionsUseCase interface {
+	Execute(context.Context, uuid.UUID, *int, *string) (app.DescriptionVersionPage, error)
+}
+
+// GetDescriptionVersionUseCase reads one saved description.
+type GetDescriptionVersionUseCase interface {
+	Execute(context.Context, uuid.UUID) (domain.DescriptionVersion, error)
+}
+
+// ListIssueActivitiesUseCase reads a page with historical reference visibility.
+type ListIssueActivitiesUseCase interface {
+	Execute(context.Context, uuid.UUID, *int, *string) (app.ActivityPage, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	CreateIssue          CreateIssueUseCase
-	GetIssue             GetIssueUseCase
-	GetIssueByIdentifier GetIssueByIdentifierUseCase
-	UpdateIssue          UpdateIssueUseCase
-	DeleteIssue          DeleteIssueUseCase
-	ArchiveIssue         ArchiveIssueUseCase
-	UnarchiveIssue       ArchiveIssueUseCase
-	ListSubIssues        ListSubIssuesUseCase
-	AddSubIssues         AddSubIssuesUseCase
-	ListIssueRelations   ListIssueRelationsUseCase
-	CreateIssueRelations CreateIssueRelationsUseCase
-	DeleteIssueRelation  DeleteIssueRelationUseCase
+	ListIssueActivities     ListIssueActivitiesUseCase
+	ListDescriptionVersions ListDescriptionVersionsUseCase
+	GetDescriptionVersion   GetDescriptionVersionUseCase
+	AddCommentReaction      AddCommentReactionUseCase
+	RemoveCommentReaction   RemoveIssueReactionUseCase
+	AddIssueReaction        AddIssueReactionUseCase
+	RemoveIssueReaction     RemoveIssueReactionUseCase
+	ListIssueReactions      ListIssueReactionsUseCase
+	UpdateIssueComment      UpdateIssueCommentUseCase
+	DeleteIssueComment      DeleteIssueCommentUseCase
+	CreateIssueComment      CreateIssueCommentUseCase
+	ListIssueComments       ListIssueCommentsUseCase
+	CreateIssue             CreateIssueUseCase
+	GetIssue                GetIssueUseCase
+	GetIssueByIdentifier    GetIssueByIdentifierUseCase
+	UpdateIssue             UpdateIssueUseCase
+	DeleteIssue             DeleteIssueUseCase
+	ArchiveIssue            ArchiveIssueUseCase
+	UnarchiveIssue          ArchiveIssueUseCase
+	ListSubIssues           ListSubIssuesUseCase
+	AddSubIssues            AddSubIssuesUseCase
+	ListIssueRelations      ListIssueRelationsUseCase
+	CreateIssueRelations    CreateIssueRelationsUseCase
+	DeleteIssueRelation     DeleteIssueRelationUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

@@ -56,3 +56,26 @@ func (f *fakeIssues) DeleteIssueSubscriberRows(ctx context.Context, d app.IssueD
 func (f *fakeIssues) DeleteIssueActivityRows(ctx context.Context, d app.IssueDeletion) error {
 	return f.deleteRows(ctx, "DeleteIssueActivityRows", d)
 }
+
+// DeleteIssueCommentRows soft-deletes comment rows in the existing deletion sequence.
+func (f *fakeIssues) DeleteIssueCommentRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueCommentRows", d)
+}
+
+// DeleteIssueReactionRows soft-deletes reaction rows in the existing deletion sequence.
+func (f *fakeIssues) DeleteIssueReactionRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueReactionRows", d)
+}
+
+// DeleteIssueCommentReactionRows soft-deletes reaction rows in the existing deletion sequence.
+func (f *fakeIssues) DeleteIssueCommentReactionRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueCommentReactionRows", d)
+}
+
+func (f *fakeIssues) DeleteIssueMentionRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueMentionRows", d)
+}
+
+func (f *fakeIssues) DeleteIssueDescriptionVersionRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueDescriptionVersionRows", d)
+}

@@ -20,7 +20,14 @@ import {
   relatedRow,
   restoredRow,
 } from "../../fixtures/assert/issue";
-import { newAccount } from "../../fixtures/auth";
+import {
+  commentDeleted,
+  commentUpdated,
+  createCommentReaction,
+  createIssueComment,
+  createIssueReaction,
+} from "../../fixtures/comments";
+import { bearer, newAccount } from "../../fixtures/auth";
 import {
   createIssue,
   createIssueRelations,
@@ -76,6 +83,7 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   // the started group it is not archived.
   const { id } = await createIssue(api, ann.token, web.id, {
     name: "Fix the login",
+    description_html: `<mention-component entity_name="user_mention" entity_identifier="${ann.id}"></mention-component>`,
     state_id: inProgress,
     assignee_ids: [ann.id],
     label_ids: [bug.id],
@@ -88,6 +96,9 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
 
   // Moved to Done, she archives it: archived at its moment, one row of its activity; archived again, nothing is
   // written, and the answer is the work item as it is.
+  const comment = await createIssueComment(api, ann.token, id, "<p>Archive discussion</p>");
+  await createCommentReaction(api, ann.token, comment.id);
+  await createIssueReaction(api, ann.token, id);
   await updateIssue(api, ann.token, id, { state_id: done });
   const toDone = changed("state", "In Progress", "Done", "updated the state to", "Done", "In Progress");
   const archiving = await issueArchived(api, ann.token, id);
@@ -146,6 +157,19 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   // the fix; none of the four writes anything.
   expect((await issueArchived(api, ann.token, id)).status).toBe(200);
   const archivedAgain = { archived: true, by: ann.email, activity: [...related.activity, archivedRow] };
+  const rejectedComment = await api.POST("/api/v0/issues/{issue_id}/comments", {
+    params: { path: { issue_id: id } },
+    body: { comment_html: "<p>Archived</p>" },
+    headers: bearer(ann.token),
+  });
+  expect(rejectedComment.response.status).toBe(409);
+  expect(rejectedComment.error?.code).toBe("issue.archived");
+  expect(await commentUpdated(api, ann.token, comment.id, "<p>Archived edit</p>")).toEqual({
+    status: 409,
+    code: "issue.archived",
+  });
+  expect(await commentDeleted(api, ann.token, comment.id)).toEqual({ status: 409, code: "issue.archived" });
+
   await expectIssueArchival(db, id, archivedAgain);
   const logout = await createIssue(api, ann.token, web.id, { name: "Fix the logout" });
   const refused = { status: 409, code: "issue.archived" };

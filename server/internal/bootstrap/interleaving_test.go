@@ -161,8 +161,30 @@ func (r race) state(t *testing.T) (active bool, workspaces, members, activeMembe
 // run starts fn and returns the channel of its result.
 func run(fn func() error) <-chan error {
 	done := make(chan error, 1)
-	go func() { done <- fn() }()
+	go func() {
+		defer close(done)
+		done <- fn()
+	}()
 	return done
+}
+
+// A consumed result remains observable by failure cleanup after held returns.
+func TestInterleavingCompletionRemainsObservable(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	sentinel := errors.New("first request ended before gate")
+	done := run(func() error { return sentinel })
+	if got := result(t, ctx, done, "immediate first request"); got != sentinel {
+		t.Fatal(got)
+	}
+	select {
+	case _, ok := <-done:
+		if ok {
+			t.Fatal("request completed twice")
+		}
+	case <-ctx.Done():
+		t.Fatal("cleanup cannot observe already consumed completion")
+	}
 }
 
 func held(t *testing.T, ctx context.Context, g *gate, done <-chan error, what string) {
@@ -202,14 +224,47 @@ func serializeOn(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate,
 func serializeOnTable(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, table string, first, second func() error) (
 	opened time.Time, firstErr, secondErr error) {
 	t.Helper()
-	done := run(first)
+	return serializeOnTableAfter(t, ctx, pool, g, table, first, second, nil)
+}
+
+// serializeOnTableAfter calls afterWait while the proven waiter is still blocked.
+func serializeOnTableAfter(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, table string, first, second func() error,
+	afterWait func()) (opened time.Time, firstErr, secondErr error) {
+	t.Helper()
+	var done, answered <-chan error
+	defer func() {
+		select {
+		case <-g.open:
+		default:
+			close(g.open)
+		}
+		// A failed probe or callback still releases and collects both requests.
+		cleanup, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+		defer cancel()
+		for _, pending := range []<-chan error{done, answered} {
+			if pending != nil {
+				select {
+				case <-pending:
+				case <-cleanup.Done():
+					t.Error("interleaved request did not end during cleanup")
+				}
+			}
+		}
+	}()
+	done = run(first)
 	held(t, ctx, g, done, "the first write")
-	answered := run(second)
+	answered = run(second)
 	pgtest.WaitForLockWaitOn(t, pool, table, 5*time.Second)
+	if afterWait != nil {
+		afterWait()
+	}
 	opened = time.Now().Truncate(time.Microsecond)
 	close(g.open)
 	firstErr = result(t, ctx, done, "the first write")
-	return opened, firstErr, result(t, ctx, answered, "the second write")
+	done = nil
+	secondErr = result(t, ctx, answered, "the second write")
+	answered = nil
+	return opened, firstErr, secondErr
 }
 
 // Deactivation first: it holds the account row; the creation waits on its

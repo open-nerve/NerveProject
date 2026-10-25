@@ -96,11 +96,16 @@ type ProjectMembershipCounts interface {
 // (StateCatalog, LabelCatalog, ProjectMembers), for its writes; a
 // workspace's projects' identifiers (ProjectIdentifiers), for a read by
 // identifier; and which projects are archived (ArchivedProjects), for a
-// list across projects. Each reads, or locks, in the transaction ctx
+// list across projects; and historical memberships for filtering activity
+// references. Each reads, or locks, in the transaction ctx
 // carries; the catalogs are read under the project's lock, which every
 // write of a state, a label or a membership holds too, so they stay as
 // read until the write commits (M4 design 3.5).
 type IssueProjects interface {
+	// HistoricalIssueProjects reads active memberships, including deleted or archived projects.
+	HistoricalIssueProjects(ctx context.Context, workspaceID, actorID uuid.UUID) ([]HistoricalIssueProject, error)
+	// IssueMentionMembers reads active candidates and their effective guest scope.
+	IssueMentionMembers(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]IssueMemberVisibility, error)
 	// ProjectWorkspace is the workspace of the undeleted project id,
 	// archived or not, read without a lock; found is false when there is
 	// none.
@@ -136,6 +141,8 @@ type IssueProjects interface {
 // values IssueProjects hands over: bootstrap converts them into issue's
 // (M4 design 6.5).
 type (
+	HistoricalIssueProject = app.HistoricalIssueProject
+	IssueMemberVisibility  = app.IssueMemberVisibility
 	IssueProject           = app.IssueProject
 	IssueState             = app.IssueState
 	IssueLabel             = app.IssueLabel

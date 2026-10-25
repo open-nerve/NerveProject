@@ -37,37 +37,49 @@ export function workspaceTables(db: Database): Promise<string[]> {
   return tablesUnder(db, "workspaces", "workspace_id");
 }
 
-/** A foreign key of one column: the table that holds it, the column, and the table it names. */
+/** A single-column foreign key, including its target column used by the id-based traversal. */
 interface ForeignKey {
   child: string;
   column: string;
   parent: string;
+  target: string;
 }
 
 /**
  * The foreign keys below table, the catalog's graph walked down from it: each key that names table, then each that
  * names a table holding one of those, and so on, in the order the walk reaches them, each table walked once (a key of
  * a table to itself, as issues.parent_id, among them). Each is a key of one column, which names its row's parent; a
- * key of more columns fails here, named, for its rows would be found another way.
+ * key of more columns or a target other than id fails here, named, for its rows would be found another way.
  */
 export async function keysBelow(db: Database, table: string): Promise<ForeignKey[]> {
-  const all = await db.query<ForeignKey & { columns: number }>(
+  const all = await db.query<ForeignKey & { columns: number; targetColumns: number }>(
     `SELECT c.conrelid::regclass::text AS child, a.attname::text AS column, c.confrelid::regclass::text AS parent,
-            cardinality(c.conkey) AS columns
+            b.attname::text AS target, cardinality(c.conkey) AS columns, cardinality(c.confkey) AS "targetColumns"
        FROM pg_constraint c JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+       JOIN pg_attribute b ON b.attrelid = c.confrelid AND b.attnum = c.confkey[1]
       WHERE c.contype = 'f'`
   );
   // tables grows as the loop goes, each table once.
   const tables = [table];
   const keys: ForeignKey[] = [];
   for (let i = 0; i < tables.length; i++) {
-    for (const { columns, ...key } of all.filter((k) => k.parent === tables[i])) {
+    for (const { columns, targetColumns, ...key } of all.filter((k) => k.parent === tables[i])) {
       expect(columns, `the columns of ${key.child}.${key.column}, a key to ${key.parent}`).toBe(1);
+      expect(targetColumns, `the target columns of ${key.child}.${key.column}`).toBe(1);
+      expect(key.target, `the target of ${key.child}.${key.column}, a key to ${key.parent}`).toBe("id");
       keys.push(key);
       if (!tables.includes(key.child)) {
         tables.push(key.child);
       }
     }
+  }
+  if (table === "issues") {
+    expect(keys, "the exact comment reaction path below issues").toEqual(
+      expect.arrayContaining([
+        { child: "comment_reactions", column: "comment_id", parent: "issue_comments", target: "id" },
+        { child: "issue_comments", column: "issue_id", parent: "issues", target: "id" },
+      ])
+    );
   }
   return keys;
 }

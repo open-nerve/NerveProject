@@ -11,20 +11,22 @@ import (
 // IssueRow is a work item a write inserts (M4 design 3.5): its values,
 // and the moment and the account that create it.
 type IssueRow struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	ProjectID   uuid.UUID
-	SequenceID  int
-	Name        string
-	StateID     uuid.UUID
-	Priority    domain.Priority
-	StartDate   *shared.Date
-	TargetDate  *shared.Date
-	ParentID    *uuid.UUID
-	SortOrder   float64
-	CompletedAt *time.Time
-	By          uuid.UUID
-	At          time.Time
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	ProjectID           uuid.UUID
+	SequenceID          int
+	Name                string
+	DescriptionHTML     string
+	DescriptionStripped *string
+	StateID             uuid.UUID
+	Priority            domain.Priority
+	StartDate           *shared.Date
+	TargetDate          *shared.Date
+	ParentID            *uuid.UUID
+	SortOrder           float64
+	CompletedAt         *time.Time
+	By                  uuid.UUID
+	At                  time.Time
 }
 
 // LinkRows are new rows of one of a work item's tables of accounts or
@@ -45,16 +47,18 @@ type LinkRows struct {
 // 3.7, 3.9): those it changes and the others as they are, and the moment
 // and the account that change it last.
 type IssueFields struct {
-	ID          uuid.UUID
-	Name        string
-	StateID     uuid.UUID
-	Priority    domain.Priority
-	StartDate   *shared.Date
-	TargetDate  *shared.Date
-	ParentID    *uuid.UUID
-	CompletedAt *time.Time
-	By          uuid.UUID
-	At          time.Time
+	ID                  uuid.UUID
+	Name                string
+	DescriptionHTML     string
+	DescriptionStripped *string
+	StateID             uuid.UUID
+	Priority            domain.Priority
+	StartDate           *shared.Date
+	TargetDate          *shared.Date
+	ParentID            *uuid.UUID
+	CompletedAt         *time.Time
+	By                  uuid.UUID
+	At                  time.Time
 }
 
 // ParentRows are the work items an addition of sub-items puts under a

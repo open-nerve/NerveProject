@@ -155,26 +155,6 @@ func TestCheckAPITokenReportsEveryField(t *testing.T) {
 	}
 }
 
-func TestPageSize(t *testing.T) {
-	for _, tt := range []struct {
-		limit *int
-		want  int
-	}{{nil, 50}, {ptr(1), 1}, {ptr(100), 100}} {
-		if got, err := PageSize(tt.limit); err != nil || got != tt.want {
-			t.Errorf("PageSize(%v) = %d, %v; want %d", tt.limit, got, err, tt.want)
-		}
-	}
-	for _, limit := range []int{0, 101, -1} {
-		_, err := PageSize(&limit)
-
-		var se *shared.Error
-		want := []shared.FieldError{{Field: "limit", Code: "out_of_range", Message: "must be between 1 and 100"}}
-		if !errors.As(err, &se) || se.Code != shared.CodeValidationFailed || !slices.Equal(se.Fields, want) {
-			t.Errorf("PageSize(%d) = %v, want 422 limit out_of_range", limit, err)
-		}
-	}
-}
-
 func ptr[T any](v T) *T { return &v }
 
 // DecodeCursor accepts only what EncodeCursor writes, so the time MarshalJSON

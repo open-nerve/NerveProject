@@ -19,7 +19,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON users, profiles, auth_sessions, api_toke
 GRANT SELECT, INSERT, UPDATE, DELETE ON workspaces, workspace_members, workspace_user_properties, workspace_member_invites
     TO nerve_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON projects, project_members, project_user_properties, states, labels TO nerve_runtime;
-GRANT SELECT, INSERT, UPDATE, DELETE ON issues, issue_assignees, issue_labels, issue_relations, issue_subscribers, issue_activities
+GRANT SELECT, INSERT, UPDATE, DELETE ON issues, issue_assignees, issue_labels, issue_relations, issue_subscribers, issue_comments, issue_reactions, comment_reactions, issue_activities, issue_mentions, issue_description_versions
     TO nerve_runtime;
 
 -- River's tables and the sequences of their ids. River rebuilds the indexes of river_job every day with

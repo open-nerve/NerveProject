@@ -2,8 +2,10 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -45,6 +47,7 @@ func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
 	}
 	activity := "issue_activities made by alice made, changed by alice made, of alice"
 	want := []string{activity, activity, "issue_assignees made by alice made, changed by alice made, of bob",
+		"issue_description_versions made by alice made, changed by alice made, of alice",
 		"issue_labels made by alice made, changed by alice made", "issue_subscribers made by alice made, changed by alice made, of alice",
 		"issue_subscribers made by alice made, changed by alice made, of bob", "issues made by alice made, changed by alice made"}
 	if got := w.workItemStamps(t, item); !slices.Equal(got, want) {
@@ -77,7 +80,15 @@ var testIssueConfig = config.IssueConfig{WriteGate: config.WriteGateConfig{PerPr
 // bootstrap wires them.
 func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
-	return newRoute(t, issue.New(issue.Deps{Pool: pool, Tx: tx, WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock.System{},
+	return newIssueRouteWithClock(t, pool, tx, clock.System{})
+}
+
+// newIssueRouteWithClock keeps the production wiring and supplies a test clock.
+func newIssueRouteWithClock(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }) moduleRoute {
+	t.Helper()
+	return newRoute(t, issue.New(issue.Deps{Pool: pool, Tx: tx,
+		ReadTx:    postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()),
+		WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock,
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory},
 		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
@@ -121,10 +132,22 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 		return route.answerWithin(t, w.contract, http.MethodPost, path, caller, body, want)
 	}
 
+	commentID := w.newComment(t, "alice", w.newWorkItem(t)).ID
+	route.answerWithin(t, w.contract, http.MethodPost, commentReactionsOf(commentID), alice, `{"reaction":"128077"}`, http.StatusCreated)
+	route.answerWithin(t, w.contract, http.MethodDelete, commentReactionsOf(commentID)+"/128077", alice, "", http.StatusNoContent)
+	reactionID := w.newWorkItem(t)
+	route.answerWithin(t, w.contract, http.MethodPost, reactionsOf(reactionID), alice, `{"reaction":"128077"}`, http.StatusCreated)
+	route.answerWithin(t, w.contract, http.MethodGet, reactionsOf(reactionID), alice, "", http.StatusOK)
+	route.answerWithin(t, w.contract, http.MethodDelete, reactionsOf(reactionID)+"/128077", alice, "", http.StatusNoContent)
+	var comment answeredComment
+	decodeAnswer(t, route.answerWithin(t, w.contract, http.MethodPost, commentsOf(w.newWorkItem(t)), alice, `{"comment_html":"<p>Hi</p>"}`, http.StatusCreated), &comment)
+	route.answerWithin(t, w.contract, http.MethodPatch, commentPath(comment.ID), alice, `{"comment_html":"<p>Changed</p>"}`, http.StatusOK)
+	route.answerWithin(t, w.contract, http.MethodDelete, commentPath(comment.ID), alice, "", http.StatusNoContent)
 	var first struct {
 		ID uuid.UUID `json:"id"`
 	}
-	decodeAnswer(t, send(alice, w.fullIssue(), http.StatusCreated), &first)
+	decodeAnswer(t, send(alice, strings.TrimSuffix(w.fullIssue(), "}")+fmt.Sprintf(`,"description_html":%q}`, mentionHTML(w.ids["bob"])), http.StatusCreated), &first)
+	route.answerWithin(t, w.contract, http.MethodPatch, "/api/v0/issues/"+first.ID.String(), alice, fmt.Sprintf(`{"description_html":%q}`, mentionHTML(w.ids["alice"])), 200)
 	if _, err := w.pool.Exec(context.Background(), "UPDATE projects SET default_assignee_id = $2 WHERE id = $1", w.web, w.ids["bob"]); err != nil {
 		t.Fatal(err)
 	}

@@ -60,6 +60,10 @@ func aRelation(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.U
 }
 
 var batchStatements = []batchStatement{
+	{"issue_mentions", (*postgresadapter.Store).DeleteProjectMentionRows, child("issue_mentions", "mention_id", anAccount)},
+	{"issue_description_versions", (*postgresadapter.Store).DeleteProjectDescriptionVersionRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, _ int) {
+		exec(t, pool, "INSERT INTO issue_description_versions(id,workspace_id,project_id,issue_id,owned_by_id,last_saved_at,created_by_id,updated_by_id,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$5,$5,$6,$6)", id, p.workspace, p.id, issue, by, now)
+	}},
 	{"issues", (*postgresadapter.Store).DeleteProjectIssueRows, func(t *testing.T, pool *pgxpool.Pool, p project, _, id, by uuid.UUID, n int) {
 		newIssue(t, pool, p, id, 100+n, by)
 	}},
@@ -67,6 +71,15 @@ var batchStatements = []batchStatement{
 	{"issue_labels", (*postgresadapter.Store).DeleteProjectLabelRows, child("issue_labels", "label_id", aLabel)},
 	{"issue_relations", (*postgresadapter.Store).DeleteProjectRelationRows, aRelation},
 	{"issue_subscribers", (*postgresadapter.Store).DeleteProjectSubscriberRows, child("issue_subscribers", "subscriber_id", anAccount)},
+	{"issue_comments", (*postgresadapter.Store).DeleteProjectCommentRows, child("issue_comments", "actor_id", anAccount)},
+	{"issue_reactions", (*postgresadapter.Store).DeleteProjectReactionRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {
+		exec(t, pool, "INSERT INTO issue_reactions(id,workspace_id,project_id,issue_id,actor_id,reaction,created_by_id,updated_by_id,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$5,$5,$7,$7)", id, p.workspace, p.id, issue, by, fmt.Sprint(n), now)
+	}},
+	{"comment_reactions", (*postgresadapter.Store).DeleteProjectCommentReactionRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {
+		c := uuid.NewV7()
+		exec(t, pool, "INSERT INTO issue_comments(id,workspace_id,project_id,issue_id,actor_id) VALUES($1,$2,$3,$4,$5)", c, p.workspace, p.id, issue, by)
+		exec(t, pool, "INSERT INTO comment_reactions(id,workspace_id,project_id,comment_id,actor_id,reaction,created_by_id,updated_by_id,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$5,$5,$7,$7)", id, p.workspace, p.id, c, by, fmt.Sprint(n), now)
+	}},
 	{"issue_activities", (*postgresadapter.Store).DeleteProjectActivityRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id,
 		by uuid.UUID, _ int) {
 		exec(t, pool, `INSERT INTO issue_activities (id, workspace_id, project_id, issue_id, actor_id, created_by_id, updated_by_id, created_at,

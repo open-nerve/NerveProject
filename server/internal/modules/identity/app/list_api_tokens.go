@@ -43,7 +43,7 @@ func (l *ListAPITokens) Execute(ctx context.Context, limit *int, cursor *string)
 			return APITokenPage{}, err
 		}
 	}
-	size, err := domain.PageSize(limit)
+	size, err := shared.PageSize(limit)
 	if err != nil {
 		return APITokenPage{}, err
 	}

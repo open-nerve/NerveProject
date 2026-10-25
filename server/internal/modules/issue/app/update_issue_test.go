@@ -42,7 +42,7 @@ func newUpdate() (*app.UpdateIssue, *world, uuid.UUID) {
 
 // updateOver is updateIssue over w's ports.
 func updateOver(w *world) *app.UpdateIssue {
-	return app.NewUpdateIssue(app.UpdateIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
+	return app.NewUpdateIssue(app.UpdateIssueDeps{Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
 		Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}})
 }
 
@@ -341,5 +341,27 @@ func TestUpdateIssueStopsAtAFailingPort(t *testing.T) {
 				t.Errorf("Execute() = %+v, %v after %q; want an error before %s", got, err, w.log.calls, tt.before)
 			}
 		})
+	}
+}
+
+func TestUpdateIssuePreservesLockedDescription(t *testing.T) {
+	for _, text := range []*string{nil, name(""), name("locked text")} {
+		uc, w, id := newUpdate()
+		w.issues.issue.DescriptionHTML = "<p>precheck</p>"
+		w.issues.issue.DescriptionStripped = name("precheck")
+		w.project.waited = func() {
+			w.issues.issue.DescriptionHTML = "<p>locked</p>"
+			w.issues.issue.DescriptionStripped = text
+		}
+		got, err := uc.Execute(as(alice), id, domain.IssuePatch{Name: name("renamed")})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if w.issues.changed == nil || w.issues.changed.DescriptionHTML != "<p>locked</p>" || !reflect.DeepEqual(w.issues.changed.DescriptionStripped, text) {
+			t.Fatalf("write did not preserve lock-time description: %+v", w.issues.changed)
+		}
+		if got.DescriptionHTML != "<p>locked</p>" || !reflect.DeepEqual(got.DescriptionStripped, text) {
+			t.Fatalf("read-back lost description: %+v", got)
+		}
 	}
 }
