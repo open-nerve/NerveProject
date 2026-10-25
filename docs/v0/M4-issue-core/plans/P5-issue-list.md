@@ -252,18 +252,18 @@ type IssueListSettings interface {
 **顺序实施与独立评审（全部仍属T5）：**
 
 - [x] **T5a：Flat仓储。** 创建Flat当前实际使用的端口/模型、三职责适配文件与唯一Flat静态SQL；从首版实现精确numeric/有限浮点位序转换，不留已知有损占位。覆盖全部筛选、OwnOnly/triage/软删/归档、完整数组/子项数、19排序基础与limit+1、同ctx、relation/target配对、nil与[]及直接sqlc NULL两层防御；至少以微秒和相邻float逆UUID真实分页证明数值策略。共享JSON的适用固定行序直接对照，不由生产比较器生成预期。过滤放到LIMIT后、漏adapter nil规整、漏SQL coalesce三类真实变异在本单元完成。精确生成物、定位/lint/必要全量及提交后gen-check，独立评审通过后交下一单元。
-- [ ] **T5b：精度收口与公共编排。** 新实现者接手；补有限浮点全边界、时间宽年份/超过2^53整数表达式、共享JSON全部适用码limit=1分页及其余T5真实变异；实现Listing同ctx目录→Flat→裁父→空cursor补total，实际消费者验证退出/停用/降guest的历史负责人姓名。Rows仍只有Flat；Groups/Subgroups留T6/T7。新增行为按TDD，补测既有正确行为如实记基线绿，由真实变异给业务失败证据，不故意造错误初红。独立评审通过、下列全部验收齐备后才勾T5。
+- [x] **T5b：精度收口与公共编排。** 新实现者接手；补有限浮点全边界、时间宽年份/超过2^53整数表达式、共享JSON全部适用码limit=1分页及其余T5真实变异；实现Listing同ctx目录→Flat→裁父→空cursor补total，实际消费者验证退出/停用/降guest的历史负责人姓名。Rows仍只有Flat；Groups/Subgroups留T6/T7。新增行为按TDD，补测既有正确行为如实记基线绿，由真实变异给业务失败证据，不故意造错误初红。独立评审通过、下列全部验收齐备后才勾T5。
 
 T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400时先核职责和余量，不压缩测试或把生成物/测试搬目录掩盖规模。需要再切按D2登记，不能用任务拆分改变架构或消失完成线。
 
-- [ ] 写 `TestFlatIssueList`：所有筛选各有命中/邻居，组合筛选、OwnOnly、triage/软删/归档、重复关联不重复issue；全部19排序与limit+1；label/assignee完整数组；子项计数含隐藏/归档邻居。 真实SQL消费T3的issue-order.json固定预期（适用的名字/日期/null/同键ID），返回ID直接比较独立期望，不复用生产比较器重算；超大整数边界另作精确表达式探针，不伪造海量子项。
-- [ ] 写 `TestListArrayParameters`：每个可空数组字段分别nil与[]等价；测试直接sqlc传NULL以证明SQLcoalesce防御；另直接验证生产Store实际调用的参数映射函数产出的各sqlc slice均非nil、并列目录长度一致，或用既有测试tracer捕获真实执行边界；不以app层fake Rows证明adapter规整、不新增生产测试注入。SQL直接NULL的coalesce与adapter规整须分别变异证伪。
-- [ ] 写 `TestListingEmptyCursorTotal`：超尾cursor、仍有原筛选、total非0；同ctx去cursor且limit1，不能删group选择；无cursor真空不多查；目录故障/二次查询错误原样返回。
-- [ ] 红：`go -C server test ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres -run 'Test(FlatIssueList|ListArrayParameters|ListingEmptyCursorTotal)' -count=1`。
-- [ ] ListRead把TargetMemberID映射为独立sqlc参数relation_user_id；关系过滤不用ActorID。项目target=nil/Relation为空，个人二者同时有效；内部错配报错，不静默回落。
-- [ ] 实现filtered MATERIALIZED/窄排序键/COLLATE C/window total与一次排序/谓词。k_num分支建议显式统一numeric，时间微秒/日期天数/整数计数不隐式转float8；sort_order和cursor使用一致的明确转换，先用相邻可表示值验证转换未合并两个键。完整数组只为输出行；Row内子项计数遵守项目OwnOnly，父ID按既有hideParents规则裁剪；主查询不读projects/states/users。
-- [ ] 绿；变异过滤移到LIMIT后、删coalesce、漏nil规整、total计cursor后、名前取max、漏HiddenFrom计数，以及从T3移来的日期AND→OR、null降序反转、同键id方向固定，均须有真实SQL业务失败并恢复。SQL形状测试只辅助，不替代行为。
-- [ ] G；提交 `feat(M4/P5): 实现同快照的不分组列表查询`。
+- [x] 写 `TestFlatIssueList`：所有筛选各有命中/邻居，组合筛选、OwnOnly、triage/软删/归档、重复关联不重复issue；全部19排序与limit+1；label/assignee完整数组；子项计数含隐藏/归档邻居。 真实SQL消费T3的issue-order.json固定预期（适用的名字/日期/null/同键ID），返回ID直接比较独立期望，不复用生产比较器重算；超大整数边界另作精确表达式探针，不伪造海量子项。
+- [x] 写 `TestListArrayParameters`：每个可空数组字段分别nil与[]等价；测试直接sqlc传NULL以证明SQLcoalesce防御；另直接验证生产Store实际调用的参数映射函数产出的各sqlc slice均非nil、并列目录长度一致，或用既有测试tracer捕获真实执行边界；不以app层fake Rows证明adapter规整、不新增生产测试注入。SQL直接NULL的coalesce与adapter规整须分别变异证伪。
+- [x] 写 `TestListingEmptyCursorTotal`：超尾cursor、仍有原筛选、total非0；同ctx去cursor且limit1，不能删group选择；无cursor真空不多查；目录故障/二次查询错误原样返回。
+- [x] 红：`go -C server test ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres -run 'Test(FlatIssueList|ListArrayParameters|ListingEmptyCursorTotal)' -count=1`。
+- [x] ListRead把TargetMemberID映射为独立sqlc参数relation_user_id；关系过滤不用ActorID。项目target=nil/Relation为空，个人二者同时有效；内部错配报错，不静默回落。
+- [x] 实现filtered MATERIALIZED/窄排序键/COLLATE C/window total与一次排序/谓词。k_num分支建议显式统一numeric，时间微秒/日期天数/整数计数不隐式转float8；sort_order和cursor使用一致的明确转换，先用相邻可表示值验证转换未合并两个键。完整数组只为输出行；Row内子项计数遵守项目OwnOnly，父ID按既有hideParents规则裁剪；主查询不读projects/states/users。
+- [x] 绿；变异过滤移到LIMIT后、删coalesce、漏nil规整、total计cursor后、名前取max、漏HiddenFrom计数，以及从T3移来的日期AND→OR、null降序反转、同键id方向固定，均须有真实SQL业务失败并恢复。SQL形状测试只辅助，不替代行为。
+- [x] G；提交 `feat(M4/P5): 实现同快照的不分组列表查询`。
 
 ## Task 6：分组查询与组续页
 

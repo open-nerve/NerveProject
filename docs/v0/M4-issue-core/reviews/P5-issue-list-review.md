@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-25。状态：**实施中；T1–T4及T5a完成，T5b进行中；阶段尚未完成，不合并**。
+日期：2026-10-25。状态：**实施中；T1–T5完成，T6待开始；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -22,7 +22,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 ## 2. 验收标准逐条核对
 
-产品验收清单以 spec §4 为准；T1–T4及T5a已有下列实施证据，整个T5与其他任务尚未完成。下表保留起步检查，后面追加逐任务证据。
+产品验收清单以 spec §4 为准；T1–T5已有下列实施证据，T6及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
 
 | 检查 | 结果 |
 |---|---|
@@ -32,7 +32,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 | 阶段关键词 | `phase=M4/P5`；没有在 P4/P5 到期的例外，`/user-properties/` 的 M4/P11 例外保留；`node tools/keywords.mjs` 为72规则、23例外、无命中 |
 | 起步文档自检 | 16个任务顺序完整、产品验收均未勾选；53处本地链接无新增缺失。M4设计原有4个M5–M8收尾文件链接仍是未来交付，不提前创建或标完成 |
 | 独立预检 | 首轮4项 Medium、2项 Low，均为局部计划/文档缺口；修订聚焦复核Approved，新增L3也已关闭，见§4 |
-| P5 产品测试、性能、交错及变异 | T1–T4证据见下文；后续任务不能以起步检查或T1结果代替 |
+| P5 产品测试、性能、交错及变异 | T1–T5证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
 
 ### T1：连接运行参数，已完成
 
@@ -65,21 +65,32 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 五包定位回归、最终三包定位、`make lint-go`两段0 issues、完整`make test`48包/117.035s/stderr空通过；提交后`make gen-check`无差异，工作树干净。首次goimports失败及修复保留。未改契约、前端、迁移或故事，未额外运行web/E2E。
 - 原始证据 `task-4-evidence/`，独立记录 `task-4-review.md`；名字编排与真实Listing消费交T5，不提前删除ArchivedProjects/seeEach。
 
-### T5a：Flat仓储，已完成；整个T5仍待T5b
+### T5a：Flat仓储，已完成
 
 - 实施提交 `ff9127c9417c4687ca81364651bacbbef718329b`；独立审查 Spec compliant、Approved，无Critical/Important。手写919+/3−，生成263行；只引入Flat实际需要的输入/记录/接口及三职责私有适配，不提前实现Listing/Groups。
 - 唯一Flat静态SQL按范围/OwnOnly/triage/全部筛选后分页，total在cursor前，完整关系数组仅对输出行取值，子项数与seen同义。数值CASE明确numeric，sort_order采用有限浮点位序int64；公开cursor仍原值。19码基础排序、微秒及邻接float逆UUID/limit=1真实分页通过。
 - 直接sqlc NULL与空数组防御、生产mapper非nil并列数组分别验证。提前LIMIT、遗漏mapper规整、删SQL coalesce三个实际变异均有明确目标失败与恢复。首次API编译红单列；共享标签样例因项目lower(name)唯一约束失败后，调整为每行独立全可读项目，保留原JSON IDs/固定期望并通过。
 - 实际sqlc接缝：开放日期端点改为私有text数组+NULLIF转date；nullable名字生成string，采用coalesce文本+NameNull布尔。公开领域/API类型未改。合法状态目录无法构造state_name=null行，真实样例明确去该行；count超大值不伪造海量子项，T5b另做精确证明。
 - 完整`make test`48成功包/119.036s/stderr空、`make lint-go`两段0 issues、提交后`make gen-check`均通过。09 mapper变异恢复后只有literal排版/尾逗号调整；内存重建SHA精确匹配原恢复记录，最终lint/full覆盖排版后版本，不声称两个整文件SHA相同。
-- 审查Minor：事务ctx测试接受任意非nil错误，已交T5b修成精确rollback sentinel；另记录定位日志中的testcontainers/ryuk `Shell not found in container`诊断，后续ready及测试成功，不清洗日志或为此改产品/依赖/已有容器。
-- 原始证据 `task-5a-evidence/`，独立记录 `task-5a-review.md`。T5b继续Listing、父项裁剪/空页total、真实历史姓名消费、完整精度边界/其余逐页与剩余变异；当前不勾整个T5。
+- 审查Minor：事务ctx测试接受任意非nil错误，已在T5b修成精确rollback sentinel并独立关闭；另记录定位日志中的testcontainers/ryuk `Shell not found in container`诊断，后续ready及测试成功，不清洗日志或为此改产品/依赖/已有容器。
+- 原始证据 `task-5a-evidence/`，独立记录 `task-5a-review.md`。T5b补齐公共编排、完整精度和剩余变异后，整个T5已独立验收，见下一节。
+
+### T5b：公共编排与精度收口，已完成
+
+- 实施提交 `a2ecc1df8809af36dff6eea06f1d4b80125e4028`；独立审查 Spec compliant、Approved，无Critical/Important/Minor。8文件873+/36−，最终SQL和生成物无永久增量；T5a事务ctx测试改为固定rollback sentinel，已独立关闭。
+- Listing沿原ctx读取完整状态/标签与历史负责人姓名，校验Actor/Target配对，空项目返回空页；limit+1只用实际末行生成游标。越尾页复制原Query，仅去cursor、limit=1，同目录/筛选补原total；端口错误原样。公共hideParents沿HiddenFrom，保留SQL子项数，不重复seen查询。
+- 真实单连接READ ONLY/REPEATABLE READ组合验证退出且停用、降guest后的负责人仍参与两向姓名分页、OwnOnly父裁剪及带原筛选的空页total。fake保留组字段只证明Query复制，当前不代表Groups/Subgroups真实SQL。
+- 全部适用共享JSON排序码真实limit=1连续分页；有限浮点26个边界值及extra_float_digits=-15/0/3、宽年份微秒/日期均验证。巨大count通过直接提取生产numeric CASE的PG类型/数值探针及真实cursor参数验证，实际子项分页仍为0/1/2，不冒称海量子项。state_name=null不可合法构造的边界沿T5a保留。
+- 十二项实际SQL变异均生成成功→业务断言红→恢复生成→同组绿：cursor后total、min→max、OwnOnly非排序及排序两路径、日期AND→OR、null降序、UUID方向、float直接numeric、负数符号、负零分键、CASE误浮点、count舍入。全部恢复SQL哈希一致；与T5a三项变异合并覆盖整个T5要求。
+- 缺API编译红与测试夹具引用错误分开保留；extra_float_digits首次失败来自测试配置经ConnString丢参数，改为直接消费克隆config后绿，未改生产池。最终三包定位、`make lint-go`两段0 issues、完整`make test`48成功包/120.932s/stderr空、提交后`make gen-check`均通过。
+- 原始证据 `task-5b-evidence/`，独立记录 `task-5b-review.md`。T5已完成；T6/T7负责组/格真实查询，T9/T10负责HTTP/授权接线，T12负责最终全面分页、快照交错和性能，不能提前宣称这些完成。
 
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
 - `6a94c5ce4abd9a6d1c0f66a9a22ecf365a7a1ff8`（含T4）也已由系统Git推送；[CI 40191919305](https://github.com/open-nerve/NerveProject/actions/runs/40191919305) server、web、e2e全部success。此检查点不包含后续T5a。
-- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
+- `b12ffbf234b7a914c597fe986d9fd390378b6eac`（含T5a）已由系统Git推送；[CI 40193812287](https://github.com/open-nerve/NerveProject/actions/runs/40193812287) server、web、e2e全部success。此检查点不包含后续T5b。
+- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
 
 ## 3. 执行中的决定
 
@@ -90,7 +101,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 5. M4 §5.1 子项排序残留改回 P3 已裁定并交付的 `(created_at, id)` 升序。P5 排序 PATCH 不改变该集合接口行为。
 
 6. T3不增加只有测试调用的生产全序比较器。纯领域验证真实键归一化、类型、canonical及日期条件保留；null方向、UUID方向、多值min和日期AND/OR的实际变异移至T5真实SQL，T12收口，全部完成要求保留。
-7. 游标拼写按spec第2.5节固定：微秒UTC、按排序定型及可空性、精确int64、有限float64及正负零统一。不能把RawMessage直接回写当唯一规范拼写。SQL位序数值转换仍待T5实证。
+7. 游标拼写按spec第2.5节固定：微秒UTC、按排序定型及可空性、精确int64、有限float64及正负零统一。不能把RawMessage直接回写当唯一规范拼写。Flat数值策略已由T5实证；Groups/Subgroups在T6/T7/T12继续验证。
 
 8. T4没有“活跃成员姓名目录”的生产消费者可供替换；新增依赖或篡改测试来源不能算生产变异。T4用真实关系ID→显示名组合证明退出/降guest仍有姓名，实际变异改取软删除关系检验目录边界；T5在Listing真实消费者再次覆盖。普通active/archived和Historical删除条件仍逐项真实变异。代价是T4不宣称完成一个尚无合法调用点的替代来源变异，姓名来源完成线不减少。
 

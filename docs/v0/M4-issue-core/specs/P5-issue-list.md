@@ -103,7 +103,7 @@ P5 恰好 19 码：sort_order 仅升序；created_at/updated_at/start_date/targe
 
 - priority 数值 urgent=4/high=3/medium=2/low=1/none=0；排序与分组序分开。
 - 名字只折 ASCII A–Z，按 Unicode 码点序；Go UTF-8 比较、SQL COLLATE C。label/assignee 总取最小名字键，降序也不改成最大值。没有名字为 null。
-- 两方向 null 都在最后；同键 UUID 与主键同方向。时间保留 PostgreSQL 微秒，日期保持纯日期；计数用精确整数，不经 float64 丢失。sort_order 是有限浮点数，按存储值排序。SQL CASE 不能因 sort_order 的 float8 分支隐式把微秒/计数转为 float8；建议 k_num 统一 numeric 并对每分支显式转换，游标键使用同一转换与全序。相邻可表示 sort_order、整数精度边界和逆 UUID 必须在真实 SQL 对照验证，当前未证明该策略。
+- 两方向 null 都在最后；同键 UUID 与主键同方向。时间保留 PostgreSQL 微秒，日期保持纯日期；计数用精确整数，不经 float64 丢失。sort_order 是有限浮点数，按存储值排序。SQL CASE 不能因 sort_order 的 float8 分支隐式把微秒/计数转为 float8；建议 k_num 统一 numeric 并对每分支显式转换，游标键使用同一转换与全序。相邻可表示 sort_order、整数精度边界和逆 UUID 必须在真实 SQL 对照验证。T5已证明Flat的有限浮点位序、时间微秒/宽日期及精确count表达式；Groups/Subgroups仍须在T6/T7/T12按最终SQL验证，不把Flat结果外推。
 - 子项数只计调用者可见、未删、未归档的直接子项；排序键与行中 sub_issues_count 同义。
 - payload 为 `[order,key,id]`，经现有 shared.EncodeCursor/DecodeCursor 的 v1 canonical base64url 封套；key 按排序为 UTC 时间字符串、日期字符串、名字字符串、数值或 null。形状、键类型、非法 UUID、非 canonical、版本、排序码与请求不符均 400。数值解码使用 json.Number/明确类型，不能 unmarshal 到 interface{} 后默认为 float64。
 - 时间游标输出为UTC固定六位小数，拒绝亚微秒及四位年份范围以外输入；日期和名字族允许null，created_at/updated_at、sort_order、priority、sub_issues_count的key不可null；priority为0–4整数，子项数为非负int64，sort_order为有限float64，正负零统一编码为正零。两页之间姓名/子项数量变化可导致行移动，这是现有全序键集方案的已知代价，不宣称跨请求固定快照。
@@ -171,7 +171,7 @@ I3/I4/I5/I6/I7/I19/I20 API 故事各文件，I15 增加归档列表；全部前�
 
 ## 4. 逐项验收
 
-T5a已独立完成，T5b继续；整个T5的勾选仍等待两个单元全部完成。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
+T1–T5已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T6及后续任务尚未验收。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
 
 | 完成 | Task | 完成线 |
 |---|---|---|
@@ -179,7 +179,7 @@ T5a已独立完成，T5b继续；整个T5的勾选仍等待两个单元全部完
 | [x] | T2 | 页面词汇、19排序与未来字段拒绝的纯表测试/变异 |
 | [x] | T3 | 原始query保留全部日期条件、键归一化与canonical游标；共享固定顺序样例（真实SQL全序/日期AND在T5/T12验证） |
 | [x] | T4 | 普通目录/Historical区别、全量状态标签/历史负责人姓名与同ctx |
-| [ ] | T5 | 平面SQL筛选前limit、数组防御、精确键、空页补total、OwnOnly |
+| [x] | T5 | 平面SQL过滤先于limit、数组防御、精确键、空页补total、OwnOnly |
 | [ ] | T6 | 分组total/每组limit/完整数组、A∩C续页与none |
 | [ ] | T7 | 泳道总体/组/泳道/格去重计数、格续页与双多值反例 |
 | [ ] | T8 | sort_order PATCH、state动态/完成时间、skip true/false互斥及锁路径交错五遍race |
