@@ -80,9 +80,15 @@ var testIssueConfig = config.IssueConfig{WriteGate: config.WriteGateConfig{PerPr
 // bootstrap wires them.
 func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
+	return newIssueRouteWithClock(t, pool, tx, clock.System{})
+}
+
+// newIssueRouteWithClock keeps the production wiring and supplies a test clock.
+func newIssueRouteWithClock(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }) moduleRoute {
+	t.Helper()
 	return newRoute(t, issue.New(issue.Deps{Pool: pool, Tx: tx,
 		ReadTx:    postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()),
-		WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock.System{},
+		WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock,
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory},
 		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)

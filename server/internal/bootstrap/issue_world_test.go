@@ -177,7 +177,7 @@ func (w issueWorld) names() map[uuid.UUID]string {
 }
 
 // workItemStamps are the rows of the work item id in the work-item side's
-// six tables, its relations either way, each a line, sorted: its table,
+// tables, its relations either way, each a line, sorted: its table,
 // who made it and changed it last, and when, when it was deleted if it
 // was, and whose it is, for an assignee, a subscriber or an activity (the
 // account assigned, subscribed or acting). An account goes by its name in

@@ -202,14 +202,47 @@ func serializeOn(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate,
 func serializeOnTable(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, table string, first, second func() error) (
 	opened time.Time, firstErr, secondErr error) {
 	t.Helper()
-	done := run(first)
+	return serializeOnTableAfter(t, ctx, pool, g, table, first, second, nil)
+}
+
+// serializeOnTableAfter calls afterWait while the proven waiter is still blocked.
+func serializeOnTableAfter(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, table string, first, second func() error,
+	afterWait func()) (opened time.Time, firstErr, secondErr error) {
+	t.Helper()
+	var done, answered <-chan error
+	defer func() {
+		select {
+		case <-g.open:
+		default:
+			close(g.open)
+		}
+		// A failed probe or callback still releases and collects both requests.
+		cleanup, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+		defer cancel()
+		for _, pending := range []<-chan error{done, answered} {
+			if pending != nil {
+				select {
+				case <-pending:
+				case <-cleanup.Done():
+					t.Error("interleaved request did not end during cleanup")
+				}
+			}
+		}
+	}()
+	done = run(first)
 	held(t, ctx, g, done, "the first write")
-	answered := run(second)
+	answered = run(second)
 	pgtest.WaitForLockWaitOn(t, pool, table, 5*time.Second)
+	if afterWait != nil {
+		afterWait()
+	}
 	opened = time.Now().Truncate(time.Microsecond)
 	close(g.open)
 	firstErr = result(t, ctx, done, "the first write")
-	return opened, firstErr, result(t, ctx, answered, "the second write")
+	done = nil
+	secondErr = result(t, ctx, answered, "the second write")
+	answered = nil
+	return opened, firstErr, secondErr
 }
 
 // Deactivation first: it holds the account row; the creation waits on its

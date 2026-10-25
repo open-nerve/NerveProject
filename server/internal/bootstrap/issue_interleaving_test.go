@@ -190,12 +190,19 @@ func (w issueWorld) serialize(t *testing.T, first, second racingWrite, a, b *exc
 // (serializeOnTable). Each answers into its exchange within 10 seconds.
 func (w issueWorld) serializeAt(t *testing.T, table string, first, second racingWrite, a, b *exchange) {
 	t.Helper()
+	w.serializeAtAfter(t, table, first, second, a, b, nil)
+}
+
+// serializeAtAfter also runs afterWait after proving the second's row wait,
+// before releasing the first. It lets a test advance a synchronized clock.
+func (w issueWorld) serializeAtAfter(t *testing.T, table string, first, second racingWrite, a, b *exchange, afterWait func()) {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	g := newGate()
 	firstWrite, secondWrite := first(t, w, heldTx{postgres.NewTxManager(w.pool, 2*time.Second), g}, a), second(t, w,
 		postgres.NewTxManager(w.pool, 2*time.Second), b)
-	opened, firstErr, secondErr := serializeOnTable(t, ctx, w.pool, g, table, firstWrite, secondWrite)
+	opened, firstErr, secondErr := serializeOnTableAfter(t, ctx, w.pool, g, table, firstWrite, secondWrite, afterWait)
 	if err := errors.Join(firstErr, secondErr); err != nil {
 		t.Fatal(err)
 	}
