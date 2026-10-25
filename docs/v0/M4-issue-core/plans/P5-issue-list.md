@@ -76,7 +76,9 @@
 
 **共用收口 G（每 Task 最后一项都执行）：** 先跑该 Task 的定位命令，确认红是目标断言失败，再实现并绿。需要真实 Postgres 的包用现有 pgtest，不手造另外一套服务。按改动范围跑 `make lint-go`、`make test`；契约用 `make gen`，仅 SQL 用 `make gen-go`；契约/web/e2e 改动加 `make lint-web`、`make knip`、`make test-web`；迁移/故事跑 `make e2e`。同一依赖链完成后全量结果可按精确 HEAD 复用，后续未影响它时不无意义重跑；新故障/改动必须验证。实施验证后只 add 本 Task 精确文件、提交中文消息，再以精确BASE..HEAD交独立评审；修复另作提交并聚焦复审。带生成物的提交后 `make gen-check` 必须无差异。
 
-**共用 API 收口 H：** 当 Task 更新 api/modules/issue.yaml（或 project.yaml）、api/openapi.yaml 新路径转引、handler/UseCases/module/bootstrap；HTTP 定位命令整包，覆盖 TestMain 的错误码双向检查。定义 closed DTO，列表只 Issue 不带 description_html/link_count；缺分支省略，[] 与 null 游标明确。矩阵项当场加入 `B/permission_matrix_issue_lists_test.go`（T9建），目标/种子/完整性同步，不等 T14 补授权。生成的 TS 必填 preferences 字段导致 `web/apps/web/core/store/project/fake-projects.ts` 编译变化时同 Task 补默认。
+**本机完整e2e环境：** 默认浏览器缓存没有Firefox；已用仓库锁定的Playwright1.63将headless Chromium、Firefox及ffmpeg下载到本工作树的ignored `.superpowers/sdd/P5-issue-list/browsers`，未全局安装、未改依赖或既有缓存。需完整e2e的Task在worktree根运行 `PLAYWRIGHT_BROWSERS_PATH="$PWD/.superpowers/sdd/P5-issue-list/browsers" make e2e`，保留默认Chromium/Firefox两个project；其他Playwright定位命令同样带此环境变量。下载成功仅证明资产已准备，实际浏览器/故事结果仍待各Task运行。
+
+**共用 API 收口 H：** 当 Task 更新 api/modules/issue.yaml（或 project.yaml）、api/openapi.yaml 新路径转引、handler/UseCases/module/bootstrap；HTTP 定位命令整包，覆盖 TestMain 的错误码双向检查。定义 closed DTO，列表只 Issue 不带 description_html/link_count；缺分支省略，[] 与 null 游标明确。矩阵项当场加入 `B/permission_matrix_issue_lists_test.go` 与 `B/permission_matrix_member_lists_test.go`（分别T9/T10建），目标/种子/完整性同步，不等 T14 补授权。生成的 TS 必填 preferences 字段导致 `web/apps/web/core/store/project/fake-projects.ts` 编译变化时同 Task 补默认。
 
 ### 跨 Task 类型与签名
 
@@ -315,15 +317,15 @@ T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400
 
 ## Task 10：个人主页列表与目标成员目录
 
-文件：新 `I/app/list_member_issues.go`/测试与HTTP对应文件；改 `I/domain/actions.go`、`access/domain/rules.go`及规则测试、W/module.go/目录适配/queries/members.sql、B/ports.go/app.go、API/矩阵。
+文件：新 `I/app/list_member_issues.go`/测试与HTTP对应文件；改 `I/domain/actions.go`、`access/domain/rules.go`及规则测试、W/module.go/目录适配、B/ports.go/app.go、API/矩阵；复用既有MemberOf，未新增或修改成员SQL。成员矩阵实际位于B/permission_matrix_member_lists_test.go，组合/runtime测试为issue_member_lists_test.go与issue_member_lists_runtime_test.go，共用issue_lists_snapshot_test.go。
 
-- [ ] `TestListMemberIssues`：assigned/created/subscribed集合互异（不要求互不相交；保留创建者/负责人自动订阅，可用真实评论产生仅订阅关系，不新增M7订阅接口）；目标当前/已结束未删成员可读，未加入/软删404member_not_found；调用者guest403；目标权限不能代替caller权限。
-- [ ] `TestMemberIssueRelationTarget` 用调用者A≠目标B，经真实SQL分别验证assigned/created/subscribed；为A、B、第三人布置互不相同关系，断言三次都筛B。另设A为OwnOnly项目guest而B为普通成员：只返回A创建且与B满足关系的项，不能按B权限放行。项目列表target=nil，query注入target字段被拒绝；Listing/仓储错配Relation/target返回错误。
-- [ ] `TestMemberIssueVisibility`：caller不同项目角色，管理员兼guest OwnOnly、管理员未入项目、项目归档/软删、退出项目；scope筛选project_id只能求交；workspace不存在/无权先按现有隐藏规则。
-- [ ] 红：`go -C server test ./internal/modules/issue/app ./internal/modules/workspace/adapter/postgres ./internal/bootstrap -run 'Test(ListMemberIssues|MemberIssueRelationTarget|MemberIssueVisibility|WorkspaceMemberExists)' -count=1`；access域和issue HTTP整包。
-- [ ] 无锁WorkspaceMemberExists，保留inactive；member_issue.list规则复用既有workspace授权模型；同ReadTx获取workspace→授权→目标存在→普通目录；构造ListingInput，ActorID为caller、TargetMemberID为已验证路径user_id，再调用Listing.Read。不得从query覆盖目标。零可读项目正常空页，不跨模块JOIN。
-- [ ] 绿；变异relation_user_id误用ActorID、目标要求active、workspace-admin拿全项目、按targetID做OwnOnly、忽略caller项目退出；恢复。
-- [ ] H/G；提交 `feat(M4/P5): 支持个人主页工作项的三类关系列表`。
+- [x] `TestListMemberIssues`：assigned/created/subscribed集合互异（不要求互不相交；保留创建者/负责人自动订阅，可用真实评论产生仅订阅关系，不新增M7订阅接口）；目标当前/已结束未删成员可读，未加入/软删404member_not_found；调用者guest403；目标权限不能代替caller权限。
+- [x] `TestMemberIssueRelationTarget` 用调用者A≠目标B，经真实SQL分别验证assigned/created/subscribed；为A、B、第三人布置互不相同关系，断言三次都筛B。另设A为OwnOnly项目guest而B为普通成员：只返回A创建且与B满足关系的项，不能按B权限放行。项目列表target=nil，query注入target字段被拒绝；Listing/仓储错配Relation/target返回错误。
+- [x] `TestMemberIssueVisibility`：caller不同项目角色，管理员兼guest OwnOnly、管理员未入项目、项目归档/软删、退出项目；scope筛选project_id只能求交；workspace不存在/无权先按现有隐藏规则。
+- [x] 红：`go -C server test ./internal/modules/issue/app ./internal/modules/workspace/adapter/postgres ./internal/bootstrap -run 'Test(ListMemberIssues|MemberIssueRelationTarget|MemberIssueVisibility|WorkspaceMemberExists)' -count=1`；access域和issue HTTP整包。
+- [x] 无锁WorkspaceMemberExists，保留inactive；member_issue.list规则复用既有workspace授权模型；同ReadTx获取workspace→授权→目标存在→普通目录；构造ListingInput，ActorID为caller、TargetMemberID为已验证路径user_id，再调用Listing.Read。不得从query覆盖目标。零可读项目正常空页，不跨模块JOIN。
+- [x] 绿；变异relation_user_id误用ActorID、目标要求active、workspace-admin拿全项目、按targetID做OwnOnly、忽略caller项目退出；恢复。
+- [x] H/G；提交 `feat(M4/P5): 支持个人主页工作项的三类关系列表`。
 
 ## Task 11：P3 关联列表改用普通可见目录
 
@@ -378,7 +380,7 @@ T13a/b预计970–1350/865–1240手写行；单元接近1400先复核剩余职�
 
 ## Task 14：矩阵、整程序边界与回归闭环
 
-文件：补 `B/permission_matrix_issue_lists_test.go`、matrix seed/targets/columns、runtime_role_test.go、contract_test.go、issue_list_permissions_test.go、project_preferences_test.go；必要TS fixture与端口假实现；不堆新helper绕过已有断言。
+文件：补 `B/permission_matrix_issue_lists_test.go`、`B/permission_matrix_member_lists_test.go`、matrix seed/targets/columns、runtime_role_test.go、contract_test.go、issue_list_permissions_test.go、project_preferences_test.go；必要TS fixture与端口假实现；不堆新helper绕过已有断言。
 
 - [ ] 审核listIssues两权限分支、listMemberIssues的所有目标、preferences三字段进入既有矩阵；角色按集合：workspace admin兼project guest、无project成员、deleted/inactive、公开/私有、隐藏先404。
 - [ ] 新 `TestP5ReadBoundary` 证实读无FOR锁/写连接/写闸门，源/目录/SQL/补total一个ctx；sort_order仍原写锁/闸门路径。复跑历史activities、description skip、relations、subissues与原preferences，确保没有范围倒退。
@@ -393,7 +395,7 @@ T13a/b预计970–1350/865–1240手写行；单元接近1400先复核剩余职�
 文件：新 `e2e/stories/issue/i3-list-groups.spec.ts`、`i4-list-order-calendar.spec.ts`、`i5-list-preferences.spec.ts`、`i6-board-order.spec.ts`、`i7-quick-add.spec.ts`、`i19-member-issues.spec.ts`、`i20-guest-boundary.spec.ts`；改i15-archive-issue.spec.ts、e2e/fixtures/issues.ts与assert/issue.ts。每故事一个文件，尚无页面版本。
 
 - [ ] I3按state组/priority×label泳道、总数/完整数组/加载更多A∩C；I4每排序码翻页、日期范围及none；I5三类设置按人隔离、同参数GET等价；I6 state+sort同时写、completed_at/单条state动态；I7复用I1创建并验证状态与末尾排序，无新API。
-- [ ] I19三关系/跨项目caller可见性/guest403；I20四格（别人的详情404、创建403、列表own、自己项评论201），访客项由member建后API降级；I15新增仅归档列表及恢复后的消失/活列表出现。
+- [ ] I19三关系/跨项目caller可见性/guest403，A/B/C在每种关系下都有不同的明确期望集合（含A-only与C-only项，保留自动订阅）；I20四格（别人的详情404、创建403、列表own、自己项评论201），访客项由member建后API降级；I15新增仅归档列表及恢复后的消失/活列表出现。
 - [ ] 数据全部经生成客户端API，断言复用assert helpers；数据库仅验证结果。需要第二页至少limit+1不同值，不能只断言200/数组长度；所有负例检查错误码/字段。
 - [ ] 新增故事/fixtures/断言后记录真实基线：`make build` 后 `pnpm --dir e2e exec playwright test --project=chromium 'issue/i(3-|4-|5-|6-|7-|15-|19-|20-)'`；实际runner参数若按path regex须核对匹配8文件，不匹配不能当绿。若缺接口或helper导致编译红须明确记录；已交付API的正确行为补测可基线绿，不故意破坏生产制造初红。下项真实生产变异必须给出业务断言红及恢复绿。
 - [ ] 至少变异删组续页filter、I6排序赋值、preferences用户隔离、I20 own过滤对应一个故事红；恢复重跑。异步栏为空，不固定等待；旧评论功能仅作为P5故事依赖。

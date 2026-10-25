@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-25。状态：**实施中；T1–T9完成，T10待开始；阶段尚未完成，不合并**。
+日期：2026-10-25。状态：**实施中；T1–T10完成，T11待开始；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -22,7 +22,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 ## 2. 验收标准逐条核对
 
-产品验收清单以 spec §4 为准；T1–T9已有下列实施证据，T10及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
+产品验收清单以 spec §4 为准；T1–T10已有下列实施证据，T11及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
 
 | 检查 | 结果 |
 |---|---|
@@ -32,7 +32,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 | 阶段关键词 | `phase=M4/P5`；没有在 P4/P5 到期的例外，`/user-properties/` 的 M4/P11 例外保留；`node tools/keywords.mjs` 为72规则、23例外、无命中 |
 | 起步文档自检 | 16个任务顺序完整、产品验收均未勾选；53处本地链接无新增缺失。M4设计原有4个M5–M8收尾文件链接仍是未来交付，不提前创建或标完成 |
 | 独立预检 | 首轮4项 Medium、2项 Low，均为局部计划/文档缺口；修订聚焦复核Approved，新增L3也已关闭，见§4 |
-| P5 产品测试、性能、交错及变异 | T1–T9证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
+| P5 产品测试、性能、交错及变异 | T1–T10证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
 
 ### T1：连接运行参数，已完成
 
@@ -125,6 +125,18 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 最终定位、HTTP整包反向码、`make lint-go`、唯一全量`make test`（48成功包，墙钟122.956s）、`make lint-web`54任务（8缓存）、`make knip`、`make test-web`17任务（11缓存）及提交后`make gen-check`通过，最终status干净。未改迁移/故事，未跑e2e；T15仍须实际客户端按普通CSV单键、日期重复键序列化，不以TS类型推定运行时explode。
 - 原始证据 `task-9-evidence/`，完整报告 `task-9-report.md`，独立记录 `task-9-review.md`，审查核对最终17文件SHA及七变异证据。保留既有Ryuk Shell not found诊断及随后ready成功的原日志，不为此改变既有容器/依赖。
 
+### T10：个人主页三关系与目标成员目录，已完成
+
+- 实施提交 `a8bba26def0f171697573c0b5f40ab1966311541`，基线 `0b599e6860da5212084776abd2d6f6dc4df0acdb`；独立审查Spec compliant、Approved，无Critical/Important；两个Minor为环境异常/日志和多余验证成本，非产品缺陷。手写25文件998+/8−，生成3文件546+；新手写最长234行，生产新文件最长74行。
+- 新member_issue.list仅允许workspace Admin/Member；同ReadTx依次查workspace、caller权限、路径账户的未删membership、caller普通Visible和Listing。ActorID与TargetMemberID独立；workspace不可见先404，目标inactive仍存在、缺失/软删/仅other成员404member_not_found。Workspace目录复用MemberOf，无新SQL、锁或跨模块导入。
+- 新成员GET与顶层转引/生成客户端齐备，复用T9原query/错误映射/封套。11种重复非日期参数、relation必填400/非法422、坏user_id path400、缺token优先级、禁用参数及日期AND均实测；HTTP整包双向码包括复用的workspace.member_not_found。
+- 真实API构造A/B/C互异关系：创建者/负责人自动订阅，B评论形成仅订阅项，另有A-only与C-only。逐目标、逐relation都有不同明确集合；不假设订阅互斥。OwnOnly按caller且B-created∩A-own为空，退出/未入/归档/软删项目、跨项目求交、隐藏parent及计数均有反例；runtime角色真实请求三关系、分组和续页，再降caller为guest验证OwnOnly。
+- 三relation×完整workspace列共18矩阵格；该seed的两个允许caller均无普通可见项目，精确空页是预期，非空范围由独立API/runtime场景证明。仅该endpoint的user_id按账户校验，静态入口独立synthetic非nil账户，保留newSeeded旧nil契约；错workspace/随机/行ID冒充/nil/其他路由及固定目标均有正反例，无targets豁免。
+- 单连接真实workspace/access/project/identity/issue端口检查READ ONLY/RR、target/Visible/SQL/parent/补total同ctx；无新提交屏障，不冒充T12并发证据。八项有效变异（七生产、一矩阵守卫）业务红并恢复：关系误用actor、target强制active、admin扩大项目、OwnOnly误用target、忽略项目退出、账户目标放行、坏path误422、移除ReadTx。
+- 退出条件SQL变异恢复后首次控制组因新建Ryuk无8080映射在业务前失败，62.58s退出1；源码/生成物已恢复。原样唯一重跑2.75s成功，未操作Docker或依赖。与既有Shell not found后ready背景分别保留，不把基础设施失败记业务红。
+- 24全量发生在C-only补强前；25补强定位实际命中13顶层和18格；29lint要求测试if链改switch，30全量已覆盖补强，31等价调整后lint通过。作者为逐字节SHA再次跑full，root纠正无需仅为证据整齐重复；已启动32自然结束（48成功包、129.50s），之后未再追加。最终Web54/17任务、knip及提交后gen-check均通过，28文件SHA与最终提交一致、status干净。
+- 原始证据 `task-10-evidence/`，报告 `task-10-report.md`，独立记录 `task-10-review.md`；审查独立核对28项当前SHA、最终full manifest和变异恢复，gen-check自身metadata未存28项SHA，不混同两份记录。本Task无迁移/故事、未跑e2e；后续接口故事、并发/性能仍按原完成门推进。
+
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
@@ -134,7 +146,8 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - `b550992c4a8babf711befea10bb3d0a26eceaf61`（含T6）已由系统Git推送；[CI 40196872428](https://github.com/open-nerve/NerveProject/actions/runs/40196872428) server、web、e2e全部success。此检查点不包含T7。
 - `1c318ddc7dc7f1f0e4b733c081a7018d2883c0a9`（含T7）已由系统Git推送；[CI 40198919892](https://github.com/open-nerve/NerveProject/actions/runs/40198919892) server、web、e2e全部success。此检查点不包含T8。
 - `add5f6d9e9e7363d1d7b80b717df38066d50ebe3`（含T8）已由系统Git推送；[CI 40200997593](https://github.com/open-nerve/NerveProject/actions/runs/40200997593) server、web、e2e全部success。此检查点不包含T9。
-- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
+- `0b599e6860da5212084776abd2d6f6dc4df0acdb`（含T9）已由系统Git推送；[CI 40202959281](https://github.com/open-nerve/NerveProject/actions/runs/40202959281) server、web、e2e全部success。此检查点不包含T10。
+- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
 
 ## 3. 执行中的决定
 
@@ -166,6 +179,8 @@ T12拆分已获独立文档预检Approved，无阻断项，记录为ignored `tas
 
 15. 最新授权要求P5阶段完成先不合并。T16开发收口（内部审查、文档、最终分支CI）与后续负责人安排的终审/集成分别登记；未做main CI和清理前不勾T16整项，不用这条未来完成线阻断当前已授权开发。
 
+16. 本机默认缓存仍缺Firefox；使用锁定Playwright的显式PLAYWRIGHT_BROWSERS_PATH，仅在P5工作树ignored目录下载headless Chromium1243、Firefox1543和ffmpeg1011，未全局安装、未改依赖/既有缓存/容器。CLI下载exit0；Firefox前两官方URL断链后自动转第三官方CDN成功，原日志在browser-cache-prep。选择的代价是额外工作树磁盘占用，资产不进入代码或过程证据归档；下载不等于浏览器测试通过，后续完整e2e显式使用该目录并保留两个project。
+
 ## 4. 预检发现与处理
 
 | 编号/级别 | 原问题 | 修订要求及证据落点 | 当前结论 |
@@ -190,7 +205,7 @@ T12拆分已获独立文档预检Approved，无阻断项，记录为ignored `tas
 
 | 接收方 | 范围 |
 |---|---|
-| P5 实施者 | T1–T9已完成；从T10继续按spec/plan逐任务交付、测试与评审 |
+| P5 实施者 | T1–T10已完成；从T11继续按spec/plan逐任务交付、测试与评审 |
 | P8 | `link_count` 字段与两个排序码；列表/搜索共用词汇 |
 | P10b | 共用排序样例、生产前端码点比较器与vitest；旧筛选store和 `/user-properties/` 迁移 |
 | P12–P15 | 接口故事增长为页面故事，列表/看板/日历/详情与访客页面 |
@@ -199,6 +214,6 @@ T12拆分已获独立文档预检Approved，无阻断项，记录为ignored `tas
 
 ## 7. 已知限制
 
-当前三条列表SQL、公共编排、排序PATCH及项目列表API已有上述实施证据；个人主页列表API、偏好迁移和100k性能等后续任务尚未完成，不能从已通过结果外推。
+当前三条列表SQL、公共编排、排序PATCH及项目/个人主页列表API已有上述实施证据；关联目录替换、偏好迁移和100k性能等后续任务尚未完成，不能从已通过结果外推。
 
-本地Firefox缺失和已知W11偶发仍按既定纪律处理；绿色P4 main CI已覆盖该基线的完整浏览器任务，不代表未来P5变更已经获得同样证据。
+默认缓存的Firefox缺失已通过项目本地资产目录准备解决，实际e2e仍待后续任务运行；已知W11偶发按既定纪律处理。各分支检查点的远端完整结果按上文精确SHA登记，不代表未提交的后续任务。
