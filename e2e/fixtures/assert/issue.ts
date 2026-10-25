@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 
 import { shownNameOf } from "../auth";
 import type { Database } from "../db";
+import type { IssuePage } from "../issues";
 import { keysBelow } from "./catalog";
 
 // Database assertions of the work-item stories. The page version and the
@@ -26,6 +27,40 @@ export interface ActivityRow {
 /** The order of the ids, which a work item answers its accounts and labels in, and a write adds them in. */
 export function byId(a: { id: string }, b: { id: string }): number {
   return a.id < b.id ? -1 : 1;
+}
+
+/** A flat page has exactly its branch, its full count and ordered identities. */
+export function expectIssuePage(page: IssuePage, ids: string[], total = ids.length, more = false): void {
+  expect(Object.keys(page).toSorted()).toEqual(["data", "next_cursor", "total"]);
+  expect(page.total).toBe(total);
+  expect(page.data?.map((row) => row.id)).toEqual(ids);
+  expect(page.next_cursor).toEqual(more ? expect.any(String) : null);
+  if (more) expect(page.next_cursor).not.toBe("");
+}
+
+/** I6's position and exact completion stamp, plus the identifiers and actor of its one state activity. */
+export async function expectIssuePosition(
+  db: Database,
+  issueId: string,
+  want: { state: string; sort: number; from: string; actor: string }
+): Promise<void> {
+  expect(
+    await db.query(
+      `SELECT state_id::text AS state, sort_order AS sort, updated_by_id::text AS actor,
+            completed_at = updated_at AS completed_at_write
+       FROM issues WHERE id = $1 AND deleted_at IS NULL`,
+      [issueId]
+    )
+  ).toEqual([{ state: want.state, sort: want.sort, actor: want.actor, completed_at_write: true }]);
+  expect(
+    await db.query(
+      `SELECT a.field, a.old_identifier::text AS old, a.new_identifier::text AS now, a.actor_id::text AS actor,
+            a.created_at = i.updated_at AS at_write
+       FROM issue_activities a JOIN issues i ON i.id = a.issue_id
+      WHERE i.id = $1 AND a.field IS NOT NULL ORDER BY a.created_at, a.id`,
+      [issueId]
+    )
+  ).toEqual([{ field: "state", old: want.from, now: want.state, actor: want.actor, at_write: true }]);
 }
 
 /** A row of a work item's activity of verb, its field from old to now: every builder below writes its rows here. */

@@ -15,6 +15,7 @@ import {
   expectIssueArchival,
   expectIssueCreated,
   expectIssueDeleted,
+  expectIssuePage,
   itemRef,
   madeBy,
   relatedRow,
@@ -37,6 +38,8 @@ import {
   issueRelationsCreated,
   issueUnarchived,
   issueUpdated,
+  issuesListed,
+  listIssues,
   subIssuesAdded,
   updateIssue,
 } from "../../fixtures/issues";
@@ -107,6 +110,9 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   await expectIssueArchival(db, id, archived);
   expect(await issueArchived(api, ann.token, id)).toEqual(archiving);
   await expectIssueArchival(db, id, archived);
+  expectIssuePage(await listIssues(api, ann.token, web.id, { archived: "true" }), [id]);
+  expectIssuePage(await listIssues(api, ann.token, web.id), []);
+  expect(await issuesListed(api, gus.token, web.id, { archived: "true" })).toEqual({ status: 403, code: "forbidden" });
 
   // While it is archived, she does not change it, and gus, who may not, does not restore it.
   expect(await issueUpdated(api, ann.token, id, { name: "Fix the sign-in" })).toEqual({
@@ -120,6 +126,8 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   expect(await issueUnarchived(api, ann.token, id)).toMatchObject({ status: 200, issue: { id, archived_at: null } });
   const restored = { archived: false, by: ann.email, activity: [...archived.activity, restoredRow] };
   await expectIssueArchival(db, id, restored);
+  expectIssuePage(await listIssues(api, ann.token, web.id, { archived: "true" }), []);
+  expectIssuePage(await listIssues(api, ann.token, web.id), [id]);
   expect(await issueUnarchived(api, ann.token, id)).toMatchObject({ status: 200, issue: { id, archived_at: null } });
   expect(await issueArchived(api, gus.token, id)).toEqual({ status: 403, code: "forbidden" });
   await expectIssueArchival(db, id, restored);
@@ -172,6 +180,11 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
 
   await expectIssueArchival(db, id, archivedAgain);
   const logout = await createIssue(api, ann.token, web.id, { name: "Fix the logout" });
+  // The existing sequence is unchanged: four live contrast rows, and exactly one archived row.
+  expectIssuePage(await listIssues(api, ann.token, web.id, { archived: "true" }), [id]);
+  const active = await listIssues(api, ann.token, web.id);
+  expect(active.total).toBe(4);
+  expect(active.data?.map((row) => row.id).toSorted()).toEqual([part.id, spec.id, ship.id, logout.id].toSorted());
   const refused = { status: 409, code: "issue.archived" };
   expect(await subIssuesAdded(api, ann.token, id, [logout.id])).toEqual(refused);
   expect(
