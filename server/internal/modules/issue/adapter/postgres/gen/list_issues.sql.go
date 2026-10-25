@@ -84,6 +84,7 @@ WITH projects AS (
 SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority,
        i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at,
        i.created_by_id, i.updated_by_id, i.created_at, i.updated_at, k.total::bigint AS total,
+       ''::text AS group_key, 0::bigint AS group_total,
        coalesce(k.k_text,'')::text AS name_key, (k.k_text IS NULL)::boolean AS name_null,
        coalesce(k.child_count,(SELECT count(*) FROM issues c WHERE c.parent_id=i.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
                               AND (NOT k.own_only OR c.created_by_id=$1::uuid)))::bigint AS sub_issues_count,
@@ -169,6 +170,8 @@ type FlatIssuesRow struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	Total          int64
+	GroupKey       string
+	GroupTotal     int64
 	NameKey        string
 	NameNull       bool
 	SubIssuesCount int64
@@ -246,6 +249,8 @@ func (q *Queries) FlatIssues(ctx context.Context, arg FlatIssuesParams) ([]FlatI
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Total,
+			&i.GroupKey,
+			&i.GroupTotal,
 			&i.NameKey,
 			&i.NameNull,
 			&i.SubIssuesCount,

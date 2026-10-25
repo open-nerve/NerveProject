@@ -57,12 +57,15 @@ type ListRead struct {
 
 // ListRecord keeps the public typed cursor key alongside a projected issue.
 type ListRecord struct {
-	Issue    domain.Issue
-	Position domain.ListCursor
-	Total    int64
+	Issue      domain.Issue
+	Position   domain.ListCursor
+	Total      int64
+	GroupKey   string
+	GroupTotal int64
 }
 
-// ListRows reads flat rows plus one lookahead row, without trimming the page.
+// ListRows reads projected rows with one lookahead per page or group.
 type ListRows interface {
 	Flat(context.Context, ListRead) ([]ListRecord, error)
+	Groups(context.Context, ListRead) ([]ListRecord, error)
 }

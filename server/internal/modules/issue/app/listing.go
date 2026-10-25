@@ -19,8 +19,18 @@ type ListingInput struct {
 	Query          domain.ListQuery
 }
 
-// IssueListPage is a flat page. An empty NextCursor represents the last page.
+// IssueListPage contains either Data or Groups, selected by the query.
+// An empty NextCursor represents the last page.
 type IssueListPage struct {
+	Total      int64
+	Data       []domain.Issue
+	NextCursor string
+	Groups     []IssueListGroup
+}
+
+// IssueListGroup contains one nonempty group and its independent cursor.
+type IssueListGroup struct {
+	Key        string
 	Total      int64
 	Data       []domain.Issue
 	NextCursor string
@@ -50,7 +60,13 @@ func (l *Listing) Read(ctx context.Context, input ListingInput) (IssueListPage, 
 	if q.Limit < 1 || q.Limit > shared.MaxPageSize {
 		return IssueListPage{}, fmt.Errorf("invalid list page size")
 	}
+	if q.SubGroupBy != "" || q.SubGroupKey != nil {
+		return IssueListPage{}, fmt.Errorf("unsupported list subgroup")
+	}
 	page := IssueListPage{Data: make([]domain.Issue, 0)}
+	if q.GroupBy != "" && q.GroupKey == nil {
+		page = IssueListPage{Groups: make([]IssueListGroup, 0)}
+	}
 	if len(input.Projects) == 0 {
 		return page, nil
 	}
@@ -59,7 +75,11 @@ func (l *Listing) Read(ctx context.Context, input ListingInput) (IssueListPage, 
 		return IssueListPage{}, err
 	}
 	read := ListRead{ActorID: input.ActorID, TargetMemberID: input.TargetMemberID, Query: q, Directories: directories}
-	rows, err := l.deps.Rows.Flat(ctx, read)
+	fetch := l.deps.Rows.Flat
+	if q.GroupBy != "" {
+		fetch = l.deps.Rows.Groups
+	}
+	rows, err := fetch(ctx, read)
 	if err != nil {
 		return IssueListPage{}, err
 	}
@@ -67,44 +87,99 @@ func (l *Listing) Read(ctx context.Context, input ListingInput) (IssueListPage, 
 		if q.Cursor != nil {
 			read.Query.Cursor = nil
 			read.Query.Limit = 1
-			totals, err := l.deps.Rows.Flat(ctx, read)
+			totals, err := fetch(ctx, read)
 			if err != nil {
 				return IssueListPage{}, err
 			}
 			if len(totals) > 0 {
-				page.Total = totals[0].Total
+				page.Total = selectedTotal(q, totals[0])
 			}
 		}
 		return page, nil
 	}
-	page.Total = rows[0].Total
+	if q.GroupBy != "" && q.GroupKey == nil {
+		return l.groups(ctx, input, rows)
+	}
+	page.Total = selectedTotal(q, rows[0])
 	size := min(len(rows), q.Limit)
-	page.Data = make([]domain.Issue, size)
+	page.Data, err = l.issues(ctx, input, rows[:size])
+	if err != nil {
+		return IssueListPage{}, err
+	}
+	page.NextCursor, err = pageCursor(rows, q.Limit)
+	if err != nil {
+		return IssueListPage{}, err
+	}
+	return page, nil
+}
+
+func selectedTotal(q domain.ListQuery, r ListRecord) int64 {
+	if q.GroupKey != nil {
+		return r.GroupTotal
+	}
+	return r.Total
+}
+func pageCursor(rows []ListRecord, limit int) (string, error) {
+	if len(rows) > limit {
+		return domain.EncodeListCursor(rows[limit-1].Position)
+	}
+	return "", nil
+}
+
+// issues copies and prunes only emitted rows; SQL child counts are retained.
+// Group pages use one batch so shared hidden parents are read only once.
+func (l *Listing) issues(ctx context.Context, input ListingInput, rows []ListRecord) ([]domain.Issue, error) {
+	items := make([]domain.Issue, len(rows))
 	own := make(map[uuid.UUID]bool, len(input.Projects))
 	for _, p := range input.Projects {
 		own[p.ID] = p.OwnOnly
 	}
 	var guarded []int
-	for n, r := range rows[:size] {
+	for n, r := range rows {
 		only, ok := own[r.Issue.ProjectID]
 		if !ok {
-			return IssueListPage{}, fmt.Errorf("no grant on project %s, of work item %s", r.Issue.ProjectID, r.Issue.ID)
+			return nil, fmt.Errorf("no grant on project %s, of work item %s", r.Issue.ProjectID, r.Issue.ID)
 		}
-		page.Data[n] = r.Issue
-		page.Data[n].AssigneeIDs = append([]uuid.UUID{}, r.Issue.AssigneeIDs...)
-		page.Data[n].LabelIDs = append([]uuid.UUID{}, r.Issue.LabelIDs...)
+		items[n] = r.Issue
+		items[n].AssigneeIDs = append([]uuid.UUID{}, r.Issue.AssigneeIDs...)
+		items[n].LabelIDs = append([]uuid.UUID{}, r.Issue.LabelIDs...)
 		if only && r.Issue.ParentID != nil {
 			guarded = append(guarded, n)
 		}
 	}
-	if err := hideParents(ctx, l.deps.Issues, input.ActorID, page.Data, guarded); err != nil {
-		return IssueListPage{}, err
+	if err := hideParents(ctx, l.deps.Issues, input.ActorID, items, guarded); err != nil {
+		return nil, err
 	}
-	if len(rows) > q.Limit {
-		page.NextCursor, err = domain.EncodeListCursor(rows[size-1].Position)
+	return items, nil
+}
+
+func (l *Listing) groups(ctx context.Context, input ListingInput, rows []ListRecord) (IssueListPage, error) {
+	page := IssueListPage{Total: rows[0].Total, Groups: make([]IssueListGroup, 0)}
+	var emitted []ListRecord
+	var sizes []int
+	for start := 0; start < len(rows); {
+		end := start + 1
+		for end < len(rows) && rows[end].GroupKey == rows[start].GroupKey {
+			end++
+		}
+		part := rows[start:end]
+		size := min(len(part), input.Query.Limit)
+		cursor, err := pageCursor(part, input.Query.Limit)
 		if err != nil {
 			return IssueListPage{}, err
 		}
+		page.Groups = append(page.Groups, IssueListGroup{Key: part[0].GroupKey, Total: part[0].GroupTotal, NextCursor: cursor})
+		emitted = append(emitted, part[:size]...)
+		sizes = append(sizes, size)
+		start = end
+	}
+	items, err := l.issues(ctx, input, emitted)
+	if err != nil {
+		return IssueListPage{}, err
+	}
+	for n, size := range sizes {
+		page.Groups[n].Data = items[:size:size]
+		items = items[size:]
 	}
 	return page, nil
 }

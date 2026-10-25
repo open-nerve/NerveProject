@@ -168,13 +168,6 @@ func TestListingEmptyCursorTotal(t *testing.T) {
 				c := listRecord(uuid.NewV7(), nil).Position
 				in.Query.Cursor = &c
 			}
-			key := "none"
-			// Only fake Rows accepts these fields today. This proves the orchestration
-			// copy, not real group/cell SQL (which is introduced in later tasks).
-			in.Query.GroupBy = "label_id"
-			in.Query.SubGroupBy = "assignee_id"
-			in.Query.GroupKey = &key
-			in.Query.SubGroupKey = &key
 			in.Query.Filters.Labels.IDs = []uuid.UUID{f.labels[0].ID}
 			in.Query.Filters.Priorities = []domain.Priority{"high"}
 			f.pages = [][]app.ListRecord{nil, {listRecord(uuid.NewV7(), nil)}}

@@ -54,3 +54,35 @@ func TestListParameterTargetAndCursor(t *testing.T) {
 		}
 	}
 }
+
+func TestIssueGroupParameters(t *testing.T) {
+	actor, target := uuid.NewV7(), uuid.NewV7()
+	key := "none"
+	in := app.ListRead{ActorID: actor, TargetMemberID: &target, Query: domain.ListQuery{Order: "sort_order", Relation: "assigned", Limit: 1, GroupBy: "label_id", GroupKey: &key}}
+	p, err := groupParameters(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.ActorID != actor || p.RelationUserID == nil || *p.RelationUserID != target || p.GroupKey == nil || *p.GroupKey != key || p.GroupBy != "label_id" {
+		t.Fatalf("group parameters %+v", p)
+	}
+	value := reflect.ValueOf(p)
+	for n := 0; n < value.NumField(); n++ {
+		if f := value.Field(n); f.Kind() == reflect.Slice && f.IsNil() {
+			t.Errorf("nil group sqlc array %s", value.Type().Field(n).Name)
+		}
+	}
+	for _, bad := range []domain.ListQuery{
+		{Order: "sort_order", Limit: 1},
+		{Order: "sort_order", Limit: 1, GroupBy: "unknown"},
+		{Order: "sort_order", Limit: 1, GroupBy: "state_id", GroupKey: &key},
+		{Order: "sort_order", Limit: 1, GroupBy: "label_id", SubGroupBy: "assignee_id"},
+		{Order: "sort_order", Limit: 1, GroupBy: "label_id", Cursor: &domain.ListCursor{Order: "sort_order", Key: []byte("1"), ID: actor}},
+	} {
+		in.Query = bad
+		in.Query.Relation = "assigned"
+		if _, err := groupParameters(in); err == nil {
+			t.Fatalf("accepted invalid group query %+v", bad)
+		}
+	}
+}

@@ -10,16 +10,24 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 )
 
-// flatParameters is the sole production mapping to the sqlc boundary.
-// Allocate even empty arrays; append each directory's parallel fields together.
 func flatParameters(in app.ListRead) (gen.FlatIssuesParams, error) {
+	q := in.Query
+	if q.GroupBy != "" || q.SubGroupBy != "" || q.GroupKey != nil || q.SubGroupKey != nil {
+		return gen.FlatIssuesParams{}, fmt.Errorf("invalid flat list query")
+	}
+	return listParameters(in)
+}
+
+// listParameters maps the shared filters, catalogs and exact cursor once.
+// Allocate even empty arrays; append each directory's parallel fields together.
+func listParameters(in app.ListRead) (gen.FlatIssuesParams, error) {
 	q, f, d := in.Query, in.Query.Filters, in.Directories
 	validRelation := q.Relation == "assigned" || q.Relation == "created" || q.Relation == "subscribed"
 	if (in.TargetMemberID == nil && q.Relation != "") || (in.TargetMemberID != nil && !validRelation) {
 		return gen.FlatIssuesParams{}, fmt.Errorf("list relation and target member do not match")
 	}
-	if !domain.ListOrderAllowed(q.Order) || q.Limit < 1 || q.Limit > 100 || q.GroupBy != "" || q.SubGroupBy != "" || q.GroupKey != nil || q.SubGroupKey != nil {
-		return gen.FlatIssuesParams{}, fmt.Errorf("invalid flat list query")
+	if !domain.ListOrderAllowed(q.Order) || q.Limit < 1 || q.Limit > 100 {
+		return gen.FlatIssuesParams{}, fmt.Errorf("invalid list query")
 	}
 	p := gen.FlatIssuesParams{
 		ActorID: in.ActorID, Relation: q.Relation, RelationUserID: in.TargetMemberID,
