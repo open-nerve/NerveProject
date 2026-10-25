@@ -121,6 +121,7 @@ func TestFlatIssueList(t *testing.T) {
 				{[]string{"2026-" + month + "-01.."}, ids[:1]}, {[]string{"..2026-" + month + "-03"}, ids[:1]},
 				{[]string{"2026-" + month + "-01..", "..2026-" + month + "-03"}, ids[:1]},
 				{[]string{"2026-" + month + "-03..", "..2026-" + month + "-01"}, nil},
+				{[]string{"2026-" + month + "-02..", "..2026-" + month + "-01"}, nil},
 				{[]string{"none"}, []uuid.UUID{ids[1], ids[2], ids[3], ids[7], ids[8]}},
 			} {
 				in := base()
@@ -170,6 +171,22 @@ func TestFlatIssueList(t *testing.T) {
 		if got[0].Issue.SubIssuesCount != 2 {
 			t.Fatalf("own direct children including triage: %+v", got[0])
 		}
+		for _, order := range []domain.ListOrder{"sub_issues_count", "-sub_issues_count"} {
+			in.Query.Order = order
+			want := []uuid.UUID{ids[7], ids[2], ids[0]}
+			if order[0] == '-' {
+				slices.Reverse(want)
+			}
+			ordered := query(t, in)
+			checkFlatIDs(t, ordered, want)
+			for _, r := range ordered {
+				if r.Issue.ID == ids[0] && r.Issue.SubIssuesCount != 2 {
+					t.Fatalf("own sorting count %+v", r)
+				}
+			}
+			checkFlatPages(t, s, in, want)
+		}
+
 	})
 	t.Run("empty scope", func(t *testing.T) { in := base(); in.Directories.Projects = nil; checkFlatIDs(t, query(t, in), nil) })
 	t.Run("project filter", func(t *testing.T) {
@@ -202,6 +219,7 @@ func TestFlatIssueList(t *testing.T) {
 		})
 	}
 	t.Run("transaction context", func(t *testing.T) {
+		rollback := errors.New("rollback sentinel")
 		err := postgres.NewTxManager(pool, time.Second).WithinTx(ctx, func(txctx context.Context) error {
 			_, err := postgres.DB(txctx, pool).Exec(txctx, "UPDATE issues SET priority='low' WHERE id=$1", ids[0])
 			if err != nil {
@@ -214,10 +232,10 @@ func TestFlatIssueList(t *testing.T) {
 				return err
 			}
 			checkFlatIDs(t, got, ids[:1])
-			return errors.New("rollback")
+			return rollback
 		})
-		if err == nil {
-			t.Fatal("expected rollback")
+		if !errors.Is(err, rollback) {
+			t.Fatalf("expected rollback sentinel, got %v", err)
 		}
 	})
 	t.Run("cancelled", func(t *testing.T) {

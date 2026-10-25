@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -125,35 +124,7 @@ func TestFlatIssueListOrders(t *testing.T) {
 						t.Fatal(err)
 					}
 					checkFlatIDs(t, got, want)
-					if sc.Order == "sort_order" || strings.HasSuffix(sc.Order, "_at") {
-						in.Query.Limit = 1
-						var seen []uuid.UUID
-						for range len(want) + 1 {
-							rows, err := s.Flat(context.Background(), in)
-							if err != nil {
-								t.Fatal(err)
-							}
-							if len(rows) == 0 {
-								break
-							}
-							if rows[0].Total != int64(len(want)) {
-								t.Fatalf("total after cursor: %d", rows[0].Total)
-							}
-							seen = append(seen, rows[0].Issue.ID)
-							encoded, err := domain.EncodeListCursor(rows[0].Position)
-							if err != nil {
-								t.Fatal(err)
-							}
-							cursor, err := domain.DecodeListCursor(encoded, in.Query.Order)
-							if err != nil {
-								t.Fatal(err)
-							}
-							in.Query.Cursor = &cursor
-						}
-						if !slices.Equal(seen, want) {
-							t.Fatalf("real pagination %v; want %v", seen, want)
-						}
-					}
+					checkFlatPages(t, s, in, want)
 				})
 			}
 		})
@@ -185,5 +156,6 @@ func TestFlatIssueListCountOrder(t *testing.T) {
 			slices.Reverse(want)
 		}
 		checkFlatIDs(t, got, want)
+		checkFlatPages(t, s, in, want)
 	}
 }

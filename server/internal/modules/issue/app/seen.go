@@ -49,7 +49,7 @@ func (l Locks) seen(ctx context.Context, actor uuid.UUID, g grants, items ...dom
 			guarded = append(guarded, n)
 		}
 	}
-	if err := l.hideParents(ctx, actor, out, guarded); err != nil {
+	if err := hideParents(ctx, l.issues, actor, out, guarded); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -63,7 +63,7 @@ func (l Locks) seen(ctx context.Context, actor uuid.UUID, g grants, items ...dom
 // read does not find, is hidden. Nothing is read when no place is guarded,
 // as under a grant that shows him every work item. A failing read is its
 // error.
-func (l Locks) hideParents(ctx context.Context, actor uuid.UUID, items []domain.Issue, guarded []int) error {
+func hideParents(ctx context.Context, issues IssueReader, actor uuid.UUID, items []domain.Issue, guarded []int) error {
 	if len(guarded) == 0 {
 		return nil
 	}
@@ -71,7 +71,7 @@ func (l Locks) hideParents(ctx context.Context, actor uuid.UUID, items []domain.
 	for k, n := range guarded {
 		ids[k] = *items[n].ParentID
 	}
-	parents, err := l.issues.GetIssues(ctx, ascending(ids))
+	parents, err := issues.GetIssues(ctx, ascending(ids))
 	if err != nil {
 		return err
 	}
