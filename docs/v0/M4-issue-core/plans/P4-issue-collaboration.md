@@ -426,12 +426,12 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Files:** Modify `docs/v0/v0-design.md`、`docs/v0/M2-auth/M2-design.md`、`docs/v0/plane-diff.md`、`docs/v0/M4-issue-core/M4-design.md`、本spec/plan、`handoffs/{M1-P2-trim-content,M1-P3-trim-platform,M1-closeout,M2-closeout,M3-closeout}.md`；更新已建的`reviews/P4-issue-collaboration-review.md`。仅记录有证据的结果。
 
-**Interfaces:** review沿P3§1–7（方式、验收证据、局部决定、终审发现、plan差异、移交、限制）；消费实际每Task日志/提交/变异/门禁，不用计划预期填结果。根任务安排/更新设计与review，执行者不要覆盖他人已写记录。
+**Interfaces:** review沿P3§1–7（方式、验收证据、局部决定、终审发现、plan差异、移交、限制）；消费实际每Task日志/提交/变异/门禁，不用计划预期填结果。T16专属文档职责：执行者可修改Files所列跟踪文档，根任务在其实施期间冻结这些文件的并发修改；保留原有真实失败/修复和逐Task证据，修正当前状态与过时措辞，不覆盖历史。根任务随后维护独立评审及实际分支CI记录。
 
 - [ ] **Step 1 收集验收。** 对spec§4每项指向可复核日志/提交；没有证据保持未勾选。同步A1原话与content最终放置、纯层守卫实测；填写16Task实际大小/依赖变化，不补造原型或全量重放。
 - [ ] **Step 2 更新上级。** 按设计3.23/P4：无回复、仅描述历史、44表/无issue_versions、20版保留交P9、PageSize共享；五表逐列差异、500000上限、skip内容标识/审计代价、空评论、表情格式、作者权限、动态分页/过滤/增量限制。未做保留任务不能写为正在运行。
 - [ ] **Step 3 移交。** 五份handoff追加“处理结果（M4/P4）”与余项，status仍open；P5复用ReadOnlySnapshot/历史目录，P6事件且skip相同不发布，P9保留/清理，P11新DTO/地址及comment_json，P14撤销重做/isMigrationUpdate，P15末页cursor重取，M5图片src投影经收尾交接；没有遗漏原spec§5/7。
-- [ ] **Step 4 核验/预备终审。** `git diff --check`，`make lint-web`；已通过G全量门禁的日志集中列出，新增修复只按影响复测，未有完整门禁则补齐。检查文档相对链接和新文件名。根任务给负责人分支、基线、spec/plan/review和变异台账，等待负责人安排Claude整分支终审；终审发现按一个修复轮处理、必要时复审。
+- [ ] **Step 4 核验/预备终审。** `git diff --check`，`make lint-web`；已通过G全量门禁的日志集中列出，新增修复只按影响复测，未有完整门禁则补齐。检查文档相对链接和新文件名。分支CI由根任务在可审查提交上使用系统git推送codex/m4-p4后核验，执行者保留未执行状态及证据落点，不虚填结论；根任务给负责人分支、基线、spec/plan/review和变异台账，等待负责人安排Claude整分支终审；终审发现按一个修复轮处理、必要时复审。
 - [ ] **Step 5 提交与停止。** `docs(M4/P4): 记录协作验收证据与后续交接`。**负责人2026-10-25明确要求完成后先别合并；不得merge、push main或清理本分支。** Claude终审前进度写实现/验证完成待终审，不冒称Phase已最终完成。
 
 ## 自检结果与大小
