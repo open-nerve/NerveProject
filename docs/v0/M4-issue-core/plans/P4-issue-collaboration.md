@@ -8,7 +8,7 @@
 
 **技术栈：** Go 1.27/toolchain go1.27.1、pgx v5.11.0、sqlc v1.31.1、oapi-codegen v2.8.0、PostgreSQL 18.6、Node 24、pnpm 11.10.0和仓库锁定的TipTap/vitest/Playwright；仅新增已批准bluemonday及设计点名的传递依赖。
 
-**规格：** [P4规格](../specs/P4-issue-collaboration.md)；[上级设计](../M4-design.md)。代码基线56d575fb8ff6575880d1edef65219728a81f2b12，恢复文档HEAD 573e8eb6。本plan为紧凑可执行计划，不转录整份实现；没有整段原型或其生成SHA；实际Task验证进度见review；T1–T16独立评审通过，T15两项Minor已由T16关闭；负责人已推送a0526ade；分支CI 40170883949中Web/服务端通过、E2E的S2失败待定位；root自主推送授权尚未恢复，Claude终审待负责人安排。
+**规格：** [P4规格](../specs/P4-issue-collaboration.md)；[上级设计](../M4-design.md)。代码基线56d575fb8ff6575880d1edef65219728a81f2b12，恢复文档HEAD 573e8eb6。本plan为紧凑可执行计划，不转录整份实现；没有整段原型或其生成SHA；实际Task验证进度见review；T1–T16独立评审通过，T15两项Minor已由T16关闭；负责人已推送a0526ade；分支CI 40170883949中Web/服务端通过、S2关闭后动画未卸载，修复范围待负责人裁定；root自主推送授权尚未恢复，Claude终审待负责人安排。
 
 ## Global Constraints
 
@@ -435,10 +435,19 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 4 核验/预备终审。** `git diff --check`，纯值定点检查及三故事定位；因承接时间断言变更，顺序执行`make lint-web`、`make knip`、`make test-web`、完整`make e2e`及提交后`make gen-check`；已通过G全量门禁的日志集中列出，新增修复只按影响复测，未有完整门禁则补齐。检查文档相对链接和新文件名。分支CI由根任务在可审查提交上使用系统git推送codex/m4-p4后核验，执行者保留未执行状态及证据落点，不虚填结论；根任务给负责人分支、基线、spec/plan/review和变异台账，等待负责人安排Claude整分支终审；终审发现按一个修复轮处理、必要时复审。
 - [x] **Step 5 提交与停止。** `docs(M4/P4): 记录协作验收证据与后续交接`。**负责人2026-10-25明确要求完成后先别合并；不得merge、push main或清理本分支。** Claude终审前进度写实现/验证完成待终审，不冒称Phase已最终完成。
 
+### CI修复轮 A2：共用动画收尾（待负责人裁定，尚未实施）
+
+- 依据负责人提供的run40170883949 trace和review§3/A2，当前暂停的是跨模块修复范围选择；T1–T16既有实施/任务评审不重开。没有获准变更依赖或产品。
+- **推荐A的可审范围：** 新增现用`@headlessui/react@2.2.10`的版本修正文件到既有`patches/`，同步`pnpm-workspace.yaml`的`patchedDependencies`及锁文件；核对实际ESM/CJS入口，把已替换的动画集合重新纳入完成等待。保留取消清理、焦点/键盘和现有动画时长；不引入新的库、不直接改安装目录。
+- **先证伪再修：** 在`web/packages/ui/src/`的既有Vitest/jsdom环境补真实Headless UI组件回归，受控呈现旧动画A被新动画B替代；原版本须因B完成后仍残留DOM而红，修复后在B完成才卸载。另验证过程中重新打开/再次关闭及卸载取消，回退库修正时回归重新失败；实现路径/控制方式须在授权后细化，不把未执行预期记结果。
+- **授权后门禁：** 定位S2所有角色和菜单/弹窗关联故事，顺序执行`make lint-web`、`make knip`、`make test-web`、完整`make e2e`及提交后`make gen-check`；无Go变化沿已有Go证据，最新分支CI另验精确HEAD；本机Firefox限制仍单列。共享库修正需独立评审，随后同整分支交负责人安排Claude终审。
+- **备选B：** 仅移除WorkspaceMenuRoot外层Transition，复用Menu.Items直接随关闭卸载的既有模式；取消该菜单100ms进入/75ms退出动效，登记Plane差异并做快速关闭/重开回归。此方案不修复其他组件的共享库路径，不能写成全局缺陷已解决。
+- **暂停边界：** 已收集/提交证据与建议，等待负责人选A或B。Git自主推送授权是独立未解决项，不因收到CI报告而视为恢复；不合并、不清理。
+
 ## 自检结果与大小
 
 16个任务与设计原任务映射在spec§3.2；12个新操作/五表全部有拥有Task，表与fixture同批交付。Task7/8内部准备由Task9消费，不提前公开描述字段；Task11历史目录由Task12消费。公共类型与方法按上面的公共表和各Interfaces定义，不依赖代码转录。Review Focus五项分别绑定实际测试和变异。作者自检报告保存于工作树的`.superpowers/sdd/P4-issue-collaboration/plan-author-report.md`（过程记录，不作为已完成测试证据）。
 
-原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检及六项修订复核、T1–T16实施/适用本地验证与独立Task评审均已完成；T1/F1、T6/I1及T9/T13 Minor的复核闭合见review。T16已完成授权文档交接、T15两项Minor处理及适用Web G/故事验证，独立审查C/I/M均0；完整e2e133通过/2项Firefox缺失失败。Step4总项仍未勾：最终提交后gen-check已通过（3c0446ea，见task-16-report）；负责人已推送a0526ade并触发分支CI 40170883949，Web/服务端通过、E2E 134通过/1失败（S2菜单按Escape未关闭），已获负责人日志，待定位；root系统git自主推送仍报钥匙串-25308，等待图形桌面授权；Claude整分支终审待负责人安排，尚未合并。16Task实际实现/修复numstat及依赖变化见review §5；T16精确SHA和最终规模见执行报告，不在将提交文档中预造自己的SHA。106次生产变异不包含T16纯值边界红绿，不称全面杀死率。
+原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检及六项修订复核、T1–T16实施/适用本地验证与独立Task评审均已完成；T1/F1、T6/I1及T9/T13 Minor的复核闭合见review。T16已完成授权文档交接、T15两项Minor处理及适用Web G/故事验证，独立审查C/I/M均0；完整e2e133通过/2项Firefox缺失失败。Step4总项仍未勾：最终提交后gen-check已通过（3c0446ea，见task-16-report）；负责人已推送a0526ade并触发分支CI 40170883949，Web/服务端通过、E2E 134通过/1失败（S2按Escape后未卸载），负责人报告已确认动画中断后残留，修复范围待裁定；root系统git自主推送仍报钥匙串-25308，等待图形桌面授权；Claude整分支终审待负责人安排，尚未合并。16Task实际实现/修复numstat及依赖变化见review §5；T16精确SHA和最终规模见执行报告，不在将提交文档中预造自己的SHA。106次生产变异不包含T16纯值边界红绿，不称全面杀死率。
 
 T16本次验证入口：工作树 `.superpowers/sdd/P4-issue-collaboration/logs/task-16-commands.jsonl`；纯值红绿、三故事6通过、Web54/17/knip、完整e2e133通过/2环境失败及全部首次失败保留于task-16-report。T15两项Minor处理已由T16独立评审确认；表数口径为Nerve44=Plane43+新增1，五份handoff仍open，M4整体完成标准未勾。
