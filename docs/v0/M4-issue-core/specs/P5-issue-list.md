@@ -122,7 +122,24 @@ filtered AS MATERIALIZED 在分页前完成范围/可见性/全部过滤，每 i
 
 最终生产 SQL 用 10k/100k 对照：默认页、label_name、state_id 分组、label_id 分组、泳道与代表性筛选；完整查询含目录/映射另测端到端耗时。记录 PG/硬件、seed 分布与核对、预热、执行次数、每次/分位耗时、EXPLAIN(ANALYZE,BUFFERS)、实际索引；原 S1 程序未留存，不声称复用了原 seed。
 
-设计基准 10k 约 2–100ms；100k 默认55–125ms、label_name210–430ms、state组0.2–0.5s、label组0.45–0.7s、泳道0.7–1s，原负载波动约±20–30%。不是不稳定 CI 的硬毫秒断言；显著越界须解释/优化后实测，不能以均值掩盖超预算项。v0 目标每项目约20k 未删除项；CASE 排序扫描全部匹配行、跨项目 VisibleProjects 哈希连接可能扫描整个工作区，是明确成本。更大规模/索引特化交 M8；实际采用索引在验证后补本节，当前没有已测索引结论。
+设计基准 10k 约 2–100ms；100k 默认55–125ms、label_name210–430ms、state组0.2–0.5s、label组0.45–0.7s、泳道0.7–1s，原负载波动约±20–30%。不是不稳定 CI 的硬毫秒断言；显著越界须解释/优化后实测，不能以均值掩盖超预算项。v0 目标每项目约20k 未删除项；CASE 排序扫描全部匹配行、跨项目 VisibleProjects 哈希连接可能扫描整个工作区，是明确成本。更大规模/索引特化交 M8；实际结果与索引如下。
+
+T12最终源码为 `f73e85ed46303e813c8cee44b5145e22607e474d`。32轮采样时HEAD仍为修复基线，完整diff与16文件SHA已独立核对为该最终提交；两规模各13场景、1预热+5实测，130样本及456份真实SQL/typedargs计划全部保存。运行角色、RO/RR及生产池配置不变；环境macOS26.6.2、M5 Max/18 CPU/128GiB（Docker VM报告7931MB）、PG18.6 aarch64、Go1.27.1，MaxConns4/cache statement。N=10k/100k正常根项，默认含活跃孩子实际匹配10200/102000；小目录/0–2关系度数，OwnOnly另仅52匹配。模块时间仅httptest ServeHTTP，不含网络/真实token认证。
+
+| 场景 | 10k列表SQL中位 ms | 100k列表SQL中位 ms | 100k模块中位 ms |
+|---|---:|---:|---:|
+| 默认页 | 11.34 | 105.53 | 117.02 |
+| label_name | 22.73 | 231.55 | 243.14 |
+| state组 | 20.24 | 205.16 | 219.24 |
+| label组 | 26.21 | 287.62 | 303.21 |
+| 泳道 | 56.14 | 622.38 | 646.32 |
+| sort_order | 14.35 | 147.71 | 158.94 |
+| 成员分配 | 6.65 | 96.59 | 107.81 |
+| 成员订阅 | 6.82 | 97.34 | 108.47 |
+
+全部场景min/median/max、五样本、目录/其他SQL、分布与原计划见[评审T12b](../reviews/P5-issue-list-review.md#t12b真实规模性能修正与单一排序收口已验收)。最终Flat用唯一窗口业务全序生成内部序位，序位上界与同值LIMIT选keys，完整投影后仅按序位输出；游标及total位置不变。默认完整回表从优化前102000次降为51次，实际使用issues_pkey；默认/label_name还使用issues_project_id_idx、issues_parent_id_idx及两关系唯一索引，成员计划另见issues_project_id_state_id_idx和issue_subscribers_issue_id_subscriber_id_key。120条现存索引DDL已保存，未新增索引。
+
+单一排序有代价：相对首版双排序实现，sort_order及分配/订阅场景约+59.5%/+87.2%/+83.2%；不能隐去退化，也不机械套用默认页预算。默认EXPLAIN execution143.621ms，窗口前全量102000候选external merge（6592kB）、temp read/write1173/2364 blocks；成员页后51次主键查，但分页前仍有102256次相关关系索引扫描。事后EXPLAIN与请求计时分开。保留20k目标、M8的大目录/跨项目/相关过滤/临时块与索引特化评估，不宣称消除扫描或同seed复现。
 
 ### 2.7 sort_order PATCH
 
@@ -171,7 +188,7 @@ I3/I4/I5/I6/I7/I19/I20 API 故事各文件，I15 增加归档列表；全部前�
 
 ## 4. 逐项验收
 
-T1–T11已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T12a完整分页/快照单元已独立Approved，T12b规模性能待实施；T12父任务及后续任务尚未验收。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
+T1–T12已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T12a及T12b均经独立评审，T12b排序定义问题经修复及范围复审关闭；T13及后续任务尚未验收。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
 
 | 完成 | Task | 完成线 |
 |---|---|---|
@@ -186,7 +203,7 @@ T1–T11已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b�
 | [x] | T9 | 两类错误映射边界、项目活/归档列表权限、三封套与闭合契约 |
 | [x] | T10 | A≠B三关系实际SQL、target存在语义、caller OwnOnly与个人主页权限 |
 | [x] | T11 | P3关联替换、归档源同项目例外、父项/计数及Historical不退化 |
-| [ ] | T12 | 19排序、项目7/个人5全部group及全部合法subgroup实际SQL/total/续页；快照-race -count=5；10k/100k最终SQL实测 |
+| [x] | T12 | 19排序、项目7/个人5全部group及全部合法subgroup实际SQL/total/续页；快照-race -count=5；10k/100k最终SQL实测 |
 | [ ] | T13 | 00026三列默认/CHECK/Down-Up、三偏好闭合校验/整字段替换/用户隔离；并发-race -count=5 |
 | [ ] | T14 | 矩阵、运行角色、双向契约、全部新增交错强制race五遍、旧功能回归和全量门禁 |
 | [ ] | T15 | I3–I7/I19/I20 API故事、I15增长、全部API前置及完整e2e |

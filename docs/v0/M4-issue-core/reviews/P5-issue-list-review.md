@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-26。状态：**实施中；T1–T11完成，T12a完成，T12b待开始；阶段尚未完成，不合并**。
+日期：2026-10-26。状态：**实施中；T1–T12完成，T13待开始；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -157,6 +157,37 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 初始正确行为如实baseline绿；02失败是fixture把start改2030却留2026 target，触发已有日期CHECK，修正fixture清target后绿，未改产品约束。八快照实际各跑五次race，共40子场景、26.84s通过；lint两段0 issues；唯一完整make test 48包、130.911s、stderr空；提交后gen-check通过。八测试最终SHA与lint/race/full一致，最终status干净。既有Ryuk Shell诊断随后ready，未动容器或依赖。
 - 原证据 `task-12a-evidence/`、实施报告 `task-12a-report.md`；独立记录 `task-12a-review.md`。本单元未运行Web/e2e或规模性能，不以测试工具/默认skip替代T12b实际10k/100k、五样本及EXPLAIN完成门。
 
+### T12b：真实规模、性能修正与单一排序收口，已验收
+
+- 基线 `c08e1061b2ec5188fd8e1a8f3eb9a22c2f157957`，实施提交 `7df20e80229c19787eb7d9bc946789ed8dc1718c`，修复提交 `f73e85ed46303e813c8cee44b5145e22607e474d`。首轮独评C0/I1/M1，I1为Flat优化复制完整排序定义；原作者修复后范围复审I1关闭、新增C/I/M均0。唯一既有Minor仍是成功ready后的Ryuk日志噪声，保留环境维护记录。本单元与T12a共同完成父T12，未验收后续任务或P5整阶段。
+- `list-scale-v1`两库真实迁移/runtime grants，owner只seed/统计/ANALYZE，业务与EXPLAIN均runtime。N为正常根项10000/100000；主项目物理10700/107000、未删10500/105000、默认含活跃孩子匹配10200/102000，全库11556/107856。五状态含另置triage、全priority、null日期、0/1/2多值、父子及归档/软删邻居、普通/OwnOnly/退出/归档项目、caller≠target三关系均有DB实际分布与独立期望核对。OwnOnly另仅52匹配，不冒称同等100k负载。
+- 复用issueWorld的已准备URL/pool构造，补既有Members与外ctx接线；生产NewPool.Config复制后仅加测试Tracer，保留jit=off/custom_plan/UTC codec、MaxConns4/cache statement。捕获原sqlc SQL、typed参数深拷贝、request/pid/起止/错误；rows关闭才结束，回调不查库。计时仅同步ServeHTTP模块路由，含API中间件与tokenIsAccount，不含网络/真实token认证；构造、契约/oracle/DB核对、写盘及EXPLAIN均在外。
+- 两规模各13场景、各1预热+5实测，最终130样本/26预热全部保留；共456份运行角色RO/RR计划，内存原typedargs重用、安全位置Prepare比对OID，捕获三SQL与最终生成常量逐字相等。26次越尾各有首空与fallback两语句，PageSize51→2、原filter/组格/target保留；真实续页/末页/总数/完整数组/父子计数均以独立oracle核对。
+- 优化前完整绿05的默认计划完整回表102000次。首版延后投影虽改善耗时，却复制全序；最终唯一row_number窗口定义业务全序，cursor仍一份且先于窗口、total在cursor前，内部序位选页后才完整回表，输出仅按序位。为收口窗口候选的行数高估，序位上界另加同值typed LIMIT；两处共用一个int32页参数，不改变选中集合或公开游标。最终默认与两成员场景页后均51次issues_pkey，没有新增索引、SET、架构或守卫例外。
+- 最终性能为32轮对应的源码：运行时HEAD仍7df，但完整diff及16文件SHA与最终f73提交/工作字节完全相等，独立复审另从Git对象核实，不为metadata HEAD重复采样。旧22及窗口候选25保持为对照，不能冒称最终成绩。环境为macOS26.6.2/Apple M5 Max/18 CPU/128GiB，Docker VM报告7931MB，PG18.6 aarch64、Go1.27.1；实际120条现有索引DDL与所有SQL/参数/BUFFERS另存原证据。
+
+| 场景 | 10k SQL min/median/max ms | 100k SQL min/median/max ms | 100k目录中位 ms | 100k模块 min/median/max ms |
+|---|---:|---:|---:|---:|
+| 默认页 | 11.02/11.34/11.65 | 104.27/105.53/106.02 | 7.84 | 115.96/117.02/117.75 |
+| label_name | 22.68/22.73/22.91 | 230.31/231.55/233.64 | 8.14 | 242.07/243.14/245.42 |
+| sort_order | 14.23/14.35/14.61 | 146.55/147.71/148.18 | 7.94 | 157.91/158.94/159.25 |
+| state组 | 19.99/20.24/20.97 | 201.11/205.16/206.83 | 8.12 | 216.93/219.24/221.75 |
+| label组 | 26.11/26.21/27.34 | 287.36/287.62/289.51 | 8.17 | 301.67/303.21/304.89 |
+| 泳道 | 55.77/56.14/58.02 | 619.23/622.38/625.09 | 8.49 | 643.60/646.32/649.97 |
+| 筛选∩组 | 12.28/12.29/12.55 | 127.93/128.43/131.38 | 8.06 | 138.83/139.40/142.64 |
+| none筛选 | 9.79/9.93/9.95 | 100.03/100.65/104.30 | 8.03 | 111.52/112.02/115.63 |
+| 重复日期AND | 7.33/7.37/7.40 | 66.41/66.62/67.07 | 7.87 | 76.84/77.19/77.69 |
+| 成员创建 | 6.29/6.33/6.53 | 48.62/49.20/49.87 | 7.46 | 60.12/60.64/61.67 |
+| 成员分配 | 6.63/6.65/6.73 | 95.99/96.59/99.84 | 7.57 | 106.95/107.81/110.77 |
+| 成员订阅 | 6.79/6.82/6.92 | 97.19/97.34/98.95 | 7.74 | 108.13/108.47/111.82 |
+| OwnOnly（52匹配） | 1.06/1.07/1.13 | 1.15/1.20/1.24 | 0.69 | 3.23/4.10/4.79 |
+
+- 核心10k处于2–100ms基准；100k默认105.527ms、label_name231.554ms分别在55–125/210–430ms内，state组205.164ms、label组287.624ms、泳道622.383ms。分布与原S1不同且原seed未留存，不冒称同seed复现；更低数字不外推大目录/高关系度数，设计区间也不是CI硬毫秒断言。
+- 单一排序的实际代价保留：相对旧22，sort_order约+59.5%、member_assigned/member_subscribed分别约+87.2%/+83.2%。页后回表已按51行收口，分页前成员过滤仍102256次相关Index Only Scan；旧assigned计划为hashed成员子计划。默认窗口排序external merge 6592kB、run condition<=51，其前仍处理102000候选；EXPLAIN execution143.621ms/shared hits3437、temp read/write1173/2364（旧22为711/1538）。EXPLAIN与请求取行计时不同，不逐样本外推一份计划。保留每项目20k目标，相关过滤/完整排序/临时块/跨项目扫描与后续索引特化交M8。
+- 有效变异为参数浅拷贝、提前End及最终序位lookahead少一行，均真实业务红/恢复绿，生产SQL经真实生成。历史10的Fatal前未defer rows.Close导致清理阻塞，错误启动11造成短暂suite重叠；精确终止自有进程、补资源释放后12/13重做，旧10/11不作有效证据，11编译红亦明确无效。原始时间证明08/22在其外，最终修复23–38全部22条命令无重叠；未操作已有Docker/他人进程。离线核验正则曾漏匹配分组row_number，修正并留audit记录，不包装成产品suite失败。
+- 最终31覆盖四入口19序、7/5/42、八快照及三SQL精度/typed/tracer；33有效lookahead变异恢复；34八快照各race五遍共40子场景、27.17s；35唯一针对最终SQL的完整make test48包/143.34s/stderr空，36 lint两段0 issues，38提交后gen-check通过。前候选29全量仅支持其源码，未错记为最终结果；默认skip明确不算性能通过。
+- 原证据 `task-12b-evidence/`，最终 `32-fix1-scale-bound/`、`fix1-performance-summary.json`、`fix1-final-plan-comparison.json`、`fix1-final-verification.json`；实施及修复报告 `task-12b-report.md`，独评 `task-12b-review.md`、范围复审 `task-12b-rereview1.md`。首轮22的成员订阅有两次偏慢86.033/84.788ms，全部保留，未只挑最快值或删慢样本。
+
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
@@ -169,7 +200,8 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - `0b599e6860da5212084776abd2d6f6dc4df0acdb`（含T9）已由系统Git推送；[CI 40202959281](https://github.com/open-nerve/NerveProject/actions/runs/40202959281) server、web、e2e全部success。此检查点不包含T10。
 - `b733b60186265915587d518b6875b5f9e4aff4b3`（含T10）已由系统Git推送；[CI 40205751190](https://github.com/open-nerve/NerveProject/actions/runs/40205751190) server、web、e2e全部success。此检查点不包含T11。
 - `26fa7cf8aa179473d77160fca95d90eea09ec6da`（含T11）已由系统Git推送；[CI 40207373659](https://github.com/open-nerve/NerveProject/actions/runs/40207373659) server、web、e2e全部success。此检查点不包含T12a。
-- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`、`ci-40205751190-jobs.json`、`ci-40207373659-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
+- `c08e1061b2ec5188fd8e1a8f3eb9a22c2f157957`（含T12a）已由系统Git推送；[CI 40210086901](https://github.com/open-nerve/NerveProject/actions/runs/40210086901) server、web、e2e全部success。此检查点不包含T12b及修复。
+- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`、`ci-40205751190-jobs.json`、`ci-40207373659-jobs.json`、`ci-40210086901-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
 
 ## 3. 执行中的决定
 

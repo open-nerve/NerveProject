@@ -346,7 +346,7 @@ T12a实际测试落点：B/issue_list_pages_test.go、issue_list_orders_test.go�
 **顺序实施与独立评审（全部仍属T12）：**
 
 - [x] **T12a：完整分页矩阵与真实快照。** 复用固定JSON和独立成员表/有序ID表，三SQL形状以代表真实组/格覆盖19码连续分页，个人入口按真实目标覆盖19码；另以固定默认序覆盖项目7/个人5/项目42种合法组对，逐层total/完整数组/none/越尾及错列变异。两维不额外相乘。真实用例读目录后channel屏障与另一连接提交、首次Rows空后fallback屏障验证旧/新快照，去ReadTx/外ctx实际变异与所有新增快照race五遍。G及独立审查通过后才交b，不能用单连接占用测试替代并发。
-- [ ] **T12b：最终生产SQL规模与性能闭环。** 新实施者接手；真实10k/100k确定seed及DB核对、运行角色生产配置派生tracer池、原SQL和typed参数保真捕获、计时外同SQL/同参数EXPLAIN、各场景预热1+实测5及目录/SQL/完整模块请求成本。必须实际开启性能测试、对照设计逐项解释，显著超预算依据计划局部修复复测，不能只交测量工具。若改生产SQL或编排，重验受影响a正确性/快照后再采最终性能；a旧结果不外推。G及独立审查后才验收全部T12。
+- [x] **T12b：最终生产SQL规模与性能闭环。** 新实施者接手；真实10k/100k确定seed及DB核对、运行角色生产配置派生tracer池、原SQL和typed参数保真捕获、计时外同SQL/同参数EXPLAIN、各场景预热1+实测5及目录/SQL/完整模块请求成本。必须实际开启性能测试、对照设计逐项解释，显著超预算依据计划局部修复复测，不能只交测量工具。若改生产SQL或编排，重验受影响a正确性/快照后再采最终性能；a旧结果不外推。G及独立审查后才验收全部T12。
 
 T12a/b预计1000–1320/1080–1450手写行，接近1400先核剩余职责；不含未知产品优化，实际新增优化超界按D2再切，不削矩阵或100k/五样本门。以下全部父任务验收保留，默认skip不算性能通过。
 
@@ -354,14 +354,14 @@ T12a/b预计1000–1320/1080–1450手写行，接近1400先核剩余职责；�
 - [x] `TestIssueListAllGroupingFields` 以真实SQL覆盖项目7种group（state_id/state_group/priority/label_id/assignee_id/created_by_id/target_date）、个人5种group（state_group/priority/label_id/target_date/project_id）；项目全部42种合法group×subgroup组合均验证返回集合、整体/组/泳道/格total与limit=1续页。每种可为空字段含none，特别单列created_by_id（含none）、project_id（真实非空项目键）、target_date=none；筛选与分组重叠、空cursor页补total、行完整数组均有反例。期望键和集合独立列出，不调用生产分组键/比较器反算；不能仅在词汇测试中接受枚举就标覆盖。created_by_id/project_id/target_date各至少一次把SQL分支替成错误字段的实际变异，必须被对应断言杀死并恢复。
 - [x] `TestIssueListSnapshot`：目录读后用可控channel/RowWaits暂停，另一连接新增state并移issue或退出成员/更名；完成本页应全旧快照，下一次请求全新；空cursor补total也走旧快照。全程读tx可观测READ ONLY/RR，不靠sleep。
 - [x] 红/绿定位：`go -C server test ./internal/bootstrap -run 'TestIssueList(AllOrders|AllGroupingFields|Snapshot)' -count=1`；去ReadTx/传外ctx变异必须失败，恢复后重跑；完成门强制 `go -C server test ./internal/bootstrap -run 'TestIssueListSnapshot' -race -count=5`，不能以一次运行或普通-race替代。
-- [ ] 实现可选显式运行的 `TestIssueListScale`（环境 `NERVE_LIST_SCALE=1`，默认skip记录清楚，不把skip当性能通过）：真实迁移/运行角色，10k和100k种子及数据库核对，最终生产SQL非近似副本；计时外比对正确性。测试pgx tracer捕获真实Store执行的sqlc SQL和参数，在测试连接对同一SQL/参数取EXPLAIN（计时外），不复制近似查询、不新增生产rawSQL出口。
-- [ ] 独占执行：`NERVE_LIST_SCALE=1 go -C server test ./internal/bootstrap -run '^TestIssueListScale$' -count=1 -timeout=20m -v`。默认页/label_name/state组/label组/泳道各至少预热1次、记录5次实测及min/median/max，代表性筛选和跨项目可见目录另测；记录目录耗时与总请求耗时，PG/硬件/参数/分布/EXPLAIN BUFFERS/实际索引。
-- [ ] 与spec基准逐项比较，显著超界先EXPLAIN局部优化再复测；不能只保留最快值或降低100k完成线。原S1程序未保留，当前结果不能冒称原S1复现。大规模/默认索引特化归M8。
-- [ ] G；提交 `test(M4/P5): 验证列表全序快照并记录规模成本`。
+- [x] 实现可选显式运行的 `TestIssueListScale`（环境 `NERVE_LIST_SCALE=1`，默认skip记录清楚，不把skip当性能通过）：真实迁移/运行角色，10k和100k种子及数据库核对，最终生产SQL非近似副本；计时外比对正确性。测试pgx tracer捕获真实Store执行的sqlc SQL和参数，在测试连接对同一SQL/参数取EXPLAIN（计时外），不复制近似查询、不新增生产rawSQL出口。
+- [x] 独占执行：`NERVE_LIST_SCALE=1 go -C server test ./internal/bootstrap -run '^TestIssueListScale$' -count=1 -timeout=20m -v`。默认页/label_name/state组/label组/泳道各至少预热1次、记录5次实测及min/median/max，代表性筛选和跨项目可见目录另测；记录目录耗时与总请求耗时，PG/硬件/参数/分布/EXPLAIN BUFFERS/实际索引。
+- [x] 与spec基准逐项比较，显著超界先EXPLAIN局部优化再复测；不能只保留最快值或降低100k完成线。原S1程序未保留，当前结果不能冒称原S1复现。大规模/默认索引特化归M8。
+- [x] G；提交 `test(M4/P5): 验证列表全序快照并记录规模成本`。
 
 ## Task 13：三类项目显示设置与纯词汇端口
 
-文件：新 `server/migrations/sql/00026_project_project_user_properties_issue_display.sql`；改 `server/migrations/project_schema_test.go`、`server/migrations/schema_test.go`、`server/sqlc.yaml`的project迁移映射、P/domain/preferences.go与测试、P/app/update_preferences.go/get_preferences.go/ports及完整默认fake、P/adapter/http/preferences.go/测试、P/adapter/postgres/preferences.go/queries/preferences.sql/测试；新I/app/list_settings.go/测试；改双方module、B/ports.go/app.go/project_connection_test.go、api/modules/project.yaml、相关Go/TS/e2e精确响应fixture。新迁移/存储/并发测试按职责分文件，不把整组追加到已有大文件。
+文件：新 `server/migrations/sql/00026_project_project_user_properties_issue_display.sql`；改 `server/migrations/project_schema_test.go`、`server/migrations/schema_test.go`、`server/sqlc.yaml`的project迁移映射、P/domain/preferences.go与测试、P/app/update_preferences.go/get_preferences.go/ports及完整默认fake、P/adapter/http/preferences.go/测试、P/adapter/postgres/preferences.go/queries/preferences.sql/测试；新I/app/list_settings.go/测试；改双方module、B/ports.go/app.go/project_connection_test.go/ending_connection_test.go、新B/project_preferences_runtime_test.go、api/modules/project.yaml、相关Go/TS/e2e精确响应fixture。新迁移/存储/并发测试按职责分文件，不把整组追加到已有大文件。
 
 **顺序实施与独立评审（全部仍属T13）：**
 
