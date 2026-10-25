@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-25。状态：**实施中；T1–T11完成，T12待开始；阶段尚未完成，不合并**。
+日期：2026-10-26。状态：**实施中；T1–T11完成，T12a完成，T12b待开始；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -147,6 +147,16 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 唯一完整`make test`48成功包、127.675s、stderr空；`make lint-go`两段0 issues、提交后`make gen-check`通过，status干净。15个存续文件SHA及删除状态与最终提交一致，full后未改产品/测试或重复全量。无API/迁移/前端/故事变动，未跑Web/e2e；verbose既有Ryuk Shell诊断随后ready，未操作容器或依赖。
 - 原始证据 `task-11-evidence/`，报告 `task-11-report.md`，独立记录 `task-11-review.md`。T12仍须完成全面分页、真实提交交错和10k/100k性能，不能由单连接结果替代。
 
+### T12a：完整分页矩阵与真实提交快照，已验收
+
+- 基线 `26fa7cf8aa179473d77160fca95d90eea09ec6da`，实施提交 `8238508e311c42a607add9b2827a30155db8e10b`；独立评审Spec compliant、Approved，C0/I0/M1。唯一Minor为既有Ryuk日志噪声，成功ready/无启动重试，保留环境维护记录，不改容器或依赖。8个手写测试文件1051+/4−，每文件不足400行；无永久产品/SQL/生成物/契约变化，父T12尚未验收。
+- 真实Flat/Groups/Subgroups及caller≠target成员HTTP入口分别19排序配置；另按默认序跑项目7字段、个人5字段与全部42个有序不同字段组对，含真实跨项目、nullable creator/date与多值none、A筛选∩C组、OwnOnly、隐藏父、归档/软删邻居。独立固定ID序与key→ID成员表断言各层total及完整数组，不调用生产比较器/分组器生成期望，不把两维交叉成额外要求。
+- 逐页保留HTTP原顺序，直接消费返回的组/格首cursor，逐值检查公开key/ID、末页null与越尾补total。共享JSON在bootstrap因真实label唯一约束复用ALPHA、给äBC固定后缀；时间映射到2255年相邻2^53微秒，count映射为0/0/1/2以造真实子项，不冒称逐字复现原种子。大整数由三条生产SQL原CASE执行探针和Groups/Subgroups typed int64参数单独证明，邻接float及逆UUID仍实际翻页。
+- 八个真实提交交错：state/parent、label名、assignee名、caller退出，以及flat/groups/subgroups/member空页fallback。目录真实返回后且Rows前、或真实Rows首查空后暂停，另一连接真实提交后放行；本页旧快照、下一请求新快照。观察真实READ ONLY/RR/同pid及独立writer pid，端口只委托/观察，记录有同步，读goroutine返结果，失败release/cancel/join后清池，无sleep或MVCC假锁。fallback保留目录/filter/actor/target/组格键，只改Query.Cursor=nil、Query.Limit=1；adapter PageSize另含lookahead为2。
+- 五项实际生产变异编译成功后业务红并恢复绿：creator/project/date错列（三项均真实生成/恢复生成）、两入口去ReadTx、Listing目录外ctx。去ReadTx在真实source/workspace检测read committed/off时失败，未冒称该变异已走到writer提交；外ctx在真实states检查失败。所有生产/生成恢复SHA匹配，未留变异。
+- 初始正确行为如实baseline绿；02失败是fixture把start改2030却留2026 target，触发已有日期CHECK，修正fixture清target后绿，未改产品约束。八快照实际各跑五次race，共40子场景、26.84s通过；lint两段0 issues；唯一完整make test 48包、130.911s、stderr空；提交后gen-check通过。八测试最终SHA与lint/race/full一致，最终status干净。既有Ryuk Shell诊断随后ready，未动容器或依赖。
+- 原证据 `task-12a-evidence/`、实施报告 `task-12a-report.md`；独立记录 `task-12a-review.md`。本单元未运行Web/e2e或规模性能，不以测试工具/默认skip替代T12b实际10k/100k、五样本及EXPLAIN完成门。
+
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
@@ -158,7 +168,8 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - `add5f6d9e9e7363d1d7b80b717df38066d50ebe3`（含T8）已由系统Git推送；[CI 40200997593](https://github.com/open-nerve/NerveProject/actions/runs/40200997593) server、web、e2e全部success。此检查点不包含T9。
 - `0b599e6860da5212084776abd2d6f6dc4df0acdb`（含T9）已由系统Git推送；[CI 40202959281](https://github.com/open-nerve/NerveProject/actions/runs/40202959281) server、web、e2e全部success。此检查点不包含T10。
 - `b733b60186265915587d518b6875b5f9e4aff4b3`（含T10）已由系统Git推送；[CI 40205751190](https://github.com/open-nerve/NerveProject/actions/runs/40205751190) server、web、e2e全部success。此检查点不包含T11。
-- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`、`ci-40205751190-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
+- `26fa7cf8aa179473d77160fca95d90eea09ec6da`（含T11）已由系统Git推送；[CI 40207373659](https://github.com/open-nerve/NerveProject/actions/runs/40207373659) server、web、e2e全部success。此检查点不包含T12a。
+- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`、`ci-40205751190-jobs.json`、`ci-40207373659-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
 
 ## 3. 执行中的决定
 
