@@ -69,25 +69,28 @@ WITH projects AS (
     FROM source_keys s
 ), keyed AS (
     SELECT n.*, (n.k_num IS NULL AND n.k_text IS NULL) AS k_null FROM numeric_keys n
+), ranked AS (
+    SELECT k.*, row_number() OVER (
+        ORDER BY k.k_null,
+                 CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.k_num END ASC,
+                 CASE WHEN sqlc.arg(descending)::boolean THEN k.k_num END DESC,
+                 CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.k_text END COLLATE "C" ASC,
+                 CASE WHEN sqlc.arg(descending)::boolean THEN k.k_text END COLLATE "C" DESC,
+                 CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.id END ASC,
+                 CASE WHEN sqlc.arg(descending)::boolean THEN k.id END DESC) AS page_position
+    FROM keyed k
+    WHERE NOT sqlc.arg(has_cursor)::boolean OR
+          (k.k_null AND NOT sqlc.arg(cursor_null)::boolean) OR
+          (k.k_null=sqlc.arg(cursor_null)::boolean AND
+           (CASE WHEN sqlc.arg(descending)::boolean THEN
+               (k.k_num<sqlc.narg(cursor_num)::bigint::numeric OR k.k_text COLLATE "C"<sqlc.narg(cursor_text)::text COLLATE "C")
+             ELSE (k.k_num>sqlc.narg(cursor_num)::bigint::numeric OR k.k_text COLLATE "C">sqlc.narg(cursor_text)::text COLLATE "C") END
+            OR ((k.k_null OR k.k_num=sqlc.narg(cursor_num)::bigint::numeric OR k.k_text COLLATE "C"=sqlc.narg(cursor_text)::text COLLATE "C")
+                AND CASE WHEN sqlc.arg(descending)::boolean THEN k.id<sqlc.narg(cursor_id)::uuid ELSE k.id>sqlc.narg(cursor_id)::uuid END)))
 ), paged AS MATERIALIZED (
-    -- Sort and count every match, then fetch full issue projections only for the page.
-    SELECT k.* FROM keyed k
-WHERE NOT sqlc.arg(has_cursor)::boolean OR
-      (k.k_null AND NOT sqlc.arg(cursor_null)::boolean) OR
-      (k.k_null=sqlc.arg(cursor_null)::boolean AND
-       (CASE WHEN sqlc.arg(descending)::boolean THEN
-           (k.k_num<sqlc.narg(cursor_num)::bigint::numeric OR k.k_text COLLATE "C"<sqlc.narg(cursor_text)::text COLLATE "C")
-         ELSE (k.k_num>sqlc.narg(cursor_num)::bigint::numeric OR k.k_text COLLATE "C">sqlc.narg(cursor_text)::text COLLATE "C") END
-        OR ((k.k_null OR k.k_num=sqlc.narg(cursor_num)::bigint::numeric OR k.k_text COLLATE "C"=sqlc.narg(cursor_text)::text COLLATE "C")
-            AND CASE WHEN sqlc.arg(descending)::boolean THEN k.id<sqlc.narg(cursor_id)::uuid ELSE k.id>sqlc.narg(cursor_id)::uuid END)))
-ORDER BY k.k_null,
-         CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.k_num END ASC,
-         CASE WHEN sqlc.arg(descending)::boolean THEN k.k_num END DESC,
-         CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.k_text END COLLATE "C" ASC,
-         CASE WHEN sqlc.arg(descending)::boolean THEN k.k_text END COLLATE "C" DESC,
-         CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.id END ASC,
-         CASE WHEN sqlc.arg(descending)::boolean THEN k.id END DESC
-LIMIT sqlc.arg(page_size)::integer
+    -- Carry the one authoritative order through the page's full projection.
+    SELECT * FROM ranked WHERE page_position <= sqlc.arg(page_size)::integer
+    LIMIT sqlc.arg(page_size)::integer
 )
 SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority,
        i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at,
@@ -100,10 +103,4 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.
        coalesce((SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS assignee_ids,
        coalesce((SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS label_ids
 FROM paged k JOIN issues i ON i.id=k.id
-ORDER BY k.k_null,
-         CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.k_num END ASC,
-         CASE WHEN sqlc.arg(descending)::boolean THEN k.k_num END DESC,
-         CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.k_text END COLLATE "C" ASC,
-         CASE WHEN sqlc.arg(descending)::boolean THEN k.k_text END COLLATE "C" DESC,
-         CASE WHEN NOT sqlc.arg(descending)::boolean THEN k.id END ASC,
-         CASE WHEN sqlc.arg(descending)::boolean THEN k.id END DESC;
+ORDER BY k.page_position;
