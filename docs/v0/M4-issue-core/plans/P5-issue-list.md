@@ -238,12 +238,12 @@ type IssueListSettings interface {
 
 文件：改 `I/app/visible_projects.go`、`I/module.go`、`P/app/issue_ports.go`、`P/module.go`、`P/adapter/postgres/issue_ports.go`、`B/ports.go`；新 `P/adapter/postgres/queries/visible_issue_projects.sql`，列表状态/标签批读SQL，`I/adapter/postgres/list_directories.go/queries/list_directories.sql`；相应测试。
 
-- [ ] 写 `TestVisibleIssueProjects`：有效普通成员、guest OwnOnly、管理员兼guest、管理员非项目成员、退出/软删成员、软删/归档项目；同fixture单独断言Historical历史语义仍不变。
-- [ ] 写 `TestListDirectories`：范围内完整状态/标签，triage排除但既有States保留；负责人先曾被指派后退出/降级仍取名，软删负责人行/外项目排除；空输入零目录、不nil，端口故障原样传播/ctx一致。
-- [ ] 红：`go -C server test ./internal/modules/project/adapter/postgres ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(VisibleIssueProjects|ListDirectories|HistoricalIssueProjects|HistoricalProjects)' -count=1`。
-- [ ] 实现上表端口与bootstrap转换，sqlc生成；只取所属模块表，数组配对由ID映射构建，不依赖map随机顺序。
-- [ ] 绿；实际变异删除is_active/archived条件、负责人目录误取软删除关系、误改Historical删过滤，每类对应反例红；恢复。退出/降guest后仍取姓名由真实AssigneeIDs→PublicProfiles组合验证，T5实际Listing消费者再覆盖。T4尚无可替换成活跃成员名单的生产调用点，不为强造该变异添加跨模块SQL/端口或修改测试来源来冒充生产变异。
-- [ ] G；提交 `feat(M4/P5): 提供普通可读项目与列表名字目录`。
+- [x] 写 `TestVisibleIssueProjects`：有效普通成员、guest OwnOnly、管理员兼guest、管理员非项目成员、退出/软删成员、软删/归档项目；同fixture单独断言Historical历史语义仍不变。
+- [x] 写 `TestListDirectories`：范围内完整状态/标签，triage排除但既有States保留；负责人先曾被指派后退出/降级仍取名，软删负责人行/外项目排除；空输入零目录、不nil，端口故障原样传播/ctx一致。
+- [x] 红：`go -C server test ./internal/modules/project/adapter/postgres ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(VisibleIssueProjects|ListDirectories|HistoricalIssueProjects|HistoricalProjects)' -count=1`。
+- [x] 实现上表端口与bootstrap转换，sqlc生成；只取所属模块表。后续列表参数的并列数组配对在T5按同一ID映射构建，本任务不提前实现该适配。
+- [x] 绿；实际变异删除is_active/archived条件、负责人目录误取软删除关系、误改Historical删过滤，每类对应反例红；恢复。退出/降guest后仍取姓名由真实AssigneeIDs→PublicProfiles组合验证，T5实际Listing消费者再覆盖。T4尚无可替换成活跃成员名单的生产调用点，不为强造该变异添加跨模块SQL/端口或修改测试来源来冒充生产变异。
+- [x] G；提交 `feat(M4/P5): 提供普通可读项目与列表名字目录`。
 
 ## Task 5：不分组静态查询与公共编排
 
