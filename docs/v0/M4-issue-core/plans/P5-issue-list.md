@@ -8,7 +8,7 @@
 
 **技术栈：** 仓库锁定 Go 1.27/toolchain go1.27.1、pgx 5.11.0、sqlc 1.31.1、oapi-codegen 2.8.0、PostgreSQL 18.6、Node 24、pnpm 11.10.0、Playwright；不新增依赖。
 
-**规格：** [P5 spec](../specs/P5-issue-list.md)；[P5 review](../reviews/P5-issue-list-review.md)。基线 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`；[main CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 已全部成功，仅证明P4基线。16个验收任务是原设计15项的局部重切，sort_order单列，全部P5范围保留。T5按执行前规模核对拆为T5a/T5b两个连续实施与独立评审单元，因此当前共17个实施单元；两个单元完成后才验收T5，不改变P5分支或负责人完成门。
+**规格：** [P5 spec](../specs/P5-issue-list.md)；[P5 review](../reviews/P5-issue-list-review.md)。基线 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`；[main CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 已全部成功，仅证明P4基线。16个验收任务是原设计15项的局部重切，sort_order单列，全部P5范围保留。T5与T13按实施前规模核对各拆为a/b两个连续实施与独立评审单元，因此当前共18个实施单元；各自两个单元完成后才验收其父任务，不改变P5分支或负责人完成门。
 
 **方法调整：** 依 [02-method §3](../../claude_to_gpt/02-method.md#3-哪些是要求哪些是做法)，采用明确职责、消费/产出签名、文件、测试和命令的紧凑计划；逐Task TDD、实际变异、恢复控制组和独立评审替代完整预制原型/逐字重放。没有跑原型就不声称跑过；不减少纪律、真实文档、性质证伪、交接、终审或合并/main CI完成门。
 
@@ -16,7 +16,7 @@
 
 - P4 已合并且 main CI 通过；起步使用 `.codex/worktress/codex/m4-p5` / `codex/m4-p5`，主目录 main 不动。不用 stash/clean/reset --hard；不动 plane/refer，不操作既有容器、不访问凭据。
 - 启动即落正式 spec/plan 与 review 记录，`tools/keywords.json` phase 改为 M4/P5；不要到 T16 才写计划。起步核对基线与本计划的局部接缝，处理独立预检意见并记录复审结论；不虚称已通过。
-- 每 Task TDD→关键变异→独立评审→局部修复→提交；中文消息，保留 feat(M4/P5) 等前缀；push 用 `/usr/bin/git`。P4 本轮旧 Claude 等待门已被负责人新指示替代；不自动取消 P5 后续完成门。P5 完成后先交负责人安排整分支终审，处理后合并，除非另有安排。
+- 每 Task TDD→关键变异→实施提交→独立评审→必要的局部修复与提交；中文消息，保留 feat(M4/P5) 等前缀；push 用 `/usr/bin/git`。P4 本轮旧 Claude 等待门已被负责人新指示替代；不自动取消 P5 后续完成门。P5 完成后先交负责人安排整分支终审，处理后合并，除非另有安排。
 - 写复用 Locks.run 与闸门；不可见404在角色403前，项目归档→工作项归档→无改动→依赖→时钟→写。全局表序沿 P4：issues→assignees→labels→relations→links→subscribers→mentions→comments→issue_reactions→comment_reactions→activities→description_versions。
 - 模块不互导、不跨模块 JOIN；SQL 仅 sqlc；三条静态查询，不拼 SQL、不写模块 SET、不加 raw pgx 豁免、不提前索引特化。端口错误原样传播，ctx 不逃逸。新逻辑文件约400行以内，生成物沿既有例外。
 - 读必须独立 ReadTx，所有鉴权/目录/SQL/补 total 传事务 ctx；不能把 ReadOnlySnapshot 嵌进已有写事务来升级隔离。PageSize 默认50、1–100唯一来源 shared。
@@ -64,15 +64,16 @@
 |---|---|
 | T1 / T2 / T3 / T4 | 150–300 / 250–450 / 600–900 / 700–1100 |
 | T5a / T5b（执行前重新估计） | 1050–1350 / 850–1300 |
-| T6 / T7 / T8 | 800–1300 / 900–1400 / 600–1000 |
+| T6 / T7 / T8 | 800–1300 / 900–1400 / 1000–1350（锁交错准备后复核） |
 | T9 / T10 / T11 / T12 | 800–1200 / 800–1200 / 350–650 / 1100–1450 |
-| T13 / T14 / T15 / T16 | 1100–1450 / 600–1000 / 900–1400 / 0–100（T16主要文档另计） |
+| T13a / T13b（实施前重新估计） | 970–1350 / 865–1240 |
+| T14 / T15 / T16 | 600–1000 / 900–1400 / 0–100（T16主要文档另计） |
 
-每实施单元预计小于约1500手写代码/测试行；生成物和文档另计，复用文件的总行数不当新增差异量。T5–7/T12/T13最重，实施前后以真实diff/测试职责核对；T5静态接缝核对后粗估1900–2400行，已按D2切为两个顺序单元（估计不是实测，不能作为完成证据）；若超约1500或Phase约16任务范围，按设计D2已批准机制重切任务或P5a/P5b并同步spec/plan/状态，不削测试、不编造完整原型SHA/逐Task精确行数，也不把局部切分升级成架构审批。
+每实施单元预计小于约1500手写代码/测试行；生成物和文档另计，复用文件的总行数不当新增差异量。T5–7/T12/T13最重，实施前后以真实diff/测试职责核对；T5静态接缝核对后粗估1900–2400行，T13三列/CHECK/跨层/并发职责复核后估计1835–2590行，两者已按D2分别切为两个顺序单元（估计不是实测，不能作为完成证据）；若超约1500或Phase约16任务范围，按设计D2已批准机制重切任务或P5a/P5b并同步spec/plan/状态，不削测试、不编造完整原型SHA/逐Task精确行数，也不把局部切分升级成架构审批。
 
 共用helpers：pgtest模板库/RowWaits、现有issueWorld及其API建模、apitest双向契约/错误码检查；沿已有锁屏障及工作项审计断言；e2e/fixtures/issues.ts、furnish.ts、assert/issue.ts及关联assert/catalog等。只为真正缺的场景补窄helper，不重新搭数据库/认证客户端/迁移框架/断言集合。
 
-**共用收口 G（每 Task 最后一项都执行）：** 先跑该 Task 的定位命令，确认红是目标断言失败，再实现并绿。需要真实 Postgres 的包用现有 pgtest，不手造另外一套服务。按改动范围跑 `make lint-go`、`make test`；契约用 `make gen`，仅 SQL 用 `make gen-go`；契约/web/e2e 改动加 `make lint-web`、`make knip`、`make test-web`；迁移/故事跑 `make e2e`。同一依赖链完成后全量结果可按精确 HEAD 复用，后续未影响它时不无意义重跑；新故障/改动必须验证。独立评审后只 add 本 Task 精确文件，提交中文消息；带生成物的提交后 `make gen-check` 必须无差异。
+**共用收口 G（每 Task 最后一项都执行）：** 先跑该 Task 的定位命令，确认红是目标断言失败，再实现并绿。需要真实 Postgres 的包用现有 pgtest，不手造另外一套服务。按改动范围跑 `make lint-go`、`make test`；契约用 `make gen`，仅 SQL 用 `make gen-go`；契约/web/e2e 改动加 `make lint-web`、`make knip`、`make test-web`；迁移/故事跑 `make e2e`。同一依赖链完成后全量结果可按精确 HEAD 复用，后续未影响它时不无意义重跑；新故障/改动必须验证。实施验证后只 add 本 Task 精确文件、提交中文消息，再以精确BASE..HEAD交独立评审；修复另作提交并聚焦复审。带生成物的提交后 `make gen-check` 必须无差异。
 
 **共用 API 收口 H：** 当 Task 更新 api/modules/issue.yaml（或 project.yaml）、api/openapi.yaml 新路径转引、handler/UseCases/module/bootstrap；HTTP 定位命令整包，覆盖 TestMain 的错误码双向检查。定义 closed DTO，列表只 Issue 不带 description_html/link_count；缺分支省略，[] 与 null 游标明确。矩阵项当场加入 `B/permission_matrix_issue_lists_test.go`（T9建），目标/种子/完整性同步，不等 T14 补授权。生成的 TS 必填 preferences 字段导致 `web/apps/web/core/store/project/fake-projects.ts` 编译变化时同 Task 补默认。
 
@@ -269,12 +270,12 @@ T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400
 
 文件：新 `I/adapter/postgres/list_issue_groups.go/list_issue_groups_test.go/queries/list_issue_groups.sql`；扩app接口/响应组织。
 
-- [ ] `TestIssueGroups` fixture：A+C标签项、仅C项、无标签项、多个负责人、各priority/state_group；每组至少limit+1。断言总体去重、组total、完整数组、组序和none末尾。
-- [ ] `TestIssueGroupContinuation`：label_id=A+group_key=C只含A∩C，target_date=none组续页；limit=1翻完无重无漏，组total不随cursor变，伪造越尾cursor仍补组total。
-- [ ] 红：`go -C server test ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres -run 'TestIssueGroup' -count=1`。
-- [ ] 静态Groups SQL，组展开层每issue/key一行；row_number partition group，limit+1；group_key额外谓词，保留原filter；只有非空组。
-- [ ] 绿；变异把group_key覆盖labelfilter、全局limit代替pergroup、数组裁成当前组、总体统计展开行；恢复。
-- [ ] G；提交 `feat(M4/P5): 支持多值分组与保留原筛选的续页`。
+- [x] `TestIssueGroups` fixture：A+C标签项、仅C项、无标签项、多个负责人、各priority/state_group；每组至少limit+1。断言总体去重、组total、完整数组、组序和none末尾。
+- [x] `TestIssueGroupContinuation`：label_id=A+group_key=C只含A∩C，target_date=none组续页；limit=1翻完无重无漏，组total不随cursor变，伪造越尾cursor仍补组total。
+- [x] 红：`go -C server test ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres -run 'TestIssueGroup' -count=1`。
+- [x] 静态Groups SQL，组展开层每issue/key一行；row_number partition group，limit+1；group_key额外谓词，保留原filter；只有非空组。
+- [x] 绿；变异把group_key覆盖labelfilter、全局limit代替pergroup、数组裁成当前组、总体统计展开行；恢复。
+- [x] G；提交 `feat(M4/P5): 支持多值分组与保留原筛选的续页`。
 
 ## Task 7：子分组与泳道去重总数
 
@@ -348,14 +349,21 @@ T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400
 
 ## Task 13：三类项目显示设置与纯词汇端口
 
-文件：新 `server/migrations/sql/00026_project_project_user_properties_issue_display.sql`；改 `server/migrations/project_schema_test.go`、P/domain/preferences.go与测试、P/app/update_preferences.go/get_preferences.go/ports、P/adapter/http/preferences.go/测试、P/adapter/postgres/preferences.go/queries/preferences.sql/测试；新I/app/list_settings.go/测试；改双方module、B/ports.go/app.go、api/modules/project.yaml、相关TS fixture。
+文件：新 `server/migrations/sql/00026_project_project_user_properties_issue_display.sql`；改 `server/migrations/project_schema_test.go`、`server/migrations/schema_test.go`、`server/sqlc.yaml`的project迁移映射、P/domain/preferences.go与测试、P/app/update_preferences.go/get_preferences.go/ports及完整默认fake、P/adapter/http/preferences.go/测试、P/adapter/postgres/preferences.go/queries/preferences.sql/测试；新I/app/list_settings.go/测试；改双方module、B/ports.go/app.go/project_connection_test.go、api/modules/project.yaml、相关Go/TS/e2e精确响应fixture。新迁移/存储/并发测试按职责分文件，不把整组追加到已有大文件。
+
+**顺序实施与独立评审（全部仍属T13）：**
+
+- [ ] **T13a：迁移、域值、持久化与纯校验。** 真实1–25旧库升级00026、Down/Up与精确CHECK反例；闭合domain值/默认/Patch/Apply、完整JSON存储、五列独立set标志、Create/Ensure默认及不覆盖；完整issue纯settings实现与词汇/日期测试。同步Go默认fixture，不改变既有Update构造器，不建空消费端口或nil跳过校验旁路；HTTP暂沿旧契约。SQL生成及迁移/旧故事G，独立审查后交b；不宣称新API已交付。
+- [ ] **T13b：应用接线、闭合API与并发闭环。** 新实现者接手；project声明app小值消费端口、一次接通双module/bootstrap及全部测试组合根，聚合旧navigation和新字段错误；闭合API/HTTP双向契约、TS/e2e默认、真实GET无写/整体替换/清空/actor隔离/归档/退出恢复；两组真实锁交错及生产丢更新变异、race五遍。H/G和完整e2e通过、独立审查后才验收全部T13；纯校验通过不能代替真实API422证据。
+
+T13a/b预计970–1350/865–1240手写行；单元接近1400先复核剩余职责，按D2再切而不削测试。a承担CHECK/独立set/纯词汇/Ensure变异，b承担整行覆盖丢更新/接线漏词值及跨层恢复反例；下列验收全部保留。
 
 - [ ] `TestIssueDisplayMigration`：老行获得精确默认；三列NOTNULL；逐列对象/数组/标量/JSONnull，未知/缺键/错误嵌套类型/string[]中非string均check_violation；合法形状非法词值DB允许、应用拒绝；Up→Down→Up且旧navigation/sort保持。
 - [ ] `TestIssueListSettings`：same词汇合法/非法对应查询；filters.label_id[0]、日期none混合、filters空数组、单个元素含逗号拒绝；group/subgroup组合、布局/日历/19排序与未来词拒绝；纯adapter无pool。
 - [ ] `TestProjectIssuePreferences`：GET缺行默认且不写、PATCH每个字段整体替换/省略保持/{}清空、其他用户不变、归档规则保持；null/未知body400、非法词值422路径准确；成员离开再恢复保留偏好。
 - [ ] `TestPreferenceFieldsDoNotOverwrite`：navigation与filters、display_filters与display_properties两个连接交错PATCH，最终两边修改都在；读整行全覆盖的变异要实际杀死。
 - [ ] 红：`go -C server test ./migrations ./internal/modules/project/domain ./internal/modules/project/app ./internal/modules/project/adapter/postgres ./internal/modules/issue/app ./internal/bootstrap -run 'Test(IssueDisplayMigration|IssueListSettings|ProjectIssuePreferences|PreferenceFieldsDoNotOverwrite)' -count=1`；project HTTP整包。
-- [ ] CHECK用CASE object保护、形状only，filters jsonb_path_exists；domain闭合结构及defaults；IssueListSettings app小值/纯issue提供/bootstrap转换；Upsert每列set标志，INSERT依赖默认保持已有ensure语义；生成closedAPI，不加rich_filters。
+- [ ] CHECK用CASE object保护、形状only，filters jsonb_path_exists；domain闭合结构及defaults；IssueListSettings app小值/纯issue提供/bootstrap转换；Upsert每列set标志，首次INSERT用默认值叠加本次patch的候选以保留显式输入；Create/Ensure省略新列依赖DB默认，Ensure冲突不覆盖已有行；生成closedAPI，不加rich_filters。
 - [ ] 绿；变异漏set标志/去CASE/只校形状不校词/误用未来group/改成员恢复覆盖行；恢复。检查现有grants仍覆盖原表，无新表/权限豁免/删除步骤；如显式列权限需要更新，按实际grant验证决定。
 - [ ] 偏好并发与新增恢复/快照交错全部强制 `go -C server test ./internal/bootstrap -run 'TestPreferenceFieldsDoNotOverwrite' -race -count=5`；若新增交错在其他测试包，逐包列实际名字同样执行-race -count=5。恢复所有变异后重跑，记录无数据竞争/无死锁/无丢更新。
 - [ ] H/G（含make e2e验证迁移与旧偏好故事）；提交 `feat(M4/P5): 保存项目工作项筛选与显示设置`。
@@ -379,7 +387,7 @@ T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400
 - [ ] I3按state组/priority×label泳道、总数/完整数组/加载更多A∩C；I4每排序码翻页、日期范围及none；I5三类设置按人隔离、同参数GET等价；I6 state+sort同时写、completed_at/单条state动态；I7复用I1创建并验证状态与末尾排序，无新API。
 - [ ] I19三关系/跨项目caller可见性/guest403；I20四格（别人的详情404、创建403、列表own、自己项评论201），访客项由member建后API降级；I15新增仅归档列表及恢复后的消失/活列表出现。
 - [ ] 数据全部经生成客户端API，断言复用assert helpers；数据库仅验证结果。需要第二页至少limit+1不同值，不能只断言200/数组长度；所有负例检查错误码/字段。
-- [ ] 先以当前缺故事断言运行并记录红：`make build` 后 `pnpm --dir e2e exec playwright test --project=chromium 'issue/i(3-|4-|5-|6-|7-|15-|19-|20-)'`；实际runner参数若按path regex须核对匹配8文件；不匹配不能当绿。实现fixtures/断言，再绿同命令。
+- [ ] 新增故事/fixtures/断言后记录真实基线：`make build` 后 `pnpm --dir e2e exec playwright test --project=chromium 'issue/i(3-|4-|5-|6-|7-|15-|19-|20-)'`；实际runner参数若按path regex须核对匹配8文件，不匹配不能当绿。若缺接口或helper导致编译红须明确记录；已交付API的正确行为补测可基线绿，不故意破坏生产制造初红。下项真实生产变异必须给出业务断言红及恢复绿。
 - [ ] 至少变异删组续页filter、I6排序赋值、preferences用户隔离、I20 own过滤对应一个故事红；恢复重跑。异步栏为空，不固定等待；旧评论功能仅作为P5故事依赖。
 - [ ] G并完整 `make e2e`；提交 `test(M4/P5): 验证列表显示设置与个人主页接口故事`。
 
