@@ -373,7 +373,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 ### Task 13: 交错14/15和最后一把锁后的时钟
 
-**Files:** Create `server/internal/bootstrap/issue_collaboration_interleaving_test.go`、`issue_collaboration_clock_test.go`、`issue_collaboration_membership_test.go`；Modify `issue_writes_test.go`为既有路由构造增加测试Clock参数并保留默认入口，`issue_world_test.go`只修workItemStamps过时的固定表数注释；现有`issue_interleaving_test.go`仅在确有需要时局部扩帮手参数，不复制pgtest锁探针。
+**Files:** Create `server/internal/bootstrap/issue_collaboration_interleaving_test.go`、`issue_collaboration_clock_test.go`、`issue_collaboration_membership_test.go`；Modify `issue_writes_test.go`为既有路由构造增加测试Clock参数并保留默认入口，`issue_world_test.go`只修workItemStamps过时的固定表数注释；局部扩`issue_interleaving_test.go`与`interleaving_test.go`的等待后回调：原入口委托同一调度实现，确认锁等待后、开gate前推进测试时钟，不复制pgtest锁探针或调度流程。
 
 **Interfaces:** Consumes现有`itemWrite`、`inBothOrdersAt`、`pgtest.RowWaits`、固定Clock及T3/T9 APIs；本Task不新增业务端口。新增测试`TestCommentAndIssueDeletionSerialize`、`TestDescriptionSavesSerialize`、`TestCollaborationReadsClockUnderLock`、`TestActivityCreatedAtDoesNotGoBack`、`TestCollaborationRechecksMembership`、`TestCommentAndReactionsSerialize`、`TestCommentWritesAndArchivalSerialize`。
 
