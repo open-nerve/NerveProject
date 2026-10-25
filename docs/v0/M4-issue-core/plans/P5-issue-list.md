@@ -8,7 +8,7 @@
 
 **技术栈：** 仓库锁定 Go 1.27/toolchain go1.27.1、pgx 5.11.0、sqlc 1.31.1、oapi-codegen 2.8.0、PostgreSQL 18.6、Node 24、pnpm 11.10.0、Playwright；不新增依赖。
 
-**规格：** [P5 spec](../specs/P5-issue-list.md)；[P5 review](../reviews/P5-issue-list-review.md)。基线 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`；[main CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 已全部成功，仅证明P4基线。16个验收任务是原设计15项的局部重切，sort_order单列，全部P5范围保留。T5与T13按实施前规模核对各拆为a/b两个连续实施与独立评审单元，因此当前共18个实施单元；各自两个单元完成后才验收其父任务，不改变P5分支或负责人完成门。
+**规格：** [P5 spec](../specs/P5-issue-list.md)；[P5 review](../reviews/P5-issue-list-review.md)。基线 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`；[main CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 已全部成功，仅证明P4基线。16个验收任务是原设计15项的局部重切，sort_order单列，全部P5范围保留。T5、T12与T13按实施前规模核对各拆为a/b两个连续实施与独立评审单元，因此当前共19个实施单元；各自两个单元完成后才验收其父任务，不改变P5分支或负责人完成门。
 
 **方法调整：** 依 [02-method §3](../../claude_to_gpt/02-method.md#3-哪些是要求哪些是做法)，采用明确职责、消费/产出签名、文件、测试和命令的紧凑计划；逐Task TDD、实际变异、恢复控制组和独立评审替代完整预制原型/逐字重放。没有跑原型就不声称跑过；不减少纪律、真实文档、性质证伪、交接、终审或合并/main CI完成门。
 
@@ -65,11 +65,12 @@
 | T1 / T2 / T3 / T4 | 150–300 / 250–450 / 600–900 / 700–1100 |
 | T5a / T5b（执行前重新估计） | 1050–1350 / 850–1300 |
 | T6 / T7 / T8 | 800–1300 / 900–1400 / 1000–1350（锁交错准备后复核） |
-| T9 / T10 / T11 / T12 | 800–1200 / 800–1200 / 350–650 / 1100–1450 |
+| T9 / T10 / T11 | 1140–1480（开工前再核） / 980–1330 / 350–650 |
+| T12a / T12b（实施前重新估计） | 1000–1320 / 1080–1450 |
 | T13a / T13b（实施前重新估计） | 970–1350 / 865–1240 |
 | T14 / T15 / T16 | 600–1000 / 900–1400 / 0–100（T16主要文档另计） |
 
-每实施单元预计小于约1500手写代码/测试行；生成物和文档另计，复用文件的总行数不当新增差异量。T5–7/T12/T13最重，实施前后以真实diff/测试职责核对；T5静态接缝核对后粗估1900–2400行，T13三列/CHECK/跨层/并发职责复核后估计1835–2590行，两者已按D2分别切为两个顺序单元（估计不是实测，不能作为完成证据）；若超约1500或Phase约16任务范围，按设计D2已批准机制重切任务或P5a/P5b并同步spec/plan/状态，不削测试、不编造完整原型SHA/逐Task精确行数，也不把局部切分升级成架构审批。
+每实施单元预计小于约1500手写代码/测试行；生成物和文档另计，复用文件的总行数不当新增差异量。T5–7/T12/T13最重，实施前后以真实diff/测试职责核对；T5静态接缝核对后粗估1900–2400行，T12完整分页/快照及性能采集职责复核为2080–2770行，T13三列/CHECK/跨层/并发职责复核为1835–2590行，三者已按D2分别切为两个顺序单元（估计不是实测，不能作为完成证据）；若超约1500或Phase约16任务范围，按设计D2已批准机制重切任务或P5a/P5b并同步spec/plan/状态，不削测试、不编造完整原型SHA/逐Task精确行数，也不把局部切分升级成架构审批。
 
 共用helpers：pgtest模板库/RowWaits、现有issueWorld及其API建模、apitest双向契约/错误码检查；沿已有锁屏障及工作项审计断言；e2e/fixtures/issues.ts、furnish.ts、assert/issue.ts及关联assert/catalog等。只为真正缺的场景补窄helper，不重新搭数据库/认证客户端/迁移框架/断言集合。
 
@@ -281,12 +282,12 @@ T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400
 
 文件：新 `I/adapter/postgres/list_issue_subgroups.go/list_issue_subgroups_test.go/queries/list_issue_subgroups.sql`；扩app/mapper内部模型。
 
-- [ ] `TestIssueSubgroups`：一个工作项两标签×两负责人，另有共享一个标签/负责人项和none项；明确写出每组/每泳道/每格/整体期望集合与计数，不能只断言相互相等。
-- [ ] `TestIssueCellContinuation`：原filter+group_key+sub_group_key，limit1翻完；某格为空、超尾cursor补该格total；每格游标独立，行数组完整。
-- [ ] 红：`go -C server test ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres -run 'TestIssue(Subgroups|CellContinuation)' -count=1`。
-- [ ] 三层展开与独立泳道窗口；不用格和/UNION ALL空行/可空结果塞非空字段；每格limit+1，正确响应枝。
-- [ ] 绿；变异泳道=格数之和、组total在双展开后算、全局limit；对应双多值fixture必须杀死；恢复。
-- [ ] G；提交 `feat(M4/P5): 实现泳道列表与分层去重计数`。
+- [x] `TestIssueSubgroups`：一个工作项两标签×两负责人，另有共享一个标签/负责人项和none项；明确写出每组/每泳道/每格/整体期望集合与计数，不能只断言相互相等。
+- [x] `TestIssueCellContinuation`：原filter+group_key+sub_group_key，limit1翻完；某格为空、超尾cursor补该格total；每格游标独立，行数组完整。
+- [x] 红：`go -C server test ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres -run 'TestIssue(Subgroups|CellContinuation)' -count=1`。
+- [x] 三层展开与独立泳道窗口；不用格和/UNION ALL空行/可空结果塞非空字段；每格limit+1，正确响应枝。
+- [x] 绿；变异泳道=格数之和、组total在双展开后算、全局limit；对应双多值fixture必须杀死；恢复。
+- [x] G；提交 `feat(M4/P5): 实现泳道列表与分层去重计数`。
 
 ## Task 8：sort_order PATCH 全链
 
@@ -329,17 +330,24 @@ T5a/T5b分别预计1050–1350与850–1300手写行；实际差异接近约1400
 文件：改 `I/app/list_relations.go/list_relations_test.go/seen.go`、`I/module.go`、B/ports.go；清理确认无消费者的ArchivedProjects端口/查询/测试；扩B/issue_relation_lists_test.go。
 
 - [ ] `TestRelationListUsesVisibleProjects`：跨项目可见/退出/归档/软删/OwnOnly、源项目归档但同项目目标可见、目标issue归档排除；顺序仍沿relation，父ID与subcount不泄漏，目录/seen错误传播。
-- [ ] 红：`go -C server test ./internal/modules/issue/app ./internal/bootstrap -run 'Test(RelationListUsesVisibleProjects|IssueRelationLists|HistoricalProjects)' -count=1`，核对已有函数名并整包补旧集合回归。
+- [ ] 红：`go -C server test ./internal/modules/issue/app ./internal/bootstrap -run 'Test(RelationListUsesVisibleProjects|ListIssueRelationsListsWhatTheCallerSees|ListIssueRelationsRefusals|ARelationListShowsWhatTheCallerSees|HistoricalProjectsConversion|HistoricalProjectsComposition)$' -count=1`；project adapter另跑 `go -C server test ./internal/modules/project/adapter/postgres -run '^Test(VisibleIssueProjects|HistoricalIssueProjects|IssueCatalogs|AFailedReadIsAnErrorNotAnAnswer)$' -count=1`。核对实际匹配并按改动整包补旧集合/活动回归，不以首条命令冒称已覆盖project adapter。
 - [ ] 源授权与读取在ReadTx；普通目录映射grants，加入明确已授权源项目grant；替换seeEach/Archived链，保留seen语义。rg确认无消费者后同步删旧port/provider/fake，Historical完全保留。
 - [ ] 绿；变异不补源grant、跨项目目标不用OwnOnly、误用Historical；恢复。矩阵原I9列表行为不变。
 - [ ] G；提交 `refactor(M4/P5): 用普通可读目录统一关联列表过滤`。
 
 ## Task 12：完整分页、快照与最终 SQL 性能
 
-文件：新 `B/issue_list_pages_test.go/issue_list_snapshot_test.go/issue_list_scale_test.go`；必要窄测试夹具；正式review记录性能表及可复跑命令/seed。
+文件：新 `B/issue_list_pages_test.go/issue_list_group_pages_test.go/issue_list_snapshot_test.go/issue_list_scale_test.go`及职责独立的fixture、snapshot端口包装、scale seed、trace/EXPLAIN测试文件；必要窄改既有issueWorld构造以接已准备数据库；正式review记录性能表及可复跑命令/seed。不得复制整套世界、认证或迁移框架。
+
+**顺序实施与独立评审（全部仍属T12）：**
+
+- [ ] **T12a：完整分页矩阵与真实快照。** 复用固定JSON和独立成员表/有序ID表，三SQL形状以代表真实组/格覆盖19码连续分页，个人入口按真实目标覆盖19码；另以固定默认序覆盖项目7/个人5/项目42种合法组对，逐层total/完整数组/none/越尾及错列变异。两维不额外相乘。真实用例读目录后channel屏障与另一连接提交、首次Rows空后fallback屏障验证旧/新快照，去ReadTx/外ctx实际变异与所有新增快照race五遍。G及独立审查通过后才交b，不能用单连接占用测试替代并发。
+- [ ] **T12b：最终生产SQL规模与性能闭环。** 新实施者接手；真实10k/100k确定seed及DB核对、运行角色生产配置派生tracer池、原SQL和typed参数保真捕获、计时外同SQL/同参数EXPLAIN、各场景预热1+实测5及目录/SQL/完整模块请求成本。必须实际开启性能测试、对照设计逐项解释，显著超预算依据计划局部修复复测，不能只交测量工具。若改生产SQL或编排，重验受影响a正确性/快照后再采最终性能；a旧结果不外推。G及独立审查后才验收全部T12。
+
+T12a/b预计1000–1320/1080–1450手写行，接近1400先核剩余职责；不含未知产品优化，实际新增优化超界按D2再切，不削矩阵或100k/五样本门。以下全部父任务验收保留，默认skip不算性能通过。
 
 - [ ] `TestIssueListAllOrders`：19码各遍历全部页，ID逆于时间、同键、null、Unicode、多值min、归档/软删/OwnOnly子项计数；加入时间微秒精度边界、相邻可表示sort_order与同键逆UUID，检查SQL键与cursor键无舍入退化；100k计数不能证明超过2^53的整数边界，该边界另用真实SQL数值表达式探针或明确精确类型证明，和领域游标测试分别记证据；对照集合和独立期望序，不复用生产比较器计算期望。
-- [ ] `TestIssueListAllGroupingFields` 以真实SQL覆盖项目7种group（state_id/state_group/priority/label_id/assignee_id/created_by_id/target_date）、个人5种group（state_group/priority/label_id/target_date/project_id）；项目全部42种合法group×subgroup组合均验证返回集合、整体/组/泳道/格total与limit=1续页。每种可为空字段含none，特别单列created_by_id、project_id、target_date=none；筛选与分组重叠、空cursor页补total、行完整数组均有反例。期望键和集合独立列出，不调用生产分组键/比较器反算；不能仅在词汇测试中接受枚举就标覆盖。created_by_id/project_id/target_date各至少一次把SQL分支替成错误字段的实际变异，必须被对应断言杀死并恢复。
+- [ ] `TestIssueListAllGroupingFields` 以真实SQL覆盖项目7种group（state_id/state_group/priority/label_id/assignee_id/created_by_id/target_date）、个人5种group（state_group/priority/label_id/target_date/project_id）；项目全部42种合法group×subgroup组合均验证返回集合、整体/组/泳道/格total与limit=1续页。每种可为空字段含none，特别单列created_by_id（含none）、project_id（真实非空项目键）、target_date=none；筛选与分组重叠、空cursor页补total、行完整数组均有反例。期望键和集合独立列出，不调用生产分组键/比较器反算；不能仅在词汇测试中接受枚举就标覆盖。created_by_id/project_id/target_date各至少一次把SQL分支替成错误字段的实际变异，必须被对应断言杀死并恢复。
 - [ ] `TestIssueListSnapshot`：目录读后用可控channel/RowWaits暂停，另一连接新增state并移issue或退出成员/更名；完成本页应全旧快照，下一次请求全新；空cursor补total也走旧快照。全程读tx可观测READ ONLY/RR，不靠sleep。
 - [ ] 红/绿定位：`go -C server test ./internal/bootstrap -run 'TestIssueList(AllOrders|AllGroupingFields|Snapshot)' -count=1`；去ReadTx/传外ctx变异必须失败，恢复后重跑；完成门强制 `go -C server test ./internal/bootstrap -run 'TestIssueListSnapshot' -race -count=5`，不能以一次运行或普通-race替代。
 - [ ] 实现可选显式运行的 `TestIssueListScale`（环境 `NERVE_LIST_SCALE=1`，默认skip记录清楚，不把skip当性能通过）：真实迁移/运行角色，10k和100k种子及数据库核对，最终生产SQL非近似副本；计时外比对正确性。测试pgx tracer捕获真实Store执行的sqlc SQL和参数，在测试连接对同一SQL/参数取EXPLAIN（计时外），不复制近似查询、不新增生产rawSQL出口。
