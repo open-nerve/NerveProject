@@ -37,7 +37,7 @@ func (f fakeUpdatePreferences) Execute(ctx context.Context, projectID uuid.UUID,
 }
 
 var (
-	bobsTabs = domain.Preferences{Navigation: domain.Navigation{DefaultTab: "modules", HideInMoreMenu: []string{"views", "intake"}}, SortOrder: -2.5}
+	bobsTabs = domain.Preferences{Navigation: domain.Navigation{DefaultTab: "modules", HideInMoreMenu: []string{"views", "intake"}}, SortOrder: -2.5, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}
 	tabsJSON = `{"navigation":{"default_tab":"modules","hide_in_more_menu":["views","intake"]},"sort_order":-2.5}`
 )
 
@@ -53,7 +53,7 @@ func TestGetProjectPreferences(t *testing.T) {
 	}{
 		{bobsTabs, tabsJSON},
 		{domain.DefaultPreferences(), defaults},
-		{domain.Preferences{Navigation: domain.Navigation{DefaultTab: "work_items"}, SortOrder: 65535}, defaults},
+		{domain.Preferences{Navigation: domain.Navigation{DefaultTab: "work_items"}, SortOrder: 65535, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}, defaults},
 	} {
 		prefs := &fakePreferences{answer: tt.answer}
 		h := newServer(t, fakes{prefs: prefs})

@@ -129,7 +129,7 @@ func TestPreferences(t *testing.T) {
 		found         bool
 	}{
 		{web, bob, domain.DefaultPreferences(), true},
-		{ops, bob, domain.Preferences{Navigation: domain.Navigation{DefaultTab: "views", HideInMoreMenu: []string{"cycles"}}, SortOrder: 7}, true},
+		{ops, bob, domain.Preferences{Navigation: domain.Navigation{DefaultTab: "views", HideInMoreMenu: []string{"cycles"}}, SortOrder: 7, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}, true},
 		{web, carol, domain.Preferences{}, false},
 		{web, alice, domain.Preferences{}, false},
 		{uuid.NewV7(), bob, domain.Preferences{}, false},
@@ -181,7 +181,7 @@ func TestUpsertPreferences(t *testing.T) {
 	views := domain.Navigation{DefaultTab: "views", HideInMoreMenu: []string{"intake", "cycles"}}
 
 	if got := upsert(domain.PreferencesPatch{SortOrder: ptr(-5.5)}, now); !reflect.DeepEqual(got,
-		domain.Preferences{Navigation: domain.DefaultPreferences().Navigation, SortOrder: -5.5}) {
+		domain.Preferences{Navigation: domain.DefaultPreferences().Navigation, SortOrder: -5.5, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}) {
 		t.Errorf("the first change = %+v; want the defaults, at -5.5", got)
 	}
 	first := row()
@@ -197,7 +197,7 @@ func TestUpsertPreferences(t *testing.T) {
 	exec(t, pool, "UPDATE project_user_properties SET created_by_id = $2, updated_by_id = $2 WHERE id = $1", id, alice)
 	first = row()
 	later := now.Add(time.Hour)
-	if got := upsert(domain.PreferencesPatch{Navigation: &views}, later); !reflect.DeepEqual(got, domain.Preferences{Navigation: views, SortOrder: -5.5}) {
+	if got := upsert(domain.PreferencesPatch{Navigation: &views}, later); !reflect.DeepEqual(got, domain.Preferences{Navigation: views, SortOrder: -5.5, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}) {
 		t.Errorf("the second change = %+v; want views, still at -5.5", got)
 	}
 	want := maps.Clone(first)
@@ -206,12 +206,12 @@ func TestUpsertPreferences(t *testing.T) {
 	if got := row(); !maps.Equal(got, want) {
 		t.Errorf("after the second change: %v\nwant %v", got, want)
 	}
-	if got := upsert(domain.PreferencesPatch{}, later.Add(time.Hour)); !reflect.DeepEqual(got, domain.Preferences{Navigation: views, SortOrder: -5.5}) {
+	if got := upsert(domain.PreferencesPatch{}, later.Add(time.Hour)); !reflect.DeepEqual(got, domain.Preferences{Navigation: views, SortOrder: -5.5, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}) {
 		t.Errorf("an empty change = %+v; want the settings as they were", got)
 	}
 	cycles := domain.Navigation{DefaultTab: "cycles"}
 	if got := upsert(domain.PreferencesPatch{Navigation: &cycles}, later.Add(2*time.Hour)); !reflect.DeepEqual(got,
-		domain.Preferences{Navigation: domain.Navigation{DefaultTab: "cycles", HideInMoreMenu: []string{}}, SortOrder: -5.5}) {
+		domain.Preferences{Navigation: domain.Navigation{DefaultTab: "cycles", HideInMoreMenu: []string{}}, SortOrder: -5.5, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}) {
 		t.Errorf("a change hiding nothing (nil) = %+v; want cycles, nothing hidden ([]), still at -5.5", got)
 	}
 	hidden := row()
@@ -221,7 +221,7 @@ func TestUpsertPreferences(t *testing.T) {
 	// The place alone, as a reorder in the sidebar changes it: the navigation stays.
 	reordered := later.Add(3 * time.Hour)
 	if got := upsert(domain.PreferencesPatch{SortOrder: ptr(2.25)}, reordered); !reflect.DeepEqual(got,
-		domain.Preferences{Navigation: domain.Navigation{DefaultTab: "cycles", HideInMoreMenu: []string{}}, SortOrder: 2.25}) {
+		domain.Preferences{Navigation: domain.Navigation{DefaultTab: "cycles", HideInMoreMenu: []string{}}, SortOrder: 2.25, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}) {
 		t.Errorf("a change of the place alone = %+v; want cycles, nothing hidden, at 2.25", got)
 	}
 	if got, want := row(), changed(hidden, map[string]string{"sort_order": "2.25", "updated_at": stamp(reordered)}); !maps.Equal(got, want) {
@@ -271,7 +271,9 @@ func TestEnsurePreferences(t *testing.T) {
 	want := map[string]string{"id": `"` + carols.String() + `"`, "workspace_id": `"` + acme.String() + `"`, "project_id": `"` + web.String() + `"`,
 		"user_id": `"` + carol.String() + `"`, "preferences": `{"navigation": {"default_tab": "work_items", "hide_in_more_menu": []}}`,
 		"sort_order": "-3", "created_by_id": `"` + alice.String() + `"`, "updated_by_id": `"` + alice.String() + `"`, "created_at": stamp,
-		"updated_at": stamp, "deleted_at": "null"}
+		"updated_at": stamp, "deleted_at": "null", "filters": "{}",
+		"display_filters":    `{"layout": "list", "calendar": {"layout": "month", "show_weekends": false}, "group_by": null, "order_by": "-created_at", "sub_issue": true, "sub_group_by": null, "show_empty_groups": true}`,
+		"display_properties": `{"key": true, "link": true, "state": true, "labels": true, "assignee": true, "due_date": true, "priority": true, "created_on": true, "start_date": true, "updated_on": true, "sub_issue_count": true}`}
 	if got := columns(t, pool, "project_user_properties", carols); !maps.Equal(got, want) {
 		t.Errorf("carol's new settings: %v\nwant %v", got, want)
 	}

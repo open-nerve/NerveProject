@@ -33,7 +33,7 @@ func (s *Store) Preferences(ctx context.Context, projectID, userID uuid.UUID) (d
 	case err != nil:
 		return domain.Preferences{}, false, fmt.Errorf("read project preferences: %w", err)
 	}
-	p, err := preferences(r.Preferences, r.SortOrder)
+	p, err := preferences(r.Preferences, r.SortOrder, r.Filters, r.DisplayFilters, r.DisplayProperties)
 	if err != nil {
 		return domain.Preferences{}, false, err
 	}
@@ -55,14 +55,22 @@ func (s *Store) UpsertPreferences(ctx context.Context, c app.PreferencesChange) 
 	if err != nil {
 		return domain.Preferences{}, fmt.Errorf("write project preferences: %w", err)
 	}
+	filters, filtersErr := json.Marshal(inserted.Filters)
+	displayFilters, displayErr := json.Marshal(inserted.DisplayFilters)
+	displayProperties, propertiesErr := json.Marshal(inserted.DisplayProperties)
+	if err := errors.Join(filtersErr, displayErr, propertiesErr); err != nil {
+		return domain.Preferences{}, fmt.Errorf("write issue display settings: %w", err)
+	}
 	r, err := s.queries(ctx).UpsertPreferences(ctx, gen.UpsertPreferencesParams{
 		ID: c.ID, WorkspaceID: c.WorkspaceID, ProjectID: c.ProjectID, UserID: c.UserID, Preferences: stored, SortOrder: inserted.SortOrder,
+		Filters: filters, DisplayFilters: displayFilters, DisplayProperties: displayProperties,
+		SetFilters: c.Patch.Filters != nil, SetDisplayFilters: c.Patch.DisplayFilters != nil, SetDisplayProperties: c.Patch.DisplayProperties != nil,
 		SetNavigation: c.Patch.Navigation != nil, SetSortOrder: c.Patch.SortOrder != nil, Now: c.Now,
 	})
 	if err != nil {
 		return domain.Preferences{}, fmt.Errorf("write project preferences: %w", err)
 	}
-	return preferences(r.Preferences, r.SortOrder)
+	return preferences(r.Preferences, r.SortOrder, r.Filters, r.DisplayFilters, r.DisplayProperties)
 }
 
 // EnsurePreferences inserts p unless its account has undeleted display
@@ -79,13 +87,25 @@ func (s *Store) EnsurePreferences(ctx context.Context, p app.PreferencesRow) err
 }
 
 // preferences are the settings a row holds.
-func preferences(stored []byte, sortOrder float64) (domain.Preferences, error) {
+func preferences(stored []byte, sortOrder float64, filters, displayFilters, displayProperties []byte) (domain.Preferences, error) {
 	var n navigationJSON
 	if err := json.Unmarshal(stored, &n); err != nil {
 		return domain.Preferences{}, fmt.Errorf("read project preferences %s: %w", stored, err)
 	}
-	return domain.Preferences{
+	p := domain.Preferences{
 		Navigation: domain.Navigation{DefaultTab: n.Navigation.DefaultTab, HideInMoreMenu: n.Navigation.HideInMoreMenu},
 		SortOrder:  sortOrder,
-	}, nil
+	}
+	for _, field := range []struct {
+		name string
+		data []byte
+		into any
+	}{
+		{"filters", filters, &p.Filters}, {"display_filters", displayFilters, &p.DisplayFilters}, {"display_properties", displayProperties, &p.DisplayProperties},
+	} {
+		if err := json.Unmarshal(field.data, field.into); err != nil {
+			return domain.Preferences{}, fmt.Errorf("read project %s: %w", field.name, err)
+		}
+	}
+	return p, nil
 }

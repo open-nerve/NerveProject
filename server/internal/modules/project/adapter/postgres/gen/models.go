@@ -66,17 +66,20 @@ type ProjectMember struct {
 }
 
 type ProjectUserProperty struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	ProjectID   uuid.UUID
-	UserID      uuid.UUID
-	Preferences []byte
-	SortOrder   float64
-	CreatedByID *uuid.UUID
-	UpdatedByID *uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   *time.Time
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	ProjectID         uuid.UUID
+	UserID            uuid.UUID
+	Preferences       []byte
+	SortOrder         float64
+	CreatedByID       *uuid.UUID
+	UpdatedByID       *uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	DeletedAt         *time.Time
+	Filters           []byte
+	DisplayFilters    []byte
+	DisplayProperties []byte
 }
 
 type State struct {

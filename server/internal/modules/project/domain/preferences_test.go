@@ -26,7 +26,7 @@ func TestSortOrderFirst(t *testing.T) {
 // a patch changes what it gives, the navigation whole, and nothing else.
 func TestPreferencesApply(t *testing.T) {
 	d := DefaultPreferences()
-	if want := (Preferences{Navigation: Navigation{DefaultTab: "work_items", HideInMoreMenu: []string{}}, SortOrder: 65535}); !reflect.DeepEqual(d, want) {
+	if want := (Preferences{Navigation: Navigation{DefaultTab: "work_items", HideInMoreMenu: []string{}}, SortOrder: 65535, DisplayFilters: d.DisplayFilters, DisplayProperties: d.DisplayProperties}); !reflect.DeepEqual(d, want) {
 		t.Errorf("DefaultPreferences() = %+v, want %+v", d, want)
 	}
 	tabbed := Navigation{DefaultTab: "modules", HideInMoreMenu: []string{"views"}}
@@ -35,8 +35,8 @@ func TestPreferencesApply(t *testing.T) {
 		want  Preferences
 	}{
 		{PreferencesPatch{}, d},
-		{PreferencesPatch{Navigation: &tabbed}, Preferences{Navigation: tabbed, SortOrder: 65535}},
-		{PreferencesPatch{SortOrder: ptr(-1.5)}, Preferences{Navigation: d.Navigation, SortOrder: -1.5}},
+		{PreferencesPatch{Navigation: &tabbed}, Preferences{Navigation: tabbed, SortOrder: 65535, DisplayFilters: d.DisplayFilters, DisplayProperties: d.DisplayProperties}},
+		{PreferencesPatch{SortOrder: ptr(-1.5)}, Preferences{Navigation: d.Navigation, SortOrder: -1.5, DisplayFilters: d.DisplayFilters, DisplayProperties: d.DisplayProperties}},
 	} {
 		if got := d.Apply(tt.patch); !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("Apply(%+v) = %+v, want %+v", tt.patch, got, tt.want)

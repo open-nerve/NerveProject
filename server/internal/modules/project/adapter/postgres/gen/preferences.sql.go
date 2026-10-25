@@ -100,7 +100,7 @@ func (q *Queries) LowestSortOrder(ctx context.Context, arg LowestSortOrderParams
 }
 
 const preferences = `-- name: Preferences :one
-SELECT preferences, sort_order
+SELECT preferences, sort_order, filters, display_filters, display_properties
 FROM project_user_properties
 WHERE project_id = $1 AND user_id = $2 AND deleted_at IS NULL
 `
@@ -111,46 +111,67 @@ type PreferencesParams struct {
 }
 
 type PreferencesRow struct {
-	Preferences []byte
-	SortOrder   float64
+	Preferences       []byte
+	SortOrder         float64
+	Filters           []byte
+	DisplayFilters    []byte
+	DisplayProperties []byte
 }
 
 // getProjectPreferences: the account's undeleted display settings in the project, if any (M3 design 3.18).
 func (q *Queries) Preferences(ctx context.Context, arg PreferencesParams) (PreferencesRow, error) {
 	row := q.db.QueryRow(ctx, preferences, arg.ProjectID, arg.UserID)
 	var i PreferencesRow
-	err := row.Scan(&i.Preferences, &i.SortOrder)
+	err := row.Scan(
+		&i.Preferences,
+		&i.SortOrder,
+		&i.Filters,
+		&i.DisplayFilters,
+		&i.DisplayProperties,
+	)
 	return i, err
 }
 
 const upsertPreferences = `-- name: UpsertPreferences :one
-INSERT INTO project_user_properties AS p (id, workspace_id, project_id, user_id, preferences, sort_order, created_by_id,
+INSERT INTO project_user_properties AS p (id, workspace_id, project_id, user_id, preferences, sort_order, filters, display_filters, display_properties, created_by_id,
                                            updated_by_id, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6,
-        $4, $4, $7, $7)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+        $4, $4, $10, $10)
 ON CONFLICT (project_id, user_id) WHERE deleted_at IS NULL DO UPDATE
-SET preferences   = CASE WHEN $8::boolean THEN EXCLUDED.preferences ELSE p.preferences END,
-    sort_order    = CASE WHEN $9::boolean THEN EXCLUDED.sort_order ELSE p.sort_order END,
+SET preferences   = CASE WHEN $11::boolean THEN EXCLUDED.preferences ELSE p.preferences END,
+    sort_order    = CASE WHEN $12::boolean THEN EXCLUDED.sort_order ELSE p.sort_order END,
+    filters = CASE WHEN $13::boolean THEN EXCLUDED.filters ELSE p.filters END,
+    display_filters = CASE WHEN $14::boolean THEN EXCLUDED.display_filters ELSE p.display_filters END,
+    display_properties = CASE WHEN $15::boolean THEN EXCLUDED.display_properties ELSE p.display_properties END,
     updated_by_id = EXCLUDED.updated_by_id,
     updated_at    = EXCLUDED.updated_at
-RETURNING preferences, sort_order
+RETURNING preferences, sort_order, filters, display_filters, display_properties
 `
 
 type UpsertPreferencesParams struct {
-	ID            uuid.UUID
-	WorkspaceID   uuid.UUID
-	ProjectID     uuid.UUID
-	UserID        uuid.UUID
-	Preferences   []byte
-	SortOrder     float64
-	Now           time.Time
-	SetNavigation bool
-	SetSortOrder  bool
+	ID                   uuid.UUID
+	WorkspaceID          uuid.UUID
+	ProjectID            uuid.UUID
+	UserID               uuid.UUID
+	Preferences          []byte
+	SortOrder            float64
+	Filters              []byte
+	DisplayFilters       []byte
+	DisplayProperties    []byte
+	Now                  time.Time
+	SetNavigation        bool
+	SetSortOrder         bool
+	SetFilters           bool
+	SetDisplayFilters    bool
+	SetDisplayProperties bool
 }
 
 type UpsertPreferencesRow struct {
-	Preferences []byte
-	SortOrder   float64
+	Preferences       []byte
+	SortOrder         float64
+	Filters           []byte
+	DisplayFilters    []byte
+	DisplayProperties []byte
 }
 
 // updateProjectPreferences, under the project's FOR SHARE (M3 design 3.6, 3.18): an account without an undeleted row
@@ -164,11 +185,23 @@ func (q *Queries) UpsertPreferences(ctx context.Context, arg UpsertPreferencesPa
 		arg.UserID,
 		arg.Preferences,
 		arg.SortOrder,
+		arg.Filters,
+		arg.DisplayFilters,
+		arg.DisplayProperties,
 		arg.Now,
 		arg.SetNavigation,
 		arg.SetSortOrder,
+		arg.SetFilters,
+		arg.SetDisplayFilters,
+		arg.SetDisplayProperties,
 	)
 	var i UpsertPreferencesRow
-	err := row.Scan(&i.Preferences, &i.SortOrder)
+	err := row.Scan(
+		&i.Preferences,
+		&i.SortOrder,
+		&i.Filters,
+		&i.DisplayFilters,
+		&i.DisplayProperties,
+	)
 	return i, err
 }

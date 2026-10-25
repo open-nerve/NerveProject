@@ -64,8 +64,8 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 25 {
-		t.Fatalf("Up() = %d migrations, %v; want 25", len(up), err)
+	if err != nil || len(up) != 26 {
+		t.Fatalf("Up() = %d migrations, %v; want 26", len(up), err)
 	}
 	for _, want := range []struct {
 		query string
@@ -92,8 +92,8 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 25 {
-		t.Errorf("Up() again = %d migrations, %v; want 25", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 26 {
+		t.Errorf("Up() again = %d migrations, %v; want 26", len(again), err)
 	}
 }
 
