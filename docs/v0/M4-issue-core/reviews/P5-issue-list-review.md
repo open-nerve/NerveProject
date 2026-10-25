@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-26。状态：**实施中；T1–T12完成，T13待开始；阶段尚未完成，不合并**。
+日期：2026-10-26。状态：**实施中；T1–T12及T13a完成，T13b待实施；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -22,7 +22,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 ## 2. 验收标准逐条核对
 
-产品验收清单以 spec §4 为准；T1–T10已有下列实施证据，T11及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
+产品验收清单以 spec §4 为准；T1–T12及T13a已有下列实施证据，T13b及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
 
 | 检查 | 结果 |
 |---|---|
@@ -32,7 +32,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 | 阶段关键词 | `phase=M4/P5`；没有在 P4/P5 到期的例外，`/user-properties/` 的 M4/P11 例外保留；`node tools/keywords.mjs` 为72规则、23例外、无命中 |
 | 起步文档自检 | 16个任务顺序完整、产品验收均未勾选；53处本地链接无新增缺失。M4设计原有4个M5–M8收尾文件链接仍是未来交付，不提前创建或标完成 |
 | 独立预检 | 首轮4项 Medium、2项 Low，均为局部计划/文档缺口；修订聚焦复核Approved，新增L3也已关闭，见§4 |
-| P5 产品测试、性能、交错及变异 | T1–T10证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
+| P5 产品测试、性能、交错及变异 | T1–T12及T13a证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
 
 ### T1：连接运行参数，已完成
 
@@ -188,6 +188,15 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 最终31覆盖四入口19序、7/5/42、八快照及三SQL精度/typed/tracer；33有效lookahead变异恢复；34八快照各race五遍共40子场景、27.17s；35唯一针对最终SQL的完整make test48包/143.34s/stderr空，36 lint两段0 issues，38提交后gen-check通过。前候选29全量仅支持其源码，未错记为最终结果；默认skip明确不算性能通过。
 - 原证据 `task-12b-evidence/`，最终 `32-fix1-scale-bound/`、`fix1-performance-summary.json`、`fix1-final-plan-comparison.json`、`fix1-final-verification.json`；实施及修复报告 `task-12b-report.md`，独评 `task-12b-review.md`、范围复审 `task-12b-rereview1.md`。首轮22的成员订阅有两次偏慢86.033/84.788ms，全部保留，未只挑最快值或删慢样本。
 
+### T13a：迁移、持久化与纯校验，已验收
+
+- 基线 `bd5702883aa04cdd98d2a1a23179a9fff4e6e73b`，实施提交 `433c82c85782a8286868c771dfb19f7240e9a95f`；独立评审Spec compliant、Approved，C0/I0/M1。21文件，手写780行差异、生成102行差异；父T13保持未完成，API接线与并发留在T13b独立验收。
+- 00026新增三列JSONB、准确默认与形状CHECK；从真实1–25迁移原字节构造旧库，插入非默认旧行后升级、Down、Up，比较全部原字段及审计不变。SQL NULL准确23502/列名；JSON null、非对象、混合数组及缺键准确23514/约束名，形状合法的未来词留给应用校验。
+- 域值保留nil与非nil空数组、null分组及false；顶层整体替换。存储首写为默认叠加patch，冲突更新的五个set标志分别保留未提供列；Create/Ensure使用列默认，Ensure不覆盖既有值或审计。纯issue ListSettings复用列表词汇/日期规则，无数据库、目录或跨模块domain依赖，确定性返回字段及数组索引错误。
+- 缺迁移、旧存储忽略新值为真实业务红；缺类型编译红另列。CASE保护删除、SetFilters常真、放行cycle_id、Ensure改为覆盖四项实际生产变异均业务红并恢复绿；SQL变异实际重新生成。中间JSONB文本键顺序fixture失败及goimports失败已修复，未删除原日志。
+- 最终lint两段0 issues，完整make test48包通过（148.234s、stderr空）；完整make e2e总53.187s，135 passed（133 Chromium、2 Firefox A4，Playwright自身46.4s），含旧P8及烟测。提交后gen-check通过（2.985s、空diff）。21源文件SHA与完整测试/e2e及最终提交逐一一致。唯一Minor是NO_COLOR/FORCE_COLOR及testcontainers探测日志噪声，登记环境维护，不为消噪重复suite或修改容器。
+- 原始证据 `task-13a-evidence/`，实施报告 `task-13a-report.md`，独评 `task-13a-review.md`。评审中T13b接口、闭合DTO、真实API422、GET无写/用户隔离/恢复及真实并发的跨任务未验收项已逐项归入b完成门，不以a批准代替。
+
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
@@ -201,7 +210,8 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - `b733b60186265915587d518b6875b5f9e4aff4b3`（含T10）已由系统Git推送；[CI 40205751190](https://github.com/open-nerve/NerveProject/actions/runs/40205751190) server、web、e2e全部success。此检查点不包含T11。
 - `26fa7cf8aa179473d77160fca95d90eea09ec6da`（含T11）已由系统Git推送；[CI 40207373659](https://github.com/open-nerve/NerveProject/actions/runs/40207373659) server、web、e2e全部success。此检查点不包含T12a。
 - `c08e1061b2ec5188fd8e1a8f3eb9a22c2f157957`（含T12a）已由系统Git推送；[CI 40210086901](https://github.com/open-nerve/NerveProject/actions/runs/40210086901) server、web、e2e全部success。此检查点不包含T12b及修复。
-- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`、`ci-40205751190-jobs.json`、`ci-40207373659-jobs.json`、`ci-40210086901-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
+- `bd5702883aa04cdd98d2a1a23179a9fff4e6e73b`（含T12全部及修复）已由系统Git推送；[CI 40215557907](https://github.com/open-nerve/NerveProject/actions/runs/40215557907) server、web、e2e全部success。此检查点不包含T13a。
+- 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`、`ci-40205751190-jobs.json`、`ci-40207373659-jobs.json`、`ci-40210086901-jobs.json`、`ci-40215557907-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
 
 ## 3. 执行中的决定
 

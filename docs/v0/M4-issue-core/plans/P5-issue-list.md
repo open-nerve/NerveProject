@@ -365,7 +365,7 @@ T12a/b预计1000–1320/1080–1450手写行，接近1400先核剩余职责；�
 
 **顺序实施与独立评审（全部仍属T13）：**
 
-- [ ] **T13a：迁移、域值、持久化与纯校验。** 真实1–25旧库升级00026、Down/Up与精确CHECK反例；闭合domain值/默认/Patch/Apply、完整JSON存储、五列独立set标志、Create/Ensure默认及不覆盖；完整issue纯settings实现与词汇/日期测试。同步Go默认fixture，不改变既有Update构造器，不建空消费端口或nil跳过校验旁路；HTTP暂沿旧契约。SQL生成及迁移/旧故事G，独立审查后交b；不宣称新API已交付。
+- [x] **T13a：迁移、域值、持久化与纯校验。** 真实1–25旧库升级00026、Down/Up与精确CHECK反例；闭合domain值/默认/Patch/Apply、完整JSON存储、五列独立set标志、Create/Ensure默认及不覆盖；完整issue纯settings实现与词汇/日期测试。同步Go默认fixture，不改变既有Update构造器，不建空消费端口或nil跳过校验旁路；HTTP暂沿旧契约。SQL生成及迁移/旧故事G，独立审查后交b；不宣称新API已交付。
 - [ ] **T13b：应用接线、闭合API与并发闭环。** 新实现者接手；project声明app小值消费端口、一次接通双module/bootstrap及全部测试组合根，聚合旧navigation和新字段错误；闭合API/HTTP双向契约、TS/e2e默认、真实GET无写/整体替换/清空/actor隔离/归档/退出恢复；两组真实锁交错及生产丢更新变异、race五遍。H/G和完整e2e通过、独立审查后才验收全部T13；纯校验通过不能代替真实API422证据。
 
 T13a/b预计970–1350/865–1240手写行；单元接近1400先复核剩余职责，按D2再切而不削测试。a承担CHECK/独立set/纯词汇/Ensure变异，b承担整行覆盖丢更新/接线漏词值及跨层恢复反例；下列验收全部保留。
