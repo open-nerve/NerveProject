@@ -2156,7 +2156,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：I11–I13 的接口版本，I1 的描述、提及、版本，I2 的描述的修改与合并、只补块 id 的保存和只改链接地址或勾选框的保存，I15 的评论的 409，I17 加上评论、表情、提及、版本之后通过；交错 14、15 通过；S3 的样例全部往返。
 
 ### P5 `issue-list`：列表引擎与显示设置（后端，16个验收任务/19个实施单元）
-- **起步与切分**（2026-10-25）：基线为 P4 的 main 合并 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 全部通过。原15项按决策点2的已有授权重切为16项：单列 P1b 留下的 `sort_order` PATCH 和 P3 普通可见目录替换；原访客一致性并入目录、API、分页和矩阵任务；不删原范围。正式 [spec](specs/P5-issue-list.md) 与 [plan](plans/P5-issue-list.md) 为执行依据，T5/T12/T13各按规模拆a/b，共19实施单元；T1–T15实施与逐任务独评Approved，T16文档子项已独评Approved，仍待内部整分支审查/最终分支CI及负责人终审，阶段未集成，不合并。
+- **起步与切分**（2026-10-25）：基线为 P4 的 main 合并 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 全部通过。原15项按决策点2的已有授权重切为16项：单列 P1b 留下的 `sort_order` PATCH 和 P3 普通可见目录替换；原访客一致性并入目录、API、分页和矩阵任务；不删原范围。正式 [spec](specs/P5-issue-list.md) 与 [plan](plans/P5-issue-list.md) 为执行依据，T5/T12/T13各按规模拆a/b，共19实施单元；T1–T15实施与逐任务独评Approved，T16文档、内部整分支审查及统一修复复审已完成；交付核精确HEAD分支CI，负责人终审及集成另待安排，不合并。
 - **目标**：项目的列表（含已归档）、个人主页的列表：筛选、分组、子分组、排序、游标、一组的"加载更多"；项目的工作项显示设置。
 - **任务**：
   1. `platform/postgres` 的连接池在每个连接上设 `jit = off`、`plan_cache_mode = force_custom_plan`；从实际连接读回，覆盖 URL 的相反值，保留 UTC 扫描（3.16）。
@@ -2525,7 +2525,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 已完成：[spec](specs/P2-issue-access.md)、[plan](plans/P2-issue-access.md)、[评审](reviews/P2-issue-access-review.md)（执行时 14 个 Task；整分支评审之后一个修复轮） |
 | P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
 | P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；已以 `--no-ff` 合并main `e9782b8f`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 三任务全绿，精确SHA及接收记录见P5评审 |
-| P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | T1–T15实施与逐任务独评Approved：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。T16文档子项已独评Approved；内部整分支审查/最终分支CI待root，负责人终审及集成另待安排；父T16未完成，未合并，保留分支/worktree。M4总体与跨Phase交接仍open |
+| P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | T1–T15实施与逐任务独评Approved：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。T16文档与内部整审完成，首审2项Important/1项Minor经49623057统一修复、范围复审全部关闭；交付核精确HEAD分支CI，负责人终审及集成另待安排；父T16未完成，未合并，保留分支/worktree。M4总体与跨Phase交接仍open |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，11） | 未开始 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12） | 未开始 |
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13） | 未开始 |

@@ -3,7 +3,7 @@
 | 项 | 内容 |
 |---|---|
 | Phase | M4/P5 issue-list |
-| 状态 | T1–T15实施/独评通过；T16文档子项已独评Approved，内部整分支审查/最终分支CI待root，负责人终审与集成另待安排，不合并 |
+| 状态 | T1–T15及T16开发工作完成，内部整审、统一修复及范围复审通过；交付另核精确HEAD分支CI，负责人终审与集成另待安排，不合并 |
 | 基线 | `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`，P4 合并 main |
 | 基线验证 | [main CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 全部成功；此证据不代表 P5 验证 |
 | 上级设计 | [M4-design](../M4-design.md) §0.3、§2、§3.4、§3.7、§3.16/3.17、§3.23、§4.15、§5.1/5.2、§6.5/6.6、§12 |
@@ -80,7 +80,7 @@ CSV 内 OR，字段间 AND；none 与 UUID 可并列。日期范围闭合，缺�
 
 ### 2.4 分组与响应
 
-项目 group_by：state_id/state_group/priority/label_id/assignee_id/created_by_id/target_date。个人主页：state_group/priority/label_id/target_date/project_id。sub_group_by 仅项目，使用项目同组词汇，必须有 group_by 且不同。组键按字段为 UUID/枚举/日期/none；none 仅适用可为空或多值为空的字段，不接受 state_group=none 等虚构键。
+项目 group_by：state_id/state_group/priority/label_id/assignee_id/created_by_id/target_date。个人主页：state_group/priority/label_id/target_date/project_id。sub_group_by 仅项目，使用项目同组词汇，必须有 group_by 且不同。组键按字段为 UUID/枚举/日期/none；UUID类的group_key/sub_group_key按UUID值规范化，大写、compact等合法拼写与标准文本指向同一组，首段、续页及空页total一致；none 仅适用可为空或多值为空的字段，不接受 state_group=none 等虚构键。
 
 多值字段按每个值展开；无标签/负责人为 none；列表行自身的 label_ids/assignee_ids 始终完整。组序：priority urgent→none，state_group backlog→cancelled，日期升序，其他文本升序，none 最后。只返回非空组，limit 是每组/格条数。
 
@@ -102,7 +102,7 @@ group_key 无 group_by、sub_group_key 无 group_key/sub_group_by、键语法不
 P5 恰好 19 码：sort_order 仅升序；created_at/updated_at/start_date/target_date/priority/state_name/label_name/assignee_name/sub_issues_count 各升降。默认 -created_at。-sort_order、±link_count 及其他未来码 422。
 
 - priority 数值 urgent=4/high=3/medium=2/low=1/none=0；排序与分组序分开。
-- 名字只折 ASCII A–Z，按 Unicode 码点序；Go UTF-8 比较、SQL COLLATE C。label/assignee 总取最小名字键，降序也不改成最大值。没有名字为 null。
+- 名字只折 ASCII A–Z，按 Unicode 码点序；Go UTF-8 比较、SQL COLLATE C。label/assignee 总取最小名字键，降序也不改成最大值。没有名字为 null。三种名称游标的字符串不能含U+0000，返回400/bad_request及cursor/invalid_format；合法Unicode、空字符串和null语义保持。
 - 两方向 null 都在最后；同键 UUID 与主键同方向。时间保留 PostgreSQL 微秒，日期保持纯日期；计数用精确整数，不经 float64 丢失。sort_order 是有限浮点数，按存储值排序。SQL CASE 不因 sort_order 的 float8 分支把微秒/计数转为 float8；最终k_num各分支显式numeric，sort_order先转有限浮点位序int64，游标使用同一转换与全序。相邻可表示 sort_order、整数精度边界和逆 UUID 必须在真实 SQL 对照验证。T5已证明Flat的有限浮点位序、时间微秒/宽日期及精确count表达式；T6已对Groups自身验证邻接浮点/2^53微秒/null两方向续页；T7也已对Subgroups自身验证同类精度/双向日期null及公开游标。最终T12已对四入口各19排序及项目7/个人5/42字段组对分别验证，不把两维扩成笛卡尔积，也不把代表性结果外推。
 - 子项数只计调用者可见、未删、未归档的直接子项；排序键与行中 sub_issues_count 同义。
 - payload 为 `[order,key,id]`，经现有 shared.EncodeCursor/DecodeCursor 的 v1 canonical base64url 封套；key 按排序为 UTC 时间字符串、日期字符串、名字字符串、数值或 null。形状、键类型、非法 UUID、非 canonical、版本、排序码与请求不符均 400。数值解码使用 json.Number/明确类型，不能 unmarshal 到 interface{} 后默认为 float64。
@@ -188,7 +188,7 @@ I3/I4/I5/I6/I7/I19/I20 API 故事各文件，I15 增加归档列表；全部前�
 
 ## 4. 逐项验收
 
-T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T12a及T12b均经独立评审，T12b排序定义问题经修复及范围复审关闭；T13a迁移/持久化/纯校验和T13b接线/API/并发均已独立Approved，父T13已验收。T14矩阵/读边界/写隔离/完整回归与T15八接口故事/四变异/完整142条e2e均已独立Approved；T16文档/差异/输入交接已同步，内部整分支审查与最终分支CI待root，负责人终审及集成仍待安排，父T16不提前勾选。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
+T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T12a及T12b均经独立评审，T12b排序定义问题经修复及范围复审关闭；T13a迁移/持久化/纯校验和T13b接线/API/并发均已独立Approved，父T13已验收。T14矩阵/读边界/写隔离/完整回归与T15八接口故事/四变异/完整142条e2e均已独立Approved；T16文档/差异/输入交接、内部整分支审查与统一修复复审已完成；最终交付核精确HEAD分支CI，负责人终审及集成仍待安排，父T16不提前勾选。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
 
 | 完成 | Task | 完成线 |
 |---|---|---|
@@ -246,7 +246,7 @@ T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b�
 | [M2收尾交接](../handoffs/M2-closeout.md) | 日期/页大小/游标与闭合schema沿现状；无新开放map schema；锁下时钟与真实验证保留 | 其他Phase条目不提前关闭 |
 | [M3收尾交接](../handoffs/M3-closeout.md) | 三偏好列及端口、成员退出恢复保留设置、个人主页规则、列表目录；T10/T13/T14 | P10b旧筛选store、后续页面 |
 
-当前文档收口已逐节关联review §2的Task/实际测试/变异/性能清单，并登记M2/M3/P1–P4的P5接收结果，其他范围仍open。T16分两门：开发门中文档已同步，内部整分支审查/最终分支CI由root继续；集成门待负责人安排，当前不合并，保留分支/worktree。关闭前必须：§4全部逐项有证据；方法调整与静态预检意见已处理；安全/权限/锁/快照性质有实际变异失败与恢复；新增快照/偏好并发/sort_order相关交错全部 `-race -count=5`；性能报告含最终SQL/参数/分布/环境/实际计划；生成物无差异、适用全量门禁通过。完成后先交负责人安排整分支终审，再处理意见并按既定 --no-ff、分支CI/main CI、清理流程完成，除非负责人另作安排。M4及跨Phase交接总体status仍到M4收尾才关闭。
+当前文档收口已逐节关联review §2的Task/实际测试/变异/性能清单，并登记M2/M3/P1–P4的P5接收结果，其他范围仍open。T16分两门：开发工作及内部整审、修复复审已完成，最终交付CI按精确HEAD的GitHub Actions记录与交付答复核验，不由本文自证；集成门待负责人安排，当前不合并，保留分支/worktree。关闭前必须：§4全部逐项有证据；方法调整与静态预检意见已处理；安全/权限/锁/快照性质有实际变异失败与恢复；新增快照/偏好并发/sort_order相关交错全部 `-race -count=5`；性能报告含最终SQL/参数/分布/环境/实际计划；生成物无差异、适用全量门禁通过。完成后先交负责人安排整分支终审，再处理意见并按既定 --no-ff、分支CI/main CI、清理流程完成，除非负责人另作安排。M4及跨Phase交接总体status仍到M4收尾才关闭。
 
 ## 附录 A. 起步时的证据边界（历史）
 

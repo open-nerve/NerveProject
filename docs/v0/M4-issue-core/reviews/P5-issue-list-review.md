@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-26。状态：**实施中；T1–T15完成，T16文档子项独评Approved，内部整分支审查/最终分支CI待完成；阶段尚未完成，不合并**。
+日期：2026-10-26。状态：**实现、文档与内部整审/修复复审完成；最终交付另核精确HEAD分支CI，负责人终审与集成待安排，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -22,7 +22,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 ## 2. 验收标准逐条核对
 
-产品验收清单以 spec §4 为准；T1–T15已有下列实施证据，T16文档子项已独评Approved，内部整分支审查/最终分支CI仍待完成。下表保留起步检查，后面各Task保留其实施时的证据边界；后来已完成的任务另以对应最终段落为准，不把旧未来式当当前欠项。
+产品验收清单以 spec §4 为准；T1–T15已有下列实施证据，T16文档子项及内部整审、统一修复与范围复审已完成；最终交付CI按本节记录原则核验。下表保留起步检查，后面各Task保留其实施时的证据边界；后来已完成的任务另以对应最终段落为准，不把旧未来式当当前欠项。
 
 | 检查 | 结果 |
 |---|---|
@@ -229,13 +229,13 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 最终lint-web54/54（36 cached）、knip、test-web17/17（全部cached）通过；完整默认make e2e总43.052s、142 passed（runner41.7s，140 Chromium+2 Firefox），八故事各实际匹配一次，旧W11通过且未专查。11交付文件在四个最终门、当前与提交blob完全一致；BASE/HEAD的server/api/web/tools树相同，全部变异源恢复。按G范围复用T14完整Go/race与T12最终性能，无永久生成物改动不重复无关gen-check，临时SQL的真实生成/恢复证据仍齐备。
 - 原证据 `task-15-evidence/`、实施报告 `task-15-report.md`、独评 `task-15-review.md`。root以P4/main与T1–14已批准记录承接跨任务约束；本任务批准不代替T16文档/整分支审查或合并授权。
 
-### T16：文档子项已独评，整分支审查与最终完成门待完成
+### T16：文档子项与内部整分支审查完成，集成待安排
 
 文档实施BASE为 `9a773608fa1f08abf3d4ecbc913e2d4a66e8de1e`。本次只同步正式设计/差异/规格/计划/评审与输入交接；没有产品、API、生成物、依赖、守卫或故事变化。16父任务/19实施单元保留，逐节范围与实际证据如下；完整命令/红因/变异恢复/环境及精确产品提交均在上述各Task记录，不把编译/fixture/基础设施失败改写成业务红。
 
 | spec节/上级范围 | 已交付Task与实际证明 | 本次正式同步/边界 |
 |---|---|---|
-| §1/2.1模块、事务与完成线 | T1–T15逐任务Approved，T14 archtest/HTTP整包/runtime和Go全量；基线main e9782b8f仅证明P4 | spec/plan/M4 §12/15同步19单元；T16内部整分支审查/最终分支CI仍待root，集成另待负责人 |
+| §1/2.1模块、事务与完成线 | T1–T15逐任务Approved，T14 archtest/HTTP整包/runtime和Go全量；基线main e9782b8f仅证明P4 | spec/plan/M4 §12/15同步19单元；T16内部整审/修复复审见下段；最终交付CI核精确HEAD，集成另待负责人 |
 | §2.2 API/普通与历史可见性 | T4目录、T9项目、T10 actor≠target三关系、T11归档源同项目；T14真实矩阵40/18/27cells/历史回归 | v0 §3.4、M4 §3.3/3.4/3.10/6.5、plane-diff三/四及M3/P1–P4输入交接；Historical不改 |
 | §2.3词汇/query/HTTP | T2 Vocabulary、T3 ParseListQuery/ListCursor；T9/10真实重复/坏path/无token/日期AND，局部映射/浅拷贝变异恢复 | v0 §3.3、plane-diff三、M2/P2：none/单日/重复日期AND/合法空交集、422/400顺序，不改生成器或认证 |
 | §2.4封套/续页/total | T5 Flat/空页total，T6 Groups A∩C，T7 CellContinuation/四层total/完整数组；T9八完整JSON；T12全部字段；T15 I3 | v0 §3.4、plane-diff三/四；缺分支省略/[]/末页null，原筛选追加组格键，不能累加格数冒充泳道total |
@@ -244,15 +244,34 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 | §2.7排序写/I6 | T8零/同值/skip true/false/状态组合和16方向race五遍；T14原六交错再五遍；T15 I6真实sort/state/审计/一条动态 | P1a/P1b/P4接收；M4 §5.1子项created_at/id已正确，仅核不改 |
 | §2.8三列/纯端口/闭合API | T13a真实1–25→26→Down/Up、CASE/词值/独立set/Ensure变异；T13b真实400/422/默认无写/恢复/四方向race；T14写范围变异，T15 I5 GET隔离变异 | v0 §6.2、M3 §3.18、plane-diff二/M4 §4.15：项目11→14、逐列默认/形状/词值、bootstrap小值转换；workspace不变、rich_filters不建 |
 | §2.9故事/§3裁定 | T15八故事确有匹配，四项生产变异成功build后业务红/恢复绿；最终142完整e2e，T13b等待屏障按真实transactionid局部校准 | I3–I7/I19/I20与I15仅API，P12–15页面不提前验收；历史决定保留并链接最终证明 |
-| §4验收/§6风险 | T1–T15勾选只据实施+独评；环境噪声Minor、扫描/跨页漂移如实保留 | 文档三子项可完成，内部整分支审查/最后CI及负责人终审/集成/main CI/清理未完成，父T16保持未勾 |
+| §4验收/§6风险 | T1–T15勾选只据实施+独评；环境噪声Minor、扫描/跨页漂移如实保留 | 文档及内部整审/修复复审完成；最终交付CI核精确HEAD，负责人终审/集成/main CI/清理待安排，父T16保持未勾 |
 | §5后续/§7输入/附录A | M2/M3/P1–P4只追加P5承接；附录A保持起步历史 | P8/P10b/P11/P12–15/M8和八输入handoff总open；M4 §14及总体§9.4不整项勾，不生成M5–M8收尾文件 |
 
-文档校验已核342个Markdown链接及其本地目标/章节，无新增失效；原有四个M5–M8未来收尾文件保持未创建。计划类型/消费签名和当前schema名、三列/三封套/状态语境及diff已核，主目录仍main，产品树/M4总体验收/总体§9.4/子项顺序/T12最终性能块均与本Task BASE一致；提交后make gen-check按T16执行，实际退出与最终提交关联留本Task交付记录，并由root继续正式收口。范围内没有产品源码差异，复用T14最终Go/race与T15最终142条e2e，不为文档HEAD重复全套。当前仅声明文档同步，不声明内部整分支审查、最终分支CI或负责人终审/合并/main CI/清理通过；由root在后续精确提交上继续登记。
+文档校验已核342个Markdown链接及其本地目标/章节，无新增失效；原有四个M5–M8未来收尾文件保持未创建。计划类型/消费签名和当前schema名、三列/三封套/状态语境及diff已核，主目录仍main，产品树/M4总体验收/总体§9.4/子项顺序/T12最终性能块均与本Task BASE一致；提交后make gen-check按T16执行，实际退出与最终提交关联留本Task交付记录，并由root继续正式收口。范围内没有产品源码差异，复用T14最终Go/race与T15最终142条e2e，不为文档HEAD重复全套。以上为文档子项1258b93a的证据边界；后续内部整分支审查与修复另见下段，不把文档独评代替全分支结论。
 
-文档实施提交 `1258b93a9de509f88e8b4a52f73037a8e72b109c` 已独立评审为 Spec compliant / Approved（C0/I0/M1）。M1为M4设计§3.3仍写“由 issue/domain 实现端口”，实际是issue/app.ListSettings复用domain词汇，纳入最终统一修复；不放宽架构守卫。19份文档SHA与最终静态核对、提交后make gen-check（3.243s，exit 0）、最终审计一致，产品整树无变化；root已全文核对报告、独评及原始输出。文档任务批准不代替内部整分支审查或用户集成安排。
+文档实施提交 `1258b93a9de509f88e8b4a52f73037a8e72b109c` 已独立评审为 Spec compliant / Approved（C0/I0/M1）。M1为M4设计§3.3仍写“由 issue/domain 实现端口”，实际是issue/app.ListSettings复用domain词汇，随后在49623057统一修复并范围复审关闭；不放宽架构守卫。19份文档SHA与最终静态核对、提交后make gen-check（3.243s，exit 0）、最终审计一致，产品整树无变化；root已全文核对报告、独评及原始输出。文档任务批准不代替内部整分支审查或用户集成安排。
+
+### 内部整分支审查与唯一修复波
+
+- 首审范围：基线`e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`至`017c950dbcb27a3f0d6a4de2de410db186a99537`，42个提交、25432行完整上下文包；新独立审查者完整读取并追踪关键调用链。首审C0/I2/M1、Needs changes，不能用逐Task批准替代此结论。
+- 统一修复：`49623057c0b6deb8c9230125b07222ae3a66faab`，6文件174+/2−，仅两domain文件、三测试文件、一行设计文案；没有SQL、排序、权限、锁/事务、依赖、API schema或通用PG错误映射变化。
+
+| 发现 | 根因与修复 | 真实回归及范围复审 |
+|---|---|---|
+| I1 名称cursor含NUL返回500 | `domain/list_cursor_key.go`在三名称共用分支拒绝U+0000，沿既有InvalidCursor返回400 | 六排序码×平面/组/格18个请求实际500红→400/bad_request及唯一cursor/invalid_format绿；domain覆盖纯/嵌入NUL及合法Unicode/空名/null，复审ADDRESSED |
+| I2 合法UUID组键变体错报空组 | `domain/list_query.go`先沿原规则验证，再只规范化五类UUID group/subgroup键；不写回raw query、不盲目改非UUID键 | 项目label组4项、state×label格4项、成员project组8项，canonical控制绿而uppercase/compact六组原total0红→九组逐页ID/完整数组/真实cursor/越尾total绿；domain另覆花括号/URN和非UUID原值，复审ADDRESSED |
+| M1 端口实现层旧措辞 | M4§3.3明确issue/app.ListSettings复用domain词汇，无连接池 | 与module/bootstrap实际适配一致，复审ADDRESSED |
+
+- 原始执行：HTTP红4.809s、domain红0.86s；domain绿0.8s、HTTP绿4.864s；lint-go14.332s、完整Go48包153.127s、修复提交后make gen-check2.853s全部exit0。红因均为真实业务断言，没有把编译或夹具失败算作有效红。四个提交前绿门保存的六源SHA，与修复提交及当时工作树逐字一致；生成检查绑定精确修复HEAD，生成后工作树干净。
+- 唯一范围复审完整读取017c950d→49623057的19541字节修复包，独立核回归断言、原红绿输出及SHA：I1/I2/M1全部ADDRESSED，新C/I/M均0，无新增范围外观察。技术修复完成不代表合并授权。
+- 原始报告及证据保留在本worktree的`.superpowers/sdd/P5-issue-list/`：`final-review.md`、`final-fix-report.md`、`final-fix-evidence/`、`final-rereview.md`。本节将结论、精确范围与关键证据写入受版本管理的正式评审，未删除首审发现或过程记录。
+- root逐项裁定四项审查边界继续按既定交接：M8验证超样本分布生产SLO、跨HTTP请求keyset漂移策略、全连接jit/custom_plan对其他业务的生产吞吐/规划成本；P10b/P12–15交付生产前端比较器与页面。错判分别可能造成未覆盖负载延迟、并发改键下重复/漏项、其他业务性能回退、前后端排序/交互不一致；本次不以有限样本或API故事宣称这些保证已具备。
 
 ### 分支检查点 CI
 
+最终交付的CI必须在最后一次证据文档提交并推送后，由root核对该精确HEAD的server/web/e2e全为success。结果以GitHub Actions的SHA绑定记录和交付答复为准；下表只声明已验证检查点，不自证本记录提交的CI，也不循环写回自身SHA制造新提交。父T16的负责人终审/集成/main CI/清理保持未完成。
+
+- `017c950dbcb27a3f0d6a4de2de410db186a99537` 已由系统Git自主推送；[CI 40226263327](https://github.com/open-nerve/NerveProject/actions/runs/40226263327) 的 server、web、e2e 全部success。该检查点为整分支首审HEAD，不代表49623057输入修复或最终证据文档提交。
 - `9a773608fa1f08abf3d4ecbc913e2d4a66e8de1e` 已由系统Git自主推送；[CI 40224012093](https://github.com/open-nerve/NerveProject/actions/runs/40224012093) 的 server、web、e2e 全部 success。此检查点包含T15验收，不代表T16及后续最终提交。
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
 - `6a94c5ce4abd9a6d1c0f66a9a22ecf365a7a1ff8`（含T4）也已由系统Git推送；[CI 40191919305](https://github.com/open-nerve/NerveProject/actions/runs/40191919305) server、web、e2e全部success。此检查点不包含后续T5a。
@@ -329,13 +348,13 @@ T13b实际测试名为IssuePreferencesAPI/AsRuntimeRole；已有冲突偏好行�
 
 T16清理上级设计候选schema名：实际为IssueListPage/IssueListGroup/IssueListSubgroup/IssueListTotal、IssueListOrder/IssueListGroupField及project侧ProjectIssueFilters/ProjectDisplayFilters/ProjectListCalendar/ProjectDisplayProperties；偏好业务词保留string由纯端口给422。没有改实际API。
 
-T16仅文档，按root授权复用无源码变化的T14 Go/race与T15最终142条e2e；提交后仍须make gen-check。当前不合并，内部整分支审查/最终分支CI与负责人终审/集成分门登记。
+T16文档实施按范围复用T14 Go/race与T15最终142条e2e；之后整分支审查发现的两项输入问题已局部修复，重新执行定位/lint/完整Go及提交后gen-check并独立范围复审。SQL/锁/故事未变，原T12性能/T14 race/T15 e2e保留准确来源。最终证据文档提交后生成检查及精确HEAD分支CI仍是交付前置门；负责人终审/集成分门登记，不合并。
 
 ## 6. 移交事项
 
 | 接收方 | 范围 |
 |---|---|
-| root/负责人 | T1–T15实施与逐任务独评Approved，T16文档同步；内部整分支审查与最终SHA分支CI待root，负责人整分支终审/意见处理及集成另待安排，父T16未勾，保留分支/worktree，不合并 |
+| root/负责人 | T1–T15及T16开发工作、内部整审/修复复审完成；最终交付核精确SHA分支CI，负责人整分支终审/意见处理及集成另待安排，父T16未勾，保留分支/worktree，不合并 |
 | P8 | `link_count` 字段与两个排序码；列表/搜索共用词汇 |
 | P10b | api/testdata/issue-order.json必须由生产前端码点比较器与vitest同文件消费；旧列表/筛选store、workItemFilters和 `/user-properties/` 迁移，相关until:M4/P11例外到迁移才删 |
 | P11 | 详情store/service换型、JSONContent/comment_json/is_bot等清理及详情分页数据；P5不关闭此范围 |
@@ -345,6 +364,6 @@ T16仅文档，按root授权复用无源码变化的T14 Go/race与T15最终142�
 
 ## 7. 已知限制
 
-T1–T15包含三SQL、排序PATCH、项目/个人主页API、关联普通目录替换、三偏好列/API/并发、最终100k性能、权限/历史回归和八接口故事，均有§2逐Task实施/独评证据。剩余门是T16内部整分支审查/最终分支CI及负责人安排的终审/集成/main CI/清理，当前不合并，不能把逐Task批准冒称整分支终审。P8/P10b/P11/P12–15/M8和M4总收尾仍开放。
+T1–T15包含三SQL、排序PATCH、项目/个人主页API、关联普通目录替换、三偏好列/API/并发、最终100k性能、权限/历史回归和八接口故事，均有§2逐Task实施/独评证据。内部整分支审查与唯一修复波已闭合；交付仍须核精确最终SHA分支CI，负责人终审/集成/main CI/清理另待安排，当前不合并。P8/P10b/P11/P12–15/M8和M4总收尾仍开放。
 
 默认缓存缺Firefox的历史限制通过项目本地资产目录解决；T13a/b完整135条、T15最终142条（Chromium140/Firefox2）已实际运行，未声称每故事双浏览器。T15本轮旧W11通过，既有Ryuk Shell/NO_COLOR提示保留为环境维护Minor，不为消噪重跑或改变他人容器。各分支检查点CI仅证明各精确SHA，不代表本次最终文档提交的远端结果。
