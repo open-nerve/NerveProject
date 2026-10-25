@@ -52,7 +52,7 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
   - 一个陷阱：Go 的 `nil` 切片作为 `NULL` 传出，`cardinality(NULL) = 0` 的谓词滤掉全部行。
   - 写法、规模的目标和连接的参数写进 3.16；P5 不再有 spike 的任务。
 - **S2 pg_trgm（做了一部分）**：sqlc 只在扩展的迁移列在模块的 `schema:` 里时才把 `similarity()` 定为 `float32`，否则静默地是 `interface{}`；名为 `q` 的参数与接收者同名，生成为 `q_`；10 万行上 `'%a3f9%'` 走位图索引扫描（0.09 ms）、`'webhook'` 12 ms，两个字符的 `'ab'` 退到顺序扫描（45 ms）；只有 `SELECT`、`USAGE` 的角色经 PUBLIC 的 `EXECUTE` 能调用 `similarity()`，授权测试的预期不变。迁移角色在镜像里建扩展、中文的查询（多是两个字）的耗时留给 P8 的第 6、12 个任务（3.18）。
-- **S3 bluemonday（P4/T1 已验证清洗与真实编辑器往返，2026-10-25）**：14 份共享样例覆盖 API 形状的 HTML（无块 id 的列表、标题、嵌套标记）及实际编辑器全部 22 个 node / 8 个 mark，逐边固定清洗、重序列化及再次清洗输出；纯文本、提及、链接地址、勾选框投影与安全边界通过，15 项实际可编译变异均被业务断言检出并恢复。默认标签经锁定上游核对后补齐，独立评审及修正复核通过，证据见 [P4 review §2.2](reviews/P4-issue-collaboration-review.md#22-t1-验收与独立评审已完成)。首个评论API在T3消费，描述及skip_activity在T9/T15完成接口验证并通过独立评审；T16只收口文档及时间断言，阶段终审仍待负责人安排。
+- **S3 bluemonday（P4/T1 已验证清洗与真实编辑器往返，2026-10-25）**：14 份共享样例覆盖 API 形状的 HTML（无块 id 的列表、标题、嵌套标记）及实际编辑器全部 22 个 node / 8 个 mark，逐边固定清洗、重序列化及再次清洗输出；纯文本、提及、链接地址、勾选框投影与安全边界通过，15 项实际可编译变异均被业务断言检出并恢复。默认标签经锁定上游核对后补齐，独立评审及修正复核通过，证据见 [P4 review §2.2](reviews/P4-issue-collaboration-review.md#22-t1-验收与独立评审已完成)。首个评论API在T3消费，描述及skip_activity在T9/T15完成接口验证并通过独立评审；T16只收口文档及时间断言；负责人随后指定的整分支deep-review与修复复审已完成，见[P4整分支报告](../../reviews/re-01-M4P4整体审核.md)。
 - **S4 River（已做）**：只投递的客户端（`&river.Config{}`，没有 `Workers`）在事务里 `InsertTx` 一个没有登记 worker 的种类可以，回滚不留、提交留下一条；以空的 `river.NewWorkers()` 建的工作客户端在 `AddWorker` 之前 `InsertTx` 失败（`UnknownJobKindError`，`river@v0.47.0/client.go:2270-2277`），`NewClient` 之后 `AddWorkerSafely` 可以（共用同一个 `*Workers`，可用但没有写进文档），`Start` 之前 `PeriodicJobs().Add`、`InsertTx` 都可以；一个 worker 都没有时 `Start` 失败。组合因此用只投递的客户端投递（6.6）。
 - **S5 取锁的等待（已做）**：E1：方案 A 之下，新的 `FOR SHARE` 在等待中的 `FOR NO KEY UPDATE` 之前 1 ms 得到；60 ms 一个、每 30 ms 新来一个的 `FOR SHARE` 持续 3 秒，工作区的 N 等了 2.753 秒（M3 17.4 的探针 B 复现）。E2：方案 B 之下，N 的等待者先来先得，3 秒首尾相连的工作项写之后，删除工作区只等了 319 ms（排在它前面的写）。E3：工作项写的链进行中，10 次 `UPDATE workspaces` 最长 2 ms；插入经外键取工作区行的 `FOR KEY SHARE`，与 `FOR NO KEY UPDATE` 不冲突。E4：`… WHERE id = ANY($1) ORDER BY id FOR NO KEY UPDATE` 按 `id` 的顺序取锁。E5、E5b、E6：约定七和关联行按 `id` 先锁的论证（3.5）。这些结论是决策点 1 的依据；交错 20、21 是它们的回归测试。
 - 第二稿的对抗性评审另做了三个 spike（同样在临时的 `postgres:18.6` 上，pgx v5.11.0，程序和输出不进仓库）：
@@ -543,7 +543,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - `owned_by_id`、`created_by_id` 是写这一版的人（Plane 的审计列抄工作项的，`API/db/models/issue.py:806-818`，与 `owned_by_id` 不一致）。
 - **保留（P9待实现，P4未运行）**：每个工作项只留最新的 20 行（按 `last_saved_at`），每天一次的定时任务 `issue.trim_description_versions`，每个未删除的项目一个事务（项目 N），物理删除多出的行（P9，与清理同一段，两者不能相遇，对抗性评审 M21）（Plane 相同，`API/bgtasks/cleanup_task.py:128-146`，按 `created_at`）。它只看未删除的工作项的未删除的版本（`deleted_at IS NULL` 的两边）；软删除的版本（随工作项删除）只归 60 天清理，两个任务碰不到同一行（3.5）。
 - **读取**：`GET /issues/{issue_id}/description-versions`，最新的在前（`last_saved_at` 降序、`id` 降序），游标分页，每行不带描述；`GET /issue-description-versions/{version_id}` 带描述。规则 `issue_description_version.read`（管理员、成员，3.4）；工作项的访客规则同样适用。
-- **还原**：没有专门的接口（Plane 也没有）。页面把旧的描述放进编辑器，经普通的 `PATCH` 保存：产生新的版本、一条描述动态。已归档的工作项不能还原（409，页面也禁用）。
+- **还原**：没有专门的接口（Plane 也没有）。页面把旧的描述放进编辑器，经普通的 `PATCH` 保存，遵循普通保存的无改动、版本 600 秒合并和描述动态合并规则；不保证新增版本或动态行。已归档的工作项不能还原（409，页面也禁用）。
 
 ### 3.15 草稿（总体设计 5.4）
 - **表**：`draft_issues(id, workspace_id, project_id, payload, created_by_id, updated_by_id, created_at, updated_at, deleted_at)`（4.13）。Plane 是一张与工作项同形的表加四张关联表（R1 第 14 节），差异清单已登记"一张表 + payload"。
@@ -2518,7 +2518,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P1b `issue-update` | 工作项的取、改与写闸门（后端，12）；同上 | 已完成：[spec](specs/P1b-issue-update.md)、[plan](plans/P1b-issue-update.md)、[评审](reviews/P1b-issue-update-review.md)（执行时 15 个 Task；整分支评审之后一个修复轮） |
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 已完成：[spec](specs/P2-issue-access.md)、[plan](plans/P2-issue-access.md)、[评审](reviews/P2-issue-access-review.md)（执行时 14 个 Task；整分支评审之后一个修复轮） |
 | P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
-| P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 进行中：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)；负责人已批准清洗适配器方案（2026-10-25），保留纯层架构守卫；T1–T16（含S3）已完成实施与独立Task评审，T9/T13两项Minor分别由T10/T14复核关闭，T16独立审查C/I/M均0，T15两项Minor已关闭；首次分支CI的S2动画残留已修复；A2修复54866c8f已通过独立评审（C/I/M均0）及分支CI 40175286547（server/web/e2e全部成功），系统git经本仓库SSH推送地址已实际推送成功，见[评审记录](reviews/P4-issue-collaboration-review.md)；完成后由负责人安排 Claude 整分支终审，尚未合并 |
+| P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；最终合并main CI按精确SHA在交付和P5输入记录 |
 | P5 `issue-list` | 列表引擎与显示设置（后端，15） | 未开始 |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，11） | 未开始 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12） | 未开始 |
