@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-26。状态：**实施中；T1–T13完成，T14待实施；阶段尚未完成，不合并**。
+日期：2026-10-26。状态：**实施中；T1–T14完成，T15待实施；阶段尚未完成，不合并**。
 
 | 项目 | 当前证据 |
 |---|---|
@@ -22,7 +22,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 
 ## 2. 验收标准逐条核对
 
-产品验收清单以 spec §4 为准；T1–T13已有下列实施证据，T14及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
+产品验收清单以 spec §4 为准；T1–T14已有下列实施证据，T15及后续任务尚未完成。下表保留起步检查，后面追加逐任务证据。
 
 | 检查 | 结果 |
 |---|---|
@@ -32,7 +32,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 | 阶段关键词 | `phase=M4/P5`；没有在 P4/P5 到期的例外，`/user-properties/` 的 M4/P11 例外保留；`node tools/keywords.mjs` 为72规则、23例外、无命中 |
 | 起步文档自检 | 16个任务顺序完整、产品验收均未勾选；53处本地链接无新增缺失。M4设计原有4个M5–M8收尾文件链接仍是未来交付，不提前创建或标完成 |
 | 独立预检 | 首轮4项 Medium、2项 Low，均为局部计划/文档缺口；修订聚焦复核Approved，新增L3也已关闭，见§4 |
-| P5 产品测试、性能、交错及变异 | T1–T13证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
+| P5 产品测试、性能、交错及变异 | T1–T14证据见下文；后续任务不能以起步检查或已完成任务结果代替 |
 
 ### T1：连接运行参数，已完成
 
@@ -207,6 +207,18 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 新增三包测试 `-p 1 -race -count=5` 通过（146.37s），7顶层及4并发子项逐项各五次；race后唯一变化为删除未读取的误加CascadeDeps字段及注释，精确旧源重建SHA和清理patch闭合映射，不伪称全部SHA相同。后续完整make test48包155.66s通过；lint-go两段0 issues、lint-web54/54（8 cached）、knip、test-web17/17（11 cached）通过；完整make e2e总46.38s、135 passed（133 Chromium、2 Firefox，runner40.7s）。提交后gen-check2.76s、空diff；26最终源SHA与六个最终门及提交一致。
 - 原始证据 `task-13b-evidence/`、实施报告 `task-13b-report.md`、独评 `task-13b-review.md`。编译红、非法fixture、未用import、探针超时及编辑工具错误均保留且不算有效变异红。评审跨任务项由a已批准记录闭合；actor写范围专门退化仍归T14，本阶段普通两actor隔离不代替该证据。实际文件/测试名已同步plan，后续命令不沿用未存在的拟名。
 
+### T14：矩阵、整程序读边界与回归闭环，已验收
+
+- 基线 `ff13a6b0c8a64f49e46c79a29c4e01ea911cd8f4`，实施提交 `15388587d348ef812c1b8a315132bc66515f8fdb`；独立评审Spec compliant、Approved，C0/I0/M1。五文件317+/1−共318手写差异，新增四个专职测试文件，旧tracer仅加可选池配置；没有永久产品/SQL/API/生成物变化。Minor为既有testcontainers探测日志噪声，保留环境记录，不改容器/依赖。
+- 真实完整应用写位=1且无队列：项目行锁阻塞首个sort_order写，第二个合法写准确503/server_busy/Retry-After1；未释放首写时，活项、归档项、成员列表仍准确回答。释放后首写成功且落库19。EXCLUSIVE表锁期间三SQL形状、成员列表和原偏好GET均完成，证明普通读不请求FOR锁或写锁；没有用MVCC普通读伪造行锁等待。
+- 单连接真实tracer与真实ReadTx/目录/SQL覆盖Flat/Groups/Subgroups、个人及越尾补total。每请求RO/RR BEGIN→全部同PID且完成无错→COMMIT，SQL名及fallback两查精确核对，隐藏父项/完整数组/total独立断言；既有current_setting与八个提交快照在本次整包/race实际回归，未重造平行编排。
+- 前序矩阵经本次完整执行重新计数：listIssues40、listMemberIssues18、preferences GET12/PATCH15。有效且仍存在的Bob目标补guest caller三关系403、inactive/deleted caller三关系404，防止目标缺失遮住角色退化。45项指定历史/runtime/contract实际匹配一次，覆盖activities、description skip/版本/快照、relations、subissues、旧preferences、目标/矩阵完整性、三运行角色和原写闸门。
+- 三项真实生产变异均业务红/恢复绿：允许workspace guest后实际200替代403；States目录逃离事务ctx后单连接无法另借，五形状实际500替代200；Upsert合法扩大同项目recipient但只返回caller后，A的PATCH200且准确响应通过，B真实整行filters medium→high及审计变化被抓住。actor前四候选的生成/nullable参数编译失败单独保留，不计业务红；最终RETURNING is_caller与显式uuid通过真实生成。全部生产源/生成物原字节恢复。
+- 强制race第一组93.15s：`TestIssueListSnapshot`、`TestIssueListTraceArguments`、`TestIssueListTraceBoundary`、`TestPreferenceFieldsDoNotOverwrite`、`TestIssueSortOrderInterleaving`、`TestP5ReadBoundary`六顶层均实际五遍；覆盖八快照、四偏好方向、16排序方向与full-gate/no-for-locks/snapshot-connection五形状。原始计数为6顶层/44子路径各五次，包含中间分组，不将路径数冒充独立业务方向数。
+- 强制race第二组70.33s：`TestTwoChangesOfAWorkItemSerialize`、`TestAWorkItemGoneWhileItsChangeWaitsIsNotFound`、`TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`、`TestArchivingAWorkItemAndMovingItSerialize`、`TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize`、`TestDeletingAWorkItemAndChangingItSerialize`六顶层及26子路径各实际五遍，无FAIL/data race。完整逐路径清单及行号在独评 `task-14-review.md`，原计数 `p5-race-counts.json` / `existing-race-counts.json`。
+- 定位、archtest/bootstrap整包（140.23s）、issue/project HTTP整包（11.22s）与完整make test48包（155.03s）通过；lint-go0 issues、lint-web54/54（38 cached）、knip、test-web17/17（全部cached）通过，缓存如实保留。提交后gen-check3.13s、空diff；五交付源在各门与提交逐字节相同，34条运行记录无重叠。没有永久SQL/故事/API变化，本任务未重复性能或e2e，T15仍需其独立门。
+- 实施/独评记录 `task-14-report.md`、`task-14-review.md`，原始证据 `task-14-evidence/`。评审跨任务项由P4/main基线及T9/T10/T13批准记录承接；本次真实矩阵、HTTP/runtime/历史执行不能扩称前序全分支终审，P5最终审查仍待T16。
+
 ### 分支检查点 CI
 
 - `48dfae8ac42007addf199bead13ccdbb5f3e0d47` 已由系统 `/usr/bin/git` 自主推送；[CI 40190689176](https://github.com/open-nerve/NerveProject/actions/runs/40190689176) 的 server、web、e2e 全部 success。此检查点包含T1–T3及其文档，不包含后续T4，不能冒称T4远端验证。
@@ -222,6 +234,7 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - `c08e1061b2ec5188fd8e1a8f3eb9a22c2f157957`（含T12a）已由系统Git推送；[CI 40210086901](https://github.com/open-nerve/NerveProject/actions/runs/40210086901) server、web、e2e全部success。此检查点不包含T12b及修复。
 - `bd5702883aa04cdd98d2a1a23179a9fff4e6e73b`（含T12全部及修复）已由系统Git推送；[CI 40215557907](https://github.com/open-nerve/NerveProject/actions/runs/40215557907) server、web、e2e全部success。此检查点不包含T13a。
 - `c4ad379e0fbc752c459999a6952969bd3b487cc8`（含T13a）已由系统Git推送；[CI 40217399252](https://github.com/open-nerve/NerveProject/actions/runs/40217399252) server、web、e2e全部success。此检查点不包含T13b。公开jobs元数据为ignored `ci-40217399252-jobs.json`。
+- `ff13a6b0c8a64f49e46c79a29c4e01ea911cd8f4`（含T13全部）已由系统Git推送；[CI 40219840173](https://github.com/open-nerve/NerveProject/actions/runs/40219840173) server、web、e2e全部success。此检查点不包含T14。公开jobs元数据为ignored `ci-40219840173-jobs.json`。
 - 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`、`ci-40205751190-jobs.json`、`ci-40207373659-jobs.json`、`ci-40210086901-jobs.json`、`ci-40215557907-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
 
 ## 3. 执行中的决定

@@ -382,15 +382,15 @@ T13a/b预计970–1350/865–1240手写行；单元接近1400先复核剩余职�
 
 ## Task 14：矩阵、整程序边界与回归闭环
 
-文件：补 `B/permission_matrix_issue_lists_test.go`、`B/permission_matrix_member_lists_test.go`、matrix seed/targets/columns、runtime_role_test.go、contract_test.go、issue_list_permissions_test.go、project_preferences_test.go；必要TS fixture与端口假实现；不堆新helper绕过已有断言。
+文件：复核并实际回归 `B/permission_matrix_issue_lists_test.go`、`B/permission_matrix_member_lists_test.go`、matrix seed/targets/columns、runtime_role_test.go、contract_test.go、issue_list_permissions_test.go、project_preferences_test.go及前序完整fixture；新B/p5_read_boundary_test.go、p5_read_connection_test.go、p5_member_roles_test.go、p5_preferences_scope_test.go，既有issue_list_trace_test.go仅加可选池配置口。前序矩阵/runtime/契约已交付，不为文件名单重复实现；真实缺口补测和完整回归均保留，不堆新helper绕过已有断言。
 
-- [ ] 审核listIssues两权限分支、listMemberIssues的所有目标、preferences三字段进入既有矩阵；角色按集合：workspace admin兼project guest、无project成员、deleted/inactive、公开/私有、隐藏先404。
-- [ ] 新 `TestP5ReadBoundary` 证实读无FOR锁/写连接/写闸门，源/目录/SQL/补total一个ctx；sort_order仍原写锁/闸门路径。复跑历史activities、description skip、relations、subissues与原preferences，确保没有范围倒退。
-- [ ] 定位 `go -C server test ./internal/bootstrap -run 'Test(PermissionMatrix|P5ReadBoundary|IssueListPermissions|IssuePreferences(API|AsRuntimeRole))' -count=1`；再跑 `go -C server test ./internal/archtest ./internal/bootstrap -count=1`，HTTP issue/project整包覆盖所有码。
-- [ ] 对前面漏测处先红再修，不写镜像实现测试；至少额外实际变异去member_issue.list角色限制、readonly目录ctx外移、settings按用户更新范围丢actor条件；恢复后绿。
-- [ ] 强制完成门：`go -C server test ./internal/bootstrap -run '^Test(IssueListSnapshot|IssueListTraceArguments|IssueListTraceBoundary|PreferenceFieldsDoNotOverwrite|IssueSortOrderInterleaving|P5ReadBoundary)$' -race -count=5`；核对所有新增快照/偏好并发/sort_order相关交错均被匹配，其余包或名称追加对应同参数命令，不允许“需要时”。sort_order复用锁路径的相应六个既有交错同样五遍race，review列出完整匹配清单；b的普通app/HTTP/API五遍结果不构成T14再跑全部普通API五遍的要求。
-- [ ] `make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web` 及已提交生成物的 `make gen-check`，记录真实命令/HEAD/结果，失败不包装为通过。
-- [ ] G；提交 `test(M4/P5): 补齐列表权限矩阵与跨层回归`。
+- [x] 审核listIssues两权限分支、listMemberIssues的所有目标、preferences三字段进入既有矩阵；角色按集合：workspace admin兼project guest、无project成员、deleted/inactive、公开/私有、隐藏先404。
+- [x] 新 `TestP5ReadBoundary` 证实读无FOR锁/写连接/写闸门，源/目录/SQL/补total一个ctx；sort_order仍原写锁/闸门路径。复跑历史activities、description skip、relations、subissues与原preferences，确保没有范围倒退。
+- [x] 定位 `go -C server test ./internal/bootstrap -run 'Test(PermissionMatrix|P5ReadBoundary|IssueListPermissions|IssuePreferences(API|AsRuntimeRole))' -count=1`；再跑 `go -C server test ./internal/archtest ./internal/bootstrap -count=1`，HTTP issue/project整包覆盖所有码。
+- [x] 对前面漏测处先红再修，不写镜像实现测试；至少额外实际变异去member_issue.list角色限制、readonly目录ctx外移、settings按用户更新范围丢actor条件；恢复后绿。
+- [x] 强制完成门：`go -C server test ./internal/bootstrap -run '^Test(IssueListSnapshot|IssueListTraceArguments|IssueListTraceBoundary|PreferenceFieldsDoNotOverwrite|IssueSortOrderInterleaving|P5ReadBoundary)$' -race -count=5`；核对所有新增快照/偏好并发/sort_order相关交错均被匹配，其余包或名称追加对应同参数命令，不允许“需要时”。sort_order复用锁路径的相应六个既有交错同样五遍race，review列出完整匹配清单；b的普通app/HTTP/API五遍结果不构成T14再跑全部普通API五遍的要求。
+- [x] `make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web` 及已提交生成物的 `make gen-check`，记录真实命令/HEAD/结果，失败不包装为通过。
+- [x] G；提交 `test(M4/P5): 补齐列表权限矩阵与跨层回归`。
 
 ## Task 15：接口故事与既有归档故事增长
 
