@@ -361,6 +361,9 @@ type IssueUpdate struct {
 	// SkipActivity Only with description_html alone; preserves audit when content identity is unchanged.
 	SkipActivity *bool `json:"skip_activity,omitempty"`
 
+	// SortOrder Finite sort order; zero allowed, omitted keeps the stored value. Cannot accompany skip_activity.
+	SortOrder *float64 `json:"sort_order,omitempty"`
+
 	// StartDate The day it starts, as YYYY-MM-DD; null for none. Not after the target date the work item then has.
 	StartDate nullable.Nullable[shared.Date] `json:"start_date,omitempty"`
 

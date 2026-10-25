@@ -106,7 +106,7 @@ func TestAWorkItemsParentIsWritten(t *testing.T) {
 	}
 	for _, to := range []*uuid.UUID{&up, &top, nil} {
 		if to != &up {
-			if err := s.UpdateIssue(ctx, app.IssueFields{ID: id, Name: "Part", StateID: web.state, Priority: domain.PriorityNone, ParentID: to,
+			if err := s.UpdateIssue(ctx, app.IssueFields{SortOrder: 65535, ID: id, Name: "Part", StateID: web.state, Priority: domain.PriorityNone, ParentID: to,
 				By: alice, At: now}); err != nil {
 				t.Fatal(err)
 			}

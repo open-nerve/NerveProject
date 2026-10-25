@@ -3655,6 +3655,9 @@ components:
       type: object
       additionalProperties: false
       properties:
+        sort_order:
+          description: Finite sort order; zero allowed, omitted keeps the stored value. Cannot accompany skip_activity.
+          type: number
         skip_activity:
           description: Only with description_html alone; preserves audit when content identity is unchanged.
           type: boolean

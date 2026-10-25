@@ -58,7 +58,7 @@ func TestUpdateIssueWritesTheDates(t *testing.T) {
 				w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
-			if fields := (app.IssueFields{ID: id, Name: "Fix", StateID: backlog.ID, Priority: domain.PriorityHigh, StartDate: tt.start,
+			if fields := (app.IssueFields{SortOrder: 65535, ID: id, Name: "Fix", StateID: backlog.ID, Priority: domain.PriorityHigh, StartDate: tt.start,
 				TargetDate: tt.target, By: alice, At: clockNow}); w.issues.changed == nil || !reflect.DeepEqual(*w.issues.changed, fields) {
 				t.Errorf("the fields written %+v, want %+v", w.issues.changed, fields)
 			}

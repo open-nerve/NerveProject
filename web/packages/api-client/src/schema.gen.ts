@@ -2168,6 +2168,8 @@ export interface components {
         };
         /** @description Changes the fields it names; a field left out keeps its value. */
         IssueUpdate: {
+            /** @description Finite sort order; zero allowed, omitted keeps the stored value. Cannot accompany skip_activity. */
+            sort_order?: number;
             /** @description Only with description_html alone; preserves audit when content identity is unchanged. */
             skip_activity?: boolean;
             /** @description Sanitized rich text HTML; at most 500000 characters on input. */

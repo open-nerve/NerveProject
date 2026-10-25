@@ -53,6 +53,7 @@ type IssueFields struct {
 	DescriptionStripped *string
 	StateID             uuid.UUID
 	Priority            domain.Priority
+	SortOrder           float64
 	StartDate           *shared.Date
 	TargetDate          *shared.Date
 	ParentID            *uuid.UUID

@@ -92,15 +92,16 @@ func (q *Queries) SetArchivedAt(ctx context.Context, arg SetArchivedAtParams) er
 const updateIssue = `-- name: UpdateIssue :exec
 UPDATE issues
 SET description_html = $1, description_stripped = $2,
-    name = $3, state_id = $4, priority = $5, start_date = $6,
-    target_date = $7, parent_id = $8, completed_at = $9,
-    updated_by_id = $10::uuid, updated_at = $11::timestamptz
-WHERE id = $12
+    sort_order = $3, name = $4, state_id = $5, priority = $6, start_date = $7,
+    target_date = $8, parent_id = $9, completed_at = $10,
+    updated_by_id = $11::uuid, updated_at = $12::timestamptz
+WHERE id = $13
 `
 
 type UpdateIssueParams struct {
 	DescriptionHtml     string
 	DescriptionStripped *string
+	SortOrder           float64
 	Name                string
 	StateID             uuid.UUID
 	Priority            string
@@ -114,13 +115,14 @@ type UpdateIssueParams struct {
 }
 
 // updateIssue's work item (M4 design 3.7, 3.9), under the project's FOR NO KEY UPDATE, read again under it: its name,
-// state, priority, dates, parent and completion as the use case gives them, those it changes and the others as they
+// state, priority, sort order, dates, parent and completion as the use case gives them, those it changes and the others as they
 // are, last changed at the moment and by the account given. Every write of a work item's row holds its project's lock
 // first (3.5), so the row is as the use case read it; it is not locked by id first (M3 design 3.6, convention 5).
 func (q *Queries) UpdateIssue(ctx context.Context, arg UpdateIssueParams) error {
 	_, err := q.db.Exec(ctx, updateIssue,
 		arg.DescriptionHtml,
 		arg.DescriptionStripped,
+		arg.SortOrder,
 		arg.Name,
 		arg.StateID,
 		arg.Priority,

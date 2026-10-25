@@ -39,13 +39,17 @@ func issueUpdateMatrixRows() []matrixRow {
 		// do: issue.not_found, not forbidden.
 		{op: "updateIssue", write: true, columns: issueColumns, request: toWorkItem(http.MethodPatch, "", `{"name":"Mend"}`),
 			cells: onAWorkItem(cellOK, cellOK, cellOK, cellForbidden), check: renamesTheIssue},
+		{op: "updateIssue", variant: "sort only", write: true, columns: issueColumns, request: toWorkItem(http.MethodPatch, "", `{"sort_order":0}`),
+			cells: onAWorkItem(cellOK, cellOK, cellOK, cellForbidden), check: func(t *testing.T, c caller, s seeded, answer string) {
+				answered(t, c, s, answer, false, func(i *answeredIssue) { i.SortOrder = 0 })
+			}},
 		// Each field given: Done, high, PA's account for PM's and the removed
 		// member's, UI for Bug, the 12th to the 19th of October for no dates.
 		{op: "updateIssue", variant: "each field given", write: true, columns: projectColumns,
 			request: toIssue(func(c caller, s seeded) string {
 				return `{"name":"Mend","state_id":"` + s.state(projectOf(c), "Done").String() + `","priority":"high","assignee_ids":["` +
 					s.account(callerProjectAdmin).String() + `"],"label_ids":["` + s.label(projectOf(c), "UI").String() +
-					`"],"start_date":"2026-10-12","target_date":"2026-10-19"}`
+					`"],"sort_order":0,"start_date":"2026-10-12","target_date":"2026-10-19"}`
 			}),
 			cells: ok, check: changesEachField},
 		// A change that changes nothing answers the work item as it is.
@@ -65,6 +69,8 @@ func issueUpdateMatrixRows() []matrixRow {
 		// the decision, by a change of nothing too.
 		{op: "updateIssue", variant: "archived work item", write: true, columns: issueColumns, prepare: inDone(true),
 			request: toWorkItem(http.MethodPatch, "", `{}`), cells: onAWorkItem(cellIssueArchived, cellIssueArchived, cellIssueArchived, cellForbidden)},
+		{op: "updateIssue", variant: "same sort archived project", write: true, columns: archivedColumns, request: toWorkItem(http.MethodPatch, "", `{"sort_order":65535}`), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
+		{op: "updateIssue", variant: "same sort archived issue", write: true, columns: issueColumns, prepare: inDone(true), request: toWorkItem(http.MethodPatch, "", `{"sort_order":65535}`), cells: onAWorkItem(cellIssueArchived, cellIssueArchived, cellIssueArchived, cellForbidden)},
 		// The archived project's Backlog, a state of another project of the
 		// same workspace: the state is checked after the decision.
 		{op: "updateIssue", variant: "another project's state", write: true, columns: projectColumns,
@@ -136,6 +142,7 @@ type answeredIssue struct {
 	SequenceID  int         `json:"sequence_id"`
 	Name        string      `json:"name"`
 	StateID     uuid.UUID   `json:"state_id"`
+	SortOrder   float64     `json:"sort_order"`
 	Priority    string      `json:"priority"`
 	StartDate   *string     `json:"start_date"`
 	TargetDate  *string     `json:"target_date"`
@@ -155,7 +162,7 @@ func seededIssue(c caller, s seeded) answeredIssue {
 	number, by := numberOf(key, name)
 	maker := s.account(by)
 	return answeredIssue{ID: s.issue(key, name), ProjectID: s.project(key), SequenceID: number, Name: name, StateID: s.state(key, "Todo"),
-		Priority:    "medium",
+		Priority: "medium", SortOrder: 65535,
 		AssigneeIDs: slices.SortedFunc(slices.Values([]uuid.UUID{s.account(callerProjectMember), s.account(callerRemoved)}), uuid.UUID.Compare),
 		LabelIDs:    []uuid.UUID{s.label(key, "Bug")}, CreatedByID: &maker, UpdatedByID: &maker}
 }
@@ -202,6 +209,7 @@ func renamesTheIssue(t *testing.T, c caller, s seeded, answer string) {
 func changesEachField(t *testing.T, c caller, s seeded, answer string) {
 	answered(t, c, s, answer, true, func(i *answeredIssue) {
 		start, target := "2026-10-12", "2026-10-19"
+		i.SortOrder = 0
 		i.Name, i.StateID, i.Priority, i.StartDate, i.TargetDate = "Mend", s.state(projectOf(c), "Done"), "high", &start, &target
 		i.AssigneeIDs, i.LabelIDs = []uuid.UUID{s.account(callerProjectAdmin)}, []uuid.UUID{s.label(projectOf(c), "UI")}
 	})
