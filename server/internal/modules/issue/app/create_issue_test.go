@@ -54,7 +54,7 @@ func newCreate() (*app.CreateIssue, *world) {
 	w.auth = &fakeAuthorizer{log: log}
 	w.profiles = fakeProfiles{log: log, names: map[uuid.UUID]string{alice: "Alice", bob: "bob", carol: "Carol C.", gus: "gus"}}
 	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{}, fakeTx{log: log})
-	uc := app.NewCreateIssue(app.CreateIssueDeps{Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: w.issues, Sequences: w.project, States: w.project, Labels: w.project,
+	uc := app.NewCreateIssue(app.CreateIssueDeps{Events: discardEvents{}, Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: w.issues, Sequences: w.project, States: w.project, Labels: w.project,
 		Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: log}})
 	return uc, w
 }

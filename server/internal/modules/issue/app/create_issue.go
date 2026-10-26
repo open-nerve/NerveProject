@@ -12,6 +12,7 @@ import (
 
 // CreateIssueDeps are what createIssue reads and writes through.
 type CreateIssueDeps struct {
+	Events    shared.EventPublisher
 	Locks     Locks
 	Issues    IssueCreator
 	Sequences Sequences

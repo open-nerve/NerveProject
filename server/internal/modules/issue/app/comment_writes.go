@@ -10,6 +10,7 @@ import (
 
 // UpdateIssueCommentDeps are the ports a comment edit consumes.
 type UpdateIssueCommentDeps struct {
+	Events    shared.EventPublisher
 	Locks     Locks
 	Comments  CommentUpdater
 	Members   ProjectMembers
@@ -80,6 +81,7 @@ func (u *UpdateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 
 // DeleteIssueCommentDeps are the ports a comment deletion consumes.
 type DeleteIssueCommentDeps struct {
+	Events   shared.EventPublisher
 	Locks    Locks
 	Comments CommentDeleter
 	Clock    Clock

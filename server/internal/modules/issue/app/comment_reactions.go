@@ -11,6 +11,7 @@ import (
 
 // AddCommentReactionDeps are the ports used to add reactions.
 type AddCommentReactionDeps struct {
+	Events    shared.EventPublisher
 	Locks     Locks
 	Comments  CommentReader
 	Reactions CommentReactionWriter

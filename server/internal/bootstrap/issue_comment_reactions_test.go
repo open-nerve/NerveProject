@@ -228,7 +228,7 @@ func TestCommentReactionReadSnapshotAndRollback(t *testing.T) {
 	}
 	sentinel := errors.New("reaction batch failed")
 	wrapped = reactionReadStore{Store: store, readError: sentinel}
-	edit := issueapp.NewUpdateIssueComment(issueapp.UpdateIssueCommentDeps{Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}})
+	edit := issueapp.NewUpdateIssueComment(issueapp.UpdateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}})
 	for _, html := range []string{c.HTML, "<p>Must roll back</p>"} {
 		beforeIssue, beforeComment := issueRow(t, w, id), commentRow(t, w, c.ID)
 		beforeSubs := reactionSnapshot(t, w, id, "issue_subscribers")

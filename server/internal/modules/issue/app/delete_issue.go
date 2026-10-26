@@ -56,9 +56,10 @@ func issueRowSteps(d IssueRowsDeleter) []func(context.Context, IssueDeletion) er
 
 // DeleteIssueDeps are what deleteIssue writes through.
 type DeleteIssueDeps struct {
-	Locks Locks
-	Rows  IssueRowsDeleter
-	Clock Clock
+	Events shared.EventPublisher
+	Locks  Locks
+	Rows   IssueRowsDeleter
+	Clock  Clock
 }
 
 // DeleteIssue deletes a work item: DELETE /api/v0/issues/{issue_id} (M4

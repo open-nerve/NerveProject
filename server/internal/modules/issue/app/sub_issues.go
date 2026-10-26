@@ -50,6 +50,7 @@ func (u *ListSubIssues) Execute(ctx context.Context, id uuid.UUID) ([]domain.Iss
 
 // AddSubIssuesDeps are what addSubIssues reads and writes through.
 type AddSubIssuesDeps struct {
+	Events shared.EventPublisher
 	Locks  Locks
 	Issues SubIssueAdder
 	Clock  Clock

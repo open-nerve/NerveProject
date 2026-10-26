@@ -24,6 +24,7 @@ type IssueRelation struct {
 // CreateIssueRelationsDeps are what createIssueRelations reads and writes
 // through.
 type CreateIssueRelationsDeps struct {
+	Events    shared.EventPublisher
 	Locks     Locks
 	Relations RelationCreator
 	Clock     Clock

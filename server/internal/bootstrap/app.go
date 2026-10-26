@@ -108,8 +108,19 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		WorkspaceRoles: workspacePorts.WorkspaceRoles,
 		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
 	})
+	inserter, err := jobs.NewInserter(pool)
+	if err != nil {
+		a.close()
+		return nil, err
+	}
+	events, err := newDispatcher(issue.EventTypes(), issue.Subscribers(issueInserter{client: inserter}))
+	if err != nil {
+		a.close()
+		return nil, err
+	}
 	issues := issue.New(issue.Deps{
-		Pool: pool, Tx: newIssueTx(pool, cfg),
+		Events: events,
+		Pool:   pool, Tx: newIssueTx(pool, cfg),
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
 		WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: clock.System{}, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},

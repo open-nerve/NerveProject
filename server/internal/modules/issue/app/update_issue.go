@@ -12,6 +12,7 @@ import (
 
 // UpdateIssueDeps are what updateIssue reads and writes through.
 type UpdateIssueDeps struct {
+	Events    shared.EventPublisher
 	Locks     Locks
 	Issues    IssueUpdater
 	States    StateCatalog

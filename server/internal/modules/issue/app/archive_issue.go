@@ -11,6 +11,7 @@ import (
 // ArchiveIssueDeps are what archiveIssue and unarchiveIssue read and write
 // through.
 type ArchiveIssueDeps struct {
+	Events shared.EventPublisher
 	Locks  Locks
 	Issues IssueArchiver
 	States StateCatalog

@@ -100,7 +100,8 @@ type (
 
 // Deps are what bootstrap gives the module (M4 design 6.6, step 6).
 type Deps struct {
-	Pool *pgxpool.Pool
+	Events shared.EventPublisher
+	Pool   *pgxpool.Pool
 	// Tx are the transactions of the module's writes, each of which waits
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
@@ -135,23 +136,23 @@ func New(d Deps) *Module {
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
 	sanitizer := content.NewSanitizer()
 	listing := app.NewListing(app.ListingDeps{Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
-	archive := app.ArchiveIssueDeps{Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
+	archive := app.ArchiveIssueDeps{Events: d.Events, Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	return &Module{uc: httpadapter.UseCases{
 		ListMemberIssues:        app.NewListMemberIssues(app.ListMemberIssuesDeps{ReadTx: d.ReadTx, Authorizer: d.Authorizer, Workspaces: d.Workspaces, Members: d.Members, Projects: d.Projects, Listing: listing}),
 		ListIssues:              app.NewListIssues(app.ListIssuesDeps{ReadTx: d.ReadTx, Locks: locks, Listing: listing}),
 		ListIssueActivities:     app.NewListIssueActivities(app.ListIssueActivitiesDeps{Locks: locks, Activities: store, Projects: d.Projects, ReadTx: d.ReadTx}),
 		ListDescriptionVersions: app.NewListDescriptionVersions(app.ListDescriptionVersionsDeps{Locks: locks, Versions: store, ReadTx: d.ReadTx}),
 		GetDescriptionVersion:   app.NewGetDescriptionVersion(app.GetDescriptionVersionDeps{Locks: locks, Versions: store}),
-		AddCommentReaction:      app.NewAddCommentReaction(app.AddCommentReactionDeps{Locks: locks, Comments: store, Reactions: store, Clock: d.Clock}),
-		RemoveCommentReaction:   app.NewRemoveCommentReaction(app.RemoveCommentReactionDeps{Locks: locks, Comments: store, Reactions: store, Clock: d.Clock}),
-		AddIssueReaction:        app.NewAddIssueReaction(app.AddIssueReactionDeps{Locks: locks, Reactions: store, Clock: d.Clock}),
-		RemoveIssueReaction:     app.NewRemoveIssueReaction(app.RemoveIssueReactionDeps{Locks: locks, Reactions: store, Clock: d.Clock}),
+		AddCommentReaction:      app.NewAddCommentReaction(app.AddCommentReactionDeps{Events: d.Events, Locks: locks, Comments: store, Reactions: store, Clock: d.Clock}),
+		RemoveCommentReaction:   app.NewRemoveCommentReaction(app.RemoveCommentReactionDeps{Events: d.Events, Locks: locks, Comments: store, Reactions: store, Clock: d.Clock}),
+		AddIssueReaction:        app.NewAddIssueReaction(app.AddIssueReactionDeps{Events: d.Events, Locks: locks, Reactions: store, Clock: d.Clock}),
+		RemoveIssueReaction:     app.NewRemoveIssueReaction(app.RemoveIssueReactionDeps{Events: d.Events, Locks: locks, Reactions: store, Clock: d.Clock}),
 		ListIssueReactions:      app.NewListIssueReactions(app.ListIssueReactionsDeps{Locks: locks, Reactions: store, ReadTx: d.ReadTx}),
-		UpdateIssueComment:      app.NewUpdateIssueComment(app.UpdateIssueCommentDeps{Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
-		DeleteIssueComment:      app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Locks: locks, Comments: store, Clock: d.Clock}),
-		CreateIssueComment:      app.NewCreateIssueComment(app.CreateIssueCommentDeps{Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
+		UpdateIssueComment:      app.NewUpdateIssueComment(app.UpdateIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
+		DeleteIssueComment:      app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Clock: d.Clock}),
+		CreateIssueComment:      app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
 		ListIssueComments:       app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
-		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{
+		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{Events: d.Events,
 			Locks: locks, Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
 			Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
 		}),
@@ -159,19 +160,19 @@ func New(d Deps) *Module {
 		GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
 			Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store,
 		}),
-		UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{
+		UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{Events: d.Events,
 			Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
 		}),
-		DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Locks: locks, Rows: store, Clock: d.Clock}),
+		DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Clock: d.Clock}),
 		ArchiveIssue:       app.NewArchiveIssue(archive),
 		UnarchiveIssue:     app.NewUnarchiveIssue(archive),
 		ListSubIssues:      app.NewListSubIssues(locks, store),
-		AddSubIssues:       app.NewAddSubIssues(app.AddSubIssuesDeps{Locks: locks, Issues: store, Clock: d.Clock}),
+		AddSubIssues:       app.NewAddSubIssues(app.AddSubIssuesDeps{Events: d.Events, Locks: locks, Issues: store, Clock: d.Clock}),
 		ListIssueRelations: app.NewListIssueRelations(app.ListIssueRelationsDeps{Locks: locks, Relations: store, Projects: d.Projects, ReadTx: d.ReadTx}),
-		CreateIssueRelations: app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{
+		CreateIssueRelations: app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{Events: d.Events,
 			Locks: locks, Relations: store, Clock: d.Clock,
 		}),
-		DeleteIssueRelation: app.NewDeleteIssueRelation(app.DeleteIssueRelationDeps{
+		DeleteIssueRelation: app.NewDeleteIssueRelation(app.DeleteIssueRelationDeps{Events: d.Events,
 			Locks: locks, Relations: store, Clock: d.Clock,
 		}),
 	}}

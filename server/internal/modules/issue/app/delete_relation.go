@@ -12,6 +12,7 @@ import (
 // DeleteIssueRelationDeps are what deleteIssueRelation reads and writes
 // through.
 type DeleteIssueRelationDeps struct {
+	Events    shared.EventPublisher
 	Locks     Locks
 	Relations RelationDeleter
 	Clock     Clock

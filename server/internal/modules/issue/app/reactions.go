@@ -10,6 +10,7 @@ import (
 
 // AddIssueReactionDeps are the ports used to add reactions.
 type AddIssueReactionDeps struct {
+	Events    shared.EventPublisher
 	Locks     Locks
 	Reactions IssueReactionWriter
 	Clock     Clock

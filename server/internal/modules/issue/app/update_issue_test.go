@@ -42,7 +42,7 @@ func newUpdate() (*app.UpdateIssue, *world, uuid.UUID) {
 
 // updateOver is updateIssue over w's ports.
 func updateOver(w *world) *app.UpdateIssue {
-	return app.NewUpdateIssue(app.UpdateIssueDeps{Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
+	return app.NewUpdateIssue(app.UpdateIssueDeps{Events: discardEvents{}, Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
 		Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}})
 }
 

@@ -80,7 +80,7 @@ func newCommentReaction() (*app.AddCommentReaction, *app.RemoveCommentReaction, 
 	_, _, w, c := newCommentWrites()
 	c.current.ActorID = bob
 	f := &commentReactionRows{writableComments: c, rows: map[app.ReactionKey]domain.CommentReaction{}}
-	d := app.AddCommentReactionDeps{Locks: w.locks, Comments: f, Reactions: f, Clock: clockAt{at: clockNow, log: w.log}}
+	d := app.AddCommentReactionDeps{Events: discardEvents{}, Locks: w.locks, Comments: f, Reactions: f, Clock: clockAt{at: clockNow, log: w.log}}
 	return app.NewAddCommentReaction(d), app.NewRemoveCommentReaction(d), w, f
 }
 func TestCommentReactions(t *testing.T) {

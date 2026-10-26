@@ -10,6 +10,7 @@ import (
 
 // CreateIssueCommentDeps are the ports a comment creation consumes.
 type CreateIssueCommentDeps struct {
+	Events    shared.EventPublisher
 	Locks     Locks
 	Comments  CommentCreator
 	Members   ProjectMembers
