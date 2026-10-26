@@ -107,6 +107,12 @@ func (u *DeleteIssue) Execute(ctx context.Context, id uuid.UUID) error {
 				return err
 			}
 		}
+		for _, issueID := range subtree {
+			s := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: issueID, by: d.By, at: d.At}
+			if err := u.d.Events.Publish(ctx, s.event(domain.EventIssueDeleted, nil)); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 }

@@ -38,15 +38,7 @@ func eventValue[T any](v T) *T           { return &v }
 // observes no job until the HTTP business write commits.
 func issueEventRoute(t *testing.T, w issueWorld, c interface{ Now() time.Time }, received *[]shared.Event, fail *error) moduleRoute {
 	t.Helper()
-	client, err := jobs.NewInserter(w.pool)
-	if err != nil {
-		t.Fatal(err)
-	}
-	inserter := issueInserter{client: client}
-	dispatcher, err := newDispatcher(issue.EventTypes(), []shared.EventSubscriber{{Name: "transaction probe", Types: []string{"issue.created", "issue.updated"}, Handle: func(ctx context.Context, e shared.Event) error {
-		if _, ok := postgres.Tx(ctx); !ok {
-			t.Error("event lost request transaction")
-		}
+	return issueEventRouteFor(t, w, c, received, fail, []string{"issue.created", "issue.updated"}, func(ctx context.Context, e shared.Event) error {
 		var html, version string
 		if err := postgres.DB(ctx, w.pool).QueryRow(ctx, `SELECT i.description_html,v.description_html FROM issues i JOIN LATERAL (SELECT description_html FROM issue_description_versions WHERE issue_id=i.id AND deleted_at IS NULL ORDER BY last_saved_at DESC,id DESC LIMIT 1) v ON true WHERE i.id=$1`, e.Entity.ID).Scan(&html, &version); err != nil {
 			return err
@@ -54,6 +46,27 @@ func issueEventRoute(t *testing.T, w issueWorld, c interface{ Now() time.Time },
 		if html != version {
 			t.Errorf("event preceded version write: issue=%q version=%q", html, version)
 		}
+		return nil
+	})
+}
+
+func issueEventRouteFor(t *testing.T, w issueWorld, c interface{ Now() time.Time }, received *[]shared.Event, fail *error, types []string, inspect func(context.Context, shared.Event) error) moduleRoute {
+	t.Helper()
+	client, err := jobs.NewInserter(w.pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inserter := issueInserter{client: client}
+	dispatcher, err := newDispatcher(issue.EventTypes(), []shared.EventSubscriber{{Name: "transaction probe", Types: types, Handle: func(ctx context.Context, e shared.Event) error {
+		if _, ok := postgres.Tx(ctx); !ok {
+			t.Error("event lost request transaction")
+		}
+		if inspect != nil {
+			if err := inspect(ctx, e); err != nil {
+				return err
+			}
+		}
+
 		*received = append(*received, e)
 		var before, after int
 		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM river_job WHERE kind='issue_test.event_probe'").Scan(&before); err != nil {
