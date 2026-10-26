@@ -1,8 +1,8 @@
 # M4/P7 `issue-links`：链接、出站客户端与元数据抓取规格
 
-日期：2026-10-26。**准备完成，独立预检及修订复审通过；T1–T4 已实施且独立评审通过，T5 请求安全、授权交错与回滚证明已实施待独立评审，其余任务未实施；未做完整原型或逐 Task 重放；另有最窄 PG/sqlc 可行性实验，边界见附录。** 基线：P6 的 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；主控已核实同一SHA的main CI `40305247546` 最终Success，server/web/e2e全绿；首轮基础设施超时及重跑历史另记review。正式分支 `codex/m4-p7`；worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)。
+日期：2026-10-26。**准备完成，独立预检及修订复审通过；T1–T5 已实施且独立评审通过，T6 地址策略与独立 IANA 快照已实施待独立评审，其余任务未实施；未做完整原型或逐 Task 重放；另有最窄 PG/sqlc 可行性实验，边界见附录。** 基线：P6 的 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；主控已核实同一SHA的main CI `40305247546` 最终Success，server/web/e2e全绿；首轮基础设施超时及重跑历史另记review。正式分支 `codex/m4-p7`；worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)。
 
-> **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1–T4 独立评审通过，T4 检查点本地 Go 8228/Web 1170/E2E 150 门禁通过；T5 请求性质证明已实施待独立评审，整阶段验收仍未完成。
+> **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1–T5 独立评审通过，T4 检查点本地 Go 8228/Web 1170/E2E 150 门禁通过；T6 地址策略已实施待独立评审，整阶段验收仍未完成。
 
 权威输入：[M4 设计](../M4-design.md) §2/I10/I17、3.4–3.6、3.11、3.13/17–19、3.19–3.20、3.23/P7、4.8、5.1–5.3、6.8、8.1/8.8、9.1–9.4、12/P7、13.1；[02](../../claude_to_gpt/02-method.md)、[03](../../claude_to_gpt/03-rules-and-pitfalls.md)；P6 spec §5/review §6 与本规格 §7。D3 事务内同步事件、架构问题 11.8 的平台出站与固定 IP、后台写回的单句守卫已批准，不重新裁定。
 
@@ -25,7 +25,7 @@
 | T3 | `api/modules/issue.yaml`、`api/openapi.yaml` 聚合入口及生成物；I/app/create_issue_link.go、list_issue_links.go、link_events.go；I/domain/events.go、errors.go、link_activity.go；I/adapter/http/links.go、link_usecases.go；I/adapter/postgres/link_conflict.go；I/module.go、module_events.go；B/events_test.go；e2e/fixtures/links.ts、furnish.ts、assert/issue-collaboration.ts 与 stories/issue/i17-delete-issue.spec.ts；错误文案 | 创建、列表、创建事件与 API fixture / T2 |
 | T4 | `api/modules/issue.yaml`、`api/openapi.yaml` 聚合入口及生成物；I/app/update_issue_link.go、delete_issue_link.go、link_target.go；I/adapter/http/link_writes.go、link_usecases.go；I/domain/link_activity.go、errors.go；I/module.go；B/issue_link_writes_test.go 与权限/写锁/闸门/单连接登记；错误文案 | 改删、三种事件完整、审计与活动 / T3 |
 | T5 | B/issue_link_security_test.go、issue_link_transactions_test.go；权限/闸门/写锁矩阵 | 链接请求完整安全与回滚证明 / T4 |
-| T6 | O/policy.go、special_ranges.go、testdata/iana-*.csv、policy_test.go | 地址策略和独立 IANA 快照 / 基线 |
+| T6 | O/policy.go、special_ranges.go、errors.go、testdata/iana-*.csv、testdata/sources.json、policy_test.go、policy_registry_test.go | 地址策略和独立 IANA 快照 / 基线 |
 | T7 | O/client.go、transport.go、errors.go 及测试 | 安全 GET、跳转、期限/响应上限 / T6 |
 | T8 | C/outbound_test.go、config.go、validate.go；server/configs/config.yaml、config.test.yaml；B/outbound.go、outbound_test.go | test-only 放行配置与组合构造函数 / T7 |
 | T9 | I/app/crawl_ports.go；I/adapter/crawler/crawler.go、metadata.go 及测试 | 页面/图标解析，失败收敛 / T7–T8 |
@@ -161,7 +161,7 @@ type OutboundConfig struct { AllowCIDRs []string `koanf:"allow_cidrs"` }
 
 构造时读取 `net.InterfaceAddrs` 成功后固定本机地址快照；失败返回错误，不当空集合。无全局可变策略。Options传入的prefix复制持有，Version从bootstrap现有版本来源给出，outbound不为取版本跨platform导入。Get的Limits均须正数，错误为调用者程序错误，不能退化为无限制。
 
-拒绝集为两张 IANA special-purpose 登记表的**所有**prefix（含 globally reachable=true、已终止保留记录），加 IPv4/IPv6 multicast 和 `fec0::/10`；各prefix显式保留，不只用IsPrivate/IsGlobalUnicast。2026-10-26官方页面最后更新2025-10-09，CSV精准来源/hash见附录；实施时核对是否更新并记录实际采用快照。mapped IPv6、NAT64、6to4、Teredo外层与内嵌IPv4均验证；外层被拒不能先Unmap绕过。NAT64 local `/48` 整体拒绝；Teredo检查server和反转的client。测试放行仅对该原地址落在显式allow prefix时覆盖静态/本机拒绝；放行IPv4 127.0.0.1/32不放行整段127/8，也不自动放行IPv6嵌入形式。
+拒绝集为两张 IANA special-purpose 登记表的**所有**prefix（含 globally reachable=true、已终止保留记录），加 IPv4/IPv6 multicast 和 `fec0::/10`；各prefix显式保留，不只用IsPrivate/IsGlobalUnicast。2026-10-26官方页面最后更新2025-10-09，CSV精准来源/hash见附录；实施时核对是否更新并记录实际采用快照。mapped IPv6、NAT64、6to4、Teredo外层与内嵌IPv4均验证；外层被拒不能先Unmap绕过。NAT64 local `/48` 整体拒绝；Teredo检查server和反转的client。固定 NAT64 `64:ff9b::/96` 按已知格式检查内嵌 IPv4；local `64:ff9b:1::/48` 是技术无关预留，不推断载荷存在、位置或算法，默认整段拒绝（[RFC 8215 §5](https://www.rfc-editor.org/rfc/rfc8215.html#section-5)、[RFC 6052 §2.2](https://www.rfc-editor.org/rfc/rfc6052.html#section-2.2)）。测试放行仅对该原地址落在显式allow prefix时覆盖静态/本机拒绝；放行IPv4 127.0.0.1/32不放行整段127/8，也不自动放行IPv6嵌入形式。显式放行已知编码外层只覆盖该原 literal 的静态/本机拒绝，递归载荷不继承 allow；公网载荷仍可通过，私网/本机载荷仍拒绝。
 
 每次GET/每跳只许http(s)，拒绝userinfo、IPv6zone、无host/坏端口；合法hostname解析全部A/AAAA，任一不合格即在任何dial前拒绝。literal不额外DNS。DialContext只向本轮已验证IP字面值拨号，不把hostname交回Dialer；Host、TLS SNI与证书检查仍按原hostname，绝不InsecureSkipVerify。不得读取代理环境变量（Proxy=nil），无CookieJar、不转发Set-Cookie、Authorization/Proxy-Authorization，不接受调用者自带认证header。
 
@@ -324,3 +324,5 @@ IANA官方CSV于2026-10-26获取（页面Last Updated 2025-10-09）：
 | [IPv6](https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry-1.csv) | `bf56772aef97fbf9b4a27c98b8511f2bb1ba96da4b9ccc12ab203a2496faba66` |
 
 原始CSV、精确UTC获取时刻/内容类型/字节数与hash在ignored `p7-iana-snapshot/manifest.json`；复制至P7证据台账后保留，实施T6采用前再次核对。除上述独立最窄PG/sqlc实验外，未执行P7产品迁移、网络目标抓取或完整生成/测试；本草稿编写者只读实验归档并修订文档，未运行实验或产品。
+
+T6 采用冻结前重核的两份官方 CSV：2026-10-26 13:59:10–13:59:11 UTC，均为原 URL 的 HTTP 200，与本附录快照逐字节相同；产品测试中的 `testdata/sources.json` 记录准确访问时刻、URL、大小和 SHA。独立 CSV 展开 50 条记录、51 个 prefix，加规格额外 3 项；清单对照与逐项首尾行为分开验证。其证据只覆盖纯地址策略，真实 GET、全部 DNS 候选、0 dial 和本机接口读取失败仍由 T7 证明，未勾本节整阶段验收。

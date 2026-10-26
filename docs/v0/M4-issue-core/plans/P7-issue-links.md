@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1–T4 独立评审通过，T4 检查点本地 Go 8228/Web 1170/E2E 150 门禁通过；T5 请求性质证明已实施待独立评审，整阶段验收未完成。
+> **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1–T5 独立评审通过，T4 检查点本地 Go 8228/Web 1170/E2E 150 门禁通过；T6 地址策略已实施待独立评审，整阶段验收未完成。
 
 **目标：** 实现 M4 §12/P7 的链接CRUD、首个生产事务订阅者、抓取worker和防SSRF出站，交付I10接口与带links的I15/I17删除目录故事。
 
@@ -12,7 +12,7 @@
 
 **规格：** [P7 spec](../specs/P7-issue-links.md)。基线为P6合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；主控已核实同一SHA的main CI `40305247546` 最终Success，server/web/e2e全绿；首轮基础设施超时及重跑历史另记review。
 
-**方法与状态：** 准备完成并经独立预检/修订复审；T1–T4 已实施且独立评审通过，T4 检查点本地完整门禁通过；T5 请求性质证明已实施待独立评审，其余任务与整阶段验收未完成。沿用02§3允许的紧凑方法：确切文件/接口/断言/命令，实施时逐Task真实红绿、生产变异、恢复与独立评审；本次静态预检不冒充完整原型或重放；独立最窄PG/sqlc实验只证明spec附录列明的物理约束能力。已批准M4设计是架构依据，局部细化见spec§3。正式实施按负责人授权逐Task推进，不自动合并。
+**方法与状态：** 准备完成并经独立预检/修订复审；T1–T5 已实施且独立评审通过，T4 检查点本地完整门禁通过；T6 地址策略已实施待独立评审，其余任务与整阶段验收未完成。沿用02§3允许的紧凑方法：确切文件/接口/断言/命令，实施时逐Task真实红绿、生产变异、恢复与独立评审；本次静态预检不冒充完整原型或重放；独立最窄PG/sqlc实验只证明spec附录列明的物理约束能力。已批准M4设计是架构依据，局部细化见spec§3。正式实施按负责人授权逐Task推进，不自动合并。
 
 **本地门禁安排（负责人 2026-10-26 调整）：** 用户要求提前执行完整本地 CI。T4 检查点已由主控完成全套、修复及独立复审；后续有产品变化的开发检查点推送前先跑完整本地门禁。逐 Task 仍保留聚焦与受影响回归，最终 T15 继续汇总验收。本条记录执行方法与 T4 已通过事实，不表示 P7 整阶段验收完成。
 
@@ -121,8 +121,10 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 ## Task 6：显式地址策略和独立 IANA 清单
 
-**Files:** 新O/policy.go、special_ranges.go、errors.go、policy_test.go、testdata/iana-ipv4-special-registry-1.csv、testdata/iana-ipv6-special-registry-1.csv、testdata/sources.json（官方URL/访问时刻/SHA）；不得生成第三方新模块。
+**Files:** 新O/policy.go、special_ranges.go、errors.go、policy_test.go、policy_registry_test.go、testdata/iana-ipv4-special-registry-1.csv、testdata/iana-ipv6-special-registry-1.csv、testdata/sources.json（官方URL/访问时刻/SHA）；不得生成第三方新模块。
 **Interfaces:** 产生包内`newPolicy(allow []netip.Prefix,local []netip.Addr) (policy,error)`、`(policy).check(addr netip.Addr) error`（拒绝识别ErrBlocked）；ErrBlocked的定义放O/errors.go供T7扩；不提供公网skip检查出口。
+
+**T6 实施事实（待独评）：** 独立 CSV 与 13:59 冻结前重核 manifest 逐字节/SHA 一致，清单 51+3 项与所有首尾分别验证。allow 仅覆盖原 literal 的静态/本机拒绝，不传给已知编码的内嵌 IPv4；固定 NAT64 `/96` 解码，技术无关 local `/48` 只作整段拒绝，不猜协议/位位置（权威来源见 spec §2.5）。纯地址策略与 registry 解析测试分文件；真实 GET/接口读取失败/0 dial 留 T7，未提前完成阶段验收。
 
 - [ ] 写`TestPolicyRegistryCoverage`：独立CSV每CIDR逐个与生产拒绝清单对照（另核额外multicast/fec0），`TestPolicyEndpoints`独立算各prefix两端；任何rawmapped不能先Unmap脱离外层；首/尾都阻止。冻结时再次只读核官方快照，变化写来源/代价而非忽略。
 - [ ] 写`TestPolicyEmbeddedAndLocal`：mapped/NAT64/6to4/Teredo含内网/公网载荷、Teredo server/client两端、本机普通公网、非法地址/zone；allow127.0.0.1/32仅放这一literal，127.0.0.2与mapped127不放；验证allow/local切片外部修改不影响已建policy。

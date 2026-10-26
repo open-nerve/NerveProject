@@ -1,0 +1,26 @@
+[
+  {
+    "file": "iana-ipv4-special-registry-1.csv",
+    "url": "https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry-1.csv",
+    "accessed_at": "2026-10-26T13:59:10.826971+00:00",
+    "effective_url": "https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry-1.csv",
+    "received_at": "2026-10-26T13:59:11.809119+00:00",
+    "status": 200,
+    "content_type": "text/csv; charset=UTF-8; header=present",
+    "size": 2445,
+    "sha256": "cbc4b7653c8bc640ba1e8e5d4ebbf11e7c7a1d867e7f1593aad001d3f8632aac",
+    "matches_prior_bytes": true
+  },
+  {
+    "file": "iana-ipv6-special-registry-1.csv",
+    "url": "https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry-1.csv",
+    "accessed_at": "2026-10-26T13:59:10.827188+00:00",
+    "effective_url": "https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry-1.csv",
+    "received_at": "2026-10-26T13:59:11.736399+00:00",
+    "status": 200,
+    "content_type": "text/csv; charset=UTF-8; header=present",
+    "size": 2300,
+    "sha256": "bf56772aef97fbf9b4a27c98b8511f2bb1ba96da4b9ccc12ab203a2496faba66",
+    "matches_prior_bytes": true
+  }
+]

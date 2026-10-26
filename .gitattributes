@@ -2,3 +2,5 @@
 tools/plane-schema/*.sql -text linguist-generated=true
 # River 导出的迁移：按 SHA-256 核对，不做换行符转换，在 GitHub 上按生成物折叠
 server/migrations/sql/00005_river_main_v2_to_v7.sql -text linguist-generated=true
+# IANA 官方 CSV 按原始 CRLF 字节核 SHA；保留其余默认空白检查
+server/internal/platform/outbound/testdata/iana-*-special-registry-1.csv -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
