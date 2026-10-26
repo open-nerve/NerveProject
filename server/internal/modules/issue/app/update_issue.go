@@ -291,9 +291,11 @@ func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c doma
 		return err
 	}
 	if c.Description != nil && c.Description.Changed {
-		return saveDescriptionVersion(ctx, u.d.Issues, s, c.Description.Content)
+		if err := saveDescriptionVersion(ctx, u.d.Issues, s, c.Description.Content); err != nil {
+			return err
+		}
 	}
-	return nil
+	return u.d.Events.Publish(ctx, s.event(domain.EventIssueUpdated, updatedChanges(activity, c.SortOrder)))
 }
 
 // relink removes the rows of d's removed ids, then inserts those of its

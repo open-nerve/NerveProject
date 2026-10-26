@@ -44,6 +44,8 @@ type checked struct {
 	assignees             []uuid.UUID
 	labels                []uuid.UUID
 	parent                *uuid.UUID
+	parentName            *domain.Ref
+	labelNames            []domain.Named
 }
 
 // Execute checks in (domain.CheckNewIssue), before any read; then Locks
@@ -158,9 +160,13 @@ func (u *CreateIssue) check(ctx context.Context, h held, actor, projectID uuid.U
 			}
 		}
 		c.labels = slices.SortedFunc(slices.Values(in.LabelIDs), uuid.UUID.Compare)
+		c.labelNames, err = labelNames(known, c.labels)
+		if err != nil && len(problems) == 0 {
+			return checked{}, err
+		}
 	}
 	if in.ParentID != nil {
-		_, ok, err := parentOf(ctx, u.d.Issues, h, actor, projectID, *in.ParentID)
+		parent, ok, err := parentOf(ctx, u.d.Issues, h, actor, projectID, *in.ParentID)
 		if err != nil {
 			return checked{}, err
 		}
@@ -168,6 +174,9 @@ func (u *CreateIssue) check(ctx context.Context, h held, actor, projectID uuid.U
 			problems = append(problems, domain.ParentNotAllowed())
 		}
 		c.parent = in.ParentID
+		if ok {
+			c.parentName = refOf(h.project, parent)
+		}
 	}
 	if len(problems) > 0 {
 		return checked{}, shared.Invalid(problems...)
@@ -209,5 +218,8 @@ func (u *CreateIssue) write(ctx context.Context, row IssueRow, c checked, clean 
 	if err := u.d.Issues.InsertActivities(ctx, s.activity(domain.CreationActivity(accounts))); err != nil {
 		return err
 	}
-	return u.d.Issues.InsertDescriptionVersion(ctx, descriptionVersion(s, clean))
+	if err := u.d.Issues.InsertDescriptionVersion(ctx, descriptionVersion(s, clean)); err != nil {
+		return err
+	}
+	return u.d.Events.Publish(ctx, s.event(domain.EventIssueCreated, createdChanges(row, c, accounts)))
 }

@@ -86,7 +86,12 @@ func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) module
 // newIssueRouteWithClock keeps the production wiring and supplies a test clock.
 func newIssueRouteWithClock(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }) moduleRoute {
 	t.Helper()
-	return newRoute(t, issue.New(issue.Deps{Events: discardIssueEvents{}, Pool: pool, Tx: tx,
+	return newIssueRouteWithPublisher(t, pool, tx, clock, discardIssueEvents{})
+}
+
+func newIssueRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher) moduleRoute {
+	t.Helper()
+	return newRoute(t, issue.New(issue.Deps{Events: events, Pool: pool, Tx: tx,
 		ReadTx:    postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()),
 		WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock,
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},

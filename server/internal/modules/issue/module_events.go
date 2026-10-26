@@ -2,6 +2,7 @@ package issue
 
 import (
 	riveradapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -9,11 +10,11 @@ import (
 // deletions join the directory when their publishing use cases arrive.
 func EventTypes() []string {
 	return []string{
-		"issue.created", "issue.updated", "issue.deleted",
-		"issue.archived", "issue.unarchived",
-		"issue.comment_created", "issue.comment_updated", "issue.comment_deleted",
-		"issue.relation_added", "issue.relation_removed",
-		"issue.reaction_added", "issue.reaction_removed",
+		domain.EventIssueCreated, domain.EventIssueUpdated, domain.EventIssueDeleted,
+		domain.EventIssueArchived, domain.EventIssueUnarchived,
+		domain.EventCommentCreated, domain.EventCommentUpdated, domain.EventCommentDeleted,
+		domain.EventRelationAdded, domain.EventRelationRemoved,
+		domain.EventReactionAdded, domain.EventReactionRemoved,
 	}
 }
 
