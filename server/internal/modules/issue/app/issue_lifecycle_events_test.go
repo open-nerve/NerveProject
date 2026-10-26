@@ -15,7 +15,7 @@ func TestIssueDeletionEvents(t *testing.T) {
 			_, w, id := newDelete()
 			w.issues.subtree = []uuid.UUID{uuid.NewV7(), id, uuid.NewV7()}
 			p := &recordedEvents{t: t, before: func(shared.Event) {
-				if len(w.issues.deletions) != 11 {
+				if len(w.issues.deletions) != 12 {
 					t.Fatal("event preceded complete subtree batch writes")
 				}
 			}}

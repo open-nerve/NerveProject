@@ -125,6 +125,21 @@ type IssueLabel struct {
 	DeletedAt   *time.Time
 }
 
+type IssueLink struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	IssueID     uuid.UUID
+	Title       *string
+	Url         string
+	Metadata    []byte
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
 type IssueMention struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID

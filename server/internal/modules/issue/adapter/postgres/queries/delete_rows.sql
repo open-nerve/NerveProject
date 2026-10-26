@@ -57,6 +57,16 @@ WHERE t.id IN (
     ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
 RETURNING t.id;
 
+-- name: DeleteProjectLinkRows :many
+-- DeleteProjectIssueRows' batch, of the work items' links.
+UPDATE issue_links AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM issue_links r
+    WHERE r.project_id = sqlc.arg(project_id) AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
+    ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
+RETURNING t.id;
+
 -- name: DeleteProjectSubscriberRows :many
 -- DeleteProjectIssueRows' batch, of the work items' subscribers.
 UPDATE issue_subscribers AS t

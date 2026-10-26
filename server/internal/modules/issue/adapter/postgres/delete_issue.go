@@ -62,6 +62,11 @@ func (s *Store) DeleteIssueRelationRows(ctx context.Context, d app.IssueDeletion
 	return deletedRows(s.queries(ctx).DeleteIssueRelationRows(ctx, gen.DeleteIssueRelationRowsParams(deletion(d))), "the relations", d)
 }
 
+// DeleteIssueLinkRows soft-deletes the subtree's links, locked in id order.
+func (s *Store) DeleteIssueLinkRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueLinkRows(ctx, gen.DeleteIssueLinkRowsParams(deletion(d))), "the links", d)
+}
+
 // DeleteIssueSubscriberRows soft-deletes the work items' subscribers'
 // rows.
 func (s *Store) DeleteIssueSubscriberRows(ctx context.Context, d app.IssueDeletion) error {

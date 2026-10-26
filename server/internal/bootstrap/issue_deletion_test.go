@@ -75,6 +75,7 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 		}
 		decodeAnswer(t, answer, &created)
 		made[i] = created.ID
+		seedIssueLinks(t, pool, created.ID, account)
 		status, answer = call(t, contract, http.MethodPost, base+reactionsOf(created.ID), token, `{"reaction":"128077"}`)
 		if status != http.StatusCreated {
 			t.Fatal(status, answer)
@@ -122,6 +123,7 @@ func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	w := newIssueWorld(t)
 	deleted, kept := w.newWorkItemBy(t, "bob", w.web, w.fullIssue()), w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
 	for _, parent := range []uuid.UUID{deleted, kept} {
+		seedIssueLinks(t, w.pool, parent, w.ids["bob"])
 		for _, html := range []string{mentionHTML(w.ids["bob"]), "<p>Removed</p>", mentionHTML(w.ids["bob"])} {
 			w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+parent.String(), fmt.Sprintf(`{"description_html":%q}`, html), 200)
 		}
@@ -250,6 +252,7 @@ func TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment(t *testing.T) {
 	root := w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
 	a, b, c := w.newWorkItem(t), w.newWorkItemBy(t, "bob", w.web, `{"name":"Fix"}`), w.doneWorkItem(t)
 	for _, id := range []uuid.UUID{p, root, a, b, c} {
+		seedIssueLinks(t, w.pool, id, w.ids["bob"])
 		w.send(t, "bob", http.MethodPost, reactionsOf(id), `{"reaction":"128077"}`, http.StatusCreated)
 		comment := w.newComment(t, "bob", id)
 		addCommentReaction(t, w, "bob", comment.ID, "128077")
@@ -278,6 +281,9 @@ func TestAnAdminGuestsDeletionTakesTheSubItemsHeDoesNotSee(t *testing.T) {
 	w.adminGuest(t)
 	mine := w.newWorkItemBy(t, "walt", w.web, w.fullIssue())
 	a, b, k := w.newWorkItem(t), w.newWorkItem(t), w.newWorkItem(t)
+	for _, id := range []uuid.UUID{mine, a, b, k} {
+		seedIssueLinks(t, w.pool, id, w.ids["alice"])
+	}
 	underWorkItem(t, w.pool, mine, a)
 	underWorkItem(t, w.pool, a, b)
 	w.send(t, "walt", http.MethodGet, "/api/v0/issues/"+a.String(), "", http.StatusNotFound)

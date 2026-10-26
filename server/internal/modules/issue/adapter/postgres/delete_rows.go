@@ -54,6 +54,12 @@ func (s *Store) DeleteProjectRelationRows(ctx context.Context, b app.RowBatch) (
 	return deleted(ids, err, "work items' relations")
 }
 
+// DeleteProjectLinkRows soft-deletes a batch of the project's links.
+func (s *Store) DeleteProjectLinkRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteProjectLinkRows(ctx, gen.DeleteProjectLinkRowsParams(batch(b)))
+	return deleted(ids, err, "links")
+}
+
 // DeleteProjectSubscriberRows soft-deletes a batch of the project's work
 // items' subscribers.
 func (s *Store) DeleteProjectSubscriberRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {

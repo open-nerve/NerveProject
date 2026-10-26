@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -242,5 +243,18 @@ func TestKeysRequireExactCommentReactionEndpoints(t *testing.T) {
 				t.Fatal("accepted a names-only path", failed)
 			}
 		})
+	}
+}
+
+// seedIssueLinks fills the deletion catalog until link creation is available
+// through the API. Both live and earlier deleted rows keep the guard strict.
+func seedIssueLinks(t testing.TB, pool *pgxpool.Pool, issue, by uuid.UUID) {
+	t.Helper()
+	for _, gone := range []bool{false, true} {
+		if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO issue_links(id,workspace_id,project_id,issue_id,url,created_by_id,updated_by_id,deleted_at)
+   SELECT $1,workspace_id,project_id,id,$3,$4,$4,CASE WHEN $5 THEN now()-interval '1 hour' END FROM issues WHERE id=$2`,
+			uuid.NewV7(), issue, fmt.Sprintf("http://169.254.169.254/%t", gone), by, gone); err != nil || tag.RowsAffected() != 1 {
+			t.Fatalf("seed links of %s: %d rows, %v; want 1", issue, tag.RowsAffected(), err)
+		}
 	}
 }

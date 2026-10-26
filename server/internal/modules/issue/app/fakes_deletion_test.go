@@ -79,3 +79,7 @@ func (f *fakeIssues) DeleteIssueMentionRows(ctx context.Context, d app.IssueDele
 func (f *fakeIssues) DeleteIssueDescriptionVersionRows(ctx context.Context, d app.IssueDeletion) error {
 	return f.deleteRows(ctx, "DeleteIssueDescriptionVersionRows", d)
 }
+
+func (f *fakeIssues) DeleteIssueLinkRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueLinkRows", d)
+}

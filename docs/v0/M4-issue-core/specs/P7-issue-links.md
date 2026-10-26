@@ -1,8 +1,8 @@
 # M4/P7 `issue-links`：链接、出站客户端与元数据抓取规格
 
-日期：2026-10-26。**准备完成，独立预检及修订复审通过；产品未实施，未做完整原型或逐 Task 重放；另有最窄 PG/sqlc 可行性实验，边界见附录。** 基线：P6 的 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；主控已核实同一SHA的main CI `40305247546` 最终Success，server/web/e2e全绿；首轮基础设施超时及重跑历史另记review。正式分支 `codex/m4-p7`；worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)。
+日期：2026-10-26。**准备完成，独立预检及修订复审通过；T1 已实施待独立评审，其余任务未实施；未做完整原型或逐 Task 重放；另有最窄 PG/sqlc 可行性实验，边界见附录。** 基线：P6 的 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；主控已核实同一SHA的main CI `40305247546` 最终Success，server/web/e2e全绿；首轮基础设施超时及重跑历史另记review。正式分支 `codex/m4-p7`；worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)。
 
-> **准备状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。T1 尚未开始，正式启动由负责人安排。
+> **准备状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1 已实施待独立评审，整阶段验收仍未完成。
 
 权威输入：[M4 设计](../M4-design.md) §2/I10/I17、3.4–3.6、3.11、3.13/17–19、3.19–3.20、3.23/P7、4.8、5.1–5.3、6.8、8.1/8.8、9.1–9.4、12/P7、13.1；[02](../../claude_to_gpt/02-method.md)、[03](../../claude_to_gpt/03-rules-and-pitfalls.md)；P6 spec §5/review §6 与本规格 §7。D3 事务内同步事件、架构问题 11.8 的平台出站与固定 IP、后台写回的单句守卫已批准，不重新裁定。
 

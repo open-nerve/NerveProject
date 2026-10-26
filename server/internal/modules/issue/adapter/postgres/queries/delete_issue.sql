@@ -50,6 +50,15 @@ WHERE t.id IN (
         AND r.deleted_at IS NULL
     ORDER BY r.id FOR NO KEY UPDATE);
 
+-- name: DeleteIssueLinkRows :exec
+-- Lock the subtree's live links in id order before stamping them; earlier deletions keep their audit.
+UPDATE issue_links AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM issue_links r
+    WHERE r.issue_id = ANY (sqlc.arg(issue_ids)::uuid[]) AND r.deleted_at IS NULL
+    ORDER BY r.id FOR NO KEY UPDATE);
+
 -- name: DeleteIssueSubscriberRows :exec
 -- DeleteIssueAssigneeRows' statement, of the deleted work items' subscribers.
 UPDATE issue_subscribers
