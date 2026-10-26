@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **准备状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。T1 尚未开始，正式启动由负责人安排。
+> **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1 独立评审通过，T2 领域与存储已实施待独立评审。
 
 **目标：** 实现 M4 §12/P7 的链接CRUD、首个生产事务订阅者、抓取worker和防SSRF出站，交付I10接口与带links的I17。
 
@@ -12,7 +12,7 @@
 
 **规格：** [P7 spec](../specs/P7-issue-links.md)。基线为P6合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；主控已核实同一SHA的main CI `40305247546` 最终Success，server/web/e2e全绿；首轮基础设施超时及重跑历史另记review。
 
-**方法与状态：** 准备完成并经独立预检/修订复审，产品未实施、验收全未勾。沿用02§3允许的紧凑方法：确切文件/接口/断言/命令，实施时逐Task真实红绿、生产变异、恢复与独立评审；本次静态预检不冒充完整原型或重放；独立最窄PG/sqlc实验只证明spec附录列明的物理约束能力。已批准M4设计是架构依据，局部细化见spec§3。正式执行前由负责人安排启动，不因预检通过自动写产品。
+**方法与状态：** 准备完成并经独立预检/修订复审；T1 已实施且独立评审通过，T2 已实施待独立评审，其余任务与整阶段验收未完成。沿用02§3允许的紧凑方法：确切文件/接口/断言/命令，实施时逐Task真实红绿、生产变异、恢复与独立评审；本次静态预检不冒充完整原型或重放；独立最窄PG/sqlc实验只证明spec附录列明的物理约束能力。已批准M4设计是架构依据，局部细化见spec§3。正式实施按负责人授权逐Task推进，不自动合并。
 
 ## Global Constraints
 
@@ -63,23 +63,23 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 **Files:** 新`server/migrations/sql/00027_issue_issue_links.sql`、I/adapter/postgres/link_constraint_test.go、testdata/link_url_hash_collision.json；改`server/sqlc.yaml`、`deploy/runtime-grants.sql`、I/app/delete_issue.go、delete_project_rows.go、对应测试/fakes、I/adapter/postgres/delete_issue.go、delete_rows.go、queries/delete_issue.sql、delete_rows.sql及对应存储测试；B/issue_deletion_test.go、project_deletion_test.go、workspace_deletion_catalog_test.go的既有种子。
 **Interfaces:** 消费`IssueDeletion`、`RowBatch`；产生`DeleteIssueLinkRows(ctx,IssueDeletion) error`、`DeleteProjectLinkRows(ctx,RowBatch)([]uuid.UUID,error)`，在两组rowSteps的relations后/subscribers前。
 
-- [ ] 写`TestLinkSchema`、`TestLinkDeletionRows`：真实12列迁移中，高熵多字节URL恰2048字符INSERT/UPDATE成功且回读逐字相同；2049字符为23514 CHECK、空URL/metadata数组/未知键/数字值拒绝。长URL以`http://169.254.169.254/`加`rand.New(rand.NewPCG(71,27))`（标准库math/rand/v2）产生的`0x10000 + r.IntN(0x100000)`码点填满2048字符，UTF-8显著超过2704字节，不用重复ASCII掩盖压缩；同issue精确重复INSERT/UPDATE为23P01及issue_links_issue_id_url_key，跨issue/软删重建成功。三层树和creator≠deleter核审计，早删不变。
-- [ ] 写`TestLinkHashCollision`：使用独立固定实验fixture（issue UUID `0199a2b4-0000-7000-8000-000000000001`，URL `http://collision.example/271150`/`http://collision.example/83166`，hash `-1669361772`），冻结到testdata/link_url_hash_collision.json。先用内置`hashtext(issue_id::text || ':' || url)`重算并断言各hash同值且两原文不同，再经真实约束插两活行并存；fixture只在存储层无任务/无网络，不需要每轮搜索。T2存储复用该固定fixture；T3/T4验证实际API边界，不重复搜索碰撞，也不把固定UUID结果套给任意issue。
-- [ ] 运行`go test -count=1 -p=1 ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(LinkSchema|LinkHashCollision|LinkDeletionRows|TheGrantsFileCoversEveryRelationAndFunction|.*Deletion)'`（server目录），确认新表缺失/遗漏失败，再加12列及精确约束`CONSTRAINT issue_links_issue_id_url_key EXCLUDE USING hash ((issue_id::text || ':' || url) WITH =) WHERE (deleted_at IS NULL)`，不额外COLLATE，FK索引/grants和两条删除SQL/adapter/port。
-- [ ] 同一statement先按id取锁再写批次，包含工作项直接和项目/工作区同步过渡；更新目录种子与fakes，不给links永久空行豁免。`make gen-go`后重跑聚焦及grants覆盖为绿。
-- [ ] 变异M1跳过links级联、M2错审计写者、M3去exclusion或metadata CHECK，M3-btree改回长原文B-tree由高熵URL击穿，M3-hash-only改为只对同一`hashtext(issue_id::text || ':' || url)`建唯一索引，由真实碰撞对击穿：存储/组合各有红，恢复。runtime权限本Task已有grants覆盖，真正HTTP/job运行由T12补。
-- [ ] G；提交`feat(M4/P7): 新增链接表并接入两条删除链`，说明furnish依赖T3、当前未跑完整E2E。
+- [x] 写`TestLinkSchema`、`TestLinkDeletionRows`：真实12列迁移中，高熵多字节URL恰2048字符INSERT/UPDATE成功且回读逐字相同；2049字符为23514 CHECK、空URL/metadata数组/未知键/数字值拒绝。长URL以`http://169.254.169.254/`加`rand.New(rand.NewPCG(71,27))`（标准库math/rand/v2）产生的`0x10000 + r.IntN(0x100000)`码点填满2048字符，UTF-8显著超过2704字节，不用重复ASCII掩盖压缩；同issue精确重复INSERT/UPDATE为23P01及issue_links_issue_id_url_key，跨issue/软删重建成功。三层树和creator≠deleter核审计，早删不变。
+- [x] 写`TestLinkHashCollision`：使用独立固定实验fixture（issue UUID `0199a2b4-0000-7000-8000-000000000001`，URL `http://collision.example/271150`/`http://collision.example/83166`，hash `-1669361772`），冻结到testdata/link_url_hash_collision.json。先用内置`hashtext(issue_id::text || ':' || url)`重算并断言各hash同值且两原文不同，再经真实约束插两活行并存；fixture只在存储层无任务/无网络，不需要每轮搜索。T2存储复用该固定fixture；T3/T4验证实际API边界，不重复搜索碰撞，也不把固定UUID结果套给任意issue。
+- [x] 运行`go test -count=1 -p=1 ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(LinkSchema|LinkHashCollision|LinkDeletionRows|TheGrantsFileCoversEveryRelationAndFunction|.*Deletion)'`（server目录），确认新表缺失/遗漏失败，再加12列及精确约束`CONSTRAINT issue_links_issue_id_url_key EXCLUDE USING hash ((issue_id::text || ':' || url) WITH =) WHERE (deleted_at IS NULL)`，不额外COLLATE，FK索引/grants和两条删除SQL/adapter/port。
+- [x] 同一statement先按id取锁再写批次，包含工作项直接和项目/工作区同步过渡；更新目录种子与fakes，不给links永久空行豁免。`make gen-go`后重跑聚焦及grants覆盖为绿。
+- [x] 变异M1跳过links级联、M2错审计写者、M3去exclusion或metadata CHECK，M3-btree改回长原文B-tree由高熵URL击穿，M3-hash-only改为只对同一`hashtext(issue_id::text || ':' || url)`建唯一索引，由真实碰撞对击穿：存储/组合各有红，恢复。runtime权限本Task已有grants覆盖，真正HTTP/job运行由T12补。
+- [x] G；提交`feat(M4/P7): 新增链接表并接入两条删除链`，说明furnish依赖T3、当前未跑完整E2E。
 
 ## Task 2：纯链接规则与读写存储
 
 **Files:** 新I/domain/link.go、link_metadata.go、link_test.go、link_metadata_test.go；I/app/link_ports.go、link_rows.go；I/adapter/postgres/links.go、links_test.go、queries/links.sql；生成sqlc。
 **Interfaces:** 产生spec§2.3的Link/NewLink/LinkPatch/LinkMetadata、CheckNewLink/CheckLinkPatch、LinkWrite/LinkDeletion及消费端口；Store.GetLink/Links/LinkURLExists/InsertLink/UpdateLink/DeleteLink实现。`UpdateLink`返回Link，不仅error。
 
-- [ ] 写`TestLinkURLNormalization`/`TestLinkTitlePatch`，断言片段：`got.URL == "HTTP://Example.com/P?q=A"`；输入`" example.com/p?next=ftp://x "`得到`"http://example.com/p?next=ftp://x"`；`ftp://example.com`/userinfo/zone/NUL拒绝；bare`127.0.0.1:4321/page`可；T1同构高熵多字节2048通过/2049失败（不是字节数）、255个界通过/256失败，`SetTitle=false`与`true,nil`不同。
-- [ ] 写`TestLinkStore`：同created_at逆id确保DESC，Get已删false，URLexists排除当前link；标题更新保持数据库已有metadata，改URL清{}；UPDATE RETURNING与SQL结果逐值相同。另用实际issueID的高熵2048字符做InsertLink/UpdateLink完整回读，直接存储2049触发23514，同issue重复INSERT/UPDATE为指定23P01、跨issue/软删复用可、真实hash碰撞不同原文并存。仅插fixture第一条时LinkURLExists对碰撞另一原文为false，对精确原文为true，排除本ID正确；不按摘要判重复。T2排斥冲突原链保留，T3首次公开码时才加domain映射/文案，避免测试要求“契约码=文案”被提前破坏。
-- [ ] 运行`go test -count=1 -p=1 ./internal/modules/issue/domain ./internal/modules/issue/adapter/postgres -run 'Test(LinkURLNormalization|LinkTitlePatch|LinkMetadata|LinkStore)'`确认红；实现纯域检查、端口与SQL（不对存储URL做额外小写/重序列化），生成后同命令绿。
-- [ ] 变异M4去协议识别/错误foldURL、M5按字节截长度或丢SetTitle、M6标题改写旧metadata；M6-url把LinkURLExists误改成比较同一hashtext值，固定碰撞fixture必须红；相应域/存储红，恢复。
-- [ ] G；提交`feat(M4/P7): 固定链接字段语义并实现存储端口`。
+- [x] 写`TestLinkURLNormalization`/`TestLinkTitlePatch`，断言片段：`got.URL == "HTTP://Example.com/P?q=A"`；输入`" example.com/p?next=ftp://x "`得到`"http://example.com/p?next=ftp://x"`；`ftp://example.com`/userinfo/zone/NUL拒绝；bare`127.0.0.1:4321/page`可；T1同构高熵多字节2048通过/2049失败（不是字节数）、255个界通过/256失败，`SetTitle=false`与`true,nil`不同。
+- [x] 写`TestLinkStore`：同created_at逆id确保DESC，Get已删false，URLexists排除当前link；标题更新保持数据库已有metadata，改URL清{}；UPDATE RETURNING与SQL结果逐值相同。另用实际issueID的高熵2048字符做InsertLink/UpdateLink完整回读，直接存储2049触发23514，同issue重复INSERT/UPDATE为指定23P01、跨issue/软删复用可、真实hash碰撞不同原文并存。仅插fixture第一条时LinkURLExists对碰撞另一原文为false，对精确原文为true，排除本ID正确；不按摘要判重复。T2排斥冲突原链保留，T3首次公开码时才加domain映射/文案，避免测试要求“契约码=文案”被提前破坏。
+- [x] 运行`go test -count=1 -p=1 ./internal/modules/issue/domain ./internal/modules/issue/adapter/postgres -run 'Test(LinkURLNormalization|LinkTitlePatch|LinkMetadata|LinkStore)'`确认红；实现纯域检查、端口与SQL（不对存储URL做额外小写/重序列化），生成后同命令绿。
+- [x] 变异M4去协议识别/错误foldURL、M5按字节截长度或丢SetTitle、M6标题改写旧metadata；M6-url把LinkURLExists误改成比较同一hashtext值，固定碰撞fixture必须红；相应域/存储红，恢复。
+- [ ] G；提交`feat(M4/P7): 固定链接字段语义并实现存储端口`（实现者证据已齐，独立评审待主控安排）。
 
 ## Task 3：创建、集合读取与首次链接事件
 
