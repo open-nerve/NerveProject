@@ -200,80 +200,85 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 	w := newIssueWorld(t)
 	for _, iw := range issueWrites {
 		t.Run(iw.op, func(t *testing.T) {
-			// alice's three sends' targets; the callers refused send her
-			// first's.
-			var targets []string
-			for range 3 {
-				target := iw.target(t, w)
-				if !pathOf(iw.path, target) {
-					t.Fatalf("%s's row sends %s %s, not a path of %s", iw.op, iw.method, target, iw.path)
-				}
-				targets = append(targets, target)
-			}
-			alices := 0
-			send := func(name string) <-chan answer {
-				target := targets[0]
-				if name == "alice" {
-					target = targets[alices]
-					alices++
-				}
-				req := newRequest(t, iw.method, w.base+target, w.tokens[name], []byte(iw.body(t, w)))
-				w.contract.CheckRequest(t, req)
-				return sendInBackground(req)
-			}
-			answers := func(name string, answered <-chan answer, want int) {
-				t.Helper()
-				a := receiveWithin(t, answered, 10*time.Second, "the answer to "+iw.op+" as "+name)
-				if a.err != nil {
-					t.Fatal(a.err)
-				}
-				if a.res.StatusCode != want {
-					t.Errorf("%s as %s = %d %s, want %d", iw.op, name, a.res.StatusCode, a.body, want)
-				}
-				if iw.op == "updateIssue" && want == http.StatusOK && a.res.StatusCode == want {
-					got := sortAnswer(t, string(a.body))
-					stored := sortStored(t, w, got.ID)
-					if got.SortOrder != 0 || stored.SortOrder != 0 {
-						t.Fatal("locked update lost sort", got, stored)
-					}
-				}
-			}
-
-			tables := lockedTables(t, w.pool, issueTables, "EXCLUSIVE")
-			for name, want := range map[string]int{"walt": http.StatusForbidden, "wanda": http.StatusForbidden, "olga": http.StatusNotFound} {
-				answers(name, send(name), want)
-			}
-			answered := send("alice")
-			pgtest.WaitForLockWaitBehind(t, w.pool, tables.Conn().PgConn(), 10*time.Second)
-			if table := waitedTable(t, w.pool, tables.Conn().PgConn()); table != "projects" {
-				t.Errorf("%s first waits for %s, not for projects", iw.op, table)
-			}
-			release(t, tables)
-			answers("alice", answered, iw.want)
-
-			waited := lockedTables(t, w.pool, iw.waits, iw.mode)
-			answered = send("alice")
-			pgtest.WaitForLockWaitBehind(t, w.pool, waited.Conn().PgConn(), 10*time.Second)
-			if table := waitedTable(t, w.pool, waited.Conn().PgConn()); table != iw.waits {
-				t.Fatalf("%s waits for %s, not for %s", iw.op, table, iw.waits)
-			}
-			if written := writtenTables(t, w.pool, waited.Conn().PgConn()); len(written) > 0 {
-				t.Errorf("%s has written %q when it waits for %s: what it holds of Web is no longer its lock's alone", iw.op, written, iw.waits)
-			}
-			if lock := lockOn(t, w.pool, "projects WHERE id = $1", w.web); lock != "FOR NO KEY UPDATE" {
-				t.Errorf("%s holds Web %s when it waits for %s, not FOR NO KEY UPDATE", iw.op, lock, iw.waits)
-			}
-			if lock := lockOn(t, w.pool, "workspaces WHERE id = $1", w.acme); lock != "no lock" {
-				t.Errorf("%s holds acme %s when it waits for %s", iw.op, lock, iw.waits)
-			}
-			release(t, waited)
-			answers("alice", answered, iw.want)
-
-			cascade := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", w.acme)
-			answers("alice", send("alice"), iw.want)
-			release(t, cascade)
+			iw.checkProjectLocks(t, w)
 		})
 	}
+}
+
+func (iw issueWrite) checkProjectLocks(t *testing.T, w issueWorld) {
+	t.Helper()
+	// alice's three sends' targets; the callers refused send her
+	// first's.
+	var targets []string
+	for range 3 {
+		target := iw.target(t, w)
+		if !pathOf(iw.path, target) {
+			t.Fatalf("%s's row sends %s %s, not a path of %s", iw.op, iw.method, target, iw.path)
+		}
+		targets = append(targets, target)
+	}
+	alices := 0
+	send := func(name string) <-chan answer {
+		target := targets[0]
+		if name == "alice" {
+			target = targets[alices]
+			alices++
+		}
+		req := newRequest(t, iw.method, w.base+target, w.tokens[name], []byte(iw.body(t, w)))
+		w.contract.CheckRequest(t, req)
+		return sendInBackground(req)
+	}
+	answers := func(name string, answered <-chan answer, want int) {
+		t.Helper()
+		a := receiveWithin(t, answered, 10*time.Second, "the answer to "+iw.op+" as "+name)
+		if a.err != nil {
+			t.Fatal(a.err)
+		}
+		if a.res.StatusCode != want {
+			t.Errorf("%s as %s = %d %s, want %d", iw.op, name, a.res.StatusCode, a.body, want)
+		}
+		if iw.op == "updateIssue" && want == http.StatusOK && a.res.StatusCode == want {
+			got := sortAnswer(t, string(a.body))
+			stored := sortStored(t, w, got.ID)
+			if got.SortOrder != 0 || stored.SortOrder != 0 {
+				t.Fatal("locked update lost sort", got, stored)
+			}
+		}
+	}
+
+	tables := lockedTables(t, w.pool, issueTables, "EXCLUSIVE")
+	for name, want := range map[string]int{"walt": http.StatusForbidden, "wanda": http.StatusForbidden, "olga": http.StatusNotFound} {
+		answers(name, send(name), want)
+	}
+	answered := send("alice")
+	pgtest.WaitForLockWaitBehind(t, w.pool, tables.Conn().PgConn(), 10*time.Second)
+	if table := waitedTable(t, w.pool, tables.Conn().PgConn()); table != "projects" {
+		t.Errorf("%s first waits for %s, not for projects", iw.op, table)
+	}
+	release(t, tables)
+	answers("alice", answered, iw.want)
+
+	waited := lockedTables(t, w.pool, iw.waits, iw.mode)
+	answered = send("alice")
+	pgtest.WaitForLockWaitBehind(t, w.pool, waited.Conn().PgConn(), 10*time.Second)
+	if table := waitedTable(t, w.pool, waited.Conn().PgConn()); table != iw.waits {
+		t.Fatalf("%s waits for %s, not for %s", iw.op, table, iw.waits)
+	}
+	if written := writtenTables(t, w.pool, waited.Conn().PgConn()); len(written) > 0 {
+		t.Errorf("%s has written %q when it waits for %s: what it holds of Web is no longer its lock's alone", iw.op, written, iw.waits)
+	}
+	if lock := lockOn(t, w.pool, "projects WHERE id = $1", w.web); lock != "FOR NO KEY UPDATE" {
+		t.Errorf("%s holds Web %s when it waits for %s, not FOR NO KEY UPDATE", iw.op, lock, iw.waits)
+	}
+	if lock := lockOn(t, w.pool, "workspaces WHERE id = $1", w.acme); lock != "no lock" {
+		t.Errorf("%s holds acme %s when it waits for %s", iw.op, lock, iw.waits)
+	}
+	release(t, waited)
+	answers("alice", answered, iw.want)
+
+	cascade := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", w.acme)
+	answers("alice", send("alice"), iw.want)
+	release(t, cascade)
 }
 
 // lockedTables begins a transaction on pool that holds tables, a list,

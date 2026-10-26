@@ -336,6 +336,21 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		})
 	}
 
+	refusedLink := createLink(t, w, "bob", item, "http://169.254.169.254/gate-refused")
+	for _, op := range linkRequests(item, refusedLink.ID)[1:] {
+		t.Run("a forbidden "+op.op, func(t *testing.T) {
+			whileBusy(t, func() {
+				for _, who := range []string{"walt", "wanda", "olga"} {
+					want := http.StatusForbidden
+					if who == "olga" {
+						want = http.StatusNotFound
+					}
+					w.send(t, who, op.method, op.path, op.body, want)
+				}
+			})
+		})
+	}
+
 	invalidLink := createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/invalid-edit")
 	t.Run("an invalid link edit", func(t *testing.T) {
 		whileBusy(t, func() {

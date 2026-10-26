@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1 独立评审通过，T2 领域与存储已实施待独立评审。
+> **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1–T4 独立评审通过，T4 检查点本地 Go 8228/Web 1170/E2E 150 门禁通过；T5 请求性质证明已实施待独立评审，整阶段验收未完成。
 
 **目标：** 实现 M4 §12/P7 的链接CRUD、首个生产事务订阅者、抓取worker和防SSRF出站，交付I10接口与带links的I15/I17删除目录故事。
 
@@ -12,9 +12,9 @@
 
 **规格：** [P7 spec](../specs/P7-issue-links.md)。基线为P6合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；主控已核实同一SHA的main CI `40305247546` 最终Success，server/web/e2e全绿；首轮基础设施超时及重跑历史另记review。
 
-**方法与状态：** 准备完成并经独立预检/修订复审；T1 已实施且独立评审通过，T2 已实施待独立评审，其余任务与整阶段验收未完成。沿用02§3允许的紧凑方法：确切文件/接口/断言/命令，实施时逐Task真实红绿、生产变异、恢复与独立评审；本次静态预检不冒充完整原型或重放；独立最窄PG/sqlc实验只证明spec附录列明的物理约束能力。已批准M4设计是架构依据，局部细化见spec§3。正式实施按负责人授权逐Task推进，不自动合并。
+**方法与状态：** 准备完成并经独立预检/修订复审；T1–T4 已实施且独立评审通过，T4 检查点本地完整门禁通过；T5 请求性质证明已实施待独立评审，其余任务与整阶段验收未完成。沿用02§3允许的紧凑方法：确切文件/接口/断言/命令，实施时逐Task真实红绿、生产变异、恢复与独立评审；本次静态预检不冒充完整原型或重放；独立最窄PG/sqlc实验只证明spec附录列明的物理约束能力。已批准M4设计是架构依据，局部细化见spec§3。正式实施按负责人授权逐Task推进，不自动合并。
 
-**本地门禁安排（负责人 2026-10-26 调整）：** 用户要求提前执行完整本地 CI。当前 T4 检查点由主控完成全套并处理失败后再继续；后续有产品变化的开发检查点推送前先跑完整本地门禁。逐 Task 仍保留聚焦与受影响回归，最终 T15 继续汇总验收。本条是执行方法调整，不表示尚未结束的全套已经通过。
+**本地门禁安排（负责人 2026-10-26 调整）：** 用户要求提前执行完整本地 CI。T4 检查点已由主控完成全套、修复及独立复审；后续有产品变化的开发检查点推送前先跑完整本地门禁。逐 Task 仍保留聚焦与受影响回归，最终 T15 继续汇总验收。本条记录执行方法与 T4 已通过事实，不表示 P7 整阶段验收完成。
 
 ## Global Constraints
 
@@ -113,11 +113,11 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 **Files:** 新B/issue_link_security_test.go、issue_link_transactions_test.go；扩现有issue_world_test、permission_matrix_links_test、issue_write_locks_test、gate_test；必要app异常测试。复用已有辅助函数。
 **Interfaces:** 只消费T3/T4生产API与真实Locks/事务；不产生第二套授权或锁实现。
 
-- [ ] `TestIssueLinkHiddenAnswers`按合法输入逐值比较不存在/OwnOnly=true时别人issue/已删父项，含管理员兼访客；再将guest_view_all_features=true证明OwnOnly=false时他人可见，普通guest写403、workspace admin兼guest可写，拒绝来自ActionUpdate而非复制角色谓词。`TestIssueLinkWritesLockAndRecheck`经RowWaits证明第一锁project N、无workspace冲突锁、预检拒绝不进gate/tx，等锁期间降级/移出后按新授权失败。新增同项目两并发创建/改为同URL，观察第二条等待既有项目N锁再进排斥检查；一条成功、另一条409，无40P01。最窄PG实验没有替代这条串行性证明。
-- [ ] `TestIssueLinkWriteRollback`以真实PG在MarkChanged后、link写后、activity后、publisher失败逐点失败，`before == after`比较所有业务/活动（T11之后另含任务）；两用户/两issue/两个link防止“只一行”空过。
-- [ ] 先跑`go test -count=1 -p=1 ./internal/bootstrap -run 'Test(IssueLinkHiddenAnswers|IssueLinkWritesLockAndRecheck|IssueLinkWriteRollback|.*Link.*Matrix)'`；若现有实现已绿，记录这是补性质覆盖，不编造红，再用对应生产变异验证会红。
-- [ ] 变异M13绕过precheck/gate、M14在事务前读Clock或吞Publish错误、M15错误作者限制；组合层红→恢复绿；对新增交错用`go test -race -count=5 -p=1 ./internal/bootstrap -run 'TestIssueLinkWritesLockAndRecheck'`，无40P01。
-- [ ] G；提交`test(M4/P7): 钉住链接写的权限锁序与原子回滚`。
+- [x] `TestIssueLinkHiddenAnswers`按合法输入逐值比较不存在/OwnOnly=true时别人issue/已删父项，含管理员兼访客；再将guest_view_all_features=true证明OwnOnly=false时他人可见，普通guest写403、workspace admin兼guest可写，拒绝来自ActionUpdate而非复制角色谓词。`TestIssueLinkWritesLockAndRecheck`经RowWaits证明第一锁project N、无workspace冲突锁、预检拒绝不进gate/tx，等锁期间降级/移出后按新授权失败。新增同项目两并发创建/改为同URL，观察第二条等待既有项目N锁再进排斥检查；一条成功、另一条409，无40P01。最窄PG实验没有替代这条串行性证明。
+- [x] `TestIssueLinkWriteRollback`以真实PG在MarkChanged后、link写后、activity后、publisher失败逐点失败，`before == after`比较所有业务/活动（T11之后另含任务）；两用户/两issue/两个link防止“只一行”空过。
+- [x] 先跑`go test -count=1 -p=1 ./internal/bootstrap -run 'Test(IssueLinkHiddenAnswers|IssueLinkWritesLockAndRecheck|IssueLinkWriteRollback|.*Link.*Matrix)'`；另跑真实矩阵 `go test -count=1 -p=1 ./internal/bootstrap -run 'TestPermissionMatrix/(prepare|listIssueLinks|createIssueLink|updateIssueLink|deleteIssueLink)'`（既有矩阵需要显式选择 prepare；`.*Link.*Matrix` 不匹配该入口）。若现有实现已绿，记录这是补性质覆盖，不编造红，再用对应生产变异验证会红。
+- [x] 变异M13绕过precheck/gate、M14在事务前读Clock或吞Publish错误、M15错误作者限制；组合层红→恢复绿；对新增交错用`go test -race -count=5 -p=1 ./internal/bootstrap -run 'TestIssueLinkWritesLockAndRecheck'`，无40P01。
+- [x] G；提交`test(M4/P7): 钉住链接写的权限锁序与原子回滚`。
 
 ## Task 6：显式地址策略和独立 IANA 清单
 

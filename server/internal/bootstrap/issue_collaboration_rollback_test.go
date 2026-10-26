@@ -72,6 +72,20 @@ func (s collaborationFaultStore) CommentReactions(ctx context.Context, ids []uui
 	return rows, s.after("CommentReactions", err)
 }
 
+func (s collaborationFaultStore) InsertLink(ctx context.Context, row issueapp.LinkWrite) error {
+	return s.after("InsertLink", s.Store.InsertLink(ctx, row))
+}
+func (s collaborationFaultStore) UpdateLink(ctx context.Context, row issueapp.LinkWrite) (domain.Link, error) {
+	link, err := s.Store.UpdateLink(ctx, row)
+	return link, s.after("UpdateLink", err)
+}
+func (s collaborationFaultStore) DeleteLink(ctx context.Context, row issueapp.LinkDeletion) error {
+	return s.after("DeleteLink", s.Store.DeleteLink(ctx, row))
+}
+func (s collaborationFaultStore) InsertActivities(ctx context.Context, rows []issueapp.ActivityRow) error {
+	return s.after("InsertActivities", s.Store.InsertActivities(ctx, rows))
+}
+
 func TestCollaborationRollsBackPortFailures(t *testing.T) {
 	for _, operation := range []struct {
 		name  string
