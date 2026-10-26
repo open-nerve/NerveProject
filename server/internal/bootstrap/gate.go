@@ -54,9 +54,9 @@ type busyTx struct {
 	tx shared.TxManager
 }
 
-// newIssueTx is the work-item side's transactions on pool.
-func newIssueTx(pool *pgxpool.Pool, cfg config.Config) busyTx {
-	return busyTx{tx: postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.LockTimeout(cfg.Issue.WriteLockTimeout))}
+// newIssueJobTx is the common raw transaction construction for jobs and requests.
+func newIssueJobTx(pool *pgxpool.Pool, cfg config.Config) shared.TxManager {
+	return postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.LockTimeout(cfg.Issue.WriteLockTimeout))
 }
 
 func (b busyTx) WithinTx(ctx context.Context, fn func(ctx context.Context) error) error {

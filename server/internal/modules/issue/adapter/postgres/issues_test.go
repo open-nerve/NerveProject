@@ -122,9 +122,9 @@ func TestCreatingAWorkItemWritesItsRows(t *testing.T) {
 	}
 	created, assigned := uuid.NewV7(), uuid.NewV7()
 	rows := []app.ActivityRow{
-		{ID: created, WorkspaceID: web.workspace, ProjectID: web.id, IssueID: id, ActorID: alice, At: now,
+		{ID: created, WorkspaceID: web.workspace, ProjectID: web.id, IssueID: id, ActorID: &alice, At: now,
 			Activity: domain.CreationActivity(nil)[0]},
-		{ID: assigned, WorkspaceID: web.workspace, ProjectID: web.id, IssueID: id, ActorID: alice, At: now,
+		{ID: assigned, WorkspaceID: web.workspace, ProjectID: web.id, IssueID: id, ActorID: &alice, At: now,
 			Activity: domain.CreationActivity([]domain.Assignee{{ID: bob, DisplayName: "Bob"}})[1]},
 	}
 	if err := s.InsertActivities(ctx, rows); err != nil {
@@ -312,7 +312,7 @@ func TestAFailedIssueStatementIsAnError(t *testing.T) {
 		}
 	}
 	if err := s.InsertActivities(cancelled, []app.ActivityRow{{ID: uuid.NewV7(), WorkspaceID: web.workspace, ProjectID: web.id, IssueID: id,
-		ActorID: alice, At: now, Activity: domain.CreationActivity(nil)[0]}}); !errors.Is(err, context.Canceled) {
+		ActorID: &alice, At: now, Activity: domain.CreationActivity(nil)[0]}}); !errors.Is(err, context.Canceled) {
 		t.Errorf("InsertActivities() = %v; want context.Canceled", err)
 	}
 }

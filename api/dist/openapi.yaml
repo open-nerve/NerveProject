@@ -3359,7 +3359,7 @@ components:
           description: Whether the project's guests see every work item of it. When false, a guest of the project sees only the work items he created, and every other answers him as one that does not exist (issue.not_found).
           type: boolean
         archive_in:
-          description: A number of months, 0–12, set for automatic archiving and kept as set; 0 for none.
+          description: Automatic archival threshold, 0–12 months of 30 days each; 0 disables it. Inactive completed or cancelled work items are archived by a periodic job after this threshold, using their last update time.
           type: integer
         archived_at:
           description: When the project was archived; null while it is not.
@@ -3481,7 +3481,7 @@ components:
         guest_view_all_features:
           type: boolean
         archive_in:
-          description: A number of months, 0–12, set for automatic archiving and kept as set; 0 for none.
+          description: Automatic archival threshold, 0–12 months of 30 days each; 0 disables it. Inactive completed or cancelled work items are archived by a periodic job after this threshold, using their last update time.
           type: integer
         logo_props:
           $ref: '#/components/schemas/LogoProps'

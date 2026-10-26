@@ -38,7 +38,7 @@ func TestActivityPagesFilterBeforeLimit(t *testing.T) {
 		} else {
 			want = append(want, uuid.UUID{})
 		}
-		r := issueapp.ActivityRow{ID: uuid.NewV7(), WorkspaceID: w.acme, ProjectID: w.web, IssueID: id, ActorID: w.ids["alice"], At: at, Activity: a}
+		r := issueapp.ActivityRow{ID: uuid.NewV7(), WorkspaceID: w.acme, ProjectID: w.web, IssueID: id, ActorID: eventValue(w.ids["alice"]), At: at, Activity: a}
 		if n%2 == 1 {
 			want[len(want)-1] = r.ID
 		}

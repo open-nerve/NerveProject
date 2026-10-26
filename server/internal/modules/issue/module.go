@@ -105,6 +105,10 @@ type Deps struct {
 	// Tx are the transactions of the module's writes, each of which waits
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
+	// JobTx retains PostgreSQL errors for River retries, with the same lock timeout.
+	JobTx               shared.TxManager
+	ArchivePolicies     app.ArchivePolicies
+	AutoArchiveInterval time.Duration
 	// ReadTx supplies independent, read-only repeatable-read transactions for
 	// collaboration lists. The first target read, authorization, directories
 	// and list queries must all use its context; never call such a list from
@@ -126,7 +130,9 @@ type Deps struct {
 
 // Module is the wired issue module.
 type Module struct {
-	uc httpadapter.UseCases
+	uc                  httpadapter.UseCases
+	autoArchive         *app.AutoArchive
+	autoArchiveInterval time.Duration
 }
 
 // New wires the module's use cases and its HTTP side from d; nothing is
@@ -137,7 +143,7 @@ func New(d Deps) *Module {
 	sanitizer := content.NewSanitizer()
 	listing := app.NewListing(app.ListingDeps{Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
 	archive := app.ArchiveIssueDeps{Events: d.Events, Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
-	return &Module{uc: httpadapter.UseCases{
+	return &Module{autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval, uc: httpadapter.UseCases{
 		ListMemberIssues:        app.NewListMemberIssues(app.ListMemberIssuesDeps{ReadTx: d.ReadTx, Authorizer: d.Authorizer, Workspaces: d.Workspaces, Members: d.Members, Projects: d.Projects, Listing: listing}),
 		ListIssues:              app.NewListIssues(app.ListIssuesDeps{ReadTx: d.ReadTx, Locks: locks, Listing: listing}),
 		ListIssueActivities:     app.NewListIssueActivities(app.ListIssueActivitiesDeps{Locks: locks, Activities: store, Projects: d.Projects, ReadTx: d.ReadTx}),

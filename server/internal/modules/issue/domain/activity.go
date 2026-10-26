@@ -152,6 +152,11 @@ func ArchiveActivity() Activity {
 	return Activity{Field: ptr("archived_at"), Verb: VerbUpdated, NewValue: ptr("manual_archive"), Comment: "archived the work item"}
 }
 
+// AutoArchiveActivity records system archival without a caller.
+func AutoArchiveActivity() Activity {
+	return Activity{Field: ptr("archived_at"), Verb: VerbUpdated, NewValue: ptr("archive"), Comment: "auto archived the work item"}
+}
+
 // UnarchiveActivity is the row a work item's unarchiving writes: row 16 of
 // M4 design 3.13, archived_at, updated, from archive to restore, after a
 // caller's archiving too (Plane the same).

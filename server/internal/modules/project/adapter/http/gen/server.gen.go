@@ -216,7 +216,7 @@ type LogoPropsInUse string
 
 // Project A project, as the caller sees it: member_role and sort_order are his, null when he is not an active member.
 type Project struct {
-	// ArchiveIn A number of months, 0–12, set for automatic archiving and kept as set; 0 for none.
+	// ArchiveIn Automatic archival threshold, 0–12 months of 30 days each; 0 disables it. Inactive completed or cancelled work items are archived by a periodic job after this threshold, using their last update time.
 	ArchiveIn int `json:"archive_in"`
 
 	// ArchivedAt When the project was archived; null while it is not.
@@ -436,7 +436,7 @@ type ProjectTab string
 
 // ProjectUpdate Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them.
 type ProjectUpdate struct {
-	// ArchiveIn A number of months, 0–12, set for automatic archiving and kept as set; 0 for none.
+	// ArchiveIn Automatic archival threshold, 0–12 months of 30 days each; 0 disables it. Inactive completed or cancelled work items are archived by a periodic job after this threshold, using their last update time.
 	ArchiveIn *int  `json:"archive_in,omitempty"`
 	CycleView *bool `json:"cycle_view,omitempty"`
 

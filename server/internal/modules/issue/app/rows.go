@@ -119,6 +119,6 @@ type ActivityRow struct {
 	ProjectID   uuid.UUID
 	IssueID     uuid.UUID
 	Activity    domain.Activity
-	ActorID     uuid.UUID
+	ActorID     *uuid.UUID
 	At          time.Time
 }

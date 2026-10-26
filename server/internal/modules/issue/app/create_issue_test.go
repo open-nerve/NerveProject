@@ -160,7 +160,7 @@ func wantActivityRows(t *testing.T, w *world, rows []app.ActivityRow) {
 	}
 	for i, r := range w.issues.activities {
 		want := rows[i]
-		want.ID, want.WorkspaceID, want.ActorID, want.At = r.ID, acme, alice, clockNow
+		want.ID, want.WorkspaceID, want.ActorID, want.At = r.ID, acme, &alice, clockNow
 		if !reflect.DeepEqual(r, want) || i > 0 && r.ID.Compare(w.issues.activities[i-1].ID) <= 0 {
 			t.Errorf("activity row %d: %+v, want %+v, its id after the row before", i, r, want)
 		}

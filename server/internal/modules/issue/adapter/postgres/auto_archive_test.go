@@ -112,11 +112,14 @@ func TestAutoArchiveRows(t *testing.T) {
 				if !reflect.DeepEqual(beforeFields, afterFields) {
 					t.Errorf("%s changed non-archival fields", c.name)
 				}
-				var archived *time.Time
+				var archived, deleted *time.Time
 				var updated time.Time
 				var by *uuid.UUID
-				if err := pool.QueryRow(context.Background(), "SELECT archived_at, updated_at, updated_by_id FROM issues WHERE id=$1", ids[i]).Scan(&archived, &updated, &by); err != nil {
+				if err := pool.QueryRow(context.Background(), "SELECT archived_at, deleted_at, updated_at, updated_by_id FROM issues WHERE id=$1", ids[i]).Scan(&archived, &deleted, &updated, &by); err != nil {
 					t.Fatal(err)
+				}
+				if deleted != nil {
+					t.Errorf("%s deleted_at changed to %v", c.name, deleted)
 				}
 				if archived == nil || !archived.Equal(at) || !updated.Equal(at) || by != nil {
 					t.Errorf("%s audit = %v, %v, %v; want %v, %v, nil", c.name, archived, updated, by, at, at)

@@ -118,9 +118,10 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		a.close()
 		return nil, err
 	}
+	issueTx := newIssueJobTx(pool, cfg)
 	issues := issue.New(issue.Deps{
 		Events: events,
-		Pool:   pool, Tx: newIssueTx(pool, cfg),
+		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval,
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
 		WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: businessClock, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},
@@ -171,7 +172,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		a.close()
 		return nil, err
 	}
-	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, ident.Jobs(), identity.EnqueuedKinds())
+	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, append(ident.Jobs(), issues.Jobs()...), append(identity.EnqueuedKinds(), issue.EnqueuedKinds()...))
 	if err != nil {
 		a.close()
 		return nil, err

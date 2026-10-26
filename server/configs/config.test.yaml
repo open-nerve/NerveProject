@@ -22,3 +22,7 @@ ratelimit:
 log:
   level: warn
   format: text
+
+# 自动归档周期在测试环境缩短。
+issue:
+  auto_archive_interval: 2s

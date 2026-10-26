@@ -59,6 +59,7 @@ func TestLogValueMasksDatabaseURL(t *testing.T) {
 		"config.issue.write_gate.max_wait=1.5s",
 		"config.issue.write_gate.max_queue=32",
 		"config.issue.write_lock_timeout=3s",
+		"config.issue.auto_archive_interval=24h0m0s",
 		"config.files.size_limit=7340032",
 		"config.log.format=json",
 	} {

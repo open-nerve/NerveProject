@@ -57,6 +57,7 @@ jobs:
 workspace:
   creation_enabled: true
 issue:
+  auto_archive_interval: 24h
   write_gate:
     per_project: 2
     max_wait: 2s
@@ -160,8 +161,9 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 		Jobs:      JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 7 * time.Second}, // environment
 		Workspace: WorkspaceConfig{CreationEnabled: false},                                              // environment
 		Issue: IssueConfig{
-			WriteGate:        WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 8}, // max_queue: environment
-			WriteLockTimeout: 5 * time.Second,
+			WriteGate:           WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 8}, // max_queue: environment
+			WriteLockTimeout:    5 * time.Second,
+			AutoArchiveInterval: 24 * time.Hour,
 		},
 		Files: FilesConfig{SizeLimit: 1024}, // environment
 		Log:   LogConfig{Level: "debug", Format: "text"},

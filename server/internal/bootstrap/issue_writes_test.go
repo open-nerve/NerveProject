@@ -71,7 +71,7 @@ func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
 // would refuse, max_wait and the lock timeout together not being under
 // the request timeout; the test worlds' configurations are never
 // validated.
-var testIssueConfig = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 64},
+var testIssueConfig = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 64},
 	WriteLockTimeout: 4 * time.Second}
 
 // newIssueRoute is the issue module (issue.New) on pool, with tx its
@@ -91,7 +91,7 @@ func newIssueRouteWithClock(t *testing.T, pool *pgxpool.Pool, tx shared.TxManage
 
 func newIssueRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher) moduleRoute {
 	t.Helper()
-	return newRoute(t, issue.New(issue.Deps{Events: events, Pool: pool, Tx: tx,
+	return newRoute(t, issue.New(issue.Deps{Events: events, Pool: pool, Tx: tx, JobTx: newIssueJobTx(pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), ArchivePolicies: project.Provide(pool).ArchivePolicies, AutoArchiveInterval: 24 * time.Hour,
 		ReadTx:    postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()),
 		WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock,
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},

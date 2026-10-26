@@ -96,8 +96,9 @@ func TestBuiltInProfiles(t *testing.T) {
 				Jobs:      config.JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 10 * time.Second},
 				Workspace: config.WorkspaceConfig{CreationEnabled: true},
 				Issue: config.IssueConfig{
-					WriteGate:        config.WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 64},
-					WriteLockTimeout: 5 * time.Second,
+					WriteGate:           config.WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 64},
+					WriteLockTimeout:    5 * time.Second,
+					AutoArchiveInterval: map[string]time.Duration{"test": 2 * time.Second, "dev": 24 * time.Hour, "prod": 24 * time.Hour}[tt.env],
 				},
 				Files: config.FilesConfig{SizeLimit: 5 << 20},
 				Log:   config.LogConfig{Level: tt.level, Format: tt.format},

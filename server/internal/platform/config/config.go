@@ -157,6 +157,8 @@ type WorkspaceConfig struct {
 // IssueConfig configures the writes on the work-item side (M4 design 3.5,
 // 11.11).
 type IssueConfig struct {
+	// AutoArchiveInterval controls the periodic system archival scan.
+	AutoArchiveInterval time.Duration `koanf:"auto_archive_interval"`
 	// WriteGate bounds the writes on one project's work items that hold a
 	// connection at once in this process.
 	WriteGate WriteGateConfig `koanf:"write_gate"`
@@ -255,6 +257,7 @@ func (c Config) LogValue() slog.Value {
 				slog.Int("max_queue", c.Issue.WriteGate.MaxQueue),
 			),
 			slog.Duration("write_lock_timeout", c.Issue.WriteLockTimeout),
+			slog.Duration("auto_archive_interval", c.Issue.AutoArchiveInterval),
 		),
 		slog.Group("files",
 			slog.Int64("size_limit", c.Files.SizeLimit),

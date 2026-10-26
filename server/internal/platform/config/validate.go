@@ -147,6 +147,9 @@ func (a AuthConfig) validate(env string, fail func(key, format string, args ...a
 }
 
 func (i IssueConfig) validate(requestTimeout time.Duration, fail func(key, format string, args ...any)) {
+	if i.AutoArchiveInterval < time.Second {
+		fail("issue.auto_archive_interval", "must be at least 1s, got %s", i.AutoArchiveInterval)
+	}
 	g := i.WriteGate
 	if g.PerProject < 1 {
 		fail("issue.write_gate.per_project", "must be at least 1, got %d", g.PerProject)
