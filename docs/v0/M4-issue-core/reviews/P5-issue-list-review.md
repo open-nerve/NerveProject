@@ -1,12 +1,12 @@
 # M4/P5 工作项列表与显示设置：评审记录
 
-日期：2026-10-26。状态：**实现、文档与内部整审/修复复审完成；最终交付另核精确HEAD分支CI，负责人终审与集成待安排，不合并**。
+日期：2026-10-26。状态：**P5 已完成：全部任务、追加 deep-review 及修复复审、授权 --no-ff 合并、main CI 与分支清理完成。**
 
 | 项目 | 当前证据 |
 |---|---|
-| 分支 | `codex/m4-p5` |
+| 实施分支（历史） | `codex/m4-p5`，已合并并删除本地/远端分支 |
 | 基线 | main `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51` |
-| 工作树 | `.codex/worktress/codex/m4-p5`；主目录保持 main |
+| 实施工作树（历史） | `.codex/worktress/codex/m4-p5`，证据归档后已删除；主目录保持 main |
 | 规格与计划 | [spec](../specs/P5-issue-list.md)、[plan](../plans/P5-issue-list.md)，16验收任务/19实施单元 |
 | P4 接收 | [整分支审核](../../../reviews/re-01-M4P4整体审核.md)的三项 Minor 已修复并独立复核；最终分支 `a37f82ec146efca84793b6620aa3e777532bd75a` 的 [CI 40179571485](https://github.com/open-nerve/NerveProject/actions/runs/40179571485) 通过 |
 | P4 合并 | `--no-ff` 双亲为 `589d9f01d4f8c30e55f449e430fe1104e2036866` 和 `a37f82ec146efca84793b6620aa3e777532bd75a`；合并后的 [main CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) server/web/e2e 全部成功 |
@@ -229,7 +229,9 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - 最终lint-web54/54（36 cached）、knip、test-web17/17（全部cached）通过；完整默认make e2e总43.052s、142 passed（runner41.7s，140 Chromium+2 Firefox），八故事各实际匹配一次，旧W11通过且未专查。11交付文件在四个最终门、当前与提交blob完全一致；BASE/HEAD的server/api/web/tools树相同，全部变异源恢复。按G范围复用T14完整Go/race与T12最终性能，无永久生成物改动不重复无关gen-check，临时SQL的真实生成/恢复证据仍齐备。
 - 原证据 `task-15-evidence/`、实施报告 `task-15-report.md`、独评 `task-15-review.md`。root以P4/main与T1–14已批准记录承接跨任务约束；本任务批准不代替T16文档/整分支审查或合并授权。
 
-### T16：文档子项与内部整分支审查完成，集成待安排
+### T16：文档与集成均已完成
+
+本节至追加deep-review的过程记录保留当时的等待门；最终结论以紧下方“授权合并与清理”记录为准。
 
 文档实施BASE为 `9a773608fa1f08abf3d4ecbc913e2d4a66e8de1e`。本次只同步正式设计/差异/规格/计划/评审与输入交接；没有产品、API、生成物、依赖、守卫或故事变化。16父任务/19实施单元保留，逐节范围与实际证据如下；完整命令/红因/变异恢复/环境及精确产品提交均在上述各Task记录，不把编译/fixture/基础设施失败改写成业务红。
 
@@ -293,6 +295,14 @@ P5 完成后仍先交负责人安排整分支终审，处理意见后才合并�
 - `ff13a6b0c8a64f49e46c79a29c4e01ea911cd8f4`（含T13全部）已由系统Git推送；[CI 40219840173](https://github.com/open-nerve/NerveProject/actions/runs/40219840173) server、web、e2e全部success。此检查点不包含T14。公开jobs元数据为ignored `ci-40219840173-jobs.json`。
 - `97d6ead3cc125007bbc8e286045768e4a2032632`（含T14）已由系统Git推送；[CI 40222281223](https://github.com/open-nerve/NerveProject/actions/runs/40222281223) server、web、e2e全部success。此检查点不包含T15。公开jobs元数据为ignored `ci-40222281223-jobs.json`。
 - 公开jobs元数据保存在ignored `ci-40190689176-jobs.json`、`ci-40191919305-jobs.json`、`ci-40193812287-jobs.json`、`ci-40195404827-jobs.json`、`ci-40196872428-jobs.json`、`ci-40198919892-jobs.json`、`ci-40200997593-jobs.json`、`ci-40202959281-jobs.json`、`ci-40205751190-jobs.json`、`ci-40207373659-jobs.json`、`ci-40210086901-jobs.json`、`ci-40215557907-jobs.json`；没有访问受限日志或提取凭据。主目录仍main，P5未合并。
+
+### 授权合并与清理（2026-10-26，最终状态）
+
+- 负责人在追加 deep-review 修复完成后明确授权 `--no-ff` 合并。最终分支 `027d5b7c9fc71230f1665cfc4a4677c750cdc16c` 的 [CI 40233008430](https://github.com/open-nerve/NerveProject/actions/runs/40233008430) 三任务全绿。
+- 合并提交 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e` 两个父提交依次为 `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`、`027d5b7c9fc71230f1665cfc4a4677c750cdc16c`；树均为 `d06a42aecd2ddb9525bc2d8633afdf0b7c53340c`，没有额外产品变动，复用精确内容的本地验证。
+- 系统 `/usr/bin/git` 推送成功；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 精确绑定合并提交，server/web/e2e 全部 completed/success，未触发 W11 失败处理。
+- 清理前 `git rev-list --count origin/main..origin/codex/m4-p5` 为0，P5工作树干净。6,517文件共184,269,398字节证据归档到主目录 `.superpowers/sdd/P5-issue-list`、`.superpowers/deep-review/M4-P5-20261026` 与 `.superpowers/sdd/P5-integration-20261026`，SHA-256逐项一致；项目内浏览器缓存保留在 `.superpowers/cache/playwright-1.63`。
+- 随后正常 `git worktree remove`（未force）及本地 `branch -d`、远端 `push --delete` 均成功。P5分支与原worktree已不存在；main与origin/main一致。父T16勾选，整个M4及其他Phase交接保持原范围。
 
 ## 3. 执行中的决定
 
