@@ -45,6 +45,10 @@ func TestUpdateIssueLinkAPI(t *testing.T) {
 		t.Fatal("update lost original or retained metadata", err, got)
 	}
 	before, audit := descriptionRows(t, w, "issue_links", id), descriptionAudit(t, w, id)
+	activities := descriptionRows(t, w, "issue_activities", id)
+	if activities == "[]" {
+		t.Fatal("rollback baseline must contain existing activities")
+	}
 	var rejected []shared.Event
 	var failure error
 	route := issueEventRouteFor(t, w, clockAt(time.Date(2044, 5, 6, 7, 8, 9, 0, time.UTC)), &rejected, &failure, issue.EventTypes(), nil)
@@ -55,7 +59,10 @@ func TestUpdateIssueLinkAPI(t *testing.T) {
 	}{{a.ID, linkBody(long+"界", nil), 422}, {b.ID, linkBody(long, nil), 409}} {
 		route.answerWithin(t, w.contract, http.MethodPatch, linkPath(tc.link), w.ids["alice"], tc.body, tc.status)
 		if before != descriptionRows(t, w, "issue_links", id) || audit != descriptionAudit(t, w, id) {
-			t.Fatal("refusal changed metadata/audit/activity")
+			t.Fatal("refusal changed metadata/audit")
+		}
+		if activities != descriptionRows(t, w, "issue_activities", id) {
+			t.Fatal("refusal changed activity snapshot")
 		}
 	}
 	if len(rejected) != 0 || issueEventCount(t, w) != 0 {
@@ -152,6 +159,10 @@ func TestUpdateIssueLinkPublicationRollback(t *testing.T) {
 				t.Fatal(err)
 			}
 			before, audit := descriptionRows(t, w, "issue_links", id), descriptionAudit(t, w, id)
+			activities := descriptionRows(t, w, "issue_activities", id)
+			if activities == "[]" {
+				t.Fatal("rollback baseline must contain existing activities")
+			}
 			var events []shared.Event
 			failure := fmt.Errorf("subscriber rejected link write")
 			route := issueEventRouteFor(t, w, clockAt(time.Date(2044, 5, 6, 7, 8, 9, 0, time.UTC)), &events, &failure, issue.EventTypes(), nil)
@@ -161,7 +172,10 @@ func TestUpdateIssueLinkPublicationRollback(t *testing.T) {
 			}
 			route.answerWithin(t, w.contract, method, linkPath(l.ID), w.ids["alice"], body, 500)
 			if before != descriptionRows(t, w, "issue_links", id) || audit != descriptionAudit(t, w, id) || issueEventCount(t, w) != 0 || len(events) != 1 {
-				t.Fatal("failed publication committed link/audit/activity/job")
+				t.Fatal("failed publication committed link/audit/job")
+			}
+			if activities != descriptionRows(t, w, "issue_activities", id) {
+				t.Fatal("failed publication changed activity snapshot")
 			}
 		})
 	}
