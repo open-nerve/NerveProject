@@ -14,6 +14,8 @@
 
 **方法与状态：** 准备完成并经独立预检/修订复审；T1 已实施且独立评审通过，T2 已实施待独立评审，其余任务与整阶段验收未完成。沿用02§3允许的紧凑方法：确切文件/接口/断言/命令，实施时逐Task真实红绿、生产变异、恢复与独立评审；本次静态预检不冒充完整原型或重放；独立最窄PG/sqlc实验只证明spec附录列明的物理约束能力。已批准M4设计是架构依据，局部细化见spec§3。正式实施按负责人授权逐Task推进，不自动合并。
 
+**本地门禁安排（负责人 2026-10-26 调整）：** 用户要求提前执行完整本地 CI。当前 T4 检查点由主控完成全套并处理失败后再继续；后续有产品变化的开发检查点推送前先跑完整本地门禁。逐 Task 仍保留聚焦与受影响回归，最终 T15 继续汇总验收。本条是执行方法调整，不表示尚未结束的全套已经通过。
+
 ## Global Constraints
 
 - 分支`codex/m4-p7`，worktree`.codex/worktress/codex/m4-p7`；主目录HEAD永远main。准备首提交改`tools/keywords.json`为M4/P7，检查到期例外，不随手延后。
@@ -56,11 +58,11 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 2. 在生产代码施加该Task代表变异，运行最窄能杀死它的测试；恢复原文件字节/hash，再运行恢复绿。禁止用放宽期望/只改测试/环境错误冒充有效变异。错误/无法核实在台账说明，不静默跳过。
 3. 生成契约/SQL的Task跑`make gen-go`/`make gen-web`，保留输出文件SHA和行数；提交后gen-check确认无漂移。不可为消除预期未提交生成物差异提前伪报gen-check通过。
 4. `git diff --check`与影响包回归，更新ignored `.superpowers/sdd/P7-issue-links/`任务报告/进度/变异恢复证据；只提交本Task精确路径，中文详细message。
-5. 独立评审该Task精确BASE..HEAD：要求→质量；局部发现修复/复审；满足本Task门禁后再下一个。全套留T15，后续只有真实变化/失败/风险才扩大重跑。
+5. 独立评审该Task精确BASE..HEAD：要求→质量；局部发现修复/复审；满足本Task门禁后再下一个；逐Task保留聚焦/受影响回归，完整本地门禁按上文负责人调整执行，T15仍汇总验收。
 
 ## Task 1：链接表、grants 和两条级联
 
-**Files:** 新`server/migrations/sql/00027_issue_issue_links.sql`、I/adapter/postgres/link_constraint_test.go、testdata/link_url_hash_collision.json；改`server/sqlc.yaml`、`deploy/runtime-grants.sql`、I/app/delete_issue.go、delete_project_rows.go、对应测试/fakes、I/adapter/postgres/delete_issue.go、delete_rows.go、queries/delete_issue.sql、delete_rows.sql及对应存储测试；B/issue_deletion_test.go、project_deletion_test.go、workspace_deletion_catalog_test.go的既有种子。
+**Files:** 新`server/migrations/sql/00027_issue_issue_links.sql`、I/adapter/postgres/link_constraint_test.go、testdata/link_url_hash_collision.json；改`server/sqlc.yaml`、`deploy/runtime-grants.sql`、I/app/delete_issue.go、delete_project_rows.go、对应测试/fakes、I/adapter/postgres/delete_issue.go、delete_rows.go、queries/delete_issue.sql、delete_rows.sql及对应存储测试；B/issue_deletion_test.go、project_deletion_test.go、workspace_deletion_catalog_test.go的既有种子。迁移回归另含 `server/migrations/issue_display_test.go`、`schema_test.go`、`issue_schema_test.go`。
 **Interfaces:** 消费`IssueDeletion`、`RowBatch`；产生`DeleteIssueLinkRows(ctx,IssueDeletion) error`、`DeleteProjectLinkRows(ctx,RowBatch)([]uuid.UUID,error)`，在两组rowSteps的relations后/subscribers前。
 
 - [x] 写`TestLinkSchema`、`TestLinkDeletionRows`：真实12列迁移中，高熵多字节URL恰2048字符INSERT/UPDATE成功且回读逐字相同；2049字符为23514 CHECK、空URL/metadata数组/未知键/数字值拒绝。长URL以`http://169.254.169.254/`加`rand.New(rand.NewPCG(71,27))`（标准库math/rand/v2）产生的`0x10000 + r.IntN(0x100000)`码点填满2048字符，UTF-8显著超过2704字节，不用重复ASCII掩盖压缩；同issue精确重复INSERT/UPDATE为23P01及issue_links_issue_id_url_key，跨issue/软删重建成功。三层树和creator≠deleter核审计，早删不变。
@@ -68,6 +70,7 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 - [x] 运行`go test -count=1 -p=1 ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(LinkSchema|LinkHashCollision|LinkDeletionRows|TheGrantsFileCoversEveryRelationAndFunction|.*Deletion)'`（server目录），确认新表缺失/遗漏失败，再加12列及精确约束`CONSTRAINT issue_links_issue_id_url_key EXCLUDE USING hash ((issue_id::text || ':' || url) WITH =) WHERE (deleted_at IS NULL)`，不额外COLLATE，FK索引/grants和两条删除SQL/adapter/port。
 - [x] 同一statement先按id取锁再写批次，包含工作项直接和项目/工作区同步过渡；更新目录种子与fakes，不给links永久空行豁免。`make gen-go`后重跑聚焦及grants覆盖为绿。
 - [x] 变异M1跳过links级联、M2错审计写者、M3去exclusion或metadata CHECK，M3-btree改回长原文B-tree由高熵URL击穿，M3-hash-only改为只对同一`hashtext(issue_id::text || ':' || url)`建唯一索引，由真实碰撞对击穿：存储/组合各有红，恢复。runtime权限本Task已有grants覆盖，真正HTTP/job运行由T12补。
+- [x] **在 T4 检查点补验，非 T1 最初执行：** T1 漏跑完整 `./migrations`；用户要求提前全套后发现历史 display 测试的 FS 边界和全量迁移/目录期望遗漏。限定 display 历史测试仅含至 26，保留 25→26→25→26 的原业务断言；全量独立期望更新至 27、纳入 issue_links 的完整 Up/Down/Up 与 14 项精确约束/索引。`cd server && go test -v -count=1 -p=1 ./migrations` 在 T4 修复轮补跑为绿（14 顶层/167 含子 RUN）；不追记为 T1 已执行。
 - [x] G；提交`feat(M4/P7): 新增链接表并接入两条删除链`，说明furnish依赖T3、当前未跑完整E2E。
 
 ## Task 2：纯链接规则与读写存储

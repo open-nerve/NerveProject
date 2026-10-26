@@ -13,8 +13,7 @@ import (
 )
 
 // issueNames are the constraints and indexes of the issue module's tables
-// (M4 design 4.2–4.6, 4.11), as TestConstraintAndIndexNames reads them: the
-// part of its want that the migrations 00015–00022 add.
+// as TestConstraintAndIndexNames reads them: the issue module's part of its want.
 var issueNames = []string{
 	"comment_reactions_actor_id_fkey f c",
 	"comment_reactions_created_by_id_fkey f n",
@@ -104,6 +103,20 @@ var issueNames = []string{
 	"issue_labels_updated_by_id_fkey f n",
 	"issue_labels_workspace_id_fkey f c",
 	"issue_labels_workspace_id_idx i",
+	"issue_links_created_by_id_fkey f n",
+	"issue_links_issue_id_fkey f c",
+	"issue_links_issue_id_idx i",
+	"issue_links_issue_id_url_key iw",
+	"issue_links_issue_id_url_key x",
+	"issue_links_metadata_check c",
+	"issue_links_pkey iu",
+	"issue_links_pkey p",
+	"issue_links_project_id_fkey f c",
+	"issue_links_project_id_idx i",
+	"issue_links_updated_by_id_fkey f n",
+	"issue_links_url_check c",
+	"issue_links_workspace_id_fkey f c",
+	"issue_links_workspace_id_idx i",
 	"issue_reactions_actor_id_fkey f c",
 	"issue_reactions_created_by_id_fkey f n",
 	"issue_reactions_issue_id_actor_id_reaction_key iuw",
