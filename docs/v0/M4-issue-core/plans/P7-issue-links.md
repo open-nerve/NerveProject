@@ -205,12 +205,13 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 ## Task 13：抓取与 URL、标题及删除的真实交错
 
 **Files:** 新B/issue_link_interleaving_test.go、issue_link_race_helpers_test.go；必要扩已有pgtest辅助的消费，不造平台同步框架。只修被反例证明的问题。
-**Interfaces:** 消费T4 UpdateLink返回Link、T10 SetLinkMetadata、T11真实投递。同步crawler fixture实现已有LinkCrawler，不向生产加屏障API。
+**Interfaces:** 消费T4 UpdateLink返回Link、T10 SetLinkMetadata、T11真实投递。实际使用受控本地HTTP，保留newApp安装的生产crawler/worker；标题锁下时钟停点使用既有newIssueRouteWithPublisher，显式接生产subscriber/InsertTx。两者均不向生产加屏障API。
 
 - [ ] 写`TestLinkCrawlURLInterleaving`：老A抓取停在网络返回前，API改B提交+清{}+留B任务，放老A令0写，再B完成；反向先A写再改B依然{}。最后断言metadata.url属于B、活动只有URL更新、两job归属精确。
 - [ ] 写`TestLinkTitlePreservesConcurrentMetadata`：标题请求已读pending、抓取先更新metadata、标题写返回值与DB都保留新metadata；相反顺序亦成立；真实事务/锁条件证明控制点，不只fake call log。`TestLinkCrawlAfterDeletion`：先删/新ID重建同URL旧任务写0；A→B→A旧A能写的已批准限制单独命名，不能偷加版本条件。
 - [ ] `go test -race -count=5 -p=1 ./internal/bootstrap -run 'Test(LinkCrawlURLInterleaving|LinkTitlePreservesConcurrentMetadata|LinkCrawlAfterDeletion)'`实际匹配每轮所有用例，无40P01/超时泄漏；两连接等待用RowWaits/通道与期限。
 - [ ] 变异M35去urlguard、M36标题整体写回旧metadata、M37匹配只url不id；真实交错必须红，恢复同一聚焦普通运行绿，之后只受改动影响再race。G；提交`test(M4/P7): 证明抓取与链接修改删除的交错语义`。
+- 执行补充（cwd=`server`）：规定聚焦命令加`-json`保留原始证据；普通3顶层/10总RUN，`-race -count=5`实际15顶层/50总RUN，每个用例恰好五轮，均exit 0。相关投递、运行角色及链接API回归11顶层/32总RUN通过；M35/M36/M37分别真实业务断言红，原SQL/适配器/生成物逐字节及SHA恢复后同选择普通绿。A→B→A为URL测试下独立命名子例，按三个精确job ID观测。
 
 ## Task 14：I10 接口故事与带链接的删除故事
 
