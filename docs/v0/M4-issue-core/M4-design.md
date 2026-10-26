@@ -455,7 +455,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 ### 3.11 链接与元数据的抓取（架构问题 8）
 - **字段**：`url`（必填）、`title`（可选，至多 255 个字符，可为 `null`）、`metadata`（服务端写，客户端不能写）。
 - **地址的规整**：去掉首尾空白；不以 `http://`、`https://` 开头（不分大小写）时在前面加 `http://`（Plane 的服务端相同，`API/app/serializers/issue.py:566-572`；页面在不以 `http` 开头时加，`create-update-link-modal.tsx:65-68`）；然后解析：协议只能是 `http`、`https`，必须有主机名，规整后至多 2048 个字符，否则 422（`url`，`not_allowed`）。Plane 的 `URLValidator` 另放行 `ftp`、`ftps`，登记差异。
-- **同一个工作项上地址唯一**（规整之后逐字比较，未删除的行之间）：重复 409 `issue.link_exists`，创建和修改都是（Plane 在代码里检查，400，`:585-598`）。数据库另有部分唯一 `ON (issue_id, url) WHERE deleted_at IS NULL`。登记差异。
+- **同一个工作项上地址唯一**（规整之后逐字比较，未删除的行之间）：重复 409 `issue.link_exists`，创建和修改都是（Plane 在代码里检查，400，`:585-598`）。数据库另以 §4.8 的部分 hash exclusion 对完整原文相等排重，保留 2048 字符并避免原文 B-tree 的索引容量限制；指定约束冲突为 `23P01`。这是 P7 预检验证后的局部物理修正，公开重复语义不变。登记差异。
 - **谁能改**：项目的管理员和成员都能改、删任何人的链接（Plane 相同，没有创建者规则，R2 第 4 节）。
 - **抓取**（第一个异步订阅者，3.19）：
   - 创建、改地址发布事件 `issue.link_created`、`issue.link_updated`（`changes` 里有 `url`）；订阅者 `crawl_on_link_change` 在同一个事务里投递 River 任务 `issue.crawl_link{link_id, url}`（`InsertTx`，3.20）。事务回滚，任务也不在。只改标题不重新抓取（Plane 相同，`API/app/views/issue/link.py:76-83`）。
@@ -959,7 +959,7 @@ M4 的 13 张表都带 `workspace_id`、`project_id`（草稿的可空）、`del
 | `metadata` | `jsonb NOT NULL DEFAULT '{}'`，CHECK：是对象，键是 `title`、`favicon`、`url`、`favicon_url`、`error` 的子集，每个值是字符串或 `null` | CHECK 新加（M2 设计 3.13） |
 | 审计列 | 同 4.2 | — |
 
-- **索引**：**新加**部分唯一 `issue_links_issue_id_url_key ON (issue_id, url) WHERE deleted_at IS NULL`（Plane 只在代码里检查）；`issue_links_issue_id_idx` 等。
+- **活链接的精确唯一约束**：**新加** `CONSTRAINT issue_links_issue_id_url_key EXCLUDE USING hash ((issue_id::text || ':' || url) WITH =) WHERE (deleted_at IS NULL)`（Plane 只在代码里检查）；另保留无条件 `issue_links_issue_id_idx`、workspace/project 外键索引。P7 预检局部修正：原 `(issue_id,url)` B-tree 不能容纳所有合法的 2048 字符多字节 URL，改用单个非空、无歧义的组合表达式排斥约束，比较仍是完整原文相等，哈希碰撞不误拒不同 URL；不缩短长度、不加字段或依赖、不改变项目锁协议。适配器只将该约束的 `23P01` 映射为 `issue.link_exists`，其他错误原样返回。PG18.6/sqlc 最窄实验与正式实施待办见 [P7 预检](reviews/P7-issue-links-review.md)，本条是设计修订，尚未迁移产品表。
 
 ### 4.9 `issue_reactions`（Plane 11 列 → 11 列）
 | 列 | 类型与约束 | 与 Plane 的差异 |
@@ -2532,8 +2532,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
 | P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；已以 `--no-ff` 合并main `e9782b8f`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 三任务全绿，精确SHA及接收记录见P5评审 |
 | P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | 已完成：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。追加[deep-review](../../reviews/re-02-M4P5整体审核.md)及局部修复复审关闭；2026-10-26 负责人授权后，P5 已以 `--no-ff` 合并为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 的 server/web/e2e 全绿；6,517 个证据文件已归档并逐个 SHA-256 核对，P5 本地/远端分支及 worktree 已清理。T16 集成门关闭，M4 总体与后续交接仍 open。 |
-| P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，16验收任务） | T1–T16已实施并逐Task独评通过，T16正式文档/交接已同步：[spec](specs/P6-issue-events.md)、[plan](plans/P6-issue-events.md)、[review](reviews/P6-issue-events-review.md)。内部整分支审查及 clock 修复聚焦复审已通过；修复 `e8df8485` 的 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 三任务全绿。deep-review 终审通过（[报告](../../reviews/re-03-M4P6整体审核.md)，3 项文档 Minor 已闭环）；实施与终审完成、集成待办，未合并；M4 总体仍进行中 |
-| P7 `issue-links` | 链接、出站客户端与抓取（后端，12） | 未开始 |
+| P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，16验收任务） | T1–T16已实施并逐Task独评通过，T16正式文档/交接已同步：[spec](specs/P6-issue-events.md)、[plan](plans/P6-issue-events.md)、[review](reviews/P6-issue-events-review.md)。内部整分支审查及 clock 修复聚焦复审已通过；修复 `e8df8485` 的 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 三任务全绿。deep-review 终审通过（[报告](../../reviews/re-03-M4P6整体审核.md)，3 项文档 Minor 已闭环）；已授权 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；[main CI 40305247546](https://github.com/open-nerve/NerveProject/actions/runs/40305247546) 重跑全绿，921 个本地证据归档核 hash 后已清理分支/worktree。**P6 已完成**；M4 总体仍进行中 |
+| P7 `issue-links` | 链接、出站客户端与抓取（后端，12 粗项展开 16 验收任务） | 准备中：[spec](specs/P7-issue-links.md)、[plan](plans/P7-issue-links.md)、[预检](reviews/P7-issue-links-review.md)；长 URL 物理约束已验证并局部修订 §4.8；独立预检及局部修订复审已通过，5 项 Medium 全部闭环，T1 未开始，等待负责人安排启动 |
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13） | 未开始 |
 | P9 `purge` | 物理清理、描述版本的保留与工作项一侧的删除任务（后端，13） | 未开始 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | 未开始 |

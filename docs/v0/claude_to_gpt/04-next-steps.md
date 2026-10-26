@@ -78,3 +78,9 @@ main 的持续集成第 340 次（P3 的合并 `dfc9378b`）在 M3 的 W11 页�
 - **修复闭环**：局部问题由 Codex 根因修复并完成相应验证、复审；没有阻断发现后，向负责人提供分支、基线、最终 HEAD、spec/plan/review 和 deep-review 报告路径。
 - **集成门**：终审通过不自动授权合并，仍按负责人对该阶段的安排执行；已授权不再重复请示。用 `--no-ff` 合并后确认精确 main SHA 的 CI 通过，归档并核验本地证据，再清理分支和 worktree。下一段从完成集成的 main 起步。
 - **上报**：架构回归、跨模块协同调整或意外高风险发现，按 [03](03-rules-and-pitfalls.md) 第 1 节先提交已完成工作再上报；审查方式调整不改变这个边界。
+
+## 6. 当前落点（2026-10-26，P6 集成后）
+
+P6 已由 deep-review 终审通过并经授权 `--no-ff` 合并为 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；[main CI 40305247546](https://github.com/open-nerve/NerveProject/actions/runs/40305247546) 重跑三任务全绿。921 个本地证据文件归档核 hash 后，P6 本地/远端分支和 worktree 已清理，见 [P6 review §2.2](../M4-issue-core/reviews/P6-issue-events-review.md#22-授权合并main-ci-与归档清理)。
+
+当前独立分支 `codex/m4-p7` 仅准备[链接 spec](../M4-issue-core/specs/P7-issue-links.md)、[plan](../M4-issue-core/plans/P7-issue-links.md)与[预检记录](../M4-issue-core/reviews/P7-issue-links-review.md)。预检及修订复审已通过，等待负责人安排启动 T1，不自动实现或合并 P7；M4 总体完成标准和交接仍保持开放。
