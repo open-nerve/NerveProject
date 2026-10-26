@@ -1,10 +1,10 @@
 # M4/P6 领域事件与自动归档评审记录
 
-日期：2026-10-26。状态：**T1–T15 实施并逐 Task 独评通过；T16 文档交接本次实施，独评及内部整分支审查待办；分支 CI、外部终审待办**。分支 `codex/m4-p6`；基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`。配套：[spec](../specs/P6-issue-events.md)、[plan](../plans/P6-issue-events.md)。
+日期：2026-10-26。状态：**T1–T16 实施并逐 Task 独评通过；内部整分支审查零新发现；分支 CI、外部终审待办**。分支 `codex/m4-p6`；基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`。配套：[spec](../specs/P6-issue-events.md)、[plan](../plans/P6-issue-events.md)。
 
 ## 1. 评审方式
 
-起步时按 [02-method](../../claude_to_gpt/02-method.md) 第3节采用紧凑计划，三个独立静态预检视角及修订复审只评文档与现状；其结果保留在第4节，不再冒充实施证据。之后 T1–T15 各自完成定位/影响回归、真实生产变异与恢复、中文实施报告及独立要求/质量评审，精确提交和命令索引在第2节。T16 本次同步正式记录与输入交接，独评由主控接续。一次内部整分支审查、必要修复与聚焦复审在 T16 后执行；外部终审另待负责人安排。
+起步时按 [02-method](../../claude_to_gpt/02-method.md) 第3节采用紧凑计划，三个独立静态预检视角及修订复审只评文档与现状；其结果保留在第4节，不再冒充实施证据。之后 T1–T15 各自完成定位/影响回归、真实生产变异与恢复、中文实施报告及独立要求/质量评审，精确提交和命令索引在第2节。T16 正式记录与输入交接经独评发现一处措辞问题，修复提交 `6995d523` 已通过独立聚焦复审。此后唯一一次内部整分支审查覆盖基线至该HEAD的全部19提交/165文件，零新发现；外部终审另待负责人安排。
 
 ## 2. 验收标准逐条核对
 
@@ -27,7 +27,7 @@
 | T13 `183ef1a7` | `make build`退出0；`pnpm --filter @nerve/e2e exec playwright test stories/smoke/clock-lifecycle.spec.ts --project=chromium`，6/6退出0 | 旧进程身份/附件两Minor由T15补；T13最终门禁仅报告，无完整rawlog |
 | T14 `565fad12` | `make build`后I16定位1/1，完整`make e2e`149/149退出0；五个成功构建的真实变异被业务断言杀死 | 旧完成任务与跨写入扫描以微秒水位区别；独评通过 |
 | T15 `4a489125` | `go test -race -count=5` 定向105 RUN；`GOFLAGS=-p=1 make test`、`make lint-go`、`make lint-web`、`make knip`、`make test-web`、`make e2e`、提交后`GOFLAGS=-p=1 make gen-check`依次退出0 | [16用例/12事件矩阵](P6-issue-events-publication-matrix.md)、[20变异矩阵](P6-issue-events-mutation-matrix.md)；四功能Minor独评关闭 |
-| T16 本次文档提交 | 关键词、链接、diff、必要架构静态核对见任务报告；独评在此提交后由主控执行 | 设计/交接同步已落地，后续结果不预填 |
+| T16 `d6f341d2`、修复`6995d523` | 关键词、链接、diff、必要架构静态核对见任务报告；初评的一处SQL NULL/事件nil措辞问题经聚焦复审确认修复 | 任务独评完成；整分支结果见§5，分支CI仍待push后核对 |
 
 T15 `make test` 是49个有测试包通过、16个无测试包；默认输出不列总测试用例数。`make lint-web` 54项成功，其中36缓存、18新执行；`make test-web` 18项成功，其中11缓存、7新执行；`make e2e` 是真实149/149（Chromium147、Firefox2）。七个被核文件的源码 SHA 与各全门禁执行时一致。20项生产变异中14项复用已核原始证据、6项T15新执行；没有以编译失败/INFRA充作业务检出。早期 testcontainers 可选 shell 探测日志、旧 Playwright `NO_COLOR`/`FORCE_COLOR` 警告照原样保留；T15报告末的 `14-color-environment` 在 `4a489125` 上同时移除两个变量后1/1、无警告，已闭环环境Minor，**不称全部历史输出 pristine**。
 
@@ -76,8 +76,8 @@ T15 `make test` 是49个有测试包通过、16个无测试包；默认输出不
 三个独立聚焦复审 `preflight-events-rereview.md`、`preflight-jobs-rereview.md`、`preflight-scope-rereview.md` 均为静态 APPROVED，High/Medium/Low 未关闭数均0。原始报告与文件SHA留在同一 ignored 台账；正式记录汇总9项局部修订（首审7、复审新增2），无架构待决点。
 
 - `node tools/keywords.mjs`：退出0，72规则、23例外、无命中/过期例外；phase仅由M4/P5改为M4/P6。
-- `go test -count=1 ./internal/archtest`：退出0，包测试1.607s；完整命令用时2.299s，stderr空。证据为台账 `verification/archtest.json` / stdout / stderr。它只验证基线架构守卫，P6运行行为未实现。
-- 文档自检确认16个Task顺序完整、16条产品验收全部未勾，新增本地链接有效，`git diff --check` 无错误；无产品/迁移/依赖文件变动。M4原有M5–M8未来closeout链接不提前创建。
+- `go test -count=1 ./internal/archtest`：退出0，包测试1.607s；完整命令用时2.299s，stderr空。证据为台账 `verification/archtest.json` / stdout / stderr。它只验证预检当时的基线架构守卫；当时P6运行行为尚未实现。
+- 准备期文档自检确认16个Task顺序完整、当时16条产品验收全部未勾，新增本地链接有效，`git diff --check` 无错误；无产品/迁移/依赖文件变动。M4原有M5–M8未来closeout链接不提前创建。
 - 仅文档与关键词标记不重跑已经精确通过的P5完整门禁；main基线CI及内容哈希证明与上表一致。准备提交/推送的精确SHA由交付答复和Git记录给出，不循环提交文档自证自身CI。
 
 ## 5. 最终实现与 plan 的差异
@@ -86,9 +86,28 @@ T15 `make test` 是49个有测试包通过、16个无测试包；默认输出不
 
 独评记录的功能Minor均闭环：T9成功归档行 `deleted_at` 保留由T10真实断言/SQL变异证明；T10 activities/events长度先精确检查由T15重复活动变异证明；T12第二项目屏障、首项目锁释放/Execute计数由T15整批事务变异与race五遍证明；T13旧进程身份取真实child退出状态、故障附件分别尝试由T15漏stop变异及故障探针证明。T15评审另指出旧颜色警告，后续定向环境验证无警告，原日志照留。第4节的九项预检修订、这里的实施修复与第2节的最终差异/验证是不同阶段，不将“预检未关闭0”替代真实Minor记录。
 
-手写发布点的完整性依据T15矩阵：15处`Publish`调用覆盖16个写用例/12种类型，包含各Change四槽nil/值、无事件例外；20项生产变异和三订阅者真实PG/River回滚见相邻矩阵。P6生产Subscribers仍为空集合，这是设计过渡，不能声称P7生产抓取已联通。没有新增HTTP operation、错误码、业务表、迁移或依赖。最终实现尚待一次内部整分支审查，若有修复会在本节追加真实差异。
+手写发布点的完整性依据T15矩阵：15处`Publish`调用覆盖16个写用例/12种类型，包含各Change四槽nil/值、无事件例外；20项生产变异和三订阅者真实PG/River回滚见相邻矩阵。P6生产Subscribers仍为空集合，这是设计过渡，不能声称P7生产抓取已联通。没有新增HTTP operation、错误码、业务表、迁移或依赖。内部整分支审查结果与边界见下文。
 
 T16任务独评修复：plane-diff、v0设计和M1/P5输入交接曾把未持久化的自动归档事件 `ActorID` 写成 SQL NULL，或把事件与活动行一起归于 SQL 读回。现已分清：T10真实 SQL/组合读回证明 `issue_activities.actor_id` 为 SQL NULL；`shared.Event.ActorID` 是同步发布的内存值 nil，由事件组合断言核对，不存在事件表或事件 SQL 读回。本修复仅更正文案，不改变产品行为或既有运行证据。
+
+### 内部整分支审查与取舍（T16后）
+
+唯一一次内部整分支审查以 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e..6995d523831f89936a7c70a94079651315a9f783` 为对象，覆盖19提交、165文件及完整产品/测试/生成物/文档差异。审者先核正式三文档、两矩阵与任务台账，再逐段审完整diff；围绕真实风险追踪事务错误/回滚、Runner与关闭、项目锁/活动SQL、发布payload、E2E进程和数据库生命周期。另核T15七个源码文件SHA与门禁manifest一致，没有重跑产品套件、变异或性能测试。结论：Critical 0、Important 0、Minor 0，无新增测试要求；这是内部技术审查，不替代公开分支CI或负责人外部终审。原始报告在ignored `.superpowers/sdd/P6-issue-events/final-review.md`。
+
+审查报告的11项“考虑后不裁定为缺陷”均经主控接受，**不是发现，也不是豁免已承诺验收**：
+
+| 项 | 取舍及边界 |
+|---|---|
+| 1–2 事件存储/重放、生产通知与发送鉴权/外链安全 | P6只交同步分发和事务投递接缝；P7链接首个生产订阅者、M7通知、M8 Webhook及外链规则各在其阶段验收，不提前造outbox或通知模型。 |
+| 3 级联和DetachLabel单项事件 | 本期矩阵明列无事件副作用；P9按自身目标再定删除任务，不能擅加issue事件。 |
+| 4 单项目极大批量性能 | 每项目一锁一事务是已批准原子性；没有规模基准就不声称任意规模吞吐，也不为猜测改分块。 |
+| 5 项目失败后停止本轮 | 返回已提交数与原错，由River重试；幂等条件避免重复，继续越过故障项目属于新策略。 |
+| 6 锁下未另判`ArchiveIn>12` | 候选扫描限定1–12且生产schema有约束；测试移除约束不代表生产有效状态。 |
+| 7 并发/重复任务无额外唯一键 | 项目锁、未归档谓词及事务回滚已控制重复副作用，无新增schema必要。 |
+| 8 fixture未逐测试DROP DATABASE | world关闭自身连接，整轮容器回收数据库；资源所有权明确。 |
+| 9 准备期旧措辞 | 当时“当前仅准备/只到预检”是历史；本次进一步标记，不能据此重做T1或重索授权。 |
+| 10 极端并发篡改登记配置/不稳定Args.Kind | 当前生产类型与配置受控，无实际触发链，不加推测性反射/约束。 |
+| 11 尚无push、精确HEAD CI、外部终审/合并 | 是安排中的交付门，内部技术结论不代替其结果或授权。 |
 
 ## 6. 移交事项
 
@@ -100,6 +119,6 @@ T16任务独评修复：plane-diff、v0设计和M1/P5输入交接曾把未持久
 
 ## 7. 已知限制与后续门
 
-当前经证据确认 T1–T15 产品实施及逐Task独评，T16 文档提交后独评由主控接续；**尚未**进行内部整分支审查、必要修复/聚焦复审、push 后精确 HEAD 分支 CI、负责人外部终审。P5 main CI仅为基线。原始证据的早期SDK fallback、T2空匹配、T13缺完整末轮rawlog、旧颜色警告已在§2/§5分开标出，不改写为 pristine。
+当前经证据确认 T1–T16 实施及逐Task独评，T16一处文档措辞问题已由`6995d523`修复并经聚焦复审通过；内部整分支审查也已完成且零新发现。**尚未**完成push后精确HEAD分支CI与负责人外部终审。P5 main CI仅为基线。原始证据的早期SDK fallback、T2空匹配、T13缺完整末轮rawlog、旧颜色警告已在§2/§5分开标出，不改写为 pristine。
 
 交付时向负责人提供分支 `codex/m4-p6`、基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`、本 [spec](../specs/P6-issue-events.md)/[plan](../plans/P6-issue-events.md)/review 和精确 Git HEAD。最终push/CI的实际SHA由交付答复及Git记录给出，不为文档自证自身CI无限提交。本阶段先保留分支/worktree，不合并；`--no-ff`、精确main SHA CI、归档和清理仅在后续授权后进行。
