@@ -66,3 +66,23 @@ func eventDate(d *shared.Date) *string {
 	return eventPtr(d.String())
 }
 func eventFloat(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
+
+// relationEvent uses the canonical stored row, independently of the end that
+// authorized the request. Relation endpoints occupy only identifier slots.
+func (s stamp) relationEvent(kind string, r domain.Relation) shared.Event {
+	changes := []shared.Change{
+		{Field: "relation_type", New: eventPtr(string(r.Type))},
+		{Field: "issue", NewID: eventPtr(r.IssueID)},
+		{Field: "related_issue", NewID: eventPtr(r.RelatedID)},
+	}
+	if kind == domain.EventRelationRemoved {
+		for n := range changes {
+			changes[n].Old, changes[n].OldID = changes[n].New, changes[n].NewID
+			changes[n].New, changes[n].NewID = nil, nil
+		}
+	}
+	e := s.event(kind, changes)
+	e.WorkspaceID, e.ProjectID = r.WorkspaceID, r.ProjectID
+	e.Entity = shared.EntityRef{Kind: "issue_relation", ID: r.ID}
+	return e
+}

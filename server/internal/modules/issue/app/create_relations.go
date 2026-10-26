@@ -89,7 +89,16 @@ func (u *CreateIssueRelations) Execute(ctx context.Context, id uuid.UUID, t doma
 			return err
 		}
 		created, err = u.answer(ctx, actor.UserID, h, relations, others)
-		return err
+		if err != nil {
+			return err
+		}
+		for _, r := range relations {
+			s := h.own().stamp(actor.UserID, r.CreatedAt)
+			if err := u.d.Events.Publish(ctx, s.relationEvent(domain.EventRelationAdded, r)); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err

@@ -93,5 +93,8 @@ func (u *DeleteIssueRelation) delete(ctx context.Context, h held, r domain.Relat
 	rows := slices.Concat(
 		first.stamp(by, at).activity([]domain.Activity{domain.RelationRemoved(r.TypeFrom(first.issue.ID), *refOf(second.project, second.issue))}),
 		second.stamp(by, at).activity([]domain.Activity{domain.RelationRemoved(r.TypeFrom(second.issue.ID), *refOf(first.project, first.issue))}))
-	return u.d.Relations.InsertActivities(ctx, rows)
+	if err := u.d.Relations.InsertActivities(ctx, rows); err != nil {
+		return err
+	}
+	return u.d.Events.Publish(ctx, first.stamp(by, at).relationEvent(domain.EventRelationRemoved, r))
 }
