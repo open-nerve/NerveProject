@@ -103,10 +103,16 @@ func TestAutoArchiveProjectTransactionsAndSystemIdentity(t *testing.T) {
 		t.Fatalf("calls = %v; want %v", f.log.calls, want)
 	}
 	cutoffs := []time.Time{time.Date(2026, 1, 30, 10, 0, 0, 123456000, time.UTC), time.Date(2026, 3, 1, 10, 0, 0, 123456000, time.UTC)}
+	if len(f.rows) != len(cutoffs) {
+		t.Fatalf("rows=%d want=%d", len(f.rows), len(cutoffs))
+	}
 	for i, r := range f.rows {
 		if !r.Cutoff.Equal(cutoffs[i]) || !r.At.Equal(d.Clock.(clockAt).at) || !slices.Equal(r.StateIDs, []uuid.UUID{bob, alice}) {
 			t.Errorf("row %d = %+v", i, r)
 		}
+	}
+	if len(f.activities) != 3 || len(f.events) != 3 {
+		t.Fatalf("activities/events=%d/%d want=3/3", len(f.activities), len(f.events))
 	}
 	seen := map[uuid.UUID]bool{}
 	for i, a := range f.activities {

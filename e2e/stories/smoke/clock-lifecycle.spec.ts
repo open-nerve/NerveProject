@@ -48,18 +48,11 @@ base("clock world switches processes on its own database and advances business t
     expect(world.db.name).toBe(clockName);
     expect(world.db.name).not.toBe(control.name);
 
-    const oldURL = first.baseURL;
+    expect(first.exitCode).toBeNull();
     const second = await world.advance("24h");
-    expect(second.nerve.baseURL).not.toBe(oldURL);
+    expect(first.exitCode).toBe(0);
+    expect(second.nerve.exitCode).toBeNull();
     expect(second.startedAt.getTime()).toBeLessThanOrEqual((await stat(info.outputPath("clock-1.log"))).birthtimeMs);
-    await expect
-      .poll(async () =>
-        fetch(`${oldURL}/readyz`).then(
-          (r) => r.status,
-          () => 0
-        )
-      )
-      .toBe(0);
     const secondEmail = `after-${databaseName(info, "user")}@example.com`;
     await register(second.api, secondEmail);
     const secondAt = await world.db.query<{ created_at: Date }>("SELECT created_at FROM users WHERE email=$1", [
@@ -172,14 +165,7 @@ base("close during startup waits for the new process and then stops it", async (
     late = (await world.advance("1h")).nerve;
     expect(closeDuringStart).toBeDefined();
     await closeDuringStart;
-    await expect
-      .poll(async () =>
-        fetch(`${late!.baseURL}/readyz`).then(
-          (r) => r.status,
-          () => 0
-        )
-      )
-      .toBe(0);
+    expect(late.exitCode).toBe(0);
     await expect(world.db.query("SELECT 1")).rejects.toThrow();
   } finally {
     try {
@@ -211,15 +197,9 @@ base("concurrent advances leave only the last process running", async ({}, info)
       return run;
     });
     const [one, two] = await Promise.all([first, second]);
-    expect(world.current.nerve.baseURL).toBe(two.nerve.baseURL);
-    await expect
-      .poll(async () =>
-        fetch(`${one.nerve.baseURL}/readyz`).then(
-          (r) => r.status,
-          () => 0
-        )
-      )
-      .toBe(0);
+    expect(world.current.nerve).toBe(two.nerve);
+    expect(one.nerve.exitCode).toBe(0);
+    expect(two.nerve.exitCode).toBeNull();
     expect((await fetch(`${two.nerve.baseURL}/readyz`)).status).toBe(200);
   } finally {
     await Promise.allSettled(started.map((nerve) => nerve.stop()));

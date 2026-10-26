@@ -113,6 +113,7 @@ export const clockTest = base.extend<{ clockWorld: ClockWorld }>({
       let generation = 0;
       let world: ClockWorld | undefined;
       let failed = false;
+      const errors: unknown[] = [];
       try {
         world = await createClockWorld({
           databaseName,
@@ -125,30 +126,41 @@ export const clockTest = base.extend<{ clockWorld: ClockWorld }>({
         failed = testInfo.status !== testInfo.expectedStatus;
       } catch (error) {
         failed = true;
-        throw error;
+        errors.push(error);
       } finally {
         try {
           if (failed) {
-            const db = world?.db ?? openDatabase(databaseName);
-            try {
-              const file = testInfo.outputPath("clock-database.sql");
-              await db.dump(file);
-              await testInfo.attach("clock-database", { path: file, contentType: "application/sql" });
-            } finally {
-              if (!world) await db.close();
-            }
-            await Promise.all(
-              Array.from({ length: generation }, async (_, number) => {
+            // Each artifact is independent: a failed dump/attachment must not
+            // prevent process logs from being attached or hide the original error.
+            const diagnostics = await Promise.allSettled([
+              (async () => {
+                const db = world?.db ?? openDatabase(databaseName);
+                try {
+                  const file = testInfo.outputPath("clock-database.sql");
+                  await db.dump(file);
+                  await testInfo.attach("clock-database", { path: file, contentType: "application/sql" });
+                } finally {
+                  if (!world) await db.close();
+                }
+              })(),
+              ...Array.from({ length: generation }, async (_, number) => {
                 const file = logFile(number);
                 if (existsSync(file))
                   await testInfo.attach(`clock-${number}`, { path: file, contentType: "text/plain" });
-              })
-            );
+              }),
+            ]);
+            for (const result of diagnostics) if (result.status === "rejected") errors.push(result.reason);
           }
         } finally {
-          await world?.close();
+          try {
+            await world?.close();
+          } catch (error) {
+            errors.push(error);
+          }
         }
       }
+      if (errors.length === 1) throw errors[0];
+      if (errors.length > 1) throw new AggregateError(errors, "clock fixture and diagnostics failed");
     },
     // Setup may wait for readiness; failure artifacts may need pg_dump before teardown.
     { timeout: nerveFixtureTimeoutMs + 110_000 },

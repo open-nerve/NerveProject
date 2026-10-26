@@ -137,16 +137,20 @@ func TestAutoArchiveUsesLockedPolicyOneProjectAtATime(t *testing.T) {
 	archiveRaceSeed(t, w, at, 40*24*time.Hour)
 	other := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Other", "OTH")
 	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+other.String(), `{"archive_in":1}`, 200)
-	g := newGate()
+	g, second := newGate(), newGate()
 	events := newArchiveRaceEvents(t, w)
 	p := project.Provide(w.pool)
-	job := issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: &archiveFirstStates{StateCatalog: issueProjects{projects: p.IssueProjects}, gate: g}, Issues: issuepostgres.New(w.pool), Tx: newIssueJobTx(w.pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), Clock: clockAt(at), Events: events})
-	done := run(func() error { _, err := job.Execute(pgtest.Soon(t)); return err })
+	states := &archiveFirstStates{StateCatalog: issueProjects{projects: p.IssueProjects}, gates: []*gate{g, second}}
+	job := issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: states, Issues: issuepostgres.New(w.pool), Tx: newIssueJobTx(w.pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), Clock: clockAt(at), Events: events})
+	count := 0
+	done := run(func() error { var err error; count, err = job.Execute(pgtest.Soon(t)); return err })
 	defer func() {
-		select {
-		case <-g.open:
-		default:
-			close(g.open)
+		for _, barrier := range []*gate{g, second} {
+			select {
+			case <-barrier.open:
+			default:
+				close(barrier.open)
+			}
 		}
 		if err := result(t, pgtest.Soon(t), done, "single project cleanup"); err != nil {
 			t.Error(err)
@@ -163,22 +167,32 @@ func TestAutoArchiveUsesLockedPolicyOneProjectAtATime(t *testing.T) {
 	}
 	w.answered(t, reply, 200)
 	close(g.open)
+	held(t, pgtest.Soon(t), second, done, "second project")
+	if pgtest.RowWaits(t, w.pool, "projects", w.web, "FOR SHARE") || !pgtest.RowWaits(t, w.pool, "projects", other, "FOR SHARE") {
+		t.Error("first project lock was not released while second project is held")
+	}
+	close(second.open)
 	if err := result(t, pgtest.Soon(t), done, "both archive projects"); err != nil {
 		t.Fatal(err)
+	}
+	if count != 1 || len(states.ids) != 2 || states.ids[0] != w.web || states.ids[1] != other || len(events.snapshot()) != 1 || issueEventCount(t, w) != 1 {
+		t.Fatalf("project observations=%v count=%d events=%d jobs=%d", states.ids, count, len(events.snapshot()), issueEventCount(t, w))
 	}
 }
 
 type archiveFirstStates struct {
 	issueapp.StateCatalog
-	gate   *gate
-	called bool
+	gates []*gate
+	ids   []uuid.UUID
 }
 
 func (s *archiveFirstStates) States(ctx context.Context, id uuid.UUID) ([]issueapp.StateRef, error) {
 	rows, err := s.StateCatalog.States(ctx, id)
-	if err == nil && !s.called {
-		s.called = true
-		err = s.gate.wait(ctx)
+	if err == nil {
+		s.ids = append(s.ids, id)
+		if len(s.ids) <= len(s.gates) {
+			err = s.gates[len(s.ids)-1].wait(ctx)
+		}
 	}
 	return rows, err
 }

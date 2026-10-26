@@ -27,6 +27,8 @@ export const nerveFixtureTimeoutMs = readyTimeoutMs + stopTimeoutMs + 10_000;
 /** A nerve serve process of this run. */
 export interface Nerve {
   readonly baseURL: string;
+  /** Exit status of this exact child process; null while it is running. */
+  readonly exitCode: number | null;
   /** Sends SIGTERM and waits for nerve to exit with code 0. */
   stop(): Promise<void>;
 }
@@ -90,7 +92,13 @@ export async function startNerve(
   });
   try {
     const baseURL = await waitUntilReady(child, addrFile, Date.now() + readyTimeoutMs, () => spawnError);
-    return { baseURL, stop: () => stop(child, logFile) };
+    return {
+      baseURL,
+      get exitCode() {
+        return child.exitCode;
+      },
+      stop: () => stop(child, logFile),
+    };
   } catch (err) {
     await kill(child);
     throw new Error(`nerve did not become ready (log: ${logFile})`, { cause: err });
