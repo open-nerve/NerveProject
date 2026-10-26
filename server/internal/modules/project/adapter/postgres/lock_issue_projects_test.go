@@ -23,7 +23,7 @@ func TestLockIssueProjects(t *testing.T) {
 	acme := newWorkspace(t, pool, "acme")
 	web, arch, gone, ops := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Arch", "ARCH", alice), newProject(t, s, acme,
 		"Gone", "GONE", alice), newProject(t, s, acme, "Ops", "OPS", alice)
-	exec(t, pool, "UPDATE projects SET default_assignee_id = $2 WHERE id = $1", web, alice)
+	exec(t, pool, "UPDATE projects SET default_assignee_id = $2, archive_in = 7 WHERE id = $1", web, alice)
 	exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", arch, now)
 	exec(t, pool, "UPDATE projects SET deleted_at = $2 WHERE id = $1", gone, now)
 
@@ -32,7 +32,7 @@ func TestLockIssueProjects(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		want := map[uuid.UUID]app.IssueProject{web: {WorkspaceID: acme, DefaultAssigneeID: &alice, Identifier: "WEB"},
+		want := map[uuid.UUID]app.IssueProject{web: {WorkspaceID: acme, DefaultAssigneeID: &alice, Identifier: "WEB", ArchiveIn: 7},
 			arch: {WorkspaceID: acme, Archived: true, Identifier: "ARCH"}}
 		if jsonOf(t, locked) != jsonOf(t, want) {
 			t.Errorf("LockIssueProjects() = %+v, want %+v", locked, want)

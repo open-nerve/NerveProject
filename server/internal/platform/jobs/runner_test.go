@@ -128,13 +128,13 @@ func TestAFailedAttemptReleasesItsContext(t *testing.T) {
 // them, and has nothing to stop.
 func TestStopEndsTheAttemptsToStart(t *testing.T) {
 	fake := &fakeClient{fails: 1000, attempts: make(chan struct{}, 1000)}
-	r := newRunner(fake, Config{ShutdownTimeout: time.Second, Logger: slog.New(slog.DiscardHandler)})
+	var logs logBuffer
+	r := newRunner(fake, Config{ShutdownTimeout: time.Second, Logger: newLogger(&logs)})
 	start(t, r, context.Background())
 	receive(t, fake.attempts, 5*time.Second, "attempt to start")
-
-	stopping := time.Now()
-	if err := stop(t, r, context.Background(), time.Second); err != nil || time.Since(stopping) > 100*time.Millisecond {
-		t.Errorf("Stop() = %v after %s, want nil at once, not after the %s pause", err, time.Since(stopping), firstRetry)
+	logs.waitFor(t, `msg="jobs did not start; trying again"`, 5*time.Second)
+	if err := stop(t, r, context.Background(), firstRetry/2); err != nil {
+		t.Errorf("Stop() = %v, want cancellation before the retry", err)
 	}
 	fake.mu.Lock()
 	defer fake.mu.Unlock()

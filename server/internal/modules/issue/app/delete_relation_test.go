@@ -26,7 +26,7 @@ func newUnrelate() (*app.DeleteIssueRelation, *world, *fakeRelations) {
 
 // unrelateOver is deleteIssueRelation over w's locks and rel.
 func unrelateOver(w *world, rel *fakeRelations) *app.DeleteIssueRelation {
-	return app.NewDeleteIssueRelation(app.DeleteIssueRelationDeps{Locks: w.locks, Relations: rel, Clock: clockAt{at: clockNow, log: w.log}})
+	return app.NewDeleteIssueRelation(app.DeleteIssueRelationDeps{Events: discardEvents{}, Locks: w.locks, Relations: rel, Clock: clockAt{at: clockNow, log: w.log}})
 }
 
 // fromNear stores newUnrelate's relation from near instead, the smaller id,

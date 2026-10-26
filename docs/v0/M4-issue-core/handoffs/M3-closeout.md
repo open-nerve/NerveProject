@@ -179,3 +179,7 @@ M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以�
 - 仍开放：§1整体规模/锁与后续批写，§5前端旧ProjectService/user-properties/workItemFilters迁移P10b；api/testdata/issue-order.json由P10b生产前端码点比较器和vitest同文件消费。相关until:M4/P11例外到实际迁移才删；P11详情store/service/JSONContent/comment_json/is_bot、§6–8及P12–15页面、P6 archive_in/P9限时删除等保留原分配。
 
 仅登记本输入的P5承接，`status: open`保持；不以八接口故事关闭页面、M4总体或T16整项，不生成M5–M8的真正收尾文件。证据：[P5 spec §2/§7](../specs/P5-issue-list.md#2-交付物)、[P5 review §2](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
+
+## 处理结果（M4/P6）
+
+§1工作项事件事务发布已实现；`jobs_test.go`/`runner_test.go` 两处固定余量已改为状态与期限，`registrationRows` 对请求入队的 `river_job` 仍属P7，项目/工作区删除任务及邀请同步边界仍属P9。§4 `Project`/`ProjectPatch.archive_in` 的0关闭、1–12个月×30天、终态和 `updated_at` 说明已通过生成链；锁下策略、每项目事务、NULL actor和运行角色真实验证由T9–T12完成。§2/3既有锁与权限回归由T15全套覆盖，P9物理清理和删除轮询、§5–9页面仍按原分配。整体 `status: open`；见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)/[§6](../reviews/P6-issue-events-review.md#6-移交事项)。

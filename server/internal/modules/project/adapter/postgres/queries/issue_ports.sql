@@ -3,7 +3,7 @@
 -- work-item side (3.5, decision point 1: B), the project's row FOR NO KEY UPDATE, its workspace's row not locked.
 -- After a wait Postgres evaluates deleted_at IS NULL again on the row's newest version, so a project deleted meanwhile
 -- reads no row. The identifier names the project's work items in their activity (3.13), as it is under the lock.
-SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in
 FROM projects
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL
 FOR NO KEY UPDATE;
@@ -13,7 +13,7 @@ FOR NO KEY UPDATE;
 -- projects among ids FOR NO KEY UPDATE, as LockIssueProject, in one statement, in id order. The lock is taken as the
 -- sorted rows come, so the order is the ids' (S5 E4). After a wait, Postgres evaluates deleted_at IS NULL again on the
 -- row's newest version: a project deleted meanwhile is left out.
-SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier
+SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in
 FROM projects
 WHERE id = ANY (sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL
 ORDER BY id

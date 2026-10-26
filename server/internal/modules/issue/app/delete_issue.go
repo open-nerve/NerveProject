@@ -56,9 +56,10 @@ func issueRowSteps(d IssueRowsDeleter) []func(context.Context, IssueDeletion) er
 
 // DeleteIssueDeps are what deleteIssue writes through.
 type DeleteIssueDeps struct {
-	Locks Locks
-	Rows  IssueRowsDeleter
-	Clock Clock
+	Events shared.EventPublisher
+	Locks  Locks
+	Rows   IssueRowsDeleter
+	Clock  Clock
 }
 
 // DeleteIssue deletes a work item: DELETE /api/v0/issues/{issue_id} (M4
@@ -103,6 +104,12 @@ func (u *DeleteIssue) Execute(ctx context.Context, id uuid.UUID) error {
 		d := IssueDeletion{IssueIDs: subtree, By: actor.UserID, At: u.d.Clock.Now()}
 		for _, step := range issueRowSteps(u.d.Rows) {
 			if err := step(ctx, d); err != nil {
+				return err
+			}
+		}
+		for _, issueID := range subtree {
+			s := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: issueID, by: d.By, at: d.At}
+			if err := u.d.Events.Publish(ctx, s.event(domain.EventIssueDeleted, nil)); err != nil {
 				return err
 			}
 		}

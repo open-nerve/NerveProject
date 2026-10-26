@@ -33,7 +33,7 @@ func (f *fakeIssues) SetArchivedAt(ctx context.Context, a app.IssueArchival) err
 // items and states as they are when it is called, their clock at
 // clockNow: after gated rebuilds w's locks, they are over the gated ones.
 func archiveOver(w *world) (*app.ArchiveIssue, *app.UnarchiveIssue) {
-	d := app.ArchiveIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project, Clock: clockAt{at: clockNow, log: w.log}}
+	d := app.ArchiveIssueDeps{Events: discardEvents{}, Locks: w.locks, Issues: w.issues, States: w.project, Clock: clockAt{at: clockNow, log: w.log}}
 	return app.NewArchiveIssue(d), app.NewUnarchiveIssue(d)
 }
 

@@ -10,6 +10,7 @@ import (
 
 // CreateIssueCommentDeps are the ports a comment creation consumes.
 type CreateIssueCommentDeps struct {
+	Events    shared.EventPublisher
 	Locks     Locks
 	Comments  CommentCreator
 	Members   ProjectMembers
@@ -56,7 +57,10 @@ func (u *CreateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 		if err := u.d.Comments.InsertSubscribers(ctx, stamp.links(targets)); err != nil {
 			return err
 		}
-		return u.d.Comments.InsertComment(ctx, CommentWrite{Comment: created, By: actor.UserID, At: at})
+		if err := u.d.Comments.InsertComment(ctx, CommentWrite{Comment: created, By: actor.UserID, At: at}); err != nil {
+			return err
+		}
+		return u.d.Events.Publish(ctx, stamp.commentEvent(domain.EventCommentCreated, created.ID, nil, eventPtr(created.HTML)))
 	})
 	if err != nil {
 		return domain.Comment{}, err

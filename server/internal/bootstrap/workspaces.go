@@ -8,7 +8,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
-	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/logging"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -35,10 +34,11 @@ func Workspaces(ctx context.Context, cfg config.Config, logOut, out io.Writer, c
 		return err
 	}
 	defer pool.Close()
+	businessClock := newClock(cfg)
 	admin := workspace.NewAdmin(workspace.AdminDeps{
 		Pool:     pool,
 		Tx:       postgres.NewTxManager(pool, cfg.Database.CommitTimeout),
-		Clock:    clock.System{},
+		Clock:    businessClock,
 		Logger:   logger,
 		Accounts: workspaceAccounts{accounts: identity.Provide(pool).Accounts},
 		Counts:   project.Provide(pool).ProjectMembershipCounts,

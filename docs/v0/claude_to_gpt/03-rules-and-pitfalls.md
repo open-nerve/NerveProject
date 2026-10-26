@@ -47,6 +47,8 @@
   - 不加设计没有点名的 Go 模块或 npm 包，需要就上报；
   - 不给副本的 `node_modules` 建符号链接，用仓库自己的安装命令。
 - **git**：
+  - 主项目目录 HEAD 始终保持 `main`；开发分支用 worktree，Codex 路径为 `.codex/worktress/<分支>/`，不在主目录切开发分支；
+  - 提交说明按负责人最新 AGENTS 使用详细中文；推送优先用系统 `/usr/bin/git`，不从钥匙串或其他位置提取凭据；
   - 不用 `stash`、`clean`、`reset --hard`（工作树之间共享 stash，别的会话可能在用）；
   - 需要完整 SHA 时用 `git rev-parse` 取，不手工补全；
   - 合并见 [02](02-method.md) 第 8 步。

@@ -73,8 +73,15 @@ ratelimit:
   # 需要校验密码的已认证操作（M2 中是修改密码），按账户
   password_user: {per_minute: 5, burst: 5}
 
+# 业务时间偏移；仅 NERVE_ENV=test 允许非零，不影响 River 调度、限流或等待期限
+clock:
+  offset: 0s
+
 # 后台任务（River）
 jobs:
+  # Concurrent jobs per queue; periodic housekeeping has its own capacity.
+  default_workers: 10
+  periodic_workers: 2
   # 停机时，HTTP 服务停下之后等正在运行的任务结束的时长；到期后取消它们
   shutdown_timeout: 10s
 
@@ -86,6 +93,7 @@ workspace:
 
 # 工作项一侧的写（M4 设计 3.5、11.11）
 issue:
+  auto_archive_interval: 24h
   # 按项目的写闸门：本进程里同一个项目上同时持有数据库连接的工作项写至多 per_project 个；
   # 其余的写不持连接地排队，至多 max_queue 个，各等至多 max_wait。超出时 503 server_busy，带 Retry-After
   write_gate:

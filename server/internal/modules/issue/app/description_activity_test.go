@@ -73,7 +73,7 @@ func TestDescriptionActivityMerge(t *testing.T) {
 					t.Fatal("new activity must have an id")
 				}
 				old, next := change.Old, change.New
-				want := ActivityRow{ID: got.ID, WorkspaceID: s.workspace, ProjectID: s.project, IssueID: s.issue, ActorID: s.by, At: s.at,
+				want := ActivityRow{ID: got.ID, WorkspaceID: s.workspace, ProjectID: s.project, IssueID: s.issue, ActorID: &s.by, At: s.at,
 					Activity: domain.Activity{Field: &description, Verb: domain.VerbUpdated, OldValue: &old, NewValue: &next, Comment: "updated the description to"}}
 				if !reflect.DeepEqual(got, want) {
 					t.Fatalf("new activity = %+v, want %+v", got, want)

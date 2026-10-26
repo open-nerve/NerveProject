@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
@@ -80,10 +79,8 @@ func (w *probeWorker) Work(ctx context.Context, job *river.Job[probeArgs]) error
 // probeJob is a periodic job every interval, the first at once.
 func probeJob(interval time.Duration, work func(ctx context.Context, job *river.Job[probeArgs]) error) Job {
 	return Job{
-		Add: func(w *river.Workers) error { return river.AddWorkerSafely(w, &probeWorker{work: work}) },
-		Periodic: river.NewPeriodicJob(river.PeriodicInterval(interval),
-			func() (river.JobArgs, *river.InsertOpts) { return probeArgs{}, nil },
-			&river.PeriodicJobOpts{ID: "jobs_test.probe", RunOnStart: true}),
+		Worker:   Register(&probeWorker{work: work}),
+		Periodic: &PeriodicSpec{Args: probeArgs{}, Interval: interval, ID: "jobs_test.probe", RunOnStart: true},
 	}
 }
 
@@ -139,8 +136,8 @@ func TestRunnerWorksAPeriodicJobUntilStopped(t *testing.T) {
 	t.Parallel()
 	runs := make(chan time.Time, 100)
 	var logs logBuffer
-	r, err := New(newPool(t, pgtest.NewDatabase(t)), Config{ShutdownTimeout: 5 * time.Second, Logger: newLogger(&logs)},
-		[]Job{probeJob(time.Second, func(_ context.Context, job *river.Job[probeArgs]) error { runs <- job.ScheduledAt; return nil })})
+	r, err := New(newPool(t, pgtest.NewDatabase(t)), Config{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 5 * time.Second, Logger: newLogger(&logs)},
+		[]Job{probeJob(time.Second, func(_ context.Context, job *river.Job[probeArgs]) error { runs <- job.ScheduledAt; return nil })}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +181,7 @@ func TestStopCancelsARunningJobAfterTheShutdownTimeout(t *testing.T) {
 			t.Parallel()
 			running, cancelled := make(chan struct{}, 1), make(chan time.Time, 1)
 			var logs logBuffer
-			r, err := New(newPool(t, pgtest.NewDatabase(t)), Config{ShutdownTimeout: timeout, Logger: newLogger(&logs)},
+			r, err := New(newPool(t, pgtest.NewDatabase(t)), Config{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: timeout, Logger: newLogger(&logs)},
 				[]Job{probeJob(time.Hour, func(ctx context.Context, _ *river.Job[probeArgs]) error {
 					running <- struct{}{}
 					select {
@@ -194,7 +191,7 @@ func TestStopCancelsARunningJobAfterTheShutdownTimeout(t *testing.T) {
 					case <-time.After(15 * time.Second): // never cancelled: end, so the test fails instead of hanging
 						return errors.New("the job's context was never cancelled")
 					}
-				})})
+				})}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -224,12 +221,12 @@ func TestStopGivesUpOnAJobThatIgnoresCancellation(t *testing.T) {
 	t.Parallel()
 	running, release := make(chan struct{}, 1), make(chan struct{})
 	var logs logBuffer
-	r, err := New(newPool(t, pgtest.NewDatabase(t)), Config{ShutdownTimeout: time.Second, Logger: newLogger(&logs)},
+	r, err := New(newPool(t, pgtest.NewDatabase(t)), Config{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: time.Second, Logger: newLogger(&logs)},
 		[]Job{probeJob(time.Hour, func(context.Context, *river.Job[probeArgs]) error {
 			running <- struct{}{}
 			<-release
 			return nil
-		})})
+		})}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,68 +250,21 @@ func TestStopGivesUpOnAJobThatIgnoresCancellation(t *testing.T) {
 // keeps trying in the background, and Stop ends that at once.
 func TestStartWithoutADatabase(t *testing.T) {
 	var logs logBuffer
-	r, err := New(newPool(t, "postgres://nobody@127.0.0.1:1/nowhere"), Config{ShutdownTimeout: 5 * time.Second, Logger: newLogger(&logs)},
-		[]Job{probeJob(time.Hour, func(context.Context, *river.Job[probeArgs]) error { return nil })})
+	r, err := New(newPool(t, "postgres://nobody@127.0.0.1:1/nowhere"), Config{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 5 * time.Second, Logger: newLogger(&logs)},
+		[]Job{probeJob(time.Hour, func(context.Context, *river.Job[probeArgs]) error { return nil })}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	start(t, r, context.Background())
 	logs.waitFor(t, `msg="jobs did not start; trying again"`, 5*time.Second)
 
-	stopping := time.Now()
-	if err := stop(t, r, context.Background(), 2*time.Second); err != nil || time.Since(stopping) > 500*time.Millisecond {
-		t.Errorf("Stop() = %v after %s, want nil at once", err, time.Since(stopping))
+	if err := stop(t, r, context.Background(), firstRetry/2); err != nil {
+		t.Errorf("Stop() = %v, want cancellation before the retry", err)
 	}
 	if !strings.Contains(logs.String(), " retry_in=1s") {
 		t.Errorf("logs lack the first wait of 1s:\n%s", logs.String())
 	}
 	if strings.Contains(logs.String(), `msg="jobs started"`) {
 		t.Errorf("logs claim the jobs started:\n%s", logs.String())
-	}
-}
-
-func TestNewRejectsTwoWorkersOfOneKind(t *testing.T) {
-	job := probeJob(time.Hour, func(context.Context, *river.Job[probeArgs]) error { return nil })
-	_, err := New(newPool(t, "postgres://nobody@127.0.0.1:1/nowhere"), Config{ShutdownTimeout: time.Second, Logger: slog.New(slog.DiscardHandler)},
-		[]Job{job, {Add: job.Add}})
-	if err == nil || !strings.Contains(err.Error(), "register a job") {
-		t.Errorf("New() = %v, want the second worker of jobs_test.probe refused", err)
-	}
-}
-
-// At most two jobs run at once: a third waits until one of them returns.
-func TestRunnerWorksTwoJobsAtOnce(t *testing.T) {
-	t.Parallel()
-	running, release := make(chan struct{}, 3), make(chan struct{})
-	job := probeJob(time.Hour, func(context.Context, *river.Job[probeArgs]) error {
-		running <- struct{}{}
-		<-release
-		return nil
-	})
-	r, err := New(newPool(t, pgtest.NewDatabase(t)), Config{ShutdownTimeout: time.Second, Logger: slog.New(slog.DiscardHandler)},
-		[]Job{{Add: job.Add}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var once sync.Once
-	releaseAll := func() { once.Do(func() { close(release) }) }
-	t.Cleanup(releaseAll) // before the pool closes: cleanups run last first
-	for range 3 {
-		if _, err := r.client.(*river.Client[pgx.Tx]).Insert(context.Background(), probeArgs{}, nil); err != nil {
-			t.Fatal(err)
-		}
-	}
-	start(t, r, context.Background())
-	receive(t, running, 15*time.Second, "first job")
-	receive(t, running, 5*time.Second, "second job")
-	select {
-	case <-running:
-		t.Errorf("a third job runs alongside the first two, want at most two at once")
-	case <-time.After(1500 * time.Millisecond):
-	}
-	releaseAll()
-	receive(t, running, 5*time.Second, "third job, once the first two returned")
-	if err := stop(t, r, context.Background(), 5*time.Second); err != nil {
-		t.Errorf("Stop() = %v", err)
 	}
 }

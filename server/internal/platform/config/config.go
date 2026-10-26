@@ -24,6 +24,7 @@ type Config struct {
 	Database  DatabaseConfig  `koanf:"database"`
 	Auth      AuthConfig      `koanf:"auth"`
 	RateLimit RateLimitConfig `koanf:"ratelimit"`
+	Clock     ClockConfig     `koanf:"clock"`
 	Jobs      JobsConfig      `koanf:"jobs"`
 	Workspace WorkspaceConfig `koanf:"workspace"`
 	Issue     IssueConfig     `koanf:"issue"`
@@ -130,8 +131,15 @@ func (b BucketConfig) LogValue() slog.Value {
 	return slog.GroupValue(slog.Int("per_minute", b.PerMinute), slog.Int("burst", b.Burst))
 }
 
+// ClockConfig shifts business time in the test profile only.
+type ClockConfig struct {
+	Offset time.Duration `koanf:"offset"`
+}
+
 // JobsConfig configures the background jobs (M2 design 3.15).
 type JobsConfig struct {
+	DefaultWorkers  int `koanf:"default_workers"`
+	PeriodicWorkers int `koanf:"periodic_workers"`
 	// ShutdownTimeout is how long nerve waits at shutdown for the running
 	// jobs, after the HTTP server has stopped; then their contexts are
 	// cancelled.
@@ -149,6 +157,8 @@ type WorkspaceConfig struct {
 // IssueConfig configures the writes on the work-item side (M4 design 3.5,
 // 11.11).
 type IssueConfig struct {
+	// AutoArchiveInterval controls the periodic system archival scan.
+	AutoArchiveInterval time.Duration `koanf:"auto_archive_interval"`
 	// WriteGate bounds the writes on one project's work items that hold a
 	// connection at once in this process.
 	WriteGate WriteGateConfig `koanf:"write_gate"`
@@ -231,8 +241,11 @@ func (c Config) LogValue() slog.Value {
 			slog.Any("register_ip", c.RateLimit.RegisterIP),
 			slog.Any("password_user", c.RateLimit.PasswordUser),
 		),
+		slog.Group("clock", slog.Duration("offset", c.Clock.Offset)),
 		slog.Group("jobs",
 			slog.Duration("shutdown_timeout", c.Jobs.ShutdownTimeout),
+			slog.Int("default_workers", c.Jobs.DefaultWorkers),
+			slog.Int("periodic_workers", c.Jobs.PeriodicWorkers),
 		),
 		slog.Group("workspace",
 			slog.Bool("creation_enabled", c.Workspace.CreationEnabled),
@@ -244,6 +257,7 @@ func (c Config) LogValue() slog.Value {
 				slog.Int("max_queue", c.Issue.WriteGate.MaxQueue),
 			),
 			slog.Duration("write_lock_timeout", c.Issue.WriteLockTimeout),
+			slog.Duration("auto_archive_interval", c.Issue.AutoArchiveInterval),
 		),
 		slog.Group("files",
 			slog.Int64("size_limit", c.Files.SizeLimit),

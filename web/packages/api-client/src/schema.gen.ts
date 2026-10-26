@@ -1882,7 +1882,7 @@ export interface components {
             intake_view: boolean;
             /** @description Whether the project's guests see every work item of it. When false, a guest of the project sees only the work items he created, and every other answers him as one that does not exist (issue.not_found). */
             guest_view_all_features: boolean;
-            /** @description A number of months, 0–12, set for automatic archiving and kept as set; 0 for none. */
+            /** @description Automatic archival threshold, 0–12 months of 30 days each; 0 disables it. Inactive completed or cancelled work items are archived by a periodic job after this threshold, using their last update time. */
             archive_in: number;
             /**
              * Format: date-time
@@ -1950,7 +1950,7 @@ export interface components {
             issue_views_view?: boolean;
             intake_view?: boolean;
             guest_view_all_features?: boolean;
-            /** @description A number of months, 0–12, set for automatic archiving and kept as set; 0 for none. */
+            /** @description Automatic archival threshold, 0–12 months of 30 days each; 0 disables it. Inactive completed or cancelled work items are archived by a periodic job after this threshold, using their last update time. */
             archive_in?: number;
             logo_props?: components["schemas"]["LogoProps"];
             /** @description An IANA time zone name. */

@@ -16,7 +16,7 @@ import (
 func newComment() (*app.CreateIssueComment, *world, *fakeComments, uuid.UUID) {
 	_, w, id := newUpdate()
 	f := &fakeComments{fakeRelations: &fakeRelations{fakeIssues: w.issues}}
-	return app.NewCreateIssueComment(app.CreateIssueCommentDeps{Locks: w.locks, Comments: f, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clockAt{at: clockNow, log: w.log}}), w, f, id
+	return app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: discardEvents{}, Locks: w.locks, Comments: f, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clockAt{at: clockNow, log: w.log}}), w, f, id
 }
 
 func TestCreateComment(t *testing.T) {
@@ -163,7 +163,7 @@ func TestCreateCommentHiddenGuestNeverEntersGate(t *testing.T) {
 	w.auth.grants = []shared.Grant{ownOnly}
 	w.auth.answers = []error{shared.Forbidden()}
 	locks := app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log})
-	uc := app.NewCreateIssueComment(app.CreateIssueCommentDeps{Locks: locks, Comments: f, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clockAt{at: clockNow, log: w.log}})
+	uc := app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: discardEvents{}, Locks: locks, Comments: f, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clockAt{at: clockNow, log: w.log}})
 	_, err := uc.Execute(as(alice), id, "<p>Hidden</p>")
 	wantRefused(t, err, domain.ErrIssueNotFound)
 	if len(w.log.calls) != 2 || f.inserted != nil || f.subscribed != nil || f.marked != nil {

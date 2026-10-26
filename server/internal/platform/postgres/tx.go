@@ -22,10 +22,18 @@ type Querier interface {
 
 type txKey struct{}
 
+// Tx returns the original transaction carried by ctx, without falling back
+// to a pool. Adapters that require an existing transaction use it at the
+// composition root.
+func Tx(ctx context.Context) (pgx.Tx, bool) {
+	tx, ok := ctx.Value(txKey{}).(pgx.Tx)
+	return tx, ok
+}
+
 // DB returns the transaction that TxManager.WithinTx put in ctx, or pool
 // when ctx carries none.
 func DB(ctx context.Context, pool *pgxpool.Pool) Querier {
-	if tx, ok := ctx.Value(txKey{}).(pgx.Tx); ok {
+	if tx, ok := Tx(ctx); ok {
 		return tx
 	}
 	return pool
@@ -110,7 +118,7 @@ func LockNotAvailable(err error) bool {
 // context fn receives carries the transaction; a nested WithinTx on it runs
 // fn in the same transaction. fn's error, or a panic, rolls it back.
 func (m *TxManager) WithinTx(ctx context.Context, fn func(ctx context.Context) error) error {
-	if _, ok := ctx.Value(txKey{}).(pgx.Tx); ok {
+	if _, ok := Tx(ctx); ok {
 		return fn(ctx)
 	}
 	tx, err := m.pool.BeginTx(ctx, m.begin)

@@ -26,7 +26,7 @@ func TestLockIssueProject(t *testing.T) {
 	acme := newWorkspace(t, pool, "acme")
 	web, arch, gone := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Arch", "ARCH", alice), newProject(t, s, acme,
 		"Gone", "GONE", alice)
-	exec(t, pool, "UPDATE projects SET default_assignee_id = $2 WHERE id = $1", web, alice)
+	exec(t, pool, "UPDATE projects SET default_assignee_id = $2, archive_in = 7 WHERE id = $1", web, alice)
 	exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", arch, now)
 	exec(t, pool, "UPDATE projects SET deleted_at = $2 WHERE id = $1", gone, now)
 
@@ -35,7 +35,7 @@ func TestLockIssueProject(t *testing.T) {
 		want  app.IssueProject
 		found bool
 	}{
-		"Web":  {web, app.IssueProject{WorkspaceID: acme, DefaultAssigneeID: &alice, Identifier: "WEB"}, true},
+		"Web":  {web, app.IssueProject{WorkspaceID: acme, DefaultAssigneeID: &alice, Identifier: "WEB", ArchiveIn: 7}, true},
 		"Arch": {arch, app.IssueProject{WorkspaceID: acme, Archived: true, Identifier: "ARCH"}, true},
 		"Gone": {gone, app.IssueProject{}, false},
 	} {

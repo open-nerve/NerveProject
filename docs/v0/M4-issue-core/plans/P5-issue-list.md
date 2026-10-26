@@ -1,6 +1,6 @@
 # M4/P5 工作项列表与显示设置实施计划
 
-> **执行方式：** 按 Task 使用 superpowers:subagent-driven-development 或 superpowers:executing-plans。状态：开发工作及内部整审/修复复审完成；精确HEAD分支CI是交付前置门，负责人终审/集成另待安排。已执行步骤按各Task勾选，真实证据见阶段评审。P5 起步/局部实现按既有自主授权与独立预检继续；本阶段完成后先交负责人安排整分支终审，再处理意见并合并，除非负责人另作安排。确需架构裁定仍上报。
+> **执行方式：** 按 Task 使用 superpowers:subagent-driven-development 或 superpowers:executing-plans。状态：P5已完成，含负责人追加deep-review、修复复审及授权合并/main CI/清理；具体证据见review。已执行步骤按各Task勾选，真实证据见阶段评审。P5 起步/局部实现按既有自主授权与独立预检继续；本阶段完成后先交负责人安排整分支终审，再处理意见并合并，除非负责人另作安排。确需架构裁定仍上报。
 
 **目标：** 交付 M4 §12/P5 的列表引擎、两个 API、可见性目录及关联替换、sort_order PATCH、三类项目偏好、性能和接口故事。
 
@@ -413,13 +413,13 @@ T13a/b预计970–1350/865–1240手写行；单元接近1400先复核剩余职�
 - [x] spec性能部分补最终生产SQL实际索引/EXPLAIN与成本，保留20k目标/100k验证、M8跨项目扫描与名字变更跨页漂移；不新增未经批准索引路线。
 - [x] P10b交接共用issue-order.json、真实前端码点比较器/vitest与旧store迁移；P8 link_count/搜索复用词汇；P12–15页面故事；M4/交接开放状态不提前关闭。
 - [x] 已自检16父任务/19实施单元、真实基线与最终签名；独立整分支审查覆盖e9782b8f→017c950d全部差异和关键调用链。C0/I2/M1经49623057统一修复，唯一范围复审全部ADDRESSED、无新C/I/M；最终review保留命令/HEAD/环境、真实红绿/恢复、性能及后续边界。
-- [x] 当前授权内的开发工作：实现、文档/交接、内部整分支审查及局部修复复审完成，适用G及修复提交后make gen-check通过。精确修复HEAD49623057与各Task证据见review；保留分支和worktree，集成另待负责人。
-- [ ] 待负责人安排的集成收口：负责人整分支终审并处理意见后，按最终SHA分支CI→--no-ff合并→main CI→worktree清理。最新指示为阶段完成先别合并，当前不执行本项；T16整项不能在main CI与清理尚未完成时提前勾选。
+- [x] 当时开发交付门：实现、文档/交接、内部整分支审查及局部修复复审完成，适用G及修复提交后make gen-check通过。精确修复HEAD49623057与各Task证据见review；当时按指示保留分支和worktree；后续授权集成结果见下一项。
+- [x] 集成收口：2026-10-26 负责人授权后，P5 已以 `--no-ff` 合并为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 的 server/web/e2e 全绿；6,517 个证据文件已归档并逐个 SHA-256 核对，P5 本地/远端分支及 worktree 已清理。T16 集成门关闭，M4 总体与后续交接仍 open。
 
-**交付前置门（保持强制）：** 最后一次证据文档提交后执行make gen-check，再由系统Git推送；root必须核对该精确HEAD的server/web/e2e全为success，才能向负责人声明开发交付完成。CI结果以GitHub Actions绑定的SHA和交付答复为准，不能用前序检查点替代，也不为把本文件自有SHA写回文档而循环制造提交。负责人终审/main CI/清理完成前，父T16仍不勾选。
+**交付前置门（保持强制）：** 最后一次证据文档提交后执行make gen-check，再由系统Git推送；root必须核对该精确HEAD的server/web/e2e全为success，才能向负责人声明开发交付完成。CI结果以GitHub Actions绑定的SHA和交付答复为准，不能用前序检查点替代，也不为把本文件自有SHA写回文档而循环制造提交。此处为交付前规则；2026-10-26授权集成已完成，父T16已验收。
 
 ## 范围核对与当前证据边界
 
-范围对照：§3.16→T1–7/T9–12；sort_order/I6→T8/T15；普通Visible/Historical/P3→T4/T11；§3.17/4.15→T2/T13；矩阵→各API Task及T14；全部P5故事→T15；§3.23→T16。ReadOnlySnapshot/PageSize直接消费；HTTP接缝已由T9/T10真实接口验证；起步四项Local/Medium、两项Low及L3已关闭。T1–T15实施/变异/恢复/逐任务独评见review §2；T16文档及内部整审、修复复审已完成，最终交付CI按上面的精确SHA外部记录核验，未完成的集成门不能提前声称通过。
+范围对照：§3.16→T1–7/T9–12；sort_order/I6→T8/T15；普通Visible/Historical/P3→T4/T11；§3.17/4.15→T2/T13；矩阵→各API Task及T14；全部P5故事→T15；§3.23→T16。ReadOnlySnapshot/PageSize直接消费；HTTP接缝已由T9/T10真实接口验证；起步四项Local/Medium、两项Low及L3已关闭。T1–T15实施/变异/恢复/逐任务独评见review §2；T16文档及内部整审、修复复审已完成，最终交付CI按上面的精确SHA外部记录核验，本轮授权集成的最终证明见review，父T16已关闭。
 
-局部选择和HTTP标准扩展点未改变架构；T1–T15真实TDD/变异恢复、全部新增及六既有交错race五遍、三SQL精度、最终32轮性能和适用门禁已有逐Task证据。T16文档核链接/章节/签名/状态语境及diff；整审后的两项输入边界与文案已修复并复审关闭，修复后完整Go48包/lint/生成检查通过。未改变SQL/锁/故事，保留T12最终性能、T14 race与T15最终142条e2e的精确归属，不为证据文档HEAD重复全套。最终SHA分支CI仍是交付前置门；负责人终审/集成/main CI/清理待安排，阶段先不合并。
+局部选择和HTTP标准扩展点未改变架构；T1–T15真实TDD/变异恢复、全部新增及六既有交错race五遍、三SQL精度、最终32轮性能和适用门禁已有逐Task证据。T16文档核链接/章节/签名/状态语境及diff；整审后的两项输入边界与文案已修复并复审关闭，修复后完整Go48包/lint/生成检查通过。未改变SQL/锁/故事，保留T12最终性能、T14 race与T15最终142条e2e的精确归属，不为证据文档HEAD重复全套。最终分支027d5b7c的CI40233008430全绿；2026-10-26 负责人授权后，P5 已以 `--no-ff` 合并为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 的 server/web/e2e 全绿；6,517 个证据文件已归档并逐个 SHA-256 核对，P5 本地/远端分支及 worktree 已清理。T16 集成门关闭，M4 总体与后续交接仍 open。

@@ -276,3 +276,7 @@ plan 是"执行时的 plan"：每个修复轮也改了它的 Task 的块，代�
 - **注明日期的记录里过时的句子**：spec 附录 A（A.1、A.3、A.5、A.6，清扫 9、18、21、35、52）和 Global Constraints 的大小，照裁定不改，第 5 节逐个数出；P1b 的 spec（:137、:427）、plan（:4161）仍把裁剪过的测试写作 P1b 的 T5.16 的组合一层（HEAD 上是 T12.3 的路由的测试）；架构的那份 INFRA 日志 `p2tools/mut-logs-c/T5.1-composition-1.log` 原样留着（第 1 节）。
 - **差异清单的"恢复没归档的 404"**（:241）靠预检读的 Plane（spec A.2），没有 `plane/` 无法再核对。
 - **接受、不改的**：`serializeOn` 不能指名在等之前就结束的写（T1.4、T2.4 在交错 4、5 死于前提的期限，矩阵给出有名的 403）；`given[T]` 与 `named` 各在自己的适配器；500 代替 422 的发现（T9.4、T10.1、T10.3、T10.4、T10.6 的组合一层和 T10.3 的 I2 死于数据库的 `issues_dates_check` 答的 500：那个检查是兜底，发现是断言）；N2（`ErrIssueNotFound` 的说明不点名没有操作走得到的"锁下在别的项目里"）；Task 7 1,630 行，长过约 1,500 行；`issue/app/fakes_test.go` 400 行；`permission_matrix_test.go` 406 行（Global Constraints 点名的例外）；设计 9.1（:1679）、9.3（:1744）说两个折叠相同的标识，对它们的数据成立。
+
+### M4/P6 接收记录
+
+子树删除、手动归档/恢复事件已按P6规格实施，提交、真实测试/变异与独立评审见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)及[§5](../reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。P7/P9/P15和M4整体交接仍按原文开放。

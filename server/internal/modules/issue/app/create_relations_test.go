@@ -39,7 +39,7 @@ func newRelate() (*app.CreateIssueRelations, *world, *fakeRelations, uuid.UUID, 
 
 // relateOver is createIssueRelations over w's locks and rel.
 func relateOver(w *world, rel *fakeRelations) *app.CreateIssueRelations {
-	return app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{Locks: w.locks, Relations: rel, Clock: clockAt{at: clockNow, log: w.log}})
+	return app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{Events: discardEvents{}, Locks: w.locks, Relations: rel, Clock: clockAt{at: clockNow, log: w.log}})
 }
 
 // reaching are the calls of alice's addition of relations from the work

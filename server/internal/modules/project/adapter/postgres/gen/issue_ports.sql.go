@@ -172,7 +172,7 @@ func (q *Queries) IssueStates(ctx context.Context, projectID uuid.UUID) ([]Issue
 }
 
 const lockIssueProject = `-- name: LockIssueProject :one
-SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in
 FROM projects
 WHERE id = $1 AND deleted_at IS NULL
 FOR NO KEY UPDATE
@@ -183,6 +183,7 @@ type LockIssueProjectRow struct {
 	Archived          bool
 	DefaultAssigneeID *uuid.UUID
 	Identifier        string
+	ArchiveIn         int32
 }
 
 // ProjectGate.Lock, what project.Provide offers the issue module (M4 design 6.5): the first lock of a write on the
@@ -197,12 +198,13 @@ func (q *Queries) LockIssueProject(ctx context.Context, id uuid.UUID) (LockIssue
 		&i.Archived,
 		&i.DefaultAssigneeID,
 		&i.Identifier,
+		&i.ArchiveIn,
 	)
 	return i, err
 }
 
 const lockIssueProjects = `-- name: LockIssueProjects :many
-SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier
+SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in
 FROM projects
 WHERE id = ANY ($1::uuid[]) AND deleted_at IS NULL
 ORDER BY id
@@ -215,6 +217,7 @@ type LockIssueProjectsRow struct {
 	Archived          bool
 	DefaultAssigneeID *uuid.UUID
 	Identifier        string
+	ArchiveIn         int32
 }
 
 // ProjectGate.LockMany (M4 design 6.5): the first locks of a write across projects (convention 7, 3.5), the undeleted
@@ -236,6 +239,7 @@ func (q *Queries) LockIssueProjects(ctx context.Context, ids []uuid.UUID) ([]Loc
 			&i.Archived,
 			&i.DefaultAssigneeID,
 			&i.Identifier,
+			&i.ArchiveIn,
 		); err != nil {
 			return nil, err
 		}

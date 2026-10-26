@@ -124,7 +124,7 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
 | I13 | 描述的历史与还原 | 成员甲建工作项（带描述），成员乙连着改两次描述，甲再改一次：历史里有三个版本，乙的两次合为一个；乙打开甲的第一版，还原（最新的一版是甲的，所以不合并）：描述变回去，历史多一个版本、时间线多一条描述动态 | `issue_description_versions`：同一个人 600 秒内的修改合并为一行（`last_saved_at` 更新），换了人新的一行（3.14）；还原经普通的 `PATCH`；600 秒的边界由后端的集成测试用时钟覆盖 | — | `GET /api/v0/issues/{issue_id}/description-versions`、`GET /api/v0/issue-description-versions/{version_id}`；项目访客 403 | P4：接口；P15：页面 | P4 / P15 |
 | I14 | 草稿发布 | 在创建弹窗里写了一半，选"存为草稿"；在草稿页打开它，补上标题，"移到项目"：工作项出现在项目里，草稿消失 | `draft_issues` 一行（`payload` 是创建的请求体）；发布之后与 I1 相同的工作项各表，草稿软删除，同一个事务 | — | `POST /api/v0/workspaces/{slug}/drafts`、`POST /api/v0/drafts/{draft_id}/publish`；`payload` 缺标题时发布 400，与直接创建同一个请求体的 400 相同（M2 交接第 4 节）；草稿引用的状态已删除 422（`state_id`）；别人的草稿 404 `issue.draft_not_found`；项目访客发布 403 | P8：接口；P15：页面 | P8 / P15 |
 | I15 | 归档、恢复与归档页 | "进行中"的工作项的菜单里没有"归档"；改到"已完成"后归档，它从列表消失，出现在项目的归档页；在详情页它是只读的，只能恢复和删除；恢复 | `archived_at` 有值、`updated_at`；动态 `archived_at` 的 `manual_archive`、`restore` 两条；恢复后为空 | — | `POST /api/v0/issues/{issue_id}/archive`、`/unarchive`；"进行中"的工作项 409 `issue.not_archivable`；已归档的工作项上评论、加关联、改字段都是 409 `issue.archived`；`GET …/issues?archived=true` 只有已归档的；项目访客 403 | P2：归档、恢复、两条动态、`issue.not_archivable`、改字段 409、访客 403；P3：加关联、加子工作项 409；P4：评论 409；P5：`?archived=true` 的列表；P13：页面 | P2 / P13 |
-| I16 | 自动归档 | 项目设"1 个月"自动归档；一个"已完成"的工作项 31 天没有更新之后（时钟偏移）从列表消失，时间线显示"Nerve 归档了工作项" | `archived_at` 有值；动态 `archived_at` 的 `archive`，`actor_id` 为空（决策点 4）；没有更新够久的、状态不是完成或取消的不变（这两个对照经偏移之后的 nerve 写下，它们的 `updated_at` 是偏移之后的时刻，3.20） | 一条 `issue.auto_archive` 在偏移的 nerve 起来之后完成（`finalized_at` 晚于它的启动；准备数据的 nerve 每 2 秒也跑过它）；轮询 `issues.archived_at` | 只有任务一条路，接口版本只用 PAT 读：`GET /api/v0/issues/{issue_id}` 的 `archived_at`、`GET …/activities` 那一条的 `actor_id` 为 `null`。页面版本在偏移的 nerve 上重新登录（两个 nerve 的测试签名密钥不同，`session_ttl` 短于 31 天） | P6：接口；P15：页面 | P6 / P15 |
+| I16 | 自动归档 | 项目设"1 个月"自动归档；一个"已完成"的工作项 31 天没有更新之后（时钟偏移）从列表消失，时间线显示"Nerve 归档了工作项" | `archived_at` 有值；动态 `archived_at` 的 `archive`，`actor_id` 为空（决策点 4）；最近更新的完成项与旧的非终态项都不变：旧非终态在偏移前经接口创建，最近完成项在偏移后经接口创建或更新，分别区分状态条件与时间条件（3.20；P6 spec） | 最后一条 recent 对照经 API 写完后，从该库取真实 `clock_timestamp()::text` 水位；至少一条 `issue.auto_archive` 的 `attempted_at` 晚于水位且已 completed，并保留 `finalized_at` 晚于偏移进程启动前的真实时刻；轮询 `issues.archived_at`（排除启动前后已跑过但未检查新对照的任务） | 只有任务一条路，接口版本只用 PAT 读：`GET /api/v0/issues/{issue_id}` 的 `archived_at`、`GET …/activities` 那一条的 `actor_id` 为 `null`。页面版本在偏移的 nerve 上重新登录（两个 nerve 的测试签名密钥不同，`session_ttl` 短于 31 天） | P6：接口；P15：页面 | P6 / P15 |
 | I17 | 删除（连同子树） | 父工作项有两层子工作项、一条跨项目的关联、评论；删除确认框写明它的子工作项（含更下层的、已归档的）一并删除；删除之后它和子树都不在列表里，对方的关联列表里也没有它 | 父工作项、子树、它们的负责人、标签、关联（两个方向）、链接、评论、表情、关注、提及、动态、描述版本的 `deleted_at` 都是同一时刻、`updated_by_id` 是删除者（`expectIssueDeleted`，按目录找到每张指向 `issues` 的表，与 `expectProjectDeleted` 同一写法） | — | `DELETE /api/v0/issues/{issue_id}`；项目成员删别人建的 403；他自己建的 204；项目访客删自己建的 403（页面相同，3.4）；已离开项目的创建者 404 | P3：子树和它们的负责人、标签、关注、动态、两个方向的关联同一时刻删除，创建者的规则；P4：前置数据加评论、表情、提及、描述版本（`expectIssueDeleted` 按目录覆盖新表）；P7：前置数据加链接；P14：页面 | P3 / P14 |
 | I18 | 搜索 | 命令面板输入 `proj-12` 得到那一个工作项，输入标题的一段（三个字以上）得到模糊匹配；选父工作项、加关联的搜索不列出自己、后代、已关联的；已归档的不出现 | 数据库不变（读） | — | `GET /api/v0/workspaces/{slug}/issue-search?q=…`；`GET /api/v0/workspaces/{slug}/issues/PROJ-12`（标识不分大小写）；看不到的项目里的编号 404 `issue.not_found` | P8：接口；P15：页面 | P8 / P15 |
 | I19 | 个人主页的工作项 | 成员打开同事的主页，"已分配""已创建""已关注"三个标签页各列出他的工作项，只有调用者是有效成员的项目里的；按项目分组；访客打开别人的主页看到"没有权限"，页面不请求列表（M3 决策点 3） | 数据库不变（读） | — | `GET /api/v0/workspaces/{slug}/members/{user_id}/issues?relation=assigned`；访客 403；不是成员的项目里的工作项不出现 | P5：接口；P13：页面 | P5 / P13 |
@@ -677,7 +677,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 
 ### 3.19 领域事件（决策点 3 负责人裁定 A；架构问题 4）
 - **`shared` 中的值和端口**（`shared/event.go`，只依赖标准库）：
-  - `Event{ID, Type, OccurredAt, WorkspaceID, ProjectID, ActorID *uuid.UUID, Entity EntityRef, Changes []Change}`：`ActorID` 为空表示 nerve 自己（决策点 4）；`Entity{Kind, ID}` 是事件说的那个东西（工作项、评论、链接、关联、表情）；`Changes` 与动态同形（`Field`、`Old`、`New`、`OldID`、`NewID`），创建时是创建的各字段，删除时为空。
+  - `Event{ID, Type, OccurredAt, WorkspaceID, ProjectID, ActorID *uuid.UUID, Entity EntityRef, Changes []Change}`：`ActorID` 为空表示 nerve 自己（决策点 4）；`Entity{Kind, ID}` 是事件说的那个东西（工作项、评论、链接、关联、表情）；`Changes` 与动态同形（`Field`、`Old`、`New`、`OldID`、`NewID`），创建时是创建的各字段；`issue.deleted`、`project.deleted` 为空，评论、关联、表情等删除按下表保留旧值上下文（P6 spec §2 明确具体形状），`workspace.deleted` 保留本次项目集合。
   - `EventPublisher.Publish(ctx, Event) error`：用例在自己的事务里、写完之后调用。
   - `EventSubscriber{Name string; Types []string; Handle func(ctx, Event) error}`：模块经 `Subscribers()` 交出它的订阅者。
 - **分发器在组合根**（`bootstrap/events.go`）：由各模块交出的订阅者建出，构造时检查：每个订阅的类型都是某个模块声明过的（`EventTypes()`），名字不重复。`Publish` 在调用者的上下文里（带着事务）按固定的顺序同步调用订阅者；一个订阅者返回错误，`Publish` 返回它，用例的事务回滚。没有订阅者的事件什么都不做。
@@ -695,7 +695,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   | `issue.archived`、`issue.unarchived` | 手动归档、自动归档（`ActorID` 为空）、恢复 | 工作项 | `archived_at` |
   | `issue.comment_created`、`issue.comment_updated`、`issue.comment_deleted` | 评论的增改删 | 评论 | `comment_html` |
   | `issue.link_created`、`issue.link_updated`、`issue.link_deleted` | 链接的增改删 | 链接 | `url`、`title` |
-  | `issue.relation_added`、`issue.relation_removed` | 关联的增删（一个关联一个事件，不分正反） | 关联 | `relation_type`、对方的 id |
+  | `issue.relation_added`、`issue.relation_removed` | 关联的增删（一个关联一个事件，不分正反） | 关联 | `relation_type`、按存储方向的 `issue` 与 `related_issue` 两端 id（P6 spec） |
   | `issue.reaction_added`、`issue.reaction_removed` | 工作项和评论的表情 | 表情 | `reaction`、它所在的工作项或评论 |
 
   - 不发布：只补块 id 的保存、抓取写回的元数据、草稿的保存（草稿不是工作项）、版本的保留和清理；删除项目、工作区之后由任务删除的工作项（`project.deleted`、`workspace.deleted` 说出它们），删除标签摘下的 `issue_labels`（3.6，这份清单写进 M8 的交接）。
@@ -728,7 +728,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **测试的时钟**（架构问题 7）：
   - 配置 `clock.offset`（时长，默认 0），只在 `env = test` 时接受，别的环境不为 0 时启动失败（与 M3 的测试专用配置同一种做法）。组合根用 `clock.Offset{Base: clock.System{}, Offset: d}` 代替今天写死的 `clock.System{}`（`bootstrap/app.go:112,118,124,135,167`），全部用例的时钟一起偏移。River 自己的调度用真实的时间（不受影响）：定时任务按真实的间隔运行，任务里读到的"现在"是偏移之后的。
   - e2e 的 `fixtures/clock.ts`：时间流逝的故事（I16、I21）先从模板建一个新库，在它上面用正常时钟起一个 nerve 准备数据，停下；再以 `NERVE_CLOCK__OFFSET` 起一个 nerve（`nerveWith` 的同一种启动，`e2e/fixtures/test.ts:70`），页面和断言都对着它。同一个库上任何时刻只有一个 nerve，River 的选主不会落到时钟不同的进程上；worker 自己的 nerve 在另一个库上，不受影响。
-  - `clock.ts` 的几处细节（对抗性评审 M20）：它自己建库、建连接、读写这个库，不能复用 `db`、`nerveWith`、`databaseSnapshot`（它们都绑在 worker 的库上）；测试环境的签名密钥是每次启动临时生成的（`auth.jwt.private_key_file` 为空），`session_ttl` 是 720 小时，短于 31 天，所以页面版本在偏移的 nerve 上重新登录（接口版本用 PAT，PAT 默认不过期）；断言"定时任务完成"要找一条在偏移的 nerve 起来之后才完成的任务（准备数据的 nerve 每 2 秒也跑过同一个种类）；对照的行（"没有更新够久的不变""60 天之内的仍在"）要经偏移的 nerve 写下，在准备数据的 nerve 上写下的一切都是同一个时刻（或用 `archive_in = 2` 这样的设定拉开）。
+  - `clock.ts` 的几处细节（对抗性评审 M20）：它自己建库、建连接、读写这个库，不能复用 `db`、`nerveWith`、`databaseSnapshot`（它们都绑在 worker 的库上）；测试环境的签名密钥是每次启动临时生成的（`auth.jwt.private_key_file` 为空），`session_ttl` 是 720 小时，短于 31 天，所以页面版本在偏移的 nerve 上重新登录（接口版本用 PAT，PAT 默认不过期）；断言"定时任务完成"须保留偏移进程启动后的完成门，并在最后一条 recent 对照经接口写完后，从自己的数据库取 `clock_timestamp()::text`（保留微秒），等待 `attempted_at` 晚于该水位且 completed 的任务；只看 finalized_at 不能排除先扫描后完成的旧轮次（P6预检补强，不改生产调度）；对照的行（"没有更新够久的不变""60 天之内的仍在"）要经偏移的 nerve 写下，在准备数据的 nerve 上写下的一切都是同一个时刻（或用 `archive_in = 2` 这样的设定拉开）。
   - 为什么不在运行中改时钟：那要一个改时钟的接口或信号，是只为测试存在的生产代码路径；以启动参数给出，生产代码里只有一个装饰器。
 
 ### 3.21 60 天的物理清理（总体设计 5.5、6.7；M2 交接第 5 节；架构问题 9）
@@ -794,6 +794,9 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **规模**：`reconciled.ts` 增约 40 行，`paged-groups.ts` 约 450 行（第二稿估 300 行；多了行的版本、固定的边界、拖放的落点和重做的判断），取代 `base-issues.store.ts`（1,775 行）中分页、分组、排序、乐观更新的部分（7.3）。
 
 ### 3.23 需要同步到上级文档的地方
+
+**P6实施记录（2026-10-26）：** T1–T16实施及逐Task独评通过，内部整分支审查零新发现；[正式review](reviews/P6-issue-events-review.md)列真实命令、矩阵、变异与Minor闭环。事件事务同步发布、自动归档每项目事务/NULL actor、测试业务时钟及两队列已落地。P7首个生产订阅者、`registrationRows`对请求任务，P9项目/工作区删除任务、版本保留与清理，P15页面仍未完成；不将M4整体验收关闭。
+
 **规则**照 M3 设计 3.20：每处偏离，在实现它的那个 Phase 的同一次合并中同步到上级文档和差异清单；建表、改表的 Phase 逐列更新差异清单。收尾只按本表逐行核对。总体设计 9.4 中 M4 的状态随本文的合并改为"进行中"（2026-10-17，已改）。负责人已裁定第 10 节、批准第 11 节（2026-10-17，全部按建议），下表每一行的内容都已确定，按标出的 Phase 同步。
 
 | Phase | 文档 | 位置 | 内容 |
@@ -1359,7 +1362,7 @@ modules/issue/
 3. **平台**：时钟（3.20）；只投递的 River 客户端 `jobs.NewInserter(pool)`，和由它加 `postgres.Tx` 接成的 `Inserter`（3.20）；`outbound` 的客户端；写闸门（`platform/gate`，按配置的 K、等待的上限，3.5）。
 4. `access.New`（`WorkspaceRoles`、`ProjectAccess`）→ `Authorizer`。
 5. **分发器**：`bootstrap/events.go` 由 `issue.Subscribers()` 建出。订阅者是 `issue` 模块的函数，它要的 `LinkCrawls`、`RowDeletions` 由 `issue/adapter/river` 在 `issue.Subscribers(Inserter)` 里建出，不要 `issue.New` 的东西，所以分发器在 `issue.New`、`project.New`、`workspace.New` 之前建出、交给它们。
-6. `issue.New`（`Authorizer`、分发器、时钟、`project` 的相关窄端口、`WorkspaceDirectory`、P5的`WorkspaceMemberDirectory`、`PublicProfiles`、写闸门、`Inserter`、`outbound` 的客户端；两个 `shared.TxManager`：工作项一侧的写用的带锁的期限、`55P03` 换成 503（`bootstrap/gate.go`），列表的读用的只读快照（`postgres.ReadOnlySnapshot()`，3.16））。
+6. `issue.New`（`Authorizer`、分发器、时钟、`project` 的相关窄端口、`WorkspaceDirectory`、P5的`WorkspaceMemberDirectory`、`PublicProfiles`、写闸门、`Inserter`、`outbound` 的客户端；事务端口按消费者区分：请求写的 `Tx` 带锁的期限并在 `bootstrap/gate.go` 将 `55P03` 换成503；列表 `ReadTx` 用只读快照（`postgres.ReadOnlySnapshot()`，3.16）；P6自动归档的 `JobTx` 用相同锁超时配置的原始事务，不经HTTP错误转换，保留PG错误给River。底层构造由bootstrap共用）。
 7. `project.New`（`Authorizer`、`WorkspaceDirectory`、`WorkspaceMembers`、`IssueCascade`、`IssueListSettings`；P9 起分发器）→ `Cascade()`。
 8. `workspace.New`（M3 照旧，`ProjectCascade` 多一个方法；P9 起分发器）→ `Deactivator()`、`SignupInvitations()`。
 9. `identity.New`（M3 照旧）。
@@ -2025,7 +2028,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 
 ## 12. Phase 划分与实施规划
 
-所有 Phase 依次推进，每个 Phase 按 M2、M3 的节奏（worktree → spec 和 plan → 按任务实现、逐个评审 → 整分支评审 → 修复 → review、交接 → `--no-ff` 合并、推送 → 持续集成通过 → 清理 worktree 和分支）。每个 Phase 合并时：持续集成的全部门禁、此前已加入的全部故事都通过；3.23 和 8.8 中标着这个 Phase 的行已在同一次合并中同步。
+所有 Phase 依次推进，每个 Phase 按 M2、M3 的节奏（worktree → spec 和 plan → 按任务实现、逐个评审 → `deep-review` 整分支终审 → 修复与复审 → review、交接 → 按负责人集成安排 `--no-ff` 合并、推送 → 精确 main SHA 持续集成通过 → 归档证据、清理 worktree 和分支）。负责人 2026-10-26 更新：各 Phase 的终审由 Codex 使用 `deep-review` 完成，不再等待 Claude；架构级问题仍先提交已完成工作再上报。每个 Phase 合并时：持续集成的全部门禁、此前已加入的全部故事都通过；3.23 和 8.8 中标着这个 Phase 的行已在同一次合并中同步。
 
 **约束**：
 1. **每个故事的前置数据在它加入时都能经接口准备**（总体设计 8.2），不写 SQL。权限矩阵是 Go 测试，用仓储准备数据，每个 Phase 都能加它的行（9.2）；经接口准备不了的格子放进 Go 的集成测试（分诊状态的 `state_id`：`createState` 拒绝分诊，对抗性评审 M17）。访客建的工作项经接口准备：成员建，再经 `updateProjectMember` 把他降为访客（2 节）。
@@ -2179,7 +2182,9 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **关闭**：M2 交接第 2 节的列表一部分（每种排序有自己的载荷和测试，改过的游标只能在看得到的数据里换起点）；M3 交接第 3 节的个人主页的一行、第 5 节的服务端一侧（显示设置的格式）。
 - **完成线**：I3、I4（`link_count` 之外的排序码、日期的 `none`）、I5–I7、I19、I20 的接口版本和 I15 的已归档的列表通过；10 万个工作项的耗时在 3.16 的实测之内；连接的参数读回为预期的值。
 
-### P6 `issue-events`：领域事件、只投递的客户端、自动归档与测试的时钟（后端，11 个任务）
+### P6 `issue-events`：领域事件、只投递的客户端、自动归档与测试的时钟（后端，16 个实施任务）
+
+以下11项为设计范围；2026-10-26起步按职责细化为16项，完整映射与估计见 [P6 plan](plans/P6-issue-events.md)。这是已批准D2内的局部切分，不减少任何完成线。
 - **目标**：事件和分发器；经只投递的客户端在事务里投递；两个队列和启动时的检查；自动归档；运行中的 nerve 可以偏移时钟。
 - **任务**：
   1. `platform/jobs` 的 `NewInserter(pool)` 和 `InsertTx`；`platform/postgres` 的 `Tx`；`bootstrap/jobs.go` 接成 `Inserter`；提交留任务、回滚不留的集成测试（S4 的结论写进 spec）。
@@ -2502,7 +2507,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - [ ] 权限矩阵的全部格子（含创建者、访客的两种、在项目里只是访客的工作区管理员、已不是成员的身份、不是成员的工作区管理员）、访客规则一致的测试（含子工作项数、动态的过滤、关注）、3.5 的 26 个交错测试在真实数据库上通过；看不到项目、不能写的写和加关联指向看不到的项目都不取锁；交错 20 经真实的连接池和写闸门，闸门满时 503 `server_busy`。
 - [ ] 每个模块的 `apitest.Main` 两个方向核对通过（`issue` 模块和 `project` 新的 `project.state_in_use`）；`access/domain` 的判定表、规则表与各模块操作名的完整性测试通过；每个操作在矩阵里有一行。
 - [ ] 列表：每个排序码两个方向的翻页、每个分组码和子分组、每个筛选参数、带 `group_key` 的"加载更多"的集成测试通过；`api/testdata/issue-order.json` 由 Go 和 vitest 各读一次，结果相同；改过的游标只在调用者看得到的数据里换起点（8.6）；10 万个工作项的耗时在 3.16 的实测之内，连接的参数读回为预期的值；`paged-groups.ts` 的 vitest 表（含对抗性评审 I2 的九个反例）通过。
-- [ ] 事件和任务：经只投递的客户端，提交留任务、回滚不留的集成测试；定时任务的种类、声明会投递的种类漏登记 worker 的两种变异让测试失败；`registrationRows` 核对 `river_job`；自动归档、版本的保留推进固定时钟；`platform/jobs` 的测试没有固定的余量。
+- [ ] 事件和任务（P6的只投递/登记/自动归档/固定时钟已验证，P7的`registrationRows`及P9版本保留未完成；[P6 review](reviews/P6-issue-events-review.md)）：经只投递的客户端，提交留任务、回滚不留的集成测试；定时任务的种类、声明会投递的种类漏登记 worker 的两种变异让测试失败；`registrationRows` 核对 `river_job`；自动归档、版本的保留推进固定时钟；`platform/jobs` 的测试没有固定的余量。
 - [ ] `platform/outbound` 的表测试（6.8：IANA 两张登记表的每个网段、本机的接口地址、跳转、重绑定）通过；I10 中被拒绝的 `169.254.169.254` 写下 `blocked`。
 - [ ] 清理的目录测试（每张有 `deleted_at` 的表有清理者，外键是 `CASCADE` 或 `SET NULL`）和 I21 通过；删除项目、工作区的任务的窗口测试、交错 24、25 通过，M3 的删除故事在限时轮询之下通过。
 - [ ] 持续集成的全部门禁通过（含架构测试、`TestSQLCSchemaScope`、grants 的两个测试、`apitest` 的写法规则、命令行的组合测试、关键词守卫、oxlint 上限、knip、`make gen-check`）。
@@ -2526,8 +2531,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 已完成：[spec](specs/P2-issue-access.md)、[plan](plans/P2-issue-access.md)、[评审](reviews/P2-issue-access-review.md)（执行时 14 个 Task；整分支评审之后一个修复轮） |
 | P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
 | P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；已以 `--no-ff` 合并main `e9782b8f`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 三任务全绿，精确SHA及接收记录见P5评审 |
-| P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | T1–T15实施与逐任务独评Approved：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。T16文档与内部整审完成，首审2项Important/1项Minor经49623057统一修复、范围复审全部关闭；负责人追加的本轮[deep-review](../../reviews/re-02-M4P5整体审核.md)另记录客户端/查询编码修复及验证；交付核精确HEAD分支CI，负责人终审及集成另待安排；父T16未完成，未合并，保留分支/worktree。M4总体与跨Phase交接仍open |
-| P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，11） | 未开始 |
+| P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | 已完成：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。追加[deep-review](../../reviews/re-02-M4P5整体审核.md)及局部修复复审关闭；2026-10-26 负责人授权后，P5 已以 `--no-ff` 合并为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 的 server/web/e2e 全绿；6,517 个证据文件已归档并逐个 SHA-256 核对，P5 本地/远端分支及 worktree 已清理。T16 集成门关闭，M4 总体与后续交接仍 open。 |
+| P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，16验收任务） | T1–T16已实施并逐Task独评通过，T16正式文档/交接已同步：[spec](specs/P6-issue-events.md)、[plan](plans/P6-issue-events.md)、[review](reviews/P6-issue-events-review.md)。内部整分支审查及 clock 修复聚焦复审已通过；修复 `e8df8485` 的 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 三任务全绿。deep-review 终审通过（[报告](../../reviews/re-03-M4P6整体审核.md)，3 项文档 Minor 已闭环）；实施与终审完成、集成待办，未合并；M4 总体仍进行中 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12） | 未开始 |
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13） | 未开始 |
 | P9 `purge` | 物理清理、描述版本的保留与工作项一侧的删除任务（后端，13） | 未开始 |

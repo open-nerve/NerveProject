@@ -490,3 +490,7 @@ P3 是 M4 加锁约定的第二段（设计 12 节约束 3：P1a 起步，P1b �
 | 清扫 18：契约声明的码和体的形状 | T6.3、T6.4、T11.4、T11.5、T14.2 | 5/5 | `TestSubIssuesRefusals`、`TestWorkItemsArePutUnderAWorkItem`、`TestAddSubIssuesHoldsTheBodyToItsStructure`、`TestIssueRelationsRefusals`、`TestWhatAWorkItemMayNotBeRelatedTo`、`TestCreateIssueRelationsHoldsTheBodyToItsStructure`、`TestDeleteIssueRelationRefusals`、等 1 个 | 单元；组合 |
 | 清扫 2、22：端口的失败照原样传出 | T1.7、T2.9、T3.13、T5.7、T5.21、T10.20、T12.3、T13.22 | 清扫的 8/8（执行中加的同类见 A.3） | `TestDeleteIssueStopsAtAFailingPort`、`TestAParentsFailingReadEndsTheWrite`、`TestAddSubIssuesStopsAtAFailingPort`、`TestListSubIssuesRefusals`、`TestCreateIssueRelationsStopsAtAFailingPort`、`TestListIssueRelationsRefusals`、`TestDeleteIssueRelationStopsAtAFailingPort` | 单元 |
 | 错误码的文案（约束 4） | T14.3、T14.4 | 2/2 | `error-messages.test.ts`、`check:sync` | 单元；守卫 |
+
+### M4/P6 接收记录
+
+实际移动的子项与存储方向的关联事件已按P6规格实施，提交、真实测试/变异与独立评审见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)及[§5](../reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。P7/P9/P15和M4整体交接仍按原文开放。

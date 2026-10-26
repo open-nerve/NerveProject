@@ -11,6 +11,7 @@ import (
 // ArchiveIssueDeps are what archiveIssue and unarchiveIssue read and write
 // through.
 type ArchiveIssueDeps struct {
+	Events shared.EventPublisher
 	Locks  Locks
 	Issues IssueArchiver
 	States StateCatalog
@@ -100,8 +101,14 @@ func (d ArchiveIssueDeps) archive(ctx context.Context, id uuid.UUID, on bool) (d
 		if answer, err = readBack(ctx, d.Issues, id); err != nil {
 			return err
 		}
-		answer, err = d.Locks.seenOne(ctx, actor.UserID, h.grant, answer)
-		return err
+		if answer, err = d.Locks.seenOne(ctx, actor.UserID, h.grant, answer); err != nil {
+			return err
+		}
+		kind := domain.EventIssueUnarchived
+		if on {
+			kind = domain.EventIssueArchived
+		}
+		return d.Events.Publish(ctx, s.event(kind, []shared.Change{{Field: *activity.Field, Old: activity.OldValue, New: activity.NewValue}}))
 	})
 	if err != nil {
 		return domain.Issue{}, err

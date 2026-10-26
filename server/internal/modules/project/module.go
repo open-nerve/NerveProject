@@ -157,6 +157,7 @@ type (
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
+	ArchivePolicies         ArchivePolicies
 	ProjectAccess           ProjectAccess
 	ProjectMembershipCounts ProjectMembershipCounts
 	IssueProjects           IssueProjects
@@ -165,7 +166,7 @@ type Provided struct {
 // Provide builds project's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
-	return Provided{ProjectAccess: store, ProjectMembershipCounts: store, IssueProjects: store}
+	return Provided{ArchivePolicies: store, ProjectAccess: store, ProjectMembershipCounts: store, IssueProjects: store}
 }
 
 // Workspace is a workspace as the WorkspaceDirectory port hands it over:

@@ -47,9 +47,8 @@ func (w *CleanupWorker) Work(ctx context.Context, _ *river.Job[CleanupArgs]) err
 // interval (auth.session_cleanup_interval).
 func CleanupJob(uc CleanupUseCase, interval time.Duration) jobs.Job {
 	return jobs.Job{
-		Add: func(w *river.Workers) error { return river.AddWorkerSafely(w, NewCleanupWorker(uc)) },
-		Periodic: river.NewPeriodicJob(river.PeriodicInterval(interval),
-			func() (river.JobArgs, *river.InsertOpts) { return CleanupArgs{}, nil },
-			&river.PeriodicJobOpts{ID: CleanupKind, RunOnStart: true}),
+		Worker: jobs.Register(NewCleanupWorker(uc)),
+		Periodic: &jobs.PeriodicSpec{Args: CleanupArgs{}, Interval: interval, ID: CleanupKind, RunOnStart: true,
+			InsertOpts: &river.InsertOpts{Queue: "periodic"}},
 	}
 }

@@ -108,19 +108,19 @@ func TestCollaborationRollsBackPortFailures(t *testing.T) {
 					var err error
 					switch operation.name {
 					case "createIssueComment":
-						_, err = issueapp.NewCreateIssueComment(issueapp.CreateIssueCommentDeps{Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}}).Execute(ctx, id, mentionHTML(w.ids["walt"]))
+						_, err = issueapp.NewCreateIssueComment(issueapp.CreateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}}).Execute(ctx, id, mentionHTML(w.ids["walt"]))
 					case "updateIssueComment":
-						_, err = issueapp.NewUpdateIssueComment(issueapp.UpdateIssueCommentDeps{Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}}).Execute(ctx, comment.ID, mentionHTML(w.ids["walt"]))
+						_, err = issueapp.NewUpdateIssueComment(issueapp.UpdateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}}).Execute(ctx, comment.ID, mentionHTML(w.ids["walt"]))
 					case "deleteIssueComment":
-						err = issueapp.NewDeleteIssueComment(issueapp.DeleteIssueCommentDeps{Locks: locks, Comments: wrapped, Clock: clock.System{}}).Execute(ctx, comment.ID)
+						err = issueapp.NewDeleteIssueComment(issueapp.DeleteIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: wrapped, Clock: clock.System{}}).Execute(ctx, comment.ID)
 					case "addIssueReaction":
-						_, err = issueapp.NewAddIssueReaction(issueapp.AddIssueReactionDeps{Locks: locks, Reactions: wrapped, Clock: clock.System{}}).Execute(ctx, id, "128077")
+						_, err = issueapp.NewAddIssueReaction(issueapp.AddIssueReactionDeps{Events: discardIssueEvents{}, Locks: locks, Reactions: wrapped, Clock: clock.System{}}).Execute(ctx, id, "128077")
 					case "removeIssueReaction":
-						err = issueapp.NewRemoveIssueReaction(issueapp.RemoveIssueReactionDeps{Locks: locks, Reactions: wrapped, Clock: clock.System{}}).Execute(ctx, id, "128077")
+						err = issueapp.NewRemoveIssueReaction(issueapp.RemoveIssueReactionDeps{Events: discardIssueEvents{}, Locks: locks, Reactions: wrapped, Clock: clock.System{}}).Execute(ctx, id, "128077")
 					case "addCommentReaction":
-						_, err = issueapp.NewAddCommentReaction(issueapp.AddCommentReactionDeps{Locks: locks, Comments: store, Reactions: wrapped, Clock: clock.System{}}).Execute(ctx, comment.ID, "128077")
+						_, err = issueapp.NewAddCommentReaction(issueapp.AddCommentReactionDeps{Events: discardIssueEvents{}, Locks: locks, Comments: store, Reactions: wrapped, Clock: clock.System{}}).Execute(ctx, comment.ID, "128077")
 					case "removeCommentReaction":
-						err = issueapp.NewRemoveCommentReaction(issueapp.RemoveCommentReactionDeps{Locks: locks, Comments: store, Reactions: wrapped, Clock: clock.System{}}).Execute(ctx, comment.ID, "128077")
+						err = issueapp.NewRemoveCommentReaction(issueapp.RemoveCommentReactionDeps{Events: discardIssueEvents{}, Locks: locks, Comments: store, Reactions: wrapped, Clock: clock.System{}}).Execute(ctx, comment.ID, "128077")
 					default:
 						t.Fatal("unknown operation", operation.name)
 					}

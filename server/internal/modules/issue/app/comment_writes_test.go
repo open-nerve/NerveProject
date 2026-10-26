@@ -49,7 +49,7 @@ func newCommentWrites() (*app.UpdateIssueComment, *app.DeleteIssueComment, *worl
 	_, w, f, id := newComment()
 	gated(w, nil)
 	c := &writableComments{fakeComments: f, found: true, current: domain.Comment{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, IssueID: id, ActorID: alice, HTML: "<p>Before</p>", Text: "Before", CreatedAt: earlier, UpdatedAt: earlier, Reactions: []domain.CommentReaction{}}}
-	return app.NewUpdateIssueComment(app.UpdateIssueCommentDeps{Locks: w.locks, Comments: c, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clockAt{at: clockNow, log: w.log}}), app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Locks: w.locks, Comments: c, Clock: clockAt{at: clockNow, log: w.log}}), w, c
+	return app.NewUpdateIssueComment(app.UpdateIssueCommentDeps{Events: discardEvents{}, Locks: w.locks, Comments: c, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clockAt{at: clockNow, log: w.log}}), app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Events: discardEvents{}, Locks: w.locks, Comments: c, Clock: clockAt{at: clockNow, log: w.log}}), w, c
 }
 func executeCommentWrite(edit bool, u *app.UpdateIssueComment, d *app.DeleteIssueComment, id uuid.UUID) error {
 	if edit {

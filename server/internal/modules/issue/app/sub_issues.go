@@ -50,6 +50,7 @@ func (u *ListSubIssues) Execute(ctx context.Context, id uuid.UUID) ([]domain.Iss
 
 // AddSubIssuesDeps are what addSubIssues reads and writes through.
 type AddSubIssuesDeps struct {
+	Events shared.EventPublisher
 	Locks  Locks
 	Issues SubIssueAdder
 	Clock  Clock
@@ -129,7 +130,18 @@ func (u *AddSubIssues) Execute(ctx context.Context, id uuid.UUID, ids []uuid.UUI
 			return fmt.Errorf("only %d of %d work items are there after their write", len(stored), len(movedIDs))
 		}
 		added, err = u.d.Locks.seen(ctx, actor.UserID, grants{h.issue.ProjectID: h.grant}, stored...)
-		return err
+		if err != nil {
+			return err
+		}
+		for _, m := range moved {
+			under := s
+			under.issue = m.item.ID
+			changes := updatedChanges(domain.Update{Parent: &m.parent}, nil)
+			if err := u.d.Events.Publish(ctx, under.event(domain.EventIssueUpdated, changes)); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err

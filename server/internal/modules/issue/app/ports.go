@@ -37,12 +37,14 @@ type ProjectGate interface {
 // LockedProject is a project as ProjectGate's lock answers it: its
 // workspace, whether it is archived, its default assignee, nil for none,
 // and its identifier, which names its work items in their activity (M4
-// design 3.13).
+// design 3.13). ArchiveIn is the policy read under the lock, in months;
+// zero disables automatic archival.
 type LockedProject struct {
 	WorkspaceID       uuid.UUID
 	Archived          bool
 	DefaultAssigneeID *uuid.UUID
 	Identifier        string
+	ArchiveIn         int
 }
 
 // WriteGate bounds the writes on one project's work items that hold a

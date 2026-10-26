@@ -19,7 +19,7 @@ func listOver(w *world) *app.ListSubIssues {
 
 // addOver is addSubIssues over w's ports.
 func addOver(w *world) *app.AddSubIssues {
-	return app.NewAddSubIssues(app.AddSubIssuesDeps{Locks: w.locks, Issues: w.issues, Clock: clockAt{at: clockNow, log: w.log}})
+	return app.NewAddSubIssues(app.AddSubIssuesDeps{Events: discardEvents{}, Locks: w.locks, Issues: w.issues, Clock: clockAt{at: clockNow, log: w.log}})
 }
 
 // putUnder stores the work item i of w's store under the work item

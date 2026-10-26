@@ -154,3 +154,7 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 - 仍开放：§1原话/原样转交，草稿P8、自动归档P6/其余写P7、清理P9、§7–13页面/编辑器/CSP/上传/下拉/复制/stores/clock.ts各原落点；P10b共享issue-order.json的生产码点比较器/vitest和旧筛选store迁移、P11详情数据及P12–15页面均未由P5关闭。
 
 仅登记本输入的P5承接，`status: open`保持；M4总体、T16内部整分支审查/最终分支CI与负责人终审/集成另待收口，不合并。证据：[P5 spec §2/§7](../specs/P5-issue-list.md#2-交付物)、[P5 review §2](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
+
+## 处理结果（M4/P6）
+
+§3自动归档从 `updated_at` 与同源业务时钟读阈值；§6只投递客户端的原事务回滚、worker/周期两类漏登记、运行角色grants和真实completed已由T1/T7–T11、T15验证；§13独立 `clock.ts` 及I16真实时间水位由T13/T14验证。§1命令行只投递原文保留，M4收尾转M5，当前CLI只接纯业务时钟、不构造jobs。P7/P9及页面/编辑器原落点仍开放；本handoff总体 `status: open`。证据：[P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)、[§6](../reviews/P6-issue-events-review.md#6-移交事项)。

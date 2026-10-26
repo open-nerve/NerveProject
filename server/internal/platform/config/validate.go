@@ -72,6 +72,9 @@ func (c Config) validate() error {
 	if c.Database.CommitTimeout <= 0 {
 		fail("database.commit_timeout", "must be positive, got %s", c.Database.CommitTimeout)
 	}
+	if c.Env != EnvTest && c.Clock.Offset != 0 {
+		fail("clock.offset", "must be zero outside test, got %s", c.Clock.Offset)
+	}
 	c.Auth.validate(c.Env, fail)
 	switch {
 	case c.Auth.RefreshDeadline <= 0:
@@ -84,6 +87,12 @@ func (c Config) validate() error {
 	c.Issue.validate(c.Server.RequestTimeout, fail)
 	if c.Jobs.ShutdownTimeout <= 0 {
 		fail("jobs.shutdown_timeout", "must be positive, got %s", c.Jobs.ShutdownTimeout)
+	}
+	if c.Jobs.DefaultWorkers < 1 {
+		fail("jobs.default_workers", "must be at least 1, got %d", c.Jobs.DefaultWorkers)
+	}
+	if c.Jobs.PeriodicWorkers < 1 {
+		fail("jobs.periodic_workers", "must be at least 1, got %d", c.Jobs.PeriodicWorkers)
 	}
 	if c.Files.SizeLimit < 1 {
 		fail("files.size_limit", "must be at least 1, got %d", c.Files.SizeLimit)
@@ -138,6 +147,9 @@ func (a AuthConfig) validate(env string, fail func(key, format string, args ...a
 }
 
 func (i IssueConfig) validate(requestTimeout time.Duration, fail func(key, format string, args ...any)) {
+	if i.AutoArchiveInterval < time.Second {
+		fail("issue.auto_archive_interval", "must be at least 1s, got %s", i.AutoArchiveInterval)
+	}
 	g := i.WriteGate
 	if g.PerProject < 1 {
 		fail("issue.write_gate.per_project", "must be at least 1, got %d", g.PerProject)

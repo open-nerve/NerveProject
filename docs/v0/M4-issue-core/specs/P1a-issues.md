@@ -412,3 +412,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 | 关键词守卫（7.9） | T1.12 | 1/1 | 关键词守卫 | 守卫 |
 | 清扫 31、32：交错的门和探针 | T12.2、T12.3 | 2/2 | `TestTwoCreationsOnAProjectSerialize` | 组合 |
 | 端到端的过渡（裁定 7） | T14.3 | 1/1 | P4、W3 | 端到端 |
+
+### M4/P6 接收记录
+
+创建工作项的完整字段事件已按P6规格实施，提交、真实测试/变异与独立评审见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)及[§5](../reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。P7/P9/P15和M4整体交接仍按原文开放。

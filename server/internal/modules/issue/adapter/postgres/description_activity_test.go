@@ -28,7 +28,7 @@ func TestLatestActivity(t *testing.T) {
 	activity := domain.Activity{Field: &description, Verb: domain.VerbUpdated, OldValue: &old, NewValue: &next, Comment: "updated the description to"}
 	insert := func(id, under, by uuid.UUID, at time.Time, a domain.Activity) {
 		t.Helper()
-		if err := s.InsertActivities(ctx, []app.ActivityRow{{ID: id, WorkspaceID: web.workspace, ProjectID: web.id, IssueID: under, ActorID: by, At: at, Activity: a}}); err != nil {
+		if err := s.InsertActivities(ctx, []app.ActivityRow{{ID: id, WorkspaceID: web.workspace, ProjectID: web.id, IssueID: under, ActorID: &by, At: at, Activity: a}}); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -82,7 +82,7 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 			Anonymous:     roomy, AuthFailure: roomy, Authenticated: roomy,
 			LoginIP: roomy, LoginIPEmail: roomy, RegisterIP: roomy, PasswordUser: roomy,
 		},
-		Jobs:      config.JobsConfig{ShutdownTimeout: 5 * time.Second},
+		Jobs:      config.JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 5 * time.Second},
 		Workspace: config.WorkspaceConfig{CreationEnabled: true},
 		Issue:     testIssueConfig,
 		Files:     config.FilesConfig{SizeLimit: 5242880},

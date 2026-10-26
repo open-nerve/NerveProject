@@ -42,7 +42,7 @@ func cleanupRuns(t *testing.T, pool *pgxpool.Pool) int {
 	t.Helper()
 	var n int
 	err := pool.QueryRow(context.Background(),
-		"SELECT count(*) FROM river_job WHERE kind = 'identity.cleanup_expired_sessions' AND state = 'completed'").Scan(&n)
+		"SELECT count(*) FROM river_job WHERE kind = 'identity.cleanup_expired_sessions' AND state = 'completed' AND queue = 'periodic'").Scan(&n)
 	if err != nil {
 		t.Fatal(err)
 	}

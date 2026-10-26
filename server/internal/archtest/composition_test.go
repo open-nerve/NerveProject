@@ -16,7 +16,9 @@ import (
 // are a pool and the modules' administrator use cases (M2 design 3.17, M3
 // design 6.6): nothing they call builds a module's HTTP side or the
 // Authorizer (a module's New), the HTTP server, a rate limiter, a write
-// gate or a jobs client. Each builds only what its commands use: Users,
+// gate, dispatcher or jobs client. Their only shared time construction is
+// newClock, which must not bring any of those dependencies. Each builds only
+// what its commands use: Users,
 // identity's NewAdmin and, for `nerve users deactivate`, workspace's
 // NewDeactivator and project's NewCascade over issue's Provide (M4 design
 // 6.6), never workspace's NewAdmin; Workspaces, workspace's NewAdmin,
@@ -48,9 +50,9 @@ func TestCommandsComposeNoServerAndNoJobs(t *testing.T) {
 		root            string
 		builds, unbuilt []string
 	}{
-		{"Users", []string{identity + ".NewAdmin", workspace + ".NewDeactivator", project + ".NewCascade", issue + ".Provide"},
+		{"Users", []string{identity + ".NewAdmin", workspace + ".NewDeactivator", project + ".NewCascade", issue + ".Provide", m("internal/bootstrap") + ".newClock"},
 			[]string{workspace + ".NewAdmin"}},
-		{"Workspaces", []string{workspace + ".NewAdmin"}, []string{workspace + ".NewDeactivator", project + ".NewCascade", issue + ".Provide"}},
+		{"Workspaces", []string{workspace + ".NewAdmin", m("internal/bootstrap") + ".newClock"}, []string{workspace + ".NewDeactivator", project + ".NewCascade", issue + ".Provide"}},
 	} {
 		root := built[0].Func(c.root)
 		if root == nil {
@@ -86,12 +88,15 @@ func TestCommandsComposeNoServerAndNoJobs(t *testing.T) {
 // module's HTTP side or the Authorizer (New in a module's root package:
 // identity.New, workspace.New, access.New and those to come), the HTTP
 // server (platform/httpserver), a rate limiter, a write gate
-// (platform/gate) or a jobs client (platform/jobs, River).
+// (platform/gate), dispatcher or jobs client (platform/jobs, River).
 func composesMore(f *ssa.Function) bool {
 	if f.Pkg == nil {
 		return false
 	}
 	path := f.Pkg.Pkg.Path()
+	if path == m("internal/bootstrap") && f.Name() == "newDispatcher" {
+		return true
+	}
 	if module, ok := strings.CutPrefix(path, m("internal/modules")+"/"); ok && !strings.Contains(module, "/") && f.Name() == "New" {
 		return true
 	}

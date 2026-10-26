@@ -27,6 +27,7 @@ import (
 func TestEachConfiguredBucketLimitsItsOperations(t *testing.T) {
 	contract := apitest.Load(t)
 	cfg := testConfig(t, pgtest.NewDatabase(t), false)
+	cfg.Clock.Offset = 48 * time.Hour                                                // business time must not bypass any real-time bucket
 	cfg.Server.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")} // the test's own peer
 	burst := func(n int) config.BucketConfig { return config.BucketConfig{PerMinute: 1, Burst: n} }
 	cfg.RateLimit.Anonymous, cfg.RateLimit.Authenticated, cfg.RateLimit.AuthFailure = burst(9), burst(8), burst(3)

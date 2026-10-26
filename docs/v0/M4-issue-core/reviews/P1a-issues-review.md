@@ -248,3 +248,7 @@ plan 的代码块照运行时的文字保留。下表是动过 plan 的块所写
 - **`orNull` 和各模块的 HTTP 测试骨架**：`issue/adapter/http` 照 M2、M3 以来各模块的写法，有自己的 `orNull`、`newServer`、`do`、`request`、`fakeAuth`。把它们提到 `platform/httpserver` 是跨模块的重构，不是 P1a 的（整分支评审的分诊：接受、不改）。
 - **外观的行宽**：`bootstrap/users.go:26`、`workspace_deletion_test.go:192` 的短注释行（plan 原文），`api/modules/workspace.yaml` 中 `deleteWorkspace` 描述里较长的一行（折叠的标量，渲染不受影响）。接受、不改。
 - **`issueTables` 不含 `users`**：取锁形状的测试里，另一个事务以 `EXCLUSIVE` 持的表不含 `users`（创建不加锁地读它，只经外键取 `FOR KEY SHARE`）。拒绝的路径不写、不锁 `users`，所以没有加（整分支评审考虑过，不算发现）。
+
+### M4/P6 接收记录
+
+创建工作项的完整字段事件已按P6规格实施，提交、真实测试/变异与独立评审见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)及[§5](../reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。P7/P9/P15和M4整体交接仍按原文开放。

@@ -34,7 +34,7 @@ func TestActivityVisibilityQuery(t *testing.T) {
 	add := func(field *string, old, new *uuid.UUID) uuid.UUID {
 		t.Helper()
 		id := uuid.NewV7()
-		err := s.InsertActivities(ctx, []app.ActivityRow{{ID: id, WorkspaceID: ws, ProjectID: targetP.id, IssueID: target, ActorID: actor, At: now, Activity: domain.Activity{Verb: "updated", Field: field, OldIdentifier: old, NewIdentifier: new}}})
+		err := s.InsertActivities(ctx, []app.ActivityRow{{ID: id, WorkspaceID: ws, ProjectID: targetP.id, IssueID: target, ActorID: &actor, At: now, Activity: domain.Activity{Verb: "updated", Field: field, OldIdentifier: old, NewIdentifier: new}}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -57,7 +57,7 @@ func TestActivityVisibilityQuery(t *testing.T) {
 	want = append(want, add(nil, nil, nil))
 	gone := add(nil, nil, nil)
 	exec(t, pool, "UPDATE issue_activities SET deleted_at=$2 WHERE id=$1", gone, now)
-	if err := s.InsertActivities(ctx, []app.ActivityRow{{ID: uuid.NewV7(), WorkspaceID: ws, ProjectID: targetP.id, IssueID: neighbor, ActorID: actor, At: now, Activity: domain.Activity{Verb: "created"}}}); err != nil {
+	if err := s.InsertActivities(ctx, []app.ActivityRow{{ID: uuid.NewV7(), WorkspaceID: ws, ProjectID: targetP.id, IssueID: neighbor, ActorID: &actor, At: now, Activity: domain.Activity{Verb: "created"}}}); err != nil {
 		t.Fatal(err)
 	}
 	slices.SortFunc(want, func(a, b uuid.UUID) int { return a.Compare(b) })

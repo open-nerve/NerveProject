@@ -3,7 +3,7 @@
 | 项 | 内容 |
 |---|---|
 | Phase | M4/P5 issue-list |
-| 状态 | T1–T15及T16开发工作完成，内部整审、统一修复及范围复审通过；交付另核精确HEAD分支CI，负责人终审与集成另待安排，不合并 |
+| 状态 | 已完成：T1–T16、整分支 deep-review/修复复审及授权合并/main CI/清理全部完成；精确证据见阶段评审 |
 | 基线 | `e9782b8f7e7571b39a4eb8924b4b72a6e60eac51`，P4 合并 main |
 | 基线验证 | [main CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 的 server/web/e2e 全部成功；此证据不代表 P5 验证 |
 | 上级设计 | [M4-design](../M4-design.md) §0.3、§2、§3.4、§3.7、§3.16/3.17、§3.23、§4.15、§5.1/5.2、§6.5/6.6、§12 |
@@ -190,7 +190,7 @@ I3/I4/I5/I6/I7/I19/I20 API 故事各文件，I15 增加归档列表；全部前�
 
 ## 4. 逐项验收
 
-T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T12a及T12b均经独立评审，T12b排序定义问题经修复及范围复审关闭；T13a迁移/持久化/纯校验和T13b接线/API/并发均已独立Approved，父T13已验收。T14矩阵/读边界/写隔离/完整回归与T15八接口故事/四变异/完整142条e2e均已独立Approved；T16文档/差异/输入交接、内部整分支审查与统一修复复审已完成；最终交付核精确HEAD分支CI，负责人终审及集成仍待安排，父T16不提前勾选。勾选只依据该 Task 的真实实施与独立评审证据，不能用静态预检代替；详见 [阶段评审第2节](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
+T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b关闭。T12a及T12b均经独立评审，T12b排序定义问题经修复及范围复审关闭；T13a迁移/持久化/纯校验和T13b接线/API/并发均已独立Approved，父T13已验收。T14矩阵/读边界/写隔离/完整回归与T15八接口故事/四变异/完整142条e2e均已独立Approved；T16文档/差异/输入交接、内部整分支审查与统一修复复审已完成；2026-10-26 负责人授权后，P5 已以 `--no-ff` 合并为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 的 server/web/e2e 全绿；6,517 个证据文件已归档并逐个 SHA-256 核对，P5 本地/远端分支及 worktree 已清理。T16 集成门关闭，M4 总体与后续交接仍 open。 勾选依据真实实施与独立评审，详见 [阶段评审](../reviews/P5-issue-list-review.md)。
 
 | 完成 | Task | 完成线 |
 |---|---|---|
@@ -209,7 +209,7 @@ T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b�
 | [x] | T13 | 00026三列默认/CHECK/Down-Up、三偏好闭合校验/整字段替换/用户隔离；并发-race -count=5 |
 | [x] | T14 | 矩阵、运行角色、双向契约、全部新增交错强制race五遍、旧功能回归和全量门禁 |
 | [x] | T15 | I3–I7/I19/I20 API故事、I15增长、全部API前置及完整e2e |
-| [ ] | T16 | 文档/差异/交接、实际证据、整分支终审意见处理、分支/main CI及既定合并清理 |
+| [x] | T16 | 文档/差异/交接、实际证据、整分支终审意见处理、分支/main CI及既定合并清理 |
 
 ## 5. 后续 Phase
 
@@ -248,10 +248,14 @@ T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b�
 | [M2收尾交接](../handoffs/M2-closeout.md) | 日期/页大小/游标与闭合schema沿现状；无新开放map schema；锁下时钟与真实验证保留 | 其他Phase条目不提前关闭 |
 | [M3收尾交接](../handoffs/M3-closeout.md) | 三偏好列及端口、成员退出恢复保留设置、个人主页规则、列表目录；T10/T13/T14 | P10b旧筛选store、后续页面 |
 
-当前文档收口已逐节关联review §2的Task/实际测试/变异/性能清单，并登记M2/M3/P1–P4的P5接收结果，其他范围仍open。T16分两门：开发工作及内部整审、修复复审已完成，最终交付CI按精确HEAD的GitHub Actions记录与交付答复核验，不由本文自证；集成门待负责人安排，当前不合并，保留分支/worktree。关闭前必须：§4全部逐项有证据；方法调整与静态预检意见已处理；安全/权限/锁/快照性质有实际变异失败与恢复；新增快照/偏好并发/sort_order相关交错全部 `-race -count=5`；性能报告含最终SQL/参数/分布/环境/实际计划；生成物无差异、适用全量门禁通过。完成后先交负责人安排整分支终审，再处理意见并按既定 --no-ff、分支CI/main CI、清理流程完成，除非负责人另作安排。M4及跨Phase交接总体status仍到M4收尾才关闭。
+当前文档收口已逐节关联 review §2 的真实测试/变异/性能及审查证据。2026-10-26 负责人授权后，P5 已以 `--no-ff` 合并为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 的 server/web/e2e 全绿；6,517 个证据文件已归档并逐个 SHA-256 核对，P5 本地/远端分支及 worktree 已清理。T16 集成门关闭，M4 总体与后续交接仍 open。
 
 ## 附录 A. 起步时的证据边界（历史）
 
 起步提交 `8f4b170d` 时仅有静态预检与文档修订；后续实施证据见第4节和阶段评审。四项 Local/Medium 已纳入本版：actor/target独立输入；全部分组字段实际SQL覆盖；所有新增交错强制race五遍；七节规格与方法/证据边界闭合。两项Low也已修正：IssueFields沿app/rows.go扩展；SQL NULL防御与adapter生产参数规整分别验证。来源/裁定与复审结果在 [P5 review](../reviews/P5-issue-list-review.md) 逐条登记；2026-10-25独立聚焦复核已批准本起步计划，产品验收仍未完成。
 
 起步时没有运行完整预制原型，没有P5 TDD红绿、变异、SQL精度证明、S1复测、性能结果、生成物或P5 CI通过证据。已知真实通过仅是表头所列P4合并main基线CI；不得将其当作P5验收。
+
+### M4/P6 接收记录
+
+列表阶段的描述/排序及archive_in消费边界已按P6规格实施，提交、真实测试/变异与独立评审见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)及[§5](../reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。P7/P9/P15和M4整体交接仍按原文开放。

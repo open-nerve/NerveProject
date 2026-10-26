@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/migrations"
@@ -112,7 +114,9 @@ func TestTheRuntimeRoleServesWithTheGrantsFile(t *testing.T) {
 		}
 	}
 	var logs lockedBuffer
-	base := startAppLogging(t, testConfig(t, roles.serverURL, false), migrations.FS(), slog.New(slog.NewTextHandler(&logs, nil)))
+	cfg := testConfig(t, roles.serverURL, false)
+	cfg.Issue.AutoArchiveInterval = time.Second
+	base := startAppLogging(t, cfg, migrations.FS(), slog.New(slog.NewTextHandler(&logs, nil)))
 
 	if status, p := getReadyz(t, base); status != 200 {
 		t.Errorf("/readyz = %d %+v, want 200", status, p)
@@ -126,6 +130,7 @@ func TestTheRuntimeRoleServesWithTheGrantsFile(t *testing.T) {
 		t.Errorf("after the cleanup: expired session left %v, live one left %v; want only the live one",
 			sessionExists(t, roles.owner, expired), sessionExists(t, roles.owner, live))
 	}
+	assertRuntimeAutoArchive(t, roles, base, &logs)
 	if all := logs.String(); !strings.Contains(all, `msg="jobs started"`) || strings.Contains(all, "permission denied") {
 		t.Errorf("logs want jobs started and no permission denied:\n%s", all)
 	}
@@ -211,4 +216,51 @@ func TestTheGrantsFileCoversEveryRelationAndFunction(t *testing.T) {
 	if seen["r"] == 0 || seen["S"] == 0 || seen["f"] == 0 {
 		t.Fatalf("the schema public has %v tables (r), sequences (S) and functions (f), want some of each", seen)
 	}
+}
+
+// Use the running app and its exact login role for every business write. The
+// owner only makes the completed item old enough; the worker must update the
+// issue and insert the system activity, including a true SQL NULL actor.
+func assertRuntimeAutoArchive(t *testing.T, roles splitRoles, base string, logs *lockedBuffer) {
+	t.Helper()
+	contract := apitest.Load(t)
+	token := registerAccount(t, contract, base, "archive-runtime@example.com").AccessToken
+	w := issueWorld{contract: contract, base: base, pool: roles.owner, tokens: map[string]string{"alice": token}}
+	var created struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/workspaces", `{"name":"Runtime","slug":"runtime"}`, http.StatusCreated), &created)
+	w.acme = created.ID
+	w.web = createdProject(t, contract, base, token, "runtime", "Runtime", "RT")
+	w.done = stateID(t, roles.owner, w.web, "Done")
+	id := w.doneWorkItem(t)
+	// Enable the policy only after the fixture is complete, so its first archive
+	// is unambiguously the background system write.
+	if _, err := roles.owner.Exec(pgtest.Soon(t), "UPDATE issues SET updated_at=now()-interval '40 days' WHERE id=$1", id); err != nil {
+		t.Fatal(err)
+	}
+	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+w.web.String(), `{"archive_in":1}`, http.StatusOK)
+	tick := time.NewTicker(25 * time.Millisecond)
+	defer tick.Stop()
+	deadline := time.NewTimer(15 * time.Second)
+	defer deadline.Stop()
+	for {
+		var archived bool
+		var activities, nullActors int
+		if err := roles.owner.QueryRow(pgtest.Soon(t), `SELECT archived_at IS NOT NULL FROM issues WHERE id=$1`, id).Scan(&archived); err != nil {
+			t.Fatal(err)
+		}
+		if err := roles.owner.QueryRow(pgtest.Soon(t), `SELECT count(*), count(*) FILTER (WHERE actor_id IS NULL AND created_by_id IS NULL AND updated_by_id IS NULL) FROM issue_activities WHERE issue_id=$1 AND field='archived_at' AND new_value='archive'`, id).Scan(&activities, &nullActors); err != nil {
+			t.Fatal(err)
+		}
+		if archived && activities == 1 && nullActors == 1 {
+			break
+		}
+		select {
+		case <-tick.C:
+		case <-deadline.C:
+			t.Fatalf("runtime auto archive as %s: archived=%v activities=%d NULL actors=%d; logs:\n%s", roles.serverName, archived, activities, nullActors, logs.String())
+		}
+	}
+	waitForCompletedKinds(t, roles.owner, map[string]int{"identity.cleanup_expired_sessions": 1, "issue.auto_archive": 1}, logs)
 }

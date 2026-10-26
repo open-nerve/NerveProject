@@ -69,7 +69,7 @@ func (s stamp) unlinks(targets []uuid.UUID) UnlinkRows {
 func (s stamp) activity(activities []domain.Activity) []ActivityRow {
 	rows := make([]ActivityRow, len(activities))
 	for i, a := range activities {
-		rows[i] = ActivityRow{ID: uuid.NewV7(), WorkspaceID: s.workspace, ProjectID: s.project, IssueID: s.issue, Activity: a, ActorID: s.by,
+		rows[i] = ActivityRow{ID: uuid.NewV7(), WorkspaceID: s.workspace, ProjectID: s.project, IssueID: s.issue, Activity: a, ActorID: &s.by,
 			At: s.at}
 	}
 	return rows

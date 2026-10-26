@@ -294,7 +294,7 @@ func TestIssueProjectsConvertsProjectsAnswers(t *testing.T) {
 	web, acme, ann, bug, ui := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	backlog := project.IssueState{ID: uuid.NewV7(), Name: "Backlog", Group: "backlog", Default: true}
 	done := project.IssueState{ID: uuid.NewV7(), Name: "Done", Group: "completed"}
-	fake := &fakeIssueProjects{web: web, locked: project.IssueProject{WorkspaceID: acme, Archived: true, DefaultAssigneeID: &ann, Identifier: "WEB"},
+	fake := &fakeIssueProjects{web: web, locked: project.IssueProject{WorkspaceID: acme, Archived: true, DefaultAssigneeID: &ann, Identifier: "WEB", ArchiveIn: 9},
 		states: []project.IssueState{backlog, done}, labels: []project.IssueLabel{{ID: bug, Name: "Bug"}, {ID: ui, Name: "UI"}},
 		roles: map[uuid.UUID]shared.Role{ann: shared.RoleMember}}
 	p := issueProjects{projects: fake}
@@ -304,14 +304,14 @@ func TestIssueProjectsConvertsProjectsAnswers(t *testing.T) {
 		t.Errorf("Find() = %s, %v, %v; want acme, found", w, found, err)
 	}
 	if l, found, err := p.Lock(ctx, web); err != nil || !found ||
-		l != (issue.LockedProject{WorkspaceID: acme, Archived: true, DefaultAssigneeID: &ann, Identifier: "WEB"}) {
+		l != (issue.LockedProject{WorkspaceID: acme, Archived: true, DefaultAssigneeID: &ann, Identifier: "WEB", ArchiveIn: 9}) {
 		t.Errorf("Lock() = %+v, %v, %v; want web as locked, found", l, found, err)
 	}
 	if _, found, _ := p.Lock(ctx, uuid.NewV7()); found {
 		t.Error("Lock() of another project found it")
 	}
 	if l, err := p.LockMany(ctx, []uuid.UUID{acme, web}); err != nil || !maps.Equal(l, map[uuid.UUID]issue.LockedProject{web: {WorkspaceID: acme,
-		Archived: true, DefaultAssigneeID: &ann, Identifier: "WEB"}}) {
+		Archived: true, DefaultAssigneeID: &ann, Identifier: "WEB", ArchiveIn: 9}}) {
 		t.Errorf("LockMany() = %+v, %v; want web as locked", l, err)
 	}
 	if n, err := p.Next(ctx, web); err != nil || n != 7 {

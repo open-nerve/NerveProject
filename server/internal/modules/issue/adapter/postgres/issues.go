@@ -88,7 +88,7 @@ func (s *Store) InsertActivities(ctx context.Context, rows []app.ActivityRow) er
 		err := s.queries(ctx).InsertActivity(ctx, gen.InsertActivityParams{
 			ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, IssueID: r.IssueID, Verb: string(a.Verb), Field: a.Field,
 			OldValue: a.OldValue, NewValue: a.NewValue, OldIdentifier: a.OldIdentifier, NewIdentifier: a.NewIdentifier, Comment: a.Comment,
-			ActorID: &r.ActorID, At: r.At,
+			ActorID: r.ActorID, At: r.At,
 		})
 		if err != nil {
 			return fmt.Errorf("insert activity of work item %s: %w", r.IssueID, err)

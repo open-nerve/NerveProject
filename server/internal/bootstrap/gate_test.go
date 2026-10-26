@@ -168,7 +168,7 @@ func (e endingIn) WithinTx(ctx context.Context, fn func(ctx context.Context) err
 // request's. Once the row is free, a change and a creation go through.
 func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Second, MaxQueue: 1},
+		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Second, MaxQueue: 1},
 			WriteLockTimeout: 3 * time.Second}
 	})
 	item := w.newWorkItem(t)
@@ -260,7 +260,7 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 // each place it took is TestAWriteAcrossProjectsGivesBackEachPlaceItTook.
 func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
+		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
 			WriteLockTimeout: 3 * time.Second}
 	})
 	item, archived := w.newWorkItem(t), w.doneWorkItem(t)
@@ -371,7 +371,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Server.RequestTimeout = 3 * time.Second
-		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: 10 * time.Second, MaxQueue: 1},
+		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: 10 * time.Second, MaxQueue: 1},
 			WriteLockTimeout: 2 * time.Second}
 	})
 	item := w.newWorkItem(t)

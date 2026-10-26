@@ -31,7 +31,7 @@ import (
 func TestAWriteAcrossProjectsWaitsMaxWaitInAll(t *testing.T) {
 	const maxWait, freed = 2 * time.Second, 1500 * time.Millisecond
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: maxWait, MaxQueue: 1},
+		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: maxWait, MaxQueue: 1},
 			WriteLockTimeout: 5 * time.Second}
 	})
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
@@ -84,7 +84,7 @@ func TestAWriteAcrossProjectsWaitsMaxWaitInAll(t *testing.T) {
 // Ops' row is free, her change of Far goes through.
 func TestAWriteAcrossProjectsGivesBackEachPlaceItTook(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
+		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
 			WriteLockTimeout: 3 * time.Second}
 	})
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")

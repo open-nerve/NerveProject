@@ -466,3 +466,7 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 | 清扫 10：规模的测量的种子 | T13.1 | 1/1 | `TestTheDeletionsAtTheScaleTarget`（设了 `NERVE_MEASURE_SCALE`） | 组合 |
 
 **合计**（执行完的分支，变异表 137 行）：136 个被发现，T8.11 是等价的；单元一层的检查发现 101 个，组合 63 个，端到端（I2）40 个，存储 21 个，守卫 1 个（一个变异可以在几层被发现）。只有一层发现的：单元 35 个、存储 6 个（都在 A.3），组合 12 个（原来的 8 个和 T5.24、T6.4、T7.5、T13.1），守卫 1 个（T4.5），端到端没有。"（Task n 起）"的：Task 6 起 12 个、Task 7 起 6 个、Task 10 起 6 个、Task 11 起 10 个、Task 12 起 8 个、Task 14 起 40 个（I2）。执行中新加的 Go 测试两个（Task 9 的修复轮）：`TestValidateAcceptsTheWriteGatesMinimums` 被 T9.11、T9.12 弄失败；`TestValidateAcceptsWriteWaitsJustUnderTheRequestTimeout`（和的规则的另一侧：刚好短于请求的期限的照样接受）被一个只为核对它而跑、不进表的变异弄失败（规则多留一毫秒，`$M4TMP/p1bsdd/ffw/mutants_ffw5.py`）；规模的测量加了种子的核对之后被 T13.1 弄失败。
+
+### M4/P6 接收记录
+
+修改/排序事件及无改动边界已按P6规格实施，提交、真实测试/变异与独立评审见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)及[§5](../reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。P7/P9/P15和M4整体交接仍按原文开放。

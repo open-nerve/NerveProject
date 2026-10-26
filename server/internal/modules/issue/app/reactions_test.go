@@ -14,7 +14,7 @@ import (
 func newReaction() (*app.AddIssueReaction, *app.RemoveIssueReaction, *world, *fakeReactions, uuid.UUID) {
 	_, w, id := newUpdate()
 	f := &fakeReactions{fakeRelations: &fakeRelations{fakeIssues: w.issues}, rows: map[app.ReactionKey]domain.IssueReaction{}}
-	d := app.AddIssueReactionDeps{Locks: w.locks, Reactions: f, Clock: clockAt{at: clockNow, log: w.log}}
+	d := app.AddIssueReactionDeps{Events: discardEvents{}, Locks: w.locks, Reactions: f, Clock: clockAt{at: clockNow, log: w.log}}
 	return app.NewAddIssueReaction(d), app.NewRemoveIssueReaction(d), w, f, id
 }
 func TestIssueReactions(t *testing.T) {
@@ -98,7 +98,7 @@ func TestIssueReactions(t *testing.T) {
 			w.auth.grants = []shared.Grant{ownOnly}
 			w.auth.answers = []error{shared.Forbidden()}
 			locks := app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log})
-			d := app.AddIssueReactionDeps{Locks: locks, Reactions: f, Clock: clockAt{at: clockNow, log: w.log}}
+			d := app.AddIssueReactionDeps{Events: discardEvents{}, Locks: locks, Reactions: f, Clock: clockAt{at: clockNow, log: w.log}}
 			a, r := app.NewAddIssueReaction(d), app.NewRemoveIssueReaction(d)
 			var e error
 			if remove {

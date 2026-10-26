@@ -47,13 +47,13 @@ func validConfig() Config {
 			PasswordUser:  BucketConfig{PerMinute: 7, Burst: 3},
 		},
 		// Unlike server.shutdown_timeout and the default.
-		Jobs: JobsConfig{ShutdownTimeout: 12 * time.Second},
+		Jobs: JobsConfig{DefaultWorkers: 11, PeriodicWorkers: 3, ShutdownTimeout: 12 * time.Second},
 		// Unlike the defaults and unlike auth.signup_enabled, so that a key
 		// logged from the wrong field shows.
 		Workspace: WorkspaceConfig{CreationEnabled: false},
 		// Each unlike its default and every other key's value, and not the
 		// start of one, so that a key logged from the wrong field shows.
-		Issue: IssueConfig{WriteGate: WriteGateConfig{PerProject: 9, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
+		Issue: IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: WriteGateConfig{PerProject: 9, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
 			WriteLockTimeout: 3 * time.Second},
 		Files: FilesConfig{SizeLimit: 7340032},
 		Log:   LogConfig{Level: "info", Format: "json"},
@@ -114,11 +114,14 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"ratelimit.register_ip.burst: must be at least 1, got 0",
 		"ratelimit.password_user.per_minute: must be at least 1, got 0",
 		"ratelimit.password_user.burst: must be at least 1, got 0",
+		"issue.auto_archive_interval: must be at least 1s, got 0s",
 		"issue.write_gate.per_project: must be at least 1, got 0",
 		"issue.write_gate.max_wait: must be positive, got 0s",
 		"issue.write_gate.max_queue: must not be negative, got -1",
 		"issue.write_lock_timeout: must be positive, got 0s",
 		"jobs.shutdown_timeout: must be positive, got 0s",
+		"jobs.default_workers: must be at least 1, got 0",
+		"jobs.periodic_workers: must be at least 1, got 0",
 		"files.size_limit: must be at least 1, got 0",
 		`log.level: must be one of debug, info, warn, error, got "verbose"`,
 		`log.format: must be text or json, got "xml"`,
