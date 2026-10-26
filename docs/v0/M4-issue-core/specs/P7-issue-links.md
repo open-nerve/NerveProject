@@ -165,7 +165,7 @@ type OutboundConfig struct { AllowCIDRs []string `koanf:"allow_cidrs"` }
 
 拒绝集为两张 IANA special-purpose 登记表的**所有**prefix（含 globally reachable=true、已终止保留记录），加 IPv4/IPv6 multicast 和 `fec0::/10`；各prefix显式保留，不只用IsPrivate/IsGlobalUnicast。2026-10-26官方页面最后更新2025-10-09，CSV精准来源/hash见附录；实施时核对是否更新并记录实际采用快照。mapped IPv6、NAT64、6to4、Teredo外层与内嵌IPv4均验证；外层被拒不能先Unmap绕过。NAT64 local `/48` 整体拒绝；Teredo检查server和反转的client。固定 NAT64 `64:ff9b::/96` 按已知格式检查内嵌 IPv4；local `64:ff9b:1::/48` 是技术无关预留，不推断载荷存在、位置或算法，默认整段拒绝（[RFC 8215 §5](https://www.rfc-editor.org/rfc/rfc8215.html#section-5)、[RFC 6052 §2.2](https://www.rfc-editor.org/rfc/rfc6052.html#section-2.2)）。测试放行仅对该原地址落在显式allow prefix时覆盖静态/本机拒绝；放行IPv4 127.0.0.1/32不放行整段127/8，也不自动放行IPv6嵌入形式。显式放行已知编码外层只覆盖该原 literal 的静态/本机拒绝，递归载荷不继承 allow；公网载荷仍可通过，私网/本机载荷仍拒绝。
 
-每次GET/每跳只许http(s)，拒绝userinfo、IPv6zone、无host/坏端口；合法hostname解析全部A/AAAA，任一不合格即在任何dial前拒绝。literal不额外DNS。DialContext只向本轮已验证IP字面值拨号，不把hostname交回Dialer；Host、TLS SNI与证书检查仍按原hostname，绝不InsecureSkipVerify。不得读取代理环境变量（Proxy=nil），无CookieJar、不转发Set-Cookie、Authorization/Proxy-Authorization，不接受调用者自带认证header。
+每次GET/每跳只许http(s)，拒绝userinfo、IPv6zone、无host/坏端口；合法hostname经标准库Transport规范为IDNA名称后解析全部A/AAAA，任一不合格即在任何实际socket dial前拒绝；每跳在DialContext/DialTLSContext收到的规范地址边界只解析一次。literal不额外DNS。实际拨号只向本轮已验证IP字面值，不把hostname交回Dialer；HTTP Host、TLS SNI与证书检查使用同一规范hostname，原URL语义保持，绝不InsecureSkipVerify。不得读取代理环境变量（Proxy=nil），无CookieJar、不转发Set-Cookie、Authorization/Proxy-Authorization，不接受调用者自带认证header。
 
 手动跟随301/302/303/307/308，最多5次跳转（初始+5次GET），每一跳都重新解析检查、相对Location按当前URL解析；第6次跳转作为不能完成请求的失败返回（包装ErrUnreachable，日志原因为redirect_limit，metadata.failed），非HTTP目标或userinfo/zone为Blocked。不发Referer，跨站/降级跳转也不会带任何凭据。中间响应及时close，不为复用无限drain body；每次Get结束close自己持有的连接/transport资源。只发GET，User-Agent=`Nerve/<version> (+link preview)`。
 

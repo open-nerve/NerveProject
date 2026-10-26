@@ -34,6 +34,9 @@ func Reason(err error) string {
 }
 
 func classify(err error) error {
+	if errors.Is(err, ErrBlocked) || errors.Is(err, ErrTimeout) || errors.Is(err, ErrUnreachable) || errors.Is(err, ErrTooLarge) {
+		return err
+	}
 	var network net.Error
 	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) || (errors.As(err, &network) && network.Timeout()) {
 		return fmt.Errorf("%w: %w", ErrTimeout, err)

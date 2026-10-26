@@ -211,3 +211,32 @@ func TestOutboundDeadlines(t *testing.T) {
 		awaitSignal(t, finalDone)
 	})
 }
+
+func TestOutboundLateDialClose(t *testing.T) {
+	entered, release, closed := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	caller, peer := net.Pipe()
+	defer func() { _ = caller.Close(); _ = peer.Close() }()
+	deps := fixtureDeps(t, "")
+	deps.dial = func(context.Context, string, string) (net.Conn, error) {
+		close(entered)
+		<-release
+		return &closedConn{Conn: caller, closed: closed}, nil
+	}
+	c := fixtureClient(t, deps)
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	result := make(chan error, 1)
+	go func() { _, err := c.Get(ctx, "http://bücher.test/", testLimits()); result <- err }()
+	awaitSignal(t, entered)
+	cancel()
+	select {
+	case err := <-result:
+		if !errors.Is(err, ErrTimeout) || !errors.Is(err, context.Canceled) {
+			t.Errorf("cancellation chain: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Error("GET waited for late dial")
+	}
+	close(release)
+	awaitSignal(t, closed)
+}

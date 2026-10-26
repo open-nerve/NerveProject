@@ -3,6 +3,8 @@ package outbound
 import (
 	"compress/gzip"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -198,4 +201,89 @@ func TestOutboundLimitsAndHeaders(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
+}
+
+func TestOutboundIDNA(t *testing.T) {
+	certificate, roots := idnaCertificate(t)
+	for _, mode := range []string{"http", "https", "redirect", "wrong_certificate"} {
+		t.Run(mode, func(t *testing.T) {
+			dns, dials, hosts, sni := make(chan string, 4), make(chan string, 4), make(chan string, 4), make(chan string, 4)
+			server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				hosts <- r.Host
+				if r.URL.Path == "/start" {
+					w.Header().Set("Location", "https://bücher.test/path?x=%2F")
+					w.WriteHeader(302)
+					return
+				}
+				if r.RequestURI != "/path?x=%2F" {
+					t.Errorf("URL semantics changed: %q", r.RequestURI)
+				}
+				_, _ = io.WriteString(w, "idna")
+			}))
+			if mode == "http" {
+				server.Start()
+			} else {
+				server.TLS = &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{certificate}, GetConfigForClient: func(hello *tls.ClientHelloInfo) (*tls.Config, error) { sni <- hello.ServerName; return nil, nil }}
+				server.StartTLS()
+			}
+			defer server.Close()
+			deps := fixtureDeps(t, server.Listener.Addr().String())
+			deps.roots = roots
+			deps.resolver = resolverFunc(func(_ context.Context, _, host string) ([]netip.Addr, error) {
+				dns <- host
+				return []netip.Addr{netip.MustParseAddr("8.8.8.8")}, nil
+			})
+			dial := deps.dial
+			deps.dial = func(ctx context.Context, network, address string) (net.Conn, error) {
+				dials <- address
+				return dial(ctx, network, address)
+			}
+			target, final, port := "https://bücher.test/path?x=%2F", "https://b%C3%BCcher.test/path?x=%2F", "443"
+			wantDNS, wantHosts := []string{"xn--bcher-kva.test"}, []string{"xn--bcher-kva.test"}
+			if mode == "http" {
+				target, final, port = "http://bücher.test/path?x=%2F", "http://b%C3%BCcher.test/path?x=%2F", "80"
+			}
+			if mode == "redirect" {
+				target = "https://xn--bcher-kva.test/start"
+				wantDNS = []string{"xn--bcher-kva.test", "xn--bcher-kva.test"}
+				wantHosts = []string{"xn--bcher-kva.test", "xn--bcher-kva.test"}
+			}
+			if mode == "wrong_certificate" {
+				target = "https://bücher.invalid/path?x=%2F"
+				wantDNS = []string{"xn--bcher-kva.invalid"}
+				wantHosts = nil
+			}
+			response, err := fixtureClient(t, deps).Get(t.Context(), target, testLimits())
+			if mode == "wrong_certificate" {
+				var mismatch x509.HostnameError
+				if !errors.Is(err, ErrUnreachable) || !errors.As(err, &mismatch) {
+					t.Errorf("wrong IDNA certificate: %v", err)
+				}
+			} else if err != nil || string(response.Body) != "idna" || response.FinalURL != final {
+				t.Errorf("IDNA response=%+v error=%v", response, err)
+			}
+			assertNames := func(label string, got <-chan string, want []string) {
+				t.Helper()
+				var actual []string
+				for len(got) > 0 {
+					actual = append(actual, <-got)
+				}
+				if !slices.Equal(actual, want) {
+					t.Errorf("%s=%q, want %q", label, actual, want)
+				}
+			}
+			assertNames("DNS", dns, wantDNS)
+			wantDials := []string{"8.8.8.8:" + port}
+			if mode == "redirect" {
+				wantDials = append(wantDials, "8.8.8.8:443")
+			}
+			assertNames("dial", dials, wantDials)
+			assertNames("Host", hosts, wantHosts)
+			wantSNI := wantDNS
+			if mode == "http" {
+				wantSNI = nil
+			}
+			assertNames("SNI", sni, wantSNI)
+		})
+	}
 }

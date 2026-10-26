@@ -2,11 +2,15 @@ package outbound
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -74,7 +78,7 @@ func TestOutboundPinsEveryHop(t *testing.T) {
 			dial := deps.dial
 			deps.dial = func(ctx context.Context, n, a string) (net.Conn, error) { calls.Add(1); return dial(ctx, n, a) }
 			_, err := fixtureClient(t, deps).Get(t.Context(), "http://preview.test/", testLimits())
-			if !errors.Is(err, ErrBlocked) || calls.Load() != 0 {
+			if !errors.Is(err, ErrBlocked) || errors.Is(err, ErrUnreachable) || calls.Load() != 0 {
 				t.Fatalf("mixed DNS: error=%v dialCalls=%d, want blocked and zero", err, calls.Load())
 			}
 		}
@@ -122,7 +126,7 @@ func TestOutboundPinsEveryHop(t *testing.T) {
 		dial := deps.dial
 		deps.dial = func(ctx context.Context, n, a string) (net.Conn, error) { dials.Add(1); return dial(ctx, n, a) }
 		_, err := fixtureClient(t, deps).Get(t.Context(), "http://preview.test/", testLimits())
-		if !errors.Is(err, ErrBlocked) || lookups.Load() != 2 || dials.Load() != 1 {
+		if !errors.Is(err, ErrBlocked) || errors.Is(err, ErrUnreachable) || lookups.Load() != 2 || dials.Load() != 1 {
 			t.Fatalf("redirect: error=%v lookups=%d dials=%d", err, lookups.Load(), dials.Load())
 		}
 	})
@@ -353,4 +357,30 @@ func TestOutboundHTTPSDowngrade(t *testing.T) {
 			t.Errorf("downgrade forwarded %s=%v", key, values)
 		}
 	}
+}
+
+func idnaCertificate(t *testing.T) (tls.Certificate, *x509.CertPool) {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		DNSNames:     []string{"xn--bcher-kva.test"},
+		NotBefore:    time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour),
+		KeyUsage:    x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certificate, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatal(err)
+	}
+	roots := x509.NewCertPool()
+	roots.AddCert(certificate)
+	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}, roots
 }

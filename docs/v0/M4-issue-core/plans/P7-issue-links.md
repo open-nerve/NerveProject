@@ -137,6 +137,8 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 **Files:** 新O/client.go、transport.go、client_test.go、transport_test.go、deadline_test.go；扩errors.go。测试私有依赖用于resolver/dial/interface/TLS root，无全局替换/可变测试hook。
 **T7 实施事实（待独评）：** 完成固定IP/每跳复检、Host/SNI与证书验证、手动跳转、解压后限额、共享期限与显式连接关闭；M19–M22七个生产变异均红后按原字节恢复绿，T6 mapped端点守卫Minor以值比较和临时helper Unmap自证闭环。仅T7实现与聚焦门禁完成，T8配置/T9日志消费与整阶段验收未完成。
 
+**T7 修复轮1（待定向复审）：** 修复Unicode hostname被自定义DNS/TLS绕过IDNA规范化的问题：复用Transport交给dial callback的规范地址，在同一边界解析/检查全部候选，再固定IP建连；Host/SNI/证书按同一规范名，保留原URL语义与分类。新增受信任punycode SAN本地HTTP/HTTPS/跳转反例与晚到连接关闭覆盖。
+
 **Interfaces:** 产生spec§2.5的Options/Limits/Response/New/Get与四错误、`Reason(error) string`（仅空或redirect_limit，支持标准包装）；New在生产读取InterfaceAddrs，测试私有`newClient(options Options,deps dependencies)`中依赖：resolver的`LookupNetIP(ctx,network,host)([]netip.Addr,error)`、dial函数、interface读取、TLS roots（只测试），不暴露给模块消费方。
 
 - [x] 写`TestOutboundPinsEveryHop`：混合public+blocked答案断言`dialCalls==0`；resolver第二次返回127但同hop只解析一次、dial目标为第一次publicIP；同host重定向重新解析；HTTPS记录Host/SNI，正确证书成功、错证书失败，不能测试依靠InsecureSkipVerify。

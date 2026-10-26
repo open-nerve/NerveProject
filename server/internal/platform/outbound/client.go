@@ -98,11 +98,7 @@ func (c *Client) Get(parent context.Context, rawURL string, limits Limits) (Resp
 		if err != nil {
 			return Response{}, err
 		}
-		addresses, err := c.resolve(ctx, target.Hostname())
-		if err != nil {
-			return Response{}, err
-		}
-		transport, closeTransport := c.transport(ctx, target, addresses, limits.ConnectTimeout)
+		transport, closeTransport := c.transport(ctx, limits.ConnectTimeout)
 		response, err := c.request(ctx, transport, target)
 		if err != nil {
 			closeTransport()

@@ -5,24 +5,24 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"net/netip"
-	"net/url"
 	"sync"
 	"time"
 )
 
-func (c *Client) transport(requestContext context.Context, target *url.URL, addresses []netip.Addr, timeout time.Duration) (*http.Transport, func()) {
-	port := target.Port()
-	if port == "" {
-		port = "80"
-		if target.Scheme == "https" {
-			port = "443"
-		}
-	}
+func (c *Client) transport(requestContext context.Context, timeout time.Duration) (*http.Transport, func()) {
 	var mutex sync.Mutex
 	var connections []net.Conn
 	closed := false
-	connect := func(secure bool) (net.Conn, error) {
+	connect := func(canonicalAddress string, secure bool) (net.Conn, error) {
+		// Transport supplies the same IDNA hostname it uses for the HTTP Host.
+		host, port, err := net.SplitHostPort(canonicalAddress)
+		if err != nil {
+			return nil, err
+		}
+		addresses, err := c.resolve(requestContext, host)
+		if err != nil {
+			return nil, err
+		}
 		// The same connect budget bounds all candidate dials and the TLS handshake.
 		ctx, cancel := context.WithTimeout(requestContext, timeout)
 		defer cancel()
@@ -46,7 +46,7 @@ func (c *Client) transport(requestContext context.Context, target *url.URL, addr
 			}
 			tlsConn := tls.Client(conn, &tls.Config{
 				MinVersion: tls.VersionTLS12,
-				ServerName: target.Hostname(),
+				ServerName: host,
 				RootCAs:    c.deps.roots,
 			})
 			if err := tlsConn.HandshakeContext(ctx); err != nil {
@@ -61,8 +61,8 @@ func (c *Client) transport(requestContext context.Context, target *url.URL, addr
 	transport := &http.Transport{
 		Proxy:             nil,
 		DisableKeepAlives: true,
-		DialContext:       func(_ context.Context, _, _ string) (net.Conn, error) { return connect(false) },
-		DialTLSContext:    func(_ context.Context, _, _ string) (net.Conn, error) { return connect(true) },
+		DialContext:       func(_ context.Context, _, address string) (net.Conn, error) { return connect(address, false) },
+		DialTLSContext:    func(_ context.Context, _, address string) (net.Conn, error) { return connect(address, true) },
 	}
 	closeTransport := func() {
 		mutex.Lock()
