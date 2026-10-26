@@ -171,7 +171,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		a.close()
 		return nil, err
 	}
-	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger}, ident.Jobs())
+	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, ident.Jobs(), identity.EnqueuedKinds())
 	if err != nil {
 		a.close()
 		return nil, err

@@ -170,3 +170,6 @@ func (m *Module) Jobs() []jobs.Job {
 func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
 	httpadapter.Register(router, api, m.uc, m.settings)
 }
+
+// EnqueuedKinds lists identity jobs inserted by request use cases.
+func EnqueuedKinds() []string { return nil }

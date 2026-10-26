@@ -52,6 +52,8 @@ func TestLogValueMasksDatabaseURL(t *testing.T) {
 		"config.ratelimit.password_user.per_minute=7",
 		"config.ratelimit.password_user.burst=3",
 		"config.jobs.shutdown_timeout=12s",
+		"config.jobs.default_workers=11",
+		"config.jobs.periodic_workers=3",
 		"config.workspace.creation_enabled=false",
 		"config.issue.write_gate.per_project=9",
 		"config.issue.write_gate.max_wait=1.5s",

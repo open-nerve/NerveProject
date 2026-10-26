@@ -85,6 +85,12 @@ func (c Config) validate() error {
 	if c.Jobs.ShutdownTimeout <= 0 {
 		fail("jobs.shutdown_timeout", "must be positive, got %s", c.Jobs.ShutdownTimeout)
 	}
+	if c.Jobs.DefaultWorkers < 1 {
+		fail("jobs.default_workers", "must be at least 1, got %d", c.Jobs.DefaultWorkers)
+	}
+	if c.Jobs.PeriodicWorkers < 1 {
+		fail("jobs.periodic_workers", "must be at least 1, got %d", c.Jobs.PeriodicWorkers)
+	}
 	if c.Files.SizeLimit < 1 {
 		fail("files.size_limit", "must be at least 1, got %d", c.Files.SizeLimit)
 	}

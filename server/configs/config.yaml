@@ -75,6 +75,9 @@ ratelimit:
 
 # 后台任务（River）
 jobs:
+  # Concurrent jobs per queue; periodic housekeeping has its own capacity.
+  default_workers: 10
+  periodic_workers: 2
   # 停机时，HTTP 服务停下之后等正在运行的任务结束的时长；到期后取消它们
   shutdown_timeout: 10s
 

@@ -132,6 +132,8 @@ func (b BucketConfig) LogValue() slog.Value {
 
 // JobsConfig configures the background jobs (M2 design 3.15).
 type JobsConfig struct {
+	DefaultWorkers  int `koanf:"default_workers"`
+	PeriodicWorkers int `koanf:"periodic_workers"`
 	// ShutdownTimeout is how long nerve waits at shutdown for the running
 	// jobs, after the HTTP server has stopped; then their contexts are
 	// cancelled.
@@ -233,6 +235,8 @@ func (c Config) LogValue() slog.Value {
 		),
 		slog.Group("jobs",
 			slog.Duration("shutdown_timeout", c.Jobs.ShutdownTimeout),
+			slog.Int("default_workers", c.Jobs.DefaultWorkers),
+			slog.Int("periodic_workers", c.Jobs.PeriodicWorkers),
 		),
 		slog.Group("workspace",
 			slog.Bool("creation_enabled", c.Workspace.CreationEnabled),

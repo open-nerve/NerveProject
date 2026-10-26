@@ -15,27 +15,17 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 )
 
-// Job is one kind of job a module works: its worker and, when the job is
-// periodic, its schedule. A module's river adapter builds it.
-type Job struct {
-	// Add registers the job's worker, e.g. with river.AddWorkerSafely.
-	Add func(*river.Workers) error
-	// Periodic, when set, enqueues the job on its schedule. River's leader
-	// enqueues it, so one runs per schedule however many servers there are.
-	Periodic *river.PeriodicJob
-}
-
 // Config is the runner's settings.
 type Config struct {
 	// ShutdownTimeout is how long Stop lets the running jobs finish before
 	// it cancels their contexts: jobs.shutdown_timeout.
 	ShutdownTimeout time.Duration
 	Logger          *slog.Logger
+	DefaultWorkers  int
+	PeriodicWorkers int
 }
 
 const (
-	// maxWorkers is how many jobs run at once. M2 has one periodic job.
-	maxWorkers = 2
 	// cancelGrace is how long Stop waits, once ShutdownTimeout has passed and
 	// the jobs' contexts are cancelled, for the jobs to return.
 	cancelGrace = time.Second
@@ -67,20 +57,20 @@ type Runner struct {
 }
 
 // New builds the client on pool for jobs; Start runs it.
-func New(pool *pgxpool.Pool, cfg Config, jobs []Job) (*Runner, error) {
-	workers := river.NewWorkers()
-	var periodic []*river.PeriodicJob
-	for _, j := range jobs {
-		if err := j.Add(workers); err != nil {
-			return nil, fmt.Errorf("register a job: %w", err)
-		}
-		if j.Periodic != nil {
-			periodic = append(periodic, j.Periodic)
-		}
+func New(pool *pgxpool.Pool, cfg Config, definitions []Job, enqueuedKinds []string) (*Runner, error) {
+	if cfg.DefaultWorkers < 1 {
+		return nil, errors.New("default workers must be positive")
+	}
+	if cfg.PeriodicWorkers < 1 {
+		return nil, errors.New("periodic workers must be positive")
+	}
+	workers, periodic, err := registerJobs(definitions, enqueuedKinds)
+	if err != nil {
+		return nil, err
 	}
 	c, err := river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Logger:       cfg.Logger,
-		Queues:       map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: maxWorkers}},
+		Queues:       map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: cfg.DefaultWorkers}, "periodic": {MaxWorkers: cfg.PeriodicWorkers}},
 		Workers:      workers,
 		PeriodicJobs: periodic,
 		// Stopping lets the running jobs finish for this long, then cancels

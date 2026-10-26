@@ -51,6 +51,8 @@ ratelimit:
   register_ip: {per_minute: 10, burst: 5}
   password_user: {per_minute: 5, burst: 5}
 jobs:
+  default_workers: 10
+  periodic_workers: 2
   shutdown_timeout: 10s
 workspace:
   creation_enabled: true
@@ -155,8 +157,8 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			RegisterIP:    BucketConfig{PerMinute: 10, Burst: 5},
 			PasswordUser:  BucketConfig{PerMinute: 7, Burst: 5}, // environment
 		},
-		Jobs:      JobsConfig{ShutdownTimeout: 7 * time.Second}, // environment
-		Workspace: WorkspaceConfig{CreationEnabled: false},      // environment
+		Jobs:      JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 7 * time.Second}, // environment
+		Workspace: WorkspaceConfig{CreationEnabled: false},                                              // environment
 		Issue: IssueConfig{
 			WriteGate:        WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 8}, // max_queue: environment
 			WriteLockTimeout: 5 * time.Second,

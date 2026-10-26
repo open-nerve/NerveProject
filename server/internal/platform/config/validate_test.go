@@ -47,7 +47,7 @@ func validConfig() Config {
 			PasswordUser:  BucketConfig{PerMinute: 7, Burst: 3},
 		},
 		// Unlike server.shutdown_timeout and the default.
-		Jobs: JobsConfig{ShutdownTimeout: 12 * time.Second},
+		Jobs: JobsConfig{DefaultWorkers: 11, PeriodicWorkers: 3, ShutdownTimeout: 12 * time.Second},
 		// Unlike the defaults and unlike auth.signup_enabled, so that a key
 		// logged from the wrong field shows.
 		Workspace: WorkspaceConfig{CreationEnabled: false},
@@ -119,6 +119,8 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"issue.write_gate.max_queue: must not be negative, got -1",
 		"issue.write_lock_timeout: must be positive, got 0s",
 		"jobs.shutdown_timeout: must be positive, got 0s",
+		"jobs.default_workers: must be at least 1, got 0",
+		"jobs.periodic_workers: must be at least 1, got 0",
 		"files.size_limit: must be at least 1, got 0",
 		`log.level: must be one of debug, info, warn, error, got "verbose"`,
 		`log.format: must be text or json, got "xml"`,

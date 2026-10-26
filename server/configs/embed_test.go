@@ -93,7 +93,7 @@ func TestBuiltInProfiles(t *testing.T) {
 					},
 				},
 				RateLimit: tt.limits,
-				Jobs:      config.JobsConfig{ShutdownTimeout: 10 * time.Second},
+				Jobs:      config.JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 10 * time.Second},
 				Workspace: config.WorkspaceConfig{CreationEnabled: true},
 				Issue: config.IssueConfig{
 					WriteGate:        config.WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 64},
