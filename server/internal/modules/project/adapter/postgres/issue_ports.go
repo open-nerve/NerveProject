@@ -26,7 +26,7 @@ func (s *Store) LockIssueProject(ctx context.Context, id uuid.UUID) (p app.Issue
 	case err != nil:
 		return app.IssueProject{}, false, fmt.Errorf("lock project %s for its work items: %w", id, err)
 	}
-	return app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID, Identifier: r.Identifier},
+	return app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID, Identifier: r.Identifier, ArchiveIn: int(r.ArchiveIn)},
 		true, nil
 }
 
@@ -44,7 +44,7 @@ func (s *Store) LockIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uui
 	locked := make(map[uuid.UUID]app.IssueProject, len(rows))
 	for _, r := range rows {
 		locked[r.ID] = app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID,
-			Identifier: r.Identifier}
+			Identifier: r.Identifier, ArchiveIn: int(r.ArchiveIn)}
 	}
 	return locked, nil
 }
