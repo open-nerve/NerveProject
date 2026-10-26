@@ -56,7 +56,11 @@ func (u *AddCommentReaction) Execute(ctx context.Context, id uuid.UUID, reaction
 		}
 		at := u.d.Clock.Now()
 		created = domain.CommentReaction{ID: uuid.NewV7(), WorkspaceID: h.issue.WorkspaceID, ProjectID: h.issue.ProjectID, CommentID: id, ActorID: actor.UserID, Reaction: reaction, CreatedAt: at}
-		return u.d.Reactions.InsertCommentReaction(ctx, CommentReactionWrite{Reaction: created, By: actor.UserID, At: at})
+		if err := u.d.Reactions.InsertCommentReaction(ctx, CommentReactionWrite{Reaction: created, By: actor.UserID, At: at}); err != nil {
+			return err
+		}
+		stamp := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: h.issue.ID, by: actor.UserID, at: at}
+		return u.d.Events.Publish(ctx, stamp.reactionEvent(domain.EventReactionAdded, "comment_reaction", created.ID, created.Reaction, "comment", created.CommentID))
 	})
 	if err != nil {
 		return domain.CommentReaction{}, err
@@ -97,13 +101,19 @@ func (u *RemoveCommentReaction) Execute(ctx context.Context, id uuid.UUID, react
 			return domain.ErrIssueArchived
 		}
 		key := ReactionKey{ResourceID: id, ActorID: actor.UserID, Reaction: reaction}
-		if _, found, err := u.d.Reactions.CommentReaction(ctx, key); err != nil {
+		current, found, err := u.d.Reactions.CommentReaction(ctx, key)
+		if err != nil {
 			return err
-		} else if !found {
+		}
+		if !found {
 			return domain.ErrReactionNotFound
 		}
 		at := u.d.Clock.Now()
-		return u.d.Reactions.DeleteCommentReaction(ctx, ReactionDeletion{Key: key, By: actor.UserID, At: at})
+		if err := u.d.Reactions.DeleteCommentReaction(ctx, ReactionDeletion{Key: key, By: actor.UserID, At: at}); err != nil {
+			return err
+		}
+		stamp := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: h.issue.ID, by: actor.UserID, at: at}
+		return u.d.Events.Publish(ctx, stamp.reactionEvent(domain.EventReactionRemoved, "comment_reaction", current.ID, current.Reaction, "comment", current.CommentID))
 	})
 }
 

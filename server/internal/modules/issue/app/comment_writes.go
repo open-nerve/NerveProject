@@ -59,6 +59,7 @@ func (u *UpdateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 		if err != nil {
 			return err
 		}
+		oldHTML := current.HTML
 		at := u.d.Clock.Now()
 		current.HTML, current.Text, current.EditedAt, current.UpdatedAt = clean.HTML, clean.Text, &at, at
 		if err := u.d.Comments.MarkChanged(ctx, ChangedRows{IDs: []uuid.UUID{h.issue.ID}, By: actor.UserID, At: at}); err != nil {
@@ -71,7 +72,10 @@ func (u *UpdateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 		if err := u.d.Comments.UpdateComment(ctx, CommentWrite{Comment: current, By: actor.UserID, At: at}); err != nil {
 			return err
 		}
-		return embedCommentReactions(ctx, u.d.Comments, []domain.Comment{current}, func(rows []domain.Comment) { current = rows[0] })
+		if err := embedCommentReactions(ctx, u.d.Comments, []domain.Comment{current}, func(rows []domain.Comment) { current = rows[0] }); err != nil {
+			return err
+		}
+		return u.d.Events.Publish(ctx, stamp.commentEvent(domain.EventCommentUpdated, current.ID, &oldHTML, eventPtr(current.HTML)))
 	})
 	if err != nil {
 		return domain.Comment{}, err
@@ -122,7 +126,11 @@ func (u *DeleteIssueComment) Execute(ctx context.Context, id uuid.UUID) error {
 		if err := u.d.Comments.DeleteComment(ctx, d); err != nil {
 			return err
 		}
-		return u.d.Comments.DeleteCommentReactionRows(ctx, d)
+		if err := u.d.Comments.DeleteCommentReactionRows(ctx, d); err != nil {
+			return err
+		}
+		stamp := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: h.issue.ID, by: actor.UserID, at: at}
+		return u.d.Events.Publish(ctx, stamp.commentEvent(domain.EventCommentDeleted, current.ID, eventPtr(current.HTML), nil))
 	})
 }
 

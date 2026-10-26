@@ -47,7 +47,11 @@ func (u *AddIssueReaction) Execute(ctx context.Context, id uuid.UUID, reaction s
 		if err := u.d.Reactions.MarkChanged(ctx, ChangedRows{IDs: []uuid.UUID{id}, By: actor.UserID, At: at}); err != nil {
 			return err
 		}
-		return u.d.Reactions.InsertIssueReaction(ctx, IssueReactionWrite{Reaction: created, By: actor.UserID, At: at})
+		if err := u.d.Reactions.InsertIssueReaction(ctx, IssueReactionWrite{Reaction: created, By: actor.UserID, At: at}); err != nil {
+			return err
+		}
+		stamp := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: h.issue.ID, by: actor.UserID, at: at}
+		return u.d.Events.Publish(ctx, stamp.reactionEvent(domain.EventReactionAdded, "issue_reaction", created.ID, created.Reaction, "issue", created.IssueID))
 	})
 	if err != nil {
 		return domain.IssueReaction{}, err
@@ -80,16 +84,22 @@ func (u *RemoveIssueReaction) Execute(ctx context.Context, id uuid.UUID, reactio
 			return domain.ErrIssueArchived
 		}
 		key := ReactionKey{ResourceID: id, ActorID: actor.UserID, Reaction: reaction}
-		if _, found, err := u.d.Reactions.IssueReaction(ctx, key); err != nil {
+		current, found, err := u.d.Reactions.IssueReaction(ctx, key)
+		if err != nil {
 			return err
-		} else if !found {
+		}
+		if !found {
 			return domain.ErrReactionNotFound
 		}
 		at := u.d.Clock.Now()
 		if err := u.d.Reactions.MarkChanged(ctx, ChangedRows{IDs: []uuid.UUID{id}, By: actor.UserID, At: at}); err != nil {
 			return err
 		}
-		return u.d.Reactions.DeleteIssueReaction(ctx, ReactionDeletion{Key: key, By: actor.UserID, At: at})
+		if err := u.d.Reactions.DeleteIssueReaction(ctx, ReactionDeletion{Key: key, By: actor.UserID, At: at}); err != nil {
+			return err
+		}
+		stamp := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: h.issue.ID, by: actor.UserID, at: at}
+		return u.d.Events.Publish(ctx, stamp.reactionEvent(domain.EventReactionRemoved, "issue_reaction", current.ID, current.Reaction, "issue", current.IssueID))
 	})
 }
 
