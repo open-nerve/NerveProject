@@ -1,8 +1,11 @@
 import path from "node:path";
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 
 import { test as base, type Page } from "@playwright/test";
 
 import { createApi, type Api } from "./api";
+import { createClockWorld, type ClockWorld } from "./clock";
 import { signInContext, type AuthTokens } from "./auth";
 import { createDatabase, openDatabase, templateDatabase, type Database } from "./db";
 import { nerveFixtureTimeoutMs, startNerve, type Nerve } from "./server";
@@ -93,5 +96,61 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       }
     },
     { auto: true },
+  ],
+});
+
+/** Clock stories own their database, process generations and failure artifacts. */
+export const clockTest = base.extend<{ clockWorld: ClockWorld }>({
+  clockWorld: [
+    // oxlint-disable-next-line no-empty-pattern -- Playwright reads fixture dependencies from this pattern
+    async ({}, use, testInfo) => {
+      const hash = createHash("sha256")
+        .update(`${testInfo.testId}:${testInfo.repeatEachIndex}:${testInfo.retry}`)
+        .digest("hex")
+        .slice(0, 12);
+      const databaseName = `e2e_clock_w${testInfo.workerIndex}_r${testInfo.retry}_${hash}`;
+      const logFile = (generation: number) => testInfo.outputPath(`clock-${generation}.log`);
+      let generation = 0;
+      let world: ClockWorld | undefined;
+      let failed = false;
+      try {
+        world = await createClockWorld({
+          databaseName,
+          logFile: (number) => {
+            generation = number + 1;
+            return logFile(number);
+          },
+        });
+        await use(world);
+        failed = testInfo.status !== testInfo.expectedStatus;
+      } catch (error) {
+        failed = true;
+        throw error;
+      } finally {
+        try {
+          if (failed) {
+            const db = world?.db ?? openDatabase(databaseName);
+            try {
+              const file = testInfo.outputPath("clock-database.sql");
+              await db.dump(file);
+              await testInfo.attach("clock-database", { path: file, contentType: "application/sql" });
+            } finally {
+              if (!world) await db.close();
+            }
+            await Promise.all(
+              Array.from({ length: generation }, async (_, number) => {
+                const file = logFile(number);
+                if (existsSync(file))
+                  await testInfo.attach(`clock-${number}`, { path: file, contentType: "text/plain" });
+              })
+            );
+          }
+        } finally {
+          await world?.close();
+        }
+      }
+    },
+    // Setup may wait for readiness; failure artifacts may need pg_dump before teardown.
+    { timeout: nerveFixtureTimeoutMs + 110_000 },
   ],
 });
