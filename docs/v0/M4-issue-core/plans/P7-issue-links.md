@@ -193,13 +193,14 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 ## Task 12：请求任务目录与运行角色真实完成
 
-**Files:** 改B/invitations_test.go（registrationRows的实际定义）、table_rows_test.go、runtime_role_test.go、jobs_test.go；新B/issue_link_runtime_test.go、request_jobs_test.go（按大小拆职责）。
+**Files:** 改B/invitations_test.go（registrationRows的实际定义）、table_rows_test.go、runtime_role_test.go；新B/issue_link_runtime_test.go、request_jobs_test.go。复用T10的B/app_test.go目录检查与T11的B/issue_crawl_jobs_test.go精确完成等待，不复制辅助框架，jobs_test.go无需改动。
 **Interfaces:** 保留`registrationRows(t,*pgxpool.Pool) string`调用方；内部追加声明请求kind的river_job稳定id/kind/args快照，不把state/attempt/finished时间等worker变化列写入。独立预期kind常量指向`issue.crawl_link`，不从实际Jobs反推预期。
 
 - [ ] 写`TestRegistrationRowsSeeRequestJobs`：插入一个crawl任务前后不同，改变args也不同；periodic/leader变化和同请求job状态变化前后相同；请求kind声明遗漏的独立预期检查失败。沿既有被拒注册用例核快照不变。
 - [ ] 写`TestIssueLinkRuntimeJob`：恰好grants权限启动真实server/River，以API建本地页面link，DB/HTTP metadata与completed一致；再改标题/URL/删、含清单以外普通表反例，不以单纯SELECT成功冒称worker可写。
 - [ ] `go test -count=1 -p=1 ./internal/bootstrap -run 'Test(RegistrationRowsSeeRequestJobs|IssueLinkRuntimeJob|TheGrantsFileCoversEveryRelationAndFunction|TheRuntimeRoleServesWithTheGrantsFile|TheRowChecksSeeEveryTable|RegisteringWithAnInvitation)'`；缺覆盖先红或生产变异红，扩现有目录而非复制第二套注册快照；恢复后全绿。
-- [ ] 变异M32去请求job快照、M33快照只count不含args、M34删link UPDATE授权/漏worker；独立反例与运行角色红→恢复，G；提交`test(M4/P7): 覆盖请求任务目录及最小权限抓取`。
+- 执行补充（cwd=`server`）：上述命令加`-json`记录实际RUN，最终为6个顶层、13个含子用例，exit 0；另执行`go test -json -count=1 -p=1 ./internal/bootstrap -run '^Test(NewAppCrawlJobCatalog|NewAppCrawlJobRuns|IssueLinkSubscriberRegistration|LinkJobCommitRollback)$'`，复用独立目录与真实投递/worker回归，实际4个顶层、15个含子用例，exit 0。未用空匹配代替覆盖。
+- [ ] M32去请求job快照、M33快照只count不含args均为**测试守卫自身的反例**，不计实际生产变异；M34删link UPDATE授权/漏worker是生产变异。逐项真实红→原字节/SHA恢复→同选择绿；另以产品请求kind声明遗漏、`ON ALL TABLES`过宽授权验证独立反例，G；提交`test(M4/P7): 覆盖请求任务目录及最小权限抓取`。
 
 ## Task 13：抓取与 URL、标题及删除的真实交错
 

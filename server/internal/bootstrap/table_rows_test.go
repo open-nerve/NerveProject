@@ -51,8 +51,8 @@ func tableRows(t *testing.T, pool *pgxpool.Pool, skip func(table string) bool) m
 
 // riversOwn reports whether table is one of River's own (river_job,
 // river_leader, …): the running apps' job clients write them on their own
-// schedule (the leader's election, the periodic session cleanup), whatever
-// a request does, so no request's writes can be told from them there.
+// schedule. registrationRows separately includes the stable identity and
+// payload of declared request jobs without this scheduling/progress noise.
 func riversOwn(table string) bool {
 	return strings.HasPrefix(table, "public.river_")
 }

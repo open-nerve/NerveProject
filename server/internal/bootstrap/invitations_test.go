@@ -16,6 +16,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -231,12 +233,19 @@ func tokensIn(t *testing.T, tables map[string]string, links []invitationLink) []
 	return found
 }
 
-// registrationRows is every row of every table but River's own (tableRows,
-// riversOwn), by table, as one text: whatever table a registration or an
-// answer to an invitation wrote, its rows differ.
+// registrationRows keeps every ordinary table's complete rows and appends
+// the stable id/kind/args of declared request jobs. River's progress and
+// scheduling are left out; request inserts and payload replacements are not.
 func registrationRows(t *testing.T, pool *pgxpool.Pool) string {
 	t.Helper()
 	tables := tableRows(t, pool, riversOwn)
+	kinds := append(identity.EnqueuedKinds(), issue.EnqueuedKinds()...)
+	var requests string
+	if err := pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(row_to_json(j)::text, E'\n' ORDER BY id), '')
+		FROM (SELECT id,kind,args FROM river_job WHERE kind=ANY($1::text[])) j`, kinds).Scan(&requests); err != nil {
+		t.Fatal(err)
+	}
+	tables["public.river_job (request jobs)"] = requests
 	var rows strings.Builder
 	for _, table := range slices.Sorted(maps.Keys(tables)) {
 		rows.WriteString(table + ":\n" + tables[table] + "\n")
