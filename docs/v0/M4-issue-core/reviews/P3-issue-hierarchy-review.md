@@ -315,3 +315,7 @@ plan 是"执行时的 plan"：每个修复轮也改了它的 Task 的块，代�
 - **环境**：机器上没有 Firefox，A4 的两个 firefox 测试在每次 `make e2e` 都失败（装它是全局的安装，规则不许）。第一次运行在别的会话的负载下超时、Docker 空闲时重跑通过：修复轮的第一次 `make test`（四个 M3 成员关系的矩阵格子 32 秒超时，范围复审在空闲时重跑 69 格通过，那四格各 0.14–0.21 秒）和第一次 `make e2e`（A9、P3、S8 三个页面故事在负载 14 时 5 秒的期望超时，重跑 10 个通过）；Task 4 的修复轮 1 前两次 `make test` 起不来容器（Ryuk 不见了、套接字超时），第三次通过；Task 6 的评审之前的修改一次 `platform/jobs` 的容器起不来。本文的作者的运行时，别的会话的 12 个 `postgres:18.6` 容器开着、CPU 0%，七个门禁第一次就通过（`make e2e` 只有 A4 的两个 firefox 测试失败），没有要重跑的超时。留下的 `Created` 的 testcontainers（台账记到 152 个）照规则不动。
 - **空的 `m4-p1b` worktree**：客户端的重启重新建过 `.claude/worktrees/m4-p1b`（P2 的评审记录第 7 节），HEAD 上它仍在 `7db78788`、分支 `worktree-m4-p1b`，没有自己的提交（`git log 7db78788..worktree-m4-p1b` 没有输出）；不是本 Phase 的，删不删由负责人定（控制者问过，还没有答复）。
 - **注明日期的记录里过时的数**：spec 附录 A.1、A.4 的原型的数、A.5、A.6 的数（第 5 节逐个数出）照裁定不改；A.3 和 Global Constraints 的大小在执行中保持为真。
+
+### M4/P6 接收记录
+
+实际移动的子项与存储方向的关联事件已按P6规格实施，提交、真实测试/变异与独立评审见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)及[§5](../reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。P7/P9/P15和M4整体交接仍按原文开放。

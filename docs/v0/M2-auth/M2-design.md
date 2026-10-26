@@ -689,6 +689,9 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 - **架构测试**（M0-P2 交接 6）：规则 6 从 `adapter/http/gen` 推广到 `adapter/*/gen`：一个适配器的生成代码只能被这个适配器导入。
 
 ### 3.15 River 接入
+
+**M4/P6 实施补记（不改 M2 当时的决策）：** 服务组合已建不启动 worker 的 `jobs.NewInserter`，在原 `pgx.Tx` 内投递；工作 runner 在所有声明任务的模块构造后只建一次；instance/router 随后构造，服务运行时才 Start。`identity.cleanup_expired_sessions` 与 `issue.auto_archive` 在 periodic 队列，默认10/2两队列 worker；独立核对周期及声明投递类型的登记完整性。实际提交/回滚、漏worker变异和真实 completed 见 [P6 review](../M4-issue-core/reviews/P6-issue-events-review.md#2-验收标准逐条核对)。CLI 不经此客户端投递，§1原文在M4收尾转 M5。
+
 - **版本**：`github.com/riverqueue/river` 和 `riverdriver/riverpgxv5` 都用 v0.47.0，2026-09-01 发布。
   - 它支持 Go 1.26、1.27；持续集成在 PG 18 上测试。
   - 主线迁移到第 7 版（v0.40.0 加入）。
@@ -730,6 +733,9 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 - 这和总体设计 0.2 原则 1"账户不区分使用者、权限由管理员分配"一致：这里的"管理员"指工作区和项目的管理员。
 
 ### 3.17 管理命令
+
+**M4/P6 实施补记：** CLI 沿最小组合保留，不构造 issue 模块、dispatcher 或 River jobs；仅共用纯业务时钟构造。命令首次需要投递时再按 §13.2 转 M5，不能将服务端 `NewInserter` 已落地误作CLI已接线。见 [P6 review §6](../M4-issue-core/reviews/P6-issue-events-review.md#6-移交事项)。
+
 五个命令都在 `nerve users` 下，都按 3.5 的账户行锁执行；需要密码的，在终端上不回显地提示输入两次（`golang.org/x/term`），标准输入不是终端时读一行，供脚本和端到端测试使用。邮箱一律按注册时的规则规范化（Plane 的 `reset_password` 按原样匹配，这里修正）。账户不存在、邮箱已被使用、密码不合规时，退出码为 1，输出一句说明，数据库不变。
 
 | 命令 | 做什么 | 输出 |

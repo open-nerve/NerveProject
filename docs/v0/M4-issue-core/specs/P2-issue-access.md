@@ -452,3 +452,7 @@ T5.9（标识也在工作区已删除的项目里找）原来在这里，按性�
 | 清扫 2、22：失败的传递，对不上所问的回答 | T5.12、T5.13、T7.18 | 3/3 | `TestIssueProjectsConvertsProjectIdentifiers`、`TestIssueWorkspacesConvertsWorkspacesAnswer`、`TestArchivingAWorkItemWhoseStateIsNotItsProjectsFails` | 单元 |
 | 错误码的文案和补救（约束 4） | T7.12、T7.13、T8.4、T8.5、T8.7 | 5/5 | `error-messages.test.ts`、`check:sync`、`TestDeleteState` | 单元；守卫 |
 | 矩阵的格子指名它的列的工作项 | T3.1、T6.2 | 2/2 | `TestMatrixViolationsCatchesAnotherCasesWorkItem`、`TestMatrixViolationsCatchesAnotherCasesIdentifier` | 单元 |
+
+### M4/P6 接收记录
+
+子树删除、手动归档/恢复事件已按P6规格实施，提交、真实测试/变异与独立评审见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)及[§5](../reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。P7/P9/P15和M4整体交接仍按原文开放。

@@ -6,8 +6,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// EventTypes declares the events published in P6. Links and cross-module
-// deletions join the directory when their publishing use cases arrive.
+// EventTypes declares the event types published by the issue module.
 func EventTypes() []string {
 	return []string{
 		domain.EventIssueCreated, domain.EventIssueUpdated, domain.EventIssueDeleted,
@@ -18,6 +17,5 @@ func EventTypes() []string {
 	}
 }
 
-// Subscribers is deliberately empty during P6 (M4 design 3.19). P7's link
-// subscriber will consume the transaction-bound insertion port here.
+// Subscribers is empty during P6 because the module has no production consumer.
 func Subscribers(_ riveradapter.Inserter) []shared.EventSubscriber { return nil }

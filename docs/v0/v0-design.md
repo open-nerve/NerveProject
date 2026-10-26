@@ -383,7 +383,7 @@ server/
     shared/                 共享内核，尽量小，只放值会跨越模块边界的东西（M2 设计 3.3）：Actor（当前账户）、
                             领域错误与错误码、TxManager 端口、分页游标的封套、Authorizer 端口和它的
                             Role、Action、Target、Grant（M3 设计 3.4），两个以上模块共用的纯取值规则
-                            （邮箱、网址、时区，M3 设计 3.13）；以后加入领域事件接口。操作名常量不在这里，
+                            （邮箱、网址、时区，M3 设计 3.13）；M4/P6 已加入 `Event`/`EventPublisher`/`EventSubscriber` 共享值与端口。操作名常量不在这里，
                             在各模块的 domain（actions.go）。平台不导入它；时钟等其余端口由使用方的 app 层声明
     modules/
       identity/             账户、会话、PAT、密码
@@ -428,8 +428,8 @@ modules/issue/
    - 需要其他模块的能力时，在自己的 `app` 层声明一个小接口，由 `bootstrap` 用对方模块的实现接上。
    - 例外：所有模块都可以依赖 `shared` 和 `platform` 中的技术基础件。
 3. **跨模块的副作用通过领域事件**：
-   - 比如工作项模块只发布 `IssueUpdated` 这样的事件，不知道谁在监听。
-   - 通知、Webhook 等模块在 `bootstrap` 中注册为订阅者。
+   - M4/P6 的工作项模块发布已声明的 `issue.*` 事件，不知道谁在监听；12种已实现类型与精确payload见 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。
+   - 订阅者由 `bootstrap` 注册；P6 生产订阅集合为空，链接首个生产订阅者留 P7，通知/Webhook 按后续阶段接入。
    - 订阅者在同一个事务内被调用，通常只做一件事：往 River 里投递任务。所以事务是原子的，同时各模块之间解耦。
 4. **只在组合根接线**：禁止全局可变状态，禁止 `init()` 副作用，禁止服务定位器。所有依赖都通过构造函数显式传入。
    - 模块之间的端口可以是双向的，所以给别的模块提供只依赖连接池的适配器的模块分两段构造（M3 设计 6.6）：`Provide(pool)` 只返回只依赖连接池、给别的模块用的适配器，不建用例；`New(Deps)` 建出全部用例和 HTTP 的一侧，`Deps` 是它要的全部端口，构造之后不再登记、不再注入任何东西。组合根先调这些模块的 `Provide`，再按依赖的顺序调各模块的 `New`，没有构造的环。
@@ -517,7 +517,7 @@ modules/issue/
 | 事件触发 | 通知分发、Webhook 投递、抓取链接的标题和图标（防 SSRF） |
 | 定时 | **自动归档**（每天）；物理删除软删除超过 60 天的数据；清理 7 天内未完成上传的文件；按保留期清理接口日志、Webhook 日志；每个工作项保留最新的 20 个描述版本（M4/P9 实现，P4 尚无保留任务）；清理过期会话 |
 
-River 的具体版本和成熟度在 M0 核实。
+M4/P6 已以锁定的 River 0.47.0 落地只投递客户端、`default`/`periodic` 两队列（默认 worker 10/2）和 `issue.auto_archive`（默认24小时，test为2秒）。每项目一个事务，锁下读策略、终态和业务时钟；业务时钟 `clock.offset` 只允许 test 非零，River 调度仍用真实时间。自动归档事件和动态的 actor 为 SQL NULL。P7抓取、P9清理/版本保留仍待实现；证据见 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md#2-验收标准逐条核对)。
 
 **文件存储**（`asset` 模块的存储端口）：
 - **两种实现**：

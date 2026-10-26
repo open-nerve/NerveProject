@@ -1,29 +1,52 @@
 # M4/P6 领域事件与自动归档评审记录
 
-日期：2026-10-26。状态：**准备、独立静态预检及修订复审通过，尚未实施 T1**。分支 `codex/m4-p6`；基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`。配套：[spec](../specs/P6-issue-events.md)、[plan](../plans/P6-issue-events.md)。
+日期：2026-10-26。状态：**T1–T15 实施并逐 Task 独评通过；T16 文档交接本次实施，独评及内部整分支审查待办；分支 CI、外部终审待办**。分支 `codex/m4-p6`；基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`。配套：[spec](../specs/P6-issue-events.md)、[plan](../plans/P6-issue-events.md)。
 
 ## 1. 评审方式
 
-按 [02-method](../../claude_to_gpt/02-method.md) 第3节允许的方法调整，延续 P5 的紧凑计划：文件/签名/测试/变异责任明确，以实施时真实红绿、变异恢复和逐 Task 独立评审代替本次预制完整产品原型。当前授权是准备 spec/plan 并完成预检；不实现产品。
-
-控制者汇总事件、任务/自动归档、交接三个只读调研，按设计11个粗项细化16 Task。spec作者与plan作者交叉核对后，另由未参与本版文档编写的独立评审者检查事件与事务、任务/锁/时钟、全范围/可执行性；结果与局部裁定在第4节登记。预检采用静态源码对照，不声称逐任务代码重放或原型结果。
+起步时按 [02-method](../../claude_to_gpt/02-method.md) 第3节采用紧凑计划，三个独立静态预检视角及修订复审只评文档与现状；其结果保留在第4节，不再冒充实施证据。之后 T1–T15 各自完成定位/影响回归、真实生产变异与恢复、中文实施报告及独立要求/质量评审，精确提交和命令索引在第2节。T16 本次同步正式记录与输入交接，独评由主控接续。一次内部整分支审查、必要修复与聚焦复审在 T16 后执行；外部终审另待负责人安排。
 
 ## 2. 验收标准逐条核对
 
-| 项 | 真实证据与状态 |
-|---|---|
-| P5基线 | `--no-ff` 合并 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`，树与已审分支一致；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) server/web/e2e全部success |
-| P5清理 | 先确认远端分支相对main独有提交0；6,517证据文件SHA-256归档一致；P5本地/远端分支与worktree已清理。完整记录见 [P5 review](P5-issue-list-review.md) |
-| P6工作树 | 按用户固定路径 `.codex/worktress/codex/m4-p6` 新建，主目录保持main；应用原生worktree工具不支持指定该路径，依用户优先规则使用系统git worktree |
-| P6起步范围 | 仅spec/plan/review、设计必要澄清/进度、P5最终集成记录与keywords phase=M4/P6；没有产品实现、迁移或依赖变化 |
-| P6静态预检 | 三个独立视角完成首审：High 0、Medium 3、Low 4，均局部；已统一修订；复审另补2 Low也已修订，三个视角全部静态Approved，未关闭发现0 |
-| P6产品验收 | spec§4 T1–T16全部未勾；真实InsertTx、worker漏登记、自动归档、交错/race和I16均待实施 |
+实施基线为 P5 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；其 [main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 只证明基线。下表 HEAD 为对应任务实施提交；每条命令均在对应 `task-N-report.md` 和证据目录有退出码/实际匹配/变异恢复，独立结论在 `task-N-review.md`。早期报告位于 worktree 的 ignored `.superpowers/sdd/P6-issue-events/`，不是 Git 跟踪的正文附件；最终证据归档按后续集成安排。
+
+| Task / 实施 HEAD | 完成线的真实命令与结果 | 独评/边界 |
+|---|---|---|
+| T1 `d0ea1969` | `go test -count=1 -p=1 ./internal/platform/postgres ./internal/platform/jobs ./internal/bootstrap ./internal/modules/issue/adapter/river`，退出0；真实同事务提交/回滚/未提交不可见及无事务拒绝 | [spec §4](../specs/P6-issue-events.md#4-逐项验收与证据)；任务独评通过 |
+| T2 `5de9238e` | `go test -count=1 ./internal/bootstrap`，退出0；`./internal/shared ./internal/modules/issue/app ./internal/modules/issue ./internal/archtest` 回归退出0 | 初次 focused 命令有空匹配，**不计**新 dispatcher 验证；后续实际匹配与包回归闭合 |
+| T3 `98af1cb9` | `go test -v -count=1 -p 1 ./internal/modules/issue/app ./internal/bootstrap -run 'TestIssue(Created|Updated)Event'`，退出0；事件 race 五遍0 | 600秒描述窗口勘误见§3；独评通过 |
+| T4 `eab93c6a` | `go test -count=1 ./internal/modules/issue/app ./internal/bootstrap -run 'Test(Issue(Deletion&#124;Archival)Events&#124;.*Deletion&#124;.*Archival)' -v`，退出0；137格权限矩阵 | 独评通过 |
+| T5 `fcea0b95` | `go test -count=1 ./internal/bootstrap`，退出0（149.644秒）；app 回归及关系/父子定位实际匹配 | 独评通过 |
+| T6 `99e45aed` | `go test -count=1 ./internal/modules/issue/app ./internal/bootstrap -run 'Test(CommentEvents|ReactionEvents|.*Comment|.*Reaction)' -v`，退出0；真实PG七条写路径回滚 | 独评通过 |
+| T7 `8bf712b0` | `go test -p 1 -count=1 ./internal/platform/jobs ./internal/platform/config ./internal/modules/identity/adapter/river ./internal/bootstrap ./configs ./internal/archtest -v`，六包退出0；10/2队列隔离与两类漏worker变异 | 独评通过；归档interval由T10承担 |
+| T8 `c01d9977` | `go test -p 1 -count=1 ./internal/platform/clock ./internal/platform/config ./internal/bootstrap ./internal/archtest`，退出0；服务/CLI业务时钟、River真时与负例 | 独评通过 |
+| T9 `ad905df0` | `go test -p 1 -count=1 ./internal/modules/project/... ./internal/modules/issue/... ./internal/bootstrap ./internal/archtest`，退出0；SQL cutoff生产变异和`make gen-check`0 | deleted_at断言Minor由T10补并独评关闭 |
+| T10 `e7e20464` | `go test -count=1 -v -p 1 ./internal/modules/issue/... ./internal/bootstrap ./internal/platform/config ./configs ./internal/archtest`，退出0（704顶层/5599 RUN）；JobTx锁超时race五遍0 | 活动/事件长度诊断Minor由T15补并独评关闭 |
+| T11 `d9b9e21f` | `go test -count=1 -p 1 -v ./internal/bootstrap -run 'Test(AllPeriodicJobsRun|TheRuntimeRoleServesWithTheGrantsFile|TheGrantsFileCoversEveryRelationAndFunction|AutoArchive.*|IssueInserter.*|TheSessionCleanupRunsAsConfigured|CloseDoesNotWaitForAConnectionInUse|RunStopsTheJobsAfterHTTP)$'`，退出0 | 固定预期两任务 completed、真实运行角色与CLI隔离；独评通过 |
+| T12 `7c3acaaf` | `go test -race -v -count=5 ./internal/bootstrap -run '^TestAutoArchive(AndStateChangeSerialize|UsesLockedPolicy|ReadsClockAfterLock)'`，退出0，19叶×5=95；无race/40P01 | 第二项目锁释放诊断Minor由T15补并独评关闭 |
+| T13 `183ef1a7` | `make build`退出0；`pnpm --filter @nerve/e2e exec playwright test stories/smoke/clock-lifecycle.spec.ts --project=chromium`，6/6退出0 | 旧进程身份/附件两Minor由T15补；T13最终门禁仅报告，无完整rawlog |
+| T14 `565fad12` | `make build`后I16定位1/1，完整`make e2e`149/149退出0；五个成功构建的真实变异被业务断言杀死 | 旧完成任务与跨写入扫描以微秒水位区别；独评通过 |
+| T15 `4a489125` | `go test -race -count=5` 定向105 RUN；`GOFLAGS=-p=1 make test`、`make lint-go`、`make lint-web`、`make knip`、`make test-web`、`make e2e`、提交后`GOFLAGS=-p=1 make gen-check`依次退出0 | [16用例/12事件矩阵](P6-issue-events-publication-matrix.md)、[20变异矩阵](P6-issue-events-mutation-matrix.md)；四功能Minor独评关闭 |
+| T16 本次文档提交 | 关键词、链接、diff、必要架构静态核对见任务报告；独评在此提交后由主控执行 | 设计/交接同步已落地，后续结果不预填 |
+
+T15 `make test` 是49个有测试包通过、16个无测试包；默认输出不列总测试用例数。`make lint-web` 54项成功，其中36缓存、18新执行；`make test-web` 18项成功，其中11缓存、7新执行；`make e2e` 是真实149/149（Chromium147、Firefox2）。七个被核文件的源码 SHA 与各全门禁执行时一致。20项生产变异中14项复用已核原始证据、6项T15新执行；没有以编译失败/INFRA充作业务检出。早期 testcontainers 可选 shell 探测日志、旧 Playwright `NO_COLOR`/`FORCE_COLOR` 警告照原样保留；T15报告末的 `14-color-environment` 在 `4a489125` 上同时移除两个变量后1/1、无警告，已闭环环境Minor，**不称全部历史输出 pristine**。
 
 ## 3. 执行中的决定
 
-局部细化以 spec§3 为准：事件payload白名单及删除具体表优先；关系存储方向/真实表情实体；顺序分发与值隔离；强绑定worker登记和独立周期声明；后台项目N、锁下策略与nullable actor；业务Clock统一而River调度真实时间。均为已批准设计的落实，没有重新裁定D3/D4/D7或放宽守卫。
+局部实现决定及若判断错误的代价逐条记录如下，依据 ignored `progress.md` 中全部 Ruling；它们没有重开已批准的 D3/D4/D7。任务中发现的测试Minor及环境Minor的闭环见§5。
 
-16 Task 是设计约16项上限内的职责切分；规模表为起步估计，不是原型实测。实施前需核真实差异及修复余量。S4只是设计历史输入，T1仍须重做当前代码的真实提交/回滚证明。
+| 裁定 | 实际处理与理由 | 若错的代价/核对 |
+|---|---|---|
+| 起步状态 | 起步“未实施”只属准备历史，用户已授权后续T1–T16实施 | 若把旧时态当现状，会错误关闭或重做任务；本表与§2按真实进度更新 |
+| 门禁分配 | 各Task跑定位/影响包/变异，完整仓库门禁集中T15 | 若局部回归遗漏跨层问题，T15的完整Go/Web/E2E门禁与矩阵兜底 |
+| 集成授权 | 合并/mainCI/清理仍待单独授权，P6分支CI也不能用P5基线CI替代 | 若越权或误认CI会造成错误交付；§7明列后续门 |
+| T3事件目录 | 类型常量集中 `issue/domain/events.go`，模块 `EventTypes` 消费它，app不反向导入模块 | 若层次不符只需局部命名/依赖重构；架构测试和T3评审核过 |
+| T3恰好600秒 | 继承P4描述版本窗口，599秒与恰好600秒合并，600秒+1微秒开新版本；初错测试期望不算生产红 | 若判错只影响测试/文档；P4原行为及T3实际用例/变异守住 |
+| T7阶段接线 | 四参runner先迁移identity；有真实autoarchive才在T10加issue Jobs/EnqueuedKinds，T11固定外部期望证明两者，不造空占位 | 若漏最终声明会使周期任务不运行；T11真实completed和漏worker变异核对 |
+| T7归档周期 | worker数与身份迁移归T7，`issue.auto_archive_interval`默认24h/test2s及校验归T10 | 代价是间隔验证延后至真实worker；T10配置/组合已验证 |
+| T11构造顺序 | 所有声明任务的模块构造后创建一次runner；instance/router按原顺序在runner后构造，服务运行时再Start | 若误写为“最后一个factory”，可能诱发无须的组合重排；T11检查生命周期/关闭分支 |
+| T14诊断屏障 | 临时读锁屏障仅协调已运行worker，业务数据准备/写入仍全走API，SQL只作诊断断言 | 若越界会弱化I16 API证据；T14真实跨写入尝试水位变异和独评核查 |
+| T15颜色环境 | 后续Playwright命令同时移除`NO_COLOR`与`FORCE_COLOR`，旧日志不改 | 若只在父进程删其一，子进程仍警告；`14-color-environment`实际1/1无警告，产品代码无变 |
 
 ## 4. 预检发现与处理
 
@@ -46,7 +69,7 @@
 
 这两项同属局部文档修订，未改变产品范围；最终聚焦复核已确认两项闭合。
 
-独立范围评审另核 P5 双亲与tree相同、公开CI三任务全绿、6,517文件/184,269,398字节SHA均符以及远端P5不存在。当前本地关键词守卫72规则/23例外无命中、架构测试通过；这些仅证明起步状态，不证明P6运行功能。
+独立范围评审另核 P5 双亲与tree相同、公开CI三任务全绿、6,517文件/184,269,398字节SHA均符以及远端P5不存在。预检当时本地关键词守卫72规则/23例外无命中、架构测试通过；这些仅证明起步状态，不证明P6运行功能。
 
 ### 最终预检结论与本地准备检查
 
@@ -59,15 +82,22 @@
 
 ## 5. 最终实现与 plan 的差异
 
-当前没有 P6 实现，不存在可报告的实现偏差。起步方法与历史Claude原型/逐字重放不同，已在第1节/spec附录A说明；签名、任务和证据边界不得混称最终实现。
+准备计划的文件/规模/命令为预估，实施按现有模块职责落地；各任务真实差异与提交见第2节的报告。T3事件词汇集中于domain；T7不加空issue.Jobs，T10接真正worker；T11 runner构造在全部声明任务的模块后，instance/router仍在其后。T3描述窗口含600秒，计划中若有“600秒即新版本”的措辞由此更正。T2初次 focused 空匹配只作为诊断记录；T10/T11实际测试名按报告核实，不复写计划正则为“通过”。T13末轮门禁原始输出缺失，T14/T15的原始全E2E与门禁覆盖后续状态。
+
+独评记录的功能Minor均闭环：T9成功归档行 `deleted_at` 保留由T10真实断言/SQL变异证明；T10 activities/events长度先精确检查由T15重复活动变异证明；T12第二项目屏障、首项目锁释放/Execute计数由T15整批事务变异与race五遍证明；T13旧进程身份取真实child退出状态、故障附件分别尝试由T15漏stop变异及故障探针证明。T15评审另指出旧颜色警告，后续定向环境验证无警告，原日志照留。第4节的九项预检修订、这里的实施修复与第2节的最终差异/验证是不同阶段，不将“预检未关闭0”替代真实Minor记录。
+
+手写发布点的完整性依据T15矩阵：15处`Publish`调用覆盖16个写用例/12种类型，包含各Change四槽nil/值、无事件例外；20项生产变异和三订阅者真实PG/River回滚见相邻矩阵。P6生产Subscribers仍为空集合，这是设计过渡，不能声称P7生产抓取已联通。没有新增HTTP operation、错误码、业务表、迁移或依赖。最终实现尚待一次内部整分支审查，若有修复会在本节追加真实差异。
 
 ## 6. 移交事项
 
-- P7：链接生产订阅者、请求投递与registrationRows核river_job；P9：删除订阅者/任务、版本保留、物理清理。
-- P15：I16页面重新登录、NULL actor展示；M6/M7：迭代/模块/收集箱的自动归档条件。
-- M2§1命令只投递交接原文在M4收尾转M5，P6不会让CLI构造jobs；仅统一业务Clock。
-- 输入handoff总体status与M4§14/总体§9.4保持开放。本期完成时只追加本期处理证据，具体落点见spec§7。
+- P1a–P5 的 spec§5/review§6 所列事件、时钟、归档输入已分别落本期；接收方可从各输入页“处理结果（M4/P6）”到本 review §2/§5 核对真实证据。输入 handoff 顶部 `status: open` 保持不变，因为其余条目仍未完成。
+- [M1/P5](../handoffs/M1-P5-brand.md) 的服务端自动归档 actor 为真实 NULL；页面显示/收集箱创建者仍归 P15/M7。
+- [M2 closeout](../handoffs/M2-closeout.md) §3/6/13 的 `updated_at`、worker登记/事务投递、clock fixture已接；§1命令行只投递的原文在M4收尾转M5，当前CLI不构造jobs。
+- [M3 closeout](../handoffs/M3-closeout.md) §1两处期限已改，领域事件只覆盖issue写；`registrationRows` 对请求任务的`river_job`核对留P7，project/workspace删除订阅及任务留P9；§4 `archive_in` 两契约说明已生成。其他权限/页面/清理原落点不提前关。
+- P7：链接首个生产订阅者与请求投递；P9：删除任务、版本保留、物理清理；P15：I16页面重登录与NULL actor展示；M6/M7按真实表条件再扩归档。M4§14事件任务整条及总体§9.4仍开放，不创建M5–M8最终closeout。
 
-## 7. 已知限制
+## 7. 已知限制与后续门
 
-本轮仅静态预检，没有P6产品原型、生成物SHA、运行红绿/变异/race/I16或产品CI通过。后续开始T1须逐任务实现、验证和独立评审；阶段完成先不合并，交负责人安排下一步。
+当前经证据确认 T1–T15 产品实施及逐Task独评，T16 文档提交后独评由主控接续；**尚未**进行内部整分支审查、必要修复/聚焦复审、push 后精确 HEAD 分支 CI、负责人外部终审。P5 main CI仅为基线。原始证据的早期SDK fallback、T2空匹配、T13缺完整末轮rawlog、旧颜色警告已在§2/§5分开标出，不改写为 pristine。
+
+交付时向负责人提供分支 `codex/m4-p6`、基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`、本 [spec](../specs/P6-issue-events.md)/[plan](../plans/P6-issue-events.md)/review 和精确 Git HEAD。最终push/CI的实际SHA由交付答复及Git记录给出，不为文档自证自身CI无限提交。本阶段先保留分支/worktree，不合并；`--no-ff`、精确main SHA CI、归档和清理仅在后续授权后进行。

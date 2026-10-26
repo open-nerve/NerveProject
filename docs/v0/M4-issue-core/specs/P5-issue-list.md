@@ -255,3 +255,7 @@ T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b�
 起步提交 `8f4b170d` 时仅有静态预检与文档修订；后续实施证据见第4节和阶段评审。四项 Local/Medium 已纳入本版：actor/target独立输入；全部分组字段实际SQL覆盖；所有新增交错强制race五遍；七节规格与方法/证据边界闭合。两项Low也已修正：IssueFields沿app/rows.go扩展；SQL NULL防御与adapter生产参数规整分别验证。来源/裁定与复审结果在 [P5 review](../reviews/P5-issue-list-review.md) 逐条登记；2026-10-25独立聚焦复核已批准本起步计划，产品验收仍未完成。
 
 起步时没有运行完整预制原型，没有P5 TDD红绿、变异、SQL精度证明、S1复测、性能结果、生成物或P5 CI通过证据。已知真实通过仅是表头所列P4合并main基线CI；不得将其当作P5验收。
+
+### M4/P6 接收记录
+
+列表阶段的描述/排序及archive_in消费边界已按P6规格实施，提交、真实测试/变异与独立评审见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)及[§5](../reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。P7/P9/P15和M4整体交接仍按原文开放。

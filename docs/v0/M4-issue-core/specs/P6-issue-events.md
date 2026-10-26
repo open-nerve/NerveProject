@@ -1,6 +1,6 @@
 # M4/P6 `issue-events`：领域事件、事务投递与自动归档规格
 
-日期：2026-10-26。基线：`main` `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`（P5 的 `--no-ff` 合并）。状态：**独立静态预检及修订复审通过，尚未实施 T1**。配套：[plan](../plans/P6-issue-events.md)、[评审记录](../reviews/P6-issue-events-review.md)。
+日期：2026-10-26。基线：`main` `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`（P5 的 `--no-ff` 合并）。状态：**T1–T15 已实施并逐任务独评通过；T16 文档与交接已实施，独评及内部整分支审查待办；分支 CI 与外部终审待办**。配套：[plan](../plans/P6-issue-events.md)、[评审记录](../reviews/P6-issue-events-review.md)。
 
 权威输入：[M4 设计](../M4-design.md) §3.5、3.8、3.19、3.20、6.5–6.6、12/P6、13.1、14；[推进方式](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)；前段 spec §5 / review §6 与本规格 §7 的交接。设计 D3、D4、D7 和架构问题 11.4、11.7、11.11 已批准，不重新裁定。
 
@@ -114,9 +114,9 @@ type EventSubscriber struct {
 
 worker 种类必须与实际登记绑定，不能信任外部填写、可能与 Add 不一致的 Kind。`jobs.Register[T river.JobArgs](river.Worker[T]) *WorkerRegistration` 封装私有 kind/add；`Job{Worker *WorkerRegistration, Periodic *PeriodicSpec}` 中周期声明独立于 worker，`PeriodicSpec{Args river.JobArgs, Interval time.Duration, ID string, RunOnStart bool, InsertOpts *river.InsertOpts}` 经公共 API 转成 River 周期对象，不反射私有字段。
 
-`jobs.New(pool,cfg,definitions,enqueuedKinds)` 先登记，再独立检查每个 PeriodicSpec.Args.Kind 和 EnqueuedKinds 都有 worker；缺任一种构造失败。重复 worker/周期 ID、nil及typed-nil worker、无效 args、worker 数或周期同样失败。Register生成的描述即使收到无效worker也必须由New在登记/启动前拒绝，不得把它当成合法空Worker跳过；无需检查River私有字段。T7同步迁移现 identity cleanup、bootstrap的New四参调用/worker配置以及相关测试构造点，保证当Task可编译并启动；T11只添加自动归档与最终完整性验收，不留旧回调兼容分支。漏一个完整定义由 bootstrap 的外部预期种类 completed 测试捕获，不能从实际定义反向造期望。
+`jobs.New(pool,cfg,definitions,enqueuedKinds)` 先登记，再独立检查每个 PeriodicSpec.Args.Kind 和 EnqueuedKinds 都有 worker；缺任一种构造失败。重复 worker/周期 ID、nil及typed-nil worker、无效 args、worker 数或周期同样失败。Register生成的描述即使收到无效worker也必须由New在登记/启动前拒绝，不得把它当成合法空Worker跳过；无需检查River私有字段。T7同步迁移现 identity cleanup、bootstrap的New四参调用/worker配置以及相关测试构造点，保证当Task可编译并启动；T10接入自动归档，T11负责最终完整性验收，不留旧回调兼容分支。漏一个完整定义由 bootstrap 的外部预期种类 completed 测试捕获，不能从实际定义反向造期望。
 
-`jobs.default_workers` 默认10、`jobs.periodic_workers` 默认2，均正整数；identity cleanup 与 auto_archive 在 periodic，default 留给事件任务。`issue.auto_archive_interval` 默认24h、测试2s、最小1s。启动配置、环境变量覆盖、校验、日志与模板同改。现两处 Stop/Start 测试改为状态确认与期限，期限必须区分立即停止和 firstRetry 等待，不能固定 sleep 同步。
+`jobs.default_workers` 默认10、`jobs.periodic_workers` 默认2，均正整数；identity cleanup 与 auto_archive 在 periodic，default 留给事件任务。`issue.auto_archive_interval` 默认24h、测试2s、最小1s（实际随T10归档worker落地；T7只负责worker数和身份清理迁移）。启动配置、环境变量覆盖、校验、日志与模板同改。现两处 Stop/Start 测试改为状态确认与期限，期限必须区分立即停止和 firstRetry 等待，不能固定 sleep 同步。
 
 ### 2.9 T8：统一业务时钟
 
@@ -144,7 +144,7 @@ River `issue.auto_archive` worker 只调用 Execute，错误交 River；周期�
 
 ### 2.12 T11：最终组合与运行角色
 
-服务顺序：各 Provide → 业务 Clock、只投递客户端 / wrapper、闸门 → access → dispatcher → issue.New → project/workspace/identity → 工作客户端 jobs.New → Start。只投递客户端在模块前完整可用；工作的客户端最后一次登记全部 worker，不交给模块。
+服务顺序：各 Provide → 业务 Clock、只投递客户端 / wrapper、闸门 → access → dispatcher → issue.New → project/workspace/identity → 在所有声明任务的模块构造后工作客户端 jobs.New 一次 → instance/router；服务运行时再 Start。只投递客户端在模块前完整可用；工作客户端汇总全部 worker，不交给模块。
 
 模块 `Jobs() []jobs.Job` 汇总 identity cleanup 与 auto_archive；`EnqueuedKinds() []string` 本期为空，不能把定时任务冒充请求投递声明。测试独立预期两种任务均实际 completed，校验 periodic 队列、并发上限与互不挤占。复用精确 runtime role/grants 环境实际自动归档；目录 grants 测试与真实用例运行都要通过。CLI 调用图继续不可达 jobs/River/issue.New。
 
@@ -196,28 +196,30 @@ River `issue.auto_archive` worker 只调用 Execute，错误交 River；周期�
 | 时钟覆盖 | serve与CLI共用纯newClock业务装饰器，River仍真实时间 | “全部用例”一致且不引入CLI任务组合 | 测试CLI时间变化；正负/零/精度/调用图验证 |
 | 文档边界 | 当前无新路由/错误码/表/依赖，只改archive_in说明与本阶段约定 | 字段已存在，后台能力随消费者落地 | 实施若超范围必须重新分析，架构/高风险提交后上报 |
 
-## 4. 逐项验收（全部待实施）
+## 4. 逐项验收与证据
 
-静态预检不等于以下完成。每项在评审记录中附命令、确切提交、退出结果、反例与独立评审后才能勾选。
+T1–T15 的运行命令、退出码、变异和精确提交见[评审 §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)及各任务报告/独评。准备期的静态预检只证明当时的文档；以下勾选依据后续真实实施证据。
 
 | 完成 | Task | 完成线 |
 |---|---|---|
-| [ ] | T1 | 同事务提交/回滚、无事务拒绝、提交前不可见，未启动worker也可投递 |
-| [ ] | T2 | 12类型目录、登记拒绝、固定顺序/深拷贝、生产注入与合法空订阅 |
-| [ ] | T3 | 创建完整字段、修改/描述/排序、skip与no-op事件边界 |
-| [ ] | T4 | 子树每项事件、归档恢复幂等、同戳与发布失败回滚 |
-| [ ] | T5 | 实际移动子项、关系一行一事件、存储方向、批量末尾发布 |
-| [ ] | T6 | 评论与两表情实体/actor/旧新值，拒绝无事件，无伴随issue.updated |
-| [ ] | T7 | 两队列实际并发、两种漏worker构造拒绝与变异、期限测试 |
-| [ ] | T8 | test-only offset、serve/CLI全部业务时钟一致，River真实时间不变 |
-| [ ] | T9 | 候选/锁下策略、自有SQL及恰好阈值、锁返回策略/生成物 |
-| [ ] | T10 | 每项目事务、系统NULL、固定时钟/状态反例、幂等与部分已提交后重试、Project/ProjectPatch说明 |
-| [ ] | T11 | 两种任务真实completed、精确runtime grants归档、CLI隔离 |
-| [ ] | T12 | 交错18两方向、策略变更/删除等待、锁后时钟，race五遍无40P01 |
-| [ ] | T13 | 独立普通函数/fixture、一库一进程、自己的失败日志/快照与清理 |
-| [ ] | T14 | I16 API前置/三层断言、31天与阈值对照、最后对照写入后开始且completed的任务 |
-| [ ] | T15 | 全发布矩阵、真实订阅回滚、实际变异恢复、全量门禁与旧故事回归 |
-| [ ] | T16 | 中文文档/交接、整分支审查意见关闭、分支与main CI、授权合并清理 |
+| [x] | T1 | 同事务提交/回滚、无事务拒绝、提交前不可见，未启动worker也可投递 |
+| [x] | T2 | 12类型目录、登记拒绝、固定顺序/深拷贝、生产注入与合法空订阅 |
+| [x] | T3 | 创建完整字段、修改/描述/排序、skip与no-op事件边界 |
+| [x] | T4 | 子树每项事件、归档恢复幂等、同戳与发布失败回滚 |
+| [x] | T5 | 实际移动子项、关系一行一事件、存储方向、批量末尾发布 |
+| [x] | T6 | 评论与两表情实体/actor/旧新值，拒绝无事件，无伴随issue.updated |
+| [x] | T7 | 两队列实际并发、两种漏worker构造拒绝与变异、期限测试 |
+| [x] | T8 | test-only offset、serve/CLI全部业务时钟一致，River真实时间不变 |
+| [x] | T9 | 候选/锁下策略、自有SQL及恰好阈值、锁返回策略/生成物 |
+| [x] | T10 | 每项目事务、系统NULL、固定时钟/状态反例、幂等与部分已提交后重试、Project/ProjectPatch说明 |
+| [x] | T11 | 两种任务真实completed、精确runtime grants归档、CLI隔离 |
+| [x] | T12 | 交错18两方向、策略变更/删除等待、锁后时钟，race五遍无40P01 |
+| [x] | T13 | 独立普通函数/fixture、一库一进程、自己的失败日志/快照与清理 |
+| [x] | T14 | I16 API前置/三层断言、31天与阈值对照、最后对照写入后开始且completed的任务 |
+| [x] | T15 | 全发布矩阵、真实订阅回滚、实际变异恢复、全量门禁与旧故事回归 |
+| [x] | T16（本次实施） | 中文正式文档、设计/README/差异同步、输入交接、静态校验与提交；独评由主控接续 |
+| [ ] | 后续审查与交付门 | 一次内部整分支审查、必要修复与聚焦复审；push 后按精确 HEAD 查分支 CI；外部终审另待安排 |
+| [ ] | 未授权集成门 | 仅经后续明确授权才 `--no-ff` 合并、查精确 main SHA 的 CI、归档与清理 |
 
 ## 5. 不在范围内与后续 Phase
 
@@ -256,14 +258,12 @@ River `issue.auto_archive` worker 只调用 Execute，错误交 River；周期�
 | M2-closeout§1/3/6/13 | 只投递平台、固定时钟、登记变异、事务约定/grants、clock普通函数（T1/T7–T14） | CLI原文转M5；其他章节原落点 |
 | M3-closeout§1/2/3/4/8 | 两处期限、后台锁论证、既有权限回归、archive_in两契约、phase关键词（T7/T9/T12/T15/T16） | 邀请删除保持同步；P7 registrationRows，P9删除任务；旧前端例外 |
 
-阶段首提交将关键词 phase 切 M4/P6；当前没有 until=M4/P6 的到期例外，P11/closeout 的前端例外保留。实现完成后上述输入只追加“处理结果（M4/P6）”及剩余责任，不改整体 status 为closed。M4§14“事件和任务”还含P7/P9条目，P6只能记子项证据。
+阶段首提交已将关键词 phase 切 M4/P6；没有 until=M4/P6 的到期例外，P11/closeout 的前端例外保留。实现完成后上述输入只追加“处理结果（M4/P6）”及剩余责任，不改整体 status 为closed。M4§14“事件和任务”还含P7/P9条目，P6只能记子项证据。
 
-关闭须满足§4全部证据、无未裁定的架构问题、独立逐Task及整分支审查意见已处理、真实变异与race/全门禁通过；遵循用户最新指令在阶段完成先不合并，待安排下一步。合并门获授权后才 --no-ff、精确main SHA CI全绿、归档证据及清理。文档为中文，提交按用户最新AGENTS用详细中文说明；主目录HEAD始终main，阶段使用约定worktree，推送优先/usr/bin/git。
+实施验收依据§4 T1–T16 的实际证据；一次内部整分支审查/必要修复及聚焦复审、精确 HEAD 分支 CI、外部终审是后续交付门，当前不声称已完成。遵循用户指令，阶段完成先不合并；仅获明确授权后才进入 `--no-ff`、精确 main SHA CI、证据归档和清理的集成门。文档为中文，提交按用户最新AGENTS用详细中文说明；主目录HEAD始终main，阶段使用约定worktree，推送优先/usr/bin/git。
 
-## 附录 A. 当前证据边界
+## 附录 A. 证据边界与准备历史
 
-本次只读检查了设计/前段spec与review/交接、现有issue写路径/事务/任务/配置/时钟/组合守卫与fixture，得到16任务切分和上述局部裁定。过程调研存根目录忽略的 `.superpowers/sdd/P6-issue-events/recon-events.md`、`recon-jobs-archive.md`、`recon-handoffs.md`，不得把这些方案文字当运行证据。
+准备阶段只读调研、三个独立视角静态预检及修订复审曾记录为“未实施”，属于起步历史。后续 T1–T15 已在 `codex/m4-p6` 分别实施并独评；当前已验证源码 HEAD `4a489125f480402692772cbae483af26d9600792`。T15 在该源码哈希上顺序完成 `make test`、`make lint-go`、`make lint-web`、`make knip`、`make test-web`、`make e2e`、提交后 `make gen-check`；Go 为49个有测试包通过，E2E 149/149，Web 的缓存命中数见[评审 §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)，不把缓存称为新执行。20个真实生产变异与16写用例/12事件目录见评审所引矩阵。T2 早期聚焦命令曾空匹配，最终证据依赖后续实际匹配与完整包回归；T13最后门禁只留报告，T14/T15有完整原始输出。早期 testcontainers 可选 shell 探测及旧 Playwright 颜色警告保留原始日志；后续无警告的定向颜色验证已闭环，不能称所有历史输出 pristine。
 
-当前未实施P6、未运行完整预制原型、未重放产品任务、无P6红绿/生产变异/归档交错/新I16/生成物SHA或P6 CI通过记录。设计S4关于River 0.47.0的结果是已批准设计的历史输入，本次T1仍须实际证明。三个独立视角的静态预检及聚焦复审已经通过：首审3 Medium/4 Low，复审另补2 Low，全部闭合；详见评审记录。此结论不替代实施时的运行验证。
-
-P5基线 main `ee26db29c8a55cbb034a2da38c794c7f1af88e4e` 的 [CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 已核 server/web/e2e 全绿；P5证据归档与分支/worktree清理完成。此证据只证明P6基线。
+P5 main `ee26db29c8a55cbb034a2da38c794c7f1af88e4e` 的 [CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 仅证明基线。T16后的内部整分支审查、精确 HEAD 分支 CI、外部终审与授权集成尚无结果，不在文档里预填成功。最终提交与 CI 的精确 SHA 由 Git 和交付答复给出，避免为文档自证自身 CI 无限提交。

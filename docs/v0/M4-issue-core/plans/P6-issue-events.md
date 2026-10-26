@@ -1,6 +1,6 @@
 # M4/P6 领域事件、任务与自动归档实施计划
 
-> **执行方式：** 实施时使用 superpowers:subagent-driven-development 或 superpowers:executing-plans，逐 Task 红绿、变异、独立评审。当前 spec/plan 的独立静态预检及修订复审通过，所有实施步骤尚未执行；未经下一步安排不开始 T1。
+> **执行记录：** T1–T15 已按任务实施并逐项独立评审，T16 正式文档与交接本次实施。以下 Task 清单保留当时的计划语气和命令，实际运行与差异以[评审 §2/§5](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)和任务报告为准；内部整分支审查、分支 CI、外部终审仍待后续。
 
 **目标：** 实现 M4 §12/P6 的事件发布、事务投递、worker 完整性、两队列、测试时钟、自动归档与 I16 接口故事。
 
@@ -61,7 +61,7 @@
 
 ## 跨 Task 接口
 
-以下只固定边界，不预制实现。uuid 是本仓库标准库 `"uuid"`；不把拟新增签名说成已存在。
+以下是起步时固定的跨任务接口；T1–T15 已实现，真实签名以源码及评审 §5 为准。uuid 是本仓库标准库 `"uuid"`。
 
 ```go
 // platform/postgres；平台之间不互导。
@@ -185,7 +185,7 @@ Go命令在 `server/`；node/Makefile命令在 worktree根。`go test -count=1` 
 
 ## Task 3：创建与修改事件（含描述、排序）
 
-- [ ] 写 TestIssueCreatedEvent / TestIssueUpdatedEvent：初值含2标签、默认负责人、parent/dates/description；修改逐字段、集合增减、sort_order=0及相邻可表示float；非零Event.ID≠Entity.ID、批量/连续写事件ID互异；no-op与skip=true只补id零事件；描述599/600秒合并前后每个真实修改一个事件。
+- [ ] 写 TestIssueCreatedEvent / TestIssueUpdatedEvent：初值含2标签、默认负责人、parent/dates/description；修改逐字段、集合增减、sort_order=0及相邻可表示float；非零Event.ID≠Entity.ID、批量/连续写事件ID互异；no-op与skip=true只补id零事件；描述599秒与恰好600秒合并、600秒+1微秒开新版本；每个真实修改仍各发布一个事件。
 - [ ] 从锁下真实值/已算Changes构造payload，使用现有s.at/by，业务SQL/动态/版本全成功后Publish；不以seen响应或动态是否插入判断，不新增动态行。
 - [ ] `go test -count=1 ./internal/modules/issue/app ./internal/bootstrap -run 'Test(Issue(Created|Updated)Event|.*Description|.*SortOrder)'`；原HTTP隐藏/拒绝矩阵保持。
 - [ ] 变异：事件只取activity、忽略sort_order/创建label、版本合并时不发、额外读Clock、先于版本写发布、Event.ID置零/复用Entity.ID；app及至少一个真实组合失败，G。
@@ -244,7 +244,7 @@ Go命令在 `server/`；node/Makefile命令在 worktree根。`go test -count=1` 
 ## Task 11：最终任务组合、运行角色与命令守卫
 
 - [ ] 写 TestAllPeriodicJobsRun：固定期望identity.cleanup_expired_sessions与issue.auto_archive，不从Jobs返回值反推；实际serve启动、每种river_job completed，队列为periodic；多个间隔配置实测。
-- [ ] 模块Jobs/EnqueuedKinds经bootstrap一次登记，工作客户端最后构造；NewInserter在模块前、不得Start或交工作client给模块；失败构造关闭pool等原资源。
+- [ ] 模块Jobs/EnqueuedKinds经bootstrap一次登记，工作客户端在所有声明任务的模块完成构造后构造一次，随后仍构造 instance/router；NewInserter在模块前、不得Start或交工作client给模块；失败构造关闭pool等原资源。
 - [ ] 扩现有runtime角色框架，以实际授予角色执行自动归档并断言业务行/空actor，不只看到cleanup completed。无新表不凭空改grants。CLI现有调用图继续拒绝jobs/River/issue.New/InsertTx。
 - [ ] `go test -count=1 ./internal/bootstrap ./internal/archtest -run 'Test(AllPeriodicJobsRun|TheRuntimeRoleServesWithTheGrantsFile|TheGrantsFileCoversEveryRelationAndFunction|CommandsComposeNoServerAndNoJobs)'`。
 - [ ] 变异：bootstrap漏接自动归档Job、所有任务进default、CLI引入inserter、临时撤去活动写权限（仅测试角色fixture）；实际检查失败，恢复G。
@@ -281,12 +281,13 @@ Go命令在 `server/`；node/Makefile命令在 worktree根。`go test -count=1` 
 
 ## Task 16：正式记录、输入交接与阶段交付
 
-- [ ] spec§4每条证据映射至真实命令/Task/HEAD，plan按实际实现同步；review七节记录局部决定、预检、实现/修复、最终差异与限制。
-- [ ] 同步v0设计§6.2/6.3/6.7、M2设计§3.15/3.17、M4§3.23/P6与§15、plane-diff第四节、README部署配置；API说明已在T10落地。
-- [ ] M1-P5服务端空actor、M2§3/6/13、M3§1部分/§4写处理结果；P1a–P5相应接收链接指向review。handoff总体status仍open。M2§1原文转M5、registrationRows=P7、删除/保留/清理=P9、页面=P15都不提前关闭。
-- [ ] M4§14事件任务整条仍含P7/P9未实现部分，不整体勾选；总体§9.4保持M4进行中，不创建M5–M8最终收尾文件。
-- [ ] 核中文文档链接/命令/签名/状态与git diff；提交/push后按精确HEAD查分支CI。告知负责人分支、基线、spec/plan/review；本阶段完成先不合并。
+- [x] spec§4每条证据映射至真实命令/Task/HEAD，plan按实际实现同步；review七节记录局部决定、预检、实现/修复、最终差异与限制。
+- [x] 同步v0设计§6.2/6.3/6.7、M2设计§3.15/3.17、M4§3.23/P6与§15、plane-diff第四节、README部署配置；API说明已在T10落地。
+- [x] M1-P5服务端空actor、M2§3/6/13、M3§1部分/§4写处理结果；P1a–P5相应接收链接指向review。handoff总体status仍open。M2§1原文转M5、registrationRows=P7、删除/保留/清理=P9、页面=P15都不提前关闭。
+- [x] M4§14事件任务整条仍含P7/P9未实现部分，不整体勾选；总体§9.4保持M4进行中，不创建M5–M8最终收尾文件。
+- [x] 核中文文档链接/命令/签名/状态与git diff并提交，告知负责人分支、基线、spec/plan/review；本阶段不合并。
+- [ ] 主控完成任务独评、内部整分支审查/必要修复与聚焦复审，push后按精确HEAD查分支CI；外部终审另待安排。合并/mainCI/清理须再获授权。
 
-## 当前证据边界
+## 实施状态与历史边界
 
-本计划已完成准备与三个视角的独立静态预检、修订复审；未关闭发现0，上述Task全部未执行。没有P6产品原型、红绿、实际变异、race、生成物或I16通过数字。基线P5合并的main CI只证明基线；P6准备提交的检查只证明文档/phase变动，不关闭任何P6产品验收。
+准备阶段三个视角的独立静态预检与修订复审均通过，当时“全部未实施”属历史状态。T1–T15 后续已逐 Task 实施与独评，真实命令、变异和差异见 review §2/§5；T16 文档与交接完成后由主控安排独评。T15 最终门禁在源码 HEAD `4a489125f480402692772cbae483af26d9600792` 上全部退出0。T2早期聚焦空匹配不计新测试证明；真实描述版本窗口含恰好600秒，600秒+1微秒进入新版本。内部整分支审查、push后精确HEAD分支CI、外部终审及授权合并/mainCI/清理仍待办；P5基线main CI不能替代P6证据。
