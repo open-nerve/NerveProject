@@ -32,7 +32,7 @@ var webID, opsID = uuid.NewV7(), uuid.NewV7()
 // The memberships of web and ops, by id, the same in every fixture.
 var bobInWeb, aliceInWeb, carolInWeb, daveInWeb, bobInOps = uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 
-var bobsTabs = domain.Preferences{Navigation: domain.Navigation{DefaultTab: "modules", HideInMoreMenu: []string{"views"}}, SortOrder: 10}
+var bobsTabs = domain.Preferences{Navigation: domain.Navigation{DefaultTab: "modules", HideInMoreMenu: []string{"views"}}, SortOrder: 10, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}
 
 // writeFixture is a write use case's fakes, sharing one log.
 type writeFixture struct {

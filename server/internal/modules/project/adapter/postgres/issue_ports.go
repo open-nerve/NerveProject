@@ -103,20 +103,6 @@ func (s *Store) ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) (
 	return out, nil
 }
 
-// ArchivedIssueProjects reads those of ids that are undeleted, archived
-// projects, each true, without a lock (M4 design 3.8).
-func (s *Store) ArchivedIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
-	rows, err := s.queries(ctx).ArchivedIssueProjects(ctx, ids)
-	if err != nil {
-		return nil, fmt.Errorf("read which of %d projects are archived: %w", len(ids), err)
-	}
-	archived := make(map[uuid.UUID]bool, len(rows))
-	for _, id := range rows {
-		archived[id] = true
-	}
-	return archived, nil
-}
-
 // ActiveRoles reads the project roles of those of the accounts ids that
 // are active members of the project, by account (M4 design 6.5).
 func (s *Store) ActiveRoles(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
@@ -140,6 +126,48 @@ func (s *Store) IssueMentionMembers(ctx context.Context, projectID uuid.UUID, id
 	out := make([]app.IssueMemberVisibility, len(rows))
 	for n, r := range rows {
 		out[n] = app.IssueMemberVisibility{ID: r.MemberID, Role: shared.Role(r.Role), OwnOnly: r.OwnOnly}
+	}
+	return out, nil
+}
+
+// VisibleIssueProjects reads ordinary membership scope without widening it
+// through workspace roles or public project visibility.
+func (s *Store) VisibleIssueProjects(ctx context.Context, workspaceID, actorID uuid.UUID) ([]app.VisibleIssueProject, error) {
+	rows, err := s.queries(ctx).VisibleIssueProjects(ctx, gen.VisibleIssueProjectsParams{WorkspaceID: workspaceID, ActorID: actorID})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]app.VisibleIssueProject, len(rows))
+	for i, r := range rows {
+		out[i] = app.VisibleIssueProject{ID: r.ID, Role: shared.Role(r.Role), OwnOnly: r.OwnOnly}
+	}
+	return out, nil
+}
+
+// IssueListStates reads the selected projects' complete state catalogs for
+// lists. Archived projects remain eligible; triage states do not.
+func (s *Store) IssueListStates(ctx context.Context, projectIDs []uuid.UUID) ([]app.IssueState, error) {
+	rows, err := s.queries(ctx).IssueListStates(ctx, projectIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]app.IssueState, len(rows))
+	for i, r := range rows {
+		out[i] = app.IssueState{ID: r.ID, Name: r.Name, Group: r.Group, Default: r.Default}
+	}
+	return out, nil
+}
+
+// IssueListLabels reads the selected projects' complete label catalogs for
+// lists, including labels unused by any work item.
+func (s *Store) IssueListLabels(ctx context.Context, projectIDs []uuid.UUID) ([]app.IssueLabel, error) {
+	rows, err := s.queries(ctx).IssueListLabels(ctx, projectIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]app.IssueLabel, len(rows))
+	for i, r := range rows {
+		out[i] = app.IssueLabel{ID: r.ID, Name: r.Name}
 	}
 	return out, nil
 }

@@ -23,6 +23,7 @@ func (h handler) GetProjectPreferences(ctx context.Context, req gen.GetProjectPr
 func (h handler) UpdateProjectPreferences(ctx context.Context, req gen.UpdateProjectPreferencesRequestObject) (gen.UpdateProjectPreferencesResponseObject, error) {
 	b := req.Body
 	in := domain.PreferencesPatch{SortOrder: b.SortOrder}
+	issuePreferencesIn(b, &in)
 	if n := b.Navigation; n != nil {
 		in.Navigation = &domain.Navigation{DefaultTab: string(n.DefaultTab), HideInMoreMenu: make([]string, len(n.HideInMoreMenu))}
 		for i, tab := range n.HideInMoreMenu {
@@ -45,5 +46,6 @@ func preferencesOut(p domain.Preferences) gen.ProjectPreferences {
 	for i, tab := range p.Navigation.HideInMoreMenu {
 		out.Navigation.HideInMoreMenu[i] = gen.ProjectTab(tab)
 	}
+	issuePreferencesOut(p, &out)
 	return out
 }

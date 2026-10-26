@@ -35,7 +35,7 @@ func newWorkspaceRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) mo
 	auth, identityPorts, provided := authorizerOn(pool), identity.Provide(pool), workspace.Provide(pool)
 	projects := project.New(project.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: provided.WorkspaceDirectory}, Members: provided.WorkspaceMembers,
-		Issues: issue.Provide(pool).IssueCascade})
+		Issues: issue.Provide(pool).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool).ListSettings}})
 	return newRoute(t, workspace.New(workspace.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Logger: slog.New(slog.DiscardHandler),
 		Authorizer: auth, Accounts: workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles: workspaceProfiles{profiles: identityPorts.PublicProfiles}, Projects: projects.Cascade()}).Register)

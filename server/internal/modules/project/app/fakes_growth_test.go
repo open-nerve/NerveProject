@@ -49,7 +49,9 @@ func (f *fakeStore) EnsurePreferences(ctx context.Context, p app.PreferencesRow)
 		project.prefs = map[uuid.UUID]domain.Preferences{}
 	}
 	if _, ok := project.prefs[p.UserID]; !ok {
-		project.prefs[p.UserID] = domain.Preferences{Navigation: domain.DefaultPreferences().Navigation, SortOrder: p.SortOrder}
+		prefs := domain.DefaultPreferences()
+		prefs.SortOrder = p.SortOrder
+		project.prefs[p.UserID] = prefs
 	}
 	return nil
 }

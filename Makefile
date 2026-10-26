@@ -133,7 +133,7 @@ test: ## 运行 Go 测试（server 和它的工具模块，不用测试缓存）
 	go -C server/tools test -count=1 ./...
 
 .PHONY: test-web
-test-web: ## 运行前端单元测试（各包 test 脚本中的 vitest，经 turbo；需要 Node；持续集成 web 任务）
+test-web: ## 运行前端单元测试（各包 test 脚本，经 turbo；需要 Node；持续集成 web 任务）
 	$(TURBO) run test $(TURBO_QUIET)
 
 .PHONY: build

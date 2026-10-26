@@ -51,10 +51,10 @@ func TestEachMemberHasHisOwnDisplaySettings(t *testing.T) {
 		}
 	}
 	alicesOps := settings(alice, ops)
-	if got, want := settings(alice, web), `{"navigation":{"default_tab":"work_items","hide_in_more_menu":[]},"sort_order":65535}`; got != want {
+	if got, want := settings(alice, web), `{`+defaultIssueSettings+`"navigation":{"default_tab":"work_items","hide_in_more_menu":[]},"sort_order":65535}`; got != want {
 		t.Errorf("alice in Web, without settings: %s, want the defaults %s", got, want)
 	}
-	bobs := `{"navigation":{"default_tab":"work_items","hide_in_more_menu":[]},"sort_order":3}`
+	bobs := `{` + defaultIssueSettings + `"navigation":{"default_tab":"work_items","hide_in_more_menu":[]},"sort_order":3}`
 	// Another member's change in progress holds Web FOR SHARE; bob's does
 	// not wait for it.
 	other := holding(t, pool, "SELECT 1 FROM projects WHERE id = $1 FOR SHARE", web)
@@ -69,8 +69,8 @@ func TestEachMemberHasHisOwnDisplaySettings(t *testing.T) {
 
 	// Alice's first change inserts her row; her second changes it, the
 	// place kept.
-	changed := `{"navigation":{"default_tab":"cycles","hide_in_more_menu":["intake"]},"sort_order":1}`
-	change("alice", alice, `{"sort_order":1}`, `{"navigation":{"default_tab":"work_items","hide_in_more_menu":[]},"sort_order":1}`)
+	changed := `{` + defaultIssueSettings + `"navigation":{"default_tab":"cycles","hide_in_more_menu":["intake"]},"sort_order":1}`
+	change("alice", alice, `{"sort_order":1}`, `{`+defaultIssueSettings+`"navigation":{"default_tab":"work_items","hide_in_more_menu":[]},"sort_order":1}`)
 	change("alice", alice, `{"navigation":{"default_tab":"cycles","hide_in_more_menu":["intake"]}}`, changed)
 
 	for _, tt := range []struct {

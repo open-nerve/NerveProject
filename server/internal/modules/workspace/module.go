@@ -57,6 +57,11 @@ type WorkspaceMembers interface {
 	ShareMembers(ctx context.Context, workspaceID uuid.UUID, userIDs []uuid.UUID) (map[uuid.UUID]shared.Role, error)
 }
 
+// WorkspaceMemberDirectory reads target memberships, including ended ones, without locks.
+type WorkspaceMemberDirectory interface {
+	WorkspaceMemberExists(context.Context, uuid.UUID, uuid.UUID) (bool, error)
+}
+
 // DirectoryEntry is the workspace WorkspaceDirectory finds: bootstrap
 // converts it into project's value (M3 design 6.5).
 type DirectoryEntry = app.DirectoryEntry
@@ -65,15 +70,16 @@ type DirectoryEntry = app.DirectoryEntry
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
-	WorkspaceRoles     WorkspaceRoles
-	WorkspaceDirectory WorkspaceDirectory
-	WorkspaceMembers   WorkspaceMembers
+	WorkspaceRoles           WorkspaceRoles
+	WorkspaceDirectory       WorkspaceDirectory
+	WorkspaceMembers         WorkspaceMembers
+	WorkspaceMemberDirectory WorkspaceMemberDirectory
 }
 
 // Provide builds workspace's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
 	directory := postgresadapter.NewDirectory(pool)
-	return Provided{WorkspaceRoles: postgresadapter.New(pool), WorkspaceDirectory: directory, WorkspaceMembers: directory}
+	return Provided{WorkspaceRoles: postgresadapter.New(pool), WorkspaceDirectory: directory, WorkspaceMembers: directory, WorkspaceMemberDirectory: directory}
 }
 
 // AccountState is the account state the Accounts port hands over: bootstrap

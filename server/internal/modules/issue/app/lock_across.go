@@ -53,8 +53,7 @@ func (h held) own() end {
 // form, whatever order they gathered it in: the projects whose gates a
 // write enters and which it locks in this order (convention 7), as
 // reachAll answers them, and others, such as an answer's parents
-// (hideParents), the other projects of a list of relations
-// (projectsBut) or a new work item's subscribers (createIssue).
+// (hideParents) or a new work item's subscribers (createIssue).
 func ascending(ids []uuid.UUID) []uuid.UUID {
 	return slices.Compact(slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare))
 }

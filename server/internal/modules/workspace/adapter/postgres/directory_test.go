@@ -294,3 +294,37 @@ func TestAFailedDirectoryCallIsAnErrorNotAnAnswer(t *testing.T) {
 		t.Errorf("ShareMembers() = %v, %v; want context.Canceled, no roles", roles, err)
 	}
 }
+
+// A read snapshot forbids row locks and still admits ended target memberships.
+func TestWorkspaceMemberExists(t *testing.T) {
+	s, pool := newStore(t)
+	d := postgresadapter.NewDirectory(pool)
+	alice, bob := newAccount(t, pool, "exists-a@example.com"), newAccount(t, pool, "exists-b@example.com")
+	acme, beta := newWorkspace(t, s, "Acme", "acme", alice), newWorkspace(t, s, "Beta", "beta", bob)
+	join(t, s, acme.ID, bob, shared.RoleGuest)
+	read := func(wid, uid uuid.UUID, want bool) {
+		t.Helper()
+		err := postgres.NewTxManager(pool, time.Second, postgres.ReadOnlySnapshot()).WithinTx(context.Background(), func(ctx context.Context) error {
+			got, err := d.WorkspaceMemberExists(ctx, wid, uid)
+			if err == nil && got != want {
+				t.Fatalf("exists=%v want %v", got, want)
+			}
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	read(acme.ID, bob, true)
+	exec(t, pool, "UPDATE workspace_members SET is_active=false WHERE workspace_id=$1 AND member_id=$2", acme.ID, bob)
+	read(acme.ID, bob, true)
+	read(beta.ID, alice, false)
+	read(acme.ID, uuid.NewV7(), false)
+	exec(t, pool, "UPDATE workspace_members SET deleted_at=$3 WHERE workspace_id=$1 AND member_id=$2", acme.ID, bob, now)
+	read(acme.ID, bob, false)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := d.WorkspaceMemberExists(ctx, acme.ID, alice); !errors.Is(err, context.Canceled) {
+		t.Fatal(err)
+	}
+}

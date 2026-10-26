@@ -106,7 +106,7 @@ func TestUpdateIssueWritesTheChangesAndTheirRows(t *testing.T) {
 	if !slices.Equal(w.log.calls, calls) {
 		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 	}
-	if fields := (app.IssueFields{ID: id, Name: "Mend", StateID: done.ID, Priority: low, CompletedAt: &clockNow, By: alice,
+	if fields := (app.IssueFields{SortOrder: 65535, ID: id, Name: "Mend", StateID: done.ID, Priority: low, CompletedAt: &clockNow, By: alice,
 		At: clockNow}); w.issues.changed == nil || !reflect.DeepEqual(*w.issues.changed, fields) {
 		t.Errorf("the fields written %+v, want %+v", w.issues.changed, fields)
 	}

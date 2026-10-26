@@ -145,11 +145,13 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `project_members` | 部分唯一索引照搬，改名为 `project_members_project_id_member_id_key ON (project_id, member_id) WHERE deleted_at IS NULL`（Plane 是 `project_member_unique_project_member_when_deleted_at_null`）；新加 `project_members_member_id_idx ON (member_id) WHERE deleted_at IS NULL`，不带条件的 `project_members_workspace_id_idx`、`project_members_project_id_idx` | 降为访客、结束成员关系按账户查；物理级联要不带条件的索引（M3 设计 4） |
 | `project_members` | 删除 `view_props`、`default_props`、`preferences` | 和 `project_user_properties` 重复 |
 | `project_members` | 删除 `sort_order`、`comment` | 侧边栏的顺序在 `project_user_properties.sort_order`，前端不读这一列；`comment` 没有写入方 |
-| `project_user_properties` | 15 列保留 11 列（M3/P4a，`00012_project_project_user_properties.sql`） | M3 设计 4.8 |
+| `project_user_properties` | M3/P4a由15列保留11列（`00012`）；M4/P5经 `00026_project_project_user_properties_issue_display.sql` 加回三列后为14列，仍不建 `rich_filters` | M3 设计 3.18/4.8；M4 设计 4.15 |
 | `project_user_properties` | `workspace_id`、`project_id`、`user_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`） |
 | `project_user_properties` | `preferences`：新加默认值 `{"navigation": {"default_tab": "work_items", "hide_in_more_menu": []}}` 和 CHECK（外层恰好一个键 `navigation`，它恰好有字符串 `default_tab` 和数组 `hide_in_more_menu`）；`sort_order`：新加 `DEFAULT 65535`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 模型的默认值，去掉 `pages`（文档页已砍）；二·全局（对象型的 `jsonb` 列） |
 | `project_user_properties` | 部分唯一索引照搬，改名为 `project_user_properties_project_id_user_id_key ON (project_id, user_id) WHERE deleted_at IS NULL`（Plane 是 `project_user_property_unique_user_project_when_deleted_at_null ON (user_id, project_id)`）；新加不带条件的 `project_user_properties_workspace_id_idx`、`project_user_properties_project_id_idx` | 物理级联要不带条件的索引（M3 设计 4） |
-| `project_user_properties` | 删除 `filters`、`display_filters`、`display_properties`、`rich_filters` | 工作项列表的筛选和显示列由它们的使用者 M4 按自己的格式加回（M3 设计 3.18） |
+| `project_user_properties` | `filters`：M4/P5加回 `jsonb NOT NULL DEFAULT '{}'`；十可选string[]键为state_id/state_group/priority/label_id/assignee_id/created_by_id/mention_id/subscriber_id/start_date/target_date，无archived/sub_issue/project_id；CHECK只校对象、键及string[]形状 | M4 §3.17/4.15；词值经IssueListSettings，非Plane旧JSON筛选树 |
+| `project_user_properties` | `display_filters`：M4/P5加回 `jsonb NOT NULL`；默认 `{"layout":"list","group_by":null,"sub_group_by":null,"order_by":"-created_at","sub_issue":true,"show_empty_groups":true,"calendar":{"layout":"month","show_weekends":false}}`；CHECK要求七键及calendar两键的准确类型 | 去掉Plane的type/calendar_date_range，加calendar；布局/分组/排序词值由纯端口校验 |
+| `project_user_properties` | `display_properties`：M4/P5加回 `jsonb NOT NULL`；assignee/start_date/due_date/labels/key/priority/state/sub_issue_count/link/created_on/updated_on十一boolean，默认全true，CHECK要求准确键和类型 | link仅显示偏好；所有三列CHECK用CASE保护非对象，JSON null为check_violation；不建rich_filters，工作区列范围不变 |
 | `states` | 18 列保留 14 列（M3/P4a，`00013_project_states.sql`） | M3 设计 4.9 |
 | `states` | `workspace_id`、`project_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`） |
 | `states` | `name`：新加 `CHECK (name <> '')`；`"group"`：新加 `DEFAULT 'backlog'` 和 `CHECK ("group" IN ('backlog', 'unstarted', 'started', 'completed', 'cancelled', 'triage'))`；`description`：新加 `DEFAULT ''`；`sequence`：新加 `DEFAULT 65535`；`"default"`：新加 `DEFAULT false`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 模型的默认值和 `StateGroup` |
@@ -223,8 +225,11 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 路径 | `/api/workspaces/{slug}/projects/{pid}/issues/{id}/` 这样的多层嵌套，结尾必须带 `/` | 列表挂在父资源下，单个资源用短路径；结尾不带 `/` |
 | 认证 | 页面用会话 Cookie 加表单登录，程序用另一套 `/api/v1` 加 `X-Api-Key` | 所有调用方都使用同一套接口和 `Authorization: Bearer` |
 | PATCH 的响应 | 204，没有响应体 | 返回完整资源 |
-| 筛选 | JSON 筛选树和 25 种旧查询参数并存 | 普通查询参数 |
-| 分页 | `每页条数:页码:是否上一页` 形式的偏移游标 | 不透明游标 |
+| 筛选 | JSON 筛选树和 25 种旧查询参数并存 | 普通CSV参数，字段间AND、项内OR；none/me按字段能力；日期单日/闭区间/none，可重复且AND；非法词/未知或重复非日期参数422（M4/P5） |
+| 分页 | `每页条数:页码:是否上一页` 形式的偏移游标 | canonical不透明键集游标；工作项载荷[order,key,id]，默认-created_at、P5十九码；两向null末尾、同键id同方向、名字仅折ASCII后按码点序，非Plane名字键兼容层 |
+| 工作项列表路径/名称 | 多层workspace/project及旧results/名字查询键 | `listIssues`：GET `/api/v0/projects/{project_id}/issues`；`listMemberIssues`：GET `/api/v0/workspaces/{slug}/members/{user_id}/issues?relation=assigned\|created\|subscribed`。筛选/分组用state_id/state_group/priority/label_id/assignee_id/created_by_id/target_date，个人另project_id；排序用state_name/label_name/assignee_name/sub_issues_count等，不用state__name/labels__name/assignees__first_name |
+| 工作项列表响应 | results及按页裁剪的关系数组 | `IssueListPage`/`Issue`：平面/组格续页{total,data,next_cursor}，分组{total,groups:[{key,total,data,next_cursor}]}，泳道组内subgroups并有顶层subgroup_totals。缺分支省略、空[]、末页null，Issue不含description_html，link_count留P8；组格续页保留原筛选另加group_key/sub_group_key，所有读取同独立RO/RR快照 |
+| 项目的工作项显示设置路径 | `/projects/{id}/user-properties/` | 沿GET/PATCH `/api/v0/me/projects/{project_id}/preferences`，三字段闭合typed结构；结构400、词值422，逐顶层字段整体替换，省略保留、{}清filters；前端旧store/service迁移仍属P10b |
 | 集合型的列表（工作区、成员、项目等） | 一次返回全部，响应是裸数组 | 同样一次返回全部、不分页，响应是 `{"data": [...]}` 封套，每个列表写明顺序（M3 设计 3.12） |
 | 关联字段 | 名字不带 `_id`（`workspace`、`member`、`project_lead`），有的内嵌对象 | 只给 id，名字带 `_id`（`WorkspaceMember.workspace_id`）；例外有两个：工作区成员内嵌成员的公开资料 `member`（`MemberUser`，v0-design 3.6；M3 设计 5.2），关联内嵌对方工作项的列表行 `issue`（`IssueRelation.issue`，M4/P3；M4 设计 3.10） |
 | 工作区的显示设置的路径 | `/api/workspaces/{slug}/user-properties/`（与工作项的筛选合在一起） | `GET`、`PATCH /api/v0/me/workspaces/{slug}/preferences`，只有项目导航的两项（M3 设计 3.18）；没有 `/sidebar-preferences/` |
@@ -241,6 +246,10 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 
 | 行为 | Plane | Nerve |
 |---|---|---|
+| 列表的分组和排序（M4/P5） | 未知排序静默回退；组总数错误、关系数组只当前页、偏移分页 | 非法词422；各层total分别去重、数组完整、原筛选AND组格键续页；19排序与7/5/42字段矩阵、八快照和I3/I4均有真实证据 |
+| 已归档项目的工作项列表（M4/P5） | issue_objects返回空 | 显式项目列表照常读，archived=false/true分别经issue.read/issue.archive；项目写仍409。个人跨项目目录排除归档项目 |
+| 个人主页工作项（M4/P5） | 访客可读且未完整施加访客规则 | member_issue.list仅工作区管理员/成员；actor可见性/OwnOnly与路径目标三关系分离，inactive目标仍可存在；I19/I20及矩阵已验证 |
+| 项目工作项显示设置（M4/P5） | filters/rich_filters/display_filters/display_properties四列旧格式 | 项目仅三列新格式，不建rich_filters；GET无写、按人隔离、恢复保留、不同字段并发不丢值，I5及四方向race验证；工作区范围不变 |
 | 写操作动态 | Celery 异步写入 | 与业务写入在同一事务中同步写入 |
 | 软删除的连带删除 | Celery 异步执行 | 在同一事务中同步执行 |
 | 最近访问 | 在 GET 请求中顺带写入 | 由前端显式调用接口记录，GET 请求没有副作用 |

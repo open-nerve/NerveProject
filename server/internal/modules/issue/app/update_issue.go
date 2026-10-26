@@ -234,7 +234,7 @@ func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c doma
 		return writeMentions(ctx, u.d.Issues, s, relations.mentions)
 	}
 	// Preserve the lock-time description, including a legacy NULL stripped value.
-	f := IssueFields{ID: i.ID, Name: i.Name, StateID: i.StateID, Priority: i.Priority, StartDate: i.StartDate, TargetDate: i.TargetDate,
+	f := IssueFields{SortOrder: i.SortOrder, ID: i.ID, Name: i.Name, StateID: i.StateID, Priority: i.Priority, StartDate: i.StartDate, TargetDate: i.TargetDate,
 		DescriptionHTML: i.DescriptionHTML, DescriptionStripped: i.DescriptionStripped,
 		ParentID: i.ParentID, CompletedAt: i.CompletedAt, By: s.by, At: s.at}
 	activity := domain.Update{Parent: n.parent, State: n.state, LabelsAdded: n.labelsAdded, LabelsRemoved: n.labelsRemoved}
@@ -251,6 +251,9 @@ func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c doma
 	}
 	if c.Priority != nil {
 		f.Priority, activity.Priority = *c.Priority, &domain.Changed[domain.Priority]{Old: i.Priority, New: *c.Priority}
+	}
+	if c.SortOrder != nil {
+		f.SortOrder = c.SortOrder.New
 	}
 	if c.StateID != nil {
 		f.StateID, f.CompletedAt = *c.StateID, domain.CompletedAt(n.group, s.at)

@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"uuid"
@@ -49,7 +48,7 @@ func (l Locks) seen(ctx context.Context, actor uuid.UUID, g grants, items ...dom
 			guarded = append(guarded, n)
 		}
 	}
-	if err := l.hideParents(ctx, actor, out, guarded); err != nil {
+	if err := hideParents(ctx, l.issues, actor, out, guarded); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -63,7 +62,7 @@ func (l Locks) seen(ctx context.Context, actor uuid.UUID, g grants, items ...dom
 // read does not find, is hidden. Nothing is read when no place is guarded,
 // as under a grant that shows him every work item. A failing read is its
 // error.
-func (l Locks) hideParents(ctx context.Context, actor uuid.UUID, items []domain.Issue, guarded []int) error {
+func hideParents(ctx context.Context, issues IssueReader, actor uuid.UUID, items []domain.Issue, guarded []int) error {
 	if len(guarded) == 0 {
 		return nil
 	}
@@ -71,7 +70,7 @@ func (l Locks) hideParents(ctx context.Context, actor uuid.UUID, items []domain.
 	for k, n := range guarded {
 		ids[k] = *items[n].ParentID
 	}
-	parents, err := l.issues.GetIssues(ctx, ascending(ids))
+	parents, err := issues.GetIssues(ctx, ascending(ids))
 	if err != nil {
 		return err
 	}
@@ -85,42 +84,6 @@ func (l Locks) hideParents(ctx context.Context, actor uuid.UUID, items []domain.
 		}
 	}
 	return nil
-}
-
-// seeEach is those of items that the caller actor sees, in their order,
-// without a lock (M4 design 3.4, 3.10), and his grants on their projects:
-// issue.read decided on each one's project, once a project, as a list
-// decides it on its project, which is each work item's decision there,
-// issue.read allowing no creator (AllowCreator); then the guest rule on
-// each. One of a project he does not see, or whose work items his role
-// may not read, is left out, and so is one the guest rule hides from him.
-// A failing decision is its error.
-func (l Locks) seeEach(ctx context.Context, actor shared.Actor, items []domain.Issue) ([]domain.Issue, grants, error) {
-	g, refused := grants{}, map[uuid.UUID]bool{}
-	var out []domain.Issue
-	for _, i := range items {
-		if refused[i.ProjectID] {
-			continue
-		}
-		grant, decided := g[i.ProjectID]
-		if !decided {
-			var err error
-			grant, err = l.decide(ctx, actor, domain.ActionRead, i.WorkspaceID, i.ProjectID, nil, domain.ErrIssueNotFound)
-			var refusal *shared.Error
-			switch {
-			case errors.As(err, &refusal):
-				refused[i.ProjectID] = true
-				continue
-			case err != nil:
-				return nil, nil, err
-			}
-			g[i.ProjectID] = grant
-		}
-		if !i.HiddenFrom(actor.UserID, grant.OwnOnly) {
-			out = append(out, i)
-		}
-	}
-	return out, g, nil
 }
 
 // seenOne is the work item i as the caller actor sees it (seen), by his

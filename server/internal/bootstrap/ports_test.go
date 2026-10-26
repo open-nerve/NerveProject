@@ -96,25 +96,6 @@ func TestWorkspaceAccountsConvertsIdentitysAnswer(t *testing.T) {
 	}
 }
 
-// fakeIdentityProfiles answers the profiles it holds of the ids asked for,
-// in the order it holds them, and records the ids.
-type fakeIdentityProfiles struct {
-	profiles []identityapp.PublicProfile
-	err      error
-	asked    [][]uuid.UUID
-}
-
-func (f *fakeIdentityProfiles) PublicProfiles(_ context.Context, ids []uuid.UUID) ([]identityapp.PublicProfile, error) {
-	f.asked = append(f.asked, ids)
-	var out []identityapp.PublicProfile
-	for _, p := range f.profiles {
-		if slices.Contains(ids, p.ID) {
-			out = append(out, p)
-		}
-	}
-	return out, f.err
-}
-
 // workspaceProfiles asks identity for the ids workspace asks for and hands
 // over each profile, every field converted, in identity's order; an error
 // as it came, without profiles.
@@ -252,6 +233,7 @@ func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
 // fakeIssueProjects answers project's IssueProjects of one project, web,
 // and records each question; err, when set, is every answer's failure.
 type fakeIssueProjects struct {
+	listProjectAnswers
 	historical          []project.HistoricalIssueProject
 	historicalWorkspace uuid.UUID
 	historicalActor     uuid.UUID

@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"encoding/json"
 	"net/http"
 	"slices"
 	"testing"
@@ -152,12 +151,12 @@ func projectMatrixRows() []matrixRow {
 		{op: "getProjectPreferences", columns: projectColumns, request: toProjectPreferences(http.MethodGet, ""),
 			cells: ofProject(cellOK, cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: readsPreferences("work_items", "[]")},
 		{op: "updateProjectPreferences", write: true, columns: projectColumns,
-			request: toProjectPreferences(http.MethodPatch, `{"navigation":{"default_tab":"cycles","hide_in_more_menu":["views"]}}`),
+			request: toProjectPreferences(http.MethodPatch, preferencesJSON("cycles", `["views"]`, 65535, customFilters, customDisplay, customProperties)),
 			cells:   ofProject(cellOK, cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: readsPreferences("cycles", `["views"]`)},
 		// An archived project's settings change as any other's (M3 design
 		// 3.19).
 		{op: "updateProjectPreferences", variant: "archived", write: true, columns: archivedColumns,
-			request: toProjectPreferences(http.MethodPatch, `{"navigation":{"default_tab":"cycles","hide_in_more_menu":["views"]}}`),
+			request: toProjectPreferences(http.MethodPatch, preferencesJSON("cycles", `["views"]`, 65535, customFilters, customDisplay, customProperties)),
 			cells:   ofArchived(cellOK, cellForbidden), check: readsPreferences("cycles", `["views"]`)},
 	}
 }
@@ -174,17 +173,11 @@ func toProjectPreferences(method, body string) func(caller, seeded) (string, str
 // tabs hidden, as JSON, at the place every seeded member has, the default.
 func readsPreferences(tab, hidden string) func(t *testing.T, c caller, _ seeded, answer string) {
 	return func(t *testing.T, c caller, _ seeded, answer string) {
-		var p struct {
-			Navigation struct {
-				DefaultTab     string          `json:"default_tab"`
-				HideInMoreMenu json.RawMessage `json:"hide_in_more_menu"`
-			} `json:"navigation"`
-			SortOrder float64 `json:"sort_order"`
+		filters, display, properties := "{}", defaultDisplay, defaultProperties
+		if tab == "cycles" {
+			filters, display, properties = customFilters, customDisplay, customProperties
 		}
-		decodeAnswer(t, answer, &p)
-		if p.Navigation.DefaultTab != tab || string(p.Navigation.HideInMoreMenu) != hidden || p.SortOrder != 65535 {
-			t.Errorf("%s reads %s; want %s, %s hidden, at 65535", c, answer, tab, hidden)
-		}
+		samePreferencesJSON(t, answer, preferencesJSON(tab, hidden, 65535, filters, display, properties))
 	}
 }
 

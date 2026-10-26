@@ -444,7 +444,7 @@ T7/8内部类型与决策由T9消费，T11 Historical由T12消费，无空端口
 
 | 接收方 | 已交付及后续责任 |
 |---|---|
-| P5 | 复用shared.PageSize、已与LockTimeout组合的独立ReadOnlySnapshot、Historical历史目录；普通VisibleProjects/列表引擎、force_custom_plan、替换P3 seeEach/ArchivedProjects仍归P5，不重复实现前移能力 |
+| P5 | 复用shared.PageSize、已与LockTimeout组合的独立ReadOnlySnapshot、Historical历史目录；普通VisibleProjects/列表引擎、force_custom_plan、替换P3 seeEach/ArchivedProjects仍归P5，不重复实现前移能力；**P5接收结果（2026-10-26）**：P5直接消费P4已交付的shared.PageSize/ReadOnlySnapshot/Historical，T1强制池参数，T4/T11完成普通Visible/P3替换；T8/T14验证sort_order不破坏skip_activity true/false互斥与既有历史回归，T12最终快照/精度/性能已收口。P11详情数据、P14保存/弹窗、P15时间线/评论与P9保留清理仍开放，实际证据见 [P5 review §2](../reviews/P5-issue-list-review.md#2-验收标准逐条核对) |
 | P6 | 描述/评论/表情事件与任务尚未实现；skip=true且内容标识相同不发布，其他每次写事件共用当前锁下时刻；不得为P4增加空事件端口；只投递客户端/worker完整性按M2交接继续 |
 | P9 | 最新20版保留、60天物理清理（含五表/comment FK/PAT）、项目/工作区异步删除、删除断言限时轮询；P4只交同步连带/键集批量语句，不声称任务正在运行 |
 | P11 | 新DTO与service/store换型、description_json/comment_json及JSONContent一起清理；历史列表/单版本新地址、评论内嵌表情、分页契约 |

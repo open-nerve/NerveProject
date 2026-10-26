@@ -84,3 +84,10 @@ func (d *Directory) ShareMembers(ctx context.Context, workspaceID uuid.UUID, use
 	}
 	return roles, nil
 }
+
+// WorkspaceMemberExists reads the undeleted membership without locking it.
+// Ended memberships remain valid targets of a personal issue list.
+func (d *Directory) WorkspaceMemberExists(ctx context.Context, workspaceID, userID uuid.UUID) (bool, error) {
+	_, found, err := d.store.MemberOf(ctx, workspaceID, userID)
+	return found, err
+}

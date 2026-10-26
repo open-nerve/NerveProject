@@ -1,0 +1,136 @@
+package domain
+
+import (
+	"encoding/json"
+	"testing"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+)
+
+func TestParseListQueryGroups(t *testing.T) {
+	id := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	cursor, err := EncodeListCursor(ListCursor{Order: "-created_at", Key: json.RawMessage(`"2026-01-01T00:00:00.000000Z"`), ID: id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Exercise all presence combinations. The expected errors are literal business
+	// precedence, independent of the parser's validation helpers.
+	cases := []struct {
+		g, s, k, sk, c bool
+		field          string
+	}{
+		{false, false, false, false, false, ""}, {false, false, false, false, true, ""},
+		{false, false, false, true, false, "sub_group_key"}, {false, false, false, true, true, "sub_group_key"},
+		{false, false, true, false, false, "group_key"}, {false, false, true, false, true, "group_key"},
+		{false, false, true, true, false, "group_key"}, {false, false, true, true, true, "group_key"},
+		{false, true, false, false, false, "sub_group_by"}, {false, true, false, false, true, "sub_group_by"},
+		{false, true, false, true, false, "sub_group_by"}, {false, true, false, true, true, "sub_group_by"},
+		{false, true, true, false, false, "sub_group_by"}, {false, true, true, false, true, "sub_group_by"},
+		{false, true, true, true, false, "sub_group_by"}, {false, true, true, true, true, "sub_group_by"},
+		{true, false, false, false, false, ""}, {true, false, false, false, true, "cursor"},
+		{true, false, false, true, false, "sub_group_key"}, {true, false, false, true, true, "sub_group_key"},
+		{true, false, true, false, false, ""}, {true, false, true, false, true, ""},
+		{true, false, true, true, false, "sub_group_key"}, {true, false, true, true, true, "sub_group_key"},
+		{true, true, false, false, false, ""}, {true, true, false, false, true, "cursor"},
+		{true, true, false, true, false, "sub_group_key"}, {true, true, false, true, true, "sub_group_key"},
+		{true, true, true, false, false, "sub_group_key"}, {true, true, true, false, true, "cursor"},
+		{true, true, true, true, false, ""}, {true, true, true, true, true, ""},
+	}
+	for _, tc := range cases {
+		raw := map[string][]string{}
+		if tc.g {
+			raw["group_by"] = []string{"label_id"}
+		}
+		if tc.s {
+			raw["sub_group_by"] = []string{"target_date"}
+		}
+		if tc.k {
+			raw["group_key"] = []string{"none"}
+		}
+		if tc.sk {
+			raw["sub_group_key"] = []string{"2026-01-01"}
+		}
+		if tc.c {
+			raw["cursor"] = []string{cursor}
+		}
+		q, err := ParseListQuery(raw, ProjectList, id)
+		if tc.field != "" {
+			assertListProblem(t, err, shared.KindInvalid, tc.field, shared.FieldNotAllowed)
+			continue
+		}
+		if err != nil {
+			t.Fatalf("raw=%v err=%v", raw, err)
+		}
+		if (q.Cursor != nil) != tc.c || (q.GroupKey != nil) != tc.k || (q.SubGroupKey != nil) != tc.sk {
+			t.Fatalf("raw=%v query=%+v", raw, q)
+		}
+	}
+	for _, raw := range []map[string][]string{
+		{"group_by": {"label_id"}, "sub_group_by": {"label_id"}},
+		{"group_by": {"state_group"}, "group_key": {"none"}},
+		{"group_by": {"target_date"}, "group_key": {"2026-01-01.."}},
+		{"group_by": {"label_id"}, "group_key": {""}},
+		{"group_by": {"priority"}, "group_key": {"none"}, "sub_group_by": {"assignee_id"}, "sub_group_key": {"me"}},
+	} {
+		_, err := ParseListQuery(raw, ProjectList, id)
+		if err == nil {
+			t.Fatalf("accepted %v", raw)
+		}
+	}
+	q, err := ParseListQuery(map[string][]string{"label_id": {id.String()}, "group_by": {"label_id"}, "group_key": {"none"}, "target_date": {"2026-01-01"}}, ProjectList, id)
+	if err != nil || len(q.Filters.Labels.IDs) != 1 || q.Filters.Labels.IDs[0] != id || q.Filters.Labels.None || len(q.Filters.Target) != 1 {
+		t.Fatalf("group key replaced filters: %+v %v", q, err)
+	}
+	for _, raw := range []map[string][]string{{"cursor": {""}}, {"cursor": {"broken"}}, {"cursor": {cursor}, "order_by": {"priority"}}} {
+		_, err := ParseListQuery(raw, ProjectList, id)
+		assertListProblem(t, err, shared.KindBadRequest, "cursor", shared.FieldInvalidFormat)
+	}
+}
+
+// Accepted UUID spellings must select the same group, while enum/date/none
+// retain their field-specific meaning and spelling.
+func TestParseListQueryCanonicalGroupKeys(t *testing.T) {
+	const canonical = "0199a2b4-0000-7000-8000-000000000001"
+	actor := uuid.MustParse(canonical)
+	for _, field := range []ListGroup{"state_id", "label_id", "assignee_id", "created_by_id", "project_id"} {
+		for _, spelling := range []string{"0199A2B4-0000-7000-8000-000000000001", "0199a2b4000070008000000000000001", "{0199a2b4-0000-7000-8000-000000000001}", "urn:uuid:0199a2b4-0000-7000-8000-000000000001"} {
+			t.Run(string(field)+"/"+spelling, func(t *testing.T) {
+				scope := ProjectList
+				raw := map[string][]string{"group_by": {string(field)}, "group_key": {spelling}}
+				if field == "project_id" {
+					scope = MemberList
+					raw["relation"] = []string{"created"}
+				}
+				q, err := ParseListQuery(raw, scope, actor)
+				if err != nil || q.GroupKey == nil || *q.GroupKey != canonical {
+					t.Fatalf("group=%+v / %v", q, err)
+				}
+				if field == "project_id" {
+					return
+				}
+				raw = map[string][]string{"group_by": {"priority"}, "group_key": {"high"}, "sub_group_by": {string(field)}, "sub_group_key": {spelling}}
+				q, err = ParseListQuery(raw, scope, actor)
+				if err != nil || q.SubGroupKey == nil || *q.SubGroupKey != canonical || *q.GroupKey != "high" {
+					t.Fatalf("cell=%+v / %v", q, err)
+				}
+			})
+		}
+	}
+	for _, tc := range []struct{ field, key string }{
+		{"label_id", "none"}, {"assignee_id", "none"}, {"created_by_id", "none"}, {"priority", "none"}, {"priority", "urgent"}, {"state_group", "started"}, {"target_date", "none"}, {"target_date", "2030-03-01"},
+	} {
+		q, err := ParseListQuery(map[string][]string{"group_by": {tc.field}, "group_key": {tc.key}}, ProjectList, actor)
+		if err != nil || q.GroupKey == nil || *q.GroupKey != tc.key {
+			t.Fatalf("non-UUID %v: %+v / %v", tc, q, err)
+		}
+		group, key := "priority", "high"
+		if tc.field == group {
+			group, key = "state_group", "started"
+		}
+		q, err = ParseListQuery(map[string][]string{"group_by": {group}, "group_key": {key}, "sub_group_by": {tc.field}, "sub_group_key": {tc.key}}, ProjectList, actor)
+		if err != nil || q.SubGroupKey == nil || *q.SubGroupKey != tc.key {
+			t.Fatalf("non-UUID cell %v: %+v / %v", tc, q, err)
+		}
+	}
+}

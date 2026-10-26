@@ -95,13 +95,19 @@ type ProjectMembershipCounts interface {
 // numbers (Sequences), and its states', labels' and members' catalogs
 // (StateCatalog, LabelCatalog, ProjectMembers), for its writes; a
 // workspace's projects' identifiers (ProjectIdentifiers), for a read by
-// identifier; and which projects are archived (ArchivedProjects), for a
-// list across projects; and historical memberships for filtering activity
-// references. Each reads, or locks, in the transaction ctx
-// carries; the catalogs are read under the project's lock, which every
+// identifier; ordinary and historical memberships; and complete
+// state and label catalogs for lists. Each reads, or locks, in the transaction
+// ctx carries. Write catalogs are read under the project's lock, which every
 // write of a state, a label or a membership holds too, so they stay as
 // read until the write commits (M4 design 3.5).
 type IssueProjects interface {
+	// VisibleIssueProjects reads active, undeleted memberships in undeleted,
+	// unarchived projects, using the project role for guest scope.
+	VisibleIssueProjects(ctx context.Context, workspaceID, actorID uuid.UUID) ([]VisibleIssueProject, error)
+	// IssueListStates reads complete undeleted non-triage state catalogs.
+	IssueListStates(ctx context.Context, projectIDs []uuid.UUID) ([]IssueState, error)
+	// IssueListLabels reads complete undeleted label catalogs.
+	IssueListLabels(ctx context.Context, projectIDs []uuid.UUID) ([]IssueLabel, error)
 	// HistoricalIssueProjects reads active memberships, including deleted or archived projects.
 	HistoricalIssueProjects(ctx context.Context, workspaceID, actorID uuid.UUID) ([]HistoricalIssueProject, error)
 	// IssueMentionMembers reads active candidates and their effective guest scope.
@@ -132,9 +138,6 @@ type IssueProjects interface {
 	// ProjectIdentifiers reads the workspace's undeleted projects, archived
 	// or not, each with its identifier, in id order, without a lock.
 	ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) ([]IssueProjectIdentifier, error)
-	// ArchivedIssueProjects reads those of ids that are undeleted,
-	// archived projects, each true, without a lock.
-	ArchivedIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error)
 }
 
 // IssueProject, IssueState, IssueLabel and IssueProjectIdentifier are the
@@ -142,6 +145,7 @@ type IssueProjects interface {
 // (M4 design 6.5).
 type (
 	HistoricalIssueProject = app.HistoricalIssueProject
+	VisibleIssueProject    = app.VisibleIssueProject
 	IssueMemberVisibility  = app.IssueMemberVisibility
 	IssueProject           = app.IssueProject
 	IssueState             = app.IssueState
@@ -168,6 +172,10 @@ func Provide(pool *pgxpool.Pool) Provided {
 // bootstrap converts workspace's DirectoryEntry into it (M3 design 6.5).
 type Workspace = app.Workspace
 
+// ListCalendar and ListDisplayFilters are the settings consumer boundary values.
+type ListCalendar = app.ListCalendar
+type ListDisplayFilters = app.ListDisplayFilters
+
 // Deps are what bootstrap gives the module (M3 design 6.6, step 4).
 type Deps struct {
 	Pool       *pgxpool.Pool
@@ -181,6 +189,8 @@ type Deps struct {
 	Members app.WorkspaceMembers
 	// Issues is issue's IssueCascade (issue.Provide).
 	Issues app.IssueCascade
+	// ListSettings is the pure issue-list vocabulary validator, converted by bootstrap.
+	ListSettings app.IssueListSettings
 }
 
 // Module is the wired project module.
@@ -207,7 +217,7 @@ func New(d Deps) *Module {
 		UnarchiveProject:    app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
 		DeleteProject:       app.NewDeleteProject(store, d.Issues, locks, d.Tx, d.Clock),
 		GetPreferences:      app.NewGetProjectPreferences(store, d.Authorizer),
-		UpdatePreferences:   app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock),
+		UpdatePreferences:   app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock, d.ListSettings),
 		ListMembers:         app.NewListProjectMembers(store, d.Authorizer),
 		AddMembers:          app.NewAddProjectMembers(app.AddMembersDeps{Locks: locks, Projects: store, Tx: d.Tx, Clock: d.Clock}),
 		JoinProject:         app.NewJoinProject(locks, store, d.Tx, d.Clock),

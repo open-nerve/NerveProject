@@ -114,14 +114,16 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: clock.System{}, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
+		Members:    issueMembers{members: workspacePorts.WorkspaceMemberDirectory},
 		Profiles:   issueProfiles{profiles: identityPorts.PublicProfiles},
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
 		Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: authorizer,
-		Workspaces: projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
-		Members:    workspacePorts.WorkspaceMembers,
-		Issues:     issuePorts.IssueCascade,
+		Workspaces:   projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
+		Members:      workspacePorts.WorkspaceMembers,
+		Issues:       issuePorts.IssueCascade,
+		ListSettings: projectListSettings{settings: issuePorts.ListSettings},
 	})
 	ws := workspace.New(workspace.Deps{
 		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,

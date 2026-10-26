@@ -77,18 +77,22 @@ func newProjectRouteOn(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, au
 	t.Helper()
 	return newRoute(t, project.New(project.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members,
-		Issues: issue.Provide(pool).IssueCascade}).Register)
+		Issues: issue.Provide(pool).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool).ListSettings}}).Register)
 }
 
 // send sends method path as caller, with body when it is not empty, and
 // returns the request and its answer. It touches no test, so another
 // goroutine may send it.
 func (p moduleRoute) send(method, path string, caller uuid.UUID, body string) (*http.Request, *httptest.ResponseRecorder) {
+	return p.sendContext(context.Background(), method, path, caller, body)
+}
+
+func (p moduleRoute) sendContext(ctx context.Context, method, path string, caller uuid.UUID, body string) (*http.Request, *httptest.ResponseRecorder) {
 	var b io.Reader
 	if body != "" {
 		b = strings.NewReader(body)
 	}
-	req := httptest.NewRequest(method, path, b)
+	req := httptest.NewRequestWithContext(ctx, method, path, b)
 	req.Header.Set("Authorization", "Bearer "+caller.String())
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")

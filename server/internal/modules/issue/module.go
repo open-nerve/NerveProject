@@ -46,24 +46,32 @@ type Cascade interface {
 	DetachLabel(ctx context.Context, labelIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 }
 
-// Provided are the adapters issue offers the other modules. They depend on
-// the pool alone, so bootstrap builds them before any module (M4 design
-// 6.6).
+// ListCalendar and ListDisplayFilters are the pure saved-settings boundary values.
+type ListCalendar = app.ListCalendar
+type ListDisplayFilters = app.ListDisplayFilters
+
+// ListSettings validates saved list words without a directory or actor.
+type ListSettings interface {
+	Validate(map[string][]string, *ListDisplayFilters, map[string]bool) []shared.FieldError
+}
+
+// Provided are the adapters bootstrap builds before wiring consuming modules.
 type Provided struct {
 	IssueCascade Cascade
+	ListSettings ListSettings
 }
 
 // Provide builds issue's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
-	return Provided{IssueCascade: app.NewCascade(store, store, deleteBatch)}
+	return Provided{IssueCascade: app.NewCascade(store, store, deleteBatch), ListSettings: app.ListSettings{}}
 }
 
 // ProjectPorts are what the module asks of a project (M4 design 6.5): its
 // gate, its numbers, its states', labels' and members' catalogs, for its
 // writes; a workspace's projects' identifiers, for a read by identifier;
-// which projects are archived, for a list across projects (3.8); historical
-// memberships, for filtering activity references after target authorization.
+// ordinary and historical memberships, and complete list state and label
+// catalogs.
 // project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
 type ProjectPorts interface {
 	app.ProjectGate
@@ -72,8 +80,9 @@ type ProjectPorts interface {
 	app.LabelCatalog
 	app.ProjectMembers
 	app.ProjectIdentifiers
-	app.ArchivedProjects
 	app.VisibleProjects
+	app.ListStateCatalog
+	app.ListLabelCatalog
 }
 
 // LockedProject, StateRef and its StateGroup, LabelRef and
@@ -109,6 +118,7 @@ type Deps struct {
 	// Workspaces is workspace's WorkspaceDirectory, converted
 	// (bootstrap/ports.go).
 	Workspaces app.WorkspaceDirectory
+	Members    app.WorkspaceMemberDirectory
 	// Profiles is identity's PublicProfiles, converted (bootstrap/ports.go).
 	Profiles app.PublicProfiles
 }
@@ -124,8 +134,11 @@ func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
 	sanitizer := content.NewSanitizer()
+	listing := app.NewListing(app.ListingDeps{Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
 	archive := app.ArchiveIssueDeps{Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	return &Module{uc: httpadapter.UseCases{
+		ListMemberIssues:        app.NewListMemberIssues(app.ListMemberIssuesDeps{ReadTx: d.ReadTx, Authorizer: d.Authorizer, Workspaces: d.Workspaces, Members: d.Members, Projects: d.Projects, Listing: listing}),
+		ListIssues:              app.NewListIssues(app.ListIssuesDeps{ReadTx: d.ReadTx, Locks: locks, Listing: listing}),
 		ListIssueActivities:     app.NewListIssueActivities(app.ListIssueActivitiesDeps{Locks: locks, Activities: store, Projects: d.Projects, ReadTx: d.ReadTx}),
 		ListDescriptionVersions: app.NewListDescriptionVersions(app.ListDescriptionVersionsDeps{Locks: locks, Versions: store, ReadTx: d.ReadTx}),
 		GetDescriptionVersion:   app.NewGetDescriptionVersion(app.GetDescriptionVersionDeps{Locks: locks, Versions: store}),
@@ -154,7 +167,7 @@ func New(d Deps) *Module {
 		UnarchiveIssue:     app.NewUnarchiveIssue(archive),
 		ListSubIssues:      app.NewListSubIssues(locks, store),
 		AddSubIssues:       app.NewAddSubIssues(app.AddSubIssuesDeps{Locks: locks, Issues: store, Clock: d.Clock}),
-		ListIssueRelations: app.NewListIssueRelations(locks, store, d.Projects),
+		ListIssueRelations: app.NewListIssueRelations(app.ListIssueRelationsDeps{Locks: locks, Relations: store, Projects: d.Projects, ReadTx: d.ReadTx}),
 		CreateIssueRelations: app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{
 			Locks: locks, Relations: store, Clock: d.Clock,
 		}),

@@ -228,7 +228,7 @@ plan 的代码块照运行时的文字保留。下表是动过 plan 的块所写
   - 有了 `deleteIssue` 之后，按目录的删除测试的种子加一个在项目之前已删除的工作项：分批语句的 `deleted_at IS NULL` 今天只由存储测试钉住（预检的 PF.3）。
   - `bodyshape` 的代价测试加字符串的数组（设计 6.1 的表；Task 9 的评审确认在 P2）。
 - **P3**：`LockMany`（约定七）、`DeletedAt`；关联进删除的语句；加关联与删除工作区的交错（两个项目同属一个工作区，两种顺序）：`LockWorkspaceProjects` 的 `id` 升序从这时起承重（P1a 只由存储测试钉住，预检的 PF.1、L6）。
-- **P5**：`Issue`（列表的行）；状态的名称进 `StateCatalog`。
+- **P5**：`Issue`（列表的行）；状态的名称进 `StateCatalog`。；**P5接收结果（2026-10-26）**：已有Issue/Detail已在P4分离，状态名已在P1b、PublicProfiles已在P1a交付；P5 T4/T9/T10实际消费而非重复交付，T8及T15 I6沿原锁/审计路径，T12精度/快照与T14回归通过。P6事件、P8草稿、P9删除和页面范围仍开放，实际证据见 [P5 review §2](../reviews/P5-issue-list-review.md#2-验收标准逐条核对)。
 - **P6**：`archive_in`。
 - **P8**：`DeleteWorkspaceIssues` 加工作区的 id（没有项目的草稿）；草稿的写和发布草稿先取工作区 S，不是 `issueWrites` 的形状，从 `writesOnIssues` 分出，另写它们的形状测试。
 - **P9**：`DeleteProjectIssues`、`DeleteWorkspaceIssues` 换成事件和任务，删去这两个方法；删除断言对工作项一侧的表的限时轮询（M3 收尾交接的未处理清单）。

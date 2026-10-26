@@ -38,24 +38,32 @@ type Navigation struct {
 }
 
 // Preferences are an account's display settings in a project (M3 design
-// 3.18, 5.2): its tab bar, and the project's place in his sidebar.
+// 3.18, 5.2; M4/P5): its tabs, sidebar place and issue-list presentation.
 type Preferences struct {
-	Navigation Navigation
-	SortOrder  float64
+	Navigation        Navigation
+	SortOrder         float64
+	Filters           Filters
+	DisplayFilters    DisplayFilters
+	DisplayProperties DisplayProperties
 }
 
 // PreferencesPatch is a change of Preferences: a nil field stays as it
-// is; a navigation given replaces the navigation whole (M3 design 5.2).
+// is; each given top-level field replaces that field whole.
 type PreferencesPatch struct {
-	Navigation *Navigation
-	SortOrder  *float64
+	Navigation        *Navigation
+	SortOrder         *float64
+	Filters           *Filters
+	DisplayFilters    *DisplayFilters
+	DisplayProperties *DisplayProperties
 }
 
 // DefaultPreferences are an account's settings in a project while he has
 // no row of them: the columns' defaults (M3 design 4.8), which the store's
 // test holds equal.
 func DefaultPreferences() Preferences {
-	return Preferences{Navigation: Navigation{DefaultTab: tabs[0], HideInMoreMenu: []string{}}, SortOrder: DefaultSortOrder}
+	return Preferences{Navigation: Navigation{DefaultTab: tabs[0], HideInMoreMenu: []string{}}, SortOrder: DefaultSortOrder,
+		DisplayFilters:    DisplayFilters{Layout: "list", OrderBy: "-created_at", SubIssue: true, ShowEmptyGroups: true, Calendar: DisplayCalendar{Layout: "month"}},
+		DisplayProperties: DisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, CreatedOn: true, UpdatedOn: true}}
 }
 
 // Apply returns p with the fields patch gives changed.
@@ -65,6 +73,15 @@ func (p Preferences) Apply(patch PreferencesPatch) Preferences {
 	}
 	if patch.SortOrder != nil {
 		p.SortOrder = *patch.SortOrder
+	}
+	if patch.Filters != nil {
+		p.Filters = *patch.Filters
+	}
+	if patch.DisplayFilters != nil {
+		p.DisplayFilters = *patch.DisplayFilters
+	}
+	if patch.DisplayProperties != nil {
+		p.DisplayProperties = *patch.DisplayProperties
 	}
 	return p
 }

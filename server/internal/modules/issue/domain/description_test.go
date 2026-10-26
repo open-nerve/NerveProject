@@ -40,7 +40,7 @@ func TestDescriptionChanges(t *testing.T) {
 			_, err := CheckIssuePatch(IssuePatch{SkipActivity: &skip})
 			assertSkipProblem(t, err)
 			for name, other := range map[string]IssuePatch{
-				"name": {Name: ptr("x")}, "state": {StateID: &id}, "priority": {Priority: ptr(PriorityLow)},
+				"sort": {SortOrder: ptr(0.0)}, "name": {Name: ptr("x")}, "state": {StateID: &id}, "priority": {Priority: ptr(PriorityLow)},
 				"assignees": {AssigneeIDs: &empty}, "labels": {LabelIDs: &empty},
 				"start null": {SetStartDate: true}, "target null": {SetTargetDate: true}, "parent null": {SetParentID: true},
 				"start": {SetStartDate: true, StartDate: october(1)}, "target": {SetTargetDate: true, TargetDate: october(2)}, "parent": {SetParentID: true, ParentID: &id},

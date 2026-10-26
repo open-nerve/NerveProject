@@ -173,21 +173,26 @@ GET   /api/v0/issues/{issue_id}/comments
 
 ### 3.3 筛选
 - 用普通查询参数：`?state_id=a,b&assignee_id=me&priority=urgent,high&target_date=2026-09-01..2026-09-30`。
-- 不同参数之间是 AND 关系；逗号表示"属于其中之一"；`..` 表示范围；`me` 表示当前账户。
+- 不同参数之间是 AND 关系；CSV 内是 OR；`me` 表示当前账户。工作项列表的 `label_id`、`assignee_id` 可用 `none` 表示没有值，`priority=none` 是优先级枚举；`none` 可与合格 UUID 并列。
+- 工作项的 `start_date`、`target_date` 接受单日、闭区间 `a..b`、`..b`、`a..` 和 `none`；日期参数可重复，全部条件 AND。`none` 不与其他日期条件并存；两个合法范围交集为空返回空列表。非法日期、反向区间、空 CSV 项、错误 UUID/词值、未知参数及重复非日期参数均 422 `validation_failed`，字段错误 `not_allowed`；具体页面允许的参数见 [M4/P5 spec §2.3](M4-issue-core/specs/P5-issue-list.md#23-查询语言与错误)。
 - **归档**：列表默认不包含已归档的对象；传 `?archived=true` 只返回已归档的对象。
 - 依据：Plane 社区版前端的筛选器只会生成"多个条件全部满足"的组合，每个条件只有"等于 / 属于 / 范围"三种判断，上面的格式能完整表达。
 
 ### 3.4 分页与分组
 - **分页**：用游标。请求带 `?limit=50&cursor=...`，响应格式为 `{ "data": [...], "next_cursor": "..." }`，最后一页的 `next_cursor` 是 `null`。游标是不透明的字符串：封套（版本号加载荷，base64url 编码）由 `internal/shared` 定义，载荷由各个列表按自己的排序定义，例如 PAT 列表的载荷是这一页最后一行的 `(created_at, id)`（M2 设计 3.12）。解不开、版本不认识、载荷不合这个列表的格式、不是 `EncodeCursor` 原样写出的游标，都是 400 `bad_request`；游标不签名，改成另一个合格的位置照样可用，它只决定从哪里接着读。`limit` 超出 1–100 是 422 `validation_failed`。
 - **集合型的列表不分页**：页面要整个集合、大小由管理员的操作决定的列表（工作区、成员、邀请、项目、项目成员、状态、标签）一次返回全部，响应仍是 `{ "data": [...] }` 封套，没有 `limit`、`cursor`、`next_cursor`；每个列表写明顺序，同值时按 `id`（M3 设计 3.12）。一个工作项的子工作项、关联、链接、表情同样是集合型：它们的大小由人对这一个工作项的操作决定，页面要整个集合（M4 设计 3.16）。以后要给其中一个分页，是接口的改动，调用方同时改。第一个是 M3/P1 的 `listWorkspaces`，工作项一侧的第一个是 M4/P3 的 `listSubIssues`。
-- **分组**：作为列表接口的可选参数，由服务端完成：
+- **工作项列表**：`listIssues` 是 `GET /api/v0/projects/{project_id}/issues`，`listMemberIssues` 是 `GET /api/v0/workspaces/{slug}/members/{user_id}/issues?relation=assigned|created|subscribed`。两者的 `IssueListPage` 响应使用已有 `Issue` 列表行，不含 `description_html`；`link_count` 随 P8 加入。三种形状为：
+  ```text
+  平面/组格续页 {total,data:Issue[],next_cursor}
+  分组          {total,groups:[{key,total,data:Issue[],next_cursor}]}
+  泳道          {total,groups:[{key,total,subgroups:[{key,total,data,next_cursor}]}],
+                      subgroup_totals:[{key,total}]}
   ```
-  GET /api/v0/projects/{id}/issues?group_by=state_id&sub_group_by=priority&limit=50
-  → { "groups": [ { "key": "...", "total": 37, "data": [...], "next_cursor": "..." } ] }
-  ```
-  - 实现：一条 SQL（借助窗口函数）算出每组的前 N 条和总数。
-  - "某一组加载更多"：用普通列表加上这一组的筛选条件。
-  - 按标签、负责人分组时，同一个工作项会出现在多个组里，由服务端处理。
+  - 没有的分支省略，空数组为 `[]`，末页游标为 `null`；整体、组、泳道、格的 `total` 分别是该层去重的工作项数，不能相加格计数充当泳道总数。只返回非空组，`limit` 是每组/格条数，多标签/负责人行的数组仍完整。
+  - `group_by=state_id&sub_group_by=priority` 返回组内 `subgroups`。组续页保留原筛选、`group_by`、`order_by`，另加 `group_key` 和该组游标；泳道还保留 `sub_group_by` 并加 `sub_group_key`。返回平面封套，`total` 为该组/格总数；`label_id=A&group_by=label_id&group_key=C` 仍是 A AND C。
+  - 未知 `order_by`、`group_by`、`sub_group_by`、不合格组键及缺少续页所需组/格键均 422；有子分组时只支持格续页。键组合和错误优先级见 [P5 spec §2.4](M4-issue-core/specs/P5-issue-list.md#24-分组与响应)。
+  - 列表鉴权、目录、三条静态 SQL、隐藏父项及空游标页补 `total` 都在同一独立 READ ONLY / REPEATABLE READ 快照内。每次请求重新鉴权，不承诺两次请求共用快照。
+  - 工作项默认 `order_by=-created_at`，P5 支持19码；载荷为 `[order,key,id]`，键按排序定型、同键以同方向 `id` 稳序。时间保留微秒、名字按仅折 ASCII 大写后的 Unicode 码点序、两方向 null 均末尾。canonical 封套仍复用 shared；姓名或子项数跨请求变化可使行移动。精确键/游标和后续前端共用样例见 [P5 spec §2.5](M4-issue-core/specs/P5-issue-list.md#25-排序与游标)。
 
 ### 3.5 错误
 - 统一使用 RFC 9457（`application/problem+json`），`code` 是给程序判断用的固定字符串：
@@ -414,6 +419,8 @@ modules/issue/
                      api（httpserver.API）提供错误映射和按路由的中间件；PublicOperations() 列出不需要令牌的操作；
                      其他模块或 bootstrap 要用的能力由访问方法导出，例如 Authenticator()（M2 设计 3.3、3.6）
 ```
+
+列表词汇在 `issue/domain/listvocab.go`（日期原子规则在 `list_date.go`）；`project/app` 声明消费端口 `IssueListSettings.Validate`，`issue.Provide` 交出 `issue/app.ListSettings` 的纯校验实现。两个模块各自声明 app 小值，只有 bootstrap 逐字段转换；模块不互相 import。显示设置的数据库形状与 HTTP 闭合结构由 project 负责，合法结构中的业务词值经该端口复用列表规则（[M4 §3.17](M4-issue-core/M4-design.md#317-项目的工作项显示设置架构问题-10)）。
 
 ### 6.3 依赖规则（在持续集成中强制检查）
 1. **依赖方向只能向内**：`adapter → app → domain`。`domain` 只能依赖标准库和 `shared`。

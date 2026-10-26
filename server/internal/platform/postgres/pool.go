@@ -32,6 +32,8 @@ func NewPool(ctx context.Context, cfg config.DatabaseConfig) (*pgxpool.Pool, err
 	if err != nil {
 		return nil, errUnusableURL
 	}
+	pc.ConnConfig.RuntimeParams["jit"] = "off"
+	pc.ConnConfig.RuntimeParams["plan_cache_mode"] = "force_custom_plan"
 	pc.MaxConns = cfg.MaxConns
 	pc.AfterConnect = scanTimestamptzInUTC
 	pool, err := pgxpool.NewWithConfig(ctx, pc)

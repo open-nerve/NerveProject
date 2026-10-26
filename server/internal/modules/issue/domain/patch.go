@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"math"
 	"slices"
 	"strings"
 	"uuid"
@@ -20,6 +21,7 @@ type IssuePatch struct {
 	SkipActivity    *bool
 	Name            *string
 	StateID         *uuid.UUID
+	SortOrder       *float64
 	Priority        *Priority
 	AssigneeIDs     *[]uuid.UUID
 	LabelIDs        *[]uuid.UUID
@@ -36,7 +38,7 @@ type IssuePatch struct {
 // without its surrounding white space, of 1–255 characters and without
 // NUL; the priority one of the five (given empty, it is refused, not left
 // as it is); at most MaxAssignees accounts and MaxLabels labels, each
-// named once. Every problem is reported at once, in one 422
+// named once; sort_order finite. Every problem is reported at once, in one 422
 // validation_failed; whether the state, each account and each label the
 // change adds, and the parent it sets, may be is the use case's, under the
 // project's lock, and so is the order of the dates the change leaves
@@ -47,6 +49,9 @@ func CheckIssuePatch(p IssuePatch) (IssuePatch, error) {
 		name := strings.TrimSpace(*p.Name)
 		p.Name = &name
 		found = append(found, checkName(name))
+	}
+	if p.SortOrder != nil && (math.IsNaN(*p.SortOrder) || math.IsInf(*p.SortOrder, 0)) {
+		found = append(found, &shared.FieldError{Field: "sort_order", Code: shared.FieldInvalidFormat, Message: "must be a finite number"})
 	}
 	if p.Priority != nil {
 		found = append(found, checkPriority(*p.Priority))
@@ -89,7 +94,7 @@ func diffOf(from, to []uuid.UUID) Diff {
 }
 
 // Changes is what a checked patch changes in a work item (M4 design 3.7,
-// 3.9): the new name, priority, state, dates and parent where each differs
+// 3.9): the new name, priority, state, sort order, dates and parent where each differs
 // from the work item's, nil where it is not given or is the same; and the
 // accounts and the labels it adds and removes (Diff), where the patch
 // gives the new set. An account or a label the work item has and the new
@@ -99,6 +104,7 @@ type Changes struct {
 	Name        *string
 	Priority    *Priority
 	StateID     *uuid.UUID
+	SortOrder   *Changed[float64]
 	StartDate   *DateChange
 	TargetDate  *DateChange
 	Parent      *ParentChange
@@ -117,6 +123,9 @@ func ChangesOf(i Issue, p IssuePatch) Changes {
 	}
 	if p.StateID != nil && *p.StateID != i.StateID {
 		c.StateID = p.StateID
+	}
+	if p.SortOrder != nil && *p.SortOrder != i.SortOrder {
+		c.SortOrder = &Changed[float64]{Old: i.SortOrder, New: *p.SortOrder}
 	}
 	if p.SetStartDate && !same(p.StartDate, i.StartDate) {
 		c.StartDate = &DateChange{To: p.StartDate}
@@ -154,7 +163,7 @@ func Unassignable(asked, added []uuid.UUID, roles map[uuid.UUID]shared.Role) []s
 
 // None reports whether c changes nothing: then the update writes no row.
 func (c Changes) None() bool {
-	return (c.Description == nil || !c.Description.Write) && c.Name == nil && c.Priority == nil && c.StateID == nil && c.StartDate == nil && c.TargetDate == nil && c.Parent == nil &&
+	return (c.Description == nil || !c.Description.Write) && c.Name == nil && c.Priority == nil && c.StateID == nil && c.SortOrder == nil && c.StartDate == nil && c.TargetDate == nil && c.Parent == nil &&
 		len(c.Assignees.Added) == 0 && len(c.Assignees.Removed) == 0 && len(c.Labels.Added) == 0 && len(c.Labels.Removed) == 0
 }
 

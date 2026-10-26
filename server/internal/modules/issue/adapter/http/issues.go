@@ -53,7 +53,7 @@ func (h handler) GetIssueByIdentifier(ctx context.Context, req gen.GetIssueByIde
 // not given, a date or the parent given null given as none; a value given
 // goes to the use case as it came, which checks it.
 func (h handler) UpdateIssue(ctx context.Context, req gen.UpdateIssueRequestObject) (gen.UpdateIssueResponseObject, error) {
-	p := domain.IssuePatch{DescriptionHTML: req.Body.DescriptionHTML, SkipActivity: req.Body.SkipActivity, Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
+	p := domain.IssuePatch{SortOrder: req.Body.SortOrder, DescriptionHTML: req.Body.DescriptionHTML, SkipActivity: req.Body.SkipActivity, Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
 		AssigneeIDs: req.Body.AssigneeIds, LabelIDs: req.Body.LabelIds}
 	p.SetStartDate, p.StartDate = given(req.Body.StartDate)
 	p.SetTargetDate, p.TargetDate = given(req.Body.TargetDate)

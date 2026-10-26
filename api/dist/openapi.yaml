@@ -1392,9 +1392,275 @@ paths:
           description: The label and the labels under it are deleted.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/members/{user_id}/issues:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+      - name: user_id
+        in: path
+        required: true
+        description: The target account UUID, not a workspace membership row UUID.
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listMemberIssues
+      tags:
+        - issue
+      summary: List a workspace member's work item relationships
+      description: 'Workspace admins and members may read; workspace guests are forbidden. A target needs an undeleted workspace membership, active or ended. Only projects the caller actively belongs to that are undeleted and unarchived are included, applying the caller''s OwnOnly restriction. Deleted, archived and triage work items are excluded. project_id only intersects this scope. Relationship filtering uses the path account, never the caller''s identity or the target''s project permissions. CSV alternatives use OR; different filters and repeated dates use AND. Unknown parameters and repeated non-date parameters answer 422. Binding precedes authentication: malformed paths or a missing relation answer 400; repeated declared non-date queries answer 422 even without a token. A group continuation retains filters and returns a flat page.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - workspace.not_found
+        - workspace.member_not_found
+        - forbidden
+      parameters:
+        - name: relation
+          in: query
+          required: true
+          description: The target account's relationship; visibility always follows the caller.
+          schema:
+            type: string
+            enum:
+              - assigned
+              - created
+              - subscribed
+        - name: project_id
+          in: query
+          description: UUID alternatives intersected with the caller's ordinary visible projects.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: state_group
+          in: query
+          description: backlog, unstarted, started, completed or cancelled. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: priority
+          in: query
+          description: urgent, high, medium, low or none. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: label_id
+          in: query
+          description: UUID or none alternatives. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: start_date
+          in: query
+          description: A day, a..b, ..b, a.. or none; repeated conditions use AND.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: target_date
+          in: query
+          description: A day, a..b, ..b, a.. or none; repeated conditions use AND.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: sub_issue
+          in: query
+          description: Whether to include child work items. Only the strings true and false are allowed.
+          schema:
+            type: string
+            default: 'true'
+        - name: group_by
+          in: query
+          schema:
+            $ref: '#/components/schemas/IssueListGroupField'
+        - name: order_by
+          in: query
+          schema:
+            $ref: '#/components/schemas/IssueListOrder'
+        - name: group_key
+          in: query
+          description: The selected group key; checked against its grouping field.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A flat page or grouped pages. Group continuation returns a flat page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueListPage'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/projects/{project_id}/issues:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listIssues
+      tags:
+        - issue
+      summary: List a project's work items
+      description: 'Active work items require issue.read; archived=true selects archived work items and requires issue.archive. An archived project remains readable. Only the explicit project''s grant applies, including the caller''s OwnOnly restriction. Deleted and triage work items are excluded. CSV alternatives use OR, different filters use AND; repeated date conditions also use AND. Unknown parameters, invalid business values and repeated non-date parameters are 422 not_allowed. Parameter binding precedes authentication: malformed paths and non-integer limits are 400, repeated non-date query parameters are 422 even without a token. Group and cell continuation retains the original filters and returns the flat envelope with the selected group or cell total.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - project.not_found
+        - forbidden
+      parameters:
+        - name: state_id
+          in: query
+          description: UUID alternatives. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: state_group
+          in: query
+          description: backlog, unstarted, started, completed or cancelled. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: priority
+          in: query
+          description: urgent, high, medium, low or none. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: label_id
+          in: query
+          description: UUID or none alternatives. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: assignee_id
+          in: query
+          description: UUID, me or none alternatives. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: created_by_id
+          in: query
+          description: UUID or me alternatives. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: mention_id
+          in: query
+          description: UUID or me alternatives. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: subscriber_id
+          in: query
+          description: UUID or me alternatives. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: start_date
+          in: query
+          description: A day, a..b, ..b, a.. or none; repeated conditions use AND.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: target_date
+          in: query
+          description: A day, a..b, ..b, a.. or none; repeated conditions use AND.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: sub_issue
+          in: query
+          description: Whether to include child work items. Only the strings true and false are allowed.
+          schema:
+            type: string
+            default: 'true'
+        - name: archived
+          in: query
+          description: Select only archived work items when true. Only the strings true and false are allowed.
+          schema:
+            type: string
+            default: 'false'
+        - name: group_by
+          in: query
+          schema:
+            $ref: '#/components/schemas/IssueListGroupField'
+        - name: sub_group_by
+          in: query
+          schema:
+            $ref: '#/components/schemas/IssueListGroupField'
+        - name: order_by
+          in: query
+          schema:
+            $ref: '#/components/schemas/IssueListOrder'
+        - name: group_key
+          in: query
+          description: The selected group key; checked against its grouping field.
+          schema:
+            type: string
+        - name: sub_group_key
+          in: query
+          description: The selected group key; checked against its grouping field.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A flat page, grouped pages, or lanes. Absent branches are omitted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueListPage'
+        default:
+          $ref: '#/components/responses/Problem'
     post:
       operationId: createIssue
       tags:
@@ -2066,7 +2332,7 @@ paths:
       tags:
         - project
       summary: Read the caller's display settings in a project
-      description: 'The caller''s own settings in the project, for its active members: the tab bar of its header and its place in his sidebar. While he has none stored they are the defaults, work_items with nothing hidden and 65535, and reading them writes nothing. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.'
+      description: 'The caller''s own settings in the project, for its active members: the tab bar, sidebar place, and issue-list display settings. While he has none stored they are the defaults; reading them writes nothing. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.'
       security:
         - bearer: []
       x-problem-codes:
@@ -2086,7 +2352,7 @@ paths:
       tags:
         - project
       summary: Change the caller's display settings in a project
-      description: For the project's active members, their own settings. The fields given change and the others stay; navigation is replaced whole, and the first change stores the caller's settings, the defaults with the change applied. A tab the web app does not have, work_items hidden, and a tab hidden twice are refused (validation_failed), before the project is looked at. An archived project's settings change as any other's. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
+      description: For the project's active members, their own settings. The fields given change and the others stay; each top-level field is replaced whole, and the first change stores the caller's settings, the defaults with the change applied. A tab the web app does not have, work_items hidden, and a tab hidden twice are refused (validation_failed), before the project is looked at. Invalid saved filter or display words are also refused with indexed field paths (validation_failed). An empty filters object clears filtering, and empty arrays are retained. An archived project's settings change as any other's. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
       security:
         - bearer: []
       x-problem-codes:
@@ -3484,6 +3750,40 @@ components:
         sort_order:
           description: The label's place among the project's labels, the lowest first.
           type: number
+    IssueListGroupField:
+      description: Project lists exclude project_id; member lists use their narrower page vocabulary.
+      type: string
+      enum:
+        - state_id
+        - state_group
+        - priority
+        - label_id
+        - assignee_id
+        - created_by_id
+        - target_date
+        - project_id
+    IssueListOrder:
+      type: string
+      enum:
+        - created_at
+        - -created_at
+        - updated_at
+        - -updated_at
+        - start_date
+        - -start_date
+        - target_date
+        - -target_date
+        - priority
+        - -priority
+        - state_name
+        - -state_name
+        - label_name
+        - -label_name
+        - assignee_name
+        - -assignee_name
+        - sub_issues_count
+        - -sub_issues_count
+        - sort_order
     IssuePriority:
       description: A work item's priority, from the most to the least urgent.
       type: string
@@ -3493,6 +3793,196 @@ components:
         - medium
         - low
         - none
+    Issue:
+      description: A work item of a project, as a list shows it.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workspace_id
+        - project_id
+        - sequence_id
+        - name
+        - state_id
+        - priority
+        - start_date
+        - target_date
+        - parent_id
+        - sort_order
+        - completed_at
+        - archived_at
+        - assignee_ids
+        - label_ids
+        - sub_issues_count
+        - created_by_id
+        - updated_by_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        sequence_id:
+          description: Its number in its project, from 1; with the project's identifier, as in WEB-12.
+          type: integer
+        name:
+          type: string
+        state_id:
+          type: string
+          format: uuid
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        start_date:
+          description: The day it starts; null for none.
+          type:
+            - string
+            - 'null'
+          format: date
+        target_date:
+          description: The day it is due, not before its start date; null for none.
+          type:
+            - string
+            - 'null'
+          format: date
+        parent_id:
+          description: The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sort_order:
+          description: Its place among its state's work items, the lowest first.
+          type: number
+        completed_at:
+          description: When it was put in a state of the completed group; null in any other state.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        archived_at:
+          description: When it was archived; null when it is not.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        assignee_ids:
+          description: The accounts it is assigned to, by id; one who has left the project since is still one.
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          description: Its labels, by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        sub_issues_count:
+          description: 'The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own.'
+          type: integer
+        created_by_id:
+          description: The account that created it; null for none.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        updated_by_id:
+          description: The account that changed it last; null for none.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    IssueListSubgroup:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - total
+        - data
+        - next_cursor
+      properties:
+        key:
+          type: string
+        total:
+          type: integer
+          format: int64
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Issue'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+    IssueListGroup:
+      description: A group page has data and next_cursor; a lane group has subgroups instead.
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - total
+      properties:
+        key:
+          type: string
+        total:
+          type: integer
+          format: int64
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Issue'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+        subgroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueListSubgroup'
+    IssueListTotal:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - total
+      properties:
+        key:
+          type: string
+        total:
+          type: integer
+          format: int64
+    IssueListPage:
+      description: Flat pages and selected group/cell pages have total, data and next_cursor. Grouped pages have total and groups. Lanes have total, groups and subgroup_totals. Other branch fields are omitted. Arrays are never null.
+      type: object
+      additionalProperties: false
+      required:
+        - total
+      properties:
+        total:
+          type: integer
+          format: int64
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Issue'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueListGroup'
+        subgroup_totals:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueListTotal'
     IssueCreate:
       type: object
       additionalProperties: false
@@ -3655,6 +4145,9 @@ components:
       type: object
       additionalProperties: false
       properties:
+        sort_order:
+          description: Finite sort order; zero allowed, omitted keeps the stored value. Cannot accompany skip_activity.
+          type: number
         skip_activity:
           description: Only with description_html alone; preserves audit when content identity is unchanged.
           type: boolean
@@ -3700,117 +4193,6 @@ components:
             - string
             - 'null'
           format: uuid
-    Issue:
-      description: A work item of a project, as a list shows it.
-      type: object
-      additionalProperties: false
-      required:
-        - id
-        - workspace_id
-        - project_id
-        - sequence_id
-        - name
-        - state_id
-        - priority
-        - start_date
-        - target_date
-        - parent_id
-        - sort_order
-        - completed_at
-        - archived_at
-        - assignee_ids
-        - label_ids
-        - sub_issues_count
-        - created_by_id
-        - updated_by_id
-        - created_at
-        - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        workspace_id:
-          type: string
-          format: uuid
-        project_id:
-          type: string
-          format: uuid
-        sequence_id:
-          description: Its number in its project, from 1; with the project's identifier, as in WEB-12.
-          type: integer
-        name:
-          type: string
-        state_id:
-          type: string
-          format: uuid
-        priority:
-          $ref: '#/components/schemas/IssuePriority'
-        start_date:
-          description: The day it starts; null for none.
-          type:
-            - string
-            - 'null'
-          format: date
-        target_date:
-          description: The day it is due, not before its start date; null for none.
-          type:
-            - string
-            - 'null'
-          format: date
-        parent_id:
-          description: The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
-          type:
-            - string
-            - 'null'
-          format: uuid
-        sort_order:
-          description: Its place among its state's work items, the lowest first.
-          type: number
-        completed_at:
-          description: When it was put in a state of the completed group; null in any other state.
-          type:
-            - string
-            - 'null'
-          format: date-time
-        archived_at:
-          description: When it was archived; null when it is not.
-          type:
-            - string
-            - 'null'
-          format: date-time
-        assignee_ids:
-          description: The accounts it is assigned to, by id; one who has left the project since is still one.
-          type: array
-          items:
-            type: string
-            format: uuid
-        label_ids:
-          description: Its labels, by id.
-          type: array
-          items:
-            type: string
-            format: uuid
-        sub_issues_count:
-          description: 'The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own.'
-          type: integer
-        created_by_id:
-          description: The account that created it; null for none.
-          type:
-            - string
-            - 'null'
-          format: uuid
-        updated_by_id:
-          description: The account that changed it last; null for none.
-          type:
-            - string
-            - 'null'
-          format: uuid
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
     IssueCollection:
       description: Work items, all of them, without pages.
       type: object
@@ -4176,6 +4558,130 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProjectTab'
+    ProjectIssueFilters:
+      description: Saved filter atoms; an empty array means no filtering for its key.
+      type: object
+      additionalProperties: false
+      properties:
+        state_id:
+          type: array
+          items:
+            type: string
+        state_group:
+          type: array
+          items:
+            type: string
+        priority:
+          type: array
+          items:
+            type: string
+        label_id:
+          type: array
+          items:
+            type: string
+        assignee_id:
+          type: array
+          items:
+            type: string
+        created_by_id:
+          type: array
+          items:
+            type: string
+        mention_id:
+          type: array
+          items:
+            type: string
+        subscriber_id:
+          type: array
+          items:
+            type: string
+        start_date:
+          type: array
+          items:
+            type: string
+        target_date:
+          type: array
+          items:
+            type: string
+    ProjectListCalendar:
+      type: object
+      additionalProperties: false
+      required:
+        - layout
+        - show_weekends
+      properties:
+        layout:
+          type: string
+        show_weekends:
+          type: boolean
+    ProjectDisplayFilters:
+      type: object
+      additionalProperties: false
+      required:
+        - layout
+        - group_by
+        - sub_group_by
+        - order_by
+        - sub_issue
+        - show_empty_groups
+        - calendar
+      properties:
+        layout:
+          type: string
+        group_by:
+          type:
+            - string
+            - 'null'
+        sub_group_by:
+          type:
+            - string
+            - 'null'
+        order_by:
+          type: string
+        sub_issue:
+          type: boolean
+        show_empty_groups:
+          type: boolean
+        calendar:
+          $ref: '#/components/schemas/ProjectListCalendar'
+    ProjectDisplayProperties:
+      type: object
+      additionalProperties: false
+      required:
+        - assignee
+        - start_date
+        - due_date
+        - labels
+        - key
+        - priority
+        - state
+        - sub_issue_count
+        - link
+        - created_on
+        - updated_on
+      properties:
+        assignee:
+          type: boolean
+        start_date:
+          type: boolean
+        due_date:
+          type: boolean
+        labels:
+          type: boolean
+        key:
+          type: boolean
+        priority:
+          type: boolean
+        state:
+          type: boolean
+        sub_issue_count:
+          type: boolean
+        link:
+          type: boolean
+        created_on:
+          type: boolean
+        updated_on:
+          type: boolean
     ProjectPreferences:
       description: The caller's display settings in a project.
       type: object
@@ -4183,14 +4689,23 @@ components:
       required:
         - navigation
         - sort_order
+        - filters
+        - display_filters
+        - display_properties
       properties:
         navigation:
           $ref: '#/components/schemas/ProjectNavigation'
         sort_order:
           description: The project's place in the caller's sidebar, lowest first.
           type: number
+        filters:
+          $ref: '#/components/schemas/ProjectIssueFilters'
+        display_filters:
+          $ref: '#/components/schemas/ProjectDisplayFilters'
+        display_properties:
+          $ref: '#/components/schemas/ProjectDisplayProperties'
     ProjectPreferencesUpdate:
-      description: Changes the fields it names; a field left out keeps its value, and navigation replaces the tab bar whole.
+      description: Each named top-level field replaces that field whole; omitted fields stay unchanged.
       type: object
       additionalProperties: false
       properties:
@@ -4199,6 +4714,12 @@ components:
         sort_order:
           description: The project's place in the caller's sidebar, lowest first.
           type: number
+        filters:
+          $ref: '#/components/schemas/ProjectIssueFilters'
+        display_filters:
+          $ref: '#/components/schemas/ProjectDisplayFilters'
+        display_properties:
+          $ref: '#/components/schemas/ProjectDisplayProperties'
   responses:
     Problem:
       description: Error (RFC 9457 problem details).

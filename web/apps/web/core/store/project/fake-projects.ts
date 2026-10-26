@@ -64,7 +64,34 @@ export function projectOf(identifier: string, workspaceId: string, fields: Parti
  * sidebar, unless fields say otherwise.
  */
 export function preferencesOf(fields: Partial<ProjectPreferences> = {}): ProjectPreferences {
-  return { navigation: { default_tab: "work_items", hide_in_more_menu: [] }, sort_order: 65535, ...fields };
+  return {
+    filters: {},
+    display_filters: {
+      layout: "list",
+      group_by: null,
+      sub_group_by: null,
+      order_by: "-created_at",
+      sub_issue: true,
+      show_empty_groups: true,
+      calendar: { layout: "month", show_weekends: false },
+    },
+    display_properties: {
+      assignee: true,
+      start_date: true,
+      due_date: true,
+      labels: true,
+      key: true,
+      priority: true,
+      state: true,
+      sub_issue_count: true,
+      link: true,
+      created_on: true,
+      updated_on: true,
+    },
+    navigation: { default_tab: "work_items", hide_in_more_menu: [] },
+    sort_order: 65535,
+    ...fields,
+  };
 }
 
 /** A state of the project as nerve gives it: the name names it in its project; not its default unless fields say so. */

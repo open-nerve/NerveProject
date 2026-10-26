@@ -229,7 +229,7 @@ P1b 的 `TestAWorkItemGoneWhileItsChangeWaitsIsNotFound`（`issue_interleaving_c
 |---|---|
 | P3 | 删除工作项连带子树（3.6、3.9）：`DeleteIssue` 的步骤加子树和关联行，`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt` 和 `expectIssueDeleted` 都去掉 `subItems`（`issues.parent_id`）的豁免（第 3 节第 14 条的裁定：有约束力的交接），I17 用 `expectIssueDeleted`；已归档的父工作项、关联的两端 409 `issue.archived`，已归档的不能成为父工作项、关联的对方（3.8）；删除工作项与关联的交错（11、13）重推第 3 节第 7 条的死锁论证（关联行按 `id` 升序，约定五的例外） |
 | P4 | 已归档的工作项上评论 409 `issue.archived`；访客规则用到评论、表情、描述版本的读写（挂在工作项下面的一切） |
-| P5 | 列表按访客规则过滤（`VisibleProjects` 带 `guest_view_all_features`，3.4）；`?archived=true` 的列表（规则 `issue.archive`）；`Issue` 列表行的 `start_date`、`target_date`；端到端里访客取别人的工作项的 404（I20 的接口版本，设计 12 节 P2 的第 13 个任务） |
+| P5 | 列表按访客规则过滤（`VisibleProjects` 带 `guest_view_all_features`，3.4）；`?archived=true` 的列表（规则 `issue.archive`）；`Issue` 列表行的 `start_date`、`target_date`；端到端里访客取别人的工作项的 404（I20 的接口版本，设计 12 节 P2 的第 13 个任务）；**P5接收结果（2026-10-26）**：T3/T9/T10/T12及T14已验证日期/none/重复AND、issue.read与issue.archive分支、OwnOnly/隐藏父计数和个人主页；T15 I15/I19/I20补归档恢复、三关系及隐藏404四格接口故事。搜索P8与页面P12–15仍开放，实际证据见 [P5 review §2](../reviews/P5-issue-list-review.md#2-验收标准逐条核对) |
 | P6 | 删除、归档、恢复、修改发布事件（`issue.deleted`、`issue.archived`、`issue.unarchived`、`issue.updated`，3.19）；自动归档（第 15 行）；`ProjectGate.Lock` 加 `archive_in` |
 | P8 | `searchIssues` 照用 `issue.search` 和 `foldIdentifier`（3.18） |
 | P9 | 账户物理删除之后 `created_by_id` 为空的工作项：访客规则隐藏它，`AllowCreator` 不认任何人（第 3 节第 2 条）；P2 只在单元一层核对这两半（假存储的 `creatorOf`，变异 T2.3、T2.9，附录 A.3），P9 加组合一层的用例 |

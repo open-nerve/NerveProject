@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"context"
 	"reflect"
 	"slices"
 	"testing"
@@ -27,6 +28,7 @@ type listing struct {
 	shelved, mine, hidden, boxed, unseen domain.Issue
 	lab, attic                           uuid.UUID
 	relations                            []domain.Relation
+	projects                             *relationProjects
 }
 
 // newListing is listIssueRelations over listing's world, web's work item
@@ -43,8 +45,6 @@ func newListing() (*app.ListIssueRelations, *world, *fakeRelations, uuid.UUID, l
 	for _, o := range []domain.Issue{l.shelved, l.mine, l.hidden, l.boxed, l.unseen} {
 		w.issues.others[o.ID] = o
 	}
-	w.project.locked.Archived = true
-	w.project.across[l.attic] = app.LockedProject{WorkspaceID: acme, Archived: true, Identifier: "ATTIC"}
 	made := func(n int, p, from, to uuid.UUID, t domain.RelationType) domain.Relation {
 		return domain.Relation{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: p, IssueID: from, RelatedID: to, Type: t, CreatedByID: &bob,
 			CreatedAt: earlier.Add(time.Duration(n) * time.Minute)}
@@ -54,35 +54,31 @@ func newListing() (*app.ListIssueRelations, *world, *fakeRelations, uuid.UUID, l
 		made(4, l.lab, l.hidden.ID, id, domain.RelatesTo), made(5, l.attic, l.boxed.ID, id, domain.Duplicate),
 		made(6, web, id, l.unseen.ID, domain.Duplicate)}
 	rel.relations = l.relations
-	// The decisions: the work item's, then near's project, far's and lab's,
-	// as the others are read, in id order, each project once: lab's for
-	// hidden, not again for unseen.
-	w.auth.answers, w.auth.grants = []error{3: shared.ErrNotVisible}, []shared.Grant{2: ownOnly}
+	l.projects = &relationProjects{log: w.log, projects: []app.VisibleProject{{ID: ops, Role: shared.RoleGuest, OwnOnly: true}}}
+	w.auth.answers, w.auth.grants = nil, nil
 	w.issues.counts = map[uuid.UUID]app.SubIssueCount{r.near.ID: {All: 2, Own: 1}, l.mine.ID: {All: 4, Own: 3}}
-	return app.NewListIssueRelations(w.locks, rel, w.project), w, rel, id, l
+	return app.NewListIssueRelations(app.ListIssueRelationsDeps{Locks: w.locks, Relations: rel, Projects: l.projects, ReadTx: fakeTx{log: w.log}}), w, rel, id, l
 }
 
-// listed are the calls of alice's list of the work item id's relations,
-// outside any transaction and without a lock (M4 design 3.4, 3.8, 3.10):
-// the work item read and issue.read decided on it, as getIssue does; its
-// relations; their other work items, in the relations' order; which of
-// the others' projects but web, the work item's own, are archived, in id
-// order: ops, lab and attic, of which attic is; issue.read decided on the
-// others' projects, each once, in the others' id order, shelved, archived,
-// and boxed, of attic, left out: web, ops, lab, refused for hidden and so
-// not decided again for unseen; then the others she sees counted.
+// Ordinary and historical directories deliberately answer differently.
+type relationProjects struct {
+	log      *callLog
+	projects []app.VisibleProject
+}
+
+func (p *relationProjects) Visible(ctx context.Context, wid, actor uuid.UUID) ([]app.VisibleProject, error) {
+	return p.projects, p.log.add(ctx, "Visible", wid, actor)
+}
+func (p *relationProjects) Historical(ctx context.Context, wid, actor uuid.UUID) ([]app.VisibleProject, error) {
+	return nil, p.log.add(ctx, "Historical", wid, actor)
+}
+
+// The source authorization, ordinary scope, target rows and seen projection all
+// share the independent read transaction. Only the source is authorized directly.
 func listed(id uuid.UUID, l listing) []string {
-	calls := []string{line("GetIssue", id), line("Authorize", alice, domain.ActionRead, acme, web), line("Relations", id),
+	return []string{"Begin", line("GetIssue", id), line("Authorize", alice, domain.ActionRead, acme, web), line("Relations", id),
 		line("GetIssues", []uuid.UUID{l.far.ID, l.mine.ID, l.shelved.ID, l.near.ID, l.hidden.ID, l.boxed.ID, l.unseen.ID}),
-		line("Archived", anys(sorted([]uuid.UUID{ops, l.lab, l.attic}))...)}
-	for _, p := range []uuid.UUID{web, ops, l.lab} {
-		calls = append(calls, line("Authorize", alice, domain.ActionRead, acme, p))
-	}
-	calls = append(calls, counted(l.near.ID, l.mine.ID))
-	for n := range calls {
-		calls[n] += " outside tx"
-	}
-	return calls
+		line("Visible", acme, alice), counted(l.near.ID, l.mine.ID)}
 }
 
 // A list of relations (M4 design 3.4, 3.8, 3.10), with listed's calls,
@@ -131,28 +127,26 @@ func TestListIssueRelationsRefusals(t *testing.T) {
 		want  error
 		calls int // of listed's
 	}{
-		{"no work item", func(*world, *fakeRelations, uuid.UUID) uuid.UUID { return uuid.NewV7() }, domain.ErrIssueNotFound, 1},
+		{"no work item", func(*world, *fakeRelations, uuid.UUID) uuid.UUID { return uuid.NewV7() }, domain.ErrIssueNotFound, 2},
 		{"a project not seen", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID {
 			w.auth.answers = []error{shared.ErrNotVisible}
 			return id
-		}, domain.ErrIssueNotFound, 2},
+		}, domain.ErrIssueNotFound, 3},
 		{"another's, to a guest who sees only his own", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID {
 			w.auth.grants = []shared.Grant{ownOnly}
 			return id
-		}, domain.ErrIssueNotFound, 2},
+		}, domain.ErrIssueNotFound, 3},
 		{"a role not allowed", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID {
 			w.auth.answers = []error{shared.Forbidden()}
 			return id
-		}, shared.Forbidden(), 2},
-		{"the relations' read fails", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID { w.log.fail = "Relations"; return id }, errDisk, 3},
-		{"the others' read fails", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID { w.log.fail = "GetIssues"; return id }, errDisk, 4},
-		{"the projects' read fails", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID { w.log.fail = "Archived"; return id }, errDisk, 5},
-		{"a decision on another project fails", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID {
-			w.log.fail = line("Authorize", alice, domain.ActionRead, acme, ops)
-			return id
-		}, errDisk, 7},
-		{"the count fails", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID { w.log.fail = "SubIssueCounts"; return id }, errDisk, 9},
-		{"no relations", func(_ *world, rel *fakeRelations, id uuid.UUID) uuid.UUID { rel.relations = nil; return id }, nil, 3},
+		}, shared.Forbidden(), 3},
+		{"the source read fails", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID { w.log.fail = "GetIssue"; return id }, errDisk, 2},
+		{"the source decision fails", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID { w.log.fail = "Authorize"; return id }, errDisk, 3},
+		{"the relations' read fails", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID { w.log.fail = "Relations"; return id }, errDisk, 4},
+		{"the others' read fails", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID { w.log.fail = "GetIssues"; return id }, errDisk, 5},
+		{"the projects' read fails", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID { w.log.fail = "Visible"; return id }, errDisk, 6},
+		{"the count fails", func(w *world, _ *fakeRelations, id uuid.UUID) uuid.UUID { w.log.fail = "SubIssueCounts"; return id }, errDisk, 7},
+		{"no relations", func(_ *world, rel *fakeRelations, id uuid.UUID) uuid.UUID { rel.relations = nil; return id }, nil, 4},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, w, rel, id, l := newListing()
@@ -162,10 +156,72 @@ func TestListIssueRelationsRefusals(t *testing.T) {
 				t.Errorf("Execute() = %+v, %v; want none and %v", got, err, tt.want)
 			}
 			calls := listed(id, l)[:tt.calls]
-			calls[0] = line("GetIssue", asked, "outside tx")
+			calls[1] = line("GetIssue", asked)
 			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
 		})
 	}
+}
+
+func TestRelationListUsesVisibleProjects(t *testing.T) {
+	for _, restrictedSource := range []bool{false, true} {
+		t.Run(line("source OwnOnly", restrictedSource), func(t *testing.T) {
+			u, w, _, id, l := newListing()
+			w.issues.issue.By = alice
+			// A conflicting ordinary entry must never replace the explicit grant.
+			l.projects.projects = append(l.projects.projects, app.VisibleProject{ID: web, Role: shared.RoleGuest, OwnOnly: !restrictedSource})
+			if restrictedSource {
+				w.auth.grants = []shared.Grant{ownOnly}
+			}
+			mine := l.mine
+			mine.ParentID = &l.far.ID // someone else's parent in the OwnOnly project
+			w.issues.others[mine.ID] = mine
+			unknown := l.unseen
+			unknown.ProjectID, unknown.CreatedByID = ops, nil
+			w.issues.others[unknown.ID] = unknown
+			got, err := u.Execute(as(alice), id)
+			wantLen := 2
+			if restrictedSource {
+				wantLen = 1 // Near is Bob's; Mine remains in ordinary Ops.
+			}
+			if err != nil || len(got) != wantLen || got[0].Issue.ID != mine.ID || got[0].Issue.ParentID != nil || got[0].Issue.SubIssuesCount != 3 {
+				t.Fatal(got, err)
+			}
+			if !restrictedSource && (got[1].Issue.ID != l.near.ID || got[1].Issue.SubIssuesCount != 2) {
+				t.Fatal("ordinary directory widened/narrowed the source grant", got)
+			}
+		})
+	}
+	t.Run("parent error", func(t *testing.T) {
+		u, w, _, id, l := newListing()
+		mine := l.mine
+		mine.ParentID = &l.far.ID
+		w.issues.others[mine.ID] = mine
+		w.log.fail = line("GetIssues", []uuid.UUID{l.far.ID})
+		got, err := u.Execute(as(alice), id)
+		if err != errDisk || got != nil || w.log.calls[len(w.log.calls)-1] != w.log.fail {
+			t.Fatal("parent read error lost", got, err, w.log.calls)
+		}
+	})
+	t.Run("no actor or snapshot failure", func(t *testing.T) {
+		u, w, rel, id, l := newListing()
+		got, err := u.Execute(context.Background(), id)
+		if !reflect.DeepEqual(err, shared.Unauthenticated()) || got != nil || len(w.log.calls) != 0 {
+			t.Fatal(got, err, w.log.calls)
+		}
+		u = app.NewListIssueRelations(app.ListIssueRelationsDeps{Locks: w.locks, Relations: rel, Projects: l.projects, ReadTx: activityReadFailureTx{}})
+		got, err = u.Execute(as(alice), id)
+		if err != errDisk || got != nil || len(w.log.calls) != 0 {
+			t.Fatal(got, err, w.log.calls)
+		}
+	})
+	t.Run("empty ordinary directory retains only source", func(t *testing.T) {
+		u, _, _, id, l := newListing()
+		l.projects.projects = nil
+		got, err := u.Execute(as(alice), id)
+		if err != nil || len(got) != 1 || got[0].Issue.ID != l.near.ID {
+			t.Fatal(got, err)
+		}
+	})
 }

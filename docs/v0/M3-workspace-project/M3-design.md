@@ -538,8 +538,12 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
 ### 3.18 个人显示设置的范围
 - **工作区**（`workspace_user_properties`）：`navigation_control_preference`（手风琴或标签页）、`navigation_project_limit`，由 `ProjectNavigationDialog` 读写（M1-P2 交接）。
 - **项目**（`project_user_properties`）：`preferences.navigation` 的 `default_tab` 和 `hide_in_more_menu`（`core/components/navigation/use-tab-preferences.ts`），以及侧边栏里项目的顺序 `sort_order`（`core/store/project/project.store.ts:440`）。Plane `preferences` 里的 `pages` 一项随文档页砍掉。
-- **不建工作项列表的筛选和显示列**（`filters`、`display_filters`、`display_properties`、`rich_filters`）：差异清单二·按表把它们的列名和格式交给 M3/M4 确定，它们的使用者是 M4 的列表引擎，由 M4 按自己的格式加列，迁移归这两张表的模块（M2 设计 3.14）。
-  - M4 的工作项筛选 store（`core/store/issue/project/filter.store.ts:127,174,236,256`）仍调 Plane 的 `/projects/{id}/user-properties/`：`ProjectService` 中这两个旧方法留给它，M4 替换（13.2）。
+- **项目工作项列表的三类设置已在 M4/P5 加回**：`00026_project_project_user_properties_issue_display.sql` 为 `project_user_properties` 加 `filters`、`display_filters`、`display_properties` 三列 `jsonb NOT NULL`（11→14列），不建 `rich_filters`。`workspace_user_properties` 仍只有本节原工作区导航范围，不加这些列。
+  - `filters` 默认 `{}`，十个可选 `string[]` 键为 state_id/state_group/priority/label_id/assignee_id/created_by_id/mention_id/subscriber_id/start_date/target_date；不含 archived/sub_issue/project_id，每元素是单个筛选原子或日期条件，不能再塞 CSV 多项。
+  - `display_filters` 固定七键，默认 `{"layout":"list","group_by":null,"sub_group_by":null,"order_by":"-created_at","sub_issue":true,"show_empty_groups":true,"calendar":{"layout":"month","show_weekends":false}}`；layout 为 list/kanban/calendar/spreadsheet，calendar.layout 为 month/week，分组和排序复用项目列表词汇。
+  - `display_properties` 固定 assignee/start_date/due_date/labels/key/priority/state/sub_issue_count/link/created_on/updated_on 十一 boolean，默认全 true；link 只是偏好，不提前提供 `Issue.link_count`。
+  - DB CHECK 只校对象/键集合/类型并用 CASE 保护，词值经 project/app 声明、issue.Provide 提供的纯 `IssueListSettings` 校验，bootstrap 转换各模块 app 小值。既有 GET/PATCH `/api/v0/me/projects/{project_id}/preferences` 使用闭合 typed DTO；结构/null/未知字段400，合法结构的非法词422。GET缺行给默认不写；PATCH逐顶层字段整体替换、{}清filters、省略保留，五个独立set避免 navigation/三设置/顺序互相覆盖；成员退出恢复保留完整偏好与审计，归档读写沿原规则。证据见 [P5 review T13a/b、T14/T15](../M4-issue-core/reviews/P5-issue-list-review.md)。
+  - 前端工作项筛选 store 仍调用 Plane `/projects/{id}/user-properties/`；旧 ProjectService 方法、workItemFilters 与相关 `until:M4/P11` 例外交 P10b 迁移，P11详情数据与后续页面仍开放，服务端三列交付不代表已迁移前端。
 - **行的生命周期**：
   - 项目的显示设置随项目成员关系一起建（Plane `ProjectMember` 的创建路径）。`sort_order`：建项目、添加成员时是他在这个工作区已有的最小值减 10000，没有时 65535（`views/project/member.py:96-118`）；加入项目时是模型的默认值 65535（Plane 的 `join` 用 `bulk_create`，`views/project/invite.py:175-185`）。都照搬。
   - 工作区的显示设置在第一次修改时建：`PATCH` 经部分唯一索引做 `INSERT … ON CONFLICT (workspace_id, user_id) WHERE deleted_at IS NULL DO UPDATE`（spike：两次写入只有一行，值是后一次的；sqlc 能生成）。没有这一行时 `GET` 返回默认值，不写库：总体设计 3.2 规定 GET 没有副作用，Plane 在 GET 里 `get_or_create`（`views/workspace/user.py:269-277`），登记差异。

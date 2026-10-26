@@ -213,6 +213,17 @@ export async function changeProjectPreferences(api: Api, token: string, id: stri
       };
 }
 
+/** Reads the caller's complete saved project settings. */
+export async function readProjectPreferences(api: Api, token: string, projectId: string): Promise<ProjectPreferences> {
+  const { data, error, response } = await api.GET("/api/v0/me/projects/{project_id}/preferences", {
+    params: { path: { project_id: projectId } },
+    headers: bearer(token),
+  });
+  expect(response.status, JSON.stringify(error)).toBe(200);
+  if (!data) throw new Error("preferences answered without settings");
+  return data;
+}
+
 /** Gives the account of memberId the role in the workspace of slug, with the bearer token given, an admin's. */
 export async function changeRole(
   api: Api,

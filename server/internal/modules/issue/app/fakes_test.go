@@ -287,6 +287,7 @@ func (f *fakeIssues) UpdateIssue(ctx context.Context, r app.IssueFields) error {
 	if f.issue == nil || r.ID != f.issue.ID {
 		return fmt.Errorf("UpdateIssue: %+v is not the work item %+v", r, f.issue)
 	}
+	f.issue.SortOrder = r.SortOrder
 	f.issue.DescriptionHTML, f.issue.DescriptionStripped = r.DescriptionHTML, r.DescriptionStripped
 	f.issue.Name, f.issue.StateID, f.issue.Priority, f.issue.CompletedAt = r.Name, r.StateID, r.Priority, r.CompletedAt
 	f.issue.StartDate, f.issue.TargetDate, f.issue.ParentID = r.StartDate, r.TargetDate, r.ParentID

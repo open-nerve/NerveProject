@@ -153,10 +153,6 @@ func (p issueProjects) Identifiers(ctx context.Context, workspaceID uuid.UUID) (
 	return out, nil
 }
 
-func (p issueProjects) Archived(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
-	return p.projects.ArchivedIssueProjects(ctx, ids)
-}
-
 // issueWorkspaces is workspace's WorkspaceDirectory as issue's: the same
 // read without a lock, the workspace's id alone.
 type issueWorkspaces struct {
@@ -166,6 +162,15 @@ type issueWorkspaces struct {
 func (d issueWorkspaces) WorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, bool, error) {
 	w, found, err := d.directory.WorkspaceBySlug(ctx, slug)
 	return w.ID, found, err
+}
+
+// issueMembers exposes workspace's lock-free historical membership lookup.
+type issueMembers struct {
+	members workspace.WorkspaceMemberDirectory
+}
+
+func (d issueMembers) MemberExists(ctx context.Context, wid, uid uuid.UUID) (bool, error) {
+	return d.members.WorkspaceMemberExists(ctx, wid, uid)
 }
 
 // issueProfiles is identity's PublicProfiles as issue's: each account's
@@ -208,4 +213,52 @@ func (p issueProjects) Historical(ctx context.Context, workspaceID, actorID uuid
 		out[i] = issue.VisibleProject(project)
 	}
 	return out, nil
+}
+
+func (p issueProjects) Visible(ctx context.Context, workspaceID, actorID uuid.UUID) ([]issue.VisibleProject, error) {
+	projects, err := p.projects.VisibleIssueProjects(ctx, workspaceID, actorID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.VisibleProject, len(projects))
+	for i, project := range projects {
+		out[i] = issue.VisibleProject(project)
+	}
+	return out, nil
+}
+
+func (p issueProjects) ListStates(ctx context.Context, projectIDs []uuid.UUID) ([]issue.StateRef, error) {
+	states, err := p.projects.IssueListStates(ctx, projectIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.StateRef, len(states))
+	for i, s := range states {
+		out[i] = issue.StateRef{ID: s.ID, Name: s.Name, Group: issue.StateGroup(s.Group), Default: s.Default}
+	}
+	return out, nil
+}
+
+func (p issueProjects) ListLabels(ctx context.Context, projectIDs []uuid.UUID) ([]issue.LabelRef, error) {
+	labels, err := p.projects.IssueListLabels(ctx, projectIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.LabelRef, len(labels))
+	for i, label := range labels {
+		out[i] = issue.LabelRef(label)
+	}
+	return out, nil
+}
+
+// projectListSettings converts the two modules' app values for the pure validator.
+type projectListSettings struct{ settings issue.ListSettings }
+
+func (p projectListSettings) Validate(filters map[string][]string, display *project.ListDisplayFilters, properties map[string]bool) []shared.FieldError {
+	var d *issue.ListDisplayFilters
+	if display != nil {
+		d = &issue.ListDisplayFilters{Layout: display.Layout, GroupBy: display.GroupBy, SubGroupBy: display.SubGroupBy, OrderBy: display.OrderBy,
+			SubIssue: display.SubIssue, ShowEmptyGroups: display.ShowEmptyGroups, Calendar: issue.ListCalendar{Layout: display.Calendar.Layout, ShowWeekends: display.Calendar.ShowWeekends}}
+	}
+	return p.settings.Validate(filters, d, properties)
 }

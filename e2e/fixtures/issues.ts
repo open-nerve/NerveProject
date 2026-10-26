@@ -1,4 +1,4 @@
-import type { components } from "@nerve/api-client";
+import type { components, operations } from "@nerve/api-client";
 import { expect } from "@playwright/test";
 
 import { answer, type Api } from "./api";
@@ -9,8 +9,61 @@ import { bearer } from "./auth";
 export type Issue = components["schemas"]["IssueDetail"];
 export type IssueCreate = components["schemas"]["IssueCreate"];
 export type IssueUpdate = components["schemas"]["IssueUpdate"];
+export type IssueQuery = NonNullable<operations["listIssues"]["parameters"]["query"]>;
+export type MemberIssueQuery = operations["listMemberIssues"]["parameters"]["query"];
+export type IssuePage = components["schemas"]["IssueListPage"];
 type IssueRelation = components["schemas"]["IssueRelation"];
 type IssueRelationsCreate = components["schemas"]["IssueRelationsCreate"];
+
+/** The real project's list response, retaining refusal fields for negative stories. */
+export async function issuesListed(api: Api, token: string, projectId: string, query: IssueQuery = {}) {
+  const { data, error, response } = await api.GET("/api/v0/projects/{project_id}/issues", {
+    params: { path: { project_id: projectId }, query },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, page: data } : answer(response, error);
+}
+
+/** A successful project list; branch assertions belong to its caller. */
+export async function listIssues(
+  api: Api,
+  token: string,
+  projectId: string,
+  query: IssueQuery = {}
+): Promise<IssuePage> {
+  const result = await issuesListed(api, token, projectId, query);
+  expect(result.status, JSON.stringify(result)).toBe(200);
+  if (!("page" in result)) throw new Error("listIssues answered without a page");
+  return result.page;
+}
+
+/** The target account's issues, always scoped by the caller. */
+export async function memberIssuesListed(
+  api: Api,
+  token: string,
+  slug: string,
+  userId: string,
+  query: MemberIssueQuery
+) {
+  const { data, error, response } = await api.GET("/api/v0/workspaces/{slug}/members/{user_id}/issues", {
+    params: { path: { slug, user_id: userId }, query },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, page: data } : answer(response, error);
+}
+
+export async function listMemberIssues(
+  api: Api,
+  token: string,
+  slug: string,
+  userId: string,
+  query: MemberIssueQuery
+): Promise<IssuePage> {
+  const result = await memberIssuesListed(api, token, slug, userId, query);
+  expect(result.status, JSON.stringify(result)).toBe(200);
+  if (!("page" in result)) throw new Error("listMemberIssues answered without a page");
+  return result.page;
+}
 
 /**
  * The answer of POST /api/v0/projects/{project_id}/issues by the caller of token: its status, the work item, or the

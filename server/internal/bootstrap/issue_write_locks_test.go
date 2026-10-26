@@ -62,7 +62,7 @@ var issueWrites = []issueWrite{
 	{op: "updateIssue", method: http.MethodPatch, path: "/api/v0/issues/{issue_id}",
 		target: func(t *testing.T, w issueWorld) string { return "/api/v0/issues/" + w.newWorkItem(t).String() },
 		body: func(_ *testing.T, w issueWorld) string {
-			return `{"description_html":"<p>Under lock</p>","state_id":"` + w.done.String() + `"}`
+			return `{"sort_order":0,"description_html":"<p>Under lock</p>","state_id":"` + w.done.String() + `"}`
 		}, want: http.StatusOK,
 		waits: "states", mode: "ACCESS EXCLUSIVE"},
 	// A work item the send deletes: it reads nothing under the lock that
@@ -222,6 +222,13 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 				}
 				if a.res.StatusCode != want {
 					t.Errorf("%s as %s = %d %s, want %d", iw.op, name, a.res.StatusCode, a.body, want)
+				}
+				if iw.op == "updateIssue" && want == http.StatusOK && a.res.StatusCode == want {
+					got := sortAnswer(t, string(a.body))
+					stored := sortStored(t, w, got.ID)
+					if got.SortOrder != 0 || stored.SortOrder != 0 {
+						t.Fatal("locked update lost sort", got, stored)
+					}
 				}
 			}
 

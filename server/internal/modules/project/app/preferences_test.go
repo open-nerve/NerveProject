@@ -112,7 +112,7 @@ func TestGetProjectPreferencesRefuses(t *testing.T) {
 // fakes, its clock logged.
 func newUpdatePreferences() (*app.UpdateProjectPreferences, *writeFixture) {
 	f := newPreferences()
-	return app.NewUpdateProjectPreferences(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}), f
+	return app.NewUpdateProjectPreferences(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}, &capturedSettings{}), f
 }
 
 // changed are the calls of user's change p of his display settings in
@@ -138,11 +138,11 @@ func TestUpdateProjectPreferences(t *testing.T) {
 		in      domain.PreferencesPatch
 		want    domain.Preferences
 	}{
-		{"bob's tabs", bob, webID, domain.PreferencesPatch{Navigation: &cycles}, domain.Preferences{Navigation: cycles, SortOrder: 10}},
+		{"bob's tabs", bob, webID, domain.PreferencesPatch{Navigation: &cycles}, domain.Preferences{Navigation: cycles, SortOrder: 10, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}},
 		{"carol's place, from the defaults", carol, webID, domain.PreferencesPatch{SortOrder: ptr(-2.5)},
-			domain.Preferences{Navigation: domain.DefaultPreferences().Navigation, SortOrder: -2.5}},
+			domain.Preferences{Navigation: domain.DefaultPreferences().Navigation, SortOrder: -2.5, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}},
 		{"in the archived project", bob, opsID, domain.PreferencesPatch{SortOrder: ptr(3.0)},
-			domain.Preferences{Navigation: domain.DefaultPreferences().Navigation, SortOrder: 3}},
+			domain.Preferences{Navigation: domain.DefaultPreferences().Navigation, SortOrder: 3, DisplayFilters: domain.DefaultPreferences().DisplayFilters, DisplayProperties: domain.DefaultPreferences().DisplayProperties}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

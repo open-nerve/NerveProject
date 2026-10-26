@@ -64,7 +64,7 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 	}
 
 	target := day(26)
-	if err := s.UpdateIssue(ctx, app.IssueFields{ID: id, Name: "Mend the login", StateID: done, Priority: domain.PriorityLow, TargetDate: &target,
+	if err := s.UpdateIssue(ctx, app.IssueFields{SortOrder: 75535, ID: id, Name: "Mend the login", StateID: done, Priority: domain.PriorityLow, TargetDate: &target,
 		CompletedAt: &later, By: bob, At: later}); err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 		}
 	}
 
-	if err := s.UpdateIssue(ctx, app.IssueFields{ID: id, Name: "Mend the login", StateID: web.state, Priority: domain.PriorityLow, By: bob,
+	if err := s.UpdateIssue(ctx, app.IssueFields{SortOrder: 75535, ID: id, Name: "Mend the login", StateID: web.state, Priority: domain.PriorityLow, By: bob,
 		At: later}); err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestAFailedUpdateStatementIsAnError(t *testing.T) {
 	newIssue(t, pool, web, id, 1, alice)
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := s.UpdateIssue(cancelled, app.IssueFields{ID: id, Name: "a", StateID: web.state, Priority: domain.PriorityNone, By: alice,
+	if err := s.UpdateIssue(cancelled, app.IssueFields{SortOrder: 75535, ID: id, Name: "a", StateID: web.state, Priority: domain.PriorityNone, By: alice,
 		At: now}); !errors.Is(err, context.Canceled) {
 		t.Errorf("UpdateIssue() = %v; want context.Canceled", err)
 	}
