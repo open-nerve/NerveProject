@@ -43,6 +43,7 @@ func TestIssueLinkWritesLockAndRecheck(t *testing.T) {
 					}
 					id := w.newWorkItemBy(t, creator, w.web, `{"name":"Link membership wait"}`)
 					link := createLink(t, w, "alice", id, "http://169.254.169.254/member")
+					waitUniqueLinkCrawl(t, w, link)
 					var op linkRequest
 					for _, candidate := range linkRequests(id, link.ID) {
 						if candidate.op == operation {
@@ -176,7 +177,9 @@ func TestIssueLinkWriteRollback(t *testing.T) {
 			id := w.newWorkItemBy(t, "alice", w.web, w.fullIssue())
 			neighbor := w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
 			link := createLink(t, w, "bob", id, "http://169.254.169.254/rollback")
-			createLink(t, w, "alice", neighbor, "http://169.254.169.254/neighbor")
+			neighborLink := createLink(t, w, "alice", neighbor, "http://169.254.169.254/neighbor")
+			waitUniqueLinkCrawl(t, w, link)
+			waitUniqueLinkCrawl(t, w, neighborLink)
 			if _, err := w.pool.Exec(pgtest.Soon(t), `UPDATE issue_links SET metadata='{"title":"Existing preview"}' WHERE id=$1`, link.ID); err != nil {
 				t.Fatal(err)
 			}

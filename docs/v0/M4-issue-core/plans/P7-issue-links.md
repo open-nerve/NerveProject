@@ -181,7 +181,7 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 ## Task 11：首个生产订阅者与原事务投递
 
-**Files:** 新I/app/crawl_on_link_change.go/test；I/adapter/river/link_crawls.go/test；改module_events.go；B/events_test.go保持T3的独立目录测试；新B/issue_link_jobs_test.go，复用issue_inserter及现有真实River probe。
+**Files:** 新I/app/crawl_on_link_change.go/test；I/adapter/river/link_crawls.go/test；改module_events.go；B/events_test.go保持T3的独立目录测试；新B/issue_link_jobs_test.go，复用issue_inserter与真实River事务接缝；改B/issue_crawl_jobs_test.go为唯一自动job集成，并以精确link/url完成等待同步B/issue_link_writes_test.go、issue_link_security_test.go、issue_link_transactions_test.go中的seed与完整metadata快照。
 **Interfaces:** 产生`LinkCrawls.Enqueue(ctx,linkID,url) error`、`NewCrawlOnLinkChange(LinkCrawls) shared.EventSubscriber`、river.NewLinkCrawls(Inserter)；issue.Subscribers旧签名不变，返回唯一生产subscriber。
 
 - [ ] 写`TestCrawlOnLinkChange`，created和含url的updated各投一次，title-only零且成功；Entity.ID与Event.ID故意不同，抓参数是linkID和Change.New；created缺url、两种订阅类型重复url/url项nil New返回程序错，updated没有url不是错误；不订阅deleted。
@@ -189,6 +189,7 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 - [ ] `TestLinkJobCommitRollback`真实PG/River：另一连接提交前0job，commit后正确args+业务，rollback后两者均无；标题独改确实提交新title/audit且没有新job；created缺url或重复url失败时业务回滚；第一subscriber入队第二失败第三不调用，全部业务/活动/job回滚；不以“没启动worker”替代事务证明。
 - [ ] `go test -count=1 -p=1 ./internal/modules/issue/app ./internal/modules/issue/adapter/river ./internal/bootstrap -run 'Test(CrawlOnLinkChange|IssueLinkSubscriberRegistration|LinkJobCommitRollback|IssueEventDirectory)'`先红，接现有Inserter.InsertTx，Queue default/3attempt，无独立事务、无网络、无锁、无异步goroutine。
 - [ ] 变异M30InsertTx换独立投递/丢ctx、M31错误urlChange条件/吞enqueue错误；真实组合层红→恢复绿；确认`issue.EventTypes`有15类型且只预期新增3，G；提交`feat(M4/P7): 由链接事件在原事务内投递抓取任务`。
+- [ ] 自动投递接线后的既有server用例保留真实worker、UA/图标/metadata/审计断言；移除API创建后的重复手投。完整快照/手写metadata之前，等待该world相关seed的精确link/url唯一job完成，不以历史completed或删掉metadata断言代替同步；本Task执行直接受影响回归，T10历史报告保留原手动投递事实。
 
 ## Task 12：请求任务目录与运行角色真实完成
 

@@ -37,6 +37,9 @@ func TestIssueLinkHiddenAnswers(t *testing.T) {
 	deletedLink := createLink(t, w, "bob", deleted, "http://169.254.169.254/deleted-parent")
 	own := w.newWorkItemBy(t, "bob", w.web, `{"name":"Guest owns parent"}`)
 	ownLink := createLink(t, w, "alice", own, "http://169.254.169.254/own")
+	for _, seed := range []answeredLink{link, deletedLink, ownLink} {
+		waitUniqueLinkCrawl(t, w, seed)
+	}
 	w.send(t, "alice", http.MethodDelete, "/api/v0/issues/"+deleted.String(), "", 204)
 	w.send(t, "alice", http.MethodPatch, bobsMembership(t, w), `{"role":5}`, 200)
 	w.adminGuest(t)
@@ -95,6 +98,7 @@ func testIssueLinkPrecheckResources(t *testing.T) {
 	w := newIssueWorld(t)
 	id := w.newWorkItem(t)
 	link := createLink(t, w, "alice", id, "http://169.254.169.254/precheck")
+	waitUniqueLinkCrawl(t, w, link)
 	one := poolOfOne(t, w.pool.Config().ConnString())
 	store := issuepg.New(one)
 	projects := issueProjects{projects: project.Provide(one).IssueProjects}

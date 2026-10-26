@@ -23,6 +23,8 @@ func TestUpdateIssueLinkAPI(t *testing.T) {
 	id, other := w.newWorkItem(t), w.newWorkItem(t)
 	a := createLink(t, w, "bob", id, "http://169.254.169.254/a")
 	b := createLink(t, w, "bob", id, "http://169.254.169.254/b")
+	waitUniqueLinkCrawl(t, w, a)
+	waitUniqueLinkCrawl(t, w, b)
 	if _, err := w.pool.Exec(pgtest.Soon(t), `UPDATE issue_links SET metadata='{"title":"fresh preview"}' WHERE id IN ($1,$2)`, a.ID, b.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -44,6 +46,7 @@ func TestUpdateIssueLinkAPI(t *testing.T) {
 	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT url FROM issue_links WHERE id=$1", a.ID).Scan(&stored); err != nil || stored != long || got.URL != long || len(got.Metadata) != 0 {
 		t.Fatal("update lost original or retained metadata", err, got)
 	}
+	waitUniqueLinkCrawl(t, w, got)
 	before, audit := descriptionRows(t, w, "issue_links", id), descriptionAudit(t, w, id)
 	activities := descriptionRows(t, w, "issue_activities", id)
 	if activities == "[]" {
@@ -155,6 +158,7 @@ func TestUpdateIssueLinkPublicationRollback(t *testing.T) {
 			w := newIssueWorld(t)
 			id := w.newWorkItem(t)
 			l := createLink(t, w, "bob", id, "http://169.254.169.254/rollback")
+			waitUniqueLinkCrawl(t, w, l)
 			if _, err := w.pool.Exec(pgtest.Soon(t), `UPDATE issue_links SET metadata='{"title":"keep"}' WHERE id=$1`, l.ID); err != nil {
 				t.Fatal(err)
 			}

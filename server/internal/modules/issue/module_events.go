@@ -2,6 +2,7 @@ package issue
 
 import (
 	riveradapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -18,5 +19,7 @@ func EventTypes() []string {
 	}
 }
 
-// Subscribers is empty during P6 because the module has no production consumer.
-func Subscribers(_ riveradapter.Inserter) []shared.EventSubscriber { return nil }
+// Subscribers composes transactional consumers independently of New.
+func Subscribers(inserter riveradapter.Inserter) []shared.EventSubscriber {
+	return []shared.EventSubscriber{app.NewCrawlOnLinkChange(riveradapter.NewLinkCrawls(inserter))}
+}

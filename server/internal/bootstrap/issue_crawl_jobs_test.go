@@ -9,16 +9,14 @@ import (
 	"testing"
 	"time"
 
-	riveradapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/buildinfo"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
-	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
-// Manual insertion isolates the production worker composition from the
-// event subscriber, whose transaction contract is covered separately.
+// The API event must enqueue exactly one job through the production subscriber
+// and worker, retaining outbound identity and leaving business audit unchanged.
 func TestNewAppCrawlJobRuns(t *testing.T) {
 	fixture := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/favicon.ico" {
@@ -38,43 +36,7 @@ func TestNewAppCrawlJobRuns(t *testing.T) {
 	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT (to_jsonb(l)-'metadata')::text FROM issue_links l WHERE id=$1", link.ID).Scan(&beforeLink); err != nil {
 		t.Fatal(err)
 	}
-	inserter, err := jobs.NewInserter(w.pool)
-	if err != nil {
-		t.Fatal(err)
-	}
-	tx, err := w.pool.Begin(pgtest.Soon(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = tx.Rollback(t.Context()) }()
-	if err := inserter.InsertTx(t.Context(), tx, riveradapter.CrawlLinkArgs{LinkID: link.ID, URL: link.URL}, nil); err != nil {
-		t.Fatal(err)
-	}
-	if err := tx.Commit(t.Context()); err != nil {
-		t.Fatal(err)
-	}
-	tick := time.NewTicker(25 * time.Millisecond)
-	defer tick.Stop()
-	deadline := time.NewTimer(15 * time.Second)
-	defer deadline.Stop()
-	for {
-		var state, queue string
-		var maxAttempts int
-		if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT state,queue,max_attempts FROM river_job WHERE kind='issue.crawl_link' AND args->>'link_id'=$1 AND args->>'url'=$2`, link.ID.String(), link.URL).Scan(&state, &queue, &maxAttempts); err != nil {
-			t.Fatal(err)
-		}
-		if queue != "default" || maxAttempts != 3 {
-			t.Fatalf("crawl queue=%s attempts=%d; want default/3", queue, maxAttempts)
-		}
-		if state == "completed" {
-			break
-		}
-		select {
-		case <-tick.C:
-		case <-deadline.C:
-			t.Fatalf("crawl job state=%s; want completed", state)
-		}
-	}
+	waitUniqueLinkCrawl(t, w, link)
 	var metadata []byte
 	var afterLink string
 	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT metadata,(to_jsonb(l)-'metadata')::text FROM issue_links l WHERE id=$1", link.ID).Scan(&metadata, &afterLink); err != nil {
@@ -91,5 +53,33 @@ func TestNewAppCrawlJobRuns(t *testing.T) {
 	}
 	if beforeLink != afterLink || beforeIssue != issueRow(t, w, item) || beforeActivity != descriptionRows(t, w, "issue_activities", item) {
 		t.Fatal("composed crawl changed link audit, issue or activity")
+	}
+}
+
+// waitUniqueLinkCrawl waits only for a fresh seed or first use of this exact
+// link/URL pair. A duplicate or historical match fails instead of hiding work.
+func waitUniqueLinkCrawl(t *testing.T, w issueWorld, link answeredLink) {
+	t.Helper()
+	tick := time.NewTicker(25 * time.Millisecond)
+	defer tick.Stop()
+	deadline := time.NewTimer(15 * time.Second)
+	defer deadline.Stop()
+	for {
+		var count, maxAttempts int
+		var state, queue string
+		if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT count(*),coalesce(min(state::text),''),coalesce(min(queue),''),coalesce(min(max_attempts),0) FROM river_job WHERE kind='issue.crawl_link' AND args->>'link_id'=$1 AND args->>'url'=$2`, link.ID.String(), link.URL).Scan(&count, &state, &queue, &maxAttempts); err != nil {
+			t.Fatal(err)
+		}
+		if count != 1 || queue != "default" || maxAttempts != 3 {
+			t.Fatalf("crawl jobs=%d queue=%s attempts=%d; want unique default/3 for %s %q", count, queue, maxAttempts, link.ID, link.URL)
+		}
+		if state == "completed" {
+			return
+		}
+		select {
+		case <-tick.C:
+		case <-deadline.C:
+			t.Fatalf("crawl job state=%s; want completed for %s %q", state, link.ID, link.URL)
+		}
 	}
 }
