@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **实施状态：** T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复、正式文档和准确提交的完整本地七门禁已完成；独立定向复审及最终分支 HEAD CI 待主控核验；未合并 main。
+> **实施状态：** T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复、正式文档和准确提交的完整本地七门禁已完成；独立定向复审已确认原8项全部 ADDRESSED；T7历史时态文案已由作者纠正，本次纯文档增量确认及最终交付 HEAD CI 以主控最终记录为准。产品检查点`cd0fce7e`的[CI40397086823](https://github.com/open-nerve/NerveProject/actions/runs/40397086823)已由主控核准确HEAD全绿；此后纯文档交付HEAD的CI另核；未合并 main。
 
 **目标：** 实现 M4 §12/P7 的链接CRUD、首个生产事务订阅者、抓取worker和防SSRF出站，交付I10接口与带links的I15/I17删除目录故事。
 
@@ -135,9 +135,9 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 ## Task 7：固定 IP 的安全 GET 与资源上限
 
 **Files:** 新O/client.go、transport.go、client_test.go、transport_test.go、deadline_test.go；扩errors.go。测试私有依赖用于resolver/dial/interface/TLS root，无全局替换/可变测试hook。
-**T7 实施事实（待独评）：** 完成固定IP/每跳复检、Host/SNI与证书验证、手动跳转、解压后限额、共享期限与显式连接关闭；M19–M22七个生产变异均红后按原字节恢复绿，T6 mapped端点守卫Minor以值比较和临时helper Unmap自证闭环。仅T7实现与聚焦门禁完成，T8配置/T9日志消费与整阶段验收未完成。
+**T7 实施事实（2026-10-26 初稿历史节点）：** 完成固定IP/每跳复检、Host/SNI与证书验证、手动跳转、解压后限额、共享期限与显式连接关闭；M19–M22七个生产变异均红后按原字节恢复绿，T6 mapped端点守卫Minor以值比较和临时helper Unmap自证闭环。该节点当时仅T7实现与聚焦门禁完成，T8配置/T9日志消费与整阶段验收尚未完成；随后T7独评完成并发现IDNA问题，按下段修复及独立定向复审关闭，T8/T9亦已实施并独评通过。
 
-**T7 修复轮1（待定向复审）：** 修复Unicode hostname被自定义DNS/TLS绕过IDNA规范化的问题：复用Transport交给dial callback的规范地址，在同一边界解析/检查全部候选，再固定IP建连；Host/SNI/证书按同一规范名，保留原URL语义与分类。新增受信任punycode SAN本地HTTP/HTTPS/跳转反例与晚到连接关闭覆盖。
+**T7 修复轮1（2026-10-26，随后独立定向复审已通过）：** 修复Unicode hostname被自定义DNS/TLS绕过IDNA规范化的问题：复用Transport交给dial callback的规范地址，在同一边界解析/检查全部候选，再固定IP建连；Host/SNI/证书按同一规范名，保留原URL语义与分类。新增受信任punycode SAN本地HTTP/HTTPS/跳转反例与晚到连接关闭覆盖。修复提交 `128de7b620460d0161776b8dcc633f637cb746d5` 的独立定向结论为 R1 ADDRESSED、无新增发现，见 `.superpowers/sdd/P7-issue-links/task-7-fix-1-review.md`；原初稿测试/变异数量仍按当时记录保留。
 
 **Interfaces:** 产生spec§2.5的Options/Limits/Response/New/Get与四错误、`Reason(error) string`（仅空或redirect_limit，支持标准包装）；New在生产读取InterfaceAddrs，测试私有`newClient(options Options,deps dependencies)`中依赖：resolver的`LookupNetIP(ctx,network,host)([]netip.Addr,error)`、dial函数、interface读取、TLS roots（只测试），不暴露给模块消费方。
 
@@ -243,7 +243,8 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 - [x] 单次deep-review审准确`5005be985e7ec78727edc6f8fc5c05999b45cc65..d2a3cf26df220f95ac8f656d9ff8f4eaa2997305`，四组全文覆盖165文件/457chunks；5新Minor+3历史Minor进入同一次修复波次，0Critical/Major/Structural/Needs Decision。
 - [x] 本波局部修复与准确提交完整本地七门禁通过（tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`）。
-- [ ] fresh scoped独立复审闭环；不重新开整支审查。
+- [x] fresh scoped独立复审`d2a3cf26..7e903ecb`确认原8项全部 ADDRESSED，无新增产品问题；不重新开整支审查。
+- T16-DOC-1仅T7两段历史时态文案，已在本次纯文档回执纠正；作者未提前宣称该增量独立通过，同一reviewer的最终增量确认见主控交付记录。
 - [x] 写review七节（方式、逐项证据、局部决定、发现处理、最终与plan差异、移交、限制）；spec§4只勾真实完成项，Task实际签名/文件差异同步，不为“表面按plan”掩盖实现修正。
 - [x] 同步总体平台/安全说明、逐列差异与README网络边界/限额/公网任意端口/NAT和网卡变化需网络层覆盖；P7不改CSP，不写已存在页面。输入交接status保持open，追加本期结果与剩余P9/P14责任。
 - [x] M4§14只补P7子项真实证据，不把“事件和任务”整条或M4总体完成；v0§9.4仍进行中，不创建M5–M8最终closeout。
@@ -253,4 +254,4 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 ## 准备期自查与当前交付边界
 
-准备期16Task覆盖设计12粗项，5项Medium预检修订闭环；当时只有4列PG/sqlc最窄实验、验收未勾。随后T1–T15已按实际执行完成，上方勾选表示目标与归属证据完成，原建议命令/变异名称有差异的以执行补充和两矩阵为准，不能倒写历史。T16已完成原范围全文审查、局部修复/正式文档及准确本轮完整门禁；定向独评、最终分支CI后才能完成交付门。main合并、mainCI与ignored证据归档清理必须另获授权。
+准备期16Task覆盖设计12粗项，5项Medium预检修订闭环；当时只有4列PG/sqlc最窄实验、验收未勾。随后T1–T15已按实际执行完成，上方勾选表示目标与归属证据完成，原建议命令/变异名称有差异的以执行补充和两矩阵为准，不能倒写历史。T16已完成原范围全文审查、局部修复/正式文档及准确本轮完整门禁；原8项定向独评已关闭；本次纯文档增量确认、最终交付HEAD的分支CI由主控最后记录。main合并、mainCI与ignored证据归档清理必须另获授权。

@@ -87,6 +87,6 @@ P6 已由 deep-review 终审通过并经授权 `--no-ff` 合并为 `5005be985e7e
 
 ## 7. P7当前接续点（2026-10-27）
 
-§6保留2026-10-26 P6集成后的冻结快照。现在`codex/m4-p7`已完成T1–T15实施和独评，原范围`5005be98..d2a3cf26`整审全文覆盖165文件/457chunks；5新增Minor及3历史Minor集中在T16修复/文档波次处理。T15准确d2的[CI40387396589](https://github.com/open-nerve/NerveProject/actions/runs/40387396589)三任务全绿；本轮完整本地门禁、独立fix定向复审和最终新HEAD CI状态见[P7 review](../M4-issue-core/reviews/P7-issue-links-review.md)与[整体审核](../../reviews/re-05-M4P7整体审核.md)。未授权合并，主目录仍main，工作树/证据保留。
+§6保留2026-10-26 P6集成后的冻结快照。现在`codex/m4-p7`已完成T1–T15实施和独评，原范围`5005be98..d2a3cf26`整审全文覆盖165文件/457chunks；5新增Minor及3历史Minor经T16单次修复后，独立定向复审`d2a3cf26..7e903ecb`确认全部ADDRESSED；唯一T7历史时态文案已由作者纠正，本次纯文档增量独立确认和最终交付HEAD CI由主控最后记录。本期产品检查点cd0的[CI40397086823](https://github.com/open-nerve/NerveProject/actions/runs/40397086823)已核准确HEAD全绿，后续纯文档交付HEAD CI另核。T15准确d2的[CI40387396589](https://github.com/open-nerve/NerveProject/actions/runs/40387396589)三任务全绿；本轮完整本地门禁、独立fix定向复审和最终新HEAD CI状态见[P7 review](../M4-issue-core/reviews/P7-issue-links-review.md)与[整体审核](../../reviews/re-05-M4P7整体审核.md)。未授权合并，主目录仍main，工作树/证据保留。
 
 下一接收方继续P8列表link_count/草稿/搜索，P9异步删除/保留/清理，P11/P14详情数据层和I10/I17页面，P15协作页面；M4整体与输入handoff保持open，不创建M5–M8最终closeout。

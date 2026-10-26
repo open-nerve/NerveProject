@@ -1,6 +1,6 @@
 # M4/P7 `issue-links`：链接、出站客户端与元数据抓取规格
 
-日期：2026-10-27。**T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复、正式文档和准确提交的完整本地七门禁已完成；独立定向复审及最终分支 HEAD CI 待主控核验；未合并 main。** 基线：P6 已集成的 `5005be985e7ec78727edc6f8fc5c05999b45cc65`，同一 SHA 的 main CI `40305247546` 重跑全绿。分支 `codex/m4-p7`，worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。预检、最窄 PG/sqlc 实验及 T4/T8/T12/T15 检查点按各自日期/源码保存，不作为本轮新执行。
+日期：2026-10-27。**T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复、正式文档和准确提交的完整本地七门禁已完成；独立定向复审已确认原8项全部 ADDRESSED；T7历史时态文案已由作者纠正，本次纯文档增量确认及最终交付 HEAD CI 以主控最终记录为准。产品检查点`cd0fce7e`的[CI40397086823](https://github.com/open-nerve/NerveProject/actions/runs/40397086823)已由主控核准确HEAD全绿；此后纯文档交付HEAD的CI另核；未合并 main。** 基线：P6 已集成的 `5005be985e7ec78727edc6f8fc5c05999b45cc65`，同一 SHA 的 main CI `40305247546` 重跑全绿。分支 `codex/m4-p7`，worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。预检、最窄 PG/sqlc 实验及 T4/T8/T12/T15 检查点按各自日期/源码保存，不作为本轮新执行。
 
 权威输入：[M4 设计](../M4-design.md) §2/I10/I17、3.4–3.6、3.11、3.13/17–19、3.19–3.20、3.23/P7、4.8、5.1–5.3、6.8、8.1/8.8、9.1–9.4、12/P7、13.1；[02](../../claude_to_gpt/02-method.md)、[03](../../claude_to_gpt/03-rules-and-pitfalls.md)；P6 spec §5/review §6 与本规格 §7。D3 事务内同步事件、架构问题 11.8 的平台出站与固定 IP、后台写回的单句守卫已批准，不重新裁定。
 
@@ -272,7 +272,7 @@ T15逐列活动/事件矩阵、至少15项代表性真实生产变异（地址/�
 - [x] I10 API含169.254.169.254 blocked；I17/项目/工作区删除含link通过（T14）。
 - [x] T15发布/活动矩阵、21项历史生产变异/恢复及完整七门禁；原范围deep-review全文覆盖完成。
 - [x] T16修复准确提交完整本地七门禁通过（tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`）。
-- [ ] T16独立定向复审闭环（原范围不重复整支审查）。
+- [x] 原8项修复经独立定向复审全部 ADDRESSED（`d2a3cf26..7e903ecb`）；T16-DOC-1历史时态文案已纠正，本次纯文档增量确认见主控最终记录。
 - [ ] §3.23所有P7文档/差异/交接处理结果为真，阶段分支准确HEAD CI通过（T16/交付）。
 - [ ] 获授权后--no-ff合并，准确main SHA CI全绿，ignored证据归档校验后清理分支/worktree（阶段集成）。
 

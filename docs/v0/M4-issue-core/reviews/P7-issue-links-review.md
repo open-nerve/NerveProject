@@ -1,6 +1,6 @@
 # M4/P7 链接、出站与抓取评审记录
 
-日期：2026-10-27。T1–T15实施及独立规格/质量评审完成；原范围单次deep-review完成，T16单次修复与正式文档已写。本轮准确提交完整本地七门禁已通过；独立fix复审、最终新HEAD分支CI待主控据实回填，未合并main。分支`codex/m4-p7`，基线`5005be985e7ec78727edc6f8fc5c05999b45cc65`。配套：[spec](../specs/P7-issue-links.md)、[plan](../plans/P7-issue-links.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。
+日期：2026-10-27。T1–T15实施及独立规格/质量评审完成；原范围单次deep-review完成，T16单次修复与正式文档已写。本轮准确提交完整本地七门禁已通过；独立fix复审已确认原8项全部 ADDRESSED；T7历史时态文案已纠正，本次纯文档增量确认及最终交付HEAD CI见主控最终记录，未合并main。分支`codex/m4-p7`，基线`5005be985e7ec78727edc6f8fc5c05999b45cc65`。配套：[spec](../specs/P7-issue-links.md)、[plan](../plans/P7-issue-links.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。
 
 ## 1. 评审方式
 
@@ -29,7 +29,7 @@
 | T13 | `a08777740f267ffcef45d0ee93c71a70de2d1b4c` | URL/title/delete真实worker交错/race；`E/task-13-report.md`、对应review/evidence |
 | T14 | `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` | I10 API和带links删除目录；`E/task-14-report.md`、对应review/evidence |
 | T15 | `d2a3cf26df220f95ac8f656d9ff8f4eaa2997305` | 两矩阵/21历史生产变异/锁观察器修复/七门禁；`E/task-15-report.md`、对应review/evidence |
-| T16 | 修复及tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`；docs-only回填提交见Task16报告 | charset/nullable enum/422 fixture、8项发现、正式文档；独立fix复审与最终分支CI尚待主控 |
+| T16 | 修复及tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`；docs-only回填提交见Task16报告 | charset/nullable enum/422 fixture、8项发现、正式文档；原8项独立fix复审已关闭；本次文档增量确认/最终交付HEAD CI见主控记录 |
 
 T4额外三个修复提交`ed205cad`/`a2211c8f`/`be3b8d4e`分别补活动回滚、完整迁移/历史FS边界及I15 link种子，不追记为T1/T3最初已覆盖。T7初稿`2a4a2196`后IDNA修复为表中`128de7b6`，只使用修复后的网络变异。T15初稿`958f2e95`完整Go失败后修正观察器fixture，tested为`6e28cc16`，最终`d2a3cf26`仅两矩阵文档、3639非docs字节相同；不是在d2另跑全套。
 
@@ -74,7 +74,7 @@ T16解码只在adapter，复用既有charset及tokenizer/Lookup；全ASCII前缀
 
 ### 本次整审与历史Minor收敛
 
-5新Minor：NJ-1非UTF8页面解码、C-E2E-01公开error枚举、core C1完整快照前crawl同步、D1写顺序、D2资源/请求/队列上限表述；另3旧Minor：T8/T11 selector、T15 M35–37恢复argv。全部已在单波实施局部修复，证据与逐项状态见[整体审核](../../../reviews/re-05-M4P7整体审核.md)。0Critical/Major/Structural/Needs Decision；关闭结论仍以本轮独立定向复审为准，作者自审不替代它。
+5新Minor：NJ-1非UTF8页面解码、C-E2E-01公开error枚举、core C1完整快照前crawl同步、D1写顺序、D2资源/请求/队列上限表述；另3旧Minor：T8/T11 selector、T15 M35–37恢复argv。全部已在单波实施局部修复，证据与逐项状态见[整体审核](../../../reviews/re-05-M4P7整体审核.md)。独立定向复审准确覆盖`d2a3cf26..7e903ecb`的28路径/36块，原8项全部 ADDRESSED，未发现新增产品Critical/Important/Minor。仅T16-DOC-1指出plan的T7两段历史时态遗漏，作者已补原2026-10-26节点及后来IDNA独立复审通过事实，保留原测试/变异数量；本次纯文档增量的独立确认见主控最终记录。
 
 ## 5. 最终实现与plan的差异
 
@@ -86,10 +86,16 @@ T8原selector没匹配configs，T11原selector漏LinkCrawlsEnqueue；推荐命�
 
 P6首生产订阅/3link事件/请求任务、M2§3审计与§6worker/grants、M3§1请求快照均追加接收回执；P6当时12事件/空订阅及集成事实不改写。M4§3.11/4.8/3.23/14/15、v0§6.2/6.7/8、plane-diff12列/约束/行为和README出站责任同步，02/03更新完整本地CI先于检查点与Firefox事实，04保留历史快照另加当前接续点。
 
-P8继续link_count/草稿/搜索；P9继续异步删除/保留/清理；P11/P14继续详情数据层、I10/I17页面及可达性/卸载清理；P15协作页面；M8复用outbound并负责IANA维护和部署网络策略。M2/M3 status仍open，M4总体§14/v0§9.4仍进行中，不创建M5–M8最终closeout。未push/merge，main集成另获授权。
+P8继续link_count/草稿/搜索；P9继续异步删除/保留/清理；P11/P14继续详情数据层、I10/I17页面及可达性/卸载清理；P15协作页面；M8复用outbound并负责IANA维护和部署网络策略。M2/M3 status仍open，M4总体§14/v0§9.4仍进行中，不创建M5–M8最终closeout。产品检查点由主控推送，作者未push/merge；本期未合并main，集成另获授权。
 
 ## 7. 已知限制与后续门
 
 启动时接口快照不能覆盖NAT/LB自公网或后来网卡变化；普通公网任意端口仍可请求，网络层出站规则负责这些风险。每crawl最多两个资源、每资源5跳，共享5秒；固定并发/入口额度不是队列长度硬上限。HTML解析没有硬CPU deadline；集合不分页，无每link速率桶；A→B→A同URL旧结果可晚覆盖。没有以worker错误原链/default3配置声称实测DB故障三次重试，没有将I10 API故事声称页面交付。
 
-准确原范围审查完成、修复作者自审、本轮本地门禁、独立定向复审、最终分支HEAD CI和授权main集成是不同状态。当前后两项交主控据实回填；不提前勾阶段交付/集成。保留旧INFRA、T15初次观察器误归因、Ryuk/React提示及三skip原始口径，不称输出pristine，不以缓存数替代测试执行数。
+准确原范围审查完成、修复作者自审、本轮本地门禁、独立定向复审、最终分支HEAD CI和授权main集成是不同状态。原8项独立关闭已经发生；本次纯文档增量确认和最终交付HEAD CI由主控最后记录，不提前勾main集成。保留旧INFRA、T15初次观察器误归因、Ryuk/React提示及三skip原始口径，不称输出pristine，不以缓存数替代测试执行数。
+
+### 2026-10-27 同次定向复审回执
+
+`E/task-16-fix-review.md`与`task-16-fix-review-coverage.md`记录准确`d2a3cf26..7e903ecb`的独立结论；主控已全文核阅。原8项全部ADDRESSED；T16-DOC-1仅历史时态文案，未打开新产品波次。此次`7e903ecb`之后只改docs，既有报告/coverage/raw不覆盖，前次作者报告与证据先封存在`E/task-16-evidence/receipt/prior`，新回执另存；完整门禁仍对应tested cd0，未因纯文档重跑产品套件。
+
+产品检查点准确`cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`的[CI40397086823](https://github.com/open-nerve/NerveProject/actions/runs/40397086823)已由主控核全绿：server7m14、web3m46、e2e7m25；公开原件`E/checkpoint-t16/run-public.json`记录head_verified=true/Success。E2E job API另核相同head、浏览器安装28秒成功、Build成功、E2E于2026-10-26 20:45:23–20:50:42 UTC成功。`run-public.html`、`watch-history.jsonl`、`e2e-job-public.json`原件保留，receipt/ci-verified.json记录其SHA；作者没有重跑远端测试或推分支。这个结果属于已测产品提交cd0，不能冒称后续纯文档交付HEAD的CI成功；最终准确链接由主控最后返回。

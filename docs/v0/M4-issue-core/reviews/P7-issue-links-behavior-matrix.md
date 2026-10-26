@@ -111,7 +111,7 @@
 
 ## T16 变更与当前验证
 
-原始整审范围为 `5005be98..d2a3cf26`；5 新 Minor 和3历史 Minor已实施局部修复，独立定向关闭及最终新HEAD CI仍待主控。完整发现、原范围/修复范围、锁图边界与26条裁定见[整体审核](../../../reviews/re-05-M4P7整体审核.md)。
+原始整审范围为 `5005be98..d2a3cf26`；5 新 Minor 和3历史 Minor已局部修复，`d2a3cf26..7e903ecb`独立定向复审确认8项全部ADDRESSED；本次T7历史时态文案由作者纠正，纯文档增量确认及最终交付HEAD CI见主控最终记录。完整发现、原范围/修复范围、锁图边界与26条裁定见[整体审核](../../../reviews/re-05-M4P7整体审核.md)。
 
 | 变更 | 当前证明 | 证据边界 |
 |---|---|---|
@@ -120,3 +120,5 @@
 | 422快照前同步got crawl | B `TestCreateIssueLinkAPI` 保持完整快照/真实worker；相关10顶层/49 RUN通过 | 原竞态为静态调度推导，未现场复现；没有造概率红、忽略metadata或停worker。 |
 
 以上 raw 与前后源码 SHA 在 `E/task-16-evidence`。本轮 tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`（tree=`25f1520301bd2471ad4892d859b97256faff884c`）七门禁全部 exit0：Go 1753 顶层/8759 RUN、3 skip，强制 Web 1170 测试，E2E 153=151 Chromium+2 Firefox。 完整HTTP包双向码守卫实际执行，0 Go缓存、Web强制执行；T15 原套件/21历史变异保留当时身份，当前源码兼容见变异矩阵末节。
+
+产品检查点`cd0fce7e`的[CI40397086823](https://github.com/open-nerve/NerveProject/actions/runs/40397086823)已由主控核准确HEAD全绿；此后纯文档交付HEAD的CI另核。
