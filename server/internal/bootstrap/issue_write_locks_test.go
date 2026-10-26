@@ -42,10 +42,14 @@ type issueWrite struct {
 // operation of the contract tagged issue but GET (writesOnIssues).
 var issueWrites = []issueWrite{
 	{op: "updateIssueLink", method: http.MethodPatch, path: "/api/v0/issue-links/{link_id}", target: func(t *testing.T, w issueWorld) string {
-		return linkPath(createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/locks").ID)
+		link := createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/locks")
+		waitUniqueLinkCrawl(t, w, link)
+		return linkPath(link.ID)
 	}, body: func(*testing.T, issueWorld) string { return `{"title":"Changed"}` }, want: http.StatusOK, waits: "issues", mode: "SHARE"},
 	{op: "deleteIssueLink", method: http.MethodDelete, path: "/api/v0/issue-links/{link_id}", target: func(t *testing.T, w issueWorld) string {
-		return linkPath(createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/locks").ID)
+		link := createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/locks")
+		waitUniqueLinkCrawl(t, w, link)
+		return linkPath(link.ID)
 	}, body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
 	{op: "createIssueLink", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/links", target: func(t *testing.T, w issueWorld) string { return linksOf(w.newWorkItem(t)) }, body: func(*testing.T, issueWorld) string { return `{"url":"http://169.254.169.254/locks"}` }, want: http.StatusCreated, waits: "issues", mode: "SHARE"},
 	{op: "addCommentReaction", method: http.MethodPost, path: "/api/v0/issue-comments/{comment_id}/reactions", target: func(t *testing.T, w issueWorld) string {
@@ -237,6 +241,13 @@ func (iw issueWrite) checkProjectLocks(t *testing.T, w issueWorld) {
 		if a.res.StatusCode != want {
 			t.Errorf("%s as %s = %d %s, want %d", iw.op, name, a.res.StatusCode, a.body, want)
 		}
+		// This matrix observes any backend behind its holder. Complete each
+		// fresh link's production crawl before the next lock probe can see it.
+		if iw.op == "createIssueLink" && want == http.StatusCreated && a.res.StatusCode == want {
+			var link answeredLink
+			decodeAnswer(t, string(a.body), &link)
+			waitUniqueLinkCrawl(t, w, link)
+		}
 		if iw.op == "updateIssue" && want == http.StatusOK && a.res.StatusCode == want {
 			got := sortAnswer(t, string(a.body))
 			stored := sortStored(t, w, got.ID)
@@ -246,6 +257,13 @@ func (iw issueWrite) checkProjectLocks(t *testing.T, w issueWorld) {
 		}
 	}
 
+	// The request probe below is valid only after every fixture crawl has
+	// completed; a metadata worker can otherwise wait behind the same holder.
+	var pendingCrawls, archiveCandidates int
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT (SELECT count(*) FROM river_job WHERE kind='issue.crawl_link' AND state<>'completed'),
+		(SELECT count(*) FROM projects WHERE deleted_at IS NULL AND archived_at IS NULL AND archive_in BETWEEN 1 AND 12)`).Scan(&pendingCrawls, &archiveCandidates); err != nil || pendingCrawls != 0 || archiveCandidates != 0 {
+		t.Fatalf("lock probe has %d unfinished crawls and %d auto-archive candidates: %v", pendingCrawls, archiveCandidates, err)
+	}
 	tables := lockedTables(t, w.pool, issueTables, "EXCLUSIVE")
 	for name, want := range map[string]int{"walt": http.StatusForbidden, "wanda": http.StatusForbidden, "olga": http.StatusNotFound} {
 		answers(name, send(name), want)
@@ -305,7 +323,8 @@ func release(t *testing.T, tx pgx.Tx) {
 }
 
 // waitedTable is the table whose lock the backend blocked behind holder
-// waits for.
+// waits for. The caller must finish its fixture's asynchronous writers before
+// holding the tables: this probe does not identify an HTTP request's backend.
 func waitedTable(t *testing.T, pool *pgxpool.Pool, holder *pgconn.PgConn) string {
 	t.Helper()
 	var table string

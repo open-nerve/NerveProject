@@ -77,8 +77,12 @@
 | I10全链 | typed API种子、无协议URL、受控pending→标题/icon/dataURL、精确args唯一job completed、title不增任务、换URL重抓、409无变、204活动链；只本机fixture | `e2e/stories/issue/i10-links.spec.ts` 两case；T14 `stories-verified`为7/7 Chromium组合历史；M30故事红201→500恢复1/1，不重复计新变异 |
 | I17 / I15 / 项目与工作区 | 两层子树三个活link、不同creator/deleter；已归档末级、先删/邻居全行保护；API furnish含links；目录没有绕过issue_links | I17 delete/catalog、I15 archive、project P4、workspace W2/W3 API/page；T14主组合7/7、cascade7/7历史；最终完整E2E另列 |
 
-最终源码接线核查：B/app.go构造 `newOutbound`、真实 `issue.Subscribers(issueInserter)` 和模块Jobs；I/module.go构造真实crawler与CrawlLink；I/module_jobs.go声明worker和EnqueuedKinds；registrationRows消费请求kind；所有删除目录与furnish均含links。定向检索生产源码无临时 `emptySubscriber` / `fakecrawler` / `fakeCrawler`，未为本矩阵修改产品或测试。
+最终源码接线核查：B/app.go构造 `newOutbound`、真实 `issue.Subscribers(issueInserter)` 和模块Jobs；I/module.go构造真实crawler与CrawlLink；I/module_jobs.go声明worker和EnqueuedKinds；registrationRows消费请求kind；所有删除目录与furnish均含links。定向检索生产源码无临时 `emptySubscriber` / `fakecrawler` / `fakeCrawler`，本Task另修复既有锁序测试的异步fixture接缝，产品源码保持不变。
 
 ## 最终门禁记录
 
-最终七门禁待在矩阵初稿提交后的 clean HEAD 串行执行。历史 T12 本地 `fdeadacf6d39340733d7e42f615229da3fdb6456` 七门禁通过，不作为本次结果。T12远端CI `40373692243`浏览器安装耗时16分36秒后成功、Build成功、E2E已开始，随后整job20分钟上限取消；不能写成远端全绿或E2E未开始。最终push/CI归主控T16处理。
+首轮clean `958f2e95070fa6db32f684eb98a7ea9fbb9fb588` 全仓Go实际1,744顶层/8,700总RUN，exit2，唯一失败为 `TestEachIssueWriteLocksItsProjectFirst/addSubIssues`：观察器选到`issue_links`而非`projects`；后六门禁未启动。原始输出保留 `E/checkpoint-t15-local`，不是绿，也不覆盖。真实本机受控HTTP诊断同时看到请求PID92执行LockIssueProject等待projects、worker PID93执行SetLinkMetadata等待issue_links；holder94下旧观察器先选后者。精确link/URL完成同步后同场景绿，请求实际200且原worker completed。诊断首次把SQL名误写LockProject的失败和随后正确的确定性红均保留，不把误期望当性质红。
+
+`issue_write_locks_test.go`保持原锁序、强度、无写与无workspace锁断言，只等待所有新seed及每次成功create201的精确生产crawl完成，并在每个全表锁窗口前断言pending crawl=0、auto-archive候选=0。当前矩阵没有URL更换，标题独改/删除不投任务；唯一issue异步写源是上述crawl；RunOnStart auto-archive仍运行但fixture没有archive_in=1..12的候选，identity cleanup不写issueTables。观察器仍只认holder，前提明确为窗口中只有目标请求写，未按SQL文本过滤、停worker或sleep。未来fixture新增URL改动/可归档项目必须同步其真实任务，否则前提断言失败。
+
+本次另对真实生产LockIssueProject查询删除FOR NO KEY UPDATE、生成后，原矩阵最窄createIssueLink选择实际红（先等issues、project无N锁）；query和生成物按原SHA逐字节恢复，同选择绿，说明fixture同步没有遮蔽真实请求锁序回归。最终测试源码完整矩阵1顶层/19RUN绿，准确新clean提交的七门禁将在独立 `E/checkpoint-t15-local-retry1` 运行。历史 T12 本地 `fdeadacf6d39340733d7e42f615229da3fdb6456` 七门禁通过，不作为本次结果。T12远端CI `40373692243`浏览器安装耗时16分36秒后成功、Build成功、E2E已开始，随后整job20分钟上限取消；不能写成远端全绿或E2E未开始。最终push/CI归主控T16处理。

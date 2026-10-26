@@ -243,3 +243,16 @@ Task15在 `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` 对既有原始证据逐项
 - T5 M14-publish初次恢复绿为Ryuk INFRA失败，不能算通过；本次没有选该项。T8/T11两条计划selector文档Minor仍交T16，完整回归覆盖事实保留。
 - T13 A→B→A按批准id+URL规则允许旧A晚覆盖同URL结果；M35只证明B不能被A覆盖，不虚构generation保证。
 - T15不为降噪操作现有容器、不重写旧raw、不新增依赖；正常源码最终门禁与历史变异是两类证据。
+
+## T15 本轮锁序补充反例（不混入上述21项历史选择）
+
+首轮完整Go揭示既有holder-only观察器会误认生产crawl的锁等待，按[行为矩阵](P7-issue-links-behavior-matrix.md)修复fixture同步后，另验证真实请求仍不能越过项目锁。此补丁没有新增M号，也没有把测试helper修复当成生产变异。
+
+- 生产补丁：`server/internal/modules/project/adapter/postgres/queries/issue_ports.sql` 的LockIssueProject去FOR NO KEY UPDATE，经 `GOFLAGS=-p=1 make gen-go` 生成真实运行源码。
+- 精确红/绿命令相同：`go test -v -count=1 -p=1 ./internal/bootstrap -run '^TestEachIssueWriteLocksItsProjectFirst$/^createIssueLink$'`；cwd为worktree/server；各1顶层/2总RUN，exit1→0。红断言为“first waits for issues, not for projects”及“holds Web no lock … not FOR NO KEY UPDATE”，不是编译/基础设施红。
+- 原始补丁/恢复/原字节：`E/task-15-evidence/project-lock.patch`、`project-lock-restoration.json`、`project-lock-original-*`；红/恢复绿为同目录 `project-lock-skipped-red.{json,stdout,stderr}` / `project-lock-restored-green.{json,stdout,stderr}`。运行HEAD为矩阵初稿958f2e95，最终测试当时为未提交新字节，准确测试SHA `2da97ef73948314346e772de05435e9a4f59cef27f0997c3a48cd55ffa56f72f`；不能用HEAD替代未提交执行内容。
+
+| 文件 | 原=恢复 SHA256 | 变异 SHA256 |
+|---|---|---|
+| queries/issue_ports.sql | `af8a9d493d2c3f2fbd7b10064593c3f678b4421314bd524eddf7998272785224` | `d0f0018389b91ca79f26a8dcb2f6dc7430298c34d4b731558089e686b854e0d7` |
+| gen/issue_ports.sql.go | `ff7c2c33866ac8fea7406dec1182dccd073e17f2167ece80029e601f5de98457` | `5893b7f41d7599a0c86a88749382d54af7893ece26741cefc65cb337bc13ea6e` |
