@@ -22,6 +22,7 @@ import {
   listIssueRelations,
   updateIssue,
 } from "../../fixtures/issues";
+import { createIssueLink } from "../../fixtures/links";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
 
@@ -86,6 +87,11 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
   });
   await Promise.all(
     [plan, notes, mirrors].map((item) =>
+      createIssueLink(api, ann.token, item.id, { url: `http://169.254.169.254/furnish/${item.id}` })
+    )
+  );
+  await Promise.all(
+    [plan, notes, mirrors].map((item) =>
       createIssueComment(api, bob.token, item.id, "<p>Delete discussion</p>").then((comment) =>
         Promise.all([ann, bob].map((who) => createCommentReaction(api, who.token, comment.id)))
       )
@@ -106,6 +112,7 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
   });
   await Promise.all(
     [old, neighbor].map(async (item) => {
+      await createIssueLink(api, bob.token, item.id, { url: `http://169.254.169.254/furnish/${item.id}` });
       const discussion = await createIssueComment(api, bob.token, item.id, "<p>Keep these stamps</p>");
       await createCommentReaction(api, ann.token, discussion.id);
       await createIssueReaction(api, bob.token, item.id);

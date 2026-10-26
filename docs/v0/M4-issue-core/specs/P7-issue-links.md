@@ -1,8 +1,8 @@
 # M4/P7 `issue-links`：链接、出站客户端与元数据抓取规格
 
-日期：2026-10-26。**准备完成，独立预检及修订复审通过；T1 已实施且独立评审通过，T2 领域与存储已实施待独立评审，其余任务未实施；未做完整原型或逐 Task 重放；另有最窄 PG/sqlc 可行性实验，边界见附录。** 基线：P6 的 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；主控已核实同一SHA的main CI `40305247546` 最终Success，server/web/e2e全绿；首轮基础设施超时及重跑历史另记review。正式分支 `codex/m4-p7`；worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)。
+日期：2026-10-26。**准备完成，独立预检及修订复审通过；T1/T2 已实施且独立评审通过，T3 创建/列表与首次链接事件已实施待独立评审，其余任务未实施；未做完整原型或逐 Task 重放；另有最窄 PG/sqlc 可行性实验，边界见附录。** 基线：P6 的 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；主控已核实同一SHA的main CI `40305247546` 最终Success，server/web/e2e全绿；首轮基础设施超时及重跑历史另记review。正式分支 `codex/m4-p7`；worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)。
 
-> **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1 独立评审通过，T2 已实施待独立评审，整阶段验收仍未完成。
+> **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1/T2 独立评审通过，T3 已实施待独立评审，整阶段验收仍未完成。
 
 权威输入：[M4 设计](../M4-design.md) §2/I10/I17、3.4–3.6、3.11、3.13/17–19、3.19–3.20、3.23/P7、4.8、5.1–5.3、6.8、8.1/8.8、9.1–9.4、12/P7、13.1；[02](../../claude_to_gpt/02-method.md)、[03](../../claude_to_gpt/03-rules-and-pitfalls.md)；P6 spec §5/review §6 与本规格 §7。D3 事务内同步事件、架构问题 11.8 的平台出站与固定 IP、后台写回的单句守卫已批准，不重新裁定。
 
@@ -22,7 +22,7 @@
 |---|---|---|
 | T1 | `server/migrations/sql/00027_issue_issue_links.sql`、`server/sqlc.yaml`、`deploy/runtime-grants.sql`；I/app/delete_issue.go、delete_project_rows.go；I/adapter/postgres/delete_issue.go、delete_rows.go 及 queries | 表、grants、两条删除路径 / 基线 |
 | T2 | I/domain/link.go、link_metadata.go；I/app/link_ports.go、link_rows.go；I/adapter/postgres/links.go、queries/links.sql | 纯领域与存储端口 / T1 |
-| T3 | `api/modules/issue.yaml`；I/app/create_issue_link.go、list_issue_links.go、link_events.go；I/adapter/http/links.go；I/module.go、module_events.go；B/events_test.go；e2e/fixtures/links.ts、furnish.ts；错误文案 | 创建、列表、创建事件与 API fixture / T2 |
+| T3 | `api/modules/issue.yaml`、`api/openapi.yaml` 聚合入口及生成物；I/app/create_issue_link.go、list_issue_links.go、link_events.go；I/domain/events.go、errors.go、link_activity.go；I/adapter/http/links.go、link_usecases.go；I/adapter/postgres/link_conflict.go；I/module.go、module_events.go；B/events_test.go；e2e/fixtures/links.ts、furnish.ts、assert/issue-collaboration.ts 与 stories/issue/i17-delete-issue.spec.ts；错误文案 | 创建、列表、创建事件与 API fixture / T2 |
 | T4 | I/app/update_issue_link.go、delete_issue_link.go、link_target.go；I/adapter/http/link_writes.go；I/domain/link_activity.go | 改删、三种事件完整、审计与活动 / T3 |
 | T5 | B/issue_link_security_test.go、issue_link_transactions_test.go；权限/闸门/写锁矩阵 | 链接请求完整安全与回滚证明 / T4 |
 | T6 | O/policy.go、special_ranges.go、testdata/iana-*.csv、policy_test.go | 地址策略和独立 IANA 快照 / 基线 |

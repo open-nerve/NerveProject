@@ -3,6 +3,7 @@ import { changeWorkspacePreferences, createLabel, createProject, invite, inviteA
 import { accountId } from "./auth";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "./comments";
 import { createIssue, createIssueRelations } from "./issues";
+import { createIssueLink } from "./links";
 
 // The rows a deletion story furnishes a workspace or a project with first, so that its deletion has a row of each
 // table to write (expectWorkspaceDeleted, expectProjectDeleted).
@@ -12,8 +13,8 @@ import { createIssue, createIssueRelations } from "./issues";
  * member of it, creates, assigned to the account of assigneeId, a member of it who is not its guest, and labelled the
  * label of labelId, one of its labels; the creator and the assignee its subscribers, and its activity the creation
  * and the assignee; and a second work item, which the first blocks: their relation, and a row of each one's activity
- * on it. The first also carries a description mention, its initial version, a comment and both reaction resources,
- * all created through their APIs so deletion catalog assertions cover the five collaboration tables.
+ * on it. The first also carries a description mention, its initial version, a link, a comment and both reaction resources,
+ * all created through their APIs so deletion catalog assertions cover the collaboration tables and links.
  */
 export async function furnishIssueRows(
   api: Api,
@@ -28,6 +29,7 @@ export async function furnishIssueRows(
     assignee_ids: [assigneeId],
     label_ids: [labelId],
   });
+  await createIssueLink(api, token, fix.id, { url: `http://169.254.169.254/furnish/${fix.id}` });
   const comment = await createIssueComment(api, token, fix.id, "<p>Ready to fix</p>");
   await createCommentReaction(api, token, comment.id);
   await createIssueReaction(api, token, fix.id);

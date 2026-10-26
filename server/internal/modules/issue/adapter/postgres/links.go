@@ -57,7 +57,7 @@ func (s *Store) InsertLink(ctx context.Context, w app.LinkWrite) error {
 	l := w.Link
 	err := s.queries(ctx).InsertLink(ctx, gen.InsertLinkParams{ID: l.ID, WorkspaceID: l.WorkspaceID, ProjectID: l.ProjectID, IssueID: l.IssueID, Url: l.URL, Title: l.Title, By: &w.By, At: w.At})
 	if err != nil {
-		return fmt.Errorf("insert link %s: %w", l.ID, err)
+		return fmt.Errorf("insert link %s: %w", l.ID, linkConflict(err))
 	}
 	return nil
 }
@@ -67,7 +67,7 @@ func (s *Store) InsertLink(ctx context.Context, w app.LinkWrite) error {
 func (s *Store) UpdateLink(ctx context.Context, w app.LinkWrite) (domain.Link, error) {
 	r, err := s.queries(ctx).UpdateLink(ctx, gen.UpdateLinkParams{ID: w.Link.ID, Url: w.Link.URL, Title: w.Link.Title, By: &w.By, At: w.At})
 	if err != nil {
-		return domain.Link{}, fmt.Errorf("update link %s: %w", w.Link.ID, err)
+		return domain.Link{}, fmt.Errorf("update link %s: %w", w.Link.ID, linkConflict(err))
 	}
 	return linkOf(gen.LinksRow(r))
 }

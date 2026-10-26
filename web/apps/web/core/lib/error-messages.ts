@@ -54,6 +54,7 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "project.label_not_found": "errors.project_label_not_found",
   "issue.description_version_not_found": "errors.issue_description_version_not_found",
   "issue.comment_not_found": "errors.issue_comment_not_found",
+  "issue.link_exists": "errors.issue_link_exists",
   "issue.reaction_exists": "errors.issue_reaction_exists",
   "issue.reaction_not_found": "errors.issue_reaction_not_found",
   "issue.not_author": "errors.issue_not_author",

@@ -14,6 +14,7 @@ func EventTypes() []string {
 		domain.EventCommentCreated, domain.EventCommentUpdated, domain.EventCommentDeleted,
 		domain.EventRelationAdded, domain.EventRelationRemoved,
 		domain.EventReactionAdded, domain.EventReactionRemoved,
+		domain.EventLinkCreated, domain.EventLinkUpdated, domain.EventLinkDeleted,
 	}
 }
 

@@ -7,6 +7,8 @@ import "github.com/open-nerve/NerveProject/server/internal/shared"
 // a workspace the workspace module's code for the workspace, which they
 // declare too (M4 design 5.1), with those modules' details.
 var (
+	// ErrLinkExists answers an exact duplicate live URL on this issue.
+	ErrLinkExists = shared.NewError(shared.KindConflict, "issue.link_exists", "This work item already has this link.")
 	// ErrMemberNotFound answers an absent or deleted target membership.
 	ErrMemberNotFound = shared.NewError(shared.KindNotFound, "workspace.member_not_found", "The member does not exist, or you cannot see the workspace.")
 	// ErrDescriptionVersionNotFound conceals missing versions and hidden parent issues.

@@ -161,7 +161,7 @@ func testLinkUpdate(t *testing.T) {
 	}
 }
 
-// Storage must retain exact high-entropy values and the PG constraint chain,
+// Storage must retain exact high-entropy values and map exact duplicates,
 // with no lowercase/hash-only duplicate checks or byte truncation.
 func testLinkExactURLs(t *testing.T) {
 	s, pool := newStore(t)
@@ -195,14 +195,18 @@ func testLinkExactURLs(t *testing.T) {
 			t.Fatalf("URL exists = %v, %v; want %v", exists, err, tc.want)
 		}
 	}
-	wantLinkConstraint(t, s.InsertLink(ctx, makeWrite(issue, long)), "23P01", "issue_links_issue_id_url_key")
+	if err := s.InsertLink(ctx, makeWrite(issue, long)); !errors.Is(err, domain.ErrLinkExists) {
+		t.Fatalf("duplicate insert = %v; want link_exists", err)
+	}
 	target := makeWrite(issue, "http://169.254.169.254/target")
 	if err := s.InsertLink(ctx, target); err != nil {
 		t.Fatal(err)
 	}
 	target.Link.URL = long
 	_, err = s.UpdateLink(ctx, target)
-	wantLinkConstraint(t, err, "23P01", "issue_links_issue_id_url_key")
+	if !errors.Is(err, domain.ErrLinkExists) {
+		t.Fatalf("duplicate update = %v; want link_exists", err)
+	}
 	changed := string([]rune(long)[:2047]) + "x"
 	target.Link.URL = changed
 	got, err = s.UpdateLink(ctx, target)
@@ -310,5 +314,31 @@ func testLinkErrors(t *testing.T) {
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("error chain = %v; want context.Canceled", err)
 		}
+	}
+}
+
+// The real exclusion constraint must reach the same public mapping as wrapped
+// PG errors; prechecking a URL in app cannot substitute for this storage path.
+func TestLinkConflictMappingConstraint(t *testing.T) {
+	s, pool := newStore(t)
+	by := newAccount(t, pool, "creator@corp.com")
+	p := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
+	id := uuid.NewV7()
+	newIssue(t, pool, p, id, 1, by)
+	w := app.LinkWrite{Link: domain.Link{ID: uuid.NewV7(), WorkspaceID: p.workspace, ProjectID: p.id, IssueID: id, URL: "http://169.254.169.254/conflict"}, By: by, At: now}
+	if err := s.InsertLink(t.Context(), w); err != nil {
+		t.Fatal(err)
+	}
+	w.Link.ID = uuid.NewV7()
+	if err := s.InsertLink(t.Context(), w); !errors.Is(err, domain.ErrLinkExists) {
+		t.Fatalf("duplicate insert=%v", err)
+	}
+	w.Link.URL = "http://169.254.169.254/other"
+	if err := s.InsertLink(t.Context(), w); err != nil {
+		t.Fatal(err)
+	}
+	w.Link.URL = "http://169.254.169.254/conflict"
+	if _, err := s.UpdateLink(t.Context(), w); !errors.Is(err, domain.ErrLinkExists) {
+		t.Fatalf("duplicate update=%v", err)
 	}
 }

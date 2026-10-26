@@ -418,6 +418,40 @@ type IssueDetail struct {
 	WorkspaceID uuid.UUID                    `json:"workspace_id"`
 }
 
+// IssueLink defines model for IssueLink.
+type IssueLink struct {
+	CreatedAt   time.Time                    `json:"created_at"`
+	CreatedByID nullable.Nullable[uuid.UUID] `json:"created_by_id"`
+	ID          uuid.UUID                    `json:"id"`
+	IssueID     uuid.UUID                    `json:"issue_id"`
+	Metadata    IssueLinkMetadata            `json:"metadata"`
+	Title       nullable.Nullable[string]    `json:"title"`
+	UpdatedAt   time.Time                    `json:"updated_at"`
+	URL         string                       `json:"url"`
+}
+
+// IssueLinkCollection defines model for IssueLinkCollection.
+type IssueLinkCollection struct {
+	Data []IssueLink `json:"data"`
+}
+
+// IssueLinkCreate defines model for IssueLinkCreate.
+type IssueLinkCreate struct {
+	Title nullable.Nullable[string] `json:"title,omitempty"`
+
+	// URL HTTP URL, at most 2048 Unicode characters after normalization.
+	URL string `json:"url"`
+}
+
+// IssueLinkMetadata defines model for IssueLinkMetadata.
+type IssueLinkMetadata struct {
+	Error      nullable.Nullable[string] `json:"error,omitempty"`
+	Favicon    nullable.Nullable[string] `json:"favicon,omitempty"`
+	FaviconURL nullable.Nullable[string] `json:"favicon_url,omitempty"`
+	Title      nullable.Nullable[string] `json:"title,omitempty"`
+	URL        nullable.Nullable[string] `json:"url,omitempty"`
+}
+
 // IssueListGroup A group page has data and next_cursor; a lane group has subgroups instead.
 type IssueListGroup struct {
 	Data *[]Issue `json:"data,omitempty"`
@@ -707,6 +741,9 @@ type UpdateIssueJSONRequestBody = IssueUpdate
 // CreateIssueCommentJSONRequestBody defines body for CreateIssueComment for application/json ContentType.
 type CreateIssueCommentJSONRequestBody = IssueCommentCreate
 
+// CreateIssueLinkJSONRequestBody defines body for CreateIssueLink for application/json ContentType.
+type CreateIssueLinkJSONRequestBody = IssueLinkCreate
+
 // AddIssueReactionJSONRequestBody defines body for AddIssueReaction for application/json ContentType.
 type AddIssueReactionJSONRequestBody = ReactionCreate
 
@@ -763,6 +800,12 @@ type ServerInterface interface {
 	// ListDescriptionVersions List a work item's saved descriptions
 	// (GET /api/v0/issues/{issue_id}/description-versions)
 	ListDescriptionVersions(w http.ResponseWriter, r *http.Request, issueID IssueID, params ListDescriptionVersionsParams)
+	// ListIssueLinks List links on a visible work item
+	// (GET /api/v0/issues/{issue_id}/links)
+	ListIssueLinks(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// CreateIssueLink Create a link on a visible work item
+	// (POST /api/v0/issues/{issue_id}/links)
+	CreateIssueLink(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// ListIssueReactions List reactions on a visible work item
 	// (GET /api/v0/issues/{issue_id}/reactions)
 	ListIssueReactions(w http.ResponseWriter, r *http.Request, issueID IssueID)
@@ -1261,6 +1304,58 @@ func (siw *ServerInterfaceWrapper) ListDescriptionVersions(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListDescriptionVersions(w, r, issueID, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListIssueLinks operation middleware
+func (siw *ServerInterfaceWrapper) ListIssueLinks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIssueLinks(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateIssueLink operation middleware
+func (siw *ServerInterfaceWrapper) CreateIssueLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateIssueLink(w, r, issueID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2170,6 +2265,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issues/{issue_id}/reactions/{reaction}", wrapper.RemoveIssueReaction)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}/reactions", wrapper.AddCommentReaction)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}/reactions/{reaction}", wrapper.RemoveCommentReaction)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/links", wrapper.ListIssueLinks)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/links", wrapper.CreateIssueLink)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.ListIssueComments)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.CreateIssueComment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}", wrapper.DeleteIssueComment)
@@ -2819,6 +2916,99 @@ func (response ListDescriptionVersionsdefaultApplicationProblemPlusJSONResponse)
 	return err
 }
 
+type ListIssueLinksRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type ListIssueLinksResponseObject interface {
+	VisitListIssueLinksResponse(w http.ResponseWriter) error
+}
+
+type ListIssueLinks200JSONResponse IssueLinkCollection
+
+func (response ListIssueLinks200JSONResponse) VisitListIssueLinksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIssueLinksdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListIssueLinksdefaultApplicationProblemPlusJSONResponse) VisitListIssueLinksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIssueLinkRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+	Body    *CreateIssueLinkJSONRequestBody
+}
+
+type CreateIssueLinkResponseObject interface {
+	VisitCreateIssueLinkResponse(w http.ResponseWriter) error
+}
+
+type CreateIssueLink201JSONResponse IssueLink
+
+func (response CreateIssueLink201JSONResponse) VisitCreateIssueLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIssueLinkdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CreateIssueLinkdefaultApplicationProblemPlusJSONResponse) VisitCreateIssueLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListIssueReactionsRequestObject struct {
 	IssueID IssueID `json:"issue_id"`
 }
@@ -3418,6 +3608,12 @@ type StrictServerInterface interface {
 	// ListDescriptionVersions List a work item's saved descriptions
 	// (GET /api/v0/issues/{issue_id}/description-versions)
 	ListDescriptionVersions(ctx context.Context, request ListDescriptionVersionsRequestObject) (ListDescriptionVersionsResponseObject, error)
+	// ListIssueLinks List links on a visible work item
+	// (GET /api/v0/issues/{issue_id}/links)
+	ListIssueLinks(ctx context.Context, request ListIssueLinksRequestObject) (ListIssueLinksResponseObject, error)
+	// CreateIssueLink Create a link on a visible work item
+	// (POST /api/v0/issues/{issue_id}/links)
+	CreateIssueLink(ctx context.Context, request CreateIssueLinkRequestObject) (CreateIssueLinkResponseObject, error)
 	// ListIssueReactions List reactions on a visible work item
 	// (GET /api/v0/issues/{issue_id}/reactions)
 	ListIssueReactions(ctx context.Context, request ListIssueReactionsRequestObject) (ListIssueReactionsResponseObject, error)
@@ -3884,6 +4080,65 @@ func (sh *strictHandler) ListDescriptionVersions(w http.ResponseWriter, r *http.
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListDescriptionVersionsResponseObject); ok {
 		if err := validResponse.VisitListDescriptionVersionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListIssueLinks operation middleware
+func (sh *strictHandler) ListIssueLinks(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request ListIssueLinksRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListIssueLinks(ctx, request.(ListIssueLinksRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListIssueLinks")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListIssueLinksResponseObject); ok {
+		if err := validResponse.VisitListIssueLinksResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateIssueLink operation middleware
+func (sh *strictHandler) CreateIssueLink(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request CreateIssueLinkRequestObject
+
+	request.IssueID = issueID
+
+	var body CreateIssueLinkJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateIssueLink(ctx, request.(CreateIssueLinkRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateIssueLink")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateIssueLinkResponseObject); ok {
+		if err := validResponse.VisitCreateIssueLinkResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

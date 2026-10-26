@@ -279,6 +279,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		{"a reaction removal", http.MethodDelete, w.newReactionPath(t), "", http.StatusNoContent},
 		{"a comment edit", http.MethodPatch, commentPath(w.newComment(t, "alice", w.newWorkItem(t)).ID), `{"comment_html":"<p>Updated</p>"}`, http.StatusOK},
 		{"a comment deletion", http.MethodDelete, commentPath(w.newComment(t, "alice", w.newWorkItem(t)).ID), "", http.StatusNoContent},
+		{"a link", http.MethodPost, linksOf(w.newWorkItem(t)), `{"url":"http://169.254.169.254/gate"}`, http.StatusCreated},
 		{"a comment", http.MethodPost, commentsOf(w.newWorkItem(t)), `{"comment_html":"<p>Queued comment</p>"}`, http.StatusCreated},
 		{"an addition of sub-items", http.MethodPost, subIssues(w.newWorkItem(t)), subIssueIDs(w.newWorkItem(t)), http.StatusOK},
 		{"an addition of relations", http.MethodPost, relationsOf(w.newWorkItem(t)), relating("relates_to", w.newWorkItem(t)),
@@ -333,6 +334,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		})
 	}
 	for _, shape := range []struct{ name, path, body, want string }{
+		{"an invalid link", linksOf(item), `{"url":"ftp://example.com"}`, "url not_allowed"},
 		{"an empty comment", commentsOf(item), `{"comment_html":"<script>removed()</script>"}`, "comment_html required"},
 		{"an addition of sub-items naming one twice", subIssues(item), subIssueIDs(archived, archived), "sub_issue_ids[1] duplicate"},
 		{"an addition of relations naming 21", relationsOf(item), relating("relates_to", slices.Repeat([]uuid.UUID{archived}, 21)...),

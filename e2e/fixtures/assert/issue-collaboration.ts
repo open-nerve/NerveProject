@@ -17,6 +17,7 @@ export async function expectDescriptionActivity(db: Database, issueId: string, o
 /** Read all collaboration rows, retaining timestamp precision beyond JavaScript Date. */
 export async function collaborationRows(db: Database, issueIds: string[]) {
   const tables = [
+    "issue_links",
     "issue_mentions",
     "issue_comments",
     "issue_reactions",
