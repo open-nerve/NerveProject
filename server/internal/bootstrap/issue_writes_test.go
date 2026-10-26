@@ -141,6 +141,9 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	linkIssue := w.newWorkItem(t)
 	route.answerWithin(t, w.contract, http.MethodPost, linksOf(linkIssue), alice, `{"url":"http://169.254.169.254/one"}`, http.StatusCreated)
 	route.answerWithin(t, w.contract, http.MethodGet, linksOf(linkIssue), alice, "", http.StatusOK)
+	link := listIn[answeredLink](t, route.answerWithin(t, w.contract, http.MethodGet, linksOf(linkIssue), alice, "", http.StatusOK))[0]
+	route.answerWithin(t, w.contract, http.MethodPatch, linkPath(link.ID), alice, `{"title":"Changed"}`, http.StatusOK)
+	route.answerWithin(t, w.contract, http.MethodDelete, linkPath(link.ID), alice, "", http.StatusNoContent)
 	commentID := w.newComment(t, "alice", w.newWorkItem(t)).ID
 	route.answerWithin(t, w.contract, http.MethodPost, commentReactionsOf(commentID), alice, `{"reaction":"128077"}`, http.StatusCreated)
 	route.answerWithin(t, w.contract, http.MethodDelete, commentReactionsOf(commentID)+"/128077", alice, "", http.StatusNoContent)

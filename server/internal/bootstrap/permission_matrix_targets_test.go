@@ -57,6 +57,7 @@ var underProject = map[string]struct {
 	"{version_id}": {"description version", func(s seeded) map[string]uuid.UUID { return s.descriptionVersions }, func(c caller, s seeded) (string, uuid.UUID) {
 		return issueOf(c), s.descriptionVersion(projectOf(c), issueOf(c))
 	}},
+	"{link_id}":    {"link", func(s seeded) map[string]uuid.UUID { return s.links }, func(c caller, s seeded) (string, uuid.UUID) { return issueOf(c), s.link(projectOf(c), issueOf(c)) }},
 	"{comment_id}": {"comment", func(s seeded) map[string]uuid.UUID { return s.comments }, func(c caller, s seeded) (string, uuid.UUID) { return issueOf(c), s.comment(projectOf(c), issueOf(c)) }},
 	"{relation_id}": {"relation", func(s seeded) map[string]uuid.UUID { return s.relations }, func(c caller, s seeded) (string, uuid.UUID) {
 		return relationOf(c), s.relation(projectOf(c), relationOf(c))

@@ -23,7 +23,7 @@
 | T1 | `server/migrations/sql/00027_issue_issue_links.sql`、`server/sqlc.yaml`、`deploy/runtime-grants.sql`；I/app/delete_issue.go、delete_project_rows.go；I/adapter/postgres/delete_issue.go、delete_rows.go 及 queries | 表、grants、两条删除路径 / 基线 |
 | T2 | I/domain/link.go、link_metadata.go；I/app/link_ports.go、link_rows.go；I/adapter/postgres/links.go、queries/links.sql | 纯领域与存储端口 / T1 |
 | T3 | `api/modules/issue.yaml`、`api/openapi.yaml` 聚合入口及生成物；I/app/create_issue_link.go、list_issue_links.go、link_events.go；I/domain/events.go、errors.go、link_activity.go；I/adapter/http/links.go、link_usecases.go；I/adapter/postgres/link_conflict.go；I/module.go、module_events.go；B/events_test.go；e2e/fixtures/links.ts、furnish.ts、assert/issue-collaboration.ts 与 stories/issue/i17-delete-issue.spec.ts；错误文案 | 创建、列表、创建事件与 API fixture / T2 |
-| T4 | I/app/update_issue_link.go、delete_issue_link.go、link_target.go；I/adapter/http/link_writes.go；I/domain/link_activity.go | 改删、三种事件完整、审计与活动 / T3 |
+| T4 | `api/modules/issue.yaml`、`api/openapi.yaml` 聚合入口及生成物；I/app/update_issue_link.go、delete_issue_link.go、link_target.go；I/adapter/http/link_writes.go、link_usecases.go；I/domain/link_activity.go、errors.go；I/module.go；B/issue_link_writes_test.go 与权限/写锁/闸门/单连接登记；错误文案 | 改删、三种事件完整、审计与活动 / T3 |
 | T5 | B/issue_link_security_test.go、issue_link_transactions_test.go；权限/闸门/写锁矩阵 | 链接请求完整安全与回滚证明 / T4 |
 | T6 | O/policy.go、special_ranges.go、testdata/iana-*.csv、policy_test.go | 地址策略和独立 IANA 快照 / 基线 |
 | T7 | O/client.go、transport.go、errors.go 及测试 | 安全 GET、跳转、期限/响应上限 / T6 |

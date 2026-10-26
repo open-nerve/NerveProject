@@ -2166,6 +2166,64 @@ paths:
                 $ref: '#/components/schemas/DescriptionVersionDetail'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issue-links/{link_id}:
+    parameters:
+      - name: link_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateIssueLink
+      tags:
+        - issue
+      summary: Update a link on a visible work item
+      description: Uses issue.update, including the parent work item's guest visibility. Members may edit another member's link. Validates supplied fields before permissions and the write gate; rereads the link under the project lock. Archived projects precede archived work items, even for a no-op. Omitted title stays unchanged, null clears it, and empty text is kept. URL changes clear preview metadata; title-only changes preserve current database metadata and emit an updated event without a URL activity. Busy projects answer 503 server_busy with Retry-After.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.link_not_found
+        - forbidden
+        - issue.link_exists
+        - project.archived
+        - issue.archived
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueLinkPatch'
+      responses:
+        '200':
+          description: The current link after the update, including current metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueLink'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteIssueLink
+      tags:
+        - issue
+      summary: Delete a link on a visible work item
+      description: Uses issue.update and the parent work item's guest visibility, without an author restriction. Rereads the live link under the project lock. Refuses archived projects before archived work items. Soft deletion, audit, activity and event share one actor and moment in one transaction. Busy projects answer 503 server_busy with Retry-After.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - issue.link_not_found
+        - forbidden
+        - project.archived
+        - issue.archived
+        - server_busy
+      responses:
+        '204':
+          description: The link was deleted.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/issues/{issue_id}/links:
     parameters:
       - $ref: '#/components/parameters/IssueID'
@@ -4522,6 +4580,18 @@ components:
           format: date-time
         description_html:
           type: string
+    IssueLinkPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        url:
+          type: string
+          description: HTTP URL, at most 2048 Unicode characters after normalization.
+        title:
+          type:
+            - string
+            - 'null'
+          maxLength: 255
     IssueLinkMetadata:
       type: object
       additionalProperties: false

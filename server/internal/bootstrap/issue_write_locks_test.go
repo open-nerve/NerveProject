@@ -41,6 +41,12 @@ type issueWrite struct {
 // issueWrites are the work-item side's writes, each with its row: every
 // operation of the contract tagged issue but GET (writesOnIssues).
 var issueWrites = []issueWrite{
+	{op: "updateIssueLink", method: http.MethodPatch, path: "/api/v0/issue-links/{link_id}", target: func(t *testing.T, w issueWorld) string {
+		return linkPath(createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/locks").ID)
+	}, body: func(*testing.T, issueWorld) string { return `{"title":"Changed"}` }, want: http.StatusOK, waits: "issues", mode: "SHARE"},
+	{op: "deleteIssueLink", method: http.MethodDelete, path: "/api/v0/issue-links/{link_id}", target: func(t *testing.T, w issueWorld) string {
+		return linkPath(createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/locks").ID)
+	}, body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
 	{op: "createIssueLink", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/links", target: func(t *testing.T, w issueWorld) string { return linksOf(w.newWorkItem(t)) }, body: func(*testing.T, issueWorld) string { return `{"url":"http://169.254.169.254/locks"}` }, want: http.StatusCreated, waits: "issues", mode: "SHARE"},
 	{op: "addCommentReaction", method: http.MethodPost, path: "/api/v0/issue-comments/{comment_id}/reactions", target: func(t *testing.T, w issueWorld) string {
 		return commentReactionsOf(w.newComment(t, "alice", w.newWorkItem(t)).ID)

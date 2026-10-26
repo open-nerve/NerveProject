@@ -1263,6 +1263,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issue-links/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a link on a visible work item
+         * @description Uses issue.update and the parent work item's guest visibility, without an author restriction. Rereads the live link under the project lock. Refuses archived projects before archived work items. Soft deletion, audit, activity and event share one actor and moment in one transaction. Busy projects answer 503 server_busy with Retry-After.
+         */
+        delete: operations["deleteIssueLink"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a link on a visible work item
+         * @description Uses issue.update, including the parent work item's guest visibility. Members may edit another member's link. Validates supplied fields before permissions and the write gate; rereads the link under the project lock. Archived projects precede archived work items, even for a no-op. Omitted title stays unchanged, null clears it, and empty text is kept. URL changes clear preview metadata; title-only changes preserve current database metadata and emit an updated event without a URL activity. Busy projects answer 503 server_busy with Retry-After.
+         */
+        patch: operations["updateIssueLink"];
+        trace?: never;
+    };
     "/api/v0/issues/{issue_id}/links": {
         parameters: {
             query?: never;
@@ -2465,6 +2491,11 @@ export interface components {
             created_at: string;
             description_html: string;
         };
+        IssueLinkPatch: {
+            /** @description HTTP URL, at most 2048 Unicode characters after normalization. */
+            url?: string;
+            title?: string | null;
+        };
         IssueLinkMetadata: {
             title?: string | null;
             favicon?: string | null;
@@ -2729,6 +2760,7 @@ export type IssueActivityPage = components['schemas']['IssueActivityPage'];
 export type DescriptionVersion = components['schemas']['DescriptionVersion'];
 export type DescriptionVersionPage = components['schemas']['DescriptionVersionPage'];
 export type DescriptionVersionDetail = components['schemas']['DescriptionVersionDetail'];
+export type IssueLinkPatch = components['schemas']['IssueLinkPatch'];
 export type IssueLinkMetadata = components['schemas']['IssueLinkMetadata'];
 export type IssueLink = components['schemas']['IssueLink'];
 export type IssueLinkCollection = components['schemas']['IssueLinkCollection'];
@@ -4743,6 +4775,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DescriptionVersionDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteIssueLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link was deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateIssueLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueLinkPatch"];
+            };
+        };
+        responses: {
+            /** @description The current link after the update, including current metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueLink"];
                 };
             };
             default: components["responses"]["Problem"];
