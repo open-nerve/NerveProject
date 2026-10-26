@@ -155,11 +155,13 @@ func New(Options) (*Client,error)
 func (*Client) Get(context.Context,string,Limits) (Response,error)
 // 分类错误经errors.Is识别；包装链供分类，不直接把error字符串写入日志。
 var ErrBlocked, ErrTimeout, ErrUnreachable, ErrTooLarge error
+// 仅返回空字符串或受控 redirect_limit，支持标准错误包装。
+func Reason(error) string
 // config；不依赖outbound，启动验证自己解析CIDR。
 type OutboundConfig struct { AllowCIDRs []string `koanf:"allow_cidrs"` }
 ```
 
-构造时读取 `net.InterfaceAddrs` 成功后固定本机地址快照；失败返回错误，不当空集合。无全局可变策略。Options传入的prefix复制持有，Version从bootstrap现有版本来源给出，outbound不为取版本跨platform导入。Get的Limits均须正数，错误为调用者程序错误，不能退化为无限制。
+构造时读取 `net.InterfaceAddrs` 成功后固定本机地址快照；失败返回错误，不当空集合。无全局可变策略。Options传入的prefix复制持有，Version从bootstrap现有版本来源给出，outbound不为取版本跨platform导入。Get的Limits均须正数，MaxBytes还须小于MaxInt64以保留越界探测字节；错误为调用者程序错误，不能退化为无限制。
 
 拒绝集为两张 IANA special-purpose 登记表的**所有**prefix（含 globally reachable=true、已终止保留记录），加 IPv4/IPv6 multicast 和 `fec0::/10`；各prefix显式保留，不只用IsPrivate/IsGlobalUnicast。2026-10-26官方页面最后更新2025-10-09，CSV精准来源/hash见附录；实施时核对是否更新并记录实际采用快照。mapped IPv6、NAT64、6to4、Teredo外层与内嵌IPv4均验证；外层被拒不能先Unmap绕过。NAT64 local `/48` 整体拒绝；Teredo检查server和反转的client。固定 NAT64 `64:ff9b::/96` 按已知格式检查内嵌 IPv4；local `64:ff9b:1::/48` 是技术无关预留，不推断载荷存在、位置或算法，默认整段拒绝（[RFC 8215 §5](https://www.rfc-editor.org/rfc/rfc8215.html#section-5)、[RFC 6052 §2.2](https://www.rfc-editor.org/rfc/rfc6052.html#section-2.2)）。测试放行仅对该原地址落在显式allow prefix时覆盖静态/本机拒绝；放行IPv4 127.0.0.1/32不放行整段127/8，也不自动放行IPv6嵌入形式。显式放行已知编码外层只覆盖该原 literal 的静态/本机拒绝，递归载荷不继承 allow；公网载荷仍可通过，私网/本机载荷仍拒绝。
 
@@ -173,7 +175,7 @@ ConnectTimeout=2s限制建连，Timeout=5s覆盖解析、全部跳转、TLS、he
 
 ### 2.6 T9：抓取元数据
 
-app声明 `type LinkCrawler interface { Crawl(context.Context,string) domain.LinkMetadata }`；crawler adapter实现 `New(client *outbound.Client, logger *slog.Logger) *Crawler`，`(*Crawler).Crawl(ctx,url string) domain.LinkMetadata`。app不importhttp、outbound或HTML库。网络诊断由adapter结构化日志记录受控阶段与错误类别，公开元数据不暴露端口探测细分。日志不得记录原始URL、query、userinfo、响应body或未经分类的 `error.Error()`（其包装链可能含URL）；对所有级别及消息/属性同样适用。阶段固定为page或icon，类别区分blocked、timeout、unreachable、too_large、http_status、non_html、invalid_icon_type；重定向超限保留redirect_limit诊断理由，仍映射公开failed，重定向被拒保留blocked与所在page/icon阶段。不要以完全不记日志通过保密测试。
+app声明 `type LinkCrawler interface { Crawl(context.Context,string) domain.LinkMetadata }`；crawler adapter实现 `New(client *outbound.Client, logger *slog.Logger) *Crawler`，`(*Crawler).Crawl(ctx,url string) domain.LinkMetadata`。app不importhttp、outbound或HTML库。网络诊断由adapter结构化日志记录受控阶段与错误类别，公开元数据不暴露端口探测细分。日志不得记录原始URL、query、userinfo、响应body或未经分类的 `error.Error()`（其包装链可能含URL）；对所有级别及消息/属性同样适用。阶段固定为page或icon，类别区分blocked、timeout、unreachable、too_large、http_status、non_html、invalid_icon_type；adapter先用errors.Is分类，仅在outbound.Reason(err)返回固定redirect_limit时记录该诊断理由；不解析原始错误文本，仍映射公开failed，重定向被拒保留blocked与所在page/icon阶段。不要以完全不记日志通过保密测试。
 
 T9的 `TestCrawlerLogsRedacted` 使用捕获所有级别的 `slog` handler，分别驱动页面失败、重定向被拒/超限、图标失败；在输入query、被拒userinfo、重定向Location、图标href和响应body放互不相同哨兵。断言完整序列化日志中均不出现这些哨兵、原始URL或原始错误文本，同时每条预期诊断保留对应page/icon阶段与受控分类（含redirect_limit）。再临时恢复记录原始URL或含URL的原始error的生产变异，证明该测试变红；恢复字节/hash后转绿。
 

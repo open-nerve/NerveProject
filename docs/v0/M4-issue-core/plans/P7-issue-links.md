@@ -134,14 +134,16 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 ## Task 7：固定 IP 的安全 GET 与资源上限
 
-**Files:** 新O/client.go、transport.go、client_test.go、transport_test.go；扩errors.go。测试私有依赖用于resolver/dial/interface/TLS root，无全局替换/可变测试hook。
-**Interfaces:** 产生spec§2.5的Options/Limits/Response/New/Get与四错误；New在生产读取InterfaceAddrs，测试私有`newClient(options Options,deps dependencies)`中依赖：resolver的`LookupNetIP(ctx,network,host)([]netip.Addr,error)`、dial函数、interface读取、TLS roots（只测试），不暴露给模块消费方。
+**Files:** 新O/client.go、transport.go、client_test.go、transport_test.go、deadline_test.go；扩errors.go。测试私有依赖用于resolver/dial/interface/TLS root，无全局替换/可变测试hook。
+**T7 实施事实（待独评）：** 完成固定IP/每跳复检、Host/SNI与证书验证、手动跳转、解压后限额、共享期限与显式连接关闭；M19–M22七个生产变异均红后按原字节恢复绿，T6 mapped端点守卫Minor以值比较和临时helper Unmap自证闭环。仅T7实现与聚焦门禁完成，T8配置/T9日志消费与整阶段验收未完成。
 
-- [ ] 写`TestOutboundPinsEveryHop`：混合public+blocked答案断言`dialCalls==0`；resolver第二次返回127但同hop只解析一次、dial目标为第一次publicIP；同host重定向重新解析；HTTPS记录Host/SNI，正确证书成功、错证书失败，不能测试依靠InsecureSkipVerify。
-- [ ] 写`TestOutboundLimitsAndHeaders`：最多5redirect，第6次返回ErrUnreachable且细分日志redirect_limit，crawler对应failed；redirect userinfo/zone/nonhttp无连接且Blocked；代理env的httptest计数0；Set-Cookie后跳转Cookie为空，Authorization/Proxy-Authorization/Referer空；MaxBytes恰好N成功，N+1/chunked/解压展开超量TooLarge，取消/解析/读body也受总期限，中间body关闭。`TestOutboundLocalSnapshot`在outbound同包私有依赖中使InterfaceAddrs返回错误，断言New失败；本机普通公网地址拒绝。
-- [ ] `go test -count=1 ./internal/platform/outbound -run 'TestOutbound'`先红；实现manual redirects、先全候选检查后拨号、Host/SNI保持、Proxy=nil、无CookieJar；同Get共用ctx，连接2s/总5s由Limits传入，用户更短ctx优先，响应资源关闭。
-- [ ] 变异M19二次DNS/只首IP、M20去redirect重检/允许第6跳、M21ProxyFromEnvironment、M22仅信Content-Length/每跳重开期限；对应本地HTTP/HTTPS测试红→恢复绿。期限测试用阻塞通道与ctx done，不sleep。
-- [ ] `go test -race -count=1 ./internal/platform/outbound`与archtest通过；G；提交`feat(M4/P7): 实现固定地址与限额的安全出站请求`。
+**Interfaces:** 产生spec§2.5的Options/Limits/Response/New/Get与四错误、`Reason(error) string`（仅空或redirect_limit，支持标准包装）；New在生产读取InterfaceAddrs，测试私有`newClient(options Options,deps dependencies)`中依赖：resolver的`LookupNetIP(ctx,network,host)([]netip.Addr,error)`、dial函数、interface读取、TLS roots（只测试），不暴露给模块消费方。
+
+- [x] 写`TestOutboundPinsEveryHop`：混合public+blocked答案断言`dialCalls==0`；resolver第二次返回127但同hop只解析一次、dial目标为第一次publicIP；同host重定向重新解析；HTTPS记录Host/SNI，正确证书成功、错证书失败，不能测试依靠InsecureSkipVerify。
+- [x] 写`TestOutboundLimitsAndHeaders`：最多5redirect，第6次返回ErrUnreachable且Reason返回redirect_limit，日志与crawler failed映射由T9验证；redirect userinfo/zone/nonhttp无连接且Blocked；代理env的httptest计数0；Set-Cookie后跳转Cookie为空，Authorization/Proxy-Authorization/Referer空；MaxBytes恰好N成功，N+1/chunked/解压展开超量TooLarge，取消/解析/读body也受总期限，中间body关闭。`TestOutboundLocalSnapshot`在outbound同包私有依赖中使InterfaceAddrs返回错误，断言New失败；本机普通公网地址拒绝。
+- [x] `go test -count=1 ./internal/platform/outbound -run 'TestOutbound'`初始缺接口编译红单列；连接生命周期两项真实断言红与下列生产变异红分别留证；实现manual redirects、先全候选检查后拨号、Host/SNI保持、Proxy=nil、无CookieJar；同Get共用ctx，连接2s/总5s由Limits传入，用户更短ctx优先，响应资源关闭。
+- [x] 变异M19二次DNS/只首IP、M20去redirect重检/允许第6跳、M21ProxyFromEnvironment、M22仅信Content-Length/每跳重开期限；对应本地HTTP/HTTPS测试红→恢复绿。期限测试用阻塞通道与ctx done，不sleep。
+- [x] `go test -race -count=1 ./internal/platform/outbound`与archtest通过；G；提交`feat(M4/P7): 实现固定地址与限额的安全出站请求`。
 
 ## Task 8：测试专用 CIDR 配置与构造接缝
 
@@ -156,7 +158,7 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 ## Task 9：页面和图标抓取适配器
 
 **Files:** 新I/app/crawl_ports.go；I/adapter/crawler/crawler.go、metadata.go、crawler_test.go、metadata_test.go、logging_test.go；使用已有x/net/html，不改go.mod。
-**Interfaces:** 产生`LinkCrawler.Crawl(ctx,string) domain.LinkMetadata`；`crawler.New(*outbound.Client,*slog.Logger)*Crawler`及同签名Crawl。不把outbound.Response或错误放入app/domain。
+**Interfaces:** 产生`LinkCrawler.Crawl(ctx,string) domain.LinkMetadata`；`crawler.New(*outbound.Client,*slog.Logger)*Crawler`及同签名Crawl。以errors.Is分类，`outbound.Reason(err)`仅返回固定redirect_limit时写reason，禁止解析原error文本。不把outbound.Response或错误放入app/domain。
 
 - [ ] 写`TestCrawlerMetadata`：本地HTML `&amp;amp;`标题只解一次后`&amp;`，前后空白trim，256个Unicode截255；无title为空；按四rel优先级/同类首href/无候选favicon.ico；redirect最终页的相对href，成功metadata四键齐，url仍原任务URL，favicon_url成功最终URL。
 - [ ] 写`TestCrawlerLimitsAndFailures`：页面1MiB/1MiB+1，图标64KiB/64KiB+1、六mime/参数/非允许SVG；图标blocked/失败保留title而两icon字段null；页面blocked仅{error:blocked,url}、其余仅failed；整个crawl共享5s而非页面+图标10s。

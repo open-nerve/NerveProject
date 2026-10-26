@@ -39,7 +39,7 @@ func TestPolicyEndpoints(t *testing.T) {
 	for _, prefix := range registryPrefixes(t) {
 		t.Run(prefix.String(), func(t *testing.T) {
 			first, last := prefixEndpoints(t, prefix)
-			if prefix.String() == "::ffff:0:0/96" && (!first.Is4In6() || !last.Is4In6()) {
+			if prefix == netip.MustParsePrefix("::ffff:0:0/96") && (!first.Is4In6() || !last.Is4In6()) {
 				t.Fatal("mapped endpoints lost their original IPv6 representation")
 			}
 			t.Run("first", func(t *testing.T) { wantBlocked(t, p, first) })
