@@ -27,7 +27,7 @@
 | RemoveIssueReaction，reactions.go:102 | issue.reaction_removed / issue_reaction / 查询返回的原表情行ID | 请求者；1；软删和issue审计后 | Q− issue | 同上/remove_issue_reaction；T15错ID变异专门只破坏删除路径 |
 | AddCommentReaction，comment_reactions.go:63 | issue.reaction_added / comment_reaction / 新表情行ID | 请求者；1；表情写后，不推进issue/comment审计 | Q+ comment | TestReactionEventsComposition/comment=true及PublicationRollback/add_comment_reaction |
 | RemoveCommentReaction，comment_reactions.go:116 | issue.reaction_removed / comment_reaction / 查询返回的原表情行ID | 请求者；1；软删后，不推进issue/comment审计 | Q− comment | 同上/remove_comment_reaction |
-| AutoArchive，auto_archive.go:85 | issue.archived / issue / 实际归档issue ID升序 | ActorID=nil（真正NULL）；每项目一次Clock/每issue一个新Event.ID；本项目全UPDATE/全活动后 | A系统 | TestAutoArchiveDatabaseBoundariesAndNullActor、PublishFailureRollsBackRowsActivitiesAndJob、DatabasePartialCommitAndRetry；新增ThreeSubscribersAndBatchRollback证明首/末失败原ctx整批回滚及成功3job提交 |
+| AutoArchive，auto_archive.go:85 | issue.archived / issue / 实际归档issue ID升序 | 事件 ActorID=nil；活动 actor_id 为 SQL NULL；每项目一次Clock/每issue一个新Event.ID；本项目全UPDATE/全活动后 | A系统 | TestAutoArchiveDatabaseBoundariesAndNullActor、PublishFailureRollsBackRowsActivitiesAndJob、DatabasePartialCommitAndRetry；新增ThreeSubscribersAndBatchRollback证明首/末失败原ctx整批回滚及成功3job提交 |
 
 ## 四槽逐字段核验
 

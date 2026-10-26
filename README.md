@@ -97,7 +97,7 @@ make          # 查看所有命令
 
 ## 部署
 
-- **后台任务与自动归档（M4/P6）**：`jobs.default_workers` 默认10、`jobs.periodic_workers` 默认2，均须为正整数。`issue.auto_archive_interval` 默认24小时、测试环境2秒，最小1秒；River的 `periodic` 队列运行会话清理与工作项自动归档，`default` 供后续事件任务。项目 `archive_in=0` 关闭自动归档，1–12按每月30天计；只归档完成/取消且 `updated_at` 到阈值的未归档工作项。系统活动/事件的操作者为NULL。`clock.offset` 默认0，仅 `NERVE_ENV=test` 可设非零（可用 `NERVE_CLOCK__OFFSET` 覆盖），只影响业务时钟，不改变River调度、限速和等待期限；生产环境非零启动失败。配置及实测见 [P6 review](docs/v0/M4-issue-core/reviews/P6-issue-events-review.md)。
+- **后台任务与自动归档（M4/P6）**：`jobs.default_workers` 默认10、`jobs.periodic_workers` 默认2，均须为正整数。`issue.auto_archive_interval` 默认24小时、测试环境2秒，最小1秒；River的 `periodic` 队列运行会话清理与工作项自动归档，`default` 供后续事件任务。项目 `archive_in=0` 关闭自动归档，1–12按每月30天计；只归档完成/取消且 `updated_at` 到阈值的未归档工作项。系统活动和事件均无操作者。`clock.offset` 默认0，仅 `NERVE_ENV=test` 可设非零（可用 `NERVE_CLOCK__OFFSET` 覆盖），只影响业务时钟，不改变River调度、限速和等待期限；生产环境非零启动失败。配置及实测见 [P6 review](docs/v0/M4-issue-core/reviews/P6-issue-events-review.md)。
 
 - **设 `NERVE_ENV=prod`**。不设时 nerve 按 dev 的默认值运行：注册默认开放；没有配置签名密钥时用临时密钥，重启后已签发的访问令牌全部失效。nerve 不是 prod、却监听在本机回环地址之外时，启动日志会记一条 WARN 提醒。
 - **签名密钥**：prod 必须提供 Ed25519 私钥（PKCS#8 PEM 文件），用 `auth.jwt.private_key_file`（环境变量 `NERVE_AUTH__JWT__PRIVATE_KEY_FILE`）指向它；没有提供或读不出来时 nerve 拒绝启动，错误指出这个配置项。生成：

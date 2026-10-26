@@ -2,7 +2,7 @@
 
 不是任选五项/十五项：逐项映射spec §2.16全部最低集合。共20项（14项复用历史真实证据、6项T15新执行），安全、事务、锁、完整性均有实际变异；第1项明确为隐藏404边界，不把payload重命名安全。每项变异退出1、恢复退出0。原日志/patch/恢复记录已逐个读取；`task-15-evidence/prior-evidence-audit.json`保存核验所读文件和哈希。
 
-路径均相对本目录。T15所有新命令/实际RUN计数/退出/HEAD/环境在`task-15-evidence/{mutation,restored}-名称.json`，原stdout/stderr合流保存`.log`，精确生产补丁`名称.patch`，逐字恢复SHA256在`名称-restoration.json`。历史项沿原任务报告及原始命令文件引用，不冒称当前新跑；当前完整门禁重新跑恢复后的整仓行为。
+下文证据路径相对本 worktree 的 ignored `.superpowers/sdd/P6-issue-events/`，不在正式 `reviews/` 目录内；表中 T15 新证据的裸文件名另相对该根下的 `task-15-evidence/`。同一格省略目录的历史文件名，沿用该格已点名的 `task-N-evidence/` 目录。归档后按归档清单中的同名相对路径定位。T15所有新命令/实际RUN计数/退出/HEAD/环境在`task-15-evidence/{mutation,restored}-名称.json`，原stdout/stderr合流保存`.log`，精确生产补丁`名称.patch`，逐字恢复SHA256在`名称-restoration.json`。历史项沿原任务报告及原始命令文件引用，不冒称当前新跑；当前完整门禁重新跑恢复后的整仓行为。
 
 | # | 最低集合/分类 | 生产变异与检出层 | 实际红/恢复证据 |
 |---|---|---|---|

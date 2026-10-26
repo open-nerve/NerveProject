@@ -1,10 +1,10 @@
 # M4/P6 领域事件与自动归档评审记录
 
-日期：2026-10-26。状态：**T1–T16 实施并逐 Task 独评通过；历史内部整分支审查零新发现；分支 CI 发现的时钟断言已局部修复，聚焦复审及修复 HEAD CI、外部终审待办**。分支 `codex/m4-p6`；基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`。配套：[spec](../specs/P6-issue-events.md)、[plan](../plans/P6-issue-events.md)。
+日期：2026-10-26。状态：**T1–T16 实施并逐 Task 独评通过；历史内部整分支审查零新发现；分支 CI 发现的时钟断言已修复并通过聚焦复审，修复 HEAD CI 全绿；deep-review 终审通过（3 项文档 Minor 已闭环），尚未集成**。分支 `codex/m4-p6`；基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`。配套：[spec](../specs/P6-issue-events.md)、[plan](../plans/P6-issue-events.md)。
 
 ## 1. 评审方式
 
-起步时按 [02-method](../../claude_to_gpt/02-method.md) 第3节采用紧凑计划，三个独立静态预检视角及修订复审只评文档与现状；其结果保留在第4节，不再冒充实施证据。之后 T1–T15 各自完成定位/影响回归、真实生产变异与恢复、中文实施报告及独立要求/质量评审，精确提交和命令索引在第2节。T16 正式记录与输入交接经独评发现一处措辞问题，修复提交 `6995d523` 已通过独立聚焦复审。此后唯一一次内部整分支审查覆盖基线至该HEAD的全部19提交/165文件，零新发现；外部终审另待负责人安排。
+起步时按 [02-method](../../claude_to_gpt/02-method.md) 第3节采用紧凑计划，三个独立静态预检视角及修订复审只评文档与现状；其结果保留在第4节，不再冒充实施证据。之后 T1–T15 各自完成定位/影响回归、真实生产变异与恢复、中文实施报告及独立要求/质量评审，精确提交和命令索引在第2节。T16 正式记录与输入交接经独评发现一处措辞问题，修复提交 `6995d523` 已通过独立聚焦复审。当时的一次内部整分支审查覆盖基线至该 HEAD 的全部19提交/165文件，零新发现。clock 修复此后经独立聚焦复审，精确 HEAD CI 通过。负责人 2026-10-26 将外部 Claude 终审改为每 Phase 由 Codex 使用 `deep-review` 整分支终审；本轮结论另记 §5，不改写前次审查的范围。
 
 ## 2. 验收标准逐条核对
 
@@ -14,20 +14,20 @@
 |---|---|---|
 | T1 `d0ea1969` | `go test -count=1 -p=1 ./internal/platform/postgres ./internal/platform/jobs ./internal/bootstrap ./internal/modules/issue/adapter/river`，退出0；真实同事务提交/回滚/未提交不可见及无事务拒绝 | [spec §4](../specs/P6-issue-events.md#4-逐项验收与证据)；任务独评通过 |
 | T2 `5de9238e` | `go test -count=1 ./internal/bootstrap`，退出0；`./internal/shared ./internal/modules/issue/app ./internal/modules/issue ./internal/archtest` 回归退出0 | 初次 focused 命令有空匹配，**不计**新 dispatcher 验证；后续实际匹配与包回归闭合 |
-| T3 `98af1cb9` | `go test -v -count=1 -p 1 ./internal/modules/issue/app ./internal/bootstrap -run 'TestIssue(Created|Updated)Event'`，退出0；事件 race 五遍0 | 600秒描述窗口勘误见§3；独评通过 |
-| T4 `eab93c6a` | `go test -count=1 ./internal/modules/issue/app ./internal/bootstrap -run 'Test(Issue(Deletion&#124;Archival)Events&#124;.*Deletion&#124;.*Archival)' -v`，退出0；137格权限矩阵 | 独评通过 |
+| T3 `98af1cb9` | `go test -v -count=1 -p 1 ./internal/modules/issue/app ./internal/bootstrap -run 'TestIssue(Created\|Updated)Event'`，退出0；事件 race 五遍0 | 600秒描述窗口勘误见§3；独评通过 |
+| T4 `eab93c6a` | `go test -count=1 ./internal/modules/issue/app ./internal/bootstrap -run 'Test(Issue(Deletion\|Archival)Events\|.*Deletion\|.*Archival)' -v`，退出0；137格权限矩阵 | 独评通过 |
 | T5 `fcea0b95` | `go test -count=1 ./internal/bootstrap`，退出0（149.644秒）；app 回归及关系/父子定位实际匹配 | 独评通过 |
-| T6 `99e45aed` | `go test -count=1 ./internal/modules/issue/app ./internal/bootstrap -run 'Test(CommentEvents|ReactionEvents|.*Comment|.*Reaction)' -v`，退出0；真实PG七条写路径回滚 | 独评通过 |
+| T6 `99e45aed` | `go test -count=1 ./internal/modules/issue/app ./internal/bootstrap -run 'Test(CommentEvents\|ReactionEvents\|.*Comment\|.*Reaction)' -v`，退出0；真实PG七条写路径回滚 | 独评通过 |
 | T7 `8bf712b0` | `go test -p 1 -count=1 ./internal/platform/jobs ./internal/platform/config ./internal/modules/identity/adapter/river ./internal/bootstrap ./configs ./internal/archtest -v`，六包退出0；10/2队列隔离与两类漏worker变异 | 独评通过；归档interval由T10承担 |
 | T8 `c01d9977` | `go test -p 1 -count=1 ./internal/platform/clock ./internal/platform/config ./internal/bootstrap ./internal/archtest`，退出0；服务/CLI业务时钟、River真时与负例 | 独评通过 |
 | T9 `ad905df0` | `go test -p 1 -count=1 ./internal/modules/project/... ./internal/modules/issue/... ./internal/bootstrap ./internal/archtest`，退出0；SQL cutoff生产变异和`make gen-check`0 | deleted_at断言Minor由T10补并独评关闭 |
 | T10 `e7e20464` | `go test -count=1 -v -p 1 ./internal/modules/issue/... ./internal/bootstrap ./internal/platform/config ./configs ./internal/archtest`，退出0（704顶层/5599 RUN）；JobTx锁超时race五遍0 | 活动/事件长度诊断Minor由T15补并独评关闭 |
-| T11 `d9b9e21f` | `go test -count=1 -p 1 -v ./internal/bootstrap -run 'Test(AllPeriodicJobsRun|TheRuntimeRoleServesWithTheGrantsFile|TheGrantsFileCoversEveryRelationAndFunction|AutoArchive.*|IssueInserter.*|TheSessionCleanupRunsAsConfigured|CloseDoesNotWaitForAConnectionInUse|RunStopsTheJobsAfterHTTP)$'`，退出0 | 固定预期两任务 completed、真实运行角色与CLI隔离；独评通过 |
-| T12 `7c3acaaf` | `go test -race -v -count=5 ./internal/bootstrap -run '^TestAutoArchive(AndStateChangeSerialize|UsesLockedPolicy|ReadsClockAfterLock)'`，退出0，19叶×5=95；无race/40P01 | 第二项目锁释放诊断Minor由T15补并独评关闭 |
+| T11 `d9b9e21f` | `go test -count=1 -p 1 -v ./internal/bootstrap -run 'Test(AllPeriodicJobsRun\|TheRuntimeRoleServesWithTheGrantsFile\|TheGrantsFileCoversEveryRelationAndFunction\|AutoArchive.*\|IssueInserter.*\|TheSessionCleanupRunsAsConfigured\|CloseDoesNotWaitForAConnectionInUse\|RunStopsTheJobsAfterHTTP)$'`，退出0 | 固定预期两任务 completed、真实运行角色与CLI隔离；独评通过 |
+| T12 `7c3acaaf` | `go test -race -v -count=5 ./internal/bootstrap -run '^TestAutoArchive(AndStateChangeSerialize\|UsesLockedPolicy\|ReadsClockAfterLock)'`，退出0，19叶×5=95；无race/40P01 | 第二项目锁释放诊断Minor由T15补并独评关闭 |
 | T13 `183ef1a7` | `make build`退出0；`pnpm --filter @nerve/e2e exec playwright test stories/smoke/clock-lifecycle.spec.ts --project=chromium`，6/6退出0 | 旧进程身份/附件两Minor由T15补；T13最终门禁仅报告，无完整rawlog |
 | T14 `565fad12` | `make build`后I16定位1/1，完整`make e2e`149/149退出0；五个成功构建的真实变异被业务断言杀死 | 旧完成任务与跨写入扫描以微秒水位区别；独评通过 |
 | T15 `4a489125` | `go test -race -count=5` 定向105 RUN；`GOFLAGS=-p=1 make test`、`make lint-go`、`make lint-web`、`make knip`、`make test-web`、`make e2e`、提交后`GOFLAGS=-p=1 make gen-check`依次退出0 | [16用例/12事件矩阵](P6-issue-events-publication-matrix.md)、[20变异矩阵](P6-issue-events-mutation-matrix.md)；四功能Minor独评关闭 |
-| T16 `d6f341d2`、修复`6995d523` | 关键词、链接、diff、必要架构静态核对见任务报告；初评的一处SQL NULL/事件nil措辞问题经聚焦复审确认修复 | 任务独评完成；整分支结果见§5，分支CI仍待push后核对 |
+| T16 `d6f341d2`、修复`6995d523` | 关键词、链接、diff、必要架构静态核对见任务报告；初评的一处SQL NULL/事件nil措辞问题经聚焦复审确认修复 | 任务独评完成；整分支结果见§5，后续 clock 修复及 CI 见§2.1 |
 
 T15 `make test` 是49个有测试包通过、16个无测试包；默认输出不列总测试用例数。`make lint-web` 54项成功，其中36缓存、18新执行；`make test-web` 18项成功，其中11缓存、7新执行；`make e2e` 是真实149/149（Chromium147、Firefox2）。七个被核文件的源码 SHA 与各全门禁执行时一致。20项生产变异中14项复用已核原始证据、6项T15新执行；没有以编译失败/INFRA充作业务检出。早期 testcontainers 可选 shell 探测日志、旧 Playwright `NO_COLOR`/`FORCE_COLOR` 警告照原样保留；T15报告末的 `14-color-environment` 在 `4a489125` 上同时移除两个变量后1/1、无警告，已闭环环境Minor，**不称全部历史输出 pristine**。
 
@@ -48,7 +48,7 @@ T15 `make test` 是49个有测试包通过、16个无测试包；默认输出不
 | `07-types` / `08-lint` / `09-format` | @nerve/e2e类型、0-warning lint和110文件格式检查均exit0 |
 | `10-make-e2e` | 唯一一轮完整make e2e，150/150（Chromium148、Firefox2）、exit0；Playwright41.8秒，命令43.55秒。Web构建11/11缓存命中，E2E全为本次真实执行；无颜色警告 |
 
-此次只有两个E2E源码文件和spec/plan/review变更，Go/业务代码未变，沿用T15对应Go/race门禁证据而不伪称重跑。历史内部整分支审查范围与结论保留；当前修复由主控接续独立聚焦复审和修复后精确HEAD公开CI，不将本地150/150替代CI结果。
+此次只有两个E2E源码文件和spec/plan/review变更，Go/业务代码未变，沿用T15对应Go/race门禁证据而不伪称重跑。历史内部整分支审查范围与结论保留；修复提交 `e8df8485eee76cd83b93bc4a2ad48b6e3d89240f` 已由独立审者聚焦复审通过，无新增问题，报告为同级 `ci-clock-fix-review.md`；其 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630)（attempt 1）已经 completed/success，server/web/e2e 均成功，主控于本轮再次从公开 API 核实精确 SHA。公开元数据保存在 `ci-clock-fix-evidence/ci/`；本地150/150与公开CI是分别取得的证据。
 
 ## 3. 执行中的决定
 
@@ -111,7 +111,7 @@ T16任务独评修复：plane-diff、v0设计和M1/P5输入交接曾把未持久
 
 ### 内部整分支审查与取舍（T16后）
 
-唯一一次内部整分支审查以 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e..6995d523831f89936a7c70a94079651315a9f783` 为对象，覆盖19提交、165文件及完整产品/测试/生成物/文档差异。审者先核正式三文档、两矩阵与任务台账，再逐段审完整diff；围绕真实风险追踪事务错误/回滚、Runner与关闭、项目锁/活动SQL、发布payload、E2E进程和数据库生命周期。另核T15七个源码文件SHA与门禁manifest一致，没有重跑产品套件、变异或性能测试。结论：Critical 0、Important 0、Minor 0，无新增测试要求；这是内部技术审查，不替代公开分支CI或负责人外部终审。原始报告在ignored `.superpowers/sdd/P6-issue-events/final-review.md`。
+当时的内部整分支审查以 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e..6995d523831f89936a7c70a94079651315a9f783` 为对象，覆盖19提交、165文件及完整产品/测试/生成物/文档差异。审者先核正式三文档、两矩阵与任务台账，再逐段审完整diff；围绕真实风险追踪事务错误/回滚、Runner与关闭、项目锁/活动SQL、发布payload、E2E进程和数据库生命周期。另核T15七个源码文件SHA与门禁manifest一致，没有重跑产品套件、变异或性能测试。结论：Critical 0、Important 0、Minor 0，无新增测试要求；这是当时的内部技术审查，不替代公开分支 CI；2026-10-26 后的终审安排见本节补记。原始报告在ignored `.superpowers/sdd/P6-issue-events/final-review.md`。
 
 审查报告的11项“考虑后不裁定为缺陷”均经主控接受，**不是发现，也不是豁免已承诺验收**：
 
@@ -126,7 +126,13 @@ T16任务独评修复：plane-diff、v0设计和M1/P5输入交接曾把未持久
 | 8 fixture未逐测试DROP DATABASE | world关闭自身连接，整轮容器回收数据库；资源所有权明确。 |
 | 9 准备期旧措辞 | 当时“当前仅准备/只到预检”是历史；本次进一步标记，不能据此重做T1或重索授权。 |
 | 10 极端并发篡改登记配置/不稳定Args.Kind | 当前生产类型与配置受控，无实际触发链，不加推测性反射/约束。 |
-| 11 尚无push、精确HEAD CI、外部终审/合并 | 是安排中的交付门，内部技术结论不代替其结果或授权。 |
+| 11 当时尚无 push、精确 HEAD CI、外部终审/合并 | 当时属于后续交付门；此后 `e8df8485` 已推送且 CI 通过，终审方式改为 deep-review，合并仍未授权。本行保留原审查取舍，不代表当前 CI 待办。 |
+
+### deep-review 终审（负责人 2026-10-26 更新后）
+
+本轮终审范围为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e..e8df8485eee76cd83b93bc4a2ad48b6e3d89240f`，另审随后流程/状态文档修订与本轮局部修复。独立 issue/事件、平台/组合/E2E、文档/契约三个分区按逻辑、集成、测试覆盖核对；完整范围与复用证据边界见 [deep-review 正式报告](../../../reviews/re-03-M4P6整体审核.md)。未发现新增产品缺陷或必要补测；3 项文档 Local / Minor 已闭环：D1 证据根与 spec 生产文件定位，D2 内存事件 nil 与活动 SQL NULL 区分，D3 测试证据表正则竖线转义。独立聚焦复审通过，Critical / Major / Minor 未关闭数均为 0，无架构待决项。
+
+本轮没有重跑产品套件，沿用已核源码哈希、T15/clock 修复真实门禁与精确 `e8df8485` 分支 CI；文档静态检查单独记录，不冒充运行验证。未改产品代码或生成物。按负责人最新决定不再等待 Claude，集成仍按其安排执行。
 
 ## 6. 移交事项
 
@@ -138,6 +144,6 @@ T16任务独评修复：plane-diff、v0设计和M1/P5输入交接曾把未持久
 
 ## 7. 已知限制与后续门
 
-当前经证据确认 T1–T16 实施及逐Task独评，T16一处文档措辞问题已由`6995d523`修复并经聚焦复审通过；内部整分支审查也已完成且零新发现。首轮分支CI已在 `17b8a117` 报告clock生命周期断言失败，局部修复与本地验证见§2.1；**尚未**完成修复后聚焦复审、精确HEAD分支CI与负责人外部终审。P5 main CI仅为基线。原始证据的早期SDK fallback、T2空匹配、T13缺完整末轮rawlog、旧颜色警告已在§2/§5分开标出，不改写为 pristine。
+当前经证据确认 T1–T16 实施及逐Task独评，T16一处文档措辞问题已由`6995d523`修复并经聚焦复审通过；内部整分支审查也已完成且零新发现。首轮分支CI已在 `17b8a117` 报告clock生命周期断言失败，局部修复与本地验证见§2.1；修复 `e8df8485` 的聚焦复审和精确 HEAD 分支 CI **均已通过**。本轮按负责人新规则使用 deep-review 收口终审，不再等待 Claude。后续文档提交的精确 HEAD CI 由最终交付记录给出。P5 main CI仅为基线。原始证据的早期SDK fallback、T2空匹配、T13缺完整末轮rawlog、旧颜色警告已在§2/§5分开标出，不改写为 pristine。
 
 交付时向负责人提供分支 `codex/m4-p6`、基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`、本 [spec](../specs/P6-issue-events.md)/[plan](../plans/P6-issue-events.md)/review 和精确 Git HEAD。最终push/CI的实际SHA由交付答复及Git记录给出，不为文档自证自身CI无限提交。本阶段先保留分支/worktree，不合并；`--no-ff`、精确main SHA CI、归档和清理仅在后续授权后进行。

@@ -1,6 +1,6 @@
 # M4/P6 领域事件、任务与自动归档实施计划
 
-> **执行记录：** T1–T16 已按任务实施并逐项独立评审，内部整分支审查已完成且无新发现。以下 Task 清单保留当时的计划语气和命令，实际运行与差异以[评审 §2/§5](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)和任务报告为准；分支 CI、外部终审仍待后续。
+> **执行记录：** T1–T16 已按任务实施并逐项独立评审，内部整分支审查已完成且无新发现。以下 Task 清单保留当时的计划语气和命令，实际运行与差异以[评审 §2/§5](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)和任务报告为准；clock 修复 `e8df8485` 聚焦复审与分支 CI 已通过；本轮 `deep-review` 终审已通过，3 项文档 Minor 已闭环，集成仍待负责人安排。
 
 **目标：** 实现 M4 §12/P6 的事件发布、事务投递、worker 完整性、两队列、测试时钟、自动归档与 I16 接口故事。
 
@@ -16,7 +16,7 @@
 
 - 工作树 `.codex/worktress/codex/m4-p6`，分支 `codex/m4-p6`，主目录 HEAD 始终 main。第一提交落 spec/plan/review、关键词 phase=M4/P6；目前无到期的 M4/P6 例外，不延后现有例外。
 - 不改 plane/refer、不在其中跑 git，不操作既有容器和 Docker，不全局安装，不增加设计未点名依赖；不 stash/clean/reset --hard。提交中文且保留 feat/fix/docs(M4/P6) 前缀；push 使用 `/usr/bin/git`。
-- 每 Task 真实检查→实现→实际变异/恢复→提交→独立要求/质量评审→修复/复审。阶段实现完成先交负责人安排整分支终审，不自动合并。merge --no-ff / main CI / 清理须有相应授权与真实结果。
+- 每 Task 真实检查→实现→实际变异/恢复→提交→独立要求/质量评审→修复/复审。阶段完成后由 Codex 使用 `deep-review` 整分支终审，局部修复后复审；不再等待 Claude，但不自动合并。merge --no-ff / main CI / 清理须有相应授权与真实结果。
 - 请求写继续经 Locks.run 的已有三种形式。隐藏404先于403，拒绝不进闸门/事务；锁下重读、项目归档→工作项归档→无改动→依赖→时钟→写。不得用事件发布改变既有拒绝顺序或 HTTP 形状。
 - 系统自动归档按设计§3.5后台例外：不进请求闸门、不锁工作区、不伪造账户；每项目一个事务、项目N→状态目录→时钟→issues→activities→events。事务用 issue.Deps.JobTx 的原始postgres.TxManager（同LockTimeout配置，不经busyTx）；原PG错误链返回River。用户请求Tx仍保留唯一的HTTP 503转换，bootstrap共用底层构造。
 - 模块不互相 import、不跨模块 JOIN。app/domain 不导入 River/pgx；platform/jobs 不导入 platform/postgres。SQL 仅 sqlc，模块不写 SET，不放宽任何架构/CLI/SQL 守卫。
@@ -278,7 +278,7 @@ Go命令在 `server/`；node/Makefile命令在 worktree根。`go test -count=1` 
 - [ ] 真实三订阅者：第一InsertTx、第二失败、第三不得调用；批量最后事件失败之前所有投递/业务/活动一起回滚。成功对照确认任务提交留下，原ctx内能看到最终业务状态。
 - [ ] 从T1–14抽不少于15个生产变异（安全/事务/锁/完整性至少各一，剩余事件/时钟/阈值），登记实际失败层与恢复；未检出的先根因修复，不把INFRA当发现。
 - [ ] 顺序跑 `make test`、`make lint-go`、`make lint-web`、`make knip`、`make test-web`、`make e2e`；带生成物提交后 `make gen-check`。沿已验证未变化内容复用，不重复缓存数字冒充新结果。
-- [x] 全Task独评后完成一次内部整分支审查：19提交/165文件，Critical/Important/Minor均0，无新增产品修复；负责人外部终审仍待安排。G。
+- [x] 全Task独评后完成一次内部整分支审查：19提交/165文件，Critical/Important/Minor均0，无新增产品修复；此为历史内部审查；2026-10-26 起终审改用 `deep-review`，本轮结果见 review。G。
 
 ## Task 16：正式记录、输入交接与阶段交付
 
@@ -288,8 +288,10 @@ Go命令在 `server/`；node/Makefile命令在 worktree根。`go test -count=1` 
 - [x] M4§14事件任务整条仍含P7/P9未实现部分，不整体勾选；总体§9.4保持M4进行中，不创建M5–M8最终收尾文件。
 - [x] 核中文文档链接/命令/签名/状态与git diff并提交，告知负责人分支、基线、spec/plan/review；本阶段不合并。
 - [x] T16初评Important措辞问题由`6995d523`修复并经聚焦复审通过；内部整分支审查完成，零新发现。
-- [ ] push后按精确HEAD查分支CI；外部终审另待安排。合并/mainCI/清理须再获授权。
+- [x] clock 修复 `e8df8485` 已独立聚焦复审通过，[CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 的 server/web/e2e 全绿。
+- [x] 依负责人新规则完成 `deep-review` 终审与文档同步，3 项文档 Minor 已修复并独立复审；见 [deep-review](../../../reviews/re-03-M4P6整体审核.md)。最终文档提交按交付记录核精确 HEAD 的分支 CI。
+- [ ] 获授权后 --no-ff 合并、确认精确 main SHA CI 全绿、归档证据并清理。
 
 ## 实施状态与历史边界
 
-准备阶段三个视角的独立静态预检与修订复审均通过，当时“全部未实施”属历史状态。T1–T16 后续已逐 Task 实施与独评，真实命令、变异和差异见 review §2/§5；T16 初评的一处措辞问题已修复并经聚焦复审通过。T15 最终门禁在源码 HEAD `4a489125f480402692772cbae483af26d9600792` 上全部退出0。T2早期聚焦空匹配不计新测试证明；真实描述版本窗口含恰好600秒，600秒+1微秒进入新版本。内部整分支审查已完成且无新发现；push后精确HEAD分支CI、外部终审及授权合并/mainCI/清理仍待办；P5基线main CI不能替代P6证据。
+准备阶段三个视角的独立静态预检与修订复审均通过，当时“全部未实施”属历史状态。T1–T16 后续已逐 Task 实施与独评，真实命令、变异和差异见 review §2/§5；T16 初评的一处措辞问题已修复并经聚焦复审通过。T15 最终门禁在源码 HEAD `4a489125f480402692772cbae483af26d9600792` 上全部退出0。T2早期聚焦空匹配不计新测试证明；真实描述版本窗口含恰好600秒，600秒+1微秒进入新版本。内部整分支审查已完成且无新发现；clock 修复 `e8df8485` 的精确 HEAD 分支 CI 已全绿，当前按新规则使用 `deep-review` 取代外部 Claude 终审。授权合并/main CI/归档清理仍待办；P5 基线 main CI 和 P6 分支 CI 都不能替代 P6 合并提交的 main CI。

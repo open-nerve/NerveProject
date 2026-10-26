@@ -1,6 +1,6 @@
 # M4/P6 `issue-events`：领域事件、事务投递与自动归档规格
 
-日期：2026-10-26。基线：`main` `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`（P5 的 `--no-ff` 合并）。状态：**T1–T16 已实施并逐任务独评通过；内部整分支审查完成且无新发现；分支 CI 与外部终审待办**。配套：[plan](../plans/P6-issue-events.md)、[评审记录](../reviews/P6-issue-events-review.md)。
+日期：2026-10-26。基线：`main` `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`（P5 的 `--no-ff` 合并）。状态：**T1–T16 已实施并逐任务独评通过；内部整分支审查与 clock 修复复审已通过；修复提交 `e8df8485` 分支 CI 全绿；deep-review 终审通过（3 项文档 Minor 已闭环），尚未集成**。配套：[plan](../plans/P6-issue-events.md)、[评审记录](../reviews/P6-issue-events-review.md)。
 
 权威输入：[M4 设计](../M4-design.md) §3.5、3.8、3.19、3.20、6.5–6.6、12/P6、13.1、14；[推进方式](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)；前段 spec §5 / review §6 与本规格 §7 的交接。设计 D3、D4、D7 和架构问题 11.4、11.7、11.11 已批准，不重新裁定。
 
@@ -20,12 +20,12 @@ P6 没有生产事件订阅者是设计明确的阶段过渡，P7 才有链接�
 
 | 文件 / 目录 | 职责 | Task |
 |---|---|---|
-| `server/internal/platform/postgres/tx.go`；`platform/jobs/inserter.go`；`bootstrap/jobs.go`；`modules/issue/adapter/river/inserter.go` | 提取事务、只投递客户端、跨平台组合的小接口 | T1 |
-| `server/internal/shared/event.go`；`bootstrap/events.go`；`modules/issue/domain/events.go`；`modules/issue/module_events.go` | 共享值、事件名单、同步分发与模块出口 | T2 |
-| `server/internal/modules/issue/app/events*.go` 与现有写用例 / `module.go` | 集中构造语义事件，各用例在事务末尾发布 | T3–T6 |
+| `server/internal/platform/postgres/tx.go`；`platform/jobs/inserter.go`；`bootstrap/issue_inserter.go`；`modules/issue/adapter/river/inserter.go` | 提取事务、只投递客户端、跨平台组合的小接口 | T1 |
+| `server/internal/shared/events.go`；`bootstrap/events.go`；`modules/issue/domain/events.go`；`modules/issue/module_events.go` | 共享值、事件名单、同步分发与模块出口 | T2 |
+| `server/internal/modules/issue/app/issue_events.go`、`collaboration_events.go` 与现有写用例 / `module.go` | 集中构造语义事件，各用例在事务末尾发布 | T3–T6 |
 | `server/internal/platform/jobs/jobs.go`、`registration.go`、`config`；`modules/identity/adapter/river/cleanup.go` | 真实 worker 登记、独立周期声明、两队列、构造校验 | T7 |
-| `server/internal/platform/clock/offset.go`；`platform/config`；`bootstrap/clock.go`、`app.go`、`users.go`、`workspaces.go` | 统一业务时钟，test-only 配置 | T8 |
-| `server/internal/modules/project/app/issue_ports.go`、`adapter/postgres/queries/issue_ports.sql`；`issue/app/archive_ports.go`；`issue/adapter/postgres/queries/auto_archive.sql` | 项目候选、锁下策略、模块自身 SQL | T9 |
+| `server/internal/platform/clock/clock.go`；`platform/config`；`bootstrap/clock.go`、`app.go`、`users.go`、`workspaces.go` | 统一业务时钟，test-only 配置 | T8 |
+| `server/internal/modules/project/app/issue_ports.go`、`adapter/postgres/queries/issue_ports.sql`、`queries/archive_policies.sql`；`issue/app/archive_ports.go`；`issue/adapter/postgres/queries/auto_archive.sql` | 项目候选、锁下策略、模块自身 SQL | T9 |
 | `server/internal/modules/issue/app/auto_archive.go`、`rows.go`；`adapter/postgres/issues.go`；`adapter/river/auto_archive.go` | 每项目归档编排、nullable actor、worker | T10 |
 | `server/internal/bootstrap/app.go`、`jobs_test.go`、`runtime_role_test.go`；`archtest/composition_test.go` | 最终任务组合、真实运行角色及命令隔离 | T11 |
 | `server/internal/bootstrap/issue_auto_archive*_test.go` | 交错 18、锁下策略与时钟、真实回滚 | T12 |
@@ -178,7 +178,7 @@ CI修复追加：`createClockWorld` 接受可选 `now?: () => Date`，默认 `()
 
 同步设计§3.23/P6：v0§6.2/6.3 的事件事务约定、§6.7 的队列/调度/测试时钟；M2§3.15/3.17 只投递客户端与启动核对；plane-diff 的自动执行者为空与按间隔调度；README 默认 worker 数/autoarchive 间隔、test-only clock。处理本规格§7输入，交接整体 status 保持 open。
 
-每 Task 记录实际测试/变异/独立评审；规格验收只据真实证据打勾。**准备期原安排：** 当时仅准备规格与预检，不执行产品任务，拟实施后交负责人安排整分支终审。**实施后结果：** T1–T16逐任务独评与内部整分支审查均已完成；后续分支CI、外部终审及获授权后的 --no-ff、精确 main SHA CI、归档/清理仍按交付门办理，不自行合并 P6。
+每 Task 记录实际测试/变异/独立评审；规格验收只据真实证据打勾。**准备期原安排：** 当时仅准备规格与预检，不执行产品任务，拟实施后交负责人安排整分支终审。**实施后结果：** T1–T16逐任务独评与内部整分支审查均已完成；修复提交 `e8df8485` 已独评通过且分支 CI 全绿。负责人 2026-10-26 将外部 Claude 终审改为由 Codex 使用 `deep-review` 整分支终审，结果汇入 review；获授权后的 --no-ff、精确 main SHA CI、归档/清理仍按交付门办理，不自行合并 P6。
 
 ## 3. 与设计的差异和补充（局部裁定）
 
@@ -221,7 +221,8 @@ T1–T15 的运行命令、退出码、变异和精确提交见[评审 §2](../r
 | [x] | T15 | 全发布矩阵、真实订阅回滚、实际变异恢复、全量门禁与旧故事回归 |
 | [x] | T16 | 中文正式文档、设计/README/差异同步、输入交接、静态校验及提交；初评一处措辞问题由`6995d523`修复并经聚焦复审通过 |
 | [x] | 内部整分支审查 | `ee26db29..6995d523` 的19提交/165文件已审，Critical/Important/Minor均0；见[评审 §5](../reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异) |
-| [ ] | 后续交付门 | push 后按精确 HEAD 查分支 CI；外部终审另待安排 |
+| [x] | 修复与分支 CI | `e8df8485eee76cd83b93bc4a2ad48b6e3d89240f` 聚焦复审通过，[CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 的 server/web/e2e 全绿；后续文档提交以最终交付 SHA 的 CI 为准 |
+| [x] | deep-review 终审 | 本轮整分支终审通过，3 项文档 Minor 全部修复并独立复审；见 [deep-review](../../../reviews/re-03-M4P6整体审核.md) 与 review §5 |
 | [ ] | 未授权集成门 | 仅经后续明确授权才 `--no-ff` 合并、查精确 main SHA 的 CI、归档与清理 |
 
 ## 5. 不在范围内与后续 Phase
@@ -263,10 +264,10 @@ T1–T15 的运行命令、退出码、变异和精确提交见[评审 §2](../r
 
 阶段首提交已将关键词 phase 切 M4/P6；没有 until=M4/P6 的到期例外，P11/closeout 的前端例外保留。实现完成后上述输入只追加“处理结果（M4/P6）”及剩余责任，不改整体 status 为closed。M4§14“事件和任务”还含P7/P9条目，P6只能记子项证据。
 
-实施验收依据§4 T1–T16 的实际证据；任务独评与内部整分支审查已完成，审查无新增发现。精确 HEAD 分支 CI、外部终审仍是后续交付门，当前不声称已完成。遵循用户指令，阶段完成先不合并；仅获明确授权后才进入 `--no-ff`、精确 main SHA CI、证据归档和清理的集成门。文档为中文，提交按用户最新AGENTS用详细中文说明；主目录HEAD始终main，阶段使用约定worktree，推送优先/usr/bin/git。
+实施验收依据§4 T1–T16 的实际证据；任务独评与内部整分支审查已完成，审查无新增发现。clock 修复 `e8df8485` 的聚焦复审和精确 HEAD 分支 CI 已通过；本轮使用 `deep-review` 收口终审，不再等待 Claude。后续文档提交的精确 HEAD CI 由交付记录给出。遵循用户指令，阶段完成先不合并；仅获明确授权后才进入 `--no-ff`、精确 main SHA CI、证据归档和清理的集成门。文档为中文，提交按用户最新AGENTS用详细中文说明；主目录HEAD始终main，阶段使用约定worktree，推送优先/usr/bin/git。
 
 ## 附录 A. 证据边界与准备历史
 
 准备阶段只读调研、三个独立视角静态预检及修订复审曾记录为“未实施”，属于起步历史。后续 T1–T15 已在 `codex/m4-p6` 分别实施并独评；当前已验证源码 HEAD `4a489125f480402692772cbae483af26d9600792`。T15 在该源码哈希上顺序完成 `make test`、`make lint-go`、`make lint-web`、`make knip`、`make test-web`、`make e2e`、提交后 `make gen-check`；Go 为49个有测试包通过，E2E 149/149，Web 的缓存命中数见[评审 §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)，不把缓存称为新执行。20个真实生产变异与16写用例/12事件目录见评审所引矩阵。T2 早期聚焦命令曾空匹配，最终证据依赖后续实际匹配与完整包回归；T13最后门禁只留报告，T14/T15有完整原始输出。早期 testcontainers 可选 shell 探测及旧 Playwright 颜色警告保留原始日志；后续无警告的定向颜色验证已闭环，不能称所有历史输出 pristine。
 
-P5 main `ee26db29c8a55cbb034a2da38c794c7f1af88e4e` 的 [CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 仅证明基线。T16后的内部整分支审查已在`6995d523`完成且无新发现；精确 HEAD 分支 CI、外部终审与授权集成尚无结果，不在文档里预填成功。最终提交与 CI 的精确 SHA 由 Git 和交付答复给出，避免为文档自证自身 CI 无限提交。
+P5 main `ee26db29c8a55cbb034a2da38c794c7f1af88e4e` 的 [CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 仅证明基线。T16后的内部整分支审查已在`6995d523`完成且无新发现；此后 clock 断言修复 `e8df8485` 已独评通过且 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 三任务全绿；外部终审要求已由负责人改为 Codex 的 `deep-review`。授权集成仍未进行，不预填 main CI 成功。最终提交与 CI 的精确 SHA 由 Git 和交付答复给出，避免为文档自证自身 CI 无限提交。

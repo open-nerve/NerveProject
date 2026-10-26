@@ -2028,7 +2028,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 
 ## 12. Phase 划分与实施规划
 
-所有 Phase 依次推进，每个 Phase 按 M2、M3 的节奏（worktree → spec 和 plan → 按任务实现、逐个评审 → 整分支评审 → 修复 → review、交接 → `--no-ff` 合并、推送 → 持续集成通过 → 清理 worktree 和分支）。每个 Phase 合并时：持续集成的全部门禁、此前已加入的全部故事都通过；3.23 和 8.8 中标着这个 Phase 的行已在同一次合并中同步。
+所有 Phase 依次推进，每个 Phase 按 M2、M3 的节奏（worktree → spec 和 plan → 按任务实现、逐个评审 → `deep-review` 整分支终审 → 修复与复审 → review、交接 → 按负责人集成安排 `--no-ff` 合并、推送 → 精确 main SHA 持续集成通过 → 归档证据、清理 worktree 和分支）。负责人 2026-10-26 更新：各 Phase 的终审由 Codex 使用 `deep-review` 完成，不再等待 Claude；架构级问题仍先提交已完成工作再上报。每个 Phase 合并时：持续集成的全部门禁、此前已加入的全部故事都通过；3.23 和 8.8 中标着这个 Phase 的行已在同一次合并中同步。
 
 **约束**：
 1. **每个故事的前置数据在它加入时都能经接口准备**（总体设计 8.2），不写 SQL。权限矩阵是 Go 测试，用仓储准备数据，每个 Phase 都能加它的行（9.2）；经接口准备不了的格子放进 Go 的集成测试（分诊状态的 `state_id`：`createState` 拒绝分诊，对抗性评审 M17）。访客建的工作项经接口准备：成员建，再经 `updateProjectMember` 把他降为访客（2 节）。
@@ -2532,7 +2532,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
 | P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；已以 `--no-ff` 合并main `e9782b8f`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 三任务全绿，精确SHA及接收记录见P5评审 |
 | P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | 已完成：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。追加[deep-review](../../reviews/re-02-M4P5整体审核.md)及局部修复复审关闭；2026-10-26 负责人授权后，P5 已以 `--no-ff` 合并为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 的 server/web/e2e 全绿；6,517 个证据文件已归档并逐个 SHA-256 核对，P5 本地/远端分支及 worktree 已清理。T16 集成门关闭，M4 总体与后续交接仍 open。 |
-| P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，16验收任务） | T1–T16已实施并逐Task独评通过，T16正式文档/交接已同步：[spec](specs/P6-issue-events.md)、[plan](plans/P6-issue-events.md)、[review](reviews/P6-issue-events-review.md)。内部整分支审查已完成（19提交/165文件、Critical/Important/Minor均0）；分支CI及外部终审待办，未合并；M4总体仍进行中 |
+| P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，16验收任务） | T1–T16已实施并逐Task独评通过，T16正式文档/交接已同步：[spec](specs/P6-issue-events.md)、[plan](plans/P6-issue-events.md)、[review](reviews/P6-issue-events-review.md)。内部整分支审查及 clock 修复聚焦复审已通过；修复 `e8df8485` 的 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 三任务全绿。deep-review 终审通过（[报告](../../reviews/re-03-M4P6整体审核.md)，3 项文档 Minor 已闭环）；实施与终审完成、集成待办，未合并；M4 总体仍进行中 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12） | 未开始 |
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13） | 未开始 |
 | P9 `purge` | 物理清理、描述版本的保留与工作项一侧的删除任务（后端，13） | 未开始 |
