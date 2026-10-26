@@ -22,7 +22,7 @@ import {
   listIssueRelations,
   updateIssue,
 } from "../../fixtures/issues";
-import { createIssueLink } from "../../fixtures/links";
+import { completedLinkCrawl, createIssueLink } from "../../fixtures/links";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
 
@@ -85,11 +85,12 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
     state_id: done,
     parent_id: notes.id,
   });
-  await Promise.all(
+  const liveLinks = await Promise.all(
     [plan, notes, mirrors].map((item) =>
-      createIssueLink(api, ann.token, item.id, { url: `http://169.254.169.254/furnish/${item.id}` })
+      createIssueLink(api, bob.token, item.id, { url: `http://169.254.169.254/furnish/${item.id}` })
     )
   );
+  expect(liveLinks.map((link) => link.created_by_id)).toEqual([bob.id, bob.id, bob.id]);
   await Promise.all(
     [plan, notes, mirrors].map((item) =>
       createIssueComment(api, bob.token, item.id, "<p>Delete discussion</p>").then((comment) =>
@@ -112,7 +113,9 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
   });
   await Promise.all(
     [old, neighbor].map(async (item) => {
-      await createIssueLink(api, bob.token, item.id, { url: `http://169.254.169.254/furnish/${item.id}` });
+      const link = await createIssueLink(api, bob.token, item.id, { url: `http://169.254.169.254/furnish/${item.id}` });
+      // Freeze the complete row only after this exact seed's metadata job finishes.
+      await completedLinkCrawl(db, link.id, link.url);
       const discussion = await createIssueComment(api, bob.token, item.id, "<p>Keep these stamps</p>");
       await createCommentReaction(api, ann.token, discussion.id);
       await createIssueReaction(api, bob.token, item.id);
@@ -156,6 +159,22 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
   // row under the three, its relations either way among them, the one stored from Ship it, of Ops, too.
   expect(await issueDeleted(api, ann.token, plan.id)).toEqual({ status: 204 });
   await expectIssueDeleted(db, plan.id, ann.email);
+  expect(
+    await db.query(
+      `SELECT l.id, l.created_by_id, l.updated_by_id, l.deleted_at = i.deleted_at AS with_root
+         FROM issue_links l JOIN issues i ON i.id = $1 WHERE l.id = ANY($2::uuid[]) ORDER BY l.id`,
+      [plan.id, liveLinks.map((link) => link.id)]
+    )
+  ).toEqual(
+    liveLinks
+      .toSorted((a, b) => a.id.localeCompare(b.id))
+      .map((link) => ({
+        id: link.id,
+        created_by_id: bob.id,
+        updated_by_id: ann.id,
+        with_root: true,
+      }))
+  );
   expect(await collaborationRows(db, [old.id])).toEqual(oldRows);
   expect(await collaborationRows(db, [neighbor.id])).toEqual(neighborRows);
   // None of the three is found again, and neither Deploy the site nor Ship it lists a relation.

@@ -6,6 +6,13 @@ import { expect, test } from "../../fixtures/test";
 // change a worker's story data or depend on the number of actors in that data.
 for (const endpoint of [
   {
+    name: "link issue",
+    table: "issue_links",
+    column: "issue_id",
+    parent: "issues",
+    other: "created_by_id",
+  },
+  {
     name: "comment reaction",
     table: "comment_reactions",
     column: "comment_id",
