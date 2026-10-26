@@ -77,6 +77,11 @@ ratelimit:
 clock:
   offset: 0s
 
+# 链接抓取的地址放行（CIDR 列表），仅 NERVE_ENV=test 可非空；dev/prod 必须为空。
+# 环境变量仍用逗号列表，例如 NERVE_OUTBOUND__ALLOW_CIDRS=127.0.0.1/32,::1/128。
+outbound:
+  allow_cidrs: []
+
 # 后台任务（River）
 jobs:
   # Concurrent jobs per queue; periodic housekeeping has its own capacity.

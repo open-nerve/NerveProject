@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"time"
 )
 
@@ -74,6 +75,14 @@ func (c Config) validate() error {
 	}
 	if c.Env != EnvTest && c.Clock.Offset != 0 {
 		fail("clock.offset", "must be zero outside test, got %s", c.Clock.Offset)
+	}
+	if c.Env != EnvTest && len(c.Outbound.AllowCIDRs) != 0 {
+		fail("outbound.allow_cidrs", "must be empty outside test")
+	}
+	for i, value := range c.Outbound.AllowCIDRs {
+		if _, err := netip.ParsePrefix(value); err != nil {
+			fail("outbound.allow_cidrs", "entry %d must be a CIDR prefix", i+1)
+		}
 	}
 	c.Auth.validate(c.Env, fail)
 	switch {

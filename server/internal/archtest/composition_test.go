@@ -16,7 +16,7 @@ import (
 // are a pool and the modules' administrator use cases (M2 design 3.17, M3
 // design 6.6): nothing they call builds a module's HTTP side or the
 // Authorizer (a module's New), the HTTP server, a rate limiter, a write
-// gate, dispatcher or jobs client. Their only shared time construction is
+// gate, dispatcher, jobs or outbound client. Their only shared time construction is
 // newClock, which must not bring any of those dependencies. Each builds only
 // what its commands use: Users,
 // identity's NewAdmin and, for `nerve users deactivate`, workspace's
@@ -88,13 +88,17 @@ func TestCommandsComposeNoServerAndNoJobs(t *testing.T) {
 // module's HTTP side or the Authorizer (New in a module's root package:
 // identity.New, workspace.New, access.New and those to come), the HTTP
 // server (platform/httpserver), a rate limiter, a write gate
-// (platform/gate), dispatcher or jobs client (platform/jobs, River).
+// (platform/gate), dispatcher, jobs client (platform/jobs, River) or outbound
+// client (platform/outbound.New).
 func composesMore(f *ssa.Function) bool {
 	if f.Pkg == nil {
 		return false
 	}
 	path := f.Pkg.Pkg.Path()
 	if path == m("internal/bootstrap") && f.Name() == "newDispatcher" {
+		return true
+	}
+	if path == m("internal/platform/outbound") && f.Name() == "New" {
 		return true
 	}
 	if module, ok := strings.CutPrefix(path, m("internal/modules")+"/"); ok && !strings.Contains(module, "/") && f.Name() == "New" {

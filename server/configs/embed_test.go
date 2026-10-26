@@ -44,12 +44,13 @@ func TestBuiltInProfiles(t *testing.T) {
 		keyFile     string        // auth.jwt.private_key_file
 		cleanup     time.Duration // auth.session_cleanup_interval
 		limits      config.RateLimitConfig
+		allowCIDRs  []string
 		level       string
 		format      string
 	}{
-		{env: "dev", addr: "127.0.0.1:8080", url: devURL, autoMigrate: true, signup: true, argon2: 19456, iterations: 2, cleanup: time.Hour, limits: defaultLimits, level: "debug", format: "text"},
-		{env: "test", addr: ":8080", url: "postgres://from-env", autoMigrate: true, signup: true, argon2: 64, iterations: 1, cleanup: 2 * time.Second, limits: testLimits, level: "warn", format: "text"},
-		{env: "prod", addr: ":8080", url: "postgres://from-env", autoMigrate: false, signup: false, argon2: 19456, iterations: 2, keyFile: "/etc/nerve/jwt.pem", cleanup: time.Hour, limits: defaultLimits, level: "info", format: "json"},
+		{env: "dev", addr: "127.0.0.1:8080", url: devURL, autoMigrate: true, signup: true, argon2: 19456, iterations: 2, cleanup: time.Hour, limits: defaultLimits, allowCIDRs: []string{}, level: "debug", format: "text"},
+		{env: "test", addr: ":8080", url: "postgres://from-env", autoMigrate: true, signup: true, argon2: 64, iterations: 1, cleanup: 2 * time.Second, limits: testLimits, allowCIDRs: []string{"127.0.0.1/32"}, level: "warn", format: "text"},
+		{env: "prod", addr: ":8080", url: "postgres://from-env", autoMigrate: false, signup: false, argon2: 19456, iterations: 2, keyFile: "/etc/nerve/jwt.pem", cleanup: time.Hour, limits: defaultLimits, allowCIDRs: []string{}, level: "info", format: "json"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.env, func(t *testing.T) {
@@ -93,6 +94,7 @@ func TestBuiltInProfiles(t *testing.T) {
 					},
 				},
 				RateLimit: tt.limits,
+				Outbound:  config.OutboundConfig{AllowCIDRs: tt.allowCIDRs},
 				Jobs:      config.JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 10 * time.Second},
 				Workspace: config.WorkspaceConfig{CreationEnabled: true},
 				Issue: config.IssueConfig{

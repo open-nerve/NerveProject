@@ -149,11 +149,11 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 ## Task 8：测试专用 CIDR 配置与构造接缝
 
-**Files:** 改C/config.go、validate.go、load_test.go、validate_test.go；新C/outbound_test.go；server/configs/config.yaml、config.test.yaml、embed_test.go；新B/outbound.go、outbound_test.go。
+**Files:** 改C/config.go、load.go（既有listHook中仅收紧`[]string`输入形状）、validate.go、load_test.go、validate_test.go；新C/outbound_test.go；server/configs/config.yaml、config.test.yaml、embed_test.go；新B/outbound.go、outbound_test.go；server/cmd/nerve/main_test.go；server/internal/archtest/composition_test.go（原CLI组合守卫补`outbound.New`）。
 **Interfaces:** 产生`config.OutboundConfig{AllowCIDRs []string}`和Config.Outbound；`newOutbound(cfg config.Config,version string)(*outbound.Client,error)`；T10生产调用传`buildinfo.Get().Version`（bootstrap可import两个platform包，outbound自己不互导）。
 
 - [ ] 写`TestOutboundAllowCIDRsConfig`表：test空/127.0.0.1/32/IPv6合法通过；非test非空各env失败；坏CIDR及JSON/env形状失败且不悄悄当空。按现有koanf路径`NERVE_OUTBOUND__ALLOW_CIDRS`验证实际切片解码，不另创env协议。
-- [ ] 写`TestNewOutbound`：直接传坏CIDR配置也构造失败，test127能访问本地fixture而未放行127.0.0.2不可，版本传到UA；cfg/log Stringer与配置文档不泄漏凭据。接口采样失败由T7同包私有依赖测试，不给bootstrap增加生产注入开关。
+- [ ] 写`TestNewOutbound`：直接传坏CIDR配置也构造失败，test127能访问本地fixture而未放行127.0.0.2不可，版本传到UA；既有`Config.LogValue`/slog配置日志与配置文档不泄漏凭据，不新增普通fmt渲染协议。接口采样失败由T7同包私有依赖测试，不给bootstrap增加生产注入开关。
 - [ ] `go test -count=1 ./internal/platform/config ./configs ./internal/bootstrap -run 'Test(OutboundAllowCIDRsConfig|NewOutbound|.*Config)'`确认红，追加默认空/test127.0.0.1/32、验证与构造；同命令绿。T8只交真实测试消费的构造接缝，T10接server；不在CLI/Provide构造。
 - [ ] 变异M23去test-only限制/解析错误忽略、M24把allow扩大127/8或读取接口失败当空；配置/组件红→恢复，G；提交`feat(M4/P7): 限定测试环境的抓取放行配置`。
 

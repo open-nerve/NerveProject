@@ -25,6 +25,7 @@ type Config struct {
 	Auth      AuthConfig      `koanf:"auth"`
 	RateLimit RateLimitConfig `koanf:"ratelimit"`
 	Clock     ClockConfig     `koanf:"clock"`
+	Outbound  OutboundConfig  `koanf:"outbound"`
 	Jobs      JobsConfig      `koanf:"jobs"`
 	Workspace WorkspaceConfig `koanf:"workspace"`
 	Issue     IssueConfig     `koanf:"issue"`
@@ -136,6 +137,11 @@ type ClockConfig struct {
 	Offset time.Duration `koanf:"offset"`
 }
 
+// OutboundConfig permits explicit address ranges only in the test profile.
+type OutboundConfig struct {
+	AllowCIDRs []string `koanf:"allow_cidrs"`
+}
+
 // JobsConfig configures the background jobs (M2 design 3.15).
 type JobsConfig struct {
 	DefaultWorkers  int `koanf:"default_workers"`
@@ -242,6 +248,7 @@ func (c Config) LogValue() slog.Value {
 			slog.Any("password_user", c.RateLimit.PasswordUser),
 		),
 		slog.Group("clock", slog.Duration("offset", c.Clock.Offset)),
+		slog.Group("outbound", slog.String("allow_cidrs", strings.Join(c.Outbound.AllowCIDRs, ","))),
 		slog.Group("jobs",
 			slog.Duration("shutdown_timeout", c.Jobs.ShutdownTimeout),
 			slog.Int("default_workers", c.Jobs.DefaultWorkers),

@@ -26,3 +26,7 @@ log:
 # 自动归档周期在测试环境缩短。
 issue:
   auto_archive_interval: 2s
+
+# 只放行本地抓取 fixture 的单一 IPv4 地址，不放行整个 127/8。
+outbound:
+  allow_cidrs: [127.0.0.1/32]
