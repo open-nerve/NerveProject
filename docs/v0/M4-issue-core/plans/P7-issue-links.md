@@ -4,7 +4,7 @@
 
 > **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1 独立评审通过，T2 领域与存储已实施待独立评审。
 
-**目标：** 实现 M4 §12/P7 的链接CRUD、首个生产事务订阅者、抓取worker和防SSRF出站，交付I10接口与带links的I17。
+**目标：** 实现 M4 §12/P7 的链接CRUD、首个生产事务订阅者、抓取worker和防SSRF出站，交付I10接口与带links的I15/I17删除目录故事。
 
 **架构：** 链接请求写经既有Locks.run；app消费小端口，domain纯值与规则。outbound是独立标准库平台包，crawler适配器消费它并解析HTML；bootstrap构造出站与已有事务投递桥。抓取只以id+url+未删除守卫更新metadata，不改审计，不取项目锁。
 
@@ -86,14 +86,14 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 ## Task 3：创建、集合读取与首次链接事件
 
-**Files:** 改`api/modules/issue.yaml`、`api/openapi.yaml`聚合入口及生成物；新I/app/create_issue_link.go、list_issue_links.go、link_events.go及测试；I/domain/events.go、errors.go、link_activity.go；I/adapter/http/links.go、link_usecases.go、links_test.go、handler.go；module.go/module_events.go；B/events_test.go、issue_links_test.go、permission_matrix_links_test.go、issue_write_locks_test.go/gate_test.go/issue_writes_test.go；新e2e/fixtures/links.ts，改furnish.ts、assert/issue-collaboration.ts、stories/issue/i17-delete-issue.spec.ts；错误文案三文件；I/adapter/postgres/links.go、links_test.go、link_conflict.go、link_conflict_test.go补精确冲突映射。
+**Files:** 改`api/modules/issue.yaml`、`api/openapi.yaml`聚合入口及生成物；新I/app/create_issue_link.go、list_issue_links.go、link_events.go及测试；I/domain/events.go、errors.go、link_activity.go；I/adapter/http/links.go、link_usecases.go、links_test.go、handler.go；module.go/module_events.go；B/events_test.go、issue_links_test.go、permission_matrix_links_test.go、issue_write_locks_test.go/gate_test.go/issue_writes_test.go；新e2e/fixtures/links.ts，改furnish.ts、assert/issue-collaboration.ts、assert/issue.ts、stories/issue/i15-archive-issue.spec.ts、i17-delete-issue.spec.ts；错误文案三文件；I/adapter/postgres/links.go、links_test.go、link_conflict.go、link_conflict_test.go补精确冲突映射。
 **Interfaces:** 消费T2 LinkCreator/LinkLister、现有Locks/ReadTx/Clock/Events；产生Create/List的构造/Execute签名（spec§2.4）；HTTP UseCases同签名。声明EventLinkCreated/Updated/Deleted目录（后两发布点T4）；`stamp.linkEvent(kind string, id uuid.UUID, changes []shared.Change) shared.Event`集中封装Entity，业务字段Changes由用例明确构造。
 
 - [x] 写`TestCreateIssueLink`/`TestListIssueLinks`及HTTP双向错误覆盖：201metadata{}、NULL title/creator形状；重复URL409而其他issue同URL成功；列表排序/空data；guest OwnOnly=true时仅自己可见、guest_view_all_features=true/OwnOnly=false时他人可读但普通guest仍不可写。创建活动四槽、事件url/title nil和值、Event.ID≠linkID和同一时刻逐值断言。高熵多字节2048字符创建201/DB原文同值，2049为422 url/not_allowed且无写；精确重复409，跨issue同URL201，T4删除接口可用后再补软删重建201。真实hash碰撞只由T1/T2固定存储fixture证明，API测试不另搜索或创建外网碰撞地址。
 - [x] 写`TestLinkConflictMapping`：真实约束23P01映射ErrLinkExists，并以包装PgError表测“正确码+正确名”唯一映射；其他名23P01、同名23505、其他23505与非PG错误均保持原链。`errors.As`解包、不按全23P01/23505粗映射；同步将T2存储重复期望改为ErrLinkExists，原始SQLSTATE仍由T1直接SQL证明；完整API重复测试不能替代这层。
 - [x] 迁移B/events_test.go的`TestIssueEventDirectory`：独立期望现有12类加link_created/link_updated/link_deleted共15类及精确顺序/无重复/防外部切片变更；移除future表的link_created，保留project.deleted/workspace.deleted未知拒绝。将目录专用dispatcher改为`newDispatcher(types,nil)`，空payload仅测目录，不调用生产Subscribers；生产订阅注册/真实payload/事务证明归T11。
 - [x] 聚焦`go test -count=1 -p=1 ./internal/modules/issue/app ./internal/modules/issue/adapter/http ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(CreateIssueLink|ListIssueLinks|LinkConflictMapping|IssueEventDirectory|.*Link.*Matrix|.*IssueWrite|.*Gate)'`先红，实现Locks链及ReadTx；添加`ErrLinkExists`、仅`Code==23P01 && ConstraintName==issue_links_issue_id_url_key`映射、契约x-problem-codes、PROBLEM_MESSAGES与en/zh-CN同Task。
-- [x] 新fixture用生成operation类型；`furnishIssueRows`通过API加link，使用`http://169.254.169.254/furnish/<issue-id>`（后来worker会拨号前blocked），不请求真实外网。扩I17现有种子为link，尚不增加页面UI。
+- [x] 新fixture用生成operation类型；`furnishIssueRows`通过API加link，使用`http://169.254.169.254/furnish/<issue-id>`（后来worker会拨号前blocked），不请求真实外网。扩I17现有种子为link，尚不增加页面UI。 **T4 完整本地 E2E 发现并补验：** I15 同样调用严格 `expectIssueDeleted`，先前漏了 link API 种子；修复轮补入 ann 创建/admin 删除的 link 与创建活动逐值期望，保留目录守卫，不记为 T3 最初已覆盖。
 - [x] `make gen-go`、`make gen-web`后聚焦绿，`make test-web`与`pnpm --filter @nerve/e2e check:types`绿。现有权限矩阵/写锁/闸门覆盖表随operation立即补行，不等T5。
 - [ ] 变异M7去访客隐藏或MarkChanged、M8漏创建title Change/Entity错ID、M9只查未规整URL；另M8-directory删除任一link事件声明，独立15类目录必须红；M9-map去约束名或只认23505，错误映射对照必须红；app和至少一条真实组合红，G；提交`feat(M4/P7): 提供链接创建与集合读取接口`（实现与七项生产变异已完成，独立评审待主控安排）。
 
@@ -205,12 +205,12 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 ## Task 14：I10 接口故事与带链接的删除故事
 
-**Files:** 新e2e/fixtures/link-page.ts、stories/issue/i10-links.spec.ts；扩fixtures/links.ts、furnish.ts；改stories/issue/i17-delete-issue.spec.ts、i17-catalog.spec.ts、必要assert/issue.ts（复用activityRow）；不加页面实现。
+**Files:** 新e2e/fixtures/link-page.ts、stories/issue/i10-links.spec.ts；扩fixtures/links.ts、furnish.ts；改stories/issue/i15-archive-issue.spec.ts、i17-delete-issue.spec.ts、i17-catalog.spec.ts、必要assert/issue.ts（复用activityRow）；不加页面实现。
 **Interfaces:** fixture `startLinkPage(): Promise<LinkPage>`，`LinkPage{url:string; release():void; close():Promise<void>}`提供受控首个页面请求/后续不同标题路由，本测试生命周期拥有server并在finally关闭；API fixture直接使用生成类型。
 
 - [ ] 写I10：API建普通用户/项目/issue→输入127.0.0.1:<port>/page→201URL带http且metadata{}→受控放行后四键metadata/内嵌data图标→DB对应linkID/url/kind的job completed→标题独改无新增任务→URL更新清{}后抓新标题→重复409→删除活动。blocked例169.254.169.254只断言metadata.error，不声称E2E观测0连接。
-- [ ] 扩I17两层子树、不同creator/deleter、已归档子项与先删对照；API填每个受测links，目录断言同刻同写者。项目/工作区的furnish也有link，不能只改I17而漏同步cascade。
-- [ ] 先`pnpm --filter @nerve/e2e check:types`，`make build`后`pnpm --filter @nerve/e2e exec playwright test stories/issue/i10-links.spec.ts stories/issue/i17-delete-issue.spec.ts stories/issue/i17-catalog.spec.ts --project=chromium`；继承已验证项目内浏览器缓存，移除NO_COLOR/FORCE_COLOR，不全局安装。
+- [ ] 扩I17两层子树、不同creator/deleter、已归档子项与先删对照；API填每个受测links，目录断言同刻同写者。I15 的归档后删除也必须 API 填 link 并纳入活动期望（T4 检查点全套发现遗漏后补入），项目/工作区的furnish也有link，不能只改I17而漏同步cascade。
+- [ ] 先`pnpm --filter @nerve/e2e check:types`，`make build`后`pnpm --filter @nerve/e2e exec playwright test stories/issue/i10-links.spec.ts stories/issue/i15-archive-issue.spec.ts stories/issue/i17-delete-issue.spec.ts stories/issue/i17-catalog.spec.ts --project=chromium`；继承已验证项目内浏览器缓存，移除NO_COLOR/FORCE_COLOR，不全局安装。
 - [ ] 故事按API/DB/job三层断言，轮询有期限、任务按本linkID/url匹配；先停server/失败也清理。选M30/M35等已有真实生产变异中最合适一项做故事归属验证，不为凑数重复全部变异；恢复绿，G；提交`test(M4/P7): 加入链接抓取故事并扩展删除目录`。
 
 ## Task 15：全链路矩阵、变异归档与最终门禁
