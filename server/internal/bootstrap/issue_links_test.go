@@ -72,6 +72,7 @@ func TestCreateIssueLinkAPI(t *testing.T) {
 	}
 	w.send(t, "bob", http.MethodPost, linksOf(id), linkBody(long, nil), 409)
 	createLink(t, w, "bob", other, long)
+	waitUniqueLinkCrawl(t, w, got)
 	before := descriptionRows(t, w, "issue_links", id)
 	audit := descriptionAudit(t, w, id)
 	answer := w.send(t, "bob", http.MethodPost, linksOf(id), linkBody(long+"界", nil), 422)

@@ -307,7 +307,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   | 加子工作项 | 读父工作项 → 项目 N → 判定 `issue.update` → 项目已归档 409 → 父已归档 409 → 子工作项的检查（同项目、未删除、未归档、不是父本身或它的祖先，422 `sub_issue_ids[i]`）→ 时刻 → 子工作项（`id` 升序）改 `parent_id` → 每个一条 `parent` 动态 → 事件 |
   | 加关联 | 读工作项和对方（得到项目）→ 预检含每个对方的可见性，看不到的对方不进下一步 → 其余的项目 N（`id` 升序，约定七）→ 判定 `issue.update` → 项目已归档 409 → 工作项已归档 409 → 对方的检查（可见、未删除、未归档、不是自己、这一对还没有关联，422 `issue_ids[i]`）→ 时刻 → 插入关联行（按对方的 `id` 排序，约定五的后一半）→ 两边的 `updated_at` → 正反两条动态 → 事件 |
   | 删除关联 | 读关联（得到两个工作项、两个项目）→ 两个项目 N（`id` 升序）→ 判定（两边任一个的 `issue.update`，3.10）→ 项目已归档 409 → 两边任一个已归档 409 → 时刻 → 软删除 → 两边的 `updated_at` → 正反两条动态 → 事件 |
-  | 加、改、删链接 | 读工作项（加）或链接（改、删）→ 项目 N → 判定 `issue.update` → 项目已归档 409 → 工作项已归档 409 → 地址的唯一（409 `issue.link_exists`）→ 时刻 → 写 → 工作项的 `updated_at` → 动态 → 事件（地址变了时投递抓取，3.11） |
+  | 加、改、删链接 | 读工作项（加）或链接（改、删）→ 无锁预检 → 项目闸门/项目 N → 锁下重读与判定 `issue.update` → 项目已归档409 → 工作项已归档409 → noop返回（不取时钟）→ 创建或URL实际变化才查唯一409 → 锁后一次时刻 → 工作项审计 `updated_at/updated_by_id` → link写 → 活动（创建/删除写活动；修改仅URL真实变化写活动，title-only无活动）→ 事件/原事务投递（创建、改URL投抓取，3.11） |
   | 发评论 | 读工作项 → 项目 N → 判定 `issue_comment.create`（访客规则）→ 项目已归档 409 → 工作项已归档 409 → 时刻 → 插入评论 → 工作项的 `updated_at` → 关注（评论者、被提及的有效成员）→ 事件 |
   | 改、删评论 | 读评论（得到工作项、项目）→ 项目 N → 判定 `issue_comment.write`（访客规则）→ 改别人的 403 `issue.not_author`；删别人的而不是项目管理员 403 `issue.not_author`（决策点 8）→ 项目已归档 409 → 工作项已归档 409 → 时刻 → 写（删除连带评论的表情）→ 工作项的 `updated_at` →（改）关注被新提及的成员 → 事件 |
   | 加、去表情（工作项、评论） | 读工作项或评论 → 项目 N → 判定 `issue_reaction.write`（访客规则）→ 项目已归档 409 → 工作项已归档 409 →（加）已有 409 `issue.reaction_exists`；（去）没有 404 `issue.reaction_not_found` → 时刻 → 写 →（工作项的表情）工作项的 `updated_at` → 事件 |
@@ -455,17 +455,17 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 ### 3.11 链接与元数据的抓取（架构问题 8）
 - **字段**：`url`（必填）、`title`（可选，至多 255 个字符，可为 `null`）、`metadata`（服务端写，客户端不能写）。
 - **地址的规整**：去掉首尾空白；不以 `http://`、`https://` 开头（不分大小写）时在前面加 `http://`（Plane 的服务端相同，`API/app/serializers/issue.py:566-572`；页面在不以 `http` 开头时加，`create-update-link-modal.tsx:65-68`）；然后解析：协议只能是 `http`、`https`，必须有主机名，规整后至多 2048 个字符，否则 422（`url`，`not_allowed`）。Plane 的 `URLValidator` 另放行 `ftp`、`ftps`，登记差异。
-- **同一个工作项上地址唯一**（规整之后逐字比较，未删除的行之间）：重复 409 `issue.link_exists`，创建和修改都是（Plane 在代码里检查，400，`:585-598`）。数据库另以 §4.8 的部分 hash exclusion 对完整原文相等排重，保留 2048 字符并避免原文 B-tree 的索引容量限制；指定约束冲突为 `23P01`。这是 P7 预检验证后的局部物理修正，公开重复语义不变。登记差异。
+- **同一个工作项上地址唯一**（规整之后逐字比较，未删除的行之间）：重复 409 `issue.link_exists`，创建和修改都是（Plane 在代码里检查，400，`:585-598`）。数据库另以 §4.8 的部分 hash exclusion 对完整原文相等排重，保留 2048 字符并避免原文 B-tree 的索引容量限制；指定约束冲突为 `23P01`。这是 P7 预检验证后由迁移00027落地的局部物理修正，公开重复语义不变。登记差异。
 - **谁能改**：项目的管理员和成员都能改、删任何人的链接（Plane 相同，没有创建者规则，R2 第 4 节）。
 - **抓取**（第一个异步订阅者，3.19）：
   - 创建、改地址发布事件 `issue.link_created`、`issue.link_updated`（`changes` 里有 `url`）；订阅者 `crawl_on_link_change` 在同一个事务里投递 River 任务 `issue.crawl_link{link_id, url}`（`InsertTx`，3.20）。事务回滚，任务也不在。只改标题不重新抓取（Plane 相同，`API/app/views/issue/link.py:76-83`）。
-  - 改地址时 `metadata` 重置为 `{}`：旧地址的标题不应显示在新地址旁边（Plane 保留到新的抓取覆盖它）。
-  - worker 经 `platform/outbound` 的客户端取页面（防 SSRF，8.1、11.8）：只发 `GET`；连接 2 秒、整体 5 秒的期限；至多 5 次跳转，每一跳重新检查；响应体至多读 1 MiB（Plane 不设上限，`work_item_link_task.py:128`，缺陷）。取 `<title>`（反转义、去空白、至多 255 个字符）。图标：页面里 `rel` 为 `icon`、`shortcut icon`、`apple-touch-icon`、`apple-touch-icon-precomposed` 的 `<link>`，按最终地址解析，没有时取 `/favicon.ico`；同样经出站客户端取，至多 64 KiB、类型是 `image/png`、`image/x-icon`、`image/vnd.microsoft.icon`、`image/gif`、`image/jpeg`、`image/webp` 之一，存为 `data:` 地址；否则 `favicon` 为 `null`，页面显示默认的链接图标。Plane 不限大小和类型，默认存一个内嵌的 SVG（`:205-245`）；Nerve 不存 SVG。
+  - 改地址时 `metadata` 重置为 `{}`：旧地址的标题不应显示在新地址旁边（Plane 保留到新的抓取覆盖它）。标题独改由SQL保留库内当前metadata，`UPDATE RETURNING`返回该值，不写回app旧快照。
+  - worker 经 `platform/outbound` 的客户端取页面（防 SSRF，8.1、11.8）：只发 `GET`；连接 2 秒、整体 5 秒的期限；至多 5 次跳转，每一跳重新检查；响应体至多读 1 MiB（Plane 不设上限，`work_item_link_task.py:128`，缺陷）。页面按BOM、HTTP charset、前1024字节内有效meta顺序解码为UTF-8；无有效声明且全文是合法UTF-8时保留UTF-8（含长ASCII前缀）。取第一个 `<title>`（实体只解码一次、去空白、至多255个Unicode字符）；1MiB是解压后、转码前字节限额。图标：页面里 `rel` 为 `icon`、`shortcut icon`、`apple-touch-icon`、`apple-touch-icon-precomposed` 的 `<link>`，按最终地址解析，没有时取 `/favicon.ico`；同样经出站客户端取，至多 64 KiB、类型是 `image/png`、`image/x-icon`、`image/vnd.microsoft.icon`、`image/gif`、`image/jpeg`、`image/webp` 之一，存为 `data:` 地址；否则 `favicon` 为 `null`，页面显示默认的链接图标。Plane 不限大小和类型，默认存一个内嵌的 SVG（`:205-245`）；Nerve 不存 SVG。
   - 写回：`{title, favicon, url, favicon_url}`；失败时 `{error, url}`，`error` 只有两个值：`blocked`（地址被出站客户端拒绝，6.8）、`failed`（其余的一切：超时、连不上、状态码、超过上限、不是 HTML）。第二稿分成六种，让抓取成了一个扫端口的回显（对抗性评审 M3）；页面只用"有没有标题"，不读 `error` 的细分，所以收粗到页面要的程度，失败的种类只写进 nerve 的日志。写回用 3.5 的带守卫的 `UPDATE`：链接已删除或地址已改时写 0 行。不写 `updated_at`、不写动态、不发布事件（抓取不是谁的修改）。
   - 网络上的失败不重试（写下 `error`，Plane 也不重试）；数据库的失败让任务返回错误，由 River 重试（至多 3 次）。
-  - 页面显示 `title || url`，后面灰色的 `metadata.title`，`metadata.favicon` 作图标（`links/link-item.tsx:46-47,58-75`），不变。CSP 的 `img-src 'self' data: blob:` 不变：图标是 `data:` 地址，页面不从外部取图。
+  - 页面沿用显示约定 `title || url`，后面灰色的 `metadata.title`，`metadata.favicon` 作图标（`links/link-item.tsx:46-47,58-75`），不变。CSP 的 `img-src 'self' data: blob:` 不变：图标是 `data:` 地址，页面不从外部取图。P7交付后端与I10 API故事，详情数据层/页面接线仍归P11/P14，不能将此显示约定视为已完成页面验收。
 - **测试的出口**：e2e 的 I10 要让抓取到达本机起的页面服务器，而出站客户端拒绝回环地址。配置 `outbound.allow_cidrs`（只在 `env = test` 时接受，别的环境启动时拒绝，与 `clock.offset` 同一种做法，3.20）列出放行的网段；`config.test.yaml` 放行 `127.0.0.1/32`，所以 worker 自己的 nerve 和故事起的 nerve 都带着它（两个 nerve 都在工作 `default` 队列，谁取到抓取的任务结果都一样，对抗性评审 M18）。I10 输入 `127.0.0.1:<端口>/page`（页面服务器的端口），规整之后是 `http://127.0.0.1:<端口>/page`；被拒绝的一例用 `169.254.169.254`（链路本地，云的元数据地址），e2e 只断言 `error: blocked`，"没有发出连接"由 6.8 的 Go 表测试证明。
-- **限流**：不另设桶（5.4）。每个链接最多引起页面和图标两次出站请求（加跳转），抓取在队列里由固定数量的 worker 执行（3.20），出站的速率不随请求的速率增长。
+- **限流**：不另设桶（5.4）。每次crawl最多页面和一个图标两个资源，每个资源最多5次跳转（初始加跳转至多6次GET），两资源共享5秒。固定worker数量限制并发；authenticated限制到达率，两者都不构成待执行队列长度硬上限。相同link反复改URL可投多个任务，DB失败重试也可能再次抓取。
 
 ### 3.12 评论、表情回应、关注与提及
 - **评论**（`issue_comments`）：
@@ -797,6 +797,8 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 
 **P6实施记录（2026-10-26）：** T1–T16实施及逐Task独评通过，内部整分支审查零新发现；[正式review](reviews/P6-issue-events-review.md)列真实命令、矩阵、变异与Minor闭环。事件事务同步发布、自动归档每项目事务/NULL actor、测试业务时钟及两队列已落地。P7首个生产订阅者、`registrationRows`对请求任务，P9项目/工作区删除任务、版本保留与清理，P15页面仍未完成；不将M4整体验收关闭。
 
+**P7接续记录（2026-10-27）：** 三link事件使目录增为15；首个生产subscriber经原事务InsertTx投递，真实worker、请求任务快照、受限运行角色及I10 API/带links删除目录已落地。下表P7三行已同步总体§6.2/§6.7/§8、12列差异和README安全；[P7 review](reviews/P7-issue-links-review.md)与[整体审核](../../reviews/re-05-M4P7整体审核.md)区分原范围整审、T16修复/本地验证、待定向复审/最终分支CI。P6当时空生产订阅是历史事实，P8/P9/P11/P14/P15及M4收尾仍开放。
+
 **规则**照 M3 设计 3.20：每处偏离，在实现它的那个 Phase 的同一次合并中同步到上级文档和差异清单；建表、改表的 Phase 逐列更新差异清单。收尾只按本表逐行核对。总体设计 9.4 中 M4 的状态随本文的合并改为"进行中"（2026-10-17，已改）。负责人已裁定第 10 节、批准第 11 节（2026-10-17，全部按建议），下表每一行的内容都已确定，按标出的 Phase 同步。
 
 | Phase | 文档 | 位置 | 内容 |
@@ -959,7 +961,7 @@ M4 的 13 张表都带 `workspace_id`、`project_id`（草稿的可空）、`del
 | `metadata` | `jsonb NOT NULL DEFAULT '{}'`，CHECK：是对象，键是 `title`、`favicon`、`url`、`favicon_url`、`error` 的子集，每个值是字符串或 `null` | CHECK 新加（M2 设计 3.13） |
 | 审计列 | 同 4.2 | — |
 
-- **活链接的精确唯一约束**：**新加** `CONSTRAINT issue_links_issue_id_url_key EXCLUDE USING hash ((issue_id::text || ':' || url) WITH =) WHERE (deleted_at IS NULL)`（Plane 只在代码里检查）；另保留无条件 `issue_links_issue_id_idx`、workspace/project 外键索引。P7 预检局部修正：原 `(issue_id,url)` B-tree 不能容纳所有合法的 2048 字符多字节 URL，改用单个非空、无歧义的组合表达式排斥约束，比较仍是完整原文相等，哈希碰撞不误拒不同 URL；不缩短长度、不加字段或依赖、不改变项目锁协议。适配器只将该约束的 `23P01` 映射为 `issue.link_exists`，其他错误原样返回。PG18.6/sqlc 最窄实验与正式实施待办见 [P7 预检](reviews/P7-issue-links-review.md)，本条是设计修订，尚未迁移产品表。
+- **活链接的精确唯一约束**：**新加** `CONSTRAINT issue_links_issue_id_url_key EXCLUDE USING hash ((issue_id::text || ':' || url) WITH =) WHERE (deleted_at IS NULL)`（Plane 只在代码里检查）；另保留无条件 `issue_links_issue_id_idx`、workspace/project 外键索引。P7 预检局部修正：原 `(issue_id,url)` B-tree 不能容纳所有合法的 2048 字符多字节 URL，改用单个非空、无歧义的组合表达式排斥约束，比较仍是完整原文相等，哈希碰撞不误拒不同 URL；不缩短长度、不加字段或依赖、不改变项目锁协议。适配器只将该约束的 `23P01` 映射为 `issue.link_exists`，其他错误原样返回。迁移 `00027_issue_issue_links.sql` 已落地，sqlc及runtime-grants均纳入新表；`TestLinkSchema`、`TestLinkHashCollision`、`TestLinkStore`覆盖真实12列、长URL、碰撞与原文比较，运行角色实际CRUD+crawl见 [P7 review](reviews/P7-issue-links-review.md)。准备期四列实验只作为设计修正的历史依据。
 
 ### 4.9 `issue_reactions`（Plane 11 列 → 11 列）
 | 列 | 类型与约束 | 与 Plane 的差异 |
@@ -1180,7 +1182,7 @@ issue_comments
 | `DELETE /api/v0/states/{state_id}` | `deleteState` | `x-problem-codes` 加 409 `project.state_in_use` |
 
 - `Project` 的 `identifier`、`default_assignee_id`、`guest_view_all_features`、`archive_in` 的说明改写为它们对工作项的作用（M3 交接第 4 节）：编号的前缀；不带负责人的新工作项指派给他（他仍是项目中不是访客的有效成员时）；关时访客只看到自己建的工作项；自动归档的月数。`State.default` 的说明加"新工作项不带状态时取它"。
-- 各列表的顺序：`listIssues`、`listMemberIssues` 按 `order_by`（3.16）；子工作项按 `(created_at, id)` 升序（P3 spec 第3节第13条的已交付契约；`sort_order` PATCH 不改变这个集合列表的顺序）；关联、链接、工作项的表情按 `(created_at, id)`；评论、动态按 `(created_at, id)` 升序；描述的历史按 `(last_saved_at, id)` 降序；草稿按 `(created_at, id)` 降序；搜索按 3.18。
+- 各列表的顺序：`listIssues`、`listMemberIssues` 按 `order_by`（3.16）；子工作项按 `(created_at, id)` 升序（P3 spec 第3节第13条的已交付契约；`sort_order` PATCH 不改变这个集合列表的顺序）；关联、工作项的表情按 `(created_at, id)`；链接按 `(created_at DESC, id DESC)`；评论、动态按 `(created_at, id)` 升序；描述的历史按 `(last_saved_at, id)` 降序；草稿按 `(created_at, id)` 降序；搜索按 3.18。
 
 ### 5.2 结构
 - **关联字段只给 id，名字带 `_id`**（总体设计 3.2、3.6）：Plane 的 `state`、`parent`、`created_by`、`actor`、`owned_by` 改为 `state_id`、`parent_id`、`created_by_id`、`actor_id`、`owned_by_id`。
@@ -1226,7 +1228,7 @@ issue_comments
 
 ### 5.4 限流
 M4 不加新的桶：需要登录的操作按凭证计数（`authenticated`，`server/configs/config.yaml` 每分钟 1200、突发 200）。
-- 链接：每个链接最多引起页面和图标两次出站请求，抓取在固定数量的 worker 里排队（3.20），出站的速率不随请求的速率增长；队列的长度由 `authenticated` 的额度限制。
+- 链接：每次crawl最多两个资源（页面/图标），每资源最多初始GET加5次跳转，共享5秒预算，理论至多12次GET。固定worker数限制并发，`authenticated`限制请求到达率；没有独立队列长度硬上限。同link多次改URL及DB失败重试可产生更多抓取，不能按link生命周期估为两次请求。
 - 搜索：三个字符以上走 trigram 索引，少于三个字符的在调用者可读的项目里顺序扫描；每次返回至多 100 个。
 - 先锁后判定的拒绝（3.5）：凡判定拒绝的（看不到的 404、不能做的 403）被不加锁的预检挡住，不取锁、不进写闸门；限速按凭证计数挡不住一个有很多 PAT 的账户，所以靠的是预检而不是额度。
 - 一个项目上的写（3.5）：`authenticated` 的突发额度（200）比连接池（10）大得多，所以工作项一侧的写在取连接之前经按项目的写闸门，满时 503 `server_busy`；额度管的是一个凭证的速率，闸门管的是一个项目在一个进程里同时占的连接。
@@ -1289,7 +1291,8 @@ modules/issue/
     list_settings.go        IssueListSettings纯校验及本模块app小值（3.17）；search_issues.go在P8
     sub_issues.go           listSubIssues、addSubIssues
     relations.go            list、create、delete
-    links.go                list、create、update、delete；crawl_link.go：抓取的写回（worker 调用）
+    create_issue_link.go / list_issue_links.go / update_issue_link.go / delete_issue_link.go
+                            链接四操作；crawl_link.go：抓取写回（worker调用）
     comments.go  reactions.go  activities.go  description_versions.go
     drafts.go               list、create、get、update、delete；publish_draft.go
     cascade.go              project 的 IssueCascade 的实现：StateInUse、DetachLabel（P1–P8 另有 DeleteProjectIssues、DeleteWorkspaceIssues，3.3）
@@ -1322,9 +1325,9 @@ modules/issue/
 
 ### 6.4 事件、任务和清理的接缝
 - **发布**：`issue/app` 的用例（P9 起还有 `project` 的删除项目、`workspace` 的删除工作区）在事务里调 `EventPublisher.Publish`，在全部写之后、事务提交之前。用例不知道谁订阅。
-- **分发**：`bootstrap/events.go` 的 `Dispatcher` 实现 `shared.EventPublisher`，由 `issue.Subscribers()`（以后各模块的）建出，构造时检查类型（各模块的 `EventTypes()`：`issue`、P9 起 `project`、`workspace`）和名字（3.19），按登记的顺序同步调用；P6 起每个用例的发布点由用例测试经假的发布者核对（类型、`Entity`、`Changes`）。
-- **投递**：订阅者要投递任务时经一个端口（`issue/app` 的 `LinkCrawls`、P9 的 `RowDeletions`），实现在 `issue/adapter/river`，它要一个 `Inserter`（`InsertTx(ctx, args, opts) error`），由 `bootstrap/jobs.go` 用 `postgres.Tx(ctx)` 加只投递的客户端（`jobs.NewInserter(pool)`，3.20）接成；不在事务里时返回错误。模块经 `EnqueuedKinds()` 声明它会投递的种类，建工作的客户端时逐个核对有 worker。
-- **任务**：模块经 `Jobs()` 交出 `jobs.Job`（M2 的写法，`identity/adapter/river/cleanup.go`），worker 只调用例；`bootstrap/app.go` 把各模块的 `Jobs()` 和 `purge.go` 的清理任务交给 `jobs.New`（今天只传 `ident.Jobs()`，`app.go:158`）。
+- **分发**：`bootstrap/events.go` 的 `Dispatcher` 实现 `shared.EventPublisher`，由 `issue.Subscribers(Inserter)`（以后各模块的）建出，构造时检查类型（各模块的 `EventTypes()`：`issue`、P9 起 `project`、`workspace`）和名字（3.19），按登记的顺序同步调用；P6 起每个用例的发布点由用例测试经假的发布者核对（类型、`Entity`、`Changes`）。
+- **投递**：订阅者要投递任务时经一个端口（`issue/app` 的 `LinkCrawls`、P9 的 `RowDeletions`），实现在 `issue/adapter/river`，它要一个 `Inserter`（`InsertTx(ctx, args, opts) error`），由实际 `bootstrap/issue_inserter.go` 用 `postgres.Tx(ctx)` 加只投递的客户端（`jobs.NewInserter(pool)`，3.20）接成；不在事务里时返回错误。模块经 `EnqueuedKinds()` 声明它会投递的种类，建工作的客户端时逐个核对有 worker。
+- **任务**：模块经 `Jobs()` 交出 `jobs.Job`（M2 的写法，`identity/adapter/river/cleanup.go`），worker 只调用例；`bootstrap/app.go` 把各模块的 `Jobs()` 和 `purge.go` 的清理任务交给 `jobs.New`（P7已组合identity与issue的Jobs；purge任务仍归P9）。
 - **清理**：四个模块各交出一个 `Purger`（`Purge(ctx, cutoff, batch) (int, error)`，删完为止），`bootstrap/purge.go` 把它们按 3.21 的顺序组成一个任务。`Purger` 的接口声明在 `bootstrap`（消费方），模块只交出满足它的值，不互相导入。
 - **测试的时钟**：`bootstrap/app.go` 按配置建出 `clock.Offset` 或 `clock.System`，交给每个模块的 `Deps.Clock`（3.20）。
 
@@ -1427,13 +1430,13 @@ modules/issue/
   - 只许 `http`、`https`；不带用户信息（`user@host`）；端口不限（Plane 也不限）。
   - 解析主机名，**任何一个**解析出的地址落在拒绝的表里就拒绝，并递归检查 IPv6 里嵌着的 IPv4（IPv4 映射的 IPv6、NAT64、6to4、Teredo，`ip_address.py:16-95,105-156`）。
   - **拒绝的表写成显式的 IANA 特殊用途登记表**（IPv4 和 IPv6 两张，`iana-ipv4-special-registry`、`iana-ipv6-special-registry`），不靠 `net/netip` 的判断：`netip` 没有"保留"的判断，`IsPrivate` 比 Python 的 `is_private`（Plane 靠它）窄得多。SP3 量到第二稿的"`netip` 的判断加一张小表"放过了 `192.0.0.192`（Oracle Cloud 旧的元数据地址）、`192.0.0.0/24`、`198.18.0.0/15`、`240.0.0.0/4`、三个文档网段、`192.88.99.0/24`、`100::/64`、`2001:db8::/32` 和 Plane 自己列着的 `64:ff9b:1::/48`（对抗性评审 M3）。表里另有 `0.0.0.0/8`、`100.64.0.0/10`、`169.254.0.0/16`、`255.255.255.255/32`、`fec0::/10`（已废弃的站点本地）和组播；登记表里"全局可达"一栏为真的网段也拒绝（例如 `192.0.0.9/32`），出站只许普通的公网地址。
-  - **拒绝本机网卡上的地址**：启动时读出本机各网卡上的地址（`net.InterfaceAddrs`）加进拒绝的表。它只覆盖启动那一刻在本机网卡上的地址：容器里和多数云上，公网地址不在本机的网卡上（在 NAT 或负载均衡上），网卡的地址也可能在启动之后变；这些由网络层的出站规则覆盖（README，8.8；聚焦复核 M9）。
+  - **拒绝本机网卡上的地址**：启动时读出本机各网卡上的地址（`net.InterfaceAddrs`）加进拒绝的表；读取失败构造失败，allow/local切片均复制持有。它只覆盖启动那一刻在本机网卡上的地址：容器里和多数云上，公网地址不在本机的网卡上（在 NAT 或负载均衡上），网卡的地址也可能在启动之后变；这些由网络层的出站规则覆盖（README，8.8；聚焦复核 M9）。
   - **连接到检查过的那个地址**：自己的 `DialContext` 只拨检查过的 IP，Host 头和 TLS 的 SNI 仍是主机名，挡住 DNS 重绑定（`url_security.py:160-272`）。
   - **每一次跳转重新检查**，至多 5 次；不跟随到非 `http(s)`。
   - 不读环境变量里的代理（`Transport.Proxy = nil`）。
   - 期限：连接 2 秒、整体 5 秒（由调用方的 `limits` 给，抓取用这两个值）；读到上限就停，返回 `TooLarge`。
   - 不发 cookie，不带凭证；`User-Agent` 是 `Nerve/<版本> (+link preview)`。
-- **测试的出口**：`outbound.allow_cidrs`（只在 `env = test`，3.11）把列出的网段从拒绝的表里拿掉；生产配置里不为空时启动失败。
+- **测试的出口**：`outbound.allow_cidrs`（只在 `env = test`，3.11）仅为原始literal覆盖静态/本机拒绝，不把allow继承给内嵌IPv4；默认空，非test环境非空启动失败，test配置仅127.0.0.1/32。
 - **测试**：登记表的每个网段一行（两端的地址各一个，含 IPv6 的嵌入形式），本机的接口地址一行；DNS 重绑定（第一次解析公网、第二次解析回环，客户端只拨第一次检查过的）；跳转到内网被拒绝；超过 5 次；超时；超过上限；代理的环境变量不生效。用 `httptest` 和自定义的解析器，不访问外网。
 - **M8 复用它**（Webhook 的投送），所以在 `platform`，不在 `issue`（13.2）。
 
@@ -2507,8 +2510,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - [ ] 权限矩阵的全部格子（含创建者、访客的两种、在项目里只是访客的工作区管理员、已不是成员的身份、不是成员的工作区管理员）、访客规则一致的测试（含子工作项数、动态的过滤、关注）、3.5 的 26 个交错测试在真实数据库上通过；看不到项目、不能写的写和加关联指向看不到的项目都不取锁；交错 20 经真实的连接池和写闸门，闸门满时 503 `server_busy`。
 - [ ] 每个模块的 `apitest.Main` 两个方向核对通过（`issue` 模块和 `project` 新的 `project.state_in_use`）；`access/domain` 的判定表、规则表与各模块操作名的完整性测试通过；每个操作在矩阵里有一行。
 - [ ] 列表：每个排序码两个方向的翻页、每个分组码和子分组、每个筛选参数、带 `group_key` 的"加载更多"的集成测试通过；`api/testdata/issue-order.json` 由 Go 和 vitest 各读一次，结果相同；改过的游标只在调用者看得到的数据里换起点（8.6）；10 万个工作项的耗时在 3.16 的实测之内，连接的参数读回为预期的值；`paged-groups.ts` 的 vitest 表（含对抗性评审 I2 的九个反例）通过。
-- [ ] 事件和任务（P6的只投递/登记/自动归档/固定时钟已验证，P7的`registrationRows`及P9版本保留未完成；[P6 review](reviews/P6-issue-events-review.md)）：经只投递的客户端，提交留任务、回滚不留的集成测试；定时任务的种类、声明会投递的种类漏登记 worker 的两种变异让测试失败；`registrationRows` 核对 `river_job`；自动归档、版本的保留推进固定时钟；`platform/jobs` 的测试没有固定的余量。
-- [ ] `platform/outbound` 的表测试（6.8：IANA 两张登记表的每个网段、本机的接口地址、跳转、重绑定）通过；I10 中被拒绝的 `169.254.169.254` 写下 `blocked`。
+- [ ] 事件和任务（P6的只投递/登记/自动归档/固定时钟已验证，P7的原事务生产订阅、真实crawl及`registrationRows`已验证，P9版本保留仍未完成；[P6 review](reviews/P6-issue-events-review.md)）：经只投递的客户端，提交留任务、回滚不留的集成测试；定时任务的种类、声明会投递的种类漏登记 worker 的两种变异让测试失败；`registrationRows` 核对 `river_job`；自动归档、版本的保留推进固定时钟；`platform/jobs` 的测试没有固定的余量。
+- [x] P7子项：`platform/outbound` 的独立IANA完整性/每网段首尾、本机地址、全部DNS候选、固定IP及每跳重检测试通过；I10 API的169.254.169.254为blocked，零危险dial由Go测试证明。证据见P7行为矩阵；不替代页面版本/最终分支CI。
 - [ ] 清理的目录测试（每张有 `deleted_at` 的表有清理者，外键是 `CASCADE` 或 `SET NULL`）和 I21 通过；删除项目、工作区的任务的窗口测试、交错 24、25 通过，M3 的删除故事在限时轮询之下通过。
 - [ ] 持续集成的全部门禁通过（含架构测试、`TestSQLCSchemaScope`、grants 的两个测试、`apitest` 的写法规则、命令行的组合测试、关键词守卫、oxlint 上限、knip、`make gen-check`）。
 - [x] 第 10 节的八个决策点有负责人的裁定，本文按裁定修改；第 11 节的十一个架构问题已由负责人批准。（2026-10-17：八个决策点都按建议裁定，每个决策点之后写着裁定，正文各节按它们写定；11.1–11.11 各标"负责人已批准，2026-10-17"；本文开头的状态一行和 17.4 同样写明。）
@@ -2522,6 +2525,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - [ ] 规模估计与实际的对比写进收尾的 review。
 - [ ] 总体设计 9.4 中 M4 的状态改为"已完成"。
 
+P7另有已验证子证据：四operation公开码双向守卫、三写权限/审计/回滚、真实事务投递、交错19与runtime角色，以及§3.23的P7文档同步。上面包含P9、全部页面/故事和M4收尾的复合项仍保持未勾。
+
 ## 15. Phase 进度表
 | Phase | 内容 | 状态 |
 |---|---|---|
@@ -2533,7 +2538,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；已以 `--no-ff` 合并main `e9782b8f`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 三任务全绿，精确SHA及接收记录见P5评审 |
 | P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | 已完成：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。追加[deep-review](../../reviews/re-02-M4P5整体审核.md)及局部修复复审关闭；2026-10-26 负责人授权后，P5 已以 `--no-ff` 合并为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 的 server/web/e2e 全绿；6,517 个证据文件已归档并逐个 SHA-256 核对，P5 本地/远端分支及 worktree 已清理。T16 集成门关闭，M4 总体与后续交接仍 open。 |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，16验收任务） | T1–T16已实施并逐Task独评通过，T16正式文档/交接已同步：[spec](specs/P6-issue-events.md)、[plan](plans/P6-issue-events.md)、[review](reviews/P6-issue-events-review.md)。内部整分支审查及 clock 修复聚焦复审已通过；修复 `e8df8485` 的 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 三任务全绿。deep-review 终审通过（[报告](../../reviews/re-03-M4P6整体审核.md)，3 项文档 Minor 已闭环）；已授权 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；[main CI 40305247546](https://github.com/open-nerve/NerveProject/actions/runs/40305247546) 重跑全绿，921 个本地证据归档核 hash 后已清理分支/worktree。**P6 已完成**；M4 总体仍进行中 |
-| P7 `issue-links` | 链接、出站客户端与抓取（后端，12 粗项展开 16 验收任务） | 准备中：[spec](specs/P7-issue-links.md)、[plan](plans/P7-issue-links.md)、[预检](reviews/P7-issue-links-review.md)；长 URL 物理约束已验证并局部修订 §4.8；独立预检及局部修订复审已通过，5 项 Medium 全部闭环，T1 未开始，等待负责人安排启动 |
+| P7 `issue-links` | 链接、出站客户端与抓取（后端，12粗项/16任务） | T1–T15实施及独评完成；[spec](specs/P7-issue-links.md)、[plan](plans/P7-issue-links.md)、[review](reviews/P7-issue-links-review.md)、[整体审核](../../reviews/re-05-M4P7整体审核.md)。原范围165文件/457chunks单次整审完成，T16修复/文档待本轮完整门禁、独立定向复审及最终准确分支CI；T15准确d2检查点CI已绿。未合并，main集成另获授权 |
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13） | 未开始 |
 | P9 `purge` | 物理清理、描述版本的保留与工作项一侧的删除任务（后端，13） | 未开始 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | 未开始 |

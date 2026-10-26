@@ -238,6 +238,10 @@ T1–T15 的运行命令、退出码、变异和精确提交见[评审 §2](../r
 | M8 | Webhook消费明确事件名单/形状；项目删除连带与DetachLabel不另发issue事件的清单 |
 | M4收尾 | 所有handoff逐条closed、总体§9.4、M4§14完整证据、M5–M8四份closeout；P6不提前关闭 |
 
+### P7接收回执（2026-10-27）
+
+上表P7责任已落地：3种link事件（目录共15）、首个生产`crawl_on_link_change`/LinkCrawls原事务投递、outbound/crawler/真实worker及registrationRows请求任务核对。见[P7 review](../reviews/P7-issue-links-review.md)与[行为矩阵](../reviews/P7-issue-links-behavior-matrix.md)。这是P7接续，不改写P6当时12事件/空生产订阅、已授权合并和mainCI的历史。P8/P9/P15及M4收尾仍开放，P7最终分支CI/集成状态独立记录。
+
 ## 6. 风险
 
 | 风险 | 控制与证据责任 |

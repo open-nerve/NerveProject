@@ -1,30 +1,44 @@
-# M4/P7 链接、出站与抓取预检评审记录
+# M4/P7 链接、出站与抓取评审记录
 
-日期：2026-10-26。状态：**独立预检及修订复审通过，5 项 Medium 全部闭环；T1–T16 未实施**。分支 `codex/m4-p7`；基线为 P6 的 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`。配套：[spec](../specs/P7-issue-links.md)、[plan](../plans/P7-issue-links.md)。P6 main CI 首次浏览器安装超时取消，重跑后三任务全绿，证据归档和分支/worktree 清理均完成。
+日期：2026-10-27。T1–T15实施及独立规格/质量评审完成；原范围单次deep-review完成，T16单次修复与正式文档已写。本轮完整本地门禁待准确初稿提交后执行；独立fix复审、最终新HEAD分支CI待主控据实回填，未合并main。分支`codex/m4-p7`，基线`5005be985e7ec78727edc6f8fc5c05999b45cc65`。配套：[spec](../specs/P7-issue-links.md)、[plan](../plans/P7-issue-links.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。
 
 ## 1. 评审方式
 
-按 [02-method §3](../../claude_to_gpt/02-method.md#3-哪些是要求哪些是做法) 采用紧凑 spec/plan，在已批准 M4 架构下进行独立文档预检。作者先盘点范围和真实接缝，再完成 writing-plans 自查；主控与独立安全、集成审者分别核对逻辑、跨层接线和测试性质。文档逐 Task 的真实红绿、生产变异、恢复、独评属于后续实施，不把本次预检写成完整原型或逐字重放。
+准备期按02§3紧凑spec/plan做独立安全/集成预检，5项Medium修订复审闭环；四列PG/sqlc实验不是完整原型。实施按逐Task真实红绿、生产变异、原字节恢复与独立双结论评审推进，局部修复复审。负责人后来要求有产品变化的检查点push前完整本地门禁，T4/T8/T12/T15已按此执行。
 
-- 安全审查全文覆盖 spec/plan，并追踪出站策略、配置与 CLI 隔离、crawler 限额、任务结果映射、事件投递；依据现存配置/架构守卫、批准设计与官方 IANA 快照。
-- 集成审查全文覆盖 spec/plan，并追踪两路删除、Locks/授权、Store/审计、HTTP/错误文案、bootstrap/module/worker/订阅者、registrationRows、runtime grants 与 I10/I17 fixtures；核对现存调用方和对应测试。发现长 URL 物理约束冲突后另做最窄可行性实验。
-- 主控核对范围、前序集成、OwnOnly 条件、签名、任务依赖、文档事实和静态门禁，合并发现并裁定局部修复。
-
-原始报告、冻结稿 SHA 与实验输出保存在本地 ignored `.superpowers/sdd/P7-issue-links/`，不是已随 Git 发布的正文附件。整合报告见 [P7 预检审核](../../../reviews/re-04-M4P7预检审核.md)。
+单次整分支deep-review固定`5005be985e7ec78727edc6f8fc5c05999b45cc65..d2a3cf26df220f95ac8f656d9ff8f4eaa2997305`，22 commits/165文件/457chunks；core72/120、network_jobs55/81、contracts_e2e24/144、docs_guards14/112全文覆盖，无重无漏，源字节对Git核验。三lens覆盖逻辑、集成、测试，含全部18项issue请求写及后台写交会锁图。作者只执行本次统一修复，不再派reviewer；独立定向复审由主控后续完成，不冒称第二次整支审查。
 
 ## 2. 验收标准逐条核对
 
-P7 spec §4 的全部产品/集成验收全部未勾选。准备期只核可实施性，不声称链接 CRUD、SSRF、worker、事务、交错或页面故事已经通过。
+`E=.superpowers/sdd/P7-issue-links`为ignored原始证据根；每Task报告/独评记录保存当时BASE、实际命令、源码SHA、RUN/exit及恢复记录。下列为历史交付锚，不冒称变异未提交字节的运行HEAD。四API/三活动/三事件/metadata/subscriber/guard逐值证明、全部命令与层见[行为矩阵](P7-issue-links-behavior-matrix.md)；七类21项真实生产补丁及排除项见[变异矩阵](P7-issue-links-mutation-matrix.md)。
 
-| 本次实际检查 | 结论与范围 |
-|---|---|
-| `node tools/keywords.mjs` | 72 规则、23 例外、零命中；phase 改为 M4/P7，无该阶段到期例外，不延长现有 until。 |
-| `GOFLAGS=-p=1 go test -count=1 ./internal/archtest` | exit 0；只证明当前准备分支未破坏架构守卫，不是未来产品代码通过。 |
-| 最窄 PG18.6 实验 | 单个 `TestP7ExactURLIndexProbe` 真实执行通过，原 B-tree 拒绝合法长 URL，替代约束满足本表下列结果。 |
-| 离线 sqlc v1.31.1 生成 | 自带 schema/query 的生成 exit 0；不替代正式 12 列迁移、外键、grants 与产品查询生成。 |
-| 文档与差异检查 | 11 份 Markdown、116 条现存本地链接、16 Task、21 项验收全未勾、表格列数及 `git diff --check` 均通过；4 条基线已存在的 M5–M8 最终 closeout 链接仍按设计留待 M4 收尾，不提前造文件。 |
+| Task | 交付锚 | 实际交付与证据 |
+|---|---|---|
+| T1 | `0537a2d9e289cb12ee75fc3059447eeafff8ef05` | 12列/长URL/碰撞/grants/两条删除；`E/task-1-report.md`、对应review/evidence |
+| T2 | `5b171386a2117ea8bbbe199ab5acf494e4dd2a4c` | 纯域、标题三态、原文存储及RETURNING；`E/task-2-report.md`、对应review/evidence |
+| T3 | `9da12bc1b0881de6c3e04eabff3fc4fbafa88ac9` | 创建/列表/三事件目录/首次码和API种子；`E/task-3-report.md`、对应review/evidence |
+| T4 | `4bc28b2b73272a1f1b88932a4e62140ad0be4454` | 改删/条件metadata/活动事件/拒绝回滚；`E/task-4-report.md`、对应review/evidence |
+| T5 | `8f05b68aa8b3d564ea5b74e682cb0beb26d45f5d` | 权限矩阵、锁下重判、原子回滚/race；`E/task-5-report.md`、对应review/evidence |
+| T6 | `9fc903225b77209081c79925895d4a5cc6483115` | 独立IANA完整性/端点及嵌入地址；`E/task-6-report.md`、对应review/evidence |
+| T7 | `128de7b620460d0161776b8dcc633f637cb746d5` | 每跳全候选/固定IP/IDNA/TLS/期限/限额；`E/task-7-report.md`、对应review/evidence |
+| T8 | `8a1a6acce00d93846257067cb4902b2de2b7d04a` | test-only配置与CLI隔离；`E/task-8-report.md`、对应review/evidence |
+| T9 | `15e2f251d6993491c71f5f0bc698a1b8e5c4beb0` | 标题/图标/共享预算/受控日志；`E/task-9-report.md`、对应review/evidence |
+| T10 | `9cb594faa3165b749f3d54637be0ca91d7c1b9d9` | guard SQL/worker/server组合；`E/task-10-report.md`、对应review/evidence |
+| T11 | `f2a6569b685c03541da24ec22b51b8a964d269b5` | 首subscriber/原事务InsertTx/完整快照同步；`E/task-11-report.md`、对应review/evidence |
+| T12 | `fdeadacf6d39340733d7e42f615229da3fdb6456` | 请求任务目录/受限运行角色/真实completed；`E/task-12-report.md`、对应review/evidence |
+| T13 | `a08777740f267ffcef45d0ee93c71a70de2d1b4c` | URL/title/delete真实worker交错/race；`E/task-13-report.md`、对应review/evidence |
+| T14 | `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` | I10 API和带links删除目录；`E/task-14-report.md`、对应review/evidence |
+| T15 | `d2a3cf26df220f95ac8f656d9ff8f4eaa2997305` | 两矩阵/21历史生产变异/锁观察器修复/七门禁；`E/task-15-report.md`、对应review/evidence |
+| T16 | 本轮从`d2a3cf26`起，精确提交在整体审核/Task16报告记录 | charset/nullable enum/422 fixture、8项发现、正式文档；独立fix复审与最终分支CI尚待主控 |
 
-### 2.1 长 URL 约束实验
+T4额外三个修复提交`ed205cad`/`a2211c8f`/`be3b8d4e`分别补活动回滚、完整迁移/历史FS边界及I15 link种子，不追记为T1/T3最初已覆盖。T7初稿`2a4a2196`后IDNA修复为表中`128de7b6`，只使用修复后的网络变异。T15初稿`958f2e95`完整Go失败后修正观察器fixture，tested为`6e28cc16`，最终`d2a3cf26`仅两矩阵文档、3639非docs字节相同；不是在d2另跑全套。
+
+T15准确本地七门禁：Go1751顶层/8725RUN（3已披露skip）、强制Web1170、E2E153=151Chromium+2Firefox；lint-go/gen-check/lint-web/knip全绿。T15准确d2 [CI40387396589](https://github.com/open-nerve/NerveProject/actions/runs/40387396589)由主控核公开原件全绿：server9m11、web3m45、e2e7m03，`E/checkpoint-t15/verified-success.json`保存摘要。T12的40373692243在浏览器安装16m36成功、Build成功、E2E已开始后触20分钟job上限取消，历史保留，不算全绿。
+
+T16局部真实红：charset原始非UTF8标题及href损坏；schema原任意error被错误接受。修复后charset25场景、schema省略/null/blocked/failed与3非法值、完整crawler/apitest/HTTP/archtest回归有raw。首次含null的enum被既有authoring guard拒绝，改为独立enum组件+单字段nullable oneOf/ref，生成物无`<nil>`常量；guard未弱化。C1按静态调度推导，未概率复现或伪造红；完整快照前只等待got的唯一crawl。最终本轮七门禁将按准确新HEAD另记，不复用T15SHA当新执行。
+
+### 2.1 准备期长URL实验（历史）
+
 
 原设计同时允许 2048 Unicode 字符、要求 `(issue_id,url)` 原文 B-tree 部分唯一。在本实验 PostgreSQL 18.6 / 8192 字节页上，2048 字符、8135 UTF-8 字节的不可压缩合法 URL 被拒绝：SQLSTATE `54000`，索引行 8168 字节超过 2704 字节上限。这个结果与 [PostgreSQL 的 B-tree 容量约束](https://www.postgresql.org/docs/18/btree.html) 一致。
 
@@ -32,20 +46,18 @@ P7 spec §4 的全部产品/集成验收全部未勾选。准备期只核可实�
 
 真实数据库结果：同一长 URL 成功保存且原文不变；同 issue 的重复 INSERT/UPDATE 报指定约束 `23P01`；不同 issue、不同 URL、软删后重建均成功；2049 字符由 CHECK 拒绝；真实 hash 碰撞的两个不同原文同时存在。完整代码、命令、原始输出与 SHA 在 `index-probe/`；固定 issue UUID `0199a2b4-0000-7000-8000-000000000001` 的可复验碰撞对为 `http://collision.example/271150` 与 `http://collision.example/83166`，完整表达式 hash 均为 `-1669361772`，补验证据单列 `index-probe-v2/`，未覆盖前轮。实验自建的 PostgreSQL/Ryuk 容器均已自动清理，没有操作既有容器。
 
-实验不覆盖正式 API、权限/grants、业务事务或生产并发。T1/T3/T4/T5/T13 必须将长 URL、精确错误映射、碰撞对照和锁串行验证变为正式产品测试。
+实验不覆盖正式 API、权限/grants、业务事务或生产并发。T1/T3/T4/T5/T13 随后已将长 URL、精确错误映射、碰撞对照和锁串行验证变为正式产品测试，详见T1–T5/T13证据。
 
-## 3. 准备中的局部裁定
 
-| 裁定 | 理由 | 错了的代价与证明 |
-|---|---|---|
-| 原设计 12 粗项展开 16 Task | 将地址策略与 HTTP 执行分开评审，补完整授权/回滚与终态门禁 | 规模估计不是原型实测；实施前继续核大小，不增加空占位。 |
-| 标题修改在 SQL 内保留当前 metadata，并返回实际行 | crawler 只锁 link，app 的旧快照不能覆盖它刚写的 metadata | 若错会丢预览；T4 存储与 T13 真实交错证明。 |
-| 以 hash exclusion 替代长原文 B-tree | 保留 2048 字符、精确唯一、12 列和现有项目锁，修复物理存储不能兑现契约的问题 | 只改变 issue 存储约束及其精确 SQLSTATE 映射，不改共享字段/端口、事务协议或依赖。实际可行性见 §2.1，正式测试仍待实施。 |
-| 不增加 URL generation | 继续已批准的 id+url+未删除写回守卫 | A→B→A 时旧 A 结果可能晚写，作为既定预览限制，不声称严格版本新鲜。 |
+## 3. 局部决定
 
-请求写资源顺序仍是预检→全部闸门→项目 N→锁下重读/授权→issue→link→activity→事件→同事务 job。metadata worker 只写带条件的 link，不持项目锁、不再索取其他业务资源。排斥约束可能等待冲突事务；同 issue 的生产 URL 写已被项目 N 串行，原文不相等的 hash 碰撞在等待前被排除。绕过既定锁协议的直接 SQL 并发写不在“无死锁”承诺内；静态推导不替代 T5/T13 的真实验证。
+完整发生顺序与每条理由/若错代价保存在[整体审核附录](../../../reviews/re-05-M4P7整体审核.md#附录裁定台账)。重点：hash exclusion保2048原文/12列；标题SQL保留库内metadata；标准库Transport规范IDNA；A→B→A沿已批准id+URL守卫；fixture先完成真实异步writer再取完整快照。旧“全套留T15”已被负责人提前检查点要求取代，不能当当前规则。
 
-## 4. 预检发现与处理
+T16解码只在adapter，复用既有charset及tokenizer/Lookup；全ASCII前缀超过1024后UTF8保留，显式BOM/header/meta优先。公开error枚举收紧在API边界，DB仍五键string/null。历史变异审计冻结T15 source ref，当前crawler改变另列差异，不能改历史恢复SHA。理由与风险见整体审核，不引入generation、新锁、依赖或共享协议。
+
+## 4. 发现与处理
+
+### 准备期预检（历史）
 
 首审累计 High 0、Medium 5、Low 0，全部是既定范围内的局部修订，未要求放宽守卫或改变模块协议。
 
@@ -59,18 +71,25 @@ P7 spec §4 的全部产品/集成验收全部未勾选。准备期只核可实�
 
 安全分区 v3、集成分区 v4 均已 Approved；未关闭 High/Medium/Low 均为 0，预检通过。所有文件清单/冻结稿哈希与定向结论均保留，不将作者自查代替独评。
 
-## 5. 当前实现与 plan 的边界
 
-尚无 P7 产品实现。新文件名、签名和测试名是约定，须逐 Task 用实际证据更新。准备分支只改正式文档、M4 设计中已证明的物理约束与进度、关键词 phase；实验与原始记录均 ignored。没有新增依赖、迁移、生产抓取或接口，没有为预检提前造完整产品副本。
+### 本次整审与历史Minor收敛
+
+5新Minor：NJ-1非UTF8页面解码、C-E2E-01公开error枚举、core C1完整快照前crawl同步、D1写顺序、D2资源/请求/队列上限表述；另3旧Minor：T8/T11 selector、T15 M35–37恢复argv。全部已在单波实施局部修复，证据与逐项状态见[整体审核](../../../reviews/re-05-M4P7整体审核.md)。0Critical/Major/Structural/Needs Decision；关闭结论仍以本轮独立定向复审为准，作者自审不替代它。
+
+## 5. 最终实现与plan的差异
+
+四CRUD按职责拆create/list/update/delete_issue_link.go；原事务桥复用bootstrap/issue_inserter.go；registrationRows实际在invitations_test.go，新request_jobs_test.go与issue_link_runtime_test.go复用现有世界/等待，无第二套框架。newOutbound消费config.Config，UpdateLink返回domain.Link，Crawl返回domain.LinkMetadata，SetLinkMetadata返回(bool,error)均与实际接口一致。
+
+T8原selector没匹配configs，T11原selector漏LinkCrawlsEnqueue；推荐命令已补，历史0匹配不计覆盖，原完整回归足够，无为文本重跑。T15脚本red/green统一argv数组，M35–37恢复同命令1/2RUN；新派生索引保留旧raw和T15冻结源，与T16当前兼容分开。T16新增charset.go/charset_test.go、schema行为测试、nullable enum生成/HTTP类型转换及C1等待，未改DB CHECK、域/app或网络策略。
 
 ## 6. 移交事项
 
-P6 已授权 `--no-ff` 合并为 `5005be985e7ec78727edc6f8fc5c05999b45cc65`，双亲为 `ee26db29…` / `17908e03…`，tree 与已审 P6 分支逐字相同。P6 的最终分支 [CI 40303510060](https://github.com/open-nerve/NerveProject/actions/runs/40303510060) 全绿；main [CI 40305247546](https://github.com/open-nerve/NerveProject/actions/runs/40305247546) 首次浏览器安装超时取消，重跑后同一 SHA 三任务全绿。921 个文件、13,550,049 字节证据归档核 hash 后，P6 本地/远端分支和 worktree 已清理；精确双亲/tree、归档根与清单见 [P6 review §2.2](P6-issue-events-review.md#22-授权合并main-ci-与归档清理)。
+P6首生产订阅/3link事件/请求任务、M2§3审计与§6worker/grants、M3§1请求快照均追加接收回执；P6当时12事件/空订阅及集成事实不改写。M4§3.11/4.8/3.23/14/15、v0§6.2/6.7/8、plane-diff12列/约束/行为和README出站责任同步，02/03更新完整本地CI先于检查点与Firefox事实，04保留历史快照另加当前接续点。
 
-P7 接收 P6 首个生产订阅者/请求投递、M2 链接审计和 worker/grants、M3 registrationRows。P8 link_count、P9 异步删除、P11/P14 页面及 M4 最终 closeout 仍开放，不提前关闭输入 handoffs。
+P8继续link_count/草稿/搜索；P9继续异步删除/保留/清理；P11/P14继续详情数据层、I10/I17页面及可达性/卸载清理；P15协作页面；M8复用outbound并负责IANA维护和部署网络策略。M2/M3 status仍open，M4总体§14/v0§9.4仍进行中，不创建M5–M8最终closeout。未push/merge，main集成另获授权。
 
-## 7. 已知限制与下一步
+## 7. 已知限制与后续门
 
-本次只准备 spec/plan 和独立预检，T1 尚未开始。预检与 P6 main CI/归档清理均已完成，等待负责人安排启动。将来的阶段完成后执行 deep-review、局部修复复审，再按授权集成；预检通过本身不授权实现或合并。
+启动时接口快照不能覆盖NAT/LB自公网或后来网卡变化；普通公网任意端口仍可请求，网络层出站规则负责这些风险。每crawl最多两个资源、每资源5跳，共享5秒；固定并发/入口额度不是队列长度硬上限。HTML解析没有硬CPU deadline；集合不分页，无每link速率桶；A→B→A同URL旧结果可晚覆盖。没有以worker错误原链/default3配置声称实测DB故障三次重试，没有将I10 API故事声称页面交付。
 
-最终文档事实复核另发现 1 项 Low：P6 plan 末段仍将已完成的授权合并/main CI/归档清理写成待办。已改为明确历史状态并引用准确合并提交及阶段 review §2.2；独立定向复核已通过，开放 High/Medium/Low 均为 0，报告在 ignored `final-doc-review.md`；不改写原先产品审查范围。
+准确原范围审查完成、修复作者自审、本轮本地门禁、独立定向复审、最终分支HEAD CI和授权main集成是不同状态。当前后两项交主控据实回填；不提前勾阶段交付/集成。保留旧INFRA、T15初次观察器误归因、Ryuk/React提示及三skip原始口径，不称输出pristine，不以缓存数替代测试执行数。

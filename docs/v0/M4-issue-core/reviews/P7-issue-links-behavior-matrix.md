@@ -3,9 +3,9 @@
 ## 证据版本与读法
 
 - Task15 BASE：`7b44d2ef7db03ab922b7a289fabdfe509951bb7d`；本矩阵逐项核对该提交的实际源码、测试和 T1–T14 原始记录。
-- 下表每一行的最终正常源码执行版本均为 **tested HEAD `6e28cc1637e99afc754d3af57a583d45e57831c8`**，tree=`fddd6b9d7764aabbcf6f3696ee4ffcc45cd47620`；2026-10-27本地七门禁实测全绿。历史变异/race另标历史版本，不冒称最终HEAD重新制造过红或跑过race。
+- 下表每一行的 T15 正常源码执行版本均为 **tested HEAD `6e28cc1637e99afc754d3af57a583d45e57831c8`**，tree=`fddd6b9d7764aabbcf6f3696ee4ffcc45cd47620`；2026-10-27本地七门禁实测全绿。历史变异/race另标历史版本，不冒称最终HEAD重新制造过红或跑过race。
 - 路径缩写：`I=server/internal/modules/issue`，`A=I/app`，`D=I/domain`，`H=I/adapter/http`，`P=I/adapter/postgres`，`C=I/adapter/crawler`，`B=server/internal/bootstrap`。测试名均为真实函数名；`E=.superpowers/sdd/P7-issue-links` 为 ignored 原始台账。
-- 权威定义：[spec §2.3–2.8](../specs/P7-issue-links.md)、[03 规则](../../claude_to_gpt/03-rules-and-pitfalls.md)。这里只归档 Task15 核验，不提前勾选 P7 阶段验收或代替 T16 deep-review。
+- 权威定义：[spec §2.3–2.8](../specs/P7-issue-links.md)、[03 规则](../../claude_to_gpt/03-rules-and-pitfalls.md)。主体归档 Task15 核验；T16 新修复及当前验证在末节另记，不将旧 tested SHA 冒称新执行。
 
 ## 四个 operation 与拒绝码
 
@@ -108,3 +108,15 @@
 - Go日志本轮三次Ryuk `Shell not found in container`，随后各ready且套件继续成功；Web四条React key提示保留，不改产品/Docker降噪。生成器stderr是正常bundle/类型输出，Turbo版本提示保留。T13日志记录Minor已关闭，T8/T11两条selector文档Minor仍归T16。
 - 旧E2E在开跑前归档79文件/1,440,353字节，新E2E归档79文件/1,453,856字节，分别为 `E/task-15-evidence/e2e-before` / `e2e-after`；每文件复制前后SHA一致，各有manifest。新HTML中机器报告另提取为 `playwright-report.json`，统计153且无errors。旧归档不倒推运行HEAD。
 - 最后提交仅补实测文档，**没有在最终文档HEAD另跑完整套件**。`tested-nondoc-manifest.json`记录tested HEAD全部3,639个非docs文件的SHA，最终逐项证明源码、测试、生成物与tested HEAD字节一致；相对Task BASE唯一非docs差异是上述已有锁测试。最终文档HEAD及证明见Task15报告，不用相同源码冒称新的执行。
+
+## T16 变更与当前验证
+
+原始整审范围为 `5005be98..d2a3cf26`；5 新 Minor 和3历史 Minor已实施局部修复，独立定向关闭及最终新HEAD CI仍待主控。完整发现、原范围/修复范围、锁图边界与26条裁定见[整体审核](../../../reviews/re-05-M4P7整体审核.md)。
+
+| 变更 | 当前证明 | 证据边界 |
+|---|---|---|
+| HTML声明解码及无声明UTF8兼容 | C `TestCrawlerPageCharset` 25场景；header/meta/BOM、1024后中文、显式Windows1252、无效/重复声明、href、实体/rune/正文边界 | 初始13场景真实红、最终25场景绿；两项最窄生产反例恢复绿。无硬CPU期限或公网攻击扩展证明。 |
+| error公开nullable枚举 | apitest `TestIssueLinkMetadataError` 省略/null/两值接受、3非法值拒绝；正常生成Go/TS，HTTP适配 | 首次含null enum被authoring guard拒绝，修为单字段oneOf/ref；DB通用CHECK不改。完整crawler/apitest/HTTP/archtest 113顶层/394 RUN通过。 |
+| 422快照前同步got crawl | B `TestCreateIssueLinkAPI` 保持完整快照/真实worker；相关10顶层/49 RUN通过 | 原竞态为静态调度推导，未现场复现；没有造概率红、忽略metadata或停worker。 |
+
+以上 raw 与前后源码 SHA 在 `E/task-16-evidence`。T16 全部产品/生成改动将在新 clean 提交执行完整七门禁，实测结果另行回填；T15 原套件/21历史变异保留当时身份，当前源码兼容见变异矩阵末节。

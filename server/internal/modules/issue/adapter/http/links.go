@@ -44,7 +44,7 @@ func linkDetail(link domain.Link) gen.IssueLink {
 		m.FaviconURL = orNull(value)
 	}
 	if value, ok := link.Metadata["error"]; ok {
-		m.Error = orNull(value)
+		m.Error = orNull((*gen.IssueLinkMetadataError)(value))
 	}
 	return gen.IssueLink{ID: link.ID, IssueID: link.IssueID, URL: link.URL, Title: orNull(link.Title), Metadata: m, CreatedByID: orNull(link.CreatedByID), CreatedAt: link.CreatedAt, UpdatedAt: link.UpdatedAt}
 }

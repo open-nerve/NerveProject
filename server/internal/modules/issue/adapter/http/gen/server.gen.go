@@ -21,6 +21,24 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
+// Defines values for IssueLinkMetadataError.
+const (
+	IssueLinkMetadataErrorBlocked IssueLinkMetadataError = "blocked"
+	IssueLinkMetadataErrorFailed  IssueLinkMetadataError = "failed"
+)
+
+// Valid indicates whether the value is a known member of the IssueLinkMetadataError enum.
+func (e IssueLinkMetadataError) Valid() bool {
+	switch e {
+	case IssueLinkMetadataErrorBlocked:
+		return true
+	case IssueLinkMetadataErrorFailed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IssueListGroupField.
 const (
 	IssueListGroupFieldAssigneeID  IssueListGroupField = "assignee_id"
@@ -445,12 +463,15 @@ type IssueLinkCreate struct {
 
 // IssueLinkMetadata defines model for IssueLinkMetadata.
 type IssueLinkMetadata struct {
-	Error      nullable.Nullable[string] `json:"error,omitempty"`
-	Favicon    nullable.Nullable[string] `json:"favicon,omitempty"`
-	FaviconURL nullable.Nullable[string] `json:"favicon_url,omitempty"`
-	Title      nullable.Nullable[string] `json:"title,omitempty"`
-	URL        nullable.Nullable[string] `json:"url,omitempty"`
+	Error      nullable.Nullable[IssueLinkMetadataError] `json:"error,omitempty"`
+	Favicon    nullable.Nullable[string]                 `json:"favicon,omitempty"`
+	FaviconURL nullable.Nullable[string]                 `json:"favicon_url,omitempty"`
+	Title      nullable.Nullable[string]                 `json:"title,omitempty"`
+	URL        nullable.Nullable[string]                 `json:"url,omitempty"`
 }
+
+// IssueLinkMetadataError defines model for IssueLinkMetadataError.
+type IssueLinkMetadataError string
 
 // IssueLinkPatch defines model for IssueLinkPatch.
 type IssueLinkPatch struct {

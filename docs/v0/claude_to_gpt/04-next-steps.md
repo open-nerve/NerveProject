@@ -68,7 +68,7 @@ main 的持续集成第 340 次（P3 的合并 `dfc9378b`）在 M3 的 W11 页�
 - M3 的几个测试世界（`project_*`、`membership_world`、`ending_world`、`interleaving_*`、`permission_matrix_*`）手拼项目成员的请求，可以收进共享的帮手。这是测试整理，可选。
 - 全部交接逐条写结论，`status` 改为 `closed`。给 M5–M8 写 `handoffs/M4-closeout.md`：设计 13.2 已有四个链接指向它们，内容见那张表。
 - 设计 3.23 逐行核对；[plane-diff.md](../plane-diff.md)、[frontend-changes.md](../frontend-changes.md) 定稿；README 按设计 8.8 更新。
-- 浏览器核对 C12 要 Chromium、Firefox、WebKit。本机只有 Chromium，Playwright 的另外两个浏览器要不要装、装在哪，到时请负责人定。
+- 浏览器核对 C12 要 Chromium、Firefox、WebKit。早期环境只有Chromium；P7已用项目内缓存实际跑过Chromium/Firefox，不能沿用“本机只有Chromium”判断。WebKit与C12的三浏览器核对仍到收尾按实际环境处理。
 - 性能的数字写进收尾的评审，交给 M8：列表 1 万、2 万、10 万个工作项；搜索；删除；清理。
 - 设计第 15 节、总体设计 9.4 标 M4 已完成。
 
@@ -84,3 +84,9 @@ main 的持续集成第 340 次（P3 的合并 `dfc9378b`）在 M3 的 W11 页�
 P6 已由 deep-review 终审通过并经授权 `--no-ff` 合并为 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；[main CI 40305247546](https://github.com/open-nerve/NerveProject/actions/runs/40305247546) 重跑三任务全绿。921 个本地证据文件归档核 hash 后，P6 本地/远端分支和 worktree 已清理，见 [P6 review §2.2](../M4-issue-core/reviews/P6-issue-events-review.md#22-授权合并main-ci-与归档清理)。
 
 当前独立分支 `codex/m4-p7` 仅准备[链接 spec](../M4-issue-core/specs/P7-issue-links.md)、[plan](../M4-issue-core/plans/P7-issue-links.md)与[预检记录](../M4-issue-core/reviews/P7-issue-links-review.md)。预检及修订复审已通过，等待负责人安排启动 T1，不自动实现或合并 P7；M4 总体完成标准和交接仍保持开放。
+
+## 7. P7当前接续点（2026-10-27）
+
+§6保留2026-10-26 P6集成后的冻结快照。现在`codex/m4-p7`已完成T1–T15实施和独评，原范围`5005be98..d2a3cf26`整审全文覆盖165文件/457chunks；5新增Minor及3历史Minor集中在T16修复/文档波次处理。T15准确d2的[CI40387396589](https://github.com/open-nerve/NerveProject/actions/runs/40387396589)三任务全绿；本轮完整本地门禁、独立fix定向复审和最终新HEAD CI状态见[P7 review](../M4-issue-core/reviews/P7-issue-links-review.md)与[整体审核](../../reviews/re-05-M4P7整体审核.md)。未授权合并，主目录仍main，工作树/证据保留。
+
+下一接收方继续P8列表link_count/草稿/搜索，P9异步删除/保留/清理，P11/P14详情数据层和I10/I17页面，P15协作页面；M4整体与输入handoff保持open，不创建M5–M8最终closeout。

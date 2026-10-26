@@ -183,3 +183,11 @@ M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以�
 ## 处理结果（M4/P6）
 
 §1工作项事件事务发布已实现；`jobs_test.go`/`runner_test.go` 两处固定余量已改为状态与期限，`registrationRows` 对请求入队的 `river_job` 仍属P7，项目/工作区删除任务及邀请同步边界仍属P9。§4 `Project`/`ProjectPatch.archive_in` 的0关闭、1–12个月×30天、终态和 `updated_at` 说明已通过生成链；锁下策略、每项目事务、NULL actor和运行角色真实验证由T9–T12完成。§2/3既有锁与权限回归由T15全套覆盖，P9物理清理和删除轮询、§5–9页面仍按原分配。整体 `status: open`；见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)/[§6](../reviews/P6-issue-events-review.md#6-移交事项)。
+
+## 处理结果（M4/P7，2026-10-27）
+
+§1的registrationRows实际在bootstrap/invitations_test.go，保留普通表完整行，另按id稳定附加各模块声明请求kind的river_job id/kind/args；新增任务或同ID改args可见，worker state/attempt与periodic/leader噪声不污染快照。request_jobs_test.go的独立kind和两个测试守卫反例、issue_link_runtime_test.go的真实受限角色CRUD+crawl completed/metadata及额外表42501已验证。
+
+§2–4链接请求遵守项目锁、前置隐藏404/权限、同刻审计与完整回滚；新issue_links纳入删除目录及API furnish，旧tombstone和邻居完整行保留。邀请删除仍同步；project/workspace异步删除、清理与限时轮询仍归P9，§5–9数据层/页面仍按原分配。
+
+本回执只关闭P7对应子责任，顶部`status: open`保持；M4整体、P8/P9/P11/P14/P15及M5–M8最终closeout不提前关闭。证据：[P7 review §2](../reviews/P7-issue-links-review.md#2-验收标准逐条核对)、[行为矩阵](../reviews/P7-issue-links-behavior-matrix.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。本波独立定向复审与最终分支CI状态在P7 review单列，未合并main。

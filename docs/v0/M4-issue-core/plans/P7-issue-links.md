@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1–T5 独立评审通过，T4 检查点本地 Go 8228/Web 1170/E2E 150 门禁通过；T6 地址策略已实施待独立评审，整阶段验收未完成。
+> **实施状态：** T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复和正式文档已写，待本轮准确提交的完整本地门禁、独立定向复审及最终分支 HEAD CI；未合并 main。
 
 **目标：** 实现 M4 §12/P7 的链接CRUD、首个生产事务订阅者、抓取worker和防SSRF出站，交付I10接口与带links的I15/I17删除目录故事。
 
@@ -12,7 +12,7 @@
 
 **规格：** [P7 spec](../specs/P7-issue-links.md)。基线为P6合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；主控已核实同一SHA的main CI `40305247546` 最终Success，server/web/e2e全绿；首轮基础设施超时及重跑历史另记review。
 
-**方法与状态：** 准备完成并经独立预检/修订复审；T1–T5 已实施且独立评审通过，T4 检查点本地完整门禁通过；T6 地址策略已实施待独立评审，其余任务与整阶段验收未完成。沿用02§3允许的紧凑方法：确切文件/接口/断言/命令，实施时逐Task真实红绿、生产变异、恢复与独立评审；本次静态预检不冒充完整原型或重放；独立最窄PG/sqlc实验只证明spec附录列明的物理约束能力。已批准M4设计是架构依据，局部细化见spec§3。正式实施按负责人授权逐Task推进，不自动合并。
+**方法与状态：** 采用已批准紧凑方法，逐Task真实红绿/生产变异/恢复及独立评审；T4/T8/T12/T15已执行完整本地门禁。准备期静态预检和四列PG可行性实验只保留为历史，未冒称完整原型。T16完成原范围整审后的单次修复与文档，复审、准确最终分支CI和main集成分别记录。
 
 **本地门禁安排（负责人 2026-10-26 调整）：** 用户要求提前执行完整本地 CI。T4 检查点已由主控完成全套、修复及独立复审；后续有产品变化的开发检查点推送前先跑完整本地门禁。逐 Task 仍保留聚焦与受影响回归，最终 T15 继续汇总验收。本条记录执行方法与 T4 已通过事实，不表示 P7 整阶段验收完成。
 
@@ -50,7 +50,7 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 全局沿用的真实接口：`Locks.run(ctx,actor,write,func(ctx,held)error)` / `Locks.see`；`Clock.Now() time.Time`；`shared.EventPublisher.Publish(ctx,Event) error`；`postgres.Tx(ctx)(pgx.Tx,bool)`；`riveradapter.Inserter.InsertTx(ctx,river.JobArgs,*river.InsertOpts) error`；`jobs.Register[T](river.Worker[T]) *WorkerRegistration`；`issue.EventTypes/EnqueuedKinds() []string`；`issue.Subscribers(Inserter) []shared.EventSubscriber`；`(*Module).Jobs() []jobs.Job`。
 
-新增类型/端口的唯一签名表在spec§2.3–2.7；各Task的Interfaces必须按同一表消费，尤其`UpdateLink(ctx,LinkWrite)(domain.Link,error)`、`LinkCrawler.Crawl(ctx,string) domain.LinkMetadata`、`SetLinkMetadata(ctx,id,url,m)(bool,error)`。不要把本计划的类型名解释成当前已存在实现。
+新增类型/端口的唯一签名表在spec§2.3–2.7；各Task的Interfaces必须按同一表消费，尤其`UpdateLink(ctx,LinkWrite)(domain.Link,error)`、`LinkCrawler.Crawl(ctx,string) domain.LinkMetadata`、`SetLinkMetadata(ctx,id,url,m)(bool,error)`。以上接口已落地；实际逐Task文件/签名差异和历史命令补充如下，并以review §2执行索引为准。
 
 ## 通用收尾 G（每 Task 都执行）
 
@@ -95,18 +95,18 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 - [x] 聚焦`go test -count=1 -p=1 ./internal/modules/issue/app ./internal/modules/issue/adapter/http ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(CreateIssueLink|ListIssueLinks|LinkConflictMapping|IssueEventDirectory|.*Link.*Matrix|.*IssueWrite|.*Gate)'`先红，实现Locks链及ReadTx；添加`ErrLinkExists`、仅`Code==23P01 && ConstraintName==issue_links_issue_id_url_key`映射、契约x-problem-codes、PROBLEM_MESSAGES与en/zh-CN同Task。
 - [x] 新fixture用生成operation类型；`furnishIssueRows`通过API加link，使用`http://169.254.169.254/furnish/<issue-id>`（后来worker会拨号前blocked），不请求真实外网。扩I17现有种子为link，尚不增加页面UI。 **T4 完整本地 E2E 发现并补验：** I15 同样调用严格 `expectIssueDeleted`，先前漏了 link API 种子；修复轮补入 ann 创建/admin 删除的 link 与创建活动逐值期望，保留目录守卫，不记为 T3 最初已覆盖。
 - [x] `make gen-go`、`make gen-web`后聚焦绿，`make test-web`与`pnpm --filter @nerve/e2e check:types`绿。现有权限矩阵/写锁/闸门覆盖表随operation立即补行，不等T5。
-- [ ] 变异M7去访客隐藏或MarkChanged、M8漏创建title Change/Entity错ID、M9只查未规整URL；另M8-directory删除任一link事件声明，独立15类目录必须红；M9-map去约束名或只认23505，错误映射对照必须红；app和至少一条真实组合红，G；提交`feat(M4/P7): 提供链接创建与集合读取接口`（实现与七项生产变异已完成，独立评审待主控安排）。
+- [x] 变异M7去访客隐藏或MarkChanged、M8漏创建title Change/Entity错ID、M9只查未规整URL；另M8-directory删除任一link事件声明，独立15类目录必须红；M9-map去约束名或只认23505，错误映射对照必须红；app和至少一条真实组合红，G；提交`feat(M4/P7): 提供链接创建与集合读取接口`（实现与七项生产变异已完成，独立评审已通过）。
 
 ## Task 4：链接改删、metadata 原子性与活动事件
 
 **Files:** 新I/app/update_issue_link.go、delete_issue_link.go、link_target.go及测试；I/adapter/http/link_writes.go/test；改domain/link_activity.go、errors.go、api/modules/issue.yaml、module.go/HTTP handler与生成物；B/issue_link_writes_test.go、矩阵/锁/闸门行；三文案文件。
 **Interfaces:** 消费T2 LinkUpdater（UpdateLink返回Link）/LinkDeleter；产生Update/Delete Execute及Deps见spec§2.4；`linkTargetCheck(links LinkReader,id uuid.UUID,current *domain.Link) func(context.Context,domain.Issue,shared.Grant) error`仅检查活资源/父项归属，不复制comment作者限制。
 
-- [ ] 写`TestUpdateIssueLink`/`TestDeleteIssueLink`：成员可改删他人link；标题null/空/省略，规整后相同URL noop；项目/issue归档均先拒绝noop；URL换后{}，title-only保持metadata；业务行/动态/事件审计精确，title-only只有updated事件、无url Change/无活动。高熵多字节2048字符更新200且DB/响应原文相同，2049为422无写；把另一个link改为已用长URL为409，整笔审计/metadata/活动/事件回滚；跨issue同URL200，软删后创建/修改为原URL成功。不同原文hash碰撞的写/查性质由T1/T2固定存储fixture证明，本Task复用同一原文查重端口。
-- [ ] `go test -count=1 -p=1 ./internal/modules/issue/app ./internal/modules/issue/adapter/http ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(UpdateIssueLink|DeleteIssueLink|LinkStore|.*Link.*Matrix|.*IssueWrite|.*Gate)'`先红；实现预检与锁下重读和拒绝顺序，返回Store.UpdateLink的实际行；新增link_not_found契约/文案同Task。
-- [ ] domain活动构造单点固定17–19与comment字符串`created a link`/`updated a link`/`deleted the link`；删除活动NewValue指向空串而非nil，事件删除New=nil，避免混用活动与事件规则。
-- [ ] make gen-go/gen-web、聚焦与make test-web通过。新公开码与契约同时出现；不修改既有安全守卫。
-- [ ] 变异M10取消锁下link重读、M11给title-only添url Change/活动、M12混淆删除空串与nil；必要语义反例红，恢复，G；提交`feat(M4/P7): 完成链接改删及原子审计事件`。
+- [x] 写`TestUpdateIssueLink`/`TestDeleteIssueLink`：成员可改删他人link；标题null/空/省略，规整后相同URL noop；项目/issue归档均先拒绝noop；URL换后{}，title-only保持metadata；业务行/动态/事件审计精确，title-only只有updated事件、无url Change/无活动。高熵多字节2048字符更新200且DB/响应原文相同，2049为422无写；把另一个link改为已用长URL为409，整笔审计/metadata/活动/事件回滚；跨issue同URL200，软删后创建/修改为原URL成功。不同原文hash碰撞的写/查性质由T1/T2固定存储fixture证明，本Task复用同一原文查重端口。
+- [x] `go test -count=1 -p=1 ./internal/modules/issue/app ./internal/modules/issue/adapter/http ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(UpdateIssueLink|DeleteIssueLink|LinkStore|.*Link.*Matrix|.*IssueWrite|.*Gate)'`先红；实现预检与锁下重读和拒绝顺序，返回Store.UpdateLink的实际行；新增link_not_found契约/文案同Task。
+- [x] domain活动构造单点固定17–19与comment字符串`created a link`/`updated a link`/`deleted the link`；删除活动NewValue指向空串而非nil，事件删除New=nil，避免混用活动与事件规则。
+- [x] make gen-go/gen-web、聚焦与make test-web通过。新公开码与契约同时出现；不修改既有安全守卫。
+- [x] 变异M10取消锁下link重读、M11给title-only添url Change/活动、M12混淆删除空串与nil；必要语义反例红，恢复，G；提交`feat(M4/P7): 完成链接改删及原子审计事件`。
 
 ## Task 5：完整请求安全、授权交错与回滚证明
 
@@ -124,13 +124,13 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 **Files:** 新O/policy.go、special_ranges.go、errors.go、policy_test.go、policy_registry_test.go、testdata/iana-ipv4-special-registry-1.csv、testdata/iana-ipv6-special-registry-1.csv、testdata/sources.json（官方URL/访问时刻/SHA）；不得生成第三方新模块。
 **Interfaces:** 产生包内`newPolicy(allow []netip.Prefix,local []netip.Addr) (policy,error)`、`(policy).check(addr netip.Addr) error`（拒绝识别ErrBlocked）；ErrBlocked的定义放O/errors.go供T7扩；不提供公网skip检查出口。
 
-**T6 实施事实（待独评）：** 独立 CSV 与 13:59 冻结前重核 manifest 逐字节/SHA 一致，清单 51+3 项与所有首尾分别验证。allow 仅覆盖原 literal 的静态/本机拒绝，不传给已知编码的内嵌 IPv4；固定 NAT64 `/96` 解码，技术无关 local `/48` 只作整段拒绝，不猜协议/位位置（权威来源见 spec §2.5）。纯地址策略与 registry 解析测试分文件；真实 GET/接口读取失败/0 dial 留 T7，未提前完成阶段验收。
+**T6 实施事实（独评已通过）：** 独立 CSV 与 13:59 冻结前重核 manifest 逐字节/SHA 一致，清单 51+3 项与所有首尾分别验证。allow 仅覆盖原 literal 的静态/本机拒绝，不传给已知编码的内嵌 IPv4；固定 NAT64 `/96` 解码，技术无关 local `/48` 只作整段拒绝，不猜协议/位位置（权威来源见 spec §2.5）。纯地址策略与 registry 解析测试分文件；真实 GET/接口读取失败/0 dial 留 T7，未提前完成阶段验收。
 
-- [ ] 写`TestPolicyRegistryCoverage`：独立CSV每CIDR逐个与生产拒绝清单对照（另核额外multicast/fec0），`TestPolicyEndpoints`独立算各prefix两端；任何rawmapped不能先Unmap脱离外层；首/尾都阻止。冻结时再次只读核官方快照，变化写来源/代价而非忽略。
-- [ ] 写`TestPolicyEmbeddedAndLocal`：mapped/NAT64/6to4/Teredo含内网/公网载荷、Teredo server/client两端、本机普通公网、非法地址/zone；allow127.0.0.1/32仅放这一literal，127.0.0.2与mapped127不放；验证allow/local切片外部修改不影响已建policy。
-- [ ] `go test -count=1 ./internal/platform/outbound -run 'TestPolicy'`先红，按spec§2.5实现显式所有prefix与递归检查，恢复绿；生产表不能在init/global可变slice构造。
-- [ ] 变异M16只用IsPrivate、M17删除非重叠prefix/删重叠条目、M18先Unmap/忽略本机；前者行为红，重叠删除由独立清单红，不虚称每行删除都会改变行为。
-- [ ] G；提交`feat(M4/P7): 建立可核对的出站地址拒绝策略`。
+- [x] 写`TestPolicyRegistryCoverage`：独立CSV每CIDR逐个与生产拒绝清单对照（另核额外multicast/fec0），`TestPolicyEndpoints`独立算各prefix两端；任何rawmapped不能先Unmap脱离外层；首/尾都阻止。冻结时再次只读核官方快照，变化写来源/代价而非忽略。
+- [x] 写`TestPolicyEmbeddedAndLocal`：mapped/NAT64/6to4/Teredo含内网/公网载荷、Teredo server/client两端、本机普通公网、非法地址/zone；allow127.0.0.1/32仅放这一literal，127.0.0.2与mapped127不放；验证allow/local切片外部修改不影响已建policy。
+- [x] `go test -count=1 ./internal/platform/outbound -run 'TestPolicy'`先红，按spec§2.5实现显式所有prefix与递归检查，恢复绿；生产表不能在init/global可变slice构造。
+- [x] 变异M16只用IsPrivate、M17删除非重叠prefix/删重叠条目、M18先Unmap/忽略本机；前者行为红，重叠删除由独立清单红，不虚称每行删除都会改变行为。
+- [x] G；提交`feat(M4/P7): 建立可核对的出站地址拒绝策略`。
 
 ## Task 7：固定 IP 的安全 GET 与资源上限
 
@@ -152,65 +152,67 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 **Files:** 改C/config.go、load.go（既有listHook中仅收紧`[]string`输入形状）、validate.go、load_test.go、validate_test.go；新C/outbound_test.go；server/configs/config.yaml、config.test.yaml、embed_test.go；新B/outbound.go、outbound_test.go；server/cmd/nerve/main_test.go；server/internal/archtest/composition_test.go（原CLI组合守卫补`outbound.New`）。
 **Interfaces:** 产生`config.OutboundConfig{AllowCIDRs []string}`和Config.Outbound；`newOutbound(cfg config.Config,version string)(*outbound.Client,error)`；T10生产调用传`buildinfo.Get().Version`（bootstrap可import两个platform包，outbound自己不互导）。
 
-- [ ] 写`TestOutboundAllowCIDRsConfig`表：test空/127.0.0.1/32/IPv6合法通过；非test非空各env失败；坏CIDR及JSON/env形状失败且不悄悄当空。按现有koanf路径`NERVE_OUTBOUND__ALLOW_CIDRS`验证实际切片解码，不另创env协议。
-- [ ] 写`TestNewOutbound`：直接传坏CIDR配置也构造失败，test127能访问本地fixture而未放行127.0.0.2不可，版本传到UA；既有`Config.LogValue`/slog配置日志与配置文档不泄漏凭据，不新增普通fmt渲染协议。接口采样失败由T7同包私有依赖测试，不给bootstrap增加生产注入开关。
-- [ ] `go test -count=1 ./internal/platform/config ./configs ./internal/bootstrap -run 'Test(OutboundAllowCIDRsConfig|NewOutbound|.*Config)'`确认红，追加默认空/test127.0.0.1/32、验证与构造；同命令绿。T8只交真实测试消费的构造接缝，T10接server；不在CLI/Provide构造。
-- [ ] 变异M23去test-only限制/解析错误忽略、M24把allow扩大127/8或读取接口失败当空；配置/组件红→恢复，G；提交`feat(M4/P7): 限定测试环境的抓取放行配置`。
+- [x] 写`TestOutboundAllowCIDRsConfig`表：test空/127.0.0.1/32/IPv6合法通过；非test非空各env失败；坏CIDR及JSON/env形状失败且不悄悄当空。按现有koanf路径`NERVE_OUTBOUND__ALLOW_CIDRS`验证实际切片解码，不另创env协议。
+- [x] 写`TestNewOutbound`：直接传坏CIDR配置也构造失败，test127能访问本地fixture而未放行127.0.0.2不可，版本传到UA；既有`Config.LogValue`/slog配置日志与配置文档不泄漏凭据，不新增普通fmt渲染协议。接口采样失败由T7同包私有依赖测试，不给bootstrap增加生产注入开关。
+- [x] `go test -count=1 ./internal/platform/config ./configs ./internal/bootstrap -run 'Test(OutboundAllowCIDRsConfig|NewOutbound|BuiltInProfiles|.*Config)'`确认红，追加默认空/test127.0.0.1/32、验证与构造；同命令绿。T8只交真实测试消费的构造接缝，T10接server；不在CLI/Provide构造。
+- 历史/推荐命令区别：T8原聚焦selector没有`BuiltInProfiles`，configs为零匹配，不能计覆盖；现行推荐命令已补入。原完整configs回归实际2顶层/5RUN已覆盖；T16只修命令文案，不冒称重新跑过T8。
+- [x] 变异M23去test-only限制/解析错误忽略、M24把allow扩大127/8或读取接口失败当空；配置/组件红→恢复，G；提交`feat(M4/P7): 限定测试环境的抓取放行配置`。
 
 ## Task 9：页面和图标抓取适配器
 
-**Files:** 新I/app/crawl_ports.go；I/adapter/crawler/crawler.go、metadata.go；crawler_test.go、metadata_test.go、logging_test.go、deadline_test.go、fixture_test.go（按边界、解析、日志、期限及本地fixture分责）；使用已有x/net/html，不改go.mod。
+**Files:** 新I/app/crawl_ports.go；I/adapter/crawler/crawler.go、metadata.go；T16补charset.go/charset_test.go处理声明解码与UTF8兼容；crawler_test.go、metadata_test.go、logging_test.go、deadline_test.go、fixture_test.go（按边界、解析、日志、期限及本地fixture分责）；使用已有x/net/html，不改go.mod。
 **Interfaces:** 产生`LinkCrawler.Crawl(ctx,string) domain.LinkMetadata`；`crawler.New(*outbound.Client,*slog.Logger)*Crawler`及同签名Crawl。以errors.Is分类，`outbound.Reason(err)`仅返回固定redirect_limit时写reason，禁止解析原error文本。不把outbound.Response或错误放入app/domain。
 
-- [ ] 写`TestCrawlerMetadata`：本地HTML `&amp;amp;`标题只解一次后`&amp;`，前后空白trim，256个Unicode截255；无title为空；按四rel优先级/同类首href/无候选favicon.ico；redirect最终页的相对href，成功metadata四键齐，url仍原任务URL，favicon_url成功最终URL。
-- [ ] 写`TestCrawlerLimitsAndFailures`：页面1MiB/1MiB+1，图标64KiB/64KiB+1、六mime/参数/非允许SVG；图标blocked/失败保留title而两icon字段null；页面blocked仅{error:blocked,url}、其余仅failed；整个crawl共享5s而非页面+图标10s。
-- [ ] 写`TestCrawlerLogsRedacted`：用开启所有级别的捕获slog handler检查原始JSON日志bytes，query=`QUERY_SENTINEL`、userinfo=`USER_SENTINEL:PASS_SENTINEL`、body=`BODY_SENTINEL`，重定向Location与icon href另用独立哨兵。真实本地fixture分别触发页面连接/超时/超量/状态/类型失败、redirect被拒/超限、图标blocked/超量/坏MIME；每次断言哨兵/原始URL/含URL原始error不在消息或任一属性，同时诊断非空且stage为page/icon，category对应blocked/timeout/unreachable/too_large/http_status/non_html/invalid_icon_type，redirect超限另保留reason=redirect_limit。禁止靠静默日志通过，禁止只检查metadata或HTTP响应。
-- [ ] `go test -count=1 ./internal/modules/issue/adapter/crawler`先红，按spec§2.6实现；网络错误仅记受控阶段/细分类，原始URL/query/userinfo/body及未经分类的error字符串均不入日志；图标同outbound，不HEAD、无脚本/refresh/HTMLbase；同命令绿。
-- [ ] 变异M25图标绕outbound、M26存SVG/漏64KiB、M27双重反转义/重开5s/细分公开error；另M27-log在生产失败分支临时记录原始URL，及在含URL包装错误的分支临时记录原始error，两次分别运行`go test -count=1 ./internal/modules/issue/adapter/crawler -run TestCrawlerLogsRedacted`确认哨兵红；若该错误本身不含哨兵须更换真实输入，不能伪造失败。逐次恢复原字节/hash并同命令绿。httptest可区分结果、0危险dial；恢复绿，G；提交`feat(M4/P7): 抓取受限的标题与内嵌图标元数据`。
+- [x] 写`TestCrawlerMetadata`：本地HTML `&amp;amp;`标题只解一次后`&amp;`，前后空白trim，256个Unicode截255；无title为空；按四rel优先级/同类首href/无候选favicon.ico；redirect最终页的相对href，成功metadata四键齐，url仍原任务URL，favicon_url成功最终URL。
+- [x] 写`TestCrawlerLimitsAndFailures`：页面1MiB/1MiB+1，图标64KiB/64KiB+1、六mime/参数/非允许SVG；图标blocked/失败保留title而两icon字段null；页面blocked仅{error:blocked,url}、其余仅failed；整个crawl共享5s而非页面+图标10s。
+- [x] 写`TestCrawlerLogsRedacted`：用开启所有级别的捕获slog handler检查原始JSON日志bytes，query=`QUERY_SENTINEL`、userinfo=`USER_SENTINEL:PASS_SENTINEL`、body=`BODY_SENTINEL`，重定向Location与icon href另用独立哨兵。真实本地fixture分别触发页面连接/超时/超量/状态/类型失败、redirect被拒/超限、图标blocked/超量/坏MIME；每次断言哨兵/原始URL/含URL原始error不在消息或任一属性，同时诊断非空且stage为page/icon，category对应blocked/timeout/unreachable/too_large/http_status/non_html/invalid_icon_type，redirect超限另保留reason=redirect_limit。禁止靠静默日志通过，禁止只检查metadata或HTTP响应。
+- [x] `go test -count=1 ./internal/modules/issue/adapter/crawler`先红，按spec§2.6实现；网络错误仅记受控阶段/细分类，原始URL/query/userinfo/body及未经分类的error字符串均不入日志；图标同outbound，不HEAD、无脚本/refresh/HTMLbase；同命令绿。
+- [x] 变异M25图标绕outbound、M26存SVG/漏64KiB、M27双重反转义/重开5s/细分公开error；另M27-log在生产失败分支临时记录原始URL，及在含URL包装错误的分支临时记录原始error，两次分别运行`go test -count=1 ./internal/modules/issue/adapter/crawler -run TestCrawlerLogsRedacted`确认哨兵红；若该错误本身不含哨兵须更换真实输入，不能伪造失败。逐次恢复原字节/hash并同命令绿。httptest可区分结果、0危险dial；恢复绿，G；提交`feat(M4/P7): 抓取受限的标题与内嵌图标元数据`。
 
 ## Task 10：守卫写回、worker 与 server 组合
 
 **Files:** 新I/app/crawl_link.go/test；I/adapter/postgres/link_metadata.go/test、queries/link_metadata.sql；I/adapter/river/crawl_link.go/test；改module.go/module_jobs.go、B/app.go/app_test.go；archtest/composition_test.go扩CLI出站构造禁达（不弱化旧规则）。
 **Interfaces:** 产生spec§2.7的LinkMetadataWriter/SetLinkMetadata、CrawlLink/CrawlLinkArgs/CrawlLinkUseCase/CrawlLinkJob。`issue.Deps`新增`Outbound *outbound.Client`、`Logger *slog.Logger`（模块root可见技术），Module新增crawlLink；app仅见Crawler/Links端口；EnqueuedKinds返回crawlkind。
 
-- [ ] 写`TestLinkMetadataGuard`：匹配活id/url写1，旧URL/已删/另ID写0，title/created_at/updated_at/updated_by/deleted_at以及activity/event均不变；数据库错误errors.Is原链；`TestCrawlLinkWorker`核args.Kind/default/MaxAttempts3、网络结果成功、DB失败返回error。
-- [ ] `go test -count=1 -p=1 ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres ./internal/modules/issue/adapter/river ./internal/bootstrap -run 'Test(LinkMetadataGuard|CrawlLinkWorker|.*Job|.*NewApp)'`先红，写一条带守卫UPDATE、app编排、worker/Register；接newOutbound→issue.New→Jobs，任一步构造失败close已有pool，CLI仍不构造网络/dispatcher/jobs。
+- [x] 写`TestLinkMetadataGuard`：匹配活id/url写1，旧URL/已删/另ID写0，title/created_at/updated_at/updated_by/deleted_at以及activity/event均不变；数据库错误errors.Is原链；`TestCrawlLinkWorker`核args.Kind/default/MaxAttempts3、网络结果成功、DB失败返回error。
+- [x] `go test -count=1 -p=1 ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres ./internal/modules/issue/adapter/river ./internal/bootstrap -run 'Test(LinkMetadataGuard|CrawlLinkWorker|.*Job|.*NewApp)'`先红，写一条带守卫UPDATE、app编排、worker/Register；接newOutbound→issue.New→Jobs，任一步构造失败close已有pool，CLI仍不构造网络/dispatcher/jobs。
 - 执行补充（cwd=`server`）：上述历史regex不匹配新增`TestCrawlLink`，须额外运行`go test -v -count=1 ./internal/modules/issue/app -run '^TestCrawlLink$'`。Task 10实际保留原聚焦命令并加`-v`观察红/绿（10个顶层、21个含子用例；app当次0匹配不算覆盖），另用这条补充命令观察app红/绿（1个顶层、7个含子用例）；未改写原selector或把改后命令当成已执行证据。
-- [ ] MaxAttempts在`CrawlLinkArgs.InsertOpts() river.InsertOpts`固定default/3，T11显式投递opts同值，单一常量`CrawlLinkMaxAttempts=3`避免漂移。新worker不读项目、不取项目锁，无metadata审计事件。
-- [ ] 变异M28去URL/deleted守卫或改updated_at、M29吞DB错误/漏Jobs登记；存储/worker/构造层红，恢复；`go test -count=1 ./internal/archtest`绿，G；提交`feat(M4/P7): 接入抓取任务和带条件的元数据写回`。
+- [x] MaxAttempts在`CrawlLinkArgs.InsertOpts() river.InsertOpts`固定default/3，T11显式投递opts同值，单一常量`CrawlLinkMaxAttempts=3`避免漂移。新worker不读项目、不取项目锁，无metadata审计事件。
+- [x] 变异M28去URL/deleted守卫或改updated_at、M29吞DB错误/漏Jobs登记；存储/worker/构造层红，恢复；`go test -count=1 ./internal/archtest`绿，G；提交`feat(M4/P7): 接入抓取任务和带条件的元数据写回`。
 
 ## Task 11：首个生产订阅者与原事务投递
 
 **Files:** 新I/app/crawl_on_link_change.go/test；I/adapter/river/link_crawls.go/test；改module_events.go；B/events_test.go保持T3的独立目录测试；新B/issue_link_jobs_test.go，复用issue_inserter与真实River事务接缝；改B/issue_crawl_jobs_test.go为唯一自动job集成，并以精确link/url完成等待同步B/issue_link_writes_test.go、issue_link_security_test.go、issue_link_transactions_test.go中的seed与完整metadata快照。
 **Interfaces:** 产生`LinkCrawls.Enqueue(ctx,linkID,url) error`、`NewCrawlOnLinkChange(LinkCrawls) shared.EventSubscriber`、river.NewLinkCrawls(Inserter)；issue.Subscribers旧签名不变，返回唯一生产subscriber。
 
-- [ ] 写`TestCrawlOnLinkChange`，created和含url的updated各投一次，title-only零且成功；Entity.ID与Event.ID故意不同，抓参数是linkID和Change.New；created缺url、两种订阅类型重复url/url项nil New返回程序错，updated没有url不是错误；不订阅deleted。
-- [ ] 新`TestIssueLinkSubscriberRegistration`在B/issue_link_jobs_test.go以`jobs.NewInserter(pool)`产生的client构造生产`issue.Subscribers(issueInserter{client:client})`并组合真实dispatcher，断言唯一生产subscriber只订阅created/updated；使用含独立Event.ID、`Entity:{Kind:"issue_link",ID:linkID}`、url Change的真实payload，在真实事务中经Inserter投递。目录的接受/拒绝仍由`TestIssueEventDirectory`无订阅者验证，不能继续用空`shared.Event{Type:kind}`调用生产subscriber。
-- [ ] `TestLinkJobCommitRollback`真实PG/River：另一连接提交前0job，commit后正确args+业务，rollback后两者均无；标题独改确实提交新title/audit且没有新job；created缺url或重复url失败时业务回滚；第一subscriber入队第二失败第三不调用，全部业务/活动/job回滚；不以“没启动worker”替代事务证明。
-- [ ] `go test -count=1 -p=1 ./internal/modules/issue/app ./internal/modules/issue/adapter/river ./internal/bootstrap -run 'Test(CrawlOnLinkChange|IssueLinkSubscriberRegistration|LinkJobCommitRollback|IssueEventDirectory)'`先红，接现有Inserter.InsertTx，Queue default/3attempt，无独立事务、无网络、无锁、无异步goroutine。
-- [ ] 变异M30InsertTx换独立投递/丢ctx、M31错误urlChange条件/吞enqueue错误；真实组合层红→恢复绿；确认`issue.EventTypes`有15类型且只预期新增3，G；提交`feat(M4/P7): 由链接事件在原事务内投递抓取任务`。
-- [ ] 自动投递接线后的既有server用例保留真实worker、UA/图标/metadata/审计断言；移除API创建后的重复手投。完整快照/手写metadata之前，等待该world相关seed的精确link/url唯一job完成，不以历史completed或删掉metadata断言代替同步；本Task执行直接受影响回归，T10历史报告保留原手动投递事实。
+- [x] 写`TestCrawlOnLinkChange`，created和含url的updated各投一次，title-only零且成功；Entity.ID与Event.ID故意不同，抓参数是linkID和Change.New；created缺url、两种订阅类型重复url/url项nil New返回程序错，updated没有url不是错误；不订阅deleted。
+- [x] 新`TestIssueLinkSubscriberRegistration`在B/issue_link_jobs_test.go以`jobs.NewInserter(pool)`产生的client构造生产`issue.Subscribers(issueInserter{client:client})`并组合真实dispatcher，断言唯一生产subscriber只订阅created/updated；使用含独立Event.ID、`Entity:{Kind:"issue_link",ID:linkID}`、url Change的真实payload，在真实事务中经Inserter投递。目录的接受/拒绝仍由`TestIssueEventDirectory`无订阅者验证，不能继续用空`shared.Event{Type:kind}`调用生产subscriber。
+- [x] `TestLinkJobCommitRollback`真实PG/River：另一连接提交前0job，commit后正确args+业务，rollback后两者均无；标题独改确实提交新title/audit且没有新job；created缺url或重复url失败时业务回滚；第一subscriber入队第二失败第三不调用，全部业务/活动/job回滚；不以“没启动worker”替代事务证明。
+- [x] `go test -count=1 -p=1 ./internal/modules/issue/app ./internal/modules/issue/adapter/river ./internal/bootstrap -run 'Test(CrawlOnLinkChange|LinkCrawlsEnqueue|IssueLinkSubscriberRegistration|LinkJobCommitRollback|IssueEventDirectory)'`先红，接现有Inserter.InsertTx，Queue default/3attempt，无独立事务、无网络、无锁、无异步goroutine。
+- 历史/推荐命令区别：T11原聚焦没有`LinkCrawlsEnqueue`，river当次零匹配；现行命令补入该真实测试。历史`affected-app-river-arch.stdout`实际RUN/PASS覆盖它；T16不重写原命令或重跑旧套件。
+- [x] 变异M30InsertTx换独立投递/丢ctx、M31错误urlChange条件/吞enqueue错误；真实组合层红→恢复绿；确认`issue.EventTypes`有15类型且只预期新增3，G；提交`feat(M4/P7): 由链接事件在原事务内投递抓取任务`。
+- [x] 自动投递接线后的既有server用例保留真实worker、UA/图标/metadata/审计断言；移除API创建后的重复手投。完整快照/手写metadata之前，等待该world相关seed的精确link/url唯一job完成，不以历史completed或删掉metadata断言代替同步；本Task执行直接受影响回归，T10历史报告保留原手动投递事实。
 
 ## Task 12：请求任务目录与运行角色真实完成
 
 **Files:** 改B/invitations_test.go（registrationRows的实际定义）、table_rows_test.go、runtime_role_test.go；新B/issue_link_runtime_test.go、request_jobs_test.go。复用T10的B/app_test.go目录检查与T11的B/issue_crawl_jobs_test.go精确完成等待，不复制辅助框架，jobs_test.go无需改动。
 **Interfaces:** 保留`registrationRows(t,*pgxpool.Pool) string`调用方；内部追加声明请求kind的river_job稳定id/kind/args快照，不把state/attempt/finished时间等worker变化列写入。独立预期kind常量指向`issue.crawl_link`，不从实际Jobs反推预期。
 
-- [ ] 写`TestRegistrationRowsSeeRequestJobs`：插入一个crawl任务前后不同，改变args也不同；periodic/leader变化和同请求job状态变化前后相同；请求kind声明遗漏的独立预期检查失败。沿既有被拒注册用例核快照不变。
-- [ ] 写`TestIssueLinkRuntimeJob`：恰好grants权限启动真实server/River，以API建本地页面link，DB/HTTP metadata与completed一致；再改标题/URL/删、含清单以外普通表反例，不以单纯SELECT成功冒称worker可写。
-- [ ] `go test -count=1 -p=1 ./internal/bootstrap -run 'Test(RegistrationRowsSeeRequestJobs|IssueLinkRuntimeJob|TheGrantsFileCoversEveryRelationAndFunction|TheRuntimeRoleServesWithTheGrantsFile|TheRowChecksSeeEveryTable|RegisteringWithAnInvitation)'`；缺覆盖先红或生产变异红，扩现有目录而非复制第二套注册快照；恢复后全绿。
+- [x] 写`TestRegistrationRowsSeeRequestJobs`：插入一个crawl任务前后不同，改变args也不同；periodic/leader变化和同请求job状态变化前后相同；请求kind声明遗漏的独立预期检查失败。沿既有被拒注册用例核快照不变。
+- [x] 写`TestIssueLinkRuntimeJob`：恰好grants权限启动真实server/River，以API建本地页面link，DB/HTTP metadata与completed一致；再改标题/URL/删、含清单以外普通表反例，不以单纯SELECT成功冒称worker可写。
+- [x] `go test -count=1 -p=1 ./internal/bootstrap -run 'Test(RegistrationRowsSeeRequestJobs|IssueLinkRuntimeJob|TheGrantsFileCoversEveryRelationAndFunction|TheRuntimeRoleServesWithTheGrantsFile|TheRowChecksSeeEveryTable|RegisteringWithAnInvitation)'`；缺覆盖先红或生产变异红，扩现有目录而非复制第二套注册快照；恢复后全绿。
 - 执行补充（cwd=`server`）：上述命令加`-json`记录实际RUN，最终为6个顶层、13个含子用例，exit 0；另执行`go test -json -count=1 -p=1 ./internal/bootstrap -run '^Test(NewAppCrawlJobCatalog|NewAppCrawlJobRuns|IssueLinkSubscriberRegistration|LinkJobCommitRollback)$'`，复用独立目录与真实投递/worker回归，实际4个顶层、15个含子用例，exit 0。未用空匹配代替覆盖。
-- [ ] M32去请求job快照、M33快照只count不含args均为**测试守卫自身的反例**，不计实际生产变异；M34删link UPDATE授权/漏worker是生产变异。逐项真实红→原字节/SHA恢复→同选择绿；另以产品请求kind声明遗漏、`ON ALL TABLES`过宽授权验证独立反例，G；提交`test(M4/P7): 覆盖请求任务目录及最小权限抓取`。
+- [x] M32去请求job快照、M33快照只count不含args均为**测试守卫自身的反例**，不计实际生产变异；M34删link UPDATE授权/漏worker是生产变异。逐项真实红→原字节/SHA恢复→同选择绿；另以产品请求kind声明遗漏、`ON ALL TABLES`过宽授权验证独立反例，G；提交`test(M4/P7): 覆盖请求任务目录及最小权限抓取`。
 
 ## Task 13：抓取与 URL、标题及删除的真实交错
 
 **Files:** 新B/issue_link_interleaving_test.go、issue_link_race_helpers_test.go；必要扩已有pgtest辅助的消费，不造平台同步框架。只修被反例证明的问题。
 **Interfaces:** 消费T4 UpdateLink返回Link、T10 SetLinkMetadata、T11真实投递。实际使用受控本地HTTP，保留newApp安装的生产crawler/worker；标题锁下时钟停点使用既有newIssueRouteWithPublisher，显式接生产subscriber/InsertTx。两者均不向生产加屏障API。
 
-- [ ] 写`TestLinkCrawlURLInterleaving`：老A抓取停在网络返回前，API改B提交+清{}+留B任务，放老A令0写，再B完成；反向先A写再改B依然{}。最后断言metadata.url属于B、活动只有URL更新、两job归属精确。
-- [ ] 写`TestLinkTitlePreservesConcurrentMetadata`：标题请求已读pending、抓取先更新metadata、标题写返回值与DB都保留新metadata；相反顺序亦成立；真实事务/锁条件证明控制点，不只fake call log。`TestLinkCrawlAfterDeletion`：先删/新ID重建同URL旧任务写0；A→B→A旧A能写的已批准限制单独命名，不能偷加版本条件。
-- [ ] `go test -race -count=5 -p=1 ./internal/bootstrap -run 'Test(LinkCrawlURLInterleaving|LinkTitlePreservesConcurrentMetadata|LinkCrawlAfterDeletion)'`实际匹配每轮所有用例，无40P01/超时泄漏；两连接等待用RowWaits/通道与期限。
-- [ ] 变异M35去urlguard、M36标题整体写回旧metadata、M37匹配只url不id；真实交错必须红，恢复同一聚焦普通运行绿，之后只受改动影响再race。G；提交`test(M4/P7): 证明抓取与链接修改删除的交错语义`。
+- [x] 写`TestLinkCrawlURLInterleaving`：老A抓取停在网络返回前，API改B提交+清{}+留B任务，放老A令0写，再B完成；反向先A写再改B依然{}。最后断言metadata.url属于B、活动只有URL更新、两job归属精确。
+- [x] 写`TestLinkTitlePreservesConcurrentMetadata`：标题请求已读pending、抓取先更新metadata、标题写返回值与DB都保留新metadata；相反顺序亦成立；真实事务/锁条件证明控制点，不只fake call log。`TestLinkCrawlAfterDeletion`：先删/新ID重建同URL旧任务写0；A→B→A旧A能写的已批准限制单独命名，不能偷加版本条件。
+- [x] `go test -race -count=5 -p=1 ./internal/bootstrap -run 'Test(LinkCrawlURLInterleaving|LinkTitlePreservesConcurrentMetadata|LinkCrawlAfterDeletion)'`实际匹配每轮所有用例，无40P01/超时泄漏；两连接等待用RowWaits/通道与期限。
+- [x] 变异M35去urlguard、M36标题整体写回旧metadata、M37匹配只url不id；真实交错必须红，恢复同一聚焦普通运行绿，之后只受改动影响再race。G；提交`test(M4/P7): 证明抓取与链接修改删除的交错语义`。
 - 执行补充（cwd=`server`）：规定聚焦命令加`-json`保留原始证据；普通3顶层/10总RUN，`-race -count=5`实际15顶层/50总RUN，每个用例恰好五轮，均exit 0。相关投递、运行角色及链接API回归11顶层/32总RUN通过；M35/M36/M37分别真实业务断言红，原SQL/适配器/生成物逐字节及SHA恢复后同选择普通绿。A→B→A为URL测试下独立命名子例，按三个精确job ID观测。
 
 ## Task 14：I10 接口故事与带链接的删除故事
@@ -218,34 +220,35 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 **Files:** 新e2e/fixtures/link-page.ts、stories/issue/i10-links.spec.ts；扩fixtures/links.ts、furnish.ts；改stories/issue/i15-archive-issue.spec.ts、i17-delete-issue.spec.ts、i17-catalog.spec.ts、必要assert/issue.ts（复用activityRow）；不加页面实现。
 **Interfaces:** fixture `startLinkPage(): Promise<LinkPage>`，`LinkPage{url:string; release():void; close():Promise<void>}`提供受控首个页面请求/后续不同标题路由，本测试生命周期拥有server并在finally关闭；API fixture直接使用生成类型。
 
-- [ ] 写I10：API建普通用户/项目/issue→输入127.0.0.1:<port>/page→201URL带http且metadata{}→受控放行后四键metadata/内嵌data图标→DB对应linkID/url/kind的job completed→标题独改无新增任务→URL更新清{}后抓新标题→重复409→删除活动。blocked例169.254.169.254只断言metadata.error，不声称E2E观测0连接。
-- [ ] 扩I17两层子树、不同creator/deleter、已归档子项与先删对照；API填每个受测links，目录断言同刻同写者。I15 的归档后删除也必须 API 填 link 并纳入活动期望（T4 检查点全套发现遗漏后补入），项目/工作区的furnish也有link，不能只改I17而漏同步cascade。
-- [ ] 先`pnpm --filter @nerve/e2e check:types`，`make build`后`pnpm --filter @nerve/e2e exec playwright test stories/issue/i10-links.spec.ts stories/issue/i15-archive-issue.spec.ts stories/issue/i17-delete-issue.spec.ts stories/issue/i17-catalog.spec.ts --project=chromium`；继承已验证项目内浏览器缓存，移除NO_COLOR/FORCE_COLOR，不全局安装。
-- [ ] 故事按API/DB/job三层断言，轮询有期限、任务按本linkID/url匹配；先停server/失败也清理。选M30/M35等已有真实生产变异中最合适一项做故事归属验证，不为凑数重复全部变异；恢复绿，G；提交`test(M4/P7): 加入链接抓取故事并扩展删除目录`。
+- [x] 写I10：API建普通用户/项目/issue→输入127.0.0.1:<port>/page→201URL带http且metadata{}→受控放行后四键metadata/内嵌data图标→DB对应linkID/url/kind的job completed→标题独改无新增任务→URL更新清{}后抓新标题→重复409→删除活动。blocked例169.254.169.254只断言metadata.error，不声称E2E观测0连接。
+- [x] 扩I17两层子树、不同creator/deleter、已归档子项与先删对照；API填每个受测links，目录断言同刻同写者。I15 的归档后删除也必须 API 填 link 并纳入活动期望（T4 检查点全套发现遗漏后补入），项目/工作区的furnish也有link，不能只改I17而漏同步cascade。
+- [x] 先`pnpm --filter @nerve/e2e check:types`，`make build`后`pnpm --filter @nerve/e2e exec playwright test stories/issue/i10-links.spec.ts stories/issue/i15-archive-issue.spec.ts stories/issue/i17-delete-issue.spec.ts stories/issue/i17-catalog.spec.ts --project=chromium`；继承已验证项目内浏览器缓存，移除NO_COLOR/FORCE_COLOR，不全局安装。
+- [x] 故事按API/DB/job三层断言，轮询有期限、任务按本linkID/url匹配；先停server/失败也清理。选M30/M35等已有真实生产变异中最合适一项做故事归属验证，不为凑数重复全部变异；恢复绿，G；提交`test(M4/P7): 加入链接抓取故事并扩展删除目录`。
 
 ## Task 15：全链路矩阵、变异归档与最终门禁
 
 **Files:** 新`docs/v0/M4-issue-core/reviews/P7-issue-links-behavior-matrix.md`、`P7-issue-links-mutation-matrix.md`；补真实跨层缺口的既有测试；原始输出仅ignored台账。
 **Interfaces:** 无新产品接口；消费T1–T14最终实现和报告。
 
-- [ ] 逐行核四operation/三活动/三事件/订阅条件与无副作用例外；每行标测试、层、精确HEAD，含四槽nil/value、metadata pending/success/error shape、全部拒绝码双向覆盖。检查最终不存在临时emptySubscriber/fakecrawler/绕过目录的过渡。
-- [ ] 从M1–M37挑至少15个实际生产变异，每类地址/网络/权限/锁/事务/guard/注册至少一个，复用已录raw证据；每个都必须实际红→原字节恢复→绿。若因安全表重叠由清单守卫杀死，明确层和原因，不说HTTP行为因此变。
-- [ ] 串行`GOFLAGS=-p=1 make test`、`make lint-go`、`make lint-web`、`make knip`、`make test-web`、`make e2e`；记录测试包/匹配/退出码、browser数量，不把缓存数或Infra失败当通过；不得操作已有容器来“修环境”。
-- [ ] 带生成物提交后`GOFLAGS=-p=1 make gen-check`无差异；库/code/hash与证据一一对应。已知W11不专门调查；若阻塞合并CI且重跑仍不过按用户纪律报告。
-- [ ] G；提交`test(M4/P7): 完成链接全链路门禁与性质证据`；后续deep-review不无理由重复完整套件。
+- [x] 逐行核四operation/三活动/三事件/订阅条件与无副作用例外；每行标测试、层、精确HEAD，含四槽nil/value、metadata pending/success/error shape、全部拒绝码双向覆盖。检查最终不存在临时emptySubscriber/fakecrawler/绕过目录的过渡。
+- [x] 从M1–M37挑至少15个实际生产变异，每类地址/网络/权限/锁/事务/guard/注册至少一个，复用已录raw证据；每个都必须实际红→原字节恢复→绿。若因安全表重叠由清单守卫杀死，明确层和原因，不说HTTP行为因此变。
+- [x] 串行`GOFLAGS=-p=1 make test`、`make lint-go`、`make lint-web`、`make knip`、`make test-web`、`make e2e`；记录测试包/匹配/退出码、browser数量，不把缓存数或Infra失败当通过；不得操作已有容器来“修环境”。
+- [x] 带生成物提交后`GOFLAGS=-p=1 make gen-check`无差异；库/code/hash与证据一一对应。已知W11不专门调查；若阻塞合并CI且重跑仍不过按用户纪律报告。
+- [x] G；提交`test(M4/P7): 完成链接全链路门禁与性质证据`；后续deep-review不无理由重复完整套件。
 
 ## Task 16：deep-review、正式记录和阶段交付
 
 **Files:** 本spec/plan/review三文档、两矩阵；M4-design §3.11/§4.8（hash exclusion局部物理修正）、§3.23/§15、v0-design §6.2/§8、plane-diff的issue_links12列/抓取差异、README安全；M2/M3 handoffs与P6 spec§5/review§6接收结果；整审报告`docs/reviews/re-NN-M4P7整体审核.md`按现存编号。
-**Interfaces:** 无新产品接口；每个结论引用真实已提交实现/证据。
+**Interfaces:** 无新跨层产品接口；T16内部pageMetadata增加contentType，公开metadata.error用nullable enum生成并做HTTP类型转换；C1只在既有422完整快照前等待唯一got的crawl。每个结论引用真实提交/证据。
 
-- [ ] 全任务独评完成后用deep-review审准确基线..HEAD整支：全文文件清单、逻辑/集成/测试覆盖，包含全部请求写死锁推导、网络边界、事件/任务原事务、文档事实。必要局部修复/测试和聚焦复审后再判通过；结构问题遵守先提交后上报。
-- [ ] 写review七节（方式、逐项证据、局部决定、发现处理、最终与plan差异、移交、限制）；spec§4只勾真实完成项，Task实际签名/文件差异同步，不为“表面按plan”掩盖实现修正。
-- [ ] 同步总体平台/安全说明、逐列差异与README网络边界/限额/公网任意端口/NAT和网卡变化需网络层覆盖；P7不改CSP，不写已存在页面。输入交接status保持open，追加本期结果与剩余P9/P14责任。
-- [ ] M4§14只补P7子项真实证据，不把“事件和任务”整条或M4总体完成；v0§9.4仍进行中，不创建M5–M8最终closeout。
+- [x] 单次deep-review审准确`5005be985e7ec78727edc6f8fc5c05999b45cc65..d2a3cf26df220f95ac8f656d9ff8f4eaa2997305`，四组全文覆盖165文件/457chunks；5新Minor+3历史Minor进入同一次修复波次，0Critical/Major/Structural/Needs Decision。
+- [ ] 本波修复、完整本地门禁与fresh scoped独立复审闭环；不重新开整支审查。
+- [x] 写review七节（方式、逐项证据、局部决定、发现处理、最终与plan差异、移交、限制）；spec§4只勾真实完成项，Task实际签名/文件差异同步，不为“表面按plan”掩盖实现修正。
+- [x] 同步总体平台/安全说明、逐列差异与README网络边界/限额/公网任意端口/NAT和网卡变化需网络层覆盖；P7不改CSP，不写已存在页面。输入交接status保持open，追加本期结果与剩余P9/P14责任。
+- [x] M4§14只补P7子项真实证据，不把“事件和任务”整条或M4总体完成；v0§9.4仍进行中，不创建M5–M8最终closeout。
 - [ ] 文档链接/代码路径/签名/checkbox范围和`git diff --check`通过，提交`docs(M4/P7): 记录阶段终审与链接交付证据`；推分支准确HEAD并确认其CI，提供分支/基线/spec/plan/review/终审路径，先不合并。
 - [ ] 后续得到授权才--no-ff合并、准确main SHA CI全绿、ignored原始证据归档验证、清理分支/worktree；不能用分支CI替代mainCI。
 
-## 准备期自查与交付边界
+## 准备期自查与当前交付边界
 
-16 Task覆盖设计12粗项，接口生产/消费与方法名逐项核对，UpdateLink始终返回Link，五项Review Focus均有归属测试；spec所有验收保持未勾。当前准备文件已通过独立安全与集成预检及定向复审，5项Medium全部关闭；尚无P7完整原型/逐Task重放、产品运行或生产变异证据，只有spec附录界定的4列PG约束/sqlc最窄实验。所有产品验收仍未勾，真实基线/mainCI与预检结论见review；等待负责人安排启动T1。
+准备期16Task覆盖设计12粗项，5项Medium预检修订闭环；当时只有4列PG/sqlc最窄实验、验收未勾。随后T1–T15已按实际执行完成，上方勾选表示目标与归属证据完成，原建议命令/变异名称有差异的以执行补充和两矩阵为准，不能倒写历史。T16已完成原范围全文审查及局部修复/文档初稿；准确本轮完整门禁、定向独评、最终分支CI后才能完成交付门。main合并、mainCI与ignored证据归档清理必须另获授权。

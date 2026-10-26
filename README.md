@@ -97,7 +97,7 @@ make          # 查看所有命令
 
 ## 部署
 
-- **后台任务与自动归档（M4/P6）**：`jobs.default_workers` 默认10、`jobs.periodic_workers` 默认2，均须为正整数。`issue.auto_archive_interval` 默认24小时、测试环境2秒，最小1秒；River的 `periodic` 队列运行会话清理与工作项自动归档，`default` 供后续事件任务。项目 `archive_in=0` 关闭自动归档，1–12按每月30天计；只归档完成/取消且 `updated_at` 到阈值的未归档工作项。系统活动和事件均无操作者。`clock.offset` 默认0，仅 `NERVE_ENV=test` 可设非零（可用 `NERVE_CLOCK__OFFSET` 覆盖），只影响业务时钟，不改变River调度、限速和等待期限；生产环境非零启动失败。配置及实测见 [P6 review](docs/v0/M4-issue-core/reviews/P6-issue-events-review.md)。
+- **后台任务与自动归档（M4/P6–P7）**：`jobs.default_workers` 默认10、`jobs.periodic_workers` 默认2，均须为正整数。`issue.auto_archive_interval` 默认24小时、测试环境2秒，最小1秒；River的 `periodic` 队列运行会话清理与工作项自动归档，`default` 已运行链接抓取任务。项目 `archive_in=0` 关闭自动归档，1–12按每月30天计；只归档完成/取消且 `updated_at` 到阈值的未归档工作项。系统活动和事件均无操作者。`clock.offset` 默认0，仅 `NERVE_ENV=test` 可设非零（可用 `NERVE_CLOCK__OFFSET` 覆盖），只影响业务时钟，不改变River调度、限速和等待期限；生产环境非零启动失败。配置及实测见 [P6 review](docs/v0/M4-issue-core/reviews/P6-issue-events-review.md)。
 
 - **设 `NERVE_ENV=prod`**。不设时 nerve 按 dev 的默认值运行：注册默认开放；没有配置签名密钥时用临时密钥，重启后已签发的访问令牌全部失效。nerve 不是 prod、却监听在本机回环地址之外时，启动日志会记一条 WARN 提醒。
 - **签名密钥**：prod 必须提供 Ed25519 私钥（PKCS#8 PEM 文件），用 `auth.jwt.private_key_file`（环境变量 `NERVE_AUTH__JWT__PRIVATE_KEY_FILE`）指向它；没有提供或读不出来时 nerve 拒绝启动，错误指出这个配置项。生成：
@@ -138,11 +138,21 @@ make          # 查看所有命令
 - **迁移**：prod 默认不在启动时迁移（`database.auto_migrate: false`），先执行 `nerve migrate up`，再 `nerve serve`。
   - **迁移和服务分用两个数据库角色时**（表的所有者执行迁移，服务用另一个角色），服务的角色需要的权限全部写在 [`deploy/runtime-grants.sql`](deploy/runtime-grants.sql)：业务表的读写，River 的表和序列，`river_job` 的 `MAINTAIN`（River 每天 00:00 UTC 用 `REINDEX INDEX CONCURRENTLY` 重建它的索引，需要 PostgreSQL 17 起），`goose_db_version` 的读（`/readyz` 靠它判断迁移是否已完成）。按表给读写（DML），不给 `TRUNCATE`、`REFERENCES`、`TRIGGER` 和 DDL。函数和类型不在文件里：PostgreSQL 默认让 PUBLIC 执行函数、使用类型，River 的 `river_job_state_in_bitmask` 和 `river_job_state` 靠的就是它；迁移收回了 PUBLIC 的这些权限时，把它们加进文件。文件授权给组角色 `nerve_runtime`：先建一次组角色，服务登录用的角色加入它，例如 `CREATE ROLE nerve_runtime NOLOGIN;`、`CREATE ROLE nerve_app LOGIN PASSWORD '…' IN ROLE nerve_runtime;`。
   - **每次 `nerve migrate up` 之后**，以表的所有者执行一次这个文件，例如 `psql -v ON_ERROR_STOP=1 -f deploy/runtime-grants.sql`：新的迁移可能加了表，文件逐个列出表和序列；重复执行没有影响。
-  - 少了 River 的权限时 `/readyz` 仍是 200，River 的任务（会话清理、自动归档）和索引重建因 `permission denied`（42501）失败，只记在日志里；少了业务表的权限时接口请求失败；少了 `goose_db_version` 的读时 `/readyz` 是 503。`server/internal/bootstrap/runtime_role_test.go` 用恰好这些权限的角色运行 nerve（就绪、会话清理、索引重建），`public` 里有表、视图、序列或函数的权限与文件不符时失败。
+  - 少了 River 的权限时 `/readyz` 仍是 200，River 的任务（会话清理、自动归档、链接抓取）和索引重建因 `permission denied`（42501）失败，只记在日志里；少了业务表的权限时接口请求失败；少了 `goose_db_version` 的读时 `/readyz` 是 503。`server/internal/bootstrap/runtime_role_test.go` 用恰好这些权限的角色运行 nerve（就绪、会话清理、索引重建），`public` 里有表、视图、序列或函数的权限与文件不符时失败。P7 的 `issue_link_runtime_test.go` 另以受限角色验证链接真实 CRUD、自动任务 completed 和 metadata 更新，重跑 grants 后未列入授权的额外表仍报 42501。
 - **数据库的 locale**：用 UTF-8 的 locale 初始化数据库（官方的 PostgreSQL 镜像是 `en_US.utf8`）。标签的名称在项目内不分大小写，按数据库的 `LC_CTYPE` 折叠（`lower(name)`）：以 `C` 初始化的数据库只折叠 ASCII，`Ä` 与 `ä` 算两个名称（M3/P7b spec 第 7 节）。
 - **工作项的写闸门和锁的期限**：一个项目上的工作项的写，每个进程里至多 `issue.write_gate.per_project`（默认 2）个同时在数据库里；多的在进程里排队，至多 `issue.write_gate.max_queue`（默认 64）个，每个至多等 `issue.write_gate.max_wait`（默认 2 秒）；在数据库里每一次等锁至多 `issue.write_lock_timeout`（默认 5 秒；加上 `max_wait` 必须短于 `server.request_timeout`）。排满、等不到、在闸门上请求到期或等锁到期的写得到 503 `server_busy`，带 `Retry-After: 1`，客户端隔这么久重试。闸门让一个热的项目上的工作项的写至多占用连接池（`database.max_conns`，默认 10）里的这么多个连接：同时热的项目少于 `max_conns / per_project`（默认 5）个时，别的项目的读写不排在这些写后面；达到这个数（默认 5 个）或更多的项目同时热时（比如删除一个大的工作区，它的每个项目上都有写在等行锁），等锁的写仍能占满连接池，别的请求在池的队列里等到这些写等锁到期。部署多个 nerve 进程时每个进程各有这么多个：连接池的大小怎样配合 `per_project`、同时热的项目数和进程数，由 M8 的部署说明定。
 - **停机**：收到 SIGTERM 或 SIGINT 后，nerve 依次停下：先是 HTTP 优雅停机，不再接受新连接，处理中的请求最多等 `server.shutdown_timeout`（默认 20 秒）；然后是后台任务（River），不再取新任务，正在运行的任务最多再等 `jobs.shutdown_timeout`（默认 10 秒），到期取消它们，再等 1 秒；最后关闭连接池，最多等 5 秒。前两步到期时 nerve 记 ERROR 并以退出码 1 退出，连接池到期只记 WARN。默认配置下最坏约 36 秒；实测空闲的 nerve 只要几到二十几毫秒。容器或进程管理器的停止宽限期要比 36 秒长：Docker 默认只等 10 秒（Compose 用 `stop_grace_period` 调大），Kubernetes 默认 30 秒（`terminationGracePeriodSeconds`）；也可以调小这几个期限。宽限期不够时，nerve 在收尾中被 SIGKILL（再收到一次 SIGTERM 或 SIGINT 时也立即退出）：处理中的请求被切断，正在运行的任务留在 `running`，River 在它开始运行 1 小时后才把它当作卡住的任务重新排入重试。
 - **停机时 River 的日志**：nerve 启动后的最初几秒内停机时，River 可能记几条 ERROR：它的维护服务还在错开启动时是 `maintenance.PeriodicJobEnqueuer: Error starting transaction`（`context canceled`）；nerve 还没记 `jobs started` 时，还可能有 `notifier.Notifier: Error running listener (will attempt reconnect after backoff)` 等几条 `conn closed`。这是 River 停止时自己记的，不是故障：退出码为 0，没有任务停在 `running`，没有连接泄漏；这次没投递的会话清理，下次启动时投递。运行中的 nerve 停机，只有恰好落在清理任务投递的那几毫秒（每 `auth.session_cleanup_interval` 一次）才会出现第一条。River 每天 00:00 UTC 用 `REINDEX INDEX CONCURRENTLY` 重建 `river_job` 的索引；停机打断重建时，River 先删掉没建完的 `*_ccnew` 索引再停下，这次删除最多等 15 秒。有访问过 `river_job` 的长事务挡住删除、超过 `jobs.shutdown_timeout` 加 1 秒时，nerve 记 ERROR（`jobs still running …`）并以退出码 1 退出；挡满 15 秒时索引留下，River 此后跳过这个索引，每次重建都记 WARN `maintenance.Reindexer: Found reindex artifact … skipping reindex`：用 `DROP INDEX CONCURRENTLY` 删掉这条 WARN 的 `artifact_names` 中列出的索引。迁移和服务分用两个角色时，索引属于表的所有者，服务的角色删不掉它（River 停机时的那次删除也会因此失败，索引留下）：由表的所有者执行这条删除。
+
+## 链接抓取与出站安全
+
+服务端会按用户保存的URL抓取预览；P7提供链接API和真实后台抓取，详情页面接线由P11/P14完成。抓取只发HTTP(S) GET，不带userinfo、代理、cookie或凭证；每跳检查全部DNS候选、IANA特殊地址及启动时本机地址快照，只向已验证的IP拨号，保留Host/SNI和证书验证。接口地址采样失败会阻止构造。
+
+每次crawl最多页面和一个图标两个资源，每资源初始请求加至多5跳（至多6次GET）；两资源共享5秒预算，建连2秒。响应解压后页面至多1MiB、图标64KiB；图标只允许六类栅格MIME，拒绝SVG，以data URL返回，CSP不变。页面遵守BOM/HTTP/meta charset，保留无声明合法UTF-8。公开失败仅blocked/failed，诊断日志只记受控阶段/类别，不记原URL/query/body/error文本。
+
+`outbound.allow_cidrs`默认空，仅env=test可非空，仓库test配置精确放行127.0.0.1/32。default worker数限制并发，authenticated限制入口速率；没有独立待执行队列长度硬上限，多次改URL会投多个任务。网络失败写粗粒度结果并完成；数据库错误返回River供最多3次attempt。
+
+**部署仍须配置网络层出站策略。** 普通公网任意端口仍可请求；NAT/负载均衡自身公网地址以及进程启动后新增/变化的网卡地址不由启动快照覆盖，错误粗化也不消除所有端口探测风险。IANA快照需维护。完全禁止出站会使外部预览失败；网络层阻断通常表现为failed，应用地址策略拒绝为blocked。能力与测试边界见[P7 review](docs/v0/M4-issue-core/reviews/P7-issue-links-review.md)。
 
 ## Plane 表结构快照
 

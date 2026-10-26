@@ -1,8 +1,6 @@
 # M4/P7 `issue-links`：链接、出站客户端与元数据抓取规格
 
-日期：2026-10-26。**准备完成，独立预检及修订复审通过；T1–T5 已实施且独立评审通过，T6 地址策略与独立 IANA 快照已实施待独立评审，其余任务未实施；未做完整原型或逐 Task 重放；另有最窄 PG/sqlc 可行性实验，边界见附录。** 基线：P6 的 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；主控已核实同一SHA的main CI `40305247546` 最终Success，server/web/e2e全绿；首轮基础设施超时及重跑历史另记review。正式分支 `codex/m4-p7`；worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)。
-
-> **实施状态：** I1 的局部物理约束修正已由最窄 PG/sqlc 实验验证并经独立复审；全部预检发现已关闭，基线 main CI 全绿。负责人已授权启动 P7；T1–T5 独立评审通过，T4 检查点本地 Go 8228/Web 1170/E2E 150 门禁通过；T6 地址策略已实施待独立评审，整阶段验收仍未完成。
+日期：2026-10-27。**T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复和正式文档已写，待本轮准确提交的完整本地门禁、独立定向复审及最终分支 HEAD CI；未合并 main。** 基线：P6 已集成的 `5005be985e7ec78727edc6f8fc5c05999b45cc65`，同一 SHA 的 main CI `40305247546` 重跑全绿。分支 `codex/m4-p7`，worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。预检、最窄 PG/sqlc 实验及 T4/T8/T12/T15 检查点按各自日期/源码保存，不作为本轮新执行。
 
 权威输入：[M4 设计](../M4-design.md) §2/I10/I17、3.4–3.6、3.11、3.13/17–19、3.19–3.20、3.23/P7、4.8、5.1–5.3、6.8、8.1/8.8、9.1–9.4、12/P7、13.1；[02](../../claude_to_gpt/02-method.md)、[03](../../claude_to_gpt/03-rules-and-pitfalls.md)；P6 spec §5/review §6 与本规格 §7。D3 事务内同步事件、架构问题 11.8 的平台出站与固定 IP、后台写回的单句守卫已批准，不重新裁定。
 
@@ -16,7 +14,7 @@
 
 ### 2.1 文件、任务与依赖
 
-相对项目根；I=`server/internal/modules/issue`，B=`server/internal/bootstrap`，O=`server/internal/platform/outbound`，C=`server/internal/platform/config`。新文件为计划名字，实施若按职责调整须同步记录；生成物仅由生成命令产出。
+相对项目根；I=`server/internal/modules/issue`，B=`server/internal/bootstrap`，O=`server/internal/platform/outbound`，C=`server/internal/platform/config`。表中为实际文件职责；逐 Task 的提交/执行证据见 review §2，生成物仅由生成命令产出。
 
 | Task | 主要文件 | 交付 / 前置 |
 |---|---|---|
@@ -31,11 +29,11 @@
 | T9 | I/app/crawl_ports.go；I/adapter/crawler/crawler.go、metadata.go 及测试 | 页面/图标解析，失败收敛 / T7–T8 |
 | T10 | I/app/crawl_link.go；I/adapter/postgres/link_metadata.go、queries/link_metadata.sql；I/adapter/river/crawl_link.go；module_jobs.go/module.go；B/app.go | 守卫写回、worker 与运行组合 / T2/T9 |
 | T11 | I/app/crawl_on_link_change.go；I/adapter/river/link_crawls.go；module_events.go；B/events_test.go、issue_link_jobs_test.go | 首个订阅者与真实事务投递 / T3–T4/T10 |
-| T12 | B/invitations_test.go、table_rows_test.go、runtime_role_test.go、jobs_test.go | 请求任务快照及运行角色真实抓取 / T11 |
+| T12 | B/invitations_test.go、table_rows_test.go、runtime_role_test.go、issue_link_runtime_test.go、request_jobs_test.go；复用 app_test.go/issue_crawl_jobs_test.go | 请求任务快照及运行角色真实抓取 / T11 |
 | T13 | B/issue_link_interleaving_test.go、issue_link_race_helpers_test.go | 交错 19、标题与抓取、删除相遇 / T11 |
 | T14 | e2e/fixtures/link-page.ts、links.ts；stories/issue/i10-links.spec.ts、i17-delete-issue.spec.ts、i17-catalog.spec.ts | I10 API、I17 与删除目录回归 / T11–T13 |
 | T15 | 本期测试/发布与变异矩阵、ignored 原始证据 | 跨层核对、代表变异和完整门禁 / T1–T14 |
-| T16 | spec/plan/review、M4/v0 设计、plane-diff、README、输入 handoffs | deep-review、文档事实与后续责任 / T15 |
+| T16 | spec/plan/review、两矩阵、M4/v0 设计、plane-diff、README、输入 handoffs、02/03/04；crawler/charset.go及测试、公开metadata.error schema/生成物/HTTP、既有422 fixture等待 | deep-review、文档事实与后续责任 / T15 |
 
 设计 §12/P7 的 12 条映射：1→T1/T3/T14；2→T2/T3；3→T4；4→T6/T7；5→T8；6→T9；7→T10；8→T11；9→T12；10→T13；11→T14；12→T16。T5/T15 是横跨这些条目的性质证明。16 Task 是上限，粗估各 Task 350–1200 手写差异行，留约 10% 修复余量；这不是原型测量。
 
@@ -136,7 +134,7 @@ Deps：创建 `{Locks, Links LinkCreator, Clock, Events shared.EventPublisher}`�
 
 列表在 ReadTx 中经 `Locks.see(...,ActionRead)`；创建经 `Locks.run` issueID/ActionUpdate/notFound=ErrIssueNotFound；改删先读link，w.issue=它的IssueID，w.action=ActionUpdate，w.notFound=ErrLinkNotFound，w.check预检和锁下都重读link并核所属issue。隐藏规则唯一来源是 `Issue.HiddenFrom(actor,grant.OwnOnly)`：项目guest且guest_view_all_features=false时OwnOnly=true，自己的可见、他人的404（管理员兼项目guest同样）；guest_view_all_features=true时OwnOnly=false，按ActionRead可见的他人项同样可读。写权限仍由ActionUpdate判定，普通guest可见项写403，workspace admin兼项目guest对可见项按管理员规则可写；不可见404始终先于403。项目成员能改删其他成员的link，无作者限制。
 
-顺序：结构/域合法性→资源与权限预检→写闸门→事务项目N→重读/重新判定→项目归档409→工作项归档409→no-op→URL唯一→最后一把锁后Clock.Now一次→MarkChanged(issue)→link写→活动→事件；创建/改删所有实际业务行同一时刻/写者。`issue` 主行先于 links，符合全局表序。任一写、活动、发布或投递失败全部回滚。拒绝/no-op不发事件、不写活动、不推进审计。
+顺序：结构/域合法性→资源与权限预检→写闸门→事务项目N→重读/重新判定→项目归档409→工作项归档409→no-op→URL唯一→最后一把锁后Clock.Now一次→MarkChanged(issue)→link写→活动（创建/删除写活动；修改仅URL真实变化写活动，title-only无活动）→事件；创建/改删所有实际业务行同一时刻/写者。`issue` 主行先于 links，符合全局表序。任一写、活动、发布或投递失败全部回滚。拒绝/no-op不发事件、不写活动、不推进审计。
 
 活动精确对应设计17–19：创建 `field=link,verb=created,old_value=nil,new_value=url,old_identifier=nil,new_identifier=linkID`；URL更新 `updated,old_url,new_url,linkID,linkID`；删除 `deleted,old_url,"",nil,nil`。存储comment分别`created a link`、`updated a link`、`deleted the link`（API仍不显示comment）。只改title不写活动，但推进审计和一个updated事件。
 
@@ -179,11 +177,11 @@ app声明 `type LinkCrawler interface { Crawl(context.Context,string) domain.Lin
 
 T9的 `TestCrawlerLogsRedacted` 使用捕获所有级别的 `slog` handler，分别驱动页面失败、重定向被拒/超限、图标失败；在输入query、被拒userinfo、重定向Location、图标href和响应body放互不相同哨兵。断言完整序列化日志中均不出现这些哨兵、原始URL或原始错误文本，同时每条预期诊断保留对应page/icon阶段与受控分类（含redirect_limit）。再临时恢复记录原始URL或含URL的原始error的生产变异，证明该测试变红；恢复字节/hash后转绿。
 
-整个Crawl共用5秒context，页面和图标不会各重获5秒；每次Get的ConnectTimeout2s、Timeout5s受父context约束。页面正文1MiB，成功2xx且Content-Type经mime解析为text/html才解析；标题用已有 `golang.org/x/net/html` 取第一个title的文本，实体只解码一次，TrimSpace后按Unicode截到255；缺/空title为null。不运行脚本、不访问其他资源、不跟随HTML refresh/base改变安全判定。
+整个Crawl共用5秒context，页面和图标不会各重获5秒；每次Get的ConnectTimeout2s、Timeout5s受父context约束。页面正文1MiB，成功2xx且Content-Type经mime解析为text/html才解析；接受的页面先用已有 `html/charset` 转为 UTF-8，再用 `golang.org/x/net/html` 取第一个title的文本，实体只解码一次，TrimSpace后按Unicode截到255；缺/空title为null。不运行脚本、不访问其他资源、不跟随HTML refresh/base改变安全判定。解码遵循 BOM→HTTP charset→前1024字节内有效meta；库默认Windows-1252而全文合法UTF-8、无有效声明时保留UTF-8，避免长ASCII前缀后的中文乱码。显式单字节声明即使正文碰巧是合法UTF-8也优先；重复属性、pragma和无效label按库的meta语义识别。1MiB是解压后、转码前的响应字节上限；不是HTML解析的硬CPU期限。
 
 图标按优先级icon→shortcut icon→apple-touch-icon→apple-touch-icon-precomposed，大小写不敏感rel按token语义；同类取首个非空href；相对地址基于页面最终URL（忽略base）；没有候选取同origin `/favicon.ico`。只尝试一个候选，不遍历多URL，GET上限64KiB。MIME允许image/png、image/x-icon、image/vnd.microsoft.icon、image/gif、image/jpeg、image/webp；去参数、规范小写；拒绝SVG，不另存默认图标。成功favicon=`data:<mime>;base64,<bytes>`、favicon_url为图标成功请求最终URL；失败/被拒/过大/非法mime的favicon和favicon_url均null，保留页面标题。
 
-metadata形状：初始/改URL为非nil空map `{}`；页面成功恰好 `{title,favicon,url,favicon_url}`，三个可空项也存在，url保存本次任务的原规整URL；页面被outbound拒绝为 `{error:"blocked",url}`，其他失败（超时/连接/状态/超量/非HTML）为 `{error:"failed",url}`。图标失败遵循上一段，不将页面成功降为失败。所有map值为string或nil；不用任意外部解析对象。网络失败不重试，只写粗粒度结果。
+metadata形状：初始/改URL为非nil空map `{}`；页面成功恰好 `{title,favicon,url,favicon_url}`，三个可空项也存在，url保存本次任务的原规整URL；页面被outbound拒绝为 `{error:"blocked",url}`，其他失败（超时/连接/状态/超量/非HTML）为 `{error:"failed",url}`。图标失败遵循上一段，不将页面成功降为失败。公开 `error` 可省略、可null，非null仅 `blocked` / `failed`；canonical用独立enum组件加该字段的nullable `oneOf`/ref，沿既有生成规则，不把整个metadata改成状态联合。域/数据库仍是五键string/null通用map；不用任意外部解析对象。网络失败不重试，只写粗粒度结果。
 
 ### 2.7 T10–T11：守卫写回、worker 与订阅者
 
@@ -252,27 +250,28 @@ T15逐列活动/事件矩阵、至少15项代表性真实生产变异（地址/�
 
 ## 4. 逐项验收与证据
 
-以下全部是待实施条件，静态预检不勾选。每行实施后附准确提交、命令、实际匹配/退出码与报告路径。
+以下产品项依据 T1–T15 真实执行、逐 Task 独评及两矩阵勾选；T16新增边界另列本轮证据。勾选不等于最终分支CI或main集成；准确提交/命令/计数见 [review §2](../reviews/P7-issue-links-review.md#2-验收标准逐条核对)。
 
-- [ ] 12列迁移/CHECK/hash exclusion精确排重/FK索引/grants及两个runtime守卫通过（T1/T12）。
-- [ ] 子树/项目/工作区两路删除覆盖links，全局顺序、同刻同写者、已删对照不变（T1/T14）。
-- [ ] URL和标题规整/长度/null/多问题、集合稳定次序与完整封闭契约通过（T2–T4）。
-- [ ] 2048字符高熵多字节完整INSERT/UPDATE与API201/200、2049CHECK/422、精确重复23P01/409、跨issue/软删复用和真实hash碰撞不同原文共存通过；只映射指定约束名+23P01（T1–T4）。
-- [ ] 四操作的HTTP码双向覆盖、三写503及双语错误文案通过（T3–T5）。
-- [ ] 全身份/隐藏404逐值相同、拒绝无锁无闸门、锁下重授权、归档优先/noop与回滚通过（T3–T5）。
-- [ ] 三种link活动与三事件完整四槽、标题独改无动态/无重抓、审计同刻通过（T3–T5/T11）。
-- [ ] IANA每prefix首尾/清单完整、全部DNS候选、嵌入IPv4、本机地址、blocked 0 dial通过（T6）。
-- [ ] 固定IP/Host/SNI/证书、每跳重检、5跳、无代理/cookie/凭据、2s/5s和响应限额通过（T7）。
-- [ ] test-only allow配置、解析失败拒绝、127.0.0.1/32各nerve一致，CLI不构造出站（T8/T10）。
-- [ ] HTML标题/6类图标/dataURL/相对地址/1MiB与64KiB/5s总限、失败仅blocked/failed通过（T9）。
-- [ ] 捕获slog证明页面/重定向/图标失败的阶段分类保留，query/userinfo/body哨兵及原始URL/error无泄漏，原始日志生产变异红且恢复绿（T9）。
-- [ ] 15类事件目录独立核对，不将空payload交生产订阅者；真实payload/事务投递另有组合测试（T3/T11）。
-- [ ] worker default/3attempt、声明完整、真实completed、DB错误重试与网络失败完成通过（T10–T12）。
-- [ ] 订阅者原事务投递：未提交不可见、commit留、rollback/后订阅失败均不留（T11）。
-- [ ] registrationRows看到请求任务且忽略周期状态变化，反例不空过（T12）。
-- [ ] 交错19、标题保持新metadata、删除/重建守卫、审计不变，race-count5无40P01（T13）。
-- [ ] I10 API含169.254.169.254 blocked；I17/项目/工作区删除含link通过（T14）。
-- [ ] 发布/活动矩阵和至少15代表生产变异/恢复、02完整门禁、deep-review修复复审闭环（T15–T16）。
+- [x] 12列迁移/CHECK/hash exclusion精确排重/FK索引/grants及两个runtime守卫通过（T1/T12）。
+- [x] 子树/项目/工作区两路删除覆盖links，全局顺序、同刻同写者、已删对照不变（T1/T14）。
+- [x] URL和标题规整/长度/null/多问题、集合稳定次序与完整封闭契约通过（T2–T4）。
+- [x] 2048字符高熵多字节完整INSERT/UPDATE与API201/200、2049CHECK/422、精确重复23P01/409、跨issue/软删复用和真实hash碰撞不同原文共存通过；只映射指定约束名+23P01（T1–T4）。
+- [x] 四操作的HTTP码双向覆盖、三写503及双语错误文案通过（T3–T5）。
+- [x] 全身份/隐藏404逐值相同、拒绝无锁无闸门、锁下重授权、归档优先/noop与回滚通过（T3–T5）。
+- [x] 三种link活动与三事件完整四槽、标题独改无动态/无重抓、审计同刻通过（T3–T5/T11）。
+- [x] IANA每prefix首尾/清单完整、全部DNS候选、嵌入IPv4、本机地址、blocked 0 dial通过（T6）。
+- [x] 固定IP/Host/SNI/证书、每跳重检、5跳、无代理/cookie/凭据、2s/5s和响应限额通过（T7）。
+- [x] test-only allow配置、解析失败拒绝、127.0.0.1/32各nerve一致，CLI不构造出站（T8/T10）。
+- [x] HTML标题/6类图标/dataURL/相对地址/1MiB与64KiB/5s总限、失败仅blocked/failed通过（T9）。
+- [x] 捕获slog证明页面/重定向/图标失败的阶段分类保留，query/userinfo/body哨兵及原始URL/error无泄漏，原始日志生产变异红且恢复绿（T9）。
+- [x] 15类事件目录独立核对，不将空payload交生产订阅者；真实payload/事务投递另有组合测试（T3/T11）。
+- [x] worker default/3attempt配置、声明完整、真实completed、DB/context错误原链返回及网络失败完成通过（未人为注入DB故障观察真实River三次attempt）（T10–T12）。
+- [x] 订阅者原事务投递：未提交不可见、commit留、rollback/后订阅失败均不留（T11）。
+- [x] registrationRows看到请求任务且忽略周期状态变化，反例不空过（T12）。
+- [x] 交错19、标题保持新metadata、删除/重建守卫、审计不变，race-count5无40P01（T13）。
+- [x] I10 API含169.254.169.254 blocked；I17/项目/工作区删除含link通过（T14）。
+- [x] T15发布/活动矩阵、21项历史生产变异/恢复及完整七门禁；原范围deep-review全文覆盖完成。
+- [ ] T16修复准确提交完整本地门禁、独立定向复审闭环（原范围不重复整支审查）。
 - [ ] §3.23所有P7文档/差异/交接处理结果为真，阶段分支准确HEAD CI通过（T16/交付）。
 - [ ] 获授权后--no-ff合并，准确main SHA CI全绿，ignored证据归档校验后清理分支/worktree（阶段集成）。
 
@@ -292,7 +291,7 @@ P7没有新事件持久化、抓取进度接口、重试按钮、生产allowlist
 
 - 包内只能拒绝启动时网卡地址；NAT/LB公网地址、启动后网卡变化由网络层出站策略覆盖。普通公网任意端口仍可被请求，metadata错误粗化不是全面阻止端口探测；README必须如实说明。
 - IANA策略快照需维护，不能声称永远与登记表同步；嵌入地址测试不能仅从生产常量生成，重叠prefix要用清单核对。
-- 链接集合不分页、数量无上限是既定集合接口；抓取受default固定worker并发控制，不增加每链接速率桶。队列积压/运维留实际证据与后续说明。
+- 链接集合不分页、数量无上限是既定集合接口；抓取受default固定worker并发控制，不增加每链接速率桶。每次crawl最多两个资源，每个资源初始GET加至多5次跳转，页面/图标共享5秒；authenticated限制到达率，固定worker限制并发，都不是待执行job数量的硬上限。反复修改URL可投多个任务，DB失败重试也可再次抓取。
 - hash exclusion的直接并发重复写可能等待并回滚死锁一方；生产同项目写仍先取既有项目N锁，metadata worker不改issue_id/url。T5/T13要证明这条既有串行路径，不能以最窄实验替代并发验收；不新增绕过项目锁的直写入口。
 - URL逐字唯一允许同资源不同拼写；A→B→A同URL旧结果可晚写。安全始终按实际请求的URL再次检查，不依赖API校验。
 - T1加入表而T3才API填充的短暂状态仅限阶段任务推进；最终目录测试不可豁免。初期仅静态预检不能证明网络/事务/锁性质。
@@ -327,4 +326,4 @@ IANA官方CSV于2026-10-26获取（页面Last Updated 2025-10-09）：
 
 原始CSV、精确UTC获取时刻/内容类型/字节数与hash在ignored `p7-iana-snapshot/manifest.json`；复制至P7证据台账后保留，实施T6采用前再次核对。除上述独立最窄PG/sqlc实验外，未执行P7产品迁移、网络目标抓取或完整生成/测试；本草稿编写者只读实验归档并修订文档，未运行实验或产品。
 
-T6 采用冻结前重核的两份官方 CSV：2026-10-26 13:59:10–13:59:11 UTC，均为原 URL 的 HTTP 200，与本附录快照逐字节相同；产品测试中的 `testdata/sources.json` 记录准确访问时刻、URL、大小和 SHA。独立 CSV 展开 50 条记录、51 个 prefix，加规格额外 3 项；清单对照与逐项首尾行为分开验证。其证据只覆盖纯地址策略，真实 GET、全部 DNS 候选、0 dial 和本机接口读取失败仍由 T7 证明，未勾本节整阶段验收。
+T6 采用冻结前重核的两份官方 CSV：2026-10-26 13:59:10–13:59:11 UTC，均为原 URL 的 HTTP 200，与本附录快照逐字节相同；产品测试中的 `testdata/sources.json` 记录准确访问时刻、URL、大小和 SHA。独立 CSV 展开 50 条记录、51 个 prefix，加规格额外 3 项；清单对照与逐项首尾行为分开验证。该冻结记录只覆盖T6纯地址策略；T7后续真实GET、全部DNS候选、0 dial与接口读取失败证据见行为矩阵，不倒写为T6已执行。

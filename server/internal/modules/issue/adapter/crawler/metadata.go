@@ -1,15 +1,14 @@
 package crawler
 
 import (
-	"bytes"
 	"strings"
 
 	"golang.org/x/net/html"
 )
 
-func pageMetadata(body []byte) (*string, string, error) {
+func pageMetadata(body []byte, contentType string) (*string, string, error) {
 	// HTML parsing decodes entities exactly once and rejects excessive nesting.
-	document, err := html.Parse(bytes.NewReader(body))
+	document, err := html.Parse(pageReader(body, contentType))
 	if err != nil {
 		return nil, "", err
 	}

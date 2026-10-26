@@ -51,7 +51,7 @@ func (c *Crawler) Crawl(parent context.Context, rawURL string) domain.LinkMetada
 		failed := "failed"
 		return domain.LinkMetadata{"error": &failed, "url": &rawURL}
 	}
-	title, href, err := pageMetadata(page.Body)
+	title, href, err := pageMetadata(page.Body, page.ContentType)
 	if err != nil {
 		c.diagnose(ctx, "page", "non_html", nil)
 		failed := "failed"

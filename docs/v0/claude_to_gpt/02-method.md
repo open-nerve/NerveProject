@@ -41,6 +41,7 @@ M0–M4/P3 每个 Phase 都按下面的节奏推进，P3 是最近的、最完�
 - **实现者**：照 plan 做这个 Task，跑这个 Task 的门禁，提交；跑这个 Task 的变异；自查（[03](03-rules-and-pitfalls.md) 第 5 节的清单）。
 - **评审者**（另一个人，只读）：先核对是否符合要求（spec 是权威、plan 是论证），再看质量。问题分 Critical、Important、Minor。plan 规定的缺陷算 Important，标"plan 规定的"。
 - **修复轮**：在根上修；补上能证明修复的测试或变异；spec 只改不再为真的句子。
+- **负责人2026-10-26调整：** 有产品变化的开发检查点push前先串行完整本地七门禁，保留raw与准确tested SHA；逐Task仍跑聚焦/受影响回归，阶段最终汇总不替代中途检查点。只在新改动、真实失败或未解风险时扩重跑。
 - 每个 Task 的结论和裁定记进台账（Claude 用的是 `.superpowers/sdd/<phase>/progress.md`，git 不跟踪）。
 
 **第 5 步：整分支终审。** 按负责人 2026-10-26 的更新，每个 Phase 完成后由 Codex 使用 `deep-review` 审查整分支，不再等待 Claude。审查范围固定为阶段基线到最终待交付 HEAD，明确记录逻辑正确性、集成安全、测试覆盖三个视角。可分派独立审者；报告写入 `docs/reviews/re-NN-<阶段整体审核>.md`，阶段 review 汇总发现、裁定、修复和复审证据。已有未受修改影响的测试/变异证据可核验后复用，不能把静态审查写成新运行。看跨 Task 的东西：
@@ -85,7 +86,9 @@ M0–M4/P3 每个 Phase 都按下面的节奏推进，P3 是最近的、最完�
 | `make lint-web` | 关键词守卫（`tools/keywords.json`）、翻译键、类型检查、oxlint（警告数等于上限）、格式、中英文翻译键一致 |
 | `make knip` | 没有未使用的文件、导出、依赖 |
 | `make test-web` | vitest |
-| `make e2e` | 先 `make build`，再跑 Playwright：chromium 跑全部故事，firefox 只跑 A4 的页面版本；本机没有 Firefox，那两个在本机总是失败（[03](03-rules-and-pitfalls.md) 第 6 节） |
+| `make e2e` | 先 `make build`，再跑 Playwright：chromium 跑全部故事，firefox 只跑 A4 的页面版本；浏览器安装按本次环境核实，不以历史缺Firefox作为永久豁免（[03](03-rules-and-pitfalls.md) 第6节） |
+
+本地通过、准确分支HEAD的CI、另获授权合并后准确main SHA的CI是三个独立事实；缓存、skip、基础设施失败和真实断言失败分别记录，不能互相替代。
 
 持续集成（`.github/workflows/ci.yml`）有三个任务：server（gen-check-go、lint-go、test）、web、e2e（依赖前两个）。
 

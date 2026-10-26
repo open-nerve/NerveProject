@@ -379,7 +379,8 @@ server/
                             全项目只有这里负责"接线"
     platform/               与业务无关的技术基础件：config、postgres（连接池、事务管理器）、
                             logging、httpserver（中间件、problem+json）、ratelimit、clock、idgen、
-                            gate（带 context 的按键的信号量：工作项的写闸门，M4 设计 3.5）
+                            gate（带 context 的按键的信号量：工作项的写闸门，M4 设计 3.5）、
+                            outbound（M4/P7安全GET：全DNS候选验证、固定IP拨号、逐跳检查/限额，供M8复用）
     shared/                 共享内核，尽量小，只放值会跨越模块边界的东西（M2 设计 3.3）：Actor（当前账户）、
                             领域错误与错误码、TxManager 端口、分页游标的封套、Authorizer 端口和它的
                             Role、Action、Target、Grant（M3 设计 3.4），两个以上模块共用的纯取值规则
@@ -428,8 +429,8 @@ modules/issue/
    - 需要其他模块的能力时，在自己的 `app` 层声明一个小接口，由 `bootstrap` 用对方模块的实现接上。
    - 例外：所有模块都可以依赖 `shared` 和 `platform` 中的技术基础件。
 3. **跨模块的副作用通过领域事件**：
-   - M4/P6 的工作项模块发布已声明的 `issue.*` 事件，不知道谁在监听；12种已实现类型与精确payload见 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。
-   - 订阅者由 `bootstrap` 注册；P6 生产订阅集合为空，链接首个生产订阅者留 P7，通知/Webhook 按后续阶段接入。
+   - M4/P6 的工作项模块发布已声明的 `issue.*` 事件，不知道谁在监听；P6当时12种类型与精确payload见 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。
+   - 订阅者由 `bootstrap` 注册；P6时生产订阅为空；P7新增3种link事件（共15种），首个`crawl_on_link_change`用原事务InsertTx投`issue.crawl_link`，default worker已接通；通知/Webhook仍按后续阶段接入，见[P7 review](M4-issue-core/reviews/P7-issue-links-review.md)。
    - 订阅者在同一个事务内被调用，通常只做一件事：往 River 里投递任务。所以事务是原子的，同时各模块之间解耦。
 4. **只在组合根接线**：禁止全局可变状态，禁止 `init()` 副作用，禁止服务定位器。所有依赖都通过构造函数显式传入。
    - 模块之间的端口可以是双向的，所以给别的模块提供只依赖连接池的适配器的模块分两段构造（M3 设计 6.6）：`Provide(pool)` 只返回只依赖连接池、给别的模块用的适配器，不建用例；`New(Deps)` 建出全部用例和 HTTP 的一侧，`Deps` 是它要的全部端口，构造之后不再登记、不再注入任何东西。组合根先调这些模块的 `Provide`，再按依赖的顺序调各模块的 `New`，没有构造的环。
@@ -517,7 +518,7 @@ modules/issue/
 | 事件触发 | 通知分发、Webhook 投递、抓取链接的标题和图标（防 SSRF） |
 | 定时 | **自动归档**（每天）；物理删除软删除超过 60 天的数据；清理 7 天内未完成上传的文件；按保留期清理接口日志、Webhook 日志；每个工作项保留最新的 20 个描述版本（M4/P9 实现，P4 尚无保留任务）；清理过期会话 |
 
-M4/P6 已以锁定的 River 0.47.0 落地只投递客户端、`default`/`periodic` 两队列（默认 worker 10/2）和 `issue.auto_archive`（默认24小时，test为2秒）。每项目一个事务，锁下读策略、终态和业务时钟；业务时钟 `clock.offset` 只允许 test 非零，River 调度仍用真实时间。自动归档动态行的 `actor_id` 为 SQL NULL；未持久化的事件值 `ActorID` 为 nil。P7抓取、P9清理/版本保留仍待实现；证据见 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md#2-验收标准逐条核对)。
+M4/P6 已以锁定的 River 0.47.0 落地只投递客户端、`default`/`periodic` 两队列（默认 worker 10/2）和 `issue.auto_archive`（默认24小时，test为2秒）。每项目一个事务，锁下读策略、终态和业务时钟；业务时钟 `clock.offset` 只允许 test 非零，River 调度仍用真实时间。自动归档动态行的 `actor_id` 为 SQL NULL；未持久化的事件值 `ActorID` 为 nil。P7抓取已在default接通：创建/URL改变投任务，title-only不投；页面/图标共享5秒、网络失败写blocked/failed后完成，DB/context错返回供至多3次attempt。P9清理/版本保留仍待实现；P6历史证据见 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md#2-验收标准逐条核对)。
 
 **文件存储**（`asset` 模块的存储端口）：
 - **两种实现**：
@@ -655,6 +656,8 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
 | 前端单元测试 | store 的状态逻辑、令牌管理器、工具函数 | vitest |
 | 前端静态检查 | 类型错误、lint 警告、未使用的代码 | TypeScript 类型检查和 knip 必须为零；oxlint 警告不得超过基线（只降不升） |
 | **端到端测试** | 每个领域的主线用户故事 | 见 8.2 |
+
+M4/P7安全与异步证据见[行为矩阵](M4-issue-core/reviews/P7-issue-links-behavior-matrix.md)和[变异矩阵](M4-issue-core/reviews/P7-issue-links-mutation-matrix.md)：独立官方地址清单/首尾、IPv4嵌入/本机地址、全部DNS候选在dial前检查、固定IP/Host/SNI/证书及每跳重检，拒绝目标零dial；本机真实页面/图标、5秒共享预算、1MiB/64KiB解压后限额、charset与日志脱敏。真实PG/原事务InsertTx/worker、精确linkID+URL任务完成、标题/URL/删除交错和运行角色均有断言。I10是API故事，页面接入仍归P11/P14；没有以blocked结果外推零socket，也没有声称实际注入DB故障观察了River三次重试。启动后网卡/NAT/LB与普通公网端口边界由部署出站策略覆盖。
 
 ### 8.2 端到端测试（Playwright + 真实数据库断言）
 - **以用户故事为单位**：每个 M 的设计文档都要列出本领域的主线用户故事清单，每个故事对应一个 Playwright 测试文件。这份清单就是这个 M 的验收范围。

@@ -2496,12 +2496,14 @@ export interface components {
             url?: string;
             title?: string | null;
         };
+        /** @enum {string} */
+        IssueLinkMetadataError: "blocked" | "failed";
         IssueLinkMetadata: {
             title?: string | null;
             favicon?: string | null;
             url?: string | null;
             favicon_url?: string | null;
-            error?: string | null;
+            error?: components["schemas"]["IssueLinkMetadataError"] | null;
         };
         IssueLink: {
             /** Format: uuid */
@@ -2761,6 +2763,7 @@ export type DescriptionVersion = components['schemas']['DescriptionVersion'];
 export type DescriptionVersionPage = components['schemas']['DescriptionVersionPage'];
 export type DescriptionVersionDetail = components['schemas']['DescriptionVersionDetail'];
 export type IssueLinkPatch = components['schemas']['IssueLinkPatch'];
+export type IssueLinkMetadataError = components['schemas']['IssueLinkMetadataError'];
 export type IssueLinkMetadata = components['schemas']['IssueLinkMetadata'];
 export type IssueLink = components['schemas']['IssueLink'];
 export type IssueLinkCollection = components['schemas']['IssueLinkCollection'];

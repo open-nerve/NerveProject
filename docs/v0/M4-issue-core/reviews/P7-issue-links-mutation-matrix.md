@@ -4,7 +4,7 @@
 
 Task15在 `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` 对既有原始证据逐项取证，选取 **21项不同实际生产补丁**，跨地址、网络、权限、锁、事务、guard、注册七类。没有重新执行历史变异，也没有把同一补丁的重复故事执行另算一类。每项历史真实红exit=1、恢复绿exit=0；T15最终正常源码在tested HEAD `6e28cc1637e99afc754d3af57a583d45e57831c8` 七门禁全绿，实测与源码兼容证明见[行为矩阵](P7-issue-links-behavior-matrix.md)。
 
-原始证据根 `E=.superpowers/sdd/P7-issue-links`（ignored）。`E/task-15-evidence/mutation-audit.json` 保存完整red/green argv、cwd、RUN计数、每次原始日志/元数据/补丁SHA256、原/变异/恢复/当前源码SHA。T15逐项读原始失败断言并核文件存在、exit与真实RUN，所有18个生产目标文件当前SHA均等于历史原/恢复SHA。下表不是最终HEAD上重新制造21次红。
+原始证据根 `E=.superpowers/sdd/P7-issue-links`（ignored）。`E/task-15-evidence/mutation-audit.json` 保存完整red/green argv、cwd、RUN计数、每次原始日志/元数据/补丁SHA256、原/变异/恢复/当前源码SHA。T15逐项读原始失败断言并核文件存在、exit与真实RUN，在T15冻结源`d2a3cf26`，18个生产目标文件SHA均等于历史原/恢复SHA。T16修复crawler后不能再把这些历史恢复SHA等同当前源码；修正派生索引见下方T16补记。下表不是最终HEAD上重新制造21次红。
 
 历史开发过程中的HEAD不一定包含当时未提交源码；有原始HEAD字段时照录，没有时标“未录”，只给交付锚（用于定位历史，不冒称运行HEAD）。真正执行内容由每次运行source manifest和下列完整SHA识别。T5生产未变但后续组合测试补了后台完成同步；T6 policy_test随后仅注释/映射端点守卫加强；T7只用IDNA修后的fix-1；T9只用final-*；T13只用最终审计断言补齐后的M*-final-*。这些历史测试不等同最终测试字节，最终正常源码执行承担最终组合兼容性。
 
@@ -38,9 +38,9 @@ Task15在 `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` 对既有原始证据逐项
 
 ## 原字节恢复与最终兼容
 
-每个源键的完整SHA256同时是原字节、恢复字节和Task15 BASE当前字节的SHA；不把源码恢复误说成某次构建二进制原字节相同。SQL变异M35–37均实际make gen-go后运行，query/adapter/生成物一起恢复。
+每个源键的完整SHA256同时是原字节、恢复字节和Task15冻结源字节的SHA；不把源码恢复误说成某次构建二进制原字节相同。SQL变异M35–37均实际make gen-go后运行，query/adapter/生成物一起恢复。
 
-| 源键 | 路径 | 原=恢复=当前 SHA256 |
+| 源键 | 路径 | 原=恢复=T15冻结 SHA256 |
 |---|---|---|
 | S1 | `server/internal/modules/issue/adapter/crawler/crawler.go` | `21b766c22eeac6ac0b5f52230aa0f7069dc846279e0356f4e26513fa78a8c544` |
 | S2 | `server/internal/modules/issue/adapter/postgres/gen/link_metadata.sql.go` | `9ec8da20fe1827eec2f2f0dc3bff7a53ff23949a7f416970b10838c0a211f0d5` |
@@ -214,7 +214,7 @@ Task15在 `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` 对既有原始证据逐项
 - 历史HEAD：原运行元数据未录；交付锚：`a08777740f267ffcef45d0ee93c71a70de2d1b4c`，执行字节由source manifest与上表识别。
 - 红 / 恢复绿：`task-13-evidence/M35-final-red.json` / `task-13-evidence/M35-final-restored-green.json`；恢复证明：`task-13-evidence/M35-restore.json`。
 - 实际补丁：`task-13-evidence/M35.patch`。
-- 红命令：`go test -json -count=1 -p=1 ./internal/bootstrap -run '^TestLinkCrawlURLInterleaving/URL_commits_before_old_crawl$'`。恢复绿：`g o ' ' t e s t ' ' - j s o n ' ' - c o u n t = 1 ' ' - p = 1 ' ' . / i n t e r n a l / b o o t s t r a p ' ' - r u n ' ' ''"'"'' '^' T e s t L i n k C r a w l U R L I n t e r l e a v i n g / U R L _ c o m m i t s _ b e f o r e _ o l d _ c r a w l '$' ''"'"''`（更广，含原红测试）。
+- 红命令：`go test -json -count=1 -p=1 ./internal/bootstrap -run '^TestLinkCrawlURLInterleaving/URL_commits_before_old_crawl$'`。恢复绿同命令。
 - 变异SHA256：S6 `ec8f70a81012a2bc9bc03b45552e0066f8a88240f6967b2567f90ffe8a6a3dfc`；S4 `c8745a53fcbecb631bdeca98231943b329c36d15d6929ad4ea74d11bd6cd22ce`；S2 `4ca357e59677f6e4b300d835412036cf923d1fc6a698c0171b157ff7e698ee2e`。
 
 ### M36
@@ -222,7 +222,7 @@ Task15在 `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` 对既有原始证据逐项
 - 历史HEAD：原运行元数据未录；交付锚：`a08777740f267ffcef45d0ee93c71a70de2d1b4c`，执行字节由source manifest与上表识别。
 - 红 / 恢复绿：`task-13-evidence/M36-final-red.json` / `task-13-evidence/M36-final-restored-green.json`；恢复证明：`task-13-evidence/M36-restore.json`。
 - 实际补丁：`task-13-evidence/M36.patch`。
-- 红命令：`go test -json -count=1 -p=1 ./internal/bootstrap -run '^TestLinkTitlePreservesConcurrentMetadata/crawl_commits_after_title_read_before_title_write$'`。恢复绿：`g o ' ' t e s t ' ' - j s o n ' ' - c o u n t = 1 ' ' - p = 1 ' ' . / i n t e r n a l / b o o t s t r a p ' ' - r u n ' ' ''"'"'' '^' T e s t L i n k T i t l e P r e s e r v e s C o n c u r r e n t M e t a d a t a / c r a w l _ c o m m i t s _ a f t e r _ t i t l e _ r e a d _ b e f o r e _ t i t l e _ w r i t e '$' ''"'"''`（更广，含原红测试）。
+- 红命令：`go test -json -count=1 -p=1 ./internal/bootstrap -run '^TestLinkTitlePreservesConcurrentMetadata/crawl_commits_after_title_read_before_title_write$'`。恢复绿同命令。
 - 变异SHA256：S7 `a2446b5f6f8d3304b0a1a2f7a0a0aaf8a1ceddc582254458aedf73db8154354b`；S5 `dc2cb936967ca5404b1df2552330cb537aed01c82bb3eabd91298abf062989a5`；S3 `804c8a9a45d6958f41f06f879cb8e620680c83caa3d47b50060d83049fa44390`。
 
 ### M37
@@ -230,7 +230,7 @@ Task15在 `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` 对既有原始证据逐项
 - 历史HEAD：原运行元数据未录；交付锚：`a08777740f267ffcef45d0ee93c71a70de2d1b4c`，执行字节由source manifest与上表识别。
 - 红 / 恢复绿：`task-13-evidence/M37-final-red.json` / `task-13-evidence/M37-final-restored-green.json`；恢复证明：`task-13-evidence/M37-restore.json`。
 - 实际补丁：`task-13-evidence/M37.patch`。
-- 红命令：`go test -json -count=1 -p=1 ./internal/bootstrap -run '^TestLinkCrawlAfterDeletion/same_URL_new_ID_rejects_old_result$'`。恢复绿：`g o ' ' t e s t ' ' - j s o n ' ' - c o u n t = 1 ' ' - p = 1 ' ' . / i n t e r n a l / b o o t s t r a p ' ' - r u n ' ' ''"'"'' '^' T e s t L i n k C r a w l A f t e r D e l e t i o n / s a m e _ U R L _ n e w _ I D _ r e j e c t s _ o l d _ r e s u l t '$' ''"'"''`（更广，含原红测试）。
+- 红命令：`go test -json -count=1 -p=1 ./internal/bootstrap -run '^TestLinkCrawlAfterDeletion/same_URL_new_ID_rejects_old_result$'`。恢复绿同命令。
 - 变异SHA256：S6 `dcdfbf85e8bbaac0353f616bf0398215ddfda391a1a9fa63a60c35156e686500`；S4 `706e58651ae564558d47e2a785354ce42d475cf1dbb12c80c398b61f918c2ab6`；S2 `15e2659d64754a160a1fe2ff9d56275c2f40da6d60bddd868fd7c98fc4a79fed`。
 
 ## 计数排除与历史限制
@@ -240,7 +240,7 @@ Task15在 `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` 对既有原始证据逐项
 - T6 m17-missing-overlap-endpoints历史163RUN仍绿；独立清单红精确保护192.0.0.9/32显式保留。删除父/24与删除子/32不是相同安全效果。
 - 未选T7 IDNA修复前M19/M20；M21历史只证明origin absolute-URI错误，proxy fixture仍0，不在本矩阵声称发生代理连接。
 - M25只证明图标绕outbound的实际本机危险请求，不将它扩大为全部DNS/IP策略证明；M19/M20私有dial将已验证目的地转本地，不称为真实私网socket。
-- T5 M14-publish初次恢复绿为Ryuk INFRA失败，不能算通过；本次没有选该项。T8/T11两条计划selector文档Minor仍交T16，完整回归覆盖事实保留。
+- T5 M14-publish初次恢复绿为Ryuk INFRA失败，不能算通过；本次没有选该项。T15 当时将 T8/T11 两条计划 selector 文档 Minor 移交 T16，现已修正文案（见末节），完整回归覆盖事实保留。
 - T13 A→B→A按批准id+URL规则允许旧A晚覆盖同URL结果；M35只证明B不能被A覆盖，不虚构generation保证。
 - T15不为降噪操作现有容器、不重写旧raw、不新增依赖；正常源码最终门禁与历史变异是两类证据。
 
@@ -256,3 +256,9 @@ Task15在 `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` 对既有原始证据逐项
 |---|---|---|
 | queries/issue_ports.sql | `af8a9d493d2c3f2fbd7b10064593c3f678b4421314bd524eddf7998272785224` | `d0f0018389b91ca79f26a8dcb2f6dc7430298c34d4b731558089e686b854e0d7` |
 | gen/issue_ports.sql.go | `ff7c2c33866ac8fea7406dec1182dccd073e17f2167ece80029e601f5de98457` | `5893b7f41d7599a0c86a88749382d54af7893ece26741cefc65cb337bc13ea6e` |
+
+## T16 派生命令修正与当前兼容边界
+
+M35/M36/M37的最终red/restored原始argv逐项完全相同，均1顶层/2RUN；三行现为“恢复绿同命令”。T15原始raw及原派生索引不变；旧脚本/矩阵/manifest已按SHA封存于`E/task-16-evidence/t15-derived-frozen`。`audit_mutations.py`统一两侧argv数组（字符串经shlex.split），核历史恢复时读取冻结`d2a3cf26`的Git字节与T15原manifest；新`E/task-16-evidence/mutation-audit.json`另列当前SHA/是否一致。writer只更新派生命令行，保留T15锁反例及本补记，避免重建初稿丢失后续证据。
+
+本轮重核21项、18目标、146原始证据文件：历史恢复与冻结源全部一致；当前18目标中仅S1 crawler.go因声明解码调用而变化，另外17个仍一致。历史6项crawler变异仍是T9当时性质证明，不冒称在T16源码重新执行；T16完整crawler回归及准确新提交七门禁另证当前正常组合。新增声明/UTF8回归先红后绿，默认解码/忽略meta两项局部生产反例各有原字节恢复绿，详见整体审核与Task16台账。T8/T11旧selector文案也已修正，原完整回归与原零匹配事实保留。
