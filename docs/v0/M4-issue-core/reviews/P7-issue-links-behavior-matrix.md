@@ -3,7 +3,7 @@
 ## 证据版本与读法
 
 - Task15 BASE：`7b44d2ef7db03ab922b7a289fabdfe509951bb7d`；本矩阵逐项核对该提交的实际源码、测试和 T1–T14 原始记录。
-- 下表每一行的最终执行版本均继承本节的 **tested HEAD**；初稿时最终门禁尚未运行，不能把历史绿当作本次执行。最终实测结果见文末。
+- 下表每一行的最终正常源码执行版本均为 **tested HEAD `6e28cc1637e99afc754d3af57a583d45e57831c8`**，tree=`fddd6b9d7764aabbcf6f3696ee4ffcc45cd47620`；2026-10-27本地七门禁实测全绿。历史变异/race另标历史版本，不冒称最终HEAD重新制造过红或跑过race。
 - 路径缩写：`I=server/internal/modules/issue`，`A=I/app`，`D=I/domain`，`H=I/adapter/http`，`P=I/adapter/postgres`，`C=I/adapter/crawler`，`B=server/internal/bootstrap`。测试名均为真实函数名；`E=.superpowers/sdd/P7-issue-links` 为 ignored 原始台账。
 - 权威定义：[spec §2.3–2.8](../specs/P7-issue-links.md)、[03 规则](../../claude_to_gpt/03-rules-and-pitfalls.md)。这里只归档 Task15 核验，不提前勾选 P7 阶段验收或代替 T16 deep-review。
 
@@ -85,4 +85,26 @@
 
 `issue_write_locks_test.go`保持原锁序、强度、无写与无workspace锁断言，只等待所有新seed及每次成功create201的精确生产crawl完成，并在每个全表锁窗口前断言pending crawl=0、auto-archive候选=0。当前矩阵没有URL更换，标题独改/删除不投任务；唯一issue异步写源是上述crawl；RunOnStart auto-archive仍运行但fixture没有archive_in=1..12的候选，identity cleanup不写issueTables。观察器仍只认holder，前提明确为窗口中只有目标请求写，未按SQL文本过滤、停worker或sleep。未来fixture新增URL改动/可归档项目必须同步其真实任务，否则前提断言失败。
 
-本次另对真实生产LockIssueProject查询删除FOR NO KEY UPDATE、生成后，原矩阵最窄createIssueLink选择实际红（先等issues、project无N锁）；query和生成物按原SHA逐字节恢复，同选择绿，说明fixture同步没有遮蔽真实请求锁序回归。最终测试源码完整矩阵1顶层/19RUN绿，准确新clean提交的七门禁将在独立 `E/checkpoint-t15-local-retry1` 运行。历史 T12 本地 `fdeadacf6d39340733d7e42f615229da3fdb6456` 七门禁通过，不作为本次结果。T12远端CI `40373692243`浏览器安装耗时16分36秒后成功、Build成功、E2E已开始，随后整job20分钟上限取消；不能写成远端全绿或E2E未开始。最终push/CI归主控T16处理。
+本次另对真实生产LockIssueProject查询删除FOR NO KEY UPDATE、生成后，原矩阵最窄createIssueLink选择实际红（先等issues、project无N锁）；query和生成物按原SHA逐字节恢复，同选择绿，说明fixture同步没有遮蔽真实请求锁序回归。最终测试源码完整矩阵1顶层/19RUN绿，随后准确新clean提交的七门禁在独立 `E/checkpoint-t15-local-retry1` 全部执行成功。历史 T12 本地 `fdeadacf6d39340733d7e42f615229da3fdb6456` 七门禁通过，不作为本次结果。T12远端CI `40373692243`浏览器安装耗时16分36秒后成功、Build成功、E2E已开始，随后整job20分钟上限取消；不能写成远端全绿或E2E未开始。最终push/CI归主控T16处理。
+
+
+### 本次最终七门禁（全部exit0）
+
+执行时间2026-10-27 03:04:35–03:11:32（Asia/Shanghai），所有stage开始/结束HEAD、源码SHA与clean状态均一致。Go用 `GOFLAGS='-p=1 -v'`，其余 `GOFLAGS=-p=1`；cwd为本worktree。测试与容器串行，命令无 `-run/-skip/-short`。
+
+| 门禁 / 实际命令 | 实际结果 | raw stem / 秒 |
+|---|---|---|
+| `make test` | server+tools 51通过包、16个无测试包；1,751顶层/8,725总RUN，含3明确SKIP，0cache；bootstrap376/3934，issue完整HTTP包60/143（11.800秒），公开码双向守卫实际启用 | retry1/test；333.569 |
+| `make lint-go BIN_DIR=/Users/xiaoruan/project/nerve-project/bin` | server与tools两段各0 issues | retry1/lint-go；11.049 |
+| `make gen-check` | Go/sqlc、契约bundle、TS类型全部重新生成，git无差异；生成物已提交 | retry1/gen-check；3.695 |
+| `make lint-web` | 54/54任务，36cache；类型/lint/format与既有关键词等守卫通过；缓存数不当作测试数量 | retry1/lint-web；4.074 |
+| `make knip` | typegen后knip，配置hint也按error，0退出 | retry1/knip；2.100 |
+| `make test-web 'TURBO_QUIET=--output-logs=full --force'` | 138文件/1,165 Vitest +5 Node=1,170；18/18任务、0cache；四条既有React key提示 | retry1/test-web；15.355 |
+| `make e2e VERSION=0.0.0-local.p7.t15` | build 11/11任务（11cache），Go二进制真实重建；9 workers，153case/153attempt：Chromium151+Firefox2；0失败/flaky/skip，HTML机器报告同值 | retry1/e2e；46.784 |
+
+`retry1`完整路径为 `E/checkpoint-t15-local-retry1`；每stem都有原始`.stdout/.stderr`、精确命令/cwd/退出码/时间/HEAD/tree/源码稳定性与日志SHA的`.json`，`execution.log`末尾为ALL_LOCAL_GATES_PASSED。`source-manifest.json`关联准确源码；`E/task-15-evidence/gate-summary.json`、`package-run-counts.json`保留实际包/测试/browser统计，矩阵引用的49个顶层测试均在本次RUN输出实际出现。
+
+- 三个Go skip如实保留：`TestIssueListScale`要求NERVE_LIST_SCALE=1；`TestTheDeletionsAtTheScaleTarget`要求NERVE_MEASURE_SCALE；`TestFlatIssueListOrders/sub_issues_count`的huge count numeric probe跳过，bounded counts另有测试。未声称规模性能验收。
+- Go日志本轮三次Ryuk `Shell not found in container`，随后各ready且套件继续成功；Web四条React key提示保留，不改产品/Docker降噪。生成器stderr是正常bundle/类型输出，Turbo版本提示保留。T13日志记录Minor已关闭，T8/T11两条selector文档Minor仍归T16。
+- 旧E2E在开跑前归档79文件/1,440,353字节，新E2E归档79文件/1,453,856字节，分别为 `E/task-15-evidence/e2e-before` / `e2e-after`；每文件复制前后SHA一致，各有manifest。新HTML中机器报告另提取为 `playwright-report.json`，统计153且无errors。旧归档不倒推运行HEAD。
+- 最后提交仅补实测文档，**没有在最终文档HEAD另跑完整套件**。`tested-nondoc-manifest.json`记录tested HEAD全部3,639个非docs文件的SHA，最终逐项证明源码、测试、生成物与tested HEAD字节一致；相对Task BASE唯一非docs差异是上述已有锁测试。最终文档HEAD及证明见Task15报告，不用相同源码冒称新的执行。

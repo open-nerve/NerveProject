@@ -2,7 +2,7 @@
 
 ## 范围与可复核性
 
-Task15在 `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` 对既有原始证据逐项取证，选取 **21项不同实际生产补丁**，跨地址、网络、权限、锁、事务、guard、注册七类。没有重新执行历史变异，也没有把同一补丁的重复故事执行另算一类。每项历史真实红exit=1、恢复绿exit=0；T15最终正常源码全门禁见[行为矩阵](P7-issue-links-behavior-matrix.md)。
+Task15在 `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` 对既有原始证据逐项取证，选取 **21项不同实际生产补丁**，跨地址、网络、权限、锁、事务、guard、注册七类。没有重新执行历史变异，也没有把同一补丁的重复故事执行另算一类。每项历史真实红exit=1、恢复绿exit=0；T15最终正常源码在tested HEAD `6e28cc1637e99afc754d3af57a583d45e57831c8` 七门禁全绿，实测与源码兼容证明见[行为矩阵](P7-issue-links-behavior-matrix.md)。
 
 原始证据根 `E=.superpowers/sdd/P7-issue-links`（ignored）。`E/task-15-evidence/mutation-audit.json` 保存完整red/green argv、cwd、RUN计数、每次原始日志/元数据/补丁SHA256、原/变异/恢复/当前源码SHA。T15逐项读原始失败断言并核文件存在、exit与真实RUN，所有18个生产目标文件当前SHA均等于历史原/恢复SHA。下表不是最终HEAD上重新制造21次红。
 
