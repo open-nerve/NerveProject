@@ -248,7 +248,7 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 
 | 行为 | Plane | Nerve |
 |---|---|---|
-| 自动归档与系统执行者（M4/P6） | Celery 按项目设置异步处理，活动显示旧机器人名 | River `issue.auto_archive` 在 periodic 队列；每项目一个事务，锁下按完成/取消及 `archive_in × 30` 天的 `updated_at` 阈值归档；同戳动态和 `issue.archived` 事件的actor均为SQL NULL，失败回滚当项目 |
+| 自动归档与系统执行者（M4/P6） | Celery 按项目设置异步处理，活动显示旧机器人名 | River `issue.auto_archive` 在 periodic 队列；每项目一个事务，锁下按完成/取消及 `archive_in × 30` 天的 `updated_at` 阈值归档；动态行的 `actor_id` 为 SQL NULL，未持久化的 `issue.archived` 事件的 `ActorID` 为 nil；同戳发布，失败回滚当项目 |
 | 领域事件与任务投递（M4/P6） | Celery信号/任务按原项目逻辑分发 | 12种`issue.*`事件在业务写末尾同事务同步分发；只投递客户端将任务写入同一PG事务，提交留/回滚无；P6生产订阅为空，首个链接订阅者在P7 |
 | 列表的分组和排序（M4/P5） | 未知排序静默回退；组总数错误、关系数组只当前页、偏移分页 | 非法词422；各层total分别去重、数组完整、原筛选AND组格键续页；19排序与7/5/42字段矩阵、八快照和I3/I4均有真实证据 |
 | 已归档项目的工作项列表（M4/P5） | issue_objects返回空 | 显式项目列表照常读，archived=false/true分别经issue.read/issue.archive；项目写仍409。个人跨项目目录排除归档项目 |

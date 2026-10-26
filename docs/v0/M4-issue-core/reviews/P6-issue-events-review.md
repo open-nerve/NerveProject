@@ -88,10 +88,12 @@ T15 `make test` 是49个有测试包通过、16个无测试包；默认输出不
 
 手写发布点的完整性依据T15矩阵：15处`Publish`调用覆盖16个写用例/12种类型，包含各Change四槽nil/值、无事件例外；20项生产变异和三订阅者真实PG/River回滚见相邻矩阵。P6生产Subscribers仍为空集合，这是设计过渡，不能声称P7生产抓取已联通。没有新增HTTP operation、错误码、业务表、迁移或依赖。最终实现尚待一次内部整分支审查，若有修复会在本节追加真实差异。
 
+T16任务独评修复：plane-diff、v0设计和M1/P5输入交接曾把未持久化的自动归档事件 `ActorID` 写成 SQL NULL，或把事件与活动行一起归于 SQL 读回。现已分清：T10真实 SQL/组合读回证明 `issue_activities.actor_id` 为 SQL NULL；`shared.Event.ActorID` 是同步发布的内存值 nil，由事件组合断言核对，不存在事件表或事件 SQL 读回。本修复仅更正文案，不改变产品行为或既有运行证据。
+
 ## 6. 移交事项
 
 - P1a–P5 的 spec§5/review§6 所列事件、时钟、归档输入已分别落本期；接收方可从各输入页“处理结果（M4/P6）”到本 review §2/§5 核对真实证据。输入 handoff 顶部 `status: open` 保持不变，因为其余条目仍未完成。
-- [M1/P5](../handoffs/M1-P5-brand.md) 的服务端自动归档 actor 为真实 NULL；页面显示/收集箱创建者仍归 P15/M7。
+- [M1/P5](../handoffs/M1-P5-brand.md) 的服务端自动归档活动行 `actor_id` 为 SQL NULL，未持久化的事件 `ActorID` 为 nil；页面显示/收集箱创建者仍归 P15/M7。
 - [M2 closeout](../handoffs/M2-closeout.md) §3/6/13 的 `updated_at`、worker登记/事务投递、clock fixture已接；§1命令行只投递的原文在M4收尾转M5，当前CLI不构造jobs。
 - [M3 closeout](../handoffs/M3-closeout.md) §1两处期限已改，领域事件只覆盖issue写；`registrationRows` 对请求任务的`river_job`核对留P7，project/workspace删除订阅及任务留P9；§4 `archive_in` 两契约说明已生成。其他权限/页面/清理原落点不提前关。
 - P7：链接首个生产订阅者与请求投递；P9：删除任务、版本保留、物理清理；P15：I16页面重登录与NULL actor展示；M6/M7按真实表条件再扩归档。M4§14事件任务整条及总体§9.4仍开放，不创建M5–M8最终closeout。

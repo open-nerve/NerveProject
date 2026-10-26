@@ -27,4 +27,4 @@ M4 合并时：由系统代为创建或操作的工作项记在谁名下、界�
 
 ## 处理结果（M4/P6）
 
-自动归档动态与 `issue.archived` 事件的 `actor_id` 已由T10真实SQL/组合读回确认为NULL，非零UUID、项目作者或邮箱/名字伪造的系统账户；T15全门禁及变异复核见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)。前端站点名显示及系统代建收集箱工作项仍按P15/M7原落点办理，整体 `status: open`。
+T10 真实 SQL/组合读回确认自动归档动态行的 `actor_id` 为 SQL NULL；`issue.archived` 事件不持久化，其 `shared.Event.ActorID` 为 nil，由事件发布组合断言核对。两者都没有零UUID、项目作者或按邮箱/名字伪造的系统账户；T15全门禁及变异复核见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)。前端站点名显示及系统代建收集箱工作项仍按P15/M7原落点办理，整体 `status: open`。

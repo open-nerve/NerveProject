@@ -517,7 +517,7 @@ modules/issue/
 | 事件触发 | 通知分发、Webhook 投递、抓取链接的标题和图标（防 SSRF） |
 | 定时 | **自动归档**（每天）；物理删除软删除超过 60 天的数据；清理 7 天内未完成上传的文件；按保留期清理接口日志、Webhook 日志；每个工作项保留最新的 20 个描述版本（M4/P9 实现，P4 尚无保留任务）；清理过期会话 |
 
-M4/P6 已以锁定的 River 0.47.0 落地只投递客户端、`default`/`periodic` 两队列（默认 worker 10/2）和 `issue.auto_archive`（默认24小时，test为2秒）。每项目一个事务，锁下读策略、终态和业务时钟；业务时钟 `clock.offset` 只允许 test 非零，River 调度仍用真实时间。自动归档事件和动态的 actor 为 SQL NULL。P7抓取、P9清理/版本保留仍待实现；证据见 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md#2-验收标准逐条核对)。
+M4/P6 已以锁定的 River 0.47.0 落地只投递客户端、`default`/`periodic` 两队列（默认 worker 10/2）和 `issue.auto_archive`（默认24小时，test为2秒）。每项目一个事务，锁下读策略、终态和业务时钟；业务时钟 `clock.offset` 只允许 test 非零，River 调度仍用真实时间。自动归档动态行的 `actor_id` 为 SQL NULL；未持久化的事件值 `ActorID` 为 nil。P7抓取、P9清理/版本保留仍待实现；证据见 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md#2-验收标准逐条核对)。
 
 **文件存储**（`asset` 模块的存储端口）：
 - **两种实现**：
