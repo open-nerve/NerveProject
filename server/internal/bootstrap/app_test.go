@@ -4,18 +4,23 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
+	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
@@ -226,5 +231,53 @@ func TestNewAppLogsTheDatabaseTarget(t *testing.T) {
 	}
 	if !strings.Contains(out, `msg="database pool created" host=127.0.0.1 port=1 database=nowhere user=nobody`) {
 		t.Errorf("log output lacks the database target: %s", out)
+	}
+}
+
+// Leaving the crawl worker out must fail independently of the declared kinds.
+func TestNewAppCrawlJobCatalog(t *testing.T) {
+	if got := issue.EnqueuedKinds(); !slices.Equal(got, []string{"issue.crawl_link"}) {
+		t.Fatalf("enqueued kinds=%v; want issue.crawl_link", got)
+	}
+	pool, err := postgres.NewPool(t.Context(), config.DatabaseConfig{URL: unreachableDB, MaxConns: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	module := issue.New(issue.Deps{Pool: pool, AutoArchiveInterval: time.Hour})
+	definitions := module.Jobs()
+	var periodic int
+	for _, job := range definitions {
+		if job.Periodic != nil {
+			periodic++
+			if job.Periodic.Args.Kind() == "issue.crawl_link" {
+				t.Fatal("crawl must not have a periodic schedule")
+			}
+		}
+	}
+	if periodic != 1 {
+		t.Fatalf("periodic jobs=%d; want only automatic archival", periodic)
+	}
+	_, err = jobs.New(pool, jobs.Config{DefaultWorkers: 1, PeriodicWorkers: 1, Logger: slog.New(slog.DiscardHandler)}, definitions, []string{"issue.crawl_link"})
+	if err != nil {
+		t.Fatalf("module crawl worker registration: %v", err)
+	}
+}
+
+// Constructor failure must take the same bounded resource cleanup path as
+// failures of the other server components, before any network work starts.
+func TestNewAppOutboundFailureClosesPool(t *testing.T) {
+	var logs bytes.Buffer
+	cfg := testConfig(t, unreachableDB, false)
+	cfg.Outbound.AllowCIDRs = []string{"broken"}
+	a, err := newApp(t.Context(), cfg, slog.New(slog.NewTextHandler(&logs, nil)), sampleMigrations, testWebUI)
+	if a != nil {
+		defer a.close()
+	}
+	if a != nil || err == nil || errors.Unwrap(err) == nil || !strings.Contains(err.Error(), "outbound.allow_cidrs") {
+		t.Fatalf("newApp=%v err=%v; want wrapped outbound construction failure", a, err)
+	}
+	if !strings.Contains(logs.String(), "database pool created") || !strings.Contains(logs.String(), "database pool closed") {
+		t.Fatalf("failure did not close its pool: %s", logs.String())
 	}
 }

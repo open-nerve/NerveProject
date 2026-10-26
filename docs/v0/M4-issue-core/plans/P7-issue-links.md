@@ -175,6 +175,7 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 - [ ] 写`TestLinkMetadataGuard`：匹配活id/url写1，旧URL/已删/另ID写0，title/created_at/updated_at/updated_by/deleted_at以及activity/event均不变；数据库错误errors.Is原链；`TestCrawlLinkWorker`核args.Kind/default/MaxAttempts3、网络结果成功、DB失败返回error。
 - [ ] `go test -count=1 -p=1 ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres ./internal/modules/issue/adapter/river ./internal/bootstrap -run 'Test(LinkMetadataGuard|CrawlLinkWorker|.*Job|.*NewApp)'`先红，写一条带守卫UPDATE、app编排、worker/Register；接newOutbound→issue.New→Jobs，任一步构造失败close已有pool，CLI仍不构造网络/dispatcher/jobs。
+- 执行补充（cwd=`server`）：上述历史regex不匹配新增`TestCrawlLink`，须额外运行`go test -v -count=1 ./internal/modules/issue/app -run '^TestCrawlLink$'`。Task 10实际保留原聚焦命令并加`-v`观察红/绿（10个顶层、21个含子用例；app当次0匹配不算覆盖），另用这条补充命令观察app红/绿（1个顶层、7个含子用例）；未改写原selector或把改后命令当成已执行证据。
 - [ ] MaxAttempts在`CrawlLinkArgs.InsertOpts() river.InsertOpts`固定default/3，T11显式投递opts同值，单一常量`CrawlLinkMaxAttempts=3`避免漂移。新worker不读项目、不取项目锁，无metadata审计事件。
 - [ ] 变异M28去URL/deleted守卫或改updated_at、M29吞DB错误/漏Jobs登记；存储/worker/构造层红，恢复；`go test -count=1 ./internal/archtest`绿，G；提交`feat(M4/P7): 接入抓取任务和带条件的元数据写回`。
 
