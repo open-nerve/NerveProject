@@ -1,6 +1,6 @@
 # M4/P6 领域事件与自动归档评审记录
 
-日期：2026-10-26。状态：**T1–T16 实施并逐 Task 独评通过；内部整分支审查零新发现；分支 CI、外部终审待办**。分支 `codex/m4-p6`；基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`。配套：[spec](../specs/P6-issue-events.md)、[plan](../plans/P6-issue-events.md)。
+日期：2026-10-26。状态：**T1–T16 实施并逐 Task 独评通过；历史内部整分支审查零新发现；分支 CI 发现的时钟断言已局部修复，聚焦复审及修复 HEAD CI、外部终审待办**。分支 `codex/m4-p6`；基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`。配套：[spec](../specs/P6-issue-events.md)、[plan](../plans/P6-issue-events.md)。
 
 ## 1. 评审方式
 
@@ -30,6 +30,25 @@
 | T16 `d6f341d2`、修复`6995d523` | 关键词、链接、diff、必要架构静态核对见任务报告；初评的一处SQL NULL/事件nil措辞问题经聚焦复审确认修复 | 任务独评完成；整分支结果见§5，分支CI仍待push后核对 |
 
 T15 `make test` 是49个有测试包通过、16个无测试包；默认输出不列总测试用例数。`make lint-web` 54项成功，其中36缓存、18新执行；`make test-web` 18项成功，其中11缓存、7新执行；`make e2e` 是真实149/149（Chromium147、Firefox2）。七个被核文件的源码 SHA 与各全门禁执行时一致。20项生产变异中14项复用已核原始证据、6项T15新执行；没有以编译失败/INFRA充作业务检出。早期 testcontainers 可选 shell 探测日志、旧 Playwright `NO_COLOR`/`FORCE_COLOR` 警告照原样保留；T15报告末的 `14-color-environment` 在 `4a489125` 上同时移除两个变量后1/1、无警告，已闭环环境Minor，**不称全部历史输出 pristine**。
+
+### 2.1 分支 CI 后的 clock 生命周期断言修复
+
+首次分支 [CI 40291867930 / E2E job 121470998137](https://github.com/open-nerve/NerveProject/actions/runs/40291867930/job/121470998137) 在 `17b8a117dc084d2e8dc017b9f1dd68c0ccb79416` 的唯一失败是 `clock-lifecycle.spec.ts:39`：`startedAt=1793003729090` 大于 `birthtimeMs=1793003729089.3872`，其余148项通过（包括I16），不是W11失败。实际调用顺序一直是 `new Date → logFile → openSync → spawn → ready`。根因是测试把应用墙钟与文件系统创建时间当成严格执行顺序的共同标尺；Node明确指出stat时间精度依平台而异。现有日志不足以确定具体Linux内核、文件系统粒度或时钟校正机制，不能归因为已证实的浮点舍入或某一种FS行为。
+
+本地诊断在已存在的临时日志上先取真实Date再以 `openSync(..., "w")` 打开，确认birthtime仍是原创建时刻，旧oracle为false。它证明旧判据不健全，**不是macOS复现本次Linux触发机制**。修复只为测试fixture增加可选 `now?: () => Date`（默认真实 `new Date`），以已有logFile回调记录启动前边界；独立故事断言初代与advance代均为采样→logFile，并返回对应采样值。正常切换故事保留真实墙钟范围、进程exitCode、业务偏移、DB隔离与清理；I16和独立附件处理原样保留。没有epsilon、取整、sleep、跳过或新测试框架。
+
+验证原始证据位于 ignored `.superpowers/sdd/P6-issue-events/ci-clock-fix-evidence/`，完整中文报告为同级 `ci-clock-fix-report.md`。所有命令串行，移除NO_COLOR与FORCE_COLOR，使用既有浏览器缓存；每条JSON含精确argv、退出码、匹配、基线HEAD和源码SHA。
+
+| 证据 | 实际结果 |
+|---|---|
+| `01-birthtime-counterexample` | exit0；正确调用顺序下旧文件时间oracle为false，仅作诊断 |
+| `02-order-red` → `03-order-and-original-green` | 新故事先缺now事件明确断言红1/1、exit1；最小实现后新故事与原失败故事2/2、exit0 |
+| `04-after-ready-mutation` → `05-order-restored` | 真正把fixture采样移到await startNerve/ready后；收到`[log:0, now]`而期望`[now, log:0]`，1/1失败、exit1；逐字恢复后1/1、exit0，SHA一致 |
+| `06-clock-and-i16` | 7个clock生命周期故事与I16共8/8、exit0；I16保留跨写入任务与新任务的数据库微秒水位诊断 |
+| `07-types` / `08-lint` / `09-format` | @nerve/e2e类型、0-warning lint和110文件格式检查均exit0 |
+| `10-make-e2e` | 唯一一轮完整make e2e，150/150（Chromium148、Firefox2）、exit0；Playwright41.8秒，命令43.55秒。Web构建11/11缓存命中，E2E全为本次真实执行；无颜色警告 |
+
+此次只有两个E2E源码文件和spec/plan/review变更，Go/业务代码未变，沿用T15对应Go/race门禁证据而不伪称重跑。历史内部整分支审查范围与结论保留；当前修复由主控接续独立聚焦复审和修复后精确HEAD公开CI，不将本地150/150替代CI结果。
 
 ## 3. 执行中的决定
 
@@ -119,6 +138,6 @@ T16任务独评修复：plane-diff、v0设计和M1/P5输入交接曾把未持久
 
 ## 7. 已知限制与后续门
 
-当前经证据确认 T1–T16 实施及逐Task独评，T16一处文档措辞问题已由`6995d523`修复并经聚焦复审通过；内部整分支审查也已完成且零新发现。**尚未**完成push后精确HEAD分支CI与负责人外部终审。P5 main CI仅为基线。原始证据的早期SDK fallback、T2空匹配、T13缺完整末轮rawlog、旧颜色警告已在§2/§5分开标出，不改写为 pristine。
+当前经证据确认 T1–T16 实施及逐Task独评，T16一处文档措辞问题已由`6995d523`修复并经聚焦复审通过；内部整分支审查也已完成且零新发现。首轮分支CI已在 `17b8a117` 报告clock生命周期断言失败，局部修复与本地验证见§2.1；**尚未**完成修复后聚焦复审、精确HEAD分支CI与负责人外部终审。P5 main CI仅为基线。原始证据的早期SDK fallback、T2空匹配、T13缺完整末轮rawlog、旧颜色警告已在§2/§5分开标出，不改写为 pristine。
 
 交付时向负责人提供分支 `codex/m4-p6`、基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`、本 [spec](../specs/P6-issue-events.md)/[plan](../plans/P6-issue-events.md)/review 和精确 Git HEAD。最终push/CI的实际SHA由交付答复及Git记录给出，不为文档自证自身CI无限提交。本阶段先保留分支/worktree，不合并；`--no-ff`、精确main SHA CI、归档和清理仅在后续授权后进行。

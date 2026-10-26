@@ -160,6 +160,8 @@ River `issue.auto_archive` worker 只调用 Execute，错误交 River；周期�
 
 正常进程准备数据 → 完整停止 → 同库偏移进程；同库任何时刻只有一个 nerve。启动前记录真实 startedAt，finally 无论哪个步骤失败都停止自己进程、关闭自己连接并处理自己库；失败附件来自自己的库及两次进程日志。不可继承会误取 worker 库的自动快照 fixture，不影响其他测试/容器。
 
+CI修复追加：`createClockWorld` 接受可选 `now?: () => Date`，默认 `() => new Date()`；仅专用生命周期顺序用例注入哨兵时刻，正常故事和I16保持真实墙钟。以采样调用与现有 `logFile` 回调的事件顺序验证每代启动前采样，并核对返回同次采样值；不比较文件系统 `birthtime` 推断执行顺序，不放宽时间容差。
+
 ### 2.15 T14：I16 接口故事
 
 全部前置经 API：创建账户、无到期 PAT、工作区、archive_in=1 项目、旧 completed/cancelled 项与旧未完成状态对照；另 archive_in=2 项目保留旧项。启动偏移744h（31天）进程，再经 API 创建/更新“最近完成”对照；用 PAT 访问，不复用失效 JWT。

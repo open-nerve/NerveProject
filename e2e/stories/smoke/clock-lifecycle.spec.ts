@@ -34,9 +34,8 @@ base("clock world switches processes on its own database and advances business t
       logFile: (generation) => info.outputPath(`clock-${generation}.log`),
     });
     first = world.current.nerve;
-    const log = await stat(info.outputPath("clock-0.log"));
     expect(world.current.startedAt.getTime()).toBeGreaterThanOrEqual(beforeSpawn.getTime());
-    expect(world.current.startedAt.getTime()).toBeLessThanOrEqual(log.birthtimeMs);
+    expect(world.current.startedAt.getTime()).toBeLessThanOrEqual(Date.now());
     const firstEmail = `before-${databaseName(info, "user")}@example.com`;
     await register(world.current.api, firstEmail);
     const firstAt = await world.db.query<{ created_at: Date }>("SELECT created_at FROM users WHERE email=$1", [
@@ -49,10 +48,12 @@ base("clock world switches processes on its own database and advances business t
     expect(world.db.name).not.toBe(control.name);
 
     expect(first.exitCode).toBeNull();
+    const beforeAdvance = new Date();
     const second = await world.advance("24h");
     expect(first.exitCode).toBe(0);
     expect(second.nerve.exitCode).toBeNull();
-    expect(second.startedAt.getTime()).toBeLessThanOrEqual((await stat(info.outputPath("clock-1.log"))).birthtimeMs);
+    expect(second.startedAt.getTime()).toBeGreaterThanOrEqual(beforeAdvance.getTime());
+    expect(second.startedAt.getTime()).toBeLessThanOrEqual(Date.now());
     const secondEmail = `after-${databaseName(info, "user")}@example.com`;
     await register(second.api, secondEmail);
     const secondAt = await world.db.query<{ created_at: Date }>("SELECT created_at FROM users WHERE email=$1", [
@@ -85,6 +86,34 @@ base("clock world switches processes on its own database and advances business t
         }
       }
     }
+  }
+});
+
+// oxlint-disable-next-line no-empty-pattern -- Playwright supplies testInfo after its fixture arguments
+base("clock world samples startedAt before each process start boundary", async ({}, info) => {
+  const events: string[] = [];
+  const samples = [new Date("2020-01-01T00:00:00Z"), new Date("2021-01-01T00:00:00Z")];
+  let nextSample = 0;
+  const world = await createClockWorld({
+    databaseName: databaseName(info, "order"),
+    now: () => {
+      events.push("now");
+      return samples[nextSample++]!;
+    },
+    logFile: (generation) => {
+      // startNerve opens the log and spawns only after this callback returns.
+      events.push(`log:${generation}`);
+      return info.outputPath(`order-${generation}.log`);
+    },
+  });
+  try {
+    expect(events).toEqual(["now", "log:0"]);
+    expect(world.current.startedAt).toBe(samples[0]);
+    const second = await world.advance("24h");
+    expect(events).toEqual(["now", "log:0", "now", "log:1"]);
+    expect(second.startedAt).toBe(samples[1]);
+  } finally {
+    await world.close();
   }
 });
 

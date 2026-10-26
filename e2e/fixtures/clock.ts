@@ -20,9 +20,12 @@ export interface ClockWorld {
 export async function createClockWorld(options: {
   databaseName: string;
   logFile: (generation: number) => string;
+  /** Defaults to the real wall clock; injectable to observe startup ordering. */
+  now?: () => Date;
 }): Promise<ClockWorld> {
   await createDatabase(options.databaseName, templateDatabase);
   const db = openDatabase(options.databaseName);
+  const now = options.now ?? (() => new Date());
   let generation = 0;
   let current: ClockRun | undefined;
   let closed = false;
@@ -39,7 +42,7 @@ export async function createClockWorld(options: {
   }
 
   async function start(offset?: string): Promise<ClockRun> {
-    const startedAt = new Date();
+    const startedAt = now();
     const nerve = await startNerve(
       db.url,
       options.logFile(generation++),

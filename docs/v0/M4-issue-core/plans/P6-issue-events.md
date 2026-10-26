@@ -157,11 +157,12 @@ type ClockWorld = {
 async function createClockWorld(options: {
   databaseName: string;
   logFile: (generation: number) => string;
+  now?: () => Date; // 默认new Date，仅供生命周期测试观察采样顺序
 }): Promise<ClockWorld>;
 // test.ts 导出由Playwright原始base扩展的clockTest；不继承普通test的自动db快照。
 ```
 
-fixture独立建库/连接/进程，advance先await旧进程stop再启动；startedAt在spawn前取真实Date。失败快照/日志/最终关闭由clockTest统一拥有，底层启动失败也清理已获得资源。数据准备仅API；SQL只断言。生命周期验证沿已有Playwright，不引入node:test的TS加载链或新runner；T14真正消费fixture。
+fixture独立建库/连接/进程，advance先await旧进程stop再启动；startedAt在spawn前取真实Date。失败快照/日志/最终关闭由clockTest统一拥有，底层启动失败也清理已获得资源。数据准备仅API；SQL只断言。生命周期验证沿已有Playwright，不引入node:test的TS加载链或新runner；T14真正消费fixture。 CI修复追加：专用顺序故事注入now并通过既有logFile边界核对每代采样早于启动、返回采样值；正常故事与I16仍走默认真实墙钟。文件birthtime不作顺序oracle，ready后采样的真实变异必须断言红并恢复。
 
 ## 共用实施收口 G
 
