@@ -72,6 +72,9 @@ func (c Config) validate() error {
 	if c.Database.CommitTimeout <= 0 {
 		fail("database.commit_timeout", "must be positive, got %s", c.Database.CommitTimeout)
 	}
+	if c.Env != EnvTest && c.Clock.Offset != 0 {
+		fail("clock.offset", "must be zero outside test, got %s", c.Clock.Offset)
+	}
 	c.Auth.validate(c.Env, fail)
 	switch {
 	case c.Auth.RefreshDeadline <= 0:

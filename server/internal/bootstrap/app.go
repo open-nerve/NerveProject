@@ -22,7 +22,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
-	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
@@ -95,6 +94,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	// time.Now, not the Clock: the monotonic reading keeps a step of the wall
 	// clock from filling or draining the buckets.
 	limiter := ratelimit.New(time.Now)
+	businessClock := newClock(cfg)
 	tx := postgres.NewTxManager(pool, cfg.Database.CommitTimeout)
 
 	// The modules in two steps (M3 design 6.6): first the adapters each
@@ -122,7 +122,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		Events: events,
 		Pool:   pool, Tx: newIssueTx(pool, cfg),
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
-		WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: clock.System{}, Authorizer: authorizer,
+		WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: businessClock, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:    issueMembers{members: workspacePorts.WorkspaceMemberDirectory},
@@ -130,14 +130,14 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
-		Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: authorizer,
+		Pool: pool, Tx: tx, Clock: businessClock, Authorizer: authorizer,
 		Workspaces:   projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:      workspacePorts.WorkspaceMembers,
 		Issues:       issuePorts.IssueCascade,
 		ListSettings: projectListSettings{settings: issuePorts.ListSettings},
 	})
 	ws := workspace.New(workspace.Deps{
-		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,
+		Pool: pool, Tx: tx, Clock: businessClock, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles:        workspaceProfiles{profiles: identityPorts.PublicProfiles},
 		InvitationMAC:   invitations,
@@ -148,7 +148,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	ident, err := identity.New(identity.Deps{
 		Pool:            pool,
 		Tx:              tx,
-		Clock:           clock.System{},
+		Clock:           businessClock,
 		Logger:          logger,
 		SignupPolicy:    signupPolicy{enabled: cfg.Auth.SignupEnabled, invitations: ws.SignupInvitations()},
 		Memberships:     ws.Deactivator(),
@@ -180,7 +180,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		SignupEnabled:            cfg.Auth.SignupEnabled,
 		WorkspaceCreationEnabled: cfg.Workspace.CreationEnabled,
 		FileSizeLimit:            cfg.Files.SizeLimit,
-		Clock:                    clock.System{},
+		Clock:                    businessClock,
 	})
 	if err != nil {
 		a.close()

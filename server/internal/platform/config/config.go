@@ -24,6 +24,7 @@ type Config struct {
 	Database  DatabaseConfig  `koanf:"database"`
 	Auth      AuthConfig      `koanf:"auth"`
 	RateLimit RateLimitConfig `koanf:"ratelimit"`
+	Clock     ClockConfig     `koanf:"clock"`
 	Jobs      JobsConfig      `koanf:"jobs"`
 	Workspace WorkspaceConfig `koanf:"workspace"`
 	Issue     IssueConfig     `koanf:"issue"`
@@ -130,6 +131,11 @@ func (b BucketConfig) LogValue() slog.Value {
 	return slog.GroupValue(slog.Int("per_minute", b.PerMinute), slog.Int("burst", b.Burst))
 }
 
+// ClockConfig shifts business time in the test profile only.
+type ClockConfig struct {
+	Offset time.Duration `koanf:"offset"`
+}
+
 // JobsConfig configures the background jobs (M2 design 3.15).
 type JobsConfig struct {
 	DefaultWorkers  int `koanf:"default_workers"`
@@ -233,6 +239,7 @@ func (c Config) LogValue() slog.Value {
 			slog.Any("register_ip", c.RateLimit.RegisterIP),
 			slog.Any("password_user", c.RateLimit.PasswordUser),
 		),
+		slog.Group("clock", slog.Duration("offset", c.Clock.Offset)),
 		slog.Group("jobs",
 			slog.Duration("shutdown_timeout", c.Jobs.ShutdownTimeout),
 			slog.Int("default_workers", c.Jobs.DefaultWorkers),

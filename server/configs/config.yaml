@@ -73,6 +73,10 @@ ratelimit:
   # 需要校验密码的已认证操作（M2 中是修改密码），按账户
   password_user: {per_minute: 5, burst: 5}
 
+# 业务时间偏移；仅 NERVE_ENV=test 允许非零，不影响 River 调度、限流或等待期限
+clock:
+  offset: 0s
+
 # 后台任务（River）
 jobs:
   # Concurrent jobs per queue; periodic housekeeping has its own capacity.
