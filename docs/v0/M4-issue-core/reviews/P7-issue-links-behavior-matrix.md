@@ -119,4 +119,4 @@
 | error公开nullable枚举 | apitest `TestIssueLinkMetadataError` 省略/null/两值接受、3非法值拒绝；正常生成Go/TS，HTTP适配 | 首次含null enum被authoring guard拒绝，修为单字段oneOf/ref；DB通用CHECK不改。完整crawler/apitest/HTTP/archtest 113顶层/394 RUN通过。 |
 | 422快照前同步got crawl | B `TestCreateIssueLinkAPI` 保持完整快照/真实worker；相关10顶层/49 RUN通过 | 原竞态为静态调度推导，未现场复现；没有造概率红、忽略metadata或停worker。 |
 
-以上 raw 与前后源码 SHA 在 `E/task-16-evidence`。T16 全部产品/生成改动将在新 clean 提交执行完整七门禁，实测结果另行回填；T15 原套件/21历史变异保留当时身份，当前源码兼容见变异矩阵末节。
+以上 raw 与前后源码 SHA 在 `E/task-16-evidence`。本轮 tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`（tree=`25f1520301bd2471ad4892d859b97256faff884c`）七门禁全部 exit0：Go 1753 顶层/8759 RUN、3 skip，强制 Web 1170 测试，E2E 153=151 Chromium+2 Firefox。 完整HTTP包双向码守卫实际执行，0 Go缓存、Web强制执行；T15 原套件/21历史变异保留当时身份，当前源码兼容见变异矩阵末节。

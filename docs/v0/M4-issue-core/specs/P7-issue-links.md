@@ -1,6 +1,6 @@
 # M4/P7 `issue-links`：链接、出站客户端与元数据抓取规格
 
-日期：2026-10-27。**T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复和正式文档已写，待本轮准确提交的完整本地门禁、独立定向复审及最终分支 HEAD CI；未合并 main。** 基线：P6 已集成的 `5005be985e7ec78727edc6f8fc5c05999b45cc65`，同一 SHA 的 main CI `40305247546` 重跑全绿。分支 `codex/m4-p7`，worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。预检、最窄 PG/sqlc 实验及 T4/T8/T12/T15 检查点按各自日期/源码保存，不作为本轮新执行。
+日期：2026-10-27。**T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复、正式文档和准确提交的完整本地七门禁已完成；独立定向复审及最终分支 HEAD CI 待主控核验；未合并 main。** 基线：P6 已集成的 `5005be985e7ec78727edc6f8fc5c05999b45cc65`，同一 SHA 的 main CI `40305247546` 重跑全绿。分支 `codex/m4-p7`，worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。预检、最窄 PG/sqlc 实验及 T4/T8/T12/T15 检查点按各自日期/源码保存，不作为本轮新执行。
 
 权威输入：[M4 设计](../M4-design.md) §2/I10/I17、3.4–3.6、3.11、3.13/17–19、3.19–3.20、3.23/P7、4.8、5.1–5.3、6.8、8.1/8.8、9.1–9.4、12/P7、13.1；[02](../../claude_to_gpt/02-method.md)、[03](../../claude_to_gpt/03-rules-and-pitfalls.md)；P6 spec §5/review §6 与本规格 §7。D3 事务内同步事件、架构问题 11.8 的平台出站与固定 IP、后台写回的单句守卫已批准，不重新裁定。
 
@@ -259,7 +259,7 @@ T15逐列活动/事件矩阵、至少15项代表性真实生产变异（地址/�
 - [x] 四操作的HTTP码双向覆盖、三写503及双语错误文案通过（T3–T5）。
 - [x] 全身份/隐藏404逐值相同、拒绝无锁无闸门、锁下重授权、归档优先/noop与回滚通过（T3–T5）。
 - [x] 三种link活动与三事件完整四槽、标题独改无动态/无重抓、审计同刻通过（T3–T5/T11）。
-- [x] IANA每prefix首尾/清单完整、全部DNS候选、嵌入IPv4、本机地址、blocked 0 dial通过（T6）。
+- [x] IANA每prefix首尾/清单完整、全部DNS候选、嵌入IPv4、本机地址、blocked 0 dial通过（T6/T7）。
 - [x] 固定IP/Host/SNI/证书、每跳重检、5跳、无代理/cookie/凭据、2s/5s和响应限额通过（T7）。
 - [x] test-only allow配置、解析失败拒绝、127.0.0.1/32各nerve一致，CLI不构造出站（T8/T10）。
 - [x] HTML标题/6类图标/dataURL/相对地址/1MiB与64KiB/5s总限、失败仅blocked/failed通过（T9）。
@@ -271,7 +271,8 @@ T15逐列活动/事件矩阵、至少15项代表性真实生产变异（地址/�
 - [x] 交错19、标题保持新metadata、删除/重建守卫、审计不变，race-count5无40P01（T13）。
 - [x] I10 API含169.254.169.254 blocked；I17/项目/工作区删除含link通过（T14）。
 - [x] T15发布/活动矩阵、21项历史生产变异/恢复及完整七门禁；原范围deep-review全文覆盖完成。
-- [ ] T16修复准确提交完整本地门禁、独立定向复审闭环（原范围不重复整支审查）。
+- [x] T16修复准确提交完整本地七门禁通过（tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`）。
+- [ ] T16独立定向复审闭环（原范围不重复整支审查）。
 - [ ] §3.23所有P7文档/差异/交接处理结果为真，阶段分支准确HEAD CI通过（T16/交付）。
 - [ ] 获授权后--no-ff合并，准确main SHA CI全绿，ignored证据归档校验后清理分支/worktree（阶段集成）。
 

@@ -1,6 +1,6 @@
 # M4/P7 链接、出站与抓取评审记录
 
-日期：2026-10-27。T1–T15实施及独立规格/质量评审完成；原范围单次deep-review完成，T16单次修复与正式文档已写。本轮完整本地门禁待准确初稿提交后执行；独立fix复审、最终新HEAD分支CI待主控据实回填，未合并main。分支`codex/m4-p7`，基线`5005be985e7ec78727edc6f8fc5c05999b45cc65`。配套：[spec](../specs/P7-issue-links.md)、[plan](../plans/P7-issue-links.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。
+日期：2026-10-27。T1–T15实施及独立规格/质量评审完成；原范围单次deep-review完成，T16单次修复与正式文档已写。本轮准确提交完整本地七门禁已通过；独立fix复审、最终新HEAD分支CI待主控据实回填，未合并main。分支`codex/m4-p7`，基线`5005be985e7ec78727edc6f8fc5c05999b45cc65`。配套：[spec](../specs/P7-issue-links.md)、[plan](../plans/P7-issue-links.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。
 
 ## 1. 评审方式
 
@@ -29,13 +29,13 @@
 | T13 | `a08777740f267ffcef45d0ee93c71a70de2d1b4c` | URL/title/delete真实worker交错/race；`E/task-13-report.md`、对应review/evidence |
 | T14 | `7b44d2ef7db03ab922b7a289fabdfe509951bb7d` | I10 API和带links删除目录；`E/task-14-report.md`、对应review/evidence |
 | T15 | `d2a3cf26df220f95ac8f656d9ff8f4eaa2997305` | 两矩阵/21历史生产变异/锁观察器修复/七门禁；`E/task-15-report.md`、对应review/evidence |
-| T16 | 本轮从`d2a3cf26`起，精确提交在整体审核/Task16报告记录 | charset/nullable enum/422 fixture、8项发现、正式文档；独立fix复审与最终分支CI尚待主控 |
+| T16 | 修复及tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`；docs-only回填提交见Task16报告 | charset/nullable enum/422 fixture、8项发现、正式文档；独立fix复审与最终分支CI尚待主控 |
 
 T4额外三个修复提交`ed205cad`/`a2211c8f`/`be3b8d4e`分别补活动回滚、完整迁移/历史FS边界及I15 link种子，不追记为T1/T3最初已覆盖。T7初稿`2a4a2196`后IDNA修复为表中`128de7b6`，只使用修复后的网络变异。T15初稿`958f2e95`完整Go失败后修正观察器fixture，tested为`6e28cc16`，最终`d2a3cf26`仅两矩阵文档、3639非docs字节相同；不是在d2另跑全套。
 
 T15准确本地七门禁：Go1751顶层/8725RUN（3已披露skip）、强制Web1170、E2E153=151Chromium+2Firefox；lint-go/gen-check/lint-web/knip全绿。T15准确d2 [CI40387396589](https://github.com/open-nerve/NerveProject/actions/runs/40387396589)由主控核公开原件全绿：server9m11、web3m45、e2e7m03，`E/checkpoint-t15/verified-success.json`保存摘要。T12的40373692243在浏览器安装16m36成功、Build成功、E2E已开始后触20分钟job上限取消，历史保留，不算全绿。
 
-T16局部真实红：charset原始非UTF8标题及href损坏；schema原任意error被错误接受。修复后charset25场景、schema省略/null/blocked/failed与3非法值、完整crawler/apitest/HTTP/archtest回归有raw。首次含null的enum被既有authoring guard拒绝，改为独立enum组件+单字段nullable oneOf/ref，生成物无`<nil>`常量；guard未弱化。C1按静态调度推导，未概率复现或伪造红；完整快照前只等待got的唯一crawl。最终本轮七门禁将按准确新HEAD另记，不复用T15SHA当新执行。
+T16局部真实红：charset原始非UTF8标题及href损坏；schema原任意error被错误接受。修复后charset25场景、schema省略/null/blocked/failed与3非法值、完整crawler/apitest/HTTP/archtest回归有raw。首次含null的enum被既有authoring guard拒绝，改为独立enum组件+单字段nullable oneOf/ref，生成物无`<nil>`常量；guard未弱化。C1按静态调度推导，未概率复现或伪造红；完整快照前只等待got的唯一crawl。本轮 tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`（tree=`25f1520301bd2471ad4892d859b97256faff884c`）七门禁全部 exit0：Go 1753 顶层/8759 RUN、3 skip，强制 Web 1170 测试，E2E 153=151 Chromium+2 Firefox。 原始门禁在 `E/checkpoint-t16-local`，汇总 `E/task-16-evidence/gate-summary.json`；不复用T15SHA当新执行。最终仅docs回填，3643个tracked非docs路径（含README及symlink文本）与tested字节一致，提交后另跑gen-check。
 
 ### 2.1 准备期长URL实验（历史）
 

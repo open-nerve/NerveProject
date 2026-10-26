@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **实施状态：** T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复和正式文档已写，待本轮准确提交的完整本地门禁、独立定向复审及最终分支 HEAD CI；未合并 main。
+> **实施状态：** T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复、正式文档和准确提交的完整本地七门禁已完成；独立定向复审及最终分支 HEAD CI 待主控核验；未合并 main。
 
 **目标：** 实现 M4 §12/P7 的链接CRUD、首个生产事务订阅者、抓取worker和防SSRF出站，交付I10接口与带links的I15/I17删除目录故事。
 
@@ -238,17 +238,19 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 ## Task 16：deep-review、正式记录和阶段交付
 
-**Files:** 本spec/plan/review三文档、两矩阵；M4-design §3.11/§4.8（hash exclusion局部物理修正）、§3.23/§15、v0-design §6.2/§8、plane-diff的issue_links12列/抓取差异、README安全；M2/M3 handoffs与P6 spec§5/review§6接收结果；整审报告`docs/reviews/re-NN-M4P7整体审核.md`按现存编号。
+**Files:** 本spec/plan/review三文档、两矩阵；M4-design §3.11/§4.8（hash exclusion局部物理修正）、§3.23/§15、v0-design §6.2/§8、plane-diff的issue_links12列/抓取差异、README安全；M2/M3 handoffs与P6 spec§5/review§6接收结果；整审报告`docs/reviews/re-05-M4P7整体审核.md`（保存前重核现存编号）；产品补I/adapter/crawler/charset.go及charset_test.go、API canonical/生成三端与HTTP links.go、apitest/issue_link_shapes_test.go、B/issue_links_test.go。
 **Interfaces:** 无新跨层产品接口；T16内部pageMetadata增加contentType，公开metadata.error用nullable enum生成并做HTTP类型转换；C1只在既有422完整快照前等待唯一got的crawl。每个结论引用真实提交/证据。
 
 - [x] 单次deep-review审准确`5005be985e7ec78727edc6f8fc5c05999b45cc65..d2a3cf26df220f95ac8f656d9ff8f4eaa2997305`，四组全文覆盖165文件/457chunks；5新Minor+3历史Minor进入同一次修复波次，0Critical/Major/Structural/Needs Decision。
-- [ ] 本波修复、完整本地门禁与fresh scoped独立复审闭环；不重新开整支审查。
+- [x] 本波局部修复与准确提交完整本地七门禁通过（tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`）。
+- [ ] fresh scoped独立复审闭环；不重新开整支审查。
 - [x] 写review七节（方式、逐项证据、局部决定、发现处理、最终与plan差异、移交、限制）；spec§4只勾真实完成项，Task实际签名/文件差异同步，不为“表面按plan”掩盖实现修正。
 - [x] 同步总体平台/安全说明、逐列差异与README网络边界/限额/公网任意端口/NAT和网卡变化需网络层覆盖；P7不改CSP，不写已存在页面。输入交接status保持open，追加本期结果与剩余P9/P14责任。
 - [x] M4§14只补P7子项真实证据，不把“事件和任务”整条或M4总体完成；v0§9.4仍进行中，不创建M5–M8最终closeout。
-- [ ] 文档链接/代码路径/签名/checkbox范围和`git diff --check`通过，提交`docs(M4/P7): 记录阶段终审与链接交付证据`；推分支准确HEAD并确认其CI，提供分支/基线/spec/plan/review/终审路径，先不合并。
+- [x] 文档链接/代码路径/签名/checkbox范围和`git diff --check`通过，记录阶段终审与本地交付证据；初稿fix提交后只回填docs，全部非docs字节保持tested一致。
+- [ ] 主控完成独立复审后推分支准确HEAD并确认其CI，提供分支/基线/spec/plan/review/终审路径，先不合并。
 - [ ] 后续得到授权才--no-ff合并、准确main SHA CI全绿、ignored原始证据归档验证、清理分支/worktree；不能用分支CI替代mainCI。
 
 ## 准备期自查与当前交付边界
 
-准备期16Task覆盖设计12粗项，5项Medium预检修订闭环；当时只有4列PG/sqlc最窄实验、验收未勾。随后T1–T15已按实际执行完成，上方勾选表示目标与归属证据完成，原建议命令/变异名称有差异的以执行补充和两矩阵为准，不能倒写历史。T16已完成原范围全文审查及局部修复/文档初稿；准确本轮完整门禁、定向独评、最终分支CI后才能完成交付门。main合并、mainCI与ignored证据归档清理必须另获授权。
+准备期16Task覆盖设计12粗项，5项Medium预检修订闭环；当时只有4列PG/sqlc最窄实验、验收未勾。随后T1–T15已按实际执行完成，上方勾选表示目标与归属证据完成，原建议命令/变异名称有差异的以执行补充和两矩阵为准，不能倒写历史。T16已完成原范围全文审查、局部修复/正式文档及准确本轮完整门禁；定向独评、最终分支CI后才能完成交付门。main合并、mainCI与ignored证据归档清理必须另获授权。
