@@ -159,7 +159,7 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 
 ## Task 9：页面和图标抓取适配器
 
-**Files:** 新I/app/crawl_ports.go；I/adapter/crawler/crawler.go、metadata.go、crawler_test.go、metadata_test.go、logging_test.go；使用已有x/net/html，不改go.mod。
+**Files:** 新I/app/crawl_ports.go；I/adapter/crawler/crawler.go、metadata.go；crawler_test.go、metadata_test.go、logging_test.go、deadline_test.go、fixture_test.go（按边界、解析、日志、期限及本地fixture分责）；使用已有x/net/html，不改go.mod。
 **Interfaces:** 产生`LinkCrawler.Crawl(ctx,string) domain.LinkMetadata`；`crawler.New(*outbound.Client,*slog.Logger)*Crawler`及同签名Crawl。以errors.Is分类，`outbound.Reason(err)`仅返回固定redirect_limit时写reason，禁止解析原error文本。不把outbound.Response或错误放入app/domain。
 
 - [ ] 写`TestCrawlerMetadata`：本地HTML `&amp;amp;`标题只解一次后`&amp;`，前后空白trim，256个Unicode截255；无title为空；按四rel优先级/同类首href/无候选favicon.ico；redirect最终页的相对href，成功metadata四键齐，url仍原任务URL，favicon_url成功最终URL。
