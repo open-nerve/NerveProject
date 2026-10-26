@@ -4,7 +4,7 @@ import { mkdir, readFile, stat } from "node:fs/promises";
 import { expect, test as base, type TestInfo } from "@playwright/test";
 
 import { register } from "../../fixtures/auth";
-import { createClockWorld } from "../../fixtures/clock";
+import { createClockWorld, type ClockWorld } from "../../fixtures/clock";
 import { createDatabase, openDatabase, templateDatabase } from "../../fixtures/db";
 import { applicationName, startNerve, type Nerve } from "../../fixtures/server";
 import { clockTest } from "../../fixtures/test";
@@ -146,6 +146,84 @@ base("invalid clock offset closes the process and assertion pool after advance f
     } finally {
       await world.close();
     }
+  }
+});
+
+// oxlint-disable-next-line no-empty-pattern -- Playwright supplies testInfo after its fixture arguments
+base("close during startup waits for the new process and then stops it", async ({}, info) => {
+  let world: ClockWorld | undefined;
+  let closeDuringStart: Promise<void> | undefined;
+  let late: Nerve | undefined;
+  world = await createClockWorld({
+    databaseName: databaseName(info, "closing"),
+    logFile: (generation) => {
+      if (generation === 1) {
+        // This callback runs before startNerve awaits readiness. The microtask
+        // closes the world while that process is still starting.
+        queueMicrotask(() => {
+          closeDuringStart = world!.close();
+        });
+      }
+      return info.outputPath(`closing-${generation}.log`);
+    },
+  });
+  const first = world.current.nerve;
+  try {
+    late = (await world.advance("1h")).nerve;
+    expect(closeDuringStart).toBeDefined();
+    await closeDuringStart;
+    await expect
+      .poll(async () =>
+        fetch(`${late!.baseURL}/readyz`).then(
+          (r) => r.status,
+          () => 0
+        )
+      )
+      .toBe(0);
+    await expect(world.db.query("SELECT 1")).rejects.toThrow();
+  } finally {
+    try {
+      await first.stop();
+    } finally {
+      try {
+        await late?.stop(); // owns a late return even if world.close loses it
+      } finally {
+        await world.close();
+      }
+    }
+  }
+});
+
+// oxlint-disable-next-line no-empty-pattern -- Playwright supplies testInfo after its fixture arguments
+base("concurrent advances leave only the last process running", async ({}, info) => {
+  const world = await createClockWorld({
+    databaseName: databaseName(info, "concurrent"),
+    logFile: (generation) => info.outputPath(`concurrent-${generation}.log`),
+  });
+  const started: Nerve[] = [];
+  try {
+    const first = world.advance("1h").then((run) => {
+      started.push(run.nerve);
+      return run;
+    });
+    const second = world.advance("2h").then((run) => {
+      started.push(run.nerve);
+      return run;
+    });
+    const [one, two] = await Promise.all([first, second]);
+    expect(world.current.nerve.baseURL).toBe(two.nerve.baseURL);
+    await expect
+      .poll(async () =>
+        fetch(`${one.nerve.baseURL}/readyz`).then(
+          (r) => r.status,
+          () => 0
+        )
+      )
+      .toBe(0);
+    expect((await fetch(`${two.nerve.baseURL}/readyz`)).status).toBe(200);
+  } finally {
+    await Promise.allSettled(started.map((nerve) => nerve.stop()));
+    await world.close();
   }
 });
 

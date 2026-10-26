@@ -26,6 +26,17 @@ export async function createClockWorld(options: {
   let generation = 0;
   let current: ClockRun | undefined;
   let closed = false;
+  let closing = false;
+  let previous: Promise<void> = Promise.resolve();
+
+  function serialize<T>(operation: () => Promise<T>): Promise<T> {
+    const result = previous.then(operation);
+    previous = result.then(
+      () => undefined,
+      () => undefined
+    );
+    return result;
+  }
 
   async function start(offset?: string): Promise<ClockRun> {
     const startedAt = new Date();
@@ -37,7 +48,7 @@ export async function createClockWorld(options: {
     return { nerve, api: createApi(nerve.baseURL), startedAt };
   }
 
-  async function close(): Promise<void> {
+  async function dispose(): Promise<void> {
     if (closed) return;
     closed = true;
     const active = current;
@@ -47,6 +58,11 @@ export async function createClockWorld(options: {
     } finally {
       await db.close();
     }
+  }
+
+  function close(): Promise<void> {
+    closing = true;
+    return serialize(dispose);
   }
 
   async function fail(error: unknown): Promise<never> {
@@ -59,7 +75,7 @@ export async function createClockWorld(options: {
       errors.push(dumpError);
     }
     try {
-      await close();
+      await dispose();
     } catch (closeError) {
       errors.push(closeError);
     }
@@ -78,17 +94,19 @@ export async function createClockWorld(options: {
       if (!current) throw new Error("clock world is closed");
       return current;
     },
-    async advance(offset) {
-      if (closed || !current) throw new Error("clock world is closed");
-      try {
-        await current.nerve.stop();
-        current = undefined;
-        current = await start(offset);
-        return current;
-      } catch (error) {
-        return fail(error);
-      }
-    },
+    advance: (offset) =>
+      serialize(async () => {
+        if (closing || closed || !current) throw new Error("clock world is closed");
+        try {
+          await current.nerve.stop();
+          current = undefined;
+          if (closing) throw new Error("clock world is closing");
+          current = await start(offset);
+          return current;
+        } catch (error) {
+          return fail(error);
+        }
+      }),
     close,
   };
 }
