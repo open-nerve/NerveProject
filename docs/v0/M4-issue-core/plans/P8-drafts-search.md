@@ -122,7 +122,7 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 
 ## Task 7：交错16/17、锁形状与授权变化
 
-**Files：** 新B/issue_draft_interleaving_test.go、issue_draft_lock_shapes_test.go；扩B/issue_write_locks_test.go、gate_test.go、project_write_locks_test.go；I/app/lock_draft.go仅修已证根因。ignored锁图/阻塞证据。
+**Files：** 新B/issue_draft_interleaving_test.go、issue_draft_lock_shapes_test.go；将请求PID/有界等待、写资源边界、W/P/D终态小帮助分别拆入issue_draft_wait_test.go、issue_draft_resources_test.go、issue_draft_terminal_test.go（每文件约400行内）；扩B/issue_draft_write_locks_test.go、issue_draft_publish_locks_test.go的请求归属探针及issue_writes_test.go的既有route wiring小帮助。复用issue_write_locks_test.go、gate_test.go、project_write_locks_test.go的完整目录/锁序/gate守卫而不改普通issue锁序；I/app/lock_draft.go仅修已证根因。ignored锁图/阻塞证据。
 
 **Interfaces：** 不新增产品接口。用现`pgtest.RowWaits/LockNotAvailable/heldTx/serializeOnTable`，记录请求连接PID、holderPID和pg_blocking_pids链；不用观察到worker等待就当作请求阻塞。
 

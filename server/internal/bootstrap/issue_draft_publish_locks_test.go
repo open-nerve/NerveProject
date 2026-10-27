@@ -23,14 +23,12 @@ func (row draftWriteLock) checkPublishLocks(t *testing.T, w issueWorld) {
 				tables, mode, wantTable = "states", "ACCESS EXCLUSIVE", "states"
 			}
 			held := lockedTables(t, w.pool, tables, mode)
-			req := newRequest(t, row.method, w.base+publishPath(d.ID), w.tokens["alice"], nil)
-			w.contract.CheckRequest(t, req)
-			pending := sendInBackground(req)
-			pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 10*time.Second)
-			if got := waitedTable(t, w.pool, held.Conn().PgConn()); got != wantTable {
-				t.Errorf("wait=%s want %s", got, wantTable)
-			}
-			if got := writtenTables(t, w.pool, held.Conn().PgConn()); len(got) != 0 {
+			tx := draftTx(w.pool)
+			var e exchange
+			collect := draftBackground(t, draftWrite(t, w, tx, &e, row.method, publishPath(d.ID), ""), func() { draftRelease(t, held) })
+			pid := draftPID(t, tx)
+			draftBlocked(t, w.pool, pid, held.Conn().PgConn().PID(), wantTable)
+			if got := draftWrittenTables(t, w.pool, pid); len(got) != 0 {
 				t.Errorf("wrote %v at %s", got, stage)
 			}
 			if stage != "workspace" {
@@ -48,15 +46,9 @@ func (row draftWriteLock) checkPublishLocks(t *testing.T, w issueWorld) {
 					t.Errorf("D=%s", got)
 				}
 			}
-			release(t, held)
-			answer := receiveWithin(t, pending, 10*time.Second, row.op)
-			if answer.err != nil {
-				t.Fatal(answer.err)
-			}
-			if answer.res.StatusCode != row.want {
-				t.Fatalf("publish=%d %s", answer.res.StatusCode, answer.body)
-			}
-			w.contract.CheckResponse(t, req, answer.res)
+			draftRelease(t, held)
+			collect()
+			w.answered(t, e, row.want)
 		})
 	}
 }

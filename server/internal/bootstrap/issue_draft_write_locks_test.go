@@ -3,11 +3,10 @@ package bootstrap
 import (
 	"slices"
 	"testing"
-	"time"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 // The three explicit directories share contract coverage, not lock semantics:
@@ -100,10 +99,12 @@ func (row draftWriteLock) checkCRUDLocks(t *testing.T, w issueWorld) {
 						tables, mode = "draft_issues", "SHARE"
 					}
 					held := lockedTables(t, w.pool, tables, mode)
-					req := newRequest(t, row.method, w.base+path, w.tokens["alice"], []byte(body))
-					w.contract.CheckRequest(t, req)
-					pending := sendInBackground(req)
-					pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 10*time.Second)
+					tx := draftTx(w.pool)
+					var e exchange
+					resources := &collaborationWriteResources{}
+					route := newIssueRouteWithGate(t, w.pool, tx, clock.System{}, discardIssueEvents{}, resources)
+					collect := draftBackground(t, w.sending(&e, route, "alice", row.method, path, body), func() { draftRelease(t, held) })
+					pid := draftPID(t, tx)
 					wantTable := "workspaces"
 					if stage == "project" {
 						wantTable = "projects"
@@ -111,11 +112,9 @@ func (row draftWriteLock) checkCRUDLocks(t *testing.T, w issueWorld) {
 					if stage == "draft" {
 						wantTable = "draft_issues"
 					}
-					if got := waitedTable(t, w.pool, held.Conn().PgConn()); got != wantTable {
-						t.Errorf("%s waits at %s, want %s", row.op, got, wantTable)
-					}
-					if got := writtenTables(t, w.pool, held.Conn().PgConn()); len(got) != 0 {
-						t.Errorf("%s already wrote %v at %s", row.op, got, stage)
+					draftBlocked(t, w.pool, pid, held.Conn().PgConn().PID(), wantTable)
+					if got := draftWrittenTables(t, w.pool, pid); len(got) != 0 {
+						t.Errorf("%s wrote %v at %s", row.op, got, stage)
 					}
 					if stage != "workspace" {
 						if got := lockOn(t, w.pool, "workspaces WHERE id=$1", w.acme); got != row.workspace {
@@ -136,15 +135,12 @@ func (row draftWriteLock) checkCRUDLocks(t *testing.T, w issueWorld) {
 							}
 						}
 					}
-					release(t, held)
-					a := receiveWithin(t, pending, 10*time.Second, row.op)
-					if a.err != nil {
-						t.Fatal(a.err)
+					draftRelease(t, held)
+					collect()
+					w.answered(t, e, row.want)
+					if resources.gates != 0 {
+						t.Fatal("ordinary draft CRUD entered issue gate", resources.gates)
 					}
-					if a.res.StatusCode != row.want {
-						t.Fatalf("%s = %d %s want %d", row.op, a.res.StatusCode, a.body, row.want)
-					}
-					w.contract.CheckResponse(t, req, a.res)
 				})
 			}
 		})
