@@ -161,6 +161,7 @@ type (
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
+	Purger                  *app.Purger
 	ArchivePolicies         ArchivePolicies
 	ProjectAccess           ProjectAccess
 	ProjectMembershipCounts ProjectMembershipCounts
@@ -170,7 +171,17 @@ type Provided struct {
 // Provide builds project's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
-	return Provided{ArchivePolicies: store, ProjectAccess: store, ProjectMembershipCounts: store, IssueProjects: store}
+	return Provided{
+		Purger: app.NewPurger([]app.PurgeStep{
+			{Table: "project_user_properties", Delete: store.PurgeProjectUserProperties},
+			{Table: "project_members", Delete: store.PurgeProjectMembers},
+			{Table: "labels", Delete: store.PurgeLabels},
+			{Table: "states", Delete: store.PurgeStates},
+			{Table: "projects", Delete: store.PurgeProjects},
+		}),
+		ArchivePolicies: store, ProjectAccess: store,
+		ProjectMembershipCounts: store, IssueProjects: store,
+	}
 }
 
 // Workspace is a workspace as the WorkspaceDirectory port hands it over:

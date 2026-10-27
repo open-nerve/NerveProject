@@ -70,6 +70,7 @@ type DirectoryEntry = app.DirectoryEntry
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
+	Purger                   *app.Purger
 	WorkspaceRoles           WorkspaceRoles
 	WorkspaceDirectory       WorkspaceDirectory
 	WorkspaceMembers         WorkspaceMembers
@@ -79,7 +80,17 @@ type Provided struct {
 // Provide builds workspace's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
 	directory := postgresadapter.NewDirectory(pool)
-	return Provided{WorkspaceRoles: postgresadapter.New(pool), WorkspaceDirectory: directory, WorkspaceMembers: directory, WorkspaceMemberDirectory: directory}
+	store := postgresadapter.New(pool)
+	return Provided{
+		Purger: app.NewPurger([]app.PurgeStep{
+			{Table: "workspace_user_properties", Delete: store.PurgeWorkspaceUserProperties},
+			{Table: "workspace_member_invites", Delete: store.PurgeWorkspaceMemberInvites},
+			{Table: "workspace_members", Delete: store.PurgeWorkspaceMembers},
+			{Table: "workspaces", Delete: store.PurgeWorkspaces},
+		}),
+		WorkspaceRoles: store, WorkspaceDirectory: directory,
+		WorkspaceMembers: directory, WorkspaceMemberDirectory: directory,
+	}
 }
 
 // AccountState is the account state the Accounts port hands over: bootstrap
