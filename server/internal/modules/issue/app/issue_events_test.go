@@ -33,7 +33,7 @@ func (p *recordedEvents) Publish(ctx context.Context, e shared.Event) error {
 	return p.fail
 }
 func eventCreate(w *world, p shared.EventPublisher) *app.CreateIssue {
-	return app.NewCreateIssue(app.CreateIssueDeps{Events: p, Locks: w.locks, Issues: w.issues, Sequences: w.project, States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}, Sanitizer: descriptionSanitizer{}})
+	return app.NewCreateIssue(app.CreateIssueDeps{Locks: w.locks, Creation: app.NewIssueCreation(app.IssueCreationDeps{Events: p, Issues: w.issues, Sequences: w.project, States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}, Sanitizer: descriptionSanitizer{}})})
 }
 func eventUpdate(w *world, p shared.EventPublisher) *app.UpdateIssue {
 	return app.NewUpdateIssue(app.UpdateIssueDeps{Events: p, Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}, Sanitizer: descriptionSanitizer{}})

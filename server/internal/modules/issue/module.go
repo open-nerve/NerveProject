@@ -154,6 +154,10 @@ func New(d Deps) *Module {
 	sanitizer := content.NewSanitizer()
 	listing := app.NewListing(app.ListingDeps{Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
 	archive := app.ArchiveIssueDeps{Events: d.Events, Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
+	creation := app.NewIssueCreation(app.IssueCreationDeps{Events: d.Events,
+		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
+		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
+	})
 	return &Module{crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: crawler.New(d.Outbound, d.Logger), Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval, uc: httpadapter.UseCases{
 		ListDrafts:              app.NewListDrafts(app.ListDraftsDeps{ReadTx: d.ReadTx, Locks: draftLocks, Workspaces: d.Workspaces, Projects: d.Projects, Drafts: store}),
 		GetDraft:                app.NewGetDraft(app.GetDraftDeps{ReadTx: d.ReadTx, Locks: draftLocks}),
@@ -178,11 +182,8 @@ func New(d Deps) *Module {
 		DeleteIssueComment:      app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Clock: d.Clock}),
 		CreateIssueComment:      app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
 		ListIssueComments:       app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
-		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{Events: d.Events,
-			Locks: locks, Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
-			Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
-		}),
-		GetIssue: app.NewGetIssue(locks),
+		CreateIssue:             app.NewCreateIssue(app.CreateIssueDeps{Locks: locks, Creation: creation}),
+		GetIssue:                app.NewGetIssue(locks),
 		GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
 			Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store,
 		}),

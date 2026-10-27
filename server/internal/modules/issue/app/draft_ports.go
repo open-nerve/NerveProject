@@ -61,3 +61,9 @@ type DraftWriter interface {
 	UpdateDraft(context.Context, DraftWrite) (domain.Draft, error)
 	DeleteDraft(context.Context, DraftDeletion) error
 }
+
+// IssueCreatePayloadDecoder applies the create contract to a stored draft body.
+// The publishing use case performs domain validation after decoding.
+type IssueCreatePayloadDecoder interface {
+	DecodeCreatePayload([]byte) (domain.NewIssue, error)
+}

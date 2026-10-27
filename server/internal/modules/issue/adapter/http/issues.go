@@ -13,14 +13,7 @@ import (
 // the priority, the dates and the parent nil and the lists empty when not
 // given; a value given goes to the use case as it came, which checks it.
 func (h handler) CreateIssue(ctx context.Context, req gen.CreateIssueRequestObject) (gen.CreateIssueResponseObject, error) {
-	in := domain.NewIssue{DescriptionHTML: req.Body.DescriptionHTML, Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
-		StartDate: req.Body.StartDate, TargetDate: req.Body.TargetDate, ParentID: req.Body.ParentID}
-	if req.Body.AssigneeIds != nil {
-		in.AssigneeIDs = *req.Body.AssigneeIds
-	}
-	if req.Body.LabelIds != nil {
-		in.LabelIDs = *req.Body.LabelIds
-	}
+	in := newIssueInput(*req.Body)
 	i, err := h.uc.CreateIssue.Execute(ctx, req.ProjectID, in)
 	if err != nil {
 		return nil, err
