@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **状态：** 准备稿，独立静态预检待进行。当前授权仅 spec/plan 与预检，暂不实施；下列命令、测试、变异、性能与提交均为未来实施步骤，全部未完成。
+> **状态：** 准备与独立静态预检通过，2项局部文档遗漏已修订复审，见[预检记录](../reviews/P9-purge-review.md)。当前授权仅 spec/plan 与预检，暂不实施；下列命令、测试、变异、性能与提交均为未来实施步骤，全部未完成。
 
 **Goal：** 交付23表60天物理清理、活描述版本最新20保留、项目/工作区删除后的issue侧分批任务，并证明窗口、锁序、审计、重试和目标规模。
 
@@ -63,14 +63,15 @@ make e2e
 
 ## Task 1：索引、配置与PAT独立批清理
 
-**Files：** 新`server/migrations/sql/00030_identity_purge_indexes.sql`、`00031_workspace_purge_indexes.sql`、`00032_project_purge_indexes.sql`、`00033_issue_purge_indexes.sql`；改`server/sqlc.yaml`、`server/internal/platform/config/config.go`、validate.go、load_test.go、validate_test.go；新config/purge_test.go；改`server/configs/config.yaml`、config.test.yaml；新A/app/purge.go、purge_test.go、adapter/postgres/purge.go、purge_test.go、queries/purge.sql；改A/provide.go；生成四模块gen。预计500–900行。
+**Files：** 新`server/migrations/sql/00030_identity_purge_indexes.sql`、`00031_workspace_purge_indexes.sql`、`00032_project_purge_indexes.sql`、`00033_issue_purge_indexes.sql`；改`server/migrations/schema_test.go`、`server/migrations/project_schema_test.go`、`server/migrations/issue_schema_test.go`、`server/migrations/draft_schema_test.go`；改`server/sqlc.yaml`、`server/internal/platform/config/config.go`、validate.go、load_test.go、validate_test.go；新config/purge_test.go；改`server/configs/config.yaml`、config.test.yaml；新A/app/purge.go、purge_test.go、adapter/postgres/purge.go、purge_test.go、queries/purge.sql；改A/provide.go；生成四模块gen。预计500–900行。
 
 **Interfaces：** 产出spec§2.2本模块PurgeBatch/PurgeStep/Purger/NewPurger/Tables；adapter `PurgeAPITokens(context.Context,app.PurgeBatch)([]uuid.UUID,error)`；A.Provided.Purger具体值，Provide(pool)不变。产出§2.3六字段与校验。
 
 - [ ] **测试：** 新`TestPurgeConfiguration`钉默认1440h/24h/1000/24h/1000/45s、六环境变量、日志；interval=999ms、batch=0/2147483648、budget=0/MaxInt64拒绝，1s/1/2147483647可接受。新app`TestPurgerAdvancesOnlyCommittedBatches`记录步骤顺序/After、先成功2行后原错返回`count=2`且后续不调用；乱序返回ids仍取max，空结束、取消不新批。
 - [ ] **PG测试：** 新`TestAPITokenPurgeBatches`准备61d/59d/精确cutoff/活token及同账户其他行；batch=1只删61d。新`TestPurgeDoesNotJoinCallerTransaction`在外层Tx ctx调用后回滚，另连接仍见前批已删除；故障批不计、users/profiles/auth_sessions不变。断言核心：`deleted==oldCount && atCutoffExists && recentExists && liveExists && accountsUnchanged`。
-- [ ] **红：** `go -C server test -p=1 -count=1 ./internal/platform/config -run '^TestPurgeConfiguration$'`；随后app/PG分别`-run '^Test(PurgerAdvancesOnlyCommittedBatches|APITokenPurgeBatches|PurgeDoesNotJoinCallerTransaction)$'`，新增类型/SQL未有先红；记非零RUN。
-- [ ] **实现与绿：** 四迁移逐表索引与各自sqlc schema；PAT静态DELETE严格<、id键集，adapter直接gen.New(pool)单语句隐式事务。`make gen-go`，重复聚焦并`go -C server test -p=1 -count=1 ./migrations ./internal/archtest ./internal/platform/config ./internal/modules/identity/...`绿。
+- [ ] **既有schema守卫：** 四迁移加入后，`TestConstraintAndIndexNames`应先因23个新部分索引不在全量名单而红，`TestDraftSchema`应先因新draft indexdef不在wantIndexes而红；同Task分别更新schema_test.go主体名单、projectNames、issueNames及draft的精确indexdef（见spec§2.2），保持slices.Equal全量相等，不能改contains或排除新索引。T3的新TestPurgeIndexes仍保留。
+- [ ] **红：** `go -C server test -p=1 -count=1 ./internal/platform/config -run '^TestPurgeConfiguration$'`；随后app/PG分别`-run '^Test(PurgerAdvancesOnlyCommittedBatches|APITokenPurgeBatches|PurgeDoesNotJoinCallerTransaction)$'`，新增类型/SQL未有先红；四迁移加入但旧名单未更新时运行`go -C server test -p=1 -count=1 ./migrations -run '^Test(ConstraintAndIndexNames|DraftSchema)$'`取得精确名单红；各组记非零RUN。
+- [ ] **实现与绿：** 四迁移逐表索引与各自sqlc schema，23个索引与draft indexdef同步进入上述既有精确期望；PAT静态DELETE严格<、id键集，adapter直接gen.New(pool)单语句隐式事务。`make gen-go`，重复全部聚焦（明确含`go -C server test -p=1 -count=1 ./migrations -run '^Test(ConstraintAndIndexNames|DraftSchema)$'`）并`go -C server test -p=1 -count=1 ./migrations ./internal/archtest ./internal/platform/config ./internal/modules/identity/...`绿。
 - [ ] **变异/G：** M1 `<`→`<=`在PG精确cutoff红；M2改用s.queries(ctx)在外层回滚反例红；M3计入失败批/after取首id在app红。恢复绿，提交`feat(M4/P9): 建立清理索引配置并按独立批次回收令牌`。
 
 ## Task 2：project与workspace清理者
@@ -172,14 +173,15 @@ make e2e
 
 ## Task 10：工作区切换、CLI清理与全部W3异步点
 
-**Files：** 改W/app/delete_workspace.go、delete_workspace_test.go、ports.go、module.go；P/app/cascade.go、cascade_test.go、issue_ports.go、module.go及fake；I/app/cascade.go、cascade_test.go、delete_project_rows.go、adapter/postgres/delete_rows.go、queries/delete_rows.sql、module.go；B/users.go、workspace_deletion_test.go、workspace_deletion_catalog_test.go、issue_interleaving_relations_test.go；新B/issue_workspace_deletion_events_test.go；改`server/internal/archtest/composition_test.go`、`api/modules/workspace.yaml`、`e2e/fixtures/assert/workspace.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`；生成相关产物。预计750–1200行。
+**Files：** 改W/app/delete_workspace.go、delete_workspace_test.go、ports.go、module.go；P/app/cascade.go、cascade_test.go、issue_ports.go、module.go及fake；I/app/cascade.go、cascade_test.go、delete_project_rows.go、adapter/postgres/delete_rows.go、queries/delete_rows.sql、module.go；B/users.go、workspace_deletion_test.go、workspace_deletion_catalog_test.go、runtime_role_test.go、issue_interleaving_relations_test.go；新B/issue_workspace_deletion_events_test.go；改`server/internal/archtest/composition_test.go`、`api/modules/workspace.yaml`、`e2e/fixtures/assert/workspace.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`；生成相关产物。预计750–1200行。
 
 **Interfaces：** W.NewDeleteWorkspace增加Events（Clock之后、Logger之前）；P/W.Deps.Events；P.NewCascade去issues，CascadeDeps仅Pool；DeleteWorkspaceProjects(ctx,workspaceID,by,now)；I.NewCascade(StateLabelUses)。删除两个旧IssueCascade方法和旧直写project relation接口/SQL，最终关系只T7编排。
 
 - [ ] **测试：** 新`TestWorkspaceDeletionPublishesOnlyLockedProjects`造Old已删任务挂起、当前P/Q、无项目draft、另workspace；workspace事件Changes恰P/Q升序，任务P/Q各1+workspace_drafts1，Old既有task不替换，不逐P再发事件。零项目workspace仍1draft task；邀请同步撤销，失败subscriber整事务零变化。扩composition守卫Users不再到issue.Provide且不可达issue.New/InsertTx/jobs/dispatcher。
-- [ ] **红：** `go -C server test -p=1 -count=1 ./internal/bootstrap -run '^Test(WorkspaceDeletionPublishesOnlyLockedProjects|RelatingAcrossProjectsAndDeletingTheWorkspaceSerialize)$'`；`go -C server test -p=1 -count=1 ./internal/archtest -run '^TestCommandsComposeNoServerAndNoJobs$'`。
+- [ ] **既有runtime测试：** 迁移`TestRuntimeRoleDeletesDraftsInWorkspaceWithoutProjects`，DELETE 204后有限等待真实`issue.delete_rows`/scope=`workspace_drafts`任务completed，且args.id等于删掉的workspace、At/By等于该workspace请求戳；再核原两个草稿精确deleted_at/updated_at/updated_by_id和邻workspace草稿整行不变。App/worker仍由roles.serverURL的runtime角色实际执行，owner不直调清理；等待前不即时把NULL审计表达式Scan为bool，也不以宽松非空断言替代精确戳。
+- [ ] **红：** `go -C server test -p=1 -count=1 ./internal/bootstrap -run '^Test(WorkspaceDeletionPublishesOnlyLockedProjects|RelatingAcrossProjectsAndDeletingTheWorkspaceSerialize|RuntimeRoleDeletesDraftsInWorkspaceWithoutProjects)$'`；runtime分支先在切换后的未完成窗口/旧即时断言上记录红，再加入准确任务完成等待，不以偶然任务先完成当同步证明；`go -C server test -p=1 -count=1 ./internal/archtest -run '^TestCommandsComposeNoServerAndNoJobs$'`。
 - [ ] **实现：** 锁住项目集合保留在workspace用例，唯一clock值给cascade和event；原同步M3邀请/成员/偏好/项目仍在。删除过渡接口、SQL、批常量和CLI注入/import，StateInUse/DetachLabel保持；迁移workspace关系同步断言。所有调用点编译不留过渡空桩。
-- [ ] **E2E/绿：** 两helper只issue侧有限轮询；W3两处另改：Old DELETE后立即oldDraftAudit改取同步Old项目戳作为预期、最终轮询草稿；零项目workspace故事直接`Promise.all(tables.map(db.query))`的issue侧改有限轮询，M3侧仍立即断言。不能等Old job全完再删workspace。`make gen`后Go相关包回归，`make build VERSION=0.1.0-dev`，`NERVE_VERSION=0.1.0-dev pnpm -C e2e exec playwright test stories/project/p4-archive.spec.ts stories/workspace/w2-landing.spec.ts stories/workspace/w3-workspace-settings.spec.ts`；与Makefile实际默认值一致，不复用错误binary。
+- [ ] **E2E/绿：** 两helper只issue侧有限轮询；W3两处另改：Old DELETE后立即oldDraftAudit改取同步Old项目戳作为预期、最终轮询草稿；零项目workspace故事直接`Promise.all(tables.map(db.query))`的issue侧改有限轮询，M3侧仍立即断言。不能等Old job全完再删workspace。`make gen`后重复上述bootstrap红的完整选择器，并单独`go -C server test -p=1 -count=1 ./internal/bootstrap -run '^TestRuntimeRoleDeletesDraftsInWorkspaceWithoutProjects$'`确认非零RUN与原断言全绿，再Go相关包回归；`make build VERSION=0.1.0-dev`，`NERVE_VERSION=0.1.0-dev pnpm -C e2e exec playwright test stories/project/p4-archive.spec.ts stories/workspace/w2-landing.spec.ts stories/workspace/w3-workspace-settings.spec.ts`；与Makefile实际默认值一致，不复用错误binary。
 - [ ] **变异/G：** M27Changes事后全workspace扫描包含Old，M28漏workspace_drafts/project_id NULL，M29漏Old戳或零项目直接断言迁移；真实组合/W3红→恢复，提交`feat(M4/P9): 按本次项目投递工作区删除并移除同步过渡依赖`。
 
 ## Task 11：37操作完整窗口与空创建者

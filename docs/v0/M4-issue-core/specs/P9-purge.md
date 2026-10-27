@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M4/P9 `purge` |
 | 日期 | 2026-10-27 |
-| 状态 | 准备稿；独立静态预检待进行；未开始产品实施，以下验收均待执行 |
+| 状态 | 准备与独立静态预检通过；2项局部文档遗漏已修订复审；未开始产品实施，以下验收均待执行；见[预检记录](../reviews/P9-purge-review.md) |
 | 代码基线 | P8 的 main 合并 `6b9d08d4821f1423c7bb9795557727c206b7880f`；主控已核该准确 SHA 的 CI `40520609987` 三个 job 全绿，并完成 P8 证据归档、哈希复核及工作树/本远端分支清理 |
 | 分支 | `codex/m4-p9`；worktree `.codex/worktress/codex/m4-p9`；主目录 HEAD 保持 main |
 | 上级文档 | [M4 设计](../M4-design.md) §3.5–3.6、3.14、3.19–3.21、3.23、4.16、6.2–6.6、9.3、9.6、12/P9、13.1；[方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md) |
@@ -28,7 +28,7 @@
 
 | Task | 精确文件或同职责文件组 | 交付；预计手写差异行 |
 |---|---|---|
-| T1 | `server/migrations/sql/00030_identity_purge_indexes.sql`、`00031_workspace_purge_indexes.sql`、`00032_project_purge_indexes.sql`、`00033_issue_purge_indexes.sql`（新）；`server/sqlc.yaml`；`platform/config/{config,validate,load_test,validate_test}.go`、`purge_test.go`（新）；`server/configs/config.yaml`、`config.test.yaml`；A/app/purge.go、adapter/postgres/purge.go、queries/purge.sql 及测试（新）、provide.go | 23 索引、六配置、PAT 清理及独立批提交；500–900 |
+| T1 | `server/migrations/sql/00030_identity_purge_indexes.sql`、`00031_workspace_purge_indexes.sql`、`00032_project_purge_indexes.sql`、`00033_issue_purge_indexes.sql`（新）；`server/migrations/schema_test.go`、`project_schema_test.go`、`issue_schema_test.go`、`draft_schema_test.go`；`server/sqlc.yaml`；`platform/config/{config,validate,load_test,validate_test}.go`、`purge_test.go`（新）；`server/configs/config.yaml`、`config.test.yaml`；A/app/purge.go、adapter/postgres/purge.go、queries/purge.sql 及测试（新）、provide.go | 23 索引、既有精确全量名单同步、六配置、PAT 清理及独立批提交；500–900 |
 | T2 | P/W 的 app/purge.go、adapter/postgres/purge.go、queries/purge.sql 及测试（新）；P/W/module.go | M3 两模块子先父后清理；450–850 |
 | T3 | I/app/purge.go、adapter/postgres/purge.go、queries/purge.sql 及测试（新）、module.go；B/purge_catalog_test.go（新）；`server/migrations/purge_indexes_test.go`（新） | issue 13 表与完整入边目录、行为反例；700–1100 |
 | T4 | B/purge.go、purge_test.go、purge_integration_test.go（新）、app.go、all_periodic_jobs_test.go、business_clock_jobs_test.go、runtime_role_test.go | 单一聚合周期任务、真实运行角色与时钟；600–1000，检查点 F |
@@ -37,7 +37,7 @@
 | T7 | I/app/relation_deletions.go 及测试（新）、delete_issue.go、delete_project_rows.go、ports.go、lock_either.go、对应 fakes；I/adapter/postgres/relation_deletions.go、queries/relation_deletions.sql 及测试（新）、delete_issue.go与对应 SQL；P/module.go、adapter/postgres/issue_ports.go、queries/issue_ports.sql；B/ports.go、issue_relation_ownership_test.go（新）、issue_relation_locks_test.go | DeletedAt、先锁关系后判归属、候选进度独立于写入数；集中补两端项目存在性预检；800–1200 |
 | T8 | I/app/delete_project_rows.go、delete_rows.go、delete_rows_test.go、delete_rows_on_deletion.go 及测试（新）；I/adapter/postgres/deletion_remaining.go、queries/deletion_remaining.sql（新）；I/adapter/river/delete_rows.go、row_deletions.go 及测试（新）；I/module.go、module_jobs.go、module_events.go；P/W/module_events.go（新）；B/app.go、events_test.go、issue_link_jobs_test.go、request_jobs_test.go、issue_delete_jobs_test.go（新） | 预算编排、River 映射、订阅/声明/登记同时可启动；900–1300，F |
 | T9 | P/app/delete_project.go 及测试、module.go；B/project_deletion_test.go、issue_project_deletion_events_test.go（新）、issue_interleaving_relations_test.go、issue_interleaving_deletion_test.go、issue_draft_interleaving_test.go；`api/modules/project.yaml`；`e2e/fixtures/assert/project.ts` | 单项目原事务事件与 204 后窗口；同步迁移旧交错11/23的关系戳断言；400–800 |
-| T10 | W/app/delete_workspace.go 及测试、ports.go、module.go；P/app/cascade.go、issue_ports.go、module.go 及测试；I/app/cascade.go 及测试、module.go；B/users.go、workspace_deletion_test.go、workspace_deletion_catalog_test.go、issue_workspace_deletion_events_test.go（新）；`archtest/composition_test.go`；`api/modules/workspace.yaml`；`e2e/fixtures/assert/workspace.ts`、`stories/workspace/w3-workspace-settings.spec.ts` | 本次项目 Changes、删除两个过渡方法、CLI 去依赖、W3 旧戳；750–1200 |
+| T10 | W/app/delete_workspace.go 及测试、ports.go、module.go；P/app/cascade.go、issue_ports.go、module.go 及测试；I/app/cascade.go 及测试、module.go；B/users.go、workspace_deletion_test.go、workspace_deletion_catalog_test.go、runtime_role_test.go、issue_workspace_deletion_events_test.go（新）；`archtest/composition_test.go`；`api/modules/workspace.yaml`；`e2e/fixtures/assert/workspace.ts`、`stories/workspace/w3-workspace-settings.spec.ts` | 本次项目 Changes、删除两个过渡方法、CLI 去依赖、runtime角色草稿任务完成等待、W3 旧戳；750–1200 |
 | T11 | B/issue_deletion_window_test.go、issue_deletion_window_cases_test.go、issue_null_creator_test.go（新）；既有 permission_matrix/issue_write_locks/draft_lock_shapes/relations/list/search tests | 37-operation 完整窗口、游标/动态/空创建者、现有守卫；700–1200 |
 | T12 | B/issue_deletion_interleaving_test.go、issue_delete_job_lifecycle_test.go、job_state_observer_test.go（新）；既有 issue_interleaving_deletion/relations、issue_draft_interleaving tests；T6 late deletion test | 交错 24/25、既有 2/3/11/16/23、真实重试/snooze/耗尽/迟到；800–1300，F |
 | T13 | `e2e/stories/issue/i21-purge.spec.ts`（新）、`e2e/fixtures/auto-archive.ts`、`clock.ts`、`assert/project.ts`、`assert/workspace.ts`；P4/W2/W3、I16 故事 | I21 的新轮次水位与所有删除故事；400–800 |
@@ -57,6 +57,8 @@
 | project / 00032 | project_user_properties → project_members → labels → states → projects |
 | workspace / 00031 | workspace_user_properties → workspace_member_invites → workspace_members → workspaces |
 | identity / 00030 | api_tokens |
+
+T1随四迁移同步既有精确全量约束/索引期望：`schema_test.go` 的主体名单、`project_schema_test.go` 的 projectNames、`issue_schema_test.go` 的 issueNames加入23个部分索引（`iw`），`draft_schema_test.go` 的 wantIndexes加入 `CREATE INDEX draft_issues_deleted_at_idx ON public.draft_issues USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)`。`TestConstraintAndIndexNames`、`TestDraftSchema`在T1先因新迁移与旧名单不符而红，同Task补齐精确期望后绿；不能改成contains、排除新增索引或放宽全量相等。T3新增索引catalog测试仍保留，不代替这两项既有守卫。
 
 同一表自引用（issues.parent_id、labels.parent_id）仍由已有 CASCADE 处理；返回计数只统计本条 `DELETE RETURNING id` 的目标行，不把 FK 级联行重复计入。近期子行若所属父链已到物理清理期限，可被父 CASCADE 带走；“59 天留”对照的父链必须不具备清理资格。
 
@@ -265,6 +267,8 @@ P/W.Deps 增 Events。T10 删除 I.Cascade、P/app.IssueCascade 的 `DeleteProje
 
 P4/W2/W3 继续经既有 `furnishIssueRows(api,token,workspaceSlug,projectId,assigneeId,labelId):Promise<void>` 和 furnishWorkspace API 造齐当前13表；目录读取不改为手写豁免。expectProjectDeleted/expectWorkspaceDeleted 仅 issue 侧有限轮询，M3 同步行仍立即断言；每张表非空及整行审计、旧行/邻居不变都保留。
 
+T10同步迁移 B/runtime_role_test.go 的既有 `TestRuntimeRoleDeletesDraftsInWorkspaceWithoutProjects`：DELETE 204后先有限等待真实 `issue.delete_rows` 的 `workspace_drafts` 任务completed，准确核对args的workspace id、原workspace请求At/By，再保留原两个草稿的deleted_at/updated_at/updated_by_id精确断言和邻workspace草稿整行不变。App与worker继续使用实际runtime角色，owner连接只做既有fixture/只读断言，不改为管理员直调清理，也不把窗口中的NULL即时Scan为bool。T10红绿选择器明确命中该测试。
+
 W3 必须另改 Old DELETE 后立即读取 `oldDraftAudit()` 的点：从同步 project 行取得 Old请求的 At/By，记录草稿id并在最终有限轮询后逐行对照该请求戳；不得先等待 Old任务全完成才删除workspace。真实“任务未完成”由交错25的barrier钉住，页面故事不以调度恰好慢为证明。
 
 W3零项目workspace故事还有直接 `Promise.all(tables.map(db.query))` 核live=0/审计的目录断言，不经过两个expect helper；T10同样将其中issue侧改为有限轮询，M3侧保留即时断言，原count非空及精确At/By继续成立。
@@ -332,6 +336,6 @@ T16同步总体设计§5.5/6.7清理、§5.5/6.3异步边界、M3设计§3.6/13.
 
 ## 附录 A：准备与运行证据边界
 
-2026-10-27作者准备仅静态阅读设计、交接、P8结构与准确main源码；作者未跑产品/迁移/并发/性能测试、生成/容器/构建/安装，未做原型。主控已单独运行准备关键词与架构守卫（`node tools/keywords.mjs`为72规则/23例外零命中，`go -C server test -count=1 ./internal/archtest`通过；原件在P9 ignored `checks/preparation-{keywords,architecture}/`），这不是P9产品运行证据。当前没有P9性能数字、红绿/变异输出或预检通过结论。独立静态预检报告后续由主控接入，不由作者自称通过。
+2026-10-27作者准备仅静态阅读设计、交接、P8结构与准确main源码；作者未跑产品/迁移/并发/性能测试、生成/容器/构建/安装，未做原型。主控已单独运行准备关键词与架构守卫（`node tools/keywords.mjs`为72规则/23例外零命中，`go -C server test -count=1 ./internal/archtest`通过；原件在P9 ignored `checks/preparation-{keywords,architecture}/`），这不是P9产品运行证据。独立静态预检及2项局部修订复审已通过，准确冻结指纹、原始发现与证据见[阶段review](../reviews/P9-purge-review.md)及[deep-review报告](../../../reviews/re-08-M4P9预检审核.md)。当前没有P9性能数字、红绿或变异输出；全部产品验收仍待实施。
 
 实施期每Task保存准确SHA/dirty字节hash、argv/cwd、时间、原始输出、RUN/skip/exit、变异恢复hash和独评记录；F按plan列出的七项串行取得。T14附录需填写每表seed计数、每job完整args/运行次数/attempt/终态/耗时、两组读写探针全部样本与环境；T15汇总真实范围，不能只贴PASS摘要。
