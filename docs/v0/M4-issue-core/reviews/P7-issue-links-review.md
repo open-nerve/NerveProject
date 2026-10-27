@@ -1,6 +1,8 @@
 # M4/P7 链接、出站与抓取评审记录
 
-日期：2026-10-27。T1–T15实施及独立规格/质量评审完成；原范围单次deep-review完成，T16单次修复与正式文档已写。本轮准确提交完整本地七门禁已通过；独立fix复审已确认原8项全部 ADDRESSED；T7历史时态文案已纠正，本次纯文档增量确认及最终交付HEAD CI见主控最终记录，未合并main。分支`codex/m4-p7`，基线`5005be985e7ec78727edc6f8fc5c05999b45cc65`。配套：[spec](../specs/P7-issue-links.md)、[plan](../plans/P7-issue-links.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。
+**当前状态（2026-10-27）：P7 已完成。** 经负责人授权以 `--no-ff` 合并为 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 的 server/web/e2e 全绿；5,443 个证据文件归档校验后，本地/远端分支及 worktree 已清理。集成证据见 [P7 review](P7-issue-links-review.md) 的集成回执；M4 总体及后续交接仍开放。
+
+**交付前冻结记录：** 日期：2026-10-27。T1–T15实施及独立规格/质量评审完成；原范围单次deep-review完成，T16单次修复与正式文档已写。本轮准确提交完整本地七门禁已通过；独立fix复审已确认原8项全部 ADDRESSED；T7历史时态文案已纠正，本次纯文档增量确认及最终交付HEAD CI见主控最终记录，未合并main。分支`codex/m4-p7`，基线`5005be985e7ec78727edc6f8fc5c05999b45cc65`。配套：[spec](../specs/P7-issue-links.md)、[plan](../plans/P7-issue-links.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。
 
 ## 1. 评审方式
 
@@ -99,3 +101,13 @@ P8继续link_count/草稿/搜索；P9继续异步删除/保留/清理；P11/P14�
 `E/task-16-fix-review.md`与`task-16-fix-review-coverage.md`记录准确`d2a3cf26..7e903ecb`的独立结论；主控已全文核阅。原8项全部ADDRESSED；T16-DOC-1仅历史时态文案，未打开新产品波次。此次`7e903ecb`之后只改docs，既有报告/coverage/raw不覆盖，前次作者报告与证据先封存在`E/task-16-evidence/receipt/prior`，新回执另存；完整门禁仍对应tested cd0，未因纯文档重跑产品套件。
 
 产品检查点准确`cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`的[CI40397086823](https://github.com/open-nerve/NerveProject/actions/runs/40397086823)已由主控核全绿：server7m14、web3m46、e2e7m25；公开原件`E/checkpoint-t16/run-public.json`记录head_verified=true/Success。E2E job API另核相同head、浏览器安装28秒成功、Build成功、E2E于2026-10-26 20:45:23–20:50:42 UTC成功。`run-public.html`、`watch-history.jsonl`、`e2e-job-public.json`原件保留，receipt/ci-verified.json记录其SHA；作者没有重跑远端测试或推分支。这个结果属于已测产品提交cd0，不能冒称后续纯文档交付HEAD的CI成功；最终准确链接由主控最后返回。
+
+## 8. 授权合并、main CI 与归档清理（2026-10-27）
+
+负责人授权后，最终分支 `023c96e82680234b6bd4c7b85b516fadc92f2247` 经 `--no-ff` 合并为 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`；两个父提交为 `5005be985e7ec78727edc6f8fc5c05999b45cc65` 和 `023c96e82680234b6bd4c7b85b516fadc92f2247`。合并无冲突，tree `51982bad72186f17a0b10c31f2f508629bb9cca7` 与已通过分支CI的交付树完全相同。系统 `/usr/bin/git` 推送成功，未提取凭据。
+
+最终纯文档增量 `7e903ecb..023c96e8` 已由原独立审者复核，原8项与T16-DOC-1全部ADDRESSED、无新增问题；[分支 CI 40400860045](https://github.com/open-nerve/NerveProject/actions/runs/40400860045) 精确对应023并全绿。随后 [main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 经公开HTML及API核准确合并HEAD，server 7分58秒、web 3分39秒、e2e 5分37秒，三任务均成功。没有用分支CI替代mainCI，也未因同树合并重复本地完整套件。
+
+在本地 `main` 与已通过CI的 `origin/main` 一致、工作树干净且 `origin/main..origin/codex/m4-p7` 为0提交之后，先归档5,443个文件、137,571,385字节，并逐文件核对来源与副本SHA-256；其余77,421个文件仅为可再生依赖/构建产物，未发现未分类材料。归档位于项目根目录 `.superpowers/sdd/P7-integration-20261027/worktree-evidence/`，manifest为同级 `archive-manifest.json`，SHA-256 `86d20fe23eeee8ca45b1965e259402f3c458466a5e4df38f92b16b5ce8f39dd3`。随后正常移除P7 worktree、`git branch -d` 删除本地分支，系统git删除远端分支；均未使用force/stash/clean/reset。清理后又逐文件核验归档，见同级 `cleanup.json`、`precleanup-verified.json`、`verified-success.json`。
+
+执行时短名 `E=.superpowers/sdd/P7-issue-links` 的完整原件现保存在归档下相同相对路径；主控最终交付回执 `final-delivery-P7-023c96e8.md/.json` 和最终定向复审追加记录都已包含。本文前七节保留交付前历史，原审查范围不变，本节关闭其中的最终增量复审/分支CI/main集成/归档清理待办。**P7 已完成**；P8只进入规格和计划准备，M4总体及后续交接仍open。

@@ -1,0 +1,306 @@
+# M4/P8 草稿、搜索与链接计数：设计说明（spec）
+
+| 项 | 内容 |
+|---|---|
+| Phase | M4/P8 `drafts-search` |
+| 日期 | 2026-10-27 |
+| 状态 | 准备稿，供独立静态预检；产品实施未开始，验收均未执行。负责人只授权准备 spec、plan 和预检，不实施 P8 |
+| 代码基线 | P7 的 main 合并 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，文件树 `51982bad72186f17a0b10c31f2f508629bb9cca7`；主控已核同 SHA 的 main CI `40451632280` 全绿；归档/清理证据见 P7 收尾记录 |
+| 分支 | `codex/m4-p8`；worktree `.codex/worktress/codex/m4-p8`，主目录保持 main |
+| 上级文档 | [M4 设计](../M4-design.md) §3.3–3.5、3.15–3.18、3.23、4.13、5、6、8.6–8.7、9、12/P8、13.1；[方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md) |
+| 计划 | [P8 plan](../plans/P8-drafts-search.md) |
+
+本 spec 固定批准设计留给 P8 的接口、参数边界、文件职责和验证方法。设计的 13 个粗任务拆为 16 个可独立评审的 Task，沿 P7 紧凑方法，不重做已批准架构，也不把静态预检记成原型或逐任务复现。以下新增符号均为实施期目标，未声称已存在。
+
+## 1. 目标
+
+1. 六个个人草稿操作：按工作区列/创建，按草稿读/改/删/发布；只属于创建者，保存不执行工作项语义，发布读取存储载荷，经原创建结构检查和唯一创建核心，在同一个事务创建工作项并软删除草稿。
+2. 草稿遵守 W(S)→P(S)→draft(U)；发布无数据库资源时先入项目写闸门，再 W(S)→P(N)→draft(U)。旧、新项目升序取锁；等待后项目变化答 409，不增补另一条锁路。
+3. 搜索在独立只读快照中按项目可见范围、OwnOnly、日期和选择器排除取前 N 个完整 `Issue`；空词最近更新，非空词精确编号/数字/标题字面包含分级排序。只有 `data`，无分页、总数和 `page`。
+4. 迁移建立 `pg_trgm` 与标题部分 GIN 索引，验证 PostgreSQL 18.6 非超级用户迁移角色、runtime 权限、sqlc 数值类型，并在 10 万英文/中文数据上记录实际耗时和计划。
+5. `link_count` 进入每一种 `Issue`/`IssueDetail` 表示，以及平铺、分组、子分组、成员列表和偏好的两个排序码；保留 P5 已交付的整数/数值游标和授权性质。
+6. 交付 I14、I18 接口故事，扩 I4 的两方向跨页；完成矩阵、交错 16/17、真实生产变异、整分支 deep-review 与完整本地七门禁。阶段完成先不合并。
+
+## 2. 交付物
+
+### 2.1 文件职责和粗任务映射
+
+路径均相对 worktree。I=`server/internal/modules/issue`，P=`server/internal/modules/project`，B=`server/internal/bootstrap`。生成目录只经生成器修改；表列测试名为计划新增者时用“新”标记。
+
+| 精确文件或同职责文件组 | 责任 | Task；设计粗任务 |
+|---|---|---|
+| `server/migrations/sql/00028_issue_draft_issues.sql`；`server/sqlc.yaml`；`deploy/runtime-grants.sql`；I/app/cascade.go、delete_project_rows.go；I/adapter/postgres/queries/delete_rows.sql、delete_rows.go；I/module.go；P/app/issue_ports.go、cascade.go；对应既有 cascade/deletion tests | 草稿 schema、授权与项目/工作区同步级联，workspaceID 贯穿 | T1；1 |
+| I/domain/draft.go、draft_cursor.go 及测试（新）；I/app/draft_ports.go（新）；I/adapter/postgres/queries/drafts.sql、drafts.go、drafts_test.go（新） | 纯草稿值、保存边界、游标和单表存储 | T2；2 |
+| I/app/lock_draft.go、draft_reads.go、draft_writes.go 及测试（新）；I/domain/actions.go；access/domain/rules.go；P/adapter/postgres/queries/issue_ports.sql、issue_ports.go；P/module.go；B/ports.go | 草稿唯一锁编排、读快照、CRUD、小目录端口 | T3；2–3 |
+| `api/modules/issue.yaml`、`api/openapi.yaml`；I/adapter/http/drafts.go、draft_query.go 及测试（新）；I/adapter/http/handler.go、I/module.go；B/permission_matrix_drafts_test.go、issue_drafts_test.go（新）；双语 errors 与 PROBLEM_MESSAGES；`e2e/fixtures/furnish.ts`、`assert/project.ts`、`assert/workspace.ts` | 五个 CRUD 操作、双语码、权限矩阵、完整删除目录的 API 前置 | T4；1–3、10 |
+| I/app/create_core.go（新）、create_issue.go、module.go构造及既有create/lock/event测试；I/adapter/http/create_payload.go、create_payload_test.go（新）、issues.go | 单一已持锁创建核心；app 消费结构解码小端口，HTTP adapter 复用生成 bodyshape/映射 | T5；4 |
+| I/app/publish_draft.go、publish_draft_test.go（新）；I/adapter/http/drafts.go；I/module.go；B/issue_draft_publish_test.go（新）；契约/矩阵 | 发布无 body、同事务副作用与拒绝顺序 | T6；4、10 |
+| B/issue_draft_interleaving_test.go、issue_draft_lock_shapes_test.go（新）；已有 gate/issue_write_locks tests | 交错 16/17 双向、权限变化、旧新项目锁序/时钟与拒绝零锁 | T7；5 |
+| `e2e/stories/issue/i14-drafts.spec.ts`（新）；`e2e/fixtures/issues.ts`；项目/工作区删除故事；B/project_deletion_test.go、workspace_deletion_test.go、workspace_deletion_catalog_test.go | I14、零项目工作区与无项目草稿级联、阶段回归 | T8；1、11 |
+| `server/migrations/sql/00029_issue_issues_name_trgm.sql`；`server/sqlc.yaml`；`server/migrations/schema_test.go`；B/runtime_role_test.go；I/adapter/postgres/search_type_test.go（新） | 扩展/GIN、部署角色与 sqlc float4 | T9；6 |
+| I/domain/search.go、search_test.go（新）；共享 `api/testdata/identifier-fold.json` 只消费 | 词汇、重复参数、日期、编号折叠、字面查询和错误边界 | T10；7 |
+| I/app/search_ports.go、search_issues.go、search_issues_test.go（新）；I/adapter/postgres/queries/search_issues.sql、search_issues.go、search_issues_test.go（新）；B/issue_search_test.go、issue_search_snapshot_test.go（新） | 同快照授权、静态 SQL 排序、全深度排除和统一 seen | T11；7–8、10 |
+| I/adapter/http/search_issues.go、search_issues_test.go（新）；I/adapter/http/handler.go、draft_query.go；I/module.go；契约；B/permission_matrix_search_test.go（新） | 搜索 HTTP 边界和完整矩阵 | T12；8、10 |
+| I/domain/issue.go、listvocab.go、list_cursor_key.go；I/adapter/postgres/queries/issues.sql、sub_issues.sql、list_issues.sql、list_issue_groups.sql、list_issue_subgroups.sql、search_issues.sql；对应 Go 映射/游标/测试；I/adapter/http/issues.go；契约；`api/testdata/issue-order.json`；已有列表/偏好/形状测试 | 所有响应 live link count、19→21 排序码、三 SQL 同形和游标 | T13；9 |
+| `e2e/stories/issue/i18-search.spec.ts`（新）、`i4-list-order-calendar.spec.ts`；B/issue_link_counts_test.go（新）；受生成类型影响的现有 TS fixtures | I18、I4 双向、全表示数量一致 | T14；11 |
+| I/adapter/postgres/search_performance_test.go（新，显式 opt-in 性能用例）；本 spec 附录、ignored 原始证据 | 10 万数据、locale/EXPLAIN/耗时、全门禁与性质审计 | T15；12 |
+| 本 spec、plan、`reviews/P8-drafts-search-review.md`；M4-design、`docs/v0/v0-design.md`、`docs/v0/plane-diff.md`、README、输入 handoffs | 准确范围 deep-review、局部修复复审、§3.23 和交接证据 | T16；13 |
+
+单 Task 目标约 350–1200 手写差异行，预留局部修复余量；超过约 1500 行先按职责重新切分，不能把安全/锁序测试压缩掉。单个新逻辑文件约 400 行上限；生成物、静态 SQL 和有明确理由的测试表沿既有例外。
+
+### 2.2 草稿数据与纯领域签名
+
+`00028` 建 `draft_issues` 九列：`id uuid PRIMARY KEY`；`workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE`；`project_id uuid NULL REFERENCES projects(id) ON DELETE CASCADE`；`payload jsonb NOT NULL DEFAULT '{}' CHECK(jsonb_typeof(payload)='object')`；`created_by_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE`；`updated_by_id uuid NULL REFERENCES users(id) ON DELETE SET NULL`；`created_at/updated_at timestamptz NOT NULL DEFAULT now()`；`deleted_at timestamptz NULL`。活行索引 `(workspace_id,created_by_id,created_at DESC,id DESC) WHERE deleted_at IS NULL`，另外 workspace/project 无条件 FK 索引；不新增冗余 title、sequence 或版本列。
+
+```go
+// I/domain/draft.go / draft_cursor.go；json/time/uuid 均为现有标准库依赖。
+type Draft struct {
+    ID, WorkspaceID, CreatedByID uuid.UUID
+    ProjectID, UpdatedByID *uuid.UUID
+    Payload json.RawMessage
+    CreatedAt, UpdatedAt time.Time
+}
+type NewDraft struct { ProjectID *uuid.UUID; Payload json.RawMessage }
+type DraftPatch struct { SetProject bool; ProjectID *uuid.UUID; SetPayload bool; Payload json.RawMessage }
+func CheckDraftPayload(json.RawMessage) error // 只固定3个自由字符串的NUL可存性，不做create语义。
+type DraftCursor struct { CreatedAt time.Time; ID uuid.UUID }
+func EncodeDraftCursor(DraftCursor) (string,error)
+func DecodeDraftCursor(string) (DraftCursor,error)
+```
+
+草稿 payload 字段精确为 `name,description_html,state_id,priority,assignee_ids,label_ids,start_date,target_date,parent_id`，全可省略；出现时类型/UUID/date 格式与 IssueCreate 相同，均不可 null。`name:""`、空/重复/超过100项数组、非法优先级、超长业务字符串、无效引用可保存，发布才按创建规则拒绝。禁止 `skip_activity/sort_order/project_id` 塞进 payload。外层创建 `payload` 必需且非 null object；PATCH 中 payload 省略保持，给出则整体替换（`{}` 合法），null400；project 省略保持，null 清空。
+
+`CheckDraftPayload` 仅对 `payload.name`、`payload.description_html`、`payload.priority` 的 NUL 答422 `invalid_format`，原文不 trim、不删字符、不清洗。结构校验由 HTTP bodyshape 负责；不扩展共享 bodyshape 或做通用 JSON 递归框架。此为静态发现的 PostgreSQL JSONB 表示边界，实施期必须真实 API/DB 验证。
+
+草稿游标复用 `shared.EncodeCursor/DecodeCursor`，payload 精确两元素 `[created_at,id]`，复用本模块 collaboration_cursor.go 的 marshal/unmarshal 形状校验（UTC RFC3339Nano 时间、非零 UUID），不新造另一套JSON规范化；固定降序。非法/非规范/错误版本/额外元素400 bad_request/cursor；合法篡改只是排序位置，绝不回查该 id 的 owner。limit 复用 `shared.PageSize(*int)(int,error)`：默认50，1–100，非整数400，越界422。`DraftPage{Data []Draft;NextCursor *string;Total int64}`，空 Data=[]，total 不受 cursor 影响；极末页仍答真实 total。
+
+### 2.3 app 草稿端口、锁与创建核心
+
+```go
+// I/app/draft_ports.go：使用者拥有的小接口；不扩全部旧IssueReader假实现。
+type WorkspaceSharer interface { ShareWorkspaceByID(context.Context,uuid.UUID)(bool,error) }
+type DraftProjects interface {
+    UndeletedIDs(context.Context,uuid.UUID)([]uuid.UUID,error)
+    ShareMany(context.Context,[]uuid.UUID)(map[uuid.UUID]uuid.UUID,error)
+}
+type DraftReader interface {
+    GetDraft(context.Context,uuid.UUID)(domain.Draft,bool,error)
+    LockDraft(context.Context,uuid.UUID)(domain.Draft,bool,error)
+}
+type DraftListRead struct {
+    WorkspaceID, ActorID uuid.UUID
+    ProjectIDs []uuid.UUID // 同工作区全部未删项目；不是调用者Visible目录。
+    After *domain.DraftCursor
+    Limit int // app请求limit+1；total独立同一快照。
+}
+type DraftLister interface { ListDrafts(context.Context,DraftListRead)([]domain.Draft,int64,error) }
+type DraftWrite struct { ID,WorkspaceID,By uuid.UUID; ProjectID *uuid.UUID; Payload json.RawMessage; At time.Time }
+type DraftDeletion struct { ID,By uuid.UUID; At time.Time }
+type DraftWriter interface {
+    InsertDraft(context.Context,DraftWrite)(domain.Draft,error)
+    UpdateDraft(context.Context,DraftWrite)(domain.Draft,error)
+    DeleteDraft(context.Context,DraftDeletion) error
+}
+type IssueCreatePayloadDecoder interface { DecodeCreatePayload([]byte)(domain.NewIssue,error) }
+```
+
+`GetDraft/LockDraft` 仅返回未删草稿，**不先加 owner 谓词**，让 workspace 访客对活草稿先答403；app 在任何响应前核 owner 和旧项目存在性。`ListDrafts` 在 SQL 内过滤 workspace/owner/deleted/project-ID 集合，并在 LIMIT 前完成全部过滤。Update SQL 仅在 project 或 JSONB payload 不同才写审计，返回真实库中结果；JSONB 对象 key 顺序变化不是修改。对同一workspace多个草稿的读取不因旧项目无成员/归档误过滤。全体读在 `ReadTx`（`ReadOnlySnapshot()`）里完成目录/授权/页和 total。
+
+```go
+// I/app/lock_draft.go：私有编排只此一套，组合唯一既有Locks。
+func NewDraftLocks(base Locks,w WorkspaceSharer,p DraftProjects,d DraftReader) DraftLocks
+func (l DraftLocks) run(ctx context.Context,actor shared.Actor,w draftWrite,fn func(context.Context,draftHeld)error) error
+func (l DraftLocks) publish(ctx context.Context,actor shared.Actor,id uuid.UUID,fn func(context.Context,publishHeld)error) error
+func (l DraftLocks) seeWorkspace(context.Context,shared.Actor,uuid.UUID) error
+func (l DraftLocks) read(context.Context,shared.Actor,uuid.UUID)(domain.Draft,error)
+// draftWrite={WorkspaceID uuid.UUID; DraftID *uuid.UUID; SetProject bool; ProjectID *uuid.UUID}。
+// draftHeld={Draft *domain.Draft; ProjectID *uuid.UUID}；创建Draft为nil；publishHeld={Draft domain.Draft; Issue held}。
+
+// I/app/create_core.go；构造公开给module，锁内方法只供app。
+type IssueCreationDeps struct {
+    Events shared.EventPublisher; Issues IssueCreator; Sequences Sequences
+    States StateCatalog; Labels LabelCatalog; Members ProjectMembers
+    Profiles PublicProfiles; Clock Clock; Sanitizer HTMLSanitizer
+}
+type IssueCreation struct { d IssueCreationDeps }
+func NewIssueCreation(IssueCreationDeps) *IssueCreation
+func (c *IssueCreation) createLocked(ctx context.Context,actorID,projectID uuid.UUID,h held,in domain.NewIssue)(domain.Issue,time.Time,error)
+```
+
+`DraftLocks` 从 `base` 复用 authorizer/gate/写 tx/错误映射，旧 `NewLocks(ProjectGate,IssueReader,Authorizer,WriteGate,TxManager)` 不变。CRUD/publish 用例不各自再持 authorizer/gate/写 tx；read 用例可持独立 ReadTx。project 在其模块导出 `UndeletedIssueProjectIDs(ctx,wid)([]uuid.UUID,error)`、`ShareIssueProjects(ctx,ids)(map[uuid.UUID]uuid.UUID,error)`；后者一条按 id 升序 `FOR SHARE`，不以 N 代 S。workspace 已有 `ShareWorkspaceByID`；bootstrap 转成 bool 小端口，只在组合层接线。原 `ProjectGate` 继续负责发布 N 锁，不增加 SQL 跨模块 JOIN。
+
+CRUD：无锁读/预检 → 写事务 W SHARE → 无额外锁重读资源存在性（见下一段）→ 工作区重新授权 → 旧/显式新项目去重升序 SHARE → 草稿 UPDATE → 重读 owner/deleted/项目与初读相等 → 检查显式新项目 → 时刻 → 写。create 无旧草稿；nil 项目不是零 UUID 项目锁。删除和省略 project 的 patch 只要求旧项目未删，不重新要求旧项目可见；显式提供 project（包括与旧值相同）须同工作区未删且 现有Authorizer以`shared.Action("project.read")`判定成功（该规则为LevelVisible，不是issue.read的LevelProject；不用并不存在的Grant.Visible字段），允许归档项目，也允许工作区成员可见但未加入的public项目；private不可见项目拒422。
+
+publish：无锁读/预检（含 owner、旧项目存在性、项目非空和 create 权限）→ 无连接/无锁入项目 gate → 事务 W SHARE → 无额外锁重读资源存在性 → draft.write → P NO KEY UPDATE/create → draft UPDATE → 重读（删除404，项目变409）→ 项目归档409 → decoder → `domain.CheckNewIssue` → `IssueCreation.createLocked` → 草稿软删 → commit → 离 gate。核心负责与当前创建完全相同的项目归档/引用/默认负责人/HTML清洗/提及/订阅/号序/排序/活动/描述版本/issue.created/readBack，返回唯一 `At` 给草稿删除；禁止在这里嵌套 `CreateIssue.Execute`、再次入 gate 或打开写 tx。
+
+W SHARE后的资源重读只判断草稿活行及当前关联项目未删（创建只读workspace），不提前比较project变化、判owner或追锁新的项目。若它已见删除，404先于workspace降guest；资源仍活而权限拒绝则403，以这次资源读为判定时点，不为确认后来并发删除而取未授权P/D锁。通过授权后仍按初读项目取锁，P/D等待后再遇删除404、项目变409。CRUD与publish一致；T7覆盖删除+降guest都已提交以及仅降guest两种终态。
+
+module.go只构造一次`NewIssueCreation`，同时给`CreateIssueDeps{Locks Locks;Creation *IssueCreation}`和`PublishDraftDeps{Locks DraftLocks;Decoder IssueCreatePayloadDecoder;Creation *IssueCreation;Drafts DraftWriter}`；既有创建测试构造同步改显式依赖，没有optional setter。普通 CreateIssue 仍先纯领域校验再 `Locks.run`，在 callback 调同核心；publish 校验必须用锁下重读的 payload。decoder 放 I/adapter/http/create_payload.go，精确调用 `gen.BodyShapes().Check("POST /api/v0/projects/{project_id}/issues",raw)` 后解 `gen.IssueCreate`，复用从 issues.go 抽出的 `newIssueInput(gen.IssueCreate) domain.NewIssue`。构造测试核此 root 存在，避免 Check 遇缺根静默放行。app/domain 不 import bodyshape、HTTP 或 gen。
+
+| 用例 | 唯一 Execute 签名；依赖 |
+|---|---|
+| ListDrafts | `Execute(ctx,slug string,limit *int,cursor *string)(DraftPage,error)`；ReadTx、DraftLocks、WorkspaceDirectory、DraftProjects、DraftLister |
+| GetDraft | `Execute(ctx,id uuid.UUID)(domain.Draft,error)`；ReadTx、DraftLocks |
+| CreateDraft | `Execute(ctx,slug string,in domain.NewDraft)(domain.Draft,error)`；DraftLocks、WorkspaceDirectory、DraftWriter、Clock |
+| UpdateDraft | `Execute(ctx,id uuid.UUID,in domain.DraftPatch)(domain.Draft,error)`；DraftLocks、DraftWriter、Clock |
+| DeleteDraft | `Execute(ctx,id uuid.UUID)error`；DraftLocks、DraftWriter、Clock |
+| PublishDraft | `Execute(ctx,id uuid.UUID)(domain.Issue,error)`；DraftLocks、IssueCreatePayloadDecoder、*IssueCreation、DraftWriter |
+
+每个用例使用同名 `XDeps`、`NewX(XDeps)*X`；签名中的 ctx 均为 context.Context，Constructor 按该行列出依赖，不引入可选 setter。
+
+### 2.4 草稿公开契约、权限和拒绝顺序
+
+六操作均 `domain.ActionDraftWrite = "issue_draft.write"`，沿工作区 admin/member 允许、guest403、非有效成员404；不新增 draft.read action。他人活草稿：可见工作区的 guest403，admin/member404 `issue.draft_not_found`。旧项目已删除/错工作区的草稿统一不可达，不泄漏 payload/owner/project；所有相关404对未知随机 id 逐值相同。
+
+| operationId / 路由 | 响应 | 模块级错误（公共认证/结构错误沿平台） |
+|---|---|---|
+| listDrafts `GET /workspaces/{slug}/drafts` | 200 DraftPage | workspace.not_found404、forbidden403、游标400、limit422 |
+| createDraft `POST /workspaces/{slug}/drafts` | 201 Draft | workspace.not_found404、forbidden403、validation_failed422、server_busy503 |
+| getDraft `GET /drafts/{draft_id}` | 200 Draft | issue.draft_not_found404、forbidden403 |
+| updateDraft `PATCH /drafts/{draft_id}` | 200 Draft | issue.draft_not_found404、forbidden403、validation_failed422、issue.draft_changed409、server_busy503 |
+| deleteDraft `DELETE /drafts/{draft_id}` | 204 | issue.draft_not_found404、forbidden403、issue.draft_changed409、server_busy503 |
+| publishDraft `POST /drafts/{draft_id}/publish`（无 body） | 201 IssueDetail | issue.draft_not_found404、project.not_found404、forbidden403、存储结构bad_request400、validation_failed422、issue.draft_changed409、project.archived409、server_busy503 |
+
+路径均有 `/api/v0` 前缀。Draft 只公开 `{id,workspace_id,project_id,payload,created_at,updated_at}`，不回创建者/更新者/删除时刻。新增两公开码与 `PROBLEM_MESSAGES` 和 en/zh-CN errors.json 同 Task 出现；`issue.draft_not_found` 文案“草稿不存在或你无权访问。”/“The draft does not exist, or you cannot see it.”；`issue.draft_changed` 文案“草稿的项目已更改，请重试。”/“The draft's project changed. Please try again.”。锁超时沿 bootstrap 统一503与 Retry-After，不再造映射。既有非GET issue写完整性守卫在T4拆成普通issue、draft CRUD、draft publish三种显式锁形状目录，其union精确覆盖全部tagged写操作（publish在T6注册时加入），不能以excludeDrafts通用豁免或等T7才调整。
+
+publish-only HTTP adapter守卫在现有认证/限流/BodyLimit之后、进入用例前核请求body：EOF/零字节允许，任意至少一个字节（包括空白、`{}`或chunked）通过现有APIErrors.BodyError答400；读错误沿该函数处理。只读至第一个字节判断，不按Content-Length单独判定；不扩全局bodyshape、不把HTTP概念下沉app/domain。
+
+请求框架的401/结构400先行，存储可表示性的纯422在资源预检前。指定草稿按“活行/旧项目存在 → workspace可见和draft权限 → owner”预检；普通写W后按§2.3资源读时点重判，P/D锁下再次读并比较初读 project，变更409；显式新项目无效422 `project_id/not_allowed`。发布无项目422 `project_id/required`；工作区/项目权限先于项目归档，归档409先于存储 payload 检查，随后原创建400/422。并发删除旧项目即使草稿仍活也404 draft，不能退成422 project；等待中换项目则409，不在同一事务追锁新项目。
+
+保存/删除草稿不发 issue 事件、不产生活动/关注/提及/版本/号序；publish 成功只一次 issue.created，返回的可见父/子计数沿原 readBack；事件、写入、草稿删除任一步失败整体回滚。已发布再请求404。
+
+### 2.5 级联签名与历史边界
+
+`ProjectRowsDeleter` 增 `DeleteProjectDraftRows(ctx context.Context,b RowBatch)([]uuid.UUID,error)`，在 issues 步骤之前按 id 锁/软删草稿。无项目草稿使用 `WorkspaceDraftBatch{WorkspaceID,After,By uuid.UUID;Limit int;At time.Time}` 和 `DeleteWorkspaceDraftRows(ctx context.Context,b WorkspaceDraftBatch)([]uuid.UUID,error)`，只选 `workspace_id` 匹配、`project_id IS NULL`、未删行。
+
+贯穿 I/app.Cascade、I/module.go.IssueCascade、P/app.IssueCascade 和 P/app.Cascade 的精确目标：`DeleteWorkspaceIssues(ctx context.Context,workspaceID uuid.UUID,projectIDs []uuid.UUID,by uuid.UUID,now time.Time) error`。调用者已有 workspaceID，不能从非空 projectIDs 猜。所有新增行沿请求原 actor/At；先前已删除项目上的草稿不改旧审计，零项目工作区也删除无项目草稿。删除工作项不删 payload.parent_id 指向它的草稿，发布再422 parent_id。
+
+`furnishIssueRows` 新增显式 workspaceSlug 参数，用 API 创建带项目草稿，更新所有调用点；工作区断言另创建无项目草稿。不可 DB 查 slug 或 SQL 填充故事前置，不在最终目录里留下 draft 豁免。P9 的异步删除/物理清理未在本期实现。
+
+### 2.6 搜索端口、词汇与同快照 SQL
+
+```go
+// I/domain/search.go
+type SearchFor string // 内部""仅代表省略；外部只接受parent/sub_issue/relation
+type SearchQuery struct {
+    Text string; ProjectID,IssueID *uuid.UUID; For SearchFor; Limit int
+    StartDate,TargetDate []DateFilter
+    Identifier string; IdentifierNumber,SequenceNumber *int
+}
+func ParseSearchQuery(map[string][]string)(SearchQuery,error)
+// 复用 ParseIdentifier、MatchIdentifier、ParseListDateFilter 和 shared.PageSize。
+// I/app/search_ports.go
+type SearchRead struct {
+    ActorID uuid.UUID; Projects []VisibleProject; Query domain.SearchQuery
+    ExactProjectID *uuid.UUID // 在可见项目中MatchIdentifier所得，未匹配为nil。
+}
+type SearchRows interface { Search(context.Context,SearchRead)([]domain.Issue,error) }
+// I/app/search_issues.go
+type SearchIssuesDeps struct {
+    ReadTx shared.TxManager; Authorizer shared.Authorizer; Workspaces WorkspaceDirectory
+    Projects VisibleProjects; Identifiers ProjectIdentifiers; Issues IssueReader
+    Locks Locks; Rows SearchRows
+}
+func NewSearchIssues(SearchIssuesDeps)*SearchIssues
+func (*SearchIssues) Execute(context.Context,string,map[string][]string)([]domain.Issue,error)
+```
+
+查询键精确 `q,project_id,for,issue_id,start_date,target_date,limit`。未知键422 not_allowed；除两个日期键可重复（非none条件AND，none不能与同字段任何另一条件并用）外，任何重复标量422 invalid_format。route 定向保留 raw query，`url.ParseQuery` 百分号错误400，不用会吞错的 URL.Query；生成binding ErrorHandler也先解析raw query，保证重复q加畸形百分号仍400，不被重复参数422抢先；limit 非整数仍400。UUID/日期/for 值错误422，对重复日期按 `start_date[i]`/`target_date[i]` 路径报告。某字段多值且含none时，报告该字段首个none位置的not_allowed（none+date为[0]，date+none为[1]，none+none为[0]），全部422；不改既有列表的报错路径。q `TrimSpace` 后 ≤100 Unicode 字符，101→422 too_long；非法 UTF-8/NUL→422 invalid_format，不做模糊纠错。空白 q 等同空 q。
+
+外部出现`for`时只接受parent/sub_issue/relation，`?for=`或unknown均422 for/not_allowed；`?issue_id=`/`?project_id=`均422各自invalid_format，不能视为省略。合法`for`出现必须有 issue_id（422 required）；只给 issue_id 无 for→422 issue_id/not_allowed；parent/sub_issue 的显式 project_id 与 source 项目不同时，在 scope/source授权通过后422 project_id/not_allowed。纯数字是 ASCII 十进制：`00012` 按 sequence12，0/超2147483647仅无数字分支，仍可标题匹配；完整 `PROJ-012` 不放宽既有 ParseIdentifier。编号项目折叠只在本次可见项目中用既有 MatchIdentifier（含 i/ı/I/İ、精确 uppercase 优先），不让隐藏同名项目改变匹配。
+
+成功结果范围是 VisibleProjects.Visible 的有效项目成员、未删未归档项目；issue 未删未归档，按每项目 OwnOnly 过滤，workspace admin+project guest 也保留 OwnOnly。显式 project_id 不在该目录404 project.not_found；source不在同工作区目录、OwnOnly不可见、已删/归档一律404 issue.not_found。
+
+顺序：parse纯参数 → ReadTx 内 workspace lookup/issue.search授权 → visible目录 → 显式project scope → source读取/OwnOnly → parent/sub项目冲突 → 标识目录/静态SQL → `Locks.seen` → 响应。404/403沿原工作区 Authorizer。整个过程经 `ReadOnlySnapshot()`，包括隐藏 parent_id 和 sub_issues_count；不把搜索结果再次套另一个目录事务，不取写锁。
+
+静态 `search_issues.sql` 只引用 issue 自己表；projectIDs/OwnOnly/标识候选从端口传入。权限、日期、排除都在 LIMIT 前。空 q 按 `updated_at DESC,id DESC`；非空候选是 OR：精确项目+编号、纯数字 sequence、标题 `ILIKE` 字面包含。每行只出现一次，rank 精确0→数字1→标题2，之后 `similarity(name,@query) DESC,created_at DESC,id DESC`；精确或数字行也必须满足全部授权/日期/排除条件。`%`、`_`、`\` 作为用户字面量转义，绝不变成通配词；description_stripped 不搜索。
+
+parent：仅 source 项目，排除 source、自身当前 parent、全部后代；sub_issue：仅 source 项目且 parent IS NULL，排除 source、全部祖先；relation：允许范围内跨项目，排除 source 和双向所有类型活关联。递归用 UNION 终止异常环，穿过隐藏/归档/删除的中间节点，不能因中间节点不可见而漏后代/祖先。返回 candidates 仍受自己的可见性约束。搜索不替代写时最终校验。
+
+### 2.7 pg_trgm 与链接计数
+
+`00029`：`CREATE EXTENSION IF NOT EXISTS pg_trgm`；`issues_name_trgm_idx USING gin(name gin_trgm_ops) WHERE deleted_at IS NULL`；Down 只移除本迁移索引，不删除可能先存在或为其他对象共享的扩展。列入 issue 的 sqlc schema，参数名 `@query`，生成 `SearchIssuesRow.Similarity` 必须可赋给 `float32`，不接受 interface{} 或通过 float64 绕开。最小查询/类型支架可在 T9 建立，T11 替换成最终完整 SQL 并再核类型。迁移用 PostgreSQL18.6 中有数据库 CREATE 的非超级用户 owner；runtime 经 PUBLIC EXECUTE 调用 similarity，保留关系/函数授权完整性检查。schema_test.go的public函数目录通过pg_depend扩展成员身份区分pg_trgm对象与应用自有函数，后者仍保持严格Up/Down目录；不按函数名黑名单放宽守卫。预先存在扩展的Down/Up测试核OID保持。
+
+`domain.Issue.LinkCount int64`，OpenAPI 两个对象都 required `link_count`，integer/int64/minimum0。数量仅 `issue_links.deleted_at IS NULL`，不受链接作者、metadata.error/抓取状态影响；0 必须显式返回。基础 GetIssue/GetIssues、SubIssues、列表三 SQL、搜索和映射全部补齐，继承 create/update/archive/restore/readBack、标识查询、父子和关联内嵌；`IssueDetail` 只比 `Issue` 多 description_html 的守卫继续通过。
+
+三列表 SQL 的最终字段名/顺序/类型同形（Groups/Subgroups→FlatIssuesRow 的现有编译约束）；link 排序只在相应 source_keys 需要时算，最终结果字段复用或 coalesce，不能为每种排序提前扫全量 links。排序码由19变21，加 `link_count/-link_count`；不加 link_count filter，display_properties 已有 link 不重复添加。计数键按非负 int64 编解码，保留 P5 内部 numeric 比较和 id 同向 tie-break。单请求同快照，跨请求链接数量改变仍是既有弱快照限制，不承诺冻结。
+
+## 3. 自主裁定、理由和错判代价
+
+这些是批准设计内的局部细化；若实施证明需改变模块责任、锁图或公开授权规则，按负责人纪律先提交已完成工作，再上报。
+
+| 编号 | 结论 | 理由 | 若判断错误的代价/核验 |
+|---|---|---|---|
+| D1 | 13粗任务拆16，准备期只静态预检，真实红绿/变异在实施期 | P7方法与用户“暂不实现”一致 | 不得用准备稿勾验收；T16审准确范围 |
+| D2 | DraftLocks组合base；consumer小端口；S锁与workspaceID是既有设计兑现 | 不扩大普通Locks构造，不另接auth/gate/tx | T7重推完整锁图与架构守卫，拒绝变第二条写链 |
+| D3 | 六操作单draft.write；getDraft补403 | 权限表比§5.1漏项明确，管理员不拥有他人草稿 | 矩阵guest+他人403，member/admin+他人404；授权泄漏为阻断项 |
+| D4 | 旧project删除→draft404；显式新project不可见/删除→422 | 前者是资源存在性，后者是输入；交错16明确404 | P9窗口及真实删除两次序测试；同步设计泛句 |
+| D5 | 项目退出/归档不抹个人草稿；省略project更新或删除可操作；显式指定必须经project.read/LevelVisible可见 | 读只要求未删，个人草稿应能编辑/清理；发布才需create | 退出项目后的读/改/清空/删/发布表；若未来产品改变需显式契约变更 |
+| D6 | payload整体替换，JSONB等值patch为noop；显式null仅外层project可用 | 契约optional与nullable可分别表达，避免隐式merge语义 | T4旧payload键消失/空对象/null/审计时刻精确断言 |
+| D7 | NUL只拒3个自由字符串和search q；不调用完整create验证 | JSONB/text存储表示边界，不是草稿业务完整性要求 | T4真实422零行变化；长标题/坏优先级/坏引用仍可保存；静态发现非已复现 |
+| D8 | 共用已持锁核心返回At；adapter解码stored payload | 保持domain纯净及一个事务/事件/clock，不放宽守卫 | T5/6语义与结构对照、事件/软删故障完整回滚 |
+| D9 | 存储结构400比较状态/码/字段；不承诺任意坏JSON原字节顺序 | JSONB规范化顺序；API合法保存和注入损坏旧数据是两类 | 缺name真实存草稿与同体POST；注入坏payload使用同canonical bytes对照，含>16问题截断边界 |
+| D10 | 搜索候选OR，纯数字前导0可匹配，0/溢出仅不走sequence | 不丢标题匹配，避免PG转换500；精确编号仍复用原规则 | 数字/编号/标题混合组逐值顺序；共享fold fixture |
+| D11 | 未给for的issue_id422；parent/sub冲突422；source归档404 | 参数不静默丢弃，source必须来自本次可搜索范围 | T10/12优先级用例，scope先于冲突，不泄漏隐藏源 |
+| D12 | 未知query与重复标量422；非none日期重复AND、none不可并用；literal LIKE；q按Unicode计数 | 沿列表词汇并关闭隐式参数歧义 | malformed percent400（含重复scalar同现）、100/101中文、NUL、%/_/反斜杠、组合日期/none互斥 |
+| D13 | 空词id DESC，非空最后id DESC；所有scope/排除先于limit | 稳定前N，避免后过滤短页 | 多个同时间同similarity候选与隐藏高分项，limit1/2反例 |
+| D14 | search从静态SQL完整Issue后唯一调用Locks.seen | 复用父屏蔽/子数定义，避免第二份OwnOnly计算 | adminGuest隐藏父、不同OwnOnly子数及同快照测试 |
+| D15 | 00029 Down不drop扩展；不预承诺3字符必走GIN/固定延迟 | IF NOT EXISTS无法认领已有扩展；计划受选择性/locale影响 | owner Up/Down/Up保留共享扩展，100k真实最终SQL计划/耗时 |
+| D17 | publish仅零字节body可用，非空含空白400；专属HTTP小守卫 | 无requestBody的生成handler不会自动拒额外body，显式契约边界防误用 | T6认证先行、零字节/空白/chunked/JSON/读错，确保不进用例或写行 |
+| D16 | link_count全表示/双排序在一个Task落地；P5历史19不倒改 | 数据字段随数据/API进入，历史验收真实不改写 | 当前词汇/fixture21；历史P5事实保持并追加P8承接 |
+
+## 4. 验收
+
+以下均未执行，预检通过只代表计划可执行。
+
+- [ ] A1：00028 九列/索引/级联/grants、无项目/零项目工作区删除、旧审计保留、furnish所有调用点和完整表目录通过（T1/4/8）。
+- [ ] A2：保存全 optional/整体替换/nullable/noop/NUL三路径；无额外issue副作用；自有游标/total及未知游标位置不泄漏通过（T2–4）。
+- [ ] A3：六操作权限矩阵含guest、ownOnly、adminGuest、退出/归档/删除项目窗口，404逐值一致，预检拒绝零锁/零gate（T3/4/6/7）。
+- [ ] A4：发布使用锁下存储载荷、与直接创建400/422同路径、完整副作用同At/actor、失败整体回滚、重复发布404（T5/6/8）。
+- [ ] A5：交错16/17双次序、相反项目UUID顺序移动、workspace删除/降级、真实等待者PID证明与恢复变异通过（T7）。
+- [ ] A6：pg_trgm非superuser owner、runtime函数/关系权限、00029 schema包含与similarity float32编译证据（T9/11）。
+- [ ] A7：空词、数字/Unicode编号、literal包含、重复参数/日期/冲突、全深度/双向排除、同ReadOnlySnapshot的隐藏父及子数通过（T10–12）。
+- [ ] A8：link_count每种表示、活/软删/metadata数量、21码双向平铺/分组/子分组/成员/偏好、整数游标和伪造游标不越权通过（T13/14）。
+- [ ] A9：I14/I18接口、I4两方向跨页及所有受影响目录故事通过（T8/14）。
+- [ ] A10：10万英文/中文数据的2字和≥3字真实最终查询参数、locale、计划、样本数/耗时写入附录；不关闭seqscan作伪证（T15）。
+- [ ] A11：T4/8/12/15完整本地七门禁先于产品检查点push；新码文案和架构/关键词不放宽；整分支deep-review及局部修复复审关闭（T16）。
+- [ ] A12：§3.23上级文档/README和输入handoffs追加准确结果；交付BASE/HEAD/spec/plan/review路径，阶段先不合并（T16）。
+
+## 5. 不在本期与后续接手
+
+| 后续 | 本期边界和接手输入 |
+|---|---|
+| P9 | 异步项目/工作区删除、60天物理清理、描述版本保留；接草稿表、workspaceID批量接口、项目删除窗口与固定原请求审计；本期只同步删除 |
+| P10b/P11/P12/P14 | 当前生成TS的编译fixture适配可做；生产前端比较器、详情store/service、日历/ExistingIssues、父子关联选择器仍由后续阶段实现 |
+| P15 | 草稿页面、创建弹窗“存草稿”、命令面板、旧ProjectService/WorkspaceService搜索移除；必须先PATCH再无body发布，不误以搜索已代替写校验 |
+| M5/M6/M7 | 发布附件在同事务移交留M5；迭代/模块/收集箱字段不加入本期payload、搜索或表 |
+| M8/M4收尾 | 扩展部署/维护最终交接、总体设计9.4与M5–M8/M4-closeout、所有交接status关闭由M4收尾统一做，本期不提前标完成 |
+
+## 6. 风险与验证责任
+
+草稿加入 W/P/D 锁序，不能沿用“所有issue写最先P”的旧概括；T7按当前全部writer重画gate/行锁资源图并真实观察阻塞。读权限目录三种语义（未删、保存project.read/LevelVisible、搜索成员Visible）不得合并。创建核心抽取不能漏P4清洗/版本、P6事件，也不能让普通创建的拒绝顺序回归。
+
+schema生成/JSONB规范化可能改变错误截断顺序，T5对规范存储体明确比较，不承诺未经证明的任意字节顺序。搜索递归必须穿过隐藏中间节点但不返回它们。`link_count`最终投影多，T13从每处domain.Issue构造向上核对到公开路由。100k性能只说明记录的环境/参数，不保证任意生产分布。
+
+已知W11偶发不专查；若合并main CI被它挡住且重跑仍失败，按用户要求停止报告。其余新失败先根因修复。若架构回归、改变既定跨模块协议或意外高风险，先提交已完成工作再用大白话上报；本spec已批准的端口补齐不是重复审批点。
+
+## 7. 交接承接与关闭口径
+
+| 输入 | 本期处理目标；证据归属 |
+|---|---|
+| P1a/P1b/P2 | workspaceID贯穿、草稿专属锁形状、闸门/超时和RO/RR、issue.search/draft.write授权；T1/3/4/7/12 |
+| P3/P4 | 多层父子/双向关联、隐藏父和可见子数；HTML清洗/提及/版本、副作用、共享PageSize；T5/6/11 |
+| P5 | link_count/两码、日期/Visible/游标/同快照；仅追加P8承接结果，不改P5当时19码完成事实；T10–14 |
+| P6/P7 | 草稿保存无事件、发布唯一issue.created；links活数/删除和metadata不改数量；T6/13/14 |
+| [M0-P4](../handoffs/M0-P4-pg-trgm.md) | 扩展迁移与镜像/owner验证，部署部分留M8；T9/15 |
+| [M1-P2](../handoffs/M1-P2-trim-content.md) | 搜索结果无page；T12/14 |
+| [M2](../handoffs/M2-closeout.md) §2/4 | 草稿游标篡改、发布存储体结构同400，保留封闭schema与代价守卫；T2/4/5/6 |
+| [M3](../handoffs/M3-closeout.md) §2/3/4 | 新写锁序/矩阵声明、级联表目录、无项目草稿；T1/4/7/8 |
+
+各handoff追加“处理结果（M4/P8）”及真实证据；总体status保持open至M4统一收尾。完成时review记录精确BASE..HEAD、审查方法/发现/修复/复审、门禁和CI；是否合并由用户另行安排。
+
+## 附录 A：准备与实施证据边界
+
+2026-10-27：只读核对M4设计、P3样板、P7交付树、现有创建/锁/列表/游标/HTTP bodyshape/删除接缝；独立需求和代码盘点保存在 ignored `.superpowers/sdd/P8-drafts-search/preparation/`。本稿没有跑迁移、生成器、测试、SQL原型或性能实验；NUL可存性和生成风险为静态推导，均有实施期验证Task。P7基线CI事实来自主控对准确SHA的核验；P8尚无实现或运行证据。
+
+实施后仅追加有原始输出/准确SHA的记录：Task红绿及实际RUN数；生产变异红因/层级/恢复hash；交错PID链；T4/8/12/15门禁；10万性能数据分布、PG版本/locale/LC_CTYPE、最终SQL及参数、EXPLAIN(ANALYZE,BUFFERS)、暖/冷说明与至少5次样本中位数/范围；deep-review和定向复审。未执行项保持未勾。

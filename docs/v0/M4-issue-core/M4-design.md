@@ -175,7 +175,8 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
   - 不拆的代价：模块较大，用 `app` 层的文件按用例拆开（6.2），每个文件不超过约 400 行。
 - **`issue` 经端口读写别的模块**，端口声明在 `issue/app`，由别的模块的 `Provide` 实现，`bootstrap` 接上（M3 设计 6.6 的两段组合）：
   - **向 `project` 要**：
-    - `ProjectGate`：`Find`：不加锁地按项目 id 读出它的工作区（第一把锁之前，3.5）；`Lock`：以 `FOR NO KEY UPDATE` 锁住项目行（带 `deleted_at IS NULL`），回答 `archived`、`identifier`、`default_assignee_id`、`archive_in`；`Lock` 不回答 `guest_view_all_features`：锁下的判定经 `Authorize` 读它（P2 spec 第 3 节第 3 条）；`LockMany`：一条语句按 `id` 升序锁住几个项目（约定七，3.5）；两个不加锁的读：这个工作区未删除的项目的 id（草稿的读，3.15），`DeletedAt(projectIDs)`（P9 起）：其中已删除的项目和它们的 `deleted_at`（关联行属于先删除的那一端，3.5）。删除工作区锁它的全部项目不经这个端口，经 `project` 给 `workspace` 的 `ProjectCascade.LockWorkspaceProjects`（见下）。
+    - `ProjectGate`：`Find`：不加锁地按项目 id 读出它的工作区（第一把锁之前，3.5）；`Lock`：以 `FOR NO KEY UPDATE` 锁住项目行（带 `deleted_at IS NULL`），回答 `archived`、`identifier`、`default_assignee_id`、`archive_in`；`Lock` 不回答 `guest_view_all_features`：锁下的判定经 `Authorize` 读它（P2 spec 第 3 节第 3 条）；`LockMany`：一条语句按 `id` 升序锁住几个项目（约定七，3.5）；另有不加锁的 `DeletedAt(projectIDs)`（P9 起）：其中已删除的项目和它们的 `deleted_at`（关联行属于先删除的那一端，3.5）。删除工作区锁它的全部项目不经这个端口，经 `project` 给 `workspace` 的 `ProjectCascade.LockWorkspaceProjects`（见下）。
+    - **P8草稿的项目端口**：按已批准的3.5锁序，由消费方另声明窄接口：`DraftProjects.UndeletedIDs` 提供同工作区全部未删除项目ID（含归档、不要求调用者仍为项目成员），`ShareMany` 提供新旧项目按ID升序的一条 `FOR SHARE` 查询；经 `project.Provide` / bootstrap转换。保存目标的可见性另判，不能用普通 `VisibleProjects` 目录替代这份存在性目录，也不能以现有项目N锁代替S锁。准确签名及实施顺序见 [P8 spec](specs/P8-drafts-search.md)，目前为准备期。
     - `Sequences`：在项目行的锁之下 `UPDATE projects SET last_issue_sequence = last_issue_sequence + 1 … RETURNING`（总体设计 5.3，M3 交接第 4 节）。
     - `StateCatalog`：项目的未删除状态（id、名称、组、`default`、是否分诊）；按 id 取一个；列表引擎按目录排序、分组用（3.16）。
     - `LabelCatalog`：项目的未删除标签（id、名称）；按 id 集合核对。
@@ -286,10 +287,10 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - 任务：项目 P 的任务（时刻 `at`）对另一端的项目在 `at` 之前已删除的关联行跳过，留给那次更早的删除的任务；另一端在同一时刻随同一个工作区删除的，两个任务谁先锁到谁写，写下的时刻和删除者相同。另一端的项目的 `deleted_at` 同样经 `ProjectGate.DeletedAt` 读出。
   - 交错 24、25 断言写下的是谁的时刻和删除者，不只是"只删了一次"。
 - **删除标签摘下 `issue_labels` 不需要按 `id` 先锁**（M3 交接第 4 节）：那里说 `issue_labels` 的写若不持项目或工作区的 `FOR NO KEY UPDATE`，就落在约定五的例外里。B 之下每个写活的项目的 `issue_labels` 的事务都持这个项目的 N（工作项的写、删除标签），删除项目、工作区之后的任务只写已删除的项目的行（3.6），`DetachLabel` 在项目 N 之下按谓词批量写到的行没有别的写能同时写到，所以不加按 `id` 的预锁，约定五的论证照旧。
-- **草稿的写持工作区 S，有项目时再持项目 S**：草稿属于工作区（`issue_draft.write` 是工作区级的操作），先锁父行（工作区 S，M3 约定二"往父行下面加行、改下面的行"）、判定；草稿带项目时再以 `FOR SHARE` 锁住它的项目（改项目时新旧两个，`id` 升序），确认项目未删除、调用者看得到（3.15），然后锁草稿行（`FOR UPDATE`）、重读。
-  - 为什么要项目 S：删除项目软删除这个项目的草稿（3.6，P9 起由任务写下删除请求的时刻）。草稿的写若不持项目的锁，删除读时刻之后草稿的写可以写下较晚的 `updated_at`，随后被写下较早的 `deleted_at`。持项目 S 时，删除项目（N）等它提交之后才读时刻；删除提交之后，草稿的写在锁下看到项目已删除（422 `project_id`）。
+- **草稿的写持工作区 S，有项目时再持项目 S**：草稿属于工作区（`issue_draft.write` 是工作区级的操作），先锁父行（工作区 S，M3 约定二"往父行下面加行、改下面的行"），无额外锁重读草稿/旧项目的存在性后再判定工作区权限；草稿带项目时再以 `FOR SHARE` 锁住它的项目（改项目时新旧两个，`id` 升序），确认旧项目未删除，然后锁草稿行（`FOR UPDATE`）、重读拥有者、删除状态及项目是否变化；通过这些资源检查后，显式指定的非空项目才另核同工作区与调用者可见性（3.15）。省略项目的修改或删除不因调用者退出旧项目而拒绝；保存目标与搜索目录的区别见P8 spec。
+  - 为什么要项目 S：删除项目软删除这个项目的草稿（3.6，P9 起由任务写下删除请求的时刻）。草稿的写若不持项目的锁，删除读时刻之后草稿的写可以写下较晚的 `updated_at`，随后被写下较早的 `deleted_at`。持项目 S 时，删除项目（N）等它提交之后才读时刻；删除提交之后，已有草稿关联的旧项目已删除时，按3.15的资源存在性规则回答404 `issue.draft_not_found`；保存时显式指定的新 `project_id` 不合法则是422 `project_id/not_allowed`。两者不混用，发布与删除项目的交错仍满足第16项的404。
   - 重读时草稿的项目已不是读时的那个（另一个标签页改了它）：409 `issue.draft_changed`，调用者重试。
-- **发布草稿**：读草稿（不加锁，得到项目）→ 预检 → 项目的写闸门 → 工作区 S → 判定 `issue_draft.write` → 项目 N → 判定 `issue.create` → 草稿行 `FOR UPDATE` → 重读（已删除 404 `issue.draft_not_found`；项目变了 409 `issue.draft_changed`）→ 与创建相同的检查和写入 → 软删除草稿。与 M3 的项目级的写同一个形状（工作区 S → 项目 N）。
+- **发布草稿**：读草稿（不加锁，得到项目）→ 预检 → 项目的写闸门 → 工作区 S → 无额外锁重读资源存在性 → 判定 `issue_draft.write` → 项目 N → 判定 `issue.create` → 草稿行 `FOR UPDATE` → 重读（已删除 404 `issue.draft_not_found`；项目变了 409 `issue.draft_changed`）→ 拒绝归档项目 → 与创建相同的检查和写入 → 软删除草稿。与 M3 的项目级的写同一个形状（工作区 S → 项目 N）。
 - **不取项目锁的后台写**：
   - 链接的抓取（3.11）：一条带守卫的 `UPDATE issue_links SET metadata = $m WHERE id = $id AND url = $url AND deleted_at IS NULL`，只写 `metadata`，不写 `updated_at`、`updated_by_id`。不持别的锁，与任何事务都不会成环；链接已删除或地址已改时写 0 行。项目已删除、任务还没软删除这个链接时，写回照样写下 `metadata`：这一列没有时刻，不破坏一个改变一个时刻，链接随后被任务删除。
   - 60 天清理（3.21）：只删除软删除超过 60 天的行；没有任何写会再改一行已软删除的行（每个写都带 `deleted_at IS NULL`），清理与写不相遇。
@@ -371,7 +372,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
     - **时间的预算**：worker 覆盖 River 的 `Timeout()`，取 `issue.delete_budget` 加 5 秒（预算默认 45 秒；River 默认的期限是 1 分钟，`river@v0.47.0/client.go:53`，`platform/jobs` 没有改它）。它在每批之前看已用的时间，预算用完而还有行时返回 `river.JobSnooze(0)`：任务重新排队、立即可取，不算一次尝试（`river@v0.47.0/error.go:31-40`），所以一个大的删除不会耗尽尝试的次数，也不会被期限打断在半批上。真的出错（数据库不可用一类）照 River 默认的重试（25 次，`attempt^4` 秒的退避）。
     - **规模**：键集之下每 1000 行约 3 ms（SP4），一个目标规模的项目的任务在一次运行里做完。P9 的量测是一条通过线：五个目标规模的项目的工作区，每个任务都在一次运行里做完（没有 snooze、没有重试），每个任务的耗时记进 spec。
   - **一个改变一个时刻仍成立**：每一行写的是删除它的那次请求的时刻和删除者，与同步的连带写下的相同，只是晚一些写：每个项目的行只由它自己的任务写；跨项目的关联行属于先删除的那一端，活的删除工作项和别的任务都跳过它（3.5）；请求先锁项目、再读时刻（3.5 重新推过），所以没有一行的时刻倒退。交错 24、25 断言每一行写下的是谁的删除。
-  - **窗口期间的读写**：请求提交之后、任务做完之前，工作项一侧的行还是"活的"，但它们的项目已删除。每个读写都经项目的门（`ProjectGate`、`access` 的 `ProjectFacts` 都带 `deleted_at IS NULL`，`server/internal/modules/project/adapter/postgres/queries/access.sql:1-8`）或可读的项目的目录（`VisibleProjects` 只列未删除的项目），所以这些行对每个读写都等于不存在，**答案与任务做完之后相同**：按 id 的读和写（预检 404）、按编号取（只认未删除的项目的标识）、搜索和个人主页（`VisibleProjects`）、项目的列表（项目 404）、别的项目里的关联列表（对方看不到）、从别的项目加关联（422）和删除指向它的关联（404），删除别的项目里的工作项不写它与这里的工作项之间的关联行（3.5，交错 24）、草稿（草稿的读按这个工作区未删除的项目过滤：`project_id` 为空或在 `ProjectGate` 给出的未删除项目里，否则当作不存在）、游标（每次按请求重新施加可见性，8.6）。动态里引用这些工作项的行按 3.13 的规则判定，那条规则本来就不看 `deleted_at`，任务前后答案相同。9.3 的"窗口"测试逐条核对：在任务跑之前和之后各问一次，答案相同。
+  - **窗口期间的读写**：请求提交之后、任务做完之前，工作项一侧的行还是"活的"，但它们的项目已删除。每个读写都经项目的门（`ProjectGate`、`access` 的 `ProjectFacts` 都带 `deleted_at IS NULL`，`server/internal/modules/project/adapter/postgres/queries/access.sql:1-8`）或可读的项目的目录（`VisibleProjects` 只列未删除的项目），所以这些行对每个读写都等于不存在，**答案与任务做完之后相同**：按 id 的读和写（预检 404）、按编号取（只认未删除的项目的标识）、搜索和个人主页（`VisibleProjects`）、项目的列表（项目 404）、别的项目里的关联列表（对方看不到）、从别的项目加关联（422）和删除指向它的关联（404），删除别的项目里的工作项不写它与这里的工作项之间的关联行（3.5，交错 24）、草稿（草稿的读按这个工作区未删除的项目过滤：`project_id` 为空或在 `DraftProjects.UndeletedIDs` 给出的未删除项目里，否则当作不存在）、游标（每次按请求重新施加可见性，8.6）。动态里引用这些工作项的行按 3.13 的规则判定，那条规则本来就不看 `deleted_at`，任务前后答案相同。9.3 的"窗口"测试逐条核对：在任务跑之前和之后各问一次，答案相同。
   - **任务失败**：真的出错时 River 按它的退避重试（预算用完的 snooze 不是失败）；重试用完时记一条错误日志，行仍是窗口期间的样子（对任何读写都不存在），60 天之后项目（工作区）的行被物理清理时，外键的 `CASCADE` 把它们物理删除（3.21）。
   - **与清理的先后**：任务写的 `deleted_at` 是请求的时刻，清理按 `deleted_at < 现在 − 60 天` 删除，所以任务在 60 天之内做完时清理碰不到它还没写的行。任务挂起超过 60 天时：`issue` 的清理者跳过仍是活的行，`project`（`workspace`）的清理者物理删除项目（工作区）的行，外键的 `CASCADE` 把剩下的工作项一侧的行一起物理删除；任务随后写 0 行、完成。两者若恰好同时碰到同一批行，按不同的顺序可能死锁（40P01），一方回滚、由 River 重试。
   - **e2e**：M4 的每张表都有 `project_id`（草稿可空）、`deleted_at`、`updated_by_id`。`expectProjectDeleted`、`expectWorkspaceDeleted` 从目录读表（`workspaceTables` 改为从目录读出，2 节）；P9 起它们对工作项一侧的表**限时轮询数据库**，等到每一行都与项目同一时刻、由同一个账户软删除（总体设计 8.2 允许"限时轮询数据库"）。M3 的删除故事在删除之前经 `furnishIssueRows` 给每张表造行（2 节，每个加表的 Phase 扩充它；对抗性评审 I6）。
@@ -549,10 +550,10 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 ### 3.15 草稿（总体设计 5.4）
 - **表**：`draft_issues(id, workspace_id, project_id, payload, created_by_id, updated_by_id, created_at, updated_at, deleted_at)`（4.13）。Plane 是一张与工作项同形的表加四张关联表（R1 第 14 节），差异清单已登记"一张表 + payload"。
 - **`payload`** 是创建工作项的请求体，同一个结构 `IssueCreate`，但全部字段可选（`IssueDraftPayload`，5.2；标题可以为空串）。`project_id` 不在载荷里而是一列：创建的路径里有项目、请求体没有。
-- **保存**（创建、修改）：`{project_id, payload}`。载荷只检查结构（`bodyshape`，未知字段 400），不检查它引用的状态、标签、负责人、父工作项（总体设计 5.4"保存时只检查类型"）。`project_id` 可为空；不为空时必须是这个工作区里调用者看得到的、未删除的项目，否则 422（`project_id`，`not_allowed`）。
-- **只属于创建者**：列表、读、改、删、发布都只对自己的草稿；别人的草稿 404 `issue.draft_not_found`（Plane 的删除不看是不是自己的，管理员能删别人的，登记差异）。
-- **列表**：`GET /workspaces/{slug}/drafts`，自己的草稿，最新的在前（`created_at` 降序、`id` 降序），游标分页，带 `total`。草稿的每个读（列表、取、改、删、发布）只认 `project_id` 为空或属于这个工作区未删除的项目的草稿（项目的目录经 `ProjectGate` 不加锁地读出）：项目已删除而删除的任务还没软删除它时，它与已删除的同样不存在（3.6）。
-- **发布**：`POST /drafts/{draft_id}/publish`，没有请求体，用存着的载荷：
+- **保存**（创建、修改）：`{project_id, payload}`。载荷只检查结构（`bodyshape`，未知字段 400），不检查它引用的状态、标签、负责人、父工作项（总体设计 5.4"保存时只检查类型"）。 P8准备期明确存储表示边界：`name`、`description_html`、`priority` 含NUL时给422（对应 `payload.<字段>`、`invalid_format`），不清洗或丢弃字符；其余标题长度、优先级取值和引用语义仍留发布检查。合法JSON的NUL不能直接写入PostgreSQL jsonb，不改共享bodyshape或依赖。`project_id` 可为空；保存时显式指定的非空项目必须是这个工作区里调用者经 `project.read` 看得到的、未删除的项目（允许归档），否则 422（`project_id`，`not_allowed`）。
+- **只属于创建者**：列表、读、改、删、发布都只对自己的草稿；有效工作区管理员/成员访问别人的草稿为404 `issue.draft_not_found`，工作区访客对活的可达草稿先按工作区权限给403（Plane 的删除不看是不是自己的，管理员能删别人的，登记差异）。
+- **列表**：`GET /workspaces/{slug}/drafts`，自己的草稿，最新的在前（`created_at` 降序、`id` 降序），游标分页，带 `total`。草稿的每个读（列表、取、改、删、发布）只认 `project_id` 为空或属于这个工作区未删除的项目的草稿（项目的目录经 `DraftProjects.UndeletedIDs` 不加锁地读出）：项目已删除而删除的任务还没软删除它时，它与已删除的同样不存在（3.6）。
+- **发布**：`POST /drafts/{draft_id}/publish`，没有请求体，用存着的载荷：P8在该路由单独拒绝任何非零字节请求体（含空白/未知长度体，400），不改全局bodyshape。
   - 没有项目 422（`project_id`，`required`）。
   - 载荷经 `createIssue` 的同一个结构检查：同一个不合规的请求体得到与直接创建相同的 400（M2 交接第 4 节）；再经同一组语义检查：同样的 422，路径相同（`state_id`、`label_ids[i]`、`parent_id` 等，引用的对象已删除时就是这样）。
   - 调用者要能在那个项目里创建（`issue.create`）。Plane 的发布不检查（`API/app/views/workspace/draft.py:224-234`），登记差异。
@@ -656,7 +657,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **M3 的关键词守卫的例外**：`/user-properties/` 两处 `until: "M4"`（`tools/keywords.json:2526`）在 `phase` 改为 `M4/P1` 的那一刻就到期（`tools/keywords.mjs:3-6,195`：`until` 不晚于 `phase` 即到期，守卫失败）。所以 P1a 开始时把 `phase` 改为 `M4/P1` 的**同一个提交**里，把它的 `until` 改为 `M4/P11`（P1b 的 `phase` 照旧是 `M4/P1`：守卫只认 `M<n>/P<k>`，第 12 节）：P10b 删除这两个旧方法和例外（项目页的筛选 store 改接新接口的 Phase，M3 交接第 5 节），`until` 取删除它的 Phase 的下一个，P10b 进行中它仍有效（7.9）。
 
 ### 3.18 搜索与按编号取（总体设计 6.9）
-- **一个搜索接口**：`GET /workspaces/{slug}/issue-search`，参数 `q`（可选，去掉首尾空白之后至多 100 个字符）、`project_id`（可选，只搜这个项目）、`for`（可选：`parent`、`sub_issue`、`relation`）与 `issue_id`（`for` 出现时必填）、`start_date`、`target_date`（可选，3.16 的日期条件，含 `none`）、`limit`（1–100，默认 50）。响应 `{data: Issue[]}`，最好的在前，不分页（取前 N 个，同 Plane）。
+- **一个搜索接口**：`GET /workspaces/{slug}/issue-search`，参数 `q`（可选，去掉首尾空白之后至多 100 个字符；NUL为422 `q/invalid_format`，避免不可表示的PostgreSQL text参数）、`project_id`（可选，只搜这个项目）、`for`（可选：`parent`、`sub_issue`、`relation`）与 `issue_id`（`for` 出现时必填）、`start_date`、`target_date`（可选，3.16 的日期条件，含 `none`）、`limit`（1–100，默认 50）。响应 `{data: Issue[]}`，最好的在前，不分页（取前 N 个，同 Plane）。
   - **`q` 为空**（不带或去掉空白之后为空）：按 `updated_at` 降序、`id` 给出范围里最近更新的工作项，排除照旧。两个选择器一打开就用空的词搜索（`core/modals/existing-issues-list-modal.tsx:98-131`、`issues/parent-issues-list-modal.tsx:61-79`），只有命令面板等着输入（`power-k/ui/modal/search-menu.tsx:49`）；第二稿要求 `q` 必填，选择器每次打开都是 422，或者打开是空的（对抗性评审 I5）。
   - **日期的条件**：日历的"添加已有"只列出没有截止日期的（`target_date=none`，`calendar/quick-add-issue-actions.tsx:46-50`），解析与列表的日期参数同一份词汇（3.17）。
 - **范围**：调用者是有效成员的、未归档的项目里，未删除、未归档的工作项，每个项目按它的访客规则过滤（3.4）。Plane 的命令面板的搜索不执行访客规则（泄露），选择器的搜索对一切访客只给自己建的（比别处更严）（R2 第 12 节）；Nerve 处处是同一条规则。`project_id` 不在范围里 404 `project.not_found`。
@@ -1127,7 +1128,7 @@ issue_comments
 ## 5. 接口
 
 ### 5.1 操作
-一个新模块文件 `api/modules/issue.yaml`（模块文件名等于模块目录名，M2 设计 3.12），37 个操作；`api/modules/project.yaml` 改三个操作。路径都不带结尾 `/`。每个操作写 `security` 和 `x-problem-codes`；下表"主要错误"一栏就是后者的内容，不再列出所有操作都可能返回的平台码。全部带 `bearer`（另隐含 `unauthorized`）；带请求体的都可能返回 400 `bad_request`（结构）。`forbidden` 写作 403 F，`validation_failed` 写作 422 V。按资源 id 寻址的操作，资源所在的项目已归档时答 409 `project.archived`（写），下表写作"409 PA"；工作项已归档时 409 `issue.archived`，写作"409 IA"。工作项一侧的每个写（下表里带 409 PA 的，和 `createIssue`、`publishDraft`）另在 `x-problem-codes` 里声明 503 `server_busy`（写闸门满、`lock_timeout`，3.5；M2 的登录已这样声明），下表不再逐行写出。
+一个新模块文件 `api/modules/issue.yaml`（模块文件名等于模块目录名，M2 设计 3.12），37 个操作；`api/modules/project.yaml` 改三个操作。路径都不带结尾 `/`。每个操作写 `security` 和 `x-problem-codes`；下表"主要错误"一栏就是后者的内容，不再列出所有操作都可能返回的平台码。全部带 `bearer`（另隐含 `unauthorized`）；带请求体的都可能返回 400 `bad_request`（结构）。`forbidden` 写作 403 F，`validation_failed` 写作 422 V。按资源 id 寻址的操作，资源所在的项目已归档时答 409 `project.archived`（写），下表写作"409 PA"；工作项已归档时 409 `issue.archived`，写作"409 IA"。工作项一侧的每个写（下表里带 409 PA 的，以及 `createIssue`、草稿的创建/修改/删除/发布）另在 `x-problem-codes` 里声明 503 `server_busy`（写闸门满或 `lock_timeout`；草稿普通写不进闸门，但仍可能发生锁超时，3.5；M2 的登录已这样声明），下表不再逐行写出。
 
 契约按模块一个文件（M3 设计 5.1 的约定和它的例外）：`issue.yaml` 预计约 2,500 行，超过约 400 行的规则，是 M3 写明的同一个例外。
 
@@ -1165,8 +1166,8 @@ issue_comments
 | `GET /api/v0/issues/{issue_id}/description-versions` | `listDescriptionVersions` | 查询：`limit`、`cursor` | 200 `DescriptionVersionPage` | 404；403 F |
 | `GET /api/v0/issue-description-versions/{version_id}` | `getDescriptionVersion` | — | 200 `DescriptionVersionDetail` | 404 `issue.description_version_not_found`；403 F |
 | `GET /api/v0/workspaces/{slug}/drafts` | `listDrafts` | 查询：`limit`、`cursor` | 200 `DraftPage` | 404 `workspace.not_found`；403 F |
-| `POST /api/v0/workspaces/{slug}/drafts` | `createDraft` | `DraftCreate {project_id?, payload}` | 201 `Draft` | 404；403 F；422 V（`project_id`） |
-| `GET /api/v0/drafts/{draft_id}` | `getDraft` | — | 200 `Draft` | 404 `issue.draft_not_found` |
+| `POST /api/v0/workspaces/{slug}/drafts` | `createDraft` | `DraftCreate {project_id?, payload}` | 201 `Draft` | 404；403 F；422 V（`project_id`，以及载荷的NUL存储边界） |
+| `GET /api/v0/drafts/{draft_id}` | `getDraft` | — | 200 `Draft` | 404 `issue.draft_not_found`；403 F |
 | `PATCH /api/v0/drafts/{draft_id}` | `updateDraft` | `DraftUpdate {project_id?, payload?}` | 200 `Draft` | 404 `issue.draft_not_found`；403 F；422 V；409 `issue.draft_changed` |
 | `DELETE /api/v0/drafts/{draft_id}` | `deleteDraft` | — | 204 | 404 `issue.draft_not_found`；403 F；409 `issue.draft_changed` |
 | `POST /api/v0/drafts/{draft_id}/publish` | `publishDraft` | — | 201 `IssueDetail` | 404 `issue.draft_not_found`；404 `project.not_found`；403 F；400（载荷的结构，与 `createIssue` 相同）；422 V；409 `issue.draft_changed`；409 `project.archived` |
@@ -1335,7 +1336,8 @@ modules/issue/
 | 端口 | 声明在 | 实现 | 测试 |
 |---|---|---|---|
 | `Authorizer`（`Target.CreatorID`、`Grant.OwnOnly`） | `internal/shared` | `access/app` | `access/domain` 的判定表（创建者、访客规则的每一种）；9.2 的矩阵 |
-| `ProjectGate`（`Find(projectID)` 不加锁 → 工作区；`Lock(projectID)` `FOR NO KEY UPDATE`，带 `deleted_at IS NULL`，回答 `archived`、`identifier`、`default_assignee_id`、`archive_in`，不回答 `guest_view_all_features`（判定经 `Authorize` 读它：锁下的写、P3 的两个列表；P5 的列表引擎经 `VisibleProjects`）；`LockMany(projectIDs)` 一条语句按 `id` 升序；不加锁的读：工作区未删除的项目的 id，`DeletedAt(projectIDs)`（P9 起）） | `issue/app` | `project/adapter/postgres`（`project.Provide`） | 集成测试；取锁的形状测试（交错 21：每个写的第一把锁是项目的 N，跨项目的写经 `LockMany`）；`LockMany` 的 `id` 顺序和等锁期间被删除的项目（`project` 的存储测试，S5 的 E4）；看不到的项目不锁（`TestARelationLocksNoProjectItDoesNotReach`，交错 21 的关联的一例） |
+| `ProjectGate`（`Find(projectID)` 不加锁 → 工作区；`Lock(projectID)` `FOR NO KEY UPDATE`，带 `deleted_at IS NULL`，回答 `archived`、`identifier`、`default_assignee_id`、`archive_in`，不回答 `guest_view_all_features`（判定经 `Authorize` 读它：锁下的写、P3 的两个列表；P5 的列表引擎经 `VisibleProjects`）；`LockMany(projectIDs)` 一条语句按 `id` 升序；不加锁的读：`DeletedAt(projectIDs)`（P9 起）） | `issue/app` | `project/adapter/postgres`（`project.Provide`） | 集成测试；取锁的形状测试（交错 21：每个写的第一把锁是项目的 N，跨项目的写经 `LockMany`）；`LockMany` 的 `id` 顺序和等锁期间被删除的项目（`project` 的存储测试，S5 的 E4）；看不到的项目不锁（`TestARelationLocksNoProjectItDoesNotReach`，交错 21 的关联的一例） |
+| `DraftProjects.UndeletedIDs` 与按ID升序的 `ShareMany` / `FOR SHARE`（P8） | `issue/app` 消费端 | `project.Provide` / bootstrap转换 | 草稿旧新项目两种ID顺序、归档/失去项目成员资格仍可读自己的草稿、删除窗口与交错16/17；目前仅列实施要求 |
 | `Sequences`（`Next(projectID) (int, error)`：`UPDATE … RETURNING`，在项目 N 之下） | `issue/app` | 同上 | 集成测试；交错 1 |
 | `StateCatalog`（项目的未删除状态：id、名字、组、默认、分诊；名字的比较键） | `issue/app` | 同上 | 集成测试 |
 | `LabelCatalog`（项目的未删除标签：id、名字的比较键；按 id 集合核对） | `issue/app` | 同上 | 同上 |
@@ -1669,7 +1671,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - 排序码与请求不符、形状不对：400 `bad_request`（3.16）。
 
 ### 8.7 其他
-- **草稿的载荷**：只在发布时按创建的规则检查（3.15）；保存时它是调用者自己的数据，只给他自己看。大小受请求体的上限（1 MiB）约束。
+- **草稿的载荷**：只在发布时按创建的规则检查（3.15）；保存时它是调用者自己的数据，只给他自己看。大小受请求体的上限（1 MiB）约束。 保存仍执行结构检查与3.15的三字符串NUL存储表示检查，不提前做创建的业务语义验证。
 - **描述历史的大小**：每个工作项至多 20 个版本（3.14），软删除的随工作项在 60 天之后物理删除（3.21）。
 - **动态的增长**：没有保留的上限（Plane 也没有，4.11）；物理清理只删除随工作项删除的。第 16 节记为风险。
 - **物理清理不删账户**（M3 交接第 2 节）：成员关系不会不经工作区的锁被级联删除（3.21）。
@@ -2223,6 +2225,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：I10 的接口版本（含被拒绝的 `169.254.169.254` 写下 `blocked`）、I17 加上链接之后通过；6.8 的表测试通过。
 
 ### P8 `drafts-search`：草稿、搜索与 `link_count`（后端，13 个任务）
+
+2026-10-27准备期将下列13个设计粗项按职责细化为16个拟实施任务，映射与规模预算见 [P8 plan](plans/P8-drafts-search.md)。仍在已批准D2范围内，不减少完成线；本次只写spec/plan并预检，未实现或运行P8验收。
 - **目标**：个人草稿和发布；工作项的搜索和选择器的排除；pg_trgm；`link_count` 进入列表。
 - **任务**：
   1. 迁移 `00028`，grants；删除的语句加草稿（项目的，和按工作区的、没有项目的）；`furnishIssueRows` 加草稿。
@@ -2538,8 +2542,8 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 已完成：[spec](specs/P4-issue-collaboration.md)、[plan](plans/P4-issue-collaboration.md)、[评审](reviews/P4-issue-collaboration-review.md)。T1–T16/A1/A2实施与独立评审完成，既有分支CI全绿；负责人新指示下的[整分支deep-review](../../reviews/re-01-M4P4整体审核.md)及局部修复复审完成，三项Minor已闭合，8组-race×5/完整Go/lint/gen-check通过；已以 `--no-ff` 合并main `e9782b8f`，[CI 40180521025](https://github.com/open-nerve/NerveProject/actions/runs/40180521025) 三任务全绿，精确SHA及接收记录见P5评审 |
 | P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | 已完成：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。追加[deep-review](../../reviews/re-02-M4P5整体审核.md)及局部修复复审关闭；2026-10-26 负责人授权后，P5 已以 `--no-ff` 合并为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 的 server/web/e2e 全绿；6,517 个证据文件已归档并逐个 SHA-256 核对，P5 本地/远端分支及 worktree 已清理。T16 集成门关闭，M4 总体与后续交接仍 open。 |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，16验收任务） | T1–T16已实施并逐Task独评通过，T16正式文档/交接已同步：[spec](specs/P6-issue-events.md)、[plan](plans/P6-issue-events.md)、[review](reviews/P6-issue-events-review.md)。内部整分支审查及 clock 修复聚焦复审已通过；修复 `e8df8485` 的 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 三任务全绿。deep-review 终审通过（[报告](../../reviews/re-03-M4P6整体审核.md)，3 项文档 Minor 已闭环）；已授权 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；[main CI 40305247546](https://github.com/open-nerve/NerveProject/actions/runs/40305247546) 重跑全绿，921 个本地证据归档核 hash 后已清理分支/worktree。**P6 已完成**；M4 总体仍进行中 |
-| P7 `issue-links` | 链接、出站客户端与抓取（后端，12粗项/16任务） | T1–T15实施及独评完成；[spec](specs/P7-issue-links.md)、[plan](plans/P7-issue-links.md)、[review](reviews/P7-issue-links-review.md)、[整体审核](../../reviews/re-05-M4P7整体审核.md)。原范围165文件/457chunks单次整审完成，T16修复/文档与本轮完整七门禁已完成（tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`），原8项独立定向复审全部ADDRESSED；T7历史时态文案已纠正，本次纯文档增量确认及最终交付HEAD CI见主控最终记录；T15准确d2及T16产品检查点cd0的[CI40397086823](https://github.com/open-nerve/NerveProject/actions/runs/40397086823)均已核全绿，后续纯文档交付HEAD CI另核。未合并，main集成另获授权 |
-| P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13） | 未开始 |
+| P7 `issue-links` | 链接、出站客户端与抓取（后端，12粗项/16任务） | **已完成**：[spec](specs/P7-issue-links.md)、[plan](plans/P7-issue-links.md)、[review](reviews/P7-issue-links-review.md)、[整体审核](../../reviews/re-05-M4P7整体审核.md)。T1–T16实施、整审及修复复审闭环；经授权 `--no-ff` 合并 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 三任务全绿；5,443个本地证据文件归档逐hash核验后，已清理本地/远端分支及worktree。M4总体仍进行中 |
+| P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13粗项/16拟实施任务） | 准备中：[spec](specs/P8-drafts-search.md)、[plan](plans/P8-drafts-search.md)。基线 `166b9efd` 的P7 main CI已通过；只准备文档与独立预检，暂不实现 |
 | P9 `purge` | 物理清理、描述版本的保留与工作项一侧的删除任务（后端，13） | 未开始 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | 未开始 |
 | P10b `web-list-data` | 列表一侧的数据层（14） | 未开始 |

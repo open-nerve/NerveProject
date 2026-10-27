@@ -2,7 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **实施状态：** T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复、正式文档和准确提交的完整本地七门禁已完成；独立定向复审已确认原8项全部 ADDRESSED；T7历史时态文案已由作者纠正，本次纯文档增量确认及最终交付 HEAD CI 以主控最终记录为准。产品检查点`cd0fce7e`的[CI40397086823](https://github.com/open-nerve/NerveProject/actions/runs/40397086823)已由主控核准确HEAD全绿；此后纯文档交付HEAD的CI另核；未合并 main。
+**当前状态（2026-10-27）：P7 已完成。** 经负责人授权以 `--no-ff` 合并为 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 的 server/web/e2e 全绿；5,443 个证据文件归档校验后，本地/远端分支及 worktree 已清理。集成证据见 [P7 review](../reviews/P7-issue-links-review.md) 的集成回执；M4 总体及后续交接仍开放。
+
+> **交付前冻结记录：** T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复、正式文档和准确提交的完整本地七门禁已完成；独立定向复审已确认原8项全部 ADDRESSED；T7历史时态文案已由作者纠正，本次纯文档增量确认及最终交付 HEAD CI 以主控最终记录为准。产品检查点`cd0fce7e`的[CI40397086823](https://github.com/open-nerve/NerveProject/actions/runs/40397086823)已由主控核准确HEAD全绿；此后纯文档交付HEAD的CI另核；未合并 main。
 
 **目标：** 实现 M4 §12/P7 的链接CRUD、首个生产事务订阅者、抓取worker和防SSRF出站，交付I10接口与带links的I15/I17删除目录故事。
 
@@ -249,9 +251,15 @@ T1–5链接请求、T6–9安全网络、T10–13任务集成、T14故事、T15
 - [x] 同步总体平台/安全说明、逐列差异与README网络边界/限额/公网任意端口/NAT和网卡变化需网络层覆盖；P7不改CSP，不写已存在页面。输入交接status保持open，追加本期结果与剩余P9/P14责任。
 - [x] M4§14只补P7子项真实证据，不把“事件和任务”整条或M4总体完成；v0§9.4仍进行中，不创建M5–M8最终closeout。
 - [x] 文档链接/代码路径/签名/checkbox范围和`git diff --check`通过，记录阶段终审与本地交付证据；初稿fix提交后只回填docs，全部非docs字节保持tested一致。
-- [ ] 主控完成独立复审后推分支准确HEAD并确认其CI，提供分支/基线/spec/plan/review/终审路径，先不合并。
-- [ ] 后续得到授权才--no-ff合并、准确main SHA CI全绿、ignored原始证据归档验证、清理分支/worktree；不能用分支CI替代mainCI。
+- [x] 主控完成独立复审并交付准确 `023c96e8`，[分支 CI 40400860045](https://github.com/open-nerve/NerveProject/actions/runs/40400860045) 全绿；当时按要求先不合并。
+- [x] 随后获得负责人授权，以 `--no-ff` 合并为 `166b9efd`，准确 main CI 40451632280 全绿；原始证据归档验证后清理分支/worktree。
 
-## 准备期自查与当前交付边界
+## 准备期自查与交付前冻结边界
 
 准备期16Task覆盖设计12粗项，5项Medium预检修订闭环；当时只有4列PG/sqlc最窄实验、验收未勾。随后T1–T15已按实际执行完成，上方勾选表示目标与归属证据完成，原建议命令/变异名称有差异的以执行补充和两矩阵为准，不能倒写历史。T16已完成原范围全文审查、局部修复/正式文档及准确本轮完整门禁；原8项定向独评已关闭；本次纯文档增量确认、最终交付HEAD的分支CI由主控最后记录。main合并、mainCI与ignored证据归档清理必须另获授权。
+
+## 2026-10-27 集成回执
+
+**当前状态（2026-10-27）：P7 已完成。** 经负责人授权以 `--no-ff` 合并为 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 的 server/web/e2e 全绿；5,443 个证据文件归档校验后，本地/远端分支及 worktree 已清理。集成证据见 [P7 review](../reviews/P7-issue-links-review.md) 的集成回执；M4 总体及后续交接仍开放。
+
+上述交付前记录保留原审查范围与当时事实；最终 `7e903ecb..023c96e8` 文档增量复审已通过，原8项与T16-DOC-1均已关闭。完整本地门禁的产品源码与最终分支/合并树身份已核对，不冒称另跑了未变套件。原始证据现位于项目根目录 `.superpowers/sdd/P7-integration-20261027/worktree-evidence/.superpowers/sdd/P7-issue-links/`；旧 `E` 路径是阶段执行时的位置。
