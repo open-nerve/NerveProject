@@ -23,7 +23,8 @@ func TestSearchSimilarityType(t *testing.T) {
 		query string
 		want  float32
 	}{{"Work", 1}, {"Wor", 0.5}, {"xyz", 0}} {
-		rows, err := queries.SearchIssues(context.Background(), tt.query)
+		number := int32(1)
+		rows, err := queries.SearchIssues(context.Background(), gen.SearchIssuesParams{Query: tt.query, ProjectIds: []uuid.UUID{p.id}, ProjectOwn: []bool{false}, ExactProjectID: &p.id, IdentifierNumber: &number, PageSize: 1})
 		if err != nil {
 			t.Fatal(err)
 		}

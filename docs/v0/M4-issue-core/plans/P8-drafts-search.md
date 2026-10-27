@@ -168,7 +168,7 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 
 ## Task 11：搜索静态SQL、完整排除与同快照授权
 
-**Files：** 新I/app/search_ports.go、search_issues.go、search_issues_test.go、fakes_search_test.go；扩I/adapter/postgres/queries/search_issues.sql；新search_issues.go、search_issues_test.go；新B/issue_search_test.go、issue_search_snapshot_test.go；消费现有visible_projects.go/seen.go；生成sqlc。
+**Files：** 新I/app/search_ports.go、search_issues.go、search_issues_test.go、fakes_search_test.go；扩I/adapter/postgres/queries/search_issues.sql；新search_issues.go、search_issues_test.go；新B/issue_search_test.go、issue_search_snapshot_test.go、issue_search_snapshot_ports_test.go（复用既有快照probe及通道帮手）；适配I/adapter/postgres/search_type_test.go的完整查询参数，保留原生float32编译与运行断言；扩B/search_runtime_role_test.go验证最终静态查询的runtime角色执行；消费现有visible_projects.go/seen.go；生成sqlc。
 
 **Interfaces：** `SearchRead`、`SearchRows.Search(ctx,in)([]domain.Issue,error)`、`NewSearchIssues/Execute`见spec§2.6。SQL自身仅issue表；projectIDs/OwnOnly/精确编号项目通过参数。每候选先全部过滤后LIMIT，最终只一套Locks.seen补可见parent/subcount。
 

@@ -7,23 +7,135 @@ package gen
 
 import (
 	"context"
+	"time"
 
 	"uuid"
 )
 
 const searchIssues = `-- name: SearchIssues :many
-SELECT id, similarity(name, $1) AS similarity
-FROM issues
-WHERE deleted_at IS NULL
+WITH RECURSIVE projects AS (
+    SELECT id, own_only FROM ROWS FROM(unnest($2::uuid[]), unnest($3::boolean[])) AS p(id, own_only)
+), source AS (
+    SELECT id, parent_id FROM issues WHERE id=$4::uuid
+), descendants(id) AS (
+    SELECT id FROM source WHERE $5::text='parent'
+    UNION
+    SELECT i.id FROM issues i JOIN descendants d ON i.parent_id=d.id
+), ancestors(id) AS (
+    SELECT id FROM source WHERE $5::text='sub_issue'
+    UNION
+    SELECT i.parent_id FROM issues i JOIN ancestors a ON i.id=a.id WHERE i.parent_id IS NOT NULL
+), candidates AS (
+    SELECT i.id, i.created_at, i.updated_at,
+           CASE WHEN i.project_id=$6::uuid AND i.sequence_id=$7::integer THEN 0
+                WHEN i.sequence_id=$8::integer THEN 1 ELSE 2 END AS rank,
+           similarity(i.name, $1) AS score
+    FROM issues i JOIN projects p ON p.id=i.project_id
+    WHERE i.deleted_at IS NULL AND i.archived_at IS NULL
+      AND (NOT p.own_only OR i.created_by_id=$9::uuid)
+      AND ($1::text='' OR i.project_id=$6::uuid AND i.sequence_id=$7::integer
+           OR i.sequence_id=$8::integer OR i.name ILIKE $10::text ESCAPE E'\\')
+      AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest($11::boolean[]), unnest($12::text[]), unnest($13::text[])) AS d(none, lo, hi)
+                     WHERE NOT (CASE WHEN d.none THEN i.start_date IS NULL ELSE i.start_date IS NOT NULL AND (d.lo='' OR i.start_date>=NULLIF(d.lo,'')::date) AND (d.hi='' OR i.start_date<=NULLIF(d.hi,'')::date) END))
+      AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest($14::boolean[]), unnest($15::text[]), unnest($16::text[])) AS d(none, lo, hi)
+                     WHERE NOT (CASE WHEN d.none THEN i.target_date IS NULL ELSE i.target_date IS NOT NULL AND (d.lo='' OR i.target_date>=NULLIF(d.lo,'')::date) AND (d.hi='' OR i.target_date<=NULLIF(d.hi,'')::date) END))
+      AND ($5::text='' OR i.id<>$4::uuid)
+      AND ($5::text<>'parent' OR
+           (NOT EXISTS(SELECT 1 FROM descendants d WHERE d.id=i.id) AND NOT EXISTS(SELECT 1 FROM source s WHERE s.parent_id=i.id)))
+      AND ($5::text<>'sub_issue' OR
+           (i.parent_id IS NULL AND NOT EXISTS(SELECT 1 FROM ancestors a WHERE a.id=i.id)))
+      AND ($5::text<>'relation' OR NOT EXISTS(
+          SELECT 1 FROM issue_relations r WHERE r.deleted_at IS NULL
+            AND ((r.issue_id=$4::uuid AND r.related_issue_id=i.id)
+                 OR (r.related_issue_id=$4::uuid AND r.issue_id=i.id))))
+), paged AS MATERIALIZED (
+    SELECT id, created_at, updated_at, rank, score FROM candidates c
+    ORDER BY CASE WHEN $1::text='' THEN c.updated_at END DESC,
+             CASE WHEN $1::text<>'' THEN c.rank END,
+             CASE WHEN $1::text<>'' THEN c.score END DESC,
+             CASE WHEN $1::text<>'' THEN c.created_at END DESC, c.id DESC
+    LIMIT $17::integer
+)
+SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_html, i.description_stripped,
+       i.state_id, i.priority, i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at,
+       i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
+       (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
+       (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids,
+       similarity(i.name, $1) AS similarity
+FROM paged c JOIN issues i ON i.id=c.id
+ORDER BY CASE WHEN $1::text='' THEN c.updated_at END DESC,
+         CASE WHEN $1::text<>'' THEN c.rank END,
+         CASE WHEN $1::text<>'' THEN c.score END DESC,
+         CASE WHEN $1::text<>'' THEN c.created_at END DESC, c.id DESC
 `
 
-type SearchIssuesRow struct {
-	ID         uuid.UUID
-	Similarity float32
+type SearchIssuesParams struct {
+	Query            string
+	ProjectIds       []uuid.UUID
+	ProjectOwn       []bool
+	SourceID         *uuid.UUID
+	Picker           string
+	ExactProjectID   *uuid.UUID
+	IdentifierNumber *int32
+	SequenceNumber   *int32
+	ActorID          uuid.UUID
+	Pattern          string
+	StartNone        []bool
+	StartFrom        []string
+	StartTo          []string
+	TargetNone       []bool
+	TargetFrom       []string
+	TargetTo         []string
+	PageSize         int32
 }
 
-func (q *Queries) SearchIssues(ctx context.Context, query string) ([]SearchIssuesRow, error) {
-	rows, err := q.db.Query(ctx, searchIssues, query)
+type SearchIssuesRow struct {
+	ID                  uuid.UUID
+	WorkspaceID         uuid.UUID
+	ProjectID           uuid.UUID
+	SequenceID          int32
+	Name                string
+	DescriptionHtml     string
+	DescriptionStripped *string
+	StateID             uuid.UUID
+	Priority            string
+	StartDate           *time.Time
+	TargetDate          *time.Time
+	ParentID            *uuid.UUID
+	SortOrder           float64
+	CompletedAt         *time.Time
+	ArchivedAt          *time.Time
+	CreatedByID         *uuid.UUID
+	UpdatedByID         *uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	AssigneeIds         []uuid.UUID
+	LabelIds            []uuid.UUID
+	Similarity          float32
+}
+
+// Scope, dates and the entire relationship exclusion precede LIMIT. Recursive
+// paths intentionally traverse invisible, archived and deleted intermediate rows.
+func (q *Queries) SearchIssues(ctx context.Context, arg SearchIssuesParams) ([]SearchIssuesRow, error) {
+	rows, err := q.db.Query(ctx, searchIssues,
+		arg.Query,
+		arg.ProjectIds,
+		arg.ProjectOwn,
+		arg.SourceID,
+		arg.Picker,
+		arg.ExactProjectID,
+		arg.IdentifierNumber,
+		arg.SequenceNumber,
+		arg.ActorID,
+		arg.Pattern,
+		arg.StartNone,
+		arg.StartFrom,
+		arg.StartTo,
+		arg.TargetNone,
+		arg.TargetFrom,
+		arg.TargetTo,
+		arg.PageSize,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +143,30 @@ func (q *Queries) SearchIssues(ctx context.Context, query string) ([]SearchIssue
 	var items []SearchIssuesRow
 	for rows.Next() {
 		var i SearchIssuesRow
-		if err := rows.Scan(&i.ID, &i.Similarity); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.SequenceID,
+			&i.Name,
+			&i.DescriptionHtml,
+			&i.DescriptionStripped,
+			&i.StateID,
+			&i.Priority,
+			&i.StartDate,
+			&i.TargetDate,
+			&i.ParentID,
+			&i.SortOrder,
+			&i.CompletedAt,
+			&i.ArchivedAt,
+			&i.CreatedByID,
+			&i.UpdatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AssigneeIds,
+			&i.LabelIds,
+			&i.Similarity,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

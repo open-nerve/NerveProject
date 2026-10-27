@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres/gen"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
@@ -42,6 +43,10 @@ func TestSearchTrigramRuntimeRole(t *testing.T) {
 	var similarity float32
 	if err := roles.server.QueryRow(ctx, `SELECT similarity(name,'Work') FROM issues WHERE id=$1`, issue).Scan(&similarity); err != nil || similarity != 1 {
 		t.Fatalf("runtime similarity over issue = %v, %v; want 1", similarity, err)
+	}
+	rows, err := gen.New(roles.server).SearchIssues(ctx, gen.SearchIssuesParams{Query: "Work", Pattern: "%Work%", ProjectIds: []uuid.UUID{project}, ProjectOwn: []bool{false}, PageSize: 1})
+	if err != nil || len(rows) != 1 || rows[0].ID != issue || rows[0].Similarity != 1 {
+		t.Fatalf("runtime full static search = %+v, %v", rows, err)
 	}
 	if _, err := roles.server.Exec(ctx, `INSERT INTO draft_issues(id,workspace_id,created_by_id) VALUES($1,$2,$3)`, draft, workspace, user); err != nil {
 		t.Fatal("runtime draft INSERT:", err)
