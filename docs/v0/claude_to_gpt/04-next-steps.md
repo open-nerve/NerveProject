@@ -95,4 +95,4 @@ P6 已由 deep-review 终审通过并经授权 `--no-ff` 合并为 `5005be985e7e
 
 P7 已经授权以 `--no-ff` 合并为 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 三任务全绿。5,443个证据文件归档并逐SHA核验后，P7本地/远端分支与worktree均已清理，完整事实见 [P7 review](../M4-issue-core/reviews/P7-issue-links-review.md) 第8节；§6/§7保留较早的冻结快照。
 
-下一步仅准备P8 `drafts-search` 的spec、plan和独立预检，工作树 `.codex/worktress/codex/m4-p8`，分支 `codex/m4-p8`，基线为上述main提交。产品暂不实现，M4总体及后续handoff保持open。
+P8 `drafts-search` 的[spec](../M4-issue-core/specs/P8-drafts-search.md)、[plan](../M4-issue-core/plans/P8-drafts-search.md)和[独立预检](../M4-issue-core/reviews/P8-drafts-search-review.md)已完成，准备提交 `d4391bff` 的两分区复核通过、开放发现为0。工作树 `.codex/worktress/codex/m4-p8`，分支 `codex/m4-p8`，基线为上述main提交；后续仅追加预检结论回执。等待负责人启动T1，产品暂不实现，M4总体及后续handoff保持open。

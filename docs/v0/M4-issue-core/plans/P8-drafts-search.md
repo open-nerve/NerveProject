@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **状态：** 仅准备 spec、plan 与独立静态预检；负责人明确暂不实现。本计划的任务、测试、变异、性能和门禁均尚未执行，不据静态阅读勾选。
+> **状态：** spec、plan 的独立静态预检已通过（[评审记录](../reviews/P8-drafts-search-review.md)）；负责人明确暂不实现，等待启动 T1。本计划的任务、测试、变异、性能和门禁均尚未执行，不据静态阅读勾选。
 
 **目标：** 交付个人草稿与原子发布、可见范围内的搜索和选择器排除、pg_trgm部署验证，以及每一种Issue表示和列表的link_count。
 

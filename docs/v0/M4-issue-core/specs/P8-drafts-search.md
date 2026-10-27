@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M4/P8 `drafts-search` |
 | 日期 | 2026-10-27 |
-| 状态 | 准备稿，供独立静态预检；产品实施未开始，验收均未执行。负责人只授权准备 spec、plan 和预检，不实施 P8 |
+| 状态 | 独立静态预检已通过，修订项全部关闭；产品实施未开始，验收均未执行。等待负责人启动 T1，见[评审记录](../reviews/P8-drafts-search-review.md) |
 | 代码基线 | P7 的 main 合并 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，文件树 `51982bad72186f17a0b10c31f2f508629bb9cca7`；主控已核同 SHA 的 main CI `40451632280` 全绿；归档/清理证据见 P7 收尾记录 |
 | 分支 | `codex/m4-p8`；worktree `.codex/worktress/codex/m4-p8`，主目录保持 main |
 | 上级文档 | [M4 设计](../M4-design.md) §3.3–3.5、3.15–3.18、3.23、4.13、5、6、8.6–8.7、9、12/P8、13.1；[方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md) |
@@ -301,6 +301,6 @@ schema生成/JSONB规范化可能改变错误截断顺序，T5对规范存储体
 
 ## 附录 A：准备与实施证据边界
 
-2026-10-27：只读核对M4设计、P3样板、P7交付树、现有创建/锁/列表/游标/HTTP bodyshape/删除接缝；独立需求和代码盘点保存在 ignored `.superpowers/sdd/P8-drafts-search/preparation/`。本稿没有跑迁移、生成器、测试、SQL原型或性能实验；NUL可存性和生成风险为静态推导，均有实施期验证Task。P7基线CI事实来自主控对准确SHA的核验；P8尚无实现或运行证据。
+2026-10-27：只读核对M4设计、P3样板、P7交付树、现有创建/锁/列表/游标/HTTP bodyshape/删除接缝；独立需求和代码盘点保存在 ignored `.superpowers/sdd/P8-drafts-search/preparation/`。规格作者和独立审者没有跑迁移、生成器、产品测试、SQL原型或性能实验；主控另已运行既有关键词/架构检查，结果见评审记录，不构成P8产品验收；NUL可存性和生成风险为静态推导，均有实施期验证Task。P7基线CI事实来自主控对准确SHA的核验；P8尚无实现或运行证据。
 
 实施后仅追加有原始输出/准确SHA的记录：Task红绿及实际RUN数；生产变异红因/层级/恢复hash；交错PID链；T4/8/12/15门禁；10万性能数据分布、PG版本/locale/LC_CTYPE、最终SQL及参数、EXPLAIN(ANALYZE,BUFFERS)、暖/冷说明与至少5次样本中位数/范围；deep-review和定向复审。未执行项保持未勾。
