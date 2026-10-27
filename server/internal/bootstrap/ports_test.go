@@ -473,7 +473,8 @@ func TestIssueProjectsDeletedAt(t *testing.T) {
 	id := uuid.NewV7()
 	at := time.Date(2026, 10, 28, 1, 2, 3, 123456000, time.FixedZone("offset", 3600))
 	f := &fakeIssueProjects{deleted: map[uuid.UUID]time.Time{id: at}}
-	ctx := context.WithValue(context.Background(), struct{}{}, "transaction")
+	type deletionContextKey struct{}
+	ctx := context.WithValue(context.Background(), deletionContextKey{}, "transaction")
 	got, err := (issueProjects{projects: f}).DeletedAt(ctx, []uuid.UUID{id})
 	if err != nil || !maps.Equal(got, f.deleted) || f.deletedContext != ctx || !slices.Equal(f.deletedIDs, []uuid.UUID{id}) {
 		t.Fatal(got, err, f.deletedIDs)
