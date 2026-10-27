@@ -51,7 +51,10 @@ func TestDescriptionVersionsPages(t *testing.T) {
 	other := w.newWorkItemIn(t, w.web, `{"name":"Neighbor"}`)
 	// Pagination capacity is tested against a stable fixture. SHARE permits
 	// these HTTP reads while the normal retention worker waits for project N.
-	holder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR SHARE", w.web)
+	holder, err := lockVersionPage(pgtest.Soon(t), w.pool, w.web)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer requestRelease(t, holder)
 	first := savedVersion(t, w, id)
 	versions := seedVersionPage(t, w, id, first)
@@ -281,7 +284,10 @@ func seedVersionPage(t *testing.T, w issueWorld, item uuid.UUID, first domain.De
 func TestDescriptionVersionsPagesRetentionInterference(t *testing.T) {
 	w := newIssueWorld(t)
 	item := w.newWorkItemIn(t, w.web, `{"name":"Retention between pages"}`)
-	holder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR SHARE", w.web)
+	holder, err := lockVersionPage(pgtest.Soon(t), w.pool, w.web)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer requestRelease(t, holder)
 	ids := seedVersionPage(t, w, item, savedVersion(t, w, item))
 	probe, collect := observedTrim(t, w.pool, func() { requestRelease(t, holder) })
