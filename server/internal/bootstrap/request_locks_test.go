@@ -39,6 +39,7 @@ type requestProbe struct {
 	active      uint64
 	id          string
 	waitTimeout time.Duration
+	onLockWait  func(requestLockSample)
 }
 
 func (d *requestProbe) WithinTx(ctx context.Context, fn func(context.Context) error) error {
@@ -90,9 +91,10 @@ func requestPID(t *testing.T, tx *requestProbe) uint32 {
 	return tx.pid.Load()
 }
 
-// Identity comes only from the request's own connection. Inspect its first
-// actual wait before comparing the expected blocker or table; background jobs
-// may wait behind the same holder without being this request.
+// Identity comes only from the request's own connection. Observe the first
+// stable wait caused by this fixture, then assert its actual table/lock. An
+// unrelated upstream transaction may legally delay reaching a downstream
+// fixture. With the all-table fixture, a wrong first table is still rejected.
 func requestBlocked(t *testing.T, pool *pgxpool.Pool, probe *requestProbe, holder uint32, table string) uint32 {
 	t.Helper()
 	return requestWait(t, pool, probe, holder, table, false)
@@ -103,48 +105,39 @@ func requestTableBlocked(t *testing.T, pool *pgxpool.Pool, probe *requestProbe, 
 }
 func requestWait(t *testing.T, pool *pgxpool.Pool, probe *requestProbe, holder uint32, table string, relationOnly bool) uint32 {
 	t.Helper()
-	var pid uint32
-	var blockers []int32
-	var query, locktype, relation, identities string
-	var sequence uint64
+	var sample requestLockSample
 	timeout := probe.waitTimeout
 	if timeout == 0 {
 		timeout = 2 * time.Second
 	}
-	requestEventuallyWithin(t, "identified request lock wait", timeout, func(ctx context.Context) bool {
-		pid, sequence = probe.snapshot()
-		if pid == 0 {
+	var diagnosed requestLockSample
+	requestEventuallyWithin(t, "identified request wait caused by fixture", timeout, func(ctx context.Context) bool {
+		var waiting bool
+		sample, waiting = readRequestLock(t, ctx, pool, probe)
+		if !waiting {
 			return false
 		}
-		var waits bool
-		err := pool.QueryRow(ctx, `SELECT coalesce(a.wait_event_type='Lock',false),pg_blocking_pids(a.pid),a.query,
-   coalesce(l.locktype,''),coalesce(l.relation::regclass::text,''),
-   jsonb_build_object('request_backend',a.backend_start,'request_xact',a.xact_start,
-    'peers',(SELECT jsonb_agg(jsonb_build_object('pid',b.pid,'backend',b.backend_start,'xact',b.xact_start,'wait',b.wait_event_type,'sql',b.query,'blockers',pg_blocking_pids(b.pid)))
-     FROM pg_stat_activity b WHERE b.pid=ANY(pg_blocking_pids(a.pid))))::text
-   FROM pg_stat_activity a LEFT JOIN pg_locks l ON l.pid=a.pid AND NOT l.granted WHERE a.pid=$1`, pid).Scan(&waits, &blockers, &query, &locktype, &relation, &identities)
-		if errors.Is(err, pgx.ErrNoRows) {
+		if !sameRequestLock(sample, diagnosed) {
+			t.Logf("requestPID=%d sequence=%d query_start=%s blockers=%v fixturePID=%d wait=%s relation=%s SQL=%s identities=%s", sample.pid, sample.sequence, sample.queryStart, sample.blockers, holder, sample.locktype, sample.relation, strings.Join(strings.Fields(sample.query), " "), sample.identities)
+			diagnosed = sample
+		}
+		if probe.onLockWait != nil {
+			probe.onLockWait(sample)
+		}
+		reachesFixture := slices.Contains(sample.blockers, int32(holder))
+		if !reachesFixture {
+			reachesFixture = slices.Contains(requestBlockerChain(t, pool, sample.pid), int32(holder))
+		}
+		if !reachesFixture {
 			return false
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		afterPID, afterSequence := probe.snapshot()
-		return waits && locktype != "" && afterPID == pid && afterSequence == sequence
+		// The transaction-only probe's sequence can stay zero across statements.
+		// Re-read the actual SQL/query_start and wait, not just the PID or xact.
+		after, stillWaiting := readRequestLock(t, ctx, pool, probe)
+		return stillWaiting && sameRequestLock(sample, after)
 	})
-	t.Logf("request sequence=%d identities=%s", sequence, identities)
-	t.Logf("requestPID=%d pg_blocking_pids=%v holderPID=%d wait=%s relation=%s SQL=%s", pid, blockers, holder, locktype, relation, strings.Join(strings.Fields(query), " "))
-	if !slices.Contains(blockers, int32(holder)) {
-		chain := requestBlockerChain(t, pool, pid)
-		t.Logf("requestPID=%d complete blocker chain=%v fixturePID=%d", pid, chain, holder)
-		if !slices.Contains(chain, int32(holder)) {
-			t.Fatalf("request PID %d blocked through %v, want fixture %d", pid, chain, holder)
-		}
-		after, seq := probe.snapshot()
-		if after != pid || seq != sequence {
-			t.Fatal("request query changed during blocker-chain inspection")
-		}
-	}
+	pid, query, locktype, relation := sample.pid, sample.query, sample.locktype, sample.relation
+
 	if relationOnly || locktype == "relation" {
 		if locktype != "relation" || relation != table {
 			t.Fatalf("request PID %d waits for %s %s, want relation %s", pid, locktype, relation, table)
@@ -157,6 +150,47 @@ func requestWait(t *testing.T, pool *pgxpool.Pool, probe *requestProbe, holder u
 		}
 	}
 	return pid
+}
+
+// A transaction-only probe can retain one PID/sequence across multiple SQL
+// statements. PostgreSQL's query_start and actual SQL distinguish their waits.
+type requestLockSample struct {
+	pid                                   uint32
+	sequence                              uint64
+	blockers                              []int32
+	query, locktype, relation, identities string
+	backend, xact, queryStart             string
+}
+
+func sameRequestLock(a, b requestLockSample) bool {
+	return a.pid == b.pid && a.sequence == b.sequence && a.backend != "" && a.backend == b.backend && a.xact != "" && a.xact == b.xact && a.queryStart != "" && a.queryStart == b.queryStart && a.query == b.query && a.locktype == b.locktype && a.relation == b.relation && slices.Equal(a.blockers, b.blockers)
+}
+
+func readRequestLock(t *testing.T, ctx context.Context, pool *pgxpool.Pool, probe *requestProbe) (requestLockSample, bool) {
+	t.Helper()
+	var sample requestLockSample
+	sample.pid, sample.sequence = probe.snapshot()
+	if sample.pid == 0 {
+		return sample, false
+	}
+	var waiting bool
+	err := pool.QueryRow(ctx, `SELECT coalesce(a.wait_event_type='Lock',false),pg_blocking_pids(a.pid),a.query,
+  coalesce(l.locktype,''),coalesce(l.relation::regclass::text,''),
+  jsonb_build_object('request_backend',a.backend_start,'request_xact',a.xact_start,'query_start',a.query_start,
+   'peers',(SELECT jsonb_agg(jsonb_build_object('pid',b.pid,'backend',b.backend_start,'xact',b.xact_start,'wait',b.wait_event_type,'sql',b.query,'blockers',pg_blocking_pids(b.pid)))
+    FROM pg_stat_activity b WHERE b.pid=ANY(pg_blocking_pids(a.pid))))::text,
+  coalesce(a.backend_start::text,''),coalesce(a.xact_start::text,''),coalesce(a.query_start::text,'')
+  FROM pg_stat_activity a LEFT JOIN pg_locks l ON l.pid=a.pid AND NOT l.granted WHERE a.pid=$1`, sample.pid).Scan(
+		&waiting, &sample.blockers, &sample.query, &sample.locktype, &sample.relation, &sample.identities, &sample.backend, &sample.xact, &sample.queryStart)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return sample, false
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	afterPID, afterSequence := probe.snapshot()
+	slices.Sort(sample.blockers)
+	return sample, waiting && sample.locktype != "" && afterPID == sample.pid && afterSequence == sample.sequence
 }
 
 // Prechecks run before BEGIN. The context marker follows only this request;
@@ -279,7 +313,8 @@ func requestWrittenTables(t *testing.T, pool *pgxpool.Pool, pid uint32) []string
 // This proves blocker reachability only, never ownership of a business row lock.
 // Follow live transactions in this database, checking their identities and edges
 // again at the end. A visited set handles cycles; a size/deadline bound rejects
-// an unexpectedly large or unstable graph instead of inferring missing edges.
+// an unexpectedly large graph. An ended/changing transaction returns no chain;
+// the caller must observe again rather than infer reachability from stale edges.
 func requestBlockerChain(t *testing.T, pool *pgxpool.Pool, pid uint32) []int32 {
 	t.Helper()
 	type backend struct {
@@ -288,14 +323,17 @@ func requestBlockerChain(t *testing.T, pool *pgxpool.Pool, pid uint32) []int32 {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	observe := func(pid int32) backend {
+	observe := func(pid int32) (backend, bool) {
 		var b backend
 		if err := pool.QueryRow(ctx, `SELECT backend_start,xact_start,pg_blocking_pids(pid)
    FROM pg_stat_activity WHERE pid=$1 AND datname=current_database() AND xact_start IS NOT NULL`, pid).Scan(&b.born, &b.started, &b.blockers); err != nil {
-			t.Fatalf("blocker PID %d no longer has a live transaction in this database: %v", pid, err)
+			if errors.Is(err, pgx.ErrNoRows) {
+				return b, false
+			}
+			t.Fatal(err)
 		}
 		slices.Sort(b.blockers)
-		return b
+		return b, true
 	}
 	seen := map[int32]backend{}
 	queue := []int32{int32(pid)}
@@ -308,16 +346,20 @@ func requestBlockerChain(t *testing.T, pool *pgxpool.Pool, pid uint32) []int32 {
 		if len(seen) == 64 {
 			t.Fatalf("request %d blocker graph exceeded 64 live transactions: %v", pid, seen)
 		}
-		b := observe(current)
+		b, live := observe(current)
+		if !live {
+			return nil
+		}
 		seen[current] = b
 		queue = append(queue, b.blockers...)
 	}
 	var chain []int32
 	edges := map[int32][]int32{}
 	for id, b := range seen {
-		after := observe(id)
-		if b.born != after.born || b.started != after.started || !slices.Equal(b.blockers, after.blockers) {
-			t.Fatalf("blocker PID %d changed transaction or edges during observation: before=%+v after=%+v", id, b, after)
+		after, live := observe(id)
+		if !live || b.born != after.born || b.started != after.started || !slices.Equal(b.blockers, after.blockers) {
+			t.Logf("blocker PID %d changed transaction or edges during observation; resampling: before=%+v after=%+v", id, b, after)
+			return nil
 		}
 		chain = append(chain, id)
 		edges[id] = b.blockers
