@@ -249,7 +249,7 @@ func (noProjects) LockWorkspaceProjects(context.Context, uuid.UUID) ([]uuid.UUID
 	return nil, nil
 }
 
-func (noProjects) DeleteWorkspaceProjects(context.Context, uuid.UUID, []uuid.UUID, uuid.UUID, time.Time) error {
+func (noProjects) DeleteWorkspaceProjects(context.Context, uuid.UUID, uuid.UUID, time.Time) error {
 	return errors.New("the projects' step ran after the failed one")
 }
 
@@ -277,7 +277,7 @@ func TestAFailedDeletionLeavesTheWorkspace(t *testing.T) {
 	acme := newWorkspace(t, s, "Acme", "acme", alice)
 	join(t, s, acme.ID, bob, shared.RoleMember)
 	invite(t, s, acme.ID, "carol@corp.com", shared.RoleGuest, alice)
-	uc := app.NewDeleteWorkspace(failingSettings{s}, noProjects{}, allowAll{}, postgres.NewTxManager(pool, 2*time.Second), clocktest.At(now),
+	uc := app.NewDeleteWorkspace(failingSettings{s}, noProjects{}, allowAll{}, postgres.NewTxManager(pool, 2*time.Second), clocktest.At(now), &workspaceEvents{},
 		slog.New(slog.DiscardHandler))
 
 	err := uc.Execute(shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: alice}), "acme")
@@ -294,4 +294,11 @@ func TestAFailedDeletionLeavesTheWorkspace(t *testing.T) {
 	if got := pendingEmails(t, pool, acme.ID); !slices.Equal(got, []string{"carol@corp.com"}) {
 		t.Errorf("acme's invitations after the failure: %q, want carol's", got)
 	}
+}
+
+type workspaceEvents struct{ received []shared.Event }
+
+func (p *workspaceEvents) Publish(_ context.Context, e shared.Event) error {
+	p.received = append(p.received, e)
+	return nil
 }

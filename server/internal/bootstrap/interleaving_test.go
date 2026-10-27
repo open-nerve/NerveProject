@@ -92,8 +92,9 @@ func (w gatedWorkspaces) CreateWorkspace(ctx context.Context, row workspaceapp.W
 }
 
 type race struct {
-	pool  *pgxpool.Pool
-	alice uuid.UUID
+	events shared.EventPublisher
+	pool   *pgxpool.Pool
+	alice  uuid.UUID
 }
 
 // newRace is a database with alice's account.
@@ -101,7 +102,7 @@ func newRace(t *testing.T) race {
 	t.Helper()
 	pool := openPool(t, pgtest.NewDatabase(t))
 	users := identitypg.New(pool)
-	r := race{pool: pool, alice: uuid.NewV7()}
+	r := race{events: projectDeletionPublisher(t, pool), pool: pool, alice: uuid.NewV7()}
 	now := time.Now()
 	if err := users.CreateUser(context.Background(), identityapp.NewUser{
 		ID: r.alice, Email: "alice@example.com", PasswordHash: "x", DisplayName: "alice", Now: now,

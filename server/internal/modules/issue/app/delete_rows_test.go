@@ -222,3 +222,39 @@ func TestDeleteRowsSkippedRelationsAdvance(t *testing.T) {
 		})
 	}
 }
+
+// Every table failure stops the scan. The preceding successful batches stay
+// committed, and a later execution completes without changing their audit.
+func TestDeleteRowsStopsAtEveryFailedTable(t *testing.T) {
+	p, by := uuid.NewV7(), uuid.NewV7()
+	at := time.Now()
+	for _, statement := range []string{"workspace_drafts", "drafts", "issues", "assignees", "labels", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
+		t.Run(statement, func(t *testing.T) {
+			w := newDeletionWorld(p)
+			w.rows["workspace_drafts"] = map[uuid.UUID][]uuid.UUID{p: ids(3)}
+			w.fail = statement
+			scope := "project"
+			if statement == "workspace_drafts" {
+				scope = "workspace_drafts"
+			}
+			result, err := w.useCase().Execute(t.Context(), scope, p, at, by)
+			if !errors.Is(err, errDisk) || result.Complete || w.begins != w.commits+1 || result.Deleted != len(w.deleted) {
+				t.Fatalf("failure=%+v %v begins=%d commits=%d", result, err, w.begins, w.commits)
+			}
+			if !strings.HasPrefix(w.calls[len(w.calls)-1], statement+" ") {
+				t.Fatal("scan continued after failure", w.calls)
+			}
+			committed := maps.Clone(w.deleted)
+			w.fail = ""
+			result, err = w.useCase().Execute(t.Context(), scope, p, at, by)
+			if err != nil || !result.Complete {
+				t.Fatalf("redo=%+v %v", result, err)
+			}
+			for id, stamp := range committed {
+				if w.deleted[id] != stamp {
+					t.Fatal("redo replaced committed stamp", id)
+				}
+			}
+		})
+	}
+}

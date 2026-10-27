@@ -20,7 +20,7 @@ import (
 // newClock, which must not bring any of those dependencies. Each builds only
 // what its commands use: Users,
 // identity's NewAdmin and, for `nerve users deactivate`, workspace's
-// NewDeactivator and project's NewCascade over issue's Provide (M4 design
+// NewDeactivator and project's NewCascade (M4 design
 // 6.6), never workspace's NewAdmin; Workspaces, workspace's NewAdmin,
 // never the deactivation's three, whose cascade no command of it calls.
 // The rule follows the static calls from each; the commands are func
@@ -50,8 +50,8 @@ func TestCommandsComposeNoServerAndNoJobs(t *testing.T) {
 		root            string
 		builds, unbuilt []string
 	}{
-		{"Users", []string{identity + ".NewAdmin", workspace + ".NewDeactivator", project + ".NewCascade", issue + ".Provide", m("internal/bootstrap") + ".newClock"},
-			[]string{workspace + ".NewAdmin"}},
+		{"Users", []string{identity + ".NewAdmin", workspace + ".NewDeactivator", project + ".NewCascade", m("internal/bootstrap") + ".newClock"},
+			[]string{workspace + ".NewAdmin", issue + ".Provide"}},
 		{"Workspaces", []string{workspace + ".NewAdmin", m("internal/bootstrap") + ".newClock"}, []string{workspace + ".NewDeactivator", project + ".NewCascade", issue + ".Provide"}},
 	} {
 		root := built[0].Func(c.root)
@@ -95,6 +95,9 @@ func composesMore(f *ssa.Function) bool {
 		return false
 	}
 	path := f.Pkg.Pkg.Path()
+	if f.Name() == "InsertTx" {
+		return true
+	}
 	if path == m("internal/bootstrap") && f.Name() == "newDispatcher" {
 		return true
 	}

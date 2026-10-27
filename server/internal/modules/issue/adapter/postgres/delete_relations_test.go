@@ -184,7 +184,12 @@ func TestARelationsBatchTakesTheRowsOfTheProjectsWorkItemsBothWays(t *testing.T)
 	exec(t, pool, "UPDATE issue_relations SET deleted_at = $2, updated_at = $2, updated_by_id = $3 WHERE id = $1", gone, earlier, alice)
 	stamps := audits(t, pool, "issue_relations")
 
-	ids, err := s.DeleteProjectRelationRows(context.Background(), app.RowBatch{ProjectID: web.id, Limit: 10, By: bob, At: later})
+	var ids []uuid.UUID
+	err := postgres.NewTxManager(pool, 5*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
+		var err error
+		ids, err = relationBatch(s, ctx, app.RowBatch{ProjectID: web.id, Limit: 10, By: bob, At: later})
+		return err
+	})
 	var want []uuid.UUID
 	for _, r := range named {
 		want = append(want, r.id)

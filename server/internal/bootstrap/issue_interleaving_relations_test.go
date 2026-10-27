@@ -269,6 +269,7 @@ func TestRelatingAcrossProjectsAndDeletingTheWorkspaceSerialize(t *testing.T) {
 				}
 				return
 			}
+			waitWorkspaceDeletion(t, w.pool, w.acme)
 			made := listIn[answeredRelation](t, w.answered(t, related, http.StatusCreated))
 			if got := w.relationDeletion(t, made[0].ID, w.deletedAt(t, "workspaces", w.acme)); got != "deleted by alice at the moment" {
 				t.Errorf("the relation is %s, want deleted by alice at the moment", got)

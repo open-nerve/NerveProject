@@ -15,13 +15,6 @@ import (
 // itself, so the caller's whole write rolls back; one that deletes writes
 // by and now into the rows it deletes.
 type IssueCascade interface {
-	// DeleteProjectIssues soft-deletes the project's work-item-side rows:
-	// deleteProject's last step.
-	DeleteProjectIssues(ctx context.Context, projectID, by uuid.UUID, now time.Time) error
-	// DeleteWorkspaceIssues soft-deletes the work-item-side rows of each of
-	// the projects: deleteWorkspace's last step, on the projects it locked
-	// (LockWorkspaceProjects), plus workspace drafts without a project.
-	DeleteWorkspaceIssues(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 	// StateInUse reports whether an undeleted work item, archived or not,
 	// is in the state: deleteState's check, under the project's lock.
 	StateInUse(ctx context.Context, stateID uuid.UUID) (bool, error)

@@ -108,6 +108,7 @@ const InvitationMACPurpose = "workspace-invitation"
 
 // Deps are what bootstrap gives the module (M3 design 6.6, step 5).
 type Deps struct {
+	Events     shared.EventPublisher
 	Pool       *pgxpool.Pool
 	Tx         shared.TxManager
 	Clock      app.Clock
@@ -154,7 +155,7 @@ func New(d Deps) *Module {
 		}),
 		GetWorkspace:      app.NewGetWorkspace(store, d.Authorizer),
 		UpdateWorkspace:   app.NewUpdateWorkspace(store, d.Authorizer, d.Tx, d.Clock),
-		DeleteWorkspace:   app.NewDeleteWorkspace(store, d.Projects, d.Authorizer, d.Tx, d.Clock, d.Logger),
+		DeleteWorkspace:   app.NewDeleteWorkspace(store, d.Projects, d.Authorizer, d.Tx, d.Clock, d.Events, d.Logger),
 		Leave:             app.NewLeaveWorkspace(store, d.Profiles, d.Projects, d.Authorizer, d.Tx, d.Clock),
 		ListMembers:       app.NewListWorkspaceMembers(store, d.Profiles, d.Authorizer),
 		UpdateMember:      app.NewUpdateWorkspaceMember(store, d.Projects, d.Profiles, d.Authorizer, d.Tx, d.Clock),

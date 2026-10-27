@@ -252,6 +252,8 @@ P/app.NewDeleteProject 的目标签名为 `(ProjectsDeleter, shared.EventPublish
 
 T9 同步接入 B/app.go、project_connection_test.go、ending_connection_test.go 的真实 dispatcher/InsertTx；小路由保留传入 Tx（含真实请求身份/交错 probe）。原子性用例与 job 身份、完成等待、DB barrier 分别在 B/issue_project_deletion_events_test.go、issue_project_deletion_jobs_test.go，完整 app worker 始终运行。既有目录、交错、动态历史引用、自动归档与版本保留（issue_retention_interleaving_test.go）断言只迁项目 issue 侧等待；workspace 同步桥接到 T10 再移除。
 
+T10 在 B/issue_workspace_deletion_events_test.go 核本次项目事件与全事务回滚，复用并扩展 issue_project_deletion_jobs_test.go 的 scope/原戳/默认25次及正常 attempt=1/errors=0 身份等待。B/app.go、ending_connection_test.go 与 M3 交错 fixture 接真实 publisher；issue_interleaving_deletion/relations、auto_archive_policy、lifecycle_events、workspace 目录同步分离 M3/issue 断言。runtime_role_test 由部署角色执行请求/worker，owner 仅造数观察；同运行角色观察真实 PID 屏障。I adapter 的 draft/link/relation 历史调用迁到 DeleteRows/T7；原跨批全回滚改为前批已提交、失败批回滚及重做原戳。scale 测试移除同步接口并分开请求/后台观测，实际规模运行仍属后续任务。W3 用隔离 DB 的只读草稿行锁保持 Old 任务跨 workspace DELETE 挂起，finally 有界释放，前置数据仍由 API 创建；M3 即时、issue 有限轮询。
+
 W/app.NewDeleteWorkspace 目标签名为 `(WorkspaceDeleter, ProjectCascade, shared.Authorizer, shared.TxManager, Clock, shared.EventPublisher, *slog.Logger) *DeleteWorkspace`。原 workspace N→邀请升序→未删项目升序 N→读时钟不变；同步完成 workspace/邀请/成员/偏好及 M3 项目行后发布 workspace.deleted。Entity={workspace,id}，ProjectID零值；Changes 按此次锁住项目的 id 顺序，且每项仅 `Field:"project",OldID:&id`，不含更早删掉的 Old，也不另发 project.deleted。任意投递/订阅错误使全部 M3 改动与任务回滚；提交后原成功日志保持。
 
 P/W.Deps 增 Events。T10 删除 I.Cascade、P/app.IssueCascade 的 `DeleteProjectIssues`/`DeleteWorkspaceIssues`，保留 StateInUse/DetachLabel；I/app.NewCascade 变为 `NewCascade(StateLabelUses) *Cascade`。P/app.NewCascade 去最后的 issues 参数，目标 `(ProjectsDeleter, WorkspaceProjectsLocker, MemberDemoter, MembershipEnder) *Cascade`；`CascadeDeps` 只留 Pool。P/W 的 `DeleteWorkspaceProjects` 收窄为 `(ctx,workspaceID,by,now) error`，workspace 用例自己保留锁住的 projects 供事件，不能因收窄丢集合。
@@ -361,3 +363,9 @@ T16同步总体设计§5.5/6.7清理、§5.5/6.3异步边界、M3设计§3.6/13.
 2026-10-27作者准备仅静态阅读设计、交接、P8结构与准确main源码；作者未跑产品/迁移/并发/性能测试、生成/容器/构建/安装，未做原型。主控已单独运行准备关键词与架构守卫（`node tools/keywords.mjs`为72规则/23例外零命中，`go -C server test -count=1 ./internal/archtest`通过；原件在P9 ignored `checks/preparation-{keywords,architecture}/`），这不是P9产品运行证据。独立静态预检及2项局部修订复审已通过，准确冻结指纹、原始发现与证据见[阶段review](../reviews/P9-purge-review.md)及[deep-review报告](../../../reviews/re-08-M4P9预检审核.md)。当前没有P9性能数字、红绿或变异输出；全部产品验收仍待实施。
 
 实施期每Task保存准确SHA/dirty字节hash、argv/cwd、时间、原始输出、RUN/skip/exit、变异恢复hash和独评记录；F按plan列出的七项串行取得。T14附录需填写每表seed计数、每job完整args/运行次数/attempt/终态/耗时、两组读写探针全部样本与环境；T15汇总真实范围，不能只贴PASS摘要。
+
+T10 回归接续：B/permission_matrix_test.go 的 prepareMatrix 在 gone workspace DELETE 后先核 M3 preconditions/states/labels，再等精确 workspace 删除任务完成，最后保留原 issue/comment/version/reaction/link 全部 seed 断言；四个矩阵/列表调用者复用，不改公开窗口守卫。
+
+T10 的 T4 接续：B/purge_runtime_test.go 准备子 App 在 runtime 角色完成 workspace 删除任务后才停止；owner 随后仅老化墓碑和观察，原两 App 隔离、61d/59d 与真实 DELETE 角色/模块序断言保持。
+
+T10 E2E 收尾：assert/catalog.ts 统一 issueOwnedTable 分类，project.ts/workspace.ts 与 W3 零项目故事共用；纯期望函数依 lint 要求归模块级，两组 Promise.all 仍先 M3 立即断言，再只对 issue 有限轮询。

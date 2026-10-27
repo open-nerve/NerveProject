@@ -152,7 +152,8 @@ func newAppWithPoolFactory(ctx context.Context, cfg config.Config, logger *slog.
 		ListSettings: projectListSettings{settings: issuePorts.ListSettings},
 	})
 	ws := workspace.New(workspace.Deps{
-		Pool: pool, Tx: tx, Clock: businessClock, Logger: logger, Authorizer: authorizer,
+		Events: events,
+		Pool:   pool, Tx: tx, Clock: businessClock, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles:        workspaceProfiles{profiles: identityPorts.PublicProfiles},
 		InvitationMAC:   invitations,

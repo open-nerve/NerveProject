@@ -195,6 +195,8 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 
 **Files：** 改W/app/delete_workspace.go、delete_workspace_test.go、ports.go、module.go；P/app/cascade.go、cascade_test.go、issue_ports.go、module.go及fake；I/app/cascade.go、cascade_test.go、delete_project_rows.go、adapter/postgres/delete_rows.go、queries/delete_rows.sql、module.go；B/users.go、workspace_deletion_test.go、workspace_deletion_catalog_test.go、runtime_role_test.go、issue_interleaving_relations_test.go；新B/issue_workspace_deletion_events_test.go；改`server/internal/archtest/composition_test.go`、`api/modules/workspace.yaml`、`e2e/fixtures/assert/workspace.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`；生成相关产物。预计750–1200行。
 
+**实际接续文件：** B/app.go、ending_connection_test.go、interleaving_{answers,deletion,growth,test,writes} 测试构造，issue_project_deletion_jobs_test.go 通用 scope/job 观察，issue_interleaving_deletion/relations、issue_auto_archive_policy_interleaving、issue_lifecycle_events、issue_scale 的旧调用迁移；W app/adapter fakes；I adapter draft/link/delete_rows/delete_relations 测试转最终编排，app 共享 batch fixtures 保留并用 DeleteRows 核错误中止。W3 的只读行锁屏障与 finally 清理证明 Old 未完成窗口，业务前置仍走 API。
+
 **Interfaces：** W.NewDeleteWorkspace增加Events（Clock之后、Logger之前）；P/W.Deps.Events；P.NewCascade去issues，CascadeDeps仅Pool；DeleteWorkspaceProjects(ctx,workspaceID,by,now)；I.NewCascade(StateLabelUses)。删除两个旧IssueCascade方法和旧直写project relation接口/SQL，最终关系只T7编排。
 
 - [ ] **测试：** 新`TestWorkspaceDeletionPublishesOnlyLockedProjects`造Old已删任务挂起、当前P/Q、无项目draft、另workspace；workspace事件Changes恰P/Q升序，任务P/Q各1+workspace_drafts1，Old既有task不替换，不逐P再发事件。零项目workspace仍1draft task；邀请同步撤销，失败subscriber整事务零变化。扩composition守卫Users不再到issue.Provide且不可达issue.New/InsertTx/jobs/dispatcher。
@@ -279,3 +281,9 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 ## 作者自查（准备稿范围）
 
 spec覆盖映射：A1→T1/T3，A2→T1–4，A3→T4/5/8，A4→T5/6，A5→T8–10，A6→T7/8/12，A7→T7/11，A8→T9/10/12，A9→T8/12，A10→T10/13，A11→T14，A12→T15/16，A13→T16。新接口集中于spec§2，任务不复制实现体；Review Focus五项均有归属测试。任务预计尺寸与依赖已列；所有执行勾选为空。此自查不是独立预检、原型、测试通过或产品授权。
+
+T10 回归接续：B/permission_matrix_test.go 的 prepareMatrix 在 gone workspace DELETE 后先核 M3 preconditions/states/labels，再等精确 workspace 删除任务完成，最后保留原 issue/comment/version/reaction/link 全部 seed 断言；四个矩阵/列表调用者复用，不改公开窗口守卫。
+
+T10 的 T4 接续：B/purge_runtime_test.go 准备子 App 在 runtime 角色完成 workspace 删除任务后才停止；owner 随后仅老化墓碑和观察，原两 App 隔离、61d/59d 与真实 DELETE 角色/模块序断言保持。
+
+T10 E2E 收尾：assert/catalog.ts 统一 issueOwnedTable 分类，project.ts/workspace.ts 与 W3 零项目故事共用；纯期望函数依 lint 要求归模块级，两组 Promise.all 仍先 M3 立即断言，再只对 issue 有限轮询。

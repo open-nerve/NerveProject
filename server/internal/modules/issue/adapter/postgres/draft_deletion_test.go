@@ -8,6 +8,9 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 )
@@ -50,8 +53,7 @@ func TestDraftDeletionRows(t *testing.T) {
 				}
 			}
 			rows, stamps := rowsAsText(t, pool, "draft_issues"), audits(t, pool, "draft_issues")
-			cascade := app.NewCascade(s, nil, 1)
-			tx := postgres.NewTxManager(pool, 5*time.Second)
+			deletionRows := adapterDeletionRows(s, pool, 1)
 			if route == "rollback project" || route == "rollback workspace" {
 				rejected, earlier := b, a
 				if route == "rollback workspace" {
@@ -68,22 +70,30 @@ func TestDraftDeletionRows(t *testing.T) {
       RETURN NEW;
      END $$`)
 				exec(t, pool, `CREATE TRIGGER reject_later_draft BEFORE UPDATE ON draft_issues FOR EACH ROW EXECUTE FUNCTION reject_later_draft()`)
-				err := tx.WithinTx(context.Background(), func(ctx context.Context) error {
-					if route == "rollback project" {
-						return cascade.DeleteProjectIssues(ctx, *projectID, actor, at)
-					}
-					return cascade.DeleteWorkspaceIssues(ctx, workspace, []uuid.UUID{*projectID}, actor, at)
-				})
+				scope, parent := "project", *projectID
+				if route == "rollback workspace" {
+					scope, parent = "workspace_drafts", workspace
+				}
+				result, err := deletionRows.Execute(context.Background(), scope, parent, at, actor)
 				if err == nil || !strings.Contains(err.Error(), "later draft batch rejected") {
 					t.Fatalf("later batch error %v; want trigger failure", err)
 				}
-				if got := audits(t, pool, "draft_issues"); !maps.Equal(got, stamps) {
-					t.Errorf("failed later batch left writes: %v; want %v", got, stamps)
+				want := maps.Clone(stamps)
+				want[earlier] = deletion(at, actor)
+				if got := audits(t, pool, "draft_issues"); !maps.Equal(got, want) || result.Deleted != 1 || result.Complete {
+					t.Fatalf("failed batch changed committed accounting/audits: %+v %v want %v", result, got, want)
 				}
+				exec(t, pool, "DROP TRIGGER reject_later_draft ON draft_issues")
+				result, err = deletionRows.Execute(context.Background(), scope, parent, at, actor)
+				want[rejected] = deletion(at, actor)
+				if got := audits(t, pool, "draft_issues"); err != nil || !result.Complete || result.Deleted != 1 || !maps.Equal(got, want) {
+					t.Fatalf("redo: %+v %v %v", result, err, got)
+				}
+
 			} else {
 				want := maps.Clone(stamps)
 				if projectID != nil && route != "workspace batch" {
-					if err := tx.WithinTx(context.Background(), func(ctx context.Context) error { return cascade.DeleteProjectIssues(ctx, *projectID, actor, at) }); err != nil {
+					if _, err := deletionRows.Execute(context.Background(), "project", *projectID, at, actor); err != nil {
 						t.Fatal(err)
 					}
 					want[a], want[b] = deletion(at, actor), deletion(at, actor)
@@ -93,7 +103,7 @@ func TestDraftDeletionRows(t *testing.T) {
 				}
 				// The workspace id must suffice for both projectless batches.
 				// Project drafts belong to their project cascade.
-				if err := tx.WithinTx(context.Background(), func(ctx context.Context) error { return cascade.DeleteWorkspaceIssues(ctx, workspace, nil, actor, at) }); err != nil {
+				if _, err := deletionRows.Execute(context.Background(), "workspace_drafts", workspace, at, actor); err != nil {
 					t.Fatal(err)
 				}
 				want[looseA], want[looseB] = deletion(at, actor), deletion(at, actor)
@@ -106,4 +116,8 @@ func TestDraftDeletionRows(t *testing.T) {
 			}
 		})
 	}
+}
+
+func adapterDeletionRows(s *postgresadapter.Store, pool *pgxpool.Pool, batch int) *app.DeleteRows {
+	return app.NewDeleteRows(app.DeleteRowsDeps{Rows: s, Relations: app.NewRelationDeletions(s, relationDeletionProjects{}), Remaining: s, Tx: postgres.NewTxManager(pool, 5*time.Second), RuntimeNow: time.Now, Batch: batch, Budget: time.Minute})
 }

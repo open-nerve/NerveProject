@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 
 import type { Database } from "../db";
-import { projectTables } from "./catalog";
+import { issueOwnedTable, projectTables } from "./catalog";
 
 // Database assertions of the project stories. The page version and the
 // API version of a story call the same function (M3 design 2).
@@ -210,15 +210,14 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
         return { table: name, deletedWithIt: (counts?.with_it ?? 0) > 0, other: counts?.other };
       })
     );
-  const issueOwned = (name: string) =>
-    name === "issues" || name === "draft_issues" || name === "comment_reactions" || name.startsWith("issue_");
-  const immediate = tables.filter((name) => !issueOwned(name));
-  const deferred = tables.filter(issueOwned);
-  const expected = (names: string[]) => names.map((table) => ({ table, deletedWithIt: true, other: 0 }));
-  expect(await readRows(immediate), `the synchronous rows under ${projectId}`).toEqual(expected(immediate));
+  const immediate = tables.filter((name) => !issueOwnedTable(name));
+  const deferred = tables.filter(issueOwnedTable);
+  expect(await readRows(immediate), `the synchronous rows under ${projectId}`).toEqual(
+    projectDeletionCounts(immediate)
+  );
   await expect
     .poll(() => readRows(deferred), { message: `the issue rows under ${projectId}`, timeout: 15_000 })
-    .toEqual(expected(deferred));
+    .toEqual(projectDeletionCounts(deferred));
 }
 
 /** A membership of a project as expectMembers reads it, its member by address. */
@@ -390,4 +389,8 @@ export async function projectSettingsOf(db: Database, id: string): Promise<unkno
     [id]
   );
   return row;
+}
+
+function projectDeletionCounts(names: string[]) {
+  return names.map((table) => ({ table, deletedWithIt: true, other: 0 }));
 }

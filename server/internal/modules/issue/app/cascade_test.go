@@ -2,11 +2,8 @@ package app_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
-	"strings"
-	"testing"
 	"time"
 	"uuid"
 
@@ -61,10 +58,6 @@ func (f *fakeRows) DeleteProjectLabelRows(ctx context.Context, b app.RowBatch) (
 	return f.batch(ctx, "labels", b)
 }
 
-func (f *fakeRows) DeleteProjectRelationRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
-	return f.batch(ctx, "relations", b)
-}
-
 func (f *fakeRows) DeleteProjectSubscriberRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
 	return f.batch(ctx, "subscribers", b)
 }
@@ -100,7 +93,7 @@ func twoProjects(web, ops uuid.UUID) *fakeRows {
 	}}
 }
 
-// batches are the calls deleteProjectRows makes on project's rows of f,
+// batches are the calls DeleteRows makes on project's rows of f,
 // in batches of two: per statement in the global order, a batch after the
 // zero id, then after the greatest id of each batch, until one finds none.
 func batches(f *fakeRows, project uuid.UUID) []string {
@@ -117,71 +110,6 @@ func batches(f *fakeRows, project uuid.UUID) []string {
 		}
 	}
 	return calls
-}
-
-// DeleteProjectIssues soft-deletes every row of the project's work-item
-// side, and none of another project's, in the caller's transaction, at its
-// moment and by its account: statement by statement in the global order of
-// M4 design 3.5, each in batches of the limit, the next after the greatest
-// id of the last, until a batch finds none (M4 design 3.6).
-// DeleteWorkspaceIssues does it for each project it is given, in that
-// order.
-func TestTheCascadeDeletesEachProjectsRowsInBatches(t *testing.T) {
-	web, ops, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	now := time.Date(2026, 10, 17, 10, 0, 0, 123456000, time.UTC)
-	inTx := context.WithValue(context.Background(), inTxKey{}, true)
-	for _, tt := range []struct {
-		name     string
-		run      func(c *app.Cascade) error
-		projects []uuid.UUID
-	}{
-		{"one project", func(c *app.Cascade) error { return c.DeleteProjectIssues(inTx, web, by, now) }, []uuid.UUID{web}},
-		{"a workspace's two", func(c *app.Cascade) error {
-			return c.DeleteWorkspaceIssues(inTx, uuid.UUID{}, []uuid.UUID{ops, web}, by, now)
-		},
-			[]uuid.UUID{ops, web}},
-		{"a workspace without projects", func(c *app.Cascade) error { return c.DeleteWorkspaceIssues(inTx, uuid.UUID{}, nil, by, now) }, nil},
-	} {
-		f := twoProjects(web, ops)
-		if err := tt.run(app.NewCascade(f, nil, 2)); err != nil {
-			t.Fatalf("%s: %v", tt.name, err)
-		}
-		var want []string
-		if tt.name != "one project" {
-			want = []string{fmt.Sprintf("workspace_drafts %s after %s limit 2", uuid.UUID{}, uuid.UUID{})}
-		}
-		deleted := map[uuid.UUID]string{}
-		for _, p := range tt.projects {
-			want = append(want, batches(f, p)...)
-			for _, rows := range f.rows {
-				for _, id := range rows[p] {
-					deleted[id] = fmt.Sprintf("%s at %s", by, now.Format(time.RFC3339Nano))
-				}
-			}
-		}
-		if !slices.Equal(f.calls, want) {
-			t.Errorf("%s: the batches\n%q\nwant\n%q", tt.name, f.calls, want)
-		}
-		if fmt.Sprint(f.deleted) != fmt.Sprint(deleted) {
-			t.Errorf("%s: deleted %v, want %v", tt.name, f.deleted, deleted)
-		}
-	}
-}
-
-// A failing batch comes back as itself, and no batch runs after it.
-func TestTheCascadeStopsAtAFailingBatch(t *testing.T) {
-	web, ops, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	for _, statement := range []string{"workspace_drafts", "drafts", "issues", "assignees", "labels", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
-		f := twoProjects(web, ops)
-		f.fail = statement
-		want := append([]string{fmt.Sprintf("workspace_drafts %s after %s limit 2", uuid.UUID{}, uuid.UUID{})}, batches(f, web)...)
-		want = want[:slices.IndexFunc(want, func(c string) bool { return strings.HasPrefix(c, statement+" ") })+1]
-		err := app.NewCascade(f, nil, 2).DeleteWorkspaceIssues(context.WithValue(context.Background(), inTxKey{}, true), uuid.UUID{}, []uuid.UUID{web, ops}, by,
-			time.Now())
-		if !errors.Is(err, errDisk) || !slices.Equal(f.calls, want) {
-			t.Errorf("failing %s: %v, the batches\n%q\nwant %v after\n%q", statement, err, f.calls, errDisk, want)
-		}
-	}
 }
 
 // DeleteProjectCommentRows soft-deletes comment rows in the existing deletion sequence.
@@ -216,37 +144,4 @@ func (f *fakeRows) DeleteProjectDraftRows(ctx context.Context, b app.RowBatch) (
 }
 func (f *fakeRows) DeleteWorkspaceDraftRows(ctx context.Context, b app.WorkspaceDraftBatch) ([]uuid.UUID, error) {
 	return f.batch(ctx, "workspace_drafts", app.RowBatch{ProjectID: b.WorkspaceID, After: b.After, Limit: b.Limit, By: b.By, At: b.At})
-}
-
-// Dropping workspaceID or skipping the batch for an empty project list leaves
-// these drafts alive; running issues first violates the shared lock order.
-func TestWorkspaceDraftCascadeCarriesWorkspaceID(t *testing.T) {
-	workspace, project, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	now := time.Date(2026, 10, 27, 1, 0, 0, 0, time.UTC)
-	for _, projects := range [][]uuid.UUID{nil, {project}} {
-		f := &fakeRows{deleted: map[uuid.UUID]string{}, rows: map[string]map[uuid.UUID][]uuid.UUID{
-			"workspace_drafts": {workspace: ids(2)}, "drafts": {project: ids(2)}, "issues": {project: ids(1)},
-		}}
-		if err := app.NewCascade(f, nil, 1).DeleteWorkspaceIssues(context.WithValue(context.Background(), inTxKey{}, true), workspace, projects, by, now); err != nil {
-			t.Fatal(err)
-		}
-		want := 2
-		if len(projects) > 0 {
-			want = 5
-		}
-		if len(f.deleted) != want {
-			t.Fatalf("deleted %d rows; want %d", len(f.deleted), want)
-		}
-		for _, stamp := range f.deleted {
-			if stamp != fmt.Sprintf("%s at %s", by, now.Format(time.RFC3339Nano)) {
-				t.Errorf("stamp %s", stamp)
-			}
-		}
-		if !strings.HasPrefix(f.calls[0], "workspace_drafts "+workspace.String()+" ") {
-			t.Errorf("first batch: %v", f.calls)
-		}
-		if len(projects) > 0 && (!strings.HasPrefix(f.calls[3], "drafts ") || !strings.HasPrefix(f.calls[6], "issues ")) {
-			t.Errorf("drafts must precede issues: %v", f.calls)
-		}
-	}
 }

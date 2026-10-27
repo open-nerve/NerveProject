@@ -29,14 +29,19 @@ import (
 // newWorkspaceRoute is the workspace module (workspace.New) on pool, with
 // tx its transactions, as bootstrap wires it: access's Authorizer,
 // identity's Accounts and MemberProfiles, converted, and the project
-// module's cascade over issue's, each on pool.
+// module's M3 cascade and transactional deletion publisher, each on pool.
 func newWorkspaceRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
+	return newWorkspaceRouteWithPublisher(t, pool, tx, projectDeletionPublisher(t, pool))
+}
+
+func newWorkspaceRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, events shared.EventPublisher) moduleRoute {
+	t.Helper()
 	auth, identityPorts, provided := authorizerOn(pool), identity.Provide(pool), workspace.Provide(pool)
-	projects := project.New(project.Deps{Events: projectDeletionPublisher(t, pool), Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
+	projects := project.New(project.Deps{Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: provided.WorkspaceDirectory}, Members: provided.WorkspaceMembers,
 		Issues: issue.Provide(pool).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool).ListSettings}})
-	return newRoute(t, workspace.New(workspace.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Logger: slog.New(slog.DiscardHandler),
+	return newRoute(t, workspace.New(workspace.Deps{Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Logger: slog.New(slog.DiscardHandler),
 		Authorizer: auth, Accounts: workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles: workspaceProfiles{profiles: identityPorts.PublicProfiles}, Projects: projects.Cascade()}).Register)
 }

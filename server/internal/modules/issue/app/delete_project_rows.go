@@ -37,9 +37,6 @@ type ProjectRowsDeleter interface {
 	DeleteProjectIssueRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectAssigneeRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectLabelRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
-	// DeleteProjectRelationRows' batch is of the relations whose either
-	// end is a work item of the project.
-	DeleteProjectRelationRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectLinkRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectSubscriberRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectMentionRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
@@ -96,19 +93,4 @@ func deleteRowBatches(ctx context.Context, step func(context.Context, RowBatch) 
 		}
 		b.After = progress.After
 	}
-}
-
-// deleteProjectRows soft-deletes every undeleted work-item-side row of the
-// project at at by by, in the transaction ctx carries: table by table in
-// the global order, each in batches of limit rows, the next batch after
-// the greatest id of the last, until a batch finds none (M4 design 3.6).
-// A failing batch comes back as itself, and nothing runs after it.
-func deleteProjectRows(ctx context.Context, d ProjectRowsDeleter, limit int, projectID, by uuid.UUID, at time.Time) error {
-	// The synchronous Cascade keeps its original relation statement until T10.
-	for _, step := range rowSteps(d, rowProgress(d.DeleteProjectRelationRows)) {
-		if err := deleteRowBatches(ctx, step, RowBatch{ProjectID: projectID, Limit: limit, By: by, At: at}); err != nil {
-			return err
-		}
-	}
-	return nil
 }

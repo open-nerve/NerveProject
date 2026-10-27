@@ -11,7 +11,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	projectdomain "github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
@@ -116,11 +115,11 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 						t.Errorf("the write at its gate holds %s; want %s", got, want)
 					}
 					demoted = run(func() error {
-						return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, store, store, store, issue.Provide(r.pool).IssueCascade))
+						return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, store, store, store))
 					})
 				} else {
 					demoted = run(func() error {
-						return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, store, gatedDemoter{store, g}, store, issue.Provide(r.pool).IssueCascade))
+						return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, store, gatedDemoter{store, g}, store))
 					})
 					held(t, ctx, g, demoted, "the demotion")
 					wrote = run(write)

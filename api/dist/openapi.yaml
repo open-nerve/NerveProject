@@ -452,7 +452,7 @@ paths:
       tags:
         - workspace
       summary: Delete a workspace
-      description: For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings, states, labels and work items (with the work items' assignees, labels, relations, subscribers and activity) are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+      description: For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings, states and labels are soft-deleted in one transaction, which also enqueues background deletion of the work items, their child rows and the workspace's projectless drafts. The background rows retain this request's moment and actor; projects deleted earlier retain their own deletion audit. Issue resources are inaccessible as soon as the request commits, including while their background deletion is pending. The members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
       security:
         - bearer: []
       x-problem-codes:

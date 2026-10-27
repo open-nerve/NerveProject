@@ -83,3 +83,8 @@ export async function keysBelow(db: Database, table: string): Promise<ForeignKey
   }
   return keys;
 }
+
+/** Only issue-owned tables wait for background deletion; unknown catalog tables remain immediate. */
+export function issueOwnedTable(name: string): boolean {
+  return name === "issues" || name === "draft_issues" || name === "comment_reactions" || name.startsWith("issue_");
+}

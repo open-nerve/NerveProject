@@ -40,8 +40,11 @@ func (w issueWorld) deletedWith(t *testing.T, table string, id uuid.UUID, since 
 	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at FROM "+table+" WHERE id = $1", id).Scan(&at); err != nil || at.Before(since) {
 		t.Errorf("the row of %s deleted at %v (%v); want no earlier than %v", table, at, err, since)
 	}
-	if table == "projects" {
+	switch table {
+	case "projects":
 		waitProjectDeletion(t, w.pool, id)
+	case "workspaces":
+		waitWorkspaceDeletion(t, w.pool, id)
 	}
 	var all, hers int
 	if err := w.pool.QueryRow(pgtest.Soon(t), `

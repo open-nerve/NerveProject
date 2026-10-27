@@ -25,14 +25,6 @@ func (f *fakeIssues) call(ctx context.Context, name, format string, args ...any)
 	return nil
 }
 
-func (f *fakeIssues) DeleteProjectIssues(ctx context.Context, projectID, by uuid.UUID, now time.Time) error {
-	return f.call(ctx, "DeleteProjectIssues", "%s by %s at %s", projectID, by, now.Format(timeFormat))
-}
-
-func (f *fakeIssues) DeleteWorkspaceIssues(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error {
-	return f.call(ctx, "DeleteWorkspaceIssues", "%s %v by %s at %s", workspaceID, projectIDs, by, now.Format(timeFormat))
-}
-
 func (f *fakeIssues) StateInUse(ctx context.Context, stateID uuid.UUID) (bool, error) {
 	if err := f.call(ctx, "StateInUse", "%s", stateID); err != nil {
 		return false, err

@@ -79,6 +79,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 			credential := createPAT(t, contract, base, token)
 			w.send(t, "alice", http.MethodDelete, "/api/v0/api-tokens/"+credential.ID, "", 204)
 			w.send(t, "alice", http.MethodDelete, "/api/v0/workspaces/"+slug, "", 204)
+			waitWorkspaceDeletion(t, roles.owner, workspace)
 			fixtures = append(fixtures, fixture{workspace, credential.ID})
 		}
 	}) {

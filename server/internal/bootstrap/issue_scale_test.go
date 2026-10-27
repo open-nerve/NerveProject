@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"os"
 	"strings"
@@ -10,9 +9,7 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
@@ -32,11 +29,8 @@ import (
 // with its project's Bug, with alice and bob subscribed and 20 activities:
 // 500,000 rows of the work-item side a project, 3,000,000 in all, the ids
 // of each table interleaved across the six projects, as concurrent writes
-// leave them. Each deletion is measured twice: its work-item side's
-// soft-deletion alone (the issue module's cascade, issue.Provide), in a
-// transaction rolled back, then vacuumed away; and its request through the
-// API, which commits, in an app whose request deadline and access tokens
-// last long enough for it to finish.
+// leave them. Request latency and remaining background duration are measured
+// separately; the task identities and final row counts are asserted.
 func TestTheDeletionsAtTheScaleTarget(t *testing.T) {
 	if os.Getenv("NERVE_MEASURE_SCALE") == "" {
 		t.Skip("NERVE_MEASURE_SCALE is not set: the measurement at the scale target runs only when asked for")
@@ -64,16 +58,14 @@ func TestTheDeletionsAtTheScaleTarget(t *testing.T) {
 		t.Fatalf("the seed wrote %d rows of the work-item side, want %d", seeded, want)
 	}
 
-	cascade := issue.Provide(w.pool).IssueCascade
-	t.Logf("deleteProject of Web: its work-item side's rows %v, rolled back", w.rolledBack(t, func(ctx context.Context) error {
-		return cascade.DeleteProjectIssues(ctx, w.web, w.ids["alice"], time.Now())
-	}))
-	t.Logf("deleteWorkspace of beta: its five projects' work-item side's rows %v, rolled back", w.rolledBack(t,
-		func(ctx context.Context) error {
-			return cascade.DeleteWorkspaceIssues(ctx, beta, projects[1:], w.ids["alice"], time.Now())
-		}))
 	t.Logf("deleteProject of Web: the request %v", w.deletion(t, "/api/v0/projects/"+w.web.String()))
 	t.Logf("deleteWorkspace of beta: the request %v", w.deletion(t, "/api/v0/workspaces/beta"))
+	background := time.Now()
+	for _, project := range projects {
+		waitDeletionJobWithin(t, w.pool, projectDeletionJob(t, w.pool, project), "completed", time.Hour)
+	}
+	waitDeletionJobWithin(t, w.pool, parentDeletionJob(t, w.pool, "workspace_drafts", beta), "completed", time.Hour)
+	t.Logf("deletion tasks after both requests: %v", time.Since(background))
 	if n := w.workItemRows(t, projects, true); n != 0 {
 		t.Errorf("%d rows of the six projects' work-item side left undeleted, want none", n)
 	}
@@ -128,38 +120,6 @@ func (w issueWorld) seedAtScale(t *testing.T, projects []uuid.UUID) {
 	w.vacuum(t)
 }
 
-// vacuum vacuums and analyzes the work-item side's tables.
-func (w issueWorld) vacuum(t *testing.T) {
-	t.Helper()
-	if _, err := w.pool.Exec(context.Background(),
-		"VACUUM ANALYZE issues, issue_assignees, issue_labels, issue_subscribers, issue_activities"); err != nil {
-		t.Fatal(err)
-	}
-}
-
-// errRolledBack ends rolledBack's transaction.
-var errRolledBack = errors.New("rolled back")
-
-// rolledBack is how long fn took in a transaction that it then rolls back,
-// and vacuums away.
-func (w issueWorld) rolledBack(t *testing.T, fn func(ctx context.Context) error) time.Duration {
-	t.Helper()
-	var took time.Duration
-	err := postgres.NewTxManager(w.pool, time.Hour).WithinTx(context.Background(), func(ctx context.Context) error {
-		start := time.Now()
-		if err := fn(ctx); err != nil {
-			return err
-		}
-		took = time.Since(start)
-		return errRolledBack
-	})
-	if !errors.Is(err, errRolledBack) {
-		t.Fatal(err)
-	}
-	w.vacuum(t)
-	return took
-}
-
 // deletion is how long alice's DELETE of path took, through the API, with
 // no deadline of the client's.
 func (w issueWorld) deletion(t *testing.T, path string) time.Duration {
@@ -176,4 +136,13 @@ func (w issueWorld) deletion(t *testing.T, path string) time.Duration {
 		t.Fatalf("DELETE %s = %d, want 204", path, res.StatusCode)
 	}
 	return took
+}
+
+// vacuum vacuums and analyzes the work-item side's tables.
+func (w issueWorld) vacuum(t *testing.T) {
+	t.Helper()
+	if _, err := w.pool.Exec(context.Background(),
+		"VACUUM ANALYZE issues, issue_assignees, issue_labels, issue_subscribers, issue_activities"); err != nil {
+		t.Fatal(err)
+	}
 }

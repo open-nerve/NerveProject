@@ -1,3 +1,5 @@
+import { Client } from "pg";
+
 import {
   changeWorkspacePreferences,
   createLabel,
@@ -8,7 +10,7 @@ import {
   slugFor,
   type Workspace,
 } from "../../fixtures/api";
-import { projectTables, workspaceTables } from "../../fixtures/assert/catalog";
+import { issueOwnedTable, projectTables, workspaceTables } from "../../fixtures/assert/catalog";
 import { expectLabels, expectProjectCreated, expectProjectDeleted, type LabelRow } from "../../fixtures/assert/project";
 import {
   expectInvitations,
@@ -185,94 +187,148 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   await expectLabels(db, old.id, [
     { name: "Bug", color: "", parent: null, sort_order: 65535, deleted: false, by: memberEmail },
   ]);
-  const oldDeleted = await api.DELETE("/api/v0/projects/{project_id}", {
-    params: { path: { project_id: old.id } },
-    headers: bearer(admin),
-  });
-  expect(oldDeleted.response.status).toBe(204);
-  const oldDraftAudit = () =>
-    db.query(
-      `SELECT id, updated_at::text AS updated_at, deleted_at::text AS deleted_at, updated_by_id
-         FROM draft_issues WHERE project_id = $1 ORDER BY id`,
+  const oldBarrier = new Client({ connectionString: db.url, connectionTimeoutMillis: 10_000, query_timeout: 10_000 });
+  await oldBarrier.connect();
+  try {
+    await oldBarrier.query("BEGIN");
+    await oldBarrier.query("SET LOCAL lock_timeout='5s'");
+    await oldBarrier.query(
+      "SELECT id FROM draft_issues WHERE project_id=$1 AND deleted_at IS NULL ORDER BY id FOR UPDATE",
       [old.id]
     );
-  const oldDraftsBeforeWorkspaceDeletion = await oldDraftAudit();
-  expect(oldDraftsBeforeWorkspaceDeletion).toEqual([
-    { id: expect.any(String), updated_at: expect.any(String), deleted_at: expect.any(String), updated_by_id: adminId },
-  ]);
+    const holder = (await oldBarrier.query<{ pid: number }>("SELECT pg_backend_pid() AS pid")).rows[0]?.pid;
+    expect(holder).toEqual(expect.any(Number));
+    const oldDeleted = await api.DELETE("/api/v0/projects/{project_id}", {
+      params: { path: { project_id: old.id } },
+      headers: bearer(admin),
+    });
+    expect(oldDeleted.response.status).toBe(204);
+    await expect
+      .poll(
+        () =>
+          db.query(
+            `SELECT count(*)::int AS n FROM river_job WHERE kind='issue.delete_rows' AND args->>'scope'='project' AND args->>'id'=$1 AND state='running'`,
+            [old.id]
+          ),
+        { timeout: 10_000 }
+      )
+      .toEqual([{ n: 1 }]);
+    await expect
+      .poll(
+        () =>
+          db.query(
+            `SELECT count(*)::int AS n FROM pg_stat_activity WHERE $1::int=ANY(pg_blocking_pids(pid)) AND wait_event_type='Lock'`,
+            [holder]
+          ),
+        { timeout: 10_000 }
+      )
+      .toEqual([{ n: 1 }]);
+    const oldDraftAudit = () =>
+      db.query(
+        `SELECT id, updated_at::text AS updated_at, deleted_at::text AS deleted_at, updated_by_id
+         FROM draft_issues WHERE project_id = $1 ORDER BY id`,
+        [old.id]
+      );
+    const oldDraftsBeforeWorkspaceDeletion = await db.query(
+      `SELECT d.id, p.deleted_at::text AS updated_at, p.deleted_at::text AS deleted_at, p.updated_by_id
+       FROM draft_issues d JOIN projects p ON p.id=d.project_id WHERE p.id=$1 ORDER BY d.id`,
+      [old.id]
+    );
+    expect(oldDraftsBeforeWorkspaceDeletion).toEqual([
+      {
+        id: expect.any(String),
+        updated_at: expect.any(String),
+        deleted_at: expect.any(String),
+        updated_by_id: adminId,
+      },
+    ]);
 
-  const deleted = await api.DELETE("/api/v0/workspaces/{slug}", { params: { path: { slug } }, headers: bearer(admin) });
-  expect(deleted.response.status).toBe(204);
-  // The rows a story can delete before their workspace keep that moment: an invitation, when it is accepted (M3
-  // design 3.8); Old and each row under it, with Old.
-  await expectWorkspaceDeleted(db, slug, adminEmail, [
-    "workspace_member_invites",
-    "projects",
-    ...(await projectTables(db)),
-  ]);
-  await expectLabels(db, acmeWeb.id, webLabels(true));
-  // Each of Web's labels carries Acme's deletion, its moment and its author: expectWorkspaceDeleted's counts cannot
-  // tell a label stamped earlier, as Old's Bug, deleted before, gives the labels an earlier row.
-  expect(
-    await db.query(
-      `SELECT l.name, l.deleted_at = w.deleted_at AS at_acmes_moment, l.updated_by_id = w.updated_by_id AS by_acmes_deleter
+    const deleted = await api.DELETE("/api/v0/workspaces/{slug}", {
+      params: { path: { slug } },
+      headers: bearer(admin),
+    });
+    expect(deleted.response.status).toBe(204);
+    const gone = await Promise.all(
+      [admin, member].map((token) =>
+        api.GET("/api/v0/workspaces/{slug}", { params: { path: { slug } }, headers: bearer(token) })
+      )
+    );
+    expect(gone.map((g) => [g.response.status, g.error?.code])).toEqual([
+      [404, "workspace.not_found"],
+      [404, "workspace.not_found"],
+    ]);
+    expect(
+      await db.query("SELECT deleted_at IS NULL AS pending FROM draft_issues WHERE project_id=$1", [old.id])
+    ).toEqual([{ pending: true }]);
+    await oldBarrier.query("ROLLBACK");
+    // The rows a story can delete before their workspace keep that moment: an invitation, when it is accepted (M3
+    // design 3.8); Old and each row under it, with Old.
+    await expectLabels(db, acmeWeb.id, webLabels(true));
+    // Each of Web's labels carries Acme's deletion, its moment and its author: expectWorkspaceDeleted's counts cannot
+    // tell a label stamped earlier, as Old's Bug, deleted before, gives the labels an earlier row.
+    expect(
+      await db.query(
+        `SELECT l.name, l.deleted_at = w.deleted_at AS at_acmes_moment, l.updated_by_id = w.updated_by_id AS by_acmes_deleter
          FROM labels l JOIN workspaces w ON w.id = l.workspace_id WHERE l.project_id = $1 ORDER BY l.sort_order`,
-      [acmeWeb.id]
-    ),
-    "when and by whom Web's labels were deleted"
-  ).toEqual([
-    { name: "Bug", at_acmes_moment: true, by_acmes_deleter: true },
-    { name: "UI", at_acmes_moment: true, by_acmes_deleter: true },
-  ]);
-  // Old and every row under it keep its deletion: its moment and its author, the admin.
-  await expectProjectDeleted(db, old.id, adminEmail);
-  expect(await oldDraftAudit(), "the old project's drafts keep their exact earlier audit").toEqual(
-    oldDraftsBeforeWorkspaceDeletion
-  );
-  expect(
-    await db.query(
-      `SELECT d.project_id IS NULL AS projectless,
+        [acmeWeb.id]
+      ),
+      "when and by whom Web's labels were deleted"
+    ).toEqual([
+      { name: "Bug", at_acmes_moment: true, by_acmes_deleter: true },
+      { name: "UI", at_acmes_moment: true, by_acmes_deleter: true },
+    ]);
+    // The invitations accepted before keep the moment they were answered; the declined one goes with the pending
+    // one; the other workspace keeps everything.
+    const invitations = (memberRole: number, withTheWorkspace: boolean) => [
+      { email: memberEmail, role: memberRole, accepted: true, responded: true, deleted: true },
+      { email: inviteeEmail, role: 5, accepted: false, responded: false, deleted: withTheWorkspace },
+      { email: declinerEmail, role: 15, accepted: false, responded: true, deleted: withTheWorkspace },
+    ];
+    await expectInvitations(
+      db,
+      slug,
+      adminEmail,
+      [...invitations(15, true), { email: coAdminEmail, role: 20, accepted: true, responded: true, deleted: true }],
+      tokens
+    );
+    await expectInvitations(db, other, adminEmail, invitations(20, false), tokens);
+    await expectWorkspaceDeleted(db, slug, adminEmail, [
+      "workspace_member_invites",
+      "projects",
+      ...(await projectTables(db)),
+    ]);
+    // Old and every row under it keep its deletion: its moment and its author, the admin.
+    await expectProjectDeleted(db, old.id, adminEmail);
+    await expect
+      .poll(oldDraftAudit, { message: "the old project's drafts keep their exact earlier audit", timeout: 15_000 })
+      .toEqual(oldDraftsBeforeWorkspaceDeletion);
+    expect(
+      await db.query(
+        `SELECT d.project_id IS NULL AS projectless,
               d.deleted_at = w.deleted_at AND d.updated_at = w.deleted_at AS same_moment,
               d.updated_by_id = w.updated_by_id AND d.updated_by_id = $2::uuid AS same_actor
          FROM draft_issues d JOIN workspaces w ON w.id = d.workspace_id WHERE d.id = $1`,
-      [projectless.id, adminId]
-    )
-  ).toEqual([{ projectless: true, same_moment: true, same_actor: true }]);
-  // The invitations accepted before keep the moment they were answered; the declined one goes with the pending
-  // one; the other workspace keeps everything.
-  const invitations = (memberRole: number, withTheWorkspace: boolean) => [
-    { email: memberEmail, role: memberRole, accepted: true, responded: true, deleted: true },
-    { email: inviteeEmail, role: 5, accepted: false, responded: false, deleted: withTheWorkspace },
-    { email: declinerEmail, role: 15, accepted: false, responded: true, deleted: withTheWorkspace },
-  ];
-  await expectInvitations(
-    db,
-    slug,
-    adminEmail,
-    [...invitations(15, true), { email: coAdminEmail, role: 20, accepted: true, responded: true, deleted: true }],
-    tokens
-  );
-  await expectInvitations(db, other, adminEmail, invitations(20, false), tokens);
-  await expectMembership(db, other, memberEmail, { role: 20, is_active: true });
-  await expectProjectCreated(db, other, web, adminEmail, memberEmail, [
-    { email: adminEmail, sort_order: 65535 },
-    { email: memberEmail, sort_order: 65535 },
-  ]);
-  await expectPreferences(db, other, memberEmail, {
-    navigation_control_preference: "ACCORDION",
-    navigation_project_limit: 3,
-  });
-  await expectLabels(db, otherWeb.id, webLabels(false));
-  await readOther();
-  const gone = await Promise.all(
-    [admin, member].map((token) =>
-      api.GET("/api/v0/workspaces/{slug}", { params: { path: { slug } }, headers: bearer(token) })
-    )
-  );
-  expect(gone.map((g) => [g.response.status, g.error?.code])).toEqual([
-    [404, "workspace.not_found"],
-    [404, "workspace.not_found"],
-  ]);
+        [projectless.id, adminId]
+      )
+    ).toEqual([{ projectless: true, same_moment: true, same_actor: true }]);
+    await expectMembership(db, other, memberEmail, { role: 20, is_active: true });
+    await expectProjectCreated(db, other, web, adminEmail, memberEmail, [
+      { email: adminEmail, sort_order: 65535 },
+      { email: memberEmail, sort_order: 65535 },
+    ]);
+    await expectPreferences(db, other, memberEmail, {
+      navigation_control_preference: "ACCORDION",
+      navigation_project_limit: 3,
+    });
+    await expectLabels(db, otherWeb.id, webLabels(false));
+    await readOther();
+  } finally {
+    try {
+      await oldBarrier.query("ROLLBACK");
+    } finally {
+      await oldBarrier.end();
+    }
+  }
 });
 
 // Catches a cascade that returns early for an empty project set and leaves nil-project drafts alive.
@@ -310,20 +366,30 @@ test("W3 (API): deleting a workspace with zero projects consumes its projectless
     headers: bearer(admin.token),
   });
   expect(deleted.response.status).toBe(204);
+  expect(await draftRead(api, admin.token, draft.id)).toEqual({ status: 404, code: "issue.draft_not_found" });
+  const read = (table: string) =>
+    db.query(
+      `SELECT count(*)::int AS count,
+       count(*) FILTER (WHERE r.deleted_at IS NULL)::int AS live,
+       count(*) FILTER (WHERE r.deleted_at=w.deleted_at AND r.updated_at=w.deleted_at
+                         AND r.updated_by_id=w.updated_by_id AND r.updated_by_id=$2::uuid)::int AS stamped
+     FROM ${table} r JOIN workspaces w ON w.id=r.workspace_id WHERE w.id=$1`,
+      [workspace.id, admin.id]
+    );
   await Promise.all(
-    tables.map(async (table) => {
-      expect(
-        await db.query(
-          `SELECT count(*)::int AS count,
-                count(*) FILTER (WHERE r.deleted_at IS NULL)::int AS live,
-                count(*) FILTER (WHERE r.deleted_at = w.deleted_at AND r.updated_at = w.deleted_at
-                                  AND r.updated_by_id = w.updated_by_id AND r.updated_by_id = $2::uuid)::int AS stamped
-           FROM ${table} r JOIN workspaces w ON w.id = r.workspace_id WHERE w.id = $1`,
-          [workspace.id, admin.id]
-        ),
-        `all rows of ${table} share the zero-project workspace deletion`
-      ).toEqual([{ count: before.get(table), live: 0, stamped: before.get(table) }]);
+    tables
+      .filter((name) => !issueOwnedTable(name))
+      .map(async (table) => {
+        expect(await read(table), `synchronous rows of ${table}`).toEqual([
+          { count: before.get(table), live: 0, stamped: before.get(table) },
+        ]);
+      })
+  );
+  await Promise.all(
+    tables.filter(issueOwnedTable).map(async (table) => {
+      await expect
+        .poll(() => read(table), { message: `issue rows of ${table}`, timeout: 15_000 })
+        .toEqual([{ count: before.get(table), live: 0, stamped: before.get(table) }]);
     })
   );
-  expect(await draftRead(api, admin.token, draft.id)).toEqual({ status: 404, code: "issue.draft_not_found" });
 });

@@ -2,7 +2,7 @@ import { expect } from "@playwright/test";
 
 import type { WorkspacePreferences } from "../api";
 import type { Database } from "../db";
-import { workspaceTables } from "./catalog";
+import { issueOwnedTable, workspaceTables } from "./catalog";
 
 // Database assertions of the workspace stories. The page version and the
 // API version of a story call the same function (M3 design 2).
@@ -243,40 +243,46 @@ export async function expectWorkspaceDeleted(
   const names = await workspaceTables(db);
   expect(names, "workspace deletion includes personal drafts").toContain("draft_issues");
   // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
-  const tables = await Promise.all(
-    names.map(async (table) => {
-      const [counts] = await db.query<{
-        with_it: number;
-        by_another: number;
-        undeleted_or_later: number;
-        earlier: number;
-      }>(
-        `SELECT count(*) FILTER (WHERE t.deleted_at = w.deleted_at)::int AS with_it,
+  const readRows = (selected: string[]) =>
+    Promise.all(
+      selected.map(async (table) => {
+        const [counts] = await db.query<{
+          with_it: number;
+          by_another: number;
+          undeleted_or_later: number;
+          earlier: number;
+        }>(
+          `SELECT count(*) FILTER (WHERE t.deleted_at = w.deleted_at)::int AS with_it,
                 count(*) FILTER (WHERE t.deleted_at = w.deleted_at
                                    AND t.updated_by_id IS DISTINCT FROM w.updated_by_id)::int AS by_another,
                 count(*) FILTER (WHERE t.deleted_at IS NULL OR t.deleted_at > w.deleted_at)::int AS undeleted_or_later,
                 count(*) FILTER (WHERE t.deleted_at < w.deleted_at)::int AS earlier
            FROM ${table} t JOIN workspaces w ON w.id = t.workspace_id WHERE w.id = $1`,
-        [w?.id]
-      );
-      return {
-        table,
-        deletedWithIt: (counts?.with_it ?? 0) > 0,
-        deletedByAnother: counts?.by_another,
-        undeletedOrLater: counts?.undeleted_or_later,
-        deletedEarlier: (counts?.earlier ?? 0) > 0,
-      };
-    })
-  );
-  expect(tables, `the rows under ${slug}`).toEqual(
-    names.map((table) => ({
+          [w?.id]
+        );
+        return {
+          table,
+          deletedWithIt: (counts?.with_it ?? 0) > 0,
+          deletedByAnother: counts?.by_another,
+          undeletedOrLater: counts?.undeleted_or_later,
+          deletedEarlier: (counts?.earlier ?? 0) > 0,
+        };
+      })
+    );
+  const expected = (selected: string[]) =>
+    selected.map((table) => ({
       table,
       deletedWithIt: true,
       deletedByAnother: 0,
       undeletedOrLater: 0,
       deletedEarlier: deletedAlone.includes(table),
-    }))
-  );
+    }));
+  const immediate = names.filter((name) => !issueOwnedTable(name));
+  const deferred = names.filter(issueOwnedTable);
+  expect(await readRows(immediate), `the synchronous rows under ${slug}`).toEqual(expected(immediate));
+  await expect
+    .poll(() => readRows(deferred), { message: `the issue rows under ${slug}`, timeout: 15_000 })
+    .toEqual(expected(deferred));
 }
 
 /**

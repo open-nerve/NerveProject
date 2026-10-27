@@ -33,30 +33,6 @@ WHERE t.id IN (
     ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
 RETURNING t.id;
 
--- name: DeleteProjectRelationRows :many
--- DeleteProjectIssueRows' batch, of the relations of the project's work items, both ways (M4 design 3.5, 3.6): the
--- project's rows (project_id is the issue_id end's) and another project's rows whose related_issue_id is a work item
--- of this project, deleted or not: the work items' batches have deleted them before this one. Another project's
--- writes reach such a row without this project's lock (its deletion, deleting its end's work item); every writer of
--- these rows takes them in id order (convention 5's exception, 3.5), as the batch's lock does. The indexes of the two
--- ends serve it, an arm of the union each: the project's rows by project_id, those toward its work items by issues'
--- project_id, then related_issue_id; the primary key's index keeps the undeleted ones after the bound, and a sort
--- puts them in id order for the lock. Each batch so reads all the project's relations both ways and its work items,
--- not every project's relations (a custom plan reads the whole table only where the planner estimates that cheaper).
--- Until P5 sets plan_cache_mode = force_custom_plan (M4 design 3.16), a generic plan may instead merge against the
--- primary key from the bound, reading every project's rows after it (P3 spec, section 7).
-UPDATE issue_relations AS t
-SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
-WHERE t.id IN (
-    SELECT r.id FROM issue_relations r
-    WHERE r.id IN (SELECT o.id FROM issue_relations o WHERE o.project_id = sqlc.arg(project_id)
-                   UNION ALL
-                   SELECT x.id FROM issue_relations x JOIN issues i ON i.id = x.related_issue_id
-                   WHERE i.project_id = sqlc.arg(project_id))
-        AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
-    ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
-RETURNING t.id;
-
 -- name: DeleteProjectLinkRows :many
 -- DeleteProjectIssueRows' batch, of the work items' links.
 UPDATE issue_links AS t

@@ -53,9 +53,13 @@ func TestLinkDeletionRows(t *testing.T) {
 					err = s.DeleteIssueLinkRows(ctx, app.IssueDeletion{IssueIDs: subtree, By: deleter, At: at})
 				}
 			case "project":
-				err = app.NewCascade(s, nil, 2).DeleteProjectIssues(ctx, p.id, deleter, at)
+				_, err = adapterDeletionRows(s, pool, 2).Execute(ctx, "project", p.id, at, deleter)
 			case "workspace":
-				err = app.NewCascade(s, nil, 2).DeleteWorkspaceIssues(ctx, workspace, []uuid.UUID{other.id, p.id}, deleter, at)
+				for _, id := range []uuid.UUID{other.id, p.id} {
+					if _, err = adapterDeletionRows(s, pool, 2).Execute(ctx, "project", id, at, deleter); err != nil {
+						break
+					}
+				}
 			}
 			if err != nil {
 				t.Fatal(err)

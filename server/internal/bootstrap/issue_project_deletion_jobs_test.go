@@ -31,8 +31,12 @@ type deletionJob struct {
 }
 
 func projectDeletionJob(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) deletionJob {
+	return parentDeletionJob(t, pool, "project", project)
+}
+
+func parentDeletionJob(t *testing.T, pool *pgxpool.Pool, scope string, project uuid.UUID) deletionJob {
 	t.Helper()
-	rows, err := pool.Query(pgtest.Soon(t), `SELECT id,args,queue,max_attempts FROM river_job WHERE kind='issue.delete_rows' AND args->>'scope'='project' AND args->>'id'=$1`, project.String())
+	rows, err := pool.Query(pgtest.Soon(t), `SELECT id,args,queue,max_attempts FROM river_job WHERE kind='issue.delete_rows' AND args->>'scope'=$2 AND args->>'id'=$1`, project.String(), scope)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,10 +70,14 @@ func projectDeletionJob(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) del
 	}
 	var at time.Time
 	var by uuid.UUID
-	if err := pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at,updated_by_id FROM projects WHERE id=$1", project).Scan(&at, &by); err != nil {
+	query := "SELECT deleted_at,updated_by_id FROM projects WHERE id=$1"
+	if scope == "workspace_drafts" {
+		query = "SELECT deleted_at,updated_by_id FROM workspaces WHERE id=$1"
+	}
+	if err := pool.QueryRow(pgtest.Soon(t), query, project).Scan(&at, &by); err != nil {
 		t.Fatal(err)
 	}
-	if job.Scope != "project" || job.Parent != project || !job.At.Equal(at) || job.By != by {
+	if job.Scope != scope || job.Parent != project || !job.At.Equal(at) || job.By != by {
 		t.Fatalf("deletion job=%+v want project %s at %s by %s", job, project, at, by)
 	}
 	t.Logf("project deletion job=%d scope=%s id=%s at=%s by=%s", job.ID, job.Scope, job.Parent, job.At.Format(time.RFC3339Nano), job.By)
@@ -84,7 +92,12 @@ func waitProjectDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) {
 
 func waitDeletionJob(t *testing.T, pool *pgxpool.Pool, job deletionJob, want string) {
 	t.Helper()
-	requestEventuallyWithin(t, "deletion job "+want, 15*time.Second, func(ctx context.Context) bool {
+	waitDeletionJobWithin(t, pool, job, want, 15*time.Second)
+}
+
+func waitDeletionJobWithin(t *testing.T, pool *pgxpool.Pool, job deletionJob, want string, timeout time.Duration) {
+	t.Helper()
+	requestEventuallyWithin(t, "deletion job "+want, timeout, func(ctx context.Context) bool {
 		var state, kind string
 		var raw []byte
 		var attempt, failures int
@@ -189,4 +202,14 @@ func assertProjectDeletionStamp(t *testing.T, pool *pgxpool.Pool, k foreignKey, 
 	if count != len(ids) || bad != 0 {
 		t.Errorf("%s: kept %d/%d rows, %d lack original deleted_at/updated_at/updated_by_id", k, count, len(ids), bad)
 	}
+}
+
+func waitWorkspaceDeletion(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID) {
+	t.Helper()
+	// These are this request's projects, excluding earlier deletions.
+	projects := queryIDs(t, pool, "SELECT p.id FROM projects p JOIN workspaces w ON w.id=p.workspace_id WHERE w.id=$1 AND p.deleted_at=w.deleted_at ORDER BY p.id", workspace)
+	for _, project := range projects {
+		waitProjectDeletion(t, pool, project)
+	}
+	waitDeletionJob(t, pool, parentDeletionJob(t, pool, "workspace_drafts", workspace), "completed")
 }

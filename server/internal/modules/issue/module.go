@@ -27,21 +27,12 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// deleteBatch is the rows a statement of a project's deletion soft-deletes
-// at most (M4 design 3.6).
-const deleteBatch = 1000
-
 // Cascade is what the project module's deletions ask of the work items:
 // project's IssueCascade port (M4 design 3.3). Each method runs in the
 // caller's transaction, which ctx carries, and returns a failure as
 // itself, so the caller's whole write rolls back; one that deletes writes
 // by and now into the rows it deletes.
 type Cascade interface {
-	// DeleteProjectIssues soft-deletes the project's work-item-side rows.
-	DeleteProjectIssues(ctx context.Context, projectID, by uuid.UUID, now time.Time) error
-	// DeleteWorkspaceIssues soft-deletes the work-item-side rows of each
-	// of the projects, and the workspace drafts without a project.
-	DeleteWorkspaceIssues(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 	// StateInUse reports whether an undeleted work item, archived or not,
 	// is in the state (M4 design 3.6).
 	StateInUse(ctx context.Context, stateID uuid.UUID) (bool, error)
@@ -82,7 +73,7 @@ func Provide(pool *pgxpool.Pool) Provided {
 		{Table: "issue_subscribers", Delete: store.PurgeIssueSubscribers},
 		{Table: "draft_issues", Delete: store.PurgeDraftIssues},
 		{Table: "issues", Delete: store.PurgeIssues},
-	}), IssueCascade: app.NewCascade(store, store, deleteBatch), ListSettings: app.ListSettings{}}
+	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}}
 }
 
 // ProjectPorts are what the module asks of a project (M4 design 6.5): its

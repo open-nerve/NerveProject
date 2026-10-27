@@ -44,7 +44,7 @@ func (r race) deleteAcme(ctx context.Context, workspaces workspaceapp.WorkspaceD
 }
 func (r race) deleteAcmeOn(ctx context.Context, workspaces workspaceapp.WorkspaceDeleter, tx shared.TxManager) error {
 	return workspaceapp.NewDeleteWorkspace(workspaces, cascadeOn(r.pool), authorizerOn(r.pool),
-		tx, clock.System{}, slog.New(slog.DiscardHandler)).
+		tx, clock.System{}, r.events, slog.New(slog.DiscardHandler)).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), "acme")
 }
 
