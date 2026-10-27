@@ -13,6 +13,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 // The deletions of a project and of a workspace at the work-item side's
@@ -51,6 +52,10 @@ func TestTheDeletionsAtTheScaleTarget(t *testing.T) {
 		w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+project.String()+"/labels", `{"name":"Bug"}`, http.StatusCreated)
 		projects = append(projects, project)
 	}
+	var beta uuid.UUID
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT id FROM workspaces WHERE slug=$1", "beta").Scan(&beta); err != nil {
+		t.Fatal(err)
+	}
 	start := time.Now()
 	w.seedAtScale(t, projects)
 	seeded := w.workItemRows(t, projects, true)
@@ -65,7 +70,7 @@ func TestTheDeletionsAtTheScaleTarget(t *testing.T) {
 	}))
 	t.Logf("deleteWorkspace of beta: its five projects' work-item side's rows %v, rolled back", w.rolledBack(t,
 		func(ctx context.Context) error {
-			return cascade.DeleteWorkspaceIssues(ctx, projects[1:], w.ids["alice"], time.Now())
+			return cascade.DeleteWorkspaceIssues(ctx, beta, projects[1:], w.ids["alice"], time.Now())
 		}))
 	t.Logf("deleteProject of Web: the request %v", w.deletion(t, "/api/v0/projects/"+w.web.String()))
 	t.Logf("deleteWorkspace of beta: the request %v", w.deletion(t, "/api/v0/workspaces/beta"))

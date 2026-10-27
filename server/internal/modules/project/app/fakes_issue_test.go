@@ -29,8 +29,8 @@ func (f *fakeIssues) DeleteProjectIssues(ctx context.Context, projectID, by uuid
 	return f.call(ctx, "DeleteProjectIssues", "%s by %s at %s", projectID, by, now.Format(timeFormat))
 }
 
-func (f *fakeIssues) DeleteWorkspaceIssues(ctx context.Context, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error {
-	return f.call(ctx, "DeleteWorkspaceIssues", "%v by %s at %s", projectIDs, by, now.Format(timeFormat))
+func (f *fakeIssues) DeleteWorkspaceIssues(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error {
+	return f.call(ctx, "DeleteWorkspaceIssues", "%s %v by %s at %s", workspaceID, projectIDs, by, now.Format(timeFormat))
 }
 
 func (f *fakeIssues) StateInUse(ctx context.Context, stateID uuid.UUID) (bool, error) {

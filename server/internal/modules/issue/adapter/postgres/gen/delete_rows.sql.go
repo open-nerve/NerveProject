@@ -237,6 +237,51 @@ func (q *Queries) DeleteProjectDescriptionVersionRows(ctx context.Context, arg D
 	return items, nil
 }
 
+const deleteProjectDraftRows = `-- name: DeleteProjectDraftRows :many
+UPDATE draft_issues AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM draft_issues r
+    WHERE r.project_id = $3 AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteProjectDraftRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID *uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// Drafts precede issues in the shared table order; only live drafts are stamped.
+func (q *Queries) DeleteProjectDraftRows(ctx context.Context, arg DeleteProjectDraftRowsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectDraftRows,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteProjectIssueRows = `-- name: DeleteProjectIssueRows :many
 UPDATE issues AS t
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -550,6 +595,51 @@ func (q *Queries) DeleteProjectSubscriberRows(ctx context.Context, arg DeletePro
 		arg.At,
 		arg.DeletedBy,
 		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deleteWorkspaceDraftRows = `-- name: DeleteWorkspaceDraftRows :many
+UPDATE draft_issues AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM draft_issues r
+    WHERE r.workspace_id = $3 AND r.project_id IS NULL AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteWorkspaceDraftRowsParams struct {
+	At          time.Time
+	DeletedBy   uuid.UUID
+	WorkspaceID uuid.UUID
+	After       uuid.UUID
+	Batch       int32
+}
+
+// Project drafts are handled by their project's cascade; preserve old deletions.
+func (q *Queries) DeleteWorkspaceDraftRows(ctx context.Context, arg DeleteWorkspaceDraftRowsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteWorkspaceDraftRows,
+		arg.At,
+		arg.DeletedBy,
+		arg.WorkspaceID,
 		arg.After,
 		arg.Batch,
 	)

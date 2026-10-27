@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M4/P8 `drafts-search` |
 | 日期 | 2026-10-27 |
-| 状态 | 独立静态预检已通过，修订项全部关闭；产品实施未开始，验收均未执行。等待负责人启动 T1，见[评审记录](../reviews/P8-drafts-search-review.md) |
+| 状态 | 独立静态预检已通过，修订项全部关闭；负责人已授权按计划从 T1 实施，当前实施中。验收以实际运行证据逐项记录，阶段结束 deep-review 后先不合并，见[评审记录](../reviews/P8-drafts-search-review.md) |
 | 代码基线 | P7 的 main 合并 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，文件树 `51982bad72186f17a0b10c31f2f508629bb9cca7`；主控已核同 SHA 的 main CI `40451632280` 全绿；归档/清理证据见 P7 收尾记录 |
 | 分支 | `codex/m4-p8`；worktree `.codex/worktress/codex/m4-p8`，主目录保持 main |
 | 上级文档 | [M4 设计](../M4-design.md) §3.3–3.5、3.15–3.18、3.23、4.13、5、6、8.6–8.7、9、12/P8、13.1；[方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md) |

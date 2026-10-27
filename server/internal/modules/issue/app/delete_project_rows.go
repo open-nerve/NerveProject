@@ -19,11 +19,21 @@ type RowBatch struct {
 	At               time.Time
 }
 
+// WorkspaceDraftBatch selects undeleted drafts without a project in a workspace,
+// in the caller's transaction and with the same keyset and audit semantics as RowBatch.
+type WorkspaceDraftBatch struct {
+	WorkspaceID, After, By uuid.UUID
+	Limit                  int
+	At                     time.Time
+}
+
 // ProjectRowsDeleter soft-deletes a deleted project's rows of one table a
 // batch at a time, in the transaction ctx carries; each method locks the
 // batch's rows FOR NO KEY UPDATE in id order before it writes them
 // (convention 5) and returns the ids it deleted.
 type ProjectRowsDeleter interface {
+	DeleteProjectDraftRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteWorkspaceDraftRows(ctx context.Context, b WorkspaceDraftBatch) ([]uuid.UUID, error)
 	DeleteProjectIssueRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectAssigneeRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectLabelRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
@@ -41,10 +51,10 @@ type ProjectRowsDeleter interface {
 }
 
 // rowSteps are d's statements in the global order of M4 design 3.5: the
-// work items, then the rows under them.
+// drafts, work items, then the rows under them.
 func rowSteps(d ProjectRowsDeleter) []func(context.Context, RowBatch) ([]uuid.UUID, error) {
 	return []func(context.Context, RowBatch) ([]uuid.UUID, error){
-		d.DeleteProjectIssueRows, d.DeleteProjectAssigneeRows, d.DeleteProjectLabelRows, d.DeleteProjectRelationRows, d.DeleteProjectLinkRows,
+		d.DeleteProjectDraftRows, d.DeleteProjectIssueRows, d.DeleteProjectAssigneeRows, d.DeleteProjectLabelRows, d.DeleteProjectRelationRows, d.DeleteProjectLinkRows,
 		d.DeleteProjectSubscriberRows, d.DeleteProjectMentionRows, d.DeleteProjectCommentRows, d.DeleteProjectReactionRows, d.DeleteProjectCommentReactionRows, d.DeleteProjectActivityRows, d.DeleteProjectDescriptionVersionRows,
 	}
 }

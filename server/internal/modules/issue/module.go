@@ -40,8 +40,8 @@ type Cascade interface {
 	// DeleteProjectIssues soft-deletes the project's work-item-side rows.
 	DeleteProjectIssues(ctx context.Context, projectID, by uuid.UUID, now time.Time) error
 	// DeleteWorkspaceIssues soft-deletes the work-item-side rows of each
-	// of the projects.
-	DeleteWorkspaceIssues(ctx context.Context, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
+	// of the projects, and the workspace drafts without a project.
+	DeleteWorkspaceIssues(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 	// StateInUse reports whether an undeleted work item, archived or not,
 	// is in the state (M4 design 3.6).
 	StateInUse(ctx context.Context, stateID uuid.UUID) (bool, error)

@@ -93,6 +93,7 @@ sql:
       - migrations/sql/00024_issue_issue_mentions.sql
       - migrations/sql/00025_issue_issue_description_versions.sql
       - migrations/sql/00027_issue_issue_links.sql
+      - migrations/sql/00028_issue_draft_issues.sql
     queries: internal/modules/issue/adapter/postgres/queries
     gen:
       go:

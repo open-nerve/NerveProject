@@ -103,3 +103,20 @@ func (s *Store) DeleteProjectDescriptionVersionRows(ctx context.Context, b app.R
 	ids, err := s.queries(ctx).DeleteProjectDescriptionVersionRows(ctx, gen.DeleteProjectDescriptionVersionRowsParams(batch(b)))
 	return deleted(ids, err, "DescriptionVersion")
 }
+
+// DeleteProjectDraftRows soft-deletes one keyset batch of live project drafts.
+func (s *Store) DeleteProjectDraftRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteProjectDraftRows(ctx, gen.DeleteProjectDraftRowsParams{At: b.At, DeletedBy: b.By, ProjectID: &b.ProjectID, After: b.After, Batch: int32(b.Limit)})
+	return deleted(ids, err, "drafts")
+}
+
+// DeleteWorkspaceDraftRows soft-deletes live drafts without a project.
+func (s *Store) DeleteWorkspaceDraftRows(ctx context.Context, b app.WorkspaceDraftBatch) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteWorkspaceDraftRows(ctx, gen.DeleteWorkspaceDraftRowsParams{
+		At: b.At, DeletedBy: b.By, WorkspaceID: b.WorkspaceID, After: b.After, Batch: int32(b.Limit),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("delete a batch of workspace drafts: %w", err)
+	}
+	return ids, nil
+}

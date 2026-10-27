@@ -15,6 +15,16 @@ import (
 // issueNames are the constraints and indexes of the issue module's tables
 // as TestConstraintAndIndexNames reads them: the issue module's part of its want.
 var issueNames = []string{
+	"draft_issues_author_created_at_idx iw",
+	"draft_issues_created_by_id_fkey f c",
+	"draft_issues_workspace_id_fkey f c",
+	"draft_issues_project_id_fkey f c",
+	"draft_issues_updated_by_id_fkey f n",
+	"draft_issues_payload_check c",
+	"draft_issues_pkey iu",
+	"draft_issues_pkey p",
+	"draft_issues_workspace_id_idx i",
+	"draft_issues_project_id_idx i",
 	"comment_reactions_actor_id_fkey f c",
 	"comment_reactions_created_by_id_fkey f n",
 	"comment_reactions_comment_id_actor_id_reaction_key iuw",

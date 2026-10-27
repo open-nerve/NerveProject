@@ -55,7 +55,7 @@ func TestLinkDeletionRows(t *testing.T) {
 			case "project":
 				err = app.NewCascade(s, nil, 2).DeleteProjectIssues(ctx, p.id, deleter, at)
 			case "workspace":
-				err = app.NewCascade(s, nil, 2).DeleteWorkspaceIssues(ctx, []uuid.UUID{other.id, p.id}, deleter, at)
+				err = app.NewCascade(s, nil, 2).DeleteWorkspaceIssues(ctx, workspace, []uuid.UUID{other.id, p.id}, deleter, at)
 			}
 			if err != nil {
 				t.Fatal(err)

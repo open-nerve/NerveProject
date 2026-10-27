@@ -137,3 +137,23 @@ WHERE t.id IN (
     WHERE r.project_id = sqlc.arg(project_id) AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
     ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
 RETURNING t.id;
+
+-- name: DeleteProjectDraftRows :many
+-- Drafts precede issues in the shared table order; only live drafts are stamped.
+UPDATE draft_issues AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM draft_issues r
+    WHERE r.project_id = sqlc.arg(project_id) AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
+    ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
+RETURNING t.id;
+
+-- name: DeleteWorkspaceDraftRows :many
+-- Project drafts are handled by their project's cascade; preserve old deletions.
+UPDATE draft_issues AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM draft_issues r
+    WHERE r.workspace_id = sqlc.arg(workspace_id) AND r.project_id IS NULL AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
+    ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
+RETURNING t.id;

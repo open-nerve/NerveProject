@@ -52,7 +52,7 @@ func (c *Cascade) DeleteWorkspaceProjects(ctx context.Context, workspaceID uuid.
 	if err := deleteProjects(ctx, c.projects, Deletion{WorkspaceID: workspaceID, By: by, Now: now}); err != nil {
 		return err
 	}
-	return c.issues.DeleteWorkspaceIssues(ctx, projectIDs, by, now)
+	return c.issues.DeleteWorkspaceIssues(ctx, workspaceID, projectIDs, by, now)
 }
 
 // DemoteToGuest makes userID a guest in each of the workspace's projects he

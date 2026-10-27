@@ -269,3 +269,53 @@ func assertRuntimeAutoArchive(t *testing.T, roles splitRoles, base string, logs 
 	}
 	waitForCompletedKinds(t, roles.owner, map[string]int{"identity.cleanup_expired_sessions": 1, "issue.auto_archive": 1}, logs)
 }
+
+// The workspace id must reach the issue cascade even when no project can carry
+// it. Running as the deployed role also exercises the draft update grant.
+func TestRuntimeRoleDeletesDraftsInWorkspaceWithoutProjects(t *testing.T) {
+	roles := newSplitRoles(t)
+	contract := apitest.Load(t)
+	base := startApp(t, testConfig(t, roles.serverURL, false), migrations.FS())
+	actor := registerAccount(t, contract, base, "actor@example.com").AccessToken
+	creator := registerAccount(t, contract, base, "creator@example.com").AccessToken
+	actorID, creatorID := accountID(t, contract, base, actor), accountID(t, contract, base, creator)
+	for _, slug := range []string{"deleted", "kept"} {
+		if code, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", actor, `{"name":"Drafts","slug":"`+slug+`"}`); code != http.StatusCreated {
+			t.Fatal(code, body)
+		}
+	}
+	var workspace, kept uuid.UUID
+	if err := roles.owner.QueryRow(pgtest.Soon(t), "SELECT id FROM workspaces WHERE slug='deleted'").Scan(&workspace); err != nil {
+		t.Fatal(err)
+	}
+	if err := roles.owner.QueryRow(pgtest.Soon(t), "SELECT id FROM workspaces WHERE slug='kept'").Scan(&kept); err != nil {
+		t.Fatal(err)
+	}
+	ids := []uuid.UUID{uuid.NewV7(), uuid.NewV7(), uuid.NewV7()}
+	for n, id := range ids {
+		w := workspace
+		if n == 2 {
+			w = kept
+		}
+		if _, err := roles.owner.Exec(pgtest.Soon(t), `INSERT INTO draft_issues(id,workspace_id,created_by_id,updated_by_id) VALUES($1,$2,$3,$3)`, id, w, creatorID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var keptBefore string
+	if err := roles.owner.QueryRow(pgtest.Soon(t), "SELECT r::text FROM draft_issues r WHERE id=$1", ids[2]).Scan(&keptBefore); err != nil {
+		t.Fatal(err)
+	}
+	if code, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", actor, ""); code != http.StatusNoContent {
+		t.Fatal(code, body)
+	}
+	for _, id := range ids[:2] {
+		var stamped bool
+		if err := roles.owner.QueryRow(pgtest.Soon(t), `SELECT d.deleted_at=w.deleted_at AND d.updated_at=w.deleted_at AND d.updated_by_id=$2 FROM draft_issues d JOIN workspaces w ON w.id=d.workspace_id WHERE d.id=$1`, id, actorID).Scan(&stamped); err != nil || !stamped {
+			t.Errorf("draft %s not stamped by workspace request: %t, %v", id, stamped, err)
+		}
+	}
+	var keptAfter string
+	if err := roles.owner.QueryRow(pgtest.Soon(t), "SELECT r::text FROM draft_issues r WHERE id=$1", ids[2]).Scan(&keptAfter); err != nil || keptAfter != keptBefore {
+		t.Errorf("other workspace draft changed: %s; want %s (%v)", keptAfter, keptBefore, err)
+	}
+}

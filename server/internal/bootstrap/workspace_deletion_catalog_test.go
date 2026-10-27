@@ -258,3 +258,18 @@ func seedIssueLinks(t testing.TB, pool *pgxpool.Pool, issue, by uuid.UUID) {
 		}
 	}
 }
+
+// seedIssueDrafts keeps both live and previously deleted drafts in the deletion
+// catalog until draft creation is available through the API. Include drafts with
+// no project so the workspace guard cannot pass through project deletion alone.
+func seedIssueDrafts(t testing.TB, pool *pgxpool.Pool, project, by uuid.UUID) {
+	t.Helper()
+	for _, loose := range []bool{false, true} {
+		for _, gone := range []bool{false, true} {
+			if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO draft_issues(id,workspace_id,project_id,created_by_id,updated_by_id,deleted_at)
+    SELECT $1,workspace_id,CASE WHEN $4 THEN NULL ELSE id END,$3,$3,CASE WHEN $5 THEN now()-interval '1 hour' END FROM projects WHERE id=$2`, uuid.NewV7(), project, by, loose, gone); err != nil || tag.RowsAffected() != 1 {
+				t.Fatalf("seed drafts of %s: %d rows, %v; want 1", project, tag.RowsAffected(), err)
+			}
+		}
+	}
+}

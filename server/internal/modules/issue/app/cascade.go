@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"slices"
 	"time"
 	"uuid"
 )
@@ -43,8 +44,20 @@ func (c *Cascade) DeleteProjectIssues(ctx context.Context, projectID, by uuid.UU
 }
 
 // DeleteWorkspaceIssues soft-deletes the work-item-side rows of each of the
-// projects, in their order: those deleteWorkspace locked and deletes.
-func (c *Cascade) DeleteWorkspaceIssues(ctx context.Context, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error {
+// projects, in their order: those deleteWorkspace locked and deletes. Drafts
+// without a project are deleted first, including in a workspace with no projects.
+func (c *Cascade) DeleteWorkspaceIssues(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error {
+	b := WorkspaceDraftBatch{WorkspaceID: workspaceID, Limit: c.batch, By: by, At: now}
+	for {
+		ids, err := c.rows.DeleteWorkspaceDraftRows(ctx, b)
+		if err != nil {
+			return err
+		}
+		if len(ids) == 0 {
+			break
+		}
+		b.After = slices.MaxFunc(ids, uuid.UUID.Compare)
+	}
 	for _, project := range projectIDs {
 		if err := deleteProjectRows(ctx, c.rows, c.batch, project, by, now); err != nil {
 			return err
