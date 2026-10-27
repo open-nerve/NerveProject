@@ -38,6 +38,7 @@ func TestDraftPublishAndProjectDeletionSerialize(t *testing.T) {
 				if !reflect.DeepEqual(before, collaborationState(t, w)) {
 					t.Fatal("refused publication created issue effects")
 				}
+				waitProjectDeletion(t, w.pool, w.web)
 				var at time.Time
 				var by uuid.UUID
 				if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at,updated_by_id FROM draft_issues WHERE id=$1", d.ID).Scan(&at, &by); err != nil || !at.Equal(*projectDeleted) || by != w.ids["alice"] {
@@ -62,6 +63,7 @@ func TestDraftPublishAndProjectDeletionSerialize(t *testing.T) {
 			if !consumed.Equal(issue.CreatedAt) || !updated.Equal(issue.CreatedAt) || by != w.ids["alice"] || projectDeleted.Before(consumed) {
 				t.Fatal("draft/creation/deletion ordering", consumed, updated, issue.CreatedAt, projectDeleted, by)
 			}
+			waitProjectDeletion(t, w.pool, w.web)
 			var all, gone int
 			if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT count(*), count(*) FILTER(WHERE deleted_at=$2) FROM (
     SELECT deleted_at FROM issues WHERE project_id=$1 UNION ALL

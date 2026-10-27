@@ -951,7 +951,7 @@ paths:
       tags:
         - project
       summary: Delete a project
-      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project is deleted as any other. The project is deleted with its memberships, its members'' display settings, its states, its labels and its work items (with their assignees, labels, relations, subscribers and activity), all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.'
+      description: For the project's admins, and its members who are the workspace's admins; an archived project is deleted as any other. The project is deleted with its memberships, its members' display settings, its states and its labels in the request transaction. That same transaction enqueues deletion of its work items and their rows, including drafts, using the request's moment and actor. The project and its work items are immediately unavailable to reads, lists and writes while the task is pending, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.
       security:
         - bearer: []
       x-problem-codes:

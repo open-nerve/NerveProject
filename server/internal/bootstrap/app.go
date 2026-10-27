@@ -144,7 +144,8 @@ func newAppWithPoolFactory(ctx context.Context, cfg config.Config, logger *slog.
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
-		Pool: pool, Tx: tx, Clock: businessClock, Authorizer: authorizer,
+		Events: events,
+		Pool:   pool, Tx: tx, Clock: businessClock, Authorizer: authorizer,
 		Workspaces:   projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:      workspacePorts.WorkspaceMembers,
 		Issues:       issuePorts.IssueCascade,

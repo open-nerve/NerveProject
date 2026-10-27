@@ -111,6 +111,9 @@ func TestAutoArchiveUsesLockedPolicy(t *testing.T) {
 				if n != want {
 					t.Errorf("locked policy archived=%d want=%d", n, want)
 				}
+				if change.deleted == "projects" {
+					waitProjectDeletion(t, w.pool, w.web)
+				}
 				archiveRaceCheck(t, w, id, at, want, events, change.deleted != "")
 				if change.deleted != "" {
 					parent := w.web

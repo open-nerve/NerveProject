@@ -220,6 +220,7 @@ func TestTrimVersionsSerializesWithProjectDeletion(t *testing.T) {
 			if count != 0 || (first == "request" && rows.calls != 0) {
 				t.Fatalf("trim after deletion count=%d SQL calls=%d", count, rows.calls)
 			}
+			waitProjectDeletion(t, w.pool, w.web)
 			retentionCheck(t, w, item, append(slices.Clone(ids), old...), oldRows)
 			var bad int
 			if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT count(*) FROM issue_description_versions v JOIN projects p ON p.id=v.project_id WHERE v.issue_id=$1 AND v.id=ANY($3) AND (v.deleted_at IS DISTINCT FROM p.deleted_at OR v.updated_at IS DISTINCT FROM p.deleted_at OR v.updated_by_id IS DISTINCT FROM $2)`, item, w.ids["alice"], ids).Scan(&bad); err != nil || bad != 0 {

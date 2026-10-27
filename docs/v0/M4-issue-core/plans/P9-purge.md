@@ -181,7 +181,7 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 
 ## Task 9：单项目请求切换与旧断言迁移
 
-**Files：** 改P/app/delete_project.go、delete_project_test.go、module.go及对应fake；新B/issue_project_deletion_events_test.go；改B/project_deletion_test.go、issue_interleaving_relations_test.go、issue_interleaving_deletion_test.go、issue_draft_interleaving_test.go及实际跨workspace关系测试调用点；改`api/modules/project.yaml`、`e2e/fixtures/assert/project.ts`；生成api/dist、Go HTTP与TS。预计400–800行。
+**Files：** 改P/app/delete_project.go、delete_project_test.go、module.go及对应fake；新B/issue_project_deletion_events_test.go（原子性）、issue_project_deletion_jobs_test.go（真实job身份/完成/DB barrier）；改B/project_deletion_test.go、issue_interleaving_relations_test.go、issue_interleaving_deletion_test.go、issue_draft_interleaving_test.go及实际跨workspace关系测试调用点；同步B/app.go、project_connection_test.go、ending_connection_test.go真实投递构造，issue_activities_test.go、issue_auto_archive_policy_interleaving_test.go、issue_retention_interleaving_test.go项目异步断言；改`api/modules/project.yaml`、`e2e/fixtures/assert/project.ts`；生成api/dist、Go HTTP与TS。预计400–800行。
 
 **Interfaces：** P.NewDeleteProject第二参数改shared.EventPublisher，P.Deps.Events；project.deleted精确形状见spec§2.8。expectProjectDeleted签名保持，只issue目录行bounded polling。
 

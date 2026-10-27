@@ -7,6 +7,8 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -102,43 +104,83 @@ func TestOppositeRelationsOfTwoWorkItemsSerialize(t *testing.T) {
 		})
 }
 
-// Deleting a work item related across projects and deleting the project of
-// the other ends serialize on their relations' rows (M4 design 3.5, 3.6;
-// interleaving 11), in both orders: bob deletes his Near, of Web, while
-// alice deletes Ops, whose Far relates to Near, stored from Near, and
-// whose Far too is its duplicate, stored from Far too. Neither waits for
-// the other's project: each locks its own, then the relation rows it
-// deletes, by id, in ascending order, so neither holds a row the other
-// waits for while waiting for one of the other's. The second waits for
-// the first's relation rows and, once the first commits, finds them
-// deleted and leaves them: each is deleted once, at the first's moment,
-// by its deleter.
+// The project request owns only its original P lock. Relation contention is
+// between its committed deletion job and the ordinary synchronous issue write.
+// Both orders retain the first deletion's precise audit stamp.
 func TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize(t *testing.T) {
-	prepare := func(t *testing.T, w issueWorld) {
-		nearAndFar(t, w)
-		near := w.workItemNamed(t, "Near")
-		farToo := w.newWorkItemIn(t, w.projectWith(t, "OPS"), `{"name":"Far too"}`)
-		w.send(t, "alice", http.MethodPost, relationsOf(near), relating("relates_to", w.workItemNamed(t, "Far")), http.StatusCreated)
-		w.send(t, "alice", http.MethodPost, relationsOf(farToo), relating("duplicate", near), http.StatusCreated)
-	}
-	inBothOrdersAt(t, "issue_relations", prepare, "Near deleted", deletesNamed("bob", "Near"), "Ops deleted", deletesOps,
-		func(t *testing.T, w issueWorld, nearFirst bool, nearDeleted, opsDeleted exchange) {
-			w.answered(t, nearDeleted, http.StatusNoContent)
-			w.answered(t, opsDeleted, http.StatusNoContent)
-			at, by := w.deletedAt(t, "issues", w.workItemNamed(t, "Near")), "bob"
-			if !nearFirst {
-				at, by = w.deletedAt(t, "projects", w.projectWith(t, "OPS")), "alice"
-			}
-			relations := queryIDs(t, w.pool, "SELECT id FROM issue_relations")
+	for _, nearFirst := range []bool{true, false} {
+		t.Run(map[bool]string{true: "Near deleted first", false: "Ops deleted first"}[nearFirst], func(t *testing.T) {
+			w := newIssueWorld(t)
+			nearAndFar(t, w)
+			near, ops := w.workItemNamed(t, "Near"), w.projectWith(t, "OPS")
+			farToo := w.newWorkItemIn(t, ops, `{"name":"Far too"}`)
+			w.send(t, "alice", http.MethodPost, relationsOf(near), relating("relates_to", w.workItemNamed(t, "Far")), 201)
+			w.send(t, "alice", http.MethodPost, relationsOf(farToo), relating("duplicate", near), 201)
+			relations := queryIDs(t, w.pool, "SELECT id FROM issue_relations ORDER BY id")
 			if len(relations) != 2 {
-				t.Fatalf("%d relations, want 2", len(relations))
+				t.Fatal("relation fixture", relations)
+			}
+			nearProbe := requestTx(w.pool)
+			g := newGate()
+			var nearDeleted, opsDeleted exchange
+			var nearDone <-chan error
+			defer func() { releaseAndJoinGate(t, g, nearDone) }()
+			if nearFirst {
+				nearDone = run(deletesNamed("bob", "Near")(t, w, heldTx{nearProbe, g}, &nearDeleted))
+				held(t, pgtest.Soon(t), g, nearDone, "Near deletion")
+			}
+			// The request still waits for P, then commits independently of issue rows.
+			projectHolder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR NO KEY UPDATE", ops)
+			projectProbe := requestTx(w.pool)
+			collectProject := requestBackground(t, deletesOps(t, w, projectProbe, &opsDeleted), func() { requestRelease(t, projectHolder) })
+			requestBlocked(t, w.pool, projectProbe, projectHolder.Conn().PgConn().PID(), "projects")
+			// Worker-first: hold its second sorted relation so it owns the first while
+			// the ordinary write arrives. The worker itself supplies the competing lock.
+			var releaseRelation func()
+			var secondPID uint32
+			if !nearFirst {
+				second := holding(t, w.pool, "SELECT 1 FROM issue_relations WHERE id=$1 FOR UPDATE", relations[1])
+				secondPID = second.Conn().PgConn().PID()
+				releaseRelation = func() { requestRelease(t, second) }
+				defer releaseRelation()
+			}
+			requestRelease(t, projectHolder)
+			collectProject()
+			w.answered(t, opsDeleted, 204)
+			w.send(t, "alice", http.MethodGet, "/api/v0/issues/"+w.workItemNamed(t, "Far").String(), "", 404)
+			job := projectDeletionJob(t, w.pool, ops)
+			if nearFirst {
+				deletionWorkerBlockedBy(t, w.pool, requestPID(t, nearProbe), job, "issue_relations")
+				requestOpen(g)
+				if err := result(t, pgtest.Soon(t), nearDone, "Near deletion"); err != nil {
+					t.Fatal(err)
+				}
+				nearDone = nil
+			} else {
+				worker := deletionWorkerBlockedBy(t, w.pool, secondPID, job, "issue_relations")
+				workerProbe := &requestProbe{}
+				workerProbe.pid.Store(worker)
+				if got := requestRowLock(t, w.pool, w.pool, workerProbe, "issue_relations WHERE id=$1", relations[0]); got != "FOR NO KEY UPDATE" {
+					t.Fatal("worker must own first relation", got)
+				}
+				collectNear := requestBackground(t, deletesNamed("bob", "Near")(t, w, nearProbe, &nearDeleted), releaseRelation)
+				requestBlocked(t, w.pool, nearProbe, worker, "issue_relations")
+				releaseRelation()
+				collectNear()
+			}
+			w.answered(t, nearDeleted, 204)
+			waitDeletionJob(t, w.pool, job, "completed")
+			at, by := w.deletedAt(t, "projects", ops), "alice"
+			if nearFirst {
+				at, by = w.deletedAt(t, "issues", near), "bob"
 			}
 			for _, id := range relations {
 				if got := w.relationDeletion(t, id, at); got != "deleted by "+by+" at the moment" {
-					t.Errorf("the relation %s is %s, want deleted by %s at the moment", id, got, by)
+					t.Errorf("relation %s: %s want %s", id, got, by)
 				}
 			}
 		})
+	}
 }
 
 // Relating a work item to another and deleting the other's project
@@ -148,12 +190,18 @@ func TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize(t *testing.T) {
 // first: the relation, which passed its precheck with Far reached, waits
 // for Ops' row, and under its locks finds Ops deleted: Far is not
 // reached, 422 at its place, and nothing is written. Related first: the
-// deletion waits for Ops' row, then deletes the relation, stored from
-// Far, a row of Ops, and Far's row of its activity on it, at its one
-// moment, by alice; Near's row stays, and no undeleted relation names a
+// deletion waits for Ops' row, then its committed job deletes the relation,
+// stored from Far, and Far's row of its activity at the request's moment,
+// by alice; Near's row stays, and no undeleted relation names a
 // deleted work item.
 func TestRelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize(t *testing.T) {
-	inBothOrders(t, nearAndFar, "Ops deleted", deletesOps, "related", relates("bob", "Near", "Far", "blocking"),
+	var holder pgx.Tx
+	inBothOrders(t, func(t *testing.T, w issueWorld) {
+		nearAndFar(t, w)
+		ops := w.projectWith(t, "OPS")
+		createDraftHTTP(t, w, "alice", `{"project_id":"`+ops.String()+`","payload":{}}`)
+		holder = holdProjectDeletion(t, w.pool, ops)
+	}, "Ops deleted", deletesOps, "related", relates("bob", "Near", "Far", "blocking"),
 		func(t *testing.T, w issueWorld, deletedFirst bool, deleted, related exchange) {
 			w.answered(t, deleted, http.StatusNoContent)
 			if deletedFirst {
@@ -166,8 +214,17 @@ func TestRelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize(t *testing.T) 
 					t.Errorf("%d relations and Near's rows on them %q after the refusal; want none", n, w.relationRows(t, w.workItemNamed(t, "Near"),
 						time.Time{}))
 				}
+				requestRelease(t, holder)
+				waitProjectDeletion(t, w.pool, w.projectWith(t, "OPS"))
 				return
 			}
+			w.send(t, "alice", http.MethodGet, "/api/v0/issues/"+w.workItemNamed(t, "Far").String(), "", 404)
+			got := listIn[answeredRelation](t, w.send(t, "bob", http.MethodGet, relationsOf(w.workItemNamed(t, "Near")), "", 200))
+			if len(got) != 0 {
+				t.Fatal("live endpoint leaked hidden relation", got)
+			}
+			requestRelease(t, holder)
+			waitProjectDeletion(t, w.pool, w.projectWith(t, "OPS"))
 			made := listIn[answeredRelation](t, w.answered(t, related, http.StatusCreated))
 			at := w.deletedAt(t, "projects", w.projectWith(t, "OPS"))
 			for _, tt := range []struct {

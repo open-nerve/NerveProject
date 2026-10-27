@@ -70,7 +70,7 @@ func newRouteWithTimeout(t *testing.T, register func(*httpserver.Router, *httpse
 }
 
 // newProjectRoute is the project module (project.New) on pool, with auth as
-// its Authorizer, members as its WorkspaceMembers and issue's cascade.
+// its Authorizer, members as its WorkspaceMembers and real event subscribers.
 func newProjectRoute(t *testing.T, pool *pgxpool.Pool, auth shared.Authorizer, members projectapp.WorkspaceMembers) moduleRoute {
 	t.Helper()
 	return newProjectRouteOn(t, pool, postgres.NewTxManager(pool, 2*time.Second), auth, members)
@@ -80,7 +80,12 @@ func newProjectRoute(t *testing.T, pool *pgxpool.Pool, auth shared.Authorizer, m
 func newProjectRouteOn(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, auth shared.Authorizer,
 	members projectapp.WorkspaceMembers) moduleRoute {
 	t.Helper()
-	return newRoute(t, project.New(project.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
+	return newProjectRouteWithPublisher(t, pool, tx, auth, members, projectDeletionPublisher(t, pool))
+}
+
+func newProjectRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, auth shared.Authorizer, members projectapp.WorkspaceMembers, events shared.EventPublisher) moduleRoute {
+	t.Helper()
+	return newRoute(t, project.New(project.Deps{Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members,
 		Issues: issue.Provide(pool).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool).ListSettings}}).Register)
 }

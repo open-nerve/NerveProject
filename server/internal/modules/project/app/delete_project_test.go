@@ -16,29 +16,35 @@ import (
 // newDelete is DeleteProject over newWrites' fakes, its clock logged.
 func newDelete() (*app.DeleteProject, *writeFixture) {
 	f := newWrites()
-	return app.NewDeleteProject(f.store, f.issues, f.locks(), f.tx, clockAt{clockNow, f.log}), f
+	return app.NewDeleteProject(f.store, f.events, f.locks(), f.tx, clockAt{clockNow, f.log}), f
 }
 
 // deleted are the calls of bob's deletion of project: the locks, the
 // decision, the clock, the five steps on that project alone, then its
-// work-item side.
+// transactional event.
 func deleted(project uuid.UUID) []string {
 	return slices.Concat(lockedDecision(bob, project, domain.ActionDelete), []string{"Now"},
 		deletionSteps(acme.ID, project.String(), bob, clockNow),
-		[]string{fmt.Sprintf("DeleteProjectIssues %s by %s at %s", project, bob, clockNow.Format(timeFormat))})
+		[]string{fmt.Sprintf("Publish project.deleted %s by %s at %s", project, bob, clockNow.Format(timeFormat))})
 }
 
 // DeleteProject, in one transaction and in the order of M3 design 3.6,
 // takes the project's locks, decides, reads the clock, then runs the steps a
 // workspace's deletion runs, on the project alone, of the workspace its
-// lock read, and last deletes its work-item side through the issue module
-// (M4 design 3.5), by the caller at that one moment. An archived project is
-// deleted as any other.
+// lock read, and last publishes its deletion event by the caller at that
+// one moment. An archived project is deleted as any other.
 func TestDeleteProject(t *testing.T) {
 	for _, project := range []uuid.UUID{webID, opsID} {
 		uc, f := newDelete()
 		if err := uc.Execute(as(bob), project); err != nil || !slices.Equal(f.log.calls, deleted(project)) {
 			t.Errorf("Execute(%s) = %v, calls\n%q\nwant\n%q", project, err, f.log.calls, deleted(project))
+		}
+		if len(f.events.events) != 1 {
+			t.Fatal("event count", f.events.events)
+		}
+		e := f.events.events[0]
+		if e.ID == (uuid.UUID{}) || e.Type != "project.deleted" || e.Entity != (shared.EntityRef{Kind: "project", ID: project}) || e.ProjectID != project || e.WorkspaceID != acme.ID || e.ActorID == nil || *e.ActorID != bob || !e.OccurredAt.Equal(clockNow) || len(e.Changes) != 0 {
+			t.Fatalf("event=%+v", e)
 		}
 	}
 }
@@ -65,6 +71,9 @@ func TestDeleteProjectRefuses(t *testing.T) {
 			if err := uc.Execute(tt.ctx, tt.id); !sameError(err, tt.want) || !slices.Equal(f.log.calls, tt.calls) {
 				t.Errorf("Execute() = %v, calls %q; want %v, calls %q", err, f.log.calls, tt.want, tt.calls)
 			}
+			if len(f.events.events) != 0 {
+				t.Fatal("refusal published", f.events.events)
+			}
 		})
 	}
 }
@@ -85,7 +94,7 @@ func TestDeleteProjectReturnsEachFailure(t *testing.T) {
 		{"the display settings", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteProjectPreferences": errDisk} }, 9},
 		{"the states", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteStates": errDisk} }, 10},
 		{"the labels", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteLabels": errDisk} }, 11},
-		{"the work items", func(f *writeFixture) { f.issues.errs = map[string]error{"DeleteProjectIssues": errDisk} }, 12},
+		{"the event", func(f *writeFixture) { f.events.err = errDisk }, 12},
 		{"the commit", func(f *writeFixture) { f.tx.commitErr = errDisk }, 12},
 	}
 	for _, tt := range tests {
@@ -97,4 +106,17 @@ func TestDeleteProjectReturnsEachFailure(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The fake logs through the transaction-aware common call log.
+type fakeProjectEvents struct {
+	log    *callLog
+	events []shared.Event
+	err    error
+}
+
+func (f *fakeProjectEvents) Publish(ctx context.Context, e shared.Event) error {
+	f.log.add(ctx, "Publish %s %s by %s at %s", e.Type, e.ProjectID, *e.ActorID, e.OccurredAt.Format(timeFormat))
+	f.events = append(f.events, e)
+	return f.err
 }

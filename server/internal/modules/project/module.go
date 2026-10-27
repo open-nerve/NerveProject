@@ -198,6 +198,7 @@ type ListDisplayFilters = app.ListDisplayFilters
 
 // Deps are what bootstrap gives the module (M3 design 6.6, step 4).
 type Deps struct {
+	Events     shared.EventPublisher
 	Pool       *pgxpool.Pool
 	Tx         shared.TxManager
 	Clock      app.Clock
@@ -235,7 +236,7 @@ func New(d Deps) *Module {
 		UpdateProject:       app.NewUpdateProject(store, locks, d.Tx, d.Clock),
 		ArchiveProject:      app.NewArchiveProject(store, locks, d.Tx, d.Clock),
 		UnarchiveProject:    app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
-		DeleteProject:       app.NewDeleteProject(store, d.Issues, locks, d.Tx, d.Clock),
+		DeleteProject:       app.NewDeleteProject(store, d.Events, locks, d.Tx, d.Clock),
 		GetPreferences:      app.NewGetProjectPreferences(store, d.Authorizer),
 		UpdatePreferences:   app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock, d.ListSettings),
 		ListMembers:         app.NewListProjectMembers(store, d.Authorizer),

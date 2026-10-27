@@ -184,6 +184,17 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 		t.Fatalf("deleting Web = %d %s, want 204", status, body)
 	}
 	after := time.Now()
+	for i, k := range keys {
+		if !projectIssueTable(k.table) {
+			if rows := k.unstamped(t, pool, recorded[i], web, daveID); rows != "" {
+				t.Errorf("M3 %s not synchronously stamped: %s", k, rows)
+			}
+		}
+	}
+	if status, body := call(t, contract, http.MethodGet, base+"/api/v0/projects/"+web.String(), alice, ""); status != 404 {
+		t.Fatalf("deleted project visible: %d %s", status, body)
+	}
+	waitProjectDeletion(t, pool, web)
 
 	for i, k := range keys {
 		under[i].deletedAfter, under[i].keptAfter = len(k.undeleted(t, pool, web)), k.rows(t, pool, ops)
@@ -241,6 +252,23 @@ func TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay(t *testing.T) {
 		t.Fatalf("deleting Web = %d %s, want 204", status, body)
 	}
 
+	for _, id := range webItems {
+		if status, body := call(t, contract, http.MethodGet, base+"/api/v0/issues/"+id.String(), alice, ""); status != 404 {
+			t.Fatalf("deleted project issue visible: %d %s", status, body)
+		}
+	}
+	for _, id := range opsItems {
+		status, body := call(t, contract, http.MethodGet, base+relationsOf(id), alice, "")
+		if status != 200 {
+			t.Fatal(status, body)
+		}
+		for _, r := range listIn[answeredRelation](t, string(body)) {
+			if r.Issue.ID == seeded {
+				t.Fatal("live relation list leaked deleted endpoint", r)
+			}
+		}
+	}
+	waitProjectDeletion(t, pool, web)
 	var left, all int
 	if err := pool.QueryRow(pgtest.Soon(t), `SELECT count(*) FILTER (WHERE r.deleted_at IS DISTINCT FROM p.deleted_at), count(*)
 		FROM issue_relations r, projects p WHERE p.id = $1 AND $2 IN (r.issue_id, r.related_issue_id)`, web, seeded).Scan(&left, &all); err != nil ||
@@ -255,8 +283,8 @@ func TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay(t *testing.T) {
 // Every statement of the deletion runs in its one transaction (M3 design
 // 3.3, 9.3): a deletion refused at its commit, after every statement ran,
 // changes no row under either project. A deferred constraint trigger
-// refuses the commits that wrote one table under projects, each table the
-// catalog ties to projects in turn: a step that ran in a transaction of
+// refuses each synchronous M3 table in turn; the full catalog and request
+// task identities are still compared: a step that ran in a transaction of
 // its own commits its rows deleted unless it wrote that table, so it is
 // seen while another table's commit is refused, wherever it comes in the
 // deletion.
@@ -273,13 +301,20 @@ func TestAProjectDeletionRefusedAtItsCommitChangesNoRow(t *testing.T) {
 		return all
 	}
 	before := rowsOf()
+	jobsBefore := registrationRows(t, pool)
 	for _, k := range keys {
+		if projectIssueTable(k.table) {
+			continue
+		}
 		restore := refusingCommits(t, pool, k.table)
 		if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/projects/"+web.String(), alice, ""); status != http.StatusInternalServerError {
 			t.Errorf("deleting Web with the commits of %s refused = %d %s, want 500", k.table, status, body)
 		}
 		if after := rowsOf(); !slices.Equal(after, before) {
 			t.Fatalf("the rows after the deletion refused at its commit of %s:\n%q\nwant\n%q", k.table, after, before)
+		}
+		if registrationRows(t, pool) != jobsBefore {
+			t.Fatal("commit rejection changed full snapshot/request tasks")
 		}
 		restore()
 	}
