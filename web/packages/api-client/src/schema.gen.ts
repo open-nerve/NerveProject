@@ -917,6 +917,99 @@ export interface paths {
         patch: operations["updateLabel"];
         trace?: never;
     };
+    "/api/v0/workspaces/{slug}/issue-search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Search visible work items
+         * @description Workspace admins, members and guests search only their active memberships of undeleted, unarchived projects, retaining each project's OwnOnly scope. Work items are undeleted and unarchived. Unknown queries answer 422; repeated scalars answer 422 invalid_format. Malformed query encoding and noninteger limit answer 400. UUID, date and for values are validated as domain values with 422. The trimmed q is at most 100 Unicode characters. Empty q orders by updated_at then id descending. Nonempty q matches identifiers, sequence numbers or literal title substrings, ordered by match rank, similarity descending, created_at descending and id descending. Source visibility is checked before parent/sub_issue project conflicts. Results are a bounded collection without pagination or totals.
+         */
+        get: operations["searchIssues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List your personal issue drafts
+         * @description Personal drafts only, including archived projects. Unknown or repeated scalar queries answer 422.
+         */
+        get: operations["listDrafts"];
+        put?: never;
+        /**
+         * Save an unfinished issue draft
+         * @description Saves structure without create validation; workspace admins and members may save their own drafts.
+         */
+        post: operations["createDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/drafts/{draft_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: components["parameters"]["DraftID"];
+            };
+            cookie?: never;
+        };
+        /** Read your issue draft */
+        get: operations["getDraft"];
+        put?: never;
+        post?: never;
+        /** Delete your issue draft */
+        delete: operations["deleteDraft"];
+        options?: never;
+        head?: never;
+        /** Replace fields of your issue draft */
+        patch: operations["updateDraft"];
+        trace?: never;
+    };
+    "/api/v0/drafts/{draft_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: components["parameters"]["DraftID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish your stored issue draft
+         * @description Accepts no request body. Creates from the locked stored payload and soft-deletes the draft atomically.
+         */
+        post: operations["publishDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/workspaces/{slug}/members/{user_id}/issues": {
         parameters: {
             query?: never;
@@ -2149,13 +2242,6 @@ export interface components {
             sort_order?: number;
         };
         /**
-         * @description Project lists exclude project_id; member lists use their narrower page vocabulary.
-         * @enum {string}
-         */
-        IssueListGroupField: "state_id" | "state_group" | "priority" | "label_id" | "assignee_id" | "created_by_id" | "target_date" | "project_id";
-        /** @enum {string} */
-        IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "sub_issues_count" | "-sub_issues_count" | "sort_order";
-        /**
          * @description A work item's priority, from the most to the least urgent.
          * @enum {string}
          */
@@ -2205,6 +2291,11 @@ export interface components {
             assignee_ids: string[];
             /** @description Its labels, by id. */
             label_ids: string[];
+            /**
+             * Format: int64
+             * @description The number of undeleted links, regardless of creator or metadata state.
+             */
+            link_count: number;
             /** @description The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own. */
             sub_issues_count: number;
             /**
@@ -2222,6 +2313,132 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /** @description Work items, all of them, without pages. */
+        IssueCollection: {
+            data: components["schemas"]["Issue"][];
+        };
+        /** @description Unfinished issue input. Saving checks structure, not create semantics. */
+        IssueDraftPayload: {
+            name?: string;
+            description_html?: string;
+            /** Format: uuid */
+            state_id?: string;
+            priority?: string;
+            assignee_ids?: string[];
+            label_ids?: string[];
+            /** Format: date */
+            start_date?: string;
+            /** Format: date */
+            target_date?: string;
+            /** Format: uuid */
+            parent_id?: string;
+        };
+        Draft: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string | null;
+            payload: components["schemas"]["IssueDraftPayload"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        DraftPage: {
+            data: components["schemas"]["Draft"][];
+            next_cursor: components["schemas"]["NextCursor"];
+            /** Format: int64 */
+            total: number;
+        };
+        DraftCreate: {
+            /** Format: uuid */
+            project_id?: string | null;
+            payload: components["schemas"]["IssueDraftPayload"];
+        };
+        /** @description Omission keeps a value; project null clears it; payload replaces the complete object. */
+        DraftUpdate: {
+            /** Format: uuid */
+            project_id?: string | null;
+            payload?: components["schemas"]["IssueDraftPayload"];
+        };
+        /** @description A work item of a project. */
+        IssueDetail: {
+            /** @description Sanitized rich text HTML; at most 500000 characters on input. */
+            description_html: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            /** @description Its number in its project, from 1; with the project's identifier, as in WEB-12. */
+            sequence_id: number;
+            name: string;
+            /** Format: uuid */
+            state_id: string;
+            priority: components["schemas"]["IssuePriority"];
+            /**
+             * Format: date
+             * @description The day it starts; null for none.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, not before its start date; null for none.
+             */
+            target_date: string | null;
+            /**
+             * Format: uuid
+             * @description The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
+             */
+            parent_id: string | null;
+            /** @description Its place among its state's work items, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was put in a state of the completed group; null in any other state.
+             */
+            completed_at: string | null;
+            /**
+             * Format: date-time
+             * @description When it was archived; null when it is not.
+             */
+            archived_at: string | null;
+            /** @description The accounts it is assigned to, by id; one who has left the project since is still one. */
+            assignee_ids: string[];
+            /** @description Its labels, by id. */
+            label_ids: string[];
+            /**
+             * Format: int64
+             * @description The number of undeleted links, regardless of creator or metadata state.
+             */
+            link_count: number;
+            /** @description The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own. */
+            sub_issues_count: number;
+            /**
+             * Format: uuid
+             * @description The account that created it; null for none.
+             */
+            created_by_id: string | null;
+            /**
+             * Format: uuid
+             * @description The account that changed it last; null for none.
+             */
+            updated_by_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /**
+         * @description Project lists exclude project_id; member lists use their narrower page vocabulary.
+         * @enum {string}
+         */
+        IssueListGroupField: "state_id" | "state_group" | "priority" | "label_id" | "assignee_id" | "created_by_id" | "target_date" | "project_id";
+        /** @enum {string} */
+        IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "sub_issues_count" | "-sub_issues_count" | "link_count" | "-link_count" | "sort_order";
         IssueListSubgroup: {
             key: string;
             /** Format: int64 */
@@ -2283,70 +2500,6 @@ export interface components {
              */
             parent_id?: string;
         };
-        /** @description A work item of a project. */
-        IssueDetail: {
-            /** @description Sanitized rich text HTML; at most 500000 characters on input. */
-            description_html: string;
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            workspace_id: string;
-            /** Format: uuid */
-            project_id: string;
-            /** @description Its number in its project, from 1; with the project's identifier, as in WEB-12. */
-            sequence_id: number;
-            name: string;
-            /** Format: uuid */
-            state_id: string;
-            priority: components["schemas"]["IssuePriority"];
-            /**
-             * Format: date
-             * @description The day it starts; null for none.
-             */
-            start_date: string | null;
-            /**
-             * Format: date
-             * @description The day it is due, not before its start date; null for none.
-             */
-            target_date: string | null;
-            /**
-             * Format: uuid
-             * @description The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
-             */
-            parent_id: string | null;
-            /** @description Its place among its state's work items, the lowest first. */
-            sort_order: number;
-            /**
-             * Format: date-time
-             * @description When it was put in a state of the completed group; null in any other state.
-             */
-            completed_at: string | null;
-            /**
-             * Format: date-time
-             * @description When it was archived; null when it is not.
-             */
-            archived_at: string | null;
-            /** @description The accounts it is assigned to, by id; one who has left the project since is still one. */
-            assignee_ids: string[];
-            /** @description Its labels, by id. */
-            label_ids: string[];
-            /** @description The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own. */
-            sub_issues_count: number;
-            /**
-             * Format: uuid
-             * @description The account that created it; null for none.
-             */
-            created_by_id: string | null;
-            /**
-             * Format: uuid
-             * @description The account that changed it last; null for none.
-             */
-            updated_by_id: string | null;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-        };
         /** @description Changes the fields it names; a field left out keeps its value. */
         IssueUpdate: {
             /** @description Finite sort order; zero allowed, omitted keeps the stored value. Cannot accompany skip_activity. */
@@ -2382,10 +2535,6 @@ export interface components {
              * @description The work item it is under, null for none: one of the project's that the caller sees, not archived, and neither this work item nor one under it. It is compared with the parent the caller is answered, a parent he does not see counting as none: sending back the null he was answered changes nothing, and naming a work item he does not see is refused as naming one not there.
              */
             parent_id?: string | null;
-        };
-        /** @description Work items, all of them, without pages. */
-        IssueCollection: {
-            data: components["schemas"]["Issue"][];
         };
         SubIssuesAdd: {
             /** @description 1–100 work items of the project, each named once, to put under the work item. */
@@ -2655,6 +2804,7 @@ export interface components {
         StateID: string;
         /** @description A label's id (Label.id). */
         LabelID: string;
+        DraftID: string;
         /** @description A work item's id (IssueDetail.id). */
         IssueID: string;
         /** @description A relation's id (IssueRelation.id). */
@@ -2738,18 +2888,23 @@ export type Label = components['schemas']['Label'];
 export type LabelList = components['schemas']['LabelList'];
 export type LabelCreate = components['schemas']['LabelCreate'];
 export type LabelUpdate = components['schemas']['LabelUpdate'];
-export type IssueListGroupField = components['schemas']['IssueListGroupField'];
-export type IssueListOrder = components['schemas']['IssueListOrder'];
 export type IssuePriority = components['schemas']['IssuePriority'];
 export type Issue = components['schemas']['Issue'];
+export type IssueCollection = components['schemas']['IssueCollection'];
+export type IssueDraftPayload = components['schemas']['IssueDraftPayload'];
+export type Draft = components['schemas']['Draft'];
+export type DraftPage = components['schemas']['DraftPage'];
+export type DraftCreate = components['schemas']['DraftCreate'];
+export type DraftUpdate = components['schemas']['DraftUpdate'];
+export type IssueDetail = components['schemas']['IssueDetail'];
+export type IssueListGroupField = components['schemas']['IssueListGroupField'];
+export type IssueListOrder = components['schemas']['IssueListOrder'];
 export type IssueListSubgroup = components['schemas']['IssueListSubgroup'];
 export type IssueListGroup = components['schemas']['IssueListGroup'];
 export type IssueListTotal = components['schemas']['IssueListTotal'];
 export type IssueListPage = components['schemas']['IssueListPage'];
 export type IssueCreate = components['schemas']['IssueCreate'];
-export type IssueDetail = components['schemas']['IssueDetail'];
 export type IssueUpdate = components['schemas']['IssueUpdate'];
-export type IssueCollection = components['schemas']['IssueCollection'];
 export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
 export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
 export type CommentReaction = components['schemas']['CommentReaction'];
@@ -2790,6 +2945,7 @@ export type ParameterProjectId = components['parameters']['ProjectID'];
 export type ParameterProjectMemberId = components['parameters']['ProjectMemberID'];
 export type ParameterStateId = components['parameters']['StateID'];
 export type ParameterLabelId = components['parameters']['LabelID'];
+export type ParameterDraftId = components['parameters']['DraftID'];
 export type ParameterIssueId = components['parameters']['IssueID'];
 export type ParameterRelationId = components['parameters']['RelationID'];
 export type ParameterIssueIdentifier = components['parameters']['IssueIdentifier'];
@@ -4212,6 +4368,195 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Label"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    searchIssues: {
+        parameters: {
+            query?: {
+                q?: string;
+                /** @description A project UUID intersecting the caller's visible project scope. */
+                project_id?: string;
+                /** @description parent, sub_issue or relation; requires issue_id when supplied. */
+                for?: string;
+                /** @description A visible, live source issue UUID; requires for when supplied. */
+                issue_id?: string;
+                /** @description A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone. */
+                start_date?: string[];
+                /** @description A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone. */
+                target_date?: string[];
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listDrafts: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftCreate"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Draft"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: components["parameters"]["DraftID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Draft"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: components["parameters"]["DraftID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: components["parameters"]["DraftID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftUpdate"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Draft"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    publishDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: components["parameters"]["DraftID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
                 };
             };
             default: components["responses"]["Problem"];

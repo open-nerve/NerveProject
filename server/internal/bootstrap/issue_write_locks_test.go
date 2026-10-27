@@ -31,46 +31,47 @@ import (
 // read waits for too, or SHARE, which a write waits for and a plain read
 // does not, so that the write waits there and its precheck does not.
 type issueWrite struct {
-	op, method, path string
-	target           func(t *testing.T, w issueWorld) string
-	body             func(t *testing.T, w issueWorld) string
-	want             int
-	waits, mode      string
+	op, method, path           string
+	workspaceLock, projectLock string
+	target                     func(t *testing.T, w issueWorld) string
+	body                       func(t *testing.T, w issueWorld) string
+	want                       int
+	waits, mode                string
 }
 
-// issueWrites are the work-item side's writes, each with its row: every
-// operation of the contract tagged issue but GET (writesOnIssues).
+// issueWrites are ordinary issue writes, explicitly P(N) without a W lock.
+// Their union with draft CRUD and draft publish covers writesOnIssues.
 var issueWrites = []issueWrite{
-	{op: "updateIssueLink", method: http.MethodPatch, path: "/api/v0/issue-links/{link_id}", target: func(t *testing.T, w issueWorld) string {
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "updateIssueLink", method: http.MethodPatch, path: "/api/v0/issue-links/{link_id}", target: func(t *testing.T, w issueWorld) string {
 		link := createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/locks")
 		waitUniqueLinkCrawl(t, w, link)
 		return linkPath(link.ID)
 	}, body: func(*testing.T, issueWorld) string { return `{"title":"Changed"}` }, want: http.StatusOK, waits: "issues", mode: "SHARE"},
-	{op: "deleteIssueLink", method: http.MethodDelete, path: "/api/v0/issue-links/{link_id}", target: func(t *testing.T, w issueWorld) string {
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "deleteIssueLink", method: http.MethodDelete, path: "/api/v0/issue-links/{link_id}", target: func(t *testing.T, w issueWorld) string {
 		link := createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/locks")
 		waitUniqueLinkCrawl(t, w, link)
 		return linkPath(link.ID)
 	}, body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
-	{op: "createIssueLink", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/links", target: func(t *testing.T, w issueWorld) string { return linksOf(w.newWorkItem(t)) }, body: func(*testing.T, issueWorld) string { return `{"url":"http://169.254.169.254/locks"}` }, want: http.StatusCreated, waits: "issues", mode: "SHARE"},
-	{op: "addCommentReaction", method: http.MethodPost, path: "/api/v0/issue-comments/{comment_id}/reactions", target: func(t *testing.T, w issueWorld) string {
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "createIssueLink", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/links", target: func(t *testing.T, w issueWorld) string { return linksOf(w.newWorkItem(t)) }, body: func(*testing.T, issueWorld) string { return `{"url":"http://169.254.169.254/locks"}` }, want: http.StatusCreated, waits: "issues", mode: "SHARE"},
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "addCommentReaction", method: http.MethodPost, path: "/api/v0/issue-comments/{comment_id}/reactions", target: func(t *testing.T, w issueWorld) string {
 		return commentReactionsOf(w.newComment(t, "alice", w.newWorkItem(t)).ID)
 	}, body: func(*testing.T, issueWorld) string { return `{"reaction":"128077"}` }, want: http.StatusCreated, waits: "comment_reactions", mode: "SHARE"},
-	{op: "removeCommentReaction", method: http.MethodDelete, path: "/api/v0/issue-comments/{comment_id}/reactions/{reaction}", target: func(t *testing.T, w issueWorld) string { return w.newCommentReactionPath(t) }, body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "comment_reactions", mode: "SHARE"},
-	{op: "addIssueReaction", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/reactions", target: func(t *testing.T, w issueWorld) string { return reactionsOf(w.newWorkItem(t)) }, body: func(*testing.T, issueWorld) string { return `{"reaction":"128077"}` }, want: http.StatusCreated, waits: "issues", mode: "SHARE"},
-	{op: "removeIssueReaction", method: http.MethodDelete, path: "/api/v0/issues/{issue_id}/reactions/{reaction}", target: func(t *testing.T, w issueWorld) string { return w.newReactionPath(t) }, body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
-	{op: "updateIssueComment", method: http.MethodPatch, path: "/api/v0/issue-comments/{comment_id}", target: func(t *testing.T, w issueWorld) string {
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "removeCommentReaction", method: http.MethodDelete, path: "/api/v0/issue-comments/{comment_id}/reactions/{reaction}", target: func(t *testing.T, w issueWorld) string { return w.newCommentReactionPath(t) }, body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "comment_reactions", mode: "SHARE"},
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "addIssueReaction", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/reactions", target: func(t *testing.T, w issueWorld) string { return reactionsOf(w.newWorkItem(t)) }, body: func(*testing.T, issueWorld) string { return `{"reaction":"128077"}` }, want: http.StatusCreated, waits: "issues", mode: "SHARE"},
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "removeIssueReaction", method: http.MethodDelete, path: "/api/v0/issues/{issue_id}/reactions/{reaction}", target: func(t *testing.T, w issueWorld) string { return w.newReactionPath(t) }, body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "updateIssueComment", method: http.MethodPatch, path: "/api/v0/issue-comments/{comment_id}", target: func(t *testing.T, w issueWorld) string {
 		return commentPath(w.newComment(t, "alice", w.newWorkItem(t)).ID)
 	}, body: func(*testing.T, issueWorld) string { return `{"comment_html":"<p>Updated</p>"}` }, want: http.StatusOK, waits: "issues", mode: "SHARE"},
-	{op: "deleteIssueComment", method: http.MethodDelete, path: "/api/v0/issue-comments/{comment_id}", target: func(t *testing.T, w issueWorld) string {
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "deleteIssueComment", method: http.MethodDelete, path: "/api/v0/issue-comments/{comment_id}", target: func(t *testing.T, w issueWorld) string {
 		return commentPath(w.newComment(t, "alice", w.newWorkItem(t)).ID)
 	}, body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
-	{op: "createIssueComment", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/comments", target: func(t *testing.T, w issueWorld) string { return commentsOf(w.newWorkItem(t)) }, body: func(*testing.T, issueWorld) string { return `{"comment_html":"<p>Hello</p>"}` }, want: http.StatusCreated, waits: "issues", mode: "SHARE"},
-	{op: "createIssue", method: http.MethodPost, path: "/api/v0/projects/{project_id}/issues",
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "createIssueComment", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/comments", target: func(t *testing.T, w issueWorld) string { return commentsOf(w.newWorkItem(t)) }, body: func(*testing.T, issueWorld) string { return `{"comment_html":"<p>Hello</p>"}` }, want: http.StatusCreated, waits: "issues", mode: "SHARE"},
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "createIssue", method: http.MethodPost, path: "/api/v0/projects/{project_id}/issues",
 		target: func(_ *testing.T, w issueWorld) string { return "/api/v0/projects/" + w.web.String() + "/issues" },
 		body:   func(_ *testing.T, w issueWorld) string { return w.fullIssue() }, want: http.StatusCreated, waits: "states", mode: "ACCESS EXCLUSIVE"},
 	// A work item in Todo, which the send moves to Done: a change of
 	// state, so the states are read under the lock.
-	{op: "updateIssue", method: http.MethodPatch, path: "/api/v0/issues/{issue_id}",
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "updateIssue", method: http.MethodPatch, path: "/api/v0/issues/{issue_id}",
 		target: func(t *testing.T, w issueWorld) string { return "/api/v0/issues/" + w.newWorkItem(t).String() },
 		body: func(_ *testing.T, w issueWorld) string {
 			return `{"sort_order":0,"description_html":"<p>Under lock</p>","state_id":"` + w.done.String() + `"}`
@@ -79,12 +80,12 @@ var issueWrites = []issueWrite{
 	// A work item the send deletes: it reads nothing under the lock that
 	// its precheck did not, so it waits for the work items' table, which
 	// it writes first.
-	{op: "deleteIssue", method: http.MethodDelete, path: "/api/v0/issues/{issue_id}",
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "deleteIssue", method: http.MethodDelete, path: "/api/v0/issues/{issue_id}",
 		target: func(t *testing.T, w issueWorld) string { return "/api/v0/issues/" + w.newWorkItem(t).String() },
 		body:   func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
 	// A work item in Done, which the send archives: its state is read
 	// under the lock.
-	{op: "archiveIssue", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/archive",
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "archiveIssue", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/archive",
 		target: func(t *testing.T, w issueWorld) string {
 			return "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive"
 		},
@@ -92,7 +93,7 @@ var issueWrites = []issueWrite{
 	// An archived work item, which the send unarchives: it reads nothing
 	// under the lock that its precheck did not, so it waits for the work
 	// items' table, which it writes first.
-	{op: "unarchiveIssue", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/unarchive",
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "unarchiveIssue", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/unarchive",
 		target: func(t *testing.T, w issueWorld) string {
 			id := w.doneWorkItem(t)
 			w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+id.String()+"/archive", "", http.StatusOK)
@@ -103,7 +104,7 @@ var issueWrites = []issueWrite{
 	// named so, made with the first target; each send moves it under the
 	// next. It reads nothing under the lock that its precheck did not, so it
 	// waits for the work items' table, which it writes first.
-	{op: "addSubIssues", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/sub-issues",
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "addSubIssues", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/sub-issues",
 		target: func(t *testing.T, w issueWorld) string {
 			if len(queryIDs(t, w.pool, "SELECT id FROM issues WHERE project_id = $1 AND name = 'Part'", w.web)) == 0 {
 				w.newWorkItemIn(t, w.web, `{"name":"Part"}`)
@@ -116,7 +117,7 @@ var issueWrites = []issueWrite{
 	// named so, made with the first target. Its precheck reads no relation,
 	// so it waits for the relations' table, which it reads first under
 	// the lock.
-	{op: "createIssueRelations", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/relations",
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "createIssueRelations", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/relations",
 		target: func(t *testing.T, w issueWorld) string {
 			if len(queryIDs(t, w.pool, "SELECT id FROM issues WHERE project_id = $1 AND name = 'Far'", w.web)) == 0 {
 				w.newWorkItemIn(t, w.web, `{"name":"Far"}`)
@@ -128,7 +129,7 @@ var issueWrites = []issueWrite{
 	// A relation of two new work items, which the send deletes: it reads
 	// nothing under the lock that its precheck did not, so it waits for the
 	// relations' table, which it writes first.
-	{op: "deleteIssueRelation", method: http.MethodDelete, path: "/api/v0/issue-relations/{relation_id}",
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "deleteIssueRelation", method: http.MethodDelete, path: "/api/v0/issue-relations/{relation_id}",
 		target: func(t *testing.T, w issueWorld) string {
 			related := listIn[answeredRelation](t, w.send(t, "alice", http.MethodPost, relationsOf(w.newWorkItem(t)),
 				relating("relates_to", w.newWorkItem(t)), http.StatusCreated))
@@ -143,7 +144,7 @@ var issueWrites = []issueWrite{
 // memberships its decision reads, the states and labels it checks, and
 // the work-item side's own.
 const issueTables = "workspaces, workspace_members, projects, project_members, states, labels, issues, issue_assignees, issue_labels, " +
-	"issue_links, issue_relations, issue_subscribers, issue_mentions, issue_comments, issue_reactions, comment_reactions, issue_activities, issue_description_versions"
+	"draft_issues, issue_links, issue_relations, issue_subscribers, issue_mentions, issue_comments, issue_reactions, comment_reactions, issue_activities, issue_description_versions"
 
 // writesOnIssues lists the operations of ops tagged issue, but GET, sorted.
 func writesOnIssues(ops []apitest.Operation) []string {
@@ -189,23 +190,18 @@ func writesOnIssues(ops []apitest.Operation) []string {
 // there.
 func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 	contract := apitest.Load(t)
-	ops := make([]string, len(issueWrites))
-	for i, iw := range issueWrites {
-		ops[i] = iw.op
-		if !slices.ContainsFunc(contract.Operations(), func(o apitest.Operation) bool {
-			return o.ID == iw.op && o.Method == iw.method && o.Path == iw.path
-		}) {
-			t.Fatalf("%s's row sends %s %s, not the contract's %s", iw.op, iw.method, iw.path, iw.op)
-		}
-	}
-	if want := writesOnIssues(contract.Operations()); !slices.Equal(slices.Sorted(slices.Values(ops)), want) {
-		t.Fatalf("the writes here are %q; the writes on the work-item side are %q: each has its row, in issueWrites", ops, want)
-	}
+	checkIssueWriteDirectories(t, contract)
 	w := newIssueWorld(t)
 	for _, iw := range issueWrites {
 		t.Run(iw.op, func(t *testing.T) {
 			iw.checkProjectLocks(t, w)
 		})
+	}
+	for _, row := range draftCRUDWrites {
+		t.Run(row.op, func(t *testing.T) { row.checkCRUDLocks(t, w) })
+	}
+	for _, row := range draftPublishWrites {
+		t.Run(row.op, func(t *testing.T) { row.checkPublishLocks(t, w) })
 	}
 }
 
@@ -285,10 +281,10 @@ func (iw issueWrite) checkProjectLocks(t *testing.T, w issueWorld) {
 	if written := writtenTables(t, w.pool, waited.Conn().PgConn()); len(written) > 0 {
 		t.Errorf("%s has written %q when it waits for %s: what it holds of Web is no longer its lock's alone", iw.op, written, iw.waits)
 	}
-	if lock := lockOn(t, w.pool, "projects WHERE id = $1", w.web); lock != "FOR NO KEY UPDATE" {
+	if lock := lockOn(t, w.pool, "projects WHERE id = $1", w.web); lock != iw.projectLock {
 		t.Errorf("%s holds Web %s when it waits for %s, not FOR NO KEY UPDATE", iw.op, lock, iw.waits)
 	}
-	if lock := lockOn(t, w.pool, "workspaces WHERE id = $1", w.acme); lock != "no lock" {
+	if lock := lockOn(t, w.pool, "workspaces WHERE id = $1", w.acme); lock != iw.workspaceLock {
 		t.Errorf("%s holds acme %s when it waits for %s", iw.op, lock, iw.waits)
 	}
 	release(t, waited)

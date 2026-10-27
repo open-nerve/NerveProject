@@ -134,8 +134,20 @@ type ListIssuesUseCase interface {
 	Execute(context.Context, uuid.UUID, map[string][]string) (app.IssueListPage, error)
 }
 
+// SearchIssuesUseCase searches the caller's ordinary visible projects.
+type SearchIssuesUseCase interface {
+	Execute(context.Context, string, map[string][]string) ([]domain.Issue, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	SearchIssues            SearchIssuesUseCase
+	PublishDraft            PublishDraftUseCase
+	ListDrafts              ListDraftsUseCase
+	GetDraft                GetDraftUseCase
+	CreateDraft             CreateDraftUseCase
+	UpdateDraft             UpdateDraftUseCase
+	DeleteDraft             DeleteDraftUseCase
 	UpdateIssueLink         UpdateIssueLinkUseCase
 	DeleteIssueLink         DeleteIssueLinkUseCase
 	CreateIssueLink         CreateIssueLinkUseCase
@@ -176,7 +188,7 @@ func Register(router *httpserver.Router, api *httpserver.API, uc UseCases) {
 		RequestErrorHandlerFunc:  api.Errors.BodyError,
 		ResponseErrorHandlerFunc: api.Errors.Write,
 	})
-	var middlewares []gen.MiddlewareFunc
+	middlewares := []gen.MiddlewareFunc{draftPublishBody(api)}
 	for _, m := range api.Middlewares(gen.BodyShapes()) {
 		middlewares = append(middlewares, m)
 	}

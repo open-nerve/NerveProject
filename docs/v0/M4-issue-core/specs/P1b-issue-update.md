@@ -222,6 +222,10 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 | P14 | I2 的页面版本 |
 | 收尾 | 3.23、8.8 中 P1b 的行由 Task 15 写好，收尾逐行核对；M8 的部署交接写明连接池的大小与多进程时的 K、同时热的项目数，以及一个工作项的写的等待：闸门上至多 `issue.write_gate.max_wait`（或到请求的期限），数据库里每一次等锁各至多 `issue.write_lock_timeout`，同时热的项目达到 ⌈池 / K⌉ 个时另有池里的等待，只以请求的期限为界；配置的规则（`max_wait` 加 `write_lock_timeout` 短于 `server.request_timeout`）只盖住闸门和一次等锁，等到请求的期限的写答 500（设计 13.2；第 7 节）；P1b 之前的 14 个测试文件里手写的 17 处 `pgErr.Code == "55P03"` 改用 `postgres.LockNotAvailable`（identity 的 `provide`、`admin`、`accounts`、`credentials`，workspace 的 `directory`、`directory_share`、`update_invitation`、`locks`、`deactivation`，project 的 `state_writes`、`demote`，bootstrap 的 `project_write_locks`、`demotion`、`interleaving_growth` 的测试），P2 起新的测试用平台的帮手（`postgres.LockNotAvailable`、`postgres.LockTimeout`），不再手写 |
 
+### P8接收回执（2026-10-27）
+
+T3/T6草稿复用原Locks的authorizer/gate/写事务与统一timeout映射，普通NewLocks五参与项目N路径保持。T7真实gate排队无连接/事务、拒绝零gate/写锁、W/P/D等待重判与D后唯一时钟；T15交错race五遍65/65。T11沿已有ReadOnlySnapshot，不另写BeginQuery；P9规模/连接池后续、P14页面与M8部署仍开放。 实际命令/计数/变异/检查点见[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
+
 ## 6. 风险
 
 | 风险 | 应对 |

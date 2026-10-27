@@ -385,3 +385,31 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 		}
 	}
 }
+
+// Adding search must satisfy the same closed workspace table and target
+// guards. These counterexamples fail if a future exception skips either.
+func TestSearchMatrixCoverageGuards(t *testing.T) {
+	ops := []apitest.Operation{{ID: "searchIssues", Tags: []string{"issue"}, Method: http.MethodGet, Path: "/api/v0/workspaces/{slug}/issue-search"}}
+	s := newSeeded().in(t)
+	rows := searchMatrixRows()
+	empty := matrixExemptions{}
+	for _, tc := range []struct {
+		name string
+		rows []matrixRow
+		want string
+	}{
+		{"missing operation", nil, "operation searchIssues, tagged [issue], has no row"},
+		{"wrong workspace", []matrixRow{{op: "searchIssues", request: sameRequest("GET", searchPath, ""), cells: inWorkspace(cellOK, cellOK, cellOK)}}, "row searchIssues, workspace deleted: targets the workspace acme, not its column's gone"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := matrixViolations(ops, empty, tc.rows, s, nil); !slices.Equal(got, []string{tc.want}) {
+				t.Fatal(got, tc.want)
+			}
+		})
+	}
+	delete(rows[0].cells, callerGuest)
+	got := matrixViolations(ops, empty, rows, s, nil)
+	if !slices.Equal(got, []string{"row searchIssues has no cell for guest"}) {
+		t.Fatal(got)
+	}
+}

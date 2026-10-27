@@ -262,3 +262,18 @@ func (p projectListSettings) Validate(filters map[string][]string, display *proj
 	}
 	return p.settings.Validate(filters, d, properties)
 }
+
+// UndeletedIDs uses the full project directory for personal drafts, including
+// archived projects and projects the caller has left.
+func (p issueProjects) UndeletedIDs(ctx context.Context, wid uuid.UUID) ([]uuid.UUID, error) {
+	return p.projects.UndeletedIssueProjectIDs(ctx, wid)
+}
+
+func (p issueProjects) ShareMany(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	return p.projects.ShareIssueProjects(ctx, ids)
+}
+
+func (d issueWorkspaces) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (bool, error) {
+	_, found, err := d.directory.ShareWorkspaceByID(ctx, id)
+	return found, err
+}

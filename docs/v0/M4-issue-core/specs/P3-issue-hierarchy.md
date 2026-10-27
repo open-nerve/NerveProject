@@ -261,6 +261,10 @@ P3 是 M4 加锁约定的第二段（设计 12 节约束 3：P1a 起步，P1b �
 | P14 | 父子、关联的页面（I8、I9 的页面版本），选择器；页面只在用户改了父工作项时在 PATCH 里发 `parent_id`，同别的字段（回答里遮住的 `null` 发回去什么都不改，第 3 节第 9 条） |
 | 收尾 | 3.23 中 P3 的行由 Task 16 写好，收尾逐行核对；两份交接的 `status` 在 M4 收尾随 review 关闭 |
 
+### P8接收回执（2026-10-27）
+
+T11/T12 parent/sub_issue排全部后代/祖先，递归穿隐藏/归档/删除中间节点并用UNION终止异常环，relation排双向所有活类型。目录/source/SQL/Locks.seen同RO/RR，隐藏parent_id及可见sub_issues_count沿原定义。T11 final-M25–29、T12逐值HTTP、T14 M26真实build故事已验证；P9异步/交错24–25及P14选择器页面仍开放。 实际命令/计数/变异/检查点见[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
+
 ## 6. 风险
 
 | 风险 | 应对 |

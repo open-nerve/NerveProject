@@ -14,6 +14,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
@@ -91,9 +92,14 @@ func newIssueRouteWithClock(t *testing.T, pool *pgxpool.Pool, tx shared.TxManage
 
 func newIssueRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher) moduleRoute {
 	t.Helper()
+	return newIssueRouteWithGate(t, pool, tx, clock, events, newWriteGate(testIssueConfig.WriteGate))
+}
+
+func newIssueRouteWithGate(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher, gate issueapp.WriteGate) moduleRoute {
+	t.Helper()
 	return newRoute(t, issue.New(issue.Deps{Events: events, Pool: pool, Tx: tx, JobTx: newIssueJobTx(pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), ArchivePolicies: project.Provide(pool).ArchivePolicies, AutoArchiveInterval: 24 * time.Hour,
 		ReadTx:    postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()),
-		WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock,
+		WriteGate: gate, Clock: clock,
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory},
 		Members:    issueMembers{members: workspace.Provide(pool).WorkspaceMemberDirectory},

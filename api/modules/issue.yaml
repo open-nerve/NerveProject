@@ -5,6 +5,174 @@ info:
   title: Nerve issue API
   version: v0
 paths:
+  /api/v0/workspaces/{slug}/issue-search:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: searchIssues
+      tags: [issue]
+      summary: Search visible work items
+      description: >-
+        Workspace admins, members and guests search only their active memberships
+        of undeleted, unarchived projects, retaining each project's OwnOnly scope.
+        Work items are undeleted and unarchived. Unknown queries answer 422;
+        repeated scalars answer 422 invalid_format. Malformed query encoding and
+        noninteger limit answer 400. UUID, date and for values are validated as
+        domain values with 422. The trimmed q is at most 100 Unicode characters.
+        Empty q orders by updated_at then id descending. Nonempty q matches
+        identifiers, sequence numbers or literal title substrings, ordered by
+        match rank, similarity descending, created_at descending and id descending.
+        Source visibility is checked before parent/sub_issue project conflicts.
+        Results are a bounded collection without pagination or totals.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, workspace.not_found, project.not_found, issue.not_found, forbidden]
+      parameters:
+        - name: q
+          in: query
+          schema: {type: string}
+        - name: project_id
+          in: query
+          description: A project UUID intersecting the caller's visible project scope.
+          schema: {type: string}
+        - name: for
+          in: query
+          description: parent, sub_issue or relation; requires issue_id when supplied.
+          schema: {type: string}
+        - name: issue_id
+          in: query
+          description: A visible, live source issue UUID; requires for when supplied.
+          schema: {type: string}
+        - name: start_date
+          in: query
+          description: A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: {type: string}
+        - name: target_date
+          in: query
+          description: A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: {type: string}
+        - $ref: '../common.yaml#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/IssueCollection'}
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/drafts:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listDrafts
+      tags: [issue]
+      summary: List your personal issue drafts
+      description: Personal drafts only, including archived projects. Unknown or repeated scalar queries answer 422.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found, forbidden, validation_failed]
+      parameters:
+        - $ref: '../common.yaml#/components/parameters/Limit'
+        - $ref: '../common.yaml#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DraftPage'}
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createDraft
+      tags: [issue]
+      summary: Save an unfinished issue draft
+      description: Saves structure without create validation; workspace admins and members may save their own drafts.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found, forbidden, validation_failed, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DraftCreate'}
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Draft'}
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/drafts/{draft_id}:
+    parameters:
+      - $ref: '#/components/parameters/DraftID'
+    get:
+      operationId: getDraft
+      tags: [issue]
+      summary: Read your issue draft
+      security: [{bearer: []}]
+      x-problem-codes: [issue.draft_not_found, forbidden]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Draft'}
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateDraft
+      tags: [issue]
+      summary: Replace fields of your issue draft
+      security: [{bearer: []}]
+      x-problem-codes: [issue.draft_not_found, forbidden, validation_failed, issue.draft_changed, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DraftUpdate'}
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Draft'}
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteDraft
+      tags: [issue]
+      summary: Delete your issue draft
+      security: [{bearer: []}]
+      x-problem-codes: [issue.draft_not_found, forbidden, issue.draft_changed, server_busy]
+      responses:
+        '204':
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/drafts/{draft_id}/publish:
+    parameters:
+      - $ref: '#/components/parameters/DraftID'
+    post:
+      operationId: publishDraft
+      tags: [issue]
+      summary: Publish your stored issue draft
+      description: Accepts no request body. Creates from the locked stored payload and soft-deletes the draft atomically.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.draft_not_found, project.not_found, forbidden, validation_failed, issue.draft_changed, project.archived, server_busy]
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/IssueDetail'}
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspaces/{slug}/members/{user_id}/issues:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -1151,6 +1319,11 @@ components:
       type: http
       scheme: bearer
   parameters:
+    DraftID:
+      name: draft_id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
     Slug:
       name: slug
       in: path
@@ -1216,6 +1389,59 @@ components:
           schema:
             $ref: '../common.yaml#/components/schemas/Problem'
   schemas:
+    IssueDraftPayload:
+      description: Unfinished issue input. Saving checks structure, not create semantics.
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string}
+        description_html: {type: string}
+        state_id: {type: string, format: uuid}
+        priority: {type: string}
+        assignee_ids:
+          type: array
+          items: {type: string, format: uuid}
+        label_ids:
+          type: array
+          items: {type: string, format: uuid}
+        start_date: {type: string, format: date}
+        target_date: {type: string, format: date}
+        parent_id: {type: string, format: uuid}
+    DraftCreate:
+      type: object
+      additionalProperties: false
+      required: [payload]
+      properties:
+        project_id: {type: [string, 'null'], format: uuid}
+        payload: {$ref: '#/components/schemas/IssueDraftPayload'}
+    DraftUpdate:
+      description: Omission keeps a value; project null clears it; payload replaces the complete object.
+      type: object
+      additionalProperties: false
+      properties:
+        project_id: {type: [string, 'null'], format: uuid}
+        payload: {$ref: '#/components/schemas/IssueDraftPayload'}
+    Draft:
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, project_id, payload, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        workspace_id: {type: string, format: uuid}
+        project_id: {type: [string, 'null'], format: uuid}
+        payload: {$ref: '#/components/schemas/IssueDraftPayload'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    DraftPage:
+      type: object
+      additionalProperties: false
+      required: [data, next_cursor, total]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Draft'}
+        next_cursor: {$ref: '../common.yaml#/components/schemas/NextCursor'}
+        total: {type: integer, format: int64}
     IssuePriority:
       description: A work item's priority, from the most to the least urgent.
       type: string
@@ -1225,7 +1451,7 @@ components:
       type: object
       additionalProperties: false
       required: [description_html, id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
-        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, created_by_id, updated_by_id, created_at, updated_at]
+        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, link_count, created_by_id, updated_by_id, created_at, updated_at]
       properties:
         description_html:
           description: Sanitized rich text HTML; at most 500000 characters on input.
@@ -1289,6 +1515,11 @@ components:
           items:
             type: string
             format: uuid
+        link_count:
+          description: The number of undeleted links, regardless of creator or metadata state.
+          type: integer
+          format: int64
+          minimum: 0
         sub_issues_count:
           description: >-
             The number of the work items directly under it that are not
@@ -1314,7 +1545,7 @@ components:
       type: object
       additionalProperties: false
       required: [id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
-        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, created_by_id, updated_by_id, created_at, updated_at]
+        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, link_count, created_by_id, updated_by_id, created_at, updated_at]
       properties:
         id:
           type: string
@@ -1375,6 +1606,11 @@ components:
           items:
             type: string
             format: uuid
+        link_count:
+          description: The number of undeleted links, regardless of creator or metadata state.
+          type: integer
+          format: int64
+          minimum: 0
         sub_issues_count:
           description: >-
             The number of the work items directly under it that are not
@@ -1397,7 +1633,7 @@ components:
           format: date-time
     IssueListOrder:
       type: string
-      enum: [created_at, '-created_at', updated_at, '-updated_at', start_date, '-start_date', target_date, '-target_date', priority, '-priority', state_name, '-state_name', label_name, '-label_name', assignee_name, '-assignee_name', sub_issues_count, '-sub_issues_count', sort_order]
+      enum: [created_at, '-created_at', updated_at, '-updated_at', start_date, '-start_date', target_date, '-target_date', priority, '-priority', state_name, '-state_name', label_name, '-label_name', assignee_name, '-assignee_name', sub_issues_count, '-sub_issues_count', link_count, '-link_count', sort_order]
     IssueListGroupField:
       description: Project lists exclude project_id; member lists use their narrower page vocabulary.
       type: string

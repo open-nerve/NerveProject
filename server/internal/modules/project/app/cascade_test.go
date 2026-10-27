@@ -36,7 +36,7 @@ func TestDeleteWorkspaceProjects(t *testing.T) {
 	workspace, by := uuid.NewV7(), uuid.NewV7()
 	projects := []uuid.UUID{uuid.NewV7(), uuid.NewV7()}
 	steps := append(deletionSteps(workspace, "*", by, clockNow),
-		fmt.Sprintf("DeleteWorkspaceIssues %v by %s at %s", projects, by, clockNow.Format(timeFormat)))
+		fmt.Sprintf("DeleteWorkspaceIssues %s %v by %s at %s", workspace, projects, by, clockNow.Format(timeFormat)))
 	type run struct {
 		fail    string
 		wantErr error

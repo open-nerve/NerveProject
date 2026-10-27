@@ -105,6 +105,8 @@ func listPosition(r gen.FlatIssuesRow, order domain.ListOrder) (domain.ListCurso
 		}
 	case "sub_issues_count":
 		key = r.SubIssuesCount
+	case "link_count":
+		key = r.LinkCount
 	case "priority":
 		switch r.Priority {
 		case "urgent":

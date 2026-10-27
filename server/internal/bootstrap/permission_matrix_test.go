@@ -14,6 +14,7 @@ import (
 	"uuid"
 
 	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
+	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -216,7 +217,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), collaborationMatrixRows(), linkMatrixRows())
+		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), collaborationMatrixRows(), linkMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -312,6 +313,17 @@ func prepareMatrix(t *testing.T) matrixData {
 		issues.relations(s)
 		issues.comments(s)
 		issues.links(s)
+		for _, c := range workspaceColumns {
+			key := workspaceOf(c) + "/project"
+			if workspaceOf(c) == "acme" {
+				key = "acme/public"
+			}
+			pid := s.project(key)
+			_, err := issues.store.InsertDraft(pgtest.Soon(t), issueapp.DraftWrite{ID: s.drafts[workspaceOf(c)+"/"+string(c)], WorkspaceID: s.workspace(workspaceOf(c)), ProjectID: &pid, By: s.account(c), Payload: []byte(`{"name":"private"}`), At: seed.now})
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 		projects.archive("acme/archived")
 		projects.removal(s)
 		for _, i := range matrixInvitations {

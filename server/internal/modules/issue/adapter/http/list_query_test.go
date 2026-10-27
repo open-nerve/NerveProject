@@ -21,7 +21,7 @@ func TestListQueryCopy(t *testing.T) {
 	if raw["start_date"][0] != "a" || len(raw) != 2 {
 		t.Fatal("copy aliases input", raw)
 	}
-	for _, op := range []string{"ListIssues", "ListMemberIssues", "ListIssueComments"} {
+	for _, op := range []string{"ListIssues", "ListMemberIssues", "ListDrafts", "SearchIssues", "ListIssueComments"} {
 		r := httptest.NewRequest(http.MethodGet, "/?start_date=a&start_date=b&unknown=kept", nil)
 		next := func(ctx context.Context, _ http.ResponseWriter, _ *http.Request, req any) (any, error) {
 			got := rawListQuery(ctx)
@@ -48,6 +48,14 @@ func TestListBindingErrorIsLocal(t *testing.T) {
 		err                         error
 		want                        int
 	}{
+		{"search duplicate", "GET /api/v0/workspaces/{slug}/issue-search", "q", "q=a&q=b", nil, 422},
+		{"search malformed beats duplicate", "GET /api/v0/workspaces/{slug}/issue-search", "q", "q=a&q=b&bad=%GG", nil, 400},
+		{"search single limit", "GET /api/v0/workspaces/{slug}/issue-search", "limit", "limit=x", nil, 400},
+		{"search date retains binding error", "GET /api/v0/workspaces/{slug}/issue-search", "start_date", "start_date=a&start_date=b", nil, 400},
+		{"similar search route", "GET /api/v0/other/workspaces/{slug}/issue-search", "q", "q=a&q=b", nil, 400},
+		{"draft duplicate", draftListPattern, "limit", "limit=1&limit=2", nil, 422},
+		{"draft malformed beats duplicate", draftListPattern, "limit", "limit=1&limit=2&x=%zz", nil, 400},
+		{"draft single", draftListPattern, "limit", "limit=x", nil, 400},
 		{"project duplicate", project, "limit", "limit=1&limit=2", nil, 422},
 		{"member duplicate", member, "project_id", "project_id=a&project_id=b", nil, 422},
 		{"project query not declared", project, "project_id", "project_id=a&project_id=b", nil, 400},

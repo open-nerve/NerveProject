@@ -8,14 +8,16 @@ import {
   inviteAndAccept,
   slugFor,
 } from "../../fixtures/api";
-import { expectIssuePage } from "../../fixtures/assert/issue";
+import { expectIssueCollection, expectIssuePage } from "../../fixtures/assert/issue";
 import { named, newAccount } from "../../fixtures/auth";
 import { instantKey } from "../../fixtures/instant";
-import { createIssue, listIssues, updateIssue } from "../../fixtures/issues";
+import { createIssue, issueRead, listIssues, searchIssues, updateIssue } from "../../fixtures/issues";
+import { startLinkPage } from "../../fixtures/link-page";
+import { createIssueLink, issueLinkDeleted } from "../../fixtures/links";
 import { createState } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
 
-test("I4 (API): all nineteen orders traverse real second and terminal pages with distinct keys; calendar ranges AND and missing dates stay separate", async ({
+test("I4 (API): all twenty-one orders traverse real second and terminal pages with distinct keys; calendar ranges AND and missing dates stay separate", async ({
   api,
 }, info) => {
   const admin = await newAccount(api, info, "admin");
@@ -81,6 +83,9 @@ test("I4 (API): all nineteen orders traverse real second and terminal pages with
   expect(instantKey(uq.updated_at) < instantKey(up.updated_at)).toBe(true);
   expect(instantKey(up.updated_at) < instantKey(ur.updated_at)).toBe(true);
   // Independent expected identities: no production comparator and no list response as the oracle.
+  // All three have zero links: only the fixture UUIDs determine these ties.
+  // Never sort the server response when asserting any order.
+  const idOrder = [p.id, q.id, r.id].toSorted();
   const orders = {
     sort_order: [q.id, r.id, p.id],
     created_at: [p.id, q.id, r.id],
@@ -101,8 +106,10 @@ test("I4 (API): all nineteen orders traverse real second and terminal pages with
     "-assignee_name": [q.id, p.id, r.id],
     sub_issues_count: [q.id, r.id, p.id],
     "-sub_issues_count": [p.id, r.id, q.id],
+    link_count: idOrder,
+    "-link_count": idOrder.toReversed(),
   } satisfies Record<IssueListOrder, string[]>;
-  expect(Object.keys(orders)).toHaveLength(19);
+  expect(Object.keys(orders)).toHaveLength(21);
   await (Object.keys(orders) as IssueListOrder[]).reduce(async (before, order_by) => {
     await before;
     await test.step(`${order_by}: second page, terminal page, exact identities`, async () => {
@@ -117,6 +124,7 @@ test("I4 (API): all nineteen orders traverse real second and terminal pages with
         expect(page.data?.[0]?.sub_issues_count).toBe(
           page.data?.[0]?.id === p.id ? 2 : page.data?.[0]?.id === r.id ? 1 : 0
         );
+        expect(page.data?.[0]?.link_count).toBe(0);
         cursor = page.next_cursor ?? undefined;
       }, Promise.resolve());
       expect(seen).toEqual(wanted);
@@ -151,4 +159,71 @@ test("I4 (API): all nineteen orders traverse real second and terminal pages with
     }),
     []
   );
+});
+
+test("I4 (API): link counts 0/1/2/2 traverse two limit-two pages in both directions with same-direction UUID ties; deletion lowers fresh list, detail and search counts", async ({
+  api,
+}, info) => {
+  const admin = await newAccount(api, info, "admin");
+  const writer = await newAccount(api, info, "writer");
+  const slug = slugFor(info);
+  await createWorkspace(api, admin.token, { name: "Link orders", slug });
+  await inviteAndAccept(api, admin.token, slug, writer, 15);
+  const project = await createProject(api, admin.token, slug, { name: "Links", identifier: "LINKS" });
+  await addProjectMembers(api, admin.token, project.id, [{ member_id: writer.id, role: 15 }]);
+  const zero = await createIssue(api, writer.token, project.id, { name: "Zero" });
+  const one = await createIssue(api, writer.token, project.id, { name: "One" });
+  const twoA = await createIssue(api, writer.token, project.id, { name: "Two A" });
+  const twoB = await createIssue(api, writer.token, project.id, { name: "Two B" });
+  const page = await startLinkPage();
+  try {
+    const removable = await createIssueLink(api, writer.token, one.id, { url: `${page.url}?one` });
+    await [twoA, twoB].reduce(async (before, issue) => {
+      await before;
+      await createIssueLink(api, writer.token, issue.id, { url: `${page.url}?first` });
+      // Counts include another author and links before or after crawler metadata arrives.
+      await createIssueLink(api, admin.token, issue.id, { url: `${page.url}?second` });
+    }, Promise.resolve());
+    const tied = [twoA.id, twoB.id].toSorted();
+    const orders = {
+      link_count: [zero.id, one.id, ...tied],
+      "-link_count": [...tied.toReversed(), one.id, zero.id],
+    };
+    await (["link_count", "-link_count"] as const).reduce(async (before, order_by) => {
+      await before;
+      await test.step(`${order_by}: two exact pages, no duplicated or missing identity`, async () => {
+        const expected = orders[order_by];
+        const first = await listIssues(api, writer.token, project.id, { order_by, limit: 2 });
+        expectIssuePage(first, expected.slice(0, 2), 4, true);
+        const second = await listIssues(api, writer.token, project.id, {
+          order_by,
+          limit: 2,
+          cursor: first.next_cursor!,
+        });
+        expectIssuePage(second, expected.slice(2), 4);
+        const rows = [...(first.data ?? []), ...(second.data ?? [])];
+        expect(rows.map((row) => row.id)).toEqual(expected);
+        expect(new Set(rows.map((row) => row.id)).size).toBe(4);
+        expect(rows.map((row) => row.link_count)).toEqual(order_by === "link_count" ? [0, 1, 2, 2] : [2, 2, 1, 0]);
+      });
+    }, Promise.resolve());
+    const before = await searchIssues(api, writer.token, slug, { q: `LINKS-${one.sequence_id}` });
+    expectIssueCollection(before, [one.id]);
+    expect(before.data[0]?.link_count).toBe(1);
+    expect(await issueRead(api, writer.token, one.id)).toMatchObject({ status: 200, issue: { link_count: 1 } });
+    expect(await issueLinkDeleted(api, writer.token, removable.id)).toEqual({ status: 204 });
+    // Start new requests after the write; an earlier cursor does not freeze changing counts.
+    const fresh = await listIssues(api, writer.token, project.id, { order_by: "link_count", limit: 2 });
+    expectIssuePage(fresh, [zero.id, one.id].toSorted(), 4, true);
+    expect(fresh.data?.map((row) => row.link_count)).toEqual([0, 0]);
+    const detail = await issueRead(api, writer.token, one.id);
+    expect(detail).toMatchObject({ status: 200, issue: { id: one.id, link_count: 0 } });
+    const searched = await searchIssues(api, writer.token, slug, { q: `LINKS-${one.sequence_id}` });
+    expectIssueCollection(searched, [one.id]);
+    expect(searched.data[0]?.link_count).toBe(0);
+    if (!("issue" in detail)) throw new Error("the linked issue detail is missing");
+    expect(searched.data[0]?.link_count).toBe(detail.issue.link_count);
+  } finally {
+    await page.close();
+  }
 });

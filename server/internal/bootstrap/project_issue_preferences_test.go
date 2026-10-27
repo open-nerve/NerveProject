@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 	"uuid"
 
@@ -89,6 +90,19 @@ func exerciseIssuePreferences(t *testing.T, w issueWorld) {
 	samePreferencesJSON(t, w.send(t, "bob", http.MethodGet, path, "", 200), custom)
 	samePreferencesJSON(t, w.send(t, "bob", http.MethodPatch, path, `{"filters":{}}`, 200), clear)
 	checkPreferenceWords(t, w, path)
+	for _, order := range []string{"link_count", "-link_count"} {
+		body := strings.Replace(custom, `"order_by":"priority"`, `"order_by":"`+order+`"`, 1)
+		if body == custom {
+			t.Fatal("custom order fixture was not replaced")
+		}
+		samePreferencesJSON(t, w.send(t, "bob", http.MethodPatch, path, body, 200), body)
+		samePreferencesJSON(t, w.send(t, "bob", http.MethodGet, path, "", 200), body)
+	}
+	bad := `{"display_properties":` + strings.TrimSuffix(customProperties, "}") + `,"link_count":true}}`
+	answer := draftRequest(t, w, "bob", http.MethodPatch, path, bad, 400)
+	if oneError(t, []byte(answer)) != "display_properties.link_count not_allowed" {
+		t.Fatal(answer)
+	}
 }
 
 func checkPreferenceWords(t *testing.T, w issueWorld, path string) {

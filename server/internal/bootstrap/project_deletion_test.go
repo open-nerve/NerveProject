@@ -122,6 +122,7 @@ func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	}
 	relate(t, pool, issue, blocker, "blocked_by", by)
 	seedIssueLinks(t, pool, issue, by)
+	seedIssueDrafts(t, pool, project, by)
 }
 
 // noRowLastWrittenBy fails the test when a row under the parent row id, by

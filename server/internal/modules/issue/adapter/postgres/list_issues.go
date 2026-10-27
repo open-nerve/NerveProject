@@ -40,6 +40,6 @@ func listRecord(r gen.FlatIssuesRow, order domain.ListOrder) (app.ListRecord, er
 		ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: int(r.SequenceID), Name: r.Name, StateID: r.StateID,
 		Priority: domain.Priority(r.Priority), StartDate: dayOf(r.StartDate), TargetDate: dayOf(r.TargetDate), ParentID: r.ParentID,
 		SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, ArchivedAt: r.ArchivedAt, CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
-		AssigneeIDs: r.AssigneeIds, LabelIDs: r.LabelIds, SubIssuesCount: int(r.SubIssuesCount),
+		AssigneeIDs: r.AssigneeIds, LabelIDs: r.LabelIds, SubIssuesCount: int(r.SubIssuesCount), LinkCount: r.LinkCount,
 	}}, nil
 }

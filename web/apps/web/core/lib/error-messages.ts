@@ -14,6 +14,8 @@ import { SessionUnavailableError } from "@/lib/auth/token-manager";
  * operation needing a bearer token can also answer, gets errors.unknown from errorMessageKey.
  */
 export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
+  "issue.draft_not_found": "errors.draft_not_found",
+  "issue.draft_changed": "errors.draft_changed",
   bad_request: "errors.bad_request",
   payload_too_large: "errors.payload_too_large",
   rate_limited: "errors.rate_limited",

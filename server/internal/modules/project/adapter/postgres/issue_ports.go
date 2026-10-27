@@ -171,3 +171,26 @@ func (s *Store) IssueListLabels(ctx context.Context, projectIDs []uuid.UUID) ([]
 	}
 	return out, nil
 }
+
+// UndeletedIssueProjectIDs includes archived projects regardless of membership.
+func (s *Store) UndeletedIssueProjectIDs(ctx context.Context, wid uuid.UUID) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).UndeletedIssueProjectIDs(ctx, wid)
+	if err != nil {
+		return nil, fmt.Errorf("read undeleted projects in workspace %s: %w", wid, err)
+	}
+	return ids, nil
+}
+
+// ShareIssueProjects acquires the requested undeleted rows in one ascending
+// SHARE statement, without locking the workspace or taking an issue write gate.
+func (s *Store) ShareIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	rows, err := s.queries(ctx).ShareIssueProjects(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("share %d projects for drafts: %w", len(ids), err)
+	}
+	out := make(map[uuid.UUID]uuid.UUID, len(rows))
+	for _, r := range rows {
+		out[r.ID] = r.WorkspaceID
+	}
+	return out, nil
+}

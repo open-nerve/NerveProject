@@ -16,6 +16,21 @@ type listQueryKey struct{}
 
 func listQueryBindingError(api *httpserver.API) func(http.ResponseWriter, *http.Request, error) {
 	return func(w http.ResponseWriter, r *http.Request, err error) {
+		if r.Method == http.MethodGet && (r.Pattern == draftListPattern || r.Pattern == searchIssuesPattern) {
+			raw, parseErr := url.ParseQuery(r.URL.RawQuery)
+			if parseErr != nil {
+				api.Errors.BadRequest(w, r, parseErr)
+				return
+			}
+			check := checkDraftQuery
+			if r.Pattern == searchIssuesPattern {
+				check = checkSearchScalars
+			}
+			if queryErr := check(raw); queryErr != nil {
+				api.Errors.Write(w, r, queryErr)
+				return
+			}
+		}
 		var format *gen.InvalidParamFormatError
 		if r.Method == http.MethodGet && errors.As(err, &format) && listSingleQuery(r.Pattern, format.ParamName) && len(r.URL.Query()[format.ParamName]) > 1 {
 			api.Errors.Write(w, r, shared.Invalid(shared.FieldError{Field: format.ParamName, Code: shared.FieldNotAllowed, Message: "is not allowed for this list"}))
@@ -45,7 +60,7 @@ func listSingleQuery(pattern, name string) bool {
 }
 
 func withListQuery(next gen.StrictHandlerFunc, operationID string) gen.StrictHandlerFunc {
-	if operationID != "ListIssues" && operationID != "ListMemberIssues" {
+	if operationID != "ListIssues" && operationID != "ListMemberIssues" && operationID != "ListDrafts" && operationID != "SearchIssues" {
 		return next
 	}
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {

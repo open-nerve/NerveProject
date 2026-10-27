@@ -45,6 +45,8 @@ WITH projects AS (
            CASE WHEN sqlc.arg(order_key)::text='sub_issues_count' THEN
                (SELECT count(*) FROM issues c WHERE c.parent_id=f.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
                 AND (NOT f.own_only OR c.created_by_id=sqlc.arg(actor_id)::uuid)) END AS child_count,
+           CASE WHEN sqlc.arg(order_key)::text='link_count' THEN
+               (SELECT count(*) FROM issue_links l WHERE l.issue_id=f.id AND l.deleted_at IS NULL) END AS link_count,
            CASE sqlc.arg(order_key)::text
              WHEN 'state_name' THEN f.state_key
              WHEN 'label_name' THEN (SELECT min(l.name_key COLLATE "C") FROM issue_labels r JOIN labels l ON l.id=r.label_id WHERE r.issue_id=f.id AND r.deleted_at IS NULL)
@@ -52,7 +54,7 @@ WITH projects AS (
            END AS k_text
     FROM counted f
 ), numeric_keys AS (
-    SELECT s.id, s.own_only, s.total, s.child_count, s.k_text,
+    SELECT s.id, s.own_only, s.total, s.child_count, s.link_count, s.k_text,
            CASE sqlc.arg(order_key)::text
              WHEN 'sort_order' THEN ((CASE WHEN get_byte(s.bits,0)>=128 THEN -1 ELSE 1 END)::bigint *
                  ((get_byte(s.bits,0)&127)::bigint*72057594037927936::bigint + get_byte(s.bits,1)::bigint*281474976710656::bigint
@@ -65,6 +67,7 @@ WITH projects AS (
              WHEN 'target_date' THEN (s.target_date-DATE '1970-01-01')::numeric
              WHEN 'priority' THEN (CASE s.priority WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END)::numeric
              WHEN 'sub_issues_count' THEN s.child_count::numeric
+             WHEN 'link_count' THEN s.link_count::numeric
            END AS k_num
     FROM source_keys s
 ), keyed AS (
@@ -100,6 +103,7 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.
        coalesce(k.k_text,'')::text AS name_key, (k.k_text IS NULL)::boolean AS name_null,
        coalesce(k.child_count,(SELECT count(*) FROM issues c WHERE c.parent_id=i.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
                               AND (NOT k.own_only OR c.created_by_id=sqlc.arg(actor_id)::uuid)))::bigint AS sub_issues_count,
+       coalesce(k.link_count,(SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL))::bigint AS link_count,
        coalesce((SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS assignee_ids,
        coalesce((SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS label_ids
 FROM paged k JOIN issues i ON i.id=k.id

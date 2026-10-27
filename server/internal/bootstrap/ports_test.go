@@ -402,3 +402,53 @@ func (f *fakeIssueProjects) HistoricalIssueProjects(ctx context.Context, workspa
 	f.historicalContext, f.historicalWorkspace, f.historicalActor = ctx, workspaceID, actorID
 	return f.historical, f.err
 }
+
+func (f *fakeIssueProjects) UndeletedIssueProjectIDs(ctx context.Context, wid uuid.UUID) ([]uuid.UUID, error) {
+	f.asked = append(f.asked, fmt.Sprint("undeleted ", wid))
+	return []uuid.UUID{f.web}, f.err
+}
+func (f *fakeIssueProjects) ShareIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	f.asked = append(f.asked, fmt.Sprint("share ", ids))
+	return map[uuid.UUID]uuid.UUID{f.web: f.locked.WorkspaceID}, f.err
+}
+
+// Wrong directory selection or altered ids
+// would change the requests and results seen by these consumer ports.
+func TestIssueDraftDirectoryPorts(t *testing.T) {
+	wid, pid := uuid.NewV7(), uuid.NewV7()
+	f := &fakeIssueProjects{web: pid, locked: project.IssueProject{WorkspaceID: wid}}
+	p := issueProjects{projects: f}
+	ctx := context.Background()
+	ids, err := p.UndeletedIDs(ctx, wid)
+	if err != nil || !slices.Equal(ids, []uuid.UUID{pid}) {
+		t.Fatalf("ids=%v err=%v", ids, err)
+	}
+	rows, err := p.ShareMany(ctx, []uuid.UUID{pid})
+	if err != nil || !maps.Equal(rows, map[uuid.UUID]uuid.UUID{pid: wid}) {
+		t.Fatalf("rows=%v err=%v", rows, err)
+	}
+	if want := []string{fmt.Sprint("undeleted ", wid), fmt.Sprint("share ", []uuid.UUID{pid})}; !slices.Equal(f.asked, want) {
+		t.Fatalf("calls=%v want=%v", f.asked, want)
+	}
+	f.err = errors.New("offline")
+	if _, err := p.UndeletedIDs(ctx, wid); !errors.Is(err, f.err) {
+		t.Fatal(err)
+	}
+	if _, err := p.ShareMany(ctx, nil); !errors.Is(err, f.err) {
+		t.Fatal(err)
+	}
+	dir := &fakeWorkspaceDirectory{names: map[uuid.UUID]string{wid: "acme"}, workspaces: map[string]workspace.DirectoryEntry{"acme": {ID: wid}}}
+	w := issueWorkspaces{directory: dir}
+	found, err := w.ShareWorkspaceByID(ctx, wid)
+	if err != nil || !found || !slices.Equal(dir.asked, []string{"share by id acme"}) {
+		t.Fatalf("found=%v err=%v calls=%v", found, err, dir.asked)
+	}
+	found, err = w.ShareWorkspaceByID(ctx, uuid.NewV7())
+	if err != nil || found {
+		t.Fatalf("missing: %v %v", found, err)
+	}
+	dir.err = errors.New("offline")
+	if _, err := w.ShareWorkspaceByID(ctx, wid); !errors.Is(err, dir.err) {
+		t.Fatal(err)
+	}
+}

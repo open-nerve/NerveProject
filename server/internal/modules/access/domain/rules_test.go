@@ -15,6 +15,7 @@ import (
 // cells here. A workspace-level row has a cell per workspaceIdentities, a
 // project-level one per projectIdentities.
 var tableCells = map[shared.Action][]outcome{
+	"issue_draft.write": {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
 	"member_issue.list": {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
 	// admin, member, guest, never a member, removed, workspace deleted, a role outside the three
 	"workspace.read":               {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},

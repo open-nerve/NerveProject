@@ -7,6 +7,10 @@ import "github.com/open-nerve/NerveProject/server/internal/shared"
 // a workspace the workspace module's code for the workspace, which they
 // declare too (M4 design 5.1), with those modules' details.
 var (
+	// ErrDraftNotFound conceals absent drafts, other owners and deleted projects.
+	ErrDraftNotFound = shared.NewError(shared.KindNotFound, "issue.draft_not_found", "The draft does not exist, or you cannot see it.")
+	// ErrDraftChanged prevents following a project that changed while locks waited.
+	ErrDraftChanged = shared.NewError(shared.KindConflict, "issue.draft_changed", "The draft's project changed. Please try again.")
 	// ErrLinkNotFound conceals missing links and hidden parent issues alike.
 	ErrLinkNotFound = shared.NewError(shared.KindNotFound, "issue.link_not_found", "The link does not exist, or you cannot see it.")
 	// ErrLinkExists answers an exact duplicate live URL on this issue.

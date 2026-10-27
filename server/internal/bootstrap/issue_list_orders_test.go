@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"os"
 	"slices"
@@ -53,6 +54,9 @@ func TestIssueListAllOrders(t *testing.T) {
 					t.Run(direction+sc.Order+"/"+shape, func(t *testing.T) {
 						q := url.Values{"order_by": {direction + sc.Order}, "sub_issue": {"false"}, "created_by_id": {w.ids["bob"].String()}}
 						endpoint := path
+						if sc.Order == "link_count" {
+							q.Set("limit", "2")
+						}
 						switch shape {
 						case "groups", "subgroups":
 							q.Set("group_by", "created_by_id")
@@ -89,8 +93,8 @@ func TestIssueListAllOrders(t *testing.T) {
 			}
 		})
 	}
-	if orders != 19 {
-		t.Fatalf("executed %d orders, want 19 in each of four shapes", orders)
+	if orders != 21 {
+		t.Fatalf("executed %d orders, want 21 in each of four shapes", orders)
 	}
 }
 
@@ -174,6 +178,14 @@ func seedListOrder(t *testing.T, sc *listOrderSample) (issueWorld, map[uuid.UUID
 				t.Fatal(err)
 			}
 			listSeedSQL(t, w, "UPDATE issues SET sort_order=$2 WHERE id=$1", r.ID, value)
+		case "link_count":
+			if err := json.Unmarshal(r.Key, &want.links); err != nil {
+				t.Fatal(err)
+			}
+			for link := int64(0); link <= want.links; link++ {
+				listSeedSQL(t, w, `INSERT INTO issue_links(id,workspace_id,project_id,issue_id,url,created_by_id,deleted_at)
+                    VALUES($1,$2,$3,$4,$5,$6,CASE WHEN $7 THEN now() END)`, uuid.NewV7(), w.acme, w.web, r.ID, fmt.Sprintf("https://example.com/%s/%d", r.ID, link), w.ids["alice"], link == want.links)
+			}
 		case "sub_issues_count":
 			want.children = []int{0, 0, 1, 2}[n]
 			keys[r.ID] = json.RawMessage(strconv.Itoa(want.children)) // Huge integers are tested by the actual SQL CASE probe.

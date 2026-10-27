@@ -12,8 +12,26 @@ export type IssueUpdate = components["schemas"]["IssueUpdate"];
 export type IssueQuery = NonNullable<operations["listIssues"]["parameters"]["query"]>;
 export type MemberIssueQuery = operations["listMemberIssues"]["parameters"]["query"];
 export type IssuePage = components["schemas"]["IssueListPage"];
+export type IssueSearchQuery = NonNullable<operations["searchIssues"]["parameters"]["query"]>;
+export type IssueCollection = components["schemas"]["IssueCollection"];
 type IssueRelation = components["schemas"]["IssueRelation"];
 type IssueRelationsCreate = components["schemas"]["IssueRelationsCreate"];
+
+/** Searches the workspace's visible issues through the generated selector operation. */
+export async function searchIssues(
+  api: Api,
+  token: string,
+  slug: string,
+  query: IssueSearchQuery = {}
+): Promise<IssueCollection> {
+  const { data, error, response } = await api.GET("/api/v0/workspaces/{slug}/issue-search", {
+    params: { path: { slug }, query },
+    headers: bearer(token),
+  });
+  expect(response.status, `search in ${slug}: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) throw new Error("searchIssues answered 200 without its collection");
+  return data;
+}
 
 /** The real project's list response, retaining refusal fields for negative stories. */
 export async function issuesListed(api: Api, token: string, projectId: string, query: IssueQuery = {}) {
@@ -248,4 +266,72 @@ export async function descriptionVersion(api: Api, token: string, versionId: str
   expect(response.status, JSON.stringify(error)).toBe(200);
   if (!data) throw new Error("description version answered 200 without its detail");
   return data;
+}
+
+/** Saves unfinished issue input through the personal workspace draft API. */
+export async function createDraft(
+  api: Api,
+  token: string,
+  workspaceSlug: string,
+  body: components["schemas"]["DraftCreate"]
+): Promise<components["schemas"]["Draft"]> {
+  const { data, error, response } = await api.POST("/api/v0/workspaces/{slug}/drafts", {
+    params: { path: { slug: workspaceSlug } },
+    body,
+    headers: bearer(token),
+  });
+  expect(response.status, `save draft in ${workspaceSlug}: ${JSON.stringify(error)}`).toBe(201);
+  if (!data) throw new Error("createDraft answered 201 without the draft");
+  return data;
+}
+
+/** Lists only the caller's unfinished input, including drafts of archived or left projects. */
+export async function draftsListed(api: Api, token: string, workspaceSlug: string) {
+  const { data, error, response } = await api.GET("/api/v0/workspaces/{slug}/drafts", {
+    params: { path: { slug: workspaceSlug } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, page: data } : answer(response, error);
+}
+
+/** Reads a personal draft, retaining refusal fields for ownership assertions. */
+export async function draftRead(api: Api, token: string, draftId: string) {
+  const { data, error, response } = await api.GET("/api/v0/drafts/{draft_id}", {
+    params: { path: { draft_id: draftId } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, draft: data } : answer(response, error);
+}
+
+/** Replaces the complete payload when present; omitted outer fields keep their values. */
+export async function draftUpdated(
+  api: Api,
+  token: string,
+  draftId: string,
+  body: components["schemas"]["DraftUpdate"]
+) {
+  const { data, error, response } = await api.PATCH("/api/v0/drafts/{draft_id}", {
+    params: { path: { draft_id: draftId } },
+    body,
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, draft: data } : answer(response, error);
+}
+
+/** Discards the caller's unfinished input without creating a work item. */
+export async function draftDeleted(api: Api, token: string, draftId: string) {
+  const { error, response } = await api.DELETE("/api/v0/drafts/{draft_id}", {
+    params: { path: { draft_id: draftId } },
+    headers: bearer(token),
+  });
+  return answer(response, error);
+}
+
+/** Publishes the saved payload through the bodyless operation, never a second form submission. */
+export async function draftPublished(api: Api, token: string, draftId: string) {
+  const { data, error, response } = await api.POST("/api/v0/drafts/{draft_id}/publish", {
+    params: { path: { draft_id: draftId } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, issue: data } : answer(response, error);
 }

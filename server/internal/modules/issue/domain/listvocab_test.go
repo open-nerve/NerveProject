@@ -10,7 +10,7 @@ func TestListVocabulary(t *testing.T) {
 			"sort_order", "created_at", "-created_at", "updated_at", "-updated_at",
 			"start_date", "-start_date", "target_date", "-target_date", "priority", "-priority",
 			"state_name", "-state_name", "label_name", "-label_name", "assignee_name", "-assignee_name",
-			"sub_issues_count", "-sub_issues_count",
+			"sub_issues_count", "-sub_issues_count", "link_count", "-link_count",
 		} {
 			t.Run(string(order), func(t *testing.T) {
 				if !ListOrderAllowed(order) {
@@ -18,7 +18,7 @@ func TestListVocabulary(t *testing.T) {
 				}
 			})
 		}
-		for _, order := range []ListOrder{"", "-sort_order", "link_count", "-link_count", "+link_count", "+created_at", "--priority", "Created_at", "created_at ", "cycle_id"} {
+		for _, order := range []ListOrder{"", "-sort_order", "+link_count", "+created_at", "--priority", "Created_at", "created_at ", "cycle_id"} {
 			t.Run("reject_"+string(order), func(t *testing.T) {
 				if ListOrderAllowed(order) {
 					t.Errorf("order %q must be rejected", order)

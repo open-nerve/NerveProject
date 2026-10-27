@@ -17,6 +17,7 @@ type issueListHTTP struct {
 		ID             uuid.UUID
 		ParentID       *uuid.UUID  `json:"parent_id"`
 		SubIssuesCount int         `json:"sub_issues_count"`
+		LinkCount      int64       `json:"link_count"`
 		LabelIDs       []uuid.UUID `json:"label_ids"`
 		AssigneeIDs    []uuid.UUID `json:"assignee_ids"`
 	} `json:"data"`
@@ -65,7 +66,7 @@ func checkListRows(t *testing.T, obj map[string]json.RawMessage) {
 		}
 	}
 	for _, raw := range listArray(t, obj["data"]) {
-		row := listKeys(t, raw, "id", "workspace_id", "project_id", "sequence_id", "name", "state_id", "priority", "start_date", "target_date", "parent_id", "sort_order", "completed_at", "archived_at", "assignee_ids", "label_ids", "sub_issues_count", "created_by_id", "updated_by_id", "created_at", "updated_at")
+		row := listKeys(t, raw, "id", "workspace_id", "project_id", "sequence_id", "name", "state_id", "priority", "start_date", "target_date", "parent_id", "sort_order", "completed_at", "archived_at", "assignee_ids", "label_ids", "sub_issues_count", "link_count", "created_by_id", "updated_by_id", "created_at", "updated_at")
 		listArray(t, row["assignee_ids"])
 		listArray(t, row["label_ids"])
 	}
@@ -179,7 +180,7 @@ func TestIssueListQueryBoundary(t *testing.T) {
 	for _, tt := range []struct {
 		query, field, code string
 		status             int
-	}{{"state_id=bad", "state_id", "not_allowed", 422}, {"start_date=2026-02-30", "start_date", "not_allowed", 422}, {"sub_issue=yes", "sub_issue", "not_allowed", 422}, {"archived=1", "archived", "not_allowed", 422}, {"cycle_id=x", "cycle_id", "not_allowed", 422}, {"group_by=project_id", "group_by", "not_allowed", 422}, {"order_by=link_count", "order_by", "not_allowed", 422}, {"limit=x", "limit", "invalid_format", 400}, {"limit=101", "limit", "out_of_range", 422}, {"cursor=bad", "cursor", "invalid_format", 400}} {
+	}{{"state_id=bad", "state_id", "not_allowed", 422}, {"start_date=2026-02-30", "start_date", "not_allowed", 422}, {"sub_issue=yes", "sub_issue", "not_allowed", 422}, {"archived=1", "archived", "not_allowed", 422}, {"cycle_id=x", "cycle_id", "not_allowed", 422}, {"group_by=project_id", "group_by", "not_allowed", 422}, {"order_by=unknown_count", "order_by", "not_allowed", 422}, {"limit=x", "limit", "invalid_format", 400}, {"limit=101", "limit", "out_of_range", 422}, {"cursor=bad", "cursor", "invalid_format", 400}} {
 		check(path+"?"+tt.query, w.tokens["alice"], tt.status, tt.field, tt.code)
 	}
 	check(path+"?limit=1&limit=2", "", 422, "limit", "not_allowed")

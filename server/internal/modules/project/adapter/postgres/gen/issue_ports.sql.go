@@ -301,3 +301,64 @@ func (q *Queries) ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID)
 	}
 	return items, nil
 }
+
+const shareIssueProjects = `-- name: ShareIssueProjects :many
+SELECT id, workspace_id FROM projects
+WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL
+ORDER BY id
+FOR SHARE
+`
+
+type ShareIssueProjectsRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+}
+
+// Draft saves use SHARE, compatible with other saves but excluding project
+// lifecycle and membership writes. ANY deduplicates before ascending row locks.
+func (q *Queries) ShareIssueProjects(ctx context.Context, ids []uuid.UUID) ([]ShareIssueProjectsRow, error) {
+	rows, err := q.db.Query(ctx, shareIssueProjects, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ShareIssueProjectsRow
+	for rows.Next() {
+		var i ShareIssueProjectsRow
+		if err := rows.Scan(&i.ID, &i.WorkspaceID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const undeletedIssueProjectIDs = `-- name: UndeletedIssueProjectIDs :many
+SELECT id FROM projects
+WHERE workspace_id = $1 AND deleted_at IS NULL
+ORDER BY id
+`
+
+// Personal drafts remain reachable after project exit and archival.
+func (q *Queries) UndeletedIssueProjectIDs(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, undeletedIssueProjectIDs, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

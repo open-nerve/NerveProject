@@ -320,16 +320,12 @@ GET   /api/v0/issues/{issue_id}/comments
 ### 5.4 草稿：一张表
 ```
 draft_issues(id, workspace_id, project_id NULL, payload jsonb,
-             created_by, created_at, updated_at, deleted_at, …)
+             created_by_id, updated_by_id NULL, created_at, updated_at, deleted_at NULL)
 ```
-- **payload**：和"创建工作项"接口的请求体完全一致，在 OpenAPI 中复用同一个结构定义。
-- **保存草稿**：只校验字段类型，不校验引用的对象是否还存在。
-- **发布**：`POST /api/v0/drafts/{id}/publish`，在同一个事务里完成三件事：
-  1. 走和"创建工作项"完全相同的代码路径，所有校验都在这里做。
-  2. 把草稿的附件改挂到新工作项上。
-  3. 删除草稿。
-  引用失效时，返回明确的错误码和出错字段。
-- **可见范围**：草稿只有创建人自己能看到，列表按创建时间倒序。
+- **payload**：`IssueDraftPayload` 使用创建工作项的九个字段及类型，但全部可省略，出现时不可 null；不含 `project_id`、`sort_order`、`skip_activity`。`project_id` 单独存列且可空。创建要求 payload 是对象；PATCH 省略 payload 保留原值，提供则整体替换，`{}` 清空；省略 project 保留，null 清空。JSONB 等值修改不推进审计。
+- **保存草稿**：检查封闭结构、UUID/date 类型及 `name`、`description_html`、`priority` 三个自由字符串的 NUL 可存性（422 `payload.<字段>/invalid_format`），不执行标题长度、优先级取值、引用有效性等创建语义，不清洗 HTML、不产生工作项事件或其他创建副作用。显式非空项目须为同工作区未删除、经 `project.read` 可见的项目，可归档；无效新参数422，旧关联项目已删除则草稿404。
+- **发布**：先 PATCH 保存，再 `POST /api/v0/drafts/{draft_id}/publish`；只能零字节请求体，任意非空正文含空白均400。发布读取锁下存储 payload，要求 `issue_draft.write` 和目标项目 `issue.create`，无项目422、等待后项目改变409 `issue.draft_changed`、归档项目409。经直接创建的同一结构检查与唯一创建核心；结构400按规范存储字节比较，业务422保持同路径。创建工作项及其全部副作用、软删草稿使用同一事务/actor/At，任一步失败全部回滚；成功201 `IssueDetail`，重复发布404。附件在同事务移交的实现仍归 M5。
+- **可见范围**：六操作统一工作区 `issue_draft.write`，管理员/成员只操作自己的草稿，别人404；工作区访客403。列表为 `(created_at DESC,id DESC)` 游标及独立 total，仅保留无项目或旧项目未删除的个人草稿，退出/归档项目不抹掉草稿。已交付与证据见 [P8 review](M4-issue-core/reviews/P8-drafts-search-review.md)。
 
 ### 5.5 照搬的机制
 - **软删除**：删除只是把 `deleted_at` 设为当前时间；唯一约束只对未删除的数据生效（部分唯一索引）。连带删除在同一个事务里同步完成；60 天后由定时任务物理删除。
@@ -558,8 +554,10 @@ server/configs/
 - 详见 [M0/P2 spec](M0-foundation/specs/P2-server-platform.md) 2.3 节。
 
 ### 6.9 其他
-- **富文本安全**：描述和评论的 HTML 用 bluemonday 清洗，只放行 Plane 编辑器用到的标签；同时提取纯文本存入 `description_stripped`，供搜索使用。
-- **搜索**：工作项标题建 pg_trgm 索引，支持模糊匹配；支持按编号搜索。已归档的工作项默认不出现在搜索结果中。
+- **富文本安全**：描述和评论的 HTML 用 bluemonday 清洗，只放行 Plane 编辑器用到的标签；同时提取纯文本存入 `description_stripped`，供摘要/Webhook 使用，工作项搜索不搜该列。
+- **搜索（M4/P8）**：`GET /api/v0/workspaces/{slug}/issue-search` 返回完整 `Issue` 的 `{data:[]}`，无分页、total 或 page。q 去首尾空白后至多100个 Unicode 字符，拒非法UTF-8/NUL；未知参数、重复标量422。非空词候选为“完整项目编号精确匹配 OR 纯ASCII数字编号 OR 标题不分大小写的字面包含”，`%/_/反斜线` 不成为通配符；按精确0/数字1/标题2分级，再 similarity、created_at、id 降序。完整编号复用共享Unicode项目标识折叠与原编号规则；纯数字允许前导零，0/溢出只失去数字分支，仍可匹配标题。空词按 updated_at、id 降序。
+- **搜索范围与选择器**：同一 ReadOnlySnapshot 内完成授权、有效项目成员目录、source、SQL、隐藏父与可见子数；排除已删/归档项目和工作项，逐项目 OwnOnly，全部过滤先于 limit（默认50，1–100）。显式项目不可见404；parent/sub_issue 限source项目，分别排自己/当前父/全部后代及自己/全部祖先且只根项；relation 排自己及双向所有类型活关联。递归穿过隐藏/删除/归档中间节点。start_date/target_date 单日/闭区间/none，重复非none为AND，none不可与同字段其他条件并用。详见 [P8 spec](M4-issue-core/specs/P8-drafts-search.md) §2.6。
+- **搜索索引与计数**：标题部分 GIN 依赖 pg_trgm，但计划由实际选择性与locale决定；P8的10万中英文实测八个标题场景顺扫，单项目login使用bitmap，不承诺三字符必走索引或固定延迟。所有 Issue/IssueDetail 的 required 非负 int64 `link_count` 只数活链接，不看作者或metadata；当前排序为保留原19码并新增 ±link_count 的21码，跨请求数量变化仍可影响游标位置。
 - **运维**：日志用 slog；prod 输出 JSON，dev 和 test 输出便于阅读的文本；提供 `/healthz` 和 `/readyz`；停机时先处理完正在进行的请求和任务。
 
 ---

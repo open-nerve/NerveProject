@@ -18,7 +18,8 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l
-        WHERE l.issue_id = i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids
+        WHERE l.issue_id = i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids,
+       (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count
 FROM issues i
 WHERE i.id = $1 AND i.deleted_at IS NULL
 `
@@ -45,6 +46,7 @@ type GetIssueRow struct {
 	UpdatedAt           time.Time
 	AssigneeIds         []uuid.UUID
 	LabelIds            []uuid.UUID
+	LinkCount           int64
 }
 
 // The undeleted work item, archived or not, as the API shows it (M4 design 5.2): with the accounts of its undeleted
@@ -75,6 +77,7 @@ func (q *Queries) GetIssue(ctx context.Context, id uuid.UUID) (GetIssueRow, erro
 		&i.UpdatedAt,
 		&i.AssigneeIds,
 		&i.LabelIds,
+		&i.LinkCount,
 	)
 	return i, err
 }
@@ -85,7 +88,8 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l
-        WHERE l.issue_id = i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids
+        WHERE l.issue_id = i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids,
+       (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count
 FROM issues i
 WHERE i.id = ANY ($1::uuid[]) AND i.deleted_at IS NULL
 ORDER BY i.id
@@ -113,6 +117,7 @@ type GetIssuesRow struct {
 	UpdatedAt           time.Time
 	AssigneeIds         []uuid.UUID
 	LabelIds            []uuid.UUID
+	LinkCount           int64
 }
 
 // The undeleted work items among ids, archived or not, each as GetIssue reads it, in id order (M4 design 3.4, 3.9), in a
@@ -148,6 +153,7 @@ func (q *Queries) GetIssues(ctx context.Context, ids []uuid.UUID) ([]GetIssuesRo
 			&i.UpdatedAt,
 			&i.AssigneeIds,
 			&i.LabelIds,
+			&i.LinkCount,
 		); err != nil {
 			return nil, err
 		}

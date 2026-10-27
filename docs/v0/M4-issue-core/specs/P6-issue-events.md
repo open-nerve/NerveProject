@@ -242,6 +242,10 @@ T1–T15 的运行命令、退出码、变异和精确提交见[评审 §2](../r
 
 上表P7责任已落地：3种link事件（目录共15）、首个生产`crawl_on_link_change`/LinkCrawls原事务投递、outbound/crawler/真实worker及registrationRows请求任务核对。见[P7 review](../reviews/P7-issue-links-review.md)与[行为矩阵](../reviews/P7-issue-links-behavior-matrix.md)。这是P7接续，不改写P6当时12事件/空生产订阅、已授权合并和mainCI的历史。P8/P9/P15及M4收尾仍开放，P7最终分支CI/集成状态独立记录。
 
+### P8接收回执（2026-10-27）
+
+T4验证草稿保存/修改/删除不发issue事件或创建副作用；T5/T6发布经唯一创建核心，在原事务只发一次issue.created，以核心唯一At/actor写消费草稿及全部子表/活动/版本，真实事件/软删/版本故障均回滚。T6 M14/M15、I14及最终F已有证据。P6/P7生产订阅与集成历史保留；P9删除任务/保留/清理、P15页面与M4总体仍开放。 实际命令/计数/变异/检查点见[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
+
 ## 6. 风险
 
 | 风险 | 控制与证据责任 |

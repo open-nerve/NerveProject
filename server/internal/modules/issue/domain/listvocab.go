@@ -64,14 +64,14 @@ func ListSubGroupAllowed(group ListGroup, scope ListScope) bool {
 	return scope == ProjectList && ListGroupAllowed(group, scope)
 }
 
-// ListOrderAllowed accepts exactly the 19 P5 ordering words. Ascending
+// ListOrderAllowed accepts exactly the 21 P8 ordering words. Ascending
 // words have no prefix; sort_order has no descending form.
 func ListOrderAllowed(value ListOrder) bool {
 	if value == "sort_order" {
 		return true
 	}
 	switch strings.TrimPrefix(string(value), "-") {
-	case "created_at", "updated_at", "start_date", "target_date", "priority", "state_name", "label_name", "assignee_name", "sub_issues_count":
+	case "created_at", "updated_at", "start_date", "target_date", "priority", "state_name", "label_name", "assignee_name", "sub_issues_count", "link_count":
 		return true
 	}
 	return false

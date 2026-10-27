@@ -91,7 +91,7 @@ func TestIssueListQueryBoundary(t *testing.T) {
 		query, field, code string
 		status             int
 	}{
-		{"unknown=x", "unknown", "not_allowed", 422}, {"project_id=" + webID.String(), "project_id", "not_allowed", 422}, {"state_id=wrong", "state_id", "not_allowed", 422}, {"start_date=2026-02-30", "start_date", "not_allowed", 422}, {"sub_issue=1", "sub_issue", "not_allowed", 422}, {"archived=TRUE", "archived", "not_allowed", 422}, {"group_by=cycle_id", "group_by", "not_allowed", 422}, {"order_by=link_count", "order_by", "not_allowed", 422}, {"limit=no", "limit", "invalid_format", 400}, {"limit=0", "limit", "out_of_range", 422}, {"limit=101", "limit", "out_of_range", 422}, {"cursor=bad", "cursor", "invalid_format", 400},
+		{"unknown=x", "unknown", "not_allowed", 422}, {"project_id=" + webID.String(), "project_id", "not_allowed", 422}, {"state_id=wrong", "state_id", "not_allowed", 422}, {"start_date=2026-02-30", "start_date", "not_allowed", 422}, {"sub_issue=1", "sub_issue", "not_allowed", 422}, {"archived=TRUE", "archived", "not_allowed", 422}, {"group_by=cycle_id", "group_by", "not_allowed", 422}, {"order_by=unknown_count", "order_by", "not_allowed", 422}, {"limit=no", "limit", "invalid_format", 400}, {"limit=0", "limit", "out_of_range", 422}, {"limit=101", "limit", "out_of_range", 422}, {"cursor=bad", "cursor", "invalid_format", 400},
 	} {
 		t.Run(tt.query, func(t *testing.T) { check(t, projectListPath+"?"+tt.query, "alice", tt.status, tt.field, tt.code) })
 	}

@@ -40,8 +40,8 @@ type Cascade interface {
 	// DeleteProjectIssues soft-deletes the project's work-item-side rows.
 	DeleteProjectIssues(ctx context.Context, projectID, by uuid.UUID, now time.Time) error
 	// DeleteWorkspaceIssues soft-deletes the work-item-side rows of each
-	// of the projects.
-	DeleteWorkspaceIssues(ctx context.Context, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
+	// of the projects, and the workspace drafts without a project.
+	DeleteWorkspaceIssues(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 	// StateInUse reports whether an undeleted work item, archived or not,
 	// is in the state (M4 design 3.6).
 	StateInUse(ctx context.Context, stateID uuid.UUID) (bool, error)
@@ -78,6 +78,7 @@ func Provide(pool *pgxpool.Pool) Provided {
 // project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
 type ProjectPorts interface {
 	app.ProjectGate
+	app.DraftProjects
 	app.Sequences
 	app.StateCatalog
 	app.LabelCatalog
@@ -127,8 +128,11 @@ type Deps struct {
 	Projects ProjectPorts
 	// Workspaces is workspace's WorkspaceDirectory, converted
 	// (bootstrap/ports.go).
-	Workspaces app.WorkspaceDirectory
-	Members    app.WorkspaceMemberDirectory
+	Workspaces interface {
+		app.WorkspaceDirectory
+		app.WorkspaceSharer
+	}
+	Members app.WorkspaceMemberDirectory
 	// Profiles is identity's PublicProfiles, converted (bootstrap/ports.go).
 	Profiles app.PublicProfiles
 }
@@ -146,10 +150,22 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
+	draftLocks := app.NewDraftLocks(locks, d.Workspaces, d.Projects, store)
 	sanitizer := content.NewSanitizer()
 	listing := app.NewListing(app.ListingDeps{Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
 	archive := app.ArchiveIssueDeps{Events: d.Events, Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
+	creation := app.NewIssueCreation(app.IssueCreationDeps{Events: d.Events,
+		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
+		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
+	})
 	return &Module{crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: crawler.New(d.Outbound, d.Logger), Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval, uc: httpadapter.UseCases{
+		SearchIssues:            app.NewSearchIssues(app.SearchIssuesDeps{ReadTx: d.ReadTx, Authorizer: d.Authorizer, Workspaces: d.Workspaces, Projects: d.Projects, Identifiers: d.Projects, Issues: store, Locks: locks, Rows: store}),
+		PublishDraft:            app.NewPublishDraft(app.PublishDraftDeps{Locks: draftLocks, Decoder: httpadapter.IssueCreatePayloadDecoder{}, Creation: creation, Drafts: store}),
+		ListDrafts:              app.NewListDrafts(app.ListDraftsDeps{ReadTx: d.ReadTx, Locks: draftLocks, Workspaces: d.Workspaces, Projects: d.Projects, Drafts: store}),
+		GetDraft:                app.NewGetDraft(app.GetDraftDeps{ReadTx: d.ReadTx, Locks: draftLocks}),
+		CreateDraft:             app.NewCreateDraft(app.CreateDraftDeps{Locks: draftLocks, Workspaces: d.Workspaces, Drafts: store, Clock: d.Clock}),
+		UpdateDraft:             app.NewUpdateDraft(app.UpdateDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
+		DeleteDraft:             app.NewDeleteDraft(app.DeleteDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
 		UpdateIssueLink:         app.NewUpdateIssueLink(app.UpdateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
 		DeleteIssueLink:         app.NewDeleteIssueLink(app.DeleteIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
 		CreateIssueLink:         app.NewCreateIssueLink(app.CreateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
@@ -168,11 +184,8 @@ func New(d Deps) *Module {
 		DeleteIssueComment:      app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Clock: d.Clock}),
 		CreateIssueComment:      app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
 		ListIssueComments:       app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
-		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{Events: d.Events,
-			Locks: locks, Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
-			Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
-		}),
-		GetIssue: app.NewGetIssue(locks),
+		CreateIssue:             app.NewCreateIssue(app.CreateIssueDeps{Locks: locks, Creation: creation}),
+		GetIssue:                app.NewGetIssue(locks),
 		GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
 			Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store,
 		}),

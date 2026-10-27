@@ -1,6 +1,8 @@
 # M4/P7 `issue-links`：链接、出站客户端与元数据抓取规格
 
-日期：2026-10-27。**T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复、正式文档和准确提交的完整本地七门禁已完成；独立定向复审已确认原8项全部 ADDRESSED；T7历史时态文案已由作者纠正，本次纯文档增量确认及最终交付 HEAD CI 以主控最终记录为准。产品检查点`cd0fce7e`的[CI40397086823](https://github.com/open-nerve/NerveProject/actions/runs/40397086823)已由主控核准确HEAD全绿；此后纯文档交付HEAD的CI另核；未合并 main。** 基线：P6 已集成的 `5005be985e7ec78727edc6f8fc5c05999b45cc65`，同一 SHA 的 main CI `40305247546` 重跑全绿。分支 `codex/m4-p7`，worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。预检、最窄 PG/sqlc 实验及 T4/T8/T12/T15 检查点按各自日期/源码保存，不作为本轮新执行。
+**当前状态（2026-10-27）：P7 已完成。** 经负责人授权以 `--no-ff` 合并为 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 的 server/web/e2e 全绿；5,443 个证据文件归档校验后，本地/远端分支及 worktree 已清理。集成证据见 [P7 review](../reviews/P7-issue-links-review.md) 的集成回执；M4 总体及后续交接仍开放。
+
+**交付前冻结记录（以下状态由文末集成回执更新）：** 日期：2026-10-27。**T1–T15 已实施并独立评审通过；准确原范围 `5005be98..d2a3cf26` 的单次整分支 deep-review 已完成（165 文件/457 chunks）。T16 单次局部修复、正式文档和准确提交的完整本地七门禁已完成；独立定向复审已确认原8项全部 ADDRESSED；T7历史时态文案已由作者纠正，本次纯文档增量确认及最终交付 HEAD CI 以主控最终记录为准。产品检查点`cd0fce7e`的[CI40397086823](https://github.com/open-nerve/NerveProject/actions/runs/40397086823)已由主控核准确HEAD全绿；此后纯文档交付HEAD的CI另核；未合并 main。** 基线：P6 已集成的 `5005be985e7ec78727edc6f8fc5c05999b45cc65`，同一 SHA 的 main CI `40305247546` 重跑全绿。分支 `codex/m4-p7`，worktree `.codex/worktress/codex/m4-p7`。配套：[plan](../plans/P7-issue-links.md)、[review](../reviews/P7-issue-links-review.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。预检、最窄 PG/sqlc 实验及 T4/T8/T12/T15 检查点按各自日期/源码保存，不作为本轮新执行。
 
 权威输入：[M4 设计](../M4-design.md) §2/I10/I17、3.4–3.6、3.11、3.13/17–19、3.19–3.20、3.23/P7、4.8、5.1–5.3、6.8、8.1/8.8、9.1–9.4、12/P7、13.1；[02](../../claude_to_gpt/02-method.md)、[03](../../claude_to_gpt/03-rules-and-pitfalls.md)；P6 spec §5/review §6 与本规格 §7。D3 事务内同步事件、架构问题 11.8 的平台出站与固定 IP、后台写回的单句守卫已批准，不重新裁定。
 
@@ -273,8 +275,8 @@ T15逐列活动/事件矩阵、至少15项代表性真实生产变异（地址/�
 - [x] T15发布/活动矩阵、21项历史生产变异/恢复及完整七门禁；原范围deep-review全文覆盖完成。
 - [x] T16修复准确提交完整本地七门禁通过（tested `cd0fce7ed4f18739a60fcf3d0c44f811b809b7b8`）。
 - [x] 原8项修复经独立定向复审全部 ADDRESSED（`d2a3cf26..7e903ecb`）；T16-DOC-1历史时态文案已纠正，本次纯文档增量确认见主控最终记录。
-- [ ] §3.23所有P7文档/差异/交接处理结果为真，阶段分支准确HEAD CI通过（T16/交付）。
-- [ ] 获授权后--no-ff合并，准确main SHA CI全绿，ignored证据归档校验后清理分支/worktree（阶段集成）。
+- [x] §3.23所有P7文档/差异/交接处理结果为真；最终分支 `023c96e8` 的 CI 40400860045 已全绿，T16-DOC-1 增量复审已关闭（T16/交付）。
+- [x] 经授权 `--no-ff` 合并，准确 main `166b9efd` 的 CI 40451632280 全绿；5,443 个 ignored 证据文件归档校验后清理本地/远端分支与 worktree（阶段集成）。
 
 ## 5. 不在范围内与后续 Phase
 
@@ -287,6 +289,10 @@ T15逐列活动/事件矩阵、至少15项代表性真实生产变异（地址/�
 | M4收尾 | §14整体逐项证据、所有输入handoff关闭、M5–M8正式M4-closeout，v0§9.4完成 |
 
 P7没有新事件持久化、抓取进度接口、重试按钮、生产allowlist、动态抓取配置、favicon缓存、任意HTTP方法/headers或跨模块JOIN，不把被阻止的地址拒绝为HTTP创建失败（语法合法内网URL仍可创建，随后metadata blocked）。
+
+### P8接收回执（2026-10-27）
+
+T13活issue_links计数进入全部Issue/Detail、Get/GetMany/SubIssues/search及三列表，0显式，URL/title/metadata.error或worker更新不改数量；新增±link_count成当前21序及整数游标。T13 M33–36、公开全表示/权限/精度，T14双向0/1/2/2、软删后detail/search一致和真实M33 binary红绿已验证。P7原出站/事件/集成不重判，P9/P11/P14/P15/M8仍开放。 实际命令/计数/变异/检查点见[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
 
 ## 6. 风险与限制
 
@@ -328,3 +334,9 @@ IANA官方CSV于2026-10-26获取（页面Last Updated 2025-10-09）：
 原始CSV、精确UTC获取时刻/内容类型/字节数与hash在ignored `p7-iana-snapshot/manifest.json`；复制至P7证据台账后保留，实施T6采用前再次核对。除上述独立最窄PG/sqlc实验外，未执行P7产品迁移、网络目标抓取或完整生成/测试；本草稿编写者只读实验归档并修订文档，未运行实验或产品。
 
 T6 采用冻结前重核的两份官方 CSV：2026-10-26 13:59:10–13:59:11 UTC，均为原 URL 的 HTTP 200，与本附录快照逐字节相同；产品测试中的 `testdata/sources.json` 记录准确访问时刻、URL、大小和 SHA。独立 CSV 展开 50 条记录、51 个 prefix，加规格额外 3 项；清单对照与逐项首尾行为分开验证。该冻结记录只覆盖T6纯地址策略；T7后续真实GET、全部DNS候选、0 dial与接口读取失败证据见行为矩阵，不倒写为T6已执行。
+
+## 2026-10-27 集成回执
+
+**当前状态（2026-10-27）：P7 已完成。** 经负责人授权以 `--no-ff` 合并为 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 的 server/web/e2e 全绿；5,443 个证据文件归档校验后，本地/远端分支及 worktree 已清理。集成证据见 [P7 review](../reviews/P7-issue-links-review.md) 的集成回执；M4 总体及后续交接仍开放。
+
+上述交付前记录保留原审查范围与当时事实；最终 `7e903ecb..023c96e8` 文档增量复审已通过，原8项与T16-DOC-1均已关闭。完整本地门禁的产品源码与最终分支/合并树身份已核对，不冒称另跑了未变套件。原始证据现位于项目根目录 `.superpowers/sdd/P7-integration-20261027/worktree-evidence/.superpowers/sdd/P7-issue-links/`；旧 `E` 路径是阶段执行时的位置。

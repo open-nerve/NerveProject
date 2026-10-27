@@ -225,6 +225,10 @@ T1–T15已完成；T5a/T5b均独立Approved，T5a的事务测试Minor已在T5b�
 | M5–M7 | 附件、迭代、模块等字段/词汇随所属数据加入，不预埋未来枚举 |
 | M8 | 超过v0约20k规模、跨项目扫描、默认排序索引特化与更大规模方案按实测决定 |
 
+### P8接收回执（2026-10-27）
+
+保留P5当时已验收19码，T13新增±link_count成当前21码，不倒改历史。全部Issue/Detail required非负int64、0显式；只数活links，不看作者/metadata，不加filter或派生列；三SQL同形、整数/numeric游标和独立child/link大数探针通过。T10–T12词汇/日期/Visible/OwnOnly/快照、T14 I4非零双向limit2/I18、T15 P5四项4/4已有证据。P10b生产比较器/共享fixture与P11–P15页面仍开放，跨请求计数变化不承诺冻结。 实际命令/计数/变异/检查点见[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
+
 ## 6. 风险
 
 | 风险 | 影响与控制 |

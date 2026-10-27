@@ -213,7 +213,7 @@ func TestIssueDeletionEventsCascade(t *testing.T) {
 			cascade := issue.Provide(w.pool).IssueCascade
 			err := postgres.NewTxManager(w.pool, 2*time.Second).WithinTx(pgtest.Soon(t), func(ctx context.Context) error {
 				if workspace {
-					return cascade.DeleteWorkspaceIssues(ctx, []uuid.UUID{w.web}, w.ids["alice"], time.Now())
+					return cascade.DeleteWorkspaceIssues(ctx, w.acme, []uuid.UUID{w.web}, w.ids["alice"], time.Now())
 				}
 				return cascade.DeleteProjectIssues(ctx, w.web, w.ids["alice"], time.Now())
 			})

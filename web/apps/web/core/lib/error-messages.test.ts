@@ -23,6 +23,10 @@ const en = JSON.parse(
   readFileSync(new URL("../../../../packages/i18n/src/locales/en/errors.json", import.meta.url), "utf8")
 ) as Record<string, unknown>;
 
+const zh = JSON.parse(
+  readFileSync(new URL("../../../../packages/i18n/src/locales/zh-CN/errors.json", import.meta.url), "utf8")
+) as Record<string, unknown>;
+
 /**
  * The items of every list under a line that matches `key` (block lists: "- item", deeper than the key). tools/i18n-keys.mjs
  * reads the x-problem-codes lists the same way (its problemCodes): a script of the repository's, outside the web
@@ -57,9 +61,9 @@ const fieldCodes = (() => {
   return new Set(codes);
 })();
 
-/** The value at a dotted i18n key of en's errors namespace, or undefined. */
-function english(key: string): unknown {
-  return key.split(".").reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], en);
+/** The value at a dotted i18n key, or undefined. */
+function translated(locale: Record<string, unknown>, key: string): unknown {
+  return key.split(".").reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], locale);
 }
 
 describe("the message tables", () => {
@@ -77,10 +81,10 @@ describe("the message tables", () => {
     expect(new Set(Object.keys(FIELD_ERROR_MESSAGES))).toEqual(fieldCodes);
   });
 
-  it("point at messages that exist in English (sync-check keeps zh-CN the same)", () => {
+  it("point at messages in both supported locales", () => {
     const keys = [...Object.values(PROBLEM_MESSAGES), ...Object.values(FIELD_ERROR_MESSAGES)];
     for (const key of [...keys, "errors.unknown", "errors.unreachable"]) {
-      expect(typeof english(key), key).toBe("string");
+      for (const locale of [en, zh]) expect(typeof translated(locale, key), key).toBe("string");
     }
   });
 });

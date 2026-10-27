@@ -83,6 +83,8 @@ type Issue struct {
 	// answer is built (the app's Locks.seen); creation answers 0, a new
 	// work item having none.
 	SubIssuesCount int
+	// Live links, independent of their creator or metadata state.
+	LinkCount int64
 }
 
 // HiddenFrom reports whether the guest rule hides i from the account actor,

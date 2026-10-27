@@ -150,6 +150,7 @@ var rules = map[shared.Action]Rule{
 	// Every active member of the workspace: getIssueByIdentifier's decision
 	// in the workspace, before issue.read on the project of the work item
 	// it finds, which the guest rule follows (M4 design 3.4, 3.7).
+	"issue_draft.write": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	"member_issue.list": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	"issue.search":      {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 }

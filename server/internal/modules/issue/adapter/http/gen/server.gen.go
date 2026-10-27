@@ -80,9 +80,11 @@ const (
 	IssueListOrderAssigneeName        IssueListOrder = "assignee_name"
 	IssueListOrderCreatedAt           IssueListOrder = "created_at"
 	IssueListOrderLabelName           IssueListOrder = "label_name"
+	IssueListOrderLinkCount           IssueListOrder = "link_count"
 	IssueListOrderMinusAssigneeName   IssueListOrder = "-assignee_name"
 	IssueListOrderMinusCreatedAt      IssueListOrder = "-created_at"
 	IssueListOrderMinusLabelName      IssueListOrder = "-label_name"
+	IssueListOrderMinusLinkCount      IssueListOrder = "-link_count"
 	IssueListOrderMinusPriority       IssueListOrder = "-priority"
 	IssueListOrderMinusStartDate      IssueListOrder = "-start_date"
 	IssueListOrderMinusStateName      IssueListOrder = "-state_name"
@@ -107,11 +109,15 @@ func (e IssueListOrder) Valid() bool {
 		return true
 	case IssueListOrderLabelName:
 		return true
+	case IssueListOrderLinkCount:
+		return true
 	case IssueListOrderMinusAssigneeName:
 		return true
 	case IssueListOrderMinusCreatedAt:
 		return true
 	case IssueListOrderMinusLabelName:
+		return true
+	case IssueListOrderMinusLinkCount:
 		return true
 	case IssueListOrderMinusPriority:
 		return true
@@ -252,6 +258,41 @@ type DescriptionVersionPage struct {
 	NextCursor nullable.Nullable[externalRef0.NextCursor] `json:"next_cursor"`
 }
 
+// Draft defines model for Draft.
+type Draft struct {
+	CreatedAt time.Time `json:"created_at"`
+	ID        uuid.UUID `json:"id"`
+
+	// Payload Unfinished issue input. Saving checks structure, not create semantics.
+	Payload     IssueDraftPayload            `json:"payload"`
+	ProjectID   nullable.Nullable[uuid.UUID] `json:"project_id"`
+	UpdatedAt   time.Time                    `json:"updated_at"`
+	WorkspaceID uuid.UUID                    `json:"workspace_id"`
+}
+
+// DraftCreate defines model for DraftCreate.
+type DraftCreate struct {
+	// Payload Unfinished issue input. Saving checks structure, not create semantics.
+	Payload   IssueDraftPayload            `json:"payload"`
+	ProjectID nullable.Nullable[uuid.UUID] `json:"project_id,omitempty"`
+}
+
+// DraftPage defines model for DraftPage.
+type DraftPage struct {
+	Data []Draft `json:"data"`
+
+	// NextCursor The cursor of the next page; null on the last page.
+	NextCursor nullable.Nullable[externalRef0.NextCursor] `json:"next_cursor"`
+	Total      int64                                      `json:"total"`
+}
+
+// DraftUpdate Omission keeps a value; project null clears it; payload replaces the complete object.
+type DraftUpdate struct {
+	// Payload Unfinished issue input. Saving checks structure, not create semantics.
+	Payload   *IssueDraftPayload           `json:"payload,omitempty"`
+	ProjectID nullable.Nullable[uuid.UUID] `json:"project_id,omitempty"`
+}
+
 // Issue A work item of a project, as a list shows it.
 type Issue struct {
 	// ArchivedAt When it was archived; null when it is not.
@@ -270,7 +311,10 @@ type Issue struct {
 
 	// LabelIds Its labels, by id.
 	LabelIds []uuid.UUID `json:"label_ids"`
-	Name     string      `json:"name"`
+
+	// LinkCount The number of undeleted links, regardless of creator or metadata state.
+	LinkCount int64  `json:"link_count"`
+	Name      string `json:"name"`
 
 	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
@@ -405,7 +449,10 @@ type IssueDetail struct {
 
 	// LabelIds Its labels, by id.
 	LabelIds []uuid.UUID `json:"label_ids"`
-	Name     string      `json:"name"`
+
+	// LinkCount The number of undeleted links, regardless of creator or metadata state.
+	LinkCount int64  `json:"link_count"`
+	Name      string `json:"name"`
 
 	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
@@ -434,6 +481,19 @@ type IssueDetail struct {
 	// UpdatedByID The account that changed it last; null for none.
 	UpdatedByID nullable.Nullable[uuid.UUID] `json:"updated_by_id"`
 	WorkspaceID uuid.UUID                    `json:"workspace_id"`
+}
+
+// IssueDraftPayload Unfinished issue input. Saving checks structure, not create semantics.
+type IssueDraftPayload struct {
+	AssigneeIds     *[]uuid.UUID `json:"assignee_ids,omitempty"`
+	DescriptionHTML *string      `json:"description_html,omitempty"`
+	LabelIds        *[]uuid.UUID `json:"label_ids,omitempty"`
+	Name            *string      `json:"name,omitempty"`
+	ParentID        *uuid.UUID   `json:"parent_id,omitempty"`
+	Priority        *string      `json:"priority,omitempty"`
+	StartDate       *shared.Date `json:"start_date,omitempty"`
+	StateID         *uuid.UUID   `json:"state_id,omitempty"`
+	TargetDate      *shared.Date `json:"target_date,omitempty"`
 }
 
 // IssueLink defines model for IssueLink.
@@ -618,6 +678,9 @@ type SubIssuesAdd struct {
 	SubIssueIds []uuid.UUID `json:"sub_issue_ids"`
 }
 
+// DraftID defines model for DraftID.
+type DraftID = uuid.UUID
+
 // IssueID defines model for IssueID.
 type IssueID = uuid.UUID
 
@@ -717,6 +780,38 @@ type ListIssuesParams struct {
 	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// ListDraftsParams defines parameters for ListDrafts.
+type ListDraftsParams struct {
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// SearchIssuesParams defines parameters for SearchIssues.
+type SearchIssuesParams struct {
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// ProjectID A project UUID intersecting the caller's visible project scope.
+	ProjectID *string `form:"project_id,omitempty" json:"project_id,omitempty"`
+
+	// For parent, sub_issue or relation; requires issue_id when supplied.
+	For *string `form:"for,omitempty" json:"for,omitempty"`
+
+	// IssueID A visible, live source issue UUID; requires for when supplied.
+	IssueID *string `form:"issue_id,omitempty" json:"issue_id,omitempty"`
+
+	// StartDate A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone.
+	StartDate *[]string `form:"start_date,omitempty" json:"start_date,omitempty"`
+
+	// TargetDate A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone.
+	TargetDate *[]string `form:"target_date,omitempty" json:"target_date,omitempty"`
+
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListMemberIssuesParams defines parameters for ListMemberIssues.
 type ListMemberIssuesParams struct {
 	// Relation The target account's relationship; visibility always follows the caller.
@@ -758,6 +853,9 @@ type ListMemberIssuesParams struct {
 // ListMemberIssuesParamsRelation defines parameters for ListMemberIssues.
 type ListMemberIssuesParamsRelation string
 
+// UpdateDraftJSONRequestBody defines body for UpdateDraft for application/json ContentType.
+type UpdateDraftJSONRequestBody = DraftUpdate
+
 // UpdateIssueCommentJSONRequestBody defines body for UpdateIssueComment for application/json ContentType.
 type UpdateIssueCommentJSONRequestBody = IssueCommentCreate
 
@@ -788,8 +886,23 @@ type AddSubIssuesJSONRequestBody = SubIssuesAdd
 // CreateIssueJSONRequestBody defines body for CreateIssue for application/json ContentType.
 type CreateIssueJSONRequestBody = IssueCreate
 
+// CreateDraftJSONRequestBody defines body for CreateDraft for application/json ContentType.
+type CreateDraftJSONRequestBody = DraftCreate
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// DeleteDraft Delete your issue draft
+	// (DELETE /api/v0/drafts/{draft_id})
+	DeleteDraft(w http.ResponseWriter, r *http.Request, draftID DraftID)
+	// GetDraft Read your issue draft
+	// (GET /api/v0/drafts/{draft_id})
+	GetDraft(w http.ResponseWriter, r *http.Request, draftID DraftID)
+	// UpdateDraft Replace fields of your issue draft
+	// (PATCH /api/v0/drafts/{draft_id})
+	UpdateDraft(w http.ResponseWriter, r *http.Request, draftID DraftID)
+	// PublishDraft Publish your stored issue draft
+	// (POST /api/v0/drafts/{draft_id}/publish)
+	PublishDraft(w http.ResponseWriter, r *http.Request, draftID DraftID)
 	// DeleteIssueComment Delete a comment as its author or project administrator
 	// (DELETE /api/v0/issue-comments/{comment_id})
 	DeleteIssueComment(w http.ResponseWriter, r *http.Request, commentID uuid.UUID)
@@ -874,6 +987,15 @@ type ServerInterface interface {
 	// CreateIssue Create a work item in a project
 	// (POST /api/v0/projects/{project_id}/issues)
 	CreateIssue(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// ListDrafts List your personal issue drafts
+	// (GET /api/v0/workspaces/{slug}/drafts)
+	ListDrafts(w http.ResponseWriter, r *http.Request, slug Slug, params ListDraftsParams)
+	// CreateDraft Save an unfinished issue draft
+	// (POST /api/v0/workspaces/{slug}/drafts)
+	CreateDraft(w http.ResponseWriter, r *http.Request, slug Slug)
+	// SearchIssues Search visible work items
+	// (GET /api/v0/workspaces/{slug}/issue-search)
+	SearchIssues(w http.ResponseWriter, r *http.Request, slug Slug, params SearchIssuesParams)
 	// GetIssueByIdentifier Read a work item by its identifier
 	// (GET /api/v0/workspaces/{slug}/issues/{identifier})
 	GetIssueByIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier IssueIdentifier)
@@ -890,6 +1012,110 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DeleteDraft operation middleware
+func (siw *ServerInterfaceWrapper) DeleteDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "draft_id" -------------
+	var draftID DraftID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "draft_id", r.PathValue("draft_id"), &draftID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "draft_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteDraft(w, r, draftID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDraft operation middleware
+func (siw *ServerInterfaceWrapper) GetDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "draft_id" -------------
+	var draftID DraftID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "draft_id", r.PathValue("draft_id"), &draftID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "draft_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDraft(w, r, draftID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateDraft operation middleware
+func (siw *ServerInterfaceWrapper) UpdateDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "draft_id" -------------
+	var draftID DraftID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "draft_id", r.PathValue("draft_id"), &draftID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "draft_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateDraft(w, r, draftID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PublishDraft operation middleware
+func (siw *ServerInterfaceWrapper) PublishDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "draft_id" -------------
+	var draftID DraftID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "draft_id", r.PathValue("draft_id"), &draftID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "draft_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublishDraft(w, r, draftID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // DeleteIssueComment operation middleware
 func (siw *ServerInterfaceWrapper) DeleteIssueComment(w http.ResponseWriter, r *http.Request) {
@@ -1974,6 +2200,207 @@ func (siw *ServerInterfaceWrapper) CreateIssue(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// ListDrafts operation middleware
+func (siw *ServerInterfaceWrapper) ListDrafts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDraftsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDrafts(w, r, slug, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateDraft operation middleware
+func (siw *ServerInterfaceWrapper) CreateDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateDraft(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SearchIssues operation middleware
+func (siw *ServerInterfaceWrapper) SearchIssues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchIssuesParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "project_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "project_id", r.URL.Query(), &params.ProjectID, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "for" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "for", r.URL.Query(), &params.For, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "for"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "for", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "issue_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "issue_id", r.URL.Query(), &params.IssueID, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "issue_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "start_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_date", r.URL.Query(), &params.StartDate, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target_date", r.URL.Query(), &params.TargetDate, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchIssues(w, r, slug, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetIssueByIdentifier operation middleware
 func (siw *ServerInterfaceWrapper) GetIssueByIdentifier(w http.ResponseWriter, r *http.Request) {
 
@@ -2336,6 +2763,13 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/issue-search", wrapper.SearchIssues)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/drafts", wrapper.ListDrafts)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspaces/{slug}/drafts", wrapper.CreateDraft)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/drafts/{draft_id}", wrapper.DeleteDraft)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/drafts/{draft_id}", wrapper.GetDraft)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/drafts/{draft_id}", wrapper.UpdateDraft)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/drafts/{draft_id}/publish", wrapper.PublishDraft)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/members/{user_id}/issues", wrapper.ListMemberIssues)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.ListIssues)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.CreateIssue)
@@ -2378,6 +2812,185 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type DeleteDraftRequestObject struct {
+	DraftID DraftID `json:"draft_id"`
+}
+
+type DeleteDraftResponseObject interface {
+	VisitDeleteDraftResponse(w http.ResponseWriter) error
+}
+
+type DeleteDraft204Response struct {
+}
+
+func (response DeleteDraft204Response) VisitDeleteDraftResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteDraftdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteDraftdefaultApplicationProblemPlusJSONResponse) VisitDeleteDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDraftRequestObject struct {
+	DraftID DraftID `json:"draft_id"`
+}
+
+type GetDraftResponseObject interface {
+	VisitGetDraftResponse(w http.ResponseWriter) error
+}
+
+type GetDraft200JSONResponse Draft
+
+func (response GetDraft200JSONResponse) VisitGetDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDraftdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetDraftdefaultApplicationProblemPlusJSONResponse) VisitGetDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDraftRequestObject struct {
+	DraftID DraftID `json:"draft_id"`
+	Body    *UpdateDraftJSONRequestBody
+}
+
+type UpdateDraftResponseObject interface {
+	VisitUpdateDraftResponse(w http.ResponseWriter) error
+}
+
+type UpdateDraft200JSONResponse Draft
+
+func (response UpdateDraft200JSONResponse) VisitUpdateDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDraftdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateDraftdefaultApplicationProblemPlusJSONResponse) VisitUpdateDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PublishDraftRequestObject struct {
+	DraftID DraftID `json:"draft_id"`
+}
+
+type PublishDraftResponseObject interface {
+	VisitPublishDraftResponse(w http.ResponseWriter) error
+}
+
+type PublishDraft201JSONResponse IssueDetail
+
+func (response PublishDraft201JSONResponse) VisitPublishDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PublishDraftdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response PublishDraftdefaultApplicationProblemPlusJSONResponse) VisitPublishDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type DeleteIssueCommentRequestObject struct {
@@ -3648,6 +4261,147 @@ func (response CreateIssuedefaultApplicationProblemPlusJSONResponse) VisitCreate
 	return err
 }
 
+type ListDraftsRequestObject struct {
+	Slug   Slug `json:"slug"`
+	Params ListDraftsParams
+}
+
+type ListDraftsResponseObject interface {
+	VisitListDraftsResponse(w http.ResponseWriter) error
+}
+
+type ListDrafts200JSONResponse DraftPage
+
+func (response ListDrafts200JSONResponse) VisitListDraftsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDraftsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListDraftsdefaultApplicationProblemPlusJSONResponse) VisitListDraftsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDraftRequestObject struct {
+	Slug Slug `json:"slug"`
+	Body *CreateDraftJSONRequestBody
+}
+
+type CreateDraftResponseObject interface {
+	VisitCreateDraftResponse(w http.ResponseWriter) error
+}
+
+type CreateDraft201JSONResponse Draft
+
+func (response CreateDraft201JSONResponse) VisitCreateDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDraftdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CreateDraftdefaultApplicationProblemPlusJSONResponse) VisitCreateDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchIssuesRequestObject struct {
+	Slug   Slug `json:"slug"`
+	Params SearchIssuesParams
+}
+
+type SearchIssuesResponseObject interface {
+	VisitSearchIssuesResponse(w http.ResponseWriter) error
+}
+
+type SearchIssues200JSONResponse IssueCollection
+
+func (response SearchIssues200JSONResponse) VisitSearchIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchIssuesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response SearchIssuesdefaultApplicationProblemPlusJSONResponse) VisitSearchIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetIssueByIdentifierRequestObject struct {
 	Slug       Slug            `json:"slug"`
 	Identifier IssueIdentifier `json:"identifier"`
@@ -3745,6 +4499,18 @@ func (response ListMemberIssuesdefaultApplicationProblemPlusJSONResponse) VisitL
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// DeleteDraft Delete your issue draft
+	// (DELETE /api/v0/drafts/{draft_id})
+	DeleteDraft(ctx context.Context, request DeleteDraftRequestObject) (DeleteDraftResponseObject, error)
+	// GetDraft Read your issue draft
+	// (GET /api/v0/drafts/{draft_id})
+	GetDraft(ctx context.Context, request GetDraftRequestObject) (GetDraftResponseObject, error)
+	// UpdateDraft Replace fields of your issue draft
+	// (PATCH /api/v0/drafts/{draft_id})
+	UpdateDraft(ctx context.Context, request UpdateDraftRequestObject) (UpdateDraftResponseObject, error)
+	// PublishDraft Publish your stored issue draft
+	// (POST /api/v0/drafts/{draft_id}/publish)
+	PublishDraft(ctx context.Context, request PublishDraftRequestObject) (PublishDraftResponseObject, error)
 	// DeleteIssueComment Delete a comment as its author or project administrator
 	// (DELETE /api/v0/issue-comments/{comment_id})
 	DeleteIssueComment(ctx context.Context, request DeleteIssueCommentRequestObject) (DeleteIssueCommentResponseObject, error)
@@ -3829,6 +4595,15 @@ type StrictServerInterface interface {
 	// CreateIssue Create a work item in a project
 	// (POST /api/v0/projects/{project_id}/issues)
 	CreateIssue(ctx context.Context, request CreateIssueRequestObject) (CreateIssueResponseObject, error)
+	// ListDrafts List your personal issue drafts
+	// (GET /api/v0/workspaces/{slug}/drafts)
+	ListDrafts(ctx context.Context, request ListDraftsRequestObject) (ListDraftsResponseObject, error)
+	// CreateDraft Save an unfinished issue draft
+	// (POST /api/v0/workspaces/{slug}/drafts)
+	CreateDraft(ctx context.Context, request CreateDraftRequestObject) (CreateDraftResponseObject, error)
+	// SearchIssues Search visible work items
+	// (GET /api/v0/workspaces/{slug}/issue-search)
+	SearchIssues(ctx context.Context, request SearchIssuesRequestObject) (SearchIssuesResponseObject, error)
 	// GetIssueByIdentifier Read a work item by its identifier
 	// (GET /api/v0/workspaces/{slug}/issues/{identifier})
 	GetIssueByIdentifier(ctx context.Context, request GetIssueByIdentifierRequestObject) (GetIssueByIdentifierResponseObject, error)
@@ -3874,6 +4649,117 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// DeleteDraft operation middleware
+func (sh *strictHandler) DeleteDraft(w http.ResponseWriter, r *http.Request, draftID DraftID) {
+	var request DeleteDraftRequestObject
+
+	request.DraftID = draftID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteDraft(ctx, request.(DeleteDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteDraft")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteDraftResponseObject); ok {
+		if err := validResponse.VisitDeleteDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDraft operation middleware
+func (sh *strictHandler) GetDraft(w http.ResponseWriter, r *http.Request, draftID DraftID) {
+	var request GetDraftRequestObject
+
+	request.DraftID = draftID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDraft(ctx, request.(GetDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDraft")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDraftResponseObject); ok {
+		if err := validResponse.VisitGetDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateDraft operation middleware
+func (sh *strictHandler) UpdateDraft(w http.ResponseWriter, r *http.Request, draftID DraftID) {
+	var request UpdateDraftRequestObject
+
+	request.DraftID = draftID
+
+	var body UpdateDraftJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateDraft(ctx, request.(UpdateDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateDraft")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateDraftResponseObject); ok {
+		if err := validResponse.VisitUpdateDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PublishDraft operation middleware
+func (sh *strictHandler) PublishDraft(w http.ResponseWriter, r *http.Request, draftID DraftID) {
+	var request PublishDraftRequestObject
+
+	request.DraftID = draftID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PublishDraft(ctx, request.(PublishDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PublishDraft")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PublishDraftResponseObject); ok {
+		if err := validResponse.VisitPublishDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // DeleteIssueComment operation middleware
@@ -4673,6 +5559,93 @@ func (sh *strictHandler) CreateIssue(w http.ResponseWriter, r *http.Request, pro
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateIssueResponseObject); ok {
 		if err := validResponse.VisitCreateIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListDrafts operation middleware
+func (sh *strictHandler) ListDrafts(w http.ResponseWriter, r *http.Request, slug Slug, params ListDraftsParams) {
+	var request ListDraftsRequestObject
+
+	request.Slug = slug
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDrafts(ctx, request.(ListDraftsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDrafts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDraftsResponseObject); ok {
+		if err := validResponse.VisitListDraftsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateDraft operation middleware
+func (sh *strictHandler) CreateDraft(w http.ResponseWriter, r *http.Request, slug Slug) {
+	var request CreateDraftRequestObject
+
+	request.Slug = slug
+
+	var body CreateDraftJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateDraft(ctx, request.(CreateDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateDraft")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateDraftResponseObject); ok {
+		if err := validResponse.VisitCreateDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchIssues operation middleware
+func (sh *strictHandler) SearchIssues(w http.ResponseWriter, r *http.Request, slug Slug, params SearchIssuesParams) {
+	var request SearchIssuesRequestObject
+
+	request.Slug = slug
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchIssues(ctx, request.(SearchIssuesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchIssues")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchIssuesResponseObject); ok {
+		if err := validResponse.VisitSearchIssuesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

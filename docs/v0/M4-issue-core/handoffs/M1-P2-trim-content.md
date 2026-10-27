@@ -59,3 +59,9 @@ M4 合并时：
 - 保留余项：P8 搜索结果无 page；P14 修描述保存撤销再重做、创建/编辑弹窗 `isMigrationUpdate`（本Phase未改页面）。M5 图片开启时将按序 src 纳入标识并扩S3，经M4真正收尾转交。
 
 状态保持 `open`；本次仅完成P4接收部分，待M4真正收尾逐项核对关闭条件。证据：[P4 spec §4/§7](../specs/P4-issue-collaboration.md#4-验收标准)、[P4 review §2/§6](../reviews/P4-issue-collaboration-review.md#2-验收标准核对)。
+
+## 处理结果（M4/P8，2026-10-27）
+
+T12/T14已以真实HTTP/生成客户端验证issue-search返回完整Issue的{data:[]}且不含page/total/next_cursor；I18覆盖空词/数字/Unicode/中文/选择器/OwnOnly与日期，搜索只查标题和编号，不搜索description_stripped。保存/发布结构与HTML清洗沿唯一创建核心，草稿保存不作创建语义。此回执只承接搜索无page子项；P14撤销再重做/isMigrationUpdate、P15页面及原文其他输入不关闭，顶部status保持open。
+
+准确产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`，首次整审 `166b9efd..10f44790`；[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)列A条款/真实RUN/变异恢复/四次七门禁及准确产品checkpoint CI，[整体审核](../../../reviews/re-07-M4P8整体审核.md)列三镜头/186文件覆盖与历史D1。文档增量独评及最终准确HEAD CI由后续提交和ignored收据追踪，未合并、不清理；不以本期子项已处理改写历史关闭条件或M4整体状态。

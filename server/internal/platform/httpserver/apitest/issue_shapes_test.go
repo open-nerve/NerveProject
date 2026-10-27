@@ -7,11 +7,19 @@ import (
 
 	"slices"
 	"testing"
+
+	"github.com/getkin/kin-openapi/openapi3"
 )
 
 func TestIssueDetailShape(t *testing.T) {
 	c := Load(t)
 	issue, detail := c.doc.Components.Schemas["Issue"].Value, c.doc.Components.Schemas["IssueDetail"].Value
+	for _, schema := range []*openapi3.Schema{issue, detail} {
+		link := schema.Properties["link_count"]
+		if !slices.Contains(schema.Required, "link_count") || link == nil || link.Value == nil || !link.Value.Type.Is("integer") || link.Value.Format != "int64" || link.Value.Min == nil || *link.Value.Min != 0 {
+			t.Fatal("Issue link_count must be required nonnegative int64")
+		}
+	}
 	properties := maps.Clone(detail.Properties)
 	if _, ok := properties["description_html"]; !ok {
 		t.Fatal("detail lacks description_html")

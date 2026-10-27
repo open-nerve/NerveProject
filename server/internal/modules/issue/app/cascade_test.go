@@ -82,14 +82,14 @@ func ids(n int) []uuid.UUID {
 	return out
 }
 
-// twoProjects are the rows of web and ops: web has three work items, an
-// assignee, a relation and two activity rows, ops a work item, a label on
-// it, a relation and a subscriber. Web's work items and its activity each
-// fill a batch of two, which fakeRows answers greatest first and least
-// first, in that order.
+// twoProjects are the rows of web and ops, each with three drafts. Web has
+// three work items, an assignee, a relation and two activity rows; ops a work
+// item, a label on it, a relation and a subscriber. Several tables fill a
+// batch of two, which fakeRows alternates greatest first and least first.
 func twoProjects(web, ops uuid.UUID) *fakeRows {
-	w, o := ids(10), ids(5)
+	w, o := ids(13), ids(8)
 	return &fakeRows{deleted: map[uuid.UUID]string{}, rows: map[string]map[uuid.UUID][]uuid.UUID{
+		"drafts":      {web: w[10:13], ops: o[5:8]},
 		"issues":      {web: w[0:3], ops: o[0:1]},
 		"assignees":   {web: w[3:4]},
 		"labels":      {ops: o[1:2]},
@@ -105,7 +105,7 @@ func twoProjects(web, ops uuid.UUID) *fakeRows {
 // zero id, then after the greatest id of each batch, until one finds none.
 func batches(f *fakeRows, project uuid.UUID) []string {
 	var calls []string
-	for _, statement := range []string{"issues", "assignees", "labels", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
+	for _, statement := range []string{"drafts", "issues", "assignees", "labels", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
 		rows := f.rows[statement][project]
 		after := uuid.UUID{}
 		for i := 0; ; i += 2 {
@@ -136,15 +136,20 @@ func TestTheCascadeDeletesEachProjectsRowsInBatches(t *testing.T) {
 		projects []uuid.UUID
 	}{
 		{"one project", func(c *app.Cascade) error { return c.DeleteProjectIssues(inTx, web, by, now) }, []uuid.UUID{web}},
-		{"a workspace's two", func(c *app.Cascade) error { return c.DeleteWorkspaceIssues(inTx, []uuid.UUID{ops, web}, by, now) },
+		{"a workspace's two", func(c *app.Cascade) error {
+			return c.DeleteWorkspaceIssues(inTx, uuid.UUID{}, []uuid.UUID{ops, web}, by, now)
+		},
 			[]uuid.UUID{ops, web}},
-		{"a workspace without projects", func(c *app.Cascade) error { return c.DeleteWorkspaceIssues(inTx, nil, by, now) }, nil},
+		{"a workspace without projects", func(c *app.Cascade) error { return c.DeleteWorkspaceIssues(inTx, uuid.UUID{}, nil, by, now) }, nil},
 	} {
 		f := twoProjects(web, ops)
 		if err := tt.run(app.NewCascade(f, nil, 2)); err != nil {
 			t.Fatalf("%s: %v", tt.name, err)
 		}
 		var want []string
+		if tt.name != "one project" {
+			want = []string{fmt.Sprintf("workspace_drafts %s after %s limit 2", uuid.UUID{}, uuid.UUID{})}
+		}
 		deleted := map[uuid.UUID]string{}
 		for _, p := range tt.projects {
 			want = append(want, batches(f, p)...)
@@ -166,12 +171,12 @@ func TestTheCascadeDeletesEachProjectsRowsInBatches(t *testing.T) {
 // A failing batch comes back as itself, and no batch runs after it.
 func TestTheCascadeStopsAtAFailingBatch(t *testing.T) {
 	web, ops, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	for _, statement := range []string{"issues", "assignees", "labels", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
+	for _, statement := range []string{"workspace_drafts", "drafts", "issues", "assignees", "labels", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
 		f := twoProjects(web, ops)
 		f.fail = statement
-		want := batches(f, web)
+		want := append([]string{fmt.Sprintf("workspace_drafts %s after %s limit 2", uuid.UUID{}, uuid.UUID{})}, batches(f, web)...)
 		want = want[:slices.IndexFunc(want, func(c string) bool { return strings.HasPrefix(c, statement+" ") })+1]
-		err := app.NewCascade(f, nil, 2).DeleteWorkspaceIssues(context.WithValue(context.Background(), inTxKey{}, true), []uuid.UUID{web, ops}, by,
+		err := app.NewCascade(f, nil, 2).DeleteWorkspaceIssues(context.WithValue(context.Background(), inTxKey{}, true), uuid.UUID{}, []uuid.UUID{web, ops}, by,
 			time.Now())
 		if !errors.Is(err, errDisk) || !slices.Equal(f.calls, want) {
 			t.Errorf("failing %s: %v, the batches\n%q\nwant %v after\n%q", statement, err, f.calls, errDisk, want)
@@ -204,4 +209,44 @@ func (f *fakeRows) DeleteProjectDescriptionVersionRows(ctx context.Context, b ap
 
 func (f *fakeRows) DeleteProjectLinkRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
 	return f.batch(ctx, "links", b)
+}
+
+func (f *fakeRows) DeleteProjectDraftRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.batch(ctx, "drafts", b)
+}
+func (f *fakeRows) DeleteWorkspaceDraftRows(ctx context.Context, b app.WorkspaceDraftBatch) ([]uuid.UUID, error) {
+	return f.batch(ctx, "workspace_drafts", app.RowBatch{ProjectID: b.WorkspaceID, After: b.After, Limit: b.Limit, By: b.By, At: b.At})
+}
+
+// Dropping workspaceID or skipping the batch for an empty project list leaves
+// these drafts alive; running issues first violates the shared lock order.
+func TestWorkspaceDraftCascadeCarriesWorkspaceID(t *testing.T) {
+	workspace, project, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	now := time.Date(2026, 10, 27, 1, 0, 0, 0, time.UTC)
+	for _, projects := range [][]uuid.UUID{nil, {project}} {
+		f := &fakeRows{deleted: map[uuid.UUID]string{}, rows: map[string]map[uuid.UUID][]uuid.UUID{
+			"workspace_drafts": {workspace: ids(2)}, "drafts": {project: ids(2)}, "issues": {project: ids(1)},
+		}}
+		if err := app.NewCascade(f, nil, 1).DeleteWorkspaceIssues(context.WithValue(context.Background(), inTxKey{}, true), workspace, projects, by, now); err != nil {
+			t.Fatal(err)
+		}
+		want := 2
+		if len(projects) > 0 {
+			want = 5
+		}
+		if len(f.deleted) != want {
+			t.Fatalf("deleted %d rows; want %d", len(f.deleted), want)
+		}
+		for _, stamp := range f.deleted {
+			if stamp != fmt.Sprintf("%s at %s", by, now.Format(time.RFC3339Nano)) {
+				t.Errorf("stamp %s", stamp)
+			}
+		}
+		if !strings.HasPrefix(f.calls[0], "workspace_drafts "+workspace.String()+" ") {
+			t.Errorf("first batch: %v", f.calls)
+		}
+		if len(projects) > 0 && (!strings.HasPrefix(f.calls[3], "drafts ") || !strings.HasPrefix(f.calls[6], "issues ")) {
+			t.Errorf("drafts must precede issues: %v", f.calls)
+		}
+	}
 }

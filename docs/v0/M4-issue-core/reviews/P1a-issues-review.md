@@ -237,6 +237,10 @@ plan 的代码块照运行时的文字保留。下表是动过 plan 的块所写
 
 **交接的处理结果**：P1a 在三份交接里写下"处理结果（M4/P1a）"：[M1/P2 交接](../handoffs/M1-P2-trim-content.md)、[M1/P3 交接](../handoffs/M1-P3-trim-platform.md)、[M3 收尾交接](../handoffs/M3-closeout.md)（Task 15 `e6532863`，`25f5b9fb`、`91e54133` 改准）。三份的 `status` 都照旧是 `open`，在 M4 收尾随 review 关闭（M3 的做法）；各自仍未处理的条目写在它们的"处理结果"末尾。
 
+### P8接收回执（2026-10-27）
+
+T1把workspaceID从原删除请求贯穿project→issue，零项目工作区仍处理无项目草稿；T3/T4/T7把草稿CRUD与publish从普通writer形状中显式分出，三目录union精确覆盖全部tagged非GET，无通用豁免。T1 M1/M2真实PG、T8 W3零项目/旧审计及全表目录、T7请求PID/交错16/17已验证。P9替换同步Cascade为异步任务与P14页面仍开放。 实际命令/计数/变异/检查点见[P8 review §8](P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
+
 ## 7. 已知限制
 
 - **授权与时刻的先后可以不一致**（B 的代价一，设计 3.5，spec 第 7 节）：只改工作区角色的写不锁项目，降为访客、结束成员关系的连带在锁项目之前读时刻。写在总体设计 4.2。
