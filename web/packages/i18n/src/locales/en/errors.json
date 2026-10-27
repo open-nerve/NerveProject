@@ -1,5 +1,7 @@
 {
   "errors": {
+    "draft_not_found": "The draft does not exist, or you cannot see it.",
+    "draft_changed": "The draft's project changed. Please try again.",
     "bad_request": "The request was not understood. Check the fields and try again.",
     "payload_too_large": "The request is too large.",
     "rate_limited": "Too many attempts. Please try again later.",

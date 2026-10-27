@@ -89,7 +89,7 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   const { project: acmeWeb, bug: acmeBug } = await furnish(acme, 15);
   // Acme's Web has a work item too, the member's, assigned to him and labelled Bug, whose rows Acme's deletion must
   // write again as the admin's; Other's Web has none, as made (expectProjectCreated).
-  await furnishIssueRows(api, member, acmeWeb.id, memberId, acmeBug.id);
+  await furnishIssueRows(api, member, slug, acmeWeb.id, memberId, acmeBug.id);
   /** Web's labels, as the member made them; deleted by the admin, as Acme's deletion writes them. */
   const webLabels = (deleted: boolean): LabelRow[] => [
     { name: "Bug", color: "#EF4444", parent: null, sort_order: 65535, deleted, by: deleted ? adminEmail : memberEmail },
@@ -165,7 +165,7 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   // display settings in it, its label and the work item's rows are his own writing, which Old's deletion must write
   // again as the admin's.
   const oldBug = await createLabel(api, member, old.id, { name: "Bug" });
-  await furnishIssueRows(api, member, old.id, memberId, oldBug.id);
+  await furnishIssueRows(api, member, slug, old.id, memberId, oldBug.id);
   const moved = await api.PATCH("/api/v0/me/projects/{project_id}/preferences", {
     params: { path: { project_id: old.id } },
     body: { sort_order: 75535 },

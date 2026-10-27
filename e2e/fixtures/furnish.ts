@@ -2,7 +2,7 @@ import { changeWorkspacePreferences, createLabel, createProject, invite, inviteA
 
 import { accountId } from "./auth";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "./comments";
-import { createIssue, createIssueRelations } from "./issues";
+import { createDraft, createIssue, createIssueRelations } from "./issues";
 import { createIssueLink } from "./links";
 
 // The rows a deletion story furnishes a workspace or a project with first, so that its deletion has a row of each
@@ -14,15 +14,17 @@ import { createIssueLink } from "./links";
  * label of labelId, one of its labels; the creator and the assignee its subscribers, and its activity the creation
  * and the assignee; and a second work item, which the first blocks: their relation, and a row of each one's activity
  * on it. The first also carries a description mention, its initial version, a link, a comment and both reaction resources,
- * all created through their APIs so deletion catalog assertions cover the collaboration tables and links.
+ * all created through their APIs so deletion catalog assertions cover the collaboration tables, links and a project draft.
  */
 export async function furnishIssueRows(
   api: Api,
   token: string,
+  workspaceSlug: string,
   projectId: string,
   assigneeId: string,
   labelId: string
 ): Promise<void> {
+  await createDraft(api, token, workspaceSlug, { project_id: projectId, payload: { name: "Unfinished" } });
   const fix = await createIssue(api, token, projectId, {
     name: "Fix the login",
     description_html: `<mention-component entity_name="user_mention" entity_identifier="${assigneeId}"></mention-component>`,
@@ -55,5 +57,6 @@ export async function furnishWorkspace(
   await changeWorkspacePreferences(api, adminToken, slug, { navigation_project_limit: 3 });
   const web = await createProject(api, adminToken, slug, { name: "Web", identifier: "WEB" });
   const bug = await createLabel(api, adminToken, web.id, { name: "Bug" });
-  await furnishIssueRows(api, adminToken, web.id, await accountId(api, adminToken), bug.id);
+  await createDraft(api, adminToken, slug, { payload: { name: "Unassigned" } });
+  await furnishIssueRows(api, adminToken, slug, web.id, await accountId(api, adminToken), bug.id);
 }

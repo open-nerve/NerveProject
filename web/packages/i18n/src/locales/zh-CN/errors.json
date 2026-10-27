@@ -1,5 +1,7 @@
 {
   "errors": {
+    "draft_not_found": "草稿不存在或你无权访问。",
+    "draft_changed": "草稿的项目已更改，请重试。",
     "bad_request": "请求无法识别，请检查填写的内容后重试。",
     "payload_too_large": "请求过大。",
     "rate_limited": "尝试次数过多，请稍后再试。",

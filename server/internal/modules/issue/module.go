@@ -78,6 +78,7 @@ func Provide(pool *pgxpool.Pool) Provided {
 // project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
 type ProjectPorts interface {
 	app.ProjectGate
+	app.DraftProjects
 	app.Sequences
 	app.StateCatalog
 	app.LabelCatalog
@@ -127,8 +128,11 @@ type Deps struct {
 	Projects ProjectPorts
 	// Workspaces is workspace's WorkspaceDirectory, converted
 	// (bootstrap/ports.go).
-	Workspaces app.WorkspaceDirectory
-	Members    app.WorkspaceMemberDirectory
+	Workspaces interface {
+		app.WorkspaceDirectory
+		app.WorkspaceSharer
+	}
+	Members app.WorkspaceMemberDirectory
 	// Profiles is identity's PublicProfiles, converted (bootstrap/ports.go).
 	Profiles app.PublicProfiles
 }
@@ -146,10 +150,16 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
+	draftLocks := app.NewDraftLocks(locks, d.Workspaces, d.Projects, store)
 	sanitizer := content.NewSanitizer()
 	listing := app.NewListing(app.ListingDeps{Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
 	archive := app.ArchiveIssueDeps{Events: d.Events, Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	return &Module{crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: crawler.New(d.Outbound, d.Logger), Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval, uc: httpadapter.UseCases{
+		ListDrafts:              app.NewListDrafts(app.ListDraftsDeps{ReadTx: d.ReadTx, Locks: draftLocks, Workspaces: d.Workspaces, Projects: d.Projects, Drafts: store}),
+		GetDraft:                app.NewGetDraft(app.GetDraftDeps{ReadTx: d.ReadTx, Locks: draftLocks}),
+		CreateDraft:             app.NewCreateDraft(app.CreateDraftDeps{Locks: draftLocks, Workspaces: d.Workspaces, Drafts: store, Clock: d.Clock}),
+		UpdateDraft:             app.NewUpdateDraft(app.UpdateDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
+		DeleteDraft:             app.NewDeleteDraft(app.DeleteDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
 		UpdateIssueLink:         app.NewUpdateIssueLink(app.UpdateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
 		DeleteIssueLink:         app.NewDeleteIssueLink(app.DeleteIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
 		CreateIssueLink:         app.NewCreateIssueLink(app.CreateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),

@@ -194,6 +194,7 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
   );
   expect(project, `the project ${projectId}`).toEqual({ deleted: true, by: adminEmail });
   const tables = await projectTables(db);
+  expect(tables, "project deletion includes personal drafts").toContain("draft_issues");
   // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
   const rows = await Promise.all(
     tables.map(async (name) => {

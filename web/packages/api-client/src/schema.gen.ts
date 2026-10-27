@@ -917,6 +917,54 @@ export interface paths {
         patch: operations["updateLabel"];
         trace?: never;
     };
+    "/api/v0/workspaces/{slug}/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List your personal issue drafts
+         * @description Personal drafts only, including archived projects. Unknown or repeated scalar queries answer 422.
+         */
+        get: operations["listDrafts"];
+        put?: never;
+        /**
+         * Save an unfinished issue draft
+         * @description Saves structure without create validation; workspace admins and members may save their own drafts.
+         */
+        post: operations["createDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/drafts/{draft_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: components["parameters"]["DraftID"];
+            };
+            cookie?: never;
+        };
+        /** Read your issue draft */
+        get: operations["getDraft"];
+        put?: never;
+        post?: never;
+        /** Delete your issue draft */
+        delete: operations["deleteDraft"];
+        options?: never;
+        head?: never;
+        /** Replace fields of your issue draft */
+        patch: operations["updateDraft"];
+        trace?: never;
+    };
     "/api/v0/workspaces/{slug}/members/{user_id}/issues": {
         parameters: {
             query?: never;
@@ -2148,6 +2196,52 @@ export interface components {
             /** @description The label's place among the project's labels, the lowest first. */
             sort_order?: number;
         };
+        /** @description Unfinished issue input. Saving checks structure, not create semantics. */
+        IssueDraftPayload: {
+            name?: string;
+            description_html?: string;
+            /** Format: uuid */
+            state_id?: string;
+            priority?: string;
+            assignee_ids?: string[];
+            label_ids?: string[];
+            /** Format: date */
+            start_date?: string;
+            /** Format: date */
+            target_date?: string;
+            /** Format: uuid */
+            parent_id?: string;
+        };
+        Draft: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string | null;
+            payload: components["schemas"]["IssueDraftPayload"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        DraftPage: {
+            data: components["schemas"]["Draft"][];
+            next_cursor: components["schemas"]["NextCursor"];
+            /** Format: int64 */
+            total: number;
+        };
+        DraftCreate: {
+            /** Format: uuid */
+            project_id?: string | null;
+            payload: components["schemas"]["IssueDraftPayload"];
+        };
+        /** @description Omission keeps a value; project null clears it; payload replaces the complete object. */
+        DraftUpdate: {
+            /** Format: uuid */
+            project_id?: string | null;
+            payload?: components["schemas"]["IssueDraftPayload"];
+        };
         /**
          * @description Project lists exclude project_id; member lists use their narrower page vocabulary.
          * @enum {string}
@@ -2655,6 +2749,7 @@ export interface components {
         StateID: string;
         /** @description A label's id (Label.id). */
         LabelID: string;
+        DraftID: string;
         /** @description A work item's id (IssueDetail.id). */
         IssueID: string;
         /** @description A relation's id (IssueRelation.id). */
@@ -2738,6 +2833,11 @@ export type Label = components['schemas']['Label'];
 export type LabelList = components['schemas']['LabelList'];
 export type LabelCreate = components['schemas']['LabelCreate'];
 export type LabelUpdate = components['schemas']['LabelUpdate'];
+export type IssueDraftPayload = components['schemas']['IssueDraftPayload'];
+export type Draft = components['schemas']['Draft'];
+export type DraftPage = components['schemas']['DraftPage'];
+export type DraftCreate = components['schemas']['DraftCreate'];
+export type DraftUpdate = components['schemas']['DraftUpdate'];
 export type IssueListGroupField = components['schemas']['IssueListGroupField'];
 export type IssueListOrder = components['schemas']['IssueListOrder'];
 export type IssuePriority = components['schemas']['IssuePriority'];
@@ -2790,6 +2890,7 @@ export type ParameterProjectId = components['parameters']['ProjectID'];
 export type ParameterProjectMemberId = components['parameters']['ProjectMemberID'];
 export type ParameterStateId = components['parameters']['StateID'];
 export type ParameterLabelId = components['parameters']['LabelID'];
+export type ParameterDraftId = components['parameters']['DraftID'];
 export type ParameterIssueId = components['parameters']['IssueID'];
 export type ParameterRelationId = components['parameters']['RelationID'];
 export type ParameterIssueIdentifier = components['parameters']['IssueIdentifier'];
@@ -4212,6 +4313,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Label"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listDrafts: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftCreate"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Draft"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: components["parameters"]["DraftID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Draft"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: components["parameters"]["DraftID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: components["parameters"]["DraftID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftUpdate"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Draft"];
                 };
             };
             default: components["responses"]["Problem"];

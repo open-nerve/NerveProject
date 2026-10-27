@@ -249,3 +249,20 @@ export async function descriptionVersion(api: Api, token: string, versionId: str
   if (!data) throw new Error("description version answered 200 without its detail");
   return data;
 }
+
+/** Saves unfinished issue input through the personal workspace draft API. */
+export async function createDraft(
+  api: Api,
+  token: string,
+  workspaceSlug: string,
+  body: components["schemas"]["DraftCreate"]
+): Promise<components["schemas"]["Draft"]> {
+  const { data, error, response } = await api.POST("/api/v0/workspaces/{slug}/drafts", {
+    params: { path: { slug: workspaceSlug } },
+    body,
+    headers: bearer(token),
+  });
+  expect(response.status, `save draft in ${workspaceSlug}: ${JSON.stringify(error)}`).toBe(201);
+  if (!data) throw new Error("createDraft answered 201 without the draft");
+  return data;
+}

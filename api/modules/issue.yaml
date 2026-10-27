@@ -5,6 +5,94 @@ info:
   title: Nerve issue API
   version: v0
 paths:
+  /api/v0/workspaces/{slug}/drafts:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listDrafts
+      tags: [issue]
+      summary: List your personal issue drafts
+      description: Personal drafts only, including archived projects. Unknown or repeated scalar queries answer 422.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found, forbidden, validation_failed]
+      parameters:
+        - $ref: '../common.yaml#/components/parameters/Limit'
+        - $ref: '../common.yaml#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DraftPage'}
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createDraft
+      tags: [issue]
+      summary: Save an unfinished issue draft
+      description: Saves structure without create validation; workspace admins and members may save their own drafts.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found, forbidden, validation_failed, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DraftCreate'}
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Draft'}
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/drafts/{draft_id}:
+    parameters:
+      - $ref: '#/components/parameters/DraftID'
+    get:
+      operationId: getDraft
+      tags: [issue]
+      summary: Read your issue draft
+      security: [{bearer: []}]
+      x-problem-codes: [issue.draft_not_found, forbidden]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Draft'}
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateDraft
+      tags: [issue]
+      summary: Replace fields of your issue draft
+      security: [{bearer: []}]
+      x-problem-codes: [issue.draft_not_found, forbidden, validation_failed, issue.draft_changed, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DraftUpdate'}
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Draft'}
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteDraft
+      tags: [issue]
+      summary: Delete your issue draft
+      security: [{bearer: []}]
+      x-problem-codes: [issue.draft_not_found, forbidden, issue.draft_changed, server_busy]
+      responses:
+        '204':
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspaces/{slug}/members/{user_id}/issues:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -1151,6 +1239,11 @@ components:
       type: http
       scheme: bearer
   parameters:
+    DraftID:
+      name: draft_id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
     Slug:
       name: slug
       in: path
@@ -1216,6 +1309,59 @@ components:
           schema:
             $ref: '../common.yaml#/components/schemas/Problem'
   schemas:
+    IssueDraftPayload:
+      description: Unfinished issue input. Saving checks structure, not create semantics.
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string}
+        description_html: {type: string}
+        state_id: {type: string, format: uuid}
+        priority: {type: string}
+        assignee_ids:
+          type: array
+          items: {type: string, format: uuid}
+        label_ids:
+          type: array
+          items: {type: string, format: uuid}
+        start_date: {type: string, format: date}
+        target_date: {type: string, format: date}
+        parent_id: {type: string, format: uuid}
+    DraftCreate:
+      type: object
+      additionalProperties: false
+      required: [payload]
+      properties:
+        project_id: {type: [string, 'null'], format: uuid}
+        payload: {$ref: '#/components/schemas/IssueDraftPayload'}
+    DraftUpdate:
+      description: Omission keeps a value; project null clears it; payload replaces the complete object.
+      type: object
+      additionalProperties: false
+      properties:
+        project_id: {type: [string, 'null'], format: uuid}
+        payload: {$ref: '#/components/schemas/IssueDraftPayload'}
+    Draft:
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, project_id, payload, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        workspace_id: {type: string, format: uuid}
+        project_id: {type: [string, 'null'], format: uuid}
+        payload: {$ref: '#/components/schemas/IssueDraftPayload'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    DraftPage:
+      type: object
+      additionalProperties: false
+      required: [data, next_cursor, total]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Draft'}
+        next_cursor: {$ref: '../common.yaml#/components/schemas/NextCursor'}
+        total: {type: integer, format: int64}
     IssuePriority:
       description: A work item's priority, from the most to the least urgent.
       type: string

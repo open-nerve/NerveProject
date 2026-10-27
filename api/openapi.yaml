@@ -103,6 +103,10 @@ paths:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1projects~1{project_id}~1labels'
   /api/v0/labels/{label_id}:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1labels~1{label_id}'
+  /api/v0/workspaces/{slug}/drafts:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1drafts'
+  /api/v0/drafts/{draft_id}:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1drafts~1{draft_id}'
   /api/v0/workspaces/{slug}/members/{user_id}/issues:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1members~1{user_id}~1issues'
   /api/v0/projects/{project_id}/issues:
