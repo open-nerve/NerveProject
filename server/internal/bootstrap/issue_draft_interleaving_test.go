@@ -175,7 +175,7 @@ func TestDraftProjectMoveAndPublishSerialize(t *testing.T) {
 				draftNoLock(t, w, "draft_issues", d.ID)
 				requestRelease(t, lo)
 				requestBlocked(t, w.pool, tx, hi.Conn().PgConn().PID(), "projects")
-				if got := lockOn(t, w.pool, "projects WHERE id=$1", low); got != "FOR SHARE" {
+				if got := requestRowLock(t, w.pool, w.pool, tx, "projects WHERE id=$1", low); got != "FOR SHARE" {
 					t.Fatal("low P must be SHARE before high P", got)
 				}
 				draftNoLock(t, w, "draft_issues", d.ID)

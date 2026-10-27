@@ -167,6 +167,10 @@ T8 影响回归的局部测试修正：真实请求可能先合法等待其他�
 
 T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issue_description_version_page_lock_test.go` 的 lockVersionPage 共用新 `row_lock_fixture_acquisition_test.go` 的 test-only 单行获取：最多5秒且尊重更短 context，成功事务交回调用者持锁，失败独立有界回滚。setup 允许合法先占者；heldBy、lockOn、rowprobe 的 NOWAIT 性质探测不变。受控已知持有者复现原 NOWAIT 的55P03，并验证真实 removeProjectMember 等待后404及精确快照、取消/deadline/连接归还、零行/多行失败与持锁生存期；原顺序/强度矩阵及生产变异保留。未知历史持有者不归因于具体 worker。
 
+同轮 scoped 回归另暴露 draft CRUD 无项目分支的宽 owner 归因：新 `B/request_row_locks_test.go` 为既有真实 XID 升级探针加请求等待身份前后校验，`issue_draft_write_locks_test.go` 的 W/P/D 三处断言共用；新 `request_row_lock_probe_test.go` 以真实无项目 PATCH、draft 表夹具和已知第三方项目 N 复现旧宽探针红。仅目标 XID 的直接 transactionid 冲突计为持锁，tuple 排队及链可达性不作持锁证据；无项目错误锁、附项目弱/强锁生产变异继续拒绝。历史 peer 身份仍未知。
+
+盘点接续同根因 callers：`B/issue_draft_publish_locks_test.go`、`issue_write_locks_test.go`、`request_lock_probe_test.go`、`issue_draft_interleaving_test.go` 复用真实 request XID；`membership_world_test.go`、`ending_world_test.go` 的可选 RequestID tracer 构造供 `project_row_races_test.go`、`ending_races_test.go` 使用，`project_write_locks_test.go` 保持完整网络 app/JWT/workers。row-races 显式合并尚存项目 SHARE 夹具，释放后去掉；其余项目只认请求。`interleaving_writes_test.go`、`interleaving_not_found_test.go` 与 `issue_link_transactions_test.go` 的 gate 仅在已观测 held 后允许 idle-in-transaction，通过既有 TxManager 暴露首操作身份，分别接续 `interleaving_deletion_test.go`、`issue_interleaving_test.go`；`interleaving_test.go` 共用释放 gate 后有界 join。无 backend_xid 的首锁阶段不映射空 owner；请求状态、SQL 与事务身份前后稳定检查保留；deactivation/retention 原正确路径与任意owner性质探针本体不变。
+
 
 
 - [ ] **测试：** 新app`TestDeleteRowsCommitsEachBatch`核13表顺序、每批一个Tx、提交后推进、部分成功原错、重做不改旧戳；`TestDeleteRowsBudgetUsesRuntimeElapsed`业务At偏移±61d不影响45s预算；fake RuntimeNow在批边界越线且有候选Complete=false，无候选Complete=true；pending错误原样返回。新`TestDeletionRemainingUsesCurrentCursor`当前After过滤、后续表从头、完成表不重扫、关系只看候选、workspace只project_id NULL。

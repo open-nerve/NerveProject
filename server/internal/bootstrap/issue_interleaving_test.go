@@ -197,12 +197,21 @@ func (w issueWorld) serializeAt(t *testing.T, table string, first, second racing
 // before releasing the first. It lets a test advance a synchronized clock.
 func (w issueWorld) serializeAtAfter(t *testing.T, table string, first, second racingWrite, a, b *exchange, afterWait func()) {
 	t.Helper()
+	w.serializeAtObserved(t, table, first, second, a, b, func(*requestProbe) {
+		if afterWait != nil {
+			afterWait()
+		}
+	})
+}
+func (w issueWorld) serializeAtObserved(t *testing.T, table string, first, second racingWrite, a, b *exchange, afterWait func(*requestProbe)) {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	g := newGate()
-	firstWrite, secondWrite := first(t, w, heldTx{postgres.NewTxManager(w.pool, 2*time.Second), g}, a), second(t, w,
+	probe := requestTx(w.pool)
+	firstWrite, secondWrite := first(t, w, heldTx{probe, g}, a), second(t, w,
 		postgres.NewTxManager(w.pool, 2*time.Second), b)
-	opened, firstErr, secondErr := serializeOnTableAfter(t, ctx, w.pool, g, table, firstWrite, secondWrite, afterWait)
+	opened, firstErr, secondErr := serializeOnTableAfter(t, ctx, w.pool, g, table, firstWrite, secondWrite, func() { afterWait(probe) })
 	if err := errors.Join(firstErr, secondErr); err != nil {
 		t.Fatal(err)
 	}

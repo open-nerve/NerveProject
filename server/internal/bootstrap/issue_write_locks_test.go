@@ -308,7 +308,7 @@ func (iw issueWrite) checkProjectLocksWith(t *testing.T, w issueWorld, hold func
 		t.Errorf("%s has written %q when it waits for %s: what it holds of Web is no longer its lock's alone", iw.op, written, iw.waits)
 	}
 
-	if lock := lockOn(t, w.pool, "projects WHERE id = $1", w.web); lock != iw.projectLock {
+	if lock := requestRowLock(t, w.pool, w.pool, tx, "projects WHERE id = $1", w.web); lock != iw.projectLock {
 		t.Errorf("%s holds Web %s when it waits for %s, not FOR NO KEY UPDATE", iw.op, lock, iw.waits)
 	}
 	if lock := lockOn(t, w.pool, "workspaces WHERE id = $1", w.acme); lock != iw.workspaceLock {

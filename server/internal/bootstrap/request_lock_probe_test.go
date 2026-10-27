@@ -200,7 +200,7 @@ func TestRequestLockProbeWaitsForItsFixtureAfterUpstreamProject(t *testing.T) {
 	if tables := requestWrittenTables(t, w.pool, pid); len(tables) != 0 {
 		t.Fatalf("premature writes=%v", tables)
 	}
-	if lock := lockOn(t, w.pool, "projects WHERE id=$1", w.web); lock != write.projectLock {
+	if lock := requestRowLock(t, w.pool, w.pool, probe, "projects WHERE id=$1", w.web); lock != write.projectLock {
 		t.Fatalf("project lock=%s want=%s", lock, write.projectLock)
 	}
 	if lock := lockOn(t, w.pool, "workspaces WHERE id=$1", w.acme); lock != write.workspaceLock {

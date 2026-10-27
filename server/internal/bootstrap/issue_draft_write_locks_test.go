@@ -5,6 +5,8 @@ import (
 	"testing"
 	"uuid"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
@@ -116,25 +118,7 @@ func (row draftWriteLock) checkCRUDLocks(t *testing.T, w issueWorld) {
 					if got := requestWrittenTables(t, w.pool, pid); len(got) != 0 {
 						t.Errorf("%s wrote %v at %s", row.op, got, stage)
 					}
-					if stage != "workspace" {
-						if got := lockOn(t, w.pool, "workspaces WHERE id=$1", w.acme); got != row.workspace {
-							t.Errorf("workspace lock=%s want %s", got, row.workspace)
-						}
-					}
-					if stage == "draft" {
-						wantProject := "no lock"
-						if attached {
-							wantProject = row.project
-						}
-						if got := lockOn(t, w.pool, "projects WHERE id=$1", w.web); got != wantProject {
-							t.Errorf("project lock=%s want %s", got, wantProject)
-						}
-						if row.op != "createDraft" {
-							if got := lockOn(t, w.pool, "draft_issues WHERE id=$1", id); got != row.draft {
-								t.Errorf("draft lock=%s want %s", got, row.draft)
-							}
-						}
-					}
+					checkDraftHeldLocks(t, w, w.pool, tx, row, id, attached, stage)
 					requestRelease(t, held)
 					collect()
 					w.answered(t, e, row.want)
@@ -144,5 +128,28 @@ func (row draftWriteLock) checkCRUDLocks(t *testing.T, w issueWorld) {
 				})
 			}
 		})
+	}
+}
+
+func checkDraftHeldLocks(t *testing.T, w issueWorld, probes *pgxpool.Pool, tx *requestProbe, row draftWriteLock, id uuid.UUID, attached bool, stage string) {
+	t.Helper()
+	if stage != "workspace" {
+		if got := requestRowLock(t, w.pool, probes, tx, "workspaces WHERE id=$1", w.acme); got != row.workspace {
+			t.Errorf("workspace lock=%s want %s", got, row.workspace)
+		}
+	}
+	if stage == "draft" {
+		wantProject := "no lock"
+		if attached {
+			wantProject = row.project
+		}
+		if got := requestRowLock(t, w.pool, probes, tx, "projects WHERE id=$1", w.web); got != wantProject {
+			t.Errorf("project lock=%s want %s", got, wantProject)
+		}
+		if row.op != "createDraft" {
+			if got := requestRowLock(t, w.pool, probes, tx, "draft_issues WHERE id=$1", id); got != row.draft {
+				t.Errorf("draft lock=%s want %s", got, row.draft)
+			}
+		}
 	}
 }

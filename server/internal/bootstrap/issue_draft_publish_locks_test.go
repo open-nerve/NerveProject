@@ -35,7 +35,7 @@ func (row draftWriteLock) checkPublishLocks(t *testing.T, w issueWorld) {
 				}
 			}
 			if stage == "draft" || stage == "core" {
-				if got := lockOn(t, w.pool, "projects WHERE id=$1", w.web); got != row.project {
+				if got := requestRowLock(t, w.pool, w.pool, tx, "projects WHERE id=$1", w.web); got != row.project {
 					t.Errorf("P=%s", got)
 				}
 			}

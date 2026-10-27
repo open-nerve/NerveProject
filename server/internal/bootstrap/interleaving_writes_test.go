@@ -98,7 +98,8 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 				if writeFirst {
 					auth = gatedAuthorizer{Authorizer: auth, action: w.action, gate: g}
 				}
-				route := newProjectRoute(t, r.pool, auth, workspace.Provide(r.pool).WorkspaceMembers)
+				probe := requestTx(r.pool)
+				route := newProjectRouteOn(t, r.pool, probe, auth, workspace.Provide(r.pool).WorkspaceMembers)
 				var req *http.Request
 				var rec *httptest.ResponseRecorder
 				write := func() error {
@@ -106,10 +107,11 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 					return nil
 				}
 				var wrote, demoted <-chan error
+				defer func() { releaseAndJoinGate(t, g, wrote, demoted) }()
 				if writeFirst {
 					wrote = run(write)
 					held(t, ctx, g, wrote, "the write")
-					if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", Web "+lockOn(t, r.pool, "projects WHERE id = $1",
+					if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", Web "+requestGateRowLock(t, r.pool, r.pool, probe, "projects WHERE id = $1",
 						r.web), "acme FOR SHARE, Web "+w.lock; got != want {
 						t.Errorf("the write at its gate holds %s; want %s", got, want)
 					}

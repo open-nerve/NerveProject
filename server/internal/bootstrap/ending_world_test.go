@@ -31,6 +31,7 @@ import (
 // acme, and one in beta; one pending to carol's in acme; one to dave's in
 // acme that he declined.
 type endingWorld struct {
+	requests       *requestQueries
 	contract       *apitest.Contract
 	base           string
 	pool           *pgxpool.Pool
@@ -44,9 +45,23 @@ type endingWorld struct {
 
 func newEndingWorld(t *testing.T) endingWorld {
 	t.Helper()
+	return newEndingWorldOnRequests(t, nil)
+}
+func newObservedEndingWorld(t *testing.T) endingWorld {
+	t.Helper()
+	return newEndingWorldOnRequests(t, &requestQueries{})
+}
+func newEndingWorldOnRequests(t *testing.T, requests *requestQueries) endingWorld {
+	t.Helper()
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
-	w := endingWorld{contract: contract, base: startApp(t, testConfig(t, dbURL, false), migrations.FS()), pool: openPool(t, dbURL),
+	var base string
+	if requests == nil {
+		base = startApp(t, testConfig(t, dbURL, false), migrations.FS())
+	} else {
+		base = startObservedApp(t, testConfig(t, dbURL, false), requests)
+	}
+	w := endingWorld{requests: requests, contract: contract, base: base, pool: openPool(t, dbURL),
 		tokens: map[string]string{}, ids: map[string]uuid.UUID{}}
 	for _, name := range []string{"alice", "bob", "carol", "dave", "erin"} {
 		w.tokens[name] = registerAccount(t, contract, w.base, name+"@example.com").AccessToken

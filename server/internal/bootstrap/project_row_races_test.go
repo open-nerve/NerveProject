@@ -109,6 +109,9 @@ func (m rowWrite) sent(t *testing.T, w memberWorld) (*http.Request, <-chan answe
 	}
 	req := newRequest(t, m.method, w.base+strings.Replace(m.path, "%s", named.String(), 1), w.tokens[m.by], body)
 	w.contract.CheckRequest(t, req)
+	if w.requests != nil {
+		w.requests.observe(req)
+	}
 	return req, sendInBackground(req)
 }
 
@@ -265,7 +268,7 @@ func TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength(t *testing.T) {
 			continue
 		}
 		t.Run(m.op, func(t *testing.T) {
-			w := newMemberWorld(t)
+			w := newObservedMemberWorld(t)
 			m.labelsFor(t, w)
 			var acme, inAcme uuid.UUID
 			if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT s.id, m.id FROM workspaces s JOIN workspace_members m ON m.workspace_id = s.id
@@ -274,14 +277,16 @@ func TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength(t *testing.T) {
 			}
 			table, row := m.row(t, w)
 			backlog := stateID(t, w.pool, w.web, "Backlog")
+			var probe *requestProbe
+			var projectFixture pgx.Tx
 			locks := func() string {
 				t.Helper()
 				return "acme " + lockOn(t, w.pool, "workspaces WHERE id = $1", acme) +
 					", in acme " + lockOn(t, w.pool, "workspace_members WHERE id = $1", inAcme) +
-					", Web " + lockOn(t, w.pool, "projects WHERE id = $1", w.web) +
+					", Web " + requestFixtureRowLock(t, w.pool, w.pool, probe, projectFixture, "projects WHERE id = $1", w.web) +
 					", its row " + lockOn(t, w.pool, table+" WHERE id = $1", row) +
 					", Web's default " + lockOn(t, w.pool, "states WHERE id = $1", backlog) +
-					", Ops " + lockOn(t, w.pool, "projects WHERE id = $1", w.ops)
+					", Ops " + requestRowLock(t, w.pool, w.pool, probe, "projects WHERE id = $1", w.ops)
 			}
 			inAcmeShared, defaultHeld := "no lock", "no lock"
 			if m.target {
@@ -293,7 +298,9 @@ func TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength(t *testing.T) {
 			holdsRow := holding(t, w.pool, "SELECT 1 FROM "+table+" WHERE id = $1 FOR SHARE", row)
 			holdsWeb := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR SHARE", w.web)
 			holdsAcme := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", acme)
+			projectFixture = holdsWeb
 			req, answered := m.sent(t, w)
+			probe = w.requests.forRequest(req)
 			var releasedWeb time.Time
 			for _, step := range []struct {
 				release pgx.Tx
@@ -309,12 +316,14 @@ func TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength(t *testing.T) {
 				if step.release != nil {
 					if step.release == holdsWeb {
 						releasedWeb = time.Now()
+						projectFixture = nil
 					}
 					if err := step.release.Rollback(context.Background()); err != nil {
 						t.Fatal(err)
 					}
 				}
-				pgtest.WaitForLockWaitOn(t, w.pool, step.waitsOn, 5*time.Second)
+				holder := map[string]pgx.Tx{"workspaces": holdsAcme, "projects": holdsWeb, table: holdsRow}[step.waitsOn]
+				requestBlocked(t, w.pool, probe, holder.Conn().PgConn().PID(), step.waitsOn)
 				if got := locks(); got != step.want {
 					t.Errorf("%s waiting on %s: %s; want %s", m.op, step.waitsOn, got, step.want)
 				}

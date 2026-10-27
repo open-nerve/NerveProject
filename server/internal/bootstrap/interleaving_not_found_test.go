@@ -139,21 +139,24 @@ func TestAWriteOnAProjectDeletedWhileItWaitsFindsNoProject(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g := newGate()
-			deleting := newProjectRoute(t, r.pool, gatedAuthorizer{Authorizer: r.authorizer(), action: projectdomain.ActionDelete, gate: g},
+			probe := requestTx(r.pool)
+			deleting := newProjectRouteOn(t, r.pool, probe, gatedAuthorizer{Authorizer: r.authorizer(), action: projectdomain.ActionDelete, gate: g},
 				workspace.Provide(r.pool).WorkspaceMembers)
 			route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool).WorkspaceMembers)
 			var deleteReq, writeReq *http.Request
 			var deleteRec, writeRec *httptest.ResponseRecorder
-			deleted := run(func() error {
+			var deleted, wrote <-chan error
+			defer func() { releaseAndJoinGate(t, g, deleted, wrote) }()
+			deleted = run(func() error {
 				deleteReq, deleteRec = deleting.send(http.MethodDelete, "/api/v0/projects/"+r.web.String(), r.alice, "")
 				return nil
 			})
 			held(t, ctx, g, deleted, "the deletion")
-			if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", Web "+lockOn(t, r.pool, "projects WHERE id = $1", r.web),
+			if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", Web "+requestGateRowLock(t, r.pool, r.pool, probe, "projects WHERE id = $1", r.web),
 				"acme FOR SHARE, Web FOR NO KEY UPDATE"; got != want {
 				t.Errorf("the deletion at its gate holds %s; want %s", got, want)
 			}
-			wrote := run(func() error {
+			wrote = run(func() error {
 				writeReq, writeRec = w.send(route, r)
 				return nil
 			})
@@ -194,15 +197,18 @@ func TestAWriteOnAProjectWhoseWorkspaceIsDeletedWhileItWaitsFindsNoProject(t *te
 			defer cancel()
 			g := newGate()
 			route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool).WorkspaceMembers)
-			deleted := run(func() error { return r.deleteAcme(ctx, gatedDeleter{workspacepg.New(r.pool), g}) })
+			probe := requestTx(r.pool)
+			var deleted, wrote <-chan error
+			defer func() { releaseAndJoinGate(t, g, deleted, wrote) }()
+			deleted = run(func() error { return r.deleteAcmeOn(ctx, gatedDeleter{workspacepg.New(r.pool), g}, probe) })
 			held(t, ctx, g, deleted, "the deletion")
-			if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", Web "+lockOn(t, r.pool, "projects WHERE id = $1", r.web),
+			if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", Web "+requestGateRowLock(t, r.pool, r.pool, probe, "projects WHERE id = $1", r.web),
 				"acme FOR NO KEY UPDATE, Web no lock"; got != want {
 				t.Errorf("the deletion at its gate holds %s; want %s", got, want)
 			}
 			var req *http.Request
 			var rec *httptest.ResponseRecorder
-			wrote := run(func() error {
+			wrote = run(func() error {
 				req, rec = w.send(route, r)
 				return nil
 			})

@@ -46,10 +46,14 @@ func (r *requestQueries) lookup(id string) *requestProbe {
 	defer r.mu.Unlock()
 	return r.byID[id]
 }
-func (w issueWorld) observe(req *http.Request) *requestProbe {
-	p := w.requests.new()
+func (w issueWorld) observe(req *http.Request) *requestProbe { return w.requests.observe(req) }
+func (r *requestQueries) observe(req *http.Request) *requestProbe {
+	p := r.new()
 	req.Header.Set(httpserver.HeaderRequestID, p.id)
 	return p
+}
+func (r *requestQueries) forRequest(req *http.Request) *requestProbe {
+	return r.lookup(req.Header.Get(httpserver.HeaderRequestID))
 }
 
 func (r *requestQueries) pool(ctx context.Context, cfg config.DatabaseConfig) (*pgxpool.Pool, error) {
