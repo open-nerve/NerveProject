@@ -21,7 +21,7 @@ func TestListCursor(t *testing.T) {
 		{"created_at", `"2026-01-01T00:00:00.123456Z"`}, {"-created_at", `"0001-01-01T00:00:00.000000Z"`},
 		{"updated_at", `"9999-12-31T23:59:59.999999Z"`}, {"-updated_at", `"2026-01-01T00:00:00.123457Z"`},
 		{"start_date", `"0001-01-01"`}, {"-start_date", `"9999-12-31"`}, {"target_date", `"2026-01-01"`}, {"-target_date", `null`},
-		{"priority", "0"}, {"-priority", "4"}, {"sub_issues_count", "9007199254740993"}, {"-sub_issues_count", "9223372036854775807"},
+		{"priority", "0"}, {"-priority", "4"}, {"sub_issues_count", "9007199254740993"}, {"-sub_issues_count", "9223372036854775807"}, {"link_count", "9007199254740993"}, {"-link_count", "9223372036854775807"},
 		{"state_name", `"Äbc"`}, {"-state_name", `null`}, {"label_name", `"～"`}, {"-label_name", `"😀"`}, {"assignee_name", `"İ"`}, {"-assignee_name", `""`},
 	}
 	for _, tc := range cases {
@@ -189,5 +189,31 @@ func TestListCursorRejectsNULNames(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// Count positions must remain exact integers, independently of sort_order's float key.
+func TestListCountCursorBoundaries(t *testing.T) {
+	id := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	for _, order := range []ListOrder{"sub_issues_count", "-sub_issues_count", "link_count", "-link_count"} {
+		for _, key := range []string{"0", "9007199254740991", "9007199254740992", "9007199254740993", "9223372036854775807"} {
+			encoded, err := EncodeListCursor(ListCursor{Order: order, Key: json.RawMessage(key), ID: id})
+			if err != nil {
+				t.Fatal(order, key, err)
+			}
+			got, err := DecodeListCursor(encoded, order)
+			if err != nil || string(got.Key) != key {
+				t.Fatalf("%s %s => %s %v", order, key, got.Key, err)
+			}
+		}
+		for _, key := range []string{"-1", "null", "1.5", "1.0", "1e0", `"1"`, "9223372036854775808", "-0"} {
+			if key != "-0" {
+				_, err := EncodeListCursor(ListCursor{Order: order, Key: json.RawMessage(key), ID: id})
+				assertListProblem(t, err, shared.KindBadRequest, "cursor", shared.FieldInvalidFormat)
+			}
+			raw := fmt.Sprintf(`{"v":1,"p":[%q,%s,%q]}`, order, key, id.String())
+			_, err := DecodeListCursor(base64.RawURLEncoding.EncodeToString([]byte(raw)), order)
+			assertListProblem(t, err, shared.KindBadRequest, "cursor", shared.FieldInvalidFormat)
+		}
 	}
 }

@@ -39,7 +39,7 @@ func (s *Store) Search(ctx context.Context, in app.SearchRead) ([]domain.Issue, 
 			ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: r.SequenceID, Name: r.Name,
 			DescriptionHtml: r.DescriptionHtml, DescriptionStripped: r.DescriptionStripped, StateID: r.StateID, Priority: r.Priority,
 			StartDate: r.StartDate, TargetDate: r.TargetDate, ParentID: r.ParentID, SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, ArchivedAt: r.ArchivedAt,
-			CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, AssigneeIds: r.AssigneeIds, LabelIds: r.LabelIds,
+			CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, AssigneeIds: r.AssigneeIds, LabelIds: r.LabelIds, LinkCount: r.LinkCount,
 		})
 	}
 	return out, nil

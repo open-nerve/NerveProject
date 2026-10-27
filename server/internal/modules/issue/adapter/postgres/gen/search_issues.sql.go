@@ -61,6 +61,7 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_
        i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids,
+       (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count,
        similarity(i.name, $1) AS similarity
 FROM paged c JOIN issues i ON i.id=c.id
 ORDER BY CASE WHEN $1::text='' THEN c.updated_at END DESC,
@@ -111,6 +112,7 @@ type SearchIssuesRow struct {
 	UpdatedAt           time.Time
 	AssigneeIds         []uuid.UUID
 	LabelIds            []uuid.UUID
+	LinkCount           int64
 	Similarity          float32
 }
 
@@ -165,6 +167,7 @@ func (q *Queries) SearchIssues(ctx context.Context, arg SearchIssuesParams) ([]S
 			&i.UpdatedAt,
 			&i.AssigneeIds,
 			&i.LabelIds,
+			&i.LinkCount,
 			&i.Similarity,
 		); err != nil {
 			return nil, err

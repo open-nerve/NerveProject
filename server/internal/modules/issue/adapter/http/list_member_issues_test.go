@@ -94,7 +94,7 @@ func TestMemberIssueListQueryBoundary(t *testing.T) {
 		query, field, code string
 		status             int
 	}{
-		{"unknown=x", "unknown", "not_allowed", 422}, {"project_id=wrong", "project_id", "not_allowed", 422}, {"start_date=2026-02-30", "start_date", "not_allowed", 422}, {"sub_issue=1", "sub_issue", "not_allowed", 422}, {"group_by=assignee_id", "group_by", "not_allowed", 422}, {"order_by=link_count", "order_by", "not_allowed", 422}, {"limit=no", "limit", "invalid_format", 400}, {"limit=0", "limit", "out_of_range", 422}, {"limit=101", "limit", "out_of_range", 422}, {"cursor=bad", "cursor", "invalid_format", 400},
+		{"unknown=x", "unknown", "not_allowed", 422}, {"project_id=wrong", "project_id", "not_allowed", 422}, {"start_date=2026-02-30", "start_date", "not_allowed", 422}, {"sub_issue=1", "sub_issue", "not_allowed", 422}, {"group_by=assignee_id", "group_by", "not_allowed", 422}, {"order_by=unknown_count", "order_by", "not_allowed", 422}, {"limit=no", "limit", "invalid_format", 400}, {"limit=0", "limit", "out_of_range", 422}, {"limit=101", "limit", "out_of_range", 422}, {"cursor=bad", "cursor", "invalid_format", 400},
 		{"state_id=x", "state_id", "not_allowed", 422}, {"assignee_id=me", "assignee_id", "not_allowed", 422}, {"created_by_id=me", "created_by_id", "not_allowed", 422}, {"mention_id=me", "mention_id", "not_allowed", 422}, {"subscriber_id=me", "subscriber_id", "not_allowed", 422}, {"archived=false", "archived", "not_allowed", 422}, {"sub_group_by=priority", "sub_group_by", "not_allowed", 422}, {"sub_group_key=high", "sub_group_key", "not_allowed", 422}, {"target_member_id=x", "target_member_id", "not_allowed", 422}, {"user_id=x", "user_id", "not_allowed", 422},
 		{"group_key=high", "group_key", "not_allowed", 422},
 	} {

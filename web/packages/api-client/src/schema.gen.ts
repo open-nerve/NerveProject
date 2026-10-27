@@ -2291,6 +2291,11 @@ export interface components {
             assignee_ids: string[];
             /** @description Its labels, by id. */
             label_ids: string[];
+            /**
+             * Format: int64
+             * @description The number of undeleted links, regardless of creator or metadata state.
+             */
+            link_count: number;
             /** @description The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own. */
             sub_issues_count: number;
             /**
@@ -2405,6 +2410,11 @@ export interface components {
             assignee_ids: string[];
             /** @description Its labels, by id. */
             label_ids: string[];
+            /**
+             * Format: int64
+             * @description The number of undeleted links, regardless of creator or metadata state.
+             */
+            link_count: number;
             /** @description The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own. */
             sub_issues_count: number;
             /**
@@ -2428,7 +2438,7 @@ export interface components {
          */
         IssueListGroupField: "state_id" | "state_group" | "priority" | "label_id" | "assignee_id" | "created_by_id" | "target_date" | "project_id";
         /** @enum {string} */
-        IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "sub_issues_count" | "-sub_issues_count" | "sort_order";
+        IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "sub_issues_count" | "-sub_issues_count" | "link_count" | "-link_count" | "sort_order";
         IssueListSubgroup: {
             key: string;
             /** Format: int64 */

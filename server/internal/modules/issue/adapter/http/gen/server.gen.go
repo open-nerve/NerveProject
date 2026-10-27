@@ -80,9 +80,11 @@ const (
 	IssueListOrderAssigneeName        IssueListOrder = "assignee_name"
 	IssueListOrderCreatedAt           IssueListOrder = "created_at"
 	IssueListOrderLabelName           IssueListOrder = "label_name"
+	IssueListOrderLinkCount           IssueListOrder = "link_count"
 	IssueListOrderMinusAssigneeName   IssueListOrder = "-assignee_name"
 	IssueListOrderMinusCreatedAt      IssueListOrder = "-created_at"
 	IssueListOrderMinusLabelName      IssueListOrder = "-label_name"
+	IssueListOrderMinusLinkCount      IssueListOrder = "-link_count"
 	IssueListOrderMinusPriority       IssueListOrder = "-priority"
 	IssueListOrderMinusStartDate      IssueListOrder = "-start_date"
 	IssueListOrderMinusStateName      IssueListOrder = "-state_name"
@@ -107,11 +109,15 @@ func (e IssueListOrder) Valid() bool {
 		return true
 	case IssueListOrderLabelName:
 		return true
+	case IssueListOrderLinkCount:
+		return true
 	case IssueListOrderMinusAssigneeName:
 		return true
 	case IssueListOrderMinusCreatedAt:
 		return true
 	case IssueListOrderMinusLabelName:
+		return true
+	case IssueListOrderMinusLinkCount:
 		return true
 	case IssueListOrderMinusPriority:
 		return true
@@ -305,7 +311,10 @@ type Issue struct {
 
 	// LabelIds Its labels, by id.
 	LabelIds []uuid.UUID `json:"label_ids"`
-	Name     string      `json:"name"`
+
+	// LinkCount The number of undeleted links, regardless of creator or metadata state.
+	LinkCount int64  `json:"link_count"`
+	Name      string `json:"name"`
 
 	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
@@ -440,7 +449,10 @@ type IssueDetail struct {
 
 	// LabelIds Its labels, by id.
 	LabelIds []uuid.UUID `json:"label_ids"`
-	Name     string      `json:"name"`
+
+	// LinkCount The number of undeleted links, regardless of creator or metadata state.
+	LinkCount int64  `json:"link_count"`
+	Name      string `json:"name"`
 
 	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`

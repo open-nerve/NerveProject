@@ -31,7 +31,7 @@ func TestIssueOrderSamples(t *testing.T) {
 	if err := json.Unmarshal(raw, &fixture); err != nil {
 		t.Fatal(err)
 	}
-	if len(fixture.NameKeys) == 0 || len(fixture.Scenarios) != 10 {
+	if len(fixture.NameKeys) == 0 || len(fixture.Scenarios) != 11 {
 		t.Fatal("missing shared cases")
 	}
 	for _, tc := range fixture.NameKeys {

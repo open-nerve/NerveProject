@@ -78,6 +78,14 @@ func TestFlatIssueListOrders(t *testing.T) {
 						}
 						exec(t, pool, "INSERT INTO "+table+"(id,workspace_id,project_id,issue_id,"+column+") VALUES($1,$2,$3,$4,$5)", uuid.NewV7(), wid, p.id, r.ID, target)
 					}
+				case "link_count":
+					var count int
+					if err := json.Unmarshal(r.Key, &count); err != nil {
+						t.Fatal(err)
+					}
+					for link := 0; link <= count; link++ {
+						exec(t, pool, `INSERT INTO issue_links(id,workspace_id,project_id,issue_id,url,deleted_at) VALUES($1,$2,$3,$4,$5,CASE WHEN $6 THEN now() END)`, uuid.NewV7(), wid, p.id, r.ID, fmt.Sprintf("https://example.com/%s/%d", r.ID, link), link == count)
+					}
 				case "created_at", "updated_at":
 					var value string
 					if err := json.Unmarshal(r.Key, &value); err != nil {
@@ -132,6 +140,7 @@ func TestFlatIssueListOrders(t *testing.T) {
 }
 
 func TestFlatIssueListCountOrder(t *testing.T) {
+	t.Run("link_count limit2", func(t *testing.T) { checkLinkCountPages(t, "flat") })
 	s, pool := newStore(t)
 	a := newAccount(t, pool, "counts")
 	wid := newWorkspace(t, pool, "count-order")

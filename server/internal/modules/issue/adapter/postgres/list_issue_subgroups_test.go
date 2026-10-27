@@ -54,6 +54,7 @@ func subgroupFixture(t *testing.T) (*postgresadapter.Store, *pgxpool.Pool, app.L
 }
 
 func TestIssueSubgroups(t *testing.T) {
+	t.Run("link_count limit2", func(t *testing.T) { checkLinkCountPages(t, "subgroups") })
 	s, _, in, ids, labels, people := subgroupFixture(t)
 	for _, limit := range []int{1, 100} {
 		in.Query.Limit = limit
@@ -100,6 +101,7 @@ func TestIssueSubgroups(t *testing.T) {
 }
 
 func TestIssueCellContinuation(t *testing.T) {
+	t.Run("link_count limit2", func(t *testing.T) { checkLinkCountPages(t, "cell") })
 	s, _, in, ids, labels, people := subgroupFixture(t)
 	for _, cell := range []struct {
 		group, lane string

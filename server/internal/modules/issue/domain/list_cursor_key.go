@@ -51,7 +51,7 @@ func canonicalListKey(order ListOrder, raw json.RawMessage) (json.RawMessage, er
 			return nil, shared.InvalidCursor()
 		}
 		return json.Marshal(NameOrderKey(value))
-	case "priority", "sub_issues_count":
+	case "priority", "sub_issues_count", "link_count":
 		var value int64
 		if err := json.Unmarshal(raw, &value); err != nil || value < 0 || (field == "priority" && value > 4) {
 			return nil, shared.InvalidCursor()

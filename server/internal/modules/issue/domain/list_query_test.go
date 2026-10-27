@@ -80,7 +80,7 @@ func TestParseListQuery(t *testing.T) {
 			{"state_id", "bad"}, {"state_id", "none"}, {"state_id", other.String() + ","}, {"priority", ",high"}, {"priority", "high,,low"}, {"priority", "HIGH"}, {"state_group", "triage"},
 			{"label_id", "me"}, {"created_by_id", "none"}, {"mention_id", "none"}, {"subscriber_id", "none"}, {"assignee_id", " me"},
 			{"start_date", "2026-02-30"}, {"start_date", "2026-03-01..2026-02-01"}, {"target_date", ".."}, {"target_date", "2026-01-01,2026-01-02"},
-			{"sub_issue", "1"}, {"archived", ""}, {"cycle_id", "x"}, {"module_id", "x"}, {"link_count", "1"}, {"group_by", "state_name"}, {"order_by", "-sort_order"}, {"order_by", "link_count"}, {"order_by", "+created_at"}, {"order_by", ""}, {"relation", "assigned"},
+			{"sub_issue", "1"}, {"archived", ""}, {"cycle_id", "x"}, {"module_id", "x"}, {"link_count", "1"}, {"group_by", "state_name"}, {"order_by", "-sort_order"}, {"order_by", "unknown_count"}, {"order_by", "+created_at"}, {"order_by", ""}, {"relation", "assigned"},
 		}
 		for _, tc := range cases {
 			t.Run(tc.field+"/"+tc.value, func(t *testing.T) {

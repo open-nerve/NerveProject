@@ -172,7 +172,8 @@ func TestFlatIssueListWideDates(t *testing.T) {
 
 // Read the exact numeric CASE from the production SQL, rather than a second
 // handwritten approximation. Only its source row is a synthetic one: enormous
-// child counts cannot be seeded. This probe does not claim a 2^53-child page.
+// counts cannot be seeded. Child and link columns have independent sentinels;
+// this probe does not claim a 2^53-row page.
 func numericExpression(t *testing.T, file string) string {
 	t.Helper()
 	data, err := os.ReadFile("queries/" + file)
@@ -201,12 +202,12 @@ func checkListNumericExpression(t *testing.T, file string) {
 	t.Helper()
 	_, pool := newStore(t)
 	expression := numericExpression(t, file)
-	query := "SELECT pg_typeof(k)::text,k::text,k=$6::numeric FROM (SELECT " + expression + " AS k FROM (SELECT pg_catalog.float8send($2::float8) AS bits,$3::timestamptz AS created_at,$3::timestamptz AS updated_at,$4::bigint AS child_count,$5::date AS start_date,$5::date AS target_date,'urgent'::text AS priority) s) probe"
-	probe := func(order string, value float64, at time.Time, count int64, date, want string) {
+	query := "SELECT pg_typeof(k)::text,k::text,k=$7::numeric FROM (SELECT " + expression + " AS k FROM (SELECT pg_catalog.float8send($2::float8) AS bits,$3::timestamptz AS created_at,$3::timestamptz AS updated_at,$4::bigint AS child_count,$5::bigint AS link_count,$6::date AS start_date,$6::date AS target_date,'urgent'::text AS priority) s) probe"
+	probe := func(order string, value float64, at time.Time, children, links int64, date, want string) {
 		t.Helper()
 		var kind, actual string
 		var equal bool
-		err := pool.QueryRow(context.Background(), query, order, value, at, count, date, want).Scan(&kind, &actual, &equal)
+		err := pool.QueryRow(context.Background(), query, order, value, at, children, links, date, want).Scan(&kind, &actual, &equal)
 		if err != nil || kind != "numeric" || !equal {
 			t.Fatalf("%s key=%s type=%s want=%s: %v", order, actual, kind, want, err)
 		}
@@ -216,19 +217,20 @@ func checkListNumericExpression(t *testing.T, file string) {
 		if value < 0 {
 			magnitude = -magnitude
 		}
-		probe("sort_order", value, now, 0, "1970-01-01", strconv.FormatInt(magnitude, 10))
+		probe("sort_order", value, now, 0, 31, "1970-01-01", strconv.FormatInt(magnitude, 10))
 	}
 	for _, count := range []int64{0, 1, 9007199254740991, 9007199254740992, 9007199254740993, math.MaxInt64} {
-		probe("sub_issues_count", 0, now, count, "1970-01-01", strconv.FormatInt(count, 10))
+		probe("sub_issues_count", 0, now, count, 31, "1970-01-01", strconv.FormatInt(count, 10))
+		probe("link_count", 0, now, 47, count, "1970-01-01", strconv.FormatInt(count, 10))
 	}
 	for _, micros := range []int64{-1, 0, 9007199254740991, 9007199254740992, 9007199254740993} {
 		for _, order := range []string{"created_at", "updated_at"} {
-			probe(order, 0, time.UnixMicro(micros), 0, "1970-01-01", strconv.FormatInt(micros, 10))
+			probe(order, 0, time.UnixMicro(micros), 0, 31, "1970-01-01", strconv.FormatInt(micros, 10))
 		}
 	}
 	for _, date := range []struct{ value, key string }{{"0001-01-01", "-719162"}, {"1969-12-31", "-1"}, {"9999-12-31", "2932896"}} {
 		for _, order := range []string{"start_date", "target_date"} {
-			probe(order, 0, now, 0, date.value, date.key)
+			probe(order, 0, now, 0, 31, date.value, date.key)
 		}
 	}
 }

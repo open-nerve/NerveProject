@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"testing"
 	"uuid"
 
@@ -16,6 +17,7 @@ import (
 type listRowWant struct {
 	labels, assignees []uuid.UUID
 	children          int
+	links             int64
 }
 
 func listSeedSQL(t *testing.T, w issueWorld, sql string, args ...any) {
@@ -30,7 +32,15 @@ func listSeedSQL(t *testing.T, w issueWorld, sql string, args ...any) {
 func checkListPages(t *testing.T, w issueWorld, actor, path string, raw url.Values, want []uuid.UUID, keys map[uuid.UUID]json.RawMessage, rows map[uuid.UUID]listRowWant) {
 	t.Helper()
 	raw = maps.Clone(raw)
-	raw.Set("limit", "1")
+	limit := 1
+	if value := raw.Get("limit"); value != "" {
+		var err error
+		limit, err = strconv.Atoi(value)
+		if err != nil || limit < 1 {
+			t.Fatal("invalid test page limit", value)
+		}
+	}
+	raw.Set("limit", strconv.Itoa(limit))
 	order := raw.Get("order_by")
 	if order == "" {
 		order = "-created_at"
@@ -45,14 +55,22 @@ func checkListPages(t *testing.T, w issueWorld, actor, path string, raw url.Valu
 		}
 		start = 1
 	}
-	for n := start; n < len(want); n++ {
-		id := want[n]
+	for n := start; n < len(want); n += limit {
+		end := min(n+limit, len(want))
 		p := checkListEnvelope(t, w.send(t, actor, http.MethodGet, path+"?"+raw.Encode(), "", 200), false, false)
-		if p.Total != int64(len(want)) || len(p.Data) != 1 || p.Data[0].ID != id {
-			t.Fatalf("page %d: %+v; want ID %s / total %d", n, p, id, len(want))
+		if p.Total != int64(len(want)) || len(p.Data) != end-n {
+			t.Fatalf("page %d: %+v; want %d rows / total %d", n, p, end-n, len(want))
 		}
-		checkListPageRow(t, p, rows[id])
-		if n == len(want)-1 {
+		for j, id := range want[n:end] {
+			if p.Data[j].ID != id {
+				t.Fatalf("page %d row %d: %s want %s", n, j, p.Data[j].ID, id)
+			}
+			single := p
+			single.Data = p.Data[j : j+1]
+			checkListPageRow(t, single, rows[id])
+		}
+		last := want[end-1]
+		if end == len(want) {
 			if p.NextCursor != nil {
 				t.Fatalf("terminal cursor: %s", *p.NextCursor)
 			}
@@ -61,12 +79,13 @@ func checkListPages(t *testing.T, w issueWorld, actor, path string, raw url.Valu
 				t.Fatal("lost lookahead/continuation")
 			}
 			c, err := domain.DecodeListCursor(*p.NextCursor, domain.ListOrder(order))
-			if err != nil || c.ID != id || string(c.Key) != string(keys[id]) {
-				t.Fatalf("cursor %+v / %v; want %s %s", c, err, id, keys[id])
+			if err != nil || c.ID != last || string(c.Key) != string(keys[last]) {
+				t.Fatalf("cursor %+v / %v; want %s %s", c, err, last, keys[last])
 			}
 			raw.Set("cursor", *p.NextCursor)
 		}
 	}
+
 	if len(want) > 0 {
 		last := want[len(want)-1]
 		cursor, err := domain.EncodeListCursor(domain.ListCursor{Order: domain.ListOrder(order), ID: last, Key: keys[last]})
@@ -87,7 +106,7 @@ func checkListPageRow(t *testing.T, p issueListHTTP, want listRowWant) {
 	labels, assignees := slices.Clone(want.labels), slices.Clone(want.assignees)
 	slices.SortFunc(labels, uuid.UUID.Compare)
 	slices.SortFunc(assignees, uuid.UUID.Compare)
-	if !slices.Equal(got.LabelIDs, labels) || !slices.Equal(got.AssigneeIDs, assignees) || got.SubIssuesCount != want.children {
+	if !slices.Equal(got.LabelIDs, labels) || !slices.Equal(got.AssigneeIDs, assignees) || got.SubIssuesCount != want.children || got.LinkCount != want.links {
 		t.Fatalf("complete arrays/count: %+v want %+v", got, want)
 	}
 }

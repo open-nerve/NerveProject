@@ -12,6 +12,7 @@ import (
 )
 
 func TestIssueGroups(t *testing.T) {
+	t.Run("link_count limit2", func(t *testing.T) { checkLinkCountPages(t, "groups") })
 	s, pool := newStore(t)
 	a, b := newAccount(t, pool, "group-a"), newAccount(t, pool, "group-b")
 	w := newWorkspace(t, pool, "groups")

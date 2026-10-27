@@ -1451,7 +1451,7 @@ components:
       type: object
       additionalProperties: false
       required: [description_html, id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
-        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, created_by_id, updated_by_id, created_at, updated_at]
+        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, link_count, created_by_id, updated_by_id, created_at, updated_at]
       properties:
         description_html:
           description: Sanitized rich text HTML; at most 500000 characters on input.
@@ -1515,6 +1515,11 @@ components:
           items:
             type: string
             format: uuid
+        link_count:
+          description: The number of undeleted links, regardless of creator or metadata state.
+          type: integer
+          format: int64
+          minimum: 0
         sub_issues_count:
           description: >-
             The number of the work items directly under it that are not
@@ -1540,7 +1545,7 @@ components:
       type: object
       additionalProperties: false
       required: [id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
-        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, created_by_id, updated_by_id, created_at, updated_at]
+        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, link_count, created_by_id, updated_by_id, created_at, updated_at]
       properties:
         id:
           type: string
@@ -1601,6 +1606,11 @@ components:
           items:
             type: string
             format: uuid
+        link_count:
+          description: The number of undeleted links, regardless of creator or metadata state.
+          type: integer
+          format: int64
+          minimum: 0
         sub_issues_count:
           description: >-
             The number of the work items directly under it that are not
@@ -1623,7 +1633,7 @@ components:
           format: date-time
     IssueListOrder:
       type: string
-      enum: [created_at, '-created_at', updated_at, '-updated_at', start_date, '-start_date', target_date, '-target_date', priority, '-priority', state_name, '-state_name', label_name, '-label_name', assignee_name, '-assignee_name', sub_issues_count, '-sub_issues_count', sort_order]
+      enum: [created_at, '-created_at', updated_at, '-updated_at', start_date, '-start_date', target_date, '-target_date', priority, '-priority', state_name, '-state_name', label_name, '-label_name', assignee_name, '-assignee_name', sub_issues_count, '-sub_issues_count', link_count, '-link_count', sort_order]
     IssueListGroupField:
       description: Project lists exclude project_id; member lists use their narrower page vocabulary.
       type: string

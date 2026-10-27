@@ -181,7 +181,7 @@ test("I3 (API): state groups and priority-label lanes count unique issues; compl
   expect(
     await issuesListed(api, x.token, project.id, {
       // @ts-expect-error -- a future sort is rejected by the real endpoint
-      order_by: "link_count",
+      order_by: "unknown_count",
     })
   ).toEqual({ status: 422, code: "validation_failed", errors: [{ field: "order_by", code: "not_allowed" }] });
 });

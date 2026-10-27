@@ -59,7 +59,8 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l
-        WHERE l.issue_id = i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids
+        WHERE l.issue_id = i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids,
+       (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count
 FROM issues i
 WHERE i.id = sqlc.arg(id) AND i.deleted_at IS NULL;
 
@@ -71,7 +72,8 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l
-        WHERE l.issue_id = i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids
+        WHERE l.issue_id = i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids,
+       (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count
 FROM issues i
 WHERE i.id = ANY (sqlc.arg(ids)::uuid[]) AND i.deleted_at IS NULL
 ORDER BY i.id;

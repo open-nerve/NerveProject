@@ -57,6 +57,8 @@ WITH projects AS (
            CASE WHEN $32::text='sub_issues_count' THEN
                (SELECT count(*) FROM issues c WHERE c.parent_id=f.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
                 AND (NOT f.own_only OR c.created_by_id=$1::uuid)) END AS child_count,
+           CASE WHEN $32::text='link_count' THEN
+               (SELECT count(*) FROM issue_links l WHERE l.issue_id=f.id AND l.deleted_at IS NULL) END AS link_count,
            CASE $32::text
              WHEN 'state_name' THEN f.state_key
              WHEN 'label_name' THEN (SELECT min(l.name_key COLLATE "C") FROM issue_labels r JOIN labels l ON l.id=r.label_id WHERE r.issue_id=f.id AND r.deleted_at IS NULL)
@@ -64,7 +66,7 @@ WITH projects AS (
            END AS k_text
     FROM counted f
 ), numeric_keys AS (
-    SELECT s.id, s.own_only, s.total, s.child_count, s.k_text,
+    SELECT s.id, s.own_only, s.total, s.child_count, s.link_count, s.k_text,
            CASE $32::text
              WHEN 'sort_order' THEN ((CASE WHEN get_byte(s.bits,0)>=128 THEN -1 ELSE 1 END)::bigint *
                  ((get_byte(s.bits,0)&127)::bigint*72057594037927936::bigint + get_byte(s.bits,1)::bigint*281474976710656::bigint
@@ -77,12 +79,13 @@ WITH projects AS (
              WHEN 'target_date' THEN (s.target_date-DATE '1970-01-01')::numeric
              WHEN 'priority' THEN (CASE s.priority WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END)::numeric
              WHEN 'sub_issues_count' THEN s.child_count::numeric
+             WHEN 'link_count' THEN s.link_count::numeric
            END AS k_num
     FROM source_keys s
 ), keyed AS (
-    SELECT n.id, n.own_only, n.total, n.child_count, n.k_text, n.k_num, (n.k_num IS NULL AND n.k_text IS NULL) AS k_null FROM numeric_keys n
+    SELECT n.id, n.own_only, n.total, n.child_count, n.link_count, n.k_text, n.k_num, (n.k_num IS NULL AND n.k_text IS NULL) AS k_null FROM numeric_keys n
 ), ranked AS (
-    SELECT k.id, k.own_only, k.total, k.child_count, k.k_text, k.k_num, k.k_null, row_number() OVER (
+    SELECT k.id, k.own_only, k.total, k.child_count, k.link_count, k.k_text, k.k_num, k.k_null, row_number() OVER (
         ORDER BY k.k_null,
                  CASE WHEN NOT $33::boolean THEN k.k_num END ASC,
                  CASE WHEN $33::boolean THEN k.k_num END DESC,
@@ -101,7 +104,7 @@ WITH projects AS (
                 AND CASE WHEN $33::boolean THEN k.id<$38::uuid ELSE k.id>$38::uuid END)))
 ), paged AS MATERIALIZED (
     -- Carry the one authoritative order through the page's full projection.
-    SELECT id, own_only, total, child_count, k_text, k_num, k_null, page_position FROM ranked WHERE page_position <= $39::integer
+    SELECT id, own_only, total, child_count, link_count, k_text, k_num, k_null, page_position FROM ranked WHERE page_position <= $39::integer
     LIMIT $39::integer
 )
 SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority,
@@ -112,6 +115,7 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.
        coalesce(k.k_text,'')::text AS name_key, (k.k_text IS NULL)::boolean AS name_null,
        coalesce(k.child_count,(SELECT count(*) FROM issues c WHERE c.parent_id=i.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
                               AND (NOT k.own_only OR c.created_by_id=$1::uuid)))::bigint AS sub_issues_count,
+       coalesce(k.link_count,(SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL))::bigint AS link_count,
        coalesce((SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS assignee_ids,
        coalesce((SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS label_ids
 FROM paged k JOIN issues i ON i.id=k.id
@@ -187,6 +191,7 @@ type FlatIssuesRow struct {
 	NameKey        string
 	NameNull       bool
 	SubIssuesCount int64
+	LinkCount      int64
 	AssigneeIds    []uuid.UUID
 	LabelIds       []uuid.UUID
 }
@@ -269,6 +274,7 @@ func (q *Queries) FlatIssues(ctx context.Context, arg FlatIssuesParams) ([]FlatI
 			&i.NameKey,
 			&i.NameNull,
 			&i.SubIssuesCount,
+			&i.LinkCount,
 			&i.AssigneeIds,
 			&i.LabelIds,
 		); err != nil {
