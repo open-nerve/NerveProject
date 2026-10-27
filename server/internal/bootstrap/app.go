@@ -61,6 +61,11 @@ type app struct {
 // newApp wires the server described by cfg around the given migrations and
 // built web frontend. close releases it.
 func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrationFiles, webFiles fs.FS) (*app, error) {
+	return newAppWithPoolFactory(ctx, cfg, logger, migrationFiles, webFiles, postgres.NewPool)
+}
+
+// newAppWithPoolFactory preserves one composition and the app's pool ownership.
+func newAppWithPoolFactory(ctx context.Context, cfg config.Config, logger *slog.Logger, migrationFiles, webFiles fs.FS, factory func(context.Context, config.DatabaseConfig) (*pgxpool.Pool, error)) (*app, error) {
 	signingKey, err := readSigningKey(cfg.Auth.JWT.PrivateKeyFile)
 	if err != nil {
 		return nil, err
@@ -75,7 +80,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	if err != nil {
 		return nil, err
 	}
-	pool, err := postgres.NewPool(ctx, cfg.Database)
+	pool, err := factory(ctx, cfg.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +133,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	issues := issue.New(issue.Deps{
 		Outbound: outboundClient, Logger: logger,
 		Events: events,
-		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval,
+		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
 		WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: businessClock, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},

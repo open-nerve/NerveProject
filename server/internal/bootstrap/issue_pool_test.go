@@ -32,7 +32,7 @@ import (
 // default, 10 connections, its configuration then changed by configure.
 func newPoolWorld(t *testing.T, configure ...func(cfg *config.Config)) issueWorld {
 	t.Helper()
-	return newIssueWorldWith(t, func(cfg *config.Config) {
+	return newObservedIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Database.MaxConns = 10
 		for _, c := range configure {
 			c(cfg)
@@ -63,10 +63,13 @@ func (r reply) String() string {
 
 // replyTo sends method path with body as alice. It touches no test: the
 // goroutines that send at once call it.
-func (w issueWorld) replyTo(method, path, body string) reply {
+func (w issueWorld) replyTo(method, path, body string, observed ...*requestProbe) reply {
 	req, err := http.NewRequest(method, w.base+path, strings.NewReader(body))
 	if err != nil {
 		return reply{err: err}
+	}
+	if len(observed) > 0 {
+		req.Header.Set("X-Request-Id", observed[0].id)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+w.tokens["alice"])
@@ -199,15 +202,17 @@ func TestAHotProjectHoldsUpNoReadOfAnother(t *testing.T) {
 	var answered atomic.Int32
 	var burst sync.WaitGroup
 	start := make(chan struct{})
+	probes := make([]*requestProbe, len(writes))
 	for i := range writes {
+		probes[i] = w.requests.new()
 		burst.Go(func() {
 			<-start
-			writes[i] = w.replyTo(http.MethodPatch, "/api/v0/issues/"+hot.String(), `{"name":"Fix `+strconv.Itoa(i)+`"}`)
+			writes[i] = w.replyTo(http.MethodPatch, "/api/v0/issues/"+hot.String(), `{"name":"Fix `+strconv.Itoa(i)+`"}`, probes[i])
 			answered.Add(1)
 		})
 	}
 	close(start)
-	pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
+	requestBurstBlocked(t, w.pool, probes, held.Conn().PgConn().PID())
 	waited := time.Now()
 	var reads []reply
 	probing, stop := context.WithCancel(context.Background())

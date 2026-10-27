@@ -27,6 +27,7 @@ import (
 // who is none of Web, and wanda, an admin of acme who is none of Web
 // either, see Web (403); olga, no member of acme, does not (404).
 type issueWorld struct {
+	requests                   *requestQueries
 	contract                   *apitest.Contract
 	base                       string
 	pool                       *pgxpool.Pool
@@ -54,10 +55,21 @@ func newIssueWorldWith(t *testing.T, configure func(cfg *config.Config)) issueWo
 // newIssueWorldOn reuses an already migrated database for the API and assertions.
 func newIssueWorldOn(t *testing.T, dbURL string, pool *pgxpool.Pool, configure func(*config.Config)) issueWorld {
 	t.Helper()
+	return newIssueWorldOnRequests(t, dbURL, pool, configure, nil)
+}
+
+func newIssueWorldOnRequests(t *testing.T, dbURL string, pool *pgxpool.Pool, configure func(*config.Config), requests *requestQueries) issueWorld {
+	t.Helper()
 	contract := apitest.Load(t)
 	cfg := testConfig(t, dbURL, false)
 	configure(&cfg)
-	w := issueWorld{contract: contract, base: startApp(t, cfg, migrations.FS()), pool: pool, tokens: map[string]string{},
+	base := ""
+	if requests == nil {
+		base = startApp(t, cfg, migrations.FS())
+	} else {
+		base = startObservedApp(t, cfg, requests)
+	}
+	w := issueWorld{requests: requests, contract: contract, base: base, pool: pool, tokens: map[string]string{},
 		ids: map[string]uuid.UUID{}}
 	for _, name := range []string{"alice", "bob", "walt", "wanda", "olga"} {
 		w.tokens[name] = registerAccount(t, contract, w.base, name+"@example.com").AccessToken

@@ -124,7 +124,12 @@ func startApp(t *testing.T, cfg config.Config, migrations fs.FS) string {
 // startAppLogging is startApp logging to logger.
 func startAppLogging(t *testing.T, cfg config.Config, migrations fs.FS, logger *slog.Logger) string {
 	t.Helper()
-	a := buildAppLogging(t, cfg, migrations, logger)
+	return runBuiltApp(t, buildAppLogging(t, cfg, migrations, logger))
+}
+
+func runBuiltApp(t *testing.T, a *app) string {
+	t.Helper()
+	cfg := a.cfg
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- a.run(ctx) }()
@@ -245,7 +250,7 @@ func TestNewAppCrawlJobCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	module := issue.New(issue.Deps{Pool: pool, AutoArchiveInterval: time.Hour})
+	module := issue.New(issue.Deps{Pool: pool, AutoArchiveInterval: time.Hour, TrimVersionsInterval: time.Hour})
 	definitions := module.Jobs()
 	var periodic int
 	for _, job := range definitions {
@@ -256,8 +261,8 @@ func TestNewAppCrawlJobCatalog(t *testing.T) {
 			}
 		}
 	}
-	if periodic != 1 {
-		t.Fatalf("periodic jobs=%d; want only automatic archival", periodic)
+	if periodic != 2 {
+		t.Fatalf("periodic jobs=%d; want archival and retention", periodic)
 	}
 	_, err = jobs.New(pool, jobs.Config{DefaultWorkers: 1, PeriodicWorkers: 1, Logger: slog.New(slog.DiscardHandler)}, definitions, []string{"issue.crawl_link"})
 	if err != nil {

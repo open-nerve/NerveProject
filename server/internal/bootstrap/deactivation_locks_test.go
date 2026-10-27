@@ -35,7 +35,7 @@ import (
 // Other transactions hold, FOR SHARE, his account, beta, kappa's invitation,
 // delta's invitation, his membership of beta, Lab and his membership of Docs,
 // which the deactivation's statements wait for in turn; they let go one at a
-// time, each step's probe naming the holder it waits behind, and lockOn reads
+// time, each step's probe naming the holder it waits behind, and the identified probe reads
 // each row's strongest lock then. The deactivation waits for his account,
 // holding nothing; then for beta, holding his account and acme, the first
 // workspace by id, and not able nor kappa, the last, nor any invitation; then
@@ -74,11 +74,13 @@ func TestEachLockOfADeactivationIsItsStrength(t *testing.T) {
 				{"Web", "projects", w.web}, {"Ops", "projects", w.ops}, {"Solo", "projects", w.solo}, {"Lab", "projects", w.lab},
 				{"Docs", "projects", w.docs},
 			}
+			var owners map[string]string
+			probes := openPool(t, w.url)
 			locks := func() string {
 				t.Helper()
 				held := make([]string, len(rows))
 				for i, r := range rows {
-					held[i] = r.name + " " + lockOn(t, w.pool, r.from+" WHERE id = $1", r.id)
+					held[i] = r.name + " " + deactivationRowLock(t, w.pool, probes, owners, r.from+" WHERE id = $1", r.id)
 				}
 				return strings.Join(held, ", ")
 			}
@@ -107,13 +109,23 @@ func TestEachLockOfADeactivationIsItsStrength(t *testing.T) {
 			holdsBeta := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR SHARE", beta)
 			holdsAccount := holding(t, w.pool, "SELECT 1 FROM users WHERE id = $1 FOR SHARE", bob)
 			shared := []string{"his account", "beta", "kappa's invitation", "delta's invitation", "his membership", "Lab"}
+			if ids := deactivationWaiters(t, w.pool, holdsAccount.Conn().PgConn().PID()); len(ids) != 0 {
+				t.Fatalf("users already has waiters %v", ids)
+			}
+			owners = map[string]string{}
+			for name, tx := range map[string]pgx.Tx{"account": holdsAccount, "beta": holdsBeta, "kappa invite": holdsKappas, "delta invite": holdsDeltas, "membership": holdsMembership, "Lab": holdsLab, "Docs membership": holdsDocs} {
+				owners[rowProbeXID(t, tx)] = name
+			}
 			answer := p.sent(w, t, "bob")
+			identity := identifyDeactivation(t, w.pool, holdsAccount)
+			started := time.Now()
+			var collectTrim func()
 			released := map[pgx.Tx]time.Time{}
 			var took []string
 			// Each step lets go of one holder, of the row frees, and names
 			// the holder the deactivation then waits behind, of the row
 			// waitsFor, and the rows it has taken by then. The probe names
-			// the holder (pgtest.WaitForLockWaitBehind): a wait for another
+			// the same identified transaction and holder: a wait for another
 			// row of the same table, or one that ended with the holder the
 			// step let go, does not satisfy it. A lock taken on a row held
 			// FOR SHARE before its turn would hide behind the holder's, and
@@ -140,11 +152,25 @@ func TestEachLockOfADeactivationIsItsStrength(t *testing.T) {
 					shared = slices.DeleteFunc(shared, func(name string) bool { return name == step.frees })
 				}
 				took = append(took, step.takes...)
-				pgtest.WaitForLockWaitBehind(t, w.pool, step.behind.Conn().PgConn(), 5*time.Second)
+				identity.waiting(t, w.pool, step.behind)
+				if identity.xid != "" {
+					owners[identity.xid] = "target"
+				}
+				if step.waitsFor == "Lab" {
+					probe, collect := observedTrim(t, w.pool, func() {
+						for _, tx := range []pgx.Tx{holdsAccount, holdsBeta, holdsKappas, holdsDeltas, holdsMembership, holdsLab, holdsDocs} {
+							requestRelease(t, tx)
+						}
+					})
+					collectTrim = collect
+					requestBlocked(t, w.pool, probe, identity.pid, "projects")
+				}
 				if got, want := locks(), state(took, shared); got != want {
 					t.Errorf("the deactivation waiting for %s:\n%s\nwant\n%s", step.waitsFor, got, want)
 				}
+				identity.waiting(t, w.pool, step.behind)
 			}
+			t.Logf("seven full lock-state stages completed in %v", time.Since(started))
 			if err := holdsDocs.Rollback(context.Background()); err != nil {
 				t.Fatal(err)
 			}
@@ -152,6 +178,7 @@ func TestEachLockOfADeactivationIsItsStrength(t *testing.T) {
 			if got := answer(); got != "" {
 				t.Fatalf("the deactivation = %q, want it done", got)
 			}
+			collectTrim()
 			moment, _ := rowJSON(t, w.pool, "workspace_member_invites", w.bobsDeclined)["deleted_at"].(string)
 			at, err := time.Parse(time.RFC3339Nano, moment)
 			for _, last := range []struct {

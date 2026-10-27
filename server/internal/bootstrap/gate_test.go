@@ -167,8 +167,8 @@ func (e endingIn) WithinTx(ctx context.Context, fn func(ctx context.Context) err
 // alice's change is refused at the lock timeout, well before the
 // request's. Once the row is free, a change and a creation go through.
 func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
-	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Second, MaxQueue: 1},
+	w := newObservedIssueWorldWith(t, func(cfg *config.Config) {
+		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, TrimVersionsInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Second, MaxQueue: 1},
 			WriteLockTimeout: 3 * time.Second}
 	})
 	item := w.newWorkItem(t)
@@ -185,8 +185,9 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 
 	held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
 	start := time.Now()
+	changeProbe := w.observe(change)
 	changed := sendInBackground(change)
-	pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
+	requestBlocked(t, w.pool, changeProbe, held.Conn().PgConn().PID(), "projects")
 	sent := time.Now()
 	pending := []<-chan answer{sendInBackground(creations[0]), sendInBackground(creations[1])}
 	var after []time.Duration
@@ -259,8 +260,8 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 // the writes the gate refused. That a write across projects gives back
 // each place it took is TestAWriteAcrossProjectsGivesBackEachPlaceItTook.
 func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
-	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
+	w := newObservedIssueWorldWith(t, func(cfg *config.Config) {
+		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, TrimVersionsInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
 			WriteLockTimeout: 3 * time.Second}
 	})
 	item, archived := w.newWorkItem(t), w.doneWorkItem(t)
@@ -301,6 +302,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["alice"], fmt.Appendf(nil, `{"name":"Mend %d"}`, changes))
 		w.contract.CheckRequest(t, change)
 		held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
+		changeProbe := w.observe(change)
 		changed := sendInBackground(change)
 		defer func() {
 			release(t, held)
@@ -312,7 +314,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 				t.Errorf("alice's change = %d %s, want 200 once Web's row is free", a.res.StatusCode, a.body)
 			}
 		}()
-		pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
+		requestBlocked(t, w.pool, changeProbe, held.Conn().PgConn().PID(), "projects")
 		check()
 	}
 	for _, write := range writes {
@@ -400,13 +402,8 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 // Once the row is free, a change and a creation go through.
 func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
 	cfg := config.Config{Server: config.ServerConfig{RequestTimeout: 3 * time.Second}, Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: config.IssueConfig{
-		AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: 10 * time.Second, MaxQueue: 1}, WriteLockTimeout: 2 * time.Second}}
-	w := newIssueWorldWith(t, func(c *config.Config) { c.Server.RequestTimeout = 3 * time.Second; c.Issue = cfg.Issue })
-	// The full app and its jobs stay live. Only these two observed requests
-	// use the marked-query pool; both share the same real write gate.
-	pool := requestPool(t, w.pool)
-	writeGate := newWriteGate(cfg.Issue.WriteGate)
-	route := observedIssueRoute(t, pool, busyTx{tx: newIssueJobTx(pool, cfg)}, cfg, writeGate)
+		AutoArchiveInterval: 24 * time.Hour, TrimVersionsInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: 10 * time.Second, MaxQueue: 1}, WriteLockTimeout: 2 * time.Second}}
+	w := newObservedIssueWorldWith(t, func(c *config.Config) { c.Server.RequestTimeout = 3 * time.Second; c.Issue = cfg.Issue })
 	item := w.newWorkItem(t)
 	path := "/api/v0/issues/" + item.String()
 	change := newRequest(t, http.MethodPatch, w.base+path, w.tokens["bob"], []byte(`{"name":"Mend"}`))
@@ -415,13 +412,10 @@ func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
 	w.contract.CheckRequest(t, create)
 
 	labels := lockedTables(t, w.pool, "issue_labels", "ACCESS EXCLUSIVE")
-	var changed, created exchange
-	changeProbe, createProbe := &requestProbe{}, &requestProbe{}
+	changeProbe, createProbe := w.observe(change), w.observe(create)
 	sent := time.Now()
-	collectChange := requestBackground(t, func() error {
-		changed.req, changed.rec = route.sendContext(changeProbe.context(t.Context()), http.MethodPatch, path, w.ids["bob"], `{"name":"Mend"}`)
-		return nil
-	}, func() { requestRelease(t, labels) })
+	changed := sendInBackground(change)
+	defer requestRelease(t, labels)
 	requestTableBlocked(t, w.pool, changeProbe, labels.Conn().PgConn().PID(), "issue_labels")
 	// This offset is part of the timeout contract, after observing the actual
 	// precheck wait: alice's 2s lock timeout must outlast bob's 3s request.
@@ -429,36 +423,31 @@ func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
 	defer timer.Stop()
 	<-timer.C
 	row := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR UPDATE", w.web)
-	collectCreate := requestBackground(t, func() error {
-		created.req, created.rec = route.sendContext(createProbe.context(t.Context()), http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", w.ids["alice"], `{"name":"Fix"}`)
-		return nil
-	}, func() { requestRelease(t, row) })
+	created := sendInBackground(create)
+	defer requestRelease(t, row)
 	requestBlocked(t, w.pool, createProbe, row.Conn().PgConn().PID(), "projects")
 	release(t, labels)
-	collectChange()
+	changedAnswer := receiveWithin(t, changed, 5*time.Second, "bob change")
+	if changedAnswer.err != nil {
+		t.Fatal(changedAnswer.err)
+	}
 	if took := time.Since(sent); took < 3*time.Second || took >= 4*time.Second {
 		t.Errorf("bob's change answered after %v; want at its request's deadline, 3s, before alice's creation left the gate", took)
 	}
-	w.wantBusy(t, "bob's change", changed.req, changed.rec.Result(), changed.rec.Body.Bytes())
-	collectCreate()
+	w.wantBusy(t, "bob's change", change, changedAnswer.res, changedAnswer.body)
+	createdAnswer := receiveWithin(t, created, 5*time.Second, "alice create")
+	if createdAnswer.err != nil {
+		t.Fatal(createdAnswer.err)
+	}
 	if took := time.Since(sent); took < 4*time.Second {
 		t.Errorf("alice's creation answered %v after bob's change was sent; want at its lock timeout, 4s", took)
 	}
-	w.wantBusy(t, "alice's creation", created.req, created.rec.Result(), created.rec.Body.Bytes())
+	w.wantBusy(t, "alice's creation", create, createdAnswer.res, createdAnswer.body)
 	if changeProbe.pid.Load() != 0 || createProbe.pid.Load() != 0 {
 		t.Fatal("finished gate request retained a query PID")
 	}
 
 	release(t, row)
-	// Check the observed route's own gate has released its place, then keep
-	// the original full-app/JWT recovery requests as well.
-	recovery, cancel := context.WithTimeout(t.Context(), cfg.Server.RequestTimeout)
-	defer cancel()
-	leave, err := writeGate.Enter(recovery, w.web)
-	if err != nil {
-		t.Fatal("observed requests did not release their gate", err)
-	}
-	leave()
 	w.send(t, "bob", http.MethodPatch, path, `{"name":"Mend"}`, http.StatusOK)
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", `{"name":"Fix"}`, http.StatusCreated)
 }

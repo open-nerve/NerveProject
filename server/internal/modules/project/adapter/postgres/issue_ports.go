@@ -194,3 +194,12 @@ func (s *Store) ShareIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uu
 	}
 	return out, nil
 }
+
+// AllUndeletedIssueProjectIDs includes archived projects, without policy or membership filters.
+func (s *Store) AllUndeletedIssueProjectIDs(ctx context.Context) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).AllUndeletedIssueProjectIDs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read all undeleted projects for issue retention: %w", err)
+	}
+	return ids, nil
+}

@@ -121,6 +121,7 @@ func TestTheRuntimeRoleServesWithTheGrantsFile(t *testing.T) {
 	var logs lockedBuffer
 	cfg := testConfig(t, roles.serverURL, false)
 	cfg.Issue.AutoArchiveInterval = time.Second
+	cfg.Issue.TrimVersionsInterval = time.Second
 	base := startAppLogging(t, cfg, migrations.FS(), slog.New(slog.NewTextHandler(&logs, nil)))
 
 	if status, p := getReadyz(t, base); status != 200 {
@@ -267,7 +268,9 @@ func assertRuntimeAutoArchive(t *testing.T, roles splitRoles, base string, logs 
 			t.Fatalf("runtime auto archive as %s: archived=%v activities=%d NULL actors=%d; logs:\n%s", roles.serverName, archived, activities, nullActors, logs.String())
 		}
 	}
-	waitForCompletedKinds(t, roles.owner, map[string]int{"identity.cleanup_expired_sessions": 1, "issue.auto_archive": 1}, logs)
+	versions := seedTrimVersions(t, roles.owner, id, "")
+	awaitTrimVersions(t, roles.owner, map[uuid.UUID][]uuid.UUID{id: versions[3:]})
+	waitForCompletedKinds(t, roles.owner, map[string]int{"identity.cleanup_expired_sessions": 1, "issue.auto_archive": 1, "cleanup.purge_deleted": 1, "issue.trim_description_versions": 1}, logs)
 }
 
 // The workspace id must reach the issue cascade even when no project can carry

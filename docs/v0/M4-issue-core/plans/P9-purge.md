@@ -117,6 +117,8 @@ make e2e
 
 **Files：** 新I/app/trim_versions.go、trim_versions_test.go、adapter/postgres/trim_versions.go、trim_versions_test.go、queries/trim_versions.sql、adapter/river/trim_versions.go、trim_versions_test.go；改I/module.go、module_jobs.go；P/module.go、adapter/postgres/issue_ports.go、queries/issue_ports.sql；B/ports.go、app.go、all_periodic_jobs_test.go；新B/issue_trim_jobs_test.go；生成对应gen。预计650–1100行。
 
+**T4 观测接续（root 局部裁定）：** 新 B/app_pool_test.go、request_app_test.go、deactivation_probe_test.go、row_lock_probe_test.go；扩既有 request_locks_test.go、app/issueWorld 启动委托及 gate/across/pool/P5/relation/draft/手动 auto_archive 观测点。默认生产 pool 构造、签名顺序、清理及守卫保持；以真实 RequestID 活动序号/PID 替换宽 waiter，原网络/JWT/共享池/200burst/全锁表/时限不减。锁升级 probe 先通过 PostgreSQL 18.6 的 tuple 队列、fixture 遮挡、其他 holder、过强锁反例，再迁移；保留真实红绿和清理失败原件。新增测试职责随本任务审查。
+
 **Interfaces：** spec§2.4 RetentionProjects.UndeletedProjectIDs、P.AllUndeletedIssueProjectIDs、DescriptionVersionTrimmer.TrimDescriptionVersions、TrimVersionsDeps/New/Execute、TrimVersionsJob。JobTx是既有原始PG错误事务，不能套busyTx。
 
 - [ ] **测试：** 新`TestTrimDescriptionVersionsKeepsLatestTwenty`为同issue建23活版+软删版，last_saved_at与created_at反序、21/20边界相同时用反序id；断言剩余精确id集合20，soft-deleted原样。归档project/issue也删到20；已删project、已删issue、软删version不碰。新app`TestTrimVersionsCommitsPerProject`第一项目成功、第二失败，只返回第一计数；等待Lock后found=false跳过；Events/Clock没有依赖。

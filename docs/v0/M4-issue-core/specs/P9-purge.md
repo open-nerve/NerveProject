@@ -136,6 +136,8 @@ P 的 `IssueProjects` 增 `AllUndeletedIssueProjectIDs(context.Context)([]uuid.U
 
 I/adapter/river 新 `TrimVersionsKind="issue.trim_description_versions"`、`TrimVersionsArgs{}`、`TrimVersionsUseCase.Execute(context.Context)(int,error)`、`NewTrimVersionsWorker(TrimVersionsUseCase)`、`TrimVersionsJob(TrimVersionsUseCase,time.Duration) jobs.Job`；结构沿 AutoArchive，periodic/RunOnStart=true。I/Deps 增 TrimVersionsInterval；Module 在构造时建出用例，Jobs 在 T5 即登记。四种 periodic 的实际运行/间隔/队列守卫同期扩展。
 
+T5 测试观测接续：bootstrap 的 `newApp` 以私有 `newAppWithPoolFactory` 委托单一组合体，默认传 `postgres.NewPool`，签名加载/MAC→pool 顺序及失败/正常关闭所有权不变；仅测试工厂在新建 pool 前装 RequestID QueryTracer，不增公开接口或平台配置。`request_app_test.go` 与既有 requestProbe 共用 PID/查询序号观测，保留 full-app 网络、JWT、同池 gate/workers 及200并发原契约。`deactivation_probe_test.go` 以 users 独占起点固定事务；每行短 probe 从 KEY SHARE 逐级升级，只认目标/fixture 的实际 transactionid 冲突，fixture SHARE 遮挡不冒称排除目标弱锁，保留全表状态、逐阶段释放和原期限。`row_lock_probe_test.go` 保存 tuple 排队/实际 XID 的反例证明；未知冲突不能填默认结果。
+
 ### 2.5 关联归属与候选进度
 
 P 的 `IssueProjects` 新 `DeletedIssueProjects(context.Context,[]uuid.UUID)(map[uuid.UUID]time.Time,error)`；I/app.ProjectGate 新 `DeletedAt(context.Context,[]uuid.UUID)(map[uuid.UUID]time.Time,error)`；B/issueProjects 显式转换。不加项目锁，只返回已软删项目及真实 deleted_at；空输入返回空 map，错误原样返回。缺项不是“物理删除时间”，不能合成时间。已锁住的有效 relation 的父链受 NOT NULL CASCADE 保护；父清理已完成则候选不存在，并发父清理按§2.9处理。

@@ -82,3 +82,9 @@ SELECT id, workspace_id FROM projects
 WHERE id = ANY(sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL
 ORDER BY id
 FOR SHARE;
+
+-- name: AllUndeletedIssueProjectIDs :many
+-- Retention includes archived projects, without policy or membership filters.
+SELECT id FROM projects
+WHERE deleted_at IS NULL
+ORDER BY id;

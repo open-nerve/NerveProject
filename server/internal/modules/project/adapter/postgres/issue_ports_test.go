@@ -199,3 +199,23 @@ func TestIssueMentionMembers(t *testing.T) {
 		}
 	}
 }
+
+// Retention has no policy, archival or membership filter, and spans workspaces.
+func TestTrimVersionsProjectDirectory(t *testing.T) {
+	s, pool := newStore(t)
+	actor := newAccount(t, pool, "retention@corp.com")
+	a := newWorkspace(t, pool, "a")
+	b := newWorkspace(t, pool, "b")
+	live := newProject(t, s, a, "Live", "LIVE", actor)
+	archived := newProject(t, s, b, "Archived", "ARCH", actor)
+	gone := newProject(t, s, a, "Gone", "GONE", actor)
+	exec(t, pool, "UPDATE projects SET archived_at=$2 WHERE id=$1", archived, now)
+	exec(t, pool, "UPDATE projects SET deleted_at=$2 WHERE id=$1", gone, now)
+	exec(t, pool, "UPDATE project_members SET is_active=false WHERE project_id IN ($1,$2)", live, archived)
+	want := []uuid.UUID{live, archived}
+	slices.SortFunc(want, uuid.UUID.Compare)
+	got, err := s.AllUndeletedIssueProjectIDs(context.Background())
+	if err != nil || !slices.Equal(got, want) {
+		t.Fatalf("directory=%v,%v want %v", got, err, want)
+	}
+}

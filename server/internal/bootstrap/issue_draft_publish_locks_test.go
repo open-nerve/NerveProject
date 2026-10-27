@@ -3,8 +3,6 @@ package bootstrap
 import (
 	"testing"
 	"time"
-
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 // Every publication directory row proves its W(S)/P(N)/D(U) lock shape
@@ -56,15 +54,19 @@ func (row draftWriteLock) checkPublishLocks(t *testing.T, w issueWorld) {
 // Publication must read the post-wait payload. PATCH already holds P(S) and
 // is paused at D(U); publish prechecks Old, waits at P(N), then creates New.
 func TestDraftPublishUsesPayloadAfterPatchWait(t *testing.T) {
-	w := newIssueWorld(t)
+	w := newObservedIssueWorld(t)
 	d := createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Old"}}`)
 	held := holding(t, w.pool, "SELECT 1 FROM draft_issues WHERE id=$1 FOR UPDATE", d.ID)
 	patch := newRequest(t, "PATCH", w.base+draftPath(d.ID), w.tokens["alice"], []byte(`{"payload":{"name":"Locked new"}}`))
+	patchProbe := w.observe(patch)
+	patchProbe.waitTimeout = 10 * time.Second
 	patched := sendInBackground(patch)
-	pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 10*time.Second)
+	patchPID := requestBlocked(t, w.pool, patchProbe, held.Conn().PgConn().PID(), "draft_issues")
 	req := newRequest(t, "POST", w.base+publishPath(d.ID), w.tokens["alice"], nil)
+	publishProbe := w.observe(req)
+	publishProbe.waitTimeout = 10 * time.Second
 	published := sendInBackground(req)
-	pgtest.WaitForLockWaitOn(t, w.pool, "projects", 10*time.Second)
+	requestBlocked(t, w.pool, publishProbe, patchPID, "projects")
 	release(t, held)
 	a := receiveWithin(t, patched, 10*time.Second, "patch")
 	if a.err != nil || a.res.StatusCode != 200 {

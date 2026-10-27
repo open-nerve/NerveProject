@@ -277,3 +277,8 @@ func (d issueWorkspaces) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (
 	_, found, err := d.directory.ShareWorkspaceByID(ctx, id)
 	return found, err
 }
+
+// UndeletedProjectIDs bridges the complete project directory for retention.
+func (p issueProjects) UndeletedProjectIDs(ctx context.Context) ([]uuid.UUID, error) {
+	return p.projects.AllUndeletedIssueProjectIDs(ctx)
+}

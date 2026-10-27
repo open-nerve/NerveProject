@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -17,6 +18,7 @@ import (
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -30,8 +32,13 @@ import (
 // the connection; these probes observe statement locks, not commit waits.
 type requestProbe struct {
 	shared.TxManager
-	pid    atomic.Uint32
-	before *gate
+	pid         atomic.Uint32
+	before      *gate
+	mu          sync.Mutex
+	sequence    uint64
+	active      uint64
+	id          string
+	waitTimeout time.Duration
 }
 
 func (d *requestProbe) WithinTx(ctx context.Context, fn func(context.Context) error) error {
@@ -58,7 +65,11 @@ func requestTx(pool *pgxpool.Pool) *requestProbe {
 // substitutes elapsed time for observing a PostgreSQL or gate boundary.
 func requestEventually(t *testing.T, description string, condition func(context.Context) bool) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	requestEventuallyWithin(t, description, 2*time.Second, condition)
+}
+func requestEventuallyWithin(t *testing.T, description string, timeout time.Duration, condition func(context.Context) bool) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	tick := time.NewTicker(time.Millisecond)
 	defer tick.Stop()
@@ -95,8 +106,13 @@ func requestWait(t *testing.T, pool *pgxpool.Pool, probe *requestProbe, holder u
 	var pid uint32
 	var blockers []int32
 	var query, locktype, relation string
-	requestEventually(t, "identified request lock wait", func(ctx context.Context) bool {
-		pid = probe.pid.Load()
+	var sequence uint64
+	timeout := probe.waitTimeout
+	if timeout == 0 {
+		timeout = 2 * time.Second
+	}
+	requestEventuallyWithin(t, "identified request lock wait", timeout, func(ctx context.Context) bool {
+		pid, sequence = probe.snapshot()
 		if pid == 0 {
 			return false
 		}
@@ -110,11 +126,20 @@ func requestWait(t *testing.T, pool *pgxpool.Pool, probe *requestProbe, holder u
 		if err != nil {
 			t.Fatal(err)
 		}
-		return waits && locktype != "" && probe.pid.Load() == pid
+		afterPID, afterSequence := probe.snapshot()
+		return waits && locktype != "" && afterPID == pid && afterSequence == sequence
 	})
 	t.Logf("requestPID=%d pg_blocking_pids=%v holderPID=%d wait=%s relation=%s SQL=%s", pid, blockers, holder, locktype, relation, strings.Join(strings.Fields(query), " "))
 	if !slices.Contains(blockers, int32(holder)) {
-		t.Fatalf("request PID %d blocked by %v, want holder %d", pid, blockers, holder)
+		chain := requestBlockerChain(t, pool, pid)
+		t.Logf("requestPID=%d complete blocker chain=%v fixturePID=%d", pid, chain, holder)
+		if !slices.Contains(chain, int32(holder)) {
+			t.Fatalf("request PID %d blocked through %v, want fixture %d", pid, chain, holder)
+		}
+		after, seq := probe.snapshot()
+		if after != pid || seq != sequence {
+			t.Fatal("request query changed during blocker-chain inspection")
+		}
 	}
 	if relationOnly || locktype == "relation" {
 		if locktype != "relation" || relation != table {
@@ -133,17 +158,43 @@ func requestWait(t *testing.T, pool *pgxpool.Pool, probe *requestProbe, holder u
 // Prechecks run before BEGIN. The context marker follows only this request;
 // QueryEnd clears the active PID before the pool can reuse its connection.
 type requestProbeKey struct{}
-type requestQueryTracer struct{}
+type requestQueryTracer struct{ requests *requestQueries }
+type requestQueryIdentity struct {
+	probe    *requestProbe
+	sequence uint64
+}
+type requestQueryIdentityKey struct{}
 
-func (requestQueryTracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, _ pgx.TraceQueryStartData) context.Context {
-	if p, ok := ctx.Value(requestProbeKey{}).(*requestProbe); ok {
-		p.pid.Store(conn.PgConn().PID())
+func (p *requestProbe) snapshot() (uint32, uint64) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.pid.Load(), p.active
+}
+func (tr requestQueryTracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, _ pgx.TraceQueryStartData) context.Context {
+	p, _ := ctx.Value(requestProbeKey{}).(*requestProbe)
+	if p == nil && tr.requests != nil {
+		p = tr.requests.lookup(httpserver.RequestID(ctx))
 	}
-	return ctx
+	if p == nil {
+		return ctx
+	}
+	p.mu.Lock()
+	p.sequence++
+	p.active = p.sequence
+	p.pid.Store(conn.PgConn().PID())
+	identity := requestQueryIdentity{p, p.active}
+	p.mu.Unlock()
+	return context.WithValue(ctx, requestQueryIdentityKey{}, identity)
 }
 func (requestQueryTracer) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, _ pgx.TraceQueryEndData) {
-	if p, ok := ctx.Value(requestProbeKey{}).(*requestProbe); ok {
-		p.pid.Store(0)
+	if identity, ok := ctx.Value(requestQueryIdentityKey{}).(requestQueryIdentity); ok {
+		p := identity.probe
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		if p.active == identity.sequence {
+			p.pid.Store(0)
+			p.active = 0
+		}
 	}
 }
 func (p *requestProbe) context(ctx context.Context) context.Context {
@@ -218,4 +269,56 @@ func requestWrittenTables(t *testing.T, pool *pgxpool.Pool, pid uint32) []string
 		t.Fatal(err)
 	}
 	return tables
+}
+
+// A waiting worker can own the tuple queue in front of the identified request.
+// This proves blocker reachability only, never ownership of a business row lock.
+// Follow live transactions in this database, checking their identities and edges
+// again at the end. A visited set handles cycles; a size/deadline bound rejects
+// an unexpectedly large or unstable graph instead of inferring missing edges.
+func requestBlockerChain(t *testing.T, pool *pgxpool.Pool, pid uint32) []int32 {
+	t.Helper()
+	type backend struct {
+		born, started time.Time
+		blockers      []int32
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	observe := func(pid int32) backend {
+		var b backend
+		if err := pool.QueryRow(ctx, `SELECT backend_start,xact_start,pg_blocking_pids(pid)
+   FROM pg_stat_activity WHERE pid=$1 AND datname=current_database() AND xact_start IS NOT NULL`, pid).Scan(&b.born, &b.started, &b.blockers); err != nil {
+			t.Fatalf("blocker PID %d no longer has a live transaction in this database: %v", pid, err)
+		}
+		slices.Sort(b.blockers)
+		return b
+	}
+	seen := map[int32]backend{}
+	queue := []int32{int32(pid)}
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		if _, ok := seen[current]; ok {
+			continue
+		}
+		if len(seen) == 64 {
+			t.Fatalf("request %d blocker graph exceeded 64 live transactions: %v", pid, seen)
+		}
+		b := observe(current)
+		seen[current] = b
+		queue = append(queue, b.blockers...)
+	}
+	var chain []int32
+	edges := map[int32][]int32{}
+	for id, b := range seen {
+		after := observe(id)
+		if b.born != after.born || b.started != after.started || !slices.Equal(b.blockers, after.blockers) {
+			t.Fatalf("blocker PID %d changed transaction or edges during observation: before=%+v after=%+v", id, b, after)
+		}
+		chain = append(chain, id)
+		edges[id] = b.blockers
+	}
+	slices.Sort(chain)
+	t.Logf("requestPID=%d live same-database blocker edges=%v", pid, edges)
+	return chain
 }

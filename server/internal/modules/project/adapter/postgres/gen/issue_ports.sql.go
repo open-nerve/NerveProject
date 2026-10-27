@@ -50,6 +50,33 @@ func (q *Queries) ActiveRoles(ctx context.Context, arg ActiveRolesParams) ([]Act
 	return items, nil
 }
 
+const allUndeletedIssueProjectIDs = `-- name: AllUndeletedIssueProjectIDs :many
+SELECT id FROM projects
+WHERE deleted_at IS NULL
+ORDER BY id
+`
+
+// Retention includes archived projects, without policy or membership filters.
+func (q *Queries) AllUndeletedIssueProjectIDs(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, allUndeletedIssueProjectIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const issueLabels = `-- name: IssueLabels :many
 SELECT id, name
 FROM labels

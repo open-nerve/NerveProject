@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 // A write across projects waits max_wait in all at their gates, not
@@ -30,8 +29,8 @@ import (
 // so does her relation.
 func TestAWriteAcrossProjectsWaitsMaxWaitInAll(t *testing.T) {
 	const maxWait, freed = 2 * time.Second, 1500 * time.Millisecond
-	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: maxWait, MaxQueue: 1},
+	w := newObservedIssueWorldWith(t, func(cfg *config.Config) {
+		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, TrimVersionsInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: maxWait, MaxQueue: 1},
 			WriteLockTimeout: 5 * time.Second}
 	})
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
@@ -42,8 +41,9 @@ func TestAWriteAcrossProjectsWaitsMaxWaitInAll(t *testing.T) {
 		change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+held.item.String(), w.tokens["alice"], []byte(`{"name":"Mend"}`))
 		w.contract.CheckRequest(t, change)
 		row := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", held.project)
+		probe := w.observe(change)
 		changed = append(changed, sendInBackground(change))
-		pgtest.WaitForLockWaitBehind(t, w.pool, row.Conn().PgConn(), 5*time.Second)
+		requestBlocked(t, w.pool, probe, row.Conn().PgConn().PID(), "projects")
 		rows = append(rows, row)
 	}
 	relate := newRequest(t, http.MethodPost, w.base+relationsOf(near), w.tokens["alice"], []byte(relating("relates_to", far)))
@@ -83,8 +83,8 @@ func TestAWriteAcrossProjectsWaitsMaxWaitInAll(t *testing.T) {
 // Ops' gate: her change of the work item of Web then goes through. Once
 // Ops' row is free, her change of Far goes through.
 func TestAWriteAcrossProjectsGivesBackEachPlaceItTook(t *testing.T) {
-	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
+	w := newObservedIssueWorldWith(t, func(cfg *config.Config) {
+		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, TrimVersionsInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
 			WriteLockTimeout: 3 * time.Second}
 	})
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
@@ -97,8 +97,9 @@ func TestAWriteAcrossProjectsGivesBackEachPlaceItTook(t *testing.T) {
 	across := newRequest(t, http.MethodPost, w.base+relationsOf(item), w.tokens["alice"], []byte(relating("relates_to", far)))
 	w.contract.CheckRequest(t, across)
 	held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", ops)
+	probe := w.observe(mend)
 	mended := sendInBackground(mend)
-	pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
+	requestBlocked(t, w.pool, probe, held.Conn().PgConn().PID(), "projects")
 	begun := time.Now()
 	a := receiveWithin(t, sendInBackground(across), 5*time.Second, "answer to her relation of the work item of Web to Far")
 	if a.err != nil {

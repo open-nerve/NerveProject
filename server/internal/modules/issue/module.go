@@ -92,6 +92,7 @@ func Provide(pool *pgxpool.Pool) Provided {
 // catalogs.
 // project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
 type ProjectPorts interface {
+	app.RetentionProjects
 	app.ProjectGate
 	app.DraftProjects
 	app.Sequences
@@ -127,9 +128,10 @@ type Deps struct {
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
 	// JobTx retains PostgreSQL errors for River retries, with the same lock timeout.
-	JobTx               shared.TxManager
-	ArchivePolicies     app.ArchivePolicies
-	AutoArchiveInterval time.Duration
+	JobTx                shared.TxManager
+	ArchivePolicies      app.ArchivePolicies
+	AutoArchiveInterval  time.Duration
+	TrimVersionsInterval time.Duration
 	// ReadTx supplies independent, read-only repeatable-read transactions for
 	// collaboration lists. The first target read, authorization, directories
 	// and list queries must all use its context; never call such a list from
@@ -154,10 +156,12 @@ type Deps struct {
 
 // Module is the wired issue module.
 type Module struct {
-	uc                  httpadapter.UseCases
-	autoArchive         *app.AutoArchive
-	crawlLink           *app.CrawlLink
-	autoArchiveInterval time.Duration
+	uc                   httpadapter.UseCases
+	trimVersions         *app.TrimVersions
+	trimVersionsInterval time.Duration
+	autoArchive          *app.AutoArchive
+	crawlLink            *app.CrawlLink
+	autoArchiveInterval  time.Duration
 }
 
 // New wires the module's use cases and its HTTP side from d; nothing is
@@ -173,53 +177,56 @@ func New(d Deps) *Module {
 		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
 		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
 	})
-	return &Module{crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: crawler.New(d.Outbound, d.Logger), Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval, uc: httpadapter.UseCases{
-		SearchIssues:            app.NewSearchIssues(app.SearchIssuesDeps{ReadTx: d.ReadTx, Authorizer: d.Authorizer, Workspaces: d.Workspaces, Projects: d.Projects, Identifiers: d.Projects, Issues: store, Locks: locks, Rows: store}),
-		PublishDraft:            app.NewPublishDraft(app.PublishDraftDeps{Locks: draftLocks, Decoder: httpadapter.IssueCreatePayloadDecoder{}, Creation: creation, Drafts: store}),
-		ListDrafts:              app.NewListDrafts(app.ListDraftsDeps{ReadTx: d.ReadTx, Locks: draftLocks, Workspaces: d.Workspaces, Projects: d.Projects, Drafts: store}),
-		GetDraft:                app.NewGetDraft(app.GetDraftDeps{ReadTx: d.ReadTx, Locks: draftLocks}),
-		CreateDraft:             app.NewCreateDraft(app.CreateDraftDeps{Locks: draftLocks, Workspaces: d.Workspaces, Drafts: store, Clock: d.Clock}),
-		UpdateDraft:             app.NewUpdateDraft(app.UpdateDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
-		DeleteDraft:             app.NewDeleteDraft(app.DeleteDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
-		UpdateIssueLink:         app.NewUpdateIssueLink(app.UpdateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
-		DeleteIssueLink:         app.NewDeleteIssueLink(app.DeleteIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
-		CreateIssueLink:         app.NewCreateIssueLink(app.CreateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
-		ListIssueLinks:          app.NewListIssueLinks(app.ListIssueLinksDeps{Locks: locks, Links: store, ReadTx: d.ReadTx}),
-		ListMemberIssues:        app.NewListMemberIssues(app.ListMemberIssuesDeps{ReadTx: d.ReadTx, Authorizer: d.Authorizer, Workspaces: d.Workspaces, Members: d.Members, Projects: d.Projects, Listing: listing}),
-		ListIssues:              app.NewListIssues(app.ListIssuesDeps{ReadTx: d.ReadTx, Locks: locks, Listing: listing}),
-		ListIssueActivities:     app.NewListIssueActivities(app.ListIssueActivitiesDeps{Locks: locks, Activities: store, Projects: d.Projects, ReadTx: d.ReadTx}),
-		ListDescriptionVersions: app.NewListDescriptionVersions(app.ListDescriptionVersionsDeps{Locks: locks, Versions: store, ReadTx: d.ReadTx}),
-		GetDescriptionVersion:   app.NewGetDescriptionVersion(app.GetDescriptionVersionDeps{Locks: locks, Versions: store}),
-		AddCommentReaction:      app.NewAddCommentReaction(app.AddCommentReactionDeps{Events: d.Events, Locks: locks, Comments: store, Reactions: store, Clock: d.Clock}),
-		RemoveCommentReaction:   app.NewRemoveCommentReaction(app.RemoveCommentReactionDeps{Events: d.Events, Locks: locks, Comments: store, Reactions: store, Clock: d.Clock}),
-		AddIssueReaction:        app.NewAddIssueReaction(app.AddIssueReactionDeps{Events: d.Events, Locks: locks, Reactions: store, Clock: d.Clock}),
-		RemoveIssueReaction:     app.NewRemoveIssueReaction(app.RemoveIssueReactionDeps{Events: d.Events, Locks: locks, Reactions: store, Clock: d.Clock}),
-		ListIssueReactions:      app.NewListIssueReactions(app.ListIssueReactionsDeps{Locks: locks, Reactions: store, ReadTx: d.ReadTx}),
-		UpdateIssueComment:      app.NewUpdateIssueComment(app.UpdateIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
-		DeleteIssueComment:      app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Clock: d.Clock}),
-		CreateIssueComment:      app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
-		ListIssueComments:       app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
-		CreateIssue:             app.NewCreateIssue(app.CreateIssueDeps{Locks: locks, Creation: creation}),
-		GetIssue:                app.NewGetIssue(locks),
-		GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
-			Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store,
-		}),
-		UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{Events: d.Events,
-			Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
-		}),
-		DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Clock: d.Clock}),
-		ArchiveIssue:       app.NewArchiveIssue(archive),
-		UnarchiveIssue:     app.NewUnarchiveIssue(archive),
-		ListSubIssues:      app.NewListSubIssues(locks, store),
-		AddSubIssues:       app.NewAddSubIssues(app.AddSubIssuesDeps{Events: d.Events, Locks: locks, Issues: store, Clock: d.Clock}),
-		ListIssueRelations: app.NewListIssueRelations(app.ListIssueRelationsDeps{Locks: locks, Relations: store, Projects: d.Projects, ReadTx: d.ReadTx}),
-		CreateIssueRelations: app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{Events: d.Events,
-			Locks: locks, Relations: store, Clock: d.Clock,
-		}),
-		DeleteIssueRelation: app.NewDeleteIssueRelation(app.DeleteIssueRelationDeps{Events: d.Events,
-			Locks: locks, Relations: store, Clock: d.Clock,
-		}),
-	}}
+	return &Module{
+		trimVersions: app.NewTrimVersions(app.TrimVersionsDeps{Projects: d.Projects, Gate: d.Projects, Rows: store, Tx: d.JobTx}), trimVersionsInterval: d.TrimVersionsInterval,
+		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: crawler.New(d.Outbound, d.Logger), Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval,
+		uc: httpadapter.UseCases{
+			SearchIssues:            app.NewSearchIssues(app.SearchIssuesDeps{ReadTx: d.ReadTx, Authorizer: d.Authorizer, Workspaces: d.Workspaces, Projects: d.Projects, Identifiers: d.Projects, Issues: store, Locks: locks, Rows: store}),
+			PublishDraft:            app.NewPublishDraft(app.PublishDraftDeps{Locks: draftLocks, Decoder: httpadapter.IssueCreatePayloadDecoder{}, Creation: creation, Drafts: store}),
+			ListDrafts:              app.NewListDrafts(app.ListDraftsDeps{ReadTx: d.ReadTx, Locks: draftLocks, Workspaces: d.Workspaces, Projects: d.Projects, Drafts: store}),
+			GetDraft:                app.NewGetDraft(app.GetDraftDeps{ReadTx: d.ReadTx, Locks: draftLocks}),
+			CreateDraft:             app.NewCreateDraft(app.CreateDraftDeps{Locks: draftLocks, Workspaces: d.Workspaces, Drafts: store, Clock: d.Clock}),
+			UpdateDraft:             app.NewUpdateDraft(app.UpdateDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
+			DeleteDraft:             app.NewDeleteDraft(app.DeleteDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
+			UpdateIssueLink:         app.NewUpdateIssueLink(app.UpdateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
+			DeleteIssueLink:         app.NewDeleteIssueLink(app.DeleteIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
+			CreateIssueLink:         app.NewCreateIssueLink(app.CreateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
+			ListIssueLinks:          app.NewListIssueLinks(app.ListIssueLinksDeps{Locks: locks, Links: store, ReadTx: d.ReadTx}),
+			ListMemberIssues:        app.NewListMemberIssues(app.ListMemberIssuesDeps{ReadTx: d.ReadTx, Authorizer: d.Authorizer, Workspaces: d.Workspaces, Members: d.Members, Projects: d.Projects, Listing: listing}),
+			ListIssues:              app.NewListIssues(app.ListIssuesDeps{ReadTx: d.ReadTx, Locks: locks, Listing: listing}),
+			ListIssueActivities:     app.NewListIssueActivities(app.ListIssueActivitiesDeps{Locks: locks, Activities: store, Projects: d.Projects, ReadTx: d.ReadTx}),
+			ListDescriptionVersions: app.NewListDescriptionVersions(app.ListDescriptionVersionsDeps{Locks: locks, Versions: store, ReadTx: d.ReadTx}),
+			GetDescriptionVersion:   app.NewGetDescriptionVersion(app.GetDescriptionVersionDeps{Locks: locks, Versions: store}),
+			AddCommentReaction:      app.NewAddCommentReaction(app.AddCommentReactionDeps{Events: d.Events, Locks: locks, Comments: store, Reactions: store, Clock: d.Clock}),
+			RemoveCommentReaction:   app.NewRemoveCommentReaction(app.RemoveCommentReactionDeps{Events: d.Events, Locks: locks, Comments: store, Reactions: store, Clock: d.Clock}),
+			AddIssueReaction:        app.NewAddIssueReaction(app.AddIssueReactionDeps{Events: d.Events, Locks: locks, Reactions: store, Clock: d.Clock}),
+			RemoveIssueReaction:     app.NewRemoveIssueReaction(app.RemoveIssueReactionDeps{Events: d.Events, Locks: locks, Reactions: store, Clock: d.Clock}),
+			ListIssueReactions:      app.NewListIssueReactions(app.ListIssueReactionsDeps{Locks: locks, Reactions: store, ReadTx: d.ReadTx}),
+			UpdateIssueComment:      app.NewUpdateIssueComment(app.UpdateIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
+			DeleteIssueComment:      app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Clock: d.Clock}),
+			CreateIssueComment:      app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
+			ListIssueComments:       app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
+			CreateIssue:             app.NewCreateIssue(app.CreateIssueDeps{Locks: locks, Creation: creation}),
+			GetIssue:                app.NewGetIssue(locks),
+			GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
+				Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store,
+			}),
+			UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{Events: d.Events,
+				Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
+			}),
+			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Clock: d.Clock}),
+			ArchiveIssue:       app.NewArchiveIssue(archive),
+			UnarchiveIssue:     app.NewUnarchiveIssue(archive),
+			ListSubIssues:      app.NewListSubIssues(locks, store),
+			AddSubIssues:       app.NewAddSubIssues(app.AddSubIssuesDeps{Events: d.Events, Locks: locks, Issues: store, Clock: d.Clock}),
+			ListIssueRelations: app.NewListIssueRelations(app.ListIssueRelationsDeps{Locks: locks, Relations: store, Projects: d.Projects, ReadTx: d.ReadTx}),
+			CreateIssueRelations: app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{Events: d.Events,
+				Locks: locks, Relations: store, Clock: d.Clock,
+			}),
+			DeleteIssueRelation: app.NewDeleteIssueRelation(app.DeleteIssueRelationDeps{Events: d.Events,
+				Locks: locks, Relations: store, Clock: d.Clock,
+			}),
+		}}
 }
 
 // Register mounts the module's API on router behind api's middlewares.

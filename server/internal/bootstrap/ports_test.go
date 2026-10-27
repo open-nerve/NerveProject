@@ -452,3 +452,8 @@ func TestIssueDraftDirectoryPorts(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func (f *fakeIssueProjects) AllUndeletedIssueProjectIDs(ctx context.Context) ([]uuid.UUID, error) {
+	f.asked = append(f.asked, "all undeleted")
+	return []uuid.UUID{f.web}, f.err
+}

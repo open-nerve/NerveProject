@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 func TestP5ReadBoundary(t *testing.T) {
@@ -19,7 +18,7 @@ func TestP5ReadBoundary(t *testing.T) {
 // The production app, not a replacement gate, admits one blocked sort write.
 // A second legal write proves the gate is full while reads still finish.
 func p5ReadsThroughFullGate(t *testing.T) {
-	w := newIssueWorldWith(t, func(cfg *config.Config) {
+	w := newObservedIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Server.RequestTimeout = 30 * time.Second
 		cfg.Issue.WriteGate = config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute}
 		cfg.Issue.WriteLockTimeout = 25 * time.Second
@@ -33,6 +32,7 @@ func p5ReadsThroughFullGate(t *testing.T) {
 	defer cancel()
 	request := newRequest(t, http.MethodPatch, w.base+path, w.tokens["alice"], []byte(`{"sort_order":19}`)).WithContext(ctx)
 	w.contract.CheckRequest(t, request)
+	probe := w.observe(request)
 	written := sendInBackground(request)
 	collected := false
 	defer func() {
@@ -44,7 +44,7 @@ func p5ReadsThroughFullGate(t *testing.T) {
 			receiveWithin(t, written, 5*time.Second, "blocked sort cleanup")
 		}
 	}()
-	pgtest.WaitForLockWaitBehind(t, w.pool, row.Conn().PgConn(), 5*time.Second)
+	requestBlocked(t, w.pool, probe, row.Conn().PgConn().PID(), "projects")
 	second := newRequest(t, http.MethodPatch, w.base+path, w.tokens["bob"], []byte(`{"sort_order":37}`))
 	w.contract.CheckRequest(t, second)
 	res, body := send(t, second)
@@ -64,7 +64,7 @@ func p5ReadsThroughFullGate(t *testing.T) {
 		}
 	}
 	// The holder and first write must still be present after all reads.
-	pgtest.WaitForLockWaitBehind(t, w.pool, row.Conn().PgConn(), 5*time.Second)
+	requestBlocked(t, w.pool, probe, row.Conn().PgConn().PID(), "projects")
 	select {
 	case a := <-written:
 		collected = true

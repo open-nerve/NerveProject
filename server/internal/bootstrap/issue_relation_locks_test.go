@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -19,7 +18,7 @@ import (
 // without waiting for either. alice, who reaches Lab's, waits for it: a
 // write locks the projects it reaches; released, she relates them.
 func TestARelationLocksNoProjectItDoesNotReach(t *testing.T) {
-	w := newIssueWorld(t)
+	w := newObservedIssueWorld(t)
 	lab := createdProjectFrom(t, w.contract, w.base, w.tokens["alice"], "acme", `{"name":"Lab","identifier":"LAB","network":0}`)
 	pub := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Pub", "PUB")
 	labs, pubs := w.newWorkItemIn(t, lab, `{"name":"Lab's"}`), w.newWorkItemIn(t, pub, `{"name":"Pub's"}`)
@@ -30,6 +29,7 @@ func TestARelationLocksNoProjectItDoesNotReach(t *testing.T) {
 	sent := func(name, body string) (*http.Request, <-chan answer) {
 		req := newRequest(t, http.MethodPost, w.base+relationsOf(near), w.tokens[name], []byte(body))
 		w.contract.CheckRequest(t, req)
+		w.observe(req).waitTimeout = 10 * time.Second
 		return req, sendInBackground(req)
 	}
 	answered := func(name string, req *http.Request, ch <-chan answer) answer {
@@ -48,7 +48,7 @@ func TestARelationLocksNoProjectItDoesNotReach(t *testing.T) {
 	}
 
 	req, alices := sent("alice", relating("relates_to", labs))
-	pgtest.WaitForLockWaitBehind(t, w.pool, labHeld.Conn().PgConn(), 10*time.Second)
+	requestBlocked(t, w.pool, w.requests.lookup(req.Header.Get("X-Request-Id")), labHeld.Conn().PgConn().PID(), "projects")
 	release(t, labHeld)
 	if a := answered("alice", req, alices); a.res.StatusCode != http.StatusCreated {
 		t.Errorf("alice's relation = %d %s, want 201", a.res.StatusCode, a.body)
