@@ -165,6 +165,8 @@ T8 接线补充：bootstrap 的 `eventTypes()` 汇总 I/P/W 目录，用于既�
 
 T8 影响回归的局部测试修正：真实请求可能先合法等待其他事务持有的 P(N)，再到下游表夹具。请求锁探针采用“首次由本夹具阻塞的稳定观测”，同时核 backend/xact/query_start、实际 SQL、等待状态及 query tracer 序号；不按 expected SQL 过滤。全表夹具仍拒绝错误首表，下游夹具仍核 P(N) 强度及未提前写表。受控上游事务反例、错误首写/弱锁/强锁及旧 SQL 快照变异验证此观测修正；不改变生产锁协议，不归因历史瞬态 peer 身份。
 
+T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issue_description_version_page_lock_test.go` 的 lockVersionPage 共用新 `row_lock_fixture_acquisition_test.go` 的 test-only 单行获取：最多5秒且尊重更短 context，成功事务交回调用者持锁，失败独立有界回滚。setup 允许合法先占者；heldBy、lockOn、rowprobe 的 NOWAIT 性质探测不变。受控已知持有者复现原 NOWAIT 的55P03，并验证真实 removeProjectMember 等待后404及精确快照、取消/deadline/连接归还、零行/多行失败与持锁生存期；原顺序/强度矩阵及生产变异保留。未知历史持有者不归因于具体 worker。
+
 
 
 - [ ] **测试：** 新app`TestDeleteRowsCommitsEachBatch`核13表顺序、每批一个Tx、提交后推进、部分成功原错、重做不改旧戳；`TestDeleteRowsBudgetUsesRuntimeElapsed`业务At偏移±61d不影响45s预算；fake RuntimeNow在批边界越线且有候选Complete=false，无候选Complete=true；pending错误原样返回。新`TestDeletionRemainingUsesCurrentCursor`当前After过滤、后续表从头、完成表不重扫、关系只看候选、workspace只project_id NULL。

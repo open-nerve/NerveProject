@@ -16,17 +16,7 @@ import (
 // Acquisition waits, with a deadline, for any writer that got project N first.
 // Its transaction stays open for the caller's reads and must be released there.
 func lockVersionPage(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (pgx.Tx, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	tx, err := pool.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(ctx, "SELECT 1 FROM projects WHERE id=$1 FOR SHARE", id); err != nil {
-		_ = tx.Rollback(context.Background())
-		return nil, err
-	}
-	return tx, nil
+	return acquireFixtureRow(ctx, pool, "SELECT 1 FROM projects WHERE id=$1 FOR SHARE", id)
 }
 
 // NOWAIT would fail with 55P03 when a legitimate project writer gets N first.

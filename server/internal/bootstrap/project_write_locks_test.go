@@ -181,20 +181,22 @@ func TestWritesOnAProjectAreEachShape(t *testing.T) {
 	}
 }
 
-// holding begins a transaction on pool that takes the one row lock sql
-// states, with args, NOWAIT, and keeps it open until the test rolls it
-// back, or ends. A lock another transaction left fails the test at once,
-// and so does a pool the holders before it took (pgtest.Soon).
+// holding acquires one fixture row within a bounded wait for an earlier owner.
+// The returned transaction keeps the lock until the caller or test cleanup releases it.
+// heldBy and lockOn below retain NOWAIT for lock-property assertions.
 func holding(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) pgx.Tx {
 	t.Helper()
-	tx, err := pool.Begin(pgtest.Soon(t))
+	tx, err := acquireFixtureRow(t.Context(), pool, sql, args...)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
-	if tag, err := tx.Exec(context.Background(), sql+" NOWAIT", args...); err != nil || tag.RowsAffected() != 1 {
-		t.Fatalf("%s NOWAIT: %v, %v; want one row held", sql, tag, err)
-	}
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	})
 	return tx
 }
 
