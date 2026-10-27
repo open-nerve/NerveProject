@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"uuid"
 
@@ -210,4 +213,93 @@ func searchSourceScope(t *testing.T) {
 	if !errors.Is(err, domain.ErrProjectNotFound) {
 		t.Fatal("project scope must precede source", err)
 	}
+}
+
+// The registered API must preserve raw multiplicity and domain field paths.
+// Dropping issue_id without for, decoding away a bad pair, or binding UUIDs
+// as transport types broadens searches or changes their public errors.
+func TestSearchHTTPContract(t *testing.T) {
+	w := newIssueWorld(t)
+	source := w.newWorkItemIn(t, w.web, `{"name":"Source"}`)
+	searchHTTPIDs(t, w, "alice", "q="+url.QueryEscape(strings.Repeat("界", 100)))
+	for _, query := range []string{"", "q=", "q=+%E3%80%80"} {
+		searchHTTPIDs(t, w, "alice", query, source)
+	}
+	for _, tc := range []struct {
+		query, field, code string
+		status             int
+	}{
+		{"cursor=x", "cursor", "not_allowed", 422}, {"order_by=name", "order_by", "not_allowed", 422},
+		{"unknown=x", "unknown", "not_allowed", 422}, {"limit=x", "limit", "invalid_format", 400},
+		{"limit=0", "limit", "out_of_range", 422}, {"limit=101", "limit", "out_of_range", 422},
+		{"project_id=", "project_id", "invalid_format", 422}, {"project_id=bad", "project_id", "invalid_format", 422},
+		{"issue_id=", "issue_id", "invalid_format", 422}, {"issue_id=bad", "issue_id", "invalid_format", 422},
+		{"issue_id=" + source.String(), "issue_id", "not_allowed", 422},
+		{"for=", "for", "not_allowed", 422}, {"for=wrong", "for", "not_allowed", 422},
+		{"for=parent", "issue_id", "required", 422}, {"q=%00", "q", "invalid_format", 422},
+		{"q=%FF", "q", "invalid_format", 422}, {"q=" + url.QueryEscape(strings.Repeat("界", 101)), "q", "too_long", 422},
+	} {
+		t.Run(tc.query, func(t *testing.T) { searchHTTPField(t, w, tc.query, tc.status, tc.field, tc.code) })
+	}
+	for key, value := range map[string]string{"q": "Source", "project_id": w.web.String(), "issue_id": source.String(), "for": "parent", "limit": "1"} {
+		t.Run("duplicate/"+key, func(t *testing.T) {
+			searchHTTPField(t, w, key+"="+value+"&"+key+"="+value, 422, key, "invalid_format")
+		})
+	}
+	for _, query := range []string{"q=%GG", "q=a&q=b&bad=%GG", "limit=1&limit=2&bad=%GG", "limit=x&bad=%GG"} {
+		t.Run("malformed/"+query, func(t *testing.T) { draftRequest(t, w, "alice", "GET", searchPath+"?"+query, "", 400) })
+	}
+	for _, field := range []string{"start_date", "target_date"} {
+		for _, tc := range []struct{ values, path, code string }{
+			{"none&" + field + "=2026-01-01", "[0]", "not_allowed"},
+			{"2026-01-01&" + field + "=none", "[1]", "not_allowed"},
+			{"none&" + field + "=none", "[0]", "not_allowed"}, {"2026-02-30", "[0]", "invalid_format"},
+		} {
+			searchHTTPField(t, w, field+"="+tc.values, 422, field+tc.path, tc.code)
+		}
+		listSeedSQL(t, w, "UPDATE issues SET "+field+"='2026-01-02' WHERE id=$1", source)
+		searchHTTPIDs(t, w, "alice", field+"=2026-01-01..&"+field+"=..2026-01-02", source)
+		searchHTTPIDs(t, w, "alice", field+"=2026-01-03..&"+field+"=..2026-01-02")
+	}
+	t.Run("source and project precedence", func(t *testing.T) {
+		other := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Other", "OTHER")
+		private := createdProjectFrom(t, w.contract, w.base, w.tokens["alice"], "acme", `{"name":"Private","identifier":"PRIVATE","network":0}`)
+		w.makeMember(t, "bob", other, shared.RoleMember)
+		w.makeMember(t, "walt", other, shared.RoleGuest)
+		w.makeMember(t, "walt", w.web, shared.RoleGuest)
+		archived := w.newWorkItem(t)
+		deleted := w.newWorkItem(t)
+		hiddenProject := w.newWorkItemIn(t, private, `{"name":"Private"}`)
+		listSeedSQL(t, w, "UPDATE issues SET archived_at=now() WHERE id=$1", archived)
+		w.send(t, "alice", "DELETE", "/api/v0/issues/"+deleted.String(), "", 204)
+		w.send(t, "alice", "POST", "/api/v0/workspaces", `{"name":"Foreign","slug":"foreign"}`, 201)
+		foreign := createdProject(t, w.contract, w.base, w.tokens["alice"], "foreign", "Foreign", "FOREIGN")
+		foreignIssue := w.newWorkItemIn(t, foreign, `{"name":"Foreign"}`)
+		missing := uuid.NewV7()
+		sourceQuery := func(id uuid.UUID) string {
+			return "for=parent&issue_id=" + id.String() + "&project_id=" + other.String()
+		}
+		absent := draftRequest(t, w, "bob", "GET", searchPath+"?"+sourceQuery(missing), "", 404)
+		if problemObject(t, absent)["code"] != "issue.not_found" {
+			t.Fatal(absent)
+		}
+		for _, id := range []uuid.UUID{hiddenProject, archived, deleted, foreignIssue} {
+			got := draftRequest(t, w, "bob", "GET", searchPath+"?"+sourceQuery(id), "", 404)
+			if !reflect.DeepEqual(problemObject(t, got), problemObject(t, absent)) {
+				t.Fatal(got, absent)
+			}
+		}
+		hidden := draftRequest(t, w, "walt", "GET", searchPath+"?"+sourceQuery(source), "", 404)
+		if !reflect.DeepEqual(problemObject(t, hidden), problemObject(t, absent)) {
+			t.Fatal(hidden, absent)
+		}
+		for _, kind := range []string{"parent", "sub_issue"} {
+			searchHTTPField(t, w, "for="+kind+"&issue_id="+source.String()+"&project_id="+other.String(), 422, "project_id", "not_allowed")
+		}
+		outside := draftRequest(t, w, "bob", "GET", searchPath+"?for=parent&issue_id="+source.String()+"&project_id="+private.String(), "", 404)
+		randomProject := draftRequest(t, w, "bob", "GET", searchPath+"?for=parent&issue_id="+source.String()+"&project_id="+uuid.NewV7().String(), "", 404)
+		if !reflect.DeepEqual(problemObject(t, outside), problemObject(t, randomProject)) || problemObject(t, outside)["code"] != "project.not_found" {
+			t.Fatal(outside, randomProject)
+		}
+	})
 }

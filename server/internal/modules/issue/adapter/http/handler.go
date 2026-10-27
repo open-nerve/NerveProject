@@ -134,8 +134,14 @@ type ListIssuesUseCase interface {
 	Execute(context.Context, uuid.UUID, map[string][]string) (app.IssueListPage, error)
 }
 
+// SearchIssuesUseCase searches the caller's ordinary visible projects.
+type SearchIssuesUseCase interface {
+	Execute(context.Context, string, map[string][]string) ([]domain.Issue, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	SearchIssues            SearchIssuesUseCase
 	PublishDraft            PublishDraftUseCase
 	ListDrafts              ListDraftsUseCase
 	GetDraft                GetDraftUseCase

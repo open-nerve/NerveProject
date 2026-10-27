@@ -1392,6 +1392,71 @@ paths:
           description: The label and the labels under it are deleted.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/issue-search:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: searchIssues
+      tags:
+        - issue
+      summary: Search visible work items
+      description: Workspace admins, members and guests search only their active memberships of undeleted, unarchived projects, retaining each project's OwnOnly scope. Work items are undeleted and unarchived. Unknown queries answer 422; repeated scalars answer 422 invalid_format. Malformed query encoding and noninteger limit answer 400. UUID, date and for values are validated as domain values with 422. The trimmed q is at most 100 Unicode characters. Empty q orders by updated_at then id descending. Nonempty q matches identifiers, sequence numbers or literal title substrings, ordered by match rank, similarity descending, created_at descending and id descending. Source visibility is checked before parent/sub_issue project conflicts. Results are a bounded collection without pagination or totals.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - workspace.not_found
+        - project.not_found
+        - issue.not_found
+        - forbidden
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: project_id
+          in: query
+          description: A project UUID intersecting the caller's visible project scope.
+          schema:
+            type: string
+        - name: for
+          in: query
+          description: parent, sub_issue or relation; requires issue_id when supplied.
+          schema:
+            type: string
+        - name: issue_id
+          in: query
+          description: A visible, live source issue UUID; requires for when supplied.
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          description: A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: target_date
+          in: query
+          description: A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueCollection'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspaces/{slug}/drafts:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -4012,6 +4077,137 @@ components:
         sort_order:
           description: The label's place among the project's labels, the lowest first.
           type: number
+    IssuePriority:
+      description: A work item's priority, from the most to the least urgent.
+      type: string
+      enum:
+        - urgent
+        - high
+        - medium
+        - low
+        - none
+    Issue:
+      description: A work item of a project, as a list shows it.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workspace_id
+        - project_id
+        - sequence_id
+        - name
+        - state_id
+        - priority
+        - start_date
+        - target_date
+        - parent_id
+        - sort_order
+        - completed_at
+        - archived_at
+        - assignee_ids
+        - label_ids
+        - sub_issues_count
+        - created_by_id
+        - updated_by_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        sequence_id:
+          description: Its number in its project, from 1; with the project's identifier, as in WEB-12.
+          type: integer
+        name:
+          type: string
+        state_id:
+          type: string
+          format: uuid
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        start_date:
+          description: The day it starts; null for none.
+          type:
+            - string
+            - 'null'
+          format: date
+        target_date:
+          description: The day it is due, not before its start date; null for none.
+          type:
+            - string
+            - 'null'
+          format: date
+        parent_id:
+          description: The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sort_order:
+          description: Its place among its state's work items, the lowest first.
+          type: number
+        completed_at:
+          description: When it was put in a state of the completed group; null in any other state.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        archived_at:
+          description: When it was archived; null when it is not.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        assignee_ids:
+          description: The accounts it is assigned to, by id; one who has left the project since is still one.
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          description: Its labels, by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        sub_issues_count:
+          description: 'The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own.'
+          type: integer
+        created_by_id:
+          description: The account that created it; null for none.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        updated_by_id:
+          description: The account that changed it last; null for none.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    IssueCollection:
+      description: Work items, all of them, without pages.
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Issue'
     IssueDraftPayload:
       description: Unfinished issue input. Saving checks structure, not create semantics.
       type: object
@@ -4117,15 +4313,6 @@ components:
           format: uuid
         payload:
           $ref: '#/components/schemas/IssueDraftPayload'
-    IssuePriority:
-      description: A work item's priority, from the most to the least urgent.
-      type: string
-      enum:
-        - urgent
-        - high
-        - medium
-        - low
-        - none
     IssueDetail:
       description: A work item of a project.
       type: object
@@ -4275,117 +4462,6 @@ components:
         - sub_issues_count
         - -sub_issues_count
         - sort_order
-    Issue:
-      description: A work item of a project, as a list shows it.
-      type: object
-      additionalProperties: false
-      required:
-        - id
-        - workspace_id
-        - project_id
-        - sequence_id
-        - name
-        - state_id
-        - priority
-        - start_date
-        - target_date
-        - parent_id
-        - sort_order
-        - completed_at
-        - archived_at
-        - assignee_ids
-        - label_ids
-        - sub_issues_count
-        - created_by_id
-        - updated_by_id
-        - created_at
-        - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        workspace_id:
-          type: string
-          format: uuid
-        project_id:
-          type: string
-          format: uuid
-        sequence_id:
-          description: Its number in its project, from 1; with the project's identifier, as in WEB-12.
-          type: integer
-        name:
-          type: string
-        state_id:
-          type: string
-          format: uuid
-        priority:
-          $ref: '#/components/schemas/IssuePriority'
-        start_date:
-          description: The day it starts; null for none.
-          type:
-            - string
-            - 'null'
-          format: date
-        target_date:
-          description: The day it is due, not before its start date; null for none.
-          type:
-            - string
-            - 'null'
-          format: date
-        parent_id:
-          description: The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
-          type:
-            - string
-            - 'null'
-          format: uuid
-        sort_order:
-          description: Its place among its state's work items, the lowest first.
-          type: number
-        completed_at:
-          description: When it was put in a state of the completed group; null in any other state.
-          type:
-            - string
-            - 'null'
-          format: date-time
-        archived_at:
-          description: When it was archived; null when it is not.
-          type:
-            - string
-            - 'null'
-          format: date-time
-        assignee_ids:
-          description: The accounts it is assigned to, by id; one who has left the project since is still one.
-          type: array
-          items:
-            type: string
-            format: uuid
-        label_ids:
-          description: Its labels, by id.
-          type: array
-          items:
-            type: string
-            format: uuid
-        sub_issues_count:
-          description: 'The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own.'
-          type: integer
-        created_by_id:
-          description: The account that created it; null for none.
-          type:
-            - string
-            - 'null'
-          format: uuid
-        updated_by_id:
-          description: The account that changed it last; null for none.
-          type:
-            - string
-            - 'null'
-          format: uuid
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
     IssueListSubgroup:
       type: object
       additionalProperties: false
@@ -4560,17 +4636,6 @@ components:
             - string
             - 'null'
           format: uuid
-    IssueCollection:
-      description: Work items, all of them, without pages.
-      type: object
-      additionalProperties: false
-      required:
-        - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Issue'
     SubIssuesAdd:
       type: object
       additionalProperties: false

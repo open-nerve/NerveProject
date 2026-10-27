@@ -777,6 +777,29 @@ type ListDraftsParams struct {
 	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// SearchIssuesParams defines parameters for SearchIssues.
+type SearchIssuesParams struct {
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// ProjectID A project UUID intersecting the caller's visible project scope.
+	ProjectID *string `form:"project_id,omitempty" json:"project_id,omitempty"`
+
+	// For parent, sub_issue or relation; requires issue_id when supplied.
+	For *string `form:"for,omitempty" json:"for,omitempty"`
+
+	// IssueID A visible, live source issue UUID; requires for when supplied.
+	IssueID *string `form:"issue_id,omitempty" json:"issue_id,omitempty"`
+
+	// StartDate A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone.
+	StartDate *[]string `form:"start_date,omitempty" json:"start_date,omitempty"`
+
+	// TargetDate A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone.
+	TargetDate *[]string `form:"target_date,omitempty" json:"target_date,omitempty"`
+
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListMemberIssuesParams defines parameters for ListMemberIssues.
 type ListMemberIssuesParams struct {
 	// Relation The target account's relationship; visibility always follows the caller.
@@ -958,6 +981,9 @@ type ServerInterface interface {
 	// CreateDraft Save an unfinished issue draft
 	// (POST /api/v0/workspaces/{slug}/drafts)
 	CreateDraft(w http.ResponseWriter, r *http.Request, slug Slug)
+	// SearchIssues Search visible work items
+	// (GET /api/v0/workspaces/{slug}/issue-search)
+	SearchIssues(w http.ResponseWriter, r *http.Request, slug Slug, params SearchIssuesParams)
 	// GetIssueByIdentifier Read a work item by its identifier
 	// (GET /api/v0/workspaces/{slug}/issues/{identifier})
 	GetIssueByIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier IssueIdentifier)
@@ -2243,6 +2269,126 @@ func (siw *ServerInterfaceWrapper) CreateDraft(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// SearchIssues operation middleware
+func (siw *ServerInterfaceWrapper) SearchIssues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchIssuesParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "project_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "project_id", r.URL.Query(), &params.ProjectID, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "for" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "for", r.URL.Query(), &params.For, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "for"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "for", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "issue_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "issue_id", r.URL.Query(), &params.IssueID, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "issue_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "start_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_date", r.URL.Query(), &params.StartDate, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target_date" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target_date", r.URL.Query(), &params.TargetDate, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_date"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_date", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchIssues(w, r, slug, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetIssueByIdentifier operation middleware
 func (siw *ServerInterfaceWrapper) GetIssueByIdentifier(w http.ResponseWriter, r *http.Request) {
 
@@ -2605,6 +2751,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/issue-search", wrapper.SearchIssues)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/drafts", wrapper.ListDrafts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspaces/{slug}/drafts", wrapper.CreateDraft)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/drafts/{draft_id}", wrapper.DeleteDraft)
@@ -4196,6 +4343,53 @@ func (response CreateDraftdefaultApplicationProblemPlusJSONResponse) VisitCreate
 	return err
 }
 
+type SearchIssuesRequestObject struct {
+	Slug   Slug `json:"slug"`
+	Params SearchIssuesParams
+}
+
+type SearchIssuesResponseObject interface {
+	VisitSearchIssuesResponse(w http.ResponseWriter) error
+}
+
+type SearchIssues200JSONResponse IssueCollection
+
+func (response SearchIssues200JSONResponse) VisitSearchIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchIssuesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response SearchIssuesdefaultApplicationProblemPlusJSONResponse) VisitSearchIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetIssueByIdentifierRequestObject struct {
 	Slug       Slug            `json:"slug"`
 	Identifier IssueIdentifier `json:"identifier"`
@@ -4395,6 +4589,9 @@ type StrictServerInterface interface {
 	// CreateDraft Save an unfinished issue draft
 	// (POST /api/v0/workspaces/{slug}/drafts)
 	CreateDraft(ctx context.Context, request CreateDraftRequestObject) (CreateDraftResponseObject, error)
+	// SearchIssues Search visible work items
+	// (GET /api/v0/workspaces/{slug}/issue-search)
+	SearchIssues(ctx context.Context, request SearchIssuesRequestObject) (SearchIssuesResponseObject, error)
 	// GetIssueByIdentifier Read a work item by its identifier
 	// (GET /api/v0/workspaces/{slug}/issues/{identifier})
 	GetIssueByIdentifier(ctx context.Context, request GetIssueByIdentifierRequestObject) (GetIssueByIdentifierResponseObject, error)
@@ -5410,6 +5607,33 @@ func (sh *strictHandler) CreateDraft(w http.ResponseWriter, r *http.Request, slu
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateDraftResponseObject); ok {
 		if err := validResponse.VisitCreateDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchIssues operation middleware
+func (sh *strictHandler) SearchIssues(w http.ResponseWriter, r *http.Request, slug Slug, params SearchIssuesParams) {
+	var request SearchIssuesRequestObject
+
+	request.Slug = slug
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchIssues(ctx, request.(SearchIssuesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchIssues")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchIssuesResponseObject); ok {
+		if err := validResponse.VisitSearchIssuesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

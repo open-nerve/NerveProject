@@ -5,6 +5,68 @@ info:
   title: Nerve issue API
   version: v0
 paths:
+  /api/v0/workspaces/{slug}/issue-search:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: searchIssues
+      tags: [issue]
+      summary: Search visible work items
+      description: >-
+        Workspace admins, members and guests search only their active memberships
+        of undeleted, unarchived projects, retaining each project's OwnOnly scope.
+        Work items are undeleted and unarchived. Unknown queries answer 422;
+        repeated scalars answer 422 invalid_format. Malformed query encoding and
+        noninteger limit answer 400. UUID, date and for values are validated as
+        domain values with 422. The trimmed q is at most 100 Unicode characters.
+        Empty q orders by updated_at then id descending. Nonempty q matches
+        identifiers, sequence numbers or literal title substrings, ordered by
+        match rank, similarity descending, created_at descending and id descending.
+        Source visibility is checked before parent/sub_issue project conflicts.
+        Results are a bounded collection without pagination or totals.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, workspace.not_found, project.not_found, issue.not_found, forbidden]
+      parameters:
+        - name: q
+          in: query
+          schema: {type: string}
+        - name: project_id
+          in: query
+          description: A project UUID intersecting the caller's visible project scope.
+          schema: {type: string}
+        - name: for
+          in: query
+          description: parent, sub_issue or relation; requires issue_id when supplied.
+          schema: {type: string}
+        - name: issue_id
+          in: query
+          description: A visible, live source issue UUID; requires for when supplied.
+          schema: {type: string}
+        - name: start_date
+          in: query
+          description: A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: {type: string}
+        - name: target_date
+          in: query
+          description: A day, a..b, ..b, a.. or none. Repeated conditions use AND; none must stand alone.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: {type: string}
+        - $ref: '../common.yaml#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/IssueCollection'}
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspaces/{slug}/drafts:
     parameters:
       - $ref: '#/components/parameters/Slug'

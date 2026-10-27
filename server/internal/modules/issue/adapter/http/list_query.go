@@ -16,13 +16,17 @@ type listQueryKey struct{}
 
 func listQueryBindingError(api *httpserver.API) func(http.ResponseWriter, *http.Request, error) {
 	return func(w http.ResponseWriter, r *http.Request, err error) {
-		if r.Method == http.MethodGet && r.Pattern == draftListPattern {
+		if r.Method == http.MethodGet && (r.Pattern == draftListPattern || r.Pattern == searchIssuesPattern) {
 			raw, parseErr := url.ParseQuery(r.URL.RawQuery)
 			if parseErr != nil {
 				api.Errors.BadRequest(w, r, parseErr)
 				return
 			}
-			if queryErr := checkDraftQuery(raw); queryErr != nil {
+			check := checkDraftQuery
+			if r.Pattern == searchIssuesPattern {
+				check = checkSearchScalars
+			}
+			if queryErr := check(raw); queryErr != nil {
 				api.Errors.Write(w, r, queryErr)
 				return
 			}
@@ -56,7 +60,7 @@ func listSingleQuery(pattern, name string) bool {
 }
 
 func withListQuery(next gen.StrictHandlerFunc, operationID string) gen.StrictHandlerFunc {
-	if operationID != "ListIssues" && operationID != "ListMemberIssues" && operationID != "ListDrafts" {
+	if operationID != "ListIssues" && operationID != "ListMemberIssues" && operationID != "ListDrafts" && operationID != "SearchIssues" {
 		return next
 	}
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
