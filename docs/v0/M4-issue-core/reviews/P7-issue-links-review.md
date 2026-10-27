@@ -90,6 +90,10 @@ P6首生产订阅/3link事件/请求任务、M2§3审计与§6worker/grants、M3
 
 P8继续link_count/草稿/搜索；P9继续异步删除/保留/清理；P11/P14继续详情数据层、I10/I17页面及可达性/卸载清理；P15协作页面；M8复用outbound并负责IANA维护和部署网络策略。M2/M3 status仍open，M4总体§14/v0§9.4仍进行中，不创建M5–M8最终closeout。产品检查点由主控推送，作者未push/merge；本期未合并main，集成另获授权。
 
+### P8接收回执（2026-10-27）
+
+T13活issue_links计数进入全部Issue/Detail、Get/GetMany/SubIssues/search及三列表，0显式，URL/title/metadata.error或worker更新不改数量；新增±link_count成当前21序及整数游标。T13 M33–36、公开全表示/权限/精度，T14双向0/1/2/2、软删后detail/search一致和真实M33 binary红绿已验证。P7原出站/事件/集成不重判，P9/P11/P14/P15/M8仍开放。 实际命令/计数/变异/检查点见[P8 review §8](P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
+
 ## 7. 已知限制与后续门
 
 启动时接口快照不能覆盖NAT/LB自公网或后来网卡变化；普通公网任意端口仍可请求，网络层出站规则负责这些风险。每crawl最多两个资源、每资源5跳，共享5秒；固定并发/入口额度不是队列长度硬上限。HTML解析没有硬CPU deadline；集合不分页，无每link速率桶；A→B→A同URL旧结果可晚覆盖。没有以worker错误原链/default3配置声称实测DB故障三次重试，没有将I10 API故事声称页面交付。

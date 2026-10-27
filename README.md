@@ -97,6 +97,8 @@ make          # 查看所有命令
 
 ## 部署
 
+- **工作项搜索扩展（M4/P8）**：PostgreSQL 镜像内须提供 `pg_trgm`（已在 `postgres:18.6` 实测）。迁移 `00029` 执行 `CREATE EXTENSION IF NOT EXISTS pg_trgm` 并建标题部分 GIN；迁移账户用有目标数据库 `CREATE` 权限的非 superuser owner 即可，不需要超级用户。Down 只删本迁移索引，保留可能预先存在或被其他对象共用的扩展。runtime 属于 `nerve_runtime` 并按 `deploy/runtime-grants.sql` 取得关系权限；`similarity` 等扩展函数依赖 PostgreSQL 默认 `PUBLIC EXECUTE`。若部署收回该默认权限，须向 runtime 显式授予搜索所需扩展函数的 EXECUTE，并核完整函数签名/授权目录，不能仅补表权限。P8的owner/runtime与生成类型实证见 [P8 review](docs/v0/M4-issue-core/reviews/P8-drafts-search-review.md)；最终locale、部署与维护交接留 M8。
+
 - **后台任务与自动归档（M4/P6–P7）**：`jobs.default_workers` 默认10、`jobs.periodic_workers` 默认2，均须为正整数。`issue.auto_archive_interval` 默认24小时、测试环境2秒，最小1秒；River的 `periodic` 队列运行会话清理与工作项自动归档，`default` 已运行链接抓取任务。项目 `archive_in=0` 关闭自动归档，1–12按每月30天计；只归档完成/取消且 `updated_at` 到阈值的未归档工作项。系统活动和事件均无操作者。`clock.offset` 默认0，仅 `NERVE_ENV=test` 可设非零（可用 `NERVE_CLOCK__OFFSET` 覆盖），只影响业务时钟，不改变River调度、限速和等待期限；生产环境非零启动失败。配置及实测见 [P6 review](docs/v0/M4-issue-core/reviews/P6-issue-events-review.md)。
 
 - **设 `NERVE_ENV=prod`**。不设时 nerve 按 dev 的默认值运行：注册默认开放；没有配置签名密钥时用临时密钥，重启后已签发的访问令牌全部失效。nerve 不是 prod、却监听在本机回环地址之外时，启动日志会记一条 WARN 提醒。

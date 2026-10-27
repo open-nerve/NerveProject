@@ -166,3 +166,9 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 §1命令只投递原文及收尾原样转M5要求保留，CLI仍不构造出站/jobs。P8草稿、P9清理/版本保留、§7–12页面与其他原落点继续开放。
 
 本回执只关闭P7对应子责任，顶部`status: open`保持；M4整体、P8/P9/P11/P14/P15及M5–M8最终closeout不提前关闭。证据：[P7 review §2](../reviews/P7-issue-links-review.md#2-验收标准逐条核对)、[行为矩阵](../reviews/P7-issue-links-behavior-matrix.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。本波独立定向复审与最终分支CI状态在P7 review单列，未合并main。
+
+## 处理结果（M4/P8，2026-10-27）
+
+§2草稿游标已在T2/T4验证：[created_at,id]canonical共享编码，另一owner/随机id合法游标只是位置，页与total仍仅自己，非法400；不签名、不回查游标ID。§4草稿发布读取锁下存储payload，由adapter复用create bodyshape和mapper，与直接创建以同canonical字节比较结构400/字段、业务422同路径，>16字段错误截断有反例；API封闭schema与成本守卫未放宽。T5/T6共享唯一创建核心、同事务/actor/At，事件/soft-delete/描述版本三故障逐表回滚；T7 gate无连接/事务和真实PID交错，T15最终race65/65。§6部署说明明确runtime经PUBLIC EXECUTE使用扩展函数、收回后显式授权，关系/全函数目录守卫保留。§1 CLI原文、其他页面/清理/后续M5–M8责任保持原归属，顶部status仍open。
+
+准确产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`，首次整审 `166b9efd..10f44790`；[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)列A条款/真实RUN/变异恢复/四次七门禁及准确产品checkpoint CI，[整体审核](../../../reviews/re-07-M4P8整体审核.md)列三镜头/186文件覆盖与历史D1。文档增量独评及最终准确HEAD CI由后续提交和ignored收据追踪，未合并、不清理；不以本期子项已处理改写历史关闭条件或M4整体状态。

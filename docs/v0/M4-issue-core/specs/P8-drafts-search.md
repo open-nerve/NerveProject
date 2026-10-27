@@ -4,13 +4,15 @@
 |---|---|
 | Phase | M4/P8 `drafts-search` |
 | 日期 | 2026-10-27 |
-| 状态 | 独立静态预检已通过，修订项全部关闭；负责人已授权按计划从 T1 实施，当前实施中。验收以实际运行证据逐项记录，阶段结束 deep-review 后先不合并，见[评审记录](../reviews/P8-drafts-search-review.md) |
+| 状态 | T1–T15实施/逐Task独评、产品HEAD首次整审已完成，T16交付正式文档；文档增量独评/最终准确HEAD CI按后续提交与收据追踪，未合并，见[评审记录](../reviews/P8-drafts-search-review.md) |
 | 代码基线 | P7 的 main 合并 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，文件树 `51982bad72186f17a0b10c31f2f508629bb9cca7`；主控已核同 SHA 的 main CI `40451632280` 全绿；归档/清理证据见 P7 收尾记录 |
 | 分支 | `codex/m4-p8`；worktree `.codex/worktress/codex/m4-p8`，主目录保持 main |
 | 上级文档 | [M4 设计](../M4-design.md) §3.3–3.5、3.15–3.18、3.23、4.13、5、6、8.6–8.7、9、12/P8、13.1；[方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md) |
 | 计划 | [P8 plan](../plans/P8-drafts-search.md) |
 
 本 spec 固定批准设计留给 P8 的接口、参数边界、文件职责和验证方法。设计的 13 个粗任务拆为 16 个可独立评审的 Task，沿 P7 紧凑方法，不重做已批准架构，也不把静态预检记成原型或逐任务复现。以下新增符号均为实施期目标，未声称已存在。
+
+以上为批准时口径；同日实施已交付下列接口，产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`。附录保留准备/T8/T15当时边界，当前验收的准确证据见§4及[review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。
 
 ## 1. 目标
 
@@ -37,14 +39,14 @@
 | I/app/publish_draft.go、publish_draft_test.go（新）；I/adapter/http/drafts.go；I/module.go；B/issue_draft_publish_test.go（新）；契约/矩阵 | 发布无 body、同事务副作用与拒绝顺序 | T6；4、10 |
 | B/issue_draft_interleaving_test.go、issue_draft_lock_shapes_test.go（新）；已有 gate/issue_write_locks tests | 交错 16/17 双向、权限变化、旧新项目锁序/时钟与拒绝零锁 | T7；5 |
 | `e2e/stories/issue/i14-drafts.spec.ts`（新）；`e2e/fixtures/issues.ts`；项目/工作区删除故事；B/project_deletion_test.go、workspace_deletion_test.go、workspace_deletion_catalog_test.go | I14、零项目工作区与无项目草稿级联、阶段回归 | T8；1、11 |
-| `server/migrations/sql/00029_issue_issues_name_trgm.sql`；`server/sqlc.yaml`；`server/migrations/schema_test.go`；B/runtime_role_test.go；I/adapter/postgres/search_type_test.go（新） | 扩展/GIN、部署角色与 sqlc float4 | T9；6 |
+| `server/migrations/sql/00029_issue_issues_name_trgm.sql`；`server/sqlc.yaml`；`server/migrations/schema_test.go`、trigram_schema_test.go；B/search_runtime_role_test.go复用runtime_role_test.go角色工具；I/adapter/postgres/search_type_test.go（新） | 扩展/GIN、部署角色与 sqlc float4 | T9；6 |
 | I/domain/search.go、search_test.go（新）；共享 `api/testdata/identifier-fold.json` 只消费 | 词汇、重复参数、日期、编号折叠、字面查询和错误边界 | T10；7 |
 | I/app/search_ports.go、search_issues.go、search_issues_test.go（新）；I/adapter/postgres/queries/search_issues.sql、search_issues.go、search_issues_test.go（新）；B/issue_search_test.go、issue_search_snapshot_test.go（新） | 同快照授权、静态 SQL 排序、全深度排除和统一 seen | T11；7–8、10 |
 | I/adapter/http/search_issues.go、search_issues_test.go（新）；I/adapter/http/handler.go、draft_query.go；I/module.go；契约；B/permission_matrix_search_test.go（新） | 搜索 HTTP 边界和完整矩阵 | T12；8、10 |
-| I/domain/issue.go、listvocab.go、list_cursor_key.go；I/adapter/postgres/queries/issues.sql、sub_issues.sql、list_issues.sql、list_issue_groups.sql、list_issue_subgroups.sql、search_issues.sql；对应 Go 映射/游标/测试；I/adapter/http/issues.go；契约；`api/testdata/issue-order.json`；已有列表/偏好/形状测试 | 所有响应 live link count、19→21 排序码、三 SQL 同形和游标 | T13；9 |
-| `e2e/stories/issue/i18-search.spec.ts`（新）、`i4-list-order-calendar.spec.ts`；B/issue_link_counts_test.go（新）；受生成类型影响的现有 TS fixtures | I18、I4 双向、全表示数量一致 | T14；11 |
+| I/domain/issue.go、listvocab.go、list_cursor_key.go；I/adapter/postgres/queries/issues.sql、sub_issues.sql、list_issues.sql、list_issue_groups.sql、list_issue_subgroups.sql、search_issues.sql；对应 Go 映射/游标/测试及list_link_count_test.go共享helper；I/adapter/http/issues.go；契约；`api/testdata/issue-order.json`；B/issue_link_counts_test.go与已有列表/偏好/形状/HTTP list-member测试、受影响I3/I4 fixtures | 所有响应 live link count、19→21 排序码、三 SQL 同形和游标 | T13；9 |
+| `e2e/stories/issue/i18-search.spec.ts`（新）、`i4-list-order-calendar.spec.ts`；`e2e/fixtures/issues.ts`、`fixtures/assert/issue.ts` | I18、I4 双向非零计数续页；全表示Go验证已在T13 | T14；11 |
 | I/adapter/postgres/search_performance{,_fixture,_evidence}_test.go（新，显式 opt-in 场景/seed/原始取证）；本 spec 附录、ignored 原始证据 | 10 万数据、locale/EXPLAIN/耗时、全门禁与性质审计 | T15；12 |
-| 本 spec、plan、`reviews/P8-drafts-search-review.md`；M4-design、`docs/v0/v0-design.md`、`docs/v0/plane-diff.md`、README、输入 handoffs | 准确范围 deep-review、局部修复复审、§3.23 和交接证据 | T16；13 |
+| 本spec/plan/review、`docs/reviews/re-07-M4P8整体审核.md`；M4-design当前端口/草稿/搜索/§3.23/6.5/11.2/12/15，v0/Plane/README，03/04当前导航；四输入handoff与P1a–P7 spec§5/review§6追加 | 30文档准确范围deep-review/历史D1摘要修正、实际验收与交接；增量独评另核 | T16；13 |
 
 单 Task 目标约 350–1200 手写差异行，预留局部修复余量；超过约 1500 行先按职责重新切分，不能把安全/锁序测试压缩掉。单个新逻辑文件约 400 行上限；生成物、静态 SQL 和有明确理由的测试表沿既有例外。
 
@@ -251,20 +253,20 @@ parent：仅 source 项目，排除 source、自身当前 parent、全部后代�
 
 ## 4. 验收
 
-以下保留批准时的验收清单；实施结果按 Task 追加在附录 A。预检只代表计划可执行，未完成的最终门禁与整分支审查不由局部通过代替。
+以下按真实证据回填批准验收；命令/真实RUN、变异、提交与限制逐条列于[review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)，性能原表在附录A。A11文档修复独评与最终提交CI由后续收据完成，不用产品HEAD通过替代未来文档提交。
 
-- [ ] A1：00028 九列/索引/级联/grants、无项目/零项目工作区删除、旧审计保留、furnish所有调用点和完整表目录通过（T1/4/8）。
-- [ ] A2：保存全 optional/整体替换/nullable/noop/NUL三路径；无额外issue副作用；自有游标/total及未知游标位置不泄漏通过（T2–4）。
-- [ ] A3：六操作权限矩阵含guest、ownOnly、adminGuest、退出/归档/删除项目窗口，404逐值一致，预检拒绝零锁/零gate（T3/4/6/7）。
-- [ ] A4：发布使用锁下存储载荷、与直接创建400/422同路径、完整副作用同At/actor、失败整体回滚、重复发布404（T5/6/8）。
-- [ ] A5：交错16/17双次序、相反项目UUID顺序移动、workspace删除/降级、真实等待者PID证明与恢复变异通过（T7）。
-- [ ] A6：pg_trgm非superuser owner、runtime函数/关系权限、00029 schema包含与similarity float32编译证据（T9/11）。
-- [ ] A7：空词、数字/Unicode编号、literal包含、重复参数/日期/冲突、全深度/双向排除、同ReadOnlySnapshot的隐藏父及子数通过（T10–12）。
-- [ ] A8：link_count每种表示、活/软删/metadata数量、21码双向平铺/分组/子分组/成员/偏好、整数游标和伪造游标不越权通过（T13/14）。
-- [ ] A9：I14/I18接口、I4两方向跨页及所有受影响目录故事通过（T8/14）。
+- [x] A1：00028 九列/索引/级联/grants、无项目/零项目工作区删除、旧审计保留、furnish所有调用点和完整表目录通过（T1/4/8）。
+- [x] A2：保存全 optional/整体替换/nullable/noop/NUL三路径；无额外issue副作用；自有游标/total及未知游标位置不泄漏通过（T2–4）。
+- [x] A3：六操作权限矩阵含guest、ownOnly、adminGuest、退出/归档/删除项目窗口，404逐值一致，预检拒绝零锁/零gate（T3/4/6/7）。
+- [x] A4：发布使用锁下存储载荷、与直接创建400/422同路径、完整副作用同At/actor、失败整体回滚、重复发布404（T5/6/8）。
+- [x] A5：交错16/17双次序、相反项目UUID顺序移动、workspace删除/降级、真实等待者PID证明与恢复变异通过（T7）。
+- [x] A6：pg_trgm非superuser owner、runtime函数/关系权限、00029 schema包含与similarity float32编译证据（T9/11）。
+- [x] A7：空词、数字/Unicode编号、literal包含、重复参数/日期/冲突、全深度/双向排除、同ReadOnlySnapshot的隐藏父及子数通过（T10–12）。
+- [x] A8：link_count每种表示、活/软删/metadata数量、21码双向平铺/分组/子分组/成员/偏好、整数游标和伪造游标不越权通过（T13/14）。
+- [x] A9：I14/I18接口、I4两方向跨页及所有受影响目录故事通过（T8/14）。
 - [x] A10：10万英文/中文数据的2字和≥3字真实最终查询参数、locale、计划、样本数/耗时写入附录；不关闭seqscan作伪证（T15）。
-- [ ] A11：T4/8/12/15完整本地七门禁先于产品检查点push；新码文案和架构/关键词不放宽；整分支deep-review及局部修复复审关闭（T16）。
-- [ ] A12：§3.23上级文档/README和输入handoffs追加准确结果；交付BASE/HEAD/spec/plan/review路径，阶段先不合并（T16）。
+- [ ] A11：四次完整本地七门禁先于产品检查点push，新码文案/架构/关键词不放宽，首次整审完成；历史文档D1已修，增量独评待后续收据确认（T16）。
+- [x] A12：§3.23上级文档/README和输入handoffs已追加准确结果，BASE/产品HEAD/spec/plan/review路径已交付，未合并；文档提交/独评及最终准确HEAD CI由后续收据绑定（T16）。
 
 ## 5. 不在本期与后续接手
 

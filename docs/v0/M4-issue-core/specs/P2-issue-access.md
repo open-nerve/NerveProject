@@ -236,6 +236,10 @@ P1b 的 `TestAWorkItemGoneWhileItsChangeWaitsIsNotFound`（`issue_interleaving_c
 | P13、P14 | I15 的页面版本、已归档的详情只读；I1、I2 的页面版本带日期；`/:workspaceSlug/browse/:workItem` 经 `getIssueByIdentifier`（M1-P3 交接的地址一项的另一半） |
 | 收尾 | 3.23 中 P2 的行由 Task 14 写好，收尾逐行核对；三份交接的 `status` 在 M4 收尾随 review 关闭；第 3 节第 3、8 条的修订已做：设计 3.3 的 `ProjectGate` 一句和 6.5 的 `ProjectGate` 一行（本提交），差异清单的"归档、恢复"一行（Task 14），收尾核对它们 |
 
+### P8接收回执（2026-10-27）
+
+T10–T12搜索消费issue.search、ParseIdentifier/MatchIdentifier及共享Unicode折叠fixture，在同一可见项目/OwnOnly快照内匹配，guest/adminGuest不放宽。六草稿操作统一draft.write，发布另按issue.create并复用原引用/访客边界。T12真实HTTP/矩阵/契约与T14 I18/I14已有证据；P9物理删除账户组合与P13–P15页面仍开放。 实际命令/计数/变异/检查点见[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
+
 ## 6. 风险
 
 | 风险 | 应对 |

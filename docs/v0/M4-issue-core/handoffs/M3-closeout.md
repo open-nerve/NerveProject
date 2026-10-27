@@ -191,3 +191,9 @@ M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以�
 §2–4链接请求遵守项目锁、前置隐藏404/权限、同刻审计与完整回滚；新issue_links纳入删除目录及API furnish，旧tombstone和邻居完整行保留。邀请删除仍同步；project/workspace异步删除、清理与限时轮询仍归P9，§5–9数据层/页面仍按原分配。
 
 本回执只关闭P7对应子责任，顶部`status: open`保持；M4整体、P8/P9/P11/P14/P15及M5–M8最终closeout不提前关闭。证据：[P7 review §2](../reviews/P7-issue-links-review.md#2-验收标准逐条核对)、[行为矩阵](../reviews/P7-issue-links-behavior-matrix.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。本波独立定向复审与最终分支CI状态在P7 review单列，未合并main。
+
+## 处理结果（M4/P8，2026-10-27）
+
+§2/§3/§4的P8输入已承接：T1将workspaceID贯穿同步级联，T4 API furnish全部调用点及动态全表目录纳draft，T8 W3显式无项目/零项目workspace删除及旧删除草稿审计保持。T3/T6唯一DraftLocks组合base；CRUD W(S)→升序P(S)→D(U)，publish无资源gate→W(S)→P(N)→D(U)，普通issue路径保持。T7请求PID/holder、交错16/17两次序/UUID两方向、W/P/D终态/唯一At/零gate锁及T15 race五遍有实证；六draft操作与search进入规则/错误/矩阵，guest/owner/OwnOnly和404逐值对照通过。历史M4§11.2摘要D1仅修成版本保留按§3.14项目N、P9待实现，不是本期实现P9。异步删除/物理清理/账户组合/限时轮询与页面等余项仍开放，顶部status继续open。
+
+准确产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`，首次整审 `166b9efd..10f44790`；[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)列A条款/真实RUN/变异恢复/四次七门禁及准确产品checkpoint CI，[整体审核](../../../reviews/re-07-M4P8整体审核.md)列三镜头/186文件覆盖与历史D1。文档增量独评及最终准确HEAD CI由后续提交和ignored收据追踪，未合并、不清理；不以本期子项已处理改写历史关闭条件或M4整体状态。

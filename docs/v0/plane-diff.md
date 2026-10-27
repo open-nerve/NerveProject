@@ -47,7 +47,7 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | 首页个性化与主题 | `workspace_home_preferences`、`workspace_user_links`、`workspace_user_preferences`、`workspace_themes` |
 | 便签 | `stickies` |
 | 公开发布 | `deploy_boards`、`project_public_members`、`issue_votes` |
-| 草稿的关联表 | `draft_issue_assignees`、`draft_issue_labels`、`draft_issue_modules`、`draft_issue_cycles`（并入 `draft_issues.payload`） |
+| 草稿的关联表 | `draft_issue_assignees`、`draft_issue_labels`由 `draft_issues.payload` 数组替代；`draft_issue_modules`、`draft_issue_cycles`不保留，P8 payload不含模块/迭代 |
 
 ---
 
@@ -168,7 +168,7 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `issues` | `archived_at` 由 `date` 改为 `timestamptz` | 和 `cycles`、`modules`、`projects` 的 `archived_at` 保持一致 |
 | `issues` | 删除 `point`、`estimate_point_id`、`type_id`、`is_draft`、`description_binary`、`description_json` | 估算、工作项类型已砍掉；草稿是另一张表（`draft_issues`）；`description_binary` 是协同编辑的遗留；`description_json` 没有读取者（M4 设计 3.7） |
 | `issues` | **新增**唯一约束 `issues_project_id_sequence_id_key UNIQUE (project_id, sequence_id)`（全表唯一，不是部分唯一）；外键列的索引只留不带条件的 `issues_workspace_id_idx`、`issues_project_id_idx`、`issues_parent_id_idx`、`issues_state_id_idx`；新加 `issues_project_id_state_id_idx ON (project_id, state_id) WHERE deleted_at IS NULL` | Plane 只靠咨询锁保证编号不重复；计数列从不回退、编号从不重用，所以全表唯一（M4 设计 3.7）；物理级联、子工作项、在用的状态按外键列找行；同一状态最大的 `sort_order`、按状态筛选（M4 设计 4.2） |
-| `issues` | **新增** `name` 的 pg_trgm 索引（需要 `pg_trgm` 扩展；M4/P8） | 标题模糊搜索（v0-design 6.9）；快照中没有任何扩展，`issues` 上只有外键列的 btree 索引 |
+| `issues` | **已新增（M4/P8，00029）** `issues_name_trgm_idx USING gin(name gin_trgm_ops) WHERE deleted_at IS NULL`、`CREATE EXTENSION IF NOT EXISTS pg_trgm` | 标题字面包含候选及similarity排序；计划按选择性/locale决定，不保证三字符必走索引。Plane模型/迁移/搜索helper定向未见同类定义/调用；不据此断言其部署数据库从未安装扩展 |
 | `issue_assignees` | 10 列照搬（M4/P1a，`00016_issue_issue_assignees.sql`）；主键名 `issue_assignees_pkey`（Plane 是 `issue_assignee_pkey`） | M4 设计 4.3 |
 | `issue_assignees` | `workspace_id`、`project_id`、`issue_id`、`assignee_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 二·全局（模型的 `on_delete`）；v0 不物理删除账户，`assignee_id` 的 `CASCADE` 不会触发 |
 | `issue_assignees` | 部分唯一索引照搬，改名为 `issue_assignees_issue_id_assignee_id_key ON (issue_id, assignee_id) WHERE deleted_at IS NULL`（Plane 是 `issue_assignee_unique_issue_assignee_when_deleted_at_null`），去掉 `(issue_id, assignee_id, deleted_at)` 的唯一约束（二·全局）；新加 `issue_assignees_assignee_id_idx ON (assignee_id) WHERE deleted_at IS NULL`，外键列的索引只留不带条件的 `issue_assignees_issue_id_idx`、`issue_assignees_workspace_id_idx`、`issue_assignees_project_id_idx` | 个人主页的"已分配"、按负责人筛选；物理级联要不带条件的索引（M4 设计 4.3） |
@@ -225,7 +225,7 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `modules` | 删除旧的 `description_text`、`description_html` | 遗留列 |
 | `*_user_properties`、`issue_views` | 删除旧的 `filters` 列；筛选条件按 Nerve 自己的格式存储（列名与格式在 M3/M4 确定）；`issue_views` 删除 `query` 列 | 筛选格式改变（见接口差异） |
 | `file_assets` | 删除 `page_id`；`draft_issue_id` 改为引用新的 `draft_issues`；`entity_type` 去掉 `PAGE_DESCRIPTION` | 文档页已砍掉；草稿重新设计 |
-| `draft_issues` | **重新设计**：`payload jsonb` 存"创建工作项"的请求体，替代 Plane 中复制工作项结构的字段和 4 张关联表 | 详见 v0-design 5.4 |
+| `draft_issues` | **已重新设计（M4/P8，00028）**：Plane24列重构为九列，八个身份/审计列加optional创建字段的payload；不保留模块/迭代/估算/type | 本期逐列/FK/三索引及实际源码对照见文末P8附录，v0-design §5.4 |
 
 ---
 
@@ -240,9 +240,9 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 认证 | 页面用会话 Cookie 加表单登录，程序用另一套 `/api/v1` 加 `X-Api-Key` | 所有调用方都使用同一套接口和 `Authorization: Bearer` |
 | PATCH 的响应 | 204，没有响应体 | 返回完整资源 |
 | 筛选 | JSON 筛选树和 25 种旧查询参数并存 | 普通CSV参数，字段间AND、项内OR；none/me按字段能力；日期单日/闭区间/none，可重复且AND；非法词/未知或重复非日期参数422（M4/P5） |
-| 分页 | `每页条数:页码:是否上一页` 形式的偏移游标 | canonical不透明键集游标；工作项载荷[order,key,id]，默认-created_at、P5十九码；两向null末尾、同键id同方向、名字仅折ASCII后按码点序，非Plane名字键兼容层 |
+| 分页 | `每页条数:页码:是否上一页` 形式的偏移游标 | canonical不透明键集游标；工作项载荷[order,key,id]，默认-created_at；P5当时十九码，P8保留原19并新增±link_count为当前21。两向null末尾、同键id同方向、名字仅折ASCII后按码点序，非Plane名字键兼容层 |
 | 工作项列表路径/名称 | 多层workspace/project及旧results/名字查询键 | `listIssues`：GET `/api/v0/projects/{project_id}/issues`；`listMemberIssues`：GET `/api/v0/workspaces/{slug}/members/{user_id}/issues?relation=assigned\|created\|subscribed`。筛选/分组用state_id/state_group/priority/label_id/assignee_id/created_by_id/target_date，个人另project_id；排序用state_name/label_name/assignee_name/sub_issues_count等，不用state__name/labels__name/assignees__first_name |
-| 工作项列表响应 | results及按页裁剪的关系数组 | `IssueListPage`/`Issue`：平面/组格续页{total,data,next_cursor}，分组{total,groups:[{key,total,data,next_cursor}]}，泳道组内subgroups并有顶层subgroup_totals。缺分支省略、空[]、末页null，Issue不含description_html，link_count留P8；组格续页保留原筛选另加group_key/sub_group_key，所有读取同独立RO/RR快照 |
+| 工作项列表响应 | results及按页裁剪的关系数组，部分serializer已含link_count | `IssueListPage`/`Issue`：平面/组格续页{total,data,next_cursor}，分组{total,groups:[{key,total,data,next_cursor}]}，泳道组内subgroups及顶层subgroup_totals。缺分支省略、空[]、末页null，Issue不含description_html；P8全部Issue/Detail required非负int64 link_count，0显式返回，仅数活links、不看作者/metadata，支持±排序与整数游标。组格续页保留筛选另加group_key/sub_group_key，所有读取同独立RO/RR快照 |
 | 项目的工作项显示设置路径 | `/projects/{id}/user-properties/` | 沿GET/PATCH `/api/v0/me/projects/{project_id}/preferences`，三字段闭合typed结构；结构400、词值422，逐顶层字段整体替换，省略保留、{}清filters；前端旧store/service迁移仍属P10b |
 | 集合型的列表（工作区、成员、项目等） | 一次返回全部，响应是裸数组 | 同样一次返回全部、不分页，响应是 `{"data": [...]}` 封套，每个列表写明顺序（M3 设计 3.12） |
 | 关联字段 | 名字不带 `_id`（`workspace`、`member`、`project_lead`），有的内嵌对象 | 只给 id，名字带 `_id`（`WorkspaceMember.workspace_id`）；例外有两个：工作区成员内嵌成员的公开资料 `member`（`MemberUser`，v0-design 3.6；M3 设计 5.2），关联内嵌对方工作项的列表行 `issue`（`IssueRelation.issue`，M4/P3；M4 设计 3.10） |
@@ -299,7 +299,7 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 子工作项数 | 数 `issue_objects` 里的直接子工作项（不含已删除、已归档、草稿、分诊状态的，也不含已归档的项目里的），不论调用者看不看得到 | `sub_issues_count` 数未删除、未归档的直接子工作项中调用者看得到的：项目里"只看自己"的访客只数自己建的（M4 设计 3.9；按它排序在 M4 的 P5） |
 | 关联 | 六种类型，不检查类型和自己；一对工作项可有两条；显示看不到的项目里的工作项；删除不存在的 500 | 页面的四种（`relates_to`、`duplicate`、`blocked_by`、`blocking`，阻塞反过来存为对方的 `blocked_by`），别的类型 422 `relation_type` `invalid_format`；一对工作项至多一条，不论类型和方向（422 `issue_ids[i]` `duplicate`）；对方要是同一个工作区里调用者看得到、未归档、所在项目未归档的别的工作项（422 `not_allowed`）；列表只含调用者看得到、未归档的对方，不含在别的已归档的项目里的：已归档的项目里的工作项照样列出它与同一个项目里的工作项的关联；按关联的 `id` 删除，能改两端任一个的即可，不存在、已删除、两端都看不到的 404 `issue.relation_not_found`（M4 设计 3.10） |
 | 关联的动态 | 对方 id 在 `old_identifier`；反向行的 `project_id` 是本项目；删除的反向行的 `comment` 用正向的类型（`field` 只把 `blocked_by`、`blocking` 反过来），`old_identifier` 是它自己 | 增、删各两条：正向的写在本工作项上、反向的写在对方上，各用从自己看的类型，各在自己的项目里；加的一条对方 id 在 `new_identifier`，删的一条在 `old_identifier`（M4 设计 3.13 第 20–23 行） |
-| 草稿发布 | 专门的转换逻辑 | 与"创建工作项"走同一代码路径 |
+| 草稿发布 | `create_draft_to_issue`限定owner，使用request.data给IssueCreateSerializer；从草稿拿项目上下文，另排活动/迁移附件再delete | 先PATCH，再零字节body发布锁下存储payload；要求draft.write和issue.create，共享唯一创建核心、同事务/actor/At软删草稿，结构400/业务422同路径，项目改变409；附件移交仍留M5 |
 | 归档 | 工作项、迭代、模块、项目的归档与恢复，以及项目级自动归档 | 规则一致（见 v0-design 5.5）；归档和恢复改为 `POST .../archive` 和 `POST .../unarchive` 两个动作接口；列表通过 `?archived=true` 查询已归档的对象 |
 | 描述、评论的长度 | 没有同一边界规则 | `description_html`、`comment_html` 各最多 500000 个 Unicode 字符，默认请求体仍为 1 MiB（M4/P4） |
 | 描述与清洗 | 异步动态/版本与宽泛输入 | `issue/adapter/content` 唯一清洗策略，app 小接口、domain 纯值；创建默认 `<p></p>`，保存后的描述、提及、关注、动态、版本同事务；旧工作项不伪造初版（M4/P4，A1） |
@@ -366,3 +366,56 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 新建标签的顺序 | 请求可以给 `sort_order`：项目还没有标签时用它，否则忽略，一律是最大值加 10000；没给、没有标签时 65535 | 请求不给 `sort_order`（给了答 400，同"请求中的未知字段"）：一律是项目未删除的标签的最大值加 10000，没有标签时 65535（M3 设计 4.10）；位置用 `updateLabel` 改 |
 | 一组中唯一的状态 | 服务端能删除、能改到别的组（页面不让） | 删除它、把它改到别的组：409 `project.state_last_in_group`（它同时是默认状态时，删除先答 409 `project.state_default`，例如新项目的 Backlog），每一组（分诊组除外）至少一个状态（M3 设计 3.17） |
 | 时区 | 只接受 `pytz.common_timezones`；时区列表中负的非整点偏移多算一小时（例如马克萨斯群岛的 −09:30 写成 −10:30） | 接受 Go 的时区数据认得的任何 IANA 名称（`Local` 除外），程序内嵌时区数据；时区列表接口给的仍是同一份常用列表，偏移按请求时刻计算，写法正确（M2 设计 5.3） |
+
+## 五、M4/P8实际源码对照（2026-10-27）
+
+本期对照主目录只读 `plane/apps/api/plane/` 的实际源码（下文缩写 `P/`），同时核本清单既有Plane schema快照；未在plane/refer运行Git、测试或容器。Nerve结果对应产品`10f44790`，详见[P8 spec](M4-issue-core/specs/P8-drafts-search.md)与[review](M4-issue-core/reviews/P8-drafts-search-review.md)。源码行号是此次读取位置，不以ignored导航文件替代源码证据。
+
+### 草稿九列、外键与索引
+
+Plane `P/db/models/draft.py:16–82`及 `workspace.py:185–187` 为实体字段与nullable项目；本仓快照 `tools/plane-schema/plane-v1.4.2-schema.sql:705–730`共24列，外键8613–8669均deferred、无数据库ON DELETE，索引4742–4796为单列审计/引用btree。Nerve `00028_issue_draft_issues.sql`实际九列如下；未复制四张关联表（Plane draft.py:139–215）。
+
+| Nerve列 | Plane与本期变化 | Nerve约束/外键 |
+|---|---|---|
+| id | 保留uuid；应用生成UUIDv7 | PRIMARY KEY |
+| workspace_id | 保留非空uuid | REFERENCES workspaces ON DELETE CASCADE，立即检查 |
+| project_id | 保留nullable uuid，不藏进payload | REFERENCES projects ON DELETE CASCADE，立即检查 |
+| payload | 新增jsonb；承载name/description_html/state_id/priority/assignee_ids/label_ids/start_date/target_date/parent_id，字段均可省略 | NOT NULL DEFAULT '{}'，CHECK jsonb_typeof='object'；封闭键/类型由API检查 |
+| created_by_id | Plane nullable改为非空；不在公开Draft返回 | REFERENCES users ON DELETE CASCADE |
+| updated_by_id | 保留nullable，不在公开Draft返回 | REFERENCES users ON DELETE SET NULL |
+| created_at | 保留非空timestamptz | 新增DEFAULT now()兜底，请求显式写唯一At |
+| updated_at | 保留非空timestamptz | 新增DEFAULT now()，JSONB等值noop不推进 |
+| deleted_at | 保留nullable timestamptz | 软删沿请求原At/actor；旧删除行审计不重写 |
+
+删除原16列：name、description_json/html/stripped/binary、priority、start_date、target_date、sort_order、completed_at、external_source/id、estimate_point_id、parent_id、state_id、type_id。其中九个payload字段只保留存储值，parent/state不设实体外键；估算/type/外部导入字段不保留，迭代/模块不加入P8 payload。附件表尚未在本期建出或迁移，原 `file_assets` 行是M5接手设计。
+
+保留主键后新增三个索引：活草稿 `draft_issues_author_created_at_idx(workspace_id,created_by_id,created_at DESC,id DESC) WHERE deleted_at IS NULL`；无条件 `draft_issues_workspace_id_idx` / `draft_issues_project_id_idx`支持物理FK和级联。不复制Plane审计者或state/parent/type/estimate单列索引，不加title/sequence/version列。
+
+### 草稿保存、权限与发布
+
+| 核对点 | Plane实际源码 | Nerve已交付 |
+|---|---|---|
+| 保存校验/副作用 | `P/app/serializers/draft.py:33–140`实体引用及日期/HTML/binary检查、状态/父项/估算所属项目、负责人/标签目录过滤；`P/db/models/draft.py:84–132`默认state、completed_at、stripped和sort_order | 只封闭结构/类型及三个自由字符串NUL可存性；允许空标题、坏priority、无效引用先保存，发布再按创建检查。payload整替换，只有外层project nullable；不发issue事件/活动/号序/版本/关注 |
+| 草稿角色/归属 | `P/app/views/workspace/draft.py:98–121` list/create装饰器含guest；list/retrieve/PATCH按created_by；156–203 PATCH成功204，destroy函数按workspace/pk读取，装饰器另有限制 | 六操作唯一issue_draft.write，工作区admin/member自己可用、别人404，guest403；PATCH200。未展开Plane装饰器全实现，不把destroy本体直接推成完整权限漏洞 |
+| 无项目与项目窗口 | `draft.py:219–234`无项目400，项目来自草稿 | 无项目422；旧项目删除草稿404，显式新project不可见/已删422；退出/归档项目仍列个人草稿，发布按当前create权限/归档409 |
+| 发布载荷 | `draft.py:205–234`限定owner，IssueCreateSerializer(data=request.data)，草稿只供项目/工作区/defaultAssignee上下文 | 先PATCH再无body发布存储payload，任何非零字节含空白400；D锁下重读、项目改变409，不接受正文覆盖 |
+| 副作用/事务 | `draft.py:236–318`另行排issue/cycle/module活动、迁移FileAsset，再调用delete；`P/db/mixins.py:72–78`默认软删并排关联任务 | 唯一创建核心与草稿软删同事务/actor/At，三真实失败注入整体回滚；附件留M5。未见该函数显式atomic不等于Plane全局没有请求事务 |
+
+### 全局搜索与项目选择器分路
+
+Plane `P/app/urls/search.py:12–25`的workspace `search/` 与project `search-issues/`是不同入口，不能用一路替代另一条。
+
+| 核对点 | Plane实际源码 | Nerve已交付 |
+|---|---|---|
+| 全局issue匹配/响应 | `P/app/views/search/base.py:83–114,271–302` name/project identifier icontains OR从query提数字匹配sequence；有效项目成员/未归档项目，最多100简要行，`results.issue`；`P/db/models/issue.py:92–100,172–178`manager排软删/归档/triage/draft，默认-created_at | 统一issue-search七键、完整Issue的data，无page/total；空词updated_at/id降序，非空精确编号/纯数字/标题OR后rank/similarity/created_at/id降序，不搜索stripped |
+| 选择器匹配/范围 | `P/utils/issue_search.py:14–24`也用name/identifier contains与数字提取（query长度≤20）；`P/app/views/search/issue.py:99–160`默认路径project、workspace_search可跨项目，最多100简要行裸数组；guest过滤只对路径project查role=5 | 完整编号使用可见目录Unicode折叠，纯ASCII数字允许前导零且有界；逐候选项目OwnOnly含adminGuest，目录/source/SQL/seen同RO/RR；不声称Plane逐候选执行本项目OwnOnly |
+| 层级/关系/日期 | `search/issue.py:37–76,123–139`parent排source/当前parent/直接children，sub限root并排当前parent；relation双向，另有cycle/module及target_date=none | parent/sub固定source项目，排全部后代/祖先，递归穿隐藏/删/归档中间节点；relation双向全部活类型。两日期完整词汇、重复非none AND、none互斥；权限/日期/排除在LIMIT前 |
+| 错误/字面词 | 上述旧入口使用不同query名及ORM icontains，未提供本项目严格七键契约 | Unicode100/101、非法UTF8/NUL、未知/重复标量、空for/source依赖与scope-before-conflict均明确400/422/404；LIKE特殊字符按字面转义，不做纠错 |
+
+### trigram、活链接数量与排序
+
+本次定向检索 `P/db/models/`、`P/db/migrations/`及 `P/utils/issue_search.py` 的trigram/pg_trgm/GinIndex/similarity无命中；上列两路搜索实际不调用similarity。因此00029扩展/部分GIN与rank后的similarity排序是本项目新增；不推断Plane其他源码/部署从无扩展。Nerve Down只删索引，预存共享扩展OID保留；runtime默认PUBLIC EXECUTE及owner数据库CREATE条件见README。
+
+Plane已有活links计数：`P/db/models/issue.py:371–381`的IssueLink普通metadata，默认manager `P/db/mixins.py:56–67`排deleted_at；`P/app/views/issue/base.py:130–133,234–239`数id，无作者或metadata.error谓词；`P/app/serializers/issue.py:738–749,780–813`部分serializer公开IntegerField link_count。本项目沿用活数语义，要求每个Issue/Detail非负int64、零显式返回。base.py按issue聚合Subquery未Coalesce，而sub_issue.py:52–62明确Coalesce0，只能说明源码形式不统一，未实测断言全部响应为NULL。
+
+Plane `P/utils/order_queryset.py:18–33,153–157`当前排序allowlist无link_count；Nerve保留P5原19码、新增±link_count成当前21，全平铺/分组/子组/成员/偏好共用词汇及整数/numeric游标。不加link_count筛选、不复制派生列到issues；metadata/URL/title更新不改数量。跨请求链接变化仍是弱快照边界，后续生产前端比较器/页面由P10b–P15接手。
