@@ -157,7 +157,7 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 
 ## Task 10：搜索词汇、编号折叠与参数错误
 
-**Files：** 新I/domain/search.go、search_test.go；复用domain/identifier.go、list_date.go、shared/page.go及api/testdata/identifier-fold.json。必要的有限字面pattern helper放同职责search文件，不复制日期/identifier算法。
+**Files：** 新I/domain/search.go、search_test.go、search_identifier_test.go；复用domain/identifier.go、list_date.go、shared/page.go及api/testdata/identifier-fold.json。必要的有限字面pattern helper放同职责search文件，不复制日期/identifier算法。
 
 **Interfaces：** `SearchFor/SearchQuery/ParseSearchQuery(map[string][]string)(SearchQuery,error)`见spec§2.6；只解析不访问目录/DB。完整identifier数字遵既有1..2147483647无前导0，纯数字分支允许00012→12。
 
