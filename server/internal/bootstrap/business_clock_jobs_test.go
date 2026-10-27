@@ -1,11 +1,14 @@
 package bootstrap
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 	"testing"
 	"time"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
@@ -61,5 +64,65 @@ func TestBusinessClockWorkerKeepsRiverRealTime(t *testing.T) {
 	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("instance = %d", resp.StatusCode)
+	}
+}
+
+// Substituting time.Now for the business clock keeps the tombstone. Moving
+// River to business time instead puts its timestamps outside the real window.
+func TestPurgeBusinessClock(t *testing.T) {
+	url := pgtest.NewDatabase(t)
+	pool := openPool(t, url)
+	var old, live pat
+	var logs lockedBuffer
+	t.Run("prepare on unshifted clock", func(t *testing.T) {
+		cfg := testConfig(t, url, false)
+		base := startApp(t, cfg, migrations.FS())
+		contract := apitest.Load(t)
+		bearer := registerAccount(t, contract, base, "purge-clock@example.com").AccessToken
+		old = createPAT(t, contract, base, bearer)
+		live = createPAT(t, contract, base, bearer)
+		if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/api-tokens/"+old.ID, bearer, ""); status != 204 {
+			t.Fatal(status, body)
+		}
+		waitForCompletedKinds(t, pool, map[string]int{"cleanup.purge_deleted": 1}, &logs)
+		var before int
+		if err := pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM api_tokens WHERE id=$1", old.ID).Scan(&before); err != nil || before != 1 {
+			t.Fatalf("unshifted clock deleted fresh tombstone: %d %v", before, err)
+		}
+	})
+	shifted := testConfig(t, url, false)
+	shifted.Clock.Offset = 61 * 24 * time.Hour
+	shifted.Cleanup.PurgeInterval = time.Second
+	realStart := time.Now()
+	startAppLogging(t, shifted, migrations.FS(), slog.New(slog.NewTextHandler(&logs, nil)))
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
+	defer cancel()
+	awaitPurge(t, ctx, &logs, "shifted purge deletes recent tombstone", func() bool {
+		var n int
+		if err := pool.QueryRow(ctx, "SELECT count(*) FROM api_tokens WHERE id=$1", old.ID).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n == 0
+	})
+	var liveCount int
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM api_tokens WHERE id=$1 AND deleted_at IS NULL", live.ID).Scan(&liveCount); err != nil || liveCount != 1 {
+		t.Fatalf("live PAT=%d %v", liveCount, err)
+	}
+	awaitPurge(t, ctx, &logs, "two shifted periodic completions", func() bool {
+		var n int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind='cleanup.purge_deleted' AND state='completed' AND scheduled_at>=$1`, realStart).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n >= 2
+	})
+	var scheduled, finished time.Time
+	if err := pool.QueryRow(ctx, `SELECT scheduled_at,finalized_at FROM river_job WHERE kind='cleanup.purge_deleted' AND state='completed' ORDER BY finalized_at DESC LIMIT 1`).Scan(&scheduled, &finished); err != nil {
+		t.Fatal(err)
+	}
+	realEnd := time.Now()
+	for _, at := range []time.Time{scheduled, finished} {
+		if at.Before(realStart) || at.After(realEnd) {
+			t.Errorf("River timestamp %s outside real interval [%s,%s]", at, realStart, realEnd)
+		}
 	}
 }

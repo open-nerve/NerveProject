@@ -179,7 +179,9 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		a.close()
 		return nil, err
 	}
-	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, append(ident.Jobs(), issues.Jobs()...), append(identity.EnqueuedKinds(), issue.EnqueuedKinds()...))
+	purge := newPurgeDeleted([]Purger{issuePorts.Purger, projectPorts.Purger, workspacePorts.Purger, identityPorts.Purger}, businessClock, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch)
+	definitions := append(append(ident.Jobs(), issues.Jobs()...), purgeJob(purge, cfg.Cleanup.PurgeInterval))
+	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, append(identity.EnqueuedKinds(), issue.EnqueuedKinds()...))
 	if err != nil {
 		a.close()
 		return nil, err

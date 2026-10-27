@@ -87,6 +87,7 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 			Anonymous:     roomy, AuthFailure: roomy, Authenticated: roomy,
 			LoginIP: roomy, LoginIPEmail: roomy, RegisterIP: roomy, PasswordUser: roomy,
 		},
+		Cleanup:   config.CleanupConfig{PurgeAfter: 60 * 24 * time.Hour, PurgeInterval: time.Hour, PurgeBatch: 1000},
 		Jobs:      config.JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 5 * time.Second},
 		Workspace: config.WorkspaceConfig{CreationEnabled: true},
 		Issue:     testIssueConfig,

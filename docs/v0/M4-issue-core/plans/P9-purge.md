@@ -100,12 +100,12 @@ make e2e
 
 ## Task 4：单一cleanup周期任务与运行角色（F）
 
-**Files：** 新B/purge.go、purge_test.go、purge_integration_test.go；改B/app.go、all_periodic_jobs_test.go、business_clock_jobs_test.go、runtime_role_test.go；消费platform/jobs既有登记接口。预计600–1000行。
+**Files：** 新B/purge.go、purge_test.go、purge_integration_test.go、purge_runtime_test.go（复用runtime_role_test.go的splitRoles，避免扩大既有文件）；改B/app.go、app_test.go（手工testConfig补合法Cleanup，普通测试按小时调度）、all_periodic_jobs_test.go、business_clock_jobs_test.go；消费platform/jobs既有登记接口。预计600–1000行。
 
 **Interfaces：** B.Purger、newPurgeDeleted、Execute、purgeJob按spec§2.3；固定kind cleanup.purge_deleted/periodic/RunOnStart，使用四Provided.Purger值和业务Clock。仅purge的InsertOpts加`river.UniqueOpts{ByState: []rivertype.JobState{rivertype.JobStateAvailable,rivertype.JobStatePending,rivertype.JobStateRunning,rivertype.JobStateRetryable,rivertype.JobStateScheduled}}`；不设ByArgs/ByPeriod、不含Completed、不改其他任务。
 
 - [ ] **测试：** 新`TestPurgeDeletedUsesOneCutoffAndModuleOrder`假Clock调用恰1，顺序issue/project/workspace/identity，第二模块失败后total仅已提交数且第三不调用；`TestPurgeDeletedRunsWithRuntimeRole`用真实runtime处理PAT和带活动/comment issue、标签/project/workspace，61d删/59d留。扩`TestAllPeriodicJobsRun`为此时3种周期各startup/重复/队列；新`TestPurgeBusinessClock`偏移61d改变cutoff而调度仍真实时间。
-- [ ] **重叠测试：** 新`TestPurgePeriodicRunsDoNotOverlap`用真实River运行purgeJob，阻住首轮跨至少两个周期（以独立控制周期任务的完成轮数为条件证据），断言`activeJobs==1 && maxConcurrent==1`；释放completed后出现新job id。另一分支令首轮真实失败进入retryable，再在隔离库把该任务scheduled_at设到两个周期之后，跨周期仍只有该active任务；到期重试仍按同job运行。去UniqueOpts必须真实观察第二active/并发而红，不能只断言配置结构。
+- [ ] **重叠测试：** 新`TestPurgePeriodicRunsDoNotOverlap`用真实River运行purgeJob，阻住首轮跨至少两个周期（以独立控制周期任务的完成轮数为条件证据），断言`activeJobs==1 && maxConcurrent==1`；释放completed后出现新job id。另一分支令首个job按默认策略真实失败两次（attempt 1为available、attempt 2为retryable），再在隔离库把该任务scheduled_at设到两个周期之后，跨周期仍只有该active任务；到期重试仍按同job的attempt 3运行。去UniqueOpts必须真实观察第二active/并发而红，不能只断言配置结构。
 - [ ] **红：** `go -C server test -p=1 -count=1 ./internal/bootstrap -run '^Test(PurgeDeletedUsesOneCutoffAndModuleOrder|PurgeDeletedRunsWithRuntimeRole|PurgeBusinessClock|PurgePeriodicRunsDoNotOverlap|AllPeriodicJobsRun)$'`，无job/无删除/跨周期重叠红；runtime不是owner连接。
 - [ ] **实现：** 单个bootstrap聚合worker，只委托Execute；append到jobs.New，不增加四并发purge任务，无SQL/模块表名派发；活动状态唯一性阻止同kind不同轮次及旧重试交叠。失败保留原错误链，默认River期限不改。
 - [ ] **绿：** 重复聚焦，`go -C server test -p=1 -count=1 ./internal/platform/jobs ./internal/bootstrap ./internal/archtest`。M9交换模块顺序、M10用time.Now替业务Clock、M11漏periodic worker、M11b去purge UniqueOpts分别红→恢复。
