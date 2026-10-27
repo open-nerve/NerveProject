@@ -100,6 +100,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 	// module's tables are in projectNames (project_schema_test.go), the issue
 	// module's in issueNames (issue_schema_test.go).
 	want := slices.Concat([]string{
+		"api_tokens_deleted_at_idx iw",
 		"api_tokens_created_by_id_fkey f n",
 		"api_tokens_label_check c",
 		"api_tokens_pkey iu",
@@ -134,6 +135,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"users_email_key u",
 		"users_pkey iu",
 		"users_pkey p",
+		"workspace_member_invites_deleted_at_idx iw",
 		"workspace_member_invites_created_by_id_fkey f n",
 		"workspace_member_invites_email_check c",
 		"workspace_member_invites_email_idx iw",
@@ -145,6 +147,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"workspace_member_invites_workspace_id_email_key iuw",
 		"workspace_member_invites_workspace_id_fkey f c",
 		"workspace_member_invites_workspace_id_idx i",
+		"workspace_members_deleted_at_idx iw",
 		"workspace_members_created_by_id_fkey f n",
 		"workspace_members_member_id_fkey f c",
 		"workspace_members_member_id_idx iw",
@@ -155,6 +158,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"workspace_members_workspace_id_fkey f c",
 		"workspace_members_workspace_id_idx i",
 		"workspace_members_workspace_id_member_id_key iuw",
+		"workspace_user_properties_deleted_at_idx iw",
 		"workspace_user_properties_created_by_id_fkey f n",
 		"workspace_user_properties_navigation_control_preference_check c",
 		"workspace_user_properties_navigation_project_limit_check c",
@@ -165,6 +169,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"workspace_user_properties_workspace_id_fkey f c",
 		"workspace_user_properties_workspace_id_idx i",
 		"workspace_user_properties_workspace_id_user_id_key iuw",
+		"workspaces_deleted_at_idx iw",
 		"workspaces_created_by_id_fkey f n",
 		"workspaces_name_check c",
 		"workspaces_organization_size_check c",

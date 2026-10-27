@@ -11,6 +11,7 @@ sql:
       - migrations/sql/00002_identity_profiles.sql
       - migrations/sql/00003_identity_auth_sessions.sql
       - migrations/sql/00004_identity_api_tokens.sql
+      - migrations/sql/00030_identity_purge_indexes.sql
     queries: internal/modules/identity/adapter/postgres/queries
     gen:
       go:
@@ -35,6 +36,7 @@ sql:
       - migrations/sql/00007_workspace_workspace_members.sql
       - migrations/sql/00008_workspace_workspace_user_properties.sql
       - migrations/sql/00009_workspace_workspace_member_invites.sql
+      - migrations/sql/00031_workspace_purge_indexes.sql
     queries: internal/modules/workspace/adapter/postgres/queries
     gen:
       go:
@@ -61,6 +63,7 @@ sql:
       - migrations/sql/00013_project_states.sql
       - migrations/sql/00014_project_labels.sql
       - migrations/sql/00026_project_project_user_properties_issue_display.sql
+      - migrations/sql/00032_project_purge_indexes.sql
     queries: internal/modules/project/adapter/postgres/queries
     gen:
       go:
@@ -95,6 +98,7 @@ sql:
       - migrations/sql/00027_issue_issue_links.sql
       - migrations/sql/00028_issue_draft_issues.sql
       - migrations/sql/00029_issue_issues_name_trgm.sql
+      - migrations/sql/00033_issue_purge_indexes.sql
     queries: internal/modules/issue/adapter/postgres/queries
     gen:
       go:

@@ -50,6 +50,7 @@ type CredentialLock interface {
 // 6.6, step 2); CredentialLock is identity's own protocol step, on its
 // store alone.
 type Provided struct {
+	Purger         *app.Purger
 	Accounts       Accounts
 	PublicProfiles PublicProfiles
 	CredentialLock CredentialLock
@@ -58,7 +59,10 @@ type Provided struct {
 // Provide builds identity's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
-	return Provided{Accounts: store, PublicProfiles: store, CredentialLock: callerLock{lock: credentialLock(store)}}
+	return Provided{
+		Purger:   app.NewPurger([]app.PurgeStep{{Table: "api_tokens", Delete: store.PurgeAPITokens}}),
+		Accounts: store, PublicProfiles: store, CredentialLock: callerLock{lock: credentialLock(store)},
+	}
 }
 
 // credentialLock is the credential lock over the store, identity's use

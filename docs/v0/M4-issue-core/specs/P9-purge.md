@@ -28,7 +28,7 @@
 
 | Task | 精确文件或同职责文件组 | 交付；预计手写差异行 |
 |---|---|---|
-| T1 | `server/migrations/sql/00030_identity_purge_indexes.sql`、`00031_workspace_purge_indexes.sql`、`00032_project_purge_indexes.sql`、`00033_issue_purge_indexes.sql`（新）；`server/migrations/schema_test.go`、`project_schema_test.go`、`issue_schema_test.go`、`draft_schema_test.go`；`server/sqlc.yaml`；`platform/config/{config,validate,load_test,validate_test}.go`、`purge_test.go`（新）；`server/configs/config.yaml`、`config.test.yaml`；A/app/purge.go、adapter/postgres/purge.go、queries/purge.sql 及测试（新）、provide.go | 23 索引、既有精确全量名单同步、六配置、PAT 清理及独立批提交；500–900 |
+| T1 | `server/migrations/sql/00030_identity_purge_indexes.sql`、`00031_workspace_purge_indexes.sql`、`00032_project_purge_indexes.sql`、`00033_issue_purge_indexes.sql`（新）；`server/migrations/schema_test.go`、`project_schema_test.go`、`issue_schema_test.go`、`draft_schema_test.go`、`trigram_schema_test.go`（新增迁移后的完整往返版本接续）；`server/sqlc.yaml`；`platform/config/{config,validate,load_test,validate_test}.go`、`purge_test.go`（新）；`server/configs/config.yaml`、`config.test.yaml`、`embed_test.go`（六字段的既有全量配置期望接续）；A/app/purge.go、adapter/postgres/purge.go、queries/purge.sql 及测试（新）、provide.go | 23 索引、既有精确全量名单同步、六配置、PAT 清理及独立批提交；500–900 |
 | T2 | P/W 的 app/purge.go、adapter/postgres/purge.go、queries/purge.sql 及测试（新）；P/W/module.go | M3 两模块子先父后清理；450–850 |
 | T3 | I/app/purge.go、adapter/postgres/purge.go、queries/purge.sql 及测试（新）、module.go；B/purge_catalog_test.go（新）；`server/migrations/purge_indexes_test.go`（新） | issue 13 表与完整入边目录、行为反例；700–1100 |
 | T4 | B/purge.go、purge_test.go、purge_integration_test.go（新）、app.go、all_periodic_jobs_test.go、business_clock_jobs_test.go、runtime_role_test.go | 单一聚合周期任务、真实运行角色与时钟；600–1000，检查点 F |

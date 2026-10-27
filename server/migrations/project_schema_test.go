@@ -14,8 +14,9 @@ import (
 
 // projectNames are the constraints and indexes of the project module's
 // tables (M3 design 4.6–4.10), as TestConstraintAndIndexNames reads them:
-// the part of its want that the migrations 00010–00014 add.
+// the project module's part of its want.
 var projectNames = []string{
+	"labels_deleted_at_idx iw",
 	"labels_created_by_id_fkey f n",
 	"labels_name_check c",
 	"labels_not_own_parent_check c",
@@ -29,6 +30,7 @@ var projectNames = []string{
 	"labels_updated_by_id_fkey f n",
 	"labels_workspace_id_fkey f c",
 	"labels_workspace_id_idx i",
+	"project_members_deleted_at_idx iw",
 	"project_members_created_by_id_fkey f n",
 	"project_members_member_id_fkey f c",
 	"project_members_member_id_idx iw",
@@ -41,6 +43,7 @@ var projectNames = []string{
 	"project_members_updated_by_id_fkey f n",
 	"project_members_workspace_id_fkey f c",
 	"project_members_workspace_id_idx i",
+	"project_user_properties_deleted_at_idx iw",
 	"project_user_properties_created_by_id_fkey f n",
 	"project_user_properties_display_filters_check c",
 	"project_user_properties_display_properties_check c",
@@ -56,6 +59,7 @@ var projectNames = []string{
 	"project_user_properties_workspace_id_fkey f c",
 	"project_user_properties_workspace_id_idx i",
 	"projects_archive_in_check c",
+	"projects_deleted_at_idx iw",
 	"projects_created_by_id_fkey f n",
 	"projects_default_assignee_id_fkey f n",
 	"projects_identifier_check c",
@@ -71,6 +75,7 @@ var projectNames = []string{
 	"projects_workspace_id_identifier_key iuw",
 	"projects_workspace_id_idx i",
 	"projects_workspace_id_name_key iuw",
+	"states_deleted_at_idx iw",
 	"states_created_by_id_fkey f n",
 	"states_group_check c",
 	"states_name_check c",

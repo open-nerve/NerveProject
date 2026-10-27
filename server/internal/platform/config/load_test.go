@@ -58,7 +58,15 @@ jobs:
   shutdown_timeout: 10s
 workspace:
   creation_enabled: true
+cleanup:
+  purge_after: 1440h
+  purge_interval: 24h
+  purge_batch: 1000
+
 issue:
+  trim_versions_interval: 24h
+  delete_batch: 1000
+  delete_budget: 45s
   auto_archive_interval: 24h
   write_gate:
     per_project: 2
@@ -163,7 +171,9 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 		Outbound:  OutboundConfig{AllowCIDRs: []string{}},
 		Jobs:      JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 7 * time.Second}, // environment
 		Workspace: WorkspaceConfig{CreationEnabled: false},                                              // environment
+		Cleanup:   CleanupConfig{PurgeAfter: 1440 * time.Hour, PurgeInterval: 24 * time.Hour, PurgeBatch: 1000},
 		Issue: IssueConfig{
+			TrimVersionsInterval: 24 * time.Hour, DeleteBatch: 1000, DeleteBudget: 45 * time.Second,
 			WriteGate:           WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 8}, // max_queue: environment
 			WriteLockTimeout:    5 * time.Second,
 			AutoArchiveInterval: 24 * time.Hour,

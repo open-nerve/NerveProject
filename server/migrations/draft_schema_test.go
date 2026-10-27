@@ -22,6 +22,7 @@ func TestDraftSchema(t *testing.T) {
 	indexes := names(t, pool, `SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND tablename='draft_issues' ORDER BY indexname`)
 	wantIndexes := []string{
 		"CREATE INDEX draft_issues_author_created_at_idx ON public.draft_issues USING btree (workspace_id, created_by_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL)",
+		"CREATE INDEX draft_issues_deleted_at_idx ON public.draft_issues USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)",
 		"CREATE UNIQUE INDEX draft_issues_pkey ON public.draft_issues USING btree (id)",
 		"CREATE INDEX draft_issues_project_id_idx ON public.draft_issues USING btree (project_id)",
 		"CREATE INDEX draft_issues_workspace_id_idx ON public.draft_issues USING btree (workspace_id)",

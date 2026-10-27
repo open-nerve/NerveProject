@@ -41,8 +41,8 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 29 {
-		t.Fatalf("Up() = %d migrations, %v; want 29", len(up), err)
+	if err != nil || len(up) != 33 {
+		t.Fatalf("Up() = %d migrations, %v; want 33", len(up), err)
 	}
 	wantSchema := []struct {
 		query string
@@ -80,8 +80,12 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 	if _, err := pool.Exec(ctx, "DROP FUNCTION public.similarity(integer)"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := m.Down(ctx); err != nil {
-		t.Fatal(err)
+	// Roll back the later retention indexes before checking migration 29.
+	for version := int64(33); version >= 29; version-- {
+		down, err := m.Down(ctx)
+		if err != nil || down == nil || down.Version != version {
+			t.Fatalf("Down version %d = %+v, %v", version, down, err)
+		}
 	}
 	if got := names(t, pool, "SELECT relname FROM pg_class WHERE relnamespace='public'::regnamespace AND relname='issues_name_trgm_idx'"); len(got) != 0 {
 		t.Fatalf("00029 Down left index: %v", got)
@@ -89,7 +93,7 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 	if got := trigramOID(t, pool); got != oid {
 		t.Fatalf("00029 Down changed extension OID: %d -> %d", oid, got)
 	}
-	for range len(up) - 1 {
+	for range 28 {
 		if _, err := m.Down(ctx); err != nil {
 			t.Fatalf("Down() error = %v", err)
 		}
@@ -99,8 +103,8 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 29 {
-		t.Errorf("Up() again = %d migrations, %v; want 29", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 33 {
+		t.Errorf("Up() again = %d migrations, %v; want 33", len(again), err)
 	}
 	checkSchema("Up again")
 	assertTrigramIndex(t, pool)

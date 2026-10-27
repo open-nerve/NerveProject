@@ -63,7 +63,7 @@ make e2e
 
 ## Task 1：索引、配置与PAT独立批清理
 
-**Files：** 新`server/migrations/sql/00030_identity_purge_indexes.sql`、`00031_workspace_purge_indexes.sql`、`00032_project_purge_indexes.sql`、`00033_issue_purge_indexes.sql`；改`server/migrations/schema_test.go`、`server/migrations/project_schema_test.go`、`server/migrations/issue_schema_test.go`、`server/migrations/draft_schema_test.go`；改`server/sqlc.yaml`、`server/internal/platform/config/config.go`、validate.go、load_test.go、validate_test.go；新config/purge_test.go；改`server/configs/config.yaml`、config.test.yaml；新A/app/purge.go、purge_test.go、adapter/postgres/purge.go、purge_test.go、queries/purge.sql；改A/provide.go；生成四模块gen。预计500–900行。
+**Files：** 新`server/migrations/sql/00030_identity_purge_indexes.sql`、`00031_workspace_purge_indexes.sql`、`00032_project_purge_indexes.sql`、`00033_issue_purge_indexes.sql`；改`server/migrations/schema_test.go`、`server/migrations/project_schema_test.go`、`server/migrations/issue_schema_test.go`、`server/migrations/draft_schema_test.go`、`server/migrations/trigram_schema_test.go`（新增迁移后的完整往返版本接续）；改`server/sqlc.yaml`、`server/internal/platform/config/config.go`、validate.go、load_test.go、validate_test.go；新config/purge_test.go；改`server/configs/config.yaml`、config.test.yaml、`server/configs/embed_test.go`（六字段的既有全量配置期望接续）；新A/app/purge.go、purge_test.go、adapter/postgres/purge.go、purge_test.go、queries/purge.sql；改A/provide.go；生成四模块gen。预计500–900行。
 
 **Interfaces：** 产出spec§2.2本模块PurgeBatch/PurgeStep/Purger/NewPurger/Tables；adapter `PurgeAPITokens(context.Context,app.PurgeBatch)([]uuid.UUID,error)`；A.Provided.Purger具体值，Provide(pool)不变。产出§2.3六字段与校验。
 
