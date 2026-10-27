@@ -12,8 +12,26 @@ export type IssueUpdate = components["schemas"]["IssueUpdate"];
 export type IssueQuery = NonNullable<operations["listIssues"]["parameters"]["query"]>;
 export type MemberIssueQuery = operations["listMemberIssues"]["parameters"]["query"];
 export type IssuePage = components["schemas"]["IssueListPage"];
+export type IssueSearchQuery = NonNullable<operations["searchIssues"]["parameters"]["query"]>;
+export type IssueCollection = components["schemas"]["IssueCollection"];
 type IssueRelation = components["schemas"]["IssueRelation"];
 type IssueRelationsCreate = components["schemas"]["IssueRelationsCreate"];
+
+/** Searches the workspace's visible issues through the generated selector operation. */
+export async function searchIssues(
+  api: Api,
+  token: string,
+  slug: string,
+  query: IssueSearchQuery = {}
+): Promise<IssueCollection> {
+  const { data, error, response } = await api.GET("/api/v0/workspaces/{slug}/issue-search", {
+    params: { path: { slug }, query },
+    headers: bearer(token),
+  });
+  expect(response.status, `search in ${slug}: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) throw new Error("searchIssues answered 200 without its collection");
+  return data;
+}
 
 /** The real project's list response, retaining refusal fields for negative stories. */
 export async function issuesListed(api: Api, token: string, projectId: string, query: IssueQuery = {}) {

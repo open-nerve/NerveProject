@@ -2,7 +2,7 @@ import { expect } from "@playwright/test";
 
 import { shownNameOf } from "../auth";
 import type { Database } from "../db";
-import type { IssuePage } from "../issues";
+import type { IssueCollection, IssuePage } from "../issues";
 import { keysBelow } from "./catalog";
 
 // Database assertions of the work-item stories. The page version and the
@@ -36,6 +36,17 @@ export function expectIssuePage(page: IssuePage, ids: string[], total = ids.leng
   expect(page.data?.map((row) => row.id)).toEqual(ids);
   expect(page.next_cursor).toEqual(more ? expect.any(String) : null);
   if (more) expect(page.next_cursor).not.toBe("");
+}
+
+/** Search has only issue data, with ordered identities and no detail-only HTML or pagination. */
+export function expectIssueCollection(collection: IssueCollection, ids: string[]): void {
+  expect(Object.keys(collection)).toEqual(["data"]);
+  expect(collection.data.map((row) => row.id)).toEqual(ids);
+  for (const row of collection.data) {
+    expect(row).not.toHaveProperty("description_html");
+    expect(row.link_count).toBeGreaterThanOrEqual(0);
+    expect(Number.isInteger(row.link_count)).toBe(true);
+  }
 }
 
 /** I6's position and exact completion stamp, plus the identifiers and actor of its one state activity. */
