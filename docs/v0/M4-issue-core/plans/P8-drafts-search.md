@@ -134,7 +134,7 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 
 ## Task 8：I14接口故事与草稿全链路回归（检查点F）
 
-**Files：** 新`e2e/stories/issue/i14-drafts.spec.ts`；`e2e/fixtures/issues.ts`；已有`e2e/stories/project/p4-archive.spec.ts`、workspace/w2-landing.spec.ts、w3-workspace-settings.spec.ts；B/workspace_deletion_test.go、workspace_deletion_catalog_test.go、project_deletion_test.go；spec验收证据。
+**Files：** 新增`e2e/stories/issue/i14-drafts.spec.ts`；扩展`e2e/fixtures/issues.ts`五个草稿操作及`e2e/stories/workspace/w3-workspace-settings.spec.ts`无项目/零项目/旧草稿审计证据；spec验收证据。复用T4已扩展的`e2e/fixtures/furnish.ts`、`e2e/fixtures/assert/{catalog,project,workspace}.ts`和既有`e2e/stories/project/p4-archive.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`，不制造空改动。复用B/workspace_deletion_test.go、workspace_deletion_catalog_test.go、project_deletion_test.go的全表目录与回滚回归，保留原subItems/links断言；零项目HTTP组合证据放在W3。
 
 **Interfaces：** fixture只包此时已落地的六个草稿和既有issue接口，不用SQL前置。I14 save→patch→publish按两个API，不能publish body拼表单。删除断言按全表目录。
 

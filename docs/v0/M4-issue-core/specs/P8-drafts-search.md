@@ -304,3 +304,11 @@ schema生成/JSONB规范化可能改变错误截断顺序，T5对规范存储体
 2026-10-27：只读核对M4设计、P3样板、P7交付树、现有创建/锁/列表/游标/HTTP bodyshape/删除接缝；独立需求和代码盘点保存在 ignored `.superpowers/sdd/P8-drafts-search/preparation/`。规格作者和独立审者没有跑迁移、生成器、产品测试、SQL原型或性能实验；主控另已运行既有关键词/架构检查，结果见评审记录，不构成P8产品验收；NUL可存性和生成风险为静态推导，均有实施期验证Task。P7基线CI事实来自主控对准确SHA的核验；P8尚无实现或运行证据。
 
 实施后仅追加有原始输出/准确SHA的记录：Task红绿及实际RUN数；生产变异红因/层级/恢复hash；交错PID链；T4/8/12/15门禁；10万性能数据分布、PG版本/locale/LC_CTYPE、最终SQL及参数、EXPLAIN(ANALYZE,BUFFERS)、暖/冷说明与至少5次样本中位数/范围；deep-review和定向复审。未执行项保持未勾。
+
+2026-10-27，T8作者聚焦证据（基线`2eb2ba80eaafa9e3c8e12bb8e5b34efdc8d526b8`，最终提交及源码hash收据见 ignored `.superpowers/sdd/P8-drafts-search/task-8-author-report.md`）：
+
+- I14三条HTTP故事覆盖缺name保存201/发布与直接创建同400、PATCH整替换、description/parent发布201、草稿list消失/get及重复publish404、同At/actor审计、失效state422、他人404/project guest403，以及归档/退出项目仍列草稿且发布按当前权限拒绝。前置均走API，数据库仅作断言。先`make build`后首轮3/3直接绿，反映T1–T7已有实现，不当作初始红。
+- M14在生产`publish_draft.go`真实略去消费草稿，`make build`成功后同I14因发布后草稿仍在列表而红（1失败、2通过）；恢复源码原字节及SHA256 `3aea4485bde8a0eddee1cd2bf6815f11b8c09a66845ef0534d705f29101f530f`，重新`make build`后同故事3/3绿。编译来源/二进制hash及原始红绿输出保存在 ignored `task-8-evidence/m14-receipt.json`和`checks/t8-m14-*`。
+- P4/W2/W3指定回归6/6通过；W3新增显式nil-project草稿、零项目工作区HTTP删除的动态全表目录断言及已删旧项目草稿原始微秒审计前后快照。P4/W2复用T4的API furnish与动态目录；bootstrap发布/删除/目录/子项28 RUN、存储层草稿/链接删除13 RUN均通过，保留原subItems/links覆盖。
+
+此记录仅为T8作者聚焦/影响验证；完整F、独立评审、准确HEAD push及CI仍由主控完成后补证。A9还包含T14的I18/I4，未在T8提前完成；各阶段验收项保持未勾。

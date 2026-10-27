@@ -266,3 +266,54 @@ export async function createDraft(
   if (!data) throw new Error("createDraft answered 201 without the draft");
   return data;
 }
+
+/** Lists only the caller's unfinished input, including drafts of archived or left projects. */
+export async function draftsListed(api: Api, token: string, workspaceSlug: string) {
+  const { data, error, response } = await api.GET("/api/v0/workspaces/{slug}/drafts", {
+    params: { path: { slug: workspaceSlug } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, page: data } : answer(response, error);
+}
+
+/** Reads a personal draft, retaining refusal fields for ownership assertions. */
+export async function draftRead(api: Api, token: string, draftId: string) {
+  const { data, error, response } = await api.GET("/api/v0/drafts/{draft_id}", {
+    params: { path: { draft_id: draftId } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, draft: data } : answer(response, error);
+}
+
+/** Replaces the complete payload when present; omitted outer fields keep their values. */
+export async function draftUpdated(
+  api: Api,
+  token: string,
+  draftId: string,
+  body: components["schemas"]["DraftUpdate"]
+) {
+  const { data, error, response } = await api.PATCH("/api/v0/drafts/{draft_id}", {
+    params: { path: { draft_id: draftId } },
+    body,
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, draft: data } : answer(response, error);
+}
+
+/** Discards the caller's unfinished input without creating a work item. */
+export async function draftDeleted(api: Api, token: string, draftId: string) {
+  const { error, response } = await api.DELETE("/api/v0/drafts/{draft_id}", {
+    params: { path: { draft_id: draftId } },
+    headers: bearer(token),
+  });
+  return answer(response, error);
+}
+
+/** Publishes the saved payload through the bodyless operation, never a second form submission. */
+export async function draftPublished(api: Api, token: string, draftId: string) {
+  const { data, error, response } = await api.POST("/api/v0/drafts/{draft_id}/publish", {
+    params: { path: { draft_id: draftId } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, issue: data } : answer(response, error);
+}

@@ -8,7 +8,7 @@ import {
   slugFor,
   type Workspace,
 } from "../../fixtures/api";
-import { projectTables } from "../../fixtures/assert/catalog";
+import { projectTables, workspaceTables } from "../../fixtures/assert/catalog";
 import { expectLabels, expectProjectCreated, expectProjectDeleted, type LabelRow } from "../../fixtures/assert/project";
 import {
   expectInvitations,
@@ -16,8 +16,9 @@ import {
   expectPreferences,
   expectWorkspaceDeleted,
 } from "../../fixtures/assert/workspace";
-import { accountId, bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, newAccount, register, registeredPAT } from "../../fixtures/auth";
 import { furnishIssueRows } from "../../fixtures/furnish";
+import { createDraft, draftRead, draftsListed } from "../../fixtures/issues";
 import { expect, test } from "../../fixtures/test";
 
 // W3, the workspace's settings (M3 design 2): the API version. The page versions, with the session switch of 7.1,
@@ -90,6 +91,7 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   // Acme's Web has a work item too, the member's, assigned to him and labelled Bug, whose rows Acme's deletion must
   // write again as the admin's; Other's Web has none, as made (expectProjectCreated).
   await furnishIssueRows(api, member, slug, acmeWeb.id, memberId, acmeBug.id);
+  const projectless = await createDraft(api, member, slug, { project_id: null, payload: { name: "Unassigned" } });
   /** Web's labels, as the member made them; deleted by the admin, as Acme's deletion writes them. */
   const webLabels = (deleted: boolean): LabelRow[] => [
     { name: "Bug", color: "#EF4444", parent: null, sort_order: 65535, deleted, by: deleted ? adminEmail : memberEmail },
@@ -188,6 +190,16 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
     headers: bearer(admin),
   });
   expect(oldDeleted.response.status).toBe(204);
+  const oldDraftAudit = () =>
+    db.query(
+      `SELECT id, updated_at::text AS updated_at, deleted_at::text AS deleted_at, updated_by_id
+         FROM draft_issues WHERE project_id = $1 ORDER BY id`,
+      [old.id]
+    );
+  const oldDraftsBeforeWorkspaceDeletion = await oldDraftAudit();
+  expect(oldDraftsBeforeWorkspaceDeletion).toEqual([
+    { id: expect.any(String), updated_at: expect.any(String), deleted_at: expect.any(String), updated_by_id: adminId },
+  ]);
 
   const deleted = await api.DELETE("/api/v0/workspaces/{slug}", { params: { path: { slug } }, headers: bearer(admin) });
   expect(deleted.response.status).toBe(204);
@@ -214,6 +226,18 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   ]);
   // Old and every row under it keep its deletion: its moment and its author, the admin.
   await expectProjectDeleted(db, old.id, adminEmail);
+  expect(await oldDraftAudit(), "the old project's drafts keep their exact earlier audit").toEqual(
+    oldDraftsBeforeWorkspaceDeletion
+  );
+  expect(
+    await db.query(
+      `SELECT d.project_id IS NULL AS projectless,
+              d.deleted_at = w.deleted_at AND d.updated_at = w.deleted_at AS same_moment,
+              d.updated_by_id = w.updated_by_id AND d.updated_by_id = $2::uuid AS same_actor
+         FROM draft_issues d JOIN workspaces w ON w.id = d.workspace_id WHERE d.id = $1`,
+      [projectless.id, adminId]
+    )
+  ).toEqual([{ projectless: true, same_moment: true, same_actor: true }]);
   // The invitations accepted before keep the moment they were answered; the declined one goes with the pending
   // one; the other workspace keeps everything.
   const invitations = (memberRole: number, withTheWorkspace: boolean) => [
@@ -249,4 +273,57 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
     [404, "workspace.not_found"],
     [404, "workspace.not_found"],
   ]);
+});
+
+// Catches a cascade that returns early for an empty project set and leaves nil-project drafts alive.
+test("W3 (API): deleting a workspace with zero projects consumes its projectless draft with the workspace's exact audit and leaves no live row in the dynamic workspace directory", async ({
+  api,
+  db,
+}, testInfo) => {
+  const admin = await newAccount(api, testInfo, "admin");
+  const slug = slugFor(testInfo);
+  const workspace = await createWorkspace(api, admin.token, { name: "Empty", slug });
+  const draft = await createDraft(api, admin.token, slug, { project_id: null, payload: { name: "No project yet" } });
+  expect(await draftsListed(api, admin.token, slug)).toEqual({
+    status: 200,
+    page: { data: [draft], next_cursor: null, total: 1 },
+  });
+  expect(await db.query(`SELECT count(*)::int AS count FROM projects WHERE workspace_id = $1`, [workspace.id])).toEqual(
+    [{ count: 0 }]
+  );
+  const tables = await workspaceTables(db);
+  expect(tables).toContain("draft_issues");
+  const before = new Map(
+    await Promise.all(
+      tables.map(async (table): Promise<[string, number]> => {
+        const [row] = await db.query<{ count: number }>(
+          `SELECT count(*)::int AS count FROM ${table} WHERE workspace_id = $1`,
+          [workspace.id]
+        );
+        if (!row) throw new Error(`missing count for ${table}`);
+        return [table, row.count];
+      })
+    )
+  );
+  const deleted = await api.DELETE("/api/v0/workspaces/{slug}", {
+    params: { path: { slug } },
+    headers: bearer(admin.token),
+  });
+  expect(deleted.response.status).toBe(204);
+  await Promise.all(
+    tables.map(async (table) => {
+      expect(
+        await db.query(
+          `SELECT count(*)::int AS count,
+                count(*) FILTER (WHERE r.deleted_at IS NULL)::int AS live,
+                count(*) FILTER (WHERE r.deleted_at = w.deleted_at AND r.updated_at = w.deleted_at
+                                  AND r.updated_by_id = w.updated_by_id AND r.updated_by_id = $2::uuid)::int AS stamped
+           FROM ${table} r JOIN workspaces w ON w.id = r.workspace_id WHERE w.id = $1`,
+          [workspace.id, admin.id]
+        ),
+        `all rows of ${table} share the zero-project workspace deletion`
+      ).toEqual([{ count: before.get(table), live: 0, stamped: before.get(table) }]);
+    })
+  );
+  expect(await draftRead(api, admin.token, draft.id)).toEqual({ status: 404, code: "issue.draft_not_found" });
 });
