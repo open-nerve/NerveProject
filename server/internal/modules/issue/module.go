@@ -132,6 +132,9 @@ type Deps struct {
 	ArchivePolicies      app.ArchivePolicies
 	AutoArchiveInterval  time.Duration
 	TrimVersionsInterval time.Duration
+	DeleteBatch          int
+	DeleteBudget         time.Duration
+	RuntimeNow           func() time.Time
 	// ReadTx supplies independent, read-only repeatable-read transactions for
 	// collaboration lists. The first target read, authorization, directories
 	// and list queries must all use its context; never call such a list from
@@ -156,6 +159,9 @@ type Deps struct {
 
 // Module is the wired issue module.
 type Module struct {
+	deleteRows           *app.DeleteRows
+	deleteBudget         time.Duration
+	logger               *slog.Logger
 	uc                   httpadapter.UseCases
 	trimVersions         *app.TrimVersions
 	trimVersionsInterval time.Duration
@@ -178,6 +184,7 @@ func New(d Deps) *Module {
 		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
 	})
 	return &Module{
+		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
 		trimVersions: app.NewTrimVersions(app.TrimVersionsDeps{Projects: d.Projects, Gate: d.Projects, Rows: store, Tx: d.JobTx}), trimVersionsInterval: d.TrimVersionsInterval,
 		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: crawler.New(d.Outbound, d.Logger), Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval,
 		uc: httpadapter.UseCases{

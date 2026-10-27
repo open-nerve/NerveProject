@@ -21,5 +21,5 @@ func EventTypes() []string {
 
 // Subscribers composes transactional consumers independently of New.
 func Subscribers(inserter riveradapter.Inserter) []shared.EventSubscriber {
-	return []shared.EventSubscriber{app.NewCrawlOnLinkChange(riveradapter.NewLinkCrawls(inserter))}
+	return []shared.EventSubscriber{app.NewCrawlOnLinkChange(riveradapter.NewLinkCrawls(inserter)), app.NewDeleteRowsOnDeletion(riveradapter.NewRowDeletions(inserter))}
 }

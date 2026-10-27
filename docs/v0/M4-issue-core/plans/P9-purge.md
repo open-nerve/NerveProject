@@ -157,9 +157,12 @@ T7 回归接续：`B/issue_description_versions_test.go` 的 101 版本分页夹
 
 ## Task 8：分批任务、预算与完整声明接线（F）
 
-**Files：** 改I/app/delete_project_rows.go；新I/app/delete_rows.go、delete_rows_test.go、delete_rows_on_deletion.go、delete_rows_on_deletion_test.go；新I/adapter/postgres/deletion_remaining.go、deletion_remaining_test.go、queries/deletion_remaining.sql；新I/adapter/river/delete_rows.go、delete_rows_test.go、row_deletions.go、row_deletions_test.go；改I/module.go、module_jobs.go、module_events.go；新P/W/module_events.go；改B/app.go、events_test.go、issue_link_jobs_test.go、request_jobs_test.go；新B/issue_delete_jobs_test.go；对应生成。预计900–1300行。
+**Files：** 改I/app/delete_project_rows.go；新I/app/delete_rows.go、delete_rows_test.go、delete_rows_on_deletion.go、delete_rows_on_deletion_test.go；新I/adapter/postgres/deletion_remaining.go、deletion_remaining_test.go、queries/deletion_remaining.sql；新I/adapter/river/delete_rows.go、delete_rows_test.go、row_deletions.go、row_deletions_test.go；改I/module.go、module_jobs.go、module_events.go；新P/W/module_events.go；改B/app.go、events.go、events_test.go、app_test.go、issue_writes_test.go、issue_link_jobs_test.go、issue_link_race_helpers_test.go、request_locks_test.go、request_jobs_test.go；新B/issue_delete_jobs_test.go；对应生成。预计900–1300行。
 
 **Interfaces：** spec§2.6/2.7 DeleteRowsDeps/Execute/Result、RemainingRows/ProjectRemainder/RowStep、RowDeletions、DeleteRowsArgs/UseCase/Worker/Job。I.Deps新增DeleteBatch/DeleteBudget/RuntimeNow，module构造时接JobTx与Relations；P/W.EventTypes在本Task声明，发布用例仍T9/T10。
+
+T8 接线补充：bootstrap 的 `eventTypes()` 汇总 I/P/W 目录，用于既有 5 处完整 Subscribers 构造（app、link jobs 的两处、link race helper、request locks）；仅用自定义 issue observer 的构造保留 issue 目录。3 处 `issue.Deps` 构造显式补 DeleteBatch/DeleteBudget/RuntimeNow，手造 testIssueConfig 同步 1000/45s；生产 RuntimeNow 为 time.Now、删除 Tx 为 JobTx。`DeletionRowSteps()` 返回独立表序切片，共用于批方法映射和静态 EXISTS 候选查询，完整性测试逐表覆盖当前游标、后续表归零、已完成表不重扫。真实 Inserter 测试直接读取 default/25，fake opts 零仅证明未覆盖默认。请求快照保留 kind/args 及同 id 替换检测，排除周期与 worker 进度噪声。
+
 
 - [ ] **测试：** 新app`TestDeleteRowsCommitsEachBatch`核13表顺序、每批一个Tx、提交后推进、部分成功原错、重做不改旧戳；`TestDeleteRowsBudgetUsesRuntimeElapsed`业务At偏移±61d不影响45s预算；fake RuntimeNow在批边界越线且有候选Complete=false，无候选Complete=true；pending错误原样返回。新`TestDeletionRemainingUsesCurrentCursor`当前After过滤、后续表从头、完成表不重扫、关系只看候选、workspace只project_id NULL。
 - [ ] **测试：** 新`TestDeleteRowsWorkerMapsBudgetAndTimeout`断言`Timeout==50*time.Second`、Complete=false为JobSnoozeError、普通错误errors.Is保持、最后失败error日志且snooze不记耗尽。新`TestDeleteRowsOnDeletion`核project1项、workspace按Changes n+1、零项目1、旧Old不在args、At/By精确、nil actor/坏shape不静默；`TestRowDeletionsEnqueue`断言scope/id/at/by JSON、default、实际max_attempts25。扩`TestRegistrationRowsSeeRequestJobs`识别此kind/替换payload/拒绝不留任务。

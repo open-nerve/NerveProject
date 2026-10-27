@@ -124,7 +124,7 @@ func newAppWithPoolFactory(ctx context.Context, cfg config.Config, logger *slog.
 		a.close()
 		return nil, err
 	}
-	events, err := newDispatcher(issue.EventTypes(), issue.Subscribers(issueInserter{client: inserter}))
+	events, err := newDispatcher(eventTypes(), issue.Subscribers(issueInserter{client: inserter}))
 	if err != nil {
 		a.close()
 		return nil, err
@@ -134,6 +134,7 @@ func newAppWithPoolFactory(ctx context.Context, cfg config.Config, logger *slog.
 		Outbound: outboundClient, Logger: logger,
 		Events: events,
 		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
+		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
 		WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: businessClock, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},

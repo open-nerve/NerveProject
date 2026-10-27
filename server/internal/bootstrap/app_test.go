@@ -240,17 +240,17 @@ func TestNewAppLogsTheDatabaseTarget(t *testing.T) {
 	}
 }
 
-// Leaving the crawl worker out must fail independently of the declared kinds.
+// Leaving either request worker out must fail independently of the declared kinds.
 func TestNewAppCrawlJobCatalog(t *testing.T) {
-	if got := issue.EnqueuedKinds(); !slices.Equal(got, []string{"issue.crawl_link"}) {
-		t.Fatalf("enqueued kinds=%v; want issue.crawl_link", got)
+	if got := issue.EnqueuedKinds(); !slices.Equal(got, []string{"issue.crawl_link", "issue.delete_rows"}) {
+		t.Fatalf("enqueued kinds=%v; want issue.crawl_link and issue.delete_rows", got)
 	}
 	pool, err := postgres.NewPool(t.Context(), config.DatabaseConfig{URL: unreachableDB, MaxConns: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	module := issue.New(issue.Deps{Pool: pool, AutoArchiveInterval: time.Hour, TrimVersionsInterval: time.Hour})
+	module := issue.New(issue.Deps{Pool: pool, AutoArchiveInterval: time.Hour, TrimVersionsInterval: time.Hour, DeleteBatch: 1000, DeleteBudget: 45 * time.Second, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler)})
 	definitions := module.Jobs()
 	var periodic int
 	for _, job := range definitions {
@@ -264,9 +264,9 @@ func TestNewAppCrawlJobCatalog(t *testing.T) {
 	if periodic != 2 {
 		t.Fatalf("periodic jobs=%d; want archival and retention", periodic)
 	}
-	_, err = jobs.New(pool, jobs.Config{DefaultWorkers: 1, PeriodicWorkers: 1, Logger: slog.New(slog.DiscardHandler)}, definitions, []string{"issue.crawl_link"})
+	_, err = jobs.New(pool, jobs.Config{DefaultWorkers: 1, PeriodicWorkers: 1, Logger: slog.New(slog.DiscardHandler)}, definitions, []string{"issue.crawl_link", "issue.delete_rows"})
 	if err != nil {
-		t.Fatalf("module crawl worker registration: %v", err)
+		t.Fatalf("module request worker registration: %v", err)
 	}
 }
 

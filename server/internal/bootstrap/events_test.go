@@ -10,6 +10,8 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -218,9 +220,19 @@ func TestIssueEventDirectory(t *testing.T) {
 			t.Fatalf("%s: %v", kind, err)
 		}
 	}
+	if !reflect.DeepEqual(project.EventTypes(), []string{"project.deleted"}) || !reflect.DeepEqual(workspace.EventTypes(), []string{"workspace.deleted"}) {
+		t.Fatal("deletion producer declarations")
+	}
+	all, err := newDispatcher(eventTypes(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, kind := range []string{"project.deleted", "workspace.deleted"} {
-		if err := d.Publish(t.Context(), shared.Event{Type: kind}); err == nil {
-			t.Errorf("accepted future event %s", kind)
+		if err := all.Publish(t.Context(), shared.Event{Type: kind}); err != nil {
+			t.Fatal(err)
 		}
+	}
+	if err := all.Publish(t.Context(), shared.Event{Type: "unknown.deleted"}); err == nil {
+		t.Fatal("accepted unknown event")
 	}
 }

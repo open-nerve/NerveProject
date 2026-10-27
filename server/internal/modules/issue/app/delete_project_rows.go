@@ -53,10 +53,20 @@ type ProjectRowsDeleter interface {
 // rowSteps are d's statements in the global order of M4 design 3.5: the
 // drafts, work items, then the rows under them.
 func rowSteps(d ProjectRowsDeleter, relations func(context.Context, RowBatch) (BatchProgress, error)) []func(context.Context, RowBatch) (BatchProgress, error) {
-	return []func(context.Context, RowBatch) (BatchProgress, error){
-		rowProgress(d.DeleteProjectDraftRows), rowProgress(d.DeleteProjectIssueRows), rowProgress(d.DeleteProjectAssigneeRows), rowProgress(d.DeleteProjectLabelRows), relations, rowProgress(d.DeleteProjectLinkRows),
-		rowProgress(d.DeleteProjectSubscriberRows), rowProgress(d.DeleteProjectMentionRows), rowProgress(d.DeleteProjectCommentRows), rowProgress(d.DeleteProjectReactionRows), rowProgress(d.DeleteProjectCommentReactionRows), rowProgress(d.DeleteProjectActivityRows), rowProgress(d.DeleteProjectDescriptionVersionRows),
+	methods := map[RowStep]func(context.Context, RowBatch) (BatchProgress, error){
+		"draft_issues": rowProgress(d.DeleteProjectDraftRows), "issues": rowProgress(d.DeleteProjectIssueRows),
+		"issue_assignees": rowProgress(d.DeleteProjectAssigneeRows), "issue_labels": rowProgress(d.DeleteProjectLabelRows),
+		"issue_relations": relations, "issue_links": rowProgress(d.DeleteProjectLinkRows),
+		"issue_subscribers": rowProgress(d.DeleteProjectSubscriberRows), "issue_mentions": rowProgress(d.DeleteProjectMentionRows),
+		"issue_comments": rowProgress(d.DeleteProjectCommentRows), "issue_reactions": rowProgress(d.DeleteProjectReactionRows),
+		"comment_reactions": rowProgress(d.DeleteProjectCommentReactionRows), "issue_activities": rowProgress(d.DeleteProjectActivityRows),
+		"issue_description_versions": rowProgress(d.DeleteProjectDescriptionVersionRows),
 	}
+	var steps []func(context.Context, RowBatch) (BatchProgress, error)
+	for _, name := range DeletionRowSteps() {
+		steps = append(steps, methods[name])
+	}
+	return steps
 }
 
 func rowProgress(step func(context.Context, RowBatch) ([]uuid.UUID, error)) func(context.Context, RowBatch) (BatchProgress, error) {

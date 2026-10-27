@@ -29,10 +29,10 @@ func TestIssueLinkSubscriberRegistration(t *testing.T) {
 	}
 	// The production subscriber must be constructible before issue.New.
 	subscribers := issue.Subscribers(issueInserter{client: client})
-	if len(subscribers) != 1 || subscribers[0].Name != "crawl_on_link_change" || !reflect.DeepEqual(subscribers[0].Types, []string{"issue.link_created", "issue.link_updated"}) {
+	if len(subscribers) != 2 || subscribers[0].Name != "crawl_on_link_change" || !reflect.DeepEqual(subscribers[0].Types, []string{"issue.link_created", "issue.link_updated"}) {
 		t.Fatalf("production subscribers=%+v; want unique link change consumer", subscribers)
 	}
-	d, err := newDispatcher(issue.EventTypes(), subscribers)
+	d, err := newDispatcher(eventTypes(), subscribers)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestLinkJobCommitRollback(t *testing.T) {
 				}},
 				shared.EventSubscriber{Name: "third observes", Types: []string{"issue.link_created", "issue.link_updated"}, Handle: func(context.Context, shared.Event) error { calls = append(calls, "third"); return nil }},
 			)
-			d, err := newDispatcher(issue.EventTypes(), subscribers)
+			d, err := newDispatcher(eventTypes(), subscribers)
 			if err != nil {
 				t.Fatal(err)
 			}

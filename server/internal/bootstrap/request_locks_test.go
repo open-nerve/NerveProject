@@ -105,7 +105,7 @@ func requestWait(t *testing.T, pool *pgxpool.Pool, probe *requestProbe, holder u
 	t.Helper()
 	var pid uint32
 	var blockers []int32
-	var query, locktype, relation string
+	var query, locktype, relation, identities string
 	var sequence uint64
 	timeout := probe.waitTimeout
 	if timeout == 0 {
@@ -118,8 +118,11 @@ func requestWait(t *testing.T, pool *pgxpool.Pool, probe *requestProbe, holder u
 		}
 		var waits bool
 		err := pool.QueryRow(ctx, `SELECT coalesce(a.wait_event_type='Lock',false),pg_blocking_pids(a.pid),a.query,
-   coalesce(l.locktype,''),coalesce(l.relation::regclass::text,'')
-   FROM pg_stat_activity a LEFT JOIN pg_locks l ON l.pid=a.pid AND NOT l.granted WHERE a.pid=$1`, pid).Scan(&waits, &blockers, &query, &locktype, &relation)
+   coalesce(l.locktype,''),coalesce(l.relation::regclass::text,''),
+   jsonb_build_object('request_backend',a.backend_start,'request_xact',a.xact_start,
+    'peers',(SELECT jsonb_agg(jsonb_build_object('pid',b.pid,'backend',b.backend_start,'xact',b.xact_start,'wait',b.wait_event_type,'sql',b.query,'blockers',pg_blocking_pids(b.pid)))
+     FROM pg_stat_activity b WHERE b.pid=ANY(pg_blocking_pids(a.pid))))::text
+   FROM pg_stat_activity a LEFT JOIN pg_locks l ON l.pid=a.pid AND NOT l.granted WHERE a.pid=$1`, pid).Scan(&waits, &blockers, &query, &locktype, &relation, &identities)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false
 		}
@@ -129,6 +132,7 @@ func requestWait(t *testing.T, pool *pgxpool.Pool, probe *requestProbe, holder u
 		afterPID, afterSequence := probe.snapshot()
 		return waits && locktype != "" && afterPID == pid && afterSequence == sequence
 	})
+	t.Logf("request sequence=%d identities=%s", sequence, identities)
 	t.Logf("requestPID=%d pg_blocking_pids=%v holderPID=%d wait=%s relation=%s SQL=%s", pid, blockers, holder, locktype, relation, strings.Join(strings.Fields(query), " "))
 	if !slices.Contains(blockers, int32(holder)) {
 		chain := requestBlockerChain(t, pool, pid)
@@ -221,7 +225,7 @@ func observedIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, c
 	if err != nil {
 		t.Fatal(err)
 	}
-	publisher, err := newDispatcher(issue.EventTypes(), issue.Subscribers(issueInserter{client: client}))
+	publisher, err := newDispatcher(eventTypes(), issue.Subscribers(issueInserter{client: client}))
 	if err != nil {
 		t.Fatal(err)
 	}
