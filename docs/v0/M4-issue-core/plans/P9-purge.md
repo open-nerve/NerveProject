@@ -129,7 +129,7 @@ make e2e
 
 ## Task 6：保留、请求与物理清理的边界
 
-**Files：** 新B/issue_retention_interleaving_test.go、purge_late_deletion_test.go；必要根因修改回T4/T5文件。预计400–750行。
+**Files：** 新B/issue_retention_interleaving_test.go（请求与trim的真实事务交错、共同版本fixture）、issue_retention_sets_test.go（保留与purge精确集合、归档子例）、purge_late_deletion_test.go（旧父CASCADE全部FK子链）；必要根因修改回T4/T5文件。预计400–750行。
 
 **Interfaces：** 消费T4 purgeDeleted.Execute、T5 TrimVersions.Execute和既有issue update/auto-archive/project delete；只新增测试场景，不建第二套生产编排。晚delete_rows实际worker在T12补齐。
 
