@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **状态：** 准备与独立静态预检通过，2项局部文档遗漏已修订复审，见[预检记录](../reviews/P9-purge-review.md)。当前授权仅 spec/plan 与预检，暂不实施；下列命令、测试、变异、性能与提交均为未来实施步骤，全部未完成。
+> **状态：** 准备与独立静态预检通过，2项局部文档遗漏已修订复审，见[评审记录](../reviews/P9-purge-review.md)。负责人已授权从T1开始实施；步骤仅在真实验证及独立评审后勾选。阶段完成做整分支deep-review，暂不合并。
 
 **Goal：** 交付23表60天物理清理、活描述版本最新20保留、项目/工作区删除后的issue侧分批任务，并证明窗口、锁序、审计、重试和目标规模。
 
@@ -28,7 +28,7 @@
 - 新逻辑文件约400行；每Task约350–1300手写行，约16Task/计划1500行以内，留修复余量。静态SQL、生成物及合理测试表沿既有例外；不以压缩安全测试满足尺寸。
 - 容器套件严格串行、上一套退出再下一套。Go -p=1/-count=1，条件等待有期限，不sleep同步；零匹配/编译失败/skip/缓存不是行为绿。复用issueWorld、heldTx、serializeAt、inBothOrdersAt、pgtest.RowWaits、registrationRows与目录fixture。
 - 每Task独立要求/质量审查；局部根因修复自行处理，改变既定架构/跨模块协议或意外高风险才按纪律提交已完成工作后上报。
-- 详细中文多行提交，前缀feat/fix/docs(M4/P9)，只add精确路径；push使用`/usr/bin/git`。本轮仅准备不实现，准备提交由主控完成；以下Task提交指未来获授权实施。未来集成另按授权，--no-ff、准确main CI、归档哈希后清理。
+- 详细中文多行提交，前缀feat/fix/docs(M4/P9)，只add精确路径；push使用`/usr/bin/git`。准备提交已完成，以下Task按负责人实施授权推进；本轮不合并。未来集成另按授权，--no-ff、准确main CI、归档哈希后清理。
 - F在T4/T8/T12/T15以及最终产品修复后、任何产品检查点push之前执行；分支CI/mainCI各自绑定准确SHA，不能互代。handoff仅追加本期子项结果，status保持open至M4收尾。
 
 ## Review Focus
@@ -254,7 +254,7 @@ make e2e
 - [ ] **修复/复审：** Findings逐条裁定根因修复，必要红绿/影响回归和独立复审；若产品修复影响最终检查点，先F后push。报告真实失败/环境限制、超60天允许40P01，不写比代码宽的无死锁承诺。
 - [ ] **同步文档：** 只有A1–A13真实证据齐才勾实施；M4状态写“实施与终审完成、集成待办”。追加P2 NULL creator历史矛盾的准确处理；handoffs只关后端子项、status仍open；M5命令行首投递、M8部署/性能与后续订阅责任保留。
 - [ ] **验证：** `git diff --check`；逐条静态链接/实际接口/配置/任务种类核对，独立文档复审。只文档修改不谎称新行为运行，不重跑未受影响规模；正式review清楚区分prepared/static/runtime/branch CI/main CI身份。
-- [ ] **G/交付：** 提交`docs(M4/P9): 汇总后台删除清理验收与后端交接`，详细正文说明审计范围/结果/未关闭项；按当前授权交付，合并必须已有或另获授权，`--no-ff`且main准确SHA CI全绿后才归档清理。本准备轮停在静态预检，不执行本Task。
+- [ ] **G/交付：** 提交`docs(M4/P9): 汇总后台删除清理验收与后端交接`，详细正文说明审计范围/结果/未关闭项；本轮完成实施与deep-review后保留分支/worktree，等待负责人安排，不合并。未来获授权后才`--no-ff`合并，main准确SHA CI全绿且归档核验后清理。
 
 ## 作者自查（准备稿范围）
 
