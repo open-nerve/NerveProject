@@ -9,6 +9,17 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 )
 
+// WorkspaceSharer holds an undeleted workspace stable for a draft write.
+type WorkspaceSharer interface {
+	ShareWorkspaceByID(context.Context, uuid.UUID) (bool, error)
+}
+
+// DraftProjects is the complete undeleted directory and SHARE lock boundary.
+type DraftProjects interface {
+	UndeletedIDs(context.Context, uuid.UUID) ([]uuid.UUID, error)
+	ShareMany(context.Context, []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
+}
+
 // DraftReader reads live drafts before workspace and ownership decisions.
 type DraftReader interface {
 	GetDraft(context.Context, uuid.UUID) (domain.Draft, bool, error)

@@ -5,6 +5,8 @@ import "github.com/open-nerve/NerveProject/server/internal/shared"
 // The issue module's actions: the keys of its rows in the access module's
 // rule table (M4 design 3.4).
 const (
+	// ActionDraftWrite allows personal draft operations for workspace admins and members.
+	ActionDraftWrite shared.Action = "issue_draft.write"
 	// ActionListMemberIssues reads member relationships for workspace admins and members.
 	ActionListMemberIssues shared.Action = "member_issue.list"
 	// ActionReadDescriptionVersion reads saved descriptions for admins and members.
@@ -33,5 +35,5 @@ const (
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 func Actions() []shared.Action {
-	return []shared.Action{ActionListMemberIssues, ActionReadDescriptionVersion, ActionWriteReaction, ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive, ActionSearch, ActionCreateComment, ActionWriteComment}
+	return []shared.Action{ActionDraftWrite, ActionListMemberIssues, ActionReadDescriptionVersion, ActionWriteReaction, ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive, ActionSearch, ActionCreateComment, ActionWriteComment}
 }

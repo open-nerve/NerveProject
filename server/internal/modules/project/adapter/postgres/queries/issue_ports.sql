@@ -68,3 +68,17 @@ FROM project_members m JOIN projects p ON p.id = m.project_id
 WHERE m.project_id = sqlc.arg(project_id) AND m.member_id = ANY (sqlc.arg(ids)::uuid[])
   AND m.is_active AND m.deleted_at IS NULL AND p.deleted_at IS NULL
 ORDER BY m.member_id;
+
+-- name: UndeletedIssueProjectIDs :many
+-- Personal drafts remain reachable after project exit and archival.
+SELECT id FROM projects
+WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL
+ORDER BY id;
+
+-- name: ShareIssueProjects :many
+-- Draft saves use SHARE, compatible with other saves but excluding project
+-- lifecycle and membership writes. ANY deduplicates before ascending row locks.
+SELECT id, workspace_id FROM projects
+WHERE id = ANY(sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL
+ORDER BY id
+FOR SHARE;

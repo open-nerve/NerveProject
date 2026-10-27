@@ -101,6 +101,10 @@ type ProjectMembershipCounts interface {
 // write of a state, a label or a membership holds too, so they stay as
 // read until the write commits (M4 design 3.5).
 type IssueProjects interface {
+	// UndeletedIssueProjectIDs includes archived projects and ignores caller membership.
+	UndeletedIssueProjectIDs(context.Context, uuid.UUID) ([]uuid.UUID, error)
+	// ShareIssueProjects locks the undeleted rows once, ascending, FOR SHARE.
+	ShareIssueProjects(context.Context, []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
 	// VisibleIssueProjects reads active, undeleted memberships in undeleted,
 	// unarchived projects, using the project role for guest scope.
 	VisibleIssueProjects(ctx context.Context, workspaceID, actorID uuid.UUID) ([]VisibleIssueProject, error)

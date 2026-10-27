@@ -50,7 +50,7 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 
 ## Task 1：草稿表、grants与同步级联
 
-**Files：** 新`server/migrations/sql/00028_issue_draft_issues.sql`；改`server/sqlc.yaml`、`deploy/runtime-grants.sql`；I/app/delete_project_rows.go、cascade.go、cascade_test.go、fakes_deletion_test.go；I/adapter/postgres/queries/delete_rows.sql、delete_rows.go、link_deletion_test.go；新I/adapter/postgres/draft_deletion_test.go；I/module.go；P/app/issue_ports.go、cascade.go、cascade_test.go及现有fake；`server/migrations/issue_schema_test.go`；B/runtime_role_test.go、project_deletion_test.go、workspace_deletion_catalog_test.go。生成I/adapter/postgres/gen。
+**Files：** 新`server/migrations/sql/00028_issue_draft_issues.sql`；改`server/sqlc.yaml`、`deploy/runtime-grants.sql`；I/app/delete_project_rows.go、cascade.go、cascade_test.go；I/adapter/postgres/queries/delete_rows.sql、delete_rows.go、delete_rows_test.go、link_deletion_test.go；新I/adapter/postgres/draft_deletion_test.go；I/module.go；P/app/issue_ports.go、cascade.go、cascade_test.go及现有fake；`server/migrations/issue_schema_test.go`、draft_schema_test.go、schema_test.go；B/runtime_role_test.go、project_deletion_test.go、workspace_deletion_catalog_test.go、issue_lifecycle_events_test.go、issue_scale_test.go。生成I/adapter/postgres/gen。
 
 **Interfaces：** 在既有ProjectRowsDeleter增加`DeleteProjectDraftRows(ctx context.Context,b RowBatch)([]uuid.UUID,error)`；`WorkspaceDraftBatch`及`DeleteWorkspaceDraftRows(ctx,b)([]uuid.UUID,error)`；所有消费端`DeleteWorkspaceIssues(ctx,workspaceID,projectIDs,by,now)error`见spec§2.5。仍由原Cascade负责批量循环，不新造异步job。
 
@@ -74,9 +74,9 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 
 ## Task 3：集中草稿锁编排与五个CRUD用例
 
-**Files：** 新I/app/lock_draft.go、lock_draft_test.go、draft_reads.go、draft_reads_test.go、draft_writes.go、draft_writes_test.go、fakes_drafts_test.go；改I/domain/actions.go、errors.go；`server/internal/modules/access/domain/rules.go`、rules_test.go；P/adapter/postgres/queries/issue_ports.sql、issue_ports.go、issue_ports_test.go；P/module.go；B/ports.go、ports_test.go。对应生成与既有action完整性测试。
+**Files：** 新I/app/lock_draft.go、lock_draft_test.go、draft_reads.go、draft_reads_test.go、draft_writes.go、draft_writes_test.go、fakes_drafts_test.go；改I/app/draft_ports.go、I/domain/actions.go、errors.go；`server/internal/modules/access/domain/rules.go`、rules_test.go；P/adapter/postgres/queries/issue_ports.sql、issue_ports.go；新P/adapter/postgres/share_issue_projects_test.go；P/module.go；B/ports.go、ports_test.go；新B/issue_draft_app_test.go。对应生成与既有action完整性测试。
 
-**Interfaces：** 产生`NewDraftLocks(base Locks,w WorkspaceSharer,p DraftProjects,d DraftReader)DraftLocks`、run/publish/read/seeWorkspace私有签名；CRUD Execute和依赖见spec§2.3。project公开`UndeletedIssueProjectIDs(ctx,wid)([]uuid.UUID,error)`/`ShareIssueProjects(ctx,ids)(map[uuid.UUID]uuid.UUID,error)`；bootstrap消费workspace现有ShareWorkspaceByID。ActionDraftWrite单一工作区权限。
+**Interfaces：** 产生`NewDraftLocks(base Locks,w WorkspaceSharer,p DraftProjects,d DraftReader)DraftLocks`、run/read/seeWorkspace私有签名（publish/publishHeld随首个生产消费者在T6补齐）；CRUD Execute和依赖见spec§2.3。project公开`UndeletedIssueProjectIDs(ctx,wid)([]uuid.UUID,error)`/`ShareIssueProjects(ctx,ids)(map[uuid.UUID]uuid.UUID,error)`；bootstrap消费workspace现有ShareWorkspaceByID。ActionDraftWrite单一工作区权限。
 
 - [ ] 新`TestDraftLocks`和`TestDraftCRUD`：顺序记录无锁预检→W SHARE/auth→去重升序P SHARE→D UPDATE→重读→clock→write；create nil不取P/D，delete不入gate；owner/权限拒绝不进tx。旧project丢失draft404，显式新project跨workspace/不可见422；同workspace归档仍可保存；工作区成员未加入但project.read/LevelVisible可见的public项目也能保存，private不可见拒422，不能调用issue.read或VisibleProjects.Visible；退出项目后省略project patch/clear/delete可用，显式重给不可见project拒422。
 - [ ] 新`TestDraftReadVisibility`：ReadTx包括workspace/目录/total；A能读自己的归档/退出项目草稿，admin不能读B，workspaceguest访问B403；已删project窗口404与随机id逐值相同。授权变化锁下重判，project变化409不追锁新project。
@@ -112,7 +112,7 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 
 **Files：** 新I/app/publish_draft.go、publish_draft_test.go；I/app/lock_draft.go；I/adapter/http/drafts.go、handler.go；新I/adapter/http/draft_publish_body.go、draft_publish_body_test.go；I/module.go；契约；新B/issue_draft_publish_test.go；扩permission_matrix_drafts_test.go。生成HTTP/TS。
 
-**Interfaces：** `NewPublishDraft(PublishDraftDeps)*PublishDraft` / `Execute(ctx,id)(domain.Issue,error)`；消费T5 decoder/core及T3 DraftLocks.publish，成功201 IssueDetail。core返回At给DraftDeletion；无独立clock、写tx、gate。
+**Interfaces：** `NewPublishDraft(PublishDraftDeps)*PublishDraft` / `Execute(ctx,id)(domain.Issue,error)`；消费T5 decoder/core，并在T3既有DraftLocks上补齐spec§2.3的publish/publishHeld私有签名，成功201 IssueDetail。core返回At给DraftDeletion；无独立clock、写tx、gate。
 
 - [ ] 新`TestDraftPublishUsesStoredPayload`：先保存“旧”再PATCH“锁下新”，空body发布只能新；附body经publish专属HTTP守卫拒400不能覆盖存储；成功草稿删、唯一新issue/sequence/event/活动/版本/订阅等原创建副作用同At/actor，重复发布404。无project422 required；归档项目即使payload缺name也先409；projectguest403；workspaceadmin+projectguest沿原create授权成功且response仍OwnOnly父/子显示规则。
 - [ ] 新`TestDraftPublishMatchesCreateBodyErrors`：真实保存`{}`后发布与直接POST`{}`同400；保存不存在state/label/parent和非法assignee，再发布按创建聚合422路径；业务非法priority/256字name/101数组也只在发布422。旧引用后来删除的状态/父项分别测试。
