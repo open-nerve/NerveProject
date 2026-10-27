@@ -1,6 +1,6 @@
 # M4/P8 草稿、搜索与链接计数评审记录
 
-日期：2026-10-27。分支 `codex/m4-p8`，基线 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`。**T1–T15实施/逐Task独评、四次本地七门禁与首次整审已完成，T16交付正式文档；文档增量独评/最终准确HEAD CI按后续提交和收据追踪，未合并。** 配套：[spec](../specs/P8-drafts-search.md)、[实际plan](../plans/P8-drafts-search.md)、[首次整体审核](../../../reviews/re-07-M4P8整体审核.md)。下方§1–7保留准备期历史，准备时确未产品实施；当时[re-06预检](../../../reviews/re-06-M4P8预检审核.md)不替代§8实施证据。
+日期：2026-10-27。分支 `codex/m4-p8`，基线 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`。**实施/逐Task独评、四次本地七门禁、首次整审及T16文档独评已通过（a65e8605，task-16-review.md Approved/D1 ADDRESSED）；最终准确HEAD CI与集成按后续收据追踪，未合并。** 配套：[spec](../specs/P8-drafts-search.md)、[实际plan](../plans/P8-drafts-search.md)、[首次整体审核](../../../reviews/re-07-M4P8整体审核.md)。下方§1–7保留准备期历史，准备时确未产品实施；当时[re-06预检](../../../reviews/re-06-M4P8预检审核.md)不替代§8实施证据。
 
 ## 1. 评审方式
 
@@ -99,7 +99,7 @@ P7 已按授权 `--no-ff` 合并，准确 [main CI 40451632280](https://github.c
 | A8 | T13全表示活links/metadata、当前21码、独立child/link numeric sentinel（2^53及bigint）与伪造游标权限；M33–36在真实PG/HTTP分页层红→恢复。影响2518/2517PASS/1旧skip，最终PG355/354PASS/1旧skip，bootstrap260/259PASS/1旧scale skip；强制web18/18零缓存。P5历史19码原样保留，仅追加当前21。 |
 | A9 | T8 I14三故事；T14先build后I18四+I4两共6故事、I14再3故事通过，API前置、独立0/1/2/2双向limit2期望。M26反向关系漏排与M33缺活link谓词均gen/build真实binary红→源恢复/gen/build同故事绿；最终58输入hash与88ba09fa及binary相符。T13原I3/I4两故事适配与T14非零计数故事分开。 |
 | A10 | spec附录保留13场景+父测试14/14、精确100000=5万英文/5万中文、17typed实参、metadata/OID/EXPLAIN与每场景first-observed+5warm。PG18.6 Debian aarch64/libc/en_US.utf8，非superuser runtime，owner seed/ANALYZE；计时为Store+RO/RR，不含HTTP/目录。dirty88ba09fa+测试字节→最终10f44790的20项源码hash映射成立，不伪称clean提交后实测；八标题场景顺扫、单项目login bitmap，不造cold-cache或固定延迟承诺。 |
-| A11 | 下表四次本地完整七门禁均准确提交/clean且先于push；两码/双语集合、架构/关键词未放宽。首次整审四分区全覆盖，产品无发现；历史文档D1已修，本次文档增量独评尚待后续准确提交/报告。A11暂不伪勾。 |
+| A11 | 下表四次本地完整七门禁均准确提交/clean且先于push；两码/双语集合、架构/关键词未放宽。首次整审四分区全覆盖，产品无发现；文档独评10f44790..a65e8605已Approved，task-16-review.md确认历史D1 ADDRESSED，A11现有真实闭环证据。最终准确HEAD CI仍待主控另核。 |
 | A12 | T16同步30文档：P8三件、正式re-07、M4/v0/Plane/README、03/04、四输入与P1a–P7十六份追加回执。Plane对照实际本地源码；四输入保持open，M4/后续未关闭。文档提交与独评、最终准确HEAD CI由 ignored `task-16-final-checkpoint-receipt.json` 及最终交付消息绑定，未合并。 |
 
 ### 检查点与CI
@@ -119,7 +119,7 @@ T15各门禁耗时分别2.725/1.535/358.547/3.783/1.800/13.870/44.601秒；E2E�
 
 T6独评Important I1发现发布初读后第二次项目预读消失被混成project404。`7f970ebd..8b8d71c6`两文件局部修复区分物理消失draft404与仍存在但create不可见project404；新增用例3 RUN先真实红再绿，app1104/组合9与独立定向复审关闭。未改普通NewLocks五参、锁图、gate或契约。前序各Task报告中的已解释fixture/编译/lint错误原样保留；它们不充当性质证明。
 
-首次整审仅一次，逻辑/集成安全/测试覆盖三个镜头按职责覆盖全部186文件及必要调用链，生成物/迁移/fixtures/旧回归均未跳过。drafts64/10437行、search-list71/12676、contracts-e2e39/24655、docs-guards12/7403；`whole-review-*-report.md`/`coverage.json`与 `whole-review-coverage-verification.json`全范围/hash核验。三个产品分区Critical/Major/Minor均0；文档分区新增0，历史Minor D1一项（M4§11.2摘要误列版本保留无项目锁），本次按既定§3.5/3.14修正，P9待实现。D1与T16文档增量待独立定向复审，未虚设第二轮产品整审或产品修复。正式结论见[re-07](../../../reviews/re-07-M4P8整体审核.md)。
+首次整审仅一次，逻辑/集成安全/测试覆盖三个镜头按职责覆盖全部186文件及必要调用链，生成物/迁移/fixtures/旧回归均未跳过。drafts64/10437行、search-list71/12676、contracts-e2e39/24655、docs-guards12/7403；`whole-review-*-report.md`/`coverage.json`与 `whole-review-coverage-verification.json`全范围/hash核验。三个产品分区Critical/Major/Minor均0；文档分区新增0，历史Minor D1一项（M4§11.2摘要误列版本保留无项目锁），本次按既定§3.5/3.14修正，P9待实现。D1与T16文档增量已在10f44790..a65e8605独评Approved，task-16-review.md确认D1 ADDRESSED，未虚设第二轮产品整审或产品修复。正式结论见[re-07](../../../reviews/re-07-M4P8整体审核.md)。
 
 性质原件独立审计见 `mutation-audit-through-t14.md`，覆盖M1–36及T14真实M26/M33二进制变体；T15新增100k OwnOnly真红→原字节恢复14/14绿。保留T2恢复SQL+生成备份的历史、T3恢复时序、T7未跟踪hash局限、T9交叠收据不采而用稳定恢复后收据、T13 PG后import-only差异经精确hash重建关闭，不为表面统一重造历史。
 
@@ -127,4 +127,6 @@ T5/T7/T8/T14正常产品初轮本就绿；缺接口编译红与测试作者错�
 
 ### 剩余边界
 
-等待本次文档增量独评及后续最终提交CI；不得据产品审查宣布未来文档已审/最终CI已绿。性能仅所列受控分布、稀疏assignee/label/relation和Store路径，first-observed非物理冷缓存；跨请求计数/游标弱快照仍在。Ryuk既有Shell警告与受支持回退保留，不称pristine。P9异步删除/保留/清理、前端P10b–P15、M5附件及M8部署维护均未实施；M4§14/总体§9.4与最终M5–M8 closeout不提前完成。用户未授权合并，分支与证据保留。
+文档独评准确范围 `10f44790ccb842e758f0ab50ecb4d294dc15a6e6..a65e86056b1fe60b7dcef88b8867e7acfaacb703`；独立审者 `/root/p8_design_full_context` 的 `E8/task-16-review.md` 为Spec/Quality Approved，新增Critical/Important/Minor均0，历史D1 ADDRESSED；覆盖和原件核验在 `task-16-review-coverage.json`。据此勾A11/T16复审。当前仅补录这些已发生状态，仍由同审者快速核本增量；最终准确提交gen-check/push/CI由主控负责，集成须另有授权。
+
+本次文档增量10f44790..a65e8605已独评Approved、D1 ADDRESSED；后续状态补录的窄复核与最终准确HEAD CI另核，不预宣称通过。性能仅所列受控分布、稀疏assignee/label/relation和Store路径，first-observed非物理冷缓存；跨请求计数/游标弱快照仍在。Ryuk既有Shell警告与受支持回退保留，不称pristine。P9异步删除/保留/清理、前端P10b–P15、M5附件及M8部署维护均未实施；M4§14/总体§9.4与最终M5–M8 closeout不提前完成。用户未授权合并，分支与证据保留。

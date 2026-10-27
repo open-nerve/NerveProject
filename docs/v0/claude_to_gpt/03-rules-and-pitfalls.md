@@ -74,7 +74,7 @@ P3 加了这条路的两种形式，不是第二条路：
 - `lock_across.go`（加关联）：调用者看不到的另一端不到达，它的项目不进闸门、不加锁，拒绝与不存在的相同；
 - `lock_either.go`（删除关联）：先判定 `issue_id` 一端，被拒绝时再判定另一端，预检通过之后两个项目都进闸门、都加锁。
 
-P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`并复用授权、闸门与写事务，不在各用例另接一套。保存/修改/删除为工作区S → 旧新项目S（去重升序）→ 草稿U；发布先在无连接、无锁时进入项目闸门，再工作区S → 项目N → 草稿U。等待后重读、权限重判、全部锁后读时钟照旧，普通工作项写仍不取工作区锁。具体端口见[P8 spec](../M4-issue-core/specs/P8-drafts-search.md)，T7真实PID/交错16/17、T15 race五遍及首次整审证据见[P8 review](../M4-issue-core/reviews/P8-drafts-search-review.md)；文档交付/独评与准确最终分支CI按后续收据追踪，尚未合并。
+P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`并复用授权、闸门与写事务，不在各用例另接一套。保存/修改/删除为工作区S → 旧新项目S（去重升序）→ 草稿U；发布先在无连接、无锁时进入项目闸门，再工作区S → 项目N → 草稿U。等待后重读、权限重判、全部锁后读时钟照旧，普通工作项写仍不取工作区锁。具体端口见[P8 spec](../M4-issue-core/specs/P8-drafts-search.md)，T7真实PID/交错16/17、T15 race五遍及首次整审证据见[P8 review](../M4-issue-core/reviews/P8-drafts-search-review.md)；文档a65e8605已独评Approved/D1 ADDRESSED（task-16-review.md），最终准确HEAD CI及集成按后续收据追踪，尚未合并。
 
 另外：
 - 503 `server_busy`（`Retry-After: 1`）只在 `bootstrap/gate.go` 映射，每个工作项的写都声明它。
