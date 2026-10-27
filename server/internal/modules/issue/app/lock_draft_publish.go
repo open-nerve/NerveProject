@@ -25,12 +25,20 @@ func (l DraftLocks) publish(ctx context.Context, actor shared.Actor, id uuid.UUI
 	if before.ProjectID == nil {
 		return shared.Invalid(shared.FieldError{Field: "project_id", Code: shared.FieldRequired, Message: "is required"})
 	}
-	w := write{project: *before.ProjectID, action: domain.ActionCreate, notFound: domain.ErrProjectNotFound}
-	w, s, err := l.base.precheck(ctx, actor, w)
+	projectID := *before.ProjectID
+	workspaceID, found, err := l.base.projects.Find(ctx, projectID)
 	if err != nil {
 		return err
 	}
-	leave, err := l.base.gate.Enter(ctx, s.projects...)
+	// Resource disappearance conceals the draft; authorization invisibility
+	// retains create's project404. A shared notFound cannot represent both.
+	if !found || workspaceID != before.WorkspaceID {
+		return domain.ErrDraftNotFound
+	}
+	if _, err = l.base.decide(ctx, actor, domain.ActionCreate, workspaceID, projectID, nil, domain.ErrProjectNotFound); err != nil {
+		return err
+	}
+	leave, err := l.base.gate.Enter(ctx, projectID)
 	if err != nil {
 		return err
 	}
@@ -52,7 +60,7 @@ func (l DraftLocks) publish(ctx context.Context, actor shared.Actor, id uuid.UUI
 			}
 			return err
 		}
-		p, found, err := l.base.projects.Lock(ctx, w.project)
+		p, found, err := l.base.projects.Lock(ctx, projectID)
 		if err != nil {
 			return err
 		}
@@ -60,7 +68,7 @@ func (l DraftLocks) publish(ctx context.Context, actor shared.Actor, id uuid.UUI
 			return domain.ErrDraftNotFound
 		}
 		h := held{project: p}
-		h.grant, err = l.base.decide(ctx, actor, domain.ActionCreate, p.WorkspaceID, w.project, nil, domain.ErrProjectNotFound)
+		h.grant, err = l.base.decide(ctx, actor, domain.ActionCreate, p.WorkspaceID, projectID, nil, domain.ErrProjectNotFound)
 		if err != nil {
 			return err
 		}

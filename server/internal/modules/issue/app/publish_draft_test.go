@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"context"
 	"errors"
 	"slices"
 	"testing"
@@ -56,4 +57,59 @@ func TestPublishDraftRefusesBeforeDecoding(t *testing.T) {
 			t.Fatal(err, w.log.calls)
 		}
 	})
+}
+
+// publishPrecheckProjects models deletion between resource's first Find and
+// the publication precheck's second Find, without changing shared CRUD fakes.
+type publishPrecheckProjects struct {
+	*draftProjects
+	finds          int
+	deleteOnSecond bool
+}
+
+func (p *publishPrecheckProjects) Find(ctx context.Context, id uuid.UUID) (uuid.UUID, bool, error) {
+	p.finds++
+	if p.finds == 2 && p.deleteOnSecond {
+		delete(p.rows, id)
+	}
+	return p.draftProjects.Find(ctx, id)
+}
+
+// Physical disappearance conceals the named draft; an existing project whose
+// create decision is invisible retains create's project404. Both stop before
+// taking the project gate, opening a transaction or decoding stored content.
+func TestPublishDraftPrecheckProjectDeletion(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		deleted bool
+		want    error
+	}{
+		{"deleted between project reads", true, domain.ErrDraftNotFound},
+		{"existing project create invisible", false, domain.ErrProjectNotFound},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newDraftWorld()
+			p := &publishPrecheckProjects{draftProjects: w.p, deleteOnSecond: tc.deleted}
+			if !tc.deleted {
+				w.auth.answers = []error{nil, shared.ErrNotVisible}
+			}
+			locks := app.NewDraftLocks(app.NewLocks(p, nil, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}), w.w, p, w.s)
+			decoder := &refusingPayload{}
+			uc := app.NewPublishDraft(app.PublishDraftDeps{Locks: locks, Decoder: decoder, Drafts: w.s})
+			_, err := uc.Execute(as(alice), w.s.row.ID)
+			if !errors.Is(err, tc.want) {
+				t.Errorf("Execute=%v want %v", err, tc.want)
+			}
+			if p.finds != 2 || decoder.calls != 0 || slices.Contains(w.log.calls, "Begin") || slices.Contains(w.log.calls, line("Enter", web, "outside tx")) {
+				t.Fatalf("finds=%d decoder=%d calls=%q", p.finds, decoder.calls, w.log.calls)
+			}
+			wantAuth := 2
+			if tc.deleted {
+				wantAuth = 1
+			}
+			if w.auth.calls != wantAuth {
+				t.Fatalf("authorization calls=%d want %d", w.auth.calls, wantAuth)
+			}
+		})
+	}
 }
