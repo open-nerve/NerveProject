@@ -34,22 +34,6 @@ UPDATE issue_labels
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE issue_id = ANY (sqlc.arg(issue_ids)::uuid[]) AND deleted_at IS NULL;
 
--- name: DeleteIssueRelationRows :exec
--- The deleted work items' relations (M4 design 3.5, 3.6), both ways: the undeleted rows that name one of them at either
--- end, the other end in this project or in another, soft-deleted at the moment and by the account given, in one
--- statement. A relation with a work item of another project is reached by that project's writes without this
--- project's lock: its deletion, and deleting the work item at that end. Two writers that each took such rows in their
--- scans' order could each hold one the other waits for, so the statement locks its rows FOR NO KEY UPDATE in id order
--- before it writes them, as each of the others does (convention 5's exception, 3.5). A row another deleted while the
--- statement waited for it is evaluated again on its newest version and passed over, and keeps that deletion.
-UPDATE issue_relations AS t
-SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
-WHERE t.id IN (
-    SELECT r.id FROM issue_relations r
-    WHERE (r.issue_id = ANY (sqlc.arg(issue_ids)::uuid[]) OR r.related_issue_id = ANY (sqlc.arg(issue_ids)::uuid[]))
-        AND r.deleted_at IS NULL
-    ORDER BY r.id FOR NO KEY UPDATE);
-
 -- name: DeleteIssueLinkRows :exec
 -- Lock the subtree's live links in id order before stamping them; earlier deletions keep their audit.
 UPDATE issue_links AS t

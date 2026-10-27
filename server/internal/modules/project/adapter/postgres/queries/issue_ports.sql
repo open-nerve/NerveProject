@@ -88,3 +88,8 @@ FOR SHARE;
 SELECT id FROM projects
 WHERE deleted_at IS NULL
 ORDER BY id;
+
+-- name: DeletedIssueProjects :many
+-- Facts only: no project locks, synthetic deletion times, or issue-table joins.
+SELECT id, deleted_at FROM projects
+WHERE id = ANY(sqlc.arg(ids)::uuid[]) AND deleted_at IS NOT NULL;

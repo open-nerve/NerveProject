@@ -212,6 +212,11 @@ func TestAWriteOnEitherWorkItemTakesBothProjects(t *testing.T) {
 			if err := unrelateOver(w, rel).Execute(as(alice), relationID); err != nil {
 				t.Fatal(err)
 			}
+			for _, project := range tt.projects {
+				if n := len(slices.DeleteFunc(slices.Clone(w.log.calls), func(call string) bool { return call != line("Find", project, "outside tx") })); n != 1 {
+					t.Errorf("Find(%s) called %d times; want one precheck", project, n)
+				}
+			}
 			wantAllAtOnce(t, w, tt.projects)
 		})
 	}

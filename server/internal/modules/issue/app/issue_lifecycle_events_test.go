@@ -15,14 +15,14 @@ func TestIssueDeletionEvents(t *testing.T) {
 			_, w, id := newDelete()
 			w.issues.subtree = []uuid.UUID{uuid.NewV7(), id, uuid.NewV7()}
 			p := &recordedEvents{t: t, before: func(shared.Event) {
-				if len(w.issues.deletions) != 12 {
+				if len(w.issues.deletions) != 11 || w.issues.relationWrites != 1 {
 					t.Fatal("event preceded complete subtree batch writes")
 				}
 			}}
 			if fail {
 				p.fail = errDisk
 			}
-			uc := app.NewDeleteIssue(app.DeleteIssueDeps{Events: p, Locks: w.locks, Rows: w.issues, Clock: clockAt{at: clockNow, log: w.log}})
+			uc := app.NewDeleteIssue(app.DeleteIssueDeps{Events: p, Locks: w.locks, Rows: w.issues, Relations: app.NewRelationDeletions(w.issues, w.project), Clock: clockAt{at: clockNow, log: w.log}})
 			err := uc.Execute(as(alice), id)
 			if fail {
 				if !errors.Is(err, errDisk) || len(p.rows) != 1 {

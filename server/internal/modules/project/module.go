@@ -101,6 +101,8 @@ type ProjectMembershipCounts interface {
 // write of a state, a label or a membership holds too, so they stay as
 // read until the write commits (M4 design 3.5).
 type IssueProjects interface {
+	// DeletedIssueProjects reads real deletion times without locking; absent IDs are omitted.
+	DeletedIssueProjects(context.Context, []uuid.UUID) (map[uuid.UUID]time.Time, error)
 	// AllUndeletedIssueProjectIDs is the complete retention directory, in id order.
 	AllUndeletedIssueProjectIDs(context.Context) ([]uuid.UUID, error)
 	// UndeletedIssueProjectIDs includes archived projects and ignores caller membership.

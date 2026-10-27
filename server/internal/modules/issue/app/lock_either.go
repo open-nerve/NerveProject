@@ -42,10 +42,20 @@ func (l Locks) eitherOf(ctx context.Context, actor shared.Actor, w write) (scope
 	if err != nil {
 		return scope{}, err
 	}
+	projects := ascending([]uuid.UUID{items[0].ProjectID, items[1].ProjectID})
+	for _, id := range projects {
+		_, found, err := l.projects.Find(ctx, id)
+		if err != nil {
+			return scope{}, err
+		}
+		if !found {
+			return scope{}, w.notFound
+		}
+	}
 	if _, err := l.decideEither(ctx, actor, w, items); err != nil {
 		return scope{}, err
 	}
-	return scope{projects: ascending([]uuid.UUID{items[0].ProjectID, items[1].ProjectID})}, nil
+	return scope{projects: projects}, nil
 }
 
 // eitherUnder reads again, under the lock, the two work items of a write

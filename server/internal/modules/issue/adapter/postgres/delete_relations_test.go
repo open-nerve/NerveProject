@@ -63,7 +63,9 @@ func TestTheRelationsOfADeletedSubtreeAreDeletedBothWays(t *testing.T) {
 	}
 	rows, stamps := rowsAsText(t, pool, "issue_relations"), audits(t, pool, "issue_relations")
 
-	if err := s.DeleteIssueRelationRows(context.Background(), app.IssueDeletion{IssueIDs: []uuid.UUID{sub, item}, By: bob, At: later}); err != nil {
+	if err := postgres.NewTxManager(pool, 5*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
+		return app.NewRelationDeletions(s, relationDeletionProjects{}).ForIssues(ctx, web.id, app.IssueDeletion{IssueIDs: []uuid.UUID{sub, item}, By: bob, At: later})
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -118,7 +120,7 @@ func TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder(t *testing.T) {
 	done := make(chan error, 1)
 	go func() {
 		done <- postgres.NewTxManager(pool, 5*time.Second).WithinTx(soon, func(ctx context.Context) error {
-			return s.DeleteIssueRelationRows(ctx, app.IssueDeletion{IssueIDs: []uuid.UUID{item}, By: bob, At: later})
+			return app.NewRelationDeletions(s, relationDeletionProjects{}).ForIssues(ctx, web.id, app.IssueDeletion{IssueIDs: []uuid.UUID{item}, By: bob, At: later})
 		})
 	}()
 	pgtest.WaitForLockWaitOn(t, pool, "issue_relations", 5*time.Second)
@@ -131,10 +133,10 @@ func TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder(t *testing.T) {
 	select {
 	case err := <-done:
 		if err != nil {
-			t.Errorf("DeleteIssueRelationRows() = %v", err)
+			t.Errorf("RelationDeletions.ForIssues() = %v", err)
 		}
 	case <-time.After(10 * time.Second):
-		t.Fatal("DeleteIssueRelationRows() did not end within 10s")
+		t.Fatal("RelationDeletions.ForIssues() did not end within 10s")
 	}
 	got := audits(t, pool, "issue_relations")
 	for name, row := range map[string]struct {

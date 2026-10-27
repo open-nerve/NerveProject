@@ -18,6 +18,8 @@ type Clock interface {
 // ProjectGate is a project's gate of every write on the work-item side (M4
 // design 3.5, 6.5): project.Provide's, converted (bootstrap/ports.go).
 type ProjectGate interface {
+	// DeletedAt reads only actual soft-deletion timestamps, without locking projects.
+	DeletedAt(context.Context, []uuid.UUID) (map[uuid.UUID]time.Time, error)
 	// Find reads the workspace of the undeleted project, archived or not,
 	// without a lock; found is false when there is none.
 	Find(ctx context.Context, projectID uuid.UUID) (workspaceID uuid.UUID, found bool, err error)

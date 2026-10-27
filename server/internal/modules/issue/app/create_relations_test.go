@@ -33,6 +33,7 @@ func newRelate() (*app.CreateIssueRelations, *world, *fakeRelations, uuid.UUID, 
 	}
 	w.issues.others = map[uuid.UUID]domain.Issue{r.near.ID: r.near, r.far.ID: r.far}
 	w.project.across = map[uuid.UUID]app.LockedProject{ops: {WorkspaceID: acme, Identifier: "OPS"}}
+	w.project.directory = map[uuid.UUID]uuid.UUID{ops: acme}
 	rel := &fakeRelations{fakeIssues: w.issues}
 	return relateOver(w, rel), w, rel, id, r
 }

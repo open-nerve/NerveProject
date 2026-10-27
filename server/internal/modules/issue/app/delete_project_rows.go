@@ -52,10 +52,39 @@ type ProjectRowsDeleter interface {
 
 // rowSteps are d's statements in the global order of M4 design 3.5: the
 // drafts, work items, then the rows under them.
-func rowSteps(d ProjectRowsDeleter) []func(context.Context, RowBatch) ([]uuid.UUID, error) {
-	return []func(context.Context, RowBatch) ([]uuid.UUID, error){
-		d.DeleteProjectDraftRows, d.DeleteProjectIssueRows, d.DeleteProjectAssigneeRows, d.DeleteProjectLabelRows, d.DeleteProjectRelationRows, d.DeleteProjectLinkRows,
-		d.DeleteProjectSubscriberRows, d.DeleteProjectMentionRows, d.DeleteProjectCommentRows, d.DeleteProjectReactionRows, d.DeleteProjectCommentReactionRows, d.DeleteProjectActivityRows, d.DeleteProjectDescriptionVersionRows,
+func rowSteps(d ProjectRowsDeleter, relations func(context.Context, RowBatch) (BatchProgress, error)) []func(context.Context, RowBatch) (BatchProgress, error) {
+	return []func(context.Context, RowBatch) (BatchProgress, error){
+		rowProgress(d.DeleteProjectDraftRows), rowProgress(d.DeleteProjectIssueRows), rowProgress(d.DeleteProjectAssigneeRows), rowProgress(d.DeleteProjectLabelRows), relations, rowProgress(d.DeleteProjectLinkRows),
+		rowProgress(d.DeleteProjectSubscriberRows), rowProgress(d.DeleteProjectMentionRows), rowProgress(d.DeleteProjectCommentRows), rowProgress(d.DeleteProjectReactionRows), rowProgress(d.DeleteProjectCommentReactionRows), rowProgress(d.DeleteProjectActivityRows), rowProgress(d.DeleteProjectDescriptionVersionRows),
+	}
+}
+
+func rowProgress(step func(context.Context, RowBatch) ([]uuid.UUID, error)) func(context.Context, RowBatch) (BatchProgress, error) {
+	return func(ctx context.Context, b RowBatch) (BatchProgress, error) {
+		ids, err := step(ctx, b)
+		if err != nil {
+			return BatchProgress{}, err
+		}
+		progress := BatchProgress{Candidates: len(ids), Written: len(ids)}
+		if len(ids) > 0 {
+			progress.After = slices.MaxFunc(ids, uuid.UUID.Compare)
+		}
+		return progress, nil
+	}
+}
+
+// deleteRowBatches is the shared candidate scan: ownership can skip every row
+// in a batch, but only an empty candidate batch ends the table.
+func deleteRowBatches(ctx context.Context, step func(context.Context, RowBatch) (BatchProgress, error), b RowBatch) error {
+	for {
+		progress, err := step(ctx, b)
+		if err != nil {
+			return err
+		}
+		if progress.Candidates == 0 {
+			return nil
+		}
+		b.After = progress.After
 	}
 }
 
@@ -65,17 +94,10 @@ func rowSteps(d ProjectRowsDeleter) []func(context.Context, RowBatch) ([]uuid.UU
 // the greatest id of the last, until a batch finds none (M4 design 3.6).
 // A failing batch comes back as itself, and nothing runs after it.
 func deleteProjectRows(ctx context.Context, d ProjectRowsDeleter, limit int, projectID, by uuid.UUID, at time.Time) error {
-	for _, step := range rowSteps(d) {
-		b := RowBatch{ProjectID: projectID, Limit: limit, By: by, At: at}
-		for {
-			ids, err := step(ctx, b)
-			if err != nil {
-				return err
-			}
-			if len(ids) == 0 {
-				break
-			}
-			b.After = slices.MaxFunc(ids, uuid.UUID.Compare)
+	// The synchronous Cascade keeps its original relation statement until T10.
+	for _, step := range rowSteps(d, rowProgress(d.DeleteProjectRelationRows)) {
+		if err := deleteRowBatches(ctx, step, RowBatch{ProjectID: projectID, Limit: limit, By: by, At: at}); err != nil {
+			return err
 		}
 	}
 	return nil

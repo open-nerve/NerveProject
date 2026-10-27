@@ -164,6 +164,10 @@ func (*RelationDeletions) ForIssues(context.Context, uuid.UUID, IssueDeletion) e
 
 `rowSteps` 在原关系位置接受一个 `(context.Context,RowBatch)(BatchProgress,error)` 步骤函数，其余12个批方法映射返回的ids为候选/写入相同的BatchProgress，单一表序不变。T7先接live deleteIssue和目标ForProject；T8异步编排传ForProject。T7–T9的同步Cascade仍传旧 `DeleteProjectRelationRows` 的直接批函数（它处于原请求项目锁下），保留到T10同两个过渡入口一起删；不让只依赖pool的Provide提前依赖ProjectGate，不回填端口。最终只剩同一份关系归属编排和批次扫描。
 
+T7 实施细化：`rowProgress` 将普通批次的 ids 转为 `BatchProgress`；`deleteRowBatches` 承担实际候选扫描并由同步 `deleteProjectRows` 调用，以 `Candidates==0` 结束、按 `After` 推进。`TestRelationDeletionCursorUsesCandidates` 将真实 `RelationDeletions.ForProject` 交给此生产扫描器，M17 直接变异其终止判断；不以测试内复制循环替代生产终止证明。同步 Cascade 仍为 `rowSteps` 注入旧项目关系批语句，T8 再接异步预算编排。
+
+T7 回归接续：`B/issue_description_versions_test.go` 的 101 版本分页夹具会被正常 retention 修剪。保持原 1/50/100 容量、排序、跨资源游标与 detail 断言，改为项目 SHARE 下直接播种并通过真实 HTTP 读取；实际 trim worker 的 PID 等待证明此锁保护。新增 `TestDescriptionVersionsPagesRetentionInterference` 释放保护后验证真实 worker 保留精确最新20条以及下一页变空；不关闭 worker、不调整周期。原100次 PATCH 构造不再是分页场景职责，HTTP 版本创建与合并仍由 `TestIssueDescriptionVersionsSlideFromLastSave` 覆盖。
+
 同时在既有 `Locks.eitherOf` 的 `both` 之后、`decideEither` 之前，用 `ProjectGate.Find` 对去重的两端项目作无锁存在性检查；任一缺失立即返回本操作的notFound，端口错误原样返回，尚未进入gate/事务。`eitherUnder` 现有两项目map存在性检查继续先于授权。否则P已删但job挂起、Q可读而不可update时会答403，job完成却答404；Q可update时还会错误进入gate/锁。T7用两存储方向、两种Q权限、已占gate/项目锁的真实反例钉住逐值404和预检零资源，不复制第二条锁路。
 
 ### 2.6 分批 app 与预算

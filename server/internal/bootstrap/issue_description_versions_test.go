@@ -49,17 +49,15 @@ func TestDescriptionVersionsPages(t *testing.T) {
 	w := newIssueWorld(t)
 	id := w.newWorkItemIn(t, w.web, `{"name":"Versions","description_html":"<p>First</p>"}`)
 	other := w.newWorkItemIn(t, w.web, `{"name":"Neighbor"}`)
+	// Pagination capacity is tested against a stable fixture. SHARE permits
+	// these HTTP reads while the normal retention worker waits for project N.
+	holder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR SHARE", w.web)
+	defer requestRelease(t, holder)
 	first := savedVersion(t, w, id)
-	versions := []uuid.UUID{first.ID}
-	// Alternating writers always create a version; insertion order disagrees with DESC.
-	for n := 1; n < 101; n++ {
-		actor := "alice"
-		if n%2 == 1 {
-			actor = "bob"
-		}
-		patchDescription(t, w, actor, id, fmt.Sprintf("<p>Version %d</p>", n), false)
-		versions = append(versions, savedVersion(t, w, id).ID)
-	}
+	versions := seedVersionPage(t, w, id, first)
+	probe, collect := observedTrim(t, w.pool, func() { requestRelease(t, holder) })
+	requestBlocked(t, w.pool, probe, holder.Conn().PgConn().PID(), "projects")
+	defer func() { requestRelease(t, holder); collect() }()
 	at := first.LastSavedAt
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issue_description_versions SET last_saved_at=$2 WHERE issue_id=$1", id, at); err != nil {
 		t.Fatal(err)
@@ -258,4 +256,53 @@ func TestDescriptionVersionsReadSnapshot(t *testing.T) {
 	}
 	w.send(t, "bob", http.MethodGet, versionsOf(fresh), "", 200)
 	w.send(t, "bob", http.MethodGet, versionPath(detail.ID), "", 200)
+}
+
+// These read fixtures deliberately exceed retention's twenty-row policy.
+// HTTP version creation/coalescing is covered by TestIssueDescriptionVersionsSlideFromLastSave.
+func seedVersionPage(t *testing.T, w issueWorld, item uuid.UUID, first domain.DescriptionVersion) []uuid.UUID {
+	t.Helper()
+	ids := []uuid.UUID{first.ID}
+	for n := 1; n < 101; n++ {
+		id := uuid.NewV7()
+		actor := "alice"
+		if n%2 == 1 {
+			actor = "bob"
+		}
+		draftExec(t, w.pool, `INSERT INTO issue_description_versions(id,workspace_id,project_id,issue_id,owned_by_id,last_saved_at,description_html,created_by_id,updated_by_id)
+   SELECT $1,workspace_id,project_id,id,$3,$4,$5,$3,$3 FROM issues WHERE id=$2`, id, item, w.ids[actor], first.LastSavedAt, fmt.Sprintf("<p>Version %d</p>", n))
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// A real trim between API pages can remove the cursor's remaining rows. Keep
+// this interference counterexample separate from the stable 1/50/100 contract.
+func TestDescriptionVersionsPagesRetentionInterference(t *testing.T) {
+	w := newIssueWorld(t)
+	item := w.newWorkItemIn(t, w.web, `{"name":"Retention between pages"}`)
+	holder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR SHARE", w.web)
+	defer requestRelease(t, holder)
+	ids := seedVersionPage(t, w, item, savedVersion(t, w, item))
+	probe, collect := observedTrim(t, w.pool, func() { requestRelease(t, holder) })
+	requestBlocked(t, w.pool, probe, holder.Conn().PgConn().PID(), "projects")
+	var first answeredVersionPage
+	decodeAnswer(t, w.send(t, "alice", http.MethodGet, versionsOf(item)+"?limit=100", "", 200), &first)
+	descending := slices.Clone(ids)
+	slices.Reverse(descending)
+	if !slices.Equal(versionIDs(first.Data), descending[:100]) || first.Next == nil {
+		t.Fatal("protected first page", first)
+	}
+	if before := trimVersionIDs(t, w.pool, item); !slices.Equal(before, ids) {
+		t.Fatal("SHARE did not preserve exact fixture", before, ids)
+	}
+	requestRelease(t, holder)
+	collect()
+	awaitTrimVersions(t, w.pool, map[uuid.UUID][]uuid.UUID{item: ids[len(ids)-20:]})
+	t.Logf("real trim retained exactly IDs %v from %d versions", ids[len(ids)-20:], len(ids))
+	var next answeredVersionPage
+	decodeAnswer(t, w.send(t, "alice", http.MethodGet, versionsOf(item)+"?limit=100&cursor="+*first.Next, "", 200), &next)
+	if next.Data == nil || len(next.Data) != 0 || next.Next != nil {
+		t.Fatal("retention must remove remaining cursor rows", next)
+	}
 }

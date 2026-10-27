@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
@@ -202,4 +203,20 @@ func (s *Store) AllUndeletedIssueProjectIDs(ctx context.Context) ([]uuid.UUID, e
 		return nil, fmt.Errorf("read all undeleted projects for issue retention: %w", err)
 	}
 	return ids, nil
+}
+
+// DeletedIssueProjects returns only stored soft-deletion times, without locks.
+func (s *Store) DeletedIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]time.Time, error) {
+	out := make(map[uuid.UUID]time.Time)
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := s.queries(ctx).DeletedIssueProjects(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		out[row.ID] = *row.DeletedAt
+	}
+	return out, nil
 }

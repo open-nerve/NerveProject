@@ -214,7 +214,7 @@ func New(d Deps) *Module {
 			UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{Events: d.Events,
 				Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
 			}),
-			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Clock: d.Clock}),
+			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Clock: d.Clock}),
 			ArchiveIssue:       app.NewArchiveIssue(archive),
 			UnarchiveIssue:     app.NewUnarchiveIssue(archive),
 			ListSubIssues:      app.NewListSubIssues(locks, store),

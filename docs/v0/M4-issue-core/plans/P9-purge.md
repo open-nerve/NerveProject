@@ -145,6 +145,10 @@ make e2e
 
 **Interfaces：** spec§2.5 DeletedAt/DeletedIssueProjects、RelationDeletionRow/Rows、BatchProgress/NewRelationDeletions/ForProject/ForIssues；DeleteIssueDeps.Relations。`Locks.eitherOf(ctx,actor,w)(scope,error)`签名不变，新增两端去重项目Find预检；eitherUnder已有map存在性检查保持。
 
+T7 实施细化：`rowProgress` 将普通批次的 ids 转为 `BatchProgress`；`deleteRowBatches` 承担实际候选扫描并由同步 `deleteProjectRows` 调用，以 `Candidates==0` 结束、按 `After` 推进。`TestRelationDeletionCursorUsesCandidates` 将真实 `RelationDeletions.ForProject` 交给此生产扫描器，M17 直接变异其终止判断；不以测试内复制循环替代生产终止证明。同步 Cascade 仍为 `rowSteps` 注入旧项目关系批语句，T8 再接异步预算编排。
+
+T7 回归接续：`B/issue_description_versions_test.go` 的 101 版本分页夹具会被正常 retention 修剪。保持原 1/50/100 容量、排序、跨资源游标与 detail 断言，改为项目 SHARE 下直接播种并通过真实 HTTP 读取；实际 trim worker 的 PID 等待证明此锁保护。新增 `TestDescriptionVersionsPagesRetentionInterference` 释放保护后验证真实 worker 保留精确最新20条以及下一页变空；不关闭 worker、不调整周期。原100次 PATCH 构造不再是分页场景职责，HTTP 版本创建与合并仍由 `TestIssueDescriptionVersionsSlideFromLastSave` 覆盖。
+
 - [ ] **测试：** 新`TestRelationDeletionOwnership`用跨项目两方向、两种id次序、At=T0/T1及不同删除者：live deleteIssue跳过已删另一端，job只跳过更早另一端，同At可写。新`TestRelationDeletionCursorUsesCandidates`首批2个低id全跳过，后续高id1个归本端：`Candidates=2,Written=0,After=lowMax`仍继续，最后全skip/混合/零候选也正确；DeletedAt错误必须原样传播不当空。
 - [ ] **预检测试：** 新`TestDeleteRelationDeletedEndpointPrecheck`在P软删但关系/issue活的窗口，Q调用者分别可update、只可read无update；两存储方向都与任务后/未知relation逐值404。持满两个gate并锁项目表，拒绝仍无gate/无写锁；Find返回原错则原错，不降成404。新`TestDeleteRelationChecksBothLockedProjects`让预检后P删除、LockMany缺P，授权调用前404；既有`TestLockIssueProjectsLeavesOutAProjectDeletedWhileItWaited`继续跑。
 - [ ] **红：** app/PG分别`go -C server test -p=1 -count=1 ./internal/modules/issue/app ./internal/modules/issue/adapter/postgres -run '^Test(RelationDeletionOwnership|RelationDeletionCursorUsesCandidates)'`；bootstrap `'^Test(DeleteRelationDeletedEndpointPrecheck|DeleteRelationChecksBothLockedProjects)$'`。预检旧实现的403/入gate是行为红。

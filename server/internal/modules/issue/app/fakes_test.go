@@ -133,6 +133,8 @@ type fakeProject struct {
 	found             bool
 	locked            *app.LockedProject
 	across            map[uuid.UUID]app.LockedProject
+	directory         map[uuid.UUID]uuid.UUID
+	deleted           map[uuid.UUID]time.Time
 	waited            func()
 	last              int
 	states            []app.StateRef
@@ -142,10 +144,14 @@ type fakeProject struct {
 }
 
 func (f *fakeProject) Find(ctx context.Context, id uuid.UUID) (uuid.UUID, bool, error) {
-	if err := f.log.add(ctx, "Find", id); err != nil || id != f.id || !f.found {
+	if err := f.log.add(ctx, "Find", id); err != nil {
 		return uuid.UUID{}, false, err
 	}
-	return f.workspace, true, nil
+	if id == f.id {
+		return f.workspace, f.found, nil
+	}
+	workspace, found := f.directory[id]
+	return workspace, found, nil
 }
 
 func (f *fakeProject) Lock(ctx context.Context, id uuid.UUID) (app.LockedProject, bool, error) {
@@ -228,6 +234,7 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // sub-items it answers, and parented the last addition of sub-items' rows
 // (fakes_parents_test.go).
 type fakeIssues struct {
+	relationWrites    int
 	log               *callLog
 	versions          []domain.DescriptionVersion
 	mentions          []uuid.UUID
@@ -402,4 +409,11 @@ func creatorOf(by uuid.UUID) *uuid.UUID {
 		return nil
 	}
 	return &by
+}
+
+func (f *fakeProject) DeletedAt(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]time.Time, error) {
+	if err := f.log.add(ctx, "DeletedAt", ids); err != nil {
+		return nil, err
+	}
+	return f.deleted, nil
 }

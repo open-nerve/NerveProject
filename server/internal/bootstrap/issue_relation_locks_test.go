@@ -1,11 +1,20 @@
 package bootstrap
 
 import (
+	"context"
 	"net/http"
 	"slices"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
+	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -92,4 +101,57 @@ func TestAWorkItemTheCallerComesToSeeWhileHisRelationWaitsIsRefused(t *testing.T
 		t.Errorf("His's and Hers' rows after the refusal:\n%q\nwant them as before it:\n%q", after, before)
 	}
 	w.send(t, "walt", http.MethodPost, relationsOf(his), relating("relates_to", hers), http.StatusCreated)
+}
+
+// Removing eitherUnder's existence check authorizes against a project that
+// disappeared after the real precheck while LockMany was waiting for its row.
+func TestDeleteRelationChecksBothLockedProjects(t *testing.T) {
+	for _, deletedEnd := range []string{"first", "second"} {
+		t.Run(deletedEnd, func(t *testing.T) {
+			w := newIssueWorld(t)
+			p := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Other", "OTHER")
+			x, y := w.newWorkItemIn(t, w.web, `{"name":"First"}`), w.newWorkItemIn(t, p, `{"name":"Second"}`)
+			r := listIn[answeredRelation](t, w.send(t, "alice", http.MethodPost, relationsOf(x), relating("relates_to", y), 201))[0].ID
+			gone := w.web
+			if deletedEnd == "second" {
+				gone = p
+			}
+			holder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR NO KEY UPDATE", gone)
+			if _, err := holder.Exec(pgtest.Soon(t), "UPDATE projects SET deleted_at=$2 WHERE id=$1", gone, time.Now()); err != nil {
+				t.Fatal(err)
+			}
+			store := issuepg.New(w.pool)
+			projects := issueProjects{projects: project.Provide(w.pool).IssueProjects}
+			authorizer := &relationCountingAuthorizer{Authorizer: authorizerOn(w.pool)}
+			tx := requestTx(w.pool)
+			locks := issueapp.NewLocks(projects, store, authorizer, newWriteGate(config.WriteGateConfig{PerProject: 1, MaxQueue: 1, MaxWait: time.Second}), tx)
+			remove := issueapp.NewDeleteIssueRelation(issueapp.DeleteIssueRelationDeps{Events: discardIssueEvents{}, Locks: locks, Relations: store, Clock: clock.System{}})
+			ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["alice"]})
+			result := make(chan error, 1)
+			go func() { result <- remove.Execute(ctx, r) }()
+			requestBlocked(t, w.pool, tx, holder.Conn().PgConn().PID(), "projects")
+			if err := holder.Commit(pgtest.Soon(t)); err != nil {
+				t.Fatal(err)
+			}
+			if err := receiveWithin(t, result, 3*time.Second, "relation deletion"); err != domain.ErrRelationNotFound {
+				t.Fatalf("got %v want relation 404", err)
+			}
+			if got := authorizer.calls.Load(); got != 1 {
+				t.Fatalf("authorization calls %d, want only precheck", got)
+			}
+			if got := w.relationDeletion(t, r, time.Time{}); got != "undeleted" {
+				t.Fatal(got)
+			}
+		})
+	}
+}
+
+type relationCountingAuthorizer struct {
+	shared.Authorizer
+	calls atomic.Int32
+}
+
+func (a *relationCountingAuthorizer) Authorize(ctx context.Context, actor shared.Actor, action shared.Action, target shared.Target) (shared.Grant, error) {
+	a.calls.Add(1)
+	return a.Authorizer.Authorize(ctx, actor, action, target)
 }
