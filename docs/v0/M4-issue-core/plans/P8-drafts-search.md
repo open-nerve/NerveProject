@@ -146,7 +146,7 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 
 ## Task 9：pg_trgm迁移、owner/runtime与生成类型
 
-**Files：** 新`server/migrations/sql/00029_issue_issues_name_trgm.sql`；改server/sqlc.yaml、migrations/schema_test.go、issue_schema_test.go；新I/adapter/postgres/queries/search_issues.sql的最小SearchIssues查询及search_type_test.go；扩B/runtime_role_test.go；生成I/adapter/postgres/gen。不改镜像或依赖版本。
+**Files：** 新`server/migrations/sql/00029_issue_issues_name_trgm.sql`；改server/sqlc.yaml、migrations/schema_test.go、issue_schema_test.go；将往返测试移到新migrations/trigram_schema_test.go并扩展；新I/adapter/postgres/queries/search_issues.sql的最小SearchIssues查询及search_type_test.go；新B/search_runtime_role_test.go复用runtime_role_test.go的newSplitRoles并保留其全目录授权守卫；生成I/adapter/postgres/gen。不改镜像或依赖版本。
 
 **Interfaces：** 产生扩展和partial GIN，以及最终`gen.SearchIssuesRow.Similarity`必须float32的编译约束；外部q，SQL参数@query。T11在同一查询名扩完整投影，不留单独unused实验查询。
 

@@ -12,7 +12,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
-	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
 func newPool(t *testing.T, url string) *pgxpool.Pool {
@@ -25,11 +24,19 @@ func newPool(t *testing.T, url string) *pgxpool.Pool {
 	return pool
 }
 
-// The schema's tables (but goose's own), enum types and functions.
+// The schema's tables (but goose's own), enum types and application functions.
+// pg_trgm survives Down: only its actual extension members are classified out.
 const (
 	tablesQuery    = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name <> 'goose_db_version' ORDER BY 1"
 	enumsQuery     = "SELECT typname FROM pg_type WHERE typnamespace = 'public'::regnamespace AND typtype = 'e' ORDER BY 1"
-	functionsQuery = "SELECT proname FROM pg_proc WHERE pronamespace = 'public'::regnamespace ORDER BY 1"
+	functionsQuery = `SELECT p.proname FROM pg_proc p
+        WHERE p.pronamespace = 'public'::regnamespace
+          AND NOT EXISTS (
+            SELECT 1 FROM pg_depend d JOIN pg_extension e ON e.oid = d.refobjid
+            WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid
+              AND d.refclassid = 'pg_extension'::regclass AND d.deptype = 'e'
+              AND e.extname = 'pg_trgm'
+          ) ORDER BY 1`
 )
 
 func names(t *testing.T, pool *pgxpool.Pool, query string) []string {
@@ -50,57 +57,6 @@ func names(t *testing.T, pool *pgxpool.Pool, query string) []string {
 		t.Fatal(err)
 	}
 	return found
-}
-
-// Every migration can go up, down and up again (M2 design 4.1), River's
-// too: goose runs each of its halves as one statement (M2 design 3.15).
-func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
-	ctx := context.Background()
-	pool := newPool(t, pgtest.NewEmptyDatabase(t))
-	m, err := postgres.NewMigrator(pool, migrations.FS())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = m.Close() })
-
-	up, err := m.Up(ctx)
-	if err != nil || len(up) != 28 {
-		t.Fatalf("Up() = %d migrations, %v; want 28", len(up), err)
-	}
-	wantSchema := []struct {
-		query string
-		names []string
-	}{
-		{tablesQuery, []string{"api_tokens", "auth_sessions", "comment_reactions", "draft_issues", "issue_activities", "issue_assignees", "issue_comments", "issue_description_versions", "issue_labels", "issue_links", "issue_mentions", "issue_reactions", "issue_relations",
-			"issue_subscribers", "issues", "labels", "profiles", "project_members", "project_user_properties", "projects", "river_job",
-			"river_leader", "river_notification", "river_queue", "states", "users", "workspace_member_invites", "workspace_members",
-			"workspace_user_properties", "workspaces"}},
-		{enumsQuery, []string{"river_job_state"}},
-		{functionsQuery, []string{"river_job_state_in_bitmask"}},
-	}
-	checkSchema := func(stage string) {
-		t.Helper()
-		for _, want := range wantSchema {
-			if got := names(t, pool, want.query); !slices.Equal(got, want.names) {
-				t.Errorf("after %s, %s = %q, want %q", stage, want.query, got, want.names)
-			}
-		}
-	}
-	checkSchema("Up")
-	for range up {
-		if _, err := m.Down(ctx); err != nil {
-			t.Fatalf("Down() error = %v", err)
-		}
-	}
-	for _, query := range []string{tablesQuery, enumsQuery, functionsQuery} {
-		if got := names(t, pool, query); len(got) != 0 {
-			t.Errorf("after every Down, %s = %q, want none", query, got)
-		}
-	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 28 {
-		t.Errorf("Up() again = %d migrations, %v; want 28", len(again), err)
-	}
-	checkSchema("Up again")
 }
 
 // Constraint and index names are the stable names of M2 design 3.13 and M3

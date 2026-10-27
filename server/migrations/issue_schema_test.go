@@ -171,6 +171,7 @@ var issueNames = []string{
 	"issues_created_by_id_fkey f n",
 	"issues_dates_check c",
 	"issues_name_check c",
+	"issues_name_trgm_idx iw",
 	"issues_not_own_parent_check c",
 	"issues_parent_id_fkey f c",
 	"issues_parent_id_idx i",
