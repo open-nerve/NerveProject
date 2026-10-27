@@ -4,15 +4,15 @@
 |---|---|
 | Phase | M4/P8 `drafts-search` |
 | 日期 | 2026-10-27 |
-| 状态 | 实施、首次整审与T16文档独评已通过（已审文档a65e8605，task-16-review.md Approved/D1 ADDRESSED）；最终准确HEAD CI与集成按后续收据追踪，未合并，见[评审记录](../reviews/P8-drafts-search-review.md) |
+| 状态 | **已完成集成**：最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 经授权 `--no-ff` 合并为 main `6b9d08d4821f1423c7bb9795557727c206b7880f`；[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) 三任务全绿，归档核验与分支/worktree清理完成，见[评审记录 §9](../reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27) |
 | 代码基线 | P7 的 main 合并 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，文件树 `51982bad72186f17a0b10c31f2f508629bb9cca7`；主控已核同 SHA 的 main CI `40451632280` 全绿；归档/清理证据见 P7 收尾记录 |
-| 分支 | `codex/m4-p8`；worktree `.codex/worktress/codex/m4-p8`，主目录保持 main |
+| 实施期分支（历史） | `codex/m4-p8`；worktree `.codex/worktress/codex/m4-p8`；集成与归档核验后已清理，主目录保持 main |
 | 上级文档 | [M4 设计](../M4-design.md) §3.3–3.5、3.15–3.18、3.23、4.13、5、6、8.6–8.7、9、12/P8、13.1；[方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md) |
 | 计划 | [P8 plan](../plans/P8-drafts-search.md) |
 
 本 spec 固定批准设计留给 P8 的接口、参数边界、文件职责和验证方法。设计的 13 个粗任务拆为 16 个可独立评审的 Task，沿 P7 紧凑方法，不重做已批准架构，也不把静态预检记成原型或逐任务复现。以下新增符号均为实施期目标，未声称已存在。
 
-以上为批准时口径；同日实施已交付下列接口，产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`。附录保留准备/T8/T15当时边界，当前验收的准确证据见§4及[review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。
+以上及目标中的“阶段完成先不合并”为批准时口径；同日实施已交付下列接口，产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`。附录保留准备/T8/T15当时边界；§4的A1–A12已按实际证据验收，实施证据见[review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)，最终分支CI与获授权后的集成完成状态见[review §9](../reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)。
 
 ## 1. 目标
 
@@ -46,7 +46,7 @@
 | I/domain/issue.go、listvocab.go、list_cursor_key.go；I/adapter/postgres/queries/issues.sql、sub_issues.sql、list_issues.sql、list_issue_groups.sql、list_issue_subgroups.sql、search_issues.sql；对应 Go 映射/游标/测试及list_link_count_test.go共享helper；I/adapter/http/issues.go；契约；`api/testdata/issue-order.json`；B/issue_link_counts_test.go与已有列表/偏好/形状/HTTP list-member测试、受影响I3/I4 fixtures | 所有响应 live link count、19→21 排序码、三 SQL 同形和游标 | T13；9 |
 | `e2e/stories/issue/i18-search.spec.ts`（新）、`i4-list-order-calendar.spec.ts`；`e2e/fixtures/issues.ts`、`fixtures/assert/issue.ts` | I18、I4 双向非零计数续页；全表示Go验证已在T13 | T14；11 |
 | I/adapter/postgres/search_performance{,_fixture,_evidence}_test.go（新，显式 opt-in 场景/seed/原始取证）；本 spec 附录、ignored 原始证据 | 10 万数据、locale/EXPLAIN/耗时、全门禁与性质审计 | T15；12 |
-| 本spec/plan/review、`docs/reviews/re-07-M4P8整体审核.md`；M4-design当前端口/草稿/搜索/§3.23/6.5/11.2/12/15，v0/Plane/README，03/04当前导航；四输入handoff与P1a–P7 spec§5/review§6追加 | 30文档准确范围deep-review/历史D1摘要修正、实际验收与交接；文档a65e8605独评Approved，最终提交验证另核 | T16；13 |
+| 本spec/plan/review、`docs/reviews/re-07-M4P8整体审核.md`；M4-design当前端口/草稿/搜索/§3.23/6.5/11.2/12/15，v0/Plane/README，03/04当前导航；四输入handoff与P1a–P7 spec§5/review§6追加 | 30文档准确范围deep-review/历史D1摘要修正、实际验收与交接；文档a65e8605独评Approved；最终分支CI与集成完成见review§9 | T16；13 |
 
 单 Task 目标约 350–1200 手写差异行，预留局部修复余量；超过约 1500 行先按职责重新切分，不能把安全/锁序测试压缩掉。单个新逻辑文件约 400 行上限；生成物、静态 SQL 和有明确理由的测试表沿既有例外。
 
@@ -265,8 +265,8 @@ parent：仅 source 项目，排除 source、自身当前 parent、全部后代�
 - [x] A8：link_count每种表示、活/软删/metadata数量、21码双向平铺/分组/子分组/成员/偏好、整数游标和伪造游标不越权通过（T13/14）。
 - [x] A9：I14/I18接口、I4两方向跨页及所有受影响目录故事通过（T8/14）。
 - [x] A10：10万英文/中文数据的2字和≥3字真实最终查询参数、locale、计划、样本数/耗时写入附录；不关闭seqscan作伪证（T15）。
-- [x] A11：四次完整本地七门禁先于产品检查点push，新码文案/架构/关键词不放宽，首次整审完成；10f44790..a65e8605文档独评Approved，历史D1已独立ADDRESSED，证据为task-16-review.md（T16）；最终准确HEAD CI另核。
-- [x] A12：§3.23上级文档/README和输入handoffs已追加准确结果，BASE/产品HEAD/spec/plan/review路径已交付，未合并；已审文档a65e8605/独评task-16-review.md已记录，最终准确HEAD CI由后续收据绑定（T16）。
+- [x] A11：四次完整本地七门禁先于产品检查点push，新码文案/架构/关键词不放宽，首次整审完成；10f44790..a65e8605文档独评Approved，历史D1已独立ADDRESSED，证据为task-16-review.md（T16）；最终准确分支HEAD `cde70d9735994cb6a579e0b800469f32631e9981` 的 [CI 40515294403](https://github.com/open-nerve/NerveProject/actions/runs/40515294403) 已通过，集成回执见review§9。
+- [x] A12：§3.23上级文档/README和输入handoffs已追加准确结果，BASE/产品HEAD/spec/plan/review路径已交付；已审文档a65e8605/独评task-16-review.md及最终状态复核均有原件（T16）。交付时未合并的历史状态保留在branch-final-receipt.json；其后已授权集成、main CI通过、归档及清理完成，见review§9。
 
 ## 5. 不在本期与后续接手
 
@@ -299,9 +299,11 @@ schema生成/JSONB规范化可能改变错误截断顺序，T5对规范存储体
 | [M2](../handoffs/M2-closeout.md) §2/4 | 草稿游标篡改、发布存储体结构同400，保留封闭schema与代价守卫；T2/4/5/6 |
 | [M3](../handoffs/M3-closeout.md) §2/3/4 | 新写锁序/矩阵声明、级联表目录、无项目草稿；T1/4/7/8 |
 
-各handoff追加“处理结果（M4/P8）”及真实证据；总体status保持open至M4统一收尾。完成时review记录精确BASE..HEAD、审查方法/发现/修复/复审、门禁和CI；是否合并由用户另行安排。
+各handoff追加“处理结果（M4/P8）”及真实证据；总体status保持open至M4统一收尾。实施完成时review按原要求记录精确BASE..HEAD、审查方法/发现/修复/复审、门禁和CI；随后用户已授权集成，结果见review§9。
 
 ## 附录 A：准备与实施证据边界
+
+以下保留各阶段原始时间点。准备原件 `.superpowers/sdd/P8-drafts-search/preparation/` 仍在主项目根目录原处，不属于本次worktree归档；T8/T15等实施证据中的同名相对根则是执行时P8 worktree路径，当前完整原件归档在主项目根目录 `.superpowers/sdd/P8-integration-20261027/worktree-evidence/.superpowers/sdd/P8-drafts-search/`，核验与清理事实见review§9。
 
 2026-10-27：只读核对M4设计、P3样板、P7交付树、现有创建/锁/列表/游标/HTTP bodyshape/删除接缝；独立需求和代码盘点保存在 ignored `.superpowers/sdd/P8-drafts-search/preparation/`。规格作者和独立审者没有跑迁移、生成器、产品测试、SQL原型或性能实验；主控另已运行既有关键词/架构检查，结果见评审记录，不构成P8产品验收；NUL可存性和生成风险为静态推导，均有实施期验证Task。P7基线CI事实来自主控对准确SHA的核验；P8尚无实现或运行证据。
 

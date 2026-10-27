@@ -1,5 +1,7 @@
 # 04 下一步与遗留
 
+**当前接续点见§9：P8已完成集成，P9仅准备与静态预检；§6–8保留各阶段当时的历史快照。**
+
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
 main 的持续集成第 340 次（P3 的合并 `dfc9378b`）在 M3 的 W11 页面故事上失败：管理员切到另一个工作区、按 Ctrl+K，命令面板 5 秒内没有出现。与 P3 的改动无关，本机复现不出来，根因未明。
@@ -91,8 +93,15 @@ P6 已由 deep-review 终审通过并经授权 `--no-ff` 合并为 `5005be985e7e
 
 下一接收方继续P8列表link_count/草稿/搜索，P9异步删除/保留/清理，P11/P14详情数据层和I10/I17页面，P15协作页面；M4整体与输入handoff保持open，不创建M5–M8最终closeout。
 
-## 8. 当前接续点（2026-10-27，P7 集成后）
+## 8. P8交付前快照（2026-10-27，P7 集成后）
 
 P7 已经授权以 `--no-ff` 合并为 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 三任务全绿。5,443个证据文件归档并逐SHA核验后，P7本地/远端分支与worktree均已清理，完整事实见 [P7 review](../M4-issue-core/reviews/P7-issue-links-review.md) 第8节；§6/§7保留较早的冻结快照。
 
 P8 `drafts-search` 已完成T1–T15实施与逐Task独立评审，产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`；[spec](../M4-issue-core/specs/P8-drafts-search.md)、[实际plan](../M4-issue-core/plans/P8-drafts-search.md)、[review](../M4-issue-core/reviews/P8-drafts-search-review.md)与[首次整体审核](../../reviews/re-07-M4P8整体审核.md)列验收、四次本地七门禁、产品checkpoint CI和整审证据。基线仍为上述main，工作树 `.codex/worktress/codex/m4-p8`、分支 `codex/m4-p8`；实施、首次整审和T16文档独评已完成，准确文档a65e8605及task-16-review.md确认Approved/D1 ADDRESSED；最终准确HEAD CI及集成由后续提交和 ignored `task-16-final-checkpoint-receipt.json` 追踪。未合并、不清理，M4总体和后续handoff保持open。准备提交 `d4391bff` 的静态预检是先前历史，不当作产品验证。
+
+
+## 9. 当前接续点（2026-10-27，P8 集成后）
+
+P8 `drafts-search` 最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的[分支 CI 40515294403](https://github.com/open-nerve/NerveProject/actions/runs/40515294403)已通过，随后经负责人授权 `--no-ff` 合并为 main `6b9d08d4821f1423c7bb9795557727c206b7880f`；准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1的server/web/e2e全部completed/success。1,598文件、37,552,117字节及1空目录归档逐hash核验后，P8本地/远端分支与worktree已正常清理，清理后再次核验归档。完整集成原件、manifest和新证据根见[P8 review §9](../M4-issue-core/reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)；上文未合并/待CI文字保留为当时事实。
+
+当前独立分支 `codex/m4-p9` 位于 `.codex/worktress/codex/m4-p9`，基线为上述main，仅准备[物理清理 spec](../M4-issue-core/specs/P9-purge.md)、[plan](../M4-issue-core/plans/P9-purge.md)与[静态预检记录](../M4-issue-core/reviews/P9-purge-review.md)。预检尚待完成，本轮不启动P9产品实现，不将既有P8运行证据当成P9验证。M4总体§14/总体设计§9.4、输入handoff总体status和M5–M8最终closeout保持原状。

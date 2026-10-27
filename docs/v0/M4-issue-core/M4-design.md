@@ -796,7 +796,9 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 
 **P7接续记录（2026-10-27）：** 三link事件使目录增为15；首个生产subscriber经原事务InsertTx投递，真实worker、请求任务快照、受限运行角色及I10 API/带links删除目录已落地。下表P7三行已同步总体§6.2/§6.7/§8、12列差异和README安全；[P7 review](reviews/P7-issue-links-review.md)与[整体审核](../../reviews/re-05-M4P7整体审核.md)区分原范围整审、T16修复/本地验证、原8项已独立关闭与最后文档增量/交付HEAD CI记录。P6当时空生产订阅是历史事实，P8/P9/P11/P14/P15及M4收尾仍开放。
 
-**P8接续记录（2026-10-27）：** T1–T15与逐Task独评已完成，产品`10f44790`的完整本地七门禁通过；首次整审覆盖基线`166b9efd..10f44790`全部186文件，三个产品分区零发现，仅历史文档Minor D1在本次摘要中修正。下表P8四行已同步总体§5.4/6.9、草稿九列/三索引/搜索与21码差异、README部署；[P8 review](reviews/P8-drafts-search-review.md)和[整体审核](../../reviews/re-07-M4P8整体审核.md)列准确范围/证据/限制。文档独评10f44790..a65e8605已Approved/D1 ADDRESSED（task-16-review.md），最终准确HEAD CI按后续收据追踪，未合并；P9/前端/M5–M8与M4总体仍开放。
+**P8接续记录（2026-10-27，集成前历史）：** T1–T15与逐Task独评已完成，产品`10f44790`的完整本地七门禁通过；首次整审覆盖基线`166b9efd..10f44790`全部186文件，三个产品分区零发现，仅历史文档Minor D1在本次摘要中修正。下表P8四行已同步总体§5.4/6.9、草稿九列/三索引/搜索与21码差异、README部署；[P8 review](reviews/P8-drafts-search-review.md)和[整体审核](../../reviews/re-07-M4P8整体审核.md)列准确范围/证据/限制。文档独评10f44790..a65e8605已Approved/D1 ADDRESSED（task-16-review.md），最终准确HEAD CI按后续收据追踪，未合并；P9/前端/M5–M8与M4总体仍开放。
+
+**P8集成接续（2026-10-27）：** 最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 已授权 `--no-ff` 合并为 main `6b9d08d4821f1423c7bb9795557727c206b7880f`，准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987)全绿；归档核验及P8本地/远端分支、worktree清理完成，见[P8 review §9](reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)。上段保留当时审查范围与未合并状态；P9仅进入规格/计划准备与静态预检，未实施，M4总体及后续交接仍开放。
 
 **规则**照 M3 设计 3.20：每处偏离，在实现它的那个 Phase 的同一次合并中同步到上级文档和差异清单；建表、改表的 Phase 逐列更新差异清单。收尾只按本表逐行核对。总体设计 9.4 中 M4 的状态随本文的合并改为"进行中"（2026-10-17，已改）。负责人已裁定第 10 节、批准第 11 节（2026-10-17，全部按建议），下表每一行的内容都已确定，按标出的 Phase 同步。
 
@@ -2224,9 +2226,9 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 
 ### P8 `drafts-search`：草稿、搜索与 `link_count`（后端，13 个任务）
 
-2026-10-27准备期将下列13个设计粗项按职责细化为16个拟实施任务，映射与规模预算见 [P8 plan](plans/P8-drafts-search.md)。仍在已批准D2范围内，不减少完成线；本次只写spec/plan并预检，未实现或运行P8验收。
+2026-10-27准备期历史：将下列13个设计粗项按职责细化为16个拟实施任务，映射与规模预算见 [P8 plan](plans/P8-drafts-search.md)。仍在已批准D2范围内，不减少完成线；本次只写spec/plan并预检，未实现或运行P8验收。
 
-同日实施结果：T1–T15及逐Task独评完成，以下13粗项已落实为16 Task交付；T16同步正式文档与首次整审。I14三故事、I18/I4六故事、交错16/17真实PID及最终race65 RUN、10万中英文Store测量14 RUN均有原始证据；四检查点完整F通过。验收/实际方法差异、CI与后续文档独评边界见[P8 review](reviews/P8-drafts-search-review.md)，未合并、不清理，不把下面“关闭”扩成输入handoff总体closed。
+同日集成前实施记录（历史）：T1–T15及逐Task独评完成，以下13粗项已落实为16 Task交付；T16同步正式文档与首次整审。I14三故事、I18/I4六故事、交错16/17真实PID及最终race65 RUN、10万中英文Store测量14 RUN均有原始证据；四检查点完整F通过。验收/实际方法差异、CI与后续文档独评边界见[P8 review](reviews/P8-drafts-search-review.md)，未合并、不清理，不把下面“关闭”扩成输入handoff总体closed。其后最终分支CI、授权集成、main CI及归档清理均已完成，准确结果见review§9；本段原证据范围不变。
 - **目标**：个人草稿和发布；工作项的搜索和选择器的排除；pg_trgm；`link_count` 进入列表。
 - **任务**：
   1. 迁移 `00028`，grants；删除的语句加草稿（项目的，和按工作区的、没有项目的）；`furnishIssueRows` 加草稿。
@@ -2543,8 +2545,8 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P5 `issue-list` | 列表引擎与显示设置（后端，16验收任务/19实施单元） | 已完成：[spec](specs/P5-issue-list.md)、[plan](plans/P5-issue-list.md)、[评审](reviews/P5-issue-list-review.md)。追加[deep-review](../../reviews/re-02-M4P5整体审核.md)及局部修复复审关闭；2026-10-26 负责人授权后，P5 已以 `--no-ff` 合并为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；[main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 的 server/web/e2e 全绿；6,517 个证据文件已归档并逐个 SHA-256 核对，P5 本地/远端分支及 worktree 已清理。T16 集成门关闭，M4 总体与后续交接仍 open。 |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，16验收任务） | T1–T16已实施并逐Task独评通过，T16正式文档/交接已同步：[spec](specs/P6-issue-events.md)、[plan](plans/P6-issue-events.md)、[review](reviews/P6-issue-events-review.md)。内部整分支审查及 clock 修复聚焦复审已通过；修复 `e8df8485` 的 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 三任务全绿。deep-review 终审通过（[报告](../../reviews/re-03-M4P6整体审核.md)，3 项文档 Minor 已闭环）；已授权 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；[main CI 40305247546](https://github.com/open-nerve/NerveProject/actions/runs/40305247546) 重跑全绿，921 个本地证据归档核 hash 后已清理分支/worktree。**P6 已完成**；M4 总体仍进行中 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12粗项/16任务） | **已完成**：[spec](specs/P7-issue-links.md)、[plan](plans/P7-issue-links.md)、[review](reviews/P7-issue-links-review.md)、[整体审核](../../reviews/re-05-M4P7整体审核.md)。T1–T16实施、整审及修复复审闭环；经授权 `--no-ff` 合并 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 三任务全绿；5,443个本地证据文件归档逐hash核验后，已清理本地/远端分支及worktree。M4总体仍进行中 |
-| P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13粗项/16 Task） | **实施与审查已完成，待集成，未合并**：[spec](specs/P8-drafts-search.md)、[实际plan](plans/P8-drafts-search.md)、[review](reviews/P8-drafts-search-review.md)、[整体审核](../../reviews/re-07-M4P8整体审核.md)。产品`10f44790`，四次本地七门禁与逐Task独评有收据；首次完整审查186文件，产品零发现、历史文档D1本次修正。已审文档a65e8605独评Approved/D1 ADDRESSED（task-16-review.md），最终准确HEAD CI另由收据追踪；保留分支/worktree，M4总体和后续交接仍open |
-| P9 `purge` | 物理清理、描述版本的保留与工作项一侧的删除任务（后端，13） | 未开始 |
+| P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13粗项/16 Task） | **已完成**：[spec](specs/P8-drafts-search.md)、[实际plan](plans/P8-drafts-search.md)、[review](reviews/P8-drafts-search-review.md)、[整体审核](../../reviews/re-07-M4P8整体审核.md)。T1–T16实施、首次整审及文档独评闭环，最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，经授权 `--no-ff` 合并为 `6b9d08d4821f1423c7bb9795557727c206b7880f`；准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1三任务全绿。1,598文件、37,552,117字节及1空目录归档逐hash核验后，本地/远端分支和worktree已清理，清理后再核哈希；完整回执见review§9。M4总体及后续交接仍open |
+| P9 `purge` | 物理清理、描述版本的保留与工作项一侧的删除任务（后端，13） | **仅准备，待静态预检完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[预检记录](reviews/P9-purge-review.md)。独立分支 `codex/m4-p9`、worktree `.codex/worktress/codex/m4-p9` 从已集成P8的main `6b9d08d4821f1423c7bb9795557727c206b7880f` 起步；本轮不实现产品，准备与预检结果以记录为准 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | 未开始 |
 | P10b `web-list-data` | 列表一侧的数据层（14） | 未开始 |
 | P11 `web-detail-data` | 详情一侧的数据层（14） | 未开始 |

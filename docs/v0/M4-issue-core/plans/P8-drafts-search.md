@@ -2,7 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
-> **状态：** spec、plan 的独立静态预检已通过（[评审记录](../reviews/P8-drafts-search-review.md)）；负责人已授权从 T1 实施，阶段结束 deep-review 后先不合并。任务、测试、变异、性能和门禁按实际完成证据勾选，不据静态阅读勾选。
+> **当前状态：已完成集成。** T1–T16实施与审查已闭环；最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 经授权 `--no-ff` 合并为 main `6b9d08d4821f1423c7bb9795557727c206b7880f`，[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) 三任务全绿；归档核验及分支/worktree清理完成，见[review §9](../reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)。
+
+> **批准计划与实施回执的历史边界：** 独立静态预检通过后，负责人当时授权从T1实施，阶段结束deep-review后先不合并。下列Global Constraints、任务和实施回执中的分支路径、“先不合并/待最终CI”保留当时范围；当前结果以上述集成回执为准。所有既有勾选保持实际完成含义，T15条件未触发的优化继续未勾。
 
 **目标：** 交付个人草稿与原子发布、可见范围内的搜索和选择器排除、pg_trgm部署验证，以及每一种Issue表示和列表的link_count。
 
@@ -10,7 +12,7 @@
 
 **技术栈：** 仓库锁定Go1.27/toolchain1.27.1、pgx5.11.0、River0.47.0、sqlc1.31.1、PostgreSQL18.6、Node24/pnpm11.10.0/Playwright；不加新依赖。
 
-**规格：** [P8 spec](../specs/P8-drafts-search.md)，新增接口与边界以spec§2为唯一表。基线main `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，主控已核该SHA的CI `40451632280`全绿；P7归档/清理另有收尾证据。P8分支`codex/m4-p8`、worktree`.codex/worktress/codex/m4-p8`。
+**规格：** [P8 spec](../specs/P8-drafts-search.md)，新增接口与边界以spec§2为唯一表。基线main `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，主控已核该SHA的CI `40451632280`全绿；P7归档/清理另有收尾证据。实施期P8分支`codex/m4-p8`、worktree`.codex/worktress/codex/m4-p8`均已在集成和归档核验后清理。
 
 ## Global Constraints
 
@@ -259,7 +261,7 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 
 ## 实施回执与实际方法差异（2026-10-27）
 
-勾选表示本项交付及等价验证已有原件，涉及条件/不同方法按本节解释，不能理解为每条推荐命令逐字执行。T1–T15均有独立 `task-N-review.md`；主控负责作者提交后的独评、检查点F/push/CI，作者不自批。原件根 `E=.superpowers/sdd/P8-drafts-search/`，精确argv/cwd/HEAD/hash/exit/RUN在 `checks/<name>/{result.json,output.log}` 与对应作者报告。产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`；[review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)给A1–12、四次F/CI和审查覆盖。
+勾选表示本项交付及等价验证已有原件，涉及条件/不同方法按本节解释，不能理解为每条推荐命令逐字执行。T1–T15均有独立 `task-N-review.md`；主控负责作者提交后的独评、检查点F/push/CI，作者不自批。执行时原件短名 `E=.superpowers/sdd/P8-drafts-search/` 为历史路径；当前完整原件位于主项目根目录 `.superpowers/sdd/P8-integration-20261027/worktree-evidence/.superpowers/sdd/P8-drafts-search/`。精确argv/cwd/HEAD/hash/exit/RUN在 `checks/<name>/{result.json,output.log}` 与对应作者报告。产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`；[review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)给A1–12、四次F/CI和审查覆盖。
 
 | Task/提交 | 实际执行与Files对齐；未运行/差异 |
 |---|---|
@@ -281,3 +283,8 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 | T16 本次文档提交 | 30文档职责：本期3件+re-07、M4/v0/Plane/README、03/04、4输入和前序16追加。首次审查产品范围冻结166b9efd..10f44790，186文件/55171行；三产品分区零发现，历史文档D1本次修。额外M4当前口径和03/04同步均是已批准同契约事实，不改产品/协议；准确文档a65e8605已由task-16-review.md独评Approved、D1 ADDRESSED，A11及复审项现勾闭环。纯文档仅静态检查，后续主控gen-check/最终pushCI，不重跑产品F。 |
 
 T4/T8/T12/T15完整F与准确产品checkpoint CI均已通过；实现期编译/fixture/lint/超时失败保留解释，不按本节勾选倒写成全程无失败。各Task的G按真实职责完成：无生成输入不强跑生成，同代码无理由不重复测试。P9/P15/前端/附件/最终部署与M4整体不在本Task关闭；全部输入顶部open不变。准确a65e8605文档独评已Approved；本次仅小范围状态补录，仍交同审者核此增量，最终文档HEAD/CI由ignored最终收据和交付消息绑定。
+
+
+## 集成完成回执（2026-10-27）
+
+最终准确分支HEAD `cde70d9735994cb6a579e0b800469f32631e9981` 的 [CI 40515294403](https://github.com/open-nerve/NerveProject/actions/runs/40515294403) 已通过；随后经授权 `--no-ff` 合并为 main `6b9d08d4821f1423c7bb9795557727c206b7880f`，准确 [main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1的server/web/e2e均completed/success。1,598个文件、37,552,117字节及1个空目录归档核验后，P8本地/远端分支与worktree已正常清理，清理后再核归档哈希；完整原件与manifest见[review §9](../reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)。本节只关闭历史最终CI/集成/清理待办；T15条件优化未触发、未执行，M4总体验收和后续handoff仍开放。
