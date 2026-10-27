@@ -214,7 +214,7 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 
 ## Task 15：10万搜索实测、性质审计与完整门禁（检查点F）
 
-**Files：** 新I/adapter/postgres/search_performance_test.go（只显式环境启用）；spec附录A和ignored性能/门禁/变异报告。产品修复只根据实际失败定位后按原Task评审。
+**Files：** 新I/adapter/postgres/search_performance_test.go（场景、独立oracle、只显式环境启用的runner）、search_performance_fixture_test.go（精确seed与最小runtime pool）、search_performance_evidence_test.go（实际SQL/实参/OID、元数据与计划）；spec附录A和ignored性能/门禁/变异报告。三文件各约400行以内、合计<1200手写目标；产品修复只根据实际失败定位后按原Task评审。
 
 **Interfaces：** 新`TestSearch100KPerformance`以`NERVE_SEARCH_PERF=1`启用；默认明确Skip，不计为性能已跑。复用现pgtest数据库和最终SearchRows/SQL，禁止单独简化查询冒充生产耗时。
 

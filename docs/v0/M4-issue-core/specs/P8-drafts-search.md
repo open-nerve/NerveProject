@@ -43,7 +43,7 @@
 | I/adapter/http/search_issues.go、search_issues_test.go（新）；I/adapter/http/handler.go、draft_query.go；I/module.go；契约；B/permission_matrix_search_test.go（新） | 搜索 HTTP 边界和完整矩阵 | T12；8、10 |
 | I/domain/issue.go、listvocab.go、list_cursor_key.go；I/adapter/postgres/queries/issues.sql、sub_issues.sql、list_issues.sql、list_issue_groups.sql、list_issue_subgroups.sql、search_issues.sql；对应 Go 映射/游标/测试；I/adapter/http/issues.go；契约；`api/testdata/issue-order.json`；已有列表/偏好/形状测试 | 所有响应 live link count、19→21 排序码、三 SQL 同形和游标 | T13；9 |
 | `e2e/stories/issue/i18-search.spec.ts`（新）、`i4-list-order-calendar.spec.ts`；B/issue_link_counts_test.go（新）；受生成类型影响的现有 TS fixtures | I18、I4 双向、全表示数量一致 | T14；11 |
-| I/adapter/postgres/search_performance_test.go（新，显式 opt-in 性能用例）；本 spec 附录、ignored 原始证据 | 10 万数据、locale/EXPLAIN/耗时、全门禁与性质审计 | T15；12 |
+| I/adapter/postgres/search_performance{,_fixture,_evidence}_test.go（新，显式 opt-in 场景/seed/原始取证）；本 spec 附录、ignored 原始证据 | 10 万数据、locale/EXPLAIN/耗时、全门禁与性质审计 | T15；12 |
 | 本 spec、plan、`reviews/P8-drafts-search-review.md`；M4-design、`docs/v0/v0-design.md`、`docs/v0/plane-diff.md`、README、输入 handoffs | 准确范围 deep-review、局部修复复审、§3.23 和交接证据 | T16；13 |
 
 单 Task 目标约 350–1200 手写差异行，预留局部修复余量；超过约 1500 行先按职责重新切分，不能把安全/锁序测试压缩掉。单个新逻辑文件约 400 行上限；生成物、静态 SQL 和有明确理由的测试表沿既有例外。
@@ -251,7 +251,7 @@ parent：仅 source 项目，排除 source、自身当前 parent、全部后代�
 
 ## 4. 验收
 
-以下均未执行，预检通过只代表计划可执行。
+以下保留批准时的验收清单；实施结果按 Task 追加在附录 A。预检只代表计划可执行，未完成的最终门禁与整分支审查不由局部通过代替。
 
 - [ ] A1：00028 九列/索引/级联/grants、无项目/零项目工作区删除、旧审计保留、furnish所有调用点和完整表目录通过（T1/4/8）。
 - [ ] A2：保存全 optional/整体替换/nullable/noop/NUL三路径；无额外issue副作用；自有游标/total及未知游标位置不泄漏通过（T2–4）。
@@ -262,7 +262,7 @@ parent：仅 source 项目，排除 source、自身当前 parent、全部后代�
 - [ ] A7：空词、数字/Unicode编号、literal包含、重复参数/日期/冲突、全深度/双向排除、同ReadOnlySnapshot的隐藏父及子数通过（T10–12）。
 - [ ] A8：link_count每种表示、活/软删/metadata数量、21码双向平铺/分组/子分组/成员/偏好、整数游标和伪造游标不越权通过（T13/14）。
 - [ ] A9：I14/I18接口、I4两方向跨页及所有受影响目录故事通过（T8/14）。
-- [ ] A10：10万英文/中文数据的2字和≥3字真实最终查询参数、locale、计划、样本数/耗时写入附录；不关闭seqscan作伪证（T15）。
+- [x] A10：10万英文/中文数据的2字和≥3字真实最终查询参数、locale、计划、样本数/耗时写入附录；不关闭seqscan作伪证（T15）。
 - [ ] A11：T4/8/12/15完整本地七门禁先于产品检查点push；新码文案和架构/关键词不放宽；整分支deep-review及局部修复复审关闭（T16）。
 - [ ] A12：§3.23上级文档/README和输入handoffs追加准确结果；交付BASE/HEAD/spec/plan/review路径，阶段先不合并（T16）。
 
@@ -312,3 +312,33 @@ schema生成/JSONB规范化可能改变错误截断顺序，T5对规范存储体
 - P4/W2/W3指定回归6/6通过；W3新增显式nil-project草稿、零项目工作区HTTP删除的动态全表目录断言及已删旧项目草稿原始微秒审计前后快照。P4/W2复用T4的API furnish与动态目录；bootstrap发布/删除/目录/子项28 RUN、存储层草稿/链接删除13 RUN均通过，保留原subItems/links覆盖。
 
 此记录仅为T8作者聚焦/影响验证；完整F、独立评审、准确HEAD push及CI仍由主控完成后补证。A9还包含T14的I18/I4，未在T8提前完成；各阶段验收项保持未勾。
+
+
+2026-10-27，T15 实际规模测量与最终性质回归（完整 F 和 T16 仍待主控）：
+
+- 测量输入为基线 `88ba09fa87883e11e3f6702998a9a7e53bef8a5b` 加未提交的三个性能测试文件和 plan 变更，**不是干净提交上的运行**。最终提交与这些字节的映射、逐文件 SHA256、完整原始输出见 ignored `task-15-author-report.md`、`checks/t15-measure-restored/{result.json,output.log}`、`task-15-evidence/restored/metadata.json`。生产搜索 SQL/生成 Go/adapter 未修改；本段文档在测量之后追加，不将文档提交本身说成运行时 HEAD。
+- 显式 `NERVE_SEARCH_PERF=1 go -C server test -p=1 -count=1 -v ./internal/modules/issue/adapter/postgres -run '^TestSearch100KPerformance$'`：13 个场景加父测试共 **14 RUN/14 PASS**，每场景 1 次 first-observed + 5 次 warm。默认关闭时是明确 skip，不能据此称性能已验。首轮真实尝试在完成 seed 后因把 `lc_ctype` 当运行设置而失败，没有产生生产耗时；按 PG18 `pg_database.datctype/datcollate` 修正取证，原日志/seed 保留。第一次完整成功测量与随后 OwnOnly 恢复测量均保留，下表采用恢复后的完整成功测量。
+- 固定 seed `20261027`、生成版本 `search-100k-v1`，**恰好 100000 行 issues**：每个可见项目 50000（英文 25000/中文 25000），共英文 50000/中文 50000；每项目 actor-owned 47056、归档 496、软删 488、rare 日期样本 1352，均包含在 50000 内，类别可重叠。第二项目目录为 OwnOnly；另有两项目均 OwnOnly 和单项目场景。四种标题包含受控 exact-title 领导行及字母后缀变体，rare 条件为 `start_date=2026-06-15`。Go 从固定 fixture 元数据独立枚举过滤前后数量，并按受控 exact-title/created_at/id（空词 updated_at/id，编号 rank）给出 topN；所有返回 ID、name、活 link_count 均比较固定期望，期望不是由 Search 输出生成。候选 count 是保留 captured candidates CTE 原谓词及全部 17 个绑定的单独诊断，不计作生产耗时。
+- 真实最终投影还读取 **20000 issue_links（10000 活/10000 软删；活行含 metadata）**，exact-title 行各 1 活链接；issue_assignees、issue_labels、issue_relations 均为空，此成本边界不外推为关联密集生产分布。owner `postgres` 负责 seed/五张相关表 ANALYZE；测量角色 `test_1_search_runtime` 为非 superuser、属于 `nerve_runtime`，按实际 grants 配置。PG **18.6 / Debian / aarch64**，`LC_CTYPE=LC_COLLATE=en_US.utf8`、UTF8、libc provider，`datlocale` 对该 provider 为空；Go/CPU/平台/索引定义和逐表 last_analyze/analyze_count 均有 metadata 原值。
+- 计时是生产 pool 配置下 `TxManager(ReadOnlySnapshot)` → 完整 `Store.Search`（含 LinkCount 与 native float32 similarity 的最终生成 SQL）。每次捕获同 snapshot PID、实际 BEGIN RR/RO、完整 SQL、原始 17 typed args（保留 typed nil/空 slice）；`jit=off`、`plan_cache_mode=force_custom_plan`、`enable_seqscan=on`。原 SQL 与后续 EXPLAIN 的参数 OID 完全相同：`25,2951,1000,2950,25,2950,23,23,2950,25,1000,1009,1009,1000,1009,1009,23`。精确值/Go 类型/最终 SQL/参数和 `EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON)` 在逐场景 samples/plans 文件，不以手抄 SQL 代替真实 capture。
+- 下表单位 ms；snapshot 包含 BEGIN/Store.Search/COMMIT 的客户端总耗时；pgx 列为 TraceQueryStart→End（含客户端往返、行读取/扫描），**不是纯服务端执行时间**；PG Execution 列是另一次 EXPLAIN 的单次服务端 Execution Time，不是五次中位数。first-observed 列 **不是物理冷缓存**：COPY/ANALYZE 已触页，未驱逐 shared buffers 或 OS cache；诊断/EXPLAIN 在该场景采样之后，亦可暖后续场景。未关闭 seqscan、未声称固定延迟达标。
+
+| 查询/范围 | 独立/实际候选数 | first snapshot | warm snapshot min/median/max | warm pgx min/median/max | 单次 PG Execution |
+|---|---:|---:|---:|---:|---:|
+| lo | 47786 | 47.936 | 36.827/37.686/39.865 | 36.331/37.180/39.360 | 38.369 |
+| lo / rare | 1302 | 38.348 | 37.516/37.708/39.640 | 36.926/37.196/39.024 | 37.502 |
+| login | 23791 | 28.631 | 26.553/27.330/27.568 | 26.099/26.887/27.045 | 27.129 |
+| login / rare | 643 | 27.273 | 26.850/26.980/27.600 | 26.350/26.455/27.162 | 26.196 |
+| 登录 | 47582 | 45.457 | 42.177/42.310/43.584 | 41.579/41.754/43.056 | 42.846 |
+| 登录 / rare | 1286 | 43.561 | 42.246/42.488/43.039 | 41.683/41.884/42.427 | 42.724 |
+| 修复登录 | 23791 | 32.636 | 30.620/30.903/31.006 | 30.168/30.495/30.562 | 30.647 |
+| 修复登录 / rare | 643 | 30.653 | 30.200/31.028/31.348 | 29.795/30.631/30.901 | 30.713 |
+| 空词 | 95164 | 47.935 | 42.171/42.493/43.156 | 41.644/42.022/42.776 | 52.368 |
+| 31415 | 2 | 1.390 | 1.074/1.135/1.149 | 0.719/0.761/0.789 | 0.289 |
+| PERFA-31415 | 1 | 1.536 | 1.306/1.342/1.370 | 0.979/0.994/1.024 | 0.563 |
+| lo / 两项目ownOnly | 46340 | 41.812 | 37.180/37.584/38.061 | 36.646/37.123/37.566 | 36.465 |
+| login / 单项目 | 12256 | 30.393 | 29.384/29.521/29.717 | 28.903/29.027/29.217 | 30.931 |
+
+- 八个标题高/低选择性场景实际均选择顺扫；rare 日期显著减少候选数，但该 fixture 下没有因此缩短为索引查找。单项目 login 实际使用 trigram bitmap；纯数字/完整编号使用编号与 trigram 的 bitmap OR。结果未暴露需改变生产查询的契约内退化；这里只说明记录的分布/环境，不保证其他生产数据形状。
+- 代表生产变异把 adapter 目录 OwnOnly 参数改为 false，真实 100k 用例在 topN[16] 多出他人固定 ID 而红（2 RUN/0 PASS，`checks/t15-own-mutation-red`）；恢复原字节 SHA256 `8d731dcac54e69fa4f064d39ac9622a3efe3829a7e0b6e67f03a187dde03f67b` 后上述 14 RUN 全绿，恢复收据在 `task-15-evidence/mutation/restoration.json`。编译 import 冲突和 locale 取证失败不是产品行为红。
+- 消费独立 `mutation-audit-through-t14.md` 的 M1–M36、T14 真实 M26/M33 E2E 变体与恢复链；保留旧生成恢复方式、T7 未跟踪测试 hash 限制、T9 overlap 和 T13 import-only 关闭的真实历史，没有重跑旧 97 份日志来改写历史。本 Task 交错 16/17 `-count=5 -race` **65 RUN/65 PASS**，含真实 PID/holder 边；P5 `TestIssueListReadSnapshot`、`TestMemberIssueReadSnapshot`、`TestIssueListsAsRuntimeRole`、`TestIssueListPermissions` **4 RUN/4 PASS**。这补最终源的规定回归，不替代主控尚待执行的完整七门禁 F、独立 T15 评审及 T16 整分支审查/交接。
