@@ -38,7 +38,7 @@
 | T8 | I/app/delete_project_rows.go、delete_rows.go、delete_rows_test.go、delete_rows_on_deletion.go 及测试（新）；I/adapter/postgres/deletion_remaining.go、queries/deletion_remaining.sql（新）；I/adapter/river/delete_rows.go、row_deletions.go 及测试（新）；I/module.go、module_jobs.go、module_events.go；P/W/module_events.go（新）；B/app.go、events.go、events_test.go、app_test.go、issue_writes_test.go、issue_link_jobs_test.go、issue_link_race_helpers_test.go、request_locks_test.go、request_lock_probe_test.go、request_jobs_test.go、issue_delete_jobs_test.go（新） | 预算编排、River 映射、订阅/声明/登记同时可启动；900–1300，F |
 | T9 | P/app/delete_project.go 及测试、module.go；B/project_deletion_test.go、issue_project_deletion_events_test.go/issue_project_deletion_jobs_test.go（新，原子性/真实job观测分责）、issue_interleaving_relations_test.go、issue_interleaving_deletion_test.go、issue_draft_interleaving_test.go；`api/modules/project.yaml`；`e2e/fixtures/assert/project.ts` | 单项目原事务事件与 204 后窗口；同步迁移旧交错11/23的关系戳断言；400–800 |
 | T10 | W/app/delete_workspace.go 及测试、ports.go、module.go；P/app/cascade.go、issue_ports.go、module.go 及测试；I/app/cascade.go 及测试、module.go；B/users.go、workspace_deletion_test.go、runtime_role_test.go、issue_workspace_deletion_events_test.go（新）；复用未改B/workspace_deletion_catalog_test.go（目录发现与快照读取，完成等待由caller workspace_deletion_test.go负责）；`archtest/composition_test.go`；`api/modules/workspace.yaml`；`e2e/fixtures/assert/workspace.ts`、`stories/workspace/w3-workspace-settings.spec.ts` | 本次项目 Changes、删除两个过渡方法、CLI 去依赖、runtime角色草稿任务完成等待、W3 旧戳；750–1200 |
-| T11 | B/issue_deletion_window_test.go、issue_deletion_window_cases_test.go、issue_null_creator_test.go（新）；既有 permission_matrix/issue_write_locks/draft_lock_shapes/relations/list/search tests | 37-operation 完整窗口、游标/动态/空创建者、现有守卫；700–1200 |
+| T11 | B/issue_deletion_window_test.go、issue_deletion_window_cases_test.go、issue_deletion_window_fixture_test.go、issue_deletion_window_pages_test.go、issue_deletion_window_boundaries_test.go、issue_null_creator_test.go（新）；既有 permission_matrix/issue_write_locks/draft_lock_shapes/relations/list/search tests 仅实际失败才改 | 37-operation 完整窗口、游标/动态/空创建者、现有守卫；700–1200 |
 | T12 | B/issue_deletion_interleaving_test.go、issue_delete_job_lifecycle_test.go、job_state_observer_test.go（新）；既有 issue_interleaving_deletion/relations、issue_draft_interleaving tests；T6 late deletion test | 交错 24/25、既有 2/3/11/16/23、真实重试/snooze/耗尽/迟到；800–1300，F |
 | T13 | `e2e/stories/issue/i21-purge.spec.ts`（新）、`e2e/fixtures/auto-archive.ts`、`clock.ts`、`assert/project.ts`、`assert/workspace.ts`；P4/W2/W3、I16 故事 | I21 的新轮次水位与所有删除故事；400–800 |
 | T14 | B/issue_scale_test.go，拆出 issue_scale_fixture_test.go、issue_scale_evidence_test.go（新）；复用 T12 observer；本 spec 附录 | 原 fixture 升到 66 万/项目、直接运行次数与读写探针；650–1100 |
@@ -274,10 +274,10 @@ P/W.Deps 增 Events。T10 删除 I.Cascade、P/app.IssueCascade 的 `DeleteProje
 | listIssueComments、createIssueComment、updateIssueComment、deleteIssueComment | 隐藏父项目下同资源404；创建者与删除者不混淆 |
 | listIssueReactions、addIssueReaction、removeIssueReaction、addCommentReaction、removeCommentReaction | 隐藏父项目下同资源404，评论反应沿真实二级父链 |
 | listIssueActivities、listDescriptionVersions、getDescriptionVersion | 隐藏源404；活源动态引用已删端仍沿历史 membership 规则，不错误套 deleted 过滤 |
-| searchIssues、listMemberIssues | VisibleProjects 目录排已删项目；total、顺序、OwnOnly、游标无泄漏；其他存活项目结果不变 |
+| searchIssues、listMemberIssues | VisibleProjects 目录排已删项目；顺序、OwnOnly及其他存活项目结果不变。search为无分页/total的bounded collection，另核limit；listMember核total/游标及平铺/分组，不支持子组的请求保持精确422 |
 | listDrafts、createDraft、getDraft、updateDraft、deleteDraft、publishDraft | 带旧项目草稿从list消失、按id404；显式把活草稿/新草稿指向删项目422；无项目草稿在活workspace仍正常，workspace删除后404；publish先守旧项目404 |
 
-以上所有操作另覆盖 workspace 删除窗口；对 workspace slug 的请求为既有 workspace404，不能误把活workspace的无项目草稿清掉。稳定响应头比较保留请求ID/Date等非确定值的既有规范化规则，不弱化 status/problem字段/结果顺序/total/422位置。
+以上所有操作另覆盖 workspace 删除窗口；合法的 workspace slug 请求为既有 workspace404，不能误把活workspace的无项目草稿清掉。非法查询仍保持现有预检优先次序（例如成员列表不支持子组的422）。搜索没有分页和total，原合并行对此描述过宽，现按真实契约精化，不扩API。稳定响应头比较保留请求ID/Date等非确定值的既有规范化规则，不弱化 status/problem字段/结果顺序/total/422位置。
 
 保留已有写守卫：普通18写 P(N)、草稿3个 CRUD 写 W(S)→P(S)→D(U)、publish W(S)→P(N)→D(U) 的 union 恰为22写；预检拒绝零锁/零gate、项目锁下重读和时刻、跨项目升序、不追新项目都继续证明。
 

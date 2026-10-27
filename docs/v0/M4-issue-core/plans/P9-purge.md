@@ -208,12 +208,12 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 
 ## Task 11：37操作完整窗口与空创建者
 
-**Files：** 新B/issue_deletion_window_test.go、issue_deletion_window_cases_test.go、issue_null_creator_test.go；改既有permission_matrix_coverage_test.go、issue_write_locks_test.go、issue_draft_lock_shapes_test.go及受影响relations/list/search tests；仅实际失败才改原用例。预计700–1200行。
+**Files：** 新B/issue_deletion_window_test.go（阶段/完整回答）、issue_deletion_window_cases_test.go（37目录）、issue_deletion_window_fixture_test.go（API前置/任务屏障）、issue_deletion_window_pages_test.go（分页/搜索）、issue_deletion_window_boundaries_test.go（关联/422/历史/草稿）、issue_null_creator_test.go；既有permission_matrix_coverage/issue_write_locks/issue_draft_lock_shapes及受影响relations/list/search tests仅实际失败才改。预计700–1200行。
 
-**Interfaces：** 测试case目录operationId集合与真实issue tag契约双向相等；复用T8 worker控制/既有call和response验证，不新增生产测试API。生产接口不扩。
+**Interfaces：** 测试case目录operationId集合与真实issue tag契约双向相等；复用T9项目/T10工作区worker控制及既有call和response验证，不新增生产测试API。生产接口不扩。
 
 - [ ] **测试：** 新`TestDeletionWindowCoversEveryIssueOperation`断言`len(reads)==15;len(writes)==22`及精确37集合，删任case失败。新`TestIssueDeletionWindowAnswersAreStable`依spec§2.9逐项project/workspace两窗口：挂起→采集→执行完成→重问，码/体/稳定头/数量/顺序/422位置相等；404再比未知资源。反向关联、活端read-only403陷阱、createDraft显式project422、旧draft404、活workspace无projectdraft正常、workspace删后404不能互混。
-- [ ] **测试：** 分页平铺/组/子组、listMember/search、description/comment/link/reactions各入口；前页游标在项目删除后续页重新过滤；活源活动引用按Historical规则不因目标deleted_at变化消失。新`TestNullCreatorRemainsHiddenAndUnowned`API建issue后隔离存储把creator=NULL；OwnOnly(含adminGuest)读写404，与未知逐值相同，普通member不能以AllowCreator删除（403），admin允许；不删除账户。
+- [ ] **测试：** 项目列表平铺/组/子组，成员列表平铺/组及不支持子组的精确422；search依实际无分页契约验证顺序/limit/OwnOnly，total/cursor仅用于真实分页入口；description/comment/link/reactions各入口。前页游标在项目删除后续页重新过滤；活源活动引用按Historical规则不因目标deleted_at变化消失。新`TestNullCreatorRemainsHiddenAndUnowned`API建issue后隔离存储把creator=NULL；OwnOnly(含adminGuest)读写404，与未知逐值相同，普通member不能以AllowCreator删除（403），admin允许；不删除账户。
 - [ ] **红/实现：** `go -C server test -p=1 -count=1 ./internal/bootstrap -run '^Test(DeletionWindowCoversEveryIssueOperation|IssueDeletionWindowAnswersAreStable|NullCreatorRemainsHiddenAndUnowned)$'`；若某路径直接绿，先记录，再对应生产变异得性质红。修复仅进统一Locks/目录/原查询，不能靠test过滤响应抹差异。
 - [ ] **绿/变异：** 同聚焦、完整permission matrix/写锁目录回归；M30漏一个case、M31删除项目仍入Visible/草稿目录、M32活动错误加deleted过滤、M33NULL creator视caller所有，在组合层分别红→恢复。已有18+3+1=22写完整性、预检零锁及P/W/D形状保持。
 - [ ] **G：** 提交`test(M4/P9): 覆盖全部操作的删除窗口及空创建者权限`。
