@@ -24,7 +24,7 @@ import (
 func collaborationState(t *testing.T, w issueWorld) map[string]string {
 	t.Helper()
 	state := map[string]string{}
-	for _, table := range []string{"issues", "issue_subscribers", "issue_mentions", "issue_comments", "issue_reactions", "comment_reactions", "issue_activities", "issue_description_versions"} {
+	for _, table := range []string{"issues", "issue_links", "issue_assignees", "issue_labels", "issue_relations", "issue_subscribers", "issue_mentions", "issue_comments", "issue_reactions", "comment_reactions", "issue_activities", "issue_description_versions"} {
 		var rows string
 		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY id),'[]'::jsonb)::text FROM "+table+" r").Scan(&rows); err != nil {
 			t.Fatal(err)

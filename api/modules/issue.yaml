@@ -826,6 +826,115 @@ paths:
           description: The caller's reaction was removed.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/links:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: listIssueLinks
+      tags: [issue]
+      summary: List links on a visible work item
+      description: >-
+        Uses issue.read and its guest visibility rule in one read snapshot.
+        Links are in descending (created_at, id) order, without pagination.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.not_found, forbidden]
+      responses:
+        '200':
+          description: Links, with an empty data array when none exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueLinkCollection'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createIssueLink
+      tags: [issue]
+      summary: Create a link on a visible work item
+      description: >-
+        Uses issue.update, with hidden work items answering issue.not_found
+        before forbidden. Domain validation precedes permission and the write
+        gate. Locks the project, repeats authorization, and refuses archived
+        projects before archived work items. URLs trim surrounding whitespace
+        and default to http; HTTP scheme recognition ignores case while stored
+        URL casing is preserved. At most 2048 Unicode characters after
+        normalization, without credentials, zones or control characters.
+        Duplicate live URLs on this issue answer issue.link_exists. Titles
+        retain whitespace and permit null or empty text, at most 255 characters.
+        All business, activity and event rows share one actor and moment.
+        Busy projects answer 503 server_busy with Retry-After.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, issue.not_found, forbidden, issue.link_exists, project.archived, issue.archived, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueLinkCreate'
+      responses:
+        '201':
+          description: The new link, with empty preview metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueLink'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issue-links/{link_id}:
+    parameters:
+      - name: link_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateIssueLink
+      tags: [issue]
+      summary: Update a link on a visible work item
+      description: >-
+        Uses issue.update, including the parent work item's guest visibility.
+        Members may edit another member's link. Validates supplied fields before
+        permissions and the write gate; rereads the link under the project lock.
+        Archived projects precede archived work items, even for a no-op.
+        Omitted title stays unchanged, null clears it, and empty text is kept.
+        URL changes clear preview metadata; title-only changes preserve current
+        database metadata and emit an updated event without a URL activity.
+        Busy projects answer 503 server_busy with Retry-After.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, issue.link_not_found, forbidden, issue.link_exists, project.archived, issue.archived, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueLinkPatch'
+      responses:
+        '200':
+          description: The current link after the update, including current metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueLink'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteIssueLink
+      tags: [issue]
+      summary: Delete a link on a visible work item
+      description: >-
+        Uses issue.update and the parent work item's guest visibility, without an
+        author restriction. Rereads the live link under the project lock.
+        Refuses archived projects before archived work items. Soft deletion,
+        audit, activity and event share one actor and moment in one transaction.
+        Busy projects answer 503 server_busy with Retry-After.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.link_not_found, forbidden, project.archived, issue.archived, server_busy]
+      responses:
+        '204':
+          description: The link was deleted.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/issues/{issue_id}/comments:
     parameters:
       - $ref: '#/components/parameters/IssueID'
@@ -1574,6 +1683,81 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/IssueReaction'
+    IssueLinkCreate:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          type: string
+          description: HTTP URL, at most 2048 Unicode characters after normalization.
+        title:
+          type: [string, 'null']
+          maxLength: 255
+    IssueLinkPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        url:
+          type: string
+          description: HTTP URL, at most 2048 Unicode characters after normalization.
+        title:
+          type: [string, 'null']
+          maxLength: 255
+    IssueLinkMetadataError:
+      type: string
+      enum: [blocked, failed]
+    IssueLinkMetadata:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: [string, 'null']
+        favicon:
+          type: [string, 'null']
+        url:
+          type: [string, 'null']
+        favicon_url:
+          type: [string, 'null']
+        error:
+          oneOf:
+            - $ref: '#/components/schemas/IssueLinkMetadataError'
+            - type: 'null'
+    IssueLink:
+      type: object
+      additionalProperties: false
+      required: [id, issue_id, url, title, metadata, created_by_id, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        title:
+          type: [string, 'null']
+        metadata:
+          $ref: '#/components/schemas/IssueLinkMetadata'
+        created_by_id:
+          type: [string, 'null']
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    IssueLinkCollection:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueLink'
     IssueCommentCreate:
       type: object
       additionalProperties: false

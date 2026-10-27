@@ -76,15 +76,20 @@ func newSplitRoles(t *testing.T) splitRoles {
 	if _, err := m.Up(ctx); err != nil {
 		t.Fatalf("migrate as the owner: %v", err)
 	}
+	applyRuntimeGrants(t, owner)
+	serverURL := as(serverName, "server")
+	return splitRoles{owner: owner, server: openPool(t, serverURL), serverName: serverName, serverURL: serverURL}
+}
+
+func applyRuntimeGrants(t *testing.T, owner *pgxpool.Pool) {
+	t.Helper()
 	grants, err := os.ReadFile(grantsFile())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := owner.Exec(ctx, string(grants)); err != nil {
+	if _, err := owner.Exec(pgtest.Soon(t), string(grants)); err != nil {
 		t.Fatalf("run deploy/runtime-grants.sql as the owner: %v", err)
 	}
-	serverURL := as(serverName, "server")
-	return splitRoles{owner: owner, server: openPool(t, serverURL), serverName: serverName, serverURL: serverURL}
 }
 
 // grantsFile is deploy/runtime-grants.sql, found from this file, three

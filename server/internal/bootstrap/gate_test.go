@@ -279,6 +279,9 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		{"a reaction removal", http.MethodDelete, w.newReactionPath(t), "", http.StatusNoContent},
 		{"a comment edit", http.MethodPatch, commentPath(w.newComment(t, "alice", w.newWorkItem(t)).ID), `{"comment_html":"<p>Updated</p>"}`, http.StatusOK},
 		{"a comment deletion", http.MethodDelete, commentPath(w.newComment(t, "alice", w.newWorkItem(t)).ID), "", http.StatusNoContent},
+		{"a link edit", http.MethodPatch, linkPath(createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/gate").ID), `{"title":"Changed"}`, http.StatusOK},
+		{"a link deletion", http.MethodDelete, linkPath(createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/gate").ID), "", http.StatusNoContent},
+		{"a link", http.MethodPost, linksOf(w.newWorkItem(t)), `{"url":"http://169.254.169.254/gate"}`, http.StatusCreated},
 		{"a comment", http.MethodPost, commentsOf(w.newWorkItem(t)), `{"comment_html":"<p>Queued comment</p>"}`, http.StatusCreated},
 		{"an addition of sub-items", http.MethodPost, subIssues(w.newWorkItem(t)), subIssueIDs(w.newWorkItem(t)), http.StatusOK},
 		{"an addition of relations", http.MethodPost, relationsOf(w.newWorkItem(t)), relating("relates_to", w.newWorkItem(t)),
@@ -332,7 +335,33 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 			})
 		})
 	}
+
+	refusedLink := createLink(t, w, "bob", item, "http://169.254.169.254/gate-refused")
+	for _, op := range linkRequests(item, refusedLink.ID)[1:] {
+		t.Run("a forbidden "+op.op, func(t *testing.T) {
+			whileBusy(t, func() {
+				for _, who := range []string{"walt", "wanda", "olga"} {
+					want := http.StatusForbidden
+					if who == "olga" {
+						want = http.StatusNotFound
+					}
+					w.send(t, who, op.method, op.path, op.body, want)
+				}
+			})
+		})
+	}
+
+	invalidLink := createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/invalid-edit")
+	t.Run("an invalid link edit", func(t *testing.T) {
+		whileBusy(t, func() {
+			answer := w.send(t, "alice", http.MethodPatch, linkPath(invalidLink.ID), `{"url":"ftp://169.254.169.254/x"}`, http.StatusUnprocessableEntity)
+			if got := refusalOf(t, []byte(answer), false); got != "validation_failed url not_allowed" {
+				t.Fatal(got)
+			}
+		})
+	})
 	for _, shape := range []struct{ name, path, body, want string }{
+		{"an invalid link", linksOf(item), `{"url":"ftp://example.com"}`, "url not_allowed"},
 		{"an empty comment", commentsOf(item), `{"comment_html":"<script>removed()</script>"}`, "comment_html required"},
 		{"an addition of sub-items naming one twice", subIssues(item), subIssueIDs(archived, archived), "sub_issue_ids[1] duplicate"},
 		{"an addition of relations naming 21", relationsOf(item), relating("relates_to", slices.Repeat([]uuid.UUID{archived}, 21)...),

@@ -1,6 +1,6 @@
 # M4/P6 领域事件与自动归档评审记录
 
-日期：2026-10-26。状态：**T1–T16 实施并逐 Task 独评通过；历史内部整分支审查零新发现；分支 CI 发现的时钟断言已修复并通过聚焦复审，修复 HEAD CI 全绿；deep-review 终审通过（3 项文档 Minor 已闭环），尚未集成**。分支 `codex/m4-p6`；基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`。配套：[spec](../specs/P6-issue-events.md)、[plan](../plans/P6-issue-events.md)。
+日期：2026-10-26。状态：**T1–T16 实施并逐 Task 独评通过；历史内部整分支审查零新发现；分支 CI 发现的时钟断言已修复并通过聚焦复审，修复 HEAD CI 全绿；deep-review 终审通过（3 项文档 Minor 已闭环）；已合并、main CI 全绿并归档清理完成**。分支 `codex/m4-p6`；基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`。配套：[spec](../specs/P6-issue-events.md)、[plan](../plans/P6-issue-events.md)。
 
 ## 1. 评审方式
 
@@ -8,7 +8,7 @@
 
 ## 2. 验收标准逐条核对
 
-实施基线为 P5 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；其 [main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 只证明基线。下表 HEAD 为对应任务实施提交；每条命令均在对应 `task-N-report.md` 和证据目录有退出码/实际匹配/变异恢复，独立结论在 `task-N-review.md`。早期报告位于 worktree 的 ignored `.superpowers/sdd/P6-issue-events/`，不是 Git 跟踪的正文附件；最终证据归档按后续集成安排。
+实施基线为 P5 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`；其 [main CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 只证明基线。下表 HEAD 为对应任务实施提交；每条命令均在对应 `task-N-report.md` 和证据目录有退出码/实际匹配/变异恢复，独立结论在 `task-N-review.md`。早期报告位于 worktree 的 ignored `.superpowers/sdd/P6-issue-events/`，不是 Git 跟踪的正文附件；最终归档与集成事实见 §2.2；历史 worktree 已按授权清理。
 
 | Task / 实施 HEAD | 完成线的真实命令与结果 | 独评/边界 |
 |---|---|---|
@@ -50,6 +50,14 @@ T15 `make test` 是49个有测试包通过、16个无测试包；默认输出不
 
 此次只有两个E2E源码文件和spec/plan/review变更，Go/业务代码未变，沿用T15对应Go/race门禁证据而不伪称重跑。历史内部整分支审查范围与结论保留；修复提交 `e8df8485eee76cd83b93bc4a2ad48b6e3d89240f` 已由独立审者聚焦复审通过，无新增问题，报告为同级 `ci-clock-fix-review.md`；其 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630)（attempt 1）已经 completed/success，server/web/e2e 均成功，主控于本轮再次从公开 API 核实精确 SHA。公开元数据保存在 `ci-clock-fix-evidence/ci/`；本地150/150与公开CI是分别取得的证据。
 
+### 2.2 授权合并、main CI 与归档清理
+
+负责人明确授权后，最终分支 `17908e037a929cc23842f39d5bd7bcdfa1cbf962` 的 [CI 40303510060](https://github.com/open-nerve/NerveProject/actions/runs/40303510060) 三任务通过，以 `--no-ff` 合并并推送 main `5005be985e7ec78727edc6f8fc5c05999b45cc65`。双亲为 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e` / `17908e037a929cc23842f39d5bd7bcdfa1cbf962`，合并 tree `b884f93b939e3b4d363396caf0f7f78292decc42` 与已审分支完全一致。
+
+main [CI 40305247546](https://github.com/open-nerve/NerveProject/actions/runs/40305247546) 首次在安装 Playwright 浏览器时达到 20 分钟作业上限而取消，Build/E2E 尚未运行，不是 W11 或产品断言失败。负责人重跑后，同一 main SHA 的 server/web/e2e 全部成功；公开页面、作业链接和精确提交证据存根目录 ignored `.superpowers/sdd/P6-integration-20261026/ci/`。未提取凭据或下载受限日志，没有因此修改产品或 CI 限时。
+
+复核本地 main=origin/main、远端 P6 无独有提交且工作树干净后，先归档 921 个文件、13,550,049 字节，逐文件 SHA-256 验证（符号链接核目标）；只排除可重建的 node_modules/构建输出。归档在根目录 `.superpowers/sdd/P6-integration-20261026/worktree-evidence/`，内含原 `.superpowers/`、Playwright 结果与缓存日志；清单为同级 `archive-manifest.json`。随后删除远端/本地 `codex/m4-p6` 与其 worktree，无强制删除；删除后再核归档 hash，结果在 `cleanup.json`。主项目 HEAD 始终 main。P6 集成门完成，M4 总体及后续交接仍开放。
+
 ## 3. 执行中的决定
 
 局部实现决定及若判断错误的代价逐条记录如下，依据 ignored `progress.md` 中全部 Ruling；它们没有重开已批准的 D3/D4/D7。任务中发现的测试Minor及环境Minor的闭环见§5。
@@ -58,7 +66,7 @@ T15 `make test` 是49个有测试包通过、16个无测试包；默认输出不
 |---|---|---|
 | 起步状态 | 起步“未实施”只属准备历史，用户已授权后续T1–T16实施 | 若把旧时态当现状，会错误关闭或重做任务；本表与§2按真实进度更新 |
 | 门禁分配 | 各Task跑定位/影响包/变异，完整仓库门禁集中T15 | 若局部回归遗漏跨层问题，T15的完整Go/Web/E2E门禁与矩阵兜底 |
-| 集成授权 | 合并/mainCI/清理仍待单独授权，P6分支CI也不能用P5基线CI替代 | 若越权或误认CI会造成错误交付；§7明列后续门 |
+| 集成授权 | 阶段终审后获明确授权，已合并并以本次 main SHA 的 CI 证明，未用旧基线代替 | 双亲/tree/CI/归档/清理的真实结果见 §2.2 |
 | T3事件目录 | 类型常量集中 `issue/domain/events.go`，模块 `EventTypes` 消费它，app不反向导入模块 | 若层次不符只需局部命名/依赖重构；架构测试和T3评审核过 |
 | T3恰好600秒 | 继承P4描述版本窗口，599秒与恰好600秒合并，600秒+1微秒开新版本；初错测试期望不算生产红 | 若判错只影响测试/文档；P4原行为及T3实际用例/变异守住 |
 | T7阶段接线 | 四参runner先迁移identity；有真实autoarchive才在T10加issue Jobs/EnqueuedKinds，T11固定外部期望证明两者，不造空占位 | 若漏最终声明会使周期任务不运行；T11真实completed和漏worker变异核对 |
@@ -126,7 +134,7 @@ T16任务独评修复：plane-diff、v0设计和M1/P5输入交接曾把未持久
 | 8 fixture未逐测试DROP DATABASE | world关闭自身连接，整轮容器回收数据库；资源所有权明确。 |
 | 9 准备期旧措辞 | 当时“当前仅准备/只到预检”是历史；本次进一步标记，不能据此重做T1或重索授权。 |
 | 10 极端并发篡改登记配置/不稳定Args.Kind | 当前生产类型与配置受控，无实际触发链，不加推测性反射/约束。 |
-| 11 当时尚无 push、精确 HEAD CI、外部终审/合并 | 当时属于后续交付门；此后 `e8df8485` 已推送且 CI 通过，终审方式改为 deep-review，合并仍未授权。本行保留原审查取舍，不代表当前 CI 待办。 |
+| 11 当时尚无 push、精确 HEAD CI、外部终审/合并 | 当时属于后续交付门；此后 `e8df8485` 已推送且 CI 通过，终审方式改为 deep-review，当时尚待集成安排；后续授权结果见 §2.2。本行保留原审查取舍，不代表当前 CI 待办。 |
 
 ### deep-review 终审（负责人 2026-10-26 更新后）
 
@@ -142,8 +150,12 @@ T16任务独评修复：plane-diff、v0设计和M1/P5输入交接曾把未持久
 - [M3 closeout](../handoffs/M3-closeout.md) §1两处期限已改，领域事件只覆盖issue写；`registrationRows` 对请求任务的`river_job`核对留P7，project/workspace删除订阅及任务留P9；§4 `archive_in` 两契约说明已生成。其他权限/页面/清理原落点不提前关。
 - P7：链接首个生产订阅者与请求投递；P9：删除任务、版本保留、物理清理；P15：I16页面重登录与NULL actor展示；M6/M7按真实表条件再扩归档。M4§14事件任务整条及总体§9.4仍开放，不创建M5–M8最终closeout。
 
+### P7接收回执（2026-10-27）
+
+链接三事件、首个生产subscriber/原事务请求投递、outbound/crawler及default worker、registrationRows请求任务快照现已在P7实现；受限运行角色、真实completed与事务回滚/交错证据见[P7 review](P7-issue-links-review.md)、[行为矩阵](P7-issue-links-behavior-matrix.md)。上方P6交付时空生产订阅和待办保留为当时事实；P9删除任务/保留/清理、P15页面、M4整体和输入handoff总体仍open。P7终审修复复审、最终分支CI与授权集成分别记录，不改变P6既有集成结论。
+
 ## 7. 已知限制与后续门
 
-当前经证据确认 T1–T16 实施及逐Task独评，T16一处文档措辞问题已由`6995d523`修复并经聚焦复审通过；内部整分支审查也已完成且零新发现。首轮分支CI已在 `17b8a117` 报告clock生命周期断言失败，局部修复与本地验证见§2.1；修复 `e8df8485` 的聚焦复审和精确 HEAD 分支 CI **均已通过**。本轮按负责人新规则使用 deep-review 收口终审，不再等待 Claude。后续文档提交的精确 HEAD CI 由最终交付记录给出。P5 main CI仅为基线。原始证据的早期SDK fallback、T2空匹配、T13缺完整末轮rawlog、旧颜色警告已在§2/§5分开标出，不改写为 pristine。
+当前经证据确认 T1–T16 实施及逐Task独评，T16一处文档措辞问题已由`6995d523`修复并经聚焦复审通过；内部整分支审查也已完成且零新发现。首轮分支CI已在 `17b8a117` 报告clock生命周期断言失败，局部修复与本地验证见§2.1；修复 `e8df8485` 的聚焦复审和精确 HEAD 分支 CI **均已通过**。本轮按负责人新规则使用 deep-review 收口终审，不再等待 Claude。最终文档提交 `17908e03` 的分支 CI 与 main 集成结果见 §2.2。P5 main CI仅为基线。原始证据的早期SDK fallback、T2空匹配、T13缺完整末轮rawlog、旧颜色警告已在§2/§5分开标出，不改写为 pristine。
 
-交付时向负责人提供分支 `codex/m4-p6`、基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`、本 [spec](../specs/P6-issue-events.md)/[plan](../plans/P6-issue-events.md)/review 和精确 Git HEAD。最终push/CI的实际SHA由交付答复及Git记录给出，不为文档自证自身CI无限提交。本阶段先保留分支/worktree，不合并；`--no-ff`、精确main SHA CI、归档和清理仅在后续授权后进行。
+交付时向负责人提供分支 `codex/m4-p6`、基线 `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`、本 [spec](../specs/P6-issue-events.md)/[plan](../plans/P6-issue-events.md)/review 和精确 Git HEAD。最终push/CI的实际SHA由交付答复及Git记录给出，不为文档自证自身CI无限提交。本阶段已获授权完成 `--no-ff`、精确 main SHA CI、归档和清理；历史分支/worktree 已删除，P7 从该 main 提交在独立 worktree 仅准备 spec/plan 和预检。

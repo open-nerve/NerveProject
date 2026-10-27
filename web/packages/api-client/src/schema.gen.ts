@@ -1263,6 +1263,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issue-links/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a link on a visible work item
+         * @description Uses issue.update and the parent work item's guest visibility, without an author restriction. Rereads the live link under the project lock. Refuses archived projects before archived work items. Soft deletion, audit, activity and event share one actor and moment in one transaction. Busy projects answer 503 server_busy with Retry-After.
+         */
+        delete: operations["deleteIssueLink"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a link on a visible work item
+         * @description Uses issue.update, including the parent work item's guest visibility. Members may edit another member's link. Validates supplied fields before permissions and the write gate; rereads the link under the project lock. Archived projects precede archived work items, even for a no-op. Omitted title stays unchanged, null clears it, and empty text is kept. URL changes clear preview metadata; title-only changes preserve current database metadata and emit an updated event without a URL activity. Busy projects answer 503 server_busy with Retry-After.
+         */
+        patch: operations["updateIssueLink"];
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List links on a visible work item
+         * @description Uses issue.read and its guest visibility rule in one read snapshot. Links are in descending (created_at, id) order, without pagination.
+         */
+        get: operations["listIssueLinks"];
+        put?: never;
+        /**
+         * Create a link on a visible work item
+         * @description Uses issue.update, with hidden work items answering issue.not_found before forbidden. Domain validation precedes permission and the write gate. Locks the project, repeats authorization, and refuses archived projects before archived work items. URLs trim surrounding whitespace and default to http; HTTP scheme recognition ignores case while stored URL casing is preserved. At most 2048 Unicode characters after normalization, without credentials, zones or control characters. Duplicate live URLs on this issue answer issue.link_exists. Titles retain whitespace and permit null or empty text, at most 255 characters. All business, activity and event rows share one actor and moment. Busy projects answer 503 server_busy with Retry-After.
+         */
+        post: operations["createIssueLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/issues/{issue_id}/comments": {
         parameters: {
             query?: never;
@@ -2438,6 +2491,43 @@ export interface components {
             created_at: string;
             description_html: string;
         };
+        IssueLinkPatch: {
+            /** @description HTTP URL, at most 2048 Unicode characters after normalization. */
+            url?: string;
+            title?: string | null;
+        };
+        /** @enum {string} */
+        IssueLinkMetadataError: "blocked" | "failed";
+        IssueLinkMetadata: {
+            title?: string | null;
+            favicon?: string | null;
+            url?: string | null;
+            favicon_url?: string | null;
+            error?: components["schemas"]["IssueLinkMetadataError"] | null;
+        };
+        IssueLink: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            issue_id: string;
+            url: string;
+            title: string | null;
+            metadata: components["schemas"]["IssueLinkMetadata"];
+            /** Format: uuid */
+            created_by_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        IssueLinkCollection: {
+            data: components["schemas"]["IssueLink"][];
+        };
+        IssueLinkCreate: {
+            /** @description HTTP URL, at most 2048 Unicode characters after normalization. */
+            url: string;
+            title?: string | null;
+        };
         IssueCommentPage: {
             data: components["schemas"]["IssueComment"][];
             next_cursor: components["schemas"]["NextCursor"];
@@ -2672,6 +2762,12 @@ export type IssueActivityPage = components['schemas']['IssueActivityPage'];
 export type DescriptionVersion = components['schemas']['DescriptionVersion'];
 export type DescriptionVersionPage = components['schemas']['DescriptionVersionPage'];
 export type DescriptionVersionDetail = components['schemas']['DescriptionVersionDetail'];
+export type IssueLinkPatch = components['schemas']['IssueLinkPatch'];
+export type IssueLinkMetadataError = components['schemas']['IssueLinkMetadataError'];
+export type IssueLinkMetadata = components['schemas']['IssueLinkMetadata'];
+export type IssueLink = components['schemas']['IssueLink'];
+export type IssueLinkCollection = components['schemas']['IssueLinkCollection'];
+export type IssueLinkCreate = components['schemas']['IssueLinkCreate'];
 export type IssueCommentPage = components['schemas']['IssueCommentPage'];
 export type IssueRelationType = components['schemas']['IssueRelationType'];
 export type IssueRelation = components['schemas']['IssueRelation'];
@@ -4682,6 +4778,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DescriptionVersionDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteIssueLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link was deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateIssueLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueLinkPatch"];
+            };
+        };
+        responses: {
+            /** @description The current link after the update, including current metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueLink"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listIssueLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Links, with an empty data array when none exist. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueLinkCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createIssueLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueLinkCreate"];
+            };
+        };
+        responses: {
+            /** @description The new link, with empty preview metadata. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueLink"];
                 };
             };
             default: components["responses"]["Problem"];

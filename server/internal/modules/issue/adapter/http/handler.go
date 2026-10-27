@@ -136,6 +136,10 @@ type ListIssuesUseCase interface {
 
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	UpdateIssueLink         UpdateIssueLinkUseCase
+	DeleteIssueLink         DeleteIssueLinkUseCase
+	CreateIssueLink         CreateIssueLinkUseCase
+	ListIssueLinks          ListIssueLinksUseCase
 	ListMemberIssues        ListMemberIssuesUseCase
 	ListIssues              ListIssuesUseCase
 	ListIssueActivities     ListIssueActivitiesUseCase

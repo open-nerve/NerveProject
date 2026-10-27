@@ -5,10 +5,10 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 )
 
-// Jobs declares the automatic archival worker and its periodic schedule.
+// Jobs declares request-driven crawls and scheduled automatic archival.
 func (m *Module) Jobs() []jobs.Job {
-	return []jobs.Job{riveradapter.AutoArchiveJob(m.autoArchive, m.autoArchiveInterval)}
+	return []jobs.Job{riveradapter.AutoArchiveJob(m.autoArchive, m.autoArchiveInterval), riveradapter.CrawlLinkJob(m.crawlLink)}
 }
 
-// EnqueuedKinds is empty: requests do not enqueue jobs in P6.
-func EnqueuedKinds() []string { return nil }
+// EnqueuedKinds declares kinds that require a registered request-driven worker.
+func EnqueuedKinds() []string { return []string{riveradapter.CrawlLinkKind} }

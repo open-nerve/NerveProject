@@ -193,12 +193,19 @@ func TestDispatcherCopiesEachEvent(t *testing.T) {
 }
 
 func TestIssueEventDirectory(t *testing.T) {
-	want := []string{"issue.created", "issue.updated", "issue.deleted", "issue.archived", "issue.unarchived", "issue.comment_created", "issue.comment_updated", "issue.comment_deleted", "issue.relation_added", "issue.relation_removed", "issue.reaction_added", "issue.reaction_removed"}
+	want := []string{"issue.created", "issue.updated", "issue.deleted", "issue.archived", "issue.unarchived", "issue.comment_created", "issue.comment_updated", "issue.comment_deleted", "issue.relation_added", "issue.relation_removed", "issue.reaction_added", "issue.reaction_removed", "issue.link_created", "issue.link_updated", "issue.link_deleted"}
 	types := issue.EventTypes()
 	if !reflect.DeepEqual(types, want) {
 		t.Fatalf("issue event directory = %v", types)
 	}
-	d, err := newDispatcher(types, issue.Subscribers(issueInserter{}))
+	seen := map[string]bool{}
+	for _, kind := range types {
+		if seen[kind] {
+			t.Fatalf("duplicate event %s", kind)
+		}
+		seen[kind] = true
+	}
+	d, err := newDispatcher(types, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +218,7 @@ func TestIssueEventDirectory(t *testing.T) {
 			t.Fatalf("%s: %v", kind, err)
 		}
 	}
-	for _, kind := range []string{"issue.link_created", "project.deleted", "workspace.deleted"} {
+	for _, kind := range []string{"project.deleted", "workspace.deleted"} {
 		if err := d.Publish(t.Context(), shared.Event{Type: kind}); err == nil {
 			t.Errorf("accepted future event %s", kind)
 		}

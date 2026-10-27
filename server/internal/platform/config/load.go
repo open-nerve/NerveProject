@@ -271,6 +271,11 @@ func numberHook(_ reflect.Type, to reflect.Type, data any) (any, error) {
 // NERVE_SERVER__TRUSTED_PROXIES=10.0.0.0/8,fd00::/8. The empty string is the
 // empty list.
 func listHook(from reflect.Type, to reflect.Type, data any) (any, error) {
+	// Weak decoding turns an empty map into an empty slice. String lists
+	// must retain their shape so a malformed allowlist cannot disappear.
+	if to == reflect.TypeFor[[]string]() && from.Kind() != reflect.String && from.Kind() != reflect.Slice && from.Kind() != reflect.Array {
+		return nil, errors.New("must be a list or comma-separated string")
+	}
 	if from.Kind() != reflect.String || to.Kind() != reflect.Slice {
 		return data, nil
 	}

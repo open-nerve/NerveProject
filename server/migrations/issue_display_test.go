@@ -24,20 +24,23 @@ const displayPropertiesDefault = `{"assignee":true,"start_date":true,"due_date":
 func TestIssueDisplayMigration(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewEmptyDatabase(t))
-	old := fstest.MapFS{}
+	old, throughDisplay := fstest.MapFS{}, fstest.MapFS{}
 	entries, err := fs.ReadDir(migrations.FS(), ".")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, e := range entries {
-		if e.Name() > "00025_z" {
+		if e.Name() > "00026_z" {
 			continue
 		}
 		data, err := fs.ReadFile(migrations.FS(), e.Name())
 		if err != nil {
 			t.Fatal(err)
 		}
-		old[e.Name()] = &fstest.MapFile{Data: data}
+		throughDisplay[e.Name()] = &fstest.MapFile{Data: data}
+		if e.Name() <= "00025_z" {
+			old[e.Name()] = throughDisplay[e.Name()]
+		}
 	}
 	m, err := postgres.NewMigrator(pool, old)
 	if err != nil {
@@ -84,7 +87,7 @@ func TestIssueDisplayMigration(t *testing.T) {
 		return row
 	}
 	before := legacy()
-	m, err = postgres.NewMigrator(pool, migrations.FS())
+	m, err = postgres.NewMigrator(pool, throughDisplay)
 	if err != nil {
 		t.Fatal(err)
 	}

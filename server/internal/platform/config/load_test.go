@@ -50,6 +50,8 @@ ratelimit:
   login_ip_email: {per_minute: 10, burst: 5}
   register_ip: {per_minute: 10, burst: 5}
   password_user: {per_minute: 5, burst: 5}
+outbound:
+  allow_cidrs: []
 jobs:
   default_workers: 10
   periodic_workers: 2
@@ -158,6 +160,7 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			RegisterIP:    BucketConfig{PerMinute: 10, Burst: 5},
 			PasswordUser:  BucketConfig{PerMinute: 7, Burst: 5}, // environment
 		},
+		Outbound:  OutboundConfig{AllowCIDRs: []string{}},
 		Jobs:      JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 7 * time.Second}, // environment
 		Workspace: WorkspaceConfig{CreationEnabled: false},                                              // environment
 		Issue: IssueConfig{

@@ -40,6 +40,8 @@
     "project_label_not_found": "The label does not exist, or you cannot see its project.",
     "issue_description_version_not_found": "The description version does not exist, or you cannot see it.",
     "issue_comment_not_found": "The comment does not exist, or you cannot see it.",
+    "issue_link_not_found": "The link does not exist, or you cannot see it.",
+    "issue_link_exists": "This work item already has this link.",
     "issue_reaction_exists": "You already have this reaction.",
     "issue_reaction_not_found": "You do not have this reaction.",
     "issue_not_author": "Only the author can edit a comment; only the author or a project administrator can delete it.",

@@ -35,6 +35,7 @@ type IssueRowsDeleter interface {
 	// the work items at either end, its other end of any project, locked
 	// in id order first (convention 5's exception).
 	DeleteIssueRelationRows(ctx context.Context, d IssueDeletion) error
+	DeleteIssueLinkRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueSubscriberRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueMentionRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueDescriptionVersionRows(ctx context.Context, d IssueDeletion) error
@@ -49,7 +50,7 @@ type IssueRowsDeleter interface {
 // the rows under them.
 func issueRowSteps(d IssueRowsDeleter) []func(context.Context, IssueDeletion) error {
 	return []func(context.Context, IssueDeletion) error{
-		d.DeleteIssueRows, d.DeleteIssueAssigneeRows, d.DeleteIssueLabelRows, d.DeleteIssueRelationRows, d.DeleteIssueSubscriberRows, d.DeleteIssueMentionRows,
+		d.DeleteIssueRows, d.DeleteIssueAssigneeRows, d.DeleteIssueLabelRows, d.DeleteIssueRelationRows, d.DeleteIssueLinkRows, d.DeleteIssueSubscriberRows, d.DeleteIssueMentionRows,
 		d.DeleteIssueCommentRows, d.DeleteIssueReactionRows, d.DeleteIssueCommentReactionRows, d.DeleteIssueActivityRows, d.DeleteIssueDescriptionVersionRows,
 	}
 }

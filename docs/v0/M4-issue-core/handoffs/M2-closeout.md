@@ -158,3 +158,11 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 ## 处理结果（M4/P6）
 
 §3自动归档从 `updated_at` 与同源业务时钟读阈值；§6只投递客户端的原事务回滚、worker/周期两类漏登记、运行角色grants和真实completed已由T1/T7–T11、T15验证；§13独立 `clock.ts` 及I16真实时间水位由T13/T14验证。§1命令行只投递原文保留，M4收尾转M5，当前CLI只接纯业务时钟、不构造jobs。P7/P9及页面/编辑器原落点仍开放；本handoff总体 `status: open`。证据：[P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)、[§6](../reviews/P6-issue-events-review.md#6-移交事项)。
+
+## 处理结果（M4/P7，2026-10-27）
+
+§3链接三写经原Locks.run：拒绝前置、锁下重读/授权/归档/noop/唯一，再取一次Clock，先issue审计再link，活动和事件同刻同写者；任一失败原事务回滚。worker单句id+URL+未删除守卫只更新metadata，不推进issue/link审计、不加活动/事件。§6首个生产subscriber通过既有issue_inserter/InsertTx投递，worker登记与grants、真实受限角色CRUD+crawl已验证；T15/T16分别记录准确源码的验证，不把配置3attempt声称为已注入真实DB故障观察三次重试。
+
+§1命令只投递原文及收尾原样转M5要求保留，CLI仍不构造出站/jobs。P8草稿、P9清理/版本保留、§7–12页面与其他原落点继续开放。
+
+本回执只关闭P7对应子责任，顶部`status: open`保持；M4整体、P8/P9/P11/P14/P15及M5–M8最终closeout不提前关闭。证据：[P7 review §2](../reviews/P7-issue-links-review.md#2-验收标准逐条核对)、[行为矩阵](../reviews/P7-issue-links-behavior-matrix.md)、[整体审核](../../../reviews/re-05-M4P7整体审核.md)。本波独立定向复审与最终分支CI状态在P7 review单列，未合并main。

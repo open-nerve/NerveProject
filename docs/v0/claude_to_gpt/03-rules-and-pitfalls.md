@@ -84,7 +84,7 @@ P3 加了这条路的两种形式，不是第二条路：
 - 列表和计数只算调用者在各项目里能看到的：`sub_issues_count`、`listSubIssues`、`listIssueRelations`、内嵌的 `Issue`。
 - 回答里不指名看不到的工作项：`seen` 把看不到的父工作项的 `parent_id` 回答为 `null`。
 - 负责人裁定 A（2026-10-24）：修改时 patch 里的父工作项与"调用者看到的父工作项"比较，看不到的当前父工作项算作没有。
-- 管理员兼访客：在项目里是访客的工作区管理员通过项目的规则，但 `OwnOnly` 仍为真。"访客不能 X"的句子对他往往不成立，要写清。
+- 管理员兼访客：在项目里是访客的工作区管理员通过项目的规则；`guest_view_all_features=false` 时 `OwnOnly` 仍为真，设为 true 时 `OwnOnly=false`。是否隐藏统一依返回的 Grant 和 `Issue.HiddenFrom`，不能从访客角色直接断言只看自己。"访客不能 X"的句子对他往往不成立，要写清。
 - P4 起每个读动态、评论、表情、描述版本的操作都要套用它；动态里按标识指名别的工作项的行（第 5、20–23 行）也要过滤。
 
 **M3 的约定**（M3 设计 3.6）：
@@ -136,7 +136,7 @@ P3 加了这条路的两种形式，不是第二条路：
 **plan 的大小**：修复轮约增长 5–10%，切 Task 时留余量。
 
 ## 6. 环境的坑
-- **Firefox**：本机没装。A4 的两个 firefox 测试每次 `make e2e` 都失败。装它是全局安装，没有做；持续集成上有 Firefox。
+- **Firefox**：早期执行环境没有Firefox，这是历史事实而非永久豁免。P7使用项目内Playwright 1.63缓存，T15准确tested `6e28cc16`完整E2E实测153=151Chromium+2Firefox通过；之后按当次缓存/运行结果记录，不全局安装、不把缺浏览器当性质红。C12/WebKit仍由M4收尾核验。
 - **负载**：别的会话常在跑容器。第一次运行时容器起不来、套接字超时、Ryuk 不见了、页面故事 5 秒期望超时，都出现过。Docker 空闲时重跑一次再下结论，结果连同数字记下来。
 - **持续集成比本机慢**：e2e 那一步约 5 分钟，本机约 2 分钟。持续集成在 Linux 上，`ControlOrMeta` 是 Ctrl。本机 macOS 上通过，不等于持续集成通过。
 - **副本**：在 `git archive` 出来的副本里跑时：
@@ -145,6 +145,8 @@ P3 加了这条路的两种形式，不是第二条路：
   - `gen-check` 跑不了（没有 git），要手工比较生成物。
 
 ## 7. 怎么看持续集成
+
+有产品变化的开发检查点先完整本地CI，再推分支；逐Task聚焦/受影响回归继续。现行核验先按Git准确40位SHA查Actions run的head_sha、branch与三个job/步骤终态，保存公开JSON/HTML原件及摘要。分支CI不替代mainCI；main合并须另获授权。T12因浏览器安装耗时后整job取消保留为历史失败，T15准确d2的CI40387396589全绿也不能替代T16最终新HEAD。下列旧脚本只作已有工具导航，使用前核可用性；读公开元数据不需要提取凭据，受限raw日志/产物仍按实际权限处理。
 - 公开的 Actions 页面（`https://github.com/open-nerve/NerveProject/actions?query=branch%3Amain`）列出每次运行的标签，形如"failed: Run 340 of CI. Merge M4/P3 …"。
 - 本机有现成的脚本（[05](05-local-materials.md)）：
   - `wait-page.sh <分支> '<标题开头>'`：每分钟看一次，直到结束，在后台跑；

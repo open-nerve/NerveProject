@@ -40,6 +40,8 @@
     "project_label_not_found": "标签不存在，或者你看不到它所在的项目。",
     "issue_description_version_not_found": "描述版本不存在，或者你看不到它。",
     "issue_comment_not_found": "评论不存在，或者你看不到它。",
+    "issue_link_not_found": "链接不存在，或你无权查看。",
+    "issue_link_exists": "此工作项已存在相同链接。",
     "issue_reaction_exists": "你已添加过相同表情。",
     "issue_reaction_not_found": "你尚未添加此表情。",
     "issue_not_author": "只有作者可编辑评论；作者或项目管理员可删除评论。",

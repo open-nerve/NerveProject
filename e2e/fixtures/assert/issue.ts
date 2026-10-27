@@ -134,6 +134,21 @@ export function unrelatedRow(type: string, other: ItemRef): ActivityRow {
   return activityRow("deleted", type, other.identifier, "", `deleted ${type} relation`, null, other.name);
 }
 
+/** The row of activity that records a newly created link's URL. */
+export function linkCreatedRow(url: string): ActivityRow {
+  return activityRow("created", "link", null, url, "created a link");
+}
+
+/** A link URL change; a title-only write has no activity row. */
+export function linkUpdatedRow(old: string, url: string): ActivityRow {
+  return activityRow("updated", "link", old, url, "updated a link");
+}
+
+/** The activity of a link's deletion clears its URL with empty text. */
+export function linkDeletedRow(url: string): ActivityRow {
+  return activityRow("deleted", "link", url, "", "deleted the link");
+}
+
 /** The first rows of a work item's activity: its creation, and its assignment to each of accounts, in id order. */
 export function createdFor(...accounts: { id: string; email: string }[]): ActivityRow[] {
   const creation = activityRow("created", null, null, null, "created the work item");

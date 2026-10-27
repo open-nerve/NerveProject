@@ -70,6 +70,9 @@ var batchStatements = []batchStatement{
 	{"issue_assignees", (*postgresadapter.Store).DeleteProjectAssigneeRows, child("issue_assignees", "assignee_id", anAccount)},
 	{"issue_labels", (*postgresadapter.Store).DeleteProjectLabelRows, child("issue_labels", "label_id", aLabel)},
 	{"issue_relations", (*postgresadapter.Store).DeleteProjectRelationRows, aRelation},
+	{"issue_links", (*postgresadapter.Store).DeleteProjectLinkRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {
+		insertLink(t, pool, p, issue, id, by, fmt.Sprintf("http://169.254.169.254/%d", n))
+	}},
 	{"issue_subscribers", (*postgresadapter.Store).DeleteProjectSubscriberRows, child("issue_subscribers", "subscriber_id", anAccount)},
 	{"issue_comments", (*postgresadapter.Store).DeleteProjectCommentRows, child("issue_comments", "actor_id", anAccount)},
 	{"issue_reactions", (*postgresadapter.Store).DeleteProjectReactionRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {

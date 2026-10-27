@@ -138,6 +138,19 @@ func TestValidateCrossKeyRules(t *testing.T) {
 		want   string
 	}{
 		{
+			name: "outbound allowlist outside test",
+			change: func(c *Config) {
+				c.Env = EnvDev
+				c.Outbound.AllowCIDRs = []string{"127.0.0.1/32"}
+			},
+			want: "outbound.allow_cidrs: must be empty outside test",
+		},
+		{
+			name:   "malformed outbound prefix",
+			change: func(c *Config) { c.Outbound.AllowCIDRs = []string{"127.0.0.1/32", "broken"} },
+			want:   "outbound.allow_cidrs: entry 2 must be a CIDR prefix",
+		},
+		{
 			// read_timeout is the budget for the whole request, so the headers
 			// alone may not be allowed longer.
 			name:   "header timeout above read timeout",

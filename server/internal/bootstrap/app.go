@@ -22,6 +22,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
+	"github.com/open-nerve/NerveProject/server/internal/platform/buildinfo"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
@@ -90,6 +91,11 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		return nil, err
 	}
 	a := &app{cfg: cfg, logger: logger, pool: pool, migrator: migrator, poolCloseTimeout: poolCloseTimeout}
+	outboundClient, err := newOutbound(cfg, buildinfo.Get().Version)
+	if err != nil {
+		a.close()
+		return nil, err
+	}
 	// Every rate-limit bucket lives on this limiter (M2 design 3.10). It reads
 	// time.Now, not the Clock: the monotonic reading keeps a step of the wall
 	// clock from filling or draining the buckets.
@@ -120,6 +126,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	}
 	issueTx := newIssueJobTx(pool, cfg)
 	issues := issue.New(issue.Deps{
+		Outbound: outboundClient, Logger: logger,
 		Events: events,
 		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval,
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),

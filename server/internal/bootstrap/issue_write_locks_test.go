@@ -41,6 +41,17 @@ type issueWrite struct {
 // issueWrites are the work-item side's writes, each with its row: every
 // operation of the contract tagged issue but GET (writesOnIssues).
 var issueWrites = []issueWrite{
+	{op: "updateIssueLink", method: http.MethodPatch, path: "/api/v0/issue-links/{link_id}", target: func(t *testing.T, w issueWorld) string {
+		link := createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/locks")
+		waitUniqueLinkCrawl(t, w, link)
+		return linkPath(link.ID)
+	}, body: func(*testing.T, issueWorld) string { return `{"title":"Changed"}` }, want: http.StatusOK, waits: "issues", mode: "SHARE"},
+	{op: "deleteIssueLink", method: http.MethodDelete, path: "/api/v0/issue-links/{link_id}", target: func(t *testing.T, w issueWorld) string {
+		link := createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/locks")
+		waitUniqueLinkCrawl(t, w, link)
+		return linkPath(link.ID)
+	}, body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
+	{op: "createIssueLink", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/links", target: func(t *testing.T, w issueWorld) string { return linksOf(w.newWorkItem(t)) }, body: func(*testing.T, issueWorld) string { return `{"url":"http://169.254.169.254/locks"}` }, want: http.StatusCreated, waits: "issues", mode: "SHARE"},
 	{op: "addCommentReaction", method: http.MethodPost, path: "/api/v0/issue-comments/{comment_id}/reactions", target: func(t *testing.T, w issueWorld) string {
 		return commentReactionsOf(w.newComment(t, "alice", w.newWorkItem(t)).ID)
 	}, body: func(*testing.T, issueWorld) string { return `{"reaction":"128077"}` }, want: http.StatusCreated, waits: "comment_reactions", mode: "SHARE"},
@@ -132,7 +143,7 @@ var issueWrites = []issueWrite{
 // memberships its decision reads, the states and labels it checks, and
 // the work-item side's own.
 const issueTables = "workspaces, workspace_members, projects, project_members, states, labels, issues, issue_assignees, issue_labels, " +
-	"issue_relations, issue_subscribers, issue_mentions, issue_comments, issue_reactions, comment_reactions, issue_activities, issue_description_versions"
+	"issue_links, issue_relations, issue_subscribers, issue_mentions, issue_comments, issue_reactions, comment_reactions, issue_activities, issue_description_versions"
 
 // writesOnIssues lists the operations of ops tagged issue, but GET, sorted.
 func writesOnIssues(ops []apitest.Operation) []string {
@@ -193,80 +204,99 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 	w := newIssueWorld(t)
 	for _, iw := range issueWrites {
 		t.Run(iw.op, func(t *testing.T) {
-			// alice's three sends' targets; the callers refused send her
-			// first's.
-			var targets []string
-			for range 3 {
-				target := iw.target(t, w)
-				if !pathOf(iw.path, target) {
-					t.Fatalf("%s's row sends %s %s, not a path of %s", iw.op, iw.method, target, iw.path)
-				}
-				targets = append(targets, target)
-			}
-			alices := 0
-			send := func(name string) <-chan answer {
-				target := targets[0]
-				if name == "alice" {
-					target = targets[alices]
-					alices++
-				}
-				req := newRequest(t, iw.method, w.base+target, w.tokens[name], []byte(iw.body(t, w)))
-				w.contract.CheckRequest(t, req)
-				return sendInBackground(req)
-			}
-			answers := func(name string, answered <-chan answer, want int) {
-				t.Helper()
-				a := receiveWithin(t, answered, 10*time.Second, "the answer to "+iw.op+" as "+name)
-				if a.err != nil {
-					t.Fatal(a.err)
-				}
-				if a.res.StatusCode != want {
-					t.Errorf("%s as %s = %d %s, want %d", iw.op, name, a.res.StatusCode, a.body, want)
-				}
-				if iw.op == "updateIssue" && want == http.StatusOK && a.res.StatusCode == want {
-					got := sortAnswer(t, string(a.body))
-					stored := sortStored(t, w, got.ID)
-					if got.SortOrder != 0 || stored.SortOrder != 0 {
-						t.Fatal("locked update lost sort", got, stored)
-					}
-				}
-			}
-
-			tables := lockedTables(t, w.pool, issueTables, "EXCLUSIVE")
-			for name, want := range map[string]int{"walt": http.StatusForbidden, "wanda": http.StatusForbidden, "olga": http.StatusNotFound} {
-				answers(name, send(name), want)
-			}
-			answered := send("alice")
-			pgtest.WaitForLockWaitBehind(t, w.pool, tables.Conn().PgConn(), 10*time.Second)
-			if table := waitedTable(t, w.pool, tables.Conn().PgConn()); table != "projects" {
-				t.Errorf("%s first waits for %s, not for projects", iw.op, table)
-			}
-			release(t, tables)
-			answers("alice", answered, iw.want)
-
-			waited := lockedTables(t, w.pool, iw.waits, iw.mode)
-			answered = send("alice")
-			pgtest.WaitForLockWaitBehind(t, w.pool, waited.Conn().PgConn(), 10*time.Second)
-			if table := waitedTable(t, w.pool, waited.Conn().PgConn()); table != iw.waits {
-				t.Fatalf("%s waits for %s, not for %s", iw.op, table, iw.waits)
-			}
-			if written := writtenTables(t, w.pool, waited.Conn().PgConn()); len(written) > 0 {
-				t.Errorf("%s has written %q when it waits for %s: what it holds of Web is no longer its lock's alone", iw.op, written, iw.waits)
-			}
-			if lock := lockOn(t, w.pool, "projects WHERE id = $1", w.web); lock != "FOR NO KEY UPDATE" {
-				t.Errorf("%s holds Web %s when it waits for %s, not FOR NO KEY UPDATE", iw.op, lock, iw.waits)
-			}
-			if lock := lockOn(t, w.pool, "workspaces WHERE id = $1", w.acme); lock != "no lock" {
-				t.Errorf("%s holds acme %s when it waits for %s", iw.op, lock, iw.waits)
-			}
-			release(t, waited)
-			answers("alice", answered, iw.want)
-
-			cascade := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", w.acme)
-			answers("alice", send("alice"), iw.want)
-			release(t, cascade)
+			iw.checkProjectLocks(t, w)
 		})
 	}
+}
+
+func (iw issueWrite) checkProjectLocks(t *testing.T, w issueWorld) {
+	t.Helper()
+	// alice's three sends' targets; the callers refused send her
+	// first's.
+	var targets []string
+	for range 3 {
+		target := iw.target(t, w)
+		if !pathOf(iw.path, target) {
+			t.Fatalf("%s's row sends %s %s, not a path of %s", iw.op, iw.method, target, iw.path)
+		}
+		targets = append(targets, target)
+	}
+	alices := 0
+	send := func(name string) <-chan answer {
+		target := targets[0]
+		if name == "alice" {
+			target = targets[alices]
+			alices++
+		}
+		req := newRequest(t, iw.method, w.base+target, w.tokens[name], []byte(iw.body(t, w)))
+		w.contract.CheckRequest(t, req)
+		return sendInBackground(req)
+	}
+	answers := func(name string, answered <-chan answer, want int) {
+		t.Helper()
+		a := receiveWithin(t, answered, 10*time.Second, "the answer to "+iw.op+" as "+name)
+		if a.err != nil {
+			t.Fatal(a.err)
+		}
+		if a.res.StatusCode != want {
+			t.Errorf("%s as %s = %d %s, want %d", iw.op, name, a.res.StatusCode, a.body, want)
+		}
+		// This matrix observes any backend behind its holder. Complete each
+		// fresh link's production crawl before the next lock probe can see it.
+		if iw.op == "createIssueLink" && want == http.StatusCreated && a.res.StatusCode == want {
+			var link answeredLink
+			decodeAnswer(t, string(a.body), &link)
+			waitUniqueLinkCrawl(t, w, link)
+		}
+		if iw.op == "updateIssue" && want == http.StatusOK && a.res.StatusCode == want {
+			got := sortAnswer(t, string(a.body))
+			stored := sortStored(t, w, got.ID)
+			if got.SortOrder != 0 || stored.SortOrder != 0 {
+				t.Fatal("locked update lost sort", got, stored)
+			}
+		}
+	}
+
+	// The request probe below is valid only after every fixture crawl has
+	// completed; a metadata worker can otherwise wait behind the same holder.
+	var pendingCrawls, archiveCandidates int
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT (SELECT count(*) FROM river_job WHERE kind='issue.crawl_link' AND state<>'completed'),
+		(SELECT count(*) FROM projects WHERE deleted_at IS NULL AND archived_at IS NULL AND archive_in BETWEEN 1 AND 12)`).Scan(&pendingCrawls, &archiveCandidates); err != nil || pendingCrawls != 0 || archiveCandidates != 0 {
+		t.Fatalf("lock probe has %d unfinished crawls and %d auto-archive candidates: %v", pendingCrawls, archiveCandidates, err)
+	}
+	tables := lockedTables(t, w.pool, issueTables, "EXCLUSIVE")
+	for name, want := range map[string]int{"walt": http.StatusForbidden, "wanda": http.StatusForbidden, "olga": http.StatusNotFound} {
+		answers(name, send(name), want)
+	}
+	answered := send("alice")
+	pgtest.WaitForLockWaitBehind(t, w.pool, tables.Conn().PgConn(), 10*time.Second)
+	if table := waitedTable(t, w.pool, tables.Conn().PgConn()); table != "projects" {
+		t.Errorf("%s first waits for %s, not for projects", iw.op, table)
+	}
+	release(t, tables)
+	answers("alice", answered, iw.want)
+
+	waited := lockedTables(t, w.pool, iw.waits, iw.mode)
+	answered = send("alice")
+	pgtest.WaitForLockWaitBehind(t, w.pool, waited.Conn().PgConn(), 10*time.Second)
+	if table := waitedTable(t, w.pool, waited.Conn().PgConn()); table != iw.waits {
+		t.Fatalf("%s waits for %s, not for %s", iw.op, table, iw.waits)
+	}
+	if written := writtenTables(t, w.pool, waited.Conn().PgConn()); len(written) > 0 {
+		t.Errorf("%s has written %q when it waits for %s: what it holds of Web is no longer its lock's alone", iw.op, written, iw.waits)
+	}
+	if lock := lockOn(t, w.pool, "projects WHERE id = $1", w.web); lock != "FOR NO KEY UPDATE" {
+		t.Errorf("%s holds Web %s when it waits for %s, not FOR NO KEY UPDATE", iw.op, lock, iw.waits)
+	}
+	if lock := lockOn(t, w.pool, "workspaces WHERE id = $1", w.acme); lock != "no lock" {
+		t.Errorf("%s holds acme %s when it waits for %s", iw.op, lock, iw.waits)
+	}
+	release(t, waited)
+	answers("alice", answered, iw.want)
+
+	cascade := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", w.acme)
+	answers("alice", send("alice"), iw.want)
+	release(t, cascade)
 }
 
 // lockedTables begins a transaction on pool that holds tables, a list,
@@ -293,7 +323,8 @@ func release(t *testing.T, tx pgx.Tx) {
 }
 
 // waitedTable is the table whose lock the backend blocked behind holder
-// waits for.
+// waits for. The caller must finish its fixture's asynchronous writers before
+// holding the tables: this probe does not identify an HTTP request's backend.
 func waitedTable(t *testing.T, pool *pgxpool.Pool, holder *pgconn.PgConn) string {
 	t.Helper()
 	var table string

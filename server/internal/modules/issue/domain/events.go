@@ -14,4 +14,7 @@ const (
 	EventRelationRemoved = "issue.relation_removed"
 	EventReactionAdded   = "issue.reaction_added"
 	EventReactionRemoved = "issue.reaction_removed"
+	EventLinkCreated     = "issue.link_created"
+	EventLinkUpdated     = "issue.link_updated"
+	EventLinkDeleted     = "issue.link_deleted"
 )

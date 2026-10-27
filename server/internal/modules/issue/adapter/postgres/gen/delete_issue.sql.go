@@ -124,6 +124,27 @@ func (q *Queries) DeleteIssueLabelRows(ctx context.Context, arg DeleteIssueLabel
 	return err
 }
 
+const deleteIssueLinkRows = `-- name: DeleteIssueLinkRows :exec
+UPDATE issue_links AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM issue_links r
+    WHERE r.issue_id = ANY ($3::uuid[]) AND r.deleted_at IS NULL
+    ORDER BY r.id FOR NO KEY UPDATE)
+`
+
+type DeleteIssueLinkRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	IssueIds  []uuid.UUID
+}
+
+// Lock the subtree's live links in id order before stamping them; earlier deletions keep their audit.
+func (q *Queries) DeleteIssueLinkRows(ctx context.Context, arg DeleteIssueLinkRowsParams) error {
+	_, err := q.db.Exec(ctx, deleteIssueLinkRows, arg.At, arg.DeletedBy, arg.IssueIds)
+	return err
+}
+
 const deleteIssueMentionRows = `-- name: DeleteIssueMentionRows :exec
 UPDATE issue_mentions
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid

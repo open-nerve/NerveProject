@@ -1,6 +1,6 @@
 # M4/P6 `issue-events`：领域事件、事务投递与自动归档规格
 
-日期：2026-10-26。基线：`main` `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`（P5 的 `--no-ff` 合并）。状态：**T1–T16 已实施并逐任务独评通过；内部整分支审查与 clock 修复复审已通过；修复提交 `e8df8485` 分支 CI 全绿；deep-review 终审通过（3 项文档 Minor 已闭环），尚未集成**。配套：[plan](../plans/P6-issue-events.md)、[评审记录](../reviews/P6-issue-events-review.md)。
+日期：2026-10-26。基线：`main` `ee26db29c8a55cbb034a2da38c794c7f1af88e4e`（P5 的 `--no-ff` 合并）。状态：**T1–T16 已实施并逐任务独评通过；内部整分支审查与 clock 修复复审已通过；修复提交 `e8df8485` 分支 CI 全绿；deep-review 终审通过（3 项文档 Minor 已闭环）；已授权合并、main CI 全绿、证据归档与分支清理完成**。配套：[plan](../plans/P6-issue-events.md)、[评审记录](../reviews/P6-issue-events-review.md)。
 
 权威输入：[M4 设计](../M4-design.md) §3.5、3.8、3.19、3.20、6.5–6.6、12/P6、13.1、14；[推进方式](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)；前段 spec §5 / review §6 与本规格 §7 的交接。设计 D3、D4、D7 和架构问题 11.4、11.7、11.11 已批准，不重新裁定。
 
@@ -223,7 +223,7 @@ T1–T15 的运行命令、退出码、变异和精确提交见[评审 §2](../r
 | [x] | 内部整分支审查 | `ee26db29..6995d523` 的19提交/165文件已审，Critical/Important/Minor均0；见[评审 §5](../reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异) |
 | [x] | 修复与分支 CI | `e8df8485eee76cd83b93bc4a2ad48b6e3d89240f` 聚焦复审通过，[CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 的 server/web/e2e 全绿；后续文档提交以最终交付 SHA 的 CI 为准 |
 | [x] | deep-review 终审 | 本轮整分支终审通过，3 项文档 Minor 全部修复并独立复审；见 [deep-review](../../../reviews/re-03-M4P6整体审核.md) 与 review §5 |
-| [ ] | 未授权集成门 | 仅经后续明确授权才 `--no-ff` 合并、查精确 main SHA 的 CI、归档与清理 |
+| [x] | 已授权集成门 | `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；main CI 40305247546 重跑全绿；921 个证据文件归档核 hash 后清理本地/远端分支和 worktree，见 review §2.2 |
 
 ## 5. 不在范围内与后续 Phase
 
@@ -237,6 +237,10 @@ T1–T15 的运行命令、退出码、变异和精确提交见[评审 §2](../r
 | M6/M7 | 自动归档加入迭代/模块/收集箱真实表条件；通知发送前再判收件者权限 |
 | M8 | Webhook消费明确事件名单/形状；项目删除连带与DetachLabel不另发issue事件的清单 |
 | M4收尾 | 所有handoff逐条closed、总体§9.4、M4§14完整证据、M5–M8四份closeout；P6不提前关闭 |
+
+### P7接收回执（2026-10-27）
+
+上表P7责任已落地：3种link事件（目录共15）、首个生产`crawl_on_link_change`/LinkCrawls原事务投递、outbound/crawler/真实worker及registrationRows请求任务核对。见[P7 review](../reviews/P7-issue-links-review.md)与[行为矩阵](../reviews/P7-issue-links-behavior-matrix.md)。这是P7接续，不改写P6当时12事件/空生产订阅、已授权合并和mainCI的历史。P8/P9/P15及M4收尾仍开放，P7最终分支CI/集成状态独立记录。
 
 ## 6. 风险
 
@@ -264,10 +268,10 @@ T1–T15 的运行命令、退出码、变异和精确提交见[评审 §2](../r
 
 阶段首提交已将关键词 phase 切 M4/P6；没有 until=M4/P6 的到期例外，P11/closeout 的前端例外保留。实现完成后上述输入只追加“处理结果（M4/P6）”及剩余责任，不改整体 status 为closed。M4§14“事件和任务”还含P7/P9条目，P6只能记子项证据。
 
-实施验收依据§4 T1–T16 的实际证据；任务独评与内部整分支审查已完成，审查无新增发现。clock 修复 `e8df8485` 的聚焦复审和精确 HEAD 分支 CI 已通过；本轮使用 `deep-review` 收口终审，不再等待 Claude。后续文档提交的精确 HEAD CI 由交付记录给出。遵循用户指令，阶段完成先不合并；仅获明确授权后才进入 `--no-ff`、精确 main SHA CI、证据归档和清理的集成门。文档为中文，提交按用户最新AGENTS用详细中文说明；主目录HEAD始终main，阶段使用约定worktree，推送优先/usr/bin/git。
+实施验收依据§4 T1–T16 的实际证据；任务独评与内部整分支审查已完成，审查无新增发现。clock 修复 `e8df8485` 的聚焦复审和精确 HEAD 分支 CI 已通过；本轮使用 `deep-review` 收口终审，不再等待 Claude。最终文档提交 `17908e03` 的分支 CI 40303510060 全绿；随后获明确授权，已完成 `--no-ff` 合并、精确 main SHA CI、证据归档和清理，见评审 §2.2。文档为中文，提交按用户最新AGENTS用详细中文说明；主目录HEAD始终main，阶段使用约定worktree，推送优先/usr/bin/git。
 
 ## 附录 A. 证据边界与准备历史
 
 准备阶段只读调研、三个独立视角静态预检及修订复审曾记录为“未实施”，属于起步历史。后续 T1–T15 已在 `codex/m4-p6` 分别实施并独评；当前已验证源码 HEAD `4a489125f480402692772cbae483af26d9600792`。T15 在该源码哈希上顺序完成 `make test`、`make lint-go`、`make lint-web`、`make knip`、`make test-web`、`make e2e`、提交后 `make gen-check`；Go 为49个有测试包通过，E2E 149/149，Web 的缓存命中数见[评审 §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)，不把缓存称为新执行。20个真实生产变异与16写用例/12事件目录见评审所引矩阵。T2 早期聚焦命令曾空匹配，最终证据依赖后续实际匹配与完整包回归；T13最后门禁只留报告，T14/T15有完整原始输出。早期 testcontainers 可选 shell 探测及旧 Playwright 颜色警告保留原始日志；后续无警告的定向颜色验证已闭环，不能称所有历史输出 pristine。
 
-P5 main `ee26db29c8a55cbb034a2da38c794c7f1af88e4e` 的 [CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 仅证明基线。T16后的内部整分支审查已在`6995d523`完成且无新发现；此后 clock 断言修复 `e8df8485` 已独评通过且 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 三任务全绿；外部终审要求已由负责人改为 Codex 的 `deep-review`。授权集成仍未进行，不预填 main CI 成功。最终提交与 CI 的精确 SHA 由 Git 和交付答复给出，避免为文档自证自身 CI 无限提交。
+P5 main `ee26db29c8a55cbb034a2da38c794c7f1af88e4e` 的 [CI 40257678959](https://github.com/open-nerve/NerveProject/actions/runs/40257678959) 仅证明基线。T16后的内部整分支审查已在`6995d523`完成且无新发现；此后 clock 断言修复 `e8df8485` 已独评通过且 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 三任务全绿；外部终审要求已由负责人改为 Codex 的 `deep-review`。随后已获授权集成；main `5005be985e7ec78727edc6f8fc5c05999b45cc65` 的 CI 40305247546 重跑后 server/web/e2e 全绿，归档清理已完成（review §2.2）。最终提交与 CI 的精确 SHA 由 Git 和交付答复给出，避免为文档自证自身 CI 无限提交。

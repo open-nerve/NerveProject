@@ -216,7 +216,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), collaborationMatrixRows())
+		labelMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), collaborationMatrixRows(), linkMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -311,6 +311,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		issues.issues(s)
 		issues.relations(s)
 		issues.comments(s)
+		issues.links(s)
 		projects.archive("acme/archived")
 		projects.removal(s)
 		for _, i := range matrixInvitations {
@@ -332,6 +333,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		issues.seededIssues(s)
 		issues.seededRelationRows(s)
 		issues.seededCommentRows(s)
+		issues.seededLinkRows(s)
 	})
 	if !prepared {
 		t.FailNow()

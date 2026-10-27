@@ -17,6 +17,7 @@ func TestIssueEventRefusalsAreUnobservable(t *testing.T) {
 	w := newIssueWorld(t)
 	id, other := w.newWorkItem(t), w.newWorkItem(t)
 	comment := w.newComment(t, "alice", id)
+	link := createLink(t, w, "alice", id, "http://169.254.169.254/silent")
 	w.send(t, "alice", http.MethodPost, relationsOf(id), relating("relates_to", other), 201)
 	relation := queryIDs(t, w.pool, "SELECT id FROM issue_relations WHERE issue_id=$1 OR related_issue_id=$1", id)[0]
 	var events []shared.Event
@@ -28,6 +29,9 @@ func TestIssueEventRefusalsAreUnobservable(t *testing.T) {
 		id                 uuid.UUID
 		path               func(uuid.UUID) string
 	}{
+		{"link create", http.MethodPost, `{"url":"http://169.254.169.254/refused"}`, id, linksOf},
+		{"link update", http.MethodPatch, `{"title":"Refused"}`, link.ID, linkPath},
+		{"link delete", http.MethodDelete, "", link.ID, linkPath},
 		{"create", http.MethodPost, `{"name":"Hidden"}`, w.web, func(id uuid.UUID) string { return "/api/v0/projects/" + id.String() + "/issues" }},
 		{"update", http.MethodPatch, `{"name":"Hidden"}`, id, func(id uuid.UUID) string { return "/api/v0/issues/" + id.String() }},
 		{"delete", http.MethodDelete, "", id, func(id uuid.UUID) string { return "/api/v0/issues/" + id.String() }},

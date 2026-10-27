@@ -60,10 +60,27 @@ func TestBareMigratePrintsHelp(t *testing.T) {
 }
 
 func TestInvalidConfigurationIsReported(t *testing.T) {
-	code, _, stderr := execute(context.Background(), []string{"NERVE_ENV=test"}, "migrate", "status")
-
-	if code != 1 || !strings.Contains(stderr, "database.url: is required") {
-		t.Errorf("nerve migrate status = %d %q, want 1 and the invalid key", code, stderr)
+	t.Run("required database", func(t *testing.T) {
+		code, _, stderr := execute(t.Context(), []string{"NERVE_ENV=test"}, "migrate", "status")
+		if code != 1 || !strings.Contains(stderr, "database.url: is required") {
+			t.Errorf("nerve migrate status = %d %q, want 1 and the invalid key", code, stderr)
+		}
+	})
+	for _, args := range [][]string{
+		{"serve"}, {"migrate", "status"}, {"users", "activate", "--email", "fixture@example.test"},
+		{"workspaces", "create", "--slug", "fixture", "--name", "Fixture", "--admin-email", "fixture@example.test"},
+	} {
+		t.Run("outbound test-only/"+args[0], func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+			defer cancel()
+			code, stdout, stderr := execute(ctx, []string{
+				"NERVE_ENV=prod", "NERVE_DATABASE__URL=postgres://127.0.0.1:1/unused",
+				"NERVE_AUTH__JWT__PRIVATE_KEY_FILE=/unused/key", "NERVE_OUTBOUND__ALLOW_CIDRS=127.0.0.1/32",
+			}, args...)
+			if code != 1 || stdout != "" || !strings.Contains(stderr, "outbound.allow_cidrs: must be empty outside test") {
+				t.Fatalf("nerve %v = %d, stdout %q, stderr %q; want configuration rejection", args, code, stdout, stderr)
+			}
+		})
 	}
 }
 

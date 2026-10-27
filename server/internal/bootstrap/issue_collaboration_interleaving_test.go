@@ -270,7 +270,7 @@ func TestCommentWritesAndArchivalSerialize(t *testing.T) {
 func collaborationRows(t *testing.T, w issueWorld, id uuid.UUID) map[string]string {
 	t.Helper()
 	out := map[string]string{}
-	for _, table := range []string{"issues", "issue_subscribers", "issue_mentions", "issue_comments", "issue_reactions", "issue_activities", "issue_description_versions"} {
+	for _, table := range []string{"issues", "issue_links", "issue_assignees", "issue_labels", "issue_relations", "issue_subscribers", "issue_mentions", "issue_comments", "issue_reactions", "issue_activities", "issue_description_versions"} {
 		out[table] = descriptionRows(t, w, table, id)
 	}
 	var reactions string

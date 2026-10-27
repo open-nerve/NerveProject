@@ -17,6 +17,7 @@ import {
   expectIssueDeleted,
   expectIssuePage,
   itemRef,
+  linkCreatedRow,
   madeBy,
   relatedRow,
   restoredRow,
@@ -43,6 +44,7 @@ import {
   subIssuesAdded,
   updateIssue,
 } from "../../fixtures/issues";
+import { createIssueLink } from "../../fixtures/links";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
 
@@ -51,7 +53,7 @@ import { expect, test } from "../../fixtures/test";
 // refused) and P3's (an archived work item takes no work item under it, relates to none and keeps its relations). The
 // archived list is P5's, the page version P13's. The archived work item's deletion at the end is P2's deleteIssue
 // (3.6), whose rows expectIssueDeleted reads from the catalog: the work item under it and its relations either way
-// among them, from P3.
+// among them, from P3, and its link from P7.
 
 test("I15 (API): a member's work item in a started state is not archived (409); moved to a completed state, she archives it, and archiving it again writes nothing; it is not changed while it is archived (409); a guest who sees it neither restores nor archives it (403); she restores it, and restoring it again writes nothing; each archiving and restoring one row of its activity, hers at its moment; restored, a work item is put under it and it is related to two others, either way; archived again, it takes no work item under it, relates to none and keeps its relations (409), and the admin deletes it, with every row under it, at one moment", async ({
   api,
@@ -97,6 +99,11 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   expect(await issueArchived(api, ann.token, id)).toEqual({ status: 409, code: "issue.not_archivable" });
   await expectIssueArchival(db, id, asCreated);
 
+  // P7's link is ann's too; the final admin deletion must stamp it with the other dependent rows.
+  const link = await createIssueLink(api, ann.token, id, { url: `http://169.254.169.254/i15/${id}` });
+  const linked = [...created, linkCreatedRow(link.url)];
+  await expectIssueArchival(db, id, { ...asCreated, activity: linked });
+
   // Moved to Done, she archives it: archived at its moment, one row of its activity; archived again, nothing is
   // written, and the answer is the work item as it is.
   const comment = await createIssueComment(api, ann.token, id, "<p>Archive discussion</p>");
@@ -106,7 +113,7 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   const toDone = changed("state", "In Progress", "Done", "updated the state to", "Done", "In Progress");
   const archiving = await issueArchived(api, ann.token, id);
   expect(archiving).toMatchObject({ status: 200, issue: { id, archived_at: expect.any(String) } });
-  const archived = { archived: true, by: ann.email, activity: [...created, toDone, archivedRow] };
+  const archived = { archived: true, by: ann.email, activity: [...linked, toDone, archivedRow] };
   await expectIssueArchival(db, id, archived);
   expect(await issueArchived(api, ann.token, id)).toEqual(archiving);
   await expectIssueArchival(db, id, archived);

@@ -88,13 +88,14 @@ func ids(n int) []uuid.UUID {
 // fill a batch of two, which fakeRows answers greatest first and least
 // first, in that order.
 func twoProjects(web, ops uuid.UUID) *fakeRows {
-	w, o := ids(7), ids(4)
+	w, o := ids(10), ids(5)
 	return &fakeRows{deleted: map[uuid.UUID]string{}, rows: map[string]map[uuid.UUID][]uuid.UUID{
 		"issues":      {web: w[0:3], ops: o[0:1]},
 		"assignees":   {web: w[3:4]},
 		"labels":      {ops: o[1:2]},
 		"relations":   {web: w[6:7], ops: o[3:4]},
 		"subscribers": {ops: o[2:3]},
+		"links":       {web: w[7:10], ops: o[4:5]},
 		"activities":  {web: w[4:6]},
 	}}
 }
@@ -104,7 +105,7 @@ func twoProjects(web, ops uuid.UUID) *fakeRows {
 // zero id, then after the greatest id of each batch, until one finds none.
 func batches(f *fakeRows, project uuid.UUID) []string {
 	var calls []string
-	for _, statement := range []string{"issues", "assignees", "labels", "relations", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
+	for _, statement := range []string{"issues", "assignees", "labels", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
 		rows := f.rows[statement][project]
 		after := uuid.UUID{}
 		for i := 0; ; i += 2 {
@@ -165,7 +166,7 @@ func TestTheCascadeDeletesEachProjectsRowsInBatches(t *testing.T) {
 // A failing batch comes back as itself, and no batch runs after it.
 func TestTheCascadeStopsAtAFailingBatch(t *testing.T) {
 	web, ops, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	for _, statement := range []string{"issues", "assignees", "labels", "relations", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
+	for _, statement := range []string{"issues", "assignees", "labels", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
 		f := twoProjects(web, ops)
 		f.fail = statement
 		want := batches(f, web)
@@ -199,4 +200,8 @@ func (f *fakeRows) DeleteProjectMentionRows(ctx context.Context, b app.RowBatch)
 
 func (f *fakeRows) DeleteProjectDescriptionVersionRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
 	return f.batch(ctx, "description_versions", b)
+}
+
+func (f *fakeRows) DeleteProjectLinkRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.batch(ctx, "links", b)
 }

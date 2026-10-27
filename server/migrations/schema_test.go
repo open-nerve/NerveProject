@@ -64,24 +64,29 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 26 {
-		t.Fatalf("Up() = %d migrations, %v; want 26", len(up), err)
+	if err != nil || len(up) != 27 {
+		t.Fatalf("Up() = %d migrations, %v; want 27", len(up), err)
 	}
-	for _, want := range []struct {
+	wantSchema := []struct {
 		query string
 		names []string
 	}{
-		{tablesQuery, []string{"api_tokens", "auth_sessions", "comment_reactions", "issue_activities", "issue_assignees", "issue_comments", "issue_description_versions", "issue_labels", "issue_mentions", "issue_reactions", "issue_relations",
+		{tablesQuery, []string{"api_tokens", "auth_sessions", "comment_reactions", "issue_activities", "issue_assignees", "issue_comments", "issue_description_versions", "issue_labels", "issue_links", "issue_mentions", "issue_reactions", "issue_relations",
 			"issue_subscribers", "issues", "labels", "profiles", "project_members", "project_user_properties", "projects", "river_job",
 			"river_leader", "river_notification", "river_queue", "states", "users", "workspace_member_invites", "workspace_members",
 			"workspace_user_properties", "workspaces"}},
 		{enumsQuery, []string{"river_job_state"}},
 		{functionsQuery, []string{"river_job_state_in_bitmask"}},
-	} {
-		if got := names(t, pool, want.query); !slices.Equal(got, want.names) {
-			t.Errorf("after Up, %s = %q, want %q", want.query, got, want.names)
+	}
+	checkSchema := func(stage string) {
+		t.Helper()
+		for _, want := range wantSchema {
+			if got := names(t, pool, want.query); !slices.Equal(got, want.names) {
+				t.Errorf("after %s, %s = %q, want %q", stage, want.query, got, want.names)
+			}
 		}
 	}
+	checkSchema("Up")
 	for range up {
 		if _, err := m.Down(ctx); err != nil {
 			t.Fatalf("Down() error = %v", err)
@@ -92,9 +97,10 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 26 {
-		t.Errorf("Up() again = %d migrations, %v; want 26", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 27 {
+		t.Errorf("Up() again = %d migrations, %v; want 27", len(again), err)
 	}
+	checkSchema("Up again")
 }
 
 // Constraint and index names are the stable names of M2 design 3.13 and M3
@@ -133,7 +139,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		got = append(got, s)
 	}
 	// contype: p primary key, u unique, f foreign key (confdeltype c: ON
-	// DELETE CASCADE, n: ON DELETE SET NULL), c check. An index is i, then
+	// DELETE CASCADE, n: ON DELETE SET NULL), c check, x exclusion. An index is i, then
 	// u when it is unique and w when it is partial (has a WHERE). The project
 	// module's tables are in projectNames (project_schema_test.go), the issue
 	// module's in issueNames (issue_schema_test.go).
