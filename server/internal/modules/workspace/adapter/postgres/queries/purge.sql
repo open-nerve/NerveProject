@@ -33,4 +33,3 @@ WHERE id IN (
     ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
 )
 RETURNING id;
-
