@@ -12,18 +12,20 @@ import (
 
 // The three explicit directories share contract coverage, not lock semantics:
 // ordinary writes P(N), draft CRUD W(S)/P(S)/D(U), publication W(S)/P(N)/D(U).
-// Publication is populated when its HTTP operation is registered in T6.
+// Publication also requires the project gate before acquiring W(S).
 type draftWriteLock struct {
-	op, method, path, workspace, project, draft string
-	want                                        int
+	op, method, path, workspace, project, draft, gate string
+	want                                              int
 }
 
 var draftCRUDWrites = []draftWriteLock{
-	{"createDraft", "POST", "/api/v0/workspaces/{slug}/drafts", "FOR SHARE", "FOR SHARE", "INSERT", 201},
-	{"updateDraft", "PATCH", "/api/v0/drafts/{draft_id}", "FOR SHARE", "FOR SHARE", "FOR UPDATE", 200},
-	{"deleteDraft", "DELETE", "/api/v0/drafts/{draft_id}", "FOR SHARE", "FOR SHARE", "FOR UPDATE", 204},
+	{"createDraft", "POST", "/api/v0/workspaces/{slug}/drafts", "FOR SHARE", "FOR SHARE", "INSERT", "none", 201},
+	{"updateDraft", "PATCH", "/api/v0/drafts/{draft_id}", "FOR SHARE", "FOR SHARE", "FOR UPDATE", "none", 200},
+	{"deleteDraft", "DELETE", "/api/v0/drafts/{draft_id}", "FOR SHARE", "FOR SHARE", "FOR UPDATE", "none", 204},
 }
-var draftPublishWrites = []draftWriteLock{}
+var draftPublishWrites = []draftWriteLock{
+	{"publishDraft", "POST", "/api/v0/drafts/{draft_id}/publish", "FOR SHARE", "FOR NO KEY UPDATE", "FOR UPDATE", "project", 201},
+}
 
 func checkIssueWriteDirectories(t *testing.T, contract *apitest.Contract) {
 	t.Helper()
@@ -42,16 +44,16 @@ func checkIssueWriteDirectories(t *testing.T, contract *apitest.Contract) {
 		}
 	}
 	for _, directory := range []struct {
-		rows    []draftWriteLock
-		project string
-	}{{draftCRUDWrites, "FOR SHARE"}, {draftPublishWrites, "FOR NO KEY UPDATE"}} {
+		rows          []draftWriteLock
+		project, gate string
+	}{{draftCRUDWrites, "FOR SHARE", "none"}, {draftPublishWrites, "FOR NO KEY UPDATE", "project"}} {
 		for _, row := range directory.rows {
 			check(row.op, row.method, row.path)
 			wantDraft := "FOR UPDATE"
 			if row.op == "createDraft" {
 				wantDraft = "INSERT"
 			}
-			if row.workspace != "FOR SHARE" || row.project != directory.project || row.draft != wantDraft {
+			if row.workspace != "FOR SHARE" || row.project != directory.project || row.draft != wantDraft || row.gate != directory.gate {
 				t.Fatalf("%s has an invalid declared lock shape: %+v", row.op, row)
 			}
 		}

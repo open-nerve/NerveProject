@@ -1514,6 +1514,34 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/drafts/{draft_id}/publish:
+    parameters:
+      - $ref: '#/components/parameters/DraftID'
+    post:
+      operationId: publishDraft
+      tags:
+        - issue
+      summary: Publish your stored issue draft
+      description: Accepts no request body. Creates from the locked stored payload and soft-deletes the draft atomically.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - issue.draft_not_found
+        - project.not_found
+        - forbidden
+        - validation_failed
+        - issue.draft_changed
+        - project.archived
+        - server_busy
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspaces/{slug}/members/{user_id}/issues:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -4089,6 +4117,130 @@ components:
           format: uuid
         payload:
           $ref: '#/components/schemas/IssueDraftPayload'
+    IssuePriority:
+      description: A work item's priority, from the most to the least urgent.
+      type: string
+      enum:
+        - urgent
+        - high
+        - medium
+        - low
+        - none
+    IssueDetail:
+      description: A work item of a project.
+      type: object
+      additionalProperties: false
+      required:
+        - description_html
+        - id
+        - workspace_id
+        - project_id
+        - sequence_id
+        - name
+        - state_id
+        - priority
+        - start_date
+        - target_date
+        - parent_id
+        - sort_order
+        - completed_at
+        - archived_at
+        - assignee_ids
+        - label_ids
+        - sub_issues_count
+        - created_by_id
+        - updated_by_id
+        - created_at
+        - updated_at
+      properties:
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        sequence_id:
+          description: Its number in its project, from 1; with the project's identifier, as in WEB-12.
+          type: integer
+        name:
+          type: string
+        state_id:
+          type: string
+          format: uuid
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        start_date:
+          description: The day it starts; null for none.
+          type:
+            - string
+            - 'null'
+          format: date
+        target_date:
+          description: The day it is due, not before its start date; null for none.
+          type:
+            - string
+            - 'null'
+          format: date
+        parent_id:
+          description: The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sort_order:
+          description: Its place among its state's work items, the lowest first.
+          type: number
+        completed_at:
+          description: When it was put in a state of the completed group; null in any other state.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        archived_at:
+          description: When it was archived; null when it is not.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        assignee_ids:
+          description: The accounts it is assigned to, by id; one who has left the project since is still one.
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          description: Its labels, by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        sub_issues_count:
+          description: 'The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own.'
+          type: integer
+        created_by_id:
+          description: The account that created it; null for none.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        updated_by_id:
+          description: The account that changed it last; null for none.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     IssueListGroupField:
       description: Project lists exclude project_id; member lists use their narrower page vocabulary.
       type: string
@@ -4123,15 +4275,6 @@ components:
         - sub_issues_count
         - -sub_issues_count
         - sort_order
-    IssuePriority:
-      description: A work item's priority, from the most to the least urgent.
-      type: string
-      enum:
-        - urgent
-        - high
-        - medium
-        - low
-        - none
     Issue:
       description: A work item of a project, as a list shows it.
       type: object
@@ -4364,121 +4507,6 @@ components:
           description: 'The work item it is under: one of the project''s that is not archived; left out for none.'
           type: string
           format: uuid
-    IssueDetail:
-      description: A work item of a project.
-      type: object
-      additionalProperties: false
-      required:
-        - description_html
-        - id
-        - workspace_id
-        - project_id
-        - sequence_id
-        - name
-        - state_id
-        - priority
-        - start_date
-        - target_date
-        - parent_id
-        - sort_order
-        - completed_at
-        - archived_at
-        - assignee_ids
-        - label_ids
-        - sub_issues_count
-        - created_by_id
-        - updated_by_id
-        - created_at
-        - updated_at
-      properties:
-        description_html:
-          description: Sanitized rich text HTML; at most 500000 characters on input.
-          type: string
-        id:
-          type: string
-          format: uuid
-        workspace_id:
-          type: string
-          format: uuid
-        project_id:
-          type: string
-          format: uuid
-        sequence_id:
-          description: Its number in its project, from 1; with the project's identifier, as in WEB-12.
-          type: integer
-        name:
-          type: string
-        state_id:
-          type: string
-          format: uuid
-        priority:
-          $ref: '#/components/schemas/IssuePriority'
-        start_date:
-          description: The day it starts; null for none.
-          type:
-            - string
-            - 'null'
-          format: date
-        target_date:
-          description: The day it is due, not before its start date; null for none.
-          type:
-            - string
-            - 'null'
-          format: date
-        parent_id:
-          description: The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
-          type:
-            - string
-            - 'null'
-          format: uuid
-        sort_order:
-          description: Its place among its state's work items, the lowest first.
-          type: number
-        completed_at:
-          description: When it was put in a state of the completed group; null in any other state.
-          type:
-            - string
-            - 'null'
-          format: date-time
-        archived_at:
-          description: When it was archived; null when it is not.
-          type:
-            - string
-            - 'null'
-          format: date-time
-        assignee_ids:
-          description: The accounts it is assigned to, by id; one who has left the project since is still one.
-          type: array
-          items:
-            type: string
-            format: uuid
-        label_ids:
-          description: Its labels, by id.
-          type: array
-          items:
-            type: string
-            format: uuid
-        sub_issues_count:
-          description: 'The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own.'
-          type: integer
-        created_by_id:
-          description: The account that created it; null for none.
-          type:
-            - string
-            - 'null'
-          format: uuid
-        updated_by_id:
-          description: The account that changed it last; null for none.
-          type:
-            - string
-            - 'null'
-          format: uuid
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
     IssueUpdate:
       description: Changes the fields it names; a field left out keeps its value.
       type: object

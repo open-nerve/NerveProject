@@ -39,6 +39,7 @@ func (f failedDraftUpdate) Execute(context.Context, uuid.UUID, domain.DraftPatch
 // Refusals cross the real registered HTTP boundary. Swallowing a use-case
 // error, disclosing error internals or losing Retry-After fails this table.
 func TestDraftHTTPRefusals(t *testing.T) {
+	_, storedShape := (httpadapter.IssueCreatePayloadDecoder{}).DecodeCreatePayload([]byte(`{}`))
 	forbidden := shared.Forbidden()
 	invalid := shared.Invalid(shared.FieldError{Field: "project_id", Code: shared.FieldNotAllowed, Message: "not a visible project"})
 	cases := []struct {
@@ -48,18 +49,22 @@ func TestDraftHTTPRefusals(t *testing.T) {
 		body   string
 		ops    []string
 	}{
+
+		{"stored shape", storedShape, 400, `{"status":400,"code":"bad_request","title":"Bad Request","detail":"The request body does not match the API description.","errors":[{"field":"name","code":"required","message":"is required"}]}`, []string{"publish"}},
+		{"project", domain.ErrProjectNotFound, 404, `{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`, []string{"publish"}},
+		{"archived", domain.ErrProjectArchived, 409, `{"status":409,"code":"project.archived","title":"Conflict","detail":"The project is archived; unarchive it to change it."}`, []string{"publish"}},
 		{"workspace", domain.ErrWorkspaceNotFound, 404, `{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`, []string{"list", "create"}},
-		{"missing", domain.ErrDraftNotFound, 404, `{"status":404,"code":"issue.draft_not_found","title":"Not Found","detail":"The draft does not exist, or you cannot see it."}`, []string{"get", "update", "delete"}},
-		{"forbidden", forbidden, 403, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`, []string{"list", "create", "get", "update", "delete"}},
-		{"invalid", invalid, 422, `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.","errors":[{"field":"project_id","code":"not_allowed","message":"not a visible project"}]}`, []string{"list", "create", "update"}},
-		{"changed", domain.ErrDraftChanged, 409, `{"status":409,"code":"issue.draft_changed","title":"Conflict","detail":"The draft's project changed. Please try again."}`, []string{"update", "delete"}},
-		{"busy", shared.ServerBusy(time.Second), 503, busy, []string{"create", "update", "delete"}},
-		{"internal", errGone, 500, `{"status":500,"code":"internal_error","title":"Internal Server Error"}`, []string{"list", "create", "get", "update", "delete"}},
+		{"missing", domain.ErrDraftNotFound, 404, `{"status":404,"code":"issue.draft_not_found","title":"Not Found","detail":"The draft does not exist, or you cannot see it."}`, []string{"get", "update", "delete", "publish"}},
+		{"forbidden", forbidden, 403, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`, []string{"list", "create", "get", "update", "delete", "publish"}},
+		{"invalid", invalid, 422, `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.","errors":[{"field":"project_id","code":"not_allowed","message":"not a visible project"}]}`, []string{"list", "create", "update", "publish"}},
+		{"changed", domain.ErrDraftChanged, 409, `{"status":409,"code":"issue.draft_changed","title":"Conflict","detail":"The draft's project changed. Please try again."}`, []string{"update", "delete", "publish"}},
+		{"busy", shared.ServerBusy(time.Second), 503, busy, []string{"create", "update", "delete", "publish"}},
+		{"internal", errGone, 500, `{"status":500,"code":"internal_error","title":"Internal Server Error"}`, []string{"list", "create", "get", "update", "delete", "publish"}},
 	}
 	for _, tc := range cases {
 		for _, op := range tc.ops {
 			t.Run(op+"/"+tc.name, func(t *testing.T) {
-				uc := httpadapter.UseCases{ListDrafts: failedDraftList{tc.err}, CreateDraft: failedDraftCreate{tc.err}, GetDraft: failedDraftGet{tc.err}, UpdateDraft: failedDraftUpdate{tc.err}, DeleteDraft: &fakeDelete{err: tc.err}}
+				uc := httpadapter.UseCases{PublishDraft: &fakeGet{err: tc.err}, ListDrafts: failedDraftList{tc.err}, CreateDraft: failedDraftCreate{tc.err}, GetDraft: failedDraftGet{tc.err}, UpdateDraft: failedDraftUpdate{tc.err}, DeleteDraft: &fakeDelete{err: tc.err}}
 				method, path, body := "GET", "/api/v0/workspaces/acme/drafts", ""
 				switch op {
 				case "create":
@@ -68,6 +73,8 @@ func TestDraftHTTPRefusals(t *testing.T) {
 					path = "/api/v0/drafts/" + webID.String()
 				case "update":
 					method, path, body = "PATCH", "/api/v0/drafts/"+webID.String(), `{}`
+				case "publish":
+					method, path = "POST", "/api/v0/drafts/"+webID.String()+"/publish"
 				case "delete":
 					method, path = "DELETE", "/api/v0/drafts/"+webID.String()
 				}

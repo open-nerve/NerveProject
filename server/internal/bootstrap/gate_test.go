@@ -270,6 +270,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		name, method, path, body string
 		want                     int // its answer once Web's row is free
 	}{
+		{"draft publication", http.MethodPost, publishPath(createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Gate"}}`).ID), "", http.StatusCreated},
 		{"a deletion", http.MethodDelete, "/api/v0/issues/" + w.newWorkItem(t).String(), "", http.StatusNoContent},
 		{"an archiving", http.MethodPost, "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive", "", http.StatusOK},
 		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", "", http.StatusOK},

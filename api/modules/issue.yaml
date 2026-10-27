@@ -93,6 +93,24 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/drafts/{draft_id}/publish:
+    parameters:
+      - $ref: '#/components/parameters/DraftID'
+    post:
+      operationId: publishDraft
+      tags: [issue]
+      summary: Publish your stored issue draft
+      description: Accepts no request body. Creates from the locked stored payload and soft-deletes the draft atomically.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.draft_not_found, project.not_found, forbidden, validation_failed, issue.draft_changed, project.archived, server_busy]
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/IssueDetail'}
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspaces/{slug}/members/{user_id}/issues:
     parameters:
       - $ref: '#/components/parameters/Slug'

@@ -136,6 +136,7 @@ type ListIssuesUseCase interface {
 
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	PublishDraft            PublishDraftUseCase
 	ListDrafts              ListDraftsUseCase
 	GetDraft                GetDraftUseCase
 	CreateDraft             CreateDraftUseCase
@@ -181,7 +182,7 @@ func Register(router *httpserver.Router, api *httpserver.API, uc UseCases) {
 		RequestErrorHandlerFunc:  api.Errors.BodyError,
 		ResponseErrorHandlerFunc: api.Errors.Write,
 	})
-	var middlewares []gen.MiddlewareFunc
+	middlewares := []gen.MiddlewareFunc{draftPublishBody(api)}
 	for _, m := range api.Middlewares(gen.BodyShapes()) {
 		middlewares = append(middlewares, m)
 	}

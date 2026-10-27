@@ -865,6 +865,9 @@ type ServerInterface interface {
 	// UpdateDraft Replace fields of your issue draft
 	// (PATCH /api/v0/drafts/{draft_id})
 	UpdateDraft(w http.ResponseWriter, r *http.Request, draftID DraftID)
+	// PublishDraft Publish your stored issue draft
+	// (POST /api/v0/drafts/{draft_id}/publish)
+	PublishDraft(w http.ResponseWriter, r *http.Request, draftID DraftID)
 	// DeleteIssueComment Delete a comment as its author or project administrator
 	// (DELETE /api/v0/issue-comments/{comment_id})
 	DeleteIssueComment(w http.ResponseWriter, r *http.Request, commentID uuid.UUID)
@@ -1041,6 +1044,32 @@ func (siw *ServerInterfaceWrapper) UpdateDraft(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateDraft(w, r, draftID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PublishDraft operation middleware
+func (siw *ServerInterfaceWrapper) PublishDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "draft_id" -------------
+	var draftID DraftID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "draft_id", r.PathValue("draft_id"), &draftID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "draft_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublishDraft(w, r, draftID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2581,6 +2610,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/drafts/{draft_id}", wrapper.DeleteDraft)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/drafts/{draft_id}", wrapper.GetDraft)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/drafts/{draft_id}", wrapper.UpdateDraft)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/drafts/{draft_id}/publish", wrapper.PublishDraft)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/members/{user_id}/issues", wrapper.ListMemberIssues)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.ListIssues)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.CreateIssue)
@@ -2741,6 +2771,52 @@ type UpdateDraftdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UpdateDraftdefaultApplicationProblemPlusJSONResponse) VisitUpdateDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PublishDraftRequestObject struct {
+	DraftID DraftID `json:"draft_id"`
+}
+
+type PublishDraftResponseObject interface {
+	VisitPublishDraftResponse(w http.ResponseWriter) error
+}
+
+type PublishDraft201JSONResponse IssueDetail
+
+func (response PublishDraft201JSONResponse) VisitPublishDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PublishDraftdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response PublishDraftdefaultApplicationProblemPlusJSONResponse) VisitPublishDraftResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -4226,6 +4302,9 @@ type StrictServerInterface interface {
 	// UpdateDraft Replace fields of your issue draft
 	// (PATCH /api/v0/drafts/{draft_id})
 	UpdateDraft(ctx context.Context, request UpdateDraftRequestObject) (UpdateDraftResponseObject, error)
+	// PublishDraft Publish your stored issue draft
+	// (POST /api/v0/drafts/{draft_id}/publish)
+	PublishDraft(ctx context.Context, request PublishDraftRequestObject) (PublishDraftResponseObject, error)
 	// DeleteIssueComment Delete a comment as its author or project administrator
 	// (DELETE /api/v0/issue-comments/{comment_id})
 	DeleteIssueComment(ctx context.Context, request DeleteIssueCommentRequestObject) (DeleteIssueCommentResponseObject, error)
@@ -4441,6 +4520,32 @@ func (sh *strictHandler) UpdateDraft(w http.ResponseWriter, r *http.Request, dra
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateDraftResponseObject); ok {
 		if err := validResponse.VisitUpdateDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PublishDraft operation middleware
+func (sh *strictHandler) PublishDraft(w http.ResponseWriter, r *http.Request, draftID DraftID) {
+	var request PublishDraftRequestObject
+
+	request.DraftID = draftID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PublishDraft(ctx, request.(PublishDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PublishDraft")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PublishDraftResponseObject); ok {
+		if err := validResponse.VisitPublishDraftResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

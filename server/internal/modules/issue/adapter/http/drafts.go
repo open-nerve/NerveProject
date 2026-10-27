@@ -95,3 +95,16 @@ func draftResponse(d domain.Draft) (gen.Draft, error) {
 	}
 	return gen.Draft{ID: d.ID, WorkspaceID: d.WorkspaceID, ProjectID: orNull(d.ProjectID), Payload: payload, CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt}, nil
 }
+
+// PublishDraftUseCase consumes only the stored draft.
+type PublishDraftUseCase interface {
+	Execute(context.Context, uuid.UUID) (domain.Issue, error)
+}
+
+func (h handler) PublishDraft(ctx context.Context, req gen.PublishDraftRequestObject) (gen.PublishDraftResponseObject, error) {
+	i, err := h.uc.PublishDraft.Execute(ctx, req.DraftID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.PublishDraft201JSONResponse(issueDetail(i)), nil
+}

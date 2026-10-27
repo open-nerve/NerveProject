@@ -314,7 +314,12 @@ func prepareMatrix(t *testing.T) matrixData {
 		issues.comments(s)
 		issues.links(s)
 		for _, c := range workspaceColumns {
-			_, err := issues.store.InsertDraft(pgtest.Soon(t), issueapp.DraftWrite{ID: s.drafts[workspaceOf(c)+"/"+string(c)], WorkspaceID: s.workspace(workspaceOf(c)), By: s.account(c), Payload: []byte(`{"name":"private"}`), At: seed.now})
+			key := workspaceOf(c) + "/project"
+			if workspaceOf(c) == "acme" {
+				key = "acme/public"
+			}
+			pid := s.project(key)
+			_, err := issues.store.InsertDraft(pgtest.Soon(t), issueapp.DraftWrite{ID: s.drafts[workspaceOf(c)+"/"+string(c)], WorkspaceID: s.workspace(workspaceOf(c)), ProjectID: &pid, By: s.account(c), Payload: []byte(`{"name":"private"}`), At: seed.now})
 			if err != nil {
 				t.Fatal(err)
 			}

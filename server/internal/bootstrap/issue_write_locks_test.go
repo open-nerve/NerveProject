@@ -200,6 +200,9 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 	for _, row := range draftCRUDWrites {
 		t.Run(row.op, func(t *testing.T) { row.checkCRUDLocks(t, w) })
 	}
+	for _, row := range draftPublishWrites {
+		t.Run(row.op, func(t *testing.T) { row.checkPublishLocks(t, w) })
+	}
 }
 
 func (iw issueWrite) checkProjectLocks(t *testing.T, w issueWorld) {

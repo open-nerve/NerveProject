@@ -110,7 +110,7 @@ Task依赖：T1→T2→T3→T4；T5依赖T4（保持可运行CRUD检查点），
 
 ## Task 6：无请求体发布、原子副作用与拒绝顺序
 
-**Files：** 新I/app/publish_draft.go、publish_draft_test.go；I/app/lock_draft.go；I/adapter/http/drafts.go、handler.go；新I/adapter/http/draft_publish_body.go、draft_publish_body_test.go；I/module.go；契约；新B/issue_draft_publish_test.go；扩permission_matrix_drafts_test.go。生成HTTP/TS。
+**Files：** 新I/app/publish_draft.go、publish_draft_test.go、lock_draft_publish.go（复用lock_draft.go的资源预检）；I/adapter/http/drafts.go、handler.go；新I/adapter/http/draft_publish_body.go、draft_publish_body_test.go；I/module.go；契约；新B/issue_draft_publish_test.go、issue_draft_publish_effects_test.go、issue_draft_publish_locks_test.go（按行为/副作用/锁观察拆分）；扩permission_matrix_drafts_test.go、permission_matrix_test.go及三类writer目录/完整性等式和gate_test.go。生成HTTP/TS。
 
 **Interfaces：** `NewPublishDraft(PublishDraftDeps)*PublishDraft` / `Execute(ctx,id)(domain.Issue,error)`；消费T5 decoder/core，并在T3既有DraftLocks上补齐spec§2.3的publish/publishHeld私有签名，成功201 IssueDetail。core返回At给DraftDeletion；无独立clock、写tx、gate。
 
