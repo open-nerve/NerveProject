@@ -399,11 +399,14 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 // about a second before her own request's deadline, could leave the gate.
 // Once the row is free, a change and a creation go through.
 func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
-	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Server.RequestTimeout = 3 * time.Second
-		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: 10 * time.Second, MaxQueue: 1},
-			WriteLockTimeout: 2 * time.Second}
-	})
+	cfg := config.Config{Server: config.ServerConfig{RequestTimeout: 3 * time.Second}, Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: config.IssueConfig{
+		AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: 10 * time.Second, MaxQueue: 1}, WriteLockTimeout: 2 * time.Second}}
+	w := newIssueWorldWith(t, func(c *config.Config) { c.Server.RequestTimeout = 3 * time.Second; c.Issue = cfg.Issue })
+	// The full app and its jobs stay live. Only these two observed requests
+	// use the marked-query pool; both share the same real write gate.
+	pool := requestPool(t, w.pool)
+	writeGate := newWriteGate(cfg.Issue.WriteGate)
+	route := observedIssueRoute(t, pool, busyTx{tx: newIssueJobTx(pool, cfg)}, cfg, writeGate)
 	item := w.newWorkItem(t)
 	path := "/api/v0/issues/" + item.String()
 	change := newRequest(t, http.MethodPatch, w.base+path, w.tokens["bob"], []byte(`{"name":"Mend"}`))
@@ -412,33 +415,50 @@ func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
 	w.contract.CheckRequest(t, create)
 
 	labels := lockedTables(t, w.pool, "issue_labels", "ACCESS EXCLUSIVE")
+	var changed, created exchange
+	changeProbe, createProbe := &requestProbe{}, &requestProbe{}
 	sent := time.Now()
-	changed := sendInBackground(change)
-	pgtest.WaitForLockWaitBehind(t, w.pool, labels.Conn().PgConn(), 5*time.Second)
-	time.Sleep(time.Until(sent.Add(2 * time.Second)))
-	row := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
-	created := sendInBackground(create)
-	pgtest.WaitForLockWaitBehind(t, w.pool, row.Conn().PgConn(), 5*time.Second)
+	collectChange := requestBackground(t, func() error {
+		changed.req, changed.rec = route.sendContext(changeProbe.context(t.Context()), http.MethodPatch, path, w.ids["bob"], `{"name":"Mend"}`)
+		return nil
+	}, func() { requestRelease(t, labels) })
+	requestTableBlocked(t, w.pool, changeProbe, labels.Conn().PgConn().PID(), "issue_labels")
+	// This offset is part of the timeout contract, after observing the actual
+	// precheck wait: alice's 2s lock timeout must outlast bob's 3s request.
+	timer := time.NewTimer(time.Until(sent.Add(2 * time.Second)))
+	defer timer.Stop()
+	<-timer.C
+	row := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR UPDATE", w.web)
+	collectCreate := requestBackground(t, func() error {
+		created.req, created.rec = route.sendContext(createProbe.context(t.Context()), http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", w.ids["alice"], `{"name":"Fix"}`)
+		return nil
+	}, func() { requestRelease(t, row) })
+	requestBlocked(t, w.pool, createProbe, row.Conn().PgConn().PID(), "projects")
 	release(t, labels)
-
-	a := receiveWithin(t, changed, 5*time.Second, "answer to bob's change")
-	if a.err != nil {
-		t.Fatal(a.err)
-	}
+	collectChange()
 	if took := time.Since(sent); took < 3*time.Second || took >= 4*time.Second {
 		t.Errorf("bob's change answered after %v; want at its request's deadline, 3s, before alice's creation left the gate", took)
 	}
-	w.wantBusy(t, "bob's change", change, a.res, a.body)
-	a = receiveWithin(t, created, 5*time.Second, "answer to alice's creation")
-	if a.err != nil {
-		t.Fatal(a.err)
-	}
+	w.wantBusy(t, "bob's change", changed.req, changed.rec.Result(), changed.rec.Body.Bytes())
+	collectCreate()
 	if took := time.Since(sent); took < 4*time.Second {
 		t.Errorf("alice's creation answered %v after bob's change was sent; want at its lock timeout, 4s", took)
 	}
-	w.wantBusy(t, "alice's creation", create, a.res, a.body)
+	w.wantBusy(t, "alice's creation", created.req, created.rec.Result(), created.rec.Body.Bytes())
+	if changeProbe.pid.Load() != 0 || createProbe.pid.Load() != 0 {
+		t.Fatal("finished gate request retained a query PID")
+	}
 
 	release(t, row)
+	// Check the observed route's own gate has released its place, then keep
+	// the original full-app/JWT recovery requests as well.
+	recovery, cancel := context.WithTimeout(t.Context(), cfg.Server.RequestTimeout)
+	defer cancel()
+	leave, err := writeGate.Enter(recovery, w.web)
+	if err != nil {
+		t.Fatal("observed requests did not release their gate", err)
+	}
+	leave()
 	w.send(t, "bob", http.MethodPatch, path, `{"name":"Mend"}`, http.StatusOK)
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", `{"name":"Fix"}`, http.StatusCreated)
 }

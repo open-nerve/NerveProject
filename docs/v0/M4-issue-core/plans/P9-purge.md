@@ -102,6 +102,8 @@ make e2e
 
 **Files：** 新B/purge.go、purge_test.go、purge_integration_test.go、purge_runtime_test.go（复用runtime_role_test.go的splitRoles，避免扩大既有文件）；改B/app.go、app_test.go（手工testConfig补合法Cleanup，普通测试按小时调度）、all_periodic_jobs_test.go、business_clock_jobs_test.go；消费platform/jobs既有登记接口。预计600–1000行。
 
+**完整 F 局部修复文件职责：** 新 B/request_locks_test.go、request_lock_probe_test.go；改 issue_write_locks_test.go、issue_draft_wait_test.go 及其既有调用者、gate_test.go 的 precheck/项目等待 fixture；issue_writes_test.go 与 project_connection_test.go 接续原配置/请求期限。按真实请求 PID 观察 PostgreSQL，再断言实际 blocker/relation 或行等待；普通矩阵的完整 app/JWT 准备、拒绝及 workspace 兼容保持，只有两次锁观测请求用真实 issue.New/dispatcher/InsertTx 模块路由；gate 保留完整 app 恢复并核其观测路由的真实 gate 已释放。新增真实 purge 干扰红绿、错误生产顺序/强度变异及连接复用身份回归，旧 draft 调用机械收敛；无生产 hook/锁协议改动，其他行宽探针留待 T5 trim 前核验。
+
 **Interfaces：** B.Purger、newPurgeDeleted、Execute、purgeJob按spec§2.3；固定kind cleanup.purge_deleted/periodic/RunOnStart，使用四Provided.Purger值和业务Clock。仅purge的InsertOpts加`river.UniqueOpts{ByState: []rivertype.JobState{rivertype.JobStateAvailable,rivertype.JobStatePending,rivertype.JobStateRunning,rivertype.JobStateRetryable,rivertype.JobStateScheduled}}`；不设ByArgs/ByPeriod、不含Completed、不改其他任务。
 
 - [ ] **测试：** 新`TestPurgeDeletedUsesOneCutoffAndModuleOrder`假Clock调用恰1，顺序issue/project/workspace/identity，第二模块失败后total仅已提交数且第三不调用；`TestPurgeDeletedRunsWithRuntimeRole`用真实runtime处理PAT和带活动/comment issue、标签/project/workspace，61d删/59d留。扩`TestAllPeriodicJobsRun`为此时3种周期各startup/重复/队列；新`TestPurgeBusinessClock`偏移61d改变cutoff而调度仍真实时间。

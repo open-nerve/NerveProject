@@ -52,11 +52,16 @@ type moduleRoute struct {
 // newRoute mounts the routes register registers so.
 func newRoute(t *testing.T, register func(*httpserver.Router, *httpserver.API)) moduleRoute {
 	t.Helper()
+	return newRouteWithTimeout(t, register, 3*time.Second)
+}
+
+func newRouteWithTimeout(t *testing.T, register func(*httpserver.Router, *httpserver.API), timeout time.Duration) moduleRoute {
+	t.Helper()
 	logger := slog.New(slog.DiscardHandler)
 	router := httpserver.NewRouter(logger)
 	limit := ratelimit.New(time.Now).Bucket("test", ratelimit.Rate{PerMinute: 600, Burst: 100})
 	api, err := httpserver.NewAPI(httpserver.APIConfig{Logger: logger, Authenticator: tokenIsAccount{}, MaxBodyBytes: 1 << 20,
-		RequestTimeout: 3 * time.Second, IPv6PrefixLen: 64, Anonymous: limit, Authenticated: limit, AuthFailure: limit})
+		RequestTimeout: timeout, IPv6PrefixLen: 64, Anonymous: limit, Authenticated: limit, AuthFailure: limit})
 	if err != nil {
 		t.Fatal(err)
 	}

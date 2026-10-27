@@ -43,7 +43,7 @@ func testDraftPrecheckResources(t *testing.T) {
 			t.Fatal(got, raw)
 		}
 	}
-	draftRelease(t, holder)
+	requestRelease(t, holder)
 	if resources.gates != 0 || resources.transactions != 0 || one.Stat().AcquiredConns() != 0 {
 		t.Fatal("refusal acquired write resources", resources, one.Stat().AcquiredConns())
 	}
@@ -82,11 +82,11 @@ func testDraftGateConnection(t *testing.T) {
 	}
 	defer leave()
 	observed := draftObservedGate{realGate, make(chan struct{})}
-	tx := draftTx(one)
+	tx := requestTx(one)
 	route := newIssueRouteWithGate(t, one, tx, clock.System{}, discardIssueEvents{}, observed)
 	baseline := one.Stat().AcquiredConns()
 	var e exchange
-	collect := draftBackground(t, w.sending(&e, route, "alice", "POST", publishPath(d.ID), ""), leave)
+	collect := requestBackground(t, w.sending(&e, route, "alice", "POST", publishPath(d.ID), ""), leave)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	select {

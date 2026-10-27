@@ -97,13 +97,18 @@ func newIssueRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxMa
 
 func newIssueRouteWithGate(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher, gate issueapp.WriteGate) moduleRoute {
 	t.Helper()
-	return newRoute(t, issue.New(issue.Deps{Events: events, Pool: pool, Tx: tx, JobTx: newIssueJobTx(pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), ArchivePolicies: project.Provide(pool).ArchivePolicies, AutoArchiveInterval: 24 * time.Hour,
-		ReadTx:    postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()),
+	return newIssueRouteWithConfig(t, pool, tx, clock, events, gate, config.Config{Server: config.ServerConfig{RequestTimeout: 3 * time.Second}, Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig})
+}
+
+func newIssueRouteWithConfig(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher, gate issueapp.WriteGate, cfg config.Config) moduleRoute {
+	t.Helper()
+	return newRouteWithTimeout(t, issue.New(issue.Deps{Events: events, Pool: pool, Tx: tx, JobTx: newIssueJobTx(pool, cfg), ArchivePolicies: project.Provide(pool).ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval,
+		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
 		WriteGate: gate, Clock: clock,
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory},
 		Members:    issueMembers{members: workspace.Provide(pool).WorkspaceMemberDirectory},
-		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
+		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register, cfg.Server.RequestTimeout)
 }
 
 // Each write on the work-item side runs every statement of its transaction

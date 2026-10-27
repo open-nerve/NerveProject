@@ -45,6 +45,8 @@
 | T15 | 本 spec 附录、ignored 运行证据；按发现归属原生产/测试文件 | 最终性质变异、race 五遍、完整本地 F；100–350（发现修复另计） |
 | T16 | 本 spec/plan/review（review 新）、`docs/reviews/re-09-M4P9整体审核.md`（目标，编号以实际占用核对）；M4/v0/M3/plane-diff/README；输入 handoffs、P1a–P8 spec§5/review§6 追加回执 | 整分支 deep-review、修复复审与后端逐项交接；350–750 |
 
+T4 完整 F 发现的锁探针修复同属 bootstrap 测试组合职责：新增 B/request_locks_test.go（真实请求 PID、precheck QueryTracer、表/行等待与真实发布路由）和 request_lock_probe_test.go（真实 purge 干扰、连接复用身份）；普通写矩阵及既有 draft PID 调用者共用该 helper，gate 超时 fixture 同步接入。B/issue_writes_test.go、project_connection_test.go 只扩测试配置/期限接续。保留 18+3+1 目录、完整 app 的准备/拒绝/workspace 兼容/恢复请求；锁观测请求仍经真实 issue.New、事务管理、订阅与 InsertTx。该修复不修改生产锁图，其他行宽探针在 T5 引入 trim 前按静态盘点另行核验。
+
 尺寸是计划估算，不是已生成代码的行数；Task 留 5–10% 修复余量，超过约 1500 手写行先按职责重切，不能省略锁/权限反例。新逻辑文件约 400 行以内，静态 SQL、生成物、合理测试表按现有例外处理。
 
 ### 2.2 23 表清理目录、SQL 与模块边界

@@ -23,12 +23,12 @@ func (row draftWriteLock) checkPublishLocks(t *testing.T, w issueWorld) {
 				tables, mode, wantTable = "states", "ACCESS EXCLUSIVE", "states"
 			}
 			held := lockedTables(t, w.pool, tables, mode)
-			tx := draftTx(w.pool)
+			tx := requestTx(w.pool)
 			var e exchange
-			collect := draftBackground(t, draftWrite(t, w, tx, &e, row.method, publishPath(d.ID), ""), func() { draftRelease(t, held) })
-			pid := draftPID(t, tx)
-			draftBlocked(t, w.pool, pid, held.Conn().PgConn().PID(), wantTable)
-			if got := draftWrittenTables(t, w.pool, pid); len(got) != 0 {
+			collect := requestBackground(t, draftWrite(t, w, tx, &e, row.method, publishPath(d.ID), ""), func() { requestRelease(t, held) })
+			pid := requestPID(t, tx)
+			requestTableBlocked(t, w.pool, tx, held.Conn().PgConn().PID(), wantTable)
+			if got := requestWrittenTables(t, w.pool, pid); len(got) != 0 {
 				t.Errorf("wrote %v at %s", got, stage)
 			}
 			if stage != "workspace" {
@@ -46,7 +46,7 @@ func (row draftWriteLock) checkPublishLocks(t *testing.T, w issueWorld) {
 					t.Errorf("D=%s", got)
 				}
 			}
-			draftRelease(t, held)
+			requestRelease(t, held)
 			collect()
 			w.answered(t, e, row.want)
 		})

@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
@@ -206,6 +206,10 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 }
 
 func (iw issueWrite) checkProjectLocks(t *testing.T, w issueWorld) {
+	iw.checkProjectLocksWith(t, w, lockedTables)
+}
+
+func (iw issueWrite) checkProjectLocksWith(t *testing.T, w issueWorld, hold func(*testing.T, *pgxpool.Pool, string, string) pgx.Tx) {
 	t.Helper()
 	// alice's three sends' targets; the callers refused send her
 	// first's.
@@ -228,17 +232,17 @@ func (iw issueWrite) checkProjectLocks(t *testing.T, w issueWorld) {
 		w.contract.CheckRequest(t, req)
 		return sendInBackground(req)
 	}
-	answers := func(name string, answered <-chan answer, want int) {
+	checkAnswer := func(name string, a answer, want int) {
 		t.Helper()
-		a := receiveWithin(t, answered, 10*time.Second, "the answer to "+iw.op+" as "+name)
 		if a.err != nil {
 			t.Fatal(a.err)
 		}
+		w.contract.CheckResponse(t, a.res.Request, a.res)
 		if a.res.StatusCode != want {
 			t.Errorf("%s as %s = %d %s, want %d", iw.op, name, a.res.StatusCode, a.body, want)
 		}
-		// This matrix observes any backend behind its holder. Complete each
-		// fresh link's production crawl before the next lock probe can see it.
+		// Keep the real event publication and complete the production crawl
+		// before the next fixture uses its link.
 		if iw.op == "createIssueLink" && want == http.StatusCreated && a.res.StatusCode == want {
 			var link answeredLink
 			decodeAnswer(t, string(a.body), &link)
@@ -253,34 +257,57 @@ func (iw issueWrite) checkProjectLocks(t *testing.T, w issueWorld) {
 		}
 	}
 
-	// The request probe below is valid only after every fixture crawl has
-	// completed; a metadata worker can otherwise wait behind the same holder.
+	answers := func(name string, answered <-chan answer, want int) {
+		t.Helper()
+		checkAnswer(name, receiveWithin(t, answered, 10*time.Second, "the answer to "+iw.op+" as "+name), want)
+	}
+
+	// Preserve fixture completion checks; they no longer establish request
+	// identity. In particular, purge may remain active throughout these probes.
 	var pendingCrawls, archiveCandidates int
 	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT (SELECT count(*) FROM river_job WHERE kind='issue.crawl_link' AND state<>'completed'),
-		(SELECT count(*) FROM projects WHERE deleted_at IS NULL AND archived_at IS NULL AND archive_in BETWEEN 1 AND 12)`).Scan(&pendingCrawls, &archiveCandidates); err != nil || pendingCrawls != 0 || archiveCandidates != 0 {
-		t.Fatalf("lock probe has %d unfinished crawls and %d auto-archive candidates: %v", pendingCrawls, archiveCandidates, err)
+  (SELECT count(*) FROM projects WHERE deleted_at IS NULL AND archived_at IS NULL AND archive_in BETWEEN 1 AND 12)`).Scan(&pendingCrawls, &archiveCandidates); err != nil || pendingCrawls != 0 || archiveCandidates != 0 {
+		t.Fatalf("fixture has %d unfinished crawls and %d auto-archive candidates: %v", pendingCrawls, archiveCandidates, err)
 	}
-	tables := lockedTables(t, w.pool, issueTables, "EXCLUSIVE")
+
+	// Keep setup, refused callers and workspace compatibility on the full
+	// network/JWT app. Only the two lock-observed requests expose their real
+	// transaction PID through the issue module route. Its publisher still
+	// enqueues real River work, and the app's workers keep running.
+	cfg := config.Config{Server: config.ServerConfig{RequestTimeout: 5 * time.Second}, Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}
+	observe := func(held pgx.Tx) (*requestProbe, func()) {
+		tx := &requestProbe{TxManager: busyTx{tx: newIssueJobTx(w.pool, cfg)}}
+		route := observedIssueRoute(t, w.pool, tx, cfg, newWriteGate(cfg.Issue.WriteGate))
+		var e exchange
+		target := targets[alices]
+		alices++
+		body := iw.body(t, w)
+		req := newRequest(t, iw.method, w.base+target, w.tokens["alice"], []byte(body))
+		w.contract.CheckRequest(t, req)
+		collect := requestBackground(t, w.sending(&e, route, "alice", iw.method, target, body), func() { requestRelease(t, held) })
+		return tx, func() {
+			collect()
+			res := e.rec.Result()
+			res.Request = e.req
+			checkAnswer("alice", answer{res: res, body: e.rec.Body.Bytes()}, iw.want)
+		}
+	}
+	tables := hold(t, w.pool, issueTables, "EXCLUSIVE")
 	for name, want := range map[string]int{"walt": http.StatusForbidden, "wanda": http.StatusForbidden, "olga": http.StatusNotFound} {
 		answers(name, send(name), want)
 	}
-	answered := send("alice")
-	pgtest.WaitForLockWaitBehind(t, w.pool, tables.Conn().PgConn(), 10*time.Second)
-	if table := waitedTable(t, w.pool, tables.Conn().PgConn()); table != "projects" {
-		t.Errorf("%s first waits for %s, not for projects", iw.op, table)
-	}
+	tx, collect := observe(tables)
+	requestTableBlocked(t, w.pool, tx, tables.Conn().PgConn().PID(), "projects")
 	release(t, tables)
-	answers("alice", answered, iw.want)
+	collect()
 
-	waited := lockedTables(t, w.pool, iw.waits, iw.mode)
-	answered = send("alice")
-	pgtest.WaitForLockWaitBehind(t, w.pool, waited.Conn().PgConn(), 10*time.Second)
-	if table := waitedTable(t, w.pool, waited.Conn().PgConn()); table != iw.waits {
-		t.Fatalf("%s waits for %s, not for %s", iw.op, table, iw.waits)
-	}
-	if written := writtenTables(t, w.pool, waited.Conn().PgConn()); len(written) > 0 {
+	waited := hold(t, w.pool, iw.waits, iw.mode)
+	tx, collect = observe(waited)
+	pid := requestTableBlocked(t, w.pool, tx, waited.Conn().PgConn().PID(), iw.waits)
+	if written := requestWrittenTables(t, w.pool, pid); len(written) > 0 {
 		t.Errorf("%s has written %q when it waits for %s: what it holds of Web is no longer its lock's alone", iw.op, written, iw.waits)
 	}
+
 	if lock := lockOn(t, w.pool, "projects WHERE id = $1", w.web); lock != iw.projectLock {
 		t.Errorf("%s holds Web %s when it waits for %s, not FOR NO KEY UPDATE", iw.op, lock, iw.waits)
 	}
@@ -288,7 +315,7 @@ func (iw issueWrite) checkProjectLocks(t *testing.T, w issueWorld) {
 		t.Errorf("%s holds acme %s when it waits for %s", iw.op, lock, iw.waits)
 	}
 	release(t, waited)
-	answers("alice", answered, iw.want)
+	collect()
 
 	cascade := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", w.acme)
 	answers("alice", send("alice"), iw.want)
@@ -316,34 +343,4 @@ func release(t *testing.T, tx pgx.Tx) {
 	if err := tx.Rollback(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-}
-
-// waitedTable is the table whose lock the backend blocked behind holder
-// waits for. The caller must finish its fixture's asynchronous writers before
-// holding the tables: this probe does not identify an HTTP request's backend.
-func waitedTable(t *testing.T, pool *pgxpool.Pool, holder *pgconn.PgConn) string {
-	t.Helper()
-	var table string
-	if err := pool.QueryRow(pgtest.Soon(t), `SELECT l.relation::regclass::text FROM pg_locks l
-		WHERE NOT l.granted AND l.locktype = 'relation' AND $1::int = ANY (pg_blocking_pids(l.pid))`, int64(holder.PID())).Scan(&table); err != nil {
-		t.Fatalf("the table waited for behind backend %d: %v", holder.PID(), err)
-	}
-	return table
-}
-
-// writtenTables are the relations the backend blocked behind holder has
-// written in its transaction, sorted: the tables and indexes it holds ROW
-// EXCLUSIVE, the lock every INSERT, UPDATE and DELETE takes of them and no
-// read or row lock does.
-func writtenTables(t *testing.T, pool *pgxpool.Pool, holder *pgconn.PgConn) []string {
-	t.Helper()
-	const written = `SELECT coalesce(array_agg(DISTINCT h.relation::regclass::text ORDER BY h.relation::regclass::text), '{}')
-		FROM pg_locks h
-		WHERE h.granted AND h.locktype = 'relation' AND h.mode = 'RowExclusiveLock'
-		  AND h.pid IN (SELECT l.pid FROM pg_locks l WHERE NOT l.granted AND $1::int = ANY (pg_blocking_pids(l.pid)))`
-	var tables []string
-	if err := pool.QueryRow(pgtest.Soon(t), written, int64(holder.PID())).Scan(&tables); err != nil {
-		t.Fatalf("the tables written behind backend %d: %v", holder.PID(), err)
-	}
-	return tables
 }

@@ -99,12 +99,12 @@ func (row draftWriteLock) checkCRUDLocks(t *testing.T, w issueWorld) {
 						tables, mode = "draft_issues", "SHARE"
 					}
 					held := lockedTables(t, w.pool, tables, mode)
-					tx := draftTx(w.pool)
+					tx := requestTx(w.pool)
 					var e exchange
 					resources := &collaborationWriteResources{}
 					route := newIssueRouteWithGate(t, w.pool, tx, clock.System{}, discardIssueEvents{}, resources)
-					collect := draftBackground(t, w.sending(&e, route, "alice", row.method, path, body), func() { draftRelease(t, held) })
-					pid := draftPID(t, tx)
+					collect := requestBackground(t, w.sending(&e, route, "alice", row.method, path, body), func() { requestRelease(t, held) })
+					pid := requestPID(t, tx)
 					wantTable := "workspaces"
 					if stage == "project" {
 						wantTable = "projects"
@@ -112,8 +112,8 @@ func (row draftWriteLock) checkCRUDLocks(t *testing.T, w issueWorld) {
 					if stage == "draft" {
 						wantTable = "draft_issues"
 					}
-					draftBlocked(t, w.pool, pid, held.Conn().PgConn().PID(), wantTable)
-					if got := draftWrittenTables(t, w.pool, pid); len(got) != 0 {
+					requestTableBlocked(t, w.pool, tx, held.Conn().PgConn().PID(), wantTable)
+					if got := requestWrittenTables(t, w.pool, pid); len(got) != 0 {
 						t.Errorf("%s wrote %v at %s", row.op, got, stage)
 					}
 					if stage != "workspace" {
@@ -135,7 +135,7 @@ func (row draftWriteLock) checkCRUDLocks(t *testing.T, w issueWorld) {
 							}
 						}
 					}
-					draftRelease(t, held)
+					requestRelease(t, held)
 					collect()
 					w.answered(t, e, row.want)
 					if resources.gates != 0 {
