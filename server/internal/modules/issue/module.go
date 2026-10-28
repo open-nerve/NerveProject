@@ -3,9 +3,9 @@
 // changing, archiving, unarchiving and deleting a work item, listing the
 // work items under one and putting work items under it, and listing a
 // work item's relations, relating it to others and deleting a relation.
-// For the project module's deletions (its IssueCascade port) it
-// soft-deletes a deleted project's rows of them, tells whether work items
-// are in a state, and takes deleted labels off them.
+// Project and workspace deletion events enqueue asynchronous work-item row
+// deletion in the publishing transaction. Its IssueCascade port tells whether
+// work items are in a state and takes deleted labels off them.
 package issue
 
 import (

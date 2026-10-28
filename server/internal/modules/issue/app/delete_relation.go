@@ -32,14 +32,17 @@ func NewDeleteIssueRelation(d DeleteIssueRelationDeps) *DeleteIssueRelation {
 // Execute reads the relation id without a lock: one not there, or
 // deleted, is issue.relation_not_found. Then Locks runs the write on
 // either of its work items (M4 design 3.5, 3.10, convention 7): its
-// precheck, before any lock, both work items read, and issue.update
+// precheck, before authorization, write gates or locks, both work items and
+// their projects must exist and be undeleted, else issue.relation_not_found
+// even when the caller may change the other work item. Then issue.update is
 // decided on the one stored as issue_id, then, when that refuses, on the
 // other, the guest rule first: neither seen is issue.relation_not_found,
 // else a role that may change neither forbidden; then the write gates of
 // both their projects, all at once in ascending id order, which refuse a
 // write that may wait no longer (503 server_busy); then in one
 // transaction those projects FOR NO KEY UPDATE, in ascending id order,
-// both work items read and decided on again, and under them, in this
+// both work items and their projects checked again for existence before
+// deciding again, and under them, in this
 // order: the relation read again, deleted meanwhile
 // issue.relation_not_found; either work item of an archived project
 // refuses it (409 project.archived), then either archived work item (409

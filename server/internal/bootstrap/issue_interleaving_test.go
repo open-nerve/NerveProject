@@ -12,7 +12,6 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -186,8 +185,8 @@ func (w issueWorld) serialize(t *testing.T, first, second racingWrite, a, b *exc
 
 // serializeAt sends first, through a route whose transaction a gate holds
 // open past its writes, then, once it is held, second; once the second
-// waits for a row of table, it opens the gate, at a's released
-// (serializeOnTable). Each answers into its exchange within 10 seconds.
+// request's own transaction waits for the first on table, it opens the
+// gate, at a's released. Each answers into its exchange within 10 seconds.
 func (w issueWorld) serializeAt(t *testing.T, table string, first, second racingWrite, a, b *exchange) {
 	t.Helper()
 	w.serializeAtAfter(t, table, first, second, a, b, nil)
@@ -208,10 +207,12 @@ func (w issueWorld) serializeAtObserved(t *testing.T, table string, first, secon
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	g := newGate()
-	probe := requestTx(w.pool)
+	probe, secondProbe := requestTx(w.pool), requestTx(w.pool)
 	firstWrite, secondWrite := first(t, w, heldTx{probe, g}, a), second(t, w,
-		postgres.NewTxManager(w.pool, 2*time.Second), b)
-	opened, firstErr, secondErr := serializeOnTableAfter(t, ctx, w.pool, g, table, firstWrite, secondWrite, func() { afterWait(probe) })
+		secondProbe, b)
+	opened, firstErr, secondErr := serializeWaiting(t, ctx, g, firstWrite, secondWrite, func() {
+		requestBlocked(t, w.pool, secondProbe, requestPID(t, probe), table)
+	}, func() { afterWait(probe) })
 	if err := errors.Join(firstErr, secondErr); err != nil {
 		t.Fatal(err)
 	}

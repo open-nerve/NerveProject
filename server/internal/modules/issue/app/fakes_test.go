@@ -403,7 +403,7 @@ func (f *fakeIssues) read(id uuid.UUID) (domain.Issue, bool) {
 }
 
 // creatorOf is a stored work item's creator as a read answers it: none for
-// the zero id, as for a work item whose creator's account is purged (P9).
+// the zero id, the fake's representation of a NULL creator read as nil.
 func creatorOf(by uuid.UUID) *uuid.UUID {
 	if by == (uuid.UUID{}) {
 		return nil
