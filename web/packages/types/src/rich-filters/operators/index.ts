@@ -57,8 +57,3 @@ export type TLogicalOperator = (typeof LOGICAL_OPERATOR)[keyof typeof LOGICAL_OP
  * Union type representing all operators that can be used in a filter condition.
  */
 export type TSupportedOperators = (typeof OPERATORS)[keyof typeof OPERATORS];
-
-/**
- * All operators available for use in rich filters UI, including negated versions.
- */
-export type TAllAvailableOperatorsForDisplay = TSupportedOperators;

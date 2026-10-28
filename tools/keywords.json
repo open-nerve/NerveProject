@@ -2549,6 +2549,43 @@
           ]
         }
       }
+    },
+    {
+      "id": "negation-filters",
+      "phase": "M4/P10",
+      "why": "M4/P10b 列表只支持正向 AND；删除否定 API、恒等显示别名和占位 hook，防止重新引入。",
+      "files": {
+        "source": "^web/(?:apps/web/(?:core|ce)|packages/(?:types|utils|shared-state|constants)/src)/.*\\.[cm]?[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\b(?:TAllAvailable(?:OperatorsForDisplay|DateFilterOperatorsForDisplay)|TNegativeOperatorConfig|_?isNegation|allowNegative|negOperatorLabel|useFiltersOperatorConfigs|T(?:UseFiltersOperatorConfigsProps|FiltersOperatorConfigs|FilterConditionNodeForDisplay|OperatorForPayload)|getOperatorForPayload|getDisplayOperator|extractConditionsWithDisplayOperators|allConditionsForDisplay|_?preserveNotGroups)\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "allowNegative: false",
+          "_isNegation: boolean",
+          "TAllAvailableOperatorsForDisplay",
+          "getOperatorForPayload(operator)",
+          "useFiltersOperatorConfigs(props)",
+          "TFilterConditionNodeForDisplay",
+          "preserveNotGroups = true"
+        ],
+        "miss": [
+          "const negative = value.startsWith(\"-\")",
+          "order_by: \"-created_at\"",
+          "getDisplayOperatorByValue(operator, value)"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/types/src/rich-filters/operators/index.ts",
+            "web/apps/web/core/components/rich-filters/filter-item/root.tsx",
+            "web/packages/shared-state/src/utils/rich-filter.helper.ts"
+          ],
+          "miss": ["docs/v0/M4-issue-core/specs/P10b-web-list-data.md", "web/packages/utils/dist/index.js"]
+        }
+      }
     }
   ],
   "exceptions": [

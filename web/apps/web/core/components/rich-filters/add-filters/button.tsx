@@ -49,16 +49,12 @@ export const AddFilterButton = observer(function AddFilterButton<P extends TFilt
   // derived values
   const FilterIcon = iconConfig.iconComponent || FilterOutline;
 
-  const handleFilterSelect = (property: P, operator: TSupportedOperators, isNegation: boolean) => {
-    filter.addCondition(
-      LOGICAL_OPERATOR.AND,
-      {
-        property,
-        operator,
-        value: undefined,
-      },
-      isNegation
-    );
+  const handleFilterSelect = (property: P, operator: TSupportedOperators) => {
+    filter.addCondition(LOGICAL_OPERATOR.AND, {
+      property,
+      operator,
+      value: undefined,
+    });
     onFilterSelect?.(property);
   };
 

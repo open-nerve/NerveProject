@@ -20,23 +20,20 @@ import { DEFAULT_FILTER_VISIBILITY_OPTIONS } from "@nerve/constants";
 import type {
   IFilterAdapter,
   SingleOrArray,
-  TAllAvailableOperatorsForDisplay,
+  TSupportedOperators,
   TExternalFilter,
   TFilterConditionNode,
-  TFilterConditionNodeForDisplay,
   TFilterConditionPayload,
   TFilterExpression,
   TFilterProperty,
   TFilterValue,
   TLogicalOperator,
-  TSupportedOperators,
 } from "@nerve/types";
 import { FILTER_NODE_TYPE } from "@nerve/types";
 // local imports
 import {
   deepCompareFilterExpressions,
   extractConditions,
-  extractConditionsWithDisplayOperators,
   findConditionsByPropertyAndOperator,
   findNodeById,
   hasValidValue,
@@ -60,7 +57,6 @@ import { FilterInstanceHelper } from "./filter-helpers";
  * - onExpressionChange: The callback to notify when the expression changes
  * - hasActiveFilters: Whether the filter instance has any active filters
  * - allConditions: All conditions in the filter expression
- * - allConditionsForDisplay: All conditions in the filter expression
  * - addCondition: Adds a condition to the filter expression
  * - updateConditionOperator: Updates the operator of a condition in the filter expression
  * - updateConditionValue: Updates the value of a condition in the filter expression
@@ -82,7 +78,6 @@ export interface IFilterInstance<P extends TFilterProperty, E extends TExternalF
   hasChanges: boolean;
   isVisible: boolean;
   allConditions: TFilterConditionNode<P, TFilterValue>[];
-  allConditionsForDisplay: TFilterConditionNodeForDisplay<P, TFilterValue>[];
   // computed option helpers
   clearFilterOptions: TClearFilterOptions | undefined;
   saveViewOptions: TSaveViewOptions<E> | undefined;
@@ -98,24 +93,18 @@ export interface IFilterInstance<P extends TFilterProperty, E extends TExternalF
   // filter condition
   findConditionsByPropertyAndOperator: (
     property: P,
-    operator: TAllAvailableOperatorsForDisplay
-  ) => TFilterConditionNodeForDisplay<P, TFilterValue>[];
+    operator: TSupportedOperators
+  ) => TFilterConditionNode<P, TFilterValue>[];
   findFirstConditionByPropertyAndOperator: (
     property: P,
-    operator: TAllAvailableOperatorsForDisplay
-  ) => TFilterConditionNodeForDisplay<P, TFilterValue> | undefined;
+    operator: TSupportedOperators
+  ) => TFilterConditionNode<P, TFilterValue> | undefined;
   addCondition: <V extends TFilterValue>(
     groupOperator: TLogicalOperator,
-    condition: TFilterConditionPayload<P, V>,
-    isNegation: boolean
+    condition: TFilterConditionPayload<P, V>
   ) => void;
-  updateConditionProperty: (
-    conditionId: string,
-    property: P,
-    operator: TSupportedOperators,
-    isNegation: boolean
-  ) => void;
-  updateConditionOperator: (conditionId: string, operator: TSupportedOperators, isNegation: boolean) => void;
+  updateConditionProperty: (conditionId: string, property: P, operator: TSupportedOperators) => void;
+  updateConditionOperator: (conditionId: string, operator: TSupportedOperators) => void;
   updateConditionValue: <V extends TFilterValue>(
     conditionId: string,
     value: SingleOrArray<V>,
@@ -180,7 +169,6 @@ export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter
       hasChanges: computed,
       isVisible: computed,
       allConditions: computed,
-      allConditionsForDisplay: computed,
       // computed option helpers
       clearFilterOptions: computed,
       saveViewOptions: computed,
@@ -214,9 +202,9 @@ export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter
     // if the expression is null, return false
     if (!this.expression) return false;
     // if there are no conditions, return false
-    if (this.allConditionsForDisplay.length === 0) return false;
+    if (this.allConditions.length === 0) return false;
     // if there are conditions, return true if any of them have a valid value
-    return this.allConditionsForDisplay.some((condition) => hasValidValue(condition.value));
+    return this.allConditions.some((condition) => hasValidValue(condition.value));
   }
 
   /**
@@ -242,15 +230,6 @@ export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter
   get allConditions(): IFilterInstance<P, E>["allConditions"] {
     if (!this.expression) return [];
     return extractConditions(this.expression);
-  }
-
-  /**
-   * Returns all conditions in the filter expression for display purposes.
-   * @returns An array of filter conditions for display purposes.
-   */
-  get allConditionsForDisplay(): IFilterInstance<P, E>["allConditionsForDisplay"] {
-    if (!this.expression) return [];
-    return extractConditionsWithDisplayOperators(this.expression);
   }
 
   // ------------ computed option helpers ------------
@@ -287,7 +266,7 @@ export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter
    */
   get canClearFilters(): IFilterInstance<P, E>["canClearFilters"] {
     if (!this.expression) return false;
-    if (this.allConditionsForDisplay.length === 0) return false;
+    if (this.allConditions.length === 0) return false;
     return this.clearFilterOptions ? !this.clearFilterOptions.isDisabled : true;
   }
 
@@ -366,12 +345,11 @@ export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter
    * Adds a condition to the filter expression.
    * @param groupOperator - The logical operator to use for the condition.
    * @param condition - The condition to add.
-   * @param isNegation - Whether the condition should be negated.
    */
-  addCondition: IFilterInstance<P, E>["addCondition"] = action((groupOperator, condition, isNegation = false) => {
+  addCondition: IFilterInstance<P, E>["addCondition"] = action((groupOperator, condition) => {
     const conditionValue = condition.value;
 
-    this.expression = this.helper.addConditionToExpression(this.expression, groupOperator, condition, isNegation);
+    this.expression = this.helper.addConditionToExpression(this.expression, groupOperator, condition);
 
     if (hasValidValue(conditionValue)) {
       this._notifyExpressionChange();
@@ -384,7 +362,7 @@ export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter
    * @param property - The new property for the condition.
    */
   updateConditionProperty: IFilterInstance<P, E>["updateConditionProperty"] = action(
-    (conditionId: string, property: P, operator: TSupportedOperators, isNegation: boolean) => {
+    (conditionId: string, property: P, operator: TSupportedOperators) => {
       if (!this.expression) return;
       const conditionBeforeUpdate = cloneDeep(findNodeById(this.expression, conditionId));
       if (!conditionBeforeUpdate || conditionBeforeUpdate.type !== FILTER_NODE_TYPE.CONDITION) return;
@@ -394,8 +372,7 @@ export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter
         this.expression,
         conditionId,
         property,
-        operator,
-        isNegation
+        operator
       );
 
       if (updatedExpression) {
@@ -411,7 +388,7 @@ export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter
    * @param operator - The new operator for the condition.
    */
   updateConditionOperator: IFilterInstance<P, E>["updateConditionOperator"] = action(
-    (conditionId: string, operator: TSupportedOperators, isNegation: boolean) => {
+    (conditionId: string, operator: TSupportedOperators) => {
       if (!this.expression) return;
       const conditionBeforeUpdate = cloneDeep(findNodeById(this.expression, conditionId));
       if (!conditionBeforeUpdate || conditionBeforeUpdate.type !== FILTER_NODE_TYPE.CONDITION) return;
@@ -431,7 +408,6 @@ export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter
         this.expression,
         conditionId,
         operator,
-        isNegation,
         shouldResetConditionValue
       );
 

@@ -1,5 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { workItemFiltersAdapter } from "@nerve/shared-state";
+import { toProjectFilters } from "@/lib/issue-filters";
 import { EIssueFilterType } from "@nerve/constants";
 import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
@@ -178,11 +180,82 @@ it("replaces filters whole instead of retaining removed conditions", async () =>
   await read.promise;
   const patch = await requestedIssue(
     nerve,
-    () => store.updateFilterExpression("ws", "A", { and: [{ state_id__in: "some-state" }] }),
+    () => store.updateFilterExpression("ws", "A", { and: [{ state_id__in: "019a0000-0000-7000-8000-000000000001" }] }),
     ["PATCH", "/api/v0/me/projects/A/preferences"]
   );
-  expect(patch.call.body).toEqual({ filters: { state_id: ["some-state"] } });
-  patch.call.answer(json(200, preferencesOf({ filters: { state_id: ["some-state"] } })));
+  expect(patch.call.body).toEqual({ filters: { state_id: ["019a0000-0000-7000-8000-000000000001"] } });
+  patch.call.answer(json(200, preferencesOf({ filters: { state_id: ["019a0000-0000-7000-8000-000000000001"] } })));
   await patch.promise;
-  expect(store.getIssueFilters("A")?.richFilters).toEqual({ and: [{ state_id__in: "some-state" }] });
+  expect(store.getIssueFilters("A")?.richFilters).toEqual({
+    and: [{ state_id__in: "019a0000-0000-7000-8000-000000000001" }],
+  });
+});
+
+it("F01 saves and reads subscriber/date AND filters through UI and the actual list query, then clears them", async () => {
+  const { app, nerve } = tab;
+  const store = app.issue.projectIssuesFilter;
+  const read = await requestedIssue(nerve, () => store.fetchFilters("ws", "A"), [
+    "GET",
+    "/api/v0/me/projects/A/preferences",
+  ]);
+  read.call.answer(json(200, preferencesOf()));
+  await read.promise;
+  const filters = {
+    subscriber_id: ["me"],
+    label_id: ["none", "019a0000-0000-7000-8000-000000000001"],
+    target_date: ["2026-10-01..", "..2026-10-31"],
+  };
+  const patch = await requestedIssue(
+    nerve,
+    () =>
+      store.updateFilterExpression("ws", "A", {
+        and: [
+          { subscriber_id__in: "me" },
+          { label_id__in: "none,019a0000-0000-7000-8000-000000000001" },
+          { target_date__range: "2026-10-01," },
+          { target_date__range: ",2026-10-31" },
+        ],
+      }),
+    ["PATCH", "/api/v0/me/projects/A/preferences"]
+  );
+  expect(patch.call.body).toEqual({ filters });
+  patch.call.answer(json(200, preferencesOf({ filters })));
+  await patch.promise;
+  const reload = await requestedIssue(nerve, () => store.fetchFilters("ws", "A"), [
+    "GET",
+    "/api/v0/me/projects/A/preferences",
+  ]);
+  reload.call.answer(json(200, preferencesOf({ filters })));
+  await reload.promise;
+  const internal = workItemFiltersAdapter.toInternal(store.getIssueFilters("A")!.richFilters);
+  if (!internal) throw new Error("Missing UI expression");
+  expect(toProjectFilters(workItemFiltersAdapter.toExternal(internal))).toEqual(filters);
+  const list = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 20 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  expect(list.call.query).toMatchObject({ subscriber_id: "me", label_id: "none,019a0000-0000-7000-8000-000000000001" });
+  expect(list.call.queryEntries.filter(([key]) => key === "target_date")).toEqual([
+    ["target_date", "2026-10-01.."],
+    ["target_date", "..2026-10-31"],
+  ]);
+  list.call.answer(json(200, { total: 0, data: [], next_cursor: null }));
+  await list.promise;
+  const clear = await requestedIssue(nerve, () => store.updateFilterExpression("ws", "A", {}), [
+    "PATCH",
+    "/api/v0/me/projects/A/preferences",
+  ]);
+  expect(clear.call.body).toEqual({ filters: {} });
+  clear.call.answer(json(200, preferencesOf()));
+  await clear.promise;
+  expect(store.getIssueFilters("A")?.richFilters).toEqual({});
+  const cleared = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 20 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  expect(cleared.call.query).toEqual({ limit: "20", order_by: "-created_at", sub_issue: "true" });
+  cleared.call.answer(json(200, { total: 0, data: [], next_cursor: null }));
+  await cleared.promise;
 });

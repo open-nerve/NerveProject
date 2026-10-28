@@ -87,6 +87,7 @@ export const WORK_ITEM_FILTER_PROPERTY_KEYS = [
   "target_date",
   "assignee_id",
   "mention_id",
+  "subscriber_id",
   "created_by_id",
   "label_id",
   "state_id",

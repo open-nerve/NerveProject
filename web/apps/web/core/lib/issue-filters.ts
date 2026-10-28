@@ -69,39 +69,117 @@ const names: Record<string, string> = {
   assignees__first_name: "assignee_name",
 };
 
-/** UI expressions are a local representation; unsupported combinations are cleared. */
-export function toProjectFilters(expression: TWorkItemFilterExpression): ProjectIssueFilters {
+type FilterField = (typeof fields)[number];
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+const isDateField = (field: string) => field === "start_date" || field === "target_date";
+const isId = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+function isDay(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1];
+}
+function isDateCondition(value: string): boolean {
+  if (value === "none" || isDay(value)) return true;
+  const bounds = value.split("..");
+  if (bounds.length !== 2) return false;
+  const [from, to] = bounds;
+  return Boolean(from || to) && (!from || isDay(from)) && (!to || isDay(to)) && (!from || !to || from <= to);
+}
+function validValue(field: FilterField | "project_id", value: string): boolean {
+  switch (field) {
+    case "state_group":
+      return ["backlog", "unstarted", "started", "completed", "cancelled"].includes(value);
+    case "priority":
+      return ["urgent", "high", "medium", "low", "none"].includes(value);
+    case "start_date":
+    case "target_date":
+      return isDateCondition(value);
+    case "label_id":
+      return value === "none" || isId(value);
+    case "assignee_id":
+      return value === "none" || value === "me" || isId(value);
+    case "created_by_id":
+    case "mention_id":
+    case "subscriber_id":
+      return value === "me" || isId(value);
+    default:
+      return isId(value);
+  }
+}
+function cleanValues(field: FilterField | "project_id", input: unknown): string[] | undefined {
+  if (!Array.isArray(input) || !input.length) return undefined;
+  const values: string[] = [];
+  for (const value of input) {
+    if (typeof value !== "string" || !validValue(field, value)) return undefined;
+    values.push(value);
+  }
+  if (isDateField(field) && values.includes("none") && values.length > 1) return undefined;
+  return values;
+}
+function cleanFilters(input: unknown): ProjectIssueFilters {
   const result: ProjectIssueFilters = {};
-  const conditions = "and" in expression && Array.isArray(expression.and) ? expression.and : [expression];
-  for (const condition of conditions)
-    for (const [key, input] of Object.entries(condition)) {
-      if (typeof input !== "string") continue;
-      const at = key.lastIndexOf("__");
-      const field = aliases[key.slice(0, at)] ?? key.slice(0, at);
-      const allowed = fields.find((candidate) => candidate === field);
-      const operator = key.slice(at + 2);
-      if (!allowed || !["exact", "in", "range"].includes(operator)) continue;
-      const date = allowed === "start_date" || allowed === "target_date";
-      const values = date ? [operator === "range" ? input.replace(",", "..") : input] : input.split(",");
-      if (values.some((value) => value.includes("fromnow") || value.includes(";"))) continue;
-      result[allowed] = [
-        ...(result[allowed] ?? []),
-        ...values.filter(Boolean).map((value) => (value === "None" ? "none" : value)),
-      ];
-    }
-  for (const field of ["start_date", "target_date"] as const) {
-    const values = result[field];
-    if (values && values.includes("none") && values.length > 1) delete result[field];
+  if (!isRecord(input)) return result;
+  for (const field of fields) {
+    const values = cleanValues(field, input[field]);
+    if (values) result[field] = values;
   }
   return result;
 }
 
+/** Invalid values or unrepresentable ANDs clear the whole field, never widen it into an OR. */
+export function toProjectFilters(expression: TWorkItemFilterExpression): ProjectIssueFilters {
+  const result: ProjectIssueFilters = {};
+  if (!isRecord(expression)) return result;
+  const conditions = "and" in expression ? expression.and : [expression];
+  if (!Array.isArray(conditions)) return result;
+  const seen = new Set<FilterField>();
+  const invalid = new Set<FilterField>();
+  for (const condition of conditions) {
+    if (!isRecord(condition)) continue;
+    for (const [key, input] of Object.entries(condition)) {
+      const at = key.lastIndexOf("__");
+      const property = key.slice(0, at);
+      const field = fields.find((candidate) => candidate === (aliases[property] ?? property));
+      if (!field) continue;
+      const operator = key.slice(at + 2);
+      const date = isDateField(field);
+      if (seen.has(field) && !date) invalid.add(field);
+      seen.add(field);
+      if (typeof input !== "string" || !(date ? ["exact", "range"] : ["exact", "in"]).includes(operator)) {
+        invalid.add(field);
+        continue;
+      }
+      const value = input === "None" ? "none" : input;
+      const values =
+        operator === "range"
+          ? [value.replace(",", "..")]
+          : operator === "in"
+            ? value.split(",").map((v) => (v === "None" ? "none" : v))
+            : [value];
+      // A date exact condition is a single day/none; range must carry both slots, including an empty bound.
+      if (date && (operator === "range" ? value.split(",").length !== 2 : value !== "none" && !isDay(value))) {
+        invalid.add(field);
+        continue;
+      }
+      const cleaned = cleanValues(field, values);
+      if (!cleaned) invalid.add(field);
+      else result[field] = [...(result[field] ?? []), ...cleaned];
+    }
+  }
+  for (const field of invalid) delete result[field];
+  return cleanFilters(result);
+}
+
 export function toFilterExpression(filters: ProjectIssueFilters): TWorkItemFilterExpression {
   const and: TWorkItemFilterConditionData[] = [];
+  const cleaned = cleanFilters(filters);
   for (const field of fields) {
-    const values = filters[field];
-    if (!values?.length) continue;
-    if (field === "start_date" || field === "target_date")
+    const values = cleaned[field];
+    if (!values) continue;
+    if (isDateField(field))
       for (const value of values) {
         and.push(
           value.includes("..") ? { [`${field}__range`]: value.replace("..", ",") } : { [`${field}__exact`]: value }
@@ -113,15 +191,17 @@ export function toFilterExpression(filters: ProjectIssueFilters): TWorkItemFilte
 }
 
 function group(field: string | null | undefined): IssueListGroupField | undefined {
-  return field ? (groups[field] ?? Object.values(groups).find((value) => value === field)) : undefined;
+  return Object.entries(groups).find(([alias, value]) => field === alias || field === value)?.[1];
 }
 function order(value = "-created_at"): IssueListOrder {
+  if (typeof value !== "string") return "-created_at";
   const negative = value.startsWith("-");
   const bare = negative ? value.slice(1) : value;
   const mapped = `${negative ? "-" : ""}${names[bare] ?? bare}`;
   return orders.find((entry) => entry === mapped) ?? "-created_at";
 }
 export function projectListQuery(filters: ProjectIssueFilters, display: Display = {}): ProjectIssueQuery {
+  display ??= {};
   const groupBy =
     display.layout === "calendar"
       ? "target_date"
@@ -130,7 +210,7 @@ export function projectListQuery(filters: ProjectIssueFilters, display: Display 
         : group(display.group_by);
   const sub = display.layout === "kanban" ? group(display.sub_group_by) : undefined;
   return {
-    ...filters,
+    ...cleanFilters(filters),
     order_by: order(display.order_by),
     sub_issue: display.sub_issue === false ? "false" : "true",
     ...(groupBy && groupBy !== "project_id" ? { group_by: groupBy } : {}),
@@ -144,14 +224,16 @@ export function memberListQuery(
   display: Display = {},
   relation: MemberIssueQuery["relation"]
 ): MemberIssueQuery {
+  display ??= {};
   const groupBy = group(display.group_by);
+  const cleaned = cleanFilters(filters);
+  const projectIds = cleanValues("project_id", filters?.project_id);
   return {
     relation,
-    ...(filters.project_id?.length ? { project_id: filters.project_id } : {}),
+    ...(projectIds ? { project_id: projectIds } : {}),
     ...Object.fromEntries(
-      ["state_group", "priority", "label_id", "start_date", "target_date"].flatMap((field) => {
-        const key = fields.find((candidate) => candidate === field)!;
-        return filters[key] ? [[key, filters[key]]] : [];
+      (["state_group", "priority", "label_id", "start_date", "target_date"] as const).flatMap((key) => {
+        return cleaned[key] ? [[key, cleaned[key]]] : [];
       })
     ),
     order_by: order(display.order_by),

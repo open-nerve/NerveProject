@@ -48,22 +48,19 @@ export interface IFilterInstanceHelper<P extends TFilterProperty, E extends TExt
   addConditionToExpression: <V extends TFilterValue>(
     expression: TFilterExpression<P> | null,
     groupOperator: TLogicalOperator,
-    condition: TFilterConditionPayload<P, V>,
-    isNegation: boolean
+    condition: TFilterConditionPayload<P, V>
   ) => TFilterExpression<P> | null;
   handleConditionPropertyUpdate: (
     expression: TFilterExpression<P>,
     conditionId: string,
     property: P,
-    operator: TSupportedOperators,
-    isNegation: boolean
+    operator: TSupportedOperators
   ) => TFilterExpression<P> | null;
   // group operations
   restructureExpressionForOperatorChange: (
     expression: TFilterExpression<P>,
     conditionId: string,
     newOperator: TSupportedOperators,
-    isNegation: boolean,
     shouldResetValue: boolean
   ) => TFilterExpression<P> | null;
 }
@@ -168,46 +165,41 @@ export class FilterInstanceHelper<
    * @param expression - The current filter expression
    * @param groupOperator - The logical operator to use for the condition
    * @param condition - The condition to add
-   * @param isNegation - Whether the condition should be negated
    * @returns The updated filter expression
    */
   addConditionToExpression: IFilterInstanceHelper<P, E>["addConditionToExpression"] = (
     expression,
     groupOperator,
-    condition,
-    isNegation
-  ) => this._addConditionByOperator(expression, groupOperator, this._getConditionPayloadToAdd(condition, isNegation));
+    condition
+  ) => this._addConditionByOperator(expression, groupOperator, createConditionNode(condition));
 
   /**
    * Updates the property and operator of a condition in the filter expression.
-   * This method updates the property, operator, resets the value, and handles negation properly.
+   * This method updates the property and operator and resets the value.
    * @param expression - The filter expression to operate on
    * @param conditionId - The ID of the condition being updated
    * @param property - The new property for the condition
    * @param operator - The new operator for the condition
-   * @param isNegation - Whether the condition should be negated
    * @returns The updated expression
    */
   handleConditionPropertyUpdate: IFilterInstanceHelper<P, E>["handleConditionPropertyUpdate"] = (
     expression,
     conditionId,
     property,
-    operator,
-    isNegation
+    operator
   ) => {
     const payload = { property, operator, value: undefined };
 
-    return this._updateCondition(expression, conditionId, payload, isNegation);
+    return this._updateCondition(expression, conditionId, payload);
   };
 
   // ------------ group operations ------------
 
   /**
-   * Restructures the expression when a condition's operator changes between positive and negative.
+   * Restructures the expression when a condition's operator changes between supported operators.
    * @param expression - The filter expression to operate on
    * @param conditionId - The ID of the condition being updated
    * @param newOperator - The new operator for the condition
-   * @param isNegation - Whether the operator is negation
    * @param shouldResetValue - Whether to reset the condition value
    * @returns The restructured expression
    */
@@ -215,30 +207,14 @@ export class FilterInstanceHelper<
     expression,
     conditionId,
     newOperator,
-    isNegation,
     shouldResetValue
   ) => {
     const payload = shouldResetValue ? { operator: newOperator, value: undefined } : { operator: newOperator };
 
-    return this._updateCondition(expression, conditionId, payload, isNegation);
+    return this._updateCondition(expression, conditionId, payload);
   };
 
   // ------------ private helpers ------------
-
-  /**
-   * Gets the condition payload to add to the expression.
-   * @param conditionNode - The condition node to add
-   * @param isNegation - Whether the condition should be negated
-   * @returns The condition payload to add
-   */
-  private _getConditionPayloadToAdd = (
-    condition: TFilterConditionPayload<P, TFilterValue>,
-    _isNegation: boolean
-  ): TFilterExpression<P> => {
-    const conditionNode = createConditionNode(condition);
-
-    return conditionNode;
-  };
 
   /**
    * Handles the logical operator switch for adding conditions.
@@ -262,18 +238,16 @@ export class FilterInstanceHelper<
   }
 
   /**
-   * Updates a condition with the given payload and handles negation wrapping/unwrapping.
+   * Updates a condition with the given payload.
    * @param expression - The filter expression to operate on
    * @param conditionId - The ID of the condition being updated
    * @param payload - The payload to update the condition with
-   * @param isNegation - Whether the condition should be negated
-   * @returns The updated expression with proper negation handling
+   * @returns The updated expression
    */
   private _updateCondition = (
     expression: TFilterExpression<P>,
     conditionId: string,
-    payload: Partial<TFilterConditionNode<P, TFilterValue>>,
-    _isNegation: boolean
+    payload: Partial<TFilterConditionNode<P, TFilterValue>>
   ): TFilterExpression<P> | null => {
     // Update the condition with the payload
     updateNodeInExpression(expression, conditionId, payload);

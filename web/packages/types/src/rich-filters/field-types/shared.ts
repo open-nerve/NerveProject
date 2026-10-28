@@ -8,21 +8,13 @@ import type { ReactNode } from "react";
 import type { TFilterValue } from "../expression";
 
 /**
- * Negative operator configuration for operators.
- * - allowNegative: Whether the operator supports negation
- * - negOperatorLabel: Label to use when the operator is negated
- */
-type TNegativeOperatorConfig = { allowNegative: true; negOperatorLabel?: string } | { allowNegative?: false };
-
-/**
  * Base filter configuration shared by all filter types.
  * - operatorLabel: Label to use for the operator
- * - negativeOperatorConfig: Configuration for negative operators
  */
 export type TBaseFilterFieldConfig = {
   isOperatorEnabled?: boolean;
   operatorLabel?: string;
-} & TNegativeOperatorConfig;
+};
 
 /**
  * Individual option for select/multi-select filters.

@@ -43,7 +43,7 @@ const createGroupTransformResult = <P extends TFilterProperty>(
   groupExpression: TFilterGroupNode<P> | null,
   shouldNotify: boolean
 ): TTreeTransformResult<P> => ({
-  expression: groupExpression ? unwrapGroupIfNeeded(groupExpression, true) : null,
+  expression: groupExpression ? unwrapGroupIfNeeded(groupExpression) : null,
   shouldNotify,
 });
 

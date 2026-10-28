@@ -7,11 +7,7 @@
 import { get } from "lodash-es";
 // nerve imports
 import { DATE_OPERATOR_LABELS_MAP, EMPTY_OPERATOR_LABEL, OPERATOR_LABELS_MAP } from "@nerve/constants";
-import type {
-  TAllAvailableOperatorsForDisplay,
-  TFilterValue,
-  TAllAvailableDateFilterOperatorsForDisplay,
-} from "@nerve/types";
+import type { TSupportedOperators, TFilterValue, TSupportedDateFilterOperators } from "@nerve/types";
 
 // -------- OPERATOR LABEL UTILITIES --------
 
@@ -20,7 +16,7 @@ import type {
  * @param operator - The operator to get the label for
  * @returns The label for the operator
  */
-export const getOperatorLabel = (operator: TAllAvailableOperatorsForDisplay | undefined): string => {
+export const getOperatorLabel = (operator: TSupportedOperators | undefined): string => {
   if (!operator) return EMPTY_OPERATOR_LABEL;
   return get(OPERATOR_LABELS_MAP, operator, EMPTY_OPERATOR_LABEL);
 };
@@ -30,7 +26,7 @@ export const getOperatorLabel = (operator: TAllAvailableOperatorsForDisplay | un
  * @param operator - The operator to get the label for
  * @returns The label for the operator
  */
-export const getDateOperatorLabel = (operator: TAllAvailableDateFilterOperatorsForDisplay | undefined): string => {
+export const getDateOperatorLabel = (operator: TSupportedDateFilterOperators | undefined): string => {
   if (!operator) return EMPTY_OPERATOR_LABEL;
   return get(DATE_OPERATOR_LABELS_MAP, operator, EMPTY_OPERATOR_LABEL);
 };
@@ -43,6 +39,5 @@ export const getDateOperatorLabel = (operator: TAllAvailableDateFilterOperatorsF
  * @returns True if the operator supports date filters
  */
 export const isDateFilterOperator = <V extends TFilterValue = TFilterValue>(
-  operator: TAllAvailableOperatorsForDisplay
-): operator is TAllAvailableDateFilterOperatorsForDisplay<V> =>
-  Object.keys(DATE_OPERATOR_LABELS_MAP).includes(operator);
+  operator: TSupportedOperators
+): operator is TSupportedDateFilterOperators<V> => Object.keys(DATE_OPERATOR_LABELS_MAP).includes(operator);

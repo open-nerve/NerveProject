@@ -17,7 +17,12 @@ import type {
   TWorkItemFilterExpressionData,
   TWorkItemFilterProperty,
 } from "@nerve/types";
-import { LOGICAL_OPERATOR, MULTI_VALUE_OPERATORS, WORK_ITEM_FILTER_PROPERTY_KEYS } from "@nerve/types";
+import {
+  COMPARISON_OPERATOR,
+  LOGICAL_OPERATOR,
+  MULTI_VALUE_OPERATORS,
+  WORK_ITEM_FILTER_PROPERTY_KEYS,
+} from "@nerve/types";
 import { createConditionNode, createAndGroupNode, isAndGroupNode, isConditionNode } from "@nerve/utils";
 // local imports
 import { FilterAdapter } from "../rich-filters/adapter";
@@ -203,7 +208,12 @@ class WorkItemFiltersAdapter extends FilterAdapter<TWorkItemFilterProperty, TWor
     const rawValue = data[key];
 
     // Parse comma-separated values
-    const parsedValue = MULTI_VALUE_OPERATORS.includes(operator) ? this._parseFilterValue(rawValue) : rawValue;
+    const parsedValue =
+      operator === COMPARISON_OPERATOR.RANGE && typeof rawValue === "string"
+        ? rawValue.split(",")
+        : MULTI_VALUE_OPERATORS.includes(operator)
+          ? this._parseFilterValue(rawValue)
+          : rawValue;
 
     return [property as TWorkItemFilterProperty, operator, parsedValue];
   };

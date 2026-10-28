@@ -299,7 +299,7 @@ it("pageMergesDeduplicateDroppedRowAndKeepsServerCursorBoundary", async () => {
 it("memberInitialAndNextPagesKeepRelationAndExplicitProjectScope", async () => {
   runInAction(() => {
     app.issue.profileIssuesFilter.filters.actor = {
-      richFilters: { project_id__in: "A,B" },
+      richFilters: { project_id__in: "019a0000-0000-7000-8000-000000000001,019a0000-0000-7000-8000-000000000002" },
       displayProperties: undefined,
       kanbanFilters: undefined,
       displayFilters: { order_by: "sort_order", group_by: "project" },
@@ -313,7 +313,7 @@ it("memberInitialAndNextPagesKeepRelationAndExplicitProjectScope", async () => {
   );
   expect(first.call.query).toEqual({
     relation: "created",
-    project_id: "A,B",
+    project_id: "019a0000-0000-7000-8000-000000000001,019a0000-0000-7000-8000-000000000002",
     order_by: "sort_order",
     sub_issue: "true",
     group_by: "project_id",
@@ -599,4 +599,32 @@ it.each([200, 403])("listCreatedDuringWrite prepares directories; %s preserves t
     expect(app.issue.projectIssues.currentList?.error).toBeDefined();
     expect(app.issue.projectIssues.groups?.get("")?.stale).toBe(true);
   }
+});
+
+it.each([
+  {
+    and: [
+      { project_id__in: "019a0000-0000-7000-8000-000000000001" },
+      { project_id__in: "019a0000-0000-7000-8000-000000000002" },
+    ],
+  },
+  { project_id__exact: "019a0000-0000-7000-8000-000000000001,019a0000-0000-7000-8000-000000000002" },
+  { project_id__in: ",019a0000-0000-7000-8000-000000000001" },
+])("F01 clears an unrepresentable member project condition %j", async (expression) => {
+  runInAction(() => {
+    app.issue.profileIssuesFilter.filters.actor = {
+      richFilters: expression,
+      displayProperties: undefined,
+      kanbanFilters: undefined,
+      displayFilters: {},
+    };
+  });
+  const request = await requestedIssue(
+    nerve,
+    () => app.issue.profileIssues.fetchIssues("ws", "actor", "init-loader", { limit: 15 }, "assigned"),
+    ["GET", "/api/v0/workspaces/ws/members/actor/issues"]
+  );
+  expect(request.call.query).toEqual({ relation: "assigned", order_by: "-created_at", sub_issue: "true", limit: "15" });
+  request.call.answer(json(200, { total: 0, data: [], next_cursor: null }));
+  await request.promise;
 });

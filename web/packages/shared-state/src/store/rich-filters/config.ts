@@ -15,19 +15,12 @@ import type {
   TFilterProperty,
   TFilterValue,
   TOperatorSpecificConfigs,
-  TAllAvailableOperatorsForDisplay,
 } from "@nerve/types";
 import { FILTER_FIELD_TYPE } from "@nerve/types";
-import {
-  getOperatorLabel,
-  isDateFilterType,
-  getDateOperatorLabel,
-  isDateFilterOperator,
-  getOperatorForPayload,
-} from "@nerve/utils";
+import { getOperatorLabel, isDateFilterType, getDateOperatorLabel, isDateFilterOperator } from "@nerve/utils";
 
 type TOperatorOptionForDisplay = {
-  value: TAllAvailableOperatorsForDisplay;
+  value: TSupportedOperators;
   label: string;
 };
 
@@ -37,9 +30,9 @@ export interface IFilterConfig<P extends TFilterProperty> extends TFilterConfig<
   firstOperator: TSupportedOperators | undefined;
   // computed functions
   getOperatorConfig: (
-    operator: TAllAvailableOperatorsForDisplay
+    operator: TSupportedOperators
   ) => TOperatorSpecificConfigs[keyof TOperatorSpecificConfigs] | undefined;
-  getLabelForOperator: (operator: TAllAvailableOperatorsForDisplay | undefined) => string;
+  getLabelForOperator: (operator: TSupportedOperators | undefined) => string;
   getDisplayOperatorByValue: <T extends TSupportedOperators>(operator: T, value: TFilterValue) => T;
   getAllDisplayOperatorOptionsByValue: (value: TFilterValue) => TOperatorOptionForDisplay[];
   // actions
@@ -110,7 +103,7 @@ export class FilterConfig<P extends TFilterProperty> implements IFilterConfig<P>
    * @returns The operator config.
    */
   getOperatorConfig: IFilterConfig<P>["getOperatorConfig"] = computedFn((operator) =>
-    this.supportedOperatorConfigsMap.get(getOperatorForPayload(operator).operator)
+    this.supportedOperatorConfigsMap.get(operator)
   );
 
   /**

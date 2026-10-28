@@ -36,13 +36,19 @@ export class ProfileIssues extends BaseIssuesStore {
     const filters = this.issueFilterStore.getIssueFilters(userID);
     const expression = filters?.richFilters ?? {};
     const conditions = "and" in expression && Array.isArray(expression.and) ? expression.and : [expression];
-    const projectIDs = conditions.flatMap((condition) =>
-      Object.entries(condition).flatMap(([key, value]) =>
-        (key === "project_id__in" || key === "project_id__exact") && typeof value === "string"
-          ? value.split(",").filter(Boolean)
-          : []
-      )
+    const projects = conditions.flatMap((condition) =>
+      Object.entries(condition).filter(([key]) => key.startsWith("project_id__"))
     );
+    const [projectKey, projectValue] = projects.length === 1 ? projects[0] : [];
+    // A second project condition is an independent AND, which CSV cannot express.
+    const projectIDs =
+      typeof projectValue !== "string"
+        ? undefined
+        : projectKey === "project_id__in"
+          ? projectValue.split(",")
+          : projectKey === "project_id__exact"
+            ? [projectValue]
+            : undefined;
     const query = {
       ...memberListQuery({ ...toProjectFilters(expression), project_id: projectIDs }, filters?.displayFilters, view),
       limit: options.limit,
