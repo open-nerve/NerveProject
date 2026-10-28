@@ -451,3 +451,88 @@ DELETE Web **7.018667ms**；DELETE beta **9.941459ms**，都204。下表运行�
 所有变异一次一个、使用同一开启scale的完整命令，原patch、原/变异字节、SHA、实际RUN/失败原因/exit/raw在task-14-mutations及checks/task-14-M*。M40仅真实生产接线临时改小，不写River状态或metadata；配置原值45s与实际临时接线1ns分别记录。全部恢复后task-14-scale-final完整非skip绿；恢复后的生产app.go与BASE逐字相同。
 
 三个最终Go文件先gofmt及make lint-go（0 issues），再正式规模；最终字节与该lint、最终规模和五族影响回归源码归档逐文件相同。影响选择器为 `^Test(JobStateObserverRunsWithRuntimeRole|NewAppDeleteRowsJobRuns|ProjectDeletionPublishesAndEnqueuesAtomically|WorkspaceDeletionPublishesOnlyLockedProjects|RuntimeRoleDeletesDraftsInWorkspaceWithoutProjects)$`。按主控限定不重跑整bootstrap/F，下一完整F在T15；独立要求/质量审查由主控安排。最初unused import编译错及源码根定位失败均完整保留，不计性质红或绿。
+
+## 附录 C：Task15 最终性质审计与作者验证（2026-10-28）
+
+作者审计/本轮行为运行的准确产品基线为 `d26ae92686d4c4dde798bc3371ce8f287e7eeaf6`。本轮只追加本附录；生产FK临时变异已恢复，没有永久生产、测试、契约、配置或生成物改动。作者完成范围是证据审计、缺失FK生产反例、普通交错/race及独立late验证；主控独立评审、最终完整F、push/准确分支CI及T16整审/文档仍按各自责任接续，不能据本附录提前勾A12/A13或声明集成完成。
+
+旧证据按已核库存和增量消费，没有重跑或重新遍历全部历史原件；失败/变异存活/零匹配/环境噪声均保留。详细入口：
+
+- [A1–A13与24个生产代表、实际命令和原件hash](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)；[完整机器可读记录](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.json)保留所选原索引记录、源码身份、argv/cwd、结果及现有RUN/skip统计，不补造旧日志未提供的计数。
+- [本轮canonical原件索引](../../../../.superpowers/sdd/P9-purge/task-15-raw-index.json)逐项记录实际RUN/PASS/FAIL/SKIP、原始输出、exit、前后准确HEAD/dirty字节与SHA；节点数包含父子测试及race重复，不等于独立故事数。
+- [逐函数/批写审计](../../../../.superpowers/sdd/P9-purge/task-15-batch-audit.md)与[当前源码相关性](../../../../.superpowers/sdd/P9-purge/task-15-source-relevance.json)记录事务、取消、原错与锁保护的实际范围；不是替代运行的静态PASS。
+
+### C.1 A1–A13逐项结论与未关闭责任
+
+|验收|实际证据接续|作者审计边界|
+|---|---|---|
+|A1|T1 `t1-schema-green`；T3 `t3-bootstrap-catalog-impact`；本轮 `t15-fk-baseline/red/green`|23索引、模块schema、23清理者/55入边（含测试非purge源）与错误动作；本轮补真实业务迁移FK反例，不把旧probe反例算生产变异|
+|A2|T1最终905节点、T2最终15聚焦、T3每表/图及T4 runtime恢复链|四模块cutoff、活父保留对照、id键集、独立批提交/错误计数；账户/会话范围未扩大；旧失败不改写为全包绿|
+|A3|T4最终聚焦/模块顺序与一次Clock、M11b真实跨周期唯一性；T5四周期；T8登记守卫|统一cleanup顺序与四种periodic实际completed；request种类不冒充新增periodic|
+|A4|T5六SQL反例；T6最终M15/M16；T9/T10异步请求交错接续|活/归档留20、last_saved_at/id全序、三层墓碑隔离、项目N/每项目事务；不以旧同步请求完成时点证明新语义|
+|A5|T9 `t9-final-source-focused`、M25；T10 M27/28、runtime草稿/CLI；T12交错25|原事务M3+事件/任务共同提交或回滚；精确本次Changes/零项目任务/原AtBy、Old排除；两个同步方法已删，State/Label保持|
+|A6|T8短批/候选、T10 `t10-adapter-final`每表失败与直接重做、T12完整目录和两worker、本轮普通/race|13表顺序、先锁关系后归属、零Written推进、旧审计/sameAt正确；手工重复Execute只称幂等，不冒充River重试|
+|A7|T11最终403、权限锁2327、影响193；T12最终影响357；本轮目录1|37=15读22写与锁目录精确相等；完整窗口/NULL/OwnOnly/Historical证据保持。search无cursor/total，member不支持子组且保留精确422|
+|A8|本轮普通38/38、race五遍190/190|八族覆盖旧2/3/11/16/23、24/25及双项目锁重判；双UUID/两个删除者/真实PID审计；普通组无40P01/deadlock/DATA RACE|
+|A9|T12真实River六族21节点、M36/M37；本轮late两族6节点|真实多snooze且attempt1、23514部分提交后同job重试、真实25discarded/一次耗尽日志；late两受害侧原40P01重试收敛单列|
+|A10|T10 runtime/W3原戳迁移；T13最终I21/I16两故事、P4/W2/W3八故事、M38/M39|API old/recent/live同拓扑、同库单nerve共同+61d、最近写后微秒水位/fresh attempt、本代完成门、保存ID直查与全行对照；不再仅靠父回拨|
+|A11|T14 `task-14-scale-final`与主控计数/样本复核；M40生产接线反例|引用附录B原测量身份/参数/42计数/6payload/160样本/7job/双窗口；没有重测或改写为本次HEAD测量|
+|A12|T4/T8/T12各自准确HEAD完整F；T1–14独评；本轮24生产代表、race/late|**待办**：T15独评、主控最终clean HEAD完整F及准确branchCI、T16整分支deep-review/修复复审；未来获授权mainCI另核|
+|A13|本附录逐批写与责任审计|**待T16**逐项同步§3.23、总体/M3设计、README六配置、契约/plane-diff/handoff及独立文档复审；handoff status保持open，不提前关闭M4/M5/M8|
+
+### C.2 24个真实生产代表与分类
+
+每项红、恢复绿、恢复manifest及当前函数相关性都列在上述证据映射。选集跨模块SQL、cutoff、真实FK、注册、窗口、预算、关系归属、保留和真实规模；同一早期/final链不重复计数：
+
+|类别|代表|
+|---|---|
+|cutoff/模块SQL/事务/目录|M1严格cutoff、M2独立pool批、M4子先父登记、M6 issue cutoff、M7 id键集、M8 comment_reactions登记、M9跨模块顺序|
+|调度/保留|M11b活动状态唯一、M12-created最新保存排序、M15项目N/事务|
+|扫描/关系/预算/注册|M17取T8当前scanner反例、M18早删端归属、M21运行时预算、M23-kind任务目录|
+|请求/窗口|M25事务内Publish、M27准确活项目集合、M31-final可见目录、M32-final Historical不错误过滤|
+|真实交错/生命周期|M34实际关系id锁序、M36真实snooze映射、M37原40P01传播|
+|E2E/规模/真实FK|M39生产PAT SQL漏清且gen/build、M40生产DeleteBudget=1ns实际scale拒绝、T15-FK真实迁移动作拒绝|
+
+M29故事、M30测试目录、M38共享TS完成门、M41三个fixture反例和T3隔离probe/内存目录反例均单列为测试层，不计生产数量。M34前两轮exit0存活保留，使用最终nested明确锁序红；M36负61d是明确attempt3/errors2/snoozes0红，正61d是终态超时；M37优先explicit原错后错误completed反例，旧等failure超时仍保留。
+
+T10已删除的同步wrapper/旧关系直写SQL不继续作当前生产证明；rowSteps/rowProgress/deleteRowBatches实际函数由T8扫描反例和T10迁移/T12竞争接续。T11之后至本基线无server非测试/契约生产净变化，测试依赖变化按T12影响及T13最终聚焦接续，不能仅凭生产hash不变就虚称旧测试在最终字节重跑。
+
+T13 M39原SQL/sqlc/binary完整恢复；I21最后lint只改独立读并发/排序，PAT保存ID直接空集断言不变。M38初clean binary与TS dirty build的VCS modified差异明确保留；不把测试门算Go生产变异。T14 M40确实改生产bootstrap接线，job发生snooze及第二次running(1)后被single-run断言拒绝，恢复后的完整scale非skip通过；M41不混入此结论。
+
+### C.3 新补真实FK性质红与恢复
+
+在真实 `00021_issue_issue_comments.sql` 中仅把 `issue_comments.issue_id → issues.id` 的 `ON DELETE CASCADE` 临时改成合法 `RESTRICT`，其余迁移/索引/端点/测试未改。新测试binary按go:embed的当次迁移建立隔离新template，不使用已应用旧版本的外部库；迁移成功后真实PG目录读取confdeltype，现有guard明确失败：`unsafe incoming issue_comments.issue_id -> issues: r`。不是迁移语法/编译红，也不声称有行DELETE触发23503。
+
+baseline、红、恢复绿都执行：
+
+```sh
+go -C server test -p=1 -count=1 -v ./internal/bootstrap -run '^TestPurgeCatalogCoversTablesAndIncomingKeys$'
+```
+
+三次分别1 PASS/1 FAIL/1 PASS，均实际RUN且0SKIP；红exit1，其余exit0。变异后及恢复后分别执行 `make gen`；当次完整生成范围为81文件（Go apigen、各模块HTTP/PG gen、api/dist、TS schema），前后逐字/hash相等，不沿用T12旧77计数。迁移original=restored=`8f21c00ae62f9693e55fe29ab72164e4029d8bff6d356abc5b7f490c759ce66c`，mutated=`620f99d6655efdf9ec9951db4d6eedf78d19203e46d726969fcbe9c48aac8a8e`。完整字节、patch、manifest及恢复记录见[生产FK链](../../../../.superpowers/sdd/P9-purge/task-15-fk/record.json)。没有永久修改既有迁移或生成物。
+
+### C.4 本轮普通/race/late与批写审计
+
+普通组先 `-count=1`，再相同八族 `-race -count=5`，cwd均P9 worktree，未并行容器套件：
+
+```sh
+go -C server test -p=1 -count=1 -v ./internal/bootstrap -run '^Test(DeletionInterleaving24|DeletionInterleaving25|AWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize|DeletingARelatedWorkItemAndTheOtherEndsProjectSerialize|RelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize|RelatingAcrossProjectsAndDeletingTheWorkspaceSerialize|DraftPublishAndProjectDeletionSerialize|DeleteRelationChecksBothLockedProjects)$'
+go -C server test -p=1 -race -count=5 -v ./internal/bootstrap -run '^Test(DeletionInterleaving24|DeletionInterleaving25|AWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize|DeletingARelatedWorkItemAndTheOtherEndsProjectSerialize|RelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize|RelatingAcrossProjectsAndDeletingTheWorkspaceSerialize|DraftPublishAndProjectDeletionSerialize|DeleteRelationChecksBothLockedProjects)$'
+go -C server test -p=1 -count=1 -v ./internal/bootstrap -run '^Test(LateDeleteRowsAfterPurge|LateDeleteRowsAndPurgeRetry)$'
+```
+
+结果普通38/38、race190/190、late6/6，exit0且0FAIL/0SKIP。普通两组无40P01/deadlock/DATA RACE；late实际两侧分别成为受害者，失败侧同一River job由attempt1/errors1重试attempt2完成，另一侧正常，目录收敛；删除侧原始40P01错误链直接留raw。不得把允许的late死锁计入“普通无死锁”，也不得写全系统绝无死锁。旧容器`Shell not found in container`探测噪声仍完整保留，后续ready/行为通过，不称无噪声。
+
+本轮对既有 `TestDeletionWindowCoversEveryIssueOperation` 定向运行1/1证明最终契约↔37目录↔22写并集；没有重跑未受语义变化影响的完整权限/E2E/scale。静态核对23条pool purge、13条普通软删SQL及独立关系协议、T11目录/锁形状守卫字节身份，具体逐函数记录见批写审计。
+
+软删各批在id升序 `FOR NO KEY UPDATE` 后写原At/By，关系先锁再读另一端归属；事务成功才计Written和推进候选。物理purge按批准§2.2为排序候选加单条pool DELETE，不把候选ORDER BY写成DELETE物理锁序。trim按批准§2.4每项目N/JobTx隔离，不伪造version行显式升序锁。这三类保护和真实并发证据分别记载，没有新造锁协议。
+
+ctx取消不再开新批、SQL传原ctx、错误保链；JobTx沿平台既有语义，COMMIT/ROLLBACK用WithoutCancel加独立期限，commit无答复仍是不确定结果，不能承诺“取消一定撤回”。rollback自身失败优先基础设施错误是既有协议。worker保原At/By/PG错误、Complete=false映射Snooze，真实失败25次耗尽；没有吞40P01或改成HTTP503。
+
+### C.5 最终检查点与交接待办
+
+附录B测量仍绑定 `4c7379f1` 加原dirty scale字节，主控已将该精确源码绑定 `d26ae926`；本轮文档提交不是测量HEAD。T15没有改变性能生产路径，不重测并不抹掉原测量环境、observer开销和最大525ms写样本边界。
+
+T12 `2aa26ab9` 的七项本地F已通过；其远端run `40610708261`唯一已知W11快捷键问题的190行原始输出已由owner提供、待重跑，不声称远端绿，也不因本轮聚焦通过推断CI问题已修复。T13/T14局部结果不能替代最终F。
+
+按批准分工，作者完成本附录和聚焦验证后交主控独评；主控在最终clean HEAD串行执行七项完整F，再push并核准确branch head_sha及三个job，必要产品修复后重新取得受影响最终检查点。T16另负责全分支deep-review/修复复审及§7列出的文档/后端子项交接。未来main合并/mainCI/归档清理另等明确授权；本附录不关闭整M4或后续阶段。
