@@ -1,6 +1,6 @@
 # M4/P9 物理清理、版本保留与异步删除评审记录
 
-> **当前接续（2026-10-28）：M4/P9实施与终审完成、集成待办。** 详见§8–12及[整体审核](../../../reviews/re-09-M4P9整体审核.md)。§1–7保留2026-10-27准备期原始判断，不代表当前产品状态。
+> **当前接续（2026-10-28）：P9 已完成集成与归档清理。** 准确 main、CI 和新证据根见§14。§1–13及其待授权/待CI/不合并语句保留各自时点的历史，不覆盖本节最新接续。
 
 日期：2026-10-27。分支 `codex/m4-p9`，基线 `6b9d08d4821f1423c7bb9795557727c206b7880f`。**准备与独立静态预检 Approved；2项局部遗漏已修订复审，开放 High/Medium/Low 均为0；未实现 P9。** 配套：[spec](../specs/P9-purge.md)、[plan](../plans/P9-purge.md)、[deep-review报告](../../../reviews/re-08-M4P9预检审核.md)。
 
@@ -175,3 +175,17 @@ M4/P9实施与终审完成、集成待办。两席文档独评及[CORE-1/2修复
 正式回归先在旧helper上明确红、修复后绿；调用族6个顶层测试/105个含子测试PASS，聚焦race五遍20个顶层/135个含子测试PASS、0skip；白名单反例红后精确恢复，恢复测试及局部lint通过。首次新增夹具试写SQL NULL被真实NOT NULL约束拒绝，已改为允许的JSON null，失败原件保留，不当产品性质红。全部源码身份与结果见[修复报告](../../../../.superpowers/sdd/P9-purge/ci-refusal-fix-report.md)和[原件收据](../../../../.superpowers/sdd/P9-purge/ci-refusal-fix-receipt.json)。没有产品、数据库迁移或性能路径变更，不重测T14规模。
 
 本轮[限定 deep-review 复审](../../../../.superpowers/sdd/P9-purge/ci-refusal-fix-review.md)已通过，CI-SNAPSHOT-1 ADDRESSED、0新增发现；主控已核10份原件与最终源码身份，见[核验收据](../../../../.superpowers/sdd/P9-purge/ci-refusal-fix-controller-verification.json)。完整本地七项及准确最终分支CI由主控接续，并写入[最新交付收据](../../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)。历史f9失败保留，不把此前e003全绿冒作本次通过。P9仍不合并、不清理，main和M4总体收尾状态不变。
+
+
+## 14. 授权合并、main CI 与归档清理（2026-10-28）
+
+负责人明确授权 P9 `--no-ff` 合并、核准确 main CI 后归档清理，再准备 P10 spec/plan/预检、暂不实现。最终分支 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 的七项本地门禁与[分支 CI 40639521407](https://github.com/open-nerve/NerveProject/actions/runs/40639521407)已核通过，最终修复复审零开放发现；没有沿用 e003 或 f9 的结果替代它。
+
+- 合并前 main `6b9d08d4821f1423c7bb9795557727c206b7880f`；`--no-ff` 合并为 `4599a9cfc5be90b2c242977f194157778a5f6ec9`，两父提交分别为原 main 与上述最终分支。合并树 `892cc0583a018ee2110499420b1c3751ab9e7d47` 与已测分支完全相同；本轮没有重复无变化的本地七门禁，仍独立验证 main CI。
+- 系统 `/usr/bin/git push origin main` 成功，local/origin main 身份相同；[准确 main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 全绿：server `122663210129`（8分18秒）、web `122663210418`（4分30秒）、e2e `122665873450`（5分34秒）。本次未重跑。公开 HTML 原件和指纹保存在 [main 核验收据](/Users/xiaoruan/project/nerve-project/.superpowers/sdd/P9-integration-20261028/verified-success.json)；已登录 Chrome UI 同样显示 E2E succeeded。
+- 归档 **3,317 文件、136,629,586 字节及 1 空目录**，逐文件 SHA-256/字节/模式和完整集合核对通过；另将 77,503 个可再生依赖/构建文件及 2 空目录明确分类，未知项为 0。未用强制清理。manifest SHA-256：`7d7d51e8007591b92cab787189af7976a6da0ced224f414343fc5f646e6e0180`。
+- 先 archive/verify，再正常删除远端合并分支、`git worktree remove` 和 `git branch -d`；P9 本地/远端分支及原 worktree 均已清理，清理后 `verify-archive` 再核通过。[清理收据](/Users/xiaoruan/project/nerve-project/.superpowers/sdd/P9-integration-20261028/cleanup.json)、[完整归档清单](/Users/xiaoruan/project/nerve-project/.superpowers/sdd/P9-integration-20261028/archive-manifest.json)、[独立归档方案审查](/Users/xiaoruan/project/nerve-project/.superpowers/sdd/P9-integration-20261028/archive-audit.md)保留全过程。
+
+**历史原件迁移规则**：原工作树根 `/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m4-p9/` 下的 ignored 证据，现以相同相对路径保存在 `/Users/xiaoruan/project/nerve-project/.superpowers/sdd/P9-integration-20261028/worktree-evidence/`。因此原 E9 `.superpowers/sdd/P9-purge/` 的新根为 [/Users/xiaoruan/project/nerve-project/.superpowers/sdd/P9-integration-20261028/worktree-evidence/.superpowers/sdd/P9-purge/](/Users/xiaoruan/project/nerve-project/.superpowers/sdd/P9-integration-20261028/worktree-evidence/.superpowers/sdd/P9-purge/)。旧 JSON 里的绝对路径和旧报告字节均未重写；本文旧相对链接/绝对源路径按此映射读取。集成回执位于 archive 外；原可变交付指针在归档前更新，其旧字节另存 `branch-final-receipt-before-integration.json`。归档冻结后不再补写。
+
+P9 的 T16 集成门关闭。P10a/P10b 两段按既定拆分准备文档；P10b 执行前仍须取未来 P10a 集成后的 main 重核。M4 §14 的复合完成线、总体 §9.4、8份输入 handoff 总状态、M5–M8 最终 closeout、C12 和整体性能收尾均保持开放。

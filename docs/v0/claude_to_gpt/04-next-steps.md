@@ -115,3 +115,12 @@ P8 `drafts-search` 最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的[�
 最终产品F：准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json)。准确产品分支CI：准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI。文档静态/独立复审：首次31文档静态核对见[静态收据](../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；两席文档独评及[CORE-1/2修复复审](../../../.superpowers/sdd/P9-purge/task-16-fix1-review.md)已闭环，见[主控核证](../../../.superpowers/sdd/P9-purge/task-16-fix1-controller-verification.json)；最终状态/注释小diff仍交主控限定核验，最终文档HEAD及其准确分支CI由主控[交付收据](../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI。T12/T15旧检查点分别有准确分支CI成功收据；T12旧attempt1 W11失败仍是历史事实，未声称查明/修复根因。SP2仅引用4c7379f1+dirty源码绑定d26的原测量，不倒填当前HEAD。
 
 本轮只完成P9后端与文档交接，不启动P10，不合并/清理。M4总体§14/总体设计§9.4、输入handoff status、C12三浏览器及M5–M8最终closeout继续待所属收尾。负责人未来明确授权后才--no-ff合并，核准确main SHA CI及归档哈希，再清理分支/worktree。
+
+
+## 11. 当前接续点（2026-10-28，P9 集成后）
+
+P9经授权--no-ff合并main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845)三个任务全绿；3,317文件/136,629,586字节/1空目录归档核hash，清理P9本地/远端分支与worktree后再次核验通过，见[P9 review §14](../M4-issue-core/reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)。以上未集成快照均不覆盖本节。
+
+当前 `codex/m4-p10a` / `.codex/worktress/codex/m4-p10a` 仅准备既定两段：[P10a spec](../M4-issue-core/specs/P10a-web-issue-types.md)、[plan](../M4-issue-core/plans/P10a-web-issue-types.md)；[P10b spec](../M4-issue-core/specs/P10b-web-list-data.md)、[plan](../M4-issue-core/plans/P10b-web-list-data.md)。静态预检结果由各阶段review及[deep-review](../../reviews/re-10-M4P10预检审核.md)接续；T1尚未实施，关键词phase仍M4/P9，启动P10a T1才按既定守卫语法设M4/P10。P10b当前是依赖预检，实施前必须在P10a已集成且main CI绿的基线重核。M4总体§14/总体设计§9.4、handoff总状态和最终closeout不提前关闭。
+
+**预检阻断 P10A-S1：** 保留的 M6/M7 领域页自身仍请求未实现的旧接口，与 P10a T8 整页零失败要求冲突。局部文档修订单独完成复审；范围问题提交后按03等负责人裁定。建议保持工作项列表删除范围，把 M6/M7 自身页面的零失败验收正式归回所属里程碑；另一方案是扩大页面收窄范围，撤下依赖未实现接口的领域展示/交互。两方案均未应用，不自行降低完成线、不开始T1。

@@ -170,7 +170,7 @@ Claude 的会话有这些额外的限制，都来自它的权限设置，不是�
 
 它们留下的痕迹是 plan 里的命令都写绝对路径。
 
-## 9. P9当前证据与后续接续（2026-10-28）
+## 9. P9交付前证据快照与后续接续（2026-10-28）
 
 M4/P9实施与终审完成、集成待办；首次整审238文件60363行与d253/e003局部复审、两席文档独评及CORE-1/2修复复审闭环；当前产品e003e96625ba51264d3aeb77729729d53a770103，最终F/准确分支CI/T16文档独评见 [P9 review](../M4-issue-core/reviews/P9-purge-review.md)，最终文档HEAD CI另核，不由产品CI代替。M4总体/后续阶段未完成，本轮不合并。
 
@@ -184,3 +184,6 @@ M4/P9实施与终审完成、集成待办；首次整审238文件60363行与d253
 
 
 **P9最终交付接续（2026-10-28）：** M4/P9实施与终审完成、集成待办。最终文档HEAD及其准确分支CI由主控[交付收据](../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI；两席文档独评及CORE-1/2修复复审见[P9 review](../M4-issue-core/reviews/P9-purge-review.md)。M4总体、输入handoff总状态和后续阶段保持开放。
+
+
+**P9 集成后接续（2026-10-28）：** P9已完成：最终369b39a0授权--no-ff合并main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845)三任务全绿，3,317个证据文件归档并逐hash核验后，本地/远端分支和worktree已清理。原件新根、manifest及清理后再次核验见[P9 review §14](../M4-issue-core/reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)。以上“不合并/待授权/待CI”保留为历史时点；P10仅准备，M4总体与后续交接仍开放。

@@ -653,7 +653,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **列表的词汇在 `issue/domain`，`project` 经端口用它**（控制者的裁定，独立评审 M13）：`issue/domain/listvocab.go` 定义筛选参数名和每个参数的取值语法（id、`none`、`me`、优先级、状态组、日期的条件）、分组码和排序码，以及每种页面（项目、个人主页）允许哪些。`issue` 用它解析列表的查询参数；`project` 检查显示设置的 `PATCH` 时经它声明的端口 `IssueListSettings`（`Validate(filters, displayFilters, displayProperties) []FieldError`），由 `issue.Provide` 交出 `issue/app.ListSettings` 纯实现，复用这份domain词汇（不要连接池；project/issue各自声明app小值，只有bootstrap逐字段转换，3.3）。两处用同一份规则；列表不会自动应用保存的偏好，由客户端显式把保存值转换为查询参数，T15 I5已验证同参数等价与无参数不自动套用。
   - 为什么不放进 `shared`（第一稿的做法，M3 设计 11.4 的"两个模块必须一致的纯取值规则"）：这份词汇随 M5–M7 一直长（附件数、迭代、模块、视图），放进 `shared` 就让所有模块共享一份不断变大的工作项领域的词汇；端口的方向（`project` 声明、`issue` 实现）与 `IssueCascade` 相同，没有新的依赖方向（11.10）。
 - **接口**：M3 的 `getProjectPreferences`、`updateProjectPreferences`（`api/modules/project.yaml:744-797`）的结构加三个字段（5.2）；`PATCH` 带上哪一个就整体替换哪一个（与 `navigation` 相同）。不合格 422（`filters.label_id[0]`、`display_filters.group_by` 等，`not_allowed`）。谁能读写：项目的任何有效成员，只有自己那一行（M3 照旧）。
-- **只存在浏览器的**（Plane 相同，R4 第 C.8 节）：已归档的列表、个人主页的筛选和显示设置（`localStorage` 的 `issue_local_filters`；草稿页没有筛选和显示设置，3.15，对抗性评审 M11）；看板折叠的组（`kanban_filters`）。Plane 的已归档列表读写的键不一致（`archived/filter.store.ts:131` 读 `richFilters`、`:175` 写 `rich_filters`），筛选从不恢复；P13 改为同一个键。
+- **只存在浏览器的**（Plane 相同，R4 第 C.8 节）：已归档的列表、个人主页的筛选和显示设置（`localStorage` 的 `issue_local_filters`；草稿页没有筛选和显示设置，3.15，对抗性评审 M11）；看板折叠的组（`kanban_filters`）。Plane 的已归档列表读写的键不一致（`archived/filter.store.ts:131` 读 `richFilters`、`:175` 写 `rich_filters`），筛选从不恢复；P10b T9 改为同一个键，P13 核对页面恢复行为。
 - **M3 的关键词守卫的例外**：`/user-properties/` 两处 `until: "M4"`（`tools/keywords.json:2526`）在 `phase` 改为 `M4/P1` 的那一刻就到期（`tools/keywords.mjs:3-6,195`：`until` 不晚于 `phase` 即到期，守卫失败）。所以 P1a 开始时把 `phase` 改为 `M4/P1` 的**同一个提交**里，把它的 `until` 改为 `M4/P11`（P1b 的 `phase` 照旧是 `M4/P1`：守卫只认 `M<n>/P<k>`，第 12 节）：P10b 删除这两个旧方法和例外（项目页的筛选 store 改接新接口的 Phase，M3 交接第 5 节），`until` 取删除它的 Phase 的下一个，P10b 进行中它仍有效（7.9）。
 
 ### 3.18 搜索与按编号取（总体设计 6.9）
@@ -744,19 +744,21 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **`Reconciled.fetchPart(part, read, merge)`**（加在 `reconciled.ts`，约 40 行）：取值的一部分（一组、一格的下一页）。
   - 值还没取到时什么都不做。
   - 它在外期间开始了一次整体的 `fetch`，或同一个 `part` 开始了更新的一次 `fetchPart`，它的应答不写（与 `fetch` 被超越的规则相同），返回 `undefined`。
-  - 应答到达时，`merge(当前的值, 应答)` 得到新的值（被回答的那一组的 `total` 取应答的 `total`，不在本地已加减过的数上接着算），再把它在外期间确认的修改按确认的顺序在新的值上重做一次；重做时修改拿到这一次的应答（下面"重做"一条按它判断）。
-  - 整体的 `fetch` 照旧：它的应答写下全部的组（第一页、总数、游标），在它开始之前发出、仍在外的 `fetchPart` 随之作废。
-- **列表的值**（`PagedGroups`，`core/lib/paged-groups.ts`，纯函数，不依赖 MobX）：`{total, groups: Map<键, Group>, subgroupTotals?: Map<子组键, 数>}`，`Group = {total, rows: Row[], nextCursor, boundary, stale, subgroups?: Map<子组键, Group>}`，`Row = {id, key, updatedAt}`。
+  - 应答到达时，`merge(当前的值, 应答)` 得到新的值（被回答的那一组的 `total` 取应答的 `total`，不在本地已加减过的数上接着算），再把它在外期间确认的修改按确认的顺序在新的值上重做一次；重做时修改拿到这一次的原应答（下面"重做"一条按它判断），只对这次回答并重置的计数和行范围补差，不能把未回答部分已确认的增减再做一次。
+  - 整体的 `fetch` 照旧：它的应答写下全部的组（第一页、总数、游标），在它开始之前发出、仍在外的 `fetchPart` 随之作废。另提供 `invalidate()`：只作废在外整体和部分读取，保留当前值；成功树删除后由本项目列表调用，再标 `stale`，不依赖列表是否显示。
+- **列表的值**（`PagedGroups`，`core/lib/paged-groups.ts`，纯函数，不依赖 MobX）：`{total, groups: Map<键, Group>, subgroupTotals?: Map<子组键, 数>}`，`Group = {total, rows: Row[], nextCursor, boundary, cursorBoundary, stale, subgroups?: Map<子组键, Group>}`，`Row = {id, key, updatedAt}`。
   - `rows` 是那一组**按应答写下的**行：id、它在这个列表的全序里的排序键、应答给出的它的 `updated_at`。版本的判断看它，不看那一份工作项（第二稿只存 id，那一份早已写着修改之后的版本，判断无从做起）。
   - `boundary` 是这一组回答过的页的最后一行的（排序键，id），**固定下来，不随活的行重算**（第二稿的"已载入的最后一行之后"会随那一行被拖走而后退，后来放进去的卡片既不显示、下一页也不返回它）。它只往后移：并入一页时取 `max(boundary, 这一页的最后一行)`（按全序），所以不会退到拖放扩出去的卡片之前（聚焦复核 M3）。`nextCursor` 为空的组是"载入完"的。
+  - `cursorBoundary` 仅记录服务端上一页末行，与可被拖放扩大的显示 `boundary` 分开。每次原应答保留只读的 `PageReadMeta`：回答的组/格、`(lower, upper]` 范围、是否末页，以及被重置的计数 `resetCounters` / 行范围 `rowParts`。续页的 lower 从发出时的 cursorBoundary 取，末页只覆盖其 lower 之后，不能当作整组；不解析、不生成服务端游标。
   - **在窗口内** = 组载入完，或按全序 `(键, id) ≤ boundary`。
-  - **没有回答的组、格是空的、载入完的**：服务端只返回非空的组（3.16），所以不在应答里的组就是 `{total: 0, rows: [], nextCursor: null}`，修改需要时按这个样子建出它（拖进空列、空泳道的第一张卡片）。
+  - **整体第一页没有回答的组、格是空的、载入完的**（部分应答未回答的组保持当前值）：服务端只返回非空的组（3.16），所以不在应答里的组就是 `{total: 0, rows: [], nextCursor: null}`，修改需要时按这个样子建出它（拖进空列、空泳道的第一张卡片）。
   - 不分组的列表是一个键为空的组；泳道的总数是 `subgroupTotals`（3.16 的 `subgroup_totals`），不再把一行的格加起来。
 - **一个工作项只有一份**（按 id 的 `ReconciledByKey`，详情的读取和列表的应答都写它）：
   - 两个版本取**服务端的 `updated_at` 大的**，相等时取后应答的。第二稿只比 `answeredAt`，那是写入的顺序，不是服务端的顺序：在一次修改之前读、在它之后才回答的看板的重取会把修改之前的行写进那一份。Plane 的 `addIssue` 用任何应答覆盖（`store/issue/issue.store.ts:61-72`）。
-  - `description_html` 只由 `IssueDetail` 的应答写；列表的行（`Issue`，没有描述）只改别的字段，留着那一份的描述（详情、浮层的编辑器读它）。
-  - 一次**读**（取单个、任何一份列表的应答）写进那一份的新版本若改了决定列表成员关系的字段（状态、优先级、标签、负责人、起止日期、父工作项、`archived_at`、`created_by_id`，或某份列表的排序键用到的字段），那是别人的修改，这个会话的列表的总数无从确知：每份含有它的列表里，它旧、新两个版本所属的组标 `stale`。这个会话自己有一个修改在路上（已发出、还没确认）的工作项除外：读到的新版本可能就是这个修改，它确认时按下面的规则摆放，不当作别人的修改，不白白重取（聚焦复核 M3）。
-- **确认的修改**：一个修改在确认的那一刻记下 `Change = {id, beforeSnapshot, after, drop?}`：`beforeSnapshot` 是确认之前那一份里的它（新建时为"无"，这个会话从没取到过它时为"不知道"）；`after` 是确认的应答（删除时为"无"；归档、恢复是 `archived_at` 变了，列表的 `archived` 决定它属不属于）；`drop` 是用户拖放的落点（哪一组、放在哪两张卡片之间），只有拖放才有。
+  - `description_html` 只由 `IssueDetail` 的应答写；列表的行（`Issue`，没有描述）只改别的字段，留着那一份的描述（详情、浮层的编辑器读它）。较旧 Detail 也不能首次补描述到较新 Issue，只安排一次最新详情补取；失败保留可重试状态，不无限重试。
+  - P10b/T6 同时收口尚留 P11 的详情、子工作项、链接、关联等调用者：完整实体应答经统一接收，partial 片段、计数算术和直接写 issuesMap 改为操作成功后的失效/权威读取，计数和 updated_at 来自服务器；issuesMap 仅为派生只读视图，不留绕过版本规则的旧 mutator。
+  - 一次**读**（取单个、任何一份列表的应答）写进那一份的新版本若改了决定列表成员关系的字段（状态、优先级、标签、负责人、起止日期、父工作项、`archived_at`、`created_by_id`，或某份列表的排序键用到的字段），那是别人的修改，这个会话的列表的总数无从确知：每份含有它的列表里，它旧、新两个版本所属的组标 `stale`。这个会话自己有一个修改在路上（已发出、还没确认）的工作项除外：读到的新版本可能就是这个修改，它确认时按下面的规则摆放，不立即当作别人的修改；该操作保留发出前冻结的 before 及途中读证据，确认时只将与 after 同版本同相关字段的读认作自己的结果；另有版本使旧属无法证明则按不知道标 stale，不因 own-pending 而丢掉第三方变化（聚焦复核 M3；P10b 预检 B-L1）。
+- **确认的修改**：一个修改在确认的那一刻记下 `Change = {id, beforeSnapshot, after, drop?}`：`beforeSnapshot` 来自这次修改在队列里轮到实际发出时、发请求前冻结的那一份（深拷贝含数组；新建为"无"，从没取到为"不知道"），与 pending 操作一起保存，确认时不从已经被在外 read 更新的 canonical 重取；途中读证明存在不等于本次 after 的第三方成员关系版本时，不能证明的旧属转为"不知道"；`after` 是确认的应答（删除时为"无"；归档、恢复是 `archived_at` 变了，列表的 `archived` 决定它属不属于）；`drop` 是用户拖放的落点（哪一组、放在哪两张卡片之间），只有拖放才有。
   - 对每一份列表的每一组（格）`g`：`新属 = after 满足列表的筛选、它的组键含 g`（在本地判断：筛选、分组的键、可见性都在工作项的行上）；`旧属` 先看这一份列表自己：`g.rows` 里有它而 `updatedAt` 早于 `after` 的，它在 `g` 里（是）；没有它而 `g` 载入完的，它不在（否）；`g.rows` 里有它而 `updatedAt` 不早于 `after` 的，这一份已经含着修改，只摆放；其余按 `beforeSnapshot` 算（"不知道"时这一组标 `stale`）。
   - 按 `(旧属, 新属)`：
 
@@ -768,20 +770,23 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
     | 否 | 否 | 不变 | — |
 
   - **用户的拖放留在放下的地方**：带 `drop` 的修改在目标组里总是把卡片插入到落点，落点在窗口之外时把这一组的 `boundary` 扩到这张卡片。放在一列的最后（`sort_order` 是最后一张加 65535，`issue-layouts/utils.tsx:479-514`）、放进日历上已满的一天（月视图一天只载入 4 张，`calendar/base-calendar-root.tsx:81-90`）都是这样；之后的页按服务端的游标接着取，按全序、按 id 去重并入，落在它前面的行排到它前面。卡片不会在确认之后消失、只剩计数变了（I6 的"卡片出现在 Done"）。
-  - 最外层的 `total`、泳道的 `subgroupTotals` 同样按"修改前在不在、修改后在不在"加减。
+  - 最外层的 `total`、泳道的 `subgroupTotals` 在直接确认时同样按"修改前在不在、修改后在不在"加减；部分应答的重做只补这次被回答并重置的计数，未回答的共享总数不重复加减。
   - 看板上最常见的一步（I6、总体设计 8.2：把卡片拖进一个没有载入完的列）因此是确知的：不重取整个看板，已载入的页和滚动的位置都留着。
+- **删除的读代际**：deleteIssue 的成功应答是 204，after 为无，不能比较 after.updated_at；已知 id 使用本会话确认删除墓碑，未知子树不猜 id 和精确减数。成功确认先推进本项目读取水位并 invalidate 相关列表在外读，再标 stale/写已知墓碑，随后才允许新水位刷新；所有 list/详情/getIssue 回查在写 canonical、合页或清 stale 前核发出时的会话/项目令牌。多项目 profile 若覆盖失效项目则整页丢弃并保持 stale，不能裁行后复用旧 total；其它独立项目保持。拒绝、SessionChanged、普通404不创建墓碑或推进删除水位，并发再次删除会使中间刷新同样失效。
 - **重做：在一次取数的应答上**（取数在外期间确认的修改，`Reconciled` 在它的应答上重做）：应答可能是修改之前读的，也可能已经含着它。**只按应答自己判断**它在修改之前还是之后：
   1. 应答的任何一组里有这个工作项的行：`updatedAt` 不早于 `after` 是之后，早于是之前。
   2. 应答里没有它的行，但应答覆盖了它修改之后该在的位置（它新属于的某组 `g`，应答对 `g` 是载入完的整组，或 `after` 的键落在应答对 `g` 回答的那一段里）：是之前（之后的话它就在那里）。应答覆盖了它修改之前所在的位置而它不在：是之后。
   3. 都看不出：不知道。
-  - **重做时旧属只来自应答和 `beforeSnapshot`**，不来自应答之前已并入的行（例如拖放已插入的、`updatedAt = after` 的那一行；把它当作"这一份已经含着修改"会让一个在修改之前读的应答的总数少算一个，聚焦复核 M3）。应答回答了的组，旧属按应答：应答里有它的行是"是"，应答对这一组载入完、或覆盖了它修改之前的键而没有它是"否"；应答没有回答的组按 `beforeSnapshot`。
-  - 之后：每组只按全序摆放（和拖放的落点），不加减。之前：照上表加减，旧属按上一条。不知道：`旧属 ≠ 新属` 的组标 `stale`，其余只摆放。
-  - **第 2 条判断时另取一次这个工作项**（`getIssue(X)`）：第 2 条把"应答里没有它"读成"应答在修改之前"，这对这个会话自己的修改成立，但若第三方在 `after` 之后又改了它（它已不在新属的位置），第 2 条会把它放回服务端说它不在的地方。取到的版本经"一个工作项只有一份"的规则写进那一份：比 `after` 新、改了成员关系的，按那里的规则标 `stale`，第三方的移动由此被发现（聚焦复核 M3）。
+  - **重做时旧属只来自应答和 `beforeSnapshot`**，不来自应答之前已并入的行（例如拖放已插入的、`updatedAt = after` 的那一行；把它当作"这一份已经含着修改"会让一个在修改之前读的应答的总数少算一个，聚焦复核 M3）。应答回答了的组，旧属按应答：应答里有它的行是"是"，应答对这一组载入完、或覆盖了它修改之前的键而没有它是"否"；部分应答没有回答的组/格保持当前行与计数，不再对它们按 beforeSnapshot 加减；whole回答才按其完整覆盖范围重放。
+  - 之后：仅在这次回答的 rowParts 按全序摆放（和拖放落点），不加减。之前：仅对 resetCounters 中被重置的计数按上表补差，旧属按上一条；其它计数/rows保持当前值。不知道：受影响范围标 stale。单组flat total只归该group，单格flat total只归该cell，不是outer；未回答的outer/subgroupTotals不能再减。多个part在外时各自只重放自己的计数集合。
+  - 删除单独判断：原应答含该id是删除之前，覆盖beforeKey且无id是之后，其余不知道；不使用after版本。未知后代采用上面的项目读代际与stale收敛。
+  - **第 2 条判断时另取一次这个工作项**（`getIssue(X)`）：第 2 条把"应答里没有它"读成"应答在修改之前"，这对这个会话自己的修改成立，但若第三方在 `after` 之后又改了它（它已不在新属的位置），第 2 条会把它放回服务端说它不在的地方。取到的版本经"一个工作项只有一份"的规则写进那一份：比 `after` 新、改了成员关系的，按那里的规则标 `stale`，第三方的移动由此被发现（聚焦复核 M3）。核实中的推测对象不作为可靠活值；成功经版本规则接收，404使对象当前可见性失效、相关组/list保持 stale（不造永久墓碑），403/500保留error和待重验状态，SessionChanged/已失效读令牌丢弃旧流程。每个协调round对同id至多一次get、每scope至多一轮刷新；404可受控刷新至空页收敛，其它拒绝交回等待显式重试/再挂载，不让 stale 同步循环重开round。每次 captureRead 在请求发出前独立递增 readSerial，返回唯一请求序号；每 id 的核实元数据另存 freshnessFloor，回查404/其它拒绝落定时提升到当时 readSerial，覆盖全部此前已发请求。只有其后新发、token.serial 严格大于该水位、同会话/项目令牌有效且版本规则允许的完整权威读，才可恢复对象可见性；核实拒绝前已在外的旧list即使同updated_at、删除令牌有效，也不能写回该id或清核实/相关stale。新的空页可收敛列表，仍不把id永久删除；freshnessFloor与项目删除水位分开，普通404不推进删除水位/不造墓碑。
   - 一组的"加载更多"的应答只回答那一组，只在那一组上判断。
-- **只在这几种情况下标 `stale`，而且只标受影响的组**：`beforeSnapshot` 是"不知道"；列表的筛选有本地判断不了的参数（`mention_id`、`subscriber_id`、个人主页的 `relation=subscribed`：提及、关注的集合不在工作项的行上，这样的列表对任何一个确认的修改都标 `stale`）；重做时看不出应答在修改之前还是之后；读到别人改了成员关系（上面"一个工作项只有一份"）。
-- **`stale` 的组**在下一次显示时（已显示的立即）重取：一组的用 `fetchPart` 取那一组的第一页（`group_key`，3.16），整个列表的（筛选判断不了时）用 `fetch`；重取作废在外的同一部分。总数因此不会偏离：要么确知地加减，要么重取。
+- **只在这几种情况下标 `stale`，而且只标受影响的组**：`beforeSnapshot` 是"不知道"；列表的筛选有本地判断不了的参数（`mention_id`、`subscriber_id`、个人主页的 `relation=subscribed`：提及、关注的集合不在工作项的行上，这样的列表对任何一个确认的修改都标 `stale`）；重做时看不出应答在修改之前还是之后；读到别人改了成员关系（上面"一个工作项只有一份"）；成功树删除使旧项目读取失效，或缺行回查未能证实对象可见时，同属无法证明的受影响范围。
+- **`stale` 的组**在下一次显示时（已显示的立即）重取：一组的用 `fetchPart` 取那一组的第一页（`group_key`，3.16），整个列表的（筛选判断不了时）用 `fetch`；重取作废在外的同一部分。总数要么确知地加减，要么保留 stale 后重取；回查失败按前述有界round等待重验，未证实的计数不能当最终值展示。
 - **vitest 的表**（9.5）：每一行是 `(列表当前的值, 修改或读到的版本, 应答?) → 期望的值`：上表四种组合各配在、不在 `rows`，窗口内、外，载入完与否；新建、删除、归档和恢复；多值的组（一个标签换成另一个、两个标签去掉一个）；子分组的格和泳道的总数；最外层的总数；拖放（窗口外、空的组、空的泳道格）；重做的三种判断；每种 `stale`；对抗性评审 I2 的九个反例各一行；聚焦复核 M3 的五行：重做时旧属不取应答之前并入的行（反例一的变体：拖放先插入、看板的重取在修改之前读，那一组的总数是应答的加一）、`fetchPart` 的并入取应答的 `total`、第 2 条判断之后第三方又移动了它（`getIssue` 的版本让那一组 `stale`）、拖放扩出 `boundary` 之后并入一页 `boundary` 不后退、自己的修改在路上时读到的新版本不标 `stale`。
-- **全序**：`paged-groups.ts` 的比较与服务端相同（3.16）：名字的比较键逐个码位比较（`codePointAt`，不用 `<` 和 `localeCompare`）、优先级的等级、空值在最后、同键按 `id`。vitest 读同一份样例 `api/testdata/issue-order.json`。
+- **P10b 预检补充反例**：自己的新版本先被读到、写答随后到且旧组X在窗口外（A5/B4应为A4/B5）；两个part回放不再扣未回答outer/subgroupTotals；树删除后未知/归档后代的隐藏whole/part/get旧答不能复活；旧详情写者不能绕过canonical；回查404/403/500/SessionChanged四路保持有界收敛；get404之前已在外的同版本list晚到不能解除未证实状态，只有freshness水位之后新发的权威读可以解除；相关精确用例和变异见P10b spec/plan。
+- **全序**：`paged-groups.ts` 的比较与服务端相同（3.16）：名字的比较键逐个码位比较（`codePointAt`，不用 `<` 和 `localeCompare`）、优先级的等级、空值在最后、同键按 `id`。vitest 读同一份样例 `api/testdata/issue-order.json`。服务器时间比较保留微秒/纳秒，不用毫秒截断；大整数fixture从原数字token解成BigInt SortKey，直接测生产compareRows；生成Issue的安全number另测issueSortKey转换，不安全number拒绝，不把BigInt塞进生成Issue或改HTTP协议。
 - **每份列表都改**：一个确认的修改作用于这个会话里全部的列表（项目的、已归档的、个人主页的）和工作项的那一份（总体设计 7.7"写进每一份"）。Plane 的乐观更新只改当前的列表、失败时回滚（`base-issues.store.ts:538-572`），与 7.7 的"只用确认的结果、一次一个"相反，删除。拖动（3.16 的 `sort_order`、跨组改字段）也是先发修改、确认之后才移动卡片：页面在请求在路上时让卡片停在放下的位置、显示更新中的遮罩（`list/block.tsx`、`calendar/issue-block.tsx` 已有），被拒绝时回到原处并提示。
   - **`sort_order` 在轮到它发出时才算**（总体设计 7.7）：新的值取放下位置前后两张卡片的 `sort_order` 的中点，而这两张的值来自 store；同一个工作项（或同一列）的修改经 `oneAtATime()` 排队，排在前面的修改确认之后可能移动了相邻的卡片。所以拖放只记下"放在哪两张之间"（它们的 id），请求的体在这次修改轮到发出时按那时的列表算出；vitest 覆盖"前一个拖动确认之后，后一个按新的位置算"。
 - **一组的"加载更多"**：`fetchPart(组的键, 同一个请求 + group_key[ + sub_group_key] + 这一组的 next_cursor, 追加)`（3.16）；回答是这一组的 `{data, next_cursor, total}`，并入时这一组的 `total` 取它的 `total`，`boundary` 取 `max(boundary, 它的最后一行)`。Plane 在本地按已加载的条数算偏移量的游标（`base-issues.store.ts:420-430`），从不用服务端的 `next_cursor`（R4 第 C.4 节），删除。
@@ -1770,6 +1775,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - 前端的生成的类型与契约同步（`make gen-web` 之后没有差别，M2 的门禁）。
 
 ### 9.5 前端单元测试（vitest）
+- P10b 静态预检补充的六个反例及合法测试入口见 [spec](specs/P10b-web-list-data.md) / [plan](plans/P10b-web-list-data.md)：pending before、树删除旧读、canonical 写者闭合、partial 回放计数所有权、精确大整数入口、回查拒绝的有界收敛。均为实施要求，本次未运行；本节“没有回答的组”仅指整体第一页，partial 未回答范围保持当前值。
 - `core/lib/reconciled.ts` 的 `fetchPart`：值还没取到时不做；被整体的取数超越、被同一部分更新的取数超越时不写；在外期间确认的修改在合并之后按确认的顺序重做，重做拿到这次的应答；会话改变。
 - `core/lib/paged-groups.ts`：3.22 的表（`(列表当前的值, 修改或读到的版本, 应答?) → 期望的值`）：旧属、新属的四种组合各配在、不在 `rows`，窗口内、外（固定的 `boundary`），载入完与否；旧属先按这一份列表的行的 `updatedAt` 判断、再按 `beforeSnapshot`；新建（`beforeSnapshot` 为无）、删除（`after` 为无）、归档和恢复；没有回答的组、格按空的建出；多值的组；子分组的格和 `subgroupTotals`；最外层的总数；拖放的落点（窗口外扩 `boundary`、空的列、空的泳道格、日历已满的一天）；重做的三种判断（应答里有它的行、应答覆盖了它的位置、看不出）；每种 `stale`；对抗性评审 I2 的九个反例各一行；聚焦复核 M3 的五行（重做时旧属只来自应答和 `beforeSnapshot`、并入取应答的 `total`、第 2 条之后的 `getIssue`、`boundary` 只往后移、自己的修改在路上时不标 `stale`）。
 - 一个工作项的那一份（`ReconciledByKey`）：服务端的 `updated_at` 大的胜出、相等时后应答的胜出；列表的行不覆盖 `description_html`；读到的新版本改了成员关系的字段时，含它的列表里它旧、新两个版本的组标 `stale`，这个会话自己有修改在路上的工作项除外。
@@ -2284,6 +2290,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：`tsc`、knip、vitest 通过；`git grep -lw TIssue -- web` 没有输出；`EIssuesStoreType` 没有 `CYCLE`、`MODULE`、`PROJECT_VIEW`、`GLOBAL`；S2 通过。
 
 ### P10b `web-list-data`：列表一侧的数据层（14 个任务）
+- **预检任务顺序细化**：T1 准备薄服务及直接测试，不提前移除仍有消费者的旧形状或发布无读者导出；T5 同任务切旧形状、生产接线、全部消费者和必要 query 纯函数，T8 完成否定层删除与完整筛选语义验证。canonical 的旧详情写者在 T6 同步收口；不提前扩展 P11 的完整详情资源。
 - **目标**：列表的 services 和 stores 改接新接口；`reconciled.ts` 的扩展和 `paged-groups.ts`；项目页挂载时不再请求旧接口。
 - **任务**：
   1. `issue`、`issue-list` 的 service，换掉旧 `issue.service.ts` 的列表方法和 `issue_archive.service.ts`（7.2 的过渡在列表一侧结束）；项目显示设置的三个字段并入 `preferences` 的 service；列表的形状和枚举换型（`IssueListPage`、`IssueListOrder`、`IssueListGroupField`、`IssuePriority`；`TIssuesResponse` 一类、`EIssueGroupByToServerOptions`、`EServerGroupByToFilterOptions` 删除）。
@@ -2518,7 +2525,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - [ ] 权限矩阵的全部格子（含创建者、访客的两种、在项目里只是访客的工作区管理员、已不是成员的身份、不是成员的工作区管理员）、访客规则一致的测试（含子工作项数、动态的过滤、关注）、3.5 的 26 个交错测试在真实数据库上通过；看不到项目、不能写的写和加关联指向看不到的项目都不取锁；交错 20 经真实的连接池和写闸门，闸门满时 503 `server_busy`。
 - [ ] 每个模块的 `apitest.Main` 两个方向核对通过（`issue` 模块和 `project` 新的 `project.state_in_use`）；`access/domain` 的判定表、规则表与各模块操作名的完整性测试通过；每个操作在矩阵里有一行。
 - [ ] 列表：每个排序码两个方向的翻页、每个分组码和子分组、每个筛选参数、带 `group_key` 的"加载更多"的集成测试通过；`api/testdata/issue-order.json` 由 Go 和 vitest 各读一次，结果相同；改过的游标只在调用者看得到的数据里换起点（8.6）；10 万个工作项的耗时在 3.16 的实测之内，连接的参数读回为预期的值；`paged-groups.ts` 的 vitest 表（含对抗性评审 I2 的九个反例）通过。
-- [ ] 事件和任务（P6的只投递/登记/自动归档/固定时钟已验证，P7的原事务生产订阅、真实crawl及`registrationRows`已验证，P9版本保留仍未完成；[P6 review](reviews/P6-issue-events-review.md)）：经只投递的客户端，提交留任务、回滚不留的集成测试；定时任务的种类、声明会投递的种类漏登记 worker 的两种变异让测试失败；`registrationRows` 核对 `river_job`；自动归档、版本的保留推进固定时钟；`platform/jobs` 的测试没有固定的余量。
+- [ ] 事件和任务（P6的只投递/登记/自动归档/固定时钟已验证，P7的原事务生产订阅、真实crawl及`registrationRows`已验证，P9版本保留与删除调度已完成，准确证据见[P9 review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)；[P6 review](reviews/P6-issue-events-review.md)）：经只投递的客户端，提交留任务、回滚不留的集成测试；定时任务的种类、声明会投递的种类漏登记 worker 的两种变异让测试失败；`registrationRows` 核对 `river_job`；自动归档、版本的保留推进固定时钟；`platform/jobs` 的测试没有固定的余量。
 - [x] P7子项：`platform/outbound` 的独立IANA完整性/每网段首尾、本机地址、全部DNS候选、固定IP及每跳重检测试通过；I10 API的169.254.169.254为blocked，零危险dial由Go测试证明。证据见P7行为矩阵；不替代页面版本/最终分支CI。
 - [ ] 清理的目录测试（每张有 `deleted_at` 的表有清理者，外键是 `CASCADE` 或 `SET NULL`）和 I21 通过；删除项目、工作区的任务的窗口测试、交错 24、25 通过，M3 的删除故事在限时轮询之下通过。
 - [ ] 持续集成的全部门禁通过（含架构测试、`TestSQLCSchemaScope`、grants 的两个测试、`apitest` 的写法规则、命令行的组合测试、关键词守卫、oxlint 上限、knip、`make gen-check`）。
@@ -2533,7 +2540,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - [ ] 规模估计与实际的对比写进收尾的 review。
 - [ ] 总体设计 9.4 中 M4 的状态改为"已完成"。
 
-P7另有已验证子证据：四operation公开码双向守卫、三写权限/审计/回滚、真实事务投递、交错19与runtime角色，以及§3.23的P7文档同步。上面包含P9、全部页面/故事和M4收尾的复合项仍保持未勾。
+P7另有已验证子证据：四operation公开码双向守卫、三写权限/审计/回滚、真实事务投递、交错19与runtime角色，以及§3.23的P7文档同步。P9子项已由本期review核验；上面包含全部页面/故事和M4收尾的复合项仍保持未勾。
 
 ## 15. Phase 进度表
 | Phase | 内容 | 状态 |
@@ -2548,9 +2555,9 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，16验收任务） | T1–T16已实施并逐Task独评通过，T16正式文档/交接已同步：[spec](specs/P6-issue-events.md)、[plan](plans/P6-issue-events.md)、[review](reviews/P6-issue-events-review.md)。内部整分支审查及 clock 修复聚焦复审已通过；修复 `e8df8485` 的 [CI 40297070630](https://github.com/open-nerve/NerveProject/actions/runs/40297070630) 三任务全绿。deep-review 终审通过（[报告](../../reviews/re-03-M4P6整体审核.md)，3 项文档 Minor 已闭环）；已授权 `--no-ff` 合并 `5005be985e7ec78727edc6f8fc5c05999b45cc65`；[main CI 40305247546](https://github.com/open-nerve/NerveProject/actions/runs/40305247546) 重跑全绿，921 个本地证据归档核 hash 后已清理分支/worktree。**P6 已完成**；M4 总体仍进行中 |
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12粗项/16任务） | **已完成**：[spec](specs/P7-issue-links.md)、[plan](plans/P7-issue-links.md)、[review](reviews/P7-issue-links-review.md)、[整体审核](../../reviews/re-05-M4P7整体审核.md)。T1–T16实施、整审及修复复审闭环；经授权 `--no-ff` 合并 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 三任务全绿；5,443个本地证据文件归档逐hash核验后，已清理本地/远端分支及worktree。M4总体仍进行中 |
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13粗项/16 Task） | **已完成**：[spec](specs/P8-drafts-search.md)、[实际plan](plans/P8-drafts-search.md)、[review](reviews/P8-drafts-search-review.md)、[整体审核](../../reviews/re-07-M4P8整体审核.md)。T1–T16实施、首次整审及文档独评闭环，最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，经授权 `--no-ff` 合并为 `6b9d08d4821f1423c7bb9795557727c206b7880f`；准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1三任务全绿。1,598文件、37,552,117字节及1空目录归档逐hash核验后，本地/远端分支和worktree已清理，清理后再核哈希；完整回执见review§9。M4总体及后续交接仍open |
-| P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **M4/P9实施与终审完成、集成待办**。产品HEAD `e003e96625ba51264d3aeb77729729d53a770103`；[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[阶段review](reviews/P9-purge-review.md)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终产品F/CI已有收据，两席文档独评及修复复审已闭环；最终文档HEAD CI由主控[交付收据](../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)独立核验，当前待核；保留codex/m4-p9分支与worktree，本轮不合并 |
-| P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | 未开始 |
-| P10b `web-list-data` | 列表一侧的数据层（14） | 未开始 |
+| P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
+| P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | spec/plan 已准备并静态预检；局部修订复审关闭，P10A-S1 范围/验收冲突待负责人裁定，整体未通过；T1 未实施。见 [预检报告](../../reviews/re-10-M4P10预检审核.md) |
+| P10b `web-list-data` | 列表一侧的数据层（14） | spec/plan 已准备，依赖预检与局部修订复审记录见 [review](reviews/P10b-web-list-data-review.md)；未实施，执行前待 P10a 集成 main CI 通过后重核 |
 | P11 `web-detail-data` | 详情一侧的数据层（14） | 未开始 |
 | P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |

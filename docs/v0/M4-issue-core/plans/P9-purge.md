@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **当前状态（2026-10-28）：** M4/P9实施与终审完成、集成待办。T1–T15真实执行与独评见[review](../reviews/P9-purge-review.md)；首次整审及两次局部修复已闭环，最终产品F/CI已有收据，两席文档独评及修复复审已闭环；最终文档HEAD CI仍独立待核。不合并。
+> **当前状态（2026-10-28）：P9 已完成。** 最终分支 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 已经授权 `--no-ff` 合并为 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，main CI 全绿、归档校验及清理完成，见[review §14](../reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)。下文实施/集成前措辞是当时计划，非当前待办。
 
 **Goal：** 交付23表60天物理清理、活描述版本最新20保留、项目/工作区删除后的issue侧分批任务，并证明窗口、锁序、审计、重试和目标规模。
 
