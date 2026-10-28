@@ -116,10 +116,15 @@ func TestDeleteRelationChecksBothLockedProjects(t *testing.T) {
 			if deletedEnd == "second" {
 				gone = p
 			}
-			holder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR NO KEY UPDATE", gone)
-			if _, err := holder.Exec(pgtest.Soon(t), "UPDATE projects SET deleted_at=$2 WHERE id=$1", gone, time.Now()); err != nil {
-				t.Fatal(err)
-			}
+			createDraftHTTP(t, w, "alice", `{"project_id":"`+gone.String()+`","payload":{}}`)
+			workerHolder := holdProjectDeletion(t, w.pool, gone)
+			deleting := w
+			deleting.web = gone
+			deletionProbe, barrier := requestTx(w.pool), newGate()
+			var deleted exchange
+			deleteDone := run(deletesWeb(t, deleting, heldTx{deletionProbe, barrier}, &deleted))
+			defer func() { releaseAndJoinGate(t, barrier, deleteDone) }()
+			held(t, pgtest.Soon(t), barrier, deleteDone, "project deletion before commit")
 			store := issuepg.New(w.pool)
 			projects := issueProjects{projects: project.Provide(w.pool).IssueProjects}
 			authorizer := &relationCountingAuthorizer{Authorizer: authorizerOn(w.pool)}
@@ -129,10 +134,13 @@ func TestDeleteRelationChecksBothLockedProjects(t *testing.T) {
 			ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["alice"]})
 			result := make(chan error, 1)
 			go func() { result <- remove.Execute(ctx, r) }()
-			requestBlocked(t, w.pool, tx, holder.Conn().PgConn().PID(), "projects")
-			if err := holder.Commit(pgtest.Soon(t)); err != nil {
+			requestBlocked(t, w.pool, tx, requestPID(t, deletionProbe), "projects")
+			requestOpen(barrier)
+			if err := receiveWithin(t, deleteDone, 5*time.Second, "project deletion"); err != nil {
 				t.Fatal(err)
 			}
+			deleteDone = nil
+			w.answered(t, deleted, 204)
 			if err := receiveWithin(t, result, 3*time.Second, "relation deletion"); err != domain.ErrRelationNotFound {
 				t.Fatalf("got %v want relation 404", err)
 			}
@@ -142,6 +150,10 @@ func TestDeleteRelationChecksBothLockedProjects(t *testing.T) {
 			if got := w.relationDeletion(t, r, time.Time{}); got != "undeleted" {
 				t.Fatal(got)
 			}
+			job := projectDeletionJob(t, w.pool, gone)
+			deletionWorkerBlocked(t, w.pool, workerHolder, job, "draft_issues")
+			requestRelease(t, workerHolder)
+			waitDeletionJob(t, w.pool, job, "completed")
 		})
 	}
 }

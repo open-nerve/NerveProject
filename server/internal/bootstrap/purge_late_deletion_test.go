@@ -13,8 +13,8 @@ import (
 )
 
 // This is an isolated storage state: only the parent tombstone is written.
-// Current project/workspace APIs still cascade synchronously. No late River
-// delete_rows worker, retry or deadlock property is claimed by this fixture.
+// The request-driven River lifecycle is tested separately. This fixture alone
+// claims no delete_rows worker, retry or deadlock property.
 func TestPurgeParentCascadesUnprocessedIssueRows(t *testing.T) {
 	for _, parent := range []string{"projects", "workspaces"} {
 		t.Run(parent, func(t *testing.T) {

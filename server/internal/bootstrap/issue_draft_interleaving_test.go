@@ -77,18 +77,17 @@ func TestDraftPublishAndProjectDeletionSerialize(t *testing.T) {
 		w := newIssueWorld(t)
 		d := createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Never"}}`)
 		before := draftState(t, w)
-		holder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR NO KEY UPDATE", w.web)
-		draftExec(t, holder, "UPDATE projects SET deleted_at=now() WHERE id=$1", w.web)
-		tx := requestTx(w.pool)
-		var e exchange
-		collect := requestBackground(t, draftWrite(t, w, tx, &e, "POST", publishPath(d.ID), ""), func() { requestRelease(t, holder) })
-		requestBlocked(t, w.pool, tx, holder.Conn().PgConn().PID(), "projects")
-		draftCommit(t, holder)
-		collect()
-		w.refused(t, e, 404, "issue.draft_not_found")
+		holder := holdProjectDeletion(t, w.pool, w.web)
+		w.send(t, "alice", "DELETE", "/api/v0/projects/"+w.web.String(), "", 204)
+		job := projectDeletionJob(t, w.pool, w.web)
+		deletionWorkerBlocked(t, w.pool, holder, job, "draft_issues")
+		w.send(t, "alice", "POST", publishPath(d.ID), "", 404)
 		if !reflect.DeepEqual(before, draftState(t, w)) {
 			t.Fatal("live-draft deletion window changed draft or issue rows")
 		}
+		requestRelease(t, holder)
+		waitDeletionJob(t, w.pool, job, "completed")
+		assertDeletionAudit(t, w.pool, "draft_issues", []uuid.UUID{d.ID}, job)
 	})
 }
 func assertDraftLive(t *testing.T, w issueWorld, id, project uuid.UUID) {

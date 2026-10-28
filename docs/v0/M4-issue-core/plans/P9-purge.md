@@ -220,7 +220,7 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 
 ## Task 12：交错、真实snooze、失败耗尽与迟到任务（F）
 
-**Files：** 新B/issue_deletion_interleaving_test.go、issue_delete_job_lifecycle_test.go、job_state_observer_test.go；改B/purge_late_deletion_test.go、issue_interleaving_deletion_test.go、issue_interleaving_relations_test.go、issue_draft_interleaving_test.go；必要根因修复回原文件。预计800–1300行。
+**Files：** 新B/issue_deletion_interleaving_test.go、issue_delete_job_lifecycle_test.go、issue_delete_job_fixture_test.go、issue_delete_late_purge_test.go、job_state_observer_test.go；改B/issue_world_test.go（复用原数据准备）、issue_relation_locks_test.go、issue_draft_interleaving_test.go、purge_late_deletion_test.go（目录性质与注释）；既有issue_interleaving_deletion/relations测试复用运行。生产代码不变。预计800–1300行。
 
 **Interfaces：** 新测试帮手`observeJobStates(t testing.TB,pool *pgxpool.Pool)`安装隔离test schema的river_job迁移记录；`jobTransitions(t testing.TB,pool *pgxpool.Pool,id int64) []jobTransition`，jobTransition={JobID int64;From,To string;Attempt int;At time.Time}。只_test.go，T14复用；不扩生产Runner/client接口。
 
