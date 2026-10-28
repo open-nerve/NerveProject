@@ -12,10 +12,8 @@ import type { ISearchIssueResponse, TIssue } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";
 import { renderFormattedPayloadDate, getDate, getTabIndex } from "@nerve/utils";
 // components
-import { CycleDropdown } from "@/components/dropdowns/cycle";
 import { DateDropdown } from "@/components/dropdowns/date";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
-import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { ParentIssuesListModal } from "@/components/issues/parent-issues-list-modal";
 import { IssueLabelSelect } from "@/components/issues/select";
@@ -109,36 +107,6 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
           tabIndex={getIndex("target_date")}
         />
       </div>
-
-      {/* cycle */}
-      {isVisible && (
-        <div className="h-7">
-          <CycleDropdown
-            value={data?.cycle_id || ""}
-            onChange={(cycleId) => handleData("cycle_id", cycleId)}
-            projectId={projectId}
-            placeholder="Cycle"
-            buttonVariant="border-with-text"
-            tabIndex={getIndex("cycle_id")}
-          />
-        </div>
-      )}
-
-      {/* module */}
-      {isVisible && (
-        <div className="h-7">
-          <ModuleDropdown
-            value={data?.module_ids || []}
-            onChange={(moduleIds) => handleData("module_ids", moduleIds)}
-            projectId={projectId}
-            placeholder="Modules"
-            buttonVariant="border-with-text"
-            multiple
-            showCount
-            tabIndex={getIndex("module_ids")}
-          />
-        </div>
-      )}
 
       {/* add parent */}
       {isVisible && (

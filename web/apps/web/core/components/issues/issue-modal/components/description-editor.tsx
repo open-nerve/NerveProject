@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueFormValues } from "../types";
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
@@ -13,7 +14,6 @@ import { ETabIndices } from "@nerve/constants";
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue } from "@nerve/types";
 import { EFileAssetType } from "@nerve/types";
 import { Loader } from "@nerve/ui";
 import { getDescriptionPlaceholderI18n, getTabIndex } from "@nerve/utils";
@@ -29,7 +29,7 @@ import { WorkspaceService } from "@/services/workspace.service";
 const workspaceService = new WorkspaceService();
 
 type TIssueDescriptionEditorProps = {
-  control: Control<TIssue>;
+  control: Control<IssueFormValues>;
   isDraft: boolean;
   issueId: string | undefined;
   descriptionHtmlData: string | undefined;
@@ -70,7 +70,7 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
   const { getIndex } = getTabIndex(ETabIndices.ISSUE_FORM, isMobile);
 
   useEffect(() => {
-    if (descriptionHtmlData) handleDescriptionHTMLDataChange(descriptionHtmlData);
+    if (descriptionHtmlData !== undefined) handleDescriptionHTMLDataChange(descriptionHtmlData);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [descriptionHtmlData]);
 

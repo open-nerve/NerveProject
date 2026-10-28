@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 // nerve imports
 import type { TIssueParams, TIssue, TIssueActivity, TIssueLink, TIssuesResponse, TIssueSubIssues } from "@nerve/types";
 // services
@@ -97,43 +98,8 @@ export class IssueService extends APIService {
       });
   }
 
-  async retrieveIssues(workspaceSlug: string, projectId: string, issueIds: string[]): Promise<TIssue[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/list/`, {
-      params: { issues: issueIds.join(",") },
-    })
-      .then(async (response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async getIssueActivities(workspaceSlug: string, projectId: string, issueId: string): Promise<TIssueActivity[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/history/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async addIssueToCycle(
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string,
-    data: {
-      issues: string[];
-    }
-  ) {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/cycle-issues/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async removeIssueFromCycle(workspaceSlug: string, projectId: string, cycleId: string, bridgeId: string) {
-    return this.delete(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/cycle-issues/${bridgeId}/`
-    )
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
@@ -159,7 +125,12 @@ export class IssueService extends APIService {
       });
   }
 
-  async patchIssue(workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>): Promise<any> {
+  async patchIssue(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    data: TLegacyIssueUpdateRequest
+  ): Promise<any> {
     return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/`, data)
       .then((response) => response?.data)
       .catch((error) => {
@@ -245,37 +216,6 @@ export class IssueService extends APIService {
     return this.delete(
       `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/issue-links/${linkId}/`
     )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  // issue subscriptions
-  async getIssueNotificationSubscriptionStatus(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string
-  ): Promise<{
-    subscribed: boolean;
-  }> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/subscribe/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async unsubscribeFromIssueNotifications(workspaceSlug: string, projectId: string, issueId: string): Promise<any> {
-    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/subscribe/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async subscribeToIssueNotifications(workspaceSlug: string, projectId: string, issueId: string): Promise<any> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/subscribe/`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

@@ -71,51 +71,6 @@ export class ModuleService extends APIService {
       });
   }
 
-  async addIssuesToModule(
-    workspaceSlug: string,
-    projectId: string,
-    moduleId: string,
-    data: { issues: string[] }
-  ): Promise<void> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/${moduleId}/issues/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async addModulesToIssue(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    data: { modules: string[]; removed_modules?: string[] }
-  ): Promise<void> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/modules/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async removeIssuesFromModuleBulk(
-    workspaceSlug: string,
-    projectId: string,
-    moduleId: string,
-    issueIds: string[]
-  ): Promise<void> {
-    const promiseDataUrls: any = [];
-    issueIds.forEach((issueId) => {
-      promiseDataUrls.push(
-        this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/${moduleId}/issues/${issueId}/`)
-      );
-    });
-    await Promise.all(promiseDataUrls)
-      .then((response) => response)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async removeModulesFromIssueBulk(
     workspaceSlug: string,
     projectId: string,

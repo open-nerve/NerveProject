@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { isEqual, concat, get, indexOf, isEmpty, orderBy, pull, set, uniq, update, clone } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
@@ -28,9 +29,7 @@ import { EIssueLayoutTypes } from "@nerve/types";
 // helpers
 import { convertToISODateString } from "@nerve/utils";
 // services
-import { CycleService } from "@/services/cycle.service";
 import { IssueArchiveService, IssueService } from "@/services/issue";
-import { ModuleService } from "@/services/module.service";
 // local imports
 import type { IIssueRootStore } from "../root.store";
 import {
@@ -72,39 +71,8 @@ export interface IBaseIssuesStore {
     isSubGroupCumulative: boolean
   ) => number | undefined;
 
-  addIssueToCycle: (
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string,
-    issueIds: string[],
-    fetchAddedIssues?: boolean
-  ) => Promise<void>;
-  removeIssueFromCycle: (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => Promise<void>;
-  addCycleToIssue: (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => Promise<void>;
-  removeCycleFromIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-
   addIssueToList: (issueId: string) => void;
   removeIssueFromList: (issueId: string) => void;
-  addIssuesToModule: (
-    workspaceSlug: string,
-    projectId: string,
-    moduleId: string,
-    issueIds: string[],
-    fetchAddedIssues?: boolean
-  ) => Promise<void>;
-  removeIssuesFromModule: (
-    workspaceSlug: string,
-    projectId: string,
-    moduleId: string,
-    issueIds: string[]
-  ) => Promise<void>;
-  changeModulesInIssue(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    addModuleIds: string[],
-    removeModuleIds: string[]
-  ): Promise<void>;
 }
 
 // This constant maps the group by keys to the respective issue property that the key relies on
@@ -169,8 +137,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
   // services
   issueService;
   issueArchiveService;
-  moduleService;
-  cycleService;
   // root store
   rootIssueStore;
   issueFilterStore;
@@ -209,15 +175,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       issueUpdate: action,
       removeIssue: action.bound,
       issueArchive: action.bound,
-
-      addIssueToCycle: action.bound,
-      removeIssueFromCycle: action.bound,
-      addCycleToIssue: action.bound,
-      removeCycleFromIssue: action.bound,
-
-      addIssuesToModule: action.bound,
-      removeIssuesFromModule: action.bound,
-      changeModulesInIssue: action.bound,
     });
     this.rootIssueStore = _rootStore;
     this.issueFilterStore = issueFilterStore;
@@ -226,8 +183,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
 
     this.issueService = new IssueService();
     this.issueArchiveService = new IssueArchiveService();
-    this.moduleService = new ModuleService();
-    this.cycleService = new CycleService();
 
     this.controller = new AbortController();
   }
@@ -528,34 +483,33 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
     workspaceSlug: string,
     projectId: string,
     issueId: string,
-    data: Partial<TIssue>,
+    data: TLegacyIssueUpdateRequest,
     shouldSync = true
   ) {
-    // Store Before state of the issue
+    const { skip_activity: _requestContext, ...patch } = data;
     const issueBeforeUpdate = clone(this.rootIssueStore.issues.getIssueById(issueId));
+    const issueAfterUpdate = issueBeforeUpdate ? { ...issueBeforeUpdate, ...patch } : undefined;
     try {
-      // Update the Respective Stores
-      this.rootIssueStore.issues.updateIssue(issueId, data);
-      this.updateIssueList({ ...issueBeforeUpdate, ...data } as TIssue, issueBeforeUpdate);
-
-      // Check if should Sync
+      this.rootIssueStore.issues.updateIssue(issueId, patch);
+      if (issueAfterUpdate) this.updateIssueList(issueAfterUpdate, issueBeforeUpdate);
       if (!shouldSync) return;
 
-      // update parent stats optimistically
-      this.updateParentStats(issueBeforeUpdate, {
-        ...issueBeforeUpdate,
-        ...data,
-      } as TIssue);
-
-      // call API to update the issue
+      if (issueAfterUpdate) this.updateParentStats(issueBeforeUpdate, issueAfterUpdate);
       await this.issueService.patchIssue(workspaceSlug, projectId, issueId, data);
-
-      // call fetch Parent Stats
       this.fetchParentStats(workspaceSlug, projectId);
     } catch (error) {
-      // If errored out update store again to revert the change
-      this.rootIssueStore.issues.updateIssue(issueId, issueBeforeUpdate ?? {});
-      this.updateIssueList(issueBeforeUpdate, { ...issueBeforeUpdate, ...data } as TIssue);
+      if (issueBeforeUpdate) {
+        runInAction(() => {
+          this.rootIssueStore.issues.updateIssue(issueId, issueBeforeUpdate);
+          const current = this.rootIssueStore.issues.getIssueById(issueId);
+          if (current) {
+            for (const key of Object.keys(patch) as (keyof typeof patch)[]) {
+              if (!Object.prototype.hasOwnProperty.call(issueBeforeUpdate, key)) delete current[key];
+            }
+          }
+        });
+        this.updateIssueList(issueBeforeUpdate, issueAfterUpdate);
+      }
       throw error;
     }
   }
@@ -606,346 +560,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       // Since Archived remove the issue Id from the current store
       this.removeIssueFromList(issueId);
     });
-  }
-
-  /**
-   * This method is used to add issues to a particular Cycle
-   * @param workspaceSlug
-   * @param projectId
-   * @param cycleId
-   * @param issueIds
-   * @param fetchAddedIssues If True we make an additional call to fetch all the issues from their Ids, Since the addIssueToCycle API does not return them
-   */
-  async addIssueToCycle(
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string,
-    issueIds: string[],
-    fetchAddedIssues = true
-  ) {
-    // Perform an APi call to add issue to cycle
-    await this.issueService.addIssueToCycle(workspaceSlug, projectId, cycleId, {
-      issues: issueIds,
-    });
-
-    // if cycle Id is the current Cycle Id then call fetch parent stats
-    if (this.cycleId === cycleId) this.fetchParentStats(workspaceSlug, projectId);
-
-    // if true, fetch the issue data for all the issueIds
-    if (fetchAddedIssues) await this.rootIssueStore.issues.getIssues(workspaceSlug, projectId, issueIds);
-
-    // Update issueIds from current store
-    runInAction(() => {
-      // If cycle Id is the current cycle Id, then, add issue to list of issueIds
-      if (this.cycleId === cycleId) issueIds.forEach((issueId) => this.addIssueToList(issueId));
-      // If cycle Id is not the current cycle Id, then, remove issue to list of issueIds
-      else if (this.cycleId) issueIds.forEach((issueId) => this.removeIssueFromList(issueId));
-    });
-
-    // For Each issue update cycle Id by calling current store's update Issue, without making an API call
-    issueIds.forEach((issueId) => {
-      this.issueUpdate(workspaceSlug, projectId, issueId, { cycle_id: cycleId }, false);
-    });
-  }
-
-  /**
-   * This method is used to remove issue from a cycle
-   * @param workspaceSlug
-   * @param projectId
-   * @param cycleId
-   * @param issueId
-   */
-  async removeIssueFromCycle(workspaceSlug: string, projectId: string, cycleId: string, issueId: string) {
-    const issueBeforeRemoval = clone(this.rootIssueStore.issues.getIssueById(issueId));
-
-    // update parent stats optimistically
-    if (this.cycleId === cycleId) this.updateParentStats(issueBeforeRemoval, undefined, cycleId);
-
-    // Perform an APi call to remove issue from cycle
-    await this.issueService.removeIssueFromCycle(workspaceSlug, projectId, cycleId, issueId);
-
-    // if cycle Id is the current Cycle Id then call fetch parent stats
-    if (this.cycleId === cycleId) this.fetchParentStats(workspaceSlug, projectId, cycleId);
-
-    runInAction(() => {
-      // If cycle Id is the current cycle Id, then, remove issue from list of issueIds
-      // oxlint-disable-next-line no-unused-expressions
-      this.cycleId === cycleId && this.removeIssueFromList(issueId);
-    });
-
-    // update Issue cycle Id to null by calling current store's update Issue, without making an API call
-    this.issueUpdate(workspaceSlug, projectId, issueId, { cycle_id: null }, false);
-  }
-
-  /**
-   * Adds cycle to issue optimistically
-   * @param workspaceSlug
-   * @param projectId
-   * @param cycleId
-   * @param issueId
-   * @returns
-   */
-  addCycleToIssue = async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => {
-    const issueCycleId = this.rootIssueStore.issues.getIssueById(issueId)?.cycle_id;
-
-    if (issueCycleId === cycleId) return;
-
-    const issueBeforeUpdate = clone(this.rootIssueStore.issues.getIssueById(issueId));
-
-    try {
-      // Update issueIds from current store
-      runInAction(() => {
-        // If cycle Id before update is the same as current cycle Id then, remove issueId from list
-        if (this.cycleId === issueCycleId) this.removeIssueFromList(issueId);
-        // If cycle Id is the current cycle Id, then, add issue to list of issueIds
-        if (this.cycleId === cycleId) this.addIssueToList(issueId);
-        // For Each issue update cycle Id by calling current store's update Issue, without making an API call
-        this.issueUpdate(workspaceSlug, projectId, issueId, { cycle_id: cycleId }, false);
-      });
-
-      const issueAfterUpdate = clone(this.rootIssueStore.issues.getIssueById(issueId));
-
-      // update parent stats optimistically
-      if (this.cycleId === cycleId || this.cycleId === issueCycleId)
-        this.updateParentStats(issueBeforeUpdate, issueAfterUpdate, this.cycleId);
-
-      await this.issueService.addIssueToCycle(workspaceSlug, projectId, cycleId, {
-        issues: [issueId],
-      });
-
-      // if cycle Id is the current Cycle Id then call fetch parent stats
-      if (this.cycleId === cycleId || this.cycleId === issueCycleId)
-        this.fetchParentStats(workspaceSlug, projectId, this.cycleId);
-    } catch (error) {
-      // remove the new issue ids from the cycle issues map
-      runInAction(() => {
-        // If cycle Id is the current cycle Id, then, remove issue to list of issueIds
-        if (this.cycleId === cycleId) this.removeIssueFromList(issueId);
-        // For Each issue update cycle Id to previous value by calling current store's update Issue, without making an API call
-        this.issueUpdate(workspaceSlug, projectId, issueId, { cycle_id: issueCycleId }, false);
-      });
-
-      throw error;
-    }
-  };
-
-  /*
-   * Remove a cycle from issue
-   * @param workspaceSlug
-   * @param projectId
-   * @param issueId
-   * @returns
-   */
-  removeCycleFromIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
-    const issueBeforeRemoval = clone(this.rootIssueStore.issues.getIssueById(issueId));
-    const issueCycleId = this.rootIssueStore.issues.getIssueById(issueId)?.cycle_id;
-    if (!issueCycleId) return;
-    try {
-      // perform optimistic update, update store
-      // Update issueIds from current store
-      runInAction(() => {
-        // If cycle Id is the current cycle Id, then, add issue to list of issueIds
-        if (this.cycleId === issueCycleId) this.removeIssueFromList(issueId);
-        // For Each issue update cycle Id by calling current store's update Issue, without making an API call
-        this.issueUpdate(workspaceSlug, projectId, issueId, { cycle_id: null }, false);
-      });
-
-      // update parent stats optimistically
-      if (this.cycleId === issueCycleId) this.updateParentStats(issueBeforeRemoval, undefined, issueCycleId);
-
-      // make API call
-      await this.issueService.removeIssueFromCycle(workspaceSlug, projectId, issueCycleId, issueId);
-
-      // if cycle Id is the current Cycle Id then call fetch parent stats
-      if (this.cycleId === issueCycleId) this.fetchParentStats(workspaceSlug, projectId, issueCycleId);
-    } catch (error) {
-      // revert back changes if fails
-      // Update issueIds from current store
-      runInAction(() => {
-        // If cycle Id is the current cycle Id, then, add issue to list of issueIds
-        if (this.cycleId === issueCycleId) this.addIssueToList(issueId);
-        // For Each issue update cycle Id by calling current store's update Issue, without making an API call
-        this.issueUpdate(workspaceSlug, projectId, issueId, { cycle_id: issueCycleId }, false);
-      });
-
-      throw error;
-    }
-  };
-
-  /**
-   * This method is used to add issues to a module
-   * @param workspaceSlug
-   * @param projectId
-   * @param moduleId
-   * @param issueIds
-   * @param fetchAddedIssues If True we make an additional call to fetch all the issues from their Ids, Since the addIssuesToModule API does not return them
-   */
-  async addIssuesToModule(
-    workspaceSlug: string,
-    projectId: string,
-    moduleId: string,
-    issueIds: string[],
-    fetchAddedIssues = true
-  ) {
-    // Perform an APi call to add issue to module
-    await this.moduleService.addIssuesToModule(workspaceSlug, projectId, moduleId, {
-      issues: issueIds,
-    });
-
-    // if true, fetch the issue data for all the issueIds
-    if (fetchAddedIssues) await this.rootIssueStore.issues.getIssues(workspaceSlug, projectId, issueIds);
-
-    // if module Id is the current Module Id then call fetch parent stats
-    if (this.moduleId === moduleId) this.fetchParentStats(workspaceSlug, projectId);
-
-    runInAction(() => {
-      // if module Id is the current Module Id, then, add issue to list of issueIds
-      // oxlint-disable-next-line no-unused-expressions
-      this.moduleId === moduleId && issueIds.forEach((issueId) => this.addIssueToList(issueId));
-    });
-
-    // For Each issue update module Ids by calling current store's update Issue, without making an API call
-    issueIds.forEach((issueId) => {
-      const issueModuleIds = get(this.rootIssueStore.issues.issuesMap, [issueId, "module_ids"]) ?? [];
-      const updatedIssueModuleIds = uniq(concat(issueModuleIds, [moduleId]));
-      this.issueUpdate(workspaceSlug, projectId, issueId, { module_ids: updatedIssueModuleIds }, false);
-    });
-  }
-
-  /**
-   * This method is used to remove issue from a module
-   * @param workspaceSlug
-   * @param projectId
-   * @param moduleId
-   * @param issueIds
-   * @returns
-   */
-  async removeIssuesFromModule(workspaceSlug: string, projectId: string, moduleId: string, issueIds: string[]) {
-    // Perform an APi call to remove issue to module
-    const response = await this.moduleService.removeIssuesFromModuleBulk(workspaceSlug, projectId, moduleId, issueIds);
-
-    // if module Id is the current Module Id then call fetch parent stats
-    if (this.moduleId === moduleId) this.fetchParentStats(workspaceSlug, projectId);
-
-    runInAction(() => {
-      // if module Id is the current Module Id, then remove issue from list of issueIds
-      // oxlint-disable-next-line no-unused-expressions
-      this.moduleId === moduleId && issueIds.forEach((issueId) => this.removeIssueFromList(issueId));
-    });
-
-    // For Each issue update module Ids by calling current store's update Issue, without making an API call
-    runInAction(() => {
-      issueIds.forEach((issueId) => {
-        const issueModuleIds = get(this.rootIssueStore.issues.issuesMap, [issueId, "module_ids"]) ?? [];
-        const updatedIssueModuleIds = pull(issueModuleIds, moduleId);
-        this.issueUpdate(workspaceSlug, projectId, issueId, { module_ids: updatedIssueModuleIds }, false);
-      });
-    });
-
-    return response;
-  }
-
-  /*
-   * add Modules to Array in a non optimistic way while creating issues
-   * @param workspaceSlug
-   * @param projectId
-   * @param issueId
-   * @param moduleIds array of modules to be added
-   */
-  async addModulesToIssue(workspaceSlug: string, projectId: string, issueId: string, moduleIds: string[]) {
-    // keep a copy of the original module ids
-    const originalModuleIds = get(this.rootIssueStore.issues.issuesMap, [issueId, "module_ids"]) ?? [];
-    //Perform API call
-    await this.moduleService.addModulesToIssue(workspaceSlug, projectId, issueId, {
-      modules: moduleIds,
-      removed_modules: [],
-    });
-
-    runInAction(() => {
-      // get current Module Ids of the issue
-      let currentModuleIds = [...originalModuleIds];
-
-      // If current Module Id is included in the modules list, then add Issue to List
-      if (moduleIds.includes(this.moduleId ?? "")) this.addIssueToList(issueId);
-      currentModuleIds = uniq(concat([...currentModuleIds], moduleIds));
-
-      // For current Issue, update module Ids by calling current store's update Issue, without making an API call
-      this.issueUpdate(workspaceSlug, projectId, issueId, { module_ids: currentModuleIds }, false);
-    });
-
-    if (moduleIds.includes(this.moduleId ?? "")) {
-      this.fetchParentStats(workspaceSlug, projectId, this.moduleId);
-    }
-  }
-
-  /*
-   * change modules array in issue
-   * @param workspaceSlug
-   * @param projectId
-   * @param issueId
-   * @param addModuleIds array of modules to be added
-   * @param removeModuleIds array of modules to be removed
-   */
-  async changeModulesInIssue(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    addModuleIds: string[],
-    removeModuleIds: string[]
-  ) {
-    // keep a copy of the original module ids
-    const issueBeforeChanges = clone(this.rootIssueStore.issues.getIssueById(issueId));
-    const originalModuleIds = get(this.rootIssueStore.issues.issuesMap, [issueId, "module_ids"]) ?? [];
-    try {
-      runInAction(() => {
-        // get current Module Ids of the issue
-        let currentModuleIds = [...originalModuleIds];
-        // remove the new issue id to the module issues
-        removeModuleIds.forEach((moduleId) => {
-          // If module Id is equal to current module Id, them remove Issue from List
-          // oxlint-disable-next-line no-unused-expressions
-          this.moduleId === moduleId && this.removeIssueFromList(issueId);
-          currentModuleIds = pull(currentModuleIds, moduleId);
-        });
-
-        // If current Module Id is included in the modules list, then add Issue to List
-        if (addModuleIds.includes(this.moduleId ?? "")) this.addIssueToList(issueId);
-        currentModuleIds = uniq(concat([...currentModuleIds], addModuleIds));
-
-        // For current Issue, update module Ids by calling current store's update Issue, without making an API call
-        this.issueUpdate(workspaceSlug, projectId, issueId, { module_ids: currentModuleIds }, false);
-      });
-
-      const issueAfterChanges = clone(this.rootIssueStore.issues.getIssueById(issueId));
-
-      // update parent stats optimistically
-      if (addModuleIds.includes(this.moduleId || "") || removeModuleIds.includes(this.moduleId || "")) {
-        this.updateParentStats(issueBeforeChanges, issueAfterChanges, this.moduleId);
-      }
-
-      //Perform API call
-      await this.moduleService.addModulesToIssue(workspaceSlug, projectId, issueId, {
-        modules: addModuleIds,
-        removed_modules: removeModuleIds,
-      });
-
-      if (addModuleIds.includes(this.moduleId || "") || removeModuleIds.includes(this.moduleId || "")) {
-        this.fetchParentStats(workspaceSlug, projectId);
-      }
-    } catch (error) {
-      // revert the issue back to its original module ids
-      runInAction(() => {
-        // If current Module Id is included in the add modules list, then remove Issue from List
-        if (addModuleIds.includes(this.moduleId ?? "")) this.removeIssueFromList(issueId);
-        // If current Module Id is included in the removed modules list, then add Issue to List
-        if (removeModuleIds.includes(this.moduleId ?? "")) this.addIssueToList(issueId);
-
-        // For current Issue, update module Ids by calling current store's update Issue, without making an API call
-        this.issueUpdate(workspaceSlug, projectId, issueId, { module_ids: originalModuleIds }, false);
-      });
-
-      throw error;
-    }
   }
 
   /**

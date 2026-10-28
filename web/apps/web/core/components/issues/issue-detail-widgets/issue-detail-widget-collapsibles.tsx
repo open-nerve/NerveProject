@@ -12,7 +12,6 @@ import type { TWorkItemWidgets } from "@nerve/types";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 // local imports
-import { AttachmentsCollapsible } from "./attachments";
 import { LinksCollapsible } from "./links";
 import { RelationsCollapsible } from "./relations";
 import { SubIssuesCollapsible } from "./sub-issues";
@@ -31,7 +30,6 @@ export const IssueDetailWidgetCollapsibles = observer(function IssueDetailWidget
   const {
     issue: { getIssueById },
     subIssues: { subIssuesByIssueId },
-    attachment: { getAttachmentsCountByIssueId, getAttachmentsUploadStatusByIssueId },
     relation: { getRelationCountByIssueId },
   } = useIssueDetail();
   // derived values
@@ -42,11 +40,6 @@ export const IssueDetailWidgetCollapsibles = observer(function IssueDetailWidget
   const shouldRenderSubIssues = !!subIssues && subIssues.length > 0 && !hideWidgets?.includes("sub-work-items");
   const shouldRenderRelations = issueRelationsCount > 0 && !hideWidgets?.includes("relations");
   const shouldRenderLinks = !!issue?.link_count && issue?.link_count > 0 && !hideWidgets?.includes("links");
-  const attachmentUploads = getAttachmentsUploadStatusByIssueId(issueId);
-  const attachmentsCount = getAttachmentsCountByIssueId(issueId);
-  const shouldRenderAttachments =
-    attachmentsCount > 0 ||
-    (!!attachmentUploads && attachmentUploads.length > 0 && !hideWidgets?.includes("attachments"));
 
   return (
     <div className="flex flex-col">
@@ -63,14 +56,6 @@ export const IssueDetailWidgetCollapsibles = observer(function IssueDetailWidget
       )}
       {shouldRenderLinks && (
         <LinksCollapsible workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} disabled={disabled} />
-      )}
-      {shouldRenderAttachments && (
-        <AttachmentsCollapsible
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          issueId={issueId}
-          disabled={disabled}
-        />
       )}
     </div>
   );

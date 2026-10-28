@@ -24,7 +24,7 @@ export type TWorkItemLevelModalsProps = {
 export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: TWorkItemLevelModalsProps) {
   const { workItemIdentifier } = props;
   // router
-  const { workspaceSlug, cycleId, moduleId } = useParams();
+  const { workspaceSlug } = useParams();
   const navigate = useNavigate();
   // store hooks
   const {
@@ -62,18 +62,11 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
     await fetchSubWorkItems(workspaceSlug, newIssue.project_id, workItemDetails.id);
   };
 
-  const getCreateIssueModalData = () => {
-    if (cycleId) return { cycle_id: cycleId };
-    if (moduleId) return { module_ids: [moduleId] };
-    return undefined;
-  };
-
   return (
     <>
       <CreateUpdateIssueModal
         isOpen={isCreateIssueModalOpen}
         onClose={() => toggleCreateIssueModal(false)}
-        data={getCreateIssueModalData()}
         onSubmit={handleCreateIssueSubmit}
         allowedProjectIds={createWorkItemAllowedProjectIds}
       />

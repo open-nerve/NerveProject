@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueFormValues } from "../types";
 import React from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
@@ -11,7 +12,7 @@ import { Controller } from "react-hook-form";
 import { ETabIndices } from "@nerve/constants";
 import { CloseOutline } from "@makeplane/propel/icons";
 // types
-import type { ISearchIssueResponse, TIssue } from "@nerve/types";
+import type { ISearchIssueResponse } from "@nerve/types";
 // helpers
 import { getTabIndex } from "@nerve/utils";
 // hooks
@@ -20,7 +21,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 
 type TIssueParentTagProps = {
-  control: Control<TIssue>;
+  control: Control<IssueFormValues>;
   selectedParentIssue: ISearchIssueResponse;
   handleFormChange: () => void;
   setSelectedParentIssue: (issue: ISearchIssueResponse | null) => void;

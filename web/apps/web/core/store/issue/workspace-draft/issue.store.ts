@@ -59,7 +59,11 @@ export interface IWorkspaceDraftIssues {
     payload: Partial<TWorkspaceDraftIssue | TIssue>
   ) => Promise<TWorkspaceDraftIssue | undefined>;
   deleteIssue: (workspaceSlug: string, issueId: string) => Promise<void>;
-  moveIssue: (workspaceSlug: string, issueId: string, payload: Partial<TWorkspaceDraftIssue>) => Promise<TIssue>;
+  moveIssue: (
+    workspaceSlug: string,
+    issueId: string,
+    payload: Partial<TWorkspaceDraftIssue | TIssue>
+  ) => Promise<TIssue>;
   addCycleToIssue: (
     workspaceSlug: string,
     issueId: string,
@@ -82,29 +86,6 @@ export interface IWorkspaceDraftIssues {
     subGroupId: string | undefined,
     isSubGroupCumulative: boolean
   ) => number | undefined;
-  removeCycleFromIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-  addIssueToCycle: (
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string,
-    issueIds: string[],
-    fetchAddedIssues?: boolean
-  ) => Promise<void>;
-  removeIssueFromCycle: (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => Promise<void>;
-
-  removeIssuesFromModule: (
-    workspaceSlug: string,
-    projectId: string,
-    moduleId: string,
-    issueIds: string[]
-  ) => Promise<void>;
-  changeModulesInIssue(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    addModuleIds: string[],
-    removeModuleIds: string[]
-  ): Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 }
 
@@ -321,7 +302,7 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
     }
   };
 
-  moveIssue = async (workspaceSlug: string, issueId: string, payload: Partial<TWorkspaceDraftIssue>) => {
+  moveIssue = async (workspaceSlug: string, issueId: string, payload: Partial<TWorkspaceDraftIssue | TIssue>) => {
     try {
       this.loader = "move";
 
@@ -381,28 +362,5 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
     _subGroupId: string | undefined,
     _isSubGroupCumulative: boolean
   ) => undefined;
-  removeCycleFromIssue = async (_workspaceSlug: string, _projectId: string, _issueId: string) => {};
-  addIssueToCycle = async (
-    _workspaceSlug: string,
-    _projectId: string,
-    _cycleId: string,
-    _issueIds: string[],
-    _fetchAddedIssues?: boolean
-  ) => {};
-  removeIssueFromCycle = async (_workspaceSlug: string, _projectId: string, _cycleId: string, _issueId: string) => {};
-
-  removeIssuesFromModule = async (
-    _workspaceSlug: string,
-    _projectId: string,
-    _moduleId: string,
-    _issueIds: string[]
-  ) => {};
-  changeModulesInIssue = async (
-    _workspaceSlug: string,
-    _projectId: string,
-    _issueId: string,
-    _addModuleIds: string[],
-    _removeModuleIds: string[]
-  ) => {};
   archiveIssue = async (_workspaceSlug: string, _projectId: string, _issueId: string) => {};
 }

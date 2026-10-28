@@ -18,12 +18,10 @@ import { generateWorkItemLink, copyTextToClipboard } from "@nerve/utils";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
-import { useUser } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { WorkItemDetailQuickActions } from "../issue-layouts/quick-action-dropdowns";
-import { IssueSubscription } from "./subscription";
 
 type Props = {
   workspaceSlug: string;
@@ -42,7 +40,6 @@ export const IssueDetailQuickActions = observer(function IssueDetailQuickActions
   const navigate = useNavigate();
 
   // hooks
-  const { data: currentUser } = useUser();
   const { isMobile } = usePlatformOS();
   const { getProjectIdentifierById } = useProject();
   const {
@@ -143,9 +140,6 @@ export const IssueDetailQuickActions = observer(function IssueDetailQuickActions
     <>
       <div className="flex flex-shrink-0 items-center justify-end">
         <div className="flex flex-wrap items-center gap-2">
-          {currentUser && !issue?.archived_at && (
-            <IssueSubscription workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} />
-          )}
           <div className="flex flex-wrap items-center gap-2 text-tertiary">
             <Tooltip label={t("common.actions.copy_link")} disabled={isMobile}>
               <IconButton

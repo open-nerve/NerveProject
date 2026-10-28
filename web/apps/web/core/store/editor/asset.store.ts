@@ -12,7 +12,14 @@ import { v4 as uuidv4 } from "uuid";
 import type { EFileAssetType, TFileEntityInfo, TFileSignedURLResponse } from "@nerve/types";
 // services
 import { FileService } from "@/services/file.service";
-import type { TAttachmentUploadStatus } from "../issue/issue-details/attachment.store";
+/** Upload progress belongs to editor assets independently of issue attachment widgets. */
+type TAttachmentUploadStatus = {
+  id: string;
+  name: string;
+  progress: number;
+  size: number;
+  type: string;
+};
 
 export interface IEditorAssetStore {
   // computed

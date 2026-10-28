@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 // nerve imports
 import type { TInboxIssue, TIssue, TInboxIssueWithPagination } from "@nerve/types";
 import { EInboxIssueSource } from "@nerve/types";
@@ -59,7 +60,7 @@ export class InboxIssueService extends APIService {
     workspaceSlug: string,
     projectId: string,
     inboxIssueId: string,
-    data: Partial<TIssue>
+    data: TLegacyIssueUpdateRequest
   ): Promise<TInboxIssue> {
     return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/inbox-issues/${inboxIssueId}/`, {
       issue: data,

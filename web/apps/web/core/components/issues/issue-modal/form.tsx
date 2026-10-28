@@ -7,9 +7,11 @@
  * See the LICENSE file for details.
  */
 
+import { pick } from "lodash-es";
+import { ISSUE_FORM_FIELDS } from "./types";
+import type { IssueFormData, IssueFormValues, IssueDescriptionLoadState } from "./types";
 import React, { useState, useRef, useEffect } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 import { FormProvider, useForm } from "react-hook-form";
 // editor
 import { ETabIndices, DEFAULT_WORK_ITEM_FORM_VALUES } from "@nerve/constants";
@@ -18,7 +20,6 @@ import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue, TWorkspaceDraftIssue } from "@nerve/types";
 // hooks
 import { Switch } from "@makeplane/propel/components/switch";
 import {
@@ -42,17 +43,19 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-import { useCycle } from "@/hooks/store/use-cycle";
 
 export interface IssueFormProps {
-  data?: Partial<TIssue>;
+  data?: IssueFormData;
+  sourceIssueId?: string;
+  descriptionLoadState?: IssueDescriptionLoadState;
+  onRetryDescription?: () => void;
   issueTitleRef: React.MutableRefObject<HTMLInputElement | null>;
   isCreateMoreToggleEnabled: boolean;
   onAssetUpload: (assetId: string) => void;
   onCreateMoreToggleChange: (value: boolean) => void;
-  onChange?: (formData: Partial<TIssue> | null) => void;
+  onChange?: (formData: Partial<IssueFormValues> | null) => void;
   onClose: () => void;
-  onSubmit: (values: Partial<TIssue>, is_draft_issue?: boolean) => Promise<void>;
+  onSubmit: (values: Partial<IssueFormValues>, is_draft_issue?: boolean) => Promise<void>;
   workspaceSlug: string;
   projectId: string;
   isDraft: boolean;
@@ -72,6 +75,9 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const { t } = useTranslation();
   const {
     data,
+    sourceIssueId,
+    descriptionLoadState = "ready",
+    onRetryDescription,
     issueTitleRef,
     onAssetUpload,
     onChange,
@@ -100,9 +106,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const formRef = useRef<HTMLFormElement | null>(null);
   const modalContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // router
-  const { projectId: routeProjectId } = useParams();
-
   // store hooks
   const { getProjectById } = useProject();
   const { selectedParentIssue, setSelectedParentIssue } = useIssueModal();
@@ -112,12 +115,11 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const {
     issue: { getIssueById },
   } = useIssueDetail();
-  const { fetchAllCycles } = useCycle();
   const { getStateById } = useProjectState();
 
   // form info
-  const methods = useForm<TIssue>({
-    defaultValues: { ...DEFAULT_WORK_ITEM_FORM_VALUES, project_id: defaultProjectId, ...data },
+  const methods = useForm<IssueFormValues>({
+    defaultValues: { ...DEFAULT_WORK_ITEM_FORM_VALUES, project_id: defaultProjectId, ...pick(data, ISSUE_FORM_FIELDS) },
     reValidateMode: "onChange",
   });
   const {
@@ -138,12 +140,12 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   //reset few fields on projectId change
   useEffect(() => {
     if (isDirty) reset(getUpdateFormDataForReset(projectId, getValues()));
-    if (projectId && routeProjectId !== projectId) fetchAllCycles(workspaceSlug, projectId);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const handleFormSubmit = async (formData: Partial<TIssue>, is_draft_issue = false) => {
+  const handleFormSubmit = async (formData: Partial<IssueFormValues>, is_draft_issue = false) => {
+    if (descriptionLoadState !== "ready") return;
     // Check if the editor is ready to discard
     if (!editorRef.current?.isEditorReadyToDiscard()) {
       setToast({
@@ -163,14 +165,11 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
           description_html: formData.description_html ?? "<p></p>",
         };
 
-    // this condition helps to move the issues from draft to project issues
-    if (formData.hasOwnProperty("is_draft")) submitData.is_draft = formData.is_draft;
-
     await onSubmit(submitData, is_draft_issue)
       .then(() => {
         reset({
           ...DEFAULT_WORK_ITEM_FORM_VALUES,
-          ...(isCreateMoreToggleEnabled ? { ...data } : {}),
+          ...(isCreateMoreToggleEnabled ? pick(data, ISSUE_FORM_FIELDS) : {}),
           project_id: getValues<"project_id">("project_id"),
           description_html: data?.description_html ?? "<p></p>",
         });
@@ -182,13 +181,13 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   };
 
   const handleMoveToProjects = async () => {
-    if (!data?.id || !data?.project_id || !data) return;
+    if (!data?.id || !data?.project_id || !data || descriptionLoadState !== "ready") return;
     setIsMoving(true);
     try {
       await moveIssue(workspaceSlug, data.id, {
         ...data,
         ...getValues(),
-      } as TWorkspaceDraftIssue);
+      });
     } catch {
       setToast({
         type: TOAST_TYPE.ERROR,
@@ -269,7 +268,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                 <div className="flex items-center gap-x-1">
                   <IssueProjectSelect
                     control={control}
-                    disabled={!!data?.id || !!data?.sourceIssueId || isProjectSelectionDisabled}
+                    disabled={!!data?.id || !!sourceIssueId || isProjectSelectionDisabled}
                     handleFormChange={handleFormChange}
                   />
                 </div>
@@ -295,22 +294,32 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
             </div>
             <div className="space-y-3 bg-surface-1 pb-4">
               <div className="px-5">
-                <IssueDescriptionEditor
-                  control={control}
-                  isDraft={isDraft}
-                  issueId={data?.id}
-                  descriptionHtmlData={data?.description_html}
-                  editorRef={editorRef}
-                  submitBtnRef={submitBtnRef}
-                  workspaceSlug={workspaceSlug}
-                  projectId={projectId}
-                  handleFormChange={handleFormChange}
-                  handleDescriptionHTMLDataChange={(description_html) =>
-                    setValue<"description_html">("description_html", description_html)
-                  }
-                  onAssetUpload={onAssetUpload}
-                  onClose={onClose}
-                />
+                {descriptionLoadState === "error" ? (
+                  <div role="alert" className="space-y-2 rounded-md border border-danger-subtle p-3">
+                    <p>{t("entity.fetch.failed", { entity: t("description") })}</p>
+                    <Button type="button" variant="secondary" onClick={onRetryDescription}>
+                      {t("common.retry")}
+                    </Button>
+                  </div>
+                ) : (
+                  <IssueDescriptionEditor
+                    control={control}
+                    isDraft={isDraft}
+                    issueId={data?.id}
+                    descriptionHtmlData={data?.description_html}
+                    editorRef={editorRef}
+                    submitBtnRef={submitBtnRef}
+                    workspaceSlug={workspaceSlug}
+                    projectId={projectId}
+                    handleFormChange={handleFormChange}
+                    handleDescriptionHTMLDataChange={(description_html) => {
+                      setValue<"description_html">("description_html", description_html);
+                      handleFormChange();
+                    }}
+                    onAssetUpload={onAssetUpload}
+                    onClose={onClose}
+                  />
+                )}
               </div>
             </div>
             <div className="rounded-b-lg border-t-[0.5px] border-subtle bg-surface-1 px-4 py-3">
@@ -321,9 +330,9 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   projectId={projectId}
                   workspaceSlug={workspaceSlug}
                   selectedParentIssue={selectedParentIssue}
-                  startDate={watch("start_date")}
-                  targetDate={watch("target_date")}
-                  parentId={watch("parent_id")}
+                  startDate={watch("start_date") ?? null}
+                  targetDate={watch("target_date") ?? null}
+                  parentId={watch("parent_id") ?? null}
                   isDraft={isDraft}
                   handleFormChange={handleFormChange}
                   setSelectedParentIssue={setSelectedParentIssue}
@@ -357,7 +366,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                       variant="secondary"
                       size="lg"
                       onClick={() => {
-                        if (editorRef.current?.isEditorReadyToDiscard()) {
+                        if (descriptionLoadState !== "ready" || editorRef.current?.isEditorReadyToDiscard()) {
                           onClose();
                         } else {
                           setToast({
@@ -378,7 +387,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                       type="submit"
                       ref={submitBtnRef}
                       loading={isSubmitting}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || descriptionLoadState !== "ready"}
                     >
                       {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
                     </Button>
@@ -390,7 +399,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                       type="button"
                       loading={isMoving}
                       onClick={handleMoveToProjects}
-                      disabled={isMoving}
+                      disabled={isMoving || descriptionLoadState !== "ready"}
                       size="lg"
                     >
                       {t("add_to_project")}

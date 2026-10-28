@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useMemo } from "react";
 // types
@@ -32,7 +33,11 @@ export interface IssueActions {
   fetchNextIssues: (groupId?: string, subGroupId?: string) => Promise<TIssuesResponse | undefined>;
   removeIssue: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   createIssue?: (projectId: string | undefined | null, data: Partial<TIssue>) => Promise<TIssue | undefined>;
-  updateIssue?: (projectId: string | undefined | null, issueId: string, data: Partial<TIssue>) => Promise<void>;
+  updateIssue?: (
+    projectId: string | undefined | null,
+    issueId: string,
+    data: TLegacyIssueUpdateRequest
+  ) => Promise<void>;
   removeIssueFromView?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   archiveIssue?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   restoreIssue?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
@@ -94,7 +99,7 @@ const useProjectIssueActions = () => {
     [issues.createIssue, workspaceSlug]
   );
   const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: Partial<TIssue>) => {
+    async (projectId: string | undefined | null, issueId: string, data: TLegacyIssueUpdateRequest) => {
       if (!workspaceSlug || !projectId) return;
       return await issues.updateIssue(workspaceSlug, projectId, issueId, data);
     },
@@ -166,7 +171,7 @@ const useProfileIssueActions = () => {
     [issues.createIssue, workspaceSlug]
   );
   const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: Partial<TIssue>) => {
+    async (projectId: string | undefined | null, issueId: string, data: TLegacyIssueUpdateRequest) => {
       if (!workspaceSlug || !projectId) return;
       return await issues.updateIssue(workspaceSlug, projectId, issueId, data);
     },

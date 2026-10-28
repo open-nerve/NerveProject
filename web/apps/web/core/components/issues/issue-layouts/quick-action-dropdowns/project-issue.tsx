@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { omit } from "lodash-es";
+import { pick } from "lodash-es";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
@@ -68,13 +68,23 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
   const isInArchivableGroup = !!stateDetails && ARCHIVABLE_STATE_GROUPS.includes(stateDetails?.group);
   const isDeletingAllowed = isEditingAllowed;
 
-  const duplicateIssuePayload = omit(
+  const duplicateIssuePayload = pick(
     {
       ...issue,
       name: `${issue.name} (copy)`,
-      sourceIssueId: issue.id,
     },
-    ["id"]
+    [
+      "name",
+      "project_id",
+      "state_id",
+      "description_html",
+      "parent_id",
+      "priority",
+      "assignee_ids",
+      "label_ids",
+      "start_date",
+      "target_date",
+    ]
   );
 
   // Menu items and modals using helper
@@ -132,6 +142,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
           setIssueToEdit(undefined);
         }}
         data={issueToEdit ?? duplicateIssuePayload}
+        sourceIssueId={issueToEdit ? undefined : issue.id}
         onSubmit={async (data) => {
           if (issueToEdit && handleUpdate) await handleUpdate(data);
         }}

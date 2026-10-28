@@ -128,6 +128,10 @@ make e2e
 
 **Files：** `C/components/issues/issue-detail/root.tsx`、issue-detail-widgets/issue-detail-widget-modals.tsx、peek-overview/root.tsx、issue-modal/base.tsx、form.tsx、modal.tsx、components/default-properties.tsx；quick-action-dropdowns/{project-issue,issue-detail,all-issue}.tsx仍有者；`C/components/inbox/content/{issue-root,issue-properties}.tsx`、inbox/modals/create-modal下调用方；对应 `C/store/issue/issue-details/`；新（如需）`C/components/issues/issue-modal/types.ts`，只定义局部表单合同。
 
+R10 Files补充：共享 `P/types/src/issues/issue.ts` 请求合同；`use-issues-actions.tsx`；detail facade/root、project/profile 更新边界、Base、IssueService.patchIssue；inbox create-root/title/properties/description、ProjectInbox.createInboxIssue、InboxIssueStore、InboxIssueService；新 `C/store/issue/helpers/base-issues.update-request.test.ts`、`C/store/inbox/inbox-issue.request.test.ts`、`C/components/inbox/modals/create-modal/create-root.request.test.tsx`。
+
+R10 Interfaces：T5 声明 `TLegacyIssueUpdateRequest = Partial<TIssue> & { skip_activity?: string }`，仅请求输入；创建输入 `Partial<TIssue>`，元数据 `Partial<TInboxIssue>`，完整响应不接受局部Partial。
+
 **Interfaces：** 沿用 T4 无 pending 入实体的局部输入边界；sourceIssueId从实体data移到独立 `sourceIssueId?: string` prop，由调用者传到base/form；payload只含实际实体/请求允许字段。详情描述仍由已有detail读取，在T6替换类型时转显式accessor。
 
 - [ ] 删除is_subscribed/is_intake/description_binary等不属于Issue的读取与M4不可达附件/关注挂载；M5/M7自身域DTO保留。不要把comment/activity/relations的完整DTO重构提前到本段。
@@ -136,9 +140,17 @@ make e2e
 - [ ] 运行 `pnpm --filter web exec vitest run core/components/issues/issue-modal/base.clone.test.tsx`，先记录真实载荷性质红，再最小调整并绿；不以不存在测试文件的失败算红。`pnpm --filter web check:types`、`make lint-web`、`make knip`通过。
 - [ ] 执行G；提交 `feat(M4/P10a): 分离弹窗局部状态并收窄详情实体读取`。
 
+- [ ] 按R10先将inbox描述创建输入在form/ProjectInboxStore/service对齐，创建请求不带更新flag；共享更新输入显式声明旧stringflag，普通详情与inbox现有三处写者保留。
+- [ ] Base.issueUpdate与InboxIssueStore.updateIssue分离原request/实体patch，canonical、local issue、分组/统计/rollback只用实体patch，旧HTTP完整发送原request一次；shouldSync=false不发；拒绝还原原HTML，原不存在key真正删，空串/null原值保留。accept以完整response.issue为底，仅响应缺description_html且本地是实际string时保留该HTML（含空串），响应Detail含空串优先；不spread整个Partial，不补undefined/default。
+- [ ] 写并运行§5 exact三个定向测试，记录真实性质红→最小改动→绿；既有吞错按实际promise与缓存事实记录，不以UI错误提示已通过代替证据。接续既有clone/check/lint/knip/G，不新拆阶段。
+
+T5 详情资源职责补充（root 同域局部裁定，2026-10-28）：两条 retrieve 入口只把完整无嵌套 core 响应入 canonical 一次；reaction/link 保留自身原 DTO，由现有 fetchReactions/fetchLinks 加载到各自资源缓存。父项只依据实际非 null parent_id，使用该响应的实际 project_id 调原 service.retrieve 后入 canonical，不递归调用全详情，不推断隐藏父。新增读取须由拥有它们的 fetch promise await 并传递拒绝，不制造 unhandled rejection、不吞成空成功；不顺手修历史 detached activity/comment/subissue/relation/state 请求。详情成功 promise 因此等待这三项；从旧 expand 取 reaction/link 改成两个既有资源 GET，非 null 父保留一次独立 GET，null 父不请求。R10 的更新/create wire 与次数不变只限其写请求，不能推广成 T5 所有读次数不变。新增 `C/store/issue/issue-details/issue.fetch.test.ts` 用真实 RootStore/canonical/两种 retrieve/资源 store/service 公共 HTTP 边界，核无嵌套、真实资源缓存、父 null/非 null、canonical 次数与拒绝可观察；先性质红再最小改动绿，T6 只机械换核心夹具。
+
 ## Task 6：机械换型与描述/null回归
 
 **Files：** `P/types/src/issues/issue.ts`；spec附录B全部剩余核心消费者；`C/store/issue/issue.store.ts`；`C/hooks/store/use-issues.ts`；§2.3点名四旧service和inbox-issue.service.ts；新 `C/store/issue/issue.store.types.test.ts`。
+
+沿T5已分清的输入/响应职责机械替换：描述创建Partial<IssueDetail>，更新request的实体部分Partial<IssueDetail>并保留既有optional string flag；TInboxIssue.issue为Issue|IssueDetail、局部partial非canonical。canonical五接口严格原spec不增flag；R10runtime已在T5闭合，T6不重设计。
 
 **Interfaces：** create 实际响应是唯一 quick-add 实体写者，无 fake defaults；严格采用spec§2.2五个接口；普通getter回Issue|IssueDetail|undefined、detailgetter只回真实Detail。旧TIssuesResponse元素Issue；三个旧核心类型从定义和barrel消失。
 
@@ -146,10 +158,12 @@ make e2e
 - [ ] 新 `does_not_claim_list_rows_are_details`：只有Issue时detailgetter为undefined，空HTML的真正Detail返回Detail，不以HTML truthy判定。新 `keeps_nullable_actor_and_hidden_parent`：created_by_id/updated_by_id/parent_id均null保存和读取不崩、不恢复旧created_by/updated_by。
 - [ ] 先运行 `pnpm --filter web exec vitest run core/store/issue/issue.store.types.test.ts`记录缺接口/不满足断言；新增接口编译红与描述保护的行为红区分。实现显式in判别与现有合并，不加P10b版本决胜。
 - [ ] 分目录机械替换导入、created_by/updated_by→*_id、可空性；描述调用者改detailgetter/显式in判别。map直接Record，不用新全局别名复活旧类型；全部注释引用也改为真实当前类型。
-- [ ] TIssueResponseResults的TBaseIssue[]换Issue[]，容器其它字段留P10b；旧四service只做已批准签名过渡，M7create/update参数Partial<Issue>，不冒称旧路由有后端。
+- [ ] TIssueResponseResults的TBaseIssue[]换Issue[]，容器其它字段留P10b；inbox create描述输入Partial<IssueDetail>；updateIssue使用显式旧请求输入，元数据update保持所属DTO；四旧service按已批准过渡签名机械换型，不冒称旧路由有后端。R10旧请求类型只在请求边界，不是新全局实体别名。
 - [ ] `rg -n '\b(TIssue|TBaseIssue|TIssueMap)\b' web`无命中；`pnpm --filter web check:types`/`make lint-web`/`make knip`通过；新增类型编译不能靠any/双断言/重新扩Issue字段。
 - [ ] 对描述测试做有效变异：把既有合并临时改为整行替换，断言HTML丢失而红；恢复精确原字节后再绿。nullable/accessor测试若纯编译保护，按真实验证层记录，不伪称运行变异。
 - [ ] 执行F和G；提交 `feat(M4/P10a): 用生成工作项实体替换旧核心类型`。
+
+- [ ] 将T5 R10 tests/fixtures机械换生成完整响应后重跑原exact三文件，载荷保留/flag隔离/absence rollback行为不回退。原canonical描述顺序、list/detail、nullable回归与合并替换变异照旧，不复制测试、不以R10替代。执行既有F/G。
 
 ## Task 7：旧地址守卫、死代码与警告收口
 

@@ -4,13 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { useMemo } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 // assets
 import emptyIssue from "@/app/assets/empty-state/issue.svg?url";
@@ -29,7 +29,7 @@ import { IssueDetailsSidebar } from "./sidebar";
 
 export type TIssueOperations = {
   fetch: (workspaceSlug: string, projectId: string, issueId: string, loader?: boolean) => Promise<void>;
-  update: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
+  update: (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) => Promise<void>;
   remove: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   archive?: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   restore?: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
@@ -70,7 +70,7 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
           console.error("Error fetching the parent issue:", error);
         }
       },
-      update: async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => {
+      update: async (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) => {
         try {
           await updateIssue(workspaceSlug, projectId, issueId, data);
         } catch (error) {

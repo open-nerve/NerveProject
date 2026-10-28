@@ -213,9 +213,6 @@ catalogs:
     react-day-picker:
       specifier: 9.5.0
       version: 9.5.0
-    react-dropzone:
-      specifier: ^14.2.3
-      version: 14.3.8
     react-hook-form:
       specifier: ^7.84.0
       version: 7.84.0
@@ -474,9 +471,6 @@ importers:
       react-dom:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
-      react-dropzone:
-        specifier: 'catalog:'
-        version: 14.3.8(react@19.2.8)
       react-hook-form:
         specifier: 'catalog:'
         version: 7.84.0(react@19.2.8)
@@ -3257,10 +3251,6 @@ packages:
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
 
-  attr-accept@2.2.5:
-    resolution: {integrity: sha512-0bDNnY/u6pPwHDMoF0FieU354oBi0a8rD9FcsLwzcGWbc8KS8KPIi7y+s13OlVY+gMWc/9xEMUgNE6Qm8ZllYQ==}
-    engines: {node: '>=4'}
-
   axios@1.18.1:
     resolution: {integrity: sha512-3nTvFlvpn9Zu/RkHUqtc7/+al4UpRW5az71ap5zccp6e8RAYEzhMTecX8Dz1wWDYrPpUoB1HAQEGEAEvUr7S9g==}
 
@@ -3845,10 +3835,6 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
-
-  file-selector@2.1.2:
-    resolution: {integrity: sha512-QgXo+mXTe8ljeqUFaX3QVHc5osSItJ/Km+xpocx0aSqWGMSCf6qYs/VnzZgS864Pjn5iceMRFigeAV7AfTlaig==}
-    engines: {node: '>= 12'}
 
   file-type@21.3.3:
     resolution: {integrity: sha512-pNwbwz8c3aZ+GvbJnIsCnDjKvgCZLHxkFWLEFxU3RMa+Ey++ZSEfisvsWQMcdys6PpxQjWUOIDi1fifXsW3YRg==}
@@ -5048,12 +5034,6 @@ packages:
 
   react-dom@19.2.8:
     resolution: {integrity: sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ==}
-    peerDependencies:
-      react: 19.2.8
-
-  react-dropzone@14.3.8:
-    resolution: {integrity: sha512-sBgODnq+lcA4P296DY4wacOZz3JFpD99fp+hb//iBO2HHnyeZU3FwWyXJ6salNpqQdsZrgMrotuko/BdJMV8Ug==}
-    engines: {node: '>= 10.13'}
     peerDependencies:
       react: 19.2.8
 
@@ -7768,8 +7748,6 @@ snapshots:
 
   asynckit@0.4.0: {}
 
-  attr-accept@2.2.5: {}
-
   axios@1.18.1(supports-color@10.2.2):
     dependencies:
       follow-redirects: 1.16.0
@@ -8368,10 +8346,6 @@ snapshots:
   fdir@6.5.0(picomatch@2.3.2):
     optionalDependencies:
       picomatch: 2.3.2
-
-  file-selector@2.1.2:
-    dependencies:
-      tslib: 2.8.1
 
   file-type@21.3.3(supports-color@10.2.2):
     dependencies:
@@ -9875,13 +9849,6 @@ snapshots:
     dependencies:
       react: 19.2.8
       scheduler: 0.27.0
-
-  react-dropzone@14.3.8(react@19.2.8):
-    dependencies:
-      attr-accept: 2.2.5
-      file-selector: 2.1.2
-      prop-types: 15.8.1
-      react: 19.2.8
 
   react-fast-compare@3.2.2: {}
 

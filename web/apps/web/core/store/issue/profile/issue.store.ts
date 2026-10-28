@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { action, observable, makeObservable, computed, runInAction } from "mobx";
 // base class
 import type { ApiClient } from "@nerve/api-client";
@@ -43,7 +44,12 @@ export interface IProfileIssues extends IBaseIssuesStore {
   ) => Promise<TIssuesResponse | undefined>;
 
   createIssue: (workspaceSlug: string, projectId: string, data: Partial<TIssue>) => Promise<TIssue>;
-  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
+  updateIssue: (
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    data: TLegacyIssueUpdateRequest
+  ) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 }
 

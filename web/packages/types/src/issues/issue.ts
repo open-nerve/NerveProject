@@ -56,7 +56,6 @@ export type TBaseIssue = {
   updated_by: string;
 
   is_draft: boolean;
-  is_intake?: boolean;
 };
 
 type IssueRelation = {
@@ -69,15 +68,12 @@ type IssueRelation = {
 
 export type TIssue = TBaseIssue & {
   description_html?: string;
-  is_subscribed?: boolean;
   parent?: Partial<TBaseIssue>;
   issue_reactions?: TIssueReaction[];
   issue_attachments?: TIssueAttachment[];
   issue_link?: TIssueLink[];
   issue_relation?: IssueRelation[];
   issue_related?: IssueRelation[];
-  // sourceIssueId is used to store the original issue id when creating a copy of an issue. Used in cloning property values. It is not a part of the API response.
-  sourceIssueId?: string;
 };
 
 export type TIssueMap = {
@@ -122,3 +118,6 @@ export interface IWorkItemPeekOverview {
   is_draft?: boolean;
   storeType?: EIssuesStoreType;
 }
+
+/** Legacy update request context; skip_activity must never enter an issue entity. */
+export type TLegacyIssueUpdateRequest = Partial<TIssue> & { skip_activity?: string };

@@ -42,7 +42,6 @@ type TInboxIssueCreateRoot = {
 };
 
 const defaultIssueData: Partial<TIssue> = {
-  id: undefined,
   name: "",
   description_html: "",
   priority: "none",

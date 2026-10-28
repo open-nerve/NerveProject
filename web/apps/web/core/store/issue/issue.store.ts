@@ -12,15 +12,11 @@ import type { TIssue } from "@nerve/types";
 // helpers
 import { getCurrentDateTimeInISO } from "@nerve/utils";
 import { rootStore } from "@/lib/store-context";
-// services
-import { IssueService } from "@/services/issue";
-
 export type IIssueStore = {
   // observables
   issuesMap: Record<string, TIssue>; // Record defines issue_id as key and TIssue as value
   issuesIdentifierMap: Record<string, string>; // Record defines issue_identifier as key and issue_id as value
   // actions
-  getIssues(workspaceSlug: string, projectId: string, issueIds: string[]): Promise<TIssue[]>;
   addIssue(issues: TIssue[]): void;
   addIssueIdentifier(issueIdentifier: string, issueId: string): void;
   updateIssue(issueId: string, issue: Partial<TIssue>): void;
@@ -35,8 +31,6 @@ export class IssueStore implements IIssueStore {
   // observables
   issuesMap: { [issue_id: string]: TIssue } = {};
   issuesIdentifierMap: { [issue_identifier: string]: string } = {};
-  // service
-  issueService;
 
   constructor() {
     makeObservable(this, {
@@ -49,7 +43,6 @@ export class IssueStore implements IIssueStore {
       updateIssue: action,
       removeIssue: action,
     });
-    this.issueService = new IssueService();
   }
 
   // actions
@@ -85,18 +78,6 @@ export class IssueStore implements IIssueStore {
     runInAction(() => {
       set(this.issuesIdentifierMap, issueIdentifier, issueId);
     });
-  };
-
-  getIssues = async (workspaceSlug: string, projectId: string, issueIds: string[]) => {
-    const issues = await this.issueService.retrieveIssues(workspaceSlug, projectId, issueIds);
-
-    runInAction(() => {
-      issues.forEach((issue) => {
-        if (!this.issuesMap[issue.id]) set(this.issuesMap, issue.id, issue);
-      });
-    });
-
-    return issues;
   };
 
   /**

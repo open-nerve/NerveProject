@@ -16,7 +16,6 @@ import { EFileAssetType, EInboxIssueSource, EInboxIssueStatus } from "@nerve/typ
 import { DescriptionVersionsRoot } from "@/components/core/description-versions";
 import { DescriptionInput } from "@/components/editor/rich-text/description-input";
 import { DescriptionInputLoader } from "@/components/editor/rich-text/description-input/loader";
-import { IssueAttachmentRoot } from "@/components/issues/attachment";
 import type { TIssueOperations } from "@/components/issues/issue-detail";
 import { IssueActivity } from "@/components/issues/issue-detail/issue-activity";
 import { IssueReaction } from "@/components/issues/issue-detail/reactions";
@@ -197,14 +196,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
         </div>
       </div>
 
-      <div className="py-4">
-        <IssueAttachmentRoot
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          issueId={issue.id}
-          disabled={!isEditable}
-        />
-      </div>
+      <div className="py-4"></div>
 
       <div className="py-4">
         <InboxIssueContentProperties

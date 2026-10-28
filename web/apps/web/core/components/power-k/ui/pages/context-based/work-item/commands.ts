@@ -13,9 +13,7 @@ import {
   LinkOutline,
   MembersOutline,
   StateOutline,
-  SubscribeOutline,
   TextOutline,
-  UnsubscribeOutline,
   UserMinusOutline,
   UserPlusOutline,
 } from "@makeplane/propel/icons";
@@ -47,7 +45,6 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
   const { getProjectById } = useProject();
   const {
     issue: { getIssueById, getIssueIdByIdentifier },
-    subscription: { getSubscriptionByIssueId, createSubscription, removeSubscription },
     updateIssue,
   } = useIssueDetail();
   // derived values
@@ -55,7 +52,6 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
   const entityDetails = entityId ? getIssueById(entityId) : null;
   const projectDetails = entityDetails?.project_id ? getProjectById(entityDetails?.project_id) : undefined;
   const isCurrentUserAssigned = !!entityDetails?.assignee_ids?.includes(currentUser?.id ?? "");
-  const isSubscribed = Boolean(entityId ? getSubscriptionByIssueId(entityId) : false);
   // translation
   const { t } = useTranslation();
   // permission
@@ -93,32 +89,6 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
     },
     [entityDetails, handleUpdateEntity]
   );
-
-  const handleSubscription = useCallback(async () => {
-    if (!workspaceSlug || !entityDetails || !entityDetails.project_id) return;
-
-    try {
-      if (isSubscribed) {
-        await removeSubscription(workspaceSlug, entityDetails.project_id, entityDetails.id);
-      } else {
-        await createSubscription(workspaceSlug, entityDetails.project_id, entityDetails.id);
-      }
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("toast.success"),
-        message: isSubscribed
-          ? t("issue.subscription.actions.unsubscribed")
-          : t("issue.subscription.actions.subscribed"),
-      });
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("toast.error"),
-        message: t("common.error.message"),
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [createSubscription, entityDetails, isSubscribed, removeSubscription, workspaceSlug]);
 
   const handleDeleteWorkItem = useCallback(() => {
     toggleDeleteIssueModal(true);
@@ -278,21 +248,6 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
       isEnabled: () => isEditingAllowed,
       isVisible: () => isEditingAllowed,
       closeOnSelect: false,
-    },
-    {
-      id: "subscribe_work_item",
-      i18n_title: isSubscribed
-        ? "power_k.contextual_actions.work_item.unsubscribe"
-        : "power_k.contextual_actions.work_item.subscribe",
-      icon: isSubscribed ? UnsubscribeOutline : SubscribeOutline,
-      group: "contextual",
-      contextType: "work-item",
-      type: "action",
-      action: handleSubscription,
-      modifierShortcut: "shift+s",
-      isEnabled: () => isEditingAllowed,
-      isVisible: () => isEditingAllowed,
-      closeOnSelect: true,
     },
     {
       id: "delete_work_item",

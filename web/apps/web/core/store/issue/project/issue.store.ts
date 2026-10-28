@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { action, makeObservable, runInAction } from "mobx";
 // types
 import type { TIssue, TLoader, ViewFlags, IssuePaginationOptions, TIssuesResponse } from "@nerve/types";
@@ -36,7 +37,12 @@ export interface IProjectIssues extends IBaseIssuesStore {
   ) => Promise<TIssuesResponse | undefined>;
 
   createIssue: (workspaceSlug: string, projectId: string, data: Partial<TIssue>) => Promise<TIssue>;
-  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
+  updateIssue: (
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    data: TLegacyIssueUpdateRequest
+  ) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 }
 

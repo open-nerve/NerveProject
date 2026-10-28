@@ -76,14 +76,6 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
     return () => window.removeEventListener("resize", handleToggleIssueDetailSidebar);
   }, [issueDetailSidebarCollapsed, toggleIssueDetailSidebar]);
 
-  useEffect(() => {
-    if (data?.is_intake) {
-      navigate(`/${workspaceSlug}/projects/${data.project_id}/intake?currentTab=open&inboxIssueId=${data.id}`, {
-        replace: true,
-      });
-    }
-  }, [workspaceSlug, data, navigate]);
-
   if (error && !isLoading) {
     return (
       <EmptyState

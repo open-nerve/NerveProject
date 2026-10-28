@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueFormValues } from "../types";
 import React from "react";
 import { observer } from "mobx-react";
 import type { Control, FormState } from "react-hook-form";
@@ -14,7 +15,6 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { ETabIndices } from "@nerve/constants";
 // types
 import { useTranslation } from "@nerve/i18n";
-import type { TIssue } from "@nerve/types";
 
 // helpers
 import { getTabIndex } from "@nerve/utils";
@@ -22,9 +22,9 @@ import { getTabIndex } from "@nerve/utils";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TIssueTitleInputProps = {
-  control: Control<TIssue>;
+  control: Control<IssueFormValues>;
   issueTitleRef: React.MutableRefObject<HTMLInputElement | null>;
-  formState: FormState<TIssue>;
+  formState: FormState<IssueFormValues>;
   handleFormChange: () => void;
 };
 

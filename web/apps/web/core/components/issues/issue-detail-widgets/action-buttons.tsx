@@ -5,12 +5,11 @@
  */
 
 import React from "react";
-import { AttachOutline, LinkOutline, RelationsOutline, ViewsOutline } from "@makeplane/propel/icons";
+import { LinkOutline, RelationsOutline, ViewsOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
 // nerve imports
 import type { TWorkItemWidgets } from "@nerve/types";
 // local imports
-import { IssueAttachmentActionButton } from "./attachments";
 import { IssueLinksActionButton } from "./links";
 import { RelationActionButton } from "./relations";
 import { SubIssuesActionButton } from "./sub-issues";
@@ -25,7 +24,7 @@ type Props = {
 };
 
 export function IssueDetailWidgetActionButtons(props: Props) {
-  const { workspaceSlug, projectId, issueId, disabled, hideWidgets } = props;
+  const { issueId, disabled, hideWidgets } = props;
   // translation
   const { t } = useTranslation();
 
@@ -63,21 +62,6 @@ export function IssueDetailWidgetActionButtons(props: Props) {
             <IssueDetailWidgetButton
               title={t("issue.add.link")}
               icon={<LinkOutline className="h-3.5 w-3.5 flex-shrink-0" />}
-              disabled={disabled}
-            />
-          }
-          disabled={disabled}
-        />
-      )}
-      {!hideWidgets?.includes("attachments") && (
-        <IssueAttachmentActionButton
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          issueId={issueId}
-          customButton={
-            <IssueDetailWidgetButton
-              title={t("common.attach")}
-              icon={<AttachOutline className="h-3.5 w-3.5 flex-shrink-0" />}
               disabled={disabled}
             />
           }

@@ -16,8 +16,6 @@ export const DEFAULT_WORK_ITEM_FORM_VALUES: Partial<TIssue> = {
   priority: "none",
   assignee_ids: [],
   label_ids: [],
-  cycle_id: null,
-  module_ids: null,
   start_date: null,
   target_date: null,
 };

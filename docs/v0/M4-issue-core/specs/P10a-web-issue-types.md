@@ -53,6 +53,10 @@ getIssueDetailById(issueId: string): IssueDetail | undefined;
 updateIssue(issueId: string, issue: Partial<IssueDetail>): void;
 ```
 
+更新请求不等于实体patch。旧请求输入TLegacyIssueUpdateRequest仅用于现有service/UI更新边界，组合Partial<IssueDetail>与可选string skip_activity；拆分后canonical.updateIssue仍只接Partial<IssueDetail>，分组/统计/回滚快照也不含请求flag。失败时恢复原值并删除本次新增、before不存在的key，不用undefined假属性冒充缺值。此为R10内部边界修正，不改P10b/P11协调模型。
+
+accept入库以完整response.issue为底，只在响应缺description_html且本地实际string时保留该单字段（含空串）；响应Detail含空串优先，无实际string时不加字段，不spread整个Partial或补undefined/default。真实retrieve/成功编辑→accept完整普通响应链验证已知HTML不丢；T5旧完整夹具与T6生成nullable_id夹具分阶段，不提前混用。
+
 `getIssueDetailById` 只在值存在且 `"description_html" in value` 时返回，不补空字符串冒充已取详情。普通展示读 Issue，编辑描述读显式 Detail。本段保留现有 addIssue 对字段的合并语义，不提前实现 P10b 的 updated_at 决胜、确认队列或列表协调；但列表行不得因为换型改成替换整个对象而抹掉已取描述。
 
 `TIssuesResponse` 在 P10a 仍保留旧容器形状，仅其行换为 `Issue`；完整容器迁移归 P10b。评论、关联等其他 DTO 名称留 P11。工作项 map 的类型直接 Record，不导出“新 TIssueMap”别名。
@@ -61,14 +65,18 @@ tempId 有活写者：createIssuePayload→quick-add→BaseIssuesStore.issueQuic
 
 `sourceIssueId/state__group` 是旧前端附加值，不属于新实体。克隆来源改为表单/弹窗的独立 `sourceIssueId?: string` prop 或局部状态，不能进入生成实体或 HTTP 载荷；状态组从现有状态目录取。草稿场景继续由现有显式草稿上下文表达，不在 Issue 上恢复 is_draft。新的本地表单类型只声明表单实际数据，不建立全体 Plane 字段兼容层。
 
+T5 详情资源职责补充（root 同域局部裁定，2026-10-28）：两条 retrieve 入口只把完整无嵌套 core 响应入 canonical 一次；reaction/link 保留自身原 DTO，由现有 fetchReactions/fetchLinks 加载到各自资源缓存。父项只依据实际非 null parent_id，使用该响应的实际 project_id 调原 service.retrieve 后入 canonical，不递归调用全详情，不推断隐藏父。新增读取须由拥有它们的 fetch promise await 并传递拒绝，不制造 unhandled rejection、不吞成空成功；不顺手修历史 detached activity/comment/subissue/relation/state 请求。详情成功 promise 因此等待这三项；从旧 expand 取 reaction/link 改成两个既有资源 GET，非 null 父保留一次独立 GET，null 父不请求。R10 的更新/create wire 与次数不变只限其写请求，不能推广成 T5 所有读次数不变。新增 `C/store/issue/issue-details/issue.fetch.test.ts` 用真实 RootStore/canonical/两种 retrieve/资源 store/service 公共 HTTP 边界，核无嵌套、真实资源缓存、父 null/非 null、canonical 次数与拒绝可观察；先性质红再最小改动绿，T6 只机械换核心夹具。
+
 ### 2.3 有界旧 service 过渡
 
 | 文件（均在 C/services） | 本段动作 | 到期 |
 |---|---|---|
 | `issue/issue.service.ts` 列表方法、`issue/issue_archive.service.ts` | 行类型改 Issue，保留旧地址到列表数据层替换 | P10b 删除，规则 until M4/P11 |
 | `issue/issue.service.ts` 其余 M4 方法、`issue/issue_relation.service.ts`、`issue/workspace_draft.service.ts` | 核心实体签名改 Issue/Detail；详情 DTO 形状仍属 P11 | P11 删除，规则 until M4/P12 |
-| `inbox/inbox-issue.service.ts` create/update | 参数 Partial<Issue>，其余收集箱字段来自所属 DTO/调用上下文 | M7，规则 until M7 |
+| `inbox/inbox-issue.service.ts` create/updateIssue；元数据update单独保留 | create描述输入Partial<IssueDetail>；updateIssue为显式旧更新请求（Partial<IssueDetail> + 可选string skip_activity），原body和string值不变；update继续Partial<TInboxIssue>元数据；嵌套响应Issue \| IssueDetail | M7，规则 until M7 |
 | 合法 M5/M6/M7 旧 service | 仅保存仍有消费者、属于该 M 的方法；M4 service 中这些方法按设计 §7.3 迁往对应所属旧 service | 各自 M，不成为新 M4 service 的能力 |
+
+R10由T5先在旧TIssue阶段分清创建输入/元数据/完整响应、隔离flag与修复absence rollback，T6机械换生成类型；不为守住旧Partial<Issue>粗略文字额外拆HTTP参数、复制字段或暗穿描述。M4旧更新请求使用者仍按P10b/P11原期限移除；后续接新API的预检须按强类型合同同步必要boolean输入，不靠string转换层延命。P14承担既定真实页面性质验收，M7旧路径仍只留到M7；最后消费者移除后删除旧请求类型。不把全部inbox列表响应虚称Detail，不把局部Partial入canonical。
 
 **类型过渡与 URL 例外是两份账。** 上表只列用新 Issue/Detail 临时类型化旧响应的四核心文件；其他尚未迁移的 M4 旧地址同样要逐命中登记，不能误删或漏放。`issue_activity/issue_comment/issue_reaction/work_item_version` 等详情资源旧地址、`user.service.ts#getUserProfileIssues`、`workspace.service.ts#searchEntity` 按 P11 删除（until M4/P12）；`project/project.service.ts#projectIssuesSearch` 的调用方在 P12/P14改接，旧文件及残余搜索方法在P15清理（until M4/P16，P14若已无读者应立即删并同步账）。`workspace.service.ts#searchWorkspace` 在P15删除；其当前 `/search/` 是否被新规则覆盖须按实际正则核，既有plane-workspace-urls规则继续有效，不伪称八类新规则已覆盖它。M5/M6/M7例外只限实际属于它们的路径/方法。
 
@@ -386,3 +394,12 @@ T4 相对 T3 完成源的尺寸：`web/apps/web/core/components/issues/issue-lay
 
 
 T1 广义旧地址账冻结 `web/` 中全部 `/api/workspaces/` 字面量：23 文件、140 处。逐方法的文件/行、完整样例、count、理由与 until 见本地 `task-1-old-urls.md/json`；它广于 T7 八类规则，不能直接充当该规则匹配数或运行时请求验收。项目 `/user-properties/` 两处仍严格 until `M4/P11`；cycle/module 的四个同名筛选方法归 T3 删除，不延长到 M6。工作区 `getViewIssues` 两地址归 T3 删除；`/search/` 归 P15、until M4/P16，由既有 plane-workspace-urls 守卫负责，不声称被八类新规则覆盖。其他 M4 列表、详情、残余搜索分别按 §2.3 到期；M5/M6/M7 及广义账中的 M8 Webhook 自身地址按所属里程碑处理，不为 T7 新增目录豁免。新规则与例外只在 T7 实施。
+
+### T5 既有大文件登记（实施基线 d9415375）
+
+| 文件 | 改前行数 | 改后行数 | 本 Task 理由 |
+|---|---:|---:|---|
+| `web/apps/web/core/components/issues/issue-modal/form.tsx` | 407 | 415 | 收窄局部表单；fix round1 增加有限可重试描述错误状态与提交/关闭保护，不改保存协议 |
+| `web/apps/web/core/store/inbox/project-inbox.store.ts` | 511 | 510 | 删除越界读取/控件、局部表单或请求签名接续；不重写所属存储算法 |
+| `web/apps/web/core/store/issue/helpers/base-issues.store.ts` | 1663 | 1277 | R10 局部 request/patch 隔离与 absent-key 恢复；fix round1 删除普通 cycle/module 最后读者链，分组算法留 P10b |
+| `web/apps/web/core/store/issue/workspace-draft/issue.store.ts` | 408 | 366 | 删除越界读取/控件、局部表单或请求签名接续；不重写所属存储算法 |

@@ -5,7 +5,7 @@
  */
 
 import React, { useRef, useState } from "react";
-import { omit } from "lodash-es";
+import { pick } from "lodash-es";
 import { observer } from "mobx-react";
 import { SquareStackIcon } from "lucide-react";
 import { CopyOutline, DeleteOutline, EditOutline } from "@makeplane/propel/icons";
@@ -51,13 +51,23 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
   const projectIdentifier = (issue && issue.project_id && getProjectIdentifierById(issue.project_id)) || undefined;
   if (!issue || !projectIdentifier) return null;
 
-  const duplicateIssuePayload = omit(
+  const duplicateIssuePayload = pick(
     {
       ...issue,
       name: `${issue.name} (copy)`,
-      is_draft: true,
     },
-    ["id"]
+    [
+      "name",
+      "project_id",
+      "state_id",
+      "description_html",
+      "parent_id",
+      "priority",
+      "assignee_ids",
+      "label_ids",
+      "start_date",
+      "target_date",
+    ]
   );
 
   const MENU_ITEMS: TContextMenuItem[] = [

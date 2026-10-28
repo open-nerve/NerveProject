@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueFormValues } from "../types";
 import React from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
@@ -11,7 +12,6 @@ import { Controller } from "react-hook-form";
 // nerve imports
 import { ETabIndices } from "@nerve/constants";
 // types
-import type { TIssue } from "@nerve/types";
 import { getTabIndex } from "@nerve/utils";
 // components
 import { ProjectDropdown } from "@/components/dropdowns/project/dropdown";
@@ -20,7 +20,7 @@ import { useIssueModal } from "@/hooks/context/use-issue-modal";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TIssueProjectSelectProps = {
-  control: Control<TIssue>;
+  control: Control<IssueFormValues>;
   disabled?: boolean;
   handleFormChange: () => void;
 };
