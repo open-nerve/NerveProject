@@ -31,10 +31,6 @@ type IssueRowsDeleter interface {
 	DeleteIssueRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueAssigneeRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueLabelRows(ctx context.Context, d IssueDeletion) error
-	// DeleteIssueRelationRows soft-deletes the relations that name one of
-	// the work items at either end, its other end of any project, locked
-	// in id order first (convention 5's exception).
-	DeleteIssueRelationRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueLinkRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueSubscriberRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueMentionRows(ctx context.Context, d IssueDeletion) error
@@ -48,19 +44,20 @@ type IssueRowsDeleter interface {
 // issueRowSteps are d's statements of a work item's deletion in the global
 // order of M4 design 3.5, as a project's (rowSteps): the work items, then
 // the rows under them.
-func issueRowSteps(d IssueRowsDeleter) []func(context.Context, IssueDeletion) error {
+func issueRowSteps(d IssueRowsDeleter, relations func(context.Context, IssueDeletion) error) []func(context.Context, IssueDeletion) error {
 	return []func(context.Context, IssueDeletion) error{
-		d.DeleteIssueRows, d.DeleteIssueAssigneeRows, d.DeleteIssueLabelRows, d.DeleteIssueRelationRows, d.DeleteIssueLinkRows, d.DeleteIssueSubscriberRows, d.DeleteIssueMentionRows,
+		d.DeleteIssueRows, d.DeleteIssueAssigneeRows, d.DeleteIssueLabelRows, relations, d.DeleteIssueLinkRows, d.DeleteIssueSubscriberRows, d.DeleteIssueMentionRows,
 		d.DeleteIssueCommentRows, d.DeleteIssueReactionRows, d.DeleteIssueCommentReactionRows, d.DeleteIssueActivityRows, d.DeleteIssueDescriptionVersionRows,
 	}
 }
 
 // DeleteIssueDeps are what deleteIssue writes through.
 type DeleteIssueDeps struct {
-	Events shared.EventPublisher
-	Locks  Locks
-	Rows   IssueRowsDeleter
-	Clock  Clock
+	Events    shared.EventPublisher
+	Locks     Locks
+	Rows      IssueRowsDeleter
+	Relations *RelationDeletions
+	Clock     Clock
 }
 
 // DeleteIssue deletes a work item: DELETE /api/v0/issues/{issue_id} (M4
@@ -103,7 +100,9 @@ func (u *DeleteIssue) Execute(ctx context.Context, id uuid.UUID) error {
 			return err
 		}
 		d := IssueDeletion{IssueIDs: subtree, By: actor.UserID, At: u.d.Clock.Now()}
-		for _, step := range issueRowSteps(u.d.Rows) {
+		for _, step := range issueRowSteps(u.d.Rows, func(ctx context.Context, d IssueDeletion) error {
+			return u.d.Relations.ForIssues(ctx, h.issue.ProjectID, d)
+		}) {
 			if err := step(ctx, d); err != nil {
 				return err
 			}

@@ -342,6 +342,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		projects.preconditions(s)
 		projects.seededStates(pool)
 		projects.seededLabels(pool, s)
+		waitWorkspaceDeletion(t, pool, s.workspace("gone"))
 		issues.seededIssues(s)
 		issues.seededRelationRows(s)
 		issues.seededCommentRows(s)

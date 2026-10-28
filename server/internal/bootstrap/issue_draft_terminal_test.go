@@ -36,7 +36,7 @@ func testDraftWorkspaceTerminal(t *testing.T) {
 				d := createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Unchanged"}}`)
 				trace := &listTrace{}
 				pool := listTracePool(t, w.pool.Config().ConnString(), trace)
-				tx := draftTx(pool)
+				tx := requestTx(pool)
 				route := newIssueRoute(t, pool, tx)
 				holder := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id=$1 FOR NO KEY UPDATE", w.acme)
 				draftExec(t, holder, "UPDATE workspace_members SET role=5 WHERE workspace_id=$1 AND member_id=$2", w.acme, w.ids["alice"])
@@ -69,8 +69,8 @@ func testDraftWorkspaceTerminal(t *testing.T) {
 					e.req, e.rec = route.sendContext(ctx, method, path, w.ids["alice"], body)
 					return nil
 				}
-				collect := draftBackground(t, send, func() { draftRelease(t, holder) })
-				draftBlocked(t, w.pool, draftPID(t, tx), holder.Conn().PgConn().PID(), "workspaces")
+				collect := requestBackground(t, send, func() { requestRelease(t, holder) })
+				requestBlocked(t, w.pool, tx, holder.Conn().PgConn().PID(), "workspaces")
 				if pgtest.RowWaits(t, w.pool, "projects", next, "FOR NO KEY UPDATE") {
 					t.Fatal("request took a new project lock while waiting W")
 				}
@@ -122,10 +122,10 @@ func testDraftWorkspaceTerminal(t *testing.T) {
 				draftExec(t, holder, "UPDATE draft_issues SET deleted_at=now() WHERE id=$1", d.ID)
 			}
 			expected := draftTerminalRows(t, holder)
-			tx := draftTx(w.pool)
+			tx := requestTx(w.pool)
 			var e exchange
-			collect := draftBackground(t, draftWrite(t, w, tx, &e, "PATCH", draftPath(d.ID), `{"payload":{}}`), func() { draftRelease(t, holder) })
-			draftBlocked(t, w.pool, draftPID(t, tx), holder.Conn().PgConn().PID(), "workspaces")
+			collect := requestBackground(t, draftWrite(t, w, tx, &e, "PATCH", draftPath(d.ID), `{"payload":{}}`), func() { requestRelease(t, holder) })
+			requestBlocked(t, w.pool, tx, holder.Conn().PgConn().PID(), "workspaces")
 			draftNoLock(t, w, "projects", w.web)
 			draftCommit(t, holder)
 			collect()
@@ -157,7 +157,7 @@ func testDraftPDTerminal(t *testing.T) {
 						table, id = "draft_issues", d.ID
 					}
 					holder := holding(t, w.pool, "SELECT 1 FROM "+table+" WHERE id=$1 FOR UPDATE", id)
-					tx := draftTx(w.pool)
+					tx := requestTx(w.pool)
 					path, body := draftPath(d.ID), ""
 					if method == "PATCH" {
 						body = `{"payload":{"name":"Must not write"}}`
@@ -166,12 +166,12 @@ func testDraftPDTerminal(t *testing.T) {
 						path = publishPath(d.ID)
 					}
 					var e exchange
-					collect := draftBackground(t, draftWrite(t, w, tx, &e, method, path, body), func() { draftRelease(t, holder) })
-					draftBlocked(t, w.pool, draftPID(t, tx), holder.Conn().PgConn().PID(), table)
+					collect := requestBackground(t, draftWrite(t, w, tx, &e, method, path, body), func() { requestRelease(t, holder) })
+					requestBlocked(t, w.pool, tx, holder.Conn().PgConn().PID(), table)
 					// Keep P2 locked until the request answers. Chasing it after D would
 					// fail this bounded request instead of returning the required conflict.
 					newP := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR NO KEY UPDATE", next)
-					t.Cleanup(func() { draftRelease(t, newP) })
+					t.Cleanup(func() { requestRelease(t, newP) })
 					want, code := 404, "issue.draft_not_found"
 					if change == "moved" {
 						draftExec(t, holder, "UPDATE draft_issues SET project_id=$2 WHERE id=$1", d.ID, next)
@@ -186,7 +186,7 @@ func testDraftPDTerminal(t *testing.T) {
 					draftCommit(t, holder)
 					collect()
 					w.refused(t, e, want, code)
-					draftRelease(t, newP)
+					requestRelease(t, newP)
 					if !reflect.DeepEqual(expected, draftTerminalRows(t, w.pool)) || !reflect.DeepEqual(effects, collaborationState(t, w)) {
 						t.Fatal("P/D terminal refusal wrote state")
 					}

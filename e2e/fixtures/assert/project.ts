@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 
 import type { Database } from "../db";
-import { projectTables } from "./catalog";
+import { issueOwnedTable, projectTables } from "./catalog";
 
 // Database assertions of the project stories. The page version and the
 // API version of a story call the same function (M3 design 2).
@@ -185,7 +185,7 @@ export async function expectMember(
  * P4, W3: the project of projectId is deleted by the account of adminEmail, and with it, at the same moment and by the
  * same account, every row under it that was not deleted before, of each table under projects (projectTables), by its
  * project_id. Each table has such a row, and none is left undeleted; a row deleted before the project, as a label a
- * story deleted, is not counted.
+ * story deleted, is not counted. M3 rows are immediate; only issue-owned rows wait for the committed task.
  */
 export async function expectProjectDeleted(db: Database, projectId: string, adminEmail: string): Promise<void> {
   const [project] = await db.query(
@@ -196,22 +196,28 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
   const tables = await projectTables(db);
   expect(tables, "project deletion includes personal drafts").toContain("draft_issues");
   // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
-  const rows = await Promise.all(
-    tables.map(async (name) => {
-      const [counts] = await db.query<{ with_it: number; other: number }>(
-        `SELECT count(*) FILTER (WHERE t.deleted_at = p.deleted_at AND t.updated_by_id = p.updated_by_id)::int AS with_it,
+  const readRows = (names: string[]) =>
+    Promise.all(
+      names.map(async (name) => {
+        const [counts] = await db.query<{ with_it: number; other: number }>(
+          `SELECT count(*) FILTER (WHERE t.deleted_at = p.deleted_at AND t.updated_by_id = p.updated_by_id)::int AS with_it,
                 count(*) FILTER (WHERE (t.deleted_at IS NULL OR t.deleted_at >= p.deleted_at)
                                    AND (t.deleted_at IS DISTINCT FROM p.deleted_at
                                         OR t.updated_by_id IS DISTINCT FROM p.updated_by_id))::int AS other
            FROM ${name} t JOIN projects p ON p.id = t.project_id WHERE p.id = $1`,
-        [projectId]
-      );
-      return { table: name, deletedWithIt: (counts?.with_it ?? 0) > 0, other: counts?.other };
-    })
+          [projectId]
+        );
+        return { table: name, deletedWithIt: (counts?.with_it ?? 0) > 0, other: counts?.other };
+      })
+    );
+  const immediate = tables.filter((name) => !issueOwnedTable(name));
+  const deferred = tables.filter(issueOwnedTable);
+  expect(await readRows(immediate), `the synchronous rows under ${projectId}`).toEqual(
+    projectDeletionCounts(immediate)
   );
-  expect(rows, `the rows under ${projectId}`).toEqual(
-    tables.map((name) => ({ table: name, deletedWithIt: true, other: 0 }))
-  );
+  await expect
+    .poll(() => readRows(deferred), { message: `the issue rows under ${projectId}`, timeout: 15_000 })
+    .toEqual(projectDeletionCounts(deferred));
 }
 
 /** A membership of a project as expectMembers reads it, its member by address. */
@@ -383,4 +389,8 @@ export async function projectSettingsOf(db: Database, id: string): Promise<unkno
     [id]
   );
   return row;
+}
+
+function projectDeletionCounts(names: string[]) {
+  return names.map((table) => ({ table, deletedWithIt: true, other: 0 }));
 }

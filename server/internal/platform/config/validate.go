@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 	"net/netip"
 	"time"
@@ -93,6 +94,7 @@ func (c Config) validate() error {
 			c.Database.CommitTimeout, webRefreshTimeout, c.Auth.RefreshDeadline)
 	}
 	c.RateLimit.validate(fail)
+	c.Cleanup.validate(fail)
 	c.Issue.validate(c.Server.RequestTimeout, fail)
 	if c.Jobs.ShutdownTimeout <= 0 {
 		fail("jobs.shutdown_timeout", "must be positive, got %s", c.Jobs.ShutdownTimeout)
@@ -155,7 +157,29 @@ func (a AuthConfig) validate(env string, fail func(key, format string, args ...a
 	}
 }
 
+func (c CleanupConfig) validate(fail func(key, format string, args ...any)) {
+	if c.PurgeAfter <= 0 {
+		fail("cleanup.purge_after", "must be positive, got %s", c.PurgeAfter)
+	}
+	if c.PurgeInterval < time.Second {
+		fail("cleanup.purge_interval", "must be at least 1s, got %s", c.PurgeInterval)
+	}
+	if c.PurgeBatch < 1 || c.PurgeBatch > math.MaxInt32 {
+		fail("cleanup.purge_batch", "must be from 1 to 2147483647, got %d", c.PurgeBatch)
+	}
+}
+
 func (i IssueConfig) validate(requestTimeout time.Duration, fail func(key, format string, args ...any)) {
+	if i.TrimVersionsInterval < time.Second {
+		fail("issue.trim_versions_interval", "must be at least 1s, got %s", i.TrimVersionsInterval)
+	}
+	if i.DeleteBatch < 1 || i.DeleteBatch > math.MaxInt32 {
+		fail("issue.delete_batch", "must be from 1 to 2147483647, got %d", i.DeleteBatch)
+	}
+	if i.DeleteBudget <= 0 || i.DeleteBudget > math.MaxInt64-5*time.Second {
+		fail("issue.delete_budget", "must be positive and leave 5s before duration overflow, got %s", i.DeleteBudget)
+	}
+
 	if i.AutoArchiveInterval < time.Second {
 		fail("issue.auto_archive_interval", "must be at least 1s, got %s", i.AutoArchiveInterval)
 	}

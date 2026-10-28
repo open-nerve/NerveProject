@@ -72,7 +72,7 @@ var batchStatements = []batchStatement{
 	}},
 	{"issue_assignees", (*postgresadapter.Store).DeleteProjectAssigneeRows, child("issue_assignees", "assignee_id", anAccount)},
 	{"issue_labels", (*postgresadapter.Store).DeleteProjectLabelRows, child("issue_labels", "label_id", aLabel)},
-	{"issue_relations", (*postgresadapter.Store).DeleteProjectRelationRows, aRelation},
+	{"issue_relations", relationBatch, aRelation},
 	{"issue_links", (*postgresadapter.Store).DeleteProjectLinkRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {
 		insertLink(t, pool, p, issue, id, by, fmt.Sprintf("http://169.254.169.254/%d", n))
 	}},
@@ -325,4 +325,24 @@ func audits(t *testing.T, pool *pgxpool.Pool, table string) map[uuid.UUID]string
 		t.Fatal(err)
 	}
 	return out
+}
+
+// Record the actual T7 lock result; an extra fixture lock would hide a missing
+// production lock. The caller supplies the transaction, as for every batch.
+type observedRelationBatch struct {
+	*postgresadapter.Store
+	ids []uuid.UUID
+}
+
+func (r *observedRelationBatch) LockProjectRelationRows(ctx context.Context, b app.RowBatch) ([]app.RelationDeletionRow, error) {
+	rows, err := r.Store.LockProjectRelationRows(ctx, b)
+	for _, row := range rows {
+		r.ids = append(r.ids, row.ID)
+	}
+	return rows, err
+}
+func relationBatch(s *postgresadapter.Store, ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	rows := &observedRelationBatch{Store: s}
+	_, err := app.NewRelationDeletions(rows, relationDeletionProjects{}).ForProject(ctx, b)
+	return rows.ids, err
 }

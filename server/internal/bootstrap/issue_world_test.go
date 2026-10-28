@@ -27,6 +27,7 @@ import (
 // who is none of Web, and wanda, an admin of acme who is none of Web
 // either, see Web (403); olga, no member of acme, does not (404).
 type issueWorld struct {
+	requests                   *requestQueries
 	contract                   *apitest.Contract
 	base                       string
 	pool                       *pgxpool.Pool
@@ -54,21 +55,39 @@ func newIssueWorldWith(t *testing.T, configure func(cfg *config.Config)) issueWo
 // newIssueWorldOn reuses an already migrated database for the API and assertions.
 func newIssueWorldOn(t *testing.T, dbURL string, pool *pgxpool.Pool, configure func(*config.Config)) issueWorld {
 	t.Helper()
+	return newIssueWorldOnRequests(t, dbURL, pool, configure, nil)
+}
+
+func newIssueWorldOnRequests(t *testing.T, dbURL string, pool *pgxpool.Pool, configure func(*config.Config), requests *requestQueries) issueWorld {
+	t.Helper()
 	contract := apitest.Load(t)
 	cfg := testConfig(t, dbURL, false)
 	configure(&cfg)
-	w := issueWorld{contract: contract, base: startApp(t, cfg, migrations.FS()), pool: pool, tokens: map[string]string{},
+	base := ""
+	if requests == nil {
+		base = startApp(t, cfg, migrations.FS())
+	} else {
+		base = startObservedApp(t, cfg, requests)
+	}
+	w := issueWorld{requests: requests, contract: contract, base: base, pool: pool, tokens: map[string]string{},
 		ids: map[string]uuid.UUID{}}
+	return prepareIssueWorld(t, w)
+}
+
+// prepareIssueWorld shares the original API and membership-store fixture with
+// tests which assemble a real Runner before starting the otherwise intact app.
+func prepareIssueWorld(t *testing.T, w issueWorld) issueWorld {
+	t.Helper()
 	for _, name := range []string{"alice", "bob", "walt", "wanda", "olga"} {
-		w.tokens[name] = registerAccount(t, contract, w.base, name+"@example.com").AccessToken
-		w.ids[name] = accountID(t, contract, w.base, w.tokens[name])
+		w.tokens[name] = registerAccount(t, w.contract, w.base, name+"@example.com").AccessToken
+		w.ids[name] = accountID(t, w.contract, w.base, w.tokens[name])
 	}
 	var created struct {
 		ID uuid.UUID `json:"id"`
 	}
 	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/workspaces", `{"name":"Acme","slug":"acme"}`, http.StatusCreated), &created)
 	w.acme = created.ID
-	w.web = createdProject(t, contract, w.base, w.tokens["alice"], "acme", "Web", "WEB")
+	w.web = createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Web", "WEB")
 	for name, role := range map[string]shared.Role{"bob": shared.RoleMember, "walt": shared.RoleMember, "wanda": shared.RoleAdmin} {
 		inWorkspaceOf(t, w.pool, w.web, w.ids[name], w.ids["alice"], role)
 	}

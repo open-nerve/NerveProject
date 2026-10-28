@@ -121,6 +121,7 @@ func TestTheRuntimeRoleServesWithTheGrantsFile(t *testing.T) {
 	var logs lockedBuffer
 	cfg := testConfig(t, roles.serverURL, false)
 	cfg.Issue.AutoArchiveInterval = time.Second
+	cfg.Issue.TrimVersionsInterval = time.Second
 	base := startAppLogging(t, cfg, migrations.FS(), slog.New(slog.NewTextHandler(&logs, nil)))
 
 	if status, p := getReadyz(t, base); status != 200 {
@@ -267,11 +268,13 @@ func assertRuntimeAutoArchive(t *testing.T, roles splitRoles, base string, logs 
 			t.Fatalf("runtime auto archive as %s: archived=%v activities=%d NULL actors=%d; logs:\n%s", roles.serverName, archived, activities, nullActors, logs.String())
 		}
 	}
-	waitForCompletedKinds(t, roles.owner, map[string]int{"identity.cleanup_expired_sessions": 1, "issue.auto_archive": 1}, logs)
+	versions := seedTrimVersions(t, roles.owner, id, "")
+	awaitTrimVersions(t, roles.owner, map[uuid.UUID][]uuid.UUID{id: versions[3:]})
+	waitForCompletedKinds(t, roles.owner, map[string]int{"identity.cleanup_expired_sessions": 1, "issue.auto_archive": 1, "cleanup.purge_deleted": 1, "issue.trim_description_versions": 1}, logs)
 }
 
-// The workspace id must reach the issue cascade even when no project can carry
-// it. Running as the deployed role also exercises the draft update grant.
+// A zero-project workspace still enqueues its draft task. The deployed role
+// runs both the request and the real worker with exact request audit data.
 func TestRuntimeRoleDeletesDraftsInWorkspaceWithoutProjects(t *testing.T) {
 	roles := newSplitRoles(t)
 	contract := apitest.Load(t)
@@ -305,9 +308,18 @@ func TestRuntimeRoleDeletesDraftsInWorkspaceWithoutProjects(t *testing.T) {
 	if err := roles.owner.QueryRow(pgtest.Soon(t), "SELECT r::text FROM draft_issues r WHERE id=$1", ids[2]).Scan(&keptBefore); err != nil {
 		t.Fatal(err)
 	}
+	holder := holding(t, roles.owner, "SELECT id FROM draft_issues WHERE id=$1 FOR UPDATE", ids[0])
 	if code, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", actor, ""); code != http.StatusNoContent {
 		t.Fatal(code, body)
 	}
+	job := parentDeletionJob(t, roles.owner, "workspace_drafts", workspace)
+	deletionWorkerBlocked(t, roles.server, holder, job, "draft_issues")
+	var live int
+	if err := roles.owner.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM draft_issues WHERE id=ANY($1) AND deleted_at IS NULL", ids[:2]).Scan(&live); err != nil || live != 2 {
+		t.Fatal("runtime window lost pending drafts", live, err)
+	}
+	requestRelease(t, holder)
+	waitDeletionJob(t, roles.owner, job, "completed")
 	for _, id := range ids[:2] {
 		var stamped bool
 		if err := roles.owner.QueryRow(pgtest.Soon(t), `SELECT d.deleted_at=w.deleted_at AND d.updated_at=w.deleted_at AND d.updated_by_id=$2 FROM draft_issues d JOIN workspaces w ON w.id=d.workspace_id WHERE d.id=$1`, id, actorID).Scan(&stamped); err != nil || !stamped {

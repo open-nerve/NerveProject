@@ -53,9 +53,10 @@
   - 需要完整 SHA 时用 `git rev-parse` 取，不手工补全；
   - 合并见 [02](02-method.md) 第 8 步。
 - **持续集成和凭据**：
-  - 没有 `gh`；
-  - 作业日志和产物（Playwright 报告）要管理员权限，公开的 API 只给作业和步骤的结论；要日志或报告就找负责人要；
-  - 不去钥匙串或别处取凭据。
+  - 本环境没有 `gh`；优先用公开 metadata 核对准确 SHA、run/job 身份与结论；
+  - 负责人已授权使用本机已登录 GitHub 的浏览器；需要详细日志、产物（如 Playwright 报告）或重跑时，直接通过该浏览器 UI 读取或操作，不因没有 `gh` 就转交负责人；
+  - 不从钥匙串、浏览器或其他位置提取 cookies、token 等凭据；仅在浏览器未登录、账号无权限，或无法访问、操作所需内容时请求负责人协助；
+  - 浏览器授权不扩大为合并授权，main 集成仍另获负责人明确授权。
 - **用户的邮箱**只用来识别身份，不发到任何服务。
 
 ## 4. M4 的技术不变式（每个 Phase 都要守住）
@@ -74,7 +75,7 @@ P3 加了这条路的两种形式，不是第二条路：
 - `lock_across.go`（加关联）：调用者看不到的另一端不到达，它的项目不进闸门、不加锁，拒绝与不存在的相同；
 - `lock_either.go`（删除关联）：先判定 `issue_id` 一端，被拒绝时再判定另一端，预检通过之后两个项目都进闸门、都加锁。
 
-P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`并复用授权、闸门与写事务，不在各用例另接一套。保存/修改/删除为工作区S → 旧新项目S（去重升序）→ 草稿U；发布先在无连接、无锁时进入项目闸门，再工作区S → 项目N → 草稿U。等待后重读、权限重判、全部锁后读时钟照旧，普通工作项写仍不取工作区锁。具体端口见[P8 spec](../M4-issue-core/specs/P8-drafts-search.md)，T7真实PID/交错16/17、T15 race五遍及首次整审证据见[P8 review](../M4-issue-core/reviews/P8-drafts-search-review.md)；文档a65e8605已独评Approved/D1 ADDRESSED（task-16-review.md），最终准确HEAD CI及集成按后续收据追踪，尚未合并。
+P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`并复用授权、闸门与写事务，不在各用例另接一套。保存/修改/删除为工作区S → 旧新项目S（去重升序）→ 草稿U；发布先在无连接、无锁时进入项目闸门，再工作区S → 项目N → 草稿U。等待后重读、权限重判、全部锁后读时钟照旧，普通工作项写仍不取工作区锁。具体端口见[P8 spec](../M4-issue-core/specs/P8-drafts-search.md)，T7真实PID/交错16/17、T15 race五遍及首次整审证据见[P8 review](../M4-issue-core/reviews/P8-drafts-search-review.md)；文档a65e8605已独评Approved/D1 ADDRESSED（task-16-review.md）；最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，已授权 `--no-ff` 合并为main `6b9d08d4821f1423c7bb9795557727c206b7880f`，[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987)三任务全绿。1,598文件、37,552,117字节及1空目录归档核验后，P8本地/远端分支与worktree已正常清理；原件新根和清理后哈希核验见[P8 review §9](../M4-issue-core/reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)。
 
 另外：
 - 503 `server_busy`（`Retry-After: 1`）只在 `bootstrap/gate.go` 映射，每个工作项的写都声明它。
@@ -157,7 +158,7 @@ P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`�
   - `ci-annotations.sh <job id>`：注解。
 - 标签在约 90 个字符处截断，标题开头要短；开头里的 `(`、`)` 要转义，`'` 写成 `&#x27;`。
 - 公开的 API `https://api.github.com/repos/open-nerve/NerveProject/actions/runs/<id>/jobs` 给出步骤的时间和结论，不用凭据。
-- 日志和 Playwright 报告要找负责人要。
+- 详细日志、Playwright 报告及已授权的重跑，优先通过负责人本机已登录 GitHub 的浏览器 UI 直接处理；保留准确 run/job/attempt 身份及所读结果，不提取 cookies/token 或钥匙串凭据。只有浏览器未登录、无权限，或无法访问、操作所需内容时再请求协助（第3节）；重跑通过不等于查明或修复原失败根因。
 
 ## 8. 只属于 Claude 执行环境的规则（Codex 不必照搬）
 Claude 的会话有这些额外的限制，都来自它的权限设置，不是项目的要求：
@@ -168,3 +169,18 @@ Claude 的会话有这些额外的限制，都来自它的权限设置，不是�
 - 用 `git commit-tree` 做合并提交。
 
 它们留下的痕迹是 plan 里的命令都写绝对路径。
+
+## 9. P9当前证据与后续接续（2026-10-28）
+
+M4/P9实施与终审完成、集成待办；首次整审238文件60363行与d253/e003局部复审、两席文档独评及CORE-1/2修复复审闭环；当前产品e003e96625ba51264d3aeb77729729d53a770103，最终F/准确分支CI/T16文档独评见 [P9 review](../M4-issue-core/reviews/P9-purge-review.md)，最终文档HEAD CI另核，不由产品CI代替。M4总体/后续阶段未完成，本轮不合并。
+
+- 观察锁必须绑定实际请求PID/事务/SQL与blocker，任意表waiter可被trim误满足；tuple链只证明等待可达，持行锁仍核XID实际冲突。测试暂停夹具要在join前释放；FF-CLEAN-1异常次序经控制流独评，未冒称Fatal注入实验。
+- purge候选ORDER BY不等于DELETE物理锁序；trim是项目N保护，普通交错无40P01与>60d父CASCADE/迟到软删允许40P01重试分列。预算用monotonic运行时钟、审计用原请求At/By，不因worker重试覆戳。
+- NULL creator组合不等于物理删账户；relation任一工作项/项目已删即404，但存活且对调用者不可见的另一端不等于已删。契约/生成说明已随I-D1修复。
+- Shell not found为锁定上游已接受fallback时保留原输出，不当未修产品缺陷，也不声称历史镜像缺sh原因查明；实际不ready/失败仍独立核验。
+- T12 run40610708261 attempt2与T15 run40623599731各准确SHA三job绿；旧T12 attempt1 W11失败保留，重跑成功不等于根因修复。最终产品/文档HEAD/未来main CI各绑定各的身份。
+
+局部裁定的结论/理由/代价及实际验证范围见P9 review§9；原准备/历史失败不覆写，ignored证据保留至未来授权合并、准确mainCI与归档核验后。M5首个投递命令、M8部署/性能等原责任不变。
+
+
+**P9最终交付接续（2026-10-28）：** M4/P9实施与终审完成、集成待办。最终文档HEAD及其准确分支CI由主控[交付收据](../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI；两席文档独评及CORE-1/2修复复审见[P9 review](../M4-issue-core/reviews/P9-purge-review.md)。M4总体、输入handoff总状态和后续阶段保持开放。

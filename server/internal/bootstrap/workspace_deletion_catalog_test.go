@@ -42,34 +42,14 @@ func rowOf(parent string) string { return strings.TrimSuffix(parent, "s") }
 // are found by that key.
 func keysTo(t testing.TB, pool *pgxpool.Pool, parent string) []foreignKey {
 	t.Helper()
-	rows, err := pool.Query(context.Background(), `
-		SELECT c.conrelid::regclass::text, a.attname, cardinality(c.conkey)
-		FROM pg_constraint c JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
-		WHERE c.contype = 'f' AND c.confrelid = $1::text::regclass
-		ORDER BY 1, 2`, parent)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
 	keys := []foreignKey{{parent, parent, "id"}}
-	for rows.Next() {
-		k := foreignKey{parent: parent}
-		var columns int
-		if err := rows.Scan(&k.table, &k.column, &columns); err != nil {
-			t.Fatal(err)
-		}
-		if columns != 1 {
-			t.Fatalf("%s references %s with %d columns: find its rows another way", k, parent, columns)
-		}
-		keys = append(keys, k)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
+	for _, key := range foreignKeysTo(t, pool, parent) {
+		keys = append(keys, key.foreignKey)
 	}
 	if len(keys) == 1 {
 		t.Fatalf("no foreign key to %s in the catalog: the test would check the %s row only", parent, parent)
 	}
-	rows, err = pool.Query(context.Background(), `
+	rows, err := pool.Query(context.Background(), `
 		WITH RECURSIVE under (tab, via) AS (
 			SELECT conrelid, confrelid FROM pg_constraint WHERE contype = 'f' AND confrelid = $1::text::regclass
 			UNION

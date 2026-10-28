@@ -52,11 +52,16 @@ type moduleRoute struct {
 // newRoute mounts the routes register registers so.
 func newRoute(t *testing.T, register func(*httpserver.Router, *httpserver.API)) moduleRoute {
 	t.Helper()
+	return newRouteWithTimeout(t, register, 3*time.Second)
+}
+
+func newRouteWithTimeout(t *testing.T, register func(*httpserver.Router, *httpserver.API), timeout time.Duration) moduleRoute {
+	t.Helper()
 	logger := slog.New(slog.DiscardHandler)
 	router := httpserver.NewRouter(logger)
 	limit := ratelimit.New(time.Now).Bucket("test", ratelimit.Rate{PerMinute: 600, Burst: 100})
 	api, err := httpserver.NewAPI(httpserver.APIConfig{Logger: logger, Authenticator: tokenIsAccount{}, MaxBodyBytes: 1 << 20,
-		RequestTimeout: 3 * time.Second, IPv6PrefixLen: 64, Anonymous: limit, Authenticated: limit, AuthFailure: limit})
+		RequestTimeout: timeout, IPv6PrefixLen: 64, Anonymous: limit, Authenticated: limit, AuthFailure: limit})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +70,7 @@ func newRoute(t *testing.T, register func(*httpserver.Router, *httpserver.API)) 
 }
 
 // newProjectRoute is the project module (project.New) on pool, with auth as
-// its Authorizer, members as its WorkspaceMembers and issue's cascade.
+// its Authorizer, members as its WorkspaceMembers and real event subscribers.
 func newProjectRoute(t *testing.T, pool *pgxpool.Pool, auth shared.Authorizer, members projectapp.WorkspaceMembers) moduleRoute {
 	t.Helper()
 	return newProjectRouteOn(t, pool, postgres.NewTxManager(pool, 2*time.Second), auth, members)
@@ -75,7 +80,12 @@ func newProjectRoute(t *testing.T, pool *pgxpool.Pool, auth shared.Authorizer, m
 func newProjectRouteOn(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, auth shared.Authorizer,
 	members projectapp.WorkspaceMembers) moduleRoute {
 	t.Helper()
-	return newRoute(t, project.New(project.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
+	return newProjectRouteWithPublisher(t, pool, tx, auth, members, projectDeletionPublisher(t, pool))
+}
+
+func newProjectRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, auth shared.Authorizer, members projectapp.WorkspaceMembers, events shared.EventPublisher) moduleRoute {
+	t.Helper()
+	return newRoute(t, project.New(project.Deps{Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members,
 		Issues: issue.Provide(pool).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool).ListSettings}}).Register)
 }

@@ -29,6 +29,7 @@ type Config struct {
 	Jobs      JobsConfig      `koanf:"jobs"`
 	Workspace WorkspaceConfig `koanf:"workspace"`
 	Issue     IssueConfig     `koanf:"issue"`
+	Cleanup   CleanupConfig   `koanf:"cleanup"`
 	Files     FilesConfig     `koanf:"files"`
 	Log       LogConfig       `koanf:"log"`
 }
@@ -160,9 +161,18 @@ type WorkspaceConfig struct {
 	CreationEnabled bool `koanf:"creation_enabled"`
 }
 
-// IssueConfig configures the writes on the work-item side (M4 design 3.5,
-// 11.11).
+// CleanupConfig controls physical deletion of soft-deleted business rows.
+type CleanupConfig struct {
+	PurgeAfter    time.Duration `koanf:"purge_after"`
+	PurgeInterval time.Duration `koanf:"purge_interval"`
+	PurgeBatch    int           `koanf:"purge_batch"`
+}
+
+// IssueConfig configures work-item writes and maintenance.
 type IssueConfig struct {
+	TrimVersionsInterval time.Duration `koanf:"trim_versions_interval"`
+	DeleteBatch          int           `koanf:"delete_batch"`
+	DeleteBudget         time.Duration `koanf:"delete_budget"`
 	// AutoArchiveInterval controls the periodic system archival scan.
 	AutoArchiveInterval time.Duration `koanf:"auto_archive_interval"`
 	// WriteGate bounds the writes on one project's work items that hold a
@@ -257,7 +267,15 @@ func (c Config) LogValue() slog.Value {
 		slog.Group("workspace",
 			slog.Bool("creation_enabled", c.Workspace.CreationEnabled),
 		),
+		slog.Group("cleanup",
+			slog.Duration("purge_after", c.Cleanup.PurgeAfter),
+			slog.Duration("purge_interval", c.Cleanup.PurgeInterval),
+			slog.Int("purge_batch", c.Cleanup.PurgeBatch),
+		),
 		slog.Group("issue",
+			slog.Duration("trim_versions_interval", c.Issue.TrimVersionsInterval),
+			slog.Int("delete_batch", c.Issue.DeleteBatch),
+			slog.Duration("delete_budget", c.Issue.DeleteBudget),
 			slog.Group("write_gate",
 				slog.Int("per_project", c.Issue.WriteGate.PerProject),
 				slog.Duration("max_wait", c.Issue.WriteGate.MaxWait),

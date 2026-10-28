@@ -181,34 +181,6 @@ func (q *Queries) DeleteIssueReactionRows(ctx context.Context, arg DeleteIssueRe
 	return err
 }
 
-const deleteIssueRelationRows = `-- name: DeleteIssueRelationRows :exec
-UPDATE issue_relations AS t
-SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
-WHERE t.id IN (
-    SELECT r.id FROM issue_relations r
-    WHERE (r.issue_id = ANY ($3::uuid[]) OR r.related_issue_id = ANY ($3::uuid[]))
-        AND r.deleted_at IS NULL
-    ORDER BY r.id FOR NO KEY UPDATE)
-`
-
-type DeleteIssueRelationRowsParams struct {
-	At        time.Time
-	DeletedBy uuid.UUID
-	IssueIds  []uuid.UUID
-}
-
-// The deleted work items' relations (M4 design 3.5, 3.6), both ways: the undeleted rows that name one of them at either
-// end, the other end in this project or in another, soft-deleted at the moment and by the account given, in one
-// statement. A relation with a work item of another project is reached by that project's writes without this
-// project's lock: its deletion, and deleting the work item at that end. Two writers that each took such rows in their
-// scans' order could each hold one the other waits for, so the statement locks its rows FOR NO KEY UPDATE in id order
-// before it writes them, as each of the others does (convention 5's exception, 3.5). A row another deleted while the
-// statement waited for it is evaluated again on its newest version and passed over, and keeps that deletion.
-func (q *Queries) DeleteIssueRelationRows(ctx context.Context, arg DeleteIssueRelationRowsParams) error {
-	_, err := q.db.Exec(ctx, deleteIssueRelationRows, arg.At, arg.DeletedBy, arg.IssueIds)
-	return err
-}
-
 const deleteIssueRows = `-- name: DeleteIssueRows :exec
 UPDATE issues
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid

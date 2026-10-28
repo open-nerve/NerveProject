@@ -7,6 +7,7 @@ import (
 	"maps"
 	"slices"
 	"testing"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
@@ -233,6 +234,9 @@ func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
 // fakeIssueProjects answers project's IssueProjects of one project, web,
 // and records each question; err, when set, is every answer's failure.
 type fakeIssueProjects struct {
+	deleted        map[uuid.UUID]time.Time
+	deletedIDs     []uuid.UUID
+	deletedContext context.Context
 	listProjectAnswers
 	historical          []project.HistoricalIssueProject
 	historicalWorkspace uuid.UUID
@@ -450,5 +454,33 @@ func TestIssueDraftDirectoryPorts(t *testing.T) {
 	dir.err = errors.New("offline")
 	if _, err := w.ShareWorkspaceByID(ctx, wid); !errors.Is(err, dir.err) {
 		t.Fatal(err)
+	}
+}
+
+func (f *fakeIssueProjects) AllUndeletedIssueProjectIDs(ctx context.Context) ([]uuid.UUID, error) {
+	f.asked = append(f.asked, "all undeleted")
+	return []uuid.UUID{f.web}, f.err
+}
+
+func (f *fakeIssueProjects) DeletedIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]time.Time, error) {
+	f.deletedIDs, f.deletedContext = ids, ctx
+	return f.deleted, f.err
+}
+
+// Deletion ownership needs exact times and the original error, not a synthetic
+// zero timestamp or an empty-success conversion at the module boundary.
+func TestIssueProjectsDeletedAt(t *testing.T) {
+	id := uuid.NewV7()
+	at := time.Date(2026, 10, 28, 1, 2, 3, 123456000, time.FixedZone("offset", 3600))
+	f := &fakeIssueProjects{deleted: map[uuid.UUID]time.Time{id: at}}
+	type deletionContextKey struct{}
+	ctx := context.WithValue(context.Background(), deletionContextKey{}, "transaction")
+	got, err := (issueProjects{projects: f}).DeletedAt(ctx, []uuid.UUID{id})
+	if err != nil || !maps.Equal(got, f.deleted) || f.deletedContext != ctx || !slices.Equal(f.deletedIDs, []uuid.UUID{id}) {
+		t.Fatal(got, err, f.deletedIDs)
+	}
+	f.err = errors.New("deletion directory unavailable")
+	if _, err := (issueProjects{projects: f}).DeletedAt(ctx, nil); err != f.err {
+		t.Fatal("original error lost", err)
 	}
 }

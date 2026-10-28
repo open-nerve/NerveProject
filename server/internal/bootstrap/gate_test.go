@@ -167,8 +167,8 @@ func (e endingIn) WithinTx(ctx context.Context, fn func(ctx context.Context) err
 // alice's change is refused at the lock timeout, well before the
 // request's. Once the row is free, a change and a creation go through.
 func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
-	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Second, MaxQueue: 1},
+	w := newObservedIssueWorldWith(t, func(cfg *config.Config) {
+		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, TrimVersionsInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Second, MaxQueue: 1},
 			WriteLockTimeout: 3 * time.Second}
 	})
 	item := w.newWorkItem(t)
@@ -185,8 +185,9 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 
 	held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
 	start := time.Now()
+	changeProbe := w.observe(change)
 	changed := sendInBackground(change)
-	pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
+	requestBlocked(t, w.pool, changeProbe, held.Conn().PgConn().PID(), "projects")
 	sent := time.Now()
 	pending := []<-chan answer{sendInBackground(creations[0]), sendInBackground(creations[1])}
 	var after []time.Duration
@@ -259,8 +260,8 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 // the writes the gate refused. That a write across projects gives back
 // each place it took is TestAWriteAcrossProjectsGivesBackEachPlaceItTook.
 func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
-	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
+	w := newObservedIssueWorldWith(t, func(cfg *config.Config) {
+		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, TrimVersionsInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
 			WriteLockTimeout: 3 * time.Second}
 	})
 	item, archived := w.newWorkItem(t), w.doneWorkItem(t)
@@ -301,6 +302,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["alice"], fmt.Appendf(nil, `{"name":"Mend %d"}`, changes))
 		w.contract.CheckRequest(t, change)
 		held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
+		changeProbe := w.observe(change)
 		changed := sendInBackground(change)
 		defer func() {
 			release(t, held)
@@ -312,7 +314,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 				t.Errorf("alice's change = %d %s, want 200 once Web's row is free", a.res.StatusCode, a.body)
 			}
 		}()
-		pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
+		requestBlocked(t, w.pool, changeProbe, held.Conn().PgConn().PID(), "projects")
 		check()
 	}
 	for _, write := range writes {
@@ -399,11 +401,9 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 // about a second before her own request's deadline, could leave the gate.
 // Once the row is free, a change and a creation go through.
 func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
-	w := newIssueWorldWith(t, func(cfg *config.Config) {
-		cfg.Server.RequestTimeout = 3 * time.Second
-		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: 10 * time.Second, MaxQueue: 1},
-			WriteLockTimeout: 2 * time.Second}
-	})
+	cfg := config.Config{Server: config.ServerConfig{RequestTimeout: 3 * time.Second}, Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: config.IssueConfig{
+		AutoArchiveInterval: 24 * time.Hour, TrimVersionsInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: 10 * time.Second, MaxQueue: 1}, WriteLockTimeout: 2 * time.Second}}
+	w := newObservedIssueWorldWith(t, func(c *config.Config) { c.Server.RequestTimeout = 3 * time.Second; c.Issue = cfg.Issue })
 	item := w.newWorkItem(t)
 	path := "/api/v0/issues/" + item.String()
 	change := newRequest(t, http.MethodPatch, w.base+path, w.tokens["bob"], []byte(`{"name":"Mend"}`))
@@ -412,31 +412,40 @@ func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
 	w.contract.CheckRequest(t, create)
 
 	labels := lockedTables(t, w.pool, "issue_labels", "ACCESS EXCLUSIVE")
+	changeProbe, createProbe := w.observe(change), w.observe(create)
 	sent := time.Now()
 	changed := sendInBackground(change)
-	pgtest.WaitForLockWaitBehind(t, w.pool, labels.Conn().PgConn(), 5*time.Second)
-	time.Sleep(time.Until(sent.Add(2 * time.Second)))
-	row := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
+	defer requestRelease(t, labels)
+	requestTableBlocked(t, w.pool, changeProbe, labels.Conn().PgConn().PID(), "issue_labels")
+	// This offset is part of the timeout contract, after observing the actual
+	// precheck wait: alice's 2s lock timeout must outlast bob's 3s request.
+	timer := time.NewTimer(time.Until(sent.Add(2 * time.Second)))
+	defer timer.Stop()
+	<-timer.C
+	row := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR UPDATE", w.web)
 	created := sendInBackground(create)
-	pgtest.WaitForLockWaitBehind(t, w.pool, row.Conn().PgConn(), 5*time.Second)
+	defer requestRelease(t, row)
+	requestBlocked(t, w.pool, createProbe, row.Conn().PgConn().PID(), "projects")
 	release(t, labels)
-
-	a := receiveWithin(t, changed, 5*time.Second, "answer to bob's change")
-	if a.err != nil {
-		t.Fatal(a.err)
+	changedAnswer := receiveWithin(t, changed, 5*time.Second, "bob change")
+	if changedAnswer.err != nil {
+		t.Fatal(changedAnswer.err)
 	}
 	if took := time.Since(sent); took < 3*time.Second || took >= 4*time.Second {
 		t.Errorf("bob's change answered after %v; want at its request's deadline, 3s, before alice's creation left the gate", took)
 	}
-	w.wantBusy(t, "bob's change", change, a.res, a.body)
-	a = receiveWithin(t, created, 5*time.Second, "answer to alice's creation")
-	if a.err != nil {
-		t.Fatal(a.err)
+	w.wantBusy(t, "bob's change", change, changedAnswer.res, changedAnswer.body)
+	createdAnswer := receiveWithin(t, created, 5*time.Second, "alice create")
+	if createdAnswer.err != nil {
+		t.Fatal(createdAnswer.err)
 	}
 	if took := time.Since(sent); took < 4*time.Second {
 		t.Errorf("alice's creation answered %v after bob's change was sent; want at its lock timeout, 4s", took)
 	}
-	w.wantBusy(t, "alice's creation", create, a.res, a.body)
+	w.wantBusy(t, "alice's creation", create, createdAnswer.res, createdAnswer.body)
+	if changeProbe.pid.Load() != 0 || createProbe.pid.Load() != 0 {
+		t.Fatal("finished gate request retained a query PID")
+	}
 
 	release(t, row)
 	w.send(t, "bob", http.MethodPatch, path, `{"name":"Mend"}`, http.StatusOK)

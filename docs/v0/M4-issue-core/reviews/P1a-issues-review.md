@@ -241,6 +241,14 @@ plan 的代码块照运行时的文字保留。下表是动过 plan 的块所写
 
 T1把workspaceID从原删除请求贯穿project→issue，零项目工作区仍处理无项目草稿；T3/T4/T7把草稿CRUD与publish从普通writer形状中显式分出，三目录union精确覆盖全部tagged非GET，无通用豁免。T1 M1/M2真实PG、T8 W3零项目/旧审计及全表目录、T7请求PID/交错16/17已验证。P9替换同步Cascade为异步任务与P14页面仍开放。 实际命令/计数/变异/检查点见[P8 review §8](P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
 
+### 处理结果（M4/P9，2026-10-28）
+
+T9/T10移除DeleteProjectIssues/DeleteWorkspaceIssues两个同步过渡能力，原请求事务只同步M3并发布事件/投任务；按本次项目及workspace_drafts边界处理13表，原At/By不变。T13 P4/W2/W3沿真实API目录与issue有限轮询、M3即时断言接续。
+
+证据：[P9 review §8–12](P9-purge-review.md)、[P9 spec附录B/C/D](../specs/P9-purge.md)；产品身份 `e003e96625ba51264d3aeb77729729d53a770103`，独立整审与两次局部复审结果按上述入口，最终检查点/文档独评分别记账。
+
+仍开放：P14 I1页面、整个M4收尾及输入handoff总状态仍开放。 本回执只承接P9后端子项，不关闭整份交接或M4，不改变本页历史运行/集成身份。
+
 ## 7. 已知限制
 
 - **授权与时刻的先后可以不一致**（B 的代价一，设计 3.5，spec 第 7 节）：只改工作区角色的写不锁项目，降为访客、结束成员关系的连带在锁项目之前读时刻。写在总体设计 4.2。

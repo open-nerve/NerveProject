@@ -29,6 +29,7 @@ import (
 // at 85000; Ops's Cancelled is at 100000, after every state of Web, moved
 // there by alice.
 type memberWorld struct {
+	requests      *requestQueries
 	contract      *apitest.Contract
 	base          string
 	pool          *pgxpool.Pool
@@ -43,9 +44,23 @@ const worldStanding = "acme: alice 20, bob 15, carol 15, dave 15, erin 5, gina 2
 
 func newMemberWorld(t *testing.T) memberWorld {
 	t.Helper()
+	return newMemberWorldOnRequests(t, nil)
+}
+func newObservedMemberWorld(t *testing.T) memberWorld {
+	t.Helper()
+	return newMemberWorldOnRequests(t, &requestQueries{})
+}
+func newMemberWorldOnRequests(t *testing.T, requests *requestQueries) memberWorld {
+	t.Helper()
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
-	w := memberWorld{contract: contract, base: startApp(t, testConfig(t, dbURL, false), migrations.FS()), pool: openPool(t, dbURL),
+	var base string
+	if requests == nil {
+		base = startApp(t, testConfig(t, dbURL, false), migrations.FS())
+	} else {
+		base = startObservedApp(t, testConfig(t, dbURL, false), requests)
+	}
+	w := memberWorld{requests: requests, contract: contract, base: base, pool: openPool(t, dbURL),
 		tokens: map[string]string{}, ids: map[string]uuid.UUID{}}
 	for _, name := range []string{"alice", "bob", "carol", "dave", "erin", "gina"} {
 		w.tokens[name] = registerAccount(t, contract, w.base, name+"@example.com").AccessToken

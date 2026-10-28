@@ -56,7 +56,7 @@ func unrelating(from uuid.UUID, before, under int) []string {
 		decisions = append(decisions, line("Authorize", alice, domain.ActionUpdate, acme, e.project))
 	}
 	var outside []string
-	for _, c := range slices.Concat([]string{line("GetRelation", relationID)}, reads, decisions[:before]) {
+	for _, c := range slices.Concat([]string{line("GetRelation", relationID)}, reads, []string{line("Find", web), line("Find", ops)}, decisions[:before]) {
 		outside = append(outside, c+" outside tx")
 	}
 	return slices.Concat(outside, []string{"Begin", line("LockMany", anys(sorted([]uuid.UUID{web, ops}))...)}, reads, decisions[:under],
@@ -252,10 +252,10 @@ func TestDeleteIssueRelationStopsAtAFailingPort(t *testing.T) {
 		answers    []error  // the Authorizer's
 		calls      []string // of unrelating's, the port's the last
 	}{
-		{"far read again under the locks", line("GetIssue", farID), nil, unrelating(farID, 1, 1)[:7]},
-		{"near read again under the locks", line("GetIssue", nearID), nil, unrelating(farID, 1, 1)[:8]},
-		{"far decided on again under the locks", far, nil, unrelating(farID, 1, 1)[:9]},
-		{"near decided on under the locks, far refused there", near, []error{1: shared.Forbidden()}, unrelating(farID, 1, 2)[:10]},
+		{"far read again under the locks", line("GetIssue", farID), nil, unrelating(farID, 1, 1)[:9]},
+		{"near read again under the locks", line("GetIssue", nearID), nil, unrelating(farID, 1, 1)[:10]},
+		{"far decided on again under the locks", far, nil, unrelating(farID, 1, 1)[:11]},
+		{"near decided on under the locks, far refused there", near, []error{1: shared.Forbidden()}, unrelating(farID, 1, 2)[:12]},
 		{"the relation read again under the locks", line("GetRelation", relationID), nil, unrelating(farID, 1, 1)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

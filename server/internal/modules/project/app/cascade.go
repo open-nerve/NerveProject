@@ -8,27 +8,17 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 )
 
-// Cascade is what the workspace module's writes ask of the projects,
-// workspace's ProjectCascade port (M3 design 3.3). Each method uses
-// project's own repositories, and DeleteWorkspaceProjects the issue
-// module's cascade too (IssueCascade, M4 design 3.3), in the transaction
-// ctx carries, which the caller began and holds its workspace's lock in: a
-// failure comes back as itself and the caller's whole transaction rolls
-// back. The caller gives who acts and the moment, which each method writes
-// into the rows it changes.
+// Cascade performs project M3 changes in the caller transaction.
 type Cascade struct {
 	projects ProjectsDeleter
 	locker   WorkspaceProjectsLocker
 	members  MemberDemoter
 	enders   MembershipEnder
-	issues   IssueCascade
 }
 
-// NewCascade returns the cascade over projects, locker, members, enders
-// and the issue module's cascade.
-func NewCascade(projects ProjectsDeleter, locker WorkspaceProjectsLocker, members MemberDemoter, enders MembershipEnder,
-	issues IssueCascade) *Cascade {
-	return &Cascade{projects: projects, locker: locker, members: members, enders: enders, issues: issues}
+// NewCascade returns the cascade over project rows and memberships.
+func NewCascade(projects ProjectsDeleter, locker WorkspaceProjectsLocker, members MemberDemoter, enders MembershipEnder) *Cascade {
+	return &Cascade{projects: projects, locker: locker, members: members, enders: enders}
 }
 
 // LockWorkspaceProjects locks the workspace's undeleted projects, archived
@@ -41,18 +31,10 @@ func (c *Cascade) LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UU
 	return c.locker.LockWorkspaceProjects(ctx, workspaceID)
 }
 
-// DeleteWorkspaceProjects soft-deletes the workspace's projects and the
-// rows under them (M3 design 3.6): the last step of deleteWorkspace's
-// cascade, under its FOR NO KEY UPDATE of the workspace and of the projects
-// (LockWorkspaceProjects), each step one statement (convention 5), the
-// steps deleteProject runs too (deleteProjects), then the work-item side of
-// the projects it locked, through the issue module (M4 design 3.5), all at
-// by and now.
-func (c *Cascade) DeleteWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error {
-	if err := deleteProjects(ctx, c.projects, Deletion{WorkspaceID: workspaceID, By: by, Now: now}); err != nil {
-		return err
-	}
-	return c.issues.DeleteWorkspaceIssues(ctx, workspaceID, projectIDs, by, now)
+// DeleteWorkspaceProjects deletes M3 project rows under the caller's workspace
+// and project locks, using the request's actor and moment.
+func (c *Cascade) DeleteWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID, by uuid.UUID, now time.Time) error {
+	return deleteProjects(ctx, c.projects, Deletion{WorkspaceID: workspaceID, By: by, Now: now})
 }
 
 // DemoteToGuest makes userID a guest in each of the workspace's projects he

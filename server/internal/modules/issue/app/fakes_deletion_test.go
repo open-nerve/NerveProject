@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
@@ -45,8 +46,21 @@ func (f *fakeIssues) DeleteIssueLabelRows(ctx context.Context, d app.IssueDeleti
 	return f.deleteRows(ctx, "DeleteIssueLabelRows", d)
 }
 
-func (f *fakeIssues) DeleteIssueRelationRows(ctx context.Context, d app.IssueDeletion) error {
-	return f.deleteRows(ctx, "DeleteIssueRelationRows", d)
+func (f *fakeIssues) LockIssueRelationRows(ctx context.Context, d app.IssueDeletion) ([]app.RelationDeletionRow, error) {
+	if err := f.log.add(ctx, "LockIssueRelationRows", d.IssueIDs); err != nil {
+		return nil, err
+	}
+	return []app.RelationDeletionRow{{ID: d.IssueIDs[0], ProjectID: web, RelatedProjectID: web}}, nil
+}
+func (f *fakeIssues) LockProjectRelationRows(context.Context, app.RowBatch) ([]app.RelationDeletionRow, error) {
+	panic("unused")
+}
+func (f *fakeIssues) DeleteLockedRelationRows(ctx context.Context, ids []uuid.UUID, by uuid.UUID, at time.Time) (int, error) {
+	if err := f.log.add(ctx, "DeleteLockedRelationRows", ids); err != nil {
+		return 0, err
+	}
+	f.relationWrites++
+	return len(ids), nil
 }
 
 func (f *fakeIssues) DeleteIssueSubscriberRows(ctx context.Context, d app.IssueDeletion) error {

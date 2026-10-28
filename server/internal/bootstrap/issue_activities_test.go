@@ -107,19 +107,26 @@ func TestActivityReferencesProjectDeletion(t *testing.T) {
 	if len(before.Data) != 5 {
 		t.Fatal("reference fixture", before)
 	}
-	// Exercise current synchronous project deletion orchestration, not a future job.
+	// Keep the worker at its first batch while checking historical visibility.
+	createDraftHTTP(t, w, "alice", `{"project_id":"`+ops.String()+`","payload":{}}`)
+	holder := holdProjectDeletion(t, w.pool, ops)
 	w.send(t, "alice", http.MethodDelete, "/api/v0/projects/"+ops.String(), "", 204)
 	after := activityPage(t, w, "bob", activitiesOf(target))
 	if !reflect.DeepEqual(after, before) {
 		t.Fatal("soft-deleted reference/project lost history", before, after)
 	}
-	if w.deletedAt(t, "issues", reference).IsZero() {
-		t.Fatal("project deletion did not cascade")
-	}
 	var active bool
 	var deleted *time.Time
 	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT is_active,deleted_at FROM project_members WHERE project_id=$1 AND member_id=$2", ops, w.ids["bob"]).Scan(&active, &deleted); err != nil || !active || deleted == nil {
 		t.Fatal("historical member fixture", active, deleted, err)
+	}
+	requestRelease(t, holder)
+	waitProjectDeletion(t, w.pool, ops)
+	if w.deletedAt(t, "issues", reference).IsZero() {
+		t.Fatal("project deletion did not drain")
+	}
+	if after := activityPage(t, w, "bob", activitiesOf(target)); !reflect.DeepEqual(after, before) {
+		t.Fatal("completed deletion lost history", before, after)
 	}
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE project_members SET is_active=false WHERE project_id=$1 AND member_id=$2", ops, w.ids["bob"]); err != nil {
 		t.Fatal(err)

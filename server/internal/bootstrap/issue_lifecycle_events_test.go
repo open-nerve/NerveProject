@@ -204,22 +204,20 @@ func TestIssueArchivalEvents(t *testing.T) {
 }
 
 func TestIssueDeletionEventsCascade(t *testing.T) {
-	// Project/workspace cascades use the provided boundary, which deliberately
-	// has no issue publisher. These real batch writes must not enqueue issue jobs.
+	// Project/workspace requests enqueue their deletion tasks; the background
+	// batch writes must not publish individual issue lifecycle events.
 	for _, workspace := range []bool{false, true} {
 		t.Run(fmt.Sprintf("workspace=%t", workspace), func(t *testing.T) {
 			w := newIssueWorld(t)
 			_, ids, _ := lifecycleTree(t, w, false)
-			cascade := issue.Provide(w.pool).IssueCascade
-			err := postgres.NewTxManager(w.pool, 2*time.Second).WithinTx(pgtest.Soon(t), func(ctx context.Context) error {
-				if workspace {
-					return cascade.DeleteWorkspaceIssues(ctx, w.acme, []uuid.UUID{w.web}, w.ids["alice"], time.Now())
-				}
-				return cascade.DeleteProjectIssues(ctx, w.web, w.ids["alice"], time.Now())
-			})
-			if err != nil {
-				t.Fatal(err)
+			if workspace {
+				w.send(t, "alice", http.MethodDelete, "/api/v0/workspaces/acme", "", 204)
+				waitWorkspaceDeletion(t, w.pool, w.acme)
+			} else {
+				w.send(t, "alice", http.MethodDelete, "/api/v0/projects/"+w.web.String(), "", 204)
+				waitProjectDeletion(t, w.pool, w.web)
 			}
+
 			if live := queryIDs(t, w.pool, "SELECT id FROM issues WHERE id=ANY($1) AND deleted_at IS NULL", ids); len(live) != 0 || issueEventCount(t, w) != 0 {
 				t.Fatal("cascade failed or enqueued issue events", live)
 			}

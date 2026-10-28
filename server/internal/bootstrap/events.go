@@ -6,6 +6,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -89,4 +92,9 @@ func cloneEventValue[T any](value *T) *T {
 	}
 	copy := *value
 	return &copy
+}
+
+// eventTypes combines producer declarations for the full transactional dispatcher.
+func eventTypes() []string {
+	return slices.Concat(issue.EventTypes(), project.EventTypes(), workspace.EventTypes())
 }

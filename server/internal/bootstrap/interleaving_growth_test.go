@@ -17,7 +17,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
@@ -115,7 +114,7 @@ func authorizerOn(pool *pgxpool.Pool) shared.Authorizer {
 // cascadeOn is project's cascade as bootstrap wires it, on pool, over
 // issue's (M4 design 6.6).
 func cascadeOn(pool *pgxpool.Pool) project.Cascade {
-	return project.NewCascade(project.CascadeDeps{Pool: pool, Issues: issue.Provide(pool).IssueCascade})
+	return project.NewCascade(project.CascadeDeps{Pool: pool})
 }
 
 // gatedShares is workspace's WorkspaceMembers; with a gate, the growth
@@ -353,11 +352,11 @@ func TestADemotionAndAProjectsDeletionSerialize(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g, store := newGate(), projectpg.New(r.pool)
-			auth, cascade := r.authorizer(), projectapp.NewCascade(store, store, store, store, issue.Provide(r.pool).IssueCascade)
+			auth, cascade := r.authorizer(), projectapp.NewCascade(store, store, store, store)
 			if deletionFirst {
 				auth = gatedAuthorizer{Authorizer: auth, action: projectdomain.ActionDelete, gate: g}
 			} else {
-				cascade = projectapp.NewCascade(store, store, gatedDemoter{store, g}, store, issue.Provide(r.pool).IssueCascade)
+				cascade = projectapp.NewCascade(store, store, gatedDemoter{store, g}, store)
 			}
 			route := newProjectRoute(t, r.pool, auth, workspace.Provide(r.pool).WorkspaceMembers)
 			var req *http.Request

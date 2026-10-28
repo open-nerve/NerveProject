@@ -61,6 +61,11 @@ type app struct {
 // newApp wires the server described by cfg around the given migrations and
 // built web frontend. close releases it.
 func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrationFiles, webFiles fs.FS) (*app, error) {
+	return newAppWithPoolFactory(ctx, cfg, logger, migrationFiles, webFiles, postgres.NewPool)
+}
+
+// newAppWithPoolFactory preserves one composition and the app's pool ownership.
+func newAppWithPoolFactory(ctx context.Context, cfg config.Config, logger *slog.Logger, migrationFiles, webFiles fs.FS, factory func(context.Context, config.DatabaseConfig) (*pgxpool.Pool, error)) (*app, error) {
 	signingKey, err := readSigningKey(cfg.Auth.JWT.PrivateKeyFile)
 	if err != nil {
 		return nil, err
@@ -75,7 +80,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	if err != nil {
 		return nil, err
 	}
-	pool, err := postgres.NewPool(ctx, cfg.Database)
+	pool, err := factory(ctx, cfg.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +124,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		a.close()
 		return nil, err
 	}
-	events, err := newDispatcher(issue.EventTypes(), issue.Subscribers(issueInserter{client: inserter}))
+	events, err := newDispatcher(eventTypes(), issue.Subscribers(issueInserter{client: inserter}))
 	if err != nil {
 		a.close()
 		return nil, err
@@ -128,7 +133,8 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	issues := issue.New(issue.Deps{
 		Outbound: outboundClient, Logger: logger,
 		Events: events,
-		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval,
+		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
+		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
 		WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: businessClock, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},
@@ -138,14 +144,16 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
-		Pool: pool, Tx: tx, Clock: businessClock, Authorizer: authorizer,
+		Events: events,
+		Pool:   pool, Tx: tx, Clock: businessClock, Authorizer: authorizer,
 		Workspaces:   projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:      workspacePorts.WorkspaceMembers,
 		Issues:       issuePorts.IssueCascade,
 		ListSettings: projectListSettings{settings: issuePorts.ListSettings},
 	})
 	ws := workspace.New(workspace.Deps{
-		Pool: pool, Tx: tx, Clock: businessClock, Logger: logger, Authorizer: authorizer,
+		Events: events,
+		Pool:   pool, Tx: tx, Clock: businessClock, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles:        workspaceProfiles{profiles: identityPorts.PublicProfiles},
 		InvitationMAC:   invitations,
@@ -179,7 +187,9 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		a.close()
 		return nil, err
 	}
-	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, append(ident.Jobs(), issues.Jobs()...), append(identity.EnqueuedKinds(), issue.EnqueuedKinds()...))
+	purge := newPurgeDeleted([]Purger{issuePorts.Purger, projectPorts.Purger, workspacePorts.Purger, identityPorts.Purger}, businessClock, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch)
+	definitions := append(append(ident.Jobs(), issues.Jobs()...), purgeJob(purge, cfg.Cleanup.PurgeInterval))
+	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, append(identity.EnqueuedKinds(), issue.EnqueuedKinds()...))
 	if err != nil {
 		a.close()
 		return nil, err

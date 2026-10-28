@@ -38,6 +38,7 @@ func TestDraftPublishAndProjectDeletionSerialize(t *testing.T) {
 				if !reflect.DeepEqual(before, collaborationState(t, w)) {
 					t.Fatal("refused publication created issue effects")
 				}
+				waitProjectDeletion(t, w.pool, w.web)
 				var at time.Time
 				var by uuid.UUID
 				if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at,updated_by_id FROM draft_issues WHERE id=$1", d.ID).Scan(&at, &by); err != nil || !at.Equal(*projectDeleted) || by != w.ids["alice"] {
@@ -62,6 +63,7 @@ func TestDraftPublishAndProjectDeletionSerialize(t *testing.T) {
 			if !consumed.Equal(issue.CreatedAt) || !updated.Equal(issue.CreatedAt) || by != w.ids["alice"] || projectDeleted.Before(consumed) {
 				t.Fatal("draft/creation/deletion ordering", consumed, updated, issue.CreatedAt, projectDeleted, by)
 			}
+			waitProjectDeletion(t, w.pool, w.web)
 			var all, gone int
 			if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT count(*), count(*) FILTER(WHERE deleted_at=$2) FROM (
     SELECT deleted_at FROM issues WHERE project_id=$1 UNION ALL
@@ -75,18 +77,17 @@ func TestDraftPublishAndProjectDeletionSerialize(t *testing.T) {
 		w := newIssueWorld(t)
 		d := createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Never"}}`)
 		before := draftState(t, w)
-		holder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR NO KEY UPDATE", w.web)
-		draftExec(t, holder, "UPDATE projects SET deleted_at=now() WHERE id=$1", w.web)
-		tx := draftTx(w.pool)
-		var e exchange
-		collect := draftBackground(t, draftWrite(t, w, tx, &e, "POST", publishPath(d.ID), ""), func() { draftRelease(t, holder) })
-		draftBlocked(t, w.pool, draftPID(t, tx), holder.Conn().PgConn().PID(), "projects")
-		draftCommit(t, holder)
-		collect()
-		w.refused(t, e, 404, "issue.draft_not_found")
+		holder := holdProjectDeletion(t, w.pool, w.web)
+		w.send(t, "alice", "DELETE", "/api/v0/projects/"+w.web.String(), "", 204)
+		job := projectDeletionJob(t, w.pool, w.web)
+		deletionWorkerBlocked(t, w.pool, holder, job, "draft_issues")
+		w.send(t, "alice", "POST", publishPath(d.ID), "", 404)
 		if !reflect.DeepEqual(before, draftState(t, w)) {
 			t.Fatal("live-draft deletion window changed draft or issue rows")
 		}
+		requestRelease(t, holder)
+		waitDeletionJob(t, w.pool, job, "completed")
+		assertDeletionAudit(t, w.pool, "draft_issues", []uuid.UUID{d.ID}, job)
 	})
 }
 func assertDraftLive(t *testing.T, w issueWorld, id, project uuid.UUID) {
@@ -121,10 +122,10 @@ func TestDraftProjectMoveAndPublishSerialize(t *testing.T) {
 			t.Run("move commits after publish precheck", func(t *testing.T) {
 				d := createDraftHTTP(t, w, "alice", `{"project_id":"`+p1.String()+`","payload":{"name":"Stale"}}`)
 				g := newGate()
-				tx := draftTx(w.pool)
+				tx := requestTx(w.pool)
 				tx.before = g
 				var e exchange
-				collect := draftBackground(t, draftWrite(t, w, tx, &e, "POST", publishPath(d.ID), ""), func() { draftOpen(g) })
+				collect := requestBackground(t, draftWrite(t, w, tx, &e, "POST", publishPath(d.ID), ""), func() { requestOpen(g) })
 				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 				defer cancel()
 				select {
@@ -136,7 +137,7 @@ func TestDraftProjectMoveAndPublishSerialize(t *testing.T) {
 				draftNoLock(t, w, "draft_issues", d.ID)
 				draftRequest(t, w, "alice", "PATCH", draftPath(d.ID), `{"project_id":"`+p2.String()+`"}`, 200)
 				before := publishSnapshot(t, w)
-				draftOpen(g)
+				requestOpen(g)
 				collect()
 				w.refused(t, e, 409, "issue.draft_changed")
 				if !reflect.DeepEqual(before, publishSnapshot(t, w)) {
@@ -168,19 +169,18 @@ func TestDraftProjectMoveAndPublishSerialize(t *testing.T) {
 				d := createDraftHTTP(t, w, "alice", `{"project_id":"`+p1.String()+`","payload":{"name":"Moving"}}`)
 				lo := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR UPDATE", low)
 				hi := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR UPDATE", high)
-				tx := draftTx(w.pool)
+				tx := requestTx(w.pool)
 				var e exchange
-				collect := draftBackground(t, draftMove(d.ID, p2)(t, w, tx, &e), func() { draftRelease(t, lo); draftRelease(t, hi) })
-				pid := draftPID(t, tx)
-				draftBlocked(t, w.pool, pid, lo.Conn().PgConn().PID(), "projects")
+				collect := requestBackground(t, draftMove(d.ID, p2)(t, w, tx, &e), func() { requestRelease(t, lo); requestRelease(t, hi) })
+				requestBlocked(t, w.pool, tx, lo.Conn().PgConn().PID(), "projects")
 				draftNoLock(t, w, "draft_issues", d.ID)
-				draftRelease(t, lo)
-				draftBlocked(t, w.pool, pid, hi.Conn().PgConn().PID(), "projects")
-				if got := lockOn(t, w.pool, "projects WHERE id=$1", low); got != "FOR SHARE" {
+				requestRelease(t, lo)
+				requestBlocked(t, w.pool, tx, hi.Conn().PgConn().PID(), "projects")
+				if got := requestRowLock(t, w.pool, w.pool, tx, "projects WHERE id=$1", low); got != "FOR SHARE" {
 					t.Fatal("low P must be SHARE before high P", got)
 				}
 				draftNoLock(t, w, "draft_issues", d.ID)
-				draftRelease(t, hi)
+				requestRelease(t, hi)
 				collect()
 				w.answered(t, e, 200)
 				assertDraftLive(t, w, d.ID, p2)

@@ -15,7 +15,7 @@ import (
 // called, its clock at clockNow: after gated rebuilds w's locks, it is
 // deleteIssue over the gated ones.
 func deleteOver(w *world) *app.DeleteIssue {
-	return app.NewDeleteIssue(app.DeleteIssueDeps{Events: discardEvents{}, Locks: w.locks, Rows: w.issues, Clock: clockAt{at: clockNow, log: w.log}})
+	return app.NewDeleteIssue(app.DeleteIssueDeps{Events: discardEvents{}, Locks: w.locks, Rows: w.issues, Relations: app.NewRelationDeletions(w.issues, w.project), Clock: clockAt{at: clockNow, log: w.log}})
 }
 
 // newDelete is deleteIssue over newUpdate's world: web's work item 7, made
@@ -31,7 +31,7 @@ func newDelete() (*app.DeleteIssue, *world, uuid.UUID) {
 // activity.
 func deletingRows(ids []uuid.UUID) []string {
 	return []string{line("DeleteIssueRows", ids), line("DeleteIssueAssigneeRows", ids), line("DeleteIssueLabelRows", ids),
-		line("DeleteIssueRelationRows", ids), line("DeleteIssueLinkRows", ids), line("DeleteIssueSubscriberRows", ids), line("DeleteIssueMentionRows", ids), line("DeleteIssueCommentRows", ids), line("DeleteIssueReactionRows", ids), line("DeleteIssueCommentReactionRows", ids), line("DeleteIssueActivityRows", ids), line("DeleteIssueDescriptionVersionRows", ids)}
+		line("LockIssueRelationRows", ids), line("DeletedAt", []uuid.UUID(nil)), line("DeleteLockedRelationRows", ids[:1]), line("DeleteIssueLinkRows", ids), line("DeleteIssueSubscriberRows", ids), line("DeleteIssueMentionRows", ids), line("DeleteIssueCommentRows", ids), line("DeleteIssueReactionRows", ids), line("DeleteIssueCommentReactionRows", ids), line("DeleteIssueActivityRows", ids), line("DeleteIssueDescriptionVersionRows", ids)}
 }
 
 // A deletion, in the order of M4 design 3.5: Locks' calls, its decisions
@@ -68,7 +68,7 @@ func TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows(t *testing.T) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
 			deletion := app.IssueDeletion{IssueIDs: subtree, By: alice, At: clockNow}
-			if want := slices.Repeat([]app.IssueDeletion{deletion}, 12); !reflect.DeepEqual(w.issues.deletions, want) {
+			if want := slices.Repeat([]app.IssueDeletion{deletion}, 11); !reflect.DeepEqual(w.issues.deletions, want) {
 				t.Errorf("the deletions %+v, want %+v", w.issues.deletions, want)
 			}
 		})
@@ -114,7 +114,7 @@ func TestDeleteIssueRefusals(t *testing.T) {
 // call after it runs: the transaction rolls back whatever was deleted.
 func TestDeleteIssueStopsAtAFailingPort(t *testing.T) {
 	for _, port := range []string{"GetIssue", "Authorize", "Lock", "Subtree", "DeleteIssueRows", "DeleteIssueAssigneeRows",
-		"DeleteIssueLabelRows", "DeleteIssueRelationRows", "DeleteIssueLinkRows", "DeleteIssueSubscriberRows", "DeleteIssueMentionRows", "DeleteIssueCommentRows", "DeleteIssueReactionRows", "DeleteIssueCommentReactionRows", "DeleteIssueActivityRows", "DeleteIssueDescriptionVersionRows"} {
+		"DeleteIssueLabelRows", "LockIssueRelationRows", "DeletedAt", "DeleteLockedRelationRows", "DeleteIssueLinkRows", "DeleteIssueSubscriberRows", "DeleteIssueMentionRows", "DeleteIssueCommentRows", "DeleteIssueReactionRows", "DeleteIssueCommentReactionRows", "DeleteIssueActivityRows", "DeleteIssueDescriptionVersionRows"} {
 		t.Run(port, func(t *testing.T) {
 			uc, w, id := newDelete()
 			w.log.fail = port

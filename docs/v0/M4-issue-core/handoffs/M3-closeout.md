@@ -197,3 +197,15 @@ M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以�
 §2/§3/§4的P8输入已承接：T1将workspaceID贯穿同步级联，T4 API furnish全部调用点及动态全表目录纳draft，T8 W3显式无项目/零项目workspace删除及旧删除草稿审计保持。T3/T6唯一DraftLocks组合base；CRUD W(S)→升序P(S)→D(U)，publish无资源gate→W(S)→P(N)→D(U)，普通issue路径保持。T7请求PID/holder、交错16/17两次序/UUID两方向、W/P/D终态/唯一At/零gate锁及T15 race五遍有实证；六draft操作与search进入规则/错误/矩阵，guest/owner/OwnOnly和404逐值对照通过。历史M4§11.2摘要D1仅修成版本保留按§3.14项目N、P9待实现，不是本期实现P9。异步删除/物理清理/账户组合/限时轮询与页面等余项仍开放，顶部status继续open。
 
 准确产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`，首次整审 `166b9efd..10f44790`；[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)列A条款/真实RUN/变异恢复/四次七门禁及准确产品checkpoint CI，[整体审核](../../../reviews/re-07-M4P8整体审核.md)列三镜头/186文件覆盖与历史D1。文档增量独评及最终准确HEAD CI由后续提交和ignored收据追踪，未合并、不清理；不以本期子项已处理改写历史关闭条件或M4整体状态。
+
+## 处理结果（M4/P9，2026-10-28）
+
+| 原输入 | 本期处理结果 | 证据/仍开放责任 |
+|---|---|---|
+| §1事件/删除连带 | project/workspace原事务发布，Changes只含本次锁住活项目；每项目一job+workspace_drafts（零项目仍投），Old保原审计；邀请/M3同步，registrationRows识别请求kind/args和同id替换 | T8–12原子提交/回滚与目录；非全M3异步，不新增CLI任务 |
+| §2约定五/账户 | 不物理删账户；purge为候选id键集+pool单DELETE，trim为项目N+事务，短批/relation显式先锁后写；原错/取消/提交边界逐函数核对，NULL creator独立组合 | T7/11/12/15与最终fixture-M1真实第二请求等待修复；不把候选排序泛化为物理DELETE锁序 |
+| §4清理/目录/删除故事 | M3表纳23清理者/索引/FK；13表issue侧有限poll，M3即时断言；W3 Old与零项目直接目录及runtime草稿准确At/By、非空/旧行/邻居保留 | T2–4/T10/T13；目录不新增豁免 |
+
+§3规则/矩阵、§5旧service/显示设置、§6会话/页面取数、§7键盘/弹窗、§8地址/复制/文案/死行、§9共享页大小按原归属继续。只有本期后端子项承接，前端与整体M4收尾不关闭。
+
+证据：[P9 review](../reviews/P9-purge-review.md)及[spec §7/附录D](../specs/P9-purge.md)；最终产品 `e003e96625ba51264d3aeb77729729d53a770103`。最终F/准确分支CI、T16文档独评在review分别列明。本文件 `status: open` 保持到M4收尾，历史原文/先前回执保留；不因P9后端承接关闭整份交接。

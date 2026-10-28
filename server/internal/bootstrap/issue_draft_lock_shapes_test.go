@@ -39,7 +39,7 @@ func testDraftFinalClock(t *testing.T) {
 			at := time.Date(2044, 5, 6, 7, 8, 9, 123456000, time.UTC)
 			controlled := clockAt(at)
 			clock := &eventCountingClock{base: controlled}
-			tx := draftTx(w.pool)
+			tx := requestTx(w.pool)
 			route := newIssueRouteWithClock(t, w.pool, tx, clock)
 			path, body, want := draftPath(d.ID), "", 204
 			if method == "PATCH" {
@@ -52,14 +52,14 @@ func testDraftFinalClock(t *testing.T) {
 			}
 			holder := holding(t, w.pool, "SELECT 1 FROM draft_issues WHERE id=$1 FOR UPDATE", d.ID)
 			var e exchange
-			collect := draftBackground(t, w.sending(&e, route, "alice", method, path, body), func() { draftRelease(t, holder) })
-			draftBlocked(t, w.pool, draftPID(t, tx), holder.Conn().PgConn().PID(), "draft_issues")
+			collect := requestBackground(t, w.sending(&e, route, "alice", method, path, body), func() { requestRelease(t, holder) })
+			requestBlocked(t, w.pool, tx, holder.Conn().PgConn().PID(), "draft_issues")
 			if clock.calls.Load() != 0 {
 				t.Errorf("Clock.Now called %d times before final D lock", clock.calls.Load())
 			}
 			controlled.advance(time.Hour)
 			at = at.Add(time.Hour)
-			draftRelease(t, holder)
+			requestRelease(t, holder)
 			collect()
 			raw := w.answered(t, e, want)
 			if clock.calls.Load() != 1 {
@@ -108,14 +108,14 @@ func testDraftWaitChain(t *testing.T) {
 	w := newIssueWorld(t)
 	d := createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Old"}}`)
 	holder := holding(t, w.pool, "SELECT 1 FROM draft_issues WHERE id=$1 FOR UPDATE", d.ID)
-	patchTx, publishTx := draftTx(w.pool), draftTx(w.pool)
+	patchTx, publishTx := requestTx(w.pool), requestTx(w.pool)
 	var patch, publish exchange
-	patched := draftBackground(t, draftWrite(t, w, patchTx, &patch, "PATCH", draftPath(d.ID), `{"payload":{"name":"Chain new"}}`), func() { draftRelease(t, holder) })
-	draftBlocked(t, w.pool, draftPID(t, patchTx), holder.Conn().PgConn().PID(), "draft_issues")
-	published := draftBackground(t, draftWrite(t, w, publishTx, &publish, "POST", publishPath(d.ID), ""), func() { draftRelease(t, holder) })
-	draftBlocked(t, w.pool, draftPID(t, publishTx), draftPID(t, patchTx), "projects")
-	draftBlocked(t, w.pool, draftPID(t, patchTx), holder.Conn().PgConn().PID(), "draft_issues")
-	draftRelease(t, holder)
+	patched := requestBackground(t, draftWrite(t, w, patchTx, &patch, "PATCH", draftPath(d.ID), `{"payload":{"name":"Chain new"}}`), func() { requestRelease(t, holder) })
+	requestBlocked(t, w.pool, patchTx, holder.Conn().PgConn().PID(), "draft_issues")
+	published := requestBackground(t, draftWrite(t, w, publishTx, &publish, "POST", publishPath(d.ID), ""), func() { requestRelease(t, holder) })
+	requestBlocked(t, w.pool, publishTx, requestPID(t, patchTx), "projects")
+	requestBlocked(t, w.pool, patchTx, holder.Conn().PgConn().PID(), "draft_issues")
+	requestRelease(t, holder)
 	patched()
 	published()
 	w.answered(t, patch, 200)

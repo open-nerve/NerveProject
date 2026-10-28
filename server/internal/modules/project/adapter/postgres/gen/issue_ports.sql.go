@@ -7,6 +7,7 @@ package gen
 
 import (
 	"context"
+	"time"
 
 	"uuid"
 )
@@ -40,6 +41,64 @@ func (q *Queries) ActiveRoles(ctx context.Context, arg ActiveRolesParams) ([]Act
 	for rows.Next() {
 		var i ActiveRolesRow
 		if err := rows.Scan(&i.MemberID, &i.Role); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const allUndeletedIssueProjectIDs = `-- name: AllUndeletedIssueProjectIDs :many
+SELECT id FROM projects
+WHERE deleted_at IS NULL
+ORDER BY id
+`
+
+// Retention includes archived projects, without policy or membership filters.
+func (q *Queries) AllUndeletedIssueProjectIDs(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, allUndeletedIssueProjectIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deletedIssueProjects = `-- name: DeletedIssueProjects :many
+SELECT id, deleted_at FROM projects
+WHERE id = ANY($1::uuid[]) AND deleted_at IS NOT NULL
+`
+
+type DeletedIssueProjectsRow struct {
+	ID        uuid.UUID
+	DeletedAt *time.Time
+}
+
+// Facts only: no project locks, synthetic deletion times, or issue-table joins.
+func (q *Queries) DeletedIssueProjects(ctx context.Context, ids []uuid.UUID) ([]DeletedIssueProjectsRow, error) {
+	rows, err := q.db.Query(ctx, deletedIssueProjects, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DeletedIssueProjectsRow
+	for rows.Next() {
+		var i DeletedIssueProjectsRow
+		if err := rows.Scan(&i.ID, &i.DeletedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

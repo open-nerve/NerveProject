@@ -1,12 +1,14 @@
 # M4/P8 草稿、搜索与链接计数评审记录
 
-日期：2026-10-27。分支 `codex/m4-p8`，基线 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`。**实施/逐Task独评、四次本地七门禁、首次整审及T16文档独评已通过（a65e8605，task-16-review.md Approved/D1 ADDRESSED）；最终准确HEAD CI与集成按后续收据追踪，未合并。** 配套：[spec](../specs/P8-drafts-search.md)、[实际plan](../plans/P8-drafts-search.md)、[首次整体审核](../../../reviews/re-07-M4P8整体审核.md)。下方§1–7保留准备期历史，准备时确未产品实施；当时[re-06预检](../../../reviews/re-06-M4P8预检审核.md)不替代§8实施证据。
+日期：2026-10-27。**P8已完成集成**：最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 经授权 `--no-ff` 合并为 main `6b9d08d4821f1423c7bb9795557727c206b7880f`；[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1的server/web/e2e均completed/success，归档核验及分支/worktree清理完成，完整原件见§9。实施基线 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`、产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6` 与原审查范围不变。配套：[spec](../specs/P8-drafts-search.md)、[实际plan](../plans/P8-drafts-search.md)、[首次整体审核](../../../reviews/re-07-M4P8整体审核.md)。
+
+§1–7保留准备期记录及当时的实施接收追加，§8保留实施/首次整审与文档独评时的历史快照；其中“待最终CI”“未授权合并”“不清理”描述当时边界，由§9关闭相应待办，不改写原审查结论。[re-06预检](../../../reviews/re-06-M4P8预检审核.md)不替代§8实施证据，re-07和T16独评也不冒充对本次集成回填的审查。
 
 ## 1. 评审方式
 
 按 [02 方法](../../claude_to_gpt/02-method.md) §3 的可调整做法，沿 P7 使用紧凑 spec/plan 和独立静态预检。先盘点设计 §12/P8、前序 Phase 与输入 handoff，再由唯一作者编写规格/计划；主控核范围、接口和事实，独立审者分别追踪草稿与搜索/计数的逻辑、集成和验证方案。没有实现完整原型、逐 Task 重放或运行产品变异，不能用静态结论替代实施期证据。
 
-本地 ignored 原始材料位于项目根目录 `.superpowers/sdd/P8-drafts-search/preparation/`，后文简称 `E`。`requirements-inventory.md`、`code-inventory.md` 是准备输入；作者报告和独立报告各自保存读取范围、源码/文档版本及限制。
+准备期本地 ignored 原始材料位于主项目根目录 `.superpowers/sdd/P8-drafts-search/preparation/`，后文简称 `E`；该准备目录仍在原处，从未位于P8 worktree，不属于§9本次归档。`requirements-inventory.md`、`code-inventory.md` 是准备输入；作者报告和独立报告各自保存读取范围、源码/文档版本及限制。
 
 ## 2. 验收标准逐条核对
 
@@ -69,7 +71,15 @@ P7 已按授权 `--no-ff` 合并，准确 [main CI 40451632280](https://github.c
 
 预检已关闭，由负责人安排启动 T1；本轮不自动实施或合并 P8。P9 接异步删除/清理，P10b/P11/P12/P14 接前端数据层及选择器，P15 接草稿页与命令面板。输入 handoff 仅在实施完成时追加真实处理结果；M4 总体仍进行中，M5–M8 最终 `M4-closeout.md` 留 M4 收尾。
 
-**P8实施接收回执（2026-10-27）：** T1–T15已完成，四份输入及P1a–P7 spec§5/review§6只追加本期承接；M0扩展服务端验证、M1无page、M2游标/存储结构、M3锁/矩阵/级联子项已有§8实证。四份status仍open，P9/P10b/P11/P12/P14/P15/M5–M8及M4最终收尾保持原归属。P5当时19码历史不改写，当前21码另附P8回执。未合并、不清理分支/worktree。
+**P8实施接收回执（2026-10-27，集成前历史）：** T1–T15已完成，四份输入及P1a–P7 spec§5/review§6只追加本期承接；M0扩展服务端验证、M1无page、M2游标/存储结构、M3锁/矩阵/级联子项已有§8实证。四份status仍open，P9/P10b/P11/P12/P14/P15/M5–M8及M4最终收尾保持原归属。P5当时19码历史不改写，当前21码另附P8回执。未合并、不清理分支/worktree。
+
+### 处理结果（M4/P9，2026-10-28）
+
+T10实际runtime角色等唯一workspace_drafts任务completed后核两个草稿原At/By/邻workspace不变；W3 Old未完成与零项目直接目录两处均迁移issue有限poll、M3即时断言。T11六draft操作/search窗口、T12交错16/24/25本次P/Q与Old双审计、T13删除故事接续；目录无新豁免。
+
+证据：[P9 review §8–12](P9-purge-review.md)、[P9 spec附录B/C/D](../specs/P9-purge.md)；产品身份 `e003e96625ba51264d3aeb77729729d53a770103`，独立整审与两次局部复审结果按上述入口，最终检查点/文档独评分别记账。
+
+仍开放：P10b–P15数据层/选择器/草稿页/命令面板、M5附件同事务/内容标识、M6/M7真实字段和M8扩展维护仍开放；P8集成/归档事实不倒改。 本回执只承接P9后端子项，不关闭整份交接或M4，不改变本页历史运行/集成身份。
 
 ## 7. 已知限制
 
@@ -79,11 +89,13 @@ P7 已按授权 `--no-ff` 合并，准确 [main CI 40451632280](https://github.c
 
 ## 8. 实施验收与首次整审（2026-10-27）
 
+本节为集成前历史快照，保留当时的证据范围与待办；最终分支CI、授权合并、main CI和清理结果见§9。
+
 ### 范围、身份与证据入口
 
 首次整审准确范围为 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d..10f44790ccb842e758f0ab50ecb4d294dc15a6e6`：18提交，186文件、55171行、3062898字节。基线是已集成P7的main；产品HEAD包含T1–T15及T6修复，T16文档提交不冒充产品测量运行时HEAD。分支 `codex/m4-p8`、工作树 `.codex/worktress/codex/m4-p8`，主目录仍main。
 
-下文原件根 `E8=.superpowers/sdd/P8-drafts-search/`（本地ignored，尚未归档）；每个 `checks/<name>/result.json` 和 `output.log` 保存准确argv/cwd、前后HEAD/树、源码hash、时刻、exit和原日志hash。`task-N-author-report.md`、`task-N-review.md`（N=1..15）分别为作者与独立要求/质量审查；不能以作者自审代独评。Go RUN含父/子测试，非独立性质数量；编译0 RUN、零匹配、lint/生成0 RUN均不当行为通过。
+下文执行时原件短名 `E8=.superpowers/sdd/P8-drafts-search/`（当时本地ignored、尚未归档；当前归档根见§9）；每个 `checks/<name>/result.json` 和 `output.log` 保存准确argv/cwd、前后HEAD/树、源码hash、时刻、exit和原日志hash。`task-N-author-report.md`、`task-N-review.md`（N=1..15）分别为作者与独立要求/质量审查；不能以作者自审代独评。Go RUN含父/子测试，非独立性质数量；编译0 RUN、零匹配、lint/生成0 RUN均不当行为通过。
 
 ### A1–A12逐项结果
 
@@ -130,3 +142,40 @@ T5/T7/T8/T14正常产品初轮本就绿；缺接口编译红与测试作者错�
 文档独评准确范围 `10f44790ccb842e758f0ab50ecb4d294dc15a6e6..a65e86056b1fe60b7dcef88b8867e7acfaacb703`；独立审者 `/root/p8_design_full_context` 的 `E8/task-16-review.md` 为Spec/Quality Approved，新增Critical/Important/Minor均0，历史D1 ADDRESSED；覆盖和原件核验在 `task-16-review-coverage.json`。据此勾A11/T16复审。当前仅补录这些已发生状态，仍由同审者快速核本增量；最终准确提交gen-check/push/CI由主控负责，集成须另有授权。
 
 本次文档增量10f44790..a65e8605已独评Approved、D1 ADDRESSED；后续状态补录的窄复核与最终准确HEAD CI另核，不预宣称通过。性能仅所列受控分布、稀疏assignee/label/relation和Store路径，first-observed非物理冷缓存；跨请求计数/游标弱快照仍在。Ryuk既有Shell警告与受支持回退保留，不称pristine。P9异步删除/保留/清理、前端P10b–P15、M5附件及M8部署维护均未实施；M4§14/总体§9.4与最终M5–M8 closeout不提前完成。用户未授权合并，分支与证据保留。
+
+
+## 9. 授权合并、main CI 与归档清理（2026-10-27）
+
+### 集成身份与准确CI
+
+负责人授权后，最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 从基线 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d` 经 `--no-ff` 合并为 main `6b9d08d4821f1423c7bb9795557727c206b7880f`。两个父提交依次为上述基线和最终分支HEAD；合并tree `68572b15efee737383da9be8d9d93df289d555d6` 与已审分支树相同，合并后main干净。系统 `/usr/bin/git push origin main` exit0；原件为 `premerge.json`、`merge.json`、`push.json`。
+
+最终分支的状态增量已由 `task-16-status-review.md` 独立确认Approved；准确 [分支CI 40515294403](https://github.com/open-nerve/NerveProject/actions/runs/40515294403) attempt1的server/web/e2e全部completed/success，绑定上述 `cde70d9735994cb6a579e0b800469f32631e9981`。分支交付时的 `branch-final-receipt.json` 保留 `complete_unmerged`、`merged:false` 等历史值；它证明最终分支交付，不代替后来的集成回执。
+
+推送后的 [main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1精确绑定 `head_sha=6b9d08d4821f1423c7bb9795557727c206b7880f`、branch=`main`，run为completed/success；[server 122246361805](https://github.com/open-nerve/NerveProject/actions/runs/40520609987/job/122246361805)、[web 122246361484](https://github.com/open-nerve/NerveProject/actions/runs/40520609987/job/122246361484)、[e2e 122250107435](https://github.com/open-nerve/NerveProject/actions/runs/40520609987/job/122250107435)均completed/success，无active/failed steps。最终公开元数据原件位于集成目录的 `ci/main-6b9d08d4/20261027T143732860611Z/{runs,jobs,summary}.json`；`verified-success.json`记录其哈希、本地main与已通过CI的origin/main一致且干净，以及远端P8分支相对origin/main无独有提交。分支CI、本地七门禁和main CI保持为独立事实；本次纯文档回填没有重跑产品套件。
+
+### 证据归档与正常清理
+
+清理前将P8工作树的1,598个证据文件、37,552,117字节和1个空目录归档，逐文件核对来源与副本SHA-256。manifest同时分类77,503个可再生文件及2个可再生空目录，未分类材料为0；不把依赖和构建产物算入保留证据数。归档根为主项目目录下 `.superpowers/sdd/P8-integration-20261027/worktree-evidence/`，完整原件新根为：
+
+`.superpowers/sdd/P8-integration-20261027/worktree-evidence/.superpowers/sdd/P8-drafts-search/`
+
+§8的实施证据短名 `E8` 和plan实施回执的 `E` 对应上述新根；它们执行时位于P8 worktree内的 `.superpowers/sdd/P8-drafts-search/`。归档保留原字节、原命令和cwd，旧路径不表示材料仍在已移除的 `.codex/worktress/codex/m4-p8` 中。§1的准备短名 `E` 则仍指主项目根目录 `/Users/xiaoruan/project/nerve-project/.superpowers/sdd/P8-drafts-search/preparation/`；它从未在P8 worktree，本次1,598文件归档不包含该准备目录。
+
+确认main/远端main与成功CI一致、工作树干净，且 `origin/main..origin/codex/m4-p8` 为0提交后，按正常删除流程清理远端分支、本地已合并分支及P8 worktree，没有使用force。`cleanup.json`确认清理后再次逐文件校验归档哈希，主目录HEAD仍为main且干净。manifest SHA-256为 `85ed510a85ff67ef04388c731fe6eec565443a1445dc677791a4ea2b4ff7d30a`。
+
+### 集成原件索引与边界
+
+以下路径均相对主项目的集成证据目录 `/Users/xiaoruan/project/nerve-project/.superpowers/sdd/P8-integration-20261027/`，不相对当前P9工作树；本次回填已读取原件并核对下列SHA-256，manifest只读取结构摘要，不将其内容展开到正式文档。
+
+| 原件 | SHA-256 |
+|---|---|
+| `premerge.json` | `48d820af01b73cfba668bfc4c6a94a05ac1a91202f37e2e799469fa97ae016ae` |
+| `merge.json` | `6cec22c9e9176854709918526073808e13ab0983d3178e0705ac31603a3e36e4` |
+| `push.json` | `c562135ae6f2be7b8a46be16148004509dd01a411d8c85175c04571c01acf313` |
+| `verified-success.json` | `4ad73e7a301fe85a87bc3b43d7e5833b035d9720e0250009392220ea76538c8c` |
+| `archive-manifest.json` | `85ed510a85ff67ef04388c731fe6eec565443a1445dc677791a4ea2b4ff7d30a` |
+| `cleanup.json` | `e4c7a6be62c2c308af47881e501889a7b730684ec4dcce4fd88e801291c5f3b4` |
+| `branch-final-receipt.json` | `b51e21da72c15a3f873bf390f94db21c770bcf27a93f009c7220df2011a5d11e` |
+
+本节关闭原历史快照中的最终状态复核、最终分支CI、main集成和归档清理待办，**P8已完成**。原首次整审与T16独评的范围和结论不变，未宣称它们覆盖本次集成回填。P9从上述main另开 `codex/m4-p9`，当前仅做spec/plan准备与静态预检，未实施；M4§14、总体设计§9.4、输入handoff的总体status及M5–M8最终closeout保持原状。

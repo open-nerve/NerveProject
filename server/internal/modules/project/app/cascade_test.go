@@ -26,17 +26,11 @@ func deletionSteps(workspace uuid.UUID, project string, by uuid.UUID, at time.Ti
 	return steps
 }
 
-// DeleteWorkspaceProjects runs the five steps in the order of M3 design
-// 3.6, each on every project of the caller's workspace, then deletes the
-// work-item side of the projects the caller locked through the issue
-// module (M4 design 3.5), with the caller's account and moment, in the
-// caller's transaction; a failing step comes back as itself and the steps
-// after it do not run. Each step fails in turn.
+// DeleteWorkspaceProjects runs the five M3 steps in the caller transaction,
+// preserving its actor/time. Each failure stops subsequent steps.
 func TestDeleteWorkspaceProjects(t *testing.T) {
 	workspace, by := uuid.NewV7(), uuid.NewV7()
-	projects := []uuid.UUID{uuid.NewV7(), uuid.NewV7()}
-	steps := append(deletionSteps(workspace, "*", by, clockNow),
-		fmt.Sprintf("DeleteWorkspaceIssues %s %v by %s at %s", workspace, projects, by, clockNow.Format(timeFormat)))
+	steps := deletionSteps(workspace, "*", by, clockNow)
 	type run struct {
 		fail    string
 		wantErr error
@@ -49,9 +43,9 @@ func TestDeleteWorkspaceProjects(t *testing.T) {
 	}
 	for _, tt := range tests {
 		f := newWrites()
-		f.store.errs, f.issues.errs = map[string]error{tt.fail: errDisk}, map[string]error{tt.fail: errDisk}
+		f.store.errs = map[string]error{tt.fail: errDisk}
 		inTx := context.WithValue(context.Background(), inTxKey{}, true)
-		err := app.NewCascade(f.store, &fakeLocker{}, &fakeDemoter{}, &fakeEnder{}, f.issues).DeleteWorkspaceProjects(inTx, workspace, projects, by, clockNow)
+		err := app.NewCascade(f.store, &fakeLocker{}, &fakeDemoter{}, &fakeEnder{}).DeleteWorkspaceProjects(inTx, workspace, by, clockNow)
 		if !errors.Is(err, tt.wantErr) || (tt.wantErr == nil) != (err == nil) || !slices.Equal(f.log.calls, tt.want) {
 			t.Errorf("failing %q: DeleteWorkspaceProjects() = %v, the steps\n%q\nwant %v,\n%q", tt.fail, err, f.log.calls, tt.wantErr, tt.want)
 		}
@@ -97,7 +91,7 @@ func TestLockWorkspaceProjects(t *testing.T) {
 	for _, tt := range tests {
 		f := &fakeLocker{locked: tt.locked, fail: tt.fail}
 		inTx := context.WithValue(context.Background(), inTxKey{}, true)
-		got, err := app.NewCascade(newWrites().store, f, &fakeDemoter{}, &fakeEnder{}, &fakeIssues{}).LockWorkspaceProjects(inTx, workspace)
+		got, err := app.NewCascade(newWrites().store, f, &fakeDemoter{}, &fakeEnder{}).LockWorkspaceProjects(inTx, workspace)
 		if !errors.Is(err, tt.wantErr) || (tt.wantErr == nil) != (err == nil) || !slices.Equal(got, tt.want) || !slices.Equal(f.log.calls, lock) {
 			t.Errorf("%s: LockWorkspaceProjects() = %v, %v, the calls %q; want %v, %v, %q", tt.name, got, err, f.log.calls, tt.want, tt.wantErr, lock)
 		}
@@ -139,9 +133,9 @@ func (f *fakeDemoter) DemoteMemberships(ctx context.Context, projectIDs []uuid.U
 // it writes nothing. A failing call comes back as itself, and nothing runs
 // after it.
 func TestDemoteToGuest(t *testing.T) {
+	projects := []uuid.UUID{uuid.NewV7(), uuid.NewV7()}
 	workspace, user, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	now := time.Date(2026, 10, 1, 10, 0, 0, 123456000, time.UTC)
-	projects := []uuid.UUID{uuid.NewV7(), uuid.NewV7()}
 	lock := fmt.Sprintf("LockMemberProjects %s %s", workspace, user)
 	demote := fmt.Sprintf("DemoteMemberships %v %s by %s at %s", projects, user, by, now.Format(time.RFC3339Nano))
 	tests := []struct {
@@ -159,7 +153,7 @@ func TestDemoteToGuest(t *testing.T) {
 	for _, tt := range tests {
 		f := &fakeDemoter{locked: tt.locked, fail: tt.fail}
 		inTx := context.WithValue(context.Background(), inTxKey{}, true)
-		err := app.NewCascade(newWrites().store, &fakeLocker{}, f, &fakeEnder{}, &fakeIssues{}).DemoteToGuest(inTx, workspace, user, by, now)
+		err := app.NewCascade(newWrites().store, &fakeLocker{}, f, &fakeEnder{}).DemoteToGuest(inTx, workspace, user, by, now)
 		if !errors.Is(err, tt.wantErr) || (tt.wantErr == nil) != (err == nil) || !slices.Equal(f.log.calls, tt.want) {
 			t.Errorf("%s: DemoteToGuest() = %v, the calls\n%q\nwant %v,\n%q", tt.name, err, f.log.calls, tt.wantErr, tt.want)
 		}
@@ -239,7 +233,7 @@ func TestEndMemberships(t *testing.T) {
 	for _, tt := range tests {
 		f := &fakeEnder{locked: tt.locked, sole: tt.sole, fail: tt.fail}
 		inTx := context.WithValue(context.Background(), inTxKey{}, true)
-		err := app.NewCascade(newWrites().store, &fakeLocker{}, &fakeDemoter{}, f, &fakeIssues{}).EndMemberships(inTx, workspaces, user, by, now)
+		err := app.NewCascade(newWrites().store, &fakeLocker{}, &fakeDemoter{}, f).EndMemberships(inTx, workspaces, user, by, now)
 		if !errors.Is(err, tt.wantErr) || (tt.wantErr == nil) != (err == nil) || !slices.Equal(f.log.calls, tt.want) {
 			t.Errorf("%s: EndMemberships() = %v, the calls\n%q\nwant %v,\n%q", tt.name, err, f.log.calls, tt.wantErr, tt.want)
 		}

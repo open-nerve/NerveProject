@@ -72,7 +72,7 @@ func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
 // would refuse, max_wait and the lock timeout together not being under
 // the request timeout; the test worlds' configurations are never
 // validated.
-var testIssueConfig = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 64},
+var testIssueConfig = config.IssueConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second, AutoArchiveInterval: 24 * time.Hour, TrimVersionsInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 64},
 	WriteLockTimeout: 4 * time.Second}
 
 // newIssueRoute is the issue module (issue.New) on pool, with tx its
@@ -97,13 +97,19 @@ func newIssueRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxMa
 
 func newIssueRouteWithGate(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher, gate issueapp.WriteGate) moduleRoute {
 	t.Helper()
-	return newRoute(t, issue.New(issue.Deps{Events: events, Pool: pool, Tx: tx, JobTx: newIssueJobTx(pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), ArchivePolicies: project.Provide(pool).ArchivePolicies, AutoArchiveInterval: 24 * time.Hour,
-		ReadTx:    postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()),
+	return newIssueRouteWithConfig(t, pool, tx, clock, events, gate, config.Config{Server: config.ServerConfig{RequestTimeout: 3 * time.Second}, Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig})
+}
+
+func newIssueRouteWithConfig(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher, gate issueapp.WriteGate, cfg config.Config) moduleRoute {
+	t.Helper()
+	return newRouteWithTimeout(t, issue.New(issue.Deps{Events: events, Pool: pool, Tx: tx, JobTx: newIssueJobTx(pool, cfg), ArchivePolicies: project.Provide(pool).ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
+		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
+		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
 		WriteGate: gate, Clock: clock,
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory},
 		Members:    issueMembers{members: workspace.Provide(pool).WorkspaceMemberDirectory},
-		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
+		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register, cfg.Server.RequestTimeout)
 }
 
 // Each write on the work-item side runs every statement of its transaction

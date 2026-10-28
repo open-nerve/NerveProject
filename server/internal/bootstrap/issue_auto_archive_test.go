@@ -205,12 +205,13 @@ func TestAutoArchiveJobLockTimeoutPreservesPostgresError(t *testing.T) {
 	p := project.Provide(w.pool)
 	cfg := config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: config.IssueConfig{WriteLockTimeout: 300 * time.Millisecond}}
 	c := &eventCountingClock{base: clocktest.At(time.Now())}
-	uc := issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: issueProjects{projects: p.IssueProjects}, Issues: issuepostgres.New(w.pool), Tx: newIssueJobTx(w.pool, cfg), Clock: c, Events: discardIssueEvents{}})
+	probe := &requestProbe{TxManager: newIssueJobTx(w.pool, cfg)}
+	uc := issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: issueProjects{projects: p.IssueProjects}, Issues: issuepostgres.New(w.pool), Tx: probe, Clock: c, Events: discardIssueEvents{}})
 	result := make(chan error, 1)
 	go func() {
 		result <- riveradapter.NewAutoArchiveWorker(uc).Work(context.Background(), &river.Job[riveradapter.AutoArchiveArgs]{})
 	}()
-	pgtest.WaitForLockWaitBehind(t, w.pool, holder.Conn().PgConn(), 2*time.Second)
+	requestBlocked(t, w.pool, probe, holder.Conn().PgConn().PID(), "projects")
 	select {
 	case err := <-result:
 		if !postgres.LockNotAvailable(err) || isBusy(err) {

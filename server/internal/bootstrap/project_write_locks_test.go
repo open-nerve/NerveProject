@@ -18,7 +18,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
-	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
 // projectWrite is a write on a project as
@@ -181,20 +180,22 @@ func TestWritesOnAProjectAreEachShape(t *testing.T) {
 	}
 }
 
-// holding begins a transaction on pool that takes the one row lock sql
-// states, with args, NOWAIT, and keeps it open until the test rolls it
-// back, or ends. A lock another transaction left fails the test at once,
-// and so does a pool the holders before it took (pgtest.Soon).
+// holding acquires one fixture row within a bounded wait for an earlier owner.
+// The returned transaction keeps the lock until the caller or test cleanup releases it.
+// heldBy and lockOn below retain NOWAIT for lock-property assertions.
 func holding(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) pgx.Tx {
 	t.Helper()
-	tx, err := pool.Begin(pgtest.Soon(t))
+	tx, err := acquireFixtureRow(t.Context(), pool, sql, args...)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
-	if tag, err := tx.Exec(context.Background(), sql+" NOWAIT", args...); err != nil || tag.RowsAffected() != 1 {
-		t.Fatalf("%s NOWAIT: %v, %v; want one row held", sql, tag, err)
-	}
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	})
 	return tx
 }
 
@@ -278,7 +279,8 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 			want)
 	}
 	dbURL := pgtest.NewDatabase(t)
-	base := startApp(t, testConfig(t, dbURL, false), migrations.FS())
+	requests := &requestQueries{}
+	base := startObservedApp(t, testConfig(t, dbURL, false), requests)
 	pool := openPool(t, dbURL)
 	alice := registerAccount(t, contract, base, "alice@example.com").AccessToken
 	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", alice, `{"name":"Acme","slug":"acme"}`)
@@ -342,10 +344,11 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 				} else {
 					other = holding(t, pool, "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", project)
 				}
+				probe := requests.observe(req)
 				answered := sendInBackground(req)
 				if phase == 0 {
-					pgtest.WaitForLockWaitOn(t, pool, "workspaces", 10*time.Second)
-					if heldBy(t, pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", project) {
+					requestBlocked(t, pool, probe, other.Conn().PgConn().PID(), "workspaces")
+					if requestRowLock(t, pool, pool, probe, "projects WHERE id = $1", project) != "no lock" {
 						t.Errorf("%s holds its project while it waits for its workspace", w.op)
 					}
 					if target != "" && heldBy(t, pool, membership, acme.ID, ids[target]) {
@@ -355,7 +358,7 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 						t.Errorf("%s holds the row of %s %s in %s while it waits for its workspace", w.op, w.row.table, key, on)
 					}
 				} else {
-					pgtest.WaitForLockWaitOn(t, pool, "projects", 10*time.Second)
+					requestBlocked(t, pool, probe, other.Conn().PgConn().PID(), "projects")
 					switch lock := lockOn(t, pool, "workspaces WHERE id = $1", acme.ID); lock {
 					case "FOR SHARE":
 					case "no lock", "FOR KEY SHARE":

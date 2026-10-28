@@ -196,7 +196,7 @@ func linkRaceTitleRoute(t *testing.T, w issueWorld, clock *linkReadClock) module
 		}
 		return nil
 	}})
-	publisher, err := newDispatcher(issue.EventTypes(), subscribers)
+	publisher, err := newDispatcher(eventTypes(), subscribers)
 	if err != nil {
 		t.Fatal(err)
 	}

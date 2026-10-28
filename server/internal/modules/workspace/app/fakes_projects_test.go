@@ -35,8 +35,8 @@ func (f *fakeProjects) LockWorkspaceProjects(ctx context.Context, workspaceID uu
 	return slices.Clone(f.locked), nil
 }
 
-func (f *fakeProjects) DeleteWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error {
-	f.log.add(ctx, "DeleteWorkspaceProjects %s %v by %s at %s", workspaceID, projectIDs, by, now.Format(time.RFC3339Nano))
+func (f *fakeProjects) DeleteWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "DeleteWorkspaceProjects %s by %s at %s", workspaceID, by, now.Format(time.RFC3339Nano))
 	if err := f.errs["DeleteWorkspaceProjects"]; err != nil {
 		return fmt.Errorf("delete the workspace's projects: %w", err)
 	}

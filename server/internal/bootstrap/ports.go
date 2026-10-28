@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
@@ -276,4 +277,13 @@ func (p issueProjects) ShareMany(ctx context.Context, ids []uuid.UUID) (map[uuid
 func (d issueWorkspaces) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (bool, error) {
 	_, found, err := d.directory.ShareWorkspaceByID(ctx, id)
 	return found, err
+}
+
+// UndeletedProjectIDs bridges the complete project directory for retention.
+func (p issueProjects) UndeletedProjectIDs(ctx context.Context) ([]uuid.UUID, error) {
+	return p.projects.AllUndeletedIssueProjectIDs(ctx)
+}
+
+func (p issueProjects) DeletedAt(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]time.Time, error) {
+	return p.projects.DeletedIssueProjects(ctx, ids)
 }

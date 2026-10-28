@@ -56,8 +56,8 @@ func TestIssueLinkWritesLockAndRecheck(t *testing.T) {
 						change, status = removesBob, 204
 					}
 					var changed, written exchange
-					w.serializeAtAfter(t, "projects", change, collaborationAt("bob", op.method, op.path, op.body, clock.System{}), &changed, &written, func() {
-						if lock := lockOn(t, w.pool, "projects WHERE id = $1", w.web); lock != "FOR NO KEY UPDATE" {
+					w.serializeAtObserved(t, "projects", change, collaborationAt("bob", op.method, op.path, op.body, clock.System{}), &changed, &written, func(probe *requestProbe) {
+						if lock := requestGateRowLock(t, w.pool, w.pool, probe, "projects WHERE id = $1", w.web); lock != "FOR NO KEY UPDATE" {
 							t.Fatal("membership holder lost project N lock", lock)
 						}
 					})

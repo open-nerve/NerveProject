@@ -92,8 +92,9 @@ func (w gatedWorkspaces) CreateWorkspace(ctx context.Context, row workspaceapp.W
 }
 
 type race struct {
-	pool  *pgxpool.Pool
-	alice uuid.UUID
+	events shared.EventPublisher
+	pool   *pgxpool.Pool
+	alice  uuid.UUID
 }
 
 // newRace is a database with alice's account.
@@ -101,7 +102,7 @@ func newRace(t *testing.T) race {
 	t.Helper()
 	pool := openPool(t, pgtest.NewDatabase(t))
 	users := identitypg.New(pool)
-	r := race{pool: pool, alice: uuid.NewV7()}
+	r := race{events: projectDeletionPublisher(t, pool), pool: pool, alice: uuid.NewV7()}
 	now := time.Now()
 	if err := users.CreateUser(context.Background(), identityapp.NewUser{
 		ID: r.alice, Email: "alice@example.com", PasswordHash: "x", DisplayName: "alice", Now: now,
@@ -239,25 +240,7 @@ func serializeOnTableAfter(t *testing.T, ctx context.Context, pool *pgxpool.Pool
 func serializeWaiting(t *testing.T, ctx context.Context, g *gate, first, second func() error, probe, afterWait func()) (opened time.Time, firstErr, secondErr error) {
 	t.Helper()
 	var done, answered <-chan error
-	defer func() {
-		select {
-		case <-g.open:
-		default:
-			close(g.open)
-		}
-		// A failed probe or callback still releases and collects both requests.
-		cleanup, cancel := context.WithTimeout(context.Background(), 4*time.Second)
-		defer cancel()
-		for _, pending := range []<-chan error{done, answered} {
-			if pending != nil {
-				select {
-				case <-pending:
-				case <-cleanup.Done():
-					t.Error("interleaved request did not end during cleanup")
-				}
-			}
-		}
-	}()
+	defer func() { releaseAndJoinGate(t, g, done, answered) }()
 	done = run(first)
 	held(t, ctx, g, done, "the first write")
 	answered = run(second)
@@ -344,5 +327,26 @@ func TestCreationFirstHoldsOffTheDeactivation(t *testing.T) {
 					"her membership ended", active, workspaces, members, activeMembers)
 			}
 		})
+	}
+}
+
+// Release first, then join on a fresh deadline even if the assertion context ended.
+func releaseAndJoinGate(t *testing.T, g *gate, pending ...<-chan error) {
+	t.Helper()
+	select {
+	case <-g.open:
+	default:
+		close(g.open)
+	}
+	cleanup, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	for _, done := range pending {
+		if done != nil {
+			select {
+			case <-done:
+			case <-cleanup.Done():
+				t.Error("interleaved request did not end during cleanup")
+			}
+		}
 	}
 }

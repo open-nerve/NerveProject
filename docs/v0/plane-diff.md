@@ -163,7 +163,7 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `labels` | 两个部分唯一索引（`project_id` 为空时按 `name` 的 `unique_name_when_project_null_and_not_deleted`、不为空时按 `(project_id, name)` 的 `unique_project_name_when_not_deleted`）改为一个 `labels_project_id_name_key ON (project_id, lower(name)) WHERE deleted_at IS NULL`；新加不带条件的 `labels_parent_id_idx`、`labels_workspace_id_idx`、`labels_project_id_idx` | 名称在项目内唯一，不分大小写：Plane 的数据库区分大小写，序列化器不区分；没有工作区级标签（M3 设计 3.16）；删除父标签时按 `parent_id` 找子标签；物理级联要不带条件的索引（M3 设计 4） |
 | `labels` | 删除 `description`、`external_source`、`external_id` | `description` 没有读取者（M3 设计 3.16）；v0 不做导入 |
 | `issues` | 28 列保留 20 列（M4/P1a，`00015_issue_issues.sql`）；主键名 `issues_pkey`（Plane 是 `issue_pkey`） | M4 设计 4.2 |
-| `issues` | `workspace_id`、`project_id`、`parent_id`：加上 `ON DELETE CASCADE`；`state_id`：改为 `NOT NULL`（Plane 可为空），加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`）；创建总有状态（项目恰有一个默认状态），删除有工作项在里面的状态被拒绝（第四节"删除状态"），`state_id` 的 `CASCADE` 只会删掉已软删除的工作项（M4 设计 3.6、3.7） |
+| `issues` | `workspace_id`、`project_id`、`parent_id`：加上 `ON DELETE CASCADE`；`state_id`：改为 `NOT NULL`（Plane 可为空），加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`）；创建总有状态（项目恰有一个默认状态），单独删除状态因未删除工作项（含归档）在用而拒绝（第四节"删除状态"），该路径后续清理仅连带已软删工作项；父级项目/工作区异步删除后，严格过期的状态或父行清理可经CASCADE回收仍为活标记的issue，迟到交叠允许40P01原错重试（M4设计3.6、3.7、3.21） |
 | `issues` | `name`：新加 `CHECK (name <> '')`；`description_html`：新加 `DEFAULT '<p></p>'`；`priority`：新加 `DEFAULT 'none'` 和 `CHECK (priority IN ('urgent', 'high', 'medium', 'low', 'none'))`；`sort_order`：新加 `DEFAULT 65535`；`sequence_id`：没有默认值（Plane 的模型默认 1），新加 `CHECK (sequence_id > 0)`；新加 `issues_not_own_parent_check CHECK (parent_id <> id)`、`issues_dates_check CHECK (start_date <= target_date)`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 模型的默认值和 choices；编号只取自项目的计数列 `last_issue_sequence`；工作项不能做自己的父工作项，开始日期不晚于目标日期（M4 设计 3.7、3.9）。描述和起止日期的列随表建出，进入接口在 M4 的 P4、P2 |
 | `issues` | `archived_at` 由 `date` 改为 `timestamptz` | 和 `cycles`、`modules`、`projects` 的 `archived_at` 保持一致 |
 | `issues` | 删除 `point`、`estimate_point_id`、`type_id`、`is_draft`、`description_binary`、`description_json` | 估算、工作项类型已砍掉；草稿是另一张表（`draft_issues`）；`description_binary` 是协同编辑的遗留；`description_json` 没有读取者（M4 设计 3.7） |
@@ -206,7 +206,7 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `issue_description_versions` | 15 列保留 13 列（M4/P4，`00025_issue_issue_description_versions.sql`）；`id`、`created_by_id`、`updated_by_id`、`created_at`、`updated_at`、`deleted_at` 保留类型与可空性；主键/外键改标准名，`created_by_id`、`updated_by_id` 加 `ON DELETE SET NULL`；`created_at`、`updated_at` 加 `DEFAULT now()`，应用仍显式写锁下时刻 | 逐列以 Plane v1.4.2 快照与实际迁移核对；审计兜底不替代用例时钟 |
 | `issue_description_versions` | `workspace_id`、`project_id`、`issue_id`、`owned_by_id`：保留 uuid/非空，全部加 `ON DELETE CASCADE` | 用户引用按模型 CASCADE，其余归属连带与删除图一致（comment_reactions经评论二层连到工作项） |
 | `issue_description_versions` | `description_html` 保留非空 text，加 `DEFAULT '<p></p>'`；`description_stripped` 保留可空 text；`last_saved_at` 保留非空 timestamptz（无默认值）；删除 `description_binary`、`description_json` | 没有二进制协作/JSON 镜像；最后保存时间由锁下用例提供 |
-| `issue_description_versions` | 新增 `issue_description_versions_issue_id_last_saved_at_idx ON (issue_id, last_saved_at, id)`（无条件，替代单列 issue 索引）；保留并改名无条件 `issue_description_versions_{workspace_id,project_id}_idx`，不保留 owned_by/审计索引 | 最新行及稳定降序分页、物理连带；最新 20 版保留任务留 P9，P4 不截断 |
+| `issue_description_versions` | 新增 `issue_description_versions_issue_id_last_saved_at_idx ON (issue_id, last_saved_at, id)`（无条件，替代单列 issue 索引）；保留并改名无条件 `issue_description_versions_{workspace_id,project_id}_idx`，不保留 owned_by/审计索引 | 最新行及稳定降序分页、物理连带；P4请求不截断；P9周期按last_saved_at/id保留活版本最新20，归档仍参与、三层墓碑不碰 |
 | `issue_links`（M4/P7） | 12列全部保留，无新增/删除列；实际迁移`00027_issue_issue_links.sql`，以下逐列核对Plane v1.4.2快照 | 表结构/真实长URL与碰撞证据见[P7 review](M4-issue-core/reviews/P7-issue-links-review.md) |
 | `issue_links.id` | 保留uuid非空PK、标准名`issue_links_pkey` | 主键名与快照相同 |
 | `issue_links.workspace_id` | 保留非空uuid；FK CASCADE、无条件外键索引改标准名 | FK默认立即检查，Plane为DEFERRABLE INITIALLY DEFERRED |
@@ -258,7 +258,7 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 
 ## 四、行为差异
 
-M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md) 的事务、时钟及自动归档证据为准；P7已实现的链接/出站/请求任务见[P7 review](M4-issue-core/reviews/P7-issue-links-review.md)，P9及页面待办不写成完成。
+M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md) 的事务、时钟及自动归档证据为准；P7已实现的链接/出站/请求任务见[P7 review](M4-issue-core/reviews/P7-issue-links-review.md)；P9后台删除/保留/清理的当前证据见 [P9 review](M4-issue-core/reviews/P9-purge-review.md)，页面及后续阶段仍开放。
 
 | 行为 | Plane | Nerve |
 |---|---|---|
@@ -271,7 +271,7 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 个人主页工作项（M4/P5） | 访客可读且未完整施加访客规则 | member_issue.list仅工作区管理员/成员；actor可见性/OwnOnly与路径目标三关系分离，inactive目标仍可存在；I19/I20及矩阵已验证 |
 | 项目工作项显示设置（M4/P5） | filters/rich_filters/display_filters/display_properties四列旧格式 | 项目仅三列新格式，不建rich_filters；GET无写、按人隔离、恢复保留、不同字段并发不丢值，I5及四方向race验证；工作区范围不变 |
 | 写操作动态 | Celery 异步写入 | 与业务写入在同一事务中同步写入 |
-| 软删除的连带删除 | Celery 异步执行 | 在同一事务中同步执行 |
+| 软删除的连带删除 | Celery 异步执行 | 删除工作项、状态、标签仍原事务同步；删除项目/工作区时M3行同步、同事务投issue分批任务，issue资源提交后即不可见、后台写原请求At/By；默认60天后的父CASCADE与迟到任务交叠允许40P01重试 |
 | 最近访问 | 在 GET 请求中顺带写入 | 由前端显式调用接口记录，GET 请求没有副作用 |
 | 通知偏好 | 决定是否发送邮件 | v0 没有邮件，不设通知偏好；站内通知的生成规则与 Plane 一致 |
 | Webhook 负载 | Plane 格式 | Nerve 格式，使用 HMAC-SHA256 签名，禁止指向内网地址 |
@@ -293,7 +293,7 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 已归档的工作项 | 只挡修改；评论、链接、表情、关联不挡；能成为父工作项 | 修改 409 `issue.archived`，什么都没改的修改也是；恢复、删除照常；在已归档的项目里先答 409 `project.archived`；往它下面加子工作项、从它加关联、删除它的关联（任一端已归档）409 `issue.archived`；不能被改成别的工作项的父工作项、被加到别的工作项下面、成为关联的对方（422 `not_allowed`）；已归档的子工作项、对方不在子工作项和关联的列表、`sub_issues_count` 里，恢复之后重新出现（M4/P3）（M4 设计 3.8、3.9、3.10；评论/表情P4及链接P7的写已接归档只读，页面仍按各自Phase） |
 | 工作项的归档、恢复 | 归档答 `{archived_at}`，恢复 204；再归档、恢复没归档的 404；状态不在"已完成""已取消"组时 400 | 都答 `IssueDetail`；已归档的再归档、未归档的再恢复不写、200；状态不在"已完成""已取消"组时 409 `issue.not_archivable`；各写一条动态（`archived_at` 的 `manual_archive`、`restore`），动态的 `comment` 不同（M4 设计 3.8、3.13） |
 | 按编号取工作项 | 格式不对 400，不是成员 403 | `GET /api/v0/workspaces/{slug}/issues/{identifier}`：不是工作区的有效成员 404 `workspace.not_found`；之后格式不对、项目或编号不存在、看不到、访客规则都是同一个 404 `issue.not_found`；看得到项目而不是它的有效成员的（工作区管理员；项目公开时，工作区成员）403 `forbidden`，与取工作项相同；标识经同一个折叠比较（`identifier-fold.json`，`i`、`ı`、`I`、`İ` 一样）（M4 设计 3.7） |
-| 删除工作项 | 动态保留，另写一条"已删除"的动态；确认框不提子工作项 | 工作项和它下面每一层的工作项（已归档的、删除者看不到的也算）连同它们的负责人、标签、关联（两个方向，另一端在别的项目里的也算）、链接、关注、动态，同一时刻、同一个删除者软删除；不写"已删除"的动态（M4 设计 3.6、3.9、3.13；确认框写明子树在 M4 的 P14） |
+| 删除工作项 | 动态保留，另写一条"已删除"的动态；确认框不提子工作项 | 工作项及各层子工作项连同负责人、标签、双方向关联、链接、关注、提及、动态、评论/两层表情和描述版本按原事务审计软删；已软删行不覆戳，关系先锁后判另一端项目删除归属。不写"已删除"动态；物理清理时活动/评论子链采用CASCADE，不沿用DO_NOTHING阻挡说法。完整issue侧13表目录见P9 spec；子树确认框仍P14 |
 | 父工作项 | 不检查自己、不检查成环 | 父工作项要是同一个项目里调用者看得到、未归档的工作项，不是它自己、不是它下面的：创建、修改的 `parent_id` 不是这样的工作项（不存在、已删除的也是）422 `parent_id` `not_allowed`；加子工作项的父工作项是路径里的工作项，调用者看不到它（不存在、已删除的也是）404 `issue.not_found`，它的项目已归档 409 `project.archived`，它已归档 409 `issue.archived`，放进去的每一个不是同一个项目里调用者看得到、未归档的工作项（不存在、已删除的也是），或是父工作项自己、它上面的，各在它的位置 422 `sub_issue_ids[i]` `not_allowed`，一次答全部；同一个项目里改父工作项的写在项目的 N 之下一个接一个，两个并发的移动不会合起来成环（M4 设计 3.9） |
 | 加子工作项的动态 | `old_value` 是子工作项自己的编号；`comment` 是 "updated the parent issue to" | 是它原来的父工作项的编号（没有时为空），`old_identifier` 是原来的父工作项（M4 设计 3.13 第 5 行）；`comment` 是 "updated the parent work item to"，修改父工作项的一行同样（Nerve 说 work item，同 M4/P2 的归档、恢复两行） |
 | 子工作项数 | 数 `issue_objects` 里的直接子工作项（不含已删除、已归档、草稿、分诊状态的，也不含已归档的项目里的），不论调用者看不看得到 | `sub_issues_count` 数未删除、未归档的直接子工作项中调用者看得到的：项目里"只看自己"的访客只数自己建的（M4 设计 3.9；按它排序在 M4 的 P5） |
@@ -309,7 +309,7 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 表情的值与归属 | 任意文本；重复 400 | 十进制格式 `^[0-9]{1,7}(-[0-9]{1,7}){0,15}$` 且 ≤128 字符；自己的重复 409，删除只找自己的活行，无该行 404；评论表情不推进 issue/comment 审计（M4/P4） |
 | 评论、表情的动态 | 写，从不显示 | 不写；通知事件留 P6，评论删除的痕迹仅审计，当前无事件发布（M4/P4） |
 | 提及的同步 | 与请求体比较，不带描述的修改删掉全部 | 从实际保存后的清洗描述做集合同步；普通相同 HTML 不写，skip=true 相同内容仍同步资格；去掉提及不取消旧关注（M4/P4） |
-| 描述的历史 | 访客能读；版本后台生成 | 仅管理员/成员可读，访客规则仍在先；同所有者且距最后保存 0–600 秒（含端点）滑动合并，其他情况新建；普通 PATCH 还原；仅描述历史，无 issue_versions；最新20版保留任务待 P9（M4/P4） |
+| 描述的历史 | 访客能读；版本后台生成 | 仅管理员/成员可读，访客规则仍在先；同所有者且距最后保存 0–600 秒（含端点）滑动合并，其他情况新建；普通 PATCH 还原；仅描述历史，无 issue_versions；P9周期仅对未删项目/工作项/版本按last_saved_at DESC,id DESC保留20；归档仍处理、软删版本归purge（P4历史请求规则不变） |
 | 动态的列表 | 不分页；不带类型时 500；每行带完整工作项、项目、工作区；泄漏隐藏引用 | `(created_at,id)` 升序游标分页，只给精简 DTO/actor_id、不返回 comment；引用 old/new 两端都按历史有效成员关系和 OwnOnly 过滤，先过滤再 LIMIT。历史目录看 is_active，不看 deleted_at/归档，物理清理引用后略去；目标权限、目录与查询处于同一只读快照（M4/P4） |
 | 时间线的增量读取 | `created_at__gt`，只取新增 | 保留产生末页的请求 cursor 重取，再按 id 覆盖/重新排序；描述原地合并推进 created_at 会再出现。别端对旧评论的编辑/删除须整体重读，不能承诺仅末页自动更新（M4/P4） |
 | 自动关闭 | 项目设置 `close_in` 后，长期未更新的未完成工作项会被自动关闭 | v0 不做 |
@@ -338,7 +338,7 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 建工作区之后 | 投递 `workspace_seed`：建一个名为 "Plane" 的机器人账户做管理员，再建演示项目、状态、标签和工作项 | 什么都不投递，没有演示数据（M3 设计 3.11） |
 | 关闭创建工作区时 | 实例管理员在管理后台为自己建工作区 | 服务器管理员用 `nerve workspaces create --slug --name --admin-email` 建，不受开关限制，`--admin-email` 的账户是它的管理员（M3 设计 3.11） |
 | 工作区的显示设置 | `GET` 时 `get_or_create`：读取就建行 | `GET` 不写库，没有行时返回默认值（`ACCORDION`、10）；第一次修改时经部分唯一索引 `INSERT … ON CONFLICT` 建行（M3 设计 3.18） |
-| 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、邀请、显示设置，项目和它们的成员关系、成员在项目里的显示设置、状态和标签，项目的工作项和它们的负责人、标签、关注、动态（M4/P1a 起）、关联（M4/P3 起），在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用 |
+| 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`，不删账户，提交后slug立即可重用；工作区/邀请/成员/显示设置及本次锁住项目的M3行同步软删，同事务投每个本次项目一条issue任务及一条无项目草稿任务。issue窗口立即不可见、后台沿原请求At/By，更早删除项目和旧墓碑保留自己的审计（M4/P9） |
 | 邀请的列出、创建、修改、删除 | 工作区管理员和成员；修改不限制角色，成员能把邀请改成管理员 | 只有工作区管理员（M3 设计决策点 4）；邀请的角色因此不高于邀请人（M3 设计 3.8） |
 | 邀请令牌 | JWT，原文存库；公开的查看不要令牌，返回被邀请的邮箱；关闭注册时，有任何一份未删除的邀请的邮箱就能注册 | 由签名密钥派生的 MAC（`nrv_inv_` 加 22 个字符），不存库，管理员列出时重新算出；公开的查看要令牌、不返回邮箱；关闭注册时要有效的令牌、且注册邮箱与邀请的相同（M3 设计 3.8、决策点 1） |
 | 邀请的链接 | `/workspace-invitations/?invitation_id=…&slug=…&token=…`；另有系统内的接受：`/invitations` 页和新手引导的"加入工作区"一步按账户的邮箱列出发给他的邀请，批量接受 | 只有链接一条路：`/workspace-invitations?invitation_id=…&token=…`；接受要登录，账户的邮箱须与邀请的相同（M3 设计 3.8、决策点 2）（页面在 M3/P9；`/invitations` 页和新手引导的一步在 M3/P8a 删除） |

@@ -25,6 +25,9 @@ func (e ending) sent(w endingWorld, t *testing.T, name string) (*http.Request, <
 	method, path, token := e.request(w, t, name)
 	req := newRequest(t, method, w.base+path, token, nil)
 	w.contract.CheckRequest(t, req)
+	if w.requests != nil {
+		w.requests.observe(req)
+	}
 	return req, sendInBackground(req)
 }
 
@@ -116,25 +119,27 @@ func TestAnEndingFindsWhatEndedMeanwhile(t *testing.T) {
 func TestEachLockOfAnEndingIsItsStrength(t *testing.T) {
 	for _, e := range endings {
 		t.Run(e.name, func(t *testing.T) {
-			w := newEndingWorld(t)
+			w := newObservedEndingWorld(t)
 			w.joinsOps(t)
 			acme, bobs := w.workspace(t, "acme"), w.membership(t, "bob")
 			opsMembership := projectMemberships(t, w.pool, w.ids["bob"], w.ops)[0]
 			site := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Site", "SITE")
+			var probe *requestProbe
 			locks := func() string {
 				t.Helper()
 				return "acme " + lockOn(t, w.pool, "workspaces WHERE id = $1", acme) +
 					", his membership " + lockOn(t, w.pool, "workspace_members WHERE id = $1", bobs) +
 					", the invitation " + lockOn(t, w.pool, "workspace_member_invites WHERE id = $1", w.bobsInvitation) +
-					", Web " + lockOn(t, w.pool, "projects WHERE id = $1", w.web) +
-					", Ops " + lockOn(t, w.pool, "projects WHERE id = $1", w.ops) +
-					", Site " + lockOn(t, w.pool, "projects WHERE id = $1", site)
+					", Web " + requestRowLock(t, w.pool, w.pool, probe, "projects WHERE id = $1", w.web) +
+					", Ops " + requestRowLock(t, w.pool, w.pool, probe, "projects WHERE id = $1", w.ops) +
+					", Site " + requestRowLock(t, w.pool, w.pool, probe, "projects WHERE id = $1", site)
 			}
 			holdsOps := holding(t, w.pool, "SELECT 1 FROM project_members WHERE id = $1 FOR SHARE", opsMembership)
 			holdsMembership := holding(t, w.pool, "SELECT 1 FROM workspace_members WHERE id = $1 FOR SHARE", bobs)
 			holdsInvitation := holding(t, w.pool, "SELECT 1 FROM workspace_member_invites WHERE id = $1 FOR SHARE", w.bobsInvitation)
 			holdsAcme := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", acme)
 			req, answered := e.sent(w, t, "bob")
+			probe = w.requests.forRequest(req)
 			var released time.Time
 			// Each step lets go of one holder and names the table the
 			// ending then waits on, and its locks: acme's is the holder's
@@ -167,7 +172,8 @@ func TestEachLockOfAnEndingIsItsStrength(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				pgtest.WaitForLockWaitOn(t, w.pool, step.waitsOn, 5*time.Second)
+				holder := map[string]pgx.Tx{"workspaces": holdsAcme, "workspace_member_invites": holdsInvitation, "workspace_members": holdsMembership, "project_members": holdsOps}[step.waitsOn]
+				requestBlocked(t, w.pool, probe, holder.Conn().PgConn().PID(), step.waitsOn)
 				if got := locks(); got != step.want {
 					t.Errorf("the ending waiting on %s: %s; want %s", step.waitsOn, got, step.want)
 				}

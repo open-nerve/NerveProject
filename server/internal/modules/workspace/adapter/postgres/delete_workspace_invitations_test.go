@@ -29,7 +29,7 @@ func (noProjectRows) LockWorkspaceProjects(context.Context, uuid.UUID) ([]uuid.U
 	return nil, nil
 }
 
-func (noProjectRows) DeleteWorkspaceProjects(context.Context, uuid.UUID, []uuid.UUID, uuid.UUID, time.Time) error {
+func (noProjectRows) DeleteWorkspaceProjects(context.Context, uuid.UUID, uuid.UUID, time.Time) error {
 	return nil
 }
 
@@ -250,7 +250,7 @@ func TestAWorkspaceDeletionAndTwoDeactivationsAllGoThrough(t *testing.T) {
 			pgtest.WaitForLockWaitBehind(t, pool, update, 5*time.Second)
 			carolsDone, carolsConn := deactivate(carol, "carol@corp.com")
 			pgtest.WaitForLockWaitBehind(t, pool, bobsConn, 5*time.Second)
-			deletion := app.NewDeleteWorkspace(s, noProjectRows{}, allowAll{}, tx, clocktest.At(now), slog.New(slog.DiscardHandler))
+			deletion := app.NewDeleteWorkspace(s, noProjectRows{}, allowAll{}, tx, clocktest.At(now), &workspaceEvents{}, slog.New(slog.DiscardHandler))
 			deleted := make(chan error, 1)
 			go func() { deleted <- deletion.Execute(shared.WithActor(ctx, shared.Actor{UserID: erin}), "y") }()
 			pgtest.WaitForLockWaitBehind(t, pool, carolsConn, 5*time.Second)

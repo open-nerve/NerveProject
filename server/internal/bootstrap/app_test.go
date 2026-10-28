@@ -87,6 +87,7 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 			Anonymous:     roomy, AuthFailure: roomy, Authenticated: roomy,
 			LoginIP: roomy, LoginIPEmail: roomy, RegisterIP: roomy, PasswordUser: roomy,
 		},
+		Cleanup:   config.CleanupConfig{PurgeAfter: 60 * 24 * time.Hour, PurgeInterval: time.Hour, PurgeBatch: 1000},
 		Jobs:      config.JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 5 * time.Second},
 		Workspace: config.WorkspaceConfig{CreationEnabled: true},
 		Issue:     testIssueConfig,
@@ -123,7 +124,12 @@ func startApp(t *testing.T, cfg config.Config, migrations fs.FS) string {
 // startAppLogging is startApp logging to logger.
 func startAppLogging(t *testing.T, cfg config.Config, migrations fs.FS, logger *slog.Logger) string {
 	t.Helper()
-	a := buildAppLogging(t, cfg, migrations, logger)
+	return runBuiltApp(t, buildAppLogging(t, cfg, migrations, logger))
+}
+
+func runBuiltApp(t *testing.T, a *app) string {
+	t.Helper()
+	cfg := a.cfg
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- a.run(ctx) }()
@@ -234,17 +240,17 @@ func TestNewAppLogsTheDatabaseTarget(t *testing.T) {
 	}
 }
 
-// Leaving the crawl worker out must fail independently of the declared kinds.
+// Leaving either request worker out must fail independently of the declared kinds.
 func TestNewAppCrawlJobCatalog(t *testing.T) {
-	if got := issue.EnqueuedKinds(); !slices.Equal(got, []string{"issue.crawl_link"}) {
-		t.Fatalf("enqueued kinds=%v; want issue.crawl_link", got)
+	if got := issue.EnqueuedKinds(); !slices.Equal(got, []string{"issue.crawl_link", "issue.delete_rows"}) {
+		t.Fatalf("enqueued kinds=%v; want issue.crawl_link and issue.delete_rows", got)
 	}
 	pool, err := postgres.NewPool(t.Context(), config.DatabaseConfig{URL: unreachableDB, MaxConns: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	module := issue.New(issue.Deps{Pool: pool, AutoArchiveInterval: time.Hour})
+	module := issue.New(issue.Deps{Pool: pool, AutoArchiveInterval: time.Hour, TrimVersionsInterval: time.Hour, DeleteBatch: 1000, DeleteBudget: 45 * time.Second, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler)})
 	definitions := module.Jobs()
 	var periodic int
 	for _, job := range definitions {
@@ -255,12 +261,12 @@ func TestNewAppCrawlJobCatalog(t *testing.T) {
 			}
 		}
 	}
-	if periodic != 1 {
-		t.Fatalf("periodic jobs=%d; want only automatic archival", periodic)
+	if periodic != 2 {
+		t.Fatalf("periodic jobs=%d; want archival and retention", periodic)
 	}
-	_, err = jobs.New(pool, jobs.Config{DefaultWorkers: 1, PeriodicWorkers: 1, Logger: slog.New(slog.DiscardHandler)}, definitions, []string{"issue.crawl_link"})
+	_, err = jobs.New(pool, jobs.Config{DefaultWorkers: 1, PeriodicWorkers: 1, Logger: slog.New(slog.DiscardHandler)}, definitions, []string{"issue.crawl_link", "issue.delete_rows"})
 	if err != nil {
-		t.Fatalf("module crawl worker registration: %v", err)
+		t.Fatalf("module request worker registration: %v", err)
 	}
 }
 

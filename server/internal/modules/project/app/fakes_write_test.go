@@ -43,6 +43,7 @@ type writeFixture struct {
 	members    *fakeMembers
 	auth       *fakeAuthorizer
 	issues     *fakeIssues
+	events     *fakeProjectEvents
 }
 
 // newWrites is writeFixture with web and ops as stored at now, acme's row
@@ -52,7 +53,7 @@ type writeFixture struct {
 func newWrites() *writeFixture {
 	log := &callLog{}
 	return &writeFixture{log: log, tx: &fakeTx{log: log}, workspaces: &fakeWorkspaces{log: log}, members: &fakeMembers{log: log},
-		issues: &fakeIssues{log: log},
+		issues: &fakeIssues{log: log}, events: &fakeProjectEvents{log: log},
 		store: &fakeStore{log: log, projects: map[uuid.UUID]*fakeProject{
 			webID: {workspace: acme.ID, updated: now, members: map[uuid.UUID]app.Membership{
 				bob:   {ID: bobInWeb, Role: shared.RoleAdmin, Active: true},

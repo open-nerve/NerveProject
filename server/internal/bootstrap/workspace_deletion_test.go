@@ -129,6 +129,21 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	}
 
 	for i, k := range keys {
+		if !projectIssueTable(k.table) {
+			if rows := k.unstamped(t, pool, recorded[i], deleted, adminID); rows != "" {
+				t.Errorf("M3 rows not immediate: %s %s", k, rows)
+			}
+		}
+	}
+	if status, body := call(t, contract, http.MethodGet, base+"/api/v0/workspaces/deleted", admin, ""); status != 404 {
+		t.Fatalf("workspace visible during deletion: %d %s", status, body)
+	}
+	want := `msg="workspace deleted" workspace_id=` + deleted.String() + " user_id=" + adminID.String() + "\n"
+	if out := logs.String(); strings.Count(out, `msg="workspace deleted"`) != 1 || !strings.Contains(out, want) {
+		t.Errorf("synchronous log: %s want %s", out, want)
+	}
+	waitWorkspaceDeletion(t, pool, deleted)
+	for i, k := range keys {
 		under[i].deletedAfter, under[i].keptAfter = len(k.undeleted(t, pool, deleted)), k.rows(t, pool, kept)
 	}
 	for _, v := range deletionViolations("workspaces", under, survivesItsWorkspace) {
@@ -140,10 +155,6 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 				t.Errorf("%s: rows not deleted at the workspace's deleted_at by its deleter %s:\n%s", k, adminID, rows)
 			}
 		}
-	}
-	want := `msg="workspace deleted" workspace_id=` + deleted.String() + " user_id=" + adminID.String() + "\n"
-	if out := logs.String(); strings.Count(out, `msg="workspace deleted"`) != 1 || !strings.Contains(out, want) {
-		t.Errorf("the logs:\n%s\nwant one line %q", out, want)
 	}
 }
 
@@ -232,8 +243,7 @@ func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID, 
 // A failing projects' step fails the whole deletion (M3 design 3.3, 9.3):
 // when it fails on the wired app, deleteWorkspace answers the failure and
 // every row rolls back, under either workspace, the projects' and the
-// workspace's own. The work items' activity table, renamed while the
-// request runs, fails the last statement of the cascade (M4 design 3.5).
+// workspace's own. The M3 states table, renamed during the request, fails a project step.
 // It does not show that the statements share the deletion's one
 // transaction: the projects' statements in a transaction of their own roll
 // back here too, with the failing one.
@@ -256,24 +266,28 @@ func TestAFailedProjectsStepRollsTheDeletionBack(t *testing.T) {
 		return all
 	}
 	before := rowsOf()
+	jobsBefore := registrationRows(t, pool)
 	exec := func(sql string) {
 		t.Helper()
 		if _, err := pool.Exec(context.Background(), sql); err != nil {
 			t.Fatal(err)
 		}
 	}
-	exec("ALTER TABLE issue_activities RENAME TO issue_activities_away")
+	exec("ALTER TABLE states RENAME TO states_away")
 	status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", admin, "")
-	exec("ALTER TABLE issue_activities_away RENAME TO issue_activities")
+	exec("ALTER TABLE states_away RENAME TO states")
 	if status != http.StatusInternalServerError {
-		t.Fatalf("deleting the workspace with the activity's step failing = %d %s, want 500", status, body)
+		t.Fatalf("deleting the workspace with the states step failing = %d %s, want 500", status, body)
+	}
+	if registrationRows(t, pool) != jobsBefore {
+		t.Error("failed request changed rows or task identities")
 	}
 	if after := rowsOf(); !slices.Equal(after, before) {
 		t.Errorf("the rows after the failed deletion:\n%q\nwant\n%q", after, before)
 	}
 }
 
-// Every statement of the deletion runs in its one transaction (M3 design
+// Every M3 statement and task insertion runs in the request transaction (M3 design
 // 3.3, 9.3), the cascade's last one too: none outside any transaction, and
 // none in a transaction of its own, which would commit before the
 // deletion's. A failing step cannot show it; a deletion refused at its
@@ -298,6 +312,7 @@ func TestADeletionRefusedAtItsCommitChangesNoRow(t *testing.T) {
 		return all
 	}
 	before := rowsOf()
+	jobsBefore := registrationRows(t, pool)
 	for _, sql := range []string{
 		`CREATE FUNCTION refuse_commit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'the commit is refused'; END $$`,
 		`CREATE CONSTRAINT TRIGGER refuse_commit AFTER UPDATE ON workspaces DEFERRABLE INITIALLY DEFERRED
@@ -309,6 +324,9 @@ func TestADeletionRefusedAtItsCommitChangesNoRow(t *testing.T) {
 	}
 	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", admin, ""); status != http.StatusInternalServerError {
 		t.Fatalf("deleting the workspace with its commit refused = %d %s, want 500", status, body)
+	}
+	if registrationRows(t, pool) != jobsBefore {
+		t.Error("failed request changed rows or task identities")
 	}
 	if after := rowsOf(); !slices.Equal(after, before) {
 		t.Errorf("the rows after the refused deletion:\n%q\nwant\n%q", after, before)

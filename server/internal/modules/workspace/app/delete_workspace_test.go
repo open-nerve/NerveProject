@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -26,6 +27,8 @@ type deleteFixture struct {
 	projects   *fakeProjects
 	auth       *fakeAuthorizer
 	logs       *strings.Builder
+	events     []shared.Event
+	publishErr error
 }
 
 // lockedInvitations and lockedProjects are what the deletion's two locks
@@ -41,7 +44,7 @@ func newDelete() (*app.DeleteWorkspace, *deleteFixture) {
 			{alice.ID, acme.ID}: {WorkspaceRole: shared.RoleAdmin},
 			{bob.ID, beta.ID}:   {WorkspaceRole: shared.RoleAdmin},
 		}}, logs: &strings.Builder{}}
-	return app.NewDeleteWorkspace(f.workspaces, f.projects, f.auth, f.tx, ticking{clocktest.At(now)}, slog.New(slog.NewTextHandler(f.logs, nil))), f
+	return app.NewDeleteWorkspace(f.workspaces, f.projects, f.auth, f.tx, ticking{clocktest.At(now)}, f, slog.New(slog.NewTextHandler(f.logs, nil))), f
 }
 
 // ticking moves a microsecond on each read: a deletion that read the clock
@@ -72,12 +75,12 @@ func cascadeCalls(user app.AccountState, w domain.Workspace) []string {
 		case "DeleteInvitations":
 			calls = append(calls, fmt.Sprintf("%s %v%s", step, lockedInvitations, at))
 		case "DeleteWorkspaceProjects":
-			calls = append(calls, fmt.Sprintf("%s %s %v%s", step, w.ID, lockedProjects, at))
+			calls = append(calls, fmt.Sprintf("%s %s%s", step, w.ID, at))
 		default:
 			calls = append(calls, step+" "+w.ID.String()+at)
 		}
 	}
-	return calls
+	return append(calls, "Publish")
 }
 
 // DeleteWorkspace locks the workspace FOR NO KEY UPDATE, decides, locks its
@@ -99,6 +102,17 @@ func TestDeleteWorkspaceLocksThenDecidesThenCascades(t *testing.T) {
 			cascadeCalls(tt.user, tt.w))
 		if !slices.Equal(f.log.calls, want) || f.tx.calls != 1 {
 			t.Errorf("%s, %s: calls = %q in %d transactions, want %q in one", tt.user.Email, tt.w.Slug, f.log.calls, f.tx.calls, want)
+		}
+		if len(f.events) != 1 {
+			t.Fatal("missing workspace event", f.events)
+		}
+		e := f.events[0]
+		changes := make([]shared.Change, 0, len(lockedProjects))
+		for _, id := range lockedProjects {
+			changes = append(changes, shared.Change{Field: "project", OldID: &id})
+		}
+		if e.ID == (uuid.UUID{}) || e.Type != "workspace.deleted" || e.Entity != (shared.EntityRef{Kind: "workspace", ID: tt.w.ID}) || e.WorkspaceID != tt.w.ID || e.ProjectID != (uuid.UUID{}) || e.ActorID == nil || *e.ActorID != tt.user.ID || !e.OccurredAt.Equal(now) || !reflect.DeepEqual(e.Changes, changes) {
+			t.Fatalf("event=%+v", e)
 		}
 		wantLog := `level=INFO msg="workspace deleted" workspace_id=` + tt.w.ID.String() + " user_id=" + tt.user.ID.String() + "\n"
 		if _, got, _ := strings.Cut(f.logs.String(), " "); got != wantLog {
@@ -155,7 +169,8 @@ func TestDeleteWorkspaceRefusals(t *testing.T) {
 			failure, append(slices.Clone(locked), steps[:4]...)},
 		{"the projects failed", alice, "acme",
 			func(f *deleteFixture) { f.projects.errs = map[string]error{"DeleteWorkspaceProjects": failure} },
-			failure, append(slices.Clone(locked), steps...)},
+			failure, append(slices.Clone(locked), steps[:5]...)},
+		{"the publication failed", alice, "acme", func(f *deleteFixture) { f.publishErr = failure }, failure, append(slices.Clone(locked), steps...)},
 		{"the commit failed", alice, "acme", func(f *deleteFixture) { f.tx.commitErr = failure }, failure,
 			append(slices.Clone(locked), steps...)},
 	}
@@ -176,4 +191,10 @@ func TestDeleteWorkspaceRefusals(t *testing.T) {
 	if err := uc.Execute(context.Background(), "acme"); !errors.Is(err, shared.Unauthenticated()) || len(f.log.calls) != 0 || f.tx.calls != 0 {
 		t.Errorf("Execute() without an actor = %v, calls %q; want 401 unauthorized and nothing", err, f.log.calls)
 	}
+}
+
+func (f *deleteFixture) Publish(ctx context.Context, e shared.Event) error {
+	f.log.add(ctx, "Publish")
+	f.events = append(f.events, e)
+	return f.publishErr
 }

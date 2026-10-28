@@ -40,6 +40,7 @@ import (
 // invitation is the link of bob's invitation, with the role
 // newAnswerRace is given.
 type answerRace struct {
+	events     shared.EventPublisher
 	pool       *pgxpool.Pool
 	alice, bob uuid.UUID
 	acme       uuid.UUID
@@ -50,7 +51,7 @@ type answerRace struct {
 func newAnswerRace(t *testing.T, role shared.Role) answerRace {
 	t.Helper()
 	pool := openPool(t, pgtest.NewDatabase(t))
-	r := answerRace{pool: pool, alice: uuid.NewV7(), bob: uuid.NewV7(), acme: uuid.NewV7(), mac: testInvitationMAC(t)}
+	r := answerRace{events: projectDeletionPublisher(t, pool), pool: pool, alice: uuid.NewV7(), bob: uuid.NewV7(), acme: uuid.NewV7(), mac: testInvitationMAC(t)}
 	now := time.Now()
 	users := identitypg.New(pool)
 	for id, email := range map[uuid.UUID]string{r.alice: "alice@example.com", r.bob: "bob@example.com"} {
@@ -121,7 +122,7 @@ func (r answerRace) decline(ctx context.Context, invitations workspaceapp.Invita
 
 // deleteAcme is alice's deletion of acme, over workspaces.
 func (r answerRace) deleteAcme(ctx context.Context, workspaces workspaceapp.WorkspaceDeleter) error {
-	return workspaceapp.NewDeleteWorkspace(workspaces, r.projects(), authorizerOn(r.pool), r.tx(), clocktest.At(time.Now()),
+	return workspaceapp.NewDeleteWorkspace(workspaces, r.projects(), authorizerOn(r.pool), r.tx(), clocktest.At(time.Now()), r.events,
 		slog.New(slog.DiscardHandler)).Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), "acme")
 }
 

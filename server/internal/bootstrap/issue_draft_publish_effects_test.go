@@ -89,7 +89,12 @@ func TestDraftPublishRefusalOrder(t *testing.T) {
 	if raw := draftRequest(t, w, "alice", "POST", publishPath(valid.ID), "", 409); !strings.Contains(raw, `"code":"project.archived"`) {
 		t.Fatal(raw)
 	}
-	if !reflect.DeepEqual(before, publishSnapshot(t, w)) {
+	if after := publishSnapshot(t, w); !reflect.DeepEqual(before, after) {
+		for table, rows := range before {
+			if after[table] != rows {
+				t.Errorf("refusals changed %s: before=%s after=%s", table, rows, after[table])
+			}
+		}
 		t.Fatal("refusals wrote rows")
 	}
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE projects SET archived_at=NULL WHERE id=$1", w.web); err != nil {

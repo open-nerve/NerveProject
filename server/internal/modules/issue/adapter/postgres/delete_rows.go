@@ -47,13 +47,6 @@ func (s *Store) DeleteProjectLabelRows(ctx context.Context, b app.RowBatch) ([]u
 	return deleted(ids, err, "work items' labels")
 }
 
-// DeleteProjectRelationRows soft-deletes a batch of the relations of the
-// project's work items, both ways.
-func (s *Store) DeleteProjectRelationRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
-	ids, err := s.queries(ctx).DeleteProjectRelationRows(ctx, gen.DeleteProjectRelationRowsParams(batch(b)))
-	return deleted(ids, err, "work items' relations")
-}
-
 // DeleteProjectLinkRows soft-deletes a batch of the project's links.
 func (s *Store) DeleteProjectLinkRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
 	ids, err := s.queries(ctx).DeleteProjectLinkRows(ctx, gen.DeleteProjectLinkRowsParams(batch(b)))

@@ -53,7 +53,8 @@ func validConfig() Config {
 		Workspace: WorkspaceConfig{CreationEnabled: false},
 		// Each unlike its default and every other key's value, and not the
 		// start of one, so that a key logged from the wrong field shows.
-		Issue: IssueConfig{AutoArchiveInterval: 24 * time.Hour, WriteGate: WriteGateConfig{PerProject: 9, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
+		Cleanup: CleanupConfig{PurgeAfter: 1440 * time.Hour, PurgeInterval: 24 * time.Hour, PurgeBatch: 1000},
+		Issue: IssueConfig{TrimVersionsInterval: 24 * time.Hour, DeleteBatch: 1000, DeleteBudget: 45 * time.Second, AutoArchiveInterval: 24 * time.Hour, WriteGate: WriteGateConfig{PerProject: 9, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
 			WriteLockTimeout: 3 * time.Second},
 		Files: FilesConfig{SizeLimit: 7340032},
 		Log:   LogConfig{Level: "info", Format: "json"},
@@ -114,6 +115,12 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"ratelimit.register_ip.burst: must be at least 1, got 0",
 		"ratelimit.password_user.per_minute: must be at least 1, got 0",
 		"ratelimit.password_user.burst: must be at least 1, got 0",
+		"cleanup.purge_after: must be positive, got 0s",
+		"cleanup.purge_interval: must be at least 1s, got 0s",
+		"cleanup.purge_batch: must be from 1 to 2147483647, got 0",
+		"issue.trim_versions_interval: must be at least 1s, got 0s",
+		"issue.delete_batch: must be from 1 to 2147483647, got 0",
+		"issue.delete_budget: must be positive and leave 5s before duration overflow, got 0s",
 		"issue.auto_archive_interval: must be at least 1s, got 0s",
 		"issue.write_gate.per_project: must be at least 1, got 0",
 		"issue.write_gate.max_wait: must be positive, got 0s",
