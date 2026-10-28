@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T6 既定任务门禁已完成；T6 三项异步边界缺陷修复复审通过，R17 已关闭；T7 开始。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T4 完整本地七门禁通过；阶段最终门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。当前实施记录见第9节，第7–8节保留 T1–T5 的过程与完成证据；以下第1–6节保留预检时点事实。
+日期：2026-10-29。**T1–T7 既定任务门禁已完成；T7 偏好迁移及并发查询修复已独评闭合；T8 开始。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T4 完整本地七门禁通过；阶段最终门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。当前实施记录见第10节，第7–9节保留 T1–T6 的过程与完成证据；以下第1–6节保留预检时点事实。
 
 ## 1. 实际前置与证据
 
@@ -163,3 +163,17 @@ Task6 全段范围为 `659ac3cbb22a68bf06a35f936372a14614027693..ffade688d82b530
 - 旧资源 HTTP 迁移仍归 P11/M7；全挂载/autorun、拖放、全副本竞态、页面与最终 F/CI 仍按 T10–T14。T12 的既定旧消费者计数矩阵还要核“写成功后回读遇到写前已在外 GET”交错，接续记录是待验证问题，未冒称已复现或已通过。
 
 T7 开始用现有 ProjectPreferencesService 迁移 filters/display_filters/display_properties，按字段排队并采用确认结果，同时删除 user-properties 两方法、例外与三个故事的旧失败放行。最近完整 F 仍属于 T4 dde969f8；下一完整 F 和产品检查点在 T8。A1–A10、阶段终审、准确分支 CI 和集成都保持开放；不合并。
+
+## 10. T7 完成与 T8 接续
+
+Task7 全段范围为 `ffade688d82b530f01e0390a0cbd9df54eabec4e..663633e149e1ca4867bd9714eb2dba2b6266cc78`：接续文档 `a91c5f4a`、迁移 `3e589955`、贯通测试 `205d7633`、并发修复 `663633e1`。项目偏好的三个字段复用既有 ProjectPreferencesService，按项目和字段排队、以最后确认值构造完整字段，只接收目标字段的答复；navigation/sort_order 保持原合同。旧 user-properties 两方法、精确例外与三个故事的放行均删除。
+
+R19 将写入与页面读取跟进分开，原显示、布局和富筛选入口复用小 hook；真实 store/FakeNerve/重试按钮证明已成功保存后的 GET 拒绝不会撤销偏好或重发 PATCH。初审进一步发现 Important I1：连续 high→low→high 保存的排队前快照使最终 high 被误判为 no-op，列表停留 low。fix1 以所选列表记录的偏好查询部分与最新确认值比较，不混入 limit/日历额外参数；真实交错先红后绿，最终 binding/行回到 high，真正 no-op 不多读。限定复审 I1 和附带过期注释 M1 均 ADDRESSED、无新增问题；原件 `task-7-review.md`、`task-7-fix1-review.md`、`task-7-current-report.md` 均在本 worktree 的 `.superpowers/sdd/P10b-web-list-data/`。
+
+验证与边界：
+
+- M23 整字段浅合并及夹带导航默认值、M24 省略偏好 query 均真实断言失败并恢复；额外禁用成功后刷新变异也触发贯通测试失败。最初测试环境/超时的红不算完整队列 TDD；报告如实限定初始 GET 红的证明范围。
+- 初版最终 8 文件63项通过，追加贯通后5文件30项通过；fix1最终8文件66项通过，有重叠，不相加。fix1的 lint-web 54/54（34缓存）、knip通过，2620输入与最终提交一致。root共核43份运行原件（含独立探针）、5条fix1提交路径及其修复前行为红的源码桥，见 `task-7-fix1-root-audit.json`、`task-7-fix1-root-commit-check.json`。
+- 构建后单套 Chromium 三故事7项通过；首轮 P8 的双 preferences GET 与单次 hold 夹具竞争已由有界 count 夹具修正，业务及数据库断言保留。此 E2E 成功发生于 fix1 前，不能说覆盖新的并发修复；后者由真实写读/重试/会话项目切换回归覆盖，下一完整浏览器验证归 T8 F。颜色环境 NO_COLOR/FORCE_COLOR 的三次警告保留，下一 F 统一子进程环境验证，不单独重跑 DB 或吞 stderr。
+
+T8 继续补齐筛选转换/回读语义并删除否定层。R20 将已批准的 negation-filters 守卫随删除一并启用，才能让本任务 M27 回引词项触发真实关键词红；T13仍核M43与角色挂载，不扩大静态限制。日期 none 禁止与其它日期条件混用，标签/负责人 none 与 id 并列仍合法。下一完整 F 和准确分支检查点在 T8；A1–A10、阶段终审、集成和 M4 总体完成线仍开放，不合并、不启动 P11。

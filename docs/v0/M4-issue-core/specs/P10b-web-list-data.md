@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层规格
 
-> 状态：T1–T6 的既定任务门禁已完成；T6 的唯一实体、完整核实链及旧写者收口通过独评和修复复审，R17 与三项异步边界缺陷已关闭。T7 开始迁移项目显示偏好。阶段最终门禁、整审与 CI 尚未完成，全部阶段产品验收仍未勾选。旧六项 B-L1–B-L6 继续作为实施要求。
+> 状态：T1–T7 的既定任务门禁已完成；T7 偏好迁移和旧地址下线通过独评及修复复审，快速切换筛选后列表停留旧查询的问题已关闭。T8 开始补齐筛选语义并删除否定层，随后执行下一完整 F 和分支检查点。阶段最终门禁、整审与 CI 尚未完成，全部阶段产品验收仍未勾选。旧六项 B-L1–B-L6 继续作为实施要求。
 
 ## 1. 目标
 
@@ -195,11 +195,15 @@ T6同时改 `C/store/issue/issue-details/{issue,sub_issues,link,relation}.store.
 
 ProjectPreferencesService现有get/update签名不变；project filter按生成filters/display_filters/display_properties消费。每次PATCH只带要变的顶层字段的全值，其余字段省略；同字段排队时从最后确认值计算。navigation/sort_order不被覆盖。服务端不会自动使用偏好，列表显式拼查询。
 
+T7 的页面跟进以已选列表记录的偏好查询部分与最新确认偏好比较，不能以调用排队前快照判断 no-op；high→low→high 连续成功保存后必须选回 high 列表。该记录只描述所选查询，不存实体；limit 与日历等额外查询参数不参与偏好比较。保存与读取拒绝分别处理，读取失败的按钮只重试 GET，不重复 PATCH。
+
 项目页面的显示设置入口与富表达式入口通过页面层会话跟进：偏好 store 交回写入结果或拒绝，确认查询改变后才独立刷新原项目列表；刷新拒绝作为读失败保留并可重试，不重发保存。组件草稿和已确认查询分开，会话或项目切换后不跟进旧页面。通用筛选回调、归档和个人列表不改变合同。
 
 `issue-filters.ts` 目标纯接口：`toProjectFilters(expression): ProjectIssueFilters`、`toFilterExpression(filters): TWorkItemFilterExpression`、`projectListQuery(filters, display): ProjectIssueQuery`、`memberListQuery(filters, display, relation): MemberIssueQuery`。标识字段映射state→state_id、labels→label_id、assignees→assignee_id、created_by→created_by_id；日期条件保持重复AND，不把两个条件随意合并成一个。one-level AND和每种已支持条件逐一测试；None/me按契约；不支持的持久化属性/组合在本地选择明确默认并清理，不偷偷传给服务端造成整页失败。
 
 ProjectDisplayFilters生成字段为string，query为enum；用允许值目录显式收窄，不用断言伪造安全。项目分组不带project_id，member允许更窄的词汇，无subgroups。表达式只用于UI state，持久化用ProjectIssueFilters。删除否定参数/恒等alias/hook，不留allowNegative:false壳。旧/user-properties两个方法、两例外、mounts.workItemFilters、p2-visibility/p8-project-preferences/s7-chinese-project三故事放行在T7一起消失。
+
+T8 删除否定层时同步启用既定 negation-filters 精确静态守卫，以完成 M27 的词项回引反例；T13 继续核 M43 与挂载门禁。该前移不放宽守卫，不把普通数值或排序中的负数概念当作否定筛选 API。
 
 ### 2.8 T9/T10：浏览器偏好、会话与权限
 

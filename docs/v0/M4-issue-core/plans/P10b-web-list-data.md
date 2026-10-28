@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T6 既定任务门禁已完成；T6/R17 与三项异步边界修复已通过独评，继续 T7 项目显示偏好与旧地址下线。任务勾选由主控在独立评审后更新。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T7 既定任务门禁已完成；T7 偏好迁移及快速切换查询的修复已通过独评，继续 T8 筛选语义与否定层清理。任务勾选由主控在独立评审后更新。
 
-> **当前状态：** T6 修复提交 ffade688 的限定复审通过；完整 web 应用 1369 项通过，最后两份测试强化由 63 项聚焦及最终 lint/knip 覆盖，源码桥边界见 review §9。最近完整本地七门禁仍绑定 T4 dde969f8；T8 按计划跑下一次完整 F 及产品检查点 CI。全部阶段产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。
+> **当前状态：** T7 修复提交 663633e1 的限定复审通过；最终 66 项聚焦及 lint/knip 通过，三旧放行故事在修复前 7 项通过，验证范围见 review §10。最近完整本地七门禁仍绑定 T4 dde969f8；T8 按计划跑下一次完整 F 及产品检查点 CI。全部阶段产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -170,21 +170,21 @@ make e2e
 
 页面跟进还涉及 C/hooks/use-project-preferences-follow.ts及其测试、C/hooks/use-issues-actions.tsx、C/components/issues/filters.tsx 与 C/components/issues/issue-layouts/roots/project-layout-root.tsx；三故事同地址双GET的时序夹具涉及 e2e/fixtures/settings-pages.ts。页面将保存和后续列表读取分为两个会话跟进，读取失败保留列表自身重试。
 
-- [ ] `writesOneWholePreferenceField`断言body只有目标字段、同字段后续patch用前序确认结果；navigation/sort_order未动；load.preferences未自动套list，query显式转换；拒绝/session更换不写。group/order宽string经允许词汇收窄。
-- [ ] 红：`pnpm --filter web exec vitest run core/store/issue/project/filter.store.test.ts core/store/project/preferences.store.test.ts`。
-- [ ] 实现并同提交删除user-properties两方法/例外和workItemFilters/三放行；保留仅search用途ProjectService直到对应后段，注释真实说明。
-- [ ] 同定向、`make lint-web`、`make build`后按F协议单套跑这三个e2e文件；若页挂载尚未T13接全，T7必须把原挂载受影响的preferences请求跟到新方法，使现有故事通过，不能留失败到T13。
-- [ ] M23浅merge字段/带navigation默认回写、M24省偏好查询交由后端自动应用，真实红；G，提交 `feat(M4/P10b): 保存项目工作项偏好并移除旧地址`。
+- [x] `writesOneWholePreferenceField`断言body只有目标字段、同字段后续patch用前序确认结果；navigation/sort_order未动；load.preferences未自动套list，query显式转换；拒绝/session更换不写。group/order宽string经允许词汇收窄。
+- [x] 红：`pnpm --filter web exec vitest run core/store/issue/project/filter.store.test.ts core/store/project/preferences.store.test.ts`。初始红仅证明新GET路径，其余条件以真实行为反例与变异补证，范围见review §10。
+- [x] 实现并同提交删除user-properties两方法/例外和workItemFilters/三放行；保留仅search用途ProjectService直到对应后段，注释真实说明。
+- [x] 同定向、`make lint-web`、`make build`后按F协议单套跑这三个e2e文件；若页挂载尚未T13接全，T7必须把原挂载受影响的preferences请求跟到新方法，使现有故事通过，不能留失败到T13。后续并发修复由真实store回归覆盖，下一完整浏览器验证归T8 F。
+- [x] M23浅merge字段/带navigation默认回写、M24省偏好查询交由后端自动应用，真实红；G，提交 `feat(M4/P10b): 保存项目工作项偏好并移除旧地址`。
 
 ## Task 8：筛选翻译与删除否定层（约500–1000行，F）
 
-**Files：** 扩充T5已加的C/lib/issue-filters.ts/test；P/shared-state/src/store/{rich-filters,work-item-filters}与utils；P/types/src/rich-filters和view-props.ts；P/utils/src/rich-filters；C/hooks/rich-filters/use-filters-operator-configs.ts及work-item-filters调用者。
+**Files：** 扩充T5已加的C/lib/issue-filters.ts/test；P/shared-state/src/store/{rich-filters,work-item-filters}与utils；P/types/src/rich-filters和view-props.ts；P/utils/src/rich-filters；C/hooks/rich-filters/use-filters-operator-configs.ts及work-item-filters调用者；tools/keywords.json 的既定 negation-filters 守卫。
 **Interfaces：** spec§2.7四纯函数toProjectFilters/toFilterExpression/projectListQuery/memberListQuery；不向shared-state新增api-client依赖。
 
 - [ ] 表F01…逐支持property/operator/value：state/groups/priority/labels/assignees/creator/mention/subscriber、none/me、两条日期AND、开区间/闭区间、空清除；回读保存值等价，不比较UI临时node ID。member排除不支持字段且relation必填；损坏存储值恢复明确默认。
 - [ ] 红：`pnpm --filter web exec vitest run core/lib/issue-filters.test.ts`。
 - [ ] 实现纯转换，删TAllAvailable*恒等alias/TNegativeOperatorConfig/isNegation/allowNegative/useFiltersOperatorConfigs及所有参数传递；先编译types→utils/shared-state→web，每Task终态全编译，不留临时any。
-- [ ] M25日期AND误变OR、M26none与实际条件混合、M27负向层残留和空筛选不清除，分别测试/关键词红；同定向、lint-web/knip，G、F，提交 `feat(M4/P10b): 统一列表筛选词汇并移除否定层`。
+- [ ] M25日期AND误变OR、M26日期none与实际日期条件混合（标签/负责人允许none与id并列）、M27负向层残留和空筛选不清除，分别测试/关键词红；否定层删完即启用既定静态守卫，T13再核M43。同定向、lint-web/knip，G、F，提交 `feat(M4/P10b): 统一列表筛选词汇并移除否定层`。
 
 ## Task 9：归档个人主页偏好与草稿去筛选（约350–650行）
 
