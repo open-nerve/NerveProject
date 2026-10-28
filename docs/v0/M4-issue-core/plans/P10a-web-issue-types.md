@@ -1,8 +1,8 @@
 # M4/P10a 工作项换型与列表收窄实施计划
 
-> **执行者：** 获负责人后续实施授权后，使用 `superpowers:subagent-driven-development` 或 `superpowers:executing-plans` 逐 Task 执行。本轮仅准备及静态预检，不运行下列产品步骤。
+> **执行者：** 负责人已授权按通过预检的 spec/plan 实施 P10a，使用 `superpowers:subagent-driven-development` 或 `superpowers:executing-plans` 逐 Task 执行。准备期仅文档及静态预检的结论保持历史原样；当前从 T1 逐任务推进，不提前关闭阶段验收。
 
-**负责人裁定：** P10A-S1 已选 A，见[报告](../../../reviews/re-10-M4P10预检审核.md)。只删工作项列表，保留领域自身加载；T8 按 spec§2.4 验收拆除边界，M6/M7 自身页面完整可用与零失败归所属里程碑。文档同步已通过独立定向静态预检，无开放发现；本轮仍不执行 T1。
+**负责人裁定：** P10A-S1 已选 A，见[报告](../../../reviews/re-10-M4P10预检审核.md)。只删工作项列表，保留领域自身加载；T8 按 spec§2.4 验收拆除边界，M6/M7 自身页面完整可用与零失败归所属里程碑。文档同步已通过独立定向静态预检，无开放发现；当前已获实施授权，从 T1 执行。
 
 **目标：** 删除四类尚属 M6/M7 的工作项列表，先收窄读取，再将核心工作项实体换为生成的 Issue/IssueDetail，保持每任务编译。
 
@@ -14,7 +14,7 @@
 
 ## 全局约束
 
-- 当前只做文档准备，全部产品步骤未执行；准备提交不改 `tools/keywords.json` phase。T1 获授权后才设 **M4/P10**，P10b同值；现有守卫只支持数字，禁止写无效M4/P10a或为此放宽解析。
+- 准备期未执行产品步骤且未改 phase；实施授权已取得，T1 设 **M4/P10**，P10b同值；现有守卫只支持数字，禁止写无效M4/P10a或为此放宽解析。
 - 主目录HEAD始终main；所有实施在 `.codex/worktress/codex/m4-p10a`。plane/和refer/只读且不在其中跑git；不操作现有容器/Docker；不stash/clean/reset--hard/强推。
 - 类型直接来自 `@nerve/api-client`。没有全字段兼容实体、`as unknown as Issue`、虚假null/default、API响应翻译层；生成物只由make gen-web生成。
 - P10a先收窄后换型；每Task后 `pnpm --filter web check:types` 通过；共享包同时由完整 `make lint-web` 核对。T6不能用关闭检查或把文件排除来救编译。
@@ -27,7 +27,7 @@
 - 新公开错误码预期0；若实际新增，契约、`C/lib/error-messages.ts` PROBLEM_MESSAGES 与 en/zh-CN errors.json 同Task，强制test-web，不以旧error?.error写法扩散。
 - 测试复用既有deferred、store/root/session fixture、watchPage、API创建工作区/项目/成员；不造假的M6/M7成功API或加空service掩盖。新测试按行为，不为机械每行修改造镜像测试。
 - 每任务要求/质量独评，局部问题根因修复后复审。架构回归、跨模块协议改变或意外高风险，提交已完成工作后上报。
-- 提交详细中文多行，前缀feat/fix/docs(M4/P10a)；只stage精确路径；push优先`/usr/bin/git`。阶段终审不自动授权合并；本次明确不实现。
+- 提交详细中文多行，前缀feat/fix/docs(M4/P10a)；只stage精确路径；push优先`/usr/bin/git`。阶段终审不自动授权合并；本次仅获 P10a 实施授权，禁止 push/merge。
 - 本地七项、最终分支CI、未来mainCI是独立事实，各绑准确SHA。变异红必须行为断言，不把无测试匹配/编译失败/基础设施失败算性质红。
 
 ## 评审重点
@@ -58,7 +58,7 @@ TURBO_FORCE=true make test-web
 make e2e
 ```
 
-通过要求：七项exit0；web记录真实运行而非turbo缓存；E2E以当次配置/环境要求浏览器为准，准确计数skip/失败；任何失败保留原件。F当前不执行，P9的基线证据不能当P10a F。
+通过要求：七项exit0；web记录真实运行而非turbo缓存；E2E以当次配置/环境要求浏览器为准，准确计数skip/失败；任何失败保留原件。F 在上述指定检查点执行，T1 不执行完整 F；P9 的基线证据不能当 P10a F。
 
 ## Task 1：阶段、类型合同与消费者冻结
 
