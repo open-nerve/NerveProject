@@ -49,7 +49,7 @@ import type { TRenderQuickActions } from "./list-view-types";
 interface Props {
   groupIssueIds: string[] | undefined;
   group: IGroupByColumn;
-  issuesMap: Record<string, Issue | IssueDetail>;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   group_by: TIssueGroupByOptions | null;
   orderBy: TIssueOrderByOptions | undefined;
   getGroupIndex: (groupId: string | undefined) => number;

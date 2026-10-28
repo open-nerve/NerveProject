@@ -23,7 +23,7 @@
 | T3 | 新 C/lib/paged-groups.ts：组/格/行/页模型；新 C/lib/issue-order.ts：排序和时间精度 | 新 C/lib/issue-order.test.ts、paged-groups.test.ts |
 | T4 | C/lib/paged-groups.ts：确认与纯merge；新 issue-membership.ts：三态成员/组键；新 paged-groups.replay.ts：raw重放与verifyIds意图；新 paged-groups.evidence.ts：计数自己的来源、确认事实和共用三分支 | 新 C/lib/paged-groups.changes.test.ts、paged-groups.replay.test.ts |
 | T5 | BaseIssuesStore选择门面、helpers/issue-list-binding.ts不可变scope/query与Reconciled及目录准备；三个列表切新service；root唯一写协调/退役/heldSources分发；issue-filters纯函数；use-issue-list-refresh.tsx接四布局可见刷新/拒绝/显式重试；同次删旧形状和服务 | 新 helpers/base-issues.store.test.ts、base-issues-utils.test.ts、lib/paged-groups.sources.test.ts、lib/issue-filters.test.ts、hooks/use-issue-list-refresh.test.tsx；迁移R8/R10与store-context |
-| T6 | C/store/issue/issue.store.ts唯一副本、ReconciledByKey接收API，description/版本/墓碑、项目read epoch；同Task闭合P11过渡详情/子项/关联/link的canonical写入 | 新 C/store/issue/issue.store.test.ts |
+| T6 | C/store/issue/issue.store.ts唯一副本、ReconciledByKey接收API，description/版本/墓碑、项目read epoch；根拥有 issue-verification.ts 的 round/去重/freshness 元数据；同Task闭合过渡详情/子项/关联/link/inbox 的 canonical 写入与只读消费合同 | 新 C/store/issue/issue.store.test.ts；既有详情、inbox、会话和复制弹窗回归 |
 | T7 | C/store/issue/project/filter.store.ts；C/store/project/preferences.store.ts按需联动；删/user-properties两方法/例外/放行 | 新 project/filter.store.test.ts；既有 project/preferences.store.test.ts和三E2E故事 |
 | T8 | 新 C/lib/issue-filters.ts；P/shared-state/types/utils富筛选否定层清除；hooks消费者 | 新 C/lib/issue-filters.test.ts |
 | T9 | archived/profile浏览器持久化；删workspace-draft/filter.store及root/use-issues引用 | 新 archived/filter.store.test.ts、profile/filter.store.test.ts |
@@ -172,7 +172,7 @@ T6同时改 `C/store/issue/issue-details/{issue,sub_issues,link,relation}.store.
 
 #### 缺行回查的四路状态转移（B-L6）
 
-**T6 首项 R17：** T5 已在 fetch/replay 后发出真实核实 GET；direct-confirm 当前仅登记 verifyIds，尚未即时发送。T6 将两条入口收口到下述完整 round，跨副本与并发 part 去重；已成功的业务写不能因后续核实拒绝而伪报写失败或重发。核实错误保留于不可确认状态并交给其读取/显式重试通道。真实 direct-confirm→GET、拒绝后显式重试及退役后无跟进须在 T6 独评前关闭，不延后至 T12/T14。
+**T6 首项 R17：** T5 在 fetch/replay 后发出真实核实 GET，direct-confirm 当时仅登记 verifyIds。T6 由 IssueRootStore 单独拥有 `issue-verification.ts`，将两条入口收口到下述完整 round，跨副本与并发 part 去重；已成功的业务写不能因后续核实拒绝而伪报写失败或重发。核实错误保留于不可确认状态并交给其读取/显式重试通道。真实 direct-confirm→GET、拒绝后显式重试及退役后无跟进须在 T6 独评前关闭，不延后至 T12/T14。
 
 核实元数据只存id、round、状态、error和 `freshnessFloor`，不复制实体。进入待核实时先记当前readSerial；回查404/其它拒绝实际落定时把该id的freshnessFloor提升到此刻当前readSerial（覆盖此前已经发出的所有read，包括核实在外期间新发的read）。它只是“恢复可见性必须有之后新发出的证据”的水位，不是删除水位，也不产生墓碑。`getIssueById/getIssueDetailById` 对待核实/不可确认可见的id不给可靠活值；列表展示也不把它作为普通确认卡片，相关stale计数不能表现为最终值。元数据不等于删除墓碑。只有同session、项目令牌有效、`token.serial > freshnessFloor` 且服务端版本规则允许的完整权威读，才能清该id核实状态；这证明请求在最近核实拒绝之后才发出。404之前已在外的旧list即使稍后回答、updated_at与旧canonical相同、项目删除令牌仍有效，也不能写回该id、恢复其可靠可见性或清相关组的stale。该freshness检查在canonical receive及清核实/清stale前执行；旧页即使缺此id，也不能据其旧范围解除本轮待重验状态。
 
@@ -182,6 +182,8 @@ T6同时改 `C/store/issue/issue-details/{issue,sub_issues,link,relation}.store.
 | 404 | 落定时提升本id freshnessFloor；对象不可确认为可见、访问器不供旧值；推测行不当活值、相关组/list保持stale；无永久墓碑 | 同一round最多一次受控可见范围刷新；空页可让组计数/rows收敛，但对象仍待以后有效权威读再恢复，不从“空页”推永久删除 |
 | 其它拒绝（含403/500） | 落定时提升本id freshnessFloor，保留error与待重验状态，相关组/list仍stale，不确认推测行/计数 | 错误交回调用方；本round不自动再get或循环刷新，下一次显式重试/重新挂载开启新round，使用新token |
 | SessionChanged / 令牌已因删除失效 | 丢弃此旧流程，不写新一代cache/错误/核实元数据，不清新一代stale | 当前session的正常挂载决定后续；旧round不安排请求 |
+
+核实协调器只保存 id/round/状态/error/freshnessFloor 与在外请求、去重/预算，不保存第二份实体。绑定通过既有 useIssueListRefresh 登记可见范围；核实在外时 hook 不重复刷新，隐藏绑定保留 stale 到显示时，重新挂载可显式进入新核实轮次。成功核实后的列表刷新失败只保留该列表错误，不反向否定已经取得的权威实体。旧详情入口返回 canonical Detail 或 undefined，不再把被版本守卫拒绝的旧描述作为函数结果交给复制弹窗。
 
 每个read/replay round维护已核实id集合及每scope刷新预算1，结束后不因同一stale自动重新开round；UI重试/下次挂载才建立新预算。并发part共享当前协调round对同id去重。仅高于该id freshnessFloor的新发有效list返回完整该id时才可重新证实可见并清核实元数据；新发的空页可使回答范围的rows/计数收敛，但不把该id永久删除。较旧版本、失效令牌或核实拒绝前已发出的list均不能清，即使服务器updated_at相同。404/拒绝不推进项目删除水位，不影响无关项目。
 

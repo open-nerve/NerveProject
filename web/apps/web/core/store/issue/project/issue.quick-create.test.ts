@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
 import { answered, json } from "@/lib/auth/fake-nerve";
 import { issueDetailOf, issueOf, issuePageOf, issueStoreTab, requestedIssue } from "../fake-issues";
+import { loadProjects, projectOf } from "@/store/project/fake-projects";
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 const binding = vi.hoisted(() => ({ app: undefined as unknown }));
@@ -61,6 +62,10 @@ it("refusedCreationLeavesCanonicalGroupAndCountUnchanged", async () => {
 });
 it("lateACreationUpdatesItsBoundListWithoutEnteringSelectedB", async () => {
   const { app, nerve } = tab;
+  await loadProjects(nerve, app.projectRoot.project, tab.workspace, [
+    tab.project,
+    projectOf("B", tab.workspace.id, { id: "B" }),
+  ]);
   const store = app.issue.projectIssues;
   const listA = store.currentList!;
   const request = await requestedIssue(nerve, () => store.createIssue("ws", "A", { name: "First" }), [

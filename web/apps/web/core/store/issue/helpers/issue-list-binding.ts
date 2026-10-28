@@ -19,6 +19,7 @@ import {
 } from "@/lib/paged-groups";
 import { replayGroups } from "@/lib/paged-groups.replay";
 import { issueParts } from "@/lib/issue-membership";
+import type { VerificationRound } from "../issue-verification";
 import type { IIssueRootStore, IssueWriteScope } from "../root.store";
 
 export type IssueListScope =
@@ -44,8 +45,17 @@ export class IssueListBinding {
   readonly reconciled = new Reconciled<PagedGroups>();
   readonly loaders = observable.map<string, TLoader>();
   private source = 0;
+  private visibleParts: readonly PagePart[] = [];
+  get isVisible(): boolean {
+    return this.visibleParts.length > 0;
+  }
+  get verifying(): boolean {
+    return this.root.verification.isVerifying(this);
+  }
+  setVisibleParts(parts: readonly PagePart[]): void {
+    this.visibleParts = parts;
+  }
   private readonly failedReads = new Map<string, ReadRequest>();
-  private readonly verification = new Set<string>();
   error: unknown;
   constructor(
     readonly root: IIssueRootStore,
@@ -120,7 +130,7 @@ export class IssueListBinding {
       : [...(known?.groups ?? [])].flatMap(([group, data]) =>
           data.subgroups ? [...data.subgroups.keys()].map((subgroup) => ({ group, subgroup })) : [{ group }]
         );
-    const answer = decodePage(
+    let answer = decodePage(
       page,
       {
         sourceID: ++this.source,
@@ -135,7 +145,25 @@ export class IssueListBinding {
       this.context
     );
     // Decode every row before touching canonical; malformed trailing rows cannot partially publish a page.
-    this.root.acceptListIssues(issues);
+    if (this.root.verification.blocksPage(this, token)) throw new SessionChangedError();
+    this.root.acceptListIssues(issues, token);
+    for (const issue of issues) {
+      if (this.root.issues.held(issue.id) === null)
+        answer = {
+          ...confirmGroups(
+            answer,
+            { id: issue.id, beforeSnapshot: { kind: "known", issue }, after: null },
+            this.context
+          ).value,
+          read: answer.read,
+        };
+      else if (this.root.verification.isUncertain(issue.id))
+        for (const affected of issueParts(issue, this.context)) {
+          const group = answer.groups.get(affected.group);
+          const cell = affected.subgroup === undefined ? group : group?.subgroups?.get(affected.subgroup);
+          if (cell) cell.stale = true;
+        }
+    }
     return answer;
   }
   async prepareCatalog(issues: Issue[]): Promise<void> {
@@ -196,8 +224,14 @@ export class IssueListBinding {
     )
       throw new Error("Required issue directory is unavailable");
   }
-  private async fetch(part: PagePart | null, first: boolean, retry?: ReadRequest): Promise<PagedGroups | undefined> {
+  private async fetch(
+    part: PagePart | null,
+    first: boolean,
+    retry?: ReadRequest,
+    refreshing?: VerificationRound
+  ): Promise<PagedGroups | undefined> {
     this.root.assertActive();
+    const round = this.root.verification.begin();
     const heldGroup = part ? this.group(part.group, part.subgroup) : undefined;
     const request =
       retry ??
@@ -220,7 +254,7 @@ export class IssueListBinding {
           ? await this.reconciled.fetch(() => this.read(request))
           : await this.refreshWhole(request);
       if (value === undefined) return undefined;
-      await this.verifyPending();
+      if (!refreshing) await this.root.verification.drain(this, round);
       if (part === null) this.failedReads.clear();
       else this.failedReads.delete(key);
       runInAction(() => {
@@ -235,6 +269,7 @@ export class IssueListBinding {
         });
       throw error;
     } finally {
+      this.root.verification.end(round);
       if (this.root.active) runInAction(() => this.loaders.delete(key));
     }
   }
@@ -253,6 +288,7 @@ export class IssueListBinding {
   fetchFirst = () => this.fetch(null, true);
   retryFailed = async (): Promise<void> => {
     this.root.assertActive();
+    if (await this.root.verification.retry(this)) return;
     const requests = [...this.failedReads.values()];
     if (!requests.length) {
       await this.fetchFirst();
@@ -284,22 +320,37 @@ export class IssueListBinding {
       const result = raw
         ? replayGroups(value, change, this.answer(raw), this.context)
         : confirmGroups(value, change, this.context, heldSources);
-      for (const id of result.verifyIds) this.verification.add(id);
+      for (const id of result.verifyIds) this.root.verification.require(id, this);
       return result.value;
     });
   }
-  async verifyPending(): Promise<void> {
-    const ids = [...this.verification];
-    this.verification.clear();
-    await Promise.all(
-      ids.map(async (id) => {
-        this.root.assertActive();
-        const token = this.root.captureRead();
-        const issue = await this.root.api.get(id);
-        if (!this.root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) return;
-        this.root.acceptListIssues([issue]);
-      })
-    );
+  refreshVerification(round: VerificationRound): Promise<PagedGroups | undefined> {
+    return this.fetch(null, true, undefined, round);
+  }
+  markVerificationStale(id?: string, error?: unknown): void {
+    if (!this.root.active) return;
+    if (error)
+      runInAction(() => {
+        this.error = error;
+      });
+    const issue = id ? this.root.issues.held(id) : undefined;
+    if (issue) this.markMembershipStale(issue, issue);
+    else
+      this.reconciled.confirm((value) => {
+        const next = structuredClone(value);
+        for (const group of next.groups.values()) {
+          group.stale = true;
+          for (const cell of group.subgroups?.values() ?? []) cell.stale = true;
+        }
+        return next;
+      });
+  }
+  clearVerificationError(error: unknown): void {
+    if (this.error !== error) return;
+    this.failedReads.clear();
+    runInAction(() => {
+      this.error = undefined;
+    });
   }
   markMembershipStale(before: Issue | undefined, after: Issue | undefined): void {
     this.reconciled.confirm((value) => {

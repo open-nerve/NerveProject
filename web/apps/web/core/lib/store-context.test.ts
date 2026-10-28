@@ -10,6 +10,7 @@ import { track, until } from "@/lib/auth/fake-time";
 import { issueOf, issueDetailOf, issuePageOf, requestedIssue } from "@/store/issue/fake-issues";
 import type { GlobalViewStore } from "@/store/global-view.store";
 import type { RootStore } from "@/store/root.store";
+import { projectOf, loadProjects } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // Each session of the tab has its own RootStore (M2 design 7.1: a tab never writes as the wrong account):
@@ -132,6 +133,7 @@ describe("store-context", () => {
     const x = context.rootStore;
     const workspace = workspaceOf("ws");
     await loadWorkspaces(nerve, x.workspaceRoot, [workspace]);
+    await loadProjects(nerve, x.projectRoot.project, workspace, [projectOf("A", workspace.id, { id: "A" })]);
     await answered(
       nerve,
       () => x.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 20 }),
@@ -139,6 +141,7 @@ describe("store-context", () => {
       issuePageOf([issueOf("x")]),
       "X list"
     );
+    const originalPage = structuredClone(x.issue.projectIssues.currentList!.reconciled.value);
     const first = await requestedIssue(
       nerve,
       () => x.issue.projectIssues.updateIssue("ws", "A", "x", { name: "first" }),
@@ -162,8 +165,10 @@ describe("store-context", () => {
     expect(first.result.error).toBeInstanceOf(SessionChangedError);
     expect(queued.error).toBeInstanceOf(SessionChangedError);
     expect(nerve.calls).toHaveLength(count);
-    expect(x.issue.issues.getIssueById("x")?.name).toBe("x");
-    expect(x.issue.projectIssues.getIssueIds()).toEqual(["x"]);
+    expect(x.issue.issues.held("x")?.name).toBe("x");
+    expect(x.issue.issues.getIssueById("x")).toBeUndefined();
+    expect(x.issue.projectIssues.getIssueIds()).toEqual([]);
+    expect(x.issue.projectIssues.currentList!.reconciled.value).toEqual(originalPage);
     expect(y.issue.issues.getIssueById("x")).toBeUndefined();
     expect(y.issue.projectIssues.groups).toBeUndefined();
     const creating = track(
@@ -176,6 +181,8 @@ describe("store-context", () => {
     nerve.calls[count + 1]!.answer(json(201, issueDetailOf("new")));
     await until(() => creating.settled, "Y confirmed");
     expect(creating.error).toBeUndefined();
+    await loadWorkspaces(nerve, y.workspaceRoot, [workspace]);
+    await loadProjects(nerve, y.projectRoot.project, workspace, [projectOf("A", workspace.id, { id: "A" })]);
     expect(y.issue.issues.getIssueById("new")?.id).toBe("new");
   });
 

@@ -147,7 +147,7 @@ make e2e
 
 ## Task 6：工作项唯一副本与删除终态（约450–850行）
 
-**Files：** C/store/issue/issue.store.ts、新issue.store.test.ts；C/lib/reconciled.ts/ReconciledByKey增加receive及测试；root.store读令牌/项目删除水位、helpers/issue-list-binding.ts及必要use-issue-list-refresh联动；同Task改issue-details/{issue,sub_issues,link,relation}.store.ts，inbox/inbox-issue.store.ts、hooks/store/use-issues.ts 只读 map 消费；attachment 已删除，不恢复。准确写者清单见 spec B.1。
+**Files：** C/store/issue/issue.store.ts、新issue.store.test.ts；新 issue-verification.ts 由根拥有，统一核实 round、id 去重、可见 scope 预算与 freshnessFloor，仅保存元数据；C/lib/reconciled.ts/ReconciledByKey增加receive及测试；root.store读令牌/项目删除水位、helpers/issue-list-binding.ts及必要use-issue-list-refresh联动；同Task改issue-details/{issue,sub_issues,link,relation}.store.ts，inbox/inbox-issue.store.ts、hooks/store/use-issues.ts 只读 map 消费；attachment 已删除，不恢复。准确写者清单见 spec B.1。
 **Interfaces：** `receive(key,answer,choose)`初始化或合并并在在外read上重放choose；IssueStore `acceptRead(answer,token)`/getIssueById/getIssueDetailById/confirmChange、`refreshAuthoritative(issueId):Promise<IssueDetail|undefined>`；IssueRootStore captureRead（每次发出前核 active 并独立++readSerial，token携本代不可变 owner）/invalidateProjectReads及token守卫；核实元数据另记每id freshnessFloor；spec§2.6保留Issue|IssueDetail|null，issuesMap为派生Readonly视图。
 
 - [ ] 首项关闭 R17（spec§2.6）：direct-confirm 产生 verifyIds 后立即进入与 fetch/replay 共用的核实 round，跨副本/并发 part 去重；真实 GET、核实拒绝后的显式重试、退役无跟进均有测试。已成功的业务写保持成功，核实拒绝通过读取/可见错误状态交回，不能重发业务写。下述四路状态及 freshness 合同同 Task 一次闭合。

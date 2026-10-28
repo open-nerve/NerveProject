@@ -46,6 +46,8 @@ afterEach(() => {
   app.dispose();
   vi.useRealTimers();
 });
+const accept = (issues: import("@nerve/api-client").Issue[]) =>
+  app.issue.acceptListIssues(issues, app.issue.captureRead());
 const whole = () => ({
   total: 10,
   groups: [
@@ -452,7 +454,7 @@ it("writeFreezesBodyBeforeAndHeldSourcesAfterRequiredDirectoryWait", async () =>
     "name list"
   );
   // A detail has the off-window issue in a state the list's old directory did not contain.
-  app.issue.issues.addIssue([listIssue("x", 5, { state_id: stateB.id, name: "old" })]);
+  accept([listIssue("x", 5, { state_id: stateB.id, name: "old" })]);
   const wait = await requestedIssue(
     nerve,
     () =>
@@ -464,9 +466,7 @@ it("writeFreezesBodyBeforeAndHeldSourcesAfterRequiredDirectoryWait", async () =>
       ),
     ["GET", "/api/v0/projects/A/states"]
   );
-  app.issue.issues.addIssue([
-    listIssue("x", 5, { state_id: stateA.id, name: "latest", updated_at: "2026-10-28T01:00:00Z" }),
-  ]);
+  accept([listIssue("x", 5, { state_id: stateA.id, name: "latest", updated_at: "2026-10-28T01:00:00Z" })]);
   expect(nerve.calls.some((call) => call.method === "PATCH")).toBe(false);
   wait.call.answer(json(200, { data: [stateA, stateB] }));
   await until(() => nerve.calls.some((call) => call.method === "PATCH"), "write after directory");
@@ -480,13 +480,13 @@ it("writeFreezesBodyBeforeAndHeldSourcesAfterRequiredDirectoryWait", async () =>
     app.issue.projectIssues.getGroupIssueCount(stateA.id),
     app.issue.projectIssues.getGroupIssueCount(stateB.id),
   ]).toEqual([2, 1]);
-  expect([...app.issue.projectIssues.groups!.values()].every((group) => !group.stale)).toBe(true);
+  expect([...app.issue.projectIssues.groups!.values()].every((group) => group.stale)).toBe(true);
 });
 
 it("ownReadBeforeWriteAnswerKeepsOffWindowBeforeMembershipWithoutWholeRefetch", async () => {
   await load();
   const before = listIssue("x", 20, { state_id: "A" });
-  app.issue.issues.addIssue([before]);
+  accept([before]);
   const patch = await requestedIssue(
     nerve,
     () => app.issue.projectIssues.updateIssue("ws", "A", "x", { state_id: "B" }),
@@ -541,7 +541,7 @@ it.each([200, 403])("listCreatedDuringWrite prepares directories; %s preserves t
     { data: [] },
     "initial directory"
   );
-  app.issue.issues.addIssue([listIssue("x", 20, { label_ids: ["before-label"] })]);
+  accept([listIssue("x", 20, { label_ids: ["before-label"] })]);
   const patch = await requestedIssue(
     nerve,
     () => app.issue.projectIssues.updateIssue("ws", "A", "x", { label_ids: ["after-label"] }),
@@ -579,6 +579,20 @@ it.each([200, 403])("listCreatedDuringWrite prepares directories; %s preserves t
     )
   );
   await patch.promise;
+  if (status === 200) {
+    expect(app.issue.projectIssues.getIssueLoader()).toBe("init-loader");
+    await until(
+      () => nerve.calls.some((call) => call.path === "/api/v0/issues/x" && call.method === "GET"),
+      "direct confirmation verification"
+    );
+    nerve.calls
+      .at(-1)!
+      .answer(json(200, { ...issueDetailOf("x"), label_ids: ["after-label"], updated_at: "2026-10-29T00:00:00Z" }));
+    await vi.advanceTimersByTimeAsync(1);
+    const refresh = nerve.calls.at(-1)!;
+    if (refresh.path === "/api/v0/projects/A/issues") refresh.answer(json(200, issuePageOf([])));
+    await vi.advanceTimersByTimeAsync(1);
+  }
   expect(app.issue.issues.getIssueById("x")?.label_ids).toEqual(["after-label"]);
   expect(nerve.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
   if (status === 403) {

@@ -105,6 +105,35 @@ it("visible stale is fetched once and hidden group waits until expansion", async
   expect(tab.nerve.calls[2]!.query.group_key).toBe("B");
   await answer(2);
 });
+
+it("verification refusal waits through rerenders and a new mount opens one retry round", async () => {
+  const list = tab.app.issue.projectIssues.currentList!;
+  await mount(list);
+  let refusal!: Promise<void>;
+  await act(async () => {
+    refusal = expect(tab.app.issue.issues.refreshAuthoritative("a")).rejects.toMatchObject({ status: 403 });
+    await until(() => tab.nerve.calls.length === 2, "authoritative read");
+  });
+  await answer(1, 403);
+  await refusal;
+  await mount(list);
+  await requestCount(2);
+  await act(async () => view.render(null));
+  await mount(list);
+  await requestCount(3);
+  expect(tab.nerve.calls[2]).toMatchObject({ method: "GET", path: "/api/v0/issues/a" });
+  await act(async () => {
+    tab.nerve.calls[2]!.answer(
+      json(200, { ...listIssue("a", 10, { state_id: "A" }), description_html: "", updated_at: "2026-10-29T00:00:00Z" })
+    );
+    await until(() => tab.nerve.calls.length === 4, "one scope refresh");
+    tab.nerve.calls[3]!.answer(json(200, page));
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(list.error).toBeUndefined();
+  await mount(list);
+  await requestCount(4);
+});
 it("refusal stays stale without render loops and explicit retry starts one new read", async () => {
   const list = tab.app.issue.projectIssues.currentList!;
   list.markMembershipStale(undefined, listIssue("a", 10, { state_id: "A" }));

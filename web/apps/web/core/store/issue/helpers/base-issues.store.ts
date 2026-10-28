@@ -39,7 +39,10 @@ export class BaseIssuesStore<TFilter extends IBaseIssueFilterStore = IBaseIssueF
     return this.currentList?.reconciled.value?.total;
   }
   getIssueIds = (group = "", subgroup?: string): string[] | undefined =>
-    this.currentList?.group(group, subgroup)?.rows.map((row) => row.id);
+    this.currentList
+      ?.group(group, subgroup)
+      ?.rows.filter((row) => !!this.rootIssueStore.issues.getIssueById(row.id))
+      .map((row) => row.id);
   getGroupIssueCount = (group?: string, subgroup?: string, cumulative = false): number | undefined =>
     cumulative && subgroup !== undefined
       ? this.currentList?.reconciled.value?.subgroupTotals?.get(subgroup)
@@ -47,7 +50,9 @@ export class BaseIssuesStore<TFilter extends IBaseIssueFilterStore = IBaseIssueF
   getPaginationData = (group?: string, subgroup?: string): Group | undefined =>
     this.currentList?.group(group, subgroup);
   getIssueLoader = (group?: string, subgroup?: string): TLoader =>
-    this.currentList?.loaders.get(group === undefined ? "whole" : pagePartKey({ group, subgroup }));
+    this.currentList?.verifying
+      ? "init-loader"
+      : this.currentList?.loaders.get(group === undefined ? "whole" : pagePartKey({ group, subgroup }));
   clear = (_clearOptions = true): void => {
     runInAction(() => {
       this.currentList = undefined;

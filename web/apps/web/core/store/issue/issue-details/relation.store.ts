@@ -17,6 +17,7 @@ import { REVERSE_RELATIONS } from "@nerve/constants";
 // services
 import { IssueRelationService } from "@/services/issue";
 // types
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import type { IIssueDetail } from "./root.store";
 export interface IIssueRelationStoreActions {
   // actions
@@ -92,14 +93,17 @@ export class IssueRelationStore implements IIssueRelationStore {
 
   // actions
   fetchRelations = async (workspaceSlug: string, projectId: string, issueId: string) => {
+    const root = this.rootIssueDetailStore.rootIssueStore;
+    const token = root.captureRead();
     const response = await this.issueRelationService.listIssueRelations(workspaceSlug, projectId, issueId);
 
+    if (!root.isReadCurrent(token, [projectId])) throw new SessionChangedError();
     runInAction(() => {
       Object.keys(response).forEach((key) => {
         const relation_key = key as TIssueRelationTypes;
         const relation_issues = response[relation_key];
         const issues = relation_issues.flat().map((issue) => issue);
-        if (issues && issues.length > 0) this.rootIssueDetailStore.rootIssueStore.issues.addIssue(issues);
+        if (issues && issues.length > 0) root.acceptListIssues(issues, token);
         set(
           this.relationMap,
           [issueId, relation_key],
@@ -118,11 +122,14 @@ export class IssueRelationStore implements IIssueRelationStore {
     relationType: TIssueRelationTypes,
     issues: string[]
   ) => {
+    const root = this.rootIssueDetailStore.rootIssueStore;
+    const token = root.captureRead();
     const response = await this.issueRelationService.createIssueRelations(workspaceSlug, projectId, issueId, {
       relation_type: relationType,
       issues,
     });
 
+    if (!root.isReadCurrent(token, [projectId])) throw new SessionChangedError();
     const reverseRelatedType = REVERSE_RELATIONS[relationType];
 
     const issuesOfRelation = get(this.relationMap, [issueId, relationType]) ?? [];
@@ -131,7 +138,7 @@ export class IssueRelationStore implements IIssueRelationStore {
       runInAction(() => {
         response.forEach((issue) => {
           const issuesOfRelated = get(this.relationMap, [issue.id, reverseRelatedType]);
-          this.rootIssueDetailStore.rootIssueStore.issues.addIssue([issue]);
+          root.issues.acceptRead(issue, token);
           issuesOfRelation.push(issue.id);
 
           if (!issuesOfRelated) {

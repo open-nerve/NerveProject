@@ -121,6 +121,19 @@ export class Reconciled<V> {
     this.changesDuringFetch?.push(change);
     for (const { changes } of this.parts.values()) changes.push(change);
   }
+
+  /** Accept an independent answer, retaining the same merge during every outstanding read. */
+  receive(answer: V, choose: (held: V | undefined, answer: V) => V): V {
+    const merge = (held: V | undefined) => choose(held, answer);
+    const value = merge(this.value);
+    runInAction(() => {
+      this.value = value;
+      this.answeredAt = ++answersWritten;
+    });
+    this.changesDuringFetch?.push(merge);
+    for (const { changes } of this.parts.values()) changes.push(merge);
+    return value;
+  }
 }
 
 /** A Reconciled value for each key (for one, a workspace's id): each key has its own newest fetch. */
@@ -145,6 +158,10 @@ export class ReconciledByKey<V> {
   /** Fetches the key's value with read (Reconciled.fetch). */
   fetch(key: string, read: () => Promise<V>): Promise<V | undefined> {
     return this.entry(key).fetch(read);
+  }
+
+  receive(key: string, answer: V, choose: (held: V | undefined, answer: V) => V): V {
+    return this.entry(key).receive(answer, choose);
   }
 
   /** A change nerve confirmed to the key's value (Reconciled.confirm); for no key, there is nothing it could change. */

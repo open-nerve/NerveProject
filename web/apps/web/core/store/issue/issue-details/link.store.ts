@@ -105,14 +105,11 @@ export class IssueLinkStore implements IIssueLinkStore {
 
   createLink = async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssueLink>) => {
     const response = await this.issueService.createIssueLink(workspaceSlug, projectId, issueId, data);
-    const issueLinkCount = this.getLinksByIssueId(issueId)?.length ?? 0;
     runInAction(() => {
-      this.links[issueId].push(response.id);
+      (this.links[issueId] ??= []).push(response.id);
       set(this.linkMap, response.id, response);
-      this.rootIssueDetailStore.rootIssueStore.issues.updateIssue(issueId, {
-        link_count: issueLinkCount + 1, // increment link count
-      });
     });
+    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(issueId);
     // fetching activity
     this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
     return response;
@@ -150,7 +147,6 @@ export class IssueLinkStore implements IIssueLinkStore {
   };
 
   removeLink = async (workspaceSlug: string, projectId: string, issueId: string, linkId: string) => {
-    const issueLinkCount = this.getLinksByIssueId(issueId)?.length ?? 0;
     await this.issueService.deleteIssueLink(workspaceSlug, projectId, issueId, linkId);
 
     const linkIndex = this.links[issueId].findIndex((_comment) => _comment === linkId);
@@ -158,11 +154,9 @@ export class IssueLinkStore implements IIssueLinkStore {
       runInAction(() => {
         this.links[issueId].splice(linkIndex, 1);
         delete this.linkMap[linkId];
-        this.rootIssueDetailStore.rootIssueStore.issues.updateIssue(issueId, {
-          link_count: issueLinkCount - 1, // decrement link count
-        });
       });
 
+    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(issueId);
     // fetching activity
     this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
   };

@@ -11,13 +11,14 @@ import { computedFn } from "mobx-utils";
 // types
 
 // services
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { IssueService } from "@/services/issue";
 // types
 import type { IIssueDetail } from "./root.store";
 
 export interface IIssueStoreActions {
   // actions
-  fetchIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<IssueDetail>;
+  fetchIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<IssueDetail | undefined>;
   updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => Promise<void>;
   removeIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
@@ -25,7 +26,7 @@ export interface IIssueStoreActions {
     workspaceSlug: string,
     project_identifier: string,
     sequence_id: string
-  ) => Promise<IssueDetail>;
+  ) => Promise<IssueDetail | undefined>;
 }
 
 export interface IIssueStore extends IIssueStoreActions {
@@ -69,23 +70,31 @@ export class IssueStore implements IIssueStore {
       this.rootIssueDetailStore.fetchReactions(workspaceSlug, projectId, issueId),
       this.rootIssueDetailStore.fetchLinks(workspaceSlug, projectId, issueId),
       ...(issue.parent_id && issue.project_id
-        ? [
-            this.issueService
-              .retrieve(workspaceSlug, issue.project_id, issue.parent_id)
-              .then((parent) => this.rootIssueDetailStore.rootIssueStore.issues.addIssue([parent])),
-          ]
+        ? [this.readParent(workspaceSlug, issue.project_id, issue.parent_id)]
         : []),
     ]);
   }
 
+  private async readParent(workspaceSlug: string, projectId: string, id: string) {
+    const root = this.rootIssueDetailStore.rootIssueStore;
+    const token = root.captureRead();
+    const parent = await this.issueService.retrieve(workspaceSlug, projectId, id);
+    root.issues.acceptRead(parent, token);
+  }
+
   // actions
   fetchIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
+    const root = this.rootIssueDetailStore.rootIssueStore;
+    const token = root.captureRead();
     const issue = await this.issueService.retrieve(workspaceSlug, projectId, issueId);
 
     if (!issue) throw new Error("Work item not found");
 
-    this.addIssueToStore(issue);
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
+    root.issues.acceptRead(issue, token);
+    if (!root.issues.getIssueDetailById(issue.id)) await root.verification.refresh(issue.id, false);
 
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
     await this.loadIssueResources(workspaceSlug, projectId, issueId, issue);
 
     // fetch issue activity
@@ -104,13 +113,7 @@ export class IssueStore implements IIssueStore {
     // TODO: check if this function is required
     this.rootIssueDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(projectId);
 
-    return issue;
-  };
-
-  addIssueToStore = (issue: Issue) => {
-    this.rootIssueDetailStore.rootIssueStore.issues.addIssue([issue]);
-
-    return issue;
+    return root.issues.getIssueDetailById(issue.id);
   };
 
   updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => {
@@ -133,6 +136,8 @@ export class IssueStore implements IIssueStore {
   };
 
   fetchIssueWithIdentifier = async (workspaceSlug: string, project_identifier: string, sequence_id: string) => {
+    const root = this.rootIssueDetailStore.rootIssueStore;
+    const token = root.captureRead();
     const issue = await this.issueService.retrieveWithIdentifier(workspaceSlug, project_identifier, sequence_id);
     const issueIdentifier = `${project_identifier}-${sequence_id}`;
     const issueId = issue?.id;
@@ -141,8 +146,11 @@ export class IssueStore implements IIssueStore {
 
     if (!issue || !projectId || !issueId) throw new Error("Issue not found");
 
-    this.addIssueToStore(issue);
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
+    root.issues.acceptRead(issue, token);
+    if (!root.issues.getIssueDetailById(issue.id)) await root.verification.refresh(issue.id, false);
 
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
     await this.loadIssueResources(workspaceSlug, projectId, issueId, issue);
 
     // add identifiers to map
@@ -164,6 +172,6 @@ export class IssueStore implements IIssueStore {
     // TODO: check if this function is required
     rootWorkItemDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(projectId);
 
-    return issue;
+    return root.issues.getIssueDetailById(issue.id);
   };
 }

@@ -15,7 +15,7 @@ import type { TRenderQuickActions } from "./list-view-types";
 
 interface Props {
   issueIds: string[] | undefined;
-  issuesMap: Record<string, Issue | IssueDetail>;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   groupId: string;
   canEditProperties: (projectId: string | undefined) => boolean;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;

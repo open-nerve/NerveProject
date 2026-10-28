@@ -35,7 +35,7 @@ import { HeaderGroupByCard } from "./headers/group-by-card";
 import { KanbanGroup } from "./kanban-group";
 
 export interface IKanBan {
-  issuesMap: Record<string, Issue | IssueDetail>;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   groups: Map<string, Group>;
   getGroupIssueCount: (
     groupId: string | undefined,

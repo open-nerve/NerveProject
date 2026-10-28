@@ -8,8 +8,8 @@ import { APIService } from "@/services/api.service";
 import { heldChange } from "@/lib/auth/fake-tab";
 import type { TIssueReaction, TIssueLink, TIssueRelation } from "@nerve/types";
 import { until, track } from "@/lib/auth/fake-time";
-import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
-import { issueOf } from "@/store/issue/fake-issues";
+import { FakeNerve, answered, json, problem } from "@/lib/auth/fake-nerve";
+import { issueOf, requestedIssue } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { projectOf, loadProjects, stateOf } from "@/store/project/fake-projects";
 // Public APIService replies include Axios metadata; entity data remains the complete real response fixture.
@@ -110,16 +110,18 @@ it.each([false, true].flatMap((identifier) => [null, "parent"].map((parentId) =>
   "both retrieve paths fill real resource caches from independent responses ($identifier/$parentId)",
   async ({ identifier, parentId }) => {
     const { detail, source, parent, get, fetch } = resources(parentId);
-    const add = vi.spyOn(app.issue.issues, "addIssue");
+    const add = vi.spyOn(app.issue.issues, "acceptRead");
     await fetch(identifier);
     expect(app.issue.issues.getIssueById(source.id)).toEqual(source);
     expect(detail.reaction.getReactionById(reaction.id)).toEqual(reaction);
     expect(detail.reaction.getReactionsByIssueId(source.id)).toEqual({ thumbsup: [reaction.id] });
     expect(detail.link.getLinksByIssueId(source.id)).toEqual([link.id]);
     expect(detail.link.getLinkById(link.id)).toEqual(link);
-    expect(add.mock.calls.map(([issues]) => issues.map((issue) => issue.id))).toEqual(
-      parentId ? [[source.id], [parent.id]] : [[source.id]]
-    );
+    expect(add.mock.calls.map(([issue]) => [issue.id])).toEqual(parentId ? [[source.id], [parent.id]] : [[source.id]]);
+    if (parentId) {
+      expect(add.mock.calls[1]![1].serial).toBeGreaterThan(add.mock.calls[0]![1].serial);
+      expect(add.mock.calls[1]![1].owner).toBe(add.mock.calls[0]![1].owner);
+    }
     expect(get).toHaveBeenCalledTimes(parentId ? 4 : 3);
     expect(get.mock.calls[0]?.[1]).toEqual({ params: undefined });
     expect(get.mock.calls.filter(([url]) => url.includes("/issues/parent/"))).toHaveLength(parentId ? 1 : 0);
@@ -129,6 +131,66 @@ it.each([false, true].flatMap((identifier) => [null, "parent"].map((parentId) =>
       expect(source).not.toHaveProperty(field);
   }
 );
+
+it.each([false, true])("legacyDetailConsumersCannotBypassCanonicalVersion (%s)", async (identifier) => {
+  const { source, parent, related, fetch, detail } = resources("parent", true);
+  const updated_at = "2026-10-29T00:00:00.000000009Z";
+  for (const row of [source, parent, related])
+    app.issue.issues.acceptRead(
+      { ...row, name: "new", updated_at, description_html: "new HTML" },
+      app.issue.captureRead()
+    );
+  await fetch(identifier);
+  await until(
+    () => detail.relation.getRelationsByIssueId(source.id)?.blocking?.includes(related.id) === true,
+    "legacy related row"
+  );
+  for (const row of [source, parent, related]) {
+    expect(app.issue.issues.getIssueById(row.id)?.name).toBe("new");
+    expect(app.issue.issues.getIssueDetailById(row.id)?.description_html).toBe("new HTML");
+  }
+});
+
+it.each([200, 500])("detailRetryIsBoundedAndRefusalReturns (%s)", async (status) => {
+  const { source, fetch } = resources(null);
+  app.issue.issues.acceptRead(
+    { ...issueOf(source.id, project.id, project.workspace_id), updated_at: "2026-10-30T00:00:00Z" },
+    app.issue.captureRead()
+  );
+  const request = await requestedIssue(nerve, () => fetch(false), ["GET", "/api/v0/issues/R1"]);
+  const outcome = status === 500 ? expect(request.promise).rejects.toMatchObject({ status: 500 }) : request.promise;
+  request.call.answer(status === 500 ? problem(500, "internal") : json(200, source));
+  await outcome;
+  expect(app.issue.issues.getIssueDetailById(source.id)).toBeUndefined();
+  expect(nerve.calls.filter((call) => call.path === "/api/v0/issues/R1")).toHaveLength(1);
+});
+
+it("legacyLinkCountComesFromAuthoritativeVersionAndRefusalDoesNotMutate", async () => {
+  const { source, detail } = resources(null);
+  app.issue.issues.acceptRead({ ...source, link_count: 4 }, app.issue.captureRead());
+  vi.spyOn(APIService.prototype, "post").mockResolvedValue(reply(link));
+  const creating = await requestedIssue(
+    nerve,
+    () => detail.link.createLink(ws.slug, project.id, source.id, { url: link.url }),
+    ["GET", "/api/v0/issues/R1"]
+  );
+  expect(app.issue.issues.getIssueById(source.id)).toBeUndefined();
+  const authoritative = { ...source, link_count: 11, updated_at: "2026-10-29T00:00:00Z" };
+  creating.call.answer(json(200, authoritative));
+  await creating.promise;
+  expect(app.issue.issues.getIssueDetailById(source.id)).toEqual(authoritative);
+  vi.spyOn(APIService.prototype, "delete").mockResolvedValue(reply(undefined));
+  const removing = await requestedIssue(nerve, () => detail.link.removeLink(ws.slug, project.id, source.id, link.id), [
+    "GET",
+    "/api/v0/issues/R1",
+  ]);
+  const refused = expect(removing.promise).rejects.toMatchObject({ status: 403 });
+  removing.call.answer(problem(403, "forbidden"));
+  await refused;
+  expect(app.issue.issues.getIssueById(source.id)).toBeUndefined();
+  app.issue.issues.acceptRead(authoritative, app.issue.captureRead());
+  expect(app.issue.issues.getIssueDetailById(source.id)).toEqual(authoritative);
+});
 it.each([false, true])(
   "fetch owns pending auxiliary loads instead of returning before they finish (%s)",
   async (identifier) => {

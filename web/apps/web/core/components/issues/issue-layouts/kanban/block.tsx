@@ -40,7 +40,7 @@ interface IssueBlockProps {
   issueId: string;
   groupId: string;
   subGroupId?: string;
-  issuesMap: Record<string, Issue | IssueDetail>;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   displayProperties: IIssueDisplayProperties | undefined;
   draggableId: string;
   canDropOverIssue: boolean;

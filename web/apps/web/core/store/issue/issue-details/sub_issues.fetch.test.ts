@@ -3,10 +3,11 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import { runInAction } from "mobx";
 import type { TIssueSubIssues } from "@nerve/types";
-import { FakeNerve, json } from "@/lib/auth/fake-nerve";
+import { FakeNerve, json, noContent } from "@/lib/auth/fake-nerve";
+import { heldChange } from "@/lib/auth/fake-tab";
 import { until } from "@/lib/auth/fake-time";
 import { APIService } from "@/services/api.service";
-import { issueOf } from "@/store/issue/fake-issues";
+import { issueOf, requestedIssue } from "@/store/issue/fake-issues";
 import { labelOf, loadProjects, projectMemberOf, projectOf, stateOf } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 
@@ -77,7 +78,7 @@ it.each(["fetch", "create"].flatMap((operation) => [false, true].map((crossProje
         cancelled: [],
       },
     };
-    app.issue.issues.addIssue([parent]);
+    app.issue.issues.acceptRead(parent, app.issue.captureRead());
     const endpoint = `/api/workspaces/${ws.slug}/projects/${here.id}/issues/${parent.id}/sub-issues/`;
     const get = vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
       if (url === endpoint) return reply(response);
@@ -86,23 +87,30 @@ it.each(["fetch", "create"].flatMap((operation) => [false, true].map((crossProje
     });
     const post = vi.spyOn(APIService.prototype, "post").mockResolvedValue(reply(response));
     const subIssues = app.issue.issueDetail.subIssues;
-    if (operation === "fetch") await subIssues.fetchSubIssues(ws.slug, here.id, parent.id);
-    else
-      await subIssues.createSubIssues(
-        ws.slug,
-        here.id,
-        parent.id,
-        children.map((child) => child.id)
-      );
+    const loading =
+      operation === "fetch"
+        ? subIssues.fetchSubIssues(ws.slug, here.id, parent.id)
+        : subIssues.createSubIssues(
+            ws.slug,
+            here.id,
+            parent.id,
+            children.map((child) => child.id)
+          );
 
+    await until(() => nerve.calls.some((call) => call.path === "/api/v0/issues/parent"), "authoritative parent count");
+    const parentRead = nerve.calls.find((call) => call.path === "/api/v0/issues/parent")!;
+    expect(app.issue.issues.getIssueById(parent.id)).toBeUndefined();
+    const authoritative = { ...parent, description_html: "", sub_issues_count: 8, updated_at: "2026-10-29T00:00:00Z" };
+    parentRead.answer(json(200, authoritative));
+    await loading;
+    const directories = nerve.calls.filter((call) => call !== parentRead);
     if (crossProject) {
-      await until(() => nerve.calls.length === 3, "external directories requested");
-      expect(nerve.calls.map(({ method, path }) => [method, path]).toSorted()).toEqual([
+      expect(directories.map(({ method, path }) => [method, path]).toSorted()).toEqual([
         ["GET", `/api/v0/projects/${elsewhere.id}/labels`],
         ["GET", `/api/v0/projects/${elsewhere.id}/members`],
         ["GET", `/api/v0/projects/${elsewhere.id}/states`],
       ]);
-      for (const call of nerve.calls) {
+      for (const call of directories) {
         const data = call.path.endsWith("/states") ? [state] : call.path.endsWith("/members") ? [member] : [label];
         call.answer(json(200, { data }));
       }
@@ -115,11 +123,12 @@ it.each(["fetch", "create"].flatMap((operation) => [false, true].map((crossProje
       );
     } else {
       await vi.advanceTimersByTimeAsync(0);
-      expect(nerve.calls).toEqual([]);
+      expect(directories).toEqual([]);
     }
     expect(subIssues.subIssuesByIssueId(parent.id)).toEqual(children.map((child) => child.id));
     expect(subIssues.stateDistributionByIssueId(parent.id)).toEqual(response.state_distribution);
-    expect(app.issue.issues.getIssueById(parent.id)?.sub_issues_count).toBe(children.length);
+    expect(app.issue.issues.getIssueById(parent.id)?.sub_issues_count).toBe(8);
+    expect(app.issue.issues.getIssueById(parent.id)?.updated_at).toBe(authoritative.updated_at);
     for (const child of children) expect(app.issue.issues.getIssueById(child.id)).toEqual(child);
     expect(get.mock.calls.map(([url]) => url)).toEqual(operation === "fetch" ? [endpoint] : []);
     expect(post.mock.calls.map(([url, body]) => [url, body])).toEqual(
@@ -127,3 +136,29 @@ it.each(["fetch", "create"].flatMap((operation) => [false, true].map((crossProje
     );
   }
 );
+
+it("deletedParentDiscardsLateLegacySubReadWithoutAuthoritativeFollowup", async () => {
+  const parent = issueOf("parent", here.id, ws.id);
+  app.issue.issues.acceptRead(parent, app.issue.captureRead());
+  const http = heldChange<AxiosResponse<TIssueSubIssues>>();
+  vi.spyOn(APIService.prototype, "get").mockReturnValue(http.sent);
+  const loading = app.issue.issueDetail.subIssues.fetchSubIssues(ws.slug, here.id, parent.id).catch((error) => error);
+  const deleting = await requestedIssue(
+    nerve,
+    () => app.issue.deleteIssue(parent.id, app.issue.scope(ws.slug, here.id)),
+    ["DELETE", "/api/v0/issues/parent"]
+  );
+  deleting.call.answer(noContent());
+  await deleting.promise;
+  http.answer(
+    reply({
+      sub_issues: [{ ...issueOf("child", here.id, ws.id), parent_id: parent.id }],
+      state_distribution: { backlog: [], unstarted: [], started: [], completed: [], cancelled: [] },
+    })
+  );
+  await vi.advanceTimersByTimeAsync(1);
+  expect(nerve.calls).toHaveLength(1);
+  await loading;
+  expect(app.issue.issues.getIssueById("child")).toBeUndefined();
+  expect(app.issue.issueDetail.subIssues.subIssuesByIssueId(parent.id)).toBeUndefined();
+});

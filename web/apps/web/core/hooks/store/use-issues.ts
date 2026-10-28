@@ -17,7 +17,7 @@ import type { IProjectIssues, IProjectIssuesFilter } from "@/store/issue/project
 import type { IWorkspaceDraftIssues, IWorkspaceDraftIssuesFilter } from "@/store/issue/workspace-draft";
 
 type defaultIssueStore = {
-  issueMap: Record<string, Issue | IssueDetail>;
+  issueMap: Readonly<Record<string, Issue | IssueDetail>>;
 };
 
 export type TStoreIssues = {

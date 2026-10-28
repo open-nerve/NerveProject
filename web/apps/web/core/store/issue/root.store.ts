@@ -5,7 +5,7 @@
  */
 
 import { isEmpty } from "lodash-es";
-import { autorun, makeObservable, observable, toJS } from "mobx";
+import { autorun, makeObservable, observable, runInAction, toJS } from "mobx";
 // types
 import type {
   ApiClient,
@@ -26,6 +26,7 @@ import type { IArchivedIssuesFilter, IArchivedIssues } from "./archived";
 import { ArchivedIssuesFilter, ArchivedIssues } from "./archived";
 import type { IIssueStore } from "./issue.store";
 import { IssueStore } from "./issue.store";
+import { IssueVerification } from "./issue-verification";
 import type { ICalendarStore } from "./issue_calendar_view.store";
 import { CalendarStore } from "./issue_calendar_view.store";
 import type { IIssueKanBanViewStore } from "./issue_kanban_view.store";
@@ -90,6 +91,10 @@ export class IssueRootStore {
   readonly api: IssueApiService;
   readonly listApi: IssueListService;
   private serial = 0;
+  get readSerial(): number {
+    return this.serial;
+  }
+  readonly verification = new IssueVerification(this);
   private readonly deletions = new Map<string, { serial: number; workspaceID: string }>();
   private readonly lists = new Set<IssueListBinding>();
   private readonly queues = new Map<string, ReturnType<typeof oneAtATime>>();
@@ -102,6 +107,7 @@ export class IssueRootStore {
     this.api = new IssueApiService(api);
     this.listApi = new IssueListService(api);
     makeObservable(this, {
+      active: observable,
       workspaceSlug: observable.ref,
       projectId: observable.ref,
       userId: observable.ref,
@@ -123,7 +129,7 @@ export class IssueRootStore {
       if (!isEmpty(rootStore?.memberRoot?.memberMap)) this.memberMap = rootStore?.memberRoot?.memberMap || undefined;
     });
 
-    this.issues = new IssueStore();
+    this.issues = new IssueStore(this);
 
     this.issueDetail = new IssueDetail(this);
 
@@ -147,7 +153,9 @@ export class IssueRootStore {
   }
   retire(): void {
     if (!this.active) return;
-    this.active = false;
+    runInAction(() => {
+      this.active = false;
+    });
     for (const list of this.lists) list.reconciled.invalidate();
   }
   registerList(list: IssueListBinding): void {
@@ -156,7 +164,7 @@ export class IssueRootStore {
   }
   captureRead(): IssueReadToken {
     this.assertActive();
-    return { owner: this.owner, serial: ++this.serial };
+    return Object.freeze({ owner: this.owner, serial: ++this.serial });
   }
   isReadCurrent(token: IssueReadToken, projectIDs: string[], workspaceID?: string): boolean {
     return (
@@ -165,7 +173,8 @@ export class IssueRootStore {
       (projectIDs.length
         ? projectIDs.every((id) => token.serial >= (this.deletions.get(id)?.serial ?? 0))
         : [...this.deletions.values()].every(
-            (deletion) => deletion.workspaceID !== workspaceID || token.serial >= deletion.serial
+            (deletion) =>
+              (workspaceID !== undefined && deletion.workspaceID !== workspaceID) || token.serial >= deletion.serial
           ))
     );
   }
@@ -176,12 +185,43 @@ export class IssueRootStore {
     if (!workspaceID) throw new Error("Issue workspace is not loaded");
     return { workspaceSlug, projectID, workspaceID };
   }
-  acceptListIssues(issues: Issue[]): void {
-    this.assertActive();
-    for (const issue of issues) {
-      this.pending.get(issue.id)?.observed.push({ version: issue.updated_at, fields: this.fields(issue) });
-    }
-    this.issues.addIssue(issues);
+  canSeeIssue(issue: Issue): boolean {
+    if (!this.active) return false;
+    const workspace = this.rootStore.workspaceRoot.workspaces?.find((item) => item.id === issue.workspace_id);
+    return (
+      !!workspace &&
+      this.rootStore.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspace.slug, issue.project_id) !==
+        undefined
+    );
+  }
+  acceptListIssues(issues: Issue[], token: IssueReadToken): void {
+    for (const issue of issues) this.issues.acceptRead(issue, token);
+  }
+  listsForIssue(id: string): IssueListBinding[] {
+    const issue = this.issues.held(id);
+    return issue
+      ? [...this.lists].filter((list) =>
+          list.covers({
+            projectID: issue.project_id,
+            workspaceID: issue.workspace_id,
+            workspaceSlug: list.scope.workspaceSlug,
+          })
+        )
+      : [];
+  }
+  observeRead(before: Issue | undefined, after: Issue): void {
+    const pending = this.pending.get(after.id);
+    pending?.observed.push({ version: after.updated_at, fields: this.fields(after) });
+    if (!pending && before && this.fields(before) !== this.fields(after))
+      for (const list of this.lists) list.markMembershipStale(before, after);
+  }
+  invalidateProjectReads(projectID: string, workspaceID: string): void {
+    this.deletions.set(projectID, { serial: ++this.serial, workspaceID });
+    for (const list of this.lists)
+      if (list.covers({ projectID, workspaceID, workspaceSlug: list.scope.workspaceSlug })) {
+        list.reconciled.invalidate();
+        list.markVerificationStale();
+      }
   }
   private fields(issue: Issue): string {
     return JSON.stringify([
@@ -282,14 +322,18 @@ export class IssueRootStore {
       }
       const change: ConfirmedIssueChange = { id: after?.id ?? id!, beforeSnapshot: before, after, drop };
       if (!after) {
-        this.deletions.set(scope.projectID, { serial: ++this.serial, workspaceID: scope.workspaceID });
-        for (const list of this.lists) if (list.covers(scope)) list.reconciled.invalidate();
+        this.invalidateProjectReads(scope.projectID, scope.workspaceID);
+        for (const child of this.issues.knownDescendants(change.id)) {
+          const deletion = { id: child.id, beforeSnapshot: { kind: "known" as const, issue: child }, after: null };
+          for (const list of this.lists)
+            if (list.covers(scope)) list.acceptConfirmed(deletion, pending.sources.get(list) ?? new Set());
+          this.issues.confirmChange(deletion);
+        }
       }
       for (const list of this.lists)
         if (list.covers(scope) && !unavailable.has(list))
           list.acceptConfirmed(change, pending.sources.get(list) ?? new Set());
-      if (after) this.issues.addIssue([after]);
-      else this.issues.removeIssue(change.id);
+      this.issues.confirmChange(change);
       return after;
     } catch (error) {
       this.assertActive();

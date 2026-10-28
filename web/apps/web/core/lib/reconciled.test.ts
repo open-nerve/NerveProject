@@ -6,10 +6,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { reaction } from "mobx";
 import { SessionChangedError } from "@/lib/auth/token-manager";
-import { Reconciled, type Change } from "@/lib/reconciled";
+import { Reconciled, ReconciledByKey, type Change } from "@/lib/reconciled";
 
 type Value = { left: number; right: number; mark: string; stale: boolean };
 const initial: Value = { left: 1, right: 2, mark: "", stale: false };
+const chooseNewer = (old: Value | undefined, answer: Value) => (old && old.left > answer.left ? old : answer);
+it("receive initializes and replays its chooser over an outstanding older answer", async () => {
+  const held = new ReconciledByKey<Value>();
+  const pending = deferred();
+  const reading = held.fetch("x", pending.read);
+  expect(held.receive("x", { ...initial, left: 9 }, chooseNewer).left).toBe(9);
+  expect(held.answeredAt("x")).toBeGreaterThan(0);
+  pending.resolve(initial);
+  await reading;
+  expect(held.get("x")?.left).toBe(9);
+  held.receive("x", { ...initial, left: 2 }, chooseNewer);
+  expect(held.get("x")?.left).toBe(9);
+});
 const mergeLeft = (held: Value, answer: Value): Value => ({ ...held, left: answer.left });
 const mergeRight = (held: Value, answer: Value): Value => ({ ...held, right: answer.right });
 
