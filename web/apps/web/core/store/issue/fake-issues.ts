@@ -1,6 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { Issue, IssueDetail, IssueListPage } from "@nerve/api-client";
 import { expect } from "vitest";
+import type { Group } from "@/lib/paged-groups";
 import type { Endpoint, FakeNerve } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 
@@ -92,7 +93,7 @@ export const listGroup = (
   rows: import("@/lib/paged-groups").Row[] = [],
   complete = false,
   edge = 10
-): import("@/lib/paged-groups").Group => ({
+): Group => ({
   total,
   rows,
   nextCursor: complete ? null : "opaque-next",

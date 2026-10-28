@@ -99,8 +99,8 @@ make e2e
 
 ## Task 4：确认变化与三分支重放（约500–1000行，F）
 
-**Files：** paged-groups.ts（decode/merge/confirm）；新 issue-membership.ts（三态成员与组键）、paged-groups.replay.ts（raw证据重放，直接导出 replayGroups）；新paged-groups.changes.test.ts、paged-groups.replay.test.ts。T5 分别从主模型与 replay 文件导入，不经反向 re-export；membership 对模型仅 type-only 依赖。member ListContext 必填 workspaceID（与 workspaceSlug 并列）；T5 从既有 Workspace 目录绑定 ID，未知 ID 不创建可请求 scope，T4 覆盖同 user 跨 workspace 的 confirm/replay 隔离。
-**Interfaces：** spec§2.5 ConfirmedIssueChange/Before/GroupChangeResult；confirmGroups、replayGroups返回value+verifyIds；纯mergePages(value, answer, context)供fetchPart合并及T5复用；绝不从纯函数发请求。
+**Files：** paged-groups.ts（decode/merge/confirm）；新 issue-membership.ts（三态成员与组键）、paged-groups.replay.ts（raw证据重放，直接导出 replayGroups）、paged-groups.evidence.ts（计数自己的 Row/range/每id最新确认事实与共用三分支）；新paged-groups.changes.test.ts、paged-groups.replay.test.ts。T5 分别从主模型与 replay 文件导入，不经反向 re-export；membership 对模型仅 type-only 依赖。member ListContext 必填 workspaceID（与 workspaceSlug 并列）；T5 从既有 Workspace 目录绑定 ID，未知 ID 不创建可请求 scope，T4 覆盖同 user 跨 workspace 的 confirm/replay 隔离。
+**Interfaces：** spec§2.4/2.5 的可选 counterEvidence / CounterEvidence / ReadEvidence（首次partial启用、reset只换所属来源与确认事实、whole替换；不存Issue、每id无历史链）；spec§2.5 ConfirmedIssueChange/Before/GroupChangeResult；confirmGroups、replayGroups返回value+verifyIds；纯mergePages(value, answer, context)供fetchPart合并及T5复用；绝不从纯函数发请求。
 
 - [ ] 表G01–G16覆盖四旧新组合×rows在/不在×window内外，另分完整/未完成组；构造非零独立计数并断言整个结构，不只截图行id。覆盖create absent/delete null/archive/unarchive、多标签/负责人、泳道subgroupTotals独立与最外total。
 - [ ] 完整索引I2-1…9与R3-1…5按下表对应M4设计§3.22及spec§4 A3；本Task验证纯模型部分，真实canonical/回查行在T6/T12补齐，不在纯函数测试伪造缓存或HTTP。额外R-TAIL证明末页不覆盖lower以前，R-DROP证明扩窗后续页range仍从server cursorBoundary，D-204证明after=null不用版本比较且三种删除证据判别。

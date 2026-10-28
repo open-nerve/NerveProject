@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { expect, test } from "vitest";
-import { listContext, listGroup, listIssue, listRow } from "@/store/issue/fake-issues";
-import { confirmGroups, type PagedGroups, type ConfirmedIssueChange } from "./paged-groups";
+import { issuePageOf, listContext, listGroup, listIssue, listRow, pageMeta } from "@/store/issue/fake-issues";
+import { confirmGroups, decodePage, mergePages, type PagedGroups, type ConfirmedIssueChange } from "./paged-groups";
 
 const afterTime = "2026-10-28T00:00:00.000001Z";
 // G01–16: frozen old/new membership × row presence × new key inside/outside.
@@ -446,4 +446,270 @@ test("memberConfirmationKeepsSameUserWorkspacesIsolated", () => {
         groups: new Map([["", { ...value.groups.get("")!, total: 6, rows: [listRow("held", 2), listRow("x", 4)] }]]),
       });
   }
+});
+
+test.each([false, true])("I1 partialAfterCreateOnlyProvesItsOwnCounter lane=%s", (lane) => {
+  const context = listContext(lane ? { group_by: "label_id", sub_group_by: "assignee_id" } : { group_by: "state_id" });
+  const issue = listIssue("x", 4, { state_id: "B", label_ids: ["L"], assignee_ids: ["U"], updated_at: afterTime });
+  const value: PagedGroups = lane
+    ? {
+        total: 9,
+        subgroupTotals: new Map([["U", 8]]),
+        groups: new Map([["L", { ...listGroup(5), subgroups: new Map([["U", listGroup(4)]]) }]]),
+      }
+    : {
+        total: 9,
+        groups: new Map([
+          ["A", listGroup(5)],
+          ["B", listGroup(4)],
+        ]),
+      };
+  const raw = decodePage(
+    { ...issuePageOf([issue], "more"), total: 5 },
+    pageMeta(lane ? { group: "L", subgroup: "U" } : { group: "B" }),
+    context
+  );
+  const rawCopy = structuredClone(raw);
+  const merged = mergePages(value, raw, context);
+  expect(merged.total).toBe(9);
+  const change: ConfirmedIssueChange = { id: "x", beforeSnapshot: { kind: "absent" }, after: issue };
+  const confirmed = confirmGroups(merged, change, context);
+  expect(confirmed.value.total).toBe(10);
+  if (lane) {
+    expect([
+      confirmed.value.groups.get("L")?.total,
+      confirmed.value.subgroupTotals?.get("U"),
+      confirmed.value.groups.get("L")?.subgroups?.get("U")?.total,
+    ]).toEqual([6, 9, 5]);
+    expect(confirmed.value.groups.get("L")?.subgroups?.get("U")?.rows).toEqual([listRow("x", 4, afterTime)]);
+  } else {
+    expect([confirmed.value.groups.get("A")?.total, confirmed.value.groups.get("B")?.total]).toEqual([5, 5]);
+    expect(confirmed.value.groups.get("B")?.rows).toEqual([listRow("x", 4, afterTime)]);
+  }
+  expect([...confirmed.value.groups.values()].every((group) => !group.stale)).toBe(true);
+  expect(confirmGroups(confirmed.value, change, context)).toEqual(confirmed);
+  expect(raw).toEqual(rawCopy);
+});
+
+test.each([false, true])("I1 partialAfterDeleteAbsenceOnlyProvesItsOwnCounter lane=%s", (lane) => {
+  const context = listContext(lane ? { group_by: "label_id", sub_group_by: "assignee_id" } : { group_by: "state_id" });
+  const issue = listIssue("x", 4, { state_id: "B", label_ids: ["L"], assignee_ids: ["U"] });
+  const cell = listGroup(1, [listRow("x", 4)], true);
+  const value: PagedGroups = lane
+    ? {
+        total: 1,
+        subgroupTotals: new Map([["U", 1]]),
+        groups: new Map([["L", { ...listGroup(1, [], true), subgroups: new Map([["U", cell]]) }]]),
+      }
+    : { total: 1, groups: new Map([["B", cell]]) };
+  const raw = decodePage(issuePageOf([]), pageMeta(lane ? { group: "L", subgroup: "U" } : { group: "B" }), context);
+  const merged = mergePages(value, raw, context);
+  expect(merged.total).toBe(1);
+  const change: ConfirmedIssueChange = { id: "x", beforeSnapshot: { kind: "known", issue }, after: null };
+  const confirmed = confirmGroups(merged, change, context);
+  expect(confirmed.value.total).toBe(0);
+  if (lane) {
+    expect([
+      confirmed.value.groups.get("L")?.total,
+      confirmed.value.subgroupTotals?.get("U"),
+      confirmed.value.groups.get("L")?.subgroups?.get("U")?.total,
+    ]).toEqual([0, 0, 0]);
+    expect(confirmed.value.groups.get("L")?.subgroups?.get("U")?.rows).toEqual([]);
+  } else expect(confirmed.value.groups.get("B")?.total).toBe(0);
+  expect([...confirmed.value.groups.values()].every((group) => !group.stale)).toBe(true);
+  expect(confirmGroups(confirmed.value, change, context)).toEqual(confirmed);
+});
+
+test.each([false, true])("I1 wholeAfterAnswerAlreadyOwnsSharedCreateAndDeleteCounters lane=%s", (lane) => {
+  const context = listContext(lane ? { group_by: "label_id", sub_group_by: "assignee_id" } : { group_by: "state_id" });
+  const issue = listIssue("x", 4, { state_id: "B", label_ids: ["L"], assignee_ids: ["U"], updated_at: afterTime });
+  const raw = decodePage(
+    lane
+      ? {
+          total: 10,
+          groups: [{ key: "L", total: 6, subgroups: [{ key: "U", total: 5, data: [issue], next_cursor: "more" }] }],
+          subgroup_totals: [{ key: "U", total: 9 }],
+        }
+      : {
+          total: 10,
+          groups: [
+            { key: "A", total: 5, data: [], next_cursor: "more" },
+            { key: "B", total: 5, data: [issue], next_cursor: "more" },
+          ],
+        },
+    pageMeta(),
+    context
+  );
+  expect(confirmGroups(raw, { id: "x", beforeSnapshot: { kind: "absent" }, after: issue }, context)).toEqual({
+    value: raw,
+    verifyIds: [],
+  });
+  const empty = decodePage({ total: 0, groups: [], ...(lane ? { subgroup_totals: [] } : {}) }, pageMeta(), context);
+  const confirmed = confirmGroups(
+    empty,
+    { id: "x", beforeSnapshot: { kind: "known", issue }, after: null },
+    context
+  ).value;
+  expect(confirmed.total).toBe(0);
+  expect([...confirmed.groups.values()].every((group) => group.total === 0 && !group.stale)).toBe(true);
+  if (lane) expect(confirmed.subgroupTotals?.get("U")).toBe(0);
+});
+
+test("I1 resetCounterWithUncoveredAfterPositionStaysUncertainWhileSharedCounterAdvances", () => {
+  const context = listContext({ group_by: "state_id" });
+  const value: PagedGroups = {
+    total: 9,
+    groups: new Map([
+      ["A", listGroup(5)],
+      ["B", listGroup(4)],
+    ]),
+  };
+  const raw = decodePage(
+    { ...issuePageOf([listIssue("tail", 10)], "more"), total: 5 },
+    pageMeta({ group: "B" }),
+    context
+  );
+  const result = confirmGroups(
+    mergePages(value, raw, context),
+    {
+      id: "x",
+      beforeSnapshot: { kind: "absent" },
+      after: listIssue("x", 20, { state_id: "B", updated_at: afterTime }),
+    },
+    context
+  );
+  expect(result.value.total).toBe(10);
+  expect(result.value.groups.get("B")?.total).toBe(5);
+  expect(result.value.groups.get("B")?.stale).toBe(true);
+  expect(result.value.groups.get("A")).toEqual(value.groups.get("A"));
+  expect(result.verifyIds).toEqual([]);
+});
+
+test("I1 counterFactsKeepMultivalueCountsIndependentAcrossLaterConfirmations", () => {
+  const context = listContext({ group_by: "label_id", sub_group_by: "assignee_id" });
+  const issue = listIssue("x", 4, { label_ids: ["L", "M"], assignee_ids: ["U", "V"], updated_at: afterTime });
+  const value: PagedGroups = {
+    total: 9,
+    subgroupTotals: new Map([
+      ["U", 8],
+      ["V", 7],
+    ]),
+    groups: new Map([
+      [
+        "L",
+        {
+          ...listGroup(5),
+          subgroups: new Map([
+            ["U", listGroup(4)],
+            ["V", listGroup(3)],
+          ]),
+        },
+      ],
+      [
+        "M",
+        {
+          ...listGroup(6),
+          subgroups: new Map([
+            ["U", listGroup(2)],
+            ["V", listGroup(1)],
+          ]),
+        },
+      ],
+    ]),
+  };
+  const raw = decodePage(
+    { ...issuePageOf([issue], "more"), total: 5 },
+    pageMeta({ group: "L", subgroup: "U" }),
+    context
+  );
+  const created = confirmGroups(
+    mergePages(value, raw, context),
+    { id: "x", beforeSnapshot: { kind: "absent" }, after: issue },
+    context
+  ).value;
+  expect(created.total).toBe(10);
+  expect(created.subgroupTotals).toEqual(
+    new Map([
+      ["U", 9],
+      ["V", 8],
+    ])
+  );
+  expect(
+    [...created.groups.values()].map((group) => [group.total, [...group.subgroups!.values()].map((cell) => cell.total)])
+  ).toEqual([
+    [6, [5, 4]],
+    [7, [3, 2]],
+  ]);
+  const after = { ...issue, label_ids: ["M"], assignee_ids: ["V"], updated_at: "2026-10-28T00:00:00.000002Z" };
+  const change: ConfirmedIssueChange = { id: "x", beforeSnapshot: { kind: "known", issue }, after };
+  const changed = confirmGroups(created, change, context);
+  expect(changed.value.total).toBe(10);
+  expect(changed.value.subgroupTotals).toEqual(
+    new Map([
+      ["U", 8],
+      ["V", 8],
+    ])
+  );
+  expect(
+    [...changed.value.groups.values()].map((group) => [
+      group.total,
+      [...group.subgroups!.values()].map((cell) => cell.total),
+    ])
+  ).toEqual([
+    [5, [4, 3]],
+    [7, [2, 2]],
+  ]);
+  expect(changed.value.groups.get("L")?.subgroups?.get("U")?.rows).toEqual([]);
+  expect(changed.value.groups.get("M")?.subgroups?.get("V")?.rows).toEqual([listRow("x", 4, after.updated_at)]);
+  expect(confirmGroups(changed.value, change, context)).toEqual(changed);
+  expect(
+    [...changed.value.counterEvidence!.values()].map((source) =>
+      [...source.confirmed.values()].map((fact) => fact.updatedAt)
+    )
+  ).toEqual(Array.from({ length: 9 }, () => [after.updated_at]));
+});
+
+test("I1 resetCounterCannotGuessFromKnownBeforeOutsideItsRange", () => {
+  const context = listContext({ group_by: "state_id" });
+  const value: PagedGroups = {
+    total: 9,
+    groups: new Map([
+      ["A", listGroup(5)],
+      ["B", listGroup(4)],
+    ]),
+  };
+  const raw = decodePage(
+    { ...issuePageOf([listIssue("tail", 10)], "more"), total: 5 },
+    pageMeta({ group: "B" }),
+    context
+  );
+  const change: ConfirmedIssueChange = {
+    id: "x",
+    beforeSnapshot: { kind: "known", issue: listIssue("x", 4, { state_id: "A" }) },
+    after: listIssue("x", 20, { state_id: "B", updated_at: afterTime }),
+  };
+  const result = confirmGroups(mergePages(value, raw, context), change, context);
+  expect([result.value.total, result.value.groups.get("A")?.total, result.value.groups.get("B")?.total]).toEqual([
+    9, 4, 5,
+  ]);
+  expect(result.value.groups.get("B")?.stale).toBe(true);
+  expect(confirmGroups(result.value, change, context)).toEqual(result);
+});
+
+test("I1 firstCellAnswerCannotPromoteRowsIntoOmittedParentAndLaneCounters", () => {
+  const context = listContext({ group_by: "label_id", sub_group_by: "assignee_id" });
+  const issue = listIssue("x", 4, { label_ids: ["L"], assignee_ids: ["U"], updated_at: afterTime });
+  const value: PagedGroups = { total: 0, groups: new Map(), subgroupTotals: new Map() };
+  const raw = decodePage(issuePageOf([issue]), pageMeta({ group: "L", subgroup: "U" }), context);
+  const confirmed = confirmGroups(
+    mergePages(value, raw, context),
+    { id: "x", beforeSnapshot: { kind: "absent" }, after: issue },
+    context
+  ).value;
+  expect([
+    confirmed.total,
+    confirmed.groups.get("L")?.total,
+    confirmed.subgroupTotals?.get("U"),
+    confirmed.groups.get("L")?.subgroups?.get("U")?.total,
+  ]).toEqual([1, 1, 1, 1]);
 });

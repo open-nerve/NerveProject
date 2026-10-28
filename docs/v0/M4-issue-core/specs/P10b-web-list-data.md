@@ -21,7 +21,7 @@
 | T1 | 新 C/services/issue/issue-list.service.ts、issue-api.service.ts及直接测试；核现有project-preferences薄服务/生成类型；旧列表容器与服务暂留至T5消费闭合 | 新 C/services/issue/issue-list.service.test.ts、issue-api.service.test.ts；既有P/api-client/test/client.test.mjs |
 | T2 | C/lib/reconciled.ts：fetchPart及原应答重放上下文 | 新 C/lib/reconciled.test.ts；既有project/workspace/member/state/label stores回归 |
 | T3 | 新 C/lib/paged-groups.ts：组/格/行/页模型；新 C/lib/issue-order.ts：排序和时间精度 | 新 C/lib/issue-order.test.ts、paged-groups.test.ts |
-| T4 | C/lib/paged-groups.ts：确认与纯merge；新 issue-membership.ts：三态成员/组键；新 paged-groups.replay.ts：raw重放与verifyIds意图 | 新 C/lib/paged-groups.changes.test.ts、paged-groups.replay.test.ts |
+| T4 | C/lib/paged-groups.ts：确认与纯merge；新 issue-membership.ts：三态成员/组键；新 paged-groups.replay.ts：raw重放与verifyIds意图；新 paged-groups.evidence.ts：计数自己的来源、确认事实和共用三分支 | 新 C/lib/paged-groups.changes.test.ts、paged-groups.replay.test.ts |
 | T5 | BaseIssuesStore及三个列表切新service/旧形状；root同任务接唯一写协调入口、会话退役与列表注册；首次query纯函数，删归档旧service和UserService旧列表方法 | 新 helpers/base-issues.store.test.ts、base-issues-utils.test.ts |
 | T6 | C/store/issue/issue.store.ts唯一副本、ReconciledByKey接收API，description/版本/墓碑、项目read epoch；同Task闭合P11过渡详情/子项/关联/link的canonical写入 | 新 C/store/issue/issue.store.test.ts |
 | T7 | C/store/issue/project/filter.store.ts；C/store/project/preferences.store.ts按需联动；删/user-properties两方法/例外/放行 | 新 project/filter.store.test.ts；既有 project/preferences.store.test.ts和三E2E故事 |
@@ -82,12 +82,19 @@ invalidate(): void; // Supersede all outstanding reads without clearing the held
 ```ts
 type SortKey = string | number | bigint | null;
 type Boundary = { key: SortKey; id: string };
+type PagePart = { group: string; subgroup?: string };
 type Row = Boundary & { updatedAt: string };
 type Group = { total: number; rows: Row[]; nextCursor: string | null;
   boundary: Boundary | null; cursorBoundary: Boundary | null; stale: boolean;
   subgroups?: Map<string, Group> };
 type PagedGroups = { total: number; groups: Map<string, Group>;
-  subgroupTotals?: Map<string, number>; read?: PageReadMeta };
+  subgroupTotals?: Map<string, number>; read?: PageReadMeta;
+  counterEvidence?: Map<string, CounterEvidence> };
+type ReadEvidence = { whole: boolean;
+  parts: {part: PagePart; rows: Row[]; range: PageRange}[] };
+type CounterEvidence = { held: {rows: Row[]; complete: boolean};
+  read?: ReadEvidence;
+  confirmed: Map<string, {updatedAt: string|null; member: boolean}> };
 type PageRange = { lower: Boundary | null; upper: Boundary | null; complete: boolean };
 type CounterRef = { kind: "outer" } | { kind: "group"; group: string }
   | { kind: "cell"; group: string; subgroup: string }
@@ -116,6 +123,10 @@ type PageAnswer = PagedGroups & { read: PageReadMeta };
 | 否 | 否 | 不变 | 不动 |
 
 旧属首先按该列表原行版本决定，已含after只摆放；无行且整组已加载为否；其余用beforeSnapshot，不知道则stale。多标签/负责人多个组分别判，外层total按去重membership变化，泳道subgroupTotals按其独立membership变化，不能求各格和。
+
+**计数自己的证据（T4 fix1/R12）：** 可选 `counterEvidence` 属于合并后的纯模型，decoder 的 raw PageAnswer 不写该字段。首次 partial merge 在改 rows 前，按稳定 JSON 数组 CounterRef key 为每个计数保存自己的 Row/完整缺席证据；包括新格带出的缺省零父组/泳道。已有来源沿用，不能用后续 merged.rows 反推旧共享计数。仅 resetCounters 的来源替换为本次原 Row/range 并清空该计数的确认事实；其它计数的来源与确认事实不动。whole 重取整体替换并清除此增量元数据。
+
+直接确认将计数与行摆放分开：计数先读自身最新确认事实；未被 partial 重置的计数按自己的旧 Row/完整缺席或冻结 Before 补差；被重置的计数使用与 raw replay 共用的 before/after/unknown 判断。范围不覆盖且没有行时，即使 Before 已知也不猜该服务器 total 是否已包含写，只标受影响部分 stale。确知补差或确知已经包含结果后，每计数每 id 只保存最新 `{updatedAt|null, member}` 一条事实，不保留历史链；unknown 不记录已应用。删除的 null 是计数已处理删除的证据，不构造第二份 Issue 或 canonical 墓碑。行摆放继续读当前 rows/window。缺行推断的 verifyIds 在同次结果内去重。replay 只同步此次拥有的计数事实和行；全部操作不改输入 value 或 raw Answer。`paged-groups.evidence.ts` 集中这些纯判定，仅 type-only 引用模型，主模型和 replay 单向消费它。
 
 **部分回答的写集合：** `resetCounters` 列出本次响应被merge重置的计数，`rowParts` 列出本次回答的组/格。whole回答拥有outer、其group/cell及返回的subgroupTotals（未返回空组按0）；单组flat回答只拥有该group.total，单格flat回答只拥有该cell.total，其flat total绝非outer。merge与replay都只改这些回答部分：replay只为被重置的计数补确认差量，未回答的group、outer、subgroupTotals和rows保持当前值；已有确认早已改过它们。不同part同时在外时各自重放只改各自集合，不再次更动共享计数。whole可按完整原应答覆盖范围重放。
 

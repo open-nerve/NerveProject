@@ -5,6 +5,15 @@ import { compareIssueTime, compareRows, issueSortKey, type IssueCatalog } from "
 
 import { beforeIssue, issueMembership, issueParts, subgroupField, type Membership } from "./issue-membership";
 
+import {
+  counterKey,
+  priorCounterMembership,
+  priorRowMembership,
+  type CounterEvidence,
+  type ReadEvidence,
+  type RowEvidence,
+} from "./paged-groups.evidence";
+
 export type SortKey = string | number | bigint | null;
 export type Boundary = { key: SortKey; id: string };
 export type Row = Boundary & { updatedAt: string };
@@ -22,6 +31,7 @@ export type PagedGroups = {
   groups: Map<string, Group>;
   subgroupTotals?: Map<string, number>;
   read?: PageReadMeta;
+  counterEvidence?: Map<string, CounterEvidence>;
 };
 export type PageRange = { lower: Boundary | null; upper: Boundary | null; complete: boolean };
 export type PagePart = { group: string; subgroup?: string };
@@ -189,7 +199,7 @@ export type ConfirmedIssueChange = {
 export type GroupChangeResult = { value: PagedGroups; verifyIds: string[] };
 
 /** Internal operations are shared with raw replay; neither path mutates its inputs. */
-export function groupAt(value: PagedGroups, part: PagePart): Group | undefined {
+function groupAt(value: PagedGroups, part: PagePart): Group | undefined {
   const group = value.groups.get(part.group);
   return part.subgroup === undefined ? group : group?.subgroups?.get(part.subgroup);
 }
@@ -202,7 +212,7 @@ function ensureGroup(value: PagedGroups, part: PagePart): Group {
   if (!cell) group.subgroups.set(part.subgroup, (cell = emptyGroup()));
   return cell;
 }
-export function rowParts(value: PagedGroups): PagePart[] {
+function rowParts(value: PagedGroups): PagePart[] {
   return [...value.groups].flatMap(([group, data]) =>
     data.subgroups ? [...data.subgroups.keys()].map((subgroup) => ({ group, subgroup })) : [{ group }]
   );
@@ -216,7 +226,7 @@ function counters(value: PagedGroups): CounterRef[] {
   for (const subgroup of value.subgroupTotals?.keys() ?? []) refs.push({ kind: "subgroup", subgroup });
   return refs;
 }
-export function partCounter(part: PagePart): CounterRef {
+function partCounter(part: PagePart): CounterRef {
   return part.subgroup === undefined
     ? { kind: "group", group: part.group }
     : { kind: "cell", group: part.group, subgroup: part.subgroup };
@@ -237,7 +247,7 @@ function setCounter(value: PagedGroups, ref: CounterRef, total: number) {
 function farther(a: Boundary | null, b: Boundary | null, context: ListContext): Boundary | null {
   return copyBoundary(!a || (b && compareRows(a, b, context.query.order_by ?? "-created_at") < 0) ? b : a);
 }
-export function counterParts(value: PagedGroups, ref: CounterRef): PagePart[] {
+function counterParts(value: PagedGroups, ref: CounterRef): PagePart[] {
   if (ref.kind === "cell") return [{ group: ref.group, subgroup: ref.subgroup }];
   if (ref.kind === "group")
     return value.groups.get(ref.group)?.subgroups
@@ -245,26 +255,48 @@ export function counterParts(value: PagedGroups, ref: CounterRef): PagePart[] {
       : [{ group: ref.group }];
   return rowParts(value).filter((part) => ref.kind === "outer" || part.subgroup === ref.subgroup);
 }
-/** Complete means the whole group here. Raw continuation proof uses ranges instead. */
-function priorMembership(
-  value: PagedGroups,
-  change: ConfirmedIssueChange,
-  context: ListContext,
-  ref: CounterRef
-): Membership {
+function counterRows(value: PagedGroups, ref: CounterRef): RowEvidence {
   const groups = counterParts(value, ref).map((part) => groupAt(value, part));
-  const row = groups.flatMap((group) => group?.rows ?? []).find((item) => item.id === change.id);
-  if (row)
-    return change.after && compareIssueTime(row.updatedAt, change.after.updated_at) >= 0
-      ? issueMembership(change.after, context, ref)
-      : true;
-  if (groups.every((group) => !group || group.nextCursor === null)) return false;
-  return issueMembership(beforeIssue(change.beforeSnapshot), context, ref);
+  return {
+    rows: groups.flatMap((group) => group?.rows ?? []),
+    complete: groups.every((group) => !group || group.nextCursor === null),
+  };
+}
+function counterSource(value: PagedGroups, ref: CounterRef): CounterEvidence {
+  return structuredClone({ held: counterRows(value, ref), confirmed: new Map() });
+}
+export function pageEvidence(answer: PageAnswer): ReadEvidence {
+  return {
+    whole: answer.read.part === null,
+    parts: answer.read.rowParts.map((part) => ({
+      part,
+      rows: groupAt(answer, part)?.rows ?? [],
+      range: answer.read.ranges.get(pagePartKey(part))!,
+    })),
+  };
 }
 
 /** Merge owns exactly the response write set; continuation totals replace local totals. */
 export function mergePages(value: PagedGroups, answer: PageAnswer, context: ListContext): PagedGroups {
   const merged = structuredClone(answer.read.part === null ? answer : value);
+  if (answer.read.part === null) delete merged.counterEvidence;
+  else {
+    merged.counterEvidence ??= new Map();
+    const refs = counters(value).concat(counters(answer));
+    for (const part of answer.read.rowParts) {
+      if (part.subgroup !== undefined) refs.push({ kind: "subgroup", subgroup: part.subgroup });
+    }
+    for (const ref of refs) {
+      if (!merged.counterEvidence.has(counterKey(ref)))
+        merged.counterEvidence.set(counterKey(ref), counterSource(value, ref));
+    }
+    for (const ref of answer.read.resetCounters) {
+      merged.counterEvidence.set(counterKey(ref), {
+        ...counterSource(answer, ref),
+        read: structuredClone(pageEvidence(answer)),
+      });
+    }
+  }
   const parts = answer.read.part === null ? rowParts(value).concat(answer.read.rowParts) : answer.read.rowParts;
   for (const part of parts) {
     const old = groupAt(value, part);
@@ -309,6 +341,7 @@ export function applyGroupChange(
   const refs = whole ? counters(result) : options.answer.read.resetCounters;
   const parts = whole ? rowParts(result) : options.answer.read.rowParts;
   const uncertain = new Set<string>();
+  const verifyIds = new Set<string>();
   function mark(ref: CounterRef) {
     for (const part of counterParts(result, ref)) {
       const member = partCounter(part);
@@ -322,8 +355,17 @@ export function applyGroupChange(
   }
   for (const ref of refs) {
     const next = issueMembership(change.after, context, ref);
+    const evidence = value.counterEvidence?.get(counterKey(ref));
+    const proven = !options && evidence ? priorCounterMembership(evidence, change, context, ref) : undefined;
+    if (proven?.inferred) verifyIds.add(change.id);
     const old =
-      options?.phase === "after" ? next : options ? options.old(ref) : priorMembership(value, change, context, ref);
+      options?.phase === "after"
+        ? next
+        : options
+          ? options.old(ref)
+          : proven
+            ? proven.old
+            : priorRowMembership(counterRows(value, ref), change, context, ref);
     const affected = old !== false || next !== false;
     if (options?.phase === "unknown") {
       if (affected) mark(ref);
@@ -334,13 +376,22 @@ export function applyGroupChange(
       continue;
     }
     if (options?.phase !== "after") setCounter(result, ref, counterValue(result, ref) + Number(next) - Number(old));
+    if (result.counterEvidence) {
+      const source = result.counterEvidence.get(counterKey(ref)) ?? counterSource(value, ref);
+      source.confirmed.set(change.id, { updatedAt: change.after?.updated_at ?? null, member: next });
+      result.counterEvidence.set(counterKey(ref), source);
+    }
   }
   for (const part of parts) {
     const group = ensureGroup(result, part);
     const ref = partCounter(part);
     const next = issueMembership(change.after, context, ref);
     const old =
-      options?.phase === "after" ? next : options ? options.old(ref) : priorMembership(value, change, context, ref);
+      options?.phase === "after"
+        ? next
+        : options
+          ? options.old(ref)
+          : priorRowMembership(counterRows(value, ref), change, context, ref);
     const affected = old !== false || next !== false || group.rows.some((row) => row.id === change.id);
     if ((options?.phase === "unknown" || old === undefined || next === undefined) && affected) {
       group.stale = true;
@@ -372,7 +423,7 @@ export function applyGroupChange(
       if ([...(group.subgroups?.keys() ?? [])].some((subgroup) => uncertain.has(pagePartKey({ group: key, subgroup }))))
         group.stale = true;
     }
-  return { value: result, verifyIds: [] };
+  return { value: result, verifyIds: [...verifyIds] };
 }
 export function confirmGroups(
   value: PagedGroups,

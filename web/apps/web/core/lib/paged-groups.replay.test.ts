@@ -377,3 +377,80 @@ test("memberReplayKeepsSameUserWorkspacesIsolated", () => {
     }
   }
 });
+
+test.each([
+  ["L", "M"],
+  ["M", "L"],
+])("I1 twoPartialAfterAnswersBeforeConfirmationKeepSharedSource %s then %s", (first, second) => {
+  const labels = listContext({ group_by: "label_id" });
+  const issue = listIssue("x", 4, { label_ids: ["L", "M"], updated_at: after.updated_at });
+  let value: PagedGroups = {
+    total: 9,
+    groups: new Map([
+      ["L", listGroup(5)],
+      ["M", listGroup(4)],
+    ]),
+  };
+  for (const group of [first, second]) {
+    const answer = decodePage(
+      { ...issuePageOf([issue], "more"), total: group === "L" ? 6 : 5 },
+      pageMeta({ group }),
+      labels
+    );
+    value = mergePages(value, answer, labels);
+  }
+  const confirmed = confirmGroups(value, { id: "x", beforeSnapshot: { kind: "absent" }, after: issue }, labels);
+  expect([
+    confirmed.value.total,
+    confirmed.value.groups.get("L")?.total,
+    confirmed.value.groups.get("M")?.total,
+  ]).toEqual([10, 6, 5]);
+  expect(confirmed.verifyIds).toEqual([]);
+  expect([...confirmed.value.groups.values()].map((group) => group.rows)).toEqual([
+    [listRow("x", 4, after.updated_at)],
+    [listRow("x", 4, after.updated_at)],
+  ]);
+});
+
+test("I1 directConfirmationReturnsOneVerificationForMissingRowsInMultipleResetCounters", () => {
+  const labels = listContext({ group_by: "label_id" });
+  const issue = listIssue("x", 4, { label_ids: ["L", "M"], updated_at: after.updated_at });
+  let value: PagedGroups = {
+    total: 9,
+    groups: new Map([
+      ["L", listGroup(5)],
+      ["M", listGroup(4)],
+    ]),
+  };
+  for (const group of ["L", "M"])
+    value = mergePages(
+      value,
+      decodePage(
+        { ...issuePageOf([listIssue("tail", 10)], "more"), total: group === "L" ? 5 : 4 },
+        pageMeta({ group }),
+        labels
+      ),
+      labels
+    );
+  const result = confirmGroups(value, { id: "x", beforeSnapshot: { kind: "absent" }, after: issue }, labels);
+  expect([result.value.total, result.value.groups.get("L")?.total, result.value.groups.get("M")?.total]).toEqual([
+    10, 6, 5,
+  ]);
+  expect(result.verifyIds).toEqual(["x"]);
+});
+
+test("I1 continuationAbsenceCannotProveDeleteAndWholeRefreshReplacesCounterEvidence", () => {
+  const value: PagedGroups = { total: 1, groups: new Map([["A", listGroup(1, [listRow("x", 4)])]]) };
+  const raw = decodePage({ ...issuePageOf([]), total: 0 }, pageMeta({ group: "A" }, { id: "edge", key: 10 }), context);
+  const deletion: ConfirmedIssueChange = { ...change, after: null };
+  const confirmed = confirmGroups(mergePages(value, raw, context), deletion, context);
+  expect([confirmed.value.total, confirmed.value.groups.get("A")?.total]).toEqual([0, 0]);
+  expect(confirmed.value.groups.get("A")?.stale).toBe(true);
+  expect(confirmed.verifyIds).toEqual([]);
+  expect(confirmGroups(confirmed.value, deletion, context)).toEqual(confirmed);
+  const freshWhole = decodePage({ total: 0, groups: [] }, pageMeta(), context);
+  const refreshed = mergePages(confirmed.value, freshWhole, context);
+  expect(refreshed.counterEvidence).toBeUndefined();
+  expect(refreshed.groups.get("A")?.stale).toBe(false);
+  expect(confirmGroups(refreshed, deletion, context).value.total).toBe(0);
+});
