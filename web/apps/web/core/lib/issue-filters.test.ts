@@ -320,3 +320,79 @@ it.each([
   );
   expect(issueMembership(listIssue("row", 1, { start_date }), listContext(query))).toBe(want);
 });
+
+it.each(["start_date", "target_date"] as const)("fix1 I1 rejects year zero throughout %s boundaries", (field) => {
+  for (const value of ["0000-01-01", "0000-01-01..", "..0000-12-31", "0000-01-01..0001-01-01"]) {
+    const filters = { [field]: [value, "2026-10-01"], priority: ["high"] };
+    const expression = {
+      and: [
+        { [`${field}__${value.includes("..") ? "range" : "exact"}`]: value.replace("..", ",") },
+        { priority__in: "high" },
+      ],
+    };
+    expect.soft(toProjectFilters(expression)).toEqual({ priority: ["high"] });
+    expect.soft(toFilterExpression(filters)).toEqual({ and: [{ priority__in: "high" }] });
+    expect.soft(projectListQuery(filters)).toEqual({ priority: ["high"], order_by: "-created_at", sub_issue: "true" });
+    expect
+      .soft(memberListQuery(filters, {}, "assigned"))
+      .toEqual({ relation: "assigned", priority: ["high"], order_by: "-created_at", sub_issue: "true" });
+  }
+});
+
+it.each(["start_date", "target_date"] as const)("fix1 I1 accepts both supported year endpoints in %s", (field) => {
+  for (const value of ["0001-01-01", "9999-12-31", "0001-01-01..", "..9999-12-31", "0001-01-01..9999-12-31"]) {
+    const filters = { [field]: [value], priority: ["high"] };
+    expect(toProjectFilters(toFilterExpression(filters))).toEqual(filters);
+    expect(projectListQuery(filters)).toEqual({ ...filters, order_by: "-created_at", sub_issue: "true" });
+    expect(memberListQuery(filters, {}, "created")).toEqual({
+      ...filters,
+      relation: "created",
+      order_by: "-created_at",
+      sub_issue: "true",
+    });
+  }
+});
+
+it.each(["state_id", "label_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id"] as const)(
+  "fix1 I3 canonicalizes accepted UUIDs at each %s vocabulary boundary",
+  (field) => {
+    const input = { [field]: [A.toUpperCase()] };
+    expect.soft(toProjectFilters({ [`${field}__in`]: A.toUpperCase() })).toEqual({ [field]: [A] });
+    expect.soft(toFilterExpression(input)).toEqual({ and: [{ [`${field}__in`]: A }] });
+    expect.soft(projectListQuery(input)).toEqual({ [field]: [A], order_by: "-created_at", sub_issue: "true" });
+  }
+);
+
+it("fix1 I3 converted project and member UUID filters match canonical issue rows", () => {
+  const row = listIssue("row", 1, { state_id: A, assignee_ids: [A], label_ids: [A], created_by_id: A });
+  const query = projectListQuery(
+    toProjectFilters(
+      toFilterExpression({
+        state_id: [A.toUpperCase()],
+        label_id: [A.toUpperCase()],
+        assignee_id: [A.toUpperCase()],
+        created_by_id: [A.toUpperCase()],
+      })
+    )
+  );
+  expect.soft(issueMembership(row, listContext(query))).toBe(true);
+  const memberQuery = memberListQuery({ project_id: [A.toUpperCase()], label_id: [A.toUpperCase()] }, {}, "created");
+  expect
+    .soft(memberQuery)
+    .toEqual({ relation: "created", project_id: [A], label_id: [A], order_by: "-created_at", sub_issue: "true" });
+  expect
+    .soft(
+      issueMembership(
+        { ...row, project_id: A },
+        {
+          ...listContext(),
+          scope: "member",
+          workspaceSlug: "ws",
+          workspaceID: row.workspace_id,
+          userID: A,
+          query: memberQuery,
+        }
+      )
+    )
+    .toBe(true);
+});

@@ -79,7 +79,7 @@ function isDay(value: string): boolean {
   const [year, month, day] = value.split("-").map(Number);
   const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
   const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1];
+  return year >= 1 && month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1];
 }
 function isDateCondition(value: string): boolean {
   if (value === "none" || isDay(value)) return true;
@@ -114,7 +114,7 @@ function cleanValues(field: FilterField | "project_id", input: unknown): string[
   const values: string[] = [];
   for (const value of input) {
     if (typeof value !== "string" || !validValue(field, value)) return undefined;
-    values.push(value);
+    values.push(isId(value) ? value.toLowerCase() : value);
   }
   if (isDateField(field) && values.includes("none") && values.length > 1) return undefined;
   return values;
@@ -138,7 +138,7 @@ export function toProjectFilters(expression: TWorkItemFilterExpression): Project
   const seen = new Set<FilterField>();
   const invalid = new Set<FilterField>();
   for (const condition of conditions) {
-    if (!isRecord(condition)) continue;
+    if (!isRecord(condition) || "and" in condition) continue;
     for (const [key, input] of Object.entries(condition)) {
       const at = key.lastIndexOf("__");
       const property = key.slice(0, at);

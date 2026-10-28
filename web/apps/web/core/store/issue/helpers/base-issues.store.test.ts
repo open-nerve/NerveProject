@@ -628,3 +628,48 @@ it.each([
   request.call.answer(json(200, { total: 0, data: [], next_cursor: null }));
   await request.promise;
 });
+
+it.each([
+  ["broken", {}],
+  [{ and: [null, { priority__in: "high" }] }, { priority: "high" }],
+  [{ and: "broken", project_id__in: "019a0000-0000-7000-8000-000000000001" }, {}],
+  [
+    {
+      and: [
+        [],
+        7,
+        "broken",
+        { and: [{ project_id__in: "019a0000-0000-7000-8000-000000000002" }], priority__in: "low" },
+        { priority__in: "high" },
+        { project_id__in: "019A0000-0000-7000-8000-000000000001" },
+      ],
+    },
+    { priority: "high", project_id: "019a0000-0000-7000-8000-000000000001" },
+  ],
+])(
+  "fix1 I2/I3 member consumer defaults malformed structure while preserving valid conditions %j",
+  async (expression, expected) => {
+    runInAction(() => {
+      app.issue.profileIssuesFilter.filters.actor = {
+        richFilters: JSON.parse(JSON.stringify(expression)),
+        displayProperties: undefined,
+        kanbanFilters: undefined,
+        displayFilters: {},
+      };
+    });
+    const request = await requestedIssue(
+      nerve,
+      () => app.issue.profileIssues.fetchIssues("ws", "actor", "init-loader", { limit: 15 }, "assigned"),
+      ["GET", "/api/v0/workspaces/ws/members/actor/issues"]
+    );
+    expect(request.call.query).toEqual({
+      relation: "assigned",
+      order_by: "-created_at",
+      sub_issue: "true",
+      limit: "15",
+      ...expected,
+    });
+    request.call.answer(json(200, { total: 0, data: [], next_cursor: null }));
+    await request.promise;
+  }
+);

@@ -5,6 +5,8 @@ import { memberListQuery, toProjectFilters, type IssueListOptions } from "@/lib/
 import { BaseIssuesStore } from "../helpers/base-issues.store";
 import type { IIssueRootStore } from "../root.store";
 import type { IProfileIssuesFilter } from "./filter.store";
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
 export type IProfileIssues = ProfileIssues;
 export class ProfileIssues extends BaseIssuesStore {
   currentView: TProfileViews = "assigned";
@@ -35,10 +37,14 @@ export class ProfileIssues extends BaseIssuesStore {
     this.setViewId(view);
     const filters = this.issueFilterStore.getIssueFilters(userID);
     const expression = filters?.richFilters ?? {};
-    const conditions = "and" in expression && Array.isArray(expression.and) ? expression.and : [expression];
-    const projects = conditions.flatMap((condition) =>
-      Object.entries(condition).filter(([key]) => key.startsWith("project_id__"))
-    );
+    const conditions = !isRecord(expression) ? [] : "and" in expression ? expression.and : [expression];
+    const projects = Array.isArray(conditions)
+      ? conditions.flatMap((condition) =>
+          isRecord(condition) && !("and" in condition)
+            ? Object.entries(condition).filter(([key]) => key.startsWith("project_id__"))
+            : []
+        )
+      : [];
     const [projectKey, projectValue] = projects.length === 1 ? projects[0] : [];
     // A second project condition is an independent AND, which CSV cannot express.
     const projectIDs =

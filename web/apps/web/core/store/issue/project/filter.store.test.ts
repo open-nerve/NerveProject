@@ -259,3 +259,84 @@ it("F01 saves and reads subscriber/date AND filters through UI and the actual li
   cleared.call.answer(json(200, { total: 0, data: [], next_cursor: null }));
   await cleared.promise;
 });
+
+it("fix1 I1/I3 canonicalizes saved UUIDs and clears year zero on real preference write/read/query", async () => {
+  const { app, nerve } = tab;
+  const store = app.issue.projectIssuesFilter;
+  const lower = "019a0000-0000-7000-8000-000000000001";
+  const upper = "019A0000-0000-7000-8000-000000000001";
+  const filters = {
+    state_id: [lower],
+    label_id: ["none", lower],
+    assignee_id: ["me", lower],
+    created_by_id: [lower],
+    mention_id: [lower],
+    subscriber_id: [lower],
+    priority: ["high"],
+  };
+  const read = await requestedIssue(nerve, () => store.fetchFilters("ws", "A"), [
+    "GET",
+    "/api/v0/me/projects/A/preferences",
+  ]);
+  read.call.answer(json(200, preferencesOf()));
+  await read.promise;
+  const patch = await requestedIssue(
+    nerve,
+    () =>
+      store.updateFilterExpression("ws", "A", {
+        and: [
+          { state_id__in: upper },
+          { label_id__in: `none,${upper}` },
+          { assignee_id__in: `me,${upper}` },
+          { created_by_id__in: upper },
+          { mention_id__in: upper },
+          { subscriber_id__in: upper },
+          { start_date__exact: "0000-01-01" },
+          { target_date__range: "0000-01-01," },
+          { priority__in: "high" },
+        ],
+      }),
+    ["PATCH", "/api/v0/me/projects/A/preferences"]
+  );
+  expect.soft(patch.call.body).toEqual({ filters });
+  patch.call.answer(json(200, preferencesOf({ filters })));
+  await patch.promise;
+  const reload = await requestedIssue(nerve, () => store.fetchFilters("ws", "A"), [
+    "GET",
+    "/api/v0/me/projects/A/preferences",
+  ]);
+  reload.call.answer(
+    json(200, preferencesOf({ filters: { ...filters, state_id: [upper], start_date: ["0000-01-01"] } }))
+  );
+  await reload.promise;
+  expect.soft(store.getIssueFilters("A")?.richFilters).toEqual({
+    and: [
+      { state_id__in: lower },
+      { priority__in: "high" },
+      { label_id__in: `none,${lower}` },
+      { assignee_id__in: `me,${lower}` },
+      { created_by_id__in: lower },
+      { mention_id__in: lower },
+      { subscriber_id__in: lower },
+    ],
+  });
+  const list = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 20 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  expect(list.call.query).toEqual({
+    limit: "20",
+    order_by: "-created_at",
+    sub_issue: "true",
+    state_id: lower,
+    priority: "high",
+    label_id: `none,${lower}`,
+    assignee_id: `me,${lower}`,
+    created_by_id: lower,
+    mention_id: lower,
+    subscriber_id: lower,
+  });
+  list.call.answer(json(200, { total: 0, data: [], next_cursor: null }));
+  await list.promise;
+});
