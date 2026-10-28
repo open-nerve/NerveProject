@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   route: { workspaceSlug: "ws", projectId: "A" },
   root: { active: true, workspaceSlug: "ws", projectId: "A" },
   priority: "high",
+  selectedPriority: "high",
   reads: 0,
   saves: 0,
   failures: [] as unknown[],
@@ -20,8 +21,10 @@ vi.mock("@/hooks/use-refusal-toast", () => ({ useRefusalToast: () => (e: unknown
 vi.mock("@/hooks/store/use-issues", () => {
   const issues = {
     rootIssueStore: state.root,
+    isPreferenceQueryCurrent: () => state.priority === state.selectedPriority,
     fetchIssuesWithExistingPagination: async () => {
       state.reads++;
+      state.selectedPriority = state.priority;
       if (state.readError) throw state.readError;
     },
   };
@@ -35,6 +38,7 @@ beforeEach(() => {
   state.route = { workspaceSlug: "ws", projectId: "A" };
   Object.assign(state.root, { active: true, workspaceSlug: "ws", projectId: "A" });
   state.priority = "high";
+  state.selectedPriority = "high";
   state.reads = 0;
   state.saves = 0;
   state.failures = [];

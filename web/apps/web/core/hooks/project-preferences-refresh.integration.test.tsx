@@ -3,6 +3,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { observer } from "mobx-react";
+import { runInAction } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
@@ -48,6 +49,15 @@ const Mounted = observer(function Mounted() {
       >
         save
       </button>
+      <button
+        onClick={() =>
+          void follow("ws", "A", () =>
+            tab.app.issue.projectIssuesFilter.updateFilterExpression("ws", "A", { and: [{ priority__in: "high" }] })
+          )
+        }
+      >
+        restore
+      </button>
       <IssueListRetry {...retry} />
     </>
   );
@@ -66,7 +76,11 @@ beforeEach(async () => {
   await pref.promise;
   const old = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    () =>
+      tab.app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", {
+        limit: 10,
+        query: { start_date: ["2026-01-01..2026-02-01"] },
+      }),
     ["GET", "/api/v0/projects/A/issues"]
   );
   old.call.answer(json(200, issuePageOf([issueOf("old")])));
@@ -117,9 +131,9 @@ it("retains a confirmed preference when its new list read fails and retries only
   });
   expect(store.getIssueFilters("A")?.richFilters).toEqual({ and: [{ priority__in: "low" }] });
   expect(issues.currentList?.error).toBeDefined();
-  expect(container.querySelectorAll("button")).toHaveLength(2);
+  expect(container.querySelectorAll("button")).toHaveLength(3);
   await act(async () => {
-    container.querySelectorAll("button")[1]!.click();
+    container.querySelectorAll("button")[2]!.click();
     await until(() => tab.nerve.calls.length === 5, "retry");
   });
   expect(tab.nerve.calls[4]).toMatchObject({ method: "GET", path: newRead.path, query: newRead.query });
@@ -129,5 +143,71 @@ it("retains a confirmed preference when its new list read fails and retries only
     await until(() => !issues.currentList?.error, "retry answer");
   });
   expect(issues.getIssueIds()).toEqual(["fresh"]);
-  expect(container.querySelectorAll("button")).toHaveLength(1);
+  expect(container.querySelectorAll("button")).toHaveLength(2);
+});
+
+it("refreshes the final confirmed query when queued changes restore the original value", async () => {
+  const issues = tab.app.issue.projectIssues;
+  await act(async () => {
+    container.querySelectorAll("button")[0]!.click();
+    container.querySelectorAll("button")[1]!.click();
+    await until(() => tab.nerve.calls.length === 3, "first patch");
+  });
+  expect(tab.nerve.calls[2]?.body).toEqual({ filters: { priority: ["low"] } });
+  expect(issues.getIssueIds()).toEqual(["old"]);
+  await act(async () => {
+    tab.nerve.calls[2]!.answer(json(200, preferencesOf({ filters: { priority: ["low"] } })));
+    await until(() => tab.nerve.calls.length === 5, "second patch and low list");
+  });
+  const second = tab.nerve.calls.find((c, i) => i >= 3 && c.method === "PATCH")!;
+  const low = tab.nerve.calls.find((c, i) => i >= 3 && c.method === "GET")!;
+  expect(second.body).toEqual({ filters: { priority: ["high"] } });
+  expect(low.query).toMatchObject({ priority: "low" });
+  await act(async () => {
+    low.answer(json(200, issuePageOf([issueOf("low-row")])));
+    await until(() => issues.getIssueIds()?.includes("low-row") === true, "low rows");
+  });
+  await act(async () => {
+    second.answer(json(200, preferencesOf({ filters: { priority: ["high"] } })));
+    await until(() => tab.nerve.calls.length === 6, "high list");
+  });
+  const high = tab.nerve.calls[5]!;
+  expect(high).toMatchObject({ method: "GET", path: "/api/v0/projects/A/issues", query: { priority: "high" } });
+  expect(issues.currentList?.scope.query.priority).toEqual(["high"]);
+  await act(async () => {
+    high.answer(json(200, issuePageOf([issueOf("high-row")])));
+    await until(() => issues.getIssueIds()?.includes("high-row") === true, "high rows");
+  });
+  expect(issues.getIssueIds()).toEqual(["high-row"]);
+  expect(tab.nerve.calls.filter((c) => c.method === "PATCH")).toHaveLength(2);
+});
+
+it("does not refetch a genuinely unchanged preference with extra list parameters", async () => {
+  await act(async () => {
+    container.querySelectorAll("button")[1]!.click();
+    await until(() => tab.nerve.calls.length === 3, "no-op patch");
+    tab.nerve.calls[2]!.answer(json(200, preferencesOf({ filters: { priority: ["high"] } })));
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  expect(tab.nerve.calls).toHaveLength(3);
+  expect(tab.app.issue.projectIssues.getIssueIds()).toEqual(["old"]);
+});
+
+it.each(["session", "project"])("does not refresh the old list when %s changes while saving", async (change) => {
+  await act(async () => {
+    container.querySelectorAll("button")[0]!.click();
+    await until(() => tab.nerve.calls.length === 3, "held patch");
+    if (change === "session") fixture.session.loginId = "B";
+    else runInAction(() => tab.app.router.setQuery({ workspaceSlug: "ws", projectId: "B" }));
+    tab.nerve.calls[2]!.answer(json(200, preferencesOf({ filters: { priority: ["low"] } })));
+    await until(
+      () =>
+        JSON.stringify(tab.app.issue.projectIssuesFilter.getIssueFilters("A")?.richFilters) ===
+        JSON.stringify({ and: [{ priority__in: "low" }] }),
+      "confirmation"
+    );
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  expect(tab.nerve.calls).toHaveLength(3);
+  expect(fixture.toast).not.toHaveBeenCalled();
 });
