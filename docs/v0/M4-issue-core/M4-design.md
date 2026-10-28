@@ -376,7 +376,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - **任务失败**：真的出错时 River 按它的退避重试（预算用完的 snooze 不是失败）；重试用完时记一条错误日志，行仍是窗口期间的样子（对任何读写都不存在），60 天之后项目（工作区）的行被物理清理时，外键的 `CASCADE` 把它们物理删除（3.21）。
   - **与清理的先后**：任务写的 `deleted_at` 是请求的时刻，清理按 `deleted_at < 现在 − 60 天` 删除，所以任务在 60 天之内做完时清理碰不到它还没写的行。任务挂起超过 60 天时：`issue` 的清理者跳过仍是活的行，`project`（`workspace`）的清理者物理删除项目（工作区）的行，外键的 `CASCADE` 把剩下的工作项一侧的行一起物理删除；任务随后写 0 行、完成。两者若恰好同时碰到同一批行，按不同的顺序可能死锁（40P01），一方回滚、由 River 重试。
   - **e2e**：M4 的每张表都有 `project_id`（草稿可空）、`deleted_at`、`updated_by_id`。`expectProjectDeleted`、`expectWorkspaceDeleted` 从目录读表（`workspaceTables` 改为从目录读出，2 节）；P9 起它们对工作项一侧的表**限时轮询数据库**，等到每一行都与项目同一时刻、由同一个账户软删除（总体设计 8.2 允许"限时轮询数据库"）。M3 的删除故事在删除之前经 `furnishIssueRows` 给每张表造行（2 节，每个加表的 Phase 扩充它；对抗性评审 I6）。
-- **删除状态**：有未删除的工作项（含已归档的）用它时拒绝，409 `project.state_in_use`（Plane 同样拒绝，计 `Issue.objects`，`API/app/views/state/base.py:123-130`；M3 的 `deleteState` 还没有这个检查，P1a 加入，M3 交接第 4 节）。所以 `issues.state_id` 的外键 `CASCADE` 不会删掉活的工作项（4.2）。
+- **删除状态**：有未删除的工作项（含已归档的）用它时拒绝，409 `project.state_in_use`（Plane 同样拒绝，计 `Issue.objects`，`API/app/views/state/base.py:123-130`；M3 的 `deleteState` 还没有这个检查，P1a 加入，M3 交接第 4 节）。这只保证单独删除状态路径的后续清理仅连带已软删除的工作项。父级项目/工作区删除会先软删状态、再由异步任务处理issue；任务迟到超过保留期时，过期状态或父行的物理清理可经 `CASCADE` 回收仍为活标记的issue。状态清理先于项目清理，直接候选仍须严格早于cutoff；迟到任务交叠允许40P01原错交River重试（4.2、3.21）。
 - **删除标签**：连同子标签，软删除它们的 `issue_labels` 行（Plane 相同，经 `CASCADE` 的遍历；M3 交接第 4 节）。不写动态（Plane 也不写）。
 - **项目成员离开、被移出、账户停用**：不改工作项。他仍是已有工作项的负责人、关注者（Plane 相同）；他不能被新指派（3.7）。Plane 的读取只返回"在某个项目里仍有效"的负责人（`API/app/views/issue/base.py:541-551`，范围不限于这个项目，是缺陷）；Nerve 返回全部未删除的负责人行，页面从工作区成员列表（含已结束的成员关系）取他的显示名。登记差异。
 - **归档项目**：不改工作项。已归档的项目里的工作项可以读，一切写 409 `project.archived`（3.8）。
@@ -892,7 +892,7 @@ M4 的 13 张表都带 `workspace_id`、`project_id`（草稿的可空）、`del
 | `workspace_id` | `uuid NOT NULL REFERENCES workspaces ON DELETE CASCADE` | — |
 | `project_id` | `uuid NOT NULL REFERENCES projects ON DELETE CASCADE` | — |
 | `parent_id` | `uuid REFERENCES issues ON DELETE CASCADE`，`issues_not_own_parent_check CHECK (parent_id <> id)` | CHECK 新加（3.9；多列的 CHECK 有名字，M2 设计 3.13） |
-| `state_id` | `uuid NOT NULL REFERENCES states ON DELETE CASCADE` | Plane 可空；Nerve 的创建总有状态（项目恰有一个默认状态）。`CASCADE` 照搬：删除状态在有工作项用它时被拒绝（3.6），所以只会删掉已软删除的工作项 |
+| `state_id` | `uuid NOT NULL REFERENCES states ON DELETE CASCADE` | Plane 可空；Nerve 的创建总有状态（项目恰有一个默认状态）。`CASCADE` 照搬：单独删除状态因未删除工作项（含归档）在用而拒绝，该路径后续清理仅连带软删工作项；父级异步删除后，过期状态或父行清理仍可CASCADE回收活标记issue，严格cutoff与迟到40P01重试边界见3.6 |
 | `name` | `varchar(255) NOT NULL`，`CHECK (name <> '')` | CHECK 新加 |
 | `description_html` | `text NOT NULL DEFAULT '<p></p>'` | — （P1a 建列，接口在 P4 才有这个字段，3.7） |
 | `description_stripped` | `text` | — |

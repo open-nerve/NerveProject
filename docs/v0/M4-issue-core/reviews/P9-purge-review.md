@@ -150,3 +150,10 @@ M4总体§14/总体§9.4、P10–P16页面与收尾仍开放；不创建M5–M8�
 本轮文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；独立文档复审由主控接续，目前待核。静态检查不代替产品运行或独立复审
 
 只文档修改不谎称新行为运行，不重跑未受影响规模。本轮不合并；保留分支/worktree及ignored证据。未来获负责人明确授权才--no-ff，另核准确main SHA CI及归档哈希后清理。
+
+
+### T16文档独评接续：局部修复待复审（2026-10-28）
+
+准确文档范围e003..7f5625bf的[18回执审查](../../../../.superpowers/sdd/P9-purge/task-16-receipts-review.md)为Approved/0发现；[核心13文件审查](../../../../.superpowers/sdd/P9-purge/task-16-core-review.md)发现T16-CORE-1/2两项Local/Minor，整体文档尚未Approved。CORE-1修正M3三处DeleteWorkspaceProjects旧projectIDs入参，锁返回的ID集合仍由workspace用例用于事件；CORE-2修正M4两处/plane-diff一处state_id CASCADE无条件承诺，区分单独删状态守卫与父级异步迟到时过期状态/父行回收活标记issue。
+
+本轮只修文档并定向静态核对端口/调用、StateInUse、状态清理顺序及FK，未改产品/测试，未重新运行F或规模；修复独立复审、文档提交CI仍待主控接续，不提前关闭A13或阶段状态。产品4项发现闭环与e003 F/CI、7f原文档证据保持各自身份。
