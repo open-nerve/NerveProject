@@ -170,6 +170,8 @@ T6同时改 `C/store/issue/issue-details/{issue,sub_issues,link,relation}.store.
 
 供旧读者的 `issuesMap` 是 `Readonly<Record<string, Issue|IssueDetail>>` 派生只读视图，不是第二份实体缓存；需要的旧addIssue/updateIssue写API彻底删除，不留无行为壳。这里只收紧共享存储边界，旧详情资源地址/业务流程完整替换仍由P11负责。若权威回读失败，采用下表未证实状态，不把“旧写成功”伪报为“最新实体已取得”。
 
+两个详情入口在辅助资源（含 parent）await 返回后、标识写入和任何后续请求之前，必须再核本次读取的 owner/active/项目删除水位；子项读取在父项权威回读 await 后、发布子项 ID/分布或返回旧应答前，也必须再核原请求令牌。权威回读 fulfilled 但返回 undefined 可能表示旧流程已失效，不能据此略过令牌检查；失效读取按既有 SessionChanged 结束。
+
 #### 缺行回查的四路状态转移（B-L6）
 
 **T6 首项 R17：** T5 在 fetch/replay 后发出真实核实 GET，direct-confirm 当时仅登记 verifyIds。T6 由 IssueRootStore 单独拥有 `issue-verification.ts`，将两条入口收口到下述完整 round，跨副本与并发 part 去重；已成功的业务写不能因后续核实拒绝而伪报写失败或重发。核实错误保留于不可确认状态并交给其读取/显式重试通道。真实 direct-confirm→GET、拒绝后显式重试及退役后无跟进须在 T6 独评前关闭，不延后至 T12/T14。
@@ -186,6 +188,8 @@ T6同时改 `C/store/issue/issue-details/{issue,sub_issues,link,relation}.store.
 核实协调器只保存 id/round/状态/error/freshnessFloor 与在外请求、去重/预算，不保存第二份实体。绑定通过既有 useIssueListRefresh 登记可见范围；核实在外时 hook 不重复刷新，隐藏绑定保留 stale 到显示时，重新挂载可显式进入新核实轮次。成功核实后的列表刷新失败只保留该列表错误，不反向否定已经取得的权威实体。旧详情入口返回 canonical Detail 或 undefined，不再把被版本守卫拒绝的旧描述作为函数结果交给复制弹窗。
 
 每个read/replay round维护已核实id集合及每scope刷新预算1，结束后不因同一stale自动重新开round；UI重试/下次挂载才建立新预算。并发part共享当前协调round对同id去重。仅高于该id freshnessFloor的新发有效list返回完整该id时才可重新证实可见并清核实元数据；新发的空页可使回答范围的rows/计数收敛，但不把该id永久删除。较旧版本、失效令牌或核实拒绝前已发出的list均不能清，即使服务器updated_at相同。404/拒绝不推进项目删除水位，不影响无关项目。
+
+显式 retry/权威 refresh 通过内部 `begin(true)` 建立新 round：即使无关慢 whole/part 仍持有旧 round，也不能复用旧 round 中已落定的拒绝 Promise。真正仍在外的同 id 请求可以跨 round 共享，并登记到加入轮次的已核实 ID 集合；旧轮次结束仅释放自身，不能清除较新的当前轮次。自动 require/drain 仍使用原轮次去重，不因拒绝自动重开；不新增实体缓存或 HTTP 合同。
 
 ### 2.7 T7/T8：显示偏好和筛选
 

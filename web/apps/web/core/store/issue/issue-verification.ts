@@ -28,7 +28,9 @@ export class IssueVerification {
   private current?: VerificationRound;
   private sequence = 0;
   constructor(private readonly root: IssueRootStore) {}
-  begin(): VerificationRound {
+  begin(fresh = false): VerificationRound {
+    // Explicit recovery owns new completed-id dedupe and scope budgets even if an old read is still out.
+    if (fresh) this.current = undefined;
     const round = (this.current ??= { id: ++this.sequence, users: 0, ids: new Map(), scopes: new Set() });
     ++round.users;
     return round;
@@ -113,7 +115,7 @@ export class IssueVerification {
   async retry(list: IssueListBinding): Promise<boolean> {
     const ids = [...this.records.keys()].filter((id) => this.affected.get(id)?.has(list) || this.belongs(id, list));
     if (!ids.length) return false;
-    const round = this.begin();
+    const round = this.begin(true);
     try {
       await Promise.all(ids.map((id) => this.request(id, round, true)));
       return true;
@@ -126,7 +128,7 @@ export class IssueVerification {
     const lists = this.affected.get(id) ?? new Set<IssueListBinding>();
     for (const list of this.root.listsForIssue(id)) lists.add(list);
     this.affected.set(id, lists);
-    const round = this.begin();
+    const round = this.begin(true);
     try {
       return await this.request(id, round, true, retryStaleDetail);
     } finally {
@@ -140,7 +142,11 @@ export class IssueVerification {
     retryStaleDetail = true
   ): Promise<IssueDetail | undefined> {
     const existing = this.inFlight.get(id) ?? round.ids.get(id);
-    if (existing) return existing;
+    if (existing) {
+      // A genuinely pending request can span rounds; its completion still dedupes this joining round.
+      round.ids.set(id, existing);
+      return existing;
+    }
     const record = this.records.get(id);
     if (record && record.status !== "pending" && !explicit)
       return record.error ? Promise.reject(record.error) : Promise.resolve(undefined);

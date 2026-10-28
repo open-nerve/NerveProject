@@ -5,7 +5,8 @@ import { runInAction } from "mobx";
 import type { TIssueSubIssues } from "@nerve/types";
 import { FakeNerve, json, noContent } from "@/lib/auth/fake-nerve";
 import { heldChange } from "@/lib/auth/fake-tab";
-import { until } from "@/lib/auth/fake-time";
+import { track, until } from "@/lib/auth/fake-time";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { APIService } from "@/services/api.service";
 import { issueOf, requestedIssue } from "@/store/issue/fake-issues";
 import { labelOf, loadProjects, projectMemberOf, projectOf, stateOf } from "@/store/project/fake-projects";
@@ -161,4 +162,38 @@ it("deletedParentDiscardsLateLegacySubReadWithoutAuthoritativeFollowup", async (
   await loading;
   expect(app.issue.issues.getIssueById("child")).toBeUndefined();
   expect(app.issue.issueDetail.subIssues.subIssuesByIssueId(parent.id)).toBeUndefined();
+});
+
+it("deletedParentDiscardsSubReadWaitingForAuthoritativeParent", async () => {
+  const parent = issueOf("parent", here.id, ws.id);
+  const child = { ...issueOf("child", here.id, ws.id), parent_id: parent.id };
+  app.issue.issues.acceptRead(parent, app.issue.captureRead());
+  vi.spyOn(APIService.prototype, "get").mockResolvedValue(
+    reply({
+      sub_issues: [child],
+      state_distribution: { backlog: [], unstarted: [child.id], started: [], completed: [], cancelled: [] },
+    })
+  );
+  const store = app.issue.issueDetail.subIssues;
+  const reading = await requestedIssue(nerve, () => store.fetchSubIssues(ws.slug, here.id, parent.id), [
+    "GET",
+    "/api/v0/issues/parent",
+  ]);
+  const observed = track(reading.promise);
+  const deleting = await requestedIssue(
+    nerve,
+    () => app.issue.deleteIssue(parent.id, app.issue.scope(ws.slug, here.id)),
+    ["DELETE", "/api/v0/issues/parent"]
+  );
+  deleting.call.answer(noContent());
+  await deleting.promise;
+  reading.call.answer(json(200, { ...parent, description_html: "", sub_issues_count: 1 }));
+  await until(() => observed.settled, "late parent read discarded");
+  expect(store.subIssuesByIssueId(parent.id)).toBeUndefined();
+  expect(store.stateDistributionByIssueId(parent.id)).toBeUndefined();
+  expect(observed.error).toBeInstanceOf(SessionChangedError);
+  expect(observed.value).toBeUndefined();
+  expect(app.issue.issues.held(parent.id)).toBeNull();
+  expect(app.issue.issues.held(child.id)).toBeNull();
+  expect(nerve.calls.map((call) => call.method)).toEqual(["GET", "DELETE"]);
 });

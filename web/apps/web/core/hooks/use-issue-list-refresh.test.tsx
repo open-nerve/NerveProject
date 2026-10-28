@@ -7,7 +7,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { answered, json } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { issueStoreTab, listIssue, requestedIssue } from "@/store/issue/fake-issues";
-import type { IssueListBinding } from "@/store/issue/helpers/issue-list-binding";
+import { IssueListBinding } from "@/store/issue/helpers/issue-list-binding";
 import { useIssueListRefresh } from "./use-issue-list-refresh";
 const binding = vi.hoisted(() => ({
   app: undefined as unknown,
@@ -133,6 +133,43 @@ it("verification refusal waits through rerenders and a new mount opens one retry
   expect(list.error).toBeUndefined();
   await mount(list);
   await requestCount(4);
+});
+it("remountRetriesRefusedVerificationWhileAnotherWholeIsStillPending", async () => {
+  const list = tab.app.issue.projectIssues.currentList!;
+  await mount(list);
+  const other = new IssueListBinding(tab.app.issue, {
+    scope: "project",
+    workspaceSlug: "ws",
+    workspaceID: "id-ws",
+    projectID: "A",
+    query: { limit: 99 },
+  });
+  const slow = await requestedIssue(tab.nerve, () => other.fetchFirst(), ["GET", "/api/v0/projects/A/issues"]);
+  let refusal!: Promise<void>;
+  await act(async () => {
+    refusal = expect(tab.app.issue.issues.refreshAuthoritative("a")).rejects.toMatchObject({ status: 403 });
+    await until(() => tab.nerve.calls.length === 3, "authoritative read beside slow whole");
+  });
+  await answer(2, 403);
+  await refusal;
+  await mount(list);
+  await requestCount(3);
+  await act(async () => view.render(null));
+  await mount(list);
+  await act(async () => vi.advanceTimersByTimeAsync(1));
+  expect(tab.nerve.calls).toHaveLength(4);
+  expect(tab.nerve.calls[3]).toMatchObject({ method: "GET", path: "/api/v0/issues/a" });
+  await act(async () => {
+    slow.call.answer(json(200, { total: 0, data: [], next_cursor: null }));
+    await slow.promise;
+    tab.nerve.calls[3]!.answer(json(200, { ...listIssue("a", 10, { state_id: "A" }), description_html: "" }));
+    await until(() => tab.nerve.calls.length === 5, "remount scope refresh");
+    tab.nerve.calls[4]!.answer(json(200, page));
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(list.error).toBeUndefined();
+  await mount(list);
+  await requestCount(5);
 });
 it("refusal stays stale without render loops and explicit retry starts one new read", async () => {
   const list = tab.app.issue.projectIssues.currentList!;

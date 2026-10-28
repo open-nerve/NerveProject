@@ -8,7 +8,8 @@ import { APIService } from "@/services/api.service";
 import { heldChange } from "@/lib/auth/fake-tab";
 import type { TIssueReaction, TIssueLink, TIssueRelation } from "@nerve/types";
 import { until, track } from "@/lib/auth/fake-time";
-import { FakeNerve, answered, json, problem } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { issueOf, requestedIssue } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { projectOf, loadProjects, stateOf } from "@/store/project/fake-projects";
@@ -206,6 +207,48 @@ it.each([false, true])(
     http.answer(reply([reaction]));
     await loading;
     expect(settledBeforeRelease).toBe(false);
+  }
+);
+it.each([false, true].flatMap((identifier) => ["retire", "delete"].map((boundary) => ({ identifier, boundary }))))(
+  "auxiliaryCompletionCannotFollowInvalidatedDetail ($identifier/$boundary)",
+  async ({ identifier, boundary }) => {
+    const { detail, source, get, fetch } = resources("parent");
+    const held = heldChange<AxiosResponse<TIssueReaction[]>>();
+    const fallback = get.getMockImplementation()!;
+    get.mockImplementation((url, ...args) => (url.endsWith("/reactions/") ? held.sent : fallback(url, ...args)));
+    // Observe the real generated state transport, not just a detached method stub.
+    const states = vi.mocked(app.state.fetchProjectStates);
+    states.mockRestore();
+    const identifiers = vi.spyOn(app.issue.issues, "addIssueIdentifier");
+    const loading = track(fetch(identifier));
+    await until(() => get.mock.calls.some(([url]) => url.endsWith("/reactions/")), "held auxiliary read");
+    if (boundary === "retire") app.dispose();
+    else {
+      const deleting = await requestedIssue(
+        nerve,
+        () => app.issue.deleteIssue(source.id, app.issue.scope(ws.slug, project.id)),
+        ["DELETE", "/api/v0/issues/R1"]
+      );
+      deleting.call.answer(noContent());
+      await deleting.promise;
+    }
+    const requestsBeforeRelease = nerve.calls.length;
+    const identifiersBeforeRelease = identifiers.mock.calls.length;
+    held.answer(reply([reaction]));
+    await until(() => loading.settled, "invalidated detail settles");
+    await vi.advanceTimersByTimeAsync(1);
+    const lateCalls = nerve.calls.slice(requestsBeforeRelease);
+    // Settle an unexpected real state request on the red run without hiding the assertion.
+    for (const call of lateCalls) call.answer(json(200, { data: [a, b] }));
+    await vi.advanceTimersByTimeAsync(1);
+    expect(lateCalls.map((call) => call.path)).toEqual([]);
+    expect(identifiers.mock.calls).toHaveLength(identifiersBeforeRelease);
+    expect(detail.activity.fetchActivities).not.toHaveBeenCalled();
+    expect(detail.comment.fetchComments).not.toHaveBeenCalled();
+    expect(detail.subIssues.fetchSubIssues).not.toHaveBeenCalled();
+    expect(detail.relation.fetchRelations).not.toHaveBeenCalled();
+    expect(loading.error).toBeInstanceOf(SessionChangedError);
+    expect(loading.value).toBeUndefined();
   }
 );
 it.each(

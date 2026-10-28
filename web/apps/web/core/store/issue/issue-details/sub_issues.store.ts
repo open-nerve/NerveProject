@@ -141,6 +141,8 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     }
     await root.issues.refreshAuthoritative(parentIssueId);
 
+    if (!root.isReadCurrent(token, [projectId])) throw new SessionChangedError();
+
     runInAction(() => {
       set(this.subIssuesStateDistribution, parentIssueId, subIssuesStateDistribution);
       set(

@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { issueDetailOf, issueOf, issuePageOf, issueStoreTab, requestedIssue } from "./fake-issues";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
-import { until } from "@/lib/auth/fake-time";
+import { track, until } from "@/lib/auth/fake-time";
 import { IssueListBinding } from "./helpers/issue-list-binding";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
@@ -131,6 +131,56 @@ it("directConfirmImmediatelyVerifiesAcrossCopiesWithoutResendingWrite", async ()
   expect(first.error).toBeUndefined();
   expect(second.error).toBeUndefined();
   expect(tab.nerve.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
+});
+
+it.each([403, 404])("explicitRetryStartsNewRoundWhileOldWholeRemainsPending (%s)", async (status) => {
+  const first = list();
+  const second = list(20);
+  await load(first, issuePageOf([issueOf("x")]));
+  first.setVisibleParts([{ group: "" }]);
+  const failed = await requestedIssue(tab.nerve, () => tab.app.issue.issues.refreshAuthoritative("x"), [
+    "GET",
+    "/api/v0/issues/x",
+  ]);
+  // Join the verification's own round, so it remains current even after its GET has settled.
+  const slow = await requestedIssue(tab.nerve, () => second.fetchFirst(), ["GET", "/api/v0/projects/A/issues"]);
+  const failure = track(failed.promise);
+  failed.call.answer(problem(status, "refused"));
+  await vi.advanceTimersByTimeAsync(1);
+  if (status === 404) {
+    tab.nerve.calls.at(-1)!.answer(json(200, issuePageOf([])));
+    await failed.promise;
+  } else expect(failure.error).toMatchObject({ status });
+  const serialBeforeRetry = tab.app.issue.readSerial;
+  const countBeforeRetry = tab.nerve.calls.length;
+  const retry = track(first.retryFailed());
+  await vi.advanceTimersByTimeAsync(1);
+  expect(tab.nerve.calls).toHaveLength(countBeforeRetry + 1);
+  expect(tab.nerve.calls.at(-1)).toMatchObject({ method: "GET", path: "/api/v0/issues/x" });
+  expect(tab.app.issue.readSerial).toBeGreaterThan(serialBeforeRetry);
+  expect(retry.settled).toBe(false);
+  const fresh = tab.nerve.calls.at(-1)!;
+  // A concurrent explicit caller shares the actual pending GET, but joins the new round's dedupe set.
+  const shared = track(first.retryFailed());
+  await vi.advanceTimersByTimeAsync(1);
+  expect(tab.nerve.calls).toHaveLength(countBeforeRetry + 1);
+  const third = list(30);
+  const holdingNew = await requestedIssue(tab.nerve, () => third.fetchFirst(), ["GET", "/api/v0/projects/A/issues"]);
+  slow.call.answer(json(200, issuePageOf([])));
+  await slow.promise;
+  fresh.answer(json(200, issueDetailOf("x")));
+  await until(() => tab.nerve.calls.length === countBeforeRetry + 3, "fresh round scope budget");
+  tab.nerve.calls.at(-1)!.answer(json(200, issuePageOf([issueOf("x")])));
+  await until(() => retry.settled && shared.settled, "shared retry settles");
+  expect(retry.error).toBeUndefined();
+  expect(shared.error).toBeUndefined();
+  expect(first.error).toBeUndefined();
+  tab.app.issue.verification.require("x", first);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(tab.nerve.calls).toHaveLength(countBeforeRetry + 3);
+  holdingNew.call.answer(json(200, issuePageOf([])));
+  await holdingNew.promise;
+  expect(tab.app.issue.issues.getIssueDetailById("x")?.id).toBe("x");
 });
 
 it.each([404, 403, 500])(

@@ -97,6 +97,8 @@ export class IssueStore implements IIssueStore {
     if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
     await this.loadIssueResources(workspaceSlug, projectId, issueId, issue);
 
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
+
     // fetch issue activity
     this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
 
@@ -152,6 +154,8 @@ export class IssueStore implements IIssueStore {
 
     if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
     await this.loadIssueResources(workspaceSlug, projectId, issueId, issue);
+
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
 
     // add identifiers to map
     rootWorkItemDetailStore.rootIssueStore.issues.addIssueIdentifier(issueIdentifier, issueId);
