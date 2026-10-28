@@ -89,6 +89,10 @@ export function toProjectFilters(expression: TWorkItemFilterExpression): Project
         ...values.filter(Boolean).map((value) => (value === "None" ? "none" : value)),
       ];
     }
+  for (const field of ["start_date", "target_date"] as const) {
+    const values = result[field];
+    if (values && values.includes("none") && values.length > 1) delete result[field];
+  }
   return result;
 }
 
@@ -103,7 +107,7 @@ export function toFilterExpression(filters: ProjectIssueFilters): TWorkItemFilte
           value.includes("..") ? { [`${field}__range`]: value.replace("..", ",") } : { [`${field}__exact`]: value }
         );
       }
-    else if (field !== "subscriber_id") and.push({ [`${field}__in`]: values.join(",") });
+    else and.push({ [`${field}__in`]: values.join(",") });
   }
   return and.length ? { and } : {};
 }
@@ -130,7 +134,9 @@ export function projectListQuery(filters: ProjectIssueFilters, display: Display 
     order_by: order(display.order_by),
     sub_issue: display.sub_issue === false ? "false" : "true",
     ...(groupBy && groupBy !== "project_id" ? { group_by: groupBy } : {}),
-    ...(sub && sub !== groupBy && sub !== "project_id" ? { sub_group_by: sub } : {}),
+    ...(groupBy && groupBy !== "project_id" && sub && sub !== groupBy && sub !== "project_id"
+      ? { sub_group_by: sub }
+      : {}),
   };
 }
 export function memberListQuery(

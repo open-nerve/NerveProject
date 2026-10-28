@@ -28,3 +28,18 @@ it("narrowsDisplayVocabularyAndMemberScope", () => {
     sub_issue: "true",
   });
 });
+
+it("F01 preserves subscriber filters on readback", () => {
+  expect(toProjectFilters(toFilterExpression({ subscriber_id: ["me"] }))).toEqual({ subscriber_id: ["me"] });
+});
+
+it("F01 clears incompatible date none", () => {
+  expect(toProjectFilters({ and: [{ target_date__exact: "none" }, { target_date__exact: "2026-10-01" }] })).toEqual({});
+});
+
+it("F01 avoids an orphan subgroup", () => {
+  expect(projectListQuery({}, { layout: "kanban", sub_group_by: "labels" })).toEqual({
+    order_by: "-created_at",
+    sub_issue: "true",
+  });
+});
