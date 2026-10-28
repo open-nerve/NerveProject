@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T4 既定任务门禁已完成，T5 实施中；W1 为 T5 首项必修。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T4 完整本地七门禁通过；阶段最终门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。实施记录见第7节；以下第1–6节保留预检时点事实。
+日期：2026-10-29。**T1–T4 既定任务门禁已完成，T5 首轮独评发现三项消费链缺陷，fix round 1 实施中；W1 已获 Task5 独评确认。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T4 完整本地七门禁通过；阶段最终门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。实施记录见第7节；以下第1–6节保留预检时点事实。
 
 ## 1. 实际前置与证据
 
@@ -127,3 +127,12 @@ T4 局部裁定与证据：
 T4 完整本地 F 绑定干净提交 `dde969f8bb526dcf2641ad45eb1a93b8f5d1e5d4`，七项均 exit0 且各自执行前后 HEAD/工作树一致：gen-check、lint-go、`GOFLAGS=-p=1 make test`、lint-web、knip、`TURBO_FORCE=true make test-web`、e2e。服务端51包通过、16包无测试文件；前端18任务0缓存，8份包级原日志共1436项通过（web 145文件1274项、其它Vitest157项、api-client Node测试5项）；Playwright169项通过，构建11任务中10缓存，不能将构建缓存说成E2E跳过。web原日志含既有IssueRootStore严格模式警告（T10处理）、Cycle/Modules及React key警告，输出不是零警告。准确argv/cwd/raw/hash、8份包原日志与源码桥见 `task-4-root-final-f-attempt1/receipts.json`、`root-verification.json`。首轮F在lint-web失败的原件仍保留，不与此最终轮混用。F通过不证明W1已修，也不是最终阶段或远端CI通过。
 
 T5接续：先关闭W1，再以唯一root写协调入口接通项目/归档/个人主页列表、同任务移除旧形状及旧列表服务。T5–T14及全部阶段产品验收仍开放；不合并、不启动P11。
+
+
+### T5 首轮独评与 fix round 1（实施者记录，待限定复审）
+
+首版 `affdcf337f1058fccc72ce560165c3719473a6f5` 的独评结论为 Needs fixes：W1/R13 已获确认；普通看板无泳道的旧子组占位使续页不可达（I1）、其它 part 拒绝期间展开新组会永久漏刷（I2）、None 标签/负责人快建预填向 HTTP 发送哨兵 ID（I3）须在 T5 修复。原 `task-5-review.md` 与独立 probe 完整保留，不以已有全绿代替这些反例。
+
+本轮修复统一 optional 子组读取/续页参数、仅在启动刷新时记录尝试，并跟进小写 none 与空字符串未分组键的消费者；M1 普通/递归子项的多余折叠层同范围修正。新挂载测试贯穿真实 KanBan/ListGroup、列键生产、QuickAddRoot/RHF、根写协调与 FakeNerve，保留泳道、有效 ID 和 priority:none。A 拒绝→展开 B→显式重试 A 后验证 B 的首次请求和收敛。准确红绿、静态门禁、全前端及源码桥记录追加于 `task-5-report.md` 的 fix1 节；本段不代替独立复审，不勾 Task 或 A1–A10。
+
+M2 既有 MobX/React key 等噪声保留原日志并沿原 M6/T10 所有者处理，不升警告阈值或吞 stderr。R17 direct-confirm 即时核实及完整 round/freshness/canonical 仍归 T6，不能从本轮 UI 修复推定已完成。

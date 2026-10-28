@@ -10,7 +10,6 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { CircleDashed } from "lucide-react";
 import { Collapsible } from "@makeplane/propel/components/collapsible";
-import { ALL_ISSUES } from "@nerve/constants";
 import type { IGroupByColumn, TSubIssueOperations } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { SubIssuesListItem } from "./list-item";
@@ -48,7 +47,7 @@ export const SubIssuesListGroup = observer(function SubIssuesListGroup(props: TS
     spacingLeft = 0,
   } = props;
 
-  const isAllIssues = group.id === ALL_ISSUES;
+  const isAllIssues = group.id === "";
 
   // states
   const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(true);

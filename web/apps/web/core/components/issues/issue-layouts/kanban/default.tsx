@@ -72,7 +72,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
     displayProperties,
     sub_group_by,
     group_by,
-    sub_group_id = "null",
+    sub_group_id,
     updateIssue,
     quickActions,
     collapsedGroups,
@@ -131,7 +131,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
 
   const isGroupByCreatedBy = group_by === "created_by";
   const approximateCardHeight = getApproximateCardHeight(displayProperties);
-  const isSubGroup = !!sub_group_id && sub_group_id !== "null";
+  const isSubGroup = sub_group_id !== undefined;
 
   return (
     <ContentWrapper className="relative flex-row gap-4 !pt-2 !pb-0">

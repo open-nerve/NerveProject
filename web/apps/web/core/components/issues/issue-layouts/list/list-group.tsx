@@ -145,10 +145,10 @@ export const ListGroup = observer(function ListGroup(props: Props) {
         preloadedData = { ...preloadedData, state_id: value };
       } else if (groupByKey === "priority") {
         preloadedData = { ...preloadedData, priority: value };
-      } else if (groupByKey === "labels" && value != "None") {
-        preloadedData = { ...preloadedData, label_ids: [value] };
-      } else if (groupByKey === "assignees" && value != "None") {
-        preloadedData = { ...preloadedData, assignee_ids: [value] };
+      } else if (groupByKey === "labels") {
+        if (value !== "none") preloadedData = { ...preloadedData, label_ids: [value] };
+      } else if (groupByKey === "assignees") {
+        if (value !== "none") preloadedData = { ...preloadedData, assignee_ids: [value] };
       } else if (groupByKey === "created_by") {
         preloadedData = { ...preloadedData };
       } else {

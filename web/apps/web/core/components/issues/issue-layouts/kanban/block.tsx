@@ -39,7 +39,7 @@ import { IssueProperties } from "../properties/all-properties";
 interface IssueBlockProps {
   issueId: string;
   groupId: string;
-  subGroupId: string;
+  subGroupId?: string;
   issuesMap: Record<string, Issue | IssueDetail>;
   displayProperties: IIssueDisplayProperties | undefined;
   draggableId: string;

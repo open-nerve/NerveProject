@@ -49,7 +49,7 @@ interface IKanbanGroup {
   displayProperties: IIssueDisplayProperties | undefined;
   sub_group_by: TIssueGroupByOptions | undefined;
   group_by: TIssueGroupByOptions | undefined;
-  sub_group_id: string;
+  sub_group_id?: string;
   isDragDisabled: boolean;
   isDropDisabled: boolean;
   dropErrorMessage: string | undefined;
@@ -102,7 +102,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
   const containerRef = sub_group_by && scrollableContainerRef ? scrollableContainerRef : columnRef;
 
   const loadMoreIssuesInThisGroup = useCallback(() => {
-    loadMoreIssues(groupId, sub_group_id === "null" ? undefined : sub_group_id);
+    loadMoreIssues(groupId, sub_group_id);
   }, [loadMoreIssues, groupId, sub_group_id]);
 
   const isPaginating = !!getIssueLoader(groupId, sub_group_id);
@@ -178,7 +178,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     groupByKey: string | undefined,
     subGroupByKey: string | undefined | null,
     groupValue: string,
-    subGroupValue: string
+    subGroupValue: string | undefined
   ) => {
     const defaultState = projectState.projectStates?.find((state) => state.default);
     let preloadedData: object = { state_id: defaultState?.id };
@@ -188,10 +188,10 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
         preloadedData = { ...preloadedData, state_id: groupValue };
       } else if (groupByKey === "priority") {
         preloadedData = { ...preloadedData, priority: groupValue };
-      } else if (groupByKey === "labels" && groupValue != "None") {
-        preloadedData = { ...preloadedData, label_ids: [groupValue] };
-      } else if (groupByKey === "assignees" && groupValue != "None") {
-        preloadedData = { ...preloadedData, assignee_ids: [groupValue] };
+      } else if (groupByKey === "labels") {
+        if (groupValue !== "none") preloadedData = { ...preloadedData, label_ids: [groupValue] };
+      } else if (groupByKey === "assignees") {
+        if (groupValue !== "none") preloadedData = { ...preloadedData, assignee_ids: [groupValue] };
       } else if (groupByKey === "created_by") {
         preloadedData = { ...preloadedData };
       } else {
@@ -199,15 +199,15 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
       }
     }
 
-    if (subGroupByKey) {
+    if (subGroupByKey && subGroupValue !== undefined) {
       if (subGroupByKey === "state") {
         preloadedData = { ...preloadedData, state_id: subGroupValue };
       } else if (subGroupByKey === "priority") {
         preloadedData = { ...preloadedData, priority: subGroupValue };
-      } else if (subGroupByKey === "labels" && subGroupValue != "None") {
-        preloadedData = { ...preloadedData, label_ids: [subGroupValue] };
-      } else if (subGroupByKey === "assignees" && subGroupValue != "None") {
-        preloadedData = { ...preloadedData, assignee_ids: [subGroupValue] };
+      } else if (subGroupByKey === "labels") {
+        if (subGroupValue !== "none") preloadedData = { ...preloadedData, label_ids: [subGroupValue] };
+      } else if (subGroupByKey === "assignees") {
+        if (subGroupValue !== "none") preloadedData = { ...preloadedData, assignee_ids: [subGroupValue] };
       } else if (subGroupByKey === "created_by") {
         preloadedData = { ...preloadedData };
       } else {
@@ -218,7 +218,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     return preloadedData;
   };
 
-  const isSubGroup = !!sub_group_id && sub_group_id !== "null";
+  const isSubGroup = sub_group_id !== undefined;
 
   const issueIds = isSubGroup
     ? (groups

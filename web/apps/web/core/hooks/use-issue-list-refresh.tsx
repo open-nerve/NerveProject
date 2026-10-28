@@ -56,8 +56,11 @@ export function useIssueListRefresh(list: IssueListBinding | undefined, visible:
       if (!list.group(group, subgroup ?? undefined)?.stale) attempts.current.parts.delete(key);
     }
     const parts = stale.filter((part) => !attempts.current.parts.has(pagePartKey(part)));
-    for (const part of parts) attempts.current.parts.add(pagePartKey(part));
-    if (parts.length && !error) void run(parts);
+    // A refusal defers other parts; their attempt starts only when a read starts.
+    if (parts.length && !error) {
+      for (const part of parts) attempts.current.parts.add(pagePartKey(part));
+      void run(parts);
+    }
   }, [list, error, current, run, stale, show]);
   return { retry, failed: !!error };
 }

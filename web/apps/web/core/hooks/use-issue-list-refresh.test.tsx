@@ -123,6 +123,30 @@ it("refusal stays stale without render loops and explicit retry starts one new r
   await answer(2);
   expect(list.group("A")?.stale).toBe(false);
 });
+it("a refusal does not consume the first refresh of a group expanded before explicit retry", async () => {
+  const list = tab.app.issue.projectIssues.currentList!;
+  list.markMembershipStale(listIssue("a", 10, { state_id: "A" }), listIssue("b", 10, { state_id: "B" }));
+  await mount(list);
+  await requestCount(2);
+  await answer(1, 403);
+  await mount(list, ["A", "B"]);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  // A must not loop; the binding may defer B until the explicit recovery succeeds.
+  expect(tab.nerve.calls.filter((call) => call.query.group_key === "A")).toHaveLength(1);
+  await act(async () => container.querySelector("button")!.click());
+  await requestCount(3);
+  expect(tab.nerve.calls[2]!.query.group_key).toBe("A");
+  await answer(2);
+  expect(list.group("A")?.stale).toBe(false);
+  expect(list.error).toBeUndefined();
+  expect(tab.nerve.calls.map((call) => call.query.group_key)).toEqual([undefined, "A", "A", "B"]);
+  await answer(3);
+  await mount(list, ["A", "B"]);
+  expect(list.group("B")?.stale).toBe(false);
+  expect(tab.nerve.calls).toHaveLength(4);
+});
 it("switching binding or retiring its root suppresses old followers and new requests", async () => {
   const old = tab.app.issue.projectIssues.currentList!;
   old.markMembershipStale(undefined, listIssue("a", 10, { state_id: "A" }));
