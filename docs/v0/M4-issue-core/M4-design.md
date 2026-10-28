@@ -2297,21 +2297,21 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：`tsc`、knip、vitest 通过；`git grep -lw TIssue -- web` 没有输出；`EIssuesStoreType` 没有 `CYCLE`、`MODULE`、`PROJECT_VIEW`、`GLOBAL`；S2 通过。
 
 ### P10b `web-list-data`：列表一侧的数据层（14 个任务）
-- **预检任务顺序细化**：T1 准备薄服务及直接测试，不提前移除仍有消费者的旧形状或发布无读者导出；T5 同任务切旧形状、生产接线、全部消费者和必要 query 纯函数，T8 完成否定层删除与完整筛选语义验证。canonical 的旧详情写者在 T6 同步收口；不提前扩展 P11 的完整详情资源。
+- **预检任务顺序细化**：T1 准备薄服务及直接测试，不提前移除仍有消费者的旧形状或发布无读者导出；T5 同任务切旧形状、生产接线、全部消费者和必要 query 纯函数，并实现根写协调入口、同代列表注册/确认、发出前 before/pending/队列和会话退役检查；T6 收口 canonical，T11 完成拖放，T12 扩全矩阵而非首次接线；T8 完成否定层删除与完整筛选语义验证。canonical 的旧详情写者在 T6 同步收口；不提前扩展 P11 的完整详情资源。
 - **目标**：列表的 services 和 stores 改接新接口；`reconciled.ts` 的扩展和 `paged-groups.ts`；项目页挂载时不再请求旧接口。
 - **任务**：
   1. `issue`、`issue-list` 的 service，换掉旧 `issue.service.ts` 的列表方法和 `issue_archive.service.ts`（7.2 的过渡在列表一侧结束）；项目显示设置的三个字段并入 `preferences` 的 service；列表的形状和枚举换型（`IssueListPage`、`IssueListOrder`、`IssueListGroupField`、`IssuePriority`；`TIssuesResponse` 一类、`EIssueGroupByToServerOptions`、`EServerGroupByToFilterOptions` 删除）。
   2. `Reconciled.fetchPart` 和 vitest。
   3. `paged-groups.ts` 的数据模型：组的行 `{id, key, updatedAt}`、固定的 `boundary`、没有回答的组按空的建出、`subgroupTotals`；全序逐个码位比较，读 `issue-order.json`。
   4. `paged-groups.ts` 的修改和重做：旧属、新属、拖放的落点、重做的三种判断、`stale`；3.22 的 vitest 表（含对抗性评审 I2 的九个反例）。
-  5. `base-issues.store.ts` 重写（第一页、一组带 `group_key` 的下一页、`stale` 的重取），保留 `getFilteredWorkItems`。
+  5. `base-issues.store.ts` 重写（第一页、一组带 `group_key` 的下一页、`stale` 的重取），保留 `getFilteredWorkItems`；根协调器同步接通及基本回归。profile 首/续页迁 listMember，删除 UserService.getUserProfileIssues 及其旧继承/类型，保留 M2 新 API 方法（原 P11 此子项前移以闭合旧列表类型删除）。
   6. 工作项的一份（`ReconciledByKey`：服务端的 `updated_at`，描述只由 `IssueDetail` 写，读到成员关系改变时标 `stale`）。
   7. 项目的 `filter.store.ts` 读写显示设置；删除 `/user-properties/` 的两个旧方法、关键词的例外、e2e 的 `workItemFilters` 和三个故事里的放行（M3 交接第 5 节）。
   8. 筛选表达式翻译成 `ProjectIssueFilters` 保存值及生成operation query；否定的一层删除（M1-P3 交接）。
   9. 已归档、个人主页的筛选存在 `localStorage`（已归档的键修正）；草稿页没有筛选：删除 `WorkspaceDraftIssuesFilter`（`store/issue/workspace-draft/filter.store.ts`，它继承本段重写的 `IssueFilterHelperStore`）和 `store/issue/root.store.ts`、`hooks/store/use-issues.ts` 里对它的引用（聚焦复核 M7）。
   10. `IssueRootStore` 的 `autorun` 改为计算属性；`rootStore` 的三处同步读取；列表一侧的 `useSessionSWR`。
   11. 看板、日历的 store：只用确认的结果，`oneAtATime`，拖动的 `sort_order` 在轮到发出时才算，`PATCH` 不带 `id`、`project_id`。
-  12. 确认的修改写进每一份列表和工作项的那一份；每个修改一张 vitest 的表。
+  12. 扩充 T5/T6 已接通的确认分发：每一份列表和工作项唯一副本、每个修改的 vitest 表及竞态闭环。
   13. 挂载时的取数：项目页取列表和显示设置；S2 的 `REQUESTS`；改到的文件的死成员、oxlint；关键词规则 `issue-optimistic`、`negation-filters`。
   14. 3.23 中 P10b 的行（总体设计 7.7）、前端改动清单；review。
 - **关闭**：M1-P3 交接的筛选显示层（否定的一层删除；终态在 P16 核对）；M2 交接第 12 节的 `autorun`、三处同步读取、列表一侧的 SWR 键；M3 交接第 5 节（例外和 `workItemFilters` 删掉）、第 6 节（`autorun`、`reconciled.ts` 的扩展、S2 的 `REQUESTS`）。
@@ -2327,7 +2327,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   5. `link`、`comment`、`comment_reaction`、`reaction` 的 store。
   6. `activity` 的 store：读完全部页、从最后一页的游标再读，与评论合并（3.13）。
   7. 描述版本、草稿的 store（发布先 `PATCH` 再 `publish`）。
-  8. 模块级实例中数据层的 7 处（`WorkItemVersionService` 2、`WorkspaceDraftService` 1、`searchEntity` 4，7.1）；`getUserProfileIssues` 改接；编辑器的 @提及 改为从成员过滤，`entity-search` 删除。
+  8. 模块级实例中数据层的 7 处（`WorkItemVersionService` 2、`WorkspaceDraftService` 1、`searchEntity` 4，7.1）；核 P10b T5 已迁移的 `getUserProfileIssues` 及其删除证据；编辑器的 @提及 改为从成员过滤，`entity-search` 删除。
   9. 按需的取数被拒绝时有提示或交回（M3 交接第 6 节），vitest。
   10. 弹窗的宿主：`WorkItemLevelModals` 留在原处，在 `projectId ?? workItemIdentifier` 改变时和卸载时关上开关；详情根 store 的开关、`peekIssue` 和三份数据由宿主结束；`isArchiveIssueModalOpen` 删除（7.1）。
   11. 错误按码经文案表（`issue-modal/base.tsx` 的两处）；工作项页面上新建标签经 `useLabelChanges().create`。
@@ -2488,7 +2488,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | M2-closeout §9 命令面板的主题命令 | 7.4 | 应答成功、且标签页仍在发出修改时的会话才 `setTheme`，失败时按 `code` 提示；vitest 和 C7（P15） |
 | M2-closeout §10 下拉框 | 7.5 | `DateDropdown` 只有一份打开状态、能用键盘打开；7 个下拉框的列表在按钮旁（P12）；`CustomSelect` 的 3 个调用方、`CustomSearchSelect` 的 4 个富筛选调用方和 `defaultOpen` 在浏览器中核对（C2、C3；P12、P13、P14） |
 | M2-closeout §11 复制到剪贴板 | 7.5 | 6 处改经 `useCopyLink`、`useCopyText`，失败时经 `t()` 提示（P14、P15，与 M3 交接第 8 节的 10 个文件一起）；C8 |
-| M2-closeout §12 stores 按会话分代 | 7.1、7.3 | `IssueRootStore` 的 `autorun` 改为 `rootStore.router` 上的计算属性，没有要释放的反应，"随退役的一代释放"由此满足，`store-context.test.ts` 没有严格模式的警告（P10b）；13 处模块级实例按 7.1 的分配消失（P11 7 处、P12 1 处、P13 1 处、P14 3 处、P15 1 处），`git grep` 的门禁在 P15；三处同步读取不发请求（P10b）；SWR 键带 `loginId`（P10b、P11）；`getUserProfileIssues` 改接（P11） |
+| M2-closeout §12 stores 按会话分代 | 7.1、7.3 | `IssueRootStore` 的 `autorun` 改为 `rootStore.router` 上的计算属性，没有要释放的反应，"随退役的一代释放"由此满足，`store-context.test.ts` 没有严格模式的警告（P10b）；13 处模块级实例按 7.1 的分配消失（P11 7 处、P12 1 处、P13 1 处、P14 3 处、P15 1 处），`git grep` 的门禁在 P15；三处同步读取不发请求（P10b）；SWR 键带 `loginId`（P10b、P11）；`getUserProfileIssues` 改接/旧方法删除（P10b T5，P11核交接） |
 | M2-closeout §13 e2e 的 `clock.ts` | 3.20 | `e2e/fixtures/clock.ts` 按 M0-P6 的写法加入，I16 用它，不等真实的时间；nerve 一侧的 `clock.offset` 只在测试环境（P6） |
 | M3-closeout §1 事件与删除工作区的连带 | 3.6、3.19、3.20 | M3 自己的连带留在删除的事务里，邀请的一步照旧同步（P6 写明）；工作项一侧在决策点 7 选 A 时挂到 `project.deleted`、`workspace.deleted` 上、由任务完成，写明窗口和失败的处理（P9，3.6、3.19）；`registrationRows` 核对 `river_job`（P7）；`jobs_test.go:265`、`runner_test.go:136` 改为期限（P6） |
 | M3-closeout §2 加锁的约定和方案 E | 3.5、决策点 1、11.2、11.11 | 方案的选择和代价写在 3.5、决策点 1（负责人裁定 B：只锁项目行；两个代价和 B′ 写明；S5 的证据；连接池的代价和写闸门，A、B 相同）；锁之前的预检拒绝一切会被拒绝的写、不取锁（P1a，加关联的另一端在 P3）；连接池的代价和写闸门（P1b）；每个新的批量写逐个按约定五核对（3.5，P1a–P9 各自的 review；删除标签摘下 `issue_labels` 不需要预锁，理由在 3.5）；没有新的成员关系增长（3.5），不加与停用的交错测试（P1a）；M4 不物理删除账户（3.21，P9） |
@@ -2563,8 +2563,8 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12粗项/16任务） | **已完成**：[spec](specs/P7-issue-links.md)、[plan](plans/P7-issue-links.md)、[review](reviews/P7-issue-links-review.md)、[整体审核](../../reviews/re-05-M4P7整体审核.md)。T1–T16实施、整审及修复复审闭环；经授权 `--no-ff` 合并 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 三任务全绿；5,443个本地证据文件归档逐hash核验后，已清理本地/远端分支及worktree。M4总体仍进行中 |
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13粗项/16 Task） | **已完成**：[spec](specs/P8-drafts-search.md)、[实际plan](plans/P8-drafts-search.md)、[review](reviews/P8-drafts-search-review.md)、[整体审核](../../reviews/re-07-M4P8整体审核.md)。T1–T16实施、首次整审及文档独评闭环，最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，经授权 `--no-ff` 合并为 `6b9d08d4821f1423c7bb9795557727c206b7880f`；准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1三任务全绿。1,598文件、37,552,117字节及1空目录归档逐hash核验后，本地/远端分支和worktree已清理，清理后再核哈希；完整回执见review§9。M4总体及后续交接仍open |
 | P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
-| P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | 实施与终审完成、集成待办；最终文稿提交后准确HEAD CI以交付回执核验；最后产品5f7085bce4aa5103a0133fa982847d274efa6e47、A-01/A-02独评闭合。C原22路径全文/guard delta通过，C-r1已读增量，唯一C-r1-01已修，C-r2 Approved；准确产品CI已核成功，最后交付HEAD CI待核。见[spec](specs/P10a-web-issue-types.md)、[plan](plans/P10a-web-issue-types.md)、[phase review](reviews/P10a-web-issue-types-review.md)、[整体审核](../../reviews/re-11-M4P10a整体审核.md)；M4总验收不关闭 |
-| P10b `web-list-data` | 列表一侧的数据层（14） | spec/plan 已准备，依赖预检与局部修订复审记录见 [review](reviews/P10b-web-list-data-review.md)；未实施，执行前待 P10a 集成 main CI 通过后重核 |
+| P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
+| P10b `web-list-data` | 列表一侧的数据层（14） | spec/plan 已按 P10a 集成 main a06e3f70 重核；执行前预检见 [review](reviews/P10b-web-list-data-review.md) 和 [deep-review](../../reviews/re-12-M4P10b预检审核.md)。**未实施**，T1 等负责人下一步授权 |
 | P11 `web-detail-data` | 详情一侧的数据层（14） | 未开始 |
 | P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |

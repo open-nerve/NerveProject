@@ -2,7 +2,7 @@
 
 > **给执行代理：** 实施获授权后，按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。当前只准备，不运行实现流程。
 
-> **当前状态：** 只准备；首轮预检六项Local已作本文档修订并独立复审关闭，P10b有条件通过静态依赖预检，未实现/原型/行为运行。P10A-S1已获负责人A裁定，验收归属同步后的定向复审见P10a review；当前仍不实施。P9集成main `4599a9cfc5be90b2c242977f194157778a5f6ec9`用于代码盘点；P10a尚未实施，本段执行必须等P10a合并后准确main CI绿并重新预检漂移。不能把当前文档分支当本段已可执行产品基线。
+> **当前状态：** P10a 集成后执行前文档预检通过；只准备，未实现/原型/行为运行。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。本轮预检结论见阶段 review；T1 仍等待负责人安排。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -14,8 +14,8 @@
 
 ## 全局约束
 
-- 主目录始终main；P10b开发必须新worktree `.codex/worktress/codex/m4-p10b`。P10a集成后记录准确执行基线/CI，复核本计划路径和例外，之前不开始T1。
-- 准备不改phase；T1启用M4/P10，字母后缀不写进keywords解析，不放宽守卫。`/user-properties/`现until=M4/P11，T7删除。P11过渡旧service例外期限M4/P12；M5–M7各自期限。
+- 主目录始终main；P10b开发必须新worktree `.codex/worktress/codex/m4-p10b`。基线/CI 与路径、例外已纳入本轮预检，实施开始再核未漂移；没有产品实施授权，不开始 T1。
+- 准备不改 phase；T1 核既有 M4/P10，字母后缀不写进keywords解析，不放宽守卫。`/user-properties/`现until=M4/P11，T7删除。共享 exact key 按最早期限：patch/retrieve 当前同为 M4/P11，T5 删 patch 后重数剩余 retrieve 才记 M4/P12；M5–M7各自期限，详见 spec B.3。
 - plane/refer只读，不动已有容器/Docker，不全局安装、不加未点名依赖、不用node_modules链接；不用stash/clean/reset --hard/force，不取keychain或其它凭据。
 - 生成类型来自api-client；ProjectIssueQuery用operations.listIssues，MemberIssueQuery用operations.listMemberIssues；完整query不能冒用ProjectIssueFilters。新服务每方法一次生成调用，无Plane响应转换层。
 - 发出请求的队列轮次内冻结该操作before证据，确认从pending取而非当前canonical；期间第三方版本无法证明则unknown/stale。成功树删除使该项目旧read令牌失效，拒绝/换会话不造删除代际。
@@ -26,7 +26,7 @@
 - shared-state无api-client/test依赖，query纯函数放web应用；否定层仍在共享types/utils/state/hook按职责删除。原getFilteredWorkItems/fromnow保留。
 - 新公开错误码如确需增加，同Task更新C/lib/error-messages.ts、P/i18n/src/locales/en与zh-CN实际键文件及其测试；本计划不预期新增服务端码，现有拒绝走errorMessageKey。
 - 新逻辑文件约400行；设计允许paged-groups纯模型约450行，比较器另有issue-order.ts；大型数据表/测试合理例外记录，不为尺寸删安全断言。
-- 通用帮手复用C/lib/auth/{fake-nerve,fake-tab,fake-time}、C/store/{fake-root,fake-project-lists}及project/fake-projects；新C/store/issue/fake-issues.ts只封装本段共同的生成Issue、list应答和时序，禁止各测试重复近似HTTP客户端。
+- 通用帮手复用C/lib/auth/{fake-nerve,fake-tab,fake-time}、C/store/{fake-root,fake-project-lists}及project/fake-projects；扩展已有 C/store/issue/fake-issues.ts 的 issueOf，加入本段共同的 list 应答和时序，禁止各测试重复近似HTTP客户端。
 - 每Task独评与修复，局部自行根因解决；架构/协议变化或意外高风险先提交已完成工作再上报。
 - 中文文档/详细中文提交，保留feat/fix/docs(M4/P10b)；精确add，系统/usr/bin/git push。阶段完成deep-review后先不合并，另按负责人授权处理。
 - F在T4/T8/T12/T14与后续产品修复后、产品检查点push前串行执行；每Task聚焦。缓存/零匹配/编译红/skip不冒充行为证据。仅新改动/失败/未解风险才扩大重跑。
@@ -61,13 +61,13 @@ make e2e
 
 **类型与前端聚焦：** `pnpm --filter web check:types`；共享包变动后 `pnpm exec turbo run build --filter=web^... --force` 生成其现有本地dist，再应用聚焦；全静态用make lint-web/knip。新测试定向`pnpm --filter web exec vitest run <从web/apps/web相对的真实文件>`；无匹配不是通过。模型测试node环境；DOM测试使用现有单文件environment注解。
 
-依赖顺序：T1→T2→T3→T4→T5→T6→T7→T8→T9→T10→T11→T12→T13→T14。T3/T4纯模型通过后T5才取代旧引擎；T1只准备新service及直接测试；旧类型/消费者整体迁移与必要query纯函数在T5一同闭合，T8继续否定层删除/全语义矩阵，不造临时response转换层。
+依赖顺序：T1→T2→T3→T4→T5→T6→T7→T8→T9→T10→T11→T12→T13→T14。T3/T4 纯模型通过后 T5 才取代旧引擎，同时交付唯一 root 写协调入口的基本实现（冻结 before、pending、每 id 队列、列表注册/确认分发）；T6 替换 canonical 并关闭旧写入 API；T11 完善拖放邻居计算，T12 扩全矩阵而非首次接线。T1只准备新service及直接测试；旧类型/消费者整体迁移与必要query纯函数在T5一同闭合，T8继续否定层删除/全语义矩阵，不造临时response转换层。
 
 ## Task 1：列表接口与核心写服务准备（约300–600行）
 
-**Files：** 新 C/services/issue/issue-list.service.ts、issue-api.service.ts和对应test；project-preferences.service.ts必要注释；新C/store/issue/fake-issues.ts。T1旧issue.service/issue_archive与列表类型仍保留供现有base使用，不加无生产调用的barrel导出；新service由测试直接import。删除与生产接线明确归T5。
+**Files：** 新 C/services/issue/issue-list.service.ts、issue-api.service.ts和对应test；project-preferences.service.ts必要注释；扩展已有 C/store/issue/fake-issues.ts（issueOf 已存在）。T1旧issue.service/issue_archive与列表类型仍保留供现有base使用，不加无生产调用的barrel导出；新service由测试直接import。删除与生产接线明确归T5。
 
-**Interfaces：** 完整消费/产出spec§2.2两个service、ProjectIssueQuery/MemberIssueQuery；新服务均由RootStore传api。归档旧service四方法包含retrieve在T5一并替换到新get。
+**Interfaces：** 完整消费/产出spec§2.2两个service、ProjectIssueQuery/MemberIssueQuery；新服务均由RootStore传api。归档旧 service 当前三方法（列表、归档、恢复）在 T5 一并替换；归档详情页头的 IssueService.retrieve 留 P11。
 
 - [ ] 新service测试逐方法捕获method/path/body/query，list-project无project_id筛选，member relation必填；项目CSV与日期重复AND、归档`archived:"true"`、封闭写body。用FakeNerve真实client返回Problem/SessionChanged，断言原错交回无额外请求。
 - [ ] 红：`pnpm --filter web exec vitest run core/services/issue/issue-list.service.test.ts core/services/issue/issue-api.service.test.ts`。缺模块红只作起步，随后对错误路径/重复数组query的实现变异取真实断言红。
@@ -109,34 +109,39 @@ make e2e
 - [ ] 实现按原应答/Before重放；decode标定resetCounters/rowParts，merge/replay只改本次拥有的集合；partial flat total只归该组/格，未回答计数/rows沿当前确认状态，whole才覆盖全部；total取response而非当前值再叠加，drop扩boundary且不回退，未知只stale受影响部分；第2判断返回去重verifyIds。
 - [ ] M9旧属读取当前已merge行、M10丢空组、M11重算boundary、M12所有partial当whole、M13总数sum各组、M14删除双减，均对应表红；恢复全模型绿、G、F，提交 `feat(M4/P10b): 按原回答重放确认修改并修正组计数`。
 
-## Task 5：替换列表引擎并闭合类型与查询消费（约900–1400行）
+## Task 5：替换列表引擎并接通确认写入口（约1100–1500行）
 
-**Files：** C/store/issue/helpers/{base-issues.store,base-issues-utils,issue-filter-helper.store}.ts；project/archived/profile/issue.store.ts；新helpers两test；首次新增C/lib/issue-filters.ts/test的spec§2.7四纯函数；删除旧列表services/type容器/枚举/映射并接上T1新service；必须同Task跟进C/hooks/use-issues-actions.tsx、issue-layouts/calendar/base-calendar-root.tsx及list/kanban/spreadsheet读者。
-**Interfaces：** BaseIssuesStore持Reconciled<PagedGroups>；fetchFirst/fetchNext/refreshStale/acceptConfirmed/markMembershipStale，spec§2.6；首次产出toProjectFilters/toFilterExpression/projectListQuery/memberListQuery，T8不重复新建，只扩大语义测试及去否定。PageAnswer返回V，通用Reconciled不理解分页业务。
+**Files：** C/store/issue/root.store.ts 的基本协调入口、C/store/root.store.ts 退役接线、C/lib/store-context.test.ts、C/services/user.service.ts；C/store/issue/helpers/{base-issues.store,base-issues-utils,issue-filter-helper.store}.ts；project/archived/profile/issue.store.ts；新helpers两test；首次新增C/lib/issue-filters.ts/test的spec§2.7四纯函数；删除旧列表services/type容器/枚举/映射并接上T1新service；必须同Task跟进C/hooks/use-issues-actions.tsx、issue-layouts/calendar/base-calendar-root.tsx及list/kanban/spreadsheet读者。
+**Interfaces：** root 首次产出 spec§2.9 核心写入口及§2.6会话生命周期（T11/T12复用，不另造）；BaseIssuesStore持Reconciled<PagedGroups>；fetchFirst/fetchNext/refreshStale/acceptConfirmed/markMembershipStale，spec§2.6；首次产出toProjectFilters/toFilterExpression/projectListQuery/memberListQuery，T8不重复新建，只扩大语义测试及去否定。PageAnswer返回V，通用Reconciled不理解分页业务。
 
 - [ ] `nextPageKeepsExactQueryAndCursor`捕获group_key/sub_group_key、cursor为server原值；`staleReloadReplacesOnlyTargetFirstPage`、`pageTotalReplacesEarlierAdjustedTotal`、`pageMergesDeduplicateDroppedRow`、`subIssueRelativeDatesStayLocal`覆盖fromnow所有既有选项。
 - [ ] 红：`pnpm --filter web exec vitest run core/store/issue/helpers/base-issues.store.test.ts core/store/issue/helpers/base-issues-utils.test.ts`。
-- [ ] 替换1775行旧base；同步删TIssuesResponse/TGroupedIssues/TSubGroupedIssues/TGroupedIssueCount/TIssuePaginationData/TPaginationData及旧排序/分组/优先级枚举、两映射，所有consumer同提交改新形状。切T1 services并删旧列表方法/issue_archive（详情get调用者改新get，其他详情业务不扩）。首次落实必要query纯函数，旧偏好来源暂存的表达式正常翻译新query；T7才切持久化API、T8清否定。删除localoffset cursor、乐观回滚路径、旧response并入。calendar/base-calendar-root旧perPageCount/before/after/groupedBy调用改为生成limit/query与选组续页；不能只让tsc过却继续发旧字段。页边界lower来自请求捕获cursorBoundary。
-- [ ] 同定向加 `core/lib/issue-filters.test.ts` 绿、typecheck；rg全web核旧列表类型/映射无残留，make knip；M15恢复loaded-count cursor、M16移除group_key、M17滤掉fromnow路径，对应红。G，提交 `feat(M4/P10b): 以新组页模型驱动全部列表读取`。
+- [ ] 同任务在 root.store.ts 实现 spec§2.9 的真实 create/update/delete/archive/unarchive 入口、每 id oneAtATime、发出前冻结 before/pending 与同代列表注册/分发；调用 T4 的 acceptConfirmed。canonical 暂用现有完整应答入口，不能调用旧 partial mutator伪造时间；T6 同提交换接 ReconciledByKey。先测 `coreWritesUseSingleCoordinatorBeforeCanonicalMigration`：请求未确认时实体/全部已取列表不动，拒绝不动；确认仅分发一次，队列前序失败后后序仍发；空/未取列表不被捏造。不得新增空方法等到 T12 填。IssueRootStore 构造时捕获不可变 owner，现有 C/store/root.store.ts 的 dispose 调用幂等 retire；每次队列发出/结算/追加读取先核 active。按 spec§2.6 加 `retiredRootDropsSuccessfulRepliesAndQueuedWrites`，以真实 store-context 切换会话和 held 200 核旧缓存/新缓存均不写、旧后续请求不发；不靠 HTTP 401 证明成功回答隔离。T10 再覆盖完整挂载矩阵，不首次补这个安全前提。
+- [ ] 同任务删除 UserService.getUserProfileIssues 及其旧类型/继承（保留真实 M2 新 API 方法），profile 首/续页均使用 listMember；测试捕获 relation 和项目范围参数，不能让 TIssuesResponse 删除后还存在该消费者。
+- [ ] 同步 hooks/详情 main-content、peek-overview/quick-add/创建表单调用签名：M4 直接 IssueCreate/IssueUpdate 白名单字段，skip_activity 源写者发 boolean、只随 description_html；不 spread 实体、不加 string 转换。M7 inbox 独立输入保留旧 string 合同。改造既有 base-issues.update-request.test 为新 HTTP/确认语义（pending不动、拒绝保持空HTML/缺属性、成功采用服务器HTML），去旧 local-only 绕写测试；其3个旧URL例外随代码一起删。
+- [ ] 迁移 P10a 既有 project/issue.quick-create.test.ts 和 quick-add/root.pending.test.tsx 到新服务边界，覆盖 R8 请求所有权/undefined和失败保留输入/迟答A不插B/真实应答只确认一次；保留测试的实际目的，不能只改 spy 让它空过。
+- [ ] 替换当前 1262 行旧 base；同步删TIssuesResponse/TGroupedIssues/TSubGroupedIssues/TGroupedIssueCount/TIssuePaginationData/TPaginationData及旧排序/分组/优先级枚举、两映射，所有consumer同提交改新形状。切T1 services并删旧列表方法/issue_archive（当前三方法；归档详情的独立 retrieve 留 P11）。首次落实必要query纯函数，旧偏好来源暂存的表达式正常翻译新query；T7才切持久化API、T8清否定。删除localoffset cursor、乐观回滚路径、旧response并入。calendar/base-calendar-root旧perPageCount/before/after/groupedBy调用改为生成limit/query与选组续页；不能只让tsc过却继续发旧字段。页边界lower来自请求捕获cursorBoundary。
+- [ ] 同定向加 `core/lib/issue-filters.test.ts` 绿；运行 `pnpm --filter web exec vitest run core/store/issue/helpers/base-issues.update-request.test.ts core/store/issue/project/issue.quick-create.test.ts core/components/issues/issue-layouts/quick-add/root.pending.test.tsx`、typecheck；rg全web核旧列表类型/映射无残留，make knip；M15恢复loaded-count cursor、M16移除group_key、M17滤掉fromnow路径，对应红。G，提交 `feat(M4/P10b): 以新组页模型驱动全部列表读取`。
 
 ## Task 6：工作项唯一副本与删除终态（约450–850行）
 
-**Files：** C/store/issue/issue.store.ts、新issue.store.test.ts；C/lib/reconciled.ts/ReconciledByKey增加receive及测试；root.store读令牌/项目删除水位；同Task改issue-details/{issue,sub_issues,link,relation}.store.ts，以及在P10a实际合并树重新枚举出的inbox/attachment等canonical写者。
-**Interfaces：** `receive(key,answer,choose)`初始化或合并并在在外read上重放choose；IssueStore `acceptRead(answer,token)`/getIssueById/getIssueDetailById/confirmChange、`refreshAuthoritative(issueId):Promise<IssueDetail|undefined>`；IssueRootStore captureRead（每次发出前独立++readSerial）/invalidateProjectReads及token守卫；核实元数据另记每id freshnessFloor；spec§2.6保留Issue|IssueDetail|null，issuesMap为派生Readonly视图。
+**Files：** C/store/issue/issue.store.ts、新issue.store.test.ts；C/lib/reconciled.ts/ReconciledByKey增加receive及测试；root.store读令牌/项目删除水位；同Task改issue-details/{issue,sub_issues,link,relation}.store.ts，inbox/inbox-issue.store.ts、hooks/store/use-issues.ts 只读 map 消费；attachment 已删除，不恢复。准确写者清单见 spec B.1。
+**Interfaces：** `receive(key,answer,choose)`初始化或合并并在在外read上重放choose；IssueStore `acceptRead(answer,token)`/getIssueById/getIssueDetailById/confirmChange、`refreshAuthoritative(issueId):Promise<IssueDetail|undefined>`；IssueRootStore captureRead（每次发出前核 active 并独立++readSerial，token携本代不可变 owner）/invalidateProjectReads及token守卫；核实元数据另记每id freshnessFloor；spec§2.6保留Issue|IssueDetail|null，issuesMap为派生Readonly视图。
 
 - [ ] `latestServerVersionWinsAcrossAnswerOrder`、`listKeepsConfirmedDescription`、`staleFirstDetailDoesNotFillDescription`、`detailRetryIsBoundedAndRefusalReturns`、`thirdPartyMembershipMarksOldAndNewGroups`、`ownPendingReadDoesNotMarkStale`。
 - [ ] `confirmedDeleteCannotBeResurrected`用先发list后确认204再放旧list，canonical和画面均无该id且不虚算total；refused delete/SessionChanged/get404不产生tombstone；archive+unarchive能恢复。`unknownDescendantsRefreshOnlyTheirProject`区分另一项目列表保持。
-- [ ] `legacyDetailConsumersCannotBypassCanonicalVersion` 覆盖旧Detail/关联旧答不能降级新实体；link和sub项成功后count来自带真实updated_at的权威get，拒绝不加减。当前链issue-details/issue:94,167,266、sub_issues:143,197,292,325、link:112,161、relation:115,147需按P10a新行号复核；不是把这些旧成员API包装成空壳。
+- [ ] `legacyDetailConsumersCannotBypassCanonicalVersion` 覆盖旧Detail/关联旧答不能降级新实体；link和sub项成功后count来自带真实updated_at的权威get，拒绝不加减。实际链为 issue 的本体和 parent、sub_issues 的整行/parent count、link 的 count、relation 整行和 inbox accept（spec B.1）；不是把这些旧成员API包装成空壳。
+- [ ] 同步 P10a 的 issue.store.types.test.ts、issue-details/issue.fetch.test.ts、sub_issues.fetch.test.ts、inbox/inbox-issue.request.test.ts：新版列表 fixture/接收 API 不清 relation 与描述，空 HTML/nullable 字段正确；两详情入口及 parent 单独 token、await/拒绝归属保持；父 count 改权威 get 后断言真实版本；跨项目只取唯一 state/member/label 目录，不恢复 cycle/module。inbox accept 的权威回读拒绝不能被旧 catch 吞掉，按 spec§2.6 保留不可确认状态并交回。旧资源 HTTP 自身整体迁移仍是 P11/M7。
 - [ ] 实现版本choose/tombstone/描述规则与只读issuesMap；完整应答捕获token→acceptRead，partial/count算术改成功后invalidate+refreshAuthoritative；根CRUD只统一确认。删除旧addIssue/partial updateIssue和direct map set，静态枚举零残留；全应用typecheck在T6过，不等P11。
-- [ ] 实现spec§2.6项目读代际：所有list/详情/回查在canonical接收之前检查token；树删除先invalidate覆盖项目的whole/part，再mark stale/墓碑、新token刷新。多项目profile若覆盖失效项目则整页discard，不裁行复用旧total。
+- [ ] 实现spec§2.6项目读代际：所有list/详情/回查在canonical接收之前检查 active/owner/token；增加 `foreignRootReadTokenIsRejected`，即使 serial/updated_at 相同，新根也不接受旧 owner；树删除先invalidate覆盖项目的whole/part，再mark stale/墓碑、新token刷新。多项目profile若覆盖失效项目则整页discard，不裁行复用旧total。
 - [ ] 实现缺行核实四路状态：成功清核实或第三方stale；404隐藏未经证实活值且无墓碑、相关范围至多一轮刷新；403/500保留error/stale等待显式retry/再挂载；SessionChanged丢弃旧流程不安排后续。每round共享去重id与scope预算，失败不能自动开新round。回查404/其它拒绝落定时将本id freshnessFloor设为当时readSerial；只有之后新发的token.serial严格大于此水位、项目令牌有效且版本合格的权威答能恢复。旧同版本list在canonical receive/清核实/清stale前被挡住；此水位和项目删除水位分开，普通404不冒删除。访问器先核scope和核实状态，不建第二个Issue缓存。
-- [ ] 命令：`pnpm --filter web exec vitest run core/store/issue/issue.store.test.ts core/lib/reconciled.test.ts`；`pnpm --filter web check:types`；rg枚举全部issuesMap写入和 `.issues.addIssue`/`.issues.updateIssue` 并逐项核无绕过，读引用正常保留。M47恢复任一旧count mutator必须在旧消费者测试红；零匹配静态不替代行为测试。
+- [ ] 命令：`pnpm --filter web exec vitest run core/store/issue/issue.store.test.ts core/lib/reconciled.test.ts`；`pnpm --filter web exec vitest run core/store/issue/issue.store.types.test.ts core/store/issue/issue-details/issue.fetch.test.ts core/store/issue/issue-details/sub_issues.fetch.test.ts core/store/inbox/inbox-issue.request.test.ts`；`pnpm --filter web check:types`；rg枚举全部issuesMap写入和 `.issues.addIssue`/`.issues.updateIssue` 并逐项核无绕过，读引用正常保留。M47恢复任一旧count mutator必须在旧消费者测试红；零匹配静态不替代行为测试。
 - [ ] M18按answeredAt覆盖、M19list抹description、M20旧Detail补HTML、M21读404造tombstone、M22不处理list中的tombstone，分别红；G，提交 `feat(M4/P10b): 按服务端版本维护唯一工作项副本`。
 
 ## Task 7：项目显示偏好与旧地址下线（约350–700行）
 
 **Files：** C/store/issue/project/filter.store.ts及新test；C/store/project/preferences.store.ts/现test按需；C/services/project/project.service.ts；tools/keywords.json；e2e/fixtures/mounts.ts；stories/project/{p2-visibility,p8-project-preferences}.spec.ts、stories/smoke/s7-chinese-project.spec.ts。
-**Interfaces：** ProjectPreferencesService现get/update；filter store每字段整体PATCH+确认结果，query拼装接口先按生成值直组，表达式翻译T8补全。
+**Interfaces：** ProjectPreferencesService现get/update；filter store每字段整体PATCH+确认结果，query 拼装和基本表达式转换已在 T5，T8 扩完整语义矩阵。
 
 - [ ] `writesOneWholePreferenceField`断言body只有目标字段、同字段后续patch用前序确认结果；navigation/sort_order未动；load.preferences未自动套list，query显式转换；拒绝/session更换不写。group/order宽string经允许词汇收窄。
 - [ ] 红：`pnpm --filter web exec vitest run core/store/issue/project/filter.store.test.ts core/store/project/preferences.store.test.ts`。
@@ -183,10 +188,10 @@ make e2e
 - [ ] 红/绿：`pnpm --filter web exec vitest run core/store/issue/issue-drag.test.ts`。删除组件提前计算sort_order传常数的旧路径，calendar月/周依生成query，不发before/after。
 - [ ] M34把makeBody移出队列、M35全实体spread、M36前序拒绝卡住后续，各红；G，提交 `feat(M4/P10b): 在拖放发出时计算位置并串行确认`。
 
-## Task 12：确认分发写入每份列表（约450–850行，F）
+## Task 12：确认分发的全副本与竞态闭环（约450–850行，F）
 
 **Files：** root.store.ts/issue.store.ts/base-issues.store.ts及project/archived/profile；新C/store/issue/issue-changes.test.ts；改到的create/delete/archive跟进消费者。
-**Interfaces：** 每write调用一个根协调入口；实际发送前pending深拷贝before与读证据，确认取该操作冻结值，若无法证明则unknown/stale；删除先推进项目read epoch；broadcast到本代已注册scope，再canonical，恰好一次；未取不虚造value。
+**Interfaces：** 复用 T5 已接通、T6 已换 canonical、T11 已闭合拖放的根协调入口，补全下列交错而非新增第二入口；每write调用同一根协调入口；实际发送前pending深拷贝before与读证据，确认取该操作冻结值，若无法证明则unknown/stale；删除先推进项目read epoch；broadcast到本代已注册scope，再canonical，恰好一次；未取不虚造value。
 
 - [ ] create/update/delete/archive/unarchive/drag六张表各包含三列表+canonical、未取列表、server拒绝、SessionChanged、读写交错。断言请求数、确认次数、各total/rows/version，而非只测当前项目。
 - [ ] B-L1 `ownReadBeforeWriteAnswerKeepsOffWindowBeforeMembership`：X在A后页、A.total=5/B.total=4、outer不变，pending read先收到本次B版本，写答确认仍A4/B5且无无谓whole fetch；另测排队前序改before、第三方版本令证据unknown/stale。M45改成确认时读canonical必须红。
@@ -211,7 +216,7 @@ make e2e
 
 **Files：** docs/v0/v0-design.md总体7.7、frontend-changes.md、M4-design.md对应行；spec本§4、plan、reviews/P10b-web-list-data-review.md；docs/reviews下一编号整审记录；落在本段的handoff处理行。
 
-- [ ] 汇总任务1–13所有原件/失败/变异/恢复hash，验收A1–A9逐项映射。原型未做保持事实，静态预检不冒充生产证明；过渡旧文件逐个写到P11/P12/P14/M5–M7。
+- [ ] 汇总任务1–13所有原件/失败/变异/恢复hash，验收A1–A10逐项映射。原型未做保持事实，静态预检不冒充生产证明；过渡旧文件逐个写到P11/P12/P14/M5–M7。
 - [ ] 完整F；按准确待交付HEAD推送后看CI server/web/e2e。已授权登录Chrome UI读详细失败并重跑基础设施/已知W11；第二次W11若在main合并CI仍失败按纪律上报，不擅改主线。
 - [ ] deep-review固定P10b实际基线..最终候选HEAD，逻辑/集成/覆盖三个视角；抽至少15个性质变异证据并核shared Reconciled所有旧消费者回归、微秒/大整数/删除204/续页范围；局部修复后按影响重验和独立复审。
 - [ ] review §1–7写真实结果；spec完成复选框只有实际通过才勾；design§15写“实施与终审完成、集成待办”，handoff总status仍open。提交 `docs(M4/P10b): 记录列表数据层验证与整分支审查`。
@@ -224,4 +229,4 @@ make e2e
 - [x] Review Focus五条均有归属task和具体反例；I2九例/M3五例与B-L1…6精确反例均已写入T3/T4/T6/T12；这只是作者文档自查，独立复审结论另见review，不能当产品验证。
 - [x] T5类型变化消费者、T5旧calendar分页参数、T10 archived SWR、T11组件预计算都同Task处理；P11/后段有界旧地址逐条留账。
 - [x] 计划不提交整套代码体；函数签名在spec统一，测试给具体输入/断言与命令；F和deep-review不是本轮已完成。
-- [ ] P10a集成后准确基线/CI与依赖漂移复核（执行前门）；届时spec/plan若局部修订需同步预检记录。
+- [x] 本轮准确 main CI 全绿、归档清理和依赖漂移已复核，静态/版本桥见准备收据；独立执行者检查无待回答问题。文档通过不勾任何产品 Task。

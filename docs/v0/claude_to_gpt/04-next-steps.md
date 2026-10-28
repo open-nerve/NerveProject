@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见[§12](#12-p10a实施后接续2026-10-28)：实施与终审完成、集成待办；最终文稿提交后准确HEAD CI以交付回执核验。§6–11保留历史快照。**
+**当前接续点见[§13](#13-p10a完成p10b执行前预检2026-10-29)：P10a 已完成授权集成与归档清理，P10b 文档预检通过、尚未实施。§6–12 保留历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -142,3 +142,11 @@ A-01/A-02统一修复已提交；最后本地F 1275测试/169E2E通过（F1–3�
 
 
 最后代码覆盖ready集合355路径=A93/B240/C22，准确覆盖源/行数/哈希与限制见re-11；实施与终审已完成，最后文稿C-r2真实Approved。root提交后生成X/final-delivery-receipt.json，核准确HEAD/run/attempt/ref/jobs全部success（必须最终文稿HEADCI全绿才结束任务），不为正文自指SHA循环提交；未来mainCI/归档清理另授权。旧T9静态inventory误写且原bytes不可证明的限制见phase review§9，最后库存另具名重核，产品与原F/CI raw未改。
+
+## 13. P10a完成、P10b执行前预检（2026-10-29）
+
+P10a 最终 d1a19e78 授权 --no-ff 合入 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) attempt 1 三任务全绿。5,898 证据文件 / 356,803,778 字节 / 22 空目录归档并逐哈希核验，随后正常清理 P10a 分支/worktree，再核归档一致；现址、历史限制及准确收据见 [P10a review §10](../M4-issue-core/reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)。上节待授权/待最终 CI/待归档均已由此接续。
+
+`codex/m4-p10b` / `.codex/worktress/codex/m4-p10b` 从上述准确 main 建立，只准备 [spec](../M4-issue-core/specs/P10b-web-list-data.md)、[plan](../M4-issue-core/plans/P10b-web-list-data.md) 与 [执行前预检](../M4-issue-core/reviews/P10b-web-list-data-review.md)，[deep-review](../../reviews/re-12-M4P10b预检审核.md) 的文档局部问题已修，独立执行者检查无待回答问题。T5 根协调入口前置、T6 canonical 旧写者收口、会话退役接线与 P10a 实际回归/旧接口期限均已明确。当前没有 P10b 实施授权，14 Task 和十项产品验收全部开放。
+
+下一步待负责人安排后从 T1 执行；每阶段完成仍先整分支 deep-review 和修复，未经授权不合并。主目录保持 main；P10b 准备证据位于根 `.superpowers/sdd/P10b-preparation-20261029/`，未来归档不得只收 worktree 而遗漏它。M4 总验收/总体 §9.4、输入 handoff 总状态及 M5–M8 最终 closeout 不关闭。

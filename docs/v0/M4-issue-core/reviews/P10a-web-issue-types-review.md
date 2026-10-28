@@ -1,6 +1,8 @@
 # M4/P10a 工作项换型与列表收窄：实施与评审记录
 
-日期：2026-10-28。**实施与终审完成、集成待办；最终文稿提交后准确HEAD CI以交付回执核验。** 工作树`codex/m4-p10a`，主项目HEAD保持main。基线main `4599a9cfc5be90b2c242977f194157778a5f6ec9`；最后产品提交`5f7085bce4aa5103a0133fa982847d274efa6e47`，tree `d0b4ea997e3dd7cdd61e9cbc662b75b064636364`。T1直接父`4569a9e7386031cffb31aa37d6cf06a726b08c2c`含准备文档，整审从main基线覆盖全部。
+日期：2026-10-28；集成更新：2026-10-29。**P10a 已完成授权合并、main CI 全绿与归档清理，准确身份见§10。** 原工作树 `codex/m4-p10a` 已清理，主项目 HEAD 保持 main。基线main `4599a9cfc5be90b2c242977f194157778a5f6ec9`；最后产品提交`5f7085bce4aa5103a0133fa982847d274efa6e47`，tree `d0b4ea997e3dd7cdd61e9cbc662b75b064636364`。T1直接父`4569a9e7386031cffb31aa37d6cf06a726b08c2c`含准备文档，整审从main基线覆盖全部。
+
+以下实施/终审段落按当时时态保留，所有“待提交/CI/授权/归档”均由§10的后续事实接续。
 
 配套：[spec](../specs/P10a-web-issue-types.md)、[plan](../plans/P10a-web-issue-types.md)、[整体审核（实施与终审完成）](../../../reviews/re-11-M4P10a整体审核.md)、[03/04当前接续](../../claude_to_gpt/04-next-steps.md#12-p10a实施后接续2026-10-28)。准备期[re-10](../../../reviews/re-10-M4P10预检审核.md)不代表产品终审。root已获分支CI推送授权并系统git推T8，808产品检查点CI已核全绿，最后修复产品CI已核成功，文档最终交付HEAD CI待核；无人获本阶段合并授权。不合并、不清理分支/worktree/X。
 
@@ -296,7 +298,26 @@ T9在5f7085bc最后产品源按tracked web逐路径重核：旧TIssue/TBaseIssue
 旧T9的task-9-final-static-inventory.json在本轮被作者误覆盖，未找到原bytes或原全文件SHA备份；旧名现明确标reconstructed-from-808，不能证明逐字恢复。808语义可由准确tree/T1/T6账及C独立复算补证，最后源另以task-9-final-product-inventory.json重核；旧audit/文稿manifest/draft及产品/测试/CI raw未改。此静态库存历史保真限制保留，不能泛称全部原件逐字保留。
 
 
-## 10. 实施与终审完成、最终交付待项
+## 10. 授权合并、main CI 与归档清理（2026-10-29）
+
+负责人授权后，最终阶段提交 `d1a19e78fa3ba83b289fdfc0f2788e3105d658da` 已用 `--no-ff` 合入 main：`a06e3f70547b755b03bf8e6b33caafd52725d0f6`。两父为原 main `4599a9cfc5be90b2c242977f194157778a5f6ec9` 和上述阶段提交；合并树 `6eb00a9b8238d3dcbbb9ee9cebfdfe10020e4c66` 与阶段最终树相同。系统 Git 推送后已核远端 main。
+
+| 事实 | 准确证据 |
+|---|---|
+| 最终阶段交付 | [CI 40719009817](https://github.com/open-nerve/NerveProject/actions/runs/40719009817)，d1a19e78，attempt 1，server/web/e2e 全 success；X/final-delivery-receipt.json SHA256 `98b1796dcff3c51fd37ff9b48cc08f83085cbbbb5a3796ad11c86fc8a24d36b3` |
+| 合并 main CI | [CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041)，准确 a06e3f70，attempt 1；web 122941158143、server 122941158652、e2e 122947428629 全 completed/success；2026-10-28 16:31:04 UTC 全部结束，本地日期为 10-29 |
+| 工作树原件归档 | 5,829 文件、353,843,611 字节、22 空目录；源前后与目的完整清单、大小、模式和 SHA256 一致；manifest SHA256 `3358de4d5fdd1648ca39d41e017c2f59dad2180ee7680f67f7959e652e37973f` |
+| 根外准备记录 | 69 文件、2,960,167 字节、0 空目录（含 decision-a）；manifest SHA256 `22b5ecaa0d41911061bd6ceb7a32287aba04e5c63b3566a00269eb7b1c855cf2`；原根记录仍保留 |
+| 清理 | 只在 main CI 全绿、归档核验后正常删除远端/本地 codex/m4-p10a 与其 worktree；清理后再次逐哈希核验通过，主目录保持 main 干净 |
+
+本机新根为主项目 `.superpowers/sdd/P10a-integration-20261029/`（I）。旧 worktree 任意证据相对路径移到 `I/worktree-evidence/<relative>`，因此 X 的现址为 `I/worktree-evidence/.superpowers/sdd/P10a-web-issue-types/`；根外准备稿冻结副本在 `I/preparation-evidence/P10-preparation-20261028/`。历史 raw 内旧绝对路径与当时状态不改写，按此映射查找。I 的 premerge/merge/push、main-ci-success-receipt、两份 archive manifest、archive-audit、pre-cleanup/cleanup receipts 共同记录先后事实；合计 5,898 文件 / 356,803,778 字节，不含可重建依赖与产物。77,360 个再生文件和 9 个再生空目录的排除清单精确保留，未知路径 0。
+
+归档逐哈希一致不抹平历史限制：§9 的 T9 原 inventory 字节不可恢复，现存明确重建；三份方括号新增测试的缺失 base hash 曾误记为空内容，准确校正见 X/final-tree-object-verification.json、final-root-review-coverage.json 与 final-base-metadata-rereview.md，原件不倒改。M6/M7 整页/真实有效实体网络以及 23 段 stderr 的既定责任继续开放。main 产品树与已验证阶段相同，本轮未重跑本地 F；准确 main CI 是新增验证。
+
+P10a 至此完成；P10b 在该 main 基线另建 `codex/m4-p10b` 准备 spec/plan 并预检，尚不实施。M4 总验收与最终交接不随本阶段关闭。以下保留提交当时的交付待项叙述，当前状态以上表为准。
+
+### 最终文稿提交时的历史待项
+
 
 C-r2真实回执为X/final-docs-r2-rereview.md，SHA256 `003d2148fce2ed649ba26f107fd3465a8d46dffffdea3bfd403f2b4393effc78`：C-r1-01 ADDRESSED、Approved、无新增。三项Local Fix均闭合；最终文稿提交/准确交付HEAD CI及回执仍按提交后事实核验，不预填未来SHA。
 
@@ -304,9 +325,9 @@ A/B原全文、A-01/A-02局部修复复审及C round0/guard delta均已收齐，
 
 本轮文稿在已审产品上只改原14docs；最后doc-only hash桥/manifest由本轮新静态收据记录。root在真正提交后核准确HEAD/ref/run/attempt/jobs并保存最终交付收据，不为正文自指SHA循环提交。文稿独评已完成，提交后准确最终交付HEAD CI尚未发生，spec§4最终交付子项仍未勾，不将旧808成功当最后交付。
 
-## 11. 输入处理与未来集成边界
+## 11. 输入处理与后续阶段边界
 
-五份输入已追加本期子项：[M1-P2](../handoffs/M1-P2-trim-content.md)、[M1-P3](../handoffs/M1-P3-trim-platform.md)、[M1-closeout](../handoffs/M1-closeout.md)、[M2-closeout](../handoffs/M2-closeout.md)、[M3-closeout](../handoffs/M3-closeout.md)，顶层status均open。M4§14/总体§9.4与未来M5–M8最终closeout不关闭/不预建；P10b只能等P10a真实main集成及准确mainCI后重核。未来集成另获授权后才--no-ff合并、核准确mainCI、归档所有根外准备/轮次/CI/E2E原件逐hash，再清理并复核；当前均未发生。
+五份输入已追加本期子项：[M1-P2](../handoffs/M1-P2-trim-content.md)、[M1-P3](../handoffs/M1-P3-trim-platform.md)、[M1-closeout](../handoffs/M1-closeout.md)、[M2-closeout](../handoffs/M2-closeout.md)、[M3-closeout](../handoffs/M3-closeout.md)，顶层status均open。M4§14/总体§9.4与未来M5–M8最终closeout不关闭/不预建；P10b只能等P10a真实main集成及准确mainCI后重核。P10a 授权集成、main CI、归档清理已在§10完成；P10b执行前的实际基线预检另见其 review。
 
 ## 12. 准备期历史记录（保留当时时态）
 
