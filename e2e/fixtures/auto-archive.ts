@@ -11,15 +11,15 @@ export async function archiveWatermark(db: Database): Promise<string> {
 }
 
 /** A completed attempt must have STARTED after every recent-control write. */
-export function completedAutoArchives(db: Database, watermark: string, startedAt: Date, id?: string) {
+export function completedPeriodicJobs(db: Database, kind: string, watermark: string, startedAt: Date, id?: string) {
   return db.query<{ id: string; attempted_at: string; finalized_at: string }>(
     `SELECT id::text, attempted_at::text, finalized_at::text FROM river_job
-     WHERE kind = 'issue.auto_archive' AND state = 'completed'
+     WHERE kind = $4 AND state = 'completed'
        AND attempted_at > $1::timestamptz
        AND finalized_at > $2::timestamptz
        AND ($3::bigint IS NULL OR id = $3::bigint)
      ORDER BY id`,
-    [watermark, startedAt.toISOString(), id ?? null]
+    [watermark, startedAt.toISOString(), id ?? null, kind]
   );
 }
 

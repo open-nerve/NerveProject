@@ -232,7 +232,7 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 
 ## Task 13：I21与删除故事的最终验证
 
-**Files：** 新`e2e/stories/issue/i21-purge.spec.ts`；改`e2e/fixtures/auto-archive.ts`、clock.ts、assert/project.ts、assert/workspace.ts和i16-auto-archive.spec.ts的必要helper调用；P4/W2/W3保持API furnish。预计400–800行。
+**Files：** 新`e2e/stories/issue/i21-purge.spec.ts`；改`e2e/fixtures/auto-archive.ts`和`e2e/stories/issue/i16-auto-archive.spec.ts`的共享完成查询调用。复用既有`clock.ts`、`assert/project.ts`、`assert/workspace.ts`及P4/W2/W3的API furnish和有限轮询，无需再次修改；本plan及spec同步实际文件归属。预计400–800行。
 
 **Interfaces：** 复用`createClockWorld({databaseName,logFile,now?}):Promise<ClockWorld>`；将既有完成查询抽为`completedPeriodicJobs(db,kind,watermark,startedAt,id?)`，返回形状沿completedAutoArchives，不造新fixture；archiveWatermark或同一局部watermark helper继续返回微秒text。
 

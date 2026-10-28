@@ -1,6 +1,6 @@
 import { changeProject, createProject, createWorkspace, slugFor } from "../../fixtures/api";
 import { newAccount } from "../../fixtures/auth";
-import { archiveWatermark, blockArchiveProject, completedAutoArchives } from "../../fixtures/auto-archive";
+import { archiveWatermark, blockArchiveProject, completedPeriodicJobs } from "../../fixtures/auto-archive";
 import { activityPage, createIssue, issueRead, listIssues, updateIssue } from "../../fixtures/issues";
 import { listStates } from "../../fixtures/states";
 import { clockTest as test, expect } from "../../fixtures/test";
@@ -90,7 +90,7 @@ test("I16 (API): a fresh auto-archive attempt archives only old terminal issues 
     controls.push(await updateIssue(world.current.api, token, toComplete.id, { state_id: state("completed") }));
     watermark = await archiveWatermark(db); // the final successful recent write precedes this DB timestamp
     expect(
-      await completedAutoArchives(db, watermark, world.current.startedAt, historical),
+      await completedPeriodicJobs(db, "issue.auto_archive", watermark, world.current.startedAt, historical),
       "historical completed must not satisfy freshness"
     ).toEqual([]);
   } finally {
@@ -120,13 +120,16 @@ test("I16 (API): a fresh auto-archive attempt archives only old terminal issues 
   );
   // Merely finalized-after-watermark would accept this real, too-early attempt.
   expect(
-    await completedAutoArchives(db, watermark, world.current.startedAt, crossing),
+    await completedPeriodicJobs(db, "issue.auto_archive", watermark, world.current.startedAt, crossing),
     "the crossing attempt must not satisfy freshness"
   ).toEqual([]);
   await expect
-    .poll(async () => (await completedAutoArchives(db, watermark, world.current.startedAt)).length, { timeout: 15_000 })
+    .poll(
+      async () => (await completedPeriodicJobs(db, "issue.auto_archive", watermark, world.current.startedAt)).length,
+      { timeout: 15_000 }
+    )
     .toBeGreaterThan(0);
-  const fresh = await completedAutoArchives(db, watermark, world.current.startedAt);
+  const fresh = await completedPeriodicJobs(db, "issue.auto_archive", watermark, world.current.startedAt);
   console.log("I16 fresh attempts", JSON.stringify({ watermark, fresh }));
   await info.attach("auto-archive-attempts", {
     body: JSON.stringify(
