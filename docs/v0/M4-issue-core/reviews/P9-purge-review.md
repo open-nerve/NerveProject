@@ -1,6 +1,6 @@
 # M4/P9 物理清理、版本保留与异步删除评审记录
 
-> **当前接续（2026-10-28）：后端实施、整审修复及最终产品F/CI已完成；T16文档独评及文档提交CI待核，集成待办。** 详见§8–12及[整体审核](../../../reviews/re-09-M4P9整体审核.md)。§1–7保留2026-10-27准备期原始判断，不代表当前产品状态。
+> **当前接续（2026-10-28）：M4/P9实施与终审完成、集成待办。** 详见§8–12及[整体审核](../../../reviews/re-09-M4P9整体审核.md)。§1–7保留2026-10-27准备期原始判断，不代表当前产品状态。
 
 日期：2026-10-27。分支 `codex/m4-p9`，基线 `6b9d08d4821f1423c7bb9795557727c206b7880f`。**准备与独立静态预检 Approved；2项局部遗漏已修订复审，开放 High/Medium/Low 均为0；未实现 P9。** 配套：[spec](../specs/P9-purge.md)、[plan](../plans/P9-purge.md)、[deep-review报告](../../../reviews/re-08-M4P9预检审核.md)。
 
@@ -50,7 +50,7 @@ P9 所有产品验收均未完成，逐条责任以 spec §4 的A1–A13和 plan
 
 ## 8. 实施验收与独立整审（2026-10-28）
 
-T1–T15已实施、逐Task独立要求/质量审查并由主控核原件；全分支整审和后续局部修复复审已闭环，产品HEAD为 `e003e96625ba51264d3aeb77729729d53a770103`。本次T16只同步文档，不新增产品行为运行。准确e003最终七项F已通过，见下列主控收据；准确产品分支CI已由主控核绿，本轮文档独评及文档提交CI仍待补；产品检查点不能代替文档交付门禁。
+T1–T15已实施、逐Task独立要求/质量审查并由主控核原件；全分支整审和后续局部修复复审已闭环，产品HEAD为 `e003e96625ba51264d3aeb77729729d53a770103`。本次T16同步文档及一处普通SQL注释，不新增产品行为运行。准确e003最终七项F已通过，见下列主控收据；准确产品分支CI已由主控核绿，两席文档独评及修复复审已闭环，最终文档HEAD CI仍待核；产品检查点不能代替文档交付门禁。
 
 | 身份 | 准确范围与结论 |
 |---|---|
@@ -60,8 +60,8 @@ T1–T15已实施、逐Task独立要求/质量审查并由主控核原件；全�
 | scoped fix review | 788→d25363b4480af57e5e29e2ee26088442e1352bf8关闭fixture-M1/L-DOC-1/I-D1；d253→e003e96625ba51264d3aeb77729729d53a770103关闭FF-CLEAN-1。4项均ADDRESSED，无开放发现/架构待决 |
 | final product F | 准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json) |
 | final product branch CI | 准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI |
-| T16 static/doc review | 本轮文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；独立文档复审由主控接续，目前待核。静态检查不代替产品运行或独立复审 |
-| delivery HEAD | 本轮文档提交身份由ignored `task-16-final-receipt.json`绑定；不递归写入提交自身SHA，也不倒填产品或规模测量HEAD |
+| T16 static/doc review | 首次31文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；两席文档独评及[CORE-1/2修复复审](../../../../.superpowers/sdd/P9-purge/task-16-fix1-review.md)已闭环，见[主控核证](../../../../.superpowers/sdd/P9-purge/task-16-fix1-controller-verification.json)；最终状态/注释小diff仍交主控限定核验，最终文档HEAD及其准确分支CI由主控[交付收据](../../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI |
+| delivery HEAD | 首次文档7f5625bf身份保留在原 `task-16-final-receipt.json`；最终交付HEAD与分支CI见主控[交付收据](../../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)，不倒填产品或规模测量HEAD |
 | main CI / integration | 未授权合并；无P9 main CI结论，分支/worktree及ignored证据保留 |
 
 实施证据入口：[A1–A13与24生产代表索引](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)；[逐函数/批写审计](../../../../.superpowers/sdd/P9-purge/task-15-batch-audit.md)；[独立整审闭环收据](../../../../.superpowers/sdd/P9-purge/final-review-closure-e003e966.json)。各项A的命令/raw位置由前者逐条展开，不将PASS摘要当原件，不把作者审计当独立整审。
@@ -80,7 +80,7 @@ T1–T15已实施、逐Task独立要求/质量审查并由主控核原件；全�
 | A10 | I21/I16最终2/2、P4/W2/W3 8/8；API造齐目录、同库单nerve换代+1464h、fresh attempted微秒门与crossing反例、保存ID直查旧链消失/recent/live整行留；Old/邻居原戳保留 |
 | A11 | 六项目每个660000行/1KB动态、7job一次running无snooze/错误、正常15s请求deadline、两类正确存活探针160样本/双处理中窗口，详见spec附录B |
 | A12 | 24真实生产代表、T4/T8/T12/T15检查点与独立整审/两次修复复审已取得；本产品最终F/branch CI已核绿，文档提交CI待核，见上表，未来main CI仍独立待授权 |
-| A13 | 本次同步M4§3.23四行/README/上级设计/契约语义及输入回执，正式静态验证与独立文档复审见待补栏；不关闭M4总体或后续阶段 |
+| A13 | 本次同步M4§3.23四行/README/上级设计/契约语义及输入回执，正式静态验证、两席文档独评及修复复审已闭环，见本节收据和§12接续；不关闭M4总体或后续阶段 |
 
 24代表为M1/M2/M4/M6/M7/M8/M9/M11b/M12-created/M15/M17-current/M18/M21/M23-kind/M25/M27/M31-final/M32-final/M34/M36/M37/M39/M40/T15-FK。M29/M30/M38/M41和catalog probe单列测试层，不计入生产数量；同一性质早轮/final不双计。M34前两轮存活、M36正61d超时/负61d明确红、M37旧超时/后明确红均保留。
 
@@ -147,13 +147,18 @@ M4§3.23四行分别落到总体§5.5/6.7清理、§5.5/6.3异步、M3§3.3/3.6/
 
 M4总体§14/总体§9.4、P10–P16页面与收尾仍开放；不创建M5–M8最终M4-closeout。M5首个CLI投递/附件内容标识，M6新增表/事件/订阅与归档条件，M7通知发送时权限重判/收集箱，M8Webhook/网络/locale/池/多进程/性能仍按M4§13.2归属。四个既有未来closeout链接是已知待收尾，不报P9新增链接失败。
 
-本轮文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；独立文档复审由主控接续，目前待核。静态检查不代替产品运行或独立复审
+首次31文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；两席文档独评及[CORE-1/2修复复审](../../../../.superpowers/sdd/P9-purge/task-16-fix1-review.md)已闭环，见[主控核证](../../../../.superpowers/sdd/P9-purge/task-16-fix1-controller-verification.json)；最终状态/注释小diff仍交主控限定核验，最终文档HEAD及其准确分支CI由主控[交付收据](../../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI
 
 只文档修改不谎称新行为运行，不重跑未受影响规模。本轮不合并；保留分支/worktree及ignored证据。未来获负责人明确授权才--no-ff，另核准确main SHA CI及归档哈希后清理。
 
 
-### T16文档独评接续：局部修复待复审（2026-10-28）
+### T16文档独评历史接续：32e52e38提交时局部修复待复审（2026-10-28）
 
 准确文档范围e003..7f5625bf的[18回执审查](../../../../.superpowers/sdd/P9-purge/task-16-receipts-review.md)为Approved/0发现；[核心13文件审查](../../../../.superpowers/sdd/P9-purge/task-16-core-review.md)发现T16-CORE-1/2两项Local/Minor，整体文档尚未Approved。CORE-1修正M3三处DeleteWorkspaceProjects旧projectIDs入参，锁返回的ID集合仍由workspace用例用于事件；CORE-2修正M4两处/plane-diff一处state_id CASCADE无条件承诺，区分单独删状态守卫与父级异步迟到时过期状态/父行回收活标记issue。
 
 本轮只修文档并定向静态核对端口/调用、StateInUse、状态清理顺序及FK，未改产品/测试，未重新运行F或规模；修复独立复审、文档提交CI仍待主控接续，不提前关闭A13或阶段状态。产品4项发现闭环与e003 F/CI、7f原文档证据保持各自身份。
+
+
+### 当前终审闭环接续（2026-10-28）
+
+M4/P9实施与终审完成、集成待办。两席文档独评及[CORE-1/2修复复审](../../../../.superpowers/sdd/P9-purge/task-16-fix1-review.md)已闭环，见[主控核证](../../../../.superpowers/sdd/P9-purge/task-16-fix1-controller-verification.json)；最终状态/注释小diff仍交主控限定核验，最终文档HEAD及其准确分支CI由主控[交付收据](../../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI。上段32e52e38待复审文字保留为当时历史；CORE-1/2现均ADDRESSED且无新破坏。主控另接受同CORE-2的00015迁移普通注释接续，仅限定单独删除状态与父级过期回收，不改SQL/goose指令；执行文本相等、gen-check及生成物零净变化由本轮收据记录，小diff由主控最终限定核验。

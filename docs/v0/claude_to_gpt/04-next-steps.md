@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见§10：P9后端实施、整审修复与最终本地F已完成，产品分支CI已核绿，文档独评/文档提交CI待收据；未授权集成。§6–9保留当时历史快照。**
+**当前接续点见§10：M4/P9实施与终审完成、集成待办，最终文档HEAD CI独立待核；未授权集成。§6–9保留当时历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -108,10 +108,10 @@ P8 `drafts-search` 最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的[�
 
 ## 10. 当前接续点（2026-10-28，P9文档收尾）
 
-主目录仍main，P9分支 `codex/m4-p9` / worktree `.codex/worktress/codex/m4-p9` 保留。基线 `6b9d08d4821f1423c7bb9795557727c206b7880f`；当前产品 `e003e96625ba51264d3aeb77729729d53a770103`；文档交付HEAD：本轮文档提交身份由ignored `task-16-final-receipt.json`绑定；不递归写入提交自身SHA，也不倒填产品或规模测量HEAD。
+主目录仍main，P9分支 `codex/m4-p9` / worktree `.codex/worktress/codex/m4-p9` 保留。基线 `6b9d08d4821f1423c7bb9795557727c206b7880f`；当前产品 `e003e96625ba51264d3aeb77729729d53a770103`；文档交付HEAD：首次文档7f5625bf身份保留在原 `task-16-final-receipt.json`；最终交付HEAD与分支CI见主控[交付收据](../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)，不倒填产品或规模测量HEAD。
 
-入口：[spec](../M4-issue-core/specs/P9-purge.md)、[plan](../M4-issue-core/plans/P9-purge.md)、[review](../M4-issue-core/reviews/P9-purge-review.md)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。T1–T15已独评，首次整审238文件60363行及d253/e003四项发现修复复审闭环，未留产品/架构待决；T16文档结果另经独评，不把本段当批准。
+入口：[spec](../M4-issue-core/specs/P9-purge.md)、[plan](../M4-issue-core/plans/P9-purge.md)、[review](../M4-issue-core/reviews/P9-purge-review.md)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。T1–T15已独评，首次整审238文件60363行及d253/e003四项发现修复复审闭环，未留产品/架构待决；T16两席独评与CORE-1/2修复复审已闭环，最终文档HEAD CI独立核对。
 
-最终产品F：准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json)。准确产品分支CI：准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI。文档静态/独立复审：本轮文档静态核对见[静态收据](../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；独立文档复审由主控接续，目前待核。静态检查不代替产品运行或独立复审。T12/T15旧检查点分别有准确分支CI成功收据；T12旧attempt1 W11失败仍是历史事实，未声称查明/修复根因。SP2仅引用4c7379f1+dirty源码绑定d26的原测量，不倒填当前HEAD。
+最终产品F：准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json)。准确产品分支CI：准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI。文档静态/独立复审：首次31文档静态核对见[静态收据](../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；两席文档独评及[CORE-1/2修复复审](../../../.superpowers/sdd/P9-purge/task-16-fix1-review.md)已闭环，见[主控核证](../../../.superpowers/sdd/P9-purge/task-16-fix1-controller-verification.json)；最终状态/注释小diff仍交主控限定核验，最终文档HEAD及其准确分支CI由主控[交付收据](../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI。T12/T15旧检查点分别有准确分支CI成功收据；T12旧attempt1 W11失败仍是历史事实，未声称查明/修复根因。SP2仅引用4c7379f1+dirty源码绑定d26的原测量，不倒填当前HEAD。
 
 本轮只完成P9后端与文档交接，不启动P10，不合并/清理。M4总体§14/总体设计§9.4、输入handoff status、C12三浏览器及M5–M8最终closeout继续待所属收尾。负责人未来明确授权后才--no-ff合并，核准确main SHA CI及归档哈希，再清理分支/worktree。

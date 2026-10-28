@@ -8,7 +8,7 @@ CREATE TABLE issues (
     project_id uuid NOT NULL REFERENCES projects ON DELETE CASCADE,
     -- 父子在同一项目（3.9）；自己不能做自己的父工作项
     parent_id uuid REFERENCES issues ON DELETE CASCADE,
-    -- Plane 可空，改为非空：创建总有状态（3.7）。删除在用的状态被拒绝（3.6），CASCADE 只删掉已软删除的工作项
+    -- Plane 可空，改为非空：创建总有状态（3.7）。单独删状态拒绝未删除工作项；父级异步删除后，过期状态或父行的 CASCADE 可回收仍为活标记的工作项（3.6）。
     state_id uuid NOT NULL REFERENCES states ON DELETE CASCADE,
     name varchar(255) NOT NULL CHECK (name <> ''),
     description_html text NOT NULL DEFAULT '<p></p>',

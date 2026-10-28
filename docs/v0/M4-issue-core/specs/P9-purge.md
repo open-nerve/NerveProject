@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M4/P9 `purge` |
 | 日期 | 2026-10-27 |
-| 状态 | 后端实施、整审修复及最终产品F/CI已完成；T16文档独评及文档提交CI待核，集成待办；准确产品HEAD `e003e96625ba51264d3aeb77729729d53a770103`；当前证据见[review](../reviews/P9-purge-review.md)，本轮不合并 |
+| 状态 | M4/P9实施与终审完成、集成待办；准确产品HEAD `e003e96625ba51264d3aeb77729729d53a770103`；当前证据见[review](../reviews/P9-purge-review.md)，本轮不合并 |
 | 代码基线 | P8 的 main 合并 `6b9d08d4821f1423c7bb9795557727c206b7880f`；主控已核该准确 SHA 的 CI `40520609987` 三个 job 全绿，并完成 P8 证据归档、哈希复核及工作树/本远端分支清理 |
 | 分支 | `codex/m4-p9`；worktree `.codex/worktress/codex/m4-p9`；主目录 HEAD 保持 main |
 | 上级文档 | [M4 设计](../M4-design.md) §3.5–3.6、3.14、3.19–3.21、3.23、4.16、6.2–6.6、9.3、9.6、12/P9、13.1；[方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md) |
@@ -319,21 +319,21 @@ I21 复用 ClockWorld，自己的独立数据库任一时刻只有一个nerve。
 
 ## 4. 验收标准（证据与当前门禁见review）
 
-T1–T15及整审修复的实际证据已映射至review§8。准确e003最终F已通过，本次文档接续仍等T16文档独评及文档提交CI，A1–A13实施勾选暂不关闭；未来mainCI独立待授权。
+T1–T15及整审修复的实际证据已映射至review§8。准确e003最终F/CI、两席文档独评及CORE-1/2修复复审均已闭环，下列勾选仅关闭A1–A13实施项；最终文档HEAD CI另按交付收据核验，main集成/CI仍待授权。
 
-- [ ] A1：00030–00033的23索引、sqlc模块schema、真实目录清理者/FK入边覆盖；漏清理者/漏入边/错误动作反例实际失败。
-- [ ] A2：四模块61天删、59天及精确cutoff留、活行留；子先父、id键集、独立批提交/错误计数、账户/会话范围及runtime权限通过。
-- [ ] A3：单个cleanup.purge_deleted按固定模块序和一次业务时钟运行；四周期种类真实completed，漏worker两类启动守卫有效。
-- [ ] A4：活项目（含归档）、活issue（含归档）的活版本仅最新20，last_saved_at/id全序；已删三层不碰；项目N和每项目事务通过。
-- [ ] A5：project/workspace原事务事件/任务提交或一起回滚，准确本次项目集合、零项目草稿任务、原At/By；CLI过渡依赖和两个同步方法删除，状态/标签能力仍在。
-- [ ] A6：13表软删顺序/短事务/幂等；关系双方向先锁再判、零Written候选继续、旧归属/同At竞争正确。
-- [ ] A7：15读22写完整窗口、目录双向守卫、动态历史引用/游标/OwnOnly/NULL creator组合证明；既有锁/gate/权限守卫未放宽。
-- [ ] A8：交错2/3/11/16/23/24/25含两项目id次序、两个删除者、真实PID等待，正常路径-race五遍无死锁。
-- [ ] A9：真实River重做/局部失败/预算多轮snooze且attempt不增/耗尽日志；>60天清理后无害，允许40P01的交叠原错重试收敛。
-- [ ] A10：I21 fresh-attempt水位、P4/W2/W3限时轮询及W3 Old审计确定通过；API造前置，目录无新增豁免。
-- [ ] A11：SP2每项目660000行、五项目各任务首次运行完成无snooze/重试；正常请求deadline、两种存活探针与全部耗时原件写附录。
-- [ ] A12：T4/T8/T12/T15及最终产品修复后F、性质变异、整分支deep-review/修复复审完成；准确分支HEAD CI与后续获授权mainCI分别核对。
-- [ ] A13：§3.23、README、契约及后端交接逐条准确同步；review记录逐批约定五和未关闭责任，不提前关闭M4/后续阶段。
+- [x] A1：00030–00033的23索引、sqlc模块schema、真实目录清理者/FK入边覆盖；漏清理者/漏入边/错误动作反例实际失败。 **实施证据：** [实施证据](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)。
+- [x] A2：四模块61天删、59天及精确cutoff留、活行留；子先父、id键集、独立批提交/错误计数、账户/会话范围及runtime权限通过。 **实施证据：** [实施证据](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)。
+- [x] A3：单个cleanup.purge_deleted按固定模块序和一次业务时钟运行；四周期种类真实completed，漏worker两类启动守卫有效。 **实施证据：** [实施证据](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)。
+- [x] A4：活项目（含归档）、活issue（含归档）的活版本仅最新20，last_saved_at/id全序；已删三层不碰；项目N和每项目事务通过。 **实施证据：** [实施证据](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)。
+- [x] A5：project/workspace原事务事件/任务提交或一起回滚，准确本次项目集合、零项目草稿任务、原At/By；CLI过渡依赖和两个同步方法删除，状态/标签能力仍在。 **实施证据：** [实施证据](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)。
+- [x] A6：13表软删顺序/短事务/幂等；关系双方向先锁再判、零Written候选继续、旧归属/同At竞争正确。 **实施证据：** [实施证据](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)。
+- [x] A7：15读22写完整窗口、目录双向守卫、动态历史引用/游标/OwnOnly/NULL creator组合证明；既有锁/gate/权限守卫未放宽。 **实施证据：** [实施证据](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)。
+- [x] A8：交错2/3/11/16/23/24/25含两项目id次序、两个删除者、真实PID等待，正常路径-race五遍无死锁。 **实施证据：** [实施证据](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)。
+- [x] A9：真实River重做/局部失败/预算多轮snooze且attempt不增/耗尽日志；>60天清理后无害，允许40P01的交叠原错重试收敛。 **实施证据：** [实施证据](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)。
+- [x] A10：I21 fresh-attempt水位、P4/W2/W3限时轮询及W3 Old审计确定通过；API造前置，目录无新增豁免。 **实施证据：** [实施证据](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)。
+- [x] A11：SP2每项目660000行、五项目各任务首次运行完成无snooze/重试；正常请求deadline、两种存活探针与全部耗时原件写附录。 **实施证据：** [实施证据](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)。
+- [x] A12：T4/T8/T12/T15及最终产品修复后F、性质变异、整分支deep-review/修复复审完成；准确分支HEAD CI与后续获授权mainCI分别核对。 **实施证据：** [产品F](../../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json)、[产品CI](../../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)、[整审闭环](../../../../.superpowers/sdd/P9-purge/final-review-closure-e003e966.json)。
+- [x] A13：§3.23、README、契约及后端交接逐条准确同步；review记录逐批约定五和未关闭责任，不提前关闭M4/后续阶段。 **实施证据：** [文档复审闭环](../../../../.superpowers/sdd/P9-purge/task-16-fix1-review.md)。
 
 ## 5. 不在范围内与后续责任
 
@@ -556,4 +556,4 @@ T12 `2aa26ab9` 的七项本地F已通过；其远端run `40610708261`唯一已�
 
 两输入handoff与18份历史回执均只追加本期处理结果，历史原文/运行身份保留、status仍open。四条M4§3.23同步分别落实上级设计/异步/M3/plane；README六配置与契约窗口一致。未来归档/集成须另获授权，不将P9子项结果等同整M4完成。
 
-T12 CI40610708261 attempt2、T15 CI40623599731 attempt1各自准确SHA三job成功；T12 attempt1 W11历史失败保留，不声称查明或修复其根因。最终产品F：准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json)；最终产品分支CI：准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI；文档独评：本轮文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；独立文档复审由主控接续，目前待核。静态检查不代替产品运行或独立复审。仅这些本期门禁闭合后才关闭A1–A13实施项，未来mainCI继续独立列待授权。
+T12 CI40610708261 attempt2、T15 CI40623599731 attempt1各自准确SHA三job成功；T12 attempt1 W11历史失败保留，不声称查明或修复其根因。最终产品F：准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json)；最终产品分支CI：准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI；文档独评：首次31文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；两席文档独评及[CORE-1/2修复复审](../../../../.superpowers/sdd/P9-purge/task-16-fix1-review.md)已闭环，见[主控核证](../../../../.superpowers/sdd/P9-purge/task-16-fix1-controller-verification.json)；最终状态/注释小diff仍交主控限定核验，最终文档HEAD及其准确分支CI由主控[交付收据](../../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI。A1–A13实施项现已关闭；最终文档HEAD CI仍按交付收据独立核验，未来mainCI继续待授权。

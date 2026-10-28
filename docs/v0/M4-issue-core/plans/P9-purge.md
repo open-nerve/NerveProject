@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **当前状态（2026-10-28）：** 后端实施、整审修复及最终产品F/CI已完成；T16文档独评及文档提交CI待核，集成待办。T1–T15真实执行与独评见[review](../reviews/P9-purge-review.md)；首次整审及两次局部修复已闭环，最终产品F/CI已有收据，T16文档独评及文档提交CI仍按各自收据完成。不合并。
+> **当前状态（2026-10-28）：** M4/P9实施与终审完成、集成待办。T1–T15真实执行与独评见[review](../reviews/P9-purge-review.md)；首次整审及两次局部修复已闭环，最终产品F/CI已有收据，两席文档独评及修复复审已闭环；最终文档HEAD CI仍独立待核。不合并。
 
 **Goal：** 交付23表60天物理清理、活描述版本最新20保留、项目/工作区删除后的issue侧分批任务，并证明窗口、锁序、审计、重试和目标规模。
 
@@ -61,7 +61,11 @@ make e2e
 
 七项退出0，web证明非缓存，E2E含本次环境要求的浏览器；记录各区域计数与skip理由、准确tested SHA/工作树和原件。基础设施失败、真实断言失败、缺浏览器分别记录；只有新改动/真实失败/未解风险才扩大或重跑。F是实施动作，准备期不执行。
 
+以下原计划步骤保留拟定命令与当时复选框；实际执行差异、失败和检查点按各Task报告/独评记账，不将完成回执解释为逐条原命令均原样执行。
+
 ## Task 1：索引、配置与PAT独立批清理
+
+- [x] Task 1 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-1-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-1-review.md)。
 
 **Files：** 新`server/migrations/sql/00030_identity_purge_indexes.sql`、`00031_workspace_purge_indexes.sql`、`00032_project_purge_indexes.sql`、`00033_issue_purge_indexes.sql`；改`server/migrations/schema_test.go`、`server/migrations/project_schema_test.go`、`server/migrations/issue_schema_test.go`、`server/migrations/draft_schema_test.go`、`server/migrations/trigram_schema_test.go`（新增迁移后的完整往返版本接续）；改`server/sqlc.yaml`、`server/internal/platform/config/config.go`、validate.go、load_test.go、validate_test.go；新config/purge_test.go；改`server/configs/config.yaml`、config.test.yaml、`server/configs/embed_test.go`（六字段的既有全量配置期望接续）；新A/app/purge.go、purge_test.go、adapter/postgres/purge.go、purge_test.go、queries/purge.sql；改A/provide.go；生成四模块gen。预计500–900行。
 
@@ -76,6 +80,8 @@ make e2e
 
 ## Task 2：project与workspace清理者
 
+- [x] Task 2 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-2-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-2-review.md)。
+
 **Files：** 新P/W的app/purge.go、purge_test.go、adapter/postgres/purge.go、purge_test.go、queries/purge.sql；改P/W/module.go；生成对应gen。预计450–850行。
 
 **Interfaces：** 每模块独立的spec§2.2Purge类型；P.Provided.Purger/W.Provided.Purger。adapter新`PurgeProjectUserProperties/PurgeProjectMembers/PurgeLabels/PurgeStates/PurgeProjects`及`PurgeWorkspaceUserProperties/PurgeWorkspaceMemberInvites/PurgeWorkspaceMembers/PurgeWorkspaces`，均`(context.Context,app.PurgeBatch)([]uuid.UUID,error)`。
@@ -88,6 +94,8 @@ make e2e
 
 ## Task 3：issue清理与完整目录守卫
 
+- [x] Task 3 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-3-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-3-review.md)。
+
 **Files：** 新I/app/purge.go、purge_test.go、adapter/postgres/purge.go、purge_test.go、queries/purge.sql；改I/module.go；新B/purge_catalog_test.go、`server/migrations/purge_indexes_test.go`；消费既有workspace_deletion_catalog_test.go；生成I/gen。预计700–1100行。
 
 **Interfaces：** I.Provided.Purger；13个`Purge<Table>(context.Context,app.PurgeBatch)([]uuid.UUID,error)`后缀/顺序见spec§2.2。B测试消费四值的Tables()，生产B.Purger接口仍留T4定义。
@@ -99,6 +107,8 @@ make e2e
 - [ ] **变异/G：** M6去deleted谓词，M7去id>after，M8丢comment_reactions步骤/入边之一；分别在PG行为、记录keyset参数、catalog反例红，恢复绿。提交`feat(M4/P9): 回收完整工作项表并守住清理与外键目录`。
 
 ## Task 4：单一cleanup周期任务与运行角色（F）
+
+- [x] Task 4 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-4-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-4-review.md)。
 
 **Files：** 新B/purge.go、purge_test.go、purge_integration_test.go、purge_runtime_test.go（复用runtime_role_test.go的splitRoles，避免扩大既有文件）；改B/app.go、app_test.go（手工testConfig补合法Cleanup，普通测试按小时调度）、all_periodic_jobs_test.go、business_clock_jobs_test.go；消费platform/jobs既有登记接口。预计600–1000行。
 
@@ -115,6 +125,8 @@ make e2e
 
 ## Task 5：最新20描述版本及周期接线
 
+- [x] Task 5 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-5-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-5-review.md)。
+
 **Files：** 新I/app/trim_versions.go、trim_versions_test.go、adapter/postgres/trim_versions.go、trim_versions_test.go、queries/trim_versions.sql、adapter/river/trim_versions.go、trim_versions_test.go；改I/module.go、module_jobs.go；P/module.go、adapter/postgres/issue_ports.go、queries/issue_ports.sql；B/ports.go、app.go、all_periodic_jobs_test.go；新B/issue_trim_jobs_test.go；生成对应gen。预计650–1100行。
 
 **T4 观测接续（root 局部裁定）：** 新 B/app_pool_test.go、request_app_test.go、deactivation_probe_test.go、row_lock_probe_test.go；扩既有 request_locks_test.go、app/issueWorld 启动委托及 gate/across/pool/P5/relation/draft/手动 auto_archive 观测点。默认生产 pool 构造、签名顺序、清理及守卫保持；以真实 RequestID 活动序号/PID 替换宽 waiter，原网络/JWT/共享池/200burst/全锁表/时限不减。锁升级 probe 先通过 PostgreSQL 18.6 的 tuple 队列、fixture 遮挡、其他 holder、过强锁反例，再迁移；保留真实红绿和清理失败原件。新增测试职责随本任务审查。
@@ -129,6 +141,8 @@ make e2e
 
 ## Task 6：保留、请求与物理清理的边界
 
+- [x] Task 6 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-6-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-6-review.md)。
+
 **Files：** 新B/issue_retention_interleaving_test.go（请求与trim的真实事务交错、共同版本fixture）、issue_retention_sets_test.go（保留与purge精确集合、归档子例）、purge_late_deletion_test.go（旧父CASCADE全部FK子链）；必要根因修改回T4/T5文件。预计400–750行。
 
 **Interfaces：** 消费T4 purgeDeleted.Execute、T5 TrimVersions.Execute和既有issue update/auto-archive/project delete；只新增测试场景，不建第二套生产编排。晚delete_rows实际worker在T12补齐。
@@ -140,6 +154,8 @@ make e2e
 - [ ] **G：** 提交`test(M4/P9): 证明版本保留与请求清理的集合和锁边界`。
 
 ## Task 7：关系先删端归属与集中预检
+
+- [x] Task 7 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-7-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-7-review.md)。
 
 **Files：** 新I/app/relation_deletions.go、relation_deletions_test.go；改I/app/delete_issue.go、delete_project_rows.go、ports.go、lock_either.go、delete_issue_test.go、lock_test.go及对应fakes；新I/adapter/postgres/relation_deletions.go、relation_deletions_test.go、queries/relation_deletions.sql；改delete_issue.go、queries/delete_issue.sql；P/module.go、adapter/postgres/issue_ports.go、queries/issue_ports.sql；B/ports.go；新B/issue_relation_ownership_test.go；改B/issue_relation_locks_test.go。预计800–1200行。
 
@@ -156,6 +172,8 @@ T7 回归接续：`B/issue_description_versions_test.go` 的 101 版本分页夹
 - [ ] **变异/G：** M17 Written=0即结束，M18先更新后读DeletedAt/忽略早删，M19去eitherOf一端Find，M20去eitherUnder存在性判断；各真实边界红→恢复。提交`fix(M4/P9): 固定关系删除归属并提前拒绝已删除端点`。
 
 ## Task 8：分批任务、预算与完整声明接线（F）
+
+- [x] Task 8 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-8-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-8-review.md)。
 
 **Files：** 改I/app/delete_project_rows.go；新I/app/delete_rows.go、delete_rows_test.go、delete_rows_on_deletion.go、delete_rows_on_deletion_test.go；新I/adapter/postgres/deletion_remaining.go、deletion_remaining_test.go、queries/deletion_remaining.sql；新I/adapter/river/delete_rows.go、delete_rows_test.go、row_deletions.go、row_deletions_test.go；改I/module.go、module_jobs.go、module_events.go；新P/W/module_events.go；改B/app.go、events.go、events_test.go、app_test.go、issue_writes_test.go、issue_link_jobs_test.go、issue_link_race_helpers_test.go、request_locks_test.go、request_lock_probe_test.go、request_jobs_test.go；新B/issue_delete_jobs_test.go；对应生成。预计900–1300行。
 
@@ -181,6 +199,8 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 
 ## Task 9：单项目请求切换与旧断言迁移
 
+- [x] Task 9 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-9-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-9-review.md)。
+
 **Files：** 改P/app/delete_project.go、delete_project_test.go、module.go及对应fake；新B/issue_project_deletion_events_test.go（原子性）、issue_project_deletion_jobs_test.go（真实job身份/完成/DB barrier）；改B/project_deletion_test.go、issue_interleaving_relations_test.go、issue_interleaving_deletion_test.go、issue_draft_interleaving_test.go及实际跨workspace关系测试调用点；同步B/app.go、project_connection_test.go、ending_connection_test.go真实投递构造，issue_activities_test.go、issue_auto_archive_policy_interleaving_test.go、issue_retention_interleaving_test.go项目异步断言；改`api/modules/project.yaml`、`e2e/fixtures/assert/project.ts`；生成api/dist、Go HTTP与TS。预计400–800行。
 
 **Interfaces：** P.NewDeleteProject第二参数改shared.EventPublisher，P.Deps.Events；project.deleted精确形状见spec§2.8。expectProjectDeleted签名保持，只issue目录行bounded polling。
@@ -192,6 +212,8 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 - [ ] **G：** 提交`feat(M4/P9): 将项目删除的工作项行交给原事务投递任务`。
 
 ## Task 10：工作区切换、CLI清理与全部W3异步点
+
+- [x] Task 10 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-10-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-10-review.md)。
 
 **Files：** 改W/app/delete_workspace.go、delete_workspace_test.go、ports.go、module.go；P/app/cascade.go、cascade_test.go、issue_ports.go、module.go及fake；I/app/cascade.go、cascade_test.go、delete_project_rows.go、adapter/postgres/delete_rows.go、queries/delete_rows.sql、module.go；B/users.go、workspace_deletion_test.go、runtime_role_test.go、issue_interleaving_relations_test.go；复用未改B/workspace_deletion_catalog_test.go（目录发现与快照读取，完成等待由caller workspace_deletion_test.go负责）；新B/issue_workspace_deletion_events_test.go；改`server/internal/archtest/composition_test.go`、`api/modules/workspace.yaml`、`e2e/fixtures/assert/workspace.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`；生成相关产物。预计750–1200行。
 
@@ -208,6 +230,8 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 
 ## Task 11：37操作完整窗口与空创建者
 
+- [x] Task 11 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-11-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-11-review.md)。
+
 **Files：** 新B/issue_deletion_window_test.go（阶段/完整回答）、issue_deletion_window_cases_test.go（37目录）、issue_deletion_window_fixture_test.go（API前置/任务屏障）、issue_deletion_window_pages_test.go（分页/搜索）、issue_deletion_window_boundaries_test.go（关联/422/历史/草稿）、issue_null_creator_test.go；既有permission_matrix_coverage/issue_write_locks/issue_draft_lock_shapes及受影响relations/list/search tests仅实际失败才改。预计700–1200行。
 
 **Interfaces：** 测试case目录operationId集合与真实issue tag契约双向相等；复用T9项目/T10工作区worker控制及既有call和response验证，不新增生产测试API。生产接口不扩。
@@ -219,6 +243,8 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 - [ ] **G：** 提交`test(M4/P9): 覆盖全部操作的删除窗口及空创建者权限`。
 
 ## Task 12：交错、真实snooze、失败耗尽与迟到任务（F）
+
+- [x] Task 12 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-12-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-12-review.md)。
 
 **Files：** 新B/issue_deletion_interleaving_test.go、issue_delete_job_lifecycle_test.go、issue_delete_job_fixture_test.go、issue_delete_late_purge_test.go、job_state_observer_test.go；改B/issue_world_test.go（复用原数据准备）、issue_relation_locks_test.go、issue_draft_interleaving_test.go、purge_late_deletion_test.go（目录性质与注释）；既有issue_interleaving_deletion/relations测试复用运行。生产代码不变。预计800–1300行。
 
@@ -232,6 +258,8 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 
 ## Task 13：I21与删除故事的最终验证
 
+- [x] Task 13 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-13-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-13-review.md)。
+
 **Files：** 新`e2e/stories/issue/i21-purge.spec.ts`；改`e2e/fixtures/auto-archive.ts`和`e2e/stories/issue/i16-auto-archive.spec.ts`的共享完成查询调用。复用既有`clock.ts`、`assert/project.ts`、`assert/workspace.ts`及P4/W2/W3的API furnish和有限轮询，无需再次修改；本plan及spec同步实际文件归属。预计400–800行。
 
 **Interfaces：** 复用`createClockWorld({databaseName,logFile,now?}):Promise<ClockWorld>`；将既有完成查询抽为`completedPeriodicJobs(db,kind,watermark,startedAt,id?)`，返回形状沿completedAutoArchives，不造新fixture；archiveWatermark或同一局部watermark helper继续返回微秒text。
@@ -243,6 +271,8 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 - [ ] **G：** 提交`test(M4/P9): 以时钟偏移验证物理清理和删除故事`。
 
 ## Task 14：现有scale升级为SP2并记录真实执行次数
+
+- [x] Task 14 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-14-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-14-review.md)。
 
 **Files：** 改B/issue_scale_test.go；新B/issue_scale_fixture_test.go、issue_scale_evidence_test.go；复用job_state_observer_test.go；本spec附录与ignored raw。预计650–1100行。
 
@@ -256,6 +286,8 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 
 ## Task 15：最终性质审计、race与完整F
 
+- [x] Task 15 实施及独评完成；实际证据：[报告](../../../../.superpowers/sdd/P9-purge/task-15-report.md) / [独评](../../../../.superpowers/sdd/P9-purge/task-15-review.md)。
+
 **Files：** 本spec附录、ignored evidence；若发现缺陷只改归属的现有生产/测试文件并独评。预计100–350行，修复另计。
 
 **Interfaces：** 不新增接口；核spec A1–A13与T1–T14结果一一映射。性能事实只能引用T14准确源码身份，不把后续文档HEAD冒充测量运行HEAD。
@@ -267,6 +299,8 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 - [ ] **G：** 提交`test(M4/P9): 完成删除清理的最终性质与本地检查点核验`；无文件变化则不造空提交，仅保留证据回执。此时尚不声称集成完成。
 
 ## Task 16：整分支deep-review、文档与后端交接
+
+- [x] Task 16 实施及独评完成；实际证据：[两席文档独评与修复复审](../reviews/P9-purge-review.md#12-文档后端交接与未关闭责任)。
 
 **Files：** 本spec/plan；改`docs/v0/M4-issue-core/reviews/P9-purge-review.md`准备占位；目标`docs/reviews/re-09-M4P9整体审核.md`（实际编号冲突时先核对）；M4-design.md、`docs/v0/v0-design.md`、`docs/v0/M3-workspace-project/M3-design.md`、`docs/v0/plane-diff.md`、README.md；M4/handoffs/M2-closeout.md、M3-closeout.md；P1a–P8各自spec§5/review§6追加回执；03/04当前接续。预计350–750行。
 
@@ -294,5 +328,7 @@ T1–T15逐Task实施/独评及主控核证已完成，实际任务文件归属�
 
 - [x] 独立整审阅读/发现处置及局部修复复审；完整F的最终身份另列，作者自查未替代独审。
 - [x] 最终产品检查点：准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json)；准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI。
-- [ ] T16文档静态核对与独立复审：本轮文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；独立文档复审由主控接续，目前待核。静态检查不代替产品运行或独立复审。
-- [ ] 精确文档路径G提交/交付身份：本轮文档提交身份由ignored `task-16-final-receipt.json`绑定；不递归写入提交自身SHA，也不倒填产品或规模测量HEAD；保留分支/worktree，不合并。
+- [x] T16文档静态核对与独立复审：首次31文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；两席文档独评及[CORE-1/2修复复审](../../../../.superpowers/sdd/P9-purge/task-16-fix1-review.md)已闭环，见[主控核证](../../../../.superpowers/sdd/P9-purge/task-16-fix1-controller-verification.json)；最终状态/注释小diff仍交主控限定核验，最终文档HEAD及其准确分支CI由主控[交付收据](../../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI。
+- [x] 首次文档及局部修复G提交（7f5625bf/32e52e38）：首次文档7f5625bf身份保留在原 `task-16-final-receipt.json`；最终交付HEAD与分支CI见主控[交付收据](../../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)，不倒填产品或规模测量HEAD；保留分支/worktree，不合并。
+
+- [ ] 最终交付HEAD分支CI：最终文档HEAD及其准确分支CI由主控[交付收据](../../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI。
