@@ -67,7 +67,13 @@ func TestIssueSerializationIgnoresTrimWaiter(t *testing.T) {
 	first := func(t *testing.T, w issueWorld, tx shared.TxManager, e *exchange) func() error {
 		held := tx.(heldTx)
 		firstProbe, firstGate = held.TxManager.(*requestProbe), held.gate
-		return removesBob(t, w, tx, e)
+		send := removesBob(t, w, tx, e)
+		return func() error {
+			// Cleanup joins the first request before the second. Release its
+			// pause before the first can report completion, including on failure.
+			defer releaseUsers()
+			return send()
+		}
 	}
 	second := func(t *testing.T, w issueWorld, tx shared.TxManager, e *exchange) func() error {
 		// This independent observation also works with the old plain TxManager.
