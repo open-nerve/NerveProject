@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 实施获授权后，按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T3 已实施并通过独立评审，T4 进行中；任务勾选由主控在独立评审后更新。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T4 既定任务门禁已完成；T5 只读准备中，先关闭 spec §2.6 的 W1，再完成真实列表接线。任务勾选由主控在独立评审后更新。
 
-> **当前状态：** P10a 集成后执行前文档预检通过；T1–T3 已实施并通过独立评审，T4 进行中；全部产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。预检结论与 2026-10-29 执行启动说明见阶段 review。
+> **当前状态：** T4 修复提交 dde969f8 的独立复审和完整本地七门禁通过；whole 窗口外计数边界 W1 由 T5 首项必修，未关闭前不推产品检查点。全部阶段产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -102,12 +102,12 @@ make e2e
 **Files：** paged-groups.ts（decode/merge/confirm）；新 issue-membership.ts（三态成员与组键）、paged-groups.replay.ts（raw证据重放，直接导出 replayGroups）、paged-groups.evidence.ts（计数自己的 Row/range/每id最新确认事实与共用三分支）；新paged-groups.changes.test.ts、paged-groups.replay.test.ts。T5 分别从主模型与 replay 文件导入，不经反向 re-export；membership 对模型仅 type-only 依赖。member ListContext 必填 workspaceID（与 workspaceSlug 并列）；T5 从既有 Workspace 目录绑定 ID，未知 ID 不创建可请求 scope，T4 覆盖同 user 跨 workspace 的 confirm/replay 隔离。
 **Interfaces：** spec§2.4/2.5 的可选 counterEvidence / CounterEvidence / ReadEvidence（首次partial启用、reset只换所属来源与确认事实、whole替换；不存Issue、每id无历史链）；spec§2.5 ConfirmedIssueChange/Before/GroupChangeResult；confirmGroups、replayGroups返回value+verifyIds；纯mergePages(value, answer, context)供fetchPart合并及T5复用；绝不从纯函数发请求。
 
-- [ ] 表G01–G16覆盖四旧新组合×rows在/不在×window内外，另分完整/未完成组；构造非零独立计数并断言整个结构，不只截图行id。覆盖create absent/delete null/archive/unarchive、多标签/负责人、泳道subgroupTotals独立与最外total。
-- [ ] 完整索引I2-1…9与R3-1…5按下表对应M4设计§3.22及spec§4 A3；本Task验证纯模型部分，真实canonical/回查行在T6/T12补齐，不在纯函数测试伪造缓存或HTTP。额外R-TAIL证明末页不覆盖lower以前，R-DROP证明扩窗后续页range仍从server cursorBoundary，D-204证明after=null不用版本比较且三种删除证据判别。
-- [ ] 新 `partialReplayAdjustsOnlyCountersResetByItsAnswer`：A5/B4/outer9，B旧页在外，A→B确认后A4/B5/outer9；旧B total4应答重放后仍A4/B5/outer9。再表两part交错、多值标签、单格回答保留未回答outer/subgroupTotals/rows；M48故意对未回答计数再减必须红。
-- [ ] 红：`pnpm --filter web exec vitest run core/lib/paged-groups.changes.test.ts core/lib/paged-groups.replay.test.ts`。
-- [ ] 实现按原应答/Before重放；decode标定resetCounters/rowParts，merge/replay只改本次拥有的集合；partial flat total只归该组/格，未回答计数/rows沿当前确认状态，whole才覆盖全部；total取response而非当前值再叠加，drop扩boundary且不回退，未知只stale受影响部分；第2判断返回去重verifyIds。
-- [ ] M9旧属读取当前已merge行、M10丢空组、M11重算boundary、M12所有partial当whole、M13总数sum各组、M14删除双减，均对应表红；恢复全模型绿、G、F，提交 `feat(M4/P10b): 按原回答重放确认修改并修正组计数`。
+- [x] 表G01–G16覆盖四旧新组合×rows在/不在×window内外，另分完整/未完成组；构造非零独立计数并断言整个结构，不只截图行id。覆盖create absent/delete null/archive/unarchive、多标签/负责人、泳道subgroupTotals独立与最外total。
+- [x] 完整索引I2-1…9与R3-1…5按下表对应M4设计§3.22及spec§4 A3；本Task验证纯模型部分，真实canonical/回查行在T6/T12补齐，不在纯函数测试伪造缓存或HTTP。额外R-TAIL证明末页不覆盖lower以前，R-DROP证明扩窗后续页range仍从server cursorBoundary，D-204证明after=null不用版本比较且三种删除证据判别。
+- [x] 新 `partialReplayAdjustsOnlyCountersResetByItsAnswer`：A5/B4/outer9，B旧页在外，A→B确认后A4/B5/outer9；旧B total4应答重放后仍A4/B5/outer9。再表两part交错、多值标签、单格回答保留未回答outer/subgroupTotals/rows；M48故意对未回答计数再减必须红。
+- [x] 红：`pnpm --filter web exec vitest run core/lib/paged-groups.changes.test.ts core/lib/paged-groups.replay.test.ts`。
+- [x] 实现按原应答/Before重放；decode标定resetCounters/rowParts，merge/replay只改本次拥有的集合；partial flat total只归该组/格，未回答计数/rows沿当前确认状态，whole才覆盖全部；total取response而非当前值再叠加，drop扩boundary且不回退，未知只stale受影响部分；第2判断返回去重verifyIds。
+- [x] M9旧属读取当前已merge行、M10丢空组、M11重算boundary、M12所有partial当whole、M13总数sum各组、M14删除双减，均对应表红；恢复全模型绿、G、F，提交 `feat(M4/P10b): 按原回答重放确认修改并修正组计数`。
 
 ### T4 与后续任务的反例证据索引
 
@@ -132,6 +132,8 @@ make e2e
 
 **Files：** C/store/issue/root.store.ts 的基本协调入口、C/store/root.store.ts 退役接线、C/lib/store-context.test.ts、C/services/user.service.ts；C/store/issue/helpers/{base-issues.store,base-issues-utils,issue-filter-helper.store}.ts；project/archived/profile/issue.store.ts；新helpers两test；首次新增C/lib/issue-filters.ts/test的spec§2.7四纯函数；删除旧列表services/type容器/枚举/映射并接上T1新service；必须同Task跟进C/hooks/use-issues-actions.tsx、issue-layouts/calendar/base-calendar-root.tsx及list/kanban/spreadsheet读者。
 **Interfaces：** root 首次产出 spec§2.9 核心写入口及§2.6会话生命周期（T11/T12复用，不另造）；BaseIssuesStore持Reconciled<PagedGroups>；fetchFirst/fetchNext/refreshStale/acceptConfirmed/markMembershipStale，spec§2.6；首次产出toProjectFilters/toFilterExpression/projectListQuery/memberListQuery，T8不重复新建，只扩大语义测试及去否定。PageAnswer返回V，通用Reconciled不理解分页业务。
+
+- [ ] 首项关闭 W1（spec§2.6/R13，原始复现见 task-4-fix1-whole-boundary-note.md）：whole已计入窗口外create但未返回该id，不能在confirm时盲加outer/group并保持fresh。提出并裁定区分“实际发出前已持有计数来源”与“操作在外新回答来源”的最小内部证据方案；未知只stale，已知发出前Before仍有效，不能一律whole刷新。补模型和真实FakeNerve交错红→绿、错误来源判定生产变异，并保留T4 I1/M48全回归；同步spec内部形状。本项随T5独评关闭，不能移交T12/T14。
 
 - [ ] `nextPageKeepsExactQueryAndCursor`捕获group_key/sub_group_key、cursor为server原值；`staleReloadReplacesOnlyTargetFirstPage`、`pageTotalReplacesEarlierAdjustedTotal`、`pageMergesDeduplicateDroppedRow`、`subIssueRelativeDatesStayLocal`覆盖fromnow所有既有选项。
 - [ ] 红：`pnpm --filter web exec vitest run core/store/issue/helpers/base-issues.store.test.ts core/store/issue/helpers/base-issues-utils.test.ts`。

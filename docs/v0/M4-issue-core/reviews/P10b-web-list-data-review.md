@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T3 已实施并通过独立评审，T4 进行中。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。阶段完整门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。实施记录见第7节；以下第1–6节保留预检时点事实。
+日期：2026-10-29。**T1–T4 既定任务门禁已完成，T5 只读准备中；W1 为 T5 首项必修。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T4 完整本地七门禁通过；阶段最终门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。实施记录见第7节；以下第1–6节保留预检时点事实。
 
 ## 1. 实际前置与证据
 
@@ -25,6 +25,8 @@ P10a 最终 d1a19e78 经负责人授权 --no-ff 合并上述 main；[main CI 407
 | PF-3 | read token 原写 loginId，但 RootStore/ApiClient 未提供该值；只有 HTTP 中间件不足以拦晚到成功答 | 按已有“一代一个 RootStore”在 IssueRootStore 构造时固定 owner，已有 RootStore.dispose 调幂等 retire；T5 核发出/结算/后续读 active，T6 核 token owner；SWR 仍 loginId，不改认证协议。必要 held 200/排队/跨根反例已入 plan，独立 final 核无未答接线问题 |
 
 历史 B-L1–B-L6 六项仍是实施约束，未因重核简化。上述均关闭于**文档层**；没有实施任何修复，也没有新增架构裁定、接口协议或依赖。主控末轮检查将 T14 的 A1–A9 笔误修为 A1–A10，避免最终验证门禁遗漏。
+
+后续实施裁定另见第7节：R9/R10 纯模型职责拆分、R11 workspaceID 明确作用域、R12 每计数来源修复均已实施；R13/W1 冻结实际已持有来源集合的方案已裁定，由 T5 首项实施验证。它们不回写为本节历史预检已实现的事实。
 
 ## 4. 实际静态验证与边界
 
@@ -97,7 +99,7 @@ P10A-S1已由负责人选择A，保持列表删除范围、调整M6/M7自身页�
 
 负责人已授权实施整个 P10b，阶段结束先不合并。主控在既有 `codex/m4-p10b` worktree 按 `6dfd7258bfe8c6350116131488bf3b83822425c9` 启动 T1；该提交包含 P10a 集成后的准备稿，P10a/main 的上述集成事实与原预检证据保持原样。当前 T1 进行中，全部产品验收仍未勾选，逐任务评审及阶段 deep-review 另留真实实施证据；phase 保持 M4/P10。
 
-## 7. T1–T3 实施、独立审查与 T4 接续
+## 7. T1–T4 实施、独立审查与 T5 接续
 
 实施证据根为本 worktree `.superpowers/sdd/P10b-web-list-data/`，准备原件仍在主目录外置的 P10b-preparation-20261029；两者未来都须归档。主控 ledger 逐 Task 记准确范围、审者、命令原件与源码桥，不能以准备稿审查或 main 基线 CI 代替产品验证。
 
@@ -106,6 +108,7 @@ P10A-S1已由负责人选择A，保持列表删除范围、调整M6/M7自身页�
 | T1 / ce35d7a9 | 薄服务20项、直接受影响39文件455项（包含前述20，不能重复相加）、api-client 5项通过；错误路径/重复日期query变异红；类型/格式通过。task-1-review.md Spec compliant / Approved |
 | T2 / daac89e7 | 并发11项、9个旧生产消费者对应14文件212项回归通过；M1–M3实际红并恢复；类型/定向lint/格式通过。task-2-review.md Spec compliant / Approved |
 | T3 / 6dcbeeee | 首版7f4da0dc的29项及M4–M8实际变异；独评发现优先级映射相反，修复后31项、types/lint/format通过，新增真实priority错误映射变异红。task-3-fix1-review.md Spec PASS / Quality APPROVED；旧M4–M8按限定源码桥承接，不能宣称是在修复后重跑 |
+| T4 / dde969f8 | 首版247cc370的纯确认/重放；独评 I1 复现 partial 先见创建/删除结果后共享计数漏加/漏减。fix1 按各计数保存来源，129模型+7service通过；六项修复变异真实红并恢复，task-4-fix1-review.md I1/M1均 ADDRESSED、无新破坏。该提交完整本地F全绿；范围外既有W1仍由T5必修，不算已修 |
 
 局部裁定：
 
@@ -114,4 +117,13 @@ P10A-S1已由负责人选择A，保持列表删除范围、调整M6/M7自身页�
 - 证据限制：T3首轮五份mutation raw被同名最终重跑覆盖，原JSONL记录保留，不能重新复验那五份旧输出，也不补造。最后一轮变异、恢复hash与绿灯原件完整，当前98份原件已冻结；fix1用唯一前缀并拒绝覆盖，22条raw/exit及最终6文件hash均核验。此历史Minor不等于产品缺陷，仍需最终整审如实披露。
 - T3初始TypeError数量由“两个”纠正为实际一个，冻结旧报告保留；不是改变测试结果。固定显示boundary与raw PageAnswer不被合并改写的实际消费由T4/T5承接。
 
-T4接续：以纯mergePages/confirmGroups/replayGroups完成计数写集合、原回答三分支、drop窗口及删除204表，随后严格串行完整本地七门禁。T5–T14及全部阶段产品验收仍开放；不合并、不启动P11。
+T4 局部裁定与证据：
+
+- R9/R10：纯 mergePages 与 confirm/replay 共享模型；成员判断、raw重放分别分文件，运行时依赖单向，避免反向转发形成循环。
+- R11：member scope 明确 workspaceID；同 user 跨工作区和 unknown-before 的 confirm/replay 均核行、计数、stale 不变。T5 从既有 Workspace 目录绑定 ID，未知不请求；HTTP 不变。
+- R12：I1 修复按 counter 保存 Row/范围/最新确认事实，partial 只替换自身来源，显示行与计数证据分开。主模型434行、evidence140行、replay29行；没有第二份实体缓存。27份 fix1 raw/exit、14个最终输入与提交字节核验；restored-green 后补过 spec 文档，产品/测试字节与最终一致，最终 lint-web/knip 已含最终 spec。旧 Task4 runner 漏记 service 逐轮指纹如实保留，新 runner 已补；没有回填旧日志。
+- **W1 / R13（Important，T5必须关闭）：** 独立最小 probe 对247cc370与dde969f8均复现 whole 已含窗口外 X、但缺行时 confirm 将 outer10/B5错加为11/6且fresh。它是既有 direct whole fallback 与 raw unknown 原则未闭合的边界，不是 fix1 新回归；原复审结论不改。T5 以实际发送前冻结的来源证据区分旧计数与写期间新回答，补真实请求交错及模型回归；不能一律猜差量或一律 whole 刷新，不能拖到T12/T14。证据 `task-4-fix1-whole-boundary-note.md` 及同名前缀probe/raw/回执；未关闭前不推产品检查点。
+
+T4 完整本地 F 绑定干净提交 `dde969f8bb526dcf2641ad45eb1a93b8f5d1e5d4`，七项均 exit0 且各自执行前后 HEAD/工作树一致：gen-check、lint-go、`GOFLAGS=-p=1 make test`、lint-web、knip、`TURBO_FORCE=true make test-web`、e2e。服务端51包通过、16包无测试文件；前端18任务0缓存，8份包级原日志共1436项通过（web 145文件1274项、其它Vitest157项、api-client Node测试5项）；Playwright169项通过，构建11任务中10缓存，不能将构建缓存说成E2E跳过。web原日志含既有IssueRootStore严格模式警告（T10处理）、Cycle/Modules及React key警告，输出不是零警告。准确argv/cwd/raw/hash、8份包原日志与源码桥见 `task-4-root-final-f-attempt1/receipts.json`、`root-verification.json`。首轮F在lint-web失败的原件仍保留，不与此最终轮混用。F通过不证明W1已修，也不是最终阶段或远端CI通过。
+
+T5接续：先关闭W1，再以唯一root写协调入口接通项目/归档/个人主页列表、同任务移除旧形状及旧列表服务。T5–T14及全部阶段产品验收仍开放；不合并、不启动P11。
