@@ -59,30 +59,6 @@ export const STATE_GROUPS: {
 };
 
 export const ARCHIVABLE_STATE_GROUPS = [STATE_GROUPS.completed.key, STATE_GROUPS.cancelled.key];
-export const COMPLETED_STATE_GROUPS = [STATE_GROUPS.completed.key];
-
-export const STATE_DISTRIBUTION = {
-  [STATE_GROUPS.backlog.key]: {
-    key: STATE_GROUPS.backlog.key,
-    issues: "backlog_issues",
-  },
-  [STATE_GROUPS.unstarted.key]: {
-    key: STATE_GROUPS.unstarted.key,
-    issues: "unstarted_issues",
-  },
-  [STATE_GROUPS.started.key]: {
-    key: STATE_GROUPS.started.key,
-    issues: "started_issues",
-  },
-  [STATE_GROUPS.completed.key]: {
-    key: STATE_GROUPS.completed.key,
-    issues: "completed_issues",
-  },
-  [STATE_GROUPS.cancelled.key]: {
-    key: STATE_GROUPS.cancelled.key,
-    issues: "cancelled_issues",
-  },
-};
 
 export const PROGRESS_STATE_GROUPS_DETAILS = [
   {

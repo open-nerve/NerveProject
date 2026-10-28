@@ -4,10 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useMemo } from "react";
 import {
   ArchiveOutline,
-  CloseCircleOutline,
   CopyOutline,
   DeleteOutline,
   EditOutline,
@@ -18,7 +19,6 @@ import {
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { EIssuesStoreType, TIssue } from "@nerve/types";
 import type { TContextMenuItem } from "@nerve/ui";
 import { copyUrlToClipboard, generateWorkItemLink } from "@nerve/utils";
 import { createCopyMenuWithDuplication } from "./copy-menu-helper";
@@ -56,7 +56,7 @@ function handleOptionalAction<T>(
 }
 
 export interface MenuItemFactoryProps {
-  issue: TIssue;
+  issue: Issue;
   workspaceSlug?: string;
   projectIdentifier?: string;
   activeLayout?: string;
@@ -66,21 +66,12 @@ export interface MenuItemFactoryProps {
   isRestoringAllowed?: boolean;
   isInArchivableGroup?: boolean;
   // Action handlers
-  setIssueToEdit: (issue: TIssue | undefined) => void;
+  setIssueToEdit: (issue: Issue | undefined) => void;
   setCreateUpdateIssueModal: (open: boolean) => void;
   setDeleteIssueModal: (open: boolean) => void;
   setArchiveIssueModal?: (open: boolean) => void;
   setDuplicateWorkItemModal?: (open: boolean) => void;
-  handleRemoveFromView?: () => void;
   handleRestore?: () => Promise<void>;
-  // External handlers
-  handleDelete?: () => Promise<void>;
-  handleUpdate?: (data: TIssue) => Promise<void>;
-  handleArchive?: () => Promise<void>;
-  // Context-specific data
-  cycleId?: string;
-  moduleId?: string;
-  storeType?: EIssuesStoreType;
 }
 
 // Common action handlers hook
@@ -158,7 +149,6 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     setDeleteIssueModal,
     setArchiveIssueModal,
     setDuplicateWorkItemModal,
-    handleRemoveFromView,
   } = props;
 
   const createEditMenuItem = (customEditAction?: () => void): TContextMenuItem => ({
@@ -208,22 +198,6 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     action: actionHandlers.handleCopyIssueLink,
   });
 
-  const createRemoveFromCycleMenuItem = (): TContextMenuItem => ({
-    key: "remove-from-cycle",
-    title: "Remove from cycle",
-    icon: CloseCircleOutline,
-    action: () => handleOptionalAction(handleRemoveFromView, "Remove from cycle"),
-    shouldRender: isEditingAllowed,
-  });
-
-  const createRemoveFromModuleMenuItem = (): TContextMenuItem => ({
-    key: "remove-from-module",
-    title: "Remove from module",
-    icon: CloseCircleOutline,
-    action: () => handleOptionalAction(handleRemoveFromView, "Remove from module"),
-    shouldRender: isEditingAllowed,
-  });
-
   const createArchiveMenuItem = (): TContextMenuItem => ({
     key: "archive",
     title: t("common.actions.archive"),
@@ -260,8 +234,6 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     createCopyMenuItem,
     createOpenInNewTabMenuItem,
     createCopyLinkMenuItem,
-    createRemoveFromCycleMenuItem,
-    createRemoveFromModuleMenuItem,
     createArchiveMenuItem,
     createRestoreMenuItem,
     createDeleteMenuItem,
@@ -298,74 +270,6 @@ export const useWorkItemDetailMenuItems = (props: MenuItemFactoryProps): TContex
     ],
     // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
     [factory]
-  );
-};
-
-export const useAllIssueMenuItems = (props: MenuItemFactoryProps): TContextMenuItem[] => {
-  const factory = useMenuItemFactory(props);
-
-  return useMemo(
-    () => [
-      factory.createEditMenuItem(),
-      factory.createCopyMenuItem(),
-      factory.createOpenInNewTabMenuItem(),
-      factory.createCopyLinkMenuItem(),
-      factory.createArchiveMenuItem(),
-      factory.createDeleteMenuItem(),
-    ],
-    [factory]
-  );
-};
-
-export const useCycleIssueMenuItems = (props: MenuItemFactoryProps): TContextMenuItem[] => {
-  const factory = useMenuItemFactory(props);
-
-  const customEditAction = () => {
-    props.setIssueToEdit({
-      ...props.issue,
-      cycle_id: props.cycleId ?? null,
-    });
-    props.setCreateUpdateIssueModal(true);
-  };
-
-  return useMemo(
-    () => [
-      factory.createEditMenuItem(customEditAction),
-      factory.createCopyMenuItem(),
-      factory.createOpenInNewTabMenuItem(),
-      factory.createCopyLinkMenuItem(),
-      factory.createRemoveFromCycleMenuItem(),
-      factory.createArchiveMenuItem(),
-      factory.createDeleteMenuItem(),
-    ],
-    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-    [factory, props.cycleId]
-  );
-};
-
-export const useModuleIssueMenuItems = (props: MenuItemFactoryProps): TContextMenuItem[] => {
-  const factory = useMenuItemFactory(props);
-
-  const customEditAction = () => {
-    props.setIssueToEdit({
-      ...props.issue,
-      module_ids: props.moduleId ? [props.moduleId] : [],
-    });
-    props.setCreateUpdateIssueModal(true);
-  };
-
-  return useMemo(
-    () => [
-      factory.createEditMenuItem(customEditAction),
-      factory.createCopyMenuItem(),
-      factory.createOpenInNewTabMenuItem(),
-      factory.createCopyLinkMenuItem(),
-      factory.createRemoveFromModuleMenuItem(),
-      factory.createArchiveMenuItem(),
-      factory.createDeleteMenuItem(),
-    ],
-    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-    [factory, props.moduleId]
   );
 };
 

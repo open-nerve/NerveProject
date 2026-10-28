@@ -13,13 +13,10 @@ import { ChevronLeftOutline, ChevronRightOutline } from "@makeplane/propel/icons
 import { getDate } from "@nerve/utils";
 import { MONTHS_LIST } from "@nerve/constants";
 import { useCalendarView } from "@/hooks/store/use-calendar-view";
-import type { ICycleIssuesFilter } from "@/store/issue/cycle";
-import type { IModuleIssuesFilter } from "@/store/issue/module";
 import type { IProjectIssuesFilter } from "@/store/issue/project";
-import type { IProjectViewIssuesFilter } from "@/store/issue/project-views";
 
 interface Props {
-  issuesFilterStore: IProjectIssuesFilter | IModuleIssuesFilter | ICycleIssuesFilter | IProjectViewIssuesFilter;
+  issuesFilterStore: IProjectIssuesFilter;
 }
 export const CalendarMonthsDropdown = observer(function CalendarMonthsDropdown(props: Props) {
   const { issuesFilterStore } = props;

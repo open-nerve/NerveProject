@@ -10,8 +10,7 @@ import { action, computed, observable, makeObservable, runInAction } from "mobx"
 import { computedFn } from "mobx-utils";
 // types
 import type { ICycle, TProgressSnapshot, TCycleDistribution } from "@nerve/types";
-import type { DistributionUpdates } from "@nerve/utils";
-import { orderCycles, shouldFilterCycle, getDate, updateDistribution } from "@nerve/utils";
+import { orderCycles, shouldFilterCycle, getDate } from "@nerve/utils";
 // services
 import { CycleService } from "@/services/cycle.service";
 import { CycleArchiveService } from "@/services/cycle_archive.service";
@@ -45,8 +44,6 @@ export interface ICycleStore {
   getProjectCycleDetails: (projectId: string) => ICycle[] | null;
   getProjectCycleIds: (projectId: string) => string[] | null;
 
-  // actions
-  updateCycleDistribution: (distributionUpdates: DistributionUpdates, cycleId: string) => void;
   // fetch
   fetchWorkspaceCycles: (workspaceSlug: string) => Promise<ICycle[]>;
   fetchAllCycles: (workspaceSlug: string, projectId: string) => Promise<undefined | ICycle[]>;
@@ -468,21 +465,6 @@ export class CycleStore implements ICycleStore {
       });
       return response;
     });
-
-  /**
-   * This method updates the cycle's stats locally without fetching the updated stats from backend
-   * @param distributionUpdates
-   * @param cycleId
-   * @returns
-   */
-  updateCycleDistribution = (distributionUpdates: DistributionUpdates, cycleId: string) => {
-    const cycle = this.getCycleById(cycleId);
-    if (!cycle) return;
-
-    runInAction(() => {
-      updateDistribution(cycle, distributionUpdates);
-    });
-  };
 
   /**
    * @description creates a new cycle

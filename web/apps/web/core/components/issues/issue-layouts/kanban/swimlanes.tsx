@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { MutableRefObject } from "react";
 import { observer } from "mobx-react";
 // nerve imports
@@ -11,9 +13,7 @@ import type {
   GroupByColumnTypes,
   IGroupByColumn,
   TGroupedIssues,
-  TIssue,
   IIssueDisplayProperties,
-  IIssueMap,
   TSubGroupedIssues,
   TIssueKanbanFilters,
   TIssueGroupByOptions,
@@ -97,7 +97,6 @@ const SubGroupSwimlaneHeader = observer(function SubGroupSwimlaneHeader({
 });
 
 interface ISubGroupSwimlane extends ISubGroupSwimlaneHeader {
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
   canEditProperties: (projectId: string | undefined) => boolean;
   collapsedGroups: TIssueKanbanFilters;
   disableIssueCreation?: boolean;
@@ -111,19 +110,18 @@ interface ISubGroupSwimlane extends ISubGroupSwimlaneHeader {
   groupedIssueIds: TGroupedIssues | TSubGroupedIssues;
   handleCollapsedGroups: (toggle: "group_by" | "sub_group_by", value: string) => void;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
-  issuesMap: IIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   loadMoreIssues: (groupId?: string, subGroupId?: string) => void;
   orderBy: TIssueOrderByOptions | undefined;
   quickActions: TRenderQuickActions;
-  quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   scrollableContainerRef?: MutableRefObject<HTMLDivElement | null>;
   showEmptyGroup: boolean;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
 }
 
 const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwimlane) {
   const {
-    addIssuesToView,
     canEditProperties,
     collapsedGroups,
     disableIssueCreation,
@@ -206,7 +204,6 @@ const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwim
                     enableQuickIssueCreate={enableQuickIssueCreate}
                     disableIssueCreation={disableIssueCreation}
                     canEditProperties={canEditProperties}
-                    addIssuesToView={addIssuesToView}
                     quickAddCallback={quickAddCallback}
                     scrollableContainerRef={scrollableContainerRef}
                     loadMoreIssues={loadMoreIssues}
@@ -225,7 +222,6 @@ const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwim
 });
 
 export interface IKanBanSwimLanes {
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
   canEditProperties: (projectId: string | undefined) => boolean;
   collapsedGroups: TIssueKanbanFilters;
   disableIssueCreation?: boolean;
@@ -240,15 +236,15 @@ export interface IKanBanSwimLanes {
   groupedIssueIds: TGroupedIssues | TSubGroupedIssues;
   handleCollapsedGroups: (toggle: "group_by" | "sub_group_by", value: string) => void;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
-  issuesMap: IIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   loadMoreIssues: (groupId?: string, subGroupId?: string) => void;
   orderBy: TIssueOrderByOptions | undefined;
   quickActions: TRenderQuickActions;
-  quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   scrollableContainerRef?: MutableRefObject<HTMLDivElement | null>;
   showEmptyGroup: boolean;
   sub_group_by: TIssueGroupByOptions | undefined;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
 }
 
 export const KanBanSwimLanes = observer(function KanBanSwimLanes(props: IKanBanSwimLanes) {
@@ -270,7 +266,6 @@ export const KanBanSwimLanes = observer(function KanBanSwimLanes(props: IKanBanS
     disableIssueCreation,
     enableQuickIssueCreate,
     canEditProperties,
-    addIssuesToView,
     quickAddCallback,
     scrollableContainerRef,
   } = props;
@@ -323,7 +318,6 @@ export const KanBanSwimLanes = observer(function KanBanSwimLanes(props: IKanBanS
           handleOnDrop={handleOnDrop}
           disableIssueCreation={disableIssueCreation}
           enableQuickIssueCreate={enableQuickIssueCreate}
-          addIssuesToView={addIssuesToView}
           canEditProperties={canEditProperties}
           quickAddCallback={quickAddCallback}
           scrollableContainerRef={scrollableContainerRef}

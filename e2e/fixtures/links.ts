@@ -65,7 +65,7 @@ export function linkCrawlJobs(db: Database, linkId: string, url?: string) {
   return db.query<{ id: string; kind: string; args: { link_id: string; url: string }; state: string }>(
     `SELECT id::text, kind, args, state::text FROM river_job
       WHERE kind = 'issue.crawl_link' AND args->>'link_id' = $1
-        AND ($2::text IS NULL OR args->>'url' = $2) ORDER BY id`,
+        AND ($2::text IS NULL OR args->>'url' = $2) ORDER BY river_job.id`,
     [linkId, url ?? null]
   );
 }

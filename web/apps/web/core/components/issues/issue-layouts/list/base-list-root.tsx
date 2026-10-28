@@ -27,36 +27,23 @@ import type { IQuickActionProps, TRenderQuickActions } from "./list-view-types";
 
 type ListStoreType =
   | EIssuesStoreType.PROJECT
-  | EIssuesStoreType.MODULE
-  | EIssuesStoreType.CYCLE
-  | EIssuesStoreType.PROJECT_VIEW
   | EIssuesStoreType.PROFILE
   | EIssuesStoreType.ARCHIVED
   | EIssuesStoreType.WORKSPACE_DRAFT;
 
 interface IBaseListRoot {
   QuickActions: FC<IQuickActionProps>;
-  addIssuesToView?: (issueIds: string[]) => Promise<any>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
   viewId?: string | undefined;
-  isCompletedCycle?: boolean;
 }
 export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot) {
-  const { QuickActions, viewId, addIssuesToView, canEditPropertiesBasedOnProject, isCompletedCycle = false } = props;
+  const { QuickActions, viewId, canEditPropertiesBasedOnProject } = props;
   // router
   const storeType = useIssueStoreType() as ListStoreType;
   //stores
   const { issuesFilter, issues } = useIssues(storeType);
-  const {
-    fetchIssues,
-    fetchNextIssues,
-    quickAddIssue,
-    updateIssue,
-    removeIssue,
-    removeIssueFromView,
-    archiveIssue,
-    restoreIssue,
-  } = useIssuesActions(storeType);
+  const { fetchIssues, fetchNextIssues, createIssue, updateIssue, removeIssue, archiveIssue, restoreIssue } =
+    useIssuesActions(storeType);
   // mobx store
   const { allowPermissions } = useUserPermissions();
   const { issueMap } = useIssues();
@@ -104,14 +91,13 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
         issue={issue}
         handleDelete={async () => removeIssue(issue.project_id, issue.id)}
         handleUpdate={async (data) => updateIssue && updateIssue(issue.project_id, issue.id, data)}
-        handleRemoveFromView={async () => removeIssueFromView && removeIssueFromView(issue.project_id, issue.id)}
         handleArchive={async () => archiveIssue && archiveIssue(issue.project_id, issue.id)}
         handleRestore={async () => restoreIssue && restoreIssue(issue.project_id, issue.id)}
-        readOnly={!canEditProperties(issue.project_id ?? undefined) || isCompletedCycle}
+        readOnly={!canEditProperties(issue.project_id ?? undefined)}
       />
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isCompletedCycle, canEditProperties, removeIssue, updateIssue, removeIssueFromView, archiveIssue, restoreIssue]
+    [canEditProperties, removeIssue, updateIssue, archiveIssue, restoreIssue]
   );
 
   const loadMoreIssues = useCallback(
@@ -152,12 +138,10 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
           groupedIssueIds={groupedIssueIds ?? {}}
           loadMoreIssues={loadMoreIssues}
           showEmptyGroup={showEmptyGroup}
-          quickAddCallback={quickAddIssue}
+          quickAddCallback={createIssue}
           enableIssueQuickAdd={!!enableQuickAdd}
           canEditProperties={canEditProperties}
           disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
-          addIssuesToView={addIssuesToView}
-          isCompletedCycle={isCompletedCycle}
           handleOnDrop={handleOnDrop}
           handleCollapsedGroups={handleCollapsedGroups}
           collapsedGroups={collapsedGroups}

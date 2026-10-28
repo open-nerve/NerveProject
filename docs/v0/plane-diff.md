@@ -220,7 +220,7 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `issue_links.created_at` | 保留非空timestamptz，新增now()默认 | 请求仍显式写锁后同一时刻 |
 | `issue_links.updated_at` | 保留非空timestamptz，新增now()默认 | 抓取不推进审计 |
 | `issue_links.deleted_at` | 保留nullable timestamptz | 活行排重/任务写回均检查NULL |
-| `issue_links`约束/授权 | 新增内置hash exclusion `((issue_id::text || ':' || url) WITH =) WHERE deleted_at IS NULL`，约束名`issue_links_issue_id_url_key`；只有该名+23P01映射409 | 原文相等recheck允许真实hash碰撞共存；不加extension/散列列；sqlc与runtime-grants纳入此表的四DML |
+| `issue_links`约束/授权 | 新增内置hash exclusion `((issue_id::text \|\| ':' \|\| url) WITH =) WHERE deleted_at IS NULL`，约束名`issue_links_issue_id_url_key`；只有该名+23P01映射409 | 原文相等recheck允许真实hash碰撞共存；不加extension/散列列；sqlc与runtime-grants纳入此表的四DML |
 | `cycle_issues` | **新增**部分唯一约束 `(issue_id)`：一个工作项最多属于一个迭代 | Plane 只在代码里检查 |
 | `modules` | 删除旧的 `description_text`、`description_html` | 遗留列 |
 | `*_user_properties`、`issue_views` | 删除旧的 `filters` 列；筛选条件按 Nerve 自己的格式存储（列名与格式在 M3/M4 确定）；`issue_views` 删除 `query` 列 | 筛选格式改变（见接口差异） |
@@ -257,6 +257,14 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 ---
 
 ## 四、行为差异
+
+整审局部收口：A-01删除跨项目子项无消费者的cycle/module目录预取，每外部项目少两旧GET，state/member/label与原拒绝边界保持；A-02删除失去最后生产读者的旧列表乐观分布更新helper/barrel/两wrapper/六死测试及两独占常量块。真实领域analytics/progress取数及calculateCycleProgress七测保留；两项独立复审Approved，非将领域数据层提前接通。
+
+**M4/P10a quick-add等待展示（R8，T4已实施并独评Approved）**：创建请求未返回前，输入在quick-add入口显示等待预览并禁用，保留Promise toast；不再将缺服务端编号/审计事实的输入作为普通卡片加入正式排序、分组或计数。成功后真实响应出现于列表，失败保留输入重试。首请求pending、双提交、跨workspace/project与旧结算边界及准确提交身份见[P10a T4/R8证据](M4-issue-core/reviews/P10a-web-issue-types-review.md#t4-r8-evidence)；未提前实现P10b协调引擎。
+
+P10a移除迭代、模块、项目/工作区视图的工作项列表及专属动作，领域自身页头/详情/归档目录取数保留。M6/M7前既缺列表，也可能因自身旧接口未接通而拿不到名称/详情/统计/目录；实际观察与恢复责任见[P10a移交](M4-issue-core/reviews/P10a-web-issue-types-review.md#6-移交事项)。详情reaction/link不再从core嵌套展开读取，改由各自原资源GET入cache，非null父另一次raw retrieve；目标链3 GET/非null父4 GET，其他历史side-load另计，新增资源由所属fetch等待并传拒绝，真实Base提供有限重试。R10写请求wire/次数不变只适用于create/update，不表示所有读请求数量/时序不变。列表关系extractor已删，详情关系资源保留；其余P11数据层责任未完成。
+
+实施与终审完成、集成待办；最终文稿提交后准确HEAD CI以交付回执核验；最后产品5f7085bce4aa5103a0133fa982847d274efa6e47，准确产品CI已核成功，最后交付HEAD CI待核。
 
 M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md) 的事务、时钟及自动归档证据为准；P7已实现的链接/出站/请求任务见[P7 review](M4-issue-core/reviews/P7-issue-links-review.md)；P9后台删除/保留/清理的当前证据见 [P9 review](M4-issue-core/reviews/P9-purge-review.md)，页面及后续阶段仍开放。
 

@@ -4,9 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
 // nerve imports
-import type { TIssue } from "@nerve/types";
+
 import { EIssuesStoreType } from "@nerve/types";
 // components
 import { DeleteIssueModal } from "@/components/issues/delete-issue-modal";
@@ -24,7 +26,7 @@ export type TWorkItemLevelModalsProps = {
 export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: TWorkItemLevelModalsProps) {
   const { workItemIdentifier } = props;
   // router
-  const { workspaceSlug, cycleId, moduleId } = useParams();
+  const { workspaceSlug } = useParams();
   const navigate = useNavigate();
   // store hooks
   const {
@@ -56,16 +58,10 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
     }
   };
 
-  const handleCreateIssueSubmit = async (newIssue: TIssue) => {
+  const handleCreateIssueSubmit = async (newIssue: Issue) => {
     if (!workspaceSlug || !newIssue.project_id || !newIssue.id || newIssue.parent_id !== workItemDetails?.id) return;
 
     await fetchSubWorkItems(workspaceSlug, newIssue.project_id, workItemDetails.id);
-  };
-
-  const getCreateIssueModalData = () => {
-    if (cycleId) return { cycle_id: cycleId };
-    if (moduleId) return { module_ids: [moduleId] };
-    return undefined;
   };
 
   return (
@@ -73,7 +69,6 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
       <CreateUpdateIssueModal
         isOpen={isCreateIssueModalOpen}
         onClose={() => toggleCreateIssueModal(false)}
-        data={getCreateIssueModalData()}
         onSubmit={handleCreateIssueSubmit}
         allowedProjectIds={createWorkItemAllowedProjectIds}
       />

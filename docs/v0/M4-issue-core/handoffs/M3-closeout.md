@@ -209,3 +209,17 @@ M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以�
 §3规则/矩阵、§5旧service/显示设置、§6会话/页面取数、§7键盘/弹窗、§8地址/复制/文案/死行、§9共享页大小按原归属继续。只有本期后端子项承接，前端与整体M4收尾不关闭。
 
 证据：[P9 review](../reviews/P9-purge-review.md)及[spec §7/附录D](../specs/P9-purge.md)；最终产品 `e003e96625ba51264d3aeb77729729d53a770103`。最终F/准确分支CI、T16文档独评在review分别列明。本文件 `status: open` 保持到M4收尾，历史原文/先前回执保留；不因P9后端承接关闭整份交接。
+
+
+## 处理结果（M4/P10a，2026-10-28）
+
+第5/6节本期子项：迭代、模块、项目/工作区视图工作项列表/筛选和独占动作已删除，领域自身详情/目录装载仍保留；T5进一步删除最后普通cycle/module写链，T6删除从core不存在字段提取关系并覆空cache的列表extractor，详情所属资源读取保持。直接生成核心、描述/null/局部输入合同与T7逐方法旧URL最早到期账见[P10a实施记录](../reviews/P10a-web-issue-types-review.md)。
+
+R15新增reaction/link/非null父GET由所属fetch等待并传拒绝，T5 I1/I3及r2 N1已独立复审闭合，真实Base可提示/重试、旧来源/关闭后晚结算不覆盖当前描述或失败状态。此结论限新增资源与当前表单快照路径，不覆盖历史activity/comment/subissue/relation/state detached、所有下拉框按需拒绝或全部模态宿主生命周期。
+
+preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectService依P12/P14读者改接及P15清理，`/search/`无自动guard且until M4/P16；详情资源/其余按需拒绝、模块service和宿主收尾留P11，各页面key/后退与交互按P13–P15。M6/M7自身完整可用/零失败和实际逐请求过渡清单由[P10a review §6](../reviews/P10a-web-issue-types-review.md#6-移交事项)交接；不把列表拆除通过视为其自身页成功，顶层status保持open。
+
+本期Task级完成至T8提交8081112492a2fc744a43b3e814c6d36ff4ba3959；A-01/A-02代码终审修复已独评并提交5f7085bce4aa5103a0133fa982847d274efa6e47；文稿最后独评已通过，最终交付HEAD分支CI待提交后核验，准确产品5f708 CI已核成功见review§8，不把本段子项写成M4最终交付或集成。
+
+
+整审A-01无消费者子项两域预取与A-02退休列表独占乐观分布链已根因清理并独评；未改会话/资源/领域协议，真实目录/统计/进度保留，不扩大本输入其余关闭范围。

@@ -4,17 +4,17 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { pull, concat, uniq, set, update } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // Nerve Imports
 import type {
-  TIssue,
   TIssueSubIssues,
   TIssueSubIssuesStateDistributionMap,
   TIssueSubIssuesIdMap,
   TSubIssuesStateDistribution,
-  TLoader,
 } from "@nerve/types";
 // services
 import { IssueService } from "@/services/issue";
@@ -36,8 +36,8 @@ export interface IIssueSubIssuesStoreActions {
     projectId: string,
     parentIssueId: string,
     issueId: string,
-    issueData: Partial<TIssue>,
-    oldIssue?: Partial<TIssue>,
+    issueData: Partial<IssueDetail>,
+    oldIssue?: Partial<IssueDetail>,
     fromModal?: boolean
   ) => Promise<void>;
   removeSubIssue: (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) => Promise<void>;
@@ -51,14 +51,13 @@ export interface IIssueSubIssuesStore extends IIssueSubIssuesStoreActions {
   subIssuesStateDistribution: TIssueSubIssuesStateDistributionMap;
   subIssues: TIssueSubIssuesIdMap;
   subIssueHelpers: Record<string, TSubIssueHelpers>; // parent_issue_id -> TSubIssueHelpers
-  loader: TLoader;
   filters: IWorkItemSubIssueFiltersStore;
   // helper methods
   stateDistributionByIssueId: (issueId: string) => TSubIssuesStateDistribution | undefined;
   subIssuesByIssueId: (issueId: string) => string[] | undefined;
   subIssueHelpersByIssueId: (issueId: string) => TSubIssueHelpers;
   // actions
-  fetchOtherProjectProperties: (workspaceSlug: string, projectIds: string[]) => Promise<void>;
+  fetchOtherProjectProperties: (projectIds: string[]) => Promise<void>;
   setSubIssueHelpers: (parentIssueId: string, key: TSubIssueHelpersKeys, value: string) => void;
 }
 
@@ -67,7 +66,6 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
   subIssuesStateDistribution: TIssueSubIssuesStateDistributionMap = {};
   subIssues: TIssueSubIssuesIdMap = {};
   subIssueHelpers: Record<string, TSubIssueHelpers> = {};
-  loader: TLoader = undefined;
 
   filters: IWorkItemSubIssueFiltersStore;
   // root store
@@ -81,7 +79,6 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
       subIssuesStateDistribution: observable,
       subIssues: observable,
       subIssueHelpers: observable,
-      loader: observable.ref,
       // actions
       setSubIssueHelpers: action,
       fetchSubIssues: action,
@@ -123,12 +120,11 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
   };
 
   fetchSubIssues = async (workspaceSlug: string, projectId: string, parentIssueId: string) => {
-    this.loader = "init-loader";
     const response = await this.issueService.subIssues(workspaceSlug, projectId, parentIssueId);
 
     const subIssuesStateDistribution = response?.state_distribution ?? {};
 
-    const issueList = (response.sub_issues ?? []) as TIssue[];
+    const issueList = (response.sub_issues ?? []) as Issue[];
 
     this.rootIssueDetailStore.rootIssueStore.issues.addIssue(issueList);
 
@@ -137,7 +133,7 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
       const otherProjectIds = uniq(
         issueList.map((issue) => issue.project_id).filter((id) => !!id && id !== projectId)
       ) as string[];
-      this.fetchOtherProjectProperties(workspaceSlug, otherProjectIds);
+      this.fetchOtherProjectProperties(otherProjectIds);
     }
     if (issueList) {
       this.rootIssueDetailStore.rootIssueStore.issues.updateIssue(parentIssueId, {
@@ -154,7 +150,6 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
       );
     });
 
-    this.loader = undefined;
     return response;
   };
 
@@ -171,7 +166,7 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
       const otherProjectIds = uniq(
         subIssues.map((issue) => issue.project_id).filter((id) => !!id && id !== projectId)
       ) as string[];
-      this.fetchOtherProjectProperties(workspaceSlug, otherProjectIds);
+      this.fetchOtherProjectProperties(otherProjectIds);
     }
 
     runInAction(() => {
@@ -207,8 +202,8 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     projectId: string,
     parentIssueId: string,
     issueId: string,
-    issueData: Partial<TIssue>,
-    oldIssue: Partial<TIssue> = {},
+    issueData: Partial<IssueDetail>,
+    oldIssue: Partial<IssueDetail> = {},
     fromModal: boolean = false
   ) => {
     if (!fromModal)
@@ -331,7 +326,7 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     return;
   };
 
-  fetchOtherProjectProperties = async (workspaceSlug: string, projectIds: string[]) => {
+  fetchOtherProjectProperties = async (projectIds: string[]) => {
     if (projectIds.length > 0) {
       for (const projectId of projectIds) {
         // fetching other project states
@@ -340,10 +335,6 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
         this.rootIssueDetailStore.rootIssueStore.rootStore.memberRoot.project.fetchProjectMembers(projectId);
         // fetching other project labels
         this.rootIssueDetailStore.rootIssueStore.rootStore.label.fetchProjectLabels(projectId);
-        // fetching other project cycles
-        this.rootIssueDetailStore.rootIssueStore.rootStore.cycle.fetchAllCycles(workspaceSlug, projectId);
-        // fetching other project modules
-        this.rootIssueDetailStore.rootIssueStore.rootStore.module.fetchModules(workspaceSlug, projectId);
       }
     }
   };

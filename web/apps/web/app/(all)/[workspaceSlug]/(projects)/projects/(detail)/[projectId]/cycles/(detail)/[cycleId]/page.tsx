@@ -5,6 +5,7 @@
  */
 
 import { observer } from "mobx-react";
+import useSWR from "swr";
 // nerve imports
 import { cn } from "@nerve/utils";
 // assets
@@ -14,7 +15,6 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHead } from "@/components/core/page-title";
 import useCyclesDetails from "@/components/cycles/active-cycle/use-cycles-details";
 import { CycleDetailsSidebar } from "@/components/cycles/progress-sidebar";
-import { CycleLayoutRoot } from "@/components/issues/issue-layouts/roots/cycle-layout-root";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useProject } from "@/hooks/store/use-project";
@@ -27,9 +27,8 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
   const navigate = useNavigate();
   const { workspaceSlug, projectId, cycleId } = params;
   // store hooks
-  const { getCycleById, loader } = useCycle();
+  const { getCycleById, loader, fetchCycleDetails } = useCycle();
   const { getProjectById } = useProject();
-  // const { issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
   // hooks
   const { setValue, storedValue } = useLocalStorage("cycle_sidebar_collapsed", false);
 
@@ -38,6 +37,11 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
     projectId,
     cycleId,
   });
+  const { isLoading: isCycleLoading } = useSWR(
+    workspaceSlug && projectId && cycleId ? ["CYCLE_DETAILS", workspaceSlug, projectId, cycleId] : null,
+    workspaceSlug && projectId && cycleId ? () => fetchCycleDetails(workspaceSlug, projectId, cycleId) : null,
+    { revalidateIfStale: false, revalidateOnFocus: false }
+  );
   // derived values
   const isSidebarCollapsed = storedValue === true;
   const cycle = getCycleById(cycleId);
@@ -49,11 +53,10 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
    */
   const toggleSidebar = () => setValue(!isSidebarCollapsed);
 
-  // const activeLayout = issuesFilter?.issueFilters?.displayFilters?.layout;
   return (
     <>
       <PageHead title={pageTitle} />
-      {!cycle && !loader ? (
+      {!cycle && !loader && !isCycleLoading ? (
         <EmptyState
           image={emptyCycle}
           title="Cycle does not exist"
@@ -66,9 +69,6 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
       ) : (
         <>
           <div className="flex h-full w-full">
-            <div className="h-full w-full overflow-hidden">
-              <CycleLayoutRoot />
-            </div>
             {!isSidebarCollapsed && (
               <div
                 className={cn(

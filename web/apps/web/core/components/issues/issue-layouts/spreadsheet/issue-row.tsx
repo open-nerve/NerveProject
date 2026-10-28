@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { Dispatch, MouseEvent, MutableRefObject, SetStateAction } from "react";
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
@@ -13,7 +15,7 @@ import { ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/ic
 import { useOutsideClickDetector } from "@nerve/hooks";
 // types
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IIssueDisplayProperties, TIssue } from "@nerve/types";
+import type { IIssueDisplayProperties } from "@nerve/types";
 // ui
 import { ControlLink, Row } from "@nerve/ui";
 import { cn, generateWorkItemLink } from "@nerve/utils";
@@ -35,7 +37,7 @@ interface Props {
   displayProperties: IIssueDisplayProperties;
   quickActions: TRenderQuickActions;
   canEditProperties: (projectId: string | undefined) => boolean;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   portalElement: React.MutableRefObject<HTMLDivElement | null>;
   nestingLevel: number;
   issueId: string;
@@ -133,7 +135,7 @@ interface IssueRowDetailsProps {
   displayProperties: IIssueDisplayProperties;
   quickActions: TRenderQuickActions;
   canEditProperties: (projectId: string | undefined) => boolean;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   portalElement: React.MutableRefObject<HTMLDivElement | null>;
   nestingLevel: number;
   issueId: string;
@@ -173,7 +175,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
   const { isMobile } = usePlatformOS();
 
   // handlers
-  const handleIssuePeekOverview = (issue: TIssue) => handleRedirection(workspaceSlug, issue, isMobile, nestingLevel);
+  const handleIssuePeekOverview = (issue: Issue) => handleRedirection(workspaceSlug, issue, isMobile, nestingLevel);
 
   const { subIssues: subIssuesStore, issue } = useIssueDetail();
 
@@ -231,12 +233,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
         tabIndex={0}
         className="group/list-block relative left-0 z-10 max-w-lg bg-surface-1 md:sticky"
       >
-        <ControlLink
-          href={workItemLink}
-          onClick={() => handleIssuePeekOverview(issueDetail)}
-          className="outline-none"
-          disabled={!!issueDetail?.tempId}
-        >
+        <ControlLink href={workItemLink} onClick={() => handleIssuePeekOverview(issueDetail)} className="outline-none">
           <Row
             className={cn(
               "group clickable z-10 flex h-11 w-full cursor-pointer items-center border-r-[0.5px] border-subtle-1 bg-transparent text-13 after:absolute",

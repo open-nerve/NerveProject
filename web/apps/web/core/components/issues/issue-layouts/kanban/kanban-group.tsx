@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { MutableRefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
@@ -18,9 +20,7 @@ import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type {
   TGroupedIssues,
-  TIssue,
   IIssueDisplayProperties,
-  IIssueMap,
   TSubGroupedIssues,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
@@ -48,7 +48,7 @@ import { KanbanIssueBlocksList } from "./blocks-list";
 
 interface IKanbanGroup {
   groupId: string;
-  issuesMap: IIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   groupedIssueIds: TGroupedIssues | TSubGroupedIssues;
   displayProperties: IIssueDisplayProperties | undefined;
   sub_group_by: TIssueGroupByOptions | undefined;
@@ -57,14 +57,13 @@ interface IKanbanGroup {
   isDragDisabled: boolean;
   isDropDisabled: boolean;
   dropErrorMessage: string | undefined;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   enableQuickIssueCreate?: boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   loadMoreIssues: (groupId?: string, subGroupId?: string) => void;
   disableIssueCreation?: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;
-  groupByVisibilityToggle?: boolean;
   scrollableContainerRef?: MutableRefObject<HTMLDivElement | null>;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
   orderBy: TIssueOrderByOptions | undefined;
@@ -193,10 +192,6 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
         preloadedData = { ...preloadedData, state_id: groupValue };
       } else if (groupByKey === "priority") {
         preloadedData = { ...preloadedData, priority: groupValue };
-      } else if (groupByKey === "cycle") {
-        preloadedData = { ...preloadedData, cycle_id: groupValue };
-      } else if (groupByKey === "module") {
-        preloadedData = { ...preloadedData, module_ids: [groupValue] };
       } else if (groupByKey === "labels" && groupValue != "None") {
         preloadedData = { ...preloadedData, label_ids: [groupValue] };
       } else if (groupByKey === "assignees" && groupValue != "None") {
@@ -213,10 +208,6 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
         preloadedData = { ...preloadedData, state_id: subGroupValue };
       } else if (subGroupByKey === "priority") {
         preloadedData = { ...preloadedData, priority: subGroupValue };
-      } else if (subGroupByKey === "cycle") {
-        preloadedData = { ...preloadedData, cycle_id: subGroupValue };
-      } else if (subGroupByKey === "module") {
-        preloadedData = { ...preloadedData, module_ids: [subGroupValue] };
       } else if (subGroupByKey === "labels" && subGroupValue != "None") {
         preloadedData = { ...preloadedData, label_ids: [subGroupValue] };
       } else if (subGroupByKey === "assignees" && subGroupValue != "None") {

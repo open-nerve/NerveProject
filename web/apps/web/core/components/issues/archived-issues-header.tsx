@@ -18,13 +18,11 @@ import { DisplayFiltersSelection, FiltersDropdown } from "@/components/issues/is
 import { WorkItemFiltersToggle } from "@/components/work-item-filters/filters-toggle";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
-import { useProject } from "@/hooks/store/use-project";
 
 export const ArchivedIssuesHeader = observer(function ArchivedIssuesHeader() {
   // router
   const { workspaceSlug, projectId } = useParams();
   // store hooks
-  const { currentProjectDetails } = useProject();
   const {
     issuesFilter: { issueFilters, updateFilters },
   } = useIssues(EIssuesStoreType.ARCHIVED);
@@ -65,8 +63,6 @@ export const ArchivedIssuesHeader = observer(function ArchivedIssuesHeader() {
             layoutDisplayFiltersOptions={
               activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.archived_issues.layoutOptions[activeLayout] : undefined
             }
-            cycleViewDisabled={!currentProjectDetails?.cycle_view}
-            moduleViewDisabled={!currentProjectDetails?.module_view}
           />
         </FiltersDropdown>
       </Header.RightItem>

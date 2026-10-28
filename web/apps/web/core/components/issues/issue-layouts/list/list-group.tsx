@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { MutableRefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
@@ -15,10 +17,8 @@ import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type {
   IGroupByColumn,
-  TIssueMap,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
-  TIssue,
   IIssueDisplayProperties,
   TIssueKanbanFilters,
 } from "@nerve/types";
@@ -48,21 +48,21 @@ import type { TRenderQuickActions } from "./list-view-types";
 interface Props {
   groupIssueIds: string[] | undefined;
   group: IGroupByColumn;
-  issuesMap: TIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   group_by: TIssueGroupByOptions | null;
   orderBy: TIssueOrderByOptions | undefined;
   getGroupIndex: (groupId: string | undefined) => number;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   displayProperties: IIssueDisplayProperties | undefined;
   enableIssueQuickAdd: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;
   containerRef: MutableRefObject<HTMLDivElement | null>;
-  quickAddCallback?: ((projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>) | undefined;
+  quickAddCallback?:
+    | ((projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>)
+    | undefined;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
   disableIssueCreation?: boolean;
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
-  isCompletedCycle?: boolean;
   showEmptyGroup?: boolean;
   loadMoreIssues: (groupId?: string) => void;
   handleCollapsedGroups: (value: string) => void;
@@ -86,8 +86,6 @@ export const ListGroup = observer(function ListGroup(props: Props) {
     quickAddCallback,
     handleOnDrop,
     disableIssueCreation,
-    addIssuesToView,
-    isCompletedCycle,
     showEmptyGroup,
     loadMoreIssues,
     handleCollapsedGroups,
@@ -150,10 +148,6 @@ export const ListGroup = observer(function ListGroup(props: Props) {
         preloadedData = { ...preloadedData, label_ids: [value] };
       } else if (groupByKey === "assignees" && value != "None") {
         preloadedData = { ...preloadedData, assignee_ids: [value] };
-      } else if (groupByKey === "cycle" && value != "None") {
-        preloadedData = { ...preloadedData, cycle_id: value };
-      } else if (groupByKey === "module" && value != "None") {
-        preloadedData = { ...preloadedData, module_ids: [value] };
       } else if (groupByKey === "created_by") {
         preloadedData = { ...preloadedData };
       } else {
@@ -259,8 +253,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
           title={group.name}
           count={groupIssueCount}
           issuePayload={group.payload}
-          disableIssueCreation={disableIssueCreation || isGroupByCreatedBy || isCompletedCycle}
-          addIssuesToView={addIssuesToView}
+          disableIssueCreation={disableIssueCreation || isGroupByCreatedBy}
           handleCollapsedGroups={handleCollapsedGroups}
         />
       </Row>
@@ -302,7 +295,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
               </>
             ))}
 
-          {enableIssueQuickAdd && !disableIssueCreation && !isGroupByCreatedBy && !isCompletedCycle && (
+          {enableIssueQuickAdd && !disableIssueCreation && !isGroupByCreatedBy && (
             <div className="sticky bottom-0 z-[1] w-full flex-shrink-0">
               <QuickAddIssueRoot
                 layout={EIssueLayoutTypes.LIST}

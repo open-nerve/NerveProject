@@ -4,12 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssuePriorities } from "../issues";
-import type { StateGroup } from "@nerve/api-client";
-import type { TIssueAttachment } from "./issue_attachment";
-import type { TIssueLink } from "./issue_link";
-import type { TIssueReaction } from "./issue_reaction";
-import type { TIssueRelationTypes } from "./issue_relation";
+import type { Issue, IssueDetail } from "@nerve/api-client";
 
 export enum EIssueLayoutTypes {
   LIST = "list",
@@ -19,88 +14,22 @@ export enum EIssueLayoutTypes {
 }
 
 export enum EIssuesStoreType {
-  GLOBAL = "GLOBAL",
   PROFILE = "PROFILE",
   PROJECT = "PROJECT",
-  CYCLE = "CYCLE",
-  MODULE = "MODULE",
-  PROJECT_VIEW = "PROJECT_VIEW",
   ARCHIVED = "ARCHIVED",
   DEFAULT = "DEFAULT",
   WORKSPACE_DRAFT = "WORKSPACE_DRAFT",
 }
 
-export type TBaseIssue = {
-  id: string;
-  sequence_id: number;
-  name: string;
-  sort_order: number;
-
-  state_id: string | null;
-  priority: TIssuePriorities | null;
-  label_ids: string[];
-  assignee_ids: string[];
-
-  sub_issues_count: number;
-  attachment_count: number;
-  link_count: number;
-
-  project_id: string | null;
-  parent_id: string | null;
-  cycle_id: string | null;
-  module_ids: string[] | null;
-
-  created_at: string;
-  updated_at: string;
-  start_date: string | null;
-  target_date: string | null;
-  completed_at: string | null;
-  archived_at: string | null;
-
-  created_by: string;
-  updated_by: string;
-
-  is_draft: boolean;
-  is_intake?: boolean;
-};
-
-type IssueRelation = {
-  id: string;
-  name: string;
-  project_id: string;
-  relation_type: TIssueRelationTypes;
-  sequence_id: number;
-};
-
-export type TIssue = TBaseIssue & {
-  description_html?: string;
-  is_subscribed?: boolean;
-  parent?: Partial<TBaseIssue>;
-  issue_reactions?: TIssueReaction[];
-  issue_attachments?: TIssueAttachment[];
-  issue_link?: TIssueLink[];
-  issue_relation?: IssueRelation[];
-  issue_related?: IssueRelation[];
-  // tempId is used for optimistic updates. It is not a part of the API response.
-  tempId?: string;
-  // sourceIssueId is used to store the original issue id when creating a copy of an issue. Used in cloning property values. It is not a part of the API response.
-  sourceIssueId?: string;
-  state__group?: StateGroup | null;
-};
-
-export type TIssueMap = {
-  [issue_id: string]: TIssue;
-};
-
 type TIssueResponseResults =
-  | TBaseIssue[]
+  | Issue[]
   | {
       [key: string]: {
         results:
-          | TBaseIssue[]
+          | Issue[]
           | {
               [key: string]: {
-                results: TBaseIssue[];
+                results: Issue[];
                 total_results: number;
               };
             };
@@ -127,6 +56,8 @@ export type TWorkItemWidgets = "sub-work-items" | "relations" | "links" | "attac
 export interface IWorkItemPeekOverview {
   embedIssue?: boolean;
   embedRemoveCurrentNotification?: () => void;
-  is_draft?: boolean;
   storeType?: EIssuesStoreType;
 }
+
+/** Legacy update request context; skip_activity must never enter an issue entity. */
+export type TLegacyIssueUpdateRequest = Partial<IssueDetail> & { skip_activity?: string };

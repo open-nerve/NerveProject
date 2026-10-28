@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueFormValues } from "../types";
 import { useState } from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
@@ -12,27 +13,24 @@ import { ETabIndices, EUserPermissions, EUserPermissionsLevel } from "@nerve/con
 import { useTranslation } from "@nerve/i18n";
 import { ParentOutline } from "@makeplane/propel/icons";
 // types
-import type { ISearchIssueResponse, TIssue } from "@nerve/types";
+import type { ISearchIssueResponse } from "@nerve/types";
 // ui
 import { CustomMenu } from "@nerve/ui";
 import { getDate, renderFormattedPayloadDate, getTabIndex } from "@nerve/utils";
 // components
-import { CycleDropdown } from "@/components/dropdowns/cycle";
 import { DateDropdown } from "@/components/dropdowns/date";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
-import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 import { ParentIssuesListModal } from "@/components/issues/parent-issues-list-modal";
 import { IssueLabelSelect } from "@/components/issues/select";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // hooks
-import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TIssueDefaultPropertiesProps = {
-  control: Control<TIssue>;
+  control: Control<IssueFormValues>;
   id: string | undefined;
   projectId: string | null;
   workspaceSlug: string;
@@ -63,11 +61,9 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
   const [parentIssueListModalOpen, setParentIssueListModalOpen] = useState(false);
   // store hooks
   const { t } = useTranslation();
-  const { getProjectById } = useProject();
   const { isMobile } = usePlatformOS();
   const { allowPermissions } = useUserPermissions();
   // derived values
-  const projectDetails = getProjectById(projectId);
 
   const { getIndex } = getTabIndex(ETabIndices.ISSUE_FORM, isMobile);
 
@@ -194,50 +190,6 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
           </div>
         )}
       />
-      {projectDetails?.cycle_view && (
-        <Controller
-          control={control}
-          name="cycle_id"
-          render={({ field: { value, onChange } }) => (
-            <div className="h-7">
-              <CycleDropdown
-                projectId={projectId ?? undefined}
-                onChange={(cycleId) => {
-                  onChange(cycleId);
-                  handleFormChange();
-                }}
-                placeholder={t("cycle.label", { count: 1 })}
-                value={value}
-                buttonVariant="border-with-text"
-                tabIndex={getIndex("cycle_id")}
-              />
-            </div>
-          )}
-        />
-      )}
-      {projectDetails?.module_view && workspaceSlug && (
-        <Controller
-          control={control}
-          name="module_ids"
-          render={({ field: { value, onChange } }) => (
-            <div className="h-7">
-              <ModuleDropdown
-                projectId={projectId ?? undefined}
-                value={value ?? []}
-                onChange={(moduleIds) => {
-                  onChange(moduleIds);
-                  handleFormChange();
-                }}
-                placeholder={t("modules")}
-                buttonVariant="border-with-text"
-                tabIndex={getIndex("module_ids")}
-                multiple
-                showCount
-              />
-            </div>
-          )}
-        />
-      )}
       <div className="h-7">
         {parentId ? (
           <CustomMenu

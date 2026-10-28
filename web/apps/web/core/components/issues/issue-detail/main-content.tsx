@@ -55,12 +55,12 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
   const { data: currentUser } = useUser();
   const { getUserDetails } = useMember();
   const {
-    issue: { getIssueById },
+    issue: { getIssueDetailById },
     peekIssue,
   } = useIssueDetail();
   const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting");
   // derived values
-  const issue = issueId ? getIssueById(issueId) : undefined;
+  const issue = issueId ? getIssueDetailById(issueId) : undefined;
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -143,7 +143,7 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
               className="flex-shrink-0"
               entityInformation={{
                 createdAt: issue.created_at ? new Date(issue.created_at) : new Date(),
-                createdByDisplayName: getUserDetails(issue.created_by ?? "")?.display_name ?? "",
+                createdByDisplayName: getUserDetails(issue.created_by_id ?? "")?.display_name ?? "",
                 id: issueId,
                 isRestoreDisabled: !isEditable || isArchived,
               }}

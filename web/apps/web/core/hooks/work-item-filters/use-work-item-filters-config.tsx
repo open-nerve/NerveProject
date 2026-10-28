@@ -8,11 +8,9 @@ import { useCallback, useMemo } from "react";
 import {
   AtOutline,
   CalendarOutline,
-  CyclesOutline,
   DueDateOutline,
   LabelsOutline,
   MembersOutline,
-  ModuleOutline,
   PriorityOutline,
   ProjectsOutline,
   StartDateOutline,
@@ -22,34 +20,29 @@ import {
 // nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
-import { CycleGroupIcon, PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
+import { PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
 import type { MemberUser, Project, State, Label } from "@nerve/api-client";
-import type { ICycle, TFilterConfig, IModule, TWorkItemFilterProperty } from "@nerve/types";
+import type { TFilterConfig, TWorkItemFilterProperty } from "@nerve/types";
 
 import {
   getAssigneeFilterConfig,
   getCreatedAtFilterConfig,
   getCreatedByFilterConfig,
-  getCycleFilterConfig,
   getFileURL,
   getLabelFilterConfig,
   getMentionFilterConfig,
-  getModuleFilterConfig,
   getPriorityFilterConfig,
   getProjectFilterConfig,
   getStartDateFilterConfig,
   getStateFilterConfig,
   getStateGroupFilterConfig,
-  getSubscriberFilterConfig,
   getTargetDateFilterConfig,
   getUpdatedAtFilterConfig,
   isLoaderReady,
 } from "@nerve/utils";
 // store hooks
-import { useCycle } from "@/hooks/store/use-cycle";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
-import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 // hooks
@@ -57,10 +50,8 @@ import { useFiltersOperatorConfigs } from "@/hooks/rich-filters/use-filters-oper
 
 export type TWorkItemFiltersEntityProps = {
   workspaceSlug: string;
-  cycleIds?: string[];
   labelIds?: string[];
   memberIds?: string[];
-  moduleIds?: string[];
   projectId?: string;
   projectIds?: string[];
   stateIds?: string[];
@@ -73,27 +64,18 @@ export type TUseWorkItemFiltersConfigProps = {
 export type TWorkItemFiltersConfig = {
   areAllConfigsInitialized: boolean;
   configs: TFilterConfig<TWorkItemFilterProperty>[];
-  configMap: {
-    [key in TWorkItemFilterProperty]?: TFilterConfig<TWorkItemFilterProperty>;
-  };
-  isFilterEnabled: (key: TWorkItemFilterProperty) => boolean;
-  members: MemberUser[];
 };
 
 export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps): TWorkItemFiltersConfig => {
-  const { allowedFilters, cycleIds, labelIds, memberIds, moduleIds, projectId, projectIds, stateIds, workspaceSlug } =
-    props;
+  const { allowedFilters, labelIds, memberIds, projectIds, stateIds, workspaceSlug } = props;
   // store hooks
   const { loader: projectLoader, getProjectById } = useProject();
-  const { getCycleById } = useCycle();
   const { getLabelById } = useLabel();
-  const { getModuleById } = useModule();
   const { getStateById } = useProjectState();
   const { getUserDetails } = useMember();
   // derived values
   const operatorConfigs = useFiltersOperatorConfigs({ workspaceSlug });
   const filtersToShow = useMemo(() => new Set(allowedFilters), [allowedFilters]);
-  const project = useMemo(() => getProjectById(projectId), [projectId, getProjectById]);
   const members: MemberUser[] | undefined = useMemo(
     () =>
       memberIds
@@ -110,15 +92,6 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
     () =>
       labelIds ? (labelIds.map((labelId) => getLabelById(labelId)).filter((label) => label) as Label[]) : undefined,
     [labelIds, getLabelById]
-  );
-  const cycles = useMemo(
-    () => (cycleIds ? (cycleIds.map((cycleId) => getCycleById(cycleId)).filter((cycle) => cycle) as ICycle[]) : []),
-    [cycleIds, getCycleById]
-  );
-  const modules = useMemo(
-    () =>
-      moduleIds ? (moduleIds.map((moduleId) => getModuleById(moduleId)).filter((module) => module) as IModule[]) : [],
-    [moduleIds, getModuleById]
   );
   const projects = useMemo(
     () => (projectIds ? (projectIds.map((id) => getProjectById(id)).filter((listed) => listed) as Project[]) : []),
@@ -174,32 +147,6 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
     [isFilterEnabled, workItemLabels, operatorConfigs]
   );
 
-  // cycle filter config
-  const cycleFilterConfig = useMemo(
-    () =>
-      getCycleFilterConfig<TWorkItemFilterProperty>("cycle_id")({
-        isEnabled: isFilterEnabled("cycle_id") && project?.cycle_view === true && cycles !== undefined,
-        filterIcon: CyclesOutline,
-        getOptionIcon: (cycleGroup) => <CycleGroupIcon cycleGroup={cycleGroup} className="h-3.5 w-3.5 flex-shrink-0" />,
-        cycles: cycles ?? [],
-        ...operatorConfigs,
-      }),
-    [isFilterEnabled, project?.cycle_view, cycles, operatorConfigs]
-  );
-
-  // module filter config
-  const moduleFilterConfig = useMemo(
-    () =>
-      getModuleFilterConfig<TWorkItemFilterProperty>("module_id")({
-        isEnabled: isFilterEnabled("module_id") && project?.module_view === true && modules !== undefined,
-        filterIcon: ModuleOutline,
-        getOptionIcon: () => <ModuleOutline className="h-3 w-3 flex-shrink-0" />,
-        modules: modules ?? [],
-        ...operatorConfigs,
-      }),
-    [isFilterEnabled, project?.module_view, modules, operatorConfigs]
-  );
-
   // assignee filter config
   const assigneeFilterConfig = useMemo(
     () =>
@@ -246,26 +193,6 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
       getCreatedByFilterConfig<TWorkItemFilterProperty>("created_by_id")({
         isEnabled: isFilterEnabled("created_by_id") && members !== undefined,
         filterIcon: UserOutline,
-        members: members ?? [],
-        getOptionIcon: (memberDetails) => (
-          <Avatar
-            alt={memberDetails.display_name}
-            fallback={memberDetails.display_name?.[0]?.toUpperCase()}
-            src={getFileURL(memberDetails.avatar_url)}
-            size="2xs"
-          />
-        ),
-        ...operatorConfigs,
-      }),
-    [isFilterEnabled, members, operatorConfigs]
-  );
-
-  // subscriber filter config
-  const subscriberFilterConfig = useMemo(
-    () =>
-      getSubscriberFilterConfig<TWorkItemFilterProperty>("subscriber_id")({
-        isEnabled: isFilterEnabled("subscriber_id") && members !== undefined,
-        filterIcon: MembersOutline,
         members: members ?? [],
         getOptionIcon: (memberDetails) => (
           <Avatar
@@ -359,33 +286,11 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
       projectFilterConfig,
       mentionFilterConfig,
       labelFilterConfig,
-      cycleFilterConfig,
-      moduleFilterConfig,
       startDateFilterConfig,
       targetDateFilterConfig,
       createdAtFilterConfig,
       updatedAtFilterConfig,
       createdByFilterConfig,
-      subscriberFilterConfig,
     ],
-    configMap: {
-      project_id: projectFilterConfig,
-      state_group: stateGroupFilterConfig,
-      state_id: stateFilterConfig,
-      label_id: labelFilterConfig,
-      cycle_id: cycleFilterConfig,
-      module_id: moduleFilterConfig,
-      assignee_id: assigneeFilterConfig,
-      mention_id: mentionFilterConfig,
-      created_by_id: createdByFilterConfig,
-      subscriber_id: subscriberFilterConfig,
-      priority: priorityFilterConfig,
-      start_date: startDateFilterConfig,
-      target_date: targetDateFilterConfig,
-      created_at: createdAtFilterConfig,
-      updated_at: updatedAtFilterConfig,
-    },
-    isFilterEnabled,
-    members: members ?? [],
   };
 };

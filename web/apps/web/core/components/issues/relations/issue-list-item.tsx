@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import React from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
@@ -11,7 +13,7 @@ import { CloseOutline, DeleteOutline, EditOutline, LinkOutline } from "@makeplan
 // nerve imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TIssueRelationTypes } from "@nerve/types";
-import type { TIssue } from "@nerve/types";
+
 import { ControlLink, CustomMenu } from "@nerve/ui";
 import { generateWorkItemLink } from "@nerve/utils";
 // hooks
@@ -34,7 +36,7 @@ type Props = {
   handleIssueCrudState: (
     key: "update" | "delete" | "removeRelation",
     issueId: string,
-    issue?: TIssue | null,
+    issue?: Issue | null,
     relationKey?: TIssueRelationTypes | null,
     relationIssueId?: string | null
   ) => void;
@@ -72,7 +74,7 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
   });
 
   // handlers
-  const handleIssuePeekOverview = (issue: TIssue) => {
+  const handleIssuePeekOverview = (issue: Issue) => {
     handleRedirection(workspaceSlug, issue, isMobile);
   };
 

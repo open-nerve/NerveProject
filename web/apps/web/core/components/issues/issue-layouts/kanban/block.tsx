@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { MutableRefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
@@ -16,7 +18,7 @@ import { useOutsideClickDetector } from "@nerve/hooks";
 // types
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TIssue, IIssueDisplayProperties, IIssueMap } from "@nerve/types";
+import type { IIssueDisplayProperties } from "@nerve/types";
 // ui
 import { ControlLink, DropIndicator } from "@nerve/ui";
 import { cn, generateWorkItemLink } from "@nerve/utils";
@@ -38,12 +40,12 @@ interface IssueBlockProps {
   issueId: string;
   groupId: string;
   subGroupId: string;
-  issuesMap: IIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   displayProperties: IIssueDisplayProperties | undefined;
   draggableId: string;
   canDropOverIssue: boolean;
   canDragIssuesInCurrentGrouping: boolean;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   canEditProperties: (projectId: string | undefined) => boolean;
   scrollableContainerRef?: MutableRefObject<HTMLDivElement | null>;
@@ -52,9 +54,9 @@ interface IssueBlockProps {
 
 interface IssueDetailsBlockProps {
   cardRef: React.RefObject<HTMLElement | null>;
-  issue: TIssue;
+  issue: Issue;
   displayProperties: IIssueDisplayProperties | undefined;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   isReadOnly: boolean;
 }
@@ -161,7 +163,7 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
   const { isMobile } = usePlatformOS();
 
   // handlers
-  const handleIssuePeekOverview = (issue: TIssue) => handleRedirection(workspaceSlug, issue, isMobile);
+  const handleIssuePeekOverview = (issue: Issue) => handleRedirection(workspaceSlug, issue, isMobile);
 
   const issue = issuesMap[issueId];
 
@@ -172,7 +174,7 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
 
   const canEditIssueProperties = canEditProperties(issue?.project_id ?? undefined);
 
-  const isDragAllowed = canDragIssuesInCurrentGrouping && !issue?.tempId && canEditIssueProperties;
+  const isDragAllowed = canDragIssuesInCurrentGrouping && canEditIssueProperties;
   const projectIdentifier = getProjectIdentifierById(issue?.project_id);
 
   const workItemLink = generateWorkItemLink({
@@ -261,7 +263,6 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
             { "z-[100] bg-layer-1": isCurrentBlockDragging }
           )}
           onClick={() => handleIssuePeekOverview(issue)}
-          disabled={!!issue?.tempId}
         >
           <RenderIfVisible
             classNames="space-y-2"

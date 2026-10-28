@@ -4,19 +4,21 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { MutableRefObject } from "react";
 // components
-import type { TIssue, IIssueDisplayProperties, TIssueMap, TGroupedIssues } from "@nerve/types";
+import type { IIssueDisplayProperties, TGroupedIssues } from "@nerve/types";
 // types
 import { IssueBlockRoot } from "./block-root";
 import type { TRenderQuickActions } from "./list-view-types";
 
 interface Props {
   issueIds: TGroupedIssues | any;
-  issuesMap: TIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   groupId: string;
   canEditProperties: (projectId: string | undefined) => boolean;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   displayProperties: IIssueDisplayProperties | undefined;
   containerRef: MutableRefObject<HTMLDivElement | null>;

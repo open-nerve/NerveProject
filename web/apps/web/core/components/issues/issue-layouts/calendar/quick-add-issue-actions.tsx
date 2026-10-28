@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { useState } from "react";
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { observer } from "mobx-react";
@@ -13,7 +15,7 @@ import { useTranslation } from "@nerve/i18n";
 // nerve imports
 import { AddOutline } from "@makeplane/propel/icons";
 import { setPromiseToast } from "@nerve/propel/toast";
-import type { ISearchIssueResponse, TIssue } from "@nerve/types";
+import type { ISearchIssueResponse } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
@@ -24,30 +26,25 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { QuickAddIssueRoot } from "../quick-add";
 
 type TCalendarQuickAddIssueActions = {
-  prePopulatedData?: Partial<TIssue>;
-  quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
-  addIssuesToView?: (issueIds: string[]) => Promise<any>;
+  prePopulatedData?: Partial<IssueDetail>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   onOpen?: () => void;
 };
 
 export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIssueActions(
   props: TCalendarQuickAddIssueActions
 ) {
-  const { prePopulatedData, quickAddCallback, addIssuesToView, onOpen } = props;
+  const { prePopulatedData, quickAddCallback, onOpen } = props;
   const { t } = useTranslation();
   // router
-  const { workspaceSlug, projectId, moduleId } = useParams();
+  const { workspaceSlug, projectId } = useParams();
   // states
   const [isOpen, setIsOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isExistingIssueModalOpen, setIsExistingIssueModalOpen] = useState(false);
   const { updateIssue } = useIssueDetail();
   // derived values
-  const ExistingIssuesListModalPayload = addIssuesToView
-    ? moduleId
-      ? { module: moduleId, target_date: "none" }
-      : { cycle: true, target_date: "none" }
-    : { target_date: "none" };
+  const ExistingIssuesListModalPayload = { target_date: "none" };
 
   const handleAddIssuesToView = async (data: ISearchIssueResponse[]) => {
     if (!workspaceSlug || !projectId) return;
@@ -55,7 +52,7 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
     const issueIds = data.map((i) => i.id);
     const addExistingIssuesPromise = Promise.all(
       data.map((issue) => updateIssue(workspaceSlug, projectId, issue.id, prePopulatedData ?? {}))
-    ).then(() => addIssuesToView?.(issueIds));
+    );
 
     setPromiseToast(addExistingIssuesPromise, {
       loading: t("issue.adding", { count: issueIds.length }),
@@ -65,7 +62,10 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
       },
       error: {
         title: t("toast.error"),
-        message: (err) => err?.message || t("common.errors.default.message"),
+        message: (err: unknown) =>
+          typeof err === "object" && err !== null && "message" in err && typeof err.message === "string"
+            ? err.message || t("common.errors.default.message")
+            : t("common.errors.default.message"),
       },
     });
   };

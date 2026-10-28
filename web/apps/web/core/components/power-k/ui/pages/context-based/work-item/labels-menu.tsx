@@ -4,10 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
 // nerve types
 import type { Label } from "@nerve/api-client";
-import type { TIssue } from "@nerve/types";
+
 import { Spinner } from "@nerve/ui";
 // components
 import { PowerKLabelsMenu } from "@/components/power-k/menus/labels";
@@ -16,7 +18,7 @@ import { useLabel } from "@/hooks/store/use-label";
 
 type Props = {
   handleSelect: (label: Label) => void;
-  workItemDetails: TIssue;
+  workItemDetails: Issue;
 };
 
 export const PowerKWorkItemLabelsMenu = observer(function PowerKWorkItemLabelsMenu(props: Props) {

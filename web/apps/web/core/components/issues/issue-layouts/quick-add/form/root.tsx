@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import type { FC } from "react";
 import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
@@ -11,7 +13,7 @@ import type { UseFormRegister, UseFormSetFocus } from "react-hook-form";
 // nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
 // types
-import type { TIssue } from "@nerve/types";
+
 import { EIssueLayoutTypes } from "@nerve/types";
 // components
 import type { TQuickAddIssueForm } from "@/components/issues/issue-layouts/quick-add";
@@ -28,11 +30,10 @@ import useKeypress from "@/hooks/use-keypress";
 export type TQuickAddIssueFormRoot = {
   isOpen: boolean;
   layout: EIssueLayoutTypes;
-  prePopulatedData?: Partial<TIssue>;
   projectId: string;
   hasError?: boolean;
-  setFocus: UseFormSetFocus<TIssue>;
-  register: UseFormRegister<TIssue>;
+  setFocus: UseFormSetFocus<Pick<Issue, "name">>;
+  register: UseFormRegister<Pick<Issue, "name">>;
   onSubmit: () => void;
   onClose: () => void;
 };

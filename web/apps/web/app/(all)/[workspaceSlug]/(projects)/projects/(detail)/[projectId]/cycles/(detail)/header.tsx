@@ -4,43 +4,23 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useRef } from "react";
+import { useRef } from "react";
 import { observer } from "mobx-react";
 // icons
-import { CyclesOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
+import { CyclesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
 // nerve imports
-import {
-  EIssueFilterType,
-  EUserPermissions,
-  EUserPermissionsLevel,
-  ISSUE_DISPLAY_FILTERS_BY_PAGE,
-} from "@nerve/constants";
-import { usePlatformOS } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
-import { Button } from "@nerve/propel/button";
 import { IconButton } from "@nerve/propel/icon-button";
-import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { ICustomSearchSelectOption, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
-import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
+import type { ICustomSearchSelectOption } from "@nerve/types";
 import { Breadcrumbs, BreadcrumbNavigationSearchDropdown, Header } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { SwitcherLabel } from "@/components/common/switcher-label";
 import { CycleQuickActions } from "@/components/cycles/quick-actions";
-import {
-  DisplayFiltersSelection,
-  FiltersDropdown,
-  LayoutSelection,
-  MobileLayoutSelection,
-} from "@/components/issues/issue-layouts/filters";
-import { WorkItemFiltersToggle } from "@/components/work-item-filters/filters-toggle";
 // hooks
-import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useCycle } from "@/hooks/store/use-cycle";
-import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
-import { useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
 import useLocalStorage from "@/hooks/use-local-storage";
 // components
@@ -61,17 +41,8 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
   // i18n
   const { t } = useTranslation();
   // store hooks
-  const {
-    issuesFilter: { issueFilters, updateFilters },
-    issues: { getGroupIssueCount },
-  } = useIssues(EIssuesStoreType.CYCLE);
   const { currentProjectCycleIds, getCycleById } = useCycle();
-  const { toggleCreateIssueModal } = useCommandPalette();
-  const { currentProjectDetails, loader } = useProject();
-  const { isMobile } = usePlatformOS();
-  const { allowPermissions } = useUserPermissions();
-
-  const activeLayout = issueFilters?.displayFilters?.layout;
+  const { loader } = useProject();
 
   const { setValue, storedValue } = useLocalStorage("cycle_sidebar_collapsed", false);
 
@@ -80,34 +51,8 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
     setValue(!isSidebarCollapsed);
   };
 
-  const handleLayoutChange = useCallback(
-    (layout: EIssueLayoutTypes) => {
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout }, cycleId);
-    },
-    [workspaceSlug, projectId, cycleId, updateFilters]
-  );
-
-  const handleDisplayFilters = useCallback(
-    (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, cycleId);
-    },
-    [workspaceSlug, projectId, cycleId, updateFilters]
-  );
-
-  const handleDisplayProperties = useCallback(
-    (property: Partial<IIssueDisplayProperties>) => {
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property, cycleId);
-    },
-    [workspaceSlug, projectId, cycleId, updateFilters]
-  );
-
   // derived values
   const cycleDetails = getCycleById(cycleId);
-  const isCompletedCycle = cycleDetails?.status?.toLocaleLowerCase() === "completed";
-  const canUserCreateIssue = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
 
   const switcherOptions = currentProjectCycleIds
     ?.map((id) => {
@@ -120,8 +65,6 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
       };
     })
     .filter((option) => option !== undefined) as ICustomSearchSelectOption[];
-
-  const workItemsCount = getGroupIssueCount(undefined, undefined, false);
 
   return (
     <Header>
@@ -158,77 +101,10 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
               isLast
             />
           </Breadcrumbs>
-          {workItemsCount && workItemsCount > 0 ? (
-            <Tooltip
-              label={`There are ${workItemsCount} ${workItemsCount > 1 ? "work items" : "work item"} in this cycle`}
-              layout="stacked"
-              side="bottom"
-              disabled={isMobile}
-            >
-              <span className="flex flex-shrink-0 cursor-default items-center justify-center rounded-xl bg-accent-primary/20 px-2 text-center text-11 font-semibold text-accent-primary">
-                {workItemsCount}
-              </span>
-            </Tooltip>
-          ) : null}
         </div>
       </Header.LeftItem>
       <Header.RightItem className="items-center">
         <div className="hidden items-center gap-2 md:flex">
-          <div className="hidden @4xl:flex">
-            <LayoutSelection
-              layouts={[
-                EIssueLayoutTypes.LIST,
-                EIssueLayoutTypes.KANBAN,
-                EIssueLayoutTypes.CALENDAR,
-                EIssueLayoutTypes.SPREADSHEET,
-              ]}
-              onChange={(layout) => handleLayoutChange(layout)}
-              selectedLayout={activeLayout}
-            />
-          </div>
-          <div className="flex @4xl:hidden">
-            <MobileLayoutSelection
-              layouts={[
-                EIssueLayoutTypes.LIST,
-                EIssueLayoutTypes.KANBAN,
-                EIssueLayoutTypes.CALENDAR,
-                EIssueLayoutTypes.SPREADSHEET,
-              ]}
-              onChange={(layout) => handleLayoutChange(layout)}
-              activeLayout={activeLayout}
-            />
-          </div>
-          <WorkItemFiltersToggle entityType={EIssuesStoreType.CYCLE} entityId={cycleId} />
-          <FiltersDropdown
-            title={t("common.display")}
-            placement="bottom-end"
-            miniIcon={<PreferencesOutline className="size-3.5" />}
-          >
-            <DisplayFiltersSelection
-              layoutDisplayFiltersOptions={
-                activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
-              }
-              displayFilters={issueFilters?.displayFilters ?? {}}
-              handleDisplayFiltersUpdate={handleDisplayFilters}
-              displayProperties={issueFilters?.displayProperties ?? {}}
-              handleDisplayPropertiesUpdate={handleDisplayProperties}
-              ignoreGroupedFilters={["cycle"]}
-              cycleViewDisabled={!currentProjectDetails?.cycle_view}
-              moduleViewDisabled={!currentProjectDetails?.module_view}
-            />
-          </FiltersDropdown>
-
-          {canUserCreateIssue && !isCompletedCycle && (
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => {
-                toggleCreateIssueModal(true, EIssuesStoreType.CYCLE);
-              }}
-            >
-              {t("issue.add.label")}
-            </Button>
-          )}
           <IconButton
             variant="tertiary"
             size="lg"

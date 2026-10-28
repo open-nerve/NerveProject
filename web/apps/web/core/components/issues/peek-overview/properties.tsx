@@ -9,11 +9,9 @@ import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 // ui icons
 import {
-  CyclesOutline,
   DueDateOutline,
   LabelsOutline,
   MembersOutline,
-  ModuleOutline,
   ParentOutline,
   PriorityOutline,
   StartDateOutline,
@@ -31,14 +29,11 @@ import { SidebarPropertyListItem } from "@/components/common/layout/sidebar/prop
 // helpers
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
-import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 // components
 import { IssueParentSelectRoot } from "@/components/issues/parent-select-root";
 import type { TIssueOperations } from "../issue-detail";
-import { IssueCycleSelect } from "../issue-detail/cycle-select";
 import { IssueLabel } from "../issue-detail/label";
-import { IssueModuleSelect } from "../issue-detail/module-select";
 
 interface IPeekOverviewProperties {
   workspaceSlug: string;
@@ -52,7 +47,6 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
   const { workspaceSlug, projectId, issueId, issueOperations, disabled } = props;
   const { t } = useTranslation();
   // store hooks
-  const { getProjectById } = useProject();
   const {
     issue: { getIssueById },
   } = useIssueDetail();
@@ -61,8 +55,7 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
   // derived values
   const issue = getIssueById(issueId);
   if (!issue) return <></>;
-  const createdByDetails = getUserDetails(issue?.created_by);
-  const projectDetails = getProjectById(issue.project_id);
+  const createdByDetails = issue.created_by_id ? getUserDetails(issue.created_by_id) : undefined;
   const stateDetails = getStateById(issue.state_id);
 
   const minDate = getDate(issue.start_date);
@@ -173,32 +166,6 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
             />
           </div>
         </SidebarPropertyListItem>
-
-        {projectDetails?.module_view && (
-          <SidebarPropertyListItem icon={ModuleOutline} label={t("common.modules")}>
-            <IssueModuleSelect
-              className="w-full grow"
-              workspaceSlug={workspaceSlug}
-              projectId={projectId}
-              issueId={issueId}
-              issueOperations={issueOperations}
-              disabled={disabled}
-            />
-          </SidebarPropertyListItem>
-        )}
-
-        {projectDetails?.cycle_view && (
-          <SidebarPropertyListItem icon={CyclesOutline} label={t("common.cycle")} appendElement={null}>
-            <IssueCycleSelect
-              className="h-7.5 w-full grow"
-              workspaceSlug={workspaceSlug}
-              projectId={projectId}
-              issueId={issueId}
-              issueOperations={issueOperations}
-              disabled={disabled}
-            />
-          </SidebarPropertyListItem>
-        )}
 
         <SidebarPropertyListItem icon={ParentOutline} label={t("common.parent")}>
           <IssueParentSelectRoot

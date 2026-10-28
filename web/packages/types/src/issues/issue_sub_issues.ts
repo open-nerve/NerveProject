@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssue } from "./issue";
+import type { Issue, IssueDetail } from "@nerve/api-client";
 
 export type TSubIssuesStateDistribution = {
   backlog: string[];
@@ -19,7 +19,7 @@ export type TIssueSubIssues = {
   sub_issues: TSubIssueResponse;
 };
 
-type TSubIssueResponse = TIssue[] | { [key: string]: TIssue[] };
+type TSubIssueResponse = Issue[] | { [key: string]: Issue[] };
 
 export type TIssueSubIssuesStateDistributionMap = {
   [issue_id: string]: TSubIssuesStateDistribution;
@@ -38,8 +38,8 @@ export type TSubIssueOperations = {
     projectId: string,
     parentIssueId: string,
     issueId: string,
-    issueData: Partial<TIssue>,
-    oldIssue?: Partial<TIssue>,
+    issueData: Partial<IssueDetail>,
+    oldIssue?: Partial<IssueDetail>,
     fromModal?: boolean
   ) => Promise<void>;
   removeSubIssue: (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) => Promise<void>;

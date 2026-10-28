@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
@@ -11,14 +13,7 @@ import { observer } from "mobx-react";
 // nerve constants
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 // types
-import type {
-  TGroupedIssues,
-  TIssue,
-  TIssueMap,
-  TPaginationData,
-  ICalendarWeek,
-  TSupportedFilterForUpdate,
-} from "@nerve/types";
+import type { TGroupedIssues, TPaginationData, ICalendarWeek, TSupportedFilterForUpdate } from "@nerve/types";
 import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
 // ui
 import { Spinner } from "@nerve/ui";
@@ -29,11 +24,8 @@ import { MONTHS_LIST } from "@nerve/constants";
 import { useIssues } from "@/hooks/store/use-issues";
 import useSize from "@/hooks/use-window-size";
 // store
-import type { ICycleIssuesFilter } from "@/store/issue/cycle";
 import type { ICalendarStore } from "@/store/issue/issue_calendar_view.store";
-import type { IModuleIssuesFilter } from "@/store/issue/module";
 import type { IProjectIssuesFilter } from "@/store/issue/project";
-import type { IProjectViewIssuesFilter } from "@/store/issue/project-views";
 // local imports
 import { IssueLayoutHOC } from "../issue-layout-HOC";
 import type { TRenderQuickActions } from "../list/list-view-types";
@@ -43,8 +35,8 @@ import { CalendarWeekDays } from "./week-days";
 import { CalendarWeekHeader } from "./week-header";
 
 type Props = {
-  issuesFilterStore: IProjectIssuesFilter | IModuleIssuesFilter | ICycleIssuesFilter | IProjectViewIssuesFilter;
-  issues: TIssueMap | undefined;
+  issuesFilterStore: IProjectIssuesFilter;
+  issues: Record<string, Issue | IssueDetail> | undefined;
   groupedIssueIds: TGroupedIssues;
   layout: "month" | "week" | undefined;
   showWeekends: boolean;
@@ -52,7 +44,7 @@ type Props = {
   loadMoreIssues: (dateString: string) => void;
   getPaginationData: (groupId: string | undefined) => TPaginationData | undefined;
   getGroupIssueCount: (groupId: string | undefined) => number | undefined;
-  quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   quickActions: TRenderQuickActions;
   handleDragAndDrop: (
     issueId: string | undefined,
@@ -60,7 +52,6 @@ type Props = {
     sourceDate: string | undefined,
     destinationDate: string | undefined
   ) => Promise<void>;
-  addIssuesToView?: (issueIds: string[]) => Promise<any>;
   readOnly?: boolean;
   updateFilters?: (
     projectId: string,
@@ -82,7 +73,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
     handleDragAndDrop,
     quickActions,
     quickAddCallback,
-    addIssuesToView,
     getPaginationData,
     getGroupIssueCount,
     updateFilters,
@@ -168,7 +158,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
                         disableIssueCreation={!enableIssueCreation}
                         quickActions={quickActions}
                         quickAddCallback={quickAddCallback}
-                        addIssuesToView={addIssuesToView}
                         readOnly={readOnly}
                         canEditProperties={canEditProperties}
                       />
@@ -191,7 +180,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
                   disableIssueCreation={!enableIssueCreation}
                   quickActions={quickActions}
                   quickAddCallback={quickAddCallback}
-                  addIssuesToView={addIssuesToView}
                   readOnly={readOnly}
                   canEditProperties={canEditProperties}
                 />
@@ -215,7 +203,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
                 enableQuickIssueCreate={enableQuickAdd}
                 disableIssueCreation={!enableIssueCreation}
                 quickAddCallback={quickAddCallback}
-                addIssuesToView={addIssuesToView}
                 readOnly={readOnly}
                 canEditProperties={canEditProperties}
                 isDragDisabled
@@ -242,7 +229,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
             enableQuickIssueCreate={enableQuickAdd}
             disableIssueCreation={!enableIssueCreation}
             quickAddCallback={quickAddCallback}
-            addIssuesToView={addIssuesToView}
             readOnly={readOnly}
             canEditProperties={canEditProperties}
             isDragDisabled

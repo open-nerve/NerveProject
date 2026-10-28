@@ -33,7 +33,7 @@ export interface ISearchIssueResponse {
   sequence_id: number;
   start_date: string | null;
   state__color: string;
-  state__group: StateGroup;
+  state__group?: StateGroup;
   state__name: string;
   workspace__slug: string;
 }

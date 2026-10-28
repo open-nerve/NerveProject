@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
@@ -14,7 +16,6 @@ import type {
   IIssueFilterOptions,
   ISubWorkItemFilters,
   TGroupedIssues,
-  TIssue,
 } from "@nerve/types";
 import { getFilteredWorkItems, getGroupedWorkItemIds, updateSubWorkItemFilters } from "../helpers/base-issues-utils";
 import type { IssueSubIssuesStore } from "./sub_issues.store";
@@ -37,7 +38,7 @@ export interface IWorkItemSubIssueFiltersStore {
     workItemId: string
   ) => void;
   getGroupedSubWorkItems: (workItemId: string) => TGroupedIssues;
-  getFilteredSubWorkItems: (workItemId: string, filters: IIssueFilterOptions) => TIssue[];
+  getFilteredSubWorkItems: (workItemId: string, filters: IIssueFilterOptions) => Issue[];
   getSubIssueFilters: (workItemId: string) => Partial<ISubWorkItemFilters>;
   resetFilters: (workItemId: string) => void;
 }
@@ -111,7 +112,12 @@ export class WorkItemSubIssueFiltersStore implements IWorkItemSubIssueFiltersSto
     const groupByKey = subIssueFilters.displayFilters?.group_by;
     const orderByKey = subIssueFilters.displayFilters?.order_by;
 
-    const groupedWorkItemIds = getGroupedWorkItemIds(filteredWorkItems, groupByKey, orderByKey);
+    const groupedWorkItemIds = getGroupedWorkItemIds(
+      filteredWorkItems,
+      groupByKey,
+      orderByKey,
+      this.subIssueStore.rootIssueDetailStore.rootIssueStore.stateMap
+    );
 
     return groupedWorkItemIds;
   });
@@ -128,7 +134,11 @@ export class WorkItemSubIssueFiltersStore implements IWorkItemSubIssueFiltersSto
       "un-archived"
     );
 
-    const filteredWorkItems = getFilteredWorkItems(workItems, filters);
+    const filteredWorkItems = getFilteredWorkItems(
+      workItems,
+      filters,
+      this.subIssueStore.rootIssueDetailStore.rootIssueStore.stateMap
+    );
 
     return filteredWorkItems;
   });

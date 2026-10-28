@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { set, cloneDeep, isEqual } from "lodash-es";
+import { set, cloneDeep } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
@@ -24,14 +24,12 @@ export interface IGlobalViewStore {
   getViewDetailsById: (viewId: string) => IWorkspaceView | null;
   // fetch actions
   fetchAllGlobalViews: (workspaceSlug: string) => Promise<IWorkspaceView[]>;
-  fetchGlobalViewDetails: (workspaceSlug: string, viewId: string) => Promise<IWorkspaceView>;
   // crud actions
   createGlobalView: (workspaceSlug: string, data: Partial<IWorkspaceView>) => Promise<IWorkspaceView>;
   updateGlobalView: (
     workspaceSlug: string,
     viewId: string,
-    data: Partial<IWorkspaceView>,
-    shouldSyncFilters?: boolean
+    data: Partial<IWorkspaceView>
   ) => Promise<IWorkspaceView | undefined>;
   deleteGlobalView: (workspaceSlug: string, viewId: string) => Promise<any>;
 }
@@ -52,7 +50,6 @@ export class GlobalViewStore implements IGlobalViewStore {
       currentWorkspaceViews: computed,
       // actions
       fetchAllGlobalViews: action,
-      fetchGlobalViewDetails: action,
       deleteGlobalView: action,
       updateGlobalView: action,
       createGlobalView: action,
@@ -120,18 +117,6 @@ export class GlobalViewStore implements IGlobalViewStore {
     });
 
   /**
-   * @description fetch view details for given viewId
-   * @param viewId
-   */
-  fetchGlobalViewDetails = async (workspaceSlug: string, viewId: string): Promise<IWorkspaceView> =>
-    await this.workspaceService.getViewDetails(workspaceSlug, viewId).then((response) => {
-      runInAction(() => {
-        set(this.globalViewMap, viewId, response);
-      });
-      return response;
-    });
-
-  /**
    * @description create new global view
    * @param workspaceSlug
    * @param data
@@ -159,8 +144,7 @@ export class GlobalViewStore implements IGlobalViewStore {
   async updateGlobalView(
     workspaceSlug: string,
     viewId: string,
-    data: Partial<IWorkspaceView>,
-    shouldSyncFilters: boolean = true
+    data: Partial<IWorkspaceView>
   ): Promise<IWorkspaceView | undefined> {
     const currentViewData = this.getViewDetailsById(viewId) ? cloneDeep(this.getViewDetailsById(viewId)) : undefined;
     try {
@@ -171,15 +155,6 @@ export class GlobalViewStore implements IGlobalViewStore {
 
       const currentView = await this.workspaceService.updateView(workspaceSlug, viewId, data);
 
-      // applying the filters in the global view
-      if (shouldSyncFilters && !isEqual(currentViewData?.rich_filters || {}, currentView?.rich_filters || {})) {
-        await this.rootStore.issue.workspaceIssuesFilter.updateFilterExpression(
-          workspaceSlug,
-          viewId,
-          currentView?.rich_filters || {}
-        );
-        this.rootStore.issue.workspaceIssues.fetchIssuesWithExistingPagination(workspaceSlug, viewId, "mutation");
-      }
       return currentView;
     } catch {
       Object.keys(data).forEach((key) => {

@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { clone, update, unset, orderBy, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
@@ -19,7 +21,6 @@ import type {
   TGroupedIssues,
   TSubGroupedIssues,
   ViewFlags,
-  TIssue,
 } from "@nerve/types";
 import { getCurrentDateTimeInISO, convertToISODateString } from "@nerve/utils";
 // services
@@ -41,7 +42,6 @@ export interface IWorkspaceDraftIssues {
   getIssueById: (issueId: string) => TWorkspaceDraftIssue | undefined;
   // helper actions
   addIssue: (issues: TWorkspaceDraftIssue[]) => void;
-  mutateIssue: (issueId: string, data: Partial<TWorkspaceDraftIssue>) => void;
   removeIssue: (issueId: string) => Promise<void>;
   // actions
   fetchIssues: (
@@ -51,15 +51,19 @@ export interface IWorkspaceDraftIssues {
   ) => Promise<TWorkspaceDraftPaginationInfo<TWorkspaceDraftIssue> | undefined>;
   createIssue: (
     workspaceSlug: string,
-    payload: Partial<TWorkspaceDraftIssue | TIssue>
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
   ) => Promise<TWorkspaceDraftIssue | undefined>;
   updateIssue: (
     workspaceSlug: string,
     issueId: string,
-    payload: Partial<TWorkspaceDraftIssue | TIssue>
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
   ) => Promise<TWorkspaceDraftIssue | undefined>;
   deleteIssue: (workspaceSlug: string, issueId: string) => Promise<void>;
-  moveIssue: (workspaceSlug: string, issueId: string, payload: Partial<TWorkspaceDraftIssue>) => Promise<TIssue>;
+  moveIssue: (
+    workspaceSlug: string,
+    issueId: string,
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
+  ) => Promise<Issue>;
   addCycleToIssue: (
     workspaceSlug: string,
     issueId: string,
@@ -82,30 +86,6 @@ export interface IWorkspaceDraftIssues {
     subGroupId: string | undefined,
     isSubGroupCumulative: boolean
   ) => number | undefined;
-  removeCycleFromIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-  addIssueToCycle: (
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string,
-    issueIds: string[],
-    fetchAddedIssues?: boolean
-  ) => Promise<void>;
-  removeIssueFromCycle: (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => Promise<void>;
-
-  removeIssuesFromModule: (
-    workspaceSlug: string,
-    projectId: string,
-    moduleId: string,
-    issueIds: string[]
-  ) => Promise<void>;
-  changeModulesInIssue(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    addModuleIds: string[],
-    removeModuleIds: string[]
-  ): Promise<void>;
-  archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 }
 
 export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
@@ -158,16 +138,6 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
       issues.forEach((issue) => {
         if (!this.issuesMap[issue.id]) set(this.issuesMap, issue.id, issue);
         else update(this.issuesMap, issue.id, (prevIssue) => ({ ...prevIssue, ...issue }));
-      });
-    });
-  };
-
-  mutateIssue = (issueId: string, issue: Partial<TWorkspaceDraftIssue>) => {
-    if (!issue || !issueId || !this.issuesMap[issueId]) return;
-    runInAction(() => {
-      set(this.issuesMap, [issueId, "updated_at"], getCurrentDateTimeInISO());
-      Object.keys(issue).forEach((key) => {
-        set(this.issuesMap, [issueId, key], issue[key as keyof TWorkspaceDraftIssue]);
       });
     });
   };
@@ -243,7 +213,7 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
 
   createIssue = async (
     workspaceSlug: string,
-    payload: Partial<TWorkspaceDraftIssue | TIssue>
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
   ): Promise<TWorkspaceDraftIssue | undefined> => {
     try {
       this.loader = "create";
@@ -271,7 +241,11 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
     }
   };
 
-  updateIssue = async (workspaceSlug: string, issueId: string, payload: Partial<TWorkspaceDraftIssue | TIssue>) => {
+  updateIssue = async (
+    workspaceSlug: string,
+    issueId: string,
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
+  ) => {
     const issueBeforeUpdate = clone(this.getIssueById(issueId));
     try {
       this.loader = "update";
@@ -321,7 +295,7 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
     }
   };
 
-  moveIssue = async (workspaceSlug: string, issueId: string, payload: Partial<TWorkspaceDraftIssue>) => {
+  moveIssue = async (workspaceSlug: string, issueId: string, payload: Partial<TWorkspaceDraftIssue | IssueDetail>) => {
     try {
       this.loader = "move";
 
@@ -381,28 +355,4 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
     _subGroupId: string | undefined,
     _isSubGroupCumulative: boolean
   ) => undefined;
-  removeCycleFromIssue = async (_workspaceSlug: string, _projectId: string, _issueId: string) => {};
-  addIssueToCycle = async (
-    _workspaceSlug: string,
-    _projectId: string,
-    _cycleId: string,
-    _issueIds: string[],
-    _fetchAddedIssues?: boolean
-  ) => {};
-  removeIssueFromCycle = async (_workspaceSlug: string, _projectId: string, _cycleId: string, _issueId: string) => {};
-
-  removeIssuesFromModule = async (
-    _workspaceSlug: string,
-    _projectId: string,
-    _moduleId: string,
-    _issueIds: string[]
-  ) => {};
-  changeModulesInIssue = async (
-    _workspaceSlug: string,
-    _projectId: string,
-    _issueId: string,
-    _addModuleIds: string[],
-    _removeModuleIds: string[]
-  ) => {};
-  archiveIssue = async (_workspaceSlug: string, _projectId: string, _issueId: string) => {};
 }

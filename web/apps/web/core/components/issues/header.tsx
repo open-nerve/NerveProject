@@ -39,7 +39,7 @@ export const IssuesHeader = observer(function IssuesHeader() {
   // i18n
   const { t } = useTranslation();
 
-  const { currentProjectDetails, loader } = useProject();
+  const { loader } = useProject();
 
   const { toggleCreateIssueModal } = useCommandPalette();
   const { allowPermissions } = useUserPermissions();
@@ -85,11 +85,7 @@ export const IssuesHeader = observer(function IssuesHeader() {
       </Header.LeftItem>
       <Header.RightItem>
         <div className="hidden gap-2 md:flex">
-          <HeaderFilters
-            projectId={projectId}
-            currentProjectDetails={currentProjectDetails}
-            workspaceSlug={workspaceSlug}
-          />
+          <HeaderFilters projectId={projectId} workspaceSlug={workspaceSlug} />
         </div>
         {canUserCreateIssue && (
           <Button

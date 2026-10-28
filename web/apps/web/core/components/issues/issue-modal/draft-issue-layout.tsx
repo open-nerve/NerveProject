@@ -4,13 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueFormData } from "./types";
 import { useState } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
 // Nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue } from "@nerve/types";
 import { isEmptyHtmlString } from "@nerve/utils";
 // hooks
 import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
@@ -20,22 +20,22 @@ import { IssueFormRoot } from "./form";
 import type { IssueFormProps } from "./form";
 
 export interface DraftIssueProps extends IssueFormProps {
-  changesMade: Partial<TIssue> | null;
-  onChange: (formData: Partial<TIssue> | null) => void;
+  changesMade: IssueFormData | null;
+  onChange: (formData: IssueFormData | null) => void;
 }
 
 export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftIssueProps) {
-  const { changesMade, data, onChange, onClose, workspaceSlug, projectId } = props;
+  const { changesMade, data, onChange, onClose, workspaceSlug, projectId, descriptionLoadState = "ready" } = props;
   // states
   const [issueDiscardModal, setIssueDiscardModal] = useState(false);
   // store hooks
   const { createIssue } = useWorkspaceDraftIssues();
   const { t } = useTranslation();
 
-  const sanitizeChanges = (): Partial<TIssue> => {
+  const sanitizeChanges = (): IssueFormData => {
     const sanitizedChanges = { ...changesMade };
     Object.entries(sanitizedChanges).forEach(([key, value]) => {
-      const issueKey = key as keyof TIssue;
+      const issueKey = key as keyof IssueFormData;
       if (value === null || value === undefined || value === "") delete sanitizedChanges[issueKey];
       if (typeof value === "object" && isEmpty(value)) delete sanitizedChanges[issueKey];
       if (Array.isArray(value) && value.length === 0) delete sanitizedChanges[issueKey];
@@ -71,7 +71,7 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
   };
 
   const handleCreateDraftIssue = async () => {
-    if (!changesMade || !projectId) return;
+    if (!changesMade || !projectId || descriptionLoadState !== "ready") return;
 
     const payload = {
       ...changesMade,
@@ -114,6 +114,7 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
         isOpen={issueDiscardModal}
         handleClose={() => setIssueDiscardModal(false)}
         onConfirm={handleCreateDraftIssue}
+        canSave={descriptionLoadState === "ready"}
         onDiscard={() => {
           onChange(null);
           setIssueDiscardModal(false);

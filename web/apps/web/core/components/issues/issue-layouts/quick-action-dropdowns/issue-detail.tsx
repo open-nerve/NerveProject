@@ -4,15 +4,17 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useState } from "react";
-import { omit } from "lodash-es";
+import { pick } from "lodash-es";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { ARCHIVABLE_STATE_GROUPS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { TIssue } from "@nerve/types";
+
 import { EIssuesStoreType } from "@nerve/types";
 import { ContextMenu, CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
@@ -62,7 +64,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
   const { workspaceSlug } = useParams();
   // states
   const [createUpdateIssueModal, setCreateUpdateIssueModal] = useState(false);
-  const [issueToEdit, setIssueToEdit] = useState<TIssue | undefined>(undefined);
+  const [issueToEdit, setIssueToEdit] = useState<Issue | undefined>(undefined);
   const [deleteIssueModal, setDeleteIssueModal] = useState(false);
   const [archiveIssueModal, setArchiveIssueModal] = useState(false);
   const [_, setDuplicateWorkItemModal] = useState(false);
@@ -90,13 +92,23 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
 
   const isDeletingAllowed = isEditingAllowed;
 
-  const duplicateIssuePayload = omit(
+  const duplicateIssuePayload = pick(
     {
       ...issue,
       name: `${issue.name} (copy)`,
-      sourceIssueId: issue.id,
     },
-    ["id"]
+    [
+      "name",
+      "project_id",
+      "state_id",
+      "description_html",
+      "parent_id",
+      "priority",
+      "assignee_ids",
+      "label_ids",
+      "start_date",
+      "target_date",
+    ]
   );
 
   const customEditAction = () => {
@@ -141,11 +153,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
     setDeleteIssueModal: customDeleteAction,
     setArchiveIssueModal: customArchiveAction,
     setDuplicateWorkItemModal: customDuplicateAction,
-    handleDelete: customDeleteAction,
-    handleUpdate,
-    handleArchive: customArchiveAction,
     handleRestore: customRestoreAction,
-    storeType: EIssuesStoreType.PROJECT,
   };
 
   //   const MENU_ITEMS = useWorkItemDetailMenuItems(menuItemProps);
@@ -219,6 +227,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
           if (toggleEditIssueModal) toggleEditIssueModal(false);
         }}
         data={issueToEdit ?? duplicateIssuePayload}
+        sourceIssueId={issueToEdit ? undefined : issue.id}
         onSubmit={async (data) => {
           if (issueToEdit && handleUpdate) await handleUpdate(data);
         }}

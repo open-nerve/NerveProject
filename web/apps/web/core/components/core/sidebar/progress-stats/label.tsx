@@ -21,14 +21,11 @@ export type TLabelData = {
 }[];
 
 type TLabelStatComponent = {
-  selectedLabelIds: string[];
-  handleLabelFiltersUpdate: (labelId: string | undefined) => void;
   distribution: TLabelData;
-  isEditable?: boolean;
 };
 
 export const LabelStatComponent = observer(function LabelStatComponent(props: TLabelStatComponent) {
-  const { distribution, isEditable, selectedLabelIds, handleLabelFiltersUpdate } = props;
+  const { distribution } = props;
   const { t } = useTranslation();
   return (
     <div>
@@ -51,10 +48,6 @@ export const LabelStatComponent = observer(function LabelStatComponent(props: TL
                 }
                 completed={label.completed}
                 total={label.total}
-                {...(isEditable && {
-                  onClick: () => handleLabelFiltersUpdate(label.id),
-                  selected: label.id ? selectedLabelIds.includes(label.id) : false,
-                })}
               />
             );
           } else {

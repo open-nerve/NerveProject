@@ -74,10 +74,10 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
 
   const isEditable =
     allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId) ||
-    inboxIssue?.issue.created_by === currentUser?.id;
+    inboxIssue?.issue.created_by_id === currentUser?.id;
 
   const isGuest = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) === EUserPermissions.GUEST;
-  const isOwner = inboxIssue?.issue.created_by === currentUser?.id;
+  const isOwner = inboxIssue?.issue.created_by_id === currentUser?.id;
   const readOnly = !isOwner && isGuest;
 
   if (!inboxIssue) return <></>;

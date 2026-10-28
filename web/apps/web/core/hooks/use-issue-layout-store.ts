@@ -18,20 +18,15 @@ export const useIssueStoreType = () => {
   // If store type exists in context, use that store type
   if (storeType) return storeType;
 
-  // else check the router params to determine the issue store
-  if (globalViewId) return EIssuesStoreType.GLOBAL;
+  // These domain routes no longer own a work item list. Shared creation and peek commands
+  // still use DEFAULT with the selected work item/project.
+  if (globalViewId || viewId || cycleId || moduleId) return EIssuesStoreType.DEFAULT;
 
   if (userId) return EIssuesStoreType.PROFILE;
 
-  if (viewId) return EIssuesStoreType.PROJECT_VIEW;
-
-  if (cycleId) return EIssuesStoreType.CYCLE;
-
-  if (moduleId) return EIssuesStoreType.MODULE;
-
   if (projectId) return EIssuesStoreType.PROJECT;
 
-  return EIssuesStoreType.PROJECT;
+  return EIssuesStoreType.DEFAULT;
 };
 
 export const useIssuesStore = () => {

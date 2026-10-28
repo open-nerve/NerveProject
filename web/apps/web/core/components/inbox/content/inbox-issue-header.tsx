@@ -100,7 +100,7 @@ export const InboxIssueActionsHeader = observer(function InboxIssueActionsHeader
   // can delete only if admin or is creator of the issue
   const canDelete =
     allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId) ||
-    issue?.created_by === currentUser?.id;
+    issue?.created_by_id === currentUser?.id;
   const isProjectAdmin = allowPermissions(
     [EUserPermissions.ADMIN],
     EUserPermissionsLevel.PROJECT,

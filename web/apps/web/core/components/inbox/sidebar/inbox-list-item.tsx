@@ -50,7 +50,7 @@ export const InboxIssueListItem = observer(function InboxIssueListItem(props: In
 
   if (!issue) return <></>;
 
-  const createdByDetails = issue?.created_by ? getUserDetails(issue?.created_by) : undefined;
+  const createdByDetails = issue?.created_by_id ? getUserDetails(issue?.created_by_id) : undefined;
 
   return (
     <>

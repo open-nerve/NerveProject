@@ -15,7 +15,6 @@ import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 // nerve imports
-import type { Project } from "@nerve/api-client";
 // local imports
 import { WorkItemFiltersToggle } from "../work-item-filters/filters-toggle";
 import {
@@ -26,7 +25,6 @@ import {
 } from "./issue-layouts/filters";
 
 type Props = {
-  currentProjectDetails: Project | undefined;
   projectId: string;
   workspaceSlug: string;
 };
@@ -38,7 +36,7 @@ const LAYOUTS = [
 ];
 
 export const HeaderFilters = observer(function HeaderFilters(props: Props) {
-  const { currentProjectDetails, projectId, workspaceSlug } = props;
+  const { projectId, workspaceSlug } = props;
   // i18n
   const { t } = useTranslation();
   // store hooks
@@ -101,8 +99,6 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
           handleDisplayFiltersUpdate={handleDisplayFilters}
           displayProperties={issueFilters?.displayProperties ?? {}}
           handleDisplayPropertiesUpdate={handleDisplayProperties}
-          cycleViewDisabled={!currentProjectDetails?.cycle_view}
-          moduleViewDisabled={!currentProjectDetails?.module_view}
         />
       </FiltersDropdown>
     </>

@@ -4,8 +4,10 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { FC } from "react";
-import type { TIssue } from "./issues/issue";
+
 import type { LOGICAL_OPERATOR, TSupportedOperators } from "./rich-filters";
 import type { CompleteOrEmpty } from "./utils";
 
@@ -19,8 +21,6 @@ export type TIssueGroupByOptions =
   | "state_detail.group"
   | "project"
   | "assignees"
-  | "cycle"
-  | "module"
   | "target_date"
   | null;
 
@@ -38,18 +38,12 @@ export type TIssueOrderByOptions =
   | "-assignees__first_name"
   | "labels__name"
   | "-labels__name"
-  | "issue_module__module__name"
-  | "-issue_module__module__name"
-  | "issue_cycle__cycle__name"
-  | "-issue_cycle__cycle__name"
   | "target_date"
   | "-target_date"
   | "start_date"
   | "-start_date"
   | "link_count"
   | "-link_count"
-  | "attachment_count"
-  | "-attachment_count"
   | "sub_issues_count"
   | "-sub_issues_count";
 
@@ -66,8 +60,6 @@ export type TIssueParams =
   | "created_by"
   | "subscriber"
   | "labels"
-  | "cycle"
-  | "module"
   | "start_date"
   | "target_date"
   | "project"
@@ -96,11 +88,8 @@ export const WORK_ITEM_FILTER_PROPERTY_KEYS = [
   "assignee_id",
   "mention_id",
   "created_by_id",
-  "subscriber_id",
   "label_id",
   "state_id",
-  "cycle_id",
-  "module_id",
   "project_id",
   "created_at",
   "updated_at",
@@ -129,13 +118,10 @@ export interface IIssueFilterOptions {
   created_by?: string[] | null;
   labels?: string[] | null;
   priority?: string[] | null;
-  cycle?: string[] | null;
-  module?: string[] | null;
   project?: string[] | null;
   start_date?: string[] | null;
   state?: string[] | null;
   state_group?: string[] | null;
-  subscriber?: string[] | null;
   target_date?: string[] | null;
 }
 
@@ -161,11 +147,8 @@ export interface IIssueDisplayProperties {
   state?: boolean;
   sub_issue_count?: boolean;
   link?: boolean;
-  attachment_count?: boolean;
   created_on?: boolean;
   updated_on?: boolean;
-  modules?: boolean;
-  cycle?: boolean;
 }
 
 export type TIssueKanbanFilters = {
@@ -204,13 +187,11 @@ export interface IssuePaginationOptions {
   before?: string;
   after?: string;
   groupedBy?: TIssueGroupByOptions;
-  subGroupedBy?: TIssueGroupByOptions;
-  orderBy?: TIssueOrderByOptions;
 }
 
 export type TSpreadsheetColumn = FC<{
-  issue: TIssue;
+  issue: Issue;
   onClose: () => void;
-  onChange: (issue: TIssue, data: Partial<TIssue>, updates: any) => void;
+  onChange: (issue: Issue, data: Partial<IssueDetail>, updates: any) => void;
   disabled: boolean;
 }>;

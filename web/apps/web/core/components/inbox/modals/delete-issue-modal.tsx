@@ -4,20 +4,22 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 // types
 import { PROJECT_ERROR_MESSAGES } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue } from "@nerve/types";
+
 // ui
 import { AlertModalCore } from "@nerve/ui";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 
 type Props = {
-  data: Partial<TIssue>;
+  data: Partial<IssueDetail>;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: () => Promise<void>;

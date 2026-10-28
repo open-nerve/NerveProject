@@ -4,45 +4,24 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useRef } from "react";
+import { useRef } from "react";
 import { observer } from "mobx-react";
 // icons
-import { ModuleOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
+import { ModuleOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
 // nerve imports
-import {
-  EIssueFilterType,
-  ISSUE_DISPLAY_FILTERS_BY_PAGE,
-  EUserPermissions,
-  EUserPermissionsLevel,
-} from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { Button } from "@nerve/propel/button";
-import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { ICustomSearchSelectOption, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
-import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
+import type { ICustomSearchSelectOption } from "@nerve/types";
 import { Breadcrumbs, Header, BreadcrumbNavigationSearchDropdown } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { SwitcherLabel } from "@/components/common/switcher-label";
-import {
-  DisplayFiltersSelection,
-  FiltersDropdown,
-  LayoutSelection,
-  MobileLayoutSelection,
-} from "@/components/issues/issue-layouts/filters";
 import { ModuleQuickActions } from "@/components/modules";
-import { WorkItemFiltersToggle } from "@/components/work-item-filters/filters-toggle";
 // hooks
-import { useCommandPalette } from "@/hooks/store/use-command-palette";
-import { useIssues } from "@/hooks/store/use-issues";
 import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
-import { useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
-import { useIssuesActions } from "@/hooks/use-issues-actions";
 import useLocalStorage from "@/hooks/use-local-storage";
-import { usePlatformOS } from "@/hooks/use-platform-os";
 // components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 import { IconButton } from "@nerve/propel/icon-button";
@@ -61,53 +40,18 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
   const { workspaceSlug, projectId, moduleId } = props;
   // hooks
   const { t } = useTranslation();
-  const { isMobile } = usePlatformOS();
   // store hooks
-  const {
-    issuesFilter: { issueFilters },
-    issues: { getGroupIssueCount },
-  } = useIssues(EIssuesStoreType.MODULE);
-  const { updateFilters } = useIssuesActions(EIssuesStoreType.MODULE);
   const { projectModuleIds, getModuleById } = useModule();
-  const { toggleCreateIssueModal } = useCommandPalette();
-  const { allowPermissions } = useUserPermissions();
-  const { currentProjectDetails, loader } = useProject();
+  const { loader } = useProject();
   // local storage
   const { setValue, storedValue } = useLocalStorage("module_sidebar_collapsed", "false");
   // derived values
   const isSidebarCollapsed = storedValue ? storedValue === "true" : false;
-  const activeLayout = issueFilters?.displayFilters?.layout;
   const moduleDetails = getModuleById(moduleId);
-  const canUserCreateIssue = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
-  const workItemsCount = getGroupIssueCount(undefined, undefined, false);
 
   const toggleSidebar = () => {
     setValue(`${!isSidebarCollapsed}`);
   };
-
-  const handleLayoutChange = useCallback(
-    (layout: EIssueLayoutTypes) => {
-      updateFilters(projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout });
-    },
-    [projectId, updateFilters]
-  );
-
-  const handleDisplayFilters = useCallback(
-    (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      updateFilters(projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter);
-    },
-    [projectId, updateFilters]
-  );
-
-  const handleDisplayProperties = useCallback(
-    (property: Partial<IIssueDisplayProperties>) => {
-      updateFilters(projectId, EIssueFilterType.DISPLAY_PROPERTIES, property);
-    },
-    [projectId, updateFilters]
-  );
 
   const switcherOptions = projectModuleIds
     ?.map((id) => {
@@ -153,79 +97,9 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
               }
             />
           </Breadcrumbs>
-          {workItemsCount && workItemsCount > 0 ? (
-            <Tooltip
-              label={`There are ${workItemsCount} ${workItemsCount > 1 ? "work items" : "work item"} in this module`}
-              layout="stacked"
-              side="bottom"
-              disabled={isMobile}
-            >
-              <span className="flex flex-shrink-0 cursor-default items-center justify-center rounded-xl bg-accent-primary/20 px-2 text-center text-11 font-semibold text-accent-primary">
-                {workItemsCount}
-              </span>
-            </Tooltip>
-          ) : null}
         </div>
       </Header.LeftItem>
       <Header.RightItem className="items-center">
-        <div className="hidden gap-2 md:flex">
-          <div className="hidden @4xl:flex">
-            <LayoutSelection
-              layouts={[
-                EIssueLayoutTypes.LIST,
-                EIssueLayoutTypes.KANBAN,
-                EIssueLayoutTypes.CALENDAR,
-                EIssueLayoutTypes.SPREADSHEET,
-              ]}
-              onChange={(layout) => handleLayoutChange(layout)}
-              selectedLayout={activeLayout}
-            />
-          </div>
-          <div className="flex @4xl:hidden">
-            <MobileLayoutSelection
-              layouts={[
-                EIssueLayoutTypes.LIST,
-                EIssueLayoutTypes.KANBAN,
-                EIssueLayoutTypes.CALENDAR,
-                EIssueLayoutTypes.SPREADSHEET,
-              ]}
-              onChange={(layout) => handleLayoutChange(layout)}
-              activeLayout={activeLayout}
-            />
-          </div>
-          <WorkItemFiltersToggle entityType={EIssuesStoreType.MODULE} entityId={moduleId} />
-          <FiltersDropdown
-            title="Display"
-            placement="bottom-end"
-            miniIcon={<PreferencesOutline className="size-3.5" />}
-          >
-            <DisplayFiltersSelection
-              layoutDisplayFiltersOptions={
-                activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
-              }
-              displayFilters={issueFilters?.displayFilters ?? {}}
-              handleDisplayFiltersUpdate={handleDisplayFilters}
-              displayProperties={issueFilters?.displayProperties ?? {}}
-              handleDisplayPropertiesUpdate={handleDisplayProperties}
-              ignoreGroupedFilters={["module"]}
-              cycleViewDisabled={!currentProjectDetails?.cycle_view}
-              moduleViewDisabled={!currentProjectDetails?.module_view}
-            />
-          </FiltersDropdown>
-        </div>
-
-        {canUserCreateIssue && (
-          <Button
-            variant="primary"
-            size="lg"
-            className="hidden sm:flex"
-            onClick={() => {
-              toggleCreateIssueModal(true, EIssuesStoreType.MODULE);
-            }}
-          >
-            Add work item
-          </Button>
-        )}
         <IconButton
           variant="tertiary"
           size="lg"

@@ -4,10 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import React from "react";
 import { observer } from "mobx-react";
 // types
-import type { TIssue } from "@nerve/types";
+
 // helpers
 import { Row } from "@nerve/ui";
 import { cn } from "@nerve/utils";
@@ -15,7 +17,7 @@ import { cn } from "@nerve/utils";
 import { useParams, useNavigate } from "react-router";
 
 type Props = {
-  issue: TIssue;
+  issue: Issue;
 };
 
 export const SpreadsheetSubIssueColumn = observer(function SpreadsheetSubIssueColumn(props: Props) {

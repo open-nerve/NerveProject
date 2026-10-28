@@ -4,13 +4,15 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
 import useSWR from "swr";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import type { TIssue } from "@nerve/types";
+
 import { Loader } from "@nerve/ui";
 // assets
 import emptyIssueDark from "@/app/assets/empty-state/search/issues-dark.webp?url";
@@ -48,7 +50,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
   const [projectIdentifier, sequence_id] = workItem.split("-");
 
   // fetching issue details
-  const { data, isLoading, error } = useSWR<TIssue, Error>(
+  const { data, isLoading, error } = useSWR<Issue, Error>(
     `ISSUE_DETAIL_${workspaceSlug}_${projectIdentifier}_${sequence_id}`,
     () => fetchIssueWithIdentifier(workspaceSlug, projectIdentifier, sequence_id)
   );
@@ -75,14 +77,6 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
     handleToggleIssueDetailSidebar();
     return () => window.removeEventListener("resize", handleToggleIssueDetailSidebar);
   }, [issueDetailSidebarCollapsed, toggleIssueDetailSidebar]);
-
-  useEffect(() => {
-    if (data?.is_intake) {
-      navigate(`/${workspaceSlug}/projects/${data.project_id}/intake?currentTab=open&inboxIssueId=${data.id}`, {
-        replace: true,
-      });
-    }
-  }, [workspaceSlug, data, navigate]);
 
   if (error && !isLoading) {
     return (

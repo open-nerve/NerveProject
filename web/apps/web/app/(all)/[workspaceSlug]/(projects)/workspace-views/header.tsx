@@ -4,27 +4,23 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE, DEFAULT_GLOBAL_VIEWS_LIST } from "@nerve/constants";
+import { DEFAULT_GLOBAL_VIEWS_LIST } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { ViewsOutline } from "@makeplane/propel/icons";
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, ICustomSearchSelectOption } from "@nerve/types";
-import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
+import type { ICustomSearchSelectOption } from "@nerve/types";
 import { Breadcrumbs, Header, BreadcrumbNavigationSearchDropdown } from "@nerve/ui";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { SwitcherLabel } from "@/components/common/switcher-label";
-import { DisplayFiltersSelection, FiltersDropdown } from "@/components/issues/issue-layouts/filters";
-import { WorkItemFiltersToggle } from "@/components/work-item-filters/filters-toggle";
 import { DefaultWorkspaceViewQuickActions } from "@/components/workspace/views/default-view-quick-action";
 import { CreateUpdateWorkspaceViewModal } from "@/components/workspace/views/modal";
 import { WorkspaceViewQuickActions } from "@/components/workspace/views/quick-action";
 // hooks
 import { useGlobalView } from "@/hooks/store/use-global-view";
-import { useIssues } from "@/hooks/store/use-issues";
 import { useNavigate } from "react-router";
 
 type TProps = {
@@ -39,34 +35,10 @@ export const GlobalIssuesHeader = observer(function GlobalIssuesHeader(props: TP
   const navigate = useNavigate();
   const { workspaceSlug, globalViewId } = props;
   // store hooks
-  const {
-    issuesFilter: { filters, updateFilters },
-  } = useIssues(EIssuesStoreType.GLOBAL);
   const { getViewDetailsById, currentWorkspaceViews } = useGlobalView();
   const { t } = useTranslation();
 
-  const issueFilters = globalViewId ? filters[globalViewId] : undefined;
-
-  const activeLayout = issueFilters?.displayFilters?.layout;
   const viewDetails = globalViewId ? getViewDetailsById(globalViewId) : undefined;
-
-  const handleDisplayFilters = useCallback(
-    (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      if (!globalViewId) return;
-      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, globalViewId);
-    },
-    [workspaceSlug, updateFilters, globalViewId]
-  );
-
-  const handleDisplayProperties = useCallback(
-    (property: Partial<IIssueDisplayProperties>) => {
-      if (!globalViewId) return;
-      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, globalViewId);
-    },
-    [workspaceSlug, updateFilters, globalViewId]
-  );
-
-  const isLocked = viewDetails?.is_locked;
 
   const isDefaultView = DEFAULT_GLOBAL_VIEWS_LIST.find((view) => view.key === globalViewId);
 
@@ -91,11 +63,6 @@ export const GlobalIssuesHeader = observer(function GlobalIssuesHeader(props: TP
   const switcherOptions = [...defaultOptions, ...workspaceOptions].filter(
     (option) => option !== undefined
   ) as ICustomSearchSelectOption[];
-  const currentLayoutFilters = useMemo(() => {
-    const layout = activeLayout ?? EIssueLayoutTypes.SPREADSHEET;
-    return ISSUE_DISPLAY_FILTERS_BY_PAGE.my_issues.layoutOptions[layout];
-  }, [activeLayout]);
-
   return (
     <>
       <CreateUpdateWorkspaceViewModal isOpen={createViewModal} onClose={() => setCreateViewModal(false)} />
@@ -130,18 +97,6 @@ export const GlobalIssuesHeader = observer(function GlobalIssuesHeader(props: TP
         </Header.LeftItem>
 
         <Header.RightItem className="items-center">
-          {globalViewId && <WorkItemFiltersToggle entityType={EIssuesStoreType.GLOBAL} entityId={globalViewId} />}
-          {!isLocked && (
-            <FiltersDropdown title={t("common.display")} placement="bottom-end">
-              <DisplayFiltersSelection
-                layoutDisplayFiltersOptions={currentLayoutFilters}
-                displayFilters={issueFilters?.displayFilters ?? {}}
-                handleDisplayFiltersUpdate={handleDisplayFilters}
-                displayProperties={issueFilters?.displayProperties ?? {}}
-                handleDisplayPropertiesUpdate={handleDisplayProperties}
-              />
-            </FiltersDropdown>
-          )}
           <Button variant="primary" size="lg" onClick={() => setCreateViewModal(true)}>
             {t("workspace_views.add_view")}
           </Button>

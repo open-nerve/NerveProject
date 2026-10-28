@@ -4,57 +4,44 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { clone, set } from "lodash-es";
 import { makeObservable, observable, runInAction, action } from "mobx";
-import type {
-  TInboxIssue,
-  TInboxIssueStatus,
-  EInboxIssueSource,
-  TIssue,
-  TInboxDuplicateIssueDetails,
-} from "@nerve/types";
+import type { TInboxIssue, TInboxIssueStatus, EInboxIssueSource, TInboxDuplicateIssueDetails } from "@nerve/types";
 import { EInboxIssueStatus } from "@nerve/types";
 // services
 import { InboxIssueService } from "@/services/inbox";
-import { IssueService } from "@/services/issue";
 // store
 import type { RootStore } from "../root.store";
 
 export interface IInboxIssueStore {
-  isLoading: boolean;
-  id: string;
   status: TInboxIssueStatus;
-  issue: Partial<TIssue>;
+  issue: Partial<IssueDetail>;
   snoozed_till: Date | undefined;
   source: EInboxIssueSource | undefined;
   duplicate_to: string | undefined;
-  created_by: string | undefined;
   duplicate_issue_detail: TInboxDuplicateIssueDetails | undefined;
   // actions
   updateInboxIssueStatus: (status: TInboxIssueStatus) => Promise<void>; // accept, decline
   updateInboxIssueDuplicateTo: (issueId: string) => Promise<void>; // connecting the inbox issue to the project existing issue
   updateInboxIssueSnoozeTill: (date: Date | undefined) => Promise<void>; // snooze the issue
-  updateIssue: (issue: Partial<TIssue>) => Promise<void>; // updating the issue
-  updateProjectIssue: (issue: Partial<TIssue>) => Promise<void>; // updating the issue
+  updateIssue: (issue: TLegacyIssueUpdateRequest) => Promise<void>; // updating the issue
   fetchIssueActivity: () => Promise<void>; // fetching the issue activity
 }
 
 export class InboxIssueStore implements IInboxIssueStore {
-  // observables
-  isLoading: boolean = false;
-  id: string;
   status: TInboxIssueStatus = EInboxIssueStatus.PENDING;
-  issue: Partial<TIssue> = {};
+  issue: Partial<IssueDetail> = {};
   snoozed_till: Date | undefined;
   source: EInboxIssueSource | undefined;
   duplicate_to: string | undefined;
-  created_by: string | undefined;
   duplicate_issue_detail: TInboxDuplicateIssueDetails | undefined = undefined;
   workspaceSlug: string;
   projectId: string;
   // services
   inboxIssueService;
-  issueService;
 
   constructor(
     workspaceSlug: string,
@@ -62,35 +49,29 @@ export class InboxIssueStore implements IInboxIssueStore {
     data: TInboxIssue,
     private store: RootStore
   ) {
-    this.id = data.id;
     this.status = data.status;
     this.issue = data?.issue;
     this.snoozed_till = data?.snoozed_till || undefined;
     this.duplicate_to = data?.duplicate_to || undefined;
-    this.created_by = data?.created_by || undefined;
     this.source = data?.source || undefined;
     this.duplicate_issue_detail = data?.duplicate_issue_detail || undefined;
     this.workspaceSlug = workspaceSlug;
     this.projectId = projectId;
     // services
     this.inboxIssueService = new InboxIssueService();
-    this.issueService = new IssueService();
     // observable variables should be defined after the initialization of the values
     makeObservable(this, {
-      id: observable,
       status: observable,
       issue: observable,
       snoozed_till: observable,
       duplicate_to: observable,
       duplicate_issue_detail: observable,
-      created_by: observable,
       source: observable,
       // actions
       updateInboxIssueStatus: action,
       updateInboxIssueDuplicateTo: action,
       updateInboxIssueSnoozeTill: action,
       updateIssue: action,
-      updateProjectIssue: action,
       fetchIssueActivity: action,
     });
   }
@@ -117,7 +98,10 @@ export class InboxIssueStore implements IInboxIssueStore {
 
       // If issue accepted sync issue to local db
       if (status === EInboxIssueStatus.ACCEPTED) {
-        const updatedIssue = { ...this.issue, ...inboxIssue.issue };
+        const updatedIssue =
+          !("description_html" in inboxIssue.issue) && typeof this.issue.description_html === "string"
+            ? { ...inboxIssue.issue, description_html: this.issue.description_html }
+            : inboxIssue.issue;
         this.store.issue.issues.addIssue([updatedIssue]);
       }
     } catch {
@@ -176,55 +160,28 @@ export class InboxIssueStore implements IInboxIssueStore {
     }
   };
 
-  updateIssue = async (issue: Partial<TIssue>) => {
+  updateIssue = async (issue: TLegacyIssueUpdateRequest) => {
+    const { skip_activity: _requestContext, ...patch } = issue;
     const inboxIssue = clone(this.issue);
     try {
       if (!this.issue.id) return;
-      Object.keys(issue).forEach((key) => {
-        const issueKey = key as keyof TIssue;
-        set(this.issue, issueKey, issue[issueKey]);
+      Object.keys(patch).forEach((key) => {
+        const issueKey = key as keyof IssueDetail;
+        set(this.issue, issueKey, patch[issueKey]);
       });
       await this.inboxIssueService.updateIssue(this.workspaceSlug, this.projectId, this.issue.id, issue);
       // fetching activity
       this.fetchIssueActivity();
     } catch {
-      Object.keys(issue).forEach((key) => {
-        const issueKey = key as keyof TIssue;
-        set(this.issue, issueKey, inboxIssue[issueKey]);
-      });
-    }
-  };
-
-  updateProjectIssue = async (issue: Partial<TIssue>) => {
-    const inboxIssue = clone(this.issue);
-    try {
-      if (!this.issue.id) return;
-      Object.keys(issue).forEach((key) => {
-        const issueKey = key as keyof TIssue;
-        set(this.issue, issueKey, issue[issueKey]);
-      });
-      await this.issueService.patchIssue(this.workspaceSlug, this.projectId, this.issue.id, issue);
-      if (issue.cycle_id) {
-        await this.store.issue.issueDetail.addIssueToCycle(this.workspaceSlug, this.projectId, issue.cycle_id, [
-          this.issue.id,
-        ]);
-      }
-      if (issue.module_ids) {
-        await this.store.issue.issueDetail.changeModulesInIssue(
-          this.workspaceSlug,
-          this.projectId,
-          this.issue.id,
-          issue.module_ids,
-          []
-        );
-      }
-
-      // fetching activity
-      this.fetchIssueActivity();
-    } catch {
-      Object.keys(issue).forEach((key) => {
-        const issueKey = key as keyof TIssue;
-        set(this.issue, issueKey, inboxIssue[issueKey]);
+      runInAction(() => {
+        Object.keys(patch).forEach((key) => {
+          const issueKey = key as keyof IssueDetail;
+          if (Object.prototype.hasOwnProperty.call(inboxIssue, issueKey)) {
+            set(this.issue, issueKey, inboxIssue[issueKey]);
+          } else {
+            delete this.issue[issueKey];
+          }
+        });
       });
     }
   };

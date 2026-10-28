@@ -4,10 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { TIssue } from "@nerve/types";
+
 import type { TIssueRelationTypes } from "@nerve/types";
 // local imports
 import { RelationIssueListItem } from "./issue-list-item";
@@ -20,7 +22,7 @@ type Props = {
   handleIssueCrudState: (
     key: "update" | "delete" | "removeRelation",
     issueId: string,
-    issue?: TIssue | null,
+    issue?: Issue | null,
     relationKey?: TIssueRelationTypes | null,
     relationIssueId?: string | null
   ) => void;

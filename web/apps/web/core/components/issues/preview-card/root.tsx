@@ -4,11 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
 // nerve imports
 import { PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
 import type { StateGroup } from "@nerve/api-client";
-import type { TIssue } from "@nerve/types";
+
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
@@ -24,7 +26,7 @@ type Props = {
     id?: string;
     name?: string;
   };
-  workItem: Pick<TIssue, "id" | "name" | "sequence_id" | "priority" | "start_date" | "target_date">;
+  workItem: Pick<Issue, "id" | "name" | "sequence_id" | "priority" | "start_date" | "target_date">;
 };
 
 export const WorkItemPreviewCard = observer(function WorkItemPreviewCard(props: Props) {

@@ -22,7 +22,6 @@ import type {
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { handleIssueQueryParamsByLayout } from "@nerve/utils";
-import { IssueFiltersService } from "@/services/issue_filter.service";
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
 import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
 // types
@@ -59,7 +58,6 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
   // root store
   rootIssueStore;
   // services
-  issueFilterService;
 
   constructor(_rootStore: IIssueRootStore) {
     super();
@@ -75,7 +73,6 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
     // root store
     this.rootIssueStore = _rootStore;
     // services
-    this.issueFilterService = new IssueFiltersService();
   }
 
   get issueFilters() {

@@ -4,8 +4,10 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { FC } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import type { UseFormRegister } from "react-hook-form";
@@ -15,18 +17,23 @@ import { useTranslation } from "@nerve/i18n";
 import { AddOutline } from "@makeplane/propel/icons";
 import { setPromiseToast } from "@nerve/propel/toast";
 import type { Project } from "@nerve/api-client";
-import type { TIssue, EIssueLayoutTypes } from "@nerve/types";
-import { cn, createIssuePayload } from "@nerve/utils";
+import type { EIssueLayoutTypes } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // local imports
 import { QuickAddIssueFormRoot } from "./form";
 import { CreateIssueToastActionItems } from "../../create-issue-toast-action-items";
+
+type QuickAddValues = Pick<Issue, "name">;
+type QuickAddPrefill = Partial<
+  Pick<Issue, "state_id" | "priority" | "assignee_ids" | "label_ids" | "start_date" | "target_date" | "parent_id">
+>;
 
 export type TQuickAddIssueForm = {
   ref: React.RefObject<HTMLFormElement | null>;
   isOpen: boolean;
   projectDetail: Project;
   hasError: boolean;
-  register: UseFormRegister<TIssue>;
+  register: UseFormRegister<QuickAddValues>;
   onSubmit: () => void;
 };
 
@@ -37,19 +44,34 @@ export type TQuickAddIssueButton = {
 type TQuickAddIssueRoot = {
   isQuickAddOpen?: boolean;
   layout: EIssueLayoutTypes;
-  prePopulatedData?: Partial<TIssue>;
+  prePopulatedData?: QuickAddPrefill;
   QuickAddButton?: FC<TQuickAddIssueButton>;
   customQuickAddButton?: React.ReactNode;
   containerClassName?: string;
   setIsQuickAddOpen?: (isOpen: boolean) => void;
-  quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
 };
 
-const defaultValues: Partial<TIssue> = {
+const defaultValues: QuickAddValues = {
   name: "",
 };
 
 export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQuickAddIssueRoot) {
+  const { workspaceSlug, projectId } = useParams();
+  if (!workspaceSlug || !projectId) return null;
+  return (
+    <QuickAddIssueScope
+      key={`${workspaceSlug}/${projectId}`}
+      {...props}
+      workspaceSlug={workspaceSlug}
+      projectId={projectId}
+    />
+  );
+});
+
+const QuickAddIssueScope = observer(function QuickAddIssueScope(
+  props: TQuickAddIssueRoot & { workspaceSlug: string; projectId: string }
+) {
   const {
     isQuickAddOpen,
     layout,
@@ -59,21 +81,30 @@ export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQui
     containerClassName = "",
     setIsQuickAddOpen,
     quickAddCallback,
+    workspaceSlug,
+    projectId,
   } = props;
   // i18n
   const { t } = useTranslation();
-  // router
-  const { workspaceSlug, projectId } = useParams();
   // states
   const [isOpen, setIsOpen] = useState(isQuickAddOpen ?? false);
+  const [pending, setPending] = useState(false);
+  const busy = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   // form info
   const {
     reset,
     handleSubmit,
     setFocus,
     register,
-    formState: { errors, isSubmitting },
-  } = useForm<TIssue>({ defaultValues });
+    formState: { errors },
+  } = useForm<QuickAddValues>({ defaultValues });
 
   useEffect(() => {
     if (isQuickAddOpen !== undefined) {
@@ -82,11 +113,12 @@ export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQui
   }, [isQuickAddOpen]);
 
   useEffect(() => {
-    if (!isOpen) reset({ ...defaultValues });
+    if (!isOpen && !busy.current) reset({ ...defaultValues });
   }, [isOpen, reset]);
 
   // oxlint-disable-next-line no-shadow
   const handleIsOpen = (isOpen: boolean) => {
+    if (!isOpen && (busy.current || pending)) return;
     if (isQuickAddOpen !== undefined && setIsQuickAddOpen) {
       setIsQuickAddOpen(isOpen);
     } else {
@@ -94,40 +126,50 @@ export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQui
     }
   };
 
-  const onSubmitHandler = async (formData: TIssue) => {
-    if (isSubmitting || !workspaceSlug || !projectId) return;
-
-    reset({ ...defaultValues });
-
-    const payload = createIssuePayload(projectId, {
-      // oxlint-disable-next-line unicorn/no-useless-fallback-in-spread
-      ...(prePopulatedData ?? {}),
-      ...formData,
-    });
-
-    if (quickAddCallback) {
-      const quickAddPromise = quickAddCallback(projectId, { ...payload });
-      setPromiseToast<any>(quickAddPromise, {
+  const onSubmitHandler = async (formData: QuickAddValues) => {
+    if (busy.current || !quickAddCallback) return;
+    busy.current = true;
+    setPending(true);
+    try {
+      // Only caller-owned editable values enter the existing create input contract.
+      const { state_id, priority, assignee_ids, label_ids, start_date, target_date, parent_id } =
+        prePopulatedData ?? {};
+      const quickAddPromise = quickAddCallback(projectId, {
+        ...formData,
+        ...(state_id !== undefined && { state_id }),
+        ...(priority !== undefined && { priority }),
+        ...(assignee_ids !== undefined && { assignee_ids }),
+        ...(label_ids !== undefined && { label_ids }),
+        ...(start_date !== undefined && { start_date }),
+        ...(target_date !== undefined && { target_date }),
+        ...(parent_id !== undefined && { parent_id }),
+      }).then((issue) => {
+        if (!issue) throw new Error(t("common.error.message"));
+        return issue;
+      });
+      setPromiseToast<Issue>(quickAddPromise, {
         loading: t("issue.adding"),
         success: {
           title: t("common.success"),
           message: () => t("issue.create.success"),
           actionItems: (data) => (
-            // TODO: Translate here
             <CreateIssueToastActionItems workspaceSlug={workspaceSlug} projectId={projectId} issueId={data.id} />
           ),
         },
         error: {
           title: t("common.error.label"),
-          message: (err) => err?.message || t("common.error.message"),
+          message: (error) => (error instanceof Error ? error.message : t("common.error.message")),
         },
       });
-
       await quickAddPromise;
+      if (mounted.current) reset(defaultValues);
+    } catch {
+      // The request toast reports the failure; keep the original input for retry.
+    } finally {
+      busy.current = false;
+      if (mounted.current) setPending(false);
     }
   };
-
-  if (!projectId) return null;
 
   return (
     <div
@@ -137,18 +179,20 @@ export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQui
       )}
     >
       {isOpen ? (
-        <QuickAddIssueFormRoot
-          isOpen={isOpen}
-          layout={layout}
-          prePopulatedData={prePopulatedData}
-          projectId={projectId}
-          // oxlint-disable-next-line no-unneeded-ternary
-          hasError={errors && errors?.name && errors?.name?.message ? true : false}
-          setFocus={setFocus}
-          register={register}
-          onSubmit={handleSubmit(onSubmitHandler)}
-          onClose={() => handleIsOpen(false)}
-        />
+        <fieldset disabled={pending}>
+          <QuickAddIssueFormRoot
+            isOpen={isOpen}
+            layout={layout}
+            projectId={projectId}
+            // oxlint-disable-next-line no-unneeded-ternary
+            hasError={errors && errors?.name && errors?.name?.message ? true : false}
+            setFocus={setFocus}
+            register={register}
+            onSubmit={handleSubmit(onSubmitHandler)}
+            onClose={() => handleIsOpen(false)}
+          />
+          {pending && <div role="status">{t("issue.adding")}</div>}
+        </fieldset>
       ) : (
         <>
           {QuickAddButton && <QuickAddButton onClick={() => handleIsOpen(true)} />}

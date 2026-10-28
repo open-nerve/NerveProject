@@ -24,14 +24,11 @@ export type TAssigneeData = {
 }[];
 
 type TAssigneeStatComponent = {
-  selectedAssigneeIds: string[];
-  handleAssigneeFiltersUpdate: (assigneeId: string | undefined) => void;
   distribution: TAssigneeData;
-  isEditable?: boolean;
 };
 
 export const AssigneeStatComponent = observer(function AssigneeStatComponent(props: TAssigneeStatComponent) {
-  const { distribution, isEditable, selectedAssigneeIds, handleAssigneeFiltersUpdate } = props;
+  const { distribution } = props;
   const { t } = useTranslation();
   return (
     <div>
@@ -54,10 +51,6 @@ export const AssigneeStatComponent = observer(function AssigneeStatComponent(pro
                 }
                 completed={assignee?.completed ?? 0}
                 total={assignee?.total ?? 0}
-                {...(isEditable && {
-                  onClick: () => handleAssigneeFiltersUpdate(assignee.id),
-                  selected: assignee.id ? selectedAssigneeIds.includes(assignee.id) : false,
-                })}
               />
             );
           else

@@ -4,18 +4,16 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 import { CircleDashed } from "lucide-react";
 import { AddOutline } from "@makeplane/propel/icons";
 // types
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue, ISearchIssueResponse, TIssueGroupByOptions } from "@nerve/types";
+import type { TIssueGroupByOptions } from "@nerve/types";
 // ui
-import { CustomMenu } from "@nerve/ui";
 // components
-import { ExistingIssuesListModal } from "@/components/core/modals/existing-issues-list-modal";
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 // constants
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
@@ -26,47 +24,16 @@ interface IHeaderGroupByCard {
   icon?: React.ReactNode;
   title: string;
   count: number;
-  issuePayload: Partial<TIssue>;
+  issuePayload: Partial<IssueDetail>;
   disableIssueCreation?: boolean;
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
   handleCollapsedGroups: (value: string) => void;
 }
 
 export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHeaderGroupByCard) {
-  const { groupID, icon, title, count, issuePayload, disableIssueCreation, addIssuesToView, handleCollapsedGroups } =
-    props;
+  const { groupID, icon, title, count, issuePayload, disableIssueCreation, handleCollapsedGroups } = props;
   // states
   const [isOpen, setIsOpen] = useState(false);
-  const [openExistingIssueListModal, setOpenExistingIssueListModal] = useState(false);
-  // router
-  const { workspaceSlug, projectId, moduleId, cycleId } = useParams();
   const storeType = useIssueStoreType();
-  // derived values
-  const renderExistingIssueModal = moduleId || cycleId;
-  const existingIssuesListModalPayload = moduleId ? { module: moduleId } : { cycle: true };
-
-  const handleAddIssuesToView = async (data: ISearchIssueResponse[]) => {
-    if (!workspaceSlug || !projectId) return;
-
-    const issues = data.map((i) => i.id);
-
-    try {
-      await addIssuesToView?.(issues);
-
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: "Work items added to the cycle successfully.",
-      });
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Selected work items could not be added to the cycle. Please try again.",
-      });
-    }
-  };
-
   return (
     <>
       <div className="group/list-header flex w-full flex-shrink-0 items-center gap-2 py-1.5">
@@ -84,41 +51,17 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
           <div className="px-2.5"></div>
         </div>
 
-        {!disableIssueCreation &&
-          (renderExistingIssueModal ? (
-            <CustomMenu
-              customButton={
-                <span className="flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xs transition-all hover:bg-layer-1">
-                  <AddOutline className="h-3.5 w-3.5" />
-                </span>
-              }
-            >
-              <CustomMenu.MenuItem
-                onClick={() => {
-                  setIsOpen(true);
-                }}
-              >
-                <span className="flex items-center justify-start gap-2">Create work item</span>
-              </CustomMenu.MenuItem>
-              <CustomMenu.MenuItem
-                onClick={() => {
-                  setOpenExistingIssueListModal(true);
-                }}
-              >
-                <span className="flex items-center justify-start gap-2">Add an existing work item</span>
-              </CustomMenu.MenuItem>
-            </CustomMenu>
-          ) : (
-            // oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions
-            <div
-              className="flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xs transition-all hover:bg-layer-1"
-              onClick={() => {
-                setIsOpen(true);
-              }}
-            >
-              <AddOutline width={14} />
-            </div>
-          ))}
+        {!disableIssueCreation && (
+          // oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions
+          <div
+            className="flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xs transition-all hover:bg-layer-1"
+            onClick={() => {
+              setIsOpen(true);
+            }}
+          >
+            <AddOutline width={14} />
+          </div>
+        )}
 
         <CreateUpdateIssueModal
           isOpen={isOpen}
@@ -126,17 +69,6 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
           data={issuePayload}
           storeType={storeType}
         />
-
-        {renderExistingIssueModal && (
-          <ExistingIssuesListModal
-            workspaceSlug={workspaceSlug}
-            projectId={projectId}
-            isOpen={openExistingIssueListModal}
-            handleClose={() => setOpenExistingIssueListModal(false)}
-            searchParams={existingIssuesListModalPayload}
-            handleOnSubmit={handleAddIssuesToView}
-          />
-        )}
       </div>
     </>
   );

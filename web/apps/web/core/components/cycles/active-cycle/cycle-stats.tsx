@@ -4,98 +4,61 @@
  * See the LICENSE file for details.
  */
 
-import { Fragment, useCallback, useRef, useState } from "react";
+import { Fragment } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
-import { CompletedAtOutline } from "@makeplane/propel/icons";
 // headless ui
 import { Tab } from "@headlessui/react";
 // nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { useTranslation } from "@nerve/i18n";
-import { PriorityIcon } from "@nerve/propel/icons";
-import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TWorkItemFilterCondition } from "@nerve/shared-state";
 import type { ICycle } from "@nerve/types";
-import { EIssuesStoreType } from "@nerve/types";
 // ui
 import { Loader } from "@nerve/ui";
-import { cn, renderFormattedDate, renderFormattedDateWithoutYear, getFileURL } from "@nerve/utils";
+import { cn, getFileURL } from "@nerve/utils";
 // assets
 import darkAssigneeAsset from "@/app/assets/empty-state/active-cycle/assignee-dark.webp?url";
 import lightAssigneeAsset from "@/app/assets/empty-state/active-cycle/assignee-light.webp?url";
 import darkLabelAsset from "@/app/assets/empty-state/active-cycle/label-dark.webp?url";
 import lightLabelAsset from "@/app/assets/empty-state/active-cycle/label-light.webp?url";
-import darkPriorityAsset from "@/app/assets/empty-state/active-cycle/priority-dark.webp?url";
-import lightPriorityAsset from "@/app/assets/empty-state/active-cycle/priority-light.webp?url";
 import userImage from "@/app/assets/user.png?url";
 // components
 import { SingleProgressStats } from "@/components/core/sidebar/single-progress-stats";
-import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-root";
-import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useIssues } from "@/hooks/store/use-issues";
-import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import useLocalStorage from "@/hooks/use-local-storage";
 // store
-import type { ActiveCycleIssueDetails } from "@/store/issue/cycle";
 
 export type ActiveCycleStatsProps = {
   workspaceSlug: string;
   projectId: string;
   cycle: ICycle | null;
   cycleId?: string | null;
-  handleFiltersUpdate: (conditions: TWorkItemFilterCondition[]) => void;
-  cycleIssueDetails?: ActiveCycleIssueDetails | { nextPageResults: boolean };
 };
 
 export const ActiveCycleStats = observer(function ActiveCycleStats(props: ActiveCycleStatsProps) {
-  const { workspaceSlug, projectId, cycle, cycleId, handleFiltersUpdate, cycleIssueDetails } = props;
+  const { cycle, cycleId } = props;
   // local storage
   const { storedValue: tab, setValue: setTab } = useLocalStorage("activeCycleTab", "Assignees");
-  // refs
-  const issuesContainerRef = useRef<HTMLDivElement | null>(null);
-  // states
-  const [issuesLoaderElement, setIssueLoaderElement] = useState<HTMLDivElement | null>(null);
   // theme hook
   const { resolvedTheme } = useTheme();
   // nerve hooks
   const { t } = useTranslation();
   // derived values
-  const priorityResolvedPath = resolvedTheme === "light" ? lightPriorityAsset : darkPriorityAsset;
   const assigneesResolvedPath = resolvedTheme === "light" ? lightAssigneeAsset : darkAssigneeAsset;
   const labelsResolvedPath = resolvedTheme === "light" ? lightLabelAsset : darkLabelAsset;
 
   const currentValue = (tab: string | null) => {
     switch (tab) {
-      case "Priority-Issues":
-        return 0;
       case "Assignees":
-        return 1;
+        return 0;
       case "Labels":
-        return 2;
+        return 1;
       default:
         return 0;
     }
   };
-  const {
-    issues: { fetchNextActiveCycleIssues },
-  } = useIssues(EIssuesStoreType.CYCLE);
-  const {
-    issue: { getIssueById },
-    setPeekIssue,
-  } = useIssueDetail();
-  const loadMoreIssues = useCallback(() => {
-    if (!cycleId) return;
-    fetchNextActiveCycleIssues(workspaceSlug, projectId, cycleId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceSlug, projectId, cycleId, issuesLoaderElement, cycleIssueDetails?.nextPageResults]);
-
-  useIntersectionObserver(issuesContainerRef, issuesLoaderElement, loadMoreIssues, `0% 0% 100% 0%`);
-
   const loaders = (
     <Loader className="space-y-3">
       <Loader.Item height="30px" />
@@ -112,14 +75,12 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
         onChange={(i) => {
           switch (i) {
             case 0:
-              return setTab("Priority-Issues");
-            case 1:
               return setTab("Assignees");
-            case 2:
+            case 1:
               return setTab("Labels");
 
             default:
-              return setTab("Priority-Issues");
+              return setTab("Assignees");
           }
         }}
       >
@@ -127,22 +88,9 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
           as="div"
           className="relative grid rounded-sm border-[0.5px] border-subtle bg-layer-1 p-[1px]"
           style={{
-            gridTemplateColumns: `repeat(3, 1fr)`,
+            gridTemplateColumns: `repeat(2, 1fr)`,
           }}
         >
-          <Tab
-            className={({ selected }) =>
-              cn(
-                "relative z-[1] rounded-[3px] py-1.5 text-11 font-semibold text-placeholder transition duration-500 focus:outline-none",
-                {
-                  "bg-surface-1 text-tertiary": selected,
-                  "hover:text-tertiary": !selected,
-                }
-              )
-            }
-          >
-            {t("project_cycles.active_cycle.priority_issue")}
-          </Tab>
           <Tab
             className={({ selected }) =>
               cn(
@@ -176,92 +124,6 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
             as="div"
             className="vertical-scrollbar scrollbar-sm flex h-52 w-full flex-col gap-1 overflow-y-auto text-secondary"
           >
-            <div
-              ref={issuesContainerRef}
-              className="vertical-scrollbar scrollbar-sm flex h-full w-full flex-col gap-1 overflow-y-auto"
-            >
-              {cycleIssueDetails && "issueIds" in cycleIssueDetails ? (
-                cycleIssueDetails.issueCount > 0 ? (
-                  <>
-                    {cycleIssueDetails.issueIds.map((issueId: string) => {
-                      const issue = getIssueById(issueId);
-
-                      if (!issue) return null;
-
-                      return (
-                        <div
-                          key={issue.id}
-                          className="group flex cursor-pointer items-center justify-between gap-2 rounded-md p-1 hover:bg-surface-2"
-                          onClick={() => {
-                            if (issue.id) {
-                              setPeekIssue({
-                                workspaceSlug,
-                                projectId,
-                                issueId: issue.id,
-                                isArchived: !!issue.archived_at,
-                              });
-                              handleFiltersUpdate([
-                                { property: "priority", operator: "in", value: ["urgent", "high"] },
-                              ]);
-                            }
-                          }}
-                        >
-                          <div className="flex w-full min-w-24 flex-grow items-center gap-1.5 truncate">
-                            <IssueIdentifier issueId={issue.id} projectId={projectId} size="xs" variant="secondary" />
-                            <Tooltip label={`Title: ${issue.name}`} layout="stacked" align="start">
-                              <span className="truncate text-13 text-primary">{issue.name}</span>
-                            </Tooltip>
-                          </div>
-                          <PriorityIcon priority={issue.priority} withContainer size={12} />
-                          <div className="flex flex-shrink-0 items-center gap-1.5">
-                            <StateDropdown
-                              value={issue.state_id}
-                              onChange={() => {}}
-                              projectId={projectId}
-                              disabled
-                              buttonVariant="background-with-text"
-                              buttonContainerClassName="cursor-pointer max-w-24"
-                              showTooltip
-                            />
-                            {issue.target_date && (
-                              <Tooltip label={`Target Date: ${renderFormattedDate(issue.target_date) ?? ""}`}>
-                                <div className="flex h-full cursor-pointer items-center gap-1.5 truncate rounded-sm bg-layer-1 px-2 py-0.5 text-11 group-hover:bg-surface-1">
-                                  <CompletedAtOutline className="h-3 w-3 flex-shrink-0" />
-                                  <span className="truncate text-11">
-                                    {renderFormattedDateWithoutYear(issue.target_date)}
-                                  </span>
-                                </div>
-                              </Tooltip>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {(cycleIssueDetails.nextPageResults === undefined || cycleIssueDetails.nextPageResults) && (
-                      <div
-                        ref={setIssueLoaderElement}
-                        className="relative flex h-11 animate-pulse cursor-pointer items-center gap-3 bg-layer-1 p-3 text-13"
-                      />
-                    )}
-                  </>
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <SimpleEmptyState
-                      title={t("active_cycle.empty_state.priority_issue.title")}
-                      assetPath={priorityResolvedPath}
-                    />
-                  </div>
-                )
-              ) : (
-                loaders
-              )}
-            </div>
-          </Tab.Panel>
-
-          <Tab.Panel
-            as="div"
-            className="vertical-scrollbar scrollbar-sm flex h-52 w-full flex-col gap-1 overflow-y-auto text-secondary"
-          >
             {cycle && !isEmpty(cycle.distribution) ? (
               cycle?.distribution?.assignees && cycle.distribution.assignees.length > 0 ? (
                 cycle.distribution?.assignees?.map((assignee, index) => {
@@ -283,13 +145,6 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
                         }
                         completed={assignee.completed_issues}
                         total={assignee.total_issues}
-                        onClick={() => {
-                          if (assignee.assignee_id) {
-                            handleFiltersUpdate([
-                              { property: "assignee_id", operator: "in", value: [assignee.assignee_id] },
-                            ]);
-                          }
-                        }}
                       />
                     );
                   else
@@ -344,15 +199,6 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
                     }
                     completed={label.completed_issues}
                     total={label.total_issues}
-                    onClick={
-                      label.label_id
-                        ? () => {
-                            if (label.label_id) {
-                              handleFiltersUpdate([{ property: "label_id", operator: "in", value: [label.label_id] }]);
-                            }
-                          }
-                        : undefined
-                    }
                   />
                 ))
               ) : (

@@ -4,116 +4,94 @@
  * See the LICENSE file for details.
  */
 
-import { makeObservable, observable } from "mobx";
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { computedFn } from "mobx-utils";
 // types
-import type { TIssue } from "@nerve/types";
+
 // services
-import { IssueArchiveService, WorkspaceDraftService, IssueService } from "@/services/issue";
+import { IssueService } from "@/services/issue";
 // types
 import type { IIssueDetail } from "./root.store";
 
 export interface IIssueStoreActions {
   // actions
-  fetchIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<TIssue>;
-  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
-  removeIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-  archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-  addCycleToIssue: (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => Promise<void>;
-  addIssueToCycle: (workspaceSlug: string, projectId: string, cycleId: string, issueIds: string[]) => Promise<void>;
-  removeIssueFromCycle: (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => Promise<void>;
-  changeModulesInIssue: (
+  fetchIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<IssueDetail>;
+  updateIssue: (
     workspaceSlug: string,
     projectId: string,
     issueId: string,
-    addModuleIds: string[],
-    removeModuleIds: string[]
+    data: TLegacyIssueUpdateRequest
   ) => Promise<void>;
-  removeIssueFromModule: (workspaceSlug: string, projectId: string, moduleId: string, issueId: string) => Promise<void>;
-  fetchIssueWithIdentifier: (workspaceSlug: string, project_identifier: string, sequence_id: string) => Promise<TIssue>;
+  removeIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
+  archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
+  fetchIssueWithIdentifier: (
+    workspaceSlug: string,
+    project_identifier: string,
+    sequence_id: string
+  ) => Promise<IssueDetail>;
 }
 
 export interface IIssueStore extends IIssueStoreActions {
-  getIsFetchingIssueDetails: (issueId: string | undefined) => boolean;
   // helper methods
-  getIssueById: (issueId: string) => TIssue | undefined;
+  getIssueById: (issueId: string) => Issue | IssueDetail | undefined;
+  getIssueDetailById: (issueId: string) => IssueDetail | undefined;
   getIssueIdByIdentifier: (issueIdentifier: string) => string | undefined;
 }
 
 export class IssueStore implements IIssueStore {
-  fetchingIssueDetails: string | undefined = undefined;
   // root store
   rootIssueDetailStore: IIssueDetail;
   // services
   issueService;
-  issueArchiveService;
-  draftWorkItemService;
 
   constructor(rootStore: IIssueDetail) {
-    makeObservable(this, {
-      fetchingIssueDetails: observable.ref,
-    });
     // root store
     this.rootIssueDetailStore = rootStore;
     // services
     this.issueService = new IssueService();
-    this.issueArchiveService = new IssueArchiveService();
-    this.draftWorkItemService = new WorkspaceDraftService();
   }
 
-  getIsFetchingIssueDetails = computedFn((issueId: string | undefined) => {
-    if (!issueId) return false;
-
-    return this.fetchingIssueDetails === issueId;
-  });
-
   // helper methods
-  getIssueById = computedFn((issueId: string) => {
+  getIssueById = computedFn((issueId: string): Issue | IssueDetail | undefined => {
     if (!issueId) return undefined;
     return this.rootIssueDetailStore.rootIssueStore.issues.getIssueById(issueId) ?? undefined;
   });
+
+  getIssueDetailById = computedFn((issueId: string) =>
+    this.rootIssueDetailStore.rootIssueStore.issues.getIssueDetailById(issueId)
+  );
 
   getIssueIdByIdentifier = computedFn((issueIdentifier: string) => {
     if (!issueIdentifier) return undefined;
     return this.rootIssueDetailStore.rootIssueStore.issues.getIssueIdByIdentifier(issueIdentifier) ?? undefined;
   });
 
+  private async loadIssueResources(workspaceSlug: string, projectId: string, issueId: string, issue: Issue) {
+    // Auxiliary resources keep their own DTOs; they are not fields of the core detail response.
+    await Promise.all([
+      this.rootIssueDetailStore.fetchReactions(workspaceSlug, projectId, issueId),
+      this.rootIssueDetailStore.fetchLinks(workspaceSlug, projectId, issueId),
+      ...(issue.parent_id && issue.project_id
+        ? [
+            this.issueService
+              .retrieve(workspaceSlug, issue.project_id, issue.parent_id)
+              .then((parent) => this.rootIssueDetailStore.rootIssueStore.issues.addIssue([parent])),
+          ]
+        : []),
+    ]);
+  }
+
   // actions
   fetchIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
-    const query = {
-      expand: "issue_reactions,issue_attachments,issue_link,parent",
-    };
-
-    this.fetchingIssueDetails = issueId;
-    const issue = await this.issueService.retrieve(workspaceSlug, projectId, issueId, query);
+    const issue = await this.issueService.retrieve(workspaceSlug, projectId, issueId);
 
     if (!issue) throw new Error("Work item not found");
 
-    const issuePayload = this.addIssueToStore(issue);
+    this.addIssueToStore(issue);
 
-    this.rootIssueDetailStore.rootIssueStore.issues.addIssue([issuePayload]);
-
-    // store handlers from issue detail
-    // parent
-    if (issue && issue?.parent && issue?.parent?.id && issue?.parent?.project_id) {
-      this.issueService
-        .retrieve(workspaceSlug, issue.parent.project_id, issue?.parent?.id)
-        .then((res) => this.rootIssueDetailStore.rootIssueStore.issues.addIssue([res]));
-    }
-    // assignees
-    // labels
-    // state
-
-    // issue reactions
-    if (issue.issue_reactions) this.rootIssueDetailStore.addReactions(issueId, issue.issue_reactions);
-
-    // fetch issue links
-    if (issue.issue_link) this.rootIssueDetailStore.addLinks(issueId, issue.issue_link);
-
-    // fetch issue attachments
-    if (issue.issue_attachments) this.rootIssueDetailStore.addAttachments(issueId, issue.issue_attachments);
-
-    this.rootIssueDetailStore.addSubscription(issueId, issue.is_subscribed);
+    await this.loadIssueResources(workspaceSlug, projectId, issueId, issue);
 
     // fetch issue activity
     this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
@@ -134,43 +112,13 @@ export class IssueStore implements IIssueStore {
     return issue;
   };
 
-  addIssueToStore = (issue: TIssue) => {
-    const issuePayload: TIssue = {
-      id: issue?.id,
-      sequence_id: issue?.sequence_id,
-      name: issue?.name,
-      description_html: issue?.description_html,
-      sort_order: issue?.sort_order,
-      state_id: issue?.state_id,
-      priority: issue?.priority,
-      label_ids: issue?.label_ids,
-      assignee_ids: issue?.assignee_ids,
-      sub_issues_count: issue?.sub_issues_count,
-      attachment_count: issue?.attachment_count,
-      link_count: issue?.link_count,
-      project_id: issue?.project_id,
-      parent_id: issue?.parent_id,
-      cycle_id: issue?.cycle_id,
-      module_ids: issue?.module_ids,
-      created_at: issue?.created_at,
-      updated_at: issue?.updated_at,
-      start_date: issue?.start_date,
-      target_date: issue?.target_date,
-      completed_at: issue?.completed_at,
-      archived_at: issue?.archived_at,
-      created_by: issue?.created_by,
-      updated_by: issue?.updated_by,
-      is_draft: issue?.is_draft,
-      is_subscribed: issue?.is_subscribed,
-    };
+  addIssueToStore = (issue: Issue) => {
+    this.rootIssueDetailStore.rootIssueStore.issues.addIssue([issue]);
 
-    this.rootIssueDetailStore.rootIssueStore.issues.addIssue([issuePayload]);
-    this.fetchingIssueDetails = undefined;
-
-    return issuePayload;
+    return issue;
   };
 
-  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => {
+  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) => {
     const currentStore = this.rootIssueDetailStore.rootIssueStore.projectIssues;
 
     await Promise.all([
@@ -189,72 +137,8 @@ export class IssueStore implements IIssueStore {
     currentStore.archiveIssue(workspaceSlug, projectId, issueId);
   };
 
-  addCycleToIssue = async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => {
-    await this.rootIssueDetailStore.rootIssueStore.cycleIssues.addCycleToIssue(
-      workspaceSlug,
-      projectId,
-      cycleId,
-      issueId
-    );
-    await this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-  };
-
-  addIssueToCycle = async (workspaceSlug: string, projectId: string, cycleId: string, issueIds: string[]) => {
-    await this.rootIssueDetailStore.rootIssueStore.cycleIssues.addIssueToCycle(
-      workspaceSlug,
-      projectId,
-      cycleId,
-      issueIds,
-      false
-    );
-    if (issueIds && issueIds.length > 0)
-      await this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueIds[0]);
-  };
-
-  removeIssueFromCycle = async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => {
-    const cycle = await this.rootIssueDetailStore.rootIssueStore.cycleIssues.removeIssueFromCycle(
-      workspaceSlug,
-      projectId,
-      cycleId,
-      issueId
-    );
-    await this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-    return cycle;
-  };
-
-  changeModulesInIssue = async (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    addModuleIds: string[],
-    removeModuleIds: string[]
-  ) => {
-    await this.rootIssueDetailStore.rootIssueStore.moduleIssues.changeModulesInIssue(
-      workspaceSlug,
-      projectId,
-      issueId,
-      addModuleIds,
-      removeModuleIds
-    );
-    await this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-  };
-
-  removeIssueFromModule = async (workspaceSlug: string, projectId: string, moduleId: string, issueId: string) => {
-    const currentModule = await this.rootIssueDetailStore.rootIssueStore.moduleIssues.removeIssuesFromModule(
-      workspaceSlug,
-      projectId,
-      moduleId,
-      [issueId]
-    );
-    await this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-    return currentModule;
-  };
-
   fetchIssueWithIdentifier = async (workspaceSlug: string, project_identifier: string, sequence_id: string) => {
-    const query = {
-      expand: "issue_reactions,issue_attachments,issue_link,parent",
-    };
-    const issue = await this.issueService.retrieveWithIdentifier(workspaceSlug, project_identifier, sequence_id, query);
+    const issue = await this.issueService.retrieveWithIdentifier(workspaceSlug, project_identifier, sequence_id);
     const issueIdentifier = `${project_identifier}-${sequence_id}`;
     const issueId = issue?.id;
     const projectId = issue?.project_id;
@@ -262,36 +146,12 @@ export class IssueStore implements IIssueStore {
 
     if (!issue || !projectId || !issueId) throw new Error("Issue not found");
 
-    const issuePayload = this.addIssueToStore(issue);
-    this.rootIssueDetailStore.rootIssueStore.issues.addIssue([issuePayload]);
+    this.addIssueToStore(issue);
 
-    // handle parent issue if exists
-    if (issue?.parent && issue?.parent?.id && issue?.parent?.project_id) {
-      this.issueService
-        .retrieve(workspaceSlug, issue.parent.project_id, issue.parent.id)
-        .then((res) => this.rootIssueDetailStore.rootIssueStore.issues.addIssue([res]));
-    }
+    await this.loadIssueResources(workspaceSlug, projectId, issueId, issue);
 
     // add identifiers to map
     rootWorkItemDetailStore.rootIssueStore.issues.addIssueIdentifier(issueIdentifier, issueId);
-
-    // add related data
-    if (issue.issue_reactions) rootWorkItemDetailStore.addReactions(issue.id, issue.issue_reactions);
-    if (issue.issue_link) rootWorkItemDetailStore.addLinks(issue.id, issue.issue_link);
-    if (issue.issue_attachments) rootWorkItemDetailStore.addAttachments(issue.id, issue.issue_attachments);
-    rootWorkItemDetailStore.addSubscription(issue.id, issue.is_subscribed);
-
-    // fetch related data
-    // issue reactions
-    if (issue.issue_reactions) rootWorkItemDetailStore.addReactions(issueId, issue.issue_reactions);
-
-    // fetch issue links
-    if (issue.issue_link) rootWorkItemDetailStore.addLinks(issueId, issue.issue_link);
-
-    // fetch issue attachments
-    if (issue.issue_attachments) rootWorkItemDetailStore.addAttachments(issueId, issue.issue_attachments);
-
-    rootWorkItemDetailStore.addSubscription(issueId, issue.is_subscribed);
 
     // fetch issue activity
     rootWorkItemDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);

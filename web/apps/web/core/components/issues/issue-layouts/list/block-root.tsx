@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { MutableRefObject } from "react";
 import React, { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
@@ -13,7 +15,7 @@ import { observer } from "mobx-react";
 // nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
 // types
-import type { IIssueDisplayProperties, TIssue, TIssueMap } from "@nerve/types";
+import type { IIssueDisplayProperties } from "@nerve/types";
 // components
 import { DropIndicator } from "@nerve/ui";
 import RenderIfVisible from "@/components/core/render-if-visible-HOC";
@@ -28,8 +30,8 @@ import type { TRenderQuickActions } from "./list-view-types";
 
 type Props = {
   issueId: string;
-  issuesMap: TIssueMap;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  issuesMap: Record<string, Issue | IssueDetail>;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   canEditProperties: (projectId: string | undefined) => boolean;
   displayProperties: IIssueDisplayProperties | undefined;

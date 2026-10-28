@@ -4,6 +4,9 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
+import type { State } from "@nerve/api-client";
 import { uniq, orderBy, isEmpty, indexOf, groupBy, set } from "lodash-es";
 import { ALL_ISSUES, EIssueFilterType, FILTER_TO_ISSUE_MAP, ISSUE_PRIORITIES } from "@nerve/constants";
 import type {
@@ -11,7 +14,6 @@ import type {
   IIssueDisplayProperties,
   IIssueFilterOptions,
   ISubWorkItemFilters,
-  TIssue,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
 } from "@nerve/types";
@@ -186,7 +188,7 @@ export const getSortOrderToFilterEmptyValues = (key: string, object: any) => {
 };
 
 // get IssueIds from Issue data List
-export const getIssueIds = (issues: TIssue[]) => issues.map((issue) => issue?.id);
+export const getIssueIds = (issues: Issue[]) => issues.map((issue) => issue?.id);
 
 /**
  * Checks if an issue meets the date filter criteria
@@ -196,7 +198,7 @@ export const getIssueIds = (issues: TIssue[]) => issues.map((issue) => issue?.id
  * @returns boolean indicating if the issue meets the date criteria
  */
 const checkIssueDateFilter = (
-  issue: TIssue,
+  issue: Issue,
   filterKey: "start_date" | "target_date",
   dateFilters: string[]
 ): boolean => {
@@ -224,7 +226,11 @@ const checkIssueDateFilter = (
  * @param displayFilters - The display filters to be applied to the issues.
  * @returns The filtered array of issues.
  */
-export const getFilteredWorkItems = (workItems: TIssue[], filters: IIssueFilterOptions | undefined): TIssue[] => {
+export const getFilteredWorkItems = (
+  workItems: Issue[],
+  filters: IIssueFilterOptions | undefined,
+  stateMap?: Record<string, State>
+): Issue[] => {
   if (!filters) return workItems;
   // Get all active filters
   const activeFilters = Object.entries(filters).filter(([, value]) => value && value.length > 0);
@@ -239,6 +245,10 @@ export const getFilteredWorkItems = (workItems: TIssue[], filters: IIssueFilterO
       // Handle date filters separately
       if (filterKey === "start_date" || filterKey === "target_date") {
         return checkIssueDateFilter(workItem, filterKey, filterValues as string[]);
+      }
+      if (filterKey === "state_group") {
+        const group = workItem.state_id ? stateMap?.[workItem.state_id]?.group : undefined;
+        return group !== undefined && filterValues!.includes(group);
       }
       // Handle regular filters
       const issueKey = FILTER_TO_ISSUE_MAP[filterKey as keyof IIssueFilterOptions];
@@ -260,7 +270,7 @@ export const getFilteredWorkItems = (workItems: TIssue[], filters: IIssueFilterO
  * @param orderByKey - The key to order the issues by.
  * @returns The ordered array of work items.
  */
-const getOrderedWorkItems = (workItems: TIssue[], orderByKey: TIssueOrderByOptions): string[] => {
+const getOrderedWorkItems = (workItems: Issue[], orderByKey: TIssueOrderByOptions): string[] => {
   switch (orderByKey) {
     case "-updated_at":
       return getIssueIds(orderBy(workItems, (item) => convertToISODateString(item["updated_at"]), ["desc"]));
@@ -280,7 +290,7 @@ const getOrderedWorkItems = (workItems: TIssue[], orderByKey: TIssueOrderByOptio
     case "-priority": {
       const sortArray = ISSUE_PRIORITIES.map((i) => i.key);
       return getIssueIds(
-        orderBy(workItems, (currentIssue: TIssue) => indexOf(sortArray, currentIssue?.priority), ["asc"])
+        orderBy(workItems, (currentIssue: Issue) => indexOf(sortArray, currentIssue?.priority), ["asc"])
       );
     }
     default:
@@ -289,9 +299,10 @@ const getOrderedWorkItems = (workItems: TIssue[], orderByKey: TIssueOrderByOptio
 };
 
 export const getGroupedWorkItemIds = (
-  workItems: TIssue[],
+  workItems: Issue[],
   groupByKey?: TIssueGroupByOptions,
-  orderByKey: TIssueOrderByOptions = "-created_at"
+  orderByKey: TIssueOrderByOptions = "-created_at",
+  stateMap?: Record<string, State>
 ): Record<string, string[]> => {
   // If group by is not set set default as ALL ISSUES
   if (!groupByKey) {
@@ -300,22 +311,15 @@ export const getGroupedWorkItemIds = (
     };
   }
 
-  // Get the default key for the group by key
-  const getDefaultGroupKey = (groupByKey: TIssueGroupByOptions) => {
-    switch (groupByKey) {
-      case "state_detail.group":
-        return "state__group";
-      case null:
-        return null;
-      default:
-        return ISSUE_GROUP_BY_KEY[groupByKey];
-    }
-  };
-
-  // Group work items
-  const groupKey = getDefaultGroupKey(groupByKey);
+  // State groups belong to the directory, never to the work item entity.
+  const groupKey = ISSUE_GROUP_BY_KEY[groupByKey];
   const groupedWorkItems = groupBy(workItems, (item) => {
-    const value = groupKey ? item[groupKey] : null;
+    const value =
+      groupByKey === "state_detail.group"
+        ? item.state_id
+          ? stateMap?.[item.state_id]?.group
+          : undefined
+        : item[groupKey];
     if (Array.isArray(value)) {
       if (value.length === 0) return "None";
       // Sort & join to build deterministic set-like key

@@ -4,15 +4,17 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
-import type { TIssue } from "@nerve/types";
+
 import { IssueDetailRoot } from "@/components/issues/issue-detail/root";
 
 export type TWorkItemDetailRoot = {
   workspaceSlug: string;
   projectId: string;
   issueId: string;
-  issue: TIssue | undefined;
+  issue: Issue | undefined;
 };
 
 export const WorkItemDetailRoot = observer(function WorkItemDetailRoot(props: TWorkItemDetailRoot) {

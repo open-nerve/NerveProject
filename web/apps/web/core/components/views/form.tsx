@@ -21,27 +21,21 @@ import type {
   IIssueDisplayProperties,
   IProjectView,
   EIssueLayoutTypes,
-  IIssueFilters,
 } from "@nerve/types";
-import { EViewAccess, EIssuesStoreType } from "@nerve/types";
+import { EViewAccess } from "@nerve/types";
 import { getComputedDisplayFilters, getComputedDisplayProperties, getTabIndex } from "@nerve/utils";
 // components
 import { DisplayFiltersSelection, FiltersDropdown } from "@/components/issues/issue-layouts/filters";
-import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 // hooks
-import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { LayoutDropDown } from "../dropdowns/layout";
-import { ProjectLevelWorkItemFiltersHOC } from "../work-item-filters/filters-hoc/project-level";
 
 type Props = {
   data?: IProjectView | null;
   handleClose: () => void;
   handleFormSubmit: (values: IProjectView) => Promise<void>;
   preLoadedData?: Partial<IProjectView> | null;
-  projectId: string;
-  workspaceSlug: string;
 };
 
 const DEFAULT_VALUES: Partial<IProjectView> = {
@@ -53,13 +47,12 @@ const DEFAULT_VALUES: Partial<IProjectView> = {
 };
 
 export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
-  const { handleFormSubmit, handleClose, data, preLoadedData, projectId, workspaceSlug } = props;
+  const { handleFormSubmit, handleClose, data, preLoadedData } = props;
   // i18n
   const { t } = useTranslation();
   // state
   const [isOpen, setIsOpen] = useState(false);
   // store hooks
-  const { getProjectById } = useProject();
   const { isMobile } = usePlatformOS();
   // form info
   const defaultValues = {
@@ -70,7 +63,6 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
   const {
     control,
     formState: { errors, isSubmitting },
-    getValues,
     handleSubmit,
     reset,
     setValue,
@@ -79,14 +71,7 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
     defaultValues,
   });
   // derived values
-  const projectDetails = getProjectById(projectId);
   const logoValue = watch("logo_props");
-  const workItemFilters: IIssueFilters = {
-    richFilters: getValues("rich_filters"),
-    displayFilters: getValues("display_filters"),
-    displayProperties: getValues("display_properties"),
-    kanbanFilters: undefined,
-  };
   const { getIndex } = getTabIndex(ETabIndices.PROJECT_VIEW, isMobile);
 
   const handleCreateUpdateView = async (formData: IProjectView) => {
@@ -252,39 +237,11 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
                               ...updatedDisplayProperties,
                             });
                           }}
-                          cycleViewDisabled={!projectDetails?.cycle_view}
-                          moduleViewDisabled={!projectDetails?.module_view}
                         />
                       </FiltersDropdown>
                     )}
                   />
                 </>
-              )}
-            />
-          </div>
-          <div>
-            {/* filters dropdown */}
-            <Controller
-              control={control}
-              name="rich_filters"
-              render={({ field: { onChange: onFiltersChange } }) => (
-                <ProjectLevelWorkItemFiltersHOC
-                  entityId={data?.id}
-                  entityType={EIssuesStoreType.PROJECT_VIEW}
-                  filtersToShowByLayout={ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.filters}
-                  initialWorkItemFilters={workItemFilters}
-                  isTemporary
-                  updateFilters={(updateFilters) => onFiltersChange(updateFilters)}
-                  projectId={projectId}
-                  showOnMount
-                  workspaceSlug={workspaceSlug}
-                >
-                  {({ filter: projectViewWorkItemsFilter }) =>
-                    projectViewWorkItemsFilter && (
-                      <WorkItemFiltersRow filter={projectViewWorkItemsFilter} variant="modal" />
-                    )
-                  }
-                </ProjectLevelWorkItemFiltersHOC>
               )}
             />
           </div>

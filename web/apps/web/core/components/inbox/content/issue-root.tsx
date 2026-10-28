@@ -4,19 +4,20 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue, TNameDescriptionLoader } from "@nerve/types";
+import type { TNameDescriptionLoader } from "@nerve/types";
 import { EFileAssetType, EInboxIssueSource, EInboxIssueStatus } from "@nerve/types";
 // components
 import { DescriptionVersionsRoot } from "@/components/core/description-versions";
 import { DescriptionInput } from "@/components/editor/rich-text/description-input";
 import { DescriptionInputLoader } from "@/components/editor/rich-text/description-input/loader";
-import { IssueAttachmentRoot } from "@/components/issues/attachment";
 import type { TIssueOperations } from "@/components/issues/issue-detail";
 import { IssueActivity } from "@/components/issues/issue-detail/issue-activity";
 import { IssueReaction } from "@/components/issues/issue-detail/reactions";
@@ -95,7 +96,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
           });
         }
       },
-      update: async (_workspaceSlug: string, _projectId: string, _issueId: string, data: Partial<TIssue>) => {
+      update: async (_workspaceSlug: string, _projectId: string, _issueId: string, data: Partial<IssueDetail>) => {
         try {
           await inboxIssue.updateIssue(data);
         } catch (_error) {
@@ -179,7 +180,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
                 createdByDisplayName:
                   inboxIssue.source === EInboxIssueSource.FORMS
                     ? "Intake Form user"
-                    : (getUserDetails(issue.created_by ?? "")?.display_name ?? ""),
+                    : (getUserDetails(issue.created_by_id ?? "")?.display_name ?? ""),
                 id: issue.id,
                 isRestoreDisabled: !isEditable,
               }}
@@ -197,14 +198,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
         </div>
       </div>
 
-      <div className="py-4">
-        <IssueAttachmentRoot
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          issueId={issue.id}
-          disabled={!isEditable}
-        />
-      </div>
+      <div className="py-4"></div>
 
       <div className="py-4">
         <InboxIssueContentProperties

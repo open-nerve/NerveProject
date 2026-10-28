@@ -66,3 +66,15 @@ M4 合并时：
 - 余项：P11 前端两个旧 work-items 地址及service/store换型；P10b/P16筛选显示层与关键词清理；P15删除动态中收集箱来源旧分支，收集箱来源决定经M4收尾转M7。无批量删除/归档接口。
 
 状态保持 `open`；本次仅完成P4接收部分，待M4真正收尾逐项核对关闭条件。证据：[P4 spec §4/§7](../specs/P4-issue-collaboration.md#4-验收标准)、[P4 review §2/§6](../reviews/P4-issue-collaboration-review.md#2-验收标准核对)。
+
+
+## 处理结果（M4/P10a，2026-10-28）
+
+本期删除四类领域工作项列表、四旧store kind与相关布局/字段/表单读取，直接生成Issue/IssueDetail未恢复is_epic/type_id等旧核心字段；其他动态/评论DTO的完整改接仍属P11。old-issue-urls已按八类完整segment守卫登记精确file+match/count/until，普通按编号/work-items与描述版本的前端旧路径仍由P11按M4/P12到期删除。`WorkspaceService.searchWorkspace`的`/search/`当前无自动guard，按广义手工账由P15删除/until M4/P16，不称已被新旧规则覆盖。准确方法与到期证据见[P10a移交](../reviews/P10a-web-issue-types-review.md#6-移交事项)。
+
+富文本筛选否定显示层留P10b、守卫终态留P16；收集箱只准确化create PartialDetail、response union、metadata所属DTO与独立旧update请求stringflag，未决定新的来源取值或完成来源显示迁移。P15删除工作项动态中旧来源分支，M4收尾向M7转交来源决定及原文细节；status保持open，不以本期类型边界修正关闭原输入。
+
+本期Task级完成至T8提交8081112492a2fc744a43b3e814c6d36ff4ba3959；A-01/A-02代码终审修复已独评并提交5f7085bce4aa5103a0133fa982847d274efa6e47；文稿最后独评已通过，最终交付HEAD分支CI待提交后核验，准确产品5f708 CI已核成功见review§8，不把本段子项写成M4最终交付或集成。
+
+
+整审A-01新真实测试旧subissues字面量精确count1/untilM4/P12已审，最后73rules/53exceptions、old-issue41hits/29keys；T7/T8的40/28仍是历史检查点，生产旧请求未恢复、rule未放宽。

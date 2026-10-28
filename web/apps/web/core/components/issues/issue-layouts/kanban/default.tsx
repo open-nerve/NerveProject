@@ -4,15 +4,15 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { MutableRefObject } from "react";
 import { observer } from "mobx-react";
 import type {
   GroupByColumnTypes,
   IGroupByColumn,
   TGroupedIssues,
-  TIssue,
   IIssueDisplayProperties,
-  IIssueMap,
   TSubGroupedIssues,
   TIssueKanbanFilters,
   TIssueGroupByOptions,
@@ -35,7 +35,7 @@ import { HeaderGroupByCard } from "./headers/group-by-card";
 import { KanbanGroup } from "./kanban-group";
 
 export interface IKanBan {
-  issuesMap: IIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   groupedIssueIds: TGroupedIssues | TSubGroupedIssues;
   getGroupIssueCount: (
     groupId: string | undefined,
@@ -49,16 +49,14 @@ export interface IKanBan {
   isDropDisabled?: boolean;
   dropErrorMessage?: string | undefined;
   sub_group_id?: string;
-  sub_group_index?: number;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   collapsedGroups: TIssueKanbanFilters;
   handleCollapsedGroups: (toggle: "group_by" | "sub_group_by", value: string) => void;
   loadMoreIssues: (groupId?: string, subGroupId?: string) => void;
   enableQuickIssueCreate?: boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   disableIssueCreation?: boolean;
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
   canEditProperties: (projectId: string | undefined) => boolean;
   scrollableContainerRef?: MutableRefObject<HTMLDivElement | null>;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
@@ -83,7 +81,6 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
     quickAddCallback,
     loadMoreIssues,
     disableIssueCreation,
-    addIssuesToView,
     canEditProperties,
     scrollableContainerRef,
     handleOnDrop,
@@ -169,7 +166,6 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                     count={getGroupIssueCount(subList.id, undefined, false) ?? 0}
                     issuePayload={subList.payload}
                     disableIssueCreation={disableIssueCreation || isGroupByCreatedBy}
-                    addIssuesToView={addIssuesToView}
                     collapsedGroups={collapsedGroups}
                     handleCollapsedGroups={handleCollapsedGroups}
                   />

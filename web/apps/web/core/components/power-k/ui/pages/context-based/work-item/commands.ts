@@ -4,20 +4,18 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import { useCallback } from "react";
 import { useParams } from "react-router";
 import { Signal, TicketCheck } from "lucide-react";
 import {
-  CyclesOutline,
   DeleteOutline,
   LabelsOutline,
   LinkOutline,
   MembersOutline,
-  ModuleOutline,
   StateOutline,
-  SubscribeOutline,
   TextOutline,
-  UnsubscribeOutline,
   UserMinusOutline,
   UserPlusOutline,
 } from "@makeplane/propel/icons";
@@ -26,7 +24,7 @@ import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import type { Label } from "@nerve/api-client";
-import type { ICycle, IModule, TIssue, TIssuePriorities } from "@nerve/types";
+import type { TIssuePriorities } from "@nerve/types";
 import { EUserPermissions } from "@nerve/types";
 import { copyTextToClipboard } from "@nerve/utils";
 // components
@@ -48,8 +46,7 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
   const { toggleDeleteIssueModal } = useCommandPalette();
   const { getProjectById } = useProject();
   const {
-    issue: { getIssueById, getIssueIdByIdentifier, addCycleToIssue, removeIssueFromCycle, changeModulesInIssue },
-    subscription: { getSubscriptionByIssueId, createSubscription, removeSubscription },
+    issue: { getIssueById, getIssueIdByIdentifier },
     updateIssue,
   } = useIssueDetail();
   // derived values
@@ -57,7 +54,6 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
   const entityDetails = entityId ? getIssueById(entityId) : null;
   const projectDetails = entityDetails?.project_id ? getProjectById(entityDetails?.project_id) : undefined;
   const isCurrentUserAssigned = !!entityDetails?.assignee_ids?.includes(currentUser?.id ?? "");
-  const isSubscribed = Boolean(entityId ? getSubscriptionByIssueId(entityId) : false);
   // translation
   const { t } = useTranslation();
   // permission
@@ -70,7 +66,7 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
     ) && !entityDetails?.archived_at;
 
   const handleUpdateEntity = useCallback(
-    async (formData: Partial<TIssue>) => {
+    async (formData: Partial<IssueDetail>) => {
       if (!workspaceSlug || !entityDetails || !entityDetails.project_id) return;
       await updateIssue(workspaceSlug, entityDetails.project_id, entityDetails.id, formData).catch(() => {
         setToast({
@@ -95,32 +91,6 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
     },
     [entityDetails, handleUpdateEntity]
   );
-
-  const handleSubscription = useCallback(async () => {
-    if (!workspaceSlug || !entityDetails || !entityDetails.project_id) return;
-
-    try {
-      if (isSubscribed) {
-        await removeSubscription(workspaceSlug, entityDetails.project_id, entityDetails.id);
-      } else {
-        await createSubscription(workspaceSlug, entityDetails.project_id, entityDetails.id);
-      }
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("toast.success"),
-        message: isSubscribed
-          ? t("issue.subscription.actions.unsubscribed")
-          : t("issue.subscription.actions.subscribed"),
-      });
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("toast.error"),
-        message: t("common.error.message"),
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [createSubscription, entityDetails, isSubscribed, removeSubscription, workspaceSlug]);
 
   const handleDeleteWorkItem = useCallback(() => {
     toggleDeleteIssueModal(true);
@@ -259,72 +229,6 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
       closeOnSelect: true,
     },
     {
-      id: "add_work_item_to_cycle",
-      i18n_title: "power_k.contextual_actions.work_item.add_to_cycle",
-      icon: CyclesOutline,
-      group: "contextual",
-      contextType: "work-item",
-      type: "change-page",
-      page: "update-work-item-cycle",
-      onSelect: (data) => {
-        const cycleId = (data as ICycle)?.id;
-        if (!workspaceSlug || !entityDetails || !entityDetails.project_id) return;
-        if (entityDetails.cycle_id === cycleId) return;
-        try {
-          if (cycleId) {
-            addCycleToIssue(workspaceSlug, entityDetails.project_id, cycleId, entityDetails.id);
-          } else {
-            removeIssueFromCycle(
-              workspaceSlug,
-              entityDetails.project_id,
-              entityDetails.cycle_id ?? "",
-              entityDetails.id
-            );
-          }
-        } catch {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: "Error!",
-            message: "Work item could not be updated. Please try again.",
-          });
-        }
-      },
-      modifierShortcut: "shift+c",
-      isEnabled: () => Boolean(projectDetails?.cycle_view && isEditingAllowed),
-      isVisible: () => Boolean(projectDetails?.cycle_view && isEditingAllowed),
-      closeOnSelect: true,
-    },
-    {
-      id: "add_work_item_to_modules",
-      i18n_title: "power_k.contextual_actions.work_item.add_to_modules",
-      icon: ModuleOutline,
-      group: "contextual",
-      contextType: "work-item",
-      type: "change-page",
-      page: "update-work-item-module",
-      onSelect: (data) => {
-        const moduleId = (data as IModule)?.id;
-        if (!workspaceSlug || !entityDetails || !entityDetails.project_id) return;
-        try {
-          if (entityDetails.module_ids?.includes(moduleId)) {
-            changeModulesInIssue(workspaceSlug, entityDetails.project_id, entityDetails.id, [], [moduleId]);
-          } else {
-            changeModulesInIssue(workspaceSlug, entityDetails.project_id, entityDetails.id, [moduleId], []);
-          }
-        } catch {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: "Error!",
-            message: "Work item could not be updated. Please try again.",
-          });
-        }
-      },
-      modifierShortcut: "shift+m",
-      isEnabled: () => Boolean(projectDetails?.module_view && isEditingAllowed),
-      isVisible: () => Boolean(projectDetails?.module_view && isEditingAllowed),
-      closeOnSelect: false,
-    },
-    {
       id: "add_work_item_labels",
       i18n_title: "power_k.contextual_actions.work_item.add_labels",
       icon: LabelsOutline,
@@ -346,21 +250,6 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
       isEnabled: () => isEditingAllowed,
       isVisible: () => isEditingAllowed,
       closeOnSelect: false,
-    },
-    {
-      id: "subscribe_work_item",
-      i18n_title: isSubscribed
-        ? "power_k.contextual_actions.work_item.unsubscribe"
-        : "power_k.contextual_actions.work_item.subscribe",
-      icon: isSubscribed ? UnsubscribeOutline : SubscribeOutline,
-      group: "contextual",
-      contextType: "work-item",
-      type: "action",
-      action: handleSubscription,
-      modifierShortcut: "shift+s",
-      isEnabled: () => isEditingAllowed,
-      isVisible: () => isEditingAllowed,
-      closeOnSelect: true,
     },
     {
       id: "delete_work_item",

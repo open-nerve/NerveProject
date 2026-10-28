@@ -8,35 +8,30 @@ import { set, update } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // types
-import type { TIssue } from "@nerve/types";
+import type { Issue, IssueDetail } from "@nerve/api-client";
 // helpers
 import { getCurrentDateTimeInISO } from "@nerve/utils";
 import { rootStore } from "@/lib/store-context";
-// services
-import { IssueService } from "@/services/issue";
-
 export type IIssueStore = {
   // observables
-  issuesMap: Record<string, TIssue>; // Record defines issue_id as key and TIssue as value
+  issuesMap: Record<string, Issue | IssueDetail>; // Record defines issue_id as key and Issue or IssueDetail as value
   issuesIdentifierMap: Record<string, string>; // Record defines issue_identifier as key and issue_id as value
   // actions
-  getIssues(workspaceSlug: string, projectId: string, issueIds: string[]): Promise<TIssue[]>;
-  addIssue(issues: TIssue[]): void;
+  addIssue(issues: (Issue | IssueDetail)[]): void;
   addIssueIdentifier(issueIdentifier: string, issueId: string): void;
-  updateIssue(issueId: string, issue: Partial<TIssue>): void;
+  updateIssue(issueId: string, issue: Partial<IssueDetail>): void;
   removeIssue(issueId: string): void;
   // helper methods
-  getIssueById(issueId: string): undefined | TIssue;
+  getIssueById(issueId: string): Issue | IssueDetail | undefined;
+  getIssueDetailById(issueId: string): IssueDetail | undefined;
   getIssueIdByIdentifier(issueIdentifier: string): undefined | string;
-  getIssuesByIds(issueIds: string[], type: "archived" | "un-archived"): TIssue[]; // Record defines issue_id as key and TIssue as value
+  getIssuesByIds(issueIds: string[], type: "archived" | "un-archived"): (Issue | IssueDetail)[]; // Record defines issue_id as key and Issue or IssueDetail as value
 };
 
 export class IssueStore implements IIssueStore {
   // observables
-  issuesMap: { [issue_id: string]: TIssue } = {};
+  issuesMap: Record<string, Issue | IssueDetail> = {};
   issuesIdentifierMap: { [issue_identifier: string]: string } = {};
-  // service
-  issueService;
 
   constructor() {
     makeObservable(this, {
@@ -49,16 +44,15 @@ export class IssueStore implements IIssueStore {
       updateIssue: action,
       removeIssue: action,
     });
-    this.issueService = new IssueService();
   }
 
   // actions
   /**
    * @description This method will add issues to the issuesMap
-   * @param {TIssue[]} issues
+   * @param {(Issue | IssueDetail)[]} issues
    * @returns {void}
    */
-  addIssue = (issues: TIssue[]) => {
+  addIssue = (issues: (Issue | IssueDetail)[]) => {
     if (issues && issues.length <= 0) return;
     runInAction(() => {
       issues.forEach((issue) => {
@@ -87,30 +81,18 @@ export class IssueStore implements IIssueStore {
     });
   };
 
-  getIssues = async (workspaceSlug: string, projectId: string, issueIds: string[]) => {
-    const issues = await this.issueService.retrieveIssues(workspaceSlug, projectId, issueIds);
-
-    runInAction(() => {
-      issues.forEach((issue) => {
-        if (!this.issuesMap[issue.id]) set(this.issuesMap, issue.id, issue);
-      });
-    });
-
-    return issues;
-  };
-
   /**
    * @description This method will update the issue in the issuesMap
    * @param {string} issueId
-   * @param {Partial<TIssue>} issue
+   * @param {Partial<IssueDetail>} issue
    * @returns {void}
    */
-  updateIssue = (issueId: string, issue: Partial<TIssue>) => {
+  updateIssue = (issueId: string, issue: Partial<IssueDetail>) => {
     if (!issue || !issueId || !this.issuesMap[issueId]) return;
     runInAction(() => {
       set(this.issuesMap, [issueId, "updated_at"], getCurrentDateTimeInISO());
       Object.keys(issue).forEach((key) => {
-        set(this.issuesMap, [issueId, key], issue[key as keyof TIssue]);
+        set(this.issuesMap, [issueId, key], issue[key as keyof IssueDetail]);
       });
     });
   };
@@ -131,11 +113,16 @@ export class IssueStore implements IIssueStore {
   /**
    * @description This method will return the issue from the issuesMap
    * @param {string} issueId
-   * @returns {TIssue | undefined}
+   * @returns {Issue | IssueDetail | undefined}
    */
-  getIssueById = computedFn((issueId: string) => {
+  getIssueById = computedFn((issueId: string): Issue | IssueDetail | undefined => {
     if (!issueId || !this.issuesMap[issueId]) return undefined;
     return this.issuesMap[issueId];
+  });
+
+  getIssueDetailById = computedFn((issueId: string): IssueDetail | undefined => {
+    const issue = this.getIssueById(issueId);
+    return issue && "description_html" in issue ? issue : undefined;
   });
 
   /**
@@ -152,11 +139,11 @@ export class IssueStore implements IIssueStore {
    * @description This method will return the issues from the issuesMap
    * @param {string[]} issueIds
    * @param {boolean} archivedIssues
-   * @returns {Record<string, TIssue> | undefined}
+   * @returns {Record<string, Issue | IssueDetail> | undefined}
    */
   getIssuesByIds = computedFn((issueIds: string[], type: "archived" | "un-archived") => {
     if (!issueIds || issueIds.length <= 0) return [];
-    const filteredIssues: TIssue[] = [];
+    const filteredIssues: (Issue | IssueDetail)[] = [];
     Object.values(issueIds).forEach((issueId) => {
       // if type is archived then check archived_at is not null
       // if type is un-archived then check archived_at is null

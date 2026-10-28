@@ -12,7 +12,6 @@ export type TPowerKContext = {
   // Route information
   params: Params;
   // Current user
-  currentUserId?: string;
   activeCommand: TPowerKCommandConfig | null;
   // Active context
   activeContext: TPowerKContextType | null;
@@ -39,8 +38,6 @@ export type TPowerKPageType =
   | "update-work-item-state"
   | "update-work-item-priority"
   | "update-work-item-assignee"
-  | "update-work-item-cycle"
-  | "update-work-item-module"
   | "update-work-item-labels"
   // module context based actions
   | "update-module-member"
@@ -66,7 +63,6 @@ export type TPowerKCommandConfig = {
   // Identity
   id: string;
   i18n_title: string;
-  i18n_description?: string;
   icon?: React.ComponentType<{ className?: string }>;
   iconNode?: React.ReactNode;
 
@@ -81,9 +77,6 @@ export type TPowerKCommandConfig = {
   // Conditions
   isVisible: (ctx: TPowerKContext) => boolean; // Dynamic visibility
   isEnabled: (ctx: TPowerKContext) => boolean; // Dynamic enablement
-
-  // Search
-  keywords?: string[]; // Alternative search keywords
 } & (
   | {
       group: Extract<TPowerKCommandGroup, "contextual">; // For UI grouping

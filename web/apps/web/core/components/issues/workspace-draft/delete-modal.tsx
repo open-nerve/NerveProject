@@ -46,7 +46,8 @@ export function WorkspaceDraftIssueDeleteIssueModal(props: Props) {
 
   // derived values
   const issue = data ? data : issueMap[dataId!];
-  const isIssueCreator = issue?.created_by === currentUser?.id;
+  const issueCreatorId = issue && ("created_by_id" in issue ? issue.created_by_id : issue.created_by);
+  const isIssueCreator = !!issueCreatorId && issueCreatorId === currentUser?.id;
   const authorized = isIssueCreator || canPerformProjectAdminActions;
 
   const onClose = () => {

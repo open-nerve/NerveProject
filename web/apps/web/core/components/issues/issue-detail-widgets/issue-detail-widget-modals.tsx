@@ -4,10 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import React from "react";
 import { observer } from "mobx-react";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { ISearchIssueResponse, TIssue, TWorkItemWidgets } from "@nerve/types";
+import type { ISearchIssueResponse, TWorkItemWidgets } from "@nerve/types";
 // components
 import { ExistingIssuesListModal } from "@/components/core/modals/existing-issues-list-modal";
 // hooks
@@ -52,23 +54,18 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
   const handleLinkOperations = useLinkOperations(workspaceSlug, projectId, issueId);
 
   // handlers
-  const handleIssueCrudState = (
-    key: "create" | "existing",
-    _parentIssueId: string | null,
-    issue: TIssue | null = null
-  ) => {
+  const handleIssueCrudState = (key: "create" | "existing", _parentIssueId: string | null) => {
     setIssueCrudOperationState({
       ...issueCrudOperationState,
       [key]: {
         toggle: !issueCrudOperationState[key].toggle,
         parentIssueId: _parentIssueId,
-        issue: issue,
       },
     });
   };
 
   const handleExistingIssuesModalClose = () => {
-    handleIssueCrudState("existing", null, null);
+    handleIssueCrudState("existing", null);
     setLastWidgetAction("sub-work-items");
     toggleSubIssuesModal(null);
   };
@@ -82,12 +79,12 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
     );
 
   const handleCreateUpdateModalClose = () => {
-    handleIssueCrudState("create", null, null);
+    handleIssueCrudState("create", null);
     toggleCreateIssueModal(false);
     setLastWidgetAction("sub-work-items");
   };
 
-  const handleCreateUpdateModalOnSubmit = async (_issue: TIssue) => {
+  const handleCreateUpdateModalOnSubmit = async (_issue: Issue) => {
     if (_issue.parent_id) {
       await subIssueOperations.addSubIssue(workspaceSlug, projectId, _issue.parent_id, [_issue.id]);
     }
@@ -128,7 +125,7 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
   };
 
   // helpers
-  const createUpdateModalData: Partial<TIssue> = {
+  const createUpdateModalData: Partial<IssueDetail> = {
     parent_id: issueCrudOperationState?.create?.parentIssueId,
     project_id: projectId,
   };

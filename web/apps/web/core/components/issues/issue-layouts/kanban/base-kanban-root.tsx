@@ -29,18 +29,11 @@ import { KanBan } from "./default";
 import { KanbanDeleteDropZone } from "./kanban-delete-drop-zone";
 import { KanBanSwimLanes } from "./swimlanes";
 
-type KanbanStoreType =
-  | EIssuesStoreType.PROJECT
-  | EIssuesStoreType.MODULE
-  | EIssuesStoreType.CYCLE
-  | EIssuesStoreType.PROJECT_VIEW
-  | EIssuesStoreType.PROFILE;
+type KanbanStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE;
 
 export interface IBaseKanBanLayout {
   QuickActions: FC<IQuickActionProps>;
-  addIssuesToView?: (issueIds: string[]) => Promise<any>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
-  isCompletedCycle?: boolean;
   viewId?: string | undefined;
 }
 
@@ -48,7 +41,7 @@ export interface IBaseKanBanLayout {
 const EMPTY_KANBAN_FILTERS = { group_by: [], sub_group_by: [] };
 
 export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBanLayout) {
-  const { QuickActions, addIssuesToView, canEditPropertiesBasedOnProject, isCompletedCycle = false, viewId } = props;
+  const { QuickActions, canEditPropertiesBasedOnProject, viewId } = props;
   // router
   const { workspaceSlug, projectId } = useParams();
   // store hooks
@@ -61,10 +54,9 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
   const {
     fetchIssues,
     fetchNextIssues,
-    quickAddIssue,
+    createIssue,
     updateIssue,
     removeIssue,
-    removeIssueFromView,
     archiveIssue,
     restoreIssue,
     updateFilters,
@@ -150,14 +142,13 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
         issue={issue}
         handleDelete={async () => removeIssue(issue.project_id, issue.id)}
         handleUpdate={async (data) => updateIssue && updateIssue(issue.project_id, issue.id, data)}
-        handleRemoveFromView={async () => removeIssueFromView && removeIssueFromView(issue.project_id, issue.id)}
         handleArchive={async () => archiveIssue && archiveIssue(issue.project_id, issue.id)}
         handleRestore={async () => restoreIssue && restoreIssue(issue.project_id, issue.id)}
-        readOnly={!canEditProperties(issue.project_id ?? undefined) || isCompletedCycle}
+        readOnly={!canEditProperties(issue.project_id ?? undefined)}
       />
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isCompletedCycle, canEditProperties, removeIssue, updateIssue, removeIssueFromView, archiveIssue, restoreIssue]
+    [canEditProperties, removeIssue, updateIssue, archiveIssue, restoreIssue]
   );
 
   const handleDeleteIssue = async () => {
@@ -224,10 +215,9 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
                 collapsedGroups={collapsedGroups}
                 enableQuickIssueCreate={enableQuickAdd}
                 showEmptyGroup={userDisplayFilters?.show_empty_groups ?? true}
-                quickAddCallback={quickAddIssue}
-                disableIssueCreation={!enableIssueCreation || !isEditingAllowed || isCompletedCycle}
+                quickAddCallback={createIssue}
+                disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
                 canEditProperties={canEditProperties}
-                addIssuesToView={addIssuesToView}
                 scrollableContainerRef={scrollableContainerRef}
                 handleOnDrop={handleOnDrop}
                 loadMoreIssues={fetchMoreIssues}

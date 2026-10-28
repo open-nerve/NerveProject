@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { useEffect, useRef } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
@@ -12,9 +14,7 @@ import { observer } from "mobx-react";
 import type {
   GroupByColumnTypes,
   TGroupedIssues,
-  TIssue,
   IIssueDisplayProperties,
-  TIssueMap,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
   IGroupByColumn,
@@ -30,20 +30,18 @@ import type { TRenderQuickActions } from "./list-view-types";
 
 export interface IList {
   groupedIssueIds: TGroupedIssues;
-  issuesMap: TIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   group_by: TIssueGroupByOptions | null;
   orderBy: TIssueOrderByOptions | undefined;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   displayProperties: IIssueDisplayProperties | undefined;
   enableIssueQuickAdd: boolean;
   showEmptyGroup?: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   disableIssueCreation?: boolean;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
-  isCompletedCycle?: boolean;
   loadMoreIssues: (groupId?: string) => void;
   handleCollapsedGroups: (value: string) => void;
   collapsedGroups: TIssueKanbanFilters;
@@ -64,8 +62,6 @@ export const List = observer(function List(props: IList) {
     quickAddCallback,
     disableIssueCreation,
     handleOnDrop,
-    addIssuesToView,
-    isCompletedCycle = false,
     loadMoreIssues,
     handleCollapsedGroups,
     collapsedGroups,
@@ -123,8 +119,6 @@ export const List = observer(function List(props: IList) {
               canEditProperties={canEditProperties}
               quickAddCallback={quickAddCallback}
               disableIssueCreation={disableIssueCreation}
-              addIssuesToView={addIssuesToView}
-              isCompletedCycle={isCompletedCycle}
               loadMoreIssues={loadMoreIssues}
               containerRef={containerRef}
               handleCollapsedGroups={handleCollapsedGroups}

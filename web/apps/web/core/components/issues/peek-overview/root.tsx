@@ -4,15 +4,15 @@
  * See the LICENSE file for details.
  */
 
-import { useState, useMemo, useCallback } from "react";
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
+import { useState, useMemo } from "react";
 import { observer } from "mobx-react";
-import { useLocation } from "react-router";
 // Nerve imports
 import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setPromiseToast, setToast } from "@nerve/propel/toast";
-import type { IWorkItemPeekOverview, TIssue } from "@nerve/types";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IWorkItemPeekOverview } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -24,15 +24,8 @@ import type { TIssueOperations } from "../issue-detail";
 import { IssueView } from "./view";
 
 export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWorkItemPeekOverview) {
-  const {
-    embedIssue = false,
-    embedRemoveCurrentNotification,
-    is_draft = false,
-    storeType: issueStoreFromProps,
-  } = props;
+  const { embedIssue = false, embedRemoveCurrentNotification, storeType: issueStoreFromProps } = props;
   const { t } = useTranslation();
-  // router
-  const { pathname } = useLocation();
   // store hook
   const { allowPermissions } = useUserPermissions();
 
@@ -41,7 +34,6 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
   } = useIssues(EIssuesStoreType.ARCHIVED);
   const {
     peekIssue,
-    setPeekIssue,
     issue: { fetchIssue },
     fetchActivities,
   } = useIssueDetail();
@@ -51,11 +43,6 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
 
   // state
   const [error, setError] = useState(false);
-
-  const removeRoutePeekId = useCallback(() => {
-    setPeekIssue(undefined);
-    if (embedIssue) embedRemoveCurrentNotification?.();
-  }, [embedIssue, embedRemoveCurrentNotification, setPeekIssue]);
 
   const issueOperations: TIssueOperations = useMemo(
     () => ({
@@ -68,7 +55,7 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
           console.error("Error fetching the parent issue", error);
         }
       },
-      update: async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => {
+      update: async (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) => {
         if (issues?.updateIssue) {
           await issues
             .updateIssue(workspaceSlug, projectId, issueId, data)
@@ -76,35 +63,13 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
               fetchActivities(workspaceSlug, projectId, issueId);
               return;
             })
-            .catch((_error) => {
+            .catch(() => {
               setToast({
                 title: t("toast.error"),
                 type: TOAST_TYPE.ERROR,
                 message: t("entity.update.failed", { entity: t("issue.label", { count: 1 }) }),
               });
             });
-        }
-      },
-      remove: async (workspaceSlug: string, projectId: string, issueId: string) => {
-        try {
-          return issues?.removeIssue(workspaceSlug, projectId, issueId).then(() => {
-            removeRoutePeekId();
-            return;
-          });
-        } catch (_error) {
-          setToast({
-            title: t("toast.error"),
-            type: TOAST_TYPE.ERROR,
-            message: t("entity.delete.failed", { entity: t("issue.label", { count: 1 }) }),
-          });
-        }
-      },
-      archive: async (workspaceSlug: string, projectId: string, issueId: string) => {
-        try {
-          if (!issues?.archiveIssue) return;
-          await issues.archiveIssue(workspaceSlug, projectId, issueId);
-        } catch (error) {
-          console.error("Error archiving the issue", error);
         }
       },
       restore: async (workspaceSlug: string, projectId: string, issueId: string) => {
@@ -123,89 +88,9 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
           });
         }
       },
-      addCycleToIssue: async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => {
-        try {
-          await issues.addCycleToIssue(workspaceSlug, projectId, cycleId, issueId);
-          fetchActivities(workspaceSlug, projectId, issueId);
-        } catch (_error) {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("issue.add.cycle.failed"),
-          });
-        }
-      },
-      addIssueToCycle: async (workspaceSlug: string, projectId: string, cycleId: string, issueIds: string[]) => {
-        try {
-          await issues.addIssueToCycle(workspaceSlug, projectId, cycleId, issueIds);
-        } catch (_error) {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("issue.add.cycle.failed"),
-          });
-        }
-      },
-      removeIssueFromCycle: async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => {
-        try {
-          const removeFromCyclePromise = issues.removeIssueFromCycle(workspaceSlug, projectId, cycleId, issueId);
-          setPromiseToast(removeFromCyclePromise, {
-            loading: t("issue.remove.cycle.loading"),
-            success: {
-              title: t("toast.success"),
-              message: () => t("issue.remove.cycle.success"),
-            },
-            error: {
-              title: t("toast.error"),
-              message: () => t("issue.remove.cycle.failed"),
-            },
-          });
-          await removeFromCyclePromise;
-          fetchActivities(workspaceSlug, projectId, issueId);
-        } catch (error) {
-          console.error("Error removing issue from cycle", error);
-        }
-      },
-      changeModulesInIssue: async (
-        workspaceSlug: string,
-        projectId: string,
-        issueId: string,
-        addModuleIds: string[],
-        removeModuleIds: string[]
-      ) => {
-        const promise = await issues.changeModulesInIssue(
-          workspaceSlug,
-          projectId,
-          issueId,
-          addModuleIds,
-          removeModuleIds
-        );
-        fetchActivities(workspaceSlug, projectId, issueId);
-        return promise;
-      },
-      removeIssueFromModule: async (workspaceSlug: string, projectId: string, moduleId: string, issueId: string) => {
-        try {
-          const removeFromModulePromise = issues.removeIssuesFromModule(workspaceSlug, projectId, moduleId, [issueId]);
-          setPromiseToast(removeFromModulePromise, {
-            loading: t("issue.remove.module.loading"),
-            success: {
-              title: t("toast.success"),
-              message: () => t("issue.remove.module.success"),
-            },
-            error: {
-              title: t("toast.error"),
-              message: () => t("issue.remove.module.failed"),
-            },
-          });
-          await removeFromModulePromise;
-          fetchActivities(workspaceSlug, projectId, issueId);
-        } catch (error) {
-          console.error("Error removing issue from module", error);
-        }
-      },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fetchIssue, is_draft, issues, fetchActivities, pathname, removeRoutePeekId, restoreIssue]
+    [fetchIssue, issues, fetchActivities, restoreIssue]
   );
 
   const { isLoading } = useSWR(

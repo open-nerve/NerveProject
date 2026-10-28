@@ -7,7 +7,6 @@
 import type {
   IWorkspaceSearchResults,
   IWorkspaceView,
-  TIssuesResponse,
   TSearchResponse,
   TSearchEntityRequestPayload,
 } from "@nerve/types";
@@ -57,31 +56,6 @@ export class WorkspaceService extends APIService {
 
   async getAllViews(workspaceSlug: string): Promise<IWorkspaceView[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/views/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getViewDetails(workspaceSlug: string, viewId: string): Promise<IWorkspaceView> {
-    return this.get(`/api/workspaces/${workspaceSlug}/views/${viewId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getViewIssues(workspaceSlug: string, params: any, config = {}): Promise<TIssuesResponse> {
-    const path = params.expand?.includes("issue_relation")
-      ? `/api/workspaces/${workspaceSlug}/issues-detail/`
-      : `/api/workspaces/${workspaceSlug}/issues/`;
-    return this.get(
-      path,
-      {
-        params,
-      },
-      config
-    )
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

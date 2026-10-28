@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { AddOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-import type { TIssue } from "@nerve/types";
+
 import { CustomMenu } from "@nerve/ui";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -39,28 +39,23 @@ export const SubIssuesActionButton = observer(function SubIssuesActionButton(pro
   if (!issue) return <></>;
 
   // handlers
-  const handleIssueCrudState = (
-    key: "create" | "existing",
-    _parentIssueId: string | null,
-    issue: TIssue | null = null
-  ) => {
+  const handleIssueCrudState = (key: "create" | "existing", _parentIssueId: string | null) => {
     setIssueCrudOperationState({
       ...issueCrudOperationState,
       [key]: {
         toggle: !issueCrudOperationState[key].toggle,
         parentIssueId: _parentIssueId,
-        issue: issue,
       },
     });
   };
 
   const handleCreateNew = () => {
-    handleIssueCrudState("create", issueId, null);
+    handleIssueCrudState("create", issueId);
     toggleCreateIssueModal(true);
   };
 
   const handleAddExisting = () => {
-    handleIssueCrudState("existing", issueId, null);
+    handleIssueCrudState("existing", issueId);
     toggleSubIssuesModal(issue.id);
   };
 

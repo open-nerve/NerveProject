@@ -4,16 +4,18 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import React from "react";
 import { observer } from "mobx-react";
 // types
-import type { TIssue } from "@nerve/types";
+
 // helpers
 import { Row } from "@nerve/ui";
 import { renderFormattedDate } from "@nerve/utils";
 
 type Props = {
-  issue: TIssue;
+  issue: Issue;
 };
 
 export const SpreadsheetUpdatedOnColumn = observer(function SpreadsheetUpdatedOnColumn(props: Props) {

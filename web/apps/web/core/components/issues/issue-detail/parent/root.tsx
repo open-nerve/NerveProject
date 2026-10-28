@@ -4,10 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
 import { MinusCircle } from "lucide-react";
 import { useTranslation } from "@nerve/i18n";
-import type { TIssue } from "@nerve/types";
+
 // component
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // ui
@@ -28,7 +30,7 @@ export type TIssueParentDetail = {
   workspaceSlug: string;
   projectId: string;
   issueId: string;
-  issue: TIssue;
+  issue: Issue;
   issueOperations: TIssueOperations;
 };
 

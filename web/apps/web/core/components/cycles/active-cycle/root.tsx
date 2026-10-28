@@ -20,7 +20,6 @@ import { CycleListGroupHeader } from "@/components/cycles/list/cycle-list-group-
 import { CyclesListItem } from "@/components/cycles/list/cycles-list-item";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
-import type { ActiveCycleIssueDetails } from "@/store/issue/cycle";
 
 interface IActiveCycleDetails {
   workspaceSlug: string;
@@ -34,8 +33,6 @@ type ActiveCyclesComponentProps = {
   activeCycle: ICycle | null;
   workspaceSlug: string;
   projectId: string;
-  handleFiltersUpdate: (filters: any) => void;
-  cycleIssueDetails?: ActiveCycleIssueDetails | { nextPageResults: boolean };
 };
 
 const ActiveCyclesComponent = observer(function ActiveCyclesComponent({
@@ -43,8 +40,6 @@ const ActiveCyclesComponent = observer(function ActiveCyclesComponent({
   activeCycle,
   workspaceSlug,
   projectId,
-  handleFiltersUpdate,
-  cycleIssueDetails,
 }: ActiveCyclesComponentProps) {
   const { t } = useTranslation();
 
@@ -70,21 +65,9 @@ const ActiveCyclesComponent = observer(function ActiveCyclesComponent({
       />
       <Row className="bg-surface-1 pt-3 pb-6">
         <div className="grid grid-cols-1 gap-3 bg-surface-1 lg:grid-cols-2 xl:grid-cols-3">
-          <ActiveCycleProgress
-            handleFiltersUpdate={handleFiltersUpdate}
-            projectId={projectId}
-            workspaceSlug={workspaceSlug}
-            cycle={activeCycle}
-          />
+          <ActiveCycleProgress projectId={projectId} workspaceSlug={workspaceSlug} cycle={activeCycle} />
           <ActiveCycleProductivity workspaceSlug={workspaceSlug} projectId={projectId} cycle={activeCycle} />
-          <ActiveCycleStats
-            workspaceSlug={workspaceSlug}
-            projectId={projectId}
-            cycle={activeCycle}
-            cycleId={cycleId}
-            handleFiltersUpdate={handleFiltersUpdate}
-            cycleIssueDetails={cycleIssueDetails}
-          />
+          <ActiveCycleStats workspaceSlug={workspaceSlug} projectId={projectId} cycle={activeCycle} cycleId={cycleId} />
         </div>
       </Row>
     </div>
@@ -100,11 +83,7 @@ export const ActiveCycleRoot = observer(function ActiveCycleRoot(props: IActiveC
   // derived values
   const cycleId = propsCycleId ?? currentProjectActiveCycleId;
   // fetch cycle details
-  const {
-    handleFiltersUpdate,
-    cycle: activeCycle,
-    cycleIssueDetails,
-  } = useCyclesDetails({ workspaceSlug, projectId, cycleId });
+  const { cycle: activeCycle } = useCyclesDetails({ workspaceSlug, projectId, cycleId });
 
   return (
     <>
@@ -121,8 +100,6 @@ export const ActiveCycleRoot = observer(function ActiveCycleRoot(props: IActiveC
                   activeCycle={activeCycle}
                   workspaceSlug={workspaceSlug}
                   projectId={projectId}
-                  handleFiltersUpdate={handleFiltersUpdate}
-                  cycleIssueDetails={cycleIssueDetails}
                 />
               </Disclosure.Panel>
             </>
@@ -134,8 +111,6 @@ export const ActiveCycleRoot = observer(function ActiveCycleRoot(props: IActiveC
           activeCycle={activeCycle}
           workspaceSlug={workspaceSlug}
           projectId={projectId}
-          handleFiltersUpdate={handleFiltersUpdate}
-          cycleIssueDetails={cycleIssueDetails}
         />
       )}
     </>

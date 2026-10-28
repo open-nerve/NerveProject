@@ -5,19 +5,18 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
 import { clone, isNil, pull, uniq, concat } from "lodash-es";
 import scrollIntoView from "smooth-scroll-into-view-if-needed";
 import type { FC } from "react";
 import {
-  AttachOutline,
   CalendarOutline,
-  CyclesOutline,
   DueDateOutline,
   LabelsOutline,
   LinkOutline,
   MembersOutline,
-  ModuleOutline,
   PriorityOutline,
   StartDateOutline,
   StateOutline,
@@ -28,14 +27,12 @@ import { Avatar } from "@makeplane/propel/components/avatar";
 import { EIconSize, ISSUE_PRIORITIES, STATE_GROUPS } from "@nerve/constants";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import type { ISvgIcons } from "@nerve/propel/icons";
-import { CycleGroupIcon, PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
+import { PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
 import type {
   GroupByColumnTypes,
   IGroupByColumn,
-  TCycleGroups,
   IIssueDisplayProperties,
   IPragmaticDropPayload,
-  TIssue,
   TIssueGroupByOptions,
   IIssueFilterOptions,
   IIssueFilters,
@@ -55,12 +52,9 @@ import { ISSUE_GROUP_BY_OPTIONS } from "@nerve/constants";
 // components
 import {
   SpreadsheetAssigneeColumn,
-  SpreadsheetAttachmentColumn,
   SpreadsheetCreatedOnColumn,
   SpreadsheetDueDateColumn,
   SpreadsheetLabelColumn,
-  SpreadsheetModuleColumn,
-  SpreadsheetCycleColumn,
   SpreadsheetLinkColumn,
   SpreadsheetPriorityColumn,
   SpreadsheetStartDateColumn,
@@ -88,7 +82,7 @@ export type IssueUpdates = {
 
 export const isWorkspaceLevel = (type: EIssuesStoreType) =>
   // oxlint-disable-next-line no-unneeded-ternary
-  [EIssuesStoreType.PROFILE, EIssuesStoreType.GLOBAL, EIssuesStoreType.WORKSPACE_DRAFT].includes(type) ? true : false;
+  [EIssuesStoreType.PROFILE, EIssuesStoreType.WORKSPACE_DRAFT].includes(type) ? true : false;
 
 type TGetGroupByColumns = {
   groupBy: GroupByColumnTypes | null;
@@ -127,8 +121,6 @@ export const getGroupByColumns = ({
     ({ isWorkspaceLevel, projectId }: TGetColumns) => IGroupByColumn[] | undefined
   > = {
     project: getProjectColumns,
-    cycle: getCycleColumns,
-    module: getModuleColumns,
     state: getStateColumns,
     "state_detail.group": getStateGroupColumns,
     priority: getPriorityColumns,
@@ -162,63 +154,6 @@ const getProjectColumns = (): IGroupByColumn[] | undefined => {
       };
     })
     .filter((column) => column !== undefined) as IGroupByColumn[];
-};
-
-const getCycleColumns = (): IGroupByColumn[] | undefined => {
-  const { currentProjectDetails } = rootStore.projectRoot.project;
-  // Check for the current project details
-  if (!currentProjectDetails || !currentProjectDetails?.id) return;
-  const { getProjectCycleDetails } = rootStore.cycle;
-  // Get the cycle details for the current project
-  const cycleDetails = currentProjectDetails?.id ? getProjectCycleDetails(currentProjectDetails?.id) : undefined;
-  // Map the cycle details to the group by columns
-  const cycles: IGroupByColumn[] = [];
-  cycleDetails?.map((cycle) => {
-    const cycleStatus = cycle.status ? (cycle.status.toLocaleLowerCase() as TCycleGroups) : "draft";
-    const isDropDisabled = cycleStatus === "completed";
-    cycles.push({
-      id: cycle.id,
-      name: cycle.name,
-      icon: <CycleGroupIcon cycleGroup={cycleStatus} className="h-3.5 w-3.5" />,
-      payload: { cycle_id: cycle.id },
-      isDropDisabled,
-      dropErrorMessage: isDropDisabled ? "Work item cannot be moved to completed cycles" : undefined,
-    });
-  });
-  cycles.push({
-    id: "None",
-    name: "None",
-    icon: <CyclesOutline className="h-3.5 w-3.5" />,
-    payload: {},
-  });
-  return cycles;
-};
-
-const getModuleColumns = (): IGroupByColumn[] | undefined => {
-  // get current project details
-  const { currentProjectDetails } = rootStore.projectRoot.project;
-  if (!currentProjectDetails || !currentProjectDetails?.id) return;
-  // get project module ids and module details
-  const { getProjectModuleDetails } = rootStore.module;
-  // get module details
-  const moduleDetails = currentProjectDetails?.id ? getProjectModuleDetails(currentProjectDetails?.id) : undefined;
-  // map module details to group by columns
-  const modules: IGroupByColumn[] = [];
-  moduleDetails?.map((module) => {
-    modules.push({
-      id: module.id,
-      name: module.name,
-      icon: <ModuleOutline className="h-3.5 w-3.5" />,
-      payload: { module_ids: [module.id] },
-    });
-  });
-  modules.push({
-    id: "None",
-    name: "None",
-    icon: <ModuleOutline className="h-3.5 w-3.5" />,
-    payload: {},
-  });
-  return modules;
 };
 
 const getStateColumns = ({ projectId }: TGetColumns): IGroupByColumn[] | undefined => {
@@ -455,7 +390,7 @@ export const getDestinationFromDropPayload = (payload: IPragmaticDropPayload): G
 const handleSortOrder = (
   destinationIssues: string[],
   destinationIssueId: string | undefined,
-  getIssueById: (issueId: string) => TIssue | undefined,
+  getIssueById: (issueId: string) => Issue | undefined,
   shouldAddIssueAtTop = false,
   canAddIssueBelow = false
 ) => {
@@ -533,16 +468,21 @@ const getGroupId = (groupId: string) => {
 export const handleGroupDragDrop = async (
   source: GroupDropLocation,
   destination: GroupDropLocation,
-  getIssueById: (issueId: string) => TIssue | undefined,
+  getIssueById: (issueId: string) => Issue | undefined,
   getIssueIds: (groupId?: string, subGroupId?: string) => string[] | undefined,
-  updateIssueOnDrop: (projectId: string, issueId: string, data: Partial<TIssue>, issueUpdates: IssueUpdates) => void,
+  updateIssueOnDrop: (
+    projectId: string,
+    issueId: string,
+    data: Partial<IssueDetail>,
+    issueUpdates: IssueUpdates
+  ) => void,
   groupBy: TIssueGroupByOptions | undefined,
   subGroupBy: TIssueGroupByOptions | undefined,
   shouldAddIssueAtTop = false
 ) => {
   if (!source.id || (subGroupBy && (!source.subGroupId || !destination.subGroupId))) return;
 
-  let updatedIssue: Partial<TIssue> = {};
+  let updatedIssue: Partial<IssueDetail> = {};
   const issueUpdates: IssueUpdates = {};
   const destinationIssues = getIssueIds(destination.groupId, destination.subGroupId) ?? [];
 
@@ -624,7 +564,7 @@ export const removeNillKeys = <T,>(obj: T) =>
  * @param issue
  * @returns
  */
-export const isIssueNew = (issue: TIssue) => {
+export const isIssueNew = (issue: Issue) => {
   const createdDate = new Date(issue.created_at);
   const currentDate = new Date();
   const diff = currentDate.getTime() - createdDate.getTime();
@@ -654,7 +594,6 @@ export function getApproximateCardHeight(displayProperties: IIssueDisplayPropert
     "key",
     "sub_issue_count",
     "link",
-    "attachment_count",
     "created_on",
     "updated_on",
   ];
@@ -775,13 +714,10 @@ const SpreadSheetPropertyIconMap: Record<string, FC<ISvgIcons>> = {
   CalenderDays: CalendarOutline,
   DueDateOutline: DueDateOutline,
   LabelsOutline: LabelsOutline,
-  ModuleOutline: ModuleOutline,
-  ContrastIcon: CyclesOutline,
   PriorityOutline: PriorityOutline,
   StartDateOutline: StartDateOutline,
   StateOutline: StateOutline,
   Link2: LinkOutline,
-  AttachOutline: AttachOutline,
   WorkItemsOutline: WorkItemsOutline,
 };
 
@@ -790,15 +726,12 @@ export const SPREADSHEET_COLUMNS: { [key in keyof IIssueDisplayProperties]: TSpr
   created_on: SpreadsheetCreatedOnColumn,
   due_date: SpreadsheetDueDateColumn,
   labels: SpreadsheetLabelColumn,
-  modules: SpreadsheetModuleColumn,
-  cycle: SpreadsheetCycleColumn,
   link: SpreadsheetLinkColumn,
   priority: SpreadsheetPriorityColumn,
   start_date: SpreadsheetStartDateColumn,
   state: SpreadsheetStateColumn,
   sub_issue_count: SpreadsheetSubIssueColumn,
   updated_on: SpreadsheetUpdatedOnColumn,
-  attachment_count: SpreadsheetAttachmentColumn,
 };
 
 export const useGroupByOptions = (

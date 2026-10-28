@@ -4,11 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail as GeneratedIssueDetail } from "@nerve/api-client";
+
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { action, computed, makeObservable, observable } from "mobx";
 // types
 import type {
-  TIssue,
-  TIssueAttachment,
   TIssueComment,
   TIssueCommentReaction,
   TIssueLink,
@@ -20,8 +21,6 @@ import type {
 import { IssueActivityStore } from "./activity.store";
 import type { IIssueActivityStore, IIssueActivityStoreActions, TActivityLoader } from "./activity.store";
 import type { IIssueRootStore } from "../root.store";
-import { IssueAttachmentStore } from "./attachment.store";
-import type { IIssueAttachmentStore, IIssueAttachmentStoreActions } from "./attachment.store";
 import { IssueCommentStore } from "./comment.store";
 import type { IIssueCommentStore, IIssueCommentStoreActions, TCommentLoader } from "./comment.store";
 import { IssueCommentReactionStore } from "./comment_reaction.store";
@@ -36,8 +35,6 @@ import { IssueRelationStore } from "./relation.store";
 import type { IIssueRelationStore, IIssueRelationStoreActions } from "./relation.store";
 import { IssueSubIssuesStore } from "./sub_issues.store";
 import type { IIssueSubIssuesStore, IIssueSubIssuesStoreActions } from "./sub_issues.store";
-import { IssueSubscriptionStore } from "./subscription.store";
-import type { IIssueSubscriptionStore, IIssueSubscriptionStoreActions } from "./subscription.store";
 
 export type TPeekIssue = {
   workspaceSlug: string;
@@ -52,7 +49,7 @@ export type TIssueRelationModal = {
   relationType: TIssueRelationTypes | null;
 };
 
-type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: TIssue | undefined };
+type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined };
 
 export type TIssueCrudOperationState = {
   create: TIssueCrudState;
@@ -65,8 +62,6 @@ export interface IIssueDetail
     IIssueReactionStoreActions,
     IIssueLinkStoreActions,
     IIssueSubIssuesStoreActions,
-    IIssueSubscriptionStoreActions,
-    IIssueAttachmentStoreActions,
     IIssueRelationStoreActions,
     IIssueActivityStoreActions,
     IIssueCommentStoreActions,
@@ -77,18 +72,14 @@ export interface IIssueDetail
   issueLinkData: TIssueLink | null;
   issueCrudOperationState: TIssueCrudOperationState;
   openWidgets: TWorkItemWidgets[];
-  lastWidgetAction: TWorkItemWidgets | null;
   isCreateIssueModalOpen: boolean;
   isIssueLinkModalOpen: boolean;
   isParentIssueModalOpen: string | null;
   isDeleteIssueModalOpen: string | null;
-  isArchiveIssueModalOpen: string | null;
   isRelationModalOpen: TIssueRelationModal | null;
   isSubIssuesModalOpen: string | null;
-  attachmentDeleteModalId: string | null;
   // computed
   isAnyModalOpen: boolean;
-  isPeekOpen: boolean;
   // helper actions
   getIsIssuePeeked: (issueId: string) => boolean;
   // actions
@@ -98,11 +89,8 @@ export interface IIssueDetail
   toggleIssueLinkModal: (value: boolean) => void;
   toggleParentIssueModal: (issueId: string | null) => void;
   toggleDeleteIssueModal: (issueId: string | null) => void;
-  toggleArchiveIssueModal: (value: string | null) => void;
   toggleRelationModal: (issueId: string | null, relationType: TIssueRelationTypes | null) => void;
   toggleSubIssuesModal: (value: string | null) => void;
-  toggleDeleteAttachmentModal: (attachmentId: string | null) => void;
-  setOpenWidgets: (state: TWorkItemWidgets[]) => void;
   setLastWidgetAction: (action: TWorkItemWidgets) => void;
   toggleOpenWidget: (state: TWorkItemWidgets) => void;
   setRelationKey: (relationKey: TIssueRelationTypes | null) => void;
@@ -111,13 +99,11 @@ export interface IIssueDetail
   rootIssueStore: IIssueRootStore;
   issue: IIssueStore;
   reaction: IIssueReactionStore;
-  attachment: IIssueAttachmentStore;
   activity: IIssueActivityStore;
   comment: IIssueCommentStore;
   commentReaction: IIssueCommentReactionStore;
   subIssues: IIssueSubIssuesStore;
   link: IIssueLinkStore;
-  subscription: IIssueSubscriptionStore;
   relation: IIssueRelationStore;
 }
 
@@ -130,32 +116,25 @@ export class IssueDetail implements IIssueDetail {
     create: {
       toggle: false,
       parentIssueId: undefined,
-      issue: undefined,
     },
     existing: {
       toggle: false,
       parentIssueId: undefined,
-      issue: undefined,
     },
   };
-  openWidgets: TWorkItemWidgets[] = ["sub-work-items", "links", "attachments"];
-  lastWidgetAction: TWorkItemWidgets | null = null;
+  openWidgets: TWorkItemWidgets[] = ["sub-work-items", "links"];
   isCreateIssueModalOpen: boolean = false;
   isIssueLinkModalOpen: boolean = false;
   isParentIssueModalOpen: string | null = null;
   isDeleteIssueModalOpen: string | null = null;
-  isArchiveIssueModalOpen: string | null = null;
   isRelationModalOpen: TIssueRelationModal | null = null;
   isSubIssuesModalOpen: string | null = null;
-  attachmentDeleteModalId: string | null = null;
   // store
   rootIssueStore: IIssueRootStore;
   issue: IIssueStore;
   reaction: IIssueReactionStore;
-  attachment: IIssueAttachmentStore;
   subIssues: IIssueSubIssuesStore;
   link: IIssueLinkStore;
-  subscription: IIssueSubscriptionStore;
   relation: IIssueRelationStore;
   activity: IIssueActivityStore;
   comment: IIssueCommentStore;
@@ -172,15 +151,11 @@ export class IssueDetail implements IIssueDetail {
       isIssueLinkModalOpen: observable.ref,
       isParentIssueModalOpen: observable.ref,
       isDeleteIssueModalOpen: observable.ref,
-      isArchiveIssueModalOpen: observable.ref,
       isRelationModalOpen: observable.ref,
       isSubIssuesModalOpen: observable.ref,
-      attachmentDeleteModalId: observable.ref,
       openWidgets: observable.ref,
-      lastWidgetAction: observable.ref,
       // computed
       isAnyModalOpen: computed,
-      isPeekOpen: computed,
       // action
       setPeekIssue: action,
       setIssueLinkData: action,
@@ -188,11 +163,8 @@ export class IssueDetail implements IIssueDetail {
       toggleIssueLinkModal: action,
       toggleParentIssueModal: action,
       toggleDeleteIssueModal: action,
-      toggleArchiveIssueModal: action,
       toggleRelationModal: action,
       toggleSubIssuesModal: action,
-      toggleDeleteAttachmentModal: action,
-      setOpenWidgets: action,
       setLastWidgetAction: action,
       toggleOpenWidget: action,
       setRelationKey: action,
@@ -203,13 +175,11 @@ export class IssueDetail implements IIssueDetail {
     this.rootIssueStore = rootStore;
     this.issue = new IssueStore(this);
     this.reaction = new IssueReactionStore(this);
-    this.attachment = new IssueAttachmentStore(rootStore);
     this.activity = new IssueActivityStore(rootStore.rootStore);
     this.comment = new IssueCommentStore(this);
     this.commentReaction = new IssueCommentReactionStore(this);
     this.subIssues = new IssueSubIssuesStore(this);
     this.link = new IssueLinkStore(this);
-    this.subscription = new IssueSubscriptionStore(this);
     this.relation = new IssueRelationStore(this);
   }
 
@@ -220,15 +190,9 @@ export class IssueDetail implements IIssueDetail {
       this.isIssueLinkModalOpen ||
       !!this.isParentIssueModalOpen ||
       !!this.isDeleteIssueModalOpen ||
-      !!this.isArchiveIssueModalOpen ||
       !!this.isRelationModalOpen?.issueId ||
-      !!this.isSubIssuesModalOpen ||
-      !!this.attachmentDeleteModalId
+      !!this.isSubIssuesModalOpen
     );
-  }
-
-  get isPeekOpen() {
-    return !!this.peekIssue;
   }
 
   // helper actions
@@ -242,15 +206,9 @@ export class IssueDetail implements IIssueDetail {
   toggleIssueLinkModal = (value: boolean) => (this.isIssueLinkModalOpen = value);
   toggleParentIssueModal = (issueId: string | null) => (this.isParentIssueModalOpen = issueId);
   toggleDeleteIssueModal = (issueId: string | null) => (this.isDeleteIssueModalOpen = issueId);
-  toggleArchiveIssueModal = (issueId: string | null) => (this.isArchiveIssueModalOpen = issueId);
   toggleRelationModal = (issueId: string | null, relationType: TIssueRelationTypes | null) =>
     (this.isRelationModalOpen = { issueId, relationType });
   toggleSubIssuesModal = (issueId: string | null) => (this.isSubIssuesModalOpen = issueId);
-  toggleDeleteAttachmentModal = (attachmentId: string | null) => (this.attachmentDeleteModalId = attachmentId);
-  setOpenWidgets = (state: TWorkItemWidgets[]) => {
-    this.openWidgets = state;
-    if (this.lastWidgetAction) this.lastWidgetAction = null;
-  };
   setLastWidgetAction = (action: TWorkItemWidgets) => {
     this.openWidgets = [action];
   };
@@ -266,28 +224,12 @@ export class IssueDetail implements IIssueDetail {
     this.issue.fetchIssue(workspaceSlug, projectId, issueId);
   fetchIssueWithIdentifier = async (workspaceSlug: string, projectIdentifier: string, sequenceId: string) =>
     this.issue.fetchIssueWithIdentifier(workspaceSlug, projectIdentifier, sequenceId);
-  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) =>
+  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) =>
     this.issue.updateIssue(workspaceSlug, projectId, issueId, data);
   removeIssue = async (workspaceSlug: string, projectId: string, issueId: string) =>
     this.issue.removeIssue(workspaceSlug, projectId, issueId);
   archiveIssue = async (workspaceSlug: string, projectId: string, issueId: string) =>
     this.issue.archiveIssue(workspaceSlug, projectId, issueId);
-  addCycleToIssue = async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) =>
-    this.issue.addCycleToIssue(workspaceSlug, projectId, cycleId, issueId);
-  addIssueToCycle = async (workspaceSlug: string, projectId: string, cycleId: string, issueIds: string[]) =>
-    this.issue.addIssueToCycle(workspaceSlug, projectId, cycleId, issueIds);
-  removeIssueFromCycle = async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) =>
-    this.issue.removeIssueFromCycle(workspaceSlug, projectId, cycleId, issueId);
-  changeModulesInIssue = async (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    addModuleIds: string[],
-    removeModuleIds: string[]
-  ) => this.issue.changeModulesInIssue(workspaceSlug, projectId, issueId, addModuleIds, removeModuleIds);
-  removeIssueFromModule = async (workspaceSlug: string, projectId: string, moduleId: string, issueId: string) =>
-    this.issue.removeIssueFromModule(workspaceSlug, projectId, moduleId, issueId);
-
   // reactions
   addReactions = (issueId: string, reactions: TIssueReaction[]) => this.reaction.addReactions(issueId, reactions);
   fetchReactions = async (workspaceSlug: string, projectId: string, issueId: string) =>
@@ -301,16 +243,6 @@ export class IssueDetail implements IIssueDetail {
     reaction: string,
     userId: string
   ) => this.reaction.removeReaction(workspaceSlug, projectId, issueId, reaction, userId);
-
-  // attachments
-  addAttachments = (issueId: string, attachments: TIssueAttachment[]) =>
-    this.attachment.addAttachments(issueId, attachments);
-  fetchAttachments = async (workspaceSlug: string, projectId: string, issueId: string) =>
-    this.attachment.fetchAttachments(workspaceSlug, projectId, issueId);
-  createAttachment = async (workspaceSlug: string, projectId: string, issueId: string, file: File) =>
-    this.attachment.createAttachment(workspaceSlug, projectId, issueId, file);
-  removeAttachment = async (workspaceSlug: string, projectId: string, issueId: string, attachmentId: string) =>
-    this.attachment.removeAttachment(workspaceSlug, projectId, issueId, attachmentId);
 
   // link
   addLinks = (issueId: string, links: TIssueLink[]) => this.link.addLinks(issueId, links);
@@ -338,24 +270,14 @@ export class IssueDetail implements IIssueDetail {
     projectId: string,
     parentIssueId: string,
     issueId: string,
-    issueData: Partial<TIssue>,
-    oldIssue?: Partial<TIssue>,
+    issueData: Partial<GeneratedIssueDetail>,
+    oldIssue?: Partial<GeneratedIssueDetail>,
     fromModal?: boolean
   ) => this.subIssues.updateSubIssue(workspaceSlug, projectId, parentIssueId, issueId, issueData, oldIssue, fromModal);
   removeSubIssue = async (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) =>
     this.subIssues.removeSubIssue(workspaceSlug, projectId, parentIssueId, issueId);
   deleteSubIssue = async (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) =>
     this.subIssues.deleteSubIssue(workspaceSlug, projectId, parentIssueId, issueId);
-
-  // subscription
-  addSubscription = (issueId: string, isSubscribed: boolean | undefined | null) =>
-    this.subscription.addSubscription(issueId, isSubscribed);
-  fetchSubscriptions = async (workspaceSlug: string, projectId: string, issueId: string) =>
-    this.subscription.fetchSubscriptions(workspaceSlug, projectId, issueId);
-  createSubscription = async (workspaceSlug: string, projectId: string, issueId: string) =>
-    this.subscription.createSubscription(workspaceSlug, projectId, issueId);
-  removeSubscription = async (workspaceSlug: string, projectId: string, issueId: string) =>
-    this.subscription.removeSubscription(workspaceSlug, projectId, issueId);
 
   // relations
   fetchRelations = async (workspaceSlug: string, projectId: string, issueId: string) =>

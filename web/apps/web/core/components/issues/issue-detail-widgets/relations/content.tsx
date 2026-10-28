@@ -4,12 +4,14 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { Collapsible } from "@makeplane/propel/components/collapsible";
 import { useTranslation } from "@nerve/i18n";
-import type { TIssue, TIssueRelationTypes } from "@nerve/types";
+import type { TIssueRelationTypes } from "@nerve/types";
 import { cn } from "@nerve/utils";
 // components
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
@@ -27,7 +29,7 @@ type Props = {
   disabled: boolean;
 };
 
-type TIssueCrudState = { toggle: boolean; issueId: string | undefined; issue: TIssue | undefined };
+type TIssueCrudState = { toggle: boolean; issueId: string | undefined; issue: Issue | undefined };
 
 export type TRelationObject = {
   key: TIssueRelationTypes;
@@ -82,7 +84,7 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
   const handleIssueCrudState = (
     key: "update" | "delete" | "removeRelation",
     _issueId: string | null,
-    issue: TIssue | null = null,
+    issue: Issue | null = null,
     relationKey?: TIssueRelationTypes | null,
     relationIssueId?: string | null
   ) => {
@@ -167,7 +169,7 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
             handleIssueCrudState("delete", null, null);
             toggleDeleteIssueModal(null);
           }}
-          data={issueCrudState?.delete?.issue as TIssue}
+          data={issueCrudState?.delete?.issue as Issue}
           onSubmit={async () => {
             if (
               issueCrudState.removeRelation.issueId &&
@@ -207,7 +209,7 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
             toggleCreateIssueModal(false);
           }}
           data={issueCrudState?.update?.issue ?? undefined}
-          onSubmit={async (_issue: TIssue) => {
+          onSubmit={async (_issue: Issue) => {
             if (!_issue.id || !_issue.project_id) return;
             await issueOperations.update(workspaceSlug, _issue.project_id, _issue.id, _issue);
           }}

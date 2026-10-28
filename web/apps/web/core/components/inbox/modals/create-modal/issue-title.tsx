@@ -4,12 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
 // nerve imports
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { TIssue } from "@nerve/types";
 
 // helpers
 import { getTabIndex } from "@nerve/utils";
@@ -17,8 +18,11 @@ import { getTabIndex } from "@nerve/utils";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TInboxIssueTitle = {
-  data: Partial<TIssue>;
-  handleData: (issueKey: keyof Partial<TIssue>, issueValue: Partial<TIssue>[keyof Partial<TIssue>]) => void;
+  data: Partial<IssueDetail>;
+  handleData: (
+    issueKey: keyof Partial<IssueDetail>,
+    issueValue: Partial<IssueDetail>[keyof Partial<IssueDetail>]
+  ) => void;
   isTitleLengthMoreThan255Character?: boolean;
 };
 

@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
@@ -11,7 +13,7 @@ import { useParams } from "react-router";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { AddWorkItemOutline } from "@makeplane/propel/icons";
-import type { TIssue } from "@nerve/types";
+
 // components
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 import { SidebarAddButton } from "@/components/sidebar/add-button";
@@ -36,7 +38,7 @@ export const SidebarQuickActions = observer(function SidebarQuickActions() {
   const { joinedProjectIds } = useProject();
   const { allowPermissions } = useUserPermissions();
   // local storage
-  const { storedValue, setValue } = useLocalStorage<Record<string, Partial<TIssue>>>("draftedIssue", {});
+  const { storedValue, setValue } = useLocalStorage<Record<string, Partial<IssueDetail>>>("draftedIssue", {});
   // derived values
   const canCreateIssue = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],

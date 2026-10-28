@@ -4,9 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useNavigate } from "react-router";
 // types
-import type { TIssue } from "@nerve/types";
+
 // helpers
 import { generateWorkItemLink } from "@nerve/utils";
 // hooks
@@ -22,12 +24,12 @@ const useIssuePeekOverviewRedirection = () => {
 
   const handleRedirection = (
     workspaceSlug: string | undefined,
-    issue: TIssue | undefined,
+    issue: Issue | undefined,
     isMobile = false,
     nestingLevel?: number
   ) => {
     if (!issue) return;
-    const { project_id, id, archived_at, tempId } = issue;
+    const { project_id, id, archived_at } = issue;
     const projectIdentifier = getProjectIdentifierById(issue?.project_id);
 
     const workItemLink = generateWorkItemLink({
@@ -38,7 +40,7 @@ const useIssuePeekOverviewRedirection = () => {
       sequenceId: issue?.sequence_id,
       isArchived: !!archived_at,
     });
-    if (workspaceSlug && project_id && id && !getIsIssuePeeked(id) && !tempId) {
+    if (workspaceSlug && project_id && id && !getIsIssuePeeked(id)) {
       if (isMobile) {
         navigate(workItemLink);
       } else {

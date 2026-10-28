@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见§10：M4/P9实施与终审完成、集成待办，最终文档HEAD CI独立待核；未授权集成。§6–9保留当时历史快照。**
+**当前接续点见[§12](#12-p10a实施后接续2026-10-28)：实施与终审完成、集成待办；最终文稿提交后准确HEAD CI以交付回执核验。§6–11保留历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -108,10 +108,37 @@ P8 `drafts-search` 最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的[�
 
 ## 10. 当前接续点（2026-10-28，P9文档收尾）
 
-主目录仍main，P9分支 `codex/m4-p9` / worktree `.codex/worktress/codex/m4-p9` 保留。基线 `6b9d08d4821f1423c7bb9795557727c206b7880f`；当前产品 `e003e96625ba51264d3aeb77729729d53a770103`；文档交付HEAD：首次文档7f5625bf身份保留在原 `task-16-final-receipt.json`；最终交付HEAD与分支CI见主控[交付收据](../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)，不倒填产品或规模测量HEAD。
+P9本机ignored证据已随授权集成归档清理；本节历史收据链接现指向P9 review§14稳定归档入口，原收据名/身份与历史结论保留，不把已清理本机路径当现存文件。
+
+主目录仍main，P9分支 `codex/m4-p9` / worktree `.codex/worktress/codex/m4-p9` 保留。基线 `6b9d08d4821f1423c7bb9795557727c206b7880f`；当前产品 `e003e96625ba51264d3aeb77729729d53a770103`；文档交付HEAD：首次文档7f5625bf身份保留在原 `task-16-final-receipt.json`；最终交付HEAD与分支CI见主控[交付收据](../M4-issue-core/reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)，不倒填产品或规模测量HEAD。
 
 入口：[spec](../M4-issue-core/specs/P9-purge.md)、[plan](../M4-issue-core/plans/P9-purge.md)、[review](../M4-issue-core/reviews/P9-purge-review.md)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。T1–T15已独评，首次整审238文件60363行及d253/e003四项发现修复复审闭环，未留产品/架构待决；T16两席独评与CORE-1/2修复复审已闭环，最终文档HEAD CI独立核对。
 
-最终产品F：准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json)。准确产品分支CI：准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI。文档静态/独立复审：首次31文档静态核对见[静态收据](../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；两席文档独评及[CORE-1/2修复复审](../../../.superpowers/sdd/P9-purge/task-16-fix1-review.md)已闭环，见[主控核证](../../../.superpowers/sdd/P9-purge/task-16-fix1-controller-verification.json)；最终状态/注释小diff仍交主控限定核验，最终文档HEAD及其准确分支CI由主控[交付收据](../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI。T12/T15旧检查点分别有准确分支CI成功收据；T12旧attempt1 W11失败仍是历史事实，未声称查明/修复根因。SP2仅引用4c7379f1+dirty源码绑定d26的原测量，不倒填当前HEAD。
+最终产品F：准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../M4-issue-core/reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)。准确产品分支CI：准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../M4-issue-core/reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)；不替代本轮文档提交或未来main CI。文档静态/独立复审：首次31文档静态核对见[静态收据](../M4-issue-core/reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)；两席文档独评及[CORE-1/2修复复审](../M4-issue-core/reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)已闭环，见[主控核证](../M4-issue-core/reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)；最终状态/注释小diff仍交主控限定核验，最终文档HEAD及其准确分支CI由主控[交付收据](../M4-issue-core/reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI。T12/T15旧检查点分别有准确分支CI成功收据；T12旧attempt1 W11失败仍是历史事实，未声称查明/修复根因。SP2仅引用4c7379f1+dirty源码绑定d26的原测量，不倒填当前HEAD。
 
 本轮只完成P9后端与文档交接，不启动P10，不合并/清理。M4总体§14/总体设计§9.4、输入handoff status、C12三浏览器及M5–M8最终closeout继续待所属收尾。负责人未来明确授权后才--no-ff合并，核准确main SHA CI及归档哈希，再清理分支/worktree。
+
+
+## 11. 历史接续点（2026-10-28，P9集成后、P10a启动时）
+
+本节“当前T1/禁止push”均为当时快照；后来实施及root分支CI推送授权见§12，不覆盖最新状态。
+
+P9经授权--no-ff合并main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845)三个任务全绿；3,317文件/136,629,586字节/1空目录归档核hash，清理P9本地/远端分支与worktree后再次核验通过，见[P9 review §14](../M4-issue-core/reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)。以上未集成快照均不覆盖本节。
+
+当前 `codex/m4-p10a` / `.codex/worktress/codex/m4-p10a` 已有既定两段的准备文档，当前已获 P10a 实施授权：[P10a spec](../M4-issue-core/specs/P10a-web-issue-types.md)、[plan](../M4-issue-core/plans/P10a-web-issue-types.md)；[P10b spec](../M4-issue-core/specs/P10b-web-list-data.md)、[plan](../M4-issue-core/plans/P10b-web-list-data.md)。静态预检结果由各阶段review及[deep-review](../../reviews/re-10-M4P10预检审核.md)接续；当前按通过预检的 spec/plan 推进 P10a T1，关键词 phase 按既定守卫语法设 M4/P10；阶段验收仍开放。P10b当前是依赖预检，实施前必须在P10a已集成且main CI绿的基线重核。M4总体§14/总体设计§9.4、handoff总状态和最终closeout不提前关闭。
+
+**负责人裁定 P10A-S1（2026-10-28）：** 已选择A，保持只删工作项列表的范围，保留领域自身加载；M6/M7自身页面完整可用与零失败验收归回所属里程碑，精确记录未接通请求和可见代价。设计、spec、plan及交接责任已同步，独立定向静态预检通过、无开放发现，证据见上述报告§5；M4页面门禁/守卫不变。定向预检完成后，负责人已授权实施 P10a，从 T1 逐任务推进；禁止 push/merge，集成须另获授权。
+
+
+## 12. P10a实施后接续（2026-10-28）
+
+当前在codex/m4-p10a worktree：T1–T8已各Task独评、修复复审及精确提交，最后产品HEAD `5f7085bce4aa5103a0133fa982847d274efa6e47`，tree `d0b4ea997e3dd7cdd61e9cbc662b75b064636364`；主项目main仍4599a9cf。A/B原全文与A-01/A-02修复独评已完成，无剩余代码发现；C原22路径全文/guard delta通过，C-r1已读14增量，唯一C-r1-01经C-r2复审ADDRESSED，无新增。见[P10a spec](../M4-issue-core/specs/P10a-web-issue-types.md)、[plan](../M4-issue-core/plans/P10a-web-issue-types.md)、[phase review](../M4-issue-core/reviews/P10a-web-issue-types-review.md)、[整体审核（实施与终审完成）](../../reviews/re-11-M4P10a整体审核.md)。最终交付收据尚未生成，不预填准确文档HEAD/CI或通过结论。
+
+root已有本阶段分支CI推送授权，完整门禁后已使用系统git推T8及最后产品5f708；808准确CI run40703659542 attempt1三job已核success；5f708准确产品CI run40712479050 attempt1的server122901158718/web122901159223/e2e122907311901均completed/success，receipt已保存；T9最终交付文档HEAD CI仍待提交后root核，另列。旧T3/T6成功只代表各自检查点，不是最终/main CI。本次仍无合并授权，不merge、不清理分支/worktree/X。未来另授权后才记录真实merge SHA、准确mainCI及全量归档逐hash/清理回执。
+
+T8原round0本地F6=1277、F7=169；R19最终仅新故事finally变化，由最终正常六入口6/6及e2e static补齐，F1–3另有keywords测试精确登记差异，不称整套在r1逐字重跑。六入口75API、八最低项及有效实体组件/service层限制、23段真实stderr归属见phase review；M6/M7前缺列表与领域自身未接通两代价保留，归档404后持续loader及有效实体网络/整页零失败留M6/M7。
+
+A-01/A-02统一修复已提交；最后本地F 1275测试/169E2E通过（F1–3六web删除桥，F4–7同源），C-r1唯一文稿Minor已修且C-r2 Approved，随后root提交并核最终交付HEAD分支CI；不得以本轮文档自查结束Phase。P10b仍未实施，必须等P10a真实main集成且准确mainCI通过后重核spec§2.3/实际文件、消费者与未完成过渡。M4§14/总体§9.4、五份输入总open及M5–M8最终closeout保持，不提前关闭或预建。
+
+
+最后代码覆盖ready集合355路径=A93/B240/C22，准确覆盖源/行数/哈希与限制见re-11；实施与终审已完成，最后文稿C-r2真实Approved。root提交后生成X/final-delivery-receipt.json，核准确HEAD/run/attempt/ref/jobs全部success（必须最终文稿HEADCI全绿才结束任务），不为正文自指SHA循环提交；未来mainCI/归档清理另授权。旧T9静态inventory误写且原bytes不可证明的限制见phase review§9，最后库存另具名重核，产品与原F/CI raw未改。

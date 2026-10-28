@@ -4,19 +4,21 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import React from "react";
 import { observer } from "mobx-react";
 // types
-import type { TIssue } from "@nerve/types";
+
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 // components
 import { IssuePropertyLabels } from "../../properties";
 
 type Props = {
-  issue: TIssue;
+  issue: Issue;
   onClose: () => void;
-  onChange: (issue: TIssue, data: Partial<TIssue>, updates: any) => void;
+  onChange: (issue: Issue, data: Partial<IssueDetail>, updates: any) => void;
   disabled: boolean;
 };
 

@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useState, useRef, forwardRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
@@ -11,7 +13,7 @@ import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { Popover } from "@nerve/propel/popover";
-import type { TIssue } from "@nerve/types";
+
 import { ControlLink } from "@nerve/ui";
 import { cn, generateWorkItemLink } from "@nerve/utils";
 // hooks
@@ -30,7 +32,7 @@ import type { TRenderQuickActions } from "../list/list-view-types";
 import type { CalendarStoreType } from "./base-calendar-root";
 
 type Props = {
-  issue: TIssue;
+  issue: Issue;
   quickActions: TRenderQuickActions;
   isDragging?: boolean;
 };
@@ -57,7 +59,7 @@ export const CalendarIssueBlock = observer(
     const projectIdentifier = getProjectIdentifierById(issue?.project_id);
 
     // handlers
-    const handleIssuePeekOverview = (peekIssue: TIssue) => handleRedirection(workspaceSlug, peekIssue, isMobile);
+    const handleIssuePeekOverview = (peekIssue: Issue) => handleRedirection(workspaceSlug, peekIssue, isMobile);
 
     useOutsideClickDetector(menuActionRef, () => setIsMenuActive(false));
 
@@ -102,14 +104,10 @@ export const CalendarIssueBlock = observer(
               href={workItemLink}
               onClick={() => handleIssuePeekOverview(issue)}
               className="block w-full rounded-sm border-b border-subtle text-13 text-primary hover:border-subtle-1 md:border-[1px]"
-              disabled={!!issue?.tempId || isMobile}
+              disabled={isMobile}
               ref={ref}
             >
               <>
-                {issue?.tempId !== undefined && (
-                  <div className="absolute top-0 left-0 z-[99999] h-full w-full animate-pulse bg-surface-1/20" />
-                )}
-
                 <div
                   ref={blockRef}
                   className={cn(
