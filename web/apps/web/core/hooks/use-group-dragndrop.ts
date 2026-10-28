@@ -4,12 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import { useParams } from "react-router";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { EIssuesStoreType, TIssue, TIssueGroupByOptions, TIssueOrderByOptions } from "@nerve/types";
 import type { GroupDropLocation } from "@/components/issues/issue-layouts/utils";
 import { handleGroupDragDrop } from "@/components/issues/issue-layouts/utils";
-import { ISSUE_FILTER_DEFAULT_DATA } from "@/store/issue/helpers/base-issues.store";
 import { useIssueDetail } from "./store/use-issue-detail";
 import { useIssues } from "./store/use-issues";
 import { useIssuesActions } from "./use-issues-actions";
@@ -26,68 +24,27 @@ export const useGroupIssuesDragNDrop = (
   groupBy: TIssueGroupByOptions | undefined,
   subGroupBy?: TIssueGroupByOptions
 ) => {
-  const { workspaceSlug } = useParams();
-
   const {
     issue: { getIssueById },
   } = useIssueDetail();
   const { updateIssue } = useIssuesActions(storeType);
   const {
-    issues: { getIssueIds, addCycleToIssue, removeCycleFromIssue, changeModulesInIssue },
+    issues: { getIssueIds },
   } = useIssues(storeType);
 
   /**
-   * update Issue on Drop, checks if modules or cycles are changed and then calls appropriate functions
+   * Update the editable work item fields after a group drop.
    * @param projectId
    * @param issueId
    * @param data
-   * @param issueUpdates
    */
-  const updateIssueOnDrop = async (
-    projectId: string,
-    issueId: string,
-    data: Partial<TIssue>,
-    issueUpdates: {
-      [groupKey: string]: {
-        ADD: string[];
-        REMOVE: string[];
-      };
-    }
-  ) => {
+  const updateIssueOnDrop = async (projectId: string, issueId: string, data: Partial<TIssue>) => {
     const errorToastProps = {
       type: TOAST_TYPE.ERROR,
       title: "Error!",
       message: "Error while updating work item",
     };
-    const moduleKey = ISSUE_FILTER_DEFAULT_DATA["module"];
-    const cycleKey = ISSUE_FILTER_DEFAULT_DATA["cycle"];
-
-    const isModuleChanged = Object.keys(data).includes(moduleKey);
-    const isCycleChanged = Object.keys(data).includes(cycleKey);
-
-    if (isCycleChanged && workspaceSlug) {
-      if (data[cycleKey]) {
-        addCycleToIssue(workspaceSlug, projectId, data[cycleKey]?.toString() ?? "", issueId).catch(() =>
-          setToast(errorToastProps)
-        );
-      } else {
-        removeCycleFromIssue(workspaceSlug, projectId, issueId).catch(() => setToast(errorToastProps));
-      }
-      delete data[cycleKey];
-    }
-
-    if (isModuleChanged && workspaceSlug && issueUpdates[moduleKey]) {
-      changeModulesInIssue(
-        workspaceSlug,
-        projectId,
-        issueId,
-        issueUpdates[moduleKey].ADD,
-        issueUpdates[moduleKey].REMOVE
-      ).catch(() => setToast(errorToastProps));
-      delete data[moduleKey];
-    }
-
-    updateIssue && updateIssue(projectId, issueId, data).catch(() => setToast(errorToastProps));
+    if (updateIssue) await updateIssue(projectId, issueId, data).catch(() => setToast(errorToastProps));
   };
 
   const handleOnDrop = async (source: GroupDropLocation, destination: GroupDropLocation) => {

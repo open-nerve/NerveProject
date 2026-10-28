@@ -41,7 +41,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
   const {
     fetchIssues,
     fetchNextIssues,
-    quickAddIssue,
+    createIssue,
     updateIssue,
     removeIssue,
     archiveIssue,
@@ -112,7 +112,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
         quickActions={renderQuickActions}
         updateIssue={updateIssue}
         canEditProperties={canEditProperties}
-        quickAddCallback={quickAddIssue}
+        quickAddCallback={createIssue}
         enableQuickCreateIssue={enableQuickAdd}
         disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
         canLoadMoreIssues={!!nextPageResults}

@@ -29,8 +29,6 @@ type Props = {
   handleDisplayPropertiesUpdate: (updatedDisplayProperties: Partial<IIssueDisplayProperties>) => void;
   layoutDisplayFiltersOptions: ILayoutDisplayFiltersOptions | undefined;
   ignoreGroupedFilters?: Partial<TIssueGroupByOptions>[];
-  cycleViewDisabled?: boolean;
-  moduleViewDisabled?: boolean;
 };
 
 export const DisplayFiltersSelection = observer(function DisplayFiltersSelection(props: Props) {
@@ -41,20 +39,10 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
     handleDisplayPropertiesUpdate,
     layoutDisplayFiltersOptions,
     ignoreGroupedFilters = [],
-    cycleViewDisabled = false,
-    moduleViewDisabled = false,
   } = props;
 
   const isDisplayFilterEnabled = (displayFilter: keyof IIssueDisplayFilterOptions) =>
     Object.keys(layoutDisplayFiltersOptions?.display_filters ?? {}).includes(displayFilter);
-
-  const computedIgnoreGroupedFilters: Partial<TIssueGroupByOptions>[] = [];
-  if (cycleViewDisabled) {
-    ignoreGroupedFilters.push("cycle");
-  }
-  if (moduleViewDisabled) {
-    ignoreGroupedFilters.push("module");
-  }
 
   return (
     <div className="vertical-scrollbar relative scrollbar-sm h-full w-full divide-y divide-subtle-1 overflow-hidden overflow-y-auto px-2.5">
@@ -65,8 +53,6 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
             displayProperties={displayProperties}
             displayPropertiesToRender={layoutDisplayFiltersOptions.display_properties}
             handleUpdate={handleDisplayPropertiesUpdate}
-            cycleViewDisabled={cycleViewDisabled}
-            moduleViewDisabled={moduleViewDisabled}
           />
         </div>
       )}
@@ -82,7 +68,7 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
                 group_by: val,
               })
             }
-            ignoreGroupedFilters={[...ignoreGroupedFilters, ...computedIgnoreGroupedFilters]}
+            ignoreGroupedFilters={ignoreGroupedFilters}
           />
         </div>
       )}
@@ -100,7 +86,7 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
                 })
               }
               subGroupByOptions={layoutDisplayFiltersOptions?.display_filters.sub_group_by ?? []}
-              ignoreGroupedFilters={[...ignoreGroupedFilters, ...computedIgnoreGroupedFilters]}
+              ignoreGroupedFilters={ignoreGroupedFilters}
             />
           </div>
         )}

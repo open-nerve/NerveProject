@@ -46,7 +46,6 @@
         "label": "Display Properties",
         "id": "ID",
         "sub_issue_count": "Sub-work item count",
-        "attachment_count": "Attachment count",
         "sub_issue": "Sub-work item"
       },
       "extra": {

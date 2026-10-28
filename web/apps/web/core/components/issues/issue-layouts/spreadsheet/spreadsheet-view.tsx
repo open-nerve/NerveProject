@@ -11,8 +11,6 @@ import { SPREADSHEET_PROPERTY_LIST } from "@nerve/constants";
 // types
 import type { TIssue, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
-// hooks
-import { useProject } from "@/hooks/store/use-project";
 // local imports
 import type { TRenderQuickActions } from "../list/list-view-types";
 import { QuickAddIssueRoot, SpreadsheetAddIssueButton } from "../quick-add";
@@ -26,13 +24,12 @@ type Props = {
   quickActions: TRenderQuickActions;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
   openIssuesListModal?: (() => void) | null;
-  quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<TIssue>) => Promise<TIssue | undefined>;
   canEditProperties: (projectId: string | undefined) => boolean;
   canLoadMoreIssues: boolean;
   loadMoreIssues: () => void;
   enableQuickCreateIssue?: boolean;
   disableIssueCreation?: boolean;
-  isWorkspaceLevel?: boolean;
 };
 
 export const SpreadsheetView = observer(function SpreadsheetView(props: Props) {
@@ -49,21 +46,11 @@ export const SpreadsheetView = observer(function SpreadsheetView(props: Props) {
     disableIssueCreation,
     canLoadMoreIssues,
     loadMoreIssues,
-    isWorkspaceLevel = false,
   } = props;
   // refs
   const containerRef = useRef<HTMLTableElement | null>(null);
   const portalRef = useRef<HTMLDivElement | null>(null);
-  // store hooks
-  const { currentProjectDetails } = useProject();
-
-  const spreadsheetColumnsList = isWorkspaceLevel
-    ? SPREADSHEET_PROPERTY_LIST
-    : SPREADSHEET_PROPERTY_LIST.filter((property) => {
-        if (property === "cycle" && !currentProjectDetails?.cycle_view) return false;
-        if (property === "modules" && !currentProjectDetails?.module_view) return false;
-        return true;
-      });
+  const spreadsheetColumnsList = SPREADSHEET_PROPERTY_LIST;
 
   if (!issueIds || issueIds.length === 0) return <></>;
   return (

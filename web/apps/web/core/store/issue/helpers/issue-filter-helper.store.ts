@@ -126,12 +126,9 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
     mentions: filters?.mentions || null,
     created_by: filters?.created_by || null,
     labels: filters?.labels || null,
-    cycle: filters?.cycle || null,
-    module: filters?.module || null,
     start_date: filters?.start_date || null,
     target_date: filters?.target_date || null,
     project: filters?.project || null,
-    subscriber: filters?.subscriber || null,
   });
 
   /**

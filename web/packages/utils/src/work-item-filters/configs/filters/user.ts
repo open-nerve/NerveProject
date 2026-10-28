@@ -94,31 +94,3 @@ export const getCreatedByFilterConfig =
         ),
       ]),
     });
-
-// ------------ Subscriber filter ------------
-
-/**
- * Subscriber filter specific params
- */
-type TCreateSubscriberFilterParams = TCreateUserFilterParams;
-
-/**
- * Get the subscriber filter config
- * @template K - The filter key
- * @param key - The filter key to use
- * @returns A function that takes parameters and returns the subscriber filter config
- */
-export const getSubscriberFilterConfig =
-  <P extends TFilterProperty>(key: P): TCreateFilterConfig<P, TCreateSubscriberFilterParams> =>
-  (params: TCreateSubscriberFilterParams) =>
-    createFilterConfig<P>({
-      id: key,
-      label: "Subscriber",
-      ...params,
-      icon: params.filterIcon,
-      supportedOperatorConfigsMap: new Map([
-        createOperatorConfigEntry(COLLECTION_OPERATOR.IN, params, (updatedParams) =>
-          getMemberMultiSelectConfig(updatedParams, EQUALITY_OPERATOR.EXACT)
-        ),
-      ]),
-    });

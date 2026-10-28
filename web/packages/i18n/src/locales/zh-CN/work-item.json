@@ -46,7 +46,6 @@
         "label": "显示属性",
         "id": "ID",
         "sub_issue_count": "子工作项数量",
-        "attachment_count": "附件数量",
         "sub_issue": "子工作项"
       },
       "extra": {

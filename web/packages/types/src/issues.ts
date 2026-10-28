@@ -33,8 +33,6 @@ export interface ViewFlags {
 
 export type GroupByColumnTypes =
   | "project"
-  | "cycle"
-  | "module"
   | "state"
   | "state_detail.group"
   | "priority"

@@ -258,6 +258,8 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 
 ## 四、行为差异
 
+**M4/P10a quick-add 等待展示（R8，已实施、待 T4 独立评审）**：创建请求未返回前，输入在 quick-add 入口显示等待预览并禁用，保留 Promise toast；不再将缺服务端编号/审计事实的输入作为普通卡片加入正式排序、分组或计数。成功后真实响应出现于列表，失败保留输入可重试。不改创建接口，不提前实现 P10b 协调引擎。
+
 M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md) 的事务、时钟及自动归档证据为准；P7已实现的链接/出站/请求任务见[P7 review](M4-issue-core/reviews/P7-issue-links-review.md)；P9后台删除/保留/清理的当前证据见 [P9 review](M4-issue-core/reviews/P9-purge-review.md)，页面及后续阶段仍开放。
 
 | 行为 | Plane | Nerve |

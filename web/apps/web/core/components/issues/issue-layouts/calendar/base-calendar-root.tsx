@@ -45,7 +45,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
   const {
     fetchIssues,
     fetchNextIssues,
-    quickAddIssue,
+    createIssue,
     updateIssue,
     removeIssue,
     archiveIssue,
@@ -157,7 +157,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
           loadMoreIssues={loadMoreIssues}
           getPaginationData={getPaginationData}
           getGroupIssueCount={getGroupIssueCount}
-          quickAddCallback={quickAddIssue}
+          quickAddCallback={createIssue}
           updateFilters={updateFilters}
           handleDragAndDrop={handleDragAndDrop}
           canEditProperties={canEditProperties}

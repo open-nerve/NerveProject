@@ -42,7 +42,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
   const storeType = useIssueStoreType() as ListStoreType;
   //stores
   const { issuesFilter, issues } = useIssues(storeType);
-  const { fetchIssues, fetchNextIssues, quickAddIssue, updateIssue, removeIssue, archiveIssue, restoreIssue } =
+  const { fetchIssues, fetchNextIssues, createIssue, updateIssue, removeIssue, archiveIssue, restoreIssue } =
     useIssuesActions(storeType);
   // mobx store
   const { allowPermissions } = useUserPermissions();
@@ -138,7 +138,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
           groupedIssueIds={groupedIssueIds ?? {}}
           loadMoreIssues={loadMoreIssues}
           showEmptyGroup={showEmptyGroup}
-          quickAddCallback={quickAddIssue}
+          quickAddCallback={createIssue}
           enableIssueQuickAdd={!!enableQuickAdd}
           canEditProperties={canEditProperties}
           disableIssueCreation={!enableIssueCreation || !isEditingAllowed}

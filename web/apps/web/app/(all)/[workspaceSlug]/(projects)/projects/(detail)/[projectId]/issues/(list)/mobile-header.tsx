@@ -21,13 +21,11 @@ import {
 } from "@/components/issues/issue-layouts/filters";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
-import { useProject } from "@/hooks/store/use-project";
 
 export const ProjectIssuesMobileHeader = observer(function ProjectIssuesMobileHeader() {
   // i18n
   const { t } = useTranslation();
   const { workspaceSlug, projectId } = useParams();
-  const { currentProjectDetails } = useProject();
 
   // store hooks
   const {
@@ -84,8 +82,6 @@ export const ProjectIssuesMobileHeader = observer(function ProjectIssuesMobileHe
             handleDisplayFiltersUpdate={handleDisplayFilters}
             displayProperties={issueFilters?.displayProperties ?? {}}
             handleDisplayPropertiesUpdate={handleDisplayProperties}
-            cycleViewDisabled={!currentProjectDetails?.cycle_view}
-            moduleViewDisabled={!currentProjectDetails?.module_view}
           />
         </FiltersDropdown>
       </div>

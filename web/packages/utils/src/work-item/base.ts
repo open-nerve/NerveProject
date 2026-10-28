@@ -6,11 +6,10 @@
 
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { isEmpty } from "lodash-es";
-import { v4 as uuidv4 } from "uuid";
 // nerve imports
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE, STATE_GROUPS } from "@nerve/constants";
 import type { StateGroup } from "@nerve/api-client";
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssue, TIssueParams } from "@nerve/types";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssueParams } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 // local imports
 import { getDate } from "../datetime";
@@ -39,36 +38,6 @@ export const handleIssueQueryParamsByLayout = (
   }
 
   return queryParams;
-};
-
-/**
- *
- * @description create a full issue payload with some default values. This function also parse the form field
- * like assignees, labels, etc. and add them to the payload
- * @param projectId project id to be added in the issue payload
- * @param formData partial issue data from the form. This will override the default values
- * @returns full issue payload with some default values
- */
-export const createIssuePayload: (projectId: string, formData: Partial<TIssue>) => TIssue = (
-  projectId: string,
-  formData: Partial<TIssue>
-) => {
-  const payload: TIssue = {
-    id: uuidv4(),
-    project_id: projectId,
-    priority: "none",
-    label_ids: [],
-    assignee_ids: [],
-    sub_issues_count: 0,
-    attachment_count: 0,
-    link_count: 0,
-    // tempId is used for optimistic updates. It is not a part of the API response.
-    tempId: uuidv4(),
-    // to be overridden by the form data
-    ...formData,
-  } as TIssue;
-
-  return payload;
 };
 
 /**
@@ -157,13 +126,10 @@ export const getComputedDisplayProperties = (
   priority: displayProperties?.priority ?? true,
   state: displayProperties?.state ?? true,
   sub_issue_count: displayProperties?.sub_issue_count ?? true,
-  attachment_count: displayProperties?.attachment_count ?? true,
   link: displayProperties?.link ?? true,
   key: displayProperties?.key ?? true,
   created_on: displayProperties?.created_on ?? true,
   updated_on: displayProperties?.updated_on ?? true,
-  modules: displayProperties?.modules ?? true,
-  cycle: displayProperties?.cycle ?? true,
 });
 
 export const generateWorkItemLink = ({

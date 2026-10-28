@@ -54,7 +54,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
   const {
     fetchIssues,
     fetchNextIssues,
-    quickAddIssue,
+    createIssue,
     updateIssue,
     removeIssue,
     archiveIssue,
@@ -215,7 +215,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
                 collapsedGroups={collapsedGroups}
                 enableQuickIssueCreate={enableQuickAdd}
                 showEmptyGroup={userDisplayFilters?.show_empty_groups ?? true}
-                quickAddCallback={quickAddIssue}
+                quickAddCallback={createIssue}
                 disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
                 canEditProperties={canEditProperties}
                 scrollableContainerRef={scrollableContainerRef}

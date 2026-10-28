@@ -57,7 +57,9 @@ updateIssue(issueId: string, issue: Partial<IssueDetail>): void;
 
 `TIssuesResponse` 在 P10a 仍保留旧容器形状，仅其行换为 `Issue`；完整容器迁移归 P10b。评论、关联等其他 DTO 名称留 P11。工作项 map 的类型直接 Record，不导出“新 TIssueMap”别名。
 
-`tempId/sourceIssueId/state__group` 是旧前端附加值，不属于新实体：没有写者的 tempId UI 分支删除；若仍有活写者，其 pending 标识在拥有它的 UI/store 中单独维护。克隆来源改为表单/弹窗的独立 `sourceIssueId?: string` prop 或局部状态，不能进入生成实体或 HTTP 载荷；状态组从现有状态目录取。草稿场景继续由现有显式草稿上下文表达，不在 Issue 上恢复 is_draft。新的本地表单类型只声明表单实际数据，不建立全体 Plane 字段兼容层。
+tempId 有活写者：createIssuePayload→quick-add→BaseIssuesStore.issueQuickAdd；输入缺 Issue 必填事实，不能迁走标记后继续断言为完整实体。采用 root 局部裁定 R8：quick-add 保留真实 RHF 输入，在创建入口展示等待预览、禁用输入与 Promise toast；服务响应前不写 canonical/groupedIssueIds/正式计数，成功仅由既有 create store 路径写入一次。失败不 reset；同步 ref 阻重复请求，独立 pending state 归首请求所有，第二次 handleSubmit 的完成不得释放等待或关闭 guard。入口按 workspace/project 的 key 隔离；旧请求结算/卸载不清空新入口，不将 A 响应插入 B 分组。ProjectIssues 以 super.createIssue(..., "", false) 保存真实 canonical 响应，await 后核当前 workspace/project 再 addIssueToList 一次。不实现全局 pending 引擎。
+
+`sourceIssueId/state__group` 是旧前端附加值，不属于新实体。克隆来源改为表单/弹窗的独立 `sourceIssueId?: string` prop 或局部状态，不能进入生成实体或 HTTP 载荷；状态组从现有状态目录取。草稿场景继续由现有显式草稿上下文表达，不在 Issue 上恢复 is_draft。新的本地表单类型只声明表单实际数据，不建立全体 Plane 字段兼容层。
 
 ### 2.3 有界旧 service 过渡
 
@@ -100,6 +102,8 @@ T8 在实际进入目标页面（而非权限重定向）前启用原 `watchPage
 ### 2.5 尺寸与现有大文件
 
 新生产逻辑文件约 400 行内；新测试按行为拆文件，生成物例外。既有超 400 行的大型布局/store 文件允许本期机械删字段/换类型，逐文件把改前/改后行数与原因记在 T1 清单及最终 review；不得以这个例外新增大段逻辑。`C/store/issue/helpers/base-issues.store.ts` 的重写已归 P10b，本期仅必要删分支/换类型；`issue-modal/base.tsx`/`form.tsx` 等本段仅删除越界读取与分离 UI 状态，不附带重构 P14 的完整交互。附录 B 是确定的消费者集合，T1 对其中超过 400 行者生成尺寸表，未列入的新大文件须局部裁定后记录。
+
+quick-add/root 仅增加有限局部生命周期/反馈（约 400 行内），不增跨布局 pending 引擎；实际无读者后删除 BaseIssuesStore.issueQuickAdd，不保留空方法。
 
 ## 3. 与设计的差异和补充
 
@@ -376,6 +380,9 @@ T1 在源 HEAD `4569a9e7386031cffb31aa37d6cf06a726b08c2c` 重新运行两条计�
 | `web/apps/web/core/store/issue/workspace-draft/issue.store.ts` | 408/408 | 既有核心类型消费者，P10a先收窄/机械换型；后续职责重写按所属Phase |
 
 T3 删除检查点（相对 T2 完成源）：`issue-layouts/utils.tsx` 812→812（仅移除 GLOBAL 条件）；`power-k/.../work-item/commands.ts` 418→350、`hooks/use-issues-actions.tsx` 685→345、`issue/cycle/issue.store.ts` 408→删除、`issue/issue-details/root.store.ts` 412→396。均为删除旧列表及五动作调用链，未增加算法；全量改动路径和前后行数由本 Task 源 manifest 保存。
+
+
+T4 相对 T3 完成源的尺寸：`web/apps/web/core/components/issues/issue-layouts/properties/all-properties.tsx` 451→332；`web/apps/web/core/components/issues/issue-layouts/utils.tsx` 812→739；`web/apps/web/core/store/issue/helpers/base-issues.store.ts` 1775→1663。既有大文件只删除字段/分支及状态目录读取的必要调整；quick-add/root 在同文件增加局部请求所有权/反馈，未新增共享 pending 引擎。
 
 
 T1 广义旧地址账冻结 `web/` 中全部 `/api/workspaces/` 字面量：23 文件、140 处。逐方法的文件/行、完整样例、count、理由与 until 见本地 `task-1-old-urls.md/json`；它广于 T7 八类规则，不能直接充当该规则匹配数或运行时请求验收。项目 `/user-properties/` 两处仍严格 until `M4/P11`；cycle/module 的四个同名筛选方法归 T3 删除，不延长到 M6。工作区 `getViewIssues` 两地址归 T3 删除；`/search/` 归 P15、until M4/P16，由既有 plane-workspace-urls 守卫负责，不声称被八类新规则覆盖。其他 M4 列表、详情、残余搜索分别按 §2.3 到期；M5/M6/M7 及广义账中的 M8 Webhook 自身地址按所属里程碑处理，不为 T7 新增目录豁免。新规则与例外只在 T7 实施。

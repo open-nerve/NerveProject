@@ -27,7 +27,6 @@ import { getComputedDisplayFilters, getComputedDisplayProperties, getTabIndex } 
 // components
 import { DisplayFiltersSelection, FiltersDropdown } from "@/components/issues/issue-layouts/filters";
 // hooks
-import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { LayoutDropDown } from "../dropdowns/layout";
@@ -55,7 +54,6 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
   // state
   const [isOpen, setIsOpen] = useState(false);
   // store hooks
-  const { getProjectById } = useProject();
   const { isMobile } = usePlatformOS();
   // form info
   const defaultValues = {
@@ -74,7 +72,6 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
     defaultValues,
   });
   // derived values
-  const projectDetails = getProjectById(projectId);
   const logoValue = watch("logo_props");
   const { getIndex } = getTabIndex(ETabIndices.PROJECT_VIEW, isMobile);
 
@@ -241,8 +238,6 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
                               ...updatedDisplayProperties,
                             });
                           }}
-                          cycleViewDisabled={!projectDetails?.cycle_view}
-                          moduleViewDisabled={!projectDetails?.module_view}
                         />
                       </FiltersDropdown>
                     )}

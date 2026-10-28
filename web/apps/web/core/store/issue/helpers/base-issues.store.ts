@@ -117,16 +117,12 @@ export const ISSUE_GROUP_BY_KEY: Record<TIssueDisplayFilterOptions, keyof TIssue
   created_by: "created_by",
   assignees: "assignee_ids",
   target_date: "target_date",
-  cycle: "cycle_id",
-  module: "module_ids",
 };
 
 export const ISSUE_FILTER_DEFAULT_DATA: Record<TIssueDisplayFilterOptions, keyof TIssue> = {
   project: "project_id",
-  cycle: "cycle_id",
-  module: "module_ids",
   state: "state_id",
-  "state_detail.group": "state__group", // state_detail.group is only being used for state_group display,
+  "state_detail.group": "state_id", // state_detail.group is only being used for state_group display,
   priority: "priority",
   labels: "label_ids",
   created_by: "created_by",
@@ -149,18 +145,12 @@ const ISSUE_ORDERBY_KEY: Record<TIssueOrderByOptions, keyof TIssue> = {
   "-assignees__first_name": "assignee_ids",
   labels__name: "label_ids",
   "-labels__name": "label_ids",
-  issue_module__module__name: "module_ids",
-  "-issue_module__module__name": "module_ids",
-  issue_cycle__cycle__name: "cycle_id",
-  "-issue_cycle__cycle__name": "cycle_id",
   target_date: "target_date",
   "-target_date": "target_date",
   start_date: "start_date",
   "-start_date": "start_date",
   link_count: "link_count",
   "-link_count": "link_count",
-  attachment_count: "attachment_count",
-  "-attachment_count": "attachment_count",
   sub_issues_count: "sub_issues_count",
   "-sub_issues_count": "sub_issues_count",
 };
@@ -217,7 +207,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
 
       createIssue: action,
       issueUpdate: action,
-      issueQuickAdd: action.bound,
       removeIssue: action.bound,
       issueArchive: action.bound,
 
@@ -617,38 +606,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       // Since Archived remove the issue Id from the current store
       this.removeIssueFromList(issueId);
     });
-  }
-
-  /**
-   * Method to perform Quick add of issues
-   * @param workspaceSlug
-   * @param projectId
-   * @param data
-   * @returns
-   */
-  async issueQuickAdd(workspaceSlug: string, projectId: string, data: TIssue) {
-    // Add issue to store with a temporary Id
-    this.addIssue(data);
-    // call Create issue method
-    const response = await this.createIssue(workspaceSlug, projectId, data);
-    runInAction(() => {
-      this.removeIssueFromList(data.id);
-      this.rootIssueStore.issues.removeIssue(data.id);
-    });
-    const currentCycleId = data.cycle_id !== "" && data.cycle_id === "None" ? undefined : data.cycle_id;
-    const currentModuleIds =
-      data.module_ids && data.module_ids.length > 0 ? data.module_ids.filter((moduleId) => moduleId != "None") : [];
-    const promiseRequests = [];
-    if (currentCycleId) {
-      promiseRequests.push(this.addCycleToIssue(workspaceSlug, projectId, currentCycleId, response.id));
-    }
-    if (currentModuleIds.length > 0) {
-      promiseRequests.push(this.changeModulesInIssue(workspaceSlug, projectId, response.id, currentModuleIds, []));
-    }
-    if (promiseRequests && promiseRequests.length > 0) {
-      await Promise.all(promiseRequests);
-    }
-    return response;
   }
 
   /**
@@ -1502,23 +1459,15 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
     // if array return the array
     if (Array.isArray(value)) return value;
 
-    return this.getDefaultGroupValue(issueObject, value, groupByKey);
+    return this.getDefaultGroupValue(value, groupByKey);
   };
 
-  // /**
-  //  * Gets the default value for a group when the primary value is empty
-  //  * @param issueObject - The issue object to extract fallback values from
-  //  * @param groupByKey - The group by key to determine fallback logic
-  //  * @returns Default group value as string array
-  //  */
-  private getDefaultGroupValue = (
-    issueObject: Partial<TIssue>,
-    value: string,
-    groupByKey?: TIssueGroupByOptions
-  ): string[] => {
+  /** State-group facts come only from the state catalog; an unknown state has no group. */
+  private getDefaultGroupValue = (value: string, groupByKey?: TIssueGroupByOptions): string[] => {
     // Handle special case for state group
     if (groupByKey === "state_detail.group") {
-      return [this.rootIssueStore.rootStore.state.stateMap?.[value]?.group ?? issueObject.state__group];
+      const group = this.rootIssueStore.rootStore.state.stateMap?.[value]?.group;
+      return group ? [group] : [];
     }
 
     return [value];
@@ -1532,7 +1481,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
    * @returns string | string[] of sortable fields to be used for sorting
    */
   populateIssueDataForSorting(
-    dataType: "state_id" | "label_ids" | "assignee_ids" | "module_ids" | "cycle_id",
+    dataType: "state_id" | "label_ids" | "assignee_ids",
     dataIds: string | string[] | null | undefined,
     order?: "asc" | "desc"
   ) {
@@ -1567,24 +1516,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
         for (const dataId of dataIdsArray) {
           const member = memberMap[dataId];
           if (member && member.first_name) dataValues.push(member.first_name.toLocaleLowerCase());
-        }
-        break;
-      }
-      case "module_ids": {
-        const moduleMap = this.rootIssueStore?.moduleMap;
-        if (!moduleMap) break;
-        for (const dataId of dataIdsArray) {
-          const currentModule = moduleMap[dataId];
-          if (currentModule && currentModule.name) dataValues.push(currentModule.name.toLocaleLowerCase());
-        }
-        break;
-      }
-      case "cycle_id": {
-        const cycleMap = this.rootIssueStore?.cycleMap;
-        if (!cycleMap) break;
-        for (const dataId of dataIdsArray) {
-          const cycle = cycleMap[dataId];
-          if (cycle && cycle.name) dataValues.push(cycle.name.toLocaleLowerCase());
         }
         break;
       }
@@ -1652,11 +1583,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       }
 
       // number
-      case "attachment_count":
-        return getIssueIds(orderBy(array, "attachment_count"));
-      case "-attachment_count":
-        return getIssueIds(orderBy(array, "attachment_count", ["desc"]));
-
       case "link_count":
         return getIssueIds(orderBy(array, "link_count"));
       case "-link_count":
@@ -1682,44 +1608,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
             [
               getSortOrderToFilterEmptyValues.bind(null, "label_ids"), //preferring sorting based on empty values to always keep the empty values below
               (issue) => this.populateIssueDataForSorting("label_ids", issue?.["label_ids"], "asc"),
-            ],
-            ["asc", "desc"]
-          )
-        );
-
-      case "issue_module__module__name":
-        return getIssueIds(
-          orderBy(array, [
-            getSortOrderToFilterEmptyValues.bind(null, "module_ids"), //preferring sorting based on empty values to always keep the empty values below
-            (issue) => this.populateIssueDataForSorting("module_ids", issue?.["module_ids"], "asc"),
-          ])
-        );
-      case "-issue_module__module__name":
-        return getIssueIds(
-          orderBy(
-            array,
-            [
-              getSortOrderToFilterEmptyValues.bind(null, "module_ids"), //preferring sorting based on empty values to always keep the empty values below
-              (issue) => this.populateIssueDataForSorting("module_ids", issue?.["module_ids"], "asc"),
-            ],
-            ["asc", "desc"]
-          )
-        );
-
-      case "issue_cycle__cycle__name":
-        return getIssueIds(
-          orderBy(array, [
-            getSortOrderToFilterEmptyValues.bind(null, "cycle_id"), //preferring sorting based on empty values to always keep the empty values below
-            (issue) => this.populateIssueDataForSorting("cycle_id", issue?.["cycle_id"], "asc"),
-          ])
-        );
-      case "-issue_cycle__cycle__name":
-        return getIssueIds(
-          orderBy(
-            array,
-            [
-              getSortOrderToFilterEmptyValues.bind(null, "cycle_id"), //preferring sorting based on empty values to always keep the empty values below
-              (issue) => this.populateIssueDataForSorting("cycle_id", issue?.["cycle_id"], "asc"),
             ],
             ["asc", "desc"]
           )

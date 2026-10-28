@@ -39,7 +39,6 @@ export interface IArchivedIssues extends IBaseIssuesStore {
 
   updateIssue: undefined;
   archiveIssue: undefined;
-  quickAddIssue: undefined;
 }
 
 export class ArchivedIssues extends BaseIssuesStore implements IArchivedIssues {
@@ -193,5 +192,4 @@ export class ArchivedIssues extends BaseIssuesStore implements IArchivedIssues {
   // Setting them as undefined as they can not performed on Archived issues
   updateIssue = undefined;
   archiveIssue = undefined;
-  quickAddIssue = undefined;
 }

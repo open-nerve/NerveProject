@@ -27,7 +27,7 @@
 - 新公开错误码预期0；若实际新增，契约、`C/lib/error-messages.ts` PROBLEM_MESSAGES 与 en/zh-CN errors.json 同Task，强制test-web，不以旧error?.error写法扩散。
 - 测试复用既有deferred、store/root/session fixture、watchPage、API创建工作区/项目/成员；不造假的M6/M7成功API或加空service掩盖。新测试按行为，不为机械每行修改造镜像测试。
 - 每任务要求/质量独评，局部问题根因修复后复审。架构回归、跨模块协议改变或意外高风险，提交已完成工作后上报。
-- 提交详细中文多行，前缀feat/fix/docs(M4/P10a)；只stage精确路径；push优先`/usr/bin/git`。阶段终审不自动授权合并；本次仅获 P10a 实施授权，禁止 push/merge。
+- 提交详细中文多行，前缀feat/fix/docs(M4/P10a)；只stage精确路径；push优先`/usr/bin/git`。阶段终审不自动授权合并；本次 P10a 实施及分支 CI 验证授权下，由 root 在本地完整门禁后推送本阶段分支；子代理不自行 push，任何人不得 merge。
 - 本地七项、最终分支CI、未来mainCI是独立事实，各绑准确SHA。变异红必须行为断言，不把无测试匹配/编译失败/基础设施失败算性质红。
 
 ## 评审重点
@@ -118,7 +118,9 @@ make e2e
 
 - [ ] 按字段rg定位到成员访问/解构/计算key，区分M6自己域对象同名字段；只删工作项实体的相关列、显示属性、分组/筛选选项和独占组件。
 - [ ] 移除enum值/映射时同步所有消费者和i18n死键；保留EIssueLayoutTypes四布局kind；不把不支持选项隐藏到默认值或无动作handler。
-- [ ] tempId先核写者：无写者删除卡片disabled/loader读取；仍有活pending使用方时给拥有它的局部store独立字段，不在TIssue/未来Issue附加属性。state__group fallback改从状态目录读，未知目录显式无值。
+- [ ] R8：移除 createIssuePayload/issueQuickAdd 假实体路径及 tempId 卡片读取；四 base roots 将既有 createIssue 传给内部 quickAddCallback（Partial<TIssue> 输入）。真实 RHF 至少仅 name 及合法预填；同步 busy ref + 独立 pending state 归首请求所有，第二次真实 handleSubmit 完成不得解除禁用/status/Escape/outside guard；只有所有者 finally 释放。按 workspace/project key 隔离入口，成功只 reset 同一存活实例，reject/undefined 保留重试输入；Promise toast 绑定同一请求与原 scope。
+- [ ] ProjectIssues 复用 super.createIssue(..., "", false) 只写真实 canonical，await 后核 router workspace/project 再 addIssueToList 一次；不二次 canonical 写入、不新建共享引擎。无读者后删除 issueQuickAdd/interface/action。state__group fallback 从状态目录读，未知目录显式无值。
+- [ ] 新 `C/components/issues/issue-layouts/quick-add/root.pending.test.tsx` 保留真实 RHF/四 form leaf，覆盖同 tick 双提交且第二次已结束、首请求仍 pending 时的禁用/status/关闭 guard、成功、reject/undefined、A/B 与卸载；新 `C/store/issue/project/issue.quick-create.test.ts` 以真实 store/canonical/deferred service 核等待无实体、响应计数仅 +1 和跨 scope 不污染。先运行两 exact paths 记录行为红，再修复并绿。
 - [ ] 相关现有Vitest回归；`pnpm --filter web check:types`、`make lint-web`、`make knip`通过；静态字段清单复核没有“以动态索引绕过类型”的新增。
 - [ ] 执行G；提交 `feat(M4/P10a): 收窄工作项布局读取与显示选项`。
 
@@ -126,7 +128,7 @@ make e2e
 
 **Files：** `C/components/issues/issue-detail/root.tsx`、issue-detail-widgets/issue-detail-widget-modals.tsx、peek-overview/root.tsx、issue-modal/base.tsx、form.tsx、modal.tsx、components/default-properties.tsx；quick-action-dropdowns/{project-issue,issue-detail,all-issue}.tsx仍有者；`C/components/inbox/content/{issue-root,issue-properties}.tsx`、inbox/modals/create-modal下调用方；对应 `C/store/issue/issue-details/`；新（如需）`C/components/issues/issue-modal/types.ts`，只定义局部表单合同。
 
-**Interfaces：** sourceIssueId从实体data移到独立 `sourceIssueId?: string` prop，由调用者传到base/form；payload只含实际实体/请求允许字段。详情描述仍由已有detail读取，在T6替换类型时转显式accessor。
+**Interfaces：** 沿用 T4 无 pending 入实体的局部输入边界；sourceIssueId从实体data移到独立 `sourceIssueId?: string` prop，由调用者传到base/form；payload只含实际实体/请求允许字段。详情描述仍由已有detail读取，在T6替换类型时转显式accessor。
 
 - [ ] 删除is_subscribed/is_intake/description_binary等不属于Issue的读取与M4不可达附件/关注挂载；M5/M7自身域DTO保留。不要把comment/activity/relations的完整DTO重构提前到本段。
 - [ ] 克隆调用者先将sourceIssueId作为独立props传给弹窗，base取详情与form的项目锁定消费该prop；提交不再通过删data.sourceIssueId修补实体。新 `C/components/issues/issue-modal/base.clone.test.tsx` 用现有DOM测试写法挂载 `CreateUpdateIssueModalBase`，隔离重型叶组件与store边界，捕获实际提交参数：`sourceIssueId`能触发源详情读取、项目选择保持锁定，body没有该字段。项目锁定实际由 `form.tsx` 实现，须保留真实 FormRoot 或补真实 form 回归；mock 整个 FormRoot 只能证明 prop 传递，不能证明禁用。该组件层测试不冒充真实HTTP。
@@ -138,7 +140,7 @@ make e2e
 
 **Files：** `P/types/src/issues/issue.ts`；spec附录B全部剩余核心消费者；`C/store/issue/issue.store.ts`；`C/hooks/store/use-issues.ts`；§2.3点名四旧service和inbox-issue.service.ts；新 `C/store/issue/issue.store.types.test.ts`。
 
-**Interfaces：** 严格采用spec§2.2五个接口；普通getter回Issue|IssueDetail|undefined、detailgetter只回真实Detail。旧TIssuesResponse元素Issue；三个旧核心类型从定义和barrel消失。
+**Interfaces：** create 实际响应是唯一 quick-add 实体写者，无 fake defaults；严格采用spec§2.2五个接口；普通getter回Issue|IssueDetail|undefined、detailgetter只回真实Detail。旧TIssuesResponse元素Issue；三个旧核心类型从定义和barrel消失。
 
 - [ ] 新存储回归 `keeps_detail_when_a_list_row_arrives`：先addIssue完整Detail（非空HTML），后addIssue同id的Issue（不含description_html），detailgetter保留HTML、普通字段按现有合并更新；反序Issue→Detail也能读到描述。
 - [ ] 新 `does_not_claim_list_rows_are_details`：只有Issue时detailgetter为undefined，空HTML的真正Detail返回Detail，不以HTML truthy判定。新 `keeps_nullable_actor_and_hidden_parent`：created_by_id/updated_by_id/parent_id均null保存和读取不崩、不恢复旧created_by/updated_by。

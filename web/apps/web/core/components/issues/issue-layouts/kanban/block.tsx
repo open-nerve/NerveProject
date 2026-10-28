@@ -172,7 +172,7 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
 
   const canEditIssueProperties = canEditProperties(issue?.project_id ?? undefined);
 
-  const isDragAllowed = canDragIssuesInCurrentGrouping && !issue?.tempId && canEditIssueProperties;
+  const isDragAllowed = canDragIssuesInCurrentGrouping && canEditIssueProperties;
   const projectIdentifier = getProjectIdentifierById(issue?.project_id);
 
   const workItemLink = generateWorkItemLink({
@@ -261,7 +261,6 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
             { "z-[100] bg-layer-1": isCurrentBlockDragging }
           )}
           onClick={() => handleIssuePeekOverview(issue)}
-          disabled={!!issue?.tempId}
         >
           <RenderIfVisible
             classNames="space-y-2"

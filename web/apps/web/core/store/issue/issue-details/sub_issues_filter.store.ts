@@ -111,7 +111,12 @@ export class WorkItemSubIssueFiltersStore implements IWorkItemSubIssueFiltersSto
     const groupByKey = subIssueFilters.displayFilters?.group_by;
     const orderByKey = subIssueFilters.displayFilters?.order_by;
 
-    const groupedWorkItemIds = getGroupedWorkItemIds(filteredWorkItems, groupByKey, orderByKey);
+    const groupedWorkItemIds = getGroupedWorkItemIds(
+      filteredWorkItems,
+      groupByKey,
+      orderByKey,
+      this.subIssueStore.rootIssueDetailStore.rootIssueStore.stateMap
+    );
 
     return groupedWorkItemIds;
   });
@@ -128,7 +133,11 @@ export class WorkItemSubIssueFiltersStore implements IWorkItemSubIssueFiltersSto
       "un-archived"
     );
 
-    const filteredWorkItems = getFilteredWorkItems(workItems, filters);
+    const filteredWorkItems = getFilteredWorkItems(
+      workItems,
+      filters,
+      this.subIssueStore.rootIssueDetailStore.rootIssueStore.stateMap
+    );
 
     return filteredWorkItems;
   });

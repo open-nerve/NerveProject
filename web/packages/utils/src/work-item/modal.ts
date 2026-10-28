@@ -34,7 +34,7 @@ export const convertWorkItemDataToSearchResponse = (
   sequence_id: workItem.sequence_id,
   state__color: state?.color ?? "",
   start_date: workItem.start_date,
-  state__group: state?.group ?? "backlog",
+  state__group: state?.group,
   state__name: state?.name ?? "",
   workspace__slug: workspaceSlug,
 });

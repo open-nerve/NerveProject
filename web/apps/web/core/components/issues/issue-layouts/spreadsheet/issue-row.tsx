@@ -231,12 +231,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
         tabIndex={0}
         className="group/list-block relative left-0 z-10 max-w-lg bg-surface-1 md:sticky"
       >
-        <ControlLink
-          href={workItemLink}
-          onClick={() => handleIssuePeekOverview(issueDetail)}
-          className="outline-none"
-          disabled={!!issueDetail?.tempId}
-        >
+        <ControlLink href={workItemLink} onClick={() => handleIssuePeekOverview(issueDetail)} className="outline-none">
           <Row
             className={cn(
               "group clickable z-10 flex h-11 w-full cursor-pointer items-center border-r-[0.5px] border-subtle-1 bg-transparent text-13 after:absolute",

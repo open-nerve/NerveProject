@@ -38,7 +38,6 @@ export interface IProjectIssues extends IBaseIssuesStore {
   createIssue: (workspaceSlug: string, projectId: string, data: Partial<TIssue>) => Promise<TIssue>;
   updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-  quickAddIssue: (workspaceSlug: string, projectId: string, data: TIssue) => Promise<TIssue | undefined>;
 }
 
 export class ProjectIssues extends BaseIssuesStore implements IProjectIssues {
@@ -58,8 +57,6 @@ export class ProjectIssues extends BaseIssuesStore implements IProjectIssues {
       fetchIssues: action,
       fetchNextIssues: action,
       fetchIssuesWithExistingPagination: action,
-
-      quickAddIssue: action,
     });
     // filter store
     this.issueFilterStore = issueFilterStore;
@@ -175,12 +172,15 @@ export class ProjectIssues extends BaseIssuesStore implements IProjectIssues {
    * @returns
    */
   override createIssue = async (workspaceSlug: string, projectId: string, data: Partial<TIssue>) => {
-    const response = await super.createIssue(workspaceSlug, projectId, data, "", projectId === this.router.projectId);
+    const response = await super.createIssue(workspaceSlug, projectId, data, "", false);
+    if (workspaceSlug === this.router.workspaceSlug && projectId === this.router.projectId) {
+      this.addIssueToList(response.id);
+      await this.fetchParentStats();
+    }
     return response;
   };
 
   // Using aliased names as they cannot be overridden in other stores
-  quickAddIssue = this.issueQuickAdd;
   updateIssue = this.issueUpdate;
   archiveIssue = this.issueArchive;
 }

@@ -23,8 +23,6 @@ export enum EIssueGroupByToServerOptions {
   "labels" = "labels__id",
   "state_detail.group" = "state__group",
   "assignees" = "assignees__id",
-  "cycle" = "cycle_id",
-  "module" = "issue_module__module_id",
   "target_date" = "target_date",
   "project" = "project_id",
   "created_by" = "created_by",
@@ -56,14 +54,7 @@ export const ISSUE_PRIORITIES: {
   },
 ];
 
-export const DRAG_ALLOWED_GROUPS: TIssueGroupByOptions[] = [
-  "state",
-  "priority",
-  "assignees",
-  "labels",
-  "module",
-  "cycle",
-];
+export const DRAG_ALLOWED_GROUPS: TIssueGroupByOptions[] = ["state", "priority", "assignees", "labels"];
 
 export type TCreateModalStoreTypes = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE;
 
@@ -75,8 +66,6 @@ export const ISSUE_GROUP_BY_OPTIONS: {
   { key: "state_detail.group", titleTranslationKey: "common.state_groups" },
   { key: "priority", titleTranslationKey: "common.priority" },
   { key: "project", titleTranslationKey: "common.project" }, // required this on my issues
-  { key: "cycle", titleTranslationKey: "common.cycle" }, // required this on my issues
-  { key: "module", titleTranslationKey: "common.module" }, // required this on my issues
   { key: "labels", titleTranslationKey: "common.labels" },
   { key: "assignees", titleTranslationKey: "common.assignees" },
   { key: "created_by", titleTranslationKey: "common.created_by" },
@@ -105,11 +94,8 @@ export const ISSUE_DISPLAY_PROPERTIES_KEYS: (keyof IIssueDisplayProperties)[] = 
   "state",
   "sub_issue_count",
   "link",
-  "attachment_count",
   "created_on",
   "updated_on",
-  "modules",
-  "cycle",
 ];
 
 export const SUB_ISSUES_DISPLAY_PROPERTIES_KEYS: (keyof IIssueDisplayProperties)[] = [
@@ -151,13 +137,7 @@ export const ISSUE_DISPLAY_PROPERTIES: {
     key: "sub_issue_count",
     titleTranslationKey: "issue.display.properties.sub_issue_count",
   },
-  {
-    key: "attachment_count",
-    titleTranslationKey: "issue.display.properties.attachment_count",
-  },
   { key: "link", titleTranslationKey: "common.link" },
-  { key: "modules", titleTranslationKey: "common.module" },
-  { key: "cycle", titleTranslationKey: "common.cycle" },
 ];
 
 export const SPREADSHEET_PROPERTY_LIST: (keyof IIssueDisplayProperties)[] = [
@@ -165,14 +145,11 @@ export const SPREADSHEET_PROPERTY_LIST: (keyof IIssueDisplayProperties)[] = [
   "priority",
   "assignee",
   "labels",
-  "modules",
-  "cycle",
   "start_date",
   "due_date",
   "created_on",
   "updated_on",
   "link",
-  "attachment_count",
   "sub_issue_count",
 ];
 
@@ -218,22 +195,6 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     descendingOrderTitle: "Z",
     icon: "LabelPropertyIcon",
   },
-  modules: {
-    i18n_title: "common.modules",
-    ascendingOrderKey: "issue_module__module__name",
-    ascendingOrderTitle: "A",
-    descendingOrderKey: "-issue_module__module__name",
-    descendingOrderTitle: "Z",
-    icon: "DiceIcon",
-  },
-  cycle: {
-    i18n_title: "common.cycle",
-    ascendingOrderKey: "issue_cycle__cycle__name",
-    ascendingOrderTitle: "A",
-    descendingOrderKey: "-issue_cycle__cycle__name",
-    descendingOrderTitle: "Z",
-    icon: "ContrastIcon",
-  },
   priority: {
     i18n_title: "common.priority",
     ascendingOrderKey: "priority",
@@ -274,14 +235,6 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     descendingOrderTitle: "Least",
     icon: "Link2",
   },
-  attachment_count: {
-    i18n_title: "common.attachment",
-    ascendingOrderKey: "-attachment_count",
-    ascendingOrderTitle: "Most",
-    descendingOrderKey: "attachment_count",
-    descendingOrderTitle: "Least",
-    icon: "Paperclip",
-  },
   sub_issue_count: {
     i18n_title: "issue.display.properties.sub_issue",
     ascendingOrderKey: "-sub_issues_count",
@@ -298,9 +251,6 @@ export const FILTER_TO_ISSUE_MAP: Partial<Record<keyof IIssueFilterOptions, keyo
   created_by: "created_by",
   labels: "label_ids",
   priority: "priority",
-  cycle: "cycle_id",
-  module: "module_ids",
   project: "project_id",
   state: "state_id",
-  state_group: "state__group",
 } as const;

@@ -28,11 +28,10 @@ import useKeypress from "@/hooks/use-keypress";
 export type TQuickAddIssueFormRoot = {
   isOpen: boolean;
   layout: EIssueLayoutTypes;
-  prePopulatedData?: Partial<TIssue>;
   projectId: string;
   hasError?: boolean;
-  setFocus: UseFormSetFocus<TIssue>;
-  register: UseFormRegister<TIssue>;
+  setFocus: UseFormSetFocus<Pick<TIssue, "name">>;
+  register: UseFormRegister<Pick<TIssue, "name">>;
   onSubmit: () => void;
   onClose: () => void;
 };
