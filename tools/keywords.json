@@ -2947,6 +2947,14 @@
       "count": 1,
       "reason": "T7暂留；T5/R10 BaseIssuesStore.issueUpdate真实RootStore/公共HTTP边界测试，随P10b替换Base核心写入迁到新API；不是产品兼容URL",
       "until": "M4/P11"
+    },
+    {
+      "rule": "old-issue-urls",
+      "path": "web/apps/web/core/store/issue/issue-details/sub_issues.fetch.test.ts",
+      "match": "/api/workspaces/${ws.slug}/projects/${here.id}/issues/${parent.id}/sub-issues/",
+      "count": 1,
+      "reason": "P10a终审修复的公共子项入口真实RootStore/APIService边界回归；P11迁移子项数据层时同步迁移测试，P14页面性质验收不延长数据层期限；不是产品兼容URL",
+      "until": "M4/P12"
     }
   ]
 }

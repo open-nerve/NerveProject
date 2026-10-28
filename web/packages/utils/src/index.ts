@@ -11,7 +11,6 @@ export * from "./calendar";
 export * from "./common";
 export * from "./cycle";
 export * from "./datetime";
-export * from "./distribution-update";
 export * from "./editor";
 export * from "./emoji";
 export * from "./file";

@@ -9,8 +9,7 @@ import { action, computed, observable, makeObservable, runInAction } from "mobx"
 import { computedFn } from "mobx-utils";
 // types
 import type { IModule, ILinkDetails } from "@nerve/types";
-import type { DistributionUpdates } from "@nerve/utils";
-import { updateDistribution, orderModules, shouldFilterModule } from "@nerve/utils";
+import { orderModules, shouldFilterModule } from "@nerve/utils";
 // services
 import { ModuleService } from "@/services/module.service";
 import { ModuleArchiveService } from "@/services/module_archive.service";
@@ -35,7 +34,6 @@ export interface IModuleStore {
   getProjectModuleDetails: (projectId: string) => IModule[] | null;
   getProjectModuleIds: (projectId: string) => string[] | null;
   // fetch
-  updateModuleDistribution: (distributionUpdates: DistributionUpdates, moduleId: string) => void;
   fetchWorkspaceModules: (workspaceSlug: string) => Promise<IModule[]>;
   fetchModules: (workspaceSlug: string, projectId: string) => Promise<undefined | IModule[]>;
   fetchArchivedModules: (workspaceSlug: string, projectId: string) => Promise<undefined | IModule[]>;
@@ -315,22 +313,6 @@ export class ModulesStore implements IModuleStore {
       });
       return response;
     });
-
-  /**
-   * This method updates the module's stats locally without fetching the updated stats from backend
-   * @param distributionUpdates
-   * @param moduleId
-   * @returns
-   */
-  updateModuleDistribution = (distributionUpdates: DistributionUpdates, moduleId: string) => {
-    const moduleInfo = this.moduleMap[moduleId];
-
-    if (!moduleInfo) return;
-
-    runInAction(() => {
-      updateDistribution(moduleInfo, distributionUpdates);
-    });
-  };
 
   /**
    * @description fetch module details
