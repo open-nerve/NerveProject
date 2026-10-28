@@ -10,8 +10,10 @@ import { SessionChangedError } from "@/lib/auth/token-manager";
 /**
  * A change nerve confirmed, as it makes a value: an idempotent function of the value (made on a value that has it
  * already, it changes nothing), so it can be made again on a fetch's answer, which may have it or not.
+ * On replay, answered is the untouched read result, before merging or making any changes; direct confirmation
+ * supplies only value. A partial read's proof therefore never includes values retained from other parts.
  */
-export type Change<V> = (value: V) => V;
+export type Change<V> = (value: V, answered?: V) => V;
 
 /** The answers written so far, of every Reconciled value: each fetch's answer written takes the next number. */
 let answersWritten = 0;
@@ -38,6 +40,9 @@ export class Reconciled<V> {
    * older fetch still out writes nothing).
    */
   private changesDuringFetch: Change<V>[] | undefined = undefined;
+  /** Monotonic identities prevent a completed/invalidated part from matching a later read of the same part. */
+  private partSequence = 0;
+  private readonly parts = new Map<string, { sequence: number; changes: Change<V>[] }>();
 
   constructor() {
     makeObservable(this, { value: observable.ref, answeredAt: observable });
@@ -51,13 +56,14 @@ export class Reconciled<V> {
    * it, and the value stays as it was.
    */
   async fetch(read: () => Promise<V>): Promise<V | undefined> {
-    const sequence = ++this.newestFetch;
+    this.invalidate();
+    const sequence = this.newestFetch;
     const changes: Change<V>[] = [];
     this.changesDuringFetch = changes;
     try {
       const fetched = await read();
       if (sequence !== this.newestFetch) return undefined;
-      const value = changes.reduce<V>((made, change) => change(made), fetched);
+      const value = changes.reduce<V>((made, change) => change(made, fetched), fetched);
       runInAction(() => {
         this.value = value;
         this.answeredAt = ++answersWritten;
@@ -71,12 +77,49 @@ export class Reconciled<V> {
     }
   }
 
-  /** A change nerve confirmed: it is made on the value, once fetched, and on the answer of the fetch that is out. */
+  /**
+   * Reads one part of an already fetched value. The newest read of each part owns its changes; independent parts
+   * merge into the value held when they answer, then replay their confirmations with the original read as proof.
+   * A whole fetch or invalidate supersedes every older part, including its failures.
+   */
+  async fetchPart(part: string, read: () => Promise<V>, merge: (held: V, answer: V) => V): Promise<V | undefined> {
+    if (this.value === undefined) return undefined;
+    const sequence = ++this.partSequence;
+    const changes: Change<V>[] = [];
+    this.parts.set(part, { sequence, changes });
+    const current = () => this.parts.get(part)?.sequence === sequence;
+    try {
+      const fetched = await read();
+      if (!current()) return undefined;
+      const merged = merge(this.value, fetched);
+      const value = changes.reduce<V>((made, change) => change(made, fetched), merged);
+      runInAction(() => {
+        this.value = value;
+        this.answeredAt = ++answersWritten;
+      });
+      return value;
+    } catch (error) {
+      if (!current() || error instanceof SessionChangedError) return undefined;
+      throw error;
+    } finally {
+      if (current()) this.parts.delete(part);
+    }
+  }
+
+  /** Supersedes outstanding whole/part reads without fetching, changing the held value, or clearing its stale flag. */
+  invalidate(): void {
+    ++this.newestFetch;
+    this.changesDuringFetch = undefined;
+    this.parts.clear();
+  }
+
+  /** A confirmed change applies to the held value and is saved for every current whole/part read's answer. */
   confirm(change: Change<V>): void {
     runInAction(() => {
       if (this.value !== undefined) this.value = change(this.value);
     });
     this.changesDuringFetch?.push(change);
+    for (const { changes } of this.parts.values()) changes.push(change);
   }
 }
 
