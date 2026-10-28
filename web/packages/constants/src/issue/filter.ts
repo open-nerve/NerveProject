@@ -13,17 +13,6 @@ import type {
 import { EIssuesStoreType } from "@nerve/types";
 import { ISSUE_DISPLAY_PROPERTIES_KEYS, SUB_ISSUES_DISPLAY_PROPERTIES_KEYS } from "./common";
 
-export enum EServerGroupByToFilterOptions {
-  "state_id" = "state",
-  "priority" = "priority",
-  "labels__id" = "labels",
-  "state__group" = "state_group",
-  "assignees__id" = "assignees",
-  "target_date" = "target_date",
-  "project_id" = "project",
-  "created_by" = "created_by",
-}
-
 export enum EIssueFilterType {
   FILTERS = "rich_filters",
   DISPLAY_FILTERS = "display_filters",

@@ -8,9 +8,9 @@ import { beforeIssue, issueMembership, issueParts, subgroupField, type Membershi
 import {
   counterKey,
   priorCounterMembership,
+  pageEvidence,
   priorRowMembership,
   type CounterEvidence,
-  type ReadEvidence,
   type RowEvidence,
 } from "./paged-groups.evidence";
 
@@ -41,6 +41,7 @@ export type CounterRef =
   | { kind: "cell"; group: string; subgroup: string }
   | { kind: "subgroup"; subgroup: string };
 export type PageReadMeta = {
+  sourceID: number;
   part: PagePart | null;
   ranges: Map<string, PageRange>;
   first: boolean;
@@ -79,7 +80,9 @@ function copyBoundary(boundary: Boundary | null): Boundary | null {
  */
 export function decodePage(page: IssueListPage, meta: PageReadMeta, context: ListContext): PageAnswer {
   checkedTotal(page.total);
+  if (!Number.isSafeInteger(meta.sourceID) || meta.sourceID < 1) throw new Error("Missing page source identity");
   const read: PageReadMeta = {
+    sourceID: meta.sourceID,
     part: meta.part ? { ...meta.part } : null,
     first: meta.first,
     ranges: new Map(),
@@ -263,17 +266,13 @@ function counterRows(value: PagedGroups, ref: CounterRef): RowEvidence {
   };
 }
 function counterSource(value: PagedGroups, ref: CounterRef): CounterEvidence {
-  return structuredClone({ held: counterRows(value, ref), confirmed: new Map() });
-}
-export function pageEvidence(answer: PageAnswer): ReadEvidence {
-  return {
-    whole: answer.read.part === null,
-    parts: answer.read.rowParts.map((part) => ({
-      part,
-      rows: groupAt(answer, part)?.rows ?? [],
-      range: answer.read.ranges.get(pagePartKey(part))!,
-    })),
-  };
+  const sourceID = value.read?.sourceID ?? 0;
+  const read = value.counterEvidence
+    ? [...value.counterEvidence.values()].find((source) => source.sourceID === sourceID)?.read
+    : value.read
+      ? pageEvidence({ ...value, read: value.read })
+      : undefined;
+  return structuredClone({ sourceID, held: counterRows(value, ref), read, confirmed: new Map() });
 }
 
 /** Merge owns exactly the response write set; continuation totals replace local totals. */
@@ -320,7 +319,8 @@ export function applyGroupChange(
   value: PagedGroups,
   change: ConfirmedIssueChange,
   context: ListContext,
-  options?: { answer: PageAnswer; phase: "before" | "after" | "unknown"; old: (ref: CounterRef) => Membership }
+  options?: { answer: PageAnswer; phase: "before" | "after" | "unknown"; old: (ref: CounterRef) => Membership },
+  heldSources: ReadonlySet<number> = new Set()
 ): GroupChangeResult {
   const before = beforeIssue(change.beforeSnapshot);
   // Workspace is immutable on an issue. A foreign confirmation cannot affect
@@ -340,6 +340,7 @@ export function applyGroupChange(
     }
   const refs = whole ? counters(result) : options.answer.read.resetCounters;
   const parts = whole ? rowParts(result) : options.answer.read.rowParts;
+  result.counterEvidence ??= new Map();
   const uncertain = new Set<string>();
   const verifyIds = new Set<string>();
   function mark(ref: CounterRef) {
@@ -355,8 +356,9 @@ export function applyGroupChange(
   }
   for (const ref of refs) {
     const next = issueMembership(change.after, context, ref);
-    const evidence = value.counterEvidence?.get(counterKey(ref));
-    const proven = !options && evidence ? priorCounterMembership(evidence, change, context, ref) : undefined;
+    const evidence = value.counterEvidence?.get(counterKey(ref)) ?? counterSource(value, ref);
+    result.counterEvidence.set(counterKey(ref), structuredClone(evidence));
+    const proven = !options ? priorCounterMembership(evidence, change, context, ref, heldSources) : undefined;
     if (proven?.inferred) verifyIds.add(change.id);
     const old =
       options?.phase === "after"
@@ -428,7 +430,8 @@ export function applyGroupChange(
 export function confirmGroups(
   value: PagedGroups,
   change: ConfirmedIssueChange,
-  context: ListContext
+  context: ListContext,
+  heldSources: ReadonlySet<number> = new Set()
 ): GroupChangeResult {
-  return applyGroupChange(value, change, context);
+  return applyGroupChange(value, change, context, undefined, heldSources);
 }

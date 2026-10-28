@@ -6,7 +6,7 @@
 
 import type { Issue, IssueDetail } from "@nerve/api-client";
 
-import type { TLegacyIssueUpdateRequest } from "@nerve/types";
+import type { IssueUpdate } from "@nerve/api-client";
 import { computedFn } from "mobx-utils";
 // types
 
@@ -18,12 +18,7 @@ import type { IIssueDetail } from "./root.store";
 export interface IIssueStoreActions {
   // actions
   fetchIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<IssueDetail>;
-  updateIssue: (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    data: TLegacyIssueUpdateRequest
-  ) => Promise<void>;
+  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => Promise<void>;
   removeIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   fetchIssueWithIdentifier: (
@@ -118,7 +113,7 @@ export class IssueStore implements IIssueStore {
     return issue;
   };
 
-  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) => {
+  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => {
     const currentStore = this.rootIssueDetailStore.rootIssueStore.projectIssues;
 
     await Promise.all([
@@ -129,12 +124,12 @@ export class IssueStore implements IIssueStore {
 
   removeIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
     const currentStore = this.rootIssueDetailStore.rootIssueStore.projectIssues;
-    currentStore.removeIssue(workspaceSlug, projectId, issueId);
+    return currentStore.removeIssue(workspaceSlug, projectId, issueId);
   };
 
   archiveIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
     const currentStore = this.rootIssueDetailStore.rootIssueStore.projectIssues;
-    currentStore.archiveIssue(workspaceSlug, projectId, issueId);
+    return currentStore.archiveIssue(workspaceSlug, projectId, issueId);
   };
 
   fetchIssueWithIdentifier = async (workspaceSlug: string, project_identifier: string, sequence_id: string) => {

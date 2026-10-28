@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T4 既定任务门禁已完成；T5 只读准备中，先关闭 spec §2.6 的 W1，再完成真实列表接线。任务勾选由主控在独立评审后更新。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T4 既定任务门禁已完成；T5 实施中，先关闭 spec §2.6 的 W1，再完成真实列表接线。任务勾选由主控在独立评审后更新。
 
 > **当前状态：** T4 修复提交 dde969f8 的独立复审和完整本地七门禁通过；whole 窗口外计数边界 W1 由 T5 首项必修，未关闭前不推产品检查点。全部阶段产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。
 
@@ -130,7 +130,7 @@ make e2e
 
 ## Task 5：替换列表引擎并接通确认写入口（约1100–1500行）
 
-**Files：** C/store/issue/root.store.ts 的基本协调入口、C/store/root.store.ts 退役接线、C/lib/store-context.test.ts、C/services/user.service.ts；C/store/issue/helpers/{base-issues.store,base-issues-utils,issue-filter-helper.store}.ts；project/archived/profile/issue.store.ts；新helpers两test；首次新增C/lib/issue-filters.ts/test的spec§2.7四纯函数；删除旧列表services/type容器/枚举/映射并接上T1新service；必须同Task跟进C/hooks/use-issues-actions.tsx、issue-layouts/calendar/base-calendar-root.tsx及list/kanban/spreadsheet读者。
+**Files：** C/store/issue/root.store.ts 的基本协调入口、C/store/root.store.ts 退役接线、C/lib/store-context.test.ts、C/services/user.service.ts；C/store/issue/helpers/{base-issues.store,issue-list-binding,base-issues-utils,issue-filter-helper.store}.ts；project/archived/profile/issue.store.ts；新helpers两test；首次新增C/lib/issue-filters.ts/test的spec§2.7四纯函数；删除旧列表services/type容器/枚举/映射并接上T1新service；必须同Task跟进C/hooks/use-issues-actions.tsx、新 C/hooks/use-issue-list-refresh.tsx/test.tsx（绑定实例的可见 stale 一轮刷新与显式重试）、issue-layouts/calendar/base-calendar-root.tsx及list/kanban/spreadsheet读者。
 **Interfaces：** root 首次产出 spec§2.9 核心写入口及§2.6会话生命周期（T11/T12复用，不另造）；BaseIssuesStore持Reconciled<PagedGroups>；fetchFirst/fetchNext/refreshStale/acceptConfirmed/markMembershipStale，spec§2.6；首次产出toProjectFilters/toFilterExpression/projectListQuery/memberListQuery，T8不重复新建，只扩大语义测试及去否定。PageAnswer返回V，通用Reconciled不理解分页业务。
 
 - [ ] 首项关闭 W1（spec§2.6/R13，原始复现见 task-4-fix1-whole-boundary-note.md）：whole已计入窗口外create但未返回该id，不能在confirm时盲加outer/group并保持fresh。提出并裁定区分“实际发出前已持有计数来源”与“操作在外新回答来源”的最小内部证据方案；未知只stale，已知发出前Before仍有效，不能一律whole刷新。补模型和真实FakeNerve交错红→绿、错误来源判定生产变异，并保留T4 I1/M48全回归；同步spec内部形状。本项随T5独评关闭，不能移交T12/T14。

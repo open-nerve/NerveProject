@@ -181,14 +181,6 @@ export interface IWorkspaceViewProps {
   display_properties: IIssueDisplayProperties;
 }
 
-export interface IssuePaginationOptions {
-  canGroup: boolean;
-  perPageCount: number;
-  before?: string;
-  after?: string;
-  groupedBy?: TIssueGroupByOptions;
-}
-
 export type TSpreadsheetColumn = FC<{
   issue: Issue;
   onClose: () => void;

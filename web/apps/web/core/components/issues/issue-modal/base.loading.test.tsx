@@ -24,7 +24,10 @@ function reply<T>(data: T): AxiosResponse<T> {
   return { data, status: 200, statusText: "OK", headers: {}, config: { headers: new AxiosHeaders() } };
 }
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
+vi.mock("@/lib/auth/api-client", () => ({
+  tokenManager: { state: { loginId: "issue-modal-session" } },
+  publicClient: {},
+}));
 const binding = vi.hoisted(() => ({ app: undefined as unknown }));
 vi.mock("@/lib/store-context", () => ({
   get rootStore() {

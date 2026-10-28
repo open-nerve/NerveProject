@@ -15,7 +15,6 @@ import type {
   IIssueDisplayProperties,
   IIssueFilterOptions,
   ISubWorkItemFilters,
-  TGroupedIssues,
 } from "@nerve/types";
 import { getFilteredWorkItems, getGroupedWorkItemIds, updateSubWorkItemFilters } from "../helpers/base-issues-utils";
 import type { IssueSubIssuesStore } from "./sub_issues.store";
@@ -37,7 +36,7 @@ export interface IWorkItemSubIssueFiltersStore {
     filters: IIssueDisplayFilterOptions | IIssueDisplayProperties | IIssueFilterOptions,
     workItemId: string
   ) => void;
-  getGroupedSubWorkItems: (workItemId: string) => TGroupedIssues;
+  getGroupedSubWorkItems: (workItemId: string) => Record<string, string[]>;
   getFilteredSubWorkItems: (workItemId: string, filters: IIssueFilterOptions) => Issue[];
   getSubIssueFilters: (workItemId: string) => Partial<ISubWorkItemFilters>;
   resetFilters: (workItemId: string) => void;

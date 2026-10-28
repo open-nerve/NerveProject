@@ -1,3 +1,4 @@
+import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -11,7 +12,7 @@ import { useParams } from "react-router";
 // nerve constants
 import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // types
-import type { EIssuesStoreType, GroupByColumnTypes, TGroupedIssues, TIssueKanbanFilters } from "@nerve/types";
+import type { EIssuesStoreType, GroupByColumnTypes, TIssueKanbanFilters } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
@@ -19,6 +20,7 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { useGroupIssuesDragNDrop } from "@/hooks/use-group-dragndrop";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
+import { useIssueListRefresh, IssueListRetry } from "@/hooks/use-issue-list-refresh";
 // components
 import { IssueLayoutHOC } from "../issue-layout-HOC";
 import { List } from "./default";
@@ -60,11 +62,19 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
   const collapsedGroups =
     issuesFilter?.issueFilters?.kanbanFilters || ({ group_by: [], sub_group_by: [] } as TIssueKanbanFilters);
 
+  // The mounted binding hook shows failures and offers retry.
   useEffect(() => {
-    fetchIssues("init-loader", { canGroup: true, perPageCount: group_by ? 50 : 100 }, viewId);
+    void fetchIssues("init-loader", { limit: group_by ? 50 : 100 }, viewId).catch(() => {});
   }, [fetchIssues, storeType, group_by, viewId]);
 
-  const groupedIssueIds = issues?.groupedIssueIds as TGroupedIssues | undefined;
+  const groups = issues?.groups as Map<string, Group> | undefined;
+  const staleRefresh = useIssueListRefresh(
+    "currentList" in issues ? issues.currentList : undefined,
+    [...(groups ?? [])]
+      .filter(([id, group]) => !collapsedGroups.group_by.includes(id) && (showEmptyGroup || group.total > 0))
+      .map(([group]) => ({ group }))
+  );
+
   // auth
   const isEditingAllowed = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
@@ -102,7 +112,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
 
   const loadMoreIssues = useCallback(
     (groupId?: string) => {
-      fetchNextIssues(groupId);
+      void fetchNextIssues(groupId).catch(() => {});
     },
     [fetchNextIssues]
   );
@@ -128,6 +138,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
   return (
     <IssueLayoutHOC layout={EIssueLayoutTypes.LIST}>
       <div className="relative size-full bg-surface-2">
+        <IssueListRetry {...staleRefresh} />
         <List
           issuesMap={issueMap}
           displayProperties={displayProperties}
@@ -135,7 +146,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
           orderBy={orderBy}
           updateIssue={updateIssue}
           quickActions={renderQuickActions}
-          groupedIssueIds={groupedIssueIds ?? {}}
+          groups={groups ?? new Map()}
           loadMoreIssues={loadMoreIssues}
           showEmptyGroup={showEmptyGroup}
           quickAddCallback={createIssue}

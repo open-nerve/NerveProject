@@ -1,10 +1,9 @@
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
-import type { IssueDetail } from "@nerve/api-client";
 
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useRef } from "react";
@@ -73,7 +72,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
   const issue = inboxIssue.issue;
   const isIntakeAccepted = inboxIssue.status === EInboxIssueStatus.ACCEPTED;
 
-  const issueOperations: TIssueOperations = useMemo(
+  const issueOperations: TIssueOperations<TLegacyIssueUpdateRequest> = useMemo(
     () => ({
       fetch: async (_workspaceSlug: string, _projectId: string, _issueId: string) => {
         return;
@@ -96,7 +95,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
           });
         }
       },
-      update: async (_workspaceSlug: string, _projectId: string, _issueId: string, data: Partial<IssueDetail>) => {
+      update: async (_workspaceSlug: string, _projectId: string, _issueId: string, data: TLegacyIssueUpdateRequest) => {
         try {
           await inboxIssue.updateIssue(data);
         } catch (_error) {

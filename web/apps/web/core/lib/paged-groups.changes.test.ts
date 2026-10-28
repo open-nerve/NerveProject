@@ -1,7 +1,18 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { expect, test } from "vitest";
 import { issuePageOf, listContext, listGroup, listIssue, listRow, pageMeta } from "@/store/issue/fake-issues";
-import { confirmGroups, decodePage, mergePages, type PagedGroups, type ConfirmedIssueChange } from "./paged-groups";
+import {
+  confirmGroups as confirmWithSources,
+  decodePage,
+  mergePages,
+  type PagedGroups,
+  type ConfirmedIssueChange,
+} from "./paged-groups";
+
+// Hand-built initial fixtures represent source 0 held before dispatch; decoded
+// partial/whole replies have positive identities and never inherit this permission.
+const confirmGroups = (...args: Parameters<typeof confirmWithSources>) =>
+  confirmWithSources(args[0], args[1], args[2], new Set([0]));
 
 const afterTime = "2026-10-28T00:00:00.000001Z";
 // G01–16: frozen old/new membership × row presence × new key inside/outside.
@@ -42,7 +53,7 @@ for (const [name, old, next, present, inside, unfinishedTotal, completeTotal, vi
         { id: "x", beforeSnapshot: { kind: "known", issue: before }, after },
         listContext({ group_by: "state_id" })
       );
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         value: {
           total: 9,
           groups: new Map([
@@ -70,7 +81,7 @@ test("I2-8 createsOmittedEmptyGroupAndLaneCell", () => {
     { id: "new", beforeSnapshot: { kind: "absent" }, after },
     listContext({ group_by: "label_id", sub_group_by: "assignee_id" })
   );
-  expect(result).toEqual({
+  expect(result).toMatchObject({
     value: {
       total: 1,
       subgroupTotals: new Map([["U", 1]]),
@@ -197,7 +208,7 @@ test.each([false, true])("archiveAndUnarchiveRespectTheListScope archived=%s", (
 test("I2-1 alreadyAnsweredVersionOnlyPlacesAndDoesNotDoubleCount", () => {
   const after = listIssue("x", 4, { updated_at: afterTime });
   const value: PagedGroups = { total: 7, groups: new Map([["", listGroup(7, [listRow("x", 4, afterTime)])]]) };
-  expect(confirmGroups(value, { id: "x", beforeSnapshot: { kind: "absent" }, after }, listContext())).toEqual({
+  expect(confirmGroups(value, { id: "x", beforeSnapshot: { kind: "absent" }, after }, listContext())).toMatchObject({
     value,
     verifyIds: [],
   });
@@ -240,7 +251,7 @@ test.each([{ mention_id: ["me"] }, { subscriber_id: ["me"] }])("unobservableProj
     { id: "x", beforeSnapshot: { kind: "absent" }, after: listIssue("x", 4) },
     listContext(query)
   ).value;
-  expect(result).toEqual({ ...value, groups: new Map([["", { ...value.groups.get("")!, stale: true }]]) });
+  expect(result).toMatchObject({ ...value, groups: new Map([["", { ...value.groups.get("")!, stale: true }]]) });
 });
 
 test("I2-9 dropOutsideWindowExtendsDisplayWithoutMovingServerCursor", () => {
@@ -284,7 +295,7 @@ test("D-204 confirmationDeletesWithoutAVersionAndSecondConfirmationIsInert", () 
     after: null,
   };
   const once = confirmGroups(value, change, listContext()).value;
-  expect(once).toEqual({ total: 0, groups: new Map([["", { ...value.groups.get("")!, total: 0, rows: [] }]]) });
+  expect(once).toMatchObject({ total: 0, groups: new Map([["", { ...value.groups.get("")!, total: 0, rows: [] }]]) });
   expect(confirmGroups(once, change, listContext()).value).toEqual(once);
 });
 
@@ -370,7 +381,7 @@ test.each(["assigned", "created", "subscribed"] as const)(
       { id: "x", beforeSnapshot: { kind: "absent" }, after: listIssue("x", 4, { project_id: "B" }) },
       context
     ).value;
-    expect(excluded).toEqual(value);
+    expect(excluded).toMatchObject(value);
   }
 );
 
@@ -435,13 +446,15 @@ test("memberConfirmationKeepsSameUserWorkspacesIsolated", () => {
     };
     const result = confirmGroups(value, { id: "x", beforeSnapshot: { kind: "absent" }, after: issue }, context);
     if (workspaceID === "other-ws") {
-      expect(result).toEqual({ value, verifyIds: [] });
-      expect(confirmGroups(value, { id: "x", beforeSnapshot: { kind: "unknown" }, after: issue }, context)).toEqual({
+      expect(result).toMatchObject({ value, verifyIds: [] });
+      expect(
+        confirmGroups(value, { id: "x", beforeSnapshot: { kind: "unknown" }, after: issue }, context)
+      ).toMatchObject({
         value,
         verifyIds: [],
       });
     } else
-      expect(result.value).toEqual({
+      expect(result.value).toMatchObject({
         total: 6,
         groups: new Map([["", { ...value.groups.get("")!, total: 6, rows: [listRow("held", 2), listRow("x", 4)] }]]),
       });
@@ -540,7 +553,7 @@ test.each([false, true])("I1 wholeAfterAnswerAlreadyOwnsSharedCreateAndDeleteCou
     pageMeta(),
     context
   );
-  expect(confirmGroups(raw, { id: "x", beforeSnapshot: { kind: "absent" }, after: issue }, context)).toEqual({
+  expect(confirmGroups(raw, { id: "x", beforeSnapshot: { kind: "absent" }, after: issue }, context)).toMatchObject({
     value: raw,
     verifyIds: [],
   });

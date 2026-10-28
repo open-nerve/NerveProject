@@ -1,3 +1,4 @@
+import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -16,10 +17,7 @@ import type {
   TWorkspaceDraftPaginationInfo,
   TWorkspaceDraftIssueLoader,
   TWorkspaceDraftQueryParams,
-  TPaginationData,
   TLoader,
-  TGroupedIssues,
-  TSubGroupedIssues,
   ViewFlags,
 } from "@nerve/types";
 import { getCurrentDateTimeInISO, convertToISODateString } from "@nerve/utils";
@@ -77,9 +75,9 @@ export interface IWorkspaceDraftIssues {
 
   // dummies
   viewFlags: ViewFlags;
-  groupedIssueIds: TGroupedIssues | TSubGroupedIssues | undefined;
+  groups: Map<string, Group> | undefined;
   getIssueIds: (groupId?: string, subGroupId?: string) => string[] | undefined;
-  getPaginationData(groupId: string | undefined, subGroupId: string | undefined): TPaginationData | undefined;
+  getPaginationData(groupId: string | undefined, subGroupId: string | undefined): Group | undefined;
   getIssueLoader(groupId?: string, subGroupId?: string): TLoader;
   getGroupIssueCount: (
     groupId: string | undefined,
@@ -346,7 +344,7 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
 
   // dummies
   viewFlags: ViewFlags = { enableQuickAdd: false, enableIssueCreation: false, enableInlineEditing: false };
-  groupedIssueIds: TGroupedIssues | TSubGroupedIssues | undefined = undefined;
+  groups: Map<string, Group> | undefined = undefined;
   getIssueIds = (_groupId?: string, _subGroupId?: string) => undefined;
   getPaginationData = (_groupId: string | undefined, _subGroupId: string | undefined) => undefined;
   getIssueLoader = (_groupId?: string, _subGroupId?: string) => "loaded" as TLoader;

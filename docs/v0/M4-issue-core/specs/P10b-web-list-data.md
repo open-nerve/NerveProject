@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层规格
 
-> 状态：T1–T4 的既定任务门禁已完成；T4 修复复审及七项本地门禁通过，整页窗口外计数边界 W1 已登记为 T5 首项必修。T5 只读准备中，全部阶段产品验收仍未勾选。旧六项 B-L1–B-L6 继续作为实施要求。
+> 状态：T1–T4 的既定任务门禁已完成；T4 修复复审及七项本地门禁通过，整页窗口外计数边界 W1 已登记为 T5 首项必修。T5 实施中，全部阶段产品验收仍未勾选。旧六项 B-L1–B-L6 继续作为实施要求。
 
 ## 1. 目标
 
@@ -22,7 +22,7 @@
 | T2 | C/lib/reconciled.ts：fetchPart及原应答重放上下文 | 新 C/lib/reconciled.test.ts；既有project/workspace/member/state/label stores回归 |
 | T3 | 新 C/lib/paged-groups.ts：组/格/行/页模型；新 C/lib/issue-order.ts：排序和时间精度 | 新 C/lib/issue-order.test.ts、paged-groups.test.ts |
 | T4 | C/lib/paged-groups.ts：确认与纯merge；新 issue-membership.ts：三态成员/组键；新 paged-groups.replay.ts：raw重放与verifyIds意图；新 paged-groups.evidence.ts：计数自己的来源、确认事实和共用三分支 | 新 C/lib/paged-groups.changes.test.ts、paged-groups.replay.test.ts |
-| T5 | BaseIssuesStore及三个列表切新service/旧形状；root同任务接唯一写协调入口、会话退役与列表注册；首次query纯函数，删归档旧service和UserService旧列表方法 | 新 helpers/base-issues.store.test.ts、base-issues-utils.test.ts |
+| T5 | BaseIssuesStore选择门面、helpers/issue-list-binding.ts不可变scope/query与Reconciled及目录准备；三个列表切新service；root唯一写协调/退役/heldSources分发；issue-filters纯函数；use-issue-list-refresh.tsx接四布局可见刷新/拒绝/显式重试；同次删旧形状和服务 | 新 helpers/base-issues.store.test.ts、base-issues-utils.test.ts、lib/paged-groups.sources.test.ts、lib/issue-filters.test.ts、hooks/use-issue-list-refresh.test.tsx；迁移R8/R10与store-context |
 | T6 | C/store/issue/issue.store.ts唯一副本、ReconciledByKey接收API，description/版本/墓碑、项目read epoch；同Task闭合P11过渡详情/子项/关联/link的canonical写入 | 新 C/store/issue/issue.store.test.ts |
 | T7 | C/store/issue/project/filter.store.ts；C/store/project/preferences.store.ts按需联动；删/user-properties两方法/例外/放行 | 新 project/filter.store.test.ts；既有 project/preferences.store.test.ts和三E2E故事 |
 | T8 | 新 C/lib/issue-filters.ts；P/shared-state/types/utils富筛选否定层清除；hooks消费者 | 新 C/lib/issue-filters.test.ts |
@@ -92,20 +92,20 @@ type PagedGroups = { total: number; groups: Map<string, Group>;
   counterEvidence?: Map<string, CounterEvidence> };
 type ReadEvidence = { whole: boolean;
   parts: {part: PagePart; rows: Row[]; range: PageRange}[] };
-type CounterEvidence = { held: {rows: Row[]; complete: boolean};
+type CounterEvidence = { sourceID: number; held: {rows: Row[]; complete: boolean};
   read?: ReadEvidence;
   confirmed: Map<string, {updatedAt: string|null; member: boolean}> };
 type PageRange = { lower: Boundary | null; upper: Boundary | null; complete: boolean };
 type CounterRef = { kind: "outer" } | { kind: "group"; group: string }
   | { kind: "cell"; group: string; subgroup: string }
   | { kind: "subgroup"; subgroup: string };
-type PageReadMeta = { part: { group: string; subgroup?: string } | null;
+type PageReadMeta = { sourceID: number; part: { group: string; subgroup?: string } | null;
   ranges: Map<string, PageRange>; first: boolean; resetCounters: CounterRef[];
   rowParts: { group: string; subgroup?: string }[] };
 type PageAnswer = PagedGroups & { read: PageReadMeta };
 ```
 
-不分组用空字符串键；服务端未回答的组/格需要时按total0、rows[]、nextCursor null、boundary null建出。`boundary` 是显示窗口最远边界，只前进；`cursorBoundary`只记上一服务端页末行，与drop扩大的boundary独立。nextCursor完全采用响应，不解析、不生成。纯decoder `decodePage(page: IssueListPage, meta: PageReadMeta, context: ListContext): PageAnswer` 保留原响应行和本次range；PageAnswer仅含Row，不保留第二份完整Issue。普通merged value的read元数据不作为证据，只有Change第二参数的原值可以作证。原PageAnswer冻结本次范围：第一页lower为空表示负无穷；续页lower为发出时cursorBoundary；末页complete仅表示到正无穷，不能把lower之前当已覆盖。空续页保持cursorBoundary，已完没有下一请求。
+不分组用空字符串键；服务端未回答的组/格需要时按total0、rows[]、nextCursor null、boundary null建出。`boundary` 是显示窗口最远边界，只前进；`cursorBoundary`只记上一服务端页末行，与drop扩大的boundary独立。nextCursor完全采用响应，不解析、不生成。纯decoder `decodePage(page: IssueListPage, meta: PageReadMeta, context: ListContext): PageAnswer` 保留原响应行和本次range；PageAnswer仅含Row，不保留第二份完整Issue。普通merged value的read元数据不作为证据；首次改动前将 raw Row/range 惰性冻结到 CounterEvidence，重放只用 Change 第二参数的原值。生产 decoder 要求 sourceID，列表按回答分配；`heldCounterSources(value)` 只读取当前 held 模型的来源集合，确认通过显式参数传递本操作/本列表许可。原PageAnswer冻结本次范围：第一页lower为空表示负无穷；续页lower为发出时cursorBoundary；末页complete仅表示到正无穷，不能把lower之前当已覆盖。空续页保持cursorBoundary，已完没有下一请求。
 
 `issue-order.ts` 产出 `issueNameKey(text): string`、`compareCodePoints(a,b): number`、`compareIssueTime(a,b): number`、`issueSortKey(issue,order,catalog): SortKey`、`compareRows(a,b,order): number`。Catalog通过生成State/Label/MemberUser目录解析名称/状态组，不向Issue补接口外字段。名字只折ASCII A–Z；逐Unicode码位比（不用localeCompare/UTF-16 `<`）。多值名始终取最小；行排序的优先级等级为none=0、low=1、medium=2、high=3、urgent=4，`priority`升序none在前、`-priority`降序urgent在前，与分组展示顺序urgent→none分开（M4设计§3.16、P5 spec排序契约）。空值双向最后，同键UUID随方向。时间键保留纳秒，日期按YYYY-MM-DD。计数key用BigInt：从生产Issue number输入仅接受Number.isSafeInteger且非负，再转BigInt；unsafe值交回错误，不假称能恢复JSON解析已经丢掉的精度。排序fixture含9007199254740993与9223372036854775807，测试须按Node24 JSON.parse reviver的context.source读原数字token转BigInt；其余数值按字段保留原类型。大整数fixture行按原token构造合法 `Row.key: bigint`，直接调用生产 `compareRows` 验证固定预期；不把bigint塞进生成 `Issue.sub_issues_count/link_count:number`，不使用强制类型断言。另用真实生成Issue的safe number调用 `issueSortKey` 验证转key，并单测unsafe number拒绝；名称、日期、优先级等能构成合法Issue的fixture仍覆盖 `issueSortKey`。不修改全局API客户端或HTTP协议。所有真实生产比较器由 `api/testdata/issue-order.json` 的独立预期测试，fixture不进入生产bundle。
 
@@ -113,7 +113,7 @@ type PageAnswer = PagedGroups & { read: PageReadMeta };
 
 ### 2.5 T4：确认与重放
 
-`Before = {kind:"known"; issue:Issue} | {kind:"absent"} | {kind:"unknown"}`；`ConfirmedIssueChange={id,beforeSnapshot:Before,after:IssueDetail|Issue|null,drop?:{group,subgroup?,beforeId?,afterId?}}`。每个操作进入实际发送的队列轮次后、发请求之前，从canonical深拷贝冻结beforeSnapshot到该操作pending记录（数组也复制），新建为absent，从未见为unknown。不得在用户排队时过早取、也不得在确认时从已被read更新的canonical重取。pending同时保留这期间观察到的成员关系/排序版本证据；确认从同一操作取冻结before。与after同版本且相关字段相同的read可识别为本次写，不推翻before；若观察到更晚版本，或早于after但晚于before且改变相关字段的其它版本，冻结before不足以证明本次实际旧属，改为unknown并使受影响旧/新组stale，不能猜计数。只保留作此判定所需版本与字段，不建立第二个可写实体缓存。after=null专门表示**已确认删除**。纯函数 `confirmGroups(value, change, context): GroupChangeResult`、`replayGroups(value, change, answer, context): GroupChangeResult` 产出 `{value, verifyIds:string[]}`，context包含query、comparison/catalog和pendingIDs，不在纯模型里请求。`ListContext` 的 member scope 同时要求 `workspaceSlug` 与 `workspaceID`；成员判断先比较 `Issue.workspace_id`，同一 user 的其它工作区不改该列表的行、计数或 stale。T5 从已有 Workspace 生成目录取得 ID 来创建绑定 scope，ID 未知时不创建可请求 scope，不新增 HTTP 协议。 同一纯模型提供 `mergePages(value: PagedGroups, answer: PageAnswer, context: ListContext): PagedGroups`，按原回答的计数/行写集合合并，T5 的 fetchPart 直接复用；它不改变 raw PageAnswer。`confirmGroups`/`mergePages` 由 `paged-groups.ts` 导出，`replayGroups` 由 `paged-groups.replay.ts` 直接导出，T5 分别导入复用；成员/组键纯判断在 `issue-membership.ts`，该文件对模型仅 type-only 引用，主模型不反向转发 replay，避免运行时循环。
+`Before = {kind:"known"; issue:Issue} | {kind:"absent"} | {kind:"unknown"}`；`ConfirmedIssueChange={id,beforeSnapshot:Before,after:IssueDetail|Issue|null,drop?:{group,subgroup?,beforeId?,afterId?}}`。每个操作进入实际发送的队列轮次后、发请求之前，从canonical深拷贝冻结beforeSnapshot到该操作pending记录（数组也复制），新建为absent，从未见为unknown。不得在用户排队时过早取、也不得在确认时从已被read更新的canonical重取。pending同时保留这期间观察到的成员关系/排序版本证据；确认从同一操作取冻结before。与after同版本且相关字段相同的read可识别为本次写，不推翻before；若观察到更晚版本，或早于after但晚于before且改变相关字段的其它版本，冻结before不足以证明本次实际旧属，改为unknown并使受影响旧/新组stale，不能猜计数。只保留作此判定所需版本与字段，不建立第二个可写实体缓存。after=null专门表示**已确认删除**。纯函数 `confirmGroups(value, change, context, heldSources?: ReadonlySet<number>): GroupChangeResult`、`replayGroups(value, change, answer, context): GroupChangeResult` 产出 `{value, verifyIds:string[]}`，context包含query、comparison/catalog和pendingIDs，不在纯模型里请求。`ListContext` 的 member scope 同时要求 `workspaceSlug` 与 `workspaceID`；成员判断先比较 `Issue.workspace_id`，同一 user 的其它工作区不改该列表的行、计数或 stale。T5 从已有 Workspace 生成目录取得 ID 来创建绑定 scope，ID 未知时不创建可请求 scope，不新增 HTTP 协议。 同一纯模型提供 `mergePages(value: PagedGroups, answer: PageAnswer, context: ListContext): PagedGroups`，按原回答的计数/行写集合合并，T5 的 fetchPart 直接复用；它不改变 raw PageAnswer。`confirmGroups`/`mergePages` 由 `paged-groups.ts` 导出，`replayGroups` 由 `paged-groups.replay.ts` 直接导出，T5 分别导入复用；成员/组键纯判断在 `issue-membership.ts`，该文件对模型仅 type-only 引用，主模型不反向转发 replay，避免运行时循环。
 
 | 旧属 | 新属 | total | rows |
 |---|---|---|---|
@@ -122,11 +122,11 @@ type PageAnswer = PagedGroups & { read: PageReadMeta };
 | 否 | 是 | +1 | 窗口内插入，窗口外等待后页 |
 | 否 | 否 | 不变 | 不动 |
 
-旧属首先按该列表原行版本决定，已含after只摆放；无行且整组已加载为否；其余用beforeSnapshot，不知道则stale。多标签/负责人多个组分别判，外层total按去重membership变化，泳道subgroupTotals按其独立membership变化，不能求各格和。
+直接确认的旧属由该计数自己的来源与本操作的 heldSources 决定：已确认事实优先；发送前实际持有的来源按原行/完整缺席/冻结 Before 判定；新来源只按 raw 三分支，缺许可不回退猜 Before。多标签/负责人多个组分别判，外层total按去重membership变化，泳道subgroupTotals按其独立membership变化，不能求各格和。
 
-**计数自己的证据（T4 fix1/R12）：** 可选 `counterEvidence` 属于合并后的纯模型，decoder 的 raw PageAnswer 不写该字段。首次 partial merge 在改 rows 前，按稳定 JSON 数组 CounterRef key 为每个计数保存自己的 Row/完整缺席证据；包括新格带出的缺省零父组/泳道。已有来源沿用，不能用后续 merged.rows 反推旧共享计数。仅 resetCounters 的来源替换为本次原 Row/range 并清空该计数的确认事实；其它计数的来源与确认事实不动。whole 重取整体替换并清除此增量元数据。
+**计数自己的证据（T4 fix1/R12）：** 可选 `counterEvidence` 属于合并后的纯模型，decoder 的 raw PageAnswer 不写该字段。首次 confirm 或 partial merge 在改 rows 前，按稳定 JSON 数组 CounterRef key 为每个计数保存自己的 Row/完整缺席证据；包括新格带出的缺省零父组/泳道。已有来源沿用，不能用后续 merged.rows 反推旧共享计数。仅 resetCounters 的来源替换为本次原 Row/range 并清空该计数的确认事实；其它计数的来源与确认事实不动。whole 重取整体替换并清除此增量元数据。
 
-直接确认将计数与行摆放分开：计数先读自身最新确认事实；未被 partial 重置的计数按自己的旧 Row/完整缺席或冻结 Before 补差；被重置的计数使用与 raw replay 共用的 before/after/unknown 判断。范围不覆盖且没有行时，即使 Before 已知也不猜该服务器 total 是否已包含写，只标受影响部分 stale。确知补差或确知已经包含结果后，每计数每 id 只保存最新 `{updatedAt|null, member}` 一条事实，不保留历史链；unknown 不记录已应用。删除的 null 是计数已处理删除的证据，不构造第二份 Issue 或 canonical 墓碑。行摆放继续读当前 rows/window。缺行推断的 verifyIds 在同次结果内去重。replay 只同步此次拥有的计数事实和行；全部操作不改输入 value 或 raw Answer。`paged-groups.evidence.ts` 集中这些纯判定，仅 type-only 引用模型，主模型和 replay 单向消费它。
+直接确认将计数与行摆放分开：计数先读自身最新确认事实；来源在本操作 heldSources 中的计数按自己的旧 Row/完整缺席或冻结 Before 补差；其余计数使用与 raw replay 共用的 before/after/unknown 判断。来源 ID 随原回答保存在 PageReadMeta，按需进入 CounterEvidence；whole 清旧证据后由新原回答惰性建立来源，partial 只替换 resetCounters。范围不覆盖且没有行时，即使 Before 已知也不猜该服务器 total 是否已包含写，只标受影响部分 stale。确知补差或确知已经包含结果后，每计数每 id 只保存最新 `{updatedAt|null, member}` 一条事实，不保留历史链；unknown 不记录已应用。删除的 null 是计数已处理删除的证据，不构造第二份 Issue 或 canonical 墓碑。行摆放继续读当前 rows/window。缺行推断的 verifyIds 在同次结果内去重。replay 只同步此次拥有的计数事实和行；全部操作不改输入 value 或 raw Answer。`paged-groups.evidence.ts` 集中这些纯判定，仅 type-only 引用模型，主模型和 replay 单向消费它。
 
 **部分回答的写集合：** `resetCounters` 列出本次响应被merge重置的计数，`rowParts` 列出本次回答的组/格。whole回答拥有outer、其group/cell及返回的subgroupTotals（未返回空组按0）；单组flat回答只拥有该group.total，单格flat回答只拥有该cell.total，其flat total绝非outer。merge与replay都只改这些回答部分：replay只为被重置的计数补确认差量，未回答的group、outer、subgroupTotals和rows保持当前值；已有确认早已改过它们。不同part同时在外时各自重放只改各自集合，不再次更动共享计数。whole可按完整原应答覆盖范围重放。
 
@@ -140,13 +140,17 @@ Drop在目标格总显示，落点越界扩boundary，后页按id去重、按全
 
 **T5 首项 W1 / R13：** T4 补充审查实证，whole 已将窗口外新建 X 计入 outer10/B5、但未返回 X 时，现有 direct confirm 会依据 absent Before 猜成 outer11/B6 且保持 fresh；该行为在 fix1 前已存在。T5 必须在真实写协调链关闭此边界：区分操作实际发出前已持有的计数来源与操作在外时新到的原回答来源，后者按自身 raw 三分支判，未知不猜；前者保留冻结 Before 的意义，不能让普通离屏修改一律重取 whole。限定 issue 模块内部 pending/计数证据，不改 HTTP、通用 Reconciled 或会话协议，不保存第二份完整实体。具体内部形状在 T5 方案裁定后同步本节与 §2.4/2.5；本条是待交付要求，不是已修结论。必要测试包括 whole 窗口外 create、发出前已持有来源、partial/whole 两种到达顺序，以及真实 FakeNerve 读写交错；W1 未关闭前不推产品检查点。
 
-R13 最小方案已裁定，仍待实施：每个绑定列表为原回答分配可 structuredClone 的数字 sourceID，仅比较身份，不将其当 cursor、版本、请求序号或删除水位。每计数保留自身来源；实际发送前，从各列表当前 Reconciled.value 冻结已持有来源集合，绑定到本操作与不可变列表身份。确认时已有事实优先；来源在集合内才可使用发送前 Before 证据，否则只看该来源自己的 raw 三分支，未知不猜。不能用“已分配序号水位”代替实际 held 集合，因为 decode 到接受回答之间仍有微任务窗口。whole 替换旧来源和确认事实，partial 只替换自身计数来源；raw replay 不使用该许可。来源集合只存内部标识，不存第二份实体，不用全根可变 current-operation 槽隐式传递并发操作的证据；确切内部类型由 T5 随实现同步。
+R13 最小方案已裁定，T5 实施中：每个绑定列表为原回答分配可 structuredClone 的数字 sourceID，仅比较身份，不将其当 cursor、版本、请求序号或删除水位。每计数保留自身来源；实际发送前，从各列表当前 Reconciled.value 冻结已持有来源集合，绑定到本操作与不可变列表身份。确认时已有事实优先；来源在集合内才可使用发送前 Before 证据，否则只看该来源自己的 raw 三分支，未知不猜。不能用“已分配序号水位”代替实际 held 集合，因为 decode 到接受回答之间仍有微任务窗口。whole 替换旧来源和确认事实，partial 只替换自身计数来源；raw replay 不使用该许可。来源集合只存内部标识，不存第二份实体，不用全根可变 current-operation 槽隐式传递并发操作的证据；确切内部类型由 T5 随实现同步。
 
-BaseIssuesStore持有 `Reconciled<PagedGroups>`，注册在本代IssueRootStore；project/archived/profile只决定scope/query。对外保留当前调用者需要的getIssueIds/getGroupIssueCount/getPaginationData等读取入口，内部不保留Plane分页兼容模型。接口迁移时修改使用方编译，不把新响应转换回旧TIssuesResponse。
+BaseIssuesStore 是当前选择和读取门面；`helpers/issue-list-binding.ts` 的 IssueListBinding 每实例持一个不可变 scope/query 与 `Reconciled<PagedGroups>`，注册在本代 IssueRootStore；project/archived/profile只决定scope/query。门面保留曾取过的绑定，切选择不修改旧实例，根操作按实例冻结 heldSources，全部已取副本继续确认；无第二状态层，root/model依赖用 type-only。对外保留当前调用者需要的getIssueIds/getGroupIssueCount/getPaginationData等读取入口，内部不保留Plane分页兼容模型。接口迁移时修改使用方编译，不把新响应转换回旧TIssuesResponse。
+
+`use-issue-list-refresh.tsx` 在四种现有布局按本次绑定实例和可见/展开的组或格调用 refreshStale(parts)（R16）；同一 stale 周期只尝试一次，拒绝保留 stale，经 followInSession/useRefusalToast 显示原因、局部按钮显式重试，rerender 不重试。绑定按 part 保留失败请求的原 cursor/lower/固定 query；retryFailed 重发该请求，首读无 value 时仍 fetchFirst；仅页面 fire-and-forget 边界消费拒绝，store promise 继续拒绝。未显示部分展开/挂载后才取；切绑定/卸载/退役停止旧 UI 跟进，不以根 currentList 反推可见性。已成功 issue 写的后续目录拒绝只使对应列表 markUnavailable/error/stale 并失效其在外页；canonical 仍接收完整成功应答，业务写 promise 成功，不引导重复提交。列表的下一次显式重取补齐目录后收敛，SessionChanged 仍丢弃整条旧流程。
+
+名称排序所需目录按绑定 query 和不可变 scope 准备（R14）：state_name/state_group 使用现有项目 state fetch/get；label_name 对本页每个项目用项目 label fetch/get，不请求不存在的 workspace label 端点；assignee_name 使用 workspace memberships 的公共 profile，保留 inactive 历史负责人。目录未到或缺任一非空引用时至多一轮权威重取，仍缺或拒绝则交回，不把未知名称当 NULL；多值名字全部补齐后才取最小。读须先核 active/scope、补目录、完整 decode/校验所有行，再交现有 canonical 完整应答入口。确认 before/after 的离屏成员/排序字段也按相同规则补目录；若发送前等待目录，body、Before 和 heldSources 仍在真正发 issue 写前重新冻结。
 
 T5为新的list请求首次加入§2.7四个query/表达式纯函数及基本请求测试，消费现有UI表达式与显示设置，不改变未迁移偏好的持久化来源；T7切偏好service，T8完成整个否定层清除和各条件/回读全面测试。查询的语义翻译是批准的业务功能，不是旧响应兼容层。
 
-新的公开协作入口：`fetchFirst(): Promise<PagedGroups|undefined>`、`fetchNext(group,subgroup?): Promise<PagedGroups|undefined>`、`refreshStale(): Promise<void>`、`acceptConfirmed(change): void`、`markMembershipStale(before,after): void`。实际页面调用参数由绑定的scope对象固定，变scope创建/选择另一个key，不篡改已有列表身份。原getFilteredWorkItems改吃Issue，保留子工作项相对日期fromnow行为。
+新的公开协作入口：`fetchFirst(): Promise<PagedGroups|undefined>`、`fetchNext(group,subgroup?): Promise<PagedGroups|undefined>`、`refreshStale(parts?: readonly PagePart[]): Promise<void>`、`acceptConfirmed(change, heldSources: ReadonlySet<number>): void`、`markMembershipStale(before,after): void`。实际页面调用参数由绑定的scope对象固定，变scope创建/选择另一个key，不篡改已有列表身份。原getFilteredWorkItems改吃Issue，保留子工作项相对日期fromnow行为。
 
 canonical为 `ReconciledByKey<Issue|IssueDetail|null>`，null仅成功delete墓碑。补通用 `receive(key, answer, choose): V` 入口：以choose(held,answer)同步合并，新key可初始化，计应答序；已有在外read重放同一merge以免后到旧应答倒退，不另建parallel cache。IssueStore的choose是服务端updated_at比较，并应用description规则和墓碑。IssueStore公开 `acceptRead(answer: Issue|IssueDetail, token: IssueReadToken): void`、`getIssueById(id): Issue|IssueDetail|undefined`、`getIssueDetailById(id): IssueDetail|undefined`、`confirmChange(change): void`，对删除返回undefined。
 
@@ -197,7 +201,7 @@ IssueRootStore的autorun改为rootStore/router/user目录计算属性，无需�
 
 每工作项的修改共用根store一条oneAtATime队列；为避免共享邻接列两个不同ID拖动冲突，拖放使用该根store统一的拖放队列，再在对应工作项队列里执行（固定取得顺序，任何其它操作不反向持有两队列）。请求到发出时才从canonical读取邻接IDs现值计算sort_order，邻居已不存在则按当前有效落点/首尾65535间隔重算，不发送旧平均数。无邻居使用65535；首尾/中间算法与现有布局/服务端sort_order契约一致。
 
-目标入口 `updateIssue(id, makeBody: (held:Issue)=>IssueUpdate, drop?): Promise<IssueDetail>`，拖放传makeBody闭包，不提前构造body；create/delete/archive/unarchive同根协调。body逐字段构造，禁止spread Issue带id/project_id。请求中仅UI pending/临时拖放呈现变化，canonical/PagedGroups不能变；拒绝交回且UI回原处。成功确认一次，从该操作pending取实际发出前冻结的beforeSnapshot并核对期间读证据→按已确认删除时先失效读代际→写各列表→写canonical，pending在对应请求finally结束，队列拒绝后继续。
+目标入口 `updateIssue(id, makeBody: (held:Issue)=>IssueUpdate, drop?, operationScope?: IssueWriteScope): Promise<IssueDetail>`，拖放传makeBody闭包，不提前构造body；create/delete/archive/unarchive同根协调。body逐字段构造，禁止spread Issue带id/project_id。请求中仅UI pending/临时拖放呈现变化，canonical/PagedGroups不能变；拒绝交回且UI回原处。成功确认一次，从该操作pending取实际发出前冻结的beforeSnapshot并核对期间读证据→按已确认删除时先失效读代际→写各列表→写canonical，pending在对应请求finally结束，队列拒绝后继续。
 
 每修改表覆盖全部已取project/archived/profile副本、未取副本、pending、失败、SessionChanged、晚到读取与重取。跟进toast/导航必须followInSession；本段改到的组件签名跟进归本段，完整详情/草稿新交互仍留后段。
 

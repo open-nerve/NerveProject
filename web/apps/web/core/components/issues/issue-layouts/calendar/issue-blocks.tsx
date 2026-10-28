@@ -1,14 +1,16 @@
+import type { IssueCreate } from "@nerve/api-client";
+import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { Issue } from "@nerve/api-client";
 
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
-import type { TPaginationData } from "@nerve/types";
+
 // components
 import { renderFormattedPayloadDate } from "@nerve/utils";
 // helpers
@@ -20,14 +22,14 @@ import { CalendarQuickAddIssueActions } from "./quick-add-issue-actions";
 type Props = {
   date: Date;
   loadMoreIssues: (dateString: string) => void;
-  getPaginationData: (groupId: string | undefined) => TPaginationData | undefined;
+  getPaginationData: (groupId: string | undefined) => Group | undefined;
   getGroupIssueCount: (groupId: string | undefined) => number | undefined;
   issueIdList: string[];
   quickActions: TRenderQuickActions;
   isDragDisabled?: boolean;
   enableQuickIssueCreate?: boolean;
   disableIssueCreation?: boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
   readOnly?: boolean;
   isMobileView?: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;
@@ -57,13 +59,11 @@ export const CalendarIssueBlocks = observer(function CalendarIssueBlocks(props: 
   if (!formattedDatePayload) return null;
 
   const dayIssueCount = getGroupIssueCount(formattedDatePayload, undefined, false);
-  const nextPageResults = getPaginationData(formattedDatePayload, undefined)?.nextPageResults;
+  const nextCursor = getPaginationData(formattedDatePayload, undefined)?.nextCursor;
   const isPaginating = !!getIssueLoader(formattedDatePayload);
 
   const shouldLoadMore =
-    nextPageResults === undefined && dayIssueCount !== undefined
-      ? issueIdList?.length < dayIssueCount
-      : !!nextPageResults;
+    nextCursor === undefined && dayIssueCount !== undefined ? issueIdList?.length < dayIssueCount : !!nextCursor;
 
   return (
     <>

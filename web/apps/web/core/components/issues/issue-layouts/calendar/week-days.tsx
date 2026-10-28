@@ -1,3 +1,5 @@
+import type { IssueCreate } from "@nerve/api-client";
+import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -8,7 +10,7 @@ import type { Issue, IssueDetail } from "@nerve/api-client";
 
 import { observer } from "mobx-react";
 // nerve imports
-import type { TGroupedIssues, TPaginationData, ICalendarDate, ICalendarWeek } from "@nerve/types";
+import type { ICalendarDate, ICalendarWeek } from "@nerve/types";
 import { cn, getOrderedDays, renderFormattedPayloadDate } from "@nerve/utils";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
@@ -20,15 +22,15 @@ import { CalendarDayTile } from "./day-tile";
 type Props = {
   issuesFilterStore: IProjectIssuesFilter;
   issues: Record<string, Issue | IssueDetail> | undefined;
-  groupedIssueIds: TGroupedIssues;
+  groups: Map<string, Group>;
   week: ICalendarWeek | undefined;
   quickActions: TRenderQuickActions;
   loadMoreIssues: (dateString: string) => void;
-  getPaginationData: (groupId: string | undefined) => TPaginationData | undefined;
+  getPaginationData: (groupId: string | undefined) => Group | undefined;
   getGroupIssueCount: (groupId: string | undefined) => number | undefined;
   enableQuickIssueCreate?: boolean;
   disableIssueCreation?: boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
   handleDragAndDrop: (
     issueId: string | undefined,
     issueProjectId: string | undefined,
@@ -45,7 +47,7 @@ export const CalendarWeekDays = observer(function CalendarWeekDays(props: Props)
   const {
     issuesFilterStore,
     issues,
-    groupedIssueIds,
+    groups,
     handleDragAndDrop,
     week,
     loadMoreIssues,
@@ -96,7 +98,7 @@ export const CalendarWeekDays = observer(function CalendarWeekDays(props: Props)
             key={renderFormattedPayloadDate(date.date)}
             date={date}
             issues={issues}
-            groupedIssueIds={groupedIssueIds}
+            groups={groups}
             loadMoreIssues={loadMoreIssues}
             getPaginationData={getPaginationData}
             getGroupIssueCount={getGroupIssueCount}

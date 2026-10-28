@@ -2727,26 +2727,10 @@
     {
       "rule": "old-issue-urls",
       "path": "web/apps/web/core/services/issue/issue.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/",
-      "count": 2,
-      "reason": "T7暂留；P10b核心列表/写入先移除；同key含P11详情时按最早期限，到时先删P10b方法再按剩余真实命中重登；T7暂留；P11接线删除；真实读者 createIssue→BaseIssuesStore.createIssue（唯一旧service消费者，P10b核心create迁移）；getIssuesFromServer→getIssues→ProjectIssues.fetchIssues/fetchNextIssues（P10b列表）",
-      "until": "M4/P11"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue.service.ts",
       "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/",
-      "count": 2,
-      "reason": "T7暂留；P10b核心列表/写入先移除；同key含P11详情时按最早期限，到时先删P10b方法再按剩余真实命中重登；T7暂留；P11接线删除；真实读者 retrieve→IssueStore.fetchIssue/loadIssueResources父项及归档detail header（P11详情）；patchIssue→BaseIssuesStore.issueUpdate（P10b核心update迁移）",
-      "until": "M4/P11"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issuesId}/",
       "count": 1,
-      "reason": "T7暂留；P10b核心列表/写入先移除；同key含P11详情时按最早期限，到时先删P10b方法再按剩余真实命中重登；T7暂留；P11接线删除；真实读者 deleteIssue→BaseIssuesStore.removeIssue（P10b核心delete迁移）",
-      "until": "M4/P11"
+      "reason": "P10b/T5已移除核心patch；仅剩retrieve→IssueStore.fetchIssue/loadIssueResources父项及归档detail header，P11详情迁移时删除",
+      "until": "M4/P12"
     },
     {
       "rule": "old-issue-urls",
@@ -2795,22 +2779,6 @@
       "count": 1,
       "reason": "T7暂留；P11接线删除；真实读者 IssueActivityStore.fetchActivities→getIssueActivities；详情活动资源",
       "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue_archive.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-issues/",
-      "count": 1,
-      "reason": "T7暂留；P10b归档列表/核心写入删除；getArchivedIssues→ArchivedIssues.fetchIssues/fetchNextIssues/restoreIssue及BaseIssuesStore.issueArchive",
-      "until": "M4/P11"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue_archive.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/archive/",
-      "count": 2,
-      "reason": "T7暂留；P10b归档列表/核心写入删除；archiveIssue,restoreIssue→ArchivedIssues.fetchIssues/fetchNextIssues/restoreIssue及BaseIssuesStore.issueArchive",
-      "until": "M4/P11"
     },
     {
       "rule": "old-issue-urls",
@@ -2918,35 +2886,11 @@
     },
     {
       "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/user.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/user-issues/${userId}/",
-      "count": 1,
-      "reason": "T7暂留；P11接线删除；真实读者 getUserProfileIssues→ProfileIssues.fetchIssues/fetchNextIssues；P11用户工作项接线",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
       "path": "web/apps/web/core/services/workspace.service.ts",
       "match": "/api/workspaces/${workspaceSlug}/entity-search/",
       "count": 1,
       "reason": "T7暂留；P11接线删除；真实读者 searchEntity→rich-text/description-input、lite-text/editor、inbox create issue-description及issue-modal description-editor；P11改接",
       "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/store/issue/helpers/base-issues.update-request.test.ts",
-      "match": "/api/workspaces/${ws.slug}/projects/${project.id}/issues/${before.id}/",
-      "count": 2,
-      "reason": "T7暂留；T5/R10 BaseIssuesStore.issueUpdate真实RootStore/公共HTTP边界测试，随P10b替换Base核心写入迁到新API；不是产品兼容URL",
-      "until": "M4/P11"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/store/issue/helpers/base-issues.update-request.test.ts",
-      "match": "/api/workspaces/${ws.slug}/projects/${project.id}/issues/${r1.id}/",
-      "count": 1,
-      "reason": "T7暂留；T5/R10 BaseIssuesStore.issueUpdate真实RootStore/公共HTTP边界测试，随P10b替换Base核心写入迁到新API；不是产品兼容URL",
-      "until": "M4/P11"
     },
     {
       "rule": "old-issue-urls",

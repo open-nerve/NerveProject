@@ -12,12 +12,20 @@ const context: ListContext = {
   catalog: { states: new Map(), labels: new Map(), members: new Map() },
   pendingIDs: new Set(),
 };
-const first = (): PageReadMeta => ({ part: null, ranges: new Map(), first: true, resetCounters: [], rowParts: [] });
+const first = (): PageReadMeta => ({
+  sourceID: 1,
+  part: null,
+  ranges: new Map(),
+  first: true,
+  resetCounters: [],
+  rowParts: [],
+});
 const row = (id: string, key: number) => ({ ...issueOf(id), sort_order: key });
 const part = { group: "high", subgroup: "label" };
 const partKey = pagePartKey(part);
 function continuation(): PageReadMeta {
   return {
+    sourceID: 2,
     part: { ...part },
     first: false,
     resetCounters: [],

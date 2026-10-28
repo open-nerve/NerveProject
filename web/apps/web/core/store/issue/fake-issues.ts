@@ -46,13 +46,14 @@ export const issuePageOf = (data: Issue[], nextCursor: string | null = null): Is
 /** Start an operation and hold its one real HTTP request until the test answers it. */
 export async function requestedIssue<T>(nerve: FakeNerve, request: () => Promise<T>, endpoint: Endpoint) {
   const at = nerve.calls.length;
-  const result = track(request());
+  const promise = request();
+  const result = track(promise);
   await until(() => nerve.calls.length > at || result.settled, "issue request");
   expect(result.settled).toBe(false);
   expect(nerve.calls).toHaveLength(at + 1);
   const call = nerve.calls[at]!;
   expect([call.method, call.path]).toEqual(endpoint);
-  return { result, call };
+  return { result, call, promise };
 }
 
 /** Shared pure list fixtures; no transport or second entity cache. */
@@ -66,10 +67,12 @@ export const listContext = (
   catalog: { states: new Map(), labels: new Map(), members: new Map() },
   pendingIDs: new Set(),
 });
+let pageSource = 0;
 export const pageMeta = (
   part: import("@/lib/paged-groups").PagePart | null = null,
   lower: import("@/lib/paged-groups").Boundary | null = null
 ): import("@/lib/paged-groups").PageReadMeta => ({
+  sourceID: ++pageSource,
   part,
   first: lower === null,
   resetCounters: [],
@@ -101,3 +104,28 @@ export const listGroup = (
   cursorBoundary: { id: "edge", key: edge },
   stale: false,
 });
+
+/** Real session stores and directory responses shared by issue HTTP behavior tests. */
+export async function issueStoreTab() {
+  const [{ RootStore }, { FakeNerve }, { workspaceOf, loadWorkspaces }, { projectOf, loadProjects }, { runInAction }] =
+    await Promise.all([
+      import("@/store/root.store"),
+      import("@/lib/auth/fake-nerve"),
+      import("@/store/workspace/fake-workspaces"),
+      import("@/store/project/fake-projects"),
+      import("mobx"),
+    ]);
+  const nerve = new FakeNerve();
+  const app = new RootStore(nerve.client());
+  const workspace = workspaceOf("ws");
+  const project = projectOf("A", workspace.id, { id: "A" });
+  runInAction(() => {
+    app.issue.workspaceSlug = workspace.slug;
+    app.issue.projectId = project.id;
+    app.router.setQuery({ workspaceSlug: workspace.slug, projectId: project.id });
+  });
+  await loadWorkspaces(nerve, app.workspaceRoot, [workspace]);
+  await loadProjects(nerve, app.projectRoot.project, workspace, [project]);
+  nerve.calls.length = 0;
+  return { app, nerve, workspace, project };
+}

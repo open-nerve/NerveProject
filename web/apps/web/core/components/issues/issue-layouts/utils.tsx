@@ -45,7 +45,7 @@ import { EIssuesStoreType } from "@nerve/types";
 import { getFileURL } from "@nerve/utils";
 // store
 import { rootStore } from "@/lib/store-context";
-import { ISSUE_FILTER_DEFAULT_DATA } from "@/store/issue/helpers/base-issues.store";
+import { issueFieldForGroup } from "@/lib/issue-filters";
 import { DEFAULT_DISPLAY_PROPERTIES } from "@/store/issue/issue-details/sub_issues_filter.store";
 // constants
 import { ISSUE_GROUP_BY_OPTIONS } from "@nerve/constants";
@@ -104,7 +104,7 @@ export const getGroupByColumns = ({
   if (!groupBy && includeNone) {
     return [
       {
-        id: "All Issues",
+        id: "",
         name: "All work items",
         payload: {},
         icon: undefined,
@@ -206,7 +206,7 @@ const getLabelsColumns = ({ isWorkspaceLevel }: TGetColumns): IGroupByColumn[] =
   // the workspace's labels across its projects are M7's (M3 design 7.3): a workspace level groups none of them
   const labels = [
     ...(isWorkspaceLevel ? [] : (rootStore.label.projectLabels ?? [])),
-    { id: "None", name: "None", color: "#666" },
+    { id: "none", name: "None", color: "#666" },
   ];
   // map labels to group by columns
   return labels.map((label) => ({
@@ -215,7 +215,7 @@ const getLabelsColumns = ({ isWorkspaceLevel }: TGetColumns): IGroupByColumn[] =
     icon: (
       <div className="h-[12px] w-[12px] rounded-full" style={{ backgroundColor: label.color ? label.color : "#666" }} />
     ),
-    payload: label?.id === "None" ? {} : { label_ids: [label.id] },
+    payload: label?.id === "none" ? {} : { label_ids: [label.id] },
   }));
 };
 
@@ -246,7 +246,7 @@ const getAssigneeColumns = ({ isWorkspaceLevel, projectId }: TGetColumns): IGrou
     });
   });
   if (includeNone) {
-    assigneeColumns.push({ id: "None", name: "None", icon: <Avatar size="xs" />, payload: {} });
+    assigneeColumns.push({ id: "none", name: "None", icon: <Avatar size="xs" />, payload: {} });
   }
 
   return assigneeColumns;
@@ -461,7 +461,7 @@ export const getIssueBlockId = (issueId: string | undefined, groupId: string | u
  * @returns
  */
 const getGroupId = (groupId: string) => {
-  if (groupId === "None") return [];
+  if (groupId === "none") return [];
   return [groupId];
 };
 
@@ -509,16 +509,16 @@ export const handleGroupDragDrop = async (
 
   // update updatedIssue values based on the source and destination groupIds
   if (source.groupId && destination.groupId && source.groupId !== destination.groupId && groupBy) {
-    const groupKey = ISSUE_FILTER_DEFAULT_DATA[groupBy];
+    const groupKey = issueFieldForGroup(groupBy);
     let groupValue: any = clone(sourceIssue[groupKey]);
 
     // If groupValues is an array, remove source groupId and add destination groupId
     if (Array.isArray(groupValue)) {
       pull(groupValue, source.groupId);
-      if (destination.groupId !== "None") groupValue = uniq(concat(groupValue, [destination.groupId]));
+      if (destination.groupId !== "none") groupValue = uniq(concat(groupValue, [destination.groupId]));
     } // else just update the groupValue based on destination groupId
     else {
-      groupValue = destination.groupId === "None" ? null : destination.groupId;
+      groupValue = destination.groupId === "none" ? null : destination.groupId;
     }
 
     // keep track of updates on what was added and what was removed
@@ -529,16 +529,16 @@ export const handleGroupDragDrop = async (
   // do the same for subgroup
   // update updatedIssue values based on the source and destination subGroupIds
   if (subGroupBy && source.subGroupId && destination.subGroupId && source.subGroupId !== destination.subGroupId) {
-    const subGroupKey = ISSUE_FILTER_DEFAULT_DATA[subGroupBy];
+    const subGroupKey = issueFieldForGroup(subGroupBy);
     let subGroupValue: any = clone(sourceIssue[subGroupKey]);
 
     // If subGroupValue is an array, remove source subGroupId and add destination subGroupId
     if (Array.isArray(subGroupValue)) {
       pull(subGroupValue, source.subGroupId);
-      if (destination.subGroupId !== "None") subGroupValue = uniq(concat(subGroupValue, [destination.subGroupId]));
+      if (destination.subGroupId !== "none") subGroupValue = uniq(concat(subGroupValue, [destination.subGroupId]));
     } // else just update the subGroupValue based on destination subGroupId
     else {
-      subGroupValue = destination.subGroupId === "None" ? null : destination.subGroupId;
+      subGroupValue = destination.subGroupId === "none" ? null : destination.subGroupId;
     }
 
     // keep track of updates on what was added and what was removed

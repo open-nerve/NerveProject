@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { IssueDetail } from "@nerve/api-client";
 
 export enum EIssueLayoutTypes {
   LIST = "list",
@@ -20,36 +20,6 @@ export enum EIssuesStoreType {
   DEFAULT = "DEFAULT",
   WORKSPACE_DRAFT = "WORKSPACE_DRAFT",
 }
-
-type TIssueResponseResults =
-  | Issue[]
-  | {
-      [key: string]: {
-        results:
-          | Issue[]
-          | {
-              [key: string]: {
-                results: Issue[];
-                total_results: number;
-              };
-            };
-        total_results: number;
-      };
-    };
-
-export type TIssuesResponse = {
-  grouped_by: string;
-  next_cursor: string;
-  prev_cursor: string;
-  next_page_results: boolean;
-  prev_page_results: boolean;
-  total_count: number;
-  count: number;
-  total_pages: number;
-  extra_stats: null;
-  results: TIssueResponseResults;
-  total_results: number;
-};
 
 export type TWorkItemWidgets = "sub-work-items" | "relations" | "links" | "attachments";
 

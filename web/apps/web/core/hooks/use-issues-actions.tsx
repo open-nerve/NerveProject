@@ -1,12 +1,14 @@
+import type { PagedGroups } from "@/lib/paged-groups";
+import type { IssueListOptions } from "@/lib/issue-filters";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
 
-import type { TLegacyIssueUpdateRequest } from "@nerve/types";
+import type { IssueDetail } from "@nerve/api-client";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useMemo } from "react";
 // types
@@ -16,8 +18,6 @@ import { EDraftIssuePaginationType } from "@nerve/constants";
 import type {
   IIssueDisplayFilterOptions,
   IIssueDisplayProperties,
-  IssuePaginationOptions,
-  TIssuesResponse,
   TLoader,
   TProfileViews,
   TSupportedFilterForUpdate,
@@ -26,19 +26,11 @@ import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "./store/use-issues";
 
 export interface IssueActions {
-  fetchIssues: (
-    loadType: TLoader,
-    options: IssuePaginationOptions,
-    viewId?: string
-  ) => Promise<TIssuesResponse | undefined>;
-  fetchNextIssues: (groupId?: string, subGroupId?: string) => Promise<TIssuesResponse | undefined>;
+  fetchIssues: (loadType: TLoader, options: IssueListOptions, viewId?: string) => Promise<PagedGroups | undefined>;
+  fetchNextIssues: (groupId?: string, subGroupId?: string) => Promise<PagedGroups | undefined>;
   removeIssue: (projectId: string | undefined | null, issueId: string) => Promise<void>;
-  createIssue?: (projectId: string | undefined | null, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
-  updateIssue?: (
-    projectId: string | undefined | null,
-    issueId: string,
-    data: TLegacyIssueUpdateRequest
-  ) => Promise<void>;
+  createIssue?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
+  updateIssue?: (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => Promise<void>;
   archiveIssue?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   restoreIssue?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   updateFilters: (
@@ -77,7 +69,7 @@ const useProjectIssueActions = () => {
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
 
   const fetchIssues = useCallback(
-    async (loadType: TLoader, options: IssuePaginationOptions) => {
+    async (loadType: TLoader, options: IssueListOptions) => {
       if (!workspaceSlug || !projectId) return;
       return issues.fetchIssues(workspaceSlug, projectId, loadType, options);
     },
@@ -92,14 +84,14 @@ const useProjectIssueActions = () => {
   );
 
   const createIssue = useCallback(
-    async (projectId: string | undefined | null, data: Partial<IssueDetail>) => {
+    async (projectId: string | undefined | null, data: IssueCreate) => {
       if (!workspaceSlug || !projectId) return;
       return await issues.createIssue(workspaceSlug, projectId, data);
     },
     [issues.createIssue, workspaceSlug]
   );
   const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: TLegacyIssueUpdateRequest) => {
+    async (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => {
       if (!workspaceSlug || !projectId) return;
       return await issues.updateIssue(workspaceSlug, projectId, issueId, data);
     },
@@ -149,29 +141,29 @@ const useProfileIssueActions = () => {
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROFILE);
 
   const fetchIssues = useCallback(
-    async (loadType: TLoader, options: IssuePaginationOptions, viewId?: string) => {
+    async (loadType: TLoader, options: IssueListOptions, viewId?: string) => {
       if (!workspaceSlug || !userId || !viewId) return;
       return issues.fetchIssues(workspaceSlug, userId, loadType, options, viewId as TProfileViews);
     },
     [issues.fetchIssues, workspaceSlug, userId]
   );
   const fetchNextIssues = useCallback(
-    async (groupId?: string, subGroupId?: string) => {
+    async (groupId?: string) => {
       if (!workspaceSlug || !userId) return;
-      return issues.fetchNextIssues(workspaceSlug, userId, groupId, subGroupId);
+      return issues.fetchNextIssues(workspaceSlug, userId, groupId);
     },
     [issues.fetchIssues, workspaceSlug, userId]
   );
 
   const createIssue = useCallback(
-    async (projectId: string | undefined | null, data: Partial<IssueDetail>) => {
+    async (projectId: string | undefined | null, data: IssueCreate) => {
       if (!workspaceSlug || !projectId) return;
       return await issues.createIssue(workspaceSlug, projectId, data);
     },
     [issues.createIssue, workspaceSlug]
   );
   const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: TLegacyIssueUpdateRequest) => {
+    async (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => {
       if (!workspaceSlug || !projectId) return;
       return await issues.updateIssue(workspaceSlug, projectId, issueId, data);
     },
@@ -221,7 +213,7 @@ const useArchivedIssueActions = () => {
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.ARCHIVED);
 
   const fetchIssues = useCallback(
-    async (loadType: TLoader, options: IssuePaginationOptions) => {
+    async (loadType: TLoader, options: IssueListOptions) => {
       if (!workspaceSlug || !projectId) return;
       return issues.fetchIssues(workspaceSlug, projectId, loadType, options);
     },
@@ -276,7 +268,7 @@ const useWorkspaceDraftIssueActions = () => {
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.WORKSPACE_DRAFT);
   const fetchIssues = useCallback(
-    async (loadType: TLoader, _options: IssuePaginationOptions) => {
+    async (loadType: TLoader, _options: IssueListOptions) => {
       if (!workspaceSlug) return;
       return issues.fetchIssues(workspaceSlug, loadType, EDraftIssuePaginationType.INIT);
     },

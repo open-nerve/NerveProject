@@ -7,7 +7,6 @@
 import { isEmpty, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 // base class
-import { computedFn } from "mobx-utils";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EIssueFilterType } from "@nerve/constants";
 import type {
@@ -15,13 +14,10 @@ import type {
   IIssueDisplayProperties,
   TIssueKanbanFilters,
   IIssueFilters,
-  TIssueParams,
-  IssuePaginationOptions,
   TWorkItemFilterExpression,
   TSupportedFilterForUpdate,
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
-import { handleIssueQueryParamsByLayout } from "@nerve/utils";
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
 import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
 // types
@@ -29,13 +25,7 @@ import type { IIssueRootStore } from "../root.store";
 
 export interface IProfileIssuesFilter extends IBaseIssueFilterStore {
   //helper actions
-  getFilterParams: (
-    options: IssuePaginationOptions,
-    userId: string,
-    cursor: string | undefined,
-    groupId: string | undefined,
-    subGroupId: string | undefined
-  ) => Partial<Record<TIssueParams, string | boolean>>;
+  getIssueFilters(userId: string): IIssueFilters | undefined;
   // action
   fetchFilters: (workspaceSlug: string, userId: string) => Promise<void>;
   updateFilterExpression: (workspaceSlug: string, userId: string, filters: TWorkItemFilterExpression) => Promise<void>;
@@ -84,37 +74,6 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
 
     return _filters;
   }
-
-  getAppliedFilters(userId: string) {
-    const userFilters = this.getIssueFilters(userId);
-    if (!userFilters) return undefined;
-
-    const filteredParams = handleIssueQueryParamsByLayout(userFilters?.displayFilters?.layout, "profile_issues");
-    if (!filteredParams) return undefined;
-
-    const filteredRouteParams: Partial<Record<TIssueParams, string | boolean>> = this.computedFilteredParams(
-      userFilters?.richFilters,
-      userFilters?.displayFilters,
-      filteredParams
-    );
-
-    return filteredRouteParams;
-  }
-
-  getFilterParams = computedFn(
-    (
-      options: IssuePaginationOptions,
-      userId: string,
-      cursor: string | undefined,
-      groupId: string | undefined,
-      subGroupId: string | undefined
-    ) => {
-      const filterParams = this.getAppliedFilters(userId);
-
-      const paginationParams = this.getPaginationParams(filterParams, options, cursor, groupId, subGroupId);
-      return paginationParams;
-    }
-  );
 
   fetchFilters = async (workspaceSlug: string, userId: string) => {
     const _filters = this.handleIssuesLocalFilters.get(EIssuesStoreType.PROFILE, workspaceSlug, userId, undefined);

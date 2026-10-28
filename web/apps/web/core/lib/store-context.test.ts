@@ -5,8 +5,9 @@
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SharedStorage } from "@/lib/auth/fake-browser";
-import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { FakeNerve, json, noContent, problem, answered } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
+import { issueOf, issueDetailOf, issuePageOf, requestedIssue } from "@/store/issue/fake-issues";
 import type { GlobalViewStore } from "@/store/global-view.store";
 import type { RootStore } from "@/store/root.store";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -125,6 +126,59 @@ afterEach(() => {
 });
 
 describe("store-context", () => {
+  it("retiredRootDropsSuccessfulRepliesAndQueuedWrites", async () => {
+    const { nerve, context, SessionChangedError, signedIn, follow } = await load();
+    await signedIn();
+    const x = context.rootStore;
+    const workspace = workspaceOf("ws");
+    await loadWorkspaces(nerve, x.workspaceRoot, [workspace]);
+    await answered(
+      nerve,
+      () => x.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 20 }),
+      ["GET", "/api/v0/projects/A/issues"],
+      issuePageOf([issueOf("x")]),
+      "X list"
+    );
+    const first = await requestedIssue(
+      nerve,
+      () => x.issue.projectIssues.updateIssue("ws", "A", "x", { name: "first" }),
+      ["PATCH", "/api/v0/issues/x"]
+    );
+    const queued = track(x.issue.projectIssues.updateIssue("ws", "A", "x", { name: "second" }));
+    const reading = await requestedIssue(
+      nerve,
+      () => x.issue.projectIssues.fetchIssues("ws", "A", "mutation", { limit: 20 }),
+      ["GET", "/api/v0/projects/A/issues"]
+    );
+    const count = nerve.calls.length;
+    const oldToken = x.issue.captureRead();
+    await follow(Y);
+    const y = context.rootStore;
+    expect(x.issue.active).toBe(false);
+    expect(y.issue.isReadCurrent(oldToken, ["A"])).toBe(false);
+    first.call.answer(json(200, { ...issueDetailOf("x"), name: "late success" }));
+    reading.call.answer(json(200, issuePageOf([{ ...issueOf("x"), name: "late read" }])));
+    await until(() => first.result.settled && queued.settled && reading.result.settled, "retired issue replies");
+    expect(first.result.error).toBeInstanceOf(SessionChangedError);
+    expect(queued.error).toBeInstanceOf(SessionChangedError);
+    expect(nerve.calls).toHaveLength(count);
+    expect(x.issue.issues.getIssueById("x")?.name).toBe("x");
+    expect(x.issue.projectIssues.getIssueIds()).toEqual(["x"]);
+    expect(y.issue.issues.getIssueById("x")).toBeUndefined();
+    expect(y.issue.projectIssues.groups).toBeUndefined();
+    const creating = track(
+      y.issue.createIssue({ workspaceSlug: "ws", workspaceID: workspace.id, projectID: "A" }, { name: "new session" })
+    );
+    await until(() => nerve.calls.length === count + 1, "Y refresh");
+    nerve.calls[count]!.answer(json(200, nerve.tokens()));
+    await until(() => nerve.calls.length === count + 2, "Y create");
+    expect(nerve.calls[count + 1]!.path).toBe("/api/v0/projects/A/issues");
+    nerve.calls[count + 1]!.answer(json(201, issueDetailOf("new")));
+    await until(() => creating.settled, "Y confirmed");
+    expect(creating.error).toBeUndefined();
+    expect(y.issue.issues.getIssueById("new")?.id).toBe("new");
+  });
+
   it("starts a new RootStore for each new session, never within one, and tells its listeners", async () => {
     const { nerve, clients, tm, context, follow } = await load();
     const x = context.rootStore;

@@ -1,3 +1,4 @@
+import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -9,9 +10,9 @@ import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
-import { EIssueGroupByToServerOptions, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TGroupedIssues } from "@nerve/types";
+
 import { EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useCalendarView } from "@/hooks/store/use-calendar-view";
@@ -19,6 +20,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
+import { useIssueListRefresh, IssueListRetry } from "@/hooks/use-issue-list-refresh";
 // types
 import type { IQuickActionProps } from "../list/list-view-types";
 import { CalendarChart } from "./calendar";
@@ -64,24 +66,35 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
 
   const displayFilters = issuesFilter.issueFilters?.displayFilters;
 
-  const groupedIssueIds = (issues.groupedIssueIds ?? {}) as TGroupedIssues;
+  const groups = (issues.groups ?? new Map()) as Map<string, Group>;
 
   const layout = displayFilters?.calendar?.layout ?? "month";
   const { startDate, endDate } = issueCalendarView.getStartAndEndDate(layout) ?? {};
+  const staleRefresh = useIssueListRefresh(
+    issues.currentList,
+    [...groups.keys()]
+      .filter(
+        (date) =>
+          startDate &&
+          endDate &&
+          date >= startDate &&
+          date <= endDate &&
+          (displayFilters?.calendar?.show_weekends !== false ||
+            ![0, 6].includes(new Date(`${date}T12:00:00Z`).getUTCDay()))
+      )
+      .map((group) => ({ group }))
+  );
 
   useEffect(() => {
     if (startDate && endDate && layout) {
-      fetchIssues(
+      void fetchIssues(
         "init-loader",
         {
-          canGroup: true,
-          perPageCount: layout === "month" ? 4 : 30,
-          before: endDate,
-          after: startDate,
-          groupedBy: EIssueGroupByToServerOptions["target_date"],
+          limit: layout === "month" ? 4 : 30,
+          query: { group_by: "target_date", target_date: [`${startDate}..${endDate}`] },
         },
         viewId
-      );
+      ).catch(() => {});
     }
   }, [fetchIssues, storeType, startDate, endDate, layout, viewId]);
 
@@ -106,7 +119,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
 
   const loadMoreIssues = useCallback(
     (dateString: string) => {
-      fetchNextIssues(dateString);
+      void fetchNextIssues(dateString).catch(() => {});
     },
     [fetchNextIssues]
   );
@@ -133,11 +146,12 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
 
   return (
     <>
+      <IssueListRetry {...staleRefresh} />
       <div className="h-full w-full overflow-hidden bg-surface-1 pt-4">
         <CalendarChart
           issuesFilterStore={issuesFilter}
           issues={issueMap}
-          groupedIssueIds={groupedIssueIds}
+          groups={groups}
           layout={displayFilters?.calendar?.layout}
           showWeekends={displayFilters?.calendar?.show_weekends ?? false}
           issueCalendarView={issueCalendarView}

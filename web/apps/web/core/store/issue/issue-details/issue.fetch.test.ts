@@ -6,7 +6,7 @@ configure({ safeDescriptors: false });
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import { APIService } from "@/services/api.service";
 import { heldChange } from "@/lib/auth/fake-tab";
-import type { TIssueReaction, TIssueLink, TIssueRelation, TIssuesResponse } from "@nerve/types";
+import type { TIssueReaction, TIssueLink, TIssueRelation } from "@nerve/types";
 import { until, track } from "@/lib/auth/fake-time";
 import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
 import { issueOf } from "@/store/issue/fake-issues";
@@ -26,6 +26,7 @@ vi.mock("@/lib/store-context", () => ({
 }));
 const { RootStore } = await import("@/store/root.store");
 let app: InstanceType<typeof RootStore>;
+let nerve: FakeNerve;
 const ws = workspaceOf("ws");
 const project = projectOf("A", ws.id);
 const a = stateOf(project, "A", "unstarted", 1000);
@@ -33,7 +34,7 @@ const b = stateOf(project, "B", "started", 2000);
 beforeEach(async () => {
   vi.restoreAllMocks();
   vi.useFakeTimers();
-  const nerve = new FakeNerve();
+  nerve = new FakeNerve();
   app = new RootStore(nerve.client());
   binding.app = app;
   runInAction(() => {
@@ -169,23 +170,16 @@ it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => 
   async ({ identifier, page }) => {
     const { detail, source, related, relations, relationFetch, get, fetch } = resources(null, true);
     const listRow = { ...issueOf(source.id, project.id, project.workspace_id), name: "list update" };
-    const response: TIssuesResponse = {
-      grouped_by: "",
-      next_cursor: "",
-      prev_cursor: "",
-      next_page_results: false,
-      prev_page_results: false,
-      total_count: 1,
-      count: 1,
-      total_pages: 1,
-      extra_stats: null,
-      results: [listRow],
-      total_results: 1,
-    };
+    const response = { total: 1, data: [listRow], next_cursor: null };
     const projectIssues = app.issue.projectIssues;
     if (page === "next") {
-      get.mockResolvedValueOnce(reply({ ...response, next_page_results: true, next_cursor: "next" }));
-      await projectIssues.fetchIssues(ws.slug, project.id, "init-loader", { canGroup: false, perPageCount: 100 });
+      await answered(
+        nerve,
+        () => projectIssues.fetchIssues(ws.slug, project.id, "init-loader", { limit: 100 }),
+        ["GET", `/api/v0/projects/${project.id}/issues`],
+        { ...response, next_cursor: "next" },
+        "first list page"
+      );
     }
     await fetch(identifier);
     await until(
@@ -194,10 +188,16 @@ it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => 
     );
     expect(relationFetch).toHaveBeenCalledExactlyOnceWith(ws.slug, project.id, source.id);
     expect(get.mock.calls.filter(([url]) => url.endsWith("/issue-relation/"))).toHaveLength(1);
-    get.mockResolvedValueOnce(reply(response));
-    if (page === "initial")
-      await projectIssues.fetchIssues(ws.slug, project.id, "init-loader", { canGroup: false, perPageCount: 100 });
-    else await projectIssues.fetchNextIssues(ws.slug, project.id);
+    await answered(
+      nerve,
+      () =>
+        page === "initial"
+          ? projectIssues.fetchIssues(ws.slug, project.id, "init-loader", { limit: 100 })
+          : projectIssues.fetchNextIssues(ws.slug, project.id),
+      ["GET", `/api/v0/projects/${project.id}/issues`],
+      response,
+      "list page"
+    );
     expect(detail.relation.getRelationsByIssueId(source.id)).toEqual({
       blocking: [related.id],
       blocked_by: [],
@@ -207,6 +207,9 @@ it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => 
     expect(app.issue.issues.getIssueById(related.id)).toEqual(relations.blocking[0]);
     expect(app.issue.issues.getIssueById(source.id)?.name).toBe("list update");
     expect(app.issue.issues.getIssueDetailById(source.id)?.description_html).toBe(source.description_html);
-    expect(get).toHaveBeenCalledTimes(page === "initial" ? 5 : 6);
+    expect(get).toHaveBeenCalledTimes(4);
+    expect(nerve.calls.filter((call) => call.path === `/api/v0/projects/${project.id}/issues`)).toHaveLength(
+      page === "initial" ? 1 : 2
+    );
   }
 );

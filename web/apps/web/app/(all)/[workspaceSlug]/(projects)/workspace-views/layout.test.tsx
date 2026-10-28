@@ -1,3 +1,4 @@
+import { IssueListService } from "@/services/issue/issue-list.service";
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act, type ComponentProps } from "react";
@@ -11,7 +12,6 @@ import { RootStore } from "@/store/root.store";
 import { GlobalViewStore } from "@/store/global-view.store";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import { EViewAccess, type IWorkspaceView } from "@nerve/types";
-import { IssueService } from "@/services/issue/issue.service";
 import Layout from "./layout";
 import GlobalViewIssuesPage from "./[globalViewId]/page";
 
@@ -77,7 +77,7 @@ it.each(["all-issues", "custom"])("preserves_domain_loading_without_issue_lists:
   const fetch = vi
     .spyOn((store.globalView as GlobalViewStore).workspaceService, "getAllViews")
     .mockReturnValue(new Promise<never>(() => {}));
-  const issues = vi.spyOn(IssueService.prototype, "getIssuesFromServer");
+  const issues = vi.spyOn(IssueListService.prototype, "listProject");
   const swrConfig = { provider: () => new Map(), shouldRetryOnError: false };
   await act(async () =>
     root.render(

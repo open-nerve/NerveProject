@@ -1,3 +1,4 @@
+import { IssueListService } from "@/services/issue/issue-list.service";
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act, type ComponentProps } from "react";
@@ -15,7 +16,6 @@ import { InstanceStore } from "@/store/instance.store";
 import { ThemeStore } from "@/store/theme.store";
 import { ModulesStore } from "@/store/module.store";
 import { ProjectViewStore } from "@/store/project-view.store";
-import { IssueService } from "@/services/issue/issue.service";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
 import ModulePage from "./modules/(detail)/[moduleId]/page";
@@ -91,7 +91,7 @@ it("preserves_domain_loading_without_issue_lists: module details and its own loa
   const fetch = vi
     .spyOn((store.module as ModulesStore).moduleService, "getModuleDetails")
     .mockReturnValue(new Promise<never>(() => {}));
-  const issues = vi.spyOn(IssueService.prototype, "getIssuesFromServer");
+  const issues = vi.spyOn(IssueListService.prototype, "listProject");
   const params = { workspaceSlug: "ws", projectId: "p-proj", moduleId: "m" };
   await act(async () =>
     root.render(
@@ -144,7 +144,7 @@ it("preserves_domain_loading_without_issue_lists: project view has one detail re
   const fetch = vi
     .spyOn((store.projectView as ProjectViewStore).viewService, "getViewDetails")
     .mockReturnValue(new Promise<never>(() => {}));
-  const issues = vi.spyOn(IssueService.prototype, "getIssuesFromServer");
+  const issues = vi.spyOn(IssueListService.prototype, "listProject");
   const params = { workspaceSlug: "ws", projectId: "p-proj", viewId: "v" };
   await act(async () =>
     root.render(

@@ -1,8 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { answerTiming, priorAnswerMembership } from "./paged-groups.evidence";
+import { answerTiming, priorAnswerMembership, pageEvidence } from "./paged-groups.evidence";
 import {
   applyGroupChange,
-  pageEvidence,
   type ConfirmedIssueChange,
   type GroupChangeResult,
   type ListContext,

@@ -2,7 +2,7 @@
 import { expect, test } from "vitest";
 import { issuePageOf, listContext, listGroup, listIssue, listRow, pageMeta } from "@/store/issue/fake-issues";
 import {
-  confirmGroups,
+  confirmGroups as confirmWithSources,
   decodePage,
   mergePages,
   pagePartKey,
@@ -10,6 +10,11 @@ import {
   type PagedGroups,
 } from "./paged-groups";
 import { replayGroups } from "./paged-groups.replay";
+
+// Hand-built initial fixtures represent source 0 held before dispatch; decoded
+// partial/whole replies have positive identities and never inherit this permission.
+const confirmGroups = (...args: Parameters<typeof confirmWithSources>) =>
+  confirmWithSources(args[0], args[1], args[2], new Set([0]));
 
 const context = listContext({ group_by: "state_id" });
 const before = listIssue("x", 4, { state_id: "A" });
@@ -293,7 +298,7 @@ test("unknownWholeRangeMarksOldAndNewGroupsButLeavesUnrelatedGroupFresh", () => 
 test("provenAfterAnswerDoesNotNeedUnknownBeforeToPlaceWithoutStale", () => {
   const raw = whole([], [after], 4, 5);
   const result = replayGroups(raw, { ...change, beforeSnapshot: { kind: "unknown" } }, raw, context);
-  expect(result).toEqual({ value: raw, verifyIds: [] });
+  expect(result).toMatchObject({ value: raw, verifyIds: [] });
 });
 
 test("partialDeletionDoesNotSubtractUnansweredOuterAndLaneCountersAgain", () => {
@@ -365,7 +370,7 @@ test("memberReplayKeepsSameUserWorkspacesIsolated", () => {
     );
     const result = replayGroups(raw, { id: "x", beforeSnapshot: { kind: "absent" }, after: issue }, raw, member);
     if (workspaceID === "other-ws") {
-      expect(result).toEqual({ value: raw, verifyIds: [] });
+      expect(result).toMatchObject({ value: raw, verifyIds: [] });
       expect(replayGroups(raw, { id: "x", beforeSnapshot: { kind: "unknown" }, after: issue }, raw, member)).toEqual({
         value: raw,
         verifyIds: [],

@@ -97,7 +97,8 @@ it("reads the independent clone source, locks the real project Controller and su
   expect(boundary.create).toHaveBeenCalledTimes(1);
   const [project, payload] = boundary.create.mock.calls[0]!;
   expect(project).toBe("A");
-  expect(payload).toMatchObject({ name: data.name, project_id: "A", description_html: "<p>source</p>" });
+  expect(payload).toMatchObject({ name: data.name, description_html: "<p>source</p>" });
+  expect(payload).not.toHaveProperty("project_id");
   expect(payload).not.toHaveProperty("sourceIssueId");
   expect(payload).not.toHaveProperty("id");
   for (const field of [

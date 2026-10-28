@@ -125,6 +125,7 @@ export class RootStore {
    * RouterStore, and run on in a retired session until M6 and M4 release them here (M3 design 7.1, 13.2).
    */
   dispose(): void {
+    this.issue.retire();
     this.projectRoot.projectFilter.dispose();
   }
 }

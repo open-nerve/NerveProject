@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TLegacyIssueUpdateRequest } from "@nerve/types";
+import type { IssueUpdate } from "@nerve/api-client";
 import { useState, useMemo } from "react";
 import { observer } from "mobx-react";
 // Nerve imports
@@ -12,6 +12,7 @@ import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { followInSession } from "@/lib/in-session";
 import type { IWorkItemPeekOverview } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 // hooks
@@ -55,38 +56,36 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
           console.error("Error fetching the parent issue", error);
         }
       },
-      update: async (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) => {
-        if (issues?.updateIssue) {
-          await issues
-            .updateIssue(workspaceSlug, projectId, issueId, data)
-            .then(async () => {
-              fetchActivities(workspaceSlug, projectId, issueId);
-              return;
-            })
-            .catch(() => {
-              setToast({
-                title: t("toast.error"),
-                type: TOAST_TYPE.ERROR,
-                message: t("entity.update.failed", { entity: t("issue.label", { count: 1 }) }),
-              });
-            });
-        }
+      update: async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => {
+        if (issues?.updateIssue)
+          await followInSession(
+            async () => {
+              await issues.updateIssue(workspaceSlug, projectId, issueId, data);
+            },
+            {
+              done: async () => {
+                await fetchActivities(workspaceSlug, projectId, issueId);
+              },
+              failed: () =>
+                setToast({
+                  title: t("toast.error"),
+                  type: TOAST_TYPE.ERROR,
+                  message: t("entity.update.failed", { entity: t("issue.label", { count: 1 }) }),
+                }),
+            }
+          );
       },
       restore: async (workspaceSlug: string, projectId: string, issueId: string) => {
-        try {
-          await restoreIssue(workspaceSlug, projectId, issueId);
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: t("issue.restore.success.title"),
-            message: t("issue.restore.success.message"),
-          });
-        } catch (_error) {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("issue.restore.failed.message"),
-          });
-        }
+        await followInSession(() => restoreIssue(workspaceSlug, projectId, issueId), {
+          done: () =>
+            setToast({
+              type: TOAST_TYPE.SUCCESS,
+              title: t("issue.restore.success.title"),
+              message: t("issue.restore.success.message"),
+            }),
+          failed: () =>
+            setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t("issue.restore.failed.message") }),
+        });
       },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps

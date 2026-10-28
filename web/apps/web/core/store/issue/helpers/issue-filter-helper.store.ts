@@ -7,18 +7,15 @@
 import { isEmpty } from "lodash-es";
 // nerve constants
 import type { EIssueFilterType } from "@nerve/constants";
-import { EIssueGroupByToServerOptions, EServerGroupByToFilterOptions } from "@nerve/constants";
 import type {
   EIssuesStoreType,
   IIssueDisplayFilterOptions,
   IIssueDisplayProperties,
   IIssueFilters,
   IIssueFiltersResponse,
-  IssuePaginationOptions,
   TIssueKanbanFilters,
   TIssueParams,
   TStaticViewTypes,
-  TWorkItemFilterExpression,
 } from "@nerve/types";
 // helpers
 import { getComputedDisplayFilters, getComputedDisplayProperties } from "@nerve/utils";
@@ -42,11 +39,6 @@ export interface IBaseIssueFilterStore {
 
 export interface IIssueFilterHelperStore {
   computedIssueFilters(filters: IIssueFilters): IIssueFilters;
-  computedFilteredParams(
-    richFilters: TWorkItemFilterExpression,
-    displayFilters: IIssueDisplayFilterOptions | undefined,
-    acceptableParamsByLayout: TIssueParams[]
-  ): Partial<Record<TIssueParams, string | boolean>>;
   getFilterConditionBasedOnViews: (
     currentUserId: string | undefined,
     type: TStaticViewTypes
@@ -70,46 +62,6 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
     displayProperties: isEmpty(filters?.displayProperties) ? undefined : filters?.displayProperties,
     kanbanFilters: isEmpty(filters?.kanbanFilters) ? undefined : filters?.kanbanFilters,
   });
-
-  /**
-   * @description This method is used to convert the filters array params to string params
-   * @param {TWorkItemFilterExpression} richFilters
-   * @param {IIssueDisplayFilterOptions} displayFilters
-   * @param {string[]} acceptableParamsByLayout
-   * @returns {Partial<Record<TIssueParams, string | boolean>>}
-   */
-  computedFilteredParams = (
-    richFilters: TWorkItemFilterExpression,
-    displayFilters: IIssueDisplayFilterOptions | undefined,
-    acceptableParamsByLayout: TIssueParams[]
-  ): Partial<Record<TIssueParams, string | boolean>> => {
-    const computedDisplayFilters: Partial<Record<TIssueParams, undefined | string[] | boolean | string>> = {
-      group_by: displayFilters?.group_by ? EIssueGroupByToServerOptions[displayFilters.group_by] : undefined,
-      sub_group_by: displayFilters?.sub_group_by
-        ? EIssueGroupByToServerOptions[displayFilters.sub_group_by]
-        : undefined,
-      order_by: displayFilters?.order_by || undefined,
-      sub_issue: displayFilters?.sub_issue ?? true,
-    };
-
-    const issueFiltersParams: Partial<Record<TIssueParams, boolean | string>> = {};
-    Object.keys(computedDisplayFilters).forEach((key) => {
-      const _key = key as TIssueParams;
-      const _value: string | boolean | string[] | undefined = computedDisplayFilters[_key];
-      const nonEmptyArrayValue = Array.isArray(_value) && _value.length === 0 ? undefined : _value;
-      if (nonEmptyArrayValue != undefined && acceptableParamsByLayout.includes(_key))
-        issueFiltersParams[_key] = Array.isArray(nonEmptyArrayValue)
-          ? nonEmptyArrayValue.join(",")
-          : nonEmptyArrayValue;
-    });
-
-    // work item filters
-    if (richFilters) issueFiltersParams.filters = JSON.stringify(richFilters);
-
-    if (displayFilters?.layout) issueFiltersParams.layout = displayFilters?.layout;
-
-    return issueFiltersParams;
-  };
 
   /**
    * @description This method is used to get the filter conditions based on the views
@@ -236,78 +188,5 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
     );
   };
 
-  /**
-   * This Method returns true if the display properties changed requires a server side update
-   * @param displayFilters
-   * @returns
-   */
-  getShouldClearIssues = (displayFilters: IIssueDisplayFilterOptions) => {
-    const NON_SERVER_DISPLAY_FILTERS = ["layout"];
-    const displayFilterKeys = Object.keys(displayFilters);
-
-    return NON_SERVER_DISPLAY_FILTERS.some((serverDisplayfilter: string) =>
-      displayFilterKeys.includes(serverDisplayfilter)
-    );
-  };
-
-  /**
-   * This Method is used to construct the url params along with paginated values
-   * @param filterParams params generated from filters
-   * @param options pagination options
-   * @param cursor cursor if exists
-   * @param groupId groupId if to fetch By group
-   * @param subGroupId groupId if to fetch By sub group
-   * @returns
-   */
-  getPaginationParams(
-    filterParams: Partial<Record<TIssueParams, string | boolean>> | undefined,
-    options: IssuePaginationOptions,
-    cursor: string | undefined,
-    groupId?: string,
-    subGroupId?: string
-  ) {
-    // if cursor exists, use the cursor. If it doesn't exist construct the cursor based on per page count
-    const pageCursor = cursor ? cursor : groupId ? `${options.perPageCount}:1:0` : `${options.perPageCount}:0:0`;
-
-    // pagination params
-    const paginationParams: Partial<Record<TIssueParams, string | boolean>> = {
-      ...filterParams,
-      cursor: pageCursor,
-      per_page: options.perPageCount.toString(),
-    };
-
-    // If group by is specifically sent through options, like that for calendar layout, use that to group
-    if (options.groupedBy) {
-      paginationParams.group_by = options.groupedBy;
-    }
-
-    // If before and after dates are sent from option to filter by then, add them to filter the options
-    if (options.after && options.before) {
-      paginationParams["target_date"] = `${options.after};after,${options.before};before`;
-    }
-
-    // If groupId is passed down, add a filter param for that group Id
-    if (groupId) {
-      const groupBy = paginationParams["group_by"] as EIssueGroupByToServerOptions | undefined;
-      delete paginationParams["group_by"];
-
-      if (groupBy) {
-        const groupByFilterOption = EServerGroupByToFilterOptions[groupBy];
-        paginationParams[groupByFilterOption] = groupId;
-      }
-    }
-
-    // If subGroupId is passed down, add a filter param for that subGroup Id
-    if (subGroupId) {
-      const subGroupBy = paginationParams["sub_group_by"] as EIssueGroupByToServerOptions | undefined;
-      delete paginationParams["sub_group_by"];
-
-      if (subGroupBy) {
-        const subGroupByFilterOption = EServerGroupByToFilterOptions[subGroupBy];
-        paginationParams[subGroupByFilterOption] = subGroupId;
-      }
-    }
-
-    return paginationParams;
-  }
+  getShouldClearIssues = (display: IIssueDisplayFilterOptions) => Object.hasOwn(display, "layout");
 }

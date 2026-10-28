@@ -2,11 +2,21 @@
 import type { Issue } from "@nerve/api-client";
 import { beforeIssue, issueMembership, issueParts, type Membership } from "./issue-membership";
 import { compareIssueTime, compareRows, issueSortKey } from "./issue-order";
-import type { ConfirmedIssueChange, CounterRef, ListContext, PagePart, PageRange, Row } from "./paged-groups";
+import type {
+  PageAnswer,
+  PagedGroups,
+  ConfirmedIssueChange,
+  CounterRef,
+  ListContext,
+  PagePart,
+  PageRange,
+  Row,
+} from "./paged-groups";
 
 export type RowEvidence = { rows: Row[]; complete: boolean };
 export type ReadEvidence = { whole: boolean; parts: { part: PagePart; rows: Row[]; range: PageRange }[] };
 export type CounterEvidence = {
+  sourceID: number;
   held: RowEvidence;
   read?: ReadEvidence;
   confirmed: Map<string, { updatedAt: string | null; member: boolean }>;
@@ -113,7 +123,8 @@ export function priorCounterMembership(
   source: CounterEvidence,
   change: ConfirmedIssueChange,
   context: ListContext,
-  ref: CounterRef
+  ref: CounterRef,
+  heldSources: ReadonlySet<number>
 ): { old: Membership; inferred: boolean } {
   const fact = source.confirmed.get(change.id);
   if (fact)
@@ -126,7 +137,9 @@ export function priorCounterMembership(
             : fact.member,
       inferred: false,
     };
-  if (!source.read) return { old: priorRowMembership(source.held, change, context, ref), inferred: false };
+  if (heldSources.has(source.sourceID))
+    return { old: priorRowMembership(source.held, change, context, ref), inferred: false };
+  if (!source.read) return { old: undefined, inferred: false };
   const timing = answerTiming(source.read, change, context);
   return {
     old:
@@ -136,5 +149,27 @@ export function priorCounterMembership(
           ? issueMembership(change.after, context, ref)
           : priorAnswerMembership(source.read, change, context, ref),
     inferred: timing.inferred && change.after !== null,
+  };
+}
+
+/** Only currently held source identities authorize a future operation's frozen Before. */
+export function heldCounterSources(value: PagedGroups | undefined): ReadonlySet<number> {
+  if (!value) return new Set();
+  return new Set(
+    value.counterEvidence
+      ? [...value.counterEvidence.values()].map((source) => source.sourceID)
+      : [value.read?.sourceID ?? 0]
+  );
+}
+
+/** Extract untouched raw evidence before any rows are merged or confirmed. */
+export function pageEvidence(answer: PageAnswer): ReadEvidence {
+  return {
+    whole: answer.read.part === null,
+    parts: answer.read.rowParts.map((part) => {
+      const group = answer.groups.get(part.group);
+      const rows = (part.subgroup === undefined ? group : group?.subgroups?.get(part.subgroup))?.rows ?? [];
+      return { part, rows, range: answer.read.ranges.get(JSON.stringify([part.group, part.subgroup]))! };
+    }),
   };
 }

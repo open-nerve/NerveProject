@@ -6,15 +6,11 @@
 
 // services
 import type { ApiClient, ChangePasswordRequest, Profile, ProfileUpdate, User, UserUpdate } from "@nerve/api-client";
-import type { TIssuesResponse } from "@nerve/types";
 import { unwrap } from "@/lib/api-error";
-import { APIService } from "@/services/api.service";
 
-export class UserService extends APIService {
+export class UserService {
   /** api: the client bound to the session of the stores that build this service (RootStore). */
-  constructor(private readonly api: ApiClient) {
-    super();
-  }
+  constructor(private readonly api: ApiClient) {}
 
   async currentUser(): Promise<User> {
     return unwrap(await this.api.GET("/api/v0/me"));
@@ -38,24 +34,5 @@ export class UserService extends APIService {
 
   async updateCurrentUserProfile(data: ProfileUpdate): Promise<Profile> {
     return unwrap(await this.api.PATCH("/api/v0/me/profile", { body: data }));
-  }
-
-  async getUserProfileIssues(
-    workspaceSlug: string,
-    userId: string,
-    params: any,
-    config = {}
-  ): Promise<TIssuesResponse> {
-    return this.get(
-      `/api/workspaces/${workspaceSlug}/user-issues/${userId}/`,
-      {
-        params,
-      },
-      config
-    )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
   }
 }

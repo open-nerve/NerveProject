@@ -1,3 +1,4 @@
+import { IssueListService } from "@/services/issue/issue-list.service";
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act } from "react";
@@ -17,7 +18,6 @@ import { InstanceStore } from "@/store/instance.store";
 import { ThemeStore } from "@/store/theme.store";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
-import { IssueService } from "@/services/issue/issue.service";
 import { ArchivedCycleLayoutRoot } from "@/components/cycles/archived-cycles/root";
 import { ArchivedModuleLayoutRoot } from "@/components/modules/archived-modules/root";
 
@@ -119,7 +119,7 @@ it.each(["cycle", "module"] as const)(
         : vi.spyOn((current.module as ModulesStore).moduleArchiveService, "getArchivedModules");
     // Valid entities are store fixtures, not fabricated HTTP success. Keep the real store's failure path too.
     fetch.mockRejectedValue(new Error("M6 archive API unavailable"));
-    const issues = vi.spyOn(IssueService.prototype, "getIssuesFromServer");
+    const issues = vi.spyOn(IssueListService.prototype, "listProject");
     await act(async () => {
       root.render(
         <MemoryRouter>
