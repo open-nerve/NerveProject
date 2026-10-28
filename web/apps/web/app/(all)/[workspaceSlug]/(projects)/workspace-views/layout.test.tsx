@@ -11,13 +11,15 @@ import { RootStore } from "@/store/root.store";
 import { GlobalViewStore } from "@/store/global-view.store";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import { EViewAccess, type IWorkspaceView } from "@nerve/types";
+import { IssueService } from "@/services/issue/issue.service";
 import Layout from "./layout";
+import GlobalViewIssuesPage from "./[globalViewId]/page";
 
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("react-router", async (original) => ({
   ...(await original<typeof import("react-router")>()),
   useNavigate: () => vi.fn(),
-  Outlet: () => null,
+  Outlet: () => <GlobalViewIssuesPage />,
 }));
 vi.mock("@/components/core/app-header", () => ({ AppHeader: ({ header }: { header: React.ReactNode }) => header }));
 vi.mock("@/components/core/content-wrapper", () => ({
@@ -42,7 +44,7 @@ function createStore(nerve: FakeNerve) {
   return new RootStore(nerve.client());
 }
 
-it.each(["all-issues", "custom"])("loads the workspace view directory on direct entry to %s", async (viewId) => {
+it.each(["all-issues", "custom"])("preserves_domain_loading_without_issue_lists: workspace view %s", async (viewId) => {
   const nerve = new FakeNerve();
   const store = createStore(nerve);
   vi.useFakeTimers();
@@ -75,6 +77,7 @@ it.each(["all-issues", "custom"])("loads the workspace view directory on direct 
   const fetch = vi
     .spyOn((store.globalView as GlobalViewStore).workspaceService, "getAllViews")
     .mockReturnValue(new Promise<never>(() => {}));
+  const issues = vi.spyOn(IssueService.prototype, "getIssuesFromServer");
   const swrConfig = { provider: () => new Map(), shouldRetryOnError: false };
   await act(async () =>
     root.render(
@@ -87,6 +90,8 @@ it.each(["all-issues", "custom"])("loads the workspace view directory on direct 
   );
   expect(fetch).toHaveBeenCalledOnce();
   expect(fetch).toHaveBeenCalledWith("ws");
+  expect(document.title).toBe("ws - All Views");
+  expect(issues).not.toHaveBeenCalled();
   const title = viewId === "custom" ? "Custom view" : "default_global_view.all_issues";
   const switcher = [...container.querySelectorAll("button")].find((button) => button.textContent?.includes(title));
   expect(switcher).toBeDefined();

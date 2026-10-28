@@ -2560,6 +2560,14 @@
       "until": "M6"
     },
     {
+      "rule": "analytics",
+      "path": "web/apps/web/core/services/cycle.service.test.ts",
+      "match": "analytics",
+      "count": 1,
+      "reason": "P10a 的真实 CycleService 传输边界测试核验保留迭代统计 GET 的 query 与尾斜杠；不伪造页面网络成功，随 M6 替换旧接口同步迁移本断言",
+      "until": "M6"
+    },
+    {
       "rule": "brand",
       "path": "pnpm-workspace.yaml",
       "match": "Plane",

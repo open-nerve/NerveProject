@@ -15,6 +15,7 @@ import { InstanceStore } from "@/store/instance.store";
 import { ThemeStore } from "@/store/theme.store";
 import { ModulesStore } from "@/store/module.store";
 import { ProjectViewStore } from "@/store/project-view.store";
+import { IssueService } from "@/services/issue/issue.service";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
 import ModulePage from "./modules/(detail)/[moduleId]/page";
@@ -57,7 +58,7 @@ async function fixture() {
   return store;
 }
 
-it("keeps the module details and its own loader", async () => {
+it("preserves_domain_loading_without_issue_lists: module details and its own loader", async () => {
   const store = await fixture();
   const module: IModule = {
     id: "m",
@@ -90,6 +91,7 @@ it("keeps the module details and its own loader", async () => {
   const fetch = vi
     .spyOn((store.module as ModulesStore).moduleService, "getModuleDetails")
     .mockReturnValue(new Promise<never>(() => {}));
+  const issues = vi.spyOn(IssueService.prototype, "getIssuesFromServer");
   const params = { workspaceSlug: "ws", projectId: "p-proj", moduleId: "m" };
   await act(async () =>
     root.render(
@@ -103,7 +105,8 @@ it("keeps the module details and its own loader", async () => {
       </MemoryRouter>
     )
   );
-  expect(fetch).toHaveBeenCalledWith("ws", "p-proj", "m");
+  expect(fetch).toHaveBeenCalledExactlyOnceWith("ws", "p-proj", "m");
+  expect(issues).not.toHaveBeenCalled();
   expect(document.title).toBe("PROJ - Milestone");
   expect(container.textContent).toContain("Milestone");
   expect(container.textContent).not.toContain("Add work item");
@@ -112,7 +115,7 @@ it("keeps the module details and its own loader", async () => {
   store.dispose();
 });
 
-it("keeps the project view title and its own loader", async () => {
+it("preserves_domain_loading_without_issue_lists: project view has one detail reader", async () => {
   const store = await fixture();
   const view: IProjectView = {
     id: "v",
@@ -141,6 +144,7 @@ it("keeps the project view title and its own loader", async () => {
   const fetch = vi
     .spyOn((store.projectView as ProjectViewStore).viewService, "getViewDetails")
     .mockReturnValue(new Promise<never>(() => {}));
+  const issues = vi.spyOn(IssueService.prototype, "getIssuesFromServer");
   const params = { workspaceSlug: "ws", projectId: "p-proj", viewId: "v" };
   await act(async () =>
     root.render(
@@ -154,7 +158,8 @@ it("keeps the project view title and its own loader", async () => {
       </MemoryRouter>
     )
   );
-  expect(fetch).toHaveBeenCalledWith("ws", "p-proj", "v");
+  expect(fetch).toHaveBeenCalledExactlyOnceWith("ws", "p-proj", "v");
+  expect(issues).not.toHaveBeenCalled();
   expect(document.title).toBe("PROJ - Release view");
   expect(container.textContent).toContain("Release view");
   expect(container.textContent).not.toContain("Add work item");

@@ -9,6 +9,7 @@ import { SWRConfig } from "swr";
 import { afterEach, expect, it, vi } from "vitest";
 import { rootStore } from "@/lib/store-context";
 import { CycleStore } from "@/store/cycle.store";
+import { IssueService } from "@/services/issue/issue.service";
 import Page from "./page";
 import { CycleIssuesHeader } from "../header";
 
@@ -31,6 +32,10 @@ document.body.append(container);
 const root = createRoot(container);
 afterEach(async () => {
   await act(async () => root.render(null));
+  runInAction(() => {
+    delete rootStore.cycle.cycleMap.present;
+  });
+  localStorage.clear();
   vi.restoreAllMocks();
 });
 
@@ -54,7 +59,7 @@ it("loads a cold cycle once and reloads when the route changes", async () => {
   expect(fetch).toHaveBeenLastCalledWith("ws", "project", "second");
 });
 
-it("keeps the real cycle sidebar and loads details once when the cycle is present", async () => {
+it("preserves_domain_loading_without_issue_lists: the real cycle sidebar deduplicates its own reads", async () => {
   const cycle: ICycle = {
     id: "present",
     name: "Spring cycle",
@@ -75,7 +80,6 @@ it("keeps the real cycle sidebar and loads details once when the cycle is presen
     started_issues: 0,
     unstarted_issues: 0,
     cancelled_issues: 0,
-    distribution: { assignees: [], labels: [], completion_chart: {} },
   };
   runInAction(() => {
     rootStore.cycle.cycleMap.present = cycle;
@@ -83,7 +87,9 @@ it("keeps the real cycle sidebar and loads details once when the cycle is presen
   const service = (rootStore.cycle as CycleStore).cycleService;
   const pending = new Promise<never>(() => {});
   const fetch = vi.spyOn(service, "getCycleDetails").mockReturnValue(pending);
-  vi.spyOn(service, "cycleProgress").mockReturnValue(pending);
+  const progress = vi.spyOn(service, "cycleProgress").mockReturnValue(pending);
+  const distribution = vi.spyOn(service, "cycleDistribution").mockReturnValue(pending);
+  const issues = vi.spyOn(IssueService.prototype, "getIssuesFromServer");
   const params = { workspaceSlug: "ws", projectId: "project", cycleId: "present" };
   await act(async () =>
     root.render(
@@ -96,6 +102,9 @@ it("keeps the real cycle sidebar and loads details once when the cycle is presen
     )
   );
   expect(fetch).toHaveBeenCalledOnce();
+  expect(progress).toHaveBeenCalledExactlyOnceWith("ws", "project", "present");
+  expect(distribution).toHaveBeenCalledExactlyOnceWith("ws", "project", "present");
+  expect(issues).not.toHaveBeenCalled();
   expect(container.textContent).toContain("Spring cycle");
   expect(container.textContent).toContain("project_cycles.active_cycle.progress");
   expect(container.textContent).not.toContain("issue.add.label");
