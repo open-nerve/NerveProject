@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T4 既定任务门禁已完成，T5 首轮独评发现三项消费链缺陷，fix round 1 实施中；W1 已获 Task5 独评确认。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T4 完整本地七门禁通过；阶段最终门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。实施记录见第7节；以下第1–6节保留预检时点事实。
+日期：2026-10-29。**T1–T5 既定任务门禁已完成，T5 三项消费链缺陷及附带 M1 修复复审通过，W1 已关闭；T6 开始。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T4 完整本地七门禁通过；阶段最终门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。当前实施记录见第8节，第7节保留 T1–T4 与 T5 初审过程；以下第1–6节保留预检时点事实。
 
 ## 1. 实际前置与证据
 
@@ -136,3 +136,15 @@ T5接续：先关闭W1，再以唯一root写协调入口接通项目/归档/个�
 本轮修复统一 optional 子组读取/续页参数、仅在启动刷新时记录尝试，并跟进小写 none 与空字符串未分组键的消费者；M1 普通/递归子项的多余折叠层同范围修正。新挂载测试贯穿真实 KanBan/ListGroup、列键生产、QuickAddRoot/RHF、根写协调与 FakeNerve，保留泳道、有效 ID 和 priority:none。A 拒绝→展开 B→显式重试 A 后验证 B 的首次请求和收敛。准确红绿、静态门禁、全前端及源码桥记录追加于 `task-5-report.md` 的 fix1 节；本段不代替独立复审，不勾 Task 或 A1–A10。
 
 M2 既有 MobX/React key 等噪声保留原日志并沿原 M6/T10 所有者处理，不升警告阈值或吞 stderr。R17 direct-confirm 即时核实及完整 round/freshness/canonical 仍归 T6，不能从本轮 UI 修复推定已完成。
+
+
+## 8. T5 完成与 T6 接续
+
+Task5 全段范围为 `dde969f8bb526dcf2641ad45eb1a93b8f5d1e5d4..659ac3cbb22a68bf06a35f936372a14614027693`：起步文档 `10308a96`、首版 `affdcf33`、修复 `659ac3cb`。T5 根协调、固定 scope/query 绑定、新列表服务、目录就绪与可见 stale 刷新均已接通；W1 由模型及真实请求交错证明关闭，发出前冻结实际 held 来源，不猜新回答的窗口外计数。Task5 独评与限定复审通过，后续 Task 和 A1–A10 尚未完成。
+
+- 初审 I1 普通看板续页、I2 拒绝期间展开组漏刷、I3 None 快建哨兵 ID 均已修复；附带 M1 未分组子项多余折叠层一并关闭。原件 `task-5-review.md`、`task-5-report.md` §7、`task-5-fix1-review.md` 和 `task-5-fix1-review-retry.md` 保存在本 worktree 的 `.superpowers/sdd/P10b-web-list-data/`。两份限定复审均确认全部发现已处理、无新增问题。首席结束时返回容量错误，但实际已留下完整报告；主控此前“未开始执行”的判断已在 ledger 更正，替补报告另存，未覆盖原件。
+- 最终合法查询/最终测试在六个修复前产品文件上产生 9 项真实断言失败，恢复字节后七文件 73 项通过。lint-web 54/54（36 缓存）、knip 通过；强制完整前端 18 任务 0 缓存，8 包共 1494 项（web 1332/151 文件，其他包 162）。73 项属于 1494 的子集。raw/源码桥/提交桥见 `task-5-fix1-root-audit-precommit.json`、`task-5-fix1-root-package-check.json`、`task-5-fix1-root-commit-check.json`；所有最终输入等该提交，测试并非最终整阶段 F。
+- 原六项生产变异按未改变的源码桥承接，未声称修复轮重跑。中间夹具、编译红及失败原件保留；全前端原日志仍有旧警告。新挂载暴露的 KanBan 隐藏列空 Fragment 缺 key 在修复前同样存在，留 T13 同阶段整理与挂载回归；其余 M2 按 T10/M6 归属，不屏蔽 stderr 或放宽阈值。
+- R17 为 T6 首项：direct-confirm 的 verifyIds 目前待下一次 fetch 才 drain。T6 完成即时发起、共享 round/去重、四路状态、freshnessFloor，并与唯一 canonical 一同闭合；业务已成功后的核实拒绝不伪报写失败。T6 同时按实际树收口 6 个普通 canonical 外部写者及 Binding 间接读入，原“7 文件”为 T5 前盘点。T6 独评前必须关闭，不能延后到 T12/T14。
+
+下一完整 F 与产品检查点按计划在 T8 执行。阶段终审、准确分支 CI、集成和 M4 总体完成线均开放；不合并、不启动 P11。

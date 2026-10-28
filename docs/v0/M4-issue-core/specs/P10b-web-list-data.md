@@ -1,12 +1,12 @@
 # M4/P10b 列表数据层规格
 
-> 状态：T1–T4 的既定任务门禁已完成；T4 修复复审及七项本地门禁通过，整页窗口外计数边界 W1 已登记为 T5 首项必修。T5 实施中，全部阶段产品验收仍未勾选。旧六项 B-L1–B-L6 继续作为实施要求。
+> 状态：T1–T5 的既定任务门禁已完成；T5 独评与修复复审关闭 W1 及三项消费链缺陷。T6 开始，首项补齐 direct-confirm 的即时核实，再收口唯一实体、读取水位及旧写者。阶段最终门禁、整审与 CI 尚未完成，全部阶段产品验收仍未勾选。旧六项 B-L1–B-L6 继续作为实施要求。
 
 ## 1. 目标
 
 将项目、已归档、个人主页的工作项列表迁到生成客户端；在既有 `Reconciled` 上扩充分组分页，并让确认的修改写入该会话所有列表和工作项的唯一副本。项目页挂载不再发旧 Plane 地址。完成 M4-design §12 P10b 的 14 个任务，保持 §3.22 的分页、重放、版本与会话约定。
 
-执行前盘点基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，树 `6eb00a9b8238d3dcbbb9ee9cebfdfe10020e4c66`，与 P10a 最终 `d1a19e78fa3ba83b289fdfc0f2788e3105d658da` 完全相同。准确 main CI 和归档清理事实由 [P10a review §10](../reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29) 绑定。2026-10-28 的 P9 基线准备稿保留为历史，当前依实际 P10a 树修订；执行前预检没有编写 P10b 实现、原型或测试；之后已按授权实施 T1–T4，下列尚未交付的接口仍是目标，准确进度、已知 W1 与证据见阶段 review。
+执行前盘点基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，树 `6eb00a9b8238d3dcbbb9ee9cebfdfe10020e4c66`，与 P10a 最终 `d1a19e78fa3ba83b289fdfc0f2788e3105d658da` 完全相同。准确 main CI 和归档清理事实由 [P10a review §10](../reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29) 绑定。2026-10-28 的 P9 基线准备稿保留为历史，当前依实际 P10a 树修订；执行前预检没有编写 P10b 实现、原型或测试；之后已按授权实施 T1–T5，下列尚未交付的接口仍是目标，准确进度、W1 关闭与证据见阶段 review §8。
 
 权威输入：[M4 设计](../M4-design.md) §3.16–3.17、§3.22、§7.1–7.3、§7.7–7.9、§9.5–9.6、§12 P10b、§13；[推进方式](../../claude_to_gpt/02-method.md)；[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)。P1–P9交接与P10a准备之间的逐项映射由预检review归档；P5列表/偏好合同和P8个人主页/搜索边界不重新裁定。
 
@@ -138,9 +138,9 @@ Drop在目标格总显示，落点越界扩boundary，后页按id去重、按全
 
 ### 2.6 T5/T6：列表协调与唯一工作项
 
-**T5 首项 W1 / R13：** T4 补充审查实证，whole 已将窗口外新建 X 计入 outer10/B5、但未返回 X 时，现有 direct confirm 会依据 absent Before 猜成 outer11/B6 且保持 fresh；该行为在 fix1 前已存在。T5 必须在真实写协调链关闭此边界：区分操作实际发出前已持有的计数来源与操作在外时新到的原回答来源，后者按自身 raw 三分支判，未知不猜；前者保留冻结 Before 的意义，不能让普通离屏修改一律重取 whole。限定 issue 模块内部 pending/计数证据，不改 HTTP、通用 Reconciled 或会话协议，不保存第二份完整实体。具体内部形状在 T5 方案裁定后同步本节与 §2.4/2.5；本条是待交付要求，不是已修结论。必要测试包括 whole 窗口外 create、发出前已持有来源、partial/whole 两种到达顺序，以及真实 FakeNerve 读写交错；W1 未关闭前不推产品检查点。
+**T5 首项 W1 / R13：** T4 补充审查实证，whole 已将窗口外新建 X 计入 outer10/B5、但未返回 X 时，现有 direct confirm 会依据 absent Before 猜成 outer11/B6 且保持 fresh；该行为在 fix1 前已存在。T5 必须在真实写协调链关闭此边界：区分操作实际发出前已持有的计数来源与操作在外时新到的原回答来源，后者按自身 raw 三分支判，未知不猜；前者保留冻结 Before 的意义，不能让普通离屏修改一律重取 whole。限定 issue 模块内部 pending/计数证据，不改 HTTP、通用 Reconciled 或会话协议，不保存第二份完整实体。内部形状已随 T5 同步本节与 §2.4/2.5；本段保留原问题和约束，关闭结论见阶段 review §8。必要测试包括 whole 窗口外 create、发出前已持有来源、partial/whole 两种到达顺序，以及真实 FakeNerve 读写交错；W1 未关闭前不推产品检查点。
 
-R13 最小方案已裁定，T5 实施中：每个绑定列表为原回答分配可 structuredClone 的数字 sourceID，仅比较身份，不将其当 cursor、版本、请求序号或删除水位。每计数保留自身来源；实际发送前，从各列表当前 Reconciled.value 冻结已持有来源集合，绑定到本操作与不可变列表身份。确认时已有事实优先；来源在集合内才可使用发送前 Before 证据，否则只看该来源自己的 raw 三分支，未知不猜。不能用“已分配序号水位”代替实际 held 集合，因为 decode 到接受回答之间仍有微任务窗口。whole 替换旧来源和确认事实，partial 只替换自身计数来源；raw replay 不使用该许可。来源集合只存内部标识，不存第二份实体，不用全根可变 current-operation 槽隐式传递并发操作的证据；确切内部类型由 T5 随实现同步。
+R13 最小方案已在 T5 实施并通过独评：每个绑定列表为原回答分配可 structuredClone 的数字 sourceID，仅比较身份，不将其当 cursor、版本、请求序号或删除水位。每计数保留自身来源；实际发送前，从各列表当前 Reconciled.value 冻结已持有来源集合，绑定到本操作与不可变列表身份。确认时已有事实优先；来源在集合内才可使用发送前 Before 证据，否则只看该来源自己的 raw 三分支，未知不猜。不能用“已分配序号水位”代替实际 held 集合，因为 decode 到接受回答之间仍有微任务窗口。whole 替换旧来源和确认事实，partial 只替换自身计数来源；raw replay 不使用该许可。来源集合只存内部标识，不存第二份实体，不用全根可变 current-operation 槽隐式传递并发操作的证据；内部类型与 heldSources 参数已随 T5 实现同步。
 
 BaseIssuesStore 是当前选择和读取门面；`helpers/issue-list-binding.ts` 的 IssueListBinding 每实例持一个不可变 scope/query 与 `Reconciled<PagedGroups>`，注册在本代 IssueRootStore；project/archived/profile只决定scope/query。门面保留曾取过的绑定，切选择不修改旧实例，根操作按实例冻结 heldSources，全部已取副本继续确认；无第二状态层，root/model依赖用 type-only。对外保留当前调用者需要的getIssueIds/getGroupIssueCount/getPaginationData等读取入口，内部不保留Plane分页兼容模型。无子组仅以 optional `undefined` 表示，看板 count/cursor/loader/next 四个消费口使用同一参数；不再传字符串占位 `"null"`。共享未分组键为 `""`，None 列/泳道键为 `"none"`；列表/看板快建预填不将 None 标签或负责人键写入 ID 数组，合法 `priority:"none"` 仍保留；普通及递归子项识别同一空字符串未分组键。接口迁移时修改使用方编译，不把新响应转换回旧TIssuesResponse。
 
@@ -171,6 +171,8 @@ T6同时改 `C/store/issue/issue-details/{issue,sub_issues,link,relation}.store.
 供旧读者的 `issuesMap` 是 `Readonly<Record<string, Issue|IssueDetail>>` 派生只读视图，不是第二份实体缓存；需要的旧addIssue/updateIssue写API彻底删除，不留无行为壳。这里只收紧共享存储边界，旧详情资源地址/业务流程完整替换仍由P11负责。若权威回读失败，采用下表未证实状态，不把“旧写成功”伪报为“最新实体已取得”。
 
 #### 缺行回查的四路状态转移（B-L6）
+
+**T6 首项 R17：** T5 已在 fetch/replay 后发出真实核实 GET；direct-confirm 当前仅登记 verifyIds，尚未即时发送。T6 将两条入口收口到下述完整 round，跨副本与并发 part 去重；已成功的业务写不能因后续核实拒绝而伪报写失败或重发。核实错误保留于不可确认状态并交给其读取/显式重试通道。真实 direct-confirm→GET、拒绝后显式重试及退役后无跟进须在 T6 独评前关闭，不延后至 T12/T14。
 
 核实元数据只存id、round、状态、error和 `freshnessFloor`，不复制实体。进入待核实时先记当前readSerial；回查404/其它拒绝实际落定时把该id的freshnessFloor提升到此刻当前readSerial（覆盖此前已经发出的所有read，包括核实在外期间新发的read）。它只是“恢复可见性必须有之后新发出的证据”的水位，不是删除水位，也不产生墓碑。`getIssueById/getIssueDetailById` 对待核实/不可确认可见的id不给可靠活值；列表展示也不把它作为普通确认卡片，相关stale计数不能表现为最终值。元数据不等于删除墓碑。只有同session、项目令牌有效、`token.serial > freshnessFloor` 且服务端版本规则允许的完整权威读，才能清该id核实状态；这证明请求在最近核实拒绝之后才发出。404之前已在外的旧list即使稍后回答、updated_at与旧canonical相同、项目删除令牌仍有效，也不能写回该id、恢复其可靠可见性或清相关组的stale。该freshness检查在canonical receive及清核实/清stale前执行；旧页即使缺此id，也不能据其旧范围解除本轮待重验状态。
 
@@ -273,7 +275,7 @@ M6/M7列表不加回，不实现祖先搜索或工作区视图。P9后端删除/
 - `C/store/issue/fake-issues.ts` 已有 `issueOf`，T1 **扩展既有夹具**，不另建近似实现；当前 `BaseIssuesStore` 为 1,262 行。`Reconciled`/`oneAtATime` 和生成 Issue/IssueDetail/IssueUpdate 合同已经存在；fetchPart、PagedGroups、IssueListService/IssueApiService 尚未实现。
 - `IssueArchiveService` 当前三方法在 T5 全部替换并删除文件/barrel；`IssueService` 的 create/getIssuesFromServer/getIssues/patch/delete 在 T5 移除；retrieve（包括 parent 和归档详情页头）、编号读取、子项、普通链接等仍留 P11。不得把所有剩余方法期限一律推迟。
 - `UserService.getUserProfileIssues` 仅被 ProfileIssues 的首/续页调用。T5 改为 listMember 后，同任务删除该方法、TIssuesResponse import、无其它旧方法时的 APIService 继承及 super；保留 M2 的认证资料方法和 ApiClient。设计原 P11 条目同步为接收本段已完成事实，不能留下无使用者旧接口到 P11。
-- T6 的 canonical 写入方为 helpers/base-issues、archived/issue、issue-details 的 issue/sub_issues/link/relation、inbox/inbox-issue 共 7 个文件，另有 canonical 自身；workspace-draft 的同名 issuesMap 是草稿缓存，不当普通工作项 map 盲删。详情父项读取必须在发出前单独 captureRead，不能沿用子项请求令牌。
+- 预检基线的 canonical 外部写者是 helpers/base-issues、archived/issue、issue-details 的 issue/sub_issues/link/relation、inbox/inbox-issue 共 7 个文件。T5 已将前两处收口至 root.store，T6 按实际树处理 root.store、4 个详情 store 和 inbox 共 6 个外部写者，以及 helpers/issue-list-binding 经 root.acceptListIssues 的间接读入；另有 canonical 自身。workspace-draft 的同名 issuesMap 是草稿缓存，不当普通工作项 map 盲删。详情父项读取必须在发出前单独 captureRead，不能沿用子项请求令牌。
 - T6 同步把 useIssues 的 issueMap 类型和其它读取合同改为只读；不止 map 外壳 readonly，生产读取方也不得通过返回的实体/数组修改 canonical。共享对象的防绕写由类型与实际调用枚举证明，不以全局禁用 MobX 守卫代替。
 - IssueRootStore 的既有 autorun 严格模式警告归 T10；M6 归档 loader / CycleQuickActions 的既有问题及未实现领域 API 仍归 M6。M6/M7 自身页面验收归属 A 不变，既不能恢复旧列表，也不能把全域失败过滤掉。
 
