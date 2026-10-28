@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T5 既定任务门禁已完成；W1 及 T5 消费链修复已通过独评，继续 T6 唯一副本与完整核实链。任务勾选由主控在独立评审后更新。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T6 既定任务门禁已完成；T6/R17 与三项异步边界修复已通过独评，继续 T7 项目显示偏好与旧地址下线。任务勾选由主控在独立评审后更新。
 
-> **当前状态：** T5 最终提交 659ac3cb 的限定复审通过，完整前端 1494 项通过；最近完整本地七门禁仍绑定 T4 dde969f8，不冒充 T5/T6 的全 F。T6 首项关闭 R17 direct-confirm 即时核实，T8 按计划跑下一次完整 F 及产品检查点 CI。全部阶段产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。
+> **当前状态：** T6 修复提交 ffade688 的限定复审通过；完整 web 应用 1369 项通过，最后两份测试强化由 63 项聚焦及最终 lint/knip 覆盖，源码桥边界见 review §9。最近完整本地七门禁仍绑定 T4 dde969f8；T8 按计划跑下一次完整 F 及产品检查点 CI。全部阶段产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -152,16 +152,16 @@ make e2e
 
 **T6 fix1 异步边界补充：** 协调器内部 `begin(fresh)` 让显式 retry/refresh 在旧慢读仍在外时建立新去重与 scope 预算；真正 inFlight 同 id 仍共享并登记加入轮次，旧 end 只释放自身。两详情入口辅助 await 后再核原 token，子项父权威 await 后再核原 token，再允许标识/后续请求或子项 ID/分布/返回。正式回归覆盖慢 whole + 403/404 重试和重新挂载、同轮 part 与跨轮真 inFlight 去重、旧 round 结束不清新轮次，以及双入口辅助期间退役/删除和父 GET 期间成功删除。
 
-- [ ] 首项关闭 R17（spec§2.6）：direct-confirm 产生 verifyIds 后立即进入与 fetch/replay 共用的核实 round，跨副本/并发 part 去重；真实 GET、核实拒绝后的显式重试、退役无跟进均有测试。已成功的业务写保持成功，核实拒绝通过读取/可见错误状态交回，不能重发业务写。下述四路状态及 freshness 合同同 Task 一次闭合。
-- [ ] `latestServerVersionWinsAcrossAnswerOrder`、`listKeepsConfirmedDescription`、`staleFirstDetailDoesNotFillDescription`、`detailRetryIsBoundedAndRefusalReturns`、`thirdPartyMembershipMarksOldAndNewGroups`、`ownPendingReadDoesNotMarkStale`。
-- [ ] `confirmedDeleteCannotBeResurrected`用先发list后确认204再放旧list，canonical和画面均无该id且不虚算total；refused delete/SessionChanged/get404不产生tombstone；archive+unarchive能恢复。`unknownDescendantsRefreshOnlyTheirProject`区分另一项目列表保持。
-- [ ] `legacyDetailConsumersCannotBypassCanonicalVersion` 覆盖旧Detail/关联旧答不能降级新实体；link和sub项成功后count来自带真实updated_at的权威get，拒绝不加减。实际链为 issue 的本体和 parent、sub_issues 的整行/parent count、link 的 count、relation 整行和 inbox accept（spec B.1）；不是把这些旧成员API包装成空壳。
-- [ ] 同步 P10a 的 issue.store.types.test.ts、issue-details/issue.fetch.test.ts、sub_issues.fetch.test.ts、inbox/inbox-issue.request.test.ts：新版列表 fixture/接收 API 不清 relation 与描述，空 HTML/nullable 字段正确；两详情入口及 parent 单独 token、await/拒绝归属保持；父 count 改权威 get 后断言真实版本；跨项目只取唯一 state/member/label 目录，不恢复 cycle/module。inbox accept 的权威回读拒绝不能被旧 catch 吞掉，按 spec§2.6 保留不可确认状态并交回。旧资源 HTTP 自身整体迁移仍是 P11/M7。
-- [ ] 实现版本choose/tombstone/描述规则与只读issuesMap；完整应答捕获token→acceptRead，partial/count算术改成功后invalidate+refreshAuthoritative；根CRUD只统一确认。删除旧addIssue/partial updateIssue和direct map set，静态枚举零残留；全应用typecheck在T6过，不等P11。
-- [ ] 实现spec§2.6项目读代际：所有list/详情/回查在canonical接收之前检查 active/owner/token；增加 `foreignRootReadTokenIsRejected`，即使 serial/updated_at 相同，新根也不接受旧 owner；树删除先invalidate覆盖项目的whole/part，再mark stale/墓碑、新token刷新。多项目profile若覆盖失效项目则整页discard，不裁行复用旧total。
-- [ ] 实现缺行核实四路状态：成功清核实或第三方stale；404隐藏未经证实活值且无墓碑、相关范围至多一轮刷新；403/500保留error/stale等待显式retry/再挂载；SessionChanged丢弃旧流程不安排后续。每round共享去重id与scope预算，失败不能自动开新round。回查404/其它拒绝落定时将本id freshnessFloor设为当时readSerial；只有之后新发的token.serial严格大于此水位、项目令牌有效且版本合格的权威答能恢复。旧同版本list在canonical receive/清核实/清stale前被挡住；此水位和项目删除水位分开，普通404不冒删除。访问器先核scope和核实状态，不建第二个Issue缓存。
-- [ ] 命令：`pnpm --filter web exec vitest run core/store/issue/issue.store.test.ts core/lib/reconciled.test.ts`；`pnpm --filter web exec vitest run core/store/issue/issue.store.types.test.ts core/store/issue/issue-details/issue.fetch.test.ts core/store/issue/issue-details/sub_issues.fetch.test.ts core/store/inbox/inbox-issue.request.test.ts`；`pnpm --filter web check:types`；rg枚举全部issuesMap写入和 `.issues.addIssue`/`.issues.updateIssue` 并逐项核无绕过，读引用正常保留。M47恢复任一旧count mutator必须在旧消费者测试红；零匹配静态不替代行为测试。
-- [ ] M18按answeredAt覆盖、M19list抹description、M20旧Detail补HTML、M21读404造tombstone、M22不处理list中的tombstone，分别红；G，提交 `feat(M4/P10b): 按服务端版本维护唯一工作项副本`。
+- [x] 首项关闭 R17（spec§2.6）：direct-confirm 产生 verifyIds 后立即进入与 fetch/replay 共用的核实 round，跨副本/并发 part 去重；真实 GET、核实拒绝后的显式重试、退役无跟进均有测试。已成功的业务写保持成功，核实拒绝通过读取/可见错误状态交回，不能重发业务写。下述四路状态及 freshness 合同同 Task 一次闭合。
+- [x] `latestServerVersionWinsAcrossAnswerOrder`、`listKeepsConfirmedDescription`、`staleFirstDetailDoesNotFillDescription`、`detailRetryIsBoundedAndRefusalReturns`、`thirdPartyMembershipMarksOldAndNewGroups`、`ownPendingReadDoesNotMarkStale`。
+- [x] `confirmedDeleteCannotBeResurrected`用先发list后确认204再放旧list，canonical和画面均无该id且不虚算total；refused delete/SessionChanged/get404不产生tombstone；archive+unarchive能恢复。`unknownDescendantsRefreshOnlyTheirProject`区分另一项目列表保持。
+- [x] `legacyDetailConsumersCannotBypassCanonicalVersion` 覆盖旧Detail/关联旧答不能降级新实体；link和sub项成功后count来自带真实updated_at的权威get，拒绝不加减。实际链为 issue 的本体和 parent、sub_issues 的整行/parent count、link 的 count、relation 整行和 inbox accept（spec B.1）；不是把这些旧成员API包装成空壳。
+- [x] 同步 P10a 的 issue.store.types.test.ts、issue-details/issue.fetch.test.ts、sub_issues.fetch.test.ts、inbox/inbox-issue.request.test.ts：新版列表 fixture/接收 API 不清 relation 与描述，空 HTML/nullable 字段正确；两详情入口及 parent 单独 token、await/拒绝归属保持；父 count 改权威 get 后断言真实版本；跨项目只取唯一 state/member/label 目录，不恢复 cycle/module。inbox accept 的权威回读拒绝不能被旧 catch 吞掉，按 spec§2.6 保留不可确认状态并交回。旧资源 HTTP 自身整体迁移仍是 P11/M7。
+- [x] 实现版本choose/tombstone/描述规则与只读issuesMap；完整应答捕获token→acceptRead，partial/count算术改成功后invalidate+refreshAuthoritative；根CRUD只统一确认。删除旧addIssue/partial updateIssue和direct map set，静态枚举零残留；全应用typecheck在T6过，不等P11。
+- [x] 实现spec§2.6项目读代际：所有list/详情/回查在canonical接收之前检查 active/owner/token；增加 `foreignRootReadTokenIsRejected`，即使 serial/updated_at 相同，新根也不接受旧 owner；树删除先invalidate覆盖项目的whole/part，再mark stale/墓碑、新token刷新。多项目profile若覆盖失效项目则整页discard，不裁行复用旧total。
+- [x] 实现缺行核实四路状态：成功清核实或第三方stale；404隐藏未经证实活值且无墓碑、相关范围至多一轮刷新；403/500保留error/stale等待显式retry/再挂载；SessionChanged丢弃旧流程不安排后续。每round共享去重id与scope预算，失败不能自动开新round。回查404/其它拒绝落定时将本id freshnessFloor设为当时readSerial；只有之后新发的token.serial严格大于此水位、项目令牌有效且版本合格的权威答能恢复。旧同版本list在canonical receive/清核实/清stale前被挡住；此水位和项目删除水位分开，普通404不冒删除。访问器先核scope和核实状态，不建第二个Issue缓存。
+- [x] 命令：`pnpm --filter web exec vitest run core/store/issue/issue.store.test.ts core/lib/reconciled.test.ts`；`pnpm --filter web exec vitest run core/store/issue/issue.store.types.test.ts core/store/issue/issue-details/issue.fetch.test.ts core/store/issue/issue-details/sub_issues.fetch.test.ts core/store/inbox/inbox-issue.request.test.ts`；`pnpm --filter web check:types`；rg枚举全部issuesMap写入和 `.issues.addIssue`/`.issues.updateIssue` 并逐项核无绕过，读引用正常保留。M47恢复任一旧count mutator必须在旧消费者测试红；零匹配静态不替代行为测试。
+- [x] M18按answeredAt覆盖、M19list抹description、M20旧Detail补HTML、M21读404造tombstone、M22不处理list中的tombstone，分别红；G，提交 `feat(M4/P10b): 按服务端版本维护唯一工作项副本`。
 
 ## Task 7：项目显示偏好与旧地址下线（约350–700行）
 

@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T5 既定任务门禁已完成，T5 三项消费链缺陷及附带 M1 修复复审通过，W1 已关闭；T6 开始。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T4 完整本地七门禁通过；阶段最终门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。当前实施记录见第8节，第7节保留 T1–T4 与 T5 初审过程；以下第1–6节保留预检时点事实。
+日期：2026-10-29。**T1–T6 既定任务门禁已完成；T6 三项异步边界缺陷修复复审通过，R17 已关闭；T7 开始。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T4 完整本地七门禁通过；阶段最终门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。当前实施记录见第9节，第7–8节保留 T1–T5 的过程与完成证据；以下第1–6节保留预检时点事实。
 
 ## 1. 实际前置与证据
 
@@ -148,3 +148,18 @@ Task5 全段范围为 `dde969f8bb526dcf2641ad45eb1a93b8f5d1e5d4..659ac3cbb22a68b
 - R17 为 T6 首项：direct-confirm 的 verifyIds 目前待下一次 fetch 才 drain。T6 完成即时发起、共享 round/去重、四路状态、freshnessFloor，并与唯一 canonical 一同闭合；业务已成功后的核实拒绝不伪报写失败。T6 同时按实际树收口 6 个普通 canonical 外部写者及 Binding 间接读入，原“7 文件”为 T5 前盘点。T6 独评前必须关闭，不能延后到 T12/T14。
 
 下一完整 F 与产品检查点按计划在 T8 执行。阶段终审、准确分支 CI、集成和 M4 总体完成线均开放；不合并、不启动 P11。
+
+## 9. T6 完成与 T7 接续
+
+Task6 全段范围为 `659ac3cbb22a68bf06a35f936372a14614027693..ffade688d82b530f01e0390a0cbd9df54eabec4e`：接续文档 `4051e547`、实现 `d37175dd`、修复 `ffade688`。唯一 ReconciledByKey 实体、精确版本/描述、确认删除墓碑、逐请求 owner/serial、项目删除水位和核实 freshnessFloor 已接通；6 个旧外部写者及 Binding 间接读入同任务收口，草稿缓存保留。R17 的 direct-confirm 真实 GET、四路状态与显式恢复已独评闭合。
+
+初审发现三个 Important：慢读取持有旧 round 时显式重试复用旧拒绝；两详情入口在辅助 await 后退役仍启动跟进；子项父权威 GET 期间删除后仍发布旧子项缓存。fix1 建立显式新轮次并保留真正 inFlight 共享/旧 end 归属，在两类 await 后检查原 token。正式测试先产生 8 个真实断言红，另以最终慢读交错复核基线，并对跨轮去重和旧 end 身份检查分别变异；恢复后 63 项聚焦通过。限定复审 I1/I2/I3 全部 ADDRESSED，无新增问题。原件 `task-6-review.md`、`task-6-fix1-review.md`、`task-6-current-report.md`（含 fix1 回执）及全部运行保存在本 worktree 的 `.superpowers/sdd/P10b-web-list-data/`。
+
+验证范围与源码边界：
+
+- 首版 102 项聚焦、197 项旧消费者，以及修复轮 119 项受影响回归有重叠，不相加。修复轮完整 `pnpm --filter web test` 为 152 文件/1369 项；这是 web 应用，不是八包全前端或完整 F。
+- 完整 web 之后仅强化两份测试，生产运行代码及 spec/plan 未变；最终 63 项覆盖这两份当前测试，`make lint-web` / `make knip` 的 2498 输入与修复提交一致。lint 54/54、36 cached；既有 cap 218 未提高，errors-only 输出不证明零 warnings。
+- root 核首版及修复轮共 71 条命令 raw，9 个修复提交路径与最终源码一致；修复轮三份临时基线/变异恢复证明均有效。见 `task-6-fix1-root-audit.json`、`task-6-fix1-root-commit-check.json`。首版 8 项有效变异及一次无效全 skip、首轮 web 的 3 个失败与编译失败均保留，不混作最终行为通过证据。
+- 旧资源 HTTP 迁移仍归 P11/M7；全挂载/autorun、拖放、全副本竞态、页面与最终 F/CI 仍按 T10–T14。T12 的既定旧消费者计数矩阵还要核“写成功后回读遇到写前已在外 GET”交错，接续记录是待验证问题，未冒称已复现或已通过。
+
+T7 开始用现有 ProjectPreferencesService 迁移 filters/display_filters/display_properties，按字段排队并采用确认结果，同时删除 user-properties 两方法、例外与三个故事的旧失败放行。最近完整 F 仍属于 T4 dde969f8；下一完整 F 和产品检查点在 T8。A1–A10、阶段终审、准确分支 CI 和集成都保持开放；不合并。
