@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 实施获授权后，按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。已获实施授权，T1 进行中；任务勾选由主控在独立评审后更新。
+> **给执行代理：** 实施获授权后，按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T3 已实施并通过独立评审，T4 进行中；任务勾选由主控在独立评审后更新。
 
-> **当前状态：** P10a 集成后执行前文档预检通过；已获实施授权，T1 进行中；全部产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。预检结论与 2026-10-29 执行启动说明见阶段 review。
+> **当前状态：** P10a 集成后执行前文档预检通过；T1–T3 已实施并通过独立评审，T4 进行中；全部产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。预检结论与 2026-10-29 执行启动说明见阶段 review。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -14,7 +14,7 @@
 
 ## 全局约束
 
-- 主目录始终main；P10b开发必须新worktree `.codex/worktress/codex/m4-p10b`。基线/CI 与路径、例外已纳入本轮预检，实施开始再核未漂移；没有产品实施授权，不开始 T1。
+- 主目录始终main；P10b开发固定使用既有独立worktree `.codex/worktress/codex/m4-p10b`。基线/CI 与路径、例外已纳入执行前预检，实施起点已核无漂移；负责人已授权T1–T14，阶段结束不合并。
 - 准备不改 phase；T1 核既有 M4/P10，字母后缀不写进keywords解析，不放宽守卫。`/user-properties/`现until=M4/P11，T7删除。共享 exact key 按最早期限：patch/retrieve 当前同为 M4/P11，T5 删 patch 后重数剩余 retrieve 才记 M4/P12；M5–M7各自期限，详见 spec B.3。
 - plane/refer只读，不动已有容器/Docker，不全局安装、不加未点名依赖、不用node_modules链接；不用stash/clean/reset --hard/force，不取keychain或其它凭据。
 - 生成类型来自api-client；ProjectIssueQuery用operations.listIssues，MemberIssueQuery用operations.listMemberIssues；完整query不能冒用ProjectIssueFilters。新服务每方法一次生成调用，无Plane响应转换层。
@@ -43,7 +43,7 @@
 
 C/P缩写、目标签名、各文件职责见spec§2.1；下方所有“新”文件/函数是实施时添加，不能在预检记为已存在。P10a删减导致的实际差异先更新计划再实施，不复活已删除M6/M7文件。
 
-**G，每Task完成线：** 写具体行为测试→聚焦红（缺接口的编译红另记）→最小实现→同命令行为绿→表中生产变异红→恢复字节/hash后绿→受影响回归和diff-check→独评/修复复审→精确路径提交。记录argv/cwd/源码SHA或dirty摘要/raw/数量/skip/exit/恢复hash。
+**G，每Task完成线：** 写具体行为测试→聚焦红（缺接口的编译红另记）→最小实现→同命令行为绿→表中生产变异红→恢复字节/hash后绿→受影响回归和diff-check→独评/修复复审→精确路径提交。记录argv/cwd/源码SHA或dirty摘要/raw/数量/skip/exit/恢复hash；每轮证据使用唯一前缀，已存在则拒绝覆盖，失败原件也保留。
 
 **F，完整本地七门禁，严格依次：**
 
@@ -69,45 +69,64 @@ make e2e
 
 **Interfaces：** 完整消费/产出spec§2.2两个service、ProjectIssueQuery/MemberIssueQuery；新服务均由RootStore传api。归档旧 service 当前三方法（列表、归档、恢复）在 T5 一并替换；归档详情页头的 IssueService.retrieve 留 P11。
 
-- [ ] 新service测试逐方法捕获method/path/body/query，list-project无project_id筛选，member relation必填；项目CSV与日期重复AND、归档`archived:"true"`、封闭写body。用FakeNerve真实client返回Problem/SessionChanged，断言原错交回无额外请求。
-- [ ] 红：`pnpm --filter web exec vitest run core/services/issue/issue-list.service.test.ts core/services/issue/issue-api.service.test.ts`。缺模块红只作起步，随后对错误路径/重复数组query的实现变异取真实断言红。
-- [ ] 实现service及直接测试，不接线旧base；项目偏好现服务已支持三字段，不重复造一层。记录T5要同时删掉的旧service/形状及消费者清单，旧非列表明确P11边界。
-- [ ] 绿：同定向、`pnpm --filter @nerve/api-client test`、`pnpm --filter web check:types`；T1不以旧形状无残留为门禁，该项T5接线后执行。
-- [ ] G，提交 `feat(M4/P10b): 接入工作项列表和确认写入的生成服务`。
+- [x] 新service测试逐方法捕获method/path/body/query，list-project无project_id筛选，member relation必填；项目CSV与日期重复AND、归档`archived:"true"`、封闭写body。用FakeNerve真实client返回Problem/SessionChanged，断言原错交回无额外请求。
+- [x] 红：`pnpm --filter web exec vitest run core/services/issue/issue-list.service.test.ts core/services/issue/issue-api.service.test.ts`。缺模块红只作起步，随后对错误路径/重复数组query的实现变异取真实断言红。
+- [x] 实现service及直接测试，不接线旧base；项目偏好现服务已支持三字段，不重复造一层。记录T5要同时删掉的旧service/形状及消费者清单，旧非列表明确P11边界。
+- [x] 绿：同定向、`pnpm --filter @nerve/api-client test`、`pnpm --filter web check:types`；T1不以旧形状无残留为门禁，该项T5接线后执行。
+- [x] G，提交 `feat(M4/P10b): 接入工作项列表和确认写入的生成服务`。
 
 ## Task 2：Reconciled 部分取数与原应答重放（约250–500行）
 
 **Files：** 改C/lib/reconciled.ts，新reconciled.test.ts；既有project/workspace/member/state/label测试回归。
 **Interfaces：** `Change<V>=(value,answered?:V)=>V`；`fetchPart(part,read:()=>Promise<V>,merge:(V,V)=>V):Promise<V|undefined>`；`invalidate():void`使在外whole/part作废但保留held；整体fetch以原V作为第二参数重放，confirm直接只传当前值。
 
-- [ ] 测试 `fetchPartIsInertBeforeFetch`、`wholeFetchSupersedesAllOlderParts`、`samePartSupersedesOlderAnswer`、`differentPartsMergeIntoLatestValue`、`replaysConfirmationsInOrderWithRawAnswer`、`obsoleteFailureAndSessionChangeDoNotWrite`、`invalidatedReadsCannotClearHeldStaleValue`；deferred逐个放行，断言read调用次数和值历史，不sleep。
-- [ ] 红：`pnpm --filter web exec vitest run core/lib/reconciled.test.ts`。
-- [ ] 实现每part序号/在外期间changes袋、whole代号；finally只清自己；merge发生在当前值，然后每change拿未经merge原应答。现有单参数Change兼容，不用Issue专用类型侵入共用库。
-- [ ] 同命令绿，`pnpm --filter web exec vitest run core/store/project core/store/workspace core/store/member core/store/state.store.test.ts core/store/label.store.test.ts`；实际baseline文件如更名先改命令并记录，不允许不存在路径混入通过。
-- [ ] 变异M1去whole超越、M2删samepart序号、M3用merge后值作proof，三个分别在对应测试红；G，提交 `feat(M4/P10b): 扩充分组取数并保留重放原应答`。
+- [x] 测试 `fetchPartIsInertBeforeFetch`、`wholeFetchSupersedesAllOlderParts`、`samePartSupersedesOlderAnswer`、`differentPartsMergeIntoLatestValue`、`replaysConfirmationsInOrderWithRawAnswer`、`obsoleteFailureAndSessionChangeDoNotWrite`、`invalidatedReadsCannotClearHeldStaleValue`；deferred逐个放行，断言read调用次数和值历史，不sleep。
+- [x] 红：`pnpm --filter web exec vitest run core/lib/reconciled.test.ts`。
+- [x] 实现每part序号/在外期间changes袋、whole代号；finally只清自己；merge发生在当前值，然后每change拿未经merge原应答。现有单参数Change兼容，不用Issue专用类型侵入共用库。
+- [x] 同命令绿，`pnpm --filter web exec vitest run core/store/project core/store/workspace core/store/member core/store/state.store.test.ts core/store/label.store.test.ts`；实际baseline文件如更名先改命令并记录，不允许不存在路径混入通过。
+- [x] 变异M1去whole超越、M2删samepart序号、M3用merge后值作proof，三个分别在对应测试红；G，提交 `feat(M4/P10b): 扩充分组取数并保留重放原应答`。
 
 ## Task 3：组页模型、全序与精确版本（约450–800行）
 
 **Files：** 新C/lib/paged-groups.ts、issue-order.ts与各test；测试只读api/testdata/issue-order.json。生产代码不import该fixture。
 **Interfaces：** spec§2.4 Row/Group/PagedGroups/CounterRef/PageReadMeta（resetCounters/rowParts）/PageAnswer、decodePage、五个order函数；ListContext在paged-groups定义为scope/query+目录+currentUserID组成，字段直接使用生成类型/operationquery。
 
-- [ ] `ordersAllSharedFixtureScenarios`逐场景固定ascending_ids/descending_ids：名称/日期/优先级等合法Issue场景调用生产issueNameKey/issueSortKey/compareRows；大整数计数场景原token经context.source解BigInt，构造合法Row.key，直接调用生产compareRows。保留9007199254740993/9223372036854775807，不把bigint断言成Issue.number，不从被测sort生成expected。另加 `safeIssueCountProducesExactSortKey` 用真实Issue safe number验证issueSortKey转BigInt，`unsafeIssueCountIsRejected`验证拒绝。
-- [ ] `comparesSameMillisecondVersionsExactly`包含.123456/.123457、.1/.100000000、等瞬时时区offset；`refusesUnsafeDecodedCounts`对已经损失精度number拒绝，不声称恢复。`decodesMissingGroupsAsEmpty`、`separatesCursorAndDisplayBoundary`、`lastPageDoesNotCoverEarlierRows`核raw范围。
-- [ ] 红后实现spec数据结构与decoder；目录名ASCII折叠+codepoint，NULL最后、id同方向；page分支按groups/subgroups存在性，空组需要时建立。元数据记录原应答范围，合并值不能冒充proof。
-- [ ] 命令：`pnpm --filter web exec vitest run core/lib/issue-order.test.ts core/lib/paged-groups.test.ts`；附`pnpm --filter web check:types`。
-- [ ] M4改localeCompare、M5反向排序令NULL最前、M6id始终升序、M7Date.parse全值毫秒、M8fixture普通JSON.parse，分别实际红；恢复G，提交 `feat(M4/P10b): 建立固定分页窗口与精确全序`。
+- [x] `ordersAllSharedFixtureScenarios`逐场景固定ascending_ids/descending_ids：名称/日期/优先级等合法Issue场景调用生产issueNameKey/issueSortKey/compareRows；大整数计数场景原token经context.source解BigInt，构造合法Row.key，直接调用生产compareRows。保留9007199254740993/9223372036854775807，不把bigint断言成Issue.number，不从被测sort生成expected。另加 `safeIssueCountProducesExactSortKey` 用真实Issue safe number验证issueSortKey转BigInt，`unsafeIssueCountIsRejected`验证拒绝。
+- [x] `comparesSameMillisecondVersionsExactly`包含.123456/.123457、.1/.100000000、等瞬时时区offset；`refusesUnsafeDecodedCounts`对已经损失精度number拒绝，不声称恢复。`decodesMissingGroupsAsEmpty`、`separatesCursorAndDisplayBoundary`、`lastPageDoesNotCoverEarlierRows`核raw范围。
+- [x] 红后实现spec数据结构与decoder；目录名ASCII折叠+codepoint，NULL最后、id同方向；page分支按groups/subgroups存在性，空组需要时建立。元数据记录原应答范围，合并值不能冒充proof。
+- [x] 命令：`pnpm --filter web exec vitest run core/lib/issue-order.test.ts core/lib/paged-groups.test.ts`；附`pnpm --filter web check:types`。
+- [x] M4改localeCompare、M5反向排序令NULL最前、M6id始终升序、M7Date.parse全值毫秒、M8fixture普通JSON.parse，分别实际红；恢复G，提交 `feat(M4/P10b): 建立固定分页窗口与精确全序`。
 
 ## Task 4：确认变化与三分支重放（约500–1000行，F）
 
 **Files：** paged-groups.ts；新paged-groups.changes.test.ts、paged-groups.replay.test.ts。
-**Interfaces：** spec§2.5 ConfirmedIssueChange/Before/GroupChangeResult；confirmGroups、replayGroups返回value+verifyIds；绝不从纯函数发请求。
+**Interfaces：** spec§2.5 ConfirmedIssueChange/Before/GroupChangeResult；confirmGroups、replayGroups返回value+verifyIds；纯mergePages(value, answer, context)供fetchPart合并及T5复用；绝不从纯函数发请求。
 
 - [ ] 表G01–G16覆盖四旧新组合×rows在/不在×window内外，另分完整/未完成组；构造非零独立计数并断言整个结构，不只截图行id。覆盖create absent/delete null/archive/unarchive、多标签/负责人、泳道subgroupTotals独立与最外total。
-- [ ] 表I2-1…9严格对应spec§4 A3九例；表R3-1…5对应M3五例；额外R-TAIL证明末页不覆盖lower以前，R-DROP证明扩窗后续页range仍从server cursorBoundary，D-204证明after=null不用版本比较且三种删除证据判别。
+- [ ] 完整索引I2-1…9与R3-1…5按下表对应M4设计§3.22及spec§4 A3；本Task验证纯模型部分，真实canonical/回查行在T6/T12补齐，不在纯函数测试伪造缓存或HTTP。额外R-TAIL证明末页不覆盖lower以前，R-DROP证明扩窗后续页range仍从server cursorBoundary，D-204证明after=null不用版本比较且三种删除证据判别。
 - [ ] 新 `partialReplayAdjustsOnlyCountersResetByItsAnswer`：A5/B4/outer9，B旧页在外，A→B确认后A4/B5/outer9；旧B total4应答重放后仍A4/B5/outer9。再表两part交错、多值标签、单格回答保留未回答outer/subgroupTotals/rows；M48故意对未回答计数再减必须红。
 - [ ] 红：`pnpm --filter web exec vitest run core/lib/paged-groups.changes.test.ts core/lib/paged-groups.replay.test.ts`。
 - [ ] 实现按原应答/Before重放；decode标定resetCounters/rowParts，merge/replay只改本次拥有的集合；partial flat total只归该组/格，未回答计数/rows沿当前确认状态，whole才覆盖全部；total取response而非当前值再叠加，drop扩boundary且不回退，未知只stale受影响部分；第2判断返回去重verifyIds。
 - [ ] M9旧属读取当前已merge行、M10丢空组、M11重算boundary、M12所有partial当whole、M13总数sum各组、M14删除双减，均对应表红；恢复全模型绿、G、F，提交 `feat(M4/P10b): 按原回答重放确认修改并修正组计数`。
+
+### T4 与后续任务的反例证据索引
+
+以下只是职责分配，未运行行不能提前标通过。T14 汇总时须补齐全部实际证据。
+
+| 设计反例 | T4 纯模型验证 | 后续真实调用链 |
+|---|---|---|
+| I2-1 双减 | 原回答之前/之后、部分计数写集合 | T12全部列表确认 |
+| I2-2 判断不了版本 | Row.updatedAt与原回答三分支；承接T3精确比较 | T6服务器版本接收 |
+| I2-3 重放的修改之前无定义 | raw+冻结Before，不用merge后行 | T12发出前冻结证据 |
+| I2-4 窗口后退 | merge/drop的boundary单调、cursorBoundary独立 | T5真实续页 |
+| I2-5 旧答覆盖唯一实体 | 不伪造canonical测试 | T6版本choose、T12真实交错 |
+| I2-6 第三方移动后两列出现 | 缺行推断返回verifyIds，未知范围stale | T6/T12真实权威回读及列表失效 |
+| I2-7 列表抹详情描述 | 纯模型仅Row，不复制实体 | T6真实Issue/Detail接收 |
+| I2-8 空组不能插入 | 缺组/空格确认插入 | T5列表读者 |
+| I2-9 列尾/满日历格丢卡片 | drop强制可见与扩窗 | T11/T12真实拖放入口 |
+| M3-1 原应答旧属、M3-2 response total、M3-4 boundary不后退 | 均在T4直接验证 | T5复用纯merge/replay |
+| M3-3 缺行后第三方修改 | T4返回verifyIds，不发请求 | T6/T12权威回读及stale |
+| M3-5 自己的pending读不当第三方 | 不在纯模型伪造pending网络链 | T6/T12读写协调 |
 
 ## Task 5：替换列表引擎并接通确认写入口（约1100–1500行）
 

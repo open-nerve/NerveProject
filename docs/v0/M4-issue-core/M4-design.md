@@ -740,7 +740,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **e2e**：I21（时钟偏移 61 天）。
 
 ### 3.22 前端的列表：在 `reconciled.ts` 上分页、分组（总体设计 7.7；M3 交接第 6 节）
-总体设计 7.7 要求工作项的分页、分组列表扩展 `core/lib/reconciled.ts`，不另写一份。它今天的 `Reconciled<V>` 是"整个值由最新的一次取数写下，取数在外期间确认的修改在应答上重做"（`reconciled.ts:26-81`，重做在 `:56-76`）。列表引擎要多四样：按组接着取的页、确认的修改在组之间移动工作项、组的总数、一个工作项只有一份。第二稿的规则在重做、窗口的移动和那一份工作项上会算错（对抗性评审 I2 的九个反例：双减、判断不了版本、重做时的"修改之前"无定义、窗口后退留下看不见的卡片、旧的应答覆盖那一份、读到别人的修改之后一张卡片在两列、列表的行覆盖详情的描述、空的组没有地方插入、放在最后或日历的满格时卡片消失）。下面的数据模型照评审的改法重写，九个反例各是 vitest 表里的一行；仍是一份实现，扩展 `reconciled.ts`（总体设计 7.7）。
+总体设计 7.7 要求工作项的分页、分组列表扩展 `core/lib/reconciled.ts`，不另写一份。它今天的 `Reconciled<V>` 是"整个值由最新的一次取数写下，取数在外期间确认的修改在应答上重做"（`reconciled.ts:26-81`，重做在 `:56-76`）。列表引擎要多四样：按组接着取的页、确认的修改在组之间移动工作项、组的总数、一个工作项只有一份。第二稿的规则在重做、窗口的移动和那一份工作项上会算错（对抗性评审 I2 的九个反例：双减、判断不了版本、重做时的"修改之前"无定义、窗口后退留下看不见的卡片、旧的应答覆盖那一份、读到别人的修改之后一张卡片在两列、列表的行覆盖详情的描述、空的组没有地方插入、放在最后或日历的满格时卡片消失）。下面的数据模型照评审的改法重写，九个反例各需有真实行为证据：P10b T4 负责纯模型，T6/T12 负责唯一副本与真实回查，具体索引见 P10b plan；仍是一份实现，扩展 `reconciled.ts`（总体设计 7.7）。
 
 - **`Reconciled.fetchPart(part, read, merge)`**（加在 `reconciled.ts`，约 40 行）：取值的一部分（一组、一格的下一页）。
   - 值还没取到时什么都不做。
@@ -2564,7 +2564,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13粗项/16 Task） | **已完成**：[spec](specs/P8-drafts-search.md)、[实际plan](plans/P8-drafts-search.md)、[review](reviews/P8-drafts-search-review.md)、[整体审核](../../reviews/re-07-M4P8整体审核.md)。T1–T16实施、首次整审及文档独评闭环，最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，经授权 `--no-ff` 合并为 `6b9d08d4821f1423c7bb9795557727c206b7880f`；准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1三任务全绿。1,598文件、37,552,117字节及1空目录归档逐hash核验后，本地/远端分支和worktree已清理，清理后再核哈希；完整回执见review§9。M4总体及后续交接仍open |
 | P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
-| P10b `web-list-data` | 列表一侧的数据层（14） | spec/plan 已按 P10a 集成 main a06e3f70 重核；执行前预检见 [review](reviews/P10b-web-list-data-review.md) 和 [deep-review](../../reviews/re-12-M4P10b预检审核.md)。**已获实施授权，T1 进行中**；全部产品验收仍未勾选 |
+| P10b `web-list-data` | 列表一侧的数据层（14） | spec/plan 已按 P10a 集成 main a06e3f70 重核；执行前预检见 [review](reviews/P10b-web-list-data-review.md) 和 [deep-review](../../reviews/re-12-M4P10b预检审核.md)。**T1–T3 已实施并独评通过，T4 进行中**；全部产品验收仍未勾选 |
 | P11 `web-detail-data` | 详情一侧的数据层（14） | 未开始 |
 | P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |

@@ -1,6 +1,6 @@
-# M4/P10b 列表数据层：执行前预检
+# M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**文档与静态依赖预检通过，尚未实施。** 分支 `codex/m4-p10b`，worktree `.codex/worktress/codex/m4-p10b`；实际基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，tree `6eb00a9b8238d3dcbbb9ee9cebfdfe10020e4c66`。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)、[deep-review](../../../reviews/re-12-M4P10b预检审核.md)。本轮授权止于准备和预检，T1–T14 均未开始，产品验收十项保持未勾。
+日期：2026-10-29。**T1–T3 已实施并通过独立评审，T4 进行中。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。阶段完整门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。实施记录见第7节；以下第1–6节保留预检时点事实。
 
 ## 1. 实际前置与证据
 
@@ -96,3 +96,22 @@ P10A-S1已由负责人选择A，保持列表删除范围、调整M6/M7自身页�
 ## 2026-10-29 执行启动说明
 
 负责人已授权实施整个 P10b，阶段结束先不合并。主控在既有 `codex/m4-p10b` worktree 按 `6dfd7258bfe8c6350116131488bf3b83822425c9` 启动 T1；该提交包含 P10a 集成后的准备稿，P10a/main 的上述集成事实与原预检证据保持原样。当前 T1 进行中，全部产品验收仍未勾选，逐任务评审及阶段 deep-review 另留真实实施证据；phase 保持 M4/P10。
+
+## 7. T1–T3 实施、独立审查与 T4 接续
+
+实施证据根为本 worktree `.superpowers/sdd/P10b-web-list-data/`，准备原件仍在主目录外置的 P10b-preparation-20261029；两者未来都须归档。主控 ledger 逐 Task 记准确范围、审者、命令原件与源码桥，不能以准备稿审查或 main 基线 CI 代替产品验证。
+
+| 任务 / 最终提交 | 实际验证与独立结论 |
+|---|---|
+| T1 / ce35d7a9 | 薄服务20项、直接受影响39文件455项（包含前述20，不能重复相加）、api-client 5项通过；错误路径/重复日期query变异红；类型/格式通过。task-1-review.md Spec compliant / Approved |
+| T2 / daac89e7 | 并发11项、9个旧生产消费者对应14文件212项回归通过；M1–M3实际红并恢复；类型/定向lint/格式通过。task-2-review.md Spec compliant / Approved |
+| T3 / 6dcbeeee | 首版7f4da0dc的29项及M4–M8实际变异；独评发现优先级映射相反，修复后31项、types/lint/format通过，新增真实priority错误映射变异红。task-3-fix1-review.md Spec PASS / Quality APPROVED；旧M4–M8按限定源码桥承接，不能宣称是在修复后重跑 |
+
+局部裁定：
+
+- R7：设计 I2 九例和 M3 五例包含 canonical、描述及权威回读，不能全挤进 T4 纯模型测试。按既定 spec 职责分配，T4 保留完整索引、证明纯模型和 verifyIds 意图，T6/T12补真实链。成本是最终A3须逐行核齐，不能提前标全通过；无协议或模块边界变化。
+- R8：上级 M4 设计§3.16/P5 spec 明确 priority 行排序 none=0/low=1/medium=2/high=3/urgent=4；阶段 spec 的枚举措辞被误当等级，前端和数字fixture同时反向而自洽。修复仅前端映射、真实Issue语义测试及本阶段spec，保持服务端已有协议；组展示urgent→none另算。
+- 证据限制：T3首轮五份mutation raw被同名最终重跑覆盖，原JSONL记录保留，不能重新复验那五份旧输出，也不补造。最后一轮变异、恢复hash与绿灯原件完整，当前98份原件已冻结；fix1用唯一前缀并拒绝覆盖，22条raw/exit及最终6文件hash均核验。此历史Minor不等于产品缺陷，仍需最终整审如实披露。
+- T3初始TypeError数量由“两个”纠正为实际一个，冻结旧报告保留；不是改变测试结果。固定显示boundary与raw PageAnswer不被合并改写的实际消费由T4/T5承接。
+
+T4接续：以纯mergePages/confirmGroups/replayGroups完成计数写集合、原回答三分支、drop窗口及删除204表，随后严格串行完整本地七门禁。T5–T14及全部阶段产品验收仍开放；不合并、不启动P11。

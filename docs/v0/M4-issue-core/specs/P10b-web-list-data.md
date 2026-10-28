@@ -1,12 +1,12 @@
 # M4/P10b 列表数据层规格
 
-> 状态：P10a 集成后的执行前文档预检通过；已获实施授权，T1 进行中；全部产品验收仍未勾选。当前预检结论见阶段 review。旧六项 B-L1–B-L6 继续作为实施要求，产品验收全部开放。
+> 状态：P10a 集成后的执行前文档预检通过；T1–T3 已实施并通过独立评审，T4 进行中；全部产品验收仍未勾选。当前预检结论见阶段 review。旧六项 B-L1–B-L6 继续作为实施要求，产品验收全部开放。
 
 ## 1. 目标
 
 将项目、已归档、个人主页的工作项列表迁到生成客户端；在既有 `Reconciled` 上扩充分组分页，并让确认的修改写入该会话所有列表和工作项的唯一副本。项目页挂载不再发旧 Plane 地址。完成 M4-design §12 P10b 的 14 个任务，保持 §3.22 的分页、重放、版本与会话约定。
 
-执行前盘点基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，树 `6eb00a9b8238d3dcbbb9ee9cebfdfe10020e4c66`，与 P10a 最终 `d1a19e78fa3ba83b289fdfc0f2788e3105d658da` 完全相同。准确 main CI 和归档清理事实由 [P10a review §10](../reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29) 绑定。2026-10-28 的 P9 基线准备稿保留为历史，当前依实际 P10a 树修订；本轮不编写 P10b 实现、原型或测试。下列目标接口用于未来实施，不代表现有导出。
+执行前盘点基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，树 `6eb00a9b8238d3dcbbb9ee9cebfdfe10020e4c66`，与 P10a 最终 `d1a19e78fa3ba83b289fdfc0f2788e3105d658da` 完全相同。准确 main CI 和归档清理事实由 [P10a review §10](../reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29) 绑定。2026-10-28 的 P9 基线准备稿保留为历史，当前依实际 P10a 树修订；执行前预检没有编写 P10b 实现、原型或测试；之后已按授权实施 T1–T3，下列尚未交付的接口仍是目标，准确进度与证据见阶段 review。
 
 权威输入：[M4 设计](../M4-design.md) §3.16–3.17、§3.22、§7.1–7.3、§7.7–7.9、§9.5–9.6、§12 P10b、§13；[推进方式](../../claude_to_gpt/02-method.md)；[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)。P1–P9交接与P10a准备之间的逐项映射由预检review归档；P5列表/偏好合同和P8个人主页/搜索边界不重新裁定。
 
@@ -106,7 +106,7 @@ type PageAnswer = PagedGroups & { read: PageReadMeta };
 
 ### 2.5 T4：确认与重放
 
-`Before = {kind:"known"; issue:Issue} | {kind:"absent"} | {kind:"unknown"}`；`ConfirmedIssueChange={id,beforeSnapshot:Before,after:IssueDetail|Issue|null,drop?:{group,subgroup?,beforeId?,afterId?}}`。每个操作进入实际发送的队列轮次后、发请求之前，从canonical深拷贝冻结beforeSnapshot到该操作pending记录（数组也复制），新建为absent，从未见为unknown。不得在用户排队时过早取、也不得在确认时从已被read更新的canonical重取。pending同时保留这期间观察到的成员关系/排序版本证据；确认从同一操作取冻结before。与after同版本且相关字段相同的read可识别为本次写，不推翻before；若观察到更晚版本，或早于after但晚于before且改变相关字段的其它版本，冻结before不足以证明本次实际旧属，改为unknown并使受影响旧/新组stale，不能猜计数。只保留作此判定所需版本与字段，不建立第二个可写实体缓存。after=null专门表示**已确认删除**。纯函数 `confirmGroups(value, change, context): GroupChangeResult`、`replayGroups(value, change, answer, context): GroupChangeResult` 产出 `{value, verifyIds:string[]}`，context包含query、comparison/catalog和pendingIDs，不在纯模型里请求。
+`Before = {kind:"known"; issue:Issue} | {kind:"absent"} | {kind:"unknown"}`；`ConfirmedIssueChange={id,beforeSnapshot:Before,after:IssueDetail|Issue|null,drop?:{group,subgroup?,beforeId?,afterId?}}`。每个操作进入实际发送的队列轮次后、发请求之前，从canonical深拷贝冻结beforeSnapshot到该操作pending记录（数组也复制），新建为absent，从未见为unknown。不得在用户排队时过早取、也不得在确认时从已被read更新的canonical重取。pending同时保留这期间观察到的成员关系/排序版本证据；确认从同一操作取冻结before。与after同版本且相关字段相同的read可识别为本次写，不推翻before；若观察到更晚版本，或早于after但晚于before且改变相关字段的其它版本，冻结before不足以证明本次实际旧属，改为unknown并使受影响旧/新组stale，不能猜计数。只保留作此判定所需版本与字段，不建立第二个可写实体缓存。after=null专门表示**已确认删除**。纯函数 `confirmGroups(value, change, context): GroupChangeResult`、`replayGroups(value, change, answer, context): GroupChangeResult` 产出 `{value, verifyIds:string[]}`，context包含query、comparison/catalog和pendingIDs，不在纯模型里请求。 同一纯模型提供 `mergePages(value: PagedGroups, answer: PageAnswer, context: ListContext): PagedGroups`，按原回答的计数/行写集合合并，T5 的 fetchPart 直接复用；它不改变 raw PageAnswer。
 
 | 旧属 | 新属 | total | rows |
 |---|---|---|---|
@@ -215,7 +215,7 @@ T14更新总体设计7.7与frontend-changes（真实路径`docs/v0/frontend-chan
 
 - [ ] A1 全部14tasks实施及逐Task独评完成，无未决Important/Critical；核心类型承接P10a，列表旧类型/旧游标/乐观回滚移除。
 - [ ] A2 list services和preferences消费真实operation；query/body精确，拒绝及SessionChanged不写；旧列表服务和/user-properties放行消失。
-- [ ] A3 fetchPart全部序列、原应答replay、partial计数写集合、组/格/窗口/多值/总数矩阵通过；I2九例、M3五例、续页范围和删除204附加例逐条有证据。
+- [ ] A3 fetchPart全部序列、原应答replay、partial计数写集合、组/格/窗口/多值/总数矩阵通过；I2九例、M3五例、续页范围和删除204附加例逐条有证据；纯模型在T4，canonical/真实回查在T6/T12，精确映射见plan的T4反例索引。
 - [ ] A4 真实比较器读取共用fixture测试；Unicode码位/ASCII折叠/多值最小/NULL/id方向/微秒时间精度正确。
 - [ ] A5 canonical仅一份，T6过渡消费者无直接或partial绕写；版本/description、发出前before证据、第三方stale、项目删除读epoch/未知后代、墓碑、回查四路有界收敛均通过。
 - [ ] A6 筛选每种条件可保存与还原、query显式拼装；否定层全删；fromnow子工作项筛选保持。
@@ -236,7 +236,7 @@ M6/M7列表不加回，不实现祖先搜索或工作区视图。P9后端删除/
 
 ## 7. 已知限制、移交与关闭条件
 
-本轮无 P10b 实现/原型/行为测试；已基于实际 P10a 合并树盘点精确路径、写入方和 guard（附录 B）。开始实施时再核 HEAD 与工作树未漂移。输入handoff的项目只在实施且验证后追加处理结果，总status保持open至M4收尾。服务端列表没有每行排序key，前端必须基于当前目录按相同合同形成key；目录异步拒绝不能转成静默空列表。
+执行前预检没有 P10b 实现/原型/行为测试；实际 P10a 合并树的路径、写入方和 guard 盘点见附录 B。实施起点已复核，当前 T1–T3 已完成并独评，完整阶段与后续任务仍未验收。输入handoff的项目只在实施且验证后追加处理结果，总status保持open至M4收尾。服务端列表没有每行排序key，前端必须基于当前目录按相同合同形成key；目录异步拒绝不能转成静默空列表。
 
 关闭条件：本规格§4全通过、deep-review无未决项，按负责人另行授权--no-ff集成、准确main CI绿、证据归档哈希与清理完成。当前不满足这些完成条件。
 
