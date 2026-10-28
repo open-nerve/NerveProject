@@ -162,3 +162,16 @@ M4总体§14/总体§9.4、P10–P16页面与收尾仍开放；不创建M5–M8�
 ### 当前终审闭环接续（2026-10-28）
 
 M4/P9实施与终审完成、集成待办。两席文档独评及[CORE-1/2修复复审](../../../../.superpowers/sdd/P9-purge/task-16-fix1-review.md)已闭环，见[主控核证](../../../../.superpowers/sdd/P9-purge/task-16-fix1-controller-verification.json)；最终状态/注释小diff仍交主控限定核验，最终文档HEAD及其准确分支CI由主控[交付收据](../../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)记录；该可变指针当前待核，须按准确HEAD核验，不代替未授权的main集成/CI。上段32e52e38待复审文字保留为当时历史；CORE-1/2现均ADDRESSED且无新破坏。主控另接受同CORE-2的00015迁移普通注释接续，仅限定单独删除状态与父级过期回收，不改SQL/goose指令；执行文本相等、gen-check及生成物零净变化由本轮收据记录，小diff由主控最终限定核验。
+
+
+## 13. 最终 CI 草稿快照误报修复（2026-10-28）
+
+最终文档提交 `f9a84e2ea07e9aa86b20aac8c5bd367ae58dd144` 的 [CI 40634485363](https://github.com/open-nerve/NerveProject/actions/runs/40634485363) attempt1：server 失败、web 成功、E2E 跳过。负责人授权使用本机已登录 GitHub 浏览器后，主控直接读取唯一失败 `TestDraftPublishRefusalOrder` / `issue_draft_publish_effects_test.go:93: refusals wrote rows`；不再要求负责人手工摘录。页面日志可读；ZIP 下载受到客户端拦截，未下载成功也未绕过，详见[浏览器能力记录](../../../../.superpowers/sdd/P9-purge/ci-refusal-browser-capabilities.md)。
+
+**局部裁定 CI-SNAPSHOT-1**：完整 app 的周期任务独立运行，旧 `publishSnapshot` 却把整个 `river_job` 的插入、状态与完成时间混入拒绝请求的零写判断。原配置目标测试20遍通过；可控真实 trim 从 running 到 completed 时，窗口零 HTTP 请求、14张业务表逐值不变，仅队列行变化，旧快照明确红。原CI没有逐表差异，不能追溯其具体触发job；本地证据证明同一断言的真实误报机制，见[诊断](../../../../.superpowers/sdd/P9-purge/ci-refusal-diagnosis/diagnosis.md)及[主控核验](../../../../.superpowers/sdd/P9-purge/ci-refusal-diagnosis-controller-verification.json)。
+
+修复只在三个测试文件：共享快照保留全部业务行，严格识别四种既定周期调度的kind/queue/空参数/来源标记；其余所有任务保留稳定身份、参数和入队配置，包括事件probe、未知kind及错误调度。保留真实Runner，不关闭后台、不用固定sleep、不放宽架构守卫。若将它错写成请求kind白名单，会漏掉probe/未知任务；反向变异已实际捕捉这种错误。既有发布事务回滚与拒绝次序均保留，原拒绝断言补逐表差异便于后续定位。
+
+正式回归先在旧helper上明确红、修复后绿；调用族6个顶层测试/105个含子测试PASS，聚焦race五遍20个顶层/135个含子测试PASS、0skip；白名单反例红后精确恢复，恢复测试及局部lint通过。首次新增夹具试写SQL NULL被真实NOT NULL约束拒绝，已改为允许的JSON null，失败原件保留，不当产品性质红。全部源码身份与结果见[修复报告](../../../../.superpowers/sdd/P9-purge/ci-refusal-fix-report.md)和[原件收据](../../../../.superpowers/sdd/P9-purge/ci-refusal-fix-receipt.json)。没有产品、数据库迁移或性能路径变更，不重测T14规模。
+
+本轮[限定 deep-review 复审](../../../../.superpowers/sdd/P9-purge/ci-refusal-fix-review.md)已通过，CI-SNAPSHOT-1 ADDRESSED、0新增发现；主控已核10份原件与最终源码身份，见[核验收据](../../../../.superpowers/sdd/P9-purge/ci-refusal-fix-controller-verification.json)。完整本地七项及准确最终分支CI由主控接续，并写入[最新交付收据](../../../../.superpowers/sdd/P9-purge/delivery-final-receipt.json)。历史f9失败保留，不把此前e003全绿冒作本次通过。P9仍不合并、不清理，main和M4总体收尾状态不变。

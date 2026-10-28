@@ -10,6 +10,8 @@ import (
 	"time"
 	"uuid"
 
+	identityriver "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/river"
+	issueriver "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -113,15 +115,25 @@ func TestDraftPublishRollsBackWithCreation(t *testing.T) {
 		})
 	}
 }
+
+// A refused request must preserve all business rows and every non-periodic
+// job's insertion identity and payload, including test event probes and unknown
+// kinds. Only the complete signature of a declared periodic schedule is noise;
+// worker attempt/state/timing updates are not writes by the request.
 func publishSnapshot(t *testing.T, w issueWorld) map[string]string {
 	t.Helper()
 	out := draftState(t, w)
-	for _, table := range []string{"projects", "river_job"} {
-		var rows string
-		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY id),'[]'::jsonb)::text FROM "+table+" r").Scan(&rows); err != nil {
-			t.Fatal(err)
-		}
-		out[table] = rows
+	var projects, queued string
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY id),'[]'::jsonb)::text FROM projects r").Scan(&projects); err != nil {
+		t.Fatal(err)
 	}
+	periodic := []string{identityriver.CleanupKind, issueriver.AutoArchiveKind, issueriver.TrimVersionsKind, (purgeArgs{}).Kind()}
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(jsonb_agg(to_jsonb(j) ORDER BY id),'[]'::jsonb)::text
+ FROM (SELECT id,kind,args,queue,max_attempts,priority,tags,created_at FROM river_job
+ WHERE NOT coalesce(kind=ANY($1::text[]) AND queue='periodic' AND args='{}'::jsonb
+ AND metadata @> jsonb_build_object('periodic',true,'river:periodic_job_id',kind),false)) j`, periodic).Scan(&queued); err != nil {
+		t.Fatal(err)
+	}
+	out["projects"], out["river_job"] = projects, queued
 	return out
 }
