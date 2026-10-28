@@ -139,7 +139,7 @@ export class IssueRootStore {
     this.workspaceDraftIssuesFilter = new WorkspaceDraftIssuesFilter(this);
     this.workspaceDraftIssues = new WorkspaceDraftIssues(this);
 
-    this.projectIssuesFilter = new ProjectIssuesFilter(this);
+    this.projectIssuesFilter = new ProjectIssuesFilter(this, api);
     this.projectIssues = new ProjectIssues(this, this.projectIssuesFilter);
 
     this.archivedIssuesFilter = new ArchivedIssuesFilter(this);

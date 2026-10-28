@@ -24,6 +24,7 @@ import type {
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "./store/use-issues";
+import { useProjectPreferencesFollow } from "./use-project-preferences-follow";
 
 export interface IssueActions {
   fetchIssues: (loadType: TLoader, options: IssueListOptions, viewId?: string) => Promise<PagedGroups | undefined>;
@@ -67,6 +68,7 @@ const useProjectIssueActions = () => {
   const { workspaceSlug, projectId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
+  const follow = useProjectPreferencesFollow();
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssueListOptions) => {
@@ -115,9 +117,11 @@ const useProjectIssueActions = () => {
   const updateFilters = useCallback(
     async (projectId: string, filterType: TSupportedFilterTypeForUpdate, filters: TSupportedFilterForUpdate) => {
       if (!workspaceSlug) return;
-      return await issuesFilter.updateFilters(workspaceSlug, projectId, filterType, filters);
+      return await follow(workspaceSlug, projectId, () =>
+        issuesFilter.updateFilters(workspaceSlug, projectId, filterType, filters)
+      );
     },
-    [issuesFilter.updateFilters, workspaceSlug]
+    [issuesFilter.updateFilters, workspaceSlug, follow]
   );
 
   return useMemo(

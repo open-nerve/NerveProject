@@ -9,7 +9,6 @@ import { emailFor, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { cancel, chineseAdmin } from "../../fixtures/chinese";
 import { closedWithin, modalDialog } from "../../fixtures/dialogs";
-import { workItemFilters } from "../../fixtures/mounts";
 import { labelRow } from "../../fixtures/project-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -167,13 +166,10 @@ test("S7 (page): an admin whose language is Chinese sees a project's header, gen
   await expect(page.getByText("未找到匹配项", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await cancel(page);
-  const filters = workItemFilters(slug, web.id);
-  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
-    [filters.failure],
-    [filters.request],
-    [],
-  ]);
-  await expectQuietConsole(page, watch, { warnings: Array(6).fill(EMOJI_CHECK_WARNING), errors: [filters.logged] });
+  await expect.poll(() => watch.apiRequests).toContain(`GET /api/v0/me/projects/${web.id}/preferences`);
+  await expect.poll(() => watch.apiRequests).toContain(`GET /api/v0/projects/${web.id}/issues`);
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch, { warnings: Array(6).fill(EMOJI_CHECK_WARNING), errors: [] });
 });
 
 test("S7 (page): an admin whose language is Chinese filters the projects and the members, and reads a project's settings, its custom range and a toast in Chinese", async ({

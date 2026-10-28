@@ -168,6 +168,8 @@ make e2e
 **Files：** C/store/issue/project/filter.store.ts及新test；C/store/project/preferences.store.ts/现test按需；C/services/project/project.service.ts；tools/keywords.json；e2e/fixtures/mounts.ts；stories/project/{p2-visibility,p8-project-preferences}.spec.ts、stories/smoke/s7-chinese-project.spec.ts。
 **Interfaces：** ProjectPreferencesService现get/update；filter store每字段整体PATCH+确认结果，query 拼装和基本表达式转换已在 T5，T8 扩完整语义矩阵。
 
+页面跟进还涉及 C/hooks/use-project-preferences-follow.ts及其测试、C/hooks/use-issues-actions.tsx、C/components/issues/filters.tsx 与 C/components/issues/issue-layouts/roots/project-layout-root.tsx；三故事同地址双GET的时序夹具涉及 e2e/fixtures/settings-pages.ts。页面将保存和后续列表读取分为两个会话跟进，读取失败保留列表自身重试。
+
 - [ ] `writesOneWholePreferenceField`断言body只有目标字段、同字段后续patch用前序确认结果；navigation/sort_order未动；load.preferences未自动套list，query显式转换；拒绝/session更换不写。group/order宽string经允许词汇收窄。
 - [ ] 红：`pnpm --filter web exec vitest run core/store/issue/project/filter.store.test.ts core/store/project/preferences.store.test.ts`。
 - [ ] 实现并同提交删除user-properties两方法/例外和workItemFilters/三放行；保留仅search用途ProjectService直到对应后段，注释真实说明。

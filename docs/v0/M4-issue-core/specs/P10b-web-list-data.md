@@ -195,6 +195,8 @@ T6同时改 `C/store/issue/issue-details/{issue,sub_issues,link,relation}.store.
 
 ProjectPreferencesService现有get/update签名不变；project filter按生成filters/display_filters/display_properties消费。每次PATCH只带要变的顶层字段的全值，其余字段省略；同字段排队时从最后确认值计算。navigation/sort_order不被覆盖。服务端不会自动使用偏好，列表显式拼查询。
 
+项目页面的显示设置入口与富表达式入口通过页面层会话跟进：偏好 store 交回写入结果或拒绝，确认查询改变后才独立刷新原项目列表；刷新拒绝作为读失败保留并可重试，不重发保存。组件草稿和已确认查询分开，会话或项目切换后不跟进旧页面。通用筛选回调、归档和个人列表不改变合同。
+
 `issue-filters.ts` 目标纯接口：`toProjectFilters(expression): ProjectIssueFilters`、`toFilterExpression(filters): TWorkItemFilterExpression`、`projectListQuery(filters, display): ProjectIssueQuery`、`memberListQuery(filters, display, relation): MemberIssueQuery`。标识字段映射state→state_id、labels→label_id、assignees→assignee_id、created_by→created_by_id；日期条件保持重复AND，不把两个条件随意合并成一个。one-level AND和每种已支持条件逐一测试；None/me按契约；不支持的持久化属性/组合在本地选择明确默认并清理，不偷偷传给服务端造成整页失败。
 
 ProjectDisplayFilters生成字段为string，query为enum；用允许值目录显式收窄，不用断言伪造安全。项目分组不带project_id，member允许更窄的词汇，无subgroups。表达式只用于UI state，持久化用ProjectIssueFilters。删除否定参数/恒等alias/hook，不留allowNegative:false壳。旧/user-properties两个方法、两例外、mounts.workItemFilters、p2-visibility/p8-project-preferences/s7-chinese-project三故事放行在T7一起消失。

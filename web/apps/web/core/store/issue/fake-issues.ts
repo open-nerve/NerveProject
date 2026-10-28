@@ -116,7 +116,8 @@ export async function issueStoreTab() {
       import("mobx"),
     ]);
   const nerve = new FakeNerve();
-  const app = new RootStore(nerve.client());
+  const api = nerve.client();
+  const app = new RootStore(api);
   const workspace = workspaceOf("ws");
   const project = projectOf("A", workspace.id, { id: "A" });
   runInAction(() => {
@@ -127,5 +128,5 @@ export async function issueStoreTab() {
   await loadWorkspaces(nerve, app.workspaceRoot, [workspace]);
   await loadProjects(nerve, app.projectRoot.project, workspace, [project]);
   nerve.calls.length = 0;
-  return { app, nerve, workspace, project };
+  return { app, nerve, api, workspace, project };
 }

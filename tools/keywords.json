@@ -2043,7 +2043,7 @@
     {
       "id": "plane-workspace-urls",
       "phase": "M3/P8a",
-      "why": "M3 换掉的 Plane 地址（M3 设计 7.10）：工作区、项目两侧的 store 改调 /api/v0 之后，旧 service 中这些地址的方法都已删除（P8a 工作区一侧；P8b 项目一侧：项目、项目角色、项目成员、归档、标识检查、收藏、状态、标签、工作区的标签、分诊状态、显示设置，各 Task 删掉时补上）。项目的 /user-properties/ 是 M4 的工作项筛选读写的，留一条例外到 M4。/search-issues/ 和迭代、模块、工作项的地址不是 M3 的，模式不宽到它们",
+      "why": "M3 换掉的 Plane 地址（M3 设计 7.10）：工作区、项目两侧的 store 改调 /api/v0 之后，旧 service 中这些地址的方法都已删除（P8a 工作区一侧；P8b 项目一侧：项目、项目角色、项目成员、归档、标识检查、收藏、状态、标签、工作区的标签、分诊状态、显示设置，各 Task 删掉时补上）。项目的 /user-properties/ 工作项筛选读写已在 M4 删除。/search-issues/ 和迭代、模块、工作项的地址不是 M3 的，模式不宽到它们",
       "files": {
         "source": "^web/(?!.*\\.test\\.[jt]sx?$).*\\.(?:[cm]?[jt]sx?|json)$",
         "flags": ""
@@ -2574,14 +2574,6 @@
       "count": 3,
       "reason": "三行中文注释记录这份配置的来源：文件开头说 catalog 等各节来自 Plane 提交 02c19e1 的 pnpm-workspace.yaml、英文注释是 Plane 的原文（M0/P5 spec 2.4），allowBuilds 里说最后三项不来自 Plane（M0/P6）。来源说明随文件长期存在，在 v0 内不会消失",
       "until": "M9"
-    },
-    {
-      "rule": "plane-workspace-urls",
-      "path": "web/apps/web/core/services/project/project.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/user-properties/",
-      "count": 2,
-      "reason": "M3/P8b 起，M4 的工作项筛选改用新接口时删除：项目的工作项筛选（getProjectUserProperties、updateProjectUserProperties）由 M4 的筛选 store 读写（M3 设计 7.3）",
-      "until": "M4/P11"
     },
     {
       "rule": "copy-hook",

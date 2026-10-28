@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import useSWR from "swr";
@@ -16,6 +17,8 @@ import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/f
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
+import { useProjectPreferencesFollow } from "@/hooks/use-project-preferences-follow";
+import type { TWorkItemFilterExpression } from "@nerve/types";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 // local imports
 import { IssuePeekOverview } from "../../peek-overview";
@@ -44,6 +47,16 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
   const { workspaceSlug, projectId } = useParams();
   // hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
+  const follow = useProjectPreferencesFollow();
+  const updateExpression = useCallback(
+    (expression: TWorkItemFilterExpression) => {
+      if (workspaceSlug && projectId)
+        void follow(workspaceSlug, projectId, () =>
+          issuesFilter.updateFilterExpression(workspaceSlug, projectId, expression)
+        );
+    },
+    [workspaceSlug, projectId, follow, issuesFilter]
+  );
   // derived values
   const workItemFilters = projectId ? issuesFilter?.getIssueFilters(projectId) : undefined;
   const activeLayout = workItemFilters?.displayFilters?.layout;
@@ -67,7 +80,7 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
         entityId={projectId}
         filtersToShowByLayout={ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.filters}
         initialWorkItemFilters={workItemFilters}
-        updateFilters={issuesFilter?.updateFilterExpression.bind(issuesFilter, workspaceSlug, projectId)}
+        updateFilters={updateExpression}
         projectId={projectId}
         workspaceSlug={workspaceSlug}
       >

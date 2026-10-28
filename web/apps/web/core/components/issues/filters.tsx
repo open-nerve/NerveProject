@@ -14,6 +14,7 @@ import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve
 import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
+import { useProjectPreferencesFollow } from "@/hooks/use-project-preferences-follow";
 // nerve imports
 // local imports
 import { WorkItemFiltersToggle } from "../work-item-filters/filters-toggle";
@@ -43,6 +44,7 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
   const {
     issuesFilter: { issueFilters, updateFilters },
   } = useIssues(EIssuesStoreType.PROJECT);
+  const follow = useProjectPreferencesFollow();
   // derived values
   const activeLayout = issueFilters?.displayFilters?.layout;
   const layoutDisplayFiltersOptions = ISSUE_STORE_TO_FILTERS_MAP[EIssuesStoreType.PROJECT]?.layoutOptions[activeLayout];
@@ -50,25 +52,31 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
       if (!workspaceSlug || !projectId) return;
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout });
+      void follow(workspaceSlug, projectId, () =>
+        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout })
+      );
     },
-    [workspaceSlug, projectId, updateFilters]
+    [workspaceSlug, projectId, updateFilters, follow]
   );
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
       if (!workspaceSlug || !projectId) return;
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter);
+      void follow(workspaceSlug, projectId, () =>
+        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter)
+      );
     },
-    [workspaceSlug, projectId, updateFilters]
+    [workspaceSlug, projectId, updateFilters, follow]
   );
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
       if (!workspaceSlug || !projectId) return;
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property);
+      void follow(workspaceSlug, projectId, () =>
+        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property)
+      );
     },
-    [workspaceSlug, projectId, updateFilters]
+    [workspaceSlug, projectId, updateFilters, follow]
   );
 
   return (

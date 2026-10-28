@@ -13,7 +13,7 @@ import { expectMember } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
 import { closedByEscape, closedWithin, enabledWithin, modalDialog } from "../../fixtures/dialogs";
-import { PROJECT_MEMBER, valued, workItemFilters } from "../../fixtures/mounts";
+import { PROJECT_MEMBER, valued } from "../../fixtures/mounts";
 import { pageContent } from "../../fixtures/project-pages";
 import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -262,12 +262,13 @@ test("P2 (page): the projects page shows a member the public project to join and
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Work Items", exact: true })).toBeFocused();
 
-  // The refused join's 404; the work items' page asks Plane's address of the filters, M4's (P8b spec §5)
-  const filters = workItemFilters(slug, web.id);
-  await expect.poll(() => watch.apiFailures).toEqual([`404 POST /api/v0/projects/${gone.id}/join`, filters.failure]);
-  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [filters.request], []]);
+  // The refused join is the only expected failed request.
+  await expect.poll(() => watch.apiRequests).toContain(`GET /api/v0/me/projects/${web.id}/preferences`);
+  await expect.poll(() => watch.apiRequests).toContain(`GET /api/v0/projects/${web.id}/issues`);
+  await expect.poll(() => watch.apiFailures).toEqual([`404 POST /api/v0/projects/${gone.id}/join`]);
+  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, {
     warnings: [EMOJI_CHECK_WARNING],
-    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)", filters.logged],
+    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
   });
 });

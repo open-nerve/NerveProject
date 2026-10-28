@@ -53,14 +53,6 @@ export const WORKSPACE_MENU: string[] = [];
  * page allows the three, once a load, through this: when M4 moves the filters to nerve, this goes, and the stories'
  * allowances with it.
  */
-export function workItemFilters(slug: string, id: string): { request: string; failure: string; logged: string } {
-  const request = `GET /api/workspaces/${slug}/projects/${id}/user-properties/`;
-  return {
-    request,
-    failure: `404 ${request}`,
-    logged: "Failed to load resource: the server responded with a status of 404 (Not Found)",
-  };
-}
 
 /** path with the values of names in place of their names: the address of a page of REQUESTS, or a request of a list. */
 export function valued(path: string, names: Record<string, string>): string {
