@@ -131,19 +131,23 @@ it("sends the member's required relation and narrower filters as one member requ
   expect(nerve.calls).toHaveLength(1);
 });
 
-it("preserves lane and empty page branches without response conversion", async () => {
-  const nerve = new FakeNerve();
-  const service = new IssueListService(nerve.client());
-  for (const page of [
-    issuePageOf([]),
-    {
+it.each([
+  { name: "empty", page: issuePageOf([]) },
+  {
+    name: "lane",
+    page: {
       total: 1,
       groups: [
         { key: "state", total: 1, subgroups: [{ key: "none", total: 1, data: [issueOf("one")], next_cursor: null }] },
       ],
       subgroup_totals: [{ key: "none", total: 1 }],
     },
-  ] satisfies IssueListPage[]) {
+  },
+] satisfies { name: string; page: IssueListPage }[])(
+  "preserves $name page branches without response conversion",
+  async ({ page }) => {
+    const nerve = new FakeNerve();
+    const service = new IssueListService(nerve.client());
     const { call, result } = await requestedIssue(nerve, () => service.listProject("A", {}), [
       "GET",
       "/api/v0/projects/A/issues",
@@ -152,9 +156,9 @@ it("preserves lane and empty page branches without response conversion", async (
     call.answer(json(200, page));
     await until(() => result.settled, "page branches");
     expect(result.value).toEqual(page);
+    expect(nerve.calls).toHaveLength(1);
   }
-  expect(nerve.calls).toHaveLength(2);
-});
+);
 
 it.each(["project", "member"] as const)(
   "returns the original Problem and session rejection for %s without a follow-up",

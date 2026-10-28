@@ -195,6 +195,7 @@ test("usesGeneratedMemberQueryAndDefaultOrder", () => {
     scope: "member",
     userID: "member",
     workspaceSlug: "ws",
+    workspaceID: "id-ws",
     query: { relation: "assigned" },
     currentUserID: "actor",
     catalog: context.catalog,

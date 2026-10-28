@@ -53,3 +53,50 @@ export async function requestedIssue<T>(nerve: FakeNerve, request: () => Promise
   expect([call.method, call.path]).toEqual(endpoint);
   return { result, call };
 }
+
+/** Shared pure list fixtures; no transport or second entity cache. */
+export const listContext = (
+  query: import("@/services/issue/issue-list.service").ProjectIssueQuery = {}
+): import("@/lib/paged-groups").ListContext => ({
+  scope: "project",
+  projectID: "A",
+  query: { order_by: "sort_order", ...query },
+  currentUserID: "actor",
+  catalog: { states: new Map(), labels: new Map(), members: new Map() },
+  pendingIDs: new Set(),
+});
+export const pageMeta = (
+  part: import("@/lib/paged-groups").PagePart | null = null,
+  lower: import("@/lib/paged-groups").Boundary | null = null
+): import("@/lib/paged-groups").PageReadMeta => ({
+  part,
+  first: lower === null,
+  resetCounters: [],
+  rowParts: [],
+  ranges: new Map(
+    part && lower ? [[JSON.stringify([part.group, part.subgroup]), { lower, upper: null, complete: false }]] : []
+  ),
+});
+export const listIssue = (id: string, key: number, changes: Partial<Issue> = {}): Issue => ({
+  ...issueOf(id),
+  sort_order: key,
+  ...changes,
+});
+export const listRow = (
+  id: string,
+  key: number,
+  updatedAt = "2026-10-28T00:00:00Z"
+): import("@/lib/paged-groups").Row => ({ id, key, updatedAt });
+export const listGroup = (
+  total: number,
+  rows: import("@/lib/paged-groups").Row[] = [],
+  complete = false,
+  edge = 10
+): import("@/lib/paged-groups").Group => ({
+  total,
+  rows,
+  nextCursor: complete ? null : "opaque-next",
+  boundary: { id: "edge", key: edge },
+  cursorBoundary: { id: "edge", key: edge },
+  stale: false,
+});
