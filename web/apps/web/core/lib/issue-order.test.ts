@@ -54,7 +54,7 @@ function fixtureRow(row: Scenario["rows"][number], order: IssueListOrder): Row {
     issue.assignee_ids = members.map((member) => member.id);
     catalog.members = new Map(members.map((member) => [member.id, member]));
   } else if (order === "priority") {
-    const priorities: IssuePriority[] = ["urgent", "high", "medium", "low", "none"];
+    const priorities: IssuePriority[] = ["none", "low", "medium", "high", "urgent"];
     if (typeof row.key !== "number" || !priorities[row.key]) throw new Error("priority fixture");
     issue.priority = priorities[row.key]!;
   } else if (order === "sort_order") {
@@ -137,4 +137,62 @@ test("nullKeysStayLastAndEqualIDsFollowDirection", () => {
   const b: Row = { ...a, id: "b" };
   expect(compareRows(a, b, "-start_date")).toBeGreaterThan(0);
   expect(compareRows(a, { ...b, key: "2026-01-01" }, "-start_date")).toBeGreaterThan(0);
+});
+
+test("ordersRealIssuePrioritiesByServerRanksInBothDirections", () => {
+  // Row priority order (M4 §3.16) differs from the priority group display order.
+  const samples: { id: string; priority: IssuePriority; rank: number }[] = [
+    { id: "00000000-0000-0000-0000-000000000008", priority: "none", rank: 0 },
+    { id: "00000000-0000-0000-0000-000000000007", priority: "low", rank: 1 },
+    { id: "00000000-0000-0000-0000-000000000006", priority: "medium", rank: 2 },
+    { id: "00000000-0000-0000-0000-000000000005", priority: "high", rank: 3 },
+    { id: "00000000-0000-0000-0000-000000000004", priority: "urgent", rank: 4 },
+    { id: "00000000-0000-0000-0000-000000000003", priority: "none", rank: 0 },
+    { id: "00000000-0000-0000-0000-000000000002", priority: "urgent", rank: 4 },
+  ];
+  const issues: Issue[] = samples.map(({ id, priority }) => ({ ...issueOf(id), priority }));
+  const rows = issues.map(
+    (issue): Row => ({ id: issue.id, key: issueSortKey(issue, "priority", emptyCatalog), updatedAt: issue.updated_at })
+  );
+  expect.soft(rows.map((row) => row.key)).toEqual(samples.map((sample) => sample.rank));
+  expect
+    .soft(rows.toSorted((a, b) => compareRows(a, b, "priority")).map((row) => row.id))
+    .toEqual([
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000008",
+      "00000000-0000-0000-0000-000000000007",
+      "00000000-0000-0000-0000-000000000006",
+      "00000000-0000-0000-0000-000000000005",
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000004",
+    ]);
+  expect
+    .soft(rows.toSorted((a, b) => compareRows(a, b, "-priority")).map((row) => row.id))
+    .toEqual([
+      "00000000-0000-0000-0000-000000000004",
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000005",
+      "00000000-0000-0000-0000-000000000006",
+      "00000000-0000-0000-0000-000000000007",
+      "00000000-0000-0000-0000-000000000008",
+      "00000000-0000-0000-0000-000000000003",
+    ]);
+});
+
+test("sharedPrioritySamplesRepresentNoneNoneUrgentIssues", () => {
+  const scenario = fixture.scenarios.find((item) => item.order === "priority")!;
+  // These are the actual priorities assigned to the shared samples by the server test.
+  const priorities: IssuePriority[] = ["none", "none", "urgent"];
+  expect.soft(scenario.rows).toHaveLength(priorities.length);
+  const rows = scenario.rows.map((sample, index): Row => {
+    const issue: Issue = { ...issueOf(sample.id), priority: priorities[index]! };
+    return { id: issue.id, key: issueSortKey(issue, "priority", emptyCatalog), updatedAt: issue.updated_at };
+  });
+  expect.soft(rows.map((row) => row.key)).toEqual(scenario.rows.map((sample) => sample.key));
+  expect
+    .soft(rows.toSorted((a, b) => compareRows(a, b, "priority")).map((row) => row.id))
+    .toEqual(scenario.ascending_ids);
+  expect
+    .soft(rows.toSorted((a, b) => compareRows(a, b, "-priority")).map((row) => row.id))
+    .toEqual(scenario.descending_ids);
 });

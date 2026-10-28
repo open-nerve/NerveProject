@@ -72,7 +72,7 @@ export function issueSortKey(issue: Issue, order: IssueListOrder, catalog: Issue
       return date;
     }
     case "priority":
-      return ["urgent", "high", "medium", "low", "none"].indexOf(issue.priority);
+      return ["none", "low", "medium", "high", "urgent"].indexOf(issue.priority);
     case "state_name":
       return minimumName([catalog.states.get(issue.state_id)?.name]);
     case "label_name":
