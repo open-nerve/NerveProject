@@ -369,3 +369,85 @@ T10 回归接续：B/permission_matrix_test.go 的 prepareMatrix 在 gone worksp
 T10 的 T4 接续：B/purge_runtime_test.go 准备子 App 在 runtime 角色完成 workspace 删除任务后才停止；owner 随后仅老化墓碑和观察，原两 App 隔离、61d/59d 与真实 DELETE 角色/模块序断言保持。
 
 T10 E2E 收尾：assert/catalog.ts 统一 issueOwnedTable 分类，project.ts/workspace.ts 与 W3 零项目故事共用；纯期望函数依 lint 要求归模块级，两组 Promise.all 仍先 M3 立即断言，再只对 issue 有限轮询。
+
+## 附录 B：Task14 SP2 实测（2026-10-28）
+
+实测运行 `task-14-scale-final`，完整规模命令非 skip、退出 0；此前 `task-14-scale-green-2` 亦完整通过，最终结果以下述恢复后运行原件为准。测量时 HEAD/BASE 均为 `4c7379f1d4dd53a8af932f2ae148ae2f9d07f859`，三个 scale 测试文件为 dirty 字节。后续文档提交不是测量 HEAD。
+
+原件位于 ignored [最终规模目录](../../../../.superpowers/sdd/P9-purge/checks/task-14-scale-final/)、[完整原件索引](../../../../.superpowers/sdd/P9-purge/task-14-raw-index.json)、[逐文件成功检查绑定](../../../../.superpowers/sdd/P9-purge/task-14-source-bindings.json)；各检查都有 exact argv/cwd、前后 HEAD/dirty SHA、起止/exit、完整 log、源码 tar/逐文件清单与 SHA256。environment.json 另保存实际所有相关 Go/SQL/生成文件 SHA、机器/参数/数据库/索引，未保存 token 或连接串。
+
+使用完整原 app/newIssueWorldOn/生产 Runner，observer 在启动 app 前安装；没有替换 Runner、加生产 hook、人工持锁或修改 batch/budget。HTTP request/write/commit 为 15s/60s/2s，DELETE/探针客户端也有15s deadline，只有 access token 延至1h；app pool=4，断言 pool=8，default/periodic workers=10/2，delete batch=1000/budget=45s，gate=2/2s/64、write lock=4s 沿原测试配置。seed context15m、计数context3m。
+
+机器 `go1.27.1` / `darwin` / `arm64`，CPU `Apple M5 Max`，NumCPU/GOMAXPROCS=18/18。PostgreSQL18.6/aarch64，app/fixture连接角色为postgres；shared_buffers128MB、work_mem4MB、max_connections100、UTF8/Etc/UTC。断言连接jit=on/plan_cache_mode=auto，生产pool由既有NewPool设为jit=off/force_custom_plan。测量包含observer数据库写入；seed/ANALYZE/计数会温热缓存，没有驱逐缓存，数字只代表本次条件。
+
+seed SQL+commit **56.292057s**；七表 ANALYZE **1.105045s**；独立初始精确计数/分布 **10.360526s**。框架经API创建beta及成员/项目/标签和acme探针项目；原issueWorld既有acme工作区成员仍复用原store fixture，不把它写成全部API。只有七表规模行沿SQL seed。
+
+| 表 | 每 issue | 每项目（六个逐一相等） | beta五项目 | 六项目 | 每项目按id项目连续区段 |
+|---|---:|---:|---:|---:|---:|
+| issues | 1 | 20,000 | 100,000 | 120,000 | 20000 |
+| issue_activities | 20 | 400,000 | 2,000,000 | 2,400,000 | 400000 |
+| issue_assignees | 2 | 40,000 | 200,000 | 240,000 | 40000 |
+| issue_labels | 2 | 40,000 | 200,000 | 240,000 | 40000 |
+| issue_subscribers | 3 | 60,000 | 300,000 | 360,000 | 60000 |
+| issue_comments | 2 | 40,000 | 200,000 | 240,000 | 40000 |
+| issue_description_versions | 3 | 60,000 | 300,000 | 360,000 | 60000 |
+| 合计 | 33 | 660,000 | 3,300,000 | 3,960,000 | 不是按项目六段插入 |
+
+42个 project/table 初始 total=live 精确相等，每 issue fanout 的 min=max 与上表一致；最终42项 total保留、live=0，分别保存 project-final/workspace-final-counts.json。每个项目动态400000，其中description恰80000（1/5），octet_length min=max=1024、distinct payload=80000，六项目480000个描述payload。载荷由每issue/副本/分块的不同md5内容拼成1024字节，非重复短占位。UUID在排序后的MATERIALIZED输入上生成，所有42项min/max UUID及区段统计在initial-counts.json；探针和API/M3框架不计入SP2七表口径，relation/link/mention/reaction/draft未冒充规模行。
+
+| 项目 | ID | 工作区 |
+|---|---|---|
+| Web | `01a1804a-7bb5-7991-a0fc-dacda94443f4` | `01a1804a-7bb3-75a9-8c23-af8df03ef845` |
+| One | `01a1804a-7c2a-78ed-93bf-c689463c87e3` | `01a1804a-7c18-78e1-b39a-becb42e4b4ca` |
+| Two | `01a1804a-7c36-75f7-bd3f-2f2517314bb0` | `01a1804a-7c18-78e1-b39a-becb42e4b4ca` |
+| Three | `01a1804a-7c41-7933-aa33-f49f6c847da0` | `01a1804a-7c18-78e1-b39a-becb42e4b4ca` |
+| Four | `01a1804a-7c4d-755c-add4-c720b15282c4` | `01a1804a-7c18-78e1-b39a-becb42e4b4ca` |
+| Five | `01a1804a-7c58-733f-8e12-12994e9e6ecc` | `01a1804a-7c18-78e1-b39a-becb42e4b4ca` |
+
+存活探针issue `01a1804a-7c74-7c24-a29e-33b54ad06d27`，project `01a1804a-7c6e-7333-bc9c-f13e9ecf369e`，workspace `01a1804a-7bb3-75a9-8c23-af8df03ef845`。删Web时是同acme的邻项目；删beta时是另一个存活workspace的项目。两个场景各自在DELETE前确认没有活跃issue.delete_rows任务；负载采样在真实running且可见已提交批次后开始，采样后仍running且有未处理标记，之后又看见新提交。没有长持锁。
+
+| 场景/阶段 | 方法 | n | p50 ms | p95 ms | max ms |
+|---|---|---:|---:|---:|---:|
+| project-baseline | GET | 20 | 0.976375 | 1.383500 | 8.372083 |
+| project-baseline | PATCH | 20 | 2.553208 | 3.249084 | 6.794667 |
+| project-processing | GET | 20 | 1.089666 | 1.761291 | 6.073250 |
+| project-processing | PATCH | 20 | 2.906917 | 4.043042 | 4.206042 |
+| workspace-baseline | GET | 20 | 1.013459 | 1.636542 | 3.781042 |
+| workspace-baseline | PATCH | 20 | 2.685625 | 3.470167 | 5.796500 |
+| workspace-processing | GET | 20 | 41.768917 | 68.099792 | 126.034209 |
+| workspace-processing | PATCH | 20 | 49.500208 | 61.819208 | 525.226791 |
+
+p50/p95采用nearest-rank：排序后ceil(p×n)-1；所有20读+20写样本均保留，不剔除首样本或异常值。四组的完整时序/状态/响应体在各*-samples.json，额外最终GET回读在*-readback.json；读200且ID准确，每次PATCH不同name成功并有最终回读验证。
+
+| 负载窗口 | 实际job | 已删标记：前→后→继续 | 采样后pending | 观测查询ms：前/后/继续 |
+|---|---:|---:|---:|---|
+| project | 5 | 2 → 18 → 20 | 945 | 3.130042/3.936667/2.412041 |
+| workspace | 8 | 2 → 41 → 43 | 922 | 4.978292/43.955667/3.319667 |
+
+标记覆盖issues/activities/description_versions，每500个取一及末行，全部marker ID、可见提交原At/By、DB前后水位、原observer轨迹保存于markers.json、*-window-search.json、*-window.json。请求/样本耗时用host monotonic；运行迁移用DB clock_timestamp，不跨时钟直接相减。
+
+DELETE Web **7.018667ms**；DELETE beta **9.941459ms**，都204。下表运行时长为observer记录进入running至completed的DB时间，含River状态持久化延迟；原created_at/attempted_at/finalized_at及完整metadata/errors也保留，不能把它当纯SQL执行时间。
+
+| job | scope | args.id | args.at（原请求） | args.by | running秒 | running/attempt/终态/errors/snoozes |
+|---:|---|---|---|---|---:|---|
+| 5 | project | `01a1804a-7bb5-7991-a0fc-dacda94443f4` | `2026-10-28T02:16:37.098443Z` | `01a1804a-7ba5-7808-adf2-b230a336ce1b` | 6.827393 | 1 / 1 / completed / 空 / 0 |
+| 6 | project | `01a1804a-7c2a-78ed-93bf-c689463c87e3` | `2026-10-28T02:16:45.10966Z` | `01a1804a-7ba5-7808-adf2-b230a336ce1b` | 14.812556 | 1 / 1 / completed / 空 / 0 |
+| 7 | project | `01a1804a-7c36-75f7-bd3f-2f2517314bb0` | `2026-10-28T02:16:45.10966Z` | `01a1804a-7ba5-7808-adf2-b230a336ce1b` | 14.812522 | 1 / 1 / completed / 空 / 0 |
+| 8 | project | `01a1804a-7c41-7933-aa33-f49f6c847da0` | `2026-10-28T02:16:45.10966Z` | `01a1804a-7ba5-7808-adf2-b230a336ce1b` | 14.812522 | 1 / 1 / completed / 空 / 0 |
+| 9 | project | `01a1804a-7c4d-755c-add4-c720b15282c4` | `2026-10-28T02:16:45.10966Z` | `01a1804a-7ba5-7808-adf2-b230a336ce1b` | 14.812523 | 1 / 1 / completed / 空 / 0 |
+| 10 | project | `01a1804a-7c58-733f-8e12-12994e9e6ecc` | `2026-10-28T02:16:45.10966Z` | `01a1804a-7ba5-7808-adf2-b230a336ce1b` | 14.812522 | 1 / 1 / completed / 空 / 0 |
+| 11 | workspace_drafts | `01a1804a-7c18-78e1-b39a-becb42e4b4ca` | `2026-10-28T02:16:45.10966Z` | `01a1804a-7ba5-7808-adf2-b230a336ce1b` | 0.068208 | 1 / 1 / completed / 空 / 0 |
+
+每个scope/id恰一个job，kind=issue.delete_rows/default queue/max_attempts25，args严格四字段。五个beta项目及workspace_drafts逐一核对workspace原请求At/By；Web核项目原请求。七任务完整轨迹都是available→running(1)→completed(1)，没有running→available/scheduled/failed等回退。workspace_drafts没有规模候选仍真实运行一次，未用它伪造负载窗口。
+
+| 变异/红 | 实际行为与精确拒绝 | 恢复 |
+|---|---|---|
+| 旧seed性质红 | issue_comments total=0 want40000；完整scale入口非skip | 后续补齐实际七表fixture |
+| M40 生产bootstrap接线DeleteBudget=1ns | job5 available→running(1)→available(0)→running(1)，snoozes=1/errors=[]/attempt1，由single-run断言拒绝；非探针超时 | app.go原/变异/恢复SHA与字节原件保存 |
+| M41-comments | total/live0/0 want40000/40000，DELETE前拒绝 | fixture逐字/SHA恢复 |
+| M41-versions | total/live0/0 want60000/60000，DELETE前拒绝 | fixture逐字/SHA恢复 |
+| M41-payload | activities400000/descriptions80000/distinct80000均对，min/max32字节与1024期望不符，DELETE前拒绝 | fixture逐字/SHA恢复 |
+
+所有变异一次一个、使用同一开启scale的完整命令，原patch、原/变异字节、SHA、实际RUN/失败原因/exit/raw在task-14-mutations及checks/task-14-M*。M40仅真实生产接线临时改小，不写River状态或metadata；配置原值45s与实际临时接线1ns分别记录。全部恢复后task-14-scale-final完整非skip绿；恢复后的生产app.go与BASE逐字相同。
+
+三个最终Go文件先gofmt及make lint-go（0 issues），再正式规模；最终字节与该lint、最终规模和五族影响回归源码归档逐文件相同。影响选择器为 `^Test(JobStateObserverRunsWithRuntimeRole|NewAppDeleteRowsJobRuns|ProjectDeletionPublishesAndEnqueuesAtomically|WorkspaceDeletionPublishesOnlyLockedProjects|RuntimeRoleDeletesDraftsInWorkspaceWithoutProjects)$`。按主控限定不重跑整bootstrap/F，下一完整F在T15；独立要求/质量审查由主控安排。最初unused import编译错及源码根定位失败均完整保留，不计性质红或绿。
