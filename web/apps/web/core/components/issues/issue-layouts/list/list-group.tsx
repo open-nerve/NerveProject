@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { MutableRefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
@@ -15,10 +17,8 @@ import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type {
   IGroupByColumn,
-  TIssueMap,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
-  TIssue,
   IIssueDisplayProperties,
   TIssueKanbanFilters,
 } from "@nerve/types";
@@ -48,18 +48,18 @@ import type { TRenderQuickActions } from "./list-view-types";
 interface Props {
   groupIssueIds: string[] | undefined;
   group: IGroupByColumn;
-  issuesMap: TIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   group_by: TIssueGroupByOptions | null;
   orderBy: TIssueOrderByOptions | undefined;
   getGroupIndex: (groupId: string | undefined) => number;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   displayProperties: IIssueDisplayProperties | undefined;
   enableIssueQuickAdd: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;
   containerRef: MutableRefObject<HTMLDivElement | null>;
   quickAddCallback?:
-    | ((projectId: string | null | undefined, data: Partial<TIssue>) => Promise<TIssue | undefined>)
+    | ((projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>)
     | undefined;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
   disableIssueCreation?: boolean;

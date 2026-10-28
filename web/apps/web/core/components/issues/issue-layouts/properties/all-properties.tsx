@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { SyntheticEvent } from "react";
 import { observer } from "mobx-react";
 // icons
@@ -11,7 +13,7 @@ import { DueDateOutline, LinkOutline, StartDateOutline, ViewsOutline } from "@ma
 // i18n
 import { useTranslation } from "@nerve/i18n";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TIssue, IIssueDisplayProperties, TIssuePriorities } from "@nerve/types";
+import type { IIssueDisplayProperties, TIssuePriorities } from "@nerve/types";
 // ui
 import {
   cn,
@@ -37,8 +39,8 @@ import { IssuePropertyLabels } from "./labels";
 import { WithDisplayPropertiesHOC } from "./with-display-properties-HOC";
 
 export interface IIssueProperties {
-  issue: TIssue;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  issue: Issue;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   displayProperties: IIssueDisplayProperties | undefined;
   isReadOnly: boolean;
   className: string;

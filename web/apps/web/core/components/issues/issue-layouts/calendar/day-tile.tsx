@@ -4,13 +4,15 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { observer } from "mobx-react";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TGroupedIssues, TIssue, TIssueMap, TPaginationData, ICalendarDate } from "@nerve/types";
+import type { TGroupedIssues, TPaginationData, ICalendarDate } from "@nerve/types";
 // components
 import { cn, renderFormattedPayloadDate } from "@nerve/utils";
 import { highlightIssueOnDrop } from "@/components/issues/issue-layouts/utils";
@@ -24,14 +26,14 @@ import { CalendarIssueBlocks } from "./issue-blocks";
 type Props = {
   issuesFilterStore: IProjectIssuesFilter;
   date: ICalendarDate;
-  issues: TIssueMap | undefined;
+  issues: Record<string, Issue | IssueDetail> | undefined;
   groupedIssueIds: TGroupedIssues;
   loadMoreIssues: (dateString: string) => void;
   getPaginationData: (groupId: string | undefined) => TPaginationData | undefined;
   getGroupIssueCount: (groupId: string | undefined) => number | undefined;
   enableQuickIssueCreate?: boolean;
   disableIssueCreation?: boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<TIssue>) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   quickActions: TRenderQuickActions;
   handleDragAndDrop: (
     issueId: string | undefined,

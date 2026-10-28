@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { describe, expect, it } from "vitest";
 import type { State } from "@nerve/api-client";
-import type { ICycle, IModule, TIssue } from "@nerve/types";
+import type { ICycle, IModule } from "@nerve/types";
 import { calculateCycleProgress } from "./cycle";
 import { getDistributionPathsPostUpdate, updateDistribution } from "./distribution-update";
 
@@ -64,15 +66,16 @@ const STATE_MAP: Record<string, State> = {
   cancelled: { id: "cancelled", group: "cancelled" } as State,
 };
 
-const workItem = (stateId: string, fields: Partial<TIssue> = {}) =>
-  ({
-    id: "work-item-1",
-    state_id: stateId,
-    assignee_ids: [],
-    label_ids: [],
-    completed_at: null,
-    ...fields,
-  }) as TIssue;
+const workItem = (
+  stateId: string,
+  fields: Partial<Pick<Issue, "state_id" | "assignee_ids" | "label_ids" | "completed_at">> = {}
+): Pick<Issue, "state_id" | "assignee_ids" | "label_ids" | "completed_at"> => ({
+  state_id: stateId,
+  assignee_ids: [],
+  label_ids: [],
+  completed_at: null,
+  ...fields,
+});
 
 const emptyCycle = () =>
   ({

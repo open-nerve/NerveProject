@@ -4,7 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssue } from "@nerve/types";
+import type { IssueDetail } from "@nerve/api-client";
+
 import { APIService } from "@/services/api.service";
 
 export class IssueArchiveService extends APIService {
@@ -49,7 +50,7 @@ export class IssueArchiveService extends APIService {
     projectId: string,
     issueId: string,
     queries?: any
-  ): Promise<TIssue> {
+  ): Promise<IssueDetail> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/archive/`, {
       params: queries,
     })

@@ -4,10 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { action, makeObservable, runInAction } from "mobx";
 // types
-import type { TIssue, TLoader, ViewFlags, IssuePaginationOptions, TIssuesResponse } from "@nerve/types";
+import type { TLoader, ViewFlags, IssuePaginationOptions, TIssuesResponse } from "@nerve/types";
 // base class
 import type { IBaseIssuesStore } from "../helpers/base-issues.store";
 import { BaseIssuesStore } from "../helpers/base-issues.store";
@@ -36,7 +38,7 @@ export interface IProjectIssues extends IBaseIssuesStore {
     subGroupId?: string
   ) => Promise<TIssuesResponse | undefined>;
 
-  createIssue: (workspaceSlug: string, projectId: string, data: Partial<TIssue>) => Promise<TIssue>;
+  createIssue: (workspaceSlug: string, projectId: string, data: Partial<IssueDetail>) => Promise<Issue>;
   updateIssue: (
     workspaceSlug: string,
     projectId: string,
@@ -177,7 +179,7 @@ export class ProjectIssues extends BaseIssuesStore implements IProjectIssues {
    * @param data
    * @returns
    */
-  override createIssue = async (workspaceSlug: string, projectId: string, data: Partial<TIssue>) => {
+  override createIssue = async (workspaceSlug: string, projectId: string, data: Partial<IssueDetail>) => {
     const response = await super.createIssue(workspaceSlug, projectId, data, "", false);
     if (workspaceSlug === this.router.workspaceSlug && projectId === this.router.projectId) {
       this.addIssueToList(response.id);

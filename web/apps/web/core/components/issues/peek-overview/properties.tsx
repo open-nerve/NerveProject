@@ -55,7 +55,7 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
   // derived values
   const issue = getIssueById(issueId);
   if (!issue) return <></>;
-  const createdByDetails = getUserDetails(issue?.created_by);
+  const createdByDetails = issue.created_by_id ? getUserDetails(issue.created_by_id) : undefined;
   const stateDetails = getStateById(issue.state_id);
 
   const minDate = getDate(issue.start_date);

@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
@@ -11,14 +13,7 @@ import { observer } from "mobx-react";
 // nerve constants
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 // types
-import type {
-  TGroupedIssues,
-  TIssue,
-  TIssueMap,
-  TPaginationData,
-  ICalendarWeek,
-  TSupportedFilterForUpdate,
-} from "@nerve/types";
+import type { TGroupedIssues, TPaginationData, ICalendarWeek, TSupportedFilterForUpdate } from "@nerve/types";
 import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
 // ui
 import { Spinner } from "@nerve/ui";
@@ -41,7 +36,7 @@ import { CalendarWeekHeader } from "./week-header";
 
 type Props = {
   issuesFilterStore: IProjectIssuesFilter;
-  issues: TIssueMap | undefined;
+  issues: Record<string, Issue | IssueDetail> | undefined;
   groupedIssueIds: TGroupedIssues;
   layout: "month" | "week" | undefined;
   showWeekends: boolean;
@@ -49,7 +44,7 @@ type Props = {
   loadMoreIssues: (dateString: string) => void;
   getPaginationData: (groupId: string | undefined) => TPaginationData | undefined;
   getGroupIssueCount: (groupId: string | undefined) => number | undefined;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<TIssue>) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   quickActions: TRenderQuickActions;
   handleDragAndDrop: (
     issueId: string | undefined,

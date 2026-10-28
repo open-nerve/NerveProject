@@ -4,20 +4,22 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useState } from "react";
 // i18n
 import { useTranslation } from "@nerve/i18n";
 // types
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TDeDupeIssue, TIssue } from "@nerve/types";
+import type { TDeDupeIssue } from "@nerve/types";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 
 type Props = {
-  data?: TIssue | TDeDupeIssue;
+  data?: Issue | TDeDupeIssue;
   dataId?: string | null | undefined;
   handleClose: () => void;
   isOpen: boolean;

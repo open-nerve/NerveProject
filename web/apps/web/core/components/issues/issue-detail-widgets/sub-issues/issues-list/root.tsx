@@ -4,13 +4,15 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { FilterOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import type { GroupByColumnTypes, TIssue, TSubIssueOperations } from "@nerve/types";
+import type { GroupByColumnTypes, TSubIssueOperations } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 // hooks
 import { SectionEmptyState } from "@/components/empty-state/section-empty-state-root";
@@ -28,7 +30,7 @@ type Props = {
   handleIssueCrudState: (
     key: "create" | "existing" | "update" | "delete",
     issueId: string,
-    issue?: TIssue | null
+    issue?: Issue | null
   ) => void;
   subIssueOperations: TSubIssueOperations;
   storeType: EIssuesStoreType;

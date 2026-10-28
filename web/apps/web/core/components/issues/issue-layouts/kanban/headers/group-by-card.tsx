@@ -4,12 +4,14 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import React from "react";
 import { observer } from "mobx-react";
 // lucide icons
 import { Circle } from "lucide-react";
 import { AddOutline, ArrowCollapseOutline, FullScreenOutline } from "@makeplane/propel/icons";
-import type { TIssue, TIssueKanbanFilters, TIssueGroupByOptions } from "@nerve/types";
+import type { TIssueKanbanFilters, TIssueGroupByOptions } from "@nerve/types";
 // ui
 // components
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
@@ -25,7 +27,7 @@ interface IHeaderGroupByCard {
   count: number;
   collapsedGroups: TIssueKanbanFilters;
   handleCollapsedGroups: (toggle: "group_by" | "sub_group_by", value: string) => void;
-  issuePayload: Partial<TIssue>;
+  issuePayload: Partial<IssueDetail>;
   disableIssueCreation?: boolean;
 }
 

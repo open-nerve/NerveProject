@@ -4,9 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
-import type { TIssue, TPaginationData } from "@nerve/types";
+import type { TPaginationData } from "@nerve/types";
 // components
 import { renderFormattedPayloadDate } from "@nerve/utils";
 // helpers
@@ -25,7 +27,7 @@ type Props = {
   isDragDisabled?: boolean;
   enableQuickIssueCreate?: boolean;
   disableIssueCreation?: boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<TIssue>) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   readOnly?: boolean;
   isMobileView?: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;

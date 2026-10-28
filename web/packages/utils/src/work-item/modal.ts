@@ -4,13 +4,15 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { set } from "lodash-es";
 // nerve imports
 import { DEFAULT_WORK_ITEM_FORM_VALUES } from "@nerve/constants";
 import type { Project, State } from "@nerve/api-client";
-import type { ISearchIssueResponse, TIssue } from "@nerve/types";
+import type { ISearchIssueResponse } from "@nerve/types";
 
-export const getUpdateFormDataForReset = (projectId: string | null | undefined, formData: Partial<TIssue>) => ({
+export const getUpdateFormDataForReset = (projectId: string | undefined, formData: Partial<IssueDetail>) => ({
   ...DEFAULT_WORK_ITEM_FORM_VALUES,
   project_id: projectId,
   name: formData.name,
@@ -22,7 +24,7 @@ export const getUpdateFormDataForReset = (projectId: string | null | undefined, 
 
 export const convertWorkItemDataToSearchResponse = (
   workspaceSlug: string,
-  workItem: TIssue,
+  workItem: Issue,
   project: Project | undefined,
   state: State | undefined
 ): ISearchIssueResponse => ({
@@ -39,15 +41,18 @@ export const convertWorkItemDataToSearchResponse = (
   workspace__slug: workspaceSlug,
 });
 
-export function getChangedIssuefields(formData: Partial<TIssue>, dirtyFields: { [key: string]: boolean | undefined }) {
+export function getChangedIssuefields(
+  formData: Partial<IssueDetail>,
+  dirtyFields: { [key: string]: boolean | undefined }
+) {
   const changedFields = {};
 
-  const dirtyFieldKeys = Object.keys(dirtyFields) as (keyof TIssue)[];
+  const dirtyFieldKeys = Object.keys(dirtyFields) as (keyof IssueDetail)[];
   for (const dirtyField of dirtyFieldKeys) {
     if (dirtyFields[dirtyField]) {
       set(changedFields, [dirtyField], formData[dirtyField]);
     }
   }
 
-  return changedFields as Partial<TIssue>;
+  return changedFields as Partial<IssueDetail>;
 }

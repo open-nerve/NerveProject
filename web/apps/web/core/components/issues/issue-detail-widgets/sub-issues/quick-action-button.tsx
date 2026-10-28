@@ -4,12 +4,14 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { AddOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-import type { TIssue } from "@nerve/types";
+
 import { CustomMenu } from "@nerve/ui";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -42,7 +44,7 @@ export const SubIssuesActionButton = observer(function SubIssuesActionButton(pro
   const handleIssueCrudState = (
     key: "create" | "existing",
     _parentIssueId: string | null,
-    issue: TIssue | null = null
+    issue: Issue | null = null
   ) => {
     setIssueCrudOperationState({
       ...issueCrudOperationState,

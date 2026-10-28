@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+
+import type { Issue } from "@nerve/api-client";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import type { FieldValues, UseFormProps } from "react-hook-form";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { TIssue } from "@nerve/types";
+
 import { EIssueLayoutTypes } from "@nerve/types";
 import { heldChange } from "@/lib/auth/fake-tab";
 import { projectOf } from "@/store/project/fake-projects";
@@ -54,8 +56,12 @@ vi.mock("react-hook-form", async (original) => {
 });
 vi.mock("@nerve/propel/toast", () => ({ setPromiseToast: observed.toast }));
 vi.mock("../../create-issue-toast-action-items", () => ({ CreateIssueToastActionItems: () => null }));
+const projectA = projectOf("A", "workspace", { id: "A" });
+const projectB = projectOf("B", "other-workspace", { id: "B" });
 vi.mock("@/hooks/store/use-project", () => ({
-  useProject: () => ({ getProjectById: (id: string) => projectOf(id, "workspace") }),
+  useProject: () => ({
+    getProjectById: (id: string) => (id === projectA.id ? projectA : id === projectB.id ? projectB : undefined),
+  }),
 }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -97,7 +103,7 @@ async function expectPending(value: string) {
 it.each(Object.values(EIssueLayoutTypes))(
   "%s keeps first request pending after a second real RHF submit completes",
   async (layout) => {
-    const change = heldChange<TIssue | undefined>();
+    const change = heldChange<Issue | undefined>();
     const create = vi.fn(() => change.sent);
     await act(async () =>
       root.render(
@@ -124,7 +130,7 @@ it.each(Object.values(EIssueLayoutTypes))(
     await expectPending("First");
     expect(observed.toast).toHaveBeenCalledTimes(1);
     await act(async () => {
-      change.answer(issueOf("R1"));
+      change.answer(issueOf("R1", projectA.id, projectA.workspace_id));
       await observed.submissions[0];
     });
     expect(input().value).toBe("");
@@ -134,8 +140,8 @@ it.each(Object.values(EIssueLayoutTypes))(
 );
 
 it.each(["reject", "undefined"])("%s retains input for retry", async (failure) => {
-  const change = heldChange<TIssue | undefined>();
-  const retry = heldChange<TIssue | undefined>();
+  const change = heldChange<Issue | undefined>();
+  const retry = heldChange<Issue | undefined>();
   const create = vi.fn().mockReturnValueOnce(change.sent).mockReturnValueOnce(retry.sent);
   await act(async () =>
     root.render(<QuickAddIssueRoot isQuickAddOpen layout={EIssueLayoutTypes.LIST} quickAddCallback={create} />)
@@ -153,14 +159,14 @@ it.each(["reject", "undefined"])("%s retains input for retry", async (failure) =
   await act(async () => submit());
   expect(create).toHaveBeenCalledTimes(2);
   await act(async () => {
-    retry.answer(issueOf("R2"));
+    retry.answer(issueOf("R2", projectA.id, projectA.workspace_id));
     await observed.submissions[1];
   });
 });
 
 it.each(["resolve", "reject"])("A %s cannot reset B or release B's pending owner", async (settling) => {
-  const a = heldChange<TIssue | undefined>();
-  const b = heldChange<TIssue | undefined>();
+  const a = heldChange<Issue | undefined>();
+  const b = heldChange<Issue | undefined>();
   const create = vi.fn().mockReturnValueOnce(a.sent).mockReturnValueOnce(b.sent);
   const render = () =>
     root.render(<QuickAddIssueRoot isQuickAddOpen layout={EIssueLayoutTypes.LIST} quickAddCallback={create} />);
@@ -175,11 +181,13 @@ it.each(["resolve", "reject"])("A %s cannot reset B or release B's pending owner
   await name("Second");
   await act(async () => submit());
   await act(async () => {
-    if (settling === "resolve") a.answer(issueOf("A1"));
+    if (settling === "resolve") a.answer(issueOf("A1", projectA.id, projectA.workspace_id));
     else a.refuse(new Error("refused"));
     await observed.submissions[0]?.catch(() => {});
   });
-  const originalAction = observed.toast.mock.calls[0]![1].success.actionItems(issueOf("A1"));
+  const originalAction = observed.toast.mock.calls[0]![1].success.actionItems(
+    issueOf("A1", projectA.id, projectA.workspace_id)
+  );
   expect(originalAction.props).toMatchObject({ workspaceSlug: "ws", projectId: "A", issueId: "A1" });
   await expectPending("Second");
   await act(async () => {
@@ -192,7 +200,7 @@ it.each(["resolve", "reject"])("A %s cannot reset B or release B's pending owner
   expect(create).toHaveBeenCalledTimes(2);
   await expectPending("Second");
   await act(async () => {
-    b.answer(issueOf("B1", "B"));
+    b.answer(issueOf("B1", projectB.id, projectB.workspace_id));
     await observed.submissions[1];
   });
   expect(input().value).toBe("");
@@ -200,7 +208,7 @@ it.each(["resolve", "reject"])("A %s cannot reset B or release B's pending owner
 });
 
 it.each(["resolve", "reject"])("unmount consumes a late %s without local effects", async (settling) => {
-  const change = heldChange<TIssue | undefined>();
+  const change = heldChange<Issue | undefined>();
   await act(async () =>
     root.render(
       <QuickAddIssueRoot isQuickAddOpen layout={EIssueLayoutTypes.LIST} quickAddCallback={() => change.sent} />
@@ -210,7 +218,7 @@ it.each(["resolve", "reject"])("unmount consumes a late %s without local effects
   await act(async () => submit());
   await act(async () => root.render(null));
   await act(async () => {
-    if (settling === "resolve") change.answer(issueOf("R1"));
+    if (settling === "resolve") change.answer(issueOf("R1", projectA.id, projectA.workspace_id));
     else change.refuse(new Error("refused"));
     await observed.submissions[0];
   });
@@ -218,9 +226,13 @@ it.each(["resolve", "reject"])("unmount consumes a late %s without local effects
 });
 
 it("keeps editable prefill but never sends entity identity or audit fields", async () => {
-  const change = heldChange<TIssue | undefined>();
+  const change = heldChange<Issue | undefined>();
   const create = vi.fn(() => change.sent);
-  const prefill = { ...issueOf("local-id"), tempId: "local-pending", state__group: "completed" as const };
+  const prefill = {
+    ...issueOf("local-id", projectA.id, projectA.workspace_id),
+    tempId: "local-pending",
+    state__group: "completed" as const,
+  };
   await act(async () =>
     root.render(
       <QuickAddIssueRoot
@@ -247,7 +259,7 @@ it("keeps editable prefill but never sends entity identity or audit fields", asy
     },
   ]);
   await act(async () => {
-    change.answer(issueOf("R1"));
+    change.answer(issueOf("R1", projectA.id, projectA.workspace_id));
     await observed.submissions[0];
   });
 });

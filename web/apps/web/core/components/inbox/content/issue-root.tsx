@@ -4,13 +4,15 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue, TNameDescriptionLoader } from "@nerve/types";
+import type { TNameDescriptionLoader } from "@nerve/types";
 import { EFileAssetType, EInboxIssueSource, EInboxIssueStatus } from "@nerve/types";
 // components
 import { DescriptionVersionsRoot } from "@/components/core/description-versions";
@@ -94,7 +96,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
           });
         }
       },
-      update: async (_workspaceSlug: string, _projectId: string, _issueId: string, data: Partial<TIssue>) => {
+      update: async (_workspaceSlug: string, _projectId: string, _issueId: string, data: Partial<IssueDetail>) => {
         try {
           await inboxIssue.updateIssue(data);
         } catch (_error) {
@@ -178,7 +180,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
                 createdByDisplayName:
                   inboxIssue.source === EInboxIssueSource.FORMS
                     ? "Intake Form user"
-                    : (getUserDetails(issue.created_by ?? "")?.display_name ?? ""),
+                    : (getUserDetails(issue.created_by_id ?? "")?.display_name ?? ""),
                 id: issue.id,
                 isRestoreDisabled: !isEditable,
               }}

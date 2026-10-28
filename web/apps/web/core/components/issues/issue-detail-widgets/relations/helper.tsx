@@ -4,18 +4,20 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import { useMemo } from "react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue } from "@nerve/types";
+
 import { copyUrlToClipboard } from "@nerve/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 
 export type TRelationIssueOperations = {
   copyLink: (path: string) => void;
-  update: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
+  update: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<IssueDetail>) => Promise<void>;
   remove: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 };
 

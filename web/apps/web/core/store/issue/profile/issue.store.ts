@@ -4,11 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { action, observable, makeObservable, computed, runInAction } from "mobx";
 // base class
 import type { ApiClient } from "@nerve/api-client";
-import type { TIssue, TLoader, IssuePaginationOptions, TIssuesResponse, ViewFlags, TProfileViews } from "@nerve/types";
+import type { TLoader, IssuePaginationOptions, TIssuesResponse, ViewFlags, TProfileViews } from "@nerve/types";
 import { UserService } from "@/services/user.service";
 
 // types
@@ -43,7 +45,7 @@ export interface IProfileIssues extends IBaseIssuesStore {
     subGroupId?: string
   ) => Promise<TIssuesResponse | undefined>;
 
-  createIssue: (workspaceSlug: string, projectId: string, data: Partial<TIssue>) => Promise<TIssue>;
+  createIssue: (workspaceSlug: string, projectId: string, data: Partial<IssueDetail>) => Promise<Issue>;
   updateIssue: (
     workspaceSlug: string,
     projectId: string,

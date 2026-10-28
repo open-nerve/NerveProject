@@ -4,12 +4,14 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { ChevronRightOutline, CloseOutline, DeleteOutline, EditOutline, LinkOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TIssue, TSubIssueOperations } from "@nerve/types";
+import type { TSubIssueOperations } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { ControlLink, CustomMenu } from "@nerve/ui";
 import { cn, generateWorkItemLink } from "@nerve/utils";
@@ -37,7 +39,7 @@ type Props = {
   handleIssueCrudState: (
     key: "create" | "existing" | "update" | "delete",
     issueId: string,
-    issue?: TIssue | null
+    issue?: Issue | null
   ) => void;
   subIssueOperations: TSubIssueOperations;
   issueId: string;
@@ -85,7 +87,7 @@ export const SubIssuesListItem = observer(function SubIssuesListItem(props: Prop
   const displayProperties = subIssueFilters?.displayProperties ?? {};
 
   //
-  const handleIssuePeekOverview = (issue: TIssue) => handleRedirection(workspaceSlug, issue, isMobile);
+  const handleIssuePeekOverview = (issue: Issue) => handleRedirection(workspaceSlug, issue, isMobile);
 
   if (!issue) return <></>;
 

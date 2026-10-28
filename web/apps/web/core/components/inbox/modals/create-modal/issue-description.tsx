@@ -4,13 +4,15 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import type { RefObject } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { ETabIndices } from "@nerve/constants";
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
-import type { TIssue } from "@nerve/types";
+
 import { EFileAssetType } from "@nerve/types";
 import { Loader } from "@nerve/ui";
 import { getDescriptionPlaceholderI18n, getTabIndex } from "@nerve/utils";
@@ -30,8 +32,11 @@ type TInboxIssueDescription = {
   workspaceSlug: string;
   projectId: string;
   workspaceId: string;
-  data: Partial<TIssue>;
-  handleData: (issueKey: keyof Partial<TIssue>, issueValue: Partial<TIssue>[keyof Partial<TIssue>]) => void;
+  data: Partial<IssueDetail>;
+  handleData: (
+    issueKey: keyof Partial<IssueDetail>,
+    issueValue: Partial<IssueDetail>[keyof Partial<IssueDetail>]
+  ) => void;
   editorRef: RefObject<EditorRefApi | null>;
   onEnterKeyPress?: (e?: any) => void;
   onAssetUpload?: (assetId: string) => void;

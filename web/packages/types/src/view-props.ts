@@ -4,8 +4,10 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { FC } from "react";
-import type { TIssue } from "./issues/issue";
+
 import type { LOGICAL_OPERATOR, TSupportedOperators } from "./rich-filters";
 import type { CompleteOrEmpty } from "./utils";
 
@@ -190,8 +192,8 @@ export interface IssuePaginationOptions {
 }
 
 export type TSpreadsheetColumn = FC<{
-  issue: TIssue;
+  issue: Issue;
   onClose: () => void;
-  onChange: (issue: TIssue, data: Partial<TIssue>, updates: any) => void;
+  onChange: (issue: Issue, data: Partial<IssueDetail>, updates: any) => void;
   disabled: boolean;
 }>;

@@ -4,8 +4,10 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import type { ICycle } from "./cycle";
-import type { TIssue } from "./issues/issue";
+
 import type { IModule } from "./module";
 import type { Workspace, MemberUser, Project } from "@nerve/api-client";
 
@@ -26,13 +28,13 @@ type TProjectSearchResponse = {
 };
 
 type TIssueSearchResponse = {
-  name: TIssue["name"];
-  id: TIssue["id"];
-  sequence_id: TIssue["sequence_id"];
+  name: Issue["name"];
+  id: Issue["id"];
+  sequence_id: Issue["sequence_id"];
   project__identifier: Project["identifier"];
-  project_id: TIssue["project_id"];
-  priority: TIssue["priority"];
-  state_id: TIssue["state_id"];
+  project_id: Issue["project_id"];
+  priority: Issue["priority"];
+  state_id: Issue["state_id"];
 };
 
 type TCycleSearchResponse = {

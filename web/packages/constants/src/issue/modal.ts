@@ -4,10 +4,11 @@
  * See the LICENSE file for details.
  */
 
-// nerve imports
-import type { TIssue } from "@nerve/types";
+import type { IssueDetail } from "@nerve/api-client";
 
-export const DEFAULT_WORK_ITEM_FORM_VALUES: Partial<TIssue> = {
+// nerve imports
+
+export const DEFAULT_WORK_ITEM_FORM_VALUES: Partial<IssueDetail> = {
   project_id: "",
   name: "",
   description_html: "",

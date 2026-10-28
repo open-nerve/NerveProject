@@ -4,12 +4,14 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { format } from "date-fns";
 import { get, set } from "lodash-es";
 // nerve imports
 import { COMPLETED_STATE_GROUPS, STATE_DISTRIBUTION } from "@nerve/constants";
 import type { State } from "@nerve/api-client";
-import type { ICycle, IModule, TIssue } from "@nerve/types";
+import type { ICycle, IModule } from "@nerve/types";
 // helper
 import { getDate } from "./datetime";
 
@@ -42,8 +44,8 @@ export type DistributionUpdates = {
  * @returns
  */
 export const getDistributionPathsPostUpdate = (
-  prevIssueState: TIssue | undefined,
-  nextIssueState: TIssue | undefined,
+  prevIssueState: Pick<Issue, "state_id" | "assignee_ids" | "label_ids" | "completed_at"> | undefined,
+  nextIssueState: Pick<Issue, "state_id" | "assignee_ids" | "label_ids" | "completed_at"> | undefined,
   stateMap: Record<string, State>
 ): DistributionUpdates => {
   const prevIssueDistribution = getDistributionDataOfIssue(prevIssueState, -1, stateMap);
@@ -81,7 +83,7 @@ export const getDistributionPathsPostUpdate = (
  * @returns
  */
 const getDistributionDataOfIssue = (
-  issue: TIssue | undefined,
+  issue: Pick<Issue, "state_id" | "assignee_ids" | "label_ids" | "completed_at"> | undefined,
   multiplier: -1 | 1,
   stateMap: Record<string, State>
 ): DistributionUpdates & { chartUpdates: ChartUpdates } => {

@@ -4,7 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssue, TWorkspaceDraftIssue, TWorkspaceDraftPaginationInfo } from "@nerve/types";
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
+import type { TWorkspaceDraftIssue, TWorkspaceDraftPaginationInfo } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 
@@ -30,7 +32,7 @@ export class WorkspaceDraftService extends APIService {
 
   async createIssue(
     workspaceSlug: string,
-    payload: Partial<TWorkspaceDraftIssue | TIssue>
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
   ): Promise<TWorkspaceDraftIssue | undefined> {
     return this.post(`/api/workspaces/${workspaceSlug}/draft-issues/`, payload)
       .then((response) => response?.data)
@@ -42,7 +44,7 @@ export class WorkspaceDraftService extends APIService {
   async updateIssue(
     workspaceSlug: string,
     issueId: string,
-    payload: Partial<TWorkspaceDraftIssue | TIssue>
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
   ): Promise<TWorkspaceDraftIssue | undefined> {
     return this.patch(`/api/workspaces/${workspaceSlug}/draft-issues/${issueId}/`, payload)
       .then((response) => response?.data)
@@ -62,8 +64,8 @@ export class WorkspaceDraftService extends APIService {
   async moveIssue(
     workspaceSlug: string,
     issueId: string,
-    payload: Partial<TWorkspaceDraftIssue | TIssue>
-  ): Promise<TIssue> {
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
+  ): Promise<Issue> {
     return this.post(`/api/workspaces/${workspaceSlug}/draft-to-issue/${issueId}/`, payload)
       .then((response) => response?.data)
       .catch((error) => {

@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import { useCallback } from "react";
 import { useParams } from "react-router";
 import { Signal, TicketCheck } from "lucide-react";
@@ -22,7 +24,7 @@ import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import type { Label } from "@nerve/api-client";
-import type { TIssue, TIssuePriorities } from "@nerve/types";
+import type { TIssuePriorities } from "@nerve/types";
 import { EUserPermissions } from "@nerve/types";
 import { copyTextToClipboard } from "@nerve/utils";
 // components
@@ -64,7 +66,7 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
     ) && !entityDetails?.archived_at;
 
   const handleUpdateEntity = useCallback(
-    async (formData: Partial<TIssue>) => {
+    async (formData: Partial<IssueDetail>) => {
       if (!workspaceSlug || !entityDetails || !entityDetails.project_id) return;
       await updateIssue(workspaceSlug, entityDetails.project_id, entityDetails.id, formData).catch(() => {
         setToast({

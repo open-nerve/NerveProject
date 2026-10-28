@@ -4,8 +4,10 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import type { ReactElement } from "react";
-import type { TIssue } from "./issues/issue";
+
 import type {
   IIssueDisplayProperties,
   TIssueExtraOptions,
@@ -49,13 +51,9 @@ export interface IGroupByColumn {
   id: string;
   name: string;
   icon?: ReactElement | undefined;
-  payload: Partial<TIssue>;
+  payload: Partial<IssueDetail>;
   isDropDisabled?: boolean;
   dropErrorMessage?: string;
-}
-
-export interface IIssueMap {
-  [key: string]: TIssue;
 }
 
 export interface ILayoutDisplayFiltersOptions {

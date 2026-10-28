@@ -4,11 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { ETabIndices } from "@nerve/constants";
 import { ParentOutline } from "@makeplane/propel/icons";
-import type { ISearchIssueResponse, TIssue } from "@nerve/types";
+import type { ISearchIssueResponse } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";
 import { renderFormattedPayloadDate, getDate, getTabIndex } from "@nerve/utils";
 // components
@@ -22,8 +24,11 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TInboxIssueProperties = {
   projectId: string;
-  data: Partial<TIssue>;
-  handleData: (issueKey: keyof Partial<TIssue>, issueValue: Partial<TIssue>[keyof Partial<TIssue>]) => void;
+  data: Partial<IssueDetail>;
+  handleData: (
+    issueKey: keyof Partial<IssueDetail>,
+    issueValue: Partial<IssueDetail>[keyof Partial<IssueDetail>]
+  ) => void;
   isVisible?: boolean;
 };
 

@@ -4,13 +4,15 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 // nerve imports
 import type { SyntheticEvent } from "react";
 import { useMemo } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { DueDateOutline, StartDateOutline } from "@makeplane/propel/icons";
-import type { IIssueDisplayProperties, TIssue } from "@nerve/types";
+import type { IIssueDisplayProperties } from "@nerve/types";
 import { getDate, renderFormattedPayloadDate, shouldHighlightIssueDueDate } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
@@ -32,11 +34,11 @@ type Props = {
     projectId: string,
     parentIssueId: string,
     issueId: string,
-    issueData: Partial<TIssue>,
-    oldIssue?: Partial<TIssue>
+    issueData: Partial<IssueDetail>,
+    oldIssue?: Partial<IssueDetail>
   ) => Promise<void>;
   displayProperties?: IIssueDisplayProperties;
-  issue: TIssue;
+  issue: Issue;
 };
 
 export const SubIssuesListItemProperties = observer(function SubIssuesListItemProperties(props: Props) {

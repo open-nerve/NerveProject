@@ -4,9 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 // nerve imports
-import type { TInboxIssue, TIssue, TInboxIssueWithPagination } from "@nerve/types";
+import type { TInboxIssue, TInboxIssueWithPagination } from "@nerve/types";
 import { EInboxIssueSource } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
@@ -32,7 +34,7 @@ export class InboxIssueService extends APIService {
       });
   }
 
-  async create(workspaceSlug: string, projectId: string, data: Partial<TIssue>): Promise<TInboxIssue> {
+  async create(workspaceSlug: string, projectId: string, data: Partial<IssueDetail>): Promise<TInboxIssue> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/inbox-issues/`, {
       source: EInboxIssueSource.IN_APP,
       issue: data,

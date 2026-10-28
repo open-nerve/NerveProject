@@ -127,7 +127,7 @@ function envelope(): TInboxIssue {
     snoozed_till: null,
     duplicate_to: undefined,
     source: EInboxIssueSource.IN_APP,
-    issue: issueOf("R1", project.id),
+    issue: issueOf("R1", project.id, project.workspace_id),
     created_by: "actor",
     duplicate_issue_detail: undefined,
   };

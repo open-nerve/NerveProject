@@ -1,9 +1,11 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+
+import type { Issue, IssueDetail } from "@nerve/api-client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { configure, runInAction } from "mobx";
 // MobX actions remain real; configurable descriptors allow call-through observations.
 configure({ safeDescriptors: false });
-import type { TInboxIssue, TIssue } from "@nerve/types";
+import type { TInboxIssue } from "@nerve/types";
 import { EInboxIssueStatus, EInboxIssueSource } from "@nerve/types";
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import { heldChange } from "@/lib/auth/fake-tab";
@@ -56,7 +58,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function envelope(issue: TIssue): TInboxIssue {
+function envelope(issue: Issue | IssueDetail): TInboxIssue {
   return {
     id: "inbox-row",
     status: EInboxIssueStatus.PENDING,
@@ -69,7 +71,10 @@ function envelope(issue: TIssue): TInboxIssue {
   };
 }
 function local(html?: string) {
-  const row = envelope({ ...issueOf("R1", project.id), ...(html === undefined ? {} : { description_html: html }) });
+  const row = envelope({
+    ...issueOf("R1", project.id, project.workspace_id),
+    ...(html === undefined ? {} : { description_html: html }),
+  });
   app.projectInbox.createOrUpdateInboxIssue([row], ws.slug, project.id);
   return app.projectInbox.getIssueInboxByIssueId(row.issue.id)!;
 }
@@ -117,7 +122,7 @@ it("retrieve then accept uses response required fields and retains the one known
   activities();
   vi.spyOn(app.issue.issueDetail, "fetchComments").mockResolvedValue([]);
   vi.spyOn(app.issue.issueDetail, "fetchReactions").mockResolvedValue([]);
-  const row = envelope({ ...issueOf("R1", project.id), description_html: "<p>retrieved</p>", issue_link: [] });
+  const row = envelope({ ...issueOf("R1", project.id, project.workspace_id), description_html: "<p>retrieved</p>" });
   const get = vi.spyOn(InboxIssueService.prototype, "get").mockResolvedValue(reply(row));
   await app.projectInbox.fetchInboxIssueById(ws.slug, project.id, "R1");
   expect(get).toHaveBeenCalledExactlyOnceWith(
@@ -127,12 +132,12 @@ it("retrieve then accept uses response required fields and retains the one known
   expect(store.issue.description_html).toBe("<p>retrieved</p>");
   expect(app.issue.issues.getIssueById("R1")).toBeUndefined();
   const response = {
-    ...issueOf("R1", project.id),
+    ...issueOf("R1", project.id, project.workspace_id),
     name: "server",
     sequence_id: 9,
     sort_order: 99,
     priority: "high" as const,
-    created_by: "response-actor",
+    created_by_id: "response-actor",
   };
   const add = vi.spyOn(app.issue.issues, "addIssue");
   const patch = vi
@@ -148,7 +153,7 @@ it("retrieve then accept uses response required fields and retains the one known
 it.each(["<p>edited</p>", ""])("successful edit then accept retains actual string HTML (%s)", async (html) => {
   activities();
   const store = local();
-  const response = issueOf("R1", project.id);
+  const response = issueOf("R1", project.id, project.workspace_id);
   const patch = vi.spyOn(InboxIssueService.prototype, "patch").mockResolvedValue(reply(envelope(response)));
   await store.updateIssue({ description_html: html, skip_activity: "true" });
   expect(store.issue).not.toHaveProperty("skip_activity");
@@ -167,7 +172,7 @@ it.each([
   async ({ localHtml, responseHtml }) => {
     const store = local(localHtml);
     const response = {
-      ...issueOf("R1", project.id),
+      ...issueOf("R1", project.id, project.workspace_id),
       ...(responseHtml === undefined ? {} : { description_html: responseHtml }),
     };
     const add = vi.spyOn(app.issue.issues, "addIssue");
@@ -203,7 +208,7 @@ it.each([false, true])("empty HTML edits stay actual empty strings with optional
   const request = { description_html: "", ...(withContext ? { skip_activity: "true" } : {}) };
   const patch = vi
     .spyOn(InboxIssueService.prototype, "patch")
-    .mockResolvedValue(reply(envelope(issueOf("R1", project.id))));
+    .mockResolvedValue(reply(envelope(issueOf("R1", project.id, project.workspace_id))));
   await store.updateIssue(request);
   expect(patch).toHaveBeenCalledExactlyOnceWith(`/api/workspaces/${ws.slug}/projects/${project.id}/inbox-issues/R1/`, {
     issue: request,

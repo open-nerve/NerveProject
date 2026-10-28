@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { useState } from "react";
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { observer } from "mobx-react";
@@ -13,7 +15,7 @@ import { useTranslation } from "@nerve/i18n";
 // nerve imports
 import { AddOutline } from "@makeplane/propel/icons";
 import { setPromiseToast } from "@nerve/propel/toast";
-import type { ISearchIssueResponse, TIssue } from "@nerve/types";
+import type { ISearchIssueResponse } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
@@ -24,8 +26,8 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { QuickAddIssueRoot } from "../quick-add";
 
 type TCalendarQuickAddIssueActions = {
-  prePopulatedData?: Partial<TIssue>;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<TIssue>) => Promise<TIssue | undefined>;
+  prePopulatedData?: Partial<IssueDetail>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   onOpen?: () => void;
 };
 

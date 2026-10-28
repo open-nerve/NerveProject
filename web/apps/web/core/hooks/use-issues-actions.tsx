@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useMemo } from "react";
@@ -15,7 +17,6 @@ import type {
   IIssueDisplayFilterOptions,
   IIssueDisplayProperties,
   IssuePaginationOptions,
-  TIssue,
   TIssuesResponse,
   TLoader,
   TProfileViews,
@@ -32,7 +33,7 @@ export interface IssueActions {
   ) => Promise<TIssuesResponse | undefined>;
   fetchNextIssues: (groupId?: string, subGroupId?: string) => Promise<TIssuesResponse | undefined>;
   removeIssue: (projectId: string | undefined | null, issueId: string) => Promise<void>;
-  createIssue?: (projectId: string | undefined | null, data: Partial<TIssue>) => Promise<TIssue | undefined>;
+  createIssue?: (projectId: string | undefined | null, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   updateIssue?: (
     projectId: string | undefined | null,
     issueId: string,
@@ -92,7 +93,7 @@ const useProjectIssueActions = () => {
   );
 
   const createIssue = useCallback(
-    async (projectId: string | undefined | null, data: Partial<TIssue>) => {
+    async (projectId: string | undefined | null, data: Partial<IssueDetail>) => {
       if (!workspaceSlug || !projectId) return;
       return await issues.createIssue(workspaceSlug, projectId, data);
     },
@@ -164,7 +165,7 @@ const useProfileIssueActions = () => {
   );
 
   const createIssue = useCallback(
-    async (projectId: string | undefined | null, data: Partial<TIssue>) => {
+    async (projectId: string | undefined | null, data: Partial<IssueDetail>) => {
       if (!workspaceSlug || !projectId) return;
       return await issues.createIssue(workspaceSlug, projectId, data);
     },
@@ -289,14 +290,14 @@ const useWorkspaceDraftIssueActions = () => {
   }, [workspaceSlug, issues]);
 
   const createIssue = useCallback(
-    async (projectId: string | undefined | null, data: Partial<TIssue>) => {
+    async (projectId: string | undefined | null, data: Partial<IssueDetail>) => {
       if (!workspaceSlug || !projectId) return;
       return await issues.createIssue(workspaceSlug, data);
     },
     [issues, workspaceSlug]
   );
   const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: Partial<TIssue>) => {
+    async (projectId: string | undefined | null, issueId: string, data: Partial<IssueDetail>) => {
       if (!workspaceSlug || !projectId) return;
       return await issues.updateIssue(workspaceSlug, issueId, data);
     },
@@ -311,7 +312,7 @@ const useWorkspaceDraftIssueActions = () => {
   );
 
   // const moveToIssue = useCallback(
-  //   async (workspaceSlug: string, issueId: string, data: Partial<TIssue>) => {
+  //   async (workspaceSlug: string, issueId: string, data: Partial<IssueDetail>) => {
   //     if (!workspaceSlug || !issueId || !data) return;
   //     return await issues.moveToIssues(workspaceSlug, issueId, data);
   //   },

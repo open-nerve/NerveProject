@@ -4,10 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { useRef } from "react";
 import { observer } from "mobx-react";
 // types
-import type { IIssueDisplayProperties, TIssue } from "@nerve/types";
+import type { IIssueDisplayProperties } from "@nerve/types";
 // constants
 import { SPREADSHEET_COLUMNS } from "../utils";
 // components
@@ -15,10 +17,10 @@ import { WithDisplayPropertiesHOC } from "../properties/with-display-properties-
 
 type Props = {
   displayProperties: IIssueDisplayProperties;
-  issueDetail: TIssue;
+  issueDetail: Issue;
   disableUserActions: boolean;
   property: keyof IIssueDisplayProperties;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
 };
 
 export const IssueColumn = observer(function IssueColumn(props: Props) {
@@ -30,7 +32,7 @@ export const IssueColumn = observer(function IssueColumn(props: Props) {
 
   if (!Column) return null;
 
-  const handleUpdateIssue = async (issue: TIssue, data: Partial<TIssue>) => {
+  const handleUpdateIssue = async (issue: Issue, data: Partial<IssueDetail>) => {
     if (updateIssue) await updateIssue(issue.project_id, issue.id, data);
   };
 

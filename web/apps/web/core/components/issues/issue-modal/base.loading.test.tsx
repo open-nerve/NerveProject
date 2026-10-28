@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+
+import type { Issue } from "@nerve/api-client";
 import React, { act, forwardRef, useImperativeHandle } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi, type MockInstance } from "vitest";
@@ -12,7 +14,7 @@ configure({ safeDescriptors: false });
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import { APIService } from "@/services/api.service";
 import { heldChange } from "@/lib/auth/fake-tab";
-import { EIssuesStoreType, type TIssue } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
 import { issueOf } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
@@ -125,9 +127,9 @@ let get: MockInstance<APIService["get"]>;
 let failure: string | undefined;
 let sourceHasHtml: boolean;
 let sourceHtml: string;
-function core(id: string): TIssue {
+function core(id: string): Issue {
   return {
-    ...issueOf(id, project.id),
+    ...issueOf(id, project.id, project.workspace_id),
     parent_id: "parent",
     ...(sourceHasHtml ? { description_html: sourceHtml } : {}),
   };
@@ -136,7 +138,7 @@ beforeEach(() => {
   vi.useRealTimers();
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.stubGlobal("ResizeObserver", NoResize);
-  ui.create.mockReset().mockResolvedValue(issueOf("created", project.id));
+  ui.create.mockReset().mockResolvedValue(issueOf("created", project.id, project.workspace_id));
   ui.update.mockReset();
   ui.close.mockReset();
   ui.draft.mockReset().mockResolvedValue(undefined);
@@ -160,7 +162,7 @@ beforeEach(() => {
   get = vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
     if (failure && url.endsWith(failure)) throw { response: { data: { code: "resource-refused" } } };
     if (url.endsWith("/reactions/") || url.endsWith("/issue-links/")) return reply([]);
-    if (url.endsWith("/issues/parent/")) return reply(issueOf("parent", project.id));
+    if (url.endsWith("/issues/parent/")) return reply(issueOf("parent", project.id, project.workspace_id));
     return reply(core(url.split("/").at(-2)!));
   });
   container = document.createElement("div");
@@ -227,7 +229,7 @@ it.each(["/reactions/", "/issue-links/", "/issues/parent/"])(
 it.each(["resolve", "reject"])(
   "an old source settling after replacement cannot change current form or load state (%s)",
   async (settling) => {
-    const old = heldChange<AxiosResponse<TIssue>>();
+    const old = heldChange<AxiosResponse<Issue>>();
     const fallback = get.getMockImplementation()!;
     get.mockImplementation((url, ...args) => (url.endsWith("/issues/old/") ? old.sent : fallback(url, ...args)));
     await render("old");
@@ -251,7 +253,7 @@ it.each(["resolve", "reject"])(
   }
 );
 it("closing during load consumes its late failure and reopening can load another source", async () => {
-  const old = heldChange<AxiosResponse<TIssue>>();
+  const old = heldChange<AxiosResponse<Issue>>();
   const fallback = get.getMockImplementation()!;
   get.mockImplementation((url, ...args) => (url.endsWith("/issues/old/") ? old.sent : fallback(url, ...args)));
   await render("old");

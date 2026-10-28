@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssue } from "@nerve/types";
+import type { IssueDetail } from "@nerve/api-client";
 
 export const handleDragDrop = async (
   issueId: string,
@@ -12,7 +12,7 @@ export const handleDragDrop = async (
   destinationDate: string,
   workspaceSlug: string | undefined,
   projectId: string | undefined,
-  updateIssue?: (projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>
+  updateIssue?: (projectId: string, issueId: string, data: Partial<IssueDetail>) => Promise<void>
 ) => {
   if (!workspaceSlug || !projectId || !updateIssue) return;
 

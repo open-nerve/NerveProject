@@ -4,11 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import React from "react";
 import { observer } from "mobx-react";
 import { DueDateOutline } from "@makeplane/propel/icons";
 // types
-import type { TIssue } from "@nerve/types";
+
 import { cn, getDate, renderFormattedPayloadDate, shouldHighlightIssueDueDate } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
@@ -16,9 +18,9 @@ import { DateDropdown } from "@/components/dropdowns/date";
 import { useProjectState } from "@/hooks/store/use-project-state";
 
 type Props = {
-  issue: TIssue;
+  issue: Issue;
   onClose: () => void;
-  onChange: (issue: TIssue, data: Partial<TIssue>, updates: any) => void;
+  onChange: (issue: Issue, data: Partial<IssueDetail>, updates: any) => void;
   disabled: boolean;
 };
 

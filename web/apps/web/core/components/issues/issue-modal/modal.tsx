@@ -4,11 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import type { IssueFormData } from "./types";
 import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { EIssuesStoreType, TIssue, TWorkspaceDraftIssue } from "@nerve/types";
+import type { EIssuesStoreType, TWorkspaceDraftIssue } from "@nerve/types";
 // local imports
 import { CreateUpdateIssueModalBase } from "./base";
 import { IssueModalProvider } from "./provider";
@@ -36,7 +38,7 @@ interface CommonIssuesModalProps {
 export type IssuesModalProps = CommonIssuesModalProps &
   (
     | { isDraft: true; onSubmit?: (res: TWorkspaceDraftIssue) => Promise<void> }
-    | { isDraft?: false; onSubmit?: (res: TIssue) => Promise<void> }
+    | { isDraft?: false; onSubmit?: (res: Issue) => Promise<void> }
   );
 
 export const CreateUpdateIssueModal = observer(function CreateUpdateIssueModal(props: IssuesModalProps) {

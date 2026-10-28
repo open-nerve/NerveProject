@@ -4,10 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
 // nerve types
-import type { TIssue } from "@nerve/types";
+
 import { Spinner } from "@nerve/ui";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
@@ -16,7 +18,7 @@ import { PowerKProjectStatesMenuItems } from "./state-menu-item";
 
 type Props = {
   handleSelect: (stateId: string) => void;
-  workItemDetails: TIssue;
+  workItemDetails: Issue;
 };
 
 export const PowerKProjectStatesMenu = observer(function PowerKProjectStatesMenu(props: Props) {

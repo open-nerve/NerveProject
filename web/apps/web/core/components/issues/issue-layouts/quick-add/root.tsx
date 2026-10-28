@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { FC } from "react";
 import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
@@ -15,15 +17,15 @@ import { useTranslation } from "@nerve/i18n";
 import { AddOutline } from "@makeplane/propel/icons";
 import { setPromiseToast } from "@nerve/propel/toast";
 import type { Project } from "@nerve/api-client";
-import type { TIssue, EIssueLayoutTypes } from "@nerve/types";
+import type { EIssueLayoutTypes } from "@nerve/types";
 import { cn } from "@nerve/utils";
 // local imports
 import { QuickAddIssueFormRoot } from "./form";
 import { CreateIssueToastActionItems } from "../../create-issue-toast-action-items";
 
-type QuickAddValues = Pick<TIssue, "name">;
+type QuickAddValues = Pick<Issue, "name">;
 type QuickAddPrefill = Partial<
-  Pick<TIssue, "state_id" | "priority" | "assignee_ids" | "label_ids" | "start_date" | "target_date" | "parent_id">
+  Pick<Issue, "state_id" | "priority" | "assignee_ids" | "label_ids" | "start_date" | "target_date" | "parent_id">
 >;
 
 export type TQuickAddIssueForm = {
@@ -47,7 +49,7 @@ type TQuickAddIssueRoot = {
   customQuickAddButton?: React.ReactNode;
   containerClassName?: string;
   setIsQuickAddOpen?: (isOpen: boolean) => void;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<TIssue>) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
 };
 
 const defaultValues: QuickAddValues = {
@@ -145,7 +147,7 @@ const QuickAddIssueScope = observer(function QuickAddIssueScope(
         if (!issue) throw new Error(t("common.error.message"));
         return issue;
       });
-      setPromiseToast<TIssue>(quickAddPromise, {
+      setPromiseToast<Issue>(quickAddPromise, {
         loading: t("issue.adding"),
         success: {
           title: t("common.success"),

@@ -4,9 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
 // nerve imports
-import type { TGroupedIssues, TIssue, TIssueMap, TPaginationData, ICalendarDate, ICalendarWeek } from "@nerve/types";
+import type { TGroupedIssues, TPaginationData, ICalendarDate, ICalendarWeek } from "@nerve/types";
 import { cn, getOrderedDays, renderFormattedPayloadDate } from "@nerve/utils";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
@@ -17,7 +19,7 @@ import { CalendarDayTile } from "./day-tile";
 
 type Props = {
   issuesFilterStore: IProjectIssuesFilter;
-  issues: TIssueMap | undefined;
+  issues: Record<string, Issue | IssueDetail> | undefined;
   groupedIssueIds: TGroupedIssues;
   week: ICalendarWeek | undefined;
   quickActions: TRenderQuickActions;
@@ -26,7 +28,7 @@ type Props = {
   getGroupIssueCount: (groupId: string | undefined) => number | undefined;
   enableQuickIssueCreate?: boolean;
   disableIssueCreation?: boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<TIssue>) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   handleDragAndDrop: (
     issueId: string | undefined,
     issueProjectId: string | undefined,

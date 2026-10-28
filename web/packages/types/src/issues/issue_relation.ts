@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssue } from "./issue";
+import type { Issue } from "@nerve/api-client";
 
-export type TIssueRelation = Record<TIssueRelationTypes, TIssue[]>;
+export type TIssueRelation = Record<TIssueRelationTypes, Issue[]>;
 
 export type TIssueRelationMap = {
   [issue_id: string]: Record<TIssueRelationTypes, string[]>;

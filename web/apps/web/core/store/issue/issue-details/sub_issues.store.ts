@@ -4,12 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { pull, concat, uniq, set, update } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // Nerve Imports
 import type {
-  TIssue,
   TIssueSubIssues,
   TIssueSubIssuesStateDistributionMap,
   TIssueSubIssuesIdMap,
@@ -36,8 +37,8 @@ export interface IIssueSubIssuesStoreActions {
     projectId: string,
     parentIssueId: string,
     issueId: string,
-    issueData: Partial<TIssue>,
-    oldIssue?: Partial<TIssue>,
+    issueData: Partial<IssueDetail>,
+    oldIssue?: Partial<IssueDetail>,
     fromModal?: boolean
   ) => Promise<void>;
   removeSubIssue: (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) => Promise<void>;
@@ -128,7 +129,7 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
 
     const subIssuesStateDistribution = response?.state_distribution ?? {};
 
-    const issueList = (response.sub_issues ?? []) as TIssue[];
+    const issueList = (response.sub_issues ?? []) as Issue[];
 
     this.rootIssueDetailStore.rootIssueStore.issues.addIssue(issueList);
 
@@ -207,8 +208,8 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     projectId: string,
     parentIssueId: string,
     issueId: string,
-    issueData: Partial<TIssue>,
-    oldIssue: Partial<TIssue> = {},
+    issueData: Partial<IssueDetail>,
+    oldIssue: Partial<IssueDetail> = {},
     fromModal: boolean = false
   ) => {
     if (!fromModal)

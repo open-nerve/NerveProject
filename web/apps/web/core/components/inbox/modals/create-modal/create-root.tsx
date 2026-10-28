@@ -1,3 +1,4 @@
+import type { IssueDetail } from "@nerve/api-client";
 // oxlint-disable jsx_a11y/prefer-tag-over-role
 // oxlint-disable jsx_a11y/click-events-have-key-events
 /**
@@ -15,7 +16,7 @@ import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue } from "@nerve/types";
+
 import { Switch } from "@makeplane/propel/components/switch";
 import { renderFormattedPayloadDate, getTabIndex } from "@nerve/utils";
 // hooks
@@ -41,7 +42,7 @@ type TInboxIssueCreateRoot = {
   handleDuplicateIssueModal: (value: boolean) => void;
 };
 
-const defaultIssueData: Partial<TIssue> = {
+const defaultIssueData: Partial<IssueDetail> = {
   name: "",
   description_html: "",
   priority: "none",
@@ -71,9 +72,9 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
   // states
   const [createMore, setCreateMore] = useState<boolean>(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
-  const [formData, setFormData] = useState<Partial<TIssue>>(defaultIssueData);
+  const [formData, setFormData] = useState<Partial<IssueDetail>>(defaultIssueData);
   const handleFormData = useCallback(
-    <T extends keyof Partial<TIssue>>(issueKey: T, issueValue: Partial<TIssue>[T]) => {
+    <T extends keyof Partial<IssueDetail>>(issueKey: T, issueValue: Partial<IssueDetail>[T]) => {
       setFormData({
         ...formData,
         [issueKey]: issueValue,
@@ -128,7 +129,7 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
       return;
     }
 
-    const payload: Partial<TIssue> = {
+    const payload: Partial<IssueDetail> = {
       name: formData.name || "",
       description_html: formData.description_html || "<p></p>",
       priority: formData.priority || "none",

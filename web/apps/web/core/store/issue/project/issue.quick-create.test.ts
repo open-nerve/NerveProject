@@ -1,8 +1,10 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+
+import type { Issue } from "@nerve/api-client";
 import { beforeEach, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
 import { ALL_ISSUES } from "@nerve/constants";
-import type { TIssue } from "@nerve/types";
+
 import { heldChange } from "@/lib/auth/fake-tab";
 import { FakeNerve } from "@/lib/auth/fake-nerve";
 import { IssueService } from "@/services/issue";
@@ -30,7 +32,7 @@ function initial(project = "A") {
 }
 it("waits for a real response then adds canonical/group/count once", async () => {
   const store = initial();
-  const answer = heldChange<TIssue>();
+  const answer = heldChange<Issue>();
   vi.spyOn(IssueService.prototype, "createIssue").mockReturnValue(answer.sent);
   const creating = store.createIssue("ws", "A", { name: "First" });
   expect(Object.keys(app.issue.issues.issuesMap)).toEqual(["R0"]);
@@ -44,7 +46,7 @@ it("waits for a real response then adds canonical/group/count once", async () =>
 });
 it("a refused creation leaves canonical/group/count unchanged", async () => {
   const store = initial();
-  const answer = heldChange<TIssue>();
+  const answer = heldChange<Issue>();
   vi.spyOn(IssueService.prototype, "createIssue").mockReturnValue(answer.sent);
   const creating = store.createIssue("ws", "A", { name: "First" });
   const refused = expect(creating).rejects.toThrow("refused");
@@ -59,7 +61,7 @@ it.each([
   { workspaceSlug: "other", projectId: "A" },
 ])("late A response cannot enter the current $workspaceSlug/$projectId group", async (route) => {
   const store = initial();
-  const answer = heldChange<TIssue>();
+  const answer = heldChange<Issue>();
   vi.spyOn(IssueService.prototype, "createIssue").mockReturnValue(answer.sent);
   const creating = store.createIssue("ws", "A", { name: "First" });
   app.router.setQuery(route);

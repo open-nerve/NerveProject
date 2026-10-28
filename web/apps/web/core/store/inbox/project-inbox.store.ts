@@ -4,7 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssue } from "@nerve/types";
+import type { IssueDetail } from "@nerve/api-client";
+
 import { uniq, update, isEmpty, omit, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
@@ -77,7 +78,7 @@ export interface IProjectInboxStore {
   createInboxIssue: (
     workspaceSlug: string,
     projectId: string,
-    data: Partial<TIssue>
+    data: Partial<IssueDetail>
   ) => Promise<TInboxIssue | undefined>;
   deleteInboxIssue: (workspaceSlug: string, projectId: string, inboxIssueId: string) => Promise<void>;
 }
@@ -454,7 +455,7 @@ export class ProjectInboxStore implements IProjectInboxStore {
    * @param projectId
    * @param data
    */
-  createInboxIssue = async (workspaceSlug: string, projectId: string, data: Partial<TIssue>) => {
+  createInboxIssue = async (workspaceSlug: string, projectId: string, data: Partial<IssueDetail>) => {
     try {
       const inboxIssueResponse = await this.inboxIssueService.create(workspaceSlug, projectId, data);
       if (inboxIssueResponse)

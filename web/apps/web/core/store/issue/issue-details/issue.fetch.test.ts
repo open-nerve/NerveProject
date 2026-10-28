@@ -6,7 +6,7 @@ configure({ safeDescriptors: false });
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import { APIService } from "@/services/api.service";
 import { heldChange } from "@/lib/auth/fake-tab";
-import type { TIssueReaction, TIssueLink } from "@nerve/types";
+import type { TIssueReaction, TIssueLink, TIssueRelation, TIssuesResponse } from "@nerve/types";
 import { until, track } from "@/lib/auth/fake-time";
 import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
 import { issueOf } from "@/store/issue/fake-issues";
@@ -72,10 +72,14 @@ const link: TIssueLink = {
   metadata: {},
   created_at: new Date("2026-10-28"),
 };
-function resources(parentId: string | null) {
+function resources(parentId: string | null, withRelations = false) {
   const detail = app.issue.issueDetail;
-  const source = { ...issueOf("R1", project.id), parent_id: parentId, description_html: "<p>detail</p>" };
-  const parent = issueOf("parent", project.id);
+  const source = {
+    ...issueOf("R1", project.id, project.workspace_id),
+    parent_id: parentId,
+    description_html: "<p>detail</p>",
+  };
+  const parent = issueOf("parent", project.id, project.workspace_id);
   // Only pre-existing, non-target detached side fetches are isolated.
   vi.spyOn(detail.activity, "fetchActivities").mockResolvedValue([]);
   vi.spyOn(detail.comment, "fetchComments").mockResolvedValue([]);
@@ -83,14 +87,13 @@ function resources(parentId: string | null) {
     state_distribution: { backlog: [], unstarted: [], started: [], completed: [], cancelled: [] },
     sub_issues: [],
   });
-  vi.spyOn(detail.relation, "fetchRelations").mockResolvedValue({
-    blocking: [],
-    blocked_by: [],
-    duplicate: [],
-    relates_to: [],
-  });
+  const related = issueOf("related", project.id, project.workspace_id);
+  const relations: TIssueRelation = { blocking: [related], blocked_by: [], duplicate: [], relates_to: [] };
+  const relationFetch = vi.spyOn(detail.relation, "fetchRelations");
+  if (!withRelations) relationFetch.mockResolvedValue({ blocking: [], blocked_by: [], duplicate: [], relates_to: [] });
   vi.spyOn(app.state, "fetchProjectStates").mockResolvedValue([]);
   const get = vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
+    if (url.endsWith("/issue-relation/")) return reply(relations);
     if (url.endsWith("/reactions/")) return reply([reaction]);
     if (url.endsWith("/issue-links/")) return reply([link]);
     if (url.endsWith("/issues/parent/")) return reply(parent);
@@ -100,7 +103,7 @@ function resources(parentId: string | null) {
     identifier
       ? detail.fetchIssueWithIdentifier(ws.slug, project.identifier, "1")
       : detail.fetchIssue(ws.slug, project.id, source.id);
-  return { detail, source, parent, get, fetch };
+  return { detail, source, parent, get, fetch, related, relations, relationFetch };
 }
 it.each([false, true].flatMap((identifier) => [null, "parent"].map((parentId) => ({ identifier, parentId }))))(
   "both retrieve paths fill real resource caches from independent responses ($identifier/$parentId)",
@@ -158,5 +161,52 @@ it.each(
     const result = track(fetch(identifier));
     await until(() => result.settled, "detail fetch settles");
     expect(result.error).toEqual(resource === "issue-links/" ? { data: domainError } : domainError);
+  }
+);
+
+it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => ({ identifier, page }))))(
+  "pure list arrival preserves relations loaded by the real detail resource ($identifier/$page)",
+  async ({ identifier, page }) => {
+    const { detail, source, related, relations, relationFetch, get, fetch } = resources(null, true);
+    const listRow = { ...issueOf(source.id, project.id, project.workspace_id), name: "list update" };
+    const response: TIssuesResponse = {
+      grouped_by: "",
+      next_cursor: "",
+      prev_cursor: "",
+      next_page_results: false,
+      prev_page_results: false,
+      total_count: 1,
+      count: 1,
+      total_pages: 1,
+      extra_stats: null,
+      results: [listRow],
+      total_results: 1,
+    };
+    const projectIssues = app.issue.projectIssues;
+    if (page === "next") {
+      get.mockResolvedValueOnce(reply({ ...response, next_page_results: true, next_cursor: "next" }));
+      await projectIssues.fetchIssues(ws.slug, project.id, "init-loader", { canGroup: false, perPageCount: 100 });
+    }
+    await fetch(identifier);
+    await until(
+      () => detail.relation.getRelationsByIssueId(source.id)?.blocking?.includes(related.id) === true,
+      "relations loaded"
+    );
+    expect(relationFetch).toHaveBeenCalledExactlyOnceWith(ws.slug, project.id, source.id);
+    expect(get.mock.calls.filter(([url]) => url.endsWith("/issue-relation/"))).toHaveLength(1);
+    get.mockResolvedValueOnce(reply(response));
+    if (page === "initial")
+      await projectIssues.fetchIssues(ws.slug, project.id, "init-loader", { canGroup: false, perPageCount: 100 });
+    else await projectIssues.fetchNextIssues(ws.slug, project.id);
+    expect(detail.relation.getRelationsByIssueId(source.id)).toEqual({
+      blocking: [related.id],
+      blocked_by: [],
+      duplicate: [],
+      relates_to: [],
+    });
+    expect(app.issue.issues.getIssueById(related.id)).toEqual(relations.blocking[0]);
+    expect(app.issue.issues.getIssueById(source.id)?.name).toBe("list update");
+    expect(app.issue.issues.getIssueDetailById(source.id)?.description_html).toBe(source.description_html);
+    expect(get).toHaveBeenCalledTimes(page === "initial" ? 5 : 6);
   }
 );

@@ -165,6 +165,8 @@ T5 详情资源职责补充（root 同域局部裁定，2026-10-28）：两条 r
 
 - [ ] 将T5 R10 tests/fixtures机械换生成完整响应后重跑原exact三文件，载荷保留/flag隔离/absence rollback行为不回退。原canonical描述顺序、list/detail、nullable回归与合并替换变异照旧，不复制测试、不以R10替代。执行既有F/G。
 
+T6 关系资源补充（R16，root 同域局部裁定，2026-10-28）：生成 core Issue/IssueDetail 没有 issue_relation/issue_related；删除列表初始/翻页对 extractRelationsFromIssues 的调用及该 extractor 的声明/action/实现，不新增列表逐行资源请求、不造嵌套兼容 DTO。详情的两个 retrieve 入口保留既有 relation.fetchRelations；关系展示依所属资源到达，列表不再预热关系。P11 继续接真实详情资源接口。用真实 RootStore/公共 HTTP 边界核两种详情读取实际填充关系缓存，再让初始/下一页纯 Issue 到达，已知关系和关联实体不能被无嵌套列表清空。此局部收窄不改变历史 detached 关系请求的拒绝所有权。
+
 ## Task 7：旧地址守卫、死代码与警告收口
 
 **Files：** `tools/keywords.json`；本期所有被改文件与有死引用的barrels/i18n keys；实际警告下降包的package.json lint上限。`tools/keywords.mjs`只读，不改规则语义。

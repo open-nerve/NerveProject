@@ -5,6 +5,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
 import { clone, isNil, pull, uniq, concat } from "lodash-es";
 import scrollIntoView from "smooth-scroll-into-view-if-needed";
@@ -31,7 +33,6 @@ import type {
   IGroupByColumn,
   IIssueDisplayProperties,
   IPragmaticDropPayload,
-  TIssue,
   TIssueGroupByOptions,
   IIssueFilterOptions,
   IIssueFilters,
@@ -389,7 +390,7 @@ export const getDestinationFromDropPayload = (payload: IPragmaticDropPayload): G
 const handleSortOrder = (
   destinationIssues: string[],
   destinationIssueId: string | undefined,
-  getIssueById: (issueId: string) => TIssue | undefined,
+  getIssueById: (issueId: string) => Issue | undefined,
   shouldAddIssueAtTop = false,
   canAddIssueBelow = false
 ) => {
@@ -467,16 +468,21 @@ const getGroupId = (groupId: string) => {
 export const handleGroupDragDrop = async (
   source: GroupDropLocation,
   destination: GroupDropLocation,
-  getIssueById: (issueId: string) => TIssue | undefined,
+  getIssueById: (issueId: string) => Issue | undefined,
   getIssueIds: (groupId?: string, subGroupId?: string) => string[] | undefined,
-  updateIssueOnDrop: (projectId: string, issueId: string, data: Partial<TIssue>, issueUpdates: IssueUpdates) => void,
+  updateIssueOnDrop: (
+    projectId: string,
+    issueId: string,
+    data: Partial<IssueDetail>,
+    issueUpdates: IssueUpdates
+  ) => void,
   groupBy: TIssueGroupByOptions | undefined,
   subGroupBy: TIssueGroupByOptions | undefined,
   shouldAddIssueAtTop = false
 ) => {
   if (!source.id || (subGroupBy && (!source.subGroupId || !destination.subGroupId))) return;
 
-  let updatedIssue: Partial<TIssue> = {};
+  let updatedIssue: Partial<IssueDetail> = {};
   const issueUpdates: IssueUpdates = {};
   const destinationIssues = getIssueIds(destination.groupId, destination.subGroupId) ?? [];
 
@@ -558,7 +564,7 @@ export const removeNillKeys = <T,>(obj: T) =>
  * @param issue
  * @returns
  */
-export const isIssueNew = (issue: TIssue) => {
+export const isIssueNew = (issue: Issue) => {
   const createdDate = new Date(issue.created_at);
   const currentDate = new Date();
   const diff = currentDate.getTime() - createdDate.getTime();

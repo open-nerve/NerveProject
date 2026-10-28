@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import type { IssueFormData, IssueDescriptionLoadState } from "./types";
 import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
@@ -11,7 +13,7 @@ import { useParams } from "react-router";
 // Nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue, TWorkspaceDraftIssue } from "@nerve/types";
+import type { TWorkspaceDraftIssue } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
@@ -161,11 +163,11 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const handleCreateIssue = async (
     payload: IssueFormData,
     is_draft_issue: boolean = false
-  ): Promise<TIssue | TWorkspaceDraftIssue | undefined> => {
+  ): Promise<Issue | TWorkspaceDraftIssue | undefined> => {
     if (!workspaceSlug || !payload.project_id || descriptionLoadState !== "ready") return;
 
     try {
-      let response: TIssue | TWorkspaceDraftIssue | undefined;
+      let response: Issue | TWorkspaceDraftIssue | undefined;
       // if draft issue, use draft issue store to create issue
       if (is_draft_issue) {
         response = await draftIssues.createIssue(workspaceSlug, payload);
@@ -215,7 +217,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     }
   };
 
-  const handleUpdateIssue = async (payload: IssueFormData): Promise<TIssue | undefined> => {
+  const handleUpdateIssue = async (payload: IssueFormData): Promise<Issue | undefined> => {
     if (!workspaceSlug || !payload.project_id || !data?.id) return;
 
     try {
@@ -249,7 +251,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const handleFormSubmit = async (payload: IssueFormData, is_draft_issue: boolean = false) => {
     if (!workspaceSlug || !payload.project_id || !storeType || descriptionLoadState !== "ready") return;
 
-    let response: TIssue | TWorkspaceDraftIssue | undefined = undefined;
+    let response: Issue | TWorkspaceDraftIssue | undefined = undefined;
 
     try {
       if (beforeFormSubmit) await beforeFormSubmit();

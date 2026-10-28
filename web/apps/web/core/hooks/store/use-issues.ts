@@ -4,9 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { useContext } from "react";
 import { merge } from "lodash-es";
-import type { TIssueMap } from "@nerve/types";
+
 import { EIssuesStoreType } from "@nerve/types";
 import { StoreContext } from "@/lib/store-context";
 import type { IArchivedIssues, IArchivedIssuesFilter } from "@/store/issue/archived";
@@ -15,7 +17,7 @@ import type { IProjectIssues, IProjectIssuesFilter } from "@/store/issue/project
 import type { IWorkspaceDraftIssues, IWorkspaceDraftIssuesFilter } from "@/store/issue/workspace-draft";
 
 type defaultIssueStore = {
-  issueMap: TIssueMap;
+  issueMap: Record<string, Issue | IssueDetail>;
 };
 
 export type TStoreIssues = {

@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import { clone, update, unset, orderBy, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
@@ -19,7 +21,6 @@ import type {
   TGroupedIssues,
   TSubGroupedIssues,
   ViewFlags,
-  TIssue,
 } from "@nerve/types";
 import { getCurrentDateTimeInISO, convertToISODateString } from "@nerve/utils";
 // services
@@ -51,19 +52,19 @@ export interface IWorkspaceDraftIssues {
   ) => Promise<TWorkspaceDraftPaginationInfo<TWorkspaceDraftIssue> | undefined>;
   createIssue: (
     workspaceSlug: string,
-    payload: Partial<TWorkspaceDraftIssue | TIssue>
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
   ) => Promise<TWorkspaceDraftIssue | undefined>;
   updateIssue: (
     workspaceSlug: string,
     issueId: string,
-    payload: Partial<TWorkspaceDraftIssue | TIssue>
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
   ) => Promise<TWorkspaceDraftIssue | undefined>;
   deleteIssue: (workspaceSlug: string, issueId: string) => Promise<void>;
   moveIssue: (
     workspaceSlug: string,
     issueId: string,
-    payload: Partial<TWorkspaceDraftIssue | TIssue>
-  ) => Promise<TIssue>;
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
+  ) => Promise<Issue>;
   addCycleToIssue: (
     workspaceSlug: string,
     issueId: string,
@@ -224,7 +225,7 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
 
   createIssue = async (
     workspaceSlug: string,
-    payload: Partial<TWorkspaceDraftIssue | TIssue>
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
   ): Promise<TWorkspaceDraftIssue | undefined> => {
     try {
       this.loader = "create";
@@ -252,7 +253,11 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
     }
   };
 
-  updateIssue = async (workspaceSlug: string, issueId: string, payload: Partial<TWorkspaceDraftIssue | TIssue>) => {
+  updateIssue = async (
+    workspaceSlug: string,
+    issueId: string,
+    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
+  ) => {
     const issueBeforeUpdate = clone(this.getIssueById(issueId));
     try {
       this.loader = "update";
@@ -302,7 +307,7 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
     }
   };
 
-  moveIssue = async (workspaceSlug: string, issueId: string, payload: Partial<TWorkspaceDraftIssue | TIssue>) => {
+  moveIssue = async (workspaceSlug: string, issueId: string, payload: Partial<TWorkspaceDraftIssue | IssueDetail>) => {
     try {
       this.loader = "move";
 

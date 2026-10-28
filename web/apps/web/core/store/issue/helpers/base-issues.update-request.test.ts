@@ -59,7 +59,7 @@ function initial(html?: string) {
   const store = app.issue.projectIssues;
   if (!(store instanceof ProjectIssues)) throw new Error("expected the real project store");
   const before = {
-    ...issueOf("R1", project.id),
+    ...issueOf("R1", project.id, project.workspace_id),
     state_id: a.id,
     ...(html === undefined ? {} : { description_html: html }),
   };
@@ -93,7 +93,7 @@ it.each(["<p>before</p>", "", undefined])(
       request
     );
     const current = app.issue.issues.getIssueById(before.id)!;
-    expect(current.description_html).toBe(request.description_html);
+    expect(app.issue.issues.getIssueDetailById(before.id)?.description_html).toBe(request.description_html);
     expect(current).not.toHaveProperty("skip_activity");
     for (const call of [...groups.mock.calls, ...stats.mock.calls])
       for (const value of call) if (value) expect(value).not.toHaveProperty("skip_activity");
@@ -110,7 +110,7 @@ it("sends the unchanged string flag once on success and keeps empty HTML", async
   const patch = vi.spyOn(store.issueService, "patch").mockResolvedValue(reply(before));
   await store.updateIssue(ws.slug, project.id, before.id, { description_html: "", skip_activity: "true" });
   expect(patch).toHaveBeenCalledTimes(1);
-  expect(app.issue.issues.getIssueById(before.id)?.description_html).toBe("");
+  expect(app.issue.issues.getIssueDetailById(before.id)?.description_html).toBe("");
   expect(app.issue.issues.getIssueById(before.id)).not.toHaveProperty("skip_activity");
 });
 it("local-only updates never send context or create missing entities", async () => {
@@ -126,8 +126,8 @@ it("local-only updates never send context or create missing entities", async () 
 it("moves actual state groups/counts while pending and restores IDs, order, counts and entity after refusal", async () => {
   const { store, before } = initial("<p>before</p>");
   const r1 = { ...before, sort_order: 2000 };
-  const r2 = { ...issueOf("R2", project.id), state_id: a.id, sort_order: 3000, sequence_id: 2 };
-  const r3 = { ...issueOf("R3", project.id), state_id: b.id, sort_order: 1000, sequence_id: 3 };
+  const r2 = { ...issueOf("R2", project.id, project.workspace_id), state_id: a.id, sort_order: 3000, sequence_id: 2 };
+  const r3 = { ...issueOf("R3", project.id, project.workspace_id), state_id: b.id, sort_order: 1000, sequence_id: 3 };
   app.issue.issues.addIssue([r1, r2, r3]);
   runInAction(() => {
     app.issue.projectIssuesFilter.filters[project.id]!.displayFilters!.group_by = "state";

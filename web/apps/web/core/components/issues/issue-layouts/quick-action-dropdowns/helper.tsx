@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useMemo } from "react";
 import {
   ArchiveOutline,
@@ -17,7 +19,7 @@ import {
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { EIssuesStoreType, TIssue } from "@nerve/types";
+import type { EIssuesStoreType } from "@nerve/types";
 import type { TContextMenuItem } from "@nerve/ui";
 import { copyUrlToClipboard, generateWorkItemLink } from "@nerve/utils";
 import { createCopyMenuWithDuplication } from "./copy-menu-helper";
@@ -55,7 +57,7 @@ function handleOptionalAction<T>(
 }
 
 export interface MenuItemFactoryProps {
-  issue: TIssue;
+  issue: Issue;
   workspaceSlug?: string;
   projectIdentifier?: string;
   activeLayout?: string;
@@ -65,7 +67,7 @@ export interface MenuItemFactoryProps {
   isRestoringAllowed?: boolean;
   isInArchivableGroup?: boolean;
   // Action handlers
-  setIssueToEdit: (issue: TIssue | undefined) => void;
+  setIssueToEdit: (issue: Issue | undefined) => void;
   setCreateUpdateIssueModal: (open: boolean) => void;
   setDeleteIssueModal: (open: boolean) => void;
   setArchiveIssueModal?: (open: boolean) => void;
@@ -73,7 +75,7 @@ export interface MenuItemFactoryProps {
   handleRestore?: () => Promise<void>;
   // External handlers
   handleDelete?: () => Promise<void>;
-  handleUpdate?: (data: TIssue) => Promise<void>;
+  handleUpdate?: (data: Issue) => Promise<void>;
   handleArchive?: () => Promise<void>;
   // Context-specific data
   storeType?: EIssuesStoreType;

@@ -4,16 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { clone, set } from "lodash-es";
 import { makeObservable, observable, runInAction, action } from "mobx";
-import type {
-  TInboxIssue,
-  TInboxIssueStatus,
-  EInboxIssueSource,
-  TIssue,
-  TInboxDuplicateIssueDetails,
-} from "@nerve/types";
+import type { TInboxIssue, TInboxIssueStatus, EInboxIssueSource, TInboxDuplicateIssueDetails } from "@nerve/types";
 import { EInboxIssueStatus } from "@nerve/types";
 // services
 import { InboxIssueService } from "@/services/inbox";
@@ -24,7 +20,7 @@ export interface IInboxIssueStore {
   isLoading: boolean;
   id: string;
   status: TInboxIssueStatus;
-  issue: Partial<TIssue>;
+  issue: Partial<IssueDetail>;
   snoozed_till: Date | undefined;
   source: EInboxIssueSource | undefined;
   duplicate_to: string | undefined;
@@ -43,7 +39,7 @@ export class InboxIssueStore implements IInboxIssueStore {
   isLoading: boolean = false;
   id: string;
   status: TInboxIssueStatus = EInboxIssueStatus.PENDING;
-  issue: Partial<TIssue> = {};
+  issue: Partial<IssueDetail> = {};
   snoozed_till: Date | undefined;
   source: EInboxIssueSource | undefined;
   duplicate_to: string | undefined;
@@ -181,7 +177,7 @@ export class InboxIssueStore implements IInboxIssueStore {
     try {
       if (!this.issue.id) return;
       Object.keys(patch).forEach((key) => {
-        const issueKey = key as keyof TIssue;
+        const issueKey = key as keyof IssueDetail;
         set(this.issue, issueKey, patch[issueKey]);
       });
       await this.inboxIssueService.updateIssue(this.workspaceSlug, this.projectId, this.issue.id, issue);
@@ -190,7 +186,7 @@ export class InboxIssueStore implements IInboxIssueStore {
     } catch {
       runInAction(() => {
         Object.keys(patch).forEach((key) => {
-          const issueKey = key as keyof TIssue;
+          const issueKey = key as keyof IssueDetail;
           if (Object.prototype.hasOwnProperty.call(inboxIssue, issueKey)) {
             set(this.issue, issueKey, inboxIssue[issueKey]);
           } else {

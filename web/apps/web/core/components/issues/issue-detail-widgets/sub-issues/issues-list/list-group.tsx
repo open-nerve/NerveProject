@@ -4,12 +4,14 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { CircleDashed } from "lucide-react";
 import { Collapsible } from "@makeplane/propel/components/collapsible";
 import { ALL_ISSUES } from "@nerve/constants";
-import type { IGroupByColumn, TIssue, TSubIssueOperations } from "@nerve/types";
+import type { IGroupByColumn, TSubIssueOperations } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { SubIssuesListItem } from "./list-item";
 
@@ -24,7 +26,7 @@ interface TSubIssuesListGroupProps {
   handleIssueCrudState: (
     key: "create" | "existing" | "update" | "delete",
     issueId: string,
-    issue?: TIssue | null
+    issue?: Issue | null
   ) => void;
   subIssueOperations: TSubIssueOperations;
   storeType?: EIssuesStoreType;

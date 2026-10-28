@@ -4,14 +4,16 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 // nerve imports
-import type { TIssueParams, TIssue, TIssueActivity, TIssueLink, TIssuesResponse, TIssueSubIssues } from "@nerve/types";
+import type { TIssueParams, TIssueActivity, TIssueLink, TIssuesResponse, TIssueSubIssues } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 
 export class IssueService extends APIService {
-  async createIssue(workspaceSlug: string, projectId: string, data: Partial<TIssue>): Promise<TIssue> {
+  async createIssue(workspaceSlug: string, projectId: string, data: Partial<IssueDetail>): Promise<Issue> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/`, data)
       .then((response) => response?.data)
       .catch((error) => {
@@ -78,7 +80,7 @@ export class IssueService extends APIService {
     workspaceSlug: string,
     projectId: string,
     queries?: any
-  ): Promise<TIssue[] | { [key: string]: TIssue[] }> {
+  ): Promise<Issue[] | { [key: string]: Issue[] }> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/`, {
       params: queries,
     })
@@ -88,7 +90,7 @@ export class IssueService extends APIService {
       });
   }
 
-  async retrieve(workspaceSlug: string, projectId: string, issueId: string, queries?: any): Promise<TIssue> {
+  async retrieve(workspaceSlug: string, projectId: string, issueId: string, queries?: any): Promise<IssueDetail> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/`, {
       params: queries,
     })
@@ -242,7 +244,7 @@ export class IssueService extends APIService {
     project_identifier: string,
     issue_sequence: string,
     queries?: any
-  ): Promise<TIssue> {
+  ): Promise<IssueDetail> {
     return this.get(`/api/workspaces/${workspaceSlug}/work-items/${project_identifier}-${issue_sequence}/`, {
       params: queries,
     })

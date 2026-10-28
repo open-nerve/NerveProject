@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
 import {
   DueDateOutline,
@@ -14,7 +16,7 @@ import {
   StateOutline,
 } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TInboxDuplicateIssueDetails, TIssue } from "@nerve/types";
+import type { TInboxDuplicateIssueDetails } from "@nerve/types";
 import { ControlLink } from "@nerve/ui";
 import { getDate, renderFormattedPayloadDate, generateWorkItemLink } from "@nerve/utils";
 // components
@@ -31,7 +33,7 @@ import { useNavigate } from "react-router";
 type Props = {
   workspaceSlug: string;
   projectId: string;
-  issue: Partial<TIssue>;
+  issue: Partial<IssueDetail>;
   issueOperations: TIssueOperations;
   isEditable: boolean;
   duplicateIssueDetails: TInboxDuplicateIssueDetails | undefined;

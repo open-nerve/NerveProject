@@ -1,9 +1,10 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { TIssue } from "@nerve/types";
+
+import type { IssueDetail } from "@nerve/api-client";
 
 /** Actual editable fields; resource relations and clone identity are separate context. */
 export type IssueFormValues = Pick<
-  TIssue,
+  IssueDetail,
   | "project_id"
   | "name"
   | "description_html"

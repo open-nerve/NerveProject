@@ -48,7 +48,7 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
   // store hooks
   const { data: currentUser } = useUser();
   const {
-    issue: { getIssueById },
+    issue: { getIssueDetailById },
   } = useIssueDetail();
 
   const { getUserDetails } = useMember();
@@ -67,16 +67,11 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
   }, [isSubmitting, setShowAlert, setIsSubmitting]);
 
   // derived values
-  const issue = issueId ? getIssueById(issueId) : undefined;
+  const issue = issueId ? getIssueDetailById(issueId) : undefined;
 
   if (!issue || !issue.project_id) return <></>;
 
-  const issueDescription =
-    issue.description_html !== undefined || issue.description_html !== null
-      ? issue.description_html != ""
-        ? issue.description_html
-        : "<p></p>"
-      : undefined;
+  const issueDescription = issue.description_html === "" ? "<p></p>" : issue.description_html;
 
   return (
     <div className="space-y-2">
@@ -139,7 +134,7 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
             className="flex-shrink-0"
             entityInformation={{
               createdAt: issue.created_at ? new Date(issue.created_at) : new Date(),
-              createdByDisplayName: getUserDetails(issue.created_by ?? "")?.display_name ?? "",
+              createdByDisplayName: getUserDetails(issue.created_by_id ?? "")?.display_name ?? "",
               id: issueId,
               isRestoreDisabled: disabled || isArchived,
             }}

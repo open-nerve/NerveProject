@@ -4,8 +4,10 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { EIssuesStoreType, TIssue, TIssueGroupByOptions, TIssueOrderByOptions } from "@nerve/types";
+import type { EIssuesStoreType, TIssueGroupByOptions, TIssueOrderByOptions } from "@nerve/types";
 import type { GroupDropLocation } from "@/components/issues/issue-layouts/utils";
 import { handleGroupDragDrop } from "@/components/issues/issue-layouts/utils";
 import { useIssueDetail } from "./store/use-issue-detail";
@@ -38,7 +40,7 @@ export const useGroupIssuesDragNDrop = (
    * @param issueId
    * @param data
    */
-  const updateIssueOnDrop = async (projectId: string, issueId: string, data: Partial<TIssue>) => {
+  const updateIssueOnDrop = async (projectId: string, issueId: string, data: Partial<IssueDetail>) => {
     const errorToastProps = {
       type: TOAST_TYPE.ERROR,
       title: "Error!",

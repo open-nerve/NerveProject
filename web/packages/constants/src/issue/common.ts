@@ -4,12 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import type {
   TIssueGroupByOptions,
   TIssueOrderByOptions,
   IIssueDisplayProperties,
   IIssueFilterOptions,
-  TIssue,
   EIssuesStoreType,
 } from "@nerve/types";
 
@@ -246,9 +247,9 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
 };
 
 // Map filter keys to their corresponding issue property keys
-export const FILTER_TO_ISSUE_MAP: Partial<Record<keyof IIssueFilterOptions, keyof TIssue>> = {
+export const FILTER_TO_ISSUE_MAP: Partial<Record<keyof IIssueFilterOptions, keyof Issue>> = {
   assignees: "assignee_ids",
-  created_by: "created_by",
+  created_by: "created_by_id",
   labels: "label_ids",
   priority: "priority",
   project: "project_id",

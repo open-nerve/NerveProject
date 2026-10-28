@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { MutableRefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
@@ -18,9 +20,7 @@ import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type {
   TGroupedIssues,
-  TIssue,
   IIssueDisplayProperties,
-  IIssueMap,
   TSubGroupedIssues,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
@@ -48,7 +48,7 @@ import { KanbanIssueBlocksList } from "./blocks-list";
 
 interface IKanbanGroup {
   groupId: string;
-  issuesMap: IIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   groupedIssueIds: TGroupedIssues | TSubGroupedIssues;
   displayProperties: IIssueDisplayProperties | undefined;
   sub_group_by: TIssueGroupByOptions | undefined;
@@ -57,10 +57,10 @@ interface IKanbanGroup {
   isDragDisabled: boolean;
   isDropDisabled: boolean;
   dropErrorMessage: string | undefined;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   enableQuickIssueCreate?: boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<TIssue>) => Promise<TIssue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
   loadMoreIssues: (groupId?: string, subGroupId?: string) => void;
   disableIssueCreation?: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;

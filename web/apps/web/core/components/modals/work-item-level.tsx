@@ -4,9 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
 // nerve imports
-import type { TIssue } from "@nerve/types";
+
 import { EIssuesStoreType } from "@nerve/types";
 // components
 import { DeleteIssueModal } from "@/components/issues/delete-issue-modal";
@@ -56,7 +58,7 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
     }
   };
 
-  const handleCreateIssueSubmit = async (newIssue: TIssue) => {
+  const handleCreateIssueSubmit = async (newIssue: Issue) => {
     if (!workspaceSlug || !newIssue.project_id || !newIssue.id || newIssue.parent_id !== workItemDetails?.id) return;
 
     await fetchSubWorkItems(workspaceSlug, newIssue.project_id, workItemDetails.id);

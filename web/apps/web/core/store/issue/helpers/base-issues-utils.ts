@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import type { State } from "@nerve/api-client";
 import { uniq, orderBy, isEmpty, indexOf, groupBy, set } from "lodash-es";
 import { ALL_ISSUES, EIssueFilterType, FILTER_TO_ISSUE_MAP, ISSUE_PRIORITIES } from "@nerve/constants";
@@ -12,7 +14,6 @@ import type {
   IIssueDisplayProperties,
   IIssueFilterOptions,
   ISubWorkItemFilters,
-  TIssue,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
 } from "@nerve/types";
@@ -187,7 +188,7 @@ export const getSortOrderToFilterEmptyValues = (key: string, object: any) => {
 };
 
 // get IssueIds from Issue data List
-export const getIssueIds = (issues: TIssue[]) => issues.map((issue) => issue?.id);
+export const getIssueIds = (issues: Issue[]) => issues.map((issue) => issue?.id);
 
 /**
  * Checks if an issue meets the date filter criteria
@@ -197,7 +198,7 @@ export const getIssueIds = (issues: TIssue[]) => issues.map((issue) => issue?.id
  * @returns boolean indicating if the issue meets the date criteria
  */
 const checkIssueDateFilter = (
-  issue: TIssue,
+  issue: Issue,
   filterKey: "start_date" | "target_date",
   dateFilters: string[]
 ): boolean => {
@@ -226,10 +227,10 @@ const checkIssueDateFilter = (
  * @returns The filtered array of issues.
  */
 export const getFilteredWorkItems = (
-  workItems: TIssue[],
+  workItems: Issue[],
   filters: IIssueFilterOptions | undefined,
   stateMap?: Record<string, State>
-): TIssue[] => {
+): Issue[] => {
   if (!filters) return workItems;
   // Get all active filters
   const activeFilters = Object.entries(filters).filter(([, value]) => value && value.length > 0);
@@ -269,7 +270,7 @@ export const getFilteredWorkItems = (
  * @param orderByKey - The key to order the issues by.
  * @returns The ordered array of work items.
  */
-const getOrderedWorkItems = (workItems: TIssue[], orderByKey: TIssueOrderByOptions): string[] => {
+const getOrderedWorkItems = (workItems: Issue[], orderByKey: TIssueOrderByOptions): string[] => {
   switch (orderByKey) {
     case "-updated_at":
       return getIssueIds(orderBy(workItems, (item) => convertToISODateString(item["updated_at"]), ["desc"]));
@@ -289,7 +290,7 @@ const getOrderedWorkItems = (workItems: TIssue[], orderByKey: TIssueOrderByOptio
     case "-priority": {
       const sortArray = ISSUE_PRIORITIES.map((i) => i.key);
       return getIssueIds(
-        orderBy(workItems, (currentIssue: TIssue) => indexOf(sortArray, currentIssue?.priority), ["asc"])
+        orderBy(workItems, (currentIssue: Issue) => indexOf(sortArray, currentIssue?.priority), ["asc"])
       );
     }
     default:
@@ -298,7 +299,7 @@ const getOrderedWorkItems = (workItems: TIssue[], orderByKey: TIssueOrderByOptio
 };
 
 export const getGroupedWorkItemIds = (
-  workItems: TIssue[],
+  workItems: Issue[],
   groupByKey?: TIssueGroupByOptions,
   orderByKey: TIssueOrderByOptions = "-created_at",
   stateMap?: Record<string, State>

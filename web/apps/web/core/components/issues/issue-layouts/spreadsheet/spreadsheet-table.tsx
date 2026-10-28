@@ -4,11 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import type { MutableRefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssue } from "@nerve/types";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
 // components
 import { SpreadsheetIssueRowLoader } from "@/components/ui/loader/layouts/spreadsheet-layout-loader";
 // hooks
@@ -27,7 +29,7 @@ type Props = {
   handleDisplayFilterUpdate: (data: Partial<IIssueDisplayFilterOptions>) => void;
   issueIds: string[];
   quickActions: TRenderQuickActions;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   canEditProperties: (projectId: string | undefined) => boolean;
   portalElement: React.MutableRefObject<HTMLDivElement | null>;
   containerRef: MutableRefObject<HTMLTableElement | null>;

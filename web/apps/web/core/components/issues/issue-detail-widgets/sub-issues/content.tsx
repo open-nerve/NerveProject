@@ -4,9 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import React, { useEffect, useState, useCallback } from "react";
 import { observer } from "mobx-react";
-import type { TIssue } from "@nerve/types";
+
 import { EIssuesStoreType } from "@nerve/types";
 // components
 import { DeleteIssueModal } from "@/components/issues/delete-issue-modal";
@@ -24,7 +26,7 @@ type Props = {
   disabled: boolean;
 };
 
-type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: TIssue | undefined };
+type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: Issue | undefined };
 
 export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibleContent(props: Props) {
   const { workspaceSlug, projectId, parentIssueId, disabled } = props;
@@ -69,7 +71,7 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
 
   // handler
   const handleIssueCrudState = useCallback(
-    (key: "create" | "existing" | "update" | "delete", _parentIssueId: string | null, issue: TIssue | null = null) => {
+    (key: "create" | "existing" | "update" | "delete", _parentIssueId: string | null, issue: Issue | null = null) => {
       setIssueCrudState({
         ...issueCrudState,
         [key]: {
@@ -146,7 +148,7 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
             handleIssueCrudState("delete", null, null);
             toggleDeleteIssueModal(null);
           }}
-          data={issueCrudState?.delete?.issue as TIssue}
+          data={issueCrudState?.delete?.issue as Issue}
           onSubmit={async () =>
             await subIssueOperations.deleteSubIssue(
               workspaceSlug,
@@ -167,7 +169,7 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
             toggleCreateIssueModal(false);
           }}
           data={issueCrudState?.update?.issue ?? undefined}
-          onSubmit={async (_issue: TIssue) => {
+          onSubmit={async (_issue: Issue) => {
             await subIssueOperations.updateSubIssue(
               workspaceSlug,
               projectId,

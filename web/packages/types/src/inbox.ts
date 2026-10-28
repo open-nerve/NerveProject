@@ -4,10 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 // nerve types
 import type { TPaginationInfo } from "./common";
 import type { TIssuePriorities } from "./issues";
-import type { TIssue } from "./issues/issue";
 
 export enum EInboxIssueCurrentTab {
   OPEN = "open",
@@ -37,7 +38,7 @@ export type TInboxIssue = {
   snoozed_till: Date | null;
   duplicate_to: string | undefined;
   source: EInboxIssueSource | undefined;
-  issue: TIssue;
+  issue: Issue | IssueDetail;
   created_by: string;
   duplicate_issue_detail: TInboxDuplicateIssueDetails | undefined;
 };

@@ -4,12 +4,14 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import { useMemo } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { Label, LabelCreate } from "@nerve/api-client";
-import type { TIssue } from "@nerve/types";
+
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useLabel } from "@/hooks/store/use-label";
@@ -29,7 +31,7 @@ export type TIssueLabel = {
 };
 
 export type TLabelOperations = {
-  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
+  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<IssueDetail>) => Promise<void>;
   createLabel: (data: LabelCreate) => Promise<Label>;
 };
 
@@ -49,7 +51,7 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
 
   const labelOperations: TLabelOperations = useMemo(
     () => ({
-      updateIssue: async (slug: string, issueProjectId: string, workItemId: string, data: Partial<TIssue>) => {
+      updateIssue: async (slug: string, issueProjectId: string, workItemId: string, data: Partial<IssueDetail>) => {
         try {
           if (onLabelUpdate) onLabelUpdate(data.label_ids || []);
           else await updateIssue(slug, issueProjectId, workItemId, data);

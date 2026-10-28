@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useState } from "react";
 import { pick } from "lodash-es";
 import { observer } from "mobx-react";
@@ -12,7 +14,7 @@ import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { ARCHIVABLE_STATE_GROUPS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { TIssue } from "@nerve/types";
+
 import { EIssuesStoreType } from "@nerve/types";
 import { ContextMenu, CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
@@ -62,7 +64,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
   const { workspaceSlug } = useParams();
   // states
   const [createUpdateIssueModal, setCreateUpdateIssueModal] = useState(false);
-  const [issueToEdit, setIssueToEdit] = useState<TIssue | undefined>(undefined);
+  const [issueToEdit, setIssueToEdit] = useState<Issue | undefined>(undefined);
   const [deleteIssueModal, setDeleteIssueModal] = useState(false);
   const [archiveIssueModal, setArchiveIssueModal] = useState(false);
   const [_, setDuplicateWorkItemModal] = useState(false);

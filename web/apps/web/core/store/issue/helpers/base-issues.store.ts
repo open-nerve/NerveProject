@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { isEqual, concat, get, indexOf, isEmpty, orderBy, pull, set, uniq, update, clone } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
@@ -12,7 +14,6 @@ import { computedFn } from "mobx-utils";
 import { ALL_ISSUES, ISSUE_PRIORITIES } from "@nerve/constants";
 // types
 import type {
-  TIssue,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
   TGroupedIssues,
@@ -76,30 +77,30 @@ export interface IBaseIssuesStore {
 }
 
 // This constant maps the group by keys to the respective issue property that the key relies on
-export const ISSUE_GROUP_BY_KEY: Record<TIssueDisplayFilterOptions, keyof TIssue> = {
+export const ISSUE_GROUP_BY_KEY: Record<TIssueDisplayFilterOptions, keyof Issue> = {
   project: "project_id",
   state: "state_id",
   "state_detail.group": "state_id", // state_detail.group is only being used for state_group display,
   priority: "priority",
   labels: "label_ids",
-  created_by: "created_by",
+  created_by: "created_by_id",
   assignees: "assignee_ids",
   target_date: "target_date",
 };
 
-export const ISSUE_FILTER_DEFAULT_DATA: Record<TIssueDisplayFilterOptions, keyof TIssue> = {
+export const ISSUE_FILTER_DEFAULT_DATA: Record<TIssueDisplayFilterOptions, keyof Issue> = {
   project: "project_id",
   state: "state_id",
   "state_detail.group": "state_id", // state_detail.group is only being used for state_group display,
   priority: "priority",
   labels: "label_ids",
-  created_by: "created_by",
+  created_by: "created_by_id",
   assignees: "assignee_ids",
   target_date: "target_date",
 };
 
 // This constant maps the order by keys to the respective issue property that the key relies on
-const ISSUE_ORDERBY_KEY: Record<TIssueOrderByOptions, keyof TIssue> = {
+const ISSUE_ORDERBY_KEY: Record<TIssueOrderByOptions, keyof Issue> = {
   created_at: "created_at",
   "-created_at": "created_at",
   updated_at: "updated_at",
@@ -190,7 +191,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
   // Abstract class to be implemented to fetch parent stats such as project, module or cycle details
   abstract fetchParentStats: (workspaceSlug: string, projectId?: string, id?: string) => void;
 
-  abstract updateParentStats: (prevIssueState?: TIssue, nextIssueState?: TIssue, id?: string) => void;
+  abstract updateParentStats: (prevIssueState?: Issue, nextIssueState?: Issue, id?: string) => void;
 
   // current Module Id from url
   get moduleId() {
@@ -408,8 +409,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
     // fetch parent stats if required, to be handled in the Implemented class
     this.fetchParentStats(workspaceSlug, projectId, id);
 
-    this.rootIssueStore.issueDetail.relation.extractRelationsFromIssues(issueList);
-
     // store Pagination options for next subsequent calls and data like next cursor etc
     this.storePreviousPaginationValues(issuesResponse, options);
   }
@@ -435,8 +434,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       this.loader[getGroupKey(groupId, subGroupId)] = undefined;
     });
 
-    this.rootIssueStore.issueDetail.relation.extractRelationsFromIssues(issueList);
-
     // store Pagination data like next cursor etc
     this.storePreviousPaginationValues(issuesResponse, undefined, groupId, subGroupId);
   }
@@ -453,7 +450,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
   async createIssue(
     workspaceSlug: string,
     projectId: string,
-    data: Partial<TIssue>,
+    data: Partial<IssueDetail>,
     id?: string,
     shouldUpdateList = true
   ) {
@@ -504,7 +501,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
           const current = this.rootIssueStore.issues.getIssueById(issueId);
           if (current) {
             for (const key of Object.keys(patch) as (keyof typeof patch)[]) {
-              if (!Object.prototype.hasOwnProperty.call(issueBeforeUpdate, key)) delete current[key];
+              if (!Object.prototype.hasOwnProperty.call(issueBeforeUpdate, key)) Reflect.deleteProperty(current, key);
             }
           }
         });
@@ -567,7 +564,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
    * @param issue
    * @param shouldUpdateList indicates if the issue Id to be added to the list
    */
-  addIssue(issue: TIssue, shouldUpdateList = true) {
+  addIssue(issue: Issue, shouldUpdateList = true) {
     runInAction(() => {
       this.rootIssueStore.issues.addIssue([issue]);
     });
@@ -623,8 +620,8 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
    * @returns
    */
   updateIssueList(
-    issue?: TIssue,
-    issueBeforeUpdate?: TIssue,
+    issue?: Issue,
+    issueBeforeUpdate?: Issue,
     // oxlint-disable-next-line no-shadow
     action?: EIssueGroupedAction.ADD | EIssueGroupedAction.DELETE
   ) {
@@ -685,7 +682,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
    * @returns groupedIssueCount, object containing issue counts of individual groups
    */
   processIssueResponse(issueResponse: TIssuesResponse): {
-    issueList: TIssue[];
+    issueList: Issue[];
     groupedIssues: TIssues;
     groupedIssueCount: TGroupedIssueCount;
   } {
@@ -712,7 +709,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       };
     }
 
-    const issueList: TIssue[] = [];
+    const issueList: Issue[] = [];
     const groupedIssues: TGroupedIssues | TSubGroupedIssues = {};
     const groupedIssueCount: TGroupedIssueCount = {};
 
@@ -948,8 +945,8 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
    * @returns an array of object that contains the path at which issue to be updated and the action to be performed at the path
    */
   getUpdateDetails = (
-    issue?: Partial<TIssue>,
-    issueBeforeUpdate?: Partial<TIssue>,
+    issue?: Partial<IssueDetail>,
+    issueBeforeUpdate?: Partial<IssueDetail>,
     // oxlint-disable-next-line no-shadow
     action?: EIssueGroupedAction.ADD | EIssueGroupedAction.DELETE
   ): { path: string[]; action: EIssueGroupedAction }[] => {
@@ -1011,8 +1008,8 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
    * @returns  an array of object that contains the path at which issue to be re-sorted/re-ordered
    */
   getOrderByUpdateDetails(
-    issue: Partial<TIssue> | undefined,
-    issueBeforeUpdate: Partial<TIssue> | undefined
+    issue: Partial<IssueDetail> | undefined,
+    issueBeforeUpdate: Partial<IssueDetail> | undefined
   ): { path: string[]; action: EIssueGroupedAction.REORDER }[] {
     // if before and after states of the issue prop on which orderBy depends on then return and empty Array
     if (
@@ -1062,7 +1059,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
   //  * @returns Normalized array of string values
   //  */
   getArrayStringArray = (
-    issueObject: Partial<TIssue> | undefined,
+    issueObject: Partial<IssueDetail> | undefined,
     value: string | string[] | undefined | null,
     groupByKey?: TIssueGroupByOptions
   ): string[] => {
@@ -1187,12 +1184,12 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       // custom
       case "-priority": {
         const sortArray = ISSUE_PRIORITIES.map((i) => i.key);
-        return getIssueIds(orderBy(array, (currentIssue: TIssue) => indexOf(sortArray, currentIssue?.priority)));
+        return getIssueIds(orderBy(array, (currentIssue: Issue) => indexOf(sortArray, currentIssue?.priority)));
       }
       case "priority": {
         const sortArray = ISSUE_PRIORITIES.map((i) => i.key);
         return getIssueIds(
-          orderBy(array, (currentIssue: TIssue) => indexOf(sortArray, currentIssue?.priority), ["desc"])
+          orderBy(array, (currentIssue: Issue) => indexOf(sortArray, currentIssue?.priority), ["desc"])
         );
       }
 

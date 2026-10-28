@@ -4,9 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useNavigate } from "react-router";
 // types
-import type { TIssue } from "@nerve/types";
+
 // helpers
 import { generateWorkItemLink } from "@nerve/utils";
 // hooks
@@ -22,7 +24,7 @@ const useIssuePeekOverviewRedirection = () => {
 
   const handleRedirection = (
     workspaceSlug: string | undefined,
-    issue: TIssue | undefined,
+    issue: Issue | undefined,
     isMobile = false,
     nestingLevel?: number
   ) => {

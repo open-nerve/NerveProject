@@ -4,11 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { makeObservable, observable } from "mobx";
 import { computedFn } from "mobx-utils";
 // types
-import type { TIssue } from "@nerve/types";
+
 // services
 import { IssueArchiveService, WorkspaceDraftService, IssueService } from "@/services/issue";
 // types
@@ -16,7 +18,7 @@ import type { IIssueDetail } from "./root.store";
 
 export interface IIssueStoreActions {
   // actions
-  fetchIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<TIssue>;
+  fetchIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<IssueDetail>;
   updateIssue: (
     workspaceSlug: string,
     projectId: string,
@@ -25,13 +27,18 @@ export interface IIssueStoreActions {
   ) => Promise<void>;
   removeIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-  fetchIssueWithIdentifier: (workspaceSlug: string, project_identifier: string, sequence_id: string) => Promise<TIssue>;
+  fetchIssueWithIdentifier: (
+    workspaceSlug: string,
+    project_identifier: string,
+    sequence_id: string
+  ) => Promise<IssueDetail>;
 }
 
 export interface IIssueStore extends IIssueStoreActions {
   getIsFetchingIssueDetails: (issueId: string | undefined) => boolean;
   // helper methods
-  getIssueById: (issueId: string) => TIssue | undefined;
+  getIssueById: (issueId: string) => Issue | IssueDetail | undefined;
+  getIssueDetailById: (issueId: string) => IssueDetail | undefined;
   getIssueIdByIdentifier: (issueIdentifier: string) => string | undefined;
 }
 
@@ -63,17 +70,21 @@ export class IssueStore implements IIssueStore {
   });
 
   // helper methods
-  getIssueById = computedFn((issueId: string) => {
+  getIssueById = computedFn((issueId: string): Issue | IssueDetail | undefined => {
     if (!issueId) return undefined;
     return this.rootIssueDetailStore.rootIssueStore.issues.getIssueById(issueId) ?? undefined;
   });
+
+  getIssueDetailById = computedFn((issueId: string) =>
+    this.rootIssueDetailStore.rootIssueStore.issues.getIssueDetailById(issueId)
+  );
 
   getIssueIdByIdentifier = computedFn((issueIdentifier: string) => {
     if (!issueIdentifier) return undefined;
     return this.rootIssueDetailStore.rootIssueStore.issues.getIssueIdByIdentifier(issueIdentifier) ?? undefined;
   });
 
-  private async loadIssueResources(workspaceSlug: string, projectId: string, issueId: string, issue: TIssue) {
+  private async loadIssueResources(workspaceSlug: string, projectId: string, issueId: string, issue: Issue) {
     // Auxiliary resources keep their own DTOs; they are not fields of the core detail response.
     await Promise.all([
       this.rootIssueDetailStore.fetchReactions(workspaceSlug, projectId, issueId),
@@ -118,7 +129,7 @@ export class IssueStore implements IIssueStore {
     return issue;
   };
 
-  addIssueToStore = (issue: TIssue) => {
+  addIssueToStore = (issue: Issue) => {
     this.rootIssueDetailStore.rootIssueStore.issues.addIssue([issue]);
     this.fetchingIssueDetails = undefined;
 

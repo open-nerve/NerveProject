@@ -4,16 +4,18 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useCallback, useMemo } from "react";
 import { matchPath } from "react-router";
-import type { TIssue } from "@nerve/types";
+
 import type { TNavigationItem } from "@/components/navigation/tab-navigation-root";
 
 type UseActiveTabProps = {
   navigationItems: TNavigationItem[];
   pathname: string;
   workItemId?: string;
-  workItem?: TIssue;
+  workItem?: Issue;
   projectId: string;
 };
 

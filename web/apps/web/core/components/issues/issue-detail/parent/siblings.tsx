@@ -4,9 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { observer } from "mobx-react";
 import useSWR from "swr";
-import type { TIssue } from "@nerve/types";
+
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // types
@@ -14,8 +16,8 @@ import { IssueParentSiblingItem } from "./sibling-item";
 
 export type TIssueParentSiblings = {
   workspaceSlug: string;
-  currentIssue: TIssue;
-  parentIssue: TIssue;
+  currentIssue: Issue;
+  parentIssue: Issue;
 };
 
 export const IssueParentSiblings = observer(function IssueParentSiblings(props: TIssueParentSiblings) {

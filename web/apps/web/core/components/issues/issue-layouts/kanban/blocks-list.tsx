@@ -4,10 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { MutableRefObject } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { TIssue, IIssueDisplayProperties, IIssueMap } from "@nerve/types";
+import type { IIssueDisplayProperties } from "@nerve/types";
 // local imports
 import type { TRenderQuickActions } from "../list/list-view-types";
 import { KanbanIssueBlock } from "./block";
@@ -15,10 +17,10 @@ import { KanbanIssueBlock } from "./block";
 interface IssueBlocksListProps {
   sub_group_id: string;
   groupId: string;
-  issuesMap: IIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   issueIds: string[];
   displayProperties: IIssueDisplayProperties | undefined;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   canEditProperties: (projectId: string | undefined) => boolean;
   canDropOverIssue: boolean;

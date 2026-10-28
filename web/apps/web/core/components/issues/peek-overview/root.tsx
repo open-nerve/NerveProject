@@ -13,7 +13,7 @@ import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IWorkItemPeekOverview, TIssue } from "@nerve/types";
+import type { IWorkItemPeekOverview } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";

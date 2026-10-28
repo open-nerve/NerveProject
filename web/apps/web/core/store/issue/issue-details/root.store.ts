@@ -4,11 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail as GeneratedIssueDetail } from "@nerve/api-client";
+
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { action, computed, makeObservable, observable } from "mobx";
 // types
 import type {
-  TIssue,
   TIssueComment,
   TIssueCommentReaction,
   TIssueLink,
@@ -48,7 +49,7 @@ export type TIssueRelationModal = {
   relationType: TIssueRelationTypes | null;
 };
 
-type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: TIssue | undefined };
+type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: Issue | undefined };
 
 export type TIssueCrudOperationState = {
   create: TIssueCrudState;
@@ -293,8 +294,8 @@ export class IssueDetail implements IIssueDetail {
     projectId: string,
     parentIssueId: string,
     issueId: string,
-    issueData: Partial<TIssue>,
-    oldIssue?: Partial<TIssue>,
+    issueData: Partial<GeneratedIssueDetail>,
+    oldIssue?: Partial<GeneratedIssueDetail>,
     fromModal?: boolean
   ) => this.subIssues.updateSubIssue(workspaceSlug, projectId, parentIssueId, issueId, issueData, oldIssue, fromModal);
   removeSubIssue = async (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) =>

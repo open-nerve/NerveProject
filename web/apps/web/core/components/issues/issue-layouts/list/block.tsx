@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue, IssueDetail } from "@nerve/api-client";
+
 import type { Dispatch, MouseEvent, SetStateAction } from "react";
 import { useEffect, useRef } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
@@ -14,7 +16,7 @@ import { ChevronRightOutline } from "@makeplane/propel/icons";
 // types
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TIssue, IIssueDisplayProperties, TIssueMap } from "@nerve/types";
+import type { IIssueDisplayProperties } from "@nerve/types";
 // ui
 import { ControlLink, Row } from "@nerve/ui";
 import { cn, generateWorkItemLink } from "@nerve/utils";
@@ -31,9 +33,9 @@ import type { TRenderQuickActions } from "./list-view-types";
 
 interface IssueBlockProps {
   issueId: string;
-  issuesMap: TIssueMap;
+  issuesMap: Record<string, Issue | IssueDetail>;
   groupId: string;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   displayProperties: IIssueDisplayProperties | undefined;
   canEditProperties: (projectId: string | undefined) => boolean;
@@ -72,7 +74,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
   const { getProjectIdentifierById } = useProject();
   const { getIsIssuePeeked, peekIssue, setPeekIssue, subIssues: subIssuesStore } = useIssueDetail();
 
-  const handleIssuePeekOverview = (issue: TIssue) =>
+  const handleIssuePeekOverview = (issue: Issue) =>
     workspaceSlug &&
     issue &&
     issue.project_id &&

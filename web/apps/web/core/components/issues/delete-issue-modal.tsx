@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
@@ -11,7 +13,7 @@ import { useParams } from "react-router";
 import { PROJECT_ERROR_MESSAGES, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TDeDupeIssue, TIssue } from "@nerve/types";
+import type { TDeDupeIssue } from "@nerve/types";
 // ui
 import { AlertModalCore } from "@nerve/ui";
 // hooks
@@ -23,7 +25,7 @@ type Props = {
   isOpen: boolean;
   handleClose: () => void;
   dataId?: string | null | undefined;
-  data?: TIssue | TDeDupeIssue;
+  data?: Issue | TDeDupeIssue;
   isSubIssue?: boolean;
   /** Deletes it: the confirmation is busy until it settles. */
   onSubmit: () => Promise<void>;
@@ -51,7 +53,8 @@ export const DeleteIssueModal = observer(function DeleteIssueModal(props: Props)
   // derived values
   const issue = data ? data : issueMap[dataId!];
   const projectDetails = getProjectById(issue?.project_id);
-  const isIssueCreator = issue?.created_by === currentUser?.id;
+  const issueCreatorId = issue && ("created_by_id" in issue ? issue.created_by_id : issue.created_by);
+  const isIssueCreator = !!issueCreatorId && issueCreatorId === currentUser?.id;
 
   const canPerformProjectAdminActions = allowPermissions(
     [EUserPermissions.ADMIN],

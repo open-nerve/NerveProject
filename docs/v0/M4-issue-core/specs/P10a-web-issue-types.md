@@ -67,6 +67,8 @@ tempId 有活写者：createIssuePayload→quick-add→BaseIssuesStore.issueQuic
 
 T5 详情资源职责补充（root 同域局部裁定，2026-10-28）：两条 retrieve 入口只把完整无嵌套 core 响应入 canonical 一次；reaction/link 保留自身原 DTO，由现有 fetchReactions/fetchLinks 加载到各自资源缓存。父项只依据实际非 null parent_id，使用该响应的实际 project_id 调原 service.retrieve 后入 canonical，不递归调用全详情，不推断隐藏父。新增读取须由拥有它们的 fetch promise await 并传递拒绝，不制造 unhandled rejection、不吞成空成功；不顺手修历史 detached activity/comment/subissue/relation/state 请求。详情成功 promise 因此等待这三项；从旧 expand 取 reaction/link 改成两个既有资源 GET，非 null 父保留一次独立 GET，null 父不请求。R10 的更新/create wire 与次数不变只限其写请求，不能推广成 T5 所有读次数不变。新增 `C/store/issue/issue-details/issue.fetch.test.ts` 用真实 RootStore/canonical/两种 retrieve/资源 store/service 公共 HTTP 边界，核无嵌套、真实资源缓存、父 null/非 null、canonical 次数与拒绝可观察；先性质红再最小改动绿，T6 只机械换核心夹具。
 
+T6 关系资源补充（R16，root 同域局部裁定，2026-10-28）：生成 core Issue/IssueDetail 没有 issue_relation/issue_related；删除列表初始/翻页对 extractRelationsFromIssues 的调用及该 extractor 的声明/action/实现，不新增列表逐行资源请求、不造嵌套兼容 DTO。详情的两个 retrieve 入口保留既有 relation.fetchRelations；关系展示依所属资源到达，列表不再预热关系。P11 继续接真实详情资源接口。用真实 RootStore/公共 HTTP 边界核两种详情读取实际填充关系缓存，再让初始/下一页纯 Issue 到达，已知关系和关联实体不能被无嵌套列表清空。此局部收窄不改变历史 detached 关系请求的拒绝所有权。
+
 ### 2.3 有界旧 service 过渡
 
 | 文件（均在 C/services） | 本段动作 | 到期 |
@@ -371,6 +373,10 @@ T1 在源 HEAD `4569a9e7386031cffb31aa37d6cf06a726b08c2c` 重新运行两条计�
 | `web/apps/web/core/store/issue/workspace/filter.store.ts` | T3 删除 |
 | `web/packages/constants/src/issue/common.ts` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 |
 
+### B.3 T6实际换型账（基线 bd862bf2）
+
+T6入口直接引用三旧核心名的消费者为118文件（T1原132是历史快照）；当前直接导入生成Issue/Detail共118文件。额外接续无旧名的nested inbox actor、详情main/peek accessor、R10/R15/Base loading/clone/draft payload测试与共享fixture。实际路径逐项及源字节由本地`task-6-consumers.json/md`和最终source manifest绑定；不恢复已删getIssues/retrieveIssues，不混改外层inbox/真实草稿/legacy查询filter键。
+
 ## 附录 C：既有大文件的机械改动例外
 
 下表仅允许本段删除分支、导入/字段名/null机械调整；新增算法仍按400行内拆分。T1 冻结改前行数；本 Task 不修改这些生产文件，故 T1 改后行数与改前相同。后续各 Task 与最终 review 更新改后行数/新增职责，不因表中存在就放行体积增长。生成物不计入此表。
@@ -403,3 +409,12 @@ T1 广义旧地址账冻结 `web/` 中全部 `/api/workspaces/` 字面量：23 �
 | `web/apps/web/core/store/inbox/project-inbox.store.ts` | 511 | 510 | 删除越界读取/控件、局部表单或请求签名接续；不重写所属存储算法 |
 | `web/apps/web/core/store/issue/helpers/base-issues.store.ts` | 1663 | 1277 | R10 局部 request/patch 隔离与 absent-key 恢复；fix round1 删除普通 cycle/module 最后读者链，分组算法留 P10b |
 | `web/apps/web/core/store/issue/workspace-draft/issue.store.ts` | 408 | 366 | 删除越界读取/控件、局部表单或请求签名接续；不重写所属存储算法 |
+
+### T6 既有大文件登记（实施基线 bd862bf2）
+
+| 文件 | 改前行数 | 改后行数 | 本 Task 理由 |
+|---|---:|---:|---|
+| `web/apps/web/core/components/inbox/content/inbox-issue-header.tsx` | 470 | 470 | 生成核心类型/字段/null机械接续；Base另按R16删除列表关系提取调用，不新增协调算法 |
+| `web/apps/web/core/components/issues/issue-layouts/utils.tsx` | 739 | 745 | 生成核心类型/字段/null机械接续；Base另按R16删除列表关系提取调用，不新增协调算法 |
+| `web/apps/web/core/store/inbox/project-inbox.store.ts` | 510 | 511 | 生成核心类型/字段/null机械接续；Base另按R16删除列表关系提取调用，不新增协调算法 |
+| `web/apps/web/core/store/issue/helpers/base-issues.store.ts` | 1277 | 1274 | 生成核心类型/字段/null机械接续；Base另按R16删除列表关系提取调用，不新增协调算法 |

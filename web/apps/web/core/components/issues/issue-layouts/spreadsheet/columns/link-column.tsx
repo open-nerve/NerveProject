@@ -4,14 +4,16 @@
  * See the LICENSE file for details.
  */
 
+import type { Issue } from "@nerve/api-client";
+
 import React from "react";
 import { observer } from "mobx-react";
 // types
-import type { TIssue } from "@nerve/types";
+
 import { Row } from "@nerve/ui";
 
 type Props = {
-  issue: TIssue;
+  issue: Issue;
 };
 
 export const SpreadsheetLinkColumn = observer(function SpreadsheetLinkColumn(props: Props) {

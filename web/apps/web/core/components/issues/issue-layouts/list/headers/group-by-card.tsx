@@ -4,12 +4,14 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueDetail } from "@nerve/api-client";
+
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { CircleDashed } from "lucide-react";
 import { AddOutline } from "@makeplane/propel/icons";
 // types
-import type { TIssue, TIssueGroupByOptions } from "@nerve/types";
+import type { TIssueGroupByOptions } from "@nerve/types";
 // ui
 // components
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
@@ -22,7 +24,7 @@ interface IHeaderGroupByCard {
   icon?: React.ReactNode;
   title: string;
   count: number;
-  issuePayload: Partial<TIssue>;
+  issuePayload: Partial<IssueDetail>;
   disableIssueCreation?: boolean;
   handleCollapsedGroups: (value: string) => void;
 }

@@ -4,7 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssueRelation, TIssue, TIssueRelationTypes } from "@nerve/types";
+import type { Issue } from "@nerve/api-client";
+
+import type { TIssueRelation, TIssueRelationTypes } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 
@@ -22,7 +24,7 @@ export class IssueRelationService extends APIService {
     projectId: string,
     issueId: string,
     data: { relation_type: TIssueRelationTypes; issues: string[] }
-  ): Promise<TIssue[]> {
+  ): Promise<Issue[]> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/issue-relation/`, data)
       .then((response) => response?.data)
       .catch((error) => {
