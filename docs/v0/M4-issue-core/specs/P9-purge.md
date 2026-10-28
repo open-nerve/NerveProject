@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M4/P9 `purge` |
 | 日期 | 2026-10-27 |
-| 状态 | 准备与独立静态预检通过；负责人已授权从T1实施，以下验收按真实证据逐项关闭；阶段结束整分支deep-review，暂不合并；见[评审记录](../reviews/P9-purge-review.md) |
+| 状态 | 后端实施、整审修复及最终产品F/CI已完成；T16文档独评及文档提交CI待核，集成待办；准确产品HEAD `e003e96625ba51264d3aeb77729729d53a770103`；当前证据见[review](../reviews/P9-purge-review.md)，本轮不合并 |
 | 代码基线 | P8 的 main 合并 `6b9d08d4821f1423c7bb9795557727c206b7880f`；主控已核该准确 SHA 的 CI `40520609987` 三个 job 全绿，并完成 P8 证据归档、哈希复核及工作树/本远端分支清理 |
 | 分支 | `codex/m4-p9`；worktree `.codex/worktress/codex/m4-p9`；主目录 HEAD 保持 main |
 | 上级文档 | [M4 设计](../M4-design.md) §3.5–3.6、3.14、3.19–3.21、3.23、4.16、6.2–6.6、9.3、9.6、12/P9、13.1；[方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md) |
@@ -317,7 +317,9 @@ I21 复用 ClockWorld，自己的独立数据库任一时刻只有一个nerve。
 
 这些是已批准协议的局部细化，没有新增跨模块协同方案。若实施发现架构回归、必须改变既定锁/事件/模块边界或意外高风险，按负责人纪律提交已完成工作后上报；不拿本节当越界授权。
 
-## 4. 验收标准（全部待实施）
+## 4. 验收标准（证据与当前门禁见review）
+
+T1–T15及整审修复的实际证据已映射至review§8。准确e003最终F已通过，本次文档接续仍等T16文档独评及文档提交CI，A1–A13实施勾选暂不关闭；未来mainCI独立待授权。
 
 - [ ] A1：00030–00033的23索引、sqlc模块schema、真实目录清理者/FK入边覆盖；漏清理者/漏入边/错误动作反例实际失败。
 - [ ] A2：四模块61天删、59天及精确cutoff留、活行留；子先父、id键集、独立批提交/错误计数、账户/会话范围及runtime权限通过。
@@ -337,11 +339,11 @@ I21 复用 ClockWorld，自己的独立数据库任一时刻只有一个nerve。
 
 - 不做账户物理删除、outbox/event持久化、通用清理平台、新队列、新依赖、前端功能或M5–M8功能；M2命令行只投递客户端的首个真实使用方仍交M5。
 - 不把自动归档/metadata抓取/草稿锁/列表权限重写一遍；只消费既有端口并补P9窗口证明。超过目标规模的性能不承诺，实测数字交M8。
-- M4页面、后续故事、Webhook/附件/迭代订阅和最终交接status关闭仍由所属阶段承担。P9自己的实施授权、整审、集成不是本准备稿的既成事实。
+- M4页面、后续故事、Webhook/附件/迭代订阅和最终handoff status关闭仍属后续阶段；P9实施/整审事实以当前review为准，不能据此声称M4总体或集成完成。
 
 ## 6. 风险
 
-关联候选被早删另一端占满时可能重复扫描，测试必须把零更新与高id推进分开；低预算的重启仍从头开始，不能偷偷持久化cursor。SQL生成类型、runtime权限和目录FK行为须真实PG验证。预算+5s无法保证任意数据库阻塞及时结束，真实数据库/context错误归River重试。大表seed/计数耗时与产品任务耗时必须分开。静态预检不能证明性能、死锁或E2E水位，所有运行通过线保持待办。
+关联候选被早删另一端占满时可能重复扫描，测试必须把零更新与高id推进分开；低预算的重启仍从头开始，不能偷偷持久化cursor。SQL生成类型、runtime权限和目录FK行为须真实PG验证。预算+5s无法保证任意数据库阻塞及时结束，真实数据库/context错误归River重试。大表seed/计数耗时与产品任务耗时必须分开。静态预检不能证明性能、死锁或E2E水位，运行结论须绑定各自实际源码身份，当前最终门禁见review，不以静态检查代替。
 
 ## 7. 交接与关闭条件
 
@@ -360,7 +362,7 @@ T16同步总体设计§5.5/6.7清理、§5.5/6.3异步边界、M3设计§3.6/13.
 
 ## 附录 A：准备与运行证据边界
 
-2026-10-27作者准备仅静态阅读设计、交接、P8结构与准确main源码；作者未跑产品/迁移/并发/性能测试、生成/容器/构建/安装，未做原型。主控已单独运行准备关键词与架构守卫（`node tools/keywords.mjs`为72规则/23例外零命中，`go -C server test -count=1 ./internal/archtest`通过；原件在P9 ignored `checks/preparation-{keywords,architecture}/`），这不是P9产品运行证据。独立静态预检及2项局部修订复审已通过，准确冻结指纹、原始发现与证据见[阶段review](../reviews/P9-purge-review.md)及[deep-review报告](../../../reviews/re-08-M4P9预检审核.md)。当前没有P9性能数字、红绿或变异输出；全部产品验收仍待实施。
+2026-10-27作者准备仅静态阅读设计、交接、P8结构与准确main源码；作者未跑产品/迁移/并发/性能测试、生成/容器/构建/安装，未做原型。主控已单独运行准备关键词与架构守卫（`node tools/keywords.mjs`为72规则/23例外零命中，`go -C server test -count=1 ./internal/archtest`通过；原件在P9 ignored `checks/preparation-{keywords,architecture}/`），这不是P9产品运行证据。独立静态预检及2项局部修订复审已通过，准确冻结指纹、原始发现与证据见[阶段review](../reviews/P9-purge-review.md)及[deep-review报告](../../../reviews/re-08-M4P9预检审核.md)。这份2026-10-27准备快照当时没有P9性能数字、红绿或变异输出；后续实施证据另见附录B/C和当前review。
 
 实施期每Task保存准确SHA/dirty字节hash、argv/cwd、时间、原始输出、RUN/skip/exit、变异恢复hash和独评记录；F按plan列出的七项串行取得。T14附录需填写每表seed计数、每job完整args/运行次数/attempt/终态/耗时、两组读写探针全部样本与环境；T15汇总真实范围，不能只贴PASS摘要。
 
@@ -536,3 +538,22 @@ ctx取消不再开新批、SQL传原ctx、错误保链；JobTx沿平台既有语
 T12 `2aa26ab9` 的七项本地F已通过；其远端run `40610708261`唯一已知W11快捷键问题的190行原始输出已由owner提供、待重跑，不声称远端绿，也不因本轮聚焦通过推断CI问题已修复。T13/T14局部结果不能替代最终F。
 
 按批准分工，作者完成本附录和聚焦验证后交主控独评；主控在最终clean HEAD串行执行七项完整F，再push并核准确branch head_sha及三个job，必要产品修复后重新取得受影响最终检查点。T16另负责全分支deep-review/修复复审及§7列出的文档/后端子项交接。未来main合并/mainCI/归档清理另等明确授权；本附录不关闭整M4或后续阶段。
+
+## 附录 D：T16 当前验收与输入回执（2026-10-28）
+
+产品HEAD `e003e96625ba51264d3aeb77729729d53a770103`；首次整审范围6b9d08d4..7881127a的238文件60363行，加d253/e003两次局部复审，4项发现全部ADDRESSED。实际A1–A13映射、24生产代表、逐批约定五、真实失败及裁定理由/代价见 [P9 review §8–12](../reviews/P9-purge-review.md) 和 [正式整体审核](../../../reviews/re-09-M4P9整体审核.md)。附录B测量身份不改，附录C为T15作者当时快照。
+
+| §7输入 | 本期后端承接结果与证据 | 保留责任 |
+|---|---|---|
+| M2 §5/6 | T1–4/T13目录/FK、PAT及活动/评论二级链回收；T4/5/8登记与真实worker、T9/10事务投递/T12生命周期 | M5首个CLI真实投递，M2其它前端/会话交接不借此全关 |
+| M3 §1 | T9/10本次项目集合事件任务、邀请同步、零项目draft；registrationRows识别请求kind | M3行同步不改成全异步；页面责任保留 |
+| M3 §2 | T7/12/15及最终fixture修复逐批审计/真实锁身份；NULL creator独立组合，不物理删账户 | handoff总体open；不把候选排序说成所有DELETE锁序 |
+| M3 §4 | T2–4清理/索引/FK，T10 runtime/W3两处原审计，T13 P4/W2/W3有限poll | 仅issue侧轮询、M3即时断言，目录无新增豁免 |
+| P1a/P1b | T9/10两过渡方法/CLI依赖移除；T14 660000行/每job单次及双存活探针 | 页面I1/I2与M8部署/更大规模开放 |
+| P2/P3 | T11 NULL creator/窗口；T12 LockMany/eitherUnder/两端存在与原审计，最终等待身份修复 | 不把账户purge旧措辞当已实现；P13–15页面开放 |
+| P4/P5 | T3/5五协作表与20版本、T11完整窗口/游标、T13物理链 | 页面/内容标识/后续新表及通知责任不关闭 |
+| P6/P7/P8 | 两事件/请求kind与周期、links/drafts目录、W3 Old原戳/零项目与search窗口 | M5–M8订阅/部署，P10b–15页面保留 |
+
+两输入handoff与18份历史回执均只追加本期处理结果，历史原文/运行身份保留、status仍open。四条M4§3.23同步分别落实上级设计/异步/M3/plane；README六配置与契约窗口一致。未来归档/集成须另获授权，不将P9子项结果等同整M4完成。
+
+T12 CI40610708261 attempt2、T15 CI40623599731 attempt1各自准确SHA三job成功；T12 attempt1 W11历史失败保留，不声称查明或修复其根因。最终产品F：准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json)；最终产品分支CI：准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI；文档独评：本轮文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；独立文档复审由主控接续，目前待核。静态检查不代替产品运行或独立复审。仅这些本期门禁闭合后才关闭A1–A13实施项，未来mainCI继续独立列待授权。

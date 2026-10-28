@@ -202,6 +202,14 @@ I11 评论与两类表情；I12 评论/动态翻页与增量新增；I13 历史�
 
 T5/T6直接创建与发布共享唯一创建核心，保留清洗、提及/关注、活动、初始描述版本和唯一事件；adapter复用create bodyshape，三真实失败注入整体回滚。草稿保存不清洗/无issue副作用，草稿/搜索复用shared.PageSize/ReadOnlySnapshot，搜索不读description_stripped。T5/T6/I14及T11快照已有证据；P9保留/清理、P11/P14数据/编辑、P15协作页面及M5图片仍开放。 实际命令/计数/变异/检查点见[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
 
+### 处理结果（M4/P9，2026-10-28）
+
+T3/T5已接五协作表及评论二级FK物理清理、活版本last_saved_at/id最新20保留；T11动态历史引用/游标与权限窗口，T13 I21保存ID直查旧物理子链消失及recent/live整行保留，P4/W2/W3仅issue侧有限poll。
+
+证据：[P9 review §8–12](../reviews/P9-purge-review.md)、[P9 spec附录B/C/D](P9-purge.md)；产品身份 `e003e96625ba51264d3aeb77729729d53a770103`，独立整审与两次局部复审结果按上述入口，最终检查点/文档独评分别记账。
+
+仍开放：P11 DTO/service/store、P14保存/弹窗、P15时间线/评论、M5图片内容标识、M6新表和M7/M8发送时权限重判仍开放。 本回执只承接P9后端子项，不关闭整份交接或M4，不改变本页历史运行/集成身份。
+
 ## 6. 风险
 
 | 风险 | 判断和退路 |

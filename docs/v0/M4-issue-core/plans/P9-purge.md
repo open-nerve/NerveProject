@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **状态：** 准备与独立静态预检通过，2项局部文档遗漏已修订复审，见[评审记录](../reviews/P9-purge-review.md)。负责人已授权从T1开始实施；步骤仅在真实验证及独立评审后勾选。阶段完成做整分支deep-review，暂不合并。
+> **当前状态（2026-10-28）：** 后端实施、整审修复及最终产品F/CI已完成；T16文档独评及文档提交CI待核，集成待办。T1–T15真实执行与独评见[review](../reviews/P9-purge-review.md)；首次整审及两次局部修复已闭环，最终产品F/CI已有收据，T16文档独评及文档提交CI仍按各自收据完成。不合并。
 
 **Goal：** 交付23表60天物理清理、活描述版本最新20保留、项目/工作区删除后的issue侧分批任务，并证明窗口、锁序、审计、重试和目标规模。
 
@@ -274,16 +274,25 @@ T8 checkpoint fix round1：`B/project_write_locks_test.go` 的 holding 与 `issu
 
 - [ ] **独立整审：** 按准确基线`6b9d08d4821f1423c7bb9795557727c206b7880f..最终产品HEAD`执行deep-review，报告逻辑正确性/集成安全/测试覆盖；覆盖HEAD全部写的锁图、37操作访客/窗口、至少15变异证据及完整F，不以作者自查代替。
 - [ ] **修复/复审：** Findings逐条裁定根因修复，必要红绿/影响回归和独立复审；若产品修复影响最终检查点，先F后push。报告真实失败/环境限制、超60天允许40P01，不写比代码宽的无死锁承诺。
-- [ ] **同步文档：** 只有A1–A13真实证据齐才勾实施；M4状态写“实施与终审完成、集成待办”。追加P2 NULL creator历史矛盾的准确处理；handoffs只关后端子项、status仍open；M5命令行首投递、M8部署/性能与后续订阅责任保留。
+- [ ] **同步文档：** 只有A1–A13真实证据齐才勾实施；M4/P9阶段状态写“实施与终审完成、集成待办”，M4总体仍进行中。追加P2 NULL creator历史矛盾的准确处理；handoffs只关后端子项、status仍open；M5命令行首投递、M8部署/性能与后续订阅责任保留。
 - [ ] **验证：** `git diff --check`；逐条静态链接/实际接口/配置/任务种类核对，独立文档复审。只文档修改不谎称新行为运行，不重跑未受影响规模；正式review清楚区分prepared/static/runtime/branch CI/main CI身份。
 - [ ] **G/交付：** 提交`docs(M4/P9): 汇总后台删除清理验收与后端交接`，详细正文说明审计范围/结果/未关闭项；本轮完成实施与deep-review后保留分支/worktree，等待负责人安排，不合并。未来获授权后才`--no-ff`合并，main准确SHA CI全绿且归档核验后清理。
 
-## 作者自查（准备稿范围）
+## 作者自查（2026-10-27准备稿历史）
 
-spec覆盖映射：A1→T1/T3，A2→T1–4，A3→T4/5/8，A4→T5/6，A5→T8–10，A6→T7/8/12，A7→T7/11，A8→T9/10/12，A9→T8/12，A10→T10/13，A11→T14，A12→T15/16，A13→T16。新接口集中于spec§2，任务不复制实现体；Review Focus五项均有归属测试。任务预计尺寸与依赖已列；所有执行勾选为空。此自查不是独立预检、原型、测试通过或产品授权。
+spec覆盖映射：A1→T1/T3，A2→T1–4，A3→T4/5/8，A4→T5/6，A5→T8–10，A6→T7/8/12，A7→T7/11，A8→T9/10/12，A9→T8/12，A10→T10/13，A11→T14，A12→T15/16，A13→T16。新接口集中于spec§2，任务不复制实现体；Review Focus五项均有归属测试。任务预计尺寸与依赖已列；当时所有执行勾选为空。此自查不是独立预检、原型、测试通过或产品授权。
 
 T10 回归接续：B/permission_matrix_test.go 的 prepareMatrix 在 gone workspace DELETE 后先核 M3 preconditions/states/labels，再等精确 workspace 删除任务完成，最后保留原 issue/comment/version/reaction/link 全部 seed 断言；四个矩阵/列表调用者复用，不改公开窗口守卫。
 
 T10 的 T4 接续：B/purge_runtime_test.go 准备子 App 在 runtime 角色完成 workspace 删除任务后才停止；owner 随后仅老化墓碑和观察，原两 App 隔离、61d/59d 与真实 DELETE 角色/模块序断言保持。
 
 T10 E2E 收尾：assert/catalog.ts 统一 issueOwnedTable 分类，project.ts/workspace.ts 与 W3 零项目故事共用；纯期望函数依 lint 要求归模块级，两组 Promise.all 仍先 M3 立即断言，再只对 issue 有限轮询。
+
+## T16执行接续（2026-10-28）
+
+T1–T15逐Task实施/独评及主控核证已完成，实际任务文件归属、失败/变异/恢复及检查点以review§8–11为准，不机械回写历史步骤为未实际运行的命令。整分支6b9d08d4..7881127a审查238文件60363行，d253/e003局部修复与独评使4发现全部ADDRESSED；当前产品BASE为e003e96625ba51264d3aeb77729729d53a770103。
+
+- [x] 独立整审阅读/发现处置及局部修复复审；完整F的最终身份另列，作者自查未替代独审。
+- [x] 最终产品检查点：准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json)；准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI。
+- [ ] T16文档静态核对与独立复审：本轮文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；独立文档复审由主控接续，目前待核。静态检查不代替产品运行或独立复审。
+- [ ] 精确文档路径G提交/交付身份：本轮文档提交身份由ignored `task-16-final-receipt.json`绑定；不递归写入提交自身SHA，也不倒填产品或规模测量HEAD；保留分支/worktree，不合并。

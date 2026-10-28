@@ -169,7 +169,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
   - `project` 问 `workspace`：按 slug 取工作区（目录）；按 id 以 `FOR SHARE` 锁住项目所在的工作区行（项目级的写的第一把锁，3.6 约定二）；锁住若干人的工作区成员行并取回有效角色（约定三，3.6）。
   - `workspace` 让 `project` 做连带：端口 `ProjectCascade`，由 `project/app` 的 `Cascade` 实现，四个方法（`LockWorkspaceProjects` 和 `DeleteWorkspaceProjects` 的 `projectIDs` 是 M4/P1a 起的，M4 设计 3.5）：
     - `LockWorkspaceProjects(ctx, workspaceID) ([]uuid.UUID, error)`：删除工作区在锁住它的邀请之后、读时刻之前，以一条语句按 `id` 升序 `FOR NO KEY UPDATE` 锁住这个工作区的全部未删除项目（已归档的也算），回答它们的 `id`；只加锁，不写；
-    - `DeleteWorkspaceProjects(ctx, workspaceID, projectIDs, by, now) error`：软删除这个工作区的项目及其下的行（项目 → 项目成员 → 项目显示设置 → 状态 → 标签，3.6 的取锁表），最后经 `issue` 模块的 `IssueCascade.DeleteWorkspaceIssues` 软删除 `projectIDs`（`LockWorkspaceProjects` 锁住的项目）的工作项一侧的行；删除者 `by` 与时刻 `now` 由工作区的连带传入，与工作区一侧的每一步相同；
+    - `DeleteWorkspaceProjects(ctx, workspaceID, projectIDs, by, now) error`：同步软删除本次锁住项目的M3行（项目 → 项目成员 → 项目显示设置 → 状态 → 标签，3.6）。P9起不再调用issue同步删除端口；workspace用例在原事务发布带本次projectIDs的 `workspace.deleted`，订阅者为每个项目及无项目草稿投递任务。`by`/`now`保持原请求审计，更早删除项目不进入本次集合；
     - `EndMemberships(ctx, workspaceIDs, userID, by, now) error`：在调用时列举他在这些工作区里有效的项目成员关系（不接收事先列好的项目，3.6 约定六），锁住那些项目、查唯一管理员（可能拒绝 `project.sole_admin`，3.7）、停用他的项目成员关系。移出、离开、停用账户都用它；`by` 是移出他的管理员、离开的本人、被停用的账户；
     - `DemoteToGuest(ctx, workspaceID, userID, by, now) error`：把他在这个工作区的项目角色都改为访客（Plane `views/workspace/member.py:87-89`，含已离开的项目）；`by` 是改他角色的管理员（`updateWorkspaceMember`），或接受邀请的本人（接受恢复为访客时，3.8）。
     - 后三个方法都把 `by` 写进它们改的行的 `updated_by_id`、把 `now` 写进审计时间，与 M3 的其余写入相同；四个方法失败时都原样返回错误，调用方的整个事务随之回滚。
@@ -298,7 +298,7 @@ M2 设计 3.5 的加锁顺序是全局约定。M3 的表接在它后面，另加
   |---|---|
   | 创建工作区（接口、命令） | 管理员的账户行 S（锁下确认有效，约定六）→ 插入工作区 → 插入成员 |
   | 修改工作区 | 工作区 N → 判定 → 改 |
-  | 删除工作区 | 工作区 N → 判定 → 邀请（N，`id` 升序，一条语句，回答它们的 `id`，约定五的例外）→ 这个工作区的全部未删除项目（N，`id` 升序，一条语句，`ProjectCascade.LockWorkspaceProjects`）→ 读时刻 → 软删除工作区 → 删除锁住的邀请 → 成员 → 显示设置 → `DeleteWorkspaceProjects`：项目 → 项目成员 → 项目显示设置 → 状态 → 标签（批量，约定五）→ 锁住的项目的工作项一侧的行。锁项目、在它之后读时刻是 M4/P1a 起的（M4 设计 3.5）：工作项的写只锁项目行、不锁工作区行，删除的时刻要不早于这些项目上已提交的每个写 |
+  | 删除工作区 | 工作区 N → 判定 → 邀请（N，`id` 升序，一条语句，回答它们的 `id`，约定五的例外）→ 这个工作区的全部未删除项目（N，`id` 升序，一条语句，`ProjectCascade.LockWorkspaceProjects`）→ 读时刻 → 软删除工作区 → 删除锁住的邀请 → 成员 → 显示设置 → `DeleteWorkspaceProjects`：项目 → 项目成员 → 项目显示设置 → 状态 → 标签（批量，约定五）→ 发布 `workspace.deleted`（Changes仅本次锁住项目；订阅者同事务投每项目一job及workspace_drafts，issue行异步写原请求戳）。邀请仍同步，投递失败整请求回滚。锁项目、在它之后读时刻是 M4/P1a 起的（M4 设计 3.5）：工作项的写只锁项目行、不锁工作区行，删除的时刻要不早于这些项目上已提交的每个写 |
   | 改工作区成员的角色 | 读成员行（得到工作区）→ 工作区 N → 重读成员行 → 判定 → 目标的检查（已结束 404、自己 409）→ 改；改为访客时 `DemoteToGuest`：他在这个工作区的项目（N，`id` 升序）→ 项目成员（批量） |
   | 移出成员、离开工作区 | 读成员行（移出按 id 指定成员关系；离开按 slug，没有这一步）→ 工作区 N → 重读成员行（移出）→ 判定 → 目标的检查（移出：已结束 404、自己 409 `workspace.own_membership`，与改角色同序）→ 查唯一管理员（离开）→ 软删除这个工作区里发给他邮箱的待接受邀请（邮箱经 `MemberProfiles`，不加锁，约定一；3.8）→ 成员行 → `EndMemberships`：列举他在这个工作区有效的项目成员关系（新的语句，约定六）→ 那些项目（N，`id` 升序）→ 查唯一管理员 → 项目成员 |
   | `nerve workspaces reactivate-member` | 账户行 S（取回状态，停用的也允许，3.11）→ 工作区 N → 成员行（恢复，角色不变）→ 数他无效的项目成员关系（不加锁） |
@@ -310,7 +310,7 @@ M2 设计 3.5 的加锁顺序是全局约定。M3 的表接在它后面，另加
   | 停用账户（3.9） | `users` N（锁下读邮箱）→ `profiles` → `auth_sessions`（M2 的部分）→ 列举他有效成员关系所在的工作区 → 那些工作区（N，`id` 升序；锁时已删除的跳过）→ 查唯一管理员 → 要删除的邀请：发给他邮箱的全部邀请、他之外没有有效成员的那些工作区的待接受邀请（N，`id` 升序，一条语句，回答它们的 `id`；等锁时已删除的跳过）→ 删除这些 `id` 的邀请 → 他的工作区成员行 → `EndMemberships`：列举这些工作区里他有效的项目成员关系（新的语句）→ 那些项目（N，`id` 升序；锁时已删除的跳过）→ 查唯一管理员 → 项目成员 |
   | 创建项目 | 工作区 S → 判定 → 创建者、负责人的工作区成员行（S，`id` 升序）→ 插入项目 → 项目成员 → 项目显示设置 → 6 个状态 |
   | 修改、归档、恢复项目 | 工作区 S → 项目 N → 判定 → 改 |
-  | 删除项目 | 工作区 S → 项目 N → 判定 → 软删除项目 → 项目成员 → 显示设置 → 状态 → 标签（批量）→ 工作项一侧的行（M4/P1a 起，M4 设计 3.6） |
+  | 删除项目 | 工作区 S → 项目 N → 判定 → 最后锁后读时刻 → 软删除项目 → 项目成员 → 显示设置 → 状态 → 标签（批量）→ 原事务发布 `project.deleted` 并投issue删除任务；M3同步，issue行后台分批保留请求At/By（M4/P9） |
   | 添加项目成员、加入项目 | 工作区 S → 目标（加入时是调用者自己）的工作区成员行（S，`id` 升序，取回是否有效和角色）→ 项目 N → 判定 → 目标的检查（添加：无效或角色不合规 422，约定三）→ 插入或恢复项目成员（恢复时的角色按约定六）→ 显示设置 |
   | 改项目成员的角色、移出项目成员 | 工作区 S →（改角色）成员的工作区成员行 S → 项目 N → 重读项目成员 → 判定 → 改。改角色锁成员的工作区成员行，因为工作区访客的上限（3.5）读他的工作区角色；移出不读它，不锁 |
   | 离开项目 | 工作区 S → 项目 N → 判定 → 查唯一管理员 → 改 |
@@ -1056,7 +1056,7 @@ modules/project/
     check_identifier.go
     list_members.go  add_members.go  update_member.go  remove_member.go  join_project.go  leave_project.go
     cascade.go              workspace 的 ProjectCascade 的实现：LockWorkspaceProjects、DeleteWorkspaceProjects、EndMemberships、DemoteToGuest（3.3、3.6、3.7）；
-                            LockWorkspaceProjects 和 DeleteWorkspaceProjects 末尾经 IssueCascade 删除工作项一侧是 M4/P1a 起的（M4 设计 3.5）
+                            P9起仅同步处理M3项目行；workspace用例用本次projectIDs发布删除事件，issue订阅者同事务投后台任务
     get_preferences.go  update_preferences.go
     list_states.go  create_state.go  update_state.go  delete_state.go  mark_default_state.go  list_workspace_states.go
     list_labels.go  create_label.go  update_label.go  delete_label.go
@@ -1095,7 +1095,7 @@ modules/access/
 | `ProjectAccess`（项目是否存在、所属工作区、可见性、调用者的有效项目角色） | `access/app` | `project/adapter/postgres`（`project.Provide`） | 同上；已删除的项目算不存在，已归档的照常 |
 | `WorkspaceDirectory`（按 slug 取工作区的 id 和时区；按 id 以 `FOR SHARE` 锁住项目所在的工作区，带 `deleted_at IS NULL`，项目级的写的第一把锁，3.6 约定二） | `project/app` | `workspace/adapter/postgres`（`workspace.Provide`） | 集成测试；组合出的 app 上每个项目级的写最先等在工作区行上（P4b） |
 | `WorkspaceMembers`（按 `id` 升序 `FOR SHARE` 锁住若干人的工作区成员行，返回是否有效和角色；约定三） | `project/app` | 同上 | 集成测试；交错测试 4、5、17（3.6） |
-| `ProjectCascade`（`LockWorkspaceProjects`、`DeleteWorkspaceProjects`、`EndMemberships`、`DemoteToGuest`，3.3；`EndMemberships` 在调用时列举项目，3.6 约定六；`LockWorkspaceProjects` 和 `DeleteWorkspaceProjects` 的 `projectIDs`、末尾经 `IssueCascade` 删除工作项一侧是 M4/P1a 起的，M4 设计 3.5） | `workspace/app` | `project/app` 的 `cascade.go`（`project.New` 的 `Cascade()`，或命令行的 `project.NewCascade`，后者随第一个调用连带的命令加入，6.3） | 用例测试；删除工作区、降为访客、移出的集成测试核对连带的行与工作区的写入在同一事务（连带失败时工作区的写入也回滚）；交错测试 1、4、5、6、13–15、17；跨工作区的 `EndMemberships` 按 `id` 升序锁项目、跳过上锁时已删除的项目（P6）；`LockWorkspaceProjects` 的存储测试（回答、按 `id` 加锁、锁的强度）和删除工作区等持它一个项目的写（`TestAWorkspacesDeletionWaitsForAWriteHoldingOneOfItsProjects`，M4/P1a） |
+| `ProjectCascade`（`LockWorkspaceProjects`、`DeleteWorkspaceProjects`、`EndMemberships`、`DemoteToGuest`，3.3；`EndMemberships` 在调用时列举项目，3.6 约定六；`LockWorkspaceProjects` 和 `DeleteWorkspaceProjects` 的 `projectIDs` 自M4/P1a起保留；P9移除末尾issue同步调用，仅M3同步，workspace用例发布本次集合事件，M4设计3.5–3.6） | `workspace/app` | `project/app` 的 `cascade.go`（`project.New` 的 `Cascade()`，或命令行的 `project.NewCascade`，后者随第一个调用连带的命令加入，6.3） | 用例测试；删除工作区、降为访客、移出的集成测试核对连带的行与工作区的写入在同一事务（连带失败时工作区的写入也回滚）；交错测试 1、4、5、6、13–15、17；跨工作区的 `EndMemberships` 按 `id` 升序锁项目、跳过上锁时已删除的项目（P6）；`LockWorkspaceProjects` 的存储测试（回答、按 `id` 加锁、锁的强度）和删除工作区等持它一个项目的写（`TestAWorkspacesDeletionWaitsForAWriteHoldingOneOfItsProjects`，M4/P1a） |
 | `ProjectMembershipCounts`（`CountInactive(ctx, workspaceID, userID) (int, error)`：他在这个工作区无效的项目成员关系个数，不加锁） | `workspace/app` | `project/adapter/postgres`（`project.Provide`） | 集成测试；W12 的输出 |
 | `Accounts`（按 id、按邮箱以 `FOR SHARE` 锁住账户行，交回 `AccountState{ID, Email, Active}`；没有这个账户时交回"不存在"。用例决定怎样对待停用的账户：建工作区、接受和忽略邀请要求有效，`reactivate-member` 允许，3.6 约定六。只作事务的第一把锁，约定一） | `workspace/app` | `identity`（`identity.Provide`，存储之上的薄实现；值在 `bootstrap/ports.go` 转换） | 集成测试（有效、停用、不存在三种）；交错测试 7、8、12、16、19 |
 | `MemberProfiles`（`PublicProfiles(ctx, ids) ([]PublicProfile, error)`：按 id 批量读显示名、名字、邮箱，不加锁，停用的账户也返回；`avatar_url` 在 M5 之前为空。成员列表用它；事务中途要读邮箱时也只用它，约定一） | `workspace/app` | `identity`（`identity.Provide`，一条查询；值在 `bootstrap/ports.go` 转换） | 集成测试（含停用的账户、不存在的 id）；`listWorkspaceMembers` 的用例测试核对访客看到的 `email` 为 `null` |
@@ -2101,6 +2101,8 @@ modules/access/
 | [M6](../M6-cycles-modules/handoffs/M3-closeout.md) | `ProjectAuthWrapper` 取迭代、模块（3.1，按 7.1 由权限启用）；`existing-issues-list-modal.tsx` 改用 M4 的工作项搜索（7.3）；`cycle_filter`、`module_filter` 的反应的释放（7.1）；`core/sidebar/progress-stats/` 的 8 行死成员；迭代、模块的外键在 4.12 的图上延伸 |
 | [M7](../M7-collaboration/handoffs/M3-closeout.md) | 侧边栏的收藏、未读通知数、首页的"最近"小部件（连同它的工作项预览 `peek-overviews.tsx`，P8a 随小部件删除，M1 3.14）、项目的视图和分诊状态的取数、项目侧边栏的 `intake_count`（3.1）；打开 `intake_view` 时建默认收集箱、分诊状态的接口（3.17）；跨项目的标签列表（3.16、7.3）；项目的收藏（`is_favorite`、卡片上的收藏按钮、建项目之后加入收藏、`favorite.store.ts` 的项目分支、`favoriteProjectIds` getter，3.2）和归档项目时的收藏处理；收集箱查重 `select-duplicate.tsx` 改用 M4 的工作项搜索（7.3）；`workspace-notifications.ts` 的 17 行死成员；工作区视图的筛选列（3.18） |
 | [M8](../M8-open-release/handoffs/M3-closeout.md) | 工作区、项目、成员的 Webhook 事件：在 M4 引入的事件机制上加（M3 没有事件）；表情选择器的数据请求只剩核对（7.7）；README 中邀请链接与签名密钥的说明随发布核对（8.7）；性能测量加上大工作区的成员列表、项目列表（不分页的集合，11.3）：回答的大小和页面的加载时间，按测到的数字决定要不要给其中一个分页 |
+
+**M4/P9接收结果（2026-10-28）：** 上表保留M3交付时的设想。项目与工作区删除的issue侧已改挂 `project.deleted`/`workspace.deleted` 同事务投递，邀请及M3连带仍同步，未放宽注册邀请检查；23表清理、NULL creator、有限轮询及原审计回执见 [M3输入交接](../M4-issue-core/handoffs/M3-closeout.md) 与 [P9 review](../M4-issue-core/reviews/P9-purge-review.md)。StateInUse/DetachLabel保留；CLI首个实际投递仍M5，页面及其余M3交接不由P9关闭。
 
 ---
 

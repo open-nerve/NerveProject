@@ -172,3 +172,15 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 §2草稿游标已在T2/T4验证：[created_at,id]canonical共享编码，另一owner/随机id合法游标只是位置，页与total仍仅自己，非法400；不签名、不回查游标ID。§4草稿发布读取锁下存储payload，由adapter复用create bodyshape和mapper，与直接创建以同canonical字节比较结构400/字段、业务422同路径，>16字段错误截断有反例；API封闭schema与成本守卫未放宽。T5/T6共享唯一创建核心、同事务/actor/At，事件/soft-delete/描述版本三故障逐表回滚；T7 gate无连接/事务和真实PID交错，T15最终race65/65。§6部署说明明确runtime经PUBLIC EXECUTE使用扩展函数、收回后显式授权，关系/全函数目录守卫保留。§1 CLI原文、其他页面/清理/后续M5–M8责任保持原归属，顶部status仍open。
 
 准确产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`，首次整审 `166b9efd..10f44790`；[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)列A条款/真实RUN/变异恢复/四次七门禁及准确产品checkpoint CI，[整体审核](../../../reviews/re-07-M4P8整体审核.md)列三镜头/186文件覆盖与历史D1。文档增量独评及最终准确HEAD CI由后续提交和ignored收据追踪，未合并、不清理；不以本期子项已处理改写历史关闭条件或M4整体状态。
+
+## 处理结果（M4/P9，2026-10-28）
+
+| 原输入 | 本期处理结果 | 证据/仍开放责任 |
+|---|---|---|
+| §5物理清理/关系图 | PAT、带活动/评论/二级反应的issue以及M3目录已有真实61d回收，59d/精确cutoff/活行保留；活动/评论子链CASCADE，不再沿用历史DO_NOTHING阻挡判断 | T1–4/T13 I21保存ID物理直查，T15真实FK反例；不清账户，session仍原任务 |
+| §6任务/订阅者 | purge/trim四周期目录实际completed，delete_rows请求kind登记、原事务投递失败回滚、受限角色与真实重试/snooze/耗尽已有证据 | T4/5/8–13；未来通知/Webhook订阅仍所属阶段 |
+| §1只投递CLI | P9仅移除Cascade的issue过渡依赖，无新投递命令/dispatcher/issue.New/jobs/InsertTx接线 | 首个真实投递命令仍M5，既有NewInserter交接保留 |
+
+§2游标、§3updated_at、§4请求体/草稿、§7–12编辑器/CSP/主题/下拉/复制/会话与§13时钟继续按历史回执/所属阶段追踪，不能因本表全关。
+
+证据：[P9 review](../reviews/P9-purge-review.md)及[spec §7/附录D](../specs/P9-purge.md)；最终产品 `e003e96625ba51264d3aeb77729729d53a770103`。最终F/准确分支CI、T16文档独评在review分别列明。本文件 `status: open` 保持到M4收尾，历史原文/先前回执保留；不因P9后端承接关闭整份交接。

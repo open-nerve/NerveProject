@@ -158,6 +158,14 @@ T16任务独评修复：plane-diff、v0设计和M1/P5输入交接曾把未持久
 
 T4验证草稿保存/修改/删除不发issue事件或创建副作用；T5/T6发布经唯一创建核心，在原事务只发一次issue.created，以核心唯一At/actor写消费草稿及全部子表/活动/版本，真实事件/软删/版本故障均回滚。T6 M14/M15、I14及最终F已有证据。P6/P7生产订阅与集成历史保留；P9删除任务/保留/清理、P15页面与M4总体仍开放。 实际命令/计数/变异/检查点见[P8 review §8](P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
 
+### 处理结果（M4/P9，2026-10-28）
+
+T4–12已接project.deleted/workspace.deleted、delete_rows_on_deletion、issue.delete_rows请求kind与purge/trim周期；同事务InsertTx失败回滚、旧登记守卫、真实Runner重做/snooze/耗尽保留原审计。两个同步删除方法/CLI过渡依赖移除；P6当时12事件与无生产订阅的历史不改。
+
+证据：[P9 review §8–12](P9-purge-review.md)、[P9 spec附录B/C/D](../specs/P9-purge.md)；产品身份 `e003e96625ba51264d3aeb77729729d53a770103`，独立整审与两次局部复审结果按上述入口，最终检查点/文档独评分别记账。
+
+仍开放：M5首个CLI真实投递、P15 NULL actor页面、M6/M7归档真实表条件和M8 Webhook订阅仍开放。 本回执只承接P9后端子项，不关闭整份交接或M4，不改变本页历史运行/集成身份。
+
 ## 7. 已知限制与后续门
 
 当前经证据确认 T1–T16 实施及逐Task独评，T16一处文档措辞问题已由`6995d523`修复并经聚焦复审通过；内部整分支审查也已完成且零新发现。首轮分支CI已在 `17b8a117` 报告clock生命周期断言失败，局部修复与本地验证见§2.1；修复 `e8df8485` 的聚焦复审和精确 HEAD 分支 CI **均已通过**。本轮按负责人新规则使用 deep-review 收口终审，不再等待 Claude。最终文档提交 `17908e03` 的分支 CI 与 main 集成结果见 §2.2。P5 main CI仅为基线。原始证据的早期SDK fallback、T2空匹配、T13缺完整末轮rawlog、旧颜色警告已在§2/§5分开标出，不改写为 pristine。

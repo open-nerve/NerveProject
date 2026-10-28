@@ -380,6 +380,14 @@ T16文档实施按范围复用T14 Go/race与T15最终142条e2e；之后整分支
 
 保留P5当时已验收19码，T13新增±link_count成当前21码，不倒改历史。全部Issue/Detail required非负int64、0显式；只数活links，不看作者/metadata，不加filter或派生列；三SQL同形、整数/numeric游标和独立child/link大数探针通过。T10–T12词汇/日期/Visible/OwnOnly/快照、T14 I4非零双向limit2/I18、T15 P5四项4/4已有证据。P10b生产比较器/共享fixture与P11–P15页面仍开放，跨请求计数变化不承诺冻结。 实际命令/计数/变异/检查点见[P8 review §8](P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
 
+### 处理结果（M4/P9，2026-10-28）
+
+T11完整覆盖平铺/分组/子组、实际分页游标、member/search/OwnOnly窗口与total/顺序/422；search不虚构total/cursor，member不扩sub_group_by。T14规模与存活探针记录成本，不因三偏好列新造删除图；P5历史19码/P8当前21码不倒改。
+
+证据：[P9 review §8–12](P9-purge-review.md)、[P9 spec附录B/C/D](../specs/P9-purge.md)；产品身份 `e003e96625ba51264d3aeb77729729d53a770103`，独立整审与两次局部复审结果按上述入口，最终检查点/文档独评分别记账。
+
+仍开放：P10b码点fixture/旧筛选迁移、P11–15页面及M8大目录/跨项目/索引部署仍开放。 本回执只承接P9后端子项，不关闭整份交接或M4，不改变本页历史运行/集成身份。
+
 ## 7. 已知限制
 
 T1–T15包含三SQL、排序PATCH、项目/个人主页API、关联普通目录替换、三偏好列/API/并发、最终100k性能、权限/历史回归和八接口故事，均有§2逐Task实施/独评证据。内部整分支审查与唯一修复波已闭合；交付仍须核精确最终SHA分支CI，负责人终审/集成/main CI/清理另待安排，当前不合并。P8/P10b/P11/P12–15/M8和M4总收尾仍开放。

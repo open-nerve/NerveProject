@@ -1,6 +1,6 @@
 # M4/P9 物理清理、版本保留与异步删除评审记录
 
-> **当前接续：负责人已授权从T1实施，阶段结束做deep-review，暂不合并。** 下文§1–7保留准备期预检事实；实施结果与决策另行追加，不将预检证据当作产品验证。
+> **当前接续（2026-10-28）：后端实施、整审修复及最终产品F/CI已完成；T16文档独评及文档提交CI待核，集成待办。** 详见§8–12及[整体审核](../../../reviews/re-09-M4P9整体审核.md)。§1–7保留2026-10-27准备期原始判断，不代表当前产品状态。
 
 日期：2026-10-27。分支 `codex/m4-p9`，基线 `6b9d08d4821f1423c7bb9795557727c206b7880f`。**准备与独立静态预检 Approved；2项局部遗漏已修订复审，开放 High/Medium/Low 均为0；未实现 P9。** 配套：[spec](../specs/P9-purge.md)、[plan](../plans/P9-purge.md)、[deep-review报告](../../../reviews/re-08-M4P9预检审核.md)。
 
@@ -47,3 +47,106 @@ P9 所有产品验收均未完成，逐条责任以 spec §4 的A1–A13和 plan
 ## 7. 已知限制
 
 静态预检不能证明运行时锁序、真实 worker 的重试/snooze、索引和 SQL 执行效果或五个目标规模项目的删除性能；计划必须保留相应实施门禁。真正的架构回归、新跨模块协同方案或意外高风险，按负责人纪律先提交已完成工作再上报。
+
+## 8. 实施验收与独立整审（2026-10-28）
+
+T1–T15已实施、逐Task独立要求/质量审查并由主控核原件；全分支整审和后续局部修复复审已闭环，产品HEAD为 `e003e96625ba51264d3aeb77729729d53a770103`。本次T16只同步文档，不新增产品行为运行。准确e003最终七项F已通过，见下列主控收据；准确产品分支CI已由主控核绿，本轮文档独评及文档提交CI仍待补；产品检查点不能代替文档交付门禁。
+
+| 身份 | 准确范围与结论 |
+|---|---|
+| prepared/static | §1–7及re-08是2026-10-27准备/独立静态预检；不证明产品运行 |
+| runtime / Task | T1–15各自report/review/controller-verification及raw；命令、源码SHA/dirty字节、RUN/skip/exit、恢复hash分别保留 |
+| whole-branch review | `6b9d08d4821f1423c7bb9795557727c206b7880f..7881127ac0e6a2884a5ea1252cff8a7707ffc697`，238文件60363行，含生成物和M4设计2721行；主控核独立读者完整范围并集，不称主控亲自重读全部 |
+| scoped fix review | 788→d25363b4480af57e5e29e2ee26088442e1352bf8关闭fixture-M1/L-DOC-1/I-D1；d253→e003e96625ba51264d3aeb77729729d53a770103关闭FF-CLEAN-1。4项均ADDRESSED，无开放发现/架构待决 |
+| final product F | 准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json) |
+| final product branch CI | 准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI |
+| T16 static/doc review | 本轮文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；独立文档复审由主控接续，目前待核。静态检查不代替产品运行或独立复审 |
+| delivery HEAD | 本轮文档提交身份由ignored `task-16-final-receipt.json`绑定；不递归写入提交自身SHA，也不倒填产品或规模测量HEAD |
+| main CI / integration | 未授权合并；无P9 main CI结论，分支/worktree及ignored证据保留 |
+
+实施证据入口：[A1–A13与24生产代表索引](../../../../.superpowers/sdd/P9-purge/task-15-audit-evidence.md)；[逐函数/批写审计](../../../../.superpowers/sdd/P9-purge/task-15-batch-audit.md)；[独立整审闭环收据](../../../../.superpowers/sdd/P9-purge/final-review-closure-e003e966.json)。各项A的命令/raw位置由前者逐条展开，不将PASS摘要当原件，不把作者审计当独立整审。
+
+| A | 已取得的具体证明与边界 |
+|---|---|
+| A1 | 00030–00033的23索引、模块schema往返、23清理者与真实入边目录；T15真实迁移CASCADE→RESTRICT被guard拒绝并恢复，不把probe算生产变异 |
+| A2 | 四模块61d删、59d/精确cutoff/活行留；子先父、id键集、pool独立批提交/错误已成功计数、runtime角色。父CASCADE可能带走较新子行；不删users/profiles，session另管 |
+| A3 | 一次业务Clock/固定模块序、四种periodic真实completed、请求kind/周期worker缺失启动拒绝；purge active-state唯一，完成后可新建任务 |
+| A4 | 活项目/issue/version按last_saved_at DESC,id DESC留20，归档仍参与，三层墓碑不碰；每项目N+JobTx和真实描述写/删除两顺序，不虚称version DELETE物理id锁序 |
+| A5 | project/workspace原事务M3写/发布/InsertTx原子回滚，本次活项目集合与零项目draft任务、原At/By；两同步删除能力及CLI过渡依赖移除，状态/标签能力保留 |
+| A6 | 13表短批/幂等，relation双向先锁后判归属、sameAt/不同actor/Old；After按Candidates而非Written推进，零Written仍继续 |
+| A7 | 37=15读+22写完整窗口与契约双向相等；未知资源逐值对照、游标/计数/顺序/422、历史引用、OwnOnly与NULL creator；18普通+3草稿CRUD+1发布锁形状不放宽 |
+| A8 | 旧交错2/3/11/16/23与24/25、双UUID次序、真实PID/XID；整审fixture-M1补第二请求本人等待证明，最终共享helper28族205、普通38/race190通过，普通组无40P01 |
+| A9 | 真Runner多轮snooze/attempt1、部分提交后23514与原job重试、真实25 discarded/耗尽日志；先purge迟到零候选与两victim原40P01重试收敛分列 |
+| A10 | I21/I16最终2/2、P4/W2/W3 8/8；API造齐目录、同库单nerve换代+1464h、fresh attempted微秒门与crossing反例、保存ID直查旧链消失/recent/live整行留；Old/邻居原戳保留 |
+| A11 | 六项目每个660000行/1KB动态、7job一次running无snooze/错误、正常15s请求deadline、两类正确存活探针160样本/双处理中窗口，详见spec附录B |
+| A12 | 24真实生产代表、T4/T8/T12/T15检查点与独立整审/两次修复复审已取得；本产品最终F/branch CI已核绿，文档提交CI待核，见上表，未来main CI仍独立待授权 |
+| A13 | 本次同步M4§3.23四行/README/上级设计/契约语义及输入回执，正式静态验证与独立文档复审见待补栏；不关闭M4总体或后续阶段 |
+
+24代表为M1/M2/M4/M6/M7/M8/M9/M11b/M12-created/M15/M17-current/M18/M21/M23-kind/M25/M27/M31-final/M32-final/M34/M36/M37/M39/M40/T15-FK。M29/M30/M38/M41和catalog probe单列测试层，不计入生产数量；同一性质早轮/final不双计。M34前两轮存活、M36正61d超时/负61d明确红、M37旧超时/后明确红均保留。
+
+## 9. 整审发现、修复与局部裁定
+
+| 发现/原级别 | 根因、修复与独立结论 | 验证与边界 |
+|---|---|---|
+| fixture-M1 / Major / Local test-evidence | 宽projects waiter可误认真实trim，使第二请求尚未到锁便放第一gate；d253绑定两请求及第二PID/事务/实际SQL/blocker链，原响应/零写/时钟不变；独评ADDRESSED | 同一回归旧helper真实红→身份修复绿→宽谓词变异红→恢复绿；28族205、普通38/race190、回归race1。不是生产锁错误，不以F绿替代等待身份 |
+| L-DOC-1 / Minor | module入口误述同步Cascade、fake误称P9删账户；d253改英文说明为当前职责/NULL语义，独评ADDRESSED | 纯注释，无生产行为改动 |
+| I-D1 / Minor | relation契约漏任一端工作项/项目已删404；d253同步源说明与正常make gen两生成副本，独评ADDRESSED | 仍允许存活但不可见另一端按任意可编辑端操作，不能误写两端都必须可见；81生成输出/112实际输入及gen-check留原件 |
+| FF-CLEAN-1 / Minor | 新回归afterWait前失败时users暂停锁释放晚于第二join；e003把释放放第一请求返回前defer，独评ADDRESSED，无新问题 | 最终test count1/race1/wide性质红→恢复绿；异常顺序靠明确控制流复审，未注入Fatal。不重跑未改205/38/190与规模，最终F另接 |
+
+原三项修复证据：[d253作者报告](../../../../.superpowers/sdd/P9-purge/final-fix-report.md)、[d253独立复审](../../../../.superpowers/sdd/P9-purge/final-fix-review.md)；续补：[e003续补报告](../../../../.superpowers/sdd/P9-purge/final-fix-cleanup-report.md)、[e003独立复审](../../../../.superpowers/sdd/P9-purge/final-fix-cleanup-review.md)。d253的19份旧raw/收据保持原样，cleanup独立10份原件/源码绑定；不把续补新test字节套用旧回归hash。
+
+局部裁定按当时批准范围记录如下。完整原话导航见[26条历史裁定导航](../../../../.superpowers/sdd/P9-purge/final-rulings-inventory.json)，后续追加见[执行台账](../../../../.superpowers/sdd/P9-purge/progress.md)；下表归并同根因而保留各原任务入口、理由和错了的代价/覆盖补偿，不重开已批准架构。
+
+| 原裁定来源 | 结论与理由 | 代价/覆盖补偿 |
+|---|---|---|
+| T1配置/schema；T2空白修正 | 六字段全量期望及33→29回退/OID不放宽；两SQL EOF空白修正只生成+聚焦 | 错了会损配置/迁移保障；保留原失败、全场景与准确最终字节，不将旧回归假作新全包 |
+| T3非purge FK probe | 先在业务schema核旧keysTo，再隔离加probe验全部入边；不扩comment_reactions例外 | 隔离不准会隐藏新业务表，审查核时序/非空/反例；T15另补真实迁移FK生产链 |
+| T4 runtime文件/testConfig | 独立purge_runtime_test复用splitRoles，testConfig补合法默认；原任务保留角色/模块序 | 不把owner观察当runtime执行；scope变化同步spec/plan并独评 |
+| T4 retryable窗口 | River首失败可available，使用同job两次真实失败进入retryable跨两个周期后第三次完成 | 错误状态假设会将timeout误计性质红；留available/retryable/attempt与原失败 |
+| T5私有pool-factory | 默认仍postgres.NewPool；test按现有RequestID核真实网络请求，保留JWT/worker/池/200burst | 小范围生产组合变化须独评及默认路径回归，不放宽门/锁断言 |
+| T5/T8实际请求锁归属 | test Tx包装取得请求PID/XID；允许锁证明用真实moduleRoute，拒绝与兼容故事保留full app；网络项目写另用RequestID tracer | 调用边界变化明确留证；tuple等待不冒行锁，混合fixture/request只计仍存在owner，不称未知历史peer为trim |
+| T8准备锁获取 | 已盘59调用只要求返回时持锁；holding/lockVersionPage共享最多5s有界获取，NOWAIT性质探针不改 | 遗留锁从即时失败变有界失败；受控持N/取消/短期限/连接归还及原强度/顺序反例补偿 |
+| T7分页与trim | SHARE保护>20版本的分页前置，SQL seed替代100次PATCH，真实HTTP分页容量/顺序/cursor/detail与HTTP保存测试保留 | 不停worker/延周期/减行；清理先放锁，有真实trim反例；原全包分页失败保留，仅聚焦接续、下一F兜底 |
+| T10 catalog清单 | 纯目录读器只复用，不做无意义touch；caller承担等待，修正spec/plan清单并独立文档复核 | 文档精度修正不冒生产改变；不为清单重跑无关套件 |
+| T10 W3/M27–29 | Old真实未完成屏障后删workspace，后按Old戳核；M27按实际漏deleted谓词记录，零项目draft不漏 | 仅API业务前置、隔离只读行锁/有界释放，不伪称另一种变异或放宽原审计 |
+| T10 E2E lint归属 | issueOwnedTable统一到catalog、纯期望模块级；M3先即时，issue后有限poll | 不豁免未知表/旧行/邻居；最终types/lint/故事及M29最终字节红绿接续，不重跑无关Go包 |
+| T11既有接口形状 | search不新增total/cursor，member不支持sub_group_by；支持入口证明分页/子组，非法仍精确422 | 不扩API也不丢性质；37完整窗口/目录双向相等，fixture假设失败不计生产红 |
+| T12世界与Runner职责 | prepareIssueWorld复用同一已启动app数据准备；单独lifecycle fixture组合真实Runner/原错观察 | 保留普通/Observed、API/store顺序与cleanup；无新生产协议，最终共享调用族/独评接续 |
+| T12目录/关系归属 | 25的12自有表逐项目非空，relation按双端逻辑集合/实际物理归属核戳；link用已批准store catalog seed | 不伪造物理双归属、不加未知表豁免；明确非全API，T13 E2E仍全API |
+| T12 M34合法计划反例 | 隔离夹具非HOT反heap且最终业务字节不变，test连接限定合法Nested Loop，原ORDER BY恢复后再变异 | 前两存活轮保留不计红；不改生产planner/SQL守卫，以真实PID/持锁区分顺序 |
+| T13文件与证据身份 | 只改I21/共享周期门/I16，既有P/W断言复用；M38 TS门与M39 SQL→gen→binary分别计 | 不机械touch旧清单、不混clean/dirty binary；最终2/2与8/8、源码绑定承接lint后实际字节 |
+| T14影响范围 | scale三文件未改共享helper，五族影响+完整非skip规模足够，下一完整F由root接续 | 未覆盖旁路由F兜底；若新变化/真实失败/风险再扩大，不把聚焦拼成全包 |
+| T15生产代表/约定五 | 测试层反例不混生产，真实FK另补；purge候选排序+pool单DELETE，trim项目N，短批/relation显式先锁 | 不虚称DELETE物理锁序或全系统无死锁；取消/commit未知结果/rollback优先原协议原样记录 |
+| 阶段执行与证据保留 | 实施授权覆盖旧仅准备状态；F在T4/T8/T12/T15/最终修复，不逐Task重跑；ignored证据保留到授权集成/mainCI/归档 | 原件及失败不删，局部修复不中途因通用评审波次停下；真实架构回归才上报 |
+| FF-CLEAN-1续补 | 用户已授权局部问题全部修复，不因通用单波次建议留下Minor；仅一回归闭包8行差异 | count1/race1/wide红恢复与控制流独评，无Fatal注入/无未改大套重跑，root最终F接续 |
+| Shell fallback归类 | 锁定Testcontainers external成功后internal errShellNotFound被上游接受并return nil；保留日志，不修产品/依赖/Docker | 不声称历史镜像缺sh成因已查明；新启动不ready/exit失败必须独立判断，旧分类不能放行 |
+
+## 10. 批写、锁图及失败边界
+
+逐函数原件见§8批写审计。23条物理purge各用pool隐式单语句事务，成功批读完RETURNING/rows.Err才计数，错误保已成功数；候选ORDER BY不是DELETE实际锁序承诺。trim逐未删项目N+JobTx，提交后计数，等待后项目消失则跳过；活版本集合与软删purge分开。
+
+软删实际为12条普通project批+1条workspace_drafts批及独立relation协议，对应issue侧13表。普通批候选id升序N，只更新锁定live行；关系先锁双方向候选再无锁读另一项目DeletedAt，不额外锁对端项目。普通deleteIssue跳过已删另一端，job只让给严格更早删除端，同At按先持关系锁处理。每批成功提交后推进Candidates/After、累计Written；不持久化cursor、不以零Written终止。
+
+请求仍18普通P(N)、草稿3CRUD W(S)→P(S)→D(U)、publish W(S)→P(N)→D(U)；拒绝先于gate/锁、锁下重读重判、最后锁后时钟未放宽。M3删除原W/P锁与邀请同步保留，同事务事件投递失败使请求全部回滚；未来worker各批不是该请求事务的一部分。
+
+业务ctx沿SQL；COMMIT/ROLLBACK仍用WithoutCancel与独立期限，commit无答复是结果不确定，取消不保证已结束语句一定撤回；rollback基础设施失败优先的旧协议不改。JobTx保原PG错，不映射HTTP503。普通race结论与>60d父CASCADE/迟到软删的40P01重试例外分列，不写绝无死锁或任意阻塞都在budget+5s内结束。
+
+## 11. 检查点、真实失败和测量身份
+
+T4/T8/T12/T15 F沿各Task/root收据保留。T12准确 `2aa26ab9b14383d1415a85fa80a3f470a4c8f1cd` 的 [CI 40610708261](https://github.com/open-nerve/NerveProject/actions/runs/40610708261) attempt2三job成功；attempt1 W11失败原输出保留，重跑成功不等于修明W11根因。T15准确 `7881127ac0e6a2884a5ea1252cff8a7707ffc697` 的 [CI 40623599731](https://github.com/open-nerve/NerveProject/actions/runs/40623599731) attempt1三job成功。
+
+T15七项F：Go51包通过+16无test包，非verbose不报逐test skip；Vitest138文件1165项及Node5项，web非缓存/0skip；E2E163=161Chromium+2Firefox/0skip，WebKit未选，C12归M4收尾。准确产品e003的最终F/CI仍以上表单独收据为准；不能借旧788结论覆盖修复后的HEAD。
+
+T14测量为 `4c7379f1d4dd53a8af932f2ae148ae2f9d07f859` 加已归档dirty scale字节，后续 `d26ae92686d4c4dde798bc3371ce8f287e7eeaf6` 绑定该源码；后续文档/局部helper与注释修复不改性能路径，也未重测。六项目396万行、160样本、7job、双窗口及全部机器/DB/池/缓存/observer参数见 [spec附录B](../specs/P9-purge.md)。workspace负载PATCH最大525.226791ms仍计入；不移植旧SP2/SP4数字或承诺跨环境毫秒上限。
+
+保留真实失败分类：T9/T10全包早轮失败按其已审最终聚焦接续；T7原全包分页失败与之后fixture修正不拼成新全包；T12存活变异/超时、T13零匹配/lint/证据脚本、T14编译/源码定位失败分别记录，均不冒性质红。Shell fallback保留原输出，未称所有日志pristine。当前产品/整审发现无开放项；这些历史记录不等于仍有未修产品缺陷。
+
+## 12. 文档、后端交接与未关闭责任
+
+M4§3.23四行分别落到总体§5.5/6.7清理、§5.5/6.3异步、M3§3.3/3.6/6.2/6.5/13.2、plane-diff；README六配置/失败窗口与契约实际行为逐项核对。两输入handoff仅追加P9后端结果、status仍open；P1a–P8各spec§5/review§6追加回执。P2旧“物理删除账户后NULL creator”只承接空创建者权限组合，账户不purge；T11用API造issue后隔离置NULL、OwnOnly/adminGuest逐值404、member不继承AllowCreator为403、admin可删。
+
+M4总体§14/总体§9.4、P10–P16页面与收尾仍开放；不创建M5–M8最终M4-closeout。M5首个CLI投递/附件内容标识，M6新增表/事件/订阅与归档条件，M7通知发送时权限重判/收集箱，M8Webhook/网络/locale/池/多进程/性能仍按M4§13.2归属。四个既有未来closeout链接是已知待收尾，不报P9新增链接失败。
+
+本轮文档静态核对见[静态收据](../../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；独立文档复审由主控接续，目前待核。静态检查不代替产品运行或独立复审
+
+只文档修改不谎称新行为运行，不重跑未受影响规模。本轮不合并；保留分支/worktree及ignored证据。未来获负责人明确授权才--no-ff，另核准确main SHA CI及归档哈希后清理。

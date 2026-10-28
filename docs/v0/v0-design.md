@@ -328,7 +328,7 @@ draft_issues(id, workspace_id, project_id NULL, payload jsonb,
 - **可见范围**：六操作统一工作区 `issue_draft.write`，管理员/成员只操作自己的草稿，别人404；工作区访客403。列表为 `(created_at DESC,id DESC)` 游标及独立 total，仅保留无项目或旧项目未删除的个人草稿，退出/归档项目不抹掉草稿。已交付与证据见 [P8 review](M4-issue-core/reviews/P8-drafts-search-review.md)。
 
 ### 5.5 照搬的机制
-- **软删除**：删除只是把 `deleted_at` 设为当前时间；唯一约束只对未删除的数据生效（部分唯一索引）。连带删除在同一个事务里同步完成；60 天后由定时任务物理删除。
+- **软删除**：删除把 `deleted_at` 设为请求时刻，部分唯一索引只约束未删除数据。删除工作项、状态、标签的连带仍在原事务同步完成；项目/工作区请求同步写M3行，并由同事务事件订阅者投递issue侧分批任务，保留原请求时刻/删除者且提交后API立即不可见。默认严格超过60天的墓碑由一个任务按issue→project→workspace→identity子先父清理，每表id键集、每批独立提交；父CASCADE可回收子链，账户不物理删除。协议、FK目录和约2万活工作项/项目的实测边界见 [P9 spec](M4-issue-core/specs/P9-purge.md)。
 - **归档**（规则照搬 Plane）：
   - `archived_at` 不为空，就表示已归档。已归档的对象不参与默认查询，但仍然可以查看、可以恢复。
   - 工作项只有处于"已完成"或"已取消"状态组时才能归档。
@@ -428,6 +428,7 @@ modules/issue/
    - M4/P6 的工作项模块发布已声明的 `issue.*` 事件，不知道谁在监听；P6当时12种类型与精确payload见 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md#5-最终实现与-plan-的差异)。
    - 订阅者由 `bootstrap` 注册；P6时生产订阅为空；P7新增3种link事件（共15种），首个`crawl_on_link_change`用原事务InsertTx投`issue.crawl_link`，default worker已接通；通知/Webhook仍按后续阶段接入，见[P7 review](M4-issue-core/reviews/P7-issue-links-review.md)。
    - 订阅者在同一个事务内被调用，通常只做一件事：往 River 里投递任务。所以事务是原子的，同时各模块之间解耦。
+    - M4/P9已接入 `project.deleted`、`workspace.deleted` 与 `delete_rows_on_deletion`：原事务InsertTx投 `issue.delete_rows`，投递失败整体回滚；workspace Changes仅含本次锁住的活项目，另投workspace_drafts。邀请/M3行仍同步，更早删除项目保留自己的审计；未增加outbox或事件持久化，后续通知/Webhook责任不变。
 4. **只在组合根接线**：禁止全局可变状态，禁止 `init()` 副作用，禁止服务定位器。所有依赖都通过构造函数显式传入。
    - 模块之间的端口可以是双向的，所以给别的模块提供只依赖连接池的适配器的模块分两段构造（M3 设计 6.6）：`Provide(pool)` 只返回只依赖连接池、给别的模块用的适配器，不建用例；`New(Deps)` 建出全部用例和 HTTP 的一侧，`Deps` 是它要的全部端口，构造之后不再登记、不再注入任何东西。组合根先调这些模块的 `Provide`，再按依赖的顺序调各模块的 `New`，没有构造的环。
 5. **不写大文件、不建大杂烩包**：
@@ -511,10 +512,10 @@ modules/issue/
 
 | 类型 | 任务 |
 |---|---|
-| 事件触发 | 通知分发、Webhook 投递、抓取链接的标题和图标（防 SSRF） |
-| 定时 | **自动归档**（每天）；物理删除软删除超过 60 天的数据；清理 7 天内未完成上传的文件；按保留期清理接口日志、Webhook 日志；每个工作项保留最新的 20 个描述版本（M4/P9 实现，P4 尚无保留任务）；清理过期会话 |
+| 事件触发 | 已接入：链接标题/图标抓取、项目/工作区删除后的issue行分批删除；后续：通知分发、Webhook投递 |
+| 定时 | 已接入：会话清理、自动归档、严格超过保留期的物理清理、活描述版本最新20保留；未完成上传文件和接口/Webhook日志清理仍由所属后续阶段接入 |
 
-M4/P6 已以锁定的 River 0.47.0 落地只投递客户端、`default`/`periodic` 两队列（默认 worker 10/2）和 `issue.auto_archive`（默认24小时，test为2秒）。每项目一个事务，锁下读策略、终态和业务时钟；业务时钟 `clock.offset` 只允许 test 非零，River 调度仍用真实时间。自动归档动态行的 `actor_id` 为 SQL NULL；未持久化的事件值 `ActorID` 为 nil。P7抓取已在default接通：创建/URL改变投任务，title-only不投；页面/图标共享5秒、网络失败写blocked/failed后完成，DB/context错返回供至多3次attempt。P9清理/版本保留仍待实现；P6历史证据见 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md#2-验收标准逐条核对)。
+M4/P6 已以锁定的 River 0.47.0 落地只投递客户端、`default`/`periodic` 两队列（默认 worker 10/2）和 `issue.auto_archive`（默认24小时，test为2秒）。每项目一个事务，锁下读策略、终态和业务时钟；业务时钟 `clock.offset` 只允许 test 非零，River 调度仍用真实时间。自动归档动态行的 `actor_id` 为 SQL NULL；未持久化的事件值 `ActorID` 为 nil。P7抓取已在default接通：创建/URL改变投任务，title-only不投；页面/图标共享5秒、网络失败写blocked/failed后完成，DB/context错返回供至多3次attempt。P9已在periodic接入 `cleanup.purge_deleted` 与 `issue.trim_description_versions`，在default接入 `issue.delete_rows`；预算snooze不耗真实失败attempt，迟到父purge交叠允许40P01重试，配置/锁图/验证边界见 [P9 review](M4-issue-core/reviews/P9-purge-review.md)。P6历史证据见 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md#2-验收标准逐条核对)。
 
 **文件存储**（`asset` 模块的存储端口）：
 - **两种实现**：

@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见§9：P8已完成集成，P9仅准备与静态预检；§6–8保留各阶段当时的历史快照。**
+**当前接续点见§10：P9后端实施、整审修复与最终本地F已完成，产品分支CI已核绿，文档独评/文档提交CI待收据；未授权集成。§6–9保留当时历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -105,3 +105,13 @@ P8 `drafts-search` 已完成T1–T15实施与逐Task独立评审，产品HEAD `1
 P8 `drafts-search` 最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的[分支 CI 40515294403](https://github.com/open-nerve/NerveProject/actions/runs/40515294403)已通过，随后经负责人授权 `--no-ff` 合并为 main `6b9d08d4821f1423c7bb9795557727c206b7880f`；准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1的server/web/e2e全部completed/success。1,598文件、37,552,117字节及1空目录归档逐hash核验后，P8本地/远端分支与worktree已正常清理，清理后再次核验归档。完整集成原件、manifest和新证据根见[P8 review §9](../M4-issue-core/reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)；上文未合并/待CI文字保留为当时事实。
 
 当前独立分支 `codex/m4-p9` 位于 `.codex/worktress/codex/m4-p9`，基线为上述main，[物理清理 spec](../M4-issue-core/specs/P9-purge.md)、[plan](../M4-issue-core/plans/P9-purge.md)与[静态预检记录](../M4-issue-core/reviews/P9-purge-review.md)已准备完成。[deep-review预检](../../reviews/re-08-M4P9预检审核.md)的2项局部文档遗漏均已修订复审，开放发现为0；13设计粗项细化为16 Task，负责人现已授权从T1开始实施，阶段完成做deep-review后保留分支等待安排，不合并；产品验收依真实执行证据关闭，不将既有P8运行证据当成P9验证。M4总体§14/总体设计§9.4、输入handoff总体status和M5–M8最终closeout保持原状。
+
+## 10. 当前接续点（2026-10-28，P9文档收尾）
+
+主目录仍main，P9分支 `codex/m4-p9` / worktree `.codex/worktress/codex/m4-p9` 保留。基线 `6b9d08d4821f1423c7bb9795557727c206b7880f`；当前产品 `e003e96625ba51264d3aeb77729729d53a770103`；文档交付HEAD：本轮文档提交身份由ignored `task-16-final-receipt.json`绑定；不递归写入提交自身SHA，也不倒填产品或规模测量HEAD。
+
+入口：[spec](../M4-issue-core/specs/P9-purge.md)、[plan](../M4-issue-core/plans/P9-purge.md)、[review](../M4-issue-core/reviews/P9-purge-review.md)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。T1–T15已独评，首次整审238文件60363行及d253/e003四项发现修复复审闭环，未留产品/架构待决；T16文档结果另经独评，不把本段当批准。
+
+最终产品F：准确e003七项串行F均exit0；Go51包+16无test包（非verbose逐test skip未知），web138files/1165Vitest+5Node且0cache/skip，E2E163=161Cr+2Fx/0skip；[主控最终F收据](../../../.superpowers/sdd/P9-purge/final-checkpoint-controller-receipt.json)。准确产品分支CI：准确产品e003的CI40630029402 attempt1已由主控核验server/web/e2e全部success，见[产品CI收据](../../../.superpowers/sdd/P9-purge/final-checkpoint-ci-receipt.json)；不替代本轮文档提交或未来main CI。文档静态/独立复审：本轮文档静态核对见[静态收据](../../../.superpowers/sdd/P9-purge/task-16-static-summary.json)；独立文档复审由主控接续，目前待核。静态检查不代替产品运行或独立复审。T12/T15旧检查点分别有准确分支CI成功收据；T12旧attempt1 W11失败仍是历史事实，未声称查明/修复根因。SP2仅引用4c7379f1+dirty源码绑定d26的原测量，不倒填当前HEAD。
+
+本轮只完成P9后端与文档交接，不启动P10，不合并/清理。M4总体§14/总体设计§9.4、输入handoff status、C12三浏览器及M5–M8最终closeout继续待所属收尾。负责人未来明确授权后才--no-ff合并，核准确main SHA CI及归档哈希，再清理分支/worktree。

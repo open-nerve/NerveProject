@@ -240,6 +240,14 @@ P1b 的 `TestAWorkItemGoneWhileItsChangeWaitsIsNotFound`（`issue_interleaving_c
 
 T10–T12搜索消费issue.search、ParseIdentifier/MatchIdentifier及共享Unicode折叠fixture，在同一可见项目/OwnOnly快照内匹配，guest/adminGuest不放宽。六草稿操作统一draft.write，发布另按issue.create并复用原引用/访客边界。T12真实HTTP/矩阵/契约与T14 I18/I14已有证据；P9物理删除账户组合与P13–P15页面仍开放。 实际命令/计数/变异/检查点见[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
 
+### 处理结果（M4/P9，2026-10-28）
+
+本页及P8回执的“P9物理删除账户后NULL creator”是历史范围误述：P9不物理删除users/profiles，承接的是空创建者权限组合。T11经API造issue后在隔离fixture置created_by_id=NULL；OwnOnly含adminGuest的指名/嵌套响应与不存在逐值相同，普通member无AllowCreator为403且零写，admin仍可删；T15及独审接续该证明。原历史文字保留，以本回执纠正当前解释，不能声称账户删除已实现。
+
+证据：[P9 review §8–12](../reviews/P9-purge-review.md)、[P9 spec附录B/C/D](P9-purge.md)；产品身份 `e003e96625ba51264d3aeb77729729d53a770103`，独立整审与两次局部复审结果按上述入口，最终检查点/文档独评分别记账。
+
+仍开放：P13–P15页面、NULL actor显示及M4收尾仍由原阶段承担。 本回执只承接P9后端子项，不关闭整份交接或M4，不改变本页历史运行/集成身份。
+
 ## 6. 风险
 
 | 风险 | 应对 |

@@ -94,6 +94,14 @@ P8继续link_count/草稿/搜索；P9继续异步删除/保留/清理；P11/P14�
 
 T13活issue_links计数进入全部Issue/Detail、Get/GetMany/SubIssues/search及三列表，0显式，URL/title/metadata.error或worker更新不改数量；新增±link_count成当前21序及整数游标。T13 M33–36、公开全表示/权限/精度，T14双向0/1/2/2、软删后detail/search一致和真实M33 binary红绿已验证。P7原出站/事件/集成不重判，P9/P11/P14/P15/M8仍开放。 实际命令/计数/变异/检查点见[P8 review §8](P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)。产品HEAD `10f44790`、首次整审 `166b9efd..10f44790`；文档独评/最终准确HEAD CI按后续收据追踪。未合并，不改变本页历史验收与集成事实，输入handoff总体仍open。
 
+### 处理结果（M4/P9，2026-10-28）
+
+T9–13把项目/工作区issue侧同步过渡替换为原事务投后台任务，links仍入完整13表软删/物理清理目录；T11/T12核抓取晚写窗口与原审计，request任务登记扩种类而不把periodic混作请求。P7抓取实现、网络安全和既有集成历史保留。
+
+证据：[P9 review §8–12](P9-purge-review.md)、[P9 spec附录B/C/D](../specs/P9-purge.md)；产品身份 `e003e96625ba51264d3aeb77729729d53a770103`，独立整审与两次局部复审结果按上述入口，最终检查点/文档独评分别记账。
+
+仍开放：P11/P14详情/弹窗/I10/I17页面、P15协作及M8 outbound/IANA/部署网络策略仍开放。 本回执只承接P9后端子项，不关闭整份交接或M4，不改变本页历史运行/集成身份。
+
 ## 7. 已知限制与后续门
 
 启动时接口快照不能覆盖NAT/LB自公网或后来网卡变化；普通公网任意端口仍可请求，网络层出站规则负责这些风险。每crawl最多两个资源、每资源5跳，共享5秒；固定并发/入口额度不是队列长度硬上限。HTML解析没有硬CPU deadline；集合不分页，无每link速率桶；A→B→A同URL旧结果可晚覆盖。没有以worker错误原链/default3配置声称实测DB故障三次重试，没有将I10 API故事声称页面交付。

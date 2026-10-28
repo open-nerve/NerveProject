@@ -168,3 +168,15 @@ Claude 的会话有这些额外的限制，都来自它的权限设置，不是�
 - 用 `git commit-tree` 做合并提交。
 
 它们留下的痕迹是 plan 里的命令都写绝对路径。
+
+## 9. P9当前证据与后续接续（2026-10-28）
+
+P9后端已实施，首次整审238文件60363行与d253/e003局部复审闭环；当前产品e003e96625ba51264d3aeb77729729d53a770103，最终F/准确分支CI/T16文档独评见 [P9 review](../M4-issue-core/reviews/P9-purge-review.md)，不由本接续提前判绿。M4总体/后续阶段未完成，本轮不合并。
+
+- 观察锁必须绑定实际请求PID/事务/SQL与blocker，任意表waiter可被trim误满足；tuple链只证明等待可达，持行锁仍核XID实际冲突。测试暂停夹具要在join前释放；FF-CLEAN-1异常次序经控制流独评，未冒称Fatal注入实验。
+- purge候选ORDER BY不等于DELETE物理锁序；trim是项目N保护，普通交错无40P01与>60d父CASCADE/迟到软删允许40P01重试分列。预算用monotonic运行时钟、审计用原请求At/By，不因worker重试覆戳。
+- NULL creator组合不等于物理删账户；relation任一工作项/项目已删即404，但存活且对调用者不可见的另一端不等于已删。契约/生成说明已随I-D1修复。
+- Shell not found为锁定上游已接受fallback时保留原输出，不当未修产品缺陷，也不声称历史镜像缺sh原因查明；实际不ready/失败仍独立核验。
+- T12 run40610708261 attempt2与T15 run40623599731各准确SHA三job绿；旧T12 attempt1 W11失败保留，重跑成功不等于根因修复。最终产品/文档HEAD/未来main CI各绑定各的身份。
+
+局部裁定的结论/理由/代价及实际验证范围见P9 review§9；原准备/历史失败不覆写，ignored证据保留至未来授权合并、准确mainCI与归档核验后。M5首个投递命令、M8部署/性能等原责任不变。
