@@ -49,7 +49,6 @@ export interface IKanBan {
   isDropDisabled?: boolean;
   dropErrorMessage?: string | undefined;
   sub_group_id?: string;
-  sub_group_index?: number;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   collapsedGroups: TIssueKanbanFilters;

@@ -17,7 +17,6 @@ import { ProjectsAppPowerKCommandsList } from "@/components/power-k/ui/modal/com
 import { PowerKModalFooter } from "@/components/power-k/ui/modal/footer";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { usePowerK } from "@/hooks/store/use-power-k";
-import { useUser } from "@/hooks/store/user";
 import { useParams, useNavigate } from "react-router";
 import { useExpandableSearch } from "@/hooks/use-expandable-search";
 
@@ -36,7 +35,6 @@ export const TopNavPowerK = observer(() => {
 
   // store hooks
   const { activeContext, setActivePage, activePage, setTopNavInputRef } = usePowerK();
-  const { data: currentUser } = useUser();
 
   const handleOnClose = useCallback(() => {
     setSearchTerm("");
@@ -69,7 +67,6 @@ export const TopNavPowerK = observer(() => {
   // Build command context
   const context: TPowerKContext = useMemo(
     () => ({
-      currentUserId: currentUser?.id,
       activeCommand,
       activeContext,
       shouldShowContextBasedActions,
@@ -84,7 +81,6 @@ export const TopNavPowerK = observer(() => {
       setActivePage,
     }),
     [
-      currentUser?.id,
       activeCommand,
       activeContext,
       shouldShowContextBasedActions,

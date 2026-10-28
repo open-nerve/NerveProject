@@ -104,10 +104,6 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
     setDeleteIssueModal,
     setArchiveIssueModal,
     setDuplicateWorkItemModal,
-    handleDelete,
-    handleUpdate,
-    handleArchive,
-    storeType: EIssuesStoreType.PROJECT,
   };
 
   const MENU_ITEMS = useProjectIssueMenuItems(menuItemProps);

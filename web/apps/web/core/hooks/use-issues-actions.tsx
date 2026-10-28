@@ -39,7 +39,6 @@ export interface IssueActions {
     issueId: string,
     data: TLegacyIssueUpdateRequest
   ) => Promise<void>;
-  removeIssueFromView?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   archiveIssue?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   restoreIssue?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   updateFilters: (

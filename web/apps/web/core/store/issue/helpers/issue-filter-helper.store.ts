@@ -12,7 +12,6 @@ import type {
   EIssuesStoreType,
   IIssueDisplayFilterOptions,
   IIssueDisplayProperties,
-  IIssueFilterOptions,
   IIssueFilters,
   IIssueFiltersResponse,
   IssuePaginationOptions,
@@ -48,7 +47,6 @@ export interface IIssueFilterHelperStore {
     displayFilters: IIssueDisplayFilterOptions | undefined,
     acceptableParamsByLayout: TIssueParams[]
   ): Partial<Record<TIssueParams, string | boolean>>;
-  computedFilters(filters: IIssueFilterOptions): IIssueFilterOptions;
   getFilterConditionBasedOnViews: (
     currentUserId: string | undefined,
     type: TStaticViewTypes
@@ -112,24 +110,6 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
 
     return issueFiltersParams;
   };
-
-  /**
-   * @description This method is used to apply the filters on the issues
-   * @param {IIssueFilterOptions} filters
-   * @returns {IIssueFilterOptions}
-   */
-  computedFilters = (filters: IIssueFilterOptions): IIssueFilterOptions => ({
-    priority: filters?.priority || null,
-    state: filters?.state || null,
-    state_group: filters?.state_group || null,
-    assignees: filters?.assignees || null,
-    mentions: filters?.mentions || null,
-    created_by: filters?.created_by || null,
-    labels: filters?.labels || null,
-    start_date: filters?.start_date || null,
-    target_date: filters?.target_date || null,
-    project: filters?.project || null,
-  });
 
   /**
    * @description This method is used to get the filter conditions based on the views

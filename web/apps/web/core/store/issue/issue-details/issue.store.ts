@@ -7,12 +7,11 @@
 import type { Issue, IssueDetail } from "@nerve/api-client";
 
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
-import { makeObservable, observable } from "mobx";
 import { computedFn } from "mobx-utils";
 // types
 
 // services
-import { IssueArchiveService, WorkspaceDraftService, IssueService } from "@/services/issue";
+import { IssueService } from "@/services/issue";
 // types
 import type { IIssueDetail } from "./root.store";
 
@@ -35,7 +34,6 @@ export interface IIssueStoreActions {
 }
 
 export interface IIssueStore extends IIssueStoreActions {
-  getIsFetchingIssueDetails: (issueId: string | undefined) => boolean;
   // helper methods
   getIssueById: (issueId: string) => Issue | IssueDetail | undefined;
   getIssueDetailById: (issueId: string) => IssueDetail | undefined;
@@ -43,31 +41,17 @@ export interface IIssueStore extends IIssueStoreActions {
 }
 
 export class IssueStore implements IIssueStore {
-  fetchingIssueDetails: string | undefined = undefined;
   // root store
   rootIssueDetailStore: IIssueDetail;
   // services
   issueService;
-  issueArchiveService;
-  draftWorkItemService;
 
   constructor(rootStore: IIssueDetail) {
-    makeObservable(this, {
-      fetchingIssueDetails: observable.ref,
-    });
     // root store
     this.rootIssueDetailStore = rootStore;
     // services
     this.issueService = new IssueService();
-    this.issueArchiveService = new IssueArchiveService();
-    this.draftWorkItemService = new WorkspaceDraftService();
   }
-
-  getIsFetchingIssueDetails = computedFn((issueId: string | undefined) => {
-    if (!issueId) return false;
-
-    return this.fetchingIssueDetails === issueId;
-  });
 
   // helper methods
   getIssueById = computedFn((issueId: string): Issue | IssueDetail | undefined => {
@@ -101,7 +85,6 @@ export class IssueStore implements IIssueStore {
 
   // actions
   fetchIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
-    this.fetchingIssueDetails = issueId;
     const issue = await this.issueService.retrieve(workspaceSlug, projectId, issueId);
 
     if (!issue) throw new Error("Work item not found");
@@ -131,7 +114,6 @@ export class IssueStore implements IIssueStore {
 
   addIssueToStore = (issue: Issue) => {
     this.rootIssueDetailStore.rootIssueStore.issues.addIssue([issue]);
-    this.fetchingIssueDetails = undefined;
 
     return issue;
   };

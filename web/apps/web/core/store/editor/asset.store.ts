@@ -6,26 +6,18 @@
 
 import { debounce, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
-import { computedFn } from "mobx-utils";
-import { v4 as uuidv4 } from "uuid";
 // nerve types
 import type { EFileAssetType, TFileEntityInfo, TFileSignedURLResponse } from "@nerve/types";
 // services
 import { FileService } from "@/services/file.service";
 /** Upload progress belongs to editor assets independently of issue attachment widgets. */
 type TAttachmentUploadStatus = {
-  id: string;
-  name: string;
   progress: number;
-  size: number;
-  type: string;
 };
 
 export interface IEditorAssetStore {
   // computed
   assetsUploadPercentage: Record<string, number>;
-  // helper methods
-  getAssetUploadStatusByEditorBlockId: (blockId: string) => TAttachmentUploadStatus | undefined;
   // actions
   uploadEditorAsset: ({
     blockId,
@@ -84,15 +76,6 @@ export class EditorAssetStore implements IEditorAssetStore {
     return assetsPercentage;
   }
 
-  // helper methods
-  getAssetUploadStatusByEditorBlockId: IEditorAssetStore["getAssetUploadStatusByEditorBlockId"] = computedFn(
-    (blockId) => {
-      const blockDetails = this.assetsUploadStatus[blockId];
-      if (!blockDetails) return undefined;
-      return blockDetails;
-    }
-  );
-
   // actions
   private debouncedUpdateProgress = debounce((blockId: string, progress: number) => {
     runInAction(() => {
@@ -102,17 +85,12 @@ export class EditorAssetStore implements IEditorAssetStore {
 
   uploadEditorAsset: IEditorAssetStore["uploadEditorAsset"] = async (args) => {
     const { blockId, data, file, projectId, workspaceSlug } = args;
-    const tempId = uuidv4();
 
     try {
       // update attachment upload status
       runInAction(() => {
         set(this.assetsUploadStatus, [blockId], {
-          id: tempId,
-          name: file.name,
           progress: 0,
-          size: file.size,
-          type: file.type,
         });
       });
       if (projectId) {

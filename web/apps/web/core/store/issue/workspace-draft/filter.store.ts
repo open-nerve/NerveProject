@@ -6,7 +6,6 @@
 
 import { isEmpty, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
-import { computedFn } from "mobx-utils";
 // Nerve Imports
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EIssueFilterType } from "@nerve/constants";
@@ -15,13 +14,10 @@ import type {
   IIssueDisplayProperties,
   TIssueKanbanFilters,
   IIssueFilters,
-  TIssueParams,
-  IssuePaginationOptions,
   TWorkItemFilterExpression,
   TSupportedFilterForUpdate,
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
-import { handleIssueQueryParamsByLayout } from "@nerve/utils";
 // services
 // helpers
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
@@ -30,16 +26,6 @@ import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
 import type { IIssueRootStore } from "../root.store";
 
 export interface IWorkspaceDraftIssuesFilter extends IBaseIssueFilterStore {
-  // observables
-  workspaceSlug: string;
-  //helper actions
-  getFilterParams: (
-    options: IssuePaginationOptions,
-    userId: string,
-    cursor: string | undefined,
-    groupId: string | undefined,
-    subGroupId: string | undefined
-  ) => Partial<Record<TIssueParams, string | boolean>>;
   // action
   fetchFilters: (workspaceSlug: string) => Promise<void>;
   updateFilterExpression: (workspaceSlug: string, userId: string, filters: TWorkItemFilterExpression) => Promise<void>;
@@ -51,8 +37,6 @@ export interface IWorkspaceDraftIssuesFilter extends IBaseIssueFilterStore {
 }
 
 export class WorkspaceDraftIssuesFilter extends IssueFilterHelperStore implements IWorkspaceDraftIssuesFilter {
-  // observables
-  workspaceSlug: string = "";
   filters: { [userId: string]: IIssueFilters } = {};
   // root store
   rootIssueStore: IIssueRootStore;
@@ -62,7 +46,6 @@ export class WorkspaceDraftIssuesFilter extends IssueFilterHelperStore implement
     super();
     makeObservable(this, {
       // observables
-      workspaceSlug: observable.ref,
       filters: observable,
       // computed
       issueFilters: computed,
@@ -91,39 +74,7 @@ export class WorkspaceDraftIssuesFilter extends IssueFilterHelperStore implement
     return _filters;
   }
 
-  getAppliedFilters(workspaceSlug: string) {
-    const userFilters = this.getIssueFilters(workspaceSlug);
-    if (!userFilters) return undefined;
-
-    const filteredParams = handleIssueQueryParamsByLayout(userFilters?.displayFilters?.layout, "profile_issues");
-    if (!filteredParams) return undefined;
-
-    const filteredRouteParams: Partial<Record<TIssueParams, string | boolean>> = this.computedFilteredParams(
-      userFilters?.richFilters,
-      userFilters?.displayFilters,
-      filteredParams
-    );
-
-    return filteredRouteParams;
-  }
-
-  getFilterParams = computedFn(
-    (
-      options: IssuePaginationOptions,
-      userId: string,
-      cursor: string | undefined,
-      groupId: string | undefined,
-      subGroupId: string | undefined
-    ) => {
-      const filterParams = this.getAppliedFilters(this.workspaceSlug);
-
-      const paginationParams = this.getPaginationParams(filterParams, options, cursor, groupId, subGroupId);
-      return paginationParams;
-    }
-  );
-
   fetchFilters = async (workspaceSlug: string) => {
-    this.workspaceSlug = workspaceSlug;
     const _filters = this.handleIssuesLocalFilters.get(
       EIssuesStoreType.PROFILE,
       workspaceSlug,

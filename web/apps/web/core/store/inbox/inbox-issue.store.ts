@@ -17,14 +17,11 @@ import { InboxIssueService } from "@/services/inbox";
 import type { RootStore } from "../root.store";
 
 export interface IInboxIssueStore {
-  isLoading: boolean;
-  id: string;
   status: TInboxIssueStatus;
   issue: Partial<IssueDetail>;
   snoozed_till: Date | undefined;
   source: EInboxIssueSource | undefined;
   duplicate_to: string | undefined;
-  created_by: string | undefined;
   duplicate_issue_detail: TInboxDuplicateIssueDetails | undefined;
   // actions
   updateInboxIssueStatus: (status: TInboxIssueStatus) => Promise<void>; // accept, decline
@@ -35,15 +32,11 @@ export interface IInboxIssueStore {
 }
 
 export class InboxIssueStore implements IInboxIssueStore {
-  // observables
-  isLoading: boolean = false;
-  id: string;
   status: TInboxIssueStatus = EInboxIssueStatus.PENDING;
   issue: Partial<IssueDetail> = {};
   snoozed_till: Date | undefined;
   source: EInboxIssueSource | undefined;
   duplicate_to: string | undefined;
-  created_by: string | undefined;
   duplicate_issue_detail: TInboxDuplicateIssueDetails | undefined = undefined;
   workspaceSlug: string;
   projectId: string;
@@ -56,12 +49,10 @@ export class InboxIssueStore implements IInboxIssueStore {
     data: TInboxIssue,
     private store: RootStore
   ) {
-    this.id = data.id;
     this.status = data.status;
     this.issue = data?.issue;
     this.snoozed_till = data?.snoozed_till || undefined;
     this.duplicate_to = data?.duplicate_to || undefined;
-    this.created_by = data?.created_by || undefined;
     this.source = data?.source || undefined;
     this.duplicate_issue_detail = data?.duplicate_issue_detail || undefined;
     this.workspaceSlug = workspaceSlug;
@@ -70,13 +61,11 @@ export class InboxIssueStore implements IInboxIssueStore {
     this.inboxIssueService = new InboxIssueService();
     // observable variables should be defined after the initialization of the values
     makeObservable(this, {
-      id: observable,
       status: observable,
       issue: observable,
       snoozed_till: observable,
       duplicate_to: observable,
       duplicate_issue_detail: observable,
-      created_by: observable,
       source: observable,
       // actions
       updateInboxIssueStatus: action,

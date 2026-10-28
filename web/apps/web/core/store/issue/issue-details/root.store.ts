@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail as GeneratedIssueDetail } from "@nerve/api-client";
+import type { IssueDetail as GeneratedIssueDetail } from "@nerve/api-client";
 
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 import { action, computed, makeObservable, observable } from "mobx";
@@ -49,7 +49,7 @@ export type TIssueRelationModal = {
   relationType: TIssueRelationTypes | null;
 };
 
-type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: Issue | undefined };
+type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined };
 
 export type TIssueCrudOperationState = {
   create: TIssueCrudState;
@@ -72,17 +72,14 @@ export interface IIssueDetail
   issueLinkData: TIssueLink | null;
   issueCrudOperationState: TIssueCrudOperationState;
   openWidgets: TWorkItemWidgets[];
-  lastWidgetAction: TWorkItemWidgets | null;
   isCreateIssueModalOpen: boolean;
   isIssueLinkModalOpen: boolean;
   isParentIssueModalOpen: string | null;
   isDeleteIssueModalOpen: string | null;
-  isArchiveIssueModalOpen: string | null;
   isRelationModalOpen: TIssueRelationModal | null;
   isSubIssuesModalOpen: string | null;
   // computed
   isAnyModalOpen: boolean;
-  isPeekOpen: boolean;
   // helper actions
   getIsIssuePeeked: (issueId: string) => boolean;
   // actions
@@ -92,10 +89,8 @@ export interface IIssueDetail
   toggleIssueLinkModal: (value: boolean) => void;
   toggleParentIssueModal: (issueId: string | null) => void;
   toggleDeleteIssueModal: (issueId: string | null) => void;
-  toggleArchiveIssueModal: (value: string | null) => void;
   toggleRelationModal: (issueId: string | null, relationType: TIssueRelationTypes | null) => void;
   toggleSubIssuesModal: (value: string | null) => void;
-  setOpenWidgets: (state: TWorkItemWidgets[]) => void;
   setLastWidgetAction: (action: TWorkItemWidgets) => void;
   toggleOpenWidget: (state: TWorkItemWidgets) => void;
   setRelationKey: (relationKey: TIssueRelationTypes | null) => void;
@@ -121,21 +116,17 @@ export class IssueDetail implements IIssueDetail {
     create: {
       toggle: false,
       parentIssueId: undefined,
-      issue: undefined,
     },
     existing: {
       toggle: false,
       parentIssueId: undefined,
-      issue: undefined,
     },
   };
   openWidgets: TWorkItemWidgets[] = ["sub-work-items", "links"];
-  lastWidgetAction: TWorkItemWidgets | null = null;
   isCreateIssueModalOpen: boolean = false;
   isIssueLinkModalOpen: boolean = false;
   isParentIssueModalOpen: string | null = null;
   isDeleteIssueModalOpen: string | null = null;
-  isArchiveIssueModalOpen: string | null = null;
   isRelationModalOpen: TIssueRelationModal | null = null;
   isSubIssuesModalOpen: string | null = null;
   // store
@@ -160,14 +151,11 @@ export class IssueDetail implements IIssueDetail {
       isIssueLinkModalOpen: observable.ref,
       isParentIssueModalOpen: observable.ref,
       isDeleteIssueModalOpen: observable.ref,
-      isArchiveIssueModalOpen: observable.ref,
       isRelationModalOpen: observable.ref,
       isSubIssuesModalOpen: observable.ref,
       openWidgets: observable.ref,
-      lastWidgetAction: observable.ref,
       // computed
       isAnyModalOpen: computed,
-      isPeekOpen: computed,
       // action
       setPeekIssue: action,
       setIssueLinkData: action,
@@ -175,10 +163,8 @@ export class IssueDetail implements IIssueDetail {
       toggleIssueLinkModal: action,
       toggleParentIssueModal: action,
       toggleDeleteIssueModal: action,
-      toggleArchiveIssueModal: action,
       toggleRelationModal: action,
       toggleSubIssuesModal: action,
-      setOpenWidgets: action,
       setLastWidgetAction: action,
       toggleOpenWidget: action,
       setRelationKey: action,
@@ -204,14 +190,9 @@ export class IssueDetail implements IIssueDetail {
       this.isIssueLinkModalOpen ||
       !!this.isParentIssueModalOpen ||
       !!this.isDeleteIssueModalOpen ||
-      !!this.isArchiveIssueModalOpen ||
       !!this.isRelationModalOpen?.issueId ||
       !!this.isSubIssuesModalOpen
     );
-  }
-
-  get isPeekOpen() {
-    return !!this.peekIssue;
   }
 
   // helper actions
@@ -225,14 +206,9 @@ export class IssueDetail implements IIssueDetail {
   toggleIssueLinkModal = (value: boolean) => (this.isIssueLinkModalOpen = value);
   toggleParentIssueModal = (issueId: string | null) => (this.isParentIssueModalOpen = issueId);
   toggleDeleteIssueModal = (issueId: string | null) => (this.isDeleteIssueModalOpen = issueId);
-  toggleArchiveIssueModal = (issueId: string | null) => (this.isArchiveIssueModalOpen = issueId);
   toggleRelationModal = (issueId: string | null, relationType: TIssueRelationTypes | null) =>
     (this.isRelationModalOpen = { issueId, relationType });
   toggleSubIssuesModal = (issueId: string | null) => (this.isSubIssuesModalOpen = issueId);
-  setOpenWidgets = (state: TWorkItemWidgets[]) => {
-    this.openWidgets = state;
-    if (this.lastWidgetAction) this.lastWidgetAction = null;
-  };
   setLastWidgetAction = (action: TWorkItemWidgets) => {
     this.openWidgets = [action];
   };

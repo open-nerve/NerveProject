@@ -11,7 +11,6 @@ import { observer } from "mobx-react";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { EIssuesStoreType } from "@nerve/types";
 // assets
 import emptyIssue from "@/app/assets/empty-state/issue.svg?url";
 // components
@@ -19,7 +18,6 @@ import { EmptyState } from "@/components/common/empty-state";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useIssues } from "@/hooks/store/use-issues";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
 // local components
@@ -30,8 +28,6 @@ import { IssueDetailsSidebar } from "./sidebar";
 export type TIssueOperations = {
   fetch: (workspaceSlug: string, projectId: string, issueId: string, loader?: boolean) => Promise<void>;
   update: (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) => Promise<void>;
-  remove: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-  archive?: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   restore?: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 };
 
@@ -52,12 +48,7 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
     issue: { getIssueById },
     fetchIssue,
     updateIssue,
-    removeIssue,
-    archiveIssue,
   } = useIssueDetail();
-  const {
-    issues: { removeIssue: removeArchivedIssue },
-  } = useIssues(EIssuesStoreType.ARCHIVED);
   const { allowPermissions } = useUserPermissions();
   const { issueDetailSidebarCollapsed } = useAppTheme();
 
@@ -82,33 +73,8 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
           });
         }
       },
-      remove: async (workspaceSlug: string, projectId: string, issueId: string) => {
-        try {
-          if (is_archived) await removeArchivedIssue(workspaceSlug, projectId, issueId);
-          else await removeIssue(workspaceSlug, projectId, issueId);
-          setToast({
-            title: t("common.success"),
-            type: TOAST_TYPE.SUCCESS,
-            message: t("entity.delete.success", { entity: t("issue.label") }),
-          });
-        } catch (error) {
-          console.log("Error in deleting issue:", error);
-          setToast({
-            title: t("common.error.label"),
-            type: TOAST_TYPE.ERROR,
-            message: t("entity.delete.failed", { entity: t("issue.label") }),
-          });
-        }
-      },
-      archive: async (workspaceSlug: string, projectId: string, issueId: string) => {
-        try {
-          await archiveIssue(workspaceSlug, projectId, issueId);
-        } catch (error) {
-          console.log("Error in archiving issue:", error);
-        }
-      },
     }),
-    [is_archived, fetchIssue, updateIssue, removeIssue, archiveIssue, removeArchivedIssue, t]
+    [fetchIssue, updateIssue, t]
   );
 
   // issue details

@@ -153,11 +153,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
     setDeleteIssueModal: customDeleteAction,
     setArchiveIssueModal: customArchiveAction,
     setDuplicateWorkItemModal: customDuplicateAction,
-    handleDelete: customDeleteAction,
-    handleUpdate,
-    handleArchive: customArchiveAction,
     handleRestore: customRestoreAction,
-    storeType: EIssuesStoreType.PROJECT,
   };
 
   //   const MENU_ITEMS = useWorkItemDetailMenuItems(menuItemProps);

@@ -42,7 +42,6 @@ export interface IWorkspaceDraftIssues {
   getIssueById: (issueId: string) => TWorkspaceDraftIssue | undefined;
   // helper actions
   addIssue: (issues: TWorkspaceDraftIssue[]) => void;
-  mutateIssue: (issueId: string, data: Partial<TWorkspaceDraftIssue>) => void;
   removeIssue: (issueId: string) => Promise<void>;
   // actions
   fetchIssues: (
@@ -87,7 +86,6 @@ export interface IWorkspaceDraftIssues {
     subGroupId: string | undefined,
     isSubGroupCumulative: boolean
   ) => number | undefined;
-  archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 }
 
 export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
@@ -140,16 +138,6 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
       issues.forEach((issue) => {
         if (!this.issuesMap[issue.id]) set(this.issuesMap, issue.id, issue);
         else update(this.issuesMap, issue.id, (prevIssue) => ({ ...prevIssue, ...issue }));
-      });
-    });
-  };
-
-  mutateIssue = (issueId: string, issue: Partial<TWorkspaceDraftIssue>) => {
-    if (!issue || !issueId || !this.issuesMap[issueId]) return;
-    runInAction(() => {
-      set(this.issuesMap, [issueId, "updated_at"], getCurrentDateTimeInISO());
-      Object.keys(issue).forEach((key) => {
-        set(this.issuesMap, [issueId, key], issue[key as keyof TWorkspaceDraftIssue]);
       });
     });
   };
@@ -367,5 +355,4 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
     _subGroupId: string | undefined,
     _isSubGroupCumulative: boolean
   ) => undefined;
-  archiveIssue = async (_workspaceSlug: string, _projectId: string, _issueId: string) => {};
 }

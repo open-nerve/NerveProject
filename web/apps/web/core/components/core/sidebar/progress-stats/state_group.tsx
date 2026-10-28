@@ -14,7 +14,6 @@ import { SingleProgressStats } from "@/components/core/sidebar/single-progress-s
 export type TStateGroupData = {
   state: string | undefined;
   completed: number;
-  total: number;
 }[];
 
 type TStateGroupStatComponent = {

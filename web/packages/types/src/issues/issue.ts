@@ -56,7 +56,6 @@ export type TWorkItemWidgets = "sub-work-items" | "relations" | "links" | "attac
 export interface IWorkItemPeekOverview {
   embedIssue?: boolean;
   embedRemoveCurrentNotification?: () => void;
-  is_draft?: boolean;
   storeType?: EIssuesStoreType;
 }
 

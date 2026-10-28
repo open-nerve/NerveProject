@@ -19,7 +19,6 @@ import {
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { EIssuesStoreType } from "@nerve/types";
 import type { TContextMenuItem } from "@nerve/ui";
 import { copyUrlToClipboard, generateWorkItemLink } from "@nerve/utils";
 import { createCopyMenuWithDuplication } from "./copy-menu-helper";
@@ -73,12 +72,6 @@ export interface MenuItemFactoryProps {
   setArchiveIssueModal?: (open: boolean) => void;
   setDuplicateWorkItemModal?: (open: boolean) => void;
   handleRestore?: () => Promise<void>;
-  // External handlers
-  handleDelete?: () => Promise<void>;
-  handleUpdate?: (data: Issue) => Promise<void>;
-  handleArchive?: () => Promise<void>;
-  // Context-specific data
-  storeType?: EIssuesStoreType;
 }
 
 // Common action handlers hook

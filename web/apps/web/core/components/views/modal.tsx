@@ -86,7 +86,6 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
         handleClose={handleClose}
         handleFormSubmit={handleFormSubmit}
         preLoadedData={preLoadedData}
-        projectId={projectId}
       />
     </ModalCore>
   );

@@ -154,8 +154,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
 
       paginationOptions: observable,
       // computed
-      moduleId: computed,
-      cycleId: computed,
       orderBy: computed,
       groupBy: computed,
       subGroupBy: computed,
@@ -192,16 +190,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
   abstract fetchParentStats: (workspaceSlug: string, projectId?: string, id?: string) => void;
 
   abstract updateParentStats: (prevIssueState?: Issue, nextIssueState?: Issue, id?: string) => void;
-
-  // current Module Id from url
-  get moduleId() {
-    return this.rootIssueStore.moduleId;
-  }
-
-  // current Cycle Id from url
-  get cycleId() {
-    return this.rootIssueStore.cycleId;
-  }
 
   // current Order by value
   get orderBy() {

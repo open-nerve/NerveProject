@@ -60,7 +60,6 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
     setCreateUpdateIssueModal: () => {},
     setDeleteIssueModal,
     handleRestore,
-    handleDelete,
   };
 
   const MENU_ITEMS = useArchivedIssueMenuItems(menuItemProps);

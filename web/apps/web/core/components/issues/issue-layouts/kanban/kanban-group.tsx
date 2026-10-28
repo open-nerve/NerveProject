@@ -64,7 +64,6 @@ interface IKanbanGroup {
   loadMoreIssues: (groupId?: string, subGroupId?: string) => void;
   disableIssueCreation?: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;
-  groupByVisibilityToggle?: boolean;
   scrollableContainerRef?: MutableRefObject<HTMLDivElement | null>;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
   orderBy: TIssueOrderByOptions | undefined;

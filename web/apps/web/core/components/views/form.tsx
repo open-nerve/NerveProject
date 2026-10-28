@@ -36,7 +36,6 @@ type Props = {
   handleClose: () => void;
   handleFormSubmit: (values: IProjectView) => Promise<void>;
   preLoadedData?: Partial<IProjectView> | null;
-  projectId: string;
 };
 
 const DEFAULT_VALUES: Partial<IProjectView> = {
@@ -48,7 +47,7 @@ const DEFAULT_VALUES: Partial<IProjectView> = {
 };
 
 export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
-  const { handleFormSubmit, handleClose, data, preLoadedData, projectId } = props;
+  const { handleFormSubmit, handleClose, data, preLoadedData } = props;
   // i18n
   const { t } = useTranslation();
   // state

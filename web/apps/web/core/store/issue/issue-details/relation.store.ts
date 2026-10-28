@@ -7,7 +7,7 @@
 import type { Issue } from "@nerve/api-client";
 
 import { uniq, get, set } from "lodash-es";
-import { action, computed, makeObservable, observable, runInAction } from "mobx";
+import { action, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
 import type { TIssueRelationIdMap, TIssueRelationMap, TIssueRelation, TIssueRelationTypes } from "@nerve/types";
@@ -40,16 +40,13 @@ export interface IIssueRelationStoreActions {
 
 export interface IIssueRelationStore extends IIssueRelationStoreActions {
   // observables
-  relationMap: TIssueRelationMap; // Record defines relationType as key and reactions as value
-  // computed
-  issueRelations: TIssueRelationIdMap | undefined;
+  relationMap: TIssueRelationMap;
   // helper methods
   getRelationsByIssueId: (issueId: string) => TIssueRelationIdMap | undefined;
   getRelationCountByIssueId: (
     issueId: string,
     ISSUE_RELATION_OPTIONS: { [key in TIssueRelationTypes]?: TRelationObject }
   ) => number;
-  createCurrentRelation: (issueId: string, relationType: TIssueRelationTypes, relatedIssueId: string) => Promise<void>;
 }
 
 export class IssueRelationStore implements IIssueRelationStore {
@@ -64,25 +61,15 @@ export class IssueRelationStore implements IIssueRelationStore {
     makeObservable(this, {
       // observables
       relationMap: observable,
-      // computed
-      issueRelations: computed,
       // actions
       fetchRelations: action,
       createRelation: action,
-      createCurrentRelation: action,
       removeRelation: action,
     });
     // root store
     this.rootIssueDetailStore = rootStore;
     // services
     this.issueRelationService = new IssueRelationService();
-  }
-
-  // computed
-  get issueRelations() {
-    const issueId = this.rootIssueDetailStore.peekIssue?.issueId;
-    if (!issueId) return undefined;
-    return this.relationMap?.[issueId] ?? undefined;
   }
 
   // // helper methods
@@ -159,61 +146,6 @@ export class IssueRelationStore implements IIssueRelationStore {
     // fetching activity
     this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
     return response;
-  };
-
-  /**
-   * create Relation in current project optimistically
-   * @param issueId
-   * @param relationType
-   * @param relatedIssueId
-   * @returns
-   */
-  createCurrentRelation = async (issueId: string, relationType: TIssueRelationTypes, relatedIssueId: string) => {
-    const workspaceSlug = this.rootIssueDetailStore.rootIssueStore.workspaceSlug;
-    const projectId = this.rootIssueDetailStore.issue.getIssueById(issueId)?.project_id;
-
-    if (!workspaceSlug || !projectId) return;
-
-    const reverseRelatedType = REVERSE_RELATIONS[relationType];
-
-    const issuesOfRelation = get(this.relationMap, [issueId, relationType]);
-    const issuesOfRelated = get(this.relationMap, [relatedIssueId, reverseRelatedType]);
-
-    try {
-      // update relations before API call
-      runInAction(() => {
-        if (!issuesOfRelation) {
-          set(this.relationMap, [issueId, relationType], [relatedIssueId]);
-        } else {
-          set(this.relationMap, [issueId, relationType], uniq([...issuesOfRelation, relatedIssueId]));
-        }
-
-        if (!issuesOfRelated) {
-          set(this.relationMap, [relatedIssueId, reverseRelatedType], [issueId]);
-        } else {
-          set(this.relationMap, [relatedIssueId, reverseRelatedType], uniq([...issuesOfRelated, issueId]));
-        }
-      });
-
-      // perform API call
-      await this.issueRelationService.createIssueRelations(workspaceSlug, projectId, issueId, {
-        relation_type: relationType,
-        issues: [relatedIssueId],
-      });
-    } catch (e) {
-      // Revert back store changes if API fails
-      runInAction(() => {
-        if (issuesOfRelation) {
-          set(this.relationMap, [issueId, relationType], issuesOfRelation);
-        }
-
-        if (issuesOfRelated) {
-          set(this.relationMap, [relatedIssueId, reverseRelatedType], issuesOfRelated);
-        }
-      });
-
-      throw e;
-    }
   };
 
   removeRelation = async (

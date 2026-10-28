@@ -10,7 +10,7 @@ import type { TWorkspaceDraftIssue, TWorkspaceDraftPaginationInfo } from "@nerve
 // services
 import { APIService } from "@/services/api.service";
 
-export class WorkspaceDraftService extends APIService {
+class WorkspaceDraftService extends APIService {
   async getIssues(
     workspaceSlug: string,
     query: object = {}
@@ -19,14 +19,6 @@ export class WorkspaceDraftService extends APIService {
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
-      });
-  }
-
-  async getIssueById(workspaceSlug: string, issueId: string): Promise<TWorkspaceDraftIssue | undefined> {
-    return this.get(`/api/workspaces/${workspaceSlug}/draft-issues/${issueId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
       });
   }
 

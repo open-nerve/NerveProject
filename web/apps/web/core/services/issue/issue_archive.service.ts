@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueDetail } from "@nerve/api-client";
-
 import { APIService } from "@/services/api.service";
 
 export class IssueArchiveService extends APIService {
@@ -39,21 +37,6 @@ export class IssueArchiveService extends APIService {
 
   async restoreIssue(workspaceSlug: string, projectId: string, issueId: string): Promise<any> {
     return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/archive/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async retrieveArchivedIssue(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    queries?: any
-  ): Promise<IssueDetail> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/archive/`, {
-      params: queries,
-    })
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

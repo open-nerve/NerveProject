@@ -80,7 +80,9 @@ T6 关系资源补充（R16，root 同域局部裁定，2026-10-28）：生成 c
 
 R10由T5先在旧TIssue阶段分清创建输入/元数据/完整响应、隔离flag与修复absence rollback，T6机械换生成类型；不为守住旧Partial<Issue>粗略文字额外拆HTTP参数、复制字段或暗穿描述。M4旧更新请求使用者仍按P10b/P11原期限移除；后续接新API的预检须按强类型合同同步必要boolean输入，不靠string转换层延命。P14承担既定真实页面性质验收，M7旧路径仍只留到M7；最后消费者移除后删除旧请求类型。不把全部inbox列表响应虚称Detail，不把局部Partial入canonical。
 
-**类型过渡与 URL 例外是两份账。** 上表只列用新 Issue/Detail 临时类型化旧响应的四核心文件；其他尚未迁移的 M4 旧地址同样要逐命中登记，不能误删或漏放。`issue_activity/issue_comment/issue_reaction/work_item_version` 等详情资源旧地址、`user.service.ts#getUserProfileIssues`、`workspace.service.ts#searchEntity` 按 P11 删除（until M4/P12）；`project/project.service.ts#projectIssuesSearch` 的调用方在 P12/P14改接，旧文件及残余搜索方法在P15清理（until M4/P16，P14若已无读者应立即删并同步账）。`workspace.service.ts#searchWorkspace` 在P15删除；其当前 `/search/` 是否被新规则覆盖须按实际正则核，既有plane-workspace-urls规则继续有效，不伪称八类新规则已覆盖它。M5/M6/M7例外只限实际属于它们的路径/方法。
+**类型过渡与 URL 例外是两份账。** 上表只列用新 Issue/Detail 临时类型化旧响应的四核心文件；其他尚未迁移的 M4 旧地址同样要逐命中登记，不能误删或漏放。`issue_activity/issue_comment/issue_reaction/work_item_version` 等详情资源旧地址、`user.service.ts#getUserProfileIssues`、`workspace.service.ts#searchEntity` 按 P11 删除（until M4/P12）；`project/project.service.ts#projectIssuesSearch` 的调用方在 P12/P14改接，旧文件及残余搜索方法在P15清理（until M4/P16，P14若已无读者应立即删并同步账）。`workspace.service.ts#searchWorkspace` 在P15删除；其当前 `/search/` 既不受既有 plane-workspace-urls 覆盖，也不属八类新规则；保留 P15 删除 / until M4/P16 的广义手工账，不加第九类或改变既有规则语义。M5/M6/M7例外只限实际属于它们的路径/方法。
+
+T7 到期接续：相同 file+match 聚合按最早期限。`IssueService.createIssue/getIssuesFromServer` 的当前两个命中随 P10b 核心 create/列表迁移，until M4/P11；`patchIssue/retrieve` 的两个命中共享详情 URL，patch 的唯一 Base.issueUpdate 读者先由 P10b 迁移，故同样 until M4/P11。P10b 删除早期方法后，只有真实残留的 P11 retrieve 才可按实际剩余 count 重登 M4/P12，不把原聚合项整体延期。Base.issueUpdate 的三个 HTTP 边界测试样例也随 P10b 迁移，until M4/P11。
 
 这只是类型过渡，Nerve 没有对应 Plane 路由，不宣称运行时已接通。`old-issue-urls` 规则在 `web/` 检测 `/api/workspaces/…` 下的 issues/work-items/archived-issues/draft-issues/draft-to-issue/search-issues/entity-search/user-issues 旧地址。每个暂留命中登记文件、匹配样例、精确 count、原因和 until，不使用整目录豁免；P16 终态只剩 M5–M7。
 
@@ -399,7 +401,7 @@ T3 删除检查点（相对 T2 完成源）：`issue-layouts/utils.tsx` 812→81
 T4 相对 T3 完成源的尺寸：`web/apps/web/core/components/issues/issue-layouts/properties/all-properties.tsx` 451→332；`web/apps/web/core/components/issues/issue-layouts/utils.tsx` 812→739；`web/apps/web/core/store/issue/helpers/base-issues.store.ts` 1775→1663。既有大文件只删除字段/分支及状态目录读取的必要调整；quick-add/root 在同文件增加局部请求所有权/反馈，未新增共享 pending 引擎。
 
 
-T1 广义旧地址账冻结 `web/` 中全部 `/api/workspaces/` 字面量：23 文件、140 处。逐方法的文件/行、完整样例、count、理由与 until 见本地 `task-1-old-urls.md/json`；它广于 T7 八类规则，不能直接充当该规则匹配数或运行时请求验收。项目 `/user-properties/` 两处仍严格 until `M4/P11`；cycle/module 的四个同名筛选方法归 T3 删除，不延长到 M6。工作区 `getViewIssues` 两地址归 T3 删除；`/search/` 归 P15、until M4/P16，由既有 plane-workspace-urls 守卫负责，不声称被八类新规则覆盖。其他 M4 列表、详情、残余搜索分别按 §2.3 到期；M5/M6/M7 及广义账中的 M8 Webhook 自身地址按所属里程碑处理，不为 T7 新增目录豁免。新规则与例外只在 T7 实施。
+T1 广义旧地址账冻结 `web/` 中全部 `/api/workspaces/` 字面量：23 文件、140 处。逐方法的文件/行、完整样例、count、理由与 until 见本地 `task-1-old-urls.md/json`；它广于 T7 八类规则，不能直接充当该规则匹配数或运行时请求验收。项目 `/user-properties/` 两处仍严格 until `M4/P11`；cycle/module 的四个同名筛选方法归 T3 删除，不延长到 M6。工作区 `getViewIssues` 两地址归 T3 删除；`/search/` 归 P15、until M4/P16，当前既不受既有 plane-workspace-urls 覆盖，也不属八类新规则，继续以广义手工账追踪，不新增第九类。其他 M4 列表、详情、残余搜索分别按 §2.3 到期；M5/M6/M7 及广义账中的 M8 Webhook 自身地址按所属里程碑处理，不为 T7 新增目录豁免。新规则与例外只在 T7 实施。
 
 ### T5 既有大文件登记（实施基线 d9415375）
 
@@ -418,3 +420,12 @@ T1 广义旧地址账冻结 `web/` 中全部 `/api/workspaces/` 字面量：23 �
 | `web/apps/web/core/components/issues/issue-layouts/utils.tsx` | 739 | 745 | 生成核心类型/字段/null机械接续；Base另按R16删除列表关系提取调用，不新增协调算法 |
 | `web/apps/web/core/store/inbox/project-inbox.store.ts` | 510 | 511 | 生成核心类型/字段/null机械接续；Base另按R16删除列表关系提取调用，不新增协调算法 |
 | `web/apps/web/core/store/issue/helpers/base-issues.store.ts` | 1277 | 1274 | 生成核心类型/字段/null机械接续；Base另按R16删除列表关系提取调用，不新增协调算法 |
+
+
+### T7 既有大文件登记（实施基线 e5031c07）
+
+| 文件 | 改前行数 | 改后行数 | 本 Task 理由 |
+|---|---:|---:|---|
+| `web/apps/web/core/store/issue/helpers/base-issues.store.ts` | 1274 | 1262 | 删除无消费者成员/类型槽及其登记；不新增协调算法 |
+
+T7 实际八类规则为 12 文件、40 命中、28 个精确 file+match 例外；其中 3 命中为 Base.issueUpdate 的真实 HTTP 测试边界。此数不等同 T1 广义 140 地址；已删附件 `/api/assets/v2/`、cycle-issues、近名 issues-detail 及仍存 `/search/` 均不虚报为八类匹配。类型过渡四文件与完整 URL 命中继续分账。`tools/keywords.mjs` 保持只读。

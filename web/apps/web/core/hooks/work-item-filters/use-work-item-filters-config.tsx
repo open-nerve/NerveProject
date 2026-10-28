@@ -64,11 +64,6 @@ export type TUseWorkItemFiltersConfigProps = {
 export type TWorkItemFiltersConfig = {
   areAllConfigsInitialized: boolean;
   configs: TFilterConfig<TWorkItemFilterProperty>[];
-  configMap: {
-    [key in TWorkItemFilterProperty]?: TFilterConfig<TWorkItemFilterProperty>;
-  };
-  isFilterEnabled: (key: TWorkItemFilterProperty) => boolean;
-  members: MemberUser[];
 };
 
 export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps): TWorkItemFiltersConfig => {
@@ -297,21 +292,5 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
       updatedAtFilterConfig,
       createdByFilterConfig,
     ],
-    configMap: {
-      project_id: projectFilterConfig,
-      state_group: stateGroupFilterConfig,
-      state_id: stateFilterConfig,
-      label_id: labelFilterConfig,
-      assignee_id: assigneeFilterConfig,
-      mention_id: mentionFilterConfig,
-      created_by_id: createdByFilterConfig,
-      priority: priorityFilterConfig,
-      start_date: startDateFilterConfig,
-      target_date: targetDateFilterConfig,
-      created_at: createdAtFilterConfig,
-      updated_at: updatedAtFilterConfig,
-    },
-    isFilterEnabled,
-    members: members ?? [],
   };
 };

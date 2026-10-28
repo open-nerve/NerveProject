@@ -9,7 +9,6 @@ import { observer } from "mobx-react";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { usePowerK } from "@/hooks/store/use-power-k";
-import { useUser } from "@/hooks/store/user";
 import { useParams, useNavigate } from "react-router";
 // components
 import { ProjectLevelModals } from "@/components/modals/project-level";
@@ -45,7 +44,6 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
     },
     [togglePowerKModal, setActivePage]
   );
-  const { data: currentUser } = useUser();
   // derived values
   const {
     issue: { getIssueById, getIssueIdByIdentifier },
@@ -58,7 +56,6 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
   // Build command context from props and store
   const context: TPowerKContext = useMemo(
     () => ({
-      currentUserId: currentUser?.id,
       activeCommand,
       activeContext,
       shouldShowContextBasedActions,
@@ -73,7 +70,6 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
       setActivePage,
     }),
     [
-      currentUser?.id,
       activeCommand,
       activeContext,
       shouldShowContextBasedActions,

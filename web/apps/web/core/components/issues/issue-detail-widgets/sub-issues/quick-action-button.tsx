@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue } from "@nerve/api-client";
-
 import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
@@ -41,28 +39,23 @@ export const SubIssuesActionButton = observer(function SubIssuesActionButton(pro
   if (!issue) return <></>;
 
   // handlers
-  const handleIssueCrudState = (
-    key: "create" | "existing",
-    _parentIssueId: string | null,
-    issue: Issue | null = null
-  ) => {
+  const handleIssueCrudState = (key: "create" | "existing", _parentIssueId: string | null) => {
     setIssueCrudOperationState({
       ...issueCrudOperationState,
       [key]: {
         toggle: !issueCrudOperationState[key].toggle,
         parentIssueId: _parentIssueId,
-        issue: issue,
       },
     });
   };
 
   const handleCreateNew = () => {
-    handleIssueCrudState("create", issueId, null);
+    handleIssueCrudState("create", issueId);
     toggleCreateIssueModal(true);
   };
 
   const handleAddExisting = () => {
-    handleIssueCrudState("existing", issueId, null);
+    handleIssueCrudState("existing", issueId);
     toggleSubIssuesModal(issue.id);
   };
 

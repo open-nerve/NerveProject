@@ -54,23 +54,18 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
   const handleLinkOperations = useLinkOperations(workspaceSlug, projectId, issueId);
 
   // handlers
-  const handleIssueCrudState = (
-    key: "create" | "existing",
-    _parentIssueId: string | null,
-    issue: Issue | null = null
-  ) => {
+  const handleIssueCrudState = (key: "create" | "existing", _parentIssueId: string | null) => {
     setIssueCrudOperationState({
       ...issueCrudOperationState,
       [key]: {
         toggle: !issueCrudOperationState[key].toggle,
         parentIssueId: _parentIssueId,
-        issue: issue,
       },
     });
   };
 
   const handleExistingIssuesModalClose = () => {
-    handleIssueCrudState("existing", null, null);
+    handleIssueCrudState("existing", null);
     setLastWidgetAction("sub-work-items");
     toggleSubIssuesModal(null);
   };
@@ -84,7 +79,7 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
     );
 
   const handleCreateUpdateModalClose = () => {
-    handleIssueCrudState("create", null, null);
+    handleIssueCrudState("create", null);
     toggleCreateIssueModal(false);
     setLastWidgetAction("sub-work-items");
   };

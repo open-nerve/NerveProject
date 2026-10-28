@@ -8,7 +8,7 @@ import type { Issue, IssueDetail } from "@nerve/api-client";
 
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 // nerve imports
-import type { TIssueParams, TIssueActivity, TIssueLink, TIssuesResponse, TIssueSubIssues } from "@nerve/types";
+import type { TIssueParams, TIssueLink, TIssuesResponse, TIssueSubIssues } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 
@@ -44,19 +44,6 @@ export class IssueService extends APIService {
       });
   }
 
-  async getIssuesForSync(
-    workspaceSlug: string,
-    projectId: string,
-    queries?: any,
-    config = {}
-  ): Promise<TIssuesResponse> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/v2/issues/`, { params: queries }, config)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async getIssues(
     workspaceSlug: string,
     projectId: string,
@@ -66,30 +53,6 @@ export class IssueService extends APIService {
     return this.getIssuesFromServer(workspaceSlug, projectId, queries, config);
   }
 
-  async getDeletedIssues(workspaceSlug: string, projectId: string, queries?: any): Promise<TIssuesResponse> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/deleted-issues/`, {
-      params: queries,
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getIssuesWithParams(
-    workspaceSlug: string,
-    projectId: string,
-    queries?: any
-  ): Promise<Issue[] | { [key: string]: Issue[] }> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/`, {
-      params: queries,
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async retrieve(workspaceSlug: string, projectId: string, issueId: string, queries?: any): Promise<IssueDetail> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/`, {
       params: queries,
@@ -97,33 +60,6 @@ export class IssueService extends APIService {
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
-      });
-  }
-
-  async getIssueActivities(workspaceSlug: string, projectId: string, issueId: string): Promise<TIssueActivity[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/history/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async createIssueRelation(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    data: {
-      related_list: Array<{
-        relation_type: "duplicate" | "relates_to" | "blocked_by";
-        related_issue: string;
-      }>;
-      relation?: "blocking" | null;
-    }
-  ) {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/issue-relation/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
       });
   }
 

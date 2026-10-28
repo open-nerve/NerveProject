@@ -15,7 +15,6 @@ import type {
   TIssueSubIssuesStateDistributionMap,
   TIssueSubIssuesIdMap,
   TSubIssuesStateDistribution,
-  TLoader,
 } from "@nerve/types";
 // services
 import { IssueService } from "@/services/issue";
@@ -52,7 +51,6 @@ export interface IIssueSubIssuesStore extends IIssueSubIssuesStoreActions {
   subIssuesStateDistribution: TIssueSubIssuesStateDistributionMap;
   subIssues: TIssueSubIssuesIdMap;
   subIssueHelpers: Record<string, TSubIssueHelpers>; // parent_issue_id -> TSubIssueHelpers
-  loader: TLoader;
   filters: IWorkItemSubIssueFiltersStore;
   // helper methods
   stateDistributionByIssueId: (issueId: string) => TSubIssuesStateDistribution | undefined;
@@ -68,7 +66,6 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
   subIssuesStateDistribution: TIssueSubIssuesStateDistributionMap = {};
   subIssues: TIssueSubIssuesIdMap = {};
   subIssueHelpers: Record<string, TSubIssueHelpers> = {};
-  loader: TLoader = undefined;
 
   filters: IWorkItemSubIssueFiltersStore;
   // root store
@@ -82,7 +79,6 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
       subIssuesStateDistribution: observable,
       subIssues: observable,
       subIssueHelpers: observable,
-      loader: observable.ref,
       // actions
       setSubIssueHelpers: action,
       fetchSubIssues: action,
@@ -124,7 +120,6 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
   };
 
   fetchSubIssues = async (workspaceSlug: string, projectId: string, parentIssueId: string) => {
-    this.loader = "init-loader";
     const response = await this.issueService.subIssues(workspaceSlug, projectId, parentIssueId);
 
     const subIssuesStateDistribution = response?.state_distribution ?? {};
@@ -155,7 +150,6 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
       );
     });
 
-    this.loader = undefined;
     return response;
   };
 

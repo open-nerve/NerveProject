@@ -5,9 +5,8 @@
  */
 
 import type { TLegacyIssueUpdateRequest } from "@nerve/types";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { observer } from "mobx-react";
-import { useLocation } from "react-router";
 // Nerve imports
 import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
@@ -25,15 +24,8 @@ import type { TIssueOperations } from "../issue-detail";
 import { IssueView } from "./view";
 
 export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWorkItemPeekOverview) {
-  const {
-    embedIssue = false,
-    embedRemoveCurrentNotification,
-    is_draft = false,
-    storeType: issueStoreFromProps,
-  } = props;
+  const { embedIssue = false, embedRemoveCurrentNotification, storeType: issueStoreFromProps } = props;
   const { t } = useTranslation();
-  // router
-  const { pathname } = useLocation();
   // store hook
   const { allowPermissions } = useUserPermissions();
 
@@ -42,7 +34,6 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
   } = useIssues(EIssuesStoreType.ARCHIVED);
   const {
     peekIssue,
-    setPeekIssue,
     issue: { fetchIssue },
     fetchActivities,
   } = useIssueDetail();
@@ -52,11 +43,6 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
 
   // state
   const [error, setError] = useState(false);
-
-  const removeRoutePeekId = useCallback(() => {
-    setPeekIssue(undefined);
-    if (embedIssue) embedRemoveCurrentNotification?.();
-  }, [embedIssue, embedRemoveCurrentNotification, setPeekIssue]);
 
   const issueOperations: TIssueOperations = useMemo(
     () => ({
@@ -86,28 +72,6 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
             });
         }
       },
-      remove: async (workspaceSlug: string, projectId: string, issueId: string) => {
-        try {
-          return issues?.removeIssue(workspaceSlug, projectId, issueId).then(() => {
-            removeRoutePeekId();
-            return;
-          });
-        } catch (_error) {
-          setToast({
-            title: t("toast.error"),
-            type: TOAST_TYPE.ERROR,
-            message: t("entity.delete.failed", { entity: t("issue.label", { count: 1 }) }),
-          });
-        }
-      },
-      archive: async (workspaceSlug: string, projectId: string, issueId: string) => {
-        try {
-          if (!issues?.archiveIssue) return;
-          await issues.archiveIssue(workspaceSlug, projectId, issueId);
-        } catch (error) {
-          console.error("Error archiving the issue", error);
-        }
-      },
       restore: async (workspaceSlug: string, projectId: string, issueId: string) => {
         try {
           await restoreIssue(workspaceSlug, projectId, issueId);
@@ -126,7 +90,7 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
       },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fetchIssue, is_draft, issues, fetchActivities, pathname, removeRoutePeekId, restoreIssue]
+    [fetchIssue, issues, fetchActivities, restoreIssue]
   );
 
   const { isLoading } = useSWR(
