@@ -16,9 +16,6 @@ import { useIssuesActions } from "./use-issues-actions";
 
 type DNDStoreType =
   | EIssuesStoreType.PROJECT
-  | EIssuesStoreType.MODULE
-  | EIssuesStoreType.CYCLE
-  | EIssuesStoreType.PROJECT_VIEW
   | EIssuesStoreType.PROFILE
   | EIssuesStoreType.ARCHIVED
   | EIssuesStoreType.WORKSPACE_DRAFT;

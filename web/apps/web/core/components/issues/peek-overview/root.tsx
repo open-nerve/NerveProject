@@ -11,7 +11,7 @@ import { useLocation } from "react-router";
 import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setPromiseToast, setToast } from "@nerve/propel/toast";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IWorkItemPeekOverview, TIssue } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 // hooks
@@ -76,7 +76,7 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
               fetchActivities(workspaceSlug, projectId, issueId);
               return;
             })
-            .catch((_error) => {
+            .catch(() => {
               setToast({
                 title: t("toast.error"),
                 type: TOAST_TYPE.ERROR,
@@ -121,86 +121,6 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
             title: t("toast.error"),
             message: t("issue.restore.failed.message"),
           });
-        }
-      },
-      addCycleToIssue: async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => {
-        try {
-          await issues.addCycleToIssue(workspaceSlug, projectId, cycleId, issueId);
-          fetchActivities(workspaceSlug, projectId, issueId);
-        } catch (_error) {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("issue.add.cycle.failed"),
-          });
-        }
-      },
-      addIssueToCycle: async (workspaceSlug: string, projectId: string, cycleId: string, issueIds: string[]) => {
-        try {
-          await issues.addIssueToCycle(workspaceSlug, projectId, cycleId, issueIds);
-        } catch (_error) {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("issue.add.cycle.failed"),
-          });
-        }
-      },
-      removeIssueFromCycle: async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => {
-        try {
-          const removeFromCyclePromise = issues.removeIssueFromCycle(workspaceSlug, projectId, cycleId, issueId);
-          setPromiseToast(removeFromCyclePromise, {
-            loading: t("issue.remove.cycle.loading"),
-            success: {
-              title: t("toast.success"),
-              message: () => t("issue.remove.cycle.success"),
-            },
-            error: {
-              title: t("toast.error"),
-              message: () => t("issue.remove.cycle.failed"),
-            },
-          });
-          await removeFromCyclePromise;
-          fetchActivities(workspaceSlug, projectId, issueId);
-        } catch (error) {
-          console.error("Error removing issue from cycle", error);
-        }
-      },
-      changeModulesInIssue: async (
-        workspaceSlug: string,
-        projectId: string,
-        issueId: string,
-        addModuleIds: string[],
-        removeModuleIds: string[]
-      ) => {
-        const promise = await issues.changeModulesInIssue(
-          workspaceSlug,
-          projectId,
-          issueId,
-          addModuleIds,
-          removeModuleIds
-        );
-        fetchActivities(workspaceSlug, projectId, issueId);
-        return promise;
-      },
-      removeIssueFromModule: async (workspaceSlug: string, projectId: string, moduleId: string, issueId: string) => {
-        try {
-          const removeFromModulePromise = issues.removeIssuesFromModule(workspaceSlug, projectId, moduleId, [issueId]);
-          setPromiseToast(removeFromModulePromise, {
-            loading: t("issue.remove.module.loading"),
-            success: {
-              title: t("toast.success"),
-              message: () => t("issue.remove.module.success"),
-            },
-            error: {
-              title: t("toast.error"),
-              message: () => t("issue.remove.module.failed"),
-            },
-          });
-          await removeFromModulePromise;
-          fetchActivities(workspaceSlug, projectId, issueId);
-        } catch (error) {
-          console.error("Error removing issue from module", error);
         }
       },
     }),

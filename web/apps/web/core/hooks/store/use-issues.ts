@@ -10,13 +10,8 @@ import type { TIssueMap } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { StoreContext } from "@/lib/store-context";
 import type { IArchivedIssues, IArchivedIssuesFilter } from "@/store/issue/archived";
-import type { IWorkspaceIssues } from "@/store/issue/workspace/issue.store";
-import type { ICycleIssues, ICycleIssuesFilter } from "@/store/issue/cycle";
-import type { IModuleIssues, IModuleIssuesFilter } from "@/store/issue/module";
 import type { IProfileIssues, IProfileIssuesFilter } from "@/store/issue/profile";
 import type { IProjectIssues, IProjectIssuesFilter } from "@/store/issue/project";
-import type { IProjectViewIssues, IProjectViewIssuesFilter } from "@/store/issue/project-views";
-import type { IWorkspaceIssuesFilter } from "@/store/issue/workspace";
 import type { IWorkspaceDraftIssues, IWorkspaceDraftIssuesFilter } from "@/store/issue/workspace-draft";
 
 type defaultIssueStore = {
@@ -24,10 +19,6 @@ type defaultIssueStore = {
 };
 
 export type TStoreIssues = {
-  [EIssuesStoreType.GLOBAL]: defaultIssueStore & {
-    issues: IWorkspaceIssues;
-    issuesFilter: IWorkspaceIssuesFilter;
-  };
   [EIssuesStoreType.WORKSPACE_DRAFT]: defaultIssueStore & {
     issues: IWorkspaceDraftIssues;
     issuesFilter: IWorkspaceDraftIssuesFilter;
@@ -39,18 +30,6 @@ export type TStoreIssues = {
   [EIssuesStoreType.PROJECT]: defaultIssueStore & {
     issues: IProjectIssues;
     issuesFilter: IProjectIssuesFilter;
-  };
-  [EIssuesStoreType.CYCLE]: defaultIssueStore & {
-    issues: ICycleIssues;
-    issuesFilter: ICycleIssuesFilter;
-  };
-  [EIssuesStoreType.MODULE]: defaultIssueStore & {
-    issues: IModuleIssues;
-    issuesFilter: IModuleIssuesFilter;
-  };
-  [EIssuesStoreType.PROJECT_VIEW]: defaultIssueStore & {
-    issues: IProjectViewIssues;
-    issuesFilter: IProjectViewIssuesFilter;
   };
   [EIssuesStoreType.ARCHIVED]: defaultIssueStore & {
     issues: IArchivedIssues;
@@ -71,11 +50,6 @@ export const useIssues = <T extends EIssuesStoreType>(storeType?: T): TStoreIssu
   };
 
   switch (storeType) {
-    case EIssuesStoreType.GLOBAL:
-      return merge(defaultStore, {
-        issues: context.issue.workspaceIssues,
-        issuesFilter: context.issue.workspaceIssuesFilter,
-      }) as TStoreIssues[T];
     case EIssuesStoreType.WORKSPACE_DRAFT:
       return merge(defaultStore, {
         issues: context.issue.workspaceDraftIssues,
@@ -91,30 +65,18 @@ export const useIssues = <T extends EIssuesStoreType>(storeType?: T): TStoreIssu
         issues: context.issue.projectIssues,
         issuesFilter: context.issue.projectIssuesFilter,
       }) as TStoreIssues[T];
-    case EIssuesStoreType.CYCLE:
-      return merge(defaultStore, {
-        issues: context.issue.cycleIssues,
-        issuesFilter: context.issue.cycleIssuesFilter,
-      }) as TStoreIssues[T];
-    case EIssuesStoreType.MODULE:
-      return merge(defaultStore, {
-        issues: context.issue.moduleIssues,
-        issuesFilter: context.issue.moduleIssuesFilter,
-      }) as TStoreIssues[T];
-    case EIssuesStoreType.PROJECT_VIEW:
-      return merge(defaultStore, {
-        issues: context.issue.projectViewIssues,
-        issuesFilter: context.issue.projectViewIssuesFilter,
-      }) as TStoreIssues[T];
     case EIssuesStoreType.ARCHIVED:
       return merge(defaultStore, {
         issues: context.issue.archivedIssues,
         issuesFilter: context.issue.archivedIssuesFilter,
       }) as TStoreIssues[T];
-    default:
+    case undefined:
+    case EIssuesStoreType.DEFAULT:
       return merge(defaultStore, {
         issues: context.issue.projectIssues,
         issuesFilter: context.issue.projectIssuesFilter,
       }) as TStoreIssues[T];
+    default:
+      throw new Error(`Unsupported issue store: ${storeType}`);
   }
 };

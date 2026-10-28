@@ -68,7 +68,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const { fetchCycleDetails } = useCycle();
   const { fetchModuleDetails } = useModule();
   const { issues } = useIssues(storeType);
-  const { issues: projectIssues } = useIssues(EIssuesStoreType.PROJECT);
   const { issues: draftIssues } = useIssues(EIssuesStoreType.WORKSPACE_DRAFT);
   const { fetchIssue } = useIssueDetail();
   const { allowedProjectIds } = useIssueModal();
@@ -162,17 +161,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       // if draft issue, use draft issue store to create issue
       if (is_draft_issue) {
         response = (await draftIssues.createIssue(workspaceSlug, payload)) as TIssue;
-      }
-      // if cycle id in payload does not match the cycleId in url
-      // or if the moduleIds in Payload does not match the moduleId in url
-      // use the project issue store to create issues
-      else if (
-        (payload.cycle_id !== cycleId && storeType === EIssuesStoreType.CYCLE) ||
-        (!(moduleId && payload.module_ids?.includes(moduleId)) && storeType === EIssuesStoreType.MODULE)
-      ) {
-        response = await projectIssues.createIssue(workspaceSlug, payload.project_id, payload);
-      } // else just use the existing store type's create method
-      else if (createIssue) {
+      } else if (createIssue) {
         response = await createIssue(payload.project_id, payload);
       }
 
@@ -193,18 +182,10 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
 
       // check if we should add issue to cycle/module
       if (!is_draft_issue) {
-        if (
-          payload.cycle_id &&
-          payload.cycle_id !== "" &&
-          (payload.cycle_id !== cycleId || storeType !== EIssuesStoreType.CYCLE)
-        ) {
+        if (payload.cycle_id && payload.cycle_id !== "") {
           await addIssueToCycle(response, payload.cycle_id);
         }
-        if (
-          payload.module_ids &&
-          payload.module_ids.length > 0 &&
-          (!(moduleId && payload.module_ids.includes(moduleId)) || storeType !== EIssuesStoreType.MODULE)
-        ) {
+        if (payload.module_ids && payload.module_ids.length > 0) {
           await addIssueToModule(response, payload.module_ids);
         }
       }
@@ -254,7 +235,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
 
     // Adding the cycle
     const newCycleId = payload.cycle_id;
-    if (newCycleId && newCycleId !== "" && (payload.cycle_id !== cycleId || storeType !== EIssuesStoreType.CYCLE)) {
+    if (newCycleId && newCycleId !== "") {
       await addIssueToCycle(data as TBaseIssue, newCycleId);
     }
   };

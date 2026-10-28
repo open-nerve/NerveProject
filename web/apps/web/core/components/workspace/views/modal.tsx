@@ -8,11 +8,9 @@ import { observer } from "mobx-react";
 // nerve imports
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IWorkspaceView } from "@nerve/types";
-import { EIssuesStoreType } from "@nerve/types";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useGlobalView } from "@/hooks/store/use-global-view";
-import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
 import { useParams, useNavigate } from "react-router";
 // local imports
 import { WorkspaceViewForm } from "./form";
@@ -31,7 +29,6 @@ export const CreateUpdateWorkspaceViewModal = observer(function CreateUpdateWork
   const { workspaceSlug } = useParams();
   // store hooks
   const { createGlobalView, updateGlobalView } = useGlobalView();
-  const { resetExpression } = useWorkItemFilters();
 
   const handleClose = () => {
     onClose();
@@ -76,7 +73,6 @@ export const CreateUpdateWorkspaceViewModal = observer(function CreateUpdateWork
       };
       const res = await updateGlobalView(workspaceSlug, data.id, payloadData);
       if (res) {
-        resetExpression(EIssuesStoreType.GLOBAL, data.id, res.rich_filters);
         setToast({
           type: TOAST_TYPE.SUCCESS,
           title: "Success!",
@@ -108,7 +104,6 @@ export const CreateUpdateWorkspaceViewModal = observer(function CreateUpdateWork
         handleClose={handleClose}
         data={data}
         preLoadedData={preLoadedData}
-        workspaceSlug={workspaceSlug}
       />
     </ModalCore>
   );

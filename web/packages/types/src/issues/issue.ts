@@ -19,12 +19,8 @@ export enum EIssueLayoutTypes {
 }
 
 export enum EIssuesStoreType {
-  GLOBAL = "GLOBAL",
   PROFILE = "PROFILE",
   PROJECT = "PROJECT",
-  CYCLE = "CYCLE",
-  MODULE = "MODULE",
-  PROJECT_VIEW = "PROJECT_VIEW",
   ARCHIVED = "ARCHIVED",
   DEFAULT = "DEFAULT",
   WORKSPACE_DRAFT = "WORKSPACE_DRAFT",

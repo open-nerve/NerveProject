@@ -8,13 +8,10 @@ import { observer } from "mobx-react";
 // types
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IProjectView } from "@nerve/types";
-import { EIssuesStoreType } from "@nerve/types";
 // ui
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
-import { useIssues } from "@/hooks/store/use-issues";
 import { useProjectView } from "@/hooks/store/use-project-view";
-import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
 import { useNavigate } from "react-router";
 import useKeypress from "@/hooks/use-keypress";
 // local imports
@@ -35,10 +32,6 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
   const navigate = useNavigate();
   // store hooks
   const { createView, updateView } = useProjectView();
-  const {
-    issuesFilter: { mutateFilters },
-  } = useIssues(EIssuesStoreType.PROJECT_VIEW);
-  const { resetExpression } = useWorkItemFilters();
 
   const handleClose = () => {
     onClose();
@@ -65,9 +58,8 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
 
   const handleUpdateView = async (payload: IProjectView) => {
     try {
-      const viewDetails = await updateView(workspaceSlug, projectId, data?.id as string, payload);
-      mutateFilters(workspaceSlug, viewDetails.id, viewDetails);
-      resetExpression(EIssuesStoreType.PROJECT_VIEW, viewDetails.id, viewDetails.rich_filters);
+      await updateView(workspaceSlug, projectId, data?.id as string, payload);
+
       handleClose();
     } catch (_error) {
       setToast({
@@ -95,7 +87,6 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
         handleFormSubmit={handleFormSubmit}
         preLoadedData={preLoadedData}
         projectId={projectId}
-        workspaceSlug={workspaceSlug}
       />
     </ModalCore>
   );

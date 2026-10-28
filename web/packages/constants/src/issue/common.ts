@@ -65,12 +65,7 @@ export const DRAG_ALLOWED_GROUPS: TIssueGroupByOptions[] = [
   "cycle",
 ];
 
-export type TCreateModalStoreTypes =
-  | EIssuesStoreType.PROJECT
-  | EIssuesStoreType.PROJECT_VIEW
-  | EIssuesStoreType.PROFILE
-  | EIssuesStoreType.CYCLE
-  | EIssuesStoreType.MODULE;
+export type TCreateModalStoreTypes = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE;
 
 export const ISSUE_GROUP_BY_OPTIONS: {
   key: TIssueGroupByOptions;

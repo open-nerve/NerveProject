@@ -5,7 +5,7 @@
  */
 
 // types
-import type { IModule, ILinkDetails, ModuleLink, TIssuesResponse } from "@nerve/types";
+import type { IModule, ILinkDetails, ModuleLink } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 
@@ -65,26 +65,6 @@ export class ModuleService extends APIService {
 
   async deleteModule(workspaceSlug: string, projectId: string, moduleId: string): Promise<any> {
     return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/${moduleId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getModuleIssues(
-    workspaceSlug: string,
-    projectId: string,
-    moduleId: string,
-    queries?: any,
-    config = {}
-  ): Promise<TIssuesResponse> {
-    return this.get(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/${moduleId}/issues/`,
-      {
-        params: queries,
-      },
-      config
-    )
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

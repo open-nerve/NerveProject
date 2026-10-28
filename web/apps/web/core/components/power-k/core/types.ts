@@ -39,8 +39,6 @@ export type TPowerKPageType =
   | "update-work-item-state"
   | "update-work-item-priority"
   | "update-work-item-assignee"
-  | "update-work-item-cycle"
-  | "update-work-item-module"
   | "update-work-item-labels"
   // module context based actions
   | "update-module-member"

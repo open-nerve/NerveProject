@@ -22,11 +22,7 @@ import { IssueLayoutHOC } from "../issue-layout-HOC";
 import type { IQuickActionProps, TRenderQuickActions } from "../list/list-view-types";
 import { SpreadsheetView } from "./spreadsheet-view";
 
-type SpreadsheetStoreType =
-  | EIssuesStoreType.PROJECT
-  | EIssuesStoreType.MODULE
-  | EIssuesStoreType.CYCLE
-  | EIssuesStoreType.PROJECT_VIEW;
+type SpreadsheetStoreType = EIssuesStoreType.PROJECT;
 
 interface IBaseSpreadsheetRoot {
   QuickActions: FC<IQuickActionProps>;

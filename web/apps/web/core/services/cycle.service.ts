@@ -5,7 +5,7 @@
  */
 
 // services
-import type { CycleDateCheckData, ICycle, TIssuesResponse, TCycleDistribution, TProgressSnapshot } from "@nerve/types";
+import type { CycleDateCheckData, ICycle, TCycleDistribution, TProgressSnapshot } from "@nerve/types";
 import { APIService } from "@/services/api.service";
 
 export class CycleService extends APIService {
@@ -61,26 +61,6 @@ export class CycleService extends APIService {
       });
   }
 
-  async getCycleIssues(
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string,
-    queries?: any,
-    config = {}
-  ): Promise<TIssuesResponse> {
-    return this.get(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/cycle-issues/`,
-      {
-        params: queries,
-      },
-      config
-    )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async patchCycle(workspaceSlug: string, projectId: string, cycleId: string, data: Partial<ICycle>): Promise<any> {
     return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/`, data)
       .then((response) => response?.data)
@@ -113,21 +93,6 @@ export class CycleService extends APIService {
     }
   ): Promise<any> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/user-favorite-cycles/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async transferIssues(
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string,
-    data: {
-      new_cycle_id: string;
-    }
-  ): Promise<any> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/transfer-issues/`, data)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

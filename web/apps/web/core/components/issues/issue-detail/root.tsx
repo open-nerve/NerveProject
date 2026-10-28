@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setPromiseToast, setToast } from "@nerve/propel/toast";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TIssue } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 // assets
@@ -33,22 +33,6 @@ export type TIssueOperations = {
   remove: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   archive?: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   restore?: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-  addCycleToIssue?: (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => Promise<void>;
-  addIssueToCycle?: (workspaceSlug: string, projectId: string, cycleId: string, issueIds: string[]) => Promise<void>;
-  removeIssueFromCycle?: (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => Promise<void>;
-  removeIssueFromModule?: (
-    workspaceSlug: string,
-    projectId: string,
-    moduleId: string,
-    issueId: string
-  ) => Promise<void>;
-  changeModulesInIssue?: (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    addModuleIds: string[],
-    removeModuleIds: string[]
-  ) => Promise<void>;
 };
 
 export type TIssueDetailRoot = {
@@ -70,11 +54,6 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
     updateIssue,
     removeIssue,
     archiveIssue,
-    addCycleToIssue,
-    addIssueToCycle,
-    removeIssueFromCycle,
-    changeModulesInIssue,
-    removeIssueFromModule,
   } = useIssueDetail();
   const {
     issues: { removeIssue: removeArchivedIssue },
@@ -128,91 +107,8 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
           console.log("Error in archiving issue:", error);
         }
       },
-      addCycleToIssue: async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => {
-        try {
-          await addCycleToIssue(workspaceSlug, projectId, cycleId, issueId);
-        } catch (_error) {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("common.error.label"),
-            message: t("issue.add.cycle.failed"),
-          });
-        }
-      },
-      addIssueToCycle: async (workspaceSlug: string, projectId: string, cycleId: string, issueIds: string[]) => {
-        try {
-          await addIssueToCycle(workspaceSlug, projectId, cycleId, issueIds);
-        } catch (_error) {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("common.error.label"),
-            message: t("issue.add.cycle.failed"),
-          });
-        }
-      },
-      removeIssueFromCycle: async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) => {
-        try {
-          const removeFromCyclePromise = removeIssueFromCycle(workspaceSlug, projectId, cycleId, issueId);
-          setPromiseToast(removeFromCyclePromise, {
-            loading: t("issue.remove.cycle.loading"),
-            success: {
-              title: t("common.success"),
-              message: () => t("issue.remove.cycle.success"),
-            },
-            error: {
-              title: t("common.error.label"),
-              message: () => t("issue.remove.cycle.failed"),
-            },
-          });
-          await removeFromCyclePromise;
-        } catch (error) {
-          console.log("Error in removing issue from cycle:", error);
-        }
-      },
-      removeIssueFromModule: async (workspaceSlug: string, projectId: string, moduleId: string, issueId: string) => {
-        try {
-          const removeFromModulePromise = removeIssueFromModule(workspaceSlug, projectId, moduleId, issueId);
-          setPromiseToast(removeFromModulePromise, {
-            loading: t("issue.remove.module.loading"),
-            success: {
-              title: t("common.success"),
-              message: () => t("issue.remove.module.success"),
-            },
-            error: {
-              title: t("common.error.label"),
-              message: () => t("issue.remove.module.failed"),
-            },
-          });
-          await removeFromModulePromise;
-        } catch (error) {
-          console.log("Error in removing issue from module:", error);
-        }
-      },
-      changeModulesInIssue: async (
-        workspaceSlug: string,
-        projectId: string,
-        issueId: string,
-        addModuleIds: string[],
-        removeModuleIds: string[]
-      ) => {
-        const promise = await changeModulesInIssue(workspaceSlug, projectId, issueId, addModuleIds, removeModuleIds);
-        return promise;
-      },
     }),
-    [
-      is_archived,
-      fetchIssue,
-      updateIssue,
-      removeIssue,
-      archiveIssue,
-      removeArchivedIssue,
-      addIssueToCycle,
-      addCycleToIssue,
-      removeIssueFromCycle,
-      changeModulesInIssue,
-      removeIssueFromModule,
-      t,
-    ]
+    [is_archived, fetchIssue, updateIssue, removeIssue, archiveIssue, removeArchivedIssue, t]
   );
 
   // issue details

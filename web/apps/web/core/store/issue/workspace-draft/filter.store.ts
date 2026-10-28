@@ -23,7 +23,6 @@ import type {
 import { EIssuesStoreType } from "@nerve/types";
 import { handleIssueQueryParamsByLayout } from "@nerve/utils";
 // services
-import { IssueFiltersService } from "@/services/issue_filter.service";
 // helpers
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
 import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
@@ -58,7 +57,6 @@ export class WorkspaceDraftIssuesFilter extends IssueFilterHelperStore implement
   // root store
   rootIssueStore: IIssueRootStore;
   // services
-  issueFilterService;
 
   constructor(_rootStore: IIssueRootStore) {
     super();
@@ -75,7 +73,6 @@ export class WorkspaceDraftIssuesFilter extends IssueFilterHelperStore implement
     // root store
     this.rootIssueStore = _rootStore;
     // services
-    this.issueFilterService = new IssueFiltersService();
   }
 
   get issueFilters() {

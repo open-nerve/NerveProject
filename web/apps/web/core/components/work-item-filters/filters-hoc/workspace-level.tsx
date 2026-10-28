@@ -128,15 +128,9 @@ export const WorkspaceLevelWorkItemFiltersHOC = observer(function WorkspaceLevel
         return;
       }
 
-      updateGlobalView(
-        workspaceSlug,
-        viewDetails.id,
-        {
-          ...getViewFilterPayload(filterExpression),
-        },
-        /* No need to sync filters here as updateFilters already handles it */
-        false
-      )
+      updateGlobalView(workspaceSlug, viewDetails.id, {
+        ...getViewFilterPayload(filterExpression),
+      })
         .then(() =>
           setToast({
             type: TOAST_TYPE.SUCCESS,

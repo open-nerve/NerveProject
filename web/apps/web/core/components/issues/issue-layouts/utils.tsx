@@ -88,7 +88,7 @@ export type IssueUpdates = {
 
 export const isWorkspaceLevel = (type: EIssuesStoreType) =>
   // oxlint-disable-next-line no-unneeded-ternary
-  [EIssuesStoreType.PROFILE, EIssuesStoreType.GLOBAL, EIssuesStoreType.WORKSPACE_DRAFT].includes(type) ? true : false;
+  [EIssuesStoreType.PROFILE, EIssuesStoreType.WORKSPACE_DRAFT].includes(type) ? true : false;
 
 type TGetGroupByColumns = {
   groupBy: GroupByColumnTypes | null;

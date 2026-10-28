@@ -375,4 +375,7 @@ T1 在源 HEAD `4569a9e7386031cffb31aa37d6cf06a726b08c2c` 重新运行两条计�
 | `web/apps/web/core/store/issue/issue-details/root.store.ts` | 412/412 | 既有核心类型消费者，P10a先收窄/机械换型；后续职责重写按所属Phase |
 | `web/apps/web/core/store/issue/workspace-draft/issue.store.ts` | 408/408 | 既有核心类型消费者，P10a先收窄/机械换型；后续职责重写按所属Phase |
 
+T3 删除检查点（相对 T2 完成源）：`issue-layouts/utils.tsx` 812→812（仅移除 GLOBAL 条件）；`power-k/.../work-item/commands.ts` 418→350、`hooks/use-issues-actions.tsx` 685→345、`issue/cycle/issue.store.ts` 408→删除、`issue/issue-details/root.store.ts` 412→396。均为删除旧列表及五动作调用链，未增加算法；全量改动路径和前后行数由本 Task 源 manifest 保存。
+
+
 T1 广义旧地址账冻结 `web/` 中全部 `/api/workspaces/` 字面量：23 文件、140 处。逐方法的文件/行、完整样例、count、理由与 until 见本地 `task-1-old-urls.md/json`；它广于 T7 八类规则，不能直接充当该规则匹配数或运行时请求验收。项目 `/user-properties/` 两处仍严格 until `M4/P11`；cycle/module 的四个同名筛选方法归 T3 删除，不延长到 M6。工作区 `getViewIssues` 两地址归 T3 删除；`/search/` 归 P15、until M4/P16，由既有 plane-workspace-urls 守卫负责，不声称被八类新规则覆盖。其他 M4 列表、详情、残余搜索分别按 §2.3 到期；M5/M6/M7 及广义账中的 M8 Webhook 自身地址按所属里程碑处理，不为 T7 新增目录豁免。新规则与例外只在 T7 实施。

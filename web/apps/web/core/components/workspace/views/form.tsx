@@ -13,20 +13,17 @@ import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area"
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, IWorkspaceView, IIssueFilters } from "@nerve/types";
-import { EViewAccess, EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, IWorkspaceView } from "@nerve/types";
+import { EViewAccess, EIssueLayoutTypes } from "@nerve/types";
 import { getComputedDisplayFilters, getComputedDisplayProperties } from "@nerve/utils";
 // components
 import { DisplayFiltersSelection, FiltersDropdown } from "@/components/issues/issue-layouts/filters";
-import { WorkspaceLevelWorkItemFiltersHOC } from "@/components/work-item-filters/filters-hoc/workspace-level";
-import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 
 type Props = {
   handleFormSubmit: (values: Partial<IWorkspaceView>) => Promise<void>;
   handleClose: () => void;
   data?: IWorkspaceView;
   preLoadedData?: Partial<IWorkspaceView>;
-  workspaceSlug: string;
 };
 
 const DEFAULT_VALUES: Partial<IWorkspaceView> = {
@@ -41,7 +38,7 @@ const DEFAULT_VALUES: Partial<IWorkspaceView> = {
 };
 
 export const WorkspaceViewForm = observer(function WorkspaceViewForm(props: Props) {
-  const { handleFormSubmit, handleClose, data, preLoadedData, workspaceSlug } = props;
+  const { handleFormSubmit, handleClose, data, preLoadedData } = props;
   // i18n
   const { t } = useTranslation();
   // form info
@@ -55,17 +52,10 @@ export const WorkspaceViewForm = observer(function WorkspaceViewForm(props: Prop
     handleSubmit,
     control,
     reset,
-    getValues,
   } = useForm<IWorkspaceView>({
     defaultValues,
   });
   // derived values
-  const workItemFilters: IIssueFilters = {
-    richFilters: getValues("rich_filters"),
-    displayFilters: getValues("display_filters"),
-    displayProperties: getValues("display_properties"),
-    kanbanFilters: undefined,
-  };
 
   const handleCreateUpdateView = async (formData: Partial<IWorkspaceView>) => {
     await handleFormSubmit(formData);
@@ -163,31 +153,6 @@ export const WorkspaceViewForm = observer(function WorkspaceViewForm(props: Prop
                     </FiltersDropdown>
                   )}
                 />
-              )}
-            />
-          </div>
-          <div>
-            {/* filters dropdown */}
-            <Controller
-              control={control}
-              name="rich_filters"
-              render={({ field: { onChange: onFiltersChange } }) => (
-                <WorkspaceLevelWorkItemFiltersHOC
-                  entityId={data?.id}
-                  entityType={EIssuesStoreType.GLOBAL}
-                  filtersToShowByLayout={ISSUE_DISPLAY_FILTERS_BY_PAGE.my_issues.filters}
-                  initialWorkItemFilters={workItemFilters}
-                  isTemporary
-                  updateFilters={(updateFilters) => onFiltersChange(updateFilters)}
-                  showOnMount
-                  workspaceSlug={workspaceSlug}
-                >
-                  {({ filter: workspaceViewWorkItemsFilter }) =>
-                    workspaceViewWorkItemsFilter && (
-                      <WorkItemFiltersRow filter={workspaceViewWorkItemsFilter} variant="modal" />
-                    )
-                  }
-                </WorkspaceLevelWorkItemFiltersHOC>
               )}
             />
           </div>

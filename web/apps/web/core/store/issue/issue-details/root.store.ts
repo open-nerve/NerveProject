@@ -272,22 +272,6 @@ export class IssueDetail implements IIssueDetail {
     this.issue.removeIssue(workspaceSlug, projectId, issueId);
   archiveIssue = async (workspaceSlug: string, projectId: string, issueId: string) =>
     this.issue.archiveIssue(workspaceSlug, projectId, issueId);
-  addCycleToIssue = async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) =>
-    this.issue.addCycleToIssue(workspaceSlug, projectId, cycleId, issueId);
-  addIssueToCycle = async (workspaceSlug: string, projectId: string, cycleId: string, issueIds: string[]) =>
-    this.issue.addIssueToCycle(workspaceSlug, projectId, cycleId, issueIds);
-  removeIssueFromCycle = async (workspaceSlug: string, projectId: string, cycleId: string, issueId: string) =>
-    this.issue.removeIssueFromCycle(workspaceSlug, projectId, cycleId, issueId);
-  changeModulesInIssue = async (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    addModuleIds: string[],
-    removeModuleIds: string[]
-  ) => this.issue.changeModulesInIssue(workspaceSlug, projectId, issueId, addModuleIds, removeModuleIds);
-  removeIssueFromModule = async (workspaceSlug: string, projectId: string, moduleId: string, issueId: string) =>
-    this.issue.removeIssueFromModule(workspaceSlug, projectId, moduleId, issueId);
-
   // reactions
   addReactions = (issueId: string, reactions: TIssueReaction[]) => this.reaction.addReactions(issueId, reactions);
   fetchReactions = async (workspaceSlug: string, projectId: string, issueId: string) =>
