@@ -6,18 +6,15 @@
 
 import { Fragment, useMemo } from "react";
 import { observer } from "mobx-react";
-import { useSearchParams } from "react-router";
 import { ChevronDownOutline, ChevronUpOutline, WarningCircleOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
 import { useTranslation } from "@nerve/i18n";
-import { EIssuesStoreType } from "@nerve/types";
 // helpers
 import { getDate } from "@nerve/utils";
 import ProgressChart from "@/components/core/sidebar/progress-chart";
 import { ModuleProgressStats } from "@/components/modules";
 // hooks
 import { useModule } from "@/hooks/store/use-module";
-import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
 type TModuleProgressProps = {
   moduleId: string;
 };
@@ -26,18 +23,11 @@ export const ModuleProgress = observer(function ModuleProgress(props: TModulePro
   // props
   const { moduleId } = props;
   // router
-  const [searchParams] = useSearchParams();
-  const peekModule = searchParams.get("peekModule") || undefined;
   // nerve hooks
   const { t } = useTranslation();
   // hooks
   const { getModuleById } = useModule();
-  const { getFilter, updateFilterValueFromSidebar } = useWorkItemFilters();
   // derived values
-  const moduleFilter = getFilter(EIssuesStoreType.MODULE, moduleId);
-  const selectedAssignees = moduleFilter?.findFirstConditionByPropertyAndOperator("assignee_id", "in");
-  const selectedLabels = moduleFilter?.findFirstConditionByPropertyAndOperator("label_id", "in");
-  const selectedStateGroups = moduleFilter?.findFirstConditionByPropertyAndOperator("state_group", "in");
   const moduleDetails = getModuleById(moduleId);
   const completedIssues = moduleDetails?.completed_issues || 0;
   const totalIssues = moduleDetails?.total_issues || 0;
@@ -119,20 +109,9 @@ export const ModuleProgress = observer(function ModuleProgress(props: TModulePro
                     <ModuleProgressStats
                       distribution={chartDistributionData}
                       groupedIssues={groupedIssues}
-                      handleFiltersUpdate={updateFilterValueFromSidebar.bind(
-                        updateFilterValueFromSidebar,
-                        EIssuesStoreType.MODULE,
-                        moduleId
-                      )}
-                      isEditable={Boolean(!peekModule) && moduleFilter !== undefined}
                       moduleId={moduleId}
                       noBackground={false}
                       roundedTab={false}
-                      selectedFilters={{
-                        assignees: selectedAssignees,
-                        labels: selectedLabels,
-                        stateGroups: selectedStateGroups,
-                      }}
                       size="xs"
                       totalIssuesCount={totalIssues}
                     />

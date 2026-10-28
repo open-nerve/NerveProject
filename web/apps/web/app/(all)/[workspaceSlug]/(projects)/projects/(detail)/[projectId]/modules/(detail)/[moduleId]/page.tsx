@@ -13,7 +13,6 @@ import emptyModule from "@/app/assets/empty-state/module.svg?url";
 // components
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHead } from "@/components/core/page-title";
-import { ModuleLayoutRoot } from "@/components/issues/issue-layouts/roots/module-layout-root";
 import { ModuleProgressSidebar } from "@/components/modules";
 // hooks
 import { useModule } from "@/hooks/store/use-module";
@@ -29,7 +28,6 @@ function ModuleIssuesPage({ params }: Route.ComponentProps) {
   // store hooks
   const { fetchModuleDetails, getModuleById } = useModule();
   const { getProjectById } = useProject();
-  // const { issuesFilter } = useIssues(EIssuesStoreType.MODULE);
   // local storage
   const { setValue, storedValue } = useLocalStorage("module_sidebar_collapsed", "false");
   const isSidebarCollapsed = storedValue === "true";
@@ -46,7 +44,6 @@ function ModuleIssuesPage({ params }: Route.ComponentProps) {
     setValue(`${!isSidebarCollapsed}`);
   };
 
-  // const activeLayout = issuesFilter?.issueFilters?.displayFilters?.layout;
   return (
     <>
       <PageHead title={pageTitle} />
@@ -62,9 +59,6 @@ function ModuleIssuesPage({ params }: Route.ComponentProps) {
         />
       ) : (
         <div className="flex h-full w-full">
-          <div className="h-full w-full overflow-hidden">
-            <ModuleLayoutRoot />
-          </div>
           {!isSidebarCollapsed && (
             <div
               className={cn(

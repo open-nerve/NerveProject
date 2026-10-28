@@ -5,16 +5,10 @@
  */
 
 import type { MouseEvent } from "react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { observer } from "mobx-react";
 import { useForm } from "react-hook-form";
-import {
-  CalendarOutline,
-  MembersOutline,
-  ShowOutline,
-  TransferWorkItemOutline,
-  WorkItemsOutline,
-} from "@makeplane/propel/icons";
+import { CalendarOutline, MembersOutline, ShowOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";
@@ -34,12 +28,11 @@ import { MergedDateDisplay } from "@/components/dropdowns/merged-date";
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useMember } from "@/hooks/store/use-member";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useParams, useNavigate, useSearchParams, useLocation } from "react-router";
+import { useNavigate, useSearchParams, useLocation } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { useTimeZoneConverter } from "@/hooks/use-timezone-converter";
 // local imports
 import { CycleQuickActions } from "../quick-actions";
-import { TransferIssuesModal } from "../transfer-issues-modal";
 
 type Props = {
   workspaceSlug: string;
@@ -58,9 +51,7 @@ const defaultValues: Partial<ICycle> = {
 export const CycleListItemAction = observer(function CycleListItemAction(props: Props) {
   const { workspaceSlug, projectId, cycleId, cycleDetails, parentRef, isActive = false } = props;
   // router
-  const { projectId: routerProjectId } = useParams();
   //states
-  const [transferIssuesModal, setTransferIssuesModal] = useState(false);
   // hooks
   const { isMobile } = usePlatformOS();
   const { t } = useTranslation();
@@ -91,12 +82,6 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
   const cycleStatus = cycleDetails.status ? (cycleDetails.status.toLocaleLowerCase() as TCycleGroups) : "draft";
 
   const showIssueCount = useMemo(() => cycleStatus === "draft" || cycleStatus === "upcoming", [cycleStatus]);
-
-  const transferableIssuesCount = cycleDetails
-    ? cycleDetails.total_issues - (cycleDetails.cancelled_issues + cycleDetails.completed_issues)
-    : 0;
-
-  const showTransferIssues = routerProjectId && transferableIssuesCount > 0 && cycleStatus === "completed";
 
   const projectUTCOffset = getProjectUTCOffset();
 
@@ -175,11 +160,6 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
 
   return (
     <>
-      <TransferIssuesModal
-        handleClose={() => setTransferIssuesModal(false)}
-        isOpen={transferIssuesModal}
-        cycleId={cycleId}
-      />
       <button
         onClick={openCycleOverview}
         className={`z-[1] flex flex-shrink-0 gap-1 text-11 text-accent-secondary ${isMobile || (isActive && !searchParams.has("peekCycle")) ? "flex" : "hidden group-hover:flex"}`}
@@ -191,18 +171,6 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
         <div className="flex items-center gap-1">
           <WorkItemsOutline className="h-4 w-4 text-tertiary" />
           <span className="text-11 text-tertiary">{cycleDetails.total_issues}</span>
-        </div>
-      )}
-      {showTransferIssues && (
-        // oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions
-        <div
-          className="flex h-6 cursor-pointer items-center gap-1 px-2 text-accent-secondary"
-          onClick={() => {
-            setTransferIssuesModal(true);
-          }}
-        >
-          <TransferWorkItemOutline className="w-4 fill-accent-primary" />
-          <span>{t("project_cycles.transfer_work_items", { count: transferableIssuesCount })}</span>
         </div>
       )}
       {isActive ? (

@@ -42,7 +42,6 @@ type Props = {
     sourceDate: string | undefined,
     destinationDate: string | undefined
   ) => Promise<void>;
-  addIssuesToView?: (issueIds: string[]) => Promise<any>;
   readOnly?: boolean;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
@@ -62,7 +61,6 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
     enableQuickIssueCreate,
     disableIssueCreation,
     quickAddCallback,
-    addIssuesToView,
     readOnly = false,
     selectedDate,
     handleDragAndDrop,
@@ -179,7 +177,6 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
               getPaginationData={getPaginationData}
               getGroupIssueCount={getGroupIssueCount}
               isDragDisabled={readOnly}
-              addIssuesToView={addIssuesToView}
               disableIssueCreation={disableIssueCreation}
               enableQuickIssueCreate={enableQuickIssueCreate}
               quickAddCallback={quickAddCallback}

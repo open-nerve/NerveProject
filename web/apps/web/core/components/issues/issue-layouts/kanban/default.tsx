@@ -58,7 +58,6 @@ export interface IKanBan {
   enableQuickIssueCreate?: boolean;
   quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
   disableIssueCreation?: boolean;
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
   canEditProperties: (projectId: string | undefined) => boolean;
   scrollableContainerRef?: MutableRefObject<HTMLDivElement | null>;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
@@ -83,7 +82,6 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
     quickAddCallback,
     loadMoreIssues,
     disableIssueCreation,
-    addIssuesToView,
     canEditProperties,
     scrollableContainerRef,
     handleOnDrop,
@@ -169,7 +167,6 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                     count={getGroupIssueCount(subList.id, undefined, false) ?? 0}
                     issuePayload={subList.payload}
                     disableIssueCreation={disableIssueCreation || isGroupByCreatedBy}
-                    addIssuesToView={addIssuesToView}
                     collapsedGroups={collapsedGroups}
                     handleCollapsedGroups={handleCollapsedGroups}
                   />

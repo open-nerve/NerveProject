@@ -24,22 +24,16 @@ import type { IQuickActionProps } from "../list/list-view-types";
 import { CalendarChart } from "./calendar";
 import { handleDragDrop } from "./utils";
 
-export type CalendarStoreType =
-  | EIssuesStoreType.PROJECT
-  | EIssuesStoreType.MODULE
-  | EIssuesStoreType.CYCLE
-  | EIssuesStoreType.PROJECT_VIEW;
+export type CalendarStoreType = EIssuesStoreType.PROJECT;
 
 interface IBaseCalendarRoot {
   QuickActions: FC<IQuickActionProps>;
-  addIssuesToView?: (issueIds: string[]) => Promise<any>;
-  isCompletedCycle?: boolean;
   viewId?: string | undefined;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
 }
 
 export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseCalendarRoot) {
-  const { QuickActions, addIssuesToView, isCompletedCycle = false, viewId, canEditPropertiesBasedOnProject } = props;
+  const { QuickActions, viewId, canEditPropertiesBasedOnProject } = props;
 
   // router
   const { workspaceSlug } = useParams();
@@ -54,7 +48,6 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
     quickAddIssue,
     updateIssue,
     removeIssue,
-    removeIssueFromView,
     archiveIssue,
     restoreIssue,
     updateFilters,
@@ -155,19 +148,16 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
               issue={issue}
               handleDelete={async () => removeIssue(issue.project_id, issue.id)}
               handleUpdate={async (data) => updateIssue && updateIssue(issue.project_id, issue.id, data)}
-              handleRemoveFromView={async () => removeIssueFromView && removeIssueFromView(issue.project_id, issue.id)}
               handleArchive={async () => archiveIssue && archiveIssue(issue.project_id, issue.id)}
               handleRestore={async () => restoreIssue && restoreIssue(issue.project_id, issue.id)}
-              readOnly={!canEditProperties(issue.project_id ?? undefined) || isCompletedCycle}
+              readOnly={!canEditProperties(issue.project_id ?? undefined)}
               placements={placement}
             />
           )}
           loadMoreIssues={loadMoreIssues}
           getPaginationData={getPaginationData}
           getGroupIssueCount={getGroupIssueCount}
-          addIssuesToView={addIssuesToView}
           quickAddCallback={quickAddIssue}
-          readOnly={isCompletedCycle}
           updateFilters={updateFilters}
           handleDragAndDrop={handleDragAndDrop}
           canEditProperties={canEditProperties}

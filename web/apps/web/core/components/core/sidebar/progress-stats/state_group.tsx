@@ -18,15 +18,12 @@ export type TStateGroupData = {
 }[];
 
 type TStateGroupStatComponent = {
-  selectedStateGroups: string[];
-  handleStateGroupFiltersUpdate: (stateGroup: string | undefined) => void;
   distribution: TStateGroupData;
   totalIssuesCount: number;
-  isEditable?: boolean;
 };
 
 export const StateGroupStatComponent = observer(function StateGroupStatComponent(props: TStateGroupStatComponent) {
-  const { distribution, isEditable, totalIssuesCount, selectedStateGroups, handleStateGroupFiltersUpdate } = props;
+  const { distribution, totalIssuesCount } = props;
 
   return (
     <div>
@@ -41,10 +38,6 @@ export const StateGroupStatComponent = observer(function StateGroupStatComponent
           }
           completed={group.completed}
           total={totalIssuesCount}
-          {...(isEditable && {
-            onClick: () => group.state && handleStateGroupFiltersUpdate(group.state),
-            selected: group.state ? selectedStateGroups.includes(group.state) : false,
-          })}
         />
       ))}
     </div>

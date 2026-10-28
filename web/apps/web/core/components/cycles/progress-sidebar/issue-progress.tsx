@@ -7,17 +7,14 @@
 import { useMemo } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
-import { useSearchParams } from "react-router";
 import { Disclosure, Transition } from "@headlessui/react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { ChevronDownOutline, ChevronUpOutline } from "@makeplane/propel/icons";
 import type { ICycle, TProgressSnapshot } from "@nerve/types";
-import { EIssuesStoreType } from "@nerve/types";
 import { getDate } from "@nerve/utils";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
-import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
 // local imports
 import { CycleProgressStats } from "./progress-stats";
 import { SidebarChart } from "./sidebar-chart";
@@ -45,18 +42,11 @@ export const CycleProgress = observer(function CycleProgress(props: TCycleProgre
   // props
   const { cycleId } = props;
   // router
-  const [searchParams] = useSearchParams();
-  const peekCycle = searchParams.get("peekCycle") || undefined;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { getCycleById } = useCycle();
-  const { getFilter, updateFilterValueFromSidebar } = useWorkItemFilters();
   // derived values
-  const cycleFilter = getFilter(EIssuesStoreType.CYCLE, cycleId);
-  const selectedAssignees = cycleFilter?.findFirstConditionByPropertyAndOperator("assignee_id", "in");
-  const selectedLabels = cycleFilter?.findFirstConditionByPropertyAndOperator("label_id", "in");
-  const selectedStateGroups = cycleFilter?.findFirstConditionByPropertyAndOperator("state_group", "in");
   const cycleDetails = validateCycleSnapshot(getCycleById(cycleId));
   const totalIssues = cycleDetails?.total_issues || 0;
   const chartDistributionData = cycleDetails?.distribution || undefined;
@@ -113,19 +103,8 @@ export const CycleProgress = observer(function CycleProgress(props: TCycleProgre
                           cycleId={cycleId}
                           distribution={chartDistributionData}
                           groupedIssues={groupedIssues}
-                          handleFiltersUpdate={updateFilterValueFromSidebar.bind(
-                            updateFilterValueFromSidebar,
-                            EIssuesStoreType.CYCLE,
-                            cycleId
-                          )}
-                          isEditable={Boolean(!peekCycle) && cycleFilter !== undefined}
                           noBackground={false}
                           roundedTab={false}
-                          selectedFilters={{
-                            assignees: selectedAssignees,
-                            labels: selectedLabels,
-                            stateGroups: selectedStateGroups,
-                          }}
                           size="xs"
                           totalIssuesCount={totalIssues}
                         />

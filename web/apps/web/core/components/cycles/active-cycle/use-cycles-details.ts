@@ -4,18 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback } from "react";
-import { useNavigate } from "react-router";
 import useSWR from "swr";
-// nerve imports
-import type { TWorkItemFilterCondition } from "@nerve/shared-state";
-import { EIssuesStoreType } from "@nerve/types";
-// constants
-import { CYCLE_ISSUES_WITH_PARAMS } from "@nerve/constants";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
-import { useIssues } from "@/hooks/store/use-issues";
-import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
 
 interface IActiveCycleDetails {
   workspaceSlug: string;
@@ -26,20 +17,11 @@ interface IActiveCycleDetails {
 const useCyclesDetails = (props: IActiveCycleDetails) => {
   // props
   const { workspaceSlug, projectId, cycleId } = props;
-  // router
-  const navigate = useNavigate();
   // store hooks
-  const {
-    issuesFilter: { updateFilterExpression },
-    issues: { getActiveCycleById: getActiveCycleByIdFromIssue, fetchActiveCycleIssues },
-  } = useIssues(EIssuesStoreType.CYCLE);
-  const { updateFilterExpressionFromConditions } = useWorkItemFilters();
-
   const { fetchActiveCycleProgress, getCycleById, fetchActiveCycleDistribution } = useCycle();
   // derived values
   const cycle = cycleId ? getCycleById(cycleId) : null;
 
-  // fetch cycle details
   useSWR(
     workspaceSlug && projectId && cycle?.id ? `PROJECT_ACTIVE_CYCLE_${projectId}_PROGRESS_${cycle.id}` : null,
     workspaceSlug && projectId && cycle?.id ? () => fetchActiveCycleProgress(workspaceSlug, projectId, cycle.id) : null,
@@ -53,36 +35,9 @@ const useCyclesDetails = (props: IActiveCycleDetails) => {
       ? () => fetchActiveCycleDistribution(workspaceSlug, projectId, cycle.id)
       : null
   );
-  useSWR(
-    workspaceSlug && projectId && cycle?.id ? CYCLE_ISSUES_WITH_PARAMS(cycle?.id, { priority: "urgent,high" }) : null,
-    workspaceSlug && projectId && cycle?.id
-      ? () => fetchActiveCycleIssues(workspaceSlug, projectId, 30, cycle?.id)
-      : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
-
-  const cycleIssueDetails = cycle?.id ? getActiveCycleByIdFromIssue(cycle?.id) : { nextPageResults: false };
-
-  const handleFiltersUpdate = useCallback(
-    async (conditions: TWorkItemFilterCondition[]) => {
-      if (!workspaceSlug || !projectId || !cycleId) return;
-
-      await updateFilterExpressionFromConditions(
-        EIssuesStoreType.CYCLE,
-        cycleId,
-        conditions,
-        updateFilterExpression.bind(updateFilterExpression, workspaceSlug, projectId, cycleId)
-      );
-
-      navigate(`/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}`);
-    },
-    [workspaceSlug, projectId, cycleId, updateFilterExpressionFromConditions, updateFilterExpression, navigate]
-  );
   return {
     cycle,
     cycleId,
-    handleFiltersUpdate,
-    cycleIssueDetails,
   };
 };
 export default useCyclesDetails;

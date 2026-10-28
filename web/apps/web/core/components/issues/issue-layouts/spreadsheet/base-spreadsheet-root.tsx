@@ -31,12 +31,11 @@ type SpreadsheetStoreType =
 interface IBaseSpreadsheetRoot {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
-  isCompletedCycle?: boolean;
   viewId?: string | undefined;
 }
 
 export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: IBaseSpreadsheetRoot) {
-  const { QuickActions, canEditPropertiesBasedOnProject, isCompletedCycle = false, viewId } = props;
+  const { QuickActions, canEditPropertiesBasedOnProject, viewId } = props;
   // router
   const { projectId } = useParams();
   // store hooks
@@ -49,7 +48,6 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
     quickAddIssue,
     updateIssue,
     removeIssue,
-    removeIssueFromView,
     archiveIssue,
     restoreIssue,
     updateFilters,
@@ -96,15 +94,14 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
         issue={issue}
         handleDelete={async () => removeIssue(issue.project_id, issue.id)}
         handleUpdate={async (data) => updateIssue && updateIssue(issue.project_id, issue.id, data)}
-        handleRemoveFromView={async () => removeIssueFromView && removeIssueFromView(issue.project_id, issue.id)}
         handleArchive={async () => archiveIssue && archiveIssue(issue.project_id, issue.id)}
         handleRestore={async () => restoreIssue && restoreIssue(issue.project_id, issue.id)}
         portalElement={portalElement}
-        readOnly={!canEditProperties(issue.project_id ?? undefined) || isCompletedCycle}
+        readOnly={!canEditProperties(issue.project_id ?? undefined)}
         placements={placement}
       />
     ),
-    [isCompletedCycle, canEditProperties, removeIssue, updateIssue, removeIssueFromView, archiveIssue, restoreIssue]
+    [canEditProperties, removeIssue, updateIssue, archiveIssue, restoreIssue]
   );
 
   if (!Array.isArray(issueIds)) return null;
@@ -121,7 +118,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
         canEditProperties={canEditProperties}
         quickAddCallback={quickAddIssue}
         enableQuickCreateIssue={enableQuickAdd}
-        disableIssueCreation={!enableIssueCreation || !isEditingAllowed || isCompletedCycle}
+        disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
         canLoadMoreIssues={!!nextPageResults}
         loadMoreIssues={fetchNextIssues}
       />

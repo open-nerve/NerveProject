@@ -26,7 +26,6 @@ type Props = {
   enableQuickIssueCreate?: boolean;
   disableIssueCreation?: boolean;
   quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
-  addIssuesToView?: (issueIds: string[]) => Promise<any>;
   readOnly?: boolean;
   isMobileView?: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;
@@ -42,7 +41,6 @@ export const CalendarIssueBlocks = observer(function CalendarIssueBlocks(props: 
     enableQuickIssueCreate,
     disableIssueCreation,
     quickAddCallback,
-    addIssuesToView,
     readOnly,
     isMobileView = false,
     canEditProperties,
@@ -91,7 +89,6 @@ export const CalendarIssueBlocks = observer(function CalendarIssueBlocks(props: 
               target_date: formattedDatePayload,
             }}
             quickAddCallback={quickAddCallback}
-            addIssuesToView={addIssuesToView}
           />
         </div>
       )}

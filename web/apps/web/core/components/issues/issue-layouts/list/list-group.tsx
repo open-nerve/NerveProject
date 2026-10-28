@@ -61,8 +61,6 @@ interface Props {
   quickAddCallback?: ((projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>) | undefined;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
   disableIssueCreation?: boolean;
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
-  isCompletedCycle?: boolean;
   showEmptyGroup?: boolean;
   loadMoreIssues: (groupId?: string) => void;
   handleCollapsedGroups: (value: string) => void;
@@ -86,8 +84,6 @@ export const ListGroup = observer(function ListGroup(props: Props) {
     quickAddCallback,
     handleOnDrop,
     disableIssueCreation,
-    addIssuesToView,
-    isCompletedCycle,
     showEmptyGroup,
     loadMoreIssues,
     handleCollapsedGroups,
@@ -259,8 +255,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
           title={group.name}
           count={groupIssueCount}
           issuePayload={group.payload}
-          disableIssueCreation={disableIssueCreation || isGroupByCreatedBy || isCompletedCycle}
-          addIssuesToView={addIssuesToView}
+          disableIssueCreation={disableIssueCreation || isGroupByCreatedBy}
           handleCollapsedGroups={handleCollapsedGroups}
         />
       </Row>
@@ -302,7 +297,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
               </>
             ))}
 
-          {enableIssueQuickAdd && !disableIssueCreation && !isGroupByCreatedBy && !isCompletedCycle && (
+          {enableIssueQuickAdd && !disableIssueCreation && !isGroupByCreatedBy && (
             <div className="sticky bottom-0 z-[1] w-full flex-shrink-0">
               <QuickAddIssueRoot
                 layout={EIssueLayoutTypes.LIST}

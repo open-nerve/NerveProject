@@ -97,7 +97,6 @@ const SubGroupSwimlaneHeader = observer(function SubGroupSwimlaneHeader({
 });
 
 interface ISubGroupSwimlane extends ISubGroupSwimlaneHeader {
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
   canEditProperties: (projectId: string | undefined) => boolean;
   collapsedGroups: TIssueKanbanFilters;
   disableIssueCreation?: boolean;
@@ -123,7 +122,6 @@ interface ISubGroupSwimlane extends ISubGroupSwimlaneHeader {
 
 const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwimlane) {
   const {
-    addIssuesToView,
     canEditProperties,
     collapsedGroups,
     disableIssueCreation,
@@ -206,7 +204,6 @@ const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwim
                     enableQuickIssueCreate={enableQuickIssueCreate}
                     disableIssueCreation={disableIssueCreation}
                     canEditProperties={canEditProperties}
-                    addIssuesToView={addIssuesToView}
                     quickAddCallback={quickAddCallback}
                     scrollableContainerRef={scrollableContainerRef}
                     loadMoreIssues={loadMoreIssues}
@@ -225,7 +222,6 @@ const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwim
 });
 
 export interface IKanBanSwimLanes {
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
   canEditProperties: (projectId: string | undefined) => boolean;
   collapsedGroups: TIssueKanbanFilters;
   disableIssueCreation?: boolean;
@@ -270,7 +266,6 @@ export const KanBanSwimLanes = observer(function KanBanSwimLanes(props: IKanBanS
     disableIssueCreation,
     enableQuickIssueCreate,
     canEditProperties,
-    addIssuesToView,
     quickAddCallback,
     scrollableContainerRef,
   } = props;
@@ -323,7 +318,6 @@ export const KanBanSwimLanes = observer(function KanBanSwimLanes(props: IKanBanS
           handleOnDrop={handleOnDrop}
           disableIssueCreation={disableIssueCreation}
           enableQuickIssueCreate={enableQuickIssueCreate}
-          addIssuesToView={addIssuesToView}
           canEditProperties={canEditProperties}
           quickAddCallback={quickAddCallback}
           scrollableContainerRef={scrollableContainerRef}

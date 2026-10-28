@@ -42,8 +42,6 @@ export interface IList {
   quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
   disableIssueCreation?: boolean;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
-  isCompletedCycle?: boolean;
   loadMoreIssues: (groupId?: string) => void;
   handleCollapsedGroups: (value: string) => void;
   collapsedGroups: TIssueKanbanFilters;
@@ -64,8 +62,6 @@ export const List = observer(function List(props: IList) {
     quickAddCallback,
     disableIssueCreation,
     handleOnDrop,
-    addIssuesToView,
-    isCompletedCycle = false,
     loadMoreIssues,
     handleCollapsedGroups,
     collapsedGroups,
@@ -123,8 +119,6 @@ export const List = observer(function List(props: IList) {
               canEditProperties={canEditProperties}
               quickAddCallback={quickAddCallback}
               disableIssueCreation={disableIssueCreation}
-              addIssuesToView={addIssuesToView}
-              isCompletedCycle={isCompletedCycle}
               loadMoreIssues={loadMoreIssues}
               containerRef={containerRef}
               handleCollapsedGroups={handleCollapsedGroups}

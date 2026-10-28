@@ -9,7 +9,6 @@ import { useTheme } from "next-themes";
 // nerve imports
 import { PROGRESS_STATE_GROUPS_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { TWorkItemFilterCondition } from "@nerve/shared-state";
 import { LinearProgress } from "@makeplane/propel/components/linear-progress";
 import type { ICycle } from "@nerve/types";
 import { Loader } from "@nerve/ui";
@@ -24,11 +23,10 @@ export type ActiveCycleProgressProps = {
   cycle: ICycle | null;
   workspaceSlug: string;
   projectId: string;
-  handleFiltersUpdate: (conditions: TWorkItemFilterCondition[]) => void;
 };
 
 export const ActiveCycleProgress = observer(function ActiveCycleProgress(props: ActiveCycleProgressProps) {
-  const { handleFiltersUpdate, cycle } = props;
+  const { cycle } = props;
   // theme hook
   const { resolvedTheme } = useTheme();
   // nerve hooks
@@ -77,13 +75,7 @@ export const ActiveCycleProgress = observer(function ActiveCycleProgress(props: 
           {Object.keys(groupedIssues).map(
             (group, index) =>
               groupedIssues[group] > 0 && (
-                <div
-                  key={group}
-                  className="flex cursor-pointer items-center justify-between gap-2 text-13"
-                  onClick={() => {
-                    handleFiltersUpdate([{ property: "state_group", operator: "in", value: [group] }]);
-                  }}
-                >
+                <div key={group} className="flex items-center justify-between gap-2 text-13">
                   <div className="flex items-center gap-1.5">
                     <span
                       className="block h-3 w-3 rounded-full"

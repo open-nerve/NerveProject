@@ -36,7 +36,6 @@ type Props = {
     sourceDate: string | undefined,
     destinationDate: string | undefined
   ) => Promise<void>;
-  addIssuesToView?: (issueIds: string[]) => Promise<any>;
   readOnly?: boolean;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
@@ -57,7 +56,6 @@ export const CalendarWeekDays = observer(function CalendarWeekDays(props: Props)
     enableQuickIssueCreate,
     disableIssueCreation,
     quickAddCallback,
-    addIssuesToView,
     readOnly = false,
     selectedDate,
     setSelectedDate,
@@ -107,7 +105,6 @@ export const CalendarWeekDays = observer(function CalendarWeekDays(props: Props)
             enableQuickIssueCreate={enableQuickIssueCreate}
             disableIssueCreation={disableIssueCreation}
             quickAddCallback={quickAddCallback}
-            addIssuesToView={addIssuesToView}
             readOnly={readOnly}
             handleDragAndDrop={handleDragAndDrop}
             canEditProperties={canEditProperties}

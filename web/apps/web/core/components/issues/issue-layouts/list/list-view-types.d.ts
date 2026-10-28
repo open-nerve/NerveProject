@@ -8,7 +8,6 @@ export interface IQuickActionProps {
   issue: TIssue;
   handleDelete: () => Promise<void>;
   handleUpdate?: (data: TIssue) => Promise<void>;
-  handleRemoveFromView?: () => Promise<void>;
   handleArchive?: () => Promise<void>;
   handleRestore?: () => Promise<void>;
   handleMoveToIssues?: () => Promise<void>;

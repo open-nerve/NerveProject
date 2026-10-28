@@ -26,28 +26,23 @@ import { QuickAddIssueRoot } from "../quick-add";
 type TCalendarQuickAddIssueActions = {
   prePopulatedData?: Partial<TIssue>;
   quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
-  addIssuesToView?: (issueIds: string[]) => Promise<any>;
   onOpen?: () => void;
 };
 
 export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIssueActions(
   props: TCalendarQuickAddIssueActions
 ) {
-  const { prePopulatedData, quickAddCallback, addIssuesToView, onOpen } = props;
+  const { prePopulatedData, quickAddCallback, onOpen } = props;
   const { t } = useTranslation();
   // router
-  const { workspaceSlug, projectId, moduleId } = useParams();
+  const { workspaceSlug, projectId } = useParams();
   // states
   const [isOpen, setIsOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isExistingIssueModalOpen, setIsExistingIssueModalOpen] = useState(false);
   const { updateIssue } = useIssueDetail();
   // derived values
-  const ExistingIssuesListModalPayload = addIssuesToView
-    ? moduleId
-      ? { module: moduleId, target_date: "none" }
-      : { cycle: true, target_date: "none" }
-    : { target_date: "none" };
+  const ExistingIssuesListModalPayload = { target_date: "none" };
 
   const handleAddIssuesToView = async (data: ISearchIssueResponse[]) => {
     if (!workspaceSlug || !projectId) return;
@@ -55,7 +50,7 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
     const issueIds = data.map((i) => i.id);
     const addExistingIssuesPromise = Promise.all(
       data.map((issue) => updateIssue(workspaceSlug, projectId, issue.id, prePopulatedData ?? {}))
-    ).then(() => addIssuesToView?.(issueIds));
+    );
 
     setPromiseToast(addExistingIssuesPromise, {
       loading: t("issue.adding", { count: issueIds.length }),
@@ -65,7 +60,10 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
       },
       error: {
         title: t("toast.error"),
-        message: (err) => err?.message || t("common.errors.default.message"),
+        message: (err: unknown) =>
+          typeof err === "object" && err !== null && "message" in err && typeof err.message === "string"
+            ? err.message || t("common.errors.default.message")
+            : t("common.errors.default.message"),
       },
     });
   };

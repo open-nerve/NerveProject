@@ -60,7 +60,6 @@ type Props = {
     sourceDate: string | undefined,
     destinationDate: string | undefined
   ) => Promise<void>;
-  addIssuesToView?: (issueIds: string[]) => Promise<any>;
   readOnly?: boolean;
   updateFilters?: (
     projectId: string,
@@ -82,7 +81,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
     handleDragAndDrop,
     quickActions,
     quickAddCallback,
-    addIssuesToView,
     getPaginationData,
     getGroupIssueCount,
     updateFilters,
@@ -168,7 +166,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
                         disableIssueCreation={!enableIssueCreation}
                         quickActions={quickActions}
                         quickAddCallback={quickAddCallback}
-                        addIssuesToView={addIssuesToView}
                         readOnly={readOnly}
                         canEditProperties={canEditProperties}
                       />
@@ -191,7 +188,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
                   disableIssueCreation={!enableIssueCreation}
                   quickActions={quickActions}
                   quickAddCallback={quickAddCallback}
-                  addIssuesToView={addIssuesToView}
                   readOnly={readOnly}
                   canEditProperties={canEditProperties}
                 />
@@ -215,7 +211,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
                 enableQuickIssueCreate={enableQuickAdd}
                 disableIssueCreation={!enableIssueCreation}
                 quickAddCallback={quickAddCallback}
-                addIssuesToView={addIssuesToView}
                 readOnly={readOnly}
                 canEditProperties={canEditProperties}
                 isDragDisabled
@@ -242,7 +237,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
             enableQuickIssueCreate={enableQuickAdd}
             disableIssueCreation={!enableIssueCreation}
             quickAddCallback={quickAddCallback}
-            addIssuesToView={addIssuesToView}
             readOnly={readOnly}
             canEditProperties={canEditProperties}
             isDragDisabled

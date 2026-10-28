@@ -4,34 +4,22 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useRef } from "react";
+import { useRef } from "react";
 import { observer } from "mobx-react";
 
 // nerve imports
-import {
-  EIssueFilterType,
-  ISSUE_DISPLAY_FILTERS_BY_PAGE,
-  EUserPermissions,
-  EUserPermissionsLevel,
-} from "@nerve/constants";
-import { Button } from "@nerve/propel/button";
 import { LockOutline, ViewsOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { ICustomSearchSelectOption, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
-import { EIssuesStoreType, EViewAccess, EIssueLayoutTypes } from "@nerve/types";
+import type { ICustomSearchSelectOption } from "@nerve/types";
+import { EViewAccess } from "@nerve/types";
 import { Breadcrumbs, Header, BreadcrumbNavigationSearchDropdown } from "@nerve/ui";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { SwitcherIcon, SwitcherLabel } from "@/components/common/switcher-label";
-import { DisplayFiltersSelection, FiltersDropdown, LayoutSelection } from "@/components/issues/issue-layouts/filters";
 import { ViewQuickActions } from "@/components/views/quick-actions";
-import { WorkItemFiltersToggle } from "@/components/work-item-filters/filters-toggle";
 // hooks
-import { useCommandPalette } from "@/hooks/store/use-command-palette";
-import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectView } from "@/hooks/store/use-project-view";
-import { useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
 // components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
@@ -49,44 +37,10 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
   const navigate = useNavigate();
   const { workspaceSlug, projectId, viewId } = props;
   // store hooks
-  const {
-    issuesFilter: { issueFilters, updateFilters },
-  } = useIssues(EIssuesStoreType.PROJECT_VIEW);
-  const { toggleCreateIssueModal } = useCommandPalette();
-  const { allowPermissions } = useUserPermissions();
-
-  const { currentProjectDetails, loader } = useProject();
+  const { loader } = useProject();
   const { projectViewIds, getViewById } = useProjectView();
 
-  const activeLayout = issueFilters?.displayFilters?.layout;
-
-  const handleLayoutChange = useCallback(
-    (layout: EIssueLayoutTypes) => {
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout }, viewId);
-    },
-    [workspaceSlug, projectId, viewId, updateFilters]
-  );
-
-  const handleDisplayFilters = useCallback(
-    (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, viewId);
-    },
-    [workspaceSlug, projectId, viewId, updateFilters]
-  );
-
-  const handleDisplayProperties = useCallback(
-    (property: Partial<IIssueDisplayProperties>) => {
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property, viewId);
-    },
-    [workspaceSlug, projectId, viewId, updateFilters]
-  );
-
   const viewDetails = getViewById(viewId);
-
-  const canUserCreateIssue = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
 
   if (!viewDetails) return;
 
@@ -147,47 +101,6 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
         )}
       </Header.LeftItem>
       <Header.RightItem className="items-center">
-        <>
-          {!viewDetails.is_locked && (
-            <LayoutSelection
-              layouts={[
-                EIssueLayoutTypes.LIST,
-                EIssueLayoutTypes.KANBAN,
-                EIssueLayoutTypes.CALENDAR,
-                EIssueLayoutTypes.SPREADSHEET,
-              ]}
-              onChange={(layout) => handleLayoutChange(layout)}
-              selectedLayout={activeLayout}
-            />
-          )}
-          <WorkItemFiltersToggle entityType={EIssuesStoreType.PROJECT_VIEW} entityId={viewId} />
-          {!viewDetails.is_locked && (
-            <FiltersDropdown title="Display" placement="bottom-end">
-              <DisplayFiltersSelection
-                layoutDisplayFiltersOptions={
-                  activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
-                }
-                displayFilters={issueFilters?.displayFilters ?? {}}
-                handleDisplayFiltersUpdate={handleDisplayFilters}
-                displayProperties={issueFilters?.displayProperties ?? {}}
-                handleDisplayPropertiesUpdate={handleDisplayProperties}
-                cycleViewDisabled={!currentProjectDetails?.cycle_view}
-                moduleViewDisabled={!currentProjectDetails?.module_view}
-              />
-            </FiltersDropdown>
-          )}
-        </>
-        {canUserCreateIssue && (
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={() => {
-              toggleCreateIssueModal(true, EIssuesStoreType.PROJECT_VIEW);
-            }}
-          >
-            Add work item
-          </Button>
-        )}
         <div className="hidden md:block">
           <ViewQuickActions
             parentRef={parentRef}

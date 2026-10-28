@@ -6,16 +6,12 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 // lucide icons
 import { Circle } from "lucide-react";
 import { AddOutline, ArrowCollapseOutline, FullScreenOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssue, ISearchIssueResponse, TIssueKanbanFilters, TIssueGroupByOptions } from "@nerve/types";
+import type { TIssue, TIssueKanbanFilters, TIssueGroupByOptions } from "@nerve/types";
 // ui
-import { CustomMenu } from "@nerve/ui";
 // components
-import { ExistingIssuesListModal } from "@/components/core/modals/existing-issues-list-modal";
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 // constants
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
@@ -31,7 +27,6 @@ interface IHeaderGroupByCard {
   handleCollapsedGroups: (toggle: "group_by" | "sub_group_by", value: string) => void;
   issuePayload: Partial<TIssue>;
   disableIssueCreation?: boolean;
-  addIssuesToView?: (issueIds: string[]) => Promise<TIssue>;
 }
 
 export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHeaderGroupByCard) {
@@ -45,42 +40,12 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
     handleCollapsedGroups,
     issuePayload,
     disableIssueCreation,
-    addIssuesToView,
   } = props;
   const verticalAlignPosition = sub_group_by ? false : collapsedGroups?.group_by.includes(column_id);
   // states
   const [isOpen, setIsOpen] = React.useState(false);
-  const [openExistingIssueListModal, setOpenExistingIssueListModal] = React.useState(false);
   // hooks
   const storeType = useIssueStoreType();
-  // router
-  const { workspaceSlug, projectId, moduleId, cycleId } = useParams();
-
-  const renderExistingIssueModal = moduleId || cycleId;
-  const ExistingIssuesListModalPayload = moduleId ? { module: moduleId } : { cycle: true };
-
-  const handleAddIssuesToView = async (data: ISearchIssueResponse[]) => {
-    if (!workspaceSlug || !projectId) return;
-
-    const issues = data.map((i) => i.id);
-
-    try {
-      await addIssuesToView?.(issues);
-
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: "Work items added to the cycle successfully.",
-      });
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Selected work items could not be added to the cycle. Please try again.",
-      });
-    }
-  };
-
   return (
     <>
       <CreateUpdateIssueModal
@@ -90,16 +55,6 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
         storeType={storeType}
       />
 
-      {renderExistingIssueModal && (
-        <ExistingIssuesListModal
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          isOpen={openExistingIssueListModal}
-          handleClose={() => setOpenExistingIssueListModal(false)}
-          searchParams={ExistingIssuesListModalPayload}
-          handleOnSubmit={handleAddIssuesToView}
-        />
-      )}
       <div
         className={`relative flex flex-shrink-0 gap-1 py-1.5 ${
           verticalAlignPosition ? `w-[44px] flex-col items-center` : `w-full flex-row items-center`
@@ -137,41 +92,16 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
           </button>
         )}
 
-        {!disableIssueCreation &&
-          (renderExistingIssueModal ? (
-            <CustomMenu
-              customButton={
-                <span className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover">
-                  <AddOutline height={14} width={14} />
-                </span>
-              }
-              placement="bottom-end"
-            >
-              <CustomMenu.MenuItem
-                onClick={() => {
-                  setIsOpen(true);
-                }}
-              >
-                <span className="flex items-center justify-start gap-2">Create work item</span>
-              </CustomMenu.MenuItem>
-              <CustomMenu.MenuItem
-                onClick={() => {
-                  setOpenExistingIssueListModal(true);
-                }}
-              >
-                <span className="flex items-center justify-start gap-2">Add an existing work item</span>
-              </CustomMenu.MenuItem>
-            </CustomMenu>
-          ) : (
-            <button
-              className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover"
-              onClick={() => {
-                setIsOpen(true);
-              }}
-            >
-              <AddOutline width={14} />
-            </button>
-          ))}
+        {!disableIssueCreation && (
+          <button
+            className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover"
+            onClick={() => {
+              setIsOpen(true);
+            }}
+          >
+            <AddOutline width={14} />
+          </button>
+        )}
       </div>
     </>
   );
