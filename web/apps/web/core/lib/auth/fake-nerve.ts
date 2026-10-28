@@ -18,6 +18,8 @@ export type Call = {
   path: string;
   /** The parameters of the query string. */
   query: Record<string, string>;
+  /** Original entries, preserving repeated conditions (for example date filters joined with AND). */
+  queryEntries: [string, string][];
   authorization: string | null;
   body: unknown;
   /** When the request arrived, on the fake clock. */
@@ -47,6 +49,7 @@ export class FakeNerve {
         method: request.method,
         path: url.pathname,
         query: Object.fromEntries(url.searchParams),
+        queryEntries: [...url.searchParams],
         authorization: request.headers.get("Authorization"),
         body: text === "" ? undefined : (JSON.parse(text) as unknown),
         at: Date.now(),

@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 实施获授权后，按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。当前只准备，不运行实现流程。
+> **给执行代理：** 实施获授权后，按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。已获实施授权，T1 进行中；任务勾选由主控在独立评审后更新。
 
-> **当前状态：** P10a 集成后执行前文档预检通过；只准备，未实现/原型/行为运行。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。本轮预检结论见阶段 review；T1 仍等待负责人安排。
+> **当前状态：** P10a 集成后执行前文档预检通过；已获实施授权，T1 进行中；全部产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。预检结论与 2026-10-29 执行启动说明见阶段 review。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
