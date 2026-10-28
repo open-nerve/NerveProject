@@ -2,7 +2,7 @@
 
 > **执行者：** 获负责人后续实施授权后，使用 `superpowers:subagent-driven-development` 或 `superpowers:executing-plans` 逐 Task 执行。本轮仅准备及静态预检，不运行下列产品步骤。
 
-**预检阻断：** P10A-S1 已确定为范围与验收冲突，见[报告](../../../reviews/re-10-M4P10预检审核.md)；负责人裁定、同步设计与本计划并复审前，不执行 T1。T8 以下保留原验收条件供裁定，不能拖到实施时才上报。
+**负责人裁定：** P10A-S1 已选 A，见[报告](../../../reviews/re-10-M4P10预检审核.md)。只删工作项列表，保留领域自身加载；T8 按 spec§2.4 验收拆除边界，M6/M7 自身页面完整可用与零失败归所属里程碑。文档同步已通过独立定向静态预检，无开放发现；本轮仍不执行 T1。
 
 **目标：** 删除四类尚属 M6/M7 的工作项列表，先收窄读取，再将核心工作项实体换为生成的 Issue/IssueDetail，保持每任务编译。
 
@@ -91,10 +91,11 @@ make e2e
 
 - [ ] 先按T1枚举四root/四kind/transfer/addIssuesToView的实际读者；标“工作项列表独占”或“其他合法领域职责”，检查后者仍有消费者。
 - [ ] 删除四root及页面import/JSX；页面不加空数组/空service/featureflag来伪装列表；保留自身页头/详情。删除由此无读者的状态、callbacks和barrel导出。
+- [ ] 先迁出 root 内仍需保留的领域加载：cycle `fetchParentStats` 的详情读取移到所属页面/领域hook，不再依赖已删工作项列表成功；`all-issue-layout-root` 的 `fetchAllGlobalViews` 迁到保留的工作区视图宿主，覆盖默认/自定义视图。仍调用所属store/service，不复制列表引擎；真实组件配有效领域store fixture验证加载调用与页头/详情保留，不模拟HTTP成功、不以冷启动空态冒充已保留详情。
 - [ ] 共用分组头/日历只删M6/M7分支；ExistingIssues选择器仍给项目日历和P14子项/关系保留；活动迭代/progress删issue-list请求及操作，不能把领域自己的统计代码冒充同一职责整删。
 - [ ] 若transfer组件所有读者已随四列表移除，连文件/导出/仅为它存在的文案一起删除；若有合法领域读者，先剥离issue-list职责，在台账列精确剩余读者，不能留下引用将删store的接口。
 - [ ] `pnpm --filter web check:types`通过；用 `rg -n '(CycleLayoutRoot|ModuleLayoutRoot|ProjectViewLayoutRoot|AllIssueLayoutRoot)' web`核无旧root；错误退出2与无命中exit1区分。`make knip`查删除闭合；根据实际清理精准降低lint cap，不改限额掩盖警告。
-- [ ] 执行G；T8统一真实路由行为回归前，本Task不得写“所有M6/M7页面已无失败API”。提交 `feat(M4/P10a): 移除后续模块的工作项列表挂载`。
+- [ ] 执行G；按负责人A裁定，本Task及T8都不得写“所有M6/M7页面已无失败API”；其完整页面验收归所属里程碑。提交 `feat(M4/P10a): 移除后续模块的工作项列表挂载`。
 
 ## Task 3：删除四类store、筛选和枚举分支
 
@@ -165,11 +166,13 @@ make e2e
 
 **Files：** `e2e/stories/smoke/s2-web-app.spec.ts`；新（实施时确定独立文件）`e2e/stories/smoke/s2-issue-list-removal.spec.ts`；受影响Vitest及必要 `C/components/issues/issue-layouts/removal.test.tsx`。前置数据复用fixtures/api、auth、test、browser和mounts，不改服务端增加M6/M7 API。
 
-**Interfaces：** S2四身份既有请求/console断言继续；新增真实登录页面验证四类删除后的列表部分无挂载，并核页面打开没有失败请求。不得把“无失败”降低为“无新增失败”。
+**Interfaces：** S2四身份既有请求/console断言继续；新增真实登录页面验证列表/独占操作及其旧请求已经移除。按负责人A裁定，领域自身页面整体验收归M6/M7，P10a保存其精确未接通记录；不将拆除边界通过称为整页零失败。原watchPage和M4页面门禁不变。
 
 - [ ] 先把六条路由及其父layout/页头/自身领域fetch逐一列清：cycle/module/project-view/workspace-view详情、archived-cycle/module。API创建workspace/project/身份可用；M6/M7域实体当前无API创建，不用SQL或route.fulfill伪造它们。
 - [ ] 选择真实可达的默认工作区视图、空/不存在领域详情等路径并明确其预期；不能用被权限挡在外层、未挂载页面的测试证明已删除列表。真正需要有效cycle/module/view实体才覆盖的分支，组件层明确用已有store fixture验证结构，不冒充e2e页面事实。
-- [ ] 对每条实际打开页面，watchPage apiFailures/oldApiRequests/console维持精确断言，不blanket放行旧M6/M7接口。若剩余失败来自保留的领域自身fetch，保存URL/status/调用栈和归属；该完成线保持未勾，先按03纪律处理跨模块边界，不给空service或扩大P10a实现后端。
+- [ ] 新拆除故事用已有API/auth/项目成员fixture真正挂载六类入口，确认工作项列表和独占操作无挂载/无旧请求；新增回归 `preserves_domain_loading_without_issue_lists` 以有效领域store fixture保留真实组件，核T2两处领域加载迁出与数据读取，不模拟后端成功。缺少有效领域实体的真实页面分支只记组件覆盖，不冒充E2E事实。
+- [ ] 导航前启用原watchPage，原始数组不修改并完整附报告；按spec§2.4的8个已知自身GET路径作为最低核对清单，对实际父layout/页头/加载链逐项补方法、完整URL/query、触发条件、状态、源码归属、证据和M6/M7接收期限。watchPage的API数组只存path，analytics的query从requestUrls核。旧工作项列表/已删动作请求必须为零，不能记进领域自身账；实际旧列表还用IssueService的issues/issues-detail地址，按调用链/query核；project-view筛选与保留详情共享view URL时，以引用/组件来源和次数证明筛选读者已删，不能仅凭URL放行；workspace单视图URL不自动归为保留账。没有归属的请求、500/无响应、其它query和未归因异常不自动放行。
+- [ ] 拆除故事按精确请求集合核自身失败记录与原始观察一致，保留全部失败而非清数组/改watchPage/按旧API前缀或4xx泛放行；M4已有S2断言不受影响。将完整页面零失败及有效领域实体回归明确交M6/M7，不给空service、隐藏领域取数或扩大P10a实现后端。本Task验收按已裁定的拆除边界关闭，自身页面未接通项继续归所属里程碑。
 - [ ] 运行现有S2四身份（先 `make build`，再 `pnpm --dir e2e exec playwright test stories/smoke/s2-web-app.spec.ts --project=chromium`）及新拆除回归，确认命中真实用例；不把signed-out重定向当四类页面成功。
 - [ ] 运行T5/T6定向与全部 `TURBO_FORCE=true make test-web`；最后执行F。任何W11只按06处理，不专项调查。
 - [ ] 执行G，提交 `test(M4/P10a): 核验换型与列表移除后的入口边界`。所有完成线满足前不得宣称阶段完成。
@@ -182,7 +185,7 @@ make e2e
 
 - [ ] 自查spec§4逐条附本期证据，未运行/不满足保持未勾；记录每Task起止SHA、独评/修复、F和最终分支CI身份，保留首次失败与修复红绿。
 - [ ] 使用deep-review审查基线4599a9cf到当前最终HEAD全部diff，逻辑/集成/覆盖三视角；聚焦132消费者完整性、四类删除边界、Issue/Detail/null/表单local、过渡期限、真实页面请求，修复后按受影响范围独立复审。
-- [ ] 前端改动清单写明实际删除范围与用户可见代价；M6加回迭代/模块列表、M7加回项目/工作区视图列表及Partial<Issue>收集箱过渡责任进review§6和设计§13.2；不提前创建最终M5–M8 closeout或关handoff总status。
+- [ ] 前端改动清单写明实际删除范围及未来领域页面仍未接通的代价；M6加回迭代/模块列表、M7加回项目/工作区视图列表及Partial<Issue>收集箱过渡，连同各自页面完整可用/零失败验收与逐请求记录写进review§6和设计§13.2。接收方接通时替换旧接口、删除过渡记录并核有效实体页面；不提前创建最终M5–M8 closeout或关handoff总status。
 - [ ] 设计§15只写“实施与终审完成、集成待办”，M4§14和总体§9.4仍开放；阶段main集成完成后再有后续真实回执，不在本Task自行合并。
 - [ ] 纯文档静态路径/链接/任务覆盖/时间态核对，独评后提交 `docs(M4/P10a): 记录换型终审证据与后续数据层交接`；准确最终HEAD CI核验与local evidence分别记录。
 

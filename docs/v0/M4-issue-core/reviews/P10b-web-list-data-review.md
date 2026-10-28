@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层 预检记录
 
-日期：2026-10-28。状态：六项局部问题文档复审关闭，P10b有条件通过静态依赖预检；全P10仍受P10A-S1阻断，尚未实施。准备分支 `codex/m4-p10a`，worktree `.codex/worktress/codex/m4-p10a`；基线 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)、[deep-review](../../../reviews/re-10-M4P10预检审核.md)。
+日期：2026-10-28。状态：六项局部问题文档复审关闭，P10b有条件通过静态依赖预检；P10A-S1已获负责人A裁定，文档定向复审见P10a review；尚未实施。准备分支 `codex/m4-p10a`，worktree `.codex/worktress/codex/m4-p10a`；基线 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)、[deep-review](../../../reviews/re-10-M4P10预检审核.md)。
 
 ## 1. 评审方式
 
@@ -45,4 +45,4 @@ P10a实施并经独立整审和负责人授权集成后，P10b才能从准确mai
 
 静态预检不能证明迁移后每Task确实编译、全部真实页面请求或分页并发性质。实施期须逐项保留红绿/拒绝/会话变化/恢复证据；P10b执行前须P10a集成main CI通过并完成差异复核。M4§14、总体设计§9.4、输入handoff总status和M5–M8最终closeout保持开放。
 
-整体P10唯一待裁定项为P10A-S1，见综合报告：未来领域页面自身请求与整页零失败的范围冲突。B的有条件预检通过不绕过该决策门，也不授权启动任何产品Task。
+P10A-S1已由负责人选择A，保持列表删除范围、调整M6/M7自身页面验收归属，见综合报告的后续决策记录。本段六项模型规则不变，仍需P10a实际集成基线复核；裁定及文档预检不授权启动任何产品Task。

@@ -123,4 +123,4 @@ P9经授权--no-ff合并main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main 
 
 当前 `codex/m4-p10a` / `.codex/worktress/codex/m4-p10a` 仅准备既定两段：[P10a spec](../M4-issue-core/specs/P10a-web-issue-types.md)、[plan](../M4-issue-core/plans/P10a-web-issue-types.md)；[P10b spec](../M4-issue-core/specs/P10b-web-list-data.md)、[plan](../M4-issue-core/plans/P10b-web-list-data.md)。静态预检结果由各阶段review及[deep-review](../../reviews/re-10-M4P10预检审核.md)接续；T1尚未实施，关键词phase仍M4/P9，启动P10a T1才按既定守卫语法设M4/P10。P10b当前是依赖预检，实施前必须在P10a已集成且main CI绿的基线重核。M4总体§14/总体设计§9.4、handoff总状态和最终closeout不提前关闭。
 
-**预检阻断 P10A-S1：** 保留的 M6/M7 领域页自身仍请求未实现的旧接口，与 P10a T8 整页零失败要求冲突。局部文档修订单独完成复审；范围问题提交后按03等负责人裁定。建议保持工作项列表删除范围，把 M6/M7 自身页面的零失败验收正式归回所属里程碑；另一方案是扩大页面收窄范围，撤下依赖未实现接口的领域展示/交互。两方案均未应用，不自行降低完成线、不开始T1。
+**负责人裁定 P10A-S1（2026-10-28）：** 已选择A，保持只删工作项列表的范围，保留领域自身加载；M6/M7自身页面完整可用与零失败验收归回所属里程碑，精确记录未接通请求和可见代价。设计、spec、plan及交接责任已同步，独立定向静态预检通过、无开放发现，证据见上述报告§5；M4页面门禁/守卫不变。本次仍只完成预检，未授权开始T1、不合并准备分支。

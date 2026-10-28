@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层规格
 
-> 状态：准备稿；六项局部问题已独立复审关闭，有条件通过静态依赖预检，尚未实施；P10A-S1 仍阻断整体 P10。P10b 必须在 P10a 合并且准确 main CI 通过之后再记录执行基线、复核漂移；本文不是已完成的产品验收。
+> 状态：准备稿；六项局部问题已独立复审关闭，有条件通过静态依赖预检，尚未实施；P10A-S1 已获负责人A裁定，文档定向复审见P10a review。P10b 必须在 P10a 合并且准确 main CI 通过之后再记录执行基线、复核漂移；本文不是已完成的产品验收。
 
 ## 1. 目标
 
@@ -240,4 +240,4 @@ M6/M7列表不加回，不实现祖先搜索或工作区视图。P9后端删除/
 
 ## 附录 A：准备记录与证据边界
 
-2026-10-28已只读核实设计§3.17/3.22/7/9.5/12、实际schema/HTTP时间字段、列表store/service/挂载、Makefile/package/test设施及关键词解析。盘点原件在仓库根 `.superpowers/sdd/P10-preparation-20261028/code-inventory.md`，与P9旧worktree生命周期无关。未执行生成、安装、原型、产品测试或变异。仅运行Node24语法能力probe：实际v24.15.0的JSON.parse reviver对上述两个大整数返回原token，转BigInt后exact=true；这只证明fixture无损读取方式，不是产品比较器通过。所有产品命令和目标测试是未来实施步骤。本轮首审提出六项Local文档问题，本修订逐项补齐规则/反例，原审者已确认六项文档层关闭，见[review](../reviews/P10b-web-list-data-review.md)；不把作者自查当独立结论，也不把文档通过当产品验证。P10a-S1跨模块页面验收冲突仍待负责人裁定，全P10不标Approved。P10a合并后还需执行前复核，并由负责人授权开始。
+2026-10-28已只读核实设计§3.17/3.22/7/9.5/12、实际schema/HTTP时间字段、列表store/service/挂载、Makefile/package/test设施及关键词解析。盘点原件在仓库根 `.superpowers/sdd/P10-preparation-20261028/code-inventory.md`，与P9旧worktree生命周期无关。未执行生成、安装、原型、产品测试或变异。仅运行Node24语法能力probe：实际v24.15.0的JSON.parse reviver对上述两个大整数返回原token，转BigInt后exact=true；这只证明fixture无损读取方式，不是产品比较器通过。所有产品命令和目标测试是未来实施步骤。本轮首审提出六项Local文档问题，本修订逐项补齐规则/反例，原审者已确认六项文档层关闭，见[review](../reviews/P10b-web-list-data-review.md)；不把作者自查当独立结论，也不把文档通过当产品验证。P10A-S1已获负责人A裁定，验收归属同步后的定向复审见P10a review；当前仍不实施。P10a合并后还需执行前复核，并由负责人授权开始。
