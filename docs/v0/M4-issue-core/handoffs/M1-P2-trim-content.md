@@ -65,3 +65,15 @@ M4 合并时：
 T12/T14已以真实HTTP/生成客户端验证issue-search返回完整Issue的{data:[]}且不含page/total/next_cursor；I18覆盖空词/数字/Unicode/中文/选择器/OwnOnly与日期，搜索只查标题和编号，不搜索description_stripped。保存/发布结构与HTML清洗沿唯一创建核心，草稿保存不作创建语义。此回执只承接搜索无page子项；P14撤销再重做/isMigrationUpdate、P15页面及原文其他输入不关闭，顶部status保持open。
 
 准确产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`，首次整审 `166b9efd..10f44790`；[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)列A条款/真实RUN/变异恢复/四次七门禁及准确产品checkpoint CI，[整体审核](../../../reviews/re-07-M4P8整体审核.md)列三镜头/186文件覆盖与历史D1。文档增量独评及最终准确HEAD CI由后续提交和ignored收据追踪，未合并、不清理；不以本期子项已处理改写历史关闭条件或M4整体状态。
+
+
+## 处理结果（M4/P10a，2026-10-28）
+
+普通工作项布局/详情/表单中越界字段读取已按T4–T6收窄，核心实体直接使用生成Issue/IssueDetail；estimate_point布局读取已删除，description_binary在本期开始即无前端读写命中，不把已有零命中伪造为本期删除。描述只从真实Detail读取，Issue后到保留已知HTML，真实空串有效；clone来源和局部表单不再附着完整实体。证据见[P10a实施记录](../reviews/P10a-web-issue-types-review.md)。
+
+旧描述更新仍使用独立request输入保存现有string skip_activity，flag在进入canonical/局部实体/分组/回滚前分离；absence rollback与accept单HTML保留已由T5及T6生成合同回归核。它不等于P4 boolean新API已在页面接通：M4在P10b/P11实际接新强类型API时同步必要boolean合同，不能为等P14保留string兼容层。P14原撤销再重做/isMigrationUpdate页面性质验收保持；M7收集箱旧路径until M7。输入整体关闭条件仍待M4收尾核，status保持open。
+
+本期Task级完成至T8提交8081112492a2fc744a43b3e814c6d36ff4ba3959；A-01/A-02代码终审修复已独评并提交5f7085bce4aa5103a0133fa982847d274efa6e47；文稿最后独评已通过，最终交付HEAD分支CI待提交后核验，准确产品5f708 CI已核成功见review§8，不把本段子项写成M4最终交付或集成。
+
+
+整审A-01无消费者子项两域预取与A-02退休列表独占乐观分布链已根因清理并独评；未改会话/资源/领域协议，真实目录/统计/进度保留，不扩大本输入其余关闭范围。

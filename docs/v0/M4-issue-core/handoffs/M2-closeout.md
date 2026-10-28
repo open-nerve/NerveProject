@@ -184,3 +184,15 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 §2游标、§3updated_at、§4请求体/草稿、§7–12编辑器/CSP/主题/下拉/复制/会话与§13时钟继续按历史回执/所属阶段追踪，不能因本表全关。
 
 证据：[P9 review](../reviews/P9-purge-review.md)及[spec §7/附录D](../specs/P9-purge.md)；最终产品 `e003e96625ba51264d3aeb77729729d53a770103`。最终F/准确分支CI、T16文档独评在review分别列明。本文件 `status: open` 保持到M4收尾，历史原文/先前回执保留；不因P9后端承接关闭整份交接。
+
+
+## 处理结果（M4/P10a，2026-10-28）
+
+第12节本期子项：核心已直接采用生成Issue/IssueDetail，nullable actor/parent、真实Detail描述与局部表单/请求边界准确化；四类列表/筛选根和部分无读者路由/目录镜像、方法/状态已删除。T7删除部分自读autorun镜像不等于IssueRootStore会话治理整项完成；剩余autorun严格模式历史输出继续保留，未关闭store-context警告性质线。
+
+P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR loginId；P11及P12–P15依设计分配迁模块级service、profile旧接口及各页面。T5/R15新增资源拒绝由真实Base错误/重试和关闭/换来源ownership闭合，只覆盖新增链，不代表所有拒绝/会话性质已验。证据与明确余项见[P10a移交](../reviews/P10a-web-issue-types-review.md#6-移交事项)，顶层status保持open。
+
+本期Task级完成至T8提交8081112492a2fc744a43b3e814c6d36ff4ba3959；A-01/A-02代码终审修复已独评并提交5f7085bce4aa5103a0133fa982847d274efa6e47；文稿最后独评已通过，最终交付HEAD分支CI待提交后核验，准确产品5f708 CI已核成功见review§8，不把本段子项写成M4最终交付或集成。
+
+
+整审A-01无消费者子项两域预取与A-02退休列表独占乐观分布链已根因清理并独评；未改会话/资源/领域协议，真实目录/统计/进度保留，不扩大本输入其余关闭范围。

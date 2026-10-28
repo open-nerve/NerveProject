@@ -4,13 +4,13 @@
 |---|---|
 | Phase | M4/P10a `web-issue-types`，设计已批准的 P10 第一段，9 Task |
 | 日期 | 2026-10-28 |
-| 状态 | 负责人已裁定 P10A-S1 采用 A；验收归属已同步并通过独立定向静态预检，无开放发现；负责人已授权按通过预检的 spec/plan 实施，当前推进 T1 |
+| 状态 | 负责人已裁定 P10A-S1 采用 A；验收归属已同步并通过独立定向静态预检，无开放发现；负责人已授权实施；实施与终审完成、集成待办；最终文稿提交后准确HEAD CI以交付回执核验；最后产品5f7085bce4aa5103a0133fa982847d274efa6e47 |
 | 代码基线 | P9 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`；准确 main CI 与归档清理以 P9 review 集成回执为准 |
 | 分支 | `codex/m4-p10a`；`.codex/worktress/codex/m4-p10a`；主目录 HEAD 保持 main |
 | 输入 | [M4 设计](../M4-design.md) §3.1/3.2、7.1–7.9、9.5/9.6、12/P10a、13.1/13.2、16、17.2/I7、17.3/M7；[02](../../claude_to_gpt/02-method.md)、[03](../../claude_to_gpt/03-rules-and-pitfalls.md) |
 | 计划与评审 | [plan](../plans/P10a-web-issue-types.md)、[review](../reviews/P10a-web-issue-types-review.md)；后续 [P10b spec](P10b-web-list-data.md) |
 
-准备期未运行完整原型、未逐任务重放、未开始 T1；这是历史边界。2026-10-28 负责人已授权按通过预检的 spec/plan 实施 P10a，当前从 T1 开始逐任务执行，尚未完成本阶段验收。以下新增符号和文件都是实施目标，不代表已经存在。已批准的 P10a/P10b 拆分保持：先删除新实体没有的读取，再机械换型；P10b 接列表数据层，P11 接详情数据层。
+准备期未运行完整原型、未逐任务重放、未开始 T1；这是历史边界。2026-10-28 负责人已授权按通过预检的 spec/plan 实施 P10a，T1–T8已实施并独评提交，真实证据见[phase review](../reviews/P10a-web-issue-types-review.md)，A-01/A-02已修复独立复审并提交5f7085bc，代码终审完成；最后文稿独评已通过，最终交付HEAD CI待提交后核验；以下合同的产品子项已由对应Task落地，最终阶段/集成完成线仍以§4为准。已批准的 P10a/P10b 拆分保持：先删除新实体没有的读取，再机械换型；P10b 接列表数据层，P11 接详情数据层。
 
 ## 1. 目标
 
@@ -61,7 +61,7 @@ accept入库以完整response.issue为底，只在响应缺description_html且�
 
 `TIssuesResponse` 在 P10a 仍保留旧容器形状，仅其行换为 `Issue`；完整容器迁移归 P10b。评论、关联等其他 DTO 名称留 P11。工作项 map 的类型直接 Record，不导出“新 TIssueMap”别名。
 
-tempId 有活写者：createIssuePayload→quick-add→BaseIssuesStore.issueQuickAdd；输入缺 Issue 必填事实，不能迁走标记后继续断言为完整实体。采用 root 局部裁定 R8：quick-add 保留真实 RHF 输入，在创建入口展示等待预览、禁用输入与 Promise toast；服务响应前不写 canonical/groupedIssueIds/正式计数，成功仅由既有 create store 路径写入一次。失败不 reset；同步 ref 阻重复请求，独立 pending state 归首请求所有，第二次 handleSubmit 的完成不得释放等待或关闭 guard。入口按 workspace/project 的 key 隔离；旧请求结算/卸载不清空新入口，不将 A 响应插入 B 分组。ProjectIssues 以 super.createIssue(..., "", false) 保存真实 canonical 响应，await 后核当前 workspace/project 再 addIssueToList 一次。不实现全局 pending 引擎。
+实施前 tempId 曾有活写者：createIssuePayload→quick-add→BaseIssuesStore.issueQuickAdd；输入缺 Issue 必填事实，不能迁走标记后继续断言为完整实体。采用 root 局部裁定 R8：quick-add 保留真实 RHF 输入，在创建入口展示等待预览、禁用输入与 Promise toast；服务响应前不写 canonical/groupedIssueIds/正式计数，成功仅由既有 create store 路径写入一次。失败不 reset；同步 ref 阻重复请求，独立 pending state 归首请求所有，第二次 handleSubmit 的完成不得释放等待或关闭 guard。入口按 workspace/project 的 key 隔离；旧请求结算/卸载不清空新入口，不将 A 响应插入 B 分组。ProjectIssues 以 super.createIssue(..., "", false) 保存真实 canonical 响应，await 后核当前 workspace/project 再 addIssueToList 一次。不实现全局 pending 引擎。R8已于T4落地，准确提交、独评及证据限制见[稳定证据](../reviews/P10a-web-issue-types-review.md#t4-r8-evidence)。
 
 `sourceIssueId/state__group` 是旧前端附加值，不属于新实体。克隆来源改为表单/弹窗的独立 `sourceIssueId?: string` prop 或局部状态，不能进入生成实体或 HTTP 载荷；状态组从现有状态目录取。草稿场景继续由现有显式草稿上下文表达，不在 Issue 上恢复 is_draft。新的本地表单类型只声明表单实际数据，不建立全体 Plane 字段兼容层。
 
@@ -106,10 +106,12 @@ T8 在实际进入目标页面（而非权限重定向）前启用原 `watchPage
 | 项目视图详情，合法项目成员，含不存在 viewId | `/projects/{project}/views/{view}/` | M7 接通项目视图时 |
 | 已归档迭代 / 模块目录，项目参数有效 | `/projects/{project}/archived-cycles/`、`/projects/{project}/archived-modules/` | M6 接通各归档目录时 |
 | 迭代自身详情，原列表 `fetchParentStats` 的领域加载迁出后 | `/projects/{project}/cycles/{cycle}/` | M6 接通迭代页面时 |
-| 有效迭代详情的统计 / 进度 | `/projects/{project}/cycles/{cycle}/analytics?type=issues`、`/projects/{project}/cycles/{cycle}/progress/` | M6 接通迭代页面时 |
+| 有效迭代详情的统计 / 进度 | `/projects/{project}/cycles/{cycle}/analytics/?type=issues`、`/projects/{project}/cycles/{cycle}/progress/` | M6 接通迭代页面时 |
 | 工作区视图目录（原 root 只要 slug 即加载，含默认页）；自定义视图名称 / 详情依赖它 | `/views/` | M7 接通工作区视图时 |
 
 当前 Nerve 旧 `/api/` 路由由 fallback 回答 404；实施时仍记录实际状态，不能将 500、无响应或其它未知错误自动归为本项。`watchPage.apiRequests` 仅保留 pathname，查询串须从 requestUrls 或单独原始请求记录核对，不能丢掉 analytics 的 `type=issues`。本表不改变 §2.3 的类型过渡和关键词例外到期账。 cycle/module的列表 `user-properties/`、active-cycle issue列表、transfer及已删detail动作也不得收入自身账；实施按完整调用链列反向清单，这些只是已知例子。 归属还须按调用者核：旧 cycle/module/project-view 工作项列表共用 `IssueService.getIssues` 的 `/projects/{project}/issues/`、`issues-detail/` 及 `v2/issues/`，workspace列表还有工作区级 `issues/`、`issues-detail/`，不能只找带 cycle/module 的URL；project-view旧筛选与保留详情页会共用 `/views/{view}/`，必须有静态引用、真实组件调用来源和次数证据证明已删读者消失，不能只按URL留账。工作区 `/views/{view}/` 原仅供已删筛选读取，不能自动列为保留领域请求；如迁移领域加载确需采用它，须记录真实读者和理由后精确核对。
+
+T8已按上述边界完成Task级验证：原S2四身份10/10、真实六入口6/6；最终r1正常矩阵75条API为69父200与6自身404。八项最低清单中analytics/progress没有有效实体页面网络，只有真实组件/store及service传输边界证据；两归档404后持续loader、feature tabs默认不显示等限制保留。完整method/URL/query/次数/状态/调用者与原件身份见[review §6](../reviews/P10a-web-issue-types-review.md#6-移交事项)，原静态表不冒充实际网络。T8全suite23段stderr中的新增5段为合法fixture暴露的既有生产缺陷，最后修复F6仍23段且归一body无增删，P10b/M6责任见review§7，不称无害或pristine。
 
 ### 2.5 尺寸与现有大文件
 
@@ -132,17 +134,20 @@ quick-add/root 仅增加有限局部生命周期/反馈（约 400 行内），�
 
 ## 4. 验收标准
 
-下列全部为未来产品完成线，准备阶段不打勾。
+下列按Task级产品、阶段终审和未来集成分别记录。T1–T8产品证据与源桥见[review §2/§8](../reviews/P10a-web-issue-types-review.md#2-验收标准核对)；文档独评、整审及准确最终HEAD CI未完成项不勾，集成仍需另授权。
 
-- [ ] T1–T8 每个 Task 结束类型检查通过，生成物由生成器产出且幂等；没有新未批准依赖。
-- [ ] TIssue/TBaseIssue/TIssueMap 的定义、导入、使用、注释引用在 web 中消失；核心实体直接用 Issue/IssueDetail；没有复制兼容 DTO 或 unsafe 双断言。
-- [ ] 四类列表根、页面列表挂载、12 个 issue/filter/index 文件、三旧 service 列表方法、四 EIssuesStoreType 值/分支和独占共用组件均删除，合法其他消费者仍可用。
-- [ ] 不再读取新 Issue 没有的 M5/M6/M7 字段；created_by_id/updated_by_id/null、Detail 描述和独立 UI 状态正确。
-- [ ] T6 描述保留/可空字段回归及相关现有 Vitest 通过；T7 old-issue-urls 精确例外/样例有效；knip无死导出/依赖，改到文件的死成员/警告处理有记录。
-- [ ] S2 四角色保持现有请求/控制台断言通过；六类受影响入口的工作项列表、独占操作及其旧请求已移除，保留领域内容/加载边界有组件回归；领域自身未接通请求按 §2.4 精确登记并交 M6/M7，原始失败证据保留，未把拆除边界通过写成整页零失败。
-- [ ] 前端改动清单和 M6/M7 恢复列表/收集箱参数移交明确；P10b/P11旧service到期账精确；输入handoff总状态保持open。
-- [ ] 最终完整本地七门禁在准确提交通过，记录原件/退出码/计数/skip/cache；准确最终分支CI全绿；deep-review整分支覆盖逻辑、集成、测试并完成修复复审。
+- [x] T1–T8 每个 Task 结束类型检查通过，生成物由生成器产出且幂等；没有新未批准依赖。
+- [x] TIssue/TBaseIssue/TIssueMap 的定义、导入、使用、注释引用在 web 中消失；核心实体直接用 Issue/IssueDetail；没有复制兼容 DTO 或 unsafe 双断言。
+- [x] 四类列表根、页面列表挂载、12 个 issue/filter/index 文件、三旧 service 列表方法、四 EIssuesStoreType 值/分支和独占共用组件均删除，合法其他消费者仍可用。
+- [x] 不再读取新 Issue 没有的 M5/M6/M7 字段；created_by_id/updated_by_id/null、Detail 描述和独立 UI 状态正确。
+- [x] T6 描述保留/可空字段回归及相关现有 Vitest 通过；T7 old-issue-urls 精确例外/样例有效；knip无死导出/依赖，改到文件的死成员/警告处理有记录。
+- [x] S2 四角色保持现有请求/控制台断言通过；六类受影响入口的工作项列表、独占操作及其旧请求已移除，保留领域内容/加载边界有组件回归；领域自身未接通请求按 §2.4 精确登记并交 M6/M7，原始失败证据保留，未把拆除边界通过写成整页零失败。
+- [x] 前端改动清单和 M6/M7 恢复列表/收集箱参数移交明确；P10b/P11旧service到期账精确；输入handoff总状态保持open。
+- [x] 产品完成线（原第8项已发生部分）：最后完整本地七门禁及准确六web差异桥通过，原件/退出码/计数/skip/cache齐备；整分支代码deep-review与A-01/A-02修复复审完成；准确产品5f7085bce4aa5103a0133fa982847d274efa6e47 CI run40712479050 attempt1三job全绿。
+- [x] 文稿复审完成线（原第8项文稿子条件）：C-r1-01已修并经C-r2复审ADDRESSED/Approved、无新增；具名回执见review§10。
+- [ ] 最终交付完成线（原第8项提交后余项）：最终文稿提交后由root核准确交付HEAD CI全部success并生成X/final-delivery-receipt.json（未来归档）。本文提交时该事件尚未发生；是否满足交付门禁以提交后准确回执为准，不预填未来SHA或成功，必须等最终文稿HEAD CI全绿后才结束任务。
 - [ ] 获本阶段明确集成授权后 --no-ff 合并；准确main CI全绿、证据归档逐hash核验后清理。实施授权不包含集成，不因这行自行合并。
+
 
 ## 5. 不在本段与后续接手
 
@@ -152,7 +157,7 @@ quick-add/root 仅增加有限局部生命周期/反馈（约 400 行内），�
 | P11 | 详情DTO/service/store、JSONContent/comment_json/is_bot、模块级实例、按需拒绝/标签create/弹窗宿主；结束§2.3其他M4旧service |
 | P12–P15 | 列表/看板/日历新故事、筛选/归档/个人、详情/创建/父子/关联、协作/草稿/搜索；C1–C11分配照设计 |
 | P16 | 死成员终态、全仓no-shadow、关键词终态、剩余getTabIndex/projectMemberIds消费者 |
-| M5/M6/M7 | 新字段随本模块真实数据恢复；M6迭代/模块和M7视图列表在新引擎重建；M6/M7分别接 §2.4 自身页面完整可用/零失败验收及精确未接通请求清单，接通时替换旧接口、删除过渡记录并核真实有效实体；M7收集箱Partial<Issue>旧参数过渡到期 |
+| M5/M6/M7 | 新字段随本模块真实数据恢复；M6在新引擎重建迭代/模块列表，M7重建项目/工作区视图列表；M6/M7接[phase review §6](../reviews/P10a-web-issue-types-review.md#6-移交事项)的实际逐请求记录和领域自身完整可用/整页零失败责任，接通时替换旧接口、删除过渡记录，并以真实有效实体核详情/统计/目录。收集箱create描述输入为`Partial<IssueDetail>`，嵌套响应为`Issue \| IssueDetail`；updateIssue使用独立旧更新请求输入`Partial<IssueDetail> & { skip_activity?: string }`，metadata update仍所属DTO。请求flag不进入canonical/局部实体/分组/回滚；T5运行边界与T6生成合同回归已完成，旧body/string值与旧路径until M7保持，M7接自身接口时删除过渡及最后旧request type。 |
 | M4收尾/M8 | 所有输入status关闭、M5–M8四份M4-closeout、总体§9.4、M4§14、C12与完整性能/部署 |
 
 本段不重写后端、不加接口或依赖、不把P9清理/事件再实现、不放宽架构守卫，不改 plane/、refer/、现有Docker。
@@ -171,9 +176,11 @@ quick-add/root 仅增加有限局部生命周期/反馈（约 400 行内），�
 
 P1a–P4的§5/评审§6已交付的Issue/Detail、nullable creator、parent遮挡、描述语义作为合同使用，不重做后端；P5/P8留给P10b的生产码点比较器、共享issue-order.json和当前21码本段不提前关闭。P6/P7/P9无新增P10a后端责任。
 
-M1-P2/平台删字段输入在本段关闭“前端不再读取”子项；M1-closeout的死成员/prop/oxlint按实际改到文件记录；M2§12、M3§5/6的会话/列表/旧preferences主要在P10b和后续，本段不声称整项关闭。M6/M7列表恢复、自身页面验收及逐请求过渡记录、收集箱参数过渡写进本段review§6与设计§13.2，最终handoffs/M4-closeout.md由M4收尾统一创建；本次只登记责任，不提前关闭输入handoff或创建最终交接。
+M1-P2/M1-P3的核心字段与前端读取子项、M1-closeout本期死成员/prop/警告处理、M2§12和M3§5/6本期局部收窄已按事实写入各输入的“处理结果（M4/P10a）”，证据与余项见phase review。旧M4 service与请求按§2.3到期；M6/M7列表恢复、自身页面验收、实际逐请求记录与收集箱准确输入/响应/旧stringflag边界写入review§6和设计§13.2。P10b会话/列表、P11详情及后续页面仍开放；五份输入顶层status保持open，最终M5–M8 M4-closeout由M4收尾统一创建，本期不预建。
 
 ## 附录 A：准备验证（2026-10-28）
+
+以下为准备期历史快照；“未做”只指当时，实施证据见phase review，不倒改历史。
 
 已做：阅读上级设计、前序spec§5/review§6和M0–M3交接；只读盘点当前生成类型、消费者、store/service、关键词解析和测试入口。未做：原型、逐Task重放、产品测试、运行变异、P10a实施、P10a合并。静态预检结论及修订轮次以本段review/独立预检报告填写，作者不预填通过。
 
@@ -181,203 +188,222 @@ P9 main CI 是基线事实，由P9集成回执提供；它不能代替P10a行为
 
 ## 附录 B：基线核心类型消费者
 
-T1 在源 HEAD `4569a9e7386031cffb31aa37d6cf06a726b08c2c` 重新运行两条计划原文 `rg -l`：核心类型 132 文件、四 store kind 50 文件，交集 9 文件、并集 173 文件，与预检实数相同；设计旧“131/53”只是历史估计。下表分配每文件的首次收窄/删除任务及剩余 T6 换型责任；属于 T3 的五动作调用链优先在 T3 闭合，不等 T5。清单不是已修改/已完成列表。原始路径、文件 sha256/改前行数、全量 URL 及退出码保存在工作树 `.superpowers/sdd/P10a-web-issue-types/task-1-*`，最终由主控归档。
+T1 在源 HEAD `4569a9e7386031cffb31aa37d6cf06a726b08c2c` 重新运行两条计划原文 `rg -l`：核心类型 132 文件、四 store kind 50 文件，交集 9 文件、并集 173 文件，与预检实数相同；设计旧“131/53”只是历史估计。下表分配每文件的首次收窄/删除任务及剩余 T6 换型责任；属于 T3 的五动作调用链优先在 T3 闭合，不等 T5。原责任列保留准备分工；新增末列逐路径给5f7085bc产品源的实际处置，不将计数差当无遗漏证明。原始路径、文件 sha256/改前行数、全量 URL 及退出码保存在工作树 `.superpowers/sdd/P10a-web-issue-types/task-1-*`，最终由主控归档。
 
 ### B.1 核心类型消费者（132）
 
-| 文件 | T2–T6 责任 |
-|---|---|
-| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/browse/[workItem]/page.tsx` | T6 剩余核心换型 |
-| `web/apps/web/core/components/browse/workItem-detail.tsx` | T6 剩余核心换型 |
-| `web/apps/web/core/components/inbox/content/issue-properties.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/inbox/content/issue-root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/inbox/modals/create-modal/create-root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/inbox/modals/create-modal/issue-description.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/inbox/modals/create-modal/issue-properties.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/inbox/modals/create-modal/issue-title.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/inbox/modals/decline-issue-modal.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/inbox/modals/delete-issue-modal.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/archive-issue-modal.tsx` | T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/delete-issue-modal.tsx` | T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail-widgets/issue-detail-widget-modals.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail-widgets/relations/content.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail-widgets/relations/helper.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/content.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/issues-list/list-group.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/issues-list/list-item.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/issues-list/properties.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/issues-list/root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/quick-action-button.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail/label/root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail/parent/root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail/parent/siblings.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-detail/root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/calendar/calendar.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/calendar/day-tile.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/calendar/issue-block.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/calendar/issue-blocks.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/calendar/quick-add-issue-actions.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/calendar/utils.ts` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/calendar/week-days.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/kanban/block.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/kanban/blocks-list.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/kanban/default.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/kanban/headers/group-by-card.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/kanban/kanban-group.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/kanban/swimlanes.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/list/block-root.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/list/block.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/list/blocks-list.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/list/default.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/list/headers/group-by-card.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/list/list-group.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/list/list-view-types.d.ts` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/properties/all-properties.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/helper.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/project-issue.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/quick-add/form/root.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/quick-add/root.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/assignee-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/attachment-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/created-on-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/cycle-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/due-date-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/label-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/link-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/module-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/priority-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/start-date-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/state-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/sub-issue-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/updated-on-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/issue-column.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/issue-row.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/spreadsheet-table.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/spreadsheet-view.tsx` | T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/utils.tsx` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-modal/base.tsx` | T3 枚举分支闭合；T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-modal/components/default-properties.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-modal/components/description-editor.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-modal/components/parent-tag.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-modal/components/project-select.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-modal/components/title-input.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-modal/draft-issue-layout.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-modal/form.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-modal/modal.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/peek-overview/root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/preview-card/root.tsx` | T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/relations/issue-list-item.tsx` | T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/relations/issue-list.tsx` | T6 剩余核心换型 |
-| `web/apps/web/core/components/modals/work-item-level.tsx` | T6 剩余核心换型 |
-| `web/apps/web/core/components/navigation/use-active-tab.ts` | T6 剩余核心换型 |
-| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/cycles-menu.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/labels-menu.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/modules-menu.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/priorities-menu.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/states-menu.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/workspace/sidebar/quick-actions.tsx` | T6 剩余核心换型 |
-| `web/apps/web/core/hooks/store/use-issues.ts` | T3 枚举分支闭合；T6 剩余核心换型 |
-| `web/apps/web/core/hooks/use-group-dragndrop.ts` | T3 枚举分支闭合；T6 剩余核心换型 |
-| `web/apps/web/core/hooks/use-issue-peek-overview-redirection.tsx` | T6 剩余核心换型 |
-| `web/apps/web/core/hooks/use-issues-actions.tsx` | T3 枚举分支闭合；T6 剩余核心换型 |
-| `web/apps/web/core/services/inbox/inbox-issue.service.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/services/issue/issue.service.ts` | T6 剩余核心换型 |
-| `web/apps/web/core/services/issue/issue_archive.service.ts` | T6 剩余核心换型 |
-| `web/apps/web/core/services/issue/issue_relation.service.ts` | T6 剩余核心换型 |
-| `web/apps/web/core/services/issue/workspace_draft.service.ts` | T6 剩余核心换型 |
-| `web/apps/web/core/store/inbox/inbox-issue.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/cycle/issue.store.ts` | T3 删除 |
-| `web/apps/web/core/store/issue/helpers/base-issues-utils.ts` | T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/helpers/base-issues.store.ts` | T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/issue-details/issue.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/issue-details/relation.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/issue-details/root.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/issue-details/sub_issues.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/issue-details/sub_issues_filter.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/issue.store.ts` | T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/module/issue.store.ts` | T3 删除 |
-| `web/apps/web/core/store/issue/profile/issue.store.ts` | T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/project-views/issue.store.ts` | T3 删除 |
-| `web/apps/web/core/store/issue/project/issue.store.ts` | T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/workspace-draft/issue.store.ts` | T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/workspace/issue.store.ts` | T3 删除 |
-| `web/packages/constants/src/issue/common.ts` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 |
-| `web/packages/constants/src/issue/modal.ts` | T4 收窄读取；T6 剩余核心换型 |
-| `web/packages/types/src/inbox.ts` | T6 剩余核心换型 |
-| `web/packages/types/src/issues.ts` | T4 收窄读取；T6 剩余核心换型 |
-| `web/packages/types/src/issues/issue.ts` | T3 删除四枚举定义；T6 删除三核心旧类型 |
-| `web/packages/types/src/issues/issue_relation.ts` | T6 剩余核心换型 |
-| `web/packages/types/src/issues/issue_sub_issues.ts` | T6 剩余核心换型 |
-| `web/packages/types/src/search.ts` | T6 剩余核心换型 |
-| `web/packages/types/src/view-props.ts` | T6 剩余核心换型 |
-| `web/packages/utils/src/distribution-update.ts` | T6 剩余核心换型 |
-| `web/packages/utils/src/progress.test.ts` | T6 剩余核心换型 |
-| `web/packages/utils/src/work-item/base.ts` | T4 收窄读取；T6 剩余核心换型 |
-| `web/packages/utils/src/work-item/modal.ts` | T4 收窄读取；T6 剩余核心换型 |
+| 文件 | T2–T6 责任 | 5f7085bc实际处置 |
+|---|---|---|
+| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/browse/[workItem]/page.tsx` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/browse/workItem-detail.tsx` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/inbox/content/issue-properties.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/inbox/content/issue-root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/inbox/modals/create-modal/create-root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/inbox/modals/create-modal/issue-description.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/inbox/modals/create-modal/issue-properties.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/inbox/modals/create-modal/issue-title.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/inbox/modals/decline-issue-modal.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/inbox/modals/delete-issue-modal.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/archive-issue-modal.tsx` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/delete-issue-modal.tsx` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail-widgets/issue-detail-widget-modals.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail-widgets/relations/content.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail-widgets/relations/helper.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/content.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/issues-list/list-group.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/issues-list/list-item.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/issues-list/properties.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/issues-list/root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/quick-action-button.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | T7删根issue只写输入及直接Issue导入；本地getter推断读者保留 |
+| `web/apps/web/core/components/issues/issue-detail/label/root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail/parent/root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail/parent/siblings.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-detail/root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 删越界详情挂载，描述由facade真实Detail accessor读取，无需直接实体导入 |
+| `web/apps/web/core/components/issues/issue-layouts/calendar/calendar.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/calendar/day-tile.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/calendar/issue-block.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/calendar/issue-blocks.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/calendar/quick-add-issue-actions.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/calendar/utils.ts` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/calendar/week-days.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/kanban/block.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/kanban/blocks-list.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/kanban/default.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/kanban/headers/group-by-card.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/kanban/kanban-group.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/kanban/swimlanes.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/list/block-root.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/list/block.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/list/blocks-list.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/list/default.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/list/headers/group-by-card.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/list/list-group.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/list/list-view-types.d.ts` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/properties/all-properties.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/helper.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/project-issue.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/quick-add/form/root.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/quick-add/root.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/assignee-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/attachment-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/created-on-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/cycle-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/due-date-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/label-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/link-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/module-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/priority-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/start-date-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/state-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/sub-issue-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/updated-on-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/issue-column.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/issue-row.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/spreadsheet-table.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/spreadsheet-view.tsx` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-layouts/utils.tsx` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-modal/base.tsx` | T3 枚举分支闭合；T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-modal/components/default-properties.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 转为真实10字段局部IssueFormValues/props；源类型由issue-modal/types.ts直接Pick生成IssueDetail，不再读旧完整实体 |
+| `web/apps/web/core/components/issues/issue-modal/components/description-editor.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 转为真实10字段局部IssueFormValues/props；源类型由issue-modal/types.ts直接Pick生成IssueDetail，不再读旧完整实体 |
+| `web/apps/web/core/components/issues/issue-modal/components/parent-tag.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 转为真实10字段局部IssueFormValues/props；源类型由issue-modal/types.ts直接Pick生成IssueDetail，不再读旧完整实体 |
+| `web/apps/web/core/components/issues/issue-modal/components/project-select.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 转为真实10字段局部IssueFormValues/props；源类型由issue-modal/types.ts直接Pick生成IssueDetail，不再读旧完整实体 |
+| `web/apps/web/core/components/issues/issue-modal/components/title-input.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 转为真实10字段局部IssueFormValues/props；源类型由issue-modal/types.ts直接Pick生成IssueDetail，不再读旧完整实体 |
+| `web/apps/web/core/components/issues/issue-modal/draft-issue-layout.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 转为真实10字段局部IssueFormValues/props；源类型由issue-modal/types.ts直接Pick生成IssueDetail，不再读旧完整实体 |
+| `web/apps/web/core/components/issues/issue-modal/form.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 转为真实10字段局部IssueFormValues/props；源类型由issue-modal/types.ts直接Pick生成IssueDetail，不再读旧完整实体 |
+| `web/apps/web/core/components/issues/issue-modal/modal.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/peek-overview/root.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 改用facade Detail accessor推断；T7删死remove/archive回调及依赖 |
+| `web/apps/web/core/components/issues/preview-card/root.tsx` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/relations/issue-list-item.tsx` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/relations/issue-list.tsx` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/modals/work-item-level.tsx` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/navigation/use-active-tab.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/cycles-menu.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 删除 |
+| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/labels-menu.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/modules-menu.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 删除 |
+| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/priorities-menu.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/states-menu.tsx` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/workspace/sidebar/quick-actions.tsx` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/hooks/store/use-issues.ts` | T3 枚举分支闭合；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/hooks/use-group-dragndrop.ts` | T3 枚举分支闭合；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/hooks/use-issue-peek-overview-redirection.tsx` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/hooks/use-issues-actions.tsx` | T3 枚举分支闭合；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/services/inbox/inbox-issue.service.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/services/issue/issue.service.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/services/issue/issue_archive.service.ts` | T6 剩余核心换型 | T7删无读者retrieveArchivedIssue及失用IssueDetail导入；其余旧归档方法按P10b/M4/P11过渡，不声称新接口已接 |
+| `web/apps/web/core/services/issue/issue_relation.service.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/services/issue/workspace_draft.service.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/inbox/inbox-issue.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/cycle/issue.store.ts` | T3 删除 | 删除 |
+| `web/apps/web/core/store/issue/helpers/base-issues-utils.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/helpers/base-issues.store.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/issue-details/issue.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/issue-details/relation.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/issue-details/root.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/issue-details/sub_issues.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/issue-details/sub_issues_filter.store.ts` | T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/issue.store.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/module/issue.store.ts` | T3 删除 | 删除 |
+| `web/apps/web/core/store/issue/profile/issue.store.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/project-views/issue.store.ts` | T3 删除 | 删除 |
+| `web/apps/web/core/store/issue/project/issue.store.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/workspace-draft/issue.store.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/workspace/issue.store.ts` | T3 删除 | 删除 |
+| `web/packages/constants/src/issue/common.ts` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/packages/constants/src/issue/modal.ts` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/packages/types/src/inbox.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/packages/types/src/issues.ts` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/packages/types/src/issues/issue.ts` | T3 删除四枚举定义；T6 删除三核心旧类型 | 直接生成Issue/Detail |
+| `web/packages/types/src/issues/issue_relation.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/packages/types/src/issues/issue_sub_issues.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/packages/types/src/search.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/packages/types/src/view-props.ts` | T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/packages/utils/src/distribution-update.ts` | T6 剩余核心换型 | 整文件删除；A-02本期最后生产读者已删，不能延期M6 |
+| `web/packages/utils/src/progress.test.ts` | T6 剩余核心换型 | A-02删六个死optimistic测试及专属Issue fixture/import；保留calculateCycleProgress七测，无完整Issue输入 |
+| `web/packages/utils/src/work-item/base.ts` | T4 收窄读取；T6 剩余核心换型 | 删临时createIssuePayload；保留日期/显示/链接等通用工具，无完整实体输入 |
+| `web/packages/utils/src/work-item/modal.ts` | T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
 
 ### B.2 四 store kind 消费者（50）
 
-| 文件 | T2–T6 责任 |
-|---|---|
-| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/[cycleId]/page.tsx` | T2 拆列表挂载；T3 枚举闭合 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx` | T3 枚举分支闭合 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/mobile-header.tsx` | T3 枚举分支闭合 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/[moduleId]/page.tsx` | T2 拆列表挂载；T3 枚举闭合 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx` | T3 枚举分支闭合 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/mobile-header.tsx` | T3 枚举分支闭合 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/views/(detail)/[viewId]/header.tsx` | T3 枚举分支闭合 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/workspace-views/header.tsx` | T3 枚举分支闭合 |
-| `web/apps/web/core/components/cycles/active-cycle/cycle-stats.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/cycles/active-cycle/use-cycles-details.ts` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/cycles/progress-sidebar/issue-progress.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/cycles/transfer-issues-modal.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/calendar/base-calendar-root.tsx` | T3 枚举分支闭合；T4 收窄读取 |
-| `web/apps/web/core/components/issues/issue-layouts/calendar/roots/cycle-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/calendar/roots/module-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/empty-states/cycle.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/empty-states/index.tsx` | T3 枚举分支闭合；T4 收窄读取 |
-| `web/apps/web/core/components/issues/issue-layouts/empty-states/module.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/empty-states/project-view.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/kanban/base-kanban-root.tsx` | T3 枚举分支闭合；T4 收窄读取 |
-| `web/apps/web/core/components/issues/issue-layouts/kanban/roots/cycle-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/kanban/roots/module-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/list/base-list-root.tsx` | T3 枚举分支闭合；T4 收窄读取 |
-| `web/apps/web/core/components/issues/issue-layouts/list/roots/cycle-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/list/roots/module-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/roots/all-issue-layout-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/roots/cycle-layout-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/roots/module-layout-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/roots/project-view-layout-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/base-spreadsheet-root.tsx` | T3 枚举分支闭合；T4 收窄读取 |
-| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/roots/workspace-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/issues/issue-layouts/utils.tsx` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 |
-| `web/apps/web/core/components/issues/issue-modal/base.tsx` | T3 枚举分支闭合；T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 |
-| `web/apps/web/core/components/modules/progress-sidebar/issue-progress.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 |
-| `web/apps/web/core/components/views/form.tsx` | T3 枚举分支闭合 |
-| `web/apps/web/core/components/views/modal.tsx` | T3 枚举分支闭合 |
-| `web/apps/web/core/components/workspace/views/form.tsx` | T3 枚举分支闭合 |
-| `web/apps/web/core/components/workspace/views/modal.tsx` | T3 枚举分支闭合 |
-| `web/apps/web/core/hooks/store/use-issues.ts` | T3 枚举分支闭合；T6 剩余核心换型 |
-| `web/apps/web/core/hooks/use-group-dragndrop.ts` | T3 枚举分支闭合；T6 剩余核心换型 |
-| `web/apps/web/core/hooks/use-issue-layout-store.ts` | T3 枚举分支闭合 |
-| `web/apps/web/core/hooks/use-issues-actions.tsx` | T3 枚举分支闭合；T6 剩余核心换型 |
-| `web/apps/web/core/store/issue/cycle/filter.store.ts` | T3 删除 |
-| `web/apps/web/core/store/issue/module/filter.store.ts` | T3 删除 |
-| `web/apps/web/core/store/issue/project-views/filter.store.ts` | T3 删除 |
-| `web/apps/web/core/store/issue/workspace/filter.store.ts` | T3 删除 |
-| `web/packages/constants/src/issue/common.ts` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 |
+| 文件 | T2–T6 责任 | 5f7085bc实际处置 |
+|---|---|---|
+| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/[cycleId]/page.tsx` | T2 拆列表挂载；T3 枚举闭合 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx` | T3 枚举分支闭合 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/mobile-header.tsx` | T3 枚举分支闭合 | 删除 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/[moduleId]/page.tsx` | T2 拆列表挂载；T3 枚举闭合 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx` | T3 枚举分支闭合 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/mobile-header.tsx` | T3 枚举分支闭合 | 删除 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/views/(detail)/[viewId]/header.tsx` | T3 枚举分支闭合 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/workspace-views/header.tsx` | T3 枚举分支闭合 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/cycles/active-cycle/cycle-stats.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/cycles/active-cycle/use-cycles-details.ts` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/cycles/progress-sidebar/issue-progress.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/cycles/transfer-issues-modal.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/calendar/base-calendar-root.tsx` | T3 枚举分支闭合；T4 收窄读取 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/issues/issue-layouts/calendar/roots/cycle-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/calendar/roots/module-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/empty-states/cycle.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/empty-states/index.tsx` | T3 枚举分支闭合；T4 收窄读取 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/issues/issue-layouts/empty-states/module.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/empty-states/project-view.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/kanban/base-kanban-root.tsx` | T3 枚举分支闭合；T4 收窄读取 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/issues/issue-layouts/kanban/roots/cycle-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/kanban/roots/module-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/list/base-list-root.tsx` | T3 枚举分支闭合；T4 收窄读取 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/issues/issue-layouts/list/roots/cycle-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/list/roots/module-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/roots/all-issue-layout-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/roots/cycle-layout-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/roots/module-layout-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/roots/project-view-layout-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/base-spreadsheet-root.tsx` | T3 枚举分支闭合；T4 收窄读取 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/issues/issue-layouts/spreadsheet/roots/workspace-root.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 删除 |
+| `web/apps/web/core/components/issues/issue-layouts/utils.tsx` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/issues/issue-modal/base.tsx` | T3 枚举分支闭合；T5 详情/UI收窄（五动作链 T3 前移）；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/components/modules/progress-sidebar/issue-progress.tsx` | T2 拆除/独占组件闭合；剩余枚举引用 T3 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/views/form.tsx` | T3 枚举分支闭合 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/views/modal.tsx` | T3 枚举分支闭合 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/workspace/views/form.tsx` | T3 枚举分支闭合 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/components/workspace/views/modal.tsx` | T3 枚举分支闭合 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/hooks/store/use-issues.ts` | T3 枚举分支闭合；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/hooks/use-group-dragndrop.ts` | T3 枚举分支闭合；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/hooks/use-issue-layout-store.ts` | T3 枚举分支闭合 | 移除旧读取/四枚举分支，合法领域或推断类型读者保留 |
+| `web/apps/web/core/hooks/use-issues-actions.tsx` | T3 枚举分支闭合；T6 剩余核心换型 | 直接生成Issue/Detail |
+| `web/apps/web/core/store/issue/cycle/filter.store.ts` | T3 删除 | 删除 |
+| `web/apps/web/core/store/issue/module/filter.store.ts` | T3 删除 | 删除 |
+| `web/apps/web/core/store/issue/project-views/filter.store.ts` | T3 删除 | 删除 |
+| `web/apps/web/core/store/issue/workspace/filter.store.ts` | T3 删除 | 删除 |
+| `web/packages/constants/src/issue/common.ts` | T3 枚举分支闭合；T4 收窄读取；T6 剩余核心换型 | 直接生成Issue/Detail |
 
 ### B.3 T6实际换型账（基线 bd862bf2）
 
 T6入口直接引用三旧核心名的消费者为118文件（T1原132是历史快照）；当前直接导入生成Issue/Detail共118文件。额外接续无旧名的nested inbox actor、详情main/peek accessor、R10/R15/Base loading/clone/draft payload测试与共享fixture。实际路径逐项及源字节由本地`task-6-consumers.json/md`和最终source manifest绑定；不恢复已删getIssues/retrieveIssues，不混改外层inbox/真实草稿/legacy查询filter键。
+
+
+
+### B.3 最后源集合与补增消费者
+
+最后产品源5f7085bce4aa5103a0133fa982847d274efa6e47：基线核心132逐项为106直接生成、13删除、13局部/推断保留；四kind50为6直接生成、24删除、20保留领域/共享组件，交集9并集173分别为106/34/33。最后114直接生成由106基线及以下8补增路径组成，旧三名/四删除kind全tracked web检索均0。T6旧118与generated118并非同集：peek root去直接导入、canonical测试新增；T7后quick-action-button死输入与archive死retrieve又删两导入，T8无新core导入；整审A-02删除helper、progress.test去专属Issue import，116→114仅此两路径退出，新增0。旧baseline清单不改成当前数量。
+
+| 补增于基线核心集合的直接generated路径 | 来源/用途 |
+|---|---|
+| `web/apps/web/core/components/issues/issue-layouts/quick-add/root.pending.test.tsx` | T4/T5新增真实行为测试、唯一完整测试fixture或局部10字段表单合同，T6机械接生成 |
+| `web/apps/web/core/components/issues/issue-modal/base.loading.test.tsx` | T4/T5新增真实行为测试、唯一完整测试fixture或局部10字段表单合同，T6机械接生成 |
+| `web/apps/web/core/components/issues/issue-modal/types.ts` | T4/T5新增真实行为测试、唯一完整测试fixture或局部10字段表单合同，T6机械接生成 |
+| `web/apps/web/core/store/inbox/inbox-issue.request.test.ts` | T4/T5新增真实行为测试、唯一完整测试fixture或局部10字段表单合同，T6机械接生成 |
+| `web/apps/web/core/store/inbox/project-inbox.store.ts` | T5/T6补充inbox已有嵌套核心消费者 |
+| `web/apps/web/core/store/issue/fake-issues.ts` | T4/T5新增真实行为测试、唯一完整测试fixture或局部10字段表单合同，T6机械接生成 |
+| `web/apps/web/core/store/issue/issue.store.types.test.ts` | T6新增canonical形状/描述/null回归 |
+| `web/apps/web/core/store/issue/project/issue.quick-create.test.ts` | T4/T5新增真实行为测试、唯一完整测试fixture或局部10字段表单合同，T6机械接生成 |
+
+T1核心132到T6旧118的逐路径差异不是删除14：21基线路径先删除/收窄为局部或无实体输入，另7个新增/新识别消费者进入T6；其逐项已在本附录和补增表登记，canonical测试为T6额外新增生成消费者。最后机器账与每路径hash在X/task-9-final-product-inventory.json；旧808库存曾误覆盖、现仅标reconstructed，原bytes/hash不可证明，不能把重建件作为immutable原始证据；C已独立复核808语义及冻结表，详见review§9证据限制。
 
 ## 附录 C：既有大文件的机械改动例外
 
@@ -429,3 +455,25 @@ T1 广义旧地址账冻结 `web/` 中全部 `/api/workspaces/` 字面量：23 �
 | `web/apps/web/core/store/issue/helpers/base-issues.store.ts` | 1274 | 1262 | 删除无消费者成员/类型槽及其登记；不新增协调算法 |
 
 T7 实际八类规则为 12 文件、40 命中、28 个精确 file+match 例外；其中 3 命中为 Base.issueUpdate 的真实 HTTP 测试边界。此数不等同 T1 广义 140 地址；已删附件 `/api/assets/v2/`、cycle-issues、近名 issues-detail 及仍存 `/search/` 均不虚报为八类匹配。类型过渡四文件与完整 URL 命中继续分账。`tools/keywords.mjs` 保持只读。
+
+
+### 最后产品源大文件核对（main4599a9cf → 5f7085bc）
+
+覆盖本期任一端>400行的13个既有生产TS/TSX及守卫配置，含已降限/删除。新唯一生产types.ts33行；A-01新测试129行，其他新测试均<400；锁文件仅R14孤立依赖删除，不当生产算法容量例外。A-02新触及两领域store各删18行，不增加算法；真实统计取数/百分比保留。
+
+| 路径 | main行数 → 最后 | 理由 |
+|---|---:|---|
+| `tools/keywords.json` | 2670 → 2960 | 八类精确守卫及到期例外；R18与A-01仅新增真实测试exactkey，不放宽rule |
+| `web/apps/web/core/components/inbox/content/inbox-issue-header.tsx` | 470 → 470 | 既有文件删除/生成字段/null接续及已批准R8/R10局部边界，后续算法重写留所属Phase |
+| `web/apps/web/core/components/issues/issue-layouts/properties/all-properties.tsx` | 451 → 334 | 既有文件删除/生成字段/null接续及已批准R8/R10局部边界，后续算法重写留所属Phase |
+| `web/apps/web/core/components/issues/issue-layouts/utils.tsx` | 812 → 745 | 既有文件删除/生成字段/null接续及已批准R8/R10局部边界，后续算法重写留所属Phase |
+| `web/apps/web/core/components/issues/issue-modal/form.tsx` | 407 → 416 | 既有文件删除/生成字段/null接续及已批准R8/R10局部边界，后续算法重写留所属Phase |
+| `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts` | 418 → 307 | 既有文件删除/生成字段/null接续及已批准R8/R10局部边界，后续算法重写留所属Phase |
+| `web/apps/web/core/hooks/use-issues-actions.tsx` | 685 → 341 | 既有文件删除/生成字段/null接续及已批准R8/R10局部边界，后续算法重写留所属Phase |
+| `web/apps/web/core/store/cycle.store.ts` | 635 → 617 | A-02仅删无入口updateDistribution wrapper/专属import，领域CRUD/目录/analytics/progress保留 |
+| `web/apps/web/core/store/inbox/project-inbox.store.ts` | 511 → 511 | 既有文件删除/生成字段/null接续及已批准R8/R10局部边界，后续算法重写留所属Phase |
+| `web/apps/web/core/store/issue/cycle/issue.store.ts` | 408 → 删除 | 既有文件删除/生成字段/null接续及已批准R8/R10局部边界，后续算法重写留所属Phase |
+| `web/apps/web/core/store/issue/helpers/base-issues.store.ts` | 1775 → 1262 | 既有文件删除/生成字段/null接续及已批准R8/R10局部边界，后续算法重写留所属Phase |
+| `web/apps/web/core/store/issue/issue-details/root.store.ts` | 412 → 334 | 既有文件删除/生成字段/null接续及已批准R8/R10局部边界，后续算法重写留所属Phase |
+| `web/apps/web/core/store/issue/workspace-draft/issue.store.ts` | 408 → 358 | 既有文件删除/生成字段/null接续及已批准R8/R10局部边界，后续算法重写留所属Phase |
+| `web/apps/web/core/store/module.store.ts` | 570 → 552 | A-02仅删无入口updateDistribution wrapper/专属import，领域CRUD/目录/analytics/progress保留 |

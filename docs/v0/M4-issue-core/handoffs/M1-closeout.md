@@ -59,3 +59,17 @@ M1 结束时 oxlint 警告共 694 个（web 565、editor 65、ui 25、utils 18�
 - 余项：P11起types/services/stores死成员、viewId收窄及各改动文件oxlint清理；P14创建/编辑弹窗isMigrationUpdate与撤销再重做；整个M4的集中规则清零/上限变化留后续及收尾，不因T1五个Editor测试而关闭本交接。
 
 状态保持 `open`；本次仅完成P4接收部分，待M4真正收尾逐项核对关闭条件。证据：[P4 spec §4/§7](../specs/P4-issue-collaboration.md#4-验收标准)、[P4 review §2/§6](../reviews/P4-issue-collaboration-review.md#2-验收标准核对)。
+
+
+## 处理结果（M4/P10a，2026-10-28）
+
+本期按改动文件实际读者闭合死方法/prop及只写依赖；T5删除普通cycle/module最后关系写链、附件/订阅独占链与无读者react-dropzone及孤立锁条目。T7恢复附录A原deadsym/domains/program脚本并逐项核读者，guard最终40命中/12文件/28exactkey；r1剩余225条/59文件候选账分清动态读取、协议方法、DTO/真实接口与合法读者，不把knip绿当全仓零dead。T7检查点prop371/member986/export11；808时T9原脚本371/988/11、227条/60文件为历史检查点；A-02最后全仓371/978/11，改动集合236条/61文件，净删10全局身份、7项属性变化另记，新增纳入cycle12/module3既存领域候选并非新增dead；旧ledger“根issue经spread/模态读取”的理由已明确撤回，根只写槽和两条输入链已删，独立sub-issues/content编辑状态保留。
+
+T7检查点web cap229→219，删除真实warning且无新增suppression/抬cap；editor上传原五字段局部状态已进一步只保留真实progress，未重写M5协议。完整范围、源桥及T9最后产品消费者114/旧名0、大文件表与已完成代码终审（最后文稿独评/最终CI待核）见[P10a实施记录](../reviews/P10a-web-issue-types-review.md)。T8全量23段stderr（原18归一仍在、新archive5段真实既有生产缺陷）的P10b/M6责任及更早旧日志不能逐段比较限制保留，不写输出pristine；测试stderr与oxlint计数分别记录。
+
+P11仍处理JSONContent/comment_json等，P13处理profile view断言，P14处理弹窗isMigrationUpdate与撤销再重做；全仓no-shadow及最终dead/各包上限验收由P16和M4收尾汇总。本期不宣称所有改动文件警告已全为0或整个M4集中规则已清零，顶层status保持open。
+
+本期Task级完成至T8提交8081112492a2fc744a43b3e814c6d36ff4ba3959；A-01/A-02代码终审修复已独评并提交5f7085bce4aa5103a0133fa982847d274efa6e47；文稿最后独评已通过，最终交付HEAD分支CI待提交后核验，准确产品5f708 CI已核成功见review§8，不把本段子项写成M4最终交付或集成。
+
+
+整审A-02经root具名追问base最后生产读者更正为本期缺口，已删distribution全死链、两wrapper/barrel、六死测试/fixture与两独占常量，calculateCycleProgress七测保留，A r2 Approved。当前236候选及15新纳入项逐项见review§9，不称全仓/所有触及文件零dead；原227静态盘点旧inventory误覆盖、原bytes/hash不可证明限制亦在review§9公开，产品/测试/CI raw不受影响。
