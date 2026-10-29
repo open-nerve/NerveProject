@@ -213,40 +213,40 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
   const startDateFilterConfig = useMemo(
     () =>
       getStartDateFilterConfig<TWorkItemFilterProperty>("start_date")({
-        isEnabled: true,
+        isEnabled: isFilterEnabled("start_date"),
         filterIcon: StartDateOutline,
       }),
-    []
+    [isFilterEnabled]
   );
 
   // target date filter config
   const targetDateFilterConfig = useMemo(
     () =>
       getTargetDateFilterConfig<TWorkItemFilterProperty>("target_date")({
-        isEnabled: true,
+        isEnabled: isFilterEnabled("target_date"),
         filterIcon: DueDateOutline,
       }),
-    []
+    [isFilterEnabled]
   );
 
   // created at filter config
   const createdAtFilterConfig = useMemo(
     () =>
       getCreatedAtFilterConfig<TWorkItemFilterProperty>("created_at")({
-        isEnabled: true,
+        isEnabled: isFilterEnabled("created_at"),
         filterIcon: CalendarOutline,
       }),
-    []
+    [isFilterEnabled]
   );
 
   // updated at filter config
   const updatedAtFilterConfig = useMemo(
     () =>
       getUpdatedAtFilterConfig<TWorkItemFilterProperty>("updated_at")({
-        isEnabled: true,
+        isEnabled: isFilterEnabled("updated_at"),
         filterIcon: CalendarOutline,
       }),
-    []
+    [isFilterEnabled]
   );
 
   // project filter config

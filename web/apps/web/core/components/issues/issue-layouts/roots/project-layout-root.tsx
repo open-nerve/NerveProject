@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -20,6 +20,7 @@ import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/f
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
+import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
 import { useProjectPreferencesFollow } from "@/hooks/use-project-preferences-follow";
 import type { TWorkItemFilterExpression } from "@nerve/types";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
@@ -51,14 +52,34 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
   // hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
   const follow = useProjectPreferencesFollow();
+  const { getFilter } = useWorkItemFilters();
+  const applyingConfirmation = useRef(false);
+  const editSequence = useRef(0);
   const updateExpression = useCallback(
     (expression: TWorkItemFilterExpression) => {
-      if (workspaceSlug && projectId)
-        void follow(workspaceSlug, projectId, () =>
-          issuesFilter.updateFilterExpression(workspaceSlug, projectId, expression)
-        );
+      if (applyingConfirmation.current || !workspaceSlug || !projectId) return;
+      const sequence = ++editSequence.current;
+      const filter = getFilter(EIssuesStoreType.PROJECT, projectId);
+      const submitted = JSON.stringify(filter?.expression);
+      void follow(workspaceSlug, projectId, async () => {
+        await issuesFilter.updateFilterExpression(workspaceSlug, projectId, expression);
+        // Capture the entire draft, including unfinished inputs that have not notified a save yet.
+        if (
+          sequence === editSequence.current &&
+          filter &&
+          getFilter(EIssuesStoreType.PROJECT, projectId) === filter &&
+          JSON.stringify(filter.expression) === submitted
+        ) {
+          applyingConfirmation.current = true;
+          try {
+            filter.resetExpression(issuesFilter.getIssueFilters(projectId)?.richFilters ?? {});
+          } finally {
+            applyingConfirmation.current = false;
+          }
+        }
+      });
     },
-    [workspaceSlug, projectId, follow, issuesFilter]
+    [workspaceSlug, projectId, follow, issuesFilter, getFilter]
   );
   // derived values
   const workItemFilters = projectId ? issuesFilter?.getIssueFilters(projectId) : undefined;

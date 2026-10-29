@@ -892,3 +892,31 @@ it.each([false, true])(
     expect(create).toHaveBeenCalledTimes(3);
   }
 );
+
+it.each([2, 3])("newerWholeBeforeOlderWriteAnswerPreservesLatestEvidence version=%s", async (readVersion) => {
+  const root = tab.app.issue;
+  const list = bindingOf("project");
+  const before = { ...issueDetailOf("x"), sort_order: 10, updated_at: version(1) };
+  await load(list, issuePageOf([before]));
+  const write = await requestedIssue(tab.nerve, () => root.updateIssue("x", () => ({ sort_order: 20 })), [
+    "PATCH",
+    "/api/v0/issues/x",
+  ]);
+  const after = { ...before, sort_order: 20, updated_at: version(2) };
+  const latest = { ...after, sort_order: readVersion * 10, updated_at: version(readVersion) };
+  await load(list, issuePageOf([latest]));
+  write.call.answer(json(200, after));
+  await write.promise;
+  expect(root.issues.getIssueById("x")).toEqual(latest);
+  expect(list.value?.total).toBe(1);
+  expect(list.group()).toEqual({
+    total: 1,
+    rows: [{ id: "x", key: latest.sort_order, updatedAt: latest.updated_at }],
+    nextCursor: null,
+    boundary: { id: "x", key: latest.sort_order },
+    cursorBoundary: { id: "x", key: latest.sort_order },
+    stale: false,
+  });
+  expect(root.verification.isUncertain("x")).toBe(false);
+  expect(tab.nerve.calls).toHaveLength(3);
+});

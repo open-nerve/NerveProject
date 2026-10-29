@@ -42,22 +42,24 @@ function covers(read: ReadEvidence, part: PagePart, issue: Issue, context: ListC
     (entry.range.complete || (!!entry.range.upper && compareRows(row, entry.range.upper, order) <= 0))
   );
 }
-/** The original read's three branches, shared by replay and a reset counter. */
+/** The original read's version relation, shared by replay and a reset counter. */
 export function answerTiming(
   read: ReadEvidence,
   change: ConfirmedIssueChange,
   context: ListContext
 ): {
-  phase: "before" | "after" | "unknown";
+  phase: "before" | "after" | "newer" | "unknown";
   inferred: boolean;
 } {
   const rows = read.parts.flatMap((entry) => entry.rows).filter((row) => row.id === change.id);
   if (rows.length)
     return {
       phase:
-        change.after && rows.some((row) => compareIssueTime(row.updatedAt, change.after!.updated_at) >= 0)
-          ? "after"
-          : "before",
+        change.after && rows.some((row) => compareIssueTime(row.updatedAt, change.after!.updated_at) > 0)
+          ? "newer"
+          : change.after && rows.some((row) => compareIssueTime(row.updatedAt, change.after!.updated_at) === 0)
+            ? "after"
+            : "before",
       inferred: false,
     };
   const covered = (issue: Issue) =>
@@ -113,7 +115,7 @@ export function priorRowMembership(
 ): Membership {
   const row = held.rows.find((item) => item.id === change.id);
   if (row)
-    return change.after && compareIssueTime(row.updatedAt, change.after.updated_at) >= 0
+    return change.after && compareIssueTime(row.updatedAt, change.after.updated_at) === 0
       ? issueMembership(change.after, context, ref)
       : true;
   if (held.complete) return false;
@@ -132,7 +134,7 @@ export function priorCounterMembership(
       old:
         fact.updatedAt === null
           ? false
-          : change.after && compareIssueTime(fact.updatedAt, change.after.updated_at) >= 0
+          : change.after && compareIssueTime(fact.updatedAt, change.after.updated_at) === 0
             ? issueMembership(change.after, context, ref)
             : fact.member,
       inferred: false,
@@ -143,7 +145,7 @@ export function priorCounterMembership(
   const timing = answerTiming(source.read, change, context);
   return {
     old:
-      timing.phase === "unknown"
+      timing.phase === "unknown" || timing.phase === "newer"
         ? undefined
         : timing.phase === "after"
           ? issueMembership(change.after, context, ref)
@@ -172,4 +174,16 @@ export function pageEvidence(answer: PageAnswer): ReadEvidence {
       return { part, rows, range: answer.read.ranges.get(JSON.stringify([part.group, part.subgroup]))! };
     }),
   };
+}
+
+/** A strictly later fact supersedes this operation only for this counter's own source. */
+export function counterSupersedes(source: CounterEvidence, change: ConfirmedIssueChange): boolean {
+  if (!change.after) return false;
+  const newer = (version: string) => compareIssueTime(version, change.after!.updated_at) > 0;
+  const fact = source.confirmed.get(change.id);
+  return Boolean(
+    (fact?.updatedAt && newer(fact.updatedAt)) ||
+    source.held.rows.some((row) => row.id === change.id && newer(row.updatedAt)) ||
+    source.read?.parts.some((entry) => entry.rows.some((row) => row.id === change.id && newer(row.updatedAt)))
+  );
 }

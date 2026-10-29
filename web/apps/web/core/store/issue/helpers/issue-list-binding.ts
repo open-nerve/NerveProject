@@ -26,6 +26,8 @@ import type { IIssueRootStore, IssueWriteScope } from "../root.store";
 export type IssueListScope =
   | {
       scope: "project";
+      /** Proven empty date intersection; never a server query term or read answer. */
+      empty?: boolean;
       workspaceSlug: string;
       workspaceID: string;
       projectID: string;
@@ -283,6 +285,18 @@ export class IssueListBinding {
     refreshing?: VerificationRound
   ): Promise<PagedGroups | undefined> {
     this.root.assertActive();
+    if (this.scope.scope === "project" && this.scope.empty) {
+      // This is a synchronous logical result, not a server read: no token/source/answer is minted.
+      if (!this.allowsRole(this.scopeRole())) return undefined;
+      this.reconciled.invalidate();
+      const value: PagedGroups = { total: 0, groups: new Map() };
+      runInAction(() => {
+        this.reconciled.value = value;
+        this.permissionStale = false;
+        this.error = undefined;
+      });
+      return value;
+    }
     const projectIDs = this.scope.scope === "project" ? [this.scope.projectID] : (this.scope.query.project_id ?? []);
     const identity = this.root.permissionReads.identity(
       this.scope.workspaceID,
@@ -389,7 +403,7 @@ export class IssueListBinding {
     await Promise.all(parts.map((part) => this.fetch(part, true)));
   };
   acceptConfirmed(change: ConfirmedIssueChange, heldSources: ReadonlySet<number>): void {
-    if (!this.root.active) return;
+    if (!this.root.active || (this.scope.scope === "project" && this.scope.empty)) return;
     this.reconciled.confirm((value, raw) => {
       const result = raw
         ? replayGroups(value, change, this.answer(raw), this.context)

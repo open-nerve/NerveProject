@@ -18,6 +18,7 @@ export function replayGroups(
 ): GroupChangeResult {
   const evidence = pageEvidence(answer);
   const timing = answerTiming(evidence, change, context);
+  if (timing.phase === "newer") return { value, verifyIds: [] };
   const result = applyGroupChange(value, change, context, {
     answer,
     phase: timing.phase,

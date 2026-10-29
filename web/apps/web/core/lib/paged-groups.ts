@@ -7,6 +7,7 @@ import { beforeIssue, issueMembership, issueParts, subgroupField, type Membershi
 
 import {
   counterKey,
+  counterSupersedes,
   priorCounterMembership,
   pageEvidence,
   priorRowMembership,
@@ -50,7 +51,7 @@ export type PageReadMeta = {
 };
 export type PageAnswer = PagedGroups & { read: PageReadMeta };
 export type ListContext = (
-  | { scope: "project"; projectID: string; query: ProjectIssueQuery }
+  | { scope: "project"; projectID: string; query: ProjectIssueQuery; empty?: boolean }
   | { scope: "member"; userID: string; workspaceSlug: string; workspaceID: string; query: MemberIssueQuery }
 ) & { catalog: IssueCatalog; currentUserID: string; pendingIDs: ReadonlySet<string> };
 
@@ -322,12 +323,16 @@ export function applyGroupChange(
   options?: { answer: PageAnswer; phase: "before" | "after" | "unknown"; old: (ref: CounterRef) => Membership },
   heldSources: ReadonlySet<number> = new Set()
 ): GroupChangeResult {
+  if (context.scope === "project" && context.empty) return { value, verifyIds: [] };
   const before = beforeIssue(change.beforeSnapshot);
   // Workspace is immutable on an issue. A foreign confirmation cannot affect
   // this member scope even when its frozen before snapshot was unavailable.
   const scopedIssue = change.after ?? before;
   if (context.scope === "member" && scopedIssue && scopedIssue.workspace_id !== context.workspaceID)
     return { value, verifyIds: [] };
+  const superseded = (ref: CounterRef) =>
+    !options && counterSupersedes(value.counterEvidence?.get(counterKey(ref)) ?? counterSource(value, ref), change);
+  if (!options && counters(value).every(superseded)) return { value, verifyIds: [] };
   const result = structuredClone(value);
   const relevant = issueParts(before, context).concat(issueParts(change.after, context));
   if (change.drop) relevant.push(change.drop);
@@ -355,6 +360,7 @@ export function applyGroupChange(
     }
   }
   for (const ref of refs) {
+    if (superseded(ref)) continue;
     const next = issueMembership(change.after, context, ref);
     const evidence = value.counterEvidence?.get(counterKey(ref)) ?? counterSource(value, ref);
     result.counterEvidence.set(counterKey(ref), structuredClone(evidence));
@@ -387,6 +393,7 @@ export function applyGroupChange(
   for (const part of parts) {
     const group = ensureGroup(result, part);
     const ref = partCounter(part);
+    if (superseded(ref)) continue;
     const next = issueMembership(change.after, context, ref);
     const old =
       options?.phase === "after"

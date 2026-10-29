@@ -425,3 +425,8 @@ it("member expression cleaning excludes project-only filters while keeping suppo
     })
   ).toEqual({ project_id: [A], priority: ["high"] });
 });
+
+it("logical empty membership stays false even with unknown entities or relation fields", () => {
+  const context = { ...listContext({ subscriber_id: [A] }), empty: true };
+  for (const issue of [undefined, null, listIssue("x", 1)]) expect(issueMembership(issue, context)).toBe(false);
+});

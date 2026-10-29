@@ -284,3 +284,26 @@ export function issueFieldForGroup(field: string): keyof Issue {
 }
 
 export type IssueListOptions = { limit: number; query?: ProjectIssueQuery };
+
+/** Intersect validated date predicates without emitting the protocol's illegal none/date combination. */
+export function intersectTargetDates(
+  saved: string[] | undefined,
+  window: string[] | undefined
+): {
+  target_date: string[] | undefined;
+  empty: boolean;
+} {
+  if (!saved?.length || !window?.length) return { target_date: window ?? saved, empty: false };
+  const terms = [...saved, ...window];
+  if (!terms.every(isDateCondition)) throw new Error("Invalid date intersection");
+  if (terms.includes("none")) return { target_date: ["none"], empty: terms.some((term) => term !== "none") };
+  let lower = "";
+  let upper = "";
+  for (const term of terms) {
+    const [from, to] = term.includes("..") ? term.split("..") : [term, term];
+    if (from && (!lower || from > lower)) lower = from;
+    if (to && (!upper || to < upper)) upper = to;
+  }
+  const empty = Boolean(lower && upper && lower > upper);
+  return { target_date: empty ? saved : [lower === upper ? lower : `${lower}..${upper}`], empty };
+}

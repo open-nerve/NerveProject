@@ -459,3 +459,14 @@ test("I1 continuationAbsenceCannotProveDeleteAndWholeRefreshReplacesCounterEvide
   expect(refreshed.groups.get("A")?.stale).toBe(false);
   expect(confirmGroups(refreshed, deletion, context).value.total).toBe(0);
 });
+
+test.each([false, true])("strictNewerReplayPreservesResponseOwnedRowsAndCounters partial=%s", (partial) => {
+  const latest = { ...after, sort_order: 30, updated_at: "2026-10-30T00:00:00Z" };
+  const raw = partial
+    ? decodePage({ total: 7, data: [latest], next_cursor: null }, pageMeta({ group: "B" }), context)
+    : whole([], [latest], 2, 7);
+  const merged = mergePages(initial(), raw, context);
+  const result = replayGroups(merged, change, raw, context);
+  expect(result.value).toEqual(merged);
+  expect(result.verifyIds).toEqual([]);
+});

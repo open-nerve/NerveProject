@@ -1,6 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { TLoader } from "@nerve/types";
-import { projectListQuery, toProjectFilters, type IssueListOptions } from "@/lib/issue-filters";
+import { intersectTargetDates, projectListQuery, toProjectFilters, type IssueListOptions } from "@/lib/issue-filters";
 import { BaseIssuesStore } from "../helpers/base-issues.store";
 import type { IProjectIssuesFilter } from "./filter.store";
 export type IProjectIssues = ProjectIssues;
@@ -27,8 +27,10 @@ export class ProjectIssues extends BaseIssuesStore<IProjectIssuesFilter> {
       limit: options.limit,
       ...options.query,
     };
+    const intersection = intersectTargetDates(preferenceQuery.target_date, options.query?.target_date);
+    query.target_date = intersection.target_date;
     this.selectedPreferenceQuery = JSON.stringify(preferenceQuery);
-    return this.select({ ...scope, scope: "project", query }, options).fetchFirst();
+    return this.select({ ...scope, scope: "project", query, empty: intersection.empty }, options).fetchFirst();
   };
   fetchNextIssues = (slug: string, projectID: string, group?: string, subgroup?: string) => {
     const list = this.currentList;

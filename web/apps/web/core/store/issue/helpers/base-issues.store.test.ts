@@ -1160,3 +1160,56 @@ it("a verification from a lost permission identity does not keep the list loadin
   verify.call.answer(json(200, issueDetailOf("a")));
   await verify.promise;
 });
+
+it("empty calendar intersection remains logical across writes permissions and window changes", async () => {
+  const root = app.issue;
+  const issues = root.projectIssues;
+  runInAction(() => {
+    root.projectIssuesFilter.filters.A.richFilters = { and: [{ target_date__exact: "2026-11-15" }] };
+  });
+  const options = (range: string) => ({ limit: 4, query: { group_by: "target_date" as const, target_date: [range] } });
+  const serial = root.readSerial;
+  await issues.fetchIssues("ws", "A", "init-loader", options("2026-10-01..2026-10-31"));
+  const empty = issues.currentList!;
+  expect(empty.value).toEqual({ total: 0, groups: new Map() });
+  expect(empty.value?.read).toBeUndefined();
+  expect(root.readSerial).toBe(serial);
+  expect(nerve.calls).toHaveLength(0);
+  const create = await requestedIssue(
+    nerve,
+    () => issues.createIssue("ws", "A", { name: "x", target_date: "2026-10-15" }),
+    ["POST", "/api/v0/projects/A/issues"]
+  );
+  create.call.answer(json(201, { ...issueDetailOf("x"), target_date: "2026-10-15" }));
+  await create.promise;
+  expect(empty.value).toEqual({ total: 0, groups: new Map() });
+  expect(root.readSerial).toBe(serial);
+  app.projectRoot.project.confirmProject(project, (held) => ({ ...held, member_role: null }));
+  expect(empty.value).toBeUndefined();
+  expect(await empty.fetchFirst()).toBeUndefined();
+  expect(empty.value).toBeUndefined();
+  app.projectRoot.project.confirmProject(project, (held) => ({ ...held, member_role: 15 }));
+  await empty.fetchFirst();
+  expect(empty.value).toEqual({ total: 0, groups: new Map() });
+  expect(root.readSerial).toBe(serial);
+  expect(nerve.calls).toHaveLength(1);
+  const read = await requestedIssue(
+    nerve,
+    () => issues.fetchIssues("ws", "A", "init-loader", options("2026-11-01..2026-11-30")),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  expect(read.call.queryEntries.filter(([key]) => key === "target_date")).toEqual([["target_date", "2026-11-15"]]);
+  const row = { ...issueDetailOf("november"), target_date: "2026-11-15" };
+  read.call.answer(json(200, { total: 1, groups: [{ key: "2026-11-15", total: 1, data: [row], next_cursor: null }] }));
+  await read.promise;
+  expect(issues.getIssueIds("2026-11-15")).toEqual(["november"]);
+  await issues.fetchIssues("ws", "A", "init-loader", options("2026-10-01..2026-10-31"));
+  expect(issues.currentList).toBe(empty);
+  expect(issues.total).toBe(0);
+  expect(nerve.calls).toHaveLength(2);
+  expect(root.projectIssuesFilter.getIssueFilters("A")?.richFilters).toEqual({
+    and: [{ target_date__exact: "2026-11-15" }],
+  });
+  root.retire();
+  await expect(empty.fetchFirst()).rejects.toThrow();
+});

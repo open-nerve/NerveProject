@@ -44,6 +44,7 @@ export function issueMembership(
   context: ListContext,
   ref: CounterRef = { kind: "outer" }
 ): Membership {
+  if (context.scope === "project" && context.empty) return false;
   if (issue === undefined) return undefined;
   if (issue === null) return false;
   const q = context.query;

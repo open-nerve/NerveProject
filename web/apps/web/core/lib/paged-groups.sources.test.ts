@@ -100,3 +100,48 @@ test("W1 wholeReplacementRetiresPartialSourcesAndTheirConfirmedFacts", () => {
   expect([result.value.total, result.value.groups.get("B")?.total]).toEqual([10, 5]);
   expect(result.value.groups.get("B")?.stale).toBe(true);
 });
+
+test("strictNewerWholePreservesMembershipAndAllLaneCounters", () => {
+  const ctx = listContext({ group_by: "label_id", sub_group_by: "assignee_id" });
+  const latest = { ...x, sort_order: 30, label_ids: ["new"], assignee_ids: ["U"], updated_at: "2026-10-30T00:00:00Z" };
+  const raw = decodePage(
+    {
+      total: 1,
+      subgroup_totals: [{ key: "U", total: 1 }],
+      groups: [{ key: "new", total: 1, subgroups: [{ key: "U", total: 1, data: [latest], next_cursor: null }] }],
+    },
+    pageMeta(),
+    ctx
+  );
+  const result = confirmGroups(
+    raw,
+    { id: "x", beforeSnapshot: { kind: "unknown" }, after: { ...x, label_ids: ["old"], assignee_ids: ["V"] } },
+    ctx
+  );
+  expect(result.value.total).toBe(1);
+  expect(result.value.subgroupTotals).toEqual(raw.subgroupTotals);
+  expect(result.value.groups).toEqual(raw.groups);
+  expect(result.verifyIds).toEqual([]);
+});
+
+test("strictNewerPartialPreservesItsRowsWithoutClaimingUnansweredCounters", () => {
+  const initial = whole(30);
+  const latest = { ...x, sort_order: 30, updated_at: "2026-10-30T00:00:00Z" };
+  const answer = decodePage(
+    { total: 7, data: [latest], next_cursor: null },
+    { ...pageMeta({ group: "B" }), sourceID: 31 },
+    context
+  );
+  const merged = mergePages(initial, answer, context);
+  const result = confirmGroups(
+    merged,
+    { id: "x", beforeSnapshot: { kind: "unknown" }, after: x },
+    context,
+    new Set([30])
+  );
+  expect(result.value.total).toBe(10);
+  expect(result.value.groups.get("B")).toEqual(merged.groups.get("B"));
+  expect(result.value.groups.get("A")?.total).toBe(5);
+  expect(result.value.groups.get("A")?.stale).toBe(true);
+  expect(result.verifyIds).toEqual([]);
+});

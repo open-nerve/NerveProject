@@ -323,7 +323,8 @@ export const getSourceFromDropPayload = (payload: IPragmaticDropPayload): GroupD
     }
   }
 
-  if (sourceIssueData?.id === undefined || !sourceColumData?.groupId) return;
+  if (typeof sourceIssueData?.id !== "string" || !sourceIssueData.id || typeof sourceColumData?.groupId !== "string")
+    return;
 
   return {
     groupId: sourceColumData.groupId as string,
@@ -359,7 +360,7 @@ export const getDestinationFromDropPayload = (payload: IPragmaticDropPayload): G
     }
   }
 
-  if (!destinationColumnData?.groupId) return;
+  if (typeof destinationColumnData?.groupId !== "string") return;
 
   // extract instruction from destination issue
   const extractedInstruction = destinationIssueData ? extractInstruction(destinationIssueData)?.type : "";

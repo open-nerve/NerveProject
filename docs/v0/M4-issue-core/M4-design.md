@@ -2570,7 +2570,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13粗项/16 Task） | **已完成**：[spec](specs/P8-drafts-search.md)、[实际plan](plans/P8-drafts-search.md)、[review](reviews/P8-drafts-search-review.md)、[整体审核](../../reviews/re-07-M4P8整体审核.md)。T1–T16实施、首次整审及文档独评闭环，最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，经授权 `--no-ff` 合并为 `6b9d08d4821f1423c7bb9795557727c206b7880f`；准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1三任务全绿。1,598文件、37,552,117字节及1空目录归档逐hash核验后，本地/远端分支和worktree已清理，清理后再核哈希；完整回执见review§9。M4总体及后续交接仍open |
 | P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
-| P10b `web-list-data` | 列表一侧的数据层（14） | **T1–T13实施及逐任务独评闭环**；T14文档收口进行中，完整F、准确HEAD CI和整分支终审待办，集成待授权。T12本地F通过但检查点CI web超时；见[阶段review](reviews/P10b-web-list-data-review.md)。不合并，不启动P11 |
+| P10b `web-list-data` | 列表一侧的数据层（14） | **T1–T13实施及逐任务独评闭环**；整审08a76bbf为0C/5I/3M、With fixes，统一修复已局部验证；T14、限定复审、完整F及准确HEAD CI开放，集成待授权。T12本地F通过但检查点CI web超时；见[阶段review](reviews/P10b-web-list-data-review.md)。不合并，不启动P11 |
 | P11 `web-detail-data` | 详情一侧的数据层（14） | 未开始 |
 | P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |
@@ -2741,3 +2741,13 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 - 第 11 节的十一个架构问题全部批准。
 
 正文各节本来就按建议写定，这次只把"待负责人裁定""待负责人批准"的标记改为裁定、批准的记录（开头的状态、第 10、11 节、3.23、第 14、15 节）；3.23 的每一行内容随之确定。总体设计 9.4 中 M4 的状态随本文的合并改为"进行中"。
+
+### 整审局部合同澄清（2026-10-29，局部验证完成、限定复审待办）
+
+- I1：原回答或已持行的版本严格高于写确认时，属于较新的第三方事实，不能等同于同版本 own-after。较旧确认不覆盖可靠的新行、排序键、边界或其来源已证明的计数；不能确定的其它来源/部分保留 stale。direct-confirm 与 raw replay 使用相同版本关系，计数仍严格遵守各回答写集合，不重算冻结 before，也不触碰权限身份与删除代际。
+- I5：实际筛选菜单按当前允许字段开放，创建/更新时间不在本段筛选合同中。保存成功后将清理过的确认表达式反映到当前实例；只可替换该次提交后没有新编辑的草稿。旧确认不覆盖后续新输入，拒绝保留草稿及现有错误处理。不会扩展后端字段或延期当前确认显示问题到 P13。
+- 整审 I1/I2/I3/I4/I5 已实施统一修复并通过受影响回归，尚待限定独立复审，因此 A3/A5/A6/A8 暂不作无条件通过；A1/A10/T14 保持开放。历史通过和原始失败不改写，最终 F/准确 HEAD CI 由 root 后续执行。
+
+**R34 / I2 日期视窗交集：** 日历显示范围与已清理偏好的 target_date 条件求语义交集；非空交集以等价合法日期条件发出，原偏好不改。none 与有日期窗口或普通日期窗口确定不相交时，binding scope 使用内部 empty 标记，不能传入生成 query、发非法 none+日期、放宽服务器守卫或造哨兵日期。empty 仅来自有效日期逻辑矛盾，未知权限/读取拒绝/目录失败不能变为空。确定空经现有 owner/权限/退役门控建立本地零行零计数模型，不伪造服务端 PageAnswer、sourceID 或 readSerial；对未知实体 membership 亦为 false，确认/replay/重验不添行、不安排 GET。窗口或偏好改变重新求交，恢复普通请求。回归包含相交、none、不相交、双向切换、写确认及失权/恢复。
+
+**R35 / 新增 N1：** 布局加载/空态判断消费新列表的 outer total，不能把未分组空键计数当整体总数；草稿保留原合同。实际日历、非空分组列表及空结果挂载回归。本项为修复期新发现，不归原整审发现。
