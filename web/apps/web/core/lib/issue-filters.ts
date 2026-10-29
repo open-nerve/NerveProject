@@ -173,6 +173,30 @@ export function toProjectFilters(expression: TWorkItemFilterExpression): Project
   return cleanFilters(result);
 }
 
+/** Member views additionally accept one validated project condition. */
+export function toMemberFilters(
+  expression: TWorkItemFilterExpression
+): ProjectIssueFilters & Pick<MemberIssueQuery, "project_id"> {
+  const result = toProjectFilters(expression);
+  const nodes = isRecord(expression) ? ("and" in expression ? expression.and : [expression]) : [];
+  const projects = Array.isArray(nodes)
+    ? nodes.flatMap((node) =>
+        isRecord(node) && !("and" in node) ? Object.entries(node).filter(([key]) => key.startsWith("project_id__")) : []
+      )
+    : [];
+  const [key, value] = projects.length === 1 ? projects[0] : [];
+  const ids =
+    typeof value === "string"
+      ? key === "project_id__in"
+        ? value.split(",")
+        : key === "project_id__exact"
+          ? [value]
+          : undefined
+      : undefined;
+  const projectIds = cleanValues("project_id", ids);
+  return { ...result, ...(projectIds ? { project_id: projectIds } : {}) };
+}
+
 export function toFilterExpression(filters: ProjectIssueFilters): TWorkItemFilterExpression {
   const and: TWorkItemFilterConditionData[] = [];
   const cleaned = cleanFilters(filters);

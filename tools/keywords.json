@@ -2586,6 +2586,33 @@
           "miss": ["docs/v0/M4-issue-core/specs/P10b-web-list-data.md", "web/packages/utils/dist/index.js"]
         }
       }
+    },
+    {
+      "id": "workspace-draft-filters",
+      "phase": "M4/P10",
+      "why": "草稿列表没有筛选，防止重新构造已删除的筛选 store。",
+      "files": {
+        "source": "^web/apps/web/(?:core|ce)/.*\\.[cm]?[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\b(?:WorkspaceDraftIssuesFilter|workspaceDraftIssuesFilter)\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "new WorkspaceDraftIssuesFilter(this)",
+          "workspaceDraftIssuesFilter = new WorkspaceDraftIssuesFilter(this)"
+        ],
+        "miss": ["new WorkspaceDraftIssues(this)", "draftIssues.filter(Boolean)", "WorkspaceDraftIssuesFilterSettings"],
+        "files": {
+          "hit": [
+            "web/apps/web/core/store/issue/root.store.ts",
+            "web/apps/web/core/store/issue/workspace-draft/filter.store.ts"
+          ],
+          "miss": ["docs/v0/M4-issue-core/specs/P10b-web-list-data.md", "web/packages/utils/dist/index.js"]
+        }
+      }
     }
   ],
   "exceptions": [

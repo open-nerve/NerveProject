@@ -127,6 +127,74 @@ afterEach(() => {
 });
 
 describe("store-context", () => {
+  it("isolates archived and profile preferences across real session replacement", async () => {
+    const { storage, context, signedIn, follow } = await load();
+    vi.stubGlobal("window", { localStorage: storage.tab("page") });
+    const { runInAction } = await import("mobx");
+    await signedIn();
+    const x = context.rootStore;
+    runInAction(() => {
+      x.user.data = { id: "account-x" } as typeof x.user.data;
+    });
+    await x.issue.archivedIssuesFilter.fetchFilters("ws", "project");
+    await x.issue.profileIssuesFilter.fetchFilters("ws", "target");
+    await x.issue.archivedIssuesFilter.updateFilterExpression("ws", "project", { priority__in: "high" });
+    await x.issue.profileIssuesFilter.updateFilterExpression("ws", "target", { priority__in: "high" });
+    storage.data.set(
+      "issue_local_filters",
+      JSON.stringify([
+        ...JSON.parse(storage.data.get("issue_local_filters")!),
+        {
+          key: "ARCHIVED",
+          workspaceSlug: "ws",
+          viewId: "project",
+          userId: "account-y",
+          filters: { rich_filters: { priority__in: "low" } },
+        },
+        {
+          key: "PROFILE",
+          workspaceSlug: "ws",
+          viewId: "target",
+          userId: "account-y",
+          filters: { rich_filters: { priority__in: "low" } },
+        },
+      ])
+    );
+    await follow(Y);
+    const y = context.rootStore;
+    expect(y).not.toBe(x);
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")).toBeUndefined();
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target")).toBeUndefined();
+    runInAction(() => {
+      y.user.data = { id: "account-y" } as typeof y.user.data;
+    });
+    await y.issue.archivedIssuesFilter.fetchFilters("ws", "project");
+    await y.issue.profileIssuesFilter.fetchFilters("ws", "target");
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    await x.issue.archivedIssuesFilter.updateFilterExpression("ws", "project", { priority__in: "urgent" });
+    await x.issue.profileIssuesFilter.updateFilterExpression("ws", "target", { priority__in: "urgent" });
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    await y.issue.archivedIssuesFilter.fetchFilters("ws", "project");
+    await y.issue.profileIssuesFilter.fetchFilters("ws", "target");
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    vi.unstubAllGlobals();
+  });
+
   it("retiredRootDropsSuccessfulRepliesAndQueuedWrites", async () => {
     const { nerve, context, SessionChangedError, signedIn, follow } = await load();
     await signedIn();

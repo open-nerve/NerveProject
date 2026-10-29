@@ -18,35 +18,17 @@ import type {
   TSupportedFilterForUpdate,
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
-import { memberListQuery, toFilterExpression, toProjectFilters } from "@/lib/issue-filters";
+import { toFilterExpression, toMemberFilters } from "@/lib/issue-filters";
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
 import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
 // types
 import type { IIssueRootStore } from "../root.store";
 
-const record = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === "object" && !Array.isArray(value);
-
 const cleanExpression = (expression: TWorkItemFilterExpression): TWorkItemFilterExpression => {
-  const clean = toFilterExpression(toProjectFilters(expression));
-  const nodes = record(expression) ? ("and" in expression ? expression.and : [expression]) : [];
-  const projects = Array.isArray(nodes)
-    ? nodes.flatMap((node) =>
-        record(node) && !("and" in node) ? Object.entries(node).filter(([key]) => key.startsWith("project_id__")) : []
-      )
-    : [];
-  const [key, value] = projects.length === 1 ? projects[0] : [];
-  const ids =
-    typeof value === "string"
-      ? key === "project_id__in"
-        ? value.split(",")
-        : key === "project_id__exact"
-          ? [value]
-          : undefined
-      : undefined;
-  const projectIds = memberListQuery({ project_id: ids }, {}, "assigned").project_id;
-  if (!projectIds) return clean;
-  return { and: [...("and" in clean ? clean.and : []), { project_id__in: projectIds.join(",") }] };
+  const { project_id, ...filters } = toMemberFilters(expression);
+  const clean = toFilterExpression(filters);
+  if (!project_id) return clean;
+  return { and: [...("and" in clean ? clean.and : []), { project_id__in: project_id.join(",") }] };
 };
 
 export interface IProfileIssuesFilter extends IBaseIssueFilterStore {

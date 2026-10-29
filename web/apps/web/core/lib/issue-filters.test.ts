@@ -396,3 +396,16 @@ it("fix1 I3 converted project and member UUID filters match canonical issue rows
     )
     .toBe(true);
 });
+
+it("extracts member project conditions without admitting them to project filters", async () => {
+  const { toMemberFilters } = await import("./issue-filters");
+  const expression = { and: [{ project_id__in: A.toUpperCase() }, { priority__in: "high" }] };
+  expect(toMemberFilters(expression)).toEqual({ project_id: [A], priority: ["high"] });
+  expect(toProjectFilters(expression)).toEqual({ priority: ["high"] });
+  expect(toMemberFilters({ and: [{ project_id__in: A }, { project_id__exact: A }, { priority__in: "low" }] })).toEqual({
+    priority: ["low"],
+  });
+  expect(
+    toMemberFilters(JSON.parse(JSON.stringify({ and: [{ and: [{ project_id__in: A }] }, { priority__in: "high" }] })))
+  ).toEqual({ priority: ["high"] });
+});
