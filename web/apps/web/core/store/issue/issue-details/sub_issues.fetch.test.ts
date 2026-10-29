@@ -234,3 +234,64 @@ it("a cross-project relation answer cannot publish ids after the related project
   expect.soft(app.issue.issues.held(child.id)).toBeUndefined();
   expect.soft(app.issue.issueDetail.relation.getRelationsByIssueId("parent")).toBeUndefined();
 });
+
+it.each(["unknown", "revoked"].flatMap((kind) => ["subissues", "relations"].map((resource) => ({ kind, resource }))))(
+  "$resource preflight rejects $kind scope before restricted GET",
+  async ({ kind, resource }) => {
+    if (kind === "revoked") await loadProjects(nerve, app.projectRoot.project, ws, [elsewhere]);
+    const projectId = kind === "unknown" ? "unknown" : here.id;
+    expect(app.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(ws.slug, projectId)).toBeUndefined();
+    const get = vi.spyOn(APIService.prototype, "get").mockRejectedValue(new Error("restricted GET sent"));
+    const detail = app.issue.issueDetail;
+    const operation =
+      resource === "subissues"
+        ? detail.subIssues.fetchSubIssues(ws.slug, projectId, "x")
+        : detail.relation.fetchRelations(ws.slug, projectId, "x");
+    await expect(operation).rejects.toBeInstanceOf(SessionChangedError);
+    expect(get).not.toHaveBeenCalled();
+  }
+);
+
+it.each(["subissues", "relations"])("%s allows a legitimate guest to send its request", async (resource) => {
+  await loadProjects(nerve, app.projectRoot.project, ws, [{ ...here, member_role: 5 }, elsewhere]);
+  const get = vi
+    .spyOn(APIService.prototype, "get")
+    .mockRejectedValue({ response: { data: { code: "server-refusal" } } });
+  const detail = app.issue.issueDetail;
+  const operation =
+    resource === "subissues"
+      ? detail.subIssues.fetchSubIssues(ws.slug, here.id, "x")
+      : detail.relation.fetchRelations(ws.slug, here.id, "x");
+  await operation.catch(() => undefined);
+  expect(get).toHaveBeenCalledOnce();
+});
+
+it.each(["subissues", "relations"])(
+  "%s discards an answer across loss and recovery of its own scope",
+  async (resource) => {
+    const held = heldChange<AxiosResponse<TIssueSubIssues | import("@nerve/types").TIssueRelation>>();
+    vi.spyOn(APIService.prototype, "get").mockReturnValue(held.sent);
+    const detail = app.issue.issueDetail;
+    const reading = track<TIssueSubIssues | import("@nerve/types").TIssueRelation>(
+      resource === "subissues"
+        ? detail.subIssues.fetchSubIssues(ws.slug, here.id, "parent")
+        : detail.relation.fetchRelations(ws.slug, here.id, "parent")
+    );
+    await loadProjects(nerve, app.projectRoot.project, ws, [elsewhere]);
+    await loadProjects(nerve, app.projectRoot.project, ws, [here, elsewhere]);
+    const child = issueOf("old", here.id, ws.id);
+    held.answer(
+      reply(
+        resource === "subissues"
+          ? {
+              sub_issues: [child],
+              state_distribution: { backlog: [], unstarted: [child.id], started: [], completed: [], cancelled: [] },
+            }
+          : { blocking: [child], blocked_by: [], duplicate: [], relates_to: [] }
+      )
+    );
+    await until(() => reading.settled, "old scope response");
+    expect(reading.error).toBeInstanceOf(SessionChangedError);
+    expect(app.issue.issues.held(child.id)).toBeUndefined();
+  }
+);

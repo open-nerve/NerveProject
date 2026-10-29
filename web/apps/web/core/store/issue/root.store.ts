@@ -204,6 +204,13 @@ export class IssueRootStore {
     if (!workspaceID) throw new Error("Issue workspace is not loaded");
     return { workspaceSlug, projectID, workspaceID };
   }
+  assertProjectReadable(workspaceSlug: string, projectID: string): void {
+    this.assertActive();
+    if (
+      this.rootStore.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectID) === undefined
+    )
+      throw new SessionChangedError();
+  }
   canSeeIssue(issue: Issue): boolean {
     if (!this.active) return false;
     const workspace = this.rootStore.workspaceRoot.workspaces?.find((item) => item.id === issue.workspace_id);

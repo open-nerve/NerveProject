@@ -77,6 +77,7 @@ export class IssueStore implements IIssueStore {
 
   private async readParent(workspaceSlug: string, projectId: string, id: string) {
     const root = this.rootIssueDetailStore.rootIssueStore;
+    root.assertProjectReadable(workspaceSlug, projectId);
     const token = root.captureRead();
     const parent = await this.issueService.retrieve(workspaceSlug, projectId, id);
     root.issues.acceptRead(parent, token);
@@ -85,6 +86,7 @@ export class IssueStore implements IIssueStore {
   // actions
   fetchIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
     const root = this.rootIssueDetailStore.rootIssueStore;
+    root.assertProjectReadable(workspaceSlug, projectId);
     const token = root.captureRead();
     const issue = await this.issueService.retrieve(workspaceSlug, projectId, issueId);
 
@@ -139,6 +141,16 @@ export class IssueStore implements IIssueStore {
 
   fetchIssueWithIdentifier = async (workspaceSlug: string, project_identifier: string, sequence_id: string) => {
     const root = this.rootIssueDetailStore.rootIssueStore;
+    const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
+    const directory = root.rootStore.projectRoot.project;
+    const project =
+      workspace &&
+      directory
+        .knownProjectIds(workspace.id)
+        .map((id) => directory.getProjectById(id))
+        .find((item) => item?.identifier === project_identifier && item.workspace_id === workspace.id);
+    if (!project) throw new SessionChangedError();
+    root.assertProjectReadable(workspaceSlug, project.id);
     const token = root.captureRead();
     const issue = await this.issueService.retrieveWithIdentifier(workspaceSlug, project_identifier, sequence_id);
     const issueIdentifier = `${project_identifier}-${sequence_id}`;
@@ -147,6 +159,7 @@ export class IssueStore implements IIssueStore {
     const rootWorkItemDetailStore = this.rootIssueDetailStore.rootIssueStore.issueDetail;
 
     if (!issue || !projectId || !issueId) throw new Error("Issue not found");
+    if (projectId !== project.id || issue.workspace_id !== project.workspace_id) throw new SessionChangedError();
 
     if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
     root.issues.acceptRead(issue, token);

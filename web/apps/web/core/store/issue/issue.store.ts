@@ -58,13 +58,12 @@ export class IssueStore {
   }
   confirmChange(change: ConfirmedIssueChange, permission?: number): void {
     if (!this.root.active) return;
-    this.canonical.receive(change.id, change.after, this.choose);
-    if (
-      change.after &&
-      permission !== undefined &&
-      this.root.permissionReads.current(permission, change.after.workspace_id, [change.after.project_id])
-    )
-      runInAction(() => this.permissionProof.set(change.id, permission));
+    runInAction(() => {
+      const held = this.canonical.get(change.id);
+      const selected = this.canonical.receive(change.id, change.after, this.choose);
+      // Publish content and its proof atomically; a rejected older answer keeps both.
+      if (change.after && selected !== held) this.permissionProof.set(change.id, permission ?? -1);
+    });
     if (change.after === null) this.root.verification.deleted(change.id);
   }
   /** Internal proof only: accessors below additionally enforce visibility and verification. */

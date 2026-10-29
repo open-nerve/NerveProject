@@ -199,6 +199,8 @@ it("does not accept a page that crossed an observed loss and restoration of proj
     await vi.advanceTimersByTimeAsync(100);
     expect.soft(tab.app.issue.issues.held("old")).toBeUndefined();
     expect.soft(tab.app.issue.projectIssues.groups).toBeUndefined();
+    expect.soft(tab.app.issue.projectIssues.getIssueIds()).toBeUndefined();
+    expect.soft(tab.app.issue.projectIssues.total).toBeUndefined();
   } finally {
     await act(async () => root.unmount());
     tab.app.dispose();

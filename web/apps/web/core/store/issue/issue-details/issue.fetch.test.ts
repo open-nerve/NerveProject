@@ -332,3 +332,45 @@ it.each([false, true])("drops an old detail after observed loss and recovery (%s
   expect(reading.error).toBeInstanceOf(SessionChangedError);
   expect(app.issue.issues.held(source.id)).toBeUndefined();
 });
+
+it.each(["unknown", "revoked"])("detail preflight rejects %s scope before restricted GET", async (kind) => {
+  if (kind === "revoked") await loadProjects(nerve, app.projectRoot.project, ws, []);
+  const projectId = kind === "unknown" ? "unknown" : project.id;
+  expect(app.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(ws.slug, projectId)).toBeUndefined();
+  const get = vi.spyOn(APIService.prototype, "get").mockRejectedValue(new Error("restricted GET sent"));
+  await expect(app.issue.issueDetail.issue.fetchIssue(ws.slug, projectId, "x")).rejects.toBeInstanceOf(
+    SessionChangedError
+  );
+  expect(get).not.toHaveBeenCalled();
+});
+
+it("identifier preflight rejects an unknown project without a restricted GET", async () => {
+  const get = vi.spyOn(APIService.prototype, "get").mockRejectedValue(new Error("restricted GET sent"));
+  await expect(app.issue.issueDetail.issue.fetchIssueWithIdentifier(ws.slug, "UNKNOWN", "1")).rejects.toBeInstanceOf(
+    SessionChangedError
+  );
+  expect(get).not.toHaveBeenCalled();
+});
+
+it.each([false, true])("a legitimate guest may fetch detail (%s)", async (identifier) => {
+  await loadProjects(nerve, app.projectRoot.project, ws, [{ ...project, member_role: 5 }]);
+  const { source, fetch } = resources(null);
+  expect(await fetch(identifier)).toEqual(source);
+});
+
+it("parent preflight sees a loss observed between the detail and auxiliary reads", async () => {
+  const { detail, get, fetch } = resources("parent");
+  vi.spyOn(detail, "fetchReactions").mockImplementation(async () => {
+    app.projectRoot.project.confirmProject(project, (held) => ({ ...held, member_role: null }));
+    return [];
+  });
+  await expect(fetch(false)).rejects.toBeInstanceOf(SessionChangedError);
+  expect(get.mock.calls.filter(([url]) => url.endsWith("/issues/parent/"))).toHaveLength(0);
+});
+
+it("identifier rejects a response belonging to another project", async () => {
+  const { get, fetch, source } = resources(null);
+  get.mockResolvedValue(reply({ ...source, project_id: "other" }));
+  await expect(fetch(true)).rejects.toBeInstanceOf(SessionChangedError);
+  expect(app.issue.issues.held(source.id)).toBeUndefined();
+});

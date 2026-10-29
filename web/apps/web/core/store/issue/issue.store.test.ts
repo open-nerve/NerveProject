@@ -1,5 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { autorun } from "mobx";
 import { issueDetailOf, issueOf, issuePageOf, issueStoreTab, requestedIssue } from "./fake-issues";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
@@ -578,3 +579,43 @@ it("a verification queued before observed permission ABA does not issue a duplic
   await until(() => old.settled && fresh.settled, "both verifications");
   expect(tab.app.issue.issues.getIssueDetailById("x")?.id).toBe("x");
 });
+
+it.each([false, true])(
+  "old write after a recovered read keeps proof bound to the selected value (older=%s)",
+  async (older) => {
+    accept(issueOf("x"));
+    const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
+      "PATCH",
+      "/api/v0/issues/x",
+    ]);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+    const fresh = await requestedIssue(
+      tab.nerve,
+      () => tab.app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+      ["GET", "/api/v0/projects/A/issues"]
+    );
+    fresh.call.answer(json(200, issuePageOf([{ ...issueOf("x"), name: "fresh", updated_at: version(older ? 2 : 1) }])));
+    await fresh.promise;
+    expect(tab.app.issue.issues.getIssueById("x")?.name).toBe("fresh");
+    const observed: (string | undefined)[] = [];
+    const dispose = autorun(() => observed.push(tab.app.issue.issues.getIssueDetailById("x")?.description_html));
+    old.call.answer(
+      json(200, {
+        ...issueDetailOf("x"),
+        name: "old-write",
+        updated_at: version(1),
+        description_html: "<p>old permission detail</p>",
+      })
+    );
+    try {
+      await old.promise;
+      expect(observed).not.toContain("<p>old permission detail</p>");
+    } finally {
+      dispose();
+    }
+    expect(tab.app.issue.issues.getIssueDetailById("x")).toBeUndefined();
+    if (older) expect(tab.app.issue.issues.getIssueById("x")?.name).toBe("fresh");
+    else expect(tab.app.issue.issues.getIssueById("x")).toBeUndefined();
+  }
+);

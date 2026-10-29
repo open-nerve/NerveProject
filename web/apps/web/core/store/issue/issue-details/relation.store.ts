@@ -94,6 +94,7 @@ export class IssueRelationStore implements IIssueRelationStore {
   // actions
   fetchRelations = async (workspaceSlug: string, projectId: string, issueId: string) => {
     const root = this.rootIssueDetailStore.rootIssueStore;
+    root.assertProjectReadable(workspaceSlug, projectId);
     const token = root.captureRead();
     const response = await this.issueRelationService.listIssueRelations(workspaceSlug, projectId, issueId);
 

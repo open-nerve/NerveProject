@@ -122,6 +122,7 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
 
   fetchSubIssues = async (workspaceSlug: string, projectId: string, parentIssueId: string) => {
     const root = this.rootIssueDetailStore.rootIssueStore;
+    root.assertProjectReadable(workspaceSlug, projectId);
     const token = root.captureRead();
     const response = await this.issueService.subIssues(workspaceSlug, projectId, parentIssueId);
 
