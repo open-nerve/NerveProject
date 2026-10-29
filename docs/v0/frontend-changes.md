@@ -200,7 +200,7 @@
 |---|---|---|
 | 认证、用户、实例配置、PAT；令牌管理器 | M2 | 已完成 |
 | 工作区、成员、邀请、项目、项目成员、项目归档、状态、标签、显示设置 | M3 | 已完成：数据层已对接（工作区一侧 M3/P8a，项目一侧 M3/P8b）；页面已对接（工作区的 M3/P9，项目的 M3/P10，状态和标签的设置页、访客看到的个人主页 M3/P11）；M3 的收尾重写了弹窗、加了离开工作区的入口、改了 M3 页面上英文和键盘的遗留（3.2 中"完成于 M3/收尾"的各行） |
-| 工作项、列表（分页和分组的新结构）、子任务、关联、链接、评论、表情回应、操作动态、搜索、历史版本、草稿、工作项归档 | M4 | 进行中；P10a已集成；P10b T1–T13实施及逐任务独评闭环，最终七门禁、准确HEAD CI与整分支审查待办，阶段未合并；P11及后续开放 |
+| 工作项、列表（分页和分组的新结构）、子任务、关联、链接、评论、表情回应、操作动态、搜索、历史版本、草稿、工作项归档 | M4 | 进行中；P10a已集成；P10b T1–T13实施及逐任务独评闭环，整审发现5 Important/3 Minor已统一修复并局部验证，限定复审、最终七门禁及准确HEAD CI待办，阶段未合并；P11及后续开放 |
 | 文件、附件、编辑器图片（上传改为 `{method, url, headers}` 形式的 PUT） | M5 | 计划中 |
 | 迭代、模块（归属改为工作项字段）、迭代和模块归档 | M6 | 计划中 |
 | 通知、收集箱、视图、收藏、最近访问 | M7 | 计划中 |
@@ -213,12 +213,12 @@
 
 M4/P10a删除迭代、模块、项目视图与工作区视图的工作项列表、四类列表/筛选store及独占控件/旧动作链；保留PROJECT/PROFILE/ARCHIVED/DEFAULT/WORKSPACE_DRAFT、四布局kind与合法共享选择器。普通实体不再承载cycle/module/attachment/subscription和表单临时状态；核心直接使用生成Issue/IssueDetail，描述只从真实Detail读取，clone来源与实际10字段表单独立。M6/M7接通前，这些页面没有工作项列表；领域自身取数亦尚未接通，真实名称/详情/统计/目录不保证可取得。保留加载与T8实际失败记录交[M6/M7](M4-issue-core/reviews/P10a-web-issue-types-review.md#6-移交事项)，由其在新引擎恢复列表、替换旧接口，并以有效实体完成整页零失败验收。P10b/P11旧数据层过渡尚有明确到期，P10a换型不代表这些API运行时已接通。
 
-实施与终审完成、集成待办；最终文稿提交后准确HEAD CI以交付回执核验；最后产品5f7085bce4aa5103a0133fa982847d274efa6e47，准确产品CI已核成功，最后交付HEAD CI待核。
+历史时点：P10a 产品5f7085bc当时已完成实施与终审，但集成及最后文稿HEAD CI待核。当前P10a最终提交d1a19e78已授权合并至main a06e3f70，main CI 40723697041的server/web/e2e均success，归档清理已核，见[P10a review §10](M4-issue-core/reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)。这不是P10b的最终门禁或集成结论。
 
 | 位置 | 改动 | 原因 | 状态 | 完成于 |
 |---|---|---|---|---|
 | quick-add创建入口（M4/P10a R8） | 等待输入保留在入口并禁用，真实成功响应才进入canonical及正式分组/计数，失败输入保留可重试；等待期不以普通卡片参与排序 | 输入缺服务端事实，按root局部裁定分离输入与实体 | 已实施，T4独评Approved及准确提交身份见[P10a T4/R8证据](M4-issue-core/reviews/P10a-web-issue-types-review.md#t4-r8-evidence) | M4/P10a |
-| `core/store/issue/helpers/base-issues.store.ts` 等列表相关 store | 使用新接口的分页结构（不透明游标 `next_cursor`）和分组结构（`groups` 数组），不再按"已加载条数 ÷ 每页条数"拼页码游标 | 新接口的分页和分组设计 | 计划中 | |
+| `core/store/issue/helpers/base-issues.store.ts` 等列表相关 store | 使用新接口的分页结构（不透明游标 `next_cursor`）和分组结构（`groups` 数组），不再按"已加载条数 ÷ 每页条数"拼页码游标 | 新接口的分页和分组设计 | 已实施；整审I1–I5及修复期N1已局部修复与验证，待限定复审及最终F/CI，未合并 | M4/P10b |
 | 用户和认证相关的 store | 登录、退出、续期改走令牌管理器 | 认证改为 Bearer 令牌 | 已完成 | M2/P4 |
 | 登录、注册、退出、修改密码的提交方式 | 删除 CSRF 令牌和 Django 会话的表单提交，改走令牌管理器 | 认证改为 Bearer 令牌；CSRF 是传输方式的一部分，和它的替代品一起删除（[M1 设计](M1-frontend-trim/M1-design.md) 3.6） | 已完成 | M2/P4 |
 | 所有处理接口错误的地方 | 统一按 RFC 9457 的 problem+json 读取 `code`、`title`、`errors`。M2/P4 已改：`ApiError` 和 `unwrap`（`core/lib/api-error.ts`）按生成的 `Problem` 读取；登录页、注册页和安全页的修改密码按它的 `code`、`errors` 显示错误。M2/P5 改完个人设置的其余部分（[M2 设计](M2-auth/M2-design.md) 7.7）和新手引导的资料步骤：general 页的保存、资料步骤和 api-tokens 页的创建把字段错误显示在字段下方（名字的规则只在 nerve，页面只查必填，Plane 的名字校验从 `@nerve/utils` 删除），其余的错误和 preferences 的主题、时区、语言、每周第一天、PAT 的撤销、停用账户、新手引导换步骤时更新资料（`onboarding/root.tsx`）的失败都在提示中，文案按 `code` 取（`core/lib/error-messages.ts` 的 `PROBLEM_MESSAGES`、`fieldErrorKeys`、`errorMessageKey`，M3/P8a 从 `helpers/authentication.helper.ts` 移来）。M3/P8a 起工作区、成员、邀请、工作区的显示设置，M3/P8b 起项目、项目成员、状态、标签、项目的显示设置经生成的客户端，nerve 的错误应答是 `ApiError`：状态和标签的设置页、工作项的三个标签选择器和项目包装层的加入界面在 M3/P8b 已按 `code` 显示错误（`errorMessageKey`），工作区的页面在 M3/P9（新手引导、邀请页、注册、创建工作区、首页、侧边栏的项目导航、工作区设置和停用账户的弹窗；创建工作区和邀请的表单把 nerve 指名的字段错误显示在对应的字段下方），项目的页面在 M3/P10（项目列表的加入、创建项目、项目设置的 general、members、features、automations，归档、恢复、删除，侧边栏的项目顺序和页头的标签栏；创建项目和 general 页把 nerve 指名的字段错误显示在对应的字段下方；general 页标识的检查被拒绝时说 nerve 的原因、按钮结束加载，原来是未处理的拒绝、一直加载），状态和标签的设置页在 M3/P11（名字已被占用和 nerve 指名的字段错误显示在对应的字段下方，原来在提示里）；M4–M8 的领域在各自的 M，它们现在还经 Plane 的 axios 基类按 Plane 的错误格式读取 | 错误格式统一 | 进行中 | |

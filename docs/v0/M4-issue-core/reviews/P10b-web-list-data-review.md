@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-2026-10-29；分支 `codex/m4-p10b`，实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，T13 产品 `7e4ed3c50a82cd7c5b97df1277d5994d751dbe70`。T1–T13逐任务实施与独评闭环；T14、最终完整F、准确HEAD CI与整分支deep-review待办，阶段未合并。[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。
+2026-10-29；分支 `codex/m4-p10b`，实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，T13 产品 `7e4ed3c50a82cd7c5b97df1277d5994d751dbe70`。T1–T13逐任务实施与独评闭环；整分支deep-review已在08a76bbf完成，0 Critical/5 Important/3 Minor、Spec/Quality均With fixes；统一修复及局部验证完成，限定复审、T14、最终完整F与准确HEAD CI待办，阶段未合并。[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。
 
 ## 1. 前置与证据
 
@@ -8,7 +8,7 @@ P10a已集成，main CI及归档见[P10a review §10](P10a-web-issue-types-revie
 
 ## 2. 验收映射
 
-A1尚待T14，A10尚待最终F/CI/整审。以下为本段已执行行为的范围，最终整审仍需独立抽核，证据路径均相对上述原件根：
+A1尚待T14，A10尚待最终F/CI/修复复审。A3/A5/A6/A8因整审I1–I5重新开放：本轮已修复并有聚焦及受影响回归，限定独立复审尚未发生。以下为本段已执行行为的范围，证据路径均相对上述原件根：
 
 | 验收 | 行为证据与边界 |
 |---|---|
@@ -16,10 +16,10 @@ A1尚待T14，A10尚待最终F/CI/整审。以下为本段已执行行为的范�
 | A3 | T4 `task-4-report.md` §矩阵和fix1、`task-4-fix1-review.md` 为纯模型；T6 `task-6-current-report.md`、T12 `task-12-final-focus-f.json` 将实体、回查及真实交错接上。逐例桥如下。 |
 | A4 | `issue-order.test.ts` 消费 `api/testdata/issue-order.json`；T3 `task-3-report.md`、`task-3-fix1-report.md`、`task-3-fix1-review.md` 验码点、空值、方向、纳秒与大整数；旧变异不是修复后字节重跑。 |
 | A5 | T6 `issue.store.test.ts` / `issue-details/issue.fetch.test.ts`，`task-6-current-report.md`及fix1复审；T12 `issue-changes.test.ts`、`task-12-final-focus-f.json` 和 `task-12-regression-final-a.json` 验before、第三方、删除epoch、墓碑和回查。静态无绕写盘点只补充行为证据。 |
-| A6 | T5 `issue-filters.test.ts` 保留fromnow；T7/T8 `task-7-current-report.md`、`task-8-current-report.md` 和独评覆盖保存/还原及显式query；T13 M43守卫反例。选择器呈现归P13。 |
+| A6 | T5 `issue-filters.test.ts` 保留fromnow；T7/T8 `task-7-current-report.md`、`task-8-current-report.md` 和独评覆盖保存/还原及显式query；T13 M43守卫反例。完整选择器呈现归P13；当前菜单字段门控与清理后确认显示为I5，本轮已修复并实际挂载验证。 |
 | A7 | T9 `task-9-current-report.md`与fix1复审覆盖归档/profile作用域、草稿；T10 `task-10-current-report.md`与fix2复审覆盖router派生、会话与权限读取；权限observer退役独立于已删除的router autorun。 |
 | A8 | T11 `task-11-current-report.md`及fix1复审验证排队时邻居与拒绝；T12 `task-12-final-focus-f.json` 验全副本和删除范围。 |
-| A9 | T13 `task-13-030-s2.json`（10项）、031 P2（3）、032 P8（2）、033 S7（2），同一版本构建，四角色和旧放行请求集；浏览器环境颜色提示仍是待处理Minor，不能称所有验证输出无噪声。 |
+| A9 | T13 `task-13-030-s2.json`（10项）、031 P2（3）、032 P8（2）、033 S7（2），同一版本构建，四角色和旧放行请求集；本轮子环境移除NO_COLOR冲突，025仅列出S2的10项用例（非浏览器执行）；最终F仍由负责人执行，不称全验证零噪声。 |
 
 I2九例和M3五例：下表 T4 的名称是 `task-4-report.md` §矩阵中的实际测试，后接真实实现和测试；T4 plan表只记录职责，并非执行证据。T6产品 `d37175dd`、修复 `ffade688`，T12 `c0cd32f7`，T4修复 `dde969f8`；具体命令和原始结果在上述各报告。
 
@@ -41,7 +41,11 @@ I2九例和M3五例：下表 T4 的名称是 `task-4-report.md` §矩阵中的�
 
 ## 3. 独评和发现
 
-T1–T13各自独评及必要修复复审闭环；T13 `task-13-review.md` 为0 Critical、0 Important、1 Minor：新增DOM Canvas getContext噪声及Playwright NO_COLOR/FORCE_COLOR提示待最终审查修复，不能屏蔽。T5隐藏列React key警告已由T13先红后绿修复。整分支审查尚未发生，不能以逐任务独评代替。
+T1–T13各自独评及必要修复复审闭环；T13原1 Minor为Canvas能力声明和颜色冲突。本次独立整分支审查覆盖实际main到08a76bbf的203路径、43提交，原报告 `final-review.md` 给出0C/5I/3M、With fixes，不能以历史Approved替代。正式持久化见[re-13](../../../reviews/re-13-M4P10b整体审核.md)，记录原发现、修复及尚未通过的限定复审/F/CI。
+
+统一修复提交 `c3bbd35804ec726ba40f394f743f2b70c3dd6bae`：I1严格较新行/计数来源与replay；I2保存日期和日历窗口的合法交集及本地确定空；I3实际DayTile闭包；I4未分组空键parser；I5真实菜单门控、保存确认与新编辑保护。修复期另发现N1（R35）：HOC误把空键组计数当outer total，已接既有total，draft合同不变。N1不归原整审发现。M1仅Canvas环境声明与调用方颜色治理；M2/M3为本页计数与前端台账纠正。IssueRootStore权限方案A未放宽，生成协议未改。
+
+本轮真实DOM也暴露既有页面边界：DateDropdown嵌套button（R36，004原件）及WorkItemFilterRoot render内更新FiltersRow（R38，026/027 default reporter的通过用例仍有），交P13；不吞console，不声称已修。日历Popover直接消费方一行nativeButton=false（R37）已使026的该warning在027消失。Vitest4.1.11自动agent reporter隐藏通过用例console，故021等安静输出不证明零stderr，最终F需显式保留default reporter的输出。
 
 ## 4. 验证时点与限制
 
@@ -51,7 +55,11 @@ T3最初五份变异raw覆盖，49项中44 hash匹配，冻结98原件保留；�
 
 ## 5. 变异候选与审查责任
 
-15项性质及红/恢复原件索引见 `task-14-current-report.md`；本次文档作者核对原始失败和恢复收据，不代替最终独立审查者抽核。最终审查还需核共享Reconciled全部旧消费者、微秒/大整数、204删除和续页范围；候选HEAD与实际基线固定后审逻辑、集成、覆盖，发现问题按影响修复复验复审。
+历史候选表 `task-14-current-report.md` 的15个ID只代表14种性质：M38/M44同为await前不确认canonical。独立整审另抽核M34发送时计算body/邻居，最终为16个ID/15种性质；原候选报告与失败不改写。核验表为 `final-review-15-property-audit.json` 和 `final-review-extra-property-m34-audit.json`。
+
+M34红raw SHA为 `1050f1c8d555e766d694f0983a42d62716e88c1dcdc653ab775f28c9fb941e3b`；最终恢复focused为16通过、raw SHA `ca7797e33cf97f8a4851291a4f5f765cc317fe5737570f07179c71c556696582`。中间M34 restore与M35 apply同记录，不当作纯恢复绿；最终root与恢复SHA均 `bbb0da5bdad2bc76e895fea17549df7f58e1ef1fec56cdb2b1d92c588fffa424`。原数值断言保留，但issue-drag测试之后扩充/改import，不是最终测试全文字节的变异重跑。上述T2/T3/T12/T13限制仍成立。
+
+本次修复新增六项生产变异：counter、replay、intersection、empty、day、draft，各有单文件行为红、精确字节恢复及绿（`final-fix-020-*`）；不是重跑历史候选，也不重新计入整审15性质。最终源码桥与全部原件见 `final-fix-report.md`。
 
 ## 6. 移交与未完成
 
@@ -59,7 +67,9 @@ P11迁移详情、关联、评论、表情、动态、版本、草稿和搜索se
 
 ## 7. 当前门禁
 
-T14文档收口后由负责人执行完整F、准确待交付HEAD push/CI和独立整分支deep-review；随后按实际结果更新验收及审查记录。阶段仍未合并，不启动P11。
+本轮34文件614项受影响回归通过（021），应用types、完整lint-web、knip通过；R37一行后以027实际日历/default reporter、028 types及029应用lint补验证。完整lint-web警告cap因真实少一条从218收紧至217，原cap不匹配失败022保留。最终详细证据与源码桥见 `final-fix-report.md`，本轮未跑完整F或浏览器套件。
+
+下一步由负责人限定独立复审，再执行完整F及准确待交付HEAD CI，按实际结果回填A3/A5/A6/A8、A1/A10/T14。阶段仍未合并，不启动P11。
 
 ## 历史预检与接续记录（当时状态，非当前结果）
 
