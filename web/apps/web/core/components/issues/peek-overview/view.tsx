@@ -31,7 +31,8 @@ interface IIssueView {
   projectId: string;
   issueId: string;
   isLoading?: boolean;
-  isError?: boolean;
+  error?: unknown;
+  retry?: () => Promise<unknown>;
   is_archived: boolean;
   disabled?: boolean;
   embedIssue?: boolean;
@@ -45,7 +46,8 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
     projectId,
     issueId,
     isLoading,
-    isError,
+    error,
+    retry,
     is_archived,
     disabled = false,
     embedIssue = false,
@@ -142,14 +144,21 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
               "0px 4px 8px 0px rgba(0, 0, 0, 0.12), 0px 6px 12px 0px rgba(16, 24, 40, 0.12), 0px 1px 16px 0px rgba(16, 24, 40, 0.12)",
           }}
         >
-          {isError ? (
+          {error ? (
             <div className="relative h-screen w-full overflow-hidden">
-              <IssuePeekOverviewError removeRoutePeekId={removeRoutePeekId} />
+              <IssuePeekOverviewError
+                removeRoutePeekId={removeRoutePeekId}
+                error={error}
+                retry={retry}
+                workspaceSlug={workspaceSlug}
+                projectId={projectId}
+                issueId={issueId}
+              />
             </div>
           ) : (
             isLoading && <IssuePeekOverviewLoader removeRoutePeekId={removeRoutePeekId} />
           )}
-          {!isLoading && !isError && issue && (
+          {!isLoading && !error && issue && (
             <>
               {/* header */}
               <IssuePeekOverviewHeader

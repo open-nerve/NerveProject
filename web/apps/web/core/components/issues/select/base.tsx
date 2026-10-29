@@ -31,6 +31,8 @@ export type TWorkItemLabelSelectBaseProps = {
   getLabelById: (labelId: string) => Label | undefined;
   label?: React.ReactNode;
   labelIds: string[];
+  isInitializing?: boolean;
+  readStatus?: React.ReactNode;
   onChange: (value: string[]) => void;
   onDropdownOpen?: () => void;
   placement?: Placement;
@@ -48,6 +50,8 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
     getLabelById,
     label: buttonLabel,
     labelIds,
+    isInitializing,
+    readStatus,
     onChange,
     onDropdownOpen,
     placement,
@@ -107,6 +111,8 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
       return;
     }
     if (
+      !isInitializing &&
+      !readStatus &&
       q !== "" &&
       e.key === "Enter" &&
       !isComposing(e.nativeEvent) &&
@@ -213,7 +219,11 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
               />
             </div>
             <div className="mt-2 max-h-48 overflow-y-scroll">
-              {labelsList && filteredOptions ? (
+              {readStatus ? (
+                readStatus
+              ) : isInitializing ? (
+                <p>{t("common.loading")}</p>
+              ) : labelsList && filteredOptions ? (
                 filteredOptions.length > 0 ? (
                   <ul className="space-y-1">
                     {filteredOptions.map((label) => {

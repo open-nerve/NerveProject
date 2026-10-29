@@ -3,39 +3,25 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
-import React from "react";
-// helpers
-import { Button } from "@nerve/propel/button";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
+import { Button, getButtonStyling } from "@nerve/propel/button";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/utils";
-// types
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { BACKGROUND_BUTTON_VARIANTS, BORDER_BUTTON_VARIANTS } from "./constants";
 import type { TButtonVariants } from "./types";
 
-export type DropdownButtonProps = {
-  children: React.ReactNode;
-  className?: string;
+export type DropdownButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  ref?: Ref<HTMLButtonElement>;
+  children: ReactNode;
   isActive: boolean;
   tooltipContent?: string;
   tooltipHeading: string;
   showTooltip: boolean;
   variant: TButtonVariants;
   renderToolTipByDefault?: boolean;
-  /** The button's place in the Tab order, where the dropdown's caller gives one. */
-  tabIndex?: number;
-};
-
-type ButtonProps = {
-  children: React.ReactNode;
-  className?: string;
-  isActive: boolean;
-  tooltipContent?: string;
-  tooltipHeading: string;
-  showTooltip: boolean;
-  renderToolTipByDefault?: boolean;
-  tabIndex?: number;
+  /** Content inside a select's native trigger: no nested button or extra Tab stop. */
+  presentation?: boolean;
 };
 
 export function DropdownButton(props: DropdownButtonProps) {
@@ -44,108 +30,35 @@ export function DropdownButton(props: DropdownButtonProps) {
     className,
     isActive,
     tooltipContent,
-    renderToolTipByDefault = true,
     tooltipHeading,
     showTooltip,
     variant,
-    tabIndex,
+    presentation = false,
+    renderToolTipByDefault: _renderToolTipByDefault,
+    ...nativeProps
   } = props;
-  const ButtonToRender: React.FC<ButtonProps> = BORDER_BUTTON_VARIANTS.includes(variant)
-    ? BorderButton
-    : BACKGROUND_BUTTON_VARIANTS.includes(variant)
-      ? BackgroundButton
-      : TransparentButton;
-
-  return (
-    <ButtonToRender
-      className={className}
-      isActive={isActive}
-      tooltipContent={tooltipContent}
-      tooltipHeading={tooltipHeading}
-      showTooltip={showTooltip}
-      renderToolTipByDefault={renderToolTipByDefault}
-      tabIndex={tabIndex}
-    >
-      {children}
-    </ButtonToRender>
-  );
-}
-
-function BorderButton(props: ButtonProps) {
-  const { children, className, isActive, tooltipContent, tooltipHeading, showTooltip, tabIndex } = props;
   const { isMobile } = usePlatformOS();
-
+  const border = BORDER_BUTTON_VARIANTS.includes(variant);
+  const background = BACKGROUND_BUTTON_VARIANTS.includes(variant);
+  const classes = cn(
+    "flex h-full w-full items-center gap-1.5",
+    border ? "justify-start border-[0.5px] border-strong" : "justify-between",
+    background ? "bg-layer-3 hover:bg-layer-1-hover" : isActive && "bg-layer-transparent-active",
+    className
+  );
   return (
     <Tooltip
       label={tooltipContent ? `${tooltipHeading}: ${tooltipContent}` : tooltipHeading}
       layout="stacked"
       disabled={!showTooltip || isMobile}
     >
-      <Button
-        variant="ghost"
-        size="sm"
-        tabIndex={tabIndex}
-        className={cn(
-          "flex h-full w-full items-center justify-start gap-1.5 border-[0.5px] border-strong",
-          {
-            "bg-layer-transparent-active": isActive,
-          },
-          className
-        )}
-      >
-        {children}
-      </Button>
-    </Tooltip>
-  );
-}
-
-function BackgroundButton(props: ButtonProps) {
-  const { children, className, tooltipContent, tooltipHeading, showTooltip, tabIndex } = props;
-  const { isMobile } = usePlatformOS();
-  return (
-    <Tooltip
-      label={tooltipContent ? `${tooltipHeading}: ${tooltipContent}` : tooltipHeading}
-      layout="stacked"
-      disabled={!showTooltip || isMobile}
-    >
-      <Button
-        variant="ghost"
-        size="sm"
-        tabIndex={tabIndex}
-        className={cn(
-          "flex h-full w-full items-center justify-between gap-1.5 bg-layer-3 hover:bg-layer-1-hover",
-          className
-        )}
-      >
-        {children}
-      </Button>
-    </Tooltip>
-  );
-}
-
-function TransparentButton(props: ButtonProps) {
-  const { children, className, isActive, tooltipContent, tooltipHeading, showTooltip, tabIndex } = props;
-  const { isMobile } = usePlatformOS();
-  return (
-    <Tooltip
-      label={tooltipContent ? `${tooltipHeading}: ${tooltipContent}` : tooltipHeading}
-      layout="stacked"
-      disabled={!showTooltip || isMobile}
-    >
-      <Button
-        variant="ghost"
-        size="sm"
-        tabIndex={tabIndex}
-        className={cn(
-          "flex h-full w-full items-center justify-between gap-1.5",
-          {
-            "bg-layer-transparent-active": isActive,
-          },
-          className
-        )}
-      >
-        {children}
-      </Button>
+      {presentation ? (
+        <span className={cn(getButtonStyling("ghost", "sm"), classes)}>{children}</span>
+      ) : (
+        <Button {...nativeProps} variant="ghost" size="sm" className={classes}>
+          {children}
+        </Button>
+      )}
     </Tooltip>
   );
 }

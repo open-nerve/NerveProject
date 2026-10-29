@@ -5,10 +5,11 @@
  */
 
 import type { IssueUpdate } from "@nerve/api-client";
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { observer } from "mobx-react";
 // Nerve imports
-import useSWR from "swr";
+import { useSessionSWR } from "@/lib/use-session-swr";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -35,6 +36,7 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
   } = useIssues(EIssuesStoreType.ARCHIVED);
   const {
     peekIssue,
+    rootIssueStore: root,
     issue: { fetchIssue },
     fetchActivities,
   } = useIssueDetail();
@@ -42,19 +44,10 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
   const storeType = issueStoreFromProps ?? issueStoreType;
   const { issues } = useIssues(storeType);
 
-  // state
-  const [error, setError] = useState(false);
-
   const issueOperations: TIssueOperations = useMemo(
     () => ({
       fetch: async (workspaceSlug: string, projectId: string, issueId: string) => {
-        try {
-          setError(false);
-          await fetchIssue(workspaceSlug, projectId, issueId);
-        } catch (error) {
-          setError(true);
-          console.error("Error fetching the parent issue", error);
-        }
+        await fetchIssue(workspaceSlug, projectId, issueId);
       },
       update: async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => {
         if (issues?.updateIssue)
@@ -92,14 +85,18 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
     [fetchIssue, issues, fetchActivities, restoreIssue]
   );
 
-  const { isLoading } = useSWR(
-    ["peek-issue", peekIssue?.workspaceSlug, peekIssue?.projectId, peekIssue?.issueId],
-    () => peekIssue && issueOperations.fetch(peekIssue.workspaceSlug, peekIssue.projectId, peekIssue.issueId),
-    {
-      revalidateIfStale: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
+  const workspace = peekIssue ? root.rootStore.workspaceRoot.getWorkspaceBySlug(peekIssue.workspaceSlug) : undefined;
+  const identity = root.permissionReads.identity(workspace?.id, peekIssue ? [peekIssue.projectId] : []);
+  const canRead =
+    peekIssue &&
+    root.active &&
+    root.rootStore.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(
+      peekIssue.workspaceSlug,
+      peekIssue.projectId
+    ) !== undefined;
+  const { isLoading, error, mutate } = useSessionSWR(
+    canRead ? ["peek-issue", identity, peekIssue.workspaceSlug, peekIssue.projectId, peekIssue.issueId] : null,
+    (_identity, ws, project, id) => issueOperations.fetch(ws, project, id)
   );
 
   if (!peekIssue?.workspaceSlug || !peekIssue?.projectId || !peekIssue?.issueId) return <></>;
@@ -118,7 +115,8 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
       projectId={peekIssue.projectId}
       issueId={peekIssue.issueId}
       isLoading={isLoading}
-      isError={error}
+      error={error instanceof SessionChangedError ? undefined : error}
+      retry={() => mutate()}
       is_archived={!!peekIssue.isArchived}
       disabled={!isEditable}
       embedIssue={embedIssue}

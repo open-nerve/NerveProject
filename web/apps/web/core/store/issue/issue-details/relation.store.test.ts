@@ -34,7 +34,10 @@ afterEach(() => {
 });
 function directories() {
   tab.nerve.respond = (call) => {
-    if (call.method === "GET" && /^\/api\/v0\/projects\/B\/(states|members|labels)$/.test(call.path))
+    if (
+      call.method === "GET" &&
+      (call.path === "/api/v0/workspaces/ws/states" || /^\/api\/v0\/projects\/B\/(members|labels)$/.test(call.path))
+    )
       call.answer(json(200, { data: [] }));
   };
 }
@@ -210,3 +213,26 @@ it.each(["mismatch", "deleted"])("rejects a known %s source before reading its r
   expect(tab.nerve.calls).toHaveLength(at);
   expect(loading.error).toBeInstanceOf(SessionChangedError);
 });
+
+// Returning [] on any of these failures would hide an unreadable dependency as an empty relation list.
+it.each(["states", "members", "labels"])(
+  "returns a cross-project %s refusal and permits a native read-only retry",
+  async (directory) => {
+    const path = directory === "states" ? "/api/v0/workspaces/ws/states" : `/api/v0/projects/B/${directory}`;
+    tab.nerve.respond = (call) => {
+      if (call.path === path) call.answer(problem(403, "forbidden"));
+      else if (call.path !== "/api/v0/issues/source/relations") call.answer(json(200, { data: [] }));
+    };
+    const sent = await requestedIssue(tab.nerve, read, ["GET", "/api/v0/issues/source/relations"]);
+    sent.call.answer(json(200, { data: [row] }));
+    await until(() => sent.result.settled, "refused relation directory");
+    expect(sent.result.error).toMatchObject({ status: 403 });
+    expect(store().getError("source")).toMatchObject({ status: 403 });
+    tab.nerve.respond = (call) => call.answer(json(200, { data: call.path.endsWith("/relations") ? [row] : [] }));
+    await store().retry("ws", "A", "source");
+    expect(store().getRelationsByIssueId("source")?.blocking).toEqual(["target-24"]);
+    expect(store().getError("source")).toBeUndefined();
+    expect(tab.nerve.to("/api/v0/projects/B/states")).toHaveLength(0);
+    expect(tab.nerve.calls.every((call) => call.method === "GET")).toBe(true);
+  }
+);

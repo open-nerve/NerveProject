@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import { DirectoryReadError, useDirectoryRead } from "@/components/issues/issue-detail-widgets/directory-read";
+import { observer } from "mobx-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Placement } from "@popperjs/core";
 import { useParams } from "react-router";
@@ -51,7 +53,7 @@ const preventPropagation = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => 
   e.preventDefault();
 };
 
-export function LabelDropdown(props: ILabelDropdownProps) {
+export const LabelDropdown = observer(function LabelDropdown(props: ILabelDropdownProps) {
   const {
     projectId,
     value,
@@ -78,7 +80,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
 
   //states
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const [query, setQuery] = useState<string>("");
   const [submitting, setSubmitting] = useState<boolean>(false);
 
@@ -94,13 +96,18 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   const { fetchProjectLabels, getProjectLabels, createLabel } = useLabel();
   const { isMobile } = usePlatformOS();
   const storeLabels = getProjectLabels(projectId);
+  const read = useDirectoryRead(
+    workspaceSlug,
+    projectId ?? undefined,
+    projectId ? () => fetchProjectLabels(projectId) : undefined
+  );
   const { allowPermissions } = useUserPermissions();
 
   const canCreateLabel =
     projectId && allowPermissions([EUserProjectRoles.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
   let projectLabels: Label[] = defaultOptions;
-  if (storeLabels && storeLabels.length > 0) projectLabels = storeLabels;
+  if (storeLabels) projectLabels = storeLabels;
 
   const options = useMemo(
     () =>
@@ -143,20 +150,11 @@ export function LabelDropdown(props: ILabelDropdownProps) {
     ],
   });
 
-  const onOpen = useCallback(() => {
-    if (!storeLabels && projectId)
-      fetchProjectLabels(projectId)
-        .then(() => setIsLoading(false))
-        .catch(() => {
-          setIsLoading(false);
-        });
-  }, [storeLabels, projectId, fetchProjectLabels, setIsLoading]);
-
   const toggleDropdown = useCallback(() => {
-    if (!isOpen) onOpen();
+    if (!isOpen) void read.load();
     setIsOpen((prevIsOpen) => !prevIsOpen);
     if (isOpen && onClose) onClose();
-  }, [onOpen, onClose, isOpen, setIsOpen]);
+  }, [read, onClose, isOpen, setIsOpen]);
 
   const handleClose = () => {
     if (!isOpen) return;
@@ -186,7 +184,14 @@ export function LabelDropdown(props: ILabelDropdownProps) {
       e.preventDefault();
     }
 
-    if (query !== "" && e.key === "Enter" && !isComposing(e.nativeEvent) && canCreateLabel) {
+    if (
+      !read.loading &&
+      !read.error &&
+      query !== "" &&
+      e.key === "Enter" &&
+      !isComposing(e.nativeEvent) &&
+      canCreateLabel
+    ) {
       e.preventDefault();
       await handleAddLabel(query);
     }
@@ -278,7 +283,9 @@ export function LabelDropdown(props: ILabelDropdownProps) {
                 />
               </div>
               <div className="mt-2 max-h-48 overflow-y-scroll">
-                {isLoading ? (
+                {read.error ? (
+                  <DirectoryReadError error={read.error} retry={read.load} />
+                ) : read.loading ? (
                   <p className="text-center text-secondary">{t("common.loading")}</p>
                 ) : filteredOptions && filteredOptions.length > 0 ? (
                   <ul className="space-y-1">
@@ -342,4 +349,4 @@ export function LabelDropdown(props: ILabelDropdownProps) {
       </ComboDropDown>
     </div>
   );
-}
+});

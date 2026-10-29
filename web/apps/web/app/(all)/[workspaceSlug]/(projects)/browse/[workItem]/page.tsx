@@ -7,6 +7,7 @@
 import { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
+import { DetailResourceError } from "@/components/issues/issue-detail-widgets/resource-error";
 import { useSessionSWR } from "@/lib/use-session-swr";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
@@ -30,7 +31,7 @@ import { WorkItemDetailRoot } from "@/components/browse/workItem-detail";
 
 import type { Route } from "./+types/page";
 
-export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: Route.ComponentProps) {
+export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: Pick<Route.ComponentProps, "params">) {
   // router
   const navigate = useNavigate();
   const { workspaceSlug, workItem } = params;
@@ -48,7 +49,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
 
   const workspaceID = rootIssueStore.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id;
   const identity = rootIssueStore.permissionReads.identity(workspaceID, []);
-  const { data, isLoading, error } = useSessionSWR(
+  const { data, isLoading, error, mutate } = useSessionSWR(
     ["issue-by-identifier", workspaceSlug, workItem, identity],
     (slug, identifier) => fetchIssueWithIdentifier(slug, identifier),
     { dedupingInterval: 0 }
@@ -78,15 +79,26 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
 
   if ((error || data === undefined) && !isLoading) {
     return (
-      <EmptyState
-        image={resolvedTheme === "dark" ? emptyIssueDark : emptyIssueLight}
-        title={t("issue.empty_state.issue_detail.title")}
-        description={t("issue.empty_state.issue_detail.description")}
-        primaryButton={{
-          text: t("issue.empty_state.issue_detail.primary_button.text"),
-          onClick: () => navigate(`/${workspaceSlug}/projects`),
-        }}
-      />
+      <>
+        {error && (
+          <DetailResourceError
+            error={error}
+            retry={() => mutate()}
+            workspaceSlug={workspaceSlug}
+            projectId={projectId || undefined}
+            issueId={workItem}
+          />
+        )}
+        <EmptyState
+          image={resolvedTheme === "dark" ? emptyIssueDark : emptyIssueLight}
+          title={error ? t("common.error.label") : t("issue.empty_state.issue_detail.title")}
+          description={error ? undefined : t("issue.empty_state.issue_detail.description")}
+          primaryButton={{
+            text: t("issue.empty_state.issue_detail.primary_button.text"),
+            onClick: () => navigate(`/${workspaceSlug}/projects`),
+          }}
+        />
+      </>
     );
   }
 

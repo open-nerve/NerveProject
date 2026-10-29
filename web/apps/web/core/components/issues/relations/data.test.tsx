@@ -213,7 +213,8 @@ it("the actual cross-project row removes its relation in the source project's sc
           ],
         })
       );
-    if (/\/projects\/B\/(states|members|labels)$/.test(call.path)) call.answer(json(200, { data: [] }));
+    if (call.path === "/api/v0/workspaces/ws/states" || /\/projects\/B\/(members|labels)$/.test(call.path))
+      call.answer(json(200, { data: [] }));
   };
   await act(async () => app.issue.issueDetail.fetchRelations("ws", "A", "source"));
   nerve.calls.length = 0;

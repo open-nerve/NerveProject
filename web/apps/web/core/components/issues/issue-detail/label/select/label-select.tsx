@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { DirectoryReadError, useDirectoryRead } from "@/components/issues/issue-detail-widgets/directory-read";
 import { Fragment, useState } from "react";
 import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
@@ -41,7 +42,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
   // states
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const [query, setQuery] = useState("");
   const [submitting, setSubmitting] = useState<boolean>(false);
 
@@ -49,13 +50,13 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
     projectId && allowPermissions([EUserProjectRoles.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
   const projectLabels = getProjectLabels(projectId);
+  const read = useDirectoryRead(
+    workspaceSlug,
+    projectId ?? undefined,
+    projectId ? () => fetchProjectLabels(projectId) : undefined
+  );
 
   const { baseTabIndex } = getTabIndex(undefined, isMobile);
-
-  const fetchLabels = () => {
-    setIsLoading(true);
-    if (!projectLabels && projectId) fetchProjectLabels(projectId).then(() => setIsLoading(false));
-  };
 
   const options = (projectLabels ?? []).map((label) => ({
     value: label.id,
@@ -98,7 +99,14 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
       setQuery("");
     }
 
-    if (query !== "" && e.key === "Enter" && !isComposing(e.nativeEvent) && canCreateLabel) {
+    if (
+      !read.loading &&
+      !read.error &&
+      query !== "" &&
+      e.key === "Enter" &&
+      !isComposing(e.nativeEvent) &&
+      canCreateLabel
+    ) {
       e.stopPropagation();
       e.preventDefault();
       await handleAddLabel(query);
@@ -136,7 +144,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
             variant="tertiary"
             size="sm"
             prependIcon={<AddOutline />}
-            onClick={() => !projectLabels && fetchLabels()}
+            onClick={read.load}
           >
             {label}
           </Button>
@@ -164,7 +172,9 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
               </div>
             </div>
             <div className="vertical-scrollbar mt-2 scrollbar-sm max-h-48 overflow-y-scroll px-2 pr-0">
-              {isLoading ? (
+              {read.error ? (
+                <DirectoryReadError error={read.error} retry={read.load} />
+              ) : read.loading ? (
                 <p className="text-center text-secondary">{t("common.loading")}</p>
               ) : filteredOptions.length > 0 ? (
                 <ul className="space-y-1">

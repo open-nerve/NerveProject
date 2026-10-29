@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import type { ComponentType, SVGProps } from "react";
+import type { ComponentType, SVGProps, ReactNode } from "react";
 import { useState } from "react";
 import { useParams } from "react-router";
 import { useTranslation } from "@nerve/i18n";
@@ -32,6 +32,8 @@ type TMemberDropdownBaseProps = {
   getUserDetails: (userId: string) => MemberUser | undefined;
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
   memberIds?: string[];
+  isInitializing?: boolean;
+  readStatus?: ReactNode;
   onClose?: () => void;
   onDropdownOpen?: () => void;
   optionsClassName?: string;
@@ -79,6 +81,7 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
   } = useMember();
   const { isMobile } = usePlatformOS();
   const [rendered, setRendered] = useState(renderByDefault);
+  const [openOnMount, setOpenOnMount] = useState(false);
 
   // what the button says: the member picked, how many are, or the placeholder
   const getDisplayName = () => {
@@ -93,6 +96,12 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
   // the button: alone while the dropdown is deferred, then in the select's button
   const button = (
     <DropdownButton
+      presentation={rendered}
+      disabled={disabled}
+      onClick={() => {
+        setOpenOnMount(true);
+        setRendered(true);
+      }}
       // shown as active while the list is open (Headless UI's data-open on the select's button)
       className={cn("text-11 group-data-open:bg-layer-transparent-active", buttonClassName)}
       isActive={false}
@@ -168,13 +177,14 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
   return (
     <CustomSearchSelect
       {...selection}
-      options={options}
+      options={props.isInitializing ? undefined : props.readStatus ? [] : options}
+      footerOption={props.readStatus}
       onOpen={onDropdownOpen}
       onClose={onClose}
       disabled={disabled}
-      // Tab stops once, at the DropdownButton in it, a button of its own, as in every dropdown of dropdowns/, where
-      // the caller's tabIndex puts it: its Enter and Space reach the select's button, which opens the list
-      tabIndex={-1}
+      // Tab stops at the select's native trigger once; DropdownButton is its presentation content.
+      tabIndex={tabIndex}
+      defaultOpen={openOnMount}
       placement={placement}
       // As before the select was under it: the dropdown shrinks in its row (an inbox row's assignees), and its
       // button has no hover tint of its own behind the DropdownButton's (several callers turn that one off).
@@ -186,7 +196,7 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
       // the list's width, and the z-index a caller gives it
       optionsClassName={cn("w-48", optionsClassName)}
       searchPlaceholder={t("search")}
-      noResultsMessage={t("no_matching_results")}
+      noResultsMessage={props.readStatus ? "" : t("no_matching_results")}
       loadingMessage={t("loading")}
       // on a phone the search takes no focus as the list opens: the keyboard would cover the list
       focusSearchOnOpen={!isMobile}

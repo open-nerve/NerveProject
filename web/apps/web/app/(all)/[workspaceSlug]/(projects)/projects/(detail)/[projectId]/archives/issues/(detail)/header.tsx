@@ -7,8 +7,7 @@
 import { observer } from "mobx-react";
 import { useSessionSWR } from "@/lib/use-session-swr";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useTranslation } from "@nerve/i18n";
-import { errorMessageKey } from "@/lib/error-messages";
+import { DetailResourceError } from "@/components/issues/issue-detail-widgets/resource-error";
 // ui
 import { ArchiveOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 import { Breadcrumbs, Header } from "@nerve/ui";
@@ -32,7 +31,6 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
   // store hooks
   const { getProjectById, loader } = useProject();
   const detail = useIssueDetail();
-  const { t } = useTranslation();
   const root = detail.rootIssueStore;
   const workspaceID = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id;
   const identity = root.permissionReads.identity(workspaceID, [projectId]);
@@ -43,7 +41,7 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
     (slug, project, id) => detail.issue.fetchIssueCore(slug, project, id),
     { dedupingInterval: 0 }
   );
-  const issueDetails = detail.issue.getIssueDetailById(archivedIssueId);
+  const issueDetails = readable ? detail.issue.getIssueDetailById(archivedIssueId) : undefined;
   const currentProjectDetails = getProjectById(projectId);
 
   return (
@@ -83,19 +81,13 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
         </Breadcrumbs>
       </Header.LeftItem>
       <Header.RightItem>
-        {error && (
-          <div role="alert">
-            {t(errorMessageKey(error))}
-            <button
-              type="button"
-              onClick={() => {
-                void mutate().catch(() => {});
-              }}
-            >
-              {t("common.retry")}
-            </button>
-          </div>
-        )}
+        <DetailResourceError
+          error={error}
+          retry={() => mutate()}
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          issueId={archivedIssueId}
+        />
         <IssueDetailQuickActions workspaceSlug={workspaceSlug} projectId={projectId} issueId={archivedIssueId} />
       </Header.RightItem>
     </Header>

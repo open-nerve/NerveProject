@@ -4,7 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
+import { useParams } from "react-router";
+import { DirectoryReadError, useDirectoryRead } from "@/components/issues/issue-detail-widgets/directory-read";
 import { observer } from "mobx-react";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
@@ -20,29 +21,23 @@ type TWorkItemStateDropdownProps = Omit<
 export const StateDropdown = observer(function StateDropdown(props: TWorkItemStateDropdownProps) {
   const { projectId } = props;
   // states
-  const [stateLoader, setStateLoader] = useState(false);
+  const { workspaceSlug } = useParams();
   // store hooks
   const { fetchProjectStates, getProjectStateIds, getStateById, getStatePercentageInGroup } = useProjectState();
   // derived values
   const stateIds = getProjectStateIds(projectId);
 
-  // fetch states if not provided
-  const onDropdownOpen = async () => {
-    if ((stateIds === undefined || stateIds.length === 0) && projectId) {
-      setStateLoader(true);
-      await fetchProjectStates(projectId);
-      setStateLoader(false);
-    }
-  };
+  const read = useDirectoryRead(workspaceSlug, projectId, projectId ? () => fetchProjectStates(projectId) : undefined);
 
   return (
     <WorkItemStateDropdownBase
       {...props}
       getStateById={getStateById}
       getStatePercentageInGroup={getStatePercentageInGroup}
-      isInitializing={stateLoader}
+      isInitializing={read.loading}
+      readStatus={read.error ? <DirectoryReadError error={read.error} retry={read.load} /> : undefined}
       stateIds={stateIds ?? []}
-      onDropdownOpen={onDropdownOpen}
+      onDropdownOpen={read.load}
     />
   );
 });

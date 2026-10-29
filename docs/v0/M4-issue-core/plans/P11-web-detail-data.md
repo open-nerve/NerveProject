@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T10已实现，继续T11**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T11已实现，继续T12**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -161,10 +161,10 @@ make e2e
 
 **Files：** issue/issue-details、issue-detail-widgets、issue-modal与属性dropdown的当前读者；C/lib/use-session-swr.ts仅必要调用合同；.oxlintrc.json；新 detail-refusals.test.tsx。
 
-- [ ] 以静态调用表列出state/member/label的await、catch及UI落点；逐项标已由T2–T10闭合或本Task修。保留全部当前拒绝入口测试，不能只测通用helper替代真实调用。
-- [ ] 为核心/父项/状态、子项/关联目录、各属性下拉与版本/草稿被拒绝提供可见错误/重试、结束loader；按workspace取跨项目状态；当前错交回，SessionChanged无旧提示。
-- [ ] 详情SessionSWR key同时包含loginId、业务scope与permission identity；ABA后不读旧cache，核新会话有请求。原直接SWR豁免路径随迁移删掉；M7旧协议仅由共享展示拿明确输入，不开M4豁免。
-- [ ] 聚焦detail-refusals/use-session-swr/issue.fetch/sub_issues.fetch及组件拒绝回归；M25吞错误空数组、M26删permission key各红；G。提交 `fix(M4/P11): 让详情按需读取的拒绝可见并隔离缓存`。
+- [x] 以静态调用表列出state/member/label的await、catch及UI落点；逐项标已由T2–T10闭合或本Task修。保留全部当前拒绝入口测试，不能只测通用helper替代真实调用。
+- [x] 为核心/父项/状态、子项/关联目录、各属性下拉与版本/草稿被拒绝提供可见错误/重试、结束loader；按workspace取跨项目状态；当前错交回，SessionChanged无旧提示。
+- [x] 详情SessionSWR key同时包含loginId、业务scope与permission identity；ABA后不读旧cache，核新会话有请求。原直接SWR豁免路径随迁移删掉；M7旧协议仅由共享展示拿明确输入，不开M4豁免。
+- [x] 聚焦detail-refusals/use-session-swr/issue.fetch/sub_issues.fetch及组件拒绝回归；M25吞错误空数组、M26删permission key各红；G。提交 `fix(M4/P11): 让详情按需读取的拒绝可见并隔离缓存`。
 
 ## Task 12：弹窗与浮层宿主（约500–1000行）
 

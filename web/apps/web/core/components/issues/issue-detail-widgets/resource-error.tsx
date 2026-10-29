@@ -1,6 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { useTranslation } from "@nerve/i18n";
 import { useRefusalMessage } from "@/hooks/use-refusal-toast";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { followInSession } from "@/lib/in-session";
 import { useDetailScope } from "./use-detail-scope";
 
@@ -20,7 +21,7 @@ export function DetailResourceError({
   const { t } = useTranslation();
   const message = useRefusalMessage();
   const scope = useDetailScope(workspaceSlug, projectId, issueId);
-  if (!error) return null;
+  if (!error || error instanceof SessionChangedError) return null;
   const reread = async () => {
     const current = scope();
     if (!current()) return;

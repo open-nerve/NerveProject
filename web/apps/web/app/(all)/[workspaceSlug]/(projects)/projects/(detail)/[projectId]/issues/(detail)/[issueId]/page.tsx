@@ -7,6 +7,7 @@
 import { useTheme } from "next-themes";
 import { useEffect } from "react";
 import { observer } from "mobx-react";
+import { DetailResourceError } from "@/components/issues/issue-detail-widgets/resource-error";
 import { useSessionSWR } from "@/lib/use-session-swr";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useNavigate } from "react-router";
@@ -25,7 +26,7 @@ const IssueDetailsPage = observer(function IssueDetailsPage({ params }: Pick<Rou
   const issueRoot = detail.rootIssueStore;
   const workspaceID = issueRoot.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id;
   const identity = issueRoot.permissionReads.identity(workspaceID, [projectId]);
-  const { data, error, isLoading } = useSessionSWR(
+  const { data, error, isLoading, mutate } = useSessionSWR(
     ["issue-id-entry", workspaceSlug, projectId, issueId, identity],
     (slug, project, id) => detail.issue.fetchIssueCore(slug, project, id),
     { dedupingInterval: 0 }
@@ -43,11 +44,20 @@ const IssueDetailsPage = observer(function IssueDetailsPage({ params }: Pick<Rou
 
   if (error || (!isLoading && !issue)) {
     return (
-      <div className="flex size-full items-center justify-center">
+      <div className="flex size-full flex-col items-center justify-center">
+        {error && (
+          <DetailResourceError
+            error={error}
+            retry={() => mutate()}
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
+            issueId={issueId}
+          />
+        )}
         <EmptyState
           image={resolvedTheme === "dark" ? emptyIssueDark : emptyIssueLight}
-          title={t("issue.empty_state.issue_detail.title")}
-          description={t("issue.empty_state.issue_detail.description")}
+          title={error ? t("common.error.label") : t("issue.empty_state.issue_detail.title")}
+          description={error ? undefined : t("issue.empty_state.issue_detail.description")}
           primaryButton={{
             text: t("issue.empty_state.issue_detail.primary_button.text"),
             onClick: () => navigate(`/${workspaceSlug}/projects`),

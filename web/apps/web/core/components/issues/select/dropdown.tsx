@@ -5,6 +5,7 @@
  */
 
 import React from "react";
+import { DirectoryReadError, useDirectoryRead } from "@/components/issues/issue-detail-widgets/directory-read";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { EUserPermissionsLevel } from "@nerve/constants";
@@ -34,9 +35,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: TWorkI
   const canCreateLabel =
     projectId && allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
-  const onDropdownOpen = () => {
-    if (projectLabelIds === undefined && projectId) fetchProjectLabels(projectId);
-  };
+  const read = useDirectoryRead(workspaceSlug, projectId, projectId ? () => fetchProjectLabels(projectId) : undefined);
 
   const handleCreateLabel = (data: LabelCreate) => {
     if (!projectId) {
@@ -50,7 +49,9 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: TWorkI
       {...props}
       getLabelById={getLabelById}
       labelIds={projectLabelIds ?? []}
-      onDropdownOpen={onDropdownOpen}
+      onDropdownOpen={read.load}
+      isInitializing={read.loading}
+      readStatus={read.error ? <DirectoryReadError error={read.error} retry={read.load} /> : undefined}
       createLabel={handleCreateLabel}
       createLabelEnabled={!!canCreateLabel}
     />

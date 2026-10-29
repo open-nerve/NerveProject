@@ -1,6 +1,6 @@
 # M4/P11 详情数据层：预检与实施记录
 
-日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T10已实现，继续T11。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
+日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T11已实现，继续T12。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
 
 ## 1. 前置、身份与范围
 
@@ -172,3 +172,32 @@ T9检查点本地F七项有效结果全部通过：t9-f1的gen-check/lint-go/tes
 43文件635项相关回归、editor7文件45项（含真实编辑器既有测试）、共享10项force/0缓存构建、types、变更16文件零warning/格式及关键词75规则24例外通过；knip首轮指出上述两项死依赖，移除后knip/共享强制构建/types/editor45项复验通过（t10-*-cleanup）；警告上限web158→154、editor64→59。M23放回inactive成员使两个实际成员目录断言失败，M24移除当前query保护使旧答覆盖新词；均逐文件hash恢复后全回归通过。初始hook9红是旧接口尚未迁移，不能算九种独立性质；建议弹层5红为真实行为。首次构建的测试ES2024 Promise.withResolvers与React act全局类型不适配ES2023，改本包局部deferred/显式声明后通过，没有改编译基线。误调用不存在的check-keywords脚本不构成验证，随后复用已记录的正式keywords命令通过。
 
 主控要求及质量自审完成；不声称独立逐Task审核。T9准确87d1bcd7的CI40964469564当前server/web已过、E2E待结束；T10没有新push，不冒用T9 CI证明T10。继续T11，阶段deep-review与最终完整门禁仍待T15，不合并。
+
+
+### T11：按需读取与会话缓存
+
+| 当前调用 | await / catch / UI 落点 | 本次归属 |
+|---|---|---|
+| issue.store.fetchIssue / fetchIssueWithIdentifier 的核心、父项、状态及协作资源 | 核心先校验，所有辅助读取 await；当前拒绝 throw，旧权限转 SessionChanged；入口原生错误和只读重试 | store T2/T3已接；T11补三个页面与peek错误落点 |
+| sub_issues.readChildren 的本项目状态与父计数权威读取 | 顺序 await；DetailResource.error；子项内容及父同级列表错误/重试 | store T3已闭合；T11补 siblings 会话/权限key |
+| relation.directories 的跨项目状态/成员/标签 | 一次工作区状态GET；各目标项目members/labels，Promise.all等待；错误交回资源，不假空数组 | T11；子项合同仍只允许同项目，不恢复旧跨项目子项 |
+| StateDropdown / MemberDropdown / IssueLabelSelect | 打开时await原生目录；当前错误可见、loader结束、GET重试；旧宿主/权限回答忽略 | T11，真实组件DOM测试，未只测通用hook |
+| 详情标签select / 列表LabelDropdown | 同一读取状态合同；列表组件用observer跟随目录；失败时禁止借Enter创建 | T11；创建动作统一入口仍T13 |
+| versions / workspace drafts | SessionSWR业务参数+member permission identity，原生列表错误、重试；版本恢复UI lease为member | T8/T9已闭合，T11补版本恢复的member lease |
+| 归档页面及页头 | 单条详情沿issue.read含合法访客，SessionSWR含当前项目permission identity；原生错误与GET重试 | T11；不改变服务端合同与权限守卫 |
+| use-workspace-issue-properties | 当前只由M7 workspace-notifications使用，cycles/modules未接合同 | 保持M7边界，不列为M4已迁移或加M4豁免 |
+| ParentSelectRoot / detail与peek的update跟进 | 属于修改后续与弹窗owner合同，尚有吞失败/重复补读的旧逻辑 | T12宿主与T14修改矩阵继续处理，不以本表声称阶段已完成 |
+
+T11读取入口的行为红、修复和回归已执行；验证边界与执行中的纠正见下文。
+
+
+T11局部裁定纠正：曾把归档列表的member规则误套到单条详情并做未提交实验；核设计§3.4/§3.11、server GetIssue.Execute后撤回，root/canonical/versions store恢复本Task基线，未改服务端或权限守卫。单条归档的ID/browse/peek仍按issue.read，合法访客可以读取；只有归档列表按issue.archive。t11-archived-proof-red/entry-green及peek-guest-red反映错误假设，不作为产品安全证明或变异数量。t11-archive-contract-red用正确合同发现三处过度限制，修复后纳入回归。
+
+
+T11最终验证：t11-web-final为直接未缓存Web全套 **198文件2144项通过**（没有skip）；t11-native-types/types-present均通过，最新source的静态为t11-native-static-fixed（28个TS/TSX文件0warning/0error、格式通过），knip通过，cap按实际153从154收紧。关键词75条/24例外无命中。此前t11-regression-corrected为47文件665项；随后新增按钮属性及两项真实键盘测试，最终全套已覆盖；task-done还会对该聚焦命令留下提交后回执。
+
+M25在关联目录调用catch返回空数组，三类403测试均断言红；M26把siblings的permission key改常量，权限20→5→20的3次合法读取退回1次，断言红。m25/m26原字节SHA恢复核对，最终全套绿；不把归档错误假设的实验计入有效变异。
+
+实际组件测试替换了最初仅三个展示叶mock的版本：当前状态、成员（项目/工作区）、三处标签全部运行真实下拉与RootStore/FakeNerve。自审发现默认状态按钮嵌套原生button，移除嵌套后又通过tabIndex测试发现Headless Combobox会强制-1；最终复用既有CustomSearchSelect的Popover触发器，DropdownButton为嵌入内容提供纯展示span，状态/成员只有一个原生触发器并能按Enter发目录GET。复用现有getButtonStyling，不改共享包、不新增依赖；移除无读者StateOption。成员SSR的旧测试曾把嵌套按钮视为合同，已改为检验唯一触发器的tabIndex及纯展示内容，实际DOM测试守住键盘行为。DateDropdown/R36仍属于原P13移交，本次未冒称全面修复所有下拉。
+
+本Task的要求/质量复核由主控分两遍自审完成，没有冒充独立代理终审；完整fresh-context审者及deep-review仍在T15。局部裁定：每次打开目录读取当前源（代价是增加一次GET）；当前请求被另一读者覆盖而返回undefined会显示可重试错误，不伪造空目录。目录数据与权限事实没有第二份cache/观察者；旧scope结果不提示。ParentSelectRoot及写后跟进的owner仍按T12/T14收口，不能把本Task表述为整个P11已经交付。T9精确提交87d1bcd7的CI40964469564 attempt1三项最终全绿，t9-ci-04为回执；该结果不代替后续产品提交CI。

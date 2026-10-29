@@ -72,17 +72,18 @@ export class IssueRelationStore {
     }
     return projects;
   }
-  private async directories(projects: string[], baseProject: string) {
+  private async directories(projects: string[], scope: IssueWriteScope) {
     const app = this.root.rootStore;
-    await Promise.all(
-      projects
-        .filter((project) => project !== baseProject)
-        .flatMap((project) => [
-          app.state.fetchProjectStates(project),
-          app.memberRoot.project.fetchProjectMembers(project),
-          app.label.fetchProjectLabels(project),
-        ])
-    );
+    const otherProjects = projects.filter((project) => project !== scope.projectID);
+    if (!otherProjects.length) return;
+    const answers = await Promise.all([
+      app.state.fetchWorkspaceStates({ id: scope.workspaceID, slug: scope.workspaceSlug }),
+      ...otherProjects.flatMap((project) => [
+        app.memberRoot.project.fetchProjectMembers(project),
+        app.label.fetchProjectLabels(project),
+      ]),
+    ]);
+    if (answers.some((answer) => answer === undefined)) throw new Error("Directory read was superseded");
   }
   fetchRelations = async (ws: string, project: string, id: string): Promise<RelationRow[]> => {
     const resource = this.resources.entry(ws, project, id);
@@ -91,7 +92,7 @@ export class IssueRelationStore {
       async (read) => {
         const result = await this.root.detailApi.listRelations(id);
         const projects = await this.prove(result.data, scope, read.token, () => read.isCurrent());
-        await this.directories(projects, project);
+        await this.directories(projects, scope);
         this.current(scope, read.token, projects);
         if (!read.isCurrent()) throw new SessionChangedError();
         this.root.acceptListIssues(
@@ -167,7 +168,7 @@ export class IssueRelationStore {
           confirmed = true;
         }
         await this.refreshEndpoints([id, ...ids], scope, token, projects);
-        await this.directories(projects, project);
+        await this.directories(projects, scope);
       }, token);
     });
   removeRelation = (ws: string, project: string, id: string, type: IssueRelationType, target: string): Promise<void> =>

@@ -7,7 +7,8 @@
 import type { Issue } from "@nerve/api-client";
 
 import { observer } from "mobx-react";
-import useSWR from "swr";
+import { useSessionSWR } from "@/lib/use-session-swr";
+import { DetailResourceError } from "../../issue-detail-widgets/resource-error";
 
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -25,23 +26,34 @@ export const IssueParentSiblings = observer(function IssueParentSiblings(props: 
   // hooks
   const {
     fetchSubIssues,
+    rootIssueStore: root,
     subIssues: { subIssuesByIssueId },
   } = useIssueDetail();
 
-  const { isLoading } = useSWR(
-    parentIssue && parentIssue.project_id
-      ? `ISSUE_PARENT_CHILD_ISSUES_${workspaceSlug}_${parentIssue.project_id}_${parentIssue.id}`
-      : null,
-    parentIssue && parentIssue.project_id
-      ? () => fetchSubIssues(workspaceSlug, parentIssue.project_id!, parentIssue.id)
-      : null
+  const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
+  const identity = root.permissionReads.identity(workspace?.id, [parentIssue.project_id]);
+  const canRead =
+    root.active &&
+    root.rootStore.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, parentIssue.project_id) !==
+      undefined;
+  const { isLoading, error, mutate } = useSessionSWR(
+    canRead ? ["ISSUE_PARENT_CHILD_ISSUES", identity, workspaceSlug, parentIssue.project_id, parentIssue.id] : null,
+    (_identity, ws, project, id) => fetchSubIssues(ws, project, id)
   );
 
   const subIssueIds = (parentIssue && subIssuesByIssueId(parentIssue.id)) || undefined;
 
   return (
     <div className="my-1">
-      {isLoading ? (
+      {error ? (
+        <DetailResourceError
+          error={error}
+          retry={() => mutate()}
+          workspaceSlug={workspaceSlug}
+          projectId={parentIssue.project_id}
+          issueId={parentIssue.id}
+        />
+      ) : isLoading ? (
         <div className="flex items-center gap-2 px-1 py-1 text-left text-11 whitespace-nowrap text-secondary">
           Loading
         </div>

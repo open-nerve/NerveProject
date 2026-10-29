@@ -50,10 +50,14 @@ describe("MemberDropdownBase", () => {
     expect([shown.searchSelects.length, markup.includes(">Lead</span></button>")]).toEqual([0, true]);
   });
 
-  it("is a select, its button in the select's, unless its caller defers it", () => {
+  it("is a select with non-interactive trigger content unless its caller defers it", () => {
     const markup = render();
     const button = renderToStaticMarkup(shown.searchSelects[0]?.customButton);
-    expect([markup, shown.searchSelects.length, button.includes(">Lead</span></button>")]).toEqual(["", 1, true]);
+    expect([
+      markup,
+      shown.searchSelects.length,
+      button.includes(">Lead</span>") && !button.includes("<button"),
+    ]).toEqual(["", 1, true]);
   });
 
   it("focuses the search as the list opens on a desktop, not on a phone", () => {
@@ -64,10 +68,10 @@ describe("MemberDropdownBase", () => {
     expect([desktop, shown.searchSelects[0]?.focusSearchOnOpen]).toEqual([true, false]);
   });
 
-  it("gives its caller's tabIndex to its button, the select's own out of the Tab order (a work item form's)", () => {
+  it("gives the caller's tabIndex to the select's only native trigger", () => {
     render(true, 3);
     const button = renderToStaticMarkup(shown.searchSelects[0]?.customButton);
-    expect([shown.searchSelects[0]?.tabIndex, button.includes('tabindex="3"')]).toEqual([-1, true]);
+    expect([shown.searchSelects[0]?.tabIndex, button.includes("tabindex=")]).toEqual([3, false]);
   });
 
   it("keeps its list 12 pixels inside the window", () => {

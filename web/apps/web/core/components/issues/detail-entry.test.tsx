@@ -9,12 +9,14 @@ import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { loadProjects } from "@/store/project/fake-projects";
 import Page from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/issues/(detail)/[issueId]/page";
+import ArchivedPage from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/issues/(detail)/[archivedIssueId]/page";
+import { IssueDetailsPage as BrowsePage } from "@/app/(all)/[workspaceSlug]/(projects)/browse/[workItem]/page";
 import { ProjectArchivedIssueDetailsHeader } from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/issues/(detail)/header";
 
 const ui = vi.hoisted(() => ({ navigate: vi.fn(), login: "entry-login" }));
 vi.mock("react-router", () => ({ useNavigate: () => ui.navigate, redirect: vi.fn() }));
 vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: ui.login }) }));
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
+vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "entry-login" } }, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
 vi.mock("next-themes", () => ({ useTheme: () => ({ resolvedTheme: "light" }) }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
@@ -31,6 +33,16 @@ vi.mock("@/components/common/breadcrumb-link", () => ({
   BreadcrumbLink: ({ label }: { label?: string }) => <span>{label}</span>,
 }));
 vi.mock("@/components/issues/issue-detail/issue-detail-quick-actions", () => ({ IssueDetailQuickActions: () => null }));
+
+vi.mock("@/components/core/page-title", () => ({ PageHead: () => null }));
+vi.mock("@/components/issues/issue-detail", () => ({ IssueDetailRoot: () => null }));
+vi.mock("@/components/browse/workItem-detail", () => ({ WorkItemDetailRoot: () => null }));
+vi.mock("@/layouts/auth-layout/project-wrapper", () => ({
+  ProjectAuthWrapper: ({ children }: { children: React.ReactNode }) => children,
+}));
+vi.mock("@/hooks/store/use-app-theme", () => ({
+  useAppTheme: () => ({ toggleIssueDetailSidebar: () => {}, issueDetailSidebarCollapsed: false }),
+}));
 
 let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 let root: Root;
@@ -82,7 +94,11 @@ it("a refused ID entry retains an error state with a workspace projects destinat
   await act(async () => tab.nerve.calls[0]!.answer(problem(404, "issue.not_found")));
   await act(async () => until(() => !!container.querySelector("button"), "entry refusal"));
   expect(ui.navigate).not.toHaveBeenCalled();
-  await act(async () => container.querySelector("button")!.click());
+  await act(async () =>
+    [...container.querySelectorAll("button")]
+      .find((button) => button.textContent === "issue.empty_state.issue_detail.primary_button.text")!
+      .click()
+  );
   expect(ui.navigate).toHaveBeenCalledExactlyOnceWith("/ws/projects");
 });
 
@@ -112,4 +128,47 @@ it("the archive header uses session core data and immediately hides an invalidat
   await act(async () => loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]));
   await act(async () => until(() => tab.nerve.to("/api/v0/issues/one").length === 2, "fresh restored permission"));
   expect(container.textContent).not.toContain(`${tab.project.identifier}-42`);
+});
+
+const pageInputs = { loaderData: undefined, actionData: undefined, matches: [] };
+it.each(["id", "browse", "archived"])("%s entry exposes a native refusal and a read-only retry", async (entry) => {
+  await mount(
+    entry === "id" ? (
+      page()
+    ) : entry === "browse" ? (
+      <BrowsePage {...pageInputs} params={{ workspaceSlug: "ws", workItem: "A-12" }} />
+    ) : (
+      <ArchivedPage {...pageInputs} params={{ workspaceSlug: "ws", projectId: "A", archivedIssueId: "one" }} />
+    )
+  );
+  await firstRequest();
+  const path = tab.nerve.calls[0]!.path;
+  await act(async () => {
+    tab.nerve.calls[0]!.answer(problem(403, "forbidden"));
+    await vi.advanceTimersByTimeAsync(20);
+  });
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain("errors.forbidden");
+  await act(async () => {
+    [...container.querySelectorAll("button")].find((button) => button.textContent === "common.retry")!.click();
+    await until(() => tab.nerve.to(path).length === 2, "entry retry");
+  });
+  expect(tab.nerve.calls.map((call) => [call.method, call.path])).toEqual([
+    ["GET", path],
+    ["GET", path],
+  ]);
+});
+it("archive page and header still request a single readable issue for a legitimate guest", async () => {
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [{ ...tab.project, member_role: 5 }]);
+  tab.nerve.calls.length = 0;
+  await mount(
+    <>
+      <ArchivedPage {...pageInputs} params={{ workspaceSlug: "ws", projectId: "A", archivedIssueId: "one" }} />
+      <ProjectArchivedIssueDetailsHeader workspaceSlug="ws" projectId="A" archivedIssueId="one" />
+    </>
+  );
+  await act(async () => vi.advanceTimersByTimeAsync(20));
+  expect(tab.nerve.calls.map((call) => [call.method, call.path])).toEqual([
+    ["GET", "/api/v0/issues/one"],
+    ["GET", "/api/v0/issues/one"],
+  ]);
 });

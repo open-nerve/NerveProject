@@ -146,3 +146,11 @@ it("a directory response after permission ABA cannot revive identifier detail", 
   expect(reactions).not.toHaveBeenCalled();
   expect(tab.app.issue.issues.held("one")).toBeUndefined();
 });
+
+it("an archived issue read remains visible to a legitimate guest, unlike the member-only archive list", async () => {
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [{ ...tab.project, member_role: 5 }]);
+  const root = tab.app.issue;
+  const archived = { ...issueDetailOf("archived"), archived_at: "2026-10-30T00:00:00Z" };
+  root.issues.acceptRead(archived, root.captureRead());
+  expect(root.issues.getIssueById("archived")?.id).toBe("archived");
+});
