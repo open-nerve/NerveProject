@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层规格
 
-> 状态：T1–T9既定任务门禁已完成。T10部分实现6b406e56通过202项及静态检查，但2e4ca695保留了“失权后恢复、旧回答仍写入”的真实红测；负责人已批准[P10B-S1](../reviews/P10b-permission-read-decision.md)方案A，先同步合同再恢复T10。红测尚未修复、T10未完成，T11–T14未开始。最近完整F及准确CI仍仅绑定T8的481c30b4。阶段最终门禁、整审与最终CI尚未完成，全部产品验收保持未勾。
+> 状态：T1–T10任务门禁已完成。[P10B-S1](../reviews/P10b-permission-read-decision.md)方案A已实现，原红例及独评两轮修复闭环；最终产品c2a58998的24文件292项、类型与静态检查通过，见review§14。现在接续T11拖放，T12–T14仍待实施。最近完整F及准确CI仅绑定T8的481c30b4，下一完整F在T12；阶段整审与最终CI未完成，全部产品验收保持未勾，阶段不合并。
 
 ## 1. 目标
 
@@ -230,6 +230,8 @@ IssueRootStore的原autorun副本改为rootStore/router/user目录计算属性�
 ### 2.9 T5起接通、T11/T12完成：串行修改与全副本确认
 
 每工作项的修改共用根store一条oneAtATime队列；为避免共享邻接列两个不同ID拖动冲突，拖放使用该根store统一的拖放队列，再在对应工作项队列里执行（固定取得顺序，任何其它操作不反向持有两队列）。请求到发出时才从canonical读取邻接IDs现值计算sort_order，邻居已不存在则按当前有效落点/首尾65535间隔重算，不发送旧平均数。无邻居使用65535；首尾/中间算法与现有布局/服务端sort_order契约一致。
+
+拖放同时捕获来源列表的不可变绑定身份；排队期间切页面或筛选不改用门面的新currentList计算邻居。根向该来源绑定传递Drop落点和扩窗语义，向其它已取副本传递同一确认修改而不附带外来落点；其它副本按自身query、组与窗口正常收确认，不能仅凭相同组字符串在不同query制造组或扩窗。该归属只在根协调层保存，纯PagedGroups模型不依赖store，也不新增实体缓存。合法拖动组字段按生成IssueUpdate词汇构造，priority的none与标签/负责人空数组分别处理。
 
 目标入口 `updateIssue(id, makeBody: (held:Issue)=>IssueUpdate, drop?, operationScope?: IssueWriteScope): Promise<IssueDetail>`，拖放传makeBody闭包，不提前构造body；create/delete/archive/unarchive同根协调。body逐字段构造，禁止spread Issue带id/project_id。请求中仅UI pending/临时拖放呈现变化，canonical/PagedGroups不能变；拒绝交回且UI回原处。成功确认一次，从该操作pending取实际发出前冻结的beforeSnapshot并核对期间读证据→按已确认删除时先失效读代际→写各列表→写canonical，pending在对应请求finally结束，队列拒绝后继续。
 

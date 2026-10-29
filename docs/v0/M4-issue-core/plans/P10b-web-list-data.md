@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T9既定任务门禁已完成；负责人已批准[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)，先同步设计/spec/plan、由root核对后恢复T10。任务勾选由主控在独立评审后更新，当前不得开始T11。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T10任务门禁及独评闭环已完成；[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)已落实。接续T11拖放，任务勾选由主控在独立评审后更新，不重做已完成任务。
 
-> **当前状态：** T10部分实现6b406e56的22文件202项及静态检查通过，红反例单独提交2e4ca695，当前6项中1项真实失败，不能宣称T10门禁全绿。负责人已选根层方案A，合同同步不等于实现或通过。T9完成证据见review§12，T10检查点见§13；最近完整F/准确CI仅绑定T8的481c30b4。全部阶段产品验收仍未勾选，main基线仍为 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，阶段不合并。
+> **当前状态：** T10最终产品c2a58998通过24文件292项、类型与静态检查，独评及两轮限定复审闭环；历史停点/红例保留于review§13，完成证据见§14。接续T11；T12–T14待办，下一完整F在T12。最近完整F/准确CI仅绑定T8的481c30b4。阶段产品验收未勾，main基线仍为 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，阶段不合并。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -202,20 +202,21 @@ make e2e
 **P10B-S1 接续范围：** `IssueRootStore` 唯一拥有 `C/store/issue/permission-reads.ts` 内部权限签名/水位观察与retire；该 helper 仅保存权限元数据、不另建缓存。`C/store/project/project.store.ts` 提供按工作区枚举已知项目ID的只读入口，供不限项目的成员列表观察实际覆盖范围；不变更项目权限协议。既有权限目录观察入口、`issue-list-binding`、canonical及详情/verify现有读入口、列表挂载和核实去重须按 spec §2.6 的权限身份协同；`issue.store.ts` 因此需补权限证据守卫，不恢复全局 import。同步修正 `RootStore.dispose` 注释中已不存在的 issue autorun，保留 cycle/module 的实际归属，不改其生命周期。`useSessionSWR` 保持封闭配置，不新增第二缓存或框架。T10 完成这些本任务直接安全回归；T12仍做全副本交错。
 **Interfaces：** root代理router/currentuser/目录computed；useSessionSWR([name,scope…]|null,fetcher)；相同scope换loginId不得复用key。
 
-- [ ] `computedScopeClearsEmptyCatalogs`从有目录→空目录，currentUserId登出归空，不只truthy更新；`rootConstructionMakesNoStrictModeWarning`；列表hook测试换account/unknownid/guest/nonmember，断言不请求及旧答不写。
-- [ ] 红/绿：`pnpm --filter web exec vitest run core/store/issue/root.store.test.ts core/lib/store-context.test.ts core/lib/use-session-swr.test.ts`。
-- [ ] 去autorun及observable副本，保持只同步读代理；旧SWR都按列表范围替换（含archived direct useSWR），按需目录拒绝交回。oxlint限制同步但不提前把P11–15未迁移文件纳入无界失败。
-- [ ] 保留2e4ca695真实红例，补 finally 清理并独立断言 canonical/rows/total；失权→旧答和失权→恢复→旧答均丢弃，旧请求仍在外时恢复的新GET可发出并只收新答。先行为红，再按 spec §2.6 以根范围水位修复，恢复权限前后都不暴露旧持有值。
-- [ ] 真正目录观察覆盖相同签名重取、admin/member→guest、guest_view_all_features变化、工作区及项目失权；尤其以工作区 admin + 原始项目 guest 实测开关改变使旧答失效、新答收敛，不能因有效角色为 admin 漏掉；不推断 guest own-only。覆盖显式项目集合与工作区范围的 member whole/part、单项目 detail/verify、无关范围、同scope多消费者/普通卸载、在途去重和新身份；保留退役/删除/404/403/500/目录拒绝/loading及T7保存后读取回归。新增至少一个去权限水位或恢复身份的生产变异，行为红并恢复字节后绿；M31–33旧证据按实际改动决定是否复跑。
-- [ ] member 页返回未知项目时，按需复用 `ProjectStore.fetchProject`；测成功后发布、403/404原拒绝、仍非成员拒绝整页，以及等待期间失权使原页无效、恢复后实际新 whole 收敛。显式项目集合外的可见项目也拒绝整页，合法应答的实际项目核水位；首次目录基线不无限重取，不抹已观察失权水位。
-- [ ] M31key删loginId、M32不清空目录、M33忽略按需拒绝，分别红；G，提交 `feat(M4/P10b): 按会话和权限驱动列表挂载`。
+- [x] `computedScopeClearsEmptyCatalogs`从有目录→空目录，currentUserId登出归空，不只truthy更新；`rootConstructionMakesNoStrictModeWarning`；列表hook测试换account/unknownid/guest/nonmember，断言不请求及旧答不写。
+- [x] 红/绿：`pnpm --filter web exec vitest run core/store/issue/root.store.test.ts core/lib/store-context.test.ts core/lib/use-session-swr.test.ts`。
+- [x] 去autorun及observable副本，保持只同步读代理；旧SWR都按列表范围替换（含archived direct useSWR），按需目录拒绝交回。oxlint限制同步但不提前把P11–15未迁移文件纳入无界失败。
+- [x] 保留2e4ca695真实红例，补 finally 清理并独立断言 canonical/rows/total；失权→旧答和失权→恢复→旧答均丢弃，旧请求仍在外时恢复的新GET可发出并只收新答。先行为红，再按 spec §2.6 以根范围水位修复，恢复权限前后都不暴露旧持有值。
+- [x] 真正目录观察覆盖相同签名重取、admin/member→guest、guest_view_all_features变化、工作区及项目失权；尤其以工作区 admin + 原始项目 guest 实测开关改变使旧答失效、新答收敛，不能因有效角色为 admin 漏掉；不推断 guest own-only。覆盖显式项目集合与工作区范围的 member whole/part、单项目 detail/verify、无关范围、同scope多消费者/普通卸载、在途去重和新身份；保留退役/删除/404/403/500/目录拒绝/loading及T7保存后读取回归。新增至少一个去权限水位或恢复身份的生产变异，行为红并恢复字节后绿；M31–33旧证据按实际改动决定是否复跑。
+- [x] member 页返回未知项目时，按需复用 `ProjectStore.fetchProject`；测成功后发布、403/404原拒绝、仍非成员拒绝整页，以及等待期间失权使原页无效、恢复后实际新 whole 收敛。显式项目集合外的可见项目也拒绝整页，合法应答的实际项目核水位；首次目录基线不无限重取，不抹已观察失权水位。
+- [x] M31key删loginId、M32不清空目录、M33忽略按需拒绝，分别红；G，提交 `feat(M4/P10b): 按会话和权限驱动列表挂载`。
 
 ## Task 11：拖放与串行请求体计算（约400–750行）
 
-**Files：** C/store/issue/issue_kanban_view.store.ts、issue_calendar_view.store.ts；issue-layouts/utils.tsx与kanban/utils.ts等实际拖放预算sort_order入口；新C/store/issue/issue-drag.test.ts。
+**Files：** C/store/issue/root.store.ts、helpers/base-issues.store.ts及实际动作门面；C/hooks/use-group-dragndrop.ts、use-issues-actions.tsx；C/components/issues/issue-layouts/utils.tsx、calendar/{utils.ts,base-calendar-root.tsx}；新C/store/issue/issue-drag.test.ts及实际消费者回归。核对issue_kanban_view.store.ts、issue_calendar_view.store.ts既有显示/拖动守卫，仅按实际接线需要修改；不存在的kanban/utils.ts不创建兼容文件。
 **Interfaces：** spec§2.9 updateIssue(id,makeBody,drop)；根drag队列→id队列单向嵌套；Drop只记neighbor IDs和组位置。
 
 - [ ] `secondDropUsesFirstConfirmedNeighbors`安排不同卡片同列、首请求held，修改邻居后才放第二请求，断言实际PATCH中点；前序失败继续；missing neighbor按当前合法落点重算；移至列尾/空列/满日历确认后保留。
+- [ ] 捕获来源绑定，排队中切列表不改读新currentList；同组字符串但不同query的其它副本只接受普通确认，不接收来源Drop的额外组/扩窗。合法分组/泳道的priority:none、负责人/标签空数组与实际生成PATCH字段一致；旧草稿业务不误接普通Issue拖放入口。
 - [ ] `waitingDropDoesNotCrossSession`换会话后不再发旧队列请求或写旧view；请求body不带id/project_id；pending时模型不变且拒绝回原位置。
 - [ ] 红/绿：`pnpm --filter web exec vitest run core/store/issue/issue-drag.test.ts`。删除组件提前计算sort_order传常数的旧路径，calendar月/周依生成query，不发before/after。
 - [ ] M34把makeBody移出队列、M35全实体spread、M36前序拒绝卡住后续，各红；G，提交 `feat(M4/P10b): 在拖放发出时计算位置并串行确认`。

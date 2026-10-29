@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T9既定任务门禁已完成；T10已保存部分实现和真实红测，[P10B-S1](P10b-permission-read-decision.md)方案A已批准，合同同步后待实现。** 分支 `codex/m4-p10b`；main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T8检查点481c30b4完整F及CI全绿；T9通过307项与独评闭环。T10当前尚有失败，未独评，不进入T11。阶段最终门禁、终审与最终CI尚未完成，产品验收十项未勾，先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。[预检deep-review](../../../reviews/re-12-M4P10b预检审核.md)为历史证据，当前检查点见第13节。
+日期：2026-10-29。**T1–T10既定任务门禁已完成；[P10B-S1](P10b-permission-read-decision.md)方案A及独评两轮修复闭环，接续T11。** 分支 `codex/m4-p10b`；main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T10最终产品c2a58998通过24文件292项、类型、lint与knip；最近完整F及CI仍只绑定T8的481c30b4。T12–T14、阶段最终门禁、终审与最终CI尚未完成，产品验收十项未勾，先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。[预检deep-review](../../../reviews/re-12-M4P10b预检审核.md)为历史证据，当前检查点见第14节。
 
 ## 1. 实际前置与证据
 
@@ -216,3 +216,13 @@ T10继续删除根store的autorun副本，按所属RootStore的计算属性读�
 root核51条原始命令日志及部分实现/红测的32个变更输入与相应提交一致；`.oxlintrc.json`的额外指纹及原运行器覆盖限制如实保留。原件在`.superpowers/sdd/P10b-web-list-data/task-10-*`，完整报告、检查点audit和源码桥均已保存。最新产品检查点未push，main始终不变。
 
 该交错需要权限变化后的持久读取失效协调共享绑定、canonical写入和恢复后的新请求。已按负责人纪律先提交再暂停；2026-10-29负责人批准根层方案A，具体合同、代价及验收见[P10B-S1决策记录](P10b-permission-read-decision.md)及spec§2.6/2.8。先提交文档由root核合同后恢复T10；决定本身不修复红测，也不开始T11；阶段deep-review和最终F/CI仍待后续完成。
+
+## 14. T10 方案A完成与 T11 接续
+
+整Task范围`3273c9fe..c2a58998`。批准后先提交合同`620a8941`及原始guest角色补正`cf78e028`，再实施`e73bf44d`。`IssueRootStore`拥有权限元数据观察和退役；列表、canonical、详情及核实读取使用同一范围身份，恢复权限开启新身份，同身份在途请求仍去重。签名包括原始项目角色，覆盖工作区admin兼项目guest及可见性开关；未知项目按需目录准备、整页范围复核与等待失权均有实际回归。没有新增第二缓存、协议、依赖或放宽架构守卫。
+
+首次独评两项Important及一项Minor均已修复：旧写答不能借恢复后新读的权限证明暴露旧详情；未知或无权限的详情/关联入口在GET前拒绝；原真实SWR ABA测试对canonical、rows、total分别断言并finally清理。`5f5367b2`修复后，限定复审补核发现旧写仍可能隐藏恢复后的有效实体并留下total=1的列表空洞。`c2a58998`保留有效新读，失效旧非删除写只返回业务成功而不传播字段，目录await成功/拒绝后均复核；有效新身份读取可替换缺当前证明的旧持有值。相同身份内的纳秒版本选择与成功删除墓碑保持。第二轮限定复审无开放问题，未把初版clean或观察缺陷的probe通过误作最终产品绿。
+
+原件在`.superpowers/sdd/P10b-web-list-data/`：作者`task-10-current-report.md`、整Task`task-10-review.md`、两轮`task-10-fix1-review.md`/`task-10-fix2-review.md`及全部raw/JSON。root核218条raw，最终24文件292项、types、lint54/54（36缓存）、knip和提交桥的2626输入均等当前产品；4个修复提交路径逐字核，见`task-10-fix2-root-audit.json`及`task-10-fix2-root-commit-check.json`。最终测试raw SHA256为`9ab8e19243fe8950e3c2f343f054dde189dd9206b930b34ce6b2dd1271ba45ce`。生产变异在各自记录时点有行为红与恢复桥；不冒称它们全部在最终源码重新执行。工具、格式、类型及早期装配失败如实保留。
+
+T11接真实拖放消费者并在发送时读取邻居。来源列表绑定在排队前固定；Drop扩窗只作用于该来源，其他已取副本按自身query接普通确认，避免异查询同组键被扩窗。该局部归属澄清先同步设计/spec/plan，行为证据待T11提供。T12仍负责全副本竞态及一般写后权威GET去重、下一次完整F；T13仍负责四角色精确请求集及S2。阶段A1–A10、整分支deep-review、最终准确HEAD CI及集成保持开放。
