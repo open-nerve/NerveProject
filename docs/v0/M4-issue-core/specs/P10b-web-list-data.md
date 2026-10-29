@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层规格
 
-> 状态：T1–T9既定任务门禁已完成。T10部分实现6b406e56通过202项及静态检查，但2e4ca695保留了“失权后恢复、旧回答仍写入”的真实红测；读取失效归属按[P10B-S1](../reviews/P10b-permission-read-decision.md)等待负责人决定，T10未完成，T11–T14未开始。最近完整F及准确CI仍仅绑定T8的481c30b4。阶段最终门禁、整审与最终CI尚未完成，全部产品验收保持未勾。
+> 状态：T1–T9既定任务门禁已完成。T10部分实现6b406e56通过202项及静态检查，但2e4ca695保留了“失权后恢复、旧回答仍写入”的真实红测；负责人已批准[P10B-S1](../reviews/P10b-permission-read-decision.md)方案A，先同步合同再恢复T10。红测尚未修复、T10未完成，T11–T14未开始。最近完整F及准确CI仍仅绑定T8的481c30b4。阶段最终门禁、整审与最终CI尚未完成，全部产品验收保持未勾。
 
 ## 1. 目标
 
@@ -191,6 +191,18 @@ T6同时改 `C/store/issue/issue-details/{issue,sub_issues,link,relation}.store.
 
 显式 retry/权威 refresh 通过内部 `begin(true)` 建立新 round：即使无关慢 whole/part 仍持有旧 round，也不能复用旧 round 中已落定的拒绝 Promise。真正仍在外的同 id 请求可以跨 round 共享，并登记到加入轮次的已核实 ID 集合；旧轮次结束仅释放自身，不能清除较新的当前轮次。自动 require/drain 仍使用原轮次去重，不因拒绝自动重开；不新增实体缓存或 HTTP 合同。
 
+#### 权限范围读取失效（P10B-S1，T10）
+
+同一登录中已观察失权再恢复，读前和读后的角色相同也不能令旧答有效。`IssueRootStore` 单一拥有权限观察、范围水位和生命周期：观察所属 workspace 目录 `workspaces` 与 project 目录经现有 `getProjectById`、权限 getter 给出的事实，覆盖已有绑定、持有实体及在途请求所涉及范围。目录权威应答被接收或确认的成员变化生效时观察语义签名；新范围先建立当前基线，未知/非成员不能发受限读取。若使用 MobX 观察器，它只跟踪权限，不复制 router/user/catalog；`retire()` 幂等释放。不能在 computed getter 偷写，不因对象引用或无变化目录重取推进水位。
+
+工作区签名使用该 `Workspace.role` 和身份；项目签名使用已有 `getProjectRoleByWorkspaceSlugAndProjectId` 的有效角色与所属工作区身份，角色为 guest 时再包含项目 `guest_view_all_features`。已知可读签名变不可读或变为不同签名即失效原身份，覆盖 admin/member→guest 和 guest 开关变化；member 的 guest 开关变化不影响其签名。恢复或改变后以新身份重取。当前 scope 是否允许读取仍遵循项目成员含 guest、归档及成员列表仅 admin/member；guest 行范围由服务端裁定，不在浏览器推断 own-only。
+
+每个 HTTP 请求真正发出前以其不可变范围捕获本次权限证据，与既有 owner/readSerial 一同贯穿整个流程；已观察到的工作区失权使其项目/成员范围失效，项目失权或签名变化使该项目和覆盖它的成员范围失效，独立项目/工作区不受影响。单项目 list/detail/verify 核工作区及项目；成员列表带显式项目集合按该集合核，否则核工作区可覆盖的项目范围。任一相关变化使整页无效、保持待刷新，不得剪行后沿用旧 total。whole、part、detail、verify 在 canonical、rows、total、stale 及核实状态的任何写入之前核证据，包含每次目录或辅助资源 await 后及后续读取前。权限水位独立于成功树删除水位和每 id freshnessFloor，不改 owner/readSerial 含义、不造墓碑；拒绝、普通404不推进删除水位。
+
+失权时相关已持有实体和列表不得显示；恢复后也不得先暴露旧值，须由新身份下有效的完整 Issue/IssueDetail 读取及列表 whole 回答分别证实后才提供可靠值，完整列表行可作为实体的证据。保留现有协调状态和范围/水位元数据，不增第二缓存。恢复后的读取身份作为现有 sessionKey 的 scope 参数，确保新 GET 可在旧请求仍在外时发出；相同有效身份的多个消费者仍共享在途请求，普通卸载不取消共享绑定。核实协调的同 id 去重和重试也以此身份区分：失效旧轮不写核实元数据，恢复后的新轮不复用其旧 Promise。原 `useSessionSWR` 的 loginId、拒绝不重试和焦点规则保持封闭；局部 dedupingInterval=0 只处理已完成请求的短窗，不能作为 ABA 方案。
+
+T10 必须直接验证失权→旧答、失权→恢复→旧答、新旧请求同时在外及新答收敛、共享消费者与普通卸载、无变化目录、其他范围、guest、whole/part/detail/verify、拒绝/loading 和既有会话/删除/核实水位，并做真实生产变异红及恢复；T12 仍执行全副本交错矩阵，T13 仍执行四角色完整请求集及 S2。M4 只收口现有读者，P11页面及其完整详情资源迁移不提前。
+
 ### 2.7 T7/T8：显示偏好和筛选
 
 ProjectPreferencesService现有get/update签名不变；project filter按生成filters/display_filters/display_properties消费。每次PATCH只带要变的顶层字段的全值，其余字段省略；同字段排队时从最后确认值计算。navigation/sort_order不被覆盖。服务端不会自动使用偏好，列表显式拼查询。
@@ -209,7 +221,7 @@ T8 删除否定层时同步启用既定 negation-filters 精确静态守卫，�
 
 已归档/profile在localStorage的issue_local_filters，用现有主体作用域隔离；归档richFilters/rich_filters读写统一成rich_filters，与profile一致，历史错误键读一次可迁移但不同时保留两份权威。存储失效/损坏恢复默认，不抛未处理错误；不把其它账户偏好混用。看板折叠kanban_filters保留。草稿无筛选：WorkspaceDraftIssuesFilter及root/useIssues/types/barrel引用删除，draft列表本身留P11。
 
-IssueRootStore的autorun改为rootStore/router/user目录计算属性，无需新reaction或autorun释放逻辑；写协调器的 retire 仍按§2.6接入既有 RootStore.dispose；空目录不能保留上一项目数据。列表侧project-layout-root、archived-issue-layout-root、profile-issues统一useSessionSWR；键名、loginId、scope参数完整，null不请求，拒绝停止loading。访客个人主页不取issues，非成员项目页不取list；归档只admin/member。三处rootStore同步读继续只读，发请求经拥有者RootStore。组回查第三方版本也受同一会话守卫。 列表绑定读取前及目录等待后核对所属工作区和当前角色，权限消失时旧页不写 rows/total；恢复后重新挂载取新页。既有 useSessionSWR 仅允许调用者窄选 dedupingInterval，列表设为 0，使刚结束的失权读取不阻挡恢复后的新请求；同 key 的在途请求仍去重，其他调用与统一会话/拒绝配置不变。
+IssueRootStore的原autorun副本改为rootStore/router/user目录计算属性；权限观察如需reaction仅按§2.6的独立职责及retire生命周期进行。写协调器的 retire 仍按§2.6接入既有 RootStore.dispose；空目录不能保留上一项目数据。列表侧project-layout-root、archived-issue-layout-root、profile-issues统一useSessionSWR；键名、loginId、权限身份和scope参数完整，null不请求，拒绝停止loading。访客个人主页不取issues，非成员项目页不取list；归档只admin/member。三处rootStore同步读继续只读，发请求经拥有者RootStore。组回查第三方版本也受同一会话及权限水位守卫。恢复后的新身份不得复用失效在途请求；局部 dedupingInterval 选项的边界见§2.6。
 
 ### 2.9 T5起接通、T11/T12完成：串行修改与全副本确认
 

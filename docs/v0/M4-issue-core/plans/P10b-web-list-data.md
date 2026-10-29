@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T9既定任务门禁已完成；T10停在[P10B-S1权限读取失效决策](../reviews/P10b-permission-read-decision.md)，负责人决定后先同步设计/spec/plan再继续。任务勾选由主控在独立评审后更新，当前不得开始T11。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T9既定任务门禁已完成；负责人已批准[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)，先同步设计/spec/plan、由root核对后恢复T10。任务勾选由主控在独立评审后更新，当前不得开始T11。
 
-> **当前状态：** T10部分实现6b406e56的22文件202项及静态检查通过，红反例单独提交2e4ca695，当前6项中1项真实失败，不能宣称T10门禁全绿。已完成工作和证据已保存，正在等负责人决定读取失效归属。T9完成证据见review§12，T10检查点见§13；最近完整F/准确CI仅绑定T8的481c30b4。全部阶段产品验收仍未勾选，main基线仍为 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，阶段不合并。
+> **当前状态：** T10部分实现6b406e56的22文件202项及静态检查通过，红反例单独提交2e4ca695，当前6项中1项真实失败，不能宣称T10门禁全绿。负责人已选根层方案A，合同同步不等于实现或通过。T9完成证据见review§12，T10检查点见§13；最近完整F/准确CI仅绑定T8的481c30b4。全部阶段产品验收仍未勾选，main基线仍为 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，阶段不合并。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -198,12 +198,15 @@ make e2e
 ## Task 10：根store计算属性与列表会话取数（约350–700行）
 
 **Files：** C/store/issue/root.store.ts及新root.store.test.ts；C/lib/store-context.test.ts；C/components/issues/issue-layouts/roots/{project-layout-root,archived-issue-layout-root}.tsx、C/components/profile/profile-issues.tsx；三同步读取utils/command-palette/issue.store；.oxlintrc.json范围。
-**实际接线范围：** 四种 base layout 的首读、`use-issue-list-mount`、`use-issues-actions`、归档/profile filter 的读拒绝及 IssueListBinding 权限复核一并纳入；旧测试 fixture 改从所属 user/router 设置输入。`issue.store.ts` 已由 T6 改用所属 root，无需补改。新增 `useSessionSWR` 的窄 dedupingInterval 选项仅供本列表设 0，见 spec §2.8。
+**实际接线范围：** 四种 base layout 的首读、`use-issue-list-mount`、`use-issues-actions`、归档/profile filter 的读拒绝及 IssueListBinding 权限复核一并纳入；旧测试 fixture 改从所属 user/router 设置输入。`issue.store.ts` 已由 T6 改用所属 root，不为凑同步读处数重新添加旧引用。新增 `useSessionSWR` 的窄 dedupingInterval 选项仅供本列表设 0，见 spec §2.8。
+**P10B-S1 接续范围：** `IssueRootStore` 与既有权限目录观察/retire、`issue-list-binding`、canonical及详情/verify现有读入口、列表挂载和核实去重须按 spec §2.6 的权限身份协同；`issue.store.ts` 因此需补权限证据守卫，不恢复全局 import。同步修正 `RootStore.dispose` 注释中已不存在的 issue autorun，保留 cycle/module 的实际归属，不改其生命周期。`useSessionSWR` 保持封闭配置，不新增第二缓存或框架。T10 完成这些本任务直接安全回归；T12仍做全副本交错。
 **Interfaces：** root代理router/currentuser/目录computed；useSessionSWR([name,scope…]|null,fetcher)；相同scope换loginId不得复用key。
 
 - [ ] `computedScopeClearsEmptyCatalogs`从有目录→空目录，currentUserId登出归空，不只truthy更新；`rootConstructionMakesNoStrictModeWarning`；列表hook测试换account/unknownid/guest/nonmember，断言不请求及旧答不写。
 - [ ] 红/绿：`pnpm --filter web exec vitest run core/store/issue/root.store.test.ts core/lib/store-context.test.ts core/lib/use-session-swr.test.ts`。
 - [ ] 去autorun及observable副本，保持只同步读代理；旧SWR都按列表范围替换（含archived direct useSWR），按需目录拒绝交回。oxlint限制同步但不提前把P11–15未迁移文件纳入无界失败。
+- [ ] 保留2e4ca695真实红例，补 finally 清理并独立断言 canonical/rows/total；失权→旧答和失权→恢复→旧答均丢弃，旧请求仍在外时恢复的新GET可发出并只收新答。先行为红，再按 spec §2.6 以根范围水位修复，恢复权限前后都不暴露旧持有值。
+- [ ] 真正目录观察覆盖相同签名重取、admin/member→guest、guest_view_all_features变化、工作区及项目失权；不推断 guest own-only。覆盖显式项目集合与工作区范围的 member whole/part、单项目 detail/verify、无关范围、同scope多消费者/普通卸载、在途去重和新身份；保留退役/删除/404/403/500/目录拒绝/loading及T7保存后读取回归。新增至少一个去权限水位或恢复身份的生产变异，行为红并恢复字节后绿；M31–33旧证据按实际改动决定是否复跑。
 - [ ] M31key删loginId、M32不清空目录、M33忽略按需拒绝，分别红；G，提交 `feat(M4/P10b): 按会话和权限驱动列表挂载`。
 
 ## Task 11：拖放与串行请求体计算（约400–750行）
@@ -224,6 +227,7 @@ make e2e
 - [ ] create/update/delete/archive/unarchive/drag六张表各包含三列表+canonical、未取列表、server拒绝、SessionChanged、读写交错。断言请求数、确认次数、各total/rows/version，而非只测当前项目。
 - [ ] B-L1 `ownReadBeforeWriteAnswerKeepsOffWindowBeforeMembership`：X在A后页、A.total=5/B.total=4、outer不变，pending read先收到本次B版本，写答确认仍A4/B5且无无谓whole fetch；另测排队前序改before、第三方版本令证据unknown/stale。M45改成确认时读canonical必须红。
 - [ ] B-L2 `subtreeDeletionInvalidatesUnknownDescendantReplies`：根→子→孙（含归档），Y从未进canonical，隐藏/可见列表各有旧whole/part/get/verify在外；204后放旧答，Y无canonical/rows，旧答不能清stale；另一项目保持。并发两次删除夹一轮刷新；拒绝/SessionChanged不推进epoch。M46去掉项目token守卫或只过滤已知墓碑必须红。
+- [ ] P10B-S1 A 的权限范围水位与删除水位、每id核实 freshnessFloor、全副本确认及同/异scope whole/part/get/verify交错，按 spec §2.6 核互不混淆、旧读不写、新身份收敛；不替代 T10 已要求的真实ABA和直接安全回归。
 - [ ] B-L6 `missingReplayVerificationLeavesUncertainGroupsStale`：after已补回，get404后访问器不给可靠活值、相关counts stale、无墓碑/无关项目不变；受控新token空页使列表收敛。403/500保留error且不自动重复；SessionChanged不写新代、不请求后续；同round重复part仅一次get。M50在catch只throw而清stale或让每个catch自动重开round必须红。
 - [ ] B-L6时序补例 `preVerificationListCannotClearUnverifiedState`：先发旧list(serial=7)，再发verify get(serial=8)，verify在外又发一份list(serial=9)；get404落定设置freshnessFloor=9，随后两旧list携相同updated_at返回，均不能恢复可靠活值/清核实或相关stale。之后新发权威get/list(serial=10)返回同版本完整Issue才可恢复；后发空页只收敛列表不造墓碑。M51让captureRead不逐请求递增或仅核版本/删除token必须红，保留普通404不推进删除水位断言。
 - [ ] pending计数不被前一finally清掉；B-L3旧详情共享缓存边界也经本表核拒绝/回读真实版本。

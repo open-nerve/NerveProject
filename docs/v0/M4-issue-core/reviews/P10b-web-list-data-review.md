@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T9既定任务门禁已完成；T10已保存部分实现和真实红测，等待[P10B-S1](P10b-permission-read-decision.md)决策。** 分支 `codex/m4-p10b`；main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T8检查点481c30b4完整F及CI全绿；T9通过307项与独评闭环。T10当前尚有失败，未独评，不进入T11。阶段最终门禁、终审与最终CI尚未完成，产品验收十项未勾，先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。[预检deep-review](../../../reviews/re-12-M4P10b预检审核.md)为历史证据，当前检查点见第13节。
+日期：2026-10-29。**T1–T9既定任务门禁已完成；T10已保存部分实现和真实红测，[P10B-S1](P10b-permission-read-decision.md)方案A已批准，合同同步后待实现。** 分支 `codex/m4-p10b`；main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T8检查点481c30b4完整F及CI全绿；T9通过307项与独评闭环。T10当前尚有失败，未独评，不进入T11。阶段最终门禁、终审与最终CI尚未完成，产品验收十项未勾，先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。[预检deep-review](../../../reviews/re-12-M4P10b预检审核.md)为历史证据，当前检查点见第13节。
 
 ## 1. 实际前置与证据
 
@@ -215,4 +215,4 @@ T10继续删除根store的autorun副本，按所属RootStore的计算属性读�
 
 root核51条原始命令日志及部分实现/红测的32个变更输入与相应提交一致；`.oxlintrc.json`的额外指纹及原运行器覆盖限制如实保留。原件在`.superpowers/sdd/P10b-web-list-data/task-10-*`，完整报告、检查点audit和源码桥均已保存。最新产品检查点未push，main始终不变。
 
-该交错需要明确权限变化后的持久读取失效由根协调器还是列表binding持有，协调共享绑定、canonical写入和恢复后的新请求。已按负责人纪律先提交再暂停，推荐根层统一按权限scope维护读取失效，具体方案、代价及验收见[P10B-S1决策记录](P10b-permission-read-decision.md)。决定前不继续候选实现、不开始T11；阶段deep-review和最终F/CI仍待后续完成。
+该交错需要权限变化后的持久读取失效协调共享绑定、canonical写入和恢复后的新请求。已按负责人纪律先提交再暂停；2026-10-29负责人批准根层方案A，具体合同、代价及验收见[P10B-S1决策记录](P10b-permission-read-decision.md)及spec§2.6/2.8。先提交文档由root核合同后恢复T10；决定本身不修复红测，也不开始T11；阶段deep-review和最终F/CI仍待后续完成。
