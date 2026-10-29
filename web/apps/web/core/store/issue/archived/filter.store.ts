@@ -92,7 +92,7 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
     const richFilters = toFilterExpression(toProjectFilters(_filters?.rich_filters ?? {}));
     const displayFilters: IIssueDisplayFilterOptions = this.computedDisplayFilters({
       ..._filters?.display_filters,
-      sub_issue: true,
+      sub_issue: _filters?.display_filters?.sub_issue ?? true,
     });
     const displayProperties: IIssueDisplayProperties = this.computedDisplayProperties(
       _filters?.display_properties ?? {}

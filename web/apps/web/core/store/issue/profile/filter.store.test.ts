@@ -96,3 +96,72 @@ it("stored project restriction reaches the real member query after invalid field
     tab.app.dispose();
   }
 });
+
+it("defaults malformed display settings without discarding valid siblings", async () => {
+  data.set(
+    "issue_local_filters",
+    JSON.stringify([
+      {
+        key: "PROFILE",
+        workspaceSlug: "ws",
+        viewId: "target",
+        userId: "alice",
+        filters: {
+          display_filters: {
+            layout: "broken",
+            order_by: 17,
+            group_by: { bad: true },
+            sub_group_by: "labels",
+            show_empty_groups: "false",
+            sub_issue: "false",
+            calendar: { layout: "week", show_weekends: "false" },
+          },
+          display_properties: { priority: "false", labels: { bad: true }, assignee: false, state: false },
+        },
+      },
+    ])
+  );
+  const store = new ProfileIssuesFilter(root());
+  await store.fetchFilters("ws", "target");
+  expect(store.getIssueFilters("target")?.displayFilters).toMatchObject({
+    layout: "list",
+    order_by: "sort_order",
+    group_by: null,
+    sub_group_by: "labels",
+    show_empty_groups: false,
+    sub_issue: false,
+    calendar: { layout: "week", show_weekends: false },
+  });
+  expect(store.getIssueFilters("target")?.displayProperties).toMatchObject({
+    priority: true,
+    labels: true,
+    assignee: false,
+    state: false,
+  });
+});
+
+it("clears member-unsupported conditions on read and save while retaining project and priority", async () => {
+  const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const input = {
+    and: [
+      { state_id__in: id },
+      { assignee_id__in: id },
+      { subscriber_id__in: id },
+      { priority__in: "high" },
+      { project_id__in: id },
+    ],
+  };
+  data.set(
+    "issue_local_filters",
+    JSON.stringify([
+      { key: "PROFILE", workspaceSlug: "ws", viewId: "target", userId: "alice", filters: { rich_filters: input } },
+    ])
+  );
+  const store = new ProfileIssuesFilter(root());
+  await store.fetchFilters("ws", "target");
+  const expected = { and: [{ priority__in: "high" }, { project_id__in: id }] };
+  expect(store.getIssueFilters("target")?.richFilters).toEqual(expected);
+  await store.updateFilterExpression("ws", "target", input);
+  expect(store.getIssueFilters("target")?.richFilters).toEqual(expected);
+  expect(JSON.parse(data.get("issue_local_filters")!)[0].filters.rich_filters).toEqual(expected);
+});

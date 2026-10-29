@@ -120,3 +120,84 @@ it("defaults malformed nested kanban data before consumers use it", async () => 
   await store.fetchFilters("ws", "project");
   expect(store.getIssueFilters("project")?.kanbanFilters).toEqual({ group_by: [], sub_group_by: [] });
 });
+
+it("defaults malformed display fields while preserving valid values and false", async () => {
+  data.set(
+    "issue_local_filters",
+    JSON.stringify([
+      {
+        key: EIssuesStoreType.ARCHIVED,
+        workspaceSlug: "ws",
+        viewId: "project",
+        userId: "alice",
+        filters: {
+          display_filters: {
+            layout: "broken",
+            order_by: "broken",
+            group_by: { bad: true },
+            sub_group_by: "priority",
+            show_empty_groups: "false",
+            sub_issue: false,
+            calendar: { layout: "broken", show_weekends: false },
+          },
+          display_properties: { priority: "false", labels: { bad: true }, state: false, key: false },
+        },
+      },
+    ])
+  );
+  const store = new ArchivedIssuesFilter(root());
+  await store.fetchFilters("ws", "project");
+  expect(store.getIssueFilters("project")?.displayFilters).toMatchObject({
+    layout: "list",
+    order_by: "sort_order",
+    group_by: null,
+    sub_group_by: "priority",
+    show_empty_groups: false,
+    sub_issue: false,
+    calendar: { layout: "month", show_weekends: false },
+  });
+  expect(store.getIssueFilters("project")?.displayProperties).toMatchObject({
+    priority: true,
+    labels: true,
+    state: false,
+    key: false,
+  });
+});
+
+it("retains valid layout, sort, group and booleans when calendar is malformed", async () => {
+  data.set(
+    "issue_local_filters",
+    JSON.stringify([
+      {
+        key: EIssuesStoreType.ARCHIVED,
+        workspaceSlug: "ws",
+        viewId: "project",
+        userId: "alice",
+        filters: {
+          display_filters: {
+            layout: "kanban",
+            order_by: "-priority",
+            group_by: "state",
+            sub_group_by: null,
+            show_empty_groups: false,
+            sub_issue: false,
+            calendar: [],
+          },
+          display_properties: { priority: false },
+        },
+      },
+    ])
+  );
+  const store = new ArchivedIssuesFilter(root());
+  await store.fetchFilters("ws", "project");
+  expect(store.getIssueFilters("project")?.displayFilters).toMatchObject({
+    layout: "kanban",
+    order_by: "-priority",
+    group_by: "state",
+    sub_group_by: null,
+    show_empty_groups: false,
+    sub_issue: false,
+    calendar: { layout: "month", show_weekends: false },
+  });
+  expect(store.getIssueFilters("project")?.displayProperties?.priority).toBe(false);
+});

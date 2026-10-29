@@ -673,3 +673,41 @@ it.each([
     await request.promise;
   }
 );
+
+it("sends the confirmed member fields after local preference save and reload", async () => {
+  const data = new Map<string, string>();
+  vi.stubGlobal("window", {
+    localStorage: {
+      getItem: (key: string) => data.get(key) ?? null,
+      setItem: (key: string, value: string) => data.set(key, value),
+    },
+  });
+  const id = "019a0000-0000-7000-8000-000000000001";
+  try {
+    runInAction(() => {
+      app.issue.currentUserId = "viewer";
+    });
+    await app.issue.profileIssuesFilter.updateFilterExpression("ws", "actor", {
+      and: [{ state_id__in: id }, { created_by_id__in: id }, { priority__in: "high" }, { project_id__in: id }],
+    });
+    expect(JSON.parse(data.get("issue_local_filters")!)[0].filters.rich_filters).toEqual({
+      and: [{ priority__in: "high" }, { project_id__in: id }],
+    });
+    await app.issue.profileIssuesFilter.fetchFilters("ws", "actor");
+    expect(app.issue.profileIssuesFilter.getIssueFilters("actor")?.richFilters).toEqual({
+      and: [{ priority__in: "high" }, { project_id__in: id }],
+    });
+    const request = await requestedIssue(
+      nerve,
+      () => app.issue.profileIssues.fetchIssues("ws", "actor", "init-loader", { limit: 15 }, "assigned"),
+      ["GET", "/api/v0/workspaces/ws/members/actor/issues"]
+    );
+    expect(request.call.query).toMatchObject({ project_id: id, priority: "high" });
+    expect(request.call.query).not.toHaveProperty("state_id");
+    expect(request.call.query).not.toHaveProperty("created_by_id");
+    request.call.answer(json(200, { total: 0, data: [], next_cursor: null }));
+    await request.promise;
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

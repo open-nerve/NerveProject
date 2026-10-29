@@ -409,3 +409,19 @@ it("extracts member project conditions without admitting them to project filters
     toMemberFilters(JSON.parse(JSON.stringify({ and: [{ and: [{ project_id__in: A }] }, { priority__in: "high" }] })))
   ).toEqual({ priority: ["high"] });
 });
+
+it("member expression cleaning excludes project-only filters while keeping supported conditions", async () => {
+  const { toMemberFilters } = await import("./issue-filters");
+  expect(
+    toMemberFilters({
+      and: [
+        { state_id__in: A },
+        { assignee_id__in: A },
+        { created_by_id__in: A },
+        { subscriber_id__in: A },
+        { priority__in: "high" },
+        { project_id__in: A },
+      ],
+    })
+  ).toEqual({ project_id: [A], priority: ["high"] });
+});

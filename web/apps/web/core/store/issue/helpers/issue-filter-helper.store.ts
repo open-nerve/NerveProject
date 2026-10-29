@@ -25,6 +25,84 @@ import { storage } from "@/lib/local-storage";
 const strings = (value: unknown): string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string") ? value : [];
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+const displayGroups = new Set([
+  "state",
+  "priority",
+  "labels",
+  "created_by",
+  "state_detail.group",
+  "project",
+  "assignees",
+  "target_date",
+]);
+const displayOrders = new Set([
+  "-created_at",
+  "created_at",
+  "updated_at",
+  "-updated_at",
+  "priority",
+  "-priority",
+  "sort_order",
+  "state__name",
+  "-state__name",
+  "assignees__first_name",
+  "-assignees__first_name",
+  "labels__name",
+  "-labels__name",
+  "target_date",
+  "-target_date",
+  "start_date",
+  "-start_date",
+  "link_count",
+  "-link_count",
+  "sub_issues_count",
+  "-sub_issues_count",
+]);
+const displayPropertyNames = [
+  "assignee",
+  "start_date",
+  "due_date",
+  "labels",
+  "key",
+  "priority",
+  "state",
+  "sub_issue_count",
+  "link",
+  "created_on",
+  "updated_on",
+] as const;
+
+function localDisplayFilters(value: unknown): IIssueDisplayFilterOptions {
+  if (!isRecord(value)) return {};
+  const result: IIssueDisplayFilterOptions = {};
+  if (typeof value.layout === "string" && ["list", "kanban", "calendar", "spreadsheet"].includes(value.layout))
+    result.layout = value.layout;
+  if (typeof value.order_by === "string" && displayOrders.has(value.order_by))
+    result.order_by = value.order_by as IIssueDisplayFilterOptions["order_by"];
+  for (const field of ["group_by", "sub_group_by"] as const) {
+    const group = value[field];
+    if (group === null || (typeof group === "string" && displayGroups.has(group)))
+      result[field] = group as IIssueDisplayFilterOptions[typeof field];
+  }
+  for (const field of ["show_empty_groups", "sub_issue"] as const)
+    if (typeof value[field] === "boolean") result[field] = value[field];
+  if (isRecord(value.calendar)) {
+    result.calendar = {};
+    if (value.calendar.layout === "month" || value.calendar.layout === "week")
+      result.calendar.layout = value.calendar.layout;
+    if (typeof value.calendar.show_weekends === "boolean") result.calendar.show_weekends = value.calendar.show_weekends;
+  }
+  return result;
+}
+function localDisplayProperties(value: unknown): IIssueDisplayProperties {
+  if (!isRecord(value)) return {};
+  const result: IIssueDisplayProperties = {};
+  for (const field of displayPropertyNames) if (typeof value[field] === "boolean") result[field] = value[field];
+  return result;
+}
+
 interface ILocalStoreIssueFilters {
   key: EIssuesStoreType;
   workspaceSlug: string;
@@ -165,6 +243,8 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
       const kanban = entry.filters.kanban_filters;
       return {
         ...entry.filters,
+        display_filters: localDisplayFilters(entry.filters.display_filters),
+        display_properties: localDisplayProperties(entry.filters.display_properties),
         ...(kanban
           ? { kanban_filters: { group_by: strings(kanban.group_by), sub_group_by: strings(kanban.sub_group_by) } }
           : {}),

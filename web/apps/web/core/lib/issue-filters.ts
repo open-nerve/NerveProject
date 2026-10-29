@@ -129,6 +129,12 @@ function cleanFilters(input: unknown): ProjectIssueFilters {
   return result;
 }
 
+const memberFields = ["state_group", "priority", "label_id", "start_date", "target_date"] as const;
+function cleanMemberFields(input: unknown): ProjectIssueFilters {
+  const cleaned = cleanFilters(input);
+  return Object.fromEntries(memberFields.flatMap((key) => (cleaned[key] ? [[key, cleaned[key]]] : [])));
+}
+
 /** Invalid values or unrepresentable ANDs clear the whole field, never widen it into an OR. */
 export function toProjectFilters(expression: TWorkItemFilterExpression): ProjectIssueFilters {
   const result: ProjectIssueFilters = {};
@@ -177,7 +183,7 @@ export function toProjectFilters(expression: TWorkItemFilterExpression): Project
 export function toMemberFilters(
   expression: TWorkItemFilterExpression
 ): ProjectIssueFilters & Pick<MemberIssueQuery, "project_id"> {
-  const result = toProjectFilters(expression);
+  const result = cleanMemberFields(toProjectFilters(expression));
   const nodes = isRecord(expression) ? ("and" in expression ? expression.and : [expression]) : [];
   const projects = Array.isArray(nodes)
     ? nodes.flatMap((node) =>
@@ -250,16 +256,12 @@ export function memberListQuery(
 ): MemberIssueQuery {
   display ??= {};
   const groupBy = group(display.group_by);
-  const cleaned = cleanFilters(filters);
+  const cleaned = cleanMemberFields(filters);
   const projectIds = cleanValues("project_id", filters?.project_id);
   return {
     relation,
     ...(projectIds ? { project_id: projectIds } : {}),
-    ...Object.fromEntries(
-      (["state_group", "priority", "label_id", "start_date", "target_date"] as const).flatMap((key) => {
-        return cleaned[key] ? [[key, cleaned[key]]] : [];
-      })
-    ),
+    ...cleaned,
     order_by: order(display.order_by),
     sub_issue: display.sub_issue === false ? "false" : "true",
     ...(groupBy && !["state_id", "assignee_id", "created_by_id"].includes(groupBy) ? { group_by: groupBy } : {}),
