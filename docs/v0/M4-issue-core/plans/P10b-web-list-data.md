@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T11任务门禁及独评闭环已完成；[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)已落实。接续T12全副本竞态，任务勾选由主控在独立评审后更新，不重做已完成任务。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T12任务门禁及独评闭环已完成；[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)已落实。接续T13挂载与精确请求门禁，任务勾选由主控在独立评审后更新，不重做已完成任务。
 
-> **当前状态：** T11最终产品99d18da9通过8文件236项、类型/lint，独评及限定复审闭环；整Task与修复的准确验证范围见review§15。T10方案A完成证据见§14。T12接续全副本竞态及完整F；T13–T14待办。最近完整F/准确CI仅绑定T8的481c30b4。阶段产品验收未勾，main基线仍为 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，阶段不合并。
+> **当前状态：** T12最终产品c0cd32f7通过147项聚焦、352项受影响回归、独评及完整本地F，原件与源码桥见review§16；T10方案A、T11拖放证据见§14–15。检查点已推送，准确CI待返回，不能用T8的CI替代。T13–T14和阶段最终验收待办；main基线仍为 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，阶段不合并。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -228,18 +228,18 @@ make e2e
 **Files：** root.store.ts/issue.store.ts/issue-verification.ts/base-issues.store.ts及project/archived/profile；新C/store/issue/issue-changes.test.ts；改到的create/delete/archive跟进消费者。B-L3按实际共享缓存边界覆盖既有issue-details/{link,sub_issues}.store.ts及inbox/inbox-issue.store.ts的权威回读调用，不提前迁移其P11/M7资源协议。
 **Interfaces：** 复用 T5 已接通、T6 已换 canonical、T11 已闭合拖放的根协调入口，补全下列交错而非新增第二入口；每write调用同一根协调入口；实际发送前pending深拷贝before与读证据，确认取该操作冻结值，若无法证明则unknown/stale；删除先推进项目read epoch；broadcast到本代已注册scope，再canonical，恰好一次；未取不虚造value。
 
-- [ ] create/update/delete/archive/unarchive/drag六张表各包含三列表+canonical、未取列表、server拒绝、SessionChanged、读写交错。断言请求数、确认次数、各total/rows/version，而非只测当前项目。
-- [ ] B-L1 `ownReadBeforeWriteAnswerKeepsOffWindowBeforeMembership`：X在A后页、A.total=5/B.total=4、outer不变，pending read先收到本次B版本，写答确认仍A4/B5且无无谓whole fetch；另测排队前序改before、第三方版本令证据unknown/stale。M45改成确认时读canonical必须红。
-- [ ] B-L2 `subtreeDeletionInvalidatesUnknownDescendantReplies`：根→子→孙（含归档），Y从未进canonical，隐藏/可见列表各有旧whole/part/get/verify在外；204后放旧答，Y无canonical/rows，旧答不能清stale；另一项目保持。并发两次删除夹一轮刷新；拒绝/SessionChanged不推进epoch。M46去掉项目token守卫或只过滤已知墓碑必须红。
-- [ ] P10B-S1 A 的权限范围水位与删除水位、每id核实 freshnessFloor、全副本确认及同/异scope whole/part/get/verify交错，按 spec §2.6 核互不混淆、旧读不写、新身份收敛；不替代 T10 已要求的真实ABA和直接安全回归。
-- [ ] B-L6 `missingReplayVerificationLeavesUncertainGroupsStale`：after已补回，get404后访问器不给可靠活值、相关counts stale、无墓碑/无关项目不变；受控新token空页使列表收敛。403/500保留error且不自动重复；SessionChanged不写新代、不请求后续；同round重复part仅一次get。M50在catch只throw而清stale或让每个catch自动重开round必须红。
-- [ ] B-L6时序补例 `preVerificationListCannotClearUnverifiedState`：先发旧list(serial=7)，再发verify get(serial=8)，verify在外又发一份list(serial=9)；get404落定设置freshnessFloor=9，随后两旧list携相同updated_at返回，均不能恢复可靠活值/清核实或相关stale。之后新发权威get/list(serial=10)返回同版本完整Issue才可恢复；后发空页只收敛列表不造墓碑。M51让captureRead不逐请求递增或仅核版本/删除token必须红，保留普通404不推进删除水位断言。
-- [ ] pending计数不被前一finally清掉；B-L3旧详情共享缓存边界也经本表核拒绝/回读真实版本。
-- [ ] B-L3补充真实交错：写成功前已有同id权威GET在外，链接/子项等旧消费者成功后要求新权威证据；旧GET晚到不能冒充写后的最新计数。覆盖无已取列表及拒绝/退役，并保留纯并发读取同身份去重对照；沿现有token/根协调局部处理，不用每调用无条件新GET绕过。
-- [ ] R31：`refreshAuthoritative(issueId, options?: { afterWrite?: boolean })` 默认保留普通读取的同权限身份在途去重；链接创建/删除、子项创建/移除/删除和收集箱接受等成功写边界显式传 `afterWrite:true`，普通 fetchSubIssues 后的父项回读不传。写后调用取当时 readSerial 为最低证据 floor；只可复用实际发送 serial>floor 的请求，或确实尚未发送且随后才 capture 新 token 的请求。它不推进权限或删除水位。无已取列表时也立即保持未证实，直到新有效完整应答。旧请求在成功、404、403/500、补读和刷新前均核对仍拥有本次在途请求身份，不能污染更晚取证的实体、核实状态或错误，即使较新请求已成功清记录或已失败。每次成功写后的新取证有界；链接消费者在回读失效或未证实（undefined）时停止活动跟进并保留资源写成功；退役仍按 SessionChanged 结束。业务写不重发，不扩展 HTTP、第二缓存或通用协调框架。
-- [ ] R32：`createLink` 在原 `runInAction` 内一次发布包含已有 IDs 和新 ID 的数组，避免未加载列表时对 `(links[id] ??= [])` 赋值前的普通数组追加而丢失可观察 ID。未加载与已加载列表、连续创建顺序、业务响应/linkMap 和拒绝不追加均有直接行为回归；不改资源 API 或提前迁移 P11 详情协议。
-- [ ] 红/绿：`pnpm --filter web exec vitest run core/store/issue/issue-changes.test.ts core/store/issue/issue.store.test.ts core/store/issue/issue-drag.test.ts`。
-- [ ] M37只改当前list、M38提前乐观写、M39重复confirm、M40漏SessionChanged，各红；G、F，提交 `feat(M4/P10b): 将确认修改同步到会话内每份列表`。
+- [x] create/update/delete/archive/unarchive/drag六张表各包含三列表+canonical、未取列表、server拒绝、SessionChanged、读写交错。断言请求数、确认次数、各total/rows/version，而非只测当前项目。
+- [x] B-L1 `ownReadBeforeWriteAnswerKeepsOffWindowBeforeMembership`：X在A后页、A.total=5/B.total=4、outer不变，pending read先收到本次B版本，写答确认仍A4/B5且无无谓whole fetch；另测排队前序改before、第三方版本令证据unknown/stale。M45改成确认时读canonical必须红。
+- [x] B-L2 `subtreeDeletionInvalidatesUnknownDescendantReplies`：根→子→孙（含归档），Y从未进canonical，隐藏/可见列表各有旧whole/part/get/verify在外；204后放旧答，Y无canonical/rows，旧答不能清stale；另一项目保持。并发两次删除夹一轮刷新；拒绝/SessionChanged不推进epoch。M46去掉项目token守卫或只过滤已知墓碑必须红。
+- [x] P10B-S1 A 的权限范围水位与删除水位、每id核实 freshnessFloor、全副本确认及同/异scope whole/part/get/verify交错，按 spec §2.6 核互不混淆、旧读不写、新身份收敛；不替代 T10 已要求的真实ABA和直接安全回归。
+- [x] B-L6 `missingReplayVerificationLeavesUncertainGroupsStale`：after已补回，get404后访问器不给可靠活值、相关counts stale、无墓碑/无关项目不变；受控新token空页使列表收敛。403/500保留error且不自动重复；SessionChanged不写新代、不请求后续；同round重复part仅一次get。M50在catch只throw而清stale或让每个catch自动重开round必须红。
+- [x] B-L6时序补例 `preVerificationListCannotClearUnverifiedState`：先发旧list(serial=7)，再发verify get(serial=8)，verify在外又发一份list(serial=9)；get404落定设置freshnessFloor=9，随后两旧list携相同updated_at返回，均不能恢复可靠活值/清核实或相关stale。之后新发权威get/list(serial=10)返回同版本完整Issue才可恢复；后发空页只收敛列表不造墓碑。M51让captureRead不逐请求递增或仅核版本/删除token必须红，保留普通404不推进删除水位断言。
+- [x] pending计数不被前一finally清掉；B-L3旧详情共享缓存边界也经本表核拒绝/回读真实版本。
+- [x] B-L3补充真实交错：写成功前已有同id权威GET在外，链接/子项等旧消费者成功后要求新权威证据；旧GET晚到不能冒充写后的最新计数。覆盖无已取列表及拒绝/退役，并保留纯并发读取同身份去重对照；沿现有token/根协调局部处理，不用每调用无条件新GET绕过。
+- [x] R31：`refreshAuthoritative(issueId, options?: { afterWrite?: boolean })` 默认保留普通读取的同权限身份在途去重；链接创建/删除、子项创建/移除/删除和收集箱接受等成功写边界显式传 `afterWrite:true`，普通 fetchSubIssues 后的父项回读不传。写后调用取当时 readSerial 为最低证据 floor；只可复用实际发送 serial>floor 的请求，或确实尚未发送且随后才 capture 新 token 的请求。它不推进权限或删除水位。无已取列表时也立即保持未证实，直到新有效完整应答。旧请求在成功、404、403/500、补读和刷新前均核对仍拥有本次在途请求身份，不能污染更晚取证的实体、核实状态或错误，即使较新请求已成功清记录或已失败。每次成功写后的新取证有界；链接消费者在回读失效或未证实（undefined）时停止活动跟进并保留资源写成功；退役仍按 SessionChanged 结束。业务写不重发，不扩展 HTTP、第二缓存或通用协调框架。
+- [x] R32：`createLink` 在原 `runInAction` 内一次发布包含已有 IDs 和新 ID 的数组，避免未加载列表时对 `(links[id] ??= [])` 赋值前的普通数组追加而丢失可观察 ID。未加载与已加载列表、连续创建顺序、业务响应/linkMap 和拒绝不追加均有直接行为回归；不改资源 API 或提前迁移 P11 详情协议。
+- [x] 红/绿：`pnpm --filter web exec vitest run core/store/issue/issue-changes.test.ts core/store/issue/issue.store.test.ts core/store/issue/issue-drag.test.ts`。
+- [x] M37只改当前list、M38提前乐观写、M39重复confirm、M40漏SessionChanged，各红；G、F，提交 `feat(M4/P10b): 将确认修改同步到会话内每份列表`。
 
 ## Task 13：项目挂载与精确请求门禁（约400–800行）
 

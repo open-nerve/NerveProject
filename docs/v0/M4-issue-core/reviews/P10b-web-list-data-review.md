@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T11既定任务门禁已完成；[P10B-S1](P10b-permission-read-decision.md)方案A及拖放的独评修复闭环，接续T12。** 分支 `codex/m4-p10b`；main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T11最终产品99d18da9通过8文件236项、类型/lint，前期静态/knip及补验桥见第15节；最近完整F及CI仍只绑定T8的481c30b4。T12–T14、阶段最终门禁、终审与最终CI尚未完成，产品验收十项未勾，先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。[预检deep-review](../../../reviews/re-12-M4P10b预检审核.md)为历史证据。
+日期：2026-10-29。**T1–T12既定任务门禁已完成；[P10B-S1](P10b-permission-read-decision.md)方案A、拖放、全副本竞态及写后取证均通过独评，接续T13。** 分支 `codex/m4-p10b`；main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T12最终产品c0cd32f7通过完整本地F，已推送、准确检查点CI待返回，详见第16节。T13–T14、阶段终审与最终CI尚未完成，产品验收十项未勾，先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。[预检deep-review](../../../reviews/re-12-M4P10b预检审核.md)为历史证据。
 
 ## 1. 实际前置与证据
 
@@ -236,3 +236,13 @@ T11接真实拖放消费者并在发送时读取邻居。来源列表绑定在�
 原件在`.superpowers/sdd/P10b-web-list-data/`：`task-11-current-report.md`、`task-11-review.md`、`task-11-fix1-review.md`，root审计`task-11-root-audit-before-review-02.json`、`task-11-fix1-root-audit.json`与两轮commit/mutation核验。最终root核98raw、4个修复提交路径和2628输入；修复后8文件236项、应用types/lint及diff-check通过。最初实现曾通过26文件376项、完整lint54/54（36缓存）与knip，最后测试加强以定点16项/types/lint补桥；修复轮knip早于最后纳秒测试加强，产品相同，最终236及types/lint覆盖最终字节。218是警告上限汇总，不声称逐项对照或零警告。M34–36及修复旧判断/unknown全放行/毫秒比较均有行为红和恢复hash；最后毫秒变异只执行1项、23项按名称跳过，非全套门禁。历史夹具/装配和root检查假设纠正均保留。
 
 日历完整DOM/浏览器拖动仍由后续集成与Phase P12页面核对，T11工具函数/门面证据不冒作E2E。T12补六写全副本、冻结before、未知子树删除、权限/核实水位交错；尤其验证旧权威GET不能冒充写成功后的新计数证据，再运行完整F和准确检查点CI。T13精确角色请求集、T14整分支deep-review及最终门禁仍待，不合并。
+
+## 16. T12 全副本竞态完成与 T13 接续
+
+整Task范围`99d18da9..c0cd32f7`，含接续文档`e00d492b`及产品`c0cd32f7`。六写分别覆盖项目/归档/个人主页、未取列表、拒绝、退役与晚答；B-L1冻结before、B-L2未知后代删除、B-L6的serial7/8/9/10及权限水位独立性均有真实RootStore/FakeNerve断言。复用原协调入口和唯一canonical，不为已正确行为制造产品改动。
+
+实际反例促成两个局部修复。R31写成功后显式要求`afterWrite`取证，默认普通读取仍共享在途GET；已发出的写前GET不能充当写后计数证据，旧请求所有权在成功/拒绝/补读/刷新前复核。六个旧资源写成功调用者已按用途接入，普通fetchSubIssues回读不误标写；权威值失效时链接活动跟进停止而保留业务写成功。R32在原action中一次发布链接ID数组，修复未加载时向MobX赋值前普通数组push造成ID丢失；未加载/已加载、连续创建及拒绝都有直接回归。spec和plan均先同步合同，未扩大资源HTTP迁移范围。
+
+独评`task-12-review.md`给出Spec通过、Quality Approved、0C/0I/0M。root核102份raw、最终147聚焦/352受影响回归/types/严格lint/format/diff的2629输入与提交一致，8提交blob和8项变异的单生产文件改动/恢复hash已核；原件为`task-12-current-report.md`、`task-12-root-audit-before-review.json`、`task-12-root-commit-mutation-check.json`。M50仅403/500错误态断言算行为红，404超时不算；早期夹具/类型失败保留，不冒充产品缺陷。旧资源service按既有测试方式mock，其canonical GET走生成客户端；不替代P11/M7资源协议集成。
+
+完整本地F于c0cd32f7干净HEAD严格串行通过，证据目录`task-12-root-final-f-attempt1`的七份raw/receipt及`root-audit.json`已核。Go为51包通过、16包无测试；lint-web54/54（36缓存）；web18任务0缓存，八包新日志合计1827项（应用164文件1665项、其余162项）；E2E169项通过（44.2s）。应用日志保留11个stderr段，含T13已认领的隐藏看板列key提示及旧领域/翻译组件提示；不声称零噪声，也不屏蔽。检查点已用系统git推送，准确CI待返回，不外推旧CI。T13继续四角色精确请求集、真实布局首读及旧接口门禁；T14仍负责A1–A10、最终F/CI与整分支deep-review，不合并。
