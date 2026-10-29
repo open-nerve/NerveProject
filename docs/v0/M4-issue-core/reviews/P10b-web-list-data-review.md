@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T8 既定任务门禁已完成；T8 筛选语义及边界修复已独评闭合，完整 F 通过；T9 开始。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。481c30b4 检查点已推送，准确分支 CI 正在观察；阶段最终门禁、终审与最终 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。当前实施记录见第11节，第7–10节保留 T1–T7 的过程与完成证据；以下第1–6节保留预检时点事实。
+日期：2026-10-29。**T1–T9既定任务门禁已完成；T9本地偏好、草稿删除及两项边界修复已独评闭合；T10开始。** 分支 `codex/m4-p10b`；实际main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T8检查点481c30b4的完整F及准确CI全绿；T9当前3273c9fe通过307项和静态门禁。阶段最终门禁、终审与最终CI尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前[deep-review](../../../reviews/re-12-M4P10b预检审核.md)仍为历史准备证据。当前实施记录见第12节，第7–11节保留T1–T8过程；以下第1–6节保留预检时点事实。
 
 ## 1. 实际前置与证据
 
@@ -194,3 +194,17 @@ T8 继续补齐筛选转换/回读语义并删除否定层。R20 将已批准的
 - 子进程移除冲突的 NO_COLOR 后颜色警告为0，T7 M2关闭；20段单测 stderr 的 MobX/React 已有警告原样保留，IssueRootStore归T10、看板隐藏空fragment归T13，其余按既有归属，不吞stderr。
 
 系统 Git 已成功推送检查点，[准确分支 CI 40791948412](https://github.com/open-nerve/NerveProject/actions/runs/40791948412) 绑定 481c30b4，仍在运行；T9 继续本地存储键/账户隔离和草稿筛选移除。阶段 A1–A10、整分支 deep-review、最终准确 HEAD CI、集成及 M4 总完成线仍开放。
+
+## 12. T9 完成与 T10 接续
+
+T8检查点[CI 40791948412](https://github.com/open-nerve/NerveProject/actions/runs/40791948412) attempt1已全绿，绑定481c30b4，server/web/e2e均success，公开收据`task-8-ci-status-07.json`；这是上节“运行中”的后续结论，不能代替T9新代码的完整F。
+
+T9范围为`481c30b4..3273c9fe`：归档/profile按当前账户＋workspace＋目标视图读写同一rich_filters键，明确账户的旧键迁移一次，无主旧条目不猜归当前账户；存储损坏/不可用回默认，看板折叠保留。草稿筛选类及root/barrel/hook/action引用删除，草稿业务保留P11。R22把两处profile项目条件提取收口到既有纯函数；R23用精确关键词守卫锁定删除边界，普通草稿业务不受影响。
+
+作者自查关注项先补证再独评：真实store-context切账户后新根首次fetch前无旧偏好，旧根晚更新不影响新根；完整RootStore＋useIssues＋草稿根挂载无偏好读写/额外根API请求。M28/M29有真实错误键/账户共享行为红；M30补充恢复完整可编译旧类与构造，类型绿、关键词6命中红、原字节恢复后绿。初次只引用不存在类的编译失败仍保留，不冒称其证明残留约束。
+
+首次独评两项Important均由`3273c9fe`修复并经限定复审关闭：本地显示设置校验布局/排序/分组/布尔/calendar与属性，坏字段默认、合法兄弟及false保留；profile确认表达式、保存和member请求共用支持字段集合，保留有效project_id。正式反例、两个生产回退变异与恢复绿覆盖这两项；不修改shared utils或服务端合同。
+
+原件均在`.superpowers/sdd/P10b-web-list-data/`：`task-9-current-report.md`、`task-9-review.md`、`task-9-fix1-review.md`及raw/JSON。root核80条raw、最终2619输入和7修复提交路径、首红基线及变异恢复桥（`task-9-fix1-root-audit.json`、`task-9-fix1-root-source-check.json`）。最终17文件307项通过，含T7保存→新查询/只重试GET与high→low→high贯通；lint-web54/54、knip通过，警告cap未放宽。完整F按计划在T12再次运行。
+
+T10继续删除根store的autorun副本，按所属RootStore的计算属性读取当前用户/路由/目录，并把列表挂载接到会话/权限控制的取数。T9的会话替换证据不替代T10完整矩阵；阶段验收、终审、最终CI及集成仍开放，不合并。

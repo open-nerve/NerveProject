@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T8 既定任务门禁已完成；T8 筛选语义、否定层清理和边界修复已通过独评及完整 F，继续 T9 本地偏好与草稿去筛选。任务勾选由主控在独立评审后更新。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T9既定任务门禁已完成；T9本地偏好、草稿删除及坏值修复通过独评，继续T10计算属性与列表会话挂载。任务勾选由主控在独立评审后更新。
 
-> **当前状态：** T8 修复提交 481c30b4 的限定复审及完整本地七门禁通过：Go 51 个包、前端 1,623 项、E2E 169 项成功；检查点已推送，准确分支 CI 仍待观察，证据见 review §11。全部阶段产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。
+> **当前状态：** T9修复提交3273c9fe的限定复审、17文件307项及lint/knip通过，证据见review§12。最近完整七门禁及准确分支CI仍绑定T8的481c30b4（Go51包、前端1623项、E2E169项；CI40791948412三任务全绿），不冒称覆盖T9新源码；下一F在T12。全部阶段产品验收仍未勾选。基线main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和P10a性质承接见spec附录B；准确main CI/归档清理见P10a review§10。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -191,9 +191,9 @@ make e2e
 **Files：** C/store/issue/{archived,profile}/filter.store.ts及新tests；删除workspace-draft/filter.store.ts，改其index/root.store.ts/use-issues.ts和草稿引用。
 **Interfaces：** localStorage issue_local_filters同键rich_filters，scope包含既有账户/项目或目标用户视图；草稿useIssues分支不再给issuesFilter。
 
-- [ ] `archiveFiltersSurviveFreshStore`写后重建store读相同条件；`legacyArchiveKeyMigratesOnce`、`invalidStorageDefaultsWithoutLeakingScope`、`profileViewsKeepIndependentSettings`；草稿挂载不调getFilters/写偏好、不发新请求。
-- [ ] 红及绿：`pnpm --filter web exec vitest run core/store/issue/archived/filter.store.test.ts core/store/issue/profile/filter.store.test.ts`，附typecheck/knip。
-- [ ] M28写richFilters读rich_filters、M29共享账户key、M30草稿残留filter构造，分别行为/静态红；G，提交 `feat(M4/P10b): 修复本地列表偏好并移除草稿筛选`。
+- [x] `archiveFiltersSurviveFreshStore`写后重建store读相同条件；`legacyArchiveKeyMigratesOnce`、`invalidStorageDefaultsWithoutLeakingScope`、`profileViewsKeepIndependentSettings`；草稿挂载不调getFilters/写偏好、不发新请求。
+- [x] 红及绿：`pnpm --filter web exec vitest run core/store/issue/archived/filter.store.test.ts core/store/issue/profile/filter.store.test.ts`，附typecheck/knip。
+- [x] M28写richFilters读rich_filters、M29共享账户key、M30草稿残留filter构造，分别行为/静态红；G，提交 `feat(M4/P10b): 修复本地列表偏好并移除草稿筛选`。
 
 ## Task 10：根store计算属性与列表会话取数（约350–700行）
 
