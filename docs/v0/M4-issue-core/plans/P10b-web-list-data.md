@@ -199,7 +199,7 @@ make e2e
 
 **Files：** C/store/issue/root.store.ts及新root.store.test.ts；C/lib/store-context.test.ts；C/components/issues/issue-layouts/roots/{project-layout-root,archived-issue-layout-root}.tsx、C/components/profile/profile-issues.tsx；三同步读取utils/command-palette/issue.store；.oxlintrc.json范围。
 **实际接线范围：** 四种 base layout 的首读、`use-issue-list-mount`、`use-issues-actions`、归档/profile filter 的读拒绝及 IssueListBinding 权限复核一并纳入；旧测试 fixture 改从所属 user/router 设置输入。`issue.store.ts` 已由 T6 改用所属 root，不为凑同步读处数重新添加旧引用。新增 `useSessionSWR` 的窄 dedupingInterval 选项仅供本列表设 0，见 spec §2.8。
-**P10B-S1 接续范围：** `IssueRootStore` 与既有权限目录观察/retire、`issue-list-binding`、canonical及详情/verify现有读入口、列表挂载和核实去重须按 spec §2.6 的权限身份协同；`issue.store.ts` 因此需补权限证据守卫，不恢复全局 import。同步修正 `RootStore.dispose` 注释中已不存在的 issue autorun，保留 cycle/module 的实际归属，不改其生命周期。`useSessionSWR` 保持封闭配置，不新增第二缓存或框架。T10 完成这些本任务直接安全回归；T12仍做全副本交错。
+**P10B-S1 接续范围：** `IssueRootStore` 唯一拥有 `C/store/issue/permission-reads.ts` 内部权限签名/水位观察与retire；该 helper 仅保存权限元数据、不另建缓存。`C/store/project/project.store.ts` 提供按工作区枚举已知项目ID的只读入口，供不限项目的成员列表观察实际覆盖范围；不变更项目权限协议。既有权限目录观察入口、`issue-list-binding`、canonical及详情/verify现有读入口、列表挂载和核实去重须按 spec §2.6 的权限身份协同；`issue.store.ts` 因此需补权限证据守卫，不恢复全局 import。同步修正 `RootStore.dispose` 注释中已不存在的 issue autorun，保留 cycle/module 的实际归属，不改其生命周期。`useSessionSWR` 保持封闭配置，不新增第二缓存或框架。T10 完成这些本任务直接安全回归；T12仍做全副本交错。
 **Interfaces：** root代理router/currentuser/目录computed；useSessionSWR([name,scope…]|null,fetcher)；相同scope换loginId不得复用key。
 
 - [ ] `computedScopeClearsEmptyCatalogs`从有目录→空目录，currentUserId登出归空，不只truthy更新；`rootConstructionMakesNoStrictModeWarning`；列表hook测试换account/unknownid/guest/nonmember，断言不请求及旧答不写。
@@ -207,6 +207,7 @@ make e2e
 - [ ] 去autorun及observable副本，保持只同步读代理；旧SWR都按列表范围替换（含archived direct useSWR），按需目录拒绝交回。oxlint限制同步但不提前把P11–15未迁移文件纳入无界失败。
 - [ ] 保留2e4ca695真实红例，补 finally 清理并独立断言 canonical/rows/total；失权→旧答和失权→恢复→旧答均丢弃，旧请求仍在外时恢复的新GET可发出并只收新答。先行为红，再按 spec §2.6 以根范围水位修复，恢复权限前后都不暴露旧持有值。
 - [ ] 真正目录观察覆盖相同签名重取、admin/member→guest、guest_view_all_features变化、工作区及项目失权；尤其以工作区 admin + 原始项目 guest 实测开关改变使旧答失效、新答收敛，不能因有效角色为 admin 漏掉；不推断 guest own-only。覆盖显式项目集合与工作区范围的 member whole/part、单项目 detail/verify、无关范围、同scope多消费者/普通卸载、在途去重和新身份；保留退役/删除/404/403/500/目录拒绝/loading及T7保存后读取回归。新增至少一个去权限水位或恢复身份的生产变异，行为红并恢复字节后绿；M31–33旧证据按实际改动决定是否复跑。
+- [ ] member 页返回未知项目时，按需复用 `ProjectStore.fetchProject`；测成功后发布、403/404原拒绝、仍非成员拒绝整页，以及等待期间失权使原页无效、恢复后实际新 whole 收敛。显式项目集合外的可见项目也拒绝整页，合法应答的实际项目核水位；首次目录基线不无限重取，不抹已观察失权水位。
 - [ ] M31key删loginId、M32不清空目录、M33忽略按需拒绝，分别红；G，提交 `feat(M4/P10b): 按会话和权限驱动列表挂载`。
 
 ## Task 11：拖放与串行请求体计算（约400–750行）

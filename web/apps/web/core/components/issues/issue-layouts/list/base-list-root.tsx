@@ -59,7 +59,14 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
   const collapsedGroups =
     issuesFilter?.issueFilters?.kanbanFilters || ({ group_by: [], sub_group_by: [] } as TIssueKanbanFilters);
 
-  useIssueListMount(storeType, fetchIssues, { limit: group_by ? 50 : 100 }, viewId, String(group_by));
+  useIssueListMount(
+    storeType,
+    issues.rootIssueStore,
+    fetchIssues,
+    { limit: group_by ? 50 : 100 },
+    viewId,
+    String(group_by)
+  );
 
   const groups = issues?.groups as Map<string, Group> | undefined;
   const staleRefresh = useIssueListRefresh(

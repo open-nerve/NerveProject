@@ -120,9 +120,9 @@ export class RootStore {
   /**
    * Releases the project filters' reaction to the address's workspace: it is registered on the page's RouterStore,
    * which goes on with the next session (v0 design 7.7, M3 design 7.1). store-context.tsx calls it as the next
-   * session's RootStore takes over, so that a retired session's project filters no longer follow the address. It
-   * releases nothing else yet: the cycle and module filters' reactions and the issue root's autorun also follow the
-   * RouterStore, and run on in a retired session until M6 releases them here (M3 design 7.1, 13.2).
+   * session's RootStore takes over, so that a retired session's project filters no longer follow the address. It also
+   * retires the issue root and its permission observation. The cycle and module filters' reactions still follow the
+   * RouterStore until M6 releases them here (M3 design 7.1, 13.2).
    */
   dispose(): void {
     this.issue.retire();

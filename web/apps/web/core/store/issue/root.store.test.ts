@@ -39,3 +39,19 @@ it("rootConstructionMakesNoStrictModeWarning", () => {
   app.dispose();
   warn.mockRestore();
 });
+
+it("retire releases permission observation and does not advance old identities", async () => {
+  const { issueStoreTab } = await import("./fake-issues");
+  const { loadProjects } = await import("@/store/project/fake-projects");
+  vi.useFakeTimers();
+  const tab = await issueStoreTab();
+  try {
+    const before = tab.app.issue.permissionReads.identity(tab.workspace.id, [tab.project.id]);
+    tab.app.dispose();
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+    expect(tab.app.issue.permissionReads.identity(tab.workspace.id, [tab.project.id])).toBe(before);
+  } finally {
+    tab.app.dispose();
+    vi.useRealTimers();
+  }
+});

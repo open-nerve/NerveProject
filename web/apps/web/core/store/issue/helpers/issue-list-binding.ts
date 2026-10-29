@@ -45,13 +45,15 @@ type ReadRequest = Readonly<{ part: PagePart | null; first: boolean; cursor: str
 export class IssueListBinding {
   readonly reconciled = new Reconciled<PagedGroups>();
   readonly loaders = observable.map<string, TLoader>();
+  private readonly loading = new Map<string, symbol>();
+  private permissionStale = false;
   private source = 0;
   private visibleParts: readonly PagePart[] = [];
   get isVisible(): boolean {
     return this.visibleParts.length > 0;
   }
   get verifying(): boolean {
-    return this.root.verification.isVerifying(this);
+    return !this.permissionStale && this.root.verification.isVerifying(this);
   }
   setVisibleParts(parts: readonly PagePart[]): void {
     this.visibleParts = parts;
@@ -62,7 +64,7 @@ export class IssueListBinding {
     readonly root: IIssueRootStore,
     readonly scope: IssueListScope
   ) {
-    makeObservable(this, { error: observable.ref });
+    makeObservable<this, "permissionStale">(this, { error: observable.ref, permissionStale: observable });
     for (const value of Object.values(scope.query)) if (Array.isArray(value)) Object.freeze(value);
     Object.freeze(scope.query);
     Object.freeze(scope);
@@ -88,6 +90,19 @@ export class IssueListBinding {
         : !this.scope.query.project_id?.length || this.scope.query.project_id.includes(scope.projectID))
     );
   }
+  invalidatePermission(): void {
+    this.reconciled.invalidate();
+    this.failedReads.clear();
+    this.loading.clear();
+    runInAction(() => {
+      this.permissionStale = true;
+      this.error = undefined;
+      this.loaders.clear();
+    });
+  }
+  get value(): PagedGroups | undefined {
+    return this.permissionStale ? undefined : this.reconciled.value;
+  }
   private scopeRole(): number | undefined {
     const stores = this.root.rootStore;
     if (stores.workspaceRoot.getWorkspaceBySlug(this.scope.workspaceSlug)?.id !== this.scope.workspaceID)
@@ -107,7 +122,7 @@ export class IssueListBinding {
     if (!this.allowsRole(role)) throw new SessionChangedError();
     const currentScope = () => this.scopeRole() === role && this.allowsRole(role);
     const { part, first, cursor, lower } = request;
-    const token = this.root.captureRead();
+    const token = this.root.captureRead(this.scope.scope === "member");
     const query = {
       ...this.scope.query,
       ...(part
@@ -137,12 +152,29 @@ export class IssueListBinding {
       issues.some(
         (issue) =>
           issue.workspace_id !== this.scope.workspaceID ||
-          (this.scope.scope === "project" && issue.project_id !== this.scope.projectID)
+          (this.scope.scope === "project" && issue.project_id !== this.scope.projectID) ||
+          (this.scope.scope === "member" &&
+            !!this.scope.query.project_id?.length &&
+            !this.scope.query.project_id.includes(issue.project_id))
       )
     )
       throw new Error("Issue page does not match its scope");
+    const returnedProjects = [...new Set(issues.map((issue) => issue.project_id))];
+    const returnedCurrent = () =>
+      !returnedProjects.length || this.root.isReadCurrent(token, returnedProjects, this.scope.workspaceID);
+    if (!returnedCurrent()) throw new SessionChangedError();
+    const projectStore = this.root.rootStore.projectRoot.project;
+    await Promise.all(
+      returnedProjects.map(async (projectID) => {
+        if (!projectStore.getProjectById(projectID)) await projectStore.fetchProject(projectID);
+      })
+    );
+    if (!returnedCurrent() || !currentScope() || !this.root.isReadCurrent(token, projects, this.scope.workspaceID))
+      throw new SessionChangedError();
+    if (issues.some((issue) => !this.root.canSeeIssue(issue)))
+      throw new Error("Required issue project permission is unavailable");
     await this.prepareCatalog(issues);
-    if (!currentScope() || !this.root.isReadCurrent(token, projects, this.scope.workspaceID))
+    if (!returnedCurrent() || !currentScope() || !this.root.isReadCurrent(token, projects, this.scope.workspaceID))
       throw new SessionChangedError();
     const known = this.reconciled.value;
     const rowParts: PagePart[] = part
@@ -251,6 +283,12 @@ export class IssueListBinding {
     refreshing?: VerificationRound
   ): Promise<PagedGroups | undefined> {
     this.root.assertActive();
+    const projectIDs = this.scope.scope === "project" ? [this.scope.projectID] : (this.scope.query.project_id ?? []);
+    const identity = this.root.permissionReads.identity(
+      this.scope.workspaceID,
+      projectIDs,
+      this.scope.scope === "member"
+    );
     const round = this.root.verification.begin();
     const heldGroup = part ? this.group(part.group, part.subgroup) : undefined;
     const request =
@@ -262,6 +300,8 @@ export class IssueListBinding {
         lower: first ? null : (heldGroup?.cursorBoundary ?? null),
       });
     const key = part ? pagePartKey(part) : "whole";
+    const loading = Symbol(key);
+    this.loading.set(key, loading);
     runInAction(() => this.loaders.set(key, first ? "init-loader" : "pagination"));
     try {
       const value = part
@@ -270,14 +310,21 @@ export class IssueListBinding {
             () => this.read(request),
             (held, answer) => mergePages(held, this.answer(answer), this.context)
           )
-        : this.reconciled.value === undefined
+        : this.reconciled.value === undefined || this.permissionStale
           ? await this.reconciled.fetch(() => this.read(request))
           : await this.refreshWhole(request);
       if (value === undefined) return undefined;
       if (!refreshing) await this.root.verification.drain(this, round);
+      if (
+        !this.root.active ||
+        identity !==
+          this.root.permissionReads.identity(this.scope.workspaceID, projectIDs, this.scope.scope === "member")
+      )
+        return undefined;
       if (part === null) this.failedReads.clear();
       else this.failedReads.delete(key);
       runInAction(() => {
+        if (part === null) this.permissionStale = false;
         if (!this.failedReads.size) this.error = undefined;
       });
       return value;
@@ -290,7 +337,10 @@ export class IssueListBinding {
       throw error;
     } finally {
       this.root.verification.end(round);
-      if (this.root.active) runInAction(() => this.loaders.delete(key));
+      if (this.root.active && this.loading.get(key) === loading) {
+        this.loading.delete(key);
+        runInAction(() => this.loaders.delete(key));
+      }
     }
   }
   private refreshWhole(request: ReadRequest): Promise<PagedGroups | undefined> {
@@ -308,6 +358,10 @@ export class IssueListBinding {
   fetchFirst = () => this.fetch(null, true);
   retryFailed = async (): Promise<void> => {
     this.root.assertActive();
+    if (this.permissionStale) {
+      await this.fetchFirst();
+      return;
+    }
     if (await this.root.verification.retry(this)) return;
     const requests = [...this.failedReads.values()];
     if (!requests.length) {
@@ -399,7 +453,7 @@ export class IssueListBinding {
     });
   }
   group(group = "", subgroup?: string): Group | undefined {
-    const outer = this.reconciled.value?.groups.get(group);
+    const outer = this.value?.groups.get(group);
     return subgroup === undefined ? outer : outer?.subgroups?.get(subgroup);
   }
 }

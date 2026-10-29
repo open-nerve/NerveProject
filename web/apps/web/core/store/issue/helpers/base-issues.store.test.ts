@@ -295,6 +295,8 @@ it("pageMergesDeduplicateDroppedRowAndKeepsServerCursorBoundary", async () => {
   expect(app.issue.projectIssues.getGroupIssueCount("B")).toBe(6);
 });
 it("memberInitialAndNextPagesKeepRelationAndExplicitProjectScope", async () => {
+  const scopedProject = "019a0000-0000-7000-8000-000000000001";
+  await loadProjects(nerve, app.projectRoot.project, ws, [projectOf("P", ws.id, { id: scopedProject })]);
   runInAction(() => {
     app.issue.profileIssuesFilter.filters.actor = {
       richFilters: { project_id__in: "019a0000-0000-7000-8000-000000000001,019a0000-0000-7000-8000-000000000002" },
@@ -318,17 +320,29 @@ it("memberInitialAndNextPagesKeepRelationAndExplicitProjectScope", async () => {
     limit: "15",
   });
   first.call.answer(
-    json(200, { total: 3, groups: [{ key: "A", total: 3, data: [listIssue("a", 10)], next_cursor: "member:next" }] })
+    json(200, {
+      total: 3,
+      groups: [
+        {
+          key: scopedProject,
+          total: 3,
+          data: [listIssue("a", 10, { project_id: scopedProject })],
+          next_cursor: "member:next",
+        },
+      ],
+    })
   );
   await first.promise;
-  const next = await requestedIssue(nerve, () => store.fetchNextIssues("ws", "actor", "A"), [
+  const next = await requestedIssue(nerve, () => store.fetchNextIssues("ws", "actor", scopedProject), [
     "GET",
     "/api/v0/workspaces/ws/members/actor/issues",
   ]);
-  expect(next.call.query).toEqual({ ...first.call.query, cursor: "member:next", group_key: "A" });
-  next.call.answer(json(200, { total: 3, data: [listIssue("b", 20)], next_cursor: null }));
+  expect(next.call.query).toEqual({ ...first.call.query, cursor: "member:next", group_key: scopedProject });
+  next.call.answer(
+    json(200, { total: 3, data: [listIssue("b", 20, { project_id: scopedProject })], next_cursor: null })
+  );
   await next.promise;
-  expect(store.getIssueIds("A")).toEqual(["a", "b"]);
+  expect(store.getIssueIds(scopedProject)).toEqual(["a", "b"]);
 });
 it("archiveAndRestoreConfirmEveryFetchedCopyOnceAndLeaveUnrelatedScopeAlone", async () => {
   const source = { ...issueDetailOf("x"), assignee_ids: ["actor"] };
@@ -752,4 +766,392 @@ it("losing one project during its list read does not clear another project's lis
   expect(app.issue.projectIssues.groups).toBeUndefined();
   expect(retained.reconciled.value?.groups.get("")?.rows.map((row) => row.id)).toEqual(["other"]);
   expect(app.issue.issues.held("old")).toBeUndefined();
+});
+
+it("workspace admin with project guest observes the guest visibility switch and hides held data until a new page", async () => {
+  const admin = { ...ws, role: 20 as const };
+  const guest = projectOf("A", ws.id, { id: "A", member_role: 5, guest_view_all_features: true });
+  await loadWorkspaces(nerve, app.workspaceRoot, [admin]);
+  await loadProjects(nerve, app.projectRoot.project, admin, [guest]);
+  const first = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  first.call.answer(json(200, issuePageOf([listIssue("held", 1)])));
+  await first.promise;
+  const old = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  await loadProjects(nerve, app.projectRoot.project, admin, [{ ...guest, guest_view_all_features: false }]);
+  expect.soft(app.issue.issues.getIssueById("held")).toBeUndefined();
+  expect.soft(app.issue.projectIssues.groups).toBeUndefined();
+  old.call.answer(json(200, issuePageOf([listIssue("old", 2)])));
+  await old.promise;
+  expect.soft(app.issue.issues.held("old")).toBeUndefined();
+  expect.soft(app.issue.projectIssues.total).toBeUndefined();
+  const fresh = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  fresh.call.answer(json(200, issuePageOf([listIssue("fresh", 3)])));
+  await fresh.promise;
+  expect(app.issue.projectIssues.getIssueIds()).toEqual(["fresh"]);
+});
+
+it("refreshing an unchanged permission signature does not invalidate an in-flight list", async () => {
+  const read = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  await loadProjects(nerve, app.projectRoot.project, ws, [{ ...project, name: "renamed" }]);
+  read.call.answer(json(200, issuePageOf([listIssue("valid", 1)])));
+  await read.promise;
+  expect(app.issue.projectIssues.getIssueIds()).toEqual(["valid"]);
+});
+
+it("workspace role change leaves a project's unchanged effective read scope valid", async () => {
+  const read = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  await loadWorkspaces(nerve, app.workspaceRoot, [{ ...ws, role: 5 }]);
+  read.call.answer(json(200, issuePageOf([listIssue("visible", 1)])));
+  await read.promise;
+  expect(app.issue.projectIssues.getIssueIds()).toEqual(["visible"]);
+});
+
+it("member pages invalidate only the covered project set, retaining an unrelated project's whole response", async () => {
+  const { IssueListBinding } = await import("./issue-list-binding");
+  const b = projectOf("B", ws.id, { id: "B" });
+  await loadProjects(nerve, app.projectRoot.project, ws, [project, b]);
+  const member = (ids?: string[]) =>
+    new IssueListBinding(app.issue, {
+      scope: "member",
+      workspaceSlug: "ws",
+      workspaceID: ws.id,
+      userID: "actor",
+      query: { relation: "assigned", project_id: ids, limit: 10 },
+    });
+  const aList = member(["A"]),
+    bList = member(["B"]),
+    all = member();
+  const a = await requestedIssue(nerve, () => aList.fetchFirst(), [
+    "GET",
+    "/api/v0/workspaces/ws/members/actor/issues",
+  ]);
+  const bb = await requestedIssue(nerve, () => bList.fetchFirst(), [
+    "GET",
+    "/api/v0/workspaces/ws/members/actor/issues",
+  ]);
+  const both = await requestedIssue(nerve, () => all.fetchFirst(), [
+    "GET",
+    "/api/v0/workspaces/ws/members/actor/issues",
+  ]);
+  await loadProjects(nerve, app.projectRoot.project, ws, [b]);
+  a.call.answer(json(200, issuePageOf([listIssue("a", 1)])));
+  bb.call.answer(json(200, issuePageOf([listIssue("b", 1, { project_id: "B" })])));
+  both.call.answer(json(200, issuePageOf([listIssue("a2", 2), listIssue("b2", 2, { project_id: "B" })])));
+  await Promise.all([a.promise, bb.promise, both.promise]);
+  expect(aList.value).toBeUndefined();
+  expect(all.value).toBeUndefined();
+  expect(bList.group()?.rows.map((row) => row.id)).toEqual(["b"]);
+  expect(app.issue.issues.held("a")).toBeUndefined();
+  expect(app.issue.issues.held("a2")).toBeUndefined();
+  expect(app.issue.issues.held("b2")).toBeUndefined();
+});
+
+it("member part after project permission loss cannot replace rows or total of the old page", async () => {
+  const { IssueListBinding } = await import("./issue-list-binding");
+  const member = new IssueListBinding(app.issue, {
+    scope: "member",
+    workspaceSlug: "ws",
+    workspaceID: ws.id,
+    userID: "actor",
+    query: { relation: "assigned", group_by: "project_id", limit: 10 },
+  });
+  const first = await requestedIssue(nerve, () => member.fetchFirst(), [
+    "GET",
+    "/api/v0/workspaces/ws/members/actor/issues",
+  ]);
+  first.call.answer(
+    json(200, { total: 2, groups: [{ key: "A", total: 2, data: [listIssue("first", 1)], next_cursor: "next" }] })
+  );
+  await first.promise;
+  const part = await requestedIssue(nerve, () => member.fetchNext("A"), [
+    "GET",
+    "/api/v0/workspaces/ws/members/actor/issues",
+  ]);
+  await loadProjects(nerve, app.projectRoot.project, ws, []);
+  part.call.answer(json(200, { total: 2, data: [listIssue("old", 2)], next_cursor: null }));
+  await part.promise;
+  expect(member.value).toBeUndefined();
+  expect(member.group("A")).toBeUndefined();
+  expect(app.issue.issues.held("old")).toBeUndefined();
+});
+
+it("permission loss during post-page verification cannot re-expose the invalidated page", async () => {
+  let release!: () => void;
+  let started = false;
+  const wait = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const drain = vi.spyOn(app.issue.verification, "drain").mockImplementation(async () => {
+    started = true;
+    await wait;
+  });
+  try {
+    const read = await requestedIssue(
+      nerve,
+      () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+      ["GET", "/api/v0/projects/A/issues"]
+    );
+    read.call.answer(json(200, issuePageOf([listIssue("old", 1)])));
+    await until(() => started, "verification drain");
+    await loadProjects(nerve, app.projectRoot.project, ws, []);
+    release();
+    await read.promise;
+    expect(app.issue.projectIssues.groups).toBeUndefined();
+    expect(app.issue.issues.getIssueById("old")).toBeUndefined();
+  } finally {
+    release();
+    drain.mockRestore();
+  }
+});
+
+it("workspace loss drops its own page without invalidating an unrelated workspace", async () => {
+  const { IssueListBinding } = await import("./issue-list-binding");
+  const otherWorkspace = workspaceOf("other");
+  const otherProject = projectOf("B", otherWorkspace.id, { id: "B" });
+  await loadWorkspaces(nerve, app.workspaceRoot, [ws, otherWorkspace]);
+  await loadProjects(nerve, app.projectRoot.project, otherWorkspace, [otherProject]);
+  const a = new IssueListBinding(app.issue, {
+    scope: "project",
+    workspaceSlug: "ws",
+    workspaceID: ws.id,
+    projectID: "A",
+    query: { limit: 10 },
+  });
+  const b = new IssueListBinding(app.issue, {
+    scope: "project",
+    workspaceSlug: "other",
+    workspaceID: otherWorkspace.id,
+    projectID: "B",
+    query: { limit: 10 },
+  });
+  const old = await requestedIssue(nerve, () => a.fetchFirst(), ["GET", "/api/v0/projects/A/issues"]);
+  const other = await requestedIssue(nerve, () => b.fetchFirst(), ["GET", "/api/v0/projects/B/issues"]);
+  await loadWorkspaces(nerve, app.workspaceRoot, [otherWorkspace]);
+  old.call.answer(json(200, issuePageOf([listIssue("old", 1)])));
+  other.call.answer(
+    json(200, issuePageOf([listIssue("other", 1, { project_id: "B", workspace_id: otherWorkspace.id })]))
+  );
+  await Promise.all([old.promise, other.promise]);
+  expect(a.value).toBeUndefined();
+  expect(b.group()?.rows.map((row) => row.id)).toEqual(["other"]);
+  expect(app.issue.issues.held("old")).toBeUndefined();
+});
+
+it("project member changing to guest invalidates an old answer although both roles can read", async () => {
+  const old = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  await loadProjects(nerve, app.projectRoot.project, ws, [
+    { ...project, member_role: 5, guest_view_all_features: true },
+  ]);
+  old.call.answer(json(200, issuePageOf([listIssue("old", 1)])));
+  await old.promise;
+  expect(app.issue.issues.held("old")).toBeUndefined();
+  expect(app.issue.projectIssues.groups).toBeUndefined();
+  const fresh = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  fresh.call.answer(json(200, issuePageOf([listIssue("guest-visible", 2)])));
+  await fresh.promise;
+  expect(app.issue.projectIssues.getIssueIds()).toEqual(["guest-visible"]);
+});
+
+it("permission recovery retries a fresh whole page rather than an obsolete failed part", async () => {
+  await load();
+  const next = await requestedIssue(nerve, () => app.issue.projectIssues.fetchNextIssues("ws", "A", "B"), [
+    "GET",
+    "/api/v0/projects/A/issues",
+  ]);
+  next.call.answer(problem(403, "forbidden"));
+  await expect(next.promise).rejects.toBeDefined();
+  const list = app.issue.projectIssues.currentList!;
+  expect(list.error).toBeDefined();
+  await loadProjects(nerve, app.projectRoot.project, ws, []);
+  await loadProjects(nerve, app.projectRoot.project, ws, [project]);
+  expect.soft(list.error).toBeUndefined();
+  const retry = await requestedIssue(nerve, () => list.retryFailed(), ["GET", "/api/v0/projects/A/issues"]);
+  expect.soft(retry.call.query).not.toHaveProperty("cursor");
+  expect.soft(retry.call.query).not.toHaveProperty("group_key");
+  retry.call.answer(json(200, issuePageOf([listIssue("new", 1)])));
+  await retry.promise;
+  expect(app.issue.projectIssues.getIssueIds()).toEqual(["new"]);
+});
+
+it.each([403, 404])(
+  "a member page returns an unknown project directory refusal (%s) without publishing",
+  async (status) => {
+    const read = await requestedIssue(
+      nerve,
+      () => app.issue.profileIssues.fetchIssues("ws", "actor", "init-loader", { limit: 10 }, "assigned"),
+      ["GET", "/api/v0/workspaces/ws/members/actor/issues"]
+    );
+    read.call.answer(json(200, issuePageOf([listIssue("unknown", 1, { project_id: "not-loaded" })])));
+    await until(
+      () => nerve.calls.some((call) => call.path === "/api/v0/projects/not-loaded"),
+      "project permission directory"
+    );
+    const refused = expect(read.promise).rejects.toMatchObject({ status });
+    nerve.calls.find((call) => call.path === "/api/v0/projects/not-loaded")!.answer(problem(status, "forbidden"));
+    await refused;
+    expect(app.issue.profileIssues.groups).toBeUndefined();
+    expect(app.issue.profileIssues.total).toBeUndefined();
+    expect(app.issue.issues.held("unknown")).toBeUndefined();
+    expect(app.issue.profileIssues.currentList?.error).toMatchObject({ status });
+    expect(app.issue.profileIssues.getIssueLoader()).not.toBe("init-loader");
+    expect(nerve.to("/api/v0/projects/not-loaded")).toHaveLength(1);
+  }
+);
+
+it("a member page with a newly loaded project publishes only after its permission directory answers", async () => {
+  const read = await requestedIssue(
+    nerve,
+    () => app.issue.profileIssues.fetchIssues("ws", "actor", "init-loader", { limit: 10 }, "assigned"),
+    ["GET", "/api/v0/workspaces/ws/members/actor/issues"]
+  );
+  read.call.answer(json(200, issuePageOf([listIssue("visible", 1, { project_id: "B" })])));
+  await until(() => nerve.calls.some((call) => call.path === "/api/v0/projects/B"), "project permission directory");
+  expect(app.issue.profileIssues.groups).toBeUndefined();
+  nerve.calls.find((call) => call.path === "/api/v0/projects/B")!.answer(json(200, projectOf("B", ws.id, { id: "B" })));
+  await read.promise;
+  expect(app.issue.profileIssues.getIssueIds()).toEqual(["visible"]);
+});
+
+it("a project directory that still reports no membership rejects the whole member page", async () => {
+  const read = await requestedIssue(
+    nerve,
+    () => app.issue.profileIssues.fetchIssues("ws", "actor", "init-loader", { limit: 10 }, "assigned"),
+    ["GET", "/api/v0/workspaces/ws/members/actor/issues"]
+  );
+  read.call.answer(json(200, issuePageOf([listIssue("unknown", 1, { project_id: "B" })])));
+  await until(() => nerve.calls.some((call) => call.path === "/api/v0/projects/B"), "project directory");
+  const rejected = expect(read.promise).rejects.toThrow("Required issue project permission");
+  nerve.calls
+    .find((call) => call.path === "/api/v0/projects/B")!
+    .answer(json(200, projectOf("B", ws.id, { id: "B", member_role: null })));
+  await rejected;
+  expect(app.issue.profileIssues.groups).toBeUndefined();
+  expect(app.issue.profileIssues.total).toBeUndefined();
+  expect(app.issue.issues.held("unknown")).toBeUndefined();
+  expect(app.issue.profileIssues.getIssueLoader()).not.toBe("init-loader");
+});
+
+it("a permission loss while awaiting a missing project directory invalidates the whole original member page", async () => {
+  const b = projectOf("B", ws.id, { id: "B" });
+  const read = await requestedIssue(
+    nerve,
+    () => app.issue.profileIssues.fetchIssues("ws", "actor", "init-loader", { limit: 10 }, "assigned"),
+    ["GET", "/api/v0/workspaces/ws/members/actor/issues"]
+  );
+  read.call.answer(json(200, issuePageOf([listIssue("old", 1, { project_id: "B" })])));
+  await until(() => nerve.calls.some((call) => call.path === "/api/v0/projects/B"), "project directory");
+  await loadProjects(nerve, app.projectRoot.project, ws, [project, b]);
+  await loadProjects(nerve, app.projectRoot.project, ws, [project]);
+  nerve.calls.find((call) => call.path === "/api/v0/projects/B")!.answer(json(200, b));
+  await read.promise;
+  expect(app.issue.profileIssues.groups).toBeUndefined();
+  expect(app.issue.profileIssues.total).toBeUndefined();
+  expect(app.issue.issues.held("old")).toBeUndefined();
+  const fresh = await requestedIssue(
+    nerve,
+    () => app.issue.profileIssues.fetchIssues("ws", "actor", "init-loader", { limit: 10 }, "assigned"),
+    ["GET", "/api/v0/workspaces/ws/members/actor/issues"]
+  );
+  fresh.call.answer(json(200, issuePageOf([])));
+  await fresh.promise;
+  expect(app.issue.profileIssues.total).toBe(0);
+});
+
+it("a member answer cannot publish an out-of-scope row whose project permission changed in flight", async () => {
+  const { IssueListBinding } = await import("./issue-list-binding");
+  const b = projectOf("B", ws.id, { id: "B" });
+  await loadProjects(nerve, app.projectRoot.project, ws, [project, b]);
+  const member = new IssueListBinding(app.issue, {
+    scope: "member",
+    workspaceSlug: "ws",
+    workspaceID: ws.id,
+    userID: "actor",
+    query: { relation: "assigned", project_id: ["A"], limit: 10 },
+  });
+  const read = await requestedIssue(nerve, () => member.fetchFirst(), [
+    "GET",
+    "/api/v0/workspaces/ws/members/actor/issues",
+  ]);
+  await loadProjects(nerve, app.projectRoot.project, ws, [project]);
+  await loadProjects(nerve, app.projectRoot.project, ws, [project, b]);
+  const rejected = expect(read.promise).rejects.toThrow("Issue page does not match its scope");
+  read.call.answer(json(200, issuePageOf([listIssue("old-b", 1, { project_id: "B" })])));
+  await rejected;
+  expect(member.value).toBeUndefined();
+  expect(app.issue.issues.held("old-b")).toBeUndefined();
+});
+
+it("a member page rejects a visible project outside its explicit project scope", async () => {
+  const { IssueListBinding } = await import("./issue-list-binding");
+  const b = projectOf("B", ws.id, { id: "B" });
+  await loadProjects(nerve, app.projectRoot.project, ws, [project, b]);
+  const member = new IssueListBinding(app.issue, {
+    scope: "member",
+    workspaceSlug: "ws",
+    workspaceID: ws.id,
+    userID: "actor",
+    query: { relation: "assigned", project_id: ["A"], limit: 10 },
+  });
+  const read = await requestedIssue(nerve, () => member.fetchFirst(), [
+    "GET",
+    "/api/v0/workspaces/ws/members/actor/issues",
+  ]);
+  const rejected = expect(read.promise).rejects.toThrow("Issue page does not match its scope");
+  read.call.answer(json(200, issuePageOf([listIssue("b", 1, { project_id: "B" })])));
+  await rejected;
+  expect(member.value).toBeUndefined();
+  expect(app.issue.issues.held("b")).toBeUndefined();
+});
+
+it("losing permission ends the invalidated list loader without waiting for its old response", async () => {
+  const read = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  await loadProjects(nerve, app.projectRoot.project, ws, []);
+  expect.soft(app.issue.projectIssues.getIssueLoader()).not.toBe("init-loader");
+  read.call.answer(json(200, issuePageOf([])));
+  await read.promise;
+});
+
+it("a verification from a lost permission identity does not keep the list loading", async () => {
+  await load();
+  const verify = await requestedIssue(nerve, () => app.issue.issues.refreshAuthoritative("a"), [
+    "GET",
+    "/api/v0/issues/a",
+  ]);
+  expect(app.issue.projectIssues.getIssueLoader()).toBe("init-loader");
+  await loadProjects(nerve, app.projectRoot.project, ws, []);
+  expect.soft(app.issue.projectIssues.getIssueLoader()).not.toBe("init-loader");
+  verify.call.answer(json(200, issueDetailOf("a")));
+  await verify.promise;
 });

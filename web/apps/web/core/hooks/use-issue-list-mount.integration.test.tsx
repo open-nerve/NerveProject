@@ -42,7 +42,7 @@ function Layout({ tab, type }: { tab: Tab; type: EIssuesStoreType }) {
       : type === EIssuesStoreType.ARCHIVED
         ? tab.app.issue.archivedIssues.fetchIssues("ws", "A", loader, options)
         : tab.app.issue.projectIssues.fetchIssues("ws", "A", loader, options);
-  useIssueListMount(type, fetchIssues, { limit: 20 }, "assigned");
+  useIssueListMount(type, tab.app.issue, fetchIssues, { limit: 20 }, "assigned");
   return null;
 }
 
@@ -184,20 +184,131 @@ it("does not accept a page that crossed an observed loss and restoration of proj
         <Layout tab={tab} type={EIssuesStoreType.PROJECT} />
       </SWRConfig>
     );
-  await act(async () => render());
-  await until(() => tab.nerve.calls.length === 1, "old request");
-  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
-  f.role = undefined;
-  await act(async () => render());
-  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
-  f.role = 15;
-  await act(async () => render());
-  await act(async () => {
-    tab.nerve.calls[0]!.answer(json(200, issuePageOf([issueOf("old")])));
-  });
-  await vi.advanceTimersByTimeAsync(100);
-  expect(tab.app.issue.issues.held("old")).toBeUndefined();
-  expect(tab.app.issue.projectIssues.groups).toBeUndefined();
-  await act(async () => root.unmount());
-  tab.app.dispose();
+  try {
+    await act(async () => render());
+    await until(() => tab.nerve.calls.length === 1, "old request");
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+    f.role = undefined;
+    await act(async () => render());
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+    f.role = 15;
+    await act(async () => render());
+    await act(async () => {
+      tab.nerve.calls[0]!.answer(json(200, issuePageOf([issueOf("old")])));
+    });
+    await vi.advanceTimersByTimeAsync(100);
+    expect.soft(tab.app.issue.issues.held("old")).toBeUndefined();
+    expect.soft(tab.app.issue.projectIssues.groups).toBeUndefined();
+  } finally {
+    await act(async () => root.unmount());
+    tab.app.dispose();
+  }
+});
+
+it("starts a new list before the invalidated request finishes and never reveals the old value", async () => {
+  const { loadProjects } = await import("@/store/project/fake-projects");
+  const tab = await issueStoreTab();
+  const root = createRoot(document.createElement("div"));
+  const cache = new Map();
+  const render = () =>
+    root.render(
+      <SWRConfig value={{ provider: () => cache }}>
+        <Layout tab={tab} type={EIssuesStoreType.PROJECT} />
+      </SWRConfig>
+    );
+  try {
+    await act(async () => render());
+    await until(() => tab.nerve.to("/api/v0/projects/A/issues").length === 1, "initial page");
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+    f.role = undefined;
+    await act(async () => render());
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+    f.role = 15;
+    await act(async () => render());
+    await vi.advanceTimersByTimeAsync(100);
+    const pages = tab.nerve.to("/api/v0/projects/A/issues");
+    expect.soft(pages).toHaveLength(2);
+    expect.soft(tab.app.issue.projectIssues.groups).toBeUndefined();
+    await act(async () => {
+      pages[0]!.answer(json(200, issuePageOf([issueOf("old")])));
+    });
+    await vi.advanceTimersByTimeAsync(100);
+    expect.soft(tab.app.issue.issues.held("old")).toBeUndefined();
+    if (pages[1]) expect.soft(tab.app.issue.projectIssues.getIssueLoader()).toBe("init-loader");
+    if (pages[1]) {
+      await act(async () => {
+        pages[1]!.answer(json(200, issuePageOf([issueOf("new")])));
+      });
+      await until(() => tab.app.issue.issues.held("new") !== undefined, "fresh page");
+    }
+    if (pages[1]) expect.soft(tab.app.issue.projectIssues.getIssueIds()).toEqual(["new"]);
+  } finally {
+    await act(async () => root.unmount());
+    tab.app.dispose();
+  }
+});
+
+it("unmounting one shared consumer does not cancel the other's in-flight request", async () => {
+  const tab = await issueStoreTab();
+  const root = createRoot(document.createElement("div"));
+  const cache = new Map();
+  const render = (both: boolean) =>
+    root.render(
+      <SWRConfig value={{ provider: () => cache }}>
+        {both && <Layout key="one" tab={tab} type={EIssuesStoreType.PROJECT} />}
+        <Layout key="two" tab={tab} type={EIssuesStoreType.PROJECT} />
+      </SWRConfig>
+    );
+  try {
+    await act(async () => render(true));
+    await until(() => tab.nerve.calls.length === 1, "shared page");
+    await act(async () => render(false));
+    expect(tab.nerve.calls).toHaveLength(1);
+    await act(async () => {
+      tab.nerve.calls[0]!.answer(json(200, issuePageOf([issueOf("visible")])));
+    });
+    await until(() => tab.app.issue.issues.held("visible") !== undefined, "shared page answer");
+    expect(tab.app.issue.projectIssues.getIssueIds()).toEqual(["visible"]);
+  } finally {
+    await act(async () => root.unmount());
+    tab.app.dispose();
+  }
+});
+
+it("a fresh page winning before the invalidated old page stays visible", async () => {
+  const { loadProjects } = await import("@/store/project/fake-projects");
+  const tab = await issueStoreTab();
+  const root = createRoot(document.createElement("div"));
+  const cache = new Map();
+  const render = () =>
+    root.render(
+      <SWRConfig value={{ provider: () => cache }}>
+        <Layout tab={tab} type={EIssuesStoreType.PROJECT} />
+      </SWRConfig>
+    );
+  try {
+    await act(async () => render());
+    await until(() => tab.nerve.to("/api/v0/projects/A/issues").length === 1, "old page");
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+    f.role = undefined;
+    await act(async () => render());
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+    f.role = 15;
+    await act(async () => render());
+    await until(() => tab.nerve.to("/api/v0/projects/A/issues").length === 2, "new page");
+    const pages = tab.nerve.to("/api/v0/projects/A/issues");
+    await act(async () => {
+      pages[1]!.answer(json(200, issuePageOf([issueOf("new")])));
+    });
+    await until(() => tab.app.issue.projectIssues.getIssueIds()?.includes("new") === true, "new answer");
+    await act(async () => {
+      pages[0]!.answer(json(200, issuePageOf([issueOf("old")])));
+    });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(tab.app.issue.projectIssues.getIssueIds()).toEqual(["new"]);
+    expect(tab.app.issue.issues.held("old")).toBeUndefined();
+  } finally {
+    await act(async () => root.unmount());
+    tab.app.dispose();
+  }
 });

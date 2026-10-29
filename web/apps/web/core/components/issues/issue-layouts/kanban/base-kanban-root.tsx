@@ -74,6 +74,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
 
   useIssueListMount(
     storeType,
+    issues.rootIssueStore,
     fetchIssues,
     { limit: sub_group_by ? 10 : 30 },
     viewId,

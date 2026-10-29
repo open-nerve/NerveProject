@@ -59,6 +59,7 @@ export interface IProjectStore {
   currentProjectDetails: Project | undefined;
   // computed actions
   getProjectById: (projectId: string | undefined | null) => Project | undefined;
+  knownProjectIds: (workspaceId: string) => string[];
   getProjectIdentifierById: (projectId: string | undefined | null) => string | undefined;
   getProjectByIdentifier: (projectIdentifier: string) => Project | undefined;
   // fetch actions
@@ -204,6 +205,15 @@ export class ProjectStore implements IProjectStore {
     const newest = maxBy(copies, "answeredAt")?.project;
     return newest && workspaces.some((workspace) => workspace.id === newest.workspace_id) ? newest : undefined;
   });
+
+  /** IDs represented in the workspace's lists or individual reads, for permission-scope observation. */
+  knownProjectIds = (workspaceId: string): string[] => [
+    ...new Set([
+      ...(this.unarchived.get(workspaceId) ?? []).map((project) => project.id),
+      ...(this.archived.get(workspaceId) ?? []).map((project) => project.id),
+      ...this.details.values().flatMap((project) => (project?.workspace_id === workspaceId ? [project.id] : [])),
+    ]),
+  ];
 
   getProjectIdentifierById = computedFn(
     (projectId: string | undefined | null): string | undefined => this.getProjectById(projectId)?.identifier

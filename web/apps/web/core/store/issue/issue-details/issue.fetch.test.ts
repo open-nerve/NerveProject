@@ -316,3 +316,19 @@ it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => 
     );
   }
 );
+
+it.each([false, true])("drops an old detail after observed loss and recovery (%s)", async (identifier) => {
+  const { fetch, source } = resources(null);
+  let release!: (value: AxiosResponse<typeof source>) => void;
+  const pending = new Promise<AxiosResponse<typeof source>>((resolve) => {
+    release = resolve;
+  });
+  vi.spyOn(APIService.prototype, "get").mockImplementation(() => pending);
+  const reading = track(fetch(identifier));
+  await loadProjects(nerve, app.projectRoot.project, ws, []);
+  await loadProjects(nerve, app.projectRoot.project, ws, [project]);
+  release(reply(source));
+  await until(() => reading.settled, "old detail");
+  expect(reading.error).toBeInstanceOf(SessionChangedError);
+  expect(app.issue.issues.held(source.id)).toBeUndefined();
+});

@@ -471,3 +471,110 @@ it("SessionChangedDeleteDoesNotCreateTombstone", async () => {
   expect(tab.app.issue.issues.held("x")).not.toBeNull();
   expect(tab.nerve.calls).toHaveLength(1);
 });
+
+it.each([200, 403, 404, 500])(
+  "authoritative retry after permission recovery does not join old in-flight GET (%s)",
+  async (status) => {
+    accept(issueOf("x"));
+    const old = await requestedIssue(tab.nerve, () => tab.app.issue.issues.refreshAuthoritative("x"), [
+      "GET",
+      "/api/v0/issues/x",
+    ]);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+    const before = tab.nerve.calls.length;
+    const fresh = track(tab.app.issue.issues.refreshAuthoritative("x"));
+    await vi.advanceTimersByTimeAsync(20);
+    expect.soft(tab.nerve.calls.length).toBe(before + 1);
+    if (tab.nerve.calls.length > before) {
+      tab.nerve.calls.at(-1)!.answer(json(200, { ...issueDetailOf("x"), name: "fresh" }));
+      await until(() => fresh.settled, "fresh verification");
+    }
+    old.call.answer(status === 200 ? json(200, { ...issueDetailOf("x"), name: "old" }) : problem(status, "refused"));
+    await old.promise;
+    expect.soft(tab.app.issue.issues.getIssueById("x")?.name).toBe("fresh");
+  }
+);
+
+it("a fresh list row after permission recovery does not reveal an old detail description", async () => {
+  accept(issueDetailOf("x"));
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  expect(tab.app.issue.issues.getIssueById("x")).toBeUndefined();
+  accept(issueOf("x"));
+  expect(tab.app.issue.issues.getIssueById("x")?.id).toBe("x");
+  expect(tab.app.issue.issues.getIssueDetailById("x")).toBeUndefined();
+});
+
+it("a confirmed create sent under restored permission becomes visible", async () => {
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  const create = await requestedIssue(
+    tab.nerve,
+    () =>
+      tab.app.issue.createIssue(
+        { workspaceSlug: "ws", workspaceID: tab.workspace.id, projectID: "A" },
+        { name: "new" }
+      ),
+    ["POST", "/api/v0/projects/A/issues"]
+  );
+  create.call.answer(json(201, issueDetailOf("new")));
+  await create.promise;
+  expect(tab.app.issue.issues.getIssueById("new")?.id).toBe("new");
+});
+
+it("an old in-flight write does not gain fresh permission proof, while a new confirmed update does", async () => {
+  accept(issueOf("x"));
+  const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
+    "PATCH",
+    "/api/v0/issues/x",
+  ]);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  old.call.answer(json(200, { ...issueDetailOf("x"), name: "old-write", updated_at: version(2) }));
+  await old.promise;
+  expect(tab.app.issue.issues.getIssueById("x")).toBeUndefined();
+  accept({ ...issueOf("x"), updated_at: version(2) });
+  const fresh = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "fresh-write" })), [
+    "PATCH",
+    "/api/v0/issues/x",
+  ]);
+  fresh.call.answer(json(200, { ...issueDetailOf("x"), name: "fresh-write", updated_at: version(3) }));
+  await fresh.promise;
+  expect(tab.app.issue.issues.getIssueById("x")?.name).toBe("fresh-write");
+});
+
+it("does not start an authoritative read while the known issue's project is unavailable", async () => {
+  accept(issueOf("x"));
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  const before = tab.nerve.calls.length;
+  const read = track(tab.app.issue.issues.refreshAuthoritative("x"));
+  await vi.advanceTimersByTimeAsync(20);
+  expect.soft(tab.nerve.calls).toHaveLength(before);
+  expect.soft(read.settled).toBe(true);
+  if (tab.nerve.calls.length > before) tab.nerve.calls.at(-1)!.answer(problem(403, "forbidden"));
+});
+
+it("does not start an unknown authoritative read without a known visible project scope", async () => {
+  tab.app.router.setQuery({ workspaceSlug: "ws", projectId: "unknown" });
+  const before = tab.nerve.calls.length;
+  const read = track(tab.app.issue.issues.refreshAuthoritative("unknown"));
+  await vi.advanceTimersByTimeAsync(20);
+  expect.soft(tab.nerve.calls).toHaveLength(before);
+  expect.soft(read.settled).toBe(true);
+  if (tab.nerve.calls.length > before) tab.nerve.calls.at(-1)!.answer(problem(403, "forbidden"));
+});
+
+it("a verification queued before observed permission ABA does not issue a duplicate after recovery", async () => {
+  accept(issueOf("x"));
+  const old = track(tab.app.issue.issues.refreshAuthoritative("x"));
+  tab.app.projectRoot.project.confirmProject(tab.project, (project) => ({ ...project, member_role: null }));
+  tab.app.projectRoot.project.confirmProject(tab.project, (project) => ({ ...project, member_role: 15 }));
+  const fresh = track(tab.app.issue.issues.refreshAuthoritative("x"));
+  await vi.advanceTimersByTimeAsync(20);
+  const reads = tab.nerve.to("/api/v0/issues/x");
+  expect.soft(reads).toHaveLength(1);
+  for (const read of reads) read.answer(json(200, issueDetailOf("x")));
+  await until(() => old.settled && fresh.settled, "both verifications");
+  expect(tab.app.issue.issues.getIssueDetailById("x")?.id).toBe("x");
+});

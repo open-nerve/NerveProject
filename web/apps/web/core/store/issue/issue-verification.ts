@@ -12,19 +12,21 @@ type Verification = {
   status: "pending" | "missing" | "error" | "unconfirmed";
   error?: unknown;
   freshnessFloor: number;
+  identity: string;
 };
 export type VerificationRound = {
   id: number;
   users: number;
-  ids: Map<string, Promise<IssueDetail | undefined>>;
+  ids: Map<string, VerificationRequest>;
   scopes: Set<IssueListBinding>;
 };
+type VerificationRequest = { identity: string; promise: Promise<IssueDetail | undefined> };
 
 /** Root-owned metadata only. All entity evidence stays in IssueStore. */
 export class IssueVerification {
   private readonly records = observable.map<string, Verification>({}, { deep: false });
   private readonly affected = new Map<string, Set<IssueListBinding>>();
-  private readonly inFlight = observable.map<string, Promise<IssueDetail | undefined>>({}, { deep: false });
+  private readonly inFlight = observable.map<string, VerificationRequest>({}, { deep: false });
   private current?: VerificationRound;
   private sequence = 0;
   constructor(private readonly root: IssueRootStore) {}
@@ -87,13 +89,19 @@ export class IssueVerification {
     lists.add(list);
     this.affected.set(id, lists);
     const round = this.begin();
-    if (round.ids.has(id) && !this.records.has(id)) {
+    if (round.ids.get(id)?.identity === this.identity(id) && !this.records.has(id)) {
       this.end(round);
       return;
     }
     if (!this.records.has(id))
       runInAction(() =>
-        this.records.set(id, { id, round: round.id, status: "pending", freshnessFloor: this.root.readSerial })
+        this.records.set(id, {
+          id,
+          round: round.id,
+          status: "pending",
+          freshnessFloor: this.root.readSerial,
+          identity: this.identity(id),
+        })
       );
     // Start after synchronous confirmation has published the authoritative write answer.
     void this.request(id, round, false)
@@ -135,47 +143,70 @@ export class IssueVerification {
       this.end(round);
     }
   }
+  private identity(id: string): string {
+    const held = this.root.issues.held(id);
+    return this.root.permissionReads.identity(held?.workspace_id, held ? [held.project_id] : []);
+  }
   private request(
     id: string,
     round: VerificationRound,
     explicit: boolean,
     retryStaleDetail = true
   ): Promise<IssueDetail | undefined> {
-    const existing = this.inFlight.get(id) ?? round.ids.get(id);
+    const held = this.root.issues.held(id);
+    if (held && !this.root.canSeeIssue(held)) return Promise.resolve(undefined);
+    const identity = this.identity(id);
+    const existing = [this.inFlight.get(id), round.ids.get(id)].find((request) => request?.identity === identity);
     if (existing) {
       // A genuinely pending request can span rounds; its completion still dedupes this joining round.
       round.ids.set(id, existing);
-      return existing;
+      return existing.promise;
     }
     const record = this.records.get(id);
-    if (record && record.status !== "pending" && !explicit)
+    if (record && record.identity === identity && record.status !== "pending" && !explicit)
       return record.error ? Promise.reject(record.error) : Promise.resolve(undefined);
-    if (!record || explicit)
+    if (!record || record.identity !== identity || explicit)
       runInAction(() =>
         this.records.set(id, {
           id,
           round: round.id,
           status: "pending",
-          error: record?.error,
+          error: record?.identity === identity ? record.error : undefined,
           freshnessFloor: this.root.readSerial,
+          identity,
         })
       );
+    const request: VerificationRequest = { identity, promise: undefined as never };
     const job = Promise.resolve()
-      .then(() => this.read(id, round, retryStaleDetail))
+      .then(() => this.read(id, round, retryStaleDetail, identity))
       .finally(() => {
-        if (this.inFlight.get(id) === job) runInAction(() => this.inFlight.delete(id));
+        if (this.inFlight.get(id) === request) runInAction(() => this.inFlight.delete(id));
       });
-    round.ids.set(id, job);
-    runInAction(() => this.inFlight.set(id, job));
+    request.promise = job;
+    round.ids.set(id, request);
+    runInAction(() => this.inFlight.set(id, request));
     return job;
   }
   private async read(
     id: string,
     round: VerificationRound,
-    retryStaleDetail: boolean
+    retryStaleDetail: boolean,
+    identity: string
   ): Promise<IssueDetail | undefined> {
     this.root.assertActive();
+    if (this.identity(id) !== identity) return undefined;
     const held = this.root.issues.held(id);
+    if (held && !this.root.canSeeIssue(held)) return undefined;
+    if (!held) {
+      const { workspaceSlug, projectId } = this.root;
+      if (
+        !workspaceSlug ||
+        !projectId ||
+        this.root.rootStore.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) ===
+          undefined
+      )
+        return undefined;
+    }
     const projects = held ? [held.project_id] : [];
     const token = this.root.captureRead();
     const lists = () => [...(this.affected.get(id) ?? [])];
@@ -194,6 +225,7 @@ export class IssueVerification {
           status: missing ? "missing" : "error",
           error: missing ? undefined : error,
           freshnessFloor: this.root.readSerial,
+          identity: this.identity(id),
         })
       );
       for (const list of lists()) list.markVerificationStale(id, missing ? undefined : error);
@@ -209,7 +241,7 @@ export class IssueVerification {
     if (uncertain) {
       const latest = this.root.issues.held(id);
       if (retryStaleDetail && latest && !("description_html" in latest) && this.root.canSeeIssue(latest))
-        return this.read(id, round, false);
+        return this.read(id, round, false, identity);
       const error = new Error("The issue detail was superseded; retry the read");
       runInAction(() => this.records.set(id, { ...uncertain, status: "unconfirmed", error }));
       for (const list of lists()) list.markVerificationStale(id, error);

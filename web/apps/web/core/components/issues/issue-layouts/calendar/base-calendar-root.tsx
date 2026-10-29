@@ -88,6 +88,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
 
   useIssueListMount(
     storeType,
+    issues.rootIssueStore,
     fetchIssues,
     startDate && endDate
       ? {

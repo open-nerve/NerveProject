@@ -195,3 +195,42 @@ it("deletedParentDiscardsSubReadWaitingForAuthoritativeParent", async () => {
   expect(app.issue.issues.held(child.id)).toBeNull();
   expect(nerve.calls.map((call) => call.method)).toEqual(["GET", "DELETE"]);
 });
+
+it("cross-project sub-issue read discards the whole response when a child project loses and regains access", async () => {
+  const parent = issueOf("parent", here.id, ws.id);
+  const child = issueOf("child", elsewhere.id, ws.id);
+  app.issue.issues.acceptRead(parent, app.issue.captureRead());
+  const held = heldChange<AxiosResponse<TIssueSubIssues>>();
+  vi.spyOn(APIService.prototype, "get").mockReturnValue(held.sent);
+  const reading = track(app.issue.issueDetail.subIssues.fetchSubIssues(ws.slug, here.id, parent.id));
+  await loadProjects(nerve, app.projectRoot.project, ws, [here]);
+  await loadProjects(nerve, app.projectRoot.project, ws, [here, elsewhere]);
+  const before = nerve.calls.length;
+  held.answer(
+    reply({
+      sub_issues: [child],
+      state_distribution: { backlog: [], unstarted: [child.id], started: [], completed: [], cancelled: [] },
+    })
+  );
+  await vi.advanceTimersByTimeAsync(30);
+  expect.soft(nerve.calls).toHaveLength(before);
+  if (nerve.calls.length > before) nerve.calls.at(-1)!.answer(json(200, { ...parent, description_html: "" }));
+  await until(() => reading.settled, "cross-project response");
+  expect.soft(reading.error).toBeInstanceOf(SessionChangedError);
+  expect.soft(app.issue.issues.held(child.id)).toBeUndefined();
+  expect.soft(app.issue.issueDetail.subIssues.subIssuesByIssueId(parent.id)).toBeUndefined();
+});
+
+it("a cross-project relation answer cannot publish ids after the related project loses and regains access", async () => {
+  const child = issueOf("related", elsewhere.id, ws.id);
+  const held = heldChange<AxiosResponse<import("@nerve/types").TIssueRelation>>();
+  vi.spyOn(APIService.prototype, "get").mockReturnValue(held.sent);
+  const reading = track(app.issue.issueDetail.relation.fetchRelations(ws.slug, here.id, "parent"));
+  await loadProjects(nerve, app.projectRoot.project, ws, [here]);
+  await loadProjects(nerve, app.projectRoot.project, ws, [here, elsewhere]);
+  held.answer(reply({ blocking: [child], blocked_by: [], duplicate: [], relates_to: [] }));
+  await until(() => reading.settled, "old relations");
+  expect.soft(reading.error).toBeInstanceOf(SessionChangedError);
+  expect.soft(app.issue.issues.held(child.id)).toBeUndefined();
+  expect.soft(app.issue.issueDetail.relation.getRelationsByIssueId("parent")).toBeUndefined();
+});

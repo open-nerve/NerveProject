@@ -33,10 +33,10 @@ export class BaseIssuesStore<TFilter extends IBaseIssueFilterStore = IBaseIssueF
     return list;
   }
   get groups(): Map<string, Group> | undefined {
-    return this.currentList?.reconciled.value?.groups;
+    return this.currentList?.value?.groups;
   }
   get total(): number | undefined {
-    return this.currentList?.reconciled.value?.total;
+    return this.currentList?.value?.total;
   }
   getIssueIds = (group = "", subgroup?: string): string[] | undefined =>
     this.currentList
@@ -45,7 +45,7 @@ export class BaseIssuesStore<TFilter extends IBaseIssueFilterStore = IBaseIssueF
       .map((row) => row.id);
   getGroupIssueCount = (group?: string, subgroup?: string, cumulative = false): number | undefined =>
     cumulative && subgroup !== undefined
-      ? this.currentList?.reconciled.value?.subgroupTotals?.get(subgroup)
+      ? this.currentList?.value?.subgroupTotals?.get(subgroup)
       : this.currentList?.group(group, subgroup)?.total;
   getPaginationData = (group?: string, subgroup?: string): Group | undefined =>
     this.currentList?.group(group, subgroup);

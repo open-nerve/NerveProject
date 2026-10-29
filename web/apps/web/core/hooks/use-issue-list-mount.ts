@@ -2,7 +2,8 @@
 import { useParams } from "react-router";
 import { EUserPermissions } from "@nerve/constants";
 import { EIssuesStoreType } from "@nerve/types";
-import type { IssueListOptions } from "@/lib/issue-filters";
+import { toMemberFilters, type IssueListOptions } from "@/lib/issue-filters";
+import type { IssueRootStore } from "@/store/issue/root.store";
 import type { IssueActions } from "@/hooks/use-issues-actions";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -10,6 +11,7 @@ import { useSessionSWR } from "@/lib/use-session-swr";
 /** A mounted layout's first page belongs to its session, scope, view and query. */
 export function useIssueListMount(
   type: EIssuesStoreType,
+  root: IssueRootStore,
   fetchIssues: IssueActions["fetchIssues"],
   options: IssueListOptions | undefined,
   viewId?: string,
@@ -28,9 +30,17 @@ export function useIssueListMount(
     profile || type === EIssuesStoreType.ARCHIVED
       ? role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER
       : role !== undefined;
+  const workspaceID = workspaceSlug ? root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id : undefined;
+  const projectIDs = profile
+    ? (toMemberFilters(userId ? (root.profileIssuesFilter.getIssueFilters(userId)?.richFilters ?? {}) : {})
+        .project_id ?? [])
+    : projectId
+      ? [projectId]
+      : [];
+  const identity = root.permissionReads.identity(workspaceID, projectIDs, profile);
   const key =
     options && allowed && (!profile || viewId)
-      ? (["ISSUE_LIST", type, workspaceSlug, target, viewId ?? "", variant, JSON.stringify(options)] as const)
+      ? (["ISSUE_LIST", type, workspaceSlug, target, viewId ?? "", variant, identity, JSON.stringify(options)] as const)
       : null;
   return useSessionSWR(key, () => fetchIssues("init-loader", options!, viewId), { dedupingInterval: 0 });
 }

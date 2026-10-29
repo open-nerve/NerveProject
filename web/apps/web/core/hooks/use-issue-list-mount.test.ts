@@ -50,7 +50,7 @@ it("gates actual list fetches for unknown, nonmember, and guest scopes", async (
   for (const role of [undefined, 5, 15, 20]) {
     f.role = role;
     f.calls = [];
-    types.forEach((type, i) => useIssueListMount(type, fetchers[i]!, { limit: 20 }, "assigned"));
+    types.forEach((type, i) => useIssueListMount(type, tab.app.issue, fetchers[i]!, { limit: 20 }, "assigned"));
     expect(f.calls.map(([key]) => !!key)).toEqual(
       role === undefined ? [false, false, false] : role === 5 ? [true, false, false] : [true, true, true]
     );
@@ -58,7 +58,7 @@ it("gates actual list fetches for unknown, nonmember, and guest scopes", async (
   f.params.projectId = undefined as never;
   f.role = 15;
   f.calls = [];
-  useIssueListMount(EIssuesStoreType.PROJECT, project as never, { limit: 20 });
+  useIssueListMount(EIssuesStoreType.PROJECT, tab.app.issue, project as never, { limit: 20 });
   const [key] = f.calls[0]!;
   expect(sessionKey({ status: "signed-in", loginId: "x" }, ...(key as [string, ...string[]]))).toBeNull();
   expect(tab.nerve.calls).toEqual([]);
@@ -73,6 +73,7 @@ it("keys a real list by login and drops a retired session's late answer; refusal
     f.calls = [];
     useIssueListMount(
       EIssuesStoreType.PROJECT,
+      tab.app.issue,
       ((_loader: never, options: never) =>
         tab.app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", options)) as never,
       { limit: 20 }

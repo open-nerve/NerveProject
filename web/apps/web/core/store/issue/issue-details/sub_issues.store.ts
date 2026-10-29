@@ -129,6 +129,8 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     const subIssuesStateDistribution = response?.state_distribution ?? {};
 
     const issueList = (response.sub_issues ?? []) as Issue[];
+    const projects = uniq([projectId, ...issueList.map((issue) => issue.project_id).filter(Boolean)]);
+    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
 
     root.acceptListIssues(issueList, token);
 
@@ -141,7 +143,7 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     }
     await root.issues.refreshAuthoritative(parentIssueId);
 
-    if (!root.isReadCurrent(token, [projectId])) throw new SessionChangedError();
+    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
 
     runInAction(() => {
       set(this.subIssuesStateDistribution, parentIssueId, subIssuesStateDistribution);
@@ -165,6 +167,8 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     if (!root.isReadCurrent(token, [projectId])) throw new SessionChangedError();
     const subIssuesStateDistribution = response?.state_distribution ?? {};
     const subIssues = Array.isArray(response?.sub_issues) ? response.sub_issues : [];
+    const projects = uniq([projectId, ...subIssues.map((issue) => issue.project_id).filter(Boolean)]);
+    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
 
     // fetch other issues states and members when sub-issues are from different project
     if (subIssues && subIssues.length > 0) {

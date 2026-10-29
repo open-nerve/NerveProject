@@ -45,10 +45,11 @@ import { compareIssueTime } from "@/lib/issue-order";
 import type { Before, ConfirmedIssueChange } from "@/lib/paged-groups";
 import { heldCounterSources } from "@/lib/paged-groups.evidence";
 import type { IssueListBinding } from "./helpers/issue-list-binding";
+import { PermissionReads } from "./permission-reads";
 
 export type IIssueRootStore = IssueRootStore;
 export type IssueWriteScope = Readonly<{ workspaceSlug: string; projectID: string; workspaceID: string }>;
-export type IssueReadToken = Readonly<{ owner: symbol; serial: number }>;
+export type IssueReadToken = Readonly<{ owner: symbol; serial: number; permission: number; member: boolean }>;
 type PendingWrite = {
   before: Before;
   sources: Map<IssueListBinding, ReadonlySet<number>>;
@@ -111,6 +112,7 @@ export class IssueRootStore {
   private readonly lists = new Set<IssueListBinding>();
   private readonly queues = new Map<string, ReturnType<typeof oneAtATime>>();
   private readonly pending = new Map<string, PendingWrite>();
+  readonly permissionReads: PermissionReads;
   get pendingIDs(): ReadonlySet<string> {
     return new Set(this.pending.keys());
   }
@@ -130,6 +132,15 @@ export class IssueRootStore {
     });
 
     this.rootStore = rootStore;
+    this.permissionReads = new PermissionReads(rootStore, (workspaceID, projectID, memberOnly) => {
+      for (const list of this.lists)
+        if (
+          list.scope.workspaceID === workspaceID &&
+          (!memberOnly || list.scope.scope === "member") &&
+          (!projectID || list.covers({ workspaceID, projectID, workspaceSlug: list.scope.workspaceSlug }))
+        )
+          list.invalidatePermission();
+    });
 
     this.issues = new IssueStore(this);
 
@@ -154,6 +165,7 @@ export class IssueRootStore {
   }
   retire(): void {
     if (!this.active) return;
+    this.permissionReads.retire();
     runInAction(() => {
       this.active = false;
     });
@@ -163,14 +175,20 @@ export class IssueRootStore {
     this.assertActive();
     this.lists.add(list);
   }
-  captureRead(): IssueReadToken {
+  captureRead(member = false): IssueReadToken {
     this.assertActive();
-    return Object.freeze({ owner: this.owner, serial: ++this.serial });
+    return Object.freeze({
+      owner: this.owner,
+      serial: ++this.serial,
+      permission: this.permissionReads.capture(),
+      member,
+    });
   }
   isReadCurrent(token: IssueReadToken, projectIDs: string[], workspaceID?: string): boolean {
     return (
       this.active &&
       token.owner === this.owner &&
+      this.permissionReads.current(token.permission, workspaceID, projectIDs, token.member) &&
       (projectIDs.length
         ? projectIDs.every((id) => token.serial >= (this.deletions.get(id)?.serial ?? 0))
         : [...this.deletions.values()].every(
@@ -284,6 +302,7 @@ export class IssueRootStore {
     };
     if (id) this.pending.set(id, pending);
     try {
+      const permission = this.permissionReads.capture();
       const after = await request(held);
       this.assertActive();
       const prepared = new Set<IssueListBinding>();
@@ -334,7 +353,7 @@ export class IssueRootStore {
       for (const list of this.lists)
         if (list.covers(scope) && !unavailable.has(list))
           list.acceptConfirmed(change, pending.sources.get(list) ?? new Set());
-      this.issues.confirmChange(change);
+      this.issues.confirmChange(change, permission);
       return after;
     } catch (error) {
       this.assertActive();

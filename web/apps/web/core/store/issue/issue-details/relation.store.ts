@@ -97,7 +97,14 @@ export class IssueRelationStore implements IIssueRelationStore {
     const token = root.captureRead();
     const response = await this.issueRelationService.listIssueRelations(workspaceSlug, projectId, issueId);
 
-    if (!root.isReadCurrent(token, [projectId])) throw new SessionChangedError();
+    const projects = uniq([
+      projectId,
+      ...Object.values(response)
+        .flat()
+        .map((issue) => issue.project_id)
+        .filter(Boolean),
+    ]);
+    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
     runInAction(() => {
       Object.keys(response).forEach((key) => {
         const relation_key = key as TIssueRelationTypes;
@@ -129,7 +136,8 @@ export class IssueRelationStore implements IIssueRelationStore {
       issues,
     });
 
-    if (!root.isReadCurrent(token, [projectId])) throw new SessionChangedError();
+    const projects = uniq([projectId, ...response.map((issue) => issue.project_id).filter(Boolean)]);
+    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
     const reverseRelatedType = REVERSE_RELATIONS[relationType];
 
     const issuesOfRelation = get(this.relationMap, [issueId, relationType]) ?? [];

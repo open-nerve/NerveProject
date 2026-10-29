@@ -12,6 +12,7 @@ export type IIssueStore = IssueStore;
 /** The sole full issue copy. null is reserved for a successful delete in this session. */
 export class IssueStore {
   private readonly canonical = new ReconciledByKey<Entity>();
+  private readonly permissionProof = observable.map<string, number>();
   readonly issuesIdentifierMap: Record<string, string> = {};
   constructor(private readonly root: IssueRootStore) {
     makeObservable(this, { issuesMap: computed, issuesIdentifierMap: observable });
@@ -23,11 +24,11 @@ export class IssueStore {
       )
     );
   }
-  private choose = (held: Entity | undefined, answer: Entity): Entity => {
+  private choose = (held: Entity | undefined, answer: Entity, keepDescription = true): Entity => {
     if (held === null || answer === null) return null;
     if (held && compareIssueTime(answer.updated_at, held.updated_at) < 0) return held;
     const merged =
-      held && "description_html" in held && !("description_html" in answer)
+      keepDescription && held && "description_html" in held && !("description_html" in answer)
         ? { ...answer, description_html: held.description_html }
         : { ...answer };
     Object.freeze(merged.assignee_ids);
@@ -43,15 +44,27 @@ export class IssueStore {
       return;
     const held = this.canonical.get(answer.id);
     if (held === null || (held && compareIssueTime(answer.updated_at, held.updated_at) < 0)) return;
-    this.canonical.receive(answer.id, answer, this.choose);
+    const keepDescription = this.root.permissionReads.current(
+      this.permissionProof.get(answer.id) ?? 0,
+      answer.workspace_id,
+      [answer.project_id]
+    );
+    this.canonical.receive(answer.id, answer, (before, incoming) => this.choose(before, incoming, keepDescription));
+    runInAction(() => this.permissionProof.set(answer.id, token.permission));
     this.root.observeRead(held ?? undefined, answer);
     this.root.verification.accept(answer.id, token);
     const identifier = this.root.rootStore.projectRoot.project.getProjectIdentifierById(answer.project_id);
     if (identifier) this.addIssueIdentifier(`${identifier}-${answer.sequence_id}`, answer.id);
   }
-  confirmChange(change: ConfirmedIssueChange): void {
+  confirmChange(change: ConfirmedIssueChange, permission?: number): void {
     if (!this.root.active) return;
     this.canonical.receive(change.id, change.after, this.choose);
+    if (
+      change.after &&
+      permission !== undefined &&
+      this.root.permissionReads.current(permission, change.after.workspace_id, [change.after.project_id])
+    )
+      runInAction(() => this.permissionProof.set(change.id, permission));
     if (change.after === null) this.root.verification.deleted(change.id);
   }
   /** Internal proof only: accessors below additionally enforce visibility and verification. */
@@ -75,7 +88,14 @@ export class IssueStore {
   }
   getIssueById = (issueId: string): Issue | IssueDetail | undefined => {
     const issue = this.canonical.get(issueId);
-    return issue && this.root.canSeeIssue(issue) && !this.root.verification.isUncertain(issueId) ? issue : undefined;
+    return issue &&
+      this.root.canSeeIssue(issue) &&
+      this.root.permissionReads.current(this.permissionProof.get(issueId) ?? 0, issue.workspace_id, [
+        issue.project_id,
+      ]) &&
+      !this.root.verification.isUncertain(issueId)
+      ? issue
+      : undefined;
   };
   getIssueDetailById = (issueId: string): IssueDetail | undefined => {
     const issue = this.getIssueById(issueId);

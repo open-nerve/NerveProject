@@ -58,7 +58,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
     EUserPermissionsLevel.PROJECT
   );
 
-  useIssueListMount(storeType, fetchIssues, { limit: 100 }, viewId);
+  useIssueListMount(storeType, issues.rootIssueStore, fetchIssues, { limit: 100 }, viewId);
 
   const canEditProperties = useCallback(
     (projectId: string | undefined) => {
