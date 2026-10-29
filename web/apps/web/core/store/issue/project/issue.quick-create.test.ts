@@ -1,74 +1,89 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-
-import type { Issue } from "@nerve/api-client";
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
-import { ALL_ISSUES } from "@nerve/constants";
-
-import { heldChange } from "@/lib/auth/fake-tab";
-import { FakeNerve } from "@/lib/auth/fake-nerve";
-import { IssueService } from "@/services/issue";
-import { issueOf } from "../fake-issues";
+import { answered, json } from "@/lib/auth/fake-nerve";
+import { issueDetailOf, issueOf, issuePageOf, issueStoreTab, requestedIssue } from "../fake-issues";
+import { loadProjects, projectOf } from "@/store/project/fake-projects";
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
+const binding = vi.hoisted(() => ({ app: undefined as unknown }));
 vi.mock("@/lib/store-context", () => ({
-  rootStore: { projectRoot: { project: { getProjectIdentifierById: () => "P" } } },
+  get rootStore() {
+    return binding.app;
+  },
 }));
-const { RootStore } = await import("@/store/root.store");
-let app: InstanceType<typeof RootStore>;
-beforeEach(() => {
-  vi.restoreAllMocks();
-  app = new RootStore(new FakeNerve().client());
-  app.router.setQuery({ workspaceSlug: "ws", projectId: "A" });
+let tab: Awaited<ReturnType<typeof issueStoreTab>>;
+beforeEach(async () => {
+  vi.useFakeTimers();
+  tab = await issueStoreTab();
+  binding.app = tab.app;
+  await answered(
+    tab.nerve,
+    () => tab.app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 20 }),
+    ["GET", "/api/v0/projects/A/issues"],
+    issuePageOf([issueOf("R0")]),
+    "list"
+  );
 });
-function initial(project = "A") {
+afterEach(() => {
+  tab.app.dispose();
+  vi.useRealTimers();
+});
+it("waitsForRealResponseThenAddsCanonicalGroupAndCountOnce", async () => {
+  const { app, nerve } = tab;
   const store = app.issue.projectIssues;
-  app.issue.issues.addIssue([issueOf("R0", project)]);
-  runInAction(() => {
-    store.groupedIssueIds = { [ALL_ISSUES]: ["R0"] };
-    store.groupedIssueCount = { [ALL_ISSUES]: 1 };
-  });
-  return store;
-}
-it("waits for a real response then adds canonical/group/count once", async () => {
-  const store = initial();
-  const answer = heldChange<Issue>();
-  vi.spyOn(IssueService.prototype, "createIssue").mockReturnValue(answer.sent);
-  const creating = store.createIssue("ws", "A", { name: "First" });
-  expect(Object.keys(app.issue.issues.issuesMap)).toEqual(["R0"]);
+  const request = await requestedIssue(nerve, () => store.createIssue("ws", "A", { name: "First" }), [
+    "POST",
+    "/api/v0/projects/A/issues",
+  ]);
+  expect(request.call.body).toEqual({ name: "First" });
   expect(store.getIssueIds()).toEqual(["R0"]);
-  expect(store.groupedIssueCount[ALL_ISSUES]).toBe(1);
-  answer.answer(issueOf("R1"));
-  await creating;
-  expect(Object.keys(app.issue.issues.issuesMap)).toEqual(["R0", "R1"]);
-  expect(store.getIssueIds()).toEqual(["R0", "R1"]);
-  expect(store.groupedIssueCount[ALL_ISSUES]).toBe(2);
+  expect(store.total).toBe(1);
+  expect(app.issue.issues.getIssueById("R1")).toBeUndefined();
+  request.call.answer(json(201, issueDetailOf("R1")));
+  await request.promise;
+  expect(store.getIssueIds()).toEqual(["R1", "R0"]);
+  expect(store.total).toBe(2);
+  expect(app.issue.issues.getIssueDetailById("R1")).toEqual(issueDetailOf("R1"));
 });
-it("a refused creation leaves canonical/group/count unchanged", async () => {
-  const store = initial();
-  const answer = heldChange<Issue>();
-  vi.spyOn(IssueService.prototype, "createIssue").mockReturnValue(answer.sent);
-  const creating = store.createIssue("ws", "A", { name: "First" });
-  const refused = expect(creating).rejects.toThrow("refused");
-  answer.refuse(new Error("refused"));
-  await refused;
-  expect(Object.keys(app.issue.issues.issuesMap)).toEqual(["R0"]);
+it("refusedCreationLeavesCanonicalGroupAndCountUnchanged", async () => {
+  const { app, nerve } = tab;
+  const store = app.issue.projectIssues;
+  const request = await requestedIssue(nerve, () => store.createIssue("ws", "A", { name: "First" }), [
+    "POST",
+    "/api/v0/projects/A/issues",
+  ]);
+  const rejected = expect(request.promise).rejects.toBeDefined();
+  request.call.answer(json(403, { code: "forbidden" }));
+  await rejected;
   expect(store.getIssueIds()).toEqual(["R0"]);
-  expect(store.groupedIssueCount[ALL_ISSUES]).toBe(1);
+  expect(store.total).toBe(1);
+  expect(Object.keys(app.issue.issues.issuesMap)).toEqual(["R0"]);
 });
-it.each([
-  { workspaceSlug: "ws", projectId: "B" },
-  { workspaceSlug: "other", projectId: "A" },
-])("late A response cannot enter the current $workspaceSlug/$projectId group", async (route) => {
-  const store = initial();
-  const answer = heldChange<Issue>();
-  vi.spyOn(IssueService.prototype, "createIssue").mockReturnValue(answer.sent);
-  const creating = store.createIssue("ws", "A", { name: "First" });
-  app.router.setQuery(route);
-  initial(route.projectId);
-  answer.answer(issueOf("A1"));
-  await creating;
+it("lateACreationUpdatesItsBoundListWithoutEnteringSelectedB", async () => {
+  const { app, nerve } = tab;
+  await loadProjects(nerve, app.projectRoot.project, tab.workspace, [
+    tab.project,
+    projectOf("B", tab.workspace.id, { id: "B" }),
+  ]);
+  const store = app.issue.projectIssues;
+  const listA = store.currentList!;
+  const request = await requestedIssue(nerve, () => store.createIssue("ws", "A", { name: "First" }), [
+    "POST",
+    "/api/v0/projects/A/issues",
+  ]);
+  runInAction(() => app.router.setQuery({ workspaceSlug: "ws", projectId: "B" }));
+  await answered(
+    nerve,
+    () => store.fetchIssues("ws", "B", "init-loader", { limit: 20 }),
+    ["GET", "/api/v0/projects/B/issues"],
+    issuePageOf([issueOf("B0", "B")]),
+    "B list"
+  );
+  request.call.answer(json(201, issueDetailOf("A1")));
+  await request.promise;
+  expect(store.getIssueIds()).toEqual(["B0"]);
+  expect(store.total).toBe(1);
+  expect(listA.reconciled.value?.total).toBe(2);
   expect(app.issue.issues.getIssueById("A1")?.project_id).toBe("A");
-  expect(store.getIssueIds()).toEqual(["R0"]);
-  expect(store.groupedIssueCount[ALL_ISSUES]).toBe(1);
 });

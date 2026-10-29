@@ -6,12 +6,12 @@
 
 // local imports
 import type { SingleOrArray } from "../utils";
-import type { TSupportedOperators, LOGICAL_OPERATOR, TAllAvailableOperatorsForDisplay } from "./operators";
+import type { TSupportedOperators, LOGICAL_OPERATOR } from "./operators";
 
 /**
  * Filter node types for building hierarchical filter trees.
  * - CONDITION: Single filter for one field (e.g., "state is backlog")
- * - GROUP: Logical container combining multiple filters with AND/OR or single filter/group with NOT
+ * - GROUP: Logical container combining multiple filters with AND
  */
 export const FILTER_NODE_TYPE = {
   CONDITION: "condition",
@@ -43,7 +43,7 @@ type TBaseFilterNode = {
  * Leaf node representing a single filter condition (e.g., "state is backlog").
  * - type: Node type (condition)
  * - property: Field being filtered
- * - operator: Comparison operator (is, is not, between, not between, etc.)
+ * - operator: Comparison operator (exact, in, range)
  * - value: Filter value(s) - array for operators that support multiple values
  * @template P - Property key type
  * @template V - Value type
@@ -53,16 +53,6 @@ export type TFilterConditionNode<P extends TFilterProperty, V extends TFilterVal
   property: P;
   operator: TSupportedOperators;
   value: SingleOrArray<V>;
-};
-
-/**
- * Filter condition node for display purposes.
- */
-export type TFilterConditionNodeForDisplay<P extends TFilterProperty, V extends TFilterValue> = Omit<
-  TFilterConditionNode<P, V>,
-  "operator"
-> & {
-  operator: TAllAvailableOperatorsForDisplay;
 };
 
 /**
@@ -79,7 +69,7 @@ export type TFilterAndGroupNode<P extends TFilterProperty> = TBaseFilterNode & {
 };
 
 /**
- * Union type for all group node types - AND, OR, and NOT groups.
+ * Union type for AND group nodes.
  * @template P - Property key type
  */
 export type TFilterGroupNode<P extends TFilterProperty> = TFilterAndGroupNode<P>;

@@ -20,6 +20,8 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { useGroupIssuesDragNDrop } from "@/hooks/use-group-dragndrop";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
+import { useIssueListRefresh, IssueListRetry } from "@/hooks/use-issue-list-refresh";
+import { useIssueListMount } from "@/hooks/use-issue-list-mount";
 // types
 import { DeleteIssueModal } from "../../delete-issue-modal";
 import { IssueLayoutHOC } from "../issue-layout-HOC";
@@ -70,20 +72,37 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
 
   const orderBy = displayFilters?.order_by;
 
-  useEffect(() => {
-    fetchIssues("init-loader", { canGroup: true, perPageCount: sub_group_by ? 10 : 30 }, viewId);
-  }, [fetchIssues, storeType, group_by, sub_group_by, viewId]);
+  useIssueListMount(
+    storeType,
+    issues.rootIssueStore,
+    fetchIssues,
+    { limit: sub_group_by ? 10 : 30 },
+    viewId,
+    JSON.stringify([group_by, sub_group_by])
+  );
 
   const fetchMoreIssues = useCallback(
     (groupId?: string, subgroupId?: string) => {
       if (issues?.getIssueLoader(groupId, subgroupId) !== "pagination") {
-        fetchNextIssues(groupId, subgroupId);
+        void fetchNextIssues(groupId, subgroupId).catch(() => {});
       }
     },
     [fetchNextIssues, issues]
   );
 
-  const groupedIssueIds = issues?.groupedIssueIds;
+  const groups = issues?.groups;
+  const collapsed = issuesFilter?.issueFilters?.kanbanFilters ?? EMPTY_KANBAN_FILTERS;
+  const staleRefresh = useIssueListRefresh(
+    issues.currentList,
+    [...(groups ?? [])].flatMap(([group, data]) => {
+      if (collapsed.group_by.includes(group) || (!displayFilters?.show_empty_groups && !data.total)) return [];
+      return data.subgroups
+        ? [...data.subgroups.keys()]
+            .filter((subgroup) => !collapsed.sub_group_by.includes(subgroup))
+            .map((subgroup) => ({ group, subgroup }))
+        : [{ group }];
+    })
+  );
 
   const userDisplayFilters = displayFilters || null;
 
@@ -187,6 +206,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
 
   return (
     <>
+      <IssueListRetry {...staleRefresh} />
       <DeleteIssueModal
         dataId={draggedIssueId}
         isOpen={deleteIssueModal}
@@ -203,7 +223,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
             <div className="h-full w-max">
               <KanBanView
                 issuesMap={issueMap}
-                groupedIssueIds={groupedIssueIds ?? {}}
+                groups={groups ?? new Map()}
                 getGroupIssueCount={issues.getGroupIssueCount}
                 displayProperties={displayProperties}
                 sub_group_by={sub_group_by}

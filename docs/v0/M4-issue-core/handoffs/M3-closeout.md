@@ -223,3 +223,7 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 
 
 整审A-01无消费者子项两域预取与A-02退休列表独占乐观分布链已根因清理并独评；未改会话/资源/领域协议，真实目录/统计/进度保留，不扩大本输入其余关闭范围。
+
+## P10b 本段处理（2026-10-29）
+
+§5 user-properties 两方法、例外和 workItemFilters 已由 T7 删除，T13 四故事复核；§6 router autorun、Reconciled 扩展与 S2 请求集由 T2/T10/T13 验证。详情取数与页面、旧搜索及 is_bot 分别仍属 P11–P15。 证据见 [P10b review](../reviews/P10b-web-list-data-review.md)；整审及N2限定修复复审已闭环，产品候选2e1264aa完整F及准确CI40896656404 attempt1三任务通过，实施与终审完成、集成待办；纯文稿HEAD CI由主控另核；整份交接 status 保持 open。

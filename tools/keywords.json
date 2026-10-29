@@ -2043,7 +2043,7 @@
     {
       "id": "plane-workspace-urls",
       "phase": "M3/P8a",
-      "why": "M3 换掉的 Plane 地址（M3 设计 7.10）：工作区、项目两侧的 store 改调 /api/v0 之后，旧 service 中这些地址的方法都已删除（P8a 工作区一侧；P8b 项目一侧：项目、项目角色、项目成员、归档、标识检查、收藏、状态、标签、工作区的标签、分诊状态、显示设置，各 Task 删掉时补上）。项目的 /user-properties/ 是 M4 的工作项筛选读写的，留一条例外到 M4。/search-issues/ 和迭代、模块、工作项的地址不是 M3 的，模式不宽到它们",
+      "why": "M3 换掉的 Plane 地址（M3 设计 7.10）：工作区、项目两侧的 store 改调 /api/v0 之后，旧 service 中这些地址的方法都已删除（P8a 工作区一侧；P8b 项目一侧：项目、项目角色、项目成员、归档、标识检查、收藏、状态、标签、工作区的标签、分诊状态、显示设置，各 Task 删掉时补上）。项目的 /user-properties/ 工作项筛选读写已在 M4 删除。/search-issues/ 和迭代、模块、工作项的地址不是 M3 的，模式不宽到它们",
       "files": {
         "source": "^web/(?!.*\\.test\\.[jt]sx?$).*\\.(?:[cm]?[jt]sx?|json)$",
         "flags": ""
@@ -2549,6 +2549,70 @@
           ]
         }
       }
+    },
+    {
+      "id": "negation-filters",
+      "phase": "M4/P10",
+      "why": "M4/P10b 列表只支持正向 AND；删除否定 API、恒等显示别名和占位 hook，防止重新引入。",
+      "files": {
+        "source": "^web/(?:apps/web/(?:core|ce)|packages/(?:types|utils|shared-state|constants)/src)/.*\\.[cm]?[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\b(?:TAllAvailable(?:OperatorsForDisplay|DateFilterOperatorsForDisplay)|TNegativeOperatorConfig|_?isNegation|allowNegative|negOperatorLabel|useFiltersOperatorConfigs|T(?:UseFiltersOperatorConfigsProps|FiltersOperatorConfigs|FilterConditionNodeForDisplay|OperatorForPayload)|getOperatorForPayload|getDisplayOperator|extractConditionsWithDisplayOperators|allConditionsForDisplay|_?preserveNotGroups)\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "allowNegative: false",
+          "_isNegation: boolean",
+          "TAllAvailableOperatorsForDisplay",
+          "getOperatorForPayload(operator)",
+          "useFiltersOperatorConfigs(props)",
+          "TFilterConditionNodeForDisplay",
+          "preserveNotGroups = true"
+        ],
+        "miss": [
+          "const negative = value.startsWith(\"-\")",
+          "order_by: \"-created_at\"",
+          "getDisplayOperatorByValue(operator, value)"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/types/src/rich-filters/operators/index.ts",
+            "web/apps/web/core/components/rich-filters/filter-item/root.tsx",
+            "web/packages/shared-state/src/utils/rich-filter.helper.ts"
+          ],
+          "miss": ["docs/v0/M4-issue-core/specs/P10b-web-list-data.md", "web/packages/utils/dist/index.js"]
+        }
+      }
+    },
+    {
+      "id": "workspace-draft-filters",
+      "phase": "M4/P10",
+      "why": "草稿列表没有筛选，防止重新构造已删除的筛选 store。",
+      "files": {
+        "source": "^web/apps/web/(?:core|ce)/.*\\.[cm]?[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\b(?:WorkspaceDraftIssuesFilter|workspaceDraftIssuesFilter)\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "new WorkspaceDraftIssuesFilter(this)",
+          "workspaceDraftIssuesFilter = new WorkspaceDraftIssuesFilter(this)"
+        ],
+        "miss": ["new WorkspaceDraftIssues(this)", "draftIssues.filter(Boolean)", "WorkspaceDraftIssuesFilterSettings"],
+        "files": {
+          "hit": [
+            "web/apps/web/core/store/issue/root.store.ts",
+            "web/apps/web/core/store/issue/workspace-draft/filter.store.ts"
+          ],
+          "miss": ["docs/v0/M4-issue-core/specs/P10b-web-list-data.md", "web/packages/utils/dist/index.js"]
+        }
+      }
     }
   ],
   "exceptions": [
@@ -2574,14 +2638,6 @@
       "count": 3,
       "reason": "三行中文注释记录这份配置的来源：文件开头说 catalog 等各节来自 Plane 提交 02c19e1 的 pnpm-workspace.yaml、英文注释是 Plane 的原文（M0/P5 spec 2.4），allowBuilds 里说最后三项不来自 Plane（M0/P6）。来源说明随文件长期存在，在 v0 内不会消失",
       "until": "M9"
-    },
-    {
-      "rule": "plane-workspace-urls",
-      "path": "web/apps/web/core/services/project/project.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/user-properties/",
-      "count": 2,
-      "reason": "M3/P8b 起，M4 的工作项筛选改用新接口时删除：项目的工作项筛选（getProjectUserProperties、updateProjectUserProperties）由 M4 的筛选 store 读写（M3 设计 7.3）",
-      "until": "M4/P11"
     },
     {
       "rule": "copy-hook",
@@ -2727,26 +2783,10 @@
     {
       "rule": "old-issue-urls",
       "path": "web/apps/web/core/services/issue/issue.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/",
-      "count": 2,
-      "reason": "T7暂留；P10b核心列表/写入先移除；同key含P11详情时按最早期限，到时先删P10b方法再按剩余真实命中重登；T7暂留；P11接线删除；真实读者 createIssue→BaseIssuesStore.createIssue（唯一旧service消费者，P10b核心create迁移）；getIssuesFromServer→getIssues→ProjectIssues.fetchIssues/fetchNextIssues（P10b列表）",
-      "until": "M4/P11"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue.service.ts",
       "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/",
-      "count": 2,
-      "reason": "T7暂留；P10b核心列表/写入先移除；同key含P11详情时按最早期限，到时先删P10b方法再按剩余真实命中重登；T7暂留；P11接线删除；真实读者 retrieve→IssueStore.fetchIssue/loadIssueResources父项及归档detail header（P11详情）；patchIssue→BaseIssuesStore.issueUpdate（P10b核心update迁移）",
-      "until": "M4/P11"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issuesId}/",
       "count": 1,
-      "reason": "T7暂留；P10b核心列表/写入先移除；同key含P11详情时按最早期限，到时先删P10b方法再按剩余真实命中重登；T7暂留；P11接线删除；真实读者 deleteIssue→BaseIssuesStore.removeIssue（P10b核心delete迁移）",
-      "until": "M4/P11"
+      "reason": "P10b/T5已移除核心patch；仅剩retrieve→IssueStore.fetchIssue/loadIssueResources父项及归档detail header，P11详情迁移时删除",
+      "until": "M4/P12"
     },
     {
       "rule": "old-issue-urls",
@@ -2795,22 +2835,6 @@
       "count": 1,
       "reason": "T7暂留；P11接线删除；真实读者 IssueActivityStore.fetchActivities→getIssueActivities；详情活动资源",
       "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue_archive.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-issues/",
-      "count": 1,
-      "reason": "T7暂留；P10b归档列表/核心写入删除；getArchivedIssues→ArchivedIssues.fetchIssues/fetchNextIssues/restoreIssue及BaseIssuesStore.issueArchive",
-      "until": "M4/P11"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue_archive.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/archive/",
-      "count": 2,
-      "reason": "T7暂留；P10b归档列表/核心写入删除；archiveIssue,restoreIssue→ArchivedIssues.fetchIssues/fetchNextIssues/restoreIssue及BaseIssuesStore.issueArchive",
-      "until": "M4/P11"
     },
     {
       "rule": "old-issue-urls",
@@ -2918,35 +2942,11 @@
     },
     {
       "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/user.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/user-issues/${userId}/",
-      "count": 1,
-      "reason": "T7暂留；P11接线删除；真实读者 getUserProfileIssues→ProfileIssues.fetchIssues/fetchNextIssues；P11用户工作项接线",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
       "path": "web/apps/web/core/services/workspace.service.ts",
       "match": "/api/workspaces/${workspaceSlug}/entity-search/",
       "count": 1,
       "reason": "T7暂留；P11接线删除；真实读者 searchEntity→rich-text/description-input、lite-text/editor、inbox create issue-description及issue-modal description-editor；P11改接",
       "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/store/issue/helpers/base-issues.update-request.test.ts",
-      "match": "/api/workspaces/${ws.slug}/projects/${project.id}/issues/${before.id}/",
-      "count": 2,
-      "reason": "T7暂留；T5/R10 BaseIssuesStore.issueUpdate真实RootStore/公共HTTP边界测试，随P10b替换Base核心写入迁到新API；不是产品兼容URL",
-      "until": "M4/P11"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/store/issue/helpers/base-issues.update-request.test.ts",
-      "match": "/api/workspaces/${ws.slug}/projects/${project.id}/issues/${r1.id}/",
-      "count": 1,
-      "reason": "T7暂留；T5/R10 BaseIssuesStore.issueUpdate真实RootStore/公共HTTP边界测试，随P10b替换Base核心写入迁到新API；不是产品兼容URL",
-      "until": "M4/P11"
     },
     {
       "rule": "old-issue-urls",

@@ -20,7 +20,7 @@ export class ProjectPreferencesService {
     );
   }
 
-  /** Changes the settings data names; the answer is all of them as nerve now holds them. */
+  /** Each named field replaces that field whole, including filters, display_filters and display_properties. */
   async update(projectId: string, data: ProjectPreferencesUpdate): Promise<ProjectPreferences> {
     return unwrap(
       await this.api.PATCH("/api/v0/me/projects/{project_id}/preferences", {

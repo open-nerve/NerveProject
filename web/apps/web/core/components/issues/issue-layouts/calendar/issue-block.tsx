@@ -97,6 +97,7 @@ export const CalendarIssueBlock = observer(
     return (
       <Popover delay={100} openOnHover>
         <Popover.Button
+          nativeButton={false}
           className="w-full"
           render={
             <ControlLink

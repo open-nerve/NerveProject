@@ -1,3 +1,5 @@
+import type { IssueCreate } from "@nerve/api-client";
+import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -13,7 +15,7 @@ import { observer } from "mobx-react";
 // nerve constants
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 // types
-import type { TGroupedIssues, TPaginationData, ICalendarWeek, TSupportedFilterForUpdate } from "@nerve/types";
+import type { ICalendarWeek, TSupportedFilterForUpdate } from "@nerve/types";
 import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
 // ui
 import { Spinner } from "@nerve/ui";
@@ -37,14 +39,14 @@ import { CalendarWeekHeader } from "./week-header";
 type Props = {
   issuesFilterStore: IProjectIssuesFilter;
   issues: Record<string, Issue | IssueDetail> | undefined;
-  groupedIssueIds: TGroupedIssues;
+  groups: Map<string, Group>;
   layout: "month" | "week" | undefined;
   showWeekends: boolean;
   issueCalendarView: ICalendarStore;
   loadMoreIssues: (dateString: string) => void;
-  getPaginationData: (groupId: string | undefined) => TPaginationData | undefined;
+  getPaginationData: (groupId: string | undefined) => Group | undefined;
   getGroupIssueCount: (groupId: string | undefined) => number | undefined;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
   quickActions: TRenderQuickActions;
   handleDragAndDrop: (
     issueId: string | undefined,
@@ -65,7 +67,7 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
   const {
     issuesFilterStore,
     issues,
-    groupedIssueIds,
+    groups,
     layout,
     showWeekends,
     issueCalendarView,
@@ -118,7 +120,7 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
       </div>
     );
 
-  const issueIdList = groupedIssueIds ? groupedIssueIds[formattedDatePayload] : [];
+  const issueIdList = groups ? (groups.get(formattedDatePayload)?.rows.map((row) => row.id) ?? []) : [];
 
   return (
     <>
@@ -150,7 +152,7 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
                         key={weekIndex}
                         week={week}
                         issues={issues}
-                        groupedIssueIds={groupedIssueIds}
+                        groups={groups}
                         loadMoreIssues={loadMoreIssues}
                         getPaginationData={getPaginationData}
                         getGroupIssueCount={getGroupIssueCount}
@@ -172,7 +174,7 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
                   issuesFilterStore={issuesFilterStore}
                   week={issueCalendarView.allDaysOfActiveWeek}
                   issues={issues}
-                  groupedIssueIds={groupedIssueIds}
+                  groups={groups}
                   loadMoreIssues={loadMoreIssues}
                   getPaginationData={getPaginationData}
                   getGroupIssueCount={getGroupIssueCount}

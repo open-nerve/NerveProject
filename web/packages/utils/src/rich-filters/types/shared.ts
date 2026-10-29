@@ -30,7 +30,7 @@ export const processGroupNode = <P extends TFilterProperty, T>(
 };
 
 /**
- * Gets the children of a group node, handling AND/OR groups (children array) and NOT groups (single child).
+ * Gets the children of a group node, handling AND groups (children array).
  * Uses processGroupNode for consistent group type handling.
  * @param group - The group node to get children from
  * @returns Array of child expressions

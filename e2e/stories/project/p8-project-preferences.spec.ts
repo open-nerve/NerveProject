@@ -18,7 +18,6 @@ import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth"
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import { closedWithin, modalDialog, shownWithin } from "../../fixtures/dialogs";
-import { workItemFilters } from "../../fixtures/mounts";
 import { dragOnto } from "../../fixtures/project-pages";
 import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -266,7 +265,7 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   const settings = `/api/v0/me/projects/${web.id}/preferences`;
   const tab = (name: string) => tabOf(page, name);
   // Until nerve has given his tab bar a tab has no menu: a change made to nerve's default would replace his tab bar.
-  const release = await holdAnswer(page, "GET", settings);
+  const release = await holdAnswer(page, "GET", settings, 2);
   await page.goto(`/${slug}/projects/${web.id}/issues`);
   await tab("Modules").click({ button: "right" });
   expect(await shownWithin(page.getByRole("menuitem", { name: "Set as default" }))).toBe(false);
@@ -321,18 +320,11 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
     },
   ]);
 
-  // The work items' page asks Plane's address of the filters, M4's (P8b spec §5), at each of its two loads.
-  const filters = workItemFilters(slug, web.id);
-  await expect.poll(() => watch.apiFailures).toEqual([filters.failure, filters.failure]);
-  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([
-    [],
-    [filters.request, filters.request],
-    [],
-  ]);
-  await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
-    errors: [filters.logged, filters.logged],
-  });
+  await expect.poll(() => watch.apiRequests).toContain(`GET /api/v0/me/projects/${web.id}/preferences`);
+  await expect.poll(() => watch.apiRequests).toContain(`GET /api/v0/projects/${web.id}/issues`);
+  await expect.poll(() => watch.apiFailures).toEqual([]);
+  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING], errors: [] });
   // The header's more menu, by the keyboard: Enter on its button, which is named, opens it; the arrow keys reach
   // Views, then its actions, each named by it and shown as it is reached; Enter on Views opens its page.
   const more = page.getByRole("button", { name: "More tabs", exact: true });
@@ -381,9 +373,11 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   expect(await stored(db, web.id, gusEmail)).toEqual([
     { preferences: { navigation: { default_tab: "views", hide_in_more_menu: [] } }, sort_order: 45535, by: gusEmail },
   ]);
-  await expect.poll(() => gusWatch.apiFailures).toEqual([filters.failure]);
-  expect([gusWatch.cspViolations, gusWatch.oldApiRequests, gusWatch.pageErrors]).toEqual([[], [filters.request], []]);
-  await expectQuietConsole(theGuest.page, gusWatch, { warnings: [EMOJI_CHECK_WARNING], errors: [filters.logged] });
+  await expect.poll(() => gusWatch.apiRequests).toContain(`GET /api/v0/me/projects/${web.id}/preferences`);
+  await expect.poll(() => gusWatch.apiRequests).toContain(`GET /api/v0/projects/${web.id}/issues`);
+  await expect.poll(() => gusWatch.apiFailures).toEqual([]);
+  expect([gusWatch.cspViolations, gusWatch.oldApiRequests, gusWatch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(theGuest.page, gusWatch, { warnings: [EMOJI_CHECK_WARNING], errors: [] });
   // His sidebar's Docs, under the same layout as Web's work items, offers a guest his leaving in its header; asked,
   // it ends as a Back takes him to Web's work items, rather than ask it of Web (v0 design 7.7: a project's pages are
   // keyed by it).

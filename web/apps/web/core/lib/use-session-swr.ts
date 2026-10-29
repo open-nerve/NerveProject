@@ -16,7 +16,8 @@ export type SessionFetch = readonly [name: string, ...args: (string | undefined)
  * The one SWR configuration of every session fetch, over the app's (WEB_SWR_CONFIG): a fetch is made as a page mounts
  * (the app's revalidateOnMount: true) and as its key changes (the app's revalidateIfStale: true, for a key SWR has an
  * answer of), not when the tab regains focus, and a refusal is not retried: the page shows it, with its own retry
- * where it has one.
+ * where it has one. A list may shorten only the deduping interval: a restored permission needs a new read even
+ * immediately after an invalidated one, while requests still in flight remain deduplicated.
  */
 const SESSION_FETCH: SWRConfiguration = { revalidateOnFocus: false, shouldRetryOnError: false };
 
@@ -29,8 +30,15 @@ const SESSION_FETCH: SWRConfiguration = { revalidateOnFocus: false, shouldRetryO
  */
 export function useSessionSWR<T>(
   fetch: SessionFetch | null,
-  fetcher: (...args: string[]) => Promise<T>
+  fetcher: (...args: string[]) => Promise<T>,
+  config?: Pick<SWRConfiguration, "dedupingInterval">
 ): SWRResponse<T> {
   const session = useSession();
-  return useSWR(fetch && sessionKey(session, ...fetch), ([, , ...args]: SessionKey) => fetcher(...args), SESSION_FETCH);
+  return useSWR(
+    fetch && sessionKey(session, ...fetch),
+    ([, , ...args]: SessionKey) => fetcher(...args),
+    config?.dedupingInterval === undefined
+      ? SESSION_FETCH
+      : { ...SESSION_FETCH, dedupingInterval: config.dedupingInterval }
+  );
 }

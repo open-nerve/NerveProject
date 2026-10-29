@@ -1,5 +1,7 @@
 # M4/P10a 工作项换型与列表收窄：设计说明（spec）
 
+> 集成更新（2026-10-29）：P10a 已 --no-ff 合并 main a06e3f70、准确 main CI 全绿，归档核验与分支/worktree清理完成；见 [review §10](../reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)。下文此前状态是提交时快照。
+
 | 项 | 内容 |
 |---|---|
 | Phase | M4/P10a `web-issue-types`，设计已批准的 P10 第一段，9 Task |
@@ -145,8 +147,8 @@ quick-add/root 仅增加有限局部生命周期/反馈（约 400 行内），�
 - [x] 前端改动清单和 M6/M7 恢复列表/收集箱参数移交明确；P10b/P11旧service到期账精确；输入handoff总状态保持open。
 - [x] 产品完成线（原第8项已发生部分）：最后完整本地七门禁及准确六web差异桥通过，原件/退出码/计数/skip/cache齐备；整分支代码deep-review与A-01/A-02修复复审完成；准确产品5f7085bce4aa5103a0133fa982847d274efa6e47 CI run40712479050 attempt1三job全绿。
 - [x] 文稿复审完成线（原第8项文稿子条件）：C-r1-01已修并经C-r2复审ADDRESSED/Approved、无新增；具名回执见review§10。
-- [ ] 最终交付完成线（原第8项提交后余项）：最终文稿提交后由root核准确交付HEAD CI全部success并生成X/final-delivery-receipt.json（未来归档）。本文提交时该事件尚未发生；是否满足交付门禁以提交后准确回执为准，不预填未来SHA或成功，必须等最终文稿HEAD CI全绿后才结束任务。
-- [ ] 获本阶段明确集成授权后 --no-ff 合并；准确main CI全绿、证据归档逐hash核验后清理。实施授权不包含集成，不因这行自行合并。
+- [x] 最终交付完成线：最终文稿 d1a19e78 的 CI 40719009817 attempt 1 三任务全绿，final-delivery-receipt.json 已生成并归档，准确身份及哈希见 review§10。
+- [x] 负责人明确授权后 --no-ff 合并 main a06e3f70；准确 CI 40723697041 全绿，全部证据归档逐哈希核验后正常清理，清理后再核一致，见 review§10。
 
 
 ## 5. 不在本段与后续接手

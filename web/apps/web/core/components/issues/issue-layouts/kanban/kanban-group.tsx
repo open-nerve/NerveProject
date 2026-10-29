@@ -1,3 +1,5 @@
+import type { IssueCreate } from "@nerve/api-client";
+import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -18,13 +20,7 @@ import { DRAG_ALLOWED_GROUPS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 //types
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type {
-  TGroupedIssues,
-  IIssueDisplayProperties,
-  TSubGroupedIssues,
-  TIssueGroupByOptions,
-  TIssueOrderByOptions,
-} from "@nerve/types";
+import type { IIssueDisplayProperties, TIssueGroupByOptions, TIssueOrderByOptions } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 import { cn } from "@nerve/utils";
 import type { GroupDropLocation } from "@/components/issues/issue-layouts/utils";
@@ -48,19 +44,19 @@ import { KanbanIssueBlocksList } from "./blocks-list";
 
 interface IKanbanGroup {
   groupId: string;
-  issuesMap: Record<string, Issue | IssueDetail>;
-  groupedIssueIds: TGroupedIssues | TSubGroupedIssues;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
+  groups: Map<string, Group>;
   displayProperties: IIssueDisplayProperties | undefined;
   sub_group_by: TIssueGroupByOptions | undefined;
   group_by: TIssueGroupByOptions | undefined;
-  sub_group_id: string;
+  sub_group_id?: string;
   isDragDisabled: boolean;
   isDropDisabled: boolean;
   dropErrorMessage: string | undefined;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   enableQuickIssueCreate?: boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
   loadMoreIssues: (groupId?: string, subGroupId?: string) => void;
   disableIssueCreation?: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;
@@ -78,7 +74,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     sub_group_by,
     issuesMap,
     displayProperties,
-    groupedIssueIds,
+    groups,
     isDropDisabled,
     dropErrorMessage,
     updateIssue,
@@ -106,7 +102,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
   const containerRef = sub_group_by && scrollableContainerRef ? scrollableContainerRef : columnRef;
 
   const loadMoreIssuesInThisGroup = useCallback(() => {
-    loadMoreIssues(groupId, sub_group_id === "null" ? undefined : sub_group_id);
+    loadMoreIssues(groupId, sub_group_id);
   }, [loadMoreIssues, groupId, sub_group_id]);
 
   const isPaginating = !!getIssueLoader(groupId, sub_group_id);
@@ -182,7 +178,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     groupByKey: string | undefined,
     subGroupByKey: string | undefined | null,
     groupValue: string,
-    subGroupValue: string
+    subGroupValue: string | undefined
   ) => {
     const defaultState = projectState.projectStates?.find((state) => state.default);
     let preloadedData: object = { state_id: defaultState?.id };
@@ -192,10 +188,10 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
         preloadedData = { ...preloadedData, state_id: groupValue };
       } else if (groupByKey === "priority") {
         preloadedData = { ...preloadedData, priority: groupValue };
-      } else if (groupByKey === "labels" && groupValue != "None") {
-        preloadedData = { ...preloadedData, label_ids: [groupValue] };
-      } else if (groupByKey === "assignees" && groupValue != "None") {
-        preloadedData = { ...preloadedData, assignee_ids: [groupValue] };
+      } else if (groupByKey === "labels") {
+        if (groupValue !== "none") preloadedData = { ...preloadedData, label_ids: [groupValue] };
+      } else if (groupByKey === "assignees") {
+        if (groupValue !== "none") preloadedData = { ...preloadedData, assignee_ids: [groupValue] };
       } else if (groupByKey === "created_by") {
         preloadedData = { ...preloadedData };
       } else {
@@ -203,15 +199,15 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
       }
     }
 
-    if (subGroupByKey) {
+    if (subGroupByKey && subGroupValue !== undefined) {
       if (subGroupByKey === "state") {
         preloadedData = { ...preloadedData, state_id: subGroupValue };
       } else if (subGroupByKey === "priority") {
         preloadedData = { ...preloadedData, priority: subGroupValue };
-      } else if (subGroupByKey === "labels" && subGroupValue != "None") {
-        preloadedData = { ...preloadedData, label_ids: [subGroupValue] };
-      } else if (subGroupByKey === "assignees" && subGroupValue != "None") {
-        preloadedData = { ...preloadedData, assignee_ids: [subGroupValue] };
+      } else if (subGroupByKey === "labels") {
+        if (subGroupValue !== "none") preloadedData = { ...preloadedData, label_ids: [subGroupValue] };
+      } else if (subGroupByKey === "assignees") {
+        if (subGroupValue !== "none") preloadedData = { ...preloadedData, assignee_ids: [subGroupValue] };
       } else if (subGroupByKey === "created_by") {
         preloadedData = { ...preloadedData };
       } else {
@@ -222,15 +218,18 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     return preloadedData;
   };
 
-  const isSubGroup = !!sub_group_id && sub_group_id !== "null";
+  const isSubGroup = sub_group_id !== undefined;
 
   const issueIds = isSubGroup
-    ? ((groupedIssueIds as TSubGroupedIssues)?.[groupId]?.[sub_group_id] ?? [])
-    : ((groupedIssueIds as TGroupedIssues)?.[groupId] ?? []);
+    ? (groups
+        .get(groupId)
+        ?.subgroups?.get(sub_group_id)
+        ?.rows.map((row) => row.id) ?? [])
+    : (groups.get(groupId)?.rows.map((row) => row.id) ?? []);
 
   const groupIssueCount = getGroupIssueCount(groupId, sub_group_id, false) ?? 0;
 
-  const nextPageResults = getPaginationData(groupId, sub_group_id)?.nextPageResults;
+  const nextCursor = getPaginationData(groupId, sub_group_id)?.nextCursor;
 
   const loadMore = isPaginating ? (
     <KanbanIssueBlockLoader />
@@ -244,7 +243,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     </div>
   );
 
-  const shouldLoadMore = nextPageResults === undefined ? issueIds?.length < groupIssueCount : !!nextPageResults;
+  const shouldLoadMore = nextCursor === undefined ? issueIds?.length < groupIssueCount : !!nextCursor;
   const canOverlayBeVisible = orderBy !== "sort_order" || isDropDisabled;
   const shouldOverlayBeVisible = isDraggingOverColumn && canOverlayBeVisible;
   const canDragIssuesInCurrentGrouping =

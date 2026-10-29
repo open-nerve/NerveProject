@@ -32,12 +32,9 @@ type TSupportedRangeDateFilterOperators<V extends TFilterValue = TFilterValue> =
 /**
  * Union type representing all operators that support date filter types.
  */
-type TSupportedDateFilterOperators<V extends TFilterValue = TFilterValue> =
+export type TSupportedDateFilterOperators<V extends TFilterValue = TFilterValue> =
   | TSupportedSingleDateFilterOperators<V>
   | TSupportedRangeDateFilterOperators<V>;
-
-export type TAllAvailableDateFilterOperatorsForDisplay<V extends TFilterValue = TFilterValue> =
-  TSupportedDateFilterOperators<V>;
 
 // -------- RE-EXPORTS --------
 

@@ -5,10 +5,10 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { Issue, IssueUpdate } from "@nerve/api-client";
 
 import { extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
-import { clone, isNil, pull, uniq, concat } from "lodash-es";
+import { clone, isNil } from "lodash-es";
 import scrollIntoView from "smooth-scroll-into-view-if-needed";
 import type { FC } from "react";
 import {
@@ -45,7 +45,7 @@ import { EIssuesStoreType } from "@nerve/types";
 import { getFileURL } from "@nerve/utils";
 // store
 import { rootStore } from "@/lib/store-context";
-import { ISSUE_FILTER_DEFAULT_DATA } from "@/store/issue/helpers/base-issues.store";
+import type { IssueDrop } from "@/store/issue/root.store";
 import { DEFAULT_DISPLAY_PROPERTIES } from "@/store/issue/issue-details/sub_issues_filter.store";
 // constants
 import { ISSUE_GROUP_BY_OPTIONS } from "@nerve/constants";
@@ -73,13 +73,6 @@ export type GroupDropLocation = {
   canAddIssueBelow?: boolean;
 };
 
-export type IssueUpdates = {
-  [groupKey: string]: {
-    ADD: string[];
-    REMOVE: string[];
-  };
-};
-
 export const isWorkspaceLevel = (type: EIssuesStoreType) =>
   // oxlint-disable-next-line no-unneeded-ternary
   [EIssuesStoreType.PROFILE, EIssuesStoreType.WORKSPACE_DRAFT].includes(type) ? true : false;
@@ -104,7 +97,7 @@ export const getGroupByColumns = ({
   if (!groupBy && includeNone) {
     return [
       {
-        id: "All Issues",
+        id: "",
         name: "All work items",
         payload: {},
         icon: undefined,
@@ -206,7 +199,7 @@ const getLabelsColumns = ({ isWorkspaceLevel }: TGetColumns): IGroupByColumn[] =
   // the workspace's labels across its projects are M7's (M3 design 7.3): a workspace level groups none of them
   const labels = [
     ...(isWorkspaceLevel ? [] : (rootStore.label.projectLabels ?? [])),
-    { id: "None", name: "None", color: "#666" },
+    { id: "none", name: "None", color: "#666" },
   ];
   // map labels to group by columns
   return labels.map((label) => ({
@@ -215,7 +208,7 @@ const getLabelsColumns = ({ isWorkspaceLevel }: TGetColumns): IGroupByColumn[] =
     icon: (
       <div className="h-[12px] w-[12px] rounded-full" style={{ backgroundColor: label.color ? label.color : "#666" }} />
     ),
-    payload: label?.id === "None" ? {} : { label_ids: [label.id] },
+    payload: label?.id === "none" ? {} : { label_ids: [label.id] },
   }));
 };
 
@@ -246,7 +239,7 @@ const getAssigneeColumns = ({ isWorkspaceLevel, projectId }: TGetColumns): IGrou
     });
   });
   if (includeNone) {
-    assigneeColumns.push({ id: "None", name: "None", icon: <Avatar size="xs" />, payload: {} });
+    assigneeColumns.push({ id: "none", name: "None", icon: <Avatar size="xs" />, payload: {} });
   }
 
   return assigneeColumns;
@@ -330,7 +323,8 @@ export const getSourceFromDropPayload = (payload: IPragmaticDropPayload): GroupD
     }
   }
 
-  if (sourceIssueData?.id === undefined || !sourceColumData?.groupId) return;
+  if (typeof sourceIssueData?.id !== "string" || !sourceIssueData.id || typeof sourceColumData?.groupId !== "string")
+    return;
 
   return {
     groupId: sourceColumData.groupId as string,
@@ -366,7 +360,7 @@ export const getDestinationFromDropPayload = (payload: IPragmaticDropPayload): G
     }
   }
 
-  if (!destinationColumnData?.groupId) return;
+  if (typeof destinationColumnData?.groupId !== "string") return;
 
   // extract instruction from destination issue
   const extractedInstruction = destinationIssueData ? extractInstruction(destinationIssueData)?.type : "";
@@ -387,168 +381,65 @@ export const getDestinationFromDropPayload = (payload: IPragmaticDropPayload): G
  * @param getIssueById
  * @returns
  */
-const handleSortOrder = (
-  destinationIssues: string[],
-  destinationIssueId: string | undefined,
-  getIssueById: (issueId: string) => Issue | undefined,
-  shouldAddIssueAtTop = false,
-  canAddIssueBelow = false
-) => {
-  const sortOrderDefaultValue = 65535;
-  let currentIssueState = {};
-
-  let destinationIndex = destinationIssueId
-    ? destinationIssues.indexOf(destinationIssueId)
-    : shouldAddIssueAtTop
-      ? 0
-      : destinationIssues.length;
-
-  const isDestinationLastChild = destinationIndex === destinationIssues.length - 1;
-
-  // if issue can be added below and if the destination issue is the last child, then add to the end of the list
-  if (canAddIssueBelow && isDestinationLastChild) {
-    destinationIndex = destinationIssues.length;
-  }
-
-  if (destinationIssues && destinationIssues.length > 0) {
-    if (destinationIndex === 0) {
-      const destinationIssueId = destinationIssues[0];
-      const destinationIssue = getIssueById(destinationIssueId);
-      if (!destinationIssue) return currentIssueState;
-
-      currentIssueState = {
-        ...currentIssueState,
-        sort_order: destinationIssue.sort_order - sortOrderDefaultValue,
-      };
-    } else if (destinationIndex === destinationIssues.length) {
-      const destinationIssueId = destinationIssues[destinationIssues.length - 1];
-      const destinationIssue = getIssueById(destinationIssueId);
-      if (!destinationIssue) return currentIssueState;
-
-      currentIssueState = {
-        ...currentIssueState,
-        sort_order: destinationIssue.sort_order + sortOrderDefaultValue,
-      };
-    } else {
-      const destinationTopIssueId = destinationIssues[destinationIndex - 1];
-      const destinationBottomIssueId = destinationIssues[destinationIndex];
-
-      const destinationTopIssue = getIssueById(destinationTopIssueId);
-      const destinationBottomIssue = getIssueById(destinationBottomIssueId);
-      if (!destinationTopIssue || !destinationBottomIssue) return currentIssueState;
-
-      currentIssueState = {
-        ...currentIssueState,
-        sort_order: (destinationTopIssue.sort_order + destinationBottomIssue.sort_order) / 2,
-      };
-    }
-  } else {
-    currentIssueState = {
-      ...currentIssueState,
-      sort_order: sortOrderDefaultValue,
-    };
-  }
-
-  return currentIssueState;
-};
-
 export const getIssueBlockId = (issueId: string | undefined, groupId: string | undefined, subGroupId?: string) =>
   `issue_${issueId}_${groupId}_${subGroupId}`;
-
-/**
- * returns empty Array if groupId is None
- * @param groupId
- * @returns
- */
-const getGroupId = (groupId: string) => {
-  if (groupId === "None") return [];
-  return [groupId];
-};
 
 export const handleGroupDragDrop = async (
   source: GroupDropLocation,
   destination: GroupDropLocation,
-  getIssueById: (issueId: string) => Issue | undefined,
-  getIssueIds: (groupId?: string, subGroupId?: string) => string[] | undefined,
+  getIssueById: (id: string) => Issue | undefined,
+  getIssueIds: (group?: string, subgroup?: string) => string[] | undefined,
   updateIssueOnDrop: (
-    projectId: string,
-    issueId: string,
-    data: Partial<IssueDetail>,
-    issueUpdates: IssueUpdates
-  ) => void,
+    project: string,
+    id: string,
+    makeBody: (held: Issue) => IssueUpdate,
+    drop: IssueDrop
+  ) => Promise<void>,
   groupBy: TIssueGroupByOptions | undefined,
   subGroupBy: TIssueGroupByOptions | undefined,
   shouldAddIssueAtTop = false
 ) => {
-  if (!source.id || (subGroupBy && (!source.subGroupId || !destination.subGroupId))) return;
-
-  let updatedIssue: Partial<IssueDetail> = {};
-  const issueUpdates: IssueUpdates = {};
-  const destinationIssues = getIssueIds(destination.groupId, destination.subGroupId) ?? [];
-
-  const sourceIssue = getIssueById(source.id);
-
-  if (!sourceIssue) return;
-
-  updatedIssue = {
-    id: sourceIssue.id,
-    project_id: sourceIssue.project_id,
+  if (!source.id || source.id === destination.id) return;
+  const issue = getIssueById(source.id);
+  if (!issue) return;
+  const ids = (getIssueIds(destination.groupId, destination.subGroupId) ?? []).filter((id) => id !== source.id);
+  let index = destination.id ? ids.indexOf(destination.id) : shouldAddIssueAtTop ? 0 : ids.length;
+  if (index < 0) index = ids.length;
+  if (destination.canAddIssueBelow && index === ids.length - 1) index++;
+  const drop: IssueDrop = {
+    group: destination.groupId,
+    subgroup: destination.subGroupId,
+    beforeId: ids[index],
+    afterId: ids[index - 1],
   };
-
-  // for both horizontal and vertical dnd
-  updatedIssue = {
-    ...updatedIssue,
-    ...handleSortOrder(
-      destinationIssues,
-      destination.id,
-      getIssueById,
-      shouldAddIssueAtTop,
-      !!destination.canAddIssueBelow
-    ),
+  const makeBody = (held: Issue): IssueUpdate => {
+    const body: IssueUpdate = {};
+    const move = (field: TIssueGroupByOptions | undefined, from: string | undefined, to: string | undefined) => {
+      if (!field || to === undefined || from === to) return;
+      switch (field) {
+        case "priority":
+          if (!["none", "low", "medium", "high", "urgent"].includes(to)) throw new Error("Invalid priority drop");
+          body.priority = to as IssueUpdate["priority"];
+          break;
+        case "state":
+          if (!to || to === "none") throw new Error("Invalid state drop");
+          body.state_id = to;
+          break;
+        case "assignees":
+        case "labels": {
+          const key = field === "assignees" ? "assignee_ids" : "label_ids";
+          body[key] = to === "none" ? [] : [...new Set([...held[key].filter((id) => id !== from), to])];
+          break;
+        }
+        default:
+          throw new Error("Unsupported drop group");
+      }
+    };
+    move(groupBy, source.groupId, destination.groupId);
+    move(subGroupBy, source.subGroupId, destination.subGroupId);
+    return body;
   };
-
-  // update updatedIssue values based on the source and destination groupIds
-  if (source.groupId && destination.groupId && source.groupId !== destination.groupId && groupBy) {
-    const groupKey = ISSUE_FILTER_DEFAULT_DATA[groupBy];
-    let groupValue: any = clone(sourceIssue[groupKey]);
-
-    // If groupValues is an array, remove source groupId and add destination groupId
-    if (Array.isArray(groupValue)) {
-      pull(groupValue, source.groupId);
-      if (destination.groupId !== "None") groupValue = uniq(concat(groupValue, [destination.groupId]));
-    } // else just update the groupValue based on destination groupId
-    else {
-      groupValue = destination.groupId === "None" ? null : destination.groupId;
-    }
-
-    // keep track of updates on what was added and what was removed
-    issueUpdates[groupKey] = { ADD: getGroupId(destination.groupId), REMOVE: getGroupId(source.groupId) };
-    updatedIssue = { ...updatedIssue, [groupKey]: groupValue };
-  }
-
-  // do the same for subgroup
-  // update updatedIssue values based on the source and destination subGroupIds
-  if (subGroupBy && source.subGroupId && destination.subGroupId && source.subGroupId !== destination.subGroupId) {
-    const subGroupKey = ISSUE_FILTER_DEFAULT_DATA[subGroupBy];
-    let subGroupValue: any = clone(sourceIssue[subGroupKey]);
-
-    // If subGroupValue is an array, remove source subGroupId and add destination subGroupId
-    if (Array.isArray(subGroupValue)) {
-      pull(subGroupValue, source.subGroupId);
-      if (destination.subGroupId !== "None") subGroupValue = uniq(concat(subGroupValue, [destination.subGroupId]));
-    } // else just update the subGroupValue based on destination subGroupId
-    else {
-      subGroupValue = destination.subGroupId === "None" ? null : destination.subGroupId;
-    }
-
-    // keep track of updates on what was added and what was removed
-    issueUpdates[subGroupKey] = { ADD: getGroupId(destination.subGroupId), REMOVE: getGroupId(source.subGroupId) };
-    updatedIssue = { ...updatedIssue, [subGroupKey]: subGroupValue };
-  }
-
-  if (updatedIssue && sourceIssue?.project_id) {
-    return await updateIssueOnDrop(sourceIssue?.project_id, sourceIssue.id, updatedIssue, issueUpdates);
-  }
+  await updateIssueOnDrop(issue.project_id, issue.id, makeBody, drop);
 };
 
 /**

@@ -3,10 +3,12 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import { runInAction } from "mobx";
 import type { TIssueSubIssues } from "@nerve/types";
-import { FakeNerve, json } from "@/lib/auth/fake-nerve";
-import { until } from "@/lib/auth/fake-time";
+import { FakeNerve, json, noContent } from "@/lib/auth/fake-nerve";
+import { heldChange } from "@/lib/auth/fake-tab";
+import { track, until } from "@/lib/auth/fake-time";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { APIService } from "@/services/api.service";
-import { issueOf } from "@/store/issue/fake-issues";
+import { issueOf, requestedIssue } from "@/store/issue/fake-issues";
 import { labelOf, loadProjects, projectMemberOf, projectOf, stateOf } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 
@@ -39,8 +41,6 @@ beforeEach(async () => {
   app = new RootStore(nerve.client());
   binding.app = app;
   runInAction(() => {
-    app.issue.workspaceSlug = ws.slug;
-    app.issue.projectId = here.id;
     app.router.setQuery({ workspaceSlug: ws.slug, projectId: here.id });
   });
   await loadWorkspaces(nerve, app.workspaceRoot, [ws]);
@@ -77,7 +77,7 @@ it.each(["fetch", "create"].flatMap((operation) => [false, true].map((crossProje
         cancelled: [],
       },
     };
-    app.issue.issues.addIssue([parent]);
+    app.issue.issues.acceptRead(parent, app.issue.captureRead());
     const endpoint = `/api/workspaces/${ws.slug}/projects/${here.id}/issues/${parent.id}/sub-issues/`;
     const get = vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
       if (url === endpoint) return reply(response);
@@ -86,23 +86,30 @@ it.each(["fetch", "create"].flatMap((operation) => [false, true].map((crossProje
     });
     const post = vi.spyOn(APIService.prototype, "post").mockResolvedValue(reply(response));
     const subIssues = app.issue.issueDetail.subIssues;
-    if (operation === "fetch") await subIssues.fetchSubIssues(ws.slug, here.id, parent.id);
-    else
-      await subIssues.createSubIssues(
-        ws.slug,
-        here.id,
-        parent.id,
-        children.map((child) => child.id)
-      );
+    const loading =
+      operation === "fetch"
+        ? subIssues.fetchSubIssues(ws.slug, here.id, parent.id)
+        : subIssues.createSubIssues(
+            ws.slug,
+            here.id,
+            parent.id,
+            children.map((child) => child.id)
+          );
 
+    await until(() => nerve.calls.some((call) => call.path === "/api/v0/issues/parent"), "authoritative parent count");
+    const parentRead = nerve.calls.find((call) => call.path === "/api/v0/issues/parent")!;
+    expect(app.issue.issues.getIssueById(parent.id)).toBeUndefined();
+    const authoritative = { ...parent, description_html: "", sub_issues_count: 8, updated_at: "2026-10-29T00:00:00Z" };
+    parentRead.answer(json(200, authoritative));
+    await loading;
+    const directories = nerve.calls.filter((call) => call !== parentRead);
     if (crossProject) {
-      await until(() => nerve.calls.length === 3, "external directories requested");
-      expect(nerve.calls.map(({ method, path }) => [method, path]).toSorted()).toEqual([
+      expect(directories.map(({ method, path }) => [method, path]).toSorted()).toEqual([
         ["GET", `/api/v0/projects/${elsewhere.id}/labels`],
         ["GET", `/api/v0/projects/${elsewhere.id}/members`],
         ["GET", `/api/v0/projects/${elsewhere.id}/states`],
       ]);
-      for (const call of nerve.calls) {
+      for (const call of directories) {
         const data = call.path.endsWith("/states") ? [state] : call.path.endsWith("/members") ? [member] : [label];
         call.answer(json(200, { data }));
       }
@@ -115,15 +122,176 @@ it.each(["fetch", "create"].flatMap((operation) => [false, true].map((crossProje
       );
     } else {
       await vi.advanceTimersByTimeAsync(0);
-      expect(nerve.calls).toEqual([]);
+      expect(directories).toEqual([]);
     }
     expect(subIssues.subIssuesByIssueId(parent.id)).toEqual(children.map((child) => child.id));
     expect(subIssues.stateDistributionByIssueId(parent.id)).toEqual(response.state_distribution);
-    expect(app.issue.issues.getIssueById(parent.id)?.sub_issues_count).toBe(children.length);
+    expect(app.issue.issues.getIssueById(parent.id)?.sub_issues_count).toBe(8);
+    expect(app.issue.issues.getIssueById(parent.id)?.updated_at).toBe(authoritative.updated_at);
     for (const child of children) expect(app.issue.issues.getIssueById(child.id)).toEqual(child);
     expect(get.mock.calls.map(([url]) => url)).toEqual(operation === "fetch" ? [endpoint] : []);
     expect(post.mock.calls.map(([url, body]) => [url, body])).toEqual(
       operation === "create" ? [[endpoint, { sub_issue_ids: children.map((child) => child.id) }]] : []
     );
+  }
+);
+
+it("deletedParentDiscardsLateLegacySubReadWithoutAuthoritativeFollowup", async () => {
+  const parent = issueOf("parent", here.id, ws.id);
+  app.issue.issues.acceptRead(parent, app.issue.captureRead());
+  const http = heldChange<AxiosResponse<TIssueSubIssues>>();
+  vi.spyOn(APIService.prototype, "get").mockReturnValue(http.sent);
+  const loading = app.issue.issueDetail.subIssues.fetchSubIssues(ws.slug, here.id, parent.id).catch((error) => error);
+  const deleting = await requestedIssue(
+    nerve,
+    () => app.issue.deleteIssue(parent.id, app.issue.scope(ws.slug, here.id)),
+    ["DELETE", "/api/v0/issues/parent"]
+  );
+  deleting.call.answer(noContent());
+  await deleting.promise;
+  http.answer(
+    reply({
+      sub_issues: [{ ...issueOf("child", here.id, ws.id), parent_id: parent.id }],
+      state_distribution: { backlog: [], unstarted: [], started: [], completed: [], cancelled: [] },
+    })
+  );
+  await vi.advanceTimersByTimeAsync(1);
+  expect(nerve.calls).toHaveLength(1);
+  await loading;
+  expect(app.issue.issues.getIssueById("child")).toBeUndefined();
+  expect(app.issue.issueDetail.subIssues.subIssuesByIssueId(parent.id)).toBeUndefined();
+});
+
+it("deletedParentDiscardsSubReadWaitingForAuthoritativeParent", async () => {
+  const parent = issueOf("parent", here.id, ws.id);
+  const child = { ...issueOf("child", here.id, ws.id), parent_id: parent.id };
+  app.issue.issues.acceptRead(parent, app.issue.captureRead());
+  vi.spyOn(APIService.prototype, "get").mockResolvedValue(
+    reply({
+      sub_issues: [child],
+      state_distribution: { backlog: [], unstarted: [child.id], started: [], completed: [], cancelled: [] },
+    })
+  );
+  const store = app.issue.issueDetail.subIssues;
+  const reading = await requestedIssue(nerve, () => store.fetchSubIssues(ws.slug, here.id, parent.id), [
+    "GET",
+    "/api/v0/issues/parent",
+  ]);
+  const observed = track(reading.promise);
+  const deleting = await requestedIssue(
+    nerve,
+    () => app.issue.deleteIssue(parent.id, app.issue.scope(ws.slug, here.id)),
+    ["DELETE", "/api/v0/issues/parent"]
+  );
+  deleting.call.answer(noContent());
+  await deleting.promise;
+  reading.call.answer(json(200, { ...parent, description_html: "", sub_issues_count: 1 }));
+  await until(() => observed.settled, "late parent read discarded");
+  expect(store.subIssuesByIssueId(parent.id)).toBeUndefined();
+  expect(store.stateDistributionByIssueId(parent.id)).toBeUndefined();
+  expect(observed.error).toBeInstanceOf(SessionChangedError);
+  expect(observed.value).toBeUndefined();
+  expect(app.issue.issues.held(parent.id)).toBeNull();
+  expect(app.issue.issues.held(child.id)).toBeNull();
+  expect(nerve.calls.map((call) => call.method)).toEqual(["GET", "DELETE"]);
+});
+
+it("cross-project sub-issue read discards the whole response when a child project loses and regains access", async () => {
+  const parent = issueOf("parent", here.id, ws.id);
+  const child = issueOf("child", elsewhere.id, ws.id);
+  app.issue.issues.acceptRead(parent, app.issue.captureRead());
+  const held = heldChange<AxiosResponse<TIssueSubIssues>>();
+  vi.spyOn(APIService.prototype, "get").mockReturnValue(held.sent);
+  const reading = track(app.issue.issueDetail.subIssues.fetchSubIssues(ws.slug, here.id, parent.id));
+  await loadProjects(nerve, app.projectRoot.project, ws, [here]);
+  await loadProjects(nerve, app.projectRoot.project, ws, [here, elsewhere]);
+  const before = nerve.calls.length;
+  held.answer(
+    reply({
+      sub_issues: [child],
+      state_distribution: { backlog: [], unstarted: [child.id], started: [], completed: [], cancelled: [] },
+    })
+  );
+  await vi.advanceTimersByTimeAsync(30);
+  expect.soft(nerve.calls).toHaveLength(before);
+  if (nerve.calls.length > before) nerve.calls.at(-1)!.answer(json(200, { ...parent, description_html: "" }));
+  await until(() => reading.settled, "cross-project response");
+  expect.soft(reading.error).toBeInstanceOf(SessionChangedError);
+  expect.soft(app.issue.issues.held(child.id)).toBeUndefined();
+  expect.soft(app.issue.issueDetail.subIssues.subIssuesByIssueId(parent.id)).toBeUndefined();
+});
+
+it("a cross-project relation answer cannot publish ids after the related project loses and regains access", async () => {
+  const child = issueOf("related", elsewhere.id, ws.id);
+  const held = heldChange<AxiosResponse<import("@nerve/types").TIssueRelation>>();
+  vi.spyOn(APIService.prototype, "get").mockReturnValue(held.sent);
+  const reading = track(app.issue.issueDetail.relation.fetchRelations(ws.slug, here.id, "parent"));
+  await loadProjects(nerve, app.projectRoot.project, ws, [here]);
+  await loadProjects(nerve, app.projectRoot.project, ws, [here, elsewhere]);
+  held.answer(reply({ blocking: [child], blocked_by: [], duplicate: [], relates_to: [] }));
+  await until(() => reading.settled, "old relations");
+  expect.soft(reading.error).toBeInstanceOf(SessionChangedError);
+  expect.soft(app.issue.issues.held(child.id)).toBeUndefined();
+  expect.soft(app.issue.issueDetail.relation.getRelationsByIssueId("parent")).toBeUndefined();
+});
+
+it.each(["unknown", "revoked"].flatMap((kind) => ["subissues", "relations"].map((resource) => ({ kind, resource }))))(
+  "$resource preflight rejects $kind scope before restricted GET",
+  async ({ kind, resource }) => {
+    if (kind === "revoked") await loadProjects(nerve, app.projectRoot.project, ws, [elsewhere]);
+    const projectId = kind === "unknown" ? "unknown" : here.id;
+    expect(app.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(ws.slug, projectId)).toBeUndefined();
+    const get = vi.spyOn(APIService.prototype, "get").mockRejectedValue(new Error("restricted GET sent"));
+    const detail = app.issue.issueDetail;
+    const operation =
+      resource === "subissues"
+        ? detail.subIssues.fetchSubIssues(ws.slug, projectId, "x")
+        : detail.relation.fetchRelations(ws.slug, projectId, "x");
+    await expect(operation).rejects.toBeInstanceOf(SessionChangedError);
+    expect(get).not.toHaveBeenCalled();
+  }
+);
+
+it.each(["subissues", "relations"])("%s allows a legitimate guest to send its request", async (resource) => {
+  await loadProjects(nerve, app.projectRoot.project, ws, [{ ...here, member_role: 5 }, elsewhere]);
+  const get = vi
+    .spyOn(APIService.prototype, "get")
+    .mockRejectedValue({ response: { data: { code: "server-refusal" } } });
+  const detail = app.issue.issueDetail;
+  const operation =
+    resource === "subissues"
+      ? detail.subIssues.fetchSubIssues(ws.slug, here.id, "x")
+      : detail.relation.fetchRelations(ws.slug, here.id, "x");
+  await operation.catch(() => undefined);
+  expect(get).toHaveBeenCalledOnce();
+});
+
+it.each(["subissues", "relations"])(
+  "%s discards an answer across loss and recovery of its own scope",
+  async (resource) => {
+    const held = heldChange<AxiosResponse<TIssueSubIssues | import("@nerve/types").TIssueRelation>>();
+    vi.spyOn(APIService.prototype, "get").mockReturnValue(held.sent);
+    const detail = app.issue.issueDetail;
+    const reading = track<TIssueSubIssues | import("@nerve/types").TIssueRelation>(
+      resource === "subissues"
+        ? detail.subIssues.fetchSubIssues(ws.slug, here.id, "parent")
+        : detail.relation.fetchRelations(ws.slug, here.id, "parent")
+    );
+    await loadProjects(nerve, app.projectRoot.project, ws, [elsewhere]);
+    await loadProjects(nerve, app.projectRoot.project, ws, [here, elsewhere]);
+    const child = issueOf("old", here.id, ws.id);
+    held.answer(
+      reply(
+        resource === "subissues"
+          ? {
+              sub_issues: [child],
+              state_distribution: { backlog: [], unstarted: [child.id], started: [], completed: [], cancelled: [] },
+            }
+          : { blocking: [child], blocked_by: [], duplicate: [], relates_to: [] }
+      )
+    );
+    await until(() => reading.settled, "old scope response");
+    expect(reading.error).toBeInstanceOf(SessionChangedError);
+    expect(app.issue.issues.held(child.id)).toBeUndefined();
   }
 );

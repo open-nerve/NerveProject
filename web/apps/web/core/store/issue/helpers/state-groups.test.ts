@@ -11,7 +11,7 @@ const row = { ...issueOf("R1"), state_id: state.id, state__group: "backlog" as c
 const catalog = { [state.id]: state };
 it("groups by the state catalog and gives unknown states no group", () => {
   expect(getGroupedWorkItemIds([row], "state_detail.group", "-created_at", catalog)).toEqual({ completed: ["R1"] });
-  expect(getGroupedWorkItemIds([row], "state_detail.group", "-created_at", {})).toEqual({ None: ["R1"] });
+  expect(getGroupedWorkItemIds([row], "state_detail.group", "-created_at", {})).toEqual({ none: ["R1"] });
 });
 it("filters state groups using catalog facts instead of entity fallback", () => {
   expect(getFilteredWorkItems([row], { state_group: ["completed"] }, catalog)).toEqual([row]);

@@ -1,3 +1,4 @@
+import { IssueListService } from "@/services/issue/issue-list.service";
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act, type ComponentProps } from "react";
@@ -9,7 +10,6 @@ import { SWRConfig } from "swr";
 import { afterEach, expect, it, vi } from "vitest";
 import { rootStore } from "@/lib/store-context";
 import { CycleStore } from "@/store/cycle.store";
-import { IssueService } from "@/services/issue/issue.service";
 import Page from "./page";
 import { CycleIssuesHeader } from "../header";
 
@@ -89,7 +89,7 @@ it("preserves_domain_loading_without_issue_lists: the real cycle sidebar dedupli
   const fetch = vi.spyOn(service, "getCycleDetails").mockReturnValue(pending);
   const progress = vi.spyOn(service, "cycleProgress").mockReturnValue(pending);
   const distribution = vi.spyOn(service, "cycleDistribution").mockReturnValue(pending);
-  const issues = vi.spyOn(IssueService.prototype, "getIssuesFromServer");
+  const issues = vi.spyOn(IssueListService.prototype, "listProject");
   const params = { workspaceSlug: "ws", projectId: "project", cycleId: "present" };
   await act(async () =>
     root.render(

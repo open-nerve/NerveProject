@@ -33,7 +33,7 @@ export const FiltersRow = observer(function FiltersRow<K extends TFilterProperty
   const [isUpdating, setIsUpdating] = useState(false);
   // derived values
   const disabledAllOperations = disabledAllOperationsProp || !filter.configManager.areConfigsReady;
-  const hasAnyConditions = filter.allConditionsForDisplay.length > 0;
+  const hasAnyConditions = filter.allConditions.length > 0;
   const hasAvailableOperations =
     !disabledAllOperations && (filter.canClearFilters || filter.canSaveView || filter.canUpdateView);
 
@@ -56,7 +56,7 @@ export const FiltersRow = observer(function FiltersRow<K extends TFilterProperty
 
   const leftContent = (
     <>
-      {filter.allConditionsForDisplay.map((condition) => (
+      {filter.allConditions.map((condition) => (
         <FilterItem key={condition.id} filter={filter} condition={condition} isDisabled={disabledAllOperations} />
       ))}
       <AddFilterButton

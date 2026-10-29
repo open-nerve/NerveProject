@@ -5,10 +5,12 @@
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SharedStorage } from "@/lib/auth/fake-browser";
-import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { FakeNerve, json, noContent, problem, answered } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
+import { issueOf, issueDetailOf, issuePageOf, requestedIssue } from "@/store/issue/fake-issues";
 import type { GlobalViewStore } from "@/store/global-view.store";
 import type { RootStore } from "@/store/root.store";
+import { projectOf, loadProjects } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // Each session of the tab has its own RootStore (M2 design 7.1: a tab never writes as the wrong account):
@@ -125,6 +127,133 @@ afterEach(() => {
 });
 
 describe("store-context", () => {
+  it("isolates archived and profile preferences across real session replacement", async () => {
+    const { storage, context, signedIn, follow } = await load();
+    vi.stubGlobal("window", { localStorage: storage.tab("page") });
+    const { runInAction } = await import("mobx");
+    await signedIn();
+    const x = context.rootStore;
+    runInAction(() => {
+      x.user.data = { id: "account-x" } as typeof x.user.data;
+    });
+    await x.issue.archivedIssuesFilter.fetchFilters("ws", "project");
+    await x.issue.profileIssuesFilter.fetchFilters("ws", "target");
+    await x.issue.archivedIssuesFilter.updateFilterExpression("ws", "project", { priority__in: "high" });
+    await x.issue.profileIssuesFilter.updateFilterExpression("ws", "target", { priority__in: "high" });
+    storage.data.set(
+      "issue_local_filters",
+      JSON.stringify([
+        ...JSON.parse(storage.data.get("issue_local_filters")!),
+        {
+          key: "ARCHIVED",
+          workspaceSlug: "ws",
+          viewId: "project",
+          userId: "account-y",
+          filters: { rich_filters: { priority__in: "low" } },
+        },
+        {
+          key: "PROFILE",
+          workspaceSlug: "ws",
+          viewId: "target",
+          userId: "account-y",
+          filters: { rich_filters: { priority__in: "low" } },
+        },
+      ])
+    );
+    await follow(Y);
+    const y = context.rootStore;
+    expect(y).not.toBe(x);
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")).toBeUndefined();
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target")).toBeUndefined();
+    runInAction(() => {
+      y.user.data = { id: "account-y" } as typeof y.user.data;
+    });
+    await y.issue.archivedIssuesFilter.fetchFilters("ws", "project");
+    await y.issue.profileIssuesFilter.fetchFilters("ws", "target");
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    await x.issue.archivedIssuesFilter.updateFilterExpression("ws", "project", { priority__in: "urgent" });
+    await x.issue.profileIssuesFilter.updateFilterExpression("ws", "target", { priority__in: "urgent" });
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    await y.issue.archivedIssuesFilter.fetchFilters("ws", "project");
+    await y.issue.profileIssuesFilter.fetchFilters("ws", "target");
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target")?.richFilters).toEqual({
+      and: [{ priority__in: "low" }],
+    });
+    vi.unstubAllGlobals();
+  });
+
+  it("retiredRootDropsSuccessfulRepliesAndQueuedWrites", async () => {
+    const { nerve, context, SessionChangedError, signedIn, follow } = await load();
+    await signedIn();
+    const x = context.rootStore;
+    const workspace = workspaceOf("ws");
+    await loadWorkspaces(nerve, x.workspaceRoot, [workspace]);
+    await loadProjects(nerve, x.projectRoot.project, workspace, [projectOf("A", workspace.id, { id: "A" })]);
+    await answered(
+      nerve,
+      () => x.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 20 }),
+      ["GET", "/api/v0/projects/A/issues"],
+      issuePageOf([issueOf("x")]),
+      "X list"
+    );
+    const originalPage = structuredClone(x.issue.projectIssues.currentList!.reconciled.value);
+    const first = await requestedIssue(
+      nerve,
+      () => x.issue.projectIssues.updateIssue("ws", "A", "x", { name: "first" }),
+      ["PATCH", "/api/v0/issues/x"]
+    );
+    const queued = track(x.issue.projectIssues.updateIssue("ws", "A", "x", { name: "second" }));
+    const reading = await requestedIssue(
+      nerve,
+      () => x.issue.projectIssues.fetchIssues("ws", "A", "mutation", { limit: 20 }),
+      ["GET", "/api/v0/projects/A/issues"]
+    );
+    const count = nerve.calls.length;
+    const oldToken = x.issue.captureRead();
+    await follow(Y);
+    const y = context.rootStore;
+    expect(x.issue.active).toBe(false);
+    expect(y.issue.isReadCurrent(oldToken, ["A"])).toBe(false);
+    first.call.answer(json(200, { ...issueDetailOf("x"), name: "late success" }));
+    reading.call.answer(json(200, issuePageOf([{ ...issueOf("x"), name: "late read" }])));
+    await until(() => first.result.settled && queued.settled && reading.result.settled, "retired issue replies");
+    expect(first.result.error).toBeInstanceOf(SessionChangedError);
+    expect(queued.error).toBeInstanceOf(SessionChangedError);
+    expect(nerve.calls).toHaveLength(count);
+    expect(x.issue.issues.held("x")?.name).toBe("x");
+    expect(x.issue.issues.getIssueById("x")).toBeUndefined();
+    expect(x.issue.projectIssues.getIssueIds()).toEqual([]);
+    expect(x.issue.projectIssues.currentList!.reconciled.value).toEqual(originalPage);
+    expect(y.issue.issues.getIssueById("x")).toBeUndefined();
+    expect(y.issue.projectIssues.groups).toBeUndefined();
+    const creating = track(
+      y.issue.createIssue({ workspaceSlug: "ws", workspaceID: workspace.id, projectID: "A" }, { name: "new session" })
+    );
+    await until(() => nerve.calls.length === count + 1, "Y refresh");
+    nerve.calls[count]!.answer(json(200, nerve.tokens()));
+    await until(() => nerve.calls.length === count + 2, "Y create");
+    expect(nerve.calls[count + 1]!.path).toBe("/api/v0/projects/A/issues");
+    nerve.calls[count + 1]!.answer(json(201, issueDetailOf("new")));
+    await until(() => creating.settled, "Y confirmed");
+    expect(creating.error).toBeUndefined();
+    await loadWorkspaces(nerve, y.workspaceRoot, [workspace]);
+    await loadProjects(nerve, y.projectRoot.project, workspace, [projectOf("A", workspace.id, { id: "A" })]);
+    expect(y.issue.issues.getIssueById("new")?.id).toBe("new");
+  });
+
   it("starts a new RootStore for each new session, never within one, and tells its listeners", async () => {
     const { nerve, clients, tm, context, follow } = await load();
     const x = context.rootStore;

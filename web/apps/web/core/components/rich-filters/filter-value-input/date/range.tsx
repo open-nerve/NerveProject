@@ -7,7 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { TDateRangeFilterFieldConfig, TFilterConditionNodeForDisplay, TFilterProperty } from "@nerve/types";
+import type { TDateRangeFilterFieldConfig, TFilterConditionNode, TFilterProperty } from "@nerve/types";
 import { cn, isValidDate, renderFormattedPayloadDate, toFilterArray } from "@nerve/utils";
 // components
 import { DateRangeDropdown } from "@/components/dropdowns/date-range";
@@ -16,7 +16,7 @@ import { COMMON_FILTER_ITEM_BORDER_CLASSNAME, EMPTY_FILTER_PLACEHOLDER_TEXT } fr
 
 type TDateRangeFilterValueInputProps<P extends TFilterProperty> = {
   config: TDateRangeFilterFieldConfig<string>;
-  condition: TFilterConditionNodeForDisplay<P, string>;
+  condition: TFilterConditionNode<P, string>;
   isDisabled?: boolean;
   onChange: (value: string[]) => void;
 };

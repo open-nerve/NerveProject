@@ -1,3 +1,5 @@
+import type { IssueCreate } from "@nerve/api-client";
+import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -11,9 +13,7 @@ import { observer } from "mobx-react";
 import type {
   GroupByColumnTypes,
   IGroupByColumn,
-  TGroupedIssues,
   IIssueDisplayProperties,
-  TSubGroupedIssues,
   TIssueKanbanFilters,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
@@ -35,8 +35,8 @@ import { HeaderGroupByCard } from "./headers/group-by-card";
 import { KanbanGroup } from "./kanban-group";
 
 export interface IKanBan {
-  issuesMap: Record<string, Issue | IssueDetail>;
-  groupedIssueIds: TGroupedIssues | TSubGroupedIssues;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
+  groups: Map<string, Group>;
   getGroupIssueCount: (
     groupId: string | undefined,
     subGroupId: string | undefined,
@@ -55,7 +55,7 @@ export interface IKanBan {
   handleCollapsedGroups: (toggle: "group_by" | "sub_group_by", value: string) => void;
   loadMoreIssues: (groupId?: string, subGroupId?: string) => void;
   enableQuickIssueCreate?: boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
   disableIssueCreation?: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;
   scrollableContainerRef?: MutableRefObject<HTMLDivElement | null>;
@@ -67,12 +67,12 @@ export interface IKanBan {
 export const KanBan = observer(function KanBan(props: IKanBan) {
   const {
     issuesMap,
-    groupedIssueIds,
+    groups,
     getGroupIssueCount,
     displayProperties,
     sub_group_by,
     group_by,
-    sub_group_id = "null",
+    sub_group_id,
     updateIssue,
     quickActions,
     collapsedGroups,
@@ -131,7 +131,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
 
   const isGroupByCreatedBy = group_by === "created_by";
   const approximateCardHeight = getApproximateCardHeight(displayProperties);
-  const isSubGroup = !!sub_group_id && sub_group_id !== "null";
+  const isSubGroup = sub_group_id !== undefined;
 
   return (
     <ContentWrapper className="relative flex-row gap-4 !pt-2 !pb-0">
@@ -140,11 +140,14 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
         list.map((subList: IGroupByColumn, groupIndex) => {
           const groupByVisibilityToggle = visibilityGroupBy(subList);
 
-          if (groupByVisibilityToggle.showGroup === false) return <></>;
+          if (groupByVisibilityToggle.showGroup === false) return null;
 
           const issueIds = isSubGroup
-            ? ((groupedIssueIds as TSubGroupedIssues)?.[subList.id]?.[sub_group_id] ?? [])
-            : ((groupedIssueIds as TGroupedIssues)?.[subList.id] ?? []);
+            ? (groups
+                .get(subList.id)
+                ?.subgroups?.get(sub_group_id)
+                ?.rows.map((row) => row.id) ?? [])
+            : (groups.get(subList.id)?.rows.map((row) => row.id) ?? []);
           const issueLength = issueIds?.length;
           const groupHeight = issueLength * approximateCardHeight;
 
@@ -193,7 +196,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                   <KanbanGroup
                     groupId={subList.id}
                     issuesMap={issuesMap}
-                    groupedIssueIds={groupedIssueIds}
+                    groups={groups}
                     displayProperties={displayProperties}
                     sub_group_by={sub_group_by}
                     group_by={group_by}

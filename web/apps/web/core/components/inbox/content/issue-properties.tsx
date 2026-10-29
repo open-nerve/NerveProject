@@ -1,3 +1,4 @@
+import type { TLegacyIssueUpdateRequest } from "@nerve/types";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -34,7 +35,7 @@ type Props = {
   workspaceSlug: string;
   projectId: string;
   issue: Partial<IssueDetail>;
-  issueOperations: TIssueOperations;
+  issueOperations: TIssueOperations<TLegacyIssueUpdateRequest>;
   isEditable: boolean;
   duplicateIssueDetails: TInboxDuplicateIssueDetails | undefined;
   isIntakeAccepted: boolean;

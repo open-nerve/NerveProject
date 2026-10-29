@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueDetail } from "@nerve/api-client";
+import { followInSession } from "@/lib/in-session";
 
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { EIssuesStoreType, TIssueGroupByOptions, TIssueOrderByOptions } from "@nerve/types";
@@ -29,25 +29,10 @@ export const useGroupIssuesDragNDrop = (
   const {
     issue: { getIssueById },
   } = useIssueDetail();
-  const { updateIssue } = useIssuesActions(storeType);
+  const { dropIssue } = useIssuesActions(storeType);
   const {
     issues: { getIssueIds },
   } = useIssues(storeType);
-
-  /**
-   * Update the editable work item fields after a group drop.
-   * @param projectId
-   * @param issueId
-   * @param data
-   */
-  const updateIssueOnDrop = async (projectId: string, issueId: string, data: Partial<IssueDetail>) => {
-    const errorToastProps = {
-      type: TOAST_TYPE.ERROR,
-      title: "Error!",
-      message: "Error while updating work item",
-    };
-    if (updateIssue) await updateIssue(projectId, issueId, data).catch(() => setToast(errorToastProps));
-  };
 
   const handleOnDrop = async (source: GroupDropLocation, destination: GroupDropLocation) => {
     if (
@@ -58,22 +43,29 @@ export const useGroupIssuesDragNDrop = (
     )
       return;
 
-    await handleGroupDragDrop(
-      source,
-      destination,
-      getIssueById,
-      getIssueIds,
-      updateIssueOnDrop,
-      groupBy,
-      subGroupBy,
-      orderBy !== "sort_order"
-    ).catch((err) => {
-      setToast({
-        title: "Error!",
-        type: TOAST_TYPE.ERROR,
-        message: err?.detail ?? "Failed to perform this action",
-      });
-    });
+    if (!dropIssue) return;
+    await followInSession(
+      () =>
+        handleGroupDragDrop(
+          source,
+          destination,
+          getIssueById,
+          getIssueIds,
+          dropIssue,
+          groupBy,
+          subGroupBy,
+          orderBy !== "sort_order"
+        ),
+      {
+        failed: () => {
+          setToast({
+            title: "Error!",
+            type: TOAST_TYPE.ERROR,
+            message: "Failed to perform this action",
+          });
+        },
+      }
+    );
   };
 
   return handleOnDrop;

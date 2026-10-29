@@ -7,7 +7,7 @@
 import type { SingleOrArray } from "../utils";
 import type { IFilterAdapter, TExternalFilter } from "./adapter";
 import type { TFilterProperty, TFilterValue } from "./expression";
-import type { TAllAvailableOperatorsForDisplay } from "./operators";
+import type { TSupportedOperators } from "./operators";
 
 /**
  * Condition payload for building filter expressions.
@@ -16,7 +16,7 @@ import type { TAllAvailableOperatorsForDisplay } from "./operators";
  */
 export type TFilterConditionForBuild<P extends TFilterProperty, V extends TFilterValue> = {
   property: P;
-  operator: TAllAvailableOperatorsForDisplay;
+  operator: TSupportedOperators;
   value: SingleOrArray<V>;
 };
 

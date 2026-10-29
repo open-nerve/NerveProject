@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { Issue, IssueCreate } from "@nerve/api-client";
 
 import type { FC } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -15,7 +15,8 @@ import { useForm } from "react-hook-form";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { AddOutline } from "@makeplane/propel/icons";
-import { setPromiseToast } from "@nerve/propel/toast";
+import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
+import { followInSession } from "@/lib/in-session";
 import type { Project } from "@nerve/api-client";
 import type { EIssueLayoutTypes } from "@nerve/types";
 import { cn } from "@nerve/utils";
@@ -49,7 +50,7 @@ type TQuickAddIssueRoot = {
   customQuickAddButton?: React.ReactNode;
   containerClassName?: string;
   setIsQuickAddOpen?: (isOpen: boolean) => void;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
 };
 
 const defaultValues: QuickAddValues = {
@@ -134,37 +135,42 @@ const QuickAddIssueScope = observer(function QuickAddIssueScope(
       // Only caller-owned editable values enter the existing create input contract.
       const { state_id, priority, assignee_ids, label_ids, start_date, target_date, parent_id } =
         prePopulatedData ?? {};
-      const quickAddPromise = quickAddCallback(projectId, {
-        ...formData,
-        ...(state_id !== undefined && { state_id }),
-        ...(priority !== undefined && { priority }),
-        ...(assignee_ids !== undefined && { assignee_ids }),
-        ...(label_ids !== undefined && { label_ids }),
-        ...(start_date !== undefined && { start_date }),
-        ...(target_date !== undefined && { target_date }),
-        ...(parent_id !== undefined && { parent_id }),
-      }).then((issue) => {
-        if (!issue) throw new Error(t("common.error.message"));
-        return issue;
-      });
-      setPromiseToast<Issue>(quickAddPromise, {
-        loading: t("issue.adding"),
-        success: {
-          title: t("common.success"),
-          message: () => t("issue.create.success"),
-          actionItems: (data) => (
-            <CreateIssueToastActionItems workspaceSlug={workspaceSlug} projectId={projectId} issueId={data.id} />
-          ),
-        },
-        error: {
-          title: t("common.error.label"),
-          message: (error) => (error instanceof Error ? error.message : t("common.error.message")),
-        },
-      });
-      await quickAddPromise;
-      if (mounted.current) reset(defaultValues);
-    } catch {
-      // The request toast reports the failure; keep the original input for retry.
+      await followInSession(
+        () =>
+          quickAddCallback(projectId, {
+            ...formData,
+            ...(state_id !== undefined && { state_id }),
+            ...(priority !== undefined && { priority }),
+            ...(assignee_ids !== undefined && { assignee_ids }),
+            ...(label_ids !== undefined && { label_ids }),
+            ...(start_date != null && { start_date }),
+            ...(target_date != null && { target_date }),
+            ...(parent_id != null && { parent_id }),
+          }).then((issue) => {
+            if (!issue) throw new Error(t("common.error.message"));
+            return issue;
+          }),
+        {
+          done: (issue) => {
+            setToast({
+              type: TOAST_TYPE.SUCCESS,
+              title: t("common.success"),
+              message: t("issue.create.success"),
+              actionItems: (
+                <CreateIssueToastActionItems workspaceSlug={workspaceSlug} projectId={projectId} issueId={issue.id} />
+              ),
+            });
+            if (mounted.current) reset(defaultValues);
+          },
+          failed: (error) => {
+            setToast({
+              type: TOAST_TYPE.ERROR,
+              title: t("common.error.label"),
+              message: error instanceof Error ? error.message : t("common.error.message"),
+            });
+          },
+        }
+      );
     } finally {
       busy.current = false;
       if (mounted.current) setPending(false);

@@ -33,8 +33,8 @@ export const FilterItemProperty = observer(function FilterItemProperty<
     return <PropertyButton {...props} />;
   }
 
-  const handleFilterSelect = (property: P, operator: TSupportedOperators, isNegation: boolean) => {
-    filter.updateConditionProperty(conditionId, property, operator, isNegation);
+  const handleFilterSelect = (property: P, operator: TSupportedOperators) => {
+    filter.updateConditionProperty(conditionId, property, operator);
   };
 
   return (

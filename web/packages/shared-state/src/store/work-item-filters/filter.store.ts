@@ -10,7 +10,6 @@ import { computedFn } from "mobx-utils";
 import type { TExpressionOptions } from "@nerve/constants";
 import type { EIssuesStoreType, TWorkItemFilterExpression, TWorkItemFilterProperty } from "@nerve/types";
 import { LOGICAL_OPERATOR } from "@nerve/types";
-import { getOperatorForPayload } from "@nerve/utils";
 // local imports
 import type { TWorkItemFilterCondition } from "../../utils";
 import { buildWorkItemFilterExpressionFromConditions } from "../../utils";
@@ -145,7 +144,7 @@ export class WorkItemFilterStore implements IWorkItemFilterStore {
   /**
    * Handles sidebar filter updates by adding new conditions or updating existing ones.
    * This method processes filter conditions from the sidebar UI and applies them to the
-   * appropriate filter instance, handling both positive and negative operators correctly.
+   * appropriate filter instance, using the supported operator directly.
    *
    * @param entityType - The entity type (e.g., project, cycle, module)
    * @param entityId - The unique identifier for the entity
@@ -169,16 +168,14 @@ export class WorkItemFilterStore implements IWorkItemFilterStore {
 
       // No existing condition found - add new condition with AND logic
       if (!conditionNode) {
-        const { operator, isNegation } = getOperatorForPayload(condition.operator);
-
         // Create the condition payload with normalized operator
         const conditionPayload = {
           property: condition.property,
-          operator,
+          operator: condition.operator,
           value: condition.value,
         };
 
-        filter.addCondition(LOGICAL_OPERATOR.AND, conditionPayload, isNegation);
+        filter.addCondition(LOGICAL_OPERATOR.AND, conditionPayload);
         return;
       }
 

@@ -21,7 +21,7 @@ export type IssueTitleInputProps = {
   workspaceSlug: string;
   isSubmitting: TNameDescriptionLoader;
   setIsSubmitting: (value: TNameDescriptionLoader) => void;
-  issueOperations: TIssueOperations;
+  issueOperations: Pick<TIssueOperations<{ name: string }>, "update">;
   projectId: string;
   issueId: string;
   containerClassName?: string;

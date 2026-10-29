@@ -15,7 +15,7 @@ import { AxiosHeaders, type AxiosResponse } from "axios";
 import { APIService } from "@/services/api.service";
 import { heldChange } from "@/lib/auth/fake-tab";
 import { EIssuesStoreType } from "@nerve/types";
-import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json } from "@/lib/auth/fake-nerve";
 import { issueOf } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { projectOf, loadProjects, stateOf } from "@/store/project/fake-projects";
@@ -24,7 +24,10 @@ function reply<T>(data: T): AxiosResponse<T> {
   return { data, status: 200, statusText: "OK", headers: {}, config: { headers: new AxiosHeaders() } };
 }
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
+vi.mock("@/lib/auth/api-client", () => ({
+  tokenManager: { state: { loginId: "issue-modal-session" } },
+  publicClient: {},
+}));
 const binding = vi.hoisted(() => ({ app: undefined as unknown }));
 vi.mock("@/lib/store-context", () => ({
   get rootStore() {
@@ -33,6 +36,7 @@ vi.mock("@/lib/store-context", () => ({
 }));
 const { RootStore } = await import("@/store/root.store");
 let app: InstanceType<typeof RootStore>;
+let nerve: FakeNerve;
 const ws = workspaceOf("ws");
 const project = projectOf("A", ws.id);
 const a = stateOf(project, "A", "unstarted", 1000);
@@ -40,12 +44,10 @@ const b = stateOf(project, "B", "started", 2000);
 beforeEach(async () => {
   vi.restoreAllMocks();
   vi.useFakeTimers();
-  const nerve = new FakeNerve();
+  nerve = new FakeNerve();
   app = new RootStore(nerve.client());
   binding.app = app;
   runInAction(() => {
-    app.issue.workspaceSlug = ws.slug;
-    app.issue.projectId = project.id;
     app.router.setQuery({ workspaceSlug: ws.slug, projectId: project.id });
   });
   await loadWorkspaces(nerve, app.workspaceRoot, [ws]);
@@ -270,6 +272,9 @@ it("closing during load consumes its late failure and reopening can load another
 it("a response without actual HTML is an error rather than a successful empty clone", async () => {
   sourceHasHtml = false;
   await render();
+  const authority = nerve.calls.at(-1)!;
+  expect(authority.path).toBe("/api/v0/issues/source");
+  await act(async () => authority.answer(json(200, core("source"))));
   expect(container.querySelector("[role=alert]")).not.toBeNull();
   await submit();
   expect(ui.create).not.toHaveBeenCalled();

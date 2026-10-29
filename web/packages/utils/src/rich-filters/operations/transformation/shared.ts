@@ -11,7 +11,7 @@ import { transformGroupWithChildren } from "./core";
 
 /**
  * Transforms groups by processing children.
- * Handles AND/OR groups with children and NOT groups with single child.
+ * Handles AND groups with children.
  * @param group - The group to transform
  * @param transformFn - The transformation function
  * @returns The transformation result

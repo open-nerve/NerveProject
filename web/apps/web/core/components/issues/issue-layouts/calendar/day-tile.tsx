@@ -1,3 +1,5 @@
+import type { IssueCreate } from "@nerve/api-client";
+import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -12,7 +14,7 @@ import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { observer } from "mobx-react";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TGroupedIssues, TPaginationData, ICalendarDate } from "@nerve/types";
+import type { ICalendarDate } from "@nerve/types";
 // components
 import { cn, renderFormattedPayloadDate } from "@nerve/utils";
 import { highlightIssueOnDrop } from "@/components/issues/issue-layouts/utils";
@@ -27,13 +29,13 @@ type Props = {
   issuesFilterStore: IProjectIssuesFilter;
   date: ICalendarDate;
   issues: Record<string, Issue | IssueDetail> | undefined;
-  groupedIssueIds: TGroupedIssues;
+  groups: Map<string, Group>;
   loadMoreIssues: (dateString: string) => void;
-  getPaginationData: (groupId: string | undefined) => TPaginationData | undefined;
+  getPaginationData: (groupId: string | undefined) => Group | undefined;
   getGroupIssueCount: (groupId: string | undefined) => number | undefined;
   enableQuickIssueCreate?: boolean;
   disableIssueCreation?: boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
   quickActions: TRenderQuickActions;
   handleDragAndDrop: (
     issueId: string | undefined,
@@ -52,7 +54,7 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
     issuesFilterStore,
     date,
     issues,
-    groupedIssueIds,
+    groups,
     loadMoreIssues,
     getPaginationData,
     getGroupIssueCount,
@@ -121,10 +123,10 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
         },
       })
     );
-  }, [dayTileRef?.current, formattedDatePayload]);
+  }, [formattedDatePayload, issues, handleDragAndDrop]);
 
   if (!formattedDatePayload) return null;
-  const issueIds = groupedIssueIds?.[formattedDatePayload];
+  const issueIds = groups?.get(formattedDatePayload)?.rows.map((row) => row.id) ?? [];
 
   const isToday = date.date.toDateString() === new Date().toDateString();
   const isSelectedDate = date.date.toDateString() == selectedDate.toDateString();

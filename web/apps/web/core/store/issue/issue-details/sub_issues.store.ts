@@ -19,6 +19,7 @@ import type {
 // services
 import { IssueService } from "@/services/issue";
 // store
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import type { IIssueDetail } from "./root.store";
 import type { IWorkItemSubIssueFiltersStore } from "./sub_issues_filter.store";
 import { WorkItemSubIssueFiltersStore } from "./sub_issues_filter.store";
@@ -120,13 +121,19 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
   };
 
   fetchSubIssues = async (workspaceSlug: string, projectId: string, parentIssueId: string) => {
+    const root = this.rootIssueDetailStore.rootIssueStore;
+    root.assertProjectReadable(workspaceSlug, projectId);
+    const token = root.captureRead();
     const response = await this.issueService.subIssues(workspaceSlug, projectId, parentIssueId);
 
+    if (!root.isReadCurrent(token, [projectId])) throw new SessionChangedError();
     const subIssuesStateDistribution = response?.state_distribution ?? {};
 
     const issueList = (response.sub_issues ?? []) as Issue[];
+    const projects = uniq([projectId, ...issueList.map((issue) => issue.project_id).filter(Boolean)]);
+    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
 
-    this.rootIssueDetailStore.rootIssueStore.issues.addIssue(issueList);
+    root.acceptListIssues(issueList, token);
 
     // fetch other issues states and members when sub-issues are from different project
     if (issueList && issueList.length > 0) {
@@ -135,11 +142,9 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
       ) as string[];
       this.fetchOtherProjectProperties(otherProjectIds);
     }
-    if (issueList) {
-      this.rootIssueDetailStore.rootIssueStore.issues.updateIssue(parentIssueId, {
-        sub_issues_count: issueList.length,
-      });
-    }
+    await root.issues.refreshAuthoritative(parentIssueId);
+
+    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
 
     runInAction(() => {
       set(this.subIssuesStateDistribution, parentIssueId, subIssuesStateDistribution);
@@ -154,12 +159,17 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
   };
 
   createSubIssues = async (workspaceSlug: string, projectId: string, parentIssueId: string, issueIds: string[]) => {
+    const root = this.rootIssueDetailStore.rootIssueStore;
+    const token = root.captureRead();
     const response = await this.issueService.addSubIssues(workspaceSlug, projectId, parentIssueId, {
       sub_issue_ids: issueIds,
     });
 
+    if (!root.isReadCurrent(token, [projectId])) throw new SessionChangedError();
     const subIssuesStateDistribution = response?.state_distribution ?? {};
     const subIssues = Array.isArray(response?.sub_issues) ? response.sub_issues : [];
+    const projects = uniq([projectId, ...subIssues.map((issue) => issue.project_id).filter(Boolean)]);
+    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
 
     // fetch other issues states and members when sub-issues are from different project
     if (subIssues && subIssues.length > 0) {
@@ -185,14 +195,8 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
       });
     });
 
-    this.rootIssueDetailStore.rootIssueStore.issues.addIssue(subIssues);
-
-    // update sub-issues_count of the parent issue
-    set(
-      this.rootIssueDetailStore.rootIssueStore.issues.issuesMap,
-      [parentIssueId, "sub_issues_count"],
-      this.subIssues[parentIssueId].length
-    );
+    root.acceptListIssues(subIssues, token);
+    await root.issues.refreshAuthoritative(parentIssueId, { afterWrite: true });
 
     return;
   };
@@ -282,14 +286,8 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
 
     runInAction(() => {
       pull(this.subIssues[parentIssueId], issueId);
-      // update sub-issues_count of the parent issue
-      set(
-        this.rootIssueDetailStore.rootIssueStore.issues.issuesMap,
-        [parentIssueId, "sub_issues_count"],
-        this.subIssues[parentIssueId]?.length
-      );
     });
-
+    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(parentIssueId, { afterWrite: true });
     return;
   };
 
@@ -315,14 +313,8 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
 
     runInAction(() => {
       pull(this.subIssues[parentIssueId], issueId);
-      // update sub-issues_count of the parent issue
-      set(
-        this.rootIssueDetailStore.rootIssueStore.issues.issuesMap,
-        [parentIssueId, "sub_issues_count"],
-        this.subIssues[parentIssueId]?.length
-      );
     });
-
+    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(parentIssueId, { afterWrite: true });
     return;
   };
 

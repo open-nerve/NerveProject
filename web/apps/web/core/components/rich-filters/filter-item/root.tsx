@@ -13,11 +13,11 @@ import type {
   TExternalFilter,
   TFilterProperty,
   TFilterValue,
-  TFilterConditionNodeForDisplay,
-  TAllAvailableOperatorsForDisplay,
+  TFilterConditionNode,
+  TSupportedOperators,
 } from "@nerve/types";
 import { CustomSearchSelect } from "@nerve/ui";
-import { cn, getOperatorForPayload } from "@nerve/utils";
+import { cn } from "@nerve/utils";
 // local imports
 import { FilterValueInput } from "../filter-value-input/root";
 import { COMMON_FILTER_ITEM_BORDER_CLASSNAME } from "../shared";
@@ -28,7 +28,7 @@ import { FilterItemLoader } from "./loader";
 import { FilterItemProperty } from "./property";
 
 export interface IFilterItemProps<P extends TFilterProperty, E extends TExternalFilter> {
-  condition: TFilterConditionNodeForDisplay<P, TFilterValue>;
+  condition: TFilterConditionNode<P, TFilterValue>;
   filter: IFilterInstance<P, E>;
   isDisabled?: boolean;
   showTransition?: boolean;
@@ -57,10 +57,9 @@ export const FilterItem = observer(function FilterItem<P extends TFilterProperty
     isDisabled ||
     (condition.operator && operatorOptions?.length === 1 && operatorOptions[0]?.value === condition.operator);
 
-  const handleOperatorChange = (operator: TAllAvailableOperatorsForDisplay) => {
+  const handleOperatorChange = (operator: TSupportedOperators) => {
     if (operator) {
-      const { operator: positiveOperator, isNegation } = getOperatorForPayload(operator);
-      filter.updateConditionOperator(condition.id, positiveOperator, isNegation);
+      filter.updateConditionOperator(condition.id, operator);
     }
   };
 

@@ -196,3 +196,7 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 
 
 整审A-01无消费者子项两域预取与A-02退休列表独占乐观分布链已根因清理并独评；未改会话/资源/领域协议，真实目录/统计/进度保留，不扩大本输入其余关闭范围。
+
+## P10b 本段处理（2026-10-29）
+
+§12 工作项 router autorun 改为计算属性；权限观察器在 retire 释放。三处同步读取、列表 SWR loginId、共享排序 fixture 与比较器由 T3/T10 验证；详情 SWR及模块 service 按 P11–P15 原分配，P11核旧 profile 方法删除。 证据见 [P10b review](../reviews/P10b-web-list-data-review.md)；整审及N2限定修复复审已闭环，产品候选2e1264aa完整F及准确CI40896656404 attempt1三任务通过，实施与终审完成、集成待办；纯文稿HEAD CI由主控另核；整份交接 status 保持 open。

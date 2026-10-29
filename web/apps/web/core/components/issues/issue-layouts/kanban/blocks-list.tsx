@@ -15,9 +15,9 @@ import type { TRenderQuickActions } from "../list/list-view-types";
 import { KanbanIssueBlock } from "./block";
 
 interface IssueBlocksListProps {
-  sub_group_id: string;
+  sub_group_id?: string;
   groupId: string;
-  issuesMap: Record<string, Issue | IssueDetail>;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   issueIds: string[];
   displayProperties: IIssueDisplayProperties | undefined;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;

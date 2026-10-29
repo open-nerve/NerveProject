@@ -11,7 +11,6 @@ import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import type { IFilterInstance } from "@nerve/shared-state";
 import type { TExternalFilter, TFilterProperty, TSupportedOperators } from "@nerve/types";
 import { CustomSearchSelect } from "@nerve/ui";
-import { getOperatorForPayload } from "@nerve/utils";
 
 export type TAddFilterDropdownProps<P extends TFilterProperty, E extends TExternalFilter> = {
   customButton: React.ReactNode;
@@ -21,7 +20,7 @@ export type TAddFilterDropdownProps<P extends TFilterProperty, E extends TExtern
     isDisabled?: boolean;
   };
   filter: IFilterInstance<P, E>;
-  handleFilterSelect: (property: P, operator: TSupportedOperators, isNegation: boolean) => void;
+  handleFilterSelect: (property: P, operator: TSupportedOperators) => void;
 };
 
 export const AddFilterDropdown = observer(function AddFilterDropdown<
@@ -64,8 +63,7 @@ export const AddFilterDropdown = observer(function AddFilterDropdown<
   const handleFilterSelect = (property: P) => {
     const config = filter.configManager.getConfigByProperty(property);
     if (config?.firstOperator) {
-      const { operator, isNegation } = getOperatorForPayload(config.firstOperator);
-      props.handleFilterSelect(property, operator, isNegation);
+      props.handleFilterSelect(property, config.firstOperator);
     } else {
       setToast({
         title: "Filter configuration error",

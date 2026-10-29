@@ -6,31 +6,27 @@
 
 import type { Issue, IssueDetail } from "@nerve/api-client";
 
-import type { TLegacyIssueUpdateRequest } from "@nerve/types";
+import type { IssueUpdate } from "@nerve/api-client";
 import { computedFn } from "mobx-utils";
 // types
 
 // services
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { IssueService } from "@/services/issue";
 // types
 import type { IIssueDetail } from "./root.store";
 
 export interface IIssueStoreActions {
   // actions
-  fetchIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<IssueDetail>;
-  updateIssue: (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    data: TLegacyIssueUpdateRequest
-  ) => Promise<void>;
+  fetchIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<IssueDetail | undefined>;
+  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => Promise<void>;
   removeIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   fetchIssueWithIdentifier: (
     workspaceSlug: string,
     project_identifier: string,
     sequence_id: string
-  ) => Promise<IssueDetail>;
+  ) => Promise<IssueDetail | undefined>;
 }
 
 export interface IIssueStore extends IIssueStoreActions {
@@ -74,24 +70,36 @@ export class IssueStore implements IIssueStore {
       this.rootIssueDetailStore.fetchReactions(workspaceSlug, projectId, issueId),
       this.rootIssueDetailStore.fetchLinks(workspaceSlug, projectId, issueId),
       ...(issue.parent_id && issue.project_id
-        ? [
-            this.issueService
-              .retrieve(workspaceSlug, issue.project_id, issue.parent_id)
-              .then((parent) => this.rootIssueDetailStore.rootIssueStore.issues.addIssue([parent])),
-          ]
+        ? [this.readParent(workspaceSlug, issue.project_id, issue.parent_id)]
         : []),
     ]);
   }
 
+  private async readParent(workspaceSlug: string, projectId: string, id: string) {
+    const root = this.rootIssueDetailStore.rootIssueStore;
+    root.assertProjectReadable(workspaceSlug, projectId);
+    const token = root.captureRead();
+    const parent = await this.issueService.retrieve(workspaceSlug, projectId, id);
+    root.issues.acceptRead(parent, token);
+  }
+
   // actions
   fetchIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
+    const root = this.rootIssueDetailStore.rootIssueStore;
+    root.assertProjectReadable(workspaceSlug, projectId);
+    const token = root.captureRead();
     const issue = await this.issueService.retrieve(workspaceSlug, projectId, issueId);
 
     if (!issue) throw new Error("Work item not found");
 
-    this.addIssueToStore(issue);
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
+    root.issues.acceptRead(issue, token);
+    if (!root.issues.getIssueDetailById(issue.id)) await root.verification.refresh(issue.id, false);
 
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
     await this.loadIssueResources(workspaceSlug, projectId, issueId, issue);
+
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
 
     // fetch issue activity
     this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
@@ -109,16 +117,10 @@ export class IssueStore implements IIssueStore {
     // TODO: check if this function is required
     this.rootIssueDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(projectId);
 
-    return issue;
+    return root.issues.getIssueDetailById(issue.id);
   };
 
-  addIssueToStore = (issue: Issue) => {
-    this.rootIssueDetailStore.rootIssueStore.issues.addIssue([issue]);
-
-    return issue;
-  };
-
-  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) => {
+  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => {
     const currentStore = this.rootIssueDetailStore.rootIssueStore.projectIssues;
 
     await Promise.all([
@@ -129,15 +131,27 @@ export class IssueStore implements IIssueStore {
 
   removeIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
     const currentStore = this.rootIssueDetailStore.rootIssueStore.projectIssues;
-    currentStore.removeIssue(workspaceSlug, projectId, issueId);
+    return currentStore.removeIssue(workspaceSlug, projectId, issueId);
   };
 
   archiveIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
     const currentStore = this.rootIssueDetailStore.rootIssueStore.projectIssues;
-    currentStore.archiveIssue(workspaceSlug, projectId, issueId);
+    return currentStore.archiveIssue(workspaceSlug, projectId, issueId);
   };
 
   fetchIssueWithIdentifier = async (workspaceSlug: string, project_identifier: string, sequence_id: string) => {
+    const root = this.rootIssueDetailStore.rootIssueStore;
+    const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
+    const directory = root.rootStore.projectRoot.project;
+    const project =
+      workspace &&
+      directory
+        .knownProjectIds(workspace.id)
+        .map((id) => directory.getProjectById(id))
+        .find((item) => item?.identifier === project_identifier && item.workspace_id === workspace.id);
+    if (!project) throw new SessionChangedError();
+    root.assertProjectReadable(workspaceSlug, project.id);
+    const token = root.captureRead();
     const issue = await this.issueService.retrieveWithIdentifier(workspaceSlug, project_identifier, sequence_id);
     const issueIdentifier = `${project_identifier}-${sequence_id}`;
     const issueId = issue?.id;
@@ -145,10 +159,16 @@ export class IssueStore implements IIssueStore {
     const rootWorkItemDetailStore = this.rootIssueDetailStore.rootIssueStore.issueDetail;
 
     if (!issue || !projectId || !issueId) throw new Error("Issue not found");
+    if (projectId !== project.id || issue.workspace_id !== project.workspace_id) throw new SessionChangedError();
 
-    this.addIssueToStore(issue);
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
+    root.issues.acceptRead(issue, token);
+    if (!root.issues.getIssueDetailById(issue.id)) await root.verification.refresh(issue.id, false);
 
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
     await this.loadIssueResources(workspaceSlug, projectId, issueId, issue);
+
+    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
 
     // add identifiers to map
     rootWorkItemDetailStore.rootIssueStore.issues.addIssueIdentifier(issueIdentifier, issueId);
@@ -169,6 +189,6 @@ export class IssueStore implements IIssueStore {
     // TODO: check if this function is required
     rootWorkItemDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(projectId);
 
-    return issue;
+    return root.issues.getIssueDetailById(issue.id);
   };
 }

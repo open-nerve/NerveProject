@@ -12,7 +12,7 @@ import type {
   IFilterOption,
   TFilterProperty,
   TMultiSelectFilterFieldConfig,
-  TFilterConditionNodeForDisplay,
+  TFilterConditionNode,
 } from "@nerve/types";
 import { CustomSearchSelect } from "@nerve/ui";
 import { toFilterArray, getFilterValueLength } from "@nerve/utils";
@@ -22,7 +22,7 @@ import { getCommonCustomSearchSelectProps, getFormattedOptions, loadOptions } fr
 
 type TMultiSelectFilterValueInputProps<P extends TFilterProperty> = {
   config: TMultiSelectFilterFieldConfig<string>;
-  condition: TFilterConditionNodeForDisplay<P, string>;
+  condition: TFilterConditionNode<P, string>;
   isDisabled?: boolean;
   onChange: (values: SingleOrArray<string>) => void;
 };

@@ -13,6 +13,7 @@ import { useParams } from "react-router";
 // Nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { sessionGuard } from "@/lib/in-session";
 import type { TWorkspaceDraftIssue } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
@@ -166,15 +167,28 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   ): Promise<Issue | TWorkspaceDraftIssue | undefined> => {
     if (!workspaceSlug || !payload.project_id || descriptionLoadState !== "ready") return;
 
+    const inSession = sessionGuard();
     try {
       let response: Issue | TWorkspaceDraftIssue | undefined;
       // if draft issue, use draft issue store to create issue
       if (is_draft_issue) {
         response = await draftIssues.createIssue(workspaceSlug, payload);
       } else if (createIssue) {
-        response = await createIssue(payload.project_id, payload);
+        if (!payload.name?.trim()) return;
+        response = await createIssue(payload.project_id, {
+          name: payload.name,
+          description_html: payload.description_html,
+          state_id: payload.state_id,
+          priority: payload.priority,
+          assignee_ids: payload.assignee_ids,
+          label_ids: payload.label_ids,
+          ...(payload.start_date != null ? { start_date: payload.start_date } : {}),
+          ...(payload.target_date != null ? { target_date: payload.target_date } : {}),
+          ...(payload.parent_id != null ? { parent_id: payload.parent_id } : {}),
+        });
       }
 
+      if (!inSession()) return;
       // update uploaded assets' status
       if (uploadedAssetIds.length > 0) {
         await fileService.updateBulkProjectAssetsUploadStatus(
@@ -185,6 +199,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
             asset_ids: uploadedAssetIds,
           }
         );
+        if (!inSession()) return;
         setUploadedAssetIds([]);
       }
 
@@ -208,6 +223,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       setChangesMade(null);
       return response;
     } catch (error: any) {
+      if (!inSession()) throw error;
       setToast({
         type: TOAST_TYPE.ERROR,
         title: t("error"),
@@ -220,9 +236,11 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const handleUpdateIssue = async (payload: IssueFormData): Promise<Issue | undefined> => {
     if (!workspaceSlug || !payload.project_id || !data?.id) return;
 
+    const inSession = sessionGuard();
     try {
       if (isDraft) await draftIssues.updateIssue(workspaceSlug, data.id, payload);
       else if (updateIssue) await updateIssue(payload.project_id, data.id, payload);
+      if (!inSession()) return;
 
       setToast({
         type: TOAST_TYPE.SUCCESS,
@@ -239,6 +257,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       });
       handleClose();
     } catch (error: any) {
+      if (!inSession()) return;
       console.error(error);
       setToast({
         type: TOAST_TYPE.ERROR,
@@ -251,14 +270,16 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const handleFormSubmit = async (payload: IssueFormData, is_draft_issue: boolean = false) => {
     if (!workspaceSlug || !payload.project_id || !storeType || descriptionLoadState !== "ready") return;
 
+    const inSession = sessionGuard();
     let response: Issue | TWorkspaceDraftIssue | undefined = undefined;
 
     try {
       if (beforeFormSubmit) await beforeFormSubmit();
+      if (!inSession()) return;
       if (!data?.id) response = await handleCreateIssue(payload, is_draft_issue);
       else response = await handleUpdateIssue(payload);
     } finally {
-      if (response && props.onSubmit) {
+      if (inSession() && response && props.onSubmit) {
         if (props.isDraft) {
           if (!("sequence_id" in response)) await props.onSubmit(response);
         } else if ("sequence_id" in response) await props.onSubmit(response);

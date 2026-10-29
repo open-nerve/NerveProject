@@ -1,3 +1,4 @@
+import type { IssueCreate } from "@nerve/api-client";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -48,7 +49,7 @@ import type { TRenderQuickActions } from "./list-view-types";
 interface Props {
   groupIssueIds: string[] | undefined;
   group: IGroupByColumn;
-  issuesMap: Record<string, Issue | IssueDetail>;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   group_by: TIssueGroupByOptions | null;
   orderBy: TIssueOrderByOptions | undefined;
   getGroupIndex: (groupId: string | undefined) => number;
@@ -59,7 +60,7 @@ interface Props {
   canEditProperties: (projectId: string | undefined) => boolean;
   containerRef: MutableRefObject<HTMLDivElement | null>;
   quickAddCallback?:
-    | ((projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>)
+    | ((projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>)
     | undefined;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
   disableIssueCreation?: boolean;
@@ -106,15 +107,15 @@ export const ListGroup = observer(function ListGroup(props: Props) {
   const [intersectionElement, setIntersectionElement] = useState<HTMLDivElement | null>(null);
 
   const groupIssueCount = getGroupIssueCount(group.id, undefined, false) ?? 0;
-  const nextPageResults = getPaginationData(group.id, undefined)?.nextPageResults;
+  const nextCursor = getPaginationData(group.id, undefined)?.nextCursor;
   const isPaginating = !!getIssueLoader(group.id);
 
   useIntersectionObserver(containerRef, isPaginating ? null : intersectionElement, loadMoreIssues, `100% 0% 100% 0%`);
 
   const shouldLoadMore =
-    nextPageResults === undefined && groupIssueCount !== undefined && groupIssueIds
+    nextCursor === undefined && groupIssueCount !== undefined && groupIssueIds
       ? groupIssueIds.length < groupIssueCount
-      : !!nextPageResults;
+      : !!nextCursor;
 
   const loadMore = isPaginating ? (
     <ListLoaderItemRow />
@@ -144,10 +145,10 @@ export const ListGroup = observer(function ListGroup(props: Props) {
         preloadedData = { ...preloadedData, state_id: value };
       } else if (groupByKey === "priority") {
         preloadedData = { ...preloadedData, priority: value };
-      } else if (groupByKey === "labels" && value != "None") {
-        preloadedData = { ...preloadedData, label_ids: [value] };
-      } else if (groupByKey === "assignees" && value != "None") {
-        preloadedData = { ...preloadedData, assignee_ids: [value] };
+      } else if (groupByKey === "labels") {
+        if (value !== "none") preloadedData = { ...preloadedData, label_ids: [value] };
+      } else if (groupByKey === "assignees") {
+        if (value !== "none") preloadedData = { ...preloadedData, assignee_ids: [value] };
       } else if (groupByKey === "created_by") {
         preloadedData = { ...preloadedData };
       } else {

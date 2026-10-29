@@ -7,14 +7,14 @@
 import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { TDateFilterFieldConfig, TFilterConditionNodeForDisplay, TFilterProperty } from "@nerve/types";
+import type { TDateFilterFieldConfig, TFilterConditionNode, TFilterProperty } from "@nerve/types";
 import { cn, renderFormattedPayloadDate } from "@nerve/utils";
 import { DateDropdown } from "@/components/dropdowns/date";
 import { COMMON_FILTER_ITEM_BORDER_CLASSNAME, EMPTY_FILTER_PLACEHOLDER_TEXT } from "../../shared";
 
 type TSingleDateFilterValueInputProps<P extends TFilterProperty> = {
   config: TDateFilterFieldConfig<string>;
-  condition: TFilterConditionNodeForDisplay<P, string>;
+  condition: TFilterConditionNode<P, string>;
   isDisabled?: boolean;
   onChange: (value: string | null | undefined) => void;
 };

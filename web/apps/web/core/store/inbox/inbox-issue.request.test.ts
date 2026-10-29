@@ -10,8 +10,8 @@ import { EInboxIssueStatus, EInboxIssueSource } from "@nerve/types";
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import { heldChange } from "@/lib/auth/fake-tab";
 import { InboxIssueService } from "@/services/inbox";
-import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
-import { issueOf } from "@/store/issue/fake-issues";
+import { FakeNerve, answered, json, problem } from "@/lib/auth/fake-nerve";
+import { issueOf, requestedIssue } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { projectOf, loadProjects, stateOf } from "@/store/project/fake-projects";
 // Public APIService replies include Axios metadata; entity data remains the complete real response fixture.
@@ -28,6 +28,7 @@ vi.mock("@/lib/store-context", () => ({
 }));
 const { RootStore } = await import("@/store/root.store");
 let app: InstanceType<typeof RootStore>;
+let nerve: FakeNerve;
 const ws = workspaceOf("ws");
 const project = projectOf("A", ws.id);
 const a = stateOf(project, "A", "unstarted", 1000);
@@ -35,12 +36,10 @@ const b = stateOf(project, "B", "started", 2000);
 beforeEach(async () => {
   vi.restoreAllMocks();
   vi.useFakeTimers();
-  const nerve = new FakeNerve();
+  nerve = new FakeNerve();
   app = new RootStore(nerve.client());
   binding.app = app;
   runInAction(() => {
-    app.issue.workspaceSlug = ws.slug;
-    app.issue.projectId = project.id;
     app.router.setQuery({ workspaceSlug: ws.slug, projectId: project.id });
   });
   await loadWorkspaces(nerve, app.workspaceRoot, [ws]);
@@ -118,7 +117,52 @@ it("retains original null fields on refusal and sends nothing without an issue i
   await store.updateIssue({ description_html: "missing" });
   expect(patch).toHaveBeenCalledTimes(1);
 });
-it("retrieve then accept uses response required fields and retains the one known HTML field", async () => {
+it.each(["<p>new</p>", ""])(
+  "inbox accept receives authoritative HTML rather than the partial editor (%s)",
+  async (html) => {
+    const store = local("<p>old editor</p>");
+    const current = {
+      ...issueOf("R1", project.id, project.workspace_id),
+      description_html: "confirmed",
+      updated_at: "2026-10-29T00:00:00Z",
+    };
+    app.issue.issues.acceptRead(current, app.issue.captureRead());
+    const response = { ...issueOf("R1", project.id, project.workspace_id), name: "partial old" };
+    const patch = vi
+      .spyOn(InboxIssueService.prototype, "patch")
+      .mockResolvedValue(reply({ ...envelope(response), status: EInboxIssueStatus.ACCEPTED }));
+    const request = await requestedIssue(nerve, () => store.updateInboxIssueStatus(EInboxIssueStatus.ACCEPTED), [
+      "GET",
+      "/api/v0/issues/R1",
+    ]);
+    expect(store.status).toBe(EInboxIssueStatus.ACCEPTED);
+    expect(app.issue.issues.getIssueById("R1")).toBeUndefined();
+    const authoritative = { ...current, description_html: html, updated_at: "2026-10-29T00:00:01Z" };
+    request.call.answer(json(200, authoritative));
+    await request.promise;
+    expect(app.issue.issues.getIssueDetailById("R1")).toEqual(authoritative);
+    expect(patch).toHaveBeenCalledTimes(1);
+  }
+);
+it("inbox authoritative refusal returns without reverting or resending the successful accept", async () => {
+  const store = local("edited");
+  const patch = vi
+    .spyOn(InboxIssueService.prototype, "patch")
+    .mockResolvedValue(
+      reply({ ...envelope(issueOf("R1", project.id, project.workspace_id)), status: EInboxIssueStatus.ACCEPTED })
+    );
+  const request = await requestedIssue(nerve, () => store.updateInboxIssueStatus(EInboxIssueStatus.ACCEPTED), [
+    "GET",
+    "/api/v0/issues/R1",
+  ]);
+  const refusing = expect(request.promise).rejects.toMatchObject({ status: 500 });
+  request.call.answer(problem(500, "internal"));
+  await refusing;
+  expect(store.status).toBe(EInboxIssueStatus.ACCEPTED);
+  expect(app.issue.issues.getIssueById("R1")).toBeUndefined();
+  expect(patch).toHaveBeenCalledTimes(1);
+});
+it("retrieve preserves its own inbox resources before accepted canonical is read", async () => {
   activities();
   vi.spyOn(app.issue.issueDetail, "fetchComments").mockResolvedValue([]);
   vi.spyOn(app.issue.issueDetail, "fetchReactions").mockResolvedValue([]);
@@ -128,67 +172,17 @@ it("retrieve then accept uses response required fields and retains the one known
   expect(get).toHaveBeenCalledExactlyOnceWith(
     `/api/workspaces/${ws.slug}/projects/${project.id}/inbox-issues/R1/?expand=issue_inbox`
   );
-  const store = app.projectInbox.getIssueInboxByIssueId("R1")!;
-  expect(store.issue.description_html).toBe("<p>retrieved</p>");
+  expect(app.projectInbox.getIssueInboxByIssueId("R1")?.issue.description_html).toBe("<p>retrieved</p>");
   expect(app.issue.issues.getIssueById("R1")).toBeUndefined();
-  const response = {
-    ...issueOf("R1", project.id, project.workspace_id),
-    name: "server",
-    sequence_id: 9,
-    sort_order: 99,
-    priority: "high" as const,
-    created_by_id: "response-actor",
-  };
-  const add = vi.spyOn(app.issue.issues, "addIssue");
-  const patch = vi
-    .spyOn(InboxIssueService.prototype, "patch")
-    .mockResolvedValue(reply({ ...envelope(response), status: EInboxIssueStatus.ACCEPTED }));
-  await store.updateInboxIssueStatus(EInboxIssueStatus.ACCEPTED);
-  expect(patch).toHaveBeenCalledExactlyOnceWith(`/api/workspaces/${ws.slug}/projects/${project.id}/inbox-issues/R1/`, {
-    status: EInboxIssueStatus.ACCEPTED,
-  });
-  expect(add).toHaveBeenCalledExactlyOnceWith([{ ...response, description_html: "<p>retrieved</p>" }]);
-  expect(app.issue.issues.getIssueById("R1")).toEqual({ ...response, description_html: "<p>retrieved</p>" });
 });
-it.each(["<p>edited</p>", ""])("successful edit then accept retains actual string HTML (%s)", async (html) => {
-  activities();
-  const store = local();
-  const response = issueOf("R1", project.id, project.workspace_id);
-  const patch = vi.spyOn(InboxIssueService.prototype, "patch").mockResolvedValue(reply(envelope(response)));
-  await store.updateIssue({ description_html: html, skip_activity: "true" });
-  expect(store.issue).not.toHaveProperty("skip_activity");
-  await store.updateInboxIssueStatus(EInboxIssueStatus.ACCEPTED);
-  expect(patch.mock.calls.map((call) => call[1])).toEqual([
-    { issue: { description_html: html, skip_activity: "true" } },
-    { status: EInboxIssueStatus.ACCEPTED },
-  ]);
-  expect(app.issue.issues.getIssueById("R1")).toEqual({ ...response, description_html: html });
-});
-it.each([
-  { localHtml: undefined, responseHtml: undefined },
-  { localHtml: "old", responseHtml: "" },
-])(
-  "accept respects absent HTML and response empty detail ($localHtml/$responseHtml)",
-  async ({ localHtml, responseHtml }) => {
-    const store = local(localHtml);
-    const response = {
-      ...issueOf("R1", project.id, project.workspace_id),
-      ...(responseHtml === undefined ? {} : { description_html: responseHtml }),
-    };
-    const add = vi.spyOn(app.issue.issues, "addIssue");
-    vi.spyOn(InboxIssueService.prototype, "patch").mockResolvedValue(reply(envelope(response)));
-    await store.updateInboxIssueStatus(EInboxIssueStatus.ACCEPTED);
-    expect(add).toHaveBeenCalledExactlyOnceWith([response]);
-    expect(Object.hasOwn(app.issue.issues.getIssueById("R1")!, "description_html")).toBe(responseHtml !== undefined);
-  }
-);
 it("status refusal is swallowed, restores status and never adds canonical", async () => {
   const store = local();
-  const add = vi.spyOn(app.issue.issues, "addIssue");
+  const before = nerve.calls.length;
   vi.spyOn(InboxIssueService.prototype, "patch").mockRejectedValue({ response: { data: { code: "refused" } } });
   await expect(store.updateInboxIssueStatus(EInboxIssueStatus.ACCEPTED)).resolves.toBeUndefined();
   expect(store.status).toBe(EInboxIssueStatus.PENDING);
-  expect(add).not.toHaveBeenCalled();
+  expect(nerve.calls).toHaveLength(before);
+  expect(app.issue.issues.getIssueById("R1")).toBeUndefined();
 });
 it("ordinary inbox cache has no invented HTML while empty details remain known", () => {
   expect(local().issue).not.toHaveProperty("description_html");

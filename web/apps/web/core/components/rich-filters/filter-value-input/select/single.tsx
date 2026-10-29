@@ -11,7 +11,7 @@ import type {
   IFilterOption,
   TFilterProperty,
   TSingleSelectFilterFieldConfig,
-  TFilterConditionNodeForDisplay,
+  TFilterConditionNode,
 } from "@nerve/types";
 import { CustomSearchSelect } from "@nerve/ui";
 // local imports
@@ -20,7 +20,7 @@ import { getCommonCustomSearchSelectProps, getFormattedOptions, loadOptions } fr
 
 type TSingleSelectFilterValueInputProps<P extends TFilterProperty> = {
   config: TSingleSelectFilterFieldConfig<string>;
-  condition: TFilterConditionNodeForDisplay<P, string>;
+  condition: TFilterConditionNode<P, string>;
   isDisabled?: boolean;
   onChange: (value: string | null) => void;
 };

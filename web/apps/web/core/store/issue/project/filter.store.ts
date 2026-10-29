@@ -5,38 +5,49 @@
  */
 
 import { isEmpty, set } from "lodash-es";
+import type { ApiClient, ProjectPreferences, ProjectDisplayFilters } from "@nerve/api-client";
+import { oneAtATime } from "@/lib/one-at-a-time";
+import { projectListQuery, toFilterExpression, toProjectFilters } from "@/lib/issue-filters";
+import { ProjectPreferencesService } from "@/services/project/project-preferences.service";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 // base class
-import { computedFn } from "mobx-utils";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EIssueFilterType } from "@nerve/constants";
 import type {
   IIssueDisplayFilterOptions,
-  IIssueDisplayProperties,
   TIssueKanbanFilters,
   IIssueFilters,
-  TIssueParams,
-  IssuePaginationOptions,
   TWorkItemFilterExpression,
   TSupportedFilterForUpdate,
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
-import { handleIssueQueryParamsByLayout } from "@nerve/utils";
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
 import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
 // types
 import type { IIssueRootStore } from "../root.store";
-import { ProjectService } from "@/services/project";
+
+const groupWire: Record<string, string> = {
+  state: "state_id",
+  "state_detail.group": "state_group",
+  priority: "priority",
+  labels: "label_id",
+  assignees: "assignee_id",
+  created_by: "created_by_id",
+  target_date: "target_date",
+};
+const orderWire: Record<string, string> = {
+  state__name: "state_name",
+  labels__name: "label_name",
+  assignees__first_name: "assignee_name",
+};
+function controlOrder(value: string): string {
+  const minus = value.startsWith("-") ? "-" : "";
+  const bare = minus ? value.slice(1) : value;
+  return minus + (Object.entries(orderWire).find(([, wire]) => wire === bare)?.[0] ?? bare);
+}
 
 export interface IProjectIssuesFilter extends IBaseIssueFilterStore {
   //helper actions
-  getFilterParams: (
-    options: IssuePaginationOptions,
-    projectId: string,
-    cursor: string | undefined,
-    groupId: string | undefined,
-    subGroupId: string | undefined
-  ) => Partial<Record<TIssueParams, string | boolean>>;
   getIssueFilters(projectId: string): IIssueFilters | undefined;
   // action
   fetchFilters: (workspaceSlug: string, projectId: string) => Promise<void>;
@@ -59,9 +70,13 @@ export class ProjectIssuesFilter extends IssueFilterHelperStore implements IProj
   // root store
   rootIssueStore: IIssueRootStore;
   // services
-  projectService;
+  private readonly service: ProjectPreferencesService;
+  private readonly values = new Map<string, ProjectPreferences>();
+  private readonly queues = new Map<string, ReturnType<typeof oneAtATime>>();
+  private readonly versions = new Map<string, number>();
+  private readonly reads = new Map<string, number>();
 
-  constructor(_rootStore: IIssueRootStore) {
+  constructor(_rootStore: IIssueRootStore, api: ApiClient) {
     super();
     makeObservable(this, {
       // observables
@@ -76,7 +91,7 @@ export class ProjectIssuesFilter extends IssueFilterHelperStore implements IProj
     // root store
     this.rootIssueStore = _rootStore;
     // services
-    this.projectService = new ProjectService();
+    this.service = new ProjectPreferencesService(api);
   }
 
   get issueFilters() {
@@ -93,200 +108,151 @@ export class ProjectIssuesFilter extends IssueFilterHelperStore implements IProj
     return this.computedIssueFilters(displayFilters);
   }
 
-  getAppliedFilters(projectId: string) {
-    const userFilters = this.getIssueFilters(projectId);
-    if (!userFilters) return undefined;
-
-    const filteredParams = handleIssueQueryParamsByLayout(userFilters?.displayFilters?.layout, "issues");
-    if (!filteredParams) return undefined;
-
-    const filteredRouteParams: Partial<Record<TIssueParams, string | boolean>> = this.computedFilteredParams(
-      userFilters?.richFilters,
-      userFilters?.displayFilters,
-      filteredParams
-    );
-
-    return filteredRouteParams;
+  private show(projectId: string, value: ProjectPreferences) {
+    const groupValues: NonNullable<IIssueDisplayFilterOptions["group_by"]>[] = [
+      "state",
+      "priority",
+      "labels",
+      "created_by",
+      "state_detail.group",
+      "project",
+      "assignees",
+      "target_date",
+    ];
+    const orderValues: NonNullable<IIssueDisplayFilterOptions["order_by"]>[] = [
+      "-created_at",
+      "created_at",
+      "updated_at",
+      "-updated_at",
+      "priority",
+      "-priority",
+      "sort_order",
+      "state__name",
+      "-state__name",
+      "assignees__first_name",
+      "-assignees__first_name",
+      "labels__name",
+      "-labels__name",
+      "target_date",
+      "-target_date",
+      "start_date",
+      "-start_date",
+      "link_count",
+      "-link_count",
+      "sub_issues_count",
+      "-sub_issues_count",
+    ];
+    const d = value.display_filters;
+    const display: IIssueDisplayFilterOptions = {
+      ...d,
+      group_by: groupValues.find((v) => groupWire[v] === d.group_by) ?? null,
+      sub_group_by: groupValues.find((v) => groupWire[v] === d.sub_group_by) ?? null,
+      order_by: orderValues.find((v) => v === controlOrder(d.order_by)) ?? "-created_at",
+      layout: ["list", "kanban", "calendar", "spreadsheet"].includes(d.layout) ? d.layout : "list",
+      calendar: { ...d.calendar, layout: d.calendar.layout === "week" ? "week" : "month" },
+    };
+    runInAction(() => {
+      set(this.filters, [projectId, "richFilters"], toFilterExpression(value.filters));
+      set(this.filters, [projectId, "displayFilters"], display);
+      set(this.filters, [projectId, "displayProperties"], value.display_properties);
+    });
   }
 
-  getFilterParams = computedFn(
-    (
-      options: IssuePaginationOptions,
-      projectId: string,
-      cursor: string | undefined,
-      groupId: string | undefined,
-      subGroupId: string | undefined
-    ) => {
-      const filterParams = this.getAppliedFilters(projectId);
-      const paginationParams = this.getPaginationParams(filterParams, options, cursor, groupId, subGroupId);
-      return paginationParams;
-    }
-  );
-
   fetchFilters = async (workspaceSlug: string, projectId: string) => {
-    const _filters = await this.projectService.getProjectUserProperties(workspaceSlug, projectId);
-
-    const richFilters = _filters?.rich_filters;
-    const displayFilters = this.computedDisplayFilters(_filters?.display_filters);
-    const displayProperties = this.computedDisplayProperties(_filters?.display_properties);
-
-    // fetching the kanban toggle helpers in the local storage
-    const kanbanFilters = {
-      group_by: [],
-      sub_group_by: [],
-    };
-    const currentUserId = this.rootIssueStore.currentUserId;
-    if (currentUserId) {
-      const _kanbanFilters = this.handleIssuesLocalFilters.get(
-        EIssuesStoreType.PROJECT,
-        workspaceSlug,
-        projectId,
-        currentUserId
-      );
-      kanbanFilters.group_by = _kanbanFilters?.kanban_filters?.group_by || [];
-      kanbanFilters.sub_group_by = _kanbanFilters?.kanban_filters?.sub_group_by || [];
+    this.rootIssueStore.assertActive();
+    const sequence = (this.reads.get(projectId) ?? 0) + 1;
+    this.reads.set(projectId, sequence);
+    const versions = ["filters", "display_filters", "display_properties"].map(
+      (field) => this.versions.get(`${projectId}:${field}`) ?? 0
+    );
+    const value = await this.service.get(projectId);
+    this.rootIssueStore.assertActive();
+    if (this.reads.get(projectId) !== sequence) return;
+    const held = this.values.get(projectId);
+    if (held) {
+      if ((this.versions.get(`${projectId}:filters`) ?? 0) !== versions[0]) value.filters = held.filters;
+      if ((this.versions.get(`${projectId}:display_filters`) ?? 0) !== versions[1])
+        value.display_filters = held.display_filters;
+      if ((this.versions.get(`${projectId}:display_properties`) ?? 0) !== versions[2])
+        value.display_properties = held.display_properties;
     }
-
-    runInAction(() => {
-      set(this.filters, [projectId, "richFilters"], richFilters);
-      set(this.filters, [projectId, "displayFilters"], displayFilters);
-      set(this.filters, [projectId, "displayProperties"], displayProperties);
-      set(this.filters, [projectId, "kanbanFilters"], kanbanFilters);
-    });
+    this.values.set(projectId, value);
+    this.show(projectId, value);
+    const currentUserId = this.rootIssueStore.currentUserId;
+    const local = currentUserId
+      ? this.handleIssuesLocalFilters.get(EIssuesStoreType.PROJECT, workspaceSlug, projectId, currentUserId)
+      : undefined;
+    runInAction(() =>
+      set(this.filters, [projectId, "kanbanFilters"], local?.kanban_filters ?? { group_by: [], sub_group_by: [] })
+    );
   };
+
+  private change<K extends "filters" | "display_filters" | "display_properties">(
+    projectId: string,
+    field: K,
+    make: (held: ProjectPreferences[K]) => ProjectPreferences[K]
+  ): Promise<void> {
+    const key = `${projectId}:${field}`;
+    let queue = this.queues.get(key);
+    if (!queue) {
+      queue = oneAtATime();
+      this.queues.set(key, queue);
+    }
+    return queue(async () => {
+      this.rootIssueStore.assertActive();
+      const held = this.values.get(projectId);
+      if (!held) throw new Error("Project preferences not loaded");
+      const answer = await this.service.update(projectId, { [field]: make(held[field]) });
+      this.rootIssueStore.assertActive();
+      const current = this.values.get(projectId);
+      if (!current) throw new Error("Project preferences not loaded");
+      const confirmed = { ...current, [field]: answer[field] };
+      this.values.set(projectId, confirmed);
+      this.versions.set(key, (this.versions.get(key) ?? 0) + 1);
+      this.show(projectId, confirmed);
+    });
+  }
 
   /**
    * NOTE: This method is designed as a fallback function for the work item filter store.
    * Only use this method directly when initializing filter instances.
    * For regular filter updates, use this method as a fallback function for the work item filter store methods instead.
    */
-  updateFilterExpression: IProjectIssuesFilter["updateFilterExpression"] = async (
-    workspaceSlug,
-    projectId,
-    filters
-  ) => {
-    try {
-      runInAction(() => {
-        set(this.filters, [projectId, "richFilters"], filters);
-      });
-
-      this.rootIssueStore.projectIssues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, "mutation");
-      await this.projectService.updateProjectUserProperties(workspaceSlug, projectId, {
-        rich_filters: filters,
-      });
-    } catch (error) {
-      console.log("error while updating rich filters", error);
-      throw error;
-    }
-  };
+  updateFilterExpression: IProjectIssuesFilter["updateFilterExpression"] = (_workspaceSlug, projectId, filters) =>
+    this.change(projectId, "filters", () => toProjectFilters(filters));
 
   updateFilters: IProjectIssuesFilter["updateFilters"] = async (workspaceSlug, projectId, type, filters) => {
-    try {
-      if (isEmpty(this.filters) || isEmpty(this.filters[projectId])) return;
-
-      const _filters = {
-        richFilters: this.filters[projectId].richFilters,
-        displayFilters: this.filters[projectId].displayFilters as IIssueDisplayFilterOptions,
-        displayProperties: this.filters[projectId].displayProperties as IIssueDisplayProperties,
-        kanbanFilters: this.filters[projectId].kanbanFilters as TIssueKanbanFilters,
-      };
-
-      switch (type) {
-        case EIssueFilterType.DISPLAY_FILTERS: {
-          const updatedDisplayFilters = filters as IIssueDisplayFilterOptions;
-          _filters.displayFilters = { ..._filters.displayFilters, ...updatedDisplayFilters };
-
-          // set sub_group_by to null if group_by is set to null
-          if (_filters.displayFilters.group_by === null) {
-            _filters.displayFilters.sub_group_by = null;
-            updatedDisplayFilters.sub_group_by = null;
-          }
-          // set sub_group_by to null if layout is switched to kanban group_by and sub_group_by are same
-          if (
-            _filters.displayFilters.layout === "kanban" &&
-            _filters.displayFilters.group_by === _filters.displayFilters.sub_group_by
-          ) {
-            _filters.displayFilters.sub_group_by = null;
-            updatedDisplayFilters.sub_group_by = null;
-          }
-          // set group_by to state if layout is switched to kanban and group_by is null
-          if (_filters.displayFilters.layout === "kanban" && _filters.displayFilters.group_by === null) {
-            _filters.displayFilters.group_by = "state";
-            updatedDisplayFilters.group_by = "state";
-          }
-
-          runInAction(() => {
-            Object.keys(updatedDisplayFilters).forEach((_key) => {
-              set(
-                this.filters,
-                [projectId, "displayFilters", _key],
-                updatedDisplayFilters[_key as keyof IIssueDisplayFilterOptions]
-              );
-            });
+    switch (type) {
+      case EIssueFilterType.DISPLAY_FILTERS:
+        return this.change(projectId, "display_filters", (held) => {
+          const update = filters as IIssueDisplayFilterOptions;
+          const result: ProjectDisplayFilters = {
+            ...held,
+            ...update,
+            calendar: { ...held.calendar, ...update.calendar },
+          };
+          if (update.group_by !== undefined)
+            result.group_by = update.group_by ? (groupWire[update.group_by] ?? null) : null;
+          if (update.sub_group_by !== undefined)
+            result.sub_group_by = update.sub_group_by ? (groupWire[update.sub_group_by] ?? null) : null;
+          if (update.order_by !== undefined)
+            result.order_by = projectListQuery({}, { order_by: update.order_by }).order_by ?? "-created_at";
+          if (result.group_by === null) result.sub_group_by = null;
+          if (result.layout === "kanban" && result.group_by === result.sub_group_by) result.sub_group_by = null;
+          if (result.layout === "kanban" && result.group_by === null) result.group_by = "state_id";
+          return result;
+        });
+      case EIssueFilterType.DISPLAY_PROPERTIES:
+        return this.change(projectId, "display_properties", (held) => ({ ...held, ...filters }));
+      case EIssueFilterType.KANBAN_FILTERS: {
+        const value = { ...this.filters[projectId]?.kanbanFilters, ...filters } as TIssueKanbanFilters;
+        const userId = this.rootIssueStore.currentUserId;
+        if (userId)
+          this.handleIssuesLocalFilters.set(EIssuesStoreType.PROJECT, type, workspaceSlug, projectId, userId, {
+            kanban_filters: value,
           });
-
-          if (this.getShouldClearIssues(updatedDisplayFilters)) {
-            this.rootIssueStore.projectIssues.clear(true); // clear issues for local store when some filters like layout changes
-          }
-
-          if (this.getShouldReFetchIssues(updatedDisplayFilters)) {
-            this.rootIssueStore.projectIssues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, "mutation");
-          }
-
-          await this.projectService.updateProjectUserProperties(workspaceSlug, projectId, {
-            display_filters: _filters.displayFilters,
-          });
-
-          break;
-        }
-        case EIssueFilterType.DISPLAY_PROPERTIES: {
-          const updatedDisplayProperties = filters as IIssueDisplayProperties;
-          _filters.displayProperties = { ..._filters.displayProperties, ...updatedDisplayProperties };
-
-          runInAction(() => {
-            Object.keys(updatedDisplayProperties).forEach((_key) => {
-              set(
-                this.filters,
-                [projectId, "displayProperties", _key],
-                updatedDisplayProperties[_key as keyof IIssueDisplayProperties]
-              );
-            });
-          });
-
-          await this.projectService.updateProjectUserProperties(workspaceSlug, projectId, {
-            display_properties: _filters.displayProperties,
-          });
-          break;
-        }
-
-        case EIssueFilterType.KANBAN_FILTERS: {
-          const updatedKanbanFilters = filters as TIssueKanbanFilters;
-          _filters.kanbanFilters = { ..._filters.kanbanFilters, ...updatedKanbanFilters };
-
-          const currentUserId = this.rootIssueStore.currentUserId;
-          if (currentUserId)
-            this.handleIssuesLocalFilters.set(EIssuesStoreType.PROJECT, type, workspaceSlug, projectId, currentUserId, {
-              kanban_filters: _filters.kanbanFilters,
-            });
-
-          runInAction(() => {
-            Object.keys(updatedKanbanFilters).forEach((_key) => {
-              set(
-                this.filters,
-                [projectId, "kanbanFilters", _key],
-                updatedKanbanFilters[_key as keyof TIssueKanbanFilters]
-              );
-            });
-          });
-
-          break;
-        }
-        default:
-          break;
+        runInAction(() => set(this.filters, [projectId, "kanbanFilters"], value));
       }
-    } catch (error) {
-      this.fetchFilters(workspaceSlug, projectId);
-      throw error;
     }
   };
 }

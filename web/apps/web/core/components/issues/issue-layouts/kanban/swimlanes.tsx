@@ -1,3 +1,5 @@
+import type { IssueCreate } from "@nerve/api-client";
+import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -12,9 +14,7 @@ import { observer } from "mobx-react";
 import type {
   GroupByColumnTypes,
   IGroupByColumn,
-  TGroupedIssues,
   IIssueDisplayProperties,
-  TSubGroupedIssues,
   TIssueKanbanFilters,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
@@ -107,14 +107,14 @@ interface ISubGroupSwimlane extends ISubGroupSwimlaneHeader {
     subGroupId: string | undefined,
     isSubGroupCumulative: boolean
   ) => number | undefined;
-  groupedIssueIds: TGroupedIssues | TSubGroupedIssues;
+  groups: Map<string, Group>;
   handleCollapsedGroups: (toggle: "group_by" | "sub_group_by", value: string) => void;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
-  issuesMap: Record<string, Issue | IssueDetail>;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   loadMoreIssues: (groupId?: string, subGroupId?: string) => void;
   orderBy: TIssueOrderByOptions | undefined;
   quickActions: TRenderQuickActions;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
   scrollableContainerRef?: MutableRefObject<HTMLDivElement | null>;
   showEmptyGroup: boolean;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
@@ -129,7 +129,7 @@ const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwim
     enableQuickIssueCreate,
     getGroupIssueCount,
     group_by,
-    groupedIssueIds,
+    groups,
     handleCollapsedGroups,
     handleOnDrop,
     issuesMap,
@@ -189,7 +189,7 @@ const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwim
                 <div className="relative">
                   <KanBan
                     issuesMap={issuesMap}
-                    groupedIssueIds={groupedIssueIds}
+                    groups={groups}
                     getGroupIssueCount={getGroupIssueCount}
                     displayProperties={displayProperties}
                     sub_group_by={sub_group_by}
@@ -233,14 +233,14 @@ export interface IKanBanSwimLanes {
     isSubGroupCumulative: boolean
   ) => number | undefined;
   group_by: TIssueGroupByOptions | undefined;
-  groupedIssueIds: TGroupedIssues | TSubGroupedIssues;
+  groups: Map<string, Group>;
   handleCollapsedGroups: (toggle: "group_by" | "sub_group_by", value: string) => void;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
-  issuesMap: Record<string, Issue | IssueDetail>;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   loadMoreIssues: (groupId?: string, subGroupId?: string) => void;
   orderBy: TIssueOrderByOptions | undefined;
   quickActions: TRenderQuickActions;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
   scrollableContainerRef?: MutableRefObject<HTMLDivElement | null>;
   showEmptyGroup: boolean;
   sub_group_by: TIssueGroupByOptions | undefined;
@@ -250,7 +250,7 @@ export interface IKanBanSwimLanes {
 export const KanBanSwimLanes = observer(function KanBanSwimLanes(props: IKanBanSwimLanes) {
   const {
     issuesMap,
-    groupedIssueIds,
+    groups,
     getGroupIssueCount,
     displayProperties,
     sub_group_by,
@@ -303,7 +303,7 @@ export const KanBanSwimLanes = observer(function KanBanSwimLanes(props: IKanBanS
         <SubGroupSwimlane
           issuesMap={issuesMap}
           list={subGroupByList}
-          groupedIssueIds={groupedIssueIds}
+          groups={groups}
           getGroupIssueCount={getGroupIssueCount}
           displayProperties={displayProperties}
           group_by={group_by}

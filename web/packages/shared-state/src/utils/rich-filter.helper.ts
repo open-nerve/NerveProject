@@ -7,7 +7,6 @@
 // nerve imports
 import type { TBuildFilterExpressionParams, TExternalFilter, TFilterProperty, TFilterValue } from "@nerve/types";
 import { LOGICAL_OPERATOR } from "@nerve/types";
-import { getOperatorForPayload } from "@nerve/utils";
 // local imports
 import { FilterInstance } from "../store/rich-filters/filter";
 
@@ -33,16 +32,11 @@ export const buildTempFilterExpressionFromConditions = <
     },
   });
   for (const condition of conditions) {
-    const { operator, isNegation } = getOperatorForPayload(condition.operator);
-    tempFilterInstance.addCondition(
-      LOGICAL_OPERATOR.AND,
-      {
-        property: condition.property,
-        operator,
-        value: condition.value,
-      },
-      isNegation
-    );
+    tempFilterInstance.addCondition(LOGICAL_OPERATOR.AND, {
+      property: condition.property,
+      operator: condition.operator,
+      value: condition.value,
+    });
   }
   return tempExpression;
 };

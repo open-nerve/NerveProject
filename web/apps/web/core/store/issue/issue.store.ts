@@ -1,157 +1,132 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import { set, update } from "lodash-es";
-import { action, makeObservable, observable, runInAction } from "mobx";
-import { computedFn } from "mobx-utils";
-// types
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { Issue, IssueDetail } from "@nerve/api-client";
-// helpers
-import { getCurrentDateTimeInISO } from "@nerve/utils";
-import { rootStore } from "@/lib/store-context";
-export type IIssueStore = {
-  // observables
-  issuesMap: Record<string, Issue | IssueDetail>; // Record defines issue_id as key and Issue or IssueDetail as value
-  issuesIdentifierMap: Record<string, string>; // Record defines issue_identifier as key and issue_id as value
-  // actions
-  addIssue(issues: (Issue | IssueDetail)[]): void;
-  addIssueIdentifier(issueIdentifier: string, issueId: string): void;
-  updateIssue(issueId: string, issue: Partial<IssueDetail>): void;
-  removeIssue(issueId: string): void;
-  // helper methods
-  getIssueById(issueId: string): Issue | IssueDetail | undefined;
-  getIssueDetailById(issueId: string): IssueDetail | undefined;
-  getIssueIdByIdentifier(issueIdentifier: string): undefined | string;
-  getIssuesByIds(issueIds: string[], type: "archived" | "un-archived"): (Issue | IssueDetail)[]; // Record defines issue_id as key and Issue or IssueDetail as value
-};
+import { computed, makeObservable, observable, runInAction } from "mobx";
+import { ReconciledByKey } from "@/lib/reconciled";
+import { compareIssueTime } from "@/lib/issue-order";
+import type { ConfirmedIssueChange } from "@/lib/paged-groups";
+import type { IssueReadToken, IssueRootStore } from "./root.store";
 
-export class IssueStore implements IIssueStore {
-  // observables
-  issuesMap: Record<string, Issue | IssueDetail> = {};
-  issuesIdentifierMap: { [issue_identifier: string]: string } = {};
+type Entity = Issue | IssueDetail | null;
+export type IIssueStore = IssueStore;
 
-  constructor() {
-    makeObservable(this, {
-      // observable
-      issuesMap: observable,
-      issuesIdentifierMap: observable,
-      // actions
-      addIssue: action,
-      addIssueIdentifier: action,
-      updateIssue: action,
-      removeIssue: action,
-    });
+/** The sole full issue copy. null is reserved for a successful delete in this session. */
+export class IssueStore {
+  private readonly canonical = new ReconciledByKey<Entity>();
+  private readonly permissionProof = observable.map<string, number>();
+  readonly issuesIdentifierMap: Record<string, string> = {};
+  constructor(private readonly root: IssueRootStore) {
+    makeObservable(this, { issuesMap: computed, issuesIdentifierMap: observable });
   }
-
-  // actions
-  /**
-   * @description This method will add issues to the issuesMap
-   * @param {(Issue | IssueDetail)[]} issues
-   * @returns {void}
-   */
-  addIssue = (issues: (Issue | IssueDetail)[]) => {
-    if (issues && issues.length <= 0) return;
-    runInAction(() => {
-      issues.forEach((issue) => {
-        // add issue identifier to the issuesIdentifierMap
-        const projectIdentifier = rootStore.projectRoot.project.getProjectIdentifierById(issue?.project_id);
-        const workItemSequenceId = issue?.sequence_id;
-        const issueIdentifier = `${projectIdentifier}-${workItemSequenceId}`;
-        set(this.issuesIdentifierMap, issueIdentifier, issue.id);
-
-        if (!this.issuesMap[issue.id]) set(this.issuesMap, issue.id, issue);
-        else update(this.issuesMap, issue.id, (prevIssue) => ({ ...prevIssue, ...issue }));
-      });
-    });
+  get issuesMap(): Readonly<Record<string, Issue | IssueDetail>> {
+    return Object.freeze(
+      Object.fromEntries(
+        this.canonical.values().flatMap((issue) => (issue && this.getIssueById(issue.id) ? [[issue.id, issue]] : []))
+      )
+    );
+  }
+  private choose = (held: Entity | undefined, answer: Entity, keepDescription = true): Entity => {
+    if (held === null || answer === null) return null;
+    if (held && compareIssueTime(answer.updated_at, held.updated_at) < 0) return held;
+    const merged =
+      keepDescription && held && "description_html" in held && !("description_html" in answer)
+        ? { ...answer, description_html: held.description_html }
+        : { ...answer };
+    Object.freeze(merged.assignee_ids);
+    Object.freeze(merged.label_ids);
+    return Object.freeze(merged);
   };
-
-  /**
-   * @description This method will add issue_identifier to the issuesIdentifierMap
-   * @param issueIdentifier
-   * @param issueId
-   * @returns {void}
-   */
-  addIssueIdentifier = (issueIdentifier: string, issueId: string) => {
-    if (!issueIdentifier || !issueId) return;
+  acceptRead(answer: Issue | IssueDetail, token: IssueReadToken): void {
+    if (
+      !this.root.isReadCurrent(token, [answer.project_id], answer.workspace_id) ||
+      !this.root.canSeeIssue(answer) ||
+      !this.root.verification.canAccept(answer.id, token)
+    )
+      return;
+    const held = this.canonical.get(answer.id);
+    const heldCurrent =
+      !!held &&
+      this.root.permissionReads.current(this.permissionProof.get(answer.id) ?? 0, held.workspace_id, [held.project_id]);
+    if (held === null || (held && heldCurrent && compareIssueTime(answer.updated_at, held.updated_at) < 0)) return;
+    this.canonical.receive(answer.id, answer, (before, incoming) =>
+      this.choose(heldCurrent ? before : undefined, incoming, heldCurrent)
+    );
+    runInAction(() => this.permissionProof.set(answer.id, token.permission));
+    this.root.observeRead(held ?? undefined, answer);
+    this.root.verification.accept(answer.id, token);
+    const identifier = this.root.rootStore.projectRoot.project.getProjectIdentifierById(answer.project_id);
+    if (identifier) this.addIssueIdentifier(`${identifier}-${answer.sequence_id}`, answer.id);
+  }
+  confirmChange(change: ConfirmedIssueChange, permission?: number): void {
+    if (!this.root.active) return;
     runInAction(() => {
-      set(this.issuesIdentifierMap, issueIdentifier, issueId);
+      const held = this.canonical.get(change.id);
+      if (
+        change.after &&
+        held &&
+        this.root.permissionReads.current(this.permissionProof.get(change.id) ?? 0, held.workspace_id, [
+          held.project_id,
+        ]) &&
+        !this.root.permissionReads.current(permission ?? -1, change.after.workspace_id, [change.after.project_id])
+      )
+        return;
+      const selected = this.canonical.receive(change.id, change.after, this.choose);
+      // Publish content and its proof atomically; a rejected older answer keeps both.
+      if (change.after && selected !== held) this.permissionProof.set(change.id, permission ?? -1);
     });
+    if (change.after === null) this.root.verification.deleted(change.id);
+  }
+  /** Internal proof only: accessors below additionally enforce visibility and verification. */
+  held(issueId: string): Entity | undefined {
+    return this.canonical.get(issueId);
+  }
+  knownDescendants(parentID: string): Issue[] {
+    const ids = new Set([parentID]);
+    const found: Issue[] = [];
+    let more = true;
+    while (more) {
+      more = false;
+      for (const issue of this.canonical.values())
+        if (issue?.parent_id && ids.has(issue.parent_id) && !ids.has(issue.id)) {
+          ids.add(issue.id);
+          found.push(issue);
+          more = true;
+        }
+    }
+    return found;
+  }
+  getIssueById = (issueId: string): Issue | IssueDetail | undefined => {
+    const issue = this.canonical.get(issueId);
+    return issue &&
+      this.root.canSeeIssue(issue) &&
+      this.root.permissionReads.current(this.permissionProof.get(issueId) ?? 0, issue.workspace_id, [
+        issue.project_id,
+      ]) &&
+      !this.root.verification.isUncertain(issueId)
+      ? issue
+      : undefined;
   };
-
-  /**
-   * @description This method will update the issue in the issuesMap
-   * @param {string} issueId
-   * @param {Partial<IssueDetail>} issue
-   * @returns {void}
-   */
-  updateIssue = (issueId: string, issue: Partial<IssueDetail>) => {
-    if (!issue || !issueId || !this.issuesMap[issueId]) return;
-    runInAction(() => {
-      set(this.issuesMap, [issueId, "updated_at"], getCurrentDateTimeInISO());
-      Object.keys(issue).forEach((key) => {
-        set(this.issuesMap, [issueId, key], issue[key as keyof IssueDetail]);
-      });
-    });
-  };
-
-  /**
-   * @description This method will remove the issue from the issuesMap
-   * @param {string} issueId
-   * @returns {void}
-   */
-  removeIssue = (issueId: string) => {
-    if (!issueId || !this.issuesMap[issueId]) return;
-    runInAction(() => {
-      delete this.issuesMap[issueId];
-    });
-  };
-
-  // helper methods
-  /**
-   * @description This method will return the issue from the issuesMap
-   * @param {string} issueId
-   * @returns {Issue | IssueDetail | undefined}
-   */
-  getIssueById = computedFn((issueId: string): Issue | IssueDetail | undefined => {
-    if (!issueId || !this.issuesMap[issueId]) return undefined;
-    return this.issuesMap[issueId];
-  });
-
-  getIssueDetailById = computedFn((issueId: string): IssueDetail | undefined => {
+  getIssueDetailById = (issueId: string): IssueDetail | undefined => {
     const issue = this.getIssueById(issueId);
     return issue && "description_html" in issue ? issue : undefined;
-  });
-
-  /**
-   * @description This method will return the issue_id from the issuesIdentifierMap
-   * @param {string} issueIdentifier
-   * @returns {string | undefined}
-   */
-  getIssueIdByIdentifier = computedFn((issueIdentifier: string) => {
-    if (!issueIdentifier || !this.issuesIdentifierMap[issueIdentifier]) return undefined;
-    return this.issuesIdentifierMap[issueIdentifier];
-  });
-
-  /**
-   * @description This method will return the issues from the issuesMap
-   * @param {string[]} issueIds
-   * @param {boolean} archivedIssues
-   * @returns {Record<string, Issue | IssueDetail> | undefined}
-   */
-  getIssuesByIds = computedFn((issueIds: string[], type: "archived" | "un-archived") => {
-    if (!issueIds || issueIds.length <= 0) return [];
-    const filteredIssues: (Issue | IssueDetail)[] = [];
-    Object.values(issueIds).forEach((issueId) => {
-      // if type is archived then check archived_at is not null
-      // if type is un-archived then check archived_at is null
-      const issue = this.issuesMap[issueId];
-      if (issue && ((type === "archived" && issue.archived_at) || (type === "un-archived" && !issue?.archived_at))) {
-        filteredIssues.push(issue);
-      }
+  };
+  refreshAuthoritative = async (
+    issueId: string,
+    options?: { afterWrite?: boolean }
+  ): Promise<IssueDetail | undefined> => {
+    const answer = await this.root.verification.refresh(issueId, true, options?.afterWrite);
+    if (options?.afterWrite) this.root.assertActive();
+    return answer;
+  };
+  addIssueIdentifier = (identifier: string, id: string): void => {
+    if (identifier && id)
+      runInAction(() => {
+        this.issuesIdentifierMap[identifier] = id;
+      });
+  };
+  getIssueIdByIdentifier = (identifier: string): string | undefined => this.issuesIdentifierMap[identifier];
+  getIssuesByIds = (ids: string[], type: "archived" | "un-archived"): (Issue | IssueDetail)[] =>
+    ids.flatMap((id) => {
+      const issue = this.getIssueById(id);
+      return issue && (type === "archived" ? !!issue.archived_at : !issue.archived_at) ? [issue] : [];
     });
-    return filteredIssues;
-  });
 }

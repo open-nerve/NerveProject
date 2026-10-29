@@ -50,7 +50,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
   const [projectIdentifier, sequence_id] = workItem.split("-");
 
   // fetching issue details
-  const { data, isLoading, error } = useSWR<Issue, Error>(
+  const { data, isLoading, error } = useSWR<Issue | undefined, Error>(
     `ISSUE_DETAIL_${workspaceSlug}_${projectIdentifier}_${sequence_id}`,
     () => fetchIssueWithIdentifier(workspaceSlug, projectIdentifier, sequence_id)
   );
@@ -78,7 +78,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
     return () => window.removeEventListener("resize", handleToggleIssueDetailSidebar);
   }, [issueDetailSidebarCollapsed, toggleIssueDetailSidebar]);
 
-  if (error && !isLoading) {
+  if ((error || data === undefined) && !isLoading) {
     return (
       <EmptyState
         image={resolvedTheme === "dark" ? emptyIssueDark : emptyIssueLight}

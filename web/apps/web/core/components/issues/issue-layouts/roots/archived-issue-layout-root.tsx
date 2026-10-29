@@ -7,7 +7,11 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-import useSWR from "swr";
+import { useSessionSWR } from "@/lib/use-session-swr";
+import { useUserPermissions } from "@/hooks/store/user";
+import { EUserPermissions } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { errorMessageKey } from "@/lib/error-messages";
 // nerve imports
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 import { EIssuesStoreType } from "@nerve/types";
@@ -29,15 +33,19 @@ export const ArchivedIssueLayoutRoot = observer(function ArchivedIssueLayoutRoot
   // derived values
   const workItemFilters = projectId ? issuesFilter?.getIssueFilters(projectId) : undefined;
 
-  useSWR(
-    workspaceSlug && projectId ? `ARCHIVED_ISSUES_${workspaceSlug}_${projectId}` : null,
-    async () => {
-      if (workspaceSlug && projectId) {
-        await issuesFilter?.fetchFilters(workspaceSlug, projectId);
-      }
-    },
-    { revalidateIfStale: false, revalidateOnFocus: false }
+  const permission = useUserPermissions();
+  const role =
+    workspaceSlug && projectId
+      ? permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId)
+      : undefined;
+  const allowed = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
+  const { t } = useTranslation();
+  const { error } = useSessionSWR(
+    allowed ? ["ARCHIVED_ISSUE_FILTERS", workspaceSlug, projectId] : null,
+    (slug, project) => issuesFilter.fetchFilters(slug, project)
   );
+  if (error) return <div role="alert">{t(errorMessageKey(error))}</div>;
+  if (!allowed) return null;
 
   if (!workspaceSlug || !projectId || !workItemFilters) return <></>;
   return (
@@ -47,7 +55,9 @@ export const ArchivedIssueLayoutRoot = observer(function ArchivedIssueLayoutRoot
         entityId={projectId}
         filtersToShowByLayout={ISSUE_DISPLAY_FILTERS_BY_PAGE.archived_issues.filters}
         initialWorkItemFilters={workItemFilters}
-        updateFilters={issuesFilter?.updateFilterExpression.bind(issuesFilter, workspaceSlug, projectId)}
+        updateFilters={(expression) => {
+          void issuesFilter.updateFilterExpression(workspaceSlug, projectId, expression).catch(() => {});
+        }}
         projectId={projectId}
         workspaceSlug={workspaceSlug}
       >

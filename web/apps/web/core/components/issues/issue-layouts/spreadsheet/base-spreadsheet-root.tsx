@@ -5,11 +5,11 @@
  */
 
 import type { FC } from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
-import { ALL_ISSUES, EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import type { EIssuesStoreType, IIssueDisplayFilterOptions } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 // hooks
@@ -17,6 +17,8 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
+import { useIssueListRefresh, IssueListRetry } from "@/hooks/use-issue-list-refresh";
+import { useIssueListMount } from "@/hooks/use-issue-list-mount";
 // local imports
 import { IssueLayoutHOC } from "../issue-layout-HOC";
 import type { IQuickActionProps, TRenderQuickActions } from "../list/list-view-types";
@@ -56,9 +58,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
     EUserPermissionsLevel.PROJECT
   );
 
-  useEffect(() => {
-    fetchIssues("init-loader", { canGroup: false, perPageCount: 100 }, viewId);
-  }, [fetchIssues, storeType, viewId]);
+  useIssueListMount(storeType, issues.rootIssueStore, fetchIssues, { limit: 100 }, viewId);
 
   const canEditProperties = useCallback(
     (projectId: string | undefined) => {
@@ -70,14 +70,15 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
     [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed]
   );
 
-  const issueIds = issues.groupedIssueIds?.[ALL_ISSUES] ?? [];
-  const nextPageResults = issues.getPaginationData(ALL_ISSUES, undefined)?.nextPageResults;
+  const staleRefresh = useIssueListRefresh(issues.currentList, [{ group: "" }]);
+  const issueIds = issues.getIssueIds() ?? [];
+  const nextCursor = issues.getPaginationData(undefined)?.nextCursor;
 
   const handleDisplayFiltersUpdate = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      updateFilters(projectId ?? "", EIssueFilterType.DISPLAY_FILTERS, {
+      void updateFilters(projectId ?? "", EIssueFilterType.DISPLAY_FILTERS, {
         ...updatedDisplayFilter,
-      });
+      }).catch(() => {});
     },
     [projectId, updateFilters]
   );
@@ -104,6 +105,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
 
   return (
     <IssueLayoutHOC layout={EIssueLayoutTypes.SPREADSHEET}>
+      <IssueListRetry {...staleRefresh} />
       <SpreadsheetView
         displayProperties={issuesFilter.issueFilters?.displayProperties ?? {}}
         displayFilters={issuesFilter.issueFilters?.displayFilters ?? {}}
@@ -115,8 +117,10 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
         quickAddCallback={createIssue}
         enableQuickCreateIssue={enableQuickAdd}
         disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
-        canLoadMoreIssues={!!nextPageResults}
-        loadMoreIssues={fetchNextIssues}
+        canLoadMoreIssues={!!nextCursor}
+        loadMoreIssues={() => {
+          void fetchNextIssues().catch(() => {});
+        }}
       />
     </IssueLayoutHOC>
   );

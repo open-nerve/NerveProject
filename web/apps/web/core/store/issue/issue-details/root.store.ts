@@ -6,7 +6,7 @@
 
 import type { IssueDetail as GeneratedIssueDetail } from "@nerve/api-client";
 
-import type { TLegacyIssueUpdateRequest } from "@nerve/types";
+import type { IssueUpdate } from "@nerve/api-client";
 import { action, computed, makeObservable, observable } from "mobx";
 // types
 import type {
@@ -224,7 +224,7 @@ export class IssueDetail implements IIssueDetail {
     this.issue.fetchIssue(workspaceSlug, projectId, issueId);
   fetchIssueWithIdentifier = async (workspaceSlug: string, projectIdentifier: string, sequenceId: string) =>
     this.issue.fetchIssueWithIdentifier(workspaceSlug, projectIdentifier, sequenceId);
-  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) =>
+  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) =>
     this.issue.updateIssue(workspaceSlug, projectId, issueId, data);
   removeIssue = async (workspaceSlug: string, projectId: string, issueId: string) =>
     this.issue.removeIssue(workspaceSlug, projectId, issueId);

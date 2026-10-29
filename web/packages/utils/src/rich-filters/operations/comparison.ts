@@ -36,8 +36,7 @@ const createConditionComparable = <P extends TFilterProperty>(condition: TFilter
 });
 
 /**
- * Helper function to create comparable children for AND/OR groups.
- * This eliminates code duplication between AND and OR group processing.
+ * Helper function to create comparable children for AND groups.
  */
 const createComparableChildren = <P extends TFilterProperty>(
   children: TFilterExpression<P>[],

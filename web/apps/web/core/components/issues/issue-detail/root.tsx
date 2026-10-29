@@ -4,13 +4,14 @@
  * See the LICENSE file for details.
  */
 
-import type { TLegacyIssueUpdateRequest } from "@nerve/types";
+import type { IssueUpdate } from "@nerve/api-client";
 import { useMemo } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { followInSession } from "@/lib/in-session";
 // assets
 import emptyIssue from "@/app/assets/empty-state/issue.svg?url";
 // components
@@ -25,9 +26,9 @@ import { IssuePeekOverview } from "../peek-overview";
 import { IssueMainContent } from "./main-content";
 import { IssueDetailsSidebar } from "./sidebar";
 
-export type TIssueOperations = {
+export type TIssueOperations<TUpdate = IssueUpdate> = {
   fetch: (workspaceSlug: string, projectId: string, issueId: string, loader?: boolean) => Promise<void>;
-  update: (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) => Promise<void>;
+  update: (workspaceSlug: string, projectId: string, issueId: string, data: TUpdate) => Promise<void>;
   restore?: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 };
 
@@ -61,17 +62,15 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
           console.error("Error fetching the parent issue:", error);
         }
       },
-      update: async (workspaceSlug: string, projectId: string, issueId: string, data: TLegacyIssueUpdateRequest) => {
-        try {
-          await updateIssue(workspaceSlug, projectId, issueId, data);
-        } catch (error) {
-          console.log("Error in updating issue:", error);
-          setToast({
-            title: t("common.error.label"),
-            type: TOAST_TYPE.ERROR,
-            message: t("entity.update.failed", { entity: t("issue.label") }),
-          });
-        }
+      update: async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => {
+        await followInSession(() => updateIssue(workspaceSlug, projectId, issueId, data), {
+          failed: () =>
+            setToast({
+              title: t("common.error.label"),
+              type: TOAST_TYPE.ERROR,
+              message: t("entity.update.failed", { entity: t("issue.label") }),
+            }),
+        });
       },
     }),
     [fetchIssue, updateIssue, t]

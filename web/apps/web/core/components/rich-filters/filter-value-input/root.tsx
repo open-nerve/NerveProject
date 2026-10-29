@@ -17,7 +17,6 @@ import type {
   TMultiSelectFilterFieldConfig,
   TDateFilterFieldConfig,
   TDateRangeFilterFieldConfig,
-  TFilterConditionNodeForDisplay,
 } from "@nerve/types";
 import { FILTER_FIELD_TYPE } from "@nerve/types";
 import type { TFilterValueInputProps } from "../shared";
@@ -36,7 +35,7 @@ export const FilterValueInput = observer(function FilterValueInput<P extends TFi
     return (
       <SingleSelectFilterValueInput<P>
         config={filterFieldConfig as TSingleSelectFilterFieldConfig<string>}
-        condition={condition as TFilterConditionNodeForDisplay<P, string>}
+        condition={condition as TFilterConditionNode<P, string>}
         isDisabled={isDisabled}
         onChange={(value) => onChange(value as SingleOrArray<V>)}
       />
@@ -60,7 +59,7 @@ export const FilterValueInput = observer(function FilterValueInput<P extends TFi
     return (
       <SingleDateFilterValueInput<P>
         config={filterFieldConfig as TDateFilterFieldConfig<string>}
-        condition={condition as TFilterConditionNodeForDisplay<P, string>}
+        condition={condition as TFilterConditionNode<P, string>}
         isDisabled={isDisabled}
         onChange={(value) => onChange(value as SingleOrArray<V>)}
       />
@@ -72,7 +71,7 @@ export const FilterValueInput = observer(function FilterValueInput<P extends TFi
     return (
       <DateRangeFilterValueInput<P>
         config={filterFieldConfig as TDateRangeFilterFieldConfig<string>}
-        condition={condition as TFilterConditionNodeForDisplay<P, string>}
+        condition={condition as TFilterConditionNode<P, string>}
         isDisabled={isDisabled}
         onChange={(value) => onChange(value as SingleOrArray<V>)}
       />

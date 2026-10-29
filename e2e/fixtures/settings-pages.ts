@@ -61,20 +61,20 @@ export async function sentTo(
 }
 
 /**
- * Holds from page nerve's answer to the next request of method to path that page sends: the request reaches nerve
- * at once, and page gets the answer only when the function returned is called. Later requests pass.
+ * Holds from page nerve's answers to the next count requests of method to path: each request reaches nerve at once,
+ * and page gets the answer only when the function returned is called. Later requests pass.
  */
-export async function holdAnswer(page: Page, method: string, path: string): Promise<() => Promise<void>> {
+export async function holdAnswer(page: Page, method: string, path: string, count = 1): Promise<() => Promise<void>> {
   const released = deferred();
-  let held = false;
+  let held = 0;
   await page.route(
     (url) => url.pathname === path,
     async (route: Route) => {
-      if (held || route.request().method() !== method) {
+      if (held >= count || route.request().method() !== method) {
         await route.fallback();
         return;
       }
-      held = true;
+      held++;
       const response = await route.fetch();
       await released.promise;
       await route.fulfill({ response });

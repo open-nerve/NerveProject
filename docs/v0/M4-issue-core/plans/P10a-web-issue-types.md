@@ -1,5 +1,7 @@
 # M4/P10a 工作项换型与列表收窄实施计划
 
+> 集成更新（2026-10-29）：全部 Task 和最终交付 CI 已完成；已授权 --no-ff 合并 main a06e3f70，main CI 全绿、证据归档清理完成，见 [review §10](../reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)。原执行授权/待提交叙述保留历史。
+
 > **执行者：** 负责人已授权按通过预检的 spec/plan 实施 P10a，使用 `superpowers:subagent-driven-development` 或 `superpowers:executing-plans` 逐 Task 执行。准备期仅文档及静态预检的结论保持历史原样；T1–T8已独评精确提交，实施与终审完成、集成待办；最终文稿提交后准确HEAD CI以交付回执核验，不提前关闭阶段验收。
 
 **负责人裁定：** P10A-S1 已选 A，见[报告](../../../reviews/re-10-M4P10预检审核.md)。只删工作项列表，保留领域自身加载；T8 按 spec§2.4 验收拆除边界，M6/M7 自身页面完整可用与零失败归所属里程碑。文档同步已通过独立定向静态预检，无开放发现；T1–T8已按实施授权完成Task级验证并提交；当前接续T9，见[实施记录](../reviews/P10a-web-issue-types-review.md)。
@@ -208,7 +210,7 @@ T6 关系资源补充（R16，root 同域局部裁定，2026-10-28）：生成 c
 - [x] 前端改动清单写明实际删除范围及领域自身尚未接通的两项可见代价；M6接迭代/模块列表恢复及自身详情/统计/归档目录验收，M7接项目/工作区视图列表及自身页面验收。收集箱create为`Partial<IssueDetail>`、响应`Issue | IssueDetail`、updateIssue为独立旧请求输入`Partial<IssueDetail> & { skip_activity?: string }`、metadata保持所属DTO，旧路径until M7。以上连同逐请求原件和完整可用/零失败责任写入review§6及设计§13.2；接收方接通时替换旧接口、删除过渡记录、核真实有效实体。不预建最终M5–M8 closeout，不关闭输入handoff总status。
 - [x] 设计§15只写“实施与终审完成、集成待办”，M4§14和总体§9.4仍开放；阶段main集成完成后再有后续真实回执，不在本Task自行合并。
 - [x] 纯文档静态路径/链接/任务覆盖/时间态核对完成，C-r1-01经C-r2复审ADDRESSED/Approved、无新增；具名回执见review§10。
-- [ ] root精确提交 `docs(M4/P10a): 记录换型终审证据与后续数据层交接` 后核准确最终文稿HEAD CI，以X/final-delivery-receipt.json记录SHA/run/attempt/ref/jobs/raw hash；本文提交时事件尚未发生，必须该HEAD CI全绿才结束任务，不能以已核产品CI代替。
+- [x] root已提交最终文稿 d1a19e78，并核其 CI 40719009817 attempt 1 三任务全绿；X/final-delivery-receipt.json 已记录并随授权集成归档，见 review§10。
 
 本轮代码终审：A-01跨项目目录多预取、A-02旧列表乐观分布更新死链均局部修复并独评Approved，九路径精确提交5f7085bce4aa5103a0133fa982847d274efa6e47；C原22全文/guard delta无finding；r1已审14增量，唯一C-r1-01本轮已修、C-r2 Approved；准确产品CI run40712479050 attempt1三job成功，文稿提交/最终交付HEAD CI仍待。最后本地F及F1–3六web差异桥、F4–7同源见review§8，不拿历史检查点代替。
 

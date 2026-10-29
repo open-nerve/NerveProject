@@ -33,7 +33,7 @@ import type { TRenderQuickActions } from "./list-view-types";
 
 interface IssueBlockProps {
   issueId: string;
-  issuesMap: Record<string, Issue | IssueDetail>;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   groupId: string;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;

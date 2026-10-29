@@ -87,6 +87,7 @@ export const WORK_ITEM_FILTER_PROPERTY_KEYS = [
   "target_date",
   "assignee_id",
   "mention_id",
+  "subscriber_id",
   "created_by_id",
   "label_id",
   "state_id",
@@ -179,14 +180,6 @@ export interface IWorkspaceViewProps {
   rich_filters: TWorkItemFilterExpression;
   display_filters: IIssueDisplayFilterOptions | undefined;
   display_properties: IIssueDisplayProperties;
-}
-
-export interface IssuePaginationOptions {
-  canGroup: boolean;
-  perPageCount: number;
-  before?: string;
-  after?: string;
-  groupedBy?: TIssueGroupByOptions;
 }
 
 export type TSpreadsheetColumn = FC<{

@@ -7,30 +7,110 @@
 import { isEmpty } from "lodash-es";
 // nerve constants
 import type { EIssueFilterType } from "@nerve/constants";
-import { EIssueGroupByToServerOptions, EServerGroupByToFilterOptions } from "@nerve/constants";
 import type {
   EIssuesStoreType,
   IIssueDisplayFilterOptions,
   IIssueDisplayProperties,
   IIssueFilters,
   IIssueFiltersResponse,
-  IssuePaginationOptions,
   TIssueKanbanFilters,
   TIssueParams,
   TStaticViewTypes,
-  TWorkItemFilterExpression,
 } from "@nerve/types";
 // helpers
 import { getComputedDisplayFilters, getComputedDisplayProperties } from "@nerve/utils";
 // lib
 import { storage } from "@/lib/local-storage";
 
+const strings = (value: unknown): string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string") ? value : [];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+const displayGroups = new Set([
+  "state",
+  "priority",
+  "labels",
+  "created_by",
+  "state_detail.group",
+  "project",
+  "assignees",
+  "target_date",
+]);
+const displayOrders = new Set([
+  "-created_at",
+  "created_at",
+  "updated_at",
+  "-updated_at",
+  "priority",
+  "-priority",
+  "sort_order",
+  "state__name",
+  "-state__name",
+  "assignees__first_name",
+  "-assignees__first_name",
+  "labels__name",
+  "-labels__name",
+  "target_date",
+  "-target_date",
+  "start_date",
+  "-start_date",
+  "link_count",
+  "-link_count",
+  "sub_issues_count",
+  "-sub_issues_count",
+]);
+const displayPropertyNames = [
+  "assignee",
+  "start_date",
+  "due_date",
+  "labels",
+  "key",
+  "priority",
+  "state",
+  "sub_issue_count",
+  "link",
+  "created_on",
+  "updated_on",
+] as const;
+
+function localDisplayFilters(value: unknown): IIssueDisplayFilterOptions {
+  if (!isRecord(value)) return {};
+  const result: IIssueDisplayFilterOptions = {};
+  if (typeof value.layout === "string" && ["list", "kanban", "calendar", "spreadsheet"].includes(value.layout))
+    result.layout = value.layout;
+  if (typeof value.order_by === "string" && displayOrders.has(value.order_by))
+    result.order_by = value.order_by as IIssueDisplayFilterOptions["order_by"];
+  for (const field of ["group_by", "sub_group_by"] as const) {
+    const group = value[field];
+    if (group === null || (typeof group === "string" && displayGroups.has(group)))
+      result[field] = group as IIssueDisplayFilterOptions[typeof field];
+  }
+  for (const field of ["show_empty_groups", "sub_issue"] as const)
+    if (typeof value[field] === "boolean") result[field] = value[field];
+  if (isRecord(value.calendar)) {
+    result.calendar = {};
+    if (value.calendar.layout === "month" || value.calendar.layout === "week")
+      result.calendar.layout = value.calendar.layout;
+    if (typeof value.calendar.show_weekends === "boolean") result.calendar.show_weekends = value.calendar.show_weekends;
+  }
+  return result;
+}
+function localDisplayProperties(value: unknown): IIssueDisplayProperties {
+  if (!isRecord(value)) return {};
+  const result: IIssueDisplayProperties = {};
+  for (const field of displayPropertyNames) if (typeof value[field] === "boolean") result[field] = value[field];
+  return result;
+}
+
 interface ILocalStoreIssueFilters {
   key: EIssuesStoreType;
   workspaceSlug: string;
   viewId: string | undefined; // It can be projectId, moduleId, cycleId, projectViewId
   userId: string | undefined;
-  filters: IIssueFilters;
+  filters: Partial<
+    IIssueFiltersResponse & { kanban_filters: TIssueKanbanFilters; richFilters: IIssueFiltersResponse["rich_filters"] }
+  >;
 }
 
 export interface IBaseIssueFilterStore {
@@ -42,11 +122,6 @@ export interface IBaseIssueFilterStore {
 
 export interface IIssueFilterHelperStore {
   computedIssueFilters(filters: IIssueFilters): IIssueFilters;
-  computedFilteredParams(
-    richFilters: TWorkItemFilterExpression,
-    displayFilters: IIssueDisplayFilterOptions | undefined,
-    acceptableParamsByLayout: TIssueParams[]
-  ): Partial<Record<TIssueParams, string | boolean>>;
   getFilterConditionBasedOnViews: (
     currentUserId: string | undefined,
     type: TStaticViewTypes
@@ -70,46 +145,6 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
     displayProperties: isEmpty(filters?.displayProperties) ? undefined : filters?.displayProperties,
     kanbanFilters: isEmpty(filters?.kanbanFilters) ? undefined : filters?.kanbanFilters,
   });
-
-  /**
-   * @description This method is used to convert the filters array params to string params
-   * @param {TWorkItemFilterExpression} richFilters
-   * @param {IIssueDisplayFilterOptions} displayFilters
-   * @param {string[]} acceptableParamsByLayout
-   * @returns {Partial<Record<TIssueParams, string | boolean>>}
-   */
-  computedFilteredParams = (
-    richFilters: TWorkItemFilterExpression,
-    displayFilters: IIssueDisplayFilterOptions | undefined,
-    acceptableParamsByLayout: TIssueParams[]
-  ): Partial<Record<TIssueParams, string | boolean>> => {
-    const computedDisplayFilters: Partial<Record<TIssueParams, undefined | string[] | boolean | string>> = {
-      group_by: displayFilters?.group_by ? EIssueGroupByToServerOptions[displayFilters.group_by] : undefined,
-      sub_group_by: displayFilters?.sub_group_by
-        ? EIssueGroupByToServerOptions[displayFilters.sub_group_by]
-        : undefined,
-      order_by: displayFilters?.order_by || undefined,
-      sub_issue: displayFilters?.sub_issue ?? true,
-    };
-
-    const issueFiltersParams: Partial<Record<TIssueParams, boolean | string>> = {};
-    Object.keys(computedDisplayFilters).forEach((key) => {
-      const _key = key as TIssueParams;
-      const _value: string | boolean | string[] | undefined = computedDisplayFilters[_key];
-      const nonEmptyArrayValue = Array.isArray(_value) && _value.length === 0 ? undefined : _value;
-      if (nonEmptyArrayValue != undefined && acceptableParamsByLayout.includes(_key))
-        issueFiltersParams[_key] = Array.isArray(nonEmptyArrayValue)
-          ? nonEmptyArrayValue.join(",")
-          : nonEmptyArrayValue;
-    });
-
-    // work item filters
-    if (richFilters) issueFiltersParams.filters = JSON.stringify(richFilters);
-
-    if (displayFilters?.layout) issueFiltersParams.layout = displayFilters?.layout;
-
-    return issueFiltersParams;
-  };
 
   /**
    * @description This method is used to get the filter conditions based on the views
@@ -161,8 +196,22 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
 
   handleIssuesLocalFilters = {
     fetchFiltersFromStorage: () => {
-      const _filters = storage.get("issue_local_filters");
-      return _filters ? JSON.parse(_filters) : [];
+      try {
+        const raw = storage.get("issue_local_filters");
+        const parsed: unknown = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(
+          (entry): entry is ILocalStoreIssueFilters =>
+            entry !== null &&
+            typeof entry === "object" &&
+            !Array.isArray(entry) &&
+            entry.filters !== null &&
+            typeof entry.filters === "object" &&
+            !Array.isArray(entry.filters)
+        );
+      } catch {
+        return [];
+      }
     },
 
     get: (
@@ -171,6 +220,7 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
       viewId: string | undefined, // It can be projectId, moduleId, cycleId, projectViewId
       userId: string | undefined
     ) => {
+      if (!userId) return undefined;
       const storageFilters = this.handleIssuesLocalFilters.fetchFiltersFromStorage();
       const currentFilterIndex = storageFilters.findIndex(
         (filter: ILocalStoreIssueFilters) =>
@@ -179,9 +229,26 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
           filter.viewId === viewId &&
           filter.userId === userId
       );
-      if (!currentFilterIndex && currentFilterIndex.length < 0) return undefined;
-
-      return storageFilters[currentFilterIndex]?.filters || {};
+      const entry = storageFilters[currentFilterIndex];
+      if (!entry) return undefined;
+      if ("richFilters" in entry.filters) {
+        const { richFilters, ...rest } = entry.filters;
+        entry.filters = { ...rest, rich_filters: rest.rich_filters ?? richFilters };
+        try {
+          storage.set("issue_local_filters", JSON.stringify(storageFilters));
+        } catch {
+          /* storage unavailable */
+        }
+      }
+      const kanban = entry.filters.kanban_filters;
+      return {
+        ...entry.filters,
+        display_filters: localDisplayFilters(entry.filters.display_filters),
+        display_properties: localDisplayProperties(entry.filters.display_properties),
+        ...(kanban
+          ? { kanban_filters: { group_by: strings(kanban.group_by), sub_group_by: strings(kanban.sub_group_by) } }
+          : {}),
+      };
     },
 
     set: (
@@ -192,6 +259,7 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
       userId: string | undefined,
       filters: Partial<IIssueFiltersResponse & { kanban_filters: TIssueKanbanFilters }>
     ) => {
+      if (!userId) return;
       const storageFilters = this.handleIssuesLocalFilters.fetchFiltersFromStorage();
       const currentFilterIndex = storageFilters.findIndex(
         (filter: ILocalStoreIssueFilters) =>
@@ -201,6 +269,11 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
           filter.userId === userId
       );
 
+      const existing = storageFilters[currentFilterIndex];
+      if (existing && "richFilters" in existing.filters) {
+        const { richFilters, ...rest } = existing.filters;
+        existing.filters = { ...rest, rich_filters: rest.rich_filters ?? richFilters };
+      }
       if (currentFilterIndex < 0)
         storageFilters.push({
           key: currentView,
@@ -218,7 +291,11 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
           },
         };
       // All group_by "filters" are stored in a single array, will cause inconsistency in case of duplicated values
-      storage.set("issue_local_filters", JSON.stringify(storageFilters));
+      try {
+        storage.set("issue_local_filters", JSON.stringify(storageFilters));
+      } catch {
+        /* storage unavailable */
+      }
     },
   };
 
@@ -236,78 +313,5 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
     );
   };
 
-  /**
-   * This Method returns true if the display properties changed requires a server side update
-   * @param displayFilters
-   * @returns
-   */
-  getShouldClearIssues = (displayFilters: IIssueDisplayFilterOptions) => {
-    const NON_SERVER_DISPLAY_FILTERS = ["layout"];
-    const displayFilterKeys = Object.keys(displayFilters);
-
-    return NON_SERVER_DISPLAY_FILTERS.some((serverDisplayfilter: string) =>
-      displayFilterKeys.includes(serverDisplayfilter)
-    );
-  };
-
-  /**
-   * This Method is used to construct the url params along with paginated values
-   * @param filterParams params generated from filters
-   * @param options pagination options
-   * @param cursor cursor if exists
-   * @param groupId groupId if to fetch By group
-   * @param subGroupId groupId if to fetch By sub group
-   * @returns
-   */
-  getPaginationParams(
-    filterParams: Partial<Record<TIssueParams, string | boolean>> | undefined,
-    options: IssuePaginationOptions,
-    cursor: string | undefined,
-    groupId?: string,
-    subGroupId?: string
-  ) {
-    // if cursor exists, use the cursor. If it doesn't exist construct the cursor based on per page count
-    const pageCursor = cursor ? cursor : groupId ? `${options.perPageCount}:1:0` : `${options.perPageCount}:0:0`;
-
-    // pagination params
-    const paginationParams: Partial<Record<TIssueParams, string | boolean>> = {
-      ...filterParams,
-      cursor: pageCursor,
-      per_page: options.perPageCount.toString(),
-    };
-
-    // If group by is specifically sent through options, like that for calendar layout, use that to group
-    if (options.groupedBy) {
-      paginationParams.group_by = options.groupedBy;
-    }
-
-    // If before and after dates are sent from option to filter by then, add them to filter the options
-    if (options.after && options.before) {
-      paginationParams["target_date"] = `${options.after};after,${options.before};before`;
-    }
-
-    // If groupId is passed down, add a filter param for that group Id
-    if (groupId) {
-      const groupBy = paginationParams["group_by"] as EIssueGroupByToServerOptions | undefined;
-      delete paginationParams["group_by"];
-
-      if (groupBy) {
-        const groupByFilterOption = EServerGroupByToFilterOptions[groupBy];
-        paginationParams[groupByFilterOption] = groupId;
-      }
-    }
-
-    // If subGroupId is passed down, add a filter param for that subGroup Id
-    if (subGroupId) {
-      const subGroupBy = paginationParams["sub_group_by"] as EIssueGroupByToServerOptions | undefined;
-      delete paginationParams["sub_group_by"];
-
-      if (subGroupBy) {
-        const subGroupByFilterOption = EServerGroupByToFilterOptions[subGroupBy];
-        paginationParams[subGroupByFilterOption] = subGroupId;
-      }
-    }
-
-    return paginationParams;
-  }
+  getShouldClearIssues = (display: IIssueDisplayFilterOptions) => Object.hasOwn(display, "layout");
 }

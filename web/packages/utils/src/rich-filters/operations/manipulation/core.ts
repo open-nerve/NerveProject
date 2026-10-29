@@ -85,14 +85,10 @@ export const updateNodeInExpression = <P extends TFilterProperty>(
 /**
  * Unwraps a group if it meets the unwrapping criteria, otherwise returns the group.
  * @param group - The group node to potentially unwrap
- * @param preserveNotGroups - Whether to preserve NOT groups even with single children
  * @returns The unwrapped child or the original group
  */
-export const unwrapGroupIfNeeded = <P extends TFilterProperty>(
-  group: TFilterGroupNode<P>,
-  preserveNotGroups = true
-) => {
-  if (shouldUnwrapGroup(group, preserveNotGroups)) {
+export const unwrapGroupIfNeeded = <P extends TFilterProperty>(group: TFilterGroupNode<P>) => {
+  if (shouldUnwrapGroup(group)) {
     const children = getGroupChildren(group);
     return children[0];
   }

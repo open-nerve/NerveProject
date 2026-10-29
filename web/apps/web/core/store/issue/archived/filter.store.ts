@@ -7,7 +7,6 @@
 import { isEmpty, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 // base class
-import { computedFn } from "mobx-utils";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EIssueFilterType } from "@nerve/constants";
 import type {
@@ -15,13 +14,11 @@ import type {
   IIssueDisplayProperties,
   TIssueKanbanFilters,
   IIssueFilters,
-  TIssueParams,
-  IssuePaginationOptions,
   TWorkItemFilterExpression,
   TSupportedFilterForUpdate,
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
-import { handleIssueQueryParamsByLayout } from "@nerve/utils";
+import { toFilterExpression, toProjectFilters } from "@/lib/issue-filters";
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
 import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
 // types
@@ -29,13 +26,6 @@ import type { IIssueRootStore } from "../root.store";
 
 export interface IArchivedIssuesFilter extends IBaseIssueFilterStore {
   //helper actions
-  getFilterParams: (
-    options: IssuePaginationOptions,
-    projectId: string,
-    cursor: string | undefined,
-    groupId: string | undefined,
-    subGroupId: string | undefined
-  ) => Partial<Record<TIssueParams, string | boolean>>;
   getIssueFilters(projectId: string): IIssueFilters | undefined;
   // action
   fetchFilters: (workspaceSlug: string, projectId: string) => Promise<void>;
@@ -91,47 +81,23 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
     return _filters;
   }
 
-  getAppliedFilters(projectId: string) {
-    const userFilters = this.getIssueFilters(projectId);
-    if (!userFilters) return undefined;
-
-    const filteredParams = handleIssueQueryParamsByLayout(userFilters?.displayFilters?.layout, "issues");
-    if (!filteredParams) return undefined;
-
-    const filteredRouteParams: Partial<Record<TIssueParams, string | boolean>> = this.computedFilteredParams(
-      userFilters?.richFilters,
-      userFilters?.displayFilters,
-      filteredParams
+  fetchFilters = async (workspaceSlug: string, projectId: string) => {
+    const _filters = this.handleIssuesLocalFilters.get(
+      EIssuesStoreType.ARCHIVED,
+      workspaceSlug,
+      projectId,
+      this.rootIssueStore.currentUserId
     );
 
-    return filteredRouteParams;
-  }
-
-  getFilterParams = computedFn(
-    (
-      options: IssuePaginationOptions,
-      projectId: string,
-      cursor: string | undefined,
-      groupId: string | undefined,
-      subGroupId: string | undefined
-    ) => {
-      const filterParams = this.getAppliedFilters(projectId);
-
-      const paginationParams = this.getPaginationParams(filterParams, options, cursor, groupId, subGroupId);
-      return paginationParams;
-    }
-  );
-
-  fetchFilters = async (workspaceSlug: string, projectId: string) => {
-    const _filters = this.handleIssuesLocalFilters.get(EIssuesStoreType.ARCHIVED, workspaceSlug, projectId, undefined);
-
-    const richFilters: TWorkItemFilterExpression = _filters?.richFilters;
+    const richFilters = toFilterExpression(toProjectFilters(_filters?.rich_filters ?? {}));
     const displayFilters: IIssueDisplayFilterOptions = this.computedDisplayFilters({
       ..._filters?.display_filters,
-      sub_issue: true,
+      sub_issue: _filters?.display_filters?.sub_issue ?? true,
     });
-    const displayProperties: IIssueDisplayProperties = this.computedDisplayProperties(_filters?.display_properties);
-    const kanbanFilters = {
+    const displayProperties: IIssueDisplayProperties = this.computedDisplayProperties(
+      _filters?.display_properties ?? {}
+    );
+    const kanbanFilters: TIssueKanbanFilters = {
       group_by: [],
       sub_group_by: [],
     };
@@ -157,21 +123,27 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
     filters
   ) => {
     try {
+      filters = toFilterExpression(toProjectFilters(filters));
       runInAction(() => {
         set(this.filters, [projectId, "richFilters"], filters);
       });
 
-      this.rootIssueStore.archivedIssues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, "mutation");
+      const reading = this.rootIssueStore.archivedIssues.fetchIssuesWithExistingPagination(
+        workspaceSlug,
+        projectId,
+        "mutation"
+      );
       this.handleIssuesLocalFilters.set(
         EIssuesStoreType.ARCHIVED,
         EIssueFilterType.FILTERS,
         workspaceSlug,
         projectId,
-        undefined,
+        this.rootIssueStore.currentUserId,
         {
           rich_filters: filters,
         }
       );
+      await reading;
     } catch (error) {
       console.log("error while updating rich filters", error);
       throw error;
@@ -223,13 +195,21 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
             });
           });
 
-          if (this.getShouldReFetchIssues(updatedDisplayFilters)) {
-            this.rootIssueStore.archivedIssues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, "mutation");
-          }
+          const reading = this.getShouldReFetchIssues(updatedDisplayFilters)
+            ? this.rootIssueStore.archivedIssues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, "mutation")
+            : undefined;
 
-          this.handleIssuesLocalFilters.set(EIssuesStoreType.ARCHIVED, type, workspaceSlug, projectId, undefined, {
-            display_filters: _filters.displayFilters,
-          });
+          this.handleIssuesLocalFilters.set(
+            EIssuesStoreType.ARCHIVED,
+            type,
+            workspaceSlug,
+            projectId,
+            this.rootIssueStore.currentUserId,
+            {
+              display_filters: _filters.displayFilters,
+            }
+          );
+          await reading;
 
           break;
         }
@@ -247,9 +227,16 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
             });
           });
 
-          this.handleIssuesLocalFilters.set(EIssuesStoreType.ARCHIVED, type, workspaceSlug, projectId, undefined, {
-            display_properties: _filters.displayProperties,
-          });
+          this.handleIssuesLocalFilters.set(
+            EIssuesStoreType.ARCHIVED,
+            type,
+            workspaceSlug,
+            projectId,
+            this.rootIssueStore.currentUserId,
+            {
+              display_properties: _filters.displayProperties,
+            }
+          );
           break;
         }
 
@@ -259,9 +246,16 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
 
           const currentUserId = this.rootIssueStore.currentUserId;
           if (currentUserId)
-            this.handleIssuesLocalFilters.set(EIssuesStoreType.ARCHIVED, type, workspaceSlug, projectId, undefined, {
-              kanban_filters: _filters.kanbanFilters,
-            });
+            this.handleIssuesLocalFilters.set(
+              EIssuesStoreType.ARCHIVED,
+              type,
+              workspaceSlug,
+              projectId,
+              this.rootIssueStore.currentUserId,
+              {
+                kanban_filters: _filters.kanbanFilters,
+              }
+            );
 
           runInAction(() => {
             Object.keys(updatedKanbanFilters).forEach((_key) => {

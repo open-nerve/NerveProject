@@ -1,3 +1,5 @@
+import type { IssueCreate } from "@nerve/api-client";
+import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -13,7 +15,6 @@ import { observer } from "mobx-react";
 // types
 import type {
   GroupByColumnTypes,
-  TGroupedIssues,
   IIssueDisplayProperties,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
@@ -29,8 +30,8 @@ import { ListGroup } from "./list-group";
 import type { TRenderQuickActions } from "./list-view-types";
 
 export interface IList {
-  groupedIssueIds: TGroupedIssues;
-  issuesMap: Record<string, Issue | IssueDetail>;
+  groups: Map<string, Group>;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   group_by: TIssueGroupByOptions | null;
   orderBy: TIssueOrderByOptions | undefined;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
@@ -39,7 +40,7 @@ export interface IList {
   enableIssueQuickAdd: boolean;
   showEmptyGroup?: boolean;
   canEditProperties: (projectId: string | undefined) => boolean;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
   disableIssueCreation?: boolean;
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
   loadMoreIssues: (groupId?: string) => void;
@@ -49,7 +50,7 @@ export interface IList {
 
 export const List = observer(function List(props: IList) {
   const {
-    groupedIssueIds,
+    groups,
     issuesMap,
     group_by,
     orderBy,
@@ -71,7 +72,7 @@ export const List = observer(function List(props: IList) {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const groups = getGroupByColumns({
+  const columns = getGroupByColumns({
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
@@ -90,21 +91,21 @@ export const List = observer(function List(props: IList) {
     );
   }, [containerRef]);
 
-  if (!groups) return null;
+  if (!columns) return null;
 
-  const getGroupIndex = (groupId: string | undefined) => groups.findIndex(({ id }) => id === groupId);
+  const getGroupIndex = (groupId: string | undefined) => columns.findIndex(({ id }) => id === groupId);
 
   return (
     <div className="relative flex size-full flex-col">
-      {groups && (
+      {columns && (
         <div
           ref={containerRef}
           className="vertical-scrollbar relative scrollbar-lg size-full overflow-auto bg-surface-1"
         >
-          {groups.map((group: IGroupByColumn) => (
+          {columns.map((group: IGroupByColumn) => (
             <ListGroup
               key={group.id}
-              groupIssueIds={groupedIssueIds?.[group.id]}
+              groupIssueIds={groups?.get(group.id)?.rows.map((row) => row.id)}
               issuesMap={issuesMap}
               group_by={group_by}
               group={group}

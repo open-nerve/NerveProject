@@ -1,3 +1,4 @@
+import type { IssueCreate } from "@nerve/api-client";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -25,7 +26,7 @@ type Props = {
   issueIds: string[] | undefined;
   quickActions: TRenderQuickActions;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
-  quickAddCallback?: (projectId: string | null | undefined, data: Partial<IssueDetail>) => Promise<Issue | undefined>;
+  quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
   canEditProperties: (projectId: string | undefined) => boolean;
   canLoadMoreIssues: boolean;
   loadMoreIssues: () => void;

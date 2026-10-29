@@ -740,7 +740,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **e2e**：I21（时钟偏移 61 天）。
 
 ### 3.22 前端的列表：在 `reconciled.ts` 上分页、分组（总体设计 7.7；M3 交接第 6 节）
-总体设计 7.7 要求工作项的分页、分组列表扩展 `core/lib/reconciled.ts`，不另写一份。它今天的 `Reconciled<V>` 是"整个值由最新的一次取数写下，取数在外期间确认的修改在应答上重做"（`reconciled.ts:26-81`，重做在 `:56-76`）。列表引擎要多四样：按组接着取的页、确认的修改在组之间移动工作项、组的总数、一个工作项只有一份。第二稿的规则在重做、窗口的移动和那一份工作项上会算错（对抗性评审 I2 的九个反例：双减、判断不了版本、重做时的"修改之前"无定义、窗口后退留下看不见的卡片、旧的应答覆盖那一份、读到别人的修改之后一张卡片在两列、列表的行覆盖详情的描述、空的组没有地方插入、放在最后或日历的满格时卡片消失）。下面的数据模型照评审的改法重写，九个反例各是 vitest 表里的一行；仍是一份实现，扩展 `reconciled.ts`（总体设计 7.7）。
+总体设计 7.7 要求工作项的分页、分组列表扩展 `core/lib/reconciled.ts`，不另写一份。它今天的 `Reconciled<V>` 是"整个值由最新的一次取数写下，取数在外期间确认的修改在应答上重做"（`reconciled.ts:26-81`，重做在 `:56-76`）。列表引擎要多四样：按组接着取的页、确认的修改在组之间移动工作项、组的总数、一个工作项只有一份。第二稿的规则在重做、窗口的移动和那一份工作项上会算错（对抗性评审 I2 的九个反例：双减、判断不了版本、重做时的"修改之前"无定义、窗口后退留下看不见的卡片、旧的应答覆盖那一份、读到别人的修改之后一张卡片在两列、列表的行覆盖详情的描述、空的组没有地方插入、放在最后或日历的满格时卡片消失）。下面的数据模型照评审的改法重写，九个反例各需有真实行为证据：P10b T4 负责纯模型，T6/T12 负责唯一副本与真实回查，具体索引见 P10b plan；仍是一份实现，扩展 `reconciled.ts`（总体设计 7.7）。
 
 - **`Reconciled.fetchPart(part, read, merge)`**（加在 `reconciled.ts`，约 40 行）：取值的一部分（一组、一格的下一页）。
   - 值还没取到时什么都不做。
@@ -755,7 +755,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - **整体第一页没有回答的组、格是空的、载入完的**（部分应答未回答的组保持当前值）：服务端只返回非空的组（3.16），所以不在应答里的组就是 `{total: 0, rows: [], nextCursor: null}`，修改需要时按这个样子建出它（拖进空列、空泳道的第一张卡片）。
   - 不分组的列表是一个键为空的组；泳道的总数是 `subgroupTotals`（3.16 的 `subgroup_totals`），不再把一行的格加起来。
 - **一个工作项只有一份**（按 id 的 `ReconciledByKey`，详情的读取和列表的应答都写它）：
-  - 两个版本取**服务端的 `updated_at` 大的**，相等时取后应答的。第二稿只比 `answeredAt`，那是写入的顺序，不是服务端的顺序：在一次修改之前读、在它之后才回答的看板的重取会把修改之前的行写进那一份。Plane 的 `addIssue` 用任何应答覆盖（`store/issue/issue.store.ts:61-72`）。
+  - 同一有效权限身份内，两个版本取**服务端的 `updated_at` 大的**，相等时取后应答的。权限身份失效后的旧非删除写答仍返回业务成功，但不传播旧字段至恢复后的当前实体或列表；有效新身份的读取可以替换缺当前证明的旧持有值，且不继承其旧描述（P10B-S1/R28）。成功删除墓碑仍优先。第二稿只比 `answeredAt`，那是写入的顺序，不是服务端的顺序：在一次修改之前读、在它之后才回答的看板的重取会把修改之前的行写进那一份。Plane 的 `addIssue` 用任何应答覆盖（`store/issue/issue.store.ts:61-72`）。
   - `description_html` 只由 `IssueDetail` 的应答写；列表的行（`Issue`，没有描述）只改别的字段，留着那一份的描述（详情、浮层的编辑器读它）。较旧 Detail 也不能首次补描述到较新 Issue，只安排一次最新详情补取；失败保留可重试状态，不无限重试。
   - P10b/T6 同时收口尚留 P11 的详情、子工作项、链接、关联等调用者：完整实体应答经统一接收，partial 片段、计数算术和直接写 issuesMap 改为操作成功后的失效/权威读取，计数和 updated_at 来自服务器；issuesMap 仅为派生只读视图，不留绕过版本规则的旧 mutator。
   - 一次**读**（取单个、任何一份列表的应答）写进那一份的新版本若改了决定列表成员关系的字段（状态、优先级、标签、负责人、起止日期、父工作项、`archived_at`、`created_by_id`，或某份列表的排序键用到的字段），那是别人的修改，这个会话的列表的总数无从确知：每份含有它的列表里，它旧、新两个版本所属的组标 `stale`。这个会话自己有一个修改在路上（已发出、还没确认）的工作项除外：读到的新版本可能就是这个修改，它确认时按下面的规则摆放，不立即当作别人的修改；该操作保留发出前冻结的 before 及途中读证据，确认时只将与 after 同版本同相关字段的读认作自己的结果；另有版本使旧属无法证明则按不知道标 stale，不因 own-pending 而丢掉第三方变化（聚焦复核 M3；P10b 预检 B-L1）。
@@ -771,9 +771,15 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
     | 否 | 否 | 不变 | — |
 
   - **用户的拖放留在放下的地方**：带 `drop` 的修改在目标组里总是把卡片插入到落点，落点在窗口之外时把这一组的 `boundary` 扩到这张卡片。放在一列的最后（`sort_order` 是最后一张加 65535，`issue-layouts/utils.tsx:479-514`）、放进日历上已满的一天（月视图一天只载入 4 张，`calendar/base-calendar-root.tsx:81-90`）都是这样；之后的页按服务端的游标接着取，按全序、按 id 去重并入，落在它前面的行排到它前面。卡片不会在确认之后消失、只剩计数变了（I6 的"卡片出现在 Done"）。
+  - `drop` 的来源列表绑定在入队前固定，排队期间路由或筛选变化不得改用新的 `currentList`。根协调器只向该来源绑定传递落点与额外扩窗；其它已取副本仍收到同一次确认，但按自身query、分组和窗口处理，不因同字符串组键接收外来落点、创建外来组或扩窗。归属只由根层元数据表达，纯分页模型不依赖store或第二缓存。
+  - 提及、关注等无法由实体判断的关系筛选不等于邻居不属。该候选必须有来源目标组/格的有效非stale服务端行，行版本与当前可见实体按纳秒相等，且无绑定错误/核实中，才可参与排序；无证据候选拒绝并等待有效重读，不伪装空列。明确不属/删除排除，真正空列仍用65535；只复用已有Row，不放宽纯成员判断的unknown语义（P10b/T11 R30）。
   - 最外层的 `total`、泳道的 `subgroupTotals` 在直接确认时同样按"修改前在不在、修改后在不在"加减；部分应答的重做只补这次被回答并重置的计数，未回答的共享总数不重复加减。
   - 看板上最常见的一步（I6、总体设计 8.2：把卡片拖进一个没有载入完的列）因此是确知的：不重取整个看板，已载入的页和滚动的位置都留着。
 - **删除的读代际**：deleteIssue 的成功应答是 204，after 为无，不能比较 after.updated_at；已知 id 使用本会话确认删除墓碑，未知子树不猜 id 和精确减数。成功确认先推进本项目读取水位并 invalidate 相关列表在外读，再标 stale/写已知墓碑，随后才允许新水位刷新；所有 list/详情/getIssue 回查在写 canonical、合页或清 stale 前核发出时的会话/项目令牌。多项目 profile 若覆盖失效项目则整页丢弃并保持 stale，不能裁行后复用旧 total；其它独立项目保持。拒绝、SessionChanged、普通404不创建墓碑或推进删除水位，并发再次删除会使中间刷新同样失效。
+- **权限读取水位（P10B-S1 A）**：同一登录内，已观察到失权后恢复相同角色，旧读仍失效。`IssueRootStore` 唯一拥有按工作区及项目记录的权限水位和观察生命周期；观察其所属 `WorkspaceRootStore.workspaces`、`ProjectStore` 对已知/在外读取范围给出的有效角色变化，在目录权威结果被接受或确认的成员变化生效时记录，不在 computed getter 写入，也不以目录对象引用变化充当权限变化。新注册范围先建立当前权限基线；未知、未加载或非成员不得发受限读。普通重取给出相同有效权限不推进水位。若需 MobX 观察器，它只跟踪权限证据，不恢复 router/user/catalog 副本 autorun，且由 `retire()` 幂等释放。工作区失权覆盖其项目和成员列表；项目失权或收窄影响该项目及覆盖它的成员列表，非相关工作区/项目不动。访客项目读仍由服务器决定可见内容，不推导 own-only；归档及成员列表只允许 admin/member。
+  - 权限签名由现有目录事实而非新 M3 协议构成：工作区按其 `Workspace.role`；项目同时保留所属工作区身份、现有 `getProjectRoleByWorkspaceSlugAndProjectId` 的有效读门控及原始 `Project.member_role`，原始项目角色为 guest 时还包含 `Project.guest_view_all_features`。工作区 admin 兼项目 guest 仍按原始项目角色及开关受服务器 guest 可见性规则约束（3.4），即使权限 getter 将其有效角色折为 admin；不在客户端过滤 own-only。已知可读签名变为不可读或不同签名时使原身份失效，包括 admin/member 降为 guest（即使仍非 undefined），以及原始 guest 的开关变化；恢复或改变后取新身份、由服务端回答收敛。原始项目 member 的 guest 开关变化不改变其读取签名；相同签名的目录刷新不作废。工作区角色变化以各受影响读取范围的实际权限签名判，不以对象更替或名称变更作废。
+  - 每次请求真正发出前取得原 owner、逐请求序号及其范围权限证据；whole、part、详情和权威/核实读取在任何 canonical、rows、total、stale 或核实状态写入前复核。单项目按所属工作区和项目核；成员列表含显式 `project_id` 时按这些项目核，否则按该工作区它可覆盖的项目范围核，任一相关水位推进整页丢弃，不裁行复用 total。状态只存权限/代际元数据，不存第二份实体；新权限水位独立于 owner、readSerial、成功树删除水位和每 id 核实 freshnessFloor，不创建墓碑或把拒绝当删除。
+  - 失权期间已持有的相关列表和实体不可见；恢复后旧持有值仍不可作为可靠结果暴露，须以恢复后新身份发起的有效权威读取重新证实，列表以新 whole 收敛。保留已有值供既有协调边界管理，不作为第二缓存；无关范围及其已持有值保持。恢复后的 scope 身份纳入现有 loginId 的 SWR key，令新 GET 不复用失效旧 in-flight；同一有效身份仍去重，普通卸载或一个共享消费者离开不作废别人的有效读取。核实协调的在途去重按同一权限身份判断，过期结果不清状态，新身份允许显式重试；只缩短去重窗口不能处理 ABA。
 - **重做：在一次取数的应答上**（取数在外期间确认的修改，`Reconciled` 在它的应答上重做）：应答可能是修改之前读的，也可能已经含着它。**只按应答自己判断**它在修改之前还是之后：
   1. 应答的任何一组里有这个工作项的行：`updatedAt` 不早于 `after` 是之后，早于是之前。
   2. 应答里没有它的行，但应答覆盖了它修改之后该在的位置（它新属于的某组 `g`，应答对 `g` 是载入完的整组，或 `after` 的键落在应答对 `g` 回答的那一段里）：是之前（之后的话它就在那里）。应答覆盖了它修改之前所在的位置而它不在：是之后。
@@ -1782,7 +1788,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - 前端的生成的类型与契约同步（`make gen-web` 之后没有差别，M2 的门禁）。
 
 ### 9.5 前端单元测试（vitest）
-- P10b 静态预检补充的六个反例及合法测试入口见 [spec](specs/P10b-web-list-data.md) / [plan](plans/P10b-web-list-data.md)：pending before、树删除旧读、canonical 写者闭合、partial 回放计数所有权、精确大整数入口、回查拒绝的有界收敛。均为实施要求，本次未运行；本节“没有回答的组”仅指整体第一页，partial 未回答范围保持当前值。
+- P10b 静态预检补充的六个反例及合法测试入口见 [spec](specs/P10b-web-list-data.md) / [plan](plans/P10b-web-list-data.md)：pending before、树删除旧读、canonical 写者闭合、partial 回放计数所有权、精确大整数入口、回查拒绝的有界收敛。预检时均为实施要求、当时未运行；后续实施证据见P10b review；本节“没有回答的组”仅指整体第一页，partial 未回答范围保持当前值。
 - `core/lib/reconciled.ts` 的 `fetchPart`：值还没取到时不做；被整体的取数超越、被同一部分更新的取数超越时不写；在外期间确认的修改在合并之后按确认的顺序重做，重做拿到这次的应答；会话改变。
 - `core/lib/paged-groups.ts`：3.22 的表（`(列表当前的值, 修改或读到的版本, 应答?) → 期望的值`）：旧属、新属的四种组合各配在、不在 `rows`，窗口内、外（固定的 `boundary`），载入完与否；旧属先按这一份列表的行的 `updatedAt` 判断、再按 `beforeSnapshot`；新建（`beforeSnapshot` 为无）、删除（`after` 为无）、归档和恢复；没有回答的组、格按空的建出；多值的组；子分组的格和 `subgroupTotals`；最外层的总数；拖放的落点（窗口外扩 `boundary`、空的列、空的泳道格、日历已满的一天）；重做的三种判断（应答里有它的行、应答覆盖了它的位置、看不出）；每种 `stale`；对抗性评审 I2 的九个反例各一行；聚焦复核 M3 的五行（重做时旧属只来自应答和 `beforeSnapshot`、并入取应答的 `total`、第 2 条之后的 `getIssue`、`boundary` 只往后移、自己的修改在路上时不标 `stale`）。
 - 一个工作项的那一份（`ReconciledByKey`）：服务端的 `updated_at` 大的胜出、相等时后应答的胜出；列表的行不覆盖 `description_html`；读到的新版本改了成员关系的字段时，含它的列表里它旧、新两个版本的组标 `stale`，这个会话自己有修改在路上的工作项除外。
@@ -2297,21 +2303,21 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：`tsc`、knip、vitest 通过；`git grep -lw TIssue -- web` 没有输出；`EIssuesStoreType` 没有 `CYCLE`、`MODULE`、`PROJECT_VIEW`、`GLOBAL`；S2 通过。
 
 ### P10b `web-list-data`：列表一侧的数据层（14 个任务）
-- **预检任务顺序细化**：T1 准备薄服务及直接测试，不提前移除仍有消费者的旧形状或发布无读者导出；T5 同任务切旧形状、生产接线、全部消费者和必要 query 纯函数，T8 完成否定层删除与完整筛选语义验证。canonical 的旧详情写者在 T6 同步收口；不提前扩展 P11 的完整详情资源。
+- **预检任务顺序细化**：T1 准备薄服务及直接测试，不提前移除仍有消费者的旧形状或发布无读者导出；T5 同任务切旧形状、生产接线、全部消费者和必要 query 纯函数，并实现根写协调入口、同代列表注册/确认、发出前 before/pending/队列和会话退役检查；T6 收口 canonical，T11 完成拖放，T12 扩全矩阵而非首次接线；T8 完成否定层删除与完整筛选语义验证。canonical 的旧详情写者在 T6 同步收口；不提前扩展 P11 的完整详情资源。
 - **目标**：列表的 services 和 stores 改接新接口；`reconciled.ts` 的扩展和 `paged-groups.ts`；项目页挂载时不再请求旧接口。
 - **任务**：
   1. `issue`、`issue-list` 的 service，换掉旧 `issue.service.ts` 的列表方法和 `issue_archive.service.ts`（7.2 的过渡在列表一侧结束）；项目显示设置的三个字段并入 `preferences` 的 service；列表的形状和枚举换型（`IssueListPage`、`IssueListOrder`、`IssueListGroupField`、`IssuePriority`；`TIssuesResponse` 一类、`EIssueGroupByToServerOptions`、`EServerGroupByToFilterOptions` 删除）。
   2. `Reconciled.fetchPart` 和 vitest。
   3. `paged-groups.ts` 的数据模型：组的行 `{id, key, updatedAt}`、固定的 `boundary`、没有回答的组按空的建出、`subgroupTotals`；全序逐个码位比较，读 `issue-order.json`。
   4. `paged-groups.ts` 的修改和重做：旧属、新属、拖放的落点、重做的三种判断、`stale`；3.22 的 vitest 表（含对抗性评审 I2 的九个反例）。
-  5. `base-issues.store.ts` 重写（第一页、一组带 `group_key` 的下一页、`stale` 的重取），保留 `getFilteredWorkItems`。
+  5. `base-issues.store.ts` 重写（第一页、一组带 `group_key` 的下一页、`stale` 的重取），保留 `getFilteredWorkItems`；根协调器同步接通及基本回归。profile 首/续页迁 listMember，删除 UserService.getUserProfileIssues 及其旧继承/类型，保留 M2 新 API 方法（原 P11 此子项前移以闭合旧列表类型删除）。
   6. 工作项的一份（`ReconciledByKey`：服务端的 `updated_at`，描述只由 `IssueDetail` 写，读到成员关系改变时标 `stale`）。
   7. 项目的 `filter.store.ts` 读写显示设置；删除 `/user-properties/` 的两个旧方法、关键词的例外、e2e 的 `workItemFilters` 和三个故事里的放行（M3 交接第 5 节）。
   8. 筛选表达式翻译成 `ProjectIssueFilters` 保存值及生成operation query；否定的一层删除（M1-P3 交接）。
   9. 已归档、个人主页的筛选存在 `localStorage`（已归档的键修正）；草稿页没有筛选：删除 `WorkspaceDraftIssuesFilter`（`store/issue/workspace-draft/filter.store.ts`，它继承本段重写的 `IssueFilterHelperStore`）和 `store/issue/root.store.ts`、`hooks/store/use-issues.ts` 里对它的引用（聚焦复核 M7）。
   10. `IssueRootStore` 的 `autorun` 改为计算属性；`rootStore` 的三处同步读取；列表一侧的 `useSessionSWR`。
   11. 看板、日历的 store：只用确认的结果，`oneAtATime`，拖动的 `sort_order` 在轮到发出时才算，`PATCH` 不带 `id`、`project_id`。
-  12. 确认的修改写进每一份列表和工作项的那一份；每个修改一张 vitest 的表。
+  12. 扩充 T5/T6 已接通的确认分发：每一份列表和工作项唯一副本、每个修改的 vitest 表及竞态闭环。
   13. 挂载时的取数：项目页取列表和显示设置；S2 的 `REQUESTS`；改到的文件的死成员、oxlint；关键词规则 `issue-optimistic`、`negation-filters`。
   14. 3.23 中 P10b 的行（总体设计 7.7）、前端改动清单；review。
 - **关闭**：M1-P3 交接的筛选显示层（否定的一层删除；终态在 P16 核对）；M2 交接第 12 节的 `autorun`、三处同步读取、列表一侧的 SWR 键；M3 交接第 5 节（例外和 `workItemFilters` 删掉）、第 6 节（`autorun`、`reconciled.ts` 的扩展、S2 的 `REQUESTS`）。
@@ -2327,7 +2333,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   5. `link`、`comment`、`comment_reaction`、`reaction` 的 store。
   6. `activity` 的 store：读完全部页、从最后一页的游标再读，与评论合并（3.13）。
   7. 描述版本、草稿的 store（发布先 `PATCH` 再 `publish`）。
-  8. 模块级实例中数据层的 7 处（`WorkItemVersionService` 2、`WorkspaceDraftService` 1、`searchEntity` 4，7.1）；`getUserProfileIssues` 改接；编辑器的 @提及 改为从成员过滤，`entity-search` 删除。
+  8. 模块级实例中数据层的 7 处（`WorkItemVersionService` 2、`WorkspaceDraftService` 1、`searchEntity` 4，7.1）；核 P10b T5 已迁移的 `getUserProfileIssues` 及其删除证据；编辑器的 @提及 改为从成员过滤，`entity-search` 删除。
   9. 按需的取数被拒绝时有提示或交回（M3 交接第 6 节），vitest。
   10. 弹窗的宿主：`WorkItemLevelModals` 留在原处，在 `projectId ?? workItemIdentifier` 改变时和卸载时关上开关；详情根 store 的开关、`peekIssue` 和三份数据由宿主结束；`isArchiveIssueModalOpen` 删除（7.1）。
   11. 错误按码经文案表（`issue-modal/base.tsx` 的两处）；工作项页面上新建标签经 `useLabelChanges().create`。
@@ -2488,7 +2494,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | M2-closeout §9 命令面板的主题命令 | 7.4 | 应答成功、且标签页仍在发出修改时的会话才 `setTheme`，失败时按 `code` 提示；vitest 和 C7（P15） |
 | M2-closeout §10 下拉框 | 7.5 | `DateDropdown` 只有一份打开状态、能用键盘打开；7 个下拉框的列表在按钮旁（P12）；`CustomSelect` 的 3 个调用方、`CustomSearchSelect` 的 4 个富筛选调用方和 `defaultOpen` 在浏览器中核对（C2、C3；P12、P13、P14） |
 | M2-closeout §11 复制到剪贴板 | 7.5 | 6 处改经 `useCopyLink`、`useCopyText`，失败时经 `t()` 提示（P14、P15，与 M3 交接第 8 节的 10 个文件一起）；C8 |
-| M2-closeout §12 stores 按会话分代 | 7.1、7.3 | `IssueRootStore` 的 `autorun` 改为 `rootStore.router` 上的计算属性，没有要释放的反应，"随退役的一代释放"由此满足，`store-context.test.ts` 没有严格模式的警告（P10b）；13 处模块级实例按 7.1 的分配消失（P11 7 处、P12 1 处、P13 1 处、P14 3 处、P15 1 处），`git grep` 的门禁在 P15；三处同步读取不发请求（P10b）；SWR 键带 `loginId`（P10b、P11）；`getUserProfileIssues` 改接（P11） |
+| M2-closeout §12 stores 按会话分代 | 7.1、7.3 | `IssueRootStore` 的 `autorun` 改为 `rootStore.router` 上的计算属性，没有要释放的反应，"随退役的一代释放"由此满足，`store-context.test.ts` 没有严格模式的警告（P10b）；13 处模块级实例按 7.1 的分配消失（P11 7 处、P12 1 处、P13 1 处、P14 3 处、P15 1 处），`git grep` 的门禁在 P15；三处同步读取不发请求（P10b）；SWR 键带 `loginId`（P10b、P11）；`getUserProfileIssues` 改接/旧方法删除（P10b T5，P11核交接） |
 | M2-closeout §13 e2e 的 `clock.ts` | 3.20 | `e2e/fixtures/clock.ts` 按 M0-P6 的写法加入，I16 用它，不等真实的时间；nerve 一侧的 `clock.offset` 只在测试环境（P6） |
 | M3-closeout §1 事件与删除工作区的连带 | 3.6、3.19、3.20 | M3 自己的连带留在删除的事务里，邀请的一步照旧同步（P6 写明）；工作项一侧在决策点 7 选 A 时挂到 `project.deleted`、`workspace.deleted` 上、由任务完成，写明窗口和失败的处理（P9，3.6、3.19）；`registrationRows` 核对 `river_job`（P7）；`jobs_test.go:265`、`runner_test.go:136` 改为期限（P6） |
 | M3-closeout §2 加锁的约定和方案 E | 3.5、决策点 1、11.2、11.11 | 方案的选择和代价写在 3.5、决策点 1（负责人裁定 B：只锁项目行；两个代价和 B′ 写明；S5 的证据；连接池的代价和写闸门，A、B 相同）；锁之前的预检拒绝一切会被拒绝的写、不取锁（P1a，加关联的另一端在 P3）；连接池的代价和写闸门（P1b）；每个新的批量写逐个按约定五核对（3.5，P1a–P9 各自的 review；删除标签摘下 `issue_labels` 不需要预锁，理由在 3.5）；没有新的成员关系增长（3.5），不加与停用的交错测试（P1a）；M4 不物理删除账户（3.21，P9） |
@@ -2563,8 +2569,8 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P7 `issue-links` | 链接、出站客户端与抓取（后端，12粗项/16任务） | **已完成**：[spec](specs/P7-issue-links.md)、[plan](plans/P7-issue-links.md)、[review](reviews/P7-issue-links-review.md)、[整体审核](../../reviews/re-05-M4P7整体审核.md)。T1–T16实施、整审及修复复审闭环；经授权 `--no-ff` 合并 `166b9efd342ecd69b0ad8f29e4cd0ae2a65b1f5d`，[main CI 40451632280](https://github.com/open-nerve/NerveProject/actions/runs/40451632280) 三任务全绿；5,443个本地证据文件归档逐hash核验后，已清理本地/远端分支及worktree。M4总体仍进行中 |
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13粗项/16 Task） | **已完成**：[spec](specs/P8-drafts-search.md)、[实际plan](plans/P8-drafts-search.md)、[review](reviews/P8-drafts-search-review.md)、[整体审核](../../reviews/re-07-M4P8整体审核.md)。T1–T16实施、首次整审及文档独评闭环，最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，经授权 `--no-ff` 合并为 `6b9d08d4821f1423c7bb9795557727c206b7880f`；准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1三任务全绿。1,598文件、37,552,117字节及1空目录归档逐hash核验后，本地/远端分支和worktree已清理，清理后再核哈希；完整回执见review§9。M4总体及后续交接仍open |
 | P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
-| P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | 实施与终审完成、集成待办；最终文稿提交后准确HEAD CI以交付回执核验；最后产品5f7085bce4aa5103a0133fa982847d274efa6e47、A-01/A-02独评闭合。C原22路径全文/guard delta通过，C-r1已读增量，唯一C-r1-01已修，C-r2 Approved；准确产品CI已核成功，最后交付HEAD CI待核。见[spec](specs/P10a-web-issue-types.md)、[plan](plans/P10a-web-issue-types.md)、[phase review](reviews/P10a-web-issue-types-review.md)、[整体审核](../../reviews/re-11-M4P10a整体审核.md)；M4总验收不关闭 |
-| P10b `web-list-data` | 列表一侧的数据层（14） | spec/plan 已准备，依赖预检与局部修订复审记录见 [review](reviews/P10b-web-list-data-review.md)；未实施，执行前待 P10a 集成 main CI 通过后重核 |
+| P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
+| P10b `web-list-data` | 列表一侧的数据层（14） | **实施与终审完成、集成待办**；产品候选2e1264aa的完整F及准确CI40896656404 attempt1三任务通过，原5I/3M及N1/N2修复复审闭环。纯文稿HEAD CI由主控另核，见[阶段review](reviews/P10b-web-list-data-review.md)。未合并、不启动P11 |
 | P11 `web-detail-data` | 详情一侧的数据层（14） | 未开始 |
 | P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |
@@ -2735,3 +2741,15 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 - 第 11 节的十一个架构问题全部批准。
 
 正文各节本来就按建议写定，这次只把"待负责人裁定""待负责人批准"的标记改为裁定、批准的记录（开头的状态、第 10、11 节、3.23、第 14、15 节）；3.23 的每一行内容随之确定。总体设计 9.4 中 M4 的状态随本文的合并改为"进行中"。
+
+### 整审局部合同澄清（2026-10-29，修复及限定复审闭环）
+
+- I1：原回答或已持行的版本严格高于写确认时，属于较新的第三方事实，不能等同于同版本 own-after。较旧确认不覆盖可靠的新行、排序键、边界或其来源已证明的计数；不能确定的其它来源/部分保留 stale。direct-confirm 与 raw replay 使用相同版本关系，计数仍严格遵守各回答写集合，不重算冻结 before，也不触碰权限身份与删除代际。
+- I5：实际筛选菜单按当前允许字段开放，创建/更新时间不在本段筛选合同中。保存成功后将清理过的确认表达式反映到当前实例；只可替换该次提交后没有新编辑的草稿。旧确认不覆盖后续新输入，拒绝保留草稿及现有错误处理。不会扩展后端字段或延期当前确认显示问题到 P13。
+- 原整审 I1–I5 及 M1–M3 经统一修复和首轮限定复审确认已处理；新增 N2 经 2e1264aa 修复与 N2 限定复审 Approved。A3/A5/A6/A8 的原阻塞已闭合；产品候选完整 F 与准确 CI 已通过，A1–A10/T14 按当前文稿映射收口。后续纯文稿 HEAD 自身 CI 仍由主控另核，不冒用候选 CI。原始 With fixes、失败及证据限制保留于阶段 review。
+
+**R34 / I2 日期视窗交集：** 日历显示范围与已清理偏好的 target_date 条件求语义交集；非空交集以等价合法日期条件发出，原偏好不改。none 与有日期窗口或普通日期窗口确定不相交时，binding scope 使用内部 empty 标记，不能传入生成 query、发非法 none+日期、放宽服务器守卫或造哨兵日期。empty 仅来自有效日期逻辑矛盾，未知权限/读取拒绝/目录失败不能变为空。确定空经现有 owner/权限/退役门控建立本地零行零计数模型，不伪造服务端 PageAnswer、sourceID 或 readSerial；对未知实体 membership 亦为 false，确认/replay/重验不添行、不安排 GET。窗口或偏好改变重新求交，恢复普通请求。回归包含相交、none、不相交、双向切换、写确认及失权/恢复。
+
+**R35 / 新增 N1：** 布局加载/空态判断消费新列表的 outer total，不能把未分组空键计数当整体总数；草稿保留原合同。实际日历、非空分组列表及空结果挂载回归。本项为修复期新发现，不归原整审发现。
+
+**R39 / 限定复审新增 N2：** R34 的已证明 `scope.empty` 不仅在 fetch/acceptConfirmed 隔离，也在 binding 的 prepareCatalog 边界跳过无关目录准备；业务写成功仍确认到 canonical，确定空列表不等待目录或接收其拒绝。普通 binding 即使当前 total=0 也不属于逻辑必空，仍准备确认所需目录并保留拒绝/owner/权限守卫。同存的 empty 与普通列表须隔离失败，空↔非空及权限恢复合同保持。此局部裁定由主控依用户授权作出；权限方案 A 才是用户明确批准。N2 已由 2e1264aa 局部修复并经限定复核 Approved；完整 F 与准确候选 CI 已通过，最终文稿 HEAD 自身 CI 由主控另核，准确回执见阶段 review。

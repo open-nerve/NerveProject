@@ -8,14 +8,14 @@ import type { Issue, IssueDetail } from "@nerve/api-client";
 
 import type { MutableRefObject } from "react";
 // components
-import type { IIssueDisplayProperties, TGroupedIssues } from "@nerve/types";
+import type { IIssueDisplayProperties } from "@nerve/types";
 // types
 import { IssueBlockRoot } from "./block-root";
 import type { TRenderQuickActions } from "./list-view-types";
 
 interface Props {
-  issueIds: TGroupedIssues | any;
-  issuesMap: Record<string, Issue | IssueDetail>;
+  issueIds: string[] | undefined;
+  issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   groupId: string;
   canEditProperties: (projectId: string | undefined) => boolean;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;

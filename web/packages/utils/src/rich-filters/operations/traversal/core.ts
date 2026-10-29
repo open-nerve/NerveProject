@@ -6,9 +6,8 @@
 
 // nerve imports
 import type {
-  TAllAvailableOperatorsForDisplay,
+  TSupportedOperators,
   TFilterConditionNode,
-  TFilterConditionNodeForDisplay,
   TFilterExpression,
   TFilterGroupNode,
   TFilterProperty,
@@ -17,7 +16,6 @@ import type {
 // local imports
 import { isConditionNode, isGroupNode } from "../../types/core";
 import { getGroupChildren } from "../../types/shared";
-import { getDisplayOperator } from "./shared";
 
 /**
  * Generic tree visitor function type
@@ -120,27 +118,6 @@ export const extractConditions = <P extends TFilterProperty>(
   traverseExpressionTree(expression, (node) => (isConditionNode(node) ? node : null), TreeTraversalMode.CONDITIONS);
 
 /**
- * Extracts all conditions from a filter expression, including their display operators.
- * @param expression - The filter expression to extract conditions from
- * @returns An array of filter conditions with their display operators
- */
-export const extractConditionsWithDisplayOperators = <P extends TFilterProperty>(
-  expression: TFilterExpression<P>
-): TFilterConditionNodeForDisplay<P, TFilterValue>[] => {
-  // First extract all raw conditions
-  const rawConditions = extractConditions(expression);
-
-  // Transform operators using the extended helper
-  return rawConditions.map((condition) => {
-    const displayOperator = getDisplayOperator(condition.operator, expression, condition.id);
-    return {
-      ...condition,
-      operator: displayOperator,
-    };
-  });
-};
-
-/**
  * Finds all conditions by property and operator.
  * @param expression - The filter expression to search in
  * @param property - The property to find the conditions by
@@ -150,8 +127,8 @@ export const extractConditionsWithDisplayOperators = <P extends TFilterProperty>
 export const findConditionsByPropertyAndOperator = <P extends TFilterProperty>(
   expression: TFilterExpression<P>,
   property: P,
-  operator: TAllAvailableOperatorsForDisplay
-): TFilterConditionNodeForDisplay<P, TFilterValue>[] => {
-  const conditions = extractConditionsWithDisplayOperators(expression);
+  operator: TSupportedOperators
+): TFilterConditionNode<P, TFilterValue>[] => {
+  const conditions = extractConditions(expression);
   return conditions.filter((condition) => condition.property === property && condition.operator === operator);
 };
