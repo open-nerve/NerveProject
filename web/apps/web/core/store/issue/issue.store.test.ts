@@ -615,7 +615,143 @@ it.each([false, true])(
       dispose();
     }
     expect(tab.app.issue.issues.getIssueDetailById("x")).toBeUndefined();
-    if (older) expect(tab.app.issue.issues.getIssueById("x")?.name).toBe("fresh");
-    else expect(tab.app.issue.issues.getIssueById("x")).toBeUndefined();
+    expect(tab.app.issue.issues.getIssueById("x")?.name).toBe("fresh");
   }
 );
+
+it.each([1, 2, 3])("retains the recovered whole and its usable list after an old write (version=%s)", async (n) => {
+  accept(issueOf("x"));
+  const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
+    "PATCH",
+    "/api/v0/issues/x",
+  ]);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  const fresh = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  fresh.call.answer(json(200, issuePageOf([{ ...issueOf("x"), name: "fresh", updated_at: version(2) }])));
+  await fresh.promise;
+  const projectList = tab.app.issue.projectIssues;
+  old.call.answer(
+    json(200, { ...issueDetailOf("x"), name: "old-write", updated_at: version(n), description_html: "old detail" })
+  );
+  await old.promise;
+  expect.soft(tab.app.issue.issues.getIssueById("x")?.name).toBe("fresh");
+  expect.soft(tab.app.issue.issues.getIssueDetailById("x")).toBeUndefined();
+  expect.soft(projectList.getIssueIds()).toEqual(["x"]);
+  expect.soft(projectList.total).toBe(1);
+  expect.soft(projectList.getPaginationData()?.rows.map((row) => row.id)).toEqual(["x"]);
+  expect.soft(projectList.getPaginationData()?.stale).toBe(false);
+  expect.soft(projectList.currentList!.error).toBeUndefined();
+  expect.soft(projectList.currentList!.verifying).toBe(false);
+  const before = tab.nerve.calls.length;
+  await projectList.currentList!.refreshStale();
+  await vi.advanceTimersByTimeAsync(100);
+  expect.soft(tab.nerve.calls).toHaveLength(before);
+  expect.soft(tab.nerve.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
+  const current = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.updateIssue("x", () => ({ name: "current-write" })),
+    ["PATCH", "/api/v0/issues/x"]
+  );
+  current.call.answer(
+    json(200, {
+      ...issueDetailOf("x"),
+      name: "current-write",
+      updated_at: version(4),
+      description_html: "current detail",
+    })
+  );
+  await current.promise;
+  expect(tab.app.issue.issues.getIssueDetailById("x")?.description_html).toBe("current detail");
+});
+
+it("a current whole replaces an unproved newer stale write when the old write arrives first", async () => {
+  accept({ ...issueOf("x"), updated_at: version(3) });
+  const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
+    "PATCH",
+    "/api/v0/issues/x",
+  ]);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  old.call.answer(
+    json(200, { ...issueDetailOf("x"), name: "old-write", updated_at: version(3), description_html: "old detail" })
+  );
+  await old.promise;
+  expect(tab.app.issue.issues.getIssueById("x")).toBeUndefined();
+  const fresh = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  fresh.call.answer(json(200, issuePageOf([{ ...issueOf("x"), name: "fresh", updated_at: version(2) }])));
+  await fresh.promise;
+  expect.soft(tab.app.issue.issues.getIssueById("x")?.name).toBe("fresh");
+  expect.soft(tab.app.issue.issues.getIssueDetailById("x")).toBeUndefined();
+  expect.soft(tab.app.issue.projectIssues.getIssueIds()).toEqual(["x"]);
+  expect.soft(tab.app.issue.projectIssues.total).toBe(1);
+  expect.soft(tab.nerve.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
+});
+
+it("an old write cannot move a recovered list using unproved membership fields", async () => {
+  accept(issueOf("x"));
+  const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
+    "PATCH",
+    "/api/v0/issues/x",
+  ]);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  const fresh = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  fresh.call.answer(json(200, issuePageOf([{ ...issueOf("x"), name: "fresh", updated_at: version(2) }])));
+  await fresh.promise;
+  old.call.answer(json(200, { ...issueDetailOf("x"), updated_at: version(3), archived_at: "2026-10-29T00:00:00Z" }));
+  await old.promise;
+  expect.soft(tab.app.issue.issues.getIssueById("x")?.name).toBe("fresh");
+  expect.soft(tab.app.issue.projectIssues.getIssueIds()).toEqual(["x"]);
+  expect.soft(tab.app.issue.projectIssues.total).toBe(1);
+});
+
+it.each([false, true])("rechecks write permission after waiting for list directories (reject=%s)", async (reject) => {
+  const first = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  first.call.answer(json(200, issuePageOf([issueOf("x")])));
+  await first.promise;
+  const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
+    "PATCH",
+    "/api/v0/issues/x",
+  ]);
+  let release!: () => void;
+  const waiting = new Promise<void>((resolve, fail) => {
+    release = () => (reject ? fail(new Error("directory refused")) : resolve());
+  });
+  const prepare = vi
+    .spyOn(tab.app.issue.projectIssues.currentList!, "prepareCatalog")
+    .mockImplementationOnce(() => waiting);
+  old.call.answer(json(200, { ...issueDetailOf("x"), archived_at: "2026-10-29T00:00:00Z", updated_at: version(3) }));
+  await until(() => prepare.mock.calls.length > 0, "write waiting for directory");
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  const fresh = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  fresh.call.answer(json(200, issuePageOf([{ ...issueOf("x"), name: "fresh", updated_at: version(2) }])));
+  await fresh.promise;
+  release();
+  await old.promise;
+  expect.soft(tab.app.issue.issues.getIssueById("x")?.name).toBe("fresh");
+  expect.soft(tab.app.issue.projectIssues.getIssueIds()).toEqual(["x"]);
+  expect.soft(tab.app.issue.projectIssues.total).toBe(1);
+  expect.soft(tab.app.issue.projectIssues.currentList!.error).toBeUndefined();
+});

@@ -43,13 +43,13 @@ export class IssueStore {
     )
       return;
     const held = this.canonical.get(answer.id);
-    if (held === null || (held && compareIssueTime(answer.updated_at, held.updated_at) < 0)) return;
-    const keepDescription = this.root.permissionReads.current(
-      this.permissionProof.get(answer.id) ?? 0,
-      answer.workspace_id,
-      [answer.project_id]
+    const heldCurrent =
+      !!held &&
+      this.root.permissionReads.current(this.permissionProof.get(answer.id) ?? 0, held.workspace_id, [held.project_id]);
+    if (held === null || (held && heldCurrent && compareIssueTime(answer.updated_at, held.updated_at) < 0)) return;
+    this.canonical.receive(answer.id, answer, (before, incoming) =>
+      this.choose(heldCurrent ? before : undefined, incoming, heldCurrent)
     );
-    this.canonical.receive(answer.id, answer, (before, incoming) => this.choose(before, incoming, keepDescription));
     runInAction(() => this.permissionProof.set(answer.id, token.permission));
     this.root.observeRead(held ?? undefined, answer);
     this.root.verification.accept(answer.id, token);
@@ -60,6 +60,15 @@ export class IssueStore {
     if (!this.root.active) return;
     runInAction(() => {
       const held = this.canonical.get(change.id);
+      if (
+        change.after &&
+        held &&
+        this.root.permissionReads.current(this.permissionProof.get(change.id) ?? 0, held.workspace_id, [
+          held.project_id,
+        ]) &&
+        !this.root.permissionReads.current(permission ?? -1, change.after.workspace_id, [change.after.project_id])
+      )
+        return;
       const selected = this.canonical.receive(change.id, change.after, this.choose);
       // Publish content and its proof atomically; a rejected older answer keeps both.
       if (change.after && selected !== held) this.permissionProof.set(change.id, permission ?? -1);

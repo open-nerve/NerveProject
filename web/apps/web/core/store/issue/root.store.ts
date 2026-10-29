@@ -312,6 +312,10 @@ export class IssueRootStore {
       const permission = this.permissionReads.capture();
       const after = await request(held);
       this.assertActive();
+      // The write succeeded, but an answer from an invalidated permission scope
+      // cannot revise recovered entities or list membership.
+      if (after && !this.permissionReads.current(permission, scope.workspaceID, [scope.projectID, after.project_id]))
+        return after;
       const prepared = new Set<IssueListBinding>();
       const unavailable = new Set<IssueListBinding>();
       // A binding can be created while a request or directory is out. Each owns its query and proof.
@@ -325,6 +329,11 @@ export class IssueRootStore {
             ]);
           } catch (error) {
             this.assertActive();
+            if (
+              after &&
+              !this.permissionReads.current(permission, scope.workspaceID, [scope.projectID, after.project_id])
+            )
+              return after;
             if (error instanceof SessionChangedError) throw error;
             // The issue write already succeeded. Keep that fact; only this list needs authoritative replacement.
             unavailable.add(list);
@@ -332,6 +341,8 @@ export class IssueRootStore {
           }
         }
       this.assertActive();
+      if (after && !this.permissionReads.current(permission, scope.workspaceID, [scope.projectID, after.project_id]))
+        return after;
       let before = pending.before;
       if (after && before.kind === "known") {
         const old = before.issue;
