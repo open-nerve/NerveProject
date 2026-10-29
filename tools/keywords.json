@@ -2787,14 +2787,6 @@
       "count": 1,
       "reason": "T7暂留；P12/P14改接existing-issues-list-modal、parent-issues-list-modal、inbox/select-duplicate；P15删除projectIssuesSearch，P14若已无读者立即删",
       "until": "M4/P16"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/workspace.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/entity-search/",
-      "count": 1,
-      "reason": "T7暂留；P11接线删除；真实读者 searchEntity→rich-text/description-input、lite-text/editor、inbox create issue-description及issue-modal description-editor；P11改接",
-      "until": "M4/P12"
     }
   ]
 }

@@ -4,12 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type {
-  IWorkspaceSearchResults,
-  IWorkspaceView,
-  TSearchResponse,
-  TSearchEntityRequestPayload,
-} from "@nerve/types";
+import type { IWorkspaceSearchResults, IWorkspaceView } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 
@@ -56,19 +51,6 @@ export class WorkspaceService extends APIService {
 
   async getAllViews(workspaceSlug: string): Promise<IWorkspaceView[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/views/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async searchEntity(workspaceSlug: string, params: TSearchEntityRequestPayload): Promise<TSearchResponse> {
-    return this.get(`/api/workspaces/${workspaceSlug}/entity-search/`, {
-      params: {
-        ...params,
-        query_type: params.query_type.join(","),
-      },
-    })
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

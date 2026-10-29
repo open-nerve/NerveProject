@@ -22,11 +22,6 @@ import { RichTextEditor } from "@/components/editor/rich-text/editor";
 import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// services
-import { WorkspaceService } from "@/services/workspace.service";
-
-const workspaceService = new WorkspaceService();
-
 type TInboxIssueDescription = {
   containerClassName?: string;
   workspaceSlug: string;
@@ -82,12 +77,6 @@ export const InboxIssueDescription = observer(function InboxIssueDescription(pro
       dragDropEnabled={false}
       onChange={(_description: object, description_html: string) => handleData("description_html", description_html)}
       placeholder={(isFocused, description) => t(getDescriptionPlaceholderI18n(isFocused, description))}
-      searchMentionCallback={async (payload) =>
-        await workspaceService.searchEntity(workspaceSlug, {
-          ...payload,
-          project_id: projectId,
-        })
-      }
       containerClassName={containerClassName}
       onEnterKeyPress={onEnterKeyPress}
       tabIndex={getIndex("description_html")}
@@ -107,7 +96,7 @@ export const InboxIssueDescription = observer(function InboxIssueDescription(pro
           return asset_id;
         } catch (error) {
           console.log("Error in uploading work item asset:", error);
-          throw new Error("Asset upload failed. Please try again later.");
+          throw new Error("Asset upload failed. Please try again later.", { cause: error });
         }
       }}
       duplicateFile={async (assetId: string) => {

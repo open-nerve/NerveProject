@@ -28,4 +28,5 @@ export type TMentionHandler = {
   getMentionedEntityDetails?: (entity_identifier: string) => { display_name: string } | undefined;
   renderComponent: (props: TCallbackMentionComponentProps) => React.ReactNode;
   searchCallback?: (query: string) => Promise<TMentionSection[]>;
+  renderError?: (error: unknown, retry: () => void) => React.ReactNode;
 };

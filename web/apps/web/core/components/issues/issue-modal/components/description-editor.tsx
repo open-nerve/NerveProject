@@ -24,10 +24,6 @@ import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import useKeypress from "@/hooks/use-keypress";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// services
-import { WorkspaceService } from "@/services/workspace.service";
-const workspaceService = new WorkspaceService();
-
 type TIssueDescriptionEditorProps = {
   control: Control<IssueFormValues>;
   isDraft: boolean;
@@ -128,12 +124,6 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
               ref={editorRef}
               tabIndex={getIndex("description_html")}
               placeholder={(isFocused, description) => t(getDescriptionPlaceholderI18n(isFocused, description))}
-              searchMentionCallback={async (payload) =>
-                await workspaceService.searchEntity(workspaceSlug, {
-                  ...payload,
-                  ...(projectId ? { project_id: projectId } : {}),
-                })
-              }
               containerClassName="pt-3 min-h-[120px]"
               uploadFile={async (blockId, file) => {
                 if (!projectId) throw new Error("A project is required to upload an attachment");

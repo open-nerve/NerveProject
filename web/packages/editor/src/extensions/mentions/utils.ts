@@ -20,18 +20,18 @@ import type { MentionsListDropdownProps } from "./mentions-list-dropdown";
 import { MentionsListDropdown } from "./mentions-list-dropdown";
 
 export const renderMentionsDropdown =
-  (args: Pick<TMentionHandler, "searchCallback">): SuggestionOptions["render"] =>
+  (args: Pick<TMentionHandler, "searchCallback" | "renderError">): SuggestionOptions["render"] =>
   () => {
-    const { searchCallback } = args;
+    const { searchCallback, renderError } = args;
     let component: ReactRenderer<CommandListInstance, MentionsListDropdownProps> | null = null;
-    let cleanup: () => void = () => {};
+    let cleanup: (() => void) | undefined;
     let editorRef: Editor | null = null;
 
     const handleClose = (editor?: Editor) => {
       component?.destroy();
       component = null;
       (editor || editorRef)?.commands.removeActiveDropbarExtension(CORE_EXTENSIONS.MENTION);
-      cleanup();
+      cleanup?.();
     };
 
     return {
@@ -42,6 +42,7 @@ export const renderMentionsDropdown =
           props: {
             ...props,
             searchCallback,
+            renderError,
             onClose: () => handleClose(props.editor),
           } satisfies MentionsListDropdownProps,
           editor: props.editor,
@@ -56,7 +57,7 @@ export const renderMentionsDropdown =
         if (!component || !component.element) return;
         component.updateProps(props);
         if (!props.clientRect) return;
-        cleanup();
+        cleanup?.();
         cleanup = updateFloatingUIFloaterPosition(props.editor, component.element as HTMLElement).cleanup;
       },
       onKeyDown: ({ event }) => {

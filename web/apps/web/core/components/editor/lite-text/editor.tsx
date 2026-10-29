@@ -13,15 +13,14 @@ import type { MakeOptional } from "@nerve/types";
 import { cn, isCommentEmpty } from "@nerve/utils";
 // components
 import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
+import { EditorMentionsError } from "@/components/editor/mentions-error";
 import { IssueCommentToolbar } from "@/components/editor/lite-text/toolbar";
 // hooks
 import { useEditorConfig, useEditorMention } from "@/hooks/editor";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // services
-import { WorkspaceService } from "@/services/workspace.service";
 import { LiteToolbar } from "./lite-toolbar";
-const workspaceService = new WorkspaceService();
 
 type LiteTextEditorWrapperProps = MakeOptional<
   Omit<ILiteTextEditorProps, "fileHandler" | "mentionHandler">,
@@ -34,7 +33,6 @@ type LiteTextEditorWrapperProps = MakeOptional<
   isSubmitting?: boolean;
   showToolbarInitially?: boolean;
   variant?: "full" | "lite" | "none";
-  issue_id?: string;
   parentClassName?: string;
   editorClassName?: string;
   submitButtonText?: string;
@@ -49,6 +47,10 @@ type LiteTextEditorWrapperProps = MakeOptional<
       }
   );
 
+function isMutableRefObject<T>(ref: React.ForwardedRef<T>): ref is React.MutableRefObject<T | null> {
+  return !!ref && typeof ref === "object" && "current" in ref;
+}
+
 export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
   props: LiteTextEditorWrapperProps,
   ref: React.ForwardedRef<EditorRefApi>
@@ -60,7 +62,6 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
     workspaceSlug,
     workspaceId,
     projectId,
-    issue_id,
     showSubmitButton = true,
     isSubmitting = false,
     showToolbarInitially = true,
@@ -79,26 +80,17 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
   const [isFocused, setIsFocused] = useState(isFullVariant ? showToolbarInitially : true);
   const [editorRef, setEditorRef] = useState<EditorRefApi | null>(null);
   // store hooks
-  const { getUserDetails } = useMember();
+  const members = useMember();
+  const { getUserDetails } = members;
   // parse content
   const { getEditorMetaData } = useParseEditorContent({
     projectId,
     workspaceSlug,
   });
   // use editor mention
-  const { fetchMentions } = useEditorMention({
-    searchEntity: async (payload) =>
-      await workspaceService.searchEntity(workspaceSlug, {
-        ...payload,
-        project_id: projectId,
-        issue_id,
-      }),
-  });
+  const { fetchMentions } = useEditorMention({ workspaceSlug, projectId, editable, members });
   // editor config
   const { getEditorFileHandlers } = useEditorConfig();
-  function isMutableRefObject<T>(ref: React.ForwardedRef<T>): ref is React.MutableRefObject<T | null> {
-    return !!ref && typeof ref === "object" && "current" in ref;
-  }
   // derived values
   const isEmpty = isCommentEmpty(props.initialValue);
 
@@ -136,11 +128,8 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
               }
             }}
             mentionHandler={{
-              searchCallback: async (query) => {
-                const res = await fetchMentions(query);
-                if (!res) throw new Error("Failed in fetching mentions");
-                return res;
-              },
+              searchCallback: fetchMentions,
+              renderError: (error, retry) => <EditorMentionsError error={error} retry={retry} />,
               renderComponent: EditorMentionsRoot,
               getMentionedEntityDetails: (id) => ({
                 display_name: getUserDetails(id)?.display_name ?? "",

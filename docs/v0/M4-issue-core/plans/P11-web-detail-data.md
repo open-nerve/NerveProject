@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T9已实现，继续T10**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T10已实现，继续T11**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -150,12 +150,12 @@ make e2e
 
 ## Task 10：成员提及与旧 JSON 字段（约450–850行）
 
-**Files：** hooks/editor/use-editor-mention.tsx及新test；editor/lite-text/editor.tsx、rich-text/editor.tsx、rich-text/description-input/root.tsx、issues/issue-modal/components/description-editor.tsx、inbox/modals/create-modal/issue-description.tsx；services/workspace.service.ts、相关types/props。四个searchEntity调用为lite-text、description-input、工作项表单描述、收集箱创建描述；inbox/content/issue-root的版本接线已归T8，不拿它代替收集箱创建入口。
+**Files：** hooks/editor/use-editor-mention.tsx及新test；editor/lite-text/editor.tsx、rich-text/editor.tsx、rich-text/description-input/root.tsx、issues/issue-modal/components/description-editor.tsx、inbox/modals/create-modal/issue-description.tsx；services/workspace.service.ts、相关types/props；P/editor的mentions-list-dropdown及其test、mention展示错误prop与extension/utils接线，新增editor/mentions-error展示组件。四个searchEntity调用为lite-text、description-input、工作项表单描述、收集箱创建描述；inbox/content/issue-root的版本接线已归T8，不拿它代替收集箱创建入口。
 
-- [ ] 逐一列四个searchEntity调用；新hook接受当前workspace/project、编辑权限和成员目录，返回既有编辑器提及展示所需值，不依赖M4列表筛选或旧search response。
-- [ ] 项目有效成员、无项目有效工作区成员、inactive排除、无email、最多5条、query变化/切scope晚答、目录拒绝可观察、只读editor零请求分别断言。M7共享编辑器同改建议数据，不改M7本体API。
-- [ ] 删除searchEntity方法/独占DTO、四模块实例；扫description_json/comment_json/共享JSONContent真实读者随资源换型删除，editor内部独立JSONContent不误伤；不提前删仍用于P12–P15的旧工作项搜索DTO。
-- [ ] hook DOM测试+editor现有测试/types；M23 inactive被建议、M24旧query盖新词各红；G。提交 `feat(M4/P11): 从有效成员目录提供提及建议`。
+- [x] 逐一列四个searchEntity调用；新hook接受当前workspace/project、编辑权限和成员目录，返回既有编辑器提及展示所需值，不依赖M4列表筛选或旧search response。
+- [x] 项目有效成员、无项目有效工作区成员、inactive排除、无email、最多5条、query变化/切scope晚答、目录拒绝可观察、只读editor零请求分别断言。M7共享编辑器同改建议数据，不改M7本体API。
+- [x] 删除searchEntity方法/独占DTO、四模块实例；扫description_json/comment_json/共享JSONContent真实读者随资源换型删除，editor内部独立JSONContent不误伤；不提前删仍用于P12–P15的旧工作项搜索DTO。
+- [x] hook DOM测试+editor现有测试/types；M23 inactive被建议、M24旧query盖新词各红；G。提交 `feat(M4/P11): 从有效成员目录提供提及建议`。
 
 ## Task 11：按需拒绝与详情会话键（约450–900行）
 

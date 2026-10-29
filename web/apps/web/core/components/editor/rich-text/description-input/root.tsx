@@ -18,17 +18,11 @@ import { RichTextEditor } from "@/components/editor/rich-text";
 // hooks
 import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";
-// services
-import { WorkspaceService } from "@/services/workspace.service";
 // local imports
 import { DescriptionInputLoader } from "./loader";
-// services init
-const workspaceService = new WorkspaceService();
-
 type TFormData = {
   id: string;
   description_html: string;
-  description_json?: object;
   isMigrationUpdate: boolean;
 };
 
@@ -71,7 +65,6 @@ type Props = {
   onSubmit: (
     value: {
       description_html: string;
-      description_json: object | undefined;
     },
     isMigrationUpdate?: boolean
   ) => Promise<void>;
@@ -154,7 +147,6 @@ export const DescriptionInput = observer(function DescriptionInput(props: Props)
       await onSubmit(
         {
           description_html: formData.description_html,
-          description_json: formData.description_json,
         },
         formData.isMigrationUpdate
       );
@@ -242,22 +234,15 @@ export const DescriptionInput = observer(function DescriptionInput(props: Props)
           workspaceId={workspaceDetails.id}
           projectId={projectId}
           dragDropEnabled
-          onChange={(description_json, description_html, options) => {
+          onChange={(_document, description_html, options) => {
             if (description_html === lastSavedContent.current) return;
             setIsSubmitting("submitting");
             onChange(description_html);
             setValue("isMigrationUpdate", !!options?.isMigrationUpdate);
-            setValue("description_json", description_json);
             hasUnsavedChanges.current = true;
             debouncedFormSave();
           }}
           placeholder={placeholder ?? ((isFocused, value) => t(getDescriptionPlaceholderI18n(isFocused, value)))}
-          searchMentionCallback={async (payload) =>
-            await workspaceService.searchEntity(workspaceSlug, {
-              ...payload,
-              project_id: projectId,
-            })
-          }
           containerClassName={containerClassName}
           uploadFile={async (blockId, file) => {
             try {
@@ -274,7 +259,7 @@ export const DescriptionInput = observer(function DescriptionInput(props: Props)
               return asset_id;
             } catch (error) {
               console.log("Error in uploading asset:", error);
-              throw new Error("Asset upload failed. Please try again later.");
+              throw new Error("Asset upload failed. Please try again later.", { cause: error });
             }
           }}
           duplicateFile={async (assetId: string) => {

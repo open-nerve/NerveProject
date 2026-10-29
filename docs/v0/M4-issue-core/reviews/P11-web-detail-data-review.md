@@ -1,6 +1,6 @@
 # M4/P11 详情数据层：预检与实施记录
 
-日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T9已实现，继续T10。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
+日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T10已实现，继续T11。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
 
 ## 1. 前置、身份与范围
 
@@ -159,3 +159,16 @@ M4恢复走root普通description_html PATCH与既有共享队列，确认前保�
 T9检查点本地F七项有效结果全部通过：t9-f1的gen-check/lint-go/test-go，后续仅前端修复后t9-f5的lint-web/knip/强制test-web/e2e。前端18任务0缓存：web195文件2109项、共享157项、api-client5项；各包原始日志及hash另存t9-f5-package-logs。E2E169项含两个Firefox A4全部通过。历史失败不删除：F1找到T8错误翻译键，F2要求keywords文件统一格式，F3找到删除后的7个死文件/1个无用export，F4发现草稿拖拽初始化；均根因修复后重跑相关前端门禁。keywords语义只删3条例外，整文件格式差异由现有oxfmt要求；当前75规则25例外，web警告上限191→158。
 
 服务/store/UI聚焦首次失败包含尚未迁移的合同；订阅mock缺失、timer/helper误用、旧加载fixture、两个并发GET夹具与权威核验GET漏答各单列，不计生产性质证明。完整页面故事仍归P15；统一列宽归T13；阶段终审、最终F/CI仍待T15。当前T9准确提交CI另存实施证据，不合并。
+
+
+### T10 有效成员提及、建议弹层与旧 JSON 收口
+
+四个实际入口（lite-text、description-input、工作项表单描述、收集箱创建描述）统一经两种编辑器包装使用本代成员目录。项目建议取有效项目成员并排除工作区inactive；无项目取当前工作区有效成员。仅按display_name匹配，最多五条，不受成员页面筛选影响，也不把email带入建议。只读零HTTP；每次输入读取用本代成员服务，query/宿主/权限ABA/退役检查在返回前生效。TipTap保留初始扩展回调，因此hook提供稳定函数入口，实际读取跟随最近已提交的宿主范围，避免新项目继续调用旧闭包。
+
+建议弹层在query变化时立即结束上轮请求，包括下一次300ms防抖窗口；旧成功/失败不能改变当前内容或loading，等待时Enter不能选旧条目。当前拒绝显示原码文案和GET重试，过期会话错误不提示。共同handler仅新增可选错误展示函数，不持有领域服务，M7自己的接口未被改变。自审补上另一个目录读者覆盖当前读取时的明确重试错误，不能把它伪装为SessionChanged而隐藏。
+
+删除WorkspaceService.searchEntity、四模块实例、其独占请求/响应DTO和一条旧地址例外；弹层迁走最后一个lodash使用后，移除editor的lodash-es/@types/lodash-es声明并更新锁文件。TSearchEntities仍供已保存mention节点使用，普通工作项搜索合同仍归后续页面。删除共享description_json表单状态/提交字段和无读者JSONContent目录/barrel；剩余description_json只在M7专属精确旧版本DTO及其合同测试，不冒称全web清零。保留editor内部TipTap JSON文档。
+
+43文件635项相关回归、editor7文件45项（含真实编辑器既有测试）、共享10项force/0缓存构建、types、变更16文件零warning/格式及关键词75规则24例外通过；knip首轮指出上述两项死依赖，移除后knip/共享强制构建/types/editor45项复验通过（t10-*-cleanup）；警告上限web158→154、editor64→59。M23放回inactive成员使两个实际成员目录断言失败，M24移除当前query保护使旧答覆盖新词；均逐文件hash恢复后全回归通过。初始hook9红是旧接口尚未迁移，不能算九种独立性质；建议弹层5红为真实行为。首次构建的测试ES2024 Promise.withResolvers与React act全局类型不适配ES2023，改本包局部deferred/显式声明后通过，没有改编译基线。误调用不存在的check-keywords脚本不构成验证，随后复用已记录的正式keywords命令通过。
+
+主控要求及质量自审完成；不声称独立逐Task审核。T9准确87d1bcd7的CI40964469564当前server/web已过、E2E待结束；T10没有新push，不冒用T9 CI证明T10。继续T11，阶段deep-review与最终完整门禁仍待T15，不合并。
