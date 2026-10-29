@@ -46,6 +46,7 @@ import type { Before, ConfirmedIssueChange } from "@/lib/paged-groups";
 import { heldCounterSources } from "@/lib/paged-groups.evidence";
 import type { IssueListBinding } from "./helpers/issue-list-binding";
 import { PermissionReads } from "./permission-reads";
+import type { DetailRegistration } from "./issue-details/resource";
 
 export type IIssueRootStore = IssueRootStore;
 export type IssueWriteScope = Readonly<{ workspaceSlug: string; projectID: string; workspaceID: string }>;
@@ -111,7 +112,8 @@ export class IssueRootStore {
   readonly verification = new IssueVerification(this);
   private readonly deletions = new Map<string, { serial: number; workspaceID: string }>();
   private readonly lists = new Set<IssueListBinding>();
-  private readonly queues = new Map<string, ReturnType<typeof oneAtATime>>();
+  private readonly resources = new Set<DetailRegistration>();
+  private readonly queues = new Map<string, Promise<void>>();
   private readonly dragQueue = oneAtATime();
   private readonly pending = new Map<string, PendingWrite>();
   readonly permissionReads: PermissionReads;
@@ -135,6 +137,8 @@ export class IssueRootStore {
 
     this.rootStore = rootStore;
     this.permissionReads = new PermissionReads(rootStore, (workspaceID, projectID, memberOnly) => {
+      for (const resource of this.resources)
+        if (resource.affects(workspaceID, projectID, memberOnly)) resource.invalidate();
       for (const list of this.lists)
         if (
           list.scope.workspaceID === workspaceID &&
@@ -172,10 +176,36 @@ export class IssueRootStore {
       this.active = false;
     });
     for (const list of this.lists) list.reconciled.invalidate();
+    for (const resource of this.resources) resource.dispose();
   }
   registerList(list: IssueListBinding): void {
     this.assertActive();
     this.lists.add(list);
+  }
+  registerResource(resource: DetailRegistration): () => void {
+    this.assertActive();
+    this.resources.add(resource);
+    return () => {
+      this.resources.delete(resource);
+    };
+  }
+  /** Reserve every affected ID before yielding; queued operations must not enqueue another write. */
+  enqueueIssueChanges<T>(ids: readonly string[], operation: () => Promise<T>): Promise<T> {
+    const ordered = [...new Set(ids)].toSorted();
+    const run = Promise.all(ordered.map((id) => this.queues.get(id))).then(() => {
+      this.assertActive();
+      return operation();
+    });
+    const tail = run.then(
+      () => undefined,
+      () => undefined
+    );
+    for (const id of ordered) this.queues.set(id, tail);
+    void tail.then(() => {
+      for (const id of ordered) if (this.queues.get(id) === tail) this.queues.delete(id);
+      return undefined;
+    });
+    return run;
   }
   captureRead(member = false): IssueReadToken {
     this.assertActive();
@@ -245,6 +275,7 @@ export class IssueRootStore {
   }
   invalidateProjectReads(projectID: string, workspaceID: string): void {
     this.deletions.set(projectID, { serial: ++this.serial, workspaceID });
+    for (const resource of this.resources) if (resource.affects(workspaceID, projectID)) resource.invalidate();
     for (const list of this.lists)
       if (list.covers({ projectID, workspaceID, workspaceSlug: list.scope.workspaceSlug })) {
         list.reconciled.invalidate();
@@ -269,14 +300,6 @@ export class IssueRootStore {
       issue.sub_issues_count,
       issue.link_count,
     ]);
-  }
-  private queue(id: string) {
-    let queue = this.queues.get(id);
-    if (!queue) {
-      queue = oneAtATime();
-      this.queues.set(id, queue);
-    }
-    return queue;
   }
   private async write(
     id: string | undefined,
@@ -409,7 +432,7 @@ export class IssueRootStore {
     operationScope?: IssueWriteScope
   ): Promise<IssueDetailAnswer> {
     const update = () =>
-      this.queue(id)(async () => {
+      this.enqueueIssueChanges([id], async () => {
         this.assertActive();
         const snapshot = this.issues.getIssueById(id);
         if (!snapshot) throw new Error("Issue has not been read");
@@ -450,7 +473,7 @@ export class IssueRootStore {
     return drop ? this.dragQueue(update) : update();
   }
   deleteIssue(id: string, scope: IssueWriteScope): Promise<void> {
-    return this.queue(id)(async () => {
+    return this.enqueueIssueChanges([id], async () => {
       await this.write(id, scope, async () => {
         await this.api.delete(id);
         return null;
@@ -458,9 +481,9 @@ export class IssueRootStore {
     });
   }
   archiveIssue(id: string, scope: IssueWriteScope): Promise<IssueDetailAnswer> {
-    return this.queue(id)(async () => (await this.write(id, scope, () => this.api.archive(id)))!);
+    return this.enqueueIssueChanges([id], async () => (await this.write(id, scope, () => this.api.archive(id)))!);
   }
   unarchiveIssue(id: string, scope: IssueWriteScope): Promise<IssueDetailAnswer> {
-    return this.queue(id)(async () => (await this.write(id, scope, () => this.api.unarchive(id)))!);
+    return this.enqueueIssueChanges([id], async () => (await this.write(id, scope, () => this.api.unarchive(id)))!);
   }
 }

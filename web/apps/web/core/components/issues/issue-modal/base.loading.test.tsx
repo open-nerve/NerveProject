@@ -4,7 +4,7 @@
 import type { Issue } from "@nerve/api-client";
 import React, { act, forwardRef, useImperativeHandle } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, expect, it, vi, type MockInstance } from "vitest";
+import { afterEach, beforeEach, expect, it, vi, type Mock } from "vitest";
 import { CreateUpdateIssueModalBase } from "./base";
 import type { IssuesModalProps } from "./modal";
 import type { RichTextEditor } from "@/components/editor/rich-text";
@@ -13,9 +13,8 @@ import { configure, runInAction } from "mobx";
 configure({ safeDescriptors: false });
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import { APIService } from "@/services/api.service";
-import { heldChange } from "@/lib/auth/fake-tab";
 import { EIssuesStoreType } from "@nerve/types";
-import { FakeNerve, answered, json } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json, problem, type Call } from "@/lib/auth/fake-nerve";
 import { issueOf } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { projectOf, loadProjects, stateOf } from "@/store/project/fake-projects";
@@ -125,8 +124,8 @@ class NoResize {
 }
 let root: Root;
 let container: HTMLElement;
-let get: MockInstance<APIService["get"]>;
 let failure: string | undefined;
+let native: Mock<(call: Call) => void>;
 let sourceHasHtml: boolean;
 let sourceHtml: string;
 function core(id: string): Issue {
@@ -161,12 +160,22 @@ beforeEach(() => {
     relates_to: [],
   });
   vi.spyOn(app.state, "fetchProjectStates").mockResolvedValue([]);
-  get = vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
+  vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
     if (failure && url.endsWith(failure)) throw { response: { data: { code: "resource-refused" } } };
     if (url.endsWith("/reactions/") || url.endsWith("/issue-links/")) return reply([]);
-    if (url.endsWith("/issues/parent/")) return reply(issueOf("parent", project.id, project.workspace_id));
-    return reply(core(url.split("/").at(-2)!));
+    throw new Error(`Unexpected legacy URL: ${url}`);
   });
+  native = vi.fn((call: Call) => {
+    if (call.method !== "GET" || !call.path.startsWith("/api/v0/issues/")) return;
+    const id = call.path.split("/").at(-1)!;
+    if (failure === "/issues/parent/" && id === "parent") call.answer(problem(403, "resource-refused"));
+    else if (id === "parent")
+      call.answer(
+        json(200, { ...issueOf("parent", project.id, project.workspace_id), description_html: "<p>parent</p>" })
+      );
+    else if (!app.issue.verification.isUncertain(id)) call.answer(json(200, core(id)));
+  });
+  nerve.respond = (call) => native(call);
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -231,16 +240,18 @@ it.each(["/reactions/", "/issue-links/", "/issues/parent/"])(
 it.each(["resolve", "reject"])(
   "an old source settling after replacement cannot change current form or load state (%s)",
   async (settling) => {
-    const old = heldChange<AxiosResponse<Issue>>();
-    const fallback = get.getMockImplementation()!;
-    get.mockImplementation((url, ...args) => (url.endsWith("/issues/old/") ? old.sent : fallback(url, ...args)));
+    const fallback = native.getMockImplementation()!;
+    native.mockImplementation((call) => {
+      if (call.path !== "/api/v0/issues/old") fallback(call);
+    });
     await render("old");
     await title("Current input");
     sourceHtml = "<p>current</p>";
     await render("current");
     await act(async () => {
-      if (settling === "resolve") old.answer(reply({ ...core("old"), description_html: "<p>stale</p>" }));
-      else old.refuse({ response: { data: { code: "old-refused" } } });
+      if (settling === "resolve")
+        nerve.to("/api/v0/issues/old")[0]!.answer(json(200, { ...core("old"), description_html: "<p>stale</p>" }));
+      else nerve.to("/api/v0/issues/old")[0]!.answer(problem(403, "old-refused"));
     });
     expect(container.querySelector("[role=alert]")).toBeNull();
     expect(container.querySelector<HTMLInputElement>("input[name=name]")!.value).toBe("Current input");
@@ -255,15 +266,16 @@ it.each(["resolve", "reject"])(
   }
 );
 it("closing during load consumes its late failure and reopening can load another source", async () => {
-  const old = heldChange<AxiosResponse<Issue>>();
-  const fallback = get.getMockImplementation()!;
-  get.mockImplementation((url, ...args) => (url.endsWith("/issues/old/") ? old.sent : fallback(url, ...args)));
+  const fallback = native.getMockImplementation()!;
+  native.mockImplementation((call) => {
+    if (call.path !== "/api/v0/issues/old") fallback(call);
+  });
   await render("old");
   const discard = [...container.querySelectorAll("button")].find((button) => button.textContent === "discard")!;
   await act(async () => discard.click());
   expect(ui.close).toHaveBeenCalledTimes(1);
   await render("old", false);
-  await act(async () => old.refuse({ response: { data: { code: "closed-refused" } } }));
+  await act(async () => nerve.to("/api/v0/issues/old")[0]!.answer(problem(403, "closed-refused")));
   expect(container.querySelector("form")).toBeNull();
   await render("current");
   expect(container.querySelector("[role=alert]")).toBeNull();

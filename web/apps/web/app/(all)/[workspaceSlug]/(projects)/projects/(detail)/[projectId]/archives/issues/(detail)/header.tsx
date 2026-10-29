@@ -5,23 +5,20 @@
  */
 
 import { observer } from "mobx-react";
-import useSWR from "swr";
+import { useSessionSWR } from "@/lib/use-session-swr";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useTranslation } from "@nerve/i18n";
+import { errorMessageKey } from "@/lib/error-messages";
 // ui
 import { ArchiveOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 import { Breadcrumbs, Header } from "@nerve/ui";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { IssueDetailQuickActions } from "@/components/issues/issue-detail/issue-detail-quick-actions";
-// constants
-import { ISSUE_DETAILS } from "@nerve/constants";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 // components
 import { ProjectBreadcrumb } from "@/components/breadcrumbs/project";
-// services
-import { IssueService } from "@/services/issue";
-
-const issueService = new IssueService();
 
 type TProps = {
   workspaceSlug: string;
@@ -33,11 +30,21 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
   // router
   const { workspaceSlug, projectId, archivedIssueId } = props;
   // store hooks
-  const { currentProjectDetails, loader } = useProject();
-
-  const { data: issueDetails } = useSWR(ISSUE_DETAILS(archivedIssueId), () =>
-    issueService.retrieve(workspaceSlug, projectId, archivedIssueId)
+  const { getProjectById, loader } = useProject();
+  const detail = useIssueDetail();
+  const { t } = useTranslation();
+  const root = detail.rootIssueStore;
+  const workspaceID = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id;
+  const identity = root.permissionReads.identity(workspaceID, [projectId]);
+  const readable =
+    root.rootStore.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) !== undefined;
+  const { error, mutate } = useSessionSWR(
+    readable ? ["archive-issue-header", workspaceSlug, projectId, archivedIssueId, identity] : null,
+    (slug, project, id) => detail.issue.fetchIssueCore(slug, project, id),
+    { dedupingInterval: 0 }
   );
+  const issueDetails = detail.issue.getIssueDetailById(archivedIssueId);
+  const currentProjectDetails = getProjectById(projectId);
 
   return (
     <Header>
@@ -76,6 +83,19 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
         </Breadcrumbs>
       </Header.LeftItem>
       <Header.RightItem>
+        {error && (
+          <div role="alert">
+            {t(errorMessageKey(error))}
+            <button
+              type="button"
+              onClick={() => {
+                void mutate().catch(() => {});
+              }}
+            >
+              {t("common.retry")}
+            </button>
+          </div>
+        )}
         <IssueDetailQuickActions workspaceSlug={workspaceSlug} projectId={projectId} issueId={archivedIssueId} />
       </Header.RightItem>
     </Header>

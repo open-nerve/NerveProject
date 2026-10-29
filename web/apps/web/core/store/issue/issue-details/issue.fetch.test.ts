@@ -8,7 +8,7 @@ import { APIService } from "@/services/api.service";
 import { heldChange } from "@/lib/auth/fake-tab";
 import type { TIssueReaction, TIssueLink, TIssueRelation } from "@nerve/types";
 import { until, track } from "@/lib/auth/fake-time";
-import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json, noContent, problem, type Call } from "@/lib/auth/fake-nerve";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { issueOf, requestedIssue } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
@@ -79,7 +79,7 @@ function resources(parentId: string | null, withRelations = false) {
     parent_id: parentId,
     description_html: "<p>detail</p>",
   };
-  const parent = issueOf("parent", project.id, project.workspace_id);
+  const parent = { ...issueOf("parent", project.id, project.workspace_id), description_html: "<p>parent</p>" };
   // Only pre-existing, non-target detached side fetches are isolated.
   vi.spyOn(detail.activity, "fetchActivities").mockResolvedValue([]);
   vi.spyOn(detail.comment, "fetchComments").mockResolvedValue([]);
@@ -96,14 +96,24 @@ function resources(parentId: string | null, withRelations = false) {
     if (url.endsWith("/issue-relation/")) return reply(relations);
     if (url.endsWith("/reactions/")) return reply([reaction]);
     if (url.endsWith("/issue-links/")) return reply([link]);
-    if (url.endsWith("/issues/parent/")) return reply(parent);
-    return reply(source);
+    throw new Error(`Unexpected legacy URL: ${url}`);
   });
+  const native = vi.fn((call: Call) => {
+    if (call.method !== "GET") return;
+    if (call.path === "/api/v0/issues/parent") call.answer(json(200, parent));
+    else if (
+      (call.path === "/api/v0/issues/R1" ||
+        call.path === `/api/v0/workspaces/${ws.slug}/issues/${project.identifier}-1`) &&
+      !app.issue.verification.isUncertain(source.id)
+    )
+      call.answer(json(200, source));
+  });
+  nerve.respond = native;
   const fetch = (identifier: boolean) =>
     identifier
-      ? detail.fetchIssueWithIdentifier(ws.slug, project.identifier, "1")
+      ? detail.fetchIssueWithIdentifier(ws.slug, `${project.identifier}-1`)
       : detail.fetchIssue(ws.slug, project.id, source.id);
-  return { detail, source, parent, get, fetch, related, relations, relationFetch };
+  return { detail, source, parent, get, native, fetch, related, relations, relationFetch };
 }
 it.each([false, true].flatMap((identifier) => [null, "parent"].map((parentId) => ({ identifier, parentId }))))(
   "both retrieve paths fill real resource caches from independent responses ($identifier/$parentId)",
@@ -121,9 +131,9 @@ it.each([false, true].flatMap((identifier) => [null, "parent"].map((parentId) =>
       expect(add.mock.calls[1]![1].serial).toBeGreaterThan(add.mock.calls[0]![1].serial);
       expect(add.mock.calls[1]![1].owner).toBe(add.mock.calls[0]![1].owner);
     }
-    expect(get).toHaveBeenCalledTimes(parentId ? 4 : 3);
-    expect(get.mock.calls[0]?.[1]).toEqual({ params: undefined });
-    expect(get.mock.calls.filter(([url]) => url.includes("/issues/parent/"))).toHaveLength(parentId ? 1 : 0);
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(nerve.calls.at(-1)?.queryEntries).toEqual([]);
+    expect(nerve.to("/api/v0/issues/parent")).toHaveLength(parentId ? 1 : 0);
     if (parentId) expect(app.issue.issues.getIssueById(parent.id)).toEqual(parent);
     else expect(app.issue.issues.getIssueById(parent.id)).toBeUndefined();
     for (const field of ["parent", "issue_reactions", "issue_link", "issue_attachments"])
@@ -156,12 +166,14 @@ it.each([200, 500])("detailRetryIsBoundedAndRefusalReturns (%s)", async (status)
     { ...issueOf(source.id, project.id, project.workspace_id), updated_at: "2026-10-30T00:00:00Z" },
     app.issue.captureRead()
   );
-  const request = await requestedIssue(nerve, () => fetch(false), ["GET", "/api/v0/issues/R1"]);
-  const outcome = status === 500 ? expect(request.promise).rejects.toMatchObject({ status: 500 }) : request.promise;
-  request.call.answer(status === 500 ? problem(500, "internal") : json(200, source));
-  await outcome;
+  const reading = track(fetch(false));
+  await until(() => nerve.to("/api/v0/issues/R1").length === 2, "bounded authority retry");
+  nerve.to("/api/v0/issues/R1")[1]!.answer(status === 500 ? problem(500, "internal") : json(200, source));
+  await until(() => reading.settled, "authority settles");
+  if (status === 500) expect(reading.error).toMatchObject({ status: 500 });
+  else expect(reading.error).toBeUndefined();
   expect(app.issue.issues.getIssueDetailById(source.id)).toBeUndefined();
-  expect(nerve.calls.filter((call) => call.path === "/api/v0/issues/R1")).toHaveLength(1);
+  expect(nerve.to("/api/v0/issues/R1")).toHaveLength(2);
 });
 
 it("legacyLinkCountComesFromAuthoritativeVersionAndRefusalDoesNotMutate", async () => {
@@ -256,15 +268,23 @@ it.each(
 )(
   "auxiliary HTTP refusal belongs to fetch, with existing extraction and no detached rejection ($identifier/$resource)",
   async ({ identifier, resource }) => {
-    const { get, fetch } = resources("parent");
+    const { get, fetch, native } = resources("parent");
     const fallback = get.getMockImplementation()!;
     const domainError = { code: "resource-refused" };
     get.mockImplementation((url, ...args) =>
       url.endsWith(resource) ? Promise.reject({ response: { data: domainError } }) : fallback(url, ...args)
     );
+    if (resource === "issues/parent/") {
+      const fallbackNative = native.getMockImplementation()!;
+      native.mockImplementation((call) =>
+        call.path === "/api/v0/issues/parent" ? call.answer(problem(403, "resource-refused")) : fallbackNative(call)
+      );
+    }
     const result = track(fetch(identifier));
     await until(() => result.settled, "detail fetch settles");
-    expect(result.error).toEqual(resource === "issue-links/" ? { data: domainError } : domainError);
+    if (resource === "issues/parent/")
+      expect(result.error).toMatchObject({ status: 403, problem: { code: "resource-refused" } });
+    else expect(result.error).toEqual(resource === "issue-links/" ? { data: domainError } : domainError);
   }
 );
 
@@ -310,7 +330,7 @@ it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => 
     expect(app.issue.issues.getIssueById(related.id)).toEqual(relations.blocking[0]);
     expect(app.issue.issues.getIssueById(source.id)?.name).toBe("list update");
     expect(app.issue.issues.getIssueDetailById(source.id)?.description_html).toBe(source.description_html);
-    expect(get).toHaveBeenCalledTimes(4);
+    expect(get).toHaveBeenCalledTimes(3);
     expect(nerve.calls.filter((call) => call.path === `/api/v0/projects/${project.id}/issues`)).toHaveLength(
       page === "initial" ? 1 : 2
     );
@@ -319,15 +339,13 @@ it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => 
 
 it.each([false, true])("drops an old detail after observed loss and recovery (%s)", async (identifier) => {
   const { fetch, source } = resources(null);
-  let release!: (value: AxiosResponse<typeof source>) => void;
-  const pending = new Promise<AxiosResponse<typeof source>>((resolve) => {
-    release = resolve;
-  });
-  vi.spyOn(APIService.prototype, "get").mockImplementation(() => pending);
+  nerve.respond = undefined;
   const reading = track(fetch(identifier));
+  await until(() => nerve.calls.some((call) => call.path.includes("/issues/")), "core GET");
+  const core = nerve.calls.find((call) => call.path.includes("/issues/"))!;
   await loadProjects(nerve, app.projectRoot.project, ws, []);
   await loadProjects(nerve, app.projectRoot.project, ws, [project]);
-  release(reply(source));
+  core.answer(json(200, source));
   await until(() => reading.settled, "old detail");
   expect(reading.error).toBeInstanceOf(SessionChangedError);
   expect(app.issue.issues.held(source.id)).toBeUndefined();
@@ -344,12 +362,15 @@ it.each(["unknown", "revoked"])("detail preflight rejects %s scope before restri
   expect(get).not.toHaveBeenCalled();
 });
 
-it("identifier preflight rejects an unknown project without a restricted GET", async () => {
-  const get = vi.spyOn(APIService.prototype, "get").mockRejectedValue(new Error("restricted GET sent"));
-  await expect(app.issue.issueDetail.issue.fetchIssueWithIdentifier(ws.slug, "UNKNOWN", "1")).rejects.toBeInstanceOf(
-    SessionChangedError
+it("identifier sends an unknown complete name to the server and preserves its refusal", async () => {
+  const { call, result } = await requestedIssue(
+    nerve,
+    () => app.issue.issueDetail.fetchIssueWithIdentifier(ws.slug, "UNKNOWN-1"),
+    ["GET", `/api/v0/workspaces/${ws.slug}/issues/UNKNOWN-1`]
   );
-  expect(get).not.toHaveBeenCalled();
+  call.answer(problem(404, "issue.not_found"));
+  await until(() => result.settled, "identifier refusal");
+  expect(result.error).toMatchObject({ status: 404 });
 });
 
 it.each([false, true])("a legitimate guest may fetch detail (%s)", async (identifier) => {
@@ -359,18 +380,23 @@ it.each([false, true])("a legitimate guest may fetch detail (%s)", async (identi
 });
 
 it("parent preflight sees a loss observed between the detail and auxiliary reads", async () => {
-  const { detail, get, fetch } = resources("parent");
+  const { detail, fetch } = resources("parent");
   vi.spyOn(detail, "fetchReactions").mockImplementation(async () => {
     app.projectRoot.project.confirmProject(project, (held) => ({ ...held, member_role: null }));
     return [];
   });
   await expect(fetch(false)).rejects.toBeInstanceOf(SessionChangedError);
-  expect(get.mock.calls.filter(([url]) => url.endsWith("/issues/parent/"))).toHaveLength(0);
+  expect(nerve.to("/api/v0/issues/parent")).toHaveLength(0);
 });
 
-it("identifier rejects a response belonging to another project", async () => {
-  const { get, fetch, source } = resources(null);
-  get.mockResolvedValue(reply({ ...source, project_id: "other" }));
-  await expect(fetch(true)).rejects.toBeInstanceOf(SessionChangedError);
+it("identifier refuses an unproved project response without accepting its core", async () => {
+  const { native, fetch, source } = resources(null);
+  native.mockImplementation((call) => {
+    if (call.path.includes("/workspaces/")) call.answer(json(200, { ...source, project_id: "other" }));
+    else if (call.path === "/api/v0/projects/other") call.answer(problem(403, "forbidden"));
+  });
+  const reading = track(fetch(true));
+  await until(() => reading.settled, "unproved project");
+  expect(reading.error).toMatchObject({ status: 403 });
   expect(app.issue.issues.held(source.id)).toBeUndefined();
 });

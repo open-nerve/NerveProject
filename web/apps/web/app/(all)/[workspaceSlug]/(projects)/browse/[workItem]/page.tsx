@@ -4,12 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue } from "@nerve/api-client";
-
 import { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
-import useSWR from "swr";
+import { useSessionSWR } from "@/lib/use-session-swr";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 
@@ -42,23 +40,23 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
   const { t } = useTranslation();
   const {
     fetchIssueWithIdentifier,
+    rootIssueStore,
     issue: { getIssueById },
   } = useIssueDetail();
-  const { getProjectById, getProjectByIdentifier } = useProject();
+  const { getProjectById } = useProject();
   const { toggleIssueDetailSidebar, issueDetailSidebarCollapsed } = useAppTheme();
 
-  const [projectIdentifier, sequence_id] = workItem.split("-");
-
-  // fetching issue details
-  const { data, isLoading, error } = useSWR<Issue | undefined, Error>(
-    `ISSUE_DETAIL_${workspaceSlug}_${projectIdentifier}_${sequence_id}`,
-    () => fetchIssueWithIdentifier(workspaceSlug, projectIdentifier, sequence_id)
+  const workspaceID = rootIssueStore.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id;
+  const identity = rootIssueStore.permissionReads.identity(workspaceID, []);
+  const { data, isLoading, error } = useSessionSWR(
+    ["issue-by-identifier", workspaceSlug, workItem, identity],
+    (slug, identifier) => fetchIssueWithIdentifier(slug, identifier),
+    { dedupingInterval: 0 }
   );
 
-  // derived values
-  const projectDetails = getProjectByIdentifier(projectIdentifier);
+  // The identifier is parsed only by the server; the proven response chooses the project.
   const issueId = data?.id;
-  const projectId = data?.project_id ?? projectDetails?.id ?? "";
+  const projectId = data?.project_id ?? "";
   const issue = getIssueById(issueId || "") || undefined;
   const project = (issue?.project_id && getProjectById(issue?.project_id)) || undefined;
   const issueLoader = !issue || isLoading;
@@ -86,7 +84,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
         description={t("issue.empty_state.issue_detail.description")}
         primaryButton={{
           text: t("issue.empty_state.issue_detail.primary_button.text"),
-          onClick: () => navigate(`/${workspaceSlug}/workspace-views/all-issues`),
+          onClick: () => navigate(`/${workspaceSlug}/projects`),
         }}
       />
     );

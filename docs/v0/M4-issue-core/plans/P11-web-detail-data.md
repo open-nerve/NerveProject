@@ -68,12 +68,12 @@ make e2e
 **Files：** C/store/issue/root.store.ts、permission-reads.ts、issue-details/issue.store.ts；新 issue-details/resource.ts/.test.ts；既有 issue.fetch.test.ts、issue-changes.test.ts、issue-modal/base.loading.test.tsx/base.clone.test.tsx 的受影响读取；app 归档详情 header.tsx 和 issueId/page.tsx（spec D3）；新 core/components/issues/detail-entry.test.tsx。
 **Interfaces：** scoped resource 的 read/confirm/getter/invalidate/dispose；root 提供局部登记/失效与同队列 `enqueueIssueChanges(ids, operation)`，ID去重排序，核心单项也走同一队列集合。resource 不自己观察角色。根现有 create/update/delete/verification 语义保持。
 
-- [ ] 以 FakeNerve 真实 HTTP 与当前 root 写 scope、请求不匹配、较旧 Detail、父项、冷目录、byIdentifier 大小写/Unicode、当前拒绝、退役/删除/ABA 两轮 deferred；旧的“本地没有严格相等 identifier 必须零GET”断言改成服务端解析+写入前scope证明，其他 id/project preflight 断言保留。
-- [ ] 资源测试 `hidesHeldResourcesImmediatelyAfterPermissionChanges`、`doesNotReviveAfterPermissionABA`、`replaysConfirmationOverOlderReads`、`retiresRegistrations`；两个资源/两个 workspace 不误清。
-- [ ] 替换核心/父项读取，保留 canonical/verification freshness；核心及附属读取有受控 await/错误；编号 GET 应答未通过 workspace/project/current token 验证前零 canonical/附属请求。
-- [ ] 归档页头使用本代 detail 读取+SessionSWR；issueId 跳转不在无会话 clientLoader 里建服务，改在有 store 的组件等确认后导航，用返回project_id所指 Project.identifier 与 IssueDetail.sequence_id 拼接；不存在/拒绝时保留错误空态，按钮改到该工作区项目列表，不能保留旧 workspace-views/all-issues 地址。只做数据接线，不扩 P13/P14 UI。
-- [ ] 跑 resource/issue.fetch/detail-entry 新旧测试+root.store.test.ts+issue.store.test.ts+types；多 ID 队列交错与 reject 后继续测试，禁止占队列后嵌套 root.updateIssue。
-- [ ] M02 移除 getter 权限校验、M03 移除返回scope检查、M04 移除重放各自行为红；G。提交 `feat(M4/P11): 接通详情读取并统一资源权限失效`。
+- [x] 以 FakeNerve 真实 HTTP 与当前 root 写 scope、请求不匹配、较旧 Detail、父项、冷目录、byIdentifier 大小写/Unicode、当前拒绝、退役/删除/ABA 两轮 deferred；旧的“本地没有严格相等 identifier 必须零GET”断言改成服务端解析+写入前scope证明，其他 id/project preflight 断言保留。
+- [x] 资源测试 `hidesHeldResourcesImmediatelyAfterPermissionChanges`、`doesNotReviveAfterPermissionABA`、`replaysConfirmationOverOlderReads`、`retiresRegistrations`；两个资源/两个 workspace 不误清。
+- [x] 替换核心/父项读取，保留 canonical/verification freshness；核心及附属读取有受控 await/错误；编号 GET 应答未通过 workspace/project/current token 验证前零 canonical/附属请求。
+- [x] 归档页头使用本代 detail 读取+SessionSWR；issueId 跳转不在无会话 clientLoader 里建服务，改在有 store 的组件等确认后导航，用返回project_id所指 Project.identifier 与 IssueDetail.sequence_id 拼接；不存在/拒绝时保留错误空态，按钮改到该工作区项目列表，不能保留旧 workspace-views/all-issues 地址。只做数据接线，不扩 P13/P14 UI。
+- [x] 跑 resource/issue.fetch/detail-entry 新旧测试+root.store.test.ts+issue.store.test.ts+types；多 ID 队列交错与 reject 后继续测试，禁止占队列后嵌套 root.updateIssue。
+- [x] M02 移除 getter 权限校验、M03 移除返回scope检查、M04 移除重放各自行为红；G。提交 `feat(M4/P11): 接通详情读取并统一资源权限失效`。
 
 ## Task 3：子项与关联（约800–1350行）
 

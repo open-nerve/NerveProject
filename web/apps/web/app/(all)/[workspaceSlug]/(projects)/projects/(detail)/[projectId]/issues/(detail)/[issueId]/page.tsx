@@ -5,7 +5,11 @@
  */
 
 import { useTheme } from "next-themes";
-import { redirect, useNavigate } from "react-router";
+import { useEffect } from "react";
+import { observer } from "mobx-react";
+import { useSessionSWR } from "@/lib/use-session-swr";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useNavigate } from "react-router";
 import { useTranslation } from "@nerve/i18n";
 // assets
 import emptyIssueDark from "@/app/assets/empty-state/search/issues-dark.webp?url";
@@ -13,40 +17,31 @@ import emptyIssueLight from "@/app/assets/empty-state/search/issues-light.webp?u
 // components
 import { EmptyState } from "@/components/common/empty-state";
 import { LogoSpinner } from "@/components/common/logo-spinner";
-// services
-import { IssueService } from "@/services/issue/issue.service";
-// types
 import type { Route } from "./+types/page";
 
-const issueService = new IssueService();
-
-export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+const IssueDetailsPage = observer(function IssueDetailsPage({ params }: Pick<Route.ComponentProps, "params">) {
   const { workspaceSlug, projectId, issueId } = params;
-
-  try {
-    const data = await issueService.getIssueMetaFromURL(workspaceSlug, projectId, issueId);
-
-    if (data) {
-      throw redirect(`/${workspaceSlug}/browse/${data.project_identifier}-${data.sequence_id}`);
-    }
-
-    return { error: true, workspaceSlug };
-  } catch (error) {
-    // If it's a redirect, rethrow it
-    if (error instanceof Response) {
-      throw error;
-    }
-    // Otherwise return error state
-    return { error: true, workspaceSlug };
-  }
-}
-
-export default function IssueDetailsPage({ loaderData }: Route.ComponentProps) {
+  const detail = useIssueDetail();
+  const issueRoot = detail.rootIssueStore;
+  const workspaceID = issueRoot.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id;
+  const identity = issueRoot.permissionReads.identity(workspaceID, [projectId]);
+  const { data, error, isLoading } = useSessionSWR(
+    ["issue-id-entry", workspaceSlug, projectId, issueId, identity],
+    (slug, project, id) => detail.issue.fetchIssueCore(slug, project, id),
+    { dedupingInterval: 0 }
+  );
+  const issue = data?.id === issueId ? detail.issue.getIssueDetailById(issueId) : undefined;
+  const project = issue ? issueRoot.rootStore.projectRoot.project.getProjectById(issue.project_id) : undefined;
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
 
-  if (loaderData.error) {
+  useEffect(() => {
+    if (issue && project)
+      navigate(`/${workspaceSlug}/browse/${project.identifier}-${issue.sequence_id}`, { replace: true });
+  }, [navigate, workspaceSlug, issue, project]);
+
+  if (error || (!isLoading && !issue)) {
     return (
       <div className="flex size-full items-center justify-center">
         <EmptyState
@@ -55,7 +50,7 @@ export default function IssueDetailsPage({ loaderData }: Route.ComponentProps) {
           description={t("issue.empty_state.issue_detail.description")}
           primaryButton={{
             text: t("issue.empty_state.issue_detail.primary_button.text"),
-            onClick: () => navigate(`/${loaderData.workspaceSlug}/workspace-views/all-issues`),
+            onClick: () => navigate(`/${workspaceSlug}/projects`),
           }}
         />
       </div>
@@ -67,4 +62,6 @@ export default function IssueDetailsPage({ loaderData }: Route.ComponentProps) {
       <LogoSpinner />
     </div>
   );
-}
+});
+
+export default IssueDetailsPage;
