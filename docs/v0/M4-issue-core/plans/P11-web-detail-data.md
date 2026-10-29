@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T7已实现，继续T8**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T8已实现，继续T9**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -130,10 +130,10 @@ make e2e
 
 **Files：** work_item_version.service.ts；新 issue-details/description-versions.store.ts/.test.ts；core/description-versions/{root,dropdown,dropdown-item,modal}.tsx及测试；两个M4调用方；services/inbox/intake-work_item_version.service.ts及新 intake-description-version.ts；inbox/content/issue-root.tsx；P/types旧description_version。
 
-- [ ] 原生版本 list/get、last_saved_at/id倒序分页、列表管理员/成员允许而guest零请求、快速选版本晚答不覆盖；恢复等待 description PATCH，422/403保留弹窗/内容，无专用restore请求。
-- [ ] M4两个模块级WorkItemVersionService移到本代store；共享展示组件的props/accessor与传输解耦。M7旧DTO精确迁到所属service目录，旧URL/body/nullable保持，测试捕获；不创建生成字段补丁或删M7功能。
-- [ ] 改SessionSWR/权限key，关闭清理计时器和选择状态受宿主scope控制；最后删共享旧版本类型，M7本地类型明确期限M7。
-- [ ] 跑新store/root测试及M7 transport相关回归/types；M16 guest发版本GET、M17恢复失败也关窗、M18旧版本答盖新选项各红；G。提交 `feat(M4/P11): 迁移描述版本并划清收集箱的旧传输类型`。
+- [x] 原生版本 list/get、last_saved_at/id倒序分页、列表管理员/成员允许而guest零请求、快速选版本晚答不覆盖；恢复等待 description PATCH，422/403保留弹窗/内容，无专用restore请求。
+- [x] M4两个模块级WorkItemVersionService移到本代store；共享展示组件的props/accessor与传输解耦。M7旧DTO精确迁到所属service目录，旧URL/body/nullable保持，测试捕获；不创建生成字段补丁或删M7功能。
+- [x] 改SessionSWR/权限key，关闭清理计时器和选择状态受宿主scope控制；最后删共享旧版本类型，M7本地类型明确期限M7。
+- [x] 跑新store/root测试及M7 transport相关回归/types；M16 guest发版本GET、M17恢复失败也关窗、M18旧版本答盖新选项各红；G。提交 `feat(M4/P11): 迁移描述版本并划清收集箱的旧传输类型`。
 
 ## Task 9：个人草稿与发布确认（约950–1500行）
 

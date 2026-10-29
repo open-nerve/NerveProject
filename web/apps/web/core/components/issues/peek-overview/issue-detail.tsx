@@ -12,23 +12,20 @@ import type { EditorRefApi } from "@nerve/editor";
 import { EFileAssetType } from "@nerve/types";
 import type { TNameDescriptionLoader } from "@nerve/types";
 // components
-import { DescriptionVersionsRoot } from "@/components/core/description-versions";
+import { IssueDescriptionVersions } from "@/components/issues/issue-detail/description-versions";
 import { DescriptionInput } from "@/components/editor/rich-text/description-input";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useMember } from "@/hooks/store/use-member";
 import { useUser } from "@/hooks/store/user";
 import useReloadConfirmations from "@/hooks/use-reload-confirmation";
 // services
-import { WorkItemVersionService } from "@/services/issue";
 // local components
 import type { TIssueOperations } from "../issue-detail";
 import { IssueParentDetail } from "../issue-detail/parent";
 import { IssueReaction } from "../issue-detail/reactions";
 import { IssueTitleInput } from "../title-input";
 // services init
-const workItemVersionService = new WorkItemVersionService();
 
 type Props = {
   editorRef: React.RefObject<EditorRefApi | null>;
@@ -51,7 +48,6 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
     issue: { getIssueDetailById },
   } = useIssueDetail();
 
-  const { getUserDetails } = useMember();
   // reload confirmation
   const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting");
 
@@ -129,35 +125,13 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
             disabled={isArchived}
           />
         )}
-        {!disabled && (
-          <DescriptionVersionsRoot
-            className="flex-shrink-0"
-            entityInformation={{
-              createdAt: issue.created_at ? new Date(issue.created_at) : new Date(),
-              createdByDisplayName: getUserDetails(issue.created_by_id ?? "")?.display_name ?? "",
-              id: issueId,
-              isRestoreDisabled: disabled || isArchived,
-            }}
-            fetchHandlers={{
-              listDescriptionVersions: (issueId) =>
-                workItemVersionService.listDescriptionVersions(
-                  workspaceSlug,
-                  issue.project_id?.toString() ?? "",
-                  issueId
-                ),
-              retrieveDescriptionVersion: (issueId, versionId) =>
-                workItemVersionService.retrieveDescriptionVersion(
-                  workspaceSlug,
-                  issue.project_id?.toString() ?? "",
-                  issueId,
-                  versionId
-                ),
-            }}
-            handleRestore={(descriptionHTML) => editorRef.current?.setEditorValue(descriptionHTML, true)}
-            projectId={issue.project_id}
-            workspaceSlug={workspaceSlug}
-          />
-        )}
+        <IssueDescriptionVersions
+          workspaceSlug={workspaceSlug}
+          projectId={issue.project_id}
+          issueId={issueId}
+          editorRef={editorRef}
+          isRestoreDisabled={disabled || isArchived}
+        />
       </div>
     </div>
   );

@@ -4,7 +4,8 @@
  * See the LICENSE file for details.
  */
 
-export type TDescriptionVersion = {
+// Exact legacy M7 transport; remove when the intake API is implemented.
+export type TIntakeDescriptionVersion = {
   created_at: string;
   created_by: string | null;
   id: string;
@@ -15,20 +16,20 @@ export type TDescriptionVersion = {
   updated_by: string | null;
 };
 
-export type TDescriptionVersionDetails = TDescriptionVersion & {
+export type TIntakeDescriptionVersionDetails = TIntakeDescriptionVersion & {
   description_html: string | null;
   description_json: object | null;
   description_stripped: string | null;
 };
 
-export type TDescriptionVersionsListResponse = {
+export type TIntakeDescriptionVersionsListResponse = {
   cursor: string;
   next_cursor: string | null;
   next_page_results: boolean;
   page_count: number;
   prev_cursor: string | null;
   prev_page_results: boolean;
-  results: TDescriptionVersion[];
+  results: TIntakeDescriptionVersion[];
   total_pages: number;
   total_results: number;
 };

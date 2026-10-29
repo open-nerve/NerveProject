@@ -463,6 +463,8 @@
     "subscribed": "Subscribed"
   },
   "description_versions": {
+    "previous_version": "Previous version",
+    "next_version": "Next version",
     "last_edited_by": "Last edited by",
     "previously_edited_by": "Previously edited by",
     "edited_by": "Edited by"

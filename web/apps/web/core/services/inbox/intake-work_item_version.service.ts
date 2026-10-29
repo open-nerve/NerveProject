@@ -5,7 +5,10 @@
  */
 
 // nerve imports
-import type { TDescriptionVersionsListResponse, TDescriptionVersionDetails } from "@nerve/types";
+import type {
+  TIntakeDescriptionVersionsListResponse,
+  TIntakeDescriptionVersionDetails,
+} from "./intake-description-version";
 // services
 import { APIService } from "@/services/api.service";
 
@@ -14,7 +17,7 @@ export class IntakeWorkItemVersionService extends APIService {
     workspaceSlug: string,
     projectId: string,
     intakeWorkItemId: string
-  ): Promise<TDescriptionVersionsListResponse> {
+  ): Promise<TIntakeDescriptionVersionsListResponse> {
     return this.get(
       `/api/workspaces/${workspaceSlug}/projects/${projectId}/intake-work-items/${intakeWorkItemId}/description-versions/`
     )
@@ -29,7 +32,7 @@ export class IntakeWorkItemVersionService extends APIService {
     projectId: string,
     intakeWorkItemId: string,
     versionId: string
-  ): Promise<TDescriptionVersionDetails> {
+  ): Promise<TIntakeDescriptionVersionDetails> {
     return this.get(
       `/api/workspaces/${workspaceSlug}/projects/${projectId}/intake-work-items/${intakeWorkItemId}/description-versions/${versionId}/`
     )

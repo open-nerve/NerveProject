@@ -7,6 +7,7 @@ import { issueCommentOf, issueReactionOf, issueActivityOf, requestedIssue } from
 import { IssueCommentService } from "./issue_comment.service";
 import { IssueActivityService } from "./issue_activity.service";
 import { IssueReactionService } from "./issue_reaction.service";
+import { WorkItemVersionService } from "./work_item_version.service";
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
@@ -28,6 +29,31 @@ const cases: {
   status: number;
   query?: [string, string][];
 }[] = [
+  {
+    name: "list description versions",
+    run: (s) => new WorkItemVersionService(s).listDescriptionVersions("x", { cursor: "opaque+/=", limit: 2 }),
+    endpoint: ["GET", "/api/v0/issues/x/description-versions"],
+    answer: { data: [], next_cursor: "next+/=" },
+    status: 200,
+    query: [
+      ["cursor", "opaque+/="],
+      ["limit", "2"],
+    ],
+  },
+  {
+    name: "get description version",
+    run: (s) => new WorkItemVersionService(s).retrieveDescriptionVersion("version-z"),
+    endpoint: ["GET", "/api/v0/issue-description-versions/version-z"],
+    answer: {
+      id: "version-z",
+      issue_id: "x",
+      owned_by_id: "actor",
+      created_at: "2026-10-30T00:00:00Z",
+      last_saved_at: "2026-10-30T00:01:00Z",
+      description_html: "",
+    },
+    status: 200,
+  },
   {
     name: "list activities",
     run: (s) => new IssueActivityService(s).getIssueActivities("x", { limit: 3, cursor: "opaque+/=" }),

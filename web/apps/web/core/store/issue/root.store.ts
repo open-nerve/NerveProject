@@ -49,6 +49,7 @@ import { PermissionReads } from "./permission-reads";
 import type { DetailRegistration } from "./issue-details/resource";
 import { IssueDetailService } from "@/services/issue/issue-detail.service";
 import { IssueCommentService } from "@/services/issue/issue_comment.service";
+import { WorkItemVersionService } from "@/services/issue/work_item_version.service";
 import { IssueActivityService } from "@/services/issue/issue_activity.service";
 import { IssueReactionService } from "@/services/issue/issue_reaction.service";
 
@@ -110,6 +111,7 @@ export class IssueRootStore {
   readonly api: IssueApiService;
   readonly detailApi: IssueDetailService;
   readonly commentApi: IssueCommentService;
+  readonly versionApi: WorkItemVersionService;
   readonly activityApi: IssueActivityService;
   readonly reactionApi: IssueReactionService;
   readonly listApi: IssueListService;
@@ -133,6 +135,7 @@ export class IssueRootStore {
     this.api = new IssueApiService(api);
     this.detailApi = new IssueDetailService(api);
     this.commentApi = new IssueCommentService(api);
+    this.versionApi = new WorkItemVersionService(api);
     this.activityApi = new IssueActivityService(api);
     this.reactionApi = new IssueReactionService(api);
     this.listApi = new IssueListService(api);

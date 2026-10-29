@@ -7,7 +7,10 @@ import { DetailResource } from "./resource";
 /** Issue IDs are globally unique; each resource still binds its original workspace/project proof. */
 export class IssueResources<V> {
   private readonly entries = observable.map<string, DetailResource<V>>({}, { deep: false });
-  constructor(private readonly root: IssueRootStore) {}
+  constructor(
+    private readonly root: IssueRootStore,
+    private readonly member = false
+  ) {}
   get(id: string): DetailResource<V> | undefined {
     return this.entries.get(id);
   }
@@ -23,7 +26,11 @@ export class IssueResources<V> {
         throw new SessionChangedError();
       return held;
     }
-    const created = new DetailResource<V>(this.root, { workspaceID: scope.workspaceID, projectIDs: [projectID] });
+    const created = new DetailResource<V>(this.root, {
+      workspaceID: scope.workspaceID,
+      projectIDs: [projectID],
+      member: this.member,
+    });
     runInAction(() => this.entries.set(id, created));
     return created;
   }

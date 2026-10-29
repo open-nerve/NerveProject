@@ -14,7 +14,7 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TNameDescriptionLoader } from "@nerve/types";
 import { EFileAssetType, EInboxIssueSource, EInboxIssueStatus } from "@nerve/types";
 // components
-import { DescriptionVersionsRoot } from "@/components/core/description-versions";
+import { IntakeDescriptionVersions } from "./description-versions";
 import { DescriptionInput } from "@/components/editor/rich-text/description-input";
 import { DescriptionInputLoader } from "@/components/editor/rich-text/description-input/loader";
 import type { TIssueOperations } from "@/components/issues/issue-detail";
@@ -172,7 +172,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
             />
           )}
           {isEditable && (
-            <DescriptionVersionsRoot
+            <IntakeDescriptionVersions
               className="flex-shrink-0"
               entityInformation={{
                 createdAt: issue.created_at ? new Date(issue.created_at) : new Date(),

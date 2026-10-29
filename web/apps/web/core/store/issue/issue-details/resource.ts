@@ -43,10 +43,10 @@ export class DetailResource<V> implements DetailRegistration {
     return (
       !!workspace &&
       (!this.scope.member || workspace.role !== 5) &&
-      projects.every(
-        (projectID) =>
-          stores.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspace.slug, projectID) !== undefined
-      )
+      projects.every((projectID) => {
+        const role = stores.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspace.slug, projectID);
+        return role !== undefined && (!this.scope.member || role === 15 || role === 20);
+      })
     );
   }
   private current(token: IssueReadToken, projects: readonly string[]): boolean {

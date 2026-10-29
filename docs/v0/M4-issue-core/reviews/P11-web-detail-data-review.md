@@ -1,6 +1,6 @@
 # M4/P11 详情数据层：预检与实施记录
 
-日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T7已实现，继续T8。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
+日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T8已实现，继续T9。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
 
 ## 1. 前置、身份与范围
 
@@ -128,3 +128,14 @@ T4准确SHA `5fd567c86a064db804558944b929d0f413eb1364`的CI40943202954 attempt1�
 30文件492项回归通过（t7-regression-restored），其中七类命令的确认/拒绝/读失败及权威只读重试、连续操作共24项走真实FakeNerve；服务/分页/排序与实际UI均覆盖。T5/T6单资源重放和表单测试隔离新增的补读协作，以继续直接验证读期间确认重放，完整协作由新文件负责；未把这些隔离单测说成整链测试。共享包10项force/0缓存、types、47个变更TS文件零warning/格式、关键词75规则30例外通过，web/utils/types警告上限保持192/6/0。
 
 M13从第一页错误重开、M14只追加不覆盖、M15丢纳秒三项均行为断言红，逐文件hash恢复后回归绿。真实UI执行者/创建/读错误5项、nullable地址4项和连续写后待核1项均有红绿。证据限制：首次实现误从api-client导入本地unwrap，纠正后原生89项通过；一次批量编辑创建展示产生语法错误，修正后实际UI10项通过，这些实现错误不计新的行为证明。要求与质量自审完成，无架构级新发现；T7因补齐原有写后协调扩大了实际调用方数量，但未扩大公共合同/阶段范围。整分支deep-review、完整F及准确最终CI仍在后续任务，未合并。
+
+
+### T8 描述版本、确认恢复与 M7 类型边界
+
+WorkItemVersionService改为本代ApiClient的list/get，版本列表与逐版本详情分别由DetailResource持有原生DTO及scope证明，列表按last_saved_at/id倒序、保留纳秒精度并按需继续加载。member资源同时核工作区与有效项目角色，guest列表/详情零HTTP；工作区管理员仍按有效项目管理员规则读取。两个M4入口使用IssueDescriptionVersions与本代store，SessionSWR带登录及权限身份；归档详情可查看历史但不能恢复。
+
+共享组件只接id/ownerId/lastSavedAt与HTML等展示输入，不认识任一服务DTO；M7的精确旧DTO移到services/inbox/intake-description-version.ts，旧URL、无body、nullable与原错误原样保留。M7包装仍使用既有编辑器恢复回调，并未接通自身API，不能把共享弹窗等待回调算作M7服务端确认。删除共享旧类型和两条旧M4 URL例外；无生成字段补丁、无新依赖。
+
+M4恢复走root普通description_html PATCH与既有共享队列，确认前保留弹窗/内容，403/422明确显示拒绝，成功才把服务端HTML送入编辑器且emitUpdate=false，避免第二次PATCH。初始空HTML是真实值，未读取不能用空段落冒充。关闭同步清除选择，无延时清理；快速切换旧详情不盖新项。主控要求/质量自审又修复排队期间及答复期间权限ABA、错项目恢复范围、缓存HTML仍在时错误提示被隐藏三类边界；各有行为红→绿，缺失成员显示稳定回退。
+
+35文件538项受影响回归通过（t8-review-fixed），共享10项强制构建、web types、变更25文件lint零警告/格式、关键词75规则28例外通过；web lint上限192→191，types/i18n保持0。M16放开项目guest读取确实出现两次GET；M17提前关闭导致两项失败；M18取消版本身份隔离后旧HTML确实覆盖新选择。原字节/hash精确恢复；对应原件m16–m18与t8-*保留。首轮新store不存在、全详情fixture错误等待附属读取以及三处测试类型错误均单列，不算生产性质证明；修正fixture为fetchIssueCore后真实请求与断言全部通过。本Task按计划不跑F、不推送；T9下一检查点统一执行完整本地门禁与准确SHA的CI，阶段不合并。

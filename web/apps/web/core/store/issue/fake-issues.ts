@@ -7,6 +7,7 @@ import type {
   IssueComment,
   IssueReaction,
   IssueActivity,
+  DescriptionVersion,
 } from "@nerve/api-client";
 import { expect } from "vitest";
 import type { Group } from "@/lib/paged-groups";
@@ -182,3 +183,11 @@ export function issueActivityOf(id: string, issueId = "x", projectId = "A"): Iss
     created_at: "2026-10-30T00:00:00.123456789Z",
   };
 }
+
+export const descriptionVersionOf = (id: string, issueId = "x"): DescriptionVersion => ({
+  id,
+  issue_id: issueId,
+  owned_by_id: "actor",
+  created_at: "2026-10-30T00:00:00Z",
+  last_saved_at: "2026-10-30T00:01:00.123456789Z",
+});

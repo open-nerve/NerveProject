@@ -3094,22 +3094,6 @@
     },
     {
       "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/work_item_version.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/work-items/${workItemId}/description-versions/",
-      "count": 1,
-      "reason": "T7暂留；P11接线删除；真实读者 listDescriptionVersions→issue-detail/issue-description的版本list/retrieve",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/work_item_version.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/work-items/${workItemId}/description-versions/${versionId}/",
-      "count": 1,
-      "reason": "T7暂留；P11接线删除；真实读者 retrieveDescriptionVersion→issue-detail/issue-description的版本list/retrieve",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
       "path": "web/apps/web/core/services/issue/workspace_draft.service.ts",
       "match": "/api/workspaces/${workspaceSlug}/draft-issues/",
       "count": 2,

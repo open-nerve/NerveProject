@@ -463,6 +463,8 @@
     "subscribed": "已订阅"
   },
   "description_versions": {
+    "previous_version": "上一版本",
+    "next_version": "下一版本",
     "last_edited_by": "最后编辑者",
     "previously_edited_by": "之前编辑者",
     "edited_by": "编辑者"

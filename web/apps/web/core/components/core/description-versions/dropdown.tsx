@@ -8,7 +8,7 @@ import { observer } from "mobx-react";
 import { HistoryOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import type { TDescriptionVersion } from "@nerve/types";
+import type { DescriptionVersionOption } from "./root";
 import { CustomMenu } from "@nerve/ui";
 import { calculateTimeAgo } from "@nerve/utils";
 // hooks
@@ -21,7 +21,7 @@ type Props = {
   disabled: boolean;
   entityInformation: TDescriptionVersionEntityInformation;
   onVersionClick: (versionId: string) => void;
-  versions: TDescriptionVersion[] | undefined;
+  versions: readonly DescriptionVersionOption[] | undefined;
 };
 
 export const DescriptionVersionsDropdown = observer(function DescriptionVersionsDropdown(props: Props) {
@@ -30,9 +30,9 @@ export const DescriptionVersionsDropdown = observer(function DescriptionVersions
   const { getUserDetails } = useMember();
   // derived values
   const latestVersion = versions?.[0];
-  const lastUpdatedAt = latestVersion?.created_at ?? entityInformation.createdAt;
-  const lastUpdatedByUserDisplayName = latestVersion?.owned_by
-    ? getUserDetails(latestVersion?.owned_by)?.display_name
+  const lastUpdatedAt = latestVersion?.lastSavedAt ?? entityInformation.createdAt;
+  const lastUpdatedByUserDisplayName = latestVersion?.ownerId
+    ? getUserDetails(latestVersion?.ownerId)?.display_name
     : entityInformation.createdByDisplayName;
   // translation
   const { t } = useTranslation();
@@ -46,7 +46,7 @@ export const DescriptionVersionsDropdown = observer(function DescriptionVersions
           </span>
           <p className="text-11">
             {t("description_versions.last_edited_by")}{" "}
-            <span className="font-medium">{lastUpdatedByUserDisplayName ?? t("common.deactivated_user")}</span>{" "}
+            <span className="font-medium">{lastUpdatedByUserDisplayName || t("common.deactivated_user")}</span>{" "}
             {calculateTimeAgo(lastUpdatedAt)}
           </p>
         </div>
