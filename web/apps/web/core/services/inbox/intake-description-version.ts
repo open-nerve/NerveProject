@@ -5,7 +5,7 @@
  */
 
 // Exact legacy M7 transport; remove when the intake API is implemented.
-export type TIntakeDescriptionVersion = {
+type TIntakeDescriptionVersion = {
   created_at: string;
   created_by: string | null;
   id: string;

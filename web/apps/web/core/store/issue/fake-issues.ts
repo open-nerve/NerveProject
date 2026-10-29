@@ -8,6 +8,7 @@ import type {
   IssueReaction,
   IssueActivity,
   DescriptionVersion,
+  Draft,
 } from "@nerve/api-client";
 import { expect } from "vitest";
 import type { Group } from "@/lib/paged-groups";
@@ -190,4 +191,13 @@ export const descriptionVersionOf = (id: string, issueId = "x"): DescriptionVers
   owned_by_id: "actor",
   created_at: "2026-10-30T00:00:00Z",
   last_saved_at: "2026-10-30T00:01:00.123456789Z",
+});
+
+export const draftOf = (id: string, workspaceId = "id-ws"): Draft => ({
+  id,
+  workspace_id: workspaceId,
+  project_id: "A",
+  payload: { name: id, description_html: "<p>draft</p>", label_ids: ["label"], assignee_ids: ["actor"] },
+  created_at: "2026-10-30T00:00:00.000000001Z",
+  updated_at: "2026-10-30T00:00:00.000000001Z",
 });

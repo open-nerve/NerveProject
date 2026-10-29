@@ -9,11 +9,10 @@ import { useState } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
 // Nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+
 import { isEmptyHtmlString } from "@nerve/utils";
 // hooks
-import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
+
 // local imports
 import { ConfirmIssueDiscard } from "../confirm-issue-discard";
 import { IssueFormRoot } from "./form";
@@ -25,12 +24,10 @@ export interface DraftIssueProps extends IssueFormProps {
 }
 
 export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftIssueProps) {
-  const { changesMade, data, onChange, onClose, workspaceSlug, projectId, descriptionLoadState = "ready" } = props;
+  const { changesMade, data, onChange, onClose, descriptionLoadState = "ready" } = props;
   // states
   const [issueDiscardModal, setIssueDiscardModal] = useState(false);
   // store hooks
-  const { createIssue } = useWorkspaceDraftIssues();
-  const { t } = useTranslation();
 
   const sanitizeChanges = (): IssueFormData => {
     const sanitizedChanges = { ...changesMade };
@@ -71,41 +68,12 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
   };
 
   const handleCreateDraftIssue = async () => {
-    if (!changesMade || !projectId || descriptionLoadState !== "ready") return;
-
-    const payload = {
-      ...changesMade,
-      name: changesMade?.name && changesMade?.name?.trim() !== "" ? changesMade.name?.trim() : "Untitled",
-      project_id: projectId,
-    };
-
-    await createIssue(workspaceSlug, payload)
-      .then((res) => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: `${t("success")}!`,
-          message: t("workspace_draft_issues.toasts.created.success"),
-        });
-        onChange(null);
-        setIssueDiscardModal(false);
-        onClose();
-        return res;
-      })
-      .catch((_error) => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: `${t("error")}!`,
-          message: t("workspace_draft_issues.toasts.created.error"),
-        });
-      });
-  };
-
-  const handleDraftAndClose = () => {
-    const sanitizedChanges = sanitizeChanges();
-    if (!data?.id && !isEmpty(sanitizedChanges)) {
-      handleCreateDraftIssue();
+    if (!changesMade || descriptionLoadState !== "ready") return;
+    try {
+      await props.onSubmit(changesMade, true);
+    } catch {
+      /* The command owner retains the form and reports the refusal. */
     }
-    onClose();
   };
 
   return (
@@ -121,7 +89,7 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
           onClose();
         }}
       />
-      <IssueFormRoot {...props} onClose={handleClose} handleDraftAndClose={handleDraftAndClose} />
+      <IssueFormRoot {...props} onClose={handleClose} />
     </>
   );
 });

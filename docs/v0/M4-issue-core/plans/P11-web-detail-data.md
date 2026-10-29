@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T8已实现，继续T9**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T9已实现，继续T10**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -140,13 +140,13 @@ make e2e
 **Files：** workspace_draft.service.ts、workspace-draft/issue.store.ts、issue/root.store.ts；issue-modal/{draft-issue-layout,base,form,modal,provider}.tsx、components/description-editor及草稿页root/block/properties/delete-modal真实消费者；P/types/workspace-draft-issues/base.ts；新 workspace-draft/issue.store.test.ts、issue-modal/draft.test.tsx，迁现有workspace-draft/root.test.tsx。
 **Interfaces：** Draft/DraftPage/DraftCreate/DraftUpdate/IssueDraftPayload；按draftId的队列。root 从既有createIssue抽出带pending/列表确认的小入口供publish复用，不能在draftstore自建canonical。
 
-- [ ] 原生分页data/next_cursor/total，工作区A/B独立loader、完整替换payload、省略/清空project_id、owner/member权限、旧列表晚到与确认delete；请求拒绝结束loading，保留已持数据。
-- [ ] 表单按生成白名单构建payload；测试只改name仍保留description/assignee/label等未编辑合法字段，空/缺字段可保存但发布按服务端422；显式清空parent/date时删除payload键、不发null或合回旧值，数组清空为[]。顶层project_id=null单独处理，草稿保存解除普通工作项分支的必选项目保护；无项目保存、清空再读取/发布均有断言。删除旧平铺Issue假形状、模块/迭代等草稿无合同字段及死方法。
-- [ ] 最小消费者闭合：`editsAndDeletesAnUnassignedDraft`核无项目/无项目目录仍显示记录和编辑器、按workspace权限删除；不读取不存在的created_by，不用project admin判断个人草稿。`keepsDraftInputAndDialogAfterRefusal`核保存/删除拒绝不清输入或关窗；成功回调不重复PATCH。迁root.test的旧默认service mock与分页fixture，保留“不访问issue_local_filters”的断言。完整页面故事留P15。
-- [ ] `patchesBeforePublishingWithoutABody`：deferred PATCH未完成时POST=0，PATCH拒绝POST=0，成功POST无body。409 draft_changed/403/422后草稿保留PATCH成功内容；两次保存/发布严格串行。
-- [ ] publish201经root创建协调：项目/个人主页等已持列表、canonical/计数各确认一次，旧读晚到不抹掉；成功发布移除draft；新确认行进入当前显示列表后参与列宽计算，不为列宽取项目或构造next序号。补读失败不重复publish。
-- [ ] workspace角色降级/退出/同账号切scope时不暴露草稿、不跟进导航；核所有WorkspaceDraftService模块实例消失。聚焦两新测试+root/issue-changes/base.loading/base.clone/types。
-- [ ] M19发布前不PATCH、M20局部payload覆盖、M21publish只写canonical、M22发布成功后的列宽流程错误发出项目刷新（与M21副本确认分开）各行为红；G；F检查点。提交 `feat(M4/P11): 接通个人草稿并串行保存发布载荷`。
+- [x] 原生分页data/next_cursor/total，工作区A/B独立loader、完整替换payload、省略/清空project_id、owner/member权限、旧列表晚到与确认delete；请求拒绝结束loading，保留已持数据。
+- [x] 表单按生成白名单构建payload；测试只改name仍保留description/assignee/label等未编辑合法字段，空/缺字段可保存但发布按服务端422；显式清空parent/date时删除payload键、不发null或合回旧值，数组清空为[]。顶层project_id=null单独处理，草稿保存解除普通工作项分支的必选项目保护；无项目保存、清空再读取/发布均有断言。删除旧平铺Issue假形状、模块/迭代等草稿无合同字段及死方法。
+- [x] 最小消费者闭合：`editsAndDeletesAnUnassignedDraft`核无项目/无项目目录仍显示记录和编辑器、按workspace权限删除；不读取不存在的created_by，不用project admin判断个人草稿。`keepsDraftInputAndDialogAfterRefusal`核保存/删除拒绝不清输入或关窗；成功回调不重复PATCH。迁root.test的旧默认service mock与分页fixture，保留“不访问issue_local_filters”的断言。完整页面故事留P15。
+- [x] `patchesBeforePublishingWithoutABody`：deferred PATCH未完成时POST=0，PATCH拒绝POST=0，成功POST无body。409 draft_changed/403/422后草稿保留PATCH成功内容；两次保存/发布严格串行。
+- [x] publish201经root创建协调：项目/个人主页等已持列表、canonical/计数各确认一次，旧读晚到不抹掉；成功发布移除draft；新确认行进入当前显示列表后参与列宽计算，不为列宽取项目或构造next序号。补读失败不重复publish。
+- [x] workspace角色降级/退出/同账号切scope时不暴露草稿、不跟进导航；核所有WorkspaceDraftService模块实例消失。聚焦两新测试+root/issue-changes/base.loading/base.clone/types。
+- [x] M19发布前不PATCH、M20局部payload覆盖、M21publish只写canonical、M22发布成功后的列宽流程错误发出项目刷新（与M21副本确认分开）各行为红；G；F检查点。提交 `feat(M4/P11): 接通个人草稿并串行保存发布载荷`。
 
 ## Task 10：成员提及与旧 JSON 字段（约450–850行）
 
@@ -230,4 +230,4 @@ M01–M31 是可选候选，不宣称31项独立安全性质；实施者记录�
 
 ## 预检边界
 
-本计划14 Task，约一万至一万六千行的规模预估（含测试/删除/文档），不是已量得的实现规模；单Task在实施前按真实消费者和diff重估，预留拆到约16 Task的余量。预检检查依赖、合同、文件、既有回归和守卫期限；不执行实现、装依赖、编译、产品原型或逐Task代码重放。静态结果与独立builder-check/三视角deep-review另见review。P11-S1已裁定A，T9取消列宽专用项目刷新、T13明确局部显示宽度；文档预检已完成，仍由负责人另行安排T1，不据此写实现。
+预检初稿为14 Task，T5拆分后当前为15 Task；约一万至一万六千行的规模预估（含测试/删除/文档），不是已量得的实现规模；单Task在实施前按真实消费者和diff重估，预留拆到约16 Task的余量。预检检查依赖、合同、文件、既有回归和守卫期限；不执行实现、装依赖、编译、产品原型或逐Task代码重放。静态结果与独立builder-check/三视角deep-review另见review。P11-S1已裁定A，T9取消列宽专用项目刷新、T13明确局部显示宽度；此处记录准备阶段边界；负责人随后已授权实施，当前进度见文首和各Task勾选。

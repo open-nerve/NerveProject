@@ -32,5 +32,4 @@ export * from "./tab-indices";
 export * from "./themes";
 export * from "./user";
 export * from "./views";
-export * from "./workspace-drafts";
 export * from "./workspace";

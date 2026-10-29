@@ -311,7 +311,10 @@ it.each(["<p>source</p>", ""])(
     await act(async () => saveAfterRetry.click());
     expect(ui.draft).toHaveBeenCalledExactlyOnceWith(
       ws.slug,
-      expect.objectContaining({ project_id: project.id, name: "Keep for retry", description_html: html })
+      expect.objectContaining({
+        project_id: project.id,
+        payload: expect.objectContaining({ name: "Keep for retry", description_html: html }),
+      })
     );
   }
 );

@@ -130,7 +130,7 @@ function DescriptionVersionsContent(props: Props) {
         )}
         {loadMore && (
           <button type="button" disabled={pending} onClick={() => void readList(loadMore)}>
-            {t("common.actions.load_more")}
+            {t("common.load_more")}
           </button>
         )}
       </div>

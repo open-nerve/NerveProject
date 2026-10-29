@@ -19,7 +19,7 @@ import { CountChip } from "@/components/common/count-chip";
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 
 // hooks
-import { useProject } from "@/hooks/store/use-project";
+import { useParams } from "react-router";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
 
@@ -28,8 +28,9 @@ export const WorkspaceDraftHeader = observer(function WorkspaceDraftHeader() {
   const [isDraftIssueModalOpen, setIsDraftIssueModalOpen] = useState(false);
   // store hooks
   const { allowPermissions } = useUserPermissions();
-  const { paginationInfo } = useWorkspaceDraftIssues();
-  const { joinedProjectIds } = useProject();
+  const { getTotal } = useWorkspaceDraftIssues();
+  const { workspaceSlug } = useParams();
+  const total = workspaceSlug ? getTotal(workspaceSlug) : undefined;
 
   const { t } = useTranslation();
   // check if user is authorized to create draft work item
@@ -56,16 +57,12 @@ export const WorkspaceDraftHeader = observer(function WorkspaceDraftHeader() {
                 }
               />
             </Breadcrumbs>
-            {paginationInfo?.total_count && paginationInfo?.total_count > 0 ? (
-              <CountChip count={paginationInfo?.total_count} />
-            ) : (
-              <></>
-            )}
+            {total !== undefined && <CountChip count={total} />}
           </div>
         </Header.LeftItem>
 
         <Header.RightItem>
-          {joinedProjectIds && joinedProjectIds.length > 0 && (
+          {workspaceSlug && (
             <Button
               variant="primary"
               size="lg"

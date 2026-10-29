@@ -6,7 +6,6 @@
 
 import type { Issue, IssueDetail } from "@nerve/api-client";
 
-import { set } from "lodash-es";
 // nerve imports
 import { DEFAULT_WORK_ITEM_FORM_VALUES } from "@nerve/constants";
 import type { Project, State } from "@nerve/api-client";
@@ -41,18 +40,10 @@ export const convertWorkItemDataToSearchResponse = (
   workspace__slug: workspaceSlug,
 });
 
-export function getChangedIssuefields(
-  formData: Partial<IssueDetail>,
-  dirtyFields: { [key: string]: boolean | undefined }
-) {
-  const changedFields = {};
-
-  const dirtyFieldKeys = Object.keys(dirtyFields) as (keyof IssueDetail)[];
-  for (const dirtyField of dirtyFieldKeys) {
-    if (dirtyFields[dirtyField]) {
-      set(changedFields, [dirtyField], formData[dirtyField]);
-    }
+export function getChangedIssuefields<T extends object>(formData: T, dirtyFields: Partial<Record<keyof T, boolean>>) {
+  const changed: Partial<T> = {};
+  for (const key of Object.keys(dirtyFields) as (keyof T)[]) {
+    if (dirtyFields[key]) changed[key] = formData[key];
   }
-
-  return changedFields as Partial<IssueDetail>;
+  return changed;
 }

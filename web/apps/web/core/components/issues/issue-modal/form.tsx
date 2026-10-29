@@ -41,7 +41,6 @@ import { useIssueModal } from "@/hooks/context/use-issue-modal";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
-import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 export interface IssueFormProps {
@@ -57,9 +56,10 @@ export interface IssueFormProps {
   onClose: () => void;
   onSubmit: (values: Partial<IssueFormValues>, is_draft_issue?: boolean) => Promise<void>;
   workspaceSlug: string;
-  projectId: string;
+  projectId: string | null;
   isDraft: boolean;
   moveToIssue?: boolean;
+  onPublish?: (values: IssueFormData) => Promise<void>;
   modalTitle?: string;
   primaryButtonText?: {
     default: string;
@@ -67,7 +67,6 @@ export interface IssueFormProps {
   };
   isDuplicateModalOpen: boolean;
   handleDuplicateIssueModal: (isOpen: boolean) => void;
-  handleDraftAndClose?: () => void;
   isProjectSelectionDisabled?: boolean;
 }
 
@@ -83,6 +82,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     onChange,
     onClose,
     onSubmit,
+    onPublish,
     workspaceSlug,
     projectId: defaultProjectId,
     isCreateMoreToggleEnabled,
@@ -110,7 +110,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const { getProjectById } = useProject();
   const { selectedParentIssue, setSelectedParentIssue } = useIssueModal();
   const { isMobile } = usePlatformOS();
-  const { moveIssue } = useWorkspaceDraftIssues();
 
   const {
     issue: { getIssueById },
@@ -139,12 +138,13 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   //reset few fields on projectId change
   useEffect(() => {
-    if (isDirty) reset(getUpdateFormDataForReset(projectId, getValues()));
+    if (isDirty && !isDraft)
+      reset(getUpdateFormDataForReset(projectId ?? undefined, { ...getValues(), project_id: projectId ?? undefined }));
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const handleFormSubmit = async (formData: Partial<IssueFormValues>, is_draft_issue = false) => {
+  const handleFormSubmit = async (formData: Partial<IssueFormValues>, is_draft_issue = isDraft) => {
     if (descriptionLoadState !== "ready") return;
     // Check if the editor is ready to discard
     if (!editorRef.current?.isEditorReadyToDiscard()) {
@@ -175,25 +175,21 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
         });
         editorRef?.current?.clearEditor();
       })
-      .catch((error) => {
-        console.error(error);
-      });
+      .catch(() => undefined);
   };
 
   const handleMoveToProjects = async () => {
-    if (!data?.id || !data?.project_id || !data || descriptionLoadState !== "ready") return;
+    if (!data?.id || !onPublish || isMoving || isSubmitting || descriptionLoadState !== "ready") return;
+    if (!editorRef.current?.isEditorReadyToDiscard()) return;
     setIsMoving(true);
     try {
-      await moveIssue(workspaceSlug, data.id, {
-        ...data,
-        ...getValues(),
+      await onPublish({
+        ...getChangedIssuefields(getValues(), dirtyFields as { [key: string]: boolean | undefined }),
+        project_id: getValues("project_id"),
+        description_html: getValues("description_html"),
       });
     } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Failed to move work item to project. Please try again.",
-      });
+      /* The command owner displays the current refusal; retain the form. */
     } finally {
       setIsMoving(false);
     }
@@ -268,7 +264,8 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                 <div className="flex items-center gap-x-1">
                   <IssueProjectSelect
                     control={control}
-                    disabled={!!data?.id || !!sourceIssueId || isProjectSelectionDisabled}
+                    disabled={(!isDraft && !!data?.id) || !!sourceIssueId || isProjectSelectionDisabled}
+                    isDraft={isDraft}
                     handleFormChange={handleFormChange}
                   />
                 </div>
@@ -287,6 +284,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                 <IssueTitleInput
                   control={control}
                   issueTitleRef={issueTitleRef}
+                  isDraft={isDraft}
                   formState={formState}
                   handleFormChange={handleFormChange}
                 />
@@ -365,6 +363,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                     <Button
                       variant="secondary"
                       size="lg"
+                      disabled={isSubmitting || isMoving}
                       onClick={() => {
                         if (descriptionLoadState !== "ready" || editorRef.current?.isEditorReadyToDiscard()) {
                           onClose();
@@ -387,7 +386,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                       type="submit"
                       ref={submitBtnRef}
                       loading={isSubmitting}
-                      disabled={isSubmitting || descriptionLoadState !== "ready"}
+                      disabled={isSubmitting || isMoving || descriptionLoadState !== "ready"}
                     >
                       {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
                     </Button>
@@ -399,7 +398,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                       type="button"
                       loading={isMoving}
                       onClick={handleMoveToProjects}
-                      disabled={isMoving || descriptionLoadState !== "ready"}
+                      disabled={isMoving || isSubmitting || descriptionLoadState !== "ready"}
                       size="lg"
                     >
                       {t("add_to_project")}

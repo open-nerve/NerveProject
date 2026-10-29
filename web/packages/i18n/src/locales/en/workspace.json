@@ -155,6 +155,8 @@
       "deleted": {
         "success": "Draft deleted"
       }
-    }
+    },
+    "untitled": "Untitled draft",
+    "clear_project": "Clear project"
   }
 }

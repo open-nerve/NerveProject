@@ -1,110 +1,69 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import { useEffect, useState } from "react";
-// types
-import { PROJECT_ERROR_MESSAGES, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { useRef, useState } from "react";
+import { observer } from "mobx-react";
+import type { Draft } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TWorkspaceDraftIssue } from "@nerve/types";
-// ui
 import { AlertModalCore } from "@nerve/ui";
-// hooks
-import { useIssues } from "@/hooks/store/use-issues";
-import { useUser, useUserPermissions } from "@/hooks/store/user";
+import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useDetailScope } from "../issue-detail-widgets/use-detail-scope";
 
 type Props = {
   isOpen: boolean;
   handleClose: () => void;
-  dataId?: string | null | undefined;
-  data?: TWorkspaceDraftIssue;
-  /** Deletes it: the confirmation is busy until it settles. */
+  workspaceSlug: string;
+  data: Draft;
   onSubmit: () => Promise<void>;
 };
-
-export function WorkspaceDraftIssueDeleteIssueModal(props: Props) {
-  const { dataId, data, isOpen, handleClose, onSubmit } = props;
-  // states
+export const WorkspaceDraftIssueDeleteIssueModal = observer(function WorkspaceDraftIssueDeleteIssueModal({
+  isOpen,
+  handleClose,
+  workspaceSlug,
+  data,
+  onSubmit,
+}: Props) {
   const [isDeleting, setIsDeleting] = useState(false);
-  // store hooks
-  const { issueMap } = useIssues();
-  const { allowPermissions } = useUserPermissions();
+  const busy = useRef(false);
+  const { canRead } = useWorkspaceDraftIssues();
+  const scope = useDetailScope(workspaceSlug, undefined, data.id, true);
   const { t } = useTranslation();
-  const { data: currentUser } = useUser();
-
-  // derived values
-  const canPerformProjectAdminActions = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
-
-  useEffect(() => {
-    setIsDeleting(false);
-  }, [isOpen]);
-
-  if (!dataId && !data) return null;
-
-  // derived values
-  const issue = data ? data : issueMap[dataId!];
-  const issueCreatorId = issue && ("created_by_id" in issue ? issue.created_by_id : issue.created_by);
-  const isIssueCreator = !!issueCreatorId && issueCreatorId === currentUser?.id;
-  const authorized = isIssueCreator || canPerformProjectAdminActions;
-
-  const onClose = () => {
-    setIsDeleting(false);
-    handleClose();
+  const refuse = useRefusalToast();
+  const close = () => {
+    if (!busy.current) handleClose();
   };
-
-  const handleIssueDelete = async () => {
+  const submit = async () => {
+    const current = scope();
+    if (busy.current || !canRead(workspaceSlug) || !current()) return;
+    busy.current = true;
     setIsDeleting(true);
-
-    if (!authorized) {
+    try {
+      await onSubmit();
+      if (!current()) return;
       setToast({
-        title: t(PROJECT_ERROR_MESSAGES.permissionError.i18n_title),
-        type: TOAST_TYPE.ERROR,
-        message:
-          PROJECT_ERROR_MESSAGES.permissionError.i18n_message && t(PROJECT_ERROR_MESSAGES.permissionError.i18n_message),
+        type: TOAST_TYPE.SUCCESS,
+        title: t("success"),
+        message: t("workspace_draft_issues.toasts.deleted.success"),
       });
-      onClose();
-      return;
+      handleClose();
+    } catch (error) {
+      if (current()) refuse(error);
+    } finally {
+      busy.current = false;
+      setIsDeleting(false);
     }
-    await onSubmit()
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: `${t("success")}!`,
-          message: t("workspace_draft_issues.toasts.deleted.success"),
-        });
-        onClose();
-        return;
-      })
-      .catch((errors) => {
-        const isPermissionError = errors?.error === "Only admin or creator can delete the work item";
-        const currentError = isPermissionError
-          ? PROJECT_ERROR_MESSAGES.permissionError
-          : PROJECT_ERROR_MESSAGES.issueDeleteError;
-        setToast({
-          title: t(currentError.i18n_title),
-          type: TOAST_TYPE.ERROR,
-          message: currentError.i18n_message && t(currentError.i18n_message),
-        });
-      })
-      .finally(() => onClose());
   };
-
+  if (!canRead(workspaceSlug)) return null;
   return (
     <AlertModalCore
-      handleClose={onClose}
-      handleSubmit={handleIssueDelete}
+      handleClose={close}
+      handleSubmit={submit}
       isSubmitting={isDeleting}
       isOpen={isOpen}
       title={t("workspace_draft_issues.delete_modal.title")}
       content={<>{t("workspace_draft_issues.delete_modal.description")}</>}
-      primaryButtonText={{
-        loading: t("deleting"),
-        default: t("delete"),
-      }}
+      primaryButtonText={{ loading: t("deleting"), default: t("delete") }}
       secondaryButtonText={t("cancel")}
     />
   );
-}
+});

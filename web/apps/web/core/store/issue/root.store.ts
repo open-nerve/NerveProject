@@ -49,6 +49,7 @@ import { PermissionReads } from "./permission-reads";
 import type { DetailRegistration } from "./issue-details/resource";
 import { IssueDetailService } from "@/services/issue/issue-detail.service";
 import { IssueCommentService } from "@/services/issue/issue_comment.service";
+import { WorkspaceDraftService } from "@/services/issue/workspace_draft.service";
 import { WorkItemVersionService } from "@/services/issue/work_item_version.service";
 import { IssueActivityService } from "@/services/issue/issue_activity.service";
 import { IssueReactionService } from "@/services/issue/issue_reaction.service";
@@ -111,6 +112,7 @@ export class IssueRootStore {
   readonly api: IssueApiService;
   readonly detailApi: IssueDetailService;
   readonly commentApi: IssueCommentService;
+  readonly draftApi: WorkspaceDraftService;
   readonly versionApi: WorkItemVersionService;
   readonly activityApi: IssueActivityService;
   readonly reactionApi: IssueReactionService;
@@ -135,6 +137,7 @@ export class IssueRootStore {
     this.api = new IssueApiService(api);
     this.detailApi = new IssueDetailService(api);
     this.commentApi = new IssueCommentService(api);
+    this.draftApi = new WorkspaceDraftService(api);
     this.versionApi = new WorkItemVersionService(api);
     this.activityApi = new IssueActivityService(api);
     this.reactionApi = new IssueReactionService(api);
@@ -322,15 +325,17 @@ export class IssueRootStore {
   }
   private async write(
     id: string | undefined,
-    scope: IssueWriteScope,
+    requestedScope: IssueWriteScope | Pick<IssueWriteScope, "workspaceSlug" | "workspaceID">,
     request: (held?: Issue) => Promise<IssueDetailAnswer | null>,
     drop?: IssueDrop
   ): Promise<IssueDetailAnswer | null> {
     this.assertActive();
+    const initialScope = "projectID" in requestedScope ? requestedScope : undefined;
     let initial = id ? this.issues.getIssueById(id) : undefined;
     while (initial) {
+      if (!initialScope) throw new Error("An existing issue needs its project scope");
       for (const list of this.lists)
-        if (list.covers(scope) && list.reconciled.value !== undefined) {
+        if (list.covers(initialScope) && list.reconciled.value !== undefined) {
           // Each directory wait may change canonical; freeze only after this serial readiness pass.
           // oxlint-disable-next-line no-await-in-loop
           await list.prepareCatalog([initial]);
@@ -356,6 +361,9 @@ export class IssueRootStore {
       const permission = this.permissionReads.capture();
       const after = await request(held);
       this.assertActive();
+      if (after && after.workspace_id !== requestedScope.workspaceID) throw new SessionChangedError();
+      if (!initialScope && !after) throw new Error("A creation must return its issue");
+      const scope: IssueWriteScope = initialScope ?? { ...requestedScope, projectID: after!.project_id };
       // The write succeeded, but an answer from an invalidated permission scope
       // cannot revise recovered entities or list membership.
       if (after && !this.permissionReads.current(permission, scope.workspaceID, [scope.projectID, after.project_id]))
@@ -444,7 +452,14 @@ export class IssueRootStore {
       target_date: input.target_date,
       parent_id: input.parent_id,
     };
-    return this.write(undefined, scope, () => this.api.create(scope.projectID, body)).then((answer) => answer!);
+    return this.confirmCreation(scope, () => this.api.create(scope.projectID, body));
+  }
+  /** Freeze existing list evidence before sending, then confirm the new issue in every held view. */
+  confirmCreation(
+    scope: Pick<IssueWriteScope, "workspaceSlug" | "workspaceID">,
+    send: () => Promise<IssueDetailAnswer>
+  ): Promise<IssueDetailAnswer> {
+    return this.write(undefined, scope, send).then((answer) => answer!);
   }
   updateIssue(
     id: string,

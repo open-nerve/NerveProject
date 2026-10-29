@@ -7,7 +7,8 @@
 import { followInSession } from "@/lib/in-session";
 
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { EIssuesStoreType, TIssueGroupByOptions, TIssueOrderByOptions } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import type { TIssueGroupByOptions, TIssueOrderByOptions } from "@nerve/types";
 import type { GroupDropLocation } from "@/components/issues/issue-layouts/utils";
 import { handleGroupDragDrop } from "@/components/issues/issue-layouts/utils";
 import { useIssueDetail } from "./store/use-issue-detail";
@@ -29,7 +30,7 @@ export const useGroupIssuesDragNDrop = (
   const {
     issue: { getIssueById },
   } = useIssueDetail();
-  const { dropIssue } = useIssuesActions(storeType);
+  const dropIssue = useIssuesActions(storeType === EIssuesStoreType.WORKSPACE_DRAFT ? undefined : storeType)?.dropIssue;
   const {
     issues: { getIssueIds },
   } = useIssues(storeType);

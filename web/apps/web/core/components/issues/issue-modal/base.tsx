@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue } from "@nerve/api-client";
+import type { Issue, Draft } from "@nerve/api-client";
 
 import type { IssueFormData, IssueDescriptionLoadState } from "./types";
 import { useEffect, useRef, useState } from "react";
@@ -13,14 +13,18 @@ import { useParams } from "react-router";
 // Nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { sessionGuard } from "@/lib/in-session";
-import type { TWorkspaceDraftIssue } from "@nerve/types";
+import { draftInput } from "@/services/issue/draft-input";
+import { draftFormData } from "./draft-form";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
 import { EIssuesStoreType } from "@nerve/types";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useIssueModal } from "@/hooks/context/use-issue-modal";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useIssues } from "@/hooks/store/use-issues";
+import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
 import { useProject } from "@/hooks/store/use-project";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
@@ -36,7 +40,6 @@ import type { IssuesModalProps } from "./modal";
 
 export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueModalBase(props: IssuesModalProps) {
   const {
-    data,
     sourceIssueId,
     isOpen,
     onClose,
@@ -51,6 +54,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     isProjectSelectionDisabled = false,
     showActionItemsOnUpdate = false,
   } = props;
+  const data = props.isDraft && props.draft ? draftFormData(props.draft) : props.data;
   const issueStoreType = useIssueStoreType();
 
   const storeType = issueStoreFromProps ?? issueStoreType;
@@ -68,17 +72,21 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
   // store hooks
   const { t } = useTranslation();
+  const refuse = useRefusalToast();
   const { workspaceSlug, projectId: routerProjectId, workItem } = useParams();
-  const { issues: draftIssues } = useIssues(EIssuesStoreType.WORKSPACE_DRAFT);
+  const draftIssues = useWorkspaceDraftIssues();
   const { fetchIssue } = useIssueDetail();
   const { allowedProjectIds } = useIssueModal();
   const { getProjectByIdentifier } = useProject();
   // current store details
-  const { createIssue, updateIssue } = useIssuesActions(storeType);
+  const { createIssue, updateIssue } = useIssuesActions(
+    storeType === EIssuesStoreType.WORKSPACE_DRAFT ? EIssuesStoreType.DEFAULT : storeType
+  );
   // derived values
   const routerProjectIdentifier = workItem?.toString().split("-")[0];
   const projectIdFromRouter = routerProjectIdentifier ? getProjectByIdentifier(routerProjectIdentifier)?.id : undefined;
-  const projectId = data?.project_id ?? routerProjectId ?? projectIdFromRouter;
+  const projectId = isDraft ? (data?.project_id ?? null) : (data?.project_id ?? routerProjectId ?? projectIdFromRouter);
+  const draftScope = useDetailScope(workspaceSlug ?? "", undefined, data?.id ?? "new-draft", true);
 
   useEffect(() => {
     const request = ++descriptionRequest.current;
@@ -92,7 +100,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       try {
         let html = data?.description_html ?? "<p></p>";
         const issueId = data?.id ?? sourceIssueId;
-        if (issueId !== undefined && fetchIssueDetails) {
+        if (issueId !== undefined && fetchIssueDetails && !isDraft) {
           if (!projectId) throw new Error("Missing source project");
           const response = await fetchIssue(workspaceSlug, projectId, issueId);
           if (typeof response?.description_html !== "string") throw new Error("Missing source description");
@@ -119,6 +127,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     data?.description_html,
     sourceIssueId,
     fetchIssueDetails,
+    isDraft,
     fetchIssue,
     descriptionAttempt,
   ]);
@@ -128,6 +137,11 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     // and return to avoid activeProjectId being set to some other project
     if (!isOpen) {
       setActiveProjectId(null);
+      return;
+    }
+
+    if (isDraft) {
+      setActiveProjectId(data?.project_id ?? null);
       return;
     }
 
@@ -149,11 +163,8 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     setCreateMore(value);
   };
 
-  const handleClose = (saveAsDraft?: boolean) => {
+  const handleClose = () => {
     descriptionRequest.current++;
-    if (changesMade && saveAsDraft && !data) {
-      handleCreateIssue(changesMade, true);
-    }
 
     setActiveProjectId(null);
     setChangesMade(null);
@@ -164,18 +175,23 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const handleCreateIssue = async (
     payload: IssueFormData,
     is_draft_issue: boolean = false
-  ): Promise<Issue | TWorkspaceDraftIssue | undefined> => {
-    if (!workspaceSlug || !payload.project_id || descriptionLoadState !== "ready") return;
+  ): Promise<Issue | Draft | undefined> => {
+    if (!workspaceSlug || (!is_draft_issue && !payload.project_id) || descriptionLoadState !== "ready") return;
 
-    const inSession = sessionGuard();
+    const session = sessionGuard();
+    const current = is_draft_issue ? draftScope() : () => true;
+    const inSession = () => session() && current();
     try {
-      let response: Issue | TWorkspaceDraftIssue | undefined;
+      let response: Issue | Draft | undefined;
       // if draft issue, use draft issue store to create issue
       if (is_draft_issue) {
-        response = await draftIssues.createIssue(workspaceSlug, payload);
+        response = await draftIssues.createIssue(
+          workspaceSlug,
+          draftInput(payload, props.isDraft ? props.draftSeed : undefined)
+        );
       } else if (createIssue) {
         if (!payload.name?.trim()) return;
-        response = await createIssue(payload.project_id, {
+        response = await createIssue(payload.project_id!, {
           name: payload.name,
           description_html: payload.description_html,
           state_id: payload.state_id,
@@ -188,22 +204,20 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
         });
       }
 
-      if (!inSession()) return;
-      // update uploaded assets' status
-      if (uploadedAssetIds.length > 0) {
-        await fileService.updateBulkProjectAssetsUploadStatus(
-          workspaceSlug,
-          response?.project_id ?? "",
-          response?.id ?? "",
-          {
+      if (!inSession()) throw new SessionChangedError();
+      if (!response) throw new Error("Missing confirmed work item");
+      // M5 attachment follow-up cannot turn a confirmed creation into a repeatable creation failure.
+      if (uploadedAssetIds.length > 0 && response.project_id) {
+        try {
+          await fileService.updateBulkProjectAssetsUploadStatus(workspaceSlug, response.project_id, response.id, {
             asset_ids: uploadedAssetIds,
-          }
-        );
-        if (!inSession()) return;
+          });
+        } catch (error) {
+          if (inSession()) refuse(error);
+        }
+        if (!inSession()) throw new SessionChangedError();
         setUploadedAssetIds([]);
       }
-
-      if (!response) throw new Error();
 
       setToast({
         type: TOAST_TYPE.SUCCESS,
@@ -222,26 +236,23 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       setDescription("<p></p>");
       setChangesMade(null);
       return response;
-    } catch (error: any) {
-      if (!inSession()) throw error;
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("error"),
-        message: error?.error ?? t(is_draft_issue ? "draft_creation_failed" : "issue_creation_failed"),
-      });
+    } catch (error) {
+      if (inSession()) refuse(error);
       throw error;
     }
   };
 
-  const handleUpdateIssue = async (payload: IssueFormData): Promise<Issue | undefined> => {
-    if (!workspaceSlug || !payload.project_id || !data?.id) return;
-
-    const inSession = sessionGuard();
+  const handleUpdateIssue = async (payload: IssueFormData): Promise<Draft | undefined> => {
+    if (!workspaceSlug || (!isDraft && !payload.project_id) || !data?.id) return;
+    const session = sessionGuard();
+    const current = isDraft ? draftScope() : () => true;
+    const inSession = () => session() && current();
     try {
-      if (isDraft) await draftIssues.updateIssue(workspaceSlug, data.id, payload);
-      else if (updateIssue) await updateIssue(payload.project_id, data.id, payload);
-      if (!inSession()) return;
-
+      let response: Draft | undefined;
+      if (isDraft)
+        response = await draftIssues.updateIssue(workspaceSlug, data.id, (held) => draftInput(payload, held.payload));
+      else if (updateIssue) await updateIssue(payload.project_id!, data.id, payload);
+      if (!inSession()) throw new SessionChangedError();
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("success"),
@@ -256,26 +267,39 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
           ) : undefined,
       });
       handleClose();
-    } catch (error: any) {
-      if (!inSession()) return;
-      console.error(error);
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("error"),
-        message: error?.error ?? t("issue_could_not_be_updated"),
-      });
+      return response;
+    } catch (error) {
+      if (inSession()) refuse(error);
+      throw error;
+    }
+  };
+  const handlePublish = async (payload: IssueFormData) => {
+    if (!workspaceSlug || !isDraft || !data?.id || descriptionLoadState !== "ready") return;
+    const current = draftScope();
+    const inSession = sessionGuard();
+    try {
+      await draftIssues.moveIssue(workspaceSlug, data.id, (held) => draftInput(payload, held.payload));
+      if (!inSession() || !current()) return;
+      setToast({ type: TOAST_TYPE.SUCCESS, title: t("success"), message: t("issue_created_successfully") });
+      handleClose();
+    } catch (error) {
+      if (inSession() && current()) refuse(error);
+      throw error;
     }
   };
 
   const handleFormSubmit = async (payload: IssueFormData, is_draft_issue: boolean = false) => {
-    if (!workspaceSlug || !payload.project_id || !storeType || descriptionLoadState !== "ready") return;
+    if (!workspaceSlug || (!is_draft_issue && !payload.project_id) || !storeType || descriptionLoadState !== "ready")
+      return;
 
-    const inSession = sessionGuard();
-    let response: Issue | TWorkspaceDraftIssue | undefined = undefined;
+    const session = sessionGuard();
+    const current = is_draft_issue ? draftScope() : () => true;
+    const inSession = () => session() && current();
+    let response: Issue | Draft | undefined = undefined;
 
     try {
       if (beforeFormSubmit) await beforeFormSubmit();
-      if (!inSession()) return;
+      if (!inSession()) throw new SessionChangedError();
       if (!data?.id) response = await handleCreateIssue(payload, is_draft_issue);
       else response = await handleUpdateIssue(payload);
     } finally {
@@ -294,7 +318,13 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const handleDuplicateIssueModal = (value: boolean) => setIsDuplicateModalOpen(value);
 
   // don't open the modal outside a workspace or if there are no projects
-  if (!workspaceSlug || !allowedProjectIds || allowedProjectIds.length === 0 || !activeProjectId) return null;
+  if (
+    !workspaceSlug ||
+    (isDraft &&
+      (!draftIssues.canRead(workspaceSlug) || (data?.id && !draftIssues.getIssueById(data.id, workspaceSlug)))) ||
+    (!isDraft && (!allowedProjectIds?.length || !activeProjectId))
+  )
+    return null;
 
   const commonIssueModalProps: IssueFormProps = {
     issueTitleRef: issueTitleRef,
@@ -307,7 +337,8 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     },
     onAssetUpload: handleUpdateUploadedAssetIds,
     onClose: handleClose,
-    onSubmit: (payload) => handleFormSubmit(payload, isDraft),
+    onSubmit: (payload, saveDraft = isDraft) => handleFormSubmit(payload, saveDraft),
+    onPublish: handlePublish,
     workspaceSlug,
     projectId: activeProjectId,
     isCreateMoreToggleEnabled: createMore,

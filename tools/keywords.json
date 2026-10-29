@@ -33,13 +33,8 @@
         "flags": ""
       },
       "samples": {
-        "hit": [
-          ".prettierignore",
-          "web/packages/ui/.prettierignore"
-        ],
-        "miss": [
-          ".gitignore"
-        ]
+        "hit": [".prettierignore", "web/packages/ui/.prettierignore"],
+        "miss": [".gitignore"]
       }
     },
     {
@@ -55,28 +50,11 @@
         "flags": ""
       },
       "samples": {
-        "hit": [
-          "\"serve\": \"catalog:\"",
-          "  serve@14.2.5:",
-          "serve -s build/client -l 3000",
-          "      serve:"
-        ],
-        "miss": [
-          "\"@react-router/serve>express\": \"^5.2.1\"",
-          "  serve-static@2.2.1:",
-          "    use-font-face-observer:"
-        ],
+        "hit": ["\"serve\": \"catalog:\"", "  serve@14.2.5:", "serve -s build/client -l 3000", "      serve:"],
+        "miss": ["\"@react-router/serve>express\": \"^5.2.1\"", "  serve-static@2.2.1:", "    use-font-face-observer:"],
         "files": {
-          "hit": [
-            "web/apps/web/package.json",
-            "pnpm-lock.yaml",
-            "pnpm-workspace.yaml",
-            "package.json"
-          ],
-          "miss": [
-            "turbo.json",
-            "web/apps/web/app/root.tsx"
-          ]
+          "hit": ["web/apps/web/package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "package.json"],
+          "miss": ["turbo.json", "web/apps/web/app/root.tsx"]
         }
       }
     },
@@ -94,10 +72,7 @@
           "web/packages/propel/src/button/button.stories.tsx",
           "storybook-static/index.html"
         ],
-        "miss": [
-          "web/packages/propel/src/button/button.tsx",
-          "e2e/stories/smoke/s2-web-app.spec.ts"
-        ]
+        "miss": ["web/packages/propel/src/button/button.tsx", "e2e/stories/smoke/s2-web-app.spec.ts"]
       }
     },
     {
@@ -118,10 +93,7 @@
           "\"@chromatic-com/storybook\": \"5.2.1\"",
           "// Static toast for Storybook"
         ],
-        "miss": [
-          "    \"oxfmt\": \"catalog:\",",
-          "  '@tiptap/extension-history@2.26.1':"
-        ],
+        "miss": ["    \"oxfmt\": \"catalog:\",", "  '@tiptap/extension-history@2.26.1':"],
         "files": {
           "hit": [
             "web/packages/ui/package.json",
@@ -133,11 +105,7 @@
             ".oxlintrc.json",
             "knip.jsonc"
           ],
-          "miss": [
-            "server/cmd/nerve/main.go",
-            ".oxfmtrc.json",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["server/cmd/nerve/main.go", ".oxfmtrc.json", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -150,13 +118,8 @@
         "flags": ""
       },
       "samples": {
-        "hit": [
-          "web/apps/web/app/compat/next/image.tsx",
-          "web/apps/web/app/types/next-script.d.ts"
-        ],
-        "miss": [
-          "web/apps/web/app/types/react-router-virtual.d.ts"
-        ]
+        "hit": ["web/apps/web/app/compat/next/image.tsx", "web/apps/web/app/types/next-script.d.ts"],
+        "miss": ["web/apps/web/app/types/react-router-virtual.d.ts"]
       }
     },
     {
@@ -177,18 +140,10 @@
           "      \"next/script\": path.resolve(__dirname, \"app/compat/next/script.tsx\"),",
           "import Image from \"next/image\";"
         ],
-        "miss": [
-          "import { useTheme } from \"next-themes\";"
-        ],
+        "miss": ["import { useTheme } from \"next-themes\";"],
         "files": {
-          "hit": [
-            "web/apps/web/app/root.tsx",
-            "web/packages/ui/package.json"
-          ],
-          "miss": [
-            "web/packages/tailwind-config/AGENTS.md",
-            "server/cmd/nerve/main.go"
-          ]
+          "hit": ["web/apps/web/app/root.tsx", "web/packages/ui/package.json"],
+          "miss": ["web/packages/tailwind-config/AGENTS.md", "server/cmd/nerve/main.go"]
         }
       }
     },
@@ -206,10 +161,7 @@
           "web/packages/services/src/api.service.ts",
           "web/packages/services/src/developer/api-token.service.ts"
         ],
-        "miss": [
-          "web/packages/services/src/helpers/url.test.ts",
-          "web/packages/services/src/file/helper.ts"
-        ]
+        "miss": ["web/packages/services/src/helpers/url.test.ts", "web/packages/services/src/file/helper.ts"]
       }
     },
     {
@@ -221,14 +173,8 @@
         "flags": ""
       },
       "samples": {
-        "hit": [
-          "web/packages/i18n/src/locales/fr/common.json",
-          "web/packages/i18n/src/locales/zh-TW/common.json"
-        ],
-        "miss": [
-          "web/packages/i18n/src/locales/en/common.json",
-          "web/packages/i18n/src/locales/zh-CN/common.json"
-        ]
+        "hit": ["web/packages/i18n/src/locales/fr/common.json", "web/packages/i18n/src/locales/zh-TW/common.json"],
+        "miss": ["web/packages/i18n/src/locales/en/common.json", "web/packages/i18n/src/locales/zh-CN/common.json"]
       }
     },
     {
@@ -248,22 +194,10 @@
           "export type { TTranslationKeys } from \"./keys.generated\";",
           "\"build\": \"pnpm run generate:types && tsdown\""
         ],
-        "miss": [
-          "export type TWorkItemDetailRoot = {",
-          "import { generateQueryParams } from \"@nerve/utils\";"
-        ],
+        "miss": ["export type TWorkItemDetailRoot = {", "import { generateQueryParams } from \"@nerve/utils\";"],
         "files": {
-          "hit": [
-            "web/packages/i18n/src/index.ts",
-            ".gitignore",
-            ".oxfmtrc.json",
-            "knip.jsonc",
-            "turbo.json"
-          ],
-          "miss": [
-            "server/cmd/nerve/main.go",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "hit": ["web/packages/i18n/src/index.ts", ".gitignore", ".oxfmtrc.json", "knip.jsonc", "turbo.json"],
+          "miss": ["server/cmd/nerve/main.go", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -286,10 +220,7 @@
           "web/packages/i18n/src/locales/en/wiki.json",
           "web/packages/i18n/src/locales/en/workflow.json"
         ],
-        "miss": [
-          "web/packages/i18n/src/locales/en/work-item.json",
-          "web/packages/i18n/src/locales/en/workspace.json"
-        ]
+        "miss": ["web/packages/i18n/src/locales/en/work-item.json", "web/packages/i18n/src/locales/en/workspace.json"]
       }
     },
     {
@@ -305,9 +236,7 @@
         "flags": ""
       },
       "samples": {
-        "hit": [
-          "    \"applications\": {"
-        ],
+        "hit": ["    \"applications\": {"],
         "miss": [
           "    \"api_tokens\": {",
           "\"description\": \"Any application using this token will no longer have the access to Nerve data. This action cannot be undone.\","
@@ -317,10 +246,7 @@
             "web/packages/i18n/src/locales/en/workspace-settings.json",
             "web/packages/i18n/src/locales/zh-CN/workspace-settings.json"
           ],
-          "miss": [
-            "web/packages/i18n/src/locales/en/workspace.json",
-            "web/packages/i18n/src/locales/en/settings.json"
-          ]
+          "miss": ["web/packages/i18n/src/locales/en/workspace.json", "web/packages/i18n/src/locales/en/settings.json"]
         }
       }
     },
@@ -365,10 +291,7 @@
             "web/packages/constants/src/workspace.ts",
             "web/packages/i18n/src/locales/en/common.json"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -404,11 +327,7 @@
             "web/packages/utils/src/tlds.ts",
             "turbo.json"
           ],
-          "miss": [
-            "docs/v0/M1-frontend-trim/M1-design.md",
-            "Makefile",
-            "api/openapi.yaml"
-          ]
+          "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "Makefile", "api/openapi.yaml"]
         }
       }
     },
@@ -441,14 +360,8 @@
           "  const { fetchActiveCycleProgress, getCycleById, fetchActiveCycleDistribution } = useCycle();"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/core/services/cycle.service.ts",
-            "web/packages/i18n/src/locales/en/common.json"
-          ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "hit": ["web/apps/web/core/services/cycle.service.ts", "web/packages/i18n/src/locales/en/common.json"],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -495,14 +408,8 @@
           "export * from \"./user-user-profile\";"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/core/services/user.service.ts",
-            "web/packages/i18n/src/locales/en/empty-state.json"
-          ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "hit": ["web/apps/web/core/services/user.service.ts", "web/packages/i18n/src/locales/en/empty-state.json"],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -534,14 +441,8 @@
           "    const emojiCodePoints = Array.from(emoji).map((char) => char.codePointAt(0));"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/core/store/cycle.store.ts",
-            "web/packages/i18n/src/locales/en/common.json"
-          ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "hit": ["web/apps/web/core/store/cycle.store.ts", "web/packages/i18n/src/locales/en/common.json"],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -576,10 +477,7 @@
           "import { differenceInCalendarDays } from \"date-fns/differenceInCalendarDays\";"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/core/store/root.store.ts",
-            "web/packages/i18n/src/locales/en/work-item.json"
-          ],
+          "hit": ["web/apps/web/core/store/root.store.ts", "web/packages/i18n/src/locales/en/work-item.json"],
           "miss": [
             "web/apps/web/app/assets/empty-state/disabled-feature/modules-light.webp",
             "docs/v0/M1-frontend-trim/M1-design.md"
@@ -680,11 +578,7 @@
             "turbo.json",
             "pnpm-workspace.yaml"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md",
-            "pnpm-lock.yaml"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md", "pnpm-lock.yaml"]
         }
       }
     },
@@ -713,14 +607,8 @@
           "  \"keyboard_shortcuts\": \"Keyboard shortcuts\","
         ],
         "files": {
-          "hit": [
-            "web/packages/i18n/src/locales/en/common.json",
-            "web/packages/types/src/instance/base.ts"
-          ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "hit": ["web/packages/i18n/src/locales/en/common.json", "web/packages/types/src/instance/base.ts"],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -759,10 +647,7 @@
             "web/apps/web/styles/globals.css",
             "web/apps/web/public/stickies.yaml"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -804,10 +689,7 @@
             "web/packages/i18n/src/locales/en/home.json",
             "web/apps/web/styles/globals.css"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -844,10 +726,7 @@
             "web/packages/constants/src/workspace.ts",
             "web/packages/i18n/src/locales/en/common.json"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -879,15 +758,8 @@
           "import { MaintenanceView } from \"@/components/instance\";"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/.env.example",
-            "turbo.json",
-            "web/packages/constants/src/endpoints.ts"
-          ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "hit": ["web/apps/web/.env.example", "turbo.json", "web/packages/constants/src/endpoints.ts"],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -918,15 +790,8 @@
           "const authService = new AuthService();"
         ],
         "files": {
-          "hit": [
-            "web/packages/i18n/src/locales/en/auth.json",
-            "web/packages/ui/src/index.ts",
-            "turbo.json"
-          ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "hit": ["web/packages/i18n/src/locales/en/auth.json", "web/packages/ui/src/index.ts", "turbo.json"],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -982,10 +847,7 @@
             "web/packages/i18n/src/locales/zh-CN/auth.json",
             "turbo.json"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1016,14 +878,8 @@
           "                  {t(\"auth.common.email.label\")}&nbsp;"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/core/services/user.service.ts",
-            "web/packages/i18n/src/locales/en/common.json"
-          ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "hit": ["web/apps/web/core/services/user.service.ts", "web/packages/i18n/src/locales/en/common.json"],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1068,15 +924,8 @@
           "export const WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS: IWorkspaceSidebarNavigationItem[] = ["
         ],
         "files": {
-          "hit": [
-            "web/apps/web/.env.example",
-            "turbo.json",
-            "web/packages/types/src/views.ts"
-          ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "hit": ["web/apps/web/.env.example", "turbo.json", "web/packages/types/src/views.ts"],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1103,14 +952,8 @@
           "      // check if the event target is an anchor or a child of an anchor tag"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/core/components/issues/header.tsx",
-            "web/packages/types/src/project/projects.ts"
-          ],
-          "miss": [
-            "web/packages/editor/src/helpers/common.ts",
-            "web/packages/i18n/src/locales/en/common.json"
-          ]
+          "hit": ["web/apps/web/core/components/issues/header.tsx", "web/packages/types/src/project/projects.ts"],
+          "miss": ["web/packages/editor/src/helpers/common.ts", "web/packages/i18n/src/locales/en/common.json"]
         }
       }
     },
@@ -1142,10 +985,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1180,10 +1020,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1222,10 +1059,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1267,10 +1101,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1309,10 +1140,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1340,10 +1168,7 @@
           "  is_project_updates_enabled: SubscribeOutline,",
           "export enum EUpdateStatus {"
         ],
-        "miss": [
-          "  \"workflow\",",
-          "import { StateOption } from \"./state-option\";"
-        ],
+        "miss": ["  \"workflow\",", "import { StateOption } from \"./state-option\";"],
         "files": {
           "hit": [
             "web/apps/web/core/components/issues/issue-layouts/list/list-group.tsx",
@@ -1351,10 +1176,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1386,10 +1208,7 @@
           "      \"plane-intelligence\": {",
           "  const isAiPath = pathname.includes(`/${workspaceSlug}/pi-chat`);"
         ],
-        "miss": [
-          "      scrollMode: \"if-needed\",",
-          "    const allMembers = this.getProjectMemberships(projectId);"
-        ],
+        "miss": ["      scrollMode: \"if-needed\",", "    const allMembers = this.getProjectMemberships(projectId);"],
         "files": {
           "hit": [
             "web/apps/web/core/components/issues/issue-modal/components/description-editor.tsx",
@@ -1397,10 +1216,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1434,10 +1250,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1483,10 +1296,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1580,10 +1390,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1617,10 +1424,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1659,10 +1463,7 @@
             "turbo.json",
             "web/apps/web/.env.example"
           ],
-          "miss": [
-            "web/apps/web/app/assets/brand/mark.svg",
-            "docs/v0/M1-frontend-trim/M1-design.md"
-          ]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1701,11 +1502,7 @@
             "turbo.json",
             "pnpm-workspace.yaml"
           ],
-          "miss": [
-            "e2e/playwright.config.ts",
-            "tools/keywords.mjs",
-            "pnpm-lock.yaml"
-          ]
+          "miss": ["e2e/playwright.config.ts", "tools/keywords.mjs", "pnpm-lock.yaml"]
         }
       }
     },
@@ -1764,10 +1561,7 @@
             "web/apps/web/core/components/home/root.tsx",
             "web/packages/i18n/src/locales/en/common.json"
           ],
-          "miss": [
-            "docs/v0/M1-frontend-trim/M1-design.md",
-            "tools/keywords.json"
-          ]
+          "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "tools/keywords.json"]
         }
       }
     },
@@ -1802,10 +1596,7 @@
             "pnpm-lock.yaml",
             "e2e/package.json"
           ],
-          "miss": [
-            "docs/v0/M1-frontend-trim/M1-design.md",
-            "tools/keywords.json"
-          ]
+          "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "tools/keywords.json"]
         }
       }
     },
@@ -1839,12 +1630,7 @@
           "const STALE_ASSET_RELOAD_KEY = \"__nerve_chunk_reload\";"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/app/root.tsx",
-            "pnpm-workspace.yaml",
-            "pnpm-lock.yaml",
-            "turbo.json"
-          ],
+          "hit": ["web/apps/web/app/root.tsx", "pnpm-workspace.yaml", "pnpm-lock.yaml", "turbo.json"],
           "miss": [
             "README.md",
             "e2e/stories/smoke/s2-web-app.spec.ts",
@@ -1901,10 +1687,7 @@
             "web/packages/editor/src/extensions/custom-link/helpers/clickHandler.ts",
             "web/apps/web/core/components/cycles/quick-actions.tsx"
           ],
-          "miss": [
-            "e2e/playwright.config.ts",
-            "web/apps/web/app/assets/brand/mark.svg"
-          ]
+          "miss": ["e2e/playwright.config.ts", "web/apps/web/app/assets/brand/mark.svg"]
         }
       }
     },
@@ -1980,22 +1763,11 @@
         "flags": ""
       },
       "samples": {
-        "hit": [
-          "  is_self_managed: boolean;",
-          "  const isSelfManaged = instanceConfig?.is_self_managed;"
-        ],
-        "miss": [
-          "  const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;"
-        ],
+        "hit": ["  is_self_managed: boolean;", "  const isSelfManaged = instanceConfig?.is_self_managed;"],
+        "miss": ["  const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;"],
         "files": {
-          "hit": [
-            "web/apps/web/core/components/onboarding/root.tsx",
-            "web/packages/types/src/index.ts"
-          ],
-          "miss": [
-            "docs/v0/M2-auth/M2-design.md",
-            "api/dist/openapi.yaml"
-          ]
+          "hit": ["web/apps/web/core/components/onboarding/root.tsx", "web/packages/types/src/index.ts"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "api/dist/openapi.yaml"]
         }
       }
     },
@@ -2032,14 +1804,8 @@
           "    return unwrap(await this.api.POST(\"/api/v0/projects/{project_id}/join\", { params: { path: { project_id: projectId } } }));"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/core/services/user.service.ts",
-            "web/apps/web/core/services/instance.service.ts"
-          ],
-          "miss": [
-            "e2e/stories/smoke/s2-web-app.spec.ts",
-            "docs/v0/M2-auth/M2-design.md"
-          ]
+          "hit": ["web/apps/web/core/services/user.service.ts", "web/apps/web/core/services/instance.service.ts"],
+          "miss": ["e2e/stories/smoke/s2-web-app.spec.ts", "docs/v0/M2-auth/M2-design.md"]
         }
       }
     },
@@ -2069,14 +1835,8 @@
           "  PROJECT_COVER = \"PROJECT_COVER\","
         ],
         "files": {
-          "hit": [
-            "web/apps/web/core/services/file.service.ts",
-            "web/packages/types/src/enums.ts"
-          ],
-          "miss": [
-            "docs/v0/M2-auth/M2-design.md",
-            "e2e/stories/identity/a1-sign-up.spec.ts"
-          ]
+          "hit": ["web/apps/web/core/services/file.service.ts", "web/packages/types/src/enums.ts"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "e2e/stories/identity/a1-sign-up.spec.ts"]
         }
       }
     },
@@ -2098,18 +1858,10 @@
           "      headers: { \"X-CSRFTOKEN\": csrfToken },",
           "  requestCSRFToken = async (): Promise<ICsrfTokenData> =>"
         ],
-        "miss": [
-          "  request.headers.set(\"Authorization\", `Bearer ${token}`);"
-        ],
+        "miss": ["  request.headers.set(\"Authorization\", `Bearer ${token}`);"],
         "files": {
-          "hit": [
-            "web/apps/web/core/services/auth.service.ts",
-            "web/packages/types/src/auth.ts"
-          ],
-          "miss": [
-            "docs/v0/M2-auth/M2-design.md",
-            "server/internal/modules/identity/adapter/http/auth.go"
-          ]
+          "hit": ["web/apps/web/core/services/auth.service.ts", "web/packages/types/src/auth.ts"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "server/internal/modules/identity/adapter/http/auth.go"]
         }
       }
     },
@@ -2140,10 +1892,7 @@
             "web/apps/web/core/components/account/auth-forms/password.tsx",
             "web/apps/web/core/services/user.service.ts"
           ],
-          "miss": [
-            "docs/v0/M2-auth/M2-design.md",
-            "e2e/stories/auth/a1-sign-up.spec.ts"
-          ]
+          "miss": ["docs/v0/M2-auth/M2-design.md", "e2e/stories/auth/a1-sign-up.spec.ts"]
         }
       }
     },
@@ -2173,10 +1922,7 @@
             "web/apps/web/core/components/account/auth-forms/auth-root.tsx",
             "web/apps/web/helpers/authentication.helper.ts"
           ],
-          "miss": [
-            "server/internal/shared/error.go",
-            "docs/v0/M2-auth/M2-design.md"
-          ]
+          "miss": ["server/internal/shared/error.go", "docs/v0/M2-auth/M2-design.md"]
         }
       }
     },
@@ -2193,22 +1939,11 @@
         "flags": ""
       },
       "samples": {
-        "hit": [
-          "      withCredentials: true,",
-          "    this.axiosInstance = create({ withCredentials:true });"
-        ],
-        "miss": [
-          "      withCredentials: false,"
-        ],
+        "hit": ["      withCredentials: true,", "    this.axiosInstance = create({ withCredentials:true });"],
+        "miss": ["      withCredentials: false,"],
         "files": {
-          "hit": [
-            "web/packages/services/src/api.service.ts",
-            "web/apps/web/core/services/api.service.ts"
-          ],
-          "miss": [
-            "docs/v0/M2-auth/M2-design.md",
-            "server/internal/platform/httpapi/cors.go"
-          ]
+          "hit": ["web/packages/services/src/api.service.ts", "web/apps/web/core/services/api.service.ts"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "server/internal/platform/httpapi/cors.go"]
         }
       }
     },
@@ -2238,10 +1973,7 @@
             "web/packages/services/src/developer/api-token.service.ts",
             "web/apps/web/core/services/api-token.service.ts"
           ],
-          "miss": [
-            "docs/v0/M2-auth/M2-design.md",
-            "e2e/stories/identity/a11-api-tokens.spec.ts"
-          ]
+          "miss": ["docs/v0/M2-auth/M2-design.md", "e2e/stories/identity/a11-api-tokens.spec.ts"]
         }
       }
     },
@@ -2258,22 +1990,11 @@
         "flags": ""
       },
       "samples": {
-        "hit": [
-          "    return this.get(`/api/timezones/`)",
-          "    return this.get(\"/api/timezones/\")"
-        ],
-        "miss": [
-          "    return unwrap(await publicClient.GET(\"/api/v0/timezones\")).data;"
-        ],
+        "hit": ["    return this.get(`/api/timezones/`)", "    return this.get(\"/api/timezones/\")"],
+        "miss": ["    return unwrap(await publicClient.GET(\"/api/v0/timezones\")).data;"],
         "files": {
-          "hit": [
-            "web/apps/web/core/services/timezone.service.ts",
-            "web/apps/web/core/hooks/use-timezone.tsx"
-          ],
-          "miss": [
-            "docs/v0/M2-auth/M2-design.md",
-            "server/internal/modules/instance/app/list_timezones.go"
-          ]
+          "hit": ["web/apps/web/core/services/timezone.service.ts", "web/apps/web/core/hooks/use-timezone.tsx"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "server/internal/modules/instance/app/list_timezones.go"]
         }
       }
     },
@@ -2310,10 +2031,7 @@
           "  async joinWorkspace(workspaceSlug: string, invitationId: string, data: any): Promise<any> {"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/app/routes/core.ts",
-            "web/apps/web/core/components/power-k/config/account-commands.ts"
-          ],
+          "hit": ["web/apps/web/app/routes/core.ts", "web/apps/web/core/components/power-k/config/account-commands.ts"],
           "miss": [
             "docs/v0/M3-workspace-project/M3-design.md",
             "server/internal/modules/workspace/domain/reserved_slugs.txt",
@@ -2394,13 +2112,8 @@
           "    return unwrap(await this.api.GET(\"/api/v0/projects/{project_id}/labels\", { params: { path: { project_id: projectId } } }));"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/core/services/workspace.service.ts"
-          ],
-          "miss": [
-            "docs/v0/M3-workspace-project/M3-design.md",
-            "web/apps/web/core/store/workspace/index.test.ts"
-          ]
+          "hit": ["web/apps/web/core/services/workspace.service.ts"],
+          "miss": ["docs/v0/M3-workspace-project/M3-design.md", "web/apps/web/core/store/workspace/index.test.ts"]
         }
       }
     },
@@ -2462,14 +2175,8 @@
           "  const { data: profile } = useUserProfile();"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/core/store/user/settings.store.ts",
-            "web/packages/types/src/users.ts"
-          ],
-          "miss": [
-            "docs/v0/M3-workspace-project/M3-design.md",
-            "e2e/stories/identity/a3-sign-in.spec.ts"
-          ]
+          "hit": ["web/apps/web/core/store/user/settings.store.ts", "web/packages/types/src/users.ts"],
+          "miss": ["docs/v0/M3-workspace-project/M3-design.md", "e2e/stories/identity/a3-sign-in.spec.ts"]
         }
       }
     },
@@ -2490,10 +2197,7 @@
           "  const { workspaces, fetchWorkspaces } = useWorkspace();",
           "  useSessionSWR([\"PROFILE_WORKSPACES\"], () => fetchWorkspaces());"
         ],
-        "miss": [
-          "  useWorkspacesFetch();",
-          "  const listed = useWorkspacesFetch(false);"
-        ],
+        "miss": ["  useWorkspacesFetch();", "  const listed = useWorkspacesFetch(false);"],
         "files": {
           "hit": [
             "web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx",
@@ -2599,10 +2303,7 @@
         "flags": ""
       },
       "samples": {
-        "hit": [
-          "  const { getProjectById, leaveProject } = useProject();",
-          "      return leaveProject(project)"
-        ],
+        "hit": ["  const { getProjectById, leaveProject } = useProject();", "      return leaveProject(project)"],
         "miss": [
           "  const { remove, leave } = useProjectMembershipChanges(workspaceSlug, projectId);",
           "  const [leaveProjectModalOpen, setLeaveProjectModalOpen] = useState(false);"
@@ -2839,10 +2540,7 @@
           "/api/workspaces/${workspaceSlug}/projects/${projectId}/module-links/"
         ],
         "files": {
-          "hit": [
-            "web/apps/web/core/services/issue/issue.service.ts",
-            "web/packages/types/src/issues/issue.ts"
-          ],
+          "hit": ["web/apps/web/core/services/issue/issue.service.ts", "web/packages/types/src/issues/issue.ts"],
           "miss": [
             "docs/v0/M4-issue-core/specs/P10a-web-issue-types.md",
             "tools/keywords.json",
@@ -2885,10 +2583,7 @@
             "web/apps/web/core/components/rich-filters/filter-item/root.tsx",
             "web/packages/shared-state/src/utils/rich-filter.helper.ts"
           ],
-          "miss": [
-            "docs/v0/M4-issue-core/specs/P10b-web-list-data.md",
-            "web/packages/utils/dist/index.js"
-          ]
+          "miss": ["docs/v0/M4-issue-core/specs/P10b-web-list-data.md", "web/packages/utils/dist/index.js"]
         }
       }
     },
@@ -2909,20 +2604,13 @@
           "new WorkspaceDraftIssuesFilter(this)",
           "workspaceDraftIssuesFilter = new WorkspaceDraftIssuesFilter(this)"
         ],
-        "miss": [
-          "new WorkspaceDraftIssues(this)",
-          "draftIssues.filter(Boolean)",
-          "WorkspaceDraftIssuesFilterSettings"
-        ],
+        "miss": ["new WorkspaceDraftIssues(this)", "draftIssues.filter(Boolean)", "WorkspaceDraftIssuesFilterSettings"],
         "files": {
           "hit": [
             "web/apps/web/core/store/issue/root.store.ts",
             "web/apps/web/core/store/issue/workspace-draft/filter.store.ts"
           ],
-          "miss": [
-            "docs/v0/M4-issue-core/specs/P10b-web-list-data.md",
-            "web/packages/utils/dist/index.js"
-          ]
+          "miss": ["docs/v0/M4-issue-core/specs/P10b-web-list-data.md", "web/packages/utils/dist/index.js"]
         }
       }
     }
@@ -3091,30 +2779,6 @@
       "match": "copyTextToClipboard(",
       "reason": "M8 的 Webhook 页面自己复制密钥，成功和失败各自说；M8 改这个页面时改用 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
       "until": "M8/closeout"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/workspace_draft.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/draft-issues/",
-      "count": 2,
-      "reason": "T7暂留；P11接线删除；真实读者 getIssues,createIssue→WorkspaceDraftIssues.fetchIssues/createIssue/updateIssue/deleteIssue/moveIssue；真实草稿CRUD仍在",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/workspace_draft.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/draft-issues/${issueId}/",
-      "count": 2,
-      "reason": "T7暂留；P11接线删除；真实读者 updateIssue,deleteIssue→WorkspaceDraftIssues.fetchIssues/createIssue/updateIssue/deleteIssue/moveIssue；真实草稿CRUD仍在",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/workspace_draft.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/draft-to-issue/${issueId}/",
-      "count": 1,
-      "reason": "T7暂留；P11接线删除；真实读者 moveIssue→WorkspaceDraftIssues.fetchIssues/createIssue/updateIssue/deleteIssue/moveIssue；真实草稿CRUD仍在",
-      "until": "M4/P12"
     },
     {
       "rule": "old-issue-urls",

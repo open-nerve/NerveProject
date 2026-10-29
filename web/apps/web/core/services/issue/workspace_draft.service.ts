@@ -1,71 +1,41 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import type { Issue, IssueDetail } from "@nerve/api-client";
-
-import type { TWorkspaceDraftIssue, TWorkspaceDraftPaginationInfo } from "@nerve/types";
-// services
-import { APIService } from "@/services/api.service";
-
-class WorkspaceDraftService extends APIService {
-  async getIssues(
-    workspaceSlug: string,
-    query: object = {}
-  ): Promise<TWorkspaceDraftPaginationInfo<TWorkspaceDraftIssue> | undefined> {
-    return this.get(`/api/workspaces/${workspaceSlug}/draft-issues/`, { params: { ...query } })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type { ApiClient, Draft, DraftPage, DraftCreate, DraftUpdate, IssueDetail, operations } from "@nerve/api-client";
+import { draftPayload } from "./draft-input";
+import { unwrap } from "@/lib/api-error";
+export class WorkspaceDraftService {
+  constructor(private readonly api: ApiClient) {}
+  async list(slug: string, query?: operations["listDrafts"]["parameters"]["query"]): Promise<DraftPage> {
+    return unwrap(await this.api.GET("/api/v0/workspaces/{slug}/drafts", { params: { path: { slug }, query } }));
   }
-
-  async createIssue(
-    workspaceSlug: string,
-    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
-  ): Promise<TWorkspaceDraftIssue | undefined> {
-    return this.post(`/api/workspaces/${workspaceSlug}/draft-issues/`, payload)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
+  async get(id: string): Promise<Draft> {
+    return unwrap(await this.api.GET("/api/v0/drafts/{draft_id}", { params: { path: { draft_id: id } } }));
   }
-
-  async updateIssue(
-    workspaceSlug: string,
-    issueId: string,
-    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
-  ): Promise<TWorkspaceDraftIssue | undefined> {
-    return this.patch(`/api/workspaces/${workspaceSlug}/draft-issues/${issueId}/`, payload)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
+  async create(slug: string, input: DraftCreate): Promise<Draft> {
+    return unwrap(
+      await this.api.POST("/api/v0/workspaces/{slug}/drafts", {
+        params: { path: { slug } },
+        body: {
+          project_id: input.project_id,
+          payload: draftPayload(input.payload),
+        },
+      })
+    );
   }
-
-  async deleteIssue(workspaceSlug: string, issueId: string): Promise<void> {
-    return this.delete(`/api/workspaces/${workspaceSlug}/draft-issues/${issueId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
+  async update(id: string, input: DraftUpdate): Promise<Draft> {
+    return unwrap(
+      await this.api.PATCH("/api/v0/drafts/{draft_id}", {
+        params: { path: { draft_id: id } },
+        body: {
+          project_id: input.project_id,
+          payload: input.payload === undefined ? undefined : draftPayload(input.payload),
+        },
+      })
+    );
   }
-
-  async moveIssue(
-    workspaceSlug: string,
-    issueId: string,
-    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
-  ): Promise<Issue> {
-    return this.post(`/api/workspaces/${workspaceSlug}/draft-to-issue/${issueId}/`, payload)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
+  async delete(id: string): Promise<void> {
+    unwrap(await this.api.DELETE("/api/v0/drafts/{draft_id}", { params: { path: { draft_id: id } } }));
+  }
+  async publish(id: string): Promise<IssueDetail> {
+    return unwrap(await this.api.POST("/api/v0/drafts/{draft_id}/publish", { params: { path: { draft_id: id } } }));
   }
 }
-
-const workspaceDraftService = new WorkspaceDraftService();
-
-export default workspaceDraftService;

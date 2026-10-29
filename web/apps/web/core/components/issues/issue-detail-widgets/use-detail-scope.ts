@@ -3,11 +3,16 @@ import { useCallback, useLayoutEffect, useMemo } from "react";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 
 /** Local UI lifetime only. Permission facts and their ABA watermark still belong to IssueRootStore. */
-export function useDetailScope(workspaceSlug: string, project: string | undefined, issue: string): () => () => boolean {
+export function useDetailScope(
+  workspaceSlug: string,
+  project: string | undefined,
+  issue: string,
+  member = false
+): () => () => boolean {
   const { rootIssueStore: root } = useIssueDetail();
   const owner = useMemo(
-    () => ({ active: false, root, workspaceSlug, project, issue }),
-    [root, workspaceSlug, project, issue]
+    () => ({ active: false, root, workspaceSlug, project, issue, member }),
+    [root, workspaceSlug, project, issue, member]
   );
   useLayoutEffect(() => {
     owner.active = true;
@@ -19,14 +24,14 @@ export function useDetailScope(workspaceSlug: string, project: string | undefine
     if (!owner.active || !root.active) return () => false;
     const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
     const projects = project ? [project] : [];
-    const identity = root.permissionReads.identity(workspace?.id, projects);
+    const identity = root.permissionReads.identity(workspace?.id, projects, member);
     // A successful delete invalidates reads itself; that is not a change of the UI's permission or host.
     return () =>
       owner.active &&
       root.active &&
       !!workspace &&
-      root.permissionReads.identity(workspace.id, projects) === identity &&
+      root.permissionReads.identity(workspace.id, projects, member) === identity &&
       (!project ||
         root.rootStore.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, project) !== undefined);
-  }, [owner, root, workspaceSlug, project]);
+  }, [owner, root, workspaceSlug, project, member]);
 }
