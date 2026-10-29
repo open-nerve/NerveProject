@@ -154,13 +154,14 @@ beforeEach(() => {
   vi.spyOn(app.state, "fetchProjectStates").mockResolvedValue([]);
   vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
     if (failure && url.endsWith(failure)) throw { response: { data: { code: "resource-refused" } } };
-    if (url.endsWith("/reactions/") || url.endsWith("/issue-links/")) return reply([]);
+    if (url.endsWith("/reactions/")) return reply([]);
     throw new Error(`Unexpected legacy URL: ${url}`);
   });
   native = vi.fn((call: Call) => {
     if (call.method !== "GET" || !call.path.startsWith("/api/v0/issues/")) return;
     const id = call.path.split("/").at(-1)!;
-    if (failure === "/issues/parent/" && id === "parent") call.answer(problem(403, "resource-refused"));
+    if (id === "links") call.answer(failure === "/links" ? problem(403, "resource-refused") : json(200, { data: [] }));
+    else if (failure === "/issues/parent/" && id === "parent") call.answer(problem(403, "resource-refused"));
     else if (id === "parent")
       call.answer(
         json(200, { ...issueOf("parent", project.id, project.workspace_id), description_html: "<p>parent</p>" })
@@ -203,7 +204,7 @@ function retry() {
   expect(retryButton).toBeDefined();
   return retryButton!;
 }
-it.each(["/reactions/", "/issue-links/", "/issues/parent/"])(
+it.each(["/reactions/", "/links", "/issues/parent/"])(
   "real auxiliary refusal shows a retryable error in Base/Form, preserving input and blocking fake-empty submit (%s)",
   async (resource) => {
     failure = resource;

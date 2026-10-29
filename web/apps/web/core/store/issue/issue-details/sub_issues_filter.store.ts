@@ -28,7 +28,7 @@ export const DEFAULT_DISPLAY_PROPERTIES = {
   priority: true,
   state: true,
 };
-export interface IWorkItemSubIssueFiltersStore {
+interface IWorkItemSubIssueFiltersStore {
   subIssueFilters: Record<string, Partial<ISubWorkItemFilters>>;
   // helpers methods
   updateSubWorkItemFilters: (

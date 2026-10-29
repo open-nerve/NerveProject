@@ -14,7 +14,6 @@ import { orderCycles, shouldFilterCycle, getDate } from "@nerve/utils";
 // services
 import { CycleService } from "@/services/cycle.service";
 import { CycleArchiveService } from "@/services/cycle_archive.service";
-import { IssueService } from "@/services/issue";
 // store
 import type { RootStore } from "./root.store";
 
@@ -85,7 +84,6 @@ export class CycleStore implements ICycleStore {
   // root store
   rootStore;
   // services
-  issueService;
   cycleService;
   cycleArchiveService;
 
@@ -125,7 +123,6 @@ export class CycleStore implements ICycleStore {
     this.rootStore = _rootStore;
 
     // services
-    this.issueService = new IssueService();
     this.cycleService = new CycleService();
     this.cycleArchiveService = new CycleArchiveService();
   }

@@ -6,11 +6,11 @@ configure({ safeDescriptors: false });
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import { APIService } from "@/services/api.service";
 import { heldChange } from "@/lib/auth/fake-tab";
-import type { TIssueReaction, TIssueLink } from "@nerve/types";
+import type { TIssueReaction } from "@nerve/types";
 import { until, track } from "@/lib/auth/fake-time";
 import { FakeNerve, answered, json, noContent, problem, type Call } from "@/lib/auth/fake-nerve";
 import { SessionChangedError } from "@/lib/auth/token-manager";
-import { issueOf, requestedIssue } from "@/store/issue/fake-issues";
+import { issueOf, issueLinkOf, requestedIssue } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { projectOf, loadProjects, stateOf } from "@/store/project/fake-projects";
 // Public APIService replies include Axios metadata; entity data remains the complete real response fixture.
@@ -63,15 +63,8 @@ const reaction: TIssueReaction = {
   reaction: "thumbsup",
   display_name: "Actor",
 };
-const link: TIssueLink = {
-  id: "link",
-  created_by_id: "actor",
-  issue_id: "R1",
-  title: "Reference",
-  url: "https://example.test",
-  metadata: {},
-  created_at: new Date("2026-10-28"),
-};
+const link = { ...issueLinkOf("link", "R1"), title: "Reference" };
+
 function resources(parentId: string | null, withRelations = false) {
   const detail = app.issue.issueDetail;
   const source = {
@@ -93,12 +86,12 @@ function resources(parentId: string | null, withRelations = false) {
   vi.spyOn(app.state, "fetchProjectStates").mockResolvedValue([]);
   const get = vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
     if (url.endsWith("/reactions/")) return reply([reaction]);
-    if (url.endsWith("/issue-links/")) return reply([link]);
     throw new Error(`Unexpected legacy URL: ${url}`);
   });
   const native = vi.fn((call: Call) => {
     if (call.method !== "GET") return;
-    if (call.path === "/api/v0/issues/R1/relations") call.answer(json(200, relations));
+    if (call.path === "/api/v0/issues/R1/links") call.answer(json(200, { data: [link] }));
+    else if (call.path === "/api/v0/issues/R1/relations") call.answer(json(200, relations));
     else if (call.path === "/api/v0/issues/parent") call.answer(json(200, parent));
     else if (
       (call.path === "/api/v0/issues/R1" ||
@@ -124,13 +117,14 @@ it.each([false, true].flatMap((identifier) => [null, "parent"].map((parentId) =>
     expect(detail.reaction.getReactionById(reaction.id)).toEqual(reaction);
     expect(detail.reaction.getReactionsByIssueId(source.id)).toEqual({ thumbsup: [reaction.id] });
     expect(detail.link.getLinksByIssueId(source.id)).toEqual([link.id]);
-    expect(detail.link.getLinkById(link.id)).toEqual(link);
+    expect(detail.link.getLinkById("R1", link.id)).toEqual(link);
     expect(add.mock.calls.map(([issue]) => [issue.id])).toEqual(parentId ? [[source.id], [parent.id]] : [[source.id]]);
     if (parentId) {
       expect(add.mock.calls[1]![1].serial).toBeGreaterThan(add.mock.calls[0]![1].serial);
       expect(add.mock.calls[1]![1].owner).toBe(add.mock.calls[0]![1].owner);
     }
-    expect(get).toHaveBeenCalledTimes(2);
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(nerve.to("/api/v0/issues/R1/links")).toHaveLength(1);
     expect(nerve.calls.at(-1)?.queryEntries).toEqual([]);
     expect(nerve.to("/api/v0/issues/parent")).toHaveLength(parentId ? 1 : 0);
     if (parentId) expect(app.issue.issues.getIssueById(parent.id)).toEqual(parent);
@@ -175,32 +169,36 @@ it.each([200, 500])("detailRetryIsBoundedAndRefusalReturns (%s)", async (status)
   expect(nerve.to("/api/v0/issues/R1")).toHaveLength(2);
 });
 
-it("legacyLinkCountComesFromAuthoritativeVersionAndRefusalDoesNotMutate", async () => {
+it("nativeLinkCountComesFromAuthorityAndReadRefusalKeepsTheConfirmedDeletion", async () => {
   const { source, detail } = resources(null);
   app.issue.issues.acceptRead({ ...source, link_count: 4 }, app.issue.captureRead());
-  vi.spyOn(APIService.prototype, "post").mockResolvedValue(reply(link));
   const creating = await requestedIssue(
     nerve,
     () => detail.link.createLink(ws.slug, project.id, source.id, { url: link.url }),
-    ["GET", "/api/v0/issues/R1"]
+    ["POST", "/api/v0/issues/R1/links"]
   );
+  creating.call.answer(json(201, link));
+  await until(() => nerve.to("/api/v0/issues/R1").length === 1, "created link count");
   expect(app.issue.issues.getIssueById(source.id)).toBeUndefined();
   const authoritative = { ...source, link_count: 11, updated_at: "2026-10-29T00:00:00Z" };
-  creating.call.answer(json(200, authoritative));
+  nerve.to("/api/v0/issues/R1")[0]!.answer(json(200, authoritative));
   await creating.promise;
   expect(app.issue.issues.getIssueDetailById(source.id)).toEqual(authoritative);
-  vi.spyOn(APIService.prototype, "delete").mockResolvedValue(reply(undefined));
   const removing = await requestedIssue(nerve, () => detail.link.removeLink(ws.slug, project.id, source.id, link.id), [
-    "GET",
-    "/api/v0/issues/R1",
+    "DELETE",
+    "/api/v0/issue-links/link",
   ]);
-  const refused = expect(removing.promise).rejects.toMatchObject({ status: 403 });
-  removing.call.answer(problem(403, "forbidden"));
-  await refused;
+  removing.call.answer(noContent());
+  await until(() => nerve.to("/api/v0/issues/R1").length === 2, "deleted link count");
+  nerve.to("/api/v0/issues/R1")[1]!.answer(problem(403, "forbidden"));
+  await removing.promise;
+  expect(detail.link.getLinksByIssueId(source.id)).toEqual([]);
+  expect(detail.link.getError(source.id)).toMatchObject({ status: 403 });
   expect(app.issue.issues.getIssueById(source.id)).toBeUndefined();
   app.issue.issues.acceptRead(authoritative, app.issue.captureRead());
   expect(app.issue.issues.getIssueDetailById(source.id)).toEqual(authoritative);
 });
+
 it.each([false, true])(
   "fetch owns pending auxiliary loads instead of returning before they finish (%s)",
   async (identifier) => {
@@ -262,7 +260,7 @@ it.each([false, true].flatMap((identifier) => ["retire", "delete"].map((boundary
 );
 it.each(
   [false, true].flatMap((identifier) =>
-    ["reactions/", "issue-links/", "issues/parent/"].map((resource) => ({ identifier, resource }))
+    ["reactions/", "links", "issues/parent/"].map((resource) => ({ identifier, resource }))
   )
 )(
   "auxiliary HTTP refusal belongs to fetch, with existing extraction and no detached rejection ($identifier/$resource)",
@@ -273,17 +271,19 @@ it.each(
     get.mockImplementation((url, ...args) =>
       url.endsWith(resource) ? Promise.reject({ response: { data: domainError } }) : fallback(url, ...args)
     );
-    if (resource === "issues/parent/") {
+    if (resource !== "reactions/") {
       const fallbackNative = native.getMockImplementation()!;
       native.mockImplementation((call) =>
-        call.path === "/api/v0/issues/parent" ? call.answer(problem(403, "resource-refused")) : fallbackNative(call)
+        call.path === (resource === "links" ? "/api/v0/issues/R1/links" : "/api/v0/issues/parent")
+          ? call.answer(problem(403, "resource-refused"))
+          : fallbackNative(call)
       );
     }
     const result = track(fetch(identifier));
     await until(() => result.settled, "detail fetch settles");
-    if (resource === "issues/parent/")
+    if (resource !== "reactions/")
       expect(result.error).toMatchObject({ status: 403, problem: { code: "resource-refused" } });
-    else expect(result.error).toEqual(resource === "issue-links/" ? { data: domainError } : domainError);
+    else expect(result.error).toEqual(domainError);
   }
 );
 
@@ -329,7 +329,8 @@ it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => 
     expect(app.issue.issues.getIssueById(related.id)).toEqual(relations.data[0]!.issue);
     expect(app.issue.issues.getIssueById(source.id)?.name).toBe("list update");
     expect(app.issue.issues.getIssueDetailById(source.id)?.description_html).toBe(source.description_html);
-    expect(get).toHaveBeenCalledTimes(2);
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(nerve.to("/api/v0/issues/R1/links")).toHaveLength(1);
     expect(nerve.calls.filter((call) => call.path === `/api/v0/projects/${project.id}/issues`)).toHaveLength(
       page === "initial" ? 1 : 2
     );

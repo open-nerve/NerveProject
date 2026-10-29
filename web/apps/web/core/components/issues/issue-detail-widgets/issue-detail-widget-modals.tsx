@@ -149,6 +149,9 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
     <>
       {!hideWidgets?.includes("links") && (
         <IssueLinkCreateUpdateModal
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          issueId={issueId}
           isModalOpen={isIssueLinkModalOpen}
           handleOnClose={handleIssueLinkModalOnClose}
           linkOperations={handleLinkOperations}

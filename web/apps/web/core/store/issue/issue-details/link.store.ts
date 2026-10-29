@@ -1,169 +1,112 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import { set } from "lodash-es";
-import { action, computed, makeObservable, observable, runInAction } from "mobx";
-// services
-import type { TIssueLink, TIssueLinkMap, TIssueLinkIdMap } from "@nerve/types";
-import { IssueService } from "@/services/issue";
-// types
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type { IssueLink, IssueLinkCreate, IssueLinkPatch } from "@nerve/api-client";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { dropped, upserted } from "@/lib/reconciled";
+import type { IssueReadToken, IssueWriteScope } from "../root.store";
 import type { IIssueDetail } from "./root.store";
+import { IssueResources } from "./resources";
 
-export interface IIssueLinkStoreActions {
-  addLinks: (issueId: string, links: TIssueLink[]) => void;
-  fetchLinks: (workspaceSlug: string, projectId: string, issueId: string) => Promise<TIssueLink[]>;
-  createLink: (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    data: Partial<TIssueLink>
-  ) => Promise<TIssueLink>;
-  updateLink: (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    linkId: string,
-    data: Partial<TIssueLink>
-  ) => Promise<TIssueLink>;
-  removeLink: (workspaceSlug: string, projectId: string, issueId: string, linkId: string) => Promise<void>;
-}
-
-export interface IIssueLinkStore extends IIssueLinkStoreActions {
-  // observables
-  links: TIssueLinkIdMap;
-  linkMap: TIssueLinkMap;
-  // computed
-  issueLinks: string[] | undefined;
-  // helper methods
-  getLinksByIssueId: (issueId: string) => string[] | undefined;
-  getLinkById: (linkId: string) => TIssueLink | undefined;
-}
-
-export class IssueLinkStore implements IIssueLinkStore {
-  // observables
-  links: TIssueLinkIdMap = {};
-  linkMap: TIssueLinkMap = {};
-  // root store
-  rootIssueDetailStore: IIssueDetail;
-  // services
-  issueService;
-
-  constructor(rootStore: IIssueDetail) {
-    makeObservable(this, {
-      // observables
-      links: observable,
-      linkMap: observable,
-      // computed
-      issueLinks: computed,
-      // actions
-      addLinks: action.bound,
-      fetchLinks: action,
-      createLink: action,
-      updateLink: action,
-      removeLink: action,
-    });
-    // root store
-    this.rootIssueDetailStore = rootStore;
-    // services
-    this.issueService = new IssueService();
+export type IIssueLinkStore = IssueLinkStore;
+export type IIssueLinkStoreActions = Pick<IssueLinkStore, "fetchLinks" | "createLink" | "updateLink" | "removeLink">;
+export class IssueLinkStore {
+  private readonly resources: IssueResources<IssueLink[]>;
+  constructor(readonly rootIssueDetailStore: IIssueDetail) {
+    this.resources = new IssueResources(this.root);
   }
-
-  // computed
-  get issueLinks() {
-    const issueId = this.rootIssueDetailStore.peekIssue?.issueId;
-    if (!issueId) return undefined;
-    return this.links[issueId] ?? undefined;
+  private get root() {
+    return this.rootIssueDetailStore.rootIssueStore;
   }
-
-  // helper methods
-  getLinksByIssueId = (issueId: string) => {
-    if (!issueId) return undefined;
-    return this.links[issueId] ?? undefined;
+  getLinksByIssueId = (id: string) => this.resources.get(id)?.value?.map((link) => link.id);
+  getLinkById = (issueId: string, linkId: string) =>
+    this.resources.get(issueId)?.value?.find((link) => link.id === linkId);
+  getError = (id: string) => this.resources.get(id)?.error;
+  retry = async (ws: string, project: string, id: string) => {
+    const resource = this.resources.entry(ws, project, id);
+    if (!(await resource.retryConfirmationRead())) await this.fetchLinks(ws, project, id);
   };
-
-  getLinkById = (linkId: string) => {
-    if (!linkId) return undefined;
-    return this.linkMap[linkId] ?? undefined;
-  };
-
-  // actions
-  addLinks = (issueId: string, links: TIssueLink[]) => {
-    runInAction(() => {
-      this.links[issueId] = links.map((link) => link.id);
-      links.forEach((link) => set(this.linkMap, link.id, link));
+  private current(scope: IssueWriteScope, token: IssueReadToken) {
+    if (!this.root.isReadCurrent(token, [scope.projectID], scope.workspaceID)) throw new SessionChangedError();
+    this.root.assertProjectReadable(scope.workspaceSlug, scope.projectID);
+  }
+  private validate(answer: IssueLink[], issueId: string, linkId?: string) {
+    if (answer.some((link) => link.issue_id !== issueId || (linkId !== undefined && link.id !== linkId)))
+      throw new SessionChangedError();
+  }
+  fetchLinks = async (ws: string, project: string, id: string): Promise<IssueLink[]> => {
+    const resource = this.resources.entry(ws, project, id);
+    const value = await resource.fetch(async (read) => {
+      const answer = await this.root.detailApi.listLinks(id);
+      if (!read.isCurrent()) throw new SessionChangedError();
+      this.validate(answer.data, id);
+      return answer.data;
     });
+    if (!value) throw new SessionChangedError();
+    return value;
   };
-
-  fetchLinks = async (workspaceSlug: string, projectId: string, issueId: string) => {
-    const response = await this.issueService.fetchIssueLinks(workspaceSlug, projectId, issueId);
-    this.addLinks(issueId, response);
-    return response;
-  };
-
-  createLink = async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssueLink>) => {
-    const response = await this.issueService.createIssueLink(workspaceSlug, projectId, issueId, data);
-    runInAction(() => {
-      set(this.links, issueId, [...(this.links[issueId] ?? []), response.id]);
-      set(this.linkMap, response.id, response);
+  private write(
+    ws: string,
+    project: string,
+    id: string,
+    request: () => Promise<IssueLink | void>,
+    removed?: string
+  ): Promise<IssueLink | void> {
+    return this.root.enqueueIssueChanges([id], async () => {
+      const resource = this.resources.entry(ws, project, id);
+      const scope = this.root.scope(ws, project);
+      const token = this.root.captureRead();
+      const answer = await request();
+      this.current(scope, token);
+      if (answer) {
+        this.validate([answer], id);
+        resource.receive([answer], token, (held) => upserted(answer)(held ?? []));
+      } else if (removed) resource.confirm(dropped(removed), token);
+      await resource.refreshAfterConfirmation(async () => {
+        this.current(scope, token);
+        await this.root.issues.refreshAuthoritative(id, { afterWrite: true });
+        this.current(scope, token);
+      }, token);
+      return answer;
     });
-    const confirmed = await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(issueId, {
-      afterWrite: true,
-    });
-    if (!confirmed) return response;
-    // fetching activity
-    this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-    return response;
+  }
+  createLink = async (ws: string, project: string, id: string, body: IssueLinkCreate): Promise<IssueLink> => {
+    const result = await this.write(ws, project, id, () =>
+      this.root.detailApi.createLink(id, {
+        url: body.url,
+        ...(body.title !== undefined ? { title: body.title } : {}),
+      })
+    );
+    if (!result) throw new Error("Missing confirmed link");
+    return result;
   };
-
   updateLink = async (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
+    ws: string,
+    project: string,
+    id: string,
     linkId: string,
-    data: Partial<TIssueLink>
-  ) => {
-    const initialData = { ...this.linkMap[linkId] };
-    try {
-      runInAction(() => {
-        Object.keys(data).forEach((key) => {
-          set(this.linkMap, [linkId, key], data[key as keyof TIssueLink]);
-        });
+    body: IssueLinkPatch
+  ): Promise<IssueLink> => {
+    const result = await this.write(ws, project, id, async () => {
+      if (!this.getLinkById(id, linkId)) throw new Error("Link has not been read");
+      const answer = await this.root.detailApi.updateLink(linkId, {
+        ...(body.url !== undefined ? { url: body.url } : {}),
+        ...(body.title !== undefined ? { title: body.title } : {}),
       });
-
-      const response = await this.issueService.updateIssueLink(workspaceSlug, projectId, issueId, linkId, data);
-
-      // fetching activity
-      this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-      return response;
-    } catch (error) {
-      console.error("error", error);
-      runInAction(() => {
-        Object.keys(initialData).forEach((key) => {
-          set(this.linkMap, [linkId, key], initialData[key as keyof TIssueLink]);
-        });
-      });
-      throw error;
-    }
-  };
-
-  removeLink = async (workspaceSlug: string, projectId: string, issueId: string, linkId: string) => {
-    await this.issueService.deleteIssueLink(workspaceSlug, projectId, issueId, linkId);
-
-    const linkIndex = this.links[issueId].findIndex((_comment) => _comment === linkId);
-    if (linkIndex >= 0)
-      runInAction(() => {
-        this.links[issueId].splice(linkIndex, 1);
-        delete this.linkMap[linkId];
-      });
-
-    const confirmed = await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(issueId, {
-      afterWrite: true,
+      this.validate([answer], id, linkId);
+      return answer;
     });
-    if (!confirmed) return;
-    // fetching activity
-    this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
+    if (!result) throw new Error("Missing confirmed link");
+    return result;
+  };
+  removeLink = async (ws: string, project: string, id: string, linkId: string): Promise<void> => {
+    await this.write(
+      ws,
+      project,
+      id,
+      async () => {
+        if (!this.getLinkById(id, linkId)) throw new Error("Link has not been read");
+        await this.root.detailApi.deleteLink(linkId);
+      },
+      linkId
+    );
   };
 }

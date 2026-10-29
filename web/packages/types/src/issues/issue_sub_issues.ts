@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueUpdate } from "@nerve/api-client";
+import type { IssueUpdate } from "@nerve/api-client";
 
 export type TSubIssuesStateDistribution = {
   backlog: string[];
@@ -12,21 +12,6 @@ export type TSubIssuesStateDistribution = {
   started: string[];
   completed: string[];
   cancelled: string[];
-};
-
-export type TIssueSubIssues = {
-  state_distribution: TSubIssuesStateDistribution;
-  sub_issues: TSubIssueResponse;
-};
-
-type TSubIssueResponse = Issue[] | { [key: string]: Issue[] };
-
-export type TIssueSubIssuesStateDistributionMap = {
-  [issue_id: string]: TSubIssuesStateDistribution;
-};
-
-export type TIssueSubIssuesIdMap = {
-  [issue_id: string]: string[];
 };
 
 export type TSubIssueOperations = {

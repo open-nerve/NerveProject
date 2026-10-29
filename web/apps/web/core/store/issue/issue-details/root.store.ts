@@ -4,13 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueUpdate } from "@nerve/api-client";
+import type { IssueUpdate, IssueLink, IssueLinkCreate, IssueLinkPatch } from "@nerve/api-client";
 import { action, computed, makeObservable, observable } from "mobx";
 // types
 import type {
   TIssueComment,
   TIssueCommentReaction,
-  TIssueLink,
   TIssueReaction,
   TIssueRelationTypes,
   TWorkItemWidgets,
@@ -67,7 +66,7 @@ export interface IIssueDetail
   // observables
   peekIssue: TPeekIssue | undefined;
   relationKey: TIssueRelationTypes | null;
-  issueLinkData: TIssueLink | null;
+  issueLinkData: IssueLink | null;
   issueCrudOperationState: TIssueCrudOperationState;
   openWidgets: TWorkItemWidgets[];
   isCreateIssueModalOpen: boolean;
@@ -82,7 +81,7 @@ export interface IIssueDetail
   getIsIssuePeeked: (issueId: string) => boolean;
   // actions
   setPeekIssue: (peekIssue: TPeekIssue | undefined) => void;
-  setIssueLinkData: (issueLinkData: TIssueLink | null) => void;
+  setIssueLinkData: (issueLinkData: IssueLink | null) => void;
   toggleCreateIssueModal: (value: boolean) => void;
   toggleIssueLinkModal: (value: boolean) => void;
   toggleParentIssueModal: (issueId: string | null) => void;
@@ -109,7 +108,7 @@ export class IssueDetail implements IIssueDetail {
   // observables
   peekIssue: TPeekIssue | undefined = undefined;
   relationKey: TIssueRelationTypes | null = null;
-  issueLinkData: TIssueLink | null = null;
+  issueLinkData: IssueLink | null = null;
   issueCrudOperationState: TIssueCrudOperationState = {
     create: {
       toggle: false,
@@ -215,7 +214,7 @@ export class IssueDetail implements IIssueDetail {
       this.openWidgets = this.openWidgets.filter((s) => s !== state);
     else this.openWidgets = [state, ...this.openWidgets];
   };
-  setIssueLinkData = (issueLinkData: TIssueLink | null) => (this.issueLinkData = issueLinkData);
+  setIssueLinkData = (issueLinkData: IssueLink | null) => (this.issueLinkData = issueLinkData);
 
   // issue
   fetchIssue = async (workspaceSlug: string, projectId: string, issueId: string) =>
@@ -243,17 +242,16 @@ export class IssueDetail implements IIssueDetail {
   ) => this.reaction.removeReaction(workspaceSlug, projectId, issueId, reaction, userId);
 
   // link
-  addLinks = (issueId: string, links: TIssueLink[]) => this.link.addLinks(issueId, links);
   fetchLinks = async (workspaceSlug: string, projectId: string, issueId: string) =>
     this.link.fetchLinks(workspaceSlug, projectId, issueId);
-  createLink = async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssueLink>) =>
+  createLink = async (workspaceSlug: string, projectId: string, issueId: string, data: IssueLinkCreate) =>
     this.link.createLink(workspaceSlug, projectId, issueId, data);
   updateLink = async (
     workspaceSlug: string,
     projectId: string,
     issueId: string,
     linkId: string,
-    data: Partial<TIssueLink>
+    data: IssueLinkPatch
   ) => this.link.updateLink(workspaceSlug, projectId, issueId, linkId, data);
   removeLink = async (workspaceSlug: string, projectId: string, issueId: string, linkId: string) =>
     this.link.removeLink(workspaceSlug, projectId, issueId, linkId);

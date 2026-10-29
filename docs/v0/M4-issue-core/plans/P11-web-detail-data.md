@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T3已实现，继续T4**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T4已实现，继续T5**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -91,11 +91,11 @@ make e2e
 
 **Files：** issue-details/link.store.ts/root.store.ts；issues/links、issue-detail/links、issue-detail-widgets/links及 create-update-link-modal 实际调用；types 的旧链接；新 link.store.test.ts、issues/links/data.test.tsx。
 
-- [ ] 原生 title=null、metadata空/favicon_url/error=blocked|failed 的展示；create/update/delete拒绝不改变集合/link_count，写成功旧GET晚到仍保留确认；修改后权威 Detail 使列表 link_count 更新，补读失败仅重试GET。
-- [ ] 输入只 IssueLinkCreate/IssueLinkPatch；删除204后确认集合，成功才关闭弹窗。metadata失败不转成写失败。
-- [ ] 核全web最后 IssueService 读者迁走（含 issue-changes 的链接 spy 与所有测试 import），删除旧 issue.service.ts/barrel导出、对应类型和 exact key；改用 FakeNerve 原生请求/响应继续核 R31/R32，service路径被新测试命中不得加入旧URL豁免。
-- [ ] 同步删除C/store/cycle.store.ts中已无调用的IssueService import/成员/构造；全文及全仓引用核实只有这三个位置，不替M6接新接口，不修改其余cycle行为。保留issue-layouts/removal.test.tsx的M6领域目录边界回归。
-- [ ] 聚焦 link.store/data + T1–T3；types/static；M08 提前写缓存、M09 元数据failed当HTTP失败；G；F并记录准确检查点。提交 `feat(M4/P11): 接通工作项链接并移除旧核心服务`。
+- [x] 原生 title=null、metadata空/favicon_url/error=blocked|failed 的展示；create/update/delete拒绝不改变集合/link_count，写成功旧GET晚到仍保留确认；修改后权威 Detail 使列表 link_count 更新，补读失败仅重试GET。
+- [x] 输入只 IssueLinkCreate/IssueLinkPatch；删除204后确认集合，成功才关闭弹窗。metadata失败不转成写失败。
+- [x] 核全web最后 IssueService 读者迁走（含 issue-changes 的链接 spy 与所有测试 import），删除旧 issue.service.ts/barrel导出、对应类型和 exact key；改用 FakeNerve 原生请求/响应继续核 R31/R32，service路径被新测试命中不得加入旧URL豁免。
+- [x] 同步删除C/store/cycle.store.ts中已无调用的IssueService import/成员/构造；全文及全仓引用核实只有这三个位置，不替M6接新接口，不修改其余cycle行为。保留issue-layouts/removal.test.tsx的M6领域目录边界回归。
+- [x] 聚焦 link.store/data + T1–T3；types/static；M08 提前写缓存、M09 元数据failed当HTTP失败；G；F并记录准确检查点。提交 `feat(M4/P11): 接通工作项链接并移除旧核心服务`。
 
 ## Task 5：评论与两类表情（约1000–1500行）
 

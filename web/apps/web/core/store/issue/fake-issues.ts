@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueDetail, IssueListPage } from "@nerve/api-client";
+import type { Issue, IssueDetail, IssueListPage, IssueLink } from "@nerve/api-client";
 import { expect } from "vitest";
 import type { Group } from "@/lib/paged-groups";
 import type { Endpoint, FakeNerve } from "@/lib/auth/fake-nerve";
@@ -41,6 +41,17 @@ export const issuePageOf = (data: Issue[], nextCursor: string | null = null): Is
   total: data.length,
   data,
   next_cursor: nextCursor,
+});
+
+export const issueLinkOf = (id: string, issueId = "x"): IssueLink => ({
+  id,
+  issue_id: issueId,
+  title: null,
+  url: "https://example.test/",
+  metadata: {},
+  created_by_id: null,
+  created_at: "2026-10-30T00:00:00Z",
+  updated_at: "2026-10-30T00:00:00Z",
 });
 
 /** Start an operation and hold its one real HTTP request until the test answers it. */

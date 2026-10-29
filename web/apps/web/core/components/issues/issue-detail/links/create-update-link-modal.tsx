@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
@@ -12,7 +12,11 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { useTranslation } from "@nerve/i18n";
 // nerve types
 import { Button } from "@nerve/propel/button";
-import type { TIssueLinkEditableFields } from "@nerve/types";
+import { followInSession } from "@/lib/in-session";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useDetailScope } from "../../issue-detail-widgets/use-detail-scope";
+import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 // nerve ui
 import { ModalCore } from "@nerve/ui";
 // hooks
@@ -20,13 +24,18 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // types
 import type { TLinkOperations } from "./types";
 
-export type TLinkOperationsModal = Exclude<TLinkOperations, "remove">;
+type TLinkOperationsModal = Pick<TLinkOperations, "create" | "update">;
 
-export type TIssueLinkCreateFormFieldOptions = TIssueLinkEditableFields & {
+export type TIssueLinkCreateFormFieldOptions = {
+  title: string;
+  url: string;
   id?: string;
 };
 
 export type TIssueLinkCreateEditModal = {
+  workspaceSlug: string;
+  projectId: string;
+  issueId: string;
   isModalOpen: boolean;
   handleOnClose?: () => void;
   linkOperations: TLinkOperationsModal;
@@ -40,7 +49,7 @@ const defaultValues: TIssueLinkCreateFormFieldOptions = {
 export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdateModal(
   props: TIssueLinkCreateEditModal
 ) {
-  const { isModalOpen, handleOnClose, linkOperations } = props;
+  const { workspaceSlug, projectId, issueId, isModalOpen, handleOnClose, linkOperations } = props;
   // i18n
   const { t } = useTranslation();
   // react hook form
@@ -53,7 +62,11 @@ export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdat
     defaultValues,
   });
   // store hooks
-  const { issueLinkData: preloadedData, setIssueLinkData } = useIssueDetail();
+  const { issueLinkData, setIssueLinkData } = useIssueDetail();
+  const preloadedData = issueLinkData?.issue_id === issueId ? issueLinkData : null;
+  const capture = useDetailScope(workspaceSlug, projectId, `${issueId}:${isModalOpen}:${preloadedData?.id ?? "new"}`);
+  const sending = useRef(false);
+  const refusal = useRefusalToast();
 
   const onClose = () => {
     setIssueLinkData(null);
@@ -61,19 +74,41 @@ export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdat
   };
 
   const handleFormSubmit = async (formData: TIssueLinkCreateFormFieldOptions) => {
-    const parsedUrl = formData.url.startsWith("http") ? formData.url : `http://${formData.url}`;
-    try {
-      if (!formData || !formData.id) await linkOperations.create({ title: formData.title, url: parsedUrl });
-      else await linkOperations.update(formData.id, { title: formData.title, url: parsedUrl });
-      onClose();
-    } catch (error) {
-      console.error("error", error);
-    }
+    const current = capture();
+    if (!current() || sending.current) return;
+    sending.current = true;
+    const parsedUrl = /^https?:\/\//i.test(formData.url) ? formData.url : `http://${formData.url}`;
+    const body = { title: formData.title || null, url: parsedUrl };
+    await followInSession(
+      () => (formData.id ? linkOperations.update(formData.id, body) : linkOperations.create(body)),
+      {
+        done: () => {
+          if (!current()) return;
+          const verb = formData.id ? "updated" : "created";
+          setToast({
+            type: TOAST_TYPE.SUCCESS,
+            title: t(`links.toasts.${verb}.title`),
+            message: t(`links.toasts.${verb}.message`),
+          });
+          onClose();
+        },
+        failed: (error) => {
+          if (current() && !(error instanceof SessionChangedError)) refusal(error);
+        },
+      }
+    );
+    if (current()) sending.current = false;
   };
 
   useEffect(() => {
-    if (isModalOpen) reset({ ...defaultValues, ...preloadedData });
-  }, [preloadedData, reset, isModalOpen]);
+    sending.current = false;
+    if (isModalOpen)
+      reset(
+        preloadedData
+          ? { id: preloadedData.id, url: preloadedData.url, title: preloadedData.title ?? "" }
+          : defaultValues
+      );
+  }, [preloadedData, reset, isModalOpen, issueId]);
 
   return (
     <ModalCore isOpen={isModalOpen} handleClose={onClose}>
@@ -141,7 +176,7 @@ export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdat
           </div>
         </div>
         <div className="flex items-center justify-end gap-2 border-t-[0.5px] border-subtle px-5 py-4">
-          <Button variant="secondary" size="lg" onClick={onClose}>
+          <Button type="button" variant="secondary" size="lg" onClick={onClose}>
             {t("common.cancel")}
           </Button>
           <Button variant="primary" size="lg" type="submit" loading={isSubmitting}>

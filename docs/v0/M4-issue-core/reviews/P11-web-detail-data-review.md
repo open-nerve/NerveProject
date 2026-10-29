@@ -1,6 +1,6 @@
 # M4/P11 详情数据层：预检与实施记录
 
-日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1进行中。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
+日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T4已实现，继续T5。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
 
 ## 1. 前置、身份与范围
 
@@ -8,7 +8,7 @@ P10b最终交付2aaef85c已授权--no-ff合并main `df5d3bbc1887486bd105fe6fc663
 
 从此main创建 `codex/m4-p11` / `.codex/worktress/codex/m4-p11`；主目录一直main。准备阶段用户只授权spec/plan和预检，当时没有产品改动、依赖安装、原型/代码重放或产品测试。准备原件在主目录 `.superpowers/sdd/P11-preparation-20261030/`，在worktree外，未来归档不能遗漏。
 
-## 2. 验收映射
+## 2. 预检时的验收映射（实施进展见§8）
 
 | spec验收 | 本轮处理 | 产品状态 |
 |---|---|---|
@@ -88,3 +88,11 @@ root集中登记详情资源并响应权限、删除及退役；DetailResource�
 18文件330项受影响回归通过（t3-regression-verified），共享包10项强制构建、web types、关键词75规则/42例外、变更文件lint零警告、格式与diff通过。M05b手加父计数得到9而非8；M06移除共享child排队导致提前PATCH；M07用targetId删除导致路径断言失败，三项均恢复原字节/hash，完整回归通过。M05首次未传权限证明，错误写入被既有守卫拦住，未计入有效变异；M06验证共享队列，不能把该变异说成单独验证了排序必要性。
 
 证据限制保留：一次共享包重建与回归重叠导致导入失败，改回构建后串行回归；一次scope测试误以为Reconciled会抛出SessionChanged，核源码后按既有返回undefined合同修正，未声称修复了不存在的生产问题；未知旧父测试首次用了错误group_key，修正为原生key后才记录行为红。T3因真实消费者局部修复超出原行数估计，仍为已定数据接线范围，无新服务端/跨模块协议。阶段完整F和首次产品推送仍在T4，未合并。
+
+### T4 链接、旧服务删除与首个完整门禁
+
+链接集合改用原生IssueLink，nullable title与metadata.error按响应展示；命令共享工作项队列，确认前不改资源，确认后以权威Detail同步计数。成功补读失败保留确认并显示只读重试，弹窗拒绝保留输入，成功才关闭；旧宿主完成不关闭新宿主。删除IssueService、链接旧类型、六条旧URL exact例外及CycleStore三处无用服务声明，M6目录边界回归保留。
+
+原生资源13项及真实消费者4项通过；R31/R32、fetch和弹窗等迁移回归6文件135项通过。M08提前修改缓存和M09把元数据failed当写失败均出现行为断言红，原字节/hash恢复后17项通过。最初红中旧Axios路径与原生路径不同是迁移边界证据；测试泛型类型错误单列，不计行为红。要求/质量自审及完整门禁又发现一个错误翻译键、两个已无读者的类型导出，均已修复；不新增规则豁免。web lint警告上限由217收紧为197，与删除旧实现后的真实数目一致。
+
+首次F严格串行：t4-f1的gen-check/lint-go/test-go通过；lint-web发现翻译键后在t4-f2重跑通过，knip发现死导出后t4-f3的lint-web/knip/test-web/e2e均通过。前端局部修复不改服务端，复用前三项真实结果。web 177文件1,849项、共享包Vitest157项及api-client5项通过，18个test任务强制执行、0缓存；E2E 169项通过（含Firefox A4）。包级完整日志和哈希在t4-test-web-packages，七项raw/json保留准确命令、HEAD与dirty文件hash。首次验证脚本仅识别了未跟踪目录，最终F前已修正为逐文件hash，未补造早期回执。准确提交与分支CI另行记录；本地通过不代表main验收，未合并。

@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export * from "./issue.service";
 export * from "./issue_reaction.service";
 export * from "./issue_activity.service";
 export * from "./issue_comment.service";

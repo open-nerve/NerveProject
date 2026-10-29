@@ -53,6 +53,7 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
     rootIssueStore,
     subIssues,
     relation,
+    link,
   } = useIssueDetail();
   const { allowPermissions } = useUserPermissions();
   const { issueDetailSidebarCollapsed } = useAppTheme();
@@ -84,9 +85,12 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
   const issue = getIssueById(issueId);
   const uncertain = rootIssueStore.verification.isUncertain(issueId);
   const readError =
-    subIssues.getError(issueId) ?? relation.getError(issueId) ?? rootIssueStore.verification.getError(issueId);
+    subIssues.getError(issueId) ??
+    relation.getError(issueId) ??
+    link.getError(issueId) ??
+    rootIssueStore.verification.getError(issueId);
   const retryRead = async () => {
-    const resources = [subIssues, relation].filter((resource) => resource.getError(issueId));
+    const resources = [subIssues, relation, link].filter((resource) => resource.getError(issueId));
     if (resources.length)
       await Promise.all(resources.map((resource) => resource.retry(workspaceSlug, projectId, issueId)));
     else await rootIssueStore.issues.refreshAuthoritative(issueId);

@@ -2782,54 +2782,6 @@
     },
     {
       "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/",
-      "count": 1,
-      "reason": "P10b/T5已移除核心patch；仅剩retrieve→IssueStore.fetchIssue/loadIssueResources父项及归档detail header，P11详情迁移时删除",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/sub-issues/",
-      "count": 2,
-      "reason": "T7暂留；P11接线删除；真实读者 subIssues→IssueSubIssuesStore.fetchSubIssues；addSubIssues→IssueSubIssuesStore.addSubIssues",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/issue-links/",
-      "count": 2,
-      "reason": "T7暂留；P11接线删除；真实读者 fetchIssueLinks→IssueLinkStore.fetchLinks；createIssueLink→IssueLinkStore.createLink",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/issue-links/${linkId}/",
-      "count": 2,
-      "reason": "T7暂留；P11接线删除；真实读者 updateIssueLink→IssueLinkStore.updateLink；deleteIssueLink→IssueLinkStore.removeLink",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/meta/",
-      "count": 1,
-      "reason": "T7暂留；P11接线删除；真实读者 getIssueMetaFromURL→issues/(detail)/[issueId]/page",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/work-items/${project_identifier}-${issue_sequence}/",
-      "count": 1,
-      "reason": "T7暂留；P11接线删除；真实读者 retrieveWithIdentifier→IssueStore.fetchIssueWithIdentifier",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
       "path": "web/apps/web/core/services/issue/issue_activity.service.ts",
       "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/history/",
       "count": 1,

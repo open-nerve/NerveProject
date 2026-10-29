@@ -11,7 +11,7 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { IssueLinkItem } from "./link-item";
 import type { TLinkOperations } from "./types";
 
-type TLinkOperationsModal = Exclude<TLinkOperations, "create">;
+type TLinkOperationsModal = Pick<TLinkOperations, "remove">;
 
 type TLinkList = {
   issueId: string;
@@ -34,7 +34,13 @@ export const LinkList = observer(function LinkList(props: TLinkList) {
   return (
     <div className="flex flex-col gap-2">
       {issueLinks.map((linkId) => (
-        <IssueLinkItem key={linkId} linkId={linkId} linkOperations={linkOperations} isNotAllowed={disabled} />
+        <IssueLinkItem
+          issueId={issueId}
+          key={linkId}
+          linkId={linkId}
+          linkOperations={linkOperations}
+          isNotAllowed={disabled}
+        />
       ))}
     </div>
   );
