@@ -172,3 +172,32 @@ it("deduplicates simultaneous mounts while the same list request remains in flig
   await act(async () => root.unmount());
   tab.app.dispose();
 });
+
+it("does not accept a page that crossed an observed loss and restoration of project membership", async () => {
+  const { loadProjects } = await import("@/store/project/fake-projects");
+  const tab = await issueStoreTab();
+  const root = createRoot(document.createElement("div"));
+  const cache = new Map();
+  const render = () =>
+    root.render(
+      <SWRConfig value={{ provider: () => cache }}>
+        <Layout tab={tab} type={EIssuesStoreType.PROJECT} />
+      </SWRConfig>
+    );
+  await act(async () => render());
+  await until(() => tab.nerve.calls.length === 1, "old request");
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  f.role = undefined;
+  await act(async () => render());
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  f.role = 15;
+  await act(async () => render());
+  await act(async () => {
+    tab.nerve.calls[0]!.answer(json(200, issuePageOf([issueOf("old")])));
+  });
+  await vi.advanceTimersByTimeAsync(100);
+  expect(tab.app.issue.issues.held("old")).toBeUndefined();
+  expect(tab.app.issue.projectIssues.groups).toBeUndefined();
+  await act(async () => root.unmount());
+  tab.app.dispose();
+});
