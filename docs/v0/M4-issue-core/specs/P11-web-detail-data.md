@@ -1,6 +1,6 @@
 # M4/P11 详情数据层规格
 
-> 状态：准备稿已形成，**预检被 P11-S1 阻塞，未实施**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。本轮只改文档，产品验收全部开放；项目编号宽度所需公开字段不存在，见[决策记录](../reviews/P11-project-number-width-decision.md)，等待负责人决定。
+> 状态：负责人已裁定P11-S1采用A，**文档预检通过，未实施**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。本轮只改文档，产品验收全部开放；编号列宽按已加载、当前可见数据计算，不新增项目API字段，见[已裁定记录](../reviews/P11-project-number-width-decision.md)。
 
 权威输入：[M4 设计](../M4-design.md) §3.9–3.15、§7.1–7.4、§9.5、§12 P11、§13；[推进方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)；[P10b spec](P10b-web-list-data.md) §2.6/§7；输入 handoffs 的 M1-closeout、M2-closeout §12、M3-closeout §5/6/8。配套 [plan](../plans/P11-web-detail-data.md)、[阶段预检](../reviews/P11-web-detail-data-review.md)。
 
@@ -26,10 +26,10 @@
 | T6 | issue_activity.service.ts、activity.store.ts；新 timeline.ts；issue-activity 展示，删旧动态细节类型 | 新 timeline.test.ts、activity.store.test.ts；T5 评论分页回归 |
 | T7 | work_item_version.service.ts；新 issue-details/description-versions.store.ts；core/description-versions 与两个 M4 调用方；M7 版本 DTO 归属 | 新 description-versions.store.test.ts、core/description-versions/root.test.tsx |
 | T8 | workspace_draft.service.ts、workspace-draft/issue.store.ts；draft 页面/表单直接消费者、root 创建确认入口 | 新 workspace-draft/issue.store.test.ts、issue-modal/draft.test.tsx |
-| T9 | hooks/editor/use-editor-mention.tsx、editor/lite-text、rich-text/description-input、inbox/content/issue-root.tsx；WorkspaceService.searchEntity 及旧 JSON 类型 | 新 hooks/editor/use-editor-mention.test.tsx；既有 editor 包测试 |
+| T9 | hooks/editor/use-editor-mention.tsx、editor/lite-text、rich-text/editor与description-input、issue-modal/components/description-editor、inbox/modals/create-modal/issue-description；WorkspaceService.searchEntity 及旧 JSON 类型 | 新 hooks/editor/use-editor-mention.test.tsx；既有 editor 包测试 |
 | T10 | 详情及按需属性目录读取、详情一侧 SessionSWR；同 Task 删除 .oxlintrc.json 对应旧 SWR 豁免 | 新 detail-refusals.test.tsx；既有 use-session-swr、issue.fetch/sub_issues.fetch 测试 |
 | T11 | modals/work-item-level.tsx、issue-details/root.store.ts、详情/peek/列表实际弹窗宿主 | 新 modals/work-item-level.test.tsx、issues/detail-host.test.tsx |
-| T12 | issue-modal/base.tsx、五处标签创建调用；use-label-changes；工作区标签/编号宽度及项目目录刷新 | 既有 base.loading/base.clone 测试；新 issue-properties.test.tsx |
+| T12 | issue-modal/base.tsx、五处标签创建调用；use-label-changes；工作区标签边界/列表统一编号列宽 | 既有 base.loading/base.clone 测试；新 issue-properties.test.tsx |
 | T13 | 关键词、barrel、死成员、修改矩阵、跨资源竞态、S2 请求边界 | 新 detail-mutations.test.ts；既有列表权限/确认回归，S2 |
 | T14 | 设计、frontend-changes、各输入 handoff 的局部处理结果、验收、阶段整分支 deep-review 和修复 | 最终完整 F、准确分支 CI、原始审查与修复证据 |
 
@@ -96,9 +96,13 @@ M4 新版本 store 使用 DescriptionVersion/Page/Detail，按 last_saved_at/id 
 
 草稿是 Draft，不是字段摊平的 Issue。store 按 workspace/本人持有分页、total、记录与 loader；只有 workspace 管理员/成员可读。scope 包含 member 权限，退出、降级、workspace 消失立即遮住旧内容；不同 workspace 的 cursor/loader 不互相覆盖。输入 builder 显式白名单 IssueDraftPayload，允许暂不满足发布条件的数据；省略 project_id 与显式 null 区分。PATCH payload 是整份替换，表单保存要保留它拥有但未编辑的合法字段，不能以局部 payload 覆盖其它字段。
 
+表单清空 parent_id/start_date/target_date 等可空输入时，从待保存的完整 payload 删除该键，不发送生成合同不接受的 null，也不把旧值合并回来；数组清空使用 []，合法空字符串按原值保存。顶层 project_id=null 才表示清空草稿目标项目，与 payload 内字段不同。无项目草稿仍可保存；现有普通工作项创建/更新的必选项目保护不得误用于草稿分支，发布所需项目和完整语义由服务端校验。
+
+直接消费者同步改为Draft.payload，缺项目不隐藏整行/编辑器，不因没有项目目录而覆盖已有草稿。读取本人的草稿由服务端限定，删除入口使用本代工作区成员权限和资源scope，不从不存在的created_by或项目管理员角色推断草稿所有权。保存/删除拒绝保留输入及弹窗；确认结果回调只做本scope的界面跟进，不能再用返回实体补发第二次修改。这里是原生草稿合同的最小调用闭合，完整草稿页面故事仍归P15。
+
 发布一个 draft 的保存和发布是同一串行操作：先 PATCH 最新完整载荷/目标项目，成功再 POST publish（无 body）；PATCH 失败不得发 POST；publish 409 draft_changed/422/403 保留保存成功的 Draft、表单和错误，不能假装已经发布。publish 201 的 IssueDetail 经过 root 的**创建确认协调入口**（冻结 before/pending、canonical、所有列表/计数同 createIssue），不能仅 acceptRead。root 将既有 createIssue 的协调流程抽成小范围复用入口，实际请求由调用者给定；不新增另一套创建缓存。成功删除该 draft 的确认要能重放到晚到列表；total 由服务端回答/确认来源处理，不按一次局部页长度猜全量。
 
-**P11-S1 待决：**原设计要求创建/发布后刷新 `Project.next_work_item_sequence`，但当前 Project 公开合同不存在该字段；此处不能实现或用假值补齐。按决策记录选择前端显示宽度方案或增补公开合同后，再修订项目刷新责任和对应测试。跟进导航/提示依 followInSession 与宿主 scope；其它窗口的草稿并发由 draft_changed 表达，不新增客户端锁协议。
+**P11-S1裁定A：**创建/发布成功后的编号宽度由实际进入当前列表的确认工作项派生，不为列宽额外刷新项目，不添加或伪造 `Project.next_work_item_sequence`。若将来其它功能真实修改项目公开字段，仍按该功能自己的确认流程刷新，不能把此裁定扩大为禁止一切项目刷新。跟进导航/提示依 followInSession 与宿主 scope；其它窗口的草稿并发由 draft_changed 表达，不新增客户端锁协议。
 
 ### 2.9 提及、按需读取与宿主
 
@@ -110,24 +114,36 @@ WorkItemLevelModals 留在现有 workspace provider；`projectId ?? workItemIden
 
 ### 2.10 错误、标签与守卫
 
-issue-modal/base.tsx 的旧 error?.error 经 errorMessageKey/现有文案表；只有新增公开码才同步 en/zh-CN 及码测试。五个工作项新建标签入口走 useLabelChanges().create(projectId, LabelCreate, underField, done)，重名 project.label_name_taken 落 name 字段；成功后跟进按会话。没有 projectId 时只使用已有、当前仍可见项目的 labelMap；未取目录的标签不显示，不声称有 workspace 标签接口，不传空项目 ID、不逐项目扩取数。工作区完整标签恢复仍归 M7（M3 handoff§6）；本段核限制和拒绝边界。编号宽度及写后项目刷新受 P11-S1 决策约束；projectIdentifier 为可选 string 的现状保留，不恢复项目对象参数。
+issue-modal/base.tsx 的旧 error?.error 经 errorMessageKey/现有文案表；只有新增公开码才同步 en/zh-CN 及码测试。五个工作项新建标签入口走 useLabelChanges().create(projectId, LabelCreate, underField, done)，重名 project.label_name_taken 落 name 字段；成功后跟进按会话。没有 projectId 时只使用已有、当前仍可见项目的 labelMap；未取目录的标签不显示，不声称有 workspace 标签接口，不传空项目 ID、不逐项目扩取数。工作区完整标签恢复仍归 M7（M3 handoff§6）；本段核限制和拒绝边界。编号宽度按P11-S1裁定A实现（下节）；projectIdentifier 为可选 string 的现状保留，不恢复项目对象参数。
+
+### 2.11 编号列宽（P11-S1裁定A）
+
+一个列表布局的所有行共用同一编号列宽，包括展开的已加载子项；项目/归档/profile三个列表入口复用这份显示规则。输入仅该布局实际纳入显示、当前有权读取的工作项及各自Project.identifier，不扫描全局canonical，不读取未加载/已失权编号；“可见”指通过权限、筛选与展开条件，不等于仅视口内已渲染的DOM。跨项目profile按每个实际完整编号计算所需宽度，再取最大，不拼接不同记录的字段冒充一个编号。
+
+复用现有calculateIdentifierWidth的像素估算（第二参数是实际sequence_id数字，不是位数），它只是显示函数，不代表项目最大序号。Project尚未到时不渲染undefined-编号或猜标识；等目录到达再参加计算。空集合初值0，关闭key显示时输出0；目录和行的HTTP读取仍由原所属store负责，宽度逻辑零网络请求。
+
+局部布局状态只记数值宽度与scope/行注册身份，不缓存另一份Issue/Project。建议在List拥有局部宽度状态，在IssueBlockRoot（RenderIfVisible外）注册当前合法完整编号的所需宽度，覆盖视口外已加载行及递归展开子项；用已有props或局部context传给行，禁止各行自己算不同列宽。注册须有宿主所有权和清理，不让卸载的旧行写入新布局；实现细节可以等价替换，行为约束不变。
+
+scope由当前loginId、workspace、列表种类、project或profile user/view，以及root的权限identity组成；改变时同步重置已记宽度、从新scope当前合法行重算，不能先画一帧旧范围。普通分页/确认新行/展开较长子项只增宽；同scope删除、折叠或筛选缩小允许保持已达到宽度以免抖动。权限改变必须重算，不沿用这种保持策略。卸载时释放；重新挂载从当前数据开始，不存localStorage。独立详情编号按自身内容展示，不新增列表宽度状态。
+
+必要样本：WEB-9/WEB-10/WEB-100、不同长度项目标识的profile列、跨分组统一值、分页和展开子项增长、视口卸载不缩列、过滤/删除保持、权限收回/ABA/切scope重算、目录未到/空集合/key隐藏、两个布局不互改。代价是新页首次出现更长编号时列可变宽；无需提前为未来编号留位。无需新增项目公开字段、后端任务或架构守卫例外。
 
 phase 在**第一条实施提交**改 M4/P11，本次准备不动。当前无 until=M4/P11 例外；P11 应删除的旧地址共有21个 exact key、期限 M4/P12，随真正消费者消失逐项减少，不能延长。新增 label-create-direct 限制实际 M4 创建入口；旧 IssueService 在 T4 最后消费者迁移后删除。旧搜索调用仍由 P12/P14/P15 负责，M5–M7 旧接口只按各自登记保留，不给新的 M4 旧调用开洞。
 
 ## 3. 补充裁定
 
-D1–D7 是既定设计内的执行细化；D8 发现上游合同缺口，属于需负责人决策的跨模块事项。准备阶段已停在此处，先提交已完成文档再上报。
+D1–D7 是既定设计内的执行细化；D8曾因上游合同缺口提交后上报，负责人2026-10-30已选择A，现按裁定完成文档修订，不扩大项目公开协议。
 
 | ID | 裁定、理由、错误代价 |
 |---|---|
-| D1 | 按资源同步换型，最多十四个 Task。单独先删所有 DTO 会让中途不可编译；代价是每个 Task 要同时检查 UI 消费者，不能只测 store。 |
+| D1 | 按资源同步换型，当前十四个 Task，实施前可按计划的规模预留再拆分，不扩大范围。单独先删所有 DTO 会让中途不可编译；代价是每个 Task 要同时检查 UI 消费者，不能只测 store。 |
 | D2 | 搜索生成合同本段登记，薄 service 延到 P12 首个生产调用方同任务落地；P14/P15 接其它消费者，最后删旧搜索类型。当前没有 P11 独立生产读者，提前建最终无读者导出会绕 knip。页面时间点不后移，代价是不能声称 P11 已接通搜索。 |
 | D3 | 归档 header 和 issueId redirect 的两个 IssueService 实例的数据接线前移 P11 T2；P13/P14 仍做完整页面验收。旧 IssueService 本就必须 P11 删，延后会延长有界旧接口。七处原要求加这两处，共九处 M4 实例在 P11 消失，13处总门禁仍 P15。 |
 | D4 | M7 版本旧 DTO 收归 M7，只有共享展示 props 分离，真实旧请求保持；符合设计要求的 M7 编译闭合，不迁 M7 业务。错误代价是偷换 DTO 导致未接通领域再添隐形假合同，故设专门测试。 |
 | D5 | 沿用 root 权限令牌/队列/Reconciled，资源只增加必要 scope 元数据；不建立第二个权限观察者、实体副本或通用同步框架。副作用成功但补读失败按确认与待核两阶段处理，不能回滚已成功写。 |
 | D6 | 编号解析交给已实现服务端，前后核 workspace/返回项目权限；不是把本地大小写匹配当权限。代价是未知编号最多多一次服务端拒绝及必要目录读取，安全由服务器与落库前 scope 证明共同保证。 |
 | D7 | 当前只准备，取消本轮完整产品原型与逐 Task 代码重放；采用合同/调用链/现有测试静态预检及独立 builder-check。所有行为证明留实施，未跑命令不写绿；方法调整由02§3允许，且遵从负责人“暂不实现”。 |
-| D8 / P11-S1 | **待负责人决定，不能标已裁定。**现有 Project 无 next_work_item_sequence，设计/交接却要求依它计算宽度；A按已加载且当前可见编号统一列宽（建议），B增补项目公开只读合同。详见决策记录；本段预检未通过。 |
+| D8 / P11-S1 | **负责人已裁定A。**编号列宽来自当前布局已加载可见编号，按§2.11统一/增宽/重置；不新增Project序号字段，不为此刷新项目。代价是更长编号首次出现时列可增宽；原公开合同保持，历史B方案留决策记录。 |
 
 ## 4. 验收标准
 
@@ -136,10 +152,10 @@ D1–D7 是既定设计内的执行细化；D8 发现上游合同缺口，属于
 - [ ] A3：子项状态分布/计数、关联关系 ID、链接元数据及计数由原生合同/权威确认驱动；所有修改串行、拒绝不改副本。
 - [ ] A4：评论/表情不乐观；无不存在的评论表情 GET；全页和增量 cursor/ID 重排/纳秒排序、并发确认和二页失败覆盖。
 - [ ] A5：版本读取权限、分页/快速选择、恢复等待确认；M7 独立旧 DTO 不冒充生成类型，原消费合同保留。
-- [ ] A6：草稿分页/权限/完整 payload、PATCH→无 body publish、拒绝保留、发布接创建协调通过；编号显示/项目刷新按P11-S1决策后的明确合同验收。
+- [ ] A6：草稿分页/权限/完整 payload、PATCH→无 body publish、拒绝保留、发布接创建协调通过；确认行按A方案影响当前列表列宽，无列宽专用项目请求。
 - [ ] A7：原七处模块实例与两个前移实例消失；提及四处改成员目录，JSONContent/comment_json/description_json/is_bot 的 M4 旧读写删除。
 - [ ] A8：每处按需拒绝可观察、结束加载/重试；详情 SessionSWR 含会话和权限身份；宿主换 scope/卸载/晚答不串弹窗。
-- [ ] A9：错误按码、标签统一创建、无项目标签限制准确；编号宽度按P11-S1决策验收；dead/oxlint/knip 与新守卫通过。
+- [ ] A9：错误按码、标签统一创建、无项目标签限制准确；编号统一列宽、分页/子项增长和scope/权限重置按§2.11通过；dead/oxlint/knip 与新守卫通过。
 - [ ] A10：逐 Task 证据、至少15项独立性质变异、完整 F、准确最终分支 CI、deep-review 与修复复审闭环，移交记录真实。阶段先不合并，另待负责人安排。
 
 ## 5. 不在范围与后续
@@ -161,7 +177,7 @@ D1–D7 是既定设计内的执行细化；D8 发现上游合同缺口，属于
 
 当前真实 main 仍包含未迁移详情旧地址和 DTO，这是 P11 的实施输入。准备稿没有解决它们、没有跑产品测试。P10b 归档中历史变异原件/覆盖限制继续原样保留，不用本次静态盘点补记历史通过。M4 总体验收与所有输入 handoff 的顶层 open 保持；本段执行完成时只写对应子项处理结果，不建未来最终交接文件。
 
-阶段完成需 A1–A10 实证、整分支 deep-review 后局部问题全闭环；本段仍先不合并，集成授权另行取得。当前下一步先由负责人裁定 P11-S1，再完成修订与预检复核；未通过前不开始 T1。
+阶段完成需 A1–A10 实证、整分支 deep-review 后局部问题全闭环；本段仍先不合并，集成授权另行取得。当前已按裁定A完成文档预检；只有负责人另行安排实施后才从T1开始。
 
 ## 附录 A：准备证据（2026-10-30）
 

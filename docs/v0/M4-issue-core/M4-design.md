@@ -1532,7 +1532,7 @@ P10a quick-add 的等待输入不是工作项实体：它没有服务端编号�
 - **改调的使用方**：store 的方法签名和字段一变，调用它们的页面和组件在改这个 store 的 Phase 改到能编译、行为不变；页面的新行为在 P12–P15。
 - **错误经文案表**：工作项的创建、修改读 `error?.error` 的两处（`issue-modal/base.tsx:233,323`）改按 `code` 经 `errorMessageKey`（M3 交接第 6 节）；新码的文案与码在同一个任务里加（第 12 节的约束）。
 - **工作项页面上新建标签**（`issue-detail/label/root.tsx`、`label/select/root.tsx`、`issue-layouts/properties/label-dropdown.tsx`、`select/dropdown.tsx`、`select/base.tsx`）改经 `useLabelChanges().create`（M3 交接第 6 节）。
-- **M3 交接第 6 节的另外三件**：工作区一级显示的工作项不显示没有取过标签的项目的标签（M7 加回）；`fetchParentStats` 在工作项的修改动了项目的字段时加一个不等的重取；工作项的键宽读 `next_work_item_sequence`、`TIssueIdentifierProps.projectIdentifier` 在项目未到时可以是 `undefined`。P11 逐个核对；工作区完整标签仍归M7，不假设现有workspace标签API。2026-10-30预检发现Project公开合同没有next_work_item_sequence，编号宽度/写后项目刷新被[P11-S1](reviews/P11-project-number-width-decision.md)阻塞，须负责人裁定，不能按不存在字段实施。
+- **M3 交接第6节的另外三件**：工作区完整标签仍由M7加回，P11不假设已有workspace标签API；fetchParentStats已删除，项目字段确有变更时由所属功能确认刷新。负责人2026-10-30已裁定[P11-S1方案A](reviews/P11-project-number-width-decision.md)：编号列宽由当前布局已加载、可见的编号统一计算（含展开子项，分页允许增宽，scope/权限变化重算），不新增next_work_item_sequence或为列宽刷新项目。TIssueIdentifierProps.projectIdentifier继续允许undefined，目录未到不猜编号；细节见P11 spec§2.11。
 
 ### 7.4 页面（P12–P15）
 - **项目的工作项页**（P12、P13）：列表、看板（含泳道）、日历、表格四种布局，分组、子分组、每组"加载更多"、快速添加、快捷操作、浮层；拖动（I6）；表格的列排序；日历的月、周和拖动、"添加已有"（列出没有截止日期的，7.5）；筛选的工具栏、显示设置、显示属性。迭代、模块的分组、列、筛选不出现（3.2）。
@@ -2324,7 +2324,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：`tsc`、knip、vitest 通过；S2 在四个角色下没有旧接口的请求；`store-context.test.ts` 没有严格模式的警告；`/user-properties/` 的例外已删除。
 
 ### P11 `web-detail-data`：详情一侧的数据层（14个任务，准备稿）
-- **状态**：已形成[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)，**预检被P11-S1阻塞，未实施**；[编号宽度决策记录](reviews/P11-project-number-width-decision.md)。任务顺序按实际资源依赖细化，所有验收开放。
+- **状态**：已形成[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)，**P11-S1已裁定A、文档预检通过，未实施**；[编号宽度决策记录](reviews/P11-project-number-width-decision.md)。任务顺序按实际资源依赖细化，所有验收开放。
 - **目标**：详情services/stores接生成接口，沿IssueRootStore方案A管理权限读取失效；原7处数据层模块实例加前移的2处IssueService消失；宿主结束自己拥有的弹窗。
 - **任务**：
   1. 按编号读、子项/关联/链接薄服务及请求测试；实施首提交phase=M4/P11。
@@ -2334,15 +2334,15 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   5. 评论/两类表情及原生类型、全页读取；评论表情来自comment.reactions，无独立GET。
   6. 动态和时间线：最后请求cursor增量重读、ID覆盖/纳秒排序；删is_bot/旧细节DTO。
   7. 描述版本store与恢复确认；M7旧DTO留所属服务，共享展示解耦，不冒充生成协议。
-  8. 草稿原生payload/分页，PATCH后无body发布，经root创建确认；项目刷新子项待P11-S1。
+  8. 草稿原生payload/分页，PATCH后无body发布，经root创建确认；不为编号列宽刷新项目。
   9. 四处提及改有效成员目录，删searchEntity与旧JSON字段/独占类型。
   10. 其余按需拒绝显示/交回，详情SessionSWR与权限key；不等到本Task才修已迁入口。
   11. WorkItemLevelModals留原宿主；scope变更和卸载结束自有开关/peek/三份数据，保护并存宿主。
-  12. 错误按码、统一标签创建；工作区标签保留M7边界；编号宽度待P11-S1裁定；核已删fetchParentStats和可选projectIdentifier。
+  12. 错误按码、统一标签创建；工作区标签保留M7边界；编号列宽按P11-S1裁定A统一/增宽/scope重置；核已删fetchParentStats和可选projectIdentifier。
   13. 旧接口/死成员/label-create-direct守卫；完整修改、权限及竞态矩阵。
   14. 完整F、逐条验收、handoff局部处理结果、整分支deep-review及修复复审；阶段先不合并。
 - **搜索边界**：P11登记生成searchIssues合同；wrapper在P12首个生产消费者接通时创建，旧搜索类型最后随P15删除，现有P12/P14/P15页面分配不变。
-- **关闭范围**：M1旧JSONContent/comment_json，M2§12原7实例/详情SWR（加两前移实例，getUserProfileIssues核P10b已删）；M3§5 is_bot，§6按需拒绝/错误/标签创建/宿主及三件的明确处理，§8旧草稿16行。工作区标签恢复仍M7；编号字段缺口不能未经裁定勾关闭。
+- **关闭范围**：M1旧JSONContent/comment_json，M2§12原7实例/详情SWR（加两前移实例，getUserProfileIssues核P10b已删）；M3§5 is_bot，§6按需拒绝/错误/标签创建/宿主及三件的明确处理，§8旧草稿16行。工作区标签恢复仍M7；编号字段缺口已裁定A，实施验收尚未关闭。
 - **完成线**：spec A1–A10实际通过；core/services/issue无生成Issue/Detail标注Plane响应；全部修改/拒绝/宿主有行为证据，原七加两实例零命中；搜索和M5–M7范围准确保留。当前尚未达到完成线。
 
 ### P12 `web-list-pages`：列表、看板、表格、日历（15 个任务）
@@ -2573,7 +2573,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
 | P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
-| P11 `web-detail-data` | 详情一侧的数据层（14，待决后重核） | **准备稿已形成、预检阻塞、未实施**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review](reviews/P11-web-detail-data-review.md)。Project缺编号字段，待[P11-S1](reviews/P11-project-number-width-decision.md)裁定；不开始T1 |
+| P11 `web-detail-data` | 详情一侧的数据层（14） | **方案A已裁定、文档预检通过、未实施**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review](reviews/P11-web-detail-data-review.md)。[P11-S1](reviews/P11-project-number-width-decision.md)按可见展示数据计算列宽；不开始T1 |
 | P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |

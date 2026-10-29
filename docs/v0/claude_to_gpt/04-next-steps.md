@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见[§15](#15-p10b完成p11文档预检2026-10-30)：P10b已授权合并、main CI全绿并归档清理；P11准备稿已形成，预检因P11-S1阻塞、尚未实施。§6–14是历史快照。**
+**当前接续点见[§15](#15-p10b完成p11文档预检2026-10-30)：P10b已授权合并、main CI全绿并归档清理；P11已按负责人裁定A同步文档，预检通过、尚未实施。§6–14是历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -167,6 +167,6 @@ P10a 最终 d1a19e78 授权 --no-ff 合入 main `a06e3f70547b755b03bf8e6b33caafd
 
 P10b最终交付2aaef85c经授权 --no-ff 合并 main `df5d3bbc1887486bd105fe6fc663f57f5b371992`，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿。worktree3247证据文件/632572496字节/2空目录、外部准备根33文件/1182444字节归档逐hash核验；分支及worktree正常清理后再次核验通过，见[P10b review§17](../M4-issue-core/reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。
 
-P11准备分支 `codex/m4-p11`，worktree `.codex/worktress/codex/m4-p11`，基线即上述main；[spec](../M4-issue-core/specs/P11-web-detail-data.md)、[plan](../M4-issue-core/plans/P11-web-detail-data.md)、[预检记录](../M4-issue-core/reviews/P11-web-detail-data-review.md)、[deep-review](../../reviews/re-14-M4P11预检审核.md)。本轮只写文档，14 Task/A1–A10全部开放，phase仍M4/P10；先裁定[编号宽度合同P11-S1](../M4-issue-core/reviews/P11-project-number-width-decision.md)，修订与预检复核后再安排T1，当前不可实施。
+P11准备分支 `codex/m4-p11`，worktree `.codex/worktress/codex/m4-p11`，基线即上述main；[spec](../M4-issue-core/specs/P11-web-detail-data.md)、[plan](../M4-issue-core/plans/P11-web-detail-data.md)、[预检记录](../M4-issue-core/reviews/P11-web-detail-data-review.md)、[deep-review](../../reviews/re-14-M4P11预检审核.md)。本轮只写文档，14 Task/A1–A10全部开放，phase仍M4/P10；[编号宽度合同P11-S1](../M4-issue-core/reviews/P11-project-number-width-decision.md)已裁定A，按已加载可见数据统一列宽；修订和文档预检复核通过，仍待负责人另行安排T1，当前不实施。
 
 P11沿IssueRootStore方案A管理详情资源权限失效；按资源同步迁服务/store/类型/消费者，普通链接非M5，M7旧版本DTO只归属化不伪造新API。旧IssueService的归档页头/issueId跳转数据接线前移P11，完整页面验收仍P13/P14；搜索wrapper随P12首个生产消费者创建，旧搜索最后清理仍P15。准备证据在主目录 `.superpowers/sdd/P11-preparation-20261030/`，未来归档不能遗漏。M4总验收、输入handoff顶层和最终closeout不提前关闭。

@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。当前准备稿已形成，**预检被[P11-S1](../reviews/P11-project-number-width-decision.md)阻塞，不得开始 T1**。任务和产品验收全部未勾选；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**文档预检通过，仍待实施安排，不得开始T1**。任务和产品验收全部未勾选；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -21,6 +21,7 @@
 - 局部问题自主根因修复；若需新共享协议、架构回归或高风险范围变更，先提交已完成工作再上报。详细中文提交，保留 feat/fix/docs(M4/P11) 前缀。
 - 下列“新”文件均为实施目标，不把预检计划当文件已存在。C/P 路径缩写见 spec§2.1。全部生产接线在所属 Task 闭合，不延到 T13 才补。
 - 数据层接线包含最小 UI 错误、确认等待与类型消费；P12–P15 完整故事保持原归属，不把这些后续页面留项写成阶段完成。
+- 既有回归随真实传输迁移，不删断言迁就新服务：issue-changes.test.ts 的旧 IssueService spy/简化响应，以及 base.loading.test.tsx 的旧 Axios URL/子项与关联 fixture，在所属 T2–T4 同步换 FakeNerve/生成原生响应。保留 R31 写后 GET 不复用写前证据、拒绝后零补读、退役后零活动跟进、R32 已确认链接顺序；base.loading/base.clone 的当前输入、拒绝后重试、旧来源晚答/取消、空 HTML 与缺失 HTML、克隆身份不入 body 等性质保持。T4 删除旧服务时同时核测试 import，不只搜生产文件。
 
 ## 评审重点
 
@@ -64,7 +65,7 @@ make e2e
 
 ## Task 2：资源生命周期与详情读取（约900–1400行）
 
-**Files：** C/store/issue/root.store.ts、permission-reads.ts、issue-details/issue.store.ts；新 issue-details/resource.ts/.test.ts；既有 issue.fetch.test.ts；app 归档详情 header.tsx 和 issueId/page.tsx（spec D3）；新 core/components/issues/detail-entry.test.tsx。
+**Files：** C/store/issue/root.store.ts、permission-reads.ts、issue-details/issue.store.ts；新 issue-details/resource.ts/.test.ts；既有 issue.fetch.test.ts、issue-changes.test.ts、issue-modal/base.loading.test.tsx/base.clone.test.tsx 的受影响读取；app 归档详情 header.tsx 和 issueId/page.tsx（spec D3）；新 core/components/issues/detail-entry.test.tsx。
 **Interfaces：** scoped resource 的 read/confirm/getter/invalidate/dispose；root 提供局部登记/失效与同队列 `enqueueIssueChanges(ids, operation)`，ID去重排序，核心单项也走同一队列集合。resource 不自己观察角色。根现有 create/update/delete/verification 语义保持。
 
 - [ ] 以 FakeNerve 真实 HTTP 与当前 root 写 scope、请求不匹配、较旧 Detail、父项、冷目录、byIdentifier 大小写/Unicode、当前拒绝、退役/删除/ABA 两轮 deferred；旧的“本地没有严格相等 identifier 必须零GET”断言改成服务端解析+写入前scope证明，其他 id/project preflight 断言保留。
@@ -76,13 +77,14 @@ make e2e
 
 ## Task 3：子项与关联（约800–1350行）
 
-**Files：** issue-details/sub_issues.store.ts、sub_issues_filter.store.ts、relation.store.ts、root.store.ts；C/components/issues/{sub-issues,relations,issue-detail-widgets} 的真实消费者；旧 issue_relation.service.ts/types；新 relation.store.test.ts/detail-changes.test.ts，迁 sub_issues.fetch.test.ts。
+**Files：** issue-details/sub_issues.store.ts、sub_issues_filter.store.ts、relation.store.ts、root.store.ts；C/components/issues/{sub-issues,relations,issue-detail-widgets} 的真实消费者；旧 issue_relation.service.ts/types；新 relation.store.test.ts/detail-changes.test.ts、C/components/issues/relations/data.test.tsx，迁 sub_issues.fetch.test.ts。
 **Interfaces：** child collection 只存ID+读取证明；relation 行有 relationId/type/targetId/createdAt；删除以 relationId；状态分布为目录派生。
 
 - [ ] 测同项目子项、不依赖 state_distribution、nullable parent、跨项目关联/可见范围、相同关系重复确认；删除请求断言关系 ID，关联目标标题来自 canonical 后更新可见。
 - [ ] add batch 与 child parent PATCH 串行；关联两端/批量ID有稳定队列顺序；移除父子调用普通 parent_id=null PATCH，delete child 沿 root 删除树。新父/旧父、关联两端的确认回查和列表 stale 按 spec§2.4。
-- [ ] 将旧 sub_issues.fetch 不可能的跨项目子项 fixture 改合同内样本；原权限旧读 ABA/拒绝性质迁到真实关联跨项目用例，不仅删失败断言。
+- [ ] 将旧 sub_issues.fetch 不可能的跨项目子项 fixture 改合同内样本；原权限旧读 ABA/拒绝性质迁到真实关联跨项目用例，不仅删失败断言。同步 issue-changes/base.loading 的子项和关联请求/fixture，保留写后新鲜度与弹窗加载回归。
 - [ ] 确认成功后补读403/500保留确认、不再POST；目录拒绝可观察。聚焦 sub_issues.fetch/relation.store/detail-changes+核心列表确认回归/types。
+- [ ] 核 relations/content、relations/helper 与弹窗的职责：由一次明确写入口提交，onSubmit收到确认实体后不得再次PATCH；去掉已无职责的回调，不发送整份Issue。`submitsOneMutationFromTheRelationEditor`验证一次编辑仅一次PATCH，拒绝留输入；删除/移除关联分别用自己的原生ID和命令。
 - [ ] M05 强行手加父计数、M06 多ID队列去掉共享/排序、M07 删除用目标issueId，分别行为红；G。提交 `feat(M4/P11): 迁移父子和关联的原生数据与确认流程`。
 
 ## Task 4：链接与旧核心服务收口（约450–850行）
@@ -91,7 +93,8 @@ make e2e
 
 - [ ] 原生 title=null、metadata空/favicon_url/error=blocked|failed 的展示；create/update/delete拒绝不改变集合/link_count，写成功旧GET晚到仍保留确认；修改后权威 Detail 使列表 link_count 更新，补读失败仅重试GET。
 - [ ] 输入只 IssueLinkCreate/IssueLinkPatch；删除204后确认集合，成功才关闭弹窗。metadata失败不转成写失败。
-- [ ] 核全web最后 IssueService 读者迁走，删除旧 issue.service.ts/barrel导出、对应类型和 exact key；service路径被新测试命中不得加入旧URL豁免。
+- [ ] 核全web最后 IssueService 读者迁走（含 issue-changes 的链接 spy 与所有测试 import），删除旧 issue.service.ts/barrel导出、对应类型和 exact key；改用 FakeNerve 原生请求/响应继续核 R31/R32，service路径被新测试命中不得加入旧URL豁免。
+- [ ] 同步删除C/store/cycle.store.ts中已无调用的IssueService import/成员/构造；全文及全仓引用核实只有这三个位置，不替M6接新接口，不修改其余cycle行为。保留issue-layouts/removal.test.tsx的M6领域目录边界回归。
 - [ ] 聚焦 link.store/data + T1–T3；types/static；M08 提前写缓存、M09 元数据failed当HTTP失败；G；F并记录准确检查点。提交 `feat(M4/P11): 接通工作项链接并移除旧核心服务`。
 
 ## Task 5：评论与两类表情（约1000–1500行）
@@ -122,21 +125,22 @@ make e2e
 - [ ] 改SessionSWR/权限key，关闭清理计时器和选择状态受宿主scope控制；最后删共享旧版本类型，M7本地类型明确期限M7。
 - [ ] 跑新store/root测试及M7 transport相关回归/types；M16 guest发版本GET、M17恢复失败也关窗、M18旧版本答盖新选项各红；G。提交 `feat(M4/P11): 迁移描述版本并划清收集箱的旧传输类型`。
 
-## Task 8：个人草稿与发布确认（约950–1500行；刷新子项待P11-S1）
+## Task 8：个人草稿与发布确认（约950–1500行）
 
-**Files：** workspace_draft.service.ts、workspace-draft/issue.store.ts、issue/root.store.ts；issue-modal/draft-issue-layout.tsx/base.tsx/form及草稿页真实消费者；P/types/workspace-draft-issues/base.ts；新 workspace-draft/issue.store.test.ts、issue-modal/draft.test.tsx。
+**Files：** workspace_draft.service.ts、workspace-draft/issue.store.ts、issue/root.store.ts；issue-modal/{draft-issue-layout,base,form,modal,provider}.tsx、components/description-editor及草稿页root/block/properties/delete-modal真实消费者；P/types/workspace-draft-issues/base.ts；新 workspace-draft/issue.store.test.ts、issue-modal/draft.test.tsx，迁现有workspace-draft/root.test.tsx。
 **Interfaces：** Draft/DraftPage/DraftCreate/DraftUpdate/IssueDraftPayload；按draftId的队列。root 从既有createIssue抽出带pending/列表确认的小入口供publish复用，不能在draftstore自建canonical。
 
 - [ ] 原生分页data/next_cursor/total，工作区A/B独立loader、完整替换payload、省略/清空project_id、owner/member权限、旧列表晚到与确认delete；请求拒绝结束loading，保留已持数据。
-- [ ] 表单按生成白名单构建payload；测试只改name仍保留description/assignee/label等未编辑合法字段，空/缺字段可保存但发布按服务端422；删除旧平铺Issue假形状、模块/迭代等草稿无合同字段及死方法。
+- [ ] 表单按生成白名单构建payload；测试只改name仍保留description/assignee/label等未编辑合法字段，空/缺字段可保存但发布按服务端422；显式清空parent/date时删除payload键、不发null或合回旧值，数组清空为[]。顶层project_id=null单独处理，草稿保存解除普通工作项分支的必选项目保护；无项目保存、清空再读取/发布均有断言。删除旧平铺Issue假形状、模块/迭代等草稿无合同字段及死方法。
+- [ ] 最小消费者闭合：`editsAndDeletesAnUnassignedDraft`核无项目/无项目目录仍显示记录和编辑器、按workspace权限删除；不读取不存在的created_by，不用project admin判断个人草稿。`keepsDraftInputAndDialogAfterRefusal`核保存/删除拒绝不清输入或关窗；成功回调不重复PATCH。迁root.test的旧默认service mock与分页fixture，保留“不访问issue_local_filters”的断言。完整页面故事留P15。
 - [ ] `patchesBeforePublishingWithoutABody`：deferred PATCH未完成时POST=0，PATCH拒绝POST=0，成功POST无body。409 draft_changed/403/422后草稿保留PATCH成功内容；两次保存/发布严格串行。
-- [ ] publish201经root创建协调：项目/个人主页等已持列表、canonical/计数各确认一次，旧读晚到不抹掉；成功发布移除draft，编号/项目刷新按P11-S1裁定后补实，不调用当前不存在的字段。补读失败不重复publish。
+- [ ] publish201经root创建协调：项目/个人主页等已持列表、canonical/计数各确认一次，旧读晚到不抹掉；成功发布移除draft；新确认行进入当前显示列表后参与列宽计算，不为列宽取项目或构造next序号。补读失败不重复publish。
 - [ ] workspace角色降级/退出/同账号切scope时不暴露草稿、不跟进导航；核所有WorkspaceDraftService模块实例消失。聚焦两新测试+root/issue-changes/base.loading/base.clone/types。
-- [ ] M19发布前不PATCH、M20局部payload覆盖、M21publish只写canonical、M22写后目录刷新候选暂挂P11-S1，选择B才落实该性质（其余各红）；G；F检查点。提交 `feat(M4/P11): 接通个人草稿并串行保存发布载荷`。
+- [ ] M19发布前不PATCH、M20局部payload覆盖、M21publish只写canonical、M22发布成功后的列宽流程错误发出项目刷新（与M21副本确认分开）各行为红；G；F检查点。提交 `feat(M4/P11): 接通个人草稿并串行保存发布载荷`。
 
 ## Task 9：成员提及与旧 JSON 字段（约450–850行）
 
-**Files：** hooks/editor/use-editor-mention.tsx及新test；editor/lite-text/editor.tsx、rich-text/editor.tsx、rich-text/description-input/root.tsx、inbox/content/issue-root.tsx；services/workspace.service.ts、相关types/props。
+**Files：** hooks/editor/use-editor-mention.tsx及新test；editor/lite-text/editor.tsx、rich-text/editor.tsx、rich-text/description-input/root.tsx、issues/issue-modal/components/description-editor.tsx、inbox/modals/create-modal/issue-description.tsx；services/workspace.service.ts、相关types/props。四个searchEntity调用为lite-text、description-input、工作项表单描述、收集箱创建描述；inbox/content/issue-root的版本接线已归T7，不拿它代替收集箱创建入口。
 
 - [ ] 逐一列四个searchEntity调用；新hook接受当前workspace/project、编辑权限和成员目录，返回既有编辑器提及展示所需值，不依赖M4列表筛选或旧search response。
 - [ ] 项目有效成员、无项目有效工作区成员、inactive排除、无email、最多5条、query变化/切scope晚答、目录拒绝可观察、只读editor零请求分别断言。M7共享编辑器同改建议数据，不改M7本体API。
@@ -162,16 +166,17 @@ make e2e
 - [ ] 真组件测试 `closesOwnedModalsOnScopeChange`、`keepsTheNewOwnersModalWhenTheOldHostUnmounts`、`doesNotFinishAnOldHostsActionInTheNewScope`；StrictMode挂卸/第二次cleanup安全。P13/P14真实Back故事仍后续。
 - [ ] 定向两新测试及base.clone/base.loading；M27全局清所有开关、M28只在卸载清不在scope变清各红；G。提交 `fix(M4/P11): 由实际宿主结束工作项弹窗状态`。
 
-## Task 12：错误、标签、工作区目录与编号宽度（约400–850行）
+## Task 12：错误、标签边界与统一编号列宽（约650–1100行）
 
-**Files：** issue-modal/base.tsx；use-label-changes.ts真实五个创建调用方；use-workspace-issue-properties相关真实调用；issue-identifier、issue-layouts/list/block.tsx及其它硬编码宽度使用；project目录的写后刷新入口；tools/keywords.json；新 issue-properties.test.tsx。
+**Files：** issue-modal/base.tsx；use-label-changes.ts真实五个创建调用方；use-workspace-issue-properties相关真实调用；issue-identifier、issue-layouts/list/{base-list-root,default,list-group,blocks-list,block-root,block}.tsx、issue-layouts/utils.tsx；新同目录identifier-width.tsx/.test.tsx（显示helper/局部状态，或等价职责拆分）；tools/keywords.json；新 issue-properties.test.tsx。
 
 - [ ] 两处旧error?.error改按码文案，必要字段错误传已有Field；五处直接label创建改useLabelChanges().create，重名name字段、成功回调只本scope，拒绝不关闭/不造标签。
 - [ ] 无projectId只用当前可见且已取项目的labelMap，未取标签不显示；不新增工作区目录或逐项目预取，完整恢复仍归M7。补这种限制/不越权/拒绝测试。
-- [ ] **P11-S1待决步骤，不可执行：**当前Project没有next_work_item_sequence。负责人选A后补已加载可见编号统一宽度/分页/权限缩小和scope重置测试；选B后补公开字段及写后新目录应答测试，并单列后端/生成任务，先重做预检。两案都不能硬编码1或造假Project字段。
+- [ ] 按spec§2.11落实A：List统一宽度状态，按每行合法Project.identifier+sequence_id算最大；IssueBlockRoot在RenderIfVisible外报告行宽，递归展开子项也接同一列。原calculateIdentifierWidth第二参数是实际序号，不传位数。未知项目不猜字符串，空集合/key隐藏输出0，无额外HTTP。
+- [ ] 新测试 `keepsOneWidthAcrossGroupsAndLoadedRows`、`growsForPagedAndExpandedRows`、`resetsForScopeAndPermissionChanges`、`doesNotReadProjectsToSizeIdentifiers`；覆盖WEB-9/10/100、profile不同前缀、视口外已加载、过滤/删除保持、权限ABA重算、空/未知目录、两个并存布局。scope含loginId/workspace/list kind/project或profile user/view/permission identity，同scope增长，换scope同步重置；只存局部数值和注册身份，旧行cleanup不得写新owner。
 - [ ] getUserProfileIssues/fetchParentStats/isArchiveIssueModalOpen 当前均已无实现，只归档删除核对，不重复开发。projectIdentifier已string|undefined保留。
-- [ ] label-create-direct规则覆盖真实调用/通用允许入口，故意直接创建变异应守卫红；不设新豁免。定向issue-properties/base.loading/base.clone+文案sync/types/static。
-- [ ] M29标签绕统一create、M30宽度固定1（断言取决P11-S1，待决）、M31错误取error.error各红；G；F检查点。提交 `fix(M4/P11): 统一标签创建与详情错误和编号显示`。
+- [ ] label-create-direct规则覆盖真实调用/通用允许入口，故意直接创建变异应守卫红；不设新豁免。定向identifier-width/issue-properties/base.loading/base.clone+文案sync/types/static。
+- [ ] M29标签绕统一create、M30宽度固定1/取消权限scope重置（两性质分记录）、M31错误取error.error各红；G；F检查点。提交 `fix(M4/P11): 统一标签创建与详情错误和编号显示`。
 
 ## Task 13：删除过渡、完整修改矩阵与回归（约350–800行）
 
@@ -208,11 +213,11 @@ make e2e
 | 工作项表情新增/删除 | IssueReaction/204、actor维度与幂等ID | T5 |
 | 评论表情新增/删除 | CommentReaction/204、评论reactions权威源 | T5 |
 | 草稿新增/更新/删除 | Draft/204、工作区页/total的确认重放 | T8 |
-| 草稿发布 | PATCH后POST、创建确认入口、草稿移除/目录刷新 | T8 |
+| 草稿发布 | PATCH后POST、创建确认入口、草稿移除/确认行显示（无列宽专用项目刷新） | T8 |
 | 标签创建 | Label确认、name字段错误、会话跟进 | T12 |
 
 M01–M31 是可选候选，不宣称31项独立安全性质；实施者记录真实失效断言，最终审查至少选15种性质（协议ID、scope、ABA、重放、队列、补读、actor、游标、重排、精度、角色、选择晚答、payload、发布顺序、列表确认、提及隔离、宿主所有权等）。不能为统计修改测试自己产生红。
 
 ## 预检边界
 
-本计划14 Task 约9100–15100行上限估计（含测试/删除/文档），不是已量得的实现规模；单Task在实施前按真实消费者和diff重估，预留拆到约16 Task的余量。预检检查依赖、合同、文件、既有回归和守卫期限；不执行实现、装依赖、编译、产品原型或逐Task代码重放。静态结果与独立builder-check/三视角deep-review另见review。先裁定P11-S1、修订受影响任务并完成预检复核，再由负责人安排T1；不得将本稿称为通过预检。
+本计划14 Task，约一万至一万六千行的规模预估（含测试/删除/文档），不是已量得的实现规模；单Task在实施前按真实消费者和diff重估，预留拆到约16 Task的余量。预检检查依赖、合同、文件、既有回归和守卫期限；不执行实现、装依赖、编译、产品原型或逐Task代码重放。静态结果与独立builder-check/三视角deep-review另见review。P11-S1已裁定A，T8取消列宽专用项目刷新、T12明确局部显示宽度；文档预检已完成，仍由负责人另行安排T1，不据此写实现。

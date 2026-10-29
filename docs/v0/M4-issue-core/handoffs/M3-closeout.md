@@ -56,7 +56,7 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 - **按需的取数按权限启用**（M3/P8b spec 第 5 节）：状态、成员、标签的下拉框打开时取（`dropdowns/state/dropdown.tsx`、`dropdowns/member/dropdown.tsx`、`issues/select/dropdown.tsx`、`issues/issue-layouts/properties/label-dropdown.tsx`、`issues/issue-detail/label/select/label-select.tsx`），子工作项的 store 取别的项目的状态、成员、标签（`store/issue/issue-details/sub_issues.store.ts`，调用者可能不是那些项目的成员）。被拒绝时：状态下拉框的加载一直不结束、是未处理的拒绝，成员下拉框是未处理的拒绝，工作项 store 不等结果的取数（`issue.store.ts` 取状态的两处、`sub_issues.store.ts` 取状态、成员、标签）是未处理的拒绝，三个标签选择器的取数被拒绝时一直"加载中"或被吞掉（Plane 原有，M3/P8b 评审的 P9）。
 - 错误经文案表（`errorMessageKey`）：工作项的创建、修改读 `error?.error` 的两处（`issues/issue-modal/base.tsx`，M3/P9 spec 第 5 节）。
 - 工作项页面上的标签新建（`issues/` 下的 `issue-detail/label/root.tsx`、`issue-detail/label/select/root.tsx`、`issue-layouts/properties/label-dropdown.tsx`、`select/dropdown.tsx`、`select/base.tsx` 直接调 store 的 `createLabel`）改经 `useLabelChanges().create`（会话的核对、名称已被占用在名称下），之后可以加关键词规则（M3/P11 spec 第 3 节第 13 条）。
-- 工作区一级显示的工作项不显示没有取过标签的项目的标签（M3/P8b 删了为每个项目取标签的工作区取数，M7 加回）；`fetchParentStats` 不再重取项目，工作项的修改若动了项目的字段，加一个不等的重取；工作项的键宽读回 `next_work_item_sequence`，`TIssueIdentifierProps.projectIdentifier` 在项目未到时可以是 `undefined`（M3/P8b spec 第 5 节）。
+- 工作区一级显示的工作项不显示没有取过标签的项目的标签（M3/P8b 删了为每个项目取标签的工作区取数，M7 加回）；`fetchParentStats` 不再重取项目，工作项的修改若动了项目的字段，加一个不等的重取；工作项的编号列宽按负责人2026-10-30 [P11-S1裁定A](../reviews/P11-project-number-width-decision.md)改由当前布局已加载且可见编号统一计算（含展开子项、分页增宽、scope/权限变化重算），不新增公开next_work_item_sequence或为列宽刷新项目；`TIssueIdentifierProps.projectIdentifier` 在项目未到时仍可以是 `undefined`（M3/P8b spec 第 5 节）。
 - 个人主页的工作项一栏（成员和管理员；`/api/workspaces/{slug}/user-issues/…` 今天答 404）和访客看到的筛选工具栏（布局、筛选、Display 的控件在"没有权限"之上，M3/P11 评审 C10）。
 - M3 页面上指向工作项页面的链接接上之后，这些页面进入 `watchPage` 的范围（M3 设计 3.1）；S2 的 `REQUESTS` 是一份要维护的名单，在挂载路径上加取数时同时改它（M3/P11 spec 第 6 节）。
 - **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，组件状态里的弹窗和状态不带过去。store 持有的弹窗开关由渲染它的宿主在卸载时关上（`useLayoutEffect` 的清理，像 `WorkspaceLevelModals`）；宿主在 key 之上时还要在范围结束时关上。工作项的弹窗、选中、草稿等属于一个工作区或项目的界面状态放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）；要在切换之间留着的，写明为什么。
@@ -227,3 +227,7 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 ## P10b 本段处理（2026-10-29）
 
 §5 user-properties 两方法、例外和 workItemFilters 已由 T7 删除，T13 四故事复核；§6 router autorun、Reconciled 扩展与 S2 请求集由 T2/T10/T13 验证。详情取数与页面、旧搜索及 is_bot 分别仍属 P11–P15。 证据见 [P10b review](../reviews/P10b-web-list-data-review.md)；整审及N2限定修复复审已闭环，产品候选2e1264aa完整F及准确CI40896656404 attempt1三任务通过，实施与终审完成、集成待办；纯文稿HEAD CI由主控另核；整份交接 status 保持 open。
+
+### P11准备期裁定同步（2026-10-30，尚未实施）
+
+只修订§6编号列宽的验收来源：负责人选择P11-S1方案A，现有Project无公开下一编号字段，按[P11 spec§2.11](../specs/P11-web-detail-data.md#211-编号列宽p11-s1裁定a)及plan T12实施显示规则。草稿发布仍需root创建确认，但不为列宽增加项目请求；其它真实项目字段的刷新职责不受影响。工作区完整标签仍归M7。此处是准备期范围裁定，不是实现证据，不关闭§6其余事项或本handoff顶层。
