@@ -7,6 +7,14 @@ export class IssueApiService {
   /** The client belongs to the RootStore's session. */
   constructor(private readonly api: ApiClient) {}
 
+  async getByIdentifier(slug: string, identifier: string): Promise<IssueDetail> {
+    return unwrap(
+      await this.api.GET("/api/v0/workspaces/{slug}/issues/{identifier}", {
+        params: { path: { slug, identifier } },
+      })
+    );
+  }
+
   async get(issueId: string): Promise<IssueDetail> {
     return unwrap(await this.api.GET("/api/v0/issues/{issue_id}", { params: { path: { issue_id: issueId } } }));
   }

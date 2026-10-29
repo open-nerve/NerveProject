@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**文档预检通过，仍待实施安排，不得开始T1**。任务和产品验收全部未勾选；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**文档预检通过，负责人已授权实施，当前从T1顺序推进**。任务和产品验收全部未勾选；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -58,10 +58,10 @@ make e2e
 **Files：** 改 C/services/issue/issue-api.service.ts/.test.ts；新 issue-detail.service.ts/.test.ts；tools/keywords.json。搜索仅合同登记，不加未消费 wrapper/barrel。
 **Interfaces：** spec§2.2 的 getByIdentifier 和9个 detail 方法；生成 body/query/response，ApiClient 注入。
 
-- [ ] 核分支基线、实际旧服务调用/21个 exact key；phase 改 M4/P11，当前无 until=M4/P11，无需给期限延期。
-- [ ] 请求测试逐方法核 verb/path/path params、无多余 slug/project/body、关系/链接资源 ID，204→void；422/403/404/409 和 SessionChanged 原错交回。测试 `usesNativeDetailRoutesAndBodies`、`passesTheWholeIdentifierToTheServer`、`doesNotTransformRefusals`。
-- [ ] 红/实现/绿：`pnpm --filter web exec vitest run core/services/issue/issue-api.service.test.ts core/services/issue/issue-detail.service.test.ts`；同时跑 api-client 既有测试与 types。服务文件不从生产 barrel 输出无人使用方法；T4前全部接通。
-- [ ] 变异 M01：把 deleteRelation 的路径 ID 换成对方 issue ID，应在请求断言红；G。提交 `feat(M4/P11): 准备详情资源生成服务并进入实施阶段`。
+- [x] 核分支基线、实际旧服务调用/21个 exact key；phase 改 M4/P11，当前无 until=M4/P11，无需给期限延期。
+- [x] 请求测试逐方法核 verb/path/path params、无多余 slug/project/body、关系/链接资源 ID，204→void；422/403/404/409 和 SessionChanged 原错交回。测试 `usesNativeDetailRoutesAndBodies`、`passesTheWholeIdentifierToTheServer`、`doesNotTransformRefusals`。
+- [x] 红/实现/绿：`pnpm --filter web exec vitest run core/services/issue/issue-api.service.test.ts core/services/issue/issue-detail.service.test.ts`；同时跑 api-client 既有测试与 types。服务文件不从生产 barrel 输出无人使用方法；T4前全部接通。
+- [x] 变异 M01：把 deleteRelation 的路径 ID 换成对方 issue ID，应在请求断言红；G。提交 `feat(M4/P11): 准备详情资源生成服务并进入实施阶段`。
 
 ## Task 2：资源生命周期与详情读取（约900–1400行）
 
