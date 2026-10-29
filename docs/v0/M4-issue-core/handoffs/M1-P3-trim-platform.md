@@ -81,4 +81,4 @@ M4 合并时：
 
 ## P10b 本段处理（2026-10-29）
 
-否定显示层及 hook 已由 T8 删除，negation-filters 守卫及 T13 M43 反例见阶段 review；选择器呈现归 P13，P16 核终态。 证据见 [P10b review](../reviews/P10b-web-list-data-review.md)；最终F、CI与整审待办，整份交接 status 保持 open。
+否定显示层及 hook 已由 T8 删除，negation-filters 守卫及 T13 M43 反例见阶段 review；选择器呈现归 P13，P16 核终态。 证据见 [P10b review](../reviews/P10b-web-list-data-review.md)；整审及N2限定修复复审已闭环，产品候选2e1264aa完整F及准确CI40896656404 attempt1三任务通过，实施与终审完成、集成待办；纯文稿HEAD CI由主控另核；整份交接 status 保持 open。

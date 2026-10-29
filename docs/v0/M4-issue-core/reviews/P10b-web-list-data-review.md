@@ -1,25 +1,27 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-2026-10-29；分支 `codex/m4-p10b`，实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，T13 产品 `7e4ed3c50a82cd7c5b97df1277d5994d751dbe70`。T1–T13逐任务实施与独评闭环；整分支deep-review已在08a76bbf完成，0 Critical/5 Important/3 Minor、Spec/Quality均With fixes；统一修复及局部验证完成，初次限定复审确认原项已处理但新增N2，N2已局部修复，待限定复核、T14、最终完整F与准确HEAD CI，阶段未合并。[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。
+2026-10-29；分支 `codex/m4-p10b`，实际main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，产品候选 `2e1264aa5711f4699546bb64728151da2f802a0e`。T1–T13逐任务独评、整分支审查及修复限定复审闭环；候选完整F七项及准确CI40896656404 attempt1三任务通过，T14文稿收口完成，**实施与终审完成、集成待办**；后续纯文稿HEAD自身CI由主控另核。阶段未合并、不启动P11。[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。
 
 ## 1. 前置与证据
 
-P10a已集成，main CI及归档见[P10a review §10](P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)。执行前没有P10b原型、实现或行为测试；静态预检不是生产证明。实施原件在本worktree `.superpowers/sdd/P10b-web-list-data/`，各任务报告、原始输出、失败、恢复和源码桥见本页历史§8–16及 `task-14-evidence-report-index.json`，T13见 `task-13-current-report.md`、`task-13-review.md` 和三份root audit/bridge。T5复审原件另有 `task-5-fix1-review-retry.md`；两次限定复审均保留，非重复执行的新结论。
+P10a已集成，main CI及归档见[P10a review §10](P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)。执行前没有P10b原型、实现或行为测试；静态预检不是生产证明。实施原件在本worktree `.superpowers/sdd/P10b-web-list-data/`（下称X），各任务报告、原始输出、失败、恢复和源码桥见本页历史§8–16及 `task-14-evidence-report-index.json`，T13见 `task-13-current-report.md`、`task-13-review.md` 和三份root audit/bridge。T5复审原件另有 `task-5-fix1-review-retry.md`；两次限定复审均保留，非重复执行的新结论。
 
 ## 2. 验收映射
 
-A1尚待T14，A10尚待最终F/CI/修复复审。A3/A5/A6/A8因整审I1–I5重新开放：本轮已修复并有聚焦及受影响回归，初次限定复审已确认原项处理，但新增N2；N2修复待再复核。以下为本段已执行行为的范围，证据路径均相对上述原件根：
+A2–A9按下表既有证据与整审修复完成；A3/A5/A6/A8先前重新开放的缺陷已获限定复审确认处理，N2也已Approved。A1–A10按产品候选、当前文稿及准确CI逐项收口；后续纯文稿HEAD自身CI另由主控核验，不能冒用候选CI。证据路径均相对X。
 
 | 验收 | 行为证据与边界 |
 |---|---|
+| A1 | T1–T13任务报告/独评、原whole与两次限定复审、当前spec/plan/review/三份handoff映射；文稿收口完成，过渡责任与原件限制逐项保留。 |
 | A2 | T1服务操作与拒绝 `task-1-report.md`；T7偏好与旧地址删除 `task-7-current-report.md`；T13真实挂载 `task-13-035-focus.json` 和 030–033。 |
-| A3 | T4 `task-4-report.md` §矩阵和fix1、`task-4-fix1-review.md` 为纯模型；T6 `task-6-current-report.md`、T12 `task-12-final-focus-f.json` 将实体、回查及真实交错接上。逐例桥如下。 |
+| A3 | T4 `task-4-report.md` §矩阵和fix1、`task-4-fix1-review.md` 为纯模型；T6 `task-6-current-report.md`、T12 `task-12-final-focus-f.json` 将实体、回查及真实交错接上。I1补strict-newer whole/partial、各来源计数与replay，c3bbd358修复且首轮限定确认；逐例桥如下。 |
 | A4 | `issue-order.test.ts` 消费 `api/testdata/issue-order.json`；T3 `task-3-report.md`、`task-3-fix1-report.md`、`task-3-fix1-review.md` 验码点、空值、方向、纳秒与大整数；旧变异不是修复后字节重跑。 |
-| A5 | T6 `issue.store.test.ts` / `issue-details/issue.fetch.test.ts`，`task-6-current-report.md`及fix1复审；T12 `issue-changes.test.ts`、`task-12-final-focus-f.json` 和 `task-12-regression-final-a.json` 验before、第三方、删除epoch、墓碑和回查。静态无绕写盘点只补充行为证据。 |
-| A6 | T5 `issue-filters.test.ts` 保留fromnow；T7/T8 `task-7-current-report.md`、`task-8-current-report.md` 和独评覆盖保存/还原及显式query；T13 M43守卫反例。完整选择器呈现归P13；当前菜单字段门控与清理后确认显示为I5，本轮已修复并实际挂载验证。 |
+| A5 | T6 `issue.store.test.ts` / `issue-details/issue.fetch.test.ts`，`task-6-current-report.md`及fix1复审；T12 `issue-changes.test.ts`、`task-12-final-focus-f.json` 和 `task-12-regression-final-a.json` 验before、第三方、删除epoch、墓碑和回查。I1确认canonical与rows/边界一致、N2写目录失败隔离；静态无绕写盘点只补充行为证据。 |
+| A6 | T5 `issue-filters.test.ts` 保留fromnow；T7/T8 `task-7-current-report.md`、`task-8-current-report.md` 和独评覆盖保存/还原及显式query；T13 M43守卫反例。完整选择器呈现归P13；I2日期交集/empty与I5菜单门控、确认清理/新输入竞态已实际挂载验证；N2确定空目录边界已限定Approved。 |
 | A7 | T9 `task-9-current-report.md`与fix1复审覆盖归档/profile作用域、草稿；T10 `task-10-current-report.md`与fix2复审覆盖router派生、会话与权限读取；权限observer退役独立于已删除的router autorun。 |
-| A8 | T11 `task-11-current-report.md`及fix1复审验证排队时邻居与拒绝；T12 `task-12-final-focus-f.json` 验全副本和删除范围。 |
-| A9 | T13 `task-13-030-s2.json`（10项）、031 P2（3）、032 P8（2）、033 S7（2），同一版本构建，四角色和旧放行请求集；本轮子环境移除NO_COLOR冲突，025仅列出S2的10项用例（非浏览器执行）；最终F仍由负责人执行，不称全验证零噪声。 |
+| A8 | T11 `task-11-current-report.md`及fix1复审验证排队时邻居与拒绝；T12 `task-12-final-focus-f.json` 验全副本和删除范围；I3/I4新增真实日历与未分组producer→parser/父链→PATCH行为，限定复审已确认。 |
+| A9 | T13 `task-13-030-s2.json`（10项）、031 P2（3）、032 P8（2）、033 S7（2），同一版本构建，四角色和旧放行请求集；T14完整F的E2E169通过覆盖当前候选；025仅枚举S2十项的旧证据仍不冒充浏览器执行。单测stderr观察另列，不称全验证零噪声。 |
+| A10 | 产品候选2e1264aa同clean HEAD七门禁通过、整审/限定修复闭环；准确CI40896656404 attempt1三任务success，按已验产品候选勾选。文稿HEAD CI由主控提交后另核。 |
 
 I2九例和M3五例：下表 T4 的名称是 `task-4-report.md` §矩阵中的实际测试，后接真实实现和测试；T4 plan表只记录职责，并非执行证据。T6产品 `d37175dd`、修复 `ffade688`，T12 `c0cd32f7`，T4修复 `dde969f8`；具体命令和原始结果在上述各报告。
 
@@ -41,13 +43,41 @@ I2九例和M3五例：下表 T4 的名称是 `task-4-report.md` §矩阵中的�
 
 ## 3. 独评和发现
 
-T1–T13各自独评及必要修复复审闭环；T13原1 Minor为Canvas能力声明和颜色冲突。本次独立整分支审查覆盖实际main到08a76bbf的203路径、43提交，原报告 `final-review.md` 给出0C/5I/3M、With fixes，不能以历史Approved替代。正式持久化见[re-13](../../../reviews/re-13-M4P10b整体审核.md)，记录原发现、修复及尚未通过的限定复审/F/CI。
+T1–T13各自独评及必要修复复审闭环；T13原1 Minor为Canvas能力声明和颜色冲突。本次独立整分支审查覆盖实际main到08a76bbf的203路径、43提交，原报告 `final-review.md` 给出0C/5I/3M、With fixes，不能以历史Approved替代。正式持久化见[re-13](../../../reviews/re-13-M4P10b整体审核.md)，记录原发现、实际修复、限定复审闭环及完整F；候选准确CI三任务已通过；文稿HEAD自身CI另核。
 
 统一修复提交 `c3bbd35804ec726ba40f394f743f2b70c3dd6bae`：I1严格较新行/计数来源与replay；I2保存日期和日历窗口的合法交集及本地确定空；I3实际DayTile闭包；I4未分组空键parser；I5真实菜单门控、保存确认与新编辑保护。修复期另发现N1（R35）：HOC误把空键组计数当outer total，已接既有total，draft合同不变。N1不归原整审发现。M1仅Canvas环境声明与调用方颜色治理；M2/M3为本页计数与前端台账纠正。IssueRootStore权限方案A未放宽，生成协议未改。
 
-本轮真实DOM也暴露既有页面边界：DateDropdown嵌套button（R36，004原件）及WorkItemFilterRoot render内更新FiltersRow（R38，026/027 default reporter的通过用例仍有），交P13；不吞console，不声称已修。日历Popover直接消费方一行nativeButton=false（R37）已使026的该warning在027消失。Vitest4.1.11自动agent reporter隐藏通过用例console，故021等安静输出不证明零stderr，最终F需显式保留default reporter的输出。
+本轮真实DOM也暴露既有页面边界：DateDropdown嵌套button（R36，004原件）及WorkItemFilterRoot render内更新FiltersRow（R38，026/027 default reporter的通过用例仍有），交P13；不吞console，不声称已修。日历Popover直接消费方一行nativeButton=false（R37）已使026的该warning在027消失。Vitest4.1.11自动agent reporter隐藏通过用例console，故021等安静输出不证明零stderr，最终F已通过去除agent检测变量的子环境保留default reporter输出，13段stderr观察见§4。
 
-## 4. 验证时点与限制
+## 4. 最终产品验证与历史限制
+
+主控在干净产品候选 `2e1264aa5711f4699546bb64728151da2f802a0e` 严格串行执行完整F。原件 `task-14-root-final-f-attempt1/receipts.json`、`root-audit.json`；可读摘要 `task-14-final-f-summary.json`。七份raw hash、前后同clean HEAD、8个fresh包日志已核：
+
+| 原命令 | 实际结果 |
+|---|---|
+| `make gen-check` | exit0，生成链无差异 |
+| `make lint-go` | exit0 |
+| `GOFLAGS=-p=1 make test` | exit0，51 Go包通过、16无测试包，无cached标记 |
+| `make lint-web` | exit0，应用warning cap217未放宽 |
+| `make knip` | exit0 |
+| `TURBO_FORCE=true make test-web` | exit0；8个fresh非缓存包日志，共1870项：web1708，api-client5、constants10、editor40、i18n12、services11、ui22、utils62 |
+| `make e2e` | exit0，同次构建，169 passed（44.8s） |
+
+runner `full-gates-explicit-output.py` 在子环境去NO_COLOR/CODEX_THREAD_ID/CODEX_SANDBOX/AI_AGENT，`reporter-environment.json`核isAgent=false；没有过滤console。实际应用包日志保留13段stderr，完整内容和行号在摘要，不能按段数推导13个独立缺陷：
+
+| 日志行/观察 | 当前归属与边界 |
+|---|---|
+| 75、134、218、357 | 既有cycle/module页面Breadcrumbs key、QuickActions嵌套button及测试act提示；M6领域loader/action/页面接通责任保持，可能hydration风险不因测试通过消失 |
+| 293、353 | R36 DateDropdown嵌套button、R38 WorkItemFilterRoot render内更新FiltersRow，明确交P13 |
+| 413、419 | 既有CycleStore/ModulesStore loader的MobX action提示，继续M6移交 |
+| 429 | Headless在真实筛选菜单测试自动补getAnimations；DOM能力观察，未装新包或吞提示 |
+| 465、476、481、520 | 既有SwitchAccountModal、Translated、ProjectFeatureUpdate的翻译/key提示；原前端呈现/测试观察，不将其计入已修M1或新增产品缺陷数 |
+
+`task-14-final-f-warning-source-bridge.json`核7个相关源与实际main相同（cycle/module store、三处翻译呈现、DateDropdown、filter HOC），不把此桥外推为所有UI已验证。Canvas、R37 nativeButton与调用方颜色冲突已处理；完整F通过不等于R36/R38或上述观察已修，也不以相对P10a的数量减少证明根因解决。
+
+候选 [CI 40896656404](https://github.com/open-nerve/NerveProject/actions/runs/40896656404) attempt1已completed/success，绑定2e1264aa：web123527503073、server123527503582、e2e123532334088均completed/success，无重跑。准确回执 `task-14-candidate-ci-09.json` 于UTC 2026-10-29T15:14:55.040407+00:00核验；01–08运行中原件保留，不冒作成功证据。后续纯文稿HEAD是新提交，其准确CI由主控另推送/核验，不能沿用候选CI身份。
+
+历史检查点（非当前产品结论）：
 
 T12 `c0cd32f7` 本地完整F七项通过：51 Go包、16无测试包，web非缓存1827项，E2E 169项；见 `task-12-root-final-f-attempt1/`。准确 [CI 40867089940](https://github.com/open-nerve/NerveProject/actions/runs/40867089940) server success、web在拖放测试5000ms超时失败、e2e skipped，浏览器摘录 `task-12-ci-web-failure-browser.md` 不是完整CI原日志。T13冷进程实测动态import 782.578ms、行为0.479ms，未本机重现5秒；静态导入把装配移到收集阶段，不能证明CI恢复。T13最终152聚焦、types/lint/knip/build及四故事17项通过，见035、026–033；不可外推为最终HEAD完整F或CI。
 
@@ -65,19 +95,20 @@ M34红raw SHA为 `1050f1c8d555e766d694f0983a42d62716e88c1dcdc653ab775f28c9fb941e
 
 P11迁移详情、关联、评论、表情、动态、版本、草稿和搜索service/store，删除 `issue.service.ts` 余项、`issue_relation.service.ts`、`workspace_draft.service.ts`；P12负责完整列表/看板/日历交互和 `projectIssuesSearch` 添加已有入口，P13筛选/归档/profile页面，P14父子选择器与收集箱查重及详情页面；P15搜索旧方法清理，P16终态守卫。M5文件、M6迭代模块和M7收集箱各自遗留不在本段关闭；M6/M7自身页面完整验收仍依负责人A裁定归各自阶段。输入handoff顶层均保持open，M4 §14及总体§9.4未完成，不建立M5–M8最终closeout。
 
-## 7. 当前门禁
+## 7. 当前门禁与交付边界
 
-本轮34文件614项受影响回归通过（021），应用types、完整lint-web、knip通过；R37一行后以027实际日历/default reporter、028 types及029应用lint补验证。完整lint-web警告cap因真实少一条从218收紧至217，原cap不匹配失败022保留。最终详细证据与源码桥见 `final-fix-report.md`，本轮未跑完整F或浏览器套件。
+原whole a06e3f70..08a76bbf审43提交/203路径；第一fix差异29路径，N2差异7路径，经两次限定复审覆盖产品候选相对main的208路径并集。不能把208写成原整审逐一阅读数。主控已核原件与修复源码桥，N2的Spec/Quality Approved仅对其限定差异，不冒认重新审了203路径。
 
-下一步由主控限定复核新增N2的修复，再执行完整F及准确待交付HEAD CI，按实际结果回填A3/A5/A6/A8、A1/A10/T14。阶段仍未合并，不启动P11。
+候选完整F与准确CI已通过；T14文稿收口完成，实施与终审完成、集成待办。文稿提交后主控还需独立核文稿、push准确文稿HEAD并看server/web/e2e，将回执另存X及交付答复，避免循环提交自身SHA/CI。阶段仍未合并、不开始P11，main仍a06e3f70；准备根和worktree/原件保留。
 
 ## 7.1 限定复审新增 N2 与局部修复（2026-10-29）
 
-`final-fix-review.md` 对08a76bbf..09b06e89两提交29路径作限定复审：原I1–I5/M1–M3及N1/R37均ADDRESSED，但R34的确定空binding仍经root写确认前prepareCatalog取label目录，403污染empty.error，故Spec/Quality保持With fixes（0C/1I/0新增M）。独立probe明确回答403并收束业务Promise，不以超时当红。
+`final-fix-review.md` 对08a76bbf..09b06e89两提交29路径作限定复审：原I1–I5/M1–M3及N1/R37均ADDRESSED，但R34的确定空binding仍经root写确认前prepareCatalog取label目录，403污染empty.error，该轮Spec/Quality为With fixes（0C/1I/0新增M）。独立probe明确回答403并收束业务Promise，不以超时当红。
 
-R39按用户局部修复授权继续收尾：binding.prepareCatalog只对显式project scope.empty早返；普通total=0仍准备目录，保留拒绝、owner及权限守卫。三个真实root/FakeNerve用例覆盖仅empty时无GET/不等待/无error/正常canonical确认，同存普通零结果时目录200成功建立排序行、403只污染普通binding。001-red为2失败1通过；测试组织修正lint后，以最终测试字节回退两行生产修复，009再次2失败1通过，精确恢复后011完整binding51通过；004 root/确认/拖放109通过，最终types及应用lint217通过；原空↔非空、权限恢复及目录失败回归保留。精确命令/源码桥见X/final-fix-n2-*和final-fix-report追加节，不重跑614或完整F。N2已局部修复，等待独立限定复核，不据此勾A1/A10/T14。
+R39按用户局部修复授权继续收尾：binding.prepareCatalog只对显式project scope.empty早返；普通total=0仍准备目录，保留拒绝、owner及权限守卫。三个真实root/FakeNerve用例覆盖仅empty时无GET/不等待/无error/正常canonical确认，同存普通零结果时目录200成功建立排序行、403只污染普通binding。001-red为2失败1通过；测试组织修正lint后，以最终测试字节回退两行生产修复，009再次2失败1通过，精确恢复后011完整binding51通过；004 root/确认/拖放109通过，最终types及应用lint217通过；原空↔非空、权限恢复及目录失败回归保留。精确命令/源码桥见X/final-fix-n2-*和final-fix-report追加节，N2修复作者当时未重跑614或完整F。N2修复提交 `2e1264aa5711f4699546bb64728151da2f802a0e` 已获 `final-fix-n2-review.md` 的Spec/Quality Approved，0新增C/I/M；原项及N2均闭合。完整F/当前候选CI状态见§4，不用修复聚焦代替最终门禁。
 
 R34–R39均为主控依据用户“局部自行决策”授权作出的裁定；只有权限方案A是用户明确批准。R36/R38仍移交P13，不称全部warning已关闭。draft既有测试是其当前页面合同回归，未直接经过IssueLayoutHOC，不冒称验证了该HOC fallback。
+
 
 ## 历史预检与接续记录（当时状态，非当前结果）
 

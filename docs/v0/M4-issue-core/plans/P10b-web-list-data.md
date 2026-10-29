@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T13任务门禁及独评闭环已完成；[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)已落实。T14文档收口进行中；整分支审查已发生，统一修复后的限定复审、完整F与准确HEAD CI仍待负责人执行。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T13任务门禁及独评闭环已完成；[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)已落实。T14文稿收口完成；整分支审查及修复限定复审已闭环，产品候选完整F及准确CI通过，实施与终审完成、集成待办；文稿HEAD的准确CI另由主控核验。
 
-> **当前状态：** T12 c0cd32f7完整本地F通过，检查点CI 40867089940 server success、web超时失败、e2e skipped；T13 7e4ed3c5独评0C/0I/1Minor，152聚焦及四故事17项通过。整分支审查08a76bbf为0C/5I/3M、With fixes，统一修复已局部验证，限定复审及最终F/CI待办；main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，阶段不合并。
+> **当前状态：实施与终审完成、集成待办。** 产品候选 `2e1264aa5711f4699546bb64728151da2f802a0e` 完整F七项及准确 [CI 40896656404](https://github.com/open-nerve/NerveProject/actions/runs/40896656404) attempt1的server/web/e2e均通过；原5I/3M、修复期N1及限定新增N2均闭环。纯文稿HEAD自身CI仍待主控另核。main基线a06e3f70547b755b03bf8e6b33caafd52725d0f6，未合并、不启动P11；历史失败/原件限制见review。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -255,11 +255,13 @@ make e2e
 
 **Files：** docs/v0/v0-design.md总体7.7、frontend-changes.md、M4-design.md对应行；spec本§4、plan、reviews/P10b-web-list-data-review.md；docs/reviews下一编号整审记录；落在本段的handoff处理行。
 
-- [ ] 汇总任务1–13所有原件/失败/变异/恢复hash，验收A1–A10逐项映射。原型未做保持事实，静态预检不冒充生产证明；过渡旧文件逐个写到P11/P12/P14/M5–M7。
-- [ ] 完整F；按准确待交付HEAD推送后看CI server/web/e2e。已授权登录Chrome UI读详细失败并重跑基础设施/已知W11；第二次W11若在main合并CI仍失败按纪律上报，不擅改主线。
-- [ ] deep-review固定P10b实际基线..最终候选HEAD，逻辑/集成/覆盖三个视角；抽至少15个性质变异证据并核shared Reconciled所有旧消费者回归、微秒/大整数/删除204/续页范围；局部修复后按影响重验和独立复审。
-- [ ] review §1–7写真实结果；spec完成复选框只有实际通过才勾；design§15写“实施与终审完成、集成待办”，handoff总status仍open。提交 `docs(M4/P10b): 记录列表数据层验证与整分支审查`。
-- [ ] 报告分支、实际main基线、spec/plan/review、准确HEAD/CI；停在未合并，等待负责人下一步，不开始P11。
+- [x] 汇总T1–T13原件/失败/变异/恢复与A1–A10映射；16ID去重15性质，历史T2/T3/T12/T13限制保留。原型未做，后续旧文件与页面责任逐项移交。
+- [x] 完整F与准确产品候选CI：2e1264aa同cleanHEAD七项通过，CI40896656404 attempt1的server/web/e2e均success，无重跑；原件见阶段review§4。后续纯文稿HEAD自身CI由主控另推送核验，不将候选结果冒作新HEAD结果。
+- [x] 原whole a06e3f70..08a76bbf三个视角审43提交/203路径、抽16ID/15性质；统一修复29路径及N2 7路径限定复审闭环，覆盖产品候选208路径并集，未把208冒作原whole实读数。
+- [x] 阶段review§1–7、正式re-13、spec复选框、M4/总体/前端台账、三份handoff与next-steps§14同步真实收口状态；实施与终审完成、集成待办，handoff总status仍open。文稿以`docs(M4/P10b)`详细提交，准确SHA另存交付回执。
+- [x] 当前文稿/实现报告记录分支、实际main基线、spec/plan/review、已验产品候选SHA/准确CI及后续文稿HEAD交付核验边界；最终文稿SHA由提交后回执与主控最终答复绑定。保持未合并，等待用户下一步，不开始P11。
+
+T14产品验收及文稿收口已完成；最后纯文稿HEAD的push/CI由主控执行并另存准确交付收据，不循环提交包含自身CI的文稿。已授权的已知W11失败处理纪律保持，当前候选CI没有重跑。
 
 ## 作者自查（准备期）
 
@@ -270,14 +272,14 @@ make e2e
 - [x] 计划不提交整套代码体；函数签名在spec统一，测试给具体输入/断言与命令；F和deep-review不是本轮已完成。
 - [x] 本轮准确 main CI 全绿、归档清理和依赖漂移已复核，静态/版本桥见准备收据；独立执行者检查无待回答问题。文档通过不勾任何产品 Task。
 
-### 整审局部合同澄清（2026-10-29，局部验证完成、限定复审待办）
+### 整审局部合同澄清（2026-10-29，修复及限定复审闭环）
 
 - I1：原回答或已持行的版本严格高于写确认时，属于较新的第三方事实，不能等同于同版本 own-after。较旧确认不覆盖可靠的新行、排序键、边界或其来源已证明的计数；不能确定的其它来源/部分保留 stale。direct-confirm 与 raw replay 使用相同版本关系，计数仍严格遵守各回答写集合，不重算冻结 before，也不触碰权限身份与删除代际。
 - I5：实际筛选菜单按当前允许字段开放，创建/更新时间不在本段筛选合同中。保存成功后将清理过的确认表达式反映到当前实例；只可替换该次提交后没有新编辑的草稿。旧确认不覆盖后续新输入，拒绝保留草稿及现有错误处理。不会扩展后端字段或延期当前确认显示问题到 P13。
-- 整审 I1/I2/I3/I4/I5 已实施统一修复并通过受影响回归，尚待限定独立复审，因此 A3/A5/A6/A8 暂不作无条件通过；A1/A10/T14 保持开放。历史通过和原始失败不改写，最终 F/准确 HEAD CI 由 root 后续执行。
+- 原整审 I1–I5 及 M1–M3 经统一修复和首轮限定复审确认已处理；新增 N2 经 2e1264aa 修复与 N2 限定复审 Approved。A3/A5/A6/A8 的原阻塞已闭合；产品候选完整 F 与准确 CI 已通过，A1–A10/T14 按当前文稿映射收口。后续纯文稿 HEAD 自身 CI 仍由主控另核，不冒用候选 CI。原始 With fixes、失败及证据限制保留于阶段 review。
 
 **R34 / I2 日期视窗交集：** 日历显示范围与已清理偏好的 target_date 条件求语义交集；非空交集以等价合法日期条件发出，原偏好不改。none 与有日期窗口或普通日期窗口确定不相交时，binding scope 使用内部 empty 标记，不能传入生成 query、发非法 none+日期、放宽服务器守卫或造哨兵日期。empty 仅来自有效日期逻辑矛盾，未知权限/读取拒绝/目录失败不能变为空。确定空经现有 owner/权限/退役门控建立本地零行零计数模型，不伪造服务端 PageAnswer、sourceID 或 readSerial；对未知实体 membership 亦为 false，确认/replay/重验不添行、不安排 GET。窗口或偏好改变重新求交，恢复普通请求。回归包含相交、none、不相交、双向切换、写确认及失权/恢复。
 
 **R35 / 新增 N1：** 布局加载/空态判断消费新列表的 outer total，不能把未分组空键计数当整体总数；草稿保留原合同。实际日历、非空分组列表及空结果挂载回归。本项为修复期新发现，不归原整审发现。
 
-**R39 / 限定复审新增 N2：** R34 的已证明 `scope.empty` 不仅在 fetch/acceptConfirmed 隔离，也在 binding 的 prepareCatalog 边界跳过无关目录准备；业务写成功仍确认到 canonical，确定空列表不等待目录或接收其拒绝。普通 binding 即使当前 total=0 也不属于逻辑必空，仍准备确认所需目录并保留拒绝/owner/权限守卫。同存的 empty 与普通列表须隔离失败，空↔非空及权限恢复合同保持。此局部裁定由主控依用户授权作出；权限方案 A 才是用户明确批准。N2 已完成局部修复和真实 binding/root 回归，待限定复核，不提前关闭 A1/A10/T14。
+**R39 / 限定复审新增 N2：** R34 的已证明 `scope.empty` 不仅在 fetch/acceptConfirmed 隔离，也在 binding 的 prepareCatalog 边界跳过无关目录准备；业务写成功仍确认到 canonical，确定空列表不等待目录或接收其拒绝。普通 binding 即使当前 total=0 也不属于逻辑必空，仍准备确认所需目录并保留拒绝/owner/权限守卫。同存的 empty 与普通列表须隔离失败，空↔非空及权限恢复合同保持。此局部裁定由主控依用户授权作出；权限方案 A 才是用户明确批准。N2 已由 2e1264aa 局部修复并经限定复核 Approved；完整 F 与准确候选 CI 已通过，最终文稿 HEAD 自身 CI 由主控另核，准确回执见阶段 review。
