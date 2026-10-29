@@ -7,7 +7,7 @@
 import type { IssueUpdate, IssueLink, IssueLinkCreate, IssueLinkPatch, IssueCommentCreate } from "@nerve/api-client";
 import { action, computed, makeObservable, observable } from "mobx";
 // types
-import type { TIssueReaction, TIssueRelationTypes, TWorkItemWidgets } from "@nerve/types";
+import type { TIssueRelationTypes, TWorkItemWidgets } from "@nerve/types";
 // local imports
 import { IssueActivityStore } from "./activity.store";
 import type { IIssueActivityStore, IIssueActivityStoreActions, TActivityLoader } from "./activity.store";
@@ -222,18 +222,12 @@ export class IssueDetail implements IIssueDetail {
   archiveIssue = async (workspaceSlug: string, projectId: string, issueId: string) =>
     this.issue.archiveIssue(workspaceSlug, projectId, issueId);
   // reactions
-  addReactions = (issueId: string, reactions: TIssueReaction[]) => this.reaction.addReactions(issueId, reactions);
   fetchReactions = async (workspaceSlug: string, projectId: string, issueId: string) =>
     this.reaction.fetchReactions(workspaceSlug, projectId, issueId);
   createReaction = async (workspaceSlug: string, projectId: string, issueId: string, reaction: string) =>
     this.reaction.createReaction(workspaceSlug, projectId, issueId, reaction);
-  removeReaction = async (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    reaction: string,
-    userId: string
-  ) => this.reaction.removeReaction(workspaceSlug, projectId, issueId, reaction, userId);
+  removeReaction = async (workspaceSlug: string, projectId: string, issueId: string, reaction: string) =>
+    this.reaction.removeReaction(workspaceSlug, projectId, issueId, reaction);
 
   // link
   fetchLinks = async (workspaceSlug: string, projectId: string, issueId: string) =>

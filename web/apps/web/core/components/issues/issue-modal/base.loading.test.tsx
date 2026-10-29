@@ -11,17 +11,11 @@ import type { RichTextEditor } from "@/components/editor/rich-text";
 import { configure, runInAction } from "mobx";
 // MobX actions remain real; configurable descriptors allow call-through observations.
 configure({ safeDescriptors: false });
-import { AxiosHeaders, type AxiosResponse } from "axios";
-import { APIService } from "@/services/api.service";
 import { EIssuesStoreType } from "@nerve/types";
 import { FakeNerve, answered, json, problem, type Call } from "@/lib/auth/fake-nerve";
 import { issueOf } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { projectOf, loadProjects, stateOf } from "@/store/project/fake-projects";
-// Public APIService replies include Axios metadata; entity data remains the complete real response fixture.
-function reply<T>(data: T): AxiosResponse<T> {
-  return { data, status: 200, statusText: "OK", headers: {}, config: { headers: new AxiosHeaders() } };
-}
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({
   tokenManager: { state: { loginId: "issue-modal-session" } },
@@ -152,15 +146,12 @@ beforeEach(() => {
   vi.spyOn(detail.subIssues, "fetchSubIssues").mockResolvedValue([]);
   vi.spyOn(detail.relation, "fetchRelations").mockResolvedValue([]);
   vi.spyOn(app.state, "fetchProjectStates").mockResolvedValue([]);
-  vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
-    if (failure && url.endsWith(failure)) throw { response: { data: { code: "resource-refused" } } };
-    if (url.endsWith("/reactions/")) return reply([]);
-    throw new Error(`Unexpected legacy URL: ${url}`);
-  });
   native = vi.fn((call: Call) => {
     if (call.method !== "GET" || !call.path.startsWith("/api/v0/issues/")) return;
     const id = call.path.split("/").at(-1)!;
     if (id === "links") call.answer(failure === "/links" ? problem(403, "resource-refused") : json(200, { data: [] }));
+    else if (id === "reactions")
+      call.answer(failure === "/reactions" ? problem(403, "resource-refused") : json(200, { data: [] }));
     else if (failure === "/issues/parent/" && id === "parent") call.answer(problem(403, "resource-refused"));
     else if (id === "parent")
       call.answer(
@@ -204,7 +195,7 @@ function retry() {
   expect(retryButton).toBeDefined();
   return retryButton!;
 }
-it.each(["/reactions/", "/links", "/issues/parent/"])(
+it.each(["/reactions", "/links", "/issues/parent/"])(
   "real auxiliary refusal shows a retryable error in Base/Form, preserving input and blocking fake-empty submit (%s)",
   async (resource) => {
     failure = resource;
@@ -296,7 +287,7 @@ it.each(["<p>source</p>", ""])(
   "retry synchronizes real source HTML into the wrapper draft payload (%s)",
   async (html) => {
     sourceHtml = html;
-    failure = "/reactions/";
+    failure = "/reactions";
     await render("source", true, true);
     await title("Keep for retry");
     const discard = [...container.querySelectorAll("button")].find((button) => button.textContent === "discard")!;

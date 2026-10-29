@@ -1,42 +1,24 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type { ApiClient, IssueReaction, IssueReactionCollection, ReactionCreate } from "@nerve/api-client";
+import { unwrap } from "@/lib/api-error";
 
-import type { TIssueReaction } from "@nerve/types";
-// services
-import { APIService } from "@/services/api.service";
-
-export class IssueReactionService extends APIService {
-  async createIssueReaction(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    data: Partial<TIssueReaction>
-  ): Promise<any> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/reactions/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+export class IssueReactionService {
+  constructor(private readonly api: ApiClient) {}
+  async listIssueReactions(issueId: string): Promise<IssueReactionCollection> {
+    return unwrap(
+      await this.api.GET("/api/v0/issues/{issue_id}/reactions", { params: { path: { issue_id: issueId } } })
+    );
   }
-
-  async listIssueReactions(workspaceSlug: string, projectId: string, issueId: string): Promise<TIssueReaction[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/reactions/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+  async createIssueReaction(issueId: string, body: ReactionCreate): Promise<IssueReaction> {
+    return unwrap(
+      await this.api.POST("/api/v0/issues/{issue_id}/reactions", { params: { path: { issue_id: issueId } }, body })
+    );
   }
-
-  async deleteIssueReaction(workspaceSlug: string, projectId: string, issueId: string, reaction: string): Promise<any> {
-    return this.delete(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/reactions/${reaction}/`
-    )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+  async deleteIssueReaction(issueId: string, reaction: string): Promise<void> {
+    return unwrap(
+      await this.api.DELETE("/api/v0/issues/{issue_id}/reactions/{reaction}", {
+        params: { path: { issue_id: issueId, reaction } },
+      })
+    );
   }
 }

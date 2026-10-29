@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T5已实现，继续T6**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T6已实现，继续T7**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -111,10 +111,10 @@ make e2e
 
 **Files：** C/services/issue/issue_reaction.service.ts、issue-details/reaction.store.ts/root.store.ts；issue-detail/reactions实际消费者；P/types旧工作项表情类型；新reaction.store.test.ts，扩collaboration.service.test.ts及表情组件测试。
 
-- [ ] 原生collection/add/remove服务和请求/拒绝测试；DTO仅actor_id，不复制actor_detail。删除签名不接任意userId，使用当前登录者；按id幂等确认，保留其他人同emoji。
-- [ ] 复用root队列及资源读取证明，确认前/拒绝不改，旧GET重放成功确认，退役/权限ABA不复活。原issue.fetch的最后旧表情fixture改真实FakeNerve，保留晚答/拒绝性质。
-- [ ] 真实界面受控await和按码拒绝；成员资料用目录，失败不是空成功。最后删除旧表情类型及其旧URL exact例外，不提前改M7。
-- [ ] 定向service/reaction/UI加已有issue.fetch/issue-changes与types；M11b删除同emoji所有工作项actor及确认重放反例；G。提交 `feat(M4/P11): 接通工作项表情的原生确认流程`。
+- [x] 原生collection/add/remove服务和请求/拒绝测试；DTO仅actor_id，不复制actor_detail。删除签名不接任意userId，使用当前登录者；按id幂等确认，保留其他人同emoji。
+- [x] 复用root队列及资源读取证明，确认前/拒绝不改，旧GET重放成功确认，退役/权限ABA不复活。原issue.fetch的最后旧表情fixture改真实FakeNerve，保留晚答/拒绝性质。
+- [x] 真实界面受控await和按码拒绝；成员资料用目录，失败不是空成功。最后删除旧表情类型及其旧URL exact例外，不提前改M7。
+- [x] 定向service/reaction/UI加已有issue.fetch/issue-changes与types；M11b删除同emoji所有工作项actor及确认重放反例；G。提交 `feat(M4/P11): 接通工作项表情的原生确认流程`。
 
 ## Task 7：动态与时间线游标（约700–1200行）
 

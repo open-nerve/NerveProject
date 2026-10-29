@@ -3,20 +3,12 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { configure, runInAction } from "mobx";
 // MobX actions remain real; configurable descriptors allow call-through observations.
 configure({ safeDescriptors: false });
-import { AxiosHeaders, type AxiosResponse } from "axios";
-import { APIService } from "@/services/api.service";
-import { heldChange } from "@/lib/auth/fake-tab";
-import type { TIssueReaction } from "@nerve/types";
 import { until, track } from "@/lib/auth/fake-time";
 import { FakeNerve, answered, json, noContent, problem, type Call } from "@/lib/auth/fake-nerve";
 import { SessionChangedError } from "@/lib/auth/token-manager";
-import { issueOf, issueLinkOf, requestedIssue } from "@/store/issue/fake-issues";
+import { issueOf, issueLinkOf, issueReactionOf, requestedIssue } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { projectOf, loadProjects, stateOf } from "@/store/project/fake-projects";
-// Public APIService replies include Axios metadata; entity data remains the complete real response fixture.
-function reply<T>(data: T): AxiosResponse<T> {
-  return { data, status: 200, statusText: "OK", headers: {}, config: { headers: new AxiosHeaders() } };
-}
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 const binding = vi.hoisted(() => ({ app: undefined as unknown }));
@@ -56,13 +48,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const reaction: TIssueReaction = {
-  id: "reaction",
-  actor: "actor",
-  issue: "R1",
-  reaction: "thumbsup",
-  display_name: "Actor",
-};
+const reaction = issueReactionOf("reaction", "R1", "actor");
 const link = { ...issueLinkOf("link", "R1"), title: "Reference" };
 
 function resources(parentId: string | null, withRelations = false) {
@@ -84,13 +70,10 @@ function resources(parentId: string | null, withRelations = false) {
   const relationFetch = vi.spyOn(detail.relation, "fetchRelations");
   if (!withRelations) relationFetch.mockResolvedValue([]);
   vi.spyOn(app.state, "fetchProjectStates").mockResolvedValue([]);
-  const get = vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
-    if (url.endsWith("/reactions/")) return reply([reaction]);
-    throw new Error(`Unexpected legacy URL: ${url}`);
-  });
   const native = vi.fn((call: Call) => {
     if (call.method !== "GET") return;
     if (call.path === "/api/v0/issues/R1/links") call.answer(json(200, { data: [link] }));
+    else if (call.path === "/api/v0/issues/R1/reactions") call.answer(json(200, { data: [reaction] }));
     else if (call.path === "/api/v0/issues/R1/relations") call.answer(json(200, relations));
     else if (call.path === "/api/v0/issues/parent") call.answer(json(200, parent));
     else if (
@@ -105,17 +88,17 @@ function resources(parentId: string | null, withRelations = false) {
     identifier
       ? detail.fetchIssueWithIdentifier(ws.slug, `${project.identifier}-1`)
       : detail.fetchIssue(ws.slug, project.id, source.id);
-  return { detail, source, parent, get, native, fetch, related, relations, relationFetch };
+  return { detail, source, parent, native, fetch, related, relations, relationFetch };
 }
 it.each([false, true].flatMap((identifier) => [null, "parent"].map((parentId) => ({ identifier, parentId }))))(
   "both retrieve paths fill real resource caches from independent responses ($identifier/$parentId)",
   async ({ identifier, parentId }) => {
-    const { detail, source, parent, get, fetch } = resources(parentId);
+    const { detail, source, parent, fetch } = resources(parentId);
     const add = vi.spyOn(app.issue.issues, "acceptRead");
     await fetch(identifier);
     expect(app.issue.issues.getIssueById(source.id)).toEqual(source);
-    expect(detail.reaction.getReactionById(reaction.id)).toEqual(reaction);
-    expect(detail.reaction.getReactionsByIssueId(source.id)).toEqual({ thumbsup: [reaction.id] });
+    expect(detail.reaction.getReactionById("R1", reaction.id)).toEqual(reaction);
+    expect(detail.reaction.getReactionsByIssueId(source.id)).toEqual({ "128077": [reaction.id] });
     expect(detail.link.getLinksByIssueId(source.id)).toEqual([link.id]);
     expect(detail.link.getLinkById("R1", link.id)).toEqual(link);
     expect(add.mock.calls.map(([issue]) => [issue.id])).toEqual(parentId ? [[source.id], [parent.id]] : [[source.id]]);
@@ -123,7 +106,7 @@ it.each([false, true].flatMap((identifier) => [null, "parent"].map((parentId) =>
       expect(add.mock.calls[1]![1].serial).toBeGreaterThan(add.mock.calls[0]![1].serial);
       expect(add.mock.calls[1]![1].owner).toBe(add.mock.calls[0]![1].owner);
     }
-    expect(get).toHaveBeenCalledTimes(1);
+    expect(nerve.to("/api/v0/issues/R1/reactions")).toHaveLength(1);
     expect(nerve.to("/api/v0/issues/R1/links")).toHaveLength(1);
     expect(nerve.calls.at(-1)?.queryEntries).toEqual([]);
     expect(nerve.to("/api/v0/issues/parent")).toHaveLength(parentId ? 1 : 0);
@@ -202,16 +185,17 @@ it("nativeLinkCountComesFromAuthorityAndReadRefusalKeepsTheConfirmedDeletion", a
 it.each([false, true])(
   "fetch owns pending auxiliary loads instead of returning before they finish (%s)",
   async (identifier) => {
-    const { get, fetch } = resources(null);
-    const http = heldChange<AxiosResponse<TIssueReaction[]>>();
-    const fallback = get.getMockImplementation()!;
-    get.mockImplementation((url, ...args) => (url.endsWith("/reactions/") ? http.sent : fallback(url, ...args)));
+    const { native, fetch } = resources(null);
+    const fallback = native.getMockImplementation()!;
+    native.mockImplementation((call) => {
+      if (call.path !== "/api/v0/issues/R1/reactions") fallback(call);
+    });
     const loading = fetch(identifier);
     const observed = track(loading);
-    await until(() => get.mock.calls.some(([url]) => url.endsWith("/reactions/")), "resource GET sent");
+    await until(() => nerve.to("/api/v0/issues/R1/reactions").length === 1, "resource GET sent");
     await vi.advanceTimersByTimeAsync(0);
     const settledBeforeRelease = observed.settled;
-    http.answer(reply([reaction]));
+    nerve.to("/api/v0/issues/R1/reactions")[0]!.answer(json(200, { data: [reaction] }));
     await loading;
     expect(settledBeforeRelease).toBe(false);
   }
@@ -219,16 +203,17 @@ it.each([false, true])(
 it.each([false, true].flatMap((identifier) => ["retire", "delete"].map((boundary) => ({ identifier, boundary }))))(
   "auxiliaryCompletionCannotFollowInvalidatedDetail ($identifier/$boundary)",
   async ({ identifier, boundary }) => {
-    const { detail, source, get, fetch } = resources("parent");
-    const held = heldChange<AxiosResponse<TIssueReaction[]>>();
-    const fallback = get.getMockImplementation()!;
-    get.mockImplementation((url, ...args) => (url.endsWith("/reactions/") ? held.sent : fallback(url, ...args)));
+    const { detail, source, native, fetch } = resources("parent");
+    const fallback = native.getMockImplementation()!;
+    native.mockImplementation((call) => {
+      if (call.path !== "/api/v0/issues/R1/reactions") fallback(call);
+    });
     // Observe the real generated state transport, not just a detached method stub.
     const states = vi.mocked(app.state.fetchProjectStates);
     states.mockRestore();
     const identifiers = vi.spyOn(app.issue.issues, "addIssueIdentifier");
     const loading = track(fetch(identifier));
-    await until(() => get.mock.calls.some(([url]) => url.endsWith("/reactions/")), "held auxiliary read");
+    await until(() => nerve.to("/api/v0/issues/R1/reactions").length === 1, "held auxiliary read");
     if (boundary === "retire") app.dispose();
     else {
       const deleting = await requestedIssue(
@@ -241,7 +226,7 @@ it.each([false, true].flatMap((identifier) => ["retire", "delete"].map((boundary
     }
     const requestsBeforeRelease = nerve.calls.length;
     const identifiersBeforeRelease = identifiers.mock.calls.length;
-    held.answer(reply([reaction]));
+    nerve.to("/api/v0/issues/R1/reactions")[0]!.answer(json(200, { data: [reaction] }));
     await until(() => loading.settled, "invalidated detail settles");
     await vi.advanceTimersByTimeAsync(1);
     const lateCalls = nerve.calls.slice(requestsBeforeRelease);
@@ -265,32 +250,23 @@ it.each(
 )(
   "auxiliary HTTP refusal belongs to fetch, with existing extraction and no detached rejection ($identifier/$resource)",
   async ({ identifier, resource }) => {
-    const { get, fetch, native } = resources("parent");
-    const fallback = get.getMockImplementation()!;
-    const domainError = { code: "resource-refused" };
-    get.mockImplementation((url, ...args) =>
-      url.endsWith(resource) ? Promise.reject({ response: { data: domainError } }) : fallback(url, ...args)
+    const { fetch, native } = resources("parent");
+    const fallback = native.getMockImplementation()!;
+    const path =
+      resource === "issues/parent/" ? "/api/v0/issues/parent" : `/api/v0/issues/R1/${resource.replace(/\/$/, "")}`;
+    native.mockImplementation((call) =>
+      call.path === path ? call.answer(problem(403, "resource-refused")) : fallback(call)
     );
-    if (resource !== "reactions/") {
-      const fallbackNative = native.getMockImplementation()!;
-      native.mockImplementation((call) =>
-        call.path === (resource === "links" ? "/api/v0/issues/R1/links" : "/api/v0/issues/parent")
-          ? call.answer(problem(403, "resource-refused"))
-          : fallbackNative(call)
-      );
-    }
     const result = track(fetch(identifier));
     await until(() => result.settled, "detail fetch settles");
-    if (resource !== "reactions/")
-      expect(result.error).toMatchObject({ status: 403, problem: { code: "resource-refused" } });
-    else expect(result.error).toEqual(domainError);
+    expect(result.error).toMatchObject({ status: 403, problem: { code: "resource-refused" } });
   }
 );
 
 it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => ({ identifier, page }))))(
   "pure list arrival preserves relations loaded by the real detail resource ($identifier/$page)",
   async ({ identifier, page }) => {
-    const { detail, source, related, relations, relationFetch, get, fetch } = resources(null, true);
+    const { detail, source, related, relations, relationFetch, fetch } = resources(null, true);
     const listRow = { ...issueOf(source.id, project.id, project.workspace_id), name: "list update" };
     const response = { total: 1, data: [listRow], next_cursor: null };
     const projectIssues = app.issue.projectIssues;
@@ -329,7 +305,7 @@ it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => 
     expect(app.issue.issues.getIssueById(related.id)).toEqual(relations.data[0]!.issue);
     expect(app.issue.issues.getIssueById(source.id)?.name).toBe("list update");
     expect(app.issue.issues.getIssueDetailById(source.id)?.description_html).toBe(source.description_html);
-    expect(get).toHaveBeenCalledTimes(1);
+    expect(nerve.to("/api/v0/issues/R1/reactions")).toHaveLength(1);
     expect(nerve.to("/api/v0/issues/R1/links")).toHaveLength(1);
     expect(nerve.calls.filter((call) => call.path === `/api/v0/projects/${project.id}/issues`)).toHaveLength(
       page === "initial" ? 1 : 2
@@ -355,11 +331,11 @@ it.each(["unknown", "revoked"])("detail preflight rejects %s scope before restri
   if (kind === "revoked") await loadProjects(nerve, app.projectRoot.project, ws, []);
   const projectId = kind === "unknown" ? "unknown" : project.id;
   expect(app.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(ws.slug, projectId)).toBeUndefined();
-  const get = vi.spyOn(APIService.prototype, "get").mockRejectedValue(new Error("restricted GET sent"));
+  const requestsBefore = nerve.calls.length;
   await expect(app.issue.issueDetail.issue.fetchIssue(ws.slug, projectId, "x")).rejects.toBeInstanceOf(
     SessionChangedError
   );
-  expect(get).not.toHaveBeenCalled();
+  expect(nerve.calls).toHaveLength(requestsBefore);
 });
 
 it("identifier sends an unknown complete name to the server and preserves its refusal", async () => {

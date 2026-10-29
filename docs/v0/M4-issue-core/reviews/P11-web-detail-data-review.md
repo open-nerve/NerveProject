@@ -1,6 +1,6 @@
 # M4/P11 详情数据层：预检与实施记录
 
-日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T5已实现，继续T6。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
+日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T6已实现，继续T7。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
 
 ## 1. 前置、身份与范围
 
@@ -112,3 +112,9 @@ T4提交`5fd567c86a064db804558944b929d0f413eb1364`已用系统git推送，[检�
 三文件59项服务/store/界面测试与此前回归合计24文件408项通过；共享包10项强制构建、types、变更文件零lint警告、格式、关键词75规则/33例外通过，web警告上限197→192。M10实际请求方法从POST错误变GET被断言捕获（生成类型也不允许该GET，但本记录是运行时请求断言红）；M11a删掉其他用户表情、M12丢失读中的确认重放均行为红，原字节hash恢复后全回归通过。T5初次51红中两项新方法缺失及其派生失败不计行为证明；后续两项失败为fixture未提供当前用户，补用已有成员fixture构造完整User，不放松生产身份检查。三个UI问题与读取错误入口均有独立红绿；后续类型/静态修订不冒充新的行为bug。
 
 T4准确SHA `5fd567c86a064db804558944b929d0f413eb1364`的CI40943202954 attempt1已server/web/e2e全绿，公开原件在主目录preparation/t4-checkpoint-ci-03；它只证明T4检查点，不能替代T5之后最终分支验证。当前未合并。
+
+### T6 工作项表情
+
+工作项表情服务三方法接生成客户端，集合复用DetailResource与root工作项队列；按原生id确认去重，删除仅当前用户同emoji，旧GET不能撤销已确认删除，退役/权限ABA不接晚答。界面改actor_id目录展示、原生错误码、只读重试和宿主跟进，权限丢失恢复后也释放当前控件忙碌状态。旧表情类型、无读者groupReactions工具及两条旧URL exact例外删除，未放宽任何守卫。
+
+26文件440项受影响回归通过（t6-regression-restored）；共享包10项强制构建/0缓存、types、变更文件零警告/格式、关键词75规则31例外通过。M11b误删他人同emoji、M12b漏重放使删除复活均断言红，精确字节hash恢复后回归全绿；M12b是共享确认性质的追加覆盖，不虚增独立性质数量。实际界面三个问题及权限恢复后的忙碌状态各有红绿。issue.fetch和base.loading最后旧Axios夹具迁到FakeNerve，拒绝/输入保留/旧来源晚答等原断言保留；首次大回归9失败由base.loading仍回答旧路径导致，修夹具后全过。首次types为Promise联合推断问题，改async回调；误用不存在的make check-keywords无测试结论，随后真实node工具通过。主控要求与质量自审完成，无新架构发现；整分支终审仍待T15，未合并。
