@@ -1,6 +1,6 @@
 # M4/P11 详情数据层规格
 
-> 状态：负责人已裁定P11-S1采用A，**文档预检通过，已获实施授权，T1–T11已实现，继续T12**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。准备阶段已结束；当前按计划实施，产品验收全部开放；编号列宽按已加载、当前可见数据计算，不新增项目API字段，见[已裁定记录](../reviews/P11-project-number-width-decision.md)。
+> 状态：负责人已裁定P11-S1采用A，**文档预检通过，已获实施授权，T1–T12已实现，继续T13**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。准备阶段已结束；当前按计划实施，产品验收全部开放；编号列宽按已加载、当前可见数据计算，不新增项目API字段，见[已裁定记录](../reviews/P11-project-number-width-decision.md)。
 
 权威输入：[M4 设计](../M4-design.md) §3.9–3.15、§7.1–7.4、§9.5、§12 P11、§13；[推进方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)；[P10b spec](P10b-web-list-data.md) §2.6/§7；输入 handoffs 的 M1-closeout、M2-closeout §12、M3-closeout §5/6/8。配套 [plan](../plans/P11-web-detail-data.md)、[阶段预检](../reviews/P11-web-detail-data-review.md)。
 
@@ -112,6 +112,8 @@ M4 新版本 store 使用 DescriptionVersion/Page/Detail，按 last_saved_at/id 
 按需 states/members/labels 的全部入口建立清单：拒绝显示错误、结束 loader、可重试，fire-and-forget 改 await/受控 UI；不把 catch 空数组当成功。详情 SWR 全部 useSessionSWR，key 带 loginId、scope 和 permission identity，禁直接 swr 的路径范围同步扩，不新增豁免。
 
 WorkItemLevelModals 留在现有 workspace provider；`projectId ?? workItemIdentifier` 改变及卸载用 useLayoutEffect cleanup 结束它拥有的开关。详情/peek/列表的实际宿主结束自己设置的开关、peekIssue 及 issueCrudOperationState/issueLinkData/relationKey，重设为原初始值。并存的详情与 peek 必须有所有权标记/租约或等效局部机制，旧宿主的 cleanup 不能关新宿主的弹窗；旧请求完成也不能改新 scope 的 UI。isArchiveIssueModalOpen、附件宿主已由 P10a 删除，只核零残留，不重建。
+
+T12实现采用局部UI状态作为等效所有权：IssueDetailHost按会话root、workspace/project/issue和root提供的permission identity持有IssueDetailModals；其React身份同时结束子树内编辑器、下拉及本地行弹窗。六个开关和三份临时数据从全局IssueDetail迁出，资源服务/canonical/权限观察仍保留原归属；openWidgets仅为既有展开偏好。工作区命令保留原provider和CommandPaletteStore，宿主租约只释放自己的创建/删除开关。五种peek宿主（详情、项目、归档、profile、通知）提供明确hostScope；实际卸载的peek选择在layout收尾后的微任务中按所有者/同一选择引用释放，以兼容StrictMode立即重挂，跨route的同一旧选择则在新layout中同步释放。旧请求只可结束自己仍有效的选择，不能按相同issueId认领后来重开的peek。通知页撤下无所有权的全局cleanup，没有改M7领域接口。
 
 ### 2.10 错误、标签与守卫
 

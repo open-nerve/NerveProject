@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import React, { act } from "react";
+import React, { act, StrictMode, useLayoutEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { issueStoreTab } from "@/store/issue/fake-issues";
@@ -64,4 +64,25 @@ it("permission loss and recovery invalidates outstanding followups", async () =>
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
   expect(old()).toBe(false);
   expect(capture.one!()()).toBe(true);
+});
+
+it("StrictMode reacquisition does not revive a captured followup from its first mount", async () => {
+  const snapshots: (() => boolean)[] = [];
+  function EffectHost() {
+    const take = useDetailScope("ws", "A", "one");
+    useLayoutEffect(() => {
+      snapshots.push(take());
+    }, [take]);
+    return null;
+  }
+  await act(async () =>
+    renderer.render(
+      <StrictMode>
+        <EffectHost />
+      </StrictMode>
+    )
+  );
+  expect(snapshots).toHaveLength(2);
+  expect(snapshots[0]!()).toBe(false);
+  expect(snapshots[1]!()).toBe(true);
 });

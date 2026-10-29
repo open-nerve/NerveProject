@@ -12,7 +12,8 @@ import type { EditorRefApi } from "@nerve/editor";
 import type { TNameDescriptionLoader } from "@nerve/types";
 import { cn } from "@nerve/utils";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useDetailScope } from "../issue-detail-widgets/use-detail-scope";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 import useKeypress from "@/hooks/use-keypress";
 import usePeekOverviewOutsideClickDetector from "@/hooks/use-peek-overview-outside-click";
 // local imports
@@ -65,14 +66,18 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
   const issuePeekOverviewRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorRefApi>(null);
   // store hooks
+  const detail = useIssueDetail();
+  const capture = useDetailScope(workspaceSlug, projectId, issueId);
+  const selection = detail.peekIssue;
   const {
     setPeekIssue,
-    isAnyModalOpen,
     issue: { getIssueById },
-  } = useIssueDetail();
+  } = detail;
+  const { isAnyModalOpen } = useIssueDetailModals();
   const issue = getIssueById(issueId);
   // remove peek id
   const removeRoutePeekId = () => {
+    if (!capture()() || detail.peekIssue !== selection) return;
     setPeekIssue(undefined);
     if (embedIssue && embedRemoveCurrentNotification) embedRemoveCurrentNotification();
   };
@@ -103,7 +108,13 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
     const editorImageFullScreenModalElement = document.querySelector(".editor-image-full-screen-modal");
     const dropdownElement = document.activeElement?.tagName === "INPUT";
     const isAnyDropbarOpen = editorRef.current?.isAnyDropbarOpen();
-    if (!isAnyModalOpen && !dropdownElement && !isAnyDropbarOpen && !editorImageFullScreenModalElement) {
+    if (
+      !isAnyModalOpen &&
+      !isAnyLocalModalOpen &&
+      !dropdownElement &&
+      !isAnyDropbarOpen &&
+      !editorImageFullScreenModalElement
+    ) {
       removeRoutePeekId();
       const issueElement = document.getElementById(`issue-${issueId}`);
       if (issueElement) issueElement?.focus();

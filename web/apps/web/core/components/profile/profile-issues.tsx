@@ -81,7 +81,7 @@ export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Prop
               </div>
             </div>
             {/* peek overview */}
-            <IssuePeekOverview />
+            <IssuePeekOverview hostScope={JSON.stringify(["profile", workspaceSlug, userId, type])} />
           </>
         )}
       </WorkspaceLevelWorkItemFiltersHOC>

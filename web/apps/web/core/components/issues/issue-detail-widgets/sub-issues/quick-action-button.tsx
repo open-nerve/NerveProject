@@ -12,7 +12,7 @@ import { AddOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 
 import { CustomMenu } from "@nerve/ui";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 
 type Props = {
   issueId: string;
@@ -27,11 +27,9 @@ export const SubIssuesActionButton = observer(function SubIssuesActionButton(pro
   // store hooks
   const {
     issue: { getIssueById },
-    toggleCreateIssueModal,
-    toggleSubIssuesModal,
-    setIssueCrudOperationState,
-    issueCrudOperationState,
   } = useIssueDetail();
+  const { issueCrudOperationState, toggleCreateIssueModal, toggleSubIssuesModal, setIssueCrudOperationState } =
+    useIssueDetailModals();
 
   // derived values
   const issue = getIssueById(issueId);
@@ -78,9 +76,9 @@ export const SubIssuesActionButton = observer(function SubIssuesActionButton(pro
 
   return (
     <CustomMenu customButton={customButtonElement} placement="bottom-start" disabled={disabled} closeOnSelect>
-      {optionItems.map((item, index) => (
+      {optionItems.map((item) => (
         <CustomMenu.MenuItem
-          key={index}
+          key={item.i18n_label}
           onClick={() => {
             item.onClick();
           }}

@@ -1,6 +1,6 @@
 # M4/P11 详情数据层：预检与实施记录
 
-日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T11已实现，继续T12。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
+日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T12已实现，继续T13。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
 
 ## 1. 前置、身份与范围
 
@@ -201,3 +201,30 @@ M25在关联目录调用catch返回空数组，三类403测试均断言红；M26
 实际组件测试替换了最初仅三个展示叶mock的版本：当前状态、成员（项目/工作区）、三处标签全部运行真实下拉与RootStore/FakeNerve。自审发现默认状态按钮嵌套原生button，移除嵌套后又通过tabIndex测试发现Headless Combobox会强制-1；最终复用既有CustomSearchSelect的Popover触发器，DropdownButton为嵌入内容提供纯展示span，状态/成员只有一个原生触发器并能按Enter发目录GET。复用现有getButtonStyling，不改共享包、不新增依赖；移除无读者StateOption。成员SSR的旧测试曾把嵌套按钮视为合同，已改为检验唯一触发器的tabIndex及纯展示内容，实际DOM测试守住键盘行为。DateDropdown/R36仍属于原P13移交，本次未冒称全面修复所有下拉。
 
 本Task的要求/质量复核由主控分两遍自审完成，没有冒充独立代理终审；完整fresh-context审者及deep-review仍在T15。局部裁定：每次打开目录读取当前源（代价是增加一次GET）；当前请求被另一读者覆盖而返回undefined会显示可重试错误，不伪造空目录。目录数据与权限事实没有第二份cache/观察者；旧scope结果不提示。ParentSelectRoot及写后跟进的owner仍按T12/T14收口，不能把本Task表述为整个P11已经交付。T9精确提交87d1bcd7的CI40964469564 attempt1三项最终全绿，t9-ci-04为回执；该结果不代替后续产品提交CI。
+
+
+### T12：弹窗、浮层和工作区命令的实际宿主
+
+T12从`8a57f52d`起实施。完成后仍不合并；T13–T15及整分支deep-review/fresh reviewer尚未完成。
+
+| 状态、原初始值 | 全部写入入口 | 实际宿主与结束点 |
+|---|---|---|
+| create=false、crud.create/existing={toggle:false,parentIssueId:undefined} | sub-issues/quick-action-button；sub-issues/issues-list/list-item、relations/issue-list-item触发行编辑；widget-modals及两个content关闭 | 每个详情/peek的IssueDetailHost持有自己的IssueDetailModals；widget创建/选择、两content本地行编辑随owner key结束 |
+| subIssues=null | sub-issues/quick-action-button、widget-modals | widget选择弹窗；scope/权限变化及卸载复位，ExistingIssuesListModal换目标/关闭重开也重建选择 |
+| issueLink=false、issueLinkData=null | links/quick-action-button、issue-detail/links/link-item、create-update-link-modal及widget-modals | 当前宿主的链接弹窗；旧回调不清新编辑数据 |
+| relation=null、relationKey=null | relations/quick-action-button、widget-modals | 当前宿主的关联选择弹窗；空relation真正回到null |
+| parent=null | issue-detail/parent-select、parent-select-root | 当前宿主的父项选择；旧更新完成不启动新宿主的跟进读取/关闭 |
+| delete=null | sub-issues/issues-list/list-item、relations/issue-list-item及各自content | 子项/关联行实际DeleteIssueModal；行局部payload随宿主key销毁 |
+| peekIssue=undefined | use-issue-peek-overview-redirection、通知sidebar/notification-card/item、peek关闭回调 | 详情/项目列表/归档列表/profile/通知动态宿主均传hostScope；同引用+所有者检查，旧卸载/晚到删除、归档、恢复不关闭新选择 |
+| command create/delete=false、allowedProjectIds=undefined | issues/header、project-issues空态、workspace/sidebar/quick-actions、power-k创建/工作项命令；WorkItemLevelModals关闭 | 原workspace provider内WorkItemLevelModals，workspace、projectId??identifier、具体identifier及permission identity换代/卸载释放拥有的两开关；首页/草稿/profile/browse创建能力保留 |
+| peek局部delete/archive/duplicate/edit=false、两个content行payload | peek/header→quick-actions；子项/关联行回调 | 不新增全局状态；宿主子树换代清理。Escape同时检查局部确认框，不能关掉底层peek |
+
+没有恢复P10a已删除的附件宿主或root归档开关。IssueDetail保留资源/服务、peek选择、展开偏好；新的局部UI状态不复制Issue/Project，也不增加权限观察者。useIssueDetailModals必须在真实宿主下使用，不提供全局降级。子组件即使经portal渲染仍继承该owner；详情和peek可以同时拥有不同弹窗，撤下“只要有peek就禁止详情渲染widget modal”的全局开关。
+
+有效红绿：t12-host-contract-red五项宿主断言失败；t12-command-red五项工作区命令断言失败（含删除拒绝不能吞为成功）；t12-selection-red锁定换目标仍保留隐形旧选择；t12-route-epoch-red锁定route改变残留peek与StrictMode恢复旧followup；t12-peek-actions/reopen-red锁定真实View+Header旧删除/恢复/同issue重开及Escape。触发器真实DOM还发现peek布局嵌套button和父项button包含链接/移除交互，分别用t12-peek-button/parent-buttons-red确认，再改为现有共享select的纯展示内容及并列原生按钮。没有放宽守卫。
+
+测试边界：detail-host和work-item-level测试运行实际宿主，展示叶被probe/props收集器替换；peek/host-actions运行真实View与Header，仅隔离领域命令的延迟、页面内容和菜单展示；links/relations仍用真实store/FakeNerve并接入实际宿主。它们证明宿主归属，不替代T14完整命令矩阵或P13/P14浏览器Back故事。最初一次夹具漏fake timers、一轮未应答附属请求中断、一次命令拼成check-types以及两处mock模块缺新context出口，都作为失败保留，不算产品红证据。
+
+最终当前源：t12-web-wired **201文件2171项通过**；恢复变异后t12-regression-restored **50文件695项通过**，包含计划指定clone/loading；t12-types-reviewed、t12-static-reviewed（37个TS/TSX，0 warning/error）、t12-knip、t12-keywords（75规则/24例外）通过。删除四项旧告警后web cap由153收紧到149。M27故意全局retire其它宿主，在旧宿主卸载时把新链接弹窗清掉，断言红；M28漏掉scope换代依赖，只在卸载结束旧状态，换issue断言红。两项均恢复原字节SHA，见t12-mutations-restored.json；有效变异没有编译错误或超时冒充。
+
+G由主控分别完成要求及质量自审，未声称独立逐Task评审。局部裁定：采用显式UI context替代全局字段；用root+scope的独立React宿主身份结束所有子树局部表单，代价是权限水位改变会清空未提交输入；peek真正卸载的选择在同次layout收尾后微任务释放，防止StrictMode误清，跨route仍同步结束旧选择。通知只迁移M4嵌入宿主的显示合同，M7自身未接通接口不在本段变更。T14继续核写后错误传播/重复读取和完整命令矩阵，T15才做阶段终审。

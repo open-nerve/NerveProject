@@ -46,6 +46,11 @@ type Props = {
 const projectService = new ProjectService();
 
 export function ExistingIssuesListModal(props: Props) {
+  const scope = JSON.stringify([props.workspaceSlug, props.projectId, props.searchParams, props.isOpen]);
+  return <ExistingIssuesSelection key={scope} {...props} />;
+}
+
+function ExistingIssuesSelection(props: Props) {
   const { t } = useTranslation();
 
   const {

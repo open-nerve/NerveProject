@@ -19,7 +19,7 @@ import { cn, generateWorkItemLink } from "@nerve/utils";
 import { useSubIssueOperations } from "@/components/issues/issue-detail-widgets/sub-issues/helper";
 import { WithDisplayPropertiesHOC } from "@/components/issues/issue-layouts/properties/with-display-properties-HOC";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import useIssuePeekOverviewRedirection from "@/hooks/use-issue-peek-overview-redirection";
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -73,7 +73,8 @@ export const SubIssuesListItem = observer(function SubIssuesListItem(props: Prop
   } = useIssueDetail();
   const { fetchSubIssues } = useSubIssueOperations(workspaceSlug, projectId, issueId);
   const capture = useDetailScope(workspaceSlug, projectId, issueId);
-  const { toggleCreateIssueModal, toggleDeleteIssueModal } = useIssueDetail();
+  const { toggleDeleteIssueModal } = useIssueDetailModals();
+  const { toggleCreateIssueModal } = useIssueDetailModals();
   const project = useProject();
   const { handleRedirection } = useIssuePeekOverviewRedirection();
   const { isMobile } = usePlatformOS();

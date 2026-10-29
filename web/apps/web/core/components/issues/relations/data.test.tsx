@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { IssueDetailHost } from "../detail-host";
 import React, { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
@@ -21,7 +22,10 @@ vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one
 vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
-vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => binding.tab!.app.issue.issueDetail }));
+vi.mock("@/hooks/store/use-issue-detail", async (original) => ({
+  ...(await original<typeof import("@/hooks/store/use-issue-detail")>()),
+  useIssueDetail: () => binding.tab!.app.issue.issueDetail,
+}));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => binding.tab!.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-app-theme", () => ({ useAppTheme: () => ({ issueDetailSidebarCollapsed: false }) }));
 vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => ({ allowPermissions: () => true }) }));
@@ -121,6 +125,13 @@ beforeEach(async () => {
   container = document.createElement("div");
   document.body.append(container);
   renderer = createRoot(container);
+  const renderLeaf = renderer.render.bind(renderer);
+  renderer.render = (children) =>
+    renderLeaf(
+      <IssueDetailHost workspaceSlug="ws" projectId="A" issueId="source">
+        {children}
+      </IssueDetailHost>
+    );
   await act(async () =>
     renderer.render(<RelationsCollapsibleContent workspaceSlug="ws" issueId="source" disabled={false} />)
   );

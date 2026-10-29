@@ -119,3 +119,15 @@ it("a search from an old project cannot replace the new project's rows", async (
   expect(container.textContent).toContain("Current project");
   expect(container.textContent).not.toContain("Old project");
 });
+
+it("changing the target ends the old selection instead of submitting hidden rows", async () => {
+  await render();
+  expect(container.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(true);
+  await render("B", async () => [{ ...item, id: "two", name: "New target" }]);
+  expect(container.textContent).toContain("New target");
+  expect(
+    [...container.querySelectorAll("button")].find((button) => button.textContent === "issue.select.add_selected")
+      ?.disabled
+  ).toBe(true);
+  expect(container.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(false);
+});

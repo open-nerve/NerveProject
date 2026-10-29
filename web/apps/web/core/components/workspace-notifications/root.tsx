@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
 // nerve imports
@@ -37,7 +37,7 @@ export const NotificationsRoot = observer(function NotificationsRoot({ workspace
     getNotifications,
   } = useWorkspaceNotifications();
   const { fetchProject } = useProject();
-  const { isWorkItem, PeekOverviewComponent, setPeekWorkItem } = useNotificationPreview();
+  const { isWorkItem, PeekOverviewComponent } = useNotificationPreview();
   // derived values
   const { workspace_slug, project_id, issue_id, is_inbox_issue } =
     notificationLiteByNotificationId(currentSelectedNotificationId);
@@ -74,14 +74,6 @@ export const NotificationsRoot = observer(function NotificationsRoot({ workspace
     [setCurrentSelectedNotificationId]
   );
 
-  // clearing up the selected notifications when unmounting the page
-  useEffect(
-    () => () => {
-      setPeekWorkItem(undefined);
-    },
-    [setCurrentSelectedNotificationId, setPeekWorkItem]
-  );
-
   return (
     <div className={cn("h-full w-full overflow-hidden", isWorkItem && "overflow-y-auto")}>
       {!currentSelectedNotificationId ? (
@@ -109,7 +101,11 @@ export const NotificationsRoot = observer(function NotificationsRoot({ workspace
               )}
             </>
           ) : (
-            <PeekOverviewComponent embedIssue embedRemoveCurrentNotification={embedRemoveCurrentNotification} />
+            <PeekOverviewComponent
+              hostScope={JSON.stringify(["notification", workspaceSlug, currentSelectedNotificationId])}
+              embedIssue
+              embedRemoveCurrentNotification={embedRemoveCurrentNotification}
+            />
           )}
         </>
       )}

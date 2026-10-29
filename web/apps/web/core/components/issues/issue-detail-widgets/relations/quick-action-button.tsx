@@ -12,7 +12,7 @@ import { AddOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { CustomMenu } from "@nerve/ui";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 // components
 import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 // types
@@ -28,7 +28,8 @@ export const RelationActionButton = observer(function RelationActionButton(props
   const { customButton, issueId, disabled = false } = props;
   const { t } = useTranslation();
   // store hooks
-  const { toggleRelationModal, setRelationKey } = useIssueDetail();
+  const { setRelationKey } = useIssueDetailModals();
+  const { toggleRelationModal } = useIssueDetailModals();
 
   // handlers
   const handleOnClick = (relationKey: TIssueRelationTypes) => {

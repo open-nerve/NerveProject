@@ -17,7 +17,7 @@ import type { TIssueRelationTypes } from "@nerve/types";
 import { ControlLink, CustomMenu } from "@nerve/ui";
 import { generateWorkItemLink } from "@nerve/utils";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import useIssuePeekOverviewRedirection from "@/hooks/use-issue-peek-overview-redirection";
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -56,9 +56,8 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
     issue: { getIssueById },
     removeRelation,
     relation: { getProjectId },
-    toggleCreateIssueModal,
-    toggleDeleteIssueModal,
   } = useIssueDetail();
+  const { toggleCreateIssueModal, toggleDeleteIssueModal } = useIssueDetailModals();
   const project = useProject();
   const { isMobile } = usePlatformOS();
   // derived values

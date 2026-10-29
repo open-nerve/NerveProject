@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T11已实现，继续T12**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T12已实现，继续T13**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -170,11 +170,11 @@ make e2e
 
 **Files：** modals/work-item-level.tsx、issue-details/root.store.ts；issue-detail-widgets/issue-detail-widget-modals.tsx、issue-detail/main-content.tsx、issue-detail/parent-select.tsx、peek-overview/root.tsx/issue-detail.tsx；另按实际writer搜索纳入列表删除宿主；新 modals/work-item-level.test.tsx、issues/detail-host.test.tsx。
 
-- [ ] 清点每个开关和三份数据的全部writer/宿主，用表绑定 owner 与初始值；已删除附件/isArchiveIssueModalOpen只核不恢复。
-- [ ] WorkItemLevelModals保持原provider位置，对projectId??workItemIdentifier变化/卸载做layout cleanup；首页/草稿/profile及browse仍能用工作区命令。
-- [ ] 详情/peek并存旧宿主卸载不关闭新owner；scope切换同步复位create/existing parent、linkData、relationKey及所拥有开关，peek宿主清peekIssue；同账号旧请求完成不关下一scope的弹窗。
-- [ ] 真组件测试 `closesOwnedModalsOnScopeChange`、`keepsTheNewOwnersModalWhenTheOldHostUnmounts`、`doesNotFinishAnOldHostsActionInTheNewScope`；StrictMode挂卸/第二次cleanup安全。P13/P14真实Back故事仍后续。
-- [ ] 定向两新测试及base.clone/base.loading；M27全局清所有开关、M28只在卸载清不在scope变清各红；G。提交 `fix(M4/P11): 由实际宿主结束工作项弹窗状态`。
+- [x] 清点每个开关和三份数据的全部writer/宿主，用表绑定 owner 与初始值；已删除附件/isArchiveIssueModalOpen只核不恢复。
+- [x] WorkItemLevelModals保持原provider位置，对projectId??workItemIdentifier变化/卸载做layout cleanup；首页/草稿/profile及browse仍能用工作区命令。
+- [x] 详情/peek并存旧宿主卸载不关闭新owner；scope切换同步复位create/existing parent、linkData、relationKey及所拥有开关，peek宿主清peekIssue；同账号旧请求完成不关下一scope的弹窗。
+- [x] 真组件测试 `closesOwnedModalsOnScopeChange`、`keepsTheNewOwnersModalWhenTheOldHostUnmounts`、`doesNotFinishAnOldHostsActionInTheNewScope`；StrictMode挂卸/第二次cleanup安全。P13/P14真实Back故事仍后续。
+- [x] 定向两新测试及base.clone/base.loading；M27全局清所有开关、M28只在卸载清不在scope变清各红；G。提交 `fix(M4/P11): 由实际宿主结束工作项弹窗状态`。
 
 ## Task 13：错误、标签边界与统一编号列宽（约650–1100行）
 

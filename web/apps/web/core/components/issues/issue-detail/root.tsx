@@ -5,6 +5,7 @@
  */
 
 import type { IssueUpdate } from "@nerve/api-client";
+import { IssueDetailHost } from "../detail-host";
 import { useMemo } from "react";
 import { observer } from "mobx-react";
 // nerve imports
@@ -105,57 +106,58 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
 
   return (
     <>
-      {!issue && uncertain ? (
-        readError ? (
-          <DetailResourceError
-            error={readError}
-            retry={retryRead}
-            workspaceSlug={workspaceSlug}
-            projectId={projectId}
-            issueId={issueId}
+      <IssueDetailHost workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId}>
+        {!issue && uncertain ? (
+          readError ? (
+            <DetailResourceError
+              error={readError}
+              retry={retryRead}
+              workspaceSlug={workspaceSlug}
+              projectId={projectId}
+              issueId={issueId}
+            />
+          ) : (
+            <div role="status">{t("common.loading")}</div>
+          )
+        ) : !issue ? (
+          <EmptyState
+            image={emptyIssue}
+            title={t("issue.empty_state.issue_detail.title")}
+            description={t("issue.empty_state.issue_detail.description")}
+            primaryButton={{
+              text: t("issue.empty_state.issue_detail.primary_button.text"),
+              onClick: () => navigate(`/${workspaceSlug}/projects/${projectId}/issues`),
+            }}
           />
         ) : (
-          <div role="status">{t("common.loading")}</div>
-        )
-      ) : !issue ? (
-        <EmptyState
-          image={emptyIssue}
-          title={t("issue.empty_state.issue_detail.title")}
-          description={t("issue.empty_state.issue_detail.description")}
-          primaryButton={{
-            text: t("issue.empty_state.issue_detail.primary_button.text"),
-            onClick: () => navigate(`/${workspaceSlug}/projects/${projectId}/issues`),
-          }}
-        />
-      ) : (
-        <div className="flex h-full w-full overflow-hidden">
-          <div className="h-full w-full space-y-6 overflow-y-auto px-9 py-5">
-            <IssueMainContent
-              workspaceSlug={workspaceSlug}
-              projectId={projectId}
-              issueId={issueId}
-              issueOperations={issueOperations}
-              isEditable={isEditable}
-              isArchived={is_archived}
-            />
+          <div className="flex h-full w-full overflow-hidden">
+            <div className="h-full w-full space-y-6 overflow-y-auto px-9 py-5">
+              <IssueMainContent
+                workspaceSlug={workspaceSlug}
+                projectId={projectId}
+                issueId={issueId}
+                issueOperations={issueOperations}
+                isEditable={isEditable}
+                isArchived={is_archived}
+              />
+            </div>
+            <div
+              className="fixed right-0 z-[5] h-full w-full min-w-[300px] border-l border-subtle bg-surface-1 sm:w-1/2 md:relative md:w-1/4 lg:min-w-80 xl:min-w-96"
+              style={issueDetailSidebarCollapsed ? { right: `-${window?.innerWidth || 0}px` } : {}}
+            >
+              <IssueDetailsSidebar
+                workspaceSlug={workspaceSlug}
+                projectId={projectId}
+                issueId={issueId}
+                issueOperations={issueOperations}
+                isEditable={!is_archived && isEditable}
+              />
+            </div>
           </div>
-          <div
-            className="fixed right-0 z-[5] h-full w-full min-w-[300px] border-l border-subtle bg-surface-1 sm:w-1/2 md:relative md:w-1/4 lg:min-w-80 xl:min-w-96"
-            style={issueDetailSidebarCollapsed ? { right: `-${window?.innerWidth || 0}px` } : {}}
-          >
-            <IssueDetailsSidebar
-              workspaceSlug={workspaceSlug}
-              projectId={projectId}
-              issueId={issueId}
-              issueOperations={issueOperations}
-              isEditable={!is_archived && isEditable}
-            />
-          </div>
-        </div>
-      )}
-
+        )}
+      </IssueDetailHost>
       {/* peek overview */}
-      <IssuePeekOverview />
+      <IssuePeekOverview hostScope={JSON.stringify(["detail", workspaceSlug, projectId, issueId])} />
     </>
   );
 });

@@ -67,7 +67,7 @@ export const ArchivedIssueLayoutRoot = observer(function ArchivedIssueLayoutRoot
             <div className="relative h-full w-full overflow-auto">
               <ArchivedIssueListLayout />
             </div>
-            <IssuePeekOverview />
+            <IssuePeekOverview hostScope={JSON.stringify(["archives", workspaceSlug, projectId])} />
           </>
         )}
       </ProjectLevelWorkItemFiltersHOC>

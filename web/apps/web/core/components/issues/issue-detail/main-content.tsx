@@ -52,7 +52,6 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
   const { data: currentUser } = useUser();
   const {
     issue: { getIssueDetailById },
-    peekIssue,
   } = useIssueDetail();
   const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting");
   // derived values
@@ -68,8 +67,6 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
   }, [isSubmitting, setShowAlert, setIsSubmitting]);
 
   if (!issue || !issue.project_id) return <></>;
-
-  const isPeekModeActive = Boolean(peekIssue);
 
   return (
     <>
@@ -149,7 +146,6 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
         projectId={projectId}
         issueId={issueId}
         disabled={!isEditable || isArchived}
-        renderWidgetModals={!isPeekModeActive}
       />
 
       {windowSize[0] < 768 && (

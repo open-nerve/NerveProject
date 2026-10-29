@@ -17,7 +17,10 @@ vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one
 vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "one" }) }));
 vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app.issue.issueDetail }));
+vi.mock("@/hooks/store/use-issue-detail", async (original) => ({
+  ...(await original<typeof import("@/hooks/store/use-issue-detail")>()),
+  useIssueDetail: () => tab.app.issue.issueDetail,
+}));
 vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => tab.app.user.permission }));
 vi.mock("@/hooks/store/use-issues", () => ({ useIssues: () => ({ issues: tab.app.issue.projectIssues }) }));
 vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => undefined }));
@@ -63,7 +66,7 @@ const variants = [
     path: "/api/v0/issues/x",
     view: () => {
       tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "x" });
-      return <IssuePeekOverview />;
+      return <IssuePeekOverview hostScope="test-route" />;
     },
   },
 ];
@@ -106,7 +109,7 @@ it("requests a readable archived peek for a legitimate guest", async () => {
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [{ ...tab.project, member_role: 5 }]);
   tab.nerve.calls.length = 0;
   tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "x", isArchived: true });
-  await render(<IssuePeekOverview />);
+  await render(<IssuePeekOverview hostScope="test-route" />);
   await act(async () => vi.advanceTimersByTimeAsync(20));
   expect(tab.nerve.calls.map((call) => [call.method, call.path])).toEqual([["GET", "/api/v0/issues/x"]]);
 });

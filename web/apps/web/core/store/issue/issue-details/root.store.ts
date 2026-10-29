@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueUpdate, IssueLink, IssueLinkCreate, IssueLinkPatch, IssueCommentCreate } from "@nerve/api-client";
-import { action, computed, makeObservable, observable } from "mobx";
+import type { IssueUpdate, IssueLinkCreate, IssueLinkPatch, IssueCommentCreate } from "@nerve/api-client";
+import { action, makeObservable, observable } from "mobx";
 // types
 import type { TIssueRelationTypes, TWorkItemWidgets } from "@nerve/types";
 // local imports
@@ -36,18 +36,6 @@ export type TPeekIssue = {
   isArchived?: boolean;
 };
 
-export type TIssueRelationModal = {
-  issueId: string | null;
-  relationType: TIssueRelationTypes | null;
-};
-
-type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined };
-
-export type TIssueCrudOperationState = {
-  create: TIssueCrudState;
-  existing: TIssueCrudState;
-};
-
 export interface IIssueDetail
   extends
     IIssueStoreActions,
@@ -61,33 +49,14 @@ export interface IIssueDetail
   refreshAfterChange: (ws: string, project: string, id: string) => Promise<void>;
   // observables
   peekIssue: TPeekIssue | undefined;
-  relationKey: TIssueRelationTypes | null;
-  issueLinkData: IssueLink | null;
-  issueCrudOperationState: TIssueCrudOperationState;
   openWidgets: TWorkItemWidgets[];
-  isCreateIssueModalOpen: boolean;
-  isIssueLinkModalOpen: boolean;
-  isParentIssueModalOpen: string | null;
-  isDeleteIssueModalOpen: string | null;
-  isRelationModalOpen: TIssueRelationModal | null;
-  isSubIssuesModalOpen: string | null;
   // computed
-  isAnyModalOpen: boolean;
   // helper actions
   getIsIssuePeeked: (issueId: string) => boolean;
   // actions
   setPeekIssue: (peekIssue: TPeekIssue | undefined) => void;
-  setIssueLinkData: (issueLinkData: IssueLink | null) => void;
-  toggleCreateIssueModal: (value: boolean) => void;
-  toggleIssueLinkModal: (value: boolean) => void;
-  toggleParentIssueModal: (issueId: string | null) => void;
-  toggleDeleteIssueModal: (issueId: string | null) => void;
-  toggleRelationModal: (issueId: string | null, relationType: TIssueRelationTypes | null) => void;
-  toggleSubIssuesModal: (value: string | null) => void;
   setLastWidgetAction: (action: TWorkItemWidgets) => void;
   toggleOpenWidget: (state: TWorkItemWidgets) => void;
-  setRelationKey: (relationKey: TIssueRelationTypes | null) => void;
-  setIssueCrudOperationState: (state: TIssueCrudOperationState) => void;
   // store
   rootIssueStore: IIssueRootStore;
   issue: IIssueStore;
@@ -104,25 +73,7 @@ export interface IIssueDetail
 export class IssueDetail implements IIssueDetail {
   // observables
   peekIssue: TPeekIssue | undefined = undefined;
-  relationKey: TIssueRelationTypes | null = null;
-  issueLinkData: IssueLink | null = null;
-  issueCrudOperationState: TIssueCrudOperationState = {
-    create: {
-      toggle: false,
-      parentIssueId: undefined,
-    },
-    existing: {
-      toggle: false,
-      parentIssueId: undefined,
-    },
-  };
   openWidgets: TWorkItemWidgets[] = ["sub-work-items", "links"];
-  isCreateIssueModalOpen: boolean = false;
-  isIssueLinkModalOpen: boolean = false;
-  isParentIssueModalOpen: string | null = null;
-  isDeleteIssueModalOpen: string | null = null;
-  isRelationModalOpen: TIssueRelationModal | null = null;
-  isSubIssuesModalOpen: string | null = null;
   // store
   rootIssueStore: IIssueRootStore;
   issue: IIssueStore;
@@ -138,32 +89,13 @@ export class IssueDetail implements IIssueDetail {
   constructor(rootStore: IIssueRootStore) {
     makeObservable(this, {
       // observables
-      peekIssue: observable,
-      relationKey: observable,
-      issueLinkData: observable,
-      issueCrudOperationState: observable,
-      isCreateIssueModalOpen: observable,
-      isIssueLinkModalOpen: observable.ref,
-      isParentIssueModalOpen: observable.ref,
-      isDeleteIssueModalOpen: observable.ref,
-      isRelationModalOpen: observable.ref,
-      isSubIssuesModalOpen: observable.ref,
+      peekIssue: observable.ref,
       openWidgets: observable.ref,
       // computed
-      isAnyModalOpen: computed,
       // action
       setPeekIssue: action,
-      setIssueLinkData: action,
-      toggleCreateIssueModal: action,
-      toggleIssueLinkModal: action,
-      toggleParentIssueModal: action,
-      toggleDeleteIssueModal: action,
-      toggleRelationModal: action,
-      toggleSubIssuesModal: action,
       setLastWidgetAction: action,
       toggleOpenWidget: action,
-      setRelationKey: action,
-      setIssueCrudOperationState: action,
     });
 
     // store
@@ -179,32 +111,11 @@ export class IssueDetail implements IIssueDetail {
     this.relation = new IssueRelationStore(this);
   }
 
-  // computed
-  get isAnyModalOpen() {
-    return (
-      this.isCreateIssueModalOpen ||
-      this.isIssueLinkModalOpen ||
-      !!this.isParentIssueModalOpen ||
-      !!this.isDeleteIssueModalOpen ||
-      !!this.isRelationModalOpen?.issueId ||
-      !!this.isSubIssuesModalOpen
-    );
-  }
-
   // helper actions
   getIsIssuePeeked = (issueId: string) => this.peekIssue?.issueId === issueId;
 
   // actions
-  setRelationKey = (relationKey: TIssueRelationTypes | null) => (this.relationKey = relationKey);
-  setIssueCrudOperationState = (state: TIssueCrudOperationState) => (this.issueCrudOperationState = state);
   setPeekIssue = (peekIssue: TPeekIssue | undefined) => (this.peekIssue = peekIssue);
-  toggleCreateIssueModal = (value: boolean) => (this.isCreateIssueModalOpen = value);
-  toggleIssueLinkModal = (value: boolean) => (this.isIssueLinkModalOpen = value);
-  toggleParentIssueModal = (issueId: string | null) => (this.isParentIssueModalOpen = issueId);
-  toggleDeleteIssueModal = (issueId: string | null) => (this.isDeleteIssueModalOpen = issueId);
-  toggleRelationModal = (issueId: string | null, relationType: TIssueRelationTypes | null) =>
-    (this.isRelationModalOpen = { issueId, relationType });
-  toggleSubIssuesModal = (issueId: string | null) => (this.isSubIssuesModalOpen = issueId);
   setLastWidgetAction = (widget: TWorkItemWidgets) => {
     this.openWidgets = [widget];
   };
@@ -213,7 +124,6 @@ export class IssueDetail implements IIssueDetail {
       this.openWidgets = this.openWidgets.filter((s) => s !== state);
     else this.openWidgets = [state, ...this.openWidgets];
   };
-  setIssueLinkData = (issueLinkData: IssueLink | null) => (this.issueLinkData = issueLinkData);
 
   // issue
   fetchIssue = async (workspaceSlug: string, projectId: string, issueId: string) =>

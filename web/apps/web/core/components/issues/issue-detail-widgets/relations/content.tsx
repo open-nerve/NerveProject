@@ -17,7 +17,7 @@ import { cn } from "@nerve/utils";
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 // helper
 import { DeleteIssueModal } from "../../delete-issue-modal";
 import { RelationIssueList } from "../../relations/issue-list";
@@ -72,9 +72,8 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
   // store hooks
   const {
     relation: { getRelationsByIssueId, getError, retry, getProjectId },
-    toggleDeleteIssueModal,
-    toggleCreateIssueModal,
   } = useIssueDetail();
+  const { toggleCreateIssueModal, toggleDeleteIssueModal } = useIssueDetailModals();
 
   // helper
   const issueOperations = useRelationOperations(workspaceSlug, issueId);

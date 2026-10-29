@@ -9,12 +9,17 @@ import { issueDetailOf, issueLinkOf, issueStoreTab, requestedIssue } from "@/sto
 import { IssueLinkCreateUpdateModal } from "../issue-detail/links/create-update-link-modal";
 import { IssueLinksCollapsibleContent } from "../issue-detail-widgets/links/content";
 import { useLinkOperations } from "../issue-detail-widgets/links/helper";
+import { IssueDetailHost } from "../detail-host";
+import { useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 import { toasts } from "@/lib/fake-toast";
 const binding = vi.hoisted(() => ({ tab: undefined as Awaited<ReturnType<typeof issueStoreTab>> | undefined }));
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
-vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => binding.tab!.app.issue.issueDetail }));
+vi.mock("@/hooks/store/use-issue-detail", async (original) => ({
+  ...(await original<typeof import("@/hooks/store/use-issue-detail")>()),
+  useIssueDetail: () => binding.tab!.app.issue.issueDetail,
+}));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
@@ -54,7 +59,16 @@ vi.mock("@nerve/ui", () => ({
 let renderer: Root;
 let container: HTMLElement;
 const close = vi.fn();
+let modals: ReturnType<typeof useIssueDetailModals>;
 function Host({ id = "x" }: { id?: string }) {
+  return (
+    <IssueDetailHost workspaceSlug="ws" projectId="A" issueId={id}>
+      <Body id={id} />
+    </IssueDetailHost>
+  );
+}
+function Body({ id }: { id: string }) {
+  modals = useIssueDetailModals();
   const operations = useLinkOperations("ws", "A", id);
   return (
     <>
@@ -156,18 +170,18 @@ it.each([200, 500])(
   }
 );
 it("a successful old host's write cannot close the new host or clear its editing data", async () => {
-  const { nerve, app } = binding.tab!;
+  const { nerve } = binding.tab!;
   await render();
   await fill("url", "https://example.test/");
   await submit();
   await until(() => nerve.to("/api/v0/issues/x/links").length === 1, "old link POST");
   await render("other");
   const current = issueLinkOf("current", "other");
-  await act(async () => app.issue.issueDetail.setIssueLinkData(current));
+  await act(async () => modals.setIssueLinkData(current));
   await act(async () => nerve.to("/api/v0/issues/x/links")[0]!.answer(json(201, issueLinkOf("old"))));
   await until(() => nerve.to("/api/v0/issues/x").length === 1, "old count");
   await act(async () => nerve.to("/api/v0/issues/x")[0]!.answer(json(200, issueDetailOf("x"))));
   expect(close).not.toHaveBeenCalled();
-  expect(app.issue.issueDetail.issueLinkData).toEqual(current);
+  expect(modals.issueLinkData).toEqual(current);
   expect(toasts).toHaveLength(0);
 });

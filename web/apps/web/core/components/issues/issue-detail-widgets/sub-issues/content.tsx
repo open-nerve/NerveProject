@@ -13,7 +13,7 @@ import { EIssuesStoreType } from "@nerve/types";
 // components
 import { DeleteIssueModal } from "@/components/issues/delete-issue-modal";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 // local imports
 import { CreateUpdateIssueModal } from "../../issue-modal/modal";
 import { useSubIssueOperations } from "./helper";
@@ -62,10 +62,9 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
   });
   // store hooks
   const {
-    toggleCreateIssueModal,
-    toggleDeleteIssueModal,
     subIssues: { subIssueHelpersByIssueId, setSubIssueHelpers, getError, retry },
   } = useIssueDetail();
+  const { toggleCreateIssueModal, toggleDeleteIssueModal } = useIssueDetailModals();
 
   // helpers
   const subIssueOperations = useSubIssueOperations(workspaceSlug, projectId, parentIssueId);

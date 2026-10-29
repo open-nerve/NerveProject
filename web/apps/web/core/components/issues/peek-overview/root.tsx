@@ -5,7 +5,7 @@
  */
 
 import type { IssueUpdate } from "@nerve/api-client";
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo } from "react";
 import { observer } from "mobx-react";
 // Nerve imports
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -23,10 +23,19 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // local imports
 import type { TIssueOperations } from "../issue-detail";
+import { IssueDetailHost } from "../detail-host";
+import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
 import { IssueView } from "./view";
 
-export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWorkItemPeekOverview) {
-  const { embedIssue = false, embedRemoveCurrentNotification, storeType: issueStoreFromProps } = props;
+const peekOwners = new WeakMap<
+  IIssueDetail,
+  { scope: string; selection: IIssueDetail["peekIssue"]; active: boolean }
+>();
+
+export const IssuePeekOverview = observer(function IssuePeekOverview(
+  props: IWorkItemPeekOverview & { hostScope: string }
+) {
+  const { hostScope, embedIssue = false, embedRemoveCurrentNotification, storeType: issueStoreFromProps } = props;
   const { t } = useTranslation();
   // store hook
   const { allowPermissions } = useUserPermissions();
@@ -34,12 +43,34 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
   const {
     issues: { restoreIssue },
   } = useIssues(EIssuesStoreType.ARCHIVED);
+  const detail = useIssueDetail();
   const {
     peekIssue,
     rootIssueStore: root,
     issue: { fetchIssue },
     fetchActivities,
-  } = useIssueDetail();
+  } = detail;
+  useLayoutEffect(() => {
+    if (!peekIssue) return;
+    const previous = peekOwners.get(detail);
+    if (previous && previous.scope !== hostScope && previous.selection === peekIssue) {
+      peekOwners.delete(detail);
+      detail.setPeekIssue(undefined);
+      return;
+    }
+    const owner = { scope: hostScope, selection: peekIssue, active: true };
+    peekOwners.set(detail, owner);
+    return () => {
+      owner.active = false;
+      // StrictMode immediately reacquires. A real unmount releases after layout setups;
+      // a different route is rejected synchronously by its next setup above.
+      queueMicrotask(() => {
+        if (peekOwners.get(detail) !== owner || owner.active) return;
+        peekOwners.delete(detail);
+        if (detail.peekIssue === peekIssue) detail.setPeekIssue(undefined);
+      });
+    };
+  }, [detail, peekIssue, hostScope]);
   const issueStoreType = useIssueStoreType();
   const storeType = issueStoreFromProps ?? issueStoreType;
   const { issues } = useIssues(storeType);
@@ -110,18 +141,24 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
   );
 
   return (
-    <IssueView
+    <IssueDetailHost
       workspaceSlug={peekIssue.workspaceSlug}
       projectId={peekIssue.projectId}
       issueId={peekIssue.issueId}
-      isLoading={isLoading}
-      error={error instanceof SessionChangedError ? undefined : error}
-      retry={() => mutate()}
-      is_archived={!!peekIssue.isArchived}
-      disabled={!isEditable}
-      embedIssue={embedIssue}
-      embedRemoveCurrentNotification={embedRemoveCurrentNotification}
-      issueOperations={issueOperations}
-    />
+    >
+      <IssueView
+        workspaceSlug={peekIssue.workspaceSlug}
+        projectId={peekIssue.projectId}
+        issueId={peekIssue.issueId}
+        isLoading={isLoading}
+        error={error instanceof SessionChangedError ? undefined : error}
+        retry={() => mutate()}
+        is_archived={!!peekIssue.isArchived}
+        disabled={!isEditable}
+        embedIssue={embedIssue}
+        embedRemoveCurrentNotification={embedRemoveCurrentNotification}
+        issueOperations={issueOperations}
+      />
+    </IssueDetailHost>
   );
 });

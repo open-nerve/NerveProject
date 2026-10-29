@@ -95,10 +95,8 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
   // store hooks
   const {
     issue: { getIssueById },
-    setPeekIssue,
     removeIssue,
     archiveIssue,
-    getIsIssuePeeked,
   } = useIssueDetail();
   const { isMobile } = usePlatformOS();
   const { getProjectIdentifierById } = useProject();
@@ -133,28 +131,14 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
   };
 
   const handleDeleteIssue = async () => {
-    try {
-      const deleteIssue = issueDetails?.archived_at ? removeArchivedIssue : removeIssue;
-
-      return deleteIssue(workspaceSlug, projectId, issueId).then(() => {
-        setPeekIssue(undefined);
-        return;
-      });
-    } catch (_error) {
-      setToast({
-        title: t("toast.error"),
-        type: TOAST_TYPE.ERROR,
-        message: t("entity.delete.failed", { entity: t("issue.label", { count: 1 }) }),
-      });
-    }
+    const deleteIssue = issueDetails?.archived_at ? removeArchivedIssue : removeIssue;
+    await deleteIssue(workspaceSlug, projectId, issueId);
+    removeRoutePeekId();
   };
 
   const handleArchiveIssue = async () => {
     await archiveIssue(workspaceSlug, projectId, issueId);
-    // check and remove if issue is peeked
-    if (getIsIssuePeeked(issueId)) {
-      removeRoutePeekId();
-    }
+    removeRoutePeekId();
   };
 
   return (
@@ -182,9 +166,9 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
               onChange={(val: any) => setPeekMode(val)}
               customButton={
                 <Tooltip label={t("common.toggle_peek_view_layout")} disabled={isMobile}>
-                  <button type="button" className="">
+                  <span>
                     <currentMode.icon className="h-4 w-4 text-tertiary hover:text-secondary" />
-                  </button>
+                  </span>
                 </Tooltip>
               }
             >

@@ -11,23 +11,26 @@ export function useDetailScope(
 ): () => () => boolean {
   const { rootIssueStore: root } = useIssueDetail();
   const owner = useMemo(
-    () => ({ active: false, root, workspaceSlug, project, issue, member }),
+    () => ({ active: false, epoch: 0, root, workspaceSlug, project, issue, member }),
     [root, workspaceSlug, project, issue, member]
   );
   useLayoutEffect(() => {
     owner.active = true;
+    owner.epoch += 1;
     return () => {
       owner.active = false;
     };
   }, [owner]);
   return useCallback(() => {
     if (!owner.active || !root.active) return () => false;
+    const epoch = owner.epoch;
     const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
     const projects = project ? [project] : [];
     const identity = root.permissionReads.identity(workspace?.id, projects, member);
     // A successful delete invalidates reads itself; that is not a change of the UI's permission or host.
     return () =>
       owner.active &&
+      owner.epoch === epoch &&
       root.active &&
       !!workspace &&
       root.permissionReads.identity(workspace.id, projects, member) === identity &&

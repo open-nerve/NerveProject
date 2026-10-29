@@ -14,7 +14,7 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { CustomMenu } from "@nerve/ui";
 import { calculateTimeAgo, copyTextToClipboard } from "@nerve/utils";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import type { TLinkOperations } from "./types";
 
@@ -31,10 +31,9 @@ export const IssueLinkItem = observer(function IssueLinkItem(props: TIssueLinkIt
   // hooks
   const { t } = useTranslation();
   const {
-    toggleIssueLinkModal: toggleIssueLinkModalStore,
-    setIssueLinkData,
     link: { getLinkById },
   } = useIssueDetail();
+  const { setIssueLinkData, toggleIssueLinkModal: toggleIssueLinkModalStore } = useIssueDetailModals();
   const { isMobile } = usePlatformOS();
   const linkDetail = getLinkById(issueId, linkId);
   if (!linkDetail) return <></>;

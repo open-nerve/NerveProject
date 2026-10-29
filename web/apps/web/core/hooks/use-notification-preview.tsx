@@ -4,15 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import type { IWorkItemPeekOverview } from "@nerve/types";
 import { IssuePeekOverview } from "@/components/issues/peek-overview";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import type { TPeekIssue } from "@/store/issue/issue-details/root.store";
 
 export type TNotificationPreview = {
   isWorkItem: boolean;
-  PeekOverviewComponent: React.ComponentType<IWorkItemPeekOverview>;
-  setPeekWorkItem: (peekIssue: TPeekIssue | undefined) => void;
+  PeekOverviewComponent: typeof IssuePeekOverview;
 };
 
 /**
@@ -20,11 +17,10 @@ export type TNotificationPreview = {
  * @returns isWorkItem: boolean, peekOverviewComponent: IWorkItemPeekOverview, setPeekWorkItem
  */
 export const useNotificationPreview = (): TNotificationPreview => {
-  const { peekIssue, setPeekIssue } = useIssueDetail();
+  const { peekIssue } = useIssueDetail();
 
   return {
     isWorkItem: Boolean(peekIssue),
     PeekOverviewComponent: IssuePeekOverview,
-    setPeekWorkItem: setPeekIssue,
   };
 };

@@ -13,7 +13,7 @@ import type { ISearchIssueResponse, TWorkItemWidgets } from "@nerve/types";
 // components
 import { ExistingIssuesListModal } from "@/components/core/modals/existing-issues-list-modal";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 // local imports
 import { IssueLinkCreateUpdateModal } from "../issue-detail/links/create-update-link-modal";
 // helpers
@@ -32,23 +32,23 @@ type Props = {
 export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals(props: Props) {
   const { workspaceSlug, projectId, issueId, hideWidgets } = props;
   // store hooks
+  const { createRelation } = useIssueDetail();
   const {
-    isIssueLinkModalOpen,
-    toggleIssueLinkModal: toggleIssueLinkModalStore,
-    setIssueLinkData,
-    isCreateIssueModalOpen,
-    toggleCreateIssueModal,
-    isSubIssuesModalOpen,
-    toggleSubIssuesModal,
     relationKey,
-    isRelationModalOpen,
-    setRelationKey,
-    setLastWidgetAction,
-    toggleRelationModal,
-    createRelation,
     issueCrudOperationState,
+    isCreateIssueModalOpen,
+    isIssueLinkModalOpen,
+    isRelationModalOpen,
+    isSubIssuesModalOpen,
+    setIssueLinkData,
+    toggleCreateIssueModal,
+    toggleIssueLinkModal: toggleIssueLinkModalStore,
+    toggleRelationModal,
+    toggleSubIssuesModal,
+    setRelationKey,
     setIssueCrudOperationState,
-  } = useIssueDetail();
+    setLastWidgetAction,
+  } = useIssueDetailModals();
 
   // helper hooks
   const subIssueOperations = useSubIssueOperations(workspaceSlug, projectId, issueId);

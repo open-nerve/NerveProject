@@ -14,7 +14,8 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TIssueOperations } from "@/components/issues/issue-detail";
 import { IssueParentSelect } from "@/components/issues/issue-detail/parent-select";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useDetailScope } from "./issue-detail-widgets/use-detail-scope";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 
 type TIssueParentSelect = {
   className?: string;
@@ -28,26 +29,30 @@ type TIssueParentSelect = {
 export const IssueParentSelectRoot = observer(function IssueParentSelectRoot(props: TIssueParentSelect) {
   const { issueId, issueOperations, projectId, workspaceSlug } = props;
   const { t } = useTranslation();
+  const capture = useDetailScope(workspaceSlug, projectId, issueId);
   // store hooks
   const {
     issue: { getIssueById },
   } = useIssueDetail();
   const {
-    toggleParentIssueModal,
     removeSubIssue,
     subIssues: { setSubIssueHelpers, fetchSubIssues },
   } = useIssueDetail();
+  const { toggleParentIssueModal } = useIssueDetailModals();
 
   // derived values
   const issue = getIssueById(issueId);
   const parentIssue = issue?.parent_id ? getIssueById(issue.parent_id) : undefined;
 
   const handleParentIssue = async (_issueId: string | null = null) => {
+    const current = capture();
     try {
       await issueOperations.update(workspaceSlug, projectId, issueId, { parent_id: _issueId });
+      if (!current()) return;
       await issueOperations.fetch(workspaceSlug, projectId, issueId, false);
+      if (!current()) return;
       if (_issueId) await fetchSubIssues(workspaceSlug, projectId, _issueId);
-      toggleParentIssueModal(null);
+      if (current()) toggleParentIssueModal(null);
     } catch (_error) {
       console.error("something went wrong while fetching the issue");
     }

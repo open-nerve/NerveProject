@@ -20,7 +20,7 @@ import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 // nerve ui
 import { ModalCore } from "@nerve/ui";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 // types
 import type { TLinkOperations } from "./types";
 
@@ -62,7 +62,8 @@ export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdat
     defaultValues,
   });
   // store hooks
-  const { issueLinkData, setIssueLinkData } = useIssueDetail();
+  const { setIssueLinkData } = useIssueDetailModals();
+  const { issueLinkData } = useIssueDetailModals();
   const preloadedData = issueLinkData?.issue_id === issueId ? issueLinkData : null;
   const capture = useDetailScope(workspaceSlug, projectId, `${issueId}:${isModalOpen}:${preloadedData?.id ?? "new"}`);
   const sending = useRef(false);
