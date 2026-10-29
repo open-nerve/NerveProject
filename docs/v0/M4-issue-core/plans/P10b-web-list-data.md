@@ -212,6 +212,8 @@ make e2e
 
 ## Task 11：拖放与串行请求体计算（约400–750行）
 
+**R30 / fix1：** unknown 关系筛选仅使用捕获来源目标 group/cell 的有效非 stale 服务端 Row，updatedAt 与当前可见 canonical 纳秒版本相等，且无错误/核实中；不改全局 membership、不加缓存。无证据或失效候选拒绝并等待有效重读后重试；明确 false/删除继续排除，真实空列仍按65535。补 mention/subscriber/member subscribed 正例及 stale/版本不符/无来源行/权限失效边界，补空列确认保留与退役旧 rows/total/canonical 不变。
+
 **Files：** C/store/issue/root.store.ts、helpers/base-issues.store.ts及实际动作门面；C/hooks/use-group-dragndrop.ts、use-issues-actions.tsx；C/components/issues/issue-layouts/utils.tsx、calendar/{utils.ts,base-calendar-root.tsx}；新C/store/issue/issue-drag.test.ts及实际消费者回归。核对issue_kanban_view.store.ts、issue_calendar_view.store.ts既有显示/拖动守卫，仅按实际接线需要修改；不存在的kanban/utils.ts不创建兼容文件。
 **Interfaces：** spec§2.9 updateIssue(id,makeBody,drop)；根drag队列→id队列单向嵌套；Drop只记neighbor IDs和组位置。
 

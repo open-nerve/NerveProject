@@ -5,6 +5,7 @@ import type { TLoader } from "@nerve/types";
 import { pagePartKey, type Group } from "@/lib/paged-groups";
 import type { IssueListOptions } from "@/lib/issue-filters";
 import { issueMembership } from "@/lib/issue-membership";
+import { compareIssueTime } from "@/lib/issue-order";
 import type { IssueDrop, IIssueRootStore } from "../root.store";
 import type { IBaseIssueFilterStore } from "./issue-filter-helper.store";
 import { IssueListBinding, type IssueListScope } from "./issue-list-binding";
@@ -77,19 +78,39 @@ export class BaseIssuesStore<TFilter extends IBaseIssueFilterStore = IBaseIssueF
     await this.rootIssueStore.updateIssue(
       id,
       (held) => {
+        if (!binding.value) throw new Error("Drop source requires a current list read");
         const body = makeBody(held);
         // Calendar uses its date query; a day move does not reorder the issue.
         if (binding.scope.query.group_by === "target_date") return body;
+        const group = binding.group(location.group, location.subgroup);
         const legal = (neighborID: string | undefined) => {
-          const neighbor =
-            neighborID && neighborID !== id ? this.rootIssueStore.issues.getIssueById(neighborID) : undefined;
+          if (!neighborID || neighborID === id) return undefined;
+          const neighbor = this.rootIssueStore.issues.getIssueById(neighborID);
+          if (!neighbor) {
+            // A hidden/unverified entity is not evidence of an empty destination; a tombstone is.
+            if (this.rootIssueStore.issues.held(neighborID)) throw new Error("Drop neighbor requires verification");
+            return undefined;
+          }
           const part =
             location.subgroup === undefined
               ? { kind: "group" as const, group: location.group }
               : { kind: "cell" as const, group: location.group, subgroup: location.subgroup };
-          return neighbor && issueMembership(neighbor, binding.context, part) === true ? neighbor : undefined;
+          const membership = issueMembership(neighbor, binding.context, part);
+          if (membership !== undefined) return membership ? neighbor : undefined;
+          // Unknown relations cannot be synthesized from Issue fields. Fresh rows under this immutable
+          // query are server evidence: uncertain confirmations retain stale rows instead of inventing them.
+          const row = group?.rows.find((item) => item.id === neighborID);
+          if (
+            !group?.stale &&
+            !binding.error &&
+            !binding.verifying &&
+            row &&
+            compareIssueTime(row.updatedAt, neighbor.updated_at) === 0
+          )
+            return neighbor;
+          throw new Error("Drop neighbor requires a current list read");
         };
-        const rows = binding.group(location.group, location.subgroup)?.rows ?? [];
+        const rows = group?.rows ?? [];
         const neighbors = rows
           .map((row) => legal(row.id))
           .filter((issue): issue is Issue => !!issue)

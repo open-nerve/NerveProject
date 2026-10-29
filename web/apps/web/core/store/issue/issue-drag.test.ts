@@ -1,11 +1,12 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { issueDetailOf, issueOf, issueStoreTab, requestedIssue } from "./fake-issues";
-import { json, problem } from "@/lib/auth/fake-nerve";
+import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { handleDragDrop } from "@/components/issues/issue-layouts/calendar/utils";
 import { IssueListBinding } from "./helpers/issue-list-binding";
 import { runInAction } from "mobx";
+import { toJS } from "mobx";
 import { issuePageOf } from "./fake-issues";
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
@@ -49,6 +50,11 @@ it.each([false, true])("secondDropUsesFirstConfirmedNeighbors; predecessor rejec
 });
 it("waitingDropDoesNotCrossSession", async () => {
   const root = tab.app.issue;
+  const binding = await loadBinding(10, ["x", "y"]);
+  const rows = structuredClone(binding.group()!.rows);
+  const total = binding.value!.total;
+  const canonical = structuredClone(toJS(root.issues.held("x")));
+  tab.nerve.calls.length = 0;
   const first = await requestedIssue(
     tab.nerve,
     () => root.updateIssue("x", () => ({ sort_order: 50 }), { group: "" }),
@@ -56,10 +62,13 @@ it("waitingDropDoesNotCrossSession", async () => {
   );
   const waiting = track(root.updateIssue("y", () => ({ sort_order: 60 }), { group: "" }));
   root.retire();
-  first.call.answer(json(200, issueDetailOf("x")));
+  first.call.answer(json(200, { ...issueDetailOf("x"), sort_order: 50, name: "late answer" }));
   await until(() => waiting.settled, "retired queue");
   expect(waiting.error).toBeDefined();
   expect(tab.nerve.calls).toHaveLength(1);
+  expect(binding.group()!.rows).toEqual(rows);
+  expect(binding.value!.total).toBe(total);
+  expect(root.issues.held("x")).toEqual(canonical);
 });
 it("calendar sends generated update fields and a destination drop", async () => {
   const update = vi.fn().mockResolvedValue(undefined);
@@ -270,3 +279,149 @@ it.each(["labels", "assignees"] as const)(
     await update.promise;
   }
 );
+
+async function relationshipList(kind: "mention" | "subscriber" | "subscribed", includeNeighbor = true) {
+  const root = tab.app.issue;
+  root.acceptListIssues([{ ...issueOf("x"), sort_order: 2000 }], root.captureRead());
+  const binding = new IssueListBinding(
+    root,
+    kind === "subscribed"
+      ? {
+          scope: "member",
+          workspaceSlug: "ws",
+          workspaceID: "id-ws",
+          userID: "actor",
+          query: { relation: "subscribed", order_by: "sort_order", group_by: "priority" },
+        }
+      : {
+          scope: "project",
+          workspaceSlug: "ws",
+          workspaceID: "id-ws",
+          projectID: "A",
+          query: {
+            order_by: "sort_order",
+            group_by: "priority",
+            ...(kind === "mention" ? { mention_id: ["actor"] } : { subscriber_id: ["actor"] }),
+          },
+        }
+  );
+  const read = await requestedIssue(tab.nerve, () => binding.fetchFirst(), [
+    "GET",
+    kind === "subscribed" ? "/api/v0/workspaces/ws/members/actor/issues" : "/api/v0/projects/A/issues",
+  ]);
+  read.call.answer(
+    json(200, {
+      total: includeNeighbor ? 2 : 1,
+      groups: [
+        {
+          key: "none",
+          total: includeNeighbor ? 2 : 1,
+          data: [...(includeNeighbor ? [issueOf("neighbor")] : []), { ...issueOf("x"), sort_order: 2000 }],
+          next_cursor: null,
+        },
+      ],
+    })
+  );
+  await read.promise;
+  const facade = kind === "subscribed" ? root.profileIssues : root.projectIssues;
+  runInAction(() => {
+    facade.currentList = binding;
+  });
+  return { binding, facade };
+}
+it.each(["mention", "subscriber", "subscribed"] as const)(
+  "fix1 %s server-proven neighbor retains real drop position",
+  async (kind) => {
+    const { binding, facade } = await relationshipList(kind);
+    expect(binding.group("none")!.rows.map((row) => row.id)).toEqual(["neighbor", "x"]);
+    expect(binding.group("none")!.stale).toBe(false);
+    const move = await requestedIssue(
+      tab.nerve,
+      () => facade.dropIssue("ws", "A", "x", () => ({}), { group: "none", beforeId: "neighbor" }),
+      ["PATCH", "/api/v0/issues/x"]
+    );
+    const body = move.call.body;
+    move.call.answer(json(200, { ...issueDetailOf("x"), sort_order: -64535 }));
+    await move.promise;
+    expect(body).toEqual({ sort_order: -64535 });
+  }
+);
+it.each(["stale", "version", "absent-row", "permission"] as const)(
+  "fix1 insufficient %s row evidence refuses instead of treating destination as empty",
+  async (kind) => {
+    const { binding, facade } = await relationshipList("mention", kind !== "absent-row");
+    const root = tab.app.issue;
+    if (kind === "stale") binding.markMembershipStale(issueOf("neighbor"), issueOf("neighbor"));
+    if (kind === "version")
+      root.acceptListIssues(
+        [{ ...issueOf("neighbor"), updated_at: "2026-10-28T00:00:00.000000001Z" }],
+        root.captureRead()
+      );
+    if (kind === "version") expect(binding.group("none")!.stale).toBe(false);
+    if (kind === "permission") binding.invalidatePermission();
+    const at = tab.nerve.calls.length;
+    const move = track(facade.dropIssue("ws", "A", "x", () => ({}), { group: "none", beforeId: "neighbor" }));
+    await until(() => move.settled || tab.nerve.calls.length > at, "evidence decision");
+    // Release a faulty PATCH so a red assertion leaves no hanging operation.
+    if (tab.nerve.calls.length > at) {
+      tab.nerve.calls.at(-1)!.answer(json(200, issueDetailOf("x")));
+      await until(() => move.settled, "faulty write");
+    }
+    expect(tab.nerve.calls).toHaveLength(at);
+    expect(move.error).toBeDefined();
+  }
+);
+it("fix1 known different group cannot reuse old server row", async () => {
+  const { facade } = await relationshipList("mention");
+  const root = tab.app.issue;
+  root.acceptListIssues(
+    [{ ...issueOf("neighbor"), priority: "high", updated_at: "2026-10-29T00:00:00Z" }],
+    root.captureRead()
+  );
+  const move = await requestedIssue(
+    tab.nerve,
+    () => facade.dropIssue("ws", "A", "x", () => ({}), { group: "none", beforeId: "neighbor" }),
+    ["PATCH", "/api/v0/issues/x"]
+  );
+  expect(move.call.body).toEqual({ sort_order: 65535 });
+  move.call.answer(json(200, issueDetailOf("x")));
+  await move.promise;
+});
+it("empty column retains successfully confirmed drop", async () => {
+  const binding = await loadBinding(1, []);
+  const root = tab.app.issue;
+  runInAction(() => {
+    root.projectIssues.currentList = binding;
+  });
+  const move = await requestedIssue(
+    tab.nerve,
+    () => root.projectIssues.dropIssue("ws", "A", "x", () => ({}), { group: "" }),
+    ["PATCH", "/api/v0/issues/x"]
+  );
+  expect(move.call.body).toEqual({ sort_order: 65535 });
+  expect(binding.group()!.rows).toEqual([]);
+  move.call.answer(json(200, { ...issueDetailOf("x"), sort_order: 65535 }));
+  await move.promise;
+  expect(binding.group()!.rows.map((row) => row.id)).toEqual(["x"]);
+  expect(root.issues.getIssueById("x")!.sort_order).toBe(65535);
+});
+
+it("fix1 deleted neighbor cannot reuse old relationship row", async () => {
+  const { facade } = await relationshipList("mention");
+  const root = tab.app.issue;
+  const removal = await requestedIssue(tab.nerve, () => root.deleteIssue("neighbor", root.scope("ws", "A")), [
+    "DELETE",
+    "/api/v0/issues/neighbor",
+  ]);
+  removal.call.answer(noContent());
+  await removal.promise;
+  expect(root.issues.held("neighbor")).toBeNull();
+  const move = await requestedIssue(
+    tab.nerve,
+    () => facade.dropIssue("ws", "A", "x", () => ({}), { group: "none", beforeId: "neighbor" }),
+    ["PATCH", "/api/v0/issues/x"]
+  );
+  expect(move.call.body).toEqual({ sort_order: 65535 });
+  move.call.answer(json(200, issueDetailOf("x")));
+  await move.promise;
+});

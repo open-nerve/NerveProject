@@ -233,6 +233,8 @@ IssueRootStore的原autorun副本改为rootStore/router/user目录计算属性�
 
 拖放同时捕获来源列表的不可变绑定身份；排队期间切页面或筛选不改用门面的新currentList计算邻居。根向该来源绑定传递Drop落点和扩窗语义，向其它已取副本传递同一确认修改而不附带外来落点；其它副本按自身query、组与窗口正常收确认，不能仅凭相同组字符串在不同query制造组或扩窗。该归属只在根协调层保存，纯PagedGroups模型不依赖store，也不新增实体缓存。合法拖动组字段按生成IssueUpdate词汇构造，priority的none与标签/负责人空数组分别处理。
 
+**R30 / T11 fix1：未知关系邻居的来源行证据。** mention/subscriber 筛选与 member subscribed 等关系不在 Issue 实体中，`issueMembership=unknown` 不等于邻居不属。只有捕获来源绑定的目标 group/cell 当前有效、非 stale 的服务端行，且其 updatedAt 与当前可见 canonical 的 updated_at 经既有纳秒比较相等、无绑定错误或核实中，才能证明该 unknown 邻居仍可用于排序。复用已有 Row 证据，不建立实体/关系缓存，不改变纯 membership 的 unknown 语义。明确不属、删除和权限不可见仍排除；候选存在但来源/版本/权限证据失效时拒绝本次拖放，等待有效重读后再操作，不静默假装空列。真正有效空列仍使用原 65535 默认值，不能将“无候选”与“未经证明的 unknown 候选”混同。
+
 目标入口 `updateIssue(id, makeBody: (held:Issue)=>IssueUpdate, drop?, operationScope?: IssueWriteScope): Promise<IssueDetail>`，拖放传makeBody闭包，不提前构造body；create/delete/archive/unarchive同根协调。body逐字段构造，禁止spread Issue带id/project_id。请求中仅UI pending/临时拖放呈现变化，canonical/PagedGroups不能变；拒绝交回且UI回原处。成功确认一次，从该操作pending取实际发出前冻结的beforeSnapshot并核对期间读证据→按已确认删除时先失效读代际→写各列表→写canonical，pending在对应请求finally结束，队列拒绝后继续。
 
 每修改表覆盖全部已取project/archived/profile副本、未取副本、pending、失败、SessionChanged、晚到读取与重取。跟进toast/导航必须followInSession；本段改到的组件签名跟进归本段，完整详情/草稿新交互仍留后段。
