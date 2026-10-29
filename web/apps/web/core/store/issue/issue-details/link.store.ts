@@ -106,10 +106,13 @@ export class IssueLinkStore implements IIssueLinkStore {
   createLink = async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssueLink>) => {
     const response = await this.issueService.createIssueLink(workspaceSlug, projectId, issueId, data);
     runInAction(() => {
-      (this.links[issueId] ??= []).push(response.id);
+      set(this.links, issueId, [...(this.links[issueId] ?? []), response.id]);
       set(this.linkMap, response.id, response);
     });
-    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(issueId);
+    const confirmed = await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(issueId, {
+      afterWrite: true,
+    });
+    if (!confirmed) return response;
     // fetching activity
     this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
     return response;
@@ -156,7 +159,10 @@ export class IssueLinkStore implements IIssueLinkStore {
         delete this.linkMap[linkId];
       });
 
-    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(issueId);
+    const confirmed = await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(issueId, {
+      afterWrite: true,
+    });
+    if (!confirmed) return;
     // fetching activity
     this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
   };

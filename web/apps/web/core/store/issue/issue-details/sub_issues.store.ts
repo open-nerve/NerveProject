@@ -196,7 +196,7 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     });
 
     root.acceptListIssues(subIssues, token);
-    await root.issues.refreshAuthoritative(parentIssueId);
+    await root.issues.refreshAuthoritative(parentIssueId, { afterWrite: true });
 
     return;
   };
@@ -287,7 +287,7 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     runInAction(() => {
       pull(this.subIssues[parentIssueId], issueId);
     });
-    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(parentIssueId);
+    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(parentIssueId, { afterWrite: true });
     return;
   };
 
@@ -314,7 +314,7 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     runInAction(() => {
       pull(this.subIssues[parentIssueId], issueId);
     });
-    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(parentIssueId);
+    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(parentIssueId, { afterWrite: true });
     return;
   };
 

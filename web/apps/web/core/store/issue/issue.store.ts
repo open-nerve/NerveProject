@@ -109,7 +109,14 @@ export class IssueStore {
     const issue = this.getIssueById(issueId);
     return issue && "description_html" in issue ? issue : undefined;
   };
-  refreshAuthoritative = (issueId: string): Promise<IssueDetail | undefined> => this.root.verification.refresh(issueId);
+  refreshAuthoritative = async (
+    issueId: string,
+    options?: { afterWrite?: boolean }
+  ): Promise<IssueDetail | undefined> => {
+    const answer = await this.root.verification.refresh(issueId, true, options?.afterWrite);
+    if (options?.afterWrite) this.root.assertActive();
+    return answer;
+  };
   addIssueIdentifier = (identifier: string, id: string): void => {
     if (identifier && id)
       runInAction(() => {

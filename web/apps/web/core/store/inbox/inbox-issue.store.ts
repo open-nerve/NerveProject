@@ -103,7 +103,7 @@ export class InboxIssueStore implements IInboxIssueStore {
     }
     // This write has succeeded. A failed authoritative read must not roll back its status or be swallowed.
     if (status === EInboxIssueStatus.ACCEPTED && this.issue.id)
-      await this.store.issue.issues.refreshAuthoritative(this.issue.id);
+      await this.store.issue.issues.refreshAuthoritative(this.issue.id, { afterWrite: true });
   };
 
   updateInboxIssueDuplicateTo = async (issueId: string) => {

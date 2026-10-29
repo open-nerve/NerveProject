@@ -236,6 +236,8 @@ make e2e
 - [ ] B-L6时序补例 `preVerificationListCannotClearUnverifiedState`：先发旧list(serial=7)，再发verify get(serial=8)，verify在外又发一份list(serial=9)；get404落定设置freshnessFloor=9，随后两旧list携相同updated_at返回，均不能恢复可靠活值/清核实或相关stale。之后新发权威get/list(serial=10)返回同版本完整Issue才可恢复；后发空页只收敛列表不造墓碑。M51让captureRead不逐请求递增或仅核版本/删除token必须红，保留普通404不推进删除水位断言。
 - [ ] pending计数不被前一finally清掉；B-L3旧详情共享缓存边界也经本表核拒绝/回读真实版本。
 - [ ] B-L3补充真实交错：写成功前已有同id权威GET在外，链接/子项等旧消费者成功后要求新权威证据；旧GET晚到不能冒充写后的最新计数。覆盖无已取列表及拒绝/退役，并保留纯并发读取同身份去重对照；沿现有token/根协调局部处理，不用每调用无条件新GET绕过。
+- [ ] R31：`refreshAuthoritative(issueId, options?: { afterWrite?: boolean })` 默认保留普通读取的同权限身份在途去重；链接创建/删除、子项创建/移除/删除和收集箱接受等成功写边界显式传 `afterWrite:true`，普通 fetchSubIssues 后的父项回读不传。写后调用取当时 readSerial 为最低证据 floor；只可复用实际发送 serial>floor 的请求，或确实尚未发送且随后才 capture 新 token 的请求。它不推进权限或删除水位。无已取列表时也立即保持未证实，直到新有效完整应答。旧请求在成功、404、403/500、补读和刷新前均核对仍拥有本次在途请求身份，不能污染更晚取证的实体、核实状态或错误，即使较新请求已成功清记录或已失败。每次成功写后的新取证有界；链接消费者在回读失效或未证实（undefined）时停止活动跟进并保留资源写成功；退役仍按 SessionChanged 结束。业务写不重发，不扩展 HTTP、第二缓存或通用协调框架。
+- [ ] R32：`createLink` 在原 `runInAction` 内一次发布包含已有 IDs 和新 ID 的数组，避免未加载列表时对 `(links[id] ??= [])` 赋值前的普通数组追加而丢失可观察 ID。未加载与已加载列表、连续创建顺序、业务响应/linkMap 和拒绝不追加均有直接行为回归；不改资源 API 或提前迁移 P11 详情协议。
 - [ ] 红/绿：`pnpm --filter web exec vitest run core/store/issue/issue-changes.test.ts core/store/issue/issue.store.test.ts core/store/issue/issue-drag.test.ts`。
 - [ ] M37只改当前list、M38提前乐观写、M39重复confirm、M40漏SessionChanged，各红；G、F，提交 `feat(M4/P10b): 将确认修改同步到会话内每份列表`。
 

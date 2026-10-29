@@ -20,7 +20,7 @@ export type VerificationRound = {
   ids: Map<string, VerificationRequest>;
   scopes: Set<IssueListBinding>;
 };
-type VerificationRequest = { identity: string; promise: Promise<IssueDetail | undefined> };
+type VerificationRequest = { identity: string; token?: IssueReadToken; promise: Promise<IssueDetail | undefined> };
 
 /** Root-owned metadata only. All entity evidence stays in IssueStore. */
 export class IssueVerification {
@@ -131,14 +131,14 @@ export class IssueVerification {
       this.end(round);
     }
   }
-  async refresh(id: string, retryStaleDetail = true): Promise<IssueDetail | undefined> {
+  async refresh(id: string, retryStaleDetail = true, afterWrite = false): Promise<IssueDetail | undefined> {
     this.root.assertActive();
     const lists = this.affected.get(id) ?? new Set<IssueListBinding>();
     for (const list of this.root.listsForIssue(id)) lists.add(list);
     this.affected.set(id, lists);
     const round = this.begin(true);
     try {
-      return await this.request(id, round, true, retryStaleDetail);
+      return await this.request(id, round, true, retryStaleDetail, afterWrite ? this.root.readSerial : undefined);
     } finally {
       this.end(round);
     }
@@ -151,12 +151,28 @@ export class IssueVerification {
     id: string,
     round: VerificationRound,
     explicit: boolean,
-    retryStaleDetail = true
+    retryStaleDetail = true,
+    minimumSerial?: number
   ): Promise<IssueDetail | undefined> {
     const held = this.root.issues.held(id);
     if (held && !this.root.canSeeIssue(held)) return Promise.resolve(undefined);
     const identity = this.identity(id);
-    const existing = [this.inFlight.get(id), round.ids.get(id)].find((request) => request?.identity === identity);
+    // A completed resource write needs evidence sent after that write, even without list consumers.
+    if (minimumSerial !== undefined)
+      runInAction(() =>
+        this.records.set(id, {
+          id,
+          round: round.id,
+          status: "pending",
+          freshnessFloor: minimumSerial,
+          identity,
+        })
+      );
+    const existing = [this.inFlight.get(id), round.ids.get(id)].find(
+      (request) =>
+        request?.identity === identity &&
+        (minimumSerial === undefined || !request.token || request.token.serial > minimumSerial)
+    );
     if (existing) {
       // A genuinely pending request can span rounds; its completion still dedupes this joining round.
       round.ids.set(id, existing);
@@ -178,7 +194,7 @@ export class IssueVerification {
       );
     const request: VerificationRequest = { identity, promise: undefined as never };
     const job = Promise.resolve()
-      .then(() => this.read(id, round, retryStaleDetail, identity))
+      .then(() => this.read(id, round, retryStaleDetail, request))
       .finally(() => {
         if (this.inFlight.get(id) === request) runInAction(() => this.inFlight.delete(id));
       });
@@ -191,9 +207,12 @@ export class IssueVerification {
     id: string,
     round: VerificationRound,
     retryStaleDetail: boolean,
-    identity: string
+    request: VerificationRequest
   ): Promise<IssueDetail | undefined> {
     this.root.assertActive();
+    const { identity } = request;
+    const ownsRequest = () => this.inFlight.get(id) === request;
+    if (!ownsRequest()) return undefined;
     if (this.identity(id) !== identity) return undefined;
     const held = this.root.issues.held(id);
     if (held && !this.root.canSeeIssue(held)) return undefined;
@@ -209,9 +228,10 @@ export class IssueVerification {
     }
     const projects = held ? [held.project_id] : [];
     const token = this.root.captureRead();
+    request.token = token;
     const lists = () => [...(this.affected.get(id) ?? [])];
     for (const list of lists()) list.markVerificationStale(id);
-    const current = () => this.root.isReadCurrent(token, projects, held?.workspace_id);
+    const current = () => ownsRequest() && this.root.isReadCurrent(token, projects, held?.workspace_id);
     let answer: IssueDetail;
     try {
       answer = await this.root.api.get(id);
@@ -230,30 +250,34 @@ export class IssueVerification {
       );
       for (const list of lists()) list.markVerificationStale(id, missing ? undefined : error);
       if (missing) {
-        await this.refreshScopes(lists(), round);
+        await this.refreshScopes(lists(), round, current);
         return undefined;
       }
       throw error;
     }
-    if (!this.root.isReadCurrent(token, [answer.project_id], answer.workspace_id)) return undefined;
+    if (!ownsRequest() || !this.root.isReadCurrent(token, [answer.project_id], answer.workspace_id)) return undefined;
     this.root.issues.acceptRead(answer, token);
     const uncertain = this.records.get(id);
     if (uncertain) {
       const latest = this.root.issues.held(id);
       if (retryStaleDetail && latest && !("description_html" in latest) && this.root.canSeeIssue(latest))
-        return this.read(id, round, false, identity);
+        return this.read(id, round, false, request);
       const error = new Error("The issue detail was superseded; retry the read");
       runInAction(() => this.records.set(id, { ...uncertain, status: "unconfirmed", error }));
       for (const list of lists()) list.markVerificationStale(id, error);
       return undefined;
     }
-    await this.refreshScopes(lists(), round);
-    return this.root.issues.getIssueDetailById(id);
+    await this.refreshScopes(lists(), round, current);
+    return current() ? this.root.issues.getIssueDetailById(id) : undefined;
   }
-  private async refreshScopes(lists: IssueListBinding[], round: VerificationRound): Promise<void> {
+  private async refreshScopes(
+    lists: IssueListBinding[],
+    round: VerificationRound,
+    current: () => boolean
+  ): Promise<void> {
     await Promise.all(
       lists.map(async (list) => {
-        if (!this.root.active || !list.isVisible || round.scopes.has(list)) return;
+        if (!current() || !list.isVisible || round.scopes.has(list)) return;
         round.scopes.add(list);
         await list.refreshVerification(round);
       })
