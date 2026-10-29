@@ -755,7 +755,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - **整体第一页没有回答的组、格是空的、载入完的**（部分应答未回答的组保持当前值）：服务端只返回非空的组（3.16），所以不在应答里的组就是 `{total: 0, rows: [], nextCursor: null}`，修改需要时按这个样子建出它（拖进空列、空泳道的第一张卡片）。
   - 不分组的列表是一个键为空的组；泳道的总数是 `subgroupTotals`（3.16 的 `subgroup_totals`），不再把一行的格加起来。
 - **一个工作项只有一份**（按 id 的 `ReconciledByKey`，详情的读取和列表的应答都写它）：
-  - 两个版本取**服务端的 `updated_at` 大的**，相等时取后应答的。第二稿只比 `answeredAt`，那是写入的顺序，不是服务端的顺序：在一次修改之前读、在它之后才回答的看板的重取会把修改之前的行写进那一份。Plane 的 `addIssue` 用任何应答覆盖（`store/issue/issue.store.ts:61-72`）。
+  - 同一有效权限身份内，两个版本取**服务端的 `updated_at` 大的**，相等时取后应答的。权限身份失效后的旧非删除写答仍返回业务成功，但不传播旧字段至恢复后的当前实体或列表；有效新身份的读取可以替换缺当前证明的旧持有值，且不继承其旧描述（P10B-S1/R28）。成功删除墓碑仍优先。第二稿只比 `answeredAt`，那是写入的顺序，不是服务端的顺序：在一次修改之前读、在它之后才回答的看板的重取会把修改之前的行写进那一份。Plane 的 `addIssue` 用任何应答覆盖（`store/issue/issue.store.ts:61-72`）。
   - `description_html` 只由 `IssueDetail` 的应答写；列表的行（`Issue`，没有描述）只改别的字段，留着那一份的描述（详情、浮层的编辑器读它）。较旧 Detail 也不能首次补描述到较新 Issue，只安排一次最新详情补取；失败保留可重试状态，不无限重试。
   - P10b/T6 同时收口尚留 P11 的详情、子工作项、链接、关联等调用者：完整实体应答经统一接收，partial 片段、计数算术和直接写 issuesMap 改为操作成功后的失效/权威读取，计数和 updated_at 来自服务器；issuesMap 仅为派生只读视图，不留绕过版本规则的旧 mutator。
   - 一次**读**（取单个、任何一份列表的应答）写进那一份的新版本若改了决定列表成员关系的字段（状态、优先级、标签、负责人、起止日期、父工作项、`archived_at`、`created_by_id`，或某份列表的排序键用到的字段），那是别人的修改，这个会话的列表的总数无从确知：每份含有它的列表里，它旧、新两个版本所属的组标 `stale`。这个会话自己有一个修改在路上（已发出、还没确认）的工作项除外：读到的新版本可能就是这个修改，它确认时按下面的规则摆放，不立即当作别人的修改；该操作保留发出前冻结的 before 及途中读证据，确认时只将与 after 同版本同相关字段的读认作自己的结果；另有版本使旧属无法证明则按不知道标 stale，不因 own-pending 而丢掉第三方变化（聚焦复核 M3；P10b 预检 B-L1）。
@@ -772,6 +772,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 
   - **用户的拖放留在放下的地方**：带 `drop` 的修改在目标组里总是把卡片插入到落点，落点在窗口之外时把这一组的 `boundary` 扩到这张卡片。放在一列的最后（`sort_order` 是最后一张加 65535，`issue-layouts/utils.tsx:479-514`）、放进日历上已满的一天（月视图一天只载入 4 张，`calendar/base-calendar-root.tsx:81-90`）都是这样；之后的页按服务端的游标接着取，按全序、按 id 去重并入，落在它前面的行排到它前面。卡片不会在确认之后消失、只剩计数变了（I6 的"卡片出现在 Done"）。
   - `drop` 的来源列表绑定在入队前固定，排队期间路由或筛选变化不得改用新的 `currentList`。根协调器只向该来源绑定传递落点与额外扩窗；其它已取副本仍收到同一次确认，但按自身query、分组和窗口处理，不因同字符串组键接收外来落点、创建外来组或扩窗。归属只由根层元数据表达，纯分页模型不依赖store或第二缓存。
+  - 提及、关注等无法由实体判断的关系筛选不等于邻居不属。该候选必须有来源目标组/格的有效非stale服务端行，行版本与当前可见实体按纳秒相等，且无绑定错误/核实中，才可参与排序；无证据候选拒绝并等待有效重读，不伪装空列。明确不属/删除排除，真正空列仍用65535；只复用已有Row，不放宽纯成员判断的unknown语义（P10b/T11 R30）。
   - 最外层的 `total`、泳道的 `subgroupTotals` 在直接确认时同样按"修改前在不在、修改后在不在"加减；部分应答的重做只补这次被回答并重置的计数，未回答的共享总数不重复加减。
   - 看板上最常见的一步（I6、总体设计 8.2：把卡片拖进一个没有载入完的列）因此是确知的：不重取整个看板，已载入的页和滚动的位置都留着。
 - **删除的读代际**：deleteIssue 的成功应答是 204，after 为无，不能比较 after.updated_at；已知 id 使用本会话确认删除墓碑，未知子树不猜 id 和精确减数。成功确认先推进本项目读取水位并 invalidate 相关列表在外读，再标 stale/写已知墓碑，随后才允许新水位刷新；所有 list/详情/getIssue 回查在写 canonical、合页或清 stale 前核发出时的会话/项目令牌。多项目 profile 若覆盖失效项目则整页丢弃并保持 stale，不能裁行后复用旧 total；其它独立项目保持。拒绝、SessionChanged、普通404不创建墓碑或推进删除水位，并发再次删除会使中间刷新同样失效。
@@ -2569,7 +2570,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13粗项/16 Task） | **已完成**：[spec](specs/P8-drafts-search.md)、[实际plan](plans/P8-drafts-search.md)、[review](reviews/P8-drafts-search-review.md)、[整体审核](../../reviews/re-07-M4P8整体审核.md)。T1–T16实施、首次整审及文档独评闭环，最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，经授权 `--no-ff` 合并为 `6b9d08d4821f1423c7bb9795557727c206b7880f`；准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1三任务全绿。1,598文件、37,552,117字节及1空目录归档逐hash核验后，本地/远端分支和worktree已清理，清理后再核哈希；完整回执见review§9。M4总体及后续交接仍open |
 | P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
-| P10b `web-list-data` | 列表一侧的数据层（14） | **T1–T10完成任务门禁，方案A及两轮修复复审闭环，接续T11**；c2a58998通过24文件292项、类型与静态检查。合同及证据见[决策记录](reviews/P10b-permission-read-decision.md)、[review§14](reviews/P10b-web-list-data-review.md#14-t10-方案a完成与-t11-接续)。最近完整F与[全绿CI40791948412](https://github.com/open-nerve/NerveProject/actions/runs/40791948412)仅绑定T8的481c30b4；T12–T14、阶段终审、最终CI与产品验收仍开放，不合并 |
+| P10b `web-list-data` | 列表一侧的数据层（14） | **T1–T11完成任务门禁，方案A和拖放独评修复闭环，接续T12**；99d18da9通过8文件236项、类型/lint，准确边界见[review§15](reviews/P10b-web-list-data-review.md#15-t11-拖放完成与-t12-接续)，权限合同见[决策记录](reviews/P10b-permission-read-decision.md)。最近完整F与[全绿CI40791948412](https://github.com/open-nerve/NerveProject/actions/runs/40791948412)仅绑定T8的481c30b4；T12–T14、阶段终审、最终CI与产品验收仍开放，不合并 |
 | P11 `web-detail-data` | 详情一侧的数据层（14） | 未开始 |
 | P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |

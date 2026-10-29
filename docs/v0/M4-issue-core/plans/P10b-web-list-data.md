@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T10任务门禁及独评闭环已完成；[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)已落实。接续T11拖放，任务勾选由主控在独立评审后更新，不重做已完成任务。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T11任务门禁及独评闭环已完成；[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)已落实。接续T12全副本竞态，任务勾选由主控在独立评审后更新，不重做已完成任务。
 
-> **当前状态：** T10最终产品c2a58998通过24文件292项、类型与静态检查，独评及两轮限定复审闭环；历史停点/红例保留于review§13，完成证据见§14。接续T11；T12–T14待办，下一完整F在T12。最近完整F/准确CI仅绑定T8的481c30b4。阶段产品验收未勾，main基线仍为 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，阶段不合并。
+> **当前状态：** T11最终产品99d18da9通过8文件236项、类型/lint，独评及限定复审闭环；整Task与修复的准确验证范围见review§15。T10方案A完成证据见§14。T12接续全副本竞态及完整F；T13–T14待办。最近完整F/准确CI仅绑定T8的481c30b4。阶段产品验收未勾，main基线仍为 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，阶段不合并。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -217,15 +217,15 @@ make e2e
 **Files：** C/store/issue/root.store.ts、helpers/base-issues.store.ts及实际动作门面；C/hooks/use-group-dragndrop.ts、use-issues-actions.tsx；C/components/issues/issue-layouts/utils.tsx、calendar/{utils.ts,base-calendar-root.tsx}；新C/store/issue/issue-drag.test.ts及实际消费者回归。核对issue_kanban_view.store.ts、issue_calendar_view.store.ts既有显示/拖动守卫，仅按实际接线需要修改；不存在的kanban/utils.ts不创建兼容文件。
 **Interfaces：** spec§2.9 updateIssue(id,makeBody,drop)；根drag队列→id队列单向嵌套；Drop只记neighbor IDs和组位置。
 
-- [ ] `secondDropUsesFirstConfirmedNeighbors`安排不同卡片同列、首请求held，修改邻居后才放第二请求，断言实际PATCH中点；前序失败继续；missing neighbor按当前合法落点重算；移至列尾/空列/满日历确认后保留。
-- [ ] 捕获来源绑定，排队中切列表不改读新currentList；同组字符串但不同query的其它副本只接受普通确认，不接收来源Drop的额外组/扩窗。合法分组/泳道的priority:none、负责人/标签空数组与实际生成PATCH字段一致；旧草稿业务不误接普通Issue拖放入口。
-- [ ] `waitingDropDoesNotCrossSession`换会话后不再发旧队列请求或写旧view；请求body不带id/project_id；pending时模型不变且拒绝回原位置。
-- [ ] 红/绿：`pnpm --filter web exec vitest run core/store/issue/issue-drag.test.ts`。删除组件提前计算sort_order传常数的旧路径，calendar月/周依生成query，不发before/after。
-- [ ] M34把makeBody移出队列、M35全实体spread、M36前序拒绝卡住后续，各红；G，提交 `feat(M4/P10b): 在拖放发出时计算位置并串行确认`。
+- [x] `secondDropUsesFirstConfirmedNeighbors`安排不同卡片同列、首请求held，修改邻居后才放第二请求，断言实际PATCH中点；前序失败继续；missing neighbor按当前合法落点重算；移至列尾/空列/满日历确认后保留。
+- [x] 捕获来源绑定，排队中切列表不改读新currentList；同组字符串但不同query的其它副本只接受普通确认，不接收来源Drop的额外组/扩窗。合法分组/泳道的priority:none、负责人/标签空数组与实际生成PATCH字段一致；旧草稿业务不误接普通Issue拖放入口。
+- [x] `waitingDropDoesNotCrossSession`换会话后不再发旧队列请求或写旧view；请求body不带id/project_id；pending时模型不变且拒绝回原位置。
+- [x] 红/绿：`pnpm --filter web exec vitest run core/store/issue/issue-drag.test.ts`。删除组件提前计算sort_order传常数的旧路径，calendar月/周依生成query，不发before/after。
+- [x] M34把makeBody移出队列、M35全实体spread、M36前序拒绝卡住后续，各红；G，提交 `feat(M4/P10b): 在拖放发出时计算位置并串行确认`。
 
 ## Task 12：确认分发的全副本与竞态闭环（约450–850行，F）
 
-**Files：** root.store.ts/issue.store.ts/base-issues.store.ts及project/archived/profile；新C/store/issue/issue-changes.test.ts；改到的create/delete/archive跟进消费者。
+**Files：** root.store.ts/issue.store.ts/issue-verification.ts/base-issues.store.ts及project/archived/profile；新C/store/issue/issue-changes.test.ts；改到的create/delete/archive跟进消费者。B-L3按实际共享缓存边界覆盖既有issue-details/{link,sub_issues}.store.ts及inbox/inbox-issue.store.ts的权威回读调用，不提前迁移其P11/M7资源协议。
 **Interfaces：** 复用 T5 已接通、T6 已换 canonical、T11 已闭合拖放的根协调入口，补全下列交错而非新增第二入口；每write调用同一根协调入口；实际发送前pending深拷贝before与读证据，确认取该操作冻结值，若无法证明则unknown/stale；删除先推进项目read epoch；broadcast到本代已注册scope，再canonical，恰好一次；未取不虚造value。
 
 - [ ] create/update/delete/archive/unarchive/drag六张表各包含三列表+canonical、未取列表、server拒绝、SessionChanged、读写交错。断言请求数、确认次数、各total/rows/version，而非只测当前项目。
@@ -235,6 +235,7 @@ make e2e
 - [ ] B-L6 `missingReplayVerificationLeavesUncertainGroupsStale`：after已补回，get404后访问器不给可靠活值、相关counts stale、无墓碑/无关项目不变；受控新token空页使列表收敛。403/500保留error且不自动重复；SessionChanged不写新代、不请求后续；同round重复part仅一次get。M50在catch只throw而清stale或让每个catch自动重开round必须红。
 - [ ] B-L6时序补例 `preVerificationListCannotClearUnverifiedState`：先发旧list(serial=7)，再发verify get(serial=8)，verify在外又发一份list(serial=9)；get404落定设置freshnessFloor=9，随后两旧list携相同updated_at返回，均不能恢复可靠活值/清核实或相关stale。之后新发权威get/list(serial=10)返回同版本完整Issue才可恢复；后发空页只收敛列表不造墓碑。M51让captureRead不逐请求递增或仅核版本/删除token必须红，保留普通404不推进删除水位断言。
 - [ ] pending计数不被前一finally清掉；B-L3旧详情共享缓存边界也经本表核拒绝/回读真实版本。
+- [ ] B-L3补充真实交错：写成功前已有同id权威GET在外，链接/子项等旧消费者成功后要求新权威证据；旧GET晚到不能冒充写后的最新计数。覆盖无已取列表及拒绝/退役，并保留纯并发读取同身份去重对照；沿现有token/根协调局部处理，不用每调用无条件新GET绕过。
 - [ ] 红/绿：`pnpm --filter web exec vitest run core/store/issue/issue-changes.test.ts core/store/issue/issue.store.test.ts core/store/issue/issue-drag.test.ts`。
 - [ ] M37只改当前list、M38提前乐观写、M39重复confirm、M40漏SessionChanged，各红；G、F，提交 `feat(M4/P10b): 将确认修改同步到会话内每份列表`。
 

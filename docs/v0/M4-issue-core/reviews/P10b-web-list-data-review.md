@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T10既定任务门禁已完成；[P10B-S1](P10b-permission-read-decision.md)方案A及独评两轮修复闭环，接续T11。** 分支 `codex/m4-p10b`；main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T10最终产品c2a58998通过24文件292项、类型、lint与knip；最近完整F及CI仍只绑定T8的481c30b4。T12–T14、阶段最终门禁、终审与最终CI尚未完成，产品验收十项未勾，先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。[预检deep-review](../../../reviews/re-12-M4P10b预检审核.md)为历史证据，当前检查点见第14节。
+日期：2026-10-29。**T1–T11既定任务门禁已完成；[P10B-S1](P10b-permission-read-decision.md)方案A及拖放的独评修复闭环，接续T12。** 分支 `codex/m4-p10b`；main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T11最终产品99d18da9通过8文件236项、类型/lint，前期静态/knip及补验桥见第15节；最近完整F及CI仍只绑定T8的481c30b4。T12–T14、阶段最终门禁、终审与最终CI尚未完成，产品验收十项未勾，先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。[预检deep-review](../../../reviews/re-12-M4P10b预检审核.md)为历史证据。
 
 ## 1. 实际前置与证据
 
@@ -226,3 +226,13 @@ root核51条原始命令日志及部分实现/红测的32个变更输入与相�
 原件在`.superpowers/sdd/P10b-web-list-data/`：作者`task-10-current-report.md`、整Task`task-10-review.md`、两轮`task-10-fix1-review.md`/`task-10-fix2-review.md`及全部raw/JSON。root核218条raw，最终24文件292项、types、lint54/54（36缓存）、knip和提交桥的2626输入均等当前产品；4个修复提交路径逐字核，见`task-10-fix2-root-audit.json`及`task-10-fix2-root-commit-check.json`。最终测试raw SHA256为`9ab8e19243fe8950e3c2f343f054dde189dd9206b930b34ce6b2dd1271ba45ce`。生产变异在各自记录时点有行为红与恢复桥；不冒称它们全部在最终源码重新执行。工具、格式、类型及早期装配失败如实保留。
 
 T11接真实拖放消费者并在发送时读取邻居。来源列表绑定在排队前固定；Drop扩窗只作用于该来源，其他已取副本按自身query接普通确认，避免异查询同组键被扩窗。该局部归属澄清先同步设计/spec/plan，行为证据待T11提供。T12仍负责全副本竞态及一般写后权威GET去重、下一次完整F；T13仍负责四角色精确请求集及S2。阶段A1–A10、整分支deep-review、最终准确HEAD CI及集成保持开放。
+
+## 15. T11 拖放完成与 T12 接续
+
+整Task范围`c2a58998..99d18da9`，实现`16031c94`、修复`99d18da9`。真实group hook与calendar回调接Base来源绑定，根drag队列再进每id队列，轮到发送才按当前canonical计算邻居；生成PATCH不带id/project_id，priority:none与负责人/标签空数组按生成合同构造。来源列表独占Drop扩窗，其余已取副本按自身query接普通确认。首写held、不同卡片共享邻居、前序拒绝后继续、切列表保留来源、缺邻居、满日历、空列确认和退役旧view分别有真实门面/FakeNerve或DOM行为证据。
+
+独评唯一Important：mention筛选的成员关系在实体上是unknown，旧实现错误丢弃服务器已返回的邻居，实际PATCH为65535而非-64535。R30修复沿用来源目标group/cell的有效fresh行及相同纳秒版本作为证据，缺证据拒绝，明确false/删除排除，不放宽通用三态。mention/subscriber/member subscribed三类正例分别实测；stale、差1纳秒、无来源行、失权等反例只对mention实测，不外推笛卡尔积。限定复审I1关闭、无新增C/I/M，空列成功及退役旧rows/total/canonical断言一并补齐。
+
+原件在`.superpowers/sdd/P10b-web-list-data/`：`task-11-current-report.md`、`task-11-review.md`、`task-11-fix1-review.md`，root审计`task-11-root-audit-before-review-02.json`、`task-11-fix1-root-audit.json`与两轮commit/mutation核验。最终root核98raw、4个修复提交路径和2628输入；修复后8文件236项、应用types/lint及diff-check通过。最初实现曾通过26文件376项、完整lint54/54（36缓存）与knip，最后测试加强以定点16项/types/lint补桥；修复轮knip早于最后纳秒测试加强，产品相同，最终236及types/lint覆盖最终字节。218是警告上限汇总，不声称逐项对照或零警告。M34–36及修复旧判断/unknown全放行/毫秒比较均有行为红和恢复hash；最后毫秒变异只执行1项、23项按名称跳过，非全套门禁。历史夹具/装配和root检查假设纠正均保留。
+
+日历完整DOM/浏览器拖动仍由后续集成与Phase P12页面核对，T11工具函数/门面证据不冒作E2E。T12补六写全副本、冻结before、未知子树删除、权限/核实水位交错；尤其验证旧权威GET不能冒充写成功后的新计数证据，再运行完整F和准确检查点CI。T13精确角色请求集、T14整分支deep-review及最终门禁仍待，不合并。
