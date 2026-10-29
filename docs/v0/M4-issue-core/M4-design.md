@@ -1788,7 +1788,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - 前端的生成的类型与契约同步（`make gen-web` 之后没有差别，M2 的门禁）。
 
 ### 9.5 前端单元测试（vitest）
-- P10b 静态预检补充的六个反例及合法测试入口见 [spec](specs/P10b-web-list-data.md) / [plan](plans/P10b-web-list-data.md)：pending before、树删除旧读、canonical 写者闭合、partial 回放计数所有权、精确大整数入口、回查拒绝的有界收敛。均为实施要求，本次未运行；本节“没有回答的组”仅指整体第一页，partial 未回答范围保持当前值。
+- P10b 静态预检补充的六个反例及合法测试入口见 [spec](specs/P10b-web-list-data.md) / [plan](plans/P10b-web-list-data.md)：pending before、树删除旧读、canonical 写者闭合、partial 回放计数所有权、精确大整数入口、回查拒绝的有界收敛。预检时均为实施要求、当时未运行；后续实施证据见P10b review；本节“没有回答的组”仅指整体第一页，partial 未回答范围保持当前值。
 - `core/lib/reconciled.ts` 的 `fetchPart`：值还没取到时不做；被整体的取数超越、被同一部分更新的取数超越时不写；在外期间确认的修改在合并之后按确认的顺序重做，重做拿到这次的应答；会话改变。
 - `core/lib/paged-groups.ts`：3.22 的表（`(列表当前的值, 修改或读到的版本, 应答?) → 期望的值`）：旧属、新属的四种组合各配在、不在 `rows`，窗口内、外（固定的 `boundary`），载入完与否；旧属先按这一份列表的行的 `updatedAt` 判断、再按 `beforeSnapshot`；新建（`beforeSnapshot` 为无）、删除（`after` 为无）、归档和恢复；没有回答的组、格按空的建出；多值的组；子分组的格和 `subgroupTotals`；最外层的总数；拖放的落点（窗口外扩 `boundary`、空的列、空的泳道格、日历已满的一天）；重做的三种判断（应答里有它的行、应答覆盖了它的位置、看不出）；每种 `stale`；对抗性评审 I2 的九个反例各一行；聚焦复核 M3 的五行（重做时旧属只来自应答和 `beforeSnapshot`、并入取应答的 `total`、第 2 条之后的 `getIssue`、`boundary` 只往后移、自己的修改在路上时不标 `stale`）。
 - 一个工作项的那一份（`ReconciledByKey`）：服务端的 `updated_at` 大的胜出、相等时后应答的胜出；列表的行不覆盖 `description_html`；读到的新版本改了成员关系的字段时，含它的列表里它旧、新两个版本的组标 `stale`，这个会话自己有修改在路上的工作项除外。
@@ -2570,7 +2570,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13粗项/16 Task） | **已完成**：[spec](specs/P8-drafts-search.md)、[实际plan](plans/P8-drafts-search.md)、[review](reviews/P8-drafts-search-review.md)、[整体审核](../../reviews/re-07-M4P8整体审核.md)。T1–T16实施、首次整审及文档独评闭环，最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，经授权 `--no-ff` 合并为 `6b9d08d4821f1423c7bb9795557727c206b7880f`；准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1三任务全绿。1,598文件、37,552,117字节及1空目录归档逐hash核验后，本地/远端分支和worktree已清理，清理后再核哈希；完整回执见review§9。M4总体及后续交接仍open |
 | P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
-| P10b `web-list-data` | 列表一侧的数据层（14） | **T1–T12完成任务门禁，接续T13**；方案A、拖放、全副本竞态及写后取证独评闭环，c0cd32f7完整本地F通过，已推送、准确检查点CI待返回。见[review§16](reviews/P10b-web-list-data-review.md#16-t12-全副本竞态完成与-t13-接续)，权限合同见[决策记录](reviews/P10b-permission-read-decision.md)。T13–T14、阶段终审、最终CI与产品验收仍开放，不合并 |
+| P10b `web-list-data` | 列表一侧的数据层（14） | **T1–T13实施及逐任务独评闭环**；T14文档收口进行中，完整F、准确HEAD CI和整分支终审待办，集成待授权。T12本地F通过但检查点CI web超时；见[阶段review](reviews/P10b-web-list-data-review.md)。不合并，不启动P11 |
 | P11 `web-detail-data` | 详情一侧的数据层（14） | 未开始 |
 | P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |

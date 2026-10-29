@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T12任务门禁及独评闭环已完成；[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)已落实。接续T13挂载与精确请求门禁，任务勾选由主控在独立评审后更新，不重做已完成任务。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T13任务门禁及独评闭环已完成；[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)已落实。T14文档收口进行中，完整F、准确HEAD CI及整分支审查仍待负责人执行。
 
-> **当前状态：** T12最终产品c0cd32f7通过147项聚焦、352项受影响回归、独评及完整本地F，原件与源码桥见review§16；T10方案A、T11拖放证据见§14–15。检查点已推送，准确CI待返回，不能用T8的CI替代。T13–T14和阶段最终验收待办；main基线仍为 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，阶段不合并。
+> **当前状态：** T12 c0cd32f7完整本地F通过，检查点CI 40867089940 server success、web超时失败、e2e skipped；T13 7e4ed3c5独评0C/0I/1Minor，152聚焦及四故事17项通过。最终F/CI和整审待办；main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，阶段不合并。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -111,7 +111,7 @@ make e2e
 
 ### T4 与后续任务的反例证据索引
 
-以下只是职责分配，未运行行不能提前标通过。T14 汇总时须补齐全部实际证据。
+以下为原职责分配，不是执行事实；实际证据见阶段 review §2 和各 Task 报告。
 
 | 设计反例 | T4 纯模型验证 | 后续真实调用链 |
 |---|---|---|
@@ -246,10 +246,10 @@ make e2e
 **Files：** project/archived root、profile-issues，各布局首次取数及filter HOC；新list-data.test.tsx；e2e/stories/smoke/s2-web-app.spec.ts；tools/keywords.json；改到的lint警告上限。
 **Interfaces：** project页先取得允许的目录/偏好，显式生成list query；S2 REQUESTS四角色加入issues页；守卫negation-filters、issue-optimistic运行表。
 
-- [ ] `mountedProjectListUsesGeneratedRequest`真实store+FakeNerve证明首次/已保存筛选/切project/拒绝错误态；角色guest-own-only服从服务端，非projectmember不取；archived guest不取；profile访客不取。
-- [ ] S2 admin/member/guest/project non-member进入项目issues页，保存精确GET集合及失败放行，只允许预期权限页，不留下旧地址。三原user-properties放行故事也运行，不能从watch里过滤所有issues。
-- [ ] 命令：新DOM测试+`make lint-web`、`make knip`；`make build`后按协议串行跑S2及三个旧放行文件，chromium。
-- [ ] M41重新发/user-properties、M42绕过权限requestgate、M43negation词项回引、M44await前写canonical，各真实门禁红；恢复G，提交 `feat(M4/P10b): 接通项目列表挂载并收紧旧接口门禁`。
+- [x] `mountedProjectListUsesGeneratedRequest`真实store+FakeNerve证明首次/已保存筛选/切project/拒绝错误态；角色guest-own-only服从服务端，非projectmember不取；archived guest不取；profile访客不取。
+- [x] S2 admin/member/guest/project non-member进入项目issues页，保存精确GET集合及失败放行，只允许预期权限页，不留下旧地址。三原user-properties放行故事也运行，不能从watch里过滤所有issues。
+- [x] 命令：新DOM测试+`make lint-web`、`make knip`；`make build`后按协议串行跑S2及三个旧放行文件，chromium。
+- [x] M41重新发/user-properties、M42绕过权限requestgate、M43negation词项回引、M44await前写canonical，各真实门禁红；恢复G，提交 `feat(M4/P10b): 接通项目列表挂载并收紧旧接口门禁`。
 
 ## Task 14：完整验证、deep-review与交接（不实施后段）
 

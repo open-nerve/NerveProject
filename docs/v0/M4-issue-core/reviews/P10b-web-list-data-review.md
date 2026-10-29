@@ -1,14 +1,75 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T12既定任务门禁已完成；[P10B-S1](P10b-permission-read-decision.md)方案A、拖放、全副本竞态及写后取证均通过独评，接续T13。** 分支 `codex/m4-p10b`；main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T12最终产品c0cd32f7通过完整本地F，已推送、准确检查点CI待返回，详见第16节。T13–T14、阶段终审与最终CI尚未完成，产品验收十项未勾，先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。[预检deep-review](../../../reviews/re-12-M4P10b预检审核.md)为历史证据。
+2026-10-29；分支 `codex/m4-p10b`，实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，T13 产品 `7e4ed3c50a82cd7c5b97df1277d5994d751dbe70`。T1–T13逐任务实施与独评闭环；T14、最终完整F、准确HEAD CI与整分支deep-review待办，阶段未合并。[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。
 
-## 1. 实际前置与证据
+## 1. 前置与证据
+
+P10a已集成，main CI及归档见[P10a review §10](P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)。执行前没有P10b原型、实现或行为测试；静态预检不是生产证明。实施原件在本worktree `.superpowers/sdd/P10b-web-list-data/`，各任务报告、原始输出、失败、恢复和源码桥见本页历史§8–16及 `task-14-evidence-report-index.json`，T13见 `task-13-current-report.md`、`task-13-review.md` 和三份root audit/bridge。T5复审原件另有 `task-5-fix1-review-retry.md`；两次限定复审均保留，非重复执行的新结论。
+
+## 2. 验收映射
+
+A1尚待T14，A10尚待最终F/CI/整审。以下为本段已执行行为的范围，最终整审仍需独立抽核，证据路径均相对上述原件根：
+
+| 验收 | 行为证据与边界 |
+|---|---|
+| A2 | T1服务操作与拒绝 `task-1-report.md`；T7偏好与旧地址删除 `task-7-current-report.md`；T13真实挂载 `task-13-035-focus.json` 和 030–033。 |
+| A3 | T4 `task-4-report.md` §矩阵和fix1、`task-4-fix1-review.md` 为纯模型；T6 `task-6-current-report.md`、T12 `task-12-final-focus-f.json` 将实体、回查及真实交错接上。逐例桥如下。 |
+| A4 | `issue-order.test.ts` 消费 `api/testdata/issue-order.json`；T3 `task-3-report.md`、`task-3-fix1-report.md`、`task-3-fix1-review.md` 验码点、空值、方向、纳秒与大整数；旧变异不是修复后字节重跑。 |
+| A5 | T6 `issue.store.test.ts` / `issue-details/issue.fetch.test.ts`，`task-6-current-report.md`及fix1复审；T12 `issue-changes.test.ts`、`task-12-final-focus-f.json` 和 `task-12-regression-final-a.json` 验before、第三方、删除epoch、墓碑和回查。静态无绕写盘点只补充行为证据。 |
+| A6 | T5 `issue-filters.test.ts` 保留fromnow；T7/T8 `task-7-current-report.md`、`task-8-current-report.md` 和独评覆盖保存/还原及显式query；T13 M43守卫反例。选择器呈现归P13。 |
+| A7 | T9 `task-9-current-report.md`与fix1复审覆盖归档/profile作用域、草稿；T10 `task-10-current-report.md`与fix2复审覆盖router派生、会话与权限读取；权限observer退役独立于已删除的router autorun。 |
+| A8 | T11 `task-11-current-report.md`及fix1复审验证排队时邻居与拒绝；T12 `task-12-final-focus-f.json` 验全副本和删除范围。 |
+| A9 | T13 `task-13-030-s2.json`（10项）、031 P2（3）、032 P8（2）、033 S7（2），同一版本构建，四角色和旧放行请求集；浏览器环境颜色提示仍是待处理Minor，不能称所有验证输出无噪声。 |
+
+I2九例和M3五例：下表 T4 的名称是 `task-4-report.md` §矩阵中的实际测试，后接真实实现和测试；T4 plan表只记录职责，并非执行证据。T6产品 `d37175dd`、修复 `ffade688`，T12 `c0cd32f7`，T4修复 `dde969f8`；具体命令和原始结果在上述各报告。
+
+| 反例 | 模型实证 → 真实链 |
+|---|---|
+| I2-1 双减 | R3-2/3、partialReplay、D-204 → T12 `sixWriteCopies` 确认分发 |
+| I2-2 版本 | Row三分支和T3微秒比较 → T6 `issue.store.test.ts` 版本接收 |
+| I2-3 before | R3-1 raw及冻结before → T12 `ownReadBeforeWriteAnswerKeepsOffWindowBeforeMembership` |
+| I2-4 窗口 | movingLastRow、R-DROP、R-TAIL → T5真实续页 `group-consumers.test.tsx` |
+| I2-5 旧答 | 模型不伪造实体 → T6 `issue.store.test.ts` 版本选择及T12真实交错 |
+| I2-6 第三方 | R3-4/5 verifyIds与stale → T6/T12 `missingReplayVerificationLeavesUncertainGroupsStale` |
+| I2-7 描述 | Row-only → T6 Issue/Detail接收 `issue.store.test.ts` |
+| I2-8 空组 | createsOmittedEmptyGroupAndLaneCell → T5列表消费者 |
+| I2-9 扩窗 | dropOutsideWindow、dropIntoFullCalendarCell → T11 `issue-drag.test.ts`、T12确认分发 |
+| M3-1/2 | R3-1、partial/twoParts → T5 fetchPart真实绑定 |
+| M3-3 | R3-4/5 → T6/T12权威回读及stale |
+| M3-4 | R-DROP、cursorBoundary → T5真实续页 |
+| M3-5 | ownAfterRowInDestination仅纯确认 → T12真实pending GET及冻结before |
+
+## 3. 独评和发现
+
+T1–T13各自独评及必要修复复审闭环；T13 `task-13-review.md` 为0 Critical、0 Important、1 Minor：新增DOM Canvas getContext噪声及Playwright NO_COLOR/FORCE_COLOR提示待最终审查修复，不能屏蔽。T5隐藏列React key警告已由T13先红后绿修复。整分支审查尚未发生，不能以逐任务独评代替。
+
+## 4. 验证时点与限制
+
+T12 `c0cd32f7` 本地完整F七项通过：51 Go包、16无测试包，web非缓存1827项，E2E 169项；见 `task-12-root-final-f-attempt1/`。准确 [CI 40867089940](https://github.com/open-nerve/NerveProject/actions/runs/40867089940) server success、web在拖放测试5000ms超时失败、e2e skipped，浏览器摘录 `task-12-ci-web-failure-browser.md` 不是完整CI原日志。T13冷进程实测动态import 782.578ms、行为0.479ms，未本机重现5秒；静态导入把装配移到收集阶段，不能证明CI恢复。T13最终152聚焦、types/lint/knip/build及四故事17项通过，见035、026–033；不可外推为最终HEAD完整F或CI。
+
+T3最初五份变异raw覆盖，49项中44 hash匹配，冻结98原件保留；不以这五份充当可核抽样。T2 M1–3历史原件和 `task-14-t2-source-bridge-c0cd32f7.diff` 显示后来增加receive接口，相关方法/断言保留但整文件不同；T12部分测试后加强，M45另在最终输入重跑；T13 M41–44变异后3测试格式及act/query加强，旧全文未保留。均不冒称所有历史变异在最终字节重跑。T6首audit有误，校正为 `task-6-root-audit-before-review-02.json`；T10原runner遗漏根 `.oxlintrc.json`，当时另留hash桥，后续runner已纳入。
+
+## 5. 变异候选与审查责任
+
+15项性质及红/恢复原件索引见 `task-14-current-report.md`；本次文档作者核对原始失败和恢复收据，不代替最终独立审查者抽核。最终审查还需核共享Reconciled全部旧消费者、微秒/大整数、204删除和续页范围；候选HEAD与实际基线固定后审逻辑、集成、覆盖，发现问题按影响修复复验复审。
+
+## 6. 移交与未完成
+
+P11迁移详情、关联、评论、表情、动态、版本、草稿和搜索service/store，删除 `issue.service.ts` 余项、`issue_relation.service.ts`、`workspace_draft.service.ts`；P12负责完整列表/看板/日历交互和 `projectIssuesSearch` 添加已有入口，P13筛选/归档/profile页面，P14父子选择器与收集箱查重及详情页面；P15搜索旧方法清理，P16终态守卫。M5文件、M6迭代模块和M7收集箱各自遗留不在本段关闭；M6/M7自身页面完整验收仍依负责人A裁定归各自阶段。输入handoff顶层均保持open，M4 §14及总体§9.4未完成，不建立M5–M8最终closeout。
+
+## 7. 当前门禁
+
+T14文档收口后由负责人执行完整F、准确待交付HEAD push/CI和独立整分支deep-review；随后按实际结果更新验收及审查记录。阶段仍未合并，不启动P11。
+
+## 历史预检与接续记录（当时状态，非当前结果）
+
+### 历史预检 1. 实际前置与证据
 
 P10a 最终 d1a19e78 经负责人授权 --no-ff 合并上述 main；[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) attempt 1 的 server/web/e2e 全 success。5,898 证据文件 / 356,803,778 字节 / 22 空目录归档核哈希，清理远端/本地 P10a 分支及 worktree 后再次核验，详见 [P10a review §10](P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)。这是当前产品基线的验证，不是尚未编写的 P10b 行为通过。
 
 当前准备证据根为主项目 `.superpowers/sdd/P10b-preparation-20261029/`，在 P10b worktree 外，未来归档必须保留；P10 原准备记录的冻结归档路径见上段，原根目录也仍保留。P10a 的 inventory 重建及缺失 base hash 校正限制没有被本轮归档抹去。
 
-## 2. 本轮预检方法与覆盖
+### 历史预检 2. 本轮预检方法与覆盖
 
 主控按 deep-review 文档模式逐一检查逻辑、集成、测试覆盖，全文重读当前 spec/plan，沿真实生成客户端、三个列表、canonical 全部写者、会话构造/退役及相关测试追踪。前次独立报告的 52 个全文文件与当前树逐哈希对照：33 相同、19 变化（18 源码和 03 规则）；该比较本身只是版本桥，不能冒称本轮重读全部 52 文件。当前源码/测试全文清单与哈希由 `review-coverage.json` 记录，schema/guard/设计的定向片段和广域检索另列，不宣称已全面验证未来算法。
 
@@ -16,7 +77,7 @@ P10a 最终 d1a19e78 经负责人授权 --no-ff 合并上述 main；[main CI 407
 
 独立最终实读 spec SHA `b6475d740435432bfb0c5901795150045663a0339729eaff2e651a8b2a05a8c0`、plan SHA `42e12e0ec4d7e83b2a6665380226729f3b35f1f2b09cf74274bcf01133acbdbb` 的冻结副本在 `builder-reviewed/`。之后主控只修 A1–A10 的验收范围笔误、准备完成状态及作者核验勾，精确 diff 与最终文件哈希另存；不把独立结论外推到未读改动。
 
-## 3. 发现、处理与复核
+### 历史预检 3. 发现、处理与复核
 
 | 编号 | 文档局部问题 | 已完成修订 / 未来实施落点 |
 |---|---|---|
@@ -28,7 +89,7 @@ P10a 最终 d1a19e78 经负责人授权 --no-ff 合并上述 main；[main CI 407
 
 后续实施裁定另见第7节：R9/R10 纯模型职责拆分、R11 workspaceID 明确作用域、R12 每计数来源修复均已实施；R13/W1 冻结实际已持有来源集合的方案已裁定，由 T5 首项实施验证。它们不回写为本节历史预检已实现的事实。
 
-## 4. 实际静态验证与边界
+### 历史预检 4. 实际静态验证与边界
 
 准确命令、退出码、文件指纹、基线及最终准备提交桥由 `preflight-receipt.json` / `commit-receipt.json` 记录。静态核对包括：`git diff --check`；所有修改仅 docs；新增相对 Markdown 链接可解析；T1–T14 顺序与 A1–A10 均开放；phase/关键词文件未改；独立已审稿到最终稿的有限差异；P10a main/归档/清理准确收据。
 
@@ -36,13 +97,13 @@ P10a 最终 d1a19e78 经负责人授权 --no-ff 合并上述 main；[main CI 407
 
 本轮不安装依赖、不执行生成器、数据库、产品测试、变异或本地七门禁；未实现的 fetchPart/PagedGroups、新 service、协调器及全部目标测试不得写已通过。完整产品验证仍按 plan F/G 和 A1–A10 执行。
 
-## 5. 接续与未完责任
+### 历史预检 5. 接续与未完责任
 
 下一步在该 worktree 获实施授权后从 T1 开始；先核 main 与基线/工作树未漂移，按 spec/plan 逐任务推进。阶段实现后做整分支 deep-review、局部修复和准确分支 CI，先不合并。架构级问题仍先提交已完成工作再上报。
 
 P11 仍接完整详情资源迁移，P12–P15 接页面，P16/M4 收尾接终态门禁与交接；P10a 的 M6/M7 自身页面验收归属 A 不变。M4 §14、总体设计 §9.4、输入 handoff 顶层 open 与 M5–M8 最终 closeout 保持开放。
 
-## 6. 首次依赖预检历史（2026-10-28）
+### 历史预检 6. 首次依赖预检历史（2026-10-28）
 
 以下为 P9 基线准备时原记录，分支/基线/“P10a 待集成”等时态只代表当时，当前执行依据以上文为准。
 
@@ -99,7 +160,7 @@ P10A-S1已由负责人选择A，保持列表删除范围、调整M6/M7自身页�
 
 负责人已授权实施整个 P10b，阶段结束先不合并。主控在既有 `codex/m4-p10b` worktree 按 `6dfd7258bfe8c6350116131488bf3b83822425c9` 启动 T1；该提交包含 P10a 集成后的准备稿，P10a/main 的上述集成事实与原预检证据保持原样。当前 T1 进行中，全部产品验收仍未勾选，逐任务评审及阶段 deep-review 另留真实实施证据；phase 保持 M4/P10。
 
-## 7. T1–T4 实施、独立审查与 T5 接续
+### 历史接续：T1–T4 实施、独立审查与 T5 接续
 
 实施证据根为本 worktree `.superpowers/sdd/P10b-web-list-data/`，准备原件仍在主目录外置的 P10b-preparation-20261029；两者未来都须归档。主控 ledger 逐 Task 记准确范围、审者、命令原件与源码桥，不能以准备稿审查或 main 基线 CI 代替产品验证。
 

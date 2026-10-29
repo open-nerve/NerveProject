@@ -78,3 +78,7 @@ M4 合并时：
 
 
 整审A-01新真实测试旧subissues字面量精确count1/untilM4/P12已审，最后73rules/53exceptions、old-issue41hits/29keys；T7/T8的40/28仍是历史检查点，生产旧请求未恢复、rule未放宽。
+
+## P10b 本段处理（2026-10-29）
+
+否定显示层及 hook 已由 T8 删除，negation-filters 守卫及 T13 M43 反例见阶段 review；选择器呈现归 P13，P16 核终态。 证据见 [P10b review](../reviews/P10b-web-list-data-review.md)；最终F、CI与整审待办，整份交接 status 保持 open。
