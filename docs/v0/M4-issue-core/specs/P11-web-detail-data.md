@@ -14,7 +14,7 @@
 
 ### 2.1 目录、任务及边界
 
-下文 `C/` 为 `web/apps/web/core/`，`P/` 为 `web/packages/`；标“新”的路径仅为实施目标。按资源整组迁移类型、服务、store、直接调用方和测试，每个 Task 末可编译。设计的十四项草稿按依赖重新组织为十四个 Task，不分“先全删类型、后修调用方”两步。
+下文 `C/` 为 `web/apps/web/core/`，`P/` 为 `web/packages/`；标“新”的路径仅为实施目标。按资源整组迁移类型、服务、store、直接调用方和测试，每个Task末可编译。原十四个Task在T4后按规模预留拆为十五个：T5评论及其内嵌表情、T6工作项表情，原T6–T14顺延为T7–T15。合同与阶段范围不变，历史证据保留当时编号。
 
 | Task | 主要文件 / 职责 | 目标测试（“新”在实施时创建） |
 |---|---|---|
@@ -22,16 +22,17 @@
 | T2 | C/store/issue/root.store.ts、permission-reads.ts、issue-details/issue.store.ts；新 issue-details/resource.ts；归档页头及 issueId 跳转的最小数据接线 | 既有 issue.fetch.test.ts；新 resource.test.ts、detail-entry.test.tsx |
 | T3 | issue-details/sub_issues.store.ts、relation.store.ts、root.store.ts；父子/关联控件与旧类型 | 既有 sub_issues.fetch.test.ts；新 relation.store.test.ts、detail-changes.test.ts |
 | T4 | issue-details/link.store.ts；links 控件/弹窗；删除旧 IssueService 最后方法及文件 | 新 link.store.test.ts、links/data.test.tsx |
-| T5 | issue_comment.service.ts、issue_reaction.service.ts；comment/comment_reaction/reaction stores；comments 与表情控件、对应旧类型 | 新 collaboration.service.test.ts、comment.store.test.ts、reaction.store.test.ts |
-| T6 | issue_activity.service.ts、activity.store.ts；新 timeline.ts；issue-activity 展示，删旧动态细节类型 | 新 timeline.test.ts、activity.store.test.ts；T5 评论分页回归 |
-| T7 | work_item_version.service.ts；新 issue-details/description-versions.store.ts；core/description-versions 与两个 M4 调用方；M7 版本 DTO 归属 | 新 description-versions.store.test.ts、core/description-versions/root.test.tsx |
-| T8 | workspace_draft.service.ts、workspace-draft/issue.store.ts；draft 页面/表单直接消费者、root 创建确认入口 | 新 workspace-draft/issue.store.test.ts、issue-modal/draft.test.tsx |
-| T9 | hooks/editor/use-editor-mention.tsx、editor/lite-text、rich-text/editor与description-input、issue-modal/components/description-editor、inbox/modals/create-modal/issue-description；WorkspaceService.searchEntity 及旧 JSON 类型 | 新 hooks/editor/use-editor-mention.test.tsx；既有 editor 包测试 |
-| T10 | 详情及按需属性目录读取、详情一侧 SessionSWR；同 Task 删除 .oxlintrc.json 对应旧 SWR 豁免 | 新 detail-refusals.test.tsx；既有 use-session-swr、issue.fetch/sub_issues.fetch 测试 |
-| T11 | modals/work-item-level.tsx、issue-details/root.store.ts、详情/peek/列表实际弹窗宿主 | 新 modals/work-item-level.test.tsx、issues/detail-host.test.tsx |
-| T12 | issue-modal/base.tsx、五处标签创建调用；use-label-changes；工作区标签边界/列表统一编号列宽 | 既有 base.loading/base.clone 测试；新 issue-properties.test.tsx |
-| T13 | 关键词、barrel、死成员、修改矩阵、跨资源竞态、S2 请求边界 | 新 detail-mutations.test.ts；既有列表权限/确认回归，S2 |
-| T14 | 设计、frontend-changes、各输入 handoff 的局部处理结果、验收、阶段整分支 deep-review 和修复 | 最终完整 F、准确分支 CI、原始审查与修复证据 |
+| T5 | issue_comment.service.ts；comment/comment_reaction stores；comments控件、对应旧类型 | 新collaboration.service.test.ts、comment.store.test.ts、comments/data.test.tsx |
+| T6 | issue_reaction.service.ts、reaction.store.ts；工作项表情实际控件、最后旧表情类型 | 扩collaboration.service.test.ts；新reaction.store.test.ts及UI测试 |
+| T7 | issue_activity.service.ts、activity.store.ts；新 timeline.ts；issue-activity 展示，删旧动态细节类型 | 新 timeline.test.ts、activity.store.test.ts；T5 评论分页回归 |
+| T8 | work_item_version.service.ts；新 issue-details/description-versions.store.ts；core/description-versions 与两个 M4 调用方；M7 版本 DTO 归属 | 新 description-versions.store.test.ts、core/description-versions/root.test.tsx |
+| T9 | workspace_draft.service.ts、workspace-draft/issue.store.ts；draft 页面/表单直接消费者、root 创建确认入口 | 新 workspace-draft/issue.store.test.ts、issue-modal/draft.test.tsx |
+| T10 | hooks/editor/use-editor-mention.tsx、editor/lite-text、rich-text/editor与description-input、issue-modal/components/description-editor、inbox/modals/create-modal/issue-description；WorkspaceService.searchEntity 及旧 JSON 类型 | 新 hooks/editor/use-editor-mention.test.tsx；既有 editor 包测试 |
+| T11 | 详情及按需属性目录读取、详情一侧 SessionSWR；同 Task 删除 .oxlintrc.json 对应旧 SWR 豁免 | 新 detail-refusals.test.tsx；既有 use-session-swr、issue.fetch/sub_issues.fetch 测试 |
+| T12 | modals/work-item-level.tsx、issue-details/root.store.ts、详情/peek/列表实际弹窗宿主 | 新 modals/work-item-level.test.tsx、issues/detail-host.test.tsx |
+| T13 | issue-modal/base.tsx、五处标签创建调用；use-label-changes；工作区标签边界/列表统一编号列宽 | 既有 base.loading/base.clone 测试；新 issue-properties.test.tsx |
+| T14 | 关键词、barrel、死成员、修改矩阵、跨资源竞态、S2 请求边界 | 新 detail-mutations.test.ts；既有列表权限/确认回归，S2 |
+| T15 | 设计、frontend-changes、各输入 handoff 的局部处理结果、验收、阶段整分支 deep-review 和修复 | 最终完整 F、准确分支 CI、原始审查与修复证据 |
 
 ### 2.2 生成合同与薄服务
 
@@ -136,7 +137,7 @@ D1–D7 是既定设计内的执行细化；D8曾因上游合同缺口提交后�
 
 | ID | 裁定、理由、错误代价 |
 |---|---|
-| D1 | 按资源同步换型，当前十四个 Task，实施前可按计划的规模预留再拆分，不扩大范围。单独先删所有 DTO 会让中途不可编译；代价是每个 Task 要同时检查 UI 消费者，不能只测 store。 |
+| D1 | 按资源同步换型，T4后盘点原T5的服务、三store及真实消费者和测试将超过约1500行，按§6预留拆为T5评论及内嵌表情、T6工作项表情，总十五Task。无新协议或范围，代价是旧工作项表情服务比评论多保留一个任务，T6末必须删除。 |
 | D2 | 搜索生成合同本段登记，薄 service 延到 P12 首个生产调用方同任务落地；P14/P15 接其它消费者，最后删旧搜索类型。当前没有 P11 独立生产读者，提前建最终无读者导出会绕 knip。页面时间点不后移，代价是不能声称 P11 已接通搜索。 |
 | D3 | 归档 header 和 issueId redirect 的两个 IssueService 实例的数据接线前移 P11 T2；P13/P14 仍做完整页面验收。旧 IssueService 本就必须 P11 删，延后会延长有界旧接口。七处原要求加这两处，共九处 M4 实例在 P11 消失，13处总门禁仍 P15。 |
 | D4 | M7 版本旧 DTO 收归 M7，只有共享展示 props 分离，真实旧请求保持；符合设计要求的 M7 编译闭合，不迁 M7 业务。错误代价是偷换 DTO 导致未接通领域再添隐形假合同，故设专门测试。 |
@@ -171,13 +172,13 @@ D1–D7 是既定设计内的执行细化；D8曾因上游合同缺口提交后�
 
 ## 6. 风险
 
-资源 ID 与工作项 ID 混用会删错关联；多 ID 队列的重入会自等；成功写后的补取失败会被误当写失败；permission ABA 会让 SWR 命中旧值；整份 payload 替换会丢字段；老动态 ID 的时间移动会漏显示。这些均设独立断言和生产变异，不靠编译证明。计划单 Task 估算含测试上限约1500行，T5/T8 超额时先按资源局部拆分（总数约16），同步 spec/plan，再实施，不堆补丁。
+资源 ID 与工作项 ID 混用会删错关联；多 ID 队列的重入会自等；成功写后的补取失败会被误当写失败；permission ABA 会让 SWR 命中旧值；整份 payload 替换会丢字段；老动态 ID 的时间移动会漏显示。这些均设独立断言和生产变异，不靠编译证明。计划单 Task 估算含测试上限约1500行，T5/T9 超额时先按资源局部拆分（总数约16），同步 spec/plan，再实施，不堆补丁。
 
 ## 7. 已知限制、交接与关闭条件
 
 当前真实 main 仍包含未迁移详情旧地址和 DTO，这是 P11 的实施输入。准备稿没有解决它们、没有跑产品测试。P10b 归档中历史变异原件/覆盖限制继续原样保留，不用本次静态盘点补记历史通过。M4 总体验收与所有输入 handoff 的顶层 open 保持；本段执行完成时只写对应子项处理结果，不建未来最终交接文件。
 
-阶段完成需 A1–A10 实证、整分支 deep-review 后局部问题全闭环；本段仍先不合并，集成授权另行取得。当前已按裁定A完成文档预检；只有负责人另行安排实施后才从T1开始。
+阶段完成需A1–A10实证、整分支deep-review后局部问题全闭环；本段仍先不合并，集成授权另行取得。当前已经获得实施授权，T1–T4完成，后续按修订计划继续；准备阶段的“暂不实现”不是当前阻塞。
 
 ## 附录 A：准备证据（2026-10-30）
 

@@ -2323,7 +2323,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **关闭**：M1-P3 交接的筛选显示层（否定的一层删除；终态在 P16 核对）；M2 交接第 12 节的 `autorun`、三处同步读取、列表一侧的 SWR 键；M3 交接第 5 节（例外和 `workItemFilters` 删掉）、第 6 节（`autorun`、`reconciled.ts` 的扩展、S2 的 `REQUESTS`）。
 - **完成线**：`tsc`、knip、vitest 通过；S2 在四个角色下没有旧接口的请求；`store-context.test.ts` 没有严格模式的警告；`/user-properties/` 的例外已删除。
 
-### P11 `web-detail-data`：详情一侧的数据层（14个任务，实施中）
+### P11 `web-detail-data`：详情一侧的数据层（15个任务，实施中）
 - **状态**：已形成[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)，**P11-S1已裁定A、文档预检通过，T1–T4已实现，继续T5**；[编号宽度决策记录](reviews/P11-project-number-width-decision.md)。任务顺序按实际资源依赖细化，所有验收开放。
 - **目标**：详情services/stores接生成接口，沿IssueRootStore方案A管理权限读取失效；原7处数据层模块实例加前移的2处IssueService消失；宿主结束自己拥有的弹窗。
 - **任务**：
@@ -2331,16 +2331,17 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   2. scoped资源、权限令牌/同队列、核心/父项读取；归档header和issueId跳转的最小数据接线。
   3. 子项/关联store与生成类型、直接消费者一起迁；状态分布由目录算，关系删除用relationId。
   4. 链接store和消费者；最后删除旧IssueService及对应例外。
-  5. 评论/两类表情及原生类型、全页读取；评论表情来自comment.reactions，无独立GET。
-  6. 动态和时间线：最后请求cursor增量重读、ID覆盖/纳秒排序；删is_bot/旧细节DTO。
-  7. 描述版本store与恢复确认；M7旧DTO留所属服务，共享展示解耦，不冒充生成协议。
-  8. 草稿原生payload/分页，PATCH后无body发布，经root创建确认；不为编号列宽刷新项目。
-  9. 四处提及改有效成员目录，删searchEntity与旧JSON字段/独占类型。
-  10. 其余按需拒绝显示/交回，详情SessionSWR与权限key；不等到本Task才修已迁入口。
-  11. WorkItemLevelModals留原宿主；scope变更和卸载结束自有开关/peek/三份数据，保护并存宿主。
-  12. 错误按码、统一标签创建；工作区标签保留M7边界；编号列宽按P11-S1裁定A统一/增宽/scope重置；核已删fetchParentStats和可选projectIdentifier。
-  13. 旧接口/死成员/label-create-direct守卫；完整修改、权限及竞态矩阵。
-  14. 完整F、逐条验收、handoff局部处理结果、整分支deep-review及修复复审；阶段先不合并。
+  5. 评论及内嵌表情的原生类型、全页读取和真实消费者；评论表情来自comment.reactions，无独立GET。
+  6. 工作项表情的原生集合、本人删除、幂等确认与真实消费者；按spec规模预留从原T5拆出，其余任务顺延。
+  7. 动态和时间线：最后请求cursor增量重读、ID覆盖/纳秒排序；删is_bot/旧细节DTO。
+  8. 描述版本store与恢复确认；M7旧DTO留所属服务，共享展示解耦，不冒充生成协议。
+  9. 草稿原生payload/分页，PATCH后无body发布，经root创建确认；不为编号列宽刷新项目。
+  10. 四处提及改有效成员目录，删searchEntity与旧JSON字段/独占类型。
+  11. 其余按需拒绝显示/交回，详情SessionSWR与权限key；不等到本Task才修已迁入口。
+  12. WorkItemLevelModals留原宿主；scope变更和卸载结束自有开关/peek/三份数据，保护并存宿主。
+  13. 错误按码、统一标签创建；工作区标签保留M7边界；编号列宽按P11-S1裁定A统一/增宽/scope重置；核已删fetchParentStats和可选projectIdentifier。
+  14. 旧接口/死成员/label-create-direct守卫；完整修改、权限及竞态矩阵。
+  15. 完整F、逐条验收、handoff局部处理结果、整分支deep-review及修复复审；阶段先不合并。
 - **搜索边界**：P11登记生成searchIssues合同；wrapper在P12首个生产消费者接通时创建，旧搜索类型最后随P15删除，现有P12/P14/P15页面分配不变。
 - **关闭范围**：M1旧JSONContent/comment_json，M2§12原7实例/详情SWR（加两前移实例，getUserProfileIssues核P10b已删）；M3§5 is_bot，§6按需拒绝/错误/标签创建/宿主及三件的明确处理，§8旧草稿16行。工作区标签恢复仍M7；编号字段缺口已裁定A，实施验收尚未关闭。
 - **完成线**：spec A1–A10实际通过；core/services/issue无生成Issue/Detail标注Plane响应；全部修改/拒绝/宿主有行为证据，原七加两实例零命中；搜索和M5–M7范围准确保留。当前尚未达到完成线。
@@ -2573,7 +2574,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
 | P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
-| P11 `web-detail-data` | 详情一侧的数据层（14） | **T1–T4已实现，继续T5**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review](reviews/P11-web-detail-data-review.md)。[P11-S1](reviews/P11-project-number-width-decision.md)按可见展示数据计算列宽；已授权顺序实施，完成后终审、暂不合并 |
+| P11 `web-detail-data` | 详情一侧的数据层（15） | **T1–T4已实现，继续T5**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review](reviews/P11-web-detail-data-review.md)。[P11-S1](reviews/P11-project-number-width-decision.md)按可见展示数据计算列宽；已授权顺序实施，完成后终审、暂不合并 |
 | P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |
