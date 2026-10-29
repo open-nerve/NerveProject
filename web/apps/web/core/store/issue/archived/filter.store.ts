@@ -18,6 +18,7 @@ import type {
   TSupportedFilterForUpdate,
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
+import { toFilterExpression, toProjectFilters } from "@/lib/issue-filters";
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
 import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
 // types
@@ -81,15 +82,22 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
   }
 
   fetchFilters = async (workspaceSlug: string, projectId: string) => {
-    const _filters = this.handleIssuesLocalFilters.get(EIssuesStoreType.ARCHIVED, workspaceSlug, projectId, undefined);
+    const _filters = this.handleIssuesLocalFilters.get(
+      EIssuesStoreType.ARCHIVED,
+      workspaceSlug,
+      projectId,
+      this.rootIssueStore.currentUserId
+    );
 
-    const richFilters: TWorkItemFilterExpression = _filters?.richFilters;
+    const richFilters = toFilterExpression(toProjectFilters(_filters?.rich_filters ?? {}));
     const displayFilters: IIssueDisplayFilterOptions = this.computedDisplayFilters({
       ..._filters?.display_filters,
       sub_issue: true,
     });
-    const displayProperties: IIssueDisplayProperties = this.computedDisplayProperties(_filters?.display_properties);
-    const kanbanFilters = {
+    const displayProperties: IIssueDisplayProperties = this.computedDisplayProperties(
+      _filters?.display_properties ?? {}
+    );
+    const kanbanFilters: TIssueKanbanFilters = {
       group_by: [],
       sub_group_by: [],
     };
@@ -115,6 +123,7 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
     filters
   ) => {
     try {
+      filters = toFilterExpression(toProjectFilters(filters));
       runInAction(() => {
         set(this.filters, [projectId, "richFilters"], filters);
       });
@@ -125,7 +134,7 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
         EIssueFilterType.FILTERS,
         workspaceSlug,
         projectId,
-        undefined,
+        this.rootIssueStore.currentUserId,
         {
           rich_filters: filters,
         }
@@ -185,9 +194,16 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
             this.rootIssueStore.archivedIssues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, "mutation");
           }
 
-          this.handleIssuesLocalFilters.set(EIssuesStoreType.ARCHIVED, type, workspaceSlug, projectId, undefined, {
-            display_filters: _filters.displayFilters,
-          });
+          this.handleIssuesLocalFilters.set(
+            EIssuesStoreType.ARCHIVED,
+            type,
+            workspaceSlug,
+            projectId,
+            this.rootIssueStore.currentUserId,
+            {
+              display_filters: _filters.displayFilters,
+            }
+          );
 
           break;
         }
@@ -205,9 +221,16 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
             });
           });
 
-          this.handleIssuesLocalFilters.set(EIssuesStoreType.ARCHIVED, type, workspaceSlug, projectId, undefined, {
-            display_properties: _filters.displayProperties,
-          });
+          this.handleIssuesLocalFilters.set(
+            EIssuesStoreType.ARCHIVED,
+            type,
+            workspaceSlug,
+            projectId,
+            this.rootIssueStore.currentUserId,
+            {
+              display_properties: _filters.displayProperties,
+            }
+          );
           break;
         }
 
@@ -217,9 +240,16 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
 
           const currentUserId = this.rootIssueStore.currentUserId;
           if (currentUserId)
-            this.handleIssuesLocalFilters.set(EIssuesStoreType.ARCHIVED, type, workspaceSlug, projectId, undefined, {
-              kanban_filters: _filters.kanbanFilters,
-            });
+            this.handleIssuesLocalFilters.set(
+              EIssuesStoreType.ARCHIVED,
+              type,
+              workspaceSlug,
+              projectId,
+              this.rootIssueStore.currentUserId,
+              {
+                kanban_filters: _filters.kanbanFilters,
+              }
+            );
 
           runInAction(() => {
             Object.keys(updatedKanbanFilters).forEach((_key) => {

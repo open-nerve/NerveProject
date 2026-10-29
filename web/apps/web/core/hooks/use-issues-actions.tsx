@@ -15,13 +15,7 @@ import { useCallback, useMemo } from "react";
 import { useParams } from "react-router";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EDraftIssuePaginationType } from "@nerve/constants";
-import type {
-  IIssueDisplayFilterOptions,
-  IIssueDisplayProperties,
-  TLoader,
-  TProfileViews,
-  TSupportedFilterForUpdate,
-} from "@nerve/types";
+import type { TLoader, TProfileViews, TSupportedFilterForUpdate } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "./store/use-issues";
 import { useProjectPreferencesFollow } from "./use-project-preferences-follow";
@@ -268,9 +262,9 @@ const useArchivedIssueActions = () => {
 
 const useWorkspaceDraftIssueActions = () => {
   // router
-  const { workspaceSlug, globalViewId } = useParams();
+  const { workspaceSlug } = useParams();
   // store hooks
-  const { issues, issuesFilter } = useIssues(EIssuesStoreType.WORKSPACE_DRAFT);
+  const { issues } = useIssues(EIssuesStoreType.WORKSPACE_DRAFT);
   const fetchIssues = useCallback(
     async (loadType: TLoader, _options: IssueListOptions) => {
       if (!workspaceSlug) return;
@@ -314,15 +308,6 @@ const useWorkspaceDraftIssueActions = () => {
   //   [issues]
   // );
 
-  const updateFilters = useCallback(
-    async (projectId: string, filterType: TSupportedFilterTypeForUpdate, filters: TSupportedFilterForUpdate) => {
-      filters = filters as IIssueDisplayFilterOptions | IIssueDisplayProperties;
-      if (!globalViewId || !workspaceSlug) return;
-      return await issuesFilter.updateFilters(workspaceSlug, filterType, filters);
-    },
-    [globalViewId, workspaceSlug, issuesFilter]
-  );
-
   return useMemo(
     () => ({
       fetchIssues,
@@ -330,8 +315,7 @@ const useWorkspaceDraftIssueActions = () => {
       createIssue,
       updateIssue,
       removeIssue,
-      updateFilters,
     }),
-    [fetchIssues, fetchNextIssues, createIssue, updateIssue, removeIssue, updateFilters]
+    [fetchIssues, fetchNextIssues, createIssue, updateIssue, removeIssue]
   );
 };

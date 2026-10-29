@@ -13,7 +13,6 @@ const store = vi.hoisted(() => ({
     archivedIssues: { marker: "archived" },
     archivedIssuesFilter: {},
     workspaceDraftIssues: { marker: "draft" },
-    workspaceDraftIssuesFilter: {},
   },
 }));
 vi.mock("react", () => ({ useContext: () => store }));
@@ -33,5 +32,6 @@ describe("issue store selection", () => {
     expect(useIssues(EIssuesStoreType.PROFILE).issues).toEqual(store.issue.profileIssues);
     expect(useIssues(EIssuesStoreType.ARCHIVED).issues).toEqual(store.issue.archivedIssues);
     expect(useIssues(EIssuesStoreType.WORKSPACE_DRAFT).issues).toEqual(store.issue.workspaceDraftIssues);
+    expect(useIssues(EIssuesStoreType.WORKSPACE_DRAFT)).not.toHaveProperty("issuesFilter");
   });
 });

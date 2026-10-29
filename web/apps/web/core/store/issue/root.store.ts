@@ -35,8 +35,8 @@ import type { IProfileIssuesFilter, IProfileIssues } from "./profile";
 import { ProfileIssuesFilter, ProfileIssues } from "./profile";
 import type { IProjectIssuesFilter, IProjectIssues } from "./project";
 import { ProjectIssuesFilter, ProjectIssues } from "./project";
-import type { IWorkspaceDraftIssues, IWorkspaceDraftIssuesFilter } from "./workspace-draft";
-import { WorkspaceDraftIssues, WorkspaceDraftIssuesFilter } from "./workspace-draft";
+import type { IWorkspaceDraftIssues } from "./workspace-draft";
+import { WorkspaceDraftIssues } from "./workspace-draft";
 
 import { IssueApiService } from "@/services/issue/issue-api.service";
 import { IssueListService } from "@/services/issue/issue-list.service";
@@ -71,7 +71,6 @@ export class IssueRootStore {
 
   issueDetail: IIssueDetail;
 
-  workspaceDraftIssuesFilter: IWorkspaceDraftIssuesFilter;
   workspaceDraftIssues: IWorkspaceDraftIssues;
 
   profileIssuesFilter: IProfileIssuesFilter;
@@ -136,7 +135,6 @@ export class IssueRootStore {
     this.profileIssuesFilter = new ProfileIssuesFilter(this);
     this.profileIssues = new ProfileIssues(this, this.profileIssuesFilter);
 
-    this.workspaceDraftIssuesFilter = new WorkspaceDraftIssuesFilter(this);
     this.workspaceDraftIssues = new WorkspaceDraftIssues(this);
 
     this.projectIssuesFilter = new ProjectIssuesFilter(this, api);

@@ -340,3 +340,36 @@ it("fix1 I1/I3 canonicalizes saved UUIDs and clears year zero on real preference
   list.call.answer(json(200, { total: 0, data: [], next_cursor: null }));
   await list.promise;
 });
+
+it("retains project kanban collapse across a real preference reload", async () => {
+  const data = new Map<string, string>();
+  vi.stubGlobal("window", {
+    localStorage: {
+      getItem: (key: string) => data.get(key) ?? null,
+      setItem: (key: string, value: string) => data.set(key, value),
+    },
+  });
+  const { app, nerve } = tab;
+  const { runInAction } = await import("mobx");
+  runInAction(() => {
+    app.issue.currentUserId = "actor";
+  });
+  const first = await requestedIssue(nerve, () => app.issue.projectIssuesFilter.fetchFilters("ws", "A"), [
+    "GET",
+    "/api/v0/me/projects/A/preferences",
+  ]);
+  first.call.answer(json(200, preferencesOf()));
+  await first.promise;
+  await app.issue.projectIssuesFilter.updateFilters("ws", "A", EIssueFilterType.KANBAN_FILTERS, {
+    group_by: ["state-1"],
+    sub_group_by: [],
+  });
+  const second = await requestedIssue(nerve, () => app.issue.projectIssuesFilter.fetchFilters("ws", "A"), [
+    "GET",
+    "/api/v0/me/projects/A/preferences",
+  ]);
+  second.call.answer(json(200, preferencesOf()));
+  await second.promise;
+  expect(app.issue.projectIssuesFilter.getIssueFilters("A")?.kanbanFilters?.group_by).toEqual(["state-1"]);
+  vi.unstubAllGlobals();
+});

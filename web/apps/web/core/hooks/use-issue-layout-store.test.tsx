@@ -37,7 +37,6 @@ vi.mock("@/lib/store-context", async () => {
         archivedIssues: {},
         archivedIssuesFilter: {},
         workspaceDraftIssues: {},
-        workspaceDraftIssuesFilter: {},
       },
     }),
   };

@@ -27,11 +27,7 @@ import { List } from "./default";
 // types
 import type { IQuickActionProps, TRenderQuickActions } from "./list-view-types";
 
-type ListStoreType =
-  | EIssuesStoreType.PROJECT
-  | EIssuesStoreType.PROFILE
-  | EIssuesStoreType.ARCHIVED
-  | EIssuesStoreType.WORKSPACE_DRAFT;
+type ListStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE | EIssuesStoreType.ARCHIVED;
 
 interface IBaseListRoot {
   QuickActions: FC<IQuickActionProps>;

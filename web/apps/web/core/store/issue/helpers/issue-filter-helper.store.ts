@@ -22,12 +22,17 @@ import { getComputedDisplayFilters, getComputedDisplayProperties } from "@nerve/
 // lib
 import { storage } from "@/lib/local-storage";
 
+const strings = (value: unknown): string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string") ? value : [];
+
 interface ILocalStoreIssueFilters {
   key: EIssuesStoreType;
   workspaceSlug: string;
   viewId: string | undefined; // It can be projectId, moduleId, cycleId, projectViewId
   userId: string | undefined;
-  filters: IIssueFilters;
+  filters: Partial<
+    IIssueFiltersResponse & { kanban_filters: TIssueKanbanFilters; richFilters: IIssueFiltersResponse["rich_filters"] }
+  >;
 }
 
 export interface IBaseIssueFilterStore {
@@ -113,8 +118,22 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
 
   handleIssuesLocalFilters = {
     fetchFiltersFromStorage: () => {
-      const _filters = storage.get("issue_local_filters");
-      return _filters ? JSON.parse(_filters) : [];
+      try {
+        const raw = storage.get("issue_local_filters");
+        const parsed: unknown = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(
+          (entry): entry is ILocalStoreIssueFilters =>
+            entry !== null &&
+            typeof entry === "object" &&
+            !Array.isArray(entry) &&
+            entry.filters !== null &&
+            typeof entry.filters === "object" &&
+            !Array.isArray(entry.filters)
+        );
+      } catch {
+        return [];
+      }
     },
 
     get: (
@@ -123,6 +142,7 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
       viewId: string | undefined, // It can be projectId, moduleId, cycleId, projectViewId
       userId: string | undefined
     ) => {
+      if (!userId) return undefined;
       const storageFilters = this.handleIssuesLocalFilters.fetchFiltersFromStorage();
       const currentFilterIndex = storageFilters.findIndex(
         (filter: ILocalStoreIssueFilters) =>
@@ -131,9 +151,24 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
           filter.viewId === viewId &&
           filter.userId === userId
       );
-      if (!currentFilterIndex && currentFilterIndex.length < 0) return undefined;
-
-      return storageFilters[currentFilterIndex]?.filters || {};
+      const entry = storageFilters[currentFilterIndex];
+      if (!entry) return undefined;
+      if ("richFilters" in entry.filters) {
+        const { richFilters, ...rest } = entry.filters;
+        entry.filters = { ...rest, rich_filters: rest.rich_filters ?? richFilters };
+        try {
+          storage.set("issue_local_filters", JSON.stringify(storageFilters));
+        } catch {
+          /* storage unavailable */
+        }
+      }
+      const kanban = entry.filters.kanban_filters;
+      return {
+        ...entry.filters,
+        ...(kanban
+          ? { kanban_filters: { group_by: strings(kanban.group_by), sub_group_by: strings(kanban.sub_group_by) } }
+          : {}),
+      };
     },
 
     set: (
@@ -144,6 +179,7 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
       userId: string | undefined,
       filters: Partial<IIssueFiltersResponse & { kanban_filters: TIssueKanbanFilters }>
     ) => {
+      if (!userId) return;
       const storageFilters = this.handleIssuesLocalFilters.fetchFiltersFromStorage();
       const currentFilterIndex = storageFilters.findIndex(
         (filter: ILocalStoreIssueFilters) =>
@@ -153,6 +189,11 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
           filter.userId === userId
       );
 
+      const existing = storageFilters[currentFilterIndex];
+      if (existing && "richFilters" in existing.filters) {
+        const { richFilters, ...rest } = existing.filters;
+        existing.filters = { ...rest, rich_filters: rest.rich_filters ?? richFilters };
+      }
       if (currentFilterIndex < 0)
         storageFilters.push({
           key: currentView,
@@ -170,7 +211,11 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
           },
         };
       // All group_by "filters" are stored in a single array, will cause inconsistency in case of duplicated values
-      storage.set("issue_local_filters", JSON.stringify(storageFilters));
+      try {
+        storage.set("issue_local_filters", JSON.stringify(storageFilters));
+      } catch {
+        /* storage unavailable */
+      }
     },
   };
 

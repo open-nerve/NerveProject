@@ -14,7 +14,7 @@ import { StoreContext } from "@/lib/store-context";
 import type { IArchivedIssues, IArchivedIssuesFilter } from "@/store/issue/archived";
 import type { IProfileIssues, IProfileIssuesFilter } from "@/store/issue/profile";
 import type { IProjectIssues, IProjectIssuesFilter } from "@/store/issue/project";
-import type { IWorkspaceDraftIssues, IWorkspaceDraftIssuesFilter } from "@/store/issue/workspace-draft";
+import type { IWorkspaceDraftIssues } from "@/store/issue/workspace-draft";
 
 type defaultIssueStore = {
   issueMap: Readonly<Record<string, Issue | IssueDetail>>;
@@ -23,7 +23,6 @@ type defaultIssueStore = {
 export type TStoreIssues = {
   [EIssuesStoreType.WORKSPACE_DRAFT]: defaultIssueStore & {
     issues: IWorkspaceDraftIssues;
-    issuesFilter: IWorkspaceDraftIssuesFilter;
   };
   [EIssuesStoreType.PROFILE]: defaultIssueStore & {
     issues: IProfileIssues;
@@ -55,7 +54,6 @@ export const useIssues = <T extends EIssuesStoreType>(storeType?: T): TStoreIssu
     case EIssuesStoreType.WORKSPACE_DRAFT:
       return merge(defaultStore, {
         issues: context.issue.workspaceDraftIssues,
-        issuesFilter: context.issue.workspaceDraftIssuesFilter,
       }) as TStoreIssues[T];
     case EIssuesStoreType.PROFILE:
       return merge(defaultStore, {

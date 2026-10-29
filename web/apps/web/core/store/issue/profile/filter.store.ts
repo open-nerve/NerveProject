@@ -18,10 +18,36 @@ import type {
   TSupportedFilterForUpdate,
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
+import { memberListQuery, toFilterExpression, toProjectFilters } from "@/lib/issue-filters";
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
 import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
 // types
 import type { IIssueRootStore } from "../root.store";
+
+const record = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+const cleanExpression = (expression: TWorkItemFilterExpression): TWorkItemFilterExpression => {
+  const clean = toFilterExpression(toProjectFilters(expression));
+  const nodes = record(expression) ? ("and" in expression ? expression.and : [expression]) : [];
+  const projects = Array.isArray(nodes)
+    ? nodes.flatMap((node) =>
+        record(node) && !("and" in node) ? Object.entries(node).filter(([key]) => key.startsWith("project_id__")) : []
+      )
+    : [];
+  const [key, value] = projects.length === 1 ? projects[0] : [];
+  const ids =
+    typeof value === "string"
+      ? key === "project_id__in"
+        ? value.split(",")
+        : key === "project_id__exact"
+          ? [value]
+          : undefined
+      : undefined;
+  const projectIds = memberListQuery({ project_id: ids }, {}, "assigned").project_id;
+  if (!projectIds) return clean;
+  return { and: [...("and" in clean ? clean.and : []), { project_id__in: projectIds.join(",") }] };
+};
 
 export interface IProfileIssuesFilter extends IBaseIssueFilterStore {
   //helper actions
@@ -76,12 +102,19 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
   }
 
   fetchFilters = async (workspaceSlug: string, userId: string) => {
-    const _filters = this.handleIssuesLocalFilters.get(EIssuesStoreType.PROFILE, workspaceSlug, userId, undefined);
+    const _filters = this.handleIssuesLocalFilters.get(
+      EIssuesStoreType.PROFILE,
+      workspaceSlug,
+      userId,
+      this.rootIssueStore.currentUserId
+    );
 
-    const richFilters: TWorkItemFilterExpression = _filters?.rich_filters;
-    const displayFilters: IIssueDisplayFilterOptions = this.computedDisplayFilters(_filters?.display_filters);
-    const displayProperties: IIssueDisplayProperties = this.computedDisplayProperties(_filters?.display_properties);
-    const kanbanFilters = {
+    const richFilters = cleanExpression(_filters?.rich_filters ?? {});
+    const displayFilters: IIssueDisplayFilterOptions = this.computedDisplayFilters(_filters?.display_filters ?? {});
+    const displayProperties: IIssueDisplayProperties = this.computedDisplayProperties(
+      _filters?.display_properties ?? {}
+    );
+    const kanbanFilters: TIssueKanbanFilters = {
       group_by: _filters?.kanban_filters?.group_by || [],
       sub_group_by: _filters?.kanban_filters?.sub_group_by || [],
     };
@@ -101,6 +134,7 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
    */
   updateFilterExpression: IProfileIssuesFilter["updateFilterExpression"] = async (workspaceSlug, userId, filters) => {
     try {
+      filters = cleanExpression(filters);
       runInAction(() => {
         set(this.filters, [userId, "richFilters"], filters);
       });
@@ -111,7 +145,7 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
         EIssueFilterType.FILTERS,
         workspaceSlug,
         userId,
-        undefined,
+        this.rootIssueStore.currentUserId,
         {
           rich_filters: filters,
         }
@@ -169,9 +203,16 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
 
           this.rootIssueStore.profileIssues.fetchIssuesWithExistingPagination(workspaceSlug, userId, "mutation");
 
-          this.handleIssuesLocalFilters.set(EIssuesStoreType.PROFILE, type, workspaceSlug, userId, undefined, {
-            display_filters: _filters.displayFilters,
-          });
+          this.handleIssuesLocalFilters.set(
+            EIssuesStoreType.PROFILE,
+            type,
+            workspaceSlug,
+            userId,
+            this.rootIssueStore.currentUserId,
+            {
+              display_filters: _filters.displayFilters,
+            }
+          );
 
           break;
         }
@@ -189,9 +230,16 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
             });
           });
 
-          this.handleIssuesLocalFilters.set(EIssuesStoreType.PROFILE, type, workspaceSlug, userId, undefined, {
-            display_properties: _filters.displayProperties,
-          });
+          this.handleIssuesLocalFilters.set(
+            EIssuesStoreType.PROFILE,
+            type,
+            workspaceSlug,
+            userId,
+            this.rootIssueStore.currentUserId,
+            {
+              display_properties: _filters.displayProperties,
+            }
+          );
           break;
         }
 
@@ -201,9 +249,16 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
 
           const currentUserId = this.rootIssueStore.currentUserId;
           if (currentUserId)
-            this.handleIssuesLocalFilters.set(EIssuesStoreType.PROFILE, type, workspaceSlug, userId, undefined, {
-              kanban_filters: _filters.kanbanFilters,
-            });
+            this.handleIssuesLocalFilters.set(
+              EIssuesStoreType.PROFILE,
+              type,
+              workspaceSlug,
+              userId,
+              this.rootIssueStore.currentUserId,
+              {
+                kanban_filters: _filters.kanbanFilters,
+              }
+            );
 
           runInAction(() => {
             Object.keys(updatedKanbanFilters).forEach((_key) => {
