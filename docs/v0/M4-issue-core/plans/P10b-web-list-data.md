@@ -1,8 +1,8 @@
 # M4/P10b 列表数据层实施计划
 
-> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T7 既定任务门禁已完成；T7 偏好迁移及快速切换查询的修复已通过独评，继续 T8 筛选语义与否定层清理。任务勾选由主控在独立评审后更新。
+> **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T8 既定任务门禁已完成；T8 筛选语义、否定层清理和边界修复已通过独评及完整 F，继续 T9 本地偏好与草稿去筛选。任务勾选由主控在独立评审后更新。
 
-> **当前状态：** T7 修复提交 663633e1 的限定复审通过；最终 66 项聚焦及 lint/knip 通过，三旧放行故事在修复前 7 项通过，验证范围见 review §10。最近完整本地七门禁仍绑定 T4 dde969f8；T8 按计划跑下一次完整 F 及产品检查点 CI。全部阶段产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。
+> **当前状态：** T8 修复提交 481c30b4 的限定复审及完整本地七门禁通过：Go 51 个包、前端 1,623 项、E2E 169 项成功；检查点已推送，准确分支 CI 仍待观察，证据见 review §11。全部阶段产品验收仍未勾选。基线 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实际依赖和 P10a 性质承接见 spec 附录 B；准确 main CI/归档清理见 P10a review §10。
 
 **目标：** 交付生成接口驱动的项目/归档/个人主页列表、分组分页、确认修改协调与会话隔离，项目挂载不发旧接口。
 
@@ -181,10 +181,10 @@ make e2e
 **Files：** 扩充T5已加的C/lib/issue-filters.ts/test；P/shared-state/src/store/{rich-filters,work-item-filters}与utils；P/types/src/rich-filters和view-props.ts；P/utils/src/rich-filters；C/hooks/rich-filters/use-filters-operator-configs.ts及work-item-filters调用者；tools/keywords.json 的既定 negation-filters 守卫。
 **Interfaces：** spec§2.7四纯函数toProjectFilters/toFilterExpression/projectListQuery/memberListQuery；不向shared-state新增api-client依赖。
 
-- [ ] 表F01…逐支持property/operator/value：state/groups/priority/labels/assignees/creator/mention/subscriber、none/me、两条日期AND、开区间/闭区间、空清除；回读保存值等价，不比较UI临时node ID。member排除不支持字段且relation必填；损坏存储值恢复明确默认。
-- [ ] 红：`pnpm --filter web exec vitest run core/lib/issue-filters.test.ts`。
-- [ ] 实现纯转换，删TAllAvailable*恒等alias/TNegativeOperatorConfig/isNegation/allowNegative/useFiltersOperatorConfigs及所有参数传递；先编译types→utils/shared-state→web，每Task终态全编译，不留临时any。
-- [ ] M25日期AND误变OR、M26日期none与实际日期条件混合（标签/负责人允许none与id并列）、M27负向层残留和空筛选不清除，分别测试/关键词红；否定层删完即启用既定静态守卫，T13再核M43。同定向、lint-web/knip，G、F，提交 `feat(M4/P10b): 统一列表筛选词汇并移除否定层`。
+- [x] 表F01…逐支持property/operator/value：state/groups/priority/labels/assignees/creator/mention/subscriber、none/me、两条日期AND、开区间/闭区间、空清除；回读保存值等价，不比较UI临时node ID。member排除不支持字段且relation必填；损坏存储值恢复明确默认。
+- [x] 红：`pnpm --filter web exec vitest run core/lib/issue-filters.test.ts`。
+- [x] 实现纯转换，删TAllAvailable*恒等alias/TNegativeOperatorConfig/isNegation/allowNegative/useFiltersOperatorConfigs及所有参数传递；先编译types→utils/shared-state→web，每Task终态全编译，不留临时any。
+- [x] M25日期AND误变OR、M26日期none与实际日期条件混合（标签/负责人允许none与id并列）、M27负向层残留和空筛选不清除，分别测试/关键词红；否定层删完即启用既定静态守卫，T13再核M43。同定向、lint-web/knip，G、F，提交 `feat(M4/P10b): 统一列表筛选词汇并移除否定层`。
 
 ## Task 9：归档个人主页偏好与草稿去筛选（约350–650行）
 

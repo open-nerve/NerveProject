@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-日期：2026-10-29。**T1–T7 既定任务门禁已完成；T7 偏好迁移及并发查询修复已独评闭合；T8 开始。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。T4 完整本地七门禁通过；阶段最终门禁、终审与准确分支 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。当前实施记录见第10节，第7–9节保留 T1–T6 的过程与完成证据；以下第1–6节保留预检时点事实。
+日期：2026-10-29。**T1–T8 既定任务门禁已完成；T8 筛选语义及边界修复已独评闭合，完整 F 通过；T9 开始。** 分支 `codex/m4-p10b`；实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，实施起点 `6dfd7258bfe8c6350116131488bf3b83822425c9`。481c30b4 检查点已推送，准确分支 CI 正在观察；阶段最终门禁、终审与最终 CI 尚未完成，产品验收十项仍未勾，阶段结束先不合并。配套：[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。执行前 [deep-review](../../../reviews/re-12-M4P10b预检审核.md) 仍为历史准备证据。当前实施记录见第11节，第7–10节保留 T1–T7 的过程与完成证据；以下第1–6节保留预检时点事实。
 
 ## 1. 实际前置与证据
 
@@ -177,3 +177,20 @@ R19 将写入与页面读取跟进分开，原显示、布局和富筛选入口�
 - 构建后单套 Chromium 三故事7项通过；首轮 P8 的双 preferences GET 与单次 hold 夹具竞争已由有界 count 夹具修正，业务及数据库断言保留。此 E2E 成功发生于 fix1 前，不能说覆盖新的并发修复；后者由真实写读/重试/会话项目切换回归覆盖，下一完整浏览器验证归 T8 F。颜色环境 NO_COLOR/FORCE_COLOR 的三次警告保留，下一 F 统一子进程环境验证，不单独重跑 DB 或吞 stderr。
 
 T8 继续补齐筛选转换/回读语义并删除否定层。R20 将已批准的 negation-filters 守卫随删除一并启用，才能让本任务 M27 回引词项触发真实关键词红；T13仍核M43与角色挂载，不扩大静态限制。日期 none 禁止与其它日期条件混用，标签/负责人 none 与 id 并列仍合法。下一完整 F 和准确分支检查点在 T8；A1–A10、阶段终审、集成和 M4 总体完成线仍开放，不合并、不启动 P11。
+
+## 11. T8 完成与 T9 接续
+
+整 Task 范围为 `663633e1..481c30b4`，包含接续文档、首轮部分实现、完整接续及一次修复。四个纯转换入口统一字段默认、重复日期 AND、开放端点、none/me 和标识词汇；否定层 API/恒等别名及空 hook 已删除，精确静态守卫同步启用。R21 规定非法值或不能表达的非日期重复 AND 清空整个字段，其它合法条件保留，不静默合并成 OR。
+
+首次独评指出三项 Important：年份 0000 被接受、profile 提取项目条件时坏结构抛错、大写 UUID 与本地成员判断不一致。`481c30b4` 修复并由独立限定复审逐项确认关闭，无新增问题。新增 16 项真实反例纳入最终 10 文件 204 项回归；年份 0001/9999、坏根/节点、UUID 实际保存回读/成员判断及 T7 快速切换和读取重试都保留。subscriber 数据往返及编辑其它条件后的保留已验证，现有选择器/InvalidFilterItem 呈现仍明确交 M4 Phase P13，不冒称已完成该 UI。
+
+原件在 worktree 的 `.superpowers/sdd/P10b-web-list-data/`：`task-8-current-report.md`、`task-8-review.md`、`task-8-fix1-review.md`、`task-8-fix1-root-audit.json` 与源码桥。root 核过 58 条验证 raw、最终 2617 个输入及六个修复提交文件；早期共享 build 与 Vitest 并行导致的 import 失败、格式/夹具失败和 adapter 旧 dist 的红均如实保留，不作为行为红。六项生产变异的原源码/红/恢复原件保留，修复轮未冒称重新执行全部变异。
+
+完整 F 绑定干净 `481c30b4d18c3c9742cd9b51a1a1bb82ab2f2625`，原件 `task-8-root-final-f-attempt1/`，七项退出均为 0，root 核其 raw/hash、前后相同 HEAD 与八包非缓存日志：
+
+- Go 51 个包通过、16 个包无测试；`-count=1`、`GOFLAGS=-p=1`，数据库套件顺序运行。
+- 前端 1,623 项通过（web 155 文件/1461 项，加七个包162项）；Turbo 18任务、0缓存。静态54任务通过（38缓存），knip通过。
+- E2E 169 项通过，含 Chromium 全套与 Firefox A4；由 `make e2e` 同次构建，覆盖 T7 并发修复后的源码。
+- 子进程移除冲突的 NO_COLOR 后颜色警告为0，T7 M2关闭；20段单测 stderr 的 MobX/React 已有警告原样保留，IssueRootStore归T10、看板隐藏空fragment归T13，其余按既有归属，不吞stderr。
+
+系统 Git 已成功推送检查点，[准确分支 CI 40791948412](https://github.com/open-nerve/NerveProject/actions/runs/40791948412) 绑定 481c30b4，仍在运行；T9 继续本地存储键/账户隔离和草稿筛选移除。阶段 A1–A10、整分支 deep-review、最终准确 HEAD CI、集成及 M4 总完成线仍开放。
