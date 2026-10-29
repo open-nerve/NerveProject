@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueDetail, IssueListPage, IssueLink } from "@nerve/api-client";
+import type { Issue, IssueDetail, IssueListPage, IssueLink, IssueComment } from "@nerve/api-client";
 import { expect } from "vitest";
 import type { Group } from "@/lib/paged-groups";
 import type { Endpoint, FakeNerve } from "@/lib/auth/fake-nerve";
@@ -52,6 +52,17 @@ export const issueLinkOf = (id: string, issueId = "x"): IssueLink => ({
   created_by_id: null,
   created_at: "2026-10-30T00:00:00Z",
   updated_at: "2026-10-30T00:00:00Z",
+});
+
+export const issueCommentOf = (id: string, issueId = "x"): IssueComment => ({
+  id,
+  issue_id: issueId,
+  actor_id: "actor",
+  comment_html: `<p>${id}</p>`,
+  edited_at: null,
+  created_at: "2026-10-30T00:00:00.123456Z",
+  updated_at: "2026-10-30T00:00:00.123456Z",
+  reactions: [],
 });
 
 /** Start an operation and hold its one real HTTP request until the test answers it. */

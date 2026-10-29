@@ -7,7 +7,7 @@
 // pages. It builds no store, so that the projects' fakes give him too without the account's store, which imports the
 // tab's session.
 
-import type { MemberUser } from "@nerve/api-client";
+import type { MemberUser, User } from "@nerve/api-client";
 
 /** A user as nerve gives him with his membership: the name names him. */
 export function userOf(name: string): MemberUser {
@@ -18,5 +18,16 @@ export function userOf(name: string): MemberUser {
     last_name: "Doe",
     avatar_url: null,
     email: `${name}@example.com`,
+  };
+}
+
+/** The signed-in account; membership responses deliberately carry fewer fields. */
+export function accountOf(name: string): User {
+  return {
+    ...userOf(name),
+    email: `${name}@example.com`,
+    user_timezone: "UTC",
+    cover_image_url: null,
+    created_at: "2026-10-30T00:00:00Z",
   };
 }

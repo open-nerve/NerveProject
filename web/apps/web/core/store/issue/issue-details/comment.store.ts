@@ -1,181 +1,189 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import { pull, concat, update, uniq, set } from "lodash-es";
-import { action, makeObservable, observable, runInAction } from "mobx";
-// Nerve Imports
-import type { TIssueComment, TIssueCommentMap, TIssueCommentIdMap } from "@nerve/types";
-// services
-import { IssueCommentService } from "@/services/issue";
-// types
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type { CommentReaction, IssueComment, IssueCommentCreate } from "@nerve/api-client";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { compareCodePoints, compareIssueTime } from "@/lib/issue-order";
+import { upserted } from "@/lib/reconciled";
 import type { IIssueDetail } from "./root.store";
+import type { IssueReadToken } from "../root.store";
+import { IssueResources } from "./resources";
 
-export type TCommentLoader = "fetch" | "create" | "update" | "delete" | "mutate" | undefined;
-
-export interface IIssueCommentStoreActions {
-  fetchComments: (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    loaderType?: TCommentLoader
-  ) => Promise<TIssueComment[]>;
-  createComment: (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    data: Partial<TIssueComment>
-  ) => Promise<any>;
-  updateComment: (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    commentId: string,
-    data: Partial<TIssueComment>
-  ) => Promise<any>;
-  removeComment: (workspaceSlug: string, projectId: string, issueId: string, commentId: string) => Promise<any>;
-}
-
-export interface IIssueCommentStore extends IIssueCommentStoreActions {
-  // observables
-  loader: TCommentLoader;
-  comments: TIssueCommentIdMap;
-  commentMap: TIssueCommentMap;
-  // helper methods
-  getCommentsByIssueId: (issueId: string) => string[] | undefined;
-  getCommentById: (activityId: string) => TIssueComment | undefined;
-}
-
-export class IssueCommentStore implements IIssueCommentStore {
-  // observables
-  loader: TCommentLoader = "fetch";
-  comments: TIssueCommentIdMap = {};
-  commentMap: TIssueCommentMap = {};
-  // root store
-  rootIssueDetail: IIssueDetail;
-  // services
-  issueCommentService;
-
-  constructor(rootStore: IIssueDetail) {
-    makeObservable(this, {
-      // observables
-      loader: observable.ref,
-      comments: observable,
-      commentMap: observable,
-      // actions
-      fetchComments: action,
-      createComment: action,
-      updateComment: action,
-      removeComment: action,
-    });
-    // root store
-    this.rootIssueDetail = rootStore;
-    // services
-    this.issueCommentService = new IssueCommentService();
+type Comments = { data: IssueComment[]; cursor?: string; complete: boolean };
+const sorted = (data: IssueComment[]) =>
+  data.toSorted((a, b) => compareIssueTime(a.created_at, b.created_at) || compareCodePoints(a.id, b.id));
+function merged(held: IssueComment[], answer: IssueComment[]): IssueComment[] {
+  const rows = new Map(held.map((row) => [row.id, row]));
+  for (const row of answer) {
+    const previous = rows.get(row.id);
+    if (!previous || compareIssueTime(row.updated_at, previous.updated_at) >= 0) rows.set(row.id, row);
   }
+  return sorted([...rows.values()]);
+}
+export type IIssueCommentStore = IssueCommentStore;
+export type IIssueCommentStoreActions = Pick<
+  IssueCommentStore,
+  "fetchComments" | "createComment" | "updateComment" | "removeComment"
+>;
 
-  // helper methods
-  getCommentsByIssueId = (issueId: string) => {
-    if (!issueId) return undefined;
-    return this.comments[issueId] ?? undefined;
-  };
-
-  getCommentById = (commentId: string) => {
-    if (!commentId) return undefined;
-    return this.commentMap[commentId] ?? undefined;
-  };
-
-  fetchComments = async (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    loaderType: TCommentLoader = "fetch"
-  ) => {
-    this.loader = loaderType;
-
-    let props = {};
-    const _commentIds = this.getCommentsByIssueId(issueId);
-    if (_commentIds && _commentIds.length > 0) {
-      const _comment = this.getCommentById(_commentIds[_commentIds.length - 1]);
-      if (_comment) props = { created_at__gt: _comment.created_at };
-    }
-
-    const comments = await this.issueCommentService.getIssueComments(workspaceSlug, projectId, issueId, props);
-
-    const commentIds = comments.map((comment) => comment.id);
-    runInAction(() => {
-      update(this.comments, issueId, (_commentIds) => {
-        if (!_commentIds) return commentIds;
-        return uniq(concat(_commentIds, commentIds));
-      });
-      comments.forEach((comment) => {
-        this.rootIssueDetail.commentReaction.applyCommentReactions(comment.id, comment?.comment_reactions || []);
-        set(this.commentMap, comment.id, comment);
-      });
-      this.loader = undefined;
+/** The comment is the sole owner of its embedded reactions; all commands share its issue's queue. */
+export class IssueCommentStore {
+  private readonly resources: IssueResources<Comments>;
+  constructor(readonly rootIssueDetail: IIssueDetail) {
+    this.resources = new IssueResources(this.root);
+  }
+  private get root() {
+    return this.rootIssueDetail.rootIssueStore;
+  }
+  getCommentsByIssueId = (id: string) => this.resources.get(id)?.value?.data.map((row) => row.id);
+  getCommentById = (id: string, commentId: string) =>
+    this.resources.get(id)?.value?.data.find((row) => row.id === commentId);
+  getError = (id: string) => this.resources.get(id)?.error;
+  isLoading = (id: string) => this.resources.get(id)?.loading ?? false;
+  fetchComments = async (ws: string, project: string, id: string, incremental = false): Promise<IssueComment[]> => {
+    const resource = this.resources.entry(ws, project, id);
+    const before = resource.value;
+    const value = await resource.fetch(async (read) => {
+      const start = incremental && before?.complete ? before.cursor : undefined;
+      let rows: IssueComment[] = [];
+      const seen = new Set<string>();
+      const pageFrom = async (cursor: string | undefined): Promise<Comments> => {
+        const page = await this.root.commentApi.getIssueComments(id, cursor === undefined ? {} : { cursor });
+        if (!read.isCurrent()) throw new SessionChangedError();
+        this.validate(page.data, id);
+        rows = merged(rows, page.data);
+        if (page.next_cursor === null) {
+          const retained =
+            incremental && before?.complete
+              ? before.data
+              : (before?.data ?? []).filter((row) => rows.some((next) => next.id === row.id));
+          return { data: merged(retained, rows), cursor, complete: true };
+        }
+        if (seen.has(page.next_cursor)) throw new Error("Repeated comment cursor");
+        seen.add(page.next_cursor);
+        return pageFrom(page.next_cursor);
+      };
+      return pageFrom(start);
     });
-
-    return comments;
+    if (!value) throw new SessionChangedError();
+    return value.data;
   };
-
-  createComment = async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssueComment>) => {
-    const response = await this.issueCommentService.createIssueComment(workspaceSlug, projectId, issueId, data);
-
-    runInAction(() => {
-      update(this.comments, issueId, (_commentIds) => {
-        if (!_commentIds) return [response.id];
-        return uniq(concat(_commentIds, [response.id]));
-      });
-      set(this.commentMap, response.id, response);
+  private validate(rows: IssueComment[], id: string) {
+    if (rows.some((row) => row.issue_id !== id || row.reactions.some((reaction) => reaction.comment_id !== row.id)))
+      throw new SessionChangedError();
+  }
+  private current(token: IssueReadToken, ws: string, project: string) {
+    const scope = this.root.scope(ws, project);
+    if (!this.root.isReadCurrent(token, [project], scope.workspaceID)) throw new SessionChangedError();
+    this.root.assertProjectReadable(ws, project);
+  }
+  private requireComment(id: string, commentId: string) {
+    if (!this.getCommentById(id, commentId)) throw new Error("Comment has not been read");
+  }
+  private write<T>(
+    ws: string,
+    project: string,
+    id: string,
+    send: () => Promise<T>,
+    confirm: (answer: T, value: Comments) => Comments,
+    commentId?: string
+  ): Promise<T> {
+    return this.root.enqueueIssueChanges([id], async () => {
+      const resource = this.resources.entry(ws, project, id);
+      if (commentId) this.requireComment(id, commentId);
+      const token = this.root.captureRead();
+      const answer = await send();
+      this.current(token, ws, project);
+      const initial: Comments = { data: [], complete: false };
+      resource.receive(initial, token, (held) => confirm(answer, held ?? initial));
+      return answer;
     });
-
-    return response;
-  };
-
-  updateComment = async (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
+  }
+  createComment = (ws: string, project: string, id: string, body: IssueCommentCreate): Promise<IssueComment> =>
+    this.write(
+      ws,
+      project,
+      id,
+      () => this.root.commentApi.createIssueComment(id, { comment_html: body.comment_html }),
+      (answer, held) => {
+        this.validate([answer], id);
+        return { ...held, data: merged(held.data, [answer]) };
+      }
+    );
+  updateComment = (
+    ws: string,
+    project: string,
+    id: string,
     commentId: string,
-    data: Partial<TIssueComment>
-  ) => {
-    try {
-      runInAction(() => {
-        Object.keys(data).forEach((key) => {
-          set(this.commentMap, [commentId, key], data[key as keyof TIssueComment]);
-        });
-      });
-
-      const response = await this.issueCommentService.patchIssueComment(
-        workspaceSlug,
-        projectId,
-        issueId,
-        commentId,
-        data
-      );
-
-      runInAction(() => {
-        set(this.commentMap, [commentId, "updated_at"], response.updated_at);
-        set(this.commentMap, [commentId, "edited_at"], response.edited_at);
-      });
-
-      return response;
-    } catch (error) {
-      this.rootIssueDetail.activity.fetchActivities(workspaceSlug, projectId, issueId);
-      throw error;
-    }
-  };
-
-  removeComment = async (workspaceSlug: string, projectId: string, issueId: string, commentId: string) => {
-    const response = await this.issueCommentService.deleteIssueComment(workspaceSlug, projectId, issueId, commentId);
-
-    runInAction(() => {
-      pull(this.comments[issueId], commentId);
-      delete this.commentMap[commentId];
-    });
-
-    return response;
+    body: IssueCommentCreate
+  ): Promise<IssueComment> =>
+    this.write(
+      ws,
+      project,
+      id,
+      () => this.root.commentApi.patchIssueComment(commentId, { comment_html: body.comment_html }),
+      (answer, held) => {
+        this.validate([answer], id);
+        if (answer.id !== commentId) throw new SessionChangedError();
+        return { ...held, data: merged(held.data, held.data.some((row) => row.id === commentId) ? [answer] : []) };
+      },
+      commentId
+    );
+  removeComment = (ws: string, project: string, id: string, commentId: string): Promise<void> =>
+    this.write(
+      ws,
+      project,
+      id,
+      () => this.root.commentApi.deleteIssueComment(commentId),
+      (_, held) => ({ ...held, data: held.data.filter((row) => row.id !== commentId) }),
+      commentId
+    );
+  createReaction = (
+    ws: string,
+    project: string,
+    id: string,
+    commentId: string,
+    reaction: string
+  ): Promise<CommentReaction> =>
+    this.write(
+      ws,
+      project,
+      id,
+      () => this.root.commentApi.addReaction(commentId, { reaction }),
+      (answer, held) => {
+        if (
+          answer.comment_id !== commentId ||
+          answer.actor_id !== this.root.currentUserId ||
+          answer.reaction !== reaction
+        )
+          throw new SessionChangedError();
+        return {
+          ...held,
+          data: held.data.map((row) =>
+            row.id === commentId ? { ...row, reactions: upserted(answer)(row.reactions) } : row
+          ),
+        };
+      },
+      commentId
+    );
+  removeReaction = (ws: string, project: string, id: string, commentId: string, reaction: string): Promise<void> => {
+    const actor = this.root.currentUserId;
+    if (!actor) return Promise.reject(new SessionChangedError());
+    return this.write(
+      ws,
+      project,
+      id,
+      () => this.root.commentApi.removeReaction(commentId, reaction),
+      (_, held) => ({
+        ...held,
+        data: held.data.map((row) =>
+          row.id === commentId
+            ? {
+                ...row,
+                reactions: row.reactions.filter((value) => value.actor_id !== actor || value.reaction !== reaction),
+              }
+            : row
+        ),
+      }),
+      commentId
+    );
   };
 }

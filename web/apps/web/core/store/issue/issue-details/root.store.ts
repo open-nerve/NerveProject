@@ -4,22 +4,16 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueUpdate, IssueLink, IssueLinkCreate, IssueLinkPatch } from "@nerve/api-client";
+import type { IssueUpdate, IssueLink, IssueLinkCreate, IssueLinkPatch, IssueCommentCreate } from "@nerve/api-client";
 import { action, computed, makeObservable, observable } from "mobx";
 // types
-import type {
-  TIssueComment,
-  TIssueCommentReaction,
-  TIssueReaction,
-  TIssueRelationTypes,
-  TWorkItemWidgets,
-} from "@nerve/types";
+import type { TIssueReaction, TIssueRelationTypes, TWorkItemWidgets } from "@nerve/types";
 // local imports
 import { IssueActivityStore } from "./activity.store";
 import type { IIssueActivityStore, IIssueActivityStoreActions, TActivityLoader } from "./activity.store";
 import type { IIssueRootStore } from "../root.store";
 import { IssueCommentStore } from "./comment.store";
-import type { IIssueCommentStore, IIssueCommentStoreActions, TCommentLoader } from "./comment.store";
+import type { IIssueCommentStore, IIssueCommentStoreActions } from "./comment.store";
 import { IssueCommentReactionStore } from "./comment_reaction.store";
 import type { IIssueCommentReactionStore, IIssueCommentReactionStoreActions } from "./comment_reaction.store";
 import { IssueStore } from "./issue.store";
@@ -296,32 +290,33 @@ export class IssueDetail implements IIssueDetail {
     this.activity.fetchActivities(workspaceSlug, projectId, issueId, loaderType);
 
   // comment
-  fetchComments = async (workspaceSlug: string, projectId: string, issueId: string, loaderType?: TCommentLoader) =>
-    this.comment.fetchComments(workspaceSlug, projectId, issueId, loaderType);
-  createComment = async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssueComment>) =>
+  fetchComments = async (workspaceSlug: string, projectId: string, issueId: string, incremental = false) =>
+    this.comment.fetchComments(workspaceSlug, projectId, issueId, incremental);
+  createComment = async (workspaceSlug: string, projectId: string, issueId: string, data: IssueCommentCreate) =>
     this.comment.createComment(workspaceSlug, projectId, issueId, data);
   updateComment = async (
     workspaceSlug: string,
     projectId: string,
     issueId: string,
     commentId: string,
-    data: Partial<TIssueComment>
+    data: IssueCommentCreate
   ) => this.comment.updateComment(workspaceSlug, projectId, issueId, commentId, data);
   removeComment = async (workspaceSlug: string, projectId: string, issueId: string, commentId: string) =>
     this.comment.removeComment(workspaceSlug, projectId, issueId, commentId);
 
-  // comment reaction
-  fetchCommentReactions = async (workspaceSlug: string, projectId: string, commentId: string) =>
-    this.commentReaction.fetchCommentReactions(workspaceSlug, projectId, commentId);
-  applyCommentReactions = async (commentId: string, commentReactions: TIssueCommentReaction[]) =>
-    this.commentReaction.applyCommentReactions(commentId, commentReactions);
-  createCommentReaction = async (workspaceSlug: string, projectId: string, commentId: string, reaction: string) =>
-    this.commentReaction.createCommentReaction(workspaceSlug, projectId, commentId, reaction);
+  // comment reactions are owned by their comments, never a second fetched collection.
+  createCommentReaction = async (
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    commentId: string,
+    reaction: string
+  ) => this.commentReaction.createCommentReaction(workspaceSlug, projectId, issueId, commentId, reaction);
   removeCommentReaction = async (
     workspaceSlug: string,
     projectId: string,
+    issueId: string,
     commentId: string,
-    reaction: string,
-    userId: string
-  ) => this.commentReaction.removeCommentReaction(workspaceSlug, projectId, commentId, reaction, userId);
+    reaction: string
+  ) => this.commentReaction.removeCommentReaction(workspaceSlug, projectId, issueId, commentId, reaction);
 }

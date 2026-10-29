@@ -102,7 +102,7 @@ export class IssueActivityStore implements IIssueActivityStore {
     });
 
     comments.forEach((commentId) => {
-      const comment = currentStore.comment.getCommentById(commentId);
+      const comment = currentStore.comment.getCommentById(issueId, commentId);
       if (!comment) return;
       activityComments.push({
         id: comment.id,

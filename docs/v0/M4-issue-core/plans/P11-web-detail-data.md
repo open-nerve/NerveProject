@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T4已实现，继续T5**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T5已实现，继续T6**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -101,11 +101,11 @@ make e2e
 
 **Files：** C/services/issue/issue_comment.service.ts；删除issue_reaction.service.ts中的评论方法；comment/comment_reaction stores/root；C/components/comments、issue-detail/issue-activity直接消费者；P/types的旧评论类型；新 collaboration.service.test.ts/comment.store.test.ts、comments/data.test.tsx。
 
-- [ ] 先服务原生请求/错误、评论actor_id/comment_html/edited_at/reactions与评论表情actor_id，删除自己的reaction；列出全部输入/返回签名并同任务迁消费者。工作项表情留T6，不提前删除其旧类型/服务方法。
-- [ ] 评论 fetch 读完所有页并保存最后请求cursor；当前拒绝/第二页失败保留上轮完整值和错误，首次失败不伪完整；confirm create/edit/delete 重放。T7复用并扩增量合并性质，不先留旧 created_at__gt 请求。
-- [ ] 评论表情直接从 comment.reactions 读；无 GET comment-reactions，删除旧 fetch/apply 双份缓存。新增幂等按ID去重、他人同emoji不受删除影响，删除评论时旧表情答不复活评论。
-- [ ] UI修改等待成功后清空编辑器/结束pending，拒绝留原文字，跟进 scope 检查。对应旧类型同 Task 删除，不靠 any 迁过。
-- [ ] 定向服务/store/评论组件及受影响回归/types；M10恢复独立评论表情GET、M11a删除同emoji所有评论actor、M12去掉确认重放，各自行为红；G。提交 `feat(M4/P11): 迁移评论与内嵌表情并保留输入`。
+- [x] 先服务原生请求/错误、评论actor_id/comment_html/edited_at/reactions与评论表情actor_id，删除自己的reaction；列出全部输入/返回签名并同任务迁消费者。工作项表情留T6，不提前删除其旧类型/服务方法。
+- [x] 评论 fetch 读完所有页并保存最后请求cursor；当前拒绝/第二页失败保留上轮完整值和错误，首次失败不伪完整；confirm create/edit/delete 重放。T7复用并扩增量合并性质，不先留旧 created_at__gt 请求。
+- [x] 评论表情直接从 comment.reactions 读；无 GET comment-reactions，删除旧 fetch/apply 双份缓存。新增幂等按ID去重、他人同emoji不受删除影响，删除评论时旧表情答不复活评论。
+- [x] UI修改等待成功后清空编辑器/结束pending，拒绝留原文字，跟进 scope 检查。对应旧类型同 Task 删除，不靠 any 迁过。
+- [x] 定向服务/store/评论组件及受影响回归/types；M10恢复独立评论表情GET、M11a删除同emoji所有评论actor、M12去掉确认重放，各自行为红；G。提交 `feat(M4/P11): 迁移评论与内嵌表情并保留输入`。
 
 ## Task 6：工作项表情（约400–800行）
 

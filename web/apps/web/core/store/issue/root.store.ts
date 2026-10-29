@@ -48,6 +48,7 @@ import type { IssueListBinding } from "./helpers/issue-list-binding";
 import { PermissionReads } from "./permission-reads";
 import type { DetailRegistration } from "./issue-details/resource";
 import { IssueDetailService } from "@/services/issue/issue-detail.service";
+import { IssueCommentService } from "@/services/issue/issue_comment.service";
 
 export type IIssueRootStore = IssueRootStore;
 export type IssueWriteScope = Readonly<{ workspaceSlug: string; projectID: string; workspaceID: string }>;
@@ -106,6 +107,7 @@ export class IssueRootStore {
   active = true;
   readonly api: IssueApiService;
   readonly detailApi: IssueDetailService;
+  readonly commentApi: IssueCommentService;
   readonly listApi: IssueListService;
   private serial = 0;
   get readSerial(): number {
@@ -126,6 +128,7 @@ export class IssueRootStore {
   constructor(rootStore: RootStore, api: ApiClient) {
     this.api = new IssueApiService(api);
     this.detailApi = new IssueDetailService(api);
+    this.commentApi = new IssueCommentService(api);
     this.listApi = new IssueListService(api);
     makeObservable(this, {
       active: observable,

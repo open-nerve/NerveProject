@@ -4,20 +4,28 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueComment, IssueCommentCreate } from "@nerve/api-client";
+
 import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
 import { useForm } from "react-hook-form";
 import type { EditorRefApi } from "@nerve/editor";
 import { CloseOutline, TickOutline } from "@makeplane/propel/icons";
 // nerve imports
-import type { TCommentsOperations, TIssueComment } from "@nerve/types";
+import type { TCommentsOperations } from "@nerve/types";
 import { cn, isCommentEmpty } from "@nerve/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
+import { followInSession } from "@/lib/in-session";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useDetailScope } from "../../issues/issue-detail-widgets/use-detail-scope";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 
 type Props = {
   activityOperations: TCommentsOperations;
-  comment: TIssueComment;
+  comment: IssueComment;
   isEditing: boolean;
   projectId?: string;
   readOnlyEditorRef: EditorRefApi | null;
@@ -39,6 +47,10 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
   } = props;
   // refs
   const editorRef = useRef<EditorRefApi>(null);
+  const sending = useRef(false);
+  const capture = useDetailScope(workspaceSlug, projectId, `${comment.issue_id}:${comment.id}:${isEditing}`);
+  const refusal = useRefusalToast();
+  const { t } = useTranslation();
   // form info
   const {
     formState: { isSubmitting },
@@ -46,7 +58,7 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
     setFocus,
     watch,
     setValue,
-  } = useForm<Partial<TIssueComment>>({
+  } = useForm<IssueCommentCreate>({
     defaultValues: { comment_html: comment?.comment_html },
   });
   const commentHTML = watch("comment_html");
@@ -56,15 +68,23 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
   const isSubmitButtonDisabled = isSubmitting || !isEditorReadyToDiscard;
   const isDisabled = isSubmitting || isEmpty || isSubmitButtonDisabled;
 
-  const onEnter = async (formData: Partial<TIssueComment>) => {
-    if (isSubmitting || !comment) return;
-
-    setIsEditing(false);
-
-    await activityOperations.updateComment(comment.id, formData);
-
-    editorRef.current?.setEditorValue(formData?.comment_html ?? "<p></p>");
-    readOnlyEditorRef?.setEditorValue(formData?.comment_html ?? "<p></p>");
+  const onEnter = async (formData: IssueCommentCreate) => {
+    const current = capture();
+    if (!current() || sending.current) return;
+    sending.current = true;
+    await followInSession(() => activityOperations.updateComment(comment.id, formData), {
+      done: (answer) => {
+        if (!current()) return;
+        editorRef.current?.setEditorValue(answer.comment_html);
+        readOnlyEditorRef?.setEditorValue(answer.comment_html);
+        setToast({ type: TOAST_TYPE.SUCCESS, title: t("common.success"), message: t("issue.comments.update.success") });
+        setIsEditing(false);
+      },
+      failed: (error) => {
+        if (current() && !(error instanceof SessionChangedError)) refusal(error);
+      },
+    });
+    if (current()) sending.current = false;
   };
 
   useEffect(() => {
@@ -74,12 +94,14 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
   }, [isEditing, setFocus]);
 
   return (
-    <form className="flex flex-col gap-2">
-      <div
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !isEmpty) handleSubmit(onEnter)(e);
-        }}
-      >
+    <form
+      className="flex flex-col gap-2"
+      onSubmit={handleSubmit(onEnter)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !isEmpty) handleSubmit(onEnter)(e);
+      }}
+    >
+      <div>
         <LiteTextEditor
           editable
           workspaceId={workspaceId}
@@ -88,7 +110,7 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
           id={comment.id}
           initialValue={commentHTML ?? ""}
           value={null}
-          onChange={(_comment_json, comment_html) => setValue("comment_html", comment_html)}
+          onChange={(_json, comment_html) => setValue("comment_html", comment_html)}
           onEnterKeyPress={(e) => {
             if (!isEmpty && !isSubmitting) {
               handleSubmit(onEnter)(e);

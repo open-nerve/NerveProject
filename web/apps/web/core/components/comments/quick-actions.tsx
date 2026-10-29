@@ -4,13 +4,15 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueComment } from "@nerve/api-client";
+
 import { useMemo } from "react";
 import { observer } from "mobx-react";
 import { DeleteOutline, EditOutline, LinkOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";
-import type { TIssueComment, TCommentsOperations } from "@nerve/types";
+import type { TCommentsOperations } from "@nerve/types";
 import type { TContextMenuItem } from "@nerve/ui";
 import { CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
@@ -19,7 +21,7 @@ import { useUser } from "@/hooks/store/user";
 
 type TCommentCard = {
   activityOperations: TCommentsOperations;
-  comment: TIssueComment;
+  comment: IssueComment;
   setEditMode: () => void;
   showCopyLinkOption: boolean;
 };
@@ -29,7 +31,7 @@ export const CommentQuickActions = observer(function CommentQuickActions(props: 
   // store hooks
   const { data: currentUser } = useUser();
   // derived values
-  const isAuthor = currentUser?.id === comment.actor;
+  const isAuthor = currentUser?.id === comment.actor_id;
   const canEdit = isAuthor;
   const canDelete = isAuthor;
   // translation

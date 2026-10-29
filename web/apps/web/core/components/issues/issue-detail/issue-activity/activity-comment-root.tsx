@@ -16,6 +16,7 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // local imports
 import { IssueActivityItem } from "./activity/activity-list";
 import { IssueActivityLoader } from "./loader";
+import { DetailResourceError } from "../../issue-detail-widgets/resource-error";
 
 type TIssueActivityCommentRoot = {
   workspaceSlug: string;
@@ -34,21 +35,32 @@ export const IssueActivityCommentRoot = observer(function IssueActivityCommentRo
   // store hooks
   const {
     activity: { getActivityAndCommentsByIssueId },
-    comment: { getCommentById },
+    comment: { getCommentById, getError, fetchComments },
   } = useIssueDetail();
   // derived values
   const activityAndComments = getActivityAndCommentsByIssueId(issueId, sortOrder);
+  const error = getError(issueId);
+  const readError = (
+    <DetailResourceError
+      error={error}
+      retry={() => fetchComments(workspaceSlug, projectId, issueId)}
+      workspaceSlug={workspaceSlug}
+      projectId={projectId}
+      issueId={issueId}
+    />
+  );
 
-  if (!activityAndComments) return <IssueActivityLoader />;
+  if (!activityAndComments) return error ? readError : <IssueActivityLoader />;
 
-  if (activityAndComments.length <= 0) return null;
+  if (activityAndComments.length <= 0) return readError;
 
   const filteredActivityAndComments = filterActivityOnSelectedFilters(activityAndComments, selectedFilters);
 
   return (
     <div>
+      {readError}
       {filteredActivityAndComments.map((activityComment, index) => {
-        const comment = getCommentById(activityComment.id);
+        const comment = getCommentById(issueId, activityComment.id);
         return activityComment.activity_type === "COMMENT" ? (
           <CommentCard
             key={activityComment.id}

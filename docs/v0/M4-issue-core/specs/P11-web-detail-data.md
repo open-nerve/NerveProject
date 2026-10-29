@@ -1,6 +1,6 @@
 # M4/P11 详情数据层规格
 
-> 状态：负责人已裁定P11-S1采用A，**文档预检通过，已获实施授权，T1–T4已实现，继续T5**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。准备阶段已结束；当前按计划实施，产品验收全部开放；编号列宽按已加载、当前可见数据计算，不新增项目API字段，见[已裁定记录](../reviews/P11-project-number-width-decision.md)。
+> 状态：负责人已裁定P11-S1采用A，**文档预检通过，已获实施授权，T1–T5已实现，继续T6**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。准备阶段已结束；当前按计划实施，产品验收全部开放；编号列宽按已加载、当前可见数据计算，不新增项目API字段，见[已裁定记录](../reviews/P11-project-number-width-decision.md)。
 
 权威输入：[M4 设计](../M4-design.md) §3.9–3.15、§7.1–7.4、§9.5、§12 P11、§13；[推进方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)；[P10b spec](P10b-web-list-data.md) §2.6/§7；输入 handoffs 的 M1-closeout、M2-closeout §12、M3-closeout §5/6/8。配套 [plan](../plans/P11-web-detail-data.md)、[阶段预检](../reviews/P11-web-detail-data-review.md)。
 
@@ -178,7 +178,7 @@ D1–D7 是既定设计内的执行细化；D8曾因上游合同缺口提交后�
 
 当前真实 main 仍包含未迁移详情旧地址和 DTO，这是 P11 的实施输入。准备稿没有解决它们、没有跑产品测试。P10b 归档中历史变异原件/覆盖限制继续原样保留，不用本次静态盘点补记历史通过。M4 总体验收与所有输入 handoff 的顶层 open 保持；本段执行完成时只写对应子项处理结果，不建未来最终交接文件。
 
-阶段完成需A1–A10实证、整分支deep-review后局部问题全闭环；本段仍先不合并，集成授权另行取得。当前已经获得实施授权，T1–T4完成，后续按修订计划继续；准备阶段的“暂不实现”不是当前阻塞。
+阶段完成需A1–A10实证、整分支deep-review后局部问题全闭环；本段仍先不合并，集成授权另行取得。当前已经获得实施授权，T1–T5完成，后续按修订计划继续；准备阶段的“暂不实现”不是当前阻塞。
 
 ## 附录 A：准备证据（2026-10-30）
 

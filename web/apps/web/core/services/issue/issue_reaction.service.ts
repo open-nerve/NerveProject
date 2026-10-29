@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssueCommentReaction, TIssueReaction } from "@nerve/types";
+import type { TIssueReaction } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 
@@ -33,46 +33,6 @@ export class IssueReactionService extends APIService {
   async deleteIssueReaction(workspaceSlug: string, projectId: string, issueId: string, reaction: string): Promise<any> {
     return this.delete(
       `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/reactions/${reaction}/`
-    )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async createIssueCommentReaction(
-    workspaceSlug: string,
-    projectId: string,
-    commentId: string,
-    data: Partial<TIssueCommentReaction>
-  ): Promise<any> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/comments/${commentId}/reactions/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async listIssueCommentReactions(
-    workspaceSlug: string,
-    projectId: string,
-    commentId: string
-  ): Promise<TIssueCommentReaction[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/comments/${commentId}/reactions/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async deleteIssueCommentReaction(
-    workspaceSlug: string,
-    projectId: string,
-    commentId: string,
-    reaction: string
-  ): Promise<any> {
-    return this.delete(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/comments/${commentId}/reactions/${reaction}/`
     )
       .then((response) => response?.data)
       .catch((error) => {
