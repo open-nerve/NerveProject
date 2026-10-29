@@ -15,16 +15,21 @@ import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 import { IssueActivityBlockComponent } from "./";
 import { getRelationActivityContent } from "./helpers/activity";
 
-type TIssueRelationActivity = { activityId: string; ends: "top" | "bottom" | undefined };
+type TIssueRelationActivity = {
+  activityId: string;
+  issueId: string;
+  workspaceSlug: string;
+  ends: "top" | "bottom" | undefined;
+};
 
 export const IssueRelationActivity = observer(function IssueRelationActivity(props: TIssueRelationActivity) {
-  const { activityId, ends } = props;
+  const { activityId, issueId, workspaceSlug, ends } = props;
   // hooks
   const {
     activity: { getActivityById },
   } = useIssueDetail();
 
-  const activity = getActivityById(activityId);
+  const activity = getActivityById(issueId, activityId);
   const activityContent = getRelationActivityContent(activity);
 
   if (!activity) return <></>;
@@ -32,6 +37,8 @@ export const IssueRelationActivity = observer(function IssueRelationActivity(pro
     <IssueActivityBlockComponent
       icon={activity.field ? ISSUE_RELATION_OPTIONS[activity.field as TIssueRelationTypes]?.icon(14) : <></>}
       activityId={activityId}
+      issueId={issueId}
+      workspaceSlug={workspaceSlug}
       ends={ends}
     >
       {activityContent}

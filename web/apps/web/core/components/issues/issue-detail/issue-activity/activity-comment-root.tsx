@@ -34,23 +34,33 @@ export const IssueActivityCommentRoot = observer(function IssueActivityCommentRo
     props;
   // store hooks
   const {
-    activity: { getActivityAndCommentsByIssueId },
-    comment: { getCommentById, getError, fetchComments },
+    activity,
+    comment: { getCommentById, getError, retry },
   } = useIssueDetail();
   // derived values
-  const activityAndComments = getActivityAndCommentsByIssueId(issueId, sortOrder);
+  const activityAndComments = activity.getActivityAndCommentsByIssueId(issueId, sortOrder);
   const error = getError(issueId);
+  const activityError = activity.getError(issueId);
   const readError = (
-    <DetailResourceError
-      error={error}
-      retry={() => fetchComments(workspaceSlug, projectId, issueId)}
-      workspaceSlug={workspaceSlug}
-      projectId={projectId}
-      issueId={issueId}
-    />
+    <>
+      <DetailResourceError
+        error={activityError}
+        retry={() => activity.retry(workspaceSlug, projectId, issueId)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={issueId}
+      />
+      <DetailResourceError
+        error={error}
+        retry={() => retry(workspaceSlug, projectId, issueId)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={issueId}
+      />
+    </>
   );
 
-  if (!activityAndComments) return error ? readError : <IssueActivityLoader />;
+  if (!activityAndComments) return error || activityError ? readError : <IssueActivityLoader />;
 
   if (activityAndComments.length <= 0) return readError;
 
@@ -63,7 +73,7 @@ export const IssueActivityCommentRoot = observer(function IssueActivityCommentRo
         const comment = getCommentById(issueId, activityComment.id);
         return activityComment.activity_type === "COMMENT" ? (
           <CommentCard
-            key={activityComment.id}
+            key={`${activityComment.kind}:${activityComment.id}`}
             workspaceSlug={workspaceSlug}
             entityId={issueId}
             comment={comment}
@@ -76,7 +86,9 @@ export const IssueActivityCommentRoot = observer(function IssueActivityCommentRo
           />
         ) : BASE_ACTIVITY_FILTER_TYPES.includes(activityComment.activity_type as EActivityFilterType) ? (
           <IssueActivityItem
-            key={activityComment.id}
+            key={`${activityComment.kind}:${activityComment.id}`}
+            workspaceSlug={workspaceSlug}
+            issueId={issueId}
             activityId={activityComment.id}
             ends={index === 0 ? "top" : index === filteredActivityAndComments.length - 1 ? "bottom" : undefined}
           />

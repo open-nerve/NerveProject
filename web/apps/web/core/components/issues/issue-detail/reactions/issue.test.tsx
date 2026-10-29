@@ -8,7 +8,7 @@ import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import { accountOf, userOf } from "@/store/member/fake-users";
-import { issueReactionOf, issueStoreTab, requestedIssue } from "@/store/issue/fake-issues";
+import { issueReactionOf, issueDetailOf, issueStoreTab, requestedIssue } from "@/store/issue/fake-issues";
 import { IssueReaction } from "./issue";
 const binding = vi.hoisted(() => ({ tab: undefined as Awaited<ReturnType<typeof issueStoreTab>> | undefined }));
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
@@ -62,6 +62,7 @@ beforeEach(async () => {
   vi.useFakeTimers();
   toasts.length = 0;
   binding.tab = await issueStoreTab();
+  vi.spyOn(binding.tab.app.issue.issues, "refreshAuthoritative").mockResolvedValue(issueDetailOf("x"));
   runInAction(() => {
     binding.tab!.app.user.data = accountOf("actor");
   });

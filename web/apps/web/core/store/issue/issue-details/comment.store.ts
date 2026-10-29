@@ -1,15 +1,15 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { CommentReaction, IssueComment, IssueCommentCreate } from "@nerve/api-client";
 import { SessionChangedError } from "@/lib/auth/token-manager";
-import { compareCodePoints, compareIssueTime } from "@/lib/issue-order";
+import { compareIssueTime } from "@/lib/issue-order";
 import { upserted } from "@/lib/reconciled";
 import type { IIssueDetail } from "./root.store";
 import type { IssueReadToken } from "../root.store";
+import { compareActivityOrder } from "./activity-order";
 import { IssueResources } from "./resources";
 
 type Comments = { data: IssueComment[]; cursor?: string; complete: boolean };
-const sorted = (data: IssueComment[]) =>
-  data.toSorted((a, b) => compareIssueTime(a.created_at, b.created_at) || compareCodePoints(a.id, b.id));
+const sorted = (data: IssueComment[]) => data.toSorted(compareActivityOrder);
 function merged(held: IssueComment[], answer: IssueComment[]): IssueComment[] {
   const rows = new Map(held.map((row) => [row.id, row]));
   for (const row of answer) {
@@ -38,6 +38,19 @@ export class IssueCommentStore {
     this.resources.get(id)?.value?.data.find((row) => row.id === commentId);
   getError = (id: string) => this.resources.get(id)?.error;
   isLoading = (id: string) => this.resources.get(id)?.loading ?? false;
+  refreshAfterChange = async (ws: string, project: string, id: string, verifyIssue = false): Promise<void> => {
+    const resource = this.resources.get(id);
+    if (!resource) return;
+    await resource.refreshAfterConfirmation(async () => {
+      if (verifyIssue || this.root.verification.isUncertain(id))
+        await this.root.issues.refreshAuthoritative(id, { afterWrite: true });
+      await this.fetchComments(ws, project, id, true);
+    }, this.root.captureRead());
+  };
+  retry = async (ws: string, project: string, id: string) => {
+    const resource = this.resources.entry(ws, project, id);
+    if (!(await resource.retryConfirmationRead())) await this.fetchComments(ws, project, id);
+  };
   fetchComments = async (ws: string, project: string, id: string, incremental = false): Promise<IssueComment[]> => {
     const resource = this.resources.entry(ws, project, id);
     const before = resource.value;
@@ -84,7 +97,8 @@ export class IssueCommentStore {
     id: string,
     send: () => Promise<T>,
     confirm: (answer: T, value: Comments) => Comments,
-    commentId?: string
+    commentId?: string,
+    changesIssue = true
   ): Promise<T> {
     return this.root.enqueueIssueChanges([id], async () => {
       const resource = this.resources.entry(ws, project, id);
@@ -94,6 +108,8 @@ export class IssueCommentStore {
       this.current(token, ws, project);
       const initial: Comments = { data: [], complete: false };
       resource.receive(initial, token, (held) => confirm(answer, held ?? initial));
+      await this.refreshAfterChange(ws, project, id, changesIssue);
+      await this.rootIssueDetail.activity.refreshAfterChange(ws, project, id);
       return answer;
     });
   }
@@ -162,7 +178,8 @@ export class IssueCommentStore {
           ),
         };
       },
-      commentId
+      commentId,
+      false
     );
   removeReaction = (ws: string, project: string, id: string, commentId: string, reaction: string): Promise<void> => {
     const actor = this.root.currentUserId;
@@ -183,7 +200,8 @@ export class IssueCommentStore {
             : row
         ),
       }),
-      commentId
+      commentId,
+      false
     );
   };
 }

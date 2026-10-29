@@ -8,7 +8,7 @@ import { heldChange } from "@/lib/auth/fake-tab";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { accountOf } from "@/store/member/fake-users";
 import { loadProjects } from "@/store/project/fake-projects";
-import { issueReactionOf, issueStoreTab, requestedIssue } from "../fake-issues";
+import { issueReactionOf, issueDetailOf, issueStoreTab, requestedIssue } from "../fake-issues";
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
@@ -21,6 +21,7 @@ const read = () => store().fetchReactions("ws", "A", "x");
 beforeEach(async () => {
   vi.useFakeTimers();
   tab = await issueStoreTab();
+  vi.spyOn(tab.app.issue.issues, "refreshAuthoritative").mockResolvedValue(issueDetailOf("x"));
   runInAction(() => {
     tab.app.user.data = accountOf("actor");
   });

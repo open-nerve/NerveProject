@@ -117,6 +117,12 @@ export class IssueRelationStore {
     this.current(scope, token, projects);
     const failed = results.find((result) => result.status === "rejected");
     if (failed?.status === "rejected") throw failed.reason;
+    await Promise.all(
+      [...new Set(ids)].map(async (id) => {
+        const issue = this.root.issues.getIssueById(id);
+        if (issue) await this.rootIssueDetailStore.refreshAfterChange(scope.workspaceSlug, issue.project_id, id);
+      })
+    );
   }
   createRelation = (ws: string, project: string, id: string, type: IssueRelationType, ids: string[]): Promise<void> =>
     this.root.enqueueIssueChanges([id, ...ids], async () => {

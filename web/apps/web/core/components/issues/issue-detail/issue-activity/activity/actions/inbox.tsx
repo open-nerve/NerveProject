@@ -11,16 +11,21 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
 import { IssueActivityBlockComponent } from "./";
 
-type TIssueInboxActivity = { activityId: string; ends: "top" | "bottom" | undefined };
+type TIssueInboxActivity = {
+  activityId: string;
+  issueId: string;
+  workspaceSlug: string;
+  ends: "top" | "bottom" | undefined;
+};
 
 export const IssueInboxActivity = observer(function IssueInboxActivity(props: TIssueInboxActivity) {
-  const { activityId, ends } = props;
+  const { activityId, issueId, workspaceSlug, ends } = props;
   // hooks
   const {
     activity: { getActivityById },
   } = useIssueDetail();
 
-  const activity = getActivityById(activityId);
+  const activity = getActivityById(issueId, activityId);
 
   const getInboxActivityMessage = () => {
     switch (activity?.verb) {
@@ -42,6 +47,8 @@ export const IssueInboxActivity = observer(function IssueInboxActivity(props: TI
     <IssueActivityBlockComponent
       icon={<IntakeOutline className="h-4 w-4 flex-shrink-0 text-secondary" />}
       activityId={activityId}
+      issueId={issueId}
+      workspaceSlug={workspaceSlug}
       ends={ends}
     >
       <>{getInboxActivityMessage()}</>

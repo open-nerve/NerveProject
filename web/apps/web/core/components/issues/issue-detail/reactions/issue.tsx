@@ -86,7 +86,7 @@ const IssueReactionContent = observer(function IssueReactionContent(props: Issue
         workspaceSlug={workspaceSlug}
         projectId={projectId}
         issueId={issueId}
-        retry={() => detail.fetchReactions(workspaceSlug, projectId, issueId)}
+        retry={() => reaction.retry(workspaceSlug, projectId, issueId)}
       />
       <EmojiReactionPicker
         isOpen={isPickerOpen}

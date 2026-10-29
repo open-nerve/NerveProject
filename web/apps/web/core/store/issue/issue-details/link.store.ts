@@ -64,6 +64,7 @@ export class IssueLinkStore {
         this.current(scope, token);
         await this.root.issues.refreshAuthoritative(id, { afterWrite: true });
         this.current(scope, token);
+        await this.rootIssueDetailStore.refreshAfterChange(ws, project, id);
       }, token);
       return answer;
     });

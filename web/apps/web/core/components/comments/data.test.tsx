@@ -97,6 +97,7 @@ beforeEach(async () => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.useFakeTimers();
   binding.tab = await issueStoreTab();
+  vi.spyOn(binding.tab.app.issue.issueDetail.comment, "refreshAfterChange").mockResolvedValue();
   runInAction(() => {
     binding.tab!.app.user.data = accountOf("actor");
   });

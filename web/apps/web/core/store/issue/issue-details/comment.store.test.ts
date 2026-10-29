@@ -21,6 +21,7 @@ const row = issueCommentOf("c-z");
 beforeEach(async () => {
   vi.useFakeTimers();
   tab = await issueStoreTab();
+  vi.spyOn(store(), "refreshAfterChange").mockResolvedValue();
   runInAction(() => {
     tab.app.user.data = accountOf("actor");
   });

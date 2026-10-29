@@ -1,6 +1,6 @@
 # M4/P11 详情数据层规格
 
-> 状态：负责人已裁定P11-S1采用A，**文档预检通过，已获实施授权，T1–T6已实现，继续T7**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。准备阶段已结束；当前按计划实施，产品验收全部开放；编号列宽按已加载、当前可见数据计算，不新增项目API字段，见[已裁定记录](../reviews/P11-project-number-width-decision.md)。
+> 状态：负责人已裁定P11-S1采用A，**文档预检通过，已获实施授权，T1–T7已实现，继续T8**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。准备阶段已结束；当前按计划实施，产品验收全部开放；编号列宽按已加载、当前可见数据计算，不新增项目API字段，见[已裁定记录](../reviews/P11-project-number-width-decision.md)。
 
 权威输入：[M4 设计](../M4-design.md) §3.9–3.15、§7.1–7.4、§9.5、§12 P11、§13；[推进方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)；[P10b spec](P10b-web-list-data.md) §2.6/§7；输入 handoffs 的 M1-closeout、M2-closeout §12、M3-closeout §5/6/8。配套 [plan](../plans/P11-web-detail-data.md)、[阶段预检](../reviews/P11-web-detail-data-review.md)。
 
@@ -24,7 +24,7 @@
 | T4 | issue-details/link.store.ts；links 控件/弹窗；删除旧 IssueService 最后方法及文件 | 新 link.store.test.ts、links/data.test.tsx |
 | T5 | issue_comment.service.ts；comment/comment_reaction stores；comments控件、对应旧类型 | 新collaboration.service.test.ts、comment.store.test.ts、comments/data.test.tsx |
 | T6 | issue_reaction.service.ts、reaction.store.ts；工作项表情实际控件、最后旧表情类型 | 扩collaboration.service.test.ts；新reaction.store.test.ts及UI测试 |
-| T7 | issue_activity.service.ts、activity.store.ts；新 timeline.ts；issue-activity 展示，删旧动态细节类型 | 新 timeline.test.ts、activity.store.test.ts；T5 评论分页回归 |
+| T7 | issue_activity.service.ts、activity.store.ts；新 activity-order.ts；issue-activity 展示，删旧动态细节类型 | 新 activity-order.test.ts、activity.store.test.ts；T5 评论分页回归 |
 | T8 | work_item_version.service.ts；新 issue-details/description-versions.store.ts；core/description-versions 与两个 M4 调用方；M7 版本 DTO 归属 | 新 description-versions.store.test.ts、core/description-versions/root.test.tsx |
 | T9 | workspace_draft.service.ts、workspace-draft/issue.store.ts；draft 页面/表单直接消费者、root 创建确认入口 | 新 workspace-draft/issue.store.test.ts、issue-modal/draft.test.tsx |
 | T10 | hooks/editor/use-editor-mention.tsx、editor/lite-text、rich-text/editor与description-input、issue-modal/components/description-editor、inbox/modals/create-modal/issue-description；WorkspaceService.searchEntity 及旧 JSON 类型 | 新 hooks/editor/use-editor-mention.test.tsx；既有 editor 包测试 |
@@ -69,7 +69,7 @@ P10b 已交付 `IssueRootStore.captureRead/isReadCurrent`、`PermissionReads`、
 
 核心属性/描述/父项仍调用 root.updateIssue 等既有入口。子项批量、关联、链接、评论和表情操作通过 root 的同一工作项队列；草稿另按 draftId 串行。批量影响多个工作项时对去重后排序的 ID 进入同一组队列，队列轮到发出时再核会话/权限；不能在占有该队列的回调里再调用会取得同队列的 updateIssue，避免自等。
 
-只消费服务端成功答案；拒绝期间不预改 canonical、计数、关系/评论集合。子项、关联应答中的 Issue 经 canonical 接收，资源本身只存 ID/原生资源 DTO；不得维护第二套完整 Issue。涉及父项计数、link_count 或其它列表投影变化时，通过 root 既有确认/权威回查路径刷新相关 Issue，再向全部持有列表传播；未知旧父或第三方版本按 P10b 标 stale/补取，不能手加减猜计数。
+只消费服务端成功答案；拒绝期间不预改 canonical、计数、关系/评论集合。 评论增改删和工作项表情会更新工作项审计时间，确认后经既有权威回读同步canonical与列表；评论表情不自行假定工作项时间变化，但不得清掉前一操作未完成的待核状态。子项、关联应答中的 Issue 经 canonical 接收，资源本身只存 ID/原生资源 DTO；不得维护第二套完整 Issue。涉及父项计数、link_count 或其它列表投影变化时，通过 root 既有确认/权威回查路径刷新相关 Issue，再向全部持有列表传播；未知旧父或第三方版本按 P10b 标 stale/补取，不能手加减猜计数。
 
 POST/PATCH/DELETE 成功后补读失败，与修改本身被拒绝分开：保留成功资源确认，canonical 标待核/列表 stale，报告补读错误并提供读重试；不要回滚服务端成功，也不要重发写入。退役或权限失效后不写本地/不 toast/不导航，不自动重试命令。每个异步 UI 跟进同时核 followInSession 和宿主 scope，避免同账号切项目后关掉新页面的弹窗。
 
@@ -178,7 +178,7 @@ D1–D7 是既定设计内的执行细化；D8曾因上游合同缺口提交后�
 
 当前真实 main 仍包含未迁移详情旧地址和 DTO，这是 P11 的实施输入。准备稿没有解决它们、没有跑产品测试。P10b 归档中历史变异原件/覆盖限制继续原样保留，不用本次静态盘点补记历史通过。M4 总体验收与所有输入 handoff 的顶层 open 保持；本段执行完成时只写对应子项处理结果，不建未来最终交接文件。
 
-阶段完成需A1–A10实证、整分支deep-review后局部问题全闭环；本段仍先不合并，集成授权另行取得。当前已经获得实施授权，T1–T6完成，后续按修订计划继续；准备阶段的“暂不实现”不是当前阻塞。
+阶段完成需A1–A10实证、整分支deep-review后局部问题全闭环；本段仍先不合并，集成授权另行取得。当前已经获得实施授权，T1–T7完成，后续按修订计划继续；准备阶段的“暂不实现”不是当前阻塞。
 
 ## 附录 A：准备证据（2026-10-30）
 

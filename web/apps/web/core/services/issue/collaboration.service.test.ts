@@ -3,8 +3,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ApiClient, CommentReaction, IssueCommentPage } from "@nerve/api-client";
 import { FakeNerve, json, noContent, problem, type Endpoint } from "@/lib/auth/fake-nerve";
 import { SessionChangedError } from "@/lib/auth/token-manager";
-import { issueCommentOf, issueReactionOf, requestedIssue } from "@/store/issue/fake-issues";
+import { issueCommentOf, issueReactionOf, issueActivityOf, requestedIssue } from "@/store/issue/fake-issues";
 import { IssueCommentService } from "./issue_comment.service";
+import { IssueActivityService } from "./issue_activity.service";
 import { IssueReactionService } from "./issue_reaction.service";
 
 beforeEach(() => vi.useFakeTimers());
@@ -27,6 +28,17 @@ const cases: {
   status: number;
   query?: [string, string][];
 }[] = [
+  {
+    name: "list activities",
+    run: (s) => new IssueActivityService(s).getIssueActivities("x", { limit: 3, cursor: "opaque+/=" }),
+    endpoint: ["GET", "/api/v0/issues/x/activities"],
+    answer: { data: [issueActivityOf("activity")], next_cursor: "next+/=" },
+    status: 200,
+    query: [
+      ["limit", "3"],
+      ["cursor", "opaque+/="],
+    ],
+  },
   {
     name: "list",
     run: (s) => new IssueCommentService(s).getIssueComments("x", { limit: 2, cursor: "next+/=" }),

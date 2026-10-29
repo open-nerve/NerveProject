@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T6已实现，继续T7**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T7已实现，继续T8**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -118,12 +118,13 @@ make e2e
 
 ## Task 7：动态与时间线游标（约700–1200行）
 
-**Files：** issue_activity.service.ts、issue-details/activity.store.ts；新 issue-details/timeline.ts/.test.ts；issue-activity/activity 展示/helpers；旧 types 动态细节；新 activity.store.test.ts，扩T5评论测试。
+**Files：** issue_activity.service.ts、issue-details/activity.store.ts；新 issue-details/activity-order.ts/.test.ts；issue-activity/activity 展示/helpers；旧 types 动态细节；新 activity.store.test.ts，扩T5评论测试。
 
-- [ ] listIssueActivities 的 query 使用 operation；移除 activity_type/created_at__gt。首次所有页；增量从最后请求cursor重读到next=null；记录一页和多页两种情况。
-- [ ] 表驱动 `reloadsTheLastRequestedPage`、`repositionsMergedDescriptionActivity`、`ordersNanosecondsBeforeIds`、`keepsTheLastCompleteValueAfterPageTwoFails`、`doesNotContinuePagingAfterRetirement`；ID覆盖而非仅尾追加，种类key区分评论/动态。
-- [ ] actor_id=null 系统文案、nullable字段、删除source_data/epoch/details/is_bot，并修改所有渲染分支；资料来自目录，拒绝不无声丢活动。历史无对应field的展示沿设计§3.13，不制造客户端事件。
-- [ ] 聚焦 timeline/activity/comment+types；M13用next_cursor=null作增量起点、M14 append-only、M15毫秒排序各红；G。提交 `feat(M4/P11): 接通完整时间线与增量游标重读`。
+- [x] listIssueActivities 的 query 使用 operation；移除 activity_type/created_at__gt。首次所有页；增量从最后请求cursor重读到next=null；记录一页和多页两种情况。
+- [x] 表驱动 `reloadsTheLastRequestedPage`、`repositionsMergedDescriptionActivity`、`ordersNanosecondsBeforeIds`、`keepsTheLastCompleteValueAfterPageTwoFails`、`doesNotContinuePagingAfterRetirement`；ID覆盖而非仅尾追加，种类key区分评论/动态。
+- [x] actor_id=null 系统文案、nullable字段、删除source_data/epoch/details/is_bot，并修改所有渲染分支；资料来自目录，拒绝不无声丢活动。历史无对应field的展示沿设计§3.13，不制造客户端事件。
+- [x] 补齐已打开活动/评论的命令后增量读取；评论/工作项表情按服务端MarkChanged回读canonical，补读失败保留确认并只重试读。七类真实命令覆盖，评论表情继续完成前一命令留下的待核工作项。
+- [x] 聚焦 activity-order/activity/comment+types；M13用next_cursor=null作增量起点、M14 append-only、M15毫秒排序各红；G。提交 `feat(M4/P11): 接通完整时间线与增量游标重读`。
 
 ## Task 8：描述版本与共享展示边界（约750–1250行）
 

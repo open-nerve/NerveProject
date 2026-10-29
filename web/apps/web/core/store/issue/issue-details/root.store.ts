@@ -10,7 +10,7 @@ import { action, computed, makeObservable, observable } from "mobx";
 import type { TIssueRelationTypes, TWorkItemWidgets } from "@nerve/types";
 // local imports
 import { IssueActivityStore } from "./activity.store";
-import type { IIssueActivityStore, IIssueActivityStoreActions, TActivityLoader } from "./activity.store";
+import type { IIssueActivityStore, IIssueActivityStoreActions } from "./activity.store";
 import type { IIssueRootStore } from "../root.store";
 import { IssueCommentStore } from "./comment.store";
 import type { IIssueCommentStore, IIssueCommentStoreActions } from "./comment.store";
@@ -57,6 +57,7 @@ export interface IIssueDetail
     IIssueActivityStoreActions,
     IIssueCommentStoreActions,
     IIssueCommentReactionStoreActions {
+  refreshAfterChange: (ws: string, project: string, id: string) => Promise<void>;
   // observables
   peekIssue: TPeekIssue | undefined;
   relationKey: TIssueRelationTypes | null;
@@ -166,7 +167,7 @@ export class IssueDetail implements IIssueDetail {
     this.rootIssueStore = rootStore;
     this.issue = new IssueStore(this);
     this.reaction = new IssueReactionStore(this);
-    this.activity = new IssueActivityStore(rootStore.rootStore);
+    this.activity = new IssueActivityStore(this);
     this.comment = new IssueCommentStore(this);
     this.commentReaction = new IssueCommentReactionStore(this);
     this.subIssues = new IssueSubIssuesStore(this);
@@ -221,6 +222,12 @@ export class IssueDetail implements IIssueDetail {
     this.issue.removeIssue(workspaceSlug, projectId, issueId);
   archiveIssue = async (workspaceSlug: string, projectId: string, issueId: string) =>
     this.issue.archiveIssue(workspaceSlug, projectId, issueId);
+  refreshAfterChange = async (ws: string, project: string, id: string): Promise<void> => {
+    await Promise.all([
+      this.activity.refreshAfterChange(ws, project, id),
+      this.comment.refreshAfterChange(ws, project, id),
+    ]);
+  };
   // reactions
   fetchReactions = async (workspaceSlug: string, projectId: string, issueId: string) =>
     this.reaction.fetchReactions(workspaceSlug, projectId, issueId);
@@ -280,8 +287,8 @@ export class IssueDetail implements IIssueDetail {
   ) => this.relation.removeRelation(workspaceSlug, projectId, issueId, relationType, relatedIssue);
 
   // activity
-  fetchActivities = async (workspaceSlug: string, projectId: string, issueId: string, loaderType?: TActivityLoader) =>
-    this.activity.fetchActivities(workspaceSlug, projectId, issueId, loaderType);
+  fetchActivities = async (workspaceSlug: string, projectId: string, issueId: string, incremental = false) =>
+    this.activity.fetchActivities(workspaceSlug, projectId, issueId, incremental);
 
   // comment
   fetchComments = async (workspaceSlug: string, projectId: string, issueId: string, incremental = false) =>

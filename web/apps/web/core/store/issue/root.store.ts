@@ -49,6 +49,7 @@ import { PermissionReads } from "./permission-reads";
 import type { DetailRegistration } from "./issue-details/resource";
 import { IssueDetailService } from "@/services/issue/issue-detail.service";
 import { IssueCommentService } from "@/services/issue/issue_comment.service";
+import { IssueActivityService } from "@/services/issue/issue_activity.service";
 import { IssueReactionService } from "@/services/issue/issue_reaction.service";
 
 export type IIssueRootStore = IssueRootStore;
@@ -109,6 +110,7 @@ export class IssueRootStore {
   readonly api: IssueApiService;
   readonly detailApi: IssueDetailService;
   readonly commentApi: IssueCommentService;
+  readonly activityApi: IssueActivityService;
   readonly reactionApi: IssueReactionService;
   readonly listApi: IssueListService;
   private serial = 0;
@@ -131,6 +133,7 @@ export class IssueRootStore {
     this.api = new IssueApiService(api);
     this.detailApi = new IssueDetailService(api);
     this.commentApi = new IssueCommentService(api);
+    this.activityApi = new IssueActivityService(api);
     this.reactionApi = new IssueReactionService(api);
     this.listApi = new IssueListService(api);
     makeObservable(this, {
@@ -417,6 +420,7 @@ export class IssueRootStore {
           );
       this.issues.confirmChange(change, permission);
       await this.issueDetail.subIssues.confirmCore(change, scope);
+      if (after) await this.issueDetail.refreshAfterChange(scope.workspaceSlug, scope.projectID, after.id);
       return after;
     } catch (error) {
       this.assertActive();

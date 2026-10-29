@@ -1,5 +1,13 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueDetail, IssueListPage, IssueLink, IssueComment, IssueReaction } from "@nerve/api-client";
+import type {
+  Issue,
+  IssueDetail,
+  IssueListPage,
+  IssueLink,
+  IssueComment,
+  IssueReaction,
+  IssueActivity,
+} from "@nerve/api-client";
 import { expect } from "vitest";
 import type { Group } from "@/lib/paged-groups";
 import type { Endpoint, FakeNerve } from "@/lib/auth/fake-nerve";
@@ -157,4 +165,20 @@ export async function issueStoreTab() {
   await loadProjects(nerve, app.projectRoot.project, workspace, [project]);
   nerve.calls.length = 0;
   return { app, nerve, api, workspace, project };
+}
+
+export function issueActivityOf(id: string, issueId = "x", projectId = "A"): IssueActivity {
+  return {
+    id,
+    issue_id: issueId,
+    project_id: projectId,
+    actor_id: "u-actor",
+    field: "name",
+    verb: "updated",
+    old_value: "before",
+    new_value: "after",
+    old_identifier: null,
+    new_identifier: null,
+    created_at: "2026-10-30T00:00:00.123456789Z",
+  };
 }

@@ -30,6 +30,10 @@ export class IssueReactionStore {
   reactionsByUser = (id: string, actorId: string) =>
     (this.resources.get(id)?.value ?? []).filter((row) => row.actor_id === actorId);
   getError = (id: string) => this.resources.get(id)?.error;
+  retry = async (ws: string, project: string, id: string) => {
+    const resource = this.resources.entry(ws, project, id);
+    if (!(await resource.retryConfirmationRead())) await this.fetchReactions(ws, project, id);
+  };
   private validate(rows: IssueReaction[], id: string) {
     if (rows.some((row) => row.issue_id !== id)) throw new SessionChangedError();
   }
@@ -59,6 +63,10 @@ export class IssueReactionStore {
       if (!this.root.isReadCurrent(token, [project], scope.workspaceID)) throw new SessionChangedError();
       this.root.assertProjectReadable(ws, project);
       resource.receive([], token, (held) => confirm(answer, held ?? []));
+      await resource.refreshAfterConfirmation(async () => {
+        await this.root.issues.refreshAuthoritative(id, { afterWrite: true });
+        await this.rootIssueDetailStore.refreshAfterChange(ws, project, id);
+      }, token);
       return answer;
     });
   }

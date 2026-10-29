@@ -7,47 +7,38 @@
 import { observer } from "mobx-react";
 // nerve imports
 import { WorkItemsOutline } from "@makeplane/propel/icons";
-import { EInboxIssueSource } from "@nerve/types";
 // hooks
-import { capitalizeFirstLetter } from "@nerve/utils";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // local imports
 import { IssueActivityBlockComponent } from "./";
 
-type TIssueDefaultActivity = { activityId: string; ends: "top" | "bottom" | undefined };
+type TIssueDefaultActivity = {
+  activityId: string;
+  issueId: string;
+  workspaceSlug: string;
+  ends: "top" | "bottom" | undefined;
+};
 
 export const IssueDefaultActivity = observer(function IssueDefaultActivity(props: TIssueDefaultActivity) {
-  const { activityId, ends } = props;
+  const { activityId, issueId, workspaceSlug, ends } = props;
   // hooks
   const {
     activity: { getActivityById },
   } = useIssueDetail();
 
-  const activity = getActivityById(activityId);
+  const activity = getActivityById(issueId, activityId);
 
   if (!activity) return <></>;
-  const source = activity.source_data?.source;
 
   return (
     <IssueActivityBlockComponent
       activityId={activityId}
+      issueId={issueId}
+      workspaceSlug={workspaceSlug}
       icon={<WorkItemsOutline width={14} height={14} className="text-secondary" aria-hidden="true" />}
       ends={ends}
     >
-      <>
-        {activity.verb === "created" ? (
-          source && source !== EInboxIssueSource.IN_APP ? (
-            <span>
-              created the work item via{" "}
-              <span className="font-medium">{capitalizeFirstLetter(source.toLowerCase() || "")}</span>.
-            </span>
-          ) : (
-            <span> created the work item.</span>
-          )
-        ) : (
-          <span> deleted a work item.</span>
-        )}
-      </>
+      <>{activity.verb === "created" ? <span> created the work item.</span> : <span> deleted a work item.</span>}</>
     </IssueActivityBlockComponent>
   );
 });

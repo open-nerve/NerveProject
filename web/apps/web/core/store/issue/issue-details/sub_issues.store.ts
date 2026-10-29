@@ -142,6 +142,11 @@ export class IssueSubIssuesStore {
         if (old !== parentID)
           this.resources.get(old)?.confirm((held) => held.filter((id) => !confirmedIDs.includes(id)), token);
       await this.refresh(resource, [parentID, ...oldParents], scope, token);
+      await Promise.all(
+        [...new Set([parentID, ...oldParents, ...ids])].map((id) =>
+          this.rootIssueDetailStore.refreshAfterChange(ws, project, id)
+        )
+      );
     });
   /** The root calls this once for its confirmed core change; never sends a second PATCH. */
   confirmCore = async (change: ConfirmedIssueChange, scope: IssueWriteScope): Promise<void> => {

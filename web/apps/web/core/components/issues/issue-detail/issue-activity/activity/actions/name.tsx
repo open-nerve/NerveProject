@@ -11,22 +11,29 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
 import { IssueActivityBlockComponent } from "./";
 
-type TIssueNameActivity = { activityId: string; ends: "top" | "bottom" | undefined };
+type TIssueNameActivity = {
+  activityId: string;
+  issueId: string;
+  workspaceSlug: string;
+  ends: "top" | "bottom" | undefined;
+};
 
 export const IssueNameActivity = observer(function IssueNameActivity(props: TIssueNameActivity) {
-  const { activityId, ends } = props;
+  const { activityId, issueId, workspaceSlug, ends } = props;
   // hooks
   const {
     activity: { getActivityById },
   } = useIssueDetail();
 
-  const activity = getActivityById(activityId);
+  const activity = getActivityById(issueId, activityId);
 
   if (!activity) return <></>;
   return (
     <IssueActivityBlockComponent
       icon={<TextOutline width={14} height={14} className="text-secondary" aria-hidden="true" />}
       activityId={activityId}
+      issueId={issueId}
+      workspaceSlug={workspaceSlug}
       ends={ends}
     >
       <>set the name to {activity.new_value}.</>

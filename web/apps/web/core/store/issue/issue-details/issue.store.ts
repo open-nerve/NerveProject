@@ -150,7 +150,6 @@ export class IssueStore implements IIssueStore {
     const token = this.root.captureRead();
     await this.root.projectIssues.updateIssue(workspaceSlug, projectId, issueId, data);
     if (!this.root.isReadCurrent(token, [projectId], scope.workspaceID)) throw new SessionChangedError();
-    await this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
   };
   removeIssue = (workspaceSlug: string, projectId: string, issueId: string) =>
     this.root.projectIssues.removeIssue(workspaceSlug, projectId, issueId);

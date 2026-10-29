@@ -3094,14 +3094,6 @@
     },
     {
       "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue_activity.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/history/",
-      "count": 1,
-      "reason": "T7暂留；P11接线删除；真实读者 IssueActivityStore.fetchActivities→getIssueActivities；详情活动资源",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
       "path": "web/apps/web/core/services/issue/work_item_version.service.ts",
       "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/work-items/${workItemId}/description-versions/",
       "count": 1,
