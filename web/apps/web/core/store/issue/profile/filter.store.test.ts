@@ -64,7 +64,7 @@ it("stored project restriction reaches the real member query after invalid field
   const tab = await issueStoreTab();
   try {
     runInAction(() => {
-      tab.app.issue.currentUserId = "alice";
+      tab.app.user.data = { id: "alice" } as NonNullable<typeof tab.app.user.data>;
     });
     data.set(
       "issue_local_filters",
@@ -164,4 +164,25 @@ it("clears member-unsupported conditions on read and save while retaining projec
   await store.updateFilterExpression("ws", "target", input);
   expect(store.getIssueFilters("target")?.richFilters).toEqual(expected);
   expect(JSON.parse(data.get("issue_local_filters")!)[0].filters.rich_filters).toEqual(expected);
+});
+
+it("returns the list read refusal after a filter change", async () => {
+  const failure = new Error("list refused");
+  let reject!: (error: Error) => void;
+  const read = new Promise<void>((_resolve, fail) => {
+    reject = fail;
+  });
+  void read.catch(() => {});
+  const owner = root();
+  vi.mocked(owner.profileIssues.fetchIssuesWithExistingPagination).mockReturnValue(read as never);
+  const changed = new ProfileIssuesFilter(owner).updateFilterExpression("ws", "target", { priority__in: "high" });
+  let settled = false;
+  void changed.then(
+    () => (settled = true),
+    () => (settled = true)
+  );
+  await Promise.resolve();
+  expect(settled).toBe(false);
+  reject(failure);
+  await expect(changed).rejects.toBe(failure);
 });

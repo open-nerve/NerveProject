@@ -128,7 +128,11 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
         set(this.filters, [projectId, "richFilters"], filters);
       });
 
-      this.rootIssueStore.archivedIssues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, "mutation");
+      const reading = this.rootIssueStore.archivedIssues.fetchIssuesWithExistingPagination(
+        workspaceSlug,
+        projectId,
+        "mutation"
+      );
       this.handleIssuesLocalFilters.set(
         EIssuesStoreType.ARCHIVED,
         EIssueFilterType.FILTERS,
@@ -139,6 +143,7 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
           rich_filters: filters,
         }
       );
+      await reading;
     } catch (error) {
       console.log("error while updating rich filters", error);
       throw error;
@@ -190,9 +195,9 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
             });
           });
 
-          if (this.getShouldReFetchIssues(updatedDisplayFilters)) {
-            this.rootIssueStore.archivedIssues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, "mutation");
-          }
+          const reading = this.getShouldReFetchIssues(updatedDisplayFilters)
+            ? this.rootIssueStore.archivedIssues.fetchIssuesWithExistingPagination(workspaceSlug, projectId, "mutation")
+            : undefined;
 
           this.handleIssuesLocalFilters.set(
             EIssuesStoreType.ARCHIVED,
@@ -204,6 +209,7 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
               display_filters: _filters.displayFilters,
             }
           );
+          await reading;
 
           break;
         }

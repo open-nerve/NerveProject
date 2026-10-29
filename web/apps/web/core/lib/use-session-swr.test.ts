@@ -81,3 +81,17 @@ describe("useSessionSWR", () => {
     expect(swr.calls.map(([key]) => key)).toEqual([null, null]);
   });
 });
+
+it("allows only the list's deduping window to be shortened while preserving the session rules", () => {
+  useSessionSWR(["ISSUE_LIST", "ws", "A"], fetchList, { dedupingInterval: 0 });
+  expect(swr.calls[0]?.[2]).toEqual({ revalidateOnFocus: false, shouldRetryOnError: false, dedupingInterval: 0 });
+});
+
+it("does not allow the narrow option to override the session refusal rules", () => {
+  useSessionSWR(["ISSUE_LIST"], fetchList, {
+    dedupingInterval: 0,
+    shouldRetryOnError: true,
+    revalidateOnFocus: true,
+  } as { dedupingInterval: number });
+  expect(swr.calls[0]?.[2]).toEqual({ revalidateOnFocus: false, shouldRetryOnError: false, dedupingInterval: 0 });
+});

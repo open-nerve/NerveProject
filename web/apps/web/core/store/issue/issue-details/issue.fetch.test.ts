@@ -39,8 +39,6 @@ beforeEach(async () => {
   app = new RootStore(nerve.client());
   binding.app = app;
   runInAction(() => {
-    app.issue.workspaceSlug = ws.slug;
-    app.issue.projectId = project.id;
     app.router.setQuery({ workspaceSlug: ws.slug, projectId: project.id });
   });
   await loadWorkspaces(nerve, app.workspaceRoot, [ws]);

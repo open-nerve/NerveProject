@@ -6,7 +6,7 @@ import type { Group } from "@/lib/paged-groups";
  */
 
 import type { FC } from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve constants
@@ -21,6 +21,7 @@ import { useGroupIssuesDragNDrop } from "@/hooks/use-group-dragndrop";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 import { useIssueListRefresh, IssueListRetry } from "@/hooks/use-issue-list-refresh";
+import { useIssueListMount } from "@/hooks/use-issue-list-mount";
 // components
 import { IssueLayoutHOC } from "../issue-layout-HOC";
 import { List } from "./default";
@@ -58,10 +59,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
   const collapsedGroups =
     issuesFilter?.issueFilters?.kanbanFilters || ({ group_by: [], sub_group_by: [] } as TIssueKanbanFilters);
 
-  // The mounted binding hook shows failures and offers retry.
-  useEffect(() => {
-    void fetchIssues("init-loader", { limit: group_by ? 50 : 100 }, viewId).catch(() => {});
-  }, [fetchIssues, storeType, group_by, viewId]);
+  useIssueListMount(storeType, fetchIssues, { limit: group_by ? 50 : 100 }, viewId, String(group_by));
 
   const groups = issues?.groups as Map<string, Group> | undefined;
   const staleRefresh = useIssueListRefresh(

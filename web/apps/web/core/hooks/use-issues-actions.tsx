@@ -14,11 +14,12 @@ import { useCallback, useMemo } from "react";
 // types
 import { useParams } from "react-router";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
-import { EDraftIssuePaginationType } from "@nerve/constants";
+import { EDraftIssuePaginationType, EUserPermissions } from "@nerve/constants";
 import type { TLoader, TProfileViews, TSupportedFilterForUpdate } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "./store/use-issues";
 import { useProjectPreferencesFollow } from "./use-project-preferences-follow";
+import { useUserPermissions } from "./store/user";
 
 export interface IssueActions {
   fetchIssues: (loadType: TLoader, options: IssueListOptions, viewId?: string) => Promise<PagedGroups | undefined>;
@@ -63,20 +64,25 @@ const useProjectIssueActions = () => {
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
   const follow = useProjectPreferencesFollow();
+  const permission = useUserPermissions();
+  const role =
+    workspaceSlug && projectId
+      ? permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId)
+      : undefined;
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssueListOptions) => {
-      if (!workspaceSlug || !projectId) return;
+      if (!workspaceSlug || !projectId || role === undefined) return;
       return issues.fetchIssues(workspaceSlug, projectId, loadType, options);
     },
-    [issues.fetchIssues, workspaceSlug, projectId]
+    [issues.fetchIssues, workspaceSlug, projectId, role]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string, subGroupId?: string) => {
-      if (!workspaceSlug || !projectId) return;
+      if (!workspaceSlug || !projectId || role === undefined) return;
       return issues.fetchNextIssues(workspaceSlug, projectId, groupId, subGroupId);
     },
-    [issues.fetchIssues, workspaceSlug, projectId]
+    [issues.fetchIssues, workspaceSlug, projectId, role]
   );
 
   const createIssue = useCallback(
@@ -137,20 +143,23 @@ const useProfileIssueActions = () => {
   const { workspaceSlug, userId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROFILE);
+  const permission = useUserPermissions();
+  const role = workspaceSlug ? permission.getWorkspaceRoleByWorkspaceSlug(workspaceSlug) : undefined;
+  const allowed = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssueListOptions, viewId?: string) => {
-      if (!workspaceSlug || !userId || !viewId) return;
+      if (!workspaceSlug || !userId || !viewId || !allowed) return;
       return issues.fetchIssues(workspaceSlug, userId, loadType, options, viewId as TProfileViews);
     },
-    [issues.fetchIssues, workspaceSlug, userId]
+    [issues.fetchIssues, workspaceSlug, userId, allowed]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string) => {
-      if (!workspaceSlug || !userId) return;
+      if (!workspaceSlug || !userId || !allowed) return;
       return issues.fetchNextIssues(workspaceSlug, userId, groupId);
     },
-    [issues.fetchIssues, workspaceSlug, userId]
+    [issues.fetchIssues, workspaceSlug, userId, allowed]
   );
 
   const createIssue = useCallback(
@@ -209,20 +218,26 @@ const useArchivedIssueActions = () => {
   const { workspaceSlug, projectId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.ARCHIVED);
+  const permission = useUserPermissions();
+  const role =
+    workspaceSlug && projectId
+      ? permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId)
+      : undefined;
+  const allowed = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssueListOptions) => {
-      if (!workspaceSlug || !projectId) return;
+      if (!workspaceSlug || !projectId || !allowed) return;
       return issues.fetchIssues(workspaceSlug, projectId, loadType, options);
     },
-    [issues.fetchIssues, workspaceSlug, projectId]
+    [issues.fetchIssues, workspaceSlug, projectId, allowed]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string, subGroupId?: string) => {
-      if (!workspaceSlug || !projectId) return;
+      if (!workspaceSlug || !projectId || !allowed) return;
       return issues.fetchNextIssues(workspaceSlug, projectId, groupId, subGroupId);
     },
-    [issues.fetchIssues, workspaceSlug, projectId]
+    [issues.fetchIssues, workspaceSlug, projectId, allowed]
   );
 
   const removeIssue = useCallback(

@@ -21,6 +21,7 @@ import { useGroupIssuesDragNDrop } from "@/hooks/use-group-dragndrop";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 import { useIssueListRefresh, IssueListRetry } from "@/hooks/use-issue-list-refresh";
+import { useIssueListMount } from "@/hooks/use-issue-list-mount";
 // types
 import { DeleteIssueModal } from "../../delete-issue-modal";
 import { IssueLayoutHOC } from "../issue-layout-HOC";
@@ -71,10 +72,13 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
 
   const orderBy = displayFilters?.order_by;
 
-  // The mounted binding hook shows failures and offers retry.
-  useEffect(() => {
-    void fetchIssues("init-loader", { limit: sub_group_by ? 10 : 30 }, viewId).catch(() => {});
-  }, [fetchIssues, storeType, group_by, sub_group_by, viewId]);
+  useIssueListMount(
+    storeType,
+    fetchIssues,
+    { limit: sub_group_by ? 10 : 30 },
+    viewId,
+    JSON.stringify([group_by, sub_group_by])
+  );
 
   const fetchMoreIssues = useCallback(
     (groupId?: string, subgroupId?: string) => {

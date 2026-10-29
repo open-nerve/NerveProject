@@ -2,6 +2,7 @@
 import type { Issue } from "@nerve/api-client";
 import { makeObservable, observable, runInAction } from "mobx";
 import type { TLoader } from "@nerve/types";
+import { EUserPermissions } from "@nerve/constants";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { Reconciled } from "@/lib/reconciled";
 import {
@@ -87,7 +88,24 @@ export class IssueListBinding {
         : !this.scope.query.project_id?.length || this.scope.query.project_id.includes(scope.projectID))
     );
   }
+  private scopeRole(): number | undefined {
+    const stores = this.root.rootStore;
+    if (stores.workspaceRoot.getWorkspaceBySlug(this.scope.workspaceSlug)?.id !== this.scope.workspaceID)
+      return undefined;
+    const permission = stores.user.permission;
+    return this.scope.scope === "project"
+      ? permission.getProjectRoleByWorkspaceSlugAndProjectId(this.scope.workspaceSlug, this.scope.projectID)
+      : permission.getWorkspaceRoleByWorkspaceSlug(this.scope.workspaceSlug);
+  }
+  private allowsRole(role: number | undefined): boolean {
+    return this.scope.scope === "member" || this.scope.query.archived === "true"
+      ? role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER
+      : role !== undefined;
+  }
   private async read(request: ReadRequest): Promise<PageAnswer> {
+    const role = this.scopeRole();
+    if (!this.allowsRole(role)) throw new SessionChangedError();
+    const currentScope = () => this.scopeRole() === role && this.allowsRole(role);
     const { part, first, cursor, lower } = request;
     const token = this.root.captureRead();
     const query = {
@@ -108,7 +126,8 @@ export class IssueListBinding {
             relation: this.scope.query.relation,
           });
     const projects = this.scope.scope === "project" ? [this.scope.projectID] : (this.scope.query.project_id ?? []);
-    if (!this.root.isReadCurrent(token, projects, this.scope.workspaceID)) throw new SessionChangedError();
+    if (!currentScope() || !this.root.isReadCurrent(token, projects, this.scope.workspaceID))
+      throw new SessionChangedError();
     const issues = page.groups
       ? page.groups.flatMap((group) =>
           group.subgroups ? group.subgroups.flatMap((cell) => cell.data) : (group.data ?? [])
@@ -123,7 +142,8 @@ export class IssueListBinding {
     )
       throw new Error("Issue page does not match its scope");
     await this.prepareCatalog(issues);
-    if (!this.root.isReadCurrent(token, projects, this.scope.workspaceID)) throw new SessionChangedError();
+    if (!currentScope() || !this.root.isReadCurrent(token, projects, this.scope.workspaceID))
+      throw new SessionChangedError();
     const known = this.reconciled.value;
     const rowParts: PagePart[] = part
       ? []
@@ -262,7 +282,7 @@ export class IssueListBinding {
       });
       return value;
     } catch (error) {
-      if (this.root.active)
+      if (this.root.active && !(error instanceof SessionChangedError))
         runInAction(() => {
           this.failedReads.set(key, request);
           this.error = error;

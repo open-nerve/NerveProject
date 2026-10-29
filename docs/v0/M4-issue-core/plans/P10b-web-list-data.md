@@ -198,6 +198,7 @@ make e2e
 ## Task 10：根store计算属性与列表会话取数（约350–700行）
 
 **Files：** C/store/issue/root.store.ts及新root.store.test.ts；C/lib/store-context.test.ts；C/components/issues/issue-layouts/roots/{project-layout-root,archived-issue-layout-root}.tsx、C/components/profile/profile-issues.tsx；三同步读取utils/command-palette/issue.store；.oxlintrc.json范围。
+**实际接线范围：** 四种 base layout 的首读、`use-issue-list-mount`、`use-issues-actions`、归档/profile filter 的读拒绝及 IssueListBinding 权限复核一并纳入；旧测试 fixture 改从所属 user/router 设置输入。`issue.store.ts` 已由 T6 改用所属 root，无需补改。新增 `useSessionSWR` 的窄 dedupingInterval 选项仅供本列表设 0，见 spec §2.8。
 **Interfaces：** root代理router/currentuser/目录computed；useSessionSWR([name,scope…]|null,fetcher)；相同scope换loginId不得复用key。
 
 - [ ] `computedScopeClearsEmptyCatalogs`从有目录→空目录，currentUserId登出归空，不只truthy更新；`rootConstructionMakesNoStrictModeWarning`；列表hook测试换account/unknownid/guest/nonmember，断言不请求及旧答不写。

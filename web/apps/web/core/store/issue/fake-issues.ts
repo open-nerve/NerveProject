@@ -121,8 +121,6 @@ export async function issueStoreTab() {
   const workspace = workspaceOf("ws");
   const project = projectOf("A", workspace.id, { id: "A" });
   runInAction(() => {
-    app.issue.workspaceSlug = workspace.slug;
-    app.issue.projectId = project.id;
     app.router.setQuery({ workspaceSlug: workspace.slug, projectId: project.id });
   });
   await loadWorkspaces(nerve, app.workspaceRoot, [workspace]);

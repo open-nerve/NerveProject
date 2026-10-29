@@ -5,7 +5,7 @@
  */
 
 import type { FC } from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
@@ -18,6 +18,7 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 import { useIssueListRefresh, IssueListRetry } from "@/hooks/use-issue-list-refresh";
+import { useIssueListMount } from "@/hooks/use-issue-list-mount";
 // local imports
 import { IssueLayoutHOC } from "../issue-layout-HOC";
 import type { IQuickActionProps, TRenderQuickActions } from "../list/list-view-types";
@@ -57,10 +58,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
     EUserPermissionsLevel.PROJECT
   );
 
-  // The mounted binding hook shows failures and offers retry.
-  useEffect(() => {
-    void fetchIssues("init-loader", { limit: 100 }, viewId).catch(() => {});
-  }, [fetchIssues, storeType, viewId]);
+  useIssueListMount(storeType, fetchIssues, { limit: 100 }, viewId);
 
   const canEditProperties = useCallback(
     (projectId: string | undefined) => {
@@ -78,9 +76,9 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
 
   const handleDisplayFiltersUpdate = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      updateFilters(projectId ?? "", EIssueFilterType.DISPLAY_FILTERS, {
+      void updateFilters(projectId ?? "", EIssueFilterType.DISPLAY_FILTERS, {
         ...updatedDisplayFilter,
-      });
+      }).catch(() => {});
     },
     [projectId, updateFilters]
   );

@@ -201,3 +201,24 @@ it("retains valid layout, sort, group and booleans when calendar is malformed", 
   });
   expect(store.getIssueFilters("project")?.displayProperties?.priority).toBe(false);
 });
+
+it("returns the list read refusal after a filter change", async () => {
+  const failure = new Error("list refused");
+  let reject!: (error: Error) => void;
+  const read = new Promise<void>((_resolve, fail) => {
+    reject = fail;
+  });
+  void read.catch(() => {});
+  const owner = root();
+  vi.mocked(owner.archivedIssues.fetchIssuesWithExistingPagination).mockReturnValue(read as never);
+  const changed = new ArchivedIssuesFilter(owner).updateFilterExpression("ws", "project", { priority__in: "high" });
+  let settled = false;
+  void changed.then(
+    () => (settled = true),
+    () => (settled = true)
+  );
+  await Promise.resolve();
+  expect(settled).toBe(false);
+  reject(failure);
+  await expect(changed).rejects.toBe(failure);
+});

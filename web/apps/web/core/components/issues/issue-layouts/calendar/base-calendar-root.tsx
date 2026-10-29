@@ -6,7 +6,7 @@ import type { Group } from "@/lib/paged-groups";
  */
 
 import type { FC } from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
@@ -21,6 +21,7 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 import { useIssueListRefresh, IssueListRetry } from "@/hooks/use-issue-list-refresh";
+import { useIssueListMount } from "@/hooks/use-issue-list-mount";
 // types
 import type { IQuickActionProps } from "../list/list-view-types";
 import { CalendarChart } from "./calendar";
@@ -85,18 +86,18 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
       .map((group) => ({ group }))
   );
 
-  useEffect(() => {
-    if (startDate && endDate && layout) {
-      void fetchIssues(
-        "init-loader",
-        {
+  useIssueListMount(
+    storeType,
+    fetchIssues,
+    startDate && endDate
+      ? {
           limit: layout === "month" ? 4 : 30,
           query: { group_by: "target_date", target_date: [`${startDate}..${endDate}`] },
-        },
-        viewId
-      ).catch(() => {});
-    }
-  }, [fetchIssues, storeType, startDate, endDate, layout, viewId]);
+        }
+      : undefined,
+    viewId,
+    layout
+  );
 
   const handleDragAndDrop = async (
     issueId: string | undefined,

@@ -11,6 +11,8 @@ const fixture = vi.hoisted(() => ({
   params: {} as Record<string, string>,
   created: [] as { projectId: string; name: string }[],
   fetches: 0,
+  projectRole: undefined as number | undefined,
+  workspaceRole: undefined as string | undefined,
 }));
 vi.mock("react-router", () => ({ useParams: () => fixture.params }));
 vi.mock("@/lib/store-context", async () => {
@@ -18,7 +20,7 @@ vi.mock("@/lib/store-context", async () => {
   const issues = {
     fetchIssues: () => {
       fixture.fetches++;
-      throw new Error("unexpected list fetch");
+      return Promise.resolve(undefined);
     },
     createIssue: async (_workspace: string, projectId: string, data: { name: string }) => {
       const created = { projectId, name: data.name };
@@ -28,13 +30,19 @@ vi.mock("@/lib/store-context", async () => {
   };
   return {
     StoreContext: createContext({
+      user: {
+        permission: {
+          getProjectRoleByWorkspaceSlugAndProjectId: () => fixture.projectRole,
+          getWorkspaceRoleByWorkspaceSlug: () => fixture.workspaceRole,
+        },
+      },
       issue: {
         issues: { issuesMap: {} },
         projectIssues: issues,
         projectIssuesFilter: {},
-        profileIssues: {},
+        profileIssues: issues,
         profileIssuesFilter: {},
-        archivedIssues: {},
+        archivedIssues: issues,
         archivedIssuesFilter: {},
         workspaceDraftIssues: {},
       },
@@ -47,6 +55,8 @@ beforeEach(() => {
   fixture.params = {};
   fixture.created = [];
   fixture.fetches = 0;
+  fixture.projectRole = undefined;
+  fixture.workspaceRole = undefined;
 });
 
 async function mount(run: () => void, context?: EIssuesStoreType) {
@@ -107,3 +117,14 @@ it.each(["GLOBAL", "CYCLE", "MODULE", "PROJECT_VIEW", "unknown"])(
     expect(fixture.fetches).toBe(0);
   }
 );
+
+// The actual action called by each layout must stop before the store sends a list request.
+it("does not fetch lists for unknown scopes, nonmembers or guests outside their allowed scope", async () => {
+  fixture.params = { workspaceSlug: "ws", projectId: "A", userId: "actor" };
+  await mount(() => {
+    void useIssuesActions(EIssuesStoreType.PROJECT).fetchIssues("init-loader", { limit: 20 });
+    void useIssuesActions(EIssuesStoreType.ARCHIVED).fetchIssues("init-loader", { limit: 20 });
+    void useIssuesActions(EIssuesStoreType.PROFILE).fetchIssues("init-loader", { limit: 20 }, "assigned");
+  });
+  expect(fixture.fetches).toBe(0);
+});

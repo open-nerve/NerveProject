@@ -209,7 +209,7 @@ T8 删除否定层时同步启用既定 negation-filters 精确静态守卫，�
 
 已归档/profile在localStorage的issue_local_filters，用现有主体作用域隔离；归档richFilters/rich_filters读写统一成rich_filters，与profile一致，历史错误键读一次可迁移但不同时保留两份权威。存储失效/损坏恢复默认，不抛未处理错误；不把其它账户偏好混用。看板折叠kanban_filters保留。草稿无筛选：WorkspaceDraftIssuesFilter及root/useIssues/types/barrel引用删除，draft列表本身留P11。
 
-IssueRootStore的autorun改为rootStore/router/user目录计算属性，无需新reaction或autorun释放逻辑；写协调器的 retire 仍按§2.6接入既有 RootStore.dispose；空目录不能保留上一项目数据。列表侧project-layout-root、archived-issue-layout-root、profile-issues统一useSessionSWR；键名、loginId、scope参数完整，null不请求，拒绝停止loading。访客个人主页不取issues，非成员项目页不取list；归档只admin/member。三处rootStore同步读继续只读，发请求经拥有者RootStore。组回查第三方版本也受同一会话守卫。
+IssueRootStore的autorun改为rootStore/router/user目录计算属性，无需新reaction或autorun释放逻辑；写协调器的 retire 仍按§2.6接入既有 RootStore.dispose；空目录不能保留上一项目数据。列表侧project-layout-root、archived-issue-layout-root、profile-issues统一useSessionSWR；键名、loginId、scope参数完整，null不请求，拒绝停止loading。访客个人主页不取issues，非成员项目页不取list；归档只admin/member。三处rootStore同步读继续只读，发请求经拥有者RootStore。组回查第三方版本也受同一会话守卫。 列表绑定读取前及目录等待后核对所属工作区和当前角色，权限消失时旧页不写 rows/total；恢复后重新挂载取新页。既有 useSessionSWR 仅允许调用者窄选 dedupingInterval，列表设为 0，使刚结束的失权读取不阻挡恢复后的新请求；同 key 的在途请求仍去重，其他调用与统一会话/拒绝配置不变。
 
 ### 2.9 T5起接通、T11/T12完成：串行修改与全副本确认
 

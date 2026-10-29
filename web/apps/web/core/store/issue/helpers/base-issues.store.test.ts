@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
-import { FakeNerve, answered, json } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { issueDetailOf, issuePageOf, listIssue, requestedIssue } from "../fake-issues";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -26,8 +26,6 @@ beforeEach(async () => {
   app = new RootStore(nerve.client());
   binding.app = app;
   runInAction(() => {
-    app.issue.workspaceSlug = ws.slug;
-    app.issue.projectId = project.id;
     app.router.setQuery({ workspaceSlug: ws.slug, projectId: project.id });
   });
   await loadWorkspaces(nerve, app.workspaceRoot, [ws]);
@@ -685,7 +683,7 @@ it("sends the confirmed member fields after local preference save and reload", a
   const id = "019a0000-0000-7000-8000-000000000001";
   try {
     runInAction(() => {
-      app.issue.currentUserId = "viewer";
+      app.user.data = { id: "viewer" } as NonNullable<typeof app.user.data>;
     });
     await app.issue.profileIssuesFilter.updateFilterExpression("ws", "actor", {
       and: [{ state_id__in: id }, { created_by_id__in: id }, { priority__in: "high" }, { project_id__in: id }],
@@ -710,4 +708,48 @@ it("sends the confirmed member fields after local preference save and reload", a
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+it("returns the required directory's HTTP refusal without publishing the page", async () => {
+  const request = await requestedIssue(
+    nerve,
+    () =>
+      app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", {
+        limit: 10,
+        query: { order_by: "state_name" },
+      }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  request.call.answer(json(200, issuePageOf([listIssue("x", 1, { state_id: "missing" })])));
+  await until(() => nerve.calls.length === 2, "required states");
+  const refused = expect(request.promise).rejects.toMatchObject({ status: 403, problem: { code: "forbidden" } });
+  nerve.calls[1]!.answer(problem(403, "forbidden"));
+  await refused;
+  expect(app.issue.projectIssues.groups).toBeUndefined();
+  expect(app.issue.issues.held("x")).toBeUndefined();
+  expect(app.issue.projectIssues.getIssueLoader()).not.toBe("init-loader");
+});
+
+it("losing one project during its list read does not clear another project's list", async () => {
+  const b = projectOf("B", ws.id, { id: "B" });
+  await loadProjects(nerve, app.projectRoot.project, ws, [project, b]);
+  const other = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "B", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/B/issues"]
+  );
+  other.call.answer(json(200, issuePageOf([listIssue("other", 1, { project_id: "B" })])));
+  await other.promise;
+  const retained = app.issue.projectIssues.currentList!;
+  const gone = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  await loadProjects(nerve, app.projectRoot.project, ws, [b]);
+  gone.call.answer(json(200, issuePageOf([listIssue("old", 1)])));
+  await gone.promise;
+  expect(app.issue.projectIssues.groups).toBeUndefined();
+  expect(retained.reconciled.value?.groups.get("")?.rows.map((row) => row.id)).toEqual(["other"]);
+  expect(app.issue.issues.held("old")).toBeUndefined();
 });

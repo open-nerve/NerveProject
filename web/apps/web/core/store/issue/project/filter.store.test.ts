@@ -352,7 +352,7 @@ it("retains project kanban collapse across a real preference reload", async () =
   const { app, nerve } = tab;
   const { runInAction } = await import("mobx");
   runInAction(() => {
-    app.issue.currentUserId = "actor";
+    app.user.data = { id: "actor" } as NonNullable<typeof app.user.data>;
   });
   const first = await requestedIssue(nerve, () => app.issue.projectIssuesFilter.fetchFilters("ws", "A"), [
     "GET",

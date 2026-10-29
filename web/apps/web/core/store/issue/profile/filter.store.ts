@@ -121,7 +121,11 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
         set(this.filters, [userId, "richFilters"], filters);
       });
 
-      this.rootIssueStore.profileIssues.fetchIssuesWithExistingPagination(workspaceSlug, userId, "mutation");
+      const reading = this.rootIssueStore.profileIssues.fetchIssuesWithExistingPagination(
+        workspaceSlug,
+        userId,
+        "mutation"
+      );
       this.handleIssuesLocalFilters.set(
         EIssuesStoreType.PROFILE,
         EIssueFilterType.FILTERS,
@@ -132,6 +136,7 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
           rich_filters: filters,
         }
       );
+      await reading;
     } catch (error) {
       console.log("error while updating rich filters", error);
       throw error;
@@ -183,7 +188,11 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
             });
           });
 
-          this.rootIssueStore.profileIssues.fetchIssuesWithExistingPagination(workspaceSlug, userId, "mutation");
+          const reading = this.rootIssueStore.profileIssues.fetchIssuesWithExistingPagination(
+            workspaceSlug,
+            userId,
+            "mutation"
+          );
 
           this.handleIssuesLocalFilters.set(
             EIssuesStoreType.PROFILE,
@@ -195,6 +204,7 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
               display_filters: _filters.displayFilters,
             }
           );
+          await reading;
 
           break;
         }

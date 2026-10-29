@@ -4,8 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { isEmpty } from "lodash-es";
-import { autorun, makeObservable, observable, runInAction, toJS } from "mobx";
+import { computed, makeObservable, observable, runInAction, toJS } from "mobx";
 // types
 import type {
   ApiClient,
@@ -57,13 +56,27 @@ type PendingWrite = {
 };
 
 export class IssueRootStore {
-  currentUserId: string | undefined = undefined;
-  workspaceSlug: string | undefined = undefined;
-  projectId: string | undefined = undefined;
-  userId: string | undefined = undefined;
-  stateMap: Record<string, State> | undefined = undefined;
-  labelMap: Record<string, Label> | undefined = undefined;
-  memberMap: Record<string, MemberUser> | undefined = undefined;
+  get currentUserId(): string | undefined {
+    return this.rootStore.user?.data?.id;
+  }
+  get workspaceSlug(): string | undefined {
+    return this.rootStore.router.workspaceSlug;
+  }
+  get projectId(): string | undefined {
+    return this.rootStore.router.projectId;
+  }
+  get userId(): string | undefined {
+    return this.rootStore.router.userId;
+  }
+  get stateMap(): Record<string, State> | undefined {
+    return this.rootStore.state?.stateMap;
+  }
+  get labelMap(): Record<string, Label> | undefined {
+    return this.rootStore.label?.labelMap;
+  }
+  get memberMap(): Record<string, MemberUser> | undefined {
+    return this.rootStore.memberRoot?.memberMap;
+  }
 
   rootStore: RootStore;
 
@@ -107,26 +120,16 @@ export class IssueRootStore {
     this.listApi = new IssueListService(api);
     makeObservable(this, {
       active: observable,
-      workspaceSlug: observable.ref,
-      projectId: observable.ref,
-      userId: observable.ref,
-      stateMap: observable,
-      labelMap: observable,
-      memberMap: observable,
+      currentUserId: computed,
+      workspaceSlug: computed,
+      projectId: computed,
+      userId: computed,
+      stateMap: computed,
+      labelMap: computed,
+      memberMap: computed,
     });
 
     this.rootStore = rootStore;
-
-    autorun(() => {
-      if (rootStore?.user?.data?.id) this.currentUserId = rootStore?.user?.data?.id;
-      if (this.workspaceSlug !== rootStore.router.workspaceSlug) this.workspaceSlug = rootStore.router.workspaceSlug;
-      if (this.projectId !== rootStore.router.projectId) this.projectId = rootStore.router.projectId;
-      if (this.userId !== rootStore.router.userId) this.userId = rootStore.router.userId;
-      // the state and label stores' records as they give them, none of a project they no longer give (M3/P8b)
-      this.stateMap = rootStore?.state?.stateMap;
-      this.labelMap = rootStore?.label?.labelMap;
-      if (!isEmpty(rootStore?.memberRoot?.memberMap)) this.memberMap = rootStore?.memberRoot?.memberMap || undefined;
-    });
 
     this.issues = new IssueStore(this);
 

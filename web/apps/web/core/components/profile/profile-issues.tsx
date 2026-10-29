@@ -7,7 +7,11 @@
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-import useSWR from "swr";
+import { useSessionSWR } from "@/lib/use-session-swr";
+import { useUserPermissions } from "@/hooks/store/user";
+import { EUserPermissions } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { errorMessageKey } from "@/lib/error-messages";
 // nerve imports
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 import { EIssuesStoreType } from "@nerve/types";
@@ -40,15 +44,15 @@ export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Prop
     if (setViewId) setViewId(type);
   }, [type, setViewId]);
 
-  useSWR(
-    workspaceSlug && userId ? `CURRENT_WORKSPACE_PROFILE_ISSUES_${workspaceSlug}_${userId}` : null,
-    async () => {
-      if (workspaceSlug && userId) {
-        await fetchFilters(workspaceSlug, userId);
-      }
-    },
-    { revalidateIfStale: false, revalidateOnFocus: false }
+  const permission = useUserPermissions();
+  const role = workspaceSlug ? permission.getWorkspaceRoleByWorkspaceSlug(workspaceSlug) : undefined;
+  const allowed = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
+  const { t } = useTranslation();
+  const { error } = useSessionSWR(allowed ? ["PROFILE_ISSUE_FILTERS", workspaceSlug, userId] : null, (slug, user) =>
+    fetchFilters(slug, user)
   );
+  if (error) return <div role="alert">{t(errorMessageKey(error))}</div>;
+  if (!allowed) return null;
 
   if (!workspaceSlug || !userId) return null;
 
@@ -59,7 +63,9 @@ export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Prop
         entityType={EIssuesStoreType.PROFILE}
         filtersToShowByLayout={ISSUE_DISPLAY_FILTERS_BY_PAGE.profile_issues.filters}
         initialWorkItemFilters={issueFilters}
-        updateFilters={updateFilterExpression.bind(updateFilterExpression, workspaceSlug, userId)}
+        updateFilters={(expression) => {
+          void updateFilterExpression(workspaceSlug, userId, expression).catch(() => {});
+        }}
         workspaceSlug={workspaceSlug}
       >
         {({ filter: profileWorkItemsFilter }) => (
