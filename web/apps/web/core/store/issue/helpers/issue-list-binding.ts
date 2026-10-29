@@ -221,6 +221,8 @@ export class IssueListBinding {
     return answer;
   }
   async prepareCatalog(issues: Issue[]): Promise<void> {
+    // A proven empty scope needs no sort or membership facts, even during write confirmation.
+    if (this.scope.scope === "project" && this.scope.empty) return;
     const stores = this.root.rootStore;
     const order = this.scope.query.order_by?.replace(/^-/, "");
     const states =

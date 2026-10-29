@@ -1,6 +1,6 @@
 # M4/P10b 列表数据层：实施与评审记录
 
-2026-10-29；分支 `codex/m4-p10b`，实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，T13 产品 `7e4ed3c50a82cd7c5b97df1277d5994d751dbe70`。T1–T13逐任务实施与独评闭环；整分支deep-review已在08a76bbf完成，0 Critical/5 Important/3 Minor、Spec/Quality均With fixes；统一修复及局部验证完成，限定复审、T14、最终完整F与准确HEAD CI待办，阶段未合并。[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。
+2026-10-29；分支 `codex/m4-p10b`，实际 main 基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，T13 产品 `7e4ed3c50a82cd7c5b97df1277d5994d751dbe70`。T1–T13逐任务实施与独评闭环；整分支deep-review已在08a76bbf完成，0 Critical/5 Important/3 Minor、Spec/Quality均With fixes；统一修复及局部验证完成，初次限定复审确认原项已处理但新增N2，N2已局部修复，待限定复核、T14、最终完整F与准确HEAD CI，阶段未合并。[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。
 
 ## 1. 前置与证据
 
@@ -8,7 +8,7 @@ P10a已集成，main CI及归档见[P10a review §10](P10a-web-issue-types-revie
 
 ## 2. 验收映射
 
-A1尚待T14，A10尚待最终F/CI/修复复审。A3/A5/A6/A8因整审I1–I5重新开放：本轮已修复并有聚焦及受影响回归，限定独立复审尚未发生。以下为本段已执行行为的范围，证据路径均相对上述原件根：
+A1尚待T14，A10尚待最终F/CI/修复复审。A3/A5/A6/A8因整审I1–I5重新开放：本轮已修复并有聚焦及受影响回归，初次限定复审已确认原项处理，但新增N2；N2修复待再复核。以下为本段已执行行为的范围，证据路径均相对上述原件根：
 
 | 验收 | 行为证据与边界 |
 |---|---|
@@ -69,7 +69,15 @@ P11迁移详情、关联、评论、表情、动态、版本、草稿和搜索se
 
 本轮34文件614项受影响回归通过（021），应用types、完整lint-web、knip通过；R37一行后以027实际日历/default reporter、028 types及029应用lint补验证。完整lint-web警告cap因真实少一条从218收紧至217，原cap不匹配失败022保留。最终详细证据与源码桥见 `final-fix-report.md`，本轮未跑完整F或浏览器套件。
 
-下一步由负责人限定独立复审，再执行完整F及准确待交付HEAD CI，按实际结果回填A3/A5/A6/A8、A1/A10/T14。阶段仍未合并，不启动P11。
+下一步由主控限定复核新增N2的修复，再执行完整F及准确待交付HEAD CI，按实际结果回填A3/A5/A6/A8、A1/A10/T14。阶段仍未合并，不启动P11。
+
+## 7.1 限定复审新增 N2 与局部修复（2026-10-29）
+
+`final-fix-review.md` 对08a76bbf..09b06e89两提交29路径作限定复审：原I1–I5/M1–M3及N1/R37均ADDRESSED，但R34的确定空binding仍经root写确认前prepareCatalog取label目录，403污染empty.error，故Spec/Quality保持With fixes（0C/1I/0新增M）。独立probe明确回答403并收束业务Promise，不以超时当红。
+
+R39按用户局部修复授权继续收尾：binding.prepareCatalog只对显式project scope.empty早返；普通total=0仍准备目录，保留拒绝、owner及权限守卫。三个真实root/FakeNerve用例覆盖仅empty时无GET/不等待/无error/正常canonical确认，同存普通零结果时目录200成功建立排序行、403只污染普通binding。001-red为2失败1通过；测试组织修正lint后，以最终测试字节回退两行生产修复，009再次2失败1通过，精确恢复后011完整binding51通过；004 root/确认/拖放109通过，最终types及应用lint217通过；原空↔非空、权限恢复及目录失败回归保留。精确命令/源码桥见X/final-fix-n2-*和final-fix-report追加节，不重跑614或完整F。N2已局部修复，等待独立限定复核，不据此勾A1/A10/T14。
+
+R34–R39均为主控依据用户“局部自行决策”授权作出的裁定；只有权限方案A是用户明确批准。R36/R38仍移交P13，不称全部warning已关闭。draft既有测试是其当前页面合同回归，未直接经过IssueLayoutHOC，不冒称验证了该HOC fallback。
 
 ## 历史预检与接续记录（当时状态，非当前结果）
 

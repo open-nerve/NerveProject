@@ -1213,3 +1213,98 @@ it("empty calendar intersection remains logical across writes permissions and wi
   root.retire();
   await expect(empty.fetchFirst()).rejects.toThrow();
 });
+
+it.each([null, 200, 403] as const)(
+  "logical empty skips catalog while ordinary zero list preserves directory handling: %s",
+  async (directoryStatus) => {
+    const root = app.issue;
+    const issues = root.projectIssues;
+    runInAction(() => {
+      root.projectIssuesFilter.filters.A.richFilters = { and: [{ target_date__exact: "2026-11-15" }] };
+    });
+    const query = { group_by: "target_date" as const, order_by: "label_name" as const };
+    await issues.fetchIssues("ws", "A", "init-loader", {
+      limit: 4,
+      query: { ...query, target_date: ["2026-10-01..2026-10-31"] },
+    });
+    const empty = issues.currentList!;
+    expect(empty.scope).toMatchObject({ empty: true });
+    expect(empty.value).toEqual({ total: 0, groups: new Map() });
+    expect(nerve.calls).toHaveLength(0);
+    if (directoryStatus !== null) {
+      await answered(
+        nerve,
+        () =>
+          issues.fetchIssues("ws", "A", "init-loader", {
+            limit: 4,
+            query: { ...query, target_date: ["2026-11-01..2026-11-30"] },
+          }),
+        ["GET", "/api/v0/projects/A/issues"],
+        { total: 0, groups: [] },
+        "ordinary empty server result"
+      );
+      expect(issues.currentList!.scope).toMatchObject({ empty: false });
+      expect(issues.total).toBe(0);
+    }
+    const ordinary = directoryStatus === null ? undefined : issues.currentList!;
+    const serial = root.readSerial;
+    const baseline = nerve.calls.length;
+    const created = await requestedIssue(
+      nerve,
+      () => issues.createIssue("ws", "A", { name: "outside", target_date: "2026-11-15", label_ids: ["new-label"] }),
+      ["POST", "/api/v0/projects/A/issues"]
+    );
+    created.call.answer(
+      json(201, { ...issueDetailOf("outside"), target_date: "2026-11-15", label_ids: ["new-label"] })
+    );
+    await until(() => created.result.settled || nerve.calls.length > baseline + 1, "write or catalog request");
+    const initialReads = nerve.calls.slice(baseline).filter((call) => call.method === "GET");
+    if (ordinary) {
+      expect.soft(created.result.settled).toBe(false);
+      expect.soft(initialReads.map((call) => call.path)).toEqual(["/api/v0/projects/A/labels"]);
+    } else {
+      expect.soft(created.result.settled).toBe(true);
+      expect.soft(initialReads).toEqual([]);
+    }
+    // Explicitly settle even unwanted pre-fix requests; timeouts are not this regression's oracle.
+    const replied = new Set<(typeof nerve.calls)[number]>();
+    const answerCatalog = async () => {
+      if (created.result.settled) return;
+      const reads = nerve.calls.slice(baseline).filter((call) => call.method === "GET" && !replied.has(call));
+      for (const call of reads) {
+        replied.add(call);
+        call.answer(
+          directoryStatus === 200
+            ? json(200, { data: [labelOf(project, "New label", 1, { id: "new-label" })] })
+            : problem(403, "permission_denied")
+        );
+      }
+      await until(
+        () =>
+          created.result.settled ||
+          nerve.calls.slice(baseline).some((call) => call.method === "GET" && !replied.has(call)),
+        "write after explicit directory answer"
+      );
+    };
+    // At most two registered bindings can issue a directory request in this scenario.
+    await answerCatalog();
+    await answerCatalog();
+    expect(created.result.settled).toBe(true);
+    await created.promise;
+    expect.soft(root.issues.getIssueById("outside")?.label_ids).toEqual(["new-label"]);
+    expect.soft(root.readSerial).toBe(serial);
+    expect.soft(empty.value).toEqual({ total: 0, groups: new Map() });
+    expect.soft(empty.error).toBeUndefined();
+    expect
+      .soft(nerve.calls.slice(baseline).map(({ method, path }) => [method, path]))
+      .toEqual([["POST", "/api/v0/projects/A/issues"], ...(ordinary ? [["GET", "/api/v0/projects/A/labels"]] : [])]);
+    if (ordinary && directoryStatus === 403) {
+      expect.soft(ordinary.error).toMatchObject({ status: 403, message: "permission_denied" });
+      expect.soft(ordinary.value?.total).toBe(0);
+    } else if (ordinary) {
+      expect.soft(ordinary.error).toBeUndefined();
+      expect.soft(ordinary.value?.total).toBe(1);
+      expect.soft(ordinary.value?.groups.get("2026-11-15")?.rows[0]).toMatchObject({ id: "outside", key: "new label" });
+    }
+  }
+);
