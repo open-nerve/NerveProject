@@ -195,7 +195,7 @@ T6同时改 `C/store/issue/issue-details/{issue,sub_issues,link,relation}.store.
 
 同一登录中已观察失权再恢复，读前和读后的角色相同也不能令旧答有效。`IssueRootStore` 单一拥有权限观察、范围水位和生命周期：观察所属 workspace 目录 `workspaces` 与 project 目录经现有 `getProjectById`、权限 getter 给出的事实，覆盖已有绑定、持有实体及在途请求所涉及范围。目录权威应答被接收或确认的成员变化生效时观察语义签名；新范围先建立当前基线，未知/非成员不能发受限读取。若使用 MobX 观察器，它只跟踪权限，不复制 router/user/catalog；`retire()` 幂等释放。不能在 computed getter 偷写，不因对象引用或无变化目录重取推进水位。
 
-工作区签名使用该 `Workspace.role` 和身份；项目签名使用已有 `getProjectRoleByWorkspaceSlugAndProjectId` 的有效角色与所属工作区身份，角色为 guest 时再包含项目 `guest_view_all_features`。已知可读签名变不可读或变为不同签名即失效原身份，覆盖 admin/member→guest 和 guest 开关变化；member 的 guest 开关变化不影响其签名。恢复或改变后以新身份重取。当前 scope 是否允许读取仍遵循项目成员含 guest、归档及成员列表仅 admin/member；guest 行范围由服务端裁定，不在浏览器推断 own-only。
+工作区签名使用该 `Workspace.role` 和身份；项目签名同时保留已有 `getProjectRoleByWorkspaceSlugAndProjectId` 的有效读门控、所属工作区身份及原始 `Project.member_role`，原始项目角色为 guest 时再包含项目 `guest_view_all_features`。工作区 admin 兼项目 guest 仍按原始项目角色及开关受服务器 guest 可见性规则约束（M4设计3.4），不能因 getter 将有效角色折为 admin 而忽略该开关。已知可读签名变不可读或变为不同签名即失效原身份，覆盖 admin/member→guest 和原始 guest 开关变化；原始项目 member 的 guest 开关变化不影响其签名。恢复或改变后以新身份重取。当前 scope 是否允许读取仍遵循项目成员含 guest、归档及成员列表仅 admin/member；guest 行范围由服务端裁定，不在浏览器推断 own-only。
 
 每个 HTTP 请求真正发出前以其不可变范围捕获本次权限证据，与既有 owner/readSerial 一同贯穿整个流程；已观察到的工作区失权使其项目/成员范围失效，项目失权或签名变化使该项目和覆盖它的成员范围失效，独立项目/工作区不受影响。单项目 list/detail/verify 核工作区及项目；成员列表带显式项目集合按该集合核，否则核工作区可覆盖的项目范围。任一相关变化使整页无效、保持待刷新，不得剪行后沿用旧 total。whole、part、detail、verify 在 canonical、rows、total、stale 及核实状态的任何写入之前核证据，包含每次目录或辅助资源 await 后及后续读取前。权限水位独立于成功树删除水位和每 id freshnessFloor，不改 owner/readSerial 含义、不造墓碑；拒绝、普通404不推进删除水位。
 

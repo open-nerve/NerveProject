@@ -206,7 +206,7 @@ make e2e
 - [ ] 红/绿：`pnpm --filter web exec vitest run core/store/issue/root.store.test.ts core/lib/store-context.test.ts core/lib/use-session-swr.test.ts`。
 - [ ] 去autorun及observable副本，保持只同步读代理；旧SWR都按列表范围替换（含archived direct useSWR），按需目录拒绝交回。oxlint限制同步但不提前把P11–15未迁移文件纳入无界失败。
 - [ ] 保留2e4ca695真实红例，补 finally 清理并独立断言 canonical/rows/total；失权→旧答和失权→恢复→旧答均丢弃，旧请求仍在外时恢复的新GET可发出并只收新答。先行为红，再按 spec §2.6 以根范围水位修复，恢复权限前后都不暴露旧持有值。
-- [ ] 真正目录观察覆盖相同签名重取、admin/member→guest、guest_view_all_features变化、工作区及项目失权；不推断 guest own-only。覆盖显式项目集合与工作区范围的 member whole/part、单项目 detail/verify、无关范围、同scope多消费者/普通卸载、在途去重和新身份；保留退役/删除/404/403/500/目录拒绝/loading及T7保存后读取回归。新增至少一个去权限水位或恢复身份的生产变异，行为红并恢复字节后绿；M31–33旧证据按实际改动决定是否复跑。
+- [ ] 真正目录观察覆盖相同签名重取、admin/member→guest、guest_view_all_features变化、工作区及项目失权；尤其以工作区 admin + 原始项目 guest 实测开关改变使旧答失效、新答收敛，不能因有效角色为 admin 漏掉；不推断 guest own-only。覆盖显式项目集合与工作区范围的 member whole/part、单项目 detail/verify、无关范围、同scope多消费者/普通卸载、在途去重和新身份；保留退役/删除/404/403/500/目录拒绝/loading及T7保存后读取回归。新增至少一个去权限水位或恢复身份的生产变异，行为红并恢复字节后绿；M31–33旧证据按实际改动决定是否复跑。
 - [ ] M31key删loginId、M32不清空目录、M33忽略按需拒绝，分别红；G，提交 `feat(M4/P10b): 按会话和权限驱动列表挂载`。
 
 ## Task 11：拖放与串行请求体计算（约400–750行）
