@@ -47,6 +47,7 @@ import { heldCounterSources } from "@/lib/paged-groups.evidence";
 import type { IssueListBinding } from "./helpers/issue-list-binding";
 import { PermissionReads } from "./permission-reads";
 import type { DetailRegistration } from "./issue-details/resource";
+import { IssueDetailService } from "@/services/issue/issue-detail.service";
 
 export type IIssueRootStore = IssueRootStore;
 export type IssueWriteScope = Readonly<{ workspaceSlug: string; projectID: string; workspaceID: string }>;
@@ -104,6 +105,7 @@ export class IssueRootStore {
   readonly owner = Symbol("issue-root");
   active = true;
   readonly api: IssueApiService;
+  readonly detailApi: IssueDetailService;
   readonly listApi: IssueListService;
   private serial = 0;
   get readSerial(): number {
@@ -123,6 +125,7 @@ export class IssueRootStore {
 
   constructor(rootStore: RootStore, api: ApiClient) {
     this.api = new IssueApiService(api);
+    this.detailApi = new IssueDetailService(api);
     this.listApi = new IssueListService(api);
     makeObservable(this, {
       active: observable,
@@ -267,6 +270,10 @@ export class IssueRootStore {
         )
       : [];
   }
+  /** A related command may have changed an unread old parent in any covered group. */
+  markScopeListsStale(scope: IssueWriteScope): void {
+    for (const list of this.lists) if (list.covers(scope)) list.markVerificationStale();
+  }
   observeRead(before: Issue | undefined, after: Issue): void {
     const pending = this.pending.get(after.id);
     pending?.observed.push({ version: after.updated_at, fields: this.fields(after) });
@@ -403,6 +410,7 @@ export class IssueRootStore {
             pending.sources.get(list) ?? new Set()
           );
       this.issues.confirmChange(change, permission);
+      await this.issueDetail.subIssues.confirmCore(change, scope);
       return after;
     } catch (error) {
       this.assertActive();

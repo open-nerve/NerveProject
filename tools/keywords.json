@@ -2878,22 +2878,6 @@
     },
     {
       "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue_relation.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/issue-relation/",
-      "count": 2,
-      "reason": "T7暂留；P11接线删除；真实读者 listIssueRelations,createIssueRelations→IssueRelationStore.fetchRelations/createRelation/removeRelation；详情独立关系资源",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/issue/issue_relation.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/remove-relation/",
-      "count": 1,
-      "reason": "T7暂留；P11接线删除；真实读者 deleteIssueRelation→IssueRelationStore.fetchRelations/createRelation/removeRelation；详情独立关系资源",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
       "path": "web/apps/web/core/services/issue/work_item_version.service.ts",
       "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/work-items/${workItemId}/description-versions/",
       "count": 1,
@@ -2946,14 +2930,6 @@
       "match": "/api/workspaces/${workspaceSlug}/entity-search/",
       "count": 1,
       "reason": "T7暂留；P11接线删除；真实读者 searchEntity→rich-text/description-input、lite-text/editor、inbox create issue-description及issue-modal description-editor；P11改接",
-      "until": "M4/P12"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/store/issue/issue-details/sub_issues.fetch.test.ts",
-      "match": "/api/workspaces/${ws.slug}/projects/${here.id}/issues/${parent.id}/sub-issues/",
-      "count": 1,
-      "reason": "P10a终审修复的公共子项入口真实RootStore/APIService边界回归；P11迁移子项数据层时同步迁移测试，P14页面性质验收不延长数据层期限；不是产品兼容URL",
       "until": "M4/P12"
     }
   ]

@@ -21,6 +21,7 @@ export class DetailResource<V> implements DetailRegistration {
   private disposed = false;
   private lifetime = 0;
   private request = 0;
+  private followup?: { read: () => Promise<unknown> };
   error: unknown;
   loading = false;
   constructor(
@@ -108,6 +109,52 @@ export class DetailResource<V> implements DetailRegistration {
       this.visible(held) ? { ...held, value: change(held.value, answered?.value) } : held
     );
   }
+  /** A command's confirmed subset, without claiming it was a complete collection read. */
+  receive(
+    answer: V,
+    token: IssueReadToken,
+    merge: (held: V | undefined, answer: V) => V,
+    projects: readonly string[] = []
+  ): void {
+    const involved = [...new Set([...this.scope.projectIDs, ...projects])];
+    if (!this.current(token, involved)) return;
+    const incoming = { value: answer, token, projects: involved, lifetime: this.lifetime };
+    this.held.receive(incoming, (held, next) => {
+      const previous = held && this.visible(held) ? held : undefined;
+      return {
+        ...next,
+        value: merge(previous?.value, next.value),
+        projects: [...new Set([...next.projects, ...(previous?.projects ?? [])])],
+      };
+    });
+  }
+  /** A successful command stays successful; its read failure has a separate, read-only retry. */
+  async refreshAfterConfirmation(read: () => Promise<unknown>, token: IssueReadToken): Promise<void> {
+    const attempt = { read };
+    this.followup = attempt;
+    const current = () => this.current(token, this.held.value?.projects ?? this.scope.projectIDs);
+    try {
+      await read();
+      if (!current()) throw new SessionChangedError();
+      if (this.followup === attempt) {
+        this.followup = undefined;
+        runInAction(() => {
+          this.error = undefined;
+        });
+      }
+    } catch (error) {
+      if (!current() || error instanceof SessionChangedError) throw new SessionChangedError();
+      if (this.followup === attempt)
+        runInAction(() => {
+          this.error = error;
+        });
+    }
+  }
+  async retryConfirmationRead(): Promise<boolean> {
+    if (!this.followup) return false;
+    await this.refreshAfterConfirmation(this.followup.read, this.root.captureRead(this.scope.member));
+    return true;
+  }
   affects(workspaceID: string, projectID?: string, memberOnly = false): boolean {
     return (
       this.scope.workspaceID === workspaceID &&
@@ -116,6 +163,7 @@ export class DetailResource<V> implements DetailRegistration {
     );
   }
   invalidate(): void {
+    this.followup = undefined;
     ++this.request;
     this.held.invalidate();
     runInAction(() => {

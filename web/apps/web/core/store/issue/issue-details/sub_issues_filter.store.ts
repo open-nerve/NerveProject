@@ -129,7 +129,7 @@ export class WorkItemSubIssueFiltersStore implements IWorkItemSubIssueFiltersSto
   getFilteredSubWorkItems = computedFn((workItemId: string, filters: IIssueFilterOptions) => {
     const subIssueIds = this.subIssueStore.subIssuesByIssueId(workItemId);
     const workItems = this.subIssueStore.rootIssueDetailStore.rootIssueStore.issues.getIssuesByIds(
-      subIssueIds,
+      subIssueIds ?? [],
       "un-archived"
     );
 

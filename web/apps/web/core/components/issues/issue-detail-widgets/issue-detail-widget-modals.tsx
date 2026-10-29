@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { IssueDetail } from "@nerve/api-client";
 
 import React from "react";
 import { observer } from "mobx-react";
@@ -20,6 +20,7 @@ import { IssueLinkCreateUpdateModal } from "../issue-detail/links/create-update-
 import { CreateUpdateIssueModal } from "../issue-modal/modal";
 import { useLinkOperations } from "./links/helper";
 import { useSubIssueOperations } from "./sub-issues/helper";
+import { useDetailScope } from "./use-detail-scope";
 
 type Props = {
   workspaceSlug: string;
@@ -50,8 +51,9 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
   } = useIssueDetail();
 
   // helper hooks
-  const subIssueOperations = useSubIssueOperations();
+  const subIssueOperations = useSubIssueOperations(workspaceSlug, projectId, issueId);
   const handleLinkOperations = useLinkOperations(workspaceSlug, projectId, issueId);
+  const capture = useDetailScope(workspaceSlug, projectId, issueId);
 
   // handlers
   const handleIssueCrudState = (key: "create" | "existing", _parentIssueId: string | null) => {
@@ -84,12 +86,6 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
     setLastWidgetAction("sub-work-items");
   };
 
-  const handleCreateUpdateModalOnSubmit = async (_issue: Issue) => {
-    if (_issue.parent_id) {
-      await subIssueOperations.addSubIssue(workspaceSlug, projectId, _issue.parent_id, [_issue.id]);
-    }
-  };
-
   const handleIssueLinkModalOnClose = () => {
     toggleIssueLinkModalStore(false);
     setLastWidgetAction("links");
@@ -103,6 +99,7 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
   };
 
   const handleExistingIssueModalOnSubmit = async (data: ISearchIssueResponse[]) => {
+    const current = capture();
     if (!relationKey) return;
     if (data.length === 0) {
       setToast({
@@ -121,7 +118,7 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
       data.map((i) => i.id)
     );
 
-    toggleRelationModal(null, null);
+    if (current()) toggleRelationModal(null, null);
   };
 
   // helpers
@@ -163,7 +160,6 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
           isOpen={issueCrudOperationState?.create?.toggle}
           data={createUpdateModalData}
           onClose={handleCreateUpdateModalClose}
-          onSubmit={handleCreateUpdateModalOnSubmit}
           isProjectSelectionDisabled
         />
       )}

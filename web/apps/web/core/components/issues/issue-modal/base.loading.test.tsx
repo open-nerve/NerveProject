@@ -149,16 +149,8 @@ beforeEach(() => {
   const detail = app.issue.issueDetail;
   vi.spyOn(detail.activity, "fetchActivities").mockResolvedValue([]);
   vi.spyOn(detail.comment, "fetchComments").mockResolvedValue([]);
-  vi.spyOn(detail.subIssues, "fetchSubIssues").mockResolvedValue({
-    state_distribution: { backlog: [], unstarted: [], started: [], completed: [], cancelled: [] },
-    sub_issues: [],
-  });
-  vi.spyOn(detail.relation, "fetchRelations").mockResolvedValue({
-    blocking: [],
-    blocked_by: [],
-    duplicate: [],
-    relates_to: [],
-  });
+  vi.spyOn(detail.subIssues, "fetchSubIssues").mockResolvedValue([]);
+  vi.spyOn(detail.relation, "fetchRelations").mockResolvedValue([]);
   vi.spyOn(app.state, "fetchProjectStates").mockResolvedValue([]);
   vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
     if (failure && url.endsWith(failure)) throw { response: { data: { code: "resource-refused" } } };

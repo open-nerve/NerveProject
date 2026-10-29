@@ -606,19 +606,20 @@ async function resourceOperation(kind: (typeof resources)[number], refuse = fals
     return () => detail.link.removeLink("ws", "A", "x", "link");
   }
   if (kind === "createSubIssues") {
-    vi.spyOn(IssueService.prototype, "addSubIssues").mockImplementation(() =>
-      response({
-        sub_issues: [],
-        state_distribution: { backlog: [], unstarted: [], started: [], completed: [], cancelled: [] },
-      })
-    );
-    return () => detail.subIssues.createSubIssues("ws", "A", "x", []);
+    tab.nerve.respond = (call) => {
+      if (call.method === "POST" && call.path === "/api/v0/issues/x/sub-issues")
+        call.answer(
+          refuse ? problem(403, "forbidden") : json(200, { data: [{ ...issueOf("new-child"), parent_id: "x" }] })
+        );
+      if (call.method === "GET" && call.path === "/api/v0/projects/A/states") call.answer(json(200, { data: [] }));
+    };
+    return () => detail.subIssues.createSubIssues("ws", "A", "x", ["new-child"]);
   }
   if (kind === "removeSubIssue" || kind === "deleteSubIssue") {
     accept({ ...issueOf("child"), parent_id: "x" });
-    runInAction(() => {
-      detail.subIssues.subIssues.x = ["child"];
-    });
+    tab.nerve.respond = (call) => {
+      if (call.method === "GET" && call.path === "/api/v0/projects/A/states") call.answer(json(200, { data: [] }));
+    };
     return () =>
       kind === "removeSubIssue"
         ? detail.subIssues.removeSubIssue("ws", "A", "x", "child")
@@ -692,10 +693,10 @@ it("ordinary fetchSubIssues parent read shares the pre-existing GET", async () =
   const root = tab.app.issue;
   accept(issueDetailOf("x"));
   const old = await requestedIssue(tab.nerve, () => root.issues.refreshAuthoritative("x"), ["GET", "/api/v0/issues/x"]);
-  vi.spyOn(IssueService.prototype, "subIssues").mockResolvedValue({
-    sub_issues: [],
-    state_distribution: { backlog: [], unstarted: [], started: [], completed: [], cancelled: [] },
-  });
+  tab.nerve.respond = (call) => {
+    if (call.method === "GET" && call.path === "/api/v0/issues/x/sub-issues") call.answer(json(200, { data: [] }));
+    if (call.method === "GET" && call.path === "/api/v0/projects/A/states") call.answer(json(200, { data: [] }));
+  };
   const read = track(root.issueDetail.subIssues.fetchSubIssues("ws", "A", "x"));
   await vi.advanceTimersByTimeAsync(10);
   expect(tab.nerve.to("/api/v0/issues/x")).toHaveLength(1);

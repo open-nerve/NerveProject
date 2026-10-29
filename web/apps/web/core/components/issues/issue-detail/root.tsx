@@ -25,6 +25,7 @@ import { useNavigate } from "react-router";
 import { IssuePeekOverview } from "../peek-overview";
 import { IssueMainContent } from "./main-content";
 import { IssueDetailsSidebar } from "./sidebar";
+import { DetailResourceError } from "../issue-detail-widgets/resource-error";
 
 export type TIssueOperations<TUpdate = IssueUpdate> = {
   fetch: (workspaceSlug: string, projectId: string, issueId: string, loader?: boolean) => Promise<void>;
@@ -49,21 +50,24 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
     issue: { getIssueById },
     fetchIssue,
     updateIssue,
+    rootIssueStore,
+    subIssues,
+    relation,
   } = useIssueDetail();
   const { allowPermissions } = useUserPermissions();
   const { issueDetailSidebarCollapsed } = useAppTheme();
 
   const issueOperations: TIssueOperations = useMemo(
     () => ({
-      fetch: async (workspaceSlug: string, projectId: string, issueId: string) => {
+      fetch: async (slug: string, project: string, id: string) => {
         try {
-          await fetchIssue(workspaceSlug, projectId, issueId);
+          await fetchIssue(slug, project, id);
         } catch (error) {
           console.error("Error fetching the parent issue:", error);
         }
       },
-      update: async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => {
-        await followInSession(() => updateIssue(workspaceSlug, projectId, issueId, data), {
+      update: async (slug: string, project: string, id: string, data: IssueUpdate) => {
+        await followInSession(() => updateIssue(slug, project, id, data), {
           failed: () =>
             setToast({
               title: t("common.error.label"),
@@ -78,6 +82,15 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
 
   // issue details
   const issue = getIssueById(issueId);
+  const uncertain = rootIssueStore.verification.isUncertain(issueId);
+  const readError =
+    subIssues.getError(issueId) ?? relation.getError(issueId) ?? rootIssueStore.verification.getError(issueId);
+  const retryRead = async () => {
+    const resources = [subIssues, relation].filter((resource) => resource.getError(issueId));
+    if (resources.length)
+      await Promise.all(resources.map((resource) => resource.retry(workspaceSlug, projectId, issueId)));
+    else await rootIssueStore.issues.refreshAuthoritative(issueId);
+  };
   // checking if issue is editable, based on user role
   const isEditable = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
@@ -88,7 +101,19 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
 
   return (
     <>
-      {!issue ? (
+      {!issue && uncertain ? (
+        readError ? (
+          <DetailResourceError
+            error={readError}
+            retry={retryRead}
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
+            issueId={issueId}
+          />
+        ) : (
+          <div role="status">{t("common.loading")}</div>
+        )
+      ) : !issue ? (
         <EmptyState
           image={emptyIssue}
           title={t("issue.empty_state.issue_detail.title")}

@@ -1,333 +1,181 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import type { Issue, IssueDetail } from "@nerve/api-client";
-
-import { pull, concat, uniq, set, update } from "lodash-es";
-import { action, makeObservable, observable, runInAction } from "mobx";
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type { Issue, IssueUpdate } from "@nerve/api-client";
+import { action, makeObservable, observable } from "mobx";
 import { computedFn } from "mobx-utils";
-// Nerve Imports
-import type {
-  TIssueSubIssues,
-  TIssueSubIssuesStateDistributionMap,
-  TIssueSubIssuesIdMap,
-  TSubIssuesStateDistribution,
-} from "@nerve/types";
-// services
-import { IssueService } from "@/services/issue";
-// store
+import type { TSubIssuesStateDistribution } from "@nerve/types";
+import type { ConfirmedIssueChange } from "@/lib/paged-groups";
 import { SessionChangedError } from "@/lib/auth/token-manager";
+import type { IssueReadToken, IssueWriteScope } from "../root.store";
+import { IssueResources } from "./resources";
+import type { DetailResource } from "./resource";
 import type { IIssueDetail } from "./root.store";
-import type { IWorkItemSubIssueFiltersStore } from "./sub_issues_filter.store";
 import { WorkItemSubIssueFiltersStore } from "./sub_issues_filter.store";
 
-export interface IIssueSubIssuesStoreActions {
-  fetchSubIssues: (workspaceSlug: string, projectId: string, parentIssueId: string) => Promise<TIssueSubIssues>;
-  createSubIssues: (
-    workspaceSlug: string,
-    projectId: string,
-    parentIssueId: string,
-    issueIds: string[]
-  ) => Promise<void>;
-  updateSubIssue: (
-    workspaceSlug: string,
-    projectId: string,
-    parentIssueId: string,
-    issueId: string,
-    issueData: Partial<IssueDetail>,
-    oldIssue?: Partial<IssueDetail>,
-    fromModal?: boolean
-  ) => Promise<void>;
-  removeSubIssue: (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) => Promise<void>;
-  deleteSubIssue: (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) => Promise<void>;
-}
-
-type TSubIssueHelpersKeys = "issue_visibility" | "preview_loader" | "issue_loader";
-type TSubIssueHelpers = Record<TSubIssueHelpersKeys, string[]>;
-export interface IIssueSubIssuesStore extends IIssueSubIssuesStoreActions {
-  // observables
-  subIssuesStateDistribution: TIssueSubIssuesStateDistributionMap;
-  subIssues: TIssueSubIssuesIdMap;
-  subIssueHelpers: Record<string, TSubIssueHelpers>; // parent_issue_id -> TSubIssueHelpers
-  filters: IWorkItemSubIssueFiltersStore;
-  // helper methods
-  stateDistributionByIssueId: (issueId: string) => TSubIssuesStateDistribution | undefined;
-  subIssuesByIssueId: (issueId: string) => string[] | undefined;
-  subIssueHelpersByIssueId: (issueId: string) => TSubIssueHelpers;
-  // actions
-  fetchOtherProjectProperties: (projectIds: string[]) => Promise<void>;
-  setSubIssueHelpers: (parentIssueId: string, key: TSubIssueHelpersKeys, value: string) => void;
-}
-
-export class IssueSubIssuesStore implements IIssueSubIssuesStore {
-  // observables
-  subIssuesStateDistribution: TIssueSubIssuesStateDistributionMap = {};
-  subIssues: TIssueSubIssuesIdMap = {};
-  subIssueHelpers: Record<string, TSubIssueHelpers> = {};
-
-  filters: IWorkItemSubIssueFiltersStore;
-  // root store
-  rootIssueDetailStore: IIssueDetail;
-  // services
-  issueService;
-
-  constructor(rootStore: IIssueDetail) {
-    makeObservable(this, {
-      // observables
-      subIssuesStateDistribution: observable,
-      subIssues: observable,
-      subIssueHelpers: observable,
-      // actions
-      setSubIssueHelpers: action,
-      fetchSubIssues: action,
-      createSubIssues: action,
-      updateSubIssue: action,
-      removeSubIssue: action,
-      deleteSubIssue: action,
-      fetchOtherProjectProperties: action,
-    });
+type HelperKey = "issue_visibility" | "preview_loader" | "issue_loader";
+type Helpers = Record<HelperKey, string[]>;
+export type IIssueSubIssuesStore = IssueSubIssuesStore;
+export type IIssueSubIssuesStoreActions = Pick<
+  IssueSubIssuesStore,
+  "fetchSubIssues" | "createSubIssues" | "updateSubIssue" | "removeSubIssue" | "deleteSubIssue"
+>;
+export class IssueSubIssuesStore {
+  private readonly resources: IssueResources<string[]>;
+  readonly filters: WorkItemSubIssueFiltersStore;
+  subIssueHelpers: Record<string, Helpers> = {};
+  constructor(readonly rootIssueDetailStore: IIssueDetail) {
+    this.resources = new IssueResources(this.root);
     this.filters = new WorkItemSubIssueFiltersStore(this);
-    // root store
-    this.rootIssueDetailStore = rootStore;
-    // services
-    this.issueService = new IssueService();
+    makeObservable(this, { subIssueHelpers: observable, setSubIssueHelpers: action });
   }
-
-  // helper methods
-  stateDistributionByIssueId = (issueId: string) => {
-    if (!issueId) return undefined;
-    return this.subIssuesStateDistribution[issueId] ?? undefined;
-  };
-
-  subIssuesByIssueId = computedFn((issueId: string) => this.subIssues[issueId]);
-
-  subIssueHelpersByIssueId = (issueId: string) => ({
-    preview_loader: this.subIssueHelpers?.[issueId]?.preview_loader || [],
-    issue_visibility: this.subIssueHelpers?.[issueId]?.issue_visibility || [],
-    issue_loader: this.subIssueHelpers?.[issueId]?.issue_loader || [],
+  private get root() {
+    return this.rootIssueDetailStore.rootIssueStore;
+  }
+  subIssuesByIssueId = computedFn((id: string) =>
+    this.resources.get(id)?.value?.filter((childID) => this.root.issues.getIssueById(childID)?.parent_id === id)
+  );
+  stateDistributionByIssueId = computedFn((id: string): TSubIssuesStateDistribution | undefined => {
+    const children = this.subIssuesByIssueId(id);
+    if (!children) return undefined;
+    const distribution: TSubIssuesStateDistribution = {
+      backlog: [],
+      unstarted: [],
+      started: [],
+      completed: [],
+      cancelled: [],
+    };
+    for (const childID of children) {
+      const child = this.root.issues.getIssueById(childID);
+      const group = child && this.root.rootStore.state.getStateById(child.state_id)?.group;
+      if (group) distribution[group].push(childID);
+    }
+    return distribution;
   });
-
-  // actions
-  setSubIssueHelpers = (parentIssueId: string, key: TSubIssueHelpersKeys, value: string) => {
-    if (!parentIssueId || !key || !value) return;
-
-    update(this.subIssueHelpers, [parentIssueId, key], (_subIssueHelpers: string[] = []) => {
-      if (_subIssueHelpers.includes(value)) return pull(_subIssueHelpers, value);
-      return concat(_subIssueHelpers, value);
-    });
+  subIssueHelpersByIssueId = (id: string): Helpers =>
+    this.subIssueHelpers[id] ?? { preview_loader: [], issue_visibility: [], issue_loader: [] };
+  setSubIssueHelpers = (id: string, key: HelperKey, value: string) => {
+    const held = this.subIssueHelpersByIssueId(id);
+    this.subIssueHelpers[id] = {
+      ...held,
+      [key]: held[key].includes(value) ? held[key].filter((item) => item !== value) : [...held[key], value],
+    };
   };
-
-  fetchSubIssues = async (workspaceSlug: string, projectId: string, parentIssueId: string) => {
-    const root = this.rootIssueDetailStore.rootIssueStore;
-    root.assertProjectReadable(workspaceSlug, projectId);
-    const token = root.captureRead();
-    const response = await this.issueService.subIssues(workspaceSlug, projectId, parentIssueId);
-
-    if (!root.isReadCurrent(token, [projectId])) throw new SessionChangedError();
-    const subIssuesStateDistribution = response?.state_distribution ?? {};
-
-    const issueList = (response.sub_issues ?? []) as Issue[];
-    const projects = uniq([projectId, ...issueList.map((issue) => issue.project_id).filter(Boolean)]);
-    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
-
-    root.acceptListIssues(issueList, token);
-
-    // fetch other issues states and members when sub-issues are from different project
-    if (issueList && issueList.length > 0) {
-      const otherProjectIds = uniq(
-        issueList.map((issue) => issue.project_id).filter((id) => !!id && id !== projectId)
-      ) as string[];
-      this.fetchOtherProjectProperties(otherProjectIds);
-    }
-    await root.issues.refreshAuthoritative(parentIssueId);
-
-    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
-
-    runInAction(() => {
-      set(this.subIssuesStateDistribution, parentIssueId, subIssuesStateDistribution);
-      set(
-        this.subIssues,
-        parentIssueId,
-        issueList.map((issue) => issue.id)
+  getError = (id: string) => this.resources.get(id)?.error;
+  retry = async (ws: string, project: string, id: string) => {
+    const resource = this.resources.entry(ws, project, id);
+    if (!(await resource.retryConfirmationRead())) await this.fetchSubIssues(ws, project, id);
+  };
+  private current(token: IssueReadToken, scope: IssueWriteScope): void {
+    if (!this.root.isReadCurrent(token, [scope.projectID], scope.workspaceID)) throw new SessionChangedError();
+    this.root.assertProjectReadable(scope.workspaceSlug, scope.projectID);
+  }
+  private accept(children: Issue[], parentID: string, scope: IssueWriteScope, token: IssueReadToken): void {
+    this.current(token, scope);
+    if (
+      children.some(
+        (child) =>
+          child.project_id !== scope.projectID ||
+          child.workspace_id !== scope.workspaceID ||
+          child.parent_id !== parentID
+      )
+    )
+      throw new SessionChangedError();
+    this.root.acceptListIssues(children, token);
+  }
+  private async states(project: string): Promise<void> {
+    const states = this.root.rootStore.state;
+    if (states.getProjectStates(project) === undefined) await states.fetchProjectStates(project);
+  }
+  fetchSubIssues = (ws: string, project: string, parentID: string): Promise<string[]> =>
+    this.readChildren(ws, project, parentID, true);
+  private async readChildren(ws: string, project: string, parentID: string, verifyParent: boolean): Promise<string[]> {
+    const resource = this.resources.entry(ws, project, parentID);
+    const scope = this.root.scope(ws, project);
+    const value = await resource.fetch(async (read) => {
+      const answer = await this.root.detailApi.listSubIssues(parentID);
+      if (!read.isCurrent()) throw new SessionChangedError();
+      this.accept(answer.data, parentID, scope, read.token);
+      await this.states(project);
+      if (!read.isCurrent()) throw new SessionChangedError();
+      if (verifyParent) await this.root.issues.refreshAuthoritative(parentID);
+      if (!read.isCurrent()) throw new SessionChangedError();
+      return answer.data.map((child) => child.id);
+    });
+    if (!value) throw new SessionChangedError();
+    return value;
+  }
+  private refresh(
+    resource: DetailResource<string[]>,
+    ids: string[],
+    scope: IssueWriteScope,
+    token: IssueReadToken,
+    reread?: () => Promise<unknown>
+  ) {
+    return resource.refreshAfterConfirmation(async () => {
+      this.current(token, scope);
+      // Start all endpoint reads so every affected list is marked stale even if one read fails.
+      const results = await Promise.allSettled(
+        [...new Set(ids)].map((id) => this.root.issues.refreshAuthoritative(id, { afterWrite: true }))
       );
-    });
-
-    return response;
-  };
-
-  createSubIssues = async (workspaceSlug: string, projectId: string, parentIssueId: string, issueIds: string[]) => {
-    const root = this.rootIssueDetailStore.rootIssueStore;
-    const token = root.captureRead();
-    const response = await this.issueService.addSubIssues(workspaceSlug, projectId, parentIssueId, {
-      sub_issue_ids: issueIds,
-    });
-
-    if (!root.isReadCurrent(token, [projectId])) throw new SessionChangedError();
-    const subIssuesStateDistribution = response?.state_distribution ?? {};
-    const subIssues = Array.isArray(response?.sub_issues) ? response.sub_issues : [];
-    const projects = uniq([projectId, ...subIssues.map((issue) => issue.project_id).filter(Boolean)]);
-    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
-
-    // fetch other issues states and members when sub-issues are from different project
-    if (subIssues && subIssues.length > 0) {
-      const otherProjectIds = uniq(
-        subIssues.map((issue) => issue.project_id).filter((id) => !!id && id !== projectId)
-      ) as string[];
-      this.fetchOtherProjectProperties(otherProjectIds);
-    }
-
-    runInAction(() => {
-      Object.keys(subIssuesStateDistribution).forEach((key) => {
-        const stateGroup = key as keyof TSubIssuesStateDistribution;
-        update(this.subIssuesStateDistribution, [parentIssueId, stateGroup], (stateDistribution) => {
-          if (!stateDistribution) return subIssuesStateDistribution[stateGroup];
-          return concat(stateDistribution, subIssuesStateDistribution[stateGroup]);
-        });
+      this.current(token, scope);
+      const failed = results.find((result) => result.status === "rejected");
+      if (failed?.status === "rejected") throw failed.reason;
+      await this.states(scope.projectID);
+      if (reread) await reread();
+    }, token);
+  }
+  createSubIssues = (ws: string, project: string, parentID: string, ids: string[]): Promise<void> =>
+    this.root.enqueueIssueChanges([parentID, ...ids], async () => {
+      const resource = this.resources.entry(ws, project, parentID);
+      const scope = this.root.scope(ws, project);
+      const token = this.root.captureRead();
+      const oldParents = ids.flatMap((id) => {
+        const old = this.root.issues.getIssueById(id)?.parent_id;
+        return old ? [old] : [];
       });
-
-      const subIssueIds = subIssues.map((issue) => issue.id);
-      update(this.subIssues, [parentIssueId], (issues) => {
-        if (!issues) return subIssueIds;
-        return concat(issues, subIssueIds);
-      });
+      const answer = await this.root.detailApi.addSubIssues(parentID, { sub_issue_ids: ids });
+      this.accept(answer.data, parentID, scope, token);
+      // A batch answer does not contain the previous parent/version. Do not guess its list projection.
+      this.root.markScopeListsStale(scope);
+      const confirmedIDs = answer.data.map((child) => child.id);
+      resource.receive(confirmedIDs, token, (held, incoming) => [...new Set([...(held ?? []), ...incoming])]);
+      for (const old of oldParents)
+        if (old !== parentID)
+          this.resources.get(old)?.confirm((held) => held.filter((id) => !confirmedIDs.includes(id)), token);
+      await this.refresh(resource, [parentID, ...oldParents], scope, token);
     });
-
-    root.acceptListIssues(subIssues, token);
-    await root.issues.refreshAuthoritative(parentIssueId, { afterWrite: true });
-
-    return;
+  /** The root calls this once for its confirmed core change; never sends a second PATCH. */
+  confirmCore = async (change: ConfirmedIssueChange, scope: IssueWriteScope): Promise<void> => {
+    const before = change.beforeSnapshot.kind === "known" ? change.beforeSnapshot.issue.parent_id : null;
+    const after = change.after?.parent_id ?? null;
+    if (before === after) return;
+    const reloadChildren = !change.after && before && this.resources.get(before);
+    const token = this.root.captureRead();
+    if (before) this.resources.get(before)?.confirm((held) => held.filter((id) => id !== change.id), token);
+    if (after)
+      this.resources
+        .entry(scope.workspaceSlug, scope.projectID, after)
+        .receive([change.id], token, (held, added) => [...new Set([...(held ?? []), ...added])]);
+    const parents = [...new Set([before, after].filter((id): id is string => !!id))];
+    const resource = this.resources.entry(scope.workspaceSlug, scope.projectID, after ?? before!);
+    await this.refresh(
+      resource,
+      parents,
+      scope,
+      token,
+      reloadChildren ? () => this.readChildren(scope.workspaceSlug, scope.projectID, before!, false) : undefined
+    );
   };
-
   updateSubIssue = async (
-    workspaceSlug: string,
-    projectId: string,
-    parentIssueId: string,
-    issueId: string,
-    issueData: Partial<IssueDetail>,
-    oldIssue: Partial<IssueDetail> = {},
-    fromModal: boolean = false
-  ) => {
-    if (!fromModal)
-      await this.rootIssueDetailStore.rootIssueStore.projectIssues.updateIssue(
-        workspaceSlug,
-        projectId,
-        issueId,
-        issueData
-      );
-
-    // parent update
-    if (issueData.hasOwnProperty("parent_id") && issueData.parent_id !== oldIssue.parent_id) {
-      runInAction(() => {
-        if (oldIssue.parent_id) pull(this.subIssues[oldIssue.parent_id], issueId);
-        if (issueData.parent_id)
-          set(this.subIssues, [issueData.parent_id], concat(this.subIssues[issueData.parent_id], issueId));
-      });
-    }
-
-    // state update
-    if (issueData.hasOwnProperty("state_id") && issueData.state_id !== oldIssue.state_id) {
-      let oldIssueStateGroup: string | undefined = undefined;
-      let issueStateGroup: string | undefined = undefined;
-
-      if (oldIssue.state_id) {
-        const state = this.rootIssueDetailStore.rootIssueStore.rootStore.state.getStateById(oldIssue.state_id);
-        if (state?.group) oldIssueStateGroup = state.group;
-      }
-
-      if (issueData.state_id) {
-        const state = this.rootIssueDetailStore.rootIssueStore.rootStore.state.getStateById(issueData.state_id);
-        if (state?.group) issueStateGroup = state.group;
-      }
-
-      if (oldIssueStateGroup && issueStateGroup && issueStateGroup !== oldIssueStateGroup) {
-        runInAction(() => {
-          if (oldIssueStateGroup)
-            update(this.subIssuesStateDistribution, [parentIssueId, oldIssueStateGroup], (stateDistribution) => {
-              if (!stateDistribution) return;
-              return pull(stateDistribution, issueId);
-            });
-
-          if (issueStateGroup)
-            update(this.subIssuesStateDistribution, [parentIssueId, issueStateGroup], (stateDistribution) => {
-              if (!stateDistribution) return [issueId];
-              return concat(stateDistribution, issueId);
-            });
-        });
-      }
-    }
-
-    return;
+    ws: string,
+    project: string,
+    _parentID: string,
+    id: string,
+    body: IssueUpdate
+  ): Promise<void> => {
+    await this.root.projectIssues.updateIssue(ws, project, id, body);
   };
-
-  removeSubIssue = async (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) => {
-    await this.rootIssueDetailStore.rootIssueStore.projectIssues.updateIssue(workspaceSlug, projectId, issueId, {
-      parent_id: null,
-    });
-
-    const issue = this.rootIssueDetailStore.issue.getIssueById(issueId);
-    if (issue && issue.state_id) {
-      let issueStateGroup: string | undefined = undefined;
-      const state = this.rootIssueDetailStore.rootIssueStore.rootStore.state.getStateById(issue.state_id);
-      if (state?.group) issueStateGroup = state.group;
-
-      if (issueStateGroup) {
-        runInAction(() => {
-          if (issueStateGroup)
-            update(this.subIssuesStateDistribution, [parentIssueId, issueStateGroup], (stateDistribution) => {
-              if (!stateDistribution) return;
-              return pull(stateDistribution, issueId);
-            });
-        });
-      }
-    }
-
-    runInAction(() => {
-      pull(this.subIssues[parentIssueId], issueId);
-    });
-    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(parentIssueId, { afterWrite: true });
-    return;
-  };
-
-  deleteSubIssue = async (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) => {
-    await this.rootIssueDetailStore.rootIssueStore.projectIssues.removeIssue(workspaceSlug, projectId, issueId);
-
-    const issue = this.rootIssueDetailStore.issue.getIssueById(issueId);
-    if (issue && issue.state_id) {
-      let issueStateGroup: string | undefined = undefined;
-      const state = this.rootIssueDetailStore.rootIssueStore.rootStore.state.getStateById(issue.state_id);
-      if (state?.group) issueStateGroup = state.group;
-
-      if (issueStateGroup) {
-        runInAction(() => {
-          if (issueStateGroup)
-            update(this.subIssuesStateDistribution, [parentIssueId, issueStateGroup], (stateDistribution) => {
-              if (!stateDistribution) return;
-              return pull(stateDistribution, issueId);
-            });
-        });
-      }
-    }
-
-    runInAction(() => {
-      pull(this.subIssues[parentIssueId], issueId);
-    });
-    await this.rootIssueDetailStore.rootIssueStore.issues.refreshAuthoritative(parentIssueId, { afterWrite: true });
-    return;
-  };
-
-  fetchOtherProjectProperties = async (projectIds: string[]) => {
-    if (projectIds.length > 0) {
-      for (const projectId of projectIds) {
-        // fetching other project states
-        this.rootIssueDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(projectId);
-        // fetching other project members
-        this.rootIssueDetailStore.rootIssueStore.rootStore.memberRoot.project.fetchProjectMembers(projectId);
-        // fetching other project labels
-        this.rootIssueDetailStore.rootIssueStore.rootStore.label.fetchProjectLabels(projectId);
-      }
-    }
-  };
+  removeSubIssue = async (ws: string, project: string, parent: string, id: string) =>
+    this.updateSubIssue(ws, project, parent, id, { parent_id: null });
+  deleteSubIssue = async (ws: string, project: string, _parent: string, id: string) =>
+    this.root.projectIssues.removeIssue(ws, project, id);
 }

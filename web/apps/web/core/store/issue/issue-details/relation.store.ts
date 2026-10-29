@@ -1,208 +1,184 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import type { Issue } from "@nerve/api-client";
-
-import { uniq, get, set } from "lodash-es";
-import { action, makeObservable, observable, runInAction } from "mobx";
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type { IssueRelation, IssueRelationType } from "@nerve/api-client";
 import { computedFn } from "mobx-utils";
-// nerve imports
-import type { TIssueRelationIdMap, TIssueRelationMap, TIssueRelation, TIssueRelationTypes } from "@nerve/types";
-// components
-import type { TRelationObject } from "@/components/issues/issue-detail-widgets/relations";
 import { REVERSE_RELATIONS } from "@nerve/constants";
-// services
-import { IssueRelationService } from "@/services/issue";
-// types
 import { SessionChangedError } from "@/lib/auth/token-manager";
+import type { IssueReadToken, IssueWriteScope } from "../root.store";
 import type { IIssueDetail } from "./root.store";
-export interface IIssueRelationStoreActions {
-  // actions
-  fetchRelations: (workspaceSlug: string, projectId: string, issueId: string) => Promise<TIssueRelation>;
-  createRelation: (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    relationType: TIssueRelationTypes,
-    issues: string[]
-  ) => Promise<Issue[]>;
-  removeRelation: (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    relationType: TIssueRelationTypes,
-    related_issue: string,
-    updateLocally?: boolean
-  ) => Promise<void>;
-}
+import { IssueResources } from "./resources";
 
-export interface IIssueRelationStore extends IIssueRelationStoreActions {
-  // observables
-  relationMap: TIssueRelationMap;
-  // helper methods
-  getRelationsByIssueId: (issueId: string) => TIssueRelationIdMap | undefined;
-  getRelationCountByIssueId: (
-    issueId: string,
-    ISSUE_RELATION_OPTIONS: { [key in TIssueRelationTypes]?: TRelationObject }
-  ) => number;
-}
+export type RelationRow = { relationId: string; type: IssueRelationType; targetId: string; createdAt: string };
+export type IIssueRelationStore = IssueRelationStore;
+export type IIssueRelationStoreActions = Pick<
+  IssueRelationStore,
+  "fetchRelations" | "createRelation" | "removeRelation"
+>;
+const rowsOf = (items: IssueRelation[]): RelationRow[] => [
+  ...new Map(
+    items.map((item) => [
+      item.id,
+      { relationId: item.id, type: item.relation_type, targetId: item.issue.id, createdAt: item.created_at },
+    ])
+  ).values(),
+];
+const merged = (held: RelationRow[] | undefined, incoming: RelationRow[]) => [
+  ...new Map([...(held ?? []), ...incoming].map((row) => [row.relationId, row])).values(),
+];
 
-export class IssueRelationStore implements IIssueRelationStore {
-  // observables
-  relationMap: TIssueRelationMap = {};
-  // root store
-  rootIssueDetailStore: IIssueDetail;
-  // services
-  issueRelationService;
-
-  constructor(rootStore: IIssueDetail) {
-    makeObservable(this, {
-      // observables
-      relationMap: observable,
-      // actions
-      fetchRelations: action,
-      createRelation: action,
-      removeRelation: action,
-    });
-    // root store
-    this.rootIssueDetailStore = rootStore;
-    // services
-    this.issueRelationService = new IssueRelationService();
+export class IssueRelationStore {
+  private readonly resources: IssueResources<RelationRow[]>;
+  constructor(readonly rootIssueDetailStore: IIssueDetail) {
+    this.resources = new IssueResources(this.root);
   }
-
-  // // helper methods
-  getRelationsByIssueId = (issueId: string) => {
-    if (!issueId) return undefined;
-    return this.relationMap?.[issueId] ?? undefined;
+  private get root() {
+    return this.rootIssueDetailStore.rootIssueStore;
+  }
+  getRelationRows = (id: string) =>
+    this.resources.get(id)?.value?.filter((row) => this.root.issues.held(row.targetId) !== null);
+  getRelationsByIssueId = computedFn((id: string): Record<IssueRelationType, string[]> | undefined => {
+    const rows = this.getRelationRows(id);
+    if (!rows) return undefined;
+    const groups: Record<IssueRelationType, string[]> = { blocking: [], blocked_by: [], duplicate: [], relates_to: [] };
+    for (const row of rows) groups[row.type].push(row.targetId);
+    return groups;
+  });
+  getRelationCountByIssueId = (id: string, options: Partial<Record<IssueRelationType, unknown>>) =>
+    this.getRelationRows(id)?.filter((row) => options[row.type]).length ?? 0;
+  getError = (id: string) => this.resources.get(id)?.error;
+  getProjectId = (id: string) => this.resources.get(id)?.scope.projectIDs[0];
+  retry = async (ws: string, project: string, id: string) => {
+    const resource = this.resources.entry(ws, project, id);
+    if (!(await resource.retryConfirmationRead())) await this.fetchRelations(ws, project, id);
   };
-
-  getRelationCountByIssueId = computedFn(
-    (issueId: string, ISSUE_RELATION_OPTIONS: { [key in TIssueRelationTypes]?: TRelationObject }) => {
-      const issueRelations = this.getRelationsByIssueId(issueId);
-
-      const issueRelationKeys = (Object.keys(issueRelations ?? {}) as TIssueRelationTypes[]).filter(
-        (relationKey) => !!ISSUE_RELATION_OPTIONS[relationKey]
-      );
-
-      return issueRelationKeys.reduce((acc, curr) => acc + (issueRelations?.[curr]?.length ?? 0), 0);
+  private current(scope: IssueWriteScope, token: IssueReadToken, projects: string[]) {
+    if (!this.root.isReadCurrent(token, [scope.projectID, ...projects], scope.workspaceID))
+      throw new SessionChangedError();
+    this.root.assertProjectReadable(scope.workspaceSlug, scope.projectID);
+  }
+  private async prove(items: IssueRelation[], scope: IssueWriteScope, token: IssueReadToken, isCurrent: () => boolean) {
+    const projects = [...new Set(items.map((item) => item.issue.project_id))];
+    const check = () => {
+      this.current(scope, token, projects);
+      if (!isCurrent() || items.some((item) => item.issue.workspace_id !== scope.workspaceID))
+        throw new SessionChangedError();
+    };
+    check();
+    for (const project of projects) {
+      if (!this.root.rootStore.projectRoot.project.getProjectById(project))
+        // oxlint-disable-next-line no-await-in-loop
+        await this.root.rootStore.projectRoot.project.fetchProject(project);
+      check();
+      this.root.assertProjectReadable(scope.workspaceSlug, project);
     }
-  );
-
-  // actions
-  fetchRelations = async (workspaceSlug: string, projectId: string, issueId: string) => {
-    const root = this.rootIssueDetailStore.rootIssueStore;
-    root.assertProjectReadable(workspaceSlug, projectId);
-    const token = root.captureRead();
-    const response = await this.issueRelationService.listIssueRelations(workspaceSlug, projectId, issueId);
-
-    const projects = uniq([
-      projectId,
-      ...Object.values(response)
-        .flat()
-        .map((issue) => issue.project_id)
-        .filter(Boolean),
-    ]);
-    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
-    runInAction(() => {
-      Object.keys(response).forEach((key) => {
-        const relation_key = key as TIssueRelationTypes;
-        const relation_issues = response[relation_key];
-        const issues = relation_issues.flat().map((issue) => issue);
-        if (issues && issues.length > 0) root.acceptListIssues(issues, token);
-        set(
-          this.relationMap,
-          [issueId, relation_key],
-          issues && issues.length > 0 ? issues.map((issue) => issue.id) : []
+    return projects;
+  }
+  private async directories(projects: string[], baseProject: string) {
+    const app = this.root.rootStore;
+    await Promise.all(
+      projects
+        .filter((project) => project !== baseProject)
+        .flatMap((project) => [
+          app.state.fetchProjectStates(project),
+          app.memberRoot.project.fetchProjectMembers(project),
+          app.label.fetchProjectLabels(project),
+        ])
+    );
+  }
+  fetchRelations = async (ws: string, project: string, id: string): Promise<RelationRow[]> => {
+    const resource = this.resources.entry(ws, project, id);
+    const scope = this.root.scope(ws, project);
+    const answer = await resource.fetch(
+      async (read) => {
+        const result = await this.root.detailApi.listRelations(id);
+        const projects = await this.prove(result.data, scope, read.token, () => read.isCurrent());
+        await this.directories(projects, project);
+        this.current(scope, read.token, projects);
+        if (!read.isCurrent()) throw new SessionChangedError();
+        this.root.acceptListIssues(
+          result.data.map((item) => item.issue),
+          read.token
         );
-      });
-    });
-
-    return response;
+        return rowsOf(result.data);
+      },
+      (rows) =>
+        rows.flatMap((row) => {
+          const target = this.root.issues.held(row.targetId);
+          return target ? [target.project_id] : [];
+        })
+    );
+    if (!answer) throw new SessionChangedError();
+    return answer;
   };
-
-  createRelation = async (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    relationType: TIssueRelationTypes,
-    issues: string[]
-  ) => {
-    const root = this.rootIssueDetailStore.rootIssueStore;
-    const token = root.captureRead();
-    const response = await this.issueRelationService.createIssueRelations(workspaceSlug, projectId, issueId, {
-      relation_type: relationType,
-      issues,
-    });
-
-    const projects = uniq([projectId, ...response.map((issue) => issue.project_id).filter(Boolean)]);
-    if (!root.isReadCurrent(token, projects)) throw new SessionChangedError();
-    const reverseRelatedType = REVERSE_RELATIONS[relationType];
-
-    const issuesOfRelation = get(this.relationMap, [issueId, relationType]) ?? [];
-
-    if (response && response.length > 0)
-      runInAction(() => {
-        response.forEach((issue) => {
-          const issuesOfRelated = get(this.relationMap, [issue.id, reverseRelatedType]);
-          root.issues.acceptRead(issue, token);
-          issuesOfRelation.push(issue.id);
-
-          if (!issuesOfRelated) {
-            set(this.relationMap, [issue.id, reverseRelatedType], [issueId]);
-          } else {
-            set(this.relationMap, [issue.id, reverseRelatedType], uniq([...issuesOfRelated, issueId]));
-          }
-        });
-        set(this.relationMap, [issueId, relationType], uniq(issuesOfRelation));
-      });
-
-    // fetching activity
-    this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-    return response;
-  };
-
-  removeRelation = async (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    relationType: TIssueRelationTypes,
-    related_issue: string,
-    updateLocally = false
-  ) => {
-    try {
-      const relationIndex = this.relationMap[issueId]?.[relationType]?.findIndex(
-        (_issueId) => _issueId === related_issue
+  private async refreshEndpoints(ids: string[], scope: IssueWriteScope, token: IssueReadToken, projects: string[]) {
+    this.current(scope, token, projects);
+    const results = await Promise.allSettled(
+      [...new Set(ids)].map((id) => this.root.issues.refreshAuthoritative(id, { afterWrite: true }))
+    );
+    this.current(scope, token, projects);
+    const failed = results.find((result) => result.status === "rejected");
+    if (failed?.status === "rejected") throw failed.reason;
+  }
+  createRelation = (ws: string, project: string, id: string, type: IssueRelationType, ids: string[]): Promise<void> =>
+    this.root.enqueueIssueChanges([id, ...ids], async () => {
+      const resource = this.resources.entry(ws, project, id);
+      const scope = this.root.scope(ws, project);
+      const token = this.root.captureRead();
+      const answer = await this.root.detailApi.createRelations(id, { relation_type: type, issue_ids: ids });
+      this.current(
+        scope,
+        token,
+        answer.data.map((row) => row.issue.project_id)
       );
-      if (relationIndex >= 0)
-        runInAction(() => {
-          this.relationMap[issueId]?.[relationType]?.splice(relationIndex, 1);
-        });
-
-      if (!updateLocally) {
-        await this.issueRelationService.deleteIssueRelation(workspaceSlug, projectId, issueId, {
-          relation_type: relationType,
-          related_issue,
-        });
-      }
-
-      // While removing one relation, reverse of the relation should also be removed
-      const reverseRelatedType = REVERSE_RELATIONS[relationType];
-      const relatedIndex = this.relationMap[related_issue]?.[reverseRelatedType]?.findIndex(
-        (_issueId) => _issueId === related_issue
-      );
-      if (relationIndex >= 0)
-        runInAction(() => {
-          this.relationMap[related_issue]?.[reverseRelatedType]?.splice(relatedIndex, 1);
-        });
-
-      // fetching activity
-      this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-    } catch (error) {
-      this.fetchRelations(workspaceSlug, projectId, issueId);
-      throw error;
-    }
-  };
+      let first = true;
+      let confirmed = false;
+      const projects = [...new Set(answer.data.map((row) => row.issue.project_id))];
+      await resource.refreshAfterConfirmation(async () => {
+        if (first) {
+          first = false;
+          await this.prove(answer.data, scope, token, () => this.root.active);
+          this.root.acceptListIssues(
+            answer.data.map((row) => row.issue),
+            token
+          );
+          resource.receive(rowsOf(answer.data), token, merged, projects);
+          for (const item of answer.data)
+            this.resources.get(item.issue.id)?.receive(
+              [
+                {
+                  relationId: item.id,
+                  type: REVERSE_RELATIONS[item.relation_type],
+                  targetId: id,
+                  createdAt: item.created_at,
+                },
+              ],
+              token,
+              merged,
+              [project, item.issue.project_id]
+            );
+          confirmed = true;
+        } else if (!confirmed) {
+          await this.fetchRelations(ws, project, id);
+          confirmed = true;
+        }
+        await this.refreshEndpoints([id, ...ids], scope, token, projects);
+        await this.directories(projects, project);
+      }, token);
+    });
+  removeRelation = (ws: string, project: string, id: string, type: IssueRelationType, target: string): Promise<void> =>
+    this.root.enqueueIssueChanges([id, target], async () => {
+      const resource = this.resources.entry(ws, project, id);
+      const row = this.getRelationRows(id)?.find((entry) => entry.type === type && entry.targetId === target);
+      if (!row) throw new Error("Relation has not been read");
+      const scope = this.root.scope(ws, project);
+      const token = this.root.captureRead();
+      const targetProject = this.root.issues.held(target)?.project_id;
+      const projects = targetProject ? [project, targetProject] : [project];
+      for (const involved of projects) this.root.assertProjectReadable(ws, involved);
+      await this.root.detailApi.deleteRelation(row.relationId);
+      this.current(scope, token, projects);
+      const remove = (held: RelationRow[]) => held.filter((entry) => entry.relationId !== row.relationId);
+      resource.confirm(remove, token);
+      this.resources.get(target)?.confirm(remove, token);
+      await resource.refreshAfterConfirmation(() => this.refreshEndpoints([id, target], scope, token, projects), token);
+    });
 }

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo, useLayoutEffect } from "react";
 import { CloseOutline, RocketOutline, SearchOutline } from "@makeplane/propel/icons";
 import { Combobox } from "@headlessui/react";
 // i18n
@@ -26,6 +26,9 @@ import { ProjectService } from "@/services/project";
 // components
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 import { IssueSearchModalEmptyState } from "./issue-search-modal-empty-state";
+import { followInSession } from "@/lib/in-session";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { useRefusalMessage, useRefusalToast } from "@/hooks/use-refusal-toast";
 
 type Props = {
   workspaceSlug: string | undefined;
@@ -63,12 +66,28 @@ export function ExistingIssuesListModal(props: Props) {
   const [issues, setIssues] = useState<ISearchIssueResponse[]>([]);
   const [selectedIssues, setSelectedIssues] = useState<ISearchIssueResponse[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<unknown>();
+  const [searchRetry, setSearchRetry] = useState(0);
+  const refusalMessage = useRefusalMessage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isWorkspaceLevel, setIsWorkspaceLevel] = useState(false);
   const { isMobile } = usePlatformOS();
   const debouncedSearchTerm: string = useDebounce(searchTerm, 500);
   const { baseTabIndex } = getTabIndex(undefined, isMobile);
   const hasInitializedSelection = useRef(false);
+  const target = JSON.stringify(searchParams);
+  const owner = useMemo(
+    () => ({ active: isOpen, submitting: false, workspaceSlug, projectId, target }),
+    [workspaceSlug, projectId, isOpen, target]
+  );
+  const refusal = useRefusalToast();
+  useLayoutEffect(() => {
+    owner.active = isOpen;
+    setIsSubmitting(false);
+    return () => {
+      owner.active = false;
+    };
+  }, [owner, isOpen]);
 
   const handleClose = () => {
     onClose();
@@ -89,30 +108,19 @@ export function ExistingIssuesListModal(props: Props) {
       return;
     }
 
+    if (!owner.active || owner.submitting) return;
+    owner.submitting = true;
     setIsSubmitting(true);
-
-    await handleOnSubmit(selectedIssues).finally(() => setIsSubmitting(false));
-
-    handleClose();
-  };
-
-  const handleSearch = () => {
-    if (!isOpen || !workspaceSlug) return;
-    setIsLoading(true);
-    const searchService =
-      workItemSearchServiceCallback ??
-      (projectId ? projectService.projectIssuesSearch.bind(projectService, workspaceSlug, projectId) : undefined);
-    if (!searchService) return;
-    searchService({
-      search: debouncedSearchTerm,
-      ...searchParams,
-      workspace_search: isWorkspaceLevel,
-    })
-      .then((res) => setIssues(res))
-      .finally(() => {
-        setIsSearching(false);
-        setIsLoading(false);
-      });
+    await followInSession(() => handleOnSubmit(selectedIssues), {
+      done: () => {
+        if (owner.active) handleClose();
+      },
+      failed: (error) => {
+        if (owner.active && !(error instanceof SessionChangedError)) refusal(error);
+      },
+    });
+    owner.submitting = false;
+    if (owner.active) setIsSubmitting(false);
   };
 
   const handleSelectIssues = () => {
@@ -127,8 +135,46 @@ export function ExistingIssuesListModal(props: Props) {
   }, [isOpen, issues, selectedWorkItemIds]);
 
   useEffect(() => {
-    handleSearch();
-  }, [debouncedSearchTerm, isOpen, isWorkspaceLevel, projectId, workspaceSlug]);
+    if (!isOpen || !owner.workspaceSlug) return;
+    const searchService =
+      workItemSearchServiceCallback ??
+      (owner.projectId
+        ? projectService.projectIssuesSearch.bind(projectService, owner.workspaceSlug, owner.projectId)
+        : undefined);
+    if (!searchService) return;
+    let current = true;
+    setIsLoading(true);
+    setSearchError(undefined);
+    const finish = () => {
+      setIsSearching(false);
+      setIsLoading(false);
+    };
+    void followInSession(
+      () =>
+        searchService({
+          ...(JSON.parse(owner.target) as Partial<TProjectIssuesSearchParams>),
+          search: debouncedSearchTerm,
+          workspace_search: isWorkspaceLevel,
+        }),
+      {
+        done: (answer) => {
+          if (current && owner.active) {
+            setIssues(answer);
+            finish();
+          }
+        },
+        failed: (error) => {
+          if (current && owner.active && !(error instanceof SessionChangedError)) {
+            setSearchError(error);
+            finish();
+          }
+        },
+      }
+    );
+    return () => {
+      current = false;
+    };
+  }, [debouncedSearchTerm, isOpen, isWorkspaceLevel, owner, workItemSearchServiceCallback, searchRetry]);
 
   const filteredIssues = issues.filter((issue) => !shouldHideIssue?.(issue));
 
@@ -143,6 +189,14 @@ export function ExistingIssuesListModal(props: Props) {
           else setSelectedIssues((prevData) => [...prevData, val]);
         }}
       >
+        {searchError !== undefined && (
+          <div role="alert">
+            {refusalMessage(searchError)}
+            <button type="button" onClick={() => setSearchRetry((value) => value + 1)}>
+              {t("common.retry")}
+            </button>
+          </div>
+        )}
         <div className="relative m-1">
           <SearchOutline
             className="text-opacity-40 pointer-events-none absolute top-3.5 left-4 h-5 w-5 text-primary"

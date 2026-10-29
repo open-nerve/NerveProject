@@ -18,6 +18,8 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { CreateUpdateIssueModal } from "../../issue-modal/modal";
 import { useSubIssueOperations } from "./helper";
 import { SubIssuesListRoot } from "./issues-list/root";
+import { DetailResourceError } from "../resource-error";
+import { useDetailScope } from "../use-detail-scope";
 
 type Props = {
   workspaceSlug: string;
@@ -62,11 +64,12 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
   const {
     toggleCreateIssueModal,
     toggleDeleteIssueModal,
-    subIssues: { subIssueHelpersByIssueId, setSubIssueHelpers },
+    subIssues: { subIssueHelpersByIssueId, setSubIssueHelpers, getError, retry },
   } = useIssueDetail();
 
   // helpers
-  const subIssueOperations = useSubIssueOperations();
+  const subIssueOperations = useSubIssueOperations(workspaceSlug, projectId, parentIssueId);
+  const captureScope = useDetailScope(workspaceSlug, projectId, parentIssueId);
   const subIssueHelpers = subIssueHelpersByIssueId(`${parentIssueId}_root`);
 
   // handler
@@ -85,6 +88,7 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
   );
 
   const handleFetchSubIssues = useCallback(async () => {
+    const current = captureScope();
     const helperId = `${parentIssueId}_root`;
     const currentSubIssueHelpers = subIssueHelpersByIssueId(helperId);
     // setSubIssueHelpers toggles membership. Skip if visible or a fetch is already in flight
@@ -99,17 +103,26 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
     try {
       setSubIssueHelpers(helperId, "preview_loader", parentIssueId);
       await subIssueOperations.fetchSubIssues(workspaceSlug, projectId, parentIssueId);
+      if (!current()) return;
       if (!subIssueHelpersByIssueId(helperId).issue_visibility.includes(parentIssueId)) {
         setSubIssueHelpers(helperId, "issue_visibility", parentIssueId);
       }
-    } catch (error) {
-      console.error("Error fetching sub-work items:", error);
+    } catch {
+      // The scoped resource keeps the current refusal for the retry panel below.
     } finally {
-      if (subIssueHelpersByIssueId(helperId).preview_loader.includes(parentIssueId)) {
+      if (current() && subIssueHelpersByIssueId(helperId).preview_loader.includes(parentIssueId)) {
         setSubIssueHelpers(helperId, "preview_loader", parentIssueId);
       }
     }
-  }, [parentIssueId, projectId, setSubIssueHelpers, subIssueHelpersByIssueId, subIssueOperations, workspaceSlug]);
+  }, [
+    captureScope,
+    parentIssueId,
+    projectId,
+    setSubIssueHelpers,
+    subIssueHelpersByIssueId,
+    subIssueOperations,
+    workspaceSlug,
+  ]);
 
   useEffect(() => {
     handleFetchSubIssues();
@@ -127,6 +140,23 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
 
   return (
     <>
+      <DetailResourceError
+        error={getError(parentIssueId)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={parentIssueId}
+        retry={async () => {
+          const current = captureScope();
+          await retry(workspaceSlug, projectId, parentIssueId);
+          const helper = `${parentIssueId}_root`;
+          if (
+            current() &&
+            !getError(parentIssueId) &&
+            !subIssueHelpersByIssueId(helper).issue_visibility.includes(parentIssueId)
+          )
+            setSubIssueHelpers(helper, "issue_visibility", parentIssueId);
+        }}
+      />
       {subIssueHelpers.issue_visibility.includes(parentIssueId) && (
         <SubIssuesListRoot
           storeType={EIssuesStoreType.PROJECT}
@@ -169,17 +199,6 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
             toggleCreateIssueModal(false);
           }}
           data={issueCrudState?.update?.issue ?? undefined}
-          onSubmit={async (_issue: Issue) => {
-            await subIssueOperations.updateSubIssue(
-              workspaceSlug,
-              projectId,
-              parentIssueId,
-              _issue.id,
-              _issue,
-              issueCrudState?.update?.issue,
-              true
-            );
-          }}
         />
       )}
     </>

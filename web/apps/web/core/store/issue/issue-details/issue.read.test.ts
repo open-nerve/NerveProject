@@ -28,16 +28,8 @@ function isolateAuxiliary() {
   vi.spyOn(detail, "fetchLinks").mockResolvedValue([]);
   const activity = vi.spyOn(detail.activity, "fetchActivities").mockResolvedValue([]);
   vi.spyOn(detail.comment, "fetchComments").mockResolvedValue([]);
-  vi.spyOn(detail.subIssues, "fetchSubIssues").mockResolvedValue({
-    sub_issues: [],
-    state_distribution: { backlog: [], unstarted: [], started: [], completed: [], cancelled: [] },
-  });
-  vi.spyOn(detail.relation, "fetchRelations").mockResolvedValue({
-    blocking: [],
-    blocked_by: [],
-    duplicate: [],
-    relates_to: [],
-  });
+  vi.spyOn(detail.subIssues, "fetchSubIssues").mockResolvedValue([]);
+  vi.spyOn(detail.relation, "fetchRelations").mockResolvedValue([]);
   vi.spyOn(tab.app.state, "fetchProjectStates").mockResolvedValue([]);
   return { detail, reactions, activity };
 }

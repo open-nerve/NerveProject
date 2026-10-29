@@ -43,6 +43,10 @@ export class IssueVerification {
   isUncertain(id: string): boolean {
     return this.records.has(id);
   }
+  getError(id: string): unknown {
+    const record = this.records.get(id);
+    return record?.identity === this.identity(id) ? record.error : undefined;
+  }
   deleted(id: string): void {
     runInAction(() => this.records.delete(id));
     this.affected.delete(id);

@@ -4,61 +4,39 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueDetail } from "@nerve/api-client";
-
 import { useMemo } from "react";
-// nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-
+import type { IssueUpdate } from "@nerve/api-client";
 import { copyUrlToClipboard } from "@nerve/utils";
-// hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { followInSession } from "@/lib/in-session";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { useDetailScope } from "../use-detail-scope";
 
 export type TRelationIssueOperations = {
   copyLink: (path: string) => void;
-  update: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<IssueDetail>) => Promise<void>;
+  update: (workspaceSlug: string, projectId: string, issueId: string, body: IssueUpdate) => Promise<void>;
   remove: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 };
-
-export const useRelationOperations = (): TRelationIssueOperations => {
-  const { updateIssue, removeIssue } = useIssueDetail();
-  const { t } = useTranslation();
-  // derived values
-  const entityName = "Work item";
-
-  const issueOperations: TRelationIssueOperations = useMemo(
+export function useRelationOperations(workspaceSlug: string, hostId: string): TRelationIssueOperations {
+  const detail = useIssueDetail();
+  const project = detail.relation.getProjectId(hostId) ?? detail.issue.getIssueById(hostId)?.project_id;
+  const capture = useDetailScope(workspaceSlug, project, hostId);
+  const refusal = useRefusalToast();
+  return useMemo(
     () => ({
-      copyLink: async (path) => {
-        await copyUrlToClipboard(path);
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: t("common.link_copied"),
-          message: t("entity.link_copied_to_clipboard", { entity: entityName }),
+      copyLink: async (path: string) => copyUrlToClipboard(path),
+      update: async (ws: string, projectId: string, id: string, body: IssueUpdate) => {
+        const current = capture();
+        if (!current()) return;
+        await followInSession(() => detail.updateIssue(ws, projectId, id, body), {
+          failed: (error) => {
+            if (current() && !(error instanceof SessionChangedError)) refusal(error);
+          },
         });
       },
-      update: async (workspaceSlug, projectId, issueId, data) => {
-        try {
-          await updateIssue(workspaceSlug, projectId, issueId, data);
-          setToast({
-            title: t("toast.success"),
-            type: TOAST_TYPE.SUCCESS,
-            message: t("entity.update.success", { entity: entityName }),
-          });
-        } catch (_error) {
-          setToast({
-            title: t("toast.error"),
-            type: TOAST_TYPE.ERROR,
-            message: t("entity.update.failed", { entity: entityName }),
-          });
-        }
-      },
-      remove: async (workspaceSlug, projectId, issueId) => {
-        return removeIssue(workspaceSlug, projectId, issueId);
-      },
+      remove: (ws: string, projectId: string, id: string) => detail.removeIssue(ws, projectId, id),
     }),
-    [entityName, removeIssue, t, updateIssue]
+    [capture, detail, refusal]
   );
-
-  return issueOperations;
-};
+}

@@ -6,7 +6,7 @@ configure({ safeDescriptors: false });
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import { APIService } from "@/services/api.service";
 import { heldChange } from "@/lib/auth/fake-tab";
-import type { TIssueReaction, TIssueLink, TIssueRelation } from "@nerve/types";
+import type { TIssueReaction, TIssueLink } from "@nerve/types";
 import { until, track } from "@/lib/auth/fake-time";
 import { FakeNerve, answered, json, noContent, problem, type Call } from "@/lib/auth/fake-nerve";
 import { SessionChangedError } from "@/lib/auth/token-manager";
@@ -83,24 +83,23 @@ function resources(parentId: string | null, withRelations = false) {
   // Only pre-existing, non-target detached side fetches are isolated.
   vi.spyOn(detail.activity, "fetchActivities").mockResolvedValue([]);
   vi.spyOn(detail.comment, "fetchComments").mockResolvedValue([]);
-  vi.spyOn(detail.subIssues, "fetchSubIssues").mockResolvedValue({
-    state_distribution: { backlog: [], unstarted: [], started: [], completed: [], cancelled: [] },
-    sub_issues: [],
-  });
+  vi.spyOn(detail.subIssues, "fetchSubIssues").mockResolvedValue([]);
   const related = issueOf("related", project.id, project.workspace_id);
-  const relations: TIssueRelation = { blocking: [related], blocked_by: [], duplicate: [], relates_to: [] };
+  const relations = {
+    data: [{ id: "relation", relation_type: "blocking", issue: related, created_at: related.created_at }],
+  };
   const relationFetch = vi.spyOn(detail.relation, "fetchRelations");
-  if (!withRelations) relationFetch.mockResolvedValue({ blocking: [], blocked_by: [], duplicate: [], relates_to: [] });
+  if (!withRelations) relationFetch.mockResolvedValue([]);
   vi.spyOn(app.state, "fetchProjectStates").mockResolvedValue([]);
   const get = vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
-    if (url.endsWith("/issue-relation/")) return reply(relations);
     if (url.endsWith("/reactions/")) return reply([reaction]);
     if (url.endsWith("/issue-links/")) return reply([link]);
     throw new Error(`Unexpected legacy URL: ${url}`);
   });
   const native = vi.fn((call: Call) => {
     if (call.method !== "GET") return;
-    if (call.path === "/api/v0/issues/parent") call.answer(json(200, parent));
+    if (call.path === "/api/v0/issues/R1/relations") call.answer(json(200, relations));
+    else if (call.path === "/api/v0/issues/parent") call.answer(json(200, parent));
     else if (
       (call.path === "/api/v0/issues/R1" ||
         call.path === `/api/v0/workspaces/${ws.slug}/issues/${project.identifier}-1`) &&
@@ -310,7 +309,7 @@ it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => 
       "relations loaded"
     );
     expect(relationFetch).toHaveBeenCalledExactlyOnceWith(ws.slug, project.id, source.id);
-    expect(get.mock.calls.filter(([url]) => url.endsWith("/issue-relation/"))).toHaveLength(1);
+    expect(nerve.to("/api/v0/issues/R1/relations")).toHaveLength(1);
     await answered(
       nerve,
       () =>
@@ -327,10 +326,10 @@ it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => 
       duplicate: [],
       relates_to: [],
     });
-    expect(app.issue.issues.getIssueById(related.id)).toEqual(relations.blocking[0]);
+    expect(app.issue.issues.getIssueById(related.id)).toEqual(relations.data[0]!.issue);
     expect(app.issue.issues.getIssueById(source.id)?.name).toBe("list update");
     expect(app.issue.issues.getIssueDetailById(source.id)?.description_html).toBe(source.description_html);
-    expect(get).toHaveBeenCalledTimes(3);
+    expect(get).toHaveBeenCalledTimes(2);
     expect(nerve.calls.filter((call) => call.path === `/api/v0/projects/${project.id}/issues`)).toHaveLength(
       page === "initial" ? 1 : 2
     );

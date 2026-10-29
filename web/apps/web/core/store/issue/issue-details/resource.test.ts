@@ -25,6 +25,31 @@ afterEach(() => {
 const resource = () =>
   new DetailResource<string[]>(tab.app.issue, { workspaceID: tab.workspace.id, projectIDs: [tab.project.id] });
 
+it("a concurrent confirmation retry keeps the newest refusal and remains retryable", async () => {
+  const held = resource();
+  const first = heldChange<void>();
+  const second = heldChange<void>();
+  let calls = 0;
+  const read = async () => {
+    calls++;
+    if (calls === 1) throw new Error("initial read failed");
+    if (calls === 2) return first.sent;
+    if (calls === 3) return second.sent;
+  };
+  await held.refreshAfterConfirmation(read, tab.app.issue.captureRead());
+  const older = held.retryConfirmationRead();
+  const newer = held.retryConfirmationRead();
+  first.answer();
+  await older;
+  const error = new Error("newest read failed");
+  second.refuse(error);
+  await newer;
+  expect(held.error).toBe(error);
+  expect(await held.retryConfirmationRead()).toBe(true);
+  expect(calls).toBe(4);
+  expect(held.error).toBeUndefined();
+});
+
 it("hidesHeldResourcesImmediatelyAfterPermissionChanges", async () => {
   const held = resource();
   await held.fetch(async () => ["secret"]);
@@ -79,6 +104,16 @@ it("keeps the last complete value and exposes only a current refusal", async () 
   expect(held.loading).toBe(false);
   await held.fetch(async () => ["recovered"]);
   expect(held.error).toBeUndefined();
+});
+it("an embedded scope that changed while reading never becomes a visible refusal", async () => {
+  const held = resource();
+  await expect(
+    held.fetch(async () => {
+      throw new SessionChangedError();
+    })
+  ).resolves.toBeUndefined();
+  expect(held.error).toBeUndefined();
+  expect(held.loading).toBe(false);
 });
 
 it("invalidates only affected resources including embedded project proofs", async () => {

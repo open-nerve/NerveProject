@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**文档预检通过，负责人已授权实施，当前从T1顺序推进**。任务和产品验收全部未勾选；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T3已实现，继续T4**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -80,12 +80,12 @@ make e2e
 **Files：** issue-details/sub_issues.store.ts、sub_issues_filter.store.ts、relation.store.ts、root.store.ts；C/components/issues/{sub-issues,relations,issue-detail-widgets} 的真实消费者；旧 issue_relation.service.ts/types；新 relation.store.test.ts/detail-changes.test.ts、C/components/issues/relations/data.test.tsx，迁 sub_issues.fetch.test.ts。
 **Interfaces：** child collection 只存ID+读取证明；relation 行有 relationId/type/targetId/createdAt；删除以 relationId；状态分布为目录派生。
 
-- [ ] 测同项目子项、不依赖 state_distribution、nullable parent、跨项目关联/可见范围、相同关系重复确认；删除请求断言关系 ID，关联目标标题来自 canonical 后更新可见。
-- [ ] add batch 与 child parent PATCH 串行；关联两端/批量ID有稳定队列顺序；移除父子调用普通 parent_id=null PATCH，delete child 沿 root 删除树。新父/旧父、关联两端的确认回查和列表 stale 按 spec§2.4。
-- [ ] 将旧 sub_issues.fetch 不可能的跨项目子项 fixture 改合同内样本；原权限旧读 ABA/拒绝性质迁到真实关联跨项目用例，不仅删失败断言。同步 issue-changes/base.loading 的子项和关联请求/fixture，保留写后新鲜度与弹窗加载回归。
-- [ ] 确认成功后补读403/500保留确认、不再POST；目录拒绝可观察。聚焦 sub_issues.fetch/relation.store/detail-changes+核心列表确认回归/types。
-- [ ] 核 relations/content、relations/helper 与弹窗的职责：由一次明确写入口提交，onSubmit收到确认实体后不得再次PATCH；去掉已无职责的回调，不发送整份Issue。`submitsOneMutationFromTheRelationEditor`验证一次编辑仅一次PATCH，拒绝留输入；删除/移除关联分别用自己的原生ID和命令。
-- [ ] M05 强行手加父计数、M06 多ID队列去掉共享/排序、M07 删除用目标issueId，分别行为红；G。提交 `feat(M4/P11): 迁移父子和关联的原生数据与确认流程`。
+- [x] 测同项目子项、不依赖 state_distribution、nullable parent、跨项目关联/可见范围、相同关系重复确认；删除请求断言关系 ID，关联目标标题来自 canonical 后更新可见。
+- [x] add batch 与 child parent PATCH 串行；关联两端/批量ID有稳定队列顺序；移除父子调用普通 parent_id=null PATCH，delete child 沿 root 删除树。新父/旧父、关联两端的确认回查和列表 stale 按 spec§2.4。
+- [x] 将旧 sub_issues.fetch 不可能的跨项目子项 fixture 改合同内样本；原权限旧读 ABA/拒绝性质迁到真实关联跨项目用例，不仅删失败断言。同步 issue-changes/base.loading 的子项和关联请求/fixture，保留写后新鲜度与弹窗加载回归。
+- [x] 确认成功后补读403/500保留确认、不再POST；目录拒绝可观察。聚焦 sub_issues.fetch/relation.store/detail-changes+核心列表确认回归/types。
+- [x] 核 relations/content、relations/helper 与弹窗的职责：由一次明确写入口提交，onSubmit收到确认实体后不得再次PATCH；去掉已无职责的回调，不发送整份Issue。`submitsOneMutationFromTheRelationEditor`验证一次编辑仅一次PATCH，拒绝留输入；删除/移除关联分别用自己的原生ID和命令。
+- [x] M05 强行手加父计数、M06 多ID队列去掉共享/排序、M07 删除用目标issueId，分别行为红；G。提交 `feat(M4/P11): 迁移父子和关联的原生数据与确认流程`。
 
 ## Task 4：链接与旧核心服务收口（约450–850行）
 

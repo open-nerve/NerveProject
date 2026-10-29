@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueDetail as GeneratedIssueDetail } from "@nerve/api-client";
-
 import type { IssueUpdate } from "@nerve/api-client";
 import { action, computed, makeObservable, observable } from "mobx";
 // types
@@ -270,10 +268,8 @@ export class IssueDetail implements IIssueDetail {
     projectId: string,
     parentIssueId: string,
     issueId: string,
-    issueData: Partial<GeneratedIssueDetail>,
-    oldIssue?: Partial<GeneratedIssueDetail>,
-    fromModal?: boolean
-  ) => this.subIssues.updateSubIssue(workspaceSlug, projectId, parentIssueId, issueId, issueData, oldIssue, fromModal);
+    issueData: IssueUpdate
+  ) => this.subIssues.updateSubIssue(workspaceSlug, projectId, parentIssueId, issueId, issueData);
   removeSubIssue = async (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) =>
     this.subIssues.removeSubIssue(workspaceSlug, projectId, parentIssueId, issueId);
   deleteSubIssue = async (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) =>
@@ -294,9 +290,8 @@ export class IssueDetail implements IIssueDetail {
     projectId: string,
     issueId: string,
     relationType: TIssueRelationTypes,
-    relatedIssue: string,
-    updateLocally?: boolean
-  ) => this.relation.removeRelation(workspaceSlug, projectId, issueId, relationType, relatedIssue, updateLocally);
+    relatedIssue: string
+  ) => this.relation.removeRelation(workspaceSlug, projectId, issueId, relationType, relatedIssue);
 
   // activity
   fetchActivities = async (workspaceSlug: string, projectId: string, issueId: string, loaderType?: TActivityLoader) =>

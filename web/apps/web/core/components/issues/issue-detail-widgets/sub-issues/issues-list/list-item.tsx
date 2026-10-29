@@ -28,6 +28,8 @@ import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifi
 // local components
 import { SubIssuesListItemProperties } from "./properties";
 import { SubIssuesListRoot } from "./root";
+import { useDetailScope } from "../../use-detail-scope";
+import { DetailResourceError } from "../../resource-error";
 
 type Props = {
   workspaceSlug: string;
@@ -67,9 +69,10 @@ export const SubIssuesListItem = observer(function SubIssuesListItem(props: Prop
     },
   } = useIssueDetail();
   const {
-    subIssues: { subIssueHelpersByIssueId, setSubIssueHelpers },
+    subIssues: { subIssueHelpersByIssueId, setSubIssueHelpers, getError, retry },
   } = useIssueDetail();
-  const { fetchSubIssues } = useSubIssueOperations();
+  const { fetchSubIssues } = useSubIssueOperations(workspaceSlug, projectId, issueId);
+  const capture = useDetailScope(workspaceSlug, projectId, issueId);
   const { toggleCreateIssueModal, toggleDeleteIssueModal } = useIssueDetail();
   const project = useProject();
   const { handleRedirection } = useIssuePeekOverviewRedirection();
@@ -87,7 +90,7 @@ export const SubIssuesListItem = observer(function SubIssuesListItem(props: Prop
   const displayProperties = subIssueFilters?.displayProperties ?? {};
 
   //
-  const handleIssuePeekOverview = (issue: Issue) => handleRedirection(workspaceSlug, issue, isMobile);
+  const handleIssuePeekOverview = (selected: Issue) => handleRedirection(workspaceSlug, selected, isMobile);
 
   if (!issue) return <></>;
 
@@ -124,17 +127,27 @@ export const SubIssuesListItem = observer(function SubIssuesListItem(props: Prop
                       <LinkOutline width={14} height={14} className="animate-spin" />
                     </div>
                   ) : (
-                    <div
+                    <button
+                      type="button"
+                      aria-label={t("common.sub_work_items")}
+                      aria-expanded={subIssueHelpers.issue_visibility.includes(issueId)}
                       className="flex h-full w-full cursor-pointer items-center justify-center text-placeholder hover:text-tertiary"
                       onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (!subIssueHelpers.issue_visibility.includes(issueId)) {
-                          setSubIssueHelpers(parentIssueId, "preview_loader", issueId);
-                          await fetchSubIssues(workspaceSlug, projectId, issueId);
-                          setSubIssueHelpers(parentIssueId, "preview_loader", issueId);
+                        const current = capture();
+                        try {
+                          if (!subIssueHelpers.issue_visibility.includes(issueId)) {
+                            setSubIssueHelpers(parentIssueId, "preview_loader", issueId);
+                            await fetchSubIssues(workspaceSlug, projectId, issueId);
+                          }
+                          if (current()) setSubIssueHelpers(parentIssueId, "issue_visibility", issueId);
+                        } catch {
+                          // The resource retains the refusal for the inline read-only retry.
+                        } finally {
+                          if (current() && subIssueHelpersByIssueId(parentIssueId).preview_loader.includes(issueId))
+                            setSubIssueHelpers(parentIssueId, "preview_loader", issueId);
                         }
-                        setSubIssueHelpers(parentIssueId, "issue_visibility", issueId);
                       }}
                     >
                       <ChevronRightOutline
@@ -142,7 +155,7 @@ export const SubIssuesListItem = observer(function SubIssuesListItem(props: Prop
                           "rotate-90": subIssueHelpers.issue_visibility.includes(issue.id),
                         })}
                       />
-                    </div>
+                    </button>
                   )}
                 </>
               )}
@@ -169,6 +182,8 @@ export const SubIssuesListItem = observer(function SubIssuesListItem(props: Prop
 
             <div
               className="flex-shrink-0 text-13"
+              role="group"
+              onKeyDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -246,6 +261,22 @@ export const SubIssuesListItem = observer(function SubIssuesListItem(props: Prop
       </ControlLink>
 
       {/* should not expand the current issue if it is also the root issue*/}
+      <DetailResourceError
+        error={getError(issueId)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={issueId}
+        retry={async () => {
+          const current = capture();
+          await retry(workspaceSlug, projectId, issueId);
+          if (
+            current() &&
+            !getError(issueId) &&
+            !subIssueHelpersByIssueId(parentIssueId).issue_visibility.includes(issueId)
+          )
+            setSubIssueHelpers(parentIssueId, "issue_visibility", issueId);
+        }}
+      />
       {subIssueHelpers.issue_visibility.includes(issueId) &&
         issue.project_id &&
         subIssueCount > 0 &&
