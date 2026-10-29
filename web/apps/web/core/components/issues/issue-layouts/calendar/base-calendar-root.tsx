@@ -1,3 +1,4 @@
+import { followInSession } from "@/lib/in-session";
 import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
@@ -50,6 +51,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
     fetchNextIssues,
     createIssue,
     updateIssue,
+    dropIssue,
     removeIssue,
     archiveIssue,
     restoreIssue,
@@ -108,13 +110,16 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
   ) => {
     if (!issueId || !destinationDate || !sourceDate || !issueProjectId) return;
 
-    await handleDragDrop(issueId, sourceDate, destinationDate, workspaceSlug, issueProjectId, updateIssue).catch(
-      (err) => {
-        setToast({
-          title: "Error!",
-          type: TOAST_TYPE.ERROR,
-          message: err?.detail ?? "Failed to perform this action",
-        });
+    await followInSession(
+      () => handleDragDrop(issueId, sourceDate, destinationDate, workspaceSlug, issueProjectId, dropIssue),
+      {
+        failed: () => {
+          setToast({
+            title: "Error!",
+            type: TOAST_TYPE.ERROR,
+            message: "Failed to perform this action",
+          });
+        },
       }
     );
   };

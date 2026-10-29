@@ -1,3 +1,4 @@
+import type { IssueDrop } from "@/store/issue/root.store";
 import type { PagedGroups } from "@/lib/paged-groups";
 import type { IssueListOptions } from "@/lib/issue-filters";
 /**
@@ -27,6 +28,12 @@ export interface IssueActions {
   removeIssue: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   createIssue?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
   updateIssue?: (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => Promise<void>;
+  dropIssue?: (
+    projectId: string,
+    issueId: string,
+    makeBody: (held: Issue) => IssueUpdate,
+    drop: IssueDrop
+  ) => Promise<void>;
   archiveIssue?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   restoreIssue?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   updateFilters: (
@@ -99,6 +106,13 @@ const useProjectIssueActions = () => {
     },
     [issues.updateIssue, workspaceSlug]
   );
+  const dropIssue = useCallback(
+    async (targetProject: string, issueId: string, makeBody: (held: Issue) => IssueUpdate, drop: IssueDrop) => {
+      if (!workspaceSlug) return;
+      await issues.dropIssue(workspaceSlug, targetProject, issueId, makeBody, drop);
+    },
+    [issues, workspaceSlug]
+  );
   const removeIssue = useCallback(
     async (projectId: string | undefined | null, issueId: string) => {
       if (!workspaceSlug || !projectId) return;
@@ -132,9 +146,10 @@ const useProjectIssueActions = () => {
       updateIssue,
       removeIssue,
       archiveIssue,
+      dropIssue,
       updateFilters,
     }),
-    [fetchIssues, fetchNextIssues, createIssue, updateIssue, removeIssue, archiveIssue, updateFilters]
+    [fetchIssues, fetchNextIssues, createIssue, updateIssue, removeIssue, archiveIssue, dropIssue, updateFilters]
   );
 };
 
@@ -176,6 +191,13 @@ const useProfileIssueActions = () => {
     },
     [issues.updateIssue, workspaceSlug]
   );
+  const dropIssue = useCallback(
+    async (targetProject: string, issueId: string, makeBody: (held: Issue) => IssueUpdate, drop: IssueDrop) => {
+      if (!workspaceSlug) return;
+      await issues.dropIssue(workspaceSlug, targetProject, issueId, makeBody, drop);
+    },
+    [issues, workspaceSlug]
+  );
   const removeIssue = useCallback(
     async (projectId: string | undefined | null, issueId: string) => {
       if (!workspaceSlug || !projectId) return;
@@ -207,9 +229,10 @@ const useProfileIssueActions = () => {
       updateIssue,
       removeIssue,
       archiveIssue,
+      dropIssue,
       updateFilters,
     }),
-    [fetchIssues, createIssue, updateIssue, removeIssue, archiveIssue, updateFilters]
+    [fetchIssues, createIssue, updateIssue, removeIssue, archiveIssue, dropIssue, updateFilters]
   );
 };
 

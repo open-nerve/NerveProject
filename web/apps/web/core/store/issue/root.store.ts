@@ -50,6 +50,7 @@ import { PermissionReads } from "./permission-reads";
 export type IIssueRootStore = IssueRootStore;
 export type IssueWriteScope = Readonly<{ workspaceSlug: string; projectID: string; workspaceID: string }>;
 export type IssueReadToken = Readonly<{ owner: symbol; serial: number; permission: number; member: boolean }>;
+export type IssueDrop = NonNullable<ConfirmedIssueChange["drop"]> & { binding?: IssueListBinding };
 type PendingWrite = {
   before: Before;
   sources: Map<IssueListBinding, ReadonlySet<number>>;
@@ -111,6 +112,7 @@ export class IssueRootStore {
   private readonly deletions = new Map<string, { serial: number; workspaceID: string }>();
   private readonly lists = new Set<IssueListBinding>();
   private readonly queues = new Map<string, ReturnType<typeof oneAtATime>>();
+  private readonly dragQueue = oneAtATime();
   private readonly pending = new Map<string, PendingWrite>();
   readonly permissionReads: PermissionReads;
   get pendingIDs(): ReadonlySet<string> {
@@ -280,7 +282,7 @@ export class IssueRootStore {
     id: string | undefined,
     scope: IssueWriteScope,
     request: (held?: Issue) => Promise<IssueDetailAnswer | null>,
-    drop?: ConfirmedIssueChange["drop"]
+    drop?: IssueDrop
   ): Promise<IssueDetailAnswer | null> {
     this.assertActive();
     let initial = id ? this.issues.getIssueById(id) : undefined;
@@ -358,7 +360,10 @@ export class IssueRootStore {
         )
           before = { kind: "unknown" };
       }
-      const change: ConfirmedIssueChange = { id: after?.id ?? id!, beforeSnapshot: before, after, drop };
+      const position = drop
+        ? { group: drop.group, subgroup: drop.subgroup, beforeId: drop.beforeId, afterId: drop.afterId }
+        : undefined;
+      const change: ConfirmedIssueChange = { id: after?.id ?? id!, beforeSnapshot: before, after };
       if (!after) {
         this.invalidateProjectReads(scope.projectID, scope.workspaceID);
         for (const child of this.issues.knownDescendants(change.id)) {
@@ -370,7 +375,10 @@ export class IssueRootStore {
       }
       for (const list of this.lists)
         if (list.covers(scope) && !unavailable.has(list))
-          list.acceptConfirmed(change, pending.sources.get(list) ?? new Set());
+          list.acceptConfirmed(
+            { ...change, drop: list === drop?.binding ? position : undefined },
+            pending.sources.get(list) ?? new Set()
+          );
       this.issues.confirmChange(change, permission);
       return after;
     } catch (error) {
@@ -397,47 +405,49 @@ export class IssueRootStore {
   updateIssue(
     id: string,
     makeBody: (held: Issue) => IssueUpdate,
-    drop?: ConfirmedIssueChange["drop"],
+    drop?: IssueDrop,
     operationScope?: IssueWriteScope
   ): Promise<IssueDetailAnswer> {
-    return this.queue(id)(async () => {
-      this.assertActive();
-      const snapshot = this.issues.getIssueById(id);
-      if (!snapshot) throw new Error("Issue has not been read");
-      const scope = operationScope ?? this.scope(this.workspaceSlug!, snapshot.project_id);
-      return (await this.write(
-        id,
-        scope,
-        (held) => {
-          if (!held) throw new Error("Issue has not been read");
-          const input = makeBody(held);
-          const body: IssueUpdate = {
-            name: input.name,
-            description_html: input.description_html,
-            state_id: input.state_id,
-            priority: input.priority,
-            assignee_ids: input.assignee_ids,
-            label_ids: input.label_ids,
-            sort_order: input.sort_order,
-            start_date: input.start_date,
-            target_date: input.target_date,
-            parent_id: input.parent_id,
-            skip_activity: input.skip_activity,
-          };
-          if (
-            body.skip_activity !== undefined &&
-            (typeof body.skip_activity !== "boolean" ||
-              body.description_html === undefined ||
-              Object.entries(body).some(
-                ([key, value]) => value !== undefined && !["description_html", "skip_activity"].includes(key)
-              ))
-          )
-            throw new Error("skip_activity requires description_html alone");
-          return this.api.update(id, body);
-        },
-        drop
-      ))!;
-    });
+    const update = () =>
+      this.queue(id)(async () => {
+        this.assertActive();
+        const snapshot = this.issues.getIssueById(id);
+        if (!snapshot) throw new Error("Issue has not been read");
+        const scope = operationScope ?? this.scope(this.workspaceSlug!, snapshot.project_id);
+        return (await this.write(
+          id,
+          scope,
+          (held) => {
+            if (!held) throw new Error("Issue has not been read");
+            const input = makeBody(held);
+            const body: IssueUpdate = {
+              name: input.name,
+              description_html: input.description_html,
+              state_id: input.state_id,
+              priority: input.priority,
+              assignee_ids: input.assignee_ids,
+              label_ids: input.label_ids,
+              sort_order: input.sort_order,
+              start_date: input.start_date,
+              target_date: input.target_date,
+              parent_id: input.parent_id,
+              skip_activity: input.skip_activity,
+            };
+            if (
+              body.skip_activity !== undefined &&
+              (typeof body.skip_activity !== "boolean" ||
+                body.description_html === undefined ||
+                Object.entries(body).some(
+                  ([key, value]) => value !== undefined && !["description_html", "skip_activity"].includes(key)
+                ))
+            )
+              throw new Error("skip_activity requires description_html alone");
+            return this.api.update(id, body);
+          },
+          drop
+        ))!;
+      });
+    return drop ? this.dragQueue(update) : update();
   }
   deleteIssue(id: string, scope: IssueWriteScope): Promise<void> {
     return this.queue(id)(async () => {

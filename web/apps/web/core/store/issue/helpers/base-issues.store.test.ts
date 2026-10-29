@@ -276,7 +276,12 @@ it("pageMergesDeduplicateDroppedRowAndKeepsServerCursorBoundary", async () => {
   const change = await requestedIssue(
     nerve,
     () =>
-      app.issue.updateIssue("a", () => ({ state_id: "B", sort_order: 20 }), { group: "B" }, app.issue.scope("ws", "A")),
+      app.issue.updateIssue(
+        "a",
+        () => ({ state_id: "B", sort_order: 20 }),
+        { group: "B", binding: app.issue.projectIssues.currentList },
+        app.issue.scope("ws", "A")
+      ),
     ["PATCH", "/api/v0/issues/a"]
   );
   const after = { ...issueDetailOf("a"), state_id: "B", sort_order: 20, updated_at: "2026-10-29T00:00:00Z" };
