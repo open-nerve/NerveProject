@@ -108,6 +108,30 @@ const create = (project: string | null | undefined, body: IssueCreate) =>
 const columns = (groupBy: GroupByColumnTypes | null) =>
   getGroupByColumns({ groupBy, includeNone: true, isWorkspaceLevel: false })!;
 
+it("hidden kanban columns render without React key warnings", async () => {
+  const original = console.error;
+  const errors = vi.spyOn(console, "error").mockImplementation((...args) => original(...args));
+  try {
+    await act(async () =>
+      view.render(
+        <KanBan
+          {...common}
+          issuesMap={{}}
+          groups={new Map()}
+          getGroupIssueCount={() => 0}
+          group_by="priority"
+          sub_group_by={undefined}
+          showEmptyGroup={false}
+          loadMoreIssues={more}
+        />
+      )
+    );
+    expect(errors.mock.calls.filter((args) => String(args[0]).includes('unique "key"'))).toEqual([]);
+  } finally {
+    errors.mockRestore();
+  }
+});
+
 it.each([false, true])("kanban continuation remains reachable with swimlane=%s", async (lane) => {
   const row = listIssue("first", 10, { priority: "high" });
   const slice = { total: 5, data: [row], next_cursor: "server:next" };

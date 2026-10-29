@@ -247,6 +247,8 @@ IssueRootStore的原autorun副本改为rootStore/router/user目录计算属性�
 
 ### 2.10 T13/T14：挂载、门禁与文档
 
+T12 检查点 CI 40867089940 的 web 测试在 `issue-drag.test.ts` 的 group consumer 用例以 5000ms 超时（1664 通过、1 失败）；T13 对该局部测试的冷加载和行为分别计时，将真实 utils 的模块装配移至收集阶段，不放宽超时或删减断言。此举不能证明本机重现了 CI 的 5 秒超时，新提交的 CI 仍须另行核验。
+
 S2四角色加入项目issues页，按角色列真实请求；成功只放行新list/preferences，非成员不放行list。P10a删除的M6/M7页不恢复。旧服务路径守卫只缩小例外；issue-optimistic不写跨函数await位置的脆弱正则，使用明确范围的运行mutation表证明未确认不写；negation-filters词项全删后用静态规则。改到文件死成员/prop清理、警告上限随真实减少调低。
 
 T14更新总体设计7.7与frontend-changes（真实路径`docs/v0/frontend-changes.md`）、spec验收、阶段review和deep-review；只在本阶段实现后打完成勾。M4总体、handoff总status仍open。

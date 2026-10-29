@@ -4,6 +4,7 @@ import { issueDetailOf, issueOf, issueStoreTab, requestedIssue } from "./fake-is
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { handleDragDrop } from "@/components/issues/issue-layouts/calendar/utils";
+import { handleGroupDragDrop } from "@/components/issues/issue-layouts/utils";
 import { IssueListBinding } from "./helpers/issue-list-binding";
 import { runInAction } from "mobx";
 import { toJS } from "mobx";
@@ -80,7 +81,6 @@ it("calendar sends generated update fields and a destination drop", async () => 
   expect(drop).toEqual({ group: "2026-10-29" });
 });
 it("group consumer passes neighbor IDs and computes legal none values from held issue", async () => {
-  const { handleGroupDragDrop } = await import("@/components/issues/issue-layouts/utils");
   const update = vi.fn().mockResolvedValue(undefined);
   await handleGroupDragDrop(
     { id: "x", columnId: "high", groupId: "high", subGroupId: "u" },
@@ -249,7 +249,6 @@ it("two actual card drops share confirmed neighbors across a list switch", async
 it.each(["labels", "assignees"] as const)(
   "priority none and %s none reach actual PATCH as generated fields",
   async (field) => {
-    const { handleGroupDragDrop } = await import("@/components/issues/issue-layouts/utils");
     const root = tab.app.issue;
     const binding = await loadBinding(1, []);
     runInAction(() => {

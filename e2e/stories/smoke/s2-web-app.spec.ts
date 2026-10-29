@@ -134,7 +134,7 @@ type Account = (typeof ACCOUNTS)[number];
  * lands on the workspace's home; the workspace's projects page, whose call of its own fetch no other check holds; the
  * workspace's general settings and its members; the guest the admin's profile and his own, the card, from the members
  * the workspace's wrapper lists, and no work item (M3 design decision point 3, A; a member's profile lists his work
- * items, which are M4's); then the project's settings, its general page, its states and its labels.
+ * items, which are M4's); then the project's issues, settings, states and labels. The navigation and issue filters each read preferences.
  */
 const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
   admin: [
@@ -142,6 +142,17 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/projects", [...APP, ...WORKSPACE, ...ARCHIVED]],
     ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
     ["/{slug}/settings/members", [...APP, ...WORKSPACE, ...INVITATIONS]],
+    [
+      "/{slug}/projects/{project}/issues",
+      [
+        ...APP,
+        ...WORKSPACE,
+        ...PROJECT,
+        ...PROJECT_MEMBER,
+        "GET /api/v0/me/projects/{project}/preferences",
+        "GET /api/v0/projects/{project}/issues?order_by=-created_at&sub_issue=true&limit=100",
+      ],
+    ],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
     ["/{slug}/settings/projects/{project}/states", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
     ["/{slug}/settings/projects/{project}/labels", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
@@ -151,6 +162,17 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/projects", [...APP, ...WORKSPACE, ...ARCHIVED]],
     ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
+    [
+      "/{slug}/projects/{project}/issues",
+      [
+        ...APP,
+        ...WORKSPACE,
+        ...PROJECT,
+        ...PROJECT_MEMBER,
+        "GET /api/v0/me/projects/{project}/preferences",
+        "GET /api/v0/projects/{project}/issues?order_by=-created_at&sub_issue=true&limit=100",
+      ],
+    ],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
     ["/{slug}/settings/projects/{project}/states", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
     ["/{slug}/settings/projects/{project}/labels", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
@@ -162,6 +184,17 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
     ["/{slug}/profile/{admin}", [...APP, ...WORKSPACE]],
     ["/{slug}/profile/{guest}", [...APP, ...WORKSPACE]],
+    [
+      "/{slug}/projects/{project}/issues",
+      [
+        ...APP,
+        ...WORKSPACE,
+        ...PROJECT,
+        ...PROJECT_MEMBER,
+        "GET /api/v0/me/projects/{project}/preferences",
+        "GET /api/v0/projects/{project}/issues?order_by=-created_at&sub_issue=true&limit=100",
+      ],
+    ],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
     ["/{slug}/settings/projects/{project}/states", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
     ["/{slug}/settings/projects/{project}/labels", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
@@ -171,6 +204,7 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/projects", [...APP, ...WORKSPACE, ...ARCHIVED]],
     ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
+    ["/{slug}/projects/{project}/issues", [...APP, ...WORKSPACE, ...PROJECT]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT]],
     ["/{slug}/settings/projects/{project}/states", [...APP, ...WORKSPACE, ...PROJECT]],
     ["/{slug}/settings/projects/{project}/labels", [...APP, ...WORKSPACE, ...PROJECT]],
@@ -297,6 +331,11 @@ for (const account of ACCOUNTS) {
     const visit = async (path: string, requested: string[]) => {
       const load = { from: requests.next(), expected: requested.toSorted() };
       await page.goto(valued(path, names));
+      if (path === "/{slug}/projects/{project}/issues") {
+        const join = page.getByRole("button", { name: "Join project" });
+        if (account === "project non-member") await expect(join).toBeVisible();
+        else await expect(join).toHaveCount(0);
+      }
       if (path === "/") await expect(page).toHaveURL(`/${slug}`);
       await expect.poll(() => requests.between(load.from)).toEqual({ pending: 0, requests: load.expected });
       return load;
