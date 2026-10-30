@@ -389,6 +389,7 @@
     "execution": "执行",
     "administration": "管理",
     "filter_options": {
+      "add": "添加筛选",
       "me": "我",
       "subscribers": "关注人",
       "search": "搜索",

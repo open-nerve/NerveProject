@@ -87,7 +87,7 @@ T3用真实Calendar验证两步草稿、同日范围、已保存单端范围、�
 
 T3局部接口调整：实际DayPicker首次选择即返回同日起止，按旧回调第一参数无法辨认两次点击。DateRangeDropdown的onSelect向后兼容增加可选selectedDay，仅传输入事实；旧调用仍消费原range，草稿归富筛选，不激活既有未使用bothRequired或增加共享缓存。同步设计/spec/plan，P11原子修改4项和原共享日期控件回归通过。
 
-T4通过真实HeaderFilters/RootStore/FakeNerve验证11属性、同字段队列、跨字段并发及未改calendar/false/null，确认后列表拒绝只出现一次提示且重试只GET。旧权限/路由/会话ABA和卸载均结束跟进；继续复用useDetailScope与root权限水位。默认/自定义按钮均具名称、expanded、disabled、tabIndex和Escape回焦，实际Panel承接定位；七个M4入口具翻译标题。六文件38测试通过、lint-web 54任务通过；M08/M09/M10分别产生3/1/8项真实失败并恢复。M08/M09属于既有确认队列回归，不重复记作本期新实现。三浏览器几何仍待T13。
+T4通过真实HeaderFilters/RootStore/FakeNerve验证显示属性确认、同字段队列、跨字段并发及未改calendar/false/null，确认后列表拒绝只出现一次提示且重试只GET。旧权限/路由/会话ABA和卸载均结束跟进；继续复用useDetailScope与root权限水位。默认/自定义按钮均具名称、expanded、disabled、tabIndex和Escape回焦，实际Panel承接定位；七个M4入口具翻译标题。六文件38测试通过、lint-web 54任务通过；M08/M09/M10分别产生3/1/8项真实失败并恢复。M08/M09属于既有确认队列回归，不重复记作本期新实现。三浏览器几何仍待T13。
 
 T4第一轮完整F中生成与Go lint通过，服务端TestNewAppDeleteRowsJobRuns暴露旧测试夹具竞态：61天前的软删审计行超过60天保留期，可被启动清理物理删除。显式在删除任务完成后执行purger使同一根因稳定失败（count=9）；改用配置保留期一半的旧时间后连续10次通过，保留原锁/批处理/审计断言及明确交错。仅修测试，不变服务端锁、协议或清理语义；不以它触发新架构调整。首次完整失败和红绿raw均保留。
 
@@ -106,3 +106,7 @@ T8在route显式收窄三个TProfileViews，typed props贯穿两个profile根、
 T9把profile内存设置键补全为workspace/target，当前路由显式取对应设置；账号仍由RootStore隔离，同目标三个view共享本地设置。保存先写内存和storage，列表失败不回读覆盖；桌面、手机与富筛选复用本地更新hook消费Promise。目录只投影已持有且仍可见的项目/标签；服务端返回的冷标签组保留行、total和cursor，名称未知显示中性占位，后续目录到达可回显。实际Page/Layout/两布局14项与相关回归共10文件134项通过，store另含storage不可用、工作区隔离。M20/M21/M22分别8/7/1项行为红并逐字节恢复；M21保护既有project_id合同，不计新实现。
 
 T9七项完整门禁均在当前产品输入运行通过：生成、Go lint、串行Go全测、Web静态54任务、knip、强制Web全测18任务（Web 247文件2676项）、E2E 180项。回执为t9-full-*；静态warning cap由119降118。初期夹具项目ID/原生分组字段和测试输入键、bound方法及hook依赖错误均保留raw，未放宽原断言；冷标签分组与未消费Promise为真实页面根因。此前T4“11属性”实际只遍历旧目录9项，T10读入口发现缺创建/更新时间，将用独立页面枚举补验与修正，不能把旧测试称为11项完整覆盖。T10–T14及最终整审/分支CI仍待完成。
+
+T10新增I5三条页面故事：started/me/none与两个日期范围AND、11属性及布局/分组/子分组/排序/空组/子项、403拒绝和确认后503读取重试。操作由真实控件产生PATCH，核原生query、数据库三列、刷新及账号/项目隔离；日历嵌套未改字段保持。页面确认添加图标无名称、创建/更新时间未进入显示属性目录，沿原组件补翻译名称及两个既有属性键；旧T4测试改成独立枚举11项，避免随生产目录漏项。I5共4项（1 API、3页面）通过，相关组件23项通过，Web静态54任务通过。M09-page在真实构建中破坏calendar合并使保存断言失败，源码逐字节及构建恢复后4项再绿；与M09同性质，不增加独立变异计数。
+
+T10首轮测试传Page给Locator helper、匹配双main和Assignee/Assignees名称错误属于夹具问题，不计产品缺陷；各失败trace/截图/数据库已保存。新增await循环违反原lint零告警约定，改用顺序reduce和独立Promise.all，未加豁免。此阶段只完成Chromium页面，Firefox/WebKit与最终完整F仍留T13。

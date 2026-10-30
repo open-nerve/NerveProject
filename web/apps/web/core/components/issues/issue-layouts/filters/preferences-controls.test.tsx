@@ -4,7 +4,6 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { observer } from "mobx-react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { ISSUE_DISPLAY_PROPERTIES } from "@nerve/constants";
 import { StoreContext } from "@/lib/store-context";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
@@ -92,7 +91,20 @@ afterEach(async () => {
 
 it("waits for confirmed property values and serializes two changes without losing the first answer", async () => {
   await click("common.display");
-  expect(ISSUE_DISPLAY_PROPERTIES.every((property) => !!button(property.titleTranslationKey))).toBe(true);
+  for (const name of [
+    "issue.display.properties.id",
+    "common.assignee",
+    "common.order_by.start_date",
+    "common.order_by.due_date",
+    "common.labels",
+    "common.priority",
+    "common.state",
+    "issue.display.properties.sub_issue_count",
+    "common.link",
+    "common.sort.created_on",
+    "common.sort.updated_on",
+  ])
+    expect(button(name), name).toBeDefined();
   await click("common.priority");
   await act(async () => until(() => patches().length === 1, "priority patch"));
   expect(button("common.priority").getAttribute("aria-pressed")).toBe("true");

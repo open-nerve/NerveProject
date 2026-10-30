@@ -6,6 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 import { FilterOutline } from "@makeplane/propel/icons";
 // nerve imports
 import type { TButtonSize, TButtonVariant } from "@nerve/propel/button";
@@ -38,6 +39,7 @@ export const AddFilterButton = observer(function AddFilterButton<P extends TFilt
   props: TAddFilterButtonProps<P, E>
 ) {
   const { filter, buttonConfig, onFilterSelect } = props;
+  const { t } = useTranslation();
   const {
     variant = "secondary",
     size = "base",
@@ -70,7 +72,7 @@ export const AddFilterButton = observer(function AddFilterButton<P extends TFilt
       customButton={
         <div className="flex items-center gap-1">
           {iconConfig.shouldShowIcon && <FilterIcon className="size-4 text-secondary" />}
-          {label}
+          {label || <span className="sr-only">{t("common.filter_options.add")}</span>}
         </div>
       }
     />

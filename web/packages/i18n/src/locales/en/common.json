@@ -389,6 +389,7 @@
     "execution": "Execution",
     "administration": "Administration",
     "filter_options": {
+      "add": "Add filter",
       "me": "Me",
       "subscribers": "Subscribers",
       "search": "Search",

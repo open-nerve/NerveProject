@@ -128,6 +128,8 @@ export const ISSUE_DISPLAY_PROPERTIES: {
     titleTranslationKey: "issue.display.properties.sub_issue_count",
   },
   { key: "link", titleTranslationKey: "common.link" },
+  { key: "created_on", titleTranslationKey: "common.sort.created_on" },
+  { key: "updated_on", titleTranslationKey: "common.sort.updated_on" },
 ];
 
 export const SPREADSHEET_PROPERTY_LIST: (keyof IIssueDisplayProperties)[] = [

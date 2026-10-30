@@ -166,11 +166,11 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 **Files：** e2e/stories/issue/i5-list-preferences.spec.ts；复用issue-list-page、watchPage、现有API/DB断言；仅两处以上真实复用时抽新helper。
 **Interfaces：** 保留已有I5(API)，新增标题I5 (page): ...；API只造前置数据，UI操作生成被断言的preferences PATCH。
 
-- [ ] Step 1：按原API故事搭建A/B、mine/yours/outside/backlog/labelled，页面设置started、assignee=me、label=none与两个target范围2026-10-01..31及15..20；核结果为交集。布局/分组/子分组/排序/空组/子项/11属性逐类可见验证，保留calendar未改键。
-- [ ] Step 2：当前make build后，在e2e运行pnpm exec playwright test stories/issue/i5-list-preferences.spec.ts --project=chromium --grep '(page)'；预期非零执行，页面缺口失败原样记；不能靠测试主动发PATCH代替操作。
-- [ ] Step 3：实现故事并只修发现的局部产品根因；刷新/另账号/另项目隔离。故意拒绝PATCH时原UI/DB不变；确认PATCH后只让列表GET失败，偏好保留且重试零新PATCH。
-- [ ] Step 4：精确UI/请求/DB三层断言绿，watchPage无意外失败；页面生产变异至少使一个偏好保存性质红并恢复。预期拒绝仅精确该请求，不能忽略全部4xx。
-- [ ] Step 5：提交test(M4/P13): 验证页面筛选与显示偏好的保存。记录A1–A4。
+- [x] Step 1：按原API故事搭建A/B、mine/yours/outside/backlog/labelled，页面设置started、assignee=me、label=none与两个target范围2026-10-01..31及15..20；核结果为交集。布局/分组/子分组/排序/空组/子项/11属性逐类可见验证，保留calendar未改键。
+- [x] Step 2：当前make build后，在e2e运行pnpm exec playwright test stories/issue/i5-list-preferences.spec.ts --project=chromium --grep '(page)'；预期非零执行，页面缺口失败原样记；不能靠测试主动发PATCH代替操作。
+- [x] Step 3：实现故事并只修发现的局部产品根因；刷新/另账号/另项目隔离。故意拒绝PATCH时原UI/DB不变；确认PATCH后只让列表GET失败，偏好保留且重试零新PATCH。
+- [x] Step 4：精确UI/请求/DB三层断言绿，watchPage无意外失败；页面生产变异至少使一个偏好保存性质红并恢复。预期拒绝仅精确该请求，不能忽略全部4xx。
+- [x] Step 5：提交test(M4/P13): 验证页面筛选与显示偏好的保存。记录A1–A4。
 
 ## Task 11：I15归档页面故事（约400–850行）
 
