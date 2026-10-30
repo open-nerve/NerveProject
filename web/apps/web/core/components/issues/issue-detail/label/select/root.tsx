@@ -9,6 +9,7 @@ import type { TLabelOperations } from "../root";
 import { IssueLabelSelect } from "./label-select";
 
 type TIssueLabelSelectRoot = {
+  disabled?: boolean;
   workspaceSlug: string;
   projectId: string;
   issueId: string;
@@ -17,7 +18,7 @@ type TIssueLabelSelectRoot = {
 };
 
 export function IssueLabelSelectRoot(props: TIssueLabelSelectRoot) {
-  const { workspaceSlug, projectId, issueId, values, labelOperations } = props;
+  const { disabled, workspaceSlug, projectId, issueId, values, labelOperations } = props;
 
   const handleLabel = async (_labelIds: string[]) => {
     await labelOperations.updateIssue(workspaceSlug, projectId, issueId, { label_ids: _labelIds });
@@ -26,6 +27,7 @@ export function IssueLabelSelectRoot(props: TIssueLabelSelectRoot) {
   return (
     <IssueLabelSelect
       key={JSON.stringify([workspaceSlug, projectId, issueId])}
+      disabled={disabled}
       workspaceSlug={workspaceSlug}
       projectId={projectId}
       issueId={issueId}

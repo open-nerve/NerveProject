@@ -99,7 +99,7 @@ it("the actual detail content retains a failed description status when the title
   await act(async () => requests[0]!.refuse(new ApiError(403, { status: 403, code: "forbidden", title: "Forbidden" })));
   await act(async () => requests[1]!.answer());
   await act(async () => vi.advanceTimersByTimeAsync(2000));
-  expect(host.textContent).toContain("common.save_failed");
-  expect(host.textContent).not.toContain("common.saved");
+  expect(host.textContent).toContain("save_failed");
+  expect([...host.querySelectorAll("span")].some((span) => span.textContent === "saved")).toBe(false);
   expect(host.querySelectorAll("textarea")[1]!.value).toBe("unsaved description");
 });

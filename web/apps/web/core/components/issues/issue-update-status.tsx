@@ -27,13 +27,7 @@ export const NameDescriptionUpdateStatus = observer(function NameDescriptionUpda
       >
         {isSubmitting === "submitting" && <RefreshOutline className="size-3.5 animate-spin text-tertiary" />}
         <span className="text-13 text-tertiary">
-          {t(
-            isSubmitting === "submitting"
-              ? "common.saving"
-              : isSubmitting === "failed"
-                ? "common.save_failed"
-                : "common.saved"
-          )}
+          {t(isSubmitting === "submitting" ? "saving" : isSubmitting === "failed" ? "save_failed" : "saved")}
         </span>
       </div>
     </>

@@ -12,14 +12,17 @@ export function useConfirmedAutosave<T>({
   save,
   status,
   disabled = false,
+  prepareSave,
 }: {
   initial: T;
   same: (left: T, right: T) => boolean;
   save: (value: T) => Promise<void>;
   status: (value: TNameDescriptionLoader) => void;
   disabled?: boolean;
+  prepareSave?: () => (value: T) => Promise<void>;
 }) {
   const [value, setValue] = useState(initial);
+  const [replacing, setReplacing] = useState(false);
   const [failure, setFailure] = useState<{ error: unknown }>();
   const [owner] = useState(() => ({
     active: false,
@@ -29,21 +32,25 @@ export function useConfirmedAutosave<T>({
     attempted: -1,
     inFlight: 0,
     dirty: false,
+    replacing: false,
+    prepared: undefined as ((value: T) => Promise<void>) | undefined,
     timer: undefined as ReturnType<typeof setTimeout> | undefined,
   }));
-  const latest = useRef({ save, status, same, disabled });
+  const latest = useRef({ save, status, same, disabled, prepareSave });
   useLayoutEffect(() => {
-    latest.current = { save, status, same, disabled };
-  }, [save, status, same, disabled]);
+    latest.current = { save, status, same, disabled, prepareSave };
+  }, [save, status, same, disabled, prepareSave]);
   useLayoutEffect(() => {
     owner.active = true;
     return () => {
       owner.active = false;
       clearTimeout(owner.timer);
       // Preserve the existing last-edit flush, but never resend an attempted or refused revision.
-      if (owner.dirty && owner.attempted !== owner.revision && !latest.current.disabled) {
+      if (!owner.replacing && owner.dirty && owner.attempted !== owner.revision && !latest.current.disabled) {
         owner.attempted = owner.revision;
-        void latest.current.save(owner.value).catch(() => undefined);
+        void Promise.resolve()
+          .then(() => (owner.prepared ?? latest.current.save)(owner.value))
+          .catch(() => undefined);
       }
     };
   }, [owner]);
@@ -58,7 +65,14 @@ export function useConfirmedAutosave<T>({
 
   const send = useCallback(async () => {
     clearTimeout(owner.timer);
-    if (!owner.active || !owner.dirty || latest.current.disabled || owner.attempted === owner.revision) return;
+    if (
+      !owner.active ||
+      owner.replacing ||
+      !owner.dirty ||
+      latest.current.disabled ||
+      owner.attempted === owner.revision
+    )
+      return;
     const revision = owner.revision;
     const input = owner.value;
     owner.attempted = revision;
@@ -66,7 +80,7 @@ export function useConfirmedAutosave<T>({
     setFailure(undefined);
     latest.current.status("submitting");
     try {
-      await latest.current.save(input);
+      await (owner.prepared ?? latest.current.save)(input);
       if (!owner.active) return;
       if (revision === owner.revision) {
         owner.confirmed = input;
@@ -84,7 +98,8 @@ export function useConfirmedAutosave<T>({
   }, [owner]);
   const change = useCallback(
     (next: T) => {
-      if (!owner.active || latest.current.disabled) return;
+      if (!owner.active || owner.replacing || latest.current.disabled) return;
+      owner.prepared = latest.current.prepareSave?.();
       owner.value = next;
       owner.revision += 1;
       owner.dirty = owner.inFlight > 0 || !latest.current.same(next, owner.confirmed);
@@ -101,7 +116,42 @@ export function useConfirmedAutosave<T>({
     owner.attempted = -1;
     void send();
   }, [owner, send]);
-  return { value, change, failure, retry };
+  const replaceWith = useCallback(
+    async (confirm: () => Promise<T>) => {
+      if (!owner.active || owner.replacing || latest.current.disabled) throw new SessionChangedError();
+      clearTimeout(owner.timer);
+      const attempted = owner.attempted === owner.revision;
+      const revision = ++owner.revision;
+      if (attempted) owner.attempted = revision;
+      owner.replacing = true;
+      setReplacing(true);
+      latest.current.status("submitting");
+      try {
+        const confirmed = await confirm();
+        if (!owner.active || revision !== owner.revision) throw new SessionChangedError();
+        owner.value = confirmed;
+        owner.confirmed = confirmed;
+        owner.dirty = false;
+        owner.prepared = undefined;
+        owner.attempted = revision;
+        setValue(confirmed);
+        setFailure(undefined);
+        latest.current.status("submitted");
+        return confirmed;
+      } catch (error) {
+        if (owner.active && revision === owner.revision) {
+          if (owner.dirty) setFailure({ error });
+          latest.current.status(owner.dirty ? "failed" : "saved");
+        }
+        throw error;
+      } finally {
+        owner.replacing = false;
+        if (owner.active) setReplacing(false);
+      }
+    },
+    [owner]
+  );
+  return { value, change, failure, retry, replaceWith, replacing };
 }
 
 export function AutosaveError({ failure, retry }: { failure: { error: unknown } | undefined; retry: () => void }) {

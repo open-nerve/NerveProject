@@ -20,7 +20,7 @@ export type IssueTitleInputProps = {
   value: string | undefined | null;
   workspaceSlug: string;
   setIsSubmitting: (value: TNameDescriptionLoader) => void;
-  issueOperations: Pick<TIssueOperations<{ name: string }>, "update">;
+  issueOperations: Pick<TIssueOperations<{ name: string }>, "update" | "prepareUpdate">;
   projectId: string;
   issueId: string;
   containerClassName?: string;
@@ -47,6 +47,12 @@ const IssueTitleInputContent = observer(function IssueTitleInputContent(props: I
     initial: value ?? "",
     same: sameTitle,
     save: (name) => issueOperations.update(workspaceSlug, projectId, issueId, { name }),
+    prepareSave: issueOperations.prepareUpdate
+      ? () => {
+          const update = issueOperations.prepareUpdate!();
+          return (name) => update(workspaceSlug, projectId, issueId, { name });
+        }
+      : undefined,
     status: setIsSubmitting,
     disabled,
   });

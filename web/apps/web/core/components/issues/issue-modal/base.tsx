@@ -86,7 +86,12 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const routerProjectIdentifier = workItem?.toString().split("-")[0];
   const projectIdFromRouter = routerProjectIdentifier ? getProjectByIdentifier(routerProjectIdentifier)?.id : undefined;
   const projectId = isDraft ? (data?.project_id ?? null) : (data?.project_id ?? routerProjectId ?? projectIdFromRouter);
-  const draftScope = useDetailScope(workspaceSlug ?? "", undefined, data?.id ?? "new-draft", true);
+  const formScope = useDetailScope(
+    workspaceSlug ?? "",
+    isDraft ? undefined : (activeProjectId ?? projectId ?? undefined),
+    JSON.stringify([isOpen, isDraft, data?.id, sourceIssueId]),
+    true
+  );
 
   useEffect(() => {
     const request = ++descriptionRequest.current;
@@ -179,7 +184,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     if (!workspaceSlug || (!is_draft_issue && !payload.project_id) || descriptionLoadState !== "ready") return;
 
     const session = sessionGuard();
-    const current = is_draft_issue ? draftScope() : () => true;
+    const current = formScope();
     const inSession = () => session() && current();
     try {
       let response: Issue | Draft | undefined;
@@ -231,10 +236,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
           />
         ),
       });
-      if (!createMore) handleClose();
-      if (createMore && issueTitleRef) issueTitleRef?.current?.focus();
-      setDescription("<p></p>");
-      setChangesMade(null);
       return response;
     } catch (error) {
       if (inSession()) refuse(error);
@@ -245,7 +246,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const handleUpdateIssue = async (payload: IssueFormData): Promise<Draft | undefined> => {
     if (!workspaceSlug || (!isDraft && !payload.project_id) || !data?.id) return;
     const session = sessionGuard();
-    const current = isDraft ? draftScope() : () => true;
+    const current = formScope();
     const inSession = () => session() && current();
     try {
       let response: Draft | undefined;
@@ -266,7 +267,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
             />
           ) : undefined,
       });
-      handleClose();
       return response;
     } catch (error) {
       if (inSession()) refuse(error);
@@ -275,7 +275,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   };
   const handlePublish = async (payload: IssueFormData) => {
     if (!workspaceSlug || !isDraft || !data?.id || descriptionLoadState !== "ready") return;
-    const current = draftScope();
+    const current = formScope();
     const inSession = sessionGuard();
     try {
       await draftIssues.moveIssue(workspaceSlug, data.id, (held) => draftInput(payload, held.payload));
@@ -293,21 +293,29 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       return;
 
     const session = sessionGuard();
-    const current = is_draft_issue ? draftScope() : () => true;
+    const current = formScope();
     const inSession = () => session() && current();
-    let response: Issue | Draft | undefined = undefined;
-
-    try {
-      if (beforeFormSubmit) await beforeFormSubmit();
-      if (!inSession()) throw new SessionChangedError();
-      if (!data?.id) response = await handleCreateIssue(payload, is_draft_issue);
-      else response = await handleUpdateIssue(payload);
-    } finally {
-      if (inSession() && response && props.onSubmit) {
+    if (beforeFormSubmit) await beforeFormSubmit();
+    if (!inSession()) throw new SessionChangedError();
+    const response = !data?.id ? await handleCreateIssue(payload, is_draft_issue) : await handleUpdateIssue(payload);
+    if (!inSession()) throw new SessionChangedError();
+    // Deliver the confirmed result before our own close retires this form's lifetime.
+    if (response && props.onSubmit) {
+      try {
         if (props.isDraft) {
           if (!("sequence_id" in response)) await props.onSubmit(response);
         } else if ("sequence_id" in response) await props.onSubmit(response);
+      } catch (error) {
+        // A consumer's follow-up is not a failure of the confirmed creation; never invite another POST.
+        if (inSession()) refuse(error);
       }
+    }
+    if (!inSession()) return;
+    if (data?.id || !createMore) handleClose();
+    else issueTitleRef.current?.focus();
+    if (!data?.id) {
+      setDescription("<p></p>");
+      setChangesMade(null);
     }
   };
 

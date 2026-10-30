@@ -142,8 +142,10 @@ export const SubIssuesListItemProperties = observer(function SubIssuesListItemPr
             }}
             placement="top-end"
             onSelect={(range) => {
-              handleStartDate(range?.from ?? null);
-              handleTargetDate(range?.to ?? null);
+              void updateSubIssue(workspaceSlug, issue.project_id, parentIssueId, issueId, {
+                start_date: range?.from ? renderFormattedPayloadDate(range.from) : null,
+                target_date: range?.to ? renderFormattedPayloadDate(range.to) : null,
+              }).catch(() => undefined);
             }}
             hideIcon={{
               from: false,

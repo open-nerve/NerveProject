@@ -6,7 +6,7 @@
 
 import type { IssueDetail } from "@nerve/api-client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -35,9 +35,14 @@ export type TLabelOperations = {
   create: IssueLabelCreation;
 };
 
-export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
+export function IssueLabel(props: TIssueLabel) {
+  return <IssueLabelContent key={JSON.stringify([props.workspaceSlug, props.projectId, props.issueId])} {...props} />;
+}
+const IssueLabelContent = observer(function IssueLabelContent(props: TIssueLabel) {
   const { workspaceSlug, projectId, issueId, disabled = false, isInboxIssue = false, onLabelUpdate } = props;
   const { t } = useTranslation();
+  const pending = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
   const capture = useDetailScope(workspaceSlug, projectId, issueId, true);
   const { create } = useLabelChanges(capture);
   const run = useDetailCommand(workspaceSlug, projectId, issueId);
@@ -52,11 +57,20 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
 
   const labelOperations: TLabelOperations = useMemo(
     () => ({
-      updateIssue: (slug: string, issueProjectId: string, workItemId: string, data: Partial<IssueDetail>) =>
-        run(async () => {
-          if (onLabelUpdate) await onLabelUpdate(data.label_ids ?? []);
-          else await updateIssue(slug, issueProjectId, workItemId, data);
-        }),
+      updateIssue: async (slug: string, issueProjectId: string, workItemId: string, data: Partial<IssueDetail>) => {
+        if (pending.current) return;
+        pending.current = true;
+        setSubmitting(true);
+        try {
+          await run(async () => {
+            if (onLabelUpdate) await onLabelUpdate(data.label_ids ?? []);
+            else await updateIssue(slug, issueProjectId, workItemId, data);
+          });
+        } finally {
+          pending.current = false;
+          setSubmitting(false);
+        }
+      },
       create: (data, underField, done) =>
         create(projectId, data, underField, async (label) => {
           if (!isInboxIssue)
@@ -75,7 +89,7 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
         issueId={issueId}
         values={issue?.label_ids || []}
         labelOperations={labelOperations}
-        disabled={disabled}
+        disabled={disabled || submitting}
       />
 
       {!disabled && (
@@ -83,6 +97,7 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
           workspaceSlug={workspaceSlug}
           projectId={projectId}
           issueId={issueId}
+          disabled={submitting}
           values={issue?.label_ids || []}
           labelOperations={labelOperations}
         />

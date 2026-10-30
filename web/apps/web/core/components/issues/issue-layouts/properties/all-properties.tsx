@@ -166,8 +166,10 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
               to: getDate(issue.target_date) || undefined,
             }}
             onSelect={(range) => {
-              handleStartDate(range?.from ?? null);
-              handleTargetDate(range?.to ?? null);
+              void updateIssue?.(issue.project_id, issue.id, {
+                start_date: range?.from ? renderFormattedPayloadDate(range.from) : null,
+                target_date: range?.to ? renderFormattedPayloadDate(range.to) : null,
+              }).catch(() => undefined);
             }}
             hideIcon={{
               from: false,

@@ -1,7 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { RefObject } from "react";
 import { observer } from "mobx-react";
-import type { EditorRefApi } from "@nerve/editor";
 import { DescriptionVersionsRoot } from "@/components/core/description-versions";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
@@ -14,10 +12,10 @@ type Props = {
   projectId: string;
   issueId: string;
   isRestoreDisabled: boolean;
-  editorRef: RefObject<Pick<EditorRefApi, "setEditorValue"> | null>;
+  restoreDescription: (confirm: () => Promise<string>) => Promise<void>;
 };
 export const IssueDescriptionVersions = observer(function IssueDescriptionVersions(props: Props) {
-  const { workspaceSlug: ws, projectId: project, issueId: id, editorRef, isRestoreDisabled } = props;
+  const { workspaceSlug: ws, projectId: project, issueId: id, restoreDescription, isRestoreDisabled } = props;
   const { rootIssueStore: root, versions, issue } = useIssueDetail();
   const { getUserDetails } = useMember();
   const scope = useDetailScope(ws, project, id, true);
@@ -53,9 +51,11 @@ export const IssueDescriptionVersions = observer(function IssueDescriptionVersio
       handleRestore={async (html) => {
         const current = scope();
         if (!current()) throw new SessionChangedError();
-        const confirmed = await versions.restore(ws, project, id, html);
-        if (!current()) throw new SessionChangedError();
-        editorRef.current?.setEditorValue(confirmed, false);
+        await restoreDescription(async () => {
+          const confirmed = await versions.restore(ws, project, id, html);
+          if (!current()) throw new SessionChangedError();
+          return confirmed;
+        });
       }}
     />
   );

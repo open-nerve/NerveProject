@@ -5,7 +5,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
@@ -13,7 +13,7 @@ import { EFileAssetType } from "@nerve/types";
 import type { TNameDescriptionLoader } from "@nerve/types";
 // components
 import { IssueDescriptionVersions } from "@/components/issues/issue-detail/description-versions";
-import { DescriptionInput } from "@/components/editor/rich-text/description-input";
+import { DescriptionInput, type DescriptionInputHandle } from "@/components/editor/rich-text/description-input";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -44,6 +44,7 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
   const {
     editorRef,
     workspaceSlug,
+    projectId,
     issueId,
     issueOperations,
     disabled,
@@ -52,6 +53,7 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
     setTitleStatus,
     setDescriptionStatus,
   } = props;
+  const descriptionInputRef = useRef<DescriptionInputHandle>(null);
   // store hooks
   const { data: currentUser } = useUser();
   const {
@@ -97,6 +99,19 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
       />
 
       <DescriptionInput
+        autosaveRef={descriptionInputRef}
+        prepareSubmit={
+          issueOperations.prepareUpdate
+            ? () => {
+                const update = issueOperations.prepareUpdate!();
+                return (value, isMigrationUpdate) =>
+                  update(workspaceSlug, projectId, issueId, {
+                    description_html: value.description_html,
+                    ...(isMigrationUpdate ? { skip_activity: true } : {}),
+                  });
+              }
+            : undefined
+        }
         issueSequenceId={issue.sequence_id}
         containerClassName="-ml-3 border-none"
         disabled={disabled || isArchived}
@@ -131,7 +146,7 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
           workspaceSlug={workspaceSlug}
           projectId={issue.project_id}
           issueId={issueId}
-          editorRef={editorRef}
+          restoreDescription={(confirm) => descriptionInputRef.current!.restore(confirm)}
           isRestoreDisabled={disabled || isArchived}
         />
       </div>

@@ -6,9 +6,11 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EIssuesStoreType } from "@nerve/types";
 import { ApiError } from "@/lib/api-error";
 import { toasts } from "@/lib/fake-toast";
-import { issueOf } from "@/store/issue/fake-issues";
+import { issueOf, issueStoreTab } from "@/store/issue/fake-issues";
 import type { IssueDescriptionEditor } from "./components/description-editor";
 import { CreateUpdateIssueModalBase } from "./base";
+vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
+let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 const boundary = vi.hoisted(() => ({ fetch: vi.fn(), create: vi.fn(), update: vi.fn() }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
@@ -19,7 +21,12 @@ vi.mock("@/hooks/context/use-issue-modal", () => ({
 }));
 vi.mock("@/hooks/store/use-issues", () => ({ useIssues: () => ({ issues: {} }) }));
 vi.mock("@/hooks/store/use-issue-detail", () => ({
-  useIssueDetail: () => ({ fetchIssue: boundary.fetch, issue: { getIssueById: () => undefined } }),
+  useIssueDetail: () => ({
+    ...tab.app.issue.issueDetail,
+    rootIssueStore: tab.app.issue,
+    fetchIssue: boundary.fetch,
+    issue: { getIssueById: () => undefined },
+  }),
 }));
 vi.mock("@/hooks/store/use-project", () => ({
   useProject: () => ({ getProjectByIdentifier: () => undefined, getProjectById: () => undefined }),
@@ -74,7 +81,10 @@ class NoResize {
 }
 let root: Root;
 let container: HTMLElement;
-beforeEach(() => {
+beforeEach(async () => {
+  vi.useFakeTimers();
+  tab = await issueStoreTab();
+  vi.useRealTimers();
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.stubGlobal("ResizeObserver", NoResize);
   toasts.length = 0;
@@ -88,6 +98,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  tab.app.dispose();
 });
 it("reads the independent clone source, locks the real project Controller and submits source HTML without local identity", async () => {
   const data = { name: "Cloned title", project_id: "A", state_id: "state" };

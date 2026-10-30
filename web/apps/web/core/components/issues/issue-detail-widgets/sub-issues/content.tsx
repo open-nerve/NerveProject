@@ -30,7 +30,12 @@ type Props = {
 
 type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: Issue | undefined };
 
-export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibleContent(props: Props) {
+export function SubIssuesCollapsibleContent(props: Props) {
+  return (
+    <SubIssuesContent key={JSON.stringify([props.workspaceSlug, props.projectId, props.parentIssueId])} {...props} />
+  );
+}
+const SubIssuesContent = observer(function SubIssuesContent(props: Props) {
   const { workspaceSlug, projectId, parentIssueId, disabled } = props;
   // state
   const [issueCrudState, setIssueCrudState] = useState<{
@@ -62,14 +67,15 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
   });
   // store hooks
   const {
-    subIssues: { subIssueHelpersByIssueId, setSubIssueHelpers, getError, retry },
+    fetchSubIssues,
+    subIssues: { getError, retry },
   } = useIssueDetail();
   const { toggleCreateIssueModal, toggleDeleteIssueModal } = useIssueDetailModals();
 
   // helpers
   const subIssueOperations = useSubIssueOperations(workspaceSlug, projectId, parentIssueId);
   const captureScope = useDetailScope(workspaceSlug, projectId, parentIssueId);
-  const subIssueHelpers = subIssueHelpersByIssueId(`${parentIssueId}_root`);
+  const [visible, setVisible] = useState(false);
 
   // handler
   const handleIssueCrudState = useCallback(
@@ -86,47 +92,22 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
     [issueCrudState]
   );
 
-  const handleFetchSubIssues = useCallback(async () => {
-    const current = captureScope();
-    const helperId = `${parentIssueId}_root`;
-    const currentSubIssueHelpers = subIssueHelpersByIssueId(helperId);
-    // setSubIssueHelpers toggles membership. Skip if visible or a fetch is already in flight
-    // so React Strict Mode's double effect does not add then remove visibility.
-    if (
-      currentSubIssueHelpers.issue_visibility.includes(parentIssueId) ||
-      currentSubIssueHelpers.preview_loader.includes(parentIssueId)
-    ) {
-      return;
-    }
-
-    try {
-      setSubIssueHelpers(helperId, "preview_loader", parentIssueId);
-      await subIssueOperations.fetchSubIssues(workspaceSlug, projectId, parentIssueId);
-      if (!current()) return;
-      if (!subIssueHelpersByIssueId(helperId).issue_visibility.includes(parentIssueId)) {
-        setSubIssueHelpers(helperId, "issue_visibility", parentIssueId);
-      }
-    } catch {
-      // The scoped resource keeps the current refusal for the retry panel below.
-    } finally {
-      if (current() && subIssueHelpersByIssueId(helperId).preview_loader.includes(parentIssueId)) {
-        setSubIssueHelpers(helperId, "preview_loader", parentIssueId);
-      }
-    }
-  }, [
-    captureScope,
-    parentIssueId,
-    projectId,
-    setSubIssueHelpers,
-    subIssueHelpersByIssueId,
-    subIssueOperations,
-    workspaceSlug,
-  ]);
-
   useEffect(() => {
-    handleFetchSubIssues();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parentIssueId]);
+    const current = captureScope();
+    let active = true;
+    void fetchSubIssues(workspaceSlug, projectId, parentIssueId).then(
+      () => {
+        if (active && current()) setVisible(true);
+        return undefined;
+      },
+      () => {
+        /* The resource retains its refusal for the read-only retry. */
+      }
+    );
+    return () => {
+      active = false;
+    };
+  }, [captureScope, fetchSubIssues, workspaceSlug, projectId, parentIssueId]);
 
   // render conditions
   const shouldRenderDeleteIssueModal =
@@ -147,16 +128,10 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
         retry={async () => {
           const current = captureScope();
           await retry(workspaceSlug, projectId, parentIssueId);
-          const helper = `${parentIssueId}_root`;
-          if (
-            current() &&
-            !getError(parentIssueId) &&
-            !subIssueHelpersByIssueId(helper).issue_visibility.includes(parentIssueId)
-          )
-            setSubIssueHelpers(helper, "issue_visibility", parentIssueId);
+          if (current() && !getError(parentIssueId)) setVisible(true);
         }}
       />
-      {subIssueHelpers.issue_visibility.includes(parentIssueId) && (
+      {visible && (
         <SubIssuesListRoot
           storeType={EIssuesStoreType.PROJECT}
           workspaceSlug={workspaceSlug}

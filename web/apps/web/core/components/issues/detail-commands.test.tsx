@@ -37,7 +37,16 @@ const closed = vi.fn();
 vi.mock("./issue-detail/parent-select", () => ({
   IssueParentSelect: (props: ComponentProps<typeof IssueParentSelect>) => (
     <>
-      <button onClick={() => void props.handleParentIssue("next")}>parent</button>
+      <button
+        onClick={() =>
+          void props
+            .handleParentIssue("next")
+            .then(() => closed(null))
+            .catch(() => undefined)
+        }
+      >
+        parent
+      </button>
       <button onClick={() => void props.handleRemoveSubIssue("ws", "A", "next", "x")}>remove</button>
     </>
   ),
@@ -179,10 +188,11 @@ it("removing a child releases its loader on refusal and reports the native failu
   tab.nerve.calls.length = 0;
   await act(async () => host.querySelectorAll<HTMLButtonElement>("button")[1]!.click());
   await act(async () => until(() => tab.nerve.calls.length === 1, "remove PATCH"));
-  expect(tab.app.issue.issueDetail.subIssues.subIssueHelpersByIssueId("next").issue_loader).toEqual(["x"]);
+  await act(async () => host.querySelectorAll<HTMLButtonElement>("button")[1]!.click());
+  expect(tab.nerve.calls).toHaveLength(1);
   await act(async () => tab.nerve.calls[0]!.answer(problem(403, "forbidden")));
   await act(async () => until(() => toasts.length > 0, "remove refused"));
-  expect(tab.app.issue.issueDetail.subIssues.subIssueHelpersByIssueId("next").issue_loader).toEqual([]);
+
   expect(toasts.at(-1)?.message).toBe("errors.forbidden");
   expect(tab.nerve.calls).toHaveLength(1);
 });

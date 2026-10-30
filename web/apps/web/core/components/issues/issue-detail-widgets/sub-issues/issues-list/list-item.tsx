@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { useRef, useState } from "react";
 import type { Issue } from "@nerve/api-client";
 
 import { observer } from "mobx-react";
@@ -48,7 +49,15 @@ type Props = {
   storeType?: EIssuesStoreType;
 };
 
-export const SubIssuesListItem = observer(function SubIssuesListItem(props: Props) {
+export function SubIssuesListItem(props: Props) {
+  return (
+    <SubIssuesListItemContent
+      key={JSON.stringify([props.workspaceSlug, props.projectId, props.parentIssueId, props.issueId])}
+      {...props}
+    />
+  );
+}
+const SubIssuesListItemContent = observer(function SubIssuesListItemContent(props: Props) {
   const {
     workspaceSlug,
     projectId,
@@ -73,6 +82,8 @@ export const SubIssuesListItem = observer(function SubIssuesListItem(props: Prop
   } = useIssueDetail();
   const { fetchSubIssues } = useSubIssueOperations(workspaceSlug, projectId, issueId);
   const capture = useDetailScope(workspaceSlug, projectId, issueId);
+  const pending = useRef(false);
+  const [loading, setLoading] = useState(false);
   const { toggleDeleteIssueModal } = useIssueDetailModals();
   const { toggleCreateIssueModal } = useIssueDetailModals();
   const project = useProject();
@@ -123,7 +134,7 @@ export const SubIssuesListItem = observer(function SubIssuesListItem(props: Prop
               {/* disable the chevron when current issue is also the root issue*/}
               {subIssueCount > 0 && !isCurrentIssueRoot && (
                 <>
-                  {subIssueHelpers.preview_loader.includes(issue.id) ? (
+                  {loading ? (
                     <div className="flex h-full w-full cursor-not-allowed items-center justify-center rounded-xs bg-layer-1 transition-all">
                       <LinkOutline width={14} height={14} className="animate-spin" />
                     </div>
@@ -136,18 +147,20 @@ export const SubIssuesListItem = observer(function SubIssuesListItem(props: Prop
                       onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        if (pending.current) return;
                         const current = capture();
+                        pending.current = true;
+                        setLoading(true);
                         try {
                           if (!subIssueHelpers.issue_visibility.includes(issueId)) {
-                            setSubIssueHelpers(parentIssueId, "preview_loader", issueId);
                             await fetchSubIssues(workspaceSlug, projectId, issueId);
                           }
                           if (current()) setSubIssueHelpers(parentIssueId, "issue_visibility", issueId);
                         } catch {
                           // The resource retains the refusal for the inline read-only retry.
                         } finally {
-                          if (current() && subIssueHelpersByIssueId(parentIssueId).preview_loader.includes(issueId))
-                            setSubIssueHelpers(parentIssueId, "preview_loader", issueId);
+                          pending.current = false;
+                          if (current()) setLoading(false);
                         }
                       }}
                     >

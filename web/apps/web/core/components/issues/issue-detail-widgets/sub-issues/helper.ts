@@ -17,19 +17,25 @@ export function useSubIssueOperations(workspaceSlug: string, projectId: string, 
   const detail = useIssueDetail();
   const capture = useDetailScope(workspaceSlug, projectId, hostId);
   const refusal = useRefusalToast();
+  const owner = useMemo(
+    () => ({ detail, workspaceSlug, projectId, hostId, pending: new Set<string>() }),
+    [detail, workspaceSlug, projectId, hostId]
+  );
   return useMemo(() => {
     const run = async (operation: () => Promise<void>, parent: string, child: string) => {
       const current = capture();
-      const store = detail.subIssues;
-      if (!current()) return;
-      store.setSubIssueHelpers(parent, "issue_loader", child);
-      await followInSession(operation, {
-        failed: (error) => {
-          if (current() && !(error instanceof SessionChangedError)) refusal(error);
-        },
-      });
-      if (current() && store.subIssueHelpersByIssueId(parent).issue_loader.includes(child))
-        store.setSubIssueHelpers(parent, "issue_loader", child);
+      const key = JSON.stringify([parent, child]);
+      if (!current() || owner.pending.has(key)) return;
+      owner.pending.add(key);
+      try {
+        await followInSession(operation, {
+          failed: (error) => {
+            if (current() && !(error instanceof SessionChangedError)) refusal(error);
+          },
+        });
+      } finally {
+        owner.pending.delete(key);
+      }
     };
     return {
       copyLink: async (path) => copyUrlToClipboard(path),
@@ -44,5 +50,5 @@ export function useSubIssueOperations(workspaceSlug: string, projectId: string, 
         run(() => detail.removeSubIssue(ws, project, parent, id), parent, id),
       deleteSubIssue: (ws, project, parent, id) => detail.deleteSubIssue(ws, project, parent, id),
     };
-  }, [capture, detail, refusal]);
+  }, [capture, detail, refusal, owner]);
 }

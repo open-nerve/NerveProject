@@ -63,7 +63,7 @@ const render = (disabled = false) =>
           workspaceSlug="ws"
           projectId="A"
           issueId="x"
-          editorRef={editor}
+          restoreDescription={async (confirm) => editor.current.setEditorValue(await confirm(), false)}
           isRestoreDisabled={disabled}
         />
       </SWRConfig>

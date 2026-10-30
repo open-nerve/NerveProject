@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 
+import { heldChange } from "@/lib/auth/fake-tab";
+import { toasts } from "@/lib/fake-toast";
+import { ApiError } from "@/lib/api-error";
 import type { Issue } from "@nerve/api-client";
 import React, { act, forwardRef, useImperativeHandle } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -318,3 +321,32 @@ it.each(["<p>source</p>", ""])(
     );
   }
 );
+
+it.each(["closed", "source", "unmounted"])(
+  "does not follow an old ordinary creation after its form is %s",
+  async (scope) => {
+    toasts.length = 0;
+    const pending = heldChange<Issue>();
+    ui.create.mockImplementation(() => pending.sent);
+    await render();
+    await submit();
+    expect(ui.create).toHaveBeenCalledTimes(1);
+    if (scope === "closed") await render("source", false);
+    else if (scope === "source") await render("another");
+    else await act(async () => root.render(null));
+    await act(async () => pending.answer(issueOf("created", project.id, project.workspace_id)));
+    expect(ui.close).not.toHaveBeenCalled();
+    expect(toasts).toEqual([]);
+  }
+);
+it("does not report an ordinary creation refusal from a previous source", async () => {
+  toasts.length = 0;
+  const pending = heldChange<Issue>();
+  ui.create.mockImplementation(() => pending.sent);
+  await render();
+  await submit();
+  await render("another");
+  await act(async () => pending.refuse(new ApiError(403, { status: 403, code: "forbidden", title: "Forbidden" })));
+  expect(toasts).toEqual([]);
+  expect(ui.close).not.toHaveBeenCalled();
+});

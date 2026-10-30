@@ -39,6 +39,8 @@ export function useIssueOperations(
 ): TIssueOperations {
   const detail = useIssueDetail();
   const run = useDetailCommand(workspaceSlug, projectId, issueId);
+  const capture = useDetailScope(workspaceSlug, projectId, issueId, true);
+  const refuse = useRefusalToast();
   const { t } = useTranslation();
   return useMemo(
     () => ({
@@ -46,6 +48,34 @@ export function useIssueOperations(
         await detail.fetchIssue(ws, project, id);
       },
       update: (ws, project, id, body) => run(() => detail.updateIssue(ws, project, id, body)),
+      prepareUpdate: () => {
+        const current = capture();
+        const inSession = sessionGuard();
+        const root = detail.rootIssueStore;
+        const permission = root.permissionReads.capture();
+        const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
+        const authorized = current() && inSession();
+        return async (ws, project, id, body) => {
+          if (
+            !authorized ||
+            !root.active ||
+            !inSession() ||
+            ws !== workspaceSlug ||
+            project !== projectId ||
+            id !== issueId ||
+            !workspace ||
+            !root.permissionReads.current(permission, workspace.id, [project], true)
+          )
+            throw new SessionChangedError();
+          try {
+            await detail.updateIssue(ws, project, id, body);
+          } catch (error) {
+            if (current() && inSession() && !(error instanceof SessionChangedError)) refuse(error);
+            throw error;
+          }
+          if (!current() || !inSession()) throw new SessionChangedError();
+        };
+      },
       restore: async (ws, project, id) => {
         await run(() => detail.rootIssueStore.unarchiveIssue(id, detail.rootIssueStore.scope(ws, project)));
         setToast({
@@ -55,6 +85,6 @@ export function useIssueOperations(
         });
       },
     }),
-    [detail, run, t]
+    [detail, run, t, capture, refuse, workspaceSlug, projectId, issueId]
   );
 }

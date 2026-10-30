@@ -203,7 +203,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
                       type="button"
                       className="grid size-4 place-items-center rounded-xs text-placeholder hover:text-tertiary"
                       aria-expanded={isExpanded}
-                      aria-label={t("common.common.sub_work_items")}
+                      aria-label={t("common.sub_work_items")}
                       onClick={handleToggleExpand}
                     >
                       <ChevronRightOutline

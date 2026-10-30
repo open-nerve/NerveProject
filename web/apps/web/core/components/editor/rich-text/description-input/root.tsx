@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useMemo } from "react";
+import { useImperativeHandle, useMemo } from "react";
 import { AutosaveError, useConfirmedAutosave } from "../../use-confirmed-autosave";
 import { observer } from "mobx-react";
 // nerve imports
@@ -24,7 +24,10 @@ type TFormData = {
   isMigrationUpdate: boolean;
 };
 
+export type DescriptionInputHandle = { restore: (confirm: () => Promise<string>) => Promise<void> };
 type Props = {
+  autosaveRef?: React.Ref<DescriptionInputHandle>;
+  prepareSubmit?: () => Props["onSubmit"];
   /**
    * @description Container class name, this will be used to add custom styles to the editor container
    */
@@ -101,6 +104,8 @@ const sameDescription = (left: TFormData, right: TFormData) =>
   left.id === right.id && left.description_html === right.description_html;
 const DescriptionInputContent = observer(function DescriptionInputContent(props: Props) {
   const {
+    autosaveRef,
+    prepareSubmit,
     containerClassName,
     disabled,
     disabledExtensions,
@@ -129,13 +134,36 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
     change,
     failure,
     retry,
+    replaceWith,
+    replacing,
   } = useConfirmedAutosave({
     initial,
     same: sameDescription,
     save: (input) => onSubmit({ description_html: input.description_html }, input.isMigrationUpdate),
+    prepareSave: prepareSubmit
+      ? () => {
+          const submit = prepareSubmit();
+          return (input) => submit({ description_html: input.description_html }, input.isMigrationUpdate);
+        }
+      : undefined,
     status: setIsSubmitting,
     disabled,
   });
+
+  useImperativeHandle(
+    autosaveRef,
+    () => ({
+      restore: async (confirm) => {
+        const result = await replaceWith(async () => ({
+          id: entityId,
+          description_html: await confirm(),
+          isMigrationUpdate: false,
+        }));
+        editorRef?.current?.setEditorValue(result.description_html, false);
+      },
+    }),
+    [replaceWith, entityId, editorRef]
+  );
 
   if (!workspaceDetails) return null;
 
@@ -143,7 +171,7 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
     <>
       <RichTextEditor
         key={entityId}
-        editable={!disabled}
+        editable={!disabled && !replacing}
         ref={editorRef}
         id={entityId}
         issueSequenceId={issueSequenceId}

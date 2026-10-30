@@ -13,7 +13,7 @@ import { useIssueSaveStatus } from "@/components/issues/use-issue-save-status";
 import { EFileAssetType } from "@nerve/types";
 // components
 import { IssueDescriptionVersions } from "@/components/issues/issue-detail/description-versions";
-import { DescriptionInput } from "@/components/editor/rich-text/description-input";
+import { DescriptionInput, type DescriptionInputHandle } from "@/components/editor/rich-text/description-input";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -45,6 +45,7 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
   const { workspaceSlug, projectId, issueId, issueOperations, isEditable, isArchived } = props;
   // refs
   const editorRef = useRef<EditorRefApi>(null);
+  const descriptionInputRef = useRef<DescriptionInputHandle>(null);
   // states
   const { status: isSubmitting, setTitleStatus, setDescriptionStatus } = useIssueSaveStatus();
   // hooks
@@ -94,6 +95,19 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
         />
 
         <DescriptionInput
+          autosaveRef={descriptionInputRef}
+          prepareSubmit={
+            issueOperations.prepareUpdate
+              ? () => {
+                  const update = issueOperations.prepareUpdate!();
+                  return (value, isMigrationUpdate) =>
+                    update(workspaceSlug, projectId, issueId, {
+                      description_html: value.description_html,
+                      ...(isMigrationUpdate ? { skip_activity: true } : {}),
+                    });
+                }
+              : undefined
+          }
           issueSequenceId={issue.sequence_id}
           containerClassName="-ml-6 border-none p-0! pl-6!"
           disabled={isArchived || !isEditable}
@@ -129,7 +143,7 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
             workspaceSlug={workspaceSlug}
             projectId={issue.project_id}
             issueId={issueId}
-            editorRef={editorRef}
+            restoreDescription={(confirm) => descriptionInputRef.current!.restore(confirm)}
             isRestoreDisabled={!isEditable || isArchived}
           />
         </div>

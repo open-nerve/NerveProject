@@ -11,7 +11,7 @@ import type { DetailResource } from "./resource";
 import type { IIssueDetail } from "./root.store";
 import { WorkItemSubIssueFiltersStore } from "./sub_issues_filter.store";
 
-type HelperKey = "issue_visibility" | "preview_loader" | "issue_loader";
+type HelperKey = "issue_visibility";
 type Helpers = Record<HelperKey, string[]>;
 export type IIssueSubIssuesStore = IssueSubIssuesStore;
 export type IIssueSubIssuesStoreActions = Pick<
@@ -50,8 +50,7 @@ export class IssueSubIssuesStore {
     }
     return distribution;
   });
-  subIssueHelpersByIssueId = (id: string): Helpers =>
-    this.subIssueHelpers[id] ?? { preview_loader: [], issue_visibility: [], issue_loader: [] };
+  subIssueHelpersByIssueId = (id: string): Helpers => this.subIssueHelpers[id] ?? { issue_visibility: [] };
   setSubIssueHelpers = (id: string, key: HelperKey, value: string) => {
     const held = this.subIssueHelpersByIssueId(id);
     this.subIssueHelpers[id] = {

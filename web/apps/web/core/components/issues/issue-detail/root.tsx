@@ -29,6 +29,8 @@ import { DetailResourceError } from "../issue-detail-widgets/resource-error";
 export type TIssueOperations<TUpdate = IssueUpdate> = {
   fetch: (workspaceSlug: string, projectId: string, issueId: string, loader?: boolean) => Promise<void>;
   update: (workspaceSlug: string, projectId: string, issueId: string, data: TUpdate) => Promise<void>;
+  /** Capture persistence authorization while the input's host is alive, for its final unmount flush. */
+  prepareUpdate?: () => TIssueOperations<TUpdate>["update"];
   restore?: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 };
 

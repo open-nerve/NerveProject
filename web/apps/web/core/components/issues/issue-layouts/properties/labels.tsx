@@ -189,6 +189,7 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
             ?.filter((l) => value.includes(l?.id))
             .map((label) => (
               <LabelDropdown
+                disabled={disabled}
                 key={label.id}
                 projectId={projectId}
                 value={value}
@@ -212,6 +213,7 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
             ))
         ) : (
           <LabelDropdown
+            disabled={disabled}
             projectId={projectId}
             value={value}
             onChange={onChange}
@@ -234,6 +236,7 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
         )
       ) : (
         <LabelDropdown
+          disabled={disabled}
           projectId={projectId}
           value={value}
           onChange={onChange}

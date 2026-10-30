@@ -1,6 +1,6 @@
 # M4/P11 详情数据层：预检与实施记录
 
-日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T13已实现，继续T14。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
+日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T14已实现，T15整审修复已完成，最终门禁验证中。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
 
 ## 1. 前置、身份与范围
 
@@ -259,9 +259,9 @@ T13准确提交`100565d27bc7d842a5693d877b84f42ef73e544c`的[CI 40982066769](htt
 
 矩阵复核又发现排队起点权限水位丢失，及目录等待/拖动队列/204删除回包的同类缺口；已在现有IssueRootStore统一加固，资源入口传源范围，涉及多个工作项时合并其已有项目证明。没有第二套权限事实。不同root、另一工作区权限变化不误伤当前队列。
 
-证据目录仍为本worktree `.superpowers/sdd/P11-web-detail-data/`：`t14-command-red` 8行为失败→9绿；`t14-autosave-red` 7行为失败及1未处理拒绝→12项（含撤回/卸载补充）绿；`t14-editor-status-red` 1行为失败→13项相关绿；`t14-parent-children-red` 3行为失败及1未处理拒绝→24绿；`t14-mention-scope-red` 1行为失败→6绿，源hook14绿。`t14-queue-aba-restored-red` 在确认恢复权限后18项失败→完整矩阵57绿；先前fixture自动答复错误的运行不算ABA证明。`t14-queue-scope-drag-red` 真实多发PATCH，`t14-catalog-recovered-red` 在新读恢复实体后真实多发PATCH，`t14-core-permission-red` 的DELETE旧回包确认错误，均在` t14-root-guards-green`的170项及随后回归通过。错误类型/类型检查/fixture错误单列，不充当行为证据。
+证据目录仍为本worktree `.superpowers/sdd/P11-web-detail-data/`：`t14-command-red` 8行为失败→9绿；`t14-autosave-red` 7行为失败及1未处理拒绝→12项（含撤回/卸载补充）绿；`t14-editor-status-red` 1行为失败→13项相关绿；`t14-parent-children-red` 3行为失败及1未处理拒绝→24绿；`t14-mention-scope-red` 1行为失败→6绿，源hook14绿。`t14-queue-aba-restored-red` 在确认恢复权限后18项失败→完整矩阵57绿；先前fixture自动答复错误的运行不算ABA证明。`t14-queue-scope-drag-red` 真实多发PATCH，`t14-catalog-recovered-red` 在新读恢复实体后真实多发PATCH，`t14-core-permission-red` 的DELETE旧回包确认错误，均在`t14-root-guards-green`的170项及随后回归通过。错误类型/类型检查/fixture错误单列，不充当行为证据。
 
-最终定向` t14-matrix-final`：23文件440项通过，涵盖全部detail资源、核心多副本、拖动及本Task真实消费者；`t14-types-final`通过。静态52文件零告警，原web警告数147→146并收紧cap。共享包10任务强制构建通过；最终F和整分支审核留T15。无新增依赖，无守卫放宽。
+最终定向`t14-matrix-final`：23文件440项通过，涵盖全部detail资源、核心多副本、拖动及本Task真实消费者；`t14-types-final`通过。静态53文件零告警，原web警告数147→146并收紧cap。共享包10任务强制构建通过；最终F和整分支审核留T15。无新增依赖，无守卫放宽。
 
 #### 完整修改矩阵
 
@@ -297,3 +297,12 @@ T13准确提交`100565d27bc7d842a5693d877b84f42ef73e544c`的[CI 40982066769](htt
 `t14-transition-audit`逐个对照基线证明9个指定模块实例消失：两个版本消费者（main-content、peek issue-detail）、workspace_draft service模块实例、四个提及入口（lite-text、description-input、issue-modal description-editor、inbox create issue-description）、archives header及issueId page两处IssueService。根按代构造原生薄服务是保留的正确归属，不要求全库`new Service`为零。
 
 M4指定目录的is_bot/description_json/comment_json均零命中，旧IssueService文件删除，keywords仍76规则/24精确例外。剩余M4模块实例为ExistingIssuesListModal（P12）、父项搜索和M7查重选择（P14）、命令面板搜索（P15）；projectIssuesSearch旧URL例外到P16前强制到期，P14若无读者即删。global-view.store的WorkspaceService属于M7自身待接通。M5资产、M6迭代/模块、M7收集箱/视图保留各自领域边界；copy-hook现有例外按各closeout处理，不冒称P11已满足P15/整M4零残留门禁。删除无读者label defaultOptions及其三个构造调用、peek storeType、输入key/状态冗余prop。
+
+
+### T15 整分支审查与修复（最终验证中）
+
+使用deep-review对阶段基线df5d3bbc至ad0dc1ec逐批审逻辑、集成和覆盖；全新只读审者核283个变更（271全文、6完整结构+变更、6历史文档相关章节+完整diff），另9依赖全文；逐路径、原SHA/行数与阅读方式在`final-reviewer-coverage.json`。不把部分历史正文或结构解析称为逐字全文，不声称审了整仓。主控核真实调用链并自行完成一次局部修复；未重新派第二审者。
+
+固定审核HEAD的6 Major/3 Minor包括父项提前关闭、子项共享加载残留、祖先卸载阻止最后autosave、版本恢复未重置autosave、两处日期拆写、标签旧集合覆盖、普通表单旧scope跟进、四个翻译key和三类只读标签透传。普通表单问题按可能重置新表单/触发旧资产请求的影响升为Major；无Critical或架构阻断。所有发现均纳入局部修复，不放宽架构、权限或关键词守卫。
+
+`t15-regression-ready`的33文件524项、`t15-types-ready`已通过；静态/完整F/最终准确SHA的CI仍待完成，不能据此声称P11已交付。有效RED与夹具失败的区别、修复权衡和全部回执路径保存在台账；阶段A1–A10继续开放，最终整审报告和验收映射在门禁完成后收口。

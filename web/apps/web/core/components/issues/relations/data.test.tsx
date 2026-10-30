@@ -13,6 +13,8 @@ import { RelationsCollapsibleContent } from "../issue-detail-widgets/relations/c
 import { RelationIssueListItem } from "./issue-list-item";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
 import { SubIssuesCollapsibleContent } from "../issue-detail-widgets/sub-issues/content";
+import { SubIssuesListItem } from "../issue-detail-widgets/sub-issues/issues-list/list-item";
+import { useSubIssueOperations } from "../issue-detail-widgets/sub-issues/helper";
 import { IssueDetailRoot } from "../issue-detail/root";
 
 configure({ safeDescriptors: false });
@@ -58,6 +60,9 @@ vi.mock("@nerve/ui", () => ({
 }));
 vi.mock("@makeplane/propel/components/collapsible", () => ({
   Collapsible: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+vi.mock("../issue-detail-widgets/sub-issues/issues-list/properties", () => ({
+  SubIssuesListItemProperties: () => null,
 }));
 vi.mock("../delete-issue-modal", () => ({ DeleteIssueModal: () => null }));
 vi.mock("./issue-list", () => ({
@@ -314,4 +319,74 @@ it("the real detail host still offers resource retry while its canonical issue i
   });
   expect(container.querySelector("[data-detail]")).not.toBeNull();
   expect(nerve.calls.filter((call) => call.method === "POST")).toHaveLength(1);
+});
+
+it.each(["old-first", "new-first"])(
+  "reopening a child tree owns its pending read independently (%s)",
+  async (order) => {
+    const { nerve } = binding.tab!;
+    nerve.respond = (call) => {
+      if (call.path === "/api/v0/projects/A/states") call.answer(json(200, { data: [] }));
+      if (call.path === "/api/v0/issues/source") call.answer(json(200, issueDetailOf("source")));
+    };
+    const view = (
+      <SubIssuesCollapsibleContent workspaceSlug="ws" projectId="A" parentIssueId="source" disabled={false} />
+    );
+    await act(async () => renderer.render(view));
+    const path = "/api/v0/issues/source/sub-issues";
+    expect(nerve.to(path)).toHaveLength(1);
+    await act(async () => renderer.render(null));
+    await act(async () => renderer.render(view));
+    expect(nerve.to(path)).toHaveLength(2);
+    const answer = (index: number) => act(async () => nerve.to(path)[index]!.answer(json(200, { data: [] })));
+    if (order === "old-first") {
+      await answer(0);
+      expect(container.querySelector("[data-subitems]")).toBeNull();
+      await answer(1);
+    } else {
+      await answer(1);
+      await answer(0);
+    }
+    expect(container.querySelector("[data-subitems]")).not.toBeNull();
+  }
+);
+
+function ChildRow() {
+  const operations = useSubIssueOperations("ws", "A", "source");
+  return (
+    <SubIssuesListItem
+      workspaceSlug="ws"
+      projectId="A"
+      parentIssueId="source"
+      rootIssueId="source"
+      issueId="target"
+      spacingLeft={0}
+      canEdit
+      handleIssueCrudState={() => {}}
+      subIssueOperations={operations}
+    />
+  );
+}
+it("a reopened child row has its own loader and an older read cannot release the current one", async () => {
+  const { app, nerve } = binding.tab!;
+  app.issue.issues.acceptRead({ ...issueDetailOf("target"), sub_issues_count: 1 }, app.issue.captureRead());
+  nerve.respond = (call) => {
+    if (call.path === "/api/v0/projects/A/states") call.answer(json(200, { data: [] }));
+    if (call.path === "/api/v0/issues/target")
+      call.answer(json(200, { ...issueDetailOf("target"), sub_issues_count: 1 }));
+  };
+  const chevron = () => container.querySelector<HTMLButtonElement>('button[aria-label="common.sub_work_items"]');
+  await act(async () => renderer.render(<ChildRow />));
+  await act(async () => chevron()!.click());
+  const path = "/api/v0/issues/target/sub-issues";
+  expect(nerve.to(path)).toHaveLength(1);
+  await act(async () => renderer.render(null));
+  await act(async () => renderer.render(<ChildRow />));
+  expect(chevron()).not.toBeNull();
+  await act(async () => chevron()!.click());
+  expect(nerve.to(path)).toHaveLength(2);
+  await act(async () => nerve.to(path)[0]!.answer(json(200, { data: [] })));
+  expect(chevron()).toBeNull();
+  await act(async () => nerve.to(path)[1]!.answer(json(200, { data: [] })));
+  expect(chevron()?.getAttribute("aria-expanded")).toBe("true");
 });

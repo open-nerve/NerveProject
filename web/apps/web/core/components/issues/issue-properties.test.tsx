@@ -11,6 +11,7 @@ import { settle, until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import { IssueLabelSelect } from "./select/dropdown";
 import { IssueLabel } from "./issue-detail/label/root";
+import { IssuePropertyLabels } from "./issue-layouts/properties/labels";
 import { LabelDropdown } from "./issue-layouts/properties/label-dropdown";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
@@ -206,4 +207,63 @@ it("a confirmed new label whose issue PATCH is refused remains unselected and pr
   expect(host.querySelector<HTMLInputElement>("input")?.value).toBe("New name");
   expect(tab.app.issue.issues.getIssueById("x")?.label_ids).toEqual([]);
   expect(toasts.filter((toast) => toast.message === "errors.forbidden")).toHaveLength(1);
+});
+
+it("serializes the actual label collection controls while a confirmed replacement is pending", async () => {
+  const labels = [labelOf(tab.project, "First", 1), labelOf(tab.project, "Second", 2)];
+  tab.nerve.respond = (call) => {
+    if (call.method === "GET" && call.path.endsWith("/labels")) call.answer(json(200, { data: labels }));
+  };
+  await tab.app.label.fetchProjectLabels("A");
+  tab.app.issue.issues.acceptRead(
+    { ...issueDetailOf("x"), label_ids: labels.map((label) => label.id) },
+    tab.app.issue.captureRead()
+  );
+  await act(async () => renderer.render(<IssueLabel workspaceSlug="ws" projectId="A" issueId="x" disabled={false} />));
+  const button = (name: string) => [...host.querySelectorAll("button")].find((item) => item.textContent === name)!;
+  await act(async () => button("First").click());
+  await act(async () => until(() => tab.nerve.calls.some((call) => call.method === "PATCH"), "remove First"));
+  expect(button("Second").disabled).toBe(true);
+  await act(async () => button("Second").click());
+  let writes = tab.nerve.calls.filter((call) => call.method === "PATCH");
+  expect(writes).toHaveLength(1);
+  await act(async () =>
+    writes[0]!.answer(
+      json(200, { ...issueDetailOf("x"), label_ids: [labels[1]!.id], updated_at: "2026-10-30T10:00:01Z" })
+    )
+  );
+  expect(button("Second").disabled).toBe(false);
+  await act(async () => button("Second").click());
+  writes = tab.nerve.calls.filter((call) => call.method === "PATCH");
+  expect(writes).toHaveLength(2);
+  expect(writes[1]!.body).toMatchObject({ label_ids: [] });
+  await act(async () =>
+    writes[1]!.answer(json(200, { ...issueDetailOf("x"), label_ids: [], updated_at: "2026-10-30T10:00:02Z" }))
+  );
+  expect(tab.app.issue.issues.getIssueById("x")?.label_ids).toEqual([]);
+});
+
+it.each([0, 1, 3])("keeps the readonly label layout inert with %s selected labels", async (count) => {
+  const labels = [1, 2, 3].map((id) => labelOf(tab.project, `Label ${id}`, id));
+  tab.nerve.respond = (call) => {
+    if (call.method === "GET" && call.path.endsWith("/labels")) call.answer(json(200, { data: labels }));
+  };
+  await tab.app.label.fetchProjectLabels("A");
+  tab.nerve.calls.length = 0;
+  await act(async () =>
+    renderer.render(
+      <IssuePropertyLabels
+        projectId="A"
+        value={labels.slice(0, count).map((label) => label.id)}
+        onChange={changed}
+        disabled
+      />
+    )
+  );
+  const buttons = [...host.querySelectorAll("button")];
+  expect(buttons.length).toBeGreaterThan(0);
+  expect(buttons.every((button) => button.disabled)).toBe(true);
+  await act(async () => buttons.forEach((button) => button.click()));
+  expect(tab.nerve.calls).toHaveLength(0);
+  expect(changed).not.toHaveBeenCalled();
 });

@@ -25,6 +25,7 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 //constants
 export interface IIssueLabelSelect {
+  disabled?: boolean;
   workspaceSlug: string;
   projectId: string;
   issueId: string;
@@ -34,7 +35,7 @@ export interface IIssueLabelSelect {
 }
 
 export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssueLabelSelect) {
-  const { workspaceSlug, projectId, issueId, values, onSelect, onAddLabel } = props;
+  const { disabled, workspaceSlug, projectId, issueId, values, onSelect, onAddLabel } = props;
   const { t } = useTranslation();
   // store hooks
   const { isMobile } = usePlatformOS();
@@ -118,7 +119,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
   };
 
   const handleAddLabel = async (labelName: string) => {
-    if (pending.current || !labelName.trim()) return;
+    if (disabled || pending.current || !labelName.trim()) return;
     pending.current = true;
     setSubmitting(true);
     setNameError(undefined);
@@ -146,6 +147,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
   return (
     <>
       <Combobox
+        disabled={disabled || submitting}
         as="div"
         className="size-full flex-shrink-0 text-left"
         value={issueLabels}
@@ -234,6 +236,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
               ) : canCreateLabel ? (
                 <div className="space-y-1">
                   <button
+                    disabled={disabled || submitting}
                     type="button"
                     onClick={(e) => {
                       e.preventDefault();
