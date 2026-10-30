@@ -210,7 +210,7 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 
 ## 处理结果（M4/P12，2026-10-30）
 
-- §10 DateDropdown在T8改为单Popover状态，列表/表格键盘可装载，单日期与范围相邻切换不会互抢焦；api-tokens真实自定义有效期表单及A11回归通过。七个点名控件的实际浮层ref、单状态、具名触发器和外层Modal隔离分别由T9/T10/C3核验；Calendar网格用Popover，离散搜索选项复用CustomSearchSelect，不机械套Listbox。CustomSelect的peek、自动归档、日期筛选三个真实入口有C3兼容证据。最终T16矩阵仍待WebKit环境恢复，不能据T15旧绿写本段最终通过。
+- §10 DateDropdown在T8改为单Popover状态，列表/表格键盘可装载，单日期与范围相邻切换不会互抢焦；api-tokens真实自定义有效期表单及A11回归通过。七个点名控件的实际浮层ref、单状态、具名触发器和外层Modal隔离分别由T9/T10/C3核验；Calendar网格用Popover，离散搜索选项复用CustomSearchSelect，不机械套Listbox。CustomSelect的peek、自动归档、日期筛选三个真实入口有C3兼容证据。最终T16三浏览器各11项已通过，WebKit使用Docker恢复后的新收据，不据T15旧绿充数。
 - §10剩余：CustomSearchSelect的defaultOpen及rich-filters四入口完整筛选验收留P13；M6/M7共享props兼容不算领域页面验收。仅本段明确测试的控件性质已处理，不关闭整个§10或顶层交接。
 - §12 ExistingIssuesListModal的模块级ProjectService已删除，三调用改用本代root持有的IssueSearchService；原helpers拆为显式scope目录函数且保持同步零HTTP，M04/M05和路由回归捕获错范围/偷发请求。parent、inbox查重和命令搜索余下实例/旧类型继续由P14/P15负责；不虚报13实例全零。
-- §7编辑器分割和§11复制hook仍按P14/P15完成；本段watchPage只精确期待已有Canvas提示，不掩盖其它console/API失败。实施、范围与最终待验项见[P12 review§23–25](../reviews/P12-web-list-pages-review.md)和[整审](../../../reviews/re-17-M4P12整体审核.md)。顶层status保持open。
+- §7编辑器分割和§11复制hook仍按P14/P15完成；本段watchPage只精确期待已有Canvas提示，不掩盖其它console/API失败。实施、范围与最终交付核准规则见[P12 review§23–25](../reviews/P12-web-list-pages-review.md)和[整审](../../../reviews/re-17-M4P12整体审核.md)。顶层status保持open。
