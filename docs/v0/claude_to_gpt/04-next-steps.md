@@ -192,4 +192,6 @@ P12用已有root统一权限/canonical/确认写入，原生搜索同Task迁日�
 
 最终产品的前端255文件2697测试、默认E2E180、三浏览器各11通过，静态/knip通过；服务端三项以输入hash核准复用T15。WebKit首次因环境中断5通过/6失败另保留，负责人恢复Docker后同产品输入11/11；没有放宽断言。候选bbd92dd0的CI41060487600三项全绿；准确最终文稿HEAD按review§26核server/web/e2e，后置final-delivery.json放忽略证据目录，回执与HEAD一致且通过才报告交付。
 
+后置0cdd315d CI首次I3失败，attempt2三任务成功；本地CPU8复现导航后应用尚未挂载便开始行序预算，已仅修正夹具为先等分组attached，再按原5秒断言完整ID。新输入静态/knip、完整E2E180、三浏览器各11均通过，未变输入的前端单测/服务端门禁按明确域复用；原远端trace下载失败，不把本地机制冒作其唯一根因。新提交仍另核准确CI，详情见[review§27](../M4-issue-core/reviews/P12-web-list-pages-review.md#27-后置ci的i3诊断与测试同步修正2026-10-30)。
+
 主目录保持main。当前授权为完成P12、deep-review后保留分支；不合并、不清理、不开始P13。准备证据在主目录 `.superpowers/sdd/P12-preparation-20261030/`，实施证据在worktree `.superpowers/sdd/P12-web-list-pages/`，未来归档均须保留。M4§14、总体§9.4、输入交接顶层open和M5–M8最终closeout仍开放。

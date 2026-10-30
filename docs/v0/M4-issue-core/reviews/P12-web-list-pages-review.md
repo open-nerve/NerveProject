@@ -318,8 +318,20 @@ T16产品实现、全部本地验收及审查修复完成；交付生效由§26�
 
 ## 26. 最终文稿的后置交付回执
 
-收尾文稿只修改说明和状态，不改变产品、测试、规则或工具链。A1–A12的本地结果、33项矩阵及26种当前hash一致的变异都已核准；候选bbd92dd0 CI全绿。当前文稿提交仍需按自身SHA再次取得server/web/e2e三项success，不能用候选CI冒作本提交CI。
+此前收尾文稿只修改说明和状态，后置CI又触发§27的测试夹具修正；实际最终输入与新增验证以§27为准。A1–A12的本地结果、33项矩阵及26种当前hash一致的变异都已核准。最终提交仍需按自身SHA取得server/web/e2e三项success，不能用候选或修正前CI冒作本提交CI。
 
 主控核验命令为忽略目录的verify-delivery.py：核全部输入路径集合/字节、七项F、三浏览器非零、全量前端255文件2697测试/零缓存、默认E2E180及变异红/恢复/绿，再将准确当前CI绑定到HEAD。通过后写 `.superpowers/sdd/P12-web-list-pages/final-delivery.json`（requiredGatesComplete=true、head=实际HEAD、ci三任务成功），Task16台账才记录complete并向负责人报告完成。该回执在提交之后生成，避免文稿记录自身SHA引起无限新CI；本节为不变的核准规则，实际最终结果以该回执和准确GitHub运行链接为证。
 
 本阶段只交付分支。主目录main仍ce3c39ab，mainCI/合并/归档清理属于负责人下一步安排。原始准备、实施、首次失败、修复和最终回执均保留；M4总体与后续阶段不提前关闭。
+
+## 27. 后置CI的I3诊断与测试同步修正（2026-10-30）
+
+文稿 `0cdd315d40d39970718b664128a40d58ea2ff331` 的[CI 41063848397](https://github.com/open-nerve/NerveProject/actions/runs/41063848397) attempt1：server/web成功，E2E 179通过/1失败；I3(page)在保存A标签筛选、切标签分组并reload后，`expectListOrder`预期C组50行却得到空数组。通过负责人已登录的Chrome读取了job124095449026日志；两种UI产物下载均超时，未取得原远端trace，也未提取凭据。已授权浏览器重跑attempt2，三任务success；原始失败保留，重跑不证明唯一根因。
+
+本地原故事普通运行10/10。只在该次reload前施加CPU限速8倍的探针，同一断言3/3失败；三份trace显示A、C分组均HTTP200各50行，页面API/运行时错误为空。另一次边界探针证明首次5秒poll超时后，同一DOM两组均50行，第二次精确顺序断言通过。本地根因是导航完成后应用初始化尚未结束，行序断言过早开始消耗自己的预算；并非本地接口遗漏行。远端未取trace，因此只确认同一断言的本地可重复机制，不宣称首次远端原因已唯一确定。
+
+局部修复仅在`e2e/fixtures/issue-list-page.ts`的`expectListOrder`先等待目标分组attached，再用原5秒poll检查完整ID和顺序；没有固定sleep、补发请求、修改预期或放宽产品守卫。I3临时探针已原字节恢复；I3/I6/I7所有调用已核，I6空列本就要求展示。相同CPU8探针3/3绿，单故事9.6/9.6/9.7秒。探针、红绿原件及本地trace保留在`t16-i3-{cpu8-failures,boundary-failure,ready-cpu8-traces}`，诊断摘要`t16-i3-diagnosis.md`。该功能故事不承担首次呈现5秒的性能保证。
+
+最终新输入补验：`t16-I3F-lint-web`54任务、`t16-I3F-knip`零dead；`t16-I3F-e2e2`构建成功、180/180、0skip；`t16-I3-matrix-{chromium,firefox,webkit}`各11/11、0skip。初次探针和初次I3F-e2e遇临时测试容器端口绑定超时，未开始故事，不计行为红或通过；服务可连接时重跑通过，没有停启既有容器。全量前端单测的255文件2697测试原输入仅差不被其消费的这个E2E夹具，服务端输入也未变；按`t16-i3-input-domains.json`和修订后的verify-delivery明确域核准复用，不冒称重跑。26种当前变异生产hash仍一致。
+
+上述修正及文稿提交后，仍须用§26后置回执核准新HEAD的准确CI。M4总验收、合并、清理与P13范围不变。

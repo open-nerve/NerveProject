@@ -59,6 +59,9 @@ export function listGroup(page: Page, title: string): Locator {
 }
 /** Outer row identities remain in the DOM when their property contents are outside the virtual viewport. */
 export async function expectListOrder(group: Locator, ids: readonly string[]) {
+  // A navigation can finish before the application has mounted this group.
+  // Wait for that UI boundary before checking the loaded rows and their exact order.
+  await group.waitFor({ state: "attached" });
   await expect
     .poll(() => group.locator('[id^="issue_"]').evaluateAll((rows) => rows.map((row) => row.id.split("_")[1])))
     .toEqual(ids);
