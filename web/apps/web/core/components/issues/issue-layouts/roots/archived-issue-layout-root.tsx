@@ -33,7 +33,7 @@ export const ArchivedIssueLayoutRoot = observer(function ArchivedIssueLayoutRoot
   const { issuesFilter } = useIssues(EIssuesStoreType.ARCHIVED);
   const update = useLocalIssueFilterUpdate(workspaceSlug ?? "", projectId, projectId ?? "");
   // derived values
-  const workItemFilters = projectId ? issuesFilter?.getIssueFilters(projectId) : undefined;
+  const workItemFilters = projectId ? issuesFilter?.getIssueFilters(projectId, workspaceSlug) : undefined;
 
   const permission = useUserPermissions();
   const role =

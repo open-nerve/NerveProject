@@ -18,7 +18,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // local imports
 import { IssueLayoutEmptyState } from "./empty-states";
-import { IssueArchiveHost } from "./archive-host";
+import { IssueListCommandHost } from "./command-host";
 
 function ActiveLoader(props: { layout: EIssueLayoutTypes }) {
   const { layout } = props;
@@ -52,7 +52,7 @@ export const IssueLayoutHOC = observer(function IssueLayoutHOC(props: Props) {
   const loading = issues?.getIssueLoader() === "init-loader" || issueCount === undefined;
   const empty = issueCount === 0 && layout !== EIssueLayoutTypes.CALENDAR;
   return (
-    <IssueArchiveHost>
+    <IssueListCommandHost>
       {loading ? (
         <ActiveLoader layout={layout} />
       ) : empty ? (
@@ -60,6 +60,6 @@ export const IssueLayoutHOC = observer(function IssueLayoutHOC(props: Props) {
       ) : (
         <LayoutErrorBoundary key={layout}>{props.children}</LayoutErrorBoundary>
       )}
-    </IssueArchiveHost>
+    </IssueListCommandHost>
   );
 });

@@ -7,9 +7,9 @@ import { runInAction } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { RootStore } from "@/store/root.store";
 import { accountOf } from "@/store/member/fake-users";
-import { issueOf, issuePageOf } from "@/store/issue/fake-issues";
+import { issueDetailOf, issueOf, issuePageOf } from "@/store/issue/fake-issues";
 import { loadProjects } from "@/store/project/fake-projects";
-import { json, problem } from "@/lib/auth/fake-nerve";
+import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection";
@@ -36,7 +36,7 @@ vi.mock("@/components/core/render-if-visible-HOC", () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
 let tab: Awaited<ReturnType<typeof issueSelectionTab>>;
-const archived = { ...issueOf("old"), archived_at: "2026-10-30T00:00:00Z" };
+const archived = { ...issueOf("old"), created_by_id: "u-alice", archived_at: "2026-10-30T00:00:00Z" };
 const lists = () => tab.nerve.to("/api/v0/projects/A/issues");
 const button = (name: string) =>
   [...document.querySelectorAll<HTMLButtonElement>("button")].find(
@@ -140,6 +140,79 @@ it("shows a first-read refusal and retries only the archive GET", async () => {
   expect(lists().every((call) => call.query.archived === "true")).toBe(true);
   expect(tab.nerve.calls.every((call) => call.method === "GET")).toBe(true);
 });
+
+async function startRestore(doubleClick = false) {
+  await click(`common.options: ${archived.name}`);
+  const restore = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+    (item) => item.textContent === "Restore"
+  );
+  expect(restore).toBeDefined();
+  await act(async () => {
+    restore!.click();
+    if (doubleClick) restore!.click();
+  });
+}
+const restores = () => tab.nerve.to("/api/v0/issues/old/unarchive");
+const restored = { ...issueDetailOf("old"), archived_at: null, updated_at: "2026-10-31T00:01:00Z" };
+it("reports one confirmed restore when the last archive row leaves the layout", async () => {
+  await loaded();
+  await startRestore(true);
+  await until(() => restores().length === 1, "restore POST");
+  await act(async () => restores()[0]!.answer(json(200, restored)));
+  expect(document.querySelector("#issue-old")).toBeNull();
+  expect(toasts).toEqual([expect.objectContaining({ type: "success", message: "issue.restore.success.message" })]);
+  expect(restores()).toHaveLength(1);
+});
+it("reports a refused row restore once and permits an explicit retry", async () => {
+  await loaded();
+  await startRestore();
+  await until(() => restores().length === 1, "restore POST");
+  await act(async () => restores()[0]!.answer(problem(403, "forbidden")));
+  expect(toasts).toEqual([expect.objectContaining({ type: "error", message: "errors.forbidden" })]);
+  expect(document.querySelector("#issue-old")).not.toBeNull();
+  await startRestore();
+  await until(() => restores().length === 2, "explicit restore retry");
+  await act(async () => restores()[1]!.answer(json(200, restored)));
+  expect(document.querySelector("#issue-old")).toBeNull();
+  expect(toasts.filter((toast) => toast.type === "success")).toHaveLength(1);
+});
+it.each([false, true])(
+  "reports one confirmed last-row delete, including explicit retry after refusal=%s",
+  async (refuseFirst) => {
+    await loaded();
+    await click(`common.options: ${archived.name}`);
+    const remove = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+      (item) => item.textContent === "common.actions.delete"
+    );
+    expect(remove).toBeDefined();
+    await act(async () => remove!.click());
+    const confirm = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(
+      (candidate) => candidate.textContent === "Delete"
+    );
+    expect(confirm).toBeDefined();
+    await act(async () => {
+      confirm!.click();
+      confirm!.click();
+    });
+    const deletes = () => tab.nerve.to("/api/v0/issues/old").filter((call) => call.method === "DELETE");
+    await until(() => deletes().length === 1, "delete request");
+    if (refuseFirst) {
+      await act(async () => deletes()[0]!.answer(problem(403, "forbidden")));
+      expect(toasts).toEqual([expect.objectContaining({ type: "error", message: "errors.forbidden" })]);
+      expect(document.querySelector("#issue-old")).not.toBeNull();
+      expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+      await act(async () => confirm!.click());
+      await until(() => deletes().length === 2, "explicit delete retry");
+    }
+    await act(async () => deletes().at(-1)!.answer(noContent()));
+    expect(document.querySelector("#issue-old")).toBeNull();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(toasts.filter((toast) => toast.type === "success")).toEqual([
+      expect.objectContaining({ type: "success", message: "entity.delete.success" }),
+    ]);
+    expect(deletes()).toHaveLength(refuseFirst ? 2 : 1);
+  }
+);
 it("keeps a locally selected order after its read fails, reports once and retries only GET", async () => {
   await loaded();
   await click("common.display");

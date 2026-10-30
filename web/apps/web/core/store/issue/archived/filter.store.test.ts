@@ -100,6 +100,42 @@ it("uses defaults and accepts updates when browser storage throws", async () => 
   expect(store.getIssueFilters("A")?.richFilters).toEqual({ and: [{ priority__in: "high" }] });
 });
 
+it.each(["blocked reads", "stale stored values"])(
+  "keeps session archive settings when returning to the page with %s",
+  async (failure) => {
+    const store = (await archiveTab()).app.issue.archivedIssuesFilter;
+    await store.fetchFilters("ws", "A");
+    await store.updateFilterExpression("ws", "A", { priority__in: "low" });
+    if (failure === "blocked reads")
+      vi.spyOn(localStorage, "getItem").mockImplementation(() => {
+        throw new Error("blocked");
+      });
+    vi.spyOn(localStorage, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+
+    await store.updateFilterExpression("ws", "A", { priority__in: "high" });
+    await store.updateFilters("ws", "A", EIssueFilterType.DISPLAY_FILTERS, {
+      order_by: "-priority",
+      group_by: "state",
+      sub_issue: false,
+    });
+    await store.updateFilters("ws", "A", EIssueFilterType.DISPLAY_PROPERTIES, { state: false });
+    await store.updateFilters("ws", "A", EIssueFilterType.KANBAN_FILTERS, { group_by: ["done"], sub_group_by: [] });
+
+    // The route's session SWR revalidates local settings on every mount.
+    await store.fetchFilters("ws", "B");
+    await store.fetchFilters("ws", "A");
+    expect(store.getIssueFilters("A")).toMatchObject({
+      richFilters: { and: [{ priority__in: "high" }] },
+      displayFilters: { order_by: "-priority", group_by: "state", sub_issue: false },
+      displayProperties: { state: false },
+      kanbanFilters: { group_by: ["done"], sub_group_by: [] },
+    });
+    expect(store.getIssueFilters("B")?.richFilters).toEqual({});
+  }
+);
+
 it("writing an existing legacy entry removes the obsolete key", async () => {
   data.set(
     "issue_local_filters",
@@ -263,7 +299,7 @@ it("restores independent workspace/project values and always selects archived ro
   await first.promise;
   expect(first.call.query).toMatchObject({ archived: "true", priority: "high" });
   await store.fetchFilters("other", "A");
-  expect(store.getIssueFilters("A")?.richFilters).toEqual({ and: [{ priority__in: "low" }] });
+  expect(store.getIssueFilters("A", "other")?.richFilters).toEqual({ and: [{ priority__in: "low" }] });
   await store.fetchFilters("ws", "B");
   expect(store.getIssueFilters("B")?.richFilters).toEqual({ and: [{ priority__in: "medium" }] });
 });

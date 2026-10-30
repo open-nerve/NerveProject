@@ -28,7 +28,6 @@ interface TOptionTransforms<TItem, TValue extends TFilterValue = string, TIconDa
  * Multi-select filter configuration
  */
 type TMultiSelectConfig<TValue extends TFilterValue = string> = TBaseFilterFieldConfig & {
-  defaultValue?: TValue[];
   additionalOptions?: IFilterOption<TValue>[];
   singleValueOperator: TSupportedOperators;
 };
@@ -67,27 +66,11 @@ export const getMultiSelectConfig = <
 // ------------ Date filters ------------
 
 /**
- * Date filter configuration
- */
-type TDateConfig = TBaseFilterFieldConfig & {
-  min?: Date;
-  max?: Date;
-};
-
-/**
- * Date range filter configuration
- */
-type TDateRangeConfig = TBaseFilterFieldConfig & {
-  min?: Date;
-  max?: Date;
-};
-
-/**
  * Helper to get the date picker config
  * @param config - Date-specific configuration
  * @returns The date picker config
  */
-export const getDatePickerConfig = (config: TDateConfig) =>
+export const getDatePickerConfig = (config: TBaseFilterFieldConfig) =>
   createFilterFieldConfig<typeof FILTER_FIELD_TYPE.DATE, Date>({
     type: FILTER_FIELD_TYPE.DATE,
     ...config,
@@ -98,7 +81,7 @@ export const getDatePickerConfig = (config: TDateConfig) =>
  * @param config - Date range-specific configuration
  * @returns The date range picker config
  */
-export const getDateRangePickerConfig = (config: TDateRangeConfig) =>
+export const getDateRangePickerConfig = (config: TBaseFilterFieldConfig) =>
   createFilterFieldConfig<typeof FILTER_FIELD_TYPE.DATE_RANGE, Date>({
     type: FILTER_FIELD_TYPE.DATE_RANGE,
     ...config,

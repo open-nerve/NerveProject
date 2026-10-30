@@ -6,7 +6,6 @@
 
 import React from "react";
 // nerve imports
-import type { TWorkItemWidgets } from "@nerve/types";
 // local imports
 import { IssueDetailWidgetActionButtons } from "./action-buttons";
 import { IssueDetailWidgetCollapsibles } from "./issue-detail-widget-collapsibles";
@@ -17,41 +16,23 @@ type Props = {
   projectId: string;
   issueId: string;
   disabled: boolean;
-  renderWidgetModals?: boolean;
-  hideWidgets?: TWorkItemWidgets[];
 };
 
 export function IssueDetailWidgets(props: Props) {
-  const { workspaceSlug, projectId, issueId, disabled, renderWidgetModals = true, hideWidgets } = props;
+  const { workspaceSlug, projectId, issueId, disabled } = props;
 
   return (
     <>
       <div className="flex flex-col space-y-4">
-        {!disabled && (
-          <IssueDetailWidgetActionButtons
-            workspaceSlug={workspaceSlug}
-            projectId={projectId}
-            issueId={issueId}
-            disabled={disabled}
-            hideWidgets={hideWidgets}
-          />
-        )}
+        {!disabled && <IssueDetailWidgetActionButtons issueId={issueId} disabled={disabled} />}
         <IssueDetailWidgetCollapsibles
           workspaceSlug={workspaceSlug}
           projectId={projectId}
           issueId={issueId}
           disabled={disabled}
-          hideWidgets={hideWidgets}
         />
       </div>
-      {renderWidgetModals && (
-        <IssueDetailWidgetModals
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          issueId={issueId}
-          hideWidgets={hideWidgets}
-        />
-      )}
+      <IssueDetailWidgetModals workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} />
     </>
   );
 }

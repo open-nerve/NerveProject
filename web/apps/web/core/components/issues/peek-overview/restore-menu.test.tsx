@@ -14,6 +14,7 @@ import { IssueDetailQuickActions } from "../issue-detail/issue-detail-quick-acti
 import { IssueDetailHost } from "../detail-host";
 import { useIssueOperations } from "../issue-detail/use-issue-operations";
 import { ArchivedIssueQuickActions } from "../issue-layouts/quick-action-dropdowns/archived-issue";
+import { IssueListCommandHost } from "../issue-layouts/command-host";
 import { IssueView } from "./view";
 import { openIssuePeek } from "./selection";
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, navigate: vi.fn() }));
@@ -72,14 +73,16 @@ async function render(id = "old", kind: "peek" | "archived" | "detail" = "peek")
       ) : kind === "peek" ? (
         <Peek key={id} id={id} />
       ) : (
-        <ArchivedIssueQuickActions
-          issue={archived(id)}
-          parentRef={{ current: null }}
-          handleDelete={async () => {}}
-          handleRestore={async () => {
-            await tab.app.issue.archivedIssues.restoreIssue("ws", "A", id);
-          }}
-        />
+        <IssueListCommandHost>
+          <ArchivedIssueQuickActions
+            issue={archived(id)}
+            parentRef={{ current: null }}
+            handleDelete={async () => {}}
+            handleRestore={async () => {
+              await tab.app.issue.archivedIssues.restoreIssue("ws", "A", id);
+            }}
+          />
+        </IssueListCommandHost>
       )}
     </MemoryRouter>
   );
@@ -135,6 +138,18 @@ it.each(["replace", "unmount", "permission ABA"] as const)("old restore cannot r
   await act(async () => writes()[0]!.answer(json(200, restored())));
   expect(toasts).toEqual([]);
   if (end === "replace") expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe("next");
+});
+
+it("the archive layout cannot report an old restore after its project permission leaves and returns", async () => {
+  await render("old", "archived");
+  await restore();
+  await act(async () => {
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  });
+  await act(async () => writes()[0]!.answer(json(200, restored())));
+  expect(toasts).toEqual([]);
+  expect(bound.navigate).not.toHaveBeenCalled();
 });
 
 it.each([false, true])(

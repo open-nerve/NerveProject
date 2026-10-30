@@ -26,7 +26,7 @@ import type { IIssueRootStore } from "../root.store";
 
 export interface IArchivedIssuesFilter extends IBaseIssueFilterStore {
   //helper actions
-  getIssueFilters(projectId: string): IIssueFilters | undefined;
+  getIssueFilters(projectId: string, workspaceSlug?: string): IIssueFilters | undefined;
   // action
   fetchFilters: (workspaceSlug: string, projectId: string) => Promise<void>;
   updateFilterExpression: (
@@ -44,7 +44,7 @@ export interface IArchivedIssuesFilter extends IBaseIssueFilterStore {
 
 export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArchivedIssuesFilter {
   // observables
-  filters: { [projectId: string]: IIssueFilters } = {};
+  filters: { [scope: string]: IIssueFilters } = {};
   // root store
   rootIssueStore: IIssueRootStore;
 
@@ -70,8 +70,9 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
     return this.getIssueFilters(projectId);
   }
 
-  getIssueFilters(projectId: string) {
-    const displayFilters = this.filters[projectId] || undefined;
+  getIssueFilters(projectId: string, workspaceSlug = this.rootIssueStore.workspaceSlug) {
+    if (!workspaceSlug) return undefined;
+    const displayFilters = this.filters[JSON.stringify([workspaceSlug, projectId])] || undefined;
     if (isEmpty(displayFilters)) return undefined;
 
     const _filters: IIssueFilters = this.computedIssueFilters(displayFilters);
@@ -80,7 +81,13 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
   }
 
   fetchFilters = async (workspaceSlug: string, projectId: string) => {
+    this.readLocalFilters(workspaceSlug, projectId);
+  };
+
+  private readLocalFilters(workspaceSlug: string, projectId: string) {
     this.rootIssueStore.assertActive();
+    const scope = JSON.stringify([workspaceSlug, projectId]);
+    if (this.filters[scope]) return;
     const _filters = this.handleIssuesLocalFilters.get(
       EIssuesStoreType.ARCHIVED,
       workspaceSlug,
@@ -105,22 +112,23 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
     kanbanFilters.group_by = _filters?.kanban_filters?.group_by || [];
 
     runInAction(() => {
-      set(this.filters, [projectId, "richFilters"], richFilters);
-      set(this.filters, [projectId, "displayFilters"], displayFilters);
-      set(this.filters, [projectId, "displayProperties"], displayProperties);
-      set(this.filters, [projectId, "kanbanFilters"], kanbanFilters);
+      set(this.filters, [scope, "richFilters"], richFilters);
+      set(this.filters, [scope, "displayFilters"], displayFilters);
+      set(this.filters, [scope, "displayProperties"], displayProperties);
+      set(this.filters, [scope, "kanbanFilters"], kanbanFilters);
     });
-  };
+  }
 
   updateFilterExpression: IArchivedIssuesFilter["updateFilterExpression"] = async (
     workspaceSlug,
     projectId,
     expression
   ) => {
-    this.rootIssueStore.assertActive();
+    this.readLocalFilters(workspaceSlug, projectId);
+    const scope = JSON.stringify([workspaceSlug, projectId]);
     const filters = toFilterExpression(toProjectFilters(expression));
     runInAction(() => {
-      set(this.filters, [projectId, "richFilters"], filters);
+      set(this.filters, [scope, "richFilters"], filters);
     });
     this.handleIssuesLocalFilters.set(
       EIssuesStoreType.ARCHIVED,
@@ -136,7 +144,8 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
 
   updateFilters: IArchivedIssuesFilter["updateFilters"] = async (workspaceSlug, projectId, type, filters) => {
     this.rootIssueStore.assertActive();
-    const held = this.filters[projectId];
+    const scope = JSON.stringify([workspaceSlug, projectId]);
+    const held = this.filters[scope];
     if (!held) return;
     const actor = this.rootIssueStore.currentUserId;
     switch (type) {
@@ -149,7 +158,7 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
           sub_group_by: null,
         });
         runInAction(() => {
-          set(this.filters, [projectId, "displayFilters"], next);
+          set(this.filters, [scope, "displayFilters"], next);
         });
         this.handleIssuesLocalFilters.set(EIssuesStoreType.ARCHIVED, type, workspaceSlug, projectId, actor, {
           display_filters: next,
@@ -165,7 +174,7 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
       case EIssueFilterType.DISPLAY_PROPERTIES: {
         const next = { ...held.displayProperties, ...(filters as IIssueDisplayProperties) };
         runInAction(() => {
-          set(this.filters, [projectId, "displayProperties"], next);
+          set(this.filters, [scope, "displayProperties"], next);
         });
         this.handleIssuesLocalFilters.set(EIssuesStoreType.ARCHIVED, type, workspaceSlug, projectId, actor, {
           display_properties: next,
@@ -176,7 +185,7 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
         // List group collapse uses this shared field too; only subgroups are unsupported.
         const next = { ...held.kanbanFilters, ...(filters as TIssueKanbanFilters), sub_group_by: [] };
         runInAction(() => {
-          set(this.filters, [projectId, "kanbanFilters"], next);
+          set(this.filters, [scope, "kanbanFilters"], next);
         });
         this.handleIssuesLocalFilters.set(EIssuesStoreType.ARCHIVED, type, workspaceSlug, projectId, actor, {
           kanban_filters: next,

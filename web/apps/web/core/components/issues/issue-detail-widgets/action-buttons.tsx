@@ -8,7 +8,6 @@ import React from "react";
 import { LinkOutline, RelationsOutline, ViewsOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
 // nerve imports
-import type { TWorkItemWidgets } from "@nerve/types";
 // local imports
 import { IssueLinksActionButton } from "./links";
 import { RelationActionButton } from "./relations";
@@ -16,55 +15,46 @@ import { SubIssuesActionButton } from "./sub-issues";
 import { IssueDetailWidgetButton } from "./widget-button";
 
 type Props = {
-  workspaceSlug: string;
-  projectId: string;
   issueId: string;
   disabled: boolean;
-  hideWidgets?: TWorkItemWidgets[];
 };
 
 export function IssueDetailWidgetActionButtons(props: Props) {
-  const { issueId, disabled, hideWidgets } = props;
+  const { issueId, disabled } = props;
   // translation
   const { t } = useTranslation();
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {!hideWidgets?.includes("sub-work-items") && (
-        <SubIssuesActionButton
-          issueId={issueId}
-          customButton={
-            <IssueDetailWidgetButton
-              title={t("issue.add.sub_issue")}
-              icon={<ViewsOutline className="h-3.5 w-3.5 flex-shrink-0" />}
-            />
-          }
-          disabled={disabled}
-        />
-      )}
-      {!hideWidgets?.includes("relations") && (
-        <RelationActionButton
-          issueId={issueId}
-          customButton={
-            <IssueDetailWidgetButton
-              title={t("issue.add.relation")}
-              icon={<RelationsOutline className="h-3.5 w-3.5 flex-shrink-0" />}
-            />
-          }
-          disabled={disabled}
-        />
-      )}
-      {!hideWidgets?.includes("links") && (
-        <IssueLinksActionButton
-          customButton={
-            <IssueDetailWidgetButton
-              title={t("issue.add.link")}
-              icon={<LinkOutline className="h-3.5 w-3.5 flex-shrink-0" />}
-            />
-          }
-          disabled={disabled}
-        />
-      )}
+      <SubIssuesActionButton
+        issueId={issueId}
+        customButton={
+          <IssueDetailWidgetButton
+            title={t("issue.add.sub_issue")}
+            icon={<ViewsOutline className="h-3.5 w-3.5 flex-shrink-0" />}
+          />
+        }
+        disabled={disabled}
+      />
+      <RelationActionButton
+        issueId={issueId}
+        customButton={
+          <IssueDetailWidgetButton
+            title={t("issue.add.relation")}
+            icon={<RelationsOutline className="h-3.5 w-3.5 flex-shrink-0" />}
+          />
+        }
+        disabled={disabled}
+      />
+      <IssueLinksActionButton
+        customButton={
+          <IssueDetailWidgetButton
+            title={t("issue.add.link")}
+            icon={<LinkOutline className="h-3.5 w-3.5 flex-shrink-0" />}
+          />
+        }
+        disabled={disabled}
+      />
     </div>
   );
 }

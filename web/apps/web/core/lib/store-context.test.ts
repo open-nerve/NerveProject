@@ -163,14 +163,14 @@ describe("store-context", () => {
     await follow(Y);
     const y = context.rootStore;
     expect(y).not.toBe(x);
-    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")).toBeUndefined();
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project", "ws")).toBeUndefined();
     expect(y.issue.profileIssuesFilter.getIssueFilters("target", "ws")).toBeUndefined();
     runInAction(() => {
       y.user.data = { id: "account-y" } as typeof y.user.data;
     });
     await y.issue.archivedIssuesFilter.fetchFilters("ws", "project");
     await y.issue.profileIssuesFilter.fetchFilters("ws", "target");
-    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project", "ws")?.richFilters).toEqual({
       and: [{ priority__in: "low" }],
     });
     expect(y.issue.profileIssuesFilter.getIssueFilters("target", "ws")?.richFilters).toEqual({
@@ -182,7 +182,7 @@ describe("store-context", () => {
     await expect(
       x.issue.profileIssuesFilter.updateFilterExpression("ws", "target", { priority__in: "urgent" })
     ).rejects.toBeInstanceOf(SessionChangedError);
-    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project", "ws")?.richFilters).toEqual({
       and: [{ priority__in: "low" }],
     });
     expect(y.issue.profileIssuesFilter.getIssueFilters("target", "ws")?.richFilters).toEqual({
@@ -190,7 +190,7 @@ describe("store-context", () => {
     });
     await y.issue.archivedIssuesFilter.fetchFilters("ws", "project");
     await y.issue.profileIssuesFilter.fetchFilters("ws", "target");
-    expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
+    expect(y.issue.archivedIssuesFilter.getIssueFilters("project", "ws")?.richFilters).toEqual({
       and: [{ priority__in: "low" }],
     });
     expect(y.issue.profileIssuesFilter.getIssueFilters("target", "ws")?.richFilters).toEqual({

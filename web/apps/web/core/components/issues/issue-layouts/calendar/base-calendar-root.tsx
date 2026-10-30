@@ -1,4 +1,3 @@
-import type { TProfileViews } from "@nerve/types";
 import { followInSession, sessionGuard } from "@/lib/in-session";
 import type { Group } from "@/lib/paged-groups";
 /**
@@ -35,12 +34,11 @@ export type CalendarStoreType = EIssuesStoreType.PROJECT;
 
 interface IBaseCalendarRoot {
   QuickActions: FC<IQuickActionProps>;
-  viewId?: TProfileViews;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
 }
 
 export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseCalendarRoot) {
-  const { QuickActions, viewId, canEditPropertiesBasedOnProject } = props;
+  const { QuickActions, canEditPropertiesBasedOnProject } = props;
 
   // router
   const { workspaceSlug, projectId } = useParams();
@@ -110,7 +108,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
           query: { group_by: "target_date", target_date: [`${startDate}..${endDate}`] },
         }
       : undefined,
-    viewId,
+    undefined,
     layout
   );
 

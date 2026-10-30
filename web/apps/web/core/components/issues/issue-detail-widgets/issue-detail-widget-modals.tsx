@@ -8,7 +8,6 @@ import type { IssueDetail } from "@nerve/api-client";
 
 import React from "react";
 import { observer } from "mobx-react";
-import type { TWorkItemWidgets } from "@nerve/types";
 // components
 import {
   ExistingIssuesListModal,
@@ -28,11 +27,10 @@ type Props = {
   workspaceSlug: string;
   projectId: string;
   issueId: string;
-  hideWidgets?: TWorkItemWidgets[];
 };
 
 export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals(props: Props) {
-  const { workspaceSlug, projectId, issueId, hideWidgets } = props;
+  const { workspaceSlug, projectId, issueId } = props;
   // store hooks
   const { createRelation } = useIssueDetail();
   const {
@@ -117,29 +115,23 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
 
   // render conditions
   const shouldRenderExistingIssuesModal =
-    !hideWidgets?.includes("sub-work-items") &&
     issueCrudOperationState?.existing?.toggle &&
     issueCrudOperationState?.existing?.parentIssueId &&
     isSubIssuesModalOpen;
 
   const shouldRenderCreateUpdateModal =
-    !hideWidgets?.includes("sub-work-items") &&
-    issueCrudOperationState?.create?.toggle &&
-    issueCrudOperationState?.create?.parentIssueId &&
-    isCreateIssueModalOpen;
+    issueCrudOperationState?.create?.toggle && issueCrudOperationState?.create?.parentIssueId && isCreateIssueModalOpen;
 
   return (
     <>
-      {!hideWidgets?.includes("links") && (
-        <IssueLinkCreateUpdateModal
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          issueId={issueId}
-          isModalOpen={isIssueLinkModalOpen}
-          handleOnClose={handleIssueLinkModalOnClose}
-          linkOperations={handleLinkOperations}
-        />
-      )}
+      <IssueLinkCreateUpdateModal
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={issueId}
+        isModalOpen={isIssueLinkModalOpen}
+        handleOnClose={handleIssueLinkModalOnClose}
+        linkOperations={handleLinkOperations}
+      />
 
       {shouldRenderCreateUpdateModal && (
         <CreateUpdateIssueModal
@@ -161,17 +153,15 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
         />
       )}
 
-      {!hideWidgets?.includes("relations") && (
-        <ExistingIssuesListModal
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          isOpen={isRelationModalOpen?.issueId === issueId && isRelationModalOpen?.relationType === relationKey}
-          handleClose={handleRelationOnClose}
-          searchParams={{ for: "relation", issue_id: issueId }}
-          handleOnSubmit={handleExistingIssueModalOnSubmit}
-          workspaceLevelToggle
-        />
-      )}
+      <ExistingIssuesListModal
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        isOpen={isRelationModalOpen?.issueId === issueId && isRelationModalOpen?.relationType === relationKey}
+        handleClose={handleRelationOnClose}
+        searchParams={{ for: "relation", issue_id: issueId }}
+        handleOnSubmit={handleExistingIssueModalOnSubmit}
+        workspaceLevelToggle
+      />
     </>
   );
 });

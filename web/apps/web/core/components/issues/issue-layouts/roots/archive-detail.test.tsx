@@ -16,6 +16,7 @@ import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection
 import Layout from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/issues/(detail)/layout";
 import Page from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/issues/(detail)/[archivedIssueId]/page";
 import { ArchivedIssueQuickActions } from "../quick-action-dropdowns/archived-issue";
+import { IssueListCommandHost } from "../command-host";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined }));
 vi.mock("@/lib/store-context", async () => ({
@@ -166,13 +167,15 @@ it.each([true, false])(
         {
           path: "/:workspaceSlug/projects/:projectId/archives/issues/:archivedIssueId",
           element: (
-            <ArchivedIssueQuickActions
-              issue={issue}
-              parentRef={{ current: null }}
-              readOnly
-              handleDelete={() => tab.app.issue.archivedIssues.removeIssue("ws", "A", "old")}
-              handleRestore={() => tab.app.issue.archivedIssues.restoreIssue("ws", "A", "old")}
-            />
+            <IssueListCommandHost>
+              <ArchivedIssueQuickActions
+                issue={issue}
+                parentRef={{ current: null }}
+                readOnly
+                handleDelete={() => tab.app.issue.archivedIssues.removeIssue("ws", "A", "old")}
+                handleRestore={() => tab.app.issue.archivedIssues.restoreIssue("ws", "A", "old")}
+              />
+            </IssueListCommandHost>
           ),
         },
       ],

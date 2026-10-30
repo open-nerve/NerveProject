@@ -26,7 +26,6 @@ type SetToastProps =
       title?: string;
     }
   | {
-      id?: string | number;
       type: Exclude<TOAST_TYPE, TOAST_TYPE.LOADING>;
       title: string;
       message?: string;

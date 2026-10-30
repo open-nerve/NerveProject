@@ -8,7 +8,7 @@ export class ArchivedIssues extends BaseIssuesStore<IArchivedIssuesFilter> {
   viewFlags = { enableQuickAdd: false, enableIssueCreation: false, enableInlineEditing: false };
   fetchIssues = (slug: string, projectID: string, _loader: TLoader, options: IssueListOptions) => {
     const scope = this.rootIssueStore.scope(slug, projectID);
-    const filters = this.issueFilterStore.getIssueFilters(projectID);
+    const filters = this.issueFilterStore.getIssueFilters(projectID, slug);
     const query = {
       ...projectListQuery(toProjectFilters(filters?.richFilters ?? {}), filters?.displayFilters),
       limit: options.limit,

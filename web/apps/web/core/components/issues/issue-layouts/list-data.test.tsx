@@ -8,7 +8,8 @@ import { SWRConfig } from "swr";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { StoreContext } from "@/lib/store-context";
-import { json, problem } from "@/lib/auth/fake-nerve";
+import { json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { toasts } from "@/lib/fake-toast";
 import { until } from "@/lib/auth/fake-time";
 import { issueStoreTab, issuePageOf, issueDetailOf } from "@/store/issue/fake-issues";
 import { loadProjects, preferencesOf, projectOf } from "@/store/project/fake-projects";
@@ -66,6 +67,7 @@ vi.mock("@/lib/store-context", async () => {
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "A" } }, publicClient: {} }));
 vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "A" }) }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("react-router", async (original) => ({
   ...(await original<typeof import("react-router")>()),
   useParams: () => fixture.params,
@@ -87,8 +89,17 @@ beforeEach(async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
   vi.stubGlobal("IntersectionObserver", VisibleObserver);
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
   dnd.drops.clear();
   dnd.drags.clear();
+  toasts.length = 0;
   tab = await issueStoreTab();
   fixture.app = tab.app;
   fixture.role = 15;
@@ -102,6 +113,7 @@ afterEach(async () => {
   await act(async () => view.unmount());
   tab.app.dispose();
   container.remove();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
@@ -130,6 +142,38 @@ it("mountedProjectListUsesGeneratedRequest waits for saved preferences and sends
   await act(async () => {
     tab.nerve.calls[1]!.answer(json(200, issuePageOf([])));
   });
+});
+
+it("the real project layout reports a last-row delete once after its row unmounts", async () => {
+  // The observed menu and dialog are visible; jsdom does not provide layout geometry.
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(new DOMRect(1, 1, 100, 30));
+  await act(async () => mount());
+  await until(() => tab.nerve.calls.length === 1, "preferences");
+  await act(async () => tab.nerve.calls[0]!.answer(json(200, preferencesOf())));
+  await act(async () => until(() => tab.nerve.calls.length === 2, "project list"));
+  await act(async () => tab.nerve.calls[1]!.answer(json(200, issuePageOf([issueDetailOf("only")]))));
+  const options = document.querySelector<HTMLButtonElement>('[aria-label="common.options: only"]');
+  expect(options).not.toBeNull();
+  await act(async () => options!.click());
+  const remove = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+    (item) => item.textContent === "common.actions.delete"
+  );
+  expect(remove).toBeDefined();
+  await act(async () => remove!.click());
+  const confirm = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(
+    (candidate) => candidate.textContent === "Delete"
+  );
+  expect(confirm).toBeDefined();
+  await act(async () => {
+    confirm!.click();
+    confirm!.click();
+  });
+  const deletes = () => tab.nerve.to("/api/v0/issues/only").filter((call) => call.method === "DELETE");
+  await until(() => deletes().length === 1, "project delete");
+  await act(async () => deletes()[0]!.answer(noContent()));
+  expect(document.querySelector("#issue-only")).toBeNull();
+  expect(toasts).toEqual([expect.objectContaining({ type: "success", message: "entity.delete.success" })]);
+  expect(deletes()).toHaveLength(1);
 });
 it.each([
   ["list", "month", "100"],

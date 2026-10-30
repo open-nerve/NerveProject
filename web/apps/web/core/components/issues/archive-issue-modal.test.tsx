@@ -15,7 +15,7 @@ import { toasts } from "@/lib/fake-toast";
 import { useIssueListRefresh, IssueListRetry } from "@/hooks/use-issue-list-refresh";
 import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection";
 import { ArchiveIssueModal } from "./archive-issue-modal";
-import { IssueArchiveHost, useArchiveRequest } from "./issue-layouts/archive-host";
+import { IssueListCommandHost, useArchiveRequest } from "./issue-layouts/command-host";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, navigate: vi.fn() }));
 vi.mock("@/lib/store-context", async () => ({
@@ -165,9 +165,9 @@ const ArchivableRow = observer(function ArchivableRow() {
 async function openRowConfirmation() {
   await tab.render(
     <MemoryRouter>
-      <IssueArchiveHost>
+      <IssueListCommandHost>
         <ArchivableRow />
-      </IssueArchiveHost>
+      </IssueListCommandHost>
     </MemoryRouter>
   );
   await act(async () => button("Archive row").click());

@@ -178,6 +178,8 @@ export class ProjectIssuesFilter extends IssueFilterHelperStore implements IProj
     }
     this.values.set(projectId, value);
     this.show(projectId, value);
+    // The server owns three preference fields; group collapse is already saved in this session.
+    if (this.filters[projectId]?.kanbanFilters) return;
     const currentUserId = this.rootIssueStore.currentUserId;
     const local = currentUserId
       ? this.handleIssuesLocalFilters.get(EIssuesStoreType.PROJECT, workspaceSlug, projectId, currentUserId)

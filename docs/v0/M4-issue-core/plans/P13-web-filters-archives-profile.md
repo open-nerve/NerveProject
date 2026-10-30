@@ -175,7 +175,7 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 ## Task 11：I15归档页面故事（约400–850行）
 
 **Files：** e2e/stories/issue/i15-archive-issue.spec.ts；fixtures/assert/issue既有删除图断言。
-**T11局部补充：** 真实页面红证明行内确认会随最后一行移除而丢成功反馈，新增 issue-layouts/archive-host.tsx 作为当前布局局部确认宿主，沿原 Modal/root 命令与权限身份，导航/权限 ABA 仍结束旧确认；页面验证最后一行、拒绝、Back 和旧答。详情已有完整子项加载，删除子项组件冗余挂载读取，并验证归档/普通详情/peek 的读取次数及稳定交互。只读页隐藏新增部件入口，按钮内容改为非交互 span，避免嵌套 button。均为 issue 内部展示职责调整，无后端/跨模块合同变化。
+**T11局部补充：** 真实页面红证明行内确认会随最后一行移除而丢成功反馈，新增 issue-layouts/command-host.tsx 作为当前布局局部确认宿主，沿原 Modal/root 命令与权限身份，导航/权限 ABA 仍结束旧确认；页面验证最后一行、拒绝、Back 和旧答。详情已有完整子项加载，删除子项组件冗余挂载读取，并验证归档/普通详情/peek 的读取次数及稳定交互。只读页隐藏新增部件入口，按钮内容改为非交互 span，避免嵌套 button。均为 issue 内部展示职责调整，无后端/跨模块合同变化。
 **Interfaces：** I15(API)保留；新增I15 (page): ...，沿原archive/unarchive/delete接口，不新增后端夹具写入。
 
 - [x] Step 1：真实行菜单归档终态项，pending双击一次POST，确认DB/活动/活动列表消失；归档列表刷新保持筛选，详情只读；restore回活动列表且一次成功提示。对非终态/403拒绝留原事实。
@@ -212,6 +212,8 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 - [x] Step 5：提交test(M4/P13): 补齐筛选归档和个人主页的跨浏览器验收。记录A10/A11。
 
 ## Task 14：整分支deep-review与分支交付
+
+执行补充：独立整审确认 R1 归档 storage 重挂载覆盖、R2 行恢复/删除反馈卸载、R3 项目折叠重读覆盖及 R4 无行为日期 Props。前三项以真实 store/布局红绿修复；R4 连同本期改动范围死代码按 M1 附录原脚本逐项核读者清理。布局原 archive-host 更名为 command-host，由 IssueListCommandHost 统一归档/删除确认及恢复反馈，不新建根命令或权限机制。修复后的完整 Web/浏览器验证和最终 CI 使用新输入；未改变的服务端输入逐文件核准后复用 T13 三项原始回执。
 
 **Files：** 本spec/plan/review；M4-design§15；M1/M2/M3-closeout中本期子项；docs/reviews下一号整体审核；忽略目录回执。
 **Interfaces：** 固定审查范围ff89d0a1..最终待交付HEAD；源码输入集合、原始raw、变异生产diff/恢复hash、准确CI组成证据，不从文稿自引用自身SHA。

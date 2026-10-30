@@ -53,10 +53,10 @@ export const FilterItem = observer(function FilterItem<P extends TFilterProperty
     };
     return t(keys[operator]);
   };
-  const operatorOptions = filterConfig?.getAllDisplayOperatorOptionsByValue(condition.value).map((option) => ({
-    value: option.value,
-    content: operatorLabel(filterConfig.getDisplayOperatorByValue(option.value, condition.value)),
-    query: operatorLabel(filterConfig.getDisplayOperatorByValue(option.value, condition.value)).toLowerCase(),
+  const operatorOptions = filterConfig?.allEnabledSupportedOperators.map((operator) => ({
+    value: operator,
+    content: operatorLabel(filterConfig.getDisplayOperatorByValue(operator, condition.value)),
+    query: operatorLabel(filterConfig.getDisplayOperatorByValue(operator, condition.value)).toLowerCase(),
   }));
   const selectedOperatorFieldConfig = filterConfig?.getOperatorConfig(condition.operator);
   const selectedOperatorOption = filterConfig?.getDisplayOperatorByValue(condition.operator, condition.value);

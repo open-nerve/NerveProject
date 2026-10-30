@@ -1,14 +1,15 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { runInAction } from "mobx";
 import { workItemFiltersAdapter } from "@nerve/shared-state";
 import { toProjectFilters } from "@/lib/issue-filters";
 import { EIssueFilterType } from "@nerve/constants";
 import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { preferencesOf } from "@/store/project/fake-projects";
+import { accountOf } from "@/store/member/fake-users";
 import { issueStoreTab, requestedIssue } from "../fake-issues";
 
-vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 const binding = vi.hoisted(() => ({ app: undefined as unknown }));
 vi.mock("@/lib/store-context", () => ({
@@ -18,6 +19,7 @@ vi.mock("@/lib/store-context", () => ({
 }));
 let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 beforeEach(async () => {
+  vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
   vi.useFakeTimers();
   tab = await issueStoreTab();
   binding.app = tab.app;
@@ -25,6 +27,7 @@ beforeEach(async () => {
 afterEach(() => {
   tab.app.dispose();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 it("writesOneWholePreferenceField using the last confirmed answer", async () => {
@@ -341,35 +344,40 @@ it("fix1 I1/I3 canonicalizes saved UUIDs and clears year zero on real preference
   await list.promise;
 });
 
-it("retains project kanban collapse across a real preference reload", async () => {
-  const data = new Map<string, string>();
-  vi.stubGlobal("window", {
-    localStorage: {
-      getItem: (key: string) => data.get(key) ?? null,
-      setItem: (key: string, value: string) => data.set(key, value),
-    },
-  });
-  const { app, nerve } = tab;
-  const { runInAction } = await import("mobx");
-  runInAction(() => {
-    app.user.data = { id: "actor" } as NonNullable<typeof app.user.data>;
-  });
-  const first = await requestedIssue(nerve, () => app.issue.projectIssuesFilter.fetchFilters("ws", "A"), [
-    "GET",
-    "/api/v0/me/projects/A/preferences",
-  ]);
-  first.call.answer(json(200, preferencesOf()));
-  await first.promise;
-  await app.issue.projectIssuesFilter.updateFilters("ws", "A", EIssueFilterType.KANBAN_FILTERS, {
-    group_by: ["state-1"],
-    sub_group_by: [],
-  });
-  const second = await requestedIssue(nerve, () => app.issue.projectIssuesFilter.fetchFilters("ws", "A"), [
-    "GET",
-    "/api/v0/me/projects/A/preferences",
-  ]);
-  second.call.answer(json(200, preferencesOf()));
-  await second.promise;
-  expect(app.issue.projectIssuesFilter.getIssueFilters("A")?.kanbanFilters?.group_by).toEqual(["state-1"]);
-  vi.unstubAllGlobals();
-});
+it.each([false, true])(
+  "retains project kanban collapse across a real preference reload (storage blocked=%s)",
+  async (blocked) => {
+    const data = new Map<string, string>();
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => data.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          if (blocked) throw new Error("blocked");
+          data.set(key, value);
+        },
+      },
+    });
+    const { app, nerve } = tab;
+    runInAction(() => {
+      app.user.data = accountOf("alice");
+    });
+    const first = await requestedIssue(nerve, () => app.issue.projectIssuesFilter.fetchFilters("ws", "A"), [
+      "GET",
+      "/api/v0/me/projects/A/preferences",
+    ]);
+    first.call.answer(json(200, preferencesOf()));
+    await first.promise;
+    await app.issue.projectIssuesFilter.updateFilters("ws", "A", EIssueFilterType.KANBAN_FILTERS, {
+      group_by: ["state-1"],
+      sub_group_by: [],
+    });
+    const second = await requestedIssue(nerve, () => app.issue.projectIssuesFilter.fetchFilters("ws", "A"), [
+      "GET",
+      "/api/v0/me/projects/A/preferences",
+    ]);
+    second.call.answer(json(200, preferencesOf({ filters: { priority: ["low"] } })));
+    await second.promise;
+    expect(app.issue.projectIssuesFilter.getIssueFilters("A")?.kanbanFilters?.group_by).toEqual(["state-1"]);
+    expect(app.issue.projectIssuesFilter.getIssueFilters("A")?.richFilters).toEqual({ and: [{ priority__in: "low" }] });
+  }
+);

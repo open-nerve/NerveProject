@@ -1,4 +1,3 @@
-import type { TProfileViews } from "@nerve/types";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -31,11 +30,10 @@ type SpreadsheetStoreType = EIssuesStoreType.PROJECT;
 interface IBaseSpreadsheetRoot {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
-  viewId?: TProfileViews;
 }
 
 export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: IBaseSpreadsheetRoot) {
-  const { QuickActions, canEditPropertiesBasedOnProject, viewId } = props;
+  const { QuickActions, canEditPropertiesBasedOnProject } = props;
   // router
   const { workspaceSlug, projectId } = useParams();
   // store hooks
@@ -65,7 +63,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
       projectId
     );
 
-  useIssueListMount(storeType, issues.rootIssueStore, fetchIssues, { limit: 100 }, viewId);
+  useIssueListMount(storeType, issues.rootIssueStore, fetchIssues, { limit: 100 });
 
   const canEditProperties = useCallback(
     (targetProjectId: string | undefined) => {
@@ -113,7 +111,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
   if (!Array.isArray(issueIds)) return null;
 
   return (
-    <RowExpansionProvider viewId={viewId}>
+    <RowExpansionProvider>
       <IssueListRetry {...staleRefresh} />
       <IssueLayoutHOC layout={EIssueLayoutTypes.SPREADSHEET}>
         <SpreadsheetView

@@ -24,14 +24,9 @@ import { MergedDateDisplay } from "./merged-date";
 import type { TButtonVariants } from "./types";
 
 type Props = {
-  applyButtonText?: string;
-  bothRequired?: boolean;
   buttonClassName?: string;
   buttonContainerClassName?: string;
-  buttonFromDateClassName?: string;
-  buttonToDateClassName?: string;
   buttonVariant: TButtonVariants;
-  cancelButtonText?: string;
   className?: string;
   clearIconClassName?: string;
   disabled?: boolean;
@@ -51,7 +46,6 @@ type Props = {
     to?: string;
   };
   placement?: Placement;
-  required?: boolean;
   showTooltip?: boolean;
   tabIndex?: number;
   value: {
@@ -71,8 +65,6 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
   const {
     buttonClassName,
     buttonContainerClassName,
-    buttonFromDateClassName,
-    buttonToDateClassName,
     buttonVariant,
     className,
     clearIconClassName = "",
@@ -177,22 +169,12 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
         ) : (
           // Original separate date display
           <>
-            <span
-              className={cn(
-                "flex h-full flex-grow items-center justify-center gap-1 rounded-xs",
-                buttonFromDateClassName
-              )}
-            >
+            <span className="flex h-full flex-grow items-center justify-center gap-1 rounded-xs">
               {!hideIcon.from && <CalendarOutline className="h-3 w-3 flex-shrink-0" />}
               {dateRange.from ? renderFormattedDate(dateRange.from) : renderPlaceholder ? placeholder.from : ""}
             </span>
             <ArrowNarrowRightOutline className="h-3 w-3 flex-shrink-0" />
-            <span
-              className={cn(
-                "flex h-full flex-grow items-center justify-center gap-1 rounded-xs",
-                buttonToDateClassName
-              )}
-            >
+            <span className="flex h-full flex-grow items-center justify-center gap-1 rounded-xs">
               {!hideIcon.to && <DueDateOutline className="h-3 w-3 flex-shrink-0" />}
               {dateRange.to ? renderFormattedDate(dateRange.to) : renderPlaceholder ? placeholder.to : ""}
             </span>

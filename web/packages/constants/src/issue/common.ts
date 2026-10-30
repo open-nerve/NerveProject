@@ -14,8 +14,6 @@ import type {
   EIssuesStoreType,
 } from "@nerve/types";
 
-export const ALL_ISSUES = "All Issues";
-
 export type TIssuePriorities = "urgent" | "high" | "medium" | "low" | "none";
 
 export const ISSUE_PRIORITIES: {

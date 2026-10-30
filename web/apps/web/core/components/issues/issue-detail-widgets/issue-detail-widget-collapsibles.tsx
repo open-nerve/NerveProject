@@ -7,7 +7,6 @@
 import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { TWorkItemWidgets } from "@nerve/types";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
@@ -21,11 +20,10 @@ type Props = {
   projectId: string;
   issueId: string;
   disabled: boolean;
-  hideWidgets?: TWorkItemWidgets[];
 };
 
 export const IssueDetailWidgetCollapsibles = observer(function IssueDetailWidgetCollapsibles(props: Props) {
-  const { workspaceSlug, projectId, issueId, disabled, hideWidgets } = props;
+  const { workspaceSlug, projectId, issueId, disabled } = props;
   // store hooks
   const {
     issue: { getIssueById },
@@ -37,9 +35,9 @@ export const IssueDetailWidgetCollapsibles = observer(function IssueDetailWidget
   const subIssues = subIssuesByIssueId(issueId);
   const issueRelationsCount = getRelationCountByIssueId(issueId, ISSUE_RELATION_OPTIONS);
   // render conditions
-  const shouldRenderSubIssues = !!subIssues && subIssues.length > 0 && !hideWidgets?.includes("sub-work-items");
-  const shouldRenderRelations = issueRelationsCount > 0 && !hideWidgets?.includes("relations");
-  const shouldRenderLinks = !!issue?.link_count && issue?.link_count > 0 && !hideWidgets?.includes("links");
+  const shouldRenderSubIssues = !!subIssues && subIssues.length > 0;
+  const shouldRenderRelations = issueRelationsCount > 0;
+  const shouldRenderLinks = !!issue?.link_count && issue?.link_count > 0;
 
   return (
     <div className="flex flex-col">

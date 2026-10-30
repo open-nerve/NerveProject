@@ -220,7 +220,6 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
                 cycleDetails.start_date ?? ""
               )} → ${renderFormattedDateInUserTimezone(cycleDetails.end_date ?? "")}`}
               mergeDates
-              required={cycleDetails.status !== "draft"}
               disabled
               hideIcon={{
                 from: false,
