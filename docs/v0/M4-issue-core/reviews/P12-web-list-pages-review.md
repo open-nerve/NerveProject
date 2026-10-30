@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T12 已完成，T13–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T13 已完成，T14–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -204,3 +204,14 @@ M25 漏只读 disabled、M26 绕过统一 create 导致字段拒绝丢失、M27 
 t12-host-red 实际 7 失败，修复后相关 10 文件 94 测试通过（t12-final-regression2，0 skip）；包括真实卡片记录触发器、双宿主、同 ID 重开、路由同步隐藏、权限失去/恢复、访客持续读取及权限 ABA 的旧错误清除、晚成功/拒绝不覆盖新项、删除/归档/恢复及焦点归还。类型、修改路径零 lint 和 cap121 通过。最初测试循环改成 it.each 时误删 finally 括号属夹具语法错误，已修复；完整成功夹具中的后续资源读取不适合单次 core 请求计数，权限 ABA 测试改为受控 core 拒绝，直接检验每次权限证明变化后的新请求和旧错误清除；保留诊断 raw，未据失败日志宣称产品已坏。
 
 M31 首轮未失败揭示测试 StrictMode 在子树而非根，未真正执行重复挂载；现将 StrictMode 包裹渲染根，M31 去旧 owner 身份校验被实际捕获。M32 去触发器连接校验被卸载焦点用例捕获。两项 receipt2 记录变异红、原字节/hash 恢复及绿；首轮存活 receipt 不计有效性质。当前所有者/读取/焦点责任均属既有 UI 层局部修正，无架构阻塞。实际 Back/三浏览器键盘继续在 T13–T15 页面故事核验。
+
+
+## 20. T13 I3/I7 真实页面故事（2026-10-30）
+
+保留原 API 故事；新 issue-list-page 夹具由 I3/I7 两个真实页面复用，API 建独立账户/项目，真实表单登录，导航前注册 watchPage。I3 使用 53 个真实工作项，状态首 50 条与后页、A 筛选 C 标签组的 51 条交集、完整 A/C 已选标签、切看板并重载后的唯一泳道总数均核 UI 和实际 query。标签逐个 chip 都能打开完整选择器，页面明确点击 A chip，不以任意 first() 掩盖定位。I7 在指定状态真实快速创建，字段描述先于拒绝取焦，422 留输入、pending 不重发，释放实际响应后清输入；DB 状态/尾部位置/创建活动一致。
+
+页面准备定位到 WorkItemFilterRoot 在 render 中更新 MobX 注册项，导致子组件渲染通知；StrictMode 重挂时又删除不重建。局部修复将注册/选项更新置于 layout effect，按 store/entity/key 持有实例，清理仅删除自己的实例，切 session store 同 key 也不暴露旧项。三项真实 store 测试覆盖原通知、StrictMode、实体/会话替换及卸载；不改变筛选协议或权限归属。D19 登记此根因处理。
+
+M06-page 续页丢 label_id 使 C-only 错入 A∩C；M08-page 先取焦使记录缺少错误描述；二者均实际页面红、精确恢复 hash、当前源码重新 build 后绿，作为既有 M06/M08 的额外层级证据，不重复计独立性质。M33 恢复原 filter HOC 触发渲染警告与 StrictMode 缺注册，精确恢复后绿。早期焦点探针被 Playwright press 预先聚焦、held route 阻断低层 route 观察及双 chip 定位歧义属夹具问题，分别改用失焦后的原生表单提交、真实 request 事件计数、指名 chip；原失败 trace 均保留。
+
+最终 t13-final-unit 为 6 文件 61 测试（0 skip），当前 make build、web/E2E 类型与修改路径零 lint 通过。t13-final-pages2 四项全绿（2 API + 2 Chromium page，0 skip）；每次实际加载的已知 EMOJI 警告精确计数，I7 仅明确期待一次 422，其他 API/旧地址/console/CSP/外域均为零。Firefox/WebKit 的文本与次数留 T15 实跑确认。证据 t13-*、M06-page/M08-page/M33 receipt。局部自查通过，无架构阻塞。

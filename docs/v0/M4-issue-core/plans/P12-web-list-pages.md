@@ -155,10 +155,10 @@ make e2e
 
 **Files：** e2e/stories/issue/i3-list-groups.spec.ts、i7-quick-add.spec.ts；必要共享fixture（新issue-list-page.ts，实际两故事复用）。
 
-- [ ] 保留API故事，加(page)故事：API准备独立账户/项目/状态标签/足够跨页数据，浏览器登录后真实UI操作。让组有超过真实页面limit的数据；不得只拦截造假分页响应代替端点。
-- [ ] I3状态组加载更多/泳道label×priority的唯一计数、完整数组、A∩C续页、切布局刷新；请求query与DOM顺序同时断言，不在断言前排序服务端答案。
-- [ ] I7选组快速添加，DB真实state/默认尾部sort和活动；空白field可访问描述、recordFocuses取焦时invalid；pending双提交/拒绝留输入。少量错误拦截精确期待watchPage失败，其它均零。
-- [ ] watchPage在导航前接，全部页面拒绝/console/CSP/旧URL/外域结果独立断言；沿expectQuietConsole按每次真正加载编辑器精确期待已知EMOJI_CHECK_WARNING，保留探针和次数断言，除此以外零警告；删除提示/编辑器分割归P14。新fixture不放宽全局watch。当前build跑两(page)故事Chromium，记录非零数；变异M06/M08至少各有页面层捕获证据。G，提交`test(M4/P12): 用真实页面验证分组续页和快速添加`。
+- [x] 保留API故事，加(page)故事：API准备独立账户/项目/状态标签/足够跨页数据，浏览器登录后真实UI操作。让组有超过真实页面limit的数据；不得只拦截造假分页响应代替端点。
+- [x] I3状态组加载更多/泳道label×priority的唯一计数、完整数组、A∩C续页、切布局刷新；请求query与DOM顺序同时断言，不在断言前排序服务端答案。
+- [x] I7选组快速添加，DB真实state/默认尾部sort和活动；空白field可访问描述、recordFocuses取焦时invalid；pending双提交/拒绝留输入。少量错误拦截精确期待watchPage失败，其它均零。
+- [x] watchPage在导航前接，全部页面拒绝/console/CSP/旧URL/外域结果独立断言；沿expectQuietConsole按每次真正加载编辑器精确期待已知EMOJI_CHECK_WARNING，保留探针和次数断言，除此以外零警告；删除提示/编辑器分割归P14。新fixture不放宽全局watch。当前build跑两(page)故事Chromium，记录非零数；变异M06/M08至少各有页面层捕获证据。G，提交`test(M4/P12): 用真实页面验证分组续页和快速添加`。
 
 ## Task 14：I4、I6页面与S2（约800–1300行）
 

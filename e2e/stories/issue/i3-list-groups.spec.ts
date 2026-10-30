@@ -1,5 +1,6 @@
 import {
   addProjectMembers,
+  readProjectPreferences,
   createLabel,
   createProject,
   createWorkspace,
@@ -11,6 +12,15 @@ import { bearer, newAccount } from "../../fixtures/auth";
 import { createIssue, issuesListed, listIssues, updateIssue, type IssueQuery } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
+
+import {
+  issueListProject,
+  saveListPreferences,
+  openIssueList,
+  listGroup,
+  expectListOrder,
+  expectListPageQuiet,
+} from "../../fixtures/issue-list-page";
 
 test("I3 (API): state groups and priority-label lanes count unique issues; complete arrays survive double expansion and A-filter C-group continuation", async ({
   api,
@@ -184,4 +194,135 @@ test("I3 (API): state groups and priority-label lanes count unique issues; compl
       order_by: "unknown_count",
     })
   ).toEqual({ status: 422, code: "validation_failed", errors: [{ field: "order_by", code: "not_allowed" }] });
+});
+
+test("I3 (page): real state continuation, saved A intersection C and label-priority lanes keep order, complete labels and unique totals", async ({
+  api,
+  page,
+  browserName,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const { member, project, states } = seed;
+  const a = await createLabel(api, member.token, project.id, { name: "Label A" });
+  const c = await createLabel(api, member.token, project.id, { name: "Label C" });
+  const labels = [a, c].toSorted(byId).map((label) => label.id);
+  const rows: Awaited<ReturnType<typeof createIssue>>[] = [];
+  await Array.from({ length: 51 }, (_, index) => index).reduce(async (prior, index) => {
+    await prior;
+    rows.push(
+      await createIssue(api, member.token, project.id, {
+        name: `Both ${String(index + 1).padStart(2, "0")}`,
+        state_id: states.Todo,
+        label_ids: labels,
+        priority: "high",
+      })
+    );
+  }, Promise.resolve());
+  const cOnly = await createIssue(api, member.token, project.id, {
+    name: "C only outside A",
+    state_id: states.Todo,
+    label_ids: [c.id],
+    priority: "high",
+  });
+  const aOnly = await createIssue(api, member.token, project.id, {
+    name: "A only",
+    state_id: states.Done,
+    label_ids: [a.id],
+    priority: "low",
+  });
+  const prefs = await readProjectPreferences(api, member.token, project.id);
+  const display = {
+    ...prefs.display_filters,
+    layout: "list" as const,
+    group_by: "state_id" as const,
+    sub_group_by: null,
+    order_by: "sort_order" as const,
+    show_empty_groups: false,
+  };
+  await saveListPreferences(api, seed, {
+    filters: {},
+    display_filters: display,
+    display_properties: { ...prefs.display_properties, labels: true },
+  });
+  const { watch, queries } = await openIssueList(page, seed);
+  const todo = listGroup(page, "Todo");
+  await expectListOrder(
+    todo,
+    rows.slice(0, 50).map((row) => row.id)
+  );
+  await expect(todo.locator('[class~="group/list-header"]')).toHaveText("Todo52");
+  const labelsButton = todo
+    .getByRole("button", { name: "Labels: Both 01", exact: true })
+    .filter({ hasText: "Label A" });
+  await labelsButton.click();
+  await expect(page.getByRole("option", { name: "Label A", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("option", { name: "Label C", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
+  await expect(labelsButton).toBeFocused();
+  await todo.getByRole("button", { name: "Load more" }).focus();
+  await page.keyboard.press("Enter");
+  await expectListOrder(
+    todo,
+    [...rows, cOnly].map((row) => row.id)
+  );
+  await expect(todo.getByRole("button", { name: "Load more" })).toHaveCount(0);
+  expect(Object.fromEntries(queries.find((query) => query.has("cursor"))!)).toMatchObject({
+    group_by: "state_id",
+    group_key: states.Todo,
+    limit: "50",
+    order_by: "sort_order",
+  });
+  await expectListOrder(listGroup(page, "Done"), [aOnly.id]);
+
+  await saveListPreferences(api, seed, {
+    filters: { label_id: [a.id] },
+    display_filters: { ...display, group_by: "label_id" },
+  });
+  await page.reload();
+  const cGroup = listGroup(page, "Label C");
+  await expectListOrder(
+    cGroup,
+    rows.slice(0, 50).map((row) => row.id)
+  );
+  await cGroup.getByRole("button", { name: "Load more" }).click();
+  await expectListOrder(
+    cGroup,
+    rows.map((row) => row.id)
+  );
+  await expect(cGroup.locator('[class~="group/list-header"]')).toHaveText("Label C51");
+  const cQuery = queries.find((query) => query.get("group_key") === c.id && query.has("cursor"));
+  expect(cQuery && Object.fromEntries(cQuery)).toMatchObject({
+    label_id: a.id,
+    group_by: "label_id",
+    group_key: c.id,
+    order_by: "sort_order",
+    limit: "50",
+  });
+  const confirmed = await listIssues(api, member.token, project.id, {
+    label_id: [a.id],
+    group_by: "label_id",
+    group_key: c.id,
+    order_by: "sort_order",
+    limit: 100,
+  });
+  expect(confirmed.data?.map((row) => row.label_ids)).toEqual(rows.map(() => labels));
+  // Change layout through the actual toolbar; then reload the saved grouping for a real swimlane page.
+  await page.getByRole("button", { name: "Board Layout", exact: true }).click();
+  await expect
+    .poll(async () => (await readProjectPreferences(api, member.token, project.id)).display_filters.layout)
+    .toBe("kanban");
+  await saveListPreferences(api, seed, {
+    filters: {},
+    display_filters: { ...display, layout: "kanban", group_by: "priority", sub_group_by: "label_id" },
+  });
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Label A 52", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Label C 52", exact: true })).toBeVisible();
+  expect(
+    queries.some(
+      (query) =>
+        query.get("group_by") === "priority" && query.get("sub_group_by") === "label_id" && query.get("limit") === "10"
+    )
+  ).toBe(true);
+  await expectListPageQuiet(page, watch, browserName, 3);
 });
