@@ -11,6 +11,7 @@ import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { useLabelChanges, type IssueLabelCreation } from "@/components/labels/use-label-changes";
+import { useDetailCommand } from "../use-issue-operations";
 import { useDetailScope } from "../../issue-detail-widgets/use-detail-scope";
 
 // hooks
@@ -26,7 +27,7 @@ export type TIssueLabel = {
   issueId: string;
   disabled: boolean;
   isInboxIssue?: boolean;
-  onLabelUpdate?: (labelIds: string[]) => void;
+  onLabelUpdate?: (labelIds: string[]) => void | Promise<void>;
 };
 
 export type TLabelOperations = {
@@ -39,6 +40,7 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
   const { t } = useTranslation();
   const capture = useDetailScope(workspaceSlug, projectId, issueId, true);
   const { create } = useLabelChanges(capture);
+  const run = useDetailCommand(workspaceSlug, projectId, issueId);
   // hooks
   const { updateIssue } = useIssueDetail();
   const {
@@ -50,18 +52,11 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
 
   const labelOperations: TLabelOperations = useMemo(
     () => ({
-      updateIssue: async (slug: string, issueProjectId: string, workItemId: string, data: Partial<IssueDetail>) => {
-        try {
-          if (onLabelUpdate) onLabelUpdate(data.label_ids || []);
+      updateIssue: (slug: string, issueProjectId: string, workItemId: string, data: Partial<IssueDetail>) =>
+        run(async () => {
+          if (onLabelUpdate) await onLabelUpdate(data.label_ids ?? []);
           else await updateIssue(slug, issueProjectId, workItemId, data);
-        } catch (_error) {
-          setToast({
-            title: t("toast.error"),
-            type: TOAST_TYPE.ERROR,
-            message: t("entity.update.failed", { entity: t("issue.label", { count: 1 }) }),
-          });
-        }
-      },
+        }),
       create: (data, underField, done) =>
         create(projectId, data, underField, async (label) => {
           if (!isInboxIssue)
@@ -69,7 +64,7 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
           await done(label);
         }),
     }),
-    [updateIssue, create, onLabelUpdate, isInboxIssue, projectId, t]
+    [updateIssue, run, create, onLabelUpdate, isInboxIssue, projectId, t]
   );
 
   return (

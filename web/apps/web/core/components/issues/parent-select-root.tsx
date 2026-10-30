@@ -1,4 +1,3 @@
-// oxlint-disable no-shadow
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -8,8 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { useDetailCommand } from "./issue-detail/use-issue-operations";
 // components
 import type { TIssueOperations } from "@/components/issues/issue-detail";
 import { IssueParentSelect } from "@/components/issues/issue-detail/parent-select";
@@ -28,7 +26,7 @@ type TIssueParentSelect = {
 
 export const IssueParentSelectRoot = observer(function IssueParentSelectRoot(props: TIssueParentSelect) {
   const { issueId, issueOperations, projectId, workspaceSlug } = props;
-  const { t } = useTranslation();
+  const run = useDetailCommand(workspaceSlug, projectId, issueId);
   const capture = useDetailScope(workspaceSlug, projectId, issueId);
   // store hooks
   const {
@@ -36,7 +34,7 @@ export const IssueParentSelectRoot = observer(function IssueParentSelectRoot(pro
   } = useIssueDetail();
   const {
     removeSubIssue,
-    subIssues: { setSubIssueHelpers, fetchSubIssues },
+    subIssues: { setSubIssueHelpers, subIssueHelpersByIssueId },
   } = useIssueDetail();
   const { toggleParentIssueModal } = useIssueDetailModals();
 
@@ -49,32 +47,22 @@ export const IssueParentSelectRoot = observer(function IssueParentSelectRoot(pro
     try {
       await issueOperations.update(workspaceSlug, projectId, issueId, { parent_id: _issueId });
       if (!current()) return;
-      await issueOperations.fetch(workspaceSlug, projectId, issueId, false);
-      if (!current()) return;
-      if (_issueId) await fetchSubIssues(workspaceSlug, projectId, _issueId);
       if (current()) toggleParentIssueModal(null);
     } catch (_error) {
-      console.error("something went wrong while fetching the issue");
+      // The command reported the refusal; retain the selection dialog.
     }
   };
 
-  const handleRemoveSubIssue = async (
-    workspaceSlug: string,
-    projectId: string,
-    parentIssueId: string,
-    issueId: string
-  ) => {
+  const handleRemoveSubIssue = async (ws: string, project: string, parent: string, child: string) => {
+    if (subIssueHelpersByIssueId(parent).issue_loader.includes(child)) return;
+    setSubIssueHelpers(parent, "issue_loader", child);
     try {
-      setSubIssueHelpers(parentIssueId, "issue_loader", issueId);
-      await removeSubIssue(workspaceSlug, projectId, parentIssueId, issueId);
-      await fetchSubIssues(workspaceSlug, projectId, parentIssueId);
-      setSubIssueHelpers(parentIssueId, "issue_loader", issueId);
+      await run(() => removeSubIssue(ws, project, parent, child));
     } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("common.error.label"),
-        message: t("common.something_went_wrong"),
-      });
+      // useDetailCommand reports native refusals and suppresses stale-host feedback.
+    } finally {
+      if (subIssueHelpersByIssueId(parent).issue_loader.includes(child))
+        setSubIssueHelpers(parent, "issue_loader", child);
     }
   };
 

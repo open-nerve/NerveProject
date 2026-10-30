@@ -5,11 +5,11 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
-import type { TNameDescriptionLoader } from "@nerve/types";
+import { useIssueSaveStatus } from "@/components/issues/use-issue-save-status";
 import { EFileAssetType } from "@nerve/types";
 // components
 import { IssueDescriptionVersions } from "@/components/issues/issue-detail/description-versions";
@@ -46,25 +46,20 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
   // refs
   const editorRef = useRef<EditorRefApi>(null);
   // states
-  const [isSubmitting, setIsSubmitting] = useState<TNameDescriptionLoader>("saved");
+  const { status: isSubmitting, setTitleStatus, setDescriptionStatus } = useIssueSaveStatus();
   // hooks
   const windowSize = useSize();
   const { data: currentUser } = useUser();
   const {
     issue: { getIssueDetailById },
   } = useIssueDetail();
-  const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting");
+  const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting" || isSubmitting === "failed");
   // derived values
   const issue = issueId ? getIssueDetailById(issueId) : undefined;
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    if (isSubmitting === "submitted") {
-      setShowAlert(false);
-      timer = setTimeout(() => setIsSubmitting("saved"), 2000);
-    } else if (isSubmitting === "submitting") setShowAlert(true);
-    return () => clearTimeout(timer);
-  }, [isSubmitting, setShowAlert, setIsSubmitting]);
+    setShowAlert(isSubmitting === "submitting" || isSubmitting === "failed");
+  }, [isSubmitting, setShowAlert]);
 
   if (!issue || !issue.project_id) return <></>;
 
@@ -92,8 +87,7 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
           workspaceSlug={workspaceSlug}
           projectId={issue.project_id}
           issueId={issue.id}
-          isSubmitting={isSubmitting}
-          setIsSubmitting={(value) => setIsSubmitting(value)}
+          setIsSubmitting={setTitleStatus}
           issueOperations={issueOperations}
           disabled={isArchived || !isEditable}
           value={issue.name}
@@ -116,7 +110,7 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
             });
           }}
           projectId={issue.project_id}
-          setIsSubmitting={(value) => setIsSubmitting(value)}
+          setIsSubmitting={setDescriptionStatus}
           workspaceSlug={workspaceSlug}
         />
 

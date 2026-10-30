@@ -88,7 +88,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
     workspaceSlug,
   });
   // use editor mention
-  const { fetchMentions } = useEditorMention({ workspaceSlug, projectId, editable, members });
+  const { fetchMentions, mentionScope } = useEditorMention({ workspaceSlug, projectId, editable, members });
   // editor config
   const { getEditorFileHandlers } = useEditorConfig();
   // derived values
@@ -129,6 +129,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
             }}
             mentionHandler={{
               searchCallback: fetchMentions,
+              scope: mentionScope,
               renderError: (error, retry) => <EditorMentionsError error={error} retry={retry} />,
               renderComponent: EditorMentionsRoot,
               getMentionedEntityDetails: (id) => ({

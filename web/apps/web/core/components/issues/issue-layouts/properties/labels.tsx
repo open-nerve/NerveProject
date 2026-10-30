@@ -25,7 +25,6 @@ import { LabelDropdown } from "./label-dropdown";
 export interface IIssuePropertyLabels {
   projectId: string | null;
   value: string[];
-  defaultOptions?: unknown;
   onChange: (data: string[]) => void;
   disabled?: boolean;
   hideDropdownArrow?: boolean;

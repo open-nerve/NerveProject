@@ -16,7 +16,7 @@ import { MentionNodeView } from "./mention-node-view";
 import { renderMentionsDropdown } from "./utils";
 
 export function CustomMentionExtension(options: TMentionHandler) {
-  const { searchCallback, renderError, renderComponent, getMentionedEntityDetails } = options;
+  const { searchCallback, renderError, scope, renderComponent, getMentionedEntityDetails } = options;
   return CustomMentionExtensionConfig.extend({
     addOptions(this) {
       return {
@@ -36,6 +36,7 @@ export function CustomMentionExtension(options: TMentionHandler) {
       render: renderMentionsDropdown({
         searchCallback,
         renderError,
+        scope,
       }),
       allowSpaces: true,
     },

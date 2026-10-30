@@ -177,9 +177,10 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
                     issueId={issue?.id}
                     disabled={!isEditable}
                     isInboxIssue
-                    onLabelUpdate={(val: string[]) =>
-                      issue?.id && issueOperations.update(workspaceSlug, projectId, issue?.id, { label_ids: val })
-                    }
+                    onLabelUpdate={async (val: string[]) => {
+                      if (issue?.id)
+                        await issueOperations.update(workspaceSlug, projectId, issue.id, { label_ids: val });
+                    }}
                   />
                 )}
               </div>

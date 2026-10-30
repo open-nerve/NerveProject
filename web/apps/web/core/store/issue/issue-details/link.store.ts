@@ -50,24 +50,28 @@ export class IssueLinkStore {
     request: () => Promise<IssueLink | void>,
     removed?: string
   ): Promise<IssueLink | void> {
-    return this.root.enqueueIssueChanges([id], async () => {
-      const resource = this.resources.entry(ws, project, id);
-      const scope = this.root.scope(ws, project);
-      const token = this.root.captureRead();
-      const answer = await request();
-      this.current(scope, token);
-      if (answer) {
-        this.validate([answer], id);
-        resource.receive([answer], token, (held) => upserted(answer)(held ?? []));
-      } else if (removed) resource.confirm(dropped(removed), token);
-      await resource.refreshAfterConfirmation(async () => {
+    return this.root.enqueueIssueChanges(
+      [id],
+      async () => {
+        const resource = this.resources.entry(ws, project, id);
+        const scope = this.root.scope(ws, project);
+        const token = this.root.captureRead();
+        const answer = await request();
         this.current(scope, token);
-        await this.root.issues.refreshAuthoritative(id, { afterWrite: true });
-        this.current(scope, token);
-        await this.rootIssueDetailStore.refreshAfterChange(ws, project, id);
-      }, token);
-      return answer;
-    });
+        if (answer) {
+          this.validate([answer], id);
+          resource.receive([answer], token, (held) => upserted(answer)(held ?? []));
+        } else if (removed) resource.confirm(dropped(removed), token);
+        await resource.refreshAfterConfirmation(async () => {
+          this.current(scope, token);
+          await this.root.issues.refreshAuthoritative(id, { afterWrite: true });
+          this.current(scope, token);
+          await this.rootIssueDetailStore.refreshAfterChange(ws, project, id);
+        }, token);
+        return answer;
+      },
+      { workspaceSlug: ws, projectID: project }
+    );
   }
   createLink = async (ws: string, project: string, id: string, body: IssueLinkCreate): Promise<IssueLink> => {
     const result = await this.write(ws, project, id, () =>

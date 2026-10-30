@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T13已实现，继续T14**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T14已实现，进入T15整审与最终验证**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -188,15 +188,17 @@ make e2e
 - [x] label-create-direct规则覆盖真实调用/通用允许入口，故意直接创建变异应守卫红；不设新豁免。定向identifier-width/issue-properties/base.loading/base.clone+文案sync/types/static。
 - [x] M29标签绕统一create、M30宽度固定1/取消权限scope重置（两性质分记录）、M31错误取error.error各红；G；F检查点。提交 `fix(M4/P11): 统一标签创建与详情错误和编号显示`。
 
-## Task 14：删除过渡、完整修改矩阵与回归（约350–800行）
+## Task 14：删除过渡、完整修改矩阵与回归（约1500–2500行，含调用方收尾测试）
 
-**Files：** 本段已改的barrel/types/旧service/关键词，C/store/issue新 detail-mutations.test.ts，e2e/stories/smoke/s2-web-app.spec.ts仅实际请求边界需调整处；不为维持绿放宽watchPage/旧URL规则。
+**Files：** 本段已改的barrel/types/旧service/关键词，C/store/issue新 detail-mutations.test.ts，e2e/stories/smoke/s2-web-app.spec.ts仅实际请求边界需调整处；不为维持绿放宽watchPage/旧URL规则。另含已迁移详情/peek/标签/父项/列表展开的命令跟进、title-input与DescriptionInput保存状态、提及建议宿主，以及对应真实UI测试；通用输入只修本段结果与生命周期处理，不改M7服务协议。
 
-- [ ] 按下表给每个修改列四列：确认前不改、403/422/409不改、退役/权限ABA不改/不跟进、成功后各副本及补读失败。不合并语义不同的行凑“已覆盖”；注明哪项无该拒绝码/适用性。
-- [ ] 跨资源同issue排队：描述/链接/评论与批量子项交错；最后一页旧GET、删树未知后代、权限失效、不同root/workspace互不污染。核最新源码而非只引用T2绿。
-- [ ] 原七个实例+前移两个逐路径零命中；is_bot旧字段/共享旧详情DTO/旧普通links地址消失；搜索与M5–M7余留按期限精确列出，不借grep整个web为零写假完成。
-- [ ] keyword exact key/phase、oxlint、knip、domains/死成员都按真实命中判断；输入handoff对应行映射各Task。聚焦全detail*.test+列表root/issue-changes/drag回归；types/static与S2实际构建运行按需要。
-- [ ] G；提交 `test(M4/P11): 补齐详情资源修改与权限竞态矩阵`。下一Task最终F覆盖本产品集合，不无理由再重复同一完整检查。
+- [x] T13矩阵预读的局部缺口：详情/peek修改拒绝向需要结果的调用方传播，属性事件明确结束已报告的Promise；恢复失败不关peek；父项不重复权威补读，loader最终释放；展开子项拒绝可见/重试。
+- [x] 标题/描述只在本次服务端确认后显示保存，拒绝保留输入并可显式重试；旧确认不能覆盖后续输入/新scope，不在卸载时重复已尝试的写入；两个字段各自状态不互相伪装成功。提及已经打开的建议在scope改变时也结束，不能只防尚未返回的请求。
+- [x] 按下表给每个修改列四列：确认前不改、403/422/409不改、退役/权限ABA不改/不跟进、成功后各副本及补读失败。不合并语义不同的行凑“已覆盖”；注明哪项无该拒绝码/适用性。
+- [x] 跨资源同issue排队：描述/链接/评论与批量子项交错；最后一页旧GET、删树未知后代、权限失效、不同root/workspace互不污染。核最新源码而非只引用T2绿。
+- [x] 原七个实例+前移两个逐路径零命中；is_bot旧字段/共享旧详情DTO/旧普通links地址消失；搜索与M5–M7余留按期限精确列出，不借grep整个web为零写假完成。
+- [x] keyword exact key/phase、oxlint、knip、domains/死成员都按真实命中判断；输入handoff对应行映射各Task。聚焦全detail*.test+列表root/issue-changes/drag回归；types/static与S2实际构建运行按需要。
+- [x] G；提交 `test(M4/P11): 补齐详情资源修改与权限竞态矩阵`。下一Task最终F覆盖本产品集合，不无理由再重复同一完整检查。
 
 ## Task 15：终审、证据与阶段交付（约150–400行文档，修复另计）
 

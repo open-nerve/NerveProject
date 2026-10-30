@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import { Avatar } from "@makeplane/propel/components/avatar";
-import type { TMentionSection } from "@nerve/editor";
+import type { TMentionSection, TMentionScope } from "@nerve/editor";
 import { getFileURL } from "@nerve/utils";
 import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -14,6 +14,28 @@ type Args = { workspaceSlug: string; projectId?: string; editable: boolean; memb
 export function useEditorMention({ workspaceSlug, projectId, editable, members }: Args) {
   const { rootIssueStore: root } = useIssueDetail();
   const scope = useDetailScope(workspaceSlug, projectId, "editor-mentions", !projectId);
+  const workspaceID = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id;
+  const permissionIdentity = root.permissionReads.identity(workspaceID, projectId ? [projectId] : [], !projectId);
+  const latestScope = useRef(scope);
+  const listeners = useMemo(() => new Set<() => void>(), []);
+  const mentionScope = useMemo<TMentionScope>(
+    () => ({
+      capture: () => latestScope.current(),
+      subscribe: (listener) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
+    }),
+    [listeners]
+  );
+  useLayoutEffect(() => {
+    latestScope.current = editable ? scope : () => () => false;
+    return () => {
+      for (const listener of listeners) listener();
+    };
+  }, [scope, permissionIdentity, editable, listeners]);
   const owner = useMemo(() => ({ active: false, request: 0, scope, editable, members }), [scope, editable, members]);
   useLayoutEffect(() => {
     owner.active = true;
@@ -79,5 +101,5 @@ export function useEditorMention({ workspaceSlug, projectId, editable, members }
   useLayoutEffect(() => {
     current.current = fetchCurrent;
   }, [fetchCurrent]);
-  return { fetchMentions: useCallback((query: string) => current.current(query), []) };
+  return { fetchMentions: useCallback((query: string) => current.current(query), []), mentionScope };
 }

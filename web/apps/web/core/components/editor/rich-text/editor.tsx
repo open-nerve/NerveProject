@@ -54,7 +54,7 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
   const members = useMember();
   const { getUserDetails } = members;
   // use editor mention
-  const { fetchMentions } = useEditorMention({ workspaceSlug, projectId, editable, members });
+  const { fetchMentions, mentionScope } = useEditorMention({ workspaceSlug, projectId, editable, members });
   // editor config
   const { getEditorFileHandlers } = useEditorConfig();
   // parse content
@@ -78,6 +78,7 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
       getEditorMetaData={getEditorMetaData}
       mentionHandler={{
         searchCallback: fetchMentions,
+        scope: mentionScope,
         renderError: (error, retry) => <EditorMentionsError error={error} retry={retry} />,
         renderComponent: EditorMentionsRoot,
         getMentionedEntityDetails: (id) => ({

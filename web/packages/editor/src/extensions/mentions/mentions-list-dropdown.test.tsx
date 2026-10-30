@@ -123,3 +123,38 @@ it("ignores failures from a previous query and from an unmounted dropdown", asyn
   expect(host.textContent).toBe("");
   expect(onClose).not.toHaveBeenCalled();
 });
+
+it("ends already rendered suggestions on host scope loss, including selection before React can rerender", async () => {
+  let valid = true;
+  let invalidate: (() => void) | undefined;
+  const scope = {
+    capture: () => () => valid,
+    subscribe: (listener: () => void) => {
+      invalidate = listener;
+      return () => {
+        invalidate = undefined;
+      };
+    },
+  };
+  search.mockResolvedValueOnce(section("Old scope"));
+  await act(async () =>
+    root.render(
+      <MentionsListDropdown
+        ref={ref}
+        query=""
+        command={command}
+        searchCallback={search}
+        onClose={onClose}
+        scope={scope}
+      />
+    )
+  );
+  await delay();
+  expect(host.textContent).toContain("Old scope");
+  valid = false;
+  await act(async () => ref.current?.onKeyDown({ event: new KeyboardEvent("keydown", { key: "Enter" }) }));
+  expect(command).not.toHaveBeenCalled();
+  await act(async () => invalidate?.());
+  expect(onClose).toHaveBeenCalled();
+  expect(host.textContent).not.toContain("Old scope");
+});

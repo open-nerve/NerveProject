@@ -67,7 +67,7 @@ const choices = [
         projectId="A"
         issueId="x"
         values={[]}
-        onSelect={noop}
+        onSelect={async () => undefined}
         onAddLabel={async () => {
           throw new Error("Unexpected creation");
         }}

@@ -36,12 +36,22 @@ type Props = {
   disabled: boolean;
   isArchived: boolean;
   isSubmitting: TNameDescriptionLoader;
-  setIsSubmitting: (value: TNameDescriptionLoader) => void;
+  setTitleStatus: (value: TNameDescriptionLoader) => void;
+  setDescriptionStatus: (value: TNameDescriptionLoader) => void;
 };
 
 export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetails(props: Props) {
-  const { editorRef, workspaceSlug, issueId, issueOperations, disabled, isArchived, isSubmitting, setIsSubmitting } =
-    props;
+  const {
+    editorRef,
+    workspaceSlug,
+    issueId,
+    issueOperations,
+    disabled,
+    isArchived,
+    isSubmitting,
+    setTitleStatus,
+    setDescriptionStatus,
+  } = props;
   // store hooks
   const { data: currentUser } = useUser();
   const {
@@ -49,18 +59,11 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
   } = useIssueDetail();
 
   // reload confirmation
-  const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting");
+  const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting" || isSubmitting === "failed");
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    if (isSubmitting === "submitted") {
-      setShowAlert(false);
-      timer = setTimeout(() => setIsSubmitting("saved"), 2000);
-    } else if (isSubmitting === "submitting") {
-      setShowAlert(true);
-    }
-    return () => clearTimeout(timer);
-  }, [isSubmitting, setShowAlert, setIsSubmitting]);
+    setShowAlert(isSubmitting === "submitting" || isSubmitting === "failed");
+  }, [isSubmitting, setShowAlert]);
 
   // derived values
   const issue = issueId ? getIssueDetailById(issueId) : undefined;
@@ -87,8 +90,7 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
         workspaceSlug={workspaceSlug}
         projectId={issue.project_id}
         issueId={issue.id}
-        isSubmitting={isSubmitting}
-        setIsSubmitting={(value) => setIsSubmitting(value)}
+        setIsSubmitting={setTitleStatus}
         issueOperations={issueOperations}
         disabled={disabled || isArchived}
         value={issue.name}
@@ -110,7 +112,7 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
             ...(isMigrationUpdate ? { skip_activity: true } : {}),
           });
         }}
-        setIsSubmitting={(value) => setIsSubmitting(value)}
+        setIsSubmitting={setDescriptionStatus}
         projectId={issue.project_id}
         workspaceSlug={workspaceSlug}
       />

@@ -39,7 +39,6 @@ export interface ILabelDropdownProps {
   onChange: (data: string[]) => void;
   onClose?: () => void;
   disabled?: boolean;
-  defaultOptions?: any;
   hideDropdownArrow?: boolean;
   className?: string;
   buttonClassName?: string;

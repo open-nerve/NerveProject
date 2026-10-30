@@ -4,25 +4,18 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueUpdate } from "@nerve/api-client";
-import { useLayoutEffect, useMemo } from "react";
+import { useLayoutEffect } from "react";
 import { observer } from "mobx-react";
 // Nerve imports
 import { useSessionSWR } from "@/lib/use-session-swr";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { followInSession } from "@/lib/in-session";
 import type { IWorkItemPeekOverview } from "@nerve/types";
-import { EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useIssues } from "@/hooks/store/use-issues";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // local imports
-import type { TIssueOperations } from "../issue-detail";
+import { useIssueOperations } from "../issue-detail/use-issue-operations";
 import { IssueDetailHost } from "../detail-host";
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
 import { IssueView } from "./view";
@@ -35,21 +28,12 @@ const peekOwners = new WeakMap<
 export const IssuePeekOverview = observer(function IssuePeekOverview(
   props: IWorkItemPeekOverview & { hostScope: string }
 ) {
-  const { hostScope, embedIssue = false, embedRemoveCurrentNotification, storeType: issueStoreFromProps } = props;
-  const { t } = useTranslation();
+  const { hostScope, embedIssue = false, embedRemoveCurrentNotification } = props;
   // store hook
   const { allowPermissions } = useUserPermissions();
 
-  const {
-    issues: { restoreIssue },
-  } = useIssues(EIssuesStoreType.ARCHIVED);
   const detail = useIssueDetail();
-  const {
-    peekIssue,
-    rootIssueStore: root,
-    issue: { fetchIssue },
-    fetchActivities,
-  } = detail;
+  const { peekIssue, rootIssueStore: root } = detail;
   useLayoutEffect(() => {
     if (!peekIssue) return;
     const previous = peekOwners.get(detail);
@@ -71,49 +55,10 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(
       });
     };
   }, [detail, peekIssue, hostScope]);
-  const issueStoreType = useIssueStoreType();
-  const storeType = issueStoreFromProps ?? issueStoreType;
-  const { issues } = useIssues(storeType);
-
-  const issueOperations: TIssueOperations = useMemo(
-    () => ({
-      fetch: async (workspaceSlug: string, projectId: string, issueId: string) => {
-        await fetchIssue(workspaceSlug, projectId, issueId);
-      },
-      update: async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => {
-        if (issues?.updateIssue)
-          await followInSession(
-            async () => {
-              await issues.updateIssue(workspaceSlug, projectId, issueId, data);
-            },
-            {
-              done: async () => {
-                await fetchActivities(workspaceSlug, projectId, issueId);
-              },
-              failed: () =>
-                setToast({
-                  title: t("toast.error"),
-                  type: TOAST_TYPE.ERROR,
-                  message: t("entity.update.failed", { entity: t("issue.label", { count: 1 }) }),
-                }),
-            }
-          );
-      },
-      restore: async (workspaceSlug: string, projectId: string, issueId: string) => {
-        await followInSession(() => restoreIssue(workspaceSlug, projectId, issueId), {
-          done: () =>
-            setToast({
-              type: TOAST_TYPE.SUCCESS,
-              title: t("issue.restore.success.title"),
-              message: t("issue.restore.success.message"),
-            }),
-          failed: () =>
-            setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t("issue.restore.failed.message") }),
-        });
-      },
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fetchIssue, issues, fetchActivities, restoreIssue]
+  const issueOperations = useIssueOperations(
+    peekIssue?.workspaceSlug ?? "",
+    peekIssue?.projectId,
+    peekIssue?.issueId ?? ""
   );
 
   const workspace = peekIssue ? root.rootStore.workspaceRoot.getWorkspaceBySlug(peekIssue.workspaceSlug) : undefined;

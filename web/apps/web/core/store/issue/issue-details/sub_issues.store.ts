@@ -59,6 +59,7 @@ export class IssueSubIssuesStore {
       [key]: held[key].includes(value) ? held[key].filter((item) => item !== value) : [...held[key], value],
     };
   };
+  getLoading = (id: string) => this.resources.get(id)?.loading ?? false;
   getError = (id: string) => this.resources.get(id)?.error;
   retry = async (ws: string, project: string, id: string) => {
     const resource = this.resources.entry(ws, project, id);
@@ -124,30 +125,34 @@ export class IssueSubIssuesStore {
     }, token);
   }
   createSubIssues = (ws: string, project: string, parentID: string, ids: string[]): Promise<void> =>
-    this.root.enqueueIssueChanges([parentID, ...ids], async () => {
-      const resource = this.resources.entry(ws, project, parentID);
-      const scope = this.root.scope(ws, project);
-      const token = this.root.captureRead();
-      const oldParents = ids.flatMap((id) => {
-        const old = this.root.issues.getIssueById(id)?.parent_id;
-        return old ? [old] : [];
-      });
-      const answer = await this.root.detailApi.addSubIssues(parentID, { sub_issue_ids: ids });
-      this.accept(answer.data, parentID, scope, token);
-      // A batch answer does not contain the previous parent/version. Do not guess its list projection.
-      this.root.markScopeListsStale(scope);
-      const confirmedIDs = answer.data.map((child) => child.id);
-      resource.receive(confirmedIDs, token, (held, incoming) => [...new Set([...(held ?? []), ...incoming])]);
-      for (const old of oldParents)
-        if (old !== parentID)
-          this.resources.get(old)?.confirm((held) => held.filter((id) => !confirmedIDs.includes(id)), token);
-      await this.refresh(resource, [parentID, ...oldParents], scope, token);
-      await Promise.all(
-        [...new Set([parentID, ...oldParents, ...ids])].map((id) =>
-          this.rootIssueDetailStore.refreshAfterChange(ws, project, id)
-        )
-      );
-    });
+    this.root.enqueueIssueChanges(
+      [parentID, ...ids],
+      async () => {
+        const resource = this.resources.entry(ws, project, parentID);
+        const scope = this.root.scope(ws, project);
+        const token = this.root.captureRead();
+        const oldParents = ids.flatMap((id) => {
+          const old = this.root.issues.getIssueById(id)?.parent_id;
+          return old ? [old] : [];
+        });
+        const answer = await this.root.detailApi.addSubIssues(parentID, { sub_issue_ids: ids });
+        this.accept(answer.data, parentID, scope, token);
+        // A batch answer does not contain the previous parent/version. Do not guess its list projection.
+        this.root.markScopeListsStale(scope);
+        const confirmedIDs = answer.data.map((child) => child.id);
+        resource.receive(confirmedIDs, token, (held, incoming) => [...new Set([...(held ?? []), ...incoming])]);
+        for (const old of oldParents)
+          if (old !== parentID)
+            this.resources.get(old)?.confirm((held) => held.filter((id) => !confirmedIDs.includes(id)), token);
+        await this.refresh(resource, [parentID, ...oldParents], scope, token);
+        await Promise.all(
+          [...new Set([parentID, ...oldParents, ...ids])].map((id) =>
+            this.rootIssueDetailStore.refreshAfterChange(ws, project, id)
+          )
+        );
+      },
+      { workspaceSlug: ws, projectID: project }
+    );
   /** The root calls this once for its confirmed core change; never sends a second PATCH. */
   confirmCore = async (change: ConfirmedIssueChange, scope: IssueWriteScope): Promise<void> => {
     const before = change.beforeSnapshot.kind === "known" ? change.beforeSnapshot.issue.parent_id : null;

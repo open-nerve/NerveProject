@@ -7,7 +7,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EIssuesStoreType } from "@nerve/types";
 import { issueOf, issueDetailOf, issueStoreTab } from "@/store/issue/fake-issues";
 import { loadProjects, projectOf, stateOf } from "@/store/project/fake-projects";
-import { json } from "@/lib/auth/fake-nerve";
+import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import type { Group } from "@/lib/paged-groups";
 import { List } from "./default";
@@ -322,4 +322,21 @@ it("registers rows again under StrictMode without stale cleanup affecting the ac
     )
   );
   expect(widths()).toEqual([35]);
+});
+
+it("expanded child reads show a refusal and retry the GET without mutating counts", async () => {
+  await render(["parent"]);
+  tab.nerve.respond = (call) => {
+    if (call.path === "/api/v0/issues/parent/sub-issues") call.answer(problem(403, "forbidden"));
+  };
+  await act(async () => host.querySelector<HTMLButtonElement>("button")!.click());
+  await act(async () => until(() => !!tab.app.issue.issueDetail.subIssues.getError("parent"), "children refused"));
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("errors.forbidden");
+  expect(tab.app.issue.issues.getIssueById("parent")?.sub_issues_count).toBe(1);
+  const before = tab.nerve.calls.length;
+  await act(async () => host.querySelector<HTMLButtonElement>('[role="alert"] button')!.click());
+  await act(async () => until(() => tab.nerve.calls.length > before, "retry GET"));
+  expect(tab.nerve.calls.slice(before).map((call) => [call.method, call.path])).toEqual([
+    ["GET", "/api/v0/issues/parent/sub-issues"],
+  ]);
 });

@@ -1,6 +1,6 @@
 # M4/P11 详情数据层规格
 
-> 状态：负责人已裁定P11-S1采用A，**文档预检通过，已获实施授权，T1–T13已实现，继续T14**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。准备阶段已结束；当前按计划实施，产品验收全部开放；编号列宽按已加载、当前可见数据计算，不新增项目API字段，见[已裁定记录](../reviews/P11-project-number-width-decision.md)。
+> 状态：负责人已裁定P11-S1采用A，**文档预检通过，已获实施授权，T1–T14已实现，进入T15整审与最终验证**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。准备阶段已结束；当前按计划实施，产品验收全部开放；编号列宽按已加载、当前可见数据计算，不新增项目API字段，见[已裁定记录](../reviews/P11-project-number-width-decision.md)。
 
 权威输入：[M4 设计](../M4-design.md) §3.9–3.15、§7.1–7.4、§9.5、§12 P11、§13；[推进方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)；[P10b spec](P10b-web-list-data.md) §2.6/§7；输入 handoffs 的 M1-closeout、M2-closeout §12、M3-closeout §5/6/8。配套 [plan](../plans/P11-web-detail-data.md)、[阶段预检](../reviews/P11-web-detail-data-review.md)。
 
@@ -73,6 +73,8 @@ P10b 已交付 `IssueRootStore.captureRead/isReadCurrent`、`PermissionReads`、
 
 POST/PATCH/DELETE 成功后补读失败，与修改本身被拒绝分开：保留成功资源确认，canonical 标待核/列表 stale，报告补读错误并提供读重试；不要回滚服务端成功，也不要重发写入。退役或权限失效后不写本地/不 toast/不导航，不自动重试命令。每个异步 UI 跟进同时核 followInSession 和宿主 scope，避免同账号切项目后关掉新页面的弹窗。
 
+T14调用方核对明确：要求修改结果的表单/编辑器不得把拒绝转换为成功Promise；只有显示拒绝的终端事件可消费该失败。标题和描述分别跟踪本次输入与确认状态，失败保留输入/显示失败且可显式重试，旧应答不覆盖较新输入，不在卸载时重复已尝试的命令；父项及peek不重复store已负责的权威补读。这里修通用UI的结果与生命周期，不改M7传输协议或领域store。
+
 ### 2.5 子项、关联与链接
 
 子项按原生 data 的 id 关联 canonical；状态分布由子项 state_id 和目录的 State.group 计算，不把 sub_issues_count 当所有状态分布。新接口只接同项目子项；现有测试中人为跨项目子项改为真实合同样本，跨项目权限测试放到关联资源，不削弱权限性质。跨项目状态使用已有 workspace 状态目录；成员/标签有实际展示需求时等待既有目录，拒绝交回。
@@ -105,13 +107,15 @@ M4 新版本 store 使用 DescriptionVersion/Page/Detail，按 last_saved_at/id 
 
 **P11-S1裁定A：**创建/发布成功后的编号宽度由实际进入当前列表的确认工作项派生，不为列宽额外刷新项目，不添加或伪造 `Project.next_work_item_sequence`。若将来其它功能真实修改项目公开字段，仍按该功能自己的确认流程刷新，不能把此裁定扩大为禁止一切项目刷新。跟进导航/提示依 followInSession 与宿主 scope；其它窗口的草稿并发由 draft_changed 表达，不新增客户端锁协议。
 
+T14补充：每个写在进入IssueRootStore队列时保留权限水位及实际工作区/项目，出队时拒绝旧范围；跨工作项拖动队列及目录准备等待同样保留起点水位。旧权限下的204删除确认也不能覆盖恢复后的副本。无新增权限观察器、实体缓存或服务协议。
+
 ### 2.9 提及、按需读取与宿主
 
-编辑器 @ 提及只从成员目录过滤：有 projectId 时使用有效项目成员与 MemberUser；无 projectId 的草稿使用当前工作区有效成员（显式排除 inactive）。按 display_name 匹配，保留既有最多五条；不读 email，不借当前筛选器限制成员，不调用 entity-search。每个输入轮次只提交最新 query/current scope 结果，拒绝由编辑器受控状态显示或交回，不能吞成“无人”；只读编辑器不发建议请求。四处 searchEntity 调用、方法和独占请求类型同 Task 删除；description_json/comment_json/共享 JSONContent 没有合法读者后删除，不误删 editor 内部自己的 JSON 类型。
+编辑器 @ 提及只从成员目录过滤：有 projectId 时使用有效项目成员与 MemberUser；无 projectId 的草稿使用当前工作区有效成员（显式排除 inactive）。按 display_name 匹配，保留既有最多五条；不读 email，不借当前筛选器限制成员，不调用 entity-search。共享编辑器通过不含权限事实的scope生命周期信号结束已打开建议，选择时再校验原scope；源hook只读取root的permission identity。每个输入轮次只提交最新 query/current scope 结果，拒绝由编辑器受控状态显示或交回，不能吞成“无人”；只读编辑器不发建议请求。四处 searchEntity 调用、方法和独占请求类型同 Task 删除；description_json/comment_json/共享 JSONContent 没有合法读者后删除，不误删 editor 内部自己的 JSON 类型。
 
 按需 states/members/labels 的全部入口建立清单：拒绝显示错误、结束 loader、可重试，fire-and-forget 改 await/受控 UI；不把 catch 空数组当成功。详情 SWR 全部 useSessionSWR，key 带 loginId、scope 和 permission identity，禁直接 swr 的路径范围同步扩，不新增豁免。
 
-WorkItemLevelModals 留在现有 workspace provider；`projectId ?? workItemIdentifier` 改变及卸载用 useLayoutEffect cleanup 结束它拥有的开关。详情/peek/列表的实际宿主结束自己设置的开关、peekIssue 及 issueCrudOperationState/issueLinkData/relationKey，重设为原初始值。并存的详情与 peek 必须有所有权标记/租约或等效局部机制，旧宿主的 cleanup 不能关新宿主的弹窗；旧请求完成也不能改新 scope 的 UI。isArchiveIssueModalOpen、附件宿主已由 P10a 删除，只核零残留，不重建。
+WorkItemLevelModals 留在现有 workspace provider；`projectId ?? workItemIdentifier` 改变及卸载用 useLayoutEffect cleanup 结束它拥有的开关。详情/peek/列表的实际宿主结束自己设置的开关、peekIssue 及 issueCrudOperationState/issueLinkData/relationKey，重设为原初始值。并存的详情与 peek 必须有所有权标记/租约或等效局部机制，旧宿主的 cleanup 不能关新宿主的弹窗；旧请求完成也不能改新 scope 的 UI。旧详情全局归档开关和附件宿主已由 P10a 删除，不重建；peek自身按宿主隔离的局部归档确认开关仍合法，不能用同名变量全局零命中替代归属核验。
 
 T12实现采用局部UI状态作为等效所有权：IssueDetailHost按会话root、workspace/project/issue和root提供的permission identity持有IssueDetailModals；其React身份同时结束子树内编辑器、下拉及本地行弹窗。六个开关和三份临时数据从全局IssueDetail迁出，资源服务/canonical/权限观察仍保留原归属；openWidgets仅为既有展开偏好。工作区命令保留原provider和CommandPaletteStore，宿主租约只释放自己的创建/删除开关。五种peek宿主（详情、项目、归档、profile、通知）提供明确hostScope；实际卸载的peek选择在layout收尾后的微任务中按所有者/同一选择引用释放，以兼容StrictMode立即重挂，跨route的同一旧选择则在新layout中同步释放。旧请求只可结束自己仍有效的选择，不能按相同issueId认领后来重开的peek。通知页撤下无所有权的全局cleanup，没有改M7领域接口。
 

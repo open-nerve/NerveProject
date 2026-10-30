@@ -100,18 +100,22 @@ export class IssueCommentStore {
     commentId?: string,
     changesIssue = true
   ): Promise<T> {
-    return this.root.enqueueIssueChanges([id], async () => {
-      const resource = this.resources.entry(ws, project, id);
-      if (commentId) this.requireComment(id, commentId);
-      const token = this.root.captureRead();
-      const answer = await send();
-      this.current(token, ws, project);
-      const initial: Comments = { data: [], complete: false };
-      resource.receive(initial, token, (held) => confirm(answer, held ?? initial));
-      await this.refreshAfterChange(ws, project, id, changesIssue);
-      await this.rootIssueDetail.activity.refreshAfterChange(ws, project, id);
-      return answer;
-    });
+    return this.root.enqueueIssueChanges(
+      [id],
+      async () => {
+        const resource = this.resources.entry(ws, project, id);
+        if (commentId) this.requireComment(id, commentId);
+        const token = this.root.captureRead();
+        const answer = await send();
+        this.current(token, ws, project);
+        const initial: Comments = { data: [], complete: false };
+        resource.receive(initial, token, (held) => confirm(answer, held ?? initial));
+        await this.refreshAfterChange(ws, project, id, changesIssue);
+        await this.rootIssueDetail.activity.refreshAfterChange(ws, project, id);
+        return answer;
+      },
+      { workspaceSlug: ws, projectID: project }
+    );
   }
   createComment = (ws: string, project: string, id: string, body: IssueCommentCreate): Promise<IssueComment> =>
     this.write(

@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { createPortal } from "react-dom";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
-import type { TNameDescriptionLoader } from "@nerve/types";
+import { useIssueSaveStatus } from "@/components/issues/use-issue-save-status";
 import { cn } from "@nerve/utils";
 // hooks
 import { useDetailScope } from "../issue-detail-widgets/use-detail-scope";
@@ -57,7 +57,7 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
   } = props;
   // states
   const [peekMode, setPeekMode] = useState<TPeekModes>("side-peek");
-  const [isSubmitting, setIsSubmitting] = useState<TNameDescriptionLoader>("saved");
+  const { status: isSubmitting, setTitleStatus, setDescriptionStatus } = useIssueSaveStatus();
   const [isDeleteIssueModalOpen, setIsDeleteIssueModalOpen] = useState(false);
   const [isArchiveIssueModalOpen, setIsArchiveIssueModalOpen] = useState(false);
   const [isDuplicateIssueModalOpen, setIsDuplicateIssueModalOpen] = useState(false);
@@ -125,8 +125,12 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
 
   const handleRestore = async () => {
     if (!issueOperations.restore) return;
-    await issueOperations.restore(workspaceSlug, projectId, issueId);
-    removeRoutePeekId();
+    try {
+      await issueOperations.restore(workspaceSlug, projectId, issueId);
+      removeRoutePeekId();
+    } catch {
+      // The operation reports its native refusal; keep this peek open.
+    }
   };
 
   const peekOverviewIssueClassName = cn(
@@ -202,7 +206,8 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                       disabled={disabled}
                       isArchived={is_archived}
                       isSubmitting={isSubmitting}
-                      setIsSubmitting={(value) => setIsSubmitting(value)}
+                      setTitleStatus={setTitleStatus}
+                      setDescriptionStatus={setDescriptionStatus}
                     />
 
                     <div className="py-2">
@@ -242,7 +247,8 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                           disabled={disabled}
                           isArchived={is_archived}
                           isSubmitting={isSubmitting}
-                          setIsSubmitting={(value) => setIsSubmitting(value)}
+                          setTitleStatus={setTitleStatus}
+                          setDescriptionStatus={setDescriptionStatus}
                         />
 
                         <div className="py-2">

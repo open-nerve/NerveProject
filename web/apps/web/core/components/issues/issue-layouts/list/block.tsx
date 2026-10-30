@@ -21,6 +21,8 @@ import type { IIssueDisplayProperties } from "@nerve/types";
 import { ControlLink, Row } from "@nerve/ui";
 import { cn, generateWorkItemLink } from "@nerve/utils";
 // components
+import { DetailResourceError } from "@/components/issues/issue-detail-widgets/resource-error";
+import { useTranslation } from "@nerve/i18n";
 import { IssueProperties } from "@/components/issues/issue-layouts/properties";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // hooks
@@ -65,6 +67,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
     setIsCurrentBlockDragging,
     canDrag,
   } = props;
+  const { t } = useTranslation();
   const keyMinWidth = useIdentifierWidth(displayProperties?.key);
   // ref
   const issueRef = useRef<HTMLDivElement | null>(null);
@@ -130,11 +133,9 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
     if (nestingLevel >= 3) {
       handleIssuePeekOverview(issue);
     } else {
-      setExpanded((prevState) => {
-        if (!prevState && workspaceSlug && issue && issue.project_id)
-          subIssuesStore.fetchSubIssues(workspaceSlug, issue.project_id, issue.id);
-        return !prevState;
-      });
+      if (!isExpanded && workspaceSlug && issue.project_id)
+        void subIssuesStore.fetchSubIssues(workspaceSlug, issue.project_id, issue.id).catch(() => undefined);
+      setExpanded(!isExpanded);
     }
   };
 
@@ -147,114 +148,130 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
     isArchived: !!issue?.archived_at,
   });
   return (
-    <ControlLink
-      id={`issue-${issue.id}`}
-      href={workItemLink}
-      onClick={() => handleIssuePeekOverview(issue)}
-      className="w-full cursor-pointer"
-    >
-      <Row
-        ref={issueRef}
-        className={cn(
-          "group/list-block relative flex min-h-11 flex-col gap-3 bg-layer-transparent py-3 text-13 transition-colors hover:bg-layer-transparent-hover",
-          {
-            "border-accent-strong": getIsIssuePeeked(issue.id) && peekIssue?.nestingLevel === nestingLevel,
-            "last:border-b-transparent": !getIsIssuePeeked(issue.id),
-            "bg-layer-1": isCurrentBlockDragging,
-            "md:flex-row md:items-center": isSidebarCollapsed,
-            "lg:flex-row lg:items-center": !isSidebarCollapsed,
-          }
-        )}
-        onDragStart={() => {
-          if (!isDraggingAllowed) {
-            setToast({
-              type: TOAST_TYPE.WARNING,
-              title: "Cannot move work item",
-              message: !canEditIssueProperties
-                ? "You are not allowed to move this work item"
-                : "Drag and drop is disabled for the current grouping",
-            });
-          }
-        }}
+    <>
+      <ControlLink
+        id={`issue-${issue.id}`}
+        href={workItemLink}
+        onClick={() => handleIssuePeekOverview(issue)}
+        className="w-full cursor-pointer"
       >
-        <div className="flex w-full gap-2 truncate">
-          <div className="flex flex-grow items-center gap-0.5 truncate">
-            <div className="flex items-center gap-1" style={isSubIssue ? { marginLeft } : {}}>
-              {displayProperties && (
-                <div className="flex-shrink-0" style={{ minWidth: `${keyMinWidth}px` }}>
-                  {issue.project_id && (
-                    <IssueIdentifier
-                      issueId={issueId}
-                      projectId={issue.project_id}
-                      size="xs"
-                      variant="tertiary"
-                      displayProperties={displayProperties}
-                    />
+        <Row
+          ref={issueRef}
+          className={cn(
+            "group/list-block relative flex min-h-11 flex-col gap-3 bg-layer-transparent py-3 text-13 transition-colors hover:bg-layer-transparent-hover",
+            {
+              "border-accent-strong": getIsIssuePeeked(issue.id) && peekIssue?.nestingLevel === nestingLevel,
+              "last:border-b-transparent": !getIsIssuePeeked(issue.id),
+              "bg-layer-1": isCurrentBlockDragging,
+              "md:flex-row md:items-center": isSidebarCollapsed,
+              "lg:flex-row lg:items-center": !isSidebarCollapsed,
+            }
+          )}
+          onDragStart={() => {
+            if (!isDraggingAllowed) {
+              setToast({
+                type: TOAST_TYPE.WARNING,
+                title: "Cannot move work item",
+                message: !canEditIssueProperties
+                  ? "You are not allowed to move this work item"
+                  : "Drag and drop is disabled for the current grouping",
+              });
+            }
+          }}
+        >
+          <div className="flex w-full gap-2 truncate">
+            <div className="flex flex-grow items-center gap-0.5 truncate">
+              <div className="flex items-center gap-1" style={isSubIssue ? { marginLeft } : {}}>
+                {displayProperties && (
+                  <div className="flex-shrink-0" style={{ minWidth: `${keyMinWidth}px` }}>
+                    {issue.project_id && (
+                      <IssueIdentifier
+                        issueId={issueId}
+                        projectId={issue.project_id}
+                        size="xs"
+                        variant="tertiary"
+                        displayProperties={displayProperties}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* sub-issues chevron */}
+                <div className="grid size-4 flex-shrink-0 place-items-center">
+                  {subIssuesCount > 0 && (
+                    <button
+                      type="button"
+                      className="grid size-4 place-items-center rounded-xs text-placeholder hover:text-tertiary"
+                      aria-expanded={isExpanded}
+                      aria-label={t("common.common.sub_work_items")}
+                      onClick={handleToggleExpand}
+                    >
+                      <ChevronRightOutline
+                        className={cn("size-4", {
+                          "rotate-90": isExpanded,
+                        })}
+                      />
+                    </button>
                   )}
                 </div>
-              )}
-
-              {/* sub-issues chevron */}
-              <div className="grid size-4 flex-shrink-0 place-items-center">
-                {subIssuesCount > 0 && (
-                  <button
-                    type="button"
-                    className="grid size-4 place-items-center rounded-xs text-placeholder hover:text-tertiary"
-                    onClick={handleToggleExpand}
-                  >
-                    <ChevronRightOutline
-                      className={cn("size-4", {
-                        "rotate-90": isExpanded,
-                      })}
-                    />
-                  </button>
-                )}
               </div>
-            </div>
 
-            <Tooltip label={issue.name} layout="stacked" align="start" disabled={isCurrentBlockDragging || isMobile}>
-              <p className="cursor-pointer truncate text-body-xs-medium text-primary">{issue.name}</p>
-            </Tooltip>
+              <Tooltip label={issue.name} layout="stacked" align="start" disabled={isCurrentBlockDragging || isMobile}>
+                <p className="cursor-pointer truncate text-body-xs-medium text-primary">{issue.name}</p>
+              </Tooltip>
+            </div>
+            <div
+              className={cn("block rounded-sm border border-strong", {
+                "md:hidden": isSidebarCollapsed,
+                "lg:hidden": !isSidebarCollapsed,
+              })}
+            >
+              {quickActions({
+                issue,
+                parentRef: issueRef,
+              })}
+            </div>
           </div>
-          <div
-            className={cn("block rounded-sm border border-strong", {
-              "md:hidden": isSidebarCollapsed,
-              "lg:hidden": !isSidebarCollapsed,
-            })}
-          >
-            {quickActions({
-              issue,
-              parentRef: issueRef,
-            })}
+          <div className="flex flex-shrink-0 items-center gap-2">
+            <IssueProperties
+              className={`relative flex flex-wrap ${isSidebarCollapsed ? "md:flex-shrink-0 md:flex-grow" : "lg:flex-shrink-0 lg:flex-grow"} items-center gap-2 whitespace-nowrap`}
+              issue={issue}
+              isReadOnly={!canEditIssueProperties}
+              updateIssue={updateIssue}
+              displayProperties={displayProperties}
+              activeLayout="List"
+            />
+            {/* oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions */}
+            <div
+              className={cn("hidden", {
+                "md:flex": isSidebarCollapsed,
+                "lg:flex": !isSidebarCollapsed,
+              })}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              {quickActions({
+                issue,
+                parentRef: issueRef,
+              })}
+            </div>
           </div>
-        </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
-          <IssueProperties
-            className={`relative flex flex-wrap ${isSidebarCollapsed ? "md:flex-shrink-0 md:flex-grow" : "lg:flex-shrink-0 lg:flex-grow"} items-center gap-2 whitespace-nowrap`}
-            issue={issue}
-            isReadOnly={!canEditIssueProperties}
-            updateIssue={updateIssue}
-            displayProperties={displayProperties}
-            activeLayout="List"
+        </Row>
+      </ControlLink>
+      {isExpanded && workspaceSlug && (
+        <>
+          {subIssuesStore.getLoading(issueId) && <div role="status">{t("common.loading")}</div>}
+          <DetailResourceError
+            error={subIssuesStore.getError(issueId)}
+            retry={() => subIssuesStore.retry(workspaceSlug, issue.project_id, issueId)}
+            workspaceSlug={workspaceSlug}
+            projectId={issue.project_id}
+            issueId={issueId}
           />
-          {/* oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions */}
-          <div
-            className={cn("hidden", {
-              "md:flex": isSidebarCollapsed,
-              "lg:flex": !isSidebarCollapsed,
-            })}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          >
-            {quickActions({
-              issue,
-              parentRef: issueRef,
-            })}
-          </div>
-        </div>
-      </Row>
-    </ControlLink>
+        </>
+      )}
+    </>
   );
 });

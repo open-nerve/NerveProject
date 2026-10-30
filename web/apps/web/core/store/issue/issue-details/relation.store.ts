@@ -126,66 +126,77 @@ export class IssueRelationStore {
     );
   }
   createRelation = (ws: string, project: string, id: string, type: IssueRelationType, ids: string[]): Promise<void> =>
-    this.root.enqueueIssueChanges([id, ...ids], async () => {
-      const resource = this.resources.entry(ws, project, id);
-      const scope = this.root.scope(ws, project);
-      const token = this.root.captureRead();
-      const answer = await this.root.detailApi.createRelations(id, { relation_type: type, issue_ids: ids });
-      this.current(
-        scope,
-        token,
-        answer.data.map((row) => row.issue.project_id)
-      );
-      let first = true;
-      let confirmed = false;
-      const projects = [...new Set(answer.data.map((row) => row.issue.project_id))];
-      await resource.refreshAfterConfirmation(async () => {
-        if (first) {
-          first = false;
-          await this.prove(answer.data, scope, token, () => this.root.active);
-          this.root.acceptListIssues(
-            answer.data.map((row) => row.issue),
-            token
-          );
-          resource.receive(rowsOf(answer.data), token, merged, projects);
-          for (const item of answer.data)
-            this.resources.get(item.issue.id)?.receive(
-              [
-                {
-                  relationId: item.id,
-                  type: REVERSE_RELATIONS[item.relation_type],
-                  targetId: id,
-                  createdAt: item.created_at,
-                },
-              ],
-              token,
-              merged,
-              [project, item.issue.project_id]
+    this.root.enqueueIssueChanges(
+      [id, ...ids],
+      async () => {
+        const resource = this.resources.entry(ws, project, id);
+        const scope = this.root.scope(ws, project);
+        const token = this.root.captureRead();
+        const answer = await this.root.detailApi.createRelations(id, { relation_type: type, issue_ids: ids });
+        this.current(
+          scope,
+          token,
+          answer.data.map((row) => row.issue.project_id)
+        );
+        let first = true;
+        let confirmed = false;
+        const projects = [...new Set(answer.data.map((row) => row.issue.project_id))];
+        await resource.refreshAfterConfirmation(async () => {
+          if (first) {
+            first = false;
+            await this.prove(answer.data, scope, token, () => this.root.active);
+            this.root.acceptListIssues(
+              answer.data.map((row) => row.issue),
+              token
             );
-          confirmed = true;
-        } else if (!confirmed) {
-          await this.fetchRelations(ws, project, id);
-          confirmed = true;
-        }
-        await this.refreshEndpoints([id, ...ids], scope, token, projects);
-        await this.directories(projects, scope);
-      }, token);
-    });
+            resource.receive(rowsOf(answer.data), token, merged, projects);
+            for (const item of answer.data)
+              this.resources.get(item.issue.id)?.receive(
+                [
+                  {
+                    relationId: item.id,
+                    type: REVERSE_RELATIONS[item.relation_type],
+                    targetId: id,
+                    createdAt: item.created_at,
+                  },
+                ],
+                token,
+                merged,
+                [project, item.issue.project_id]
+              );
+            confirmed = true;
+          } else if (!confirmed) {
+            await this.fetchRelations(ws, project, id);
+            confirmed = true;
+          }
+          await this.refreshEndpoints([id, ...ids], scope, token, projects);
+          await this.directories(projects, scope);
+        }, token);
+      },
+      { workspaceSlug: ws, projectID: project }
+    );
   removeRelation = (ws: string, project: string, id: string, type: IssueRelationType, target: string): Promise<void> =>
-    this.root.enqueueIssueChanges([id, target], async () => {
-      const resource = this.resources.entry(ws, project, id);
-      const row = this.getRelationRows(id)?.find((entry) => entry.type === type && entry.targetId === target);
-      if (!row) throw new Error("Relation has not been read");
-      const scope = this.root.scope(ws, project);
-      const token = this.root.captureRead();
-      const targetProject = this.root.issues.held(target)?.project_id;
-      const projects = targetProject ? [project, targetProject] : [project];
-      for (const involved of projects) this.root.assertProjectReadable(ws, involved);
-      await this.root.detailApi.deleteRelation(row.relationId);
-      this.current(scope, token, projects);
-      const remove = (held: RelationRow[]) => held.filter((entry) => entry.relationId !== row.relationId);
-      resource.confirm(remove, token);
-      this.resources.get(target)?.confirm(remove, token);
-      await resource.refreshAfterConfirmation(() => this.refreshEndpoints([id, target], scope, token, projects), token);
-    });
+    this.root.enqueueIssueChanges(
+      [id, target],
+      async () => {
+        const resource = this.resources.entry(ws, project, id);
+        const row = this.getRelationRows(id)?.find((entry) => entry.type === type && entry.targetId === target);
+        if (!row) throw new Error("Relation has not been read");
+        const scope = this.root.scope(ws, project);
+        const token = this.root.captureRead();
+        const targetProject = this.root.issues.held(target)?.project_id;
+        const projects = targetProject ? [project, targetProject] : [project];
+        for (const involved of projects) this.root.assertProjectReadable(ws, involved);
+        await this.root.detailApi.deleteRelation(row.relationId);
+        this.current(scope, token, projects);
+        const remove = (held: RelationRow[]) => held.filter((entry) => entry.relationId !== row.relationId);
+        resource.confirm(remove, token);
+        this.resources.get(target)?.confirm(remove, token);
+        await resource.refreshAfterConfirmation(
+          () => this.refreshEndpoints([id, target], scope, token, projects),
+          token
+        );
+      },
+      { workspaceSlug: ws, projectID: project }
+    );
 }

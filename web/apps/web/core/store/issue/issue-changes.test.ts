@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { runInAction, toJS } from "mobx";
 import { issueDetailOf, issueOf, issuePageOf, issueLinkOf, issueStoreTab, requestedIssue } from "./fake-issues";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { heldChange } from "@/lib/auth/fake-tab";
 import { track, until } from "@/lib/auth/fake-time";
 import { IssueListBinding } from "./helpers/issue-list-binding";
 import { SessionChangedError } from "@/lib/auth/token-manager";
@@ -945,4 +946,34 @@ it.each([2, 3])("newerWholeBeforeOlderWriteAnswerPreservesLatestEvidence version
   });
   expect(root.verification.isUncertain("x")).toBe(false);
   expect(tab.nerve.calls).toHaveLength(3);
+});
+
+it.each(kinds)("a confirmed %s from an old permission lifetime cannot update recovered copies", async (kind) => {
+  const { after, lists, confirm, canonical } = await copies(kind);
+  const request = await requestedIssue(tab.nerve, () => operate(kind, lists[0]), endpoint(kind));
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  const count = tab.nerve.calls.length;
+  request.call.answer(kind === "delete" ? noContent() : json(200, after));
+  await until(() => request.result.settled, "old confirmed write");
+  expect(canonical).not.toHaveBeenCalled();
+  expect(confirm.every((spy) => spy.mock.calls.length === 0)).toBe(true);
+  expect(tab.nerve.calls).toHaveLength(count);
+});
+it("a core change waiting for its list catalog cannot send after permission ABA", async () => {
+  const { lists } = await copies("update");
+  const held = heldChange<void>();
+  const prepare = vi.spyOn(lists[0]!, "prepareCatalog").mockImplementation(() => held.sent);
+  const request = operate("update", lists[0]);
+  const result = track(request);
+  await until(() => prepare.mock.calls.length === 1, "held catalog");
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  accept({ ...issueDetailOf("x"), updated_at: "2026-10-31T00:00:00Z" });
+  expect(tab.app.issue.issues.getIssueById("x")).toBeDefined();
+  const count = tab.nerve.calls.length;
+  held.answer();
+  await until(() => result.settled || tab.nerve.calls.length > count, "scope checked after catalog");
+  expect(tab.nerve.calls).toHaveLength(count);
+  await expect(request).rejects.toBeInstanceOf(SessionChangedError);
 });

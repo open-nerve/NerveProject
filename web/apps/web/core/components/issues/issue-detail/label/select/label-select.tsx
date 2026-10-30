@@ -16,7 +16,6 @@ import { EUserPermissionsLevel, getRandomLabelColor } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { IssueLabelCreation } from "@/components/labels/use-label-changes";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { EUserProjectRoles } from "@nerve/types";
 // helpers
 import { getTabIndex, isComposing } from "@nerve/utils";
@@ -30,14 +29,13 @@ export interface IIssueLabelSelect {
   projectId: string;
   issueId: string;
   values: string[];
-  onSelect: (_labelIds: string[]) => void;
+  onSelect: (_labelIds: string[]) => Promise<void>;
   onAddLabel: IssueLabelCreation;
 }
 
 export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssueLabelSelect) {
   const { workspaceSlug, projectId, issueId, values, onSelect, onAddLabel } = props;
   const { t } = useTranslation();
-  const toastRefusal = useRefusalToast();
   // store hooks
   const { isMobile } = usePlatformOS();
   const { fetchProjectLabels, getProjectLabels } = useLabel();
@@ -132,8 +130,8 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
           try {
             await onSelect([...values, created.id]);
             setQuery("");
-          } catch (error) {
-            toastRefusal(error);
+          } catch {
+            // Attachment reports its own refusal; keep the query and confirmed label available.
           }
         }
       );
@@ -151,7 +149,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
         as="div"
         className="size-full flex-shrink-0 text-left"
         value={issueLabels}
-        onChange={(value) => onSelect(value)}
+        onChange={(value) => void onSelect(value).catch(() => undefined)}
         multiple
       >
         <Combobox.Button as={Fragment}>

@@ -26,7 +26,6 @@ export type TWorkItemWidgets = "sub-work-items" | "relations" | "links" | "attac
 export interface IWorkItemPeekOverview {
   embedIssue?: boolean;
   embedRemoveCurrentNotification?: () => void;
-  storeType?: EIssuesStoreType;
 }
 
 /** Legacy update request context; skip_activity must never enter an issue entity. */

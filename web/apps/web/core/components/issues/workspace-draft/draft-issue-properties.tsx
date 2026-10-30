@@ -20,7 +20,6 @@ import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 // hooks
-import { useLabel } from "@/hooks/store/use-label";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { IssuePropertyLabels } from "../issue-layouts/properties";
@@ -38,7 +37,6 @@ export const DraftIssueProperties = observer(function DraftIssueProperties({
   className,
 }: Props) {
   const issue = draft.payload;
-  const { labelMap } = useLabel();
   const { getStateById } = useProjectState();
   const { isMobile } = usePlatformOS();
   const scope = useDetailScope(workspaceSlug, undefined, draft.id, true);
@@ -60,12 +58,6 @@ export const DraftIssueProperties = observer(function DraftIssueProperties({
   const handleStartDate = (date: Date | null) => change({ start_date: date ? renderFormattedPayloadDate(date) : null });
   const handleTargetDate = (date: Date | null) =>
     change({ target_date: date ? renderFormattedPayloadDate(date) : null });
-
-  const defaultLabelOptions =
-    issue?.label_ids?.flatMap((id) => {
-      const label = labelMap[id];
-      return label ? [label] : [];
-    }) || [];
 
   const minDate = getDate(issue.start_date);
   minDate?.setDate(minDate.getDate());
@@ -109,7 +101,6 @@ export const DraftIssueProperties = observer(function DraftIssueProperties({
         <IssuePropertyLabels
           projectId={draft.project_id}
           value={issue.label_ids ?? []}
-          defaultOptions={defaultLabelOptions}
           onChange={handleLabel}
           renderByDefault={isMobile}
           hideDropdownArrow

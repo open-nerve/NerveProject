@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { observer } from "mobx-react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -21,10 +22,10 @@ let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 let result: ReturnType<typeof useEditorMention>;
 let props = { workspaceSlug: "ws", projectId: undefined as string | undefined, editable: true };
-function Probe() {
-  result = useEditorMention({ ...props, members: state.tab!.app.memberRoot });
+const Probe = observer(function Probe({ options }: { options: typeof props }) {
+  result = useEditorMention({ ...options, members: state.tab!.app.memberRoot });
   return null;
-}
+});
 beforeEach(async () => {
   vi.useFakeTimers();
   state.tab = await issueStoreTab();
@@ -39,7 +40,7 @@ afterEach(async () => {
   state.tab!.app.dispose();
   vi.useRealTimers();
 });
-const render = () => act(async () => root.render(<Probe />));
+const render = () => act(async () => root.render(<Probe options={{ ...props }} />));
 const member = (name: string, fields: Partial<WorkspaceMember> = {}) => membershipOf(name, fields, "ws");
 async function start(query: string, project = props.projectId) {
   const nerve = state.tab!.nerve;
@@ -174,4 +175,31 @@ it("keeps an overtaken current directory read retryable instead of claiming a se
   const retry = await start("a");
   await answer(retry, [member("alice")]);
   expect((await retry.promise)[0]?.items[0]?.title).toBe("alice");
+});
+
+it("invalidates an already subscribed popup on host changes without replacing its stable adapter", async () => {
+  await render();
+  const signal = result.mentionScope;
+  const current = signal.capture();
+  const close = vi.fn();
+  const stop = signal.subscribe(close);
+  props = { ...props, projectId: "A" };
+  await render();
+  expect(current()).toBe(false);
+  expect(close).toHaveBeenCalledTimes(1);
+  expect(result.mentionScope).toBe(signal);
+  expect(signal.capture()()).toBe(true);
+  stop();
+});
+it("notifies an open popup across permission loss and recovery using the root watermark", async () => {
+  await render();
+  const current = result.mentionScope.capture();
+  const close = vi.fn();
+  const stop = result.mentionScope.subscribe(close);
+  await act(async () =>
+    loadWorkspaces(state.tab!.nerve, state.tab!.app.workspaceRoot, [{ ...state.tab!.workspace, role: 5 }])
+  );
+  expect(current()).toBe(false);
+  expect(close).toHaveBeenCalled();
+  stop();
 });

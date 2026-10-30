@@ -20,12 +20,26 @@ export type MentionsListDropdownProps = Pick<
   SuggestionProps<TMentionSection, TMentionSuggestion>,
   "command" | "query"
 > &
-  Pick<TMentionHandler, "searchCallback" | "renderError"> & {
+  Pick<TMentionHandler, "searchCallback" | "renderError" | "scope"> & {
     onClose: () => void;
   };
 
 export const MentionsListDropdown = forwardRef(function MentionsListDropdown(props: MentionsListDropdownProps, ref) {
-  const { command, query, searchCallback, renderError, onClose } = props;
+  const { command, query, searchCallback, renderError, scope, onClose } = props;
+  const currentScope = useRef<() => boolean>(() => true);
+  const ended = useRef(false);
+  useLayoutEffect(() => {
+    currentScope.current = scope?.capture() ?? (() => true);
+    const end = () => {
+      ended.current = true;
+      setSections([]);
+      setFailure(undefined);
+      setIsLoading(false);
+      queueMicrotask(onClose);
+    };
+    if (!currentScope.current()) end();
+    return scope?.subscribe(end);
+  }, [scope, onClose]);
   // states
   const [sections, setSections] = useState<TMentionSection[]>([]);
   const [selectedIndex, setSelectedIndex] = useState({
@@ -40,7 +54,7 @@ export const MentionsListDropdown = forwardRef(function MentionsListDropdown(pro
 
   const selectItem = useCallback(
     (sectionIndex: number, itemIndex: number) => {
-      if (isLoading || failure) return;
+      if (ended.current || !currentScope.current() || isLoading || failure) return;
       try {
         const item = sections?.[sectionIndex]?.items?.[itemIndex];
         const transactionId = uuidv4();
@@ -94,14 +108,14 @@ export const MentionsListDropdown = forwardRef(function MentionsListDropdown(pro
     setFailure(undefined);
     setIsLoading(!!searchCallback);
     const timer = setTimeout(() => {
-      if (!searchCallback) return;
+      if (!searchCallback || ended.current || !currentScope.current()) return;
       void searchCallback(query)
         .then((answer) => {
-          if (current) setSections(answer);
+          if (current && !ended.current && currentScope.current()) setSections(answer);
           return undefined;
         })
         .catch((error: unknown) => {
-          if (current) setFailure({ error });
+          if (current && !ended.current && currentScope.current()) setFailure({ error });
         })
         .finally(() => {
           if (current) setIsLoading(false);

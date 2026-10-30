@@ -190,3 +190,20 @@ it("an admin permission loss and recovery cannot revive a pending label refusal"
   expect(host.textContent).not.toContain("errors.project_label_name_taken");
   expect(toasts).toHaveLength(0);
 });
+
+it("a confirmed new label whose issue PATCH is refused remains unselected and preserves the query", async () => {
+  await open({
+    name: "detail-native",
+    view: () => <IssueLabel workspaceSlug="ws" projectId="A" issueId="x" disabled={false} />,
+  });
+  await enter();
+  const label = labelOf(tab.project, "New name", 1);
+  await act(async () => posts()[0]!.answer(json(201, label)));
+  await act(async () => until(() => tab.nerve.calls.some((call) => call.method === "PATCH"), "attach confirmed label"));
+  expect(tab.app.issue.issues.getIssueById("x")?.label_ids).toEqual([]);
+  await act(async () => tab.nerve.calls.find((call) => call.method === "PATCH")!.answer(problem(403, "forbidden")));
+  await act(async () => vi.advanceTimersByTimeAsync(20));
+  expect(host.querySelector<HTMLInputElement>("input")?.value).toBe("New name");
+  expect(tab.app.issue.issues.getIssueById("x")?.label_ids).toEqual([]);
+  expect(toasts.filter((toast) => toast.message === "errors.forbidden")).toHaveLength(1);
+});

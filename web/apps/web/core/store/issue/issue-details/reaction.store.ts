@@ -55,20 +55,24 @@ export class IssueReactionStore {
     send: () => Promise<T>,
     confirm: (answer: T, rows: IssueReaction[]) => IssueReaction[]
   ): Promise<T> {
-    return this.root.enqueueIssueChanges([id], async () => {
-      const resource = this.resources.entry(ws, project, id);
-      const scope = this.root.scope(ws, project);
-      const token = this.root.captureRead();
-      const answer = await send();
-      if (!this.root.isReadCurrent(token, [project], scope.workspaceID)) throw new SessionChangedError();
-      this.root.assertProjectReadable(ws, project);
-      resource.receive([], token, (held) => confirm(answer, held ?? []));
-      await resource.refreshAfterConfirmation(async () => {
-        await this.root.issues.refreshAuthoritative(id, { afterWrite: true });
-        await this.rootIssueDetailStore.refreshAfterChange(ws, project, id);
-      }, token);
-      return answer;
-    });
+    return this.root.enqueueIssueChanges(
+      [id],
+      async () => {
+        const resource = this.resources.entry(ws, project, id);
+        const scope = this.root.scope(ws, project);
+        const token = this.root.captureRead();
+        const answer = await send();
+        if (!this.root.isReadCurrent(token, [project], scope.workspaceID)) throw new SessionChangedError();
+        this.root.assertProjectReadable(ws, project);
+        resource.receive([], token, (held) => confirm(answer, held ?? []));
+        await resource.refreshAfterConfirmation(async () => {
+          await this.root.issues.refreshAuthoritative(id, { afterWrite: true });
+          await this.rootIssueDetailStore.refreshAfterChange(ws, project, id);
+        }, token);
+        return answer;
+      },
+      { workspaceSlug: ws, projectID: project }
+    );
   }
   createReaction = (ws: string, project: string, id: string, reaction: string): Promise<IssueReaction> =>
     this.write(

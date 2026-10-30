@@ -2,6 +2,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { issueDetailOf, issueOf, issueStoreTab, requestedIssue } from "./fake-issues";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { loadProjects } from "@/store/project/fake-projects";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { track, until } from "@/lib/auth/fake-time";
 import { handleDragDrop } from "@/components/issues/issue-layouts/calendar/utils";
 import { handleGroupDragDrop } from "@/components/issues/issue-layouts/utils";
@@ -423,4 +425,25 @@ it("fix1 deleted neighbor cannot reuse old relationship row", async () => {
   expect(move.call.body).toEqual({ sort_order: 65535 });
   move.call.answer(json(200, issueDetailOf("x")));
   await move.promise;
+});
+
+it("a drag waiting for another issue preserves its initiating permission lifetime", async () => {
+  const root = tab.app.issue;
+  const first = await requestedIssue(
+    tab.nerve,
+    () => root.updateIssue("x", () => ({ sort_order: 50 }), { group: "" }),
+    ["PATCH", "/api/v0/issues/x"]
+  );
+  const next = root.updateIssue("y", () => ({ sort_order: 60 }), { group: "" });
+  const result = track(next);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  root.issues.acceptRead(issueDetailOf("y"), root.captureRead());
+  const count = tab.nerve.calls.length;
+  first.call.answer(json(200, { ...issueDetailOf("x"), sort_order: 50 }));
+  await first.promise;
+  await vi.advanceTimersByTimeAsync(1);
+  expect(tab.nerve.calls).toHaveLength(count);
+  await until(() => result.settled, "old drag retired");
+  await expect(next).rejects.toBeInstanceOf(SessionChangedError);
 });

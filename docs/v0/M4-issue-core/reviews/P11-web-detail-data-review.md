@@ -247,3 +247,53 @@ List局部数值注册表统一全列宽度，IssueBlockRoot在RenderIfVisible�
 局部裁定：P1故事的DOM预期随T11真实控件结构同步，不保留非法嵌套来满足旧测试；代价是测试不再约束已删除的包装元素，单一语义按钮/Tab顺序/焦点恢复得到更直接约束。草稿/列表宽度没有改变项目公开字段或后端。getUserProfileIssues/fetchParentStats已无实现；peek自身的`isArchiveIssueModalOpen`是仍在使用的局部状态，不能声称整个web该名字零命中。
 
 G按要求与质量两遍主控自审，未冒称独立逐Task审者。T14继续处理根详情/peek/标签更新的拒绝传播、父项重复补读和加载收尾、展开子项的受控读取、标题/描述实际保存状态及完整命令矩阵；阶段A1–A10与T15整分支审查仍开放。本检查点推送后的准确SHA/CI回执另存忽略证据目录，不能用T9绿色CI代替。
+
+
+### T14 修改矩阵与调用方收尾
+
+T13准确提交`100565d27bc7d842a5693d877b84f42ef73e544c`的[CI 40982066769](https://github.com/open-nerve/NerveProject/actions/runs/40982066769)已全绿（attempt 1，server/web/e2e）；这份结论不用于后续T14产品。
+
+详情/peek命令现在传播已报告的拒绝；属性事件明确结束Promise，恢复失败保留peek。父项操作删除重复详情/子项补读，移除失败释放自己取得的loader。列表展开副作用离开setState updater，失败展示原生错误并只读重试。标签创建成功但附加失败保留输入，不伪称附加成功。
+
+标题与描述以本地输入修订和实际命令确认管理自动保存：拒绝保留输入/显式重试，旧确认不覆盖新输入，撤回原值仍排入必要的后续写，不在卸载时重发已尝试的写。标题/描述各自状态汇总，任何失败都不会被另一字段的成功或计时器掩盖；M7仅跟进共享展示props，不改变旧领域服务。提及菜单增加纯UI生命周期信号，scope变更清空已显示建议、关闭菜单，选择时同步阻止旧scope；源hook只读取既有root权限identity。
+
+矩阵复核又发现排队起点权限水位丢失，及目录等待/拖动队列/204删除回包的同类缺口；已在现有IssueRootStore统一加固，资源入口传源范围，涉及多个工作项时合并其已有项目证明。没有第二套权限事实。不同root、另一工作区权限变化不误伤当前队列。
+
+证据目录仍为本worktree `.superpowers/sdd/P11-web-detail-data/`：`t14-command-red` 8行为失败→9绿；`t14-autosave-red` 7行为失败及1未处理拒绝→12项（含撤回/卸载补充）绿；`t14-editor-status-red` 1行为失败→13项相关绿；`t14-parent-children-red` 3行为失败及1未处理拒绝→24绿；`t14-mention-scope-red` 1行为失败→6绿，源hook14绿。`t14-queue-aba-restored-red` 在确认恢复权限后18项失败→完整矩阵57绿；先前fixture自动答复错误的运行不算ABA证明。`t14-queue-scope-drag-red` 真实多发PATCH，`t14-catalog-recovered-red` 在新读恢复实体后真实多发PATCH，`t14-core-permission-red` 的DELETE旧回包确认错误，均在` t14-root-guards-green`的170项及随后回归通过。错误类型/类型检查/fixture错误单列，不充当行为证据。
+
+最终定向` t14-matrix-final`：23文件440项通过，涵盖全部detail资源、核心多副本、拖动及本Task真实消费者；`t14-types-final`通过。静态52文件零告警，原web警告数147→146并收紧cap。共享包10任务强制构建通过；最终F和整分支审核留T15。无新增依赖，无守卫放宽。
+
+#### 完整修改矩阵
+
+下表每一语义分别审阅；“公共矩阵”指`issue-details/detail-mutations.test.ts`的18类命令，各有待确认/403不改，以及退役/权限ABA排队不发送。服务逐方法403/404/409/422测试仅证明原生Problem原样传播，不代表每个端点都会产生全部业务码；无body的删除没有表单422语义。业务409还包括归档工作项/项目，链接冲突为`issue.link_exists`，表情冲突为`issue.reaction_exists`，草稿发布为`issue.draft_changed`。
+
+| 修改语义 | 确认前/拒绝 | 退役/权限/旧读 | 确认及补读失败 |
+|---|---|---|---|
+| 属性PATCH | issue-changes六写矩阵；实际表单403/422 | issue-changes权限/晚GET、公共队列入口 | canonical+项目/归档/profile；目录失败待核 |
+| 描述PATCH/版本恢复 | 公共矩阵description；autosave/versions拒绝保留 | 公共矩阵、旧编辑确认不盖新值 | 原生Detail；版本等待确认后关闭，两个字段各自状态 |
+| 父项PATCH | 公共矩阵parent | 排队/ABA；旧父未知不猜计数 | detail-changes核旧/新父权威读；真实父项UI不重读 |
+| 批量子项 | 公共矩阵subAdd | 多ID预约、跨资源交错、旧父未知stale | 原生回答子项；两端计数待核不回滚 |
+| 移除子项 | 公共矩阵subRemove | 与批量同队列，ABA不发送 | nullable parent确认，loader失败释放 |
+| 删除子树 | 公共矩阵subDelete | issue-changes未知后代/旧GET/verify；旧权限204不确认 | root墓碑与父计数；无body删除不捏造422字段 |
+| 恢复归档 | 公共矩阵restore；详情/peek拒绝 | 拖动/普通队列起点水位，旧宿主不关新peek | 六写多副本协调 |
+| 新增关联 | 公共矩阵relationAdd | source/target目录证明、跨项目ABA | relationId/native目标；补读失败只读重试 |
+| 删除关联 | 公共矩阵relationRemove | 旧集合重放、两端scope | DELETE关系ID；拒绝不动，后续GET不重写 |
+| 新增链接 | 公共矩阵linkAdd | 旧GET重放/ABA | native链接；元数据failed可确认，计数权威 |
+| 修改链接 | 公共矩阵linkEdit | 同上及并存活动增量 | native nullable title；补读失败保留成功 |
+| 删除链接 | 公共矩阵linkRemove | 同上及scope失效 | 204后按ID移除，计数不本地减 |
+| 新增评论 | 公共矩阵commentAdd | 全页原子/晚GET/纳秒重排 | native评论及内嵌表情；权威补读失败保留 |
+| 编辑评论 | 公共矩阵commentEdit | 新版本不被旧页覆盖 | comment_html原生确认；最后请求cursor增量 |
+| 删除评论 | 公共矩阵commentRemove | 旧页重放，已删除不被晚表情复活 | 204删除评论及自身表情，无独立表情GET |
+| 新增工作项表情 | 公共矩阵reactionAdd | actor维度、同issue队列/ABA | 幂等ID；只读补取不重POST |
+| 删除工作项表情 | 公共矩阵reactionRemove | 同上 | 只移除当前actor同reaction，不动别人 |
+| 新增评论表情 | 公共矩阵commentReactionAdd | scope/队列/晚回包 | 仅comment.reactions；不清除之前尚未核实的核心错误 |
+| 删除评论表情 | 公共矩阵commentReactionRemove | 同上 | 204只移除本人，不建伪表情集合 |
+| 草稿新增/更新/删除 | workspace-draft store矩阵，403/422保留 | 独立draft队列、权限、全页晚答 | 原生Draft/204；total待刷新而非猜数 |
+| 草稿发布 | workspace-draft publish/真实弹窗矩阵 | 退役/成员失效，单次提交 | PATCH完整payload→无bodyPOST→root创建确认；后续失败不能重发 |
+| 标签创建/附加 | use-label-changes、issue-properties、form错误矩阵 | session/host捕获；双Enter只发一次 | nativeLabel成功才选择；附加拒绝不回滚已建标签 |
+
+#### 过渡清单
+
+`t14-transition-audit`逐个对照基线证明9个指定模块实例消失：两个版本消费者（main-content、peek issue-detail）、workspace_draft service模块实例、四个提及入口（lite-text、description-input、issue-modal description-editor、inbox create issue-description）、archives header及issueId page两处IssueService。根按代构造原生薄服务是保留的正确归属，不要求全库`new Service`为零。
+
+M4指定目录的is_bot/description_json/comment_json均零命中，旧IssueService文件删除，keywords仍76规则/24精确例外。剩余M4模块实例为ExistingIssuesListModal（P12）、父项搜索和M7查重选择（P14）、命令面板搜索（P15）；projectIssuesSearch旧URL例外到P16前强制到期，P14若无读者即删。global-view.store的WorkspaceService属于M7自身待接通。M5资产、M6迭代/模块、M7收集箱/视图保留各自领域边界；copy-hook现有例外按各closeout处理，不冒称P11已满足P15/整M4零残留门禁。删除无读者label defaultOptions及其三个构造调用、peek storeType、输入key/状态冗余prop。

@@ -6,13 +6,11 @@
 
 import type { IssueUpdate } from "@nerve/api-client";
 import { IssueDetailHost } from "../detail-host";
-import { useMemo } from "react";
+import { useIssueOperations } from "./use-issue-operations";
 import { observer } from "mobx-react";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { followInSession } from "@/lib/in-session";
 // assets
 import emptyIssue from "@/app/assets/empty-state/issue.svg?url";
 // components
@@ -49,8 +47,6 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
   // hooks
   const {
     issue: { getIssueById },
-    fetchIssue,
-    updateIssue,
     rootIssueStore,
     subIssues,
     relation,
@@ -59,28 +55,7 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
   const { allowPermissions } = useUserPermissions();
   const { issueDetailSidebarCollapsed } = useAppTheme();
 
-  const issueOperations: TIssueOperations = useMemo(
-    () => ({
-      fetch: async (slug: string, project: string, id: string) => {
-        try {
-          await fetchIssue(slug, project, id);
-        } catch (error) {
-          console.error("Error fetching the parent issue:", error);
-        }
-      },
-      update: async (slug: string, project: string, id: string, data: IssueUpdate) => {
-        await followInSession(() => updateIssue(slug, project, id, data), {
-          failed: () =>
-            setToast({
-              title: t("common.error.label"),
-              type: TOAST_TYPE.ERROR,
-              message: t("entity.update.failed", { entity: t("issue.label") }),
-            }),
-        });
-      },
-    }),
-    [fetchIssue, updateIssue, t]
-  );
+  const issueOperations = useIssueOperations(workspaceSlug, projectId, issueId);
 
   // issue details
   const issue = getIssueById(issueId);
