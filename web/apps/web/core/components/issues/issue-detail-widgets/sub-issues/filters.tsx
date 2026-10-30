@@ -44,6 +44,7 @@ export const SubIssueFilters = observer(function SubIssueFilters(props: TSubIssu
   return (
     <>
       <FiltersDropdown
+        title={t("common.filters")}
         placement="bottom-end"
         menuButton={
           <div

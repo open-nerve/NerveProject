@@ -7,6 +7,7 @@
 import { useMemo } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 import { PreferencesOutline } from "@makeplane/propel/icons";
 // nerve imports
 import type { IIssueDisplayFilterOptions, ILayoutDisplayFiltersOptions, IIssueDisplayProperties } from "@nerve/types";
@@ -28,6 +29,7 @@ type TSubIssueDisplayFiltersProps = {
 };
 
 export const SubIssueDisplayFilters = observer(function SubIssueDisplayFilters(props: TSubIssueDisplayFiltersProps) {
+  const { t } = useTranslation();
   const {
     displayProperties,
     layoutDisplayFiltersOptions,
@@ -45,6 +47,7 @@ export const SubIssueDisplayFilters = observer(function SubIssueDisplayFilters(p
     <>
       {layoutDisplayFiltersOptions?.display_filters && layoutDisplayFiltersOptions?.display_properties.length > 0 && (
         <FiltersDropdown
+          title={t("common.display")}
           placement="bottom-end"
           menuButton={
             <div

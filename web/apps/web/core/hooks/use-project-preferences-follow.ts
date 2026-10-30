@@ -4,25 +4,27 @@ import { useParams } from "react-router";
 import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
 import { followInSession } from "@/lib/in-session";
 
 /** Follow a confirmed preference change in the same session and project. List reads have their own refusal. */
 export function useProjectPreferencesFollow() {
   const { workspaceSlug, projectId } = useParams();
-  const scope = useRef({ workspaceSlug, projectId });
-  scope.current = { workspaceSlug, projectId };
+  const capture = useDetailScope(workspaceSlug ?? "", projectId, "project-preferences");
   const { issues } = useIssues(EIssuesStoreType.PROJECT);
   const refusal = useRefusalToast();
   const toast = useRef(refusal);
   toast.current = refusal;
   return useCallback(
     async (slug: string, id: string, change: () => Promise<void>) => {
+      const owned = capture();
       const current = () =>
+        owned() &&
         issues.rootIssueStore.active &&
         issues.rootIssueStore.workspaceSlug === slug &&
         issues.rootIssueStore.projectId === id &&
-        scope.current.workspaceSlug === slug &&
-        scope.current.projectId === id;
+        workspaceSlug === slug &&
+        projectId === id;
       await followInSession(change, {
         failed: (error) => {
           if (current()) toast.current(error);
@@ -30,13 +32,12 @@ export function useProjectPreferencesFollow() {
         done: async () => {
           if (!current() || issues.isPreferenceQueryCurrent(id)) return;
           await followInSession(() => issues.fetchIssuesWithExistingPagination(slug, id, "mutation"), {
-            failed: (error) => {
-              if (current()) toast.current(error);
-            },
+            // The binding retains read failures; the visible list owns its one refusal and GET-only retry.
+            failed: () => undefined,
           });
         },
       });
     },
-    [issues]
+    [issues, capture, workspaceSlug, projectId]
   );
 }

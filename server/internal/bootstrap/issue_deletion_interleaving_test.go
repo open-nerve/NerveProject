@@ -60,9 +60,27 @@ func TestDeletionInterleaving24(t *testing.T) {
 				var done <-chan error
 				defer func() { releaseAndJoinGate(t, g, done) }()
 				var second pgx.Tx
+				var joinNeighbor func()
 				if liveFirst {
 					done = run(remove(heldTx{probe, g}))
 					held(t, pgtest.Soon(t), g, done, "live issue deletion")
+					// A periodic archive read can wait on the same transaction's
+					// project lock. Observe the relation worker without assuming
+					// that it is this transaction's only blocked backend.
+					neighbor, err := w.pool.Acquire(pgtest.Soon(t))
+					if err != nil {
+						t.Fatal(err)
+					}
+					t.Cleanup(neighbor.Release)
+					neighborCtx, cancelNeighbor := context.WithTimeout(context.Background(), 20*time.Second)
+					t.Cleanup(cancelNeighbor)
+					joinNeighbor = requestBackground(t, func() error {
+						_, err := neighbor.Exec(neighborCtx, "SELECT 1 FROM projects WHERE id=$1 FOR NO KEY UPDATE", q)
+						return err
+					}, func() { requestOpen(g) })
+					observer := &requestProbe{}
+					observer.pid.Store(neighbor.Conn().PgConn().PID())
+					requestBlocked(t, w.pool, observer, requestPID(t, probe), "projects")
 				} else {
 					second = holding(t, w.pool, `SELECT 1 FROM issue_relations WHERE id=$1 FOR UPDATE`, ids[1])
 					defer requestRelease(t, second)
@@ -76,6 +94,7 @@ func TestDeletionInterleaving24(t *testing.T) {
 						t.Fatal(err)
 					}
 					done = nil
+					joinNeighbor()
 				} else {
 					pid := deletionWorkerBlocked(t, w.pool, second, job, "issue_relations")
 					logRelationLockPlan(t, w, pid, p)

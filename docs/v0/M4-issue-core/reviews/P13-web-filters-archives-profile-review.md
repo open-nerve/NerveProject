@@ -1,6 +1,6 @@
 # M4/P13 筛选、归档与个人主页：预检记录
 
-日期：2026-10-31。**当前已获准实施，T1完成，T2接续；以下§1–7保留预检快照，实施接续见§8。** [spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[deep-review预检](../../../reviews/re-18-M4P13预检审核.md)。产品A1–A12和14个Task全部开放；本记录不等于阶段实施后的整分支终审。
+日期：2026-10-31。**当前已获准实施，T1–T4完成，T5接续；以下§1–7保留预检快照，实施接续见§8。** [spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[deep-review预检](../../../reviews/re-18-M4P13预检审核.md)。产品A1–A12仍待阶段验收；本记录不等于阶段实施后的整分支终审。
 
 ## 1. 前置与评审方式
 
@@ -86,3 +86,11 @@ T2通过真实CustomSearchSelect覆盖空条件首次打开、静态/异步候�
 T3用真实Calendar验证两步草稿、同日范围、已保存单端范围、反向/越界文字及aria关联、条件换id和外部值ABA。首次10项行为失败；外部值ABA新增断言先红后修。日期回归5文件43通过，UTC+14与UTC-7各10通过；M05/M06/M07分别去草稿、改UTC解析、去aria关联，产生9/6/5项行为失败并恢复。首次类型检查暴露toFilterArray泛型推断过宽，明确string后lint-web 54通过（36缓存）。旧DateFilterModal真实表单校验使用日历输入替身强制输入反向日期，单独验证date2和分号callback；不冒称该测试是完整页面日历。
 
 T3局部接口调整：实际DayPicker首次选择即返回同日起止，按旧回调第一参数无法辨认两次点击。DateRangeDropdown的onSelect向后兼容增加可选selectedDay，仅传输入事实；旧调用仍消费原range，草稿归富筛选，不激活既有未使用bothRequired或增加共享缓存。同步设计/spec/plan，P11原子修改4项和原共享日期控件回归通过。
+
+T4通过真实HeaderFilters/RootStore/FakeNerve验证11属性、同字段队列、跨字段并发及未改calendar/false/null，确认后列表拒绝只出现一次提示且重试只GET。旧权限/路由/会话ABA和卸载均结束跟进；继续复用useDetailScope与root权限水位。默认/自定义按钮均具名称、expanded、disabled、tabIndex和Escape回焦，实际Panel承接定位；七个M4入口具翻译标题。六文件38测试通过、lint-web 54任务通过；M08/M09/M10分别产生3/1/8项真实失败并恢复。M08/M09属于既有确认队列回归，不重复记作本期新实现。三浏览器几何仍待T13。
+
+T4第一轮完整F中生成与Go lint通过，服务端TestNewAppDeleteRowsJobRuns暴露旧测试夹具竞态：61天前的软删审计行超过60天保留期，可被启动清理物理删除。显式在删除任务完成后执行purger使同一根因稳定失败（count=9）；改用配置保留期一半的旧时间后连续10次通过，保留原锁/批处理/审计断言及明确交错。仅修测试，不变服务端锁、协议或清理语义；不以它触发新架构调整。首次完整失败和红绿raw均保留。
+
+第二轮完整F的TestDeletionInterleaving24在观测锁等待时失败。单子例20次未复现；整个24矩阵20次复现一次，临时诊断明确同一事务阻塞了关联行删除worker和项目行周期任务，旧helper把全部等待者限定为一个。新夹具明确制造第二等待者，旧helper稳定选错projects；按预期表筛选候选后仍检查稳定PID、实际SQL及锁类型，24/25全矩阵连续10轮通过。只调整测试观测，不改生产事务/锁顺序/超时；临时诊断源码已撤回，证据保留。最终验证见下段。
+
+T4最终检查点七项均通过：生成/Go lint/Go全测取t4-full3，Web lint/knip/强制全测/E2E取t4-full4。第三轮Web全测曾有旧路由接线夹具缺少detail root的10项失败，改用真实RootStore/FakeNerve后原性质保留并补guest断言，相关23项通过。服务端源输入逐文件核验不变（t4-server-input-reuse.json），没有冒称第四轮重跑Go。最终Web 240文件2587项、全部包18任务通过，E2E 180通过；所有失败raw保留。T4完成，继续T5–T14；阶段整审、三浏览器与最终分支CI仍待执行。

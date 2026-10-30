@@ -11,6 +11,7 @@ import { usePopper } from "react-popper";
 import { Popover, Transition } from "@headlessui/react";
 // ui
 import { Button } from "@nerve/propel/button";
+import { useTranslation } from "@nerve/i18n";
 
 type Props = {
   children: React.ReactNode;
@@ -31,11 +32,12 @@ type Props = {
  * the panel opens.
  */
 export function FiltersDropdown(props: Props) {
+  const { t } = useTranslation();
   const {
     children,
     miniIcon,
     icon,
-    title = "Dropdown",
+    title = t("common.filters"),
     placement,
     disabled = false,
     tabIndex,
@@ -43,11 +45,12 @@ export function FiltersDropdown(props: Props) {
     isFiltersApplied = false,
   } = props;
 
-  const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | HTMLDivElement | null>(null);
-  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
+  const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
+  const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
 
   const { styles, attributes } = usePopper(referenceElement, popperElement, {
     placement: placement ?? "auto",
+    strategy: "fixed",
   });
 
   return (
@@ -56,37 +59,42 @@ export function FiltersDropdown(props: Props) {
         <>
           {menuButton ? (
             <Popover.Button as={React.Fragment}>
-              <button type="button" ref={setReferenceElement}>
+              <button
+                type="button"
+                ref={setReferenceElement}
+                aria-label={title}
+                disabled={disabled}
+                tabIndex={tabIndex}
+              >
                 {menuButton}
               </button>
             </Popover.Button>
           ) : (
             // one button, named by the title, whose content follows the header's width: in a wide header the icon,
             // the title and the mark of the filters applied, in a narrow one the mini icon or the title
-            <div ref={setReferenceElement} className="flex">
-              <Popover.Button as={React.Fragment}>
-                <Button
-                  disabled={disabled}
-                  variant="secondary"
-                  tabIndex={tabIndex}
-                  className="@4xl:relative"
-                  size="lg"
-                  aria-label={title}
-                >
-                  <span className="hidden @4xl:contents">
-                    {/* the icon as the button's prependIcon shows it */}
-                    {icon && cloneElement(icon, { className: "shrink-0 size-4", strokeWidth: 2 })}
-                    <span className={`${open ? "text-primary" : "text-secondary"}`}>
-                      <span>{title}</span>
-                    </span>
-                    {isFiltersApplied && (
-                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent-primary" />
-                    )}
+            <Popover.Button as={React.Fragment}>
+              <Button
+                ref={setReferenceElement}
+                disabled={disabled}
+                variant="secondary"
+                tabIndex={tabIndex}
+                className="@4xl:relative"
+                size="lg"
+                aria-label={title}
+              >
+                <span className="hidden @4xl:contents">
+                  {/* the icon as the button's prependIcon shows it */}
+                  {icon && cloneElement(icon, { className: "shrink-0 size-4", strokeWidth: 2 })}
+                  <span className={`${open ? "text-primary" : "text-secondary"}`}>
+                    <span>{title}</span>
                   </span>
-                  <span className="contents @4xl:hidden">{miniIcon || title}</span>
-                </Button>
-              </Popover.Button>
-            </div>
+                  {isFiltersApplied && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent-primary" />
+                  )}
+                </span>
+                <span className="contents @4xl:hidden">{miniIcon || title}</span>
+              </Button>
+            </Popover.Button>
           )}
           <Transition
             as={Fragment}
@@ -101,13 +109,14 @@ export function FiltersDropdown(props: Props) {
             {/* The Transition takes the panel out of the page after its leave, so the panel keeps its place in Headless
                 UI's state as the popover closes (unmount false): opened again during the leave, it would otherwise no
                 longer close as the focus moves on past it. */}
-            <Popover.Panel className="fixed z-10 translate-y-0" unmount={false}>
-              <div
-                className="my-1 overflow-hidden rounded-sm border border-subtle bg-surface-1 shadow-raised-100"
-                ref={setPopperElement}
-                style={styles.popper}
-                {...attributes.popper}
-              >
+            <Popover.Panel
+              className="fixed z-10 translate-y-0"
+              unmount={false}
+              ref={setPopperElement}
+              style={styles.popper}
+              {...attributes.popper}
+            >
+              <div className="my-1 overflow-hidden rounded-sm border border-subtle bg-surface-1 shadow-raised-100">
                 <div className="flex max-h-[30rem] w-[18.75rem] flex-col overflow-hidden lg:max-h-[37.5rem]">
                   {children}
                 </div>

@@ -100,11 +100,11 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 **Files：** C/components/issues/filters.tsx；L/filters/header/helpers/dropdown.tsx及.test.tsx；L/filters/header/display-filters/真实控件；C/hooks/use-project-preferences-follow.ts及已有.test.tsx；新L/filters/preferences-controls.test.tsx。
 **Interfaces：** 原useProjectPreferencesFollow()返回(slug:string,id:string,change:()=>Promise<void>)=>Promise<void>保持；当前性复用useDetailScope和root.permissionReads，不新增root观察者。ProjectIssuesFilter.updateFilters/updateFilterExpression签名保持。
 
-- [ ] Step 1：用真实RootStore/FakeNerve挂载控件，写waitsForConfirmedPreferences、keepsOtherFieldsAndCalendar、doesNotFollowAfterPermissionABA、retriesOnlyTheReadAfterConfirmedSave。按钮默认/自定义两支断言name、expanded、disabled、Escape回焦；盘点七个M4生产调用并给图标分支title（项目/profile两手机头、项目filters、归档header、profile-filter、子项filters/display-filters）；全仓其余消费者只兼容复核。
-- [ ] Step 2：运行新控件、扩展后的既有hook测试及project/filter.store.test.ts；预期自定义按钮无语义或旧宿主跟进的对应失败；已成立队列性质只回归。保留原hook测试的确认、拒绝、读取失败和导航性质，并补真实root权限/会话ABA断言。
-- [ ] Step 3：所有Promise有当前scope反馈，确认后才查询新列表；连续同字段/不同字段不覆盖、false/null/calendar未改字段保留。补FiltersDropdown实际按钮语义与实际Panel定位；不重写P12单开关。
-- [ ] Step 4：聚焦绿、共享受影响消费者绿；M08乐观显示未确认偏好、M09丢嵌套calendar字段、M10权限ABA仍跟进各红、恢复绿。检查点F串行全绿后push准确提交。
-- [ ] Step 5：提交fix(M4/P13): 完成显示设置的确认反馈和键盘入口。记录A2/A4及F输入。
+- [x] Step 1：用真实RootStore/FakeNerve挂载控件，写waitsForConfirmedPreferences、keepsOtherFieldsAndCalendar、doesNotFollowAfterPermissionABA、retriesOnlyTheReadAfterConfirmedSave。按钮默认/自定义两支断言name、expanded、disabled、Escape回焦；盘点七个M4生产调用并给图标分支title（项目/profile两手机头、项目filters、归档header、profile-filter、子项filters/display-filters）；全仓其余消费者只兼容复核。
+- [x] Step 2：运行新控件、扩展后的既有hook测试及project/filter.store.test.ts；预期自定义按钮无语义或旧宿主跟进的对应失败；已成立队列性质只回归。保留原hook测试的确认、拒绝、读取失败和导航性质，并补真实root权限/会话ABA断言。
+- [x] Step 3：所有Promise有当前scope反馈，确认后才查询新列表；连续同字段/不同字段不覆盖、false/null/calendar未改字段保留。补FiltersDropdown实际按钮语义与实际Panel定位；不重写P12单开关。
+- [x] Step 4：聚焦绿、共享受影响消费者绿；M08乐观显示未确认偏好、M09丢嵌套calendar字段、M10权限ABA仍跟进各红、恢复绿。检查点F串行全绿后push准确提交。
+- [x] Step 5：提交fix(M4/P13): 完成显示设置的确认反馈和键盘入口。记录A2/A4及F输入。
 
 ## Task 5：归档列表与本地设置（约500–950行）
 
