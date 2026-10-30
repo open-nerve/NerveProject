@@ -862,7 +862,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 | P9 | 差异清单 | 四 | 动态随工作项物理删除（`CASCADE`，不是 `DO_NOTHING`）；已登记的"连带在同一事务"改为只对删除工作项、状态、标签成立，删除项目、工作区的工作项一侧与 Plane 一样在事务之外完成，但写下请求的时刻（3.6） **P9回执：** 已同步plane-diff第四节及版本索引行：活动/评论子链CASCADE、同步/异步按操作划分；T3/T5/T9–13证据见P9 review |
 | P10b | 总体设计 | 7.7 | `Reconciled.fetchPart` 和 `paged-groups.ts`；一个工作项只有一份，取服务端 `updated_at` 大的（3.22） |
 | P10a–P16 | 前端改动清单 | 3.1、3.2 | M4 一行的状态；删到 M5、M6、M7 的入口和取数（3.1、3.2）；迭代、模块、项目视图、工作区视图的工作项列表在 P10a 删除，M6、M7 加回（7.3） |
-| P12 | README | "前端"一节 | "M3 中看到的页面"改写为 M4 能到达的页面（3.1） |
+| P12 | README | "前端"一节 | 已按实际分支更新四布局/原生搜索及后续页面边界（3.1）；P12最终WebKit/CI仍待核，不宣称已集成，见P12 review§24–25 |
 | 收尾 | 总体设计 | 9.4 | M4 的状态改为"已完成" |
 
 ---
@@ -2351,7 +2351,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：spec A1–A10实际通过；core/services/issue无生成Issue/Detail标注Plane响应；全部修改/拒绝/宿主有行为证据，原七加两实例零命中；搜索和M5–M7范围准确保留。产品验收、整审、准确最终HEAD CI及授权后的main CI均已闭合，归档清理回执见review§15。
 
 ### P12 `web-list-pages`：列表、看板、表格、日历（15个设计粗项，细化16个实施Task）
-- **状态**：预检后已获授权实施，T1–T15 本地实施和验证完成，完整七项门禁通过（默认 E2E 180 项、三浏览器矩阵33项）；检查点CI与T16整分支 deep-review 继续。阶段先不合并；[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[实施记录](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab，关键词phase已为M4/P12；七下拉拆两组验证，原22路由清单按14存在/8已删核验，范围不变。
+- **状态**：T1–T15及检查点CI完成，T16整审六项重要问题已修复；最终前端2697、默认E2E180和Chromium/Firefox各11通过，WebKit运行中Docker服务消失，待恢复后重验及准确文稿HEAD CI。阶段先不合并；[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[实施记录](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab，关键词phase已为M4/P12；七下拉拆两组验证，原22路由清单按14存在/8已删核验，范围不变。
 - **目标**：项目的工作项页的四种布局、拖动、快速添加、快捷操作、浮层；"添加已有"的选择器经 `issue-search`。
 - **任务**：
   1. 列表布局：分组、每组加载更多、快速添加（字段的提示和焦点）；I7 的页面版本。
@@ -2580,7 +2580,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
 | P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
 | P11 `web-detail-data` | 详情一侧的数据层（15） | **已完成**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review§15](reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。交付42afa24f、main ce3c39ab；准确分支及main CI全绿，证据归档/清理完成；列宽按已裁定A |
-| P12 `web-list-pages` | 列表、看板、表格、日历（16） | **实施中，T1–T15本地完成**：[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[review](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab；本地七项门禁、默认E2E180项和三浏览器33项通过，检查点CI、T16及阶段验收开放，先不合并 |
+| P12 `web-list-pages` | 列表、看板、表格、日历（16） | **T16收尾，尚未交付**：[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[review](reviews/P12-web-list-pages-review.md)、[整审](../../reviews/re-17-M4P12整体审核.md)。基线main ce3c39ab；六项重要问题已修复，最终WebKit及文稿HEAD CI待核，先不合并 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述的历史、草稿、搜索、命令面板（15） | 未开始 |

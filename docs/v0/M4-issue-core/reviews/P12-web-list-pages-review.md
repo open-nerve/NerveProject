@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T15 本地实施和验证完成，T15检查点CI与T16整审继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：T1–T15及检查点CI完成；T16整审六项重要问题已修复，最终WebKit和文稿HEAD的CI待闭合。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。整分支结论见[re-17](../../../reviews/re-17-M4P12整体审核.md)，A1–A12映射见§24；保留尚未满足的验收，不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -272,3 +272,46 @@ T15局部问题及首红：`t15-inline-ime-red`/`t15-controls-red`复现行/表�
 有效红为 `t16-project-lifecycle-red5`（6项失败）与 `t16-restore-menu-red`（7项失败）；更早缺夹具/错误按钮名/权限角色等失败不计产品红。第一轮修复绿剩一项成功删除未关窗，追到 dataId 被 canonical 删除使命令身份消失，改为当前确认快照后 `t16-lifecycle-restore-green2` 13/13；补权限结束/卸载后 `t16-lifecycle-scope-green` 19/19。`t16-affected-regression` 实际10文件86测试（不存在的额外过滤路径不计执行文件）。最终全量 test-web 覆盖255文件2697测试、18任务零缓存、0 skip；修改路径 lint 零警告，完整 lint-web 54任务、knip、build、默认 E2E180/180均通过，见 `t16-F-*`/`t16-build`。服务端未改，最终交付按输入 hash 核准复用 T15 服务端三项。
 
 最终矩阵的 Chromium/Firefox 各11/11通过；WebKit 第一次5通过/6失败，同时 Docker socket 消失、数据库连接被拒绝且 pg_dump 无法连接，原始证据为 `t16-matrix-webkit`。只读 `docker info` 确认环境不可用，已请负责人按“不动已有容器和 Docker”规则恢复服务。此轮不能计通过，也不以 T15 旧矩阵代替最终输入；保留原始证据待环境恢复重跑。文档收尾与最终准确 HEAD CI 仍在进行，当前不宣称 T16 完成。
+
+## 24. A1–A12与写入结果的证据映射（2026-10-30）
+
+以下按当前产品修复 `49b628fb` 核对。早期逐Task红/变异保留其发生时的输入，不把旧收据自动视作最终回归；最终全量前端、默认E2E、静态和两浏览器另跑且输入一致。A9/A11/A12因最终WebKit/文稿HEAD CI未闭合仍保留开放。
+
+| 标准 | 可定位证据 | 当前判断 |
+|---|---|---|
+| A1 | issue-search.service/use-issue-search、ExistingIssuesListModal及三个调用方；t1-final-regression 149测试；旧实例/旧query检索 | 通过 |
+| A2 | hook/resource/selector真实root、权限目录、当前拒绝、查询防抖窗、session/ABA/晚答；M02/M03与最终全量前端 | 通过 |
+| A3 | spec§2.9原22路径14存在8已删；route-scope/group-consumers；M04/M05；关键词规则76/例外24、无新增宽泛豁免 | 通过 |
+| A4 | list/view、swimlanes/list-data及I3页面，M06/M07历史及M06-page；T16首读重试/跨核验展开；当前Chromium/Firefox矩阵 | 通过；跨浏览器最终汇总另属A11 |
+| A5 | quick-add root.errors/root.pending、I7实际字段描述/recordFocuses/请求/DB；M08–M10 | 通过 |
+| A6 | kanban/drop与group-dragndrop/root拖动；I6一次PATCH、DB/DOM与中间below/列尾；M11–M14；T16删除/滚动生命周期 | 通过 |
+| A7 | spreadsheet/view/columns/header-column、project/filter.store、I4四种排序双向真实二页；M15–M17；原排序localStorage已删除 | 通过 |
+| A8 | calendar/view/selection、真实selector、UTC+14 I4、M18–M20；部分成功不重发确认项 | 通过 |
+| A9 | date/basic-dropdowns/label-controls/menus、C3六条故事；api-tokens A11与settings selects；最终WebKit尚待恢复复验 | 待最终矩阵闭合 |
+| A10 | detail-host/host-actions/selection/outside-click；M31/M32有效receipt2；真实C3加载中原节点/完整加载后退役，T16restore-menu | 通过 |
+| A11 | 导航前watchPage；S2准确REQUESTS，默认180/180；T15矩阵33项绿是历史，T16当前Chromium/Firefox22项绿；WebKit失败不计通过 | 待WebKit复验 |
+| A12 | 最终静态/knip、完整F输入核验、26项当前hash一致的独立性质、re-17六项修复；局部handoff已更新，最终文稿HEAD CI未核 | 待最终交付 |
+
+下表按P12实际写入口分类。“成功补读失败”有些由共享确认/读取合同组合证明，没有为每个UI入口各跑同名端到端故事；不把这种组合证据写成每一入口都经历过一次页面500。
+
+| 写入口（生成协议） | 确认 | 拒绝 | 旧scope/宿主 | 成功后的读取失败 |
+|---|---|---|---|---|
+| 快速添加POST issue | root.pending、project/issue.quick-create、I7：确认前输入和列表不变，确认后尾部/唯一动态 | root.errors/I7：422描述先于焦点、留输入、防重复 | root.pending/route-scope：换group/route/权限后旧答不释放B的pending或toast | issue.quick-create及root确认协调保留确认；list-data/refresh证明读取失败只GET；新项没有已打开的活动资源，不虚构此类补读 |
+| 行/表格属性PATCH（含双日期/标签集合） | issue-properties、date-range-write及inline-refusals验证原生单次写/确认值 | inline-refusals实际三个消费者403，一次原码反馈、旧值保留；标签选择器自有反馈 | inline-refusals/detail-commands与权限ABA，旧宿主无提示或关闭 | issue-details/detail-collaboration的core命令：活动GET500仍成功、一次写；root authority/只读重试不回滚确认 |
+| 看板状态/排序、日历日期PATCH | kanban/drop、calendar/view与I4/I6请求/DB/DOM；确认前不移动 | drop的403/422、calendar拒绝保留原位 | use-group-dragndrop/use-drop-highlight、日历scope/卸载，旧timer/scroll/反馈清理 | drop的older-read与refused-refresh实际验证503后只GET重试；canonical确认由issue-changes共享合同保证 |
+| 表格排序偏好PATCH | spreadsheet/view实际菜单与project/filter.store，确认箭头和持久化值后刷新 | 两测试拒绝时保留偏好/箭头/行 | filter.store旧读/退役及view同账号换项目 | 组合证明：偏好已确认投影 + 独立列表读取错误/GET重试，未单独声称页面偏好成功后500故事；失败读不改确认偏好 |
+| 日历已有项PATCH、子项/关联批量POST | selector与calendar/selection：confirmedIds/失败ID分开；detail-mutations使用原队列 | 原子批量拒绝保留全选；日历部分拒绝只留失败选择 | selector原scope证明、关闭/换词与换范围不同、权限ABA、detail-mutations旧队列 | detail-collaboration的subIssues/relation活动读取失败保持成功；日历已确认ID不在失败集合，不再PATCH |
+| 新标签POST→附加标签PATCH | label-controls/issue-properties与use-label-changes统一create；受控值确认后变 | 重名字段错误、附加拒绝保留已创建标签 | T10已关闭/重新打开picker的旧创建不能附加/提示，权限/宿主归现有scope | 创建确认与附加命令分开；后续目录/活动读取失败走既有资源重试，不把已建标签当POST失败重发 |
+| DELETE、archive/unarchive POST | issue-changes六种核心确认矩阵；detail-commands；T16真实删除/Restore一次反馈 | T16实际403删除留窗/Restore仍归档，无假成功；重试单次命令 | project-lifecycle/restore-menu及detail-commands换项/卸载/ABA不跟进旧UI | 核心确认投影不因列表补读失败回滚；删除后对象退役不再补读它的活动。布局重试仅GET，Restore helper不增加第二次写 |
+
+C3逐控件落点：DateDropdown与DateRange、priority/state、member由实际列表行；project与通用label-select由创建窗；行label-dropdown由实际标签chip，详情label/select由真实peek；七浮层几何与外层pageBehindHidden、Escape/Tab/焦点均在 `list-interactions.spec.ts`。CustomSelect的peek当前模式、自动归档自定义范围、日期筛选与api-token期限兼容由同文件真实入口核验；api-token日历同时保留A11。该矩阵不等于完整创建、富筛选或M6/M7领域页面验收。
+
+## 25. 最终输入与剩余门禁（2026-10-30）
+
+`t16-input-audit1.json` 对照所有git输入路径的集合及SHA-256，而非只比较交集：T16静态/knip/test-web/build/默认E2E/Chromium/Firefox与当前产品字节一致；T15服务端三项后仅12个web/e2e路径变化，服务端输入不变可复用。33种有效历史变异中26种当前生产hash一致；M07/21/22/28/29/30/33后续改动仅保留历史性质证明，详见t16-mutation-audit。原件有首次失败、生产diff、恢复hash及恢复绿；无匹配、全skip、首轮存活M31、夹具编译失败不计有效性质。
+
+修复提交 `49b628fb2807e3423f7d40ceeaa8f5f5a656cc8d` 已推送，CI [41057831211](https://github.com/open-nerve/NerveProject/actions/runs/41057831211) 的server/web已通过，e2e在核验中。最终文稿提交必须另核准确SHA，后置回执写忽略目录final-delivery.json以防自引用，不拿产品候选CI替代最终文稿CI。
+
+WebKit最终第一次运行5通过/6失败；保留环境中断原件，不先断言所有页面失败都是同一环境原因。只读docker info确认socket不存在/服务不可连接，已请负责人恢复Docker；恢复后只对当前输入重跑该浏览器，若仍出现页面失败再按根因处理。此前通过的服务端/前端/默认E2E不因纯文稿重复重跑。
+
+T16尚未完成，不合并、不清理worktree、不启动P13。M4§14/总体§9.4、输入handoff顶层open和最终M5–M8 closeout不提前勾选。完整执行裁定与审查范围取舍见[re-17§6](../../../reviews/re-17-M4P12整体审核.md)，没有deferred minors。

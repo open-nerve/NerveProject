@@ -238,3 +238,11 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 §5：is_bot及M4评论/动态旧DTO读写删除；§6：状态/成员/标签/子项等当前拒绝均可见并结束loading/提供只读重试，详情SWR含权限身份；错误按原生code，五个标签创建入口/回调归useLabelChanges，新增守卫；编号按P11-S1裁定A从当前可见行统一计算，分页/展开子项增宽、scope/权限重置，零专用项目HTTP。局部弹窗/peek/命令宿主只结束自己的状态，旧scope成功/拒绝无权清新表单；整审的输入保存、版本恢复、父项等待和原子日期/标签确认已修复。§8：旧workspace-draft-issues的16行及独占旧形状已删除。
 
 工作区完整标签恢复仍M7，旧搜索迁移P12/P14/P15，个人主页/归档与R36/R38归P13，完整字段焦点/键盘/嵌套Escape/复制和页面watchPage按后续阶段。本期169个既有E2E通过不替代这些新故事。[P11 review](../reviews/P11-web-detail-data-review.md)列全部验证、实际覆盖与剩余范围；P11实施与整审完成、集成待办，顶层status仍open。
+
+## 处理结果（M4/P12，2026-10-30）
+
+- §6 项目四布局已加入I3/I4/I6/I7页面watchPage，S2准确维护原生请求名单；按需目录拒绝、统一标签创建和已有权限水位继续覆盖。Peek在原provider内按实际owner/每次选择结束，Back/换scope/退役/权限ABA及旧请求不关新项有测试；列表/表格展开意图跨同范围父项核验保留，权限或宿主结束即清空，首读/子项拒绝有GET重试。完整profile/归档嵌套key归P13，完整详情/创建归P14，不据共享host测试关闭这些页面。
+- §7 DateDropdown及七下拉改为单状态/正确浮层ref，弹窗内选项保留外层背景隔离；CustomSelect三个M4入口实测。平铺快捷菜单键盘/激活底色、右键关闭inert及aria-hidden、详情菜单和peek模式选择无嵌套按钮、表格Space/IME、列表侧pending/日历/拖动层叠与焦点均有C3/DOM证据。SubMenu没有实际生产者，已删除死链，没有伪称子菜单验收。快速添加用Field/FieldError/useRefusedFocus，I7的recordFocuses核取焦时已invalid且有描述。
+- §7剩余：详情/创建正tabIndex、标签新建哨兵、parent选择、标题/链接字段、嵌套Escape及编辑器document监听由P14完成；富筛选日期范围提示由P13；版本/动态入口由P15。getTabIndex最后消费者与全应用C12由P16/收尾核，不提前总关闭。
+- §8 原22项目路由路径按14存在/8删除逐项核对，helper无隐式router目录；project-address-route保留原范围并覆盖删除路径防复活，实际命中/不命中样本通过。M7仍有projectMemberIds读者，暂保留getter；copy-hook和ui泛型的最终清理保持原归属，未延长或放宽守卫。
+- 证据见[P12 spec§2.9](../specs/P12-web-list-pages.md)、[review§23–25](../reviews/P12-web-list-pages-review.md)、[整审](../../../reviews/re-17-M4P12整体审核.md)。T16修复后最终WebKit受Docker中断尚待复验；各条只是局部结果，顶层status保持open。

@@ -200,7 +200,7 @@
 |---|---|---|
 | 认证、用户、实例配置、PAT；令牌管理器 | M2 | 已完成 |
 | 工作区、成员、邀请、项目、项目成员、项目归档、状态、标签、显示设置 | M3 | 已完成：数据层已对接（工作区一侧 M3/P8a，项目一侧 M3/P8b）；页面已对接（工作区的 M3/P9，项目的 M3/P10，状态和标签的设置页、访客看到的个人主页 M3/P11）；M3 的收尾重写了弹窗、加了离开工作区的入口、改了 M3 页面上英文和键盘的遗留（3.2 中"完成于 M3/收尾"的各行） |
-| 工作项、列表（分页和分组的新结构）、子任务、关联、链接、评论、表情回应、操作动态、搜索、历史版本、草稿、工作项归档 | M4 | 进行中；P10a/P10b/P11已完成并集成；P11准确main ce3c39ab的CI 41005896280全绿、归档清理完成；P12仅文档预检，页面及M4总体完成线仍开放 |
+| 工作项、列表（分页和分组的新结构）、子任务、关联、链接、评论、表情回应、操作动态、搜索、历史版本、草稿、工作项归档 | M4 | 进行中；P10a/P10b/P11已集成；P12四布局和整审六项修复已实现，最终WebKit/文稿HEAD CI待核，不合并；范围和证据见3.3，M4总体仍开放 |
 | 文件、附件、编辑器图片（上传改为 `{method, url, headers}` 形式的 PUT） | M5 | 计划中 |
 | 迭代、模块（归属改为工作项字段）、迭代和模块归档 | M6 | 计划中 |
 | 通知、收集箱、视图、收藏、最近访问 | M7 | 计划中 |
@@ -265,6 +265,23 @@ M4/P10a删除迭代、模块、项目视图与工作区视图的工作项列表�
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`；关键词规则 `composing-check` 看住别处读 `.isComposing`（解构出它的也算）、拿 `keyCode` 或 `which` 与 229 比较）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板，面板的一页上结束组字的 Backspace 不再回到上一页。`CustomSelect` 的两种按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加，邀请成员的弹窗中在角色上按 Enter 就立即发出邀请；表单里别的这种选择同样，例如创建工作区的规模、创建项目和项目设置的网络、API 令牌的期限、模块的状态，日期筛选的"自定义"弹窗中原来重新载入页面）；指针打开过列表之后，Enter 照样打开它（浏览器核对之后，[M3 收尾 spec](M3-workspace-project/specs/closeout.md) 2.17 第 3 条：原来 Headless UI 把这时的 Enter 当作指针的点击而忽略） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |
 | 工作区的地址 | M3 页面上只读工作区的 20 个文件不再读路由 store 的 `currentWorkspace`：经 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`：路由的 slug 经调用者的工作区列表找到），工作区级的权限判断写明 slug；关键词规则 `workspace-address-route` 看住它们，与项目一侧的 `project-address-route` 同一个写法 | 地址只从路由参数（总体设计 7.7） | 已完成 | M3/收尾 |
 | 共用的写法 | 复制只经 `useCopyLink`、`useCopyText`（`core/hooks/use-copy-link.ts`）：API 令牌弹窗的复制和命令面板的"复制当前页面的地址"也经它们（复制失败是共用的提示，两条专用的文案删除；命令面板的复制成功时与别处的复制链接同一个样子，标题是"Link copied!"，原来作标题的"Current page URL copied to clipboard."现在是说明）；关键词规则 `copy-hook` 看住，M4、M6、M7、M8 的 20 个文件是带期限的例外。问题码只经 `problemCode()`（`core/lib/api-error.ts`），提示里的拒绝的文字只经 `useRefusalMessage`（`useRefusalToast` 和主题切换的失败提示都经它）。`ButtonAvatars` 的 `showTooltip` 删除（没有读者）。`make lint-web` 加 `tools/i18n-keys.mjs`：页面读的每个键在语言文件中都有（它第一次运行就找到侧边栏的四个没有定义的键和一个没有读者的日期筛选项） | 一件事只有一份写法 | 已完成 | M3/收尾 |
+
+### 3.3 M4/P12 列表页面（2026-10-30，分支待交付）
+
+| 改动 | 结果与范围 | 证据 |
+|---|---|---|
+| 原生选择器 | 日历、已有子项、关联同Task迁issue-search；候选/选择只存ID和权限证明；部分成功只重试失败项 | T1/T7，I4页面 |
+| 路由和目录 | 原22路径14存在/8已删除；同步helper显式scope、零HTTP；守卫扩围无新宽泛例外 | T2，route-scope与M04/M05 |
+| 列表/泳道 | 各组/格独立cursor，保留A∩C、完整多值及权威唯一总数；首读失败可重试 | T3/T5/T16，I3 |
+| 快速添加 | 按选中组原生预填、服务端列尾；FieldError先于取焦，拒绝保留、pending防重复 | T4，I7及recordFocuses |
+| 看板 | 实际上下邻居/中间below/列尾、确认后移动；删除结果归原Modal，滚动注册跟随真实容器 | T5/T16，I6、project-lifecycle |
+| 表格 | 原生排序和确认偏好，去第二份localStorage真值；真实二页和子项browse链接；展开跨核验保留、拒绝只读重试 | T6/T16，I4、project-lifecycle |
+| 日历 | 本地日期/月周边界、一次target_date写；多选部分确认、当前宿主反馈；拖动时结束悬停预览 | T7/T15，UTC+14 I4 |
+| 下拉和菜单 | DateDropdown单状态、七控件实际浮层定位、外层modal隔离、具名触发器与IME；删除无生产者SubMenu | T8–T11/T15，C3 |
+| Peek与命令 | 每次选择和实际UI owner隔离，旧宿主不关新项；Restore一次真实结果，退役DOM不取焦 | T12/T16，host/restore-menu |
+| 页面/门禁 | 保留API故事，新增I3/I4/I6/I7页面及S2准确请求；默认E2E180、前端2697通过；最终WebKit待Docker恢复复验 | [阶段记录](M4-issue-core/reviews/P12-web-list-pages-review.md)§23–25、[整审](../reviews/re-17-M4P12整体审核.md) |
+
+共享修复不关闭P13富筛选/profile/归档、P14完整详情/创建与键盘、P15协作/草稿/命令搜索，也不替M5–M7验收领域接口。P12未合并，M4总体状态不变。
 
 ---
 

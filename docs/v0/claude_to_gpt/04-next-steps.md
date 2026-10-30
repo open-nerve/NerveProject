@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见§17：P11已合并且main CI全绿、归档清理完成；P12仅准备spec/plan与预检，暂不实现。§6–16为历史快照。**
+**当前接续点见§18：P12已实施并修复整审六项重要问题，待最终WebKit复验和文稿HEAD CI后交付；先不合并。§6–17为历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -185,3 +185,11 @@ P11交付42afa24f已按授权--no-ff合并main `ce3c39abef99a290157b282c23180983
 当前 `codex/m4-p12` / `.codex/worktress/codex/m4-p12` 以该main为基线，只有[spec](../M4-issue-core/specs/P12-web-list-pages.md)、[plan](../M4-issue-core/plans/P12-web-list-pages.md)及[预检记录](../M4-issue-core/reviews/P12-web-list-pages-review.md)。16Task，A1–A12全部开放；phase保持M4/P11，不安装依赖/原型/实施/产品测试。准备证据在主目录.superpowers/sdd/P12-preparation-20261030，后续归档不得遗漏。
 
 P12用已有root统一权限/canonical/确认写入，原生搜索同Task迁日历/子项/关联三个消费者；原22路由清单14存在8已删；DateDropdown和七下拉、四布局、I3/I4/I6/I7以及C1三浏览器/C3列表侧是实际完成线。P13–P16范围保留；M4§14/总体§9.4、输入handoff顶层及最终closeout不提前关闭。预检结论以当前review为准，获负责人下一步实施安排后再从T1开始。
+
+## 18. P12实施、整审修复与剩余验证（2026-10-30）
+
+分支 `codex/m4-p12`，worktree `.codex/worktress/codex/m4-p12`，基线 main `ce3c39abef99a290157b282c23180983f8746bcb`。T1–T15完成，T16六项重要问题已修复为 `49b628fb`；[spec](../M4-issue-core/specs/P12-web-list-pages.md)、[plan](../M4-issue-core/plans/P12-web-list-pages.md)、[阶段记录](../M4-issue-core/reviews/P12-web-list-pages-review.md)、[整分支审核](../../reviews/re-17-M4P12整体审核.md)。
+
+最终产品的前端255文件2697测试、默认E2E180、Chromium/Firefox各11通过，静态/knip通过；服务端三项以输入hash核准复用T15。WebKit运行中Docker socket消失，5通过/6失败，不计通过，待负责人恢复Docker后重跑。不得借T15三浏览器旧绿或旧提交CI宣称T16完成；准确最终文稿HEAD还需核server/web/e2e，后置final-delivery.json放忽略证据目录。
+
+主目录保持main。当前授权为完成P12、deep-review后保留分支；不合并、不清理、不开始P13。准备证据在主目录 `.superpowers/sdd/P12-preparation-20261030/`，实施证据在worktree `.superpowers/sdd/P12-web-list-pages/`，未来归档均须保留。M4§14、总体§9.4、输入交接顶层open和M5–M8最终closeout仍开放。
