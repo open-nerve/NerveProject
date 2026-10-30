@@ -1,6 +1,6 @@
 # M4/P11 详情数据层：预检与实施记录
 
-日期：2026-10-30。**当前：实施与整审修复已完成，集成待办；最终交付CI见提交后回执。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。A1–A9已核，A10以最终提交CI回执收口；准备阶段证据保持原义，§8为各Task当时快照，最终结论见§9–§14。
+日期：2026-10-30。**当前：已完成；已获授权合并，准确main CI全绿，证据归档与清理完成，见§15。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。A1–A10已核；§1–§14保留当时准备、实施和交付快照，当前集成事实以§15为准。
 
 ## 1. 前置、身份与范围
 
@@ -422,3 +422,23 @@ M24/M28等相近晚答样本不重复计为另一性质；错误归档权限假�
 [re-15整分支deep-review](../../../reviews/re-15-M4P11整体审核.md)记录首次6 Major/3 Minor及主控重定级为7 Major/2 Minor的依据，九项全部修复；完整逐文件读取覆盖/遗漏与Rulings原序公开。最终死成员/整分支静态补查的局部清理已复验，无新的架构协议或未修局部阻断。
 
 M1输入只记旧JSON/死成员逐项与警告结果；profile view收窄P13、弹窗迁移ID P14、全仓守卫P16。M2§12原七加两实例、详情SessionSWR与退役已接；剩余搜索四实例仍P12–P15。M3§5 is_bot、§6按需拒绝/原生错误/标签创建/宽度/宿主和§8草稿旧类型已处理；完整标签恢复M7、地址/复制/焦点/页面故事分别按后续阶段。不关闭M4设计§14、总体设计§9.4或八份输入handoff顶层，也不预建M5–M8最终closeout。
+
+
+## 15. 授权合并、main CI与归档清理（2026-10-30）
+
+负责人明确授权P11用--no-ff合并、准确main CI全绿后归档清理，并仅准备P12的spec/plan及预检。由系统 `/usr/bin/git` 执行，主目录始终main。
+
+- 最终交付 `42afa24fe45ac0f669839dc458db5c84f1b576a6` 的 [CI 40996101552](https://github.com/open-nerve/NerveProject/actions/runs/40996101552) attempt1三任务success，`t15-final-delivery.json`、`t15-final-ci-13.json`与最终文稿/产品源码桥在合并前重新核验；A10完成。没有把产品候选CI代替最终交付CI。
+- 合并提交 `ce3c39abef99a290157b282c23180983f8746bcb`，两父依次为 `df5d3bbc1887486bd105fe6fc663f57f5b371992` 与上述交付提交；main的tree与交付分支tree完全相同，无新的产品改动，因此复用已核对输入哈希的完整本地F，不冒称重跑。
+- [main CI 41005896280](https://github.com/open-nerve/NerveProject/actions/runs/41005896280) attempt1，2026-10-30 05:19:11 UTC核得server/web/e2e均success；`main-ci-06.json`保存逐步骤，`main-ci-success-receipt.json`确认准确SHA、实际远端main、本地main一致。无需重跑，没有W11阻断。
+
+归档根为主项目 `.superpowers/sdd/P11-integration-20261030/`。`worktree-evidence/`保存1529文件、15916372字节和5个空目录，包括全部台账/审查/红绿与变异原件、E2E报告、test-results和各`.turbo`日志；另有`preparation-evidence/P11-preparation-20261030/`的34文件270275字节。未知文件0；77272个可重建依赖/构建产物按逐路径分类排除，绝非一概丢弃ignored文件。原件中的旧worktree绝对路径不重写，读取时映射至归档根下相同相对路径。
+
+复制前后源与副本逐文件SHA-256、大小、mode及目录成员一致；两个manifest为：
+
+- `archive-manifest.json`：`3284af647cf5f148bb97fd600cec9ee45b0733a8aa6626495fc20133d2278fdb`。
+- `preparation-archive-manifest.json`：`1ec35b817c0a78e056d94c2b0b6a08bc8a029943e0b22eb41cb69dada7e1f055`。
+
+确认`origin/main..origin/codex/m4-p11`未合并提交数为0后，删除远端分支，正常`git worktree remove`，再`git branch -d`；均未用force。清理后两归档再次全部校验通过，远端/本地分支和worktree均不存在，main干净。`cleanup-receipt.json`记录05:20:45 UTC的结果，`archive-audit.md`说明映射及排除规则；原主目录准备文件也保留。
+
+P11至此完成。P12从准确main建立独立worktree，当前仅文档预检；P12产品验收仍开放。M4§14/总体§9.4、八份输入handoff顶层open与M5–M8最终closeout保持原范围，不因P11集成提前关闭。

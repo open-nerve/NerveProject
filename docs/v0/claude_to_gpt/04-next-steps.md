@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见§16：P11实施与deep-review修复完成，准确交付CI后置核验，集成待办；保留分支/worktree，不合并、不开始P12。§6–15为历史快照。**
+**当前接续点见§17：P11已合并且main CI全绿、归档清理完成；P12仅准备spec/plan与预检，暂不实现。§6–16为历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -176,3 +176,12 @@ P11沿IssueRootStore方案A管理详情资源权限失效；按资源同步迁�
 分支codex/m4-p11，基线main df5d3bbc；产品e84acb4b已推送，完整本地F通过，Web210文件2315项、E2E169项，整分支252个TS/TSX零警告。首次整审283变更中271全文/6结构/6相关章节，九项问题及后续死成员/静态补查已修；不宣称每Task独评或283全文。见[P11 spec](../M4-issue-core/specs/P11-web-detail-data.md)、[plan](../M4-issue-core/plans/P11-web-detail-data.md)、[review](../M4-issue-core/reviews/P11-web-detail-data-review.md)、[re-15](../../reviews/re-15-M4P11整体审核.md)。
 
 主控只完成文稿与准确最终HEAD的server/web/e2e核验，再交负责人安排；后置t15-final-delivery.json必须与HEAD一致，不冒用产品候选CI。当前没有合并/清理/P12实施授权。准备证据位于主目录.superpowers/sdd/P11-preparation-20261030，实施证据在worktree的.superpowers/sdd/P11-web-detail-data，均保留。M4§14、总体§9.4、输入handoff顶层与M5–M8最终closeout保持开放。
+
+
+## 17. P11完成、P12文档预检（2026-10-30）
+
+P11交付42afa24f已按授权--no-ff合并main `ce3c39abef99a290157b282c23180983f8746bcb`；[main CI 41005896280](https://github.com/open-nerve/NerveProject/actions/runs/41005896280) attempt1 server/web/e2e全绿。两父与tree、归档哈希、远端/本地分支及worktree清理见[P11 review§15](../M4-issue-core/reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。全部实施原件映射到主目录.superpowers/sdd/P11-integration-20261030/worktree-evidence，准备34文件另存preparation-evidence；清理后再次校验通过。
+
+当前 `codex/m4-p12` / `.codex/worktress/codex/m4-p12` 以该main为基线，只有[spec](../M4-issue-core/specs/P12-web-list-pages.md)、[plan](../M4-issue-core/plans/P12-web-list-pages.md)及[预检记录](../M4-issue-core/reviews/P12-web-list-pages-review.md)。16Task，A1–A12全部开放；phase保持M4/P11，不安装依赖/原型/实施/产品测试。准备证据在主目录.superpowers/sdd/P12-preparation-20261030，后续归档不得遗漏。
+
+P12用已有root统一权限/canonical/确认写入，原生搜索同Task迁日历/子项/关联三个消费者；原22路由清单14存在8已删；DateDropdown和七下拉、四布局、I3/I4/I6/I7以及C1三浏览器/C3列表侧是实际完成线。P13–P16范围保留；M4§14/总体§9.4、输入handoff顶层及最终closeout不提前关闭。预检结论以当前review为准，获负责人下一步实施安排后再从T1开始。
