@@ -78,11 +78,11 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 **Files：** spec T2；新C/components/rich-filters/filter-value-input/select/use-filter-select-options.ts及.test.tsx；新C/components/rich-filters/select-inputs.test.tsx；selected-options-display.tsx。
 **Interfaces：** 新useFilterSelectOptions(config:TSingleSelectFilterFieldConfig<string>|TMultiSelectFilterFieldConfig<string>):{options:IFilterOption<string>[];loading:boolean;error:unknown;retry:()=>void}，仅single/multi两处消费；删除没有读者的loadOptions。getFormattedOptions保持既有选项形状。
 
-- [ ] Step 1：真实CustomSearchSelect下写opensAnEmptyConditionAfterOptionsArrive、ignoresPreviousConfigAnswer、showsOnlyCurrentReadFailure、keepsUnknownSelectedIds；覆盖初开、配置切换、旧finally、卸载、无候选与合法未知ID、en/zh-CN三文案和每次onOpen一次。
-- [ ] Step 2：运行select-inputs与新hook测试；预期旧loadOptions会接受旧答/只console.error等对应断言红。
-- [ ] Step 3：实现局部请求epoch/cleanup与重试；四消费者传三翻译props；loading与defaultOpen衔接不丢首次打开，选项到达后不再点一次。占位/更多数量可翻译，保留未知ID条件；禁止新增领域缓存。
-- [ ] Step 4：聚焦绿并回归现有C/components/dropdowns/member/base.test.tsx真实CustomSearchSelect消费者测试；M02让旧答覆盖新配置、M03仅console.error、M04候选到达前消耗defaultOpen分别行为红、恢复绿。
-- [ ] Step 5：提交fix(M4/P13): 让富筛选选择器跟随当前条件加载。记录A2/Review Focus 1。
+- [x] Step 1：真实CustomSearchSelect下写opensAnEmptyConditionAfterOptionsArrive、ignoresPreviousConfigAnswer、showsOnlyCurrentReadFailure、keepsUnknownSelectedIds；覆盖初开、配置切换、旧finally、卸载、无候选与合法未知ID、en/zh-CN三文案和每次onOpen一次。
+- [x] Step 2：运行select-inputs与新hook测试；预期旧loadOptions会接受旧答/只console.error等对应断言红。
+- [x] Step 3：实现局部请求epoch/cleanup与重试；四消费者传三翻译props；loading与defaultOpen衔接不丢首次打开，选项到达后不再点一次。占位/更多数量可翻译，保留未知ID条件；禁止新增领域缓存。
+- [x] Step 4：聚焦绿并回归现有C/components/dropdowns/member/base.test.tsx消费者接线测试（该旧测试替换了底层控件，本Task新增测试使用真实CustomSearchSelect）；M02让旧答覆盖新配置、M03仅console.error、M04候选到达前消耗defaultOpen分别行为红、恢复绿。
+- [x] Step 5：提交fix(M4/P13): 让富筛选选择器跟随当前条件加载。记录A2/Review Focus 1。
 
 ## Task 3：范围草稿、字段错误与日期标题（约450–850行）
 

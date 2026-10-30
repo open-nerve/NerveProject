@@ -4,21 +4,17 @@
  * See the LICENSE file for details.
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
+import { useTranslation } from "@nerve/i18n";
 import { observer } from "mobx-react";
 // nerve imports
-import type {
-  SingleOrArray,
-  IFilterOption,
-  TFilterProperty,
-  TMultiSelectFilterFieldConfig,
-  TFilterConditionNode,
-} from "@nerve/types";
+import type { SingleOrArray, TFilterProperty, TMultiSelectFilterFieldConfig, TFilterConditionNode } from "@nerve/types";
 import { CustomSearchSelect } from "@nerve/ui";
 import { toFilterArray, getFilterValueLength } from "@nerve/utils";
 // local imports
 import { SelectedOptionsDisplay } from "./selected-options-display";
-import { getCommonCustomSearchSelectProps, getFormattedOptions, loadOptions } from "./shared";
+import { FilterOptionsError, getCommonCustomSearchSelectProps, getFormattedOptions } from "./shared";
+import { useFilterSelectOptions } from "./use-filter-select-options";
 
 type TMultiSelectFilterValueInputProps<P extends TFilterProperty> = {
   config: TMultiSelectFilterFieldConfig<string>;
@@ -31,30 +27,33 @@ export const MultiSelectFilterValueInput = observer(function MultiSelectFilterVa
   props: TMultiSelectFilterValueInputProps<P>
 ) {
   const { config, condition, isDisabled, onChange } = props;
-  // states
-  const [options, setOptions] = useState<IFilterOption<string>[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const { t } = useTranslation();
+  const { options, loading, error, retry } = useFilterSelectOptions(config);
   // derived values
   const formattedOptions = useMemo(() => getFormattedOptions<string>(options), [options]);
-
-  useEffect(() => {
-    loadOptions({ config, setOptions, setLoading });
-  }, [config]);
 
   const handleSelectChange = (values: string[]) => {
     onChange(values);
   };
 
   return (
-    <CustomSearchSelect
-      {...getCommonCustomSearchSelectProps(isDisabled)}
-      value={toFilterArray(condition.value)}
-      onChange={handleSelectChange}
-      options={formattedOptions}
-      multiple
-      disabled={loading || isDisabled}
-      customButton={<SelectedOptionsDisplay<string> selectedValue={condition.value} options={options} />}
-      defaultOpen={getFilterValueLength(condition.value) === 0}
-    />
+    <>
+      <CustomSearchSelect
+        {...getCommonCustomSearchSelectProps(isDisabled)}
+        value={toFilterArray(condition.value)}
+        onChange={handleSelectChange}
+        options={loading ? undefined : formattedOptions}
+        searchPlaceholder={t("common.filter_options.search")}
+        noResultsMessage={t(
+          error !== undefined ? "common.filter_options.load_failed" : "common.filter_options.no_results"
+        )}
+        loadingMessage={t("common.filter_options.loading")}
+        multiple
+        disabled={isDisabled}
+        customButton={<SelectedOptionsDisplay<string> selectedValue={condition.value} options={options} />}
+        defaultOpen={getFilterValueLength(condition.value) === 0}
+      />
+      {error !== undefined && <FilterOptionsError retry={retry} disabled={isDisabled} />}
+    </>
   );
 });

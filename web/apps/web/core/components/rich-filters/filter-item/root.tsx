@@ -6,6 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 // nerve imports
 import type { IFilterInstance } from "@nerve/shared-state";
 import type {
@@ -38,6 +39,7 @@ export const FilterItem = observer(function FilterItem<P extends TFilterProperty
   props: IFilterItemProps<P, E>
 ) {
   const { condition, filter, isDisabled = false, showTransition = true } = props;
+  const { t } = useTranslation();
   // derived values
   const filterConfig = condition?.property ? filter.configManager.getConfigByProperty(condition.property) : undefined;
   const operatorOptions = filterConfig
@@ -96,6 +98,9 @@ export const FilterItem = observer(function FilterItem<P extends TFilterProperty
 
       {/* Operator section */}
       <CustomSearchSelect
+        searchPlaceholder={t("common.filter_options.search")}
+        noResultsMessage={t("common.filter_options.no_results")}
+        loadingMessage={t("common.filter_options.loading")}
         value={condition.operator}
         onChange={handleOperatorChange}
         options={operatorOptions}

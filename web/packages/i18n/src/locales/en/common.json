@@ -390,7 +390,17 @@
     "administration": "Administration",
     "filter_options": {
       "me": "Me",
-      "subscribers": "Subscribers"
+      "subscribers": "Subscribers",
+      "search": "Search",
+      "loading": "Loading options…",
+      "no_results": "No options found",
+      "load_failed": "Could not load options",
+      "unavailable": "Unavailable option",
+      "choose": "Select an option",
+      "more": "+{count} more",
+      "all_applied": "All filters applied",
+      "config_error": "Filter configuration error",
+      "config_error_description": "This filter could not be applied. Please reload and try again."
     }
   },
   "date_filter": {

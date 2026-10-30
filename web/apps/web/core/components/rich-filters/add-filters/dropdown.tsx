@@ -6,6 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 // nerve imports
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import type { IFilterInstance } from "@nerve/shared-state";
@@ -28,6 +29,7 @@ export const AddFilterDropdown = observer(function AddFilterDropdown<
   E extends TExternalFilter,
 >(props: TAddFilterDropdownProps<P, E>) {
   const { filter, customButton, buttonConfig } = props;
+  const { t } = useTranslation();
   const { className, defaultOpen = false, isDisabled = false } = buttonConfig || {};
 
   // Transform available filter configs to CustomSearchSelect options format
@@ -53,8 +55,8 @@ export const AddFilterDropdown = observer(function AddFilterDropdown<
     ? [
         {
           value: "all_filters_applied",
-          content: <div className="text-placeholder italic">All filters applied</div>,
-          query: "all filters applied",
+          content: <div className="text-placeholder italic">{t("common.filter_options.all_applied")}</div>,
+          query: t("common.filter_options.all_applied").toLowerCase(),
           disabled: true,
         },
       ]
@@ -66,8 +68,8 @@ export const AddFilterDropdown = observer(function AddFilterDropdown<
       props.handleFilterSelect(property, config.firstOperator);
     } else {
       setToast({
-        title: "Filter configuration error",
-        message: "This filter is not properly configured and cannot be applied",
+        title: t("common.filter_options.config_error"),
+        message: t("common.filter_options.config_error_description"),
         type: TOAST_TYPE.ERROR,
       });
     }
@@ -76,6 +78,9 @@ export const AddFilterDropdown = observer(function AddFilterDropdown<
   return (
     <div className="relative transition-all duration-200 ease-in-out">
       <CustomSearchSelect
+        searchPlaceholder={t("common.filter_options.search")}
+        noResultsMessage={t("common.filter_options.no_results")}
+        loadingMessage={t("common.filter_options.loading")}
         defaultOpen={defaultOpen}
         value={""}
         onChange={handleFilterSelect}

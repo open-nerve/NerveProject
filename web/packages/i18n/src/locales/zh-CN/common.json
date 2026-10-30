@@ -390,7 +390,17 @@
     "administration": "管理",
     "filter_options": {
       "me": "我",
-      "subscribers": "关注人"
+      "subscribers": "关注人",
+      "search": "搜索",
+      "loading": "正在加载选项…",
+      "no_results": "未找到选项",
+      "load_failed": "无法加载选项",
+      "unavailable": "暂不可用的选项",
+      "choose": "选择选项",
+      "more": "还有 {count} 项",
+      "all_applied": "已应用所有筛选条件",
+      "config_error": "筛选配置错误",
+      "config_error_description": "无法应用该筛选条件，请刷新后重试。"
     }
   },
   "date_filter": {
