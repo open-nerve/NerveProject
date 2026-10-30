@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T4 已完成，T5–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T5 已完成，T6–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -101,3 +101,17 @@ M06 续页丢 label_id、M07 计数改用已加载长度均触发行为红，精
 现有 root.pending 改为提供真实根权限事实，保留原 HTTP/重复提交/B pending 的断言，并把旧A成功toast改为安静；新 root.errors 通过真实 root writer 与 FakeNerve 覆盖空白、422、403、成功、IME、关闭/换组/权限ABA。M08错误前抢焦、M09丢宿主检查、M10去busy锁在最终源码上均实际红→精确哈希恢复→绿（`M08-final`/`M09-final`/`M10-final` receipts）；M10 明确观测到2个POST，而非只等到超时。早期引入 scopeKey 前同载荷换组仍弹toast的红、默认状态错项目及打开未取焦的红也保留。
 
 最终聚焦10文件99测试（0 skip）通过，类型、格式、修改路径零 lint 和关键词通过，web cap137→135按实际收紧。证据为 `t4-final-regression2`、`t4-types-final2`、`t4-changed-lint-final`、`t4-format-final`、`t4-lint-final`、`t4-keywords`。第一次final聚焦揭露首次打开取焦缺口，已修复后再跑，旧失败原件保留；初次 FieldError 缺 size 的类型错误及 jsdom 缺 IntersectionObserver 只记夹具/编译过程。无未决架构问题；真实页面、三浏览器和首轮完整 F 留 T5 及后续检查点。
+
+## 12. T5 看板、泳道和拖放（2026-10-30）
+
+列表/看板真实卡片统一通过现有 closest-edge 产生上/下落点，指示线与请求方向一致；移除源后求邻居，中间 below 前进一位，初始目标失效不发写，列尾和空列仍由根排序协调处理。多标签/负责人保留其它成员，none 合同保持。非手工排序只允许现有跨组移动，不发送同组手工重排。
+
+实际 hook 复用 DetailScope、会话与根权限水位，并核捕获的列表 binding；当前拒绝按码本地化，关闭/换项目/换 binding/权限 ABA 的晚答无旧 toast。确认之后才安排高亮，useDropHighlight 持有 timer 和全部动画帧，保留平滑滚动并在卸载、scope 或权限结束后停止。迁移中类型检查发现侧栏也是高亮工具的真实调用方，已同步 hook 用法，不改变项目拖动合同；日历本次仅接取消能力和原生移动端日期按钮，日期确认业务留 T7。
+
+普通看板与泳道均有原生续页按钮，pending 禁用；错误时取消自动续页，保留显式重试。泳道头仍读取 subgroup_totals，改为可键盘折叠的按钮；隐藏行返回 null，避免缺 key 警告。真实多标签卡片显示两处但 canonical 只有一份，独立 cell cursor、失败重试与权威总数均验证。
+
+M11（中间 below 算成 above）实际发送 2500 而非 3500；M12（相加格计数）把泳道 4 变成 6；M13（写前乐观移动）在 PATCH 等待时移走源卡片；M14（旧读跳过确认回放）把成功尾部卡片放回源组。四项均行为红、精确恢复原字节/hash 后绿，见 M11–M14 receipts 与 t5-Mxx-red/restored。旧读/补读 503/只读重试的真实 DOM 和请求断言也通过。
+
+完整本地 F 已串行通过：gen-check、lint-go、GOFLAGS=-p=1 make test、lint-web、knip、TURBO_FORCE=true make test-web、make e2e；证据为 t5-F1-* 的 raw、argv、输入哈希与退出码。lint-web 54 项通过，test-web 18 项均强制执行无缓存，默认 E2E 169/169；这不代替 T15 的 C1 三浏览器故事。web lint cap135→133。最终聚焦11文件189测试（0 skip）通过，见 t5-final-regression；修改路径零 lint、全仓类型/格式/关键词已含 F。
+
+自查核对了所有高亮消费者、原生落点生产者、真实 hook/根写入口、确认前后计数、同组/跨组/尾部/空列、读拒绝、独立分页与类型合同。新集成测试按拖放/泳道分文件，并共用 fake-kanban，避免复制完整假 transport。初期夹具 API 拼写/参数/数据外壳和拆文件时的 mock 导入顺序失败如实保留，不算行为红。无未决架构问题。T11 另需实测路由卸载中的全局 dragging 标志是否残留，并在原拖动层职责内处理；当前还未将这一检查宣称通过。

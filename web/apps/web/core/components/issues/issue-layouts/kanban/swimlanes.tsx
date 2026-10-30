@@ -76,7 +76,7 @@ const SubGroupSwimlaneHeader = observer(function SubGroupSwimlaneHeader({
 
           const subGroupByVisibilityToggle = visibilitySubGroupByGroupCount(groupCount, showEmptyGroup);
 
-          if (subGroupByVisibilityToggle === false) return <></>;
+          if (subGroupByVisibilityToggle === false) return null;
 
           return (
             <div key={`${sub_group_by}_${_list.id}`} className="flex w-[350px] flex-shrink-0 flex-col">
@@ -170,7 +170,7 @@ const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwim
         list.map((_list: IGroupByColumn, subGroupIndex) => {
           const issueCount = getGroupIssueCount(undefined, _list.id, true) ?? 0;
           const subGroupByVisibilityToggle = visibilitySubGroupBy(_list, issueCount);
-          if (subGroupByVisibilityToggle.showGroup === false) return <></>;
+          if (subGroupByVisibilityToggle.showGroup === false) return null;
           return (
             <div key={_list.id} className="flex flex-shrink-0 flex-col">
               <div className="sticky top-[50px] z-[3] flex w-full items-center border-y-[0.5px] border-subtle bg-layer-1 py-1">

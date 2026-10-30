@@ -37,12 +37,7 @@ import { useIssuesStore } from "@/hooks/use-issue-layout-store";
 import { GroupDragOverlay } from "../group-drag-overlay";
 import { ListQuickAddIssueButton, QuickAddIssueRoot } from "../quick-add";
 import type { GroupDropLocation } from "../utils";
-import {
-  getDestinationFromDropPayload,
-  getIssueBlockId,
-  getSourceFromDropPayload,
-  highlightIssueOnDrop,
-} from "../utils";
+import { getDestinationFromDropPayload, getSourceFromDropPayload } from "../utils";
 import { IssueBlocksList } from "./blocks-list";
 import { HeaderGroupByCard } from "./headers/group-by-card";
 import type { TRenderQuickActions } from "./list-view-types";
@@ -215,8 +210,6 @@ export const ListGroup = observer(function ListGroup(props: Props) {
           }
 
           handleOnDrop(source, destination);
-
-          highlightIssueOnDrop(getIssueBlockId(source.id, destination?.groupId), orderBy !== "sort_order");
 
           if (!isExpanded) {
             handleCollapsedGroups(group.id);

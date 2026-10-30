@@ -6,9 +6,8 @@
 
 import type { Issue, IssueUpdate } from "@nerve/api-client";
 
-import { extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
 import { clone, isNil } from "lodash-es";
-import scrollIntoView from "smooth-scroll-into-view-if-needed";
+import { extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import type { FC } from "react";
 import {
   CalendarOutline,
@@ -83,21 +82,6 @@ export const getDisplayPropertiesCount = (
 };
 
 /**
- * This Method finds the DOM element with elementId, scrolls to it and highlights the issue block
- * @param elementId
- * @param shouldScrollIntoView
- */
-export const highlightIssueOnDrop = (elementId: string | undefined, shouldScrollIntoView = true) => {
-  setTimeout(async () => {
-    const sourceElementId = elementId ?? "";
-    const sourceElement = document.getElementById(sourceElementId);
-    sourceElement?.classList?.add(HIGHLIGHT_CLASS);
-    if (shouldScrollIntoView && sourceElement)
-      await scrollIntoView(sourceElement, { behavior: "smooth", block: "center", duration: 1500 });
-  }, 200);
-};
-
-/**
  * get Kanban Source data from Pragmatic Payload
  * @param payload
  * @returns
@@ -119,14 +103,19 @@ export const getSourceFromDropPayload = (payload: IPragmaticDropPayload): GroupD
     }
   }
 
-  if (typeof sourceIssueData?.id !== "string" || !sourceIssueData.id || typeof sourceColumData?.groupId !== "string")
+  if (
+    typeof sourceIssueData?.id !== "string" ||
+    !sourceIssueData.id ||
+    typeof sourceColumData?.groupId !== "string" ||
+    (sourceColumData.subGroupId !== undefined && typeof sourceColumData.subGroupId !== "string")
+  )
     return;
 
   return {
-    groupId: sourceColumData.groupId as string,
-    subGroupId: sourceColumData.subGroupId as string,
-    columnId: sourceColumData.columnId as string,
-    id: sourceIssueData.id as string,
+    groupId: sourceColumData.groupId,
+    subGroupId: sourceColumData.subGroupId as string | undefined,
+    columnId: `${sourceColumData.groupId}__${sourceColumData.subGroupId}`,
+    id: sourceIssueData.id,
   };
 };
 
@@ -156,17 +145,19 @@ export const getDestinationFromDropPayload = (payload: IPragmaticDropPayload): G
     }
   }
 
-  if (typeof destinationColumnData?.groupId !== "string") return;
-
-  // extract instruction from destination issue
-  const extractedInstruction = destinationIssueData ? extractInstruction(destinationIssueData)?.type : "";
+  if (
+    typeof destinationColumnData?.groupId !== "string" ||
+    (destinationColumnData.subGroupId !== undefined && typeof destinationColumnData.subGroupId !== "string") ||
+    (destinationIssueData && (typeof destinationIssueData.id !== "string" || !destinationIssueData.id))
+  )
+    return;
 
   return {
-    groupId: destinationColumnData.groupId as string,
-    subGroupId: destinationColumnData.subGroupId as string,
-    columnId: destinationColumnData.columnId as string,
+    groupId: destinationColumnData.groupId,
+    subGroupId: destinationColumnData.subGroupId as string | undefined,
+    columnId: `${destinationColumnData.groupId}__${destinationColumnData.subGroupId}`,
     id: destinationIssueData?.id as string | undefined,
-    canAddIssueBelow: extractedInstruction === "reorder-below",
+    canAddIssueBelow: !!destinationIssueData && extractClosestEdge(destinationIssueData) === "bottom",
   };
 };
 
@@ -195,13 +186,14 @@ export const handleGroupDragDrop = async (
   subGroupBy: TIssueGroupByOptions | undefined,
   shouldAddIssueAtTop = false
 ) => {
-  if (!source.id || source.id === destination.id) return;
+  if (!source.id || source.id === destination.id) return false;
   const issue = getIssueById(source.id);
-  if (!issue) return;
+  if (!issue) return false;
   const ids = (getIssueIds(destination.groupId, destination.subGroupId) ?? []).filter((id) => id !== source.id);
   let index = destination.id ? ids.indexOf(destination.id) : shouldAddIssueAtTop ? 0 : ids.length;
-  if (index < 0) index = ids.length;
-  if (destination.canAddIssueBelow && index === ids.length - 1) index++;
+  // An invalid captured card is not the same as an intentional column-tail drop.
+  if (index < 0) return false;
+  if (destination.id && destination.canAddIssueBelow) index++;
   const drop: IssueDrop = {
     group: destination.groupId,
     subgroup: destination.subGroupId,
@@ -236,6 +228,7 @@ export const handleGroupDragDrop = async (
     return body;
   };
   await updateIssueOnDrop(issue.project_id, issue.id, makeBody, drop);
+  return true;
 };
 
 /**

@@ -17,7 +17,7 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { ICalendarDate } from "@nerve/types";
 // components
 import { cn, renderFormattedPayloadDate } from "@nerve/utils";
-import { highlightIssueOnDrop } from "@/components/issues/issue-layouts/utils";
+import { useDropHighlight } from "@/hooks/use-drop-highlight";
 // helpers
 import { MONTHS_LIST } from "@nerve/constants";
 // types
@@ -75,6 +75,7 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
 
   const formattedDatePayload = renderFormattedPayloadDate(date.date);
 
+  const highlightIssueOnDrop = useDropHighlight(formattedDatePayload ?? "");
   const dayTileRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -123,7 +124,7 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
         },
       })
     );
-  }, [formattedDatePayload, issues, handleDragAndDrop]);
+  }, [formattedDatePayload, issues, handleDragAndDrop, highlightIssueOnDrop]);
 
   if (!formattedDatePayload) return null;
   const issueIds = groups?.get(formattedDatePayload)?.rows.map((row) => row.id) ?? [];
@@ -188,7 +189,10 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
         </div>
 
         {/* Mobile view content */}
-        <div
+        <button
+          type="button"
+          aria-label={formattedDatePayload}
+          aria-pressed={isSelectedDate}
           onClick={() => setSelectedDate(date.date)}
           className={cn(
             "mx-auto flex h-full w-full cursor-pointer flex-col items-center justify-start py-2.5 text-13 font-medium opacity-80 md:hidden",
@@ -197,15 +201,15 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
             }
           )}
         >
-          <div
+          <span
             className={cn("flex size-6 items-center justify-center rounded-full", {
               "bg-accent-primary text-on-color": isSelectedDate,
               "bg-accent-primary/10 text-accent-primary": isToday && !isSelectedDate,
             })}
           >
             {date.date.getDate()}
-          </div>
-        </div>
+          </span>
+        </button>
       </div>
     </>
   );

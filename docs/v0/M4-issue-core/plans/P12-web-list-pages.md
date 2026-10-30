@@ -80,13 +80,13 @@ make e2e
 
 ## Task 5：看板和泳道拖放（约850–1400行）
 
-**Files：** L/kanban、L/utils.tsx、C/hooks/use-group-dragndrop.ts/.test.tsx，新L/kanban/drop.test.tsx；现有列表drop/confirm回归。
+**Files：** L/kanban、L/utils.tsx、C/hooks/use-group-dragndrop.ts/.test.tsx；新 use-drop-highlight.ts/.test.tsx 与 Kanban drop/swimlanes 测试、两测试共用 fake-kanban；列表真实 drop/confirm 回归；日历与侧栏现有高亮调用同步迁移，保留各自业务写合同。
 
-- [ ] 真实源/目标构造覆盖同组前/后、跨组两邻居间、列尾和空列；移除源后求邻居，中间below也前进一位。目标失效/不存在给当前错误或安全不发，不能猜任意尾部掩盖事件缺口。
-- [ ] 多值group/subgroup用既有makeBody/root.dropIssue，不覆写其它标签/负责人；none清空及优先级none按原生合同。非sort_order布局不可擅自做手工排序。
-- [ ] deferred PATCH确认前原列表/计数不变；成功一次state+sort_order，卡片留目标；403/422原位、补读失败保留成功并只读重试。实际hook的新toast按码且同时核session/scope/permission；旧timer/highlight/scroll卸载后取消。
-- [ ] 泳道总数只用subgroup_totals，组/格各自cursor，加载控件键盘可达；一个多标签卡片多处与唯一canonical一致。
-- [ ] 聚焦drop/hook/group-consumers及root排序/确认测试；M11中间below变above、M12泳道格total相加、M13先乐观改序、M14尾部被旧读复位各行为红；G与检查点F。提交`fix(M4/P12): 按确认结果完成看板和泳道拖放`。
+- [x] 真实源/目标构造覆盖同组前/后、跨组两邻居间、列尾和空列；移除源后求邻居，中间below也前进一位。目标失效/不存在给当前错误或安全不发，不能猜任意尾部掩盖事件缺口。
+- [x] 多值group/subgroup用既有makeBody/root.dropIssue，不覆写其它标签/负责人；none清空及优先级none按原生合同。非sort_order布局不可擅自做手工排序。
+- [x] deferred PATCH确认前原列表/计数不变；成功一次state+sort_order，卡片留目标；403/422原位、补读失败保留成功并只读重试。实际hook的新toast按码且同时核session/scope/permission；旧timer/highlight/scroll卸载后取消。
+- [x] 泳道总数只用subgroup_totals，组/格各自cursor，加载控件键盘可达；一个多标签卡片多处与唯一canonical一致。
+- [x] 聚焦drop/hook/group-consumers及root排序/确认测试；M11中间below变above、M12泳道格total相加、M13先乐观改序、M14尾部被旧读复位各行为红；G与检查点F。提交`fix(M4/P12): 按确认结果完成看板和泳道拖放`。
 
 ## Task 6：表格排序、滚动和编号链接（约600–1000行）
 

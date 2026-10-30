@@ -167,7 +167,7 @@ it.each([false, true])("kanban continuation remains reachable with swimlane=%s",
     )
   );
   if (lane) {
-    const button = [...container.querySelectorAll("div")].find((node) => node.textContent === "common.load_more ↓");
+    const button = [...container.querySelectorAll("button")].find((node) => node.textContent === "common.load_more ↓");
     expect(button, "the swimlane exposes a continuation control").toBeDefined();
     await act(async () => button!.click());
   } else {
