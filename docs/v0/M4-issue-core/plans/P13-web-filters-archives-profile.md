@@ -111,11 +111,11 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 **Files：** spec T5；新L/roots/archive-page.test.tsx；新C/hooks/use-local-issue-filter-update.ts及.test.tsx（T9的profile桌面/手机共用）。
 **Interfaces：** useLocalIssueFilterUpdate(workspaceSlug:string,projectId:string|undefined,targetId:string,member:boolean=false):(change:()=>Promise<unknown>)=>Promise<void>；只消费Promise/当前宿主拒绝，数据和GET重试仍归原filter store/list binding。archived原fetchFilters/updateFilters/updateFilterExpression签名不变。
 
-- [ ] Step 1：写restoresArchivedLocalFilters、doesNotPatchProjectPreferences、doesNotFetchForGuest、preservesSavedSettingsWhenListReadFails；覆盖richFilters迁移、损坏/storage抛错、跨账号/workspace/project以及遗留kanban/subgroup设置。
-- [ ] Step 2：运行archive-page、hook、archived/filter.store.test.ts和list-mount测试；预期无处理Promise/不支持布局等实际缺口的断言红。
-- [ ] Step 3：归档只list、查询恒archived=true；页面能力规范化不能影响其它helper读者。现有归档单测接受kanban/孤儿子分组的预期随本期能力迁移，同时保留合法兄弟字段、false、账号隔离和读取拒绝性质；改到的旧测试使用已有真实fixture替代双重断言假root。接当前本地更新callback、可见首读/续页错误与GET retry，禁字段编辑/快建/拖动；恢复/删除权限由T6/T7独立保留。项目有效角色为访客时不拉归档列表/筛选目录。
-- [ ] Step 4：测试绿；M11丢actor存储scope、M12读写rich键再不一致、M13归档开inline写各红、恢复绿。回归已通过P12project-lifecycle/row-expansion。
-- [ ] Step 5：提交fix(M4/P13): 接通归档页的本地设置与只读列表。记录A5/A9。
+- [x] Step 1：写restoresArchivedLocalFilters、doesNotPatchProjectPreferences、doesNotFetchForGuest、preservesSavedSettingsWhenListReadFails；覆盖richFilters迁移、损坏/storage抛错、跨账号/workspace/project以及遗留kanban/subgroup设置。
+- [x] Step 2：运行archive-page、hook、archived/filter.store.test.ts和list-mount测试；预期无处理Promise/不支持布局等实际缺口的断言红。
+- [x] Step 3：归档只list、查询恒archived=true；页面能力规范化不能影响其它helper读者。现有归档单测接受kanban/孤儿子分组的预期随本期能力迁移，同时保留合法兄弟字段、false、账号隔离和读取拒绝性质；改到的旧测试使用已有真实fixture替代双重断言假root。接当前本地更新callback、可见首读/续页错误与GET retry，禁字段编辑/快建/拖动；恢复/删除权限由T6/T7独立保留。项目有效角色为访客时不拉归档列表/筛选目录。
+- [x] Step 4：测试绿；M11丢actor存储scope、M12读写rich键再不一致、M13归档开inline写各红、恢复绿。回归已通过P12project-lifecycle/row-expansion。
+- [x] Step 5：提交fix(M4/P13): 接通归档页的本地设置与只读列表。记录A5/A9。
 
 ## Task 6：归档确认与恢复的一次反馈（约450–850行）
 

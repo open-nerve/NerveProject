@@ -1,6 +1,6 @@
 # M4/P13 筛选、归档与个人主页：预检记录
 
-日期：2026-10-31。**当前已获准实施，T1–T4完成，T5接续；以下§1–7保留预检快照，实施接续见§8。** [spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[deep-review预检](../../../reviews/re-18-M4P13预检审核.md)。产品A1–A12仍待阶段验收；本记录不等于阶段实施后的整分支终审。
+日期：2026-10-31。**当前已获准实施，T1–T5完成，T6接续；以下§1–7保留预检快照，实施接续见§8。** [spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[deep-review预检](../../../reviews/re-18-M4P13预检审核.md)。产品A1–A12仍待阶段验收；本记录不等于阶段实施后的整分支终审。
 
 ## 1. 前置与评审方式
 
@@ -94,3 +94,5 @@ T4第一轮完整F中生成与Go lint通过，服务端TestNewAppDeleteRowsJobRu
 第二轮完整F的TestDeletionInterleaving24在观测锁等待时失败。单子例20次未复现；整个24矩阵20次复现一次，临时诊断明确同一事务阻塞了关联行删除worker和项目行周期任务，旧helper把全部等待者限定为一个。新夹具明确制造第二等待者，旧helper稳定选错projects；按预期表筛选候选后仍检查稳定PID、实际SQL及锁类型，24/25全矩阵连续10轮通过。只调整测试观测，不改生产事务/锁顺序/超时；临时诊断源码已撤回，证据保留。最终验证见下段。
 
 T4最终检查点七项均通过：生成/Go lint/Go全测取t4-full3，Web lint/knip/强制全测/E2E取t4-full4。第三轮Web全测曾有旧路由接线夹具缺少detail root的10项失败，改用真实RootStore/FakeNerve后原性质保留并补guest断言，相关23项通过。服务端源输入逐文件核验不变（t4-server-input-reuse.json），没有冒称第四轮重跑Go。最终Web 240文件2587项、全部包18任务通过，E2E 180通过；所有失败raw保留。T4完成，继续T5–T14；阶段整审、三浏览器与最终分支CI仍待执行。
+
+T5归档原store统一规范化为list/无子分组，保留合法兄弟设置、false和列表组折叠；查询最后固定archived=true。局部更新hook复用既有宿主/权限身份，消费同步及异步拒绝，列表错误仍由binding单独提示和GET重试。实际页头与列表对guest均不挂载，viewFlags作为字段只读的单一能力来源，移除重复覆盖；恢复/删除独立留T6/T7。六文件49测试通过（含project-lifecycle原行展开性质），lint-web 54通过；删除无用代码使警告上限120降119。M11/M12/M13分别2/3/1项行为红，均准确恢复；M11为既有账号隔离回归。新增测试的动画/IntersectionObserver夹具错误及flat分页条件不符已修正，失败raw保留，不计为产品缺陷。T4远端检查点CI仍待结束，尚非最终阶段CI。
