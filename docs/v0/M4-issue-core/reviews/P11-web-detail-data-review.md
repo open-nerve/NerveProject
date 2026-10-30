@@ -1,6 +1,6 @@
 # M4/P11 详情数据层：预检与实施记录
 
-日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T14已实现，T15整审修复已完成，最终门禁验证中。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
+日期：2026-10-30。**当前：实施与整审修复已完成，集成待办；最终交付CI见提交后回执。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。A1–A9已核，A10以最终提交CI回执收口；准备阶段证据保持原义，§8为各Task当时快照，最终结论见§9–§14。
 
 ## 1. 前置、身份与范围
 
@@ -51,11 +51,11 @@ P10b证据保持原hash及历史限制，不替历史变异补红绿。准备提
 
 P11-S1裁定、修订和预检复核已完成；现已获实施安排，按T1起顺序执行。P12搜索首调用、P13归档/profile/R36/R38、P14详情与父项搜索、P15协作/草稿/全局搜索、P16守卫终态不关闭。M7标签完整恢复与旧版本DTO最终删除保持所属阶段。
 
-M4§14、总体§9.4、输入handoff顶层open不变；M5–M8最终M4-closeout未创建。P10b已收尾，P11不是已完成阶段，不合并、不清理P11准备worktree。
+M4§14、总体§9.4、输入handoff顶层open不变；M5–M8最终M4-closeout未创建。P10b已收尾，P11实施与整审完成、集成待办，不合并、不清理P11 worktree和证据。
 
 ## 7. 当前下一步
 
-按通过预检的计划完成T1–T14，阶段完成后deep-review并修复局部问题，保留codex/m4-p11分支/worktree、暂不合并。架构级问题先提交已完成工作再上报。原停下依据和两方案代价保留在决策记录。
+主控完成最后文稿核对及准确交付HEAD CI后向负责人交付，保留codex/m4-p11分支/worktree、暂不合并，不开始P12。架构级问题先提交已完成工作再上报。原停下依据和两方案代价保留在决策记录。
 
 ## 8. 实施起点与执行方法
 
@@ -299,7 +299,7 @@ T13准确提交`100565d27bc7d842a5693d877b84f42ef73e544c`的[CI 40982066769](htt
 M4指定目录的is_bot/description_json/comment_json均零命中，旧IssueService文件删除，keywords仍76规则/24精确例外。剩余M4模块实例为ExistingIssuesListModal（P12）、父项搜索和M7查重选择（P14）、命令面板搜索（P15）；projectIssuesSearch旧URL例外到P16前强制到期，P14若无读者即删。global-view.store的WorkspaceService属于M7自身待接通。M5资产、M6迭代/模块、M7收集箱/视图保留各自领域边界；copy-hook现有例外按各closeout处理，不冒称P11已满足P15/整M4零残留门禁。删除无读者label defaultOptions及其三个构造调用、peek storeType、输入key/状态冗余prop。
 
 
-### T15 整分支审查与修复（最终验证中）
+### T15 整分支审查与修复（过程快照）
 
 使用deep-review对阶段基线df5d3bbc至ad0dc1ec逐批审逻辑、集成和覆盖；全新只读审者核283个变更（271全文、6完整结构+变更、6历史文档相关章节+完整diff），另9依赖全文；逐路径、原SHA/行数与阅读方式在`final-reviewer-coverage.json`。不把部分历史正文或结构解析称为逐字全文，不声称审了整仓。主控核真实调用链并自行完成一次局部修复；未重新派第二审者。
 
@@ -312,8 +312,113 @@ M4指定目录的is_bot/description_json/comment_json均零命中，旧IssueServ
 
 M1附录原脚本恢复到本阶段忽略目录（extraction.json记录原字节SHA），先typegen再deadsym/domains。终审删除无生产调用的草稿fetchIssue/get及旧列表字段、关联createdAt/核验round只写元数据、冗余subissue接口、旧局部create/existing/removeRelation槽、无传入的评论footer/标签props/lite变体和独占toolbar，IMAGE_ITEM收为包内常量、ViewFlags死类型删除；cycle.store只删除无读者progressLoader及三个getter，其领域service调用不变。草稿测试改从真实列表重读，保留project=null和payload断言；单条生成GET合同未变，包装随P15真实入口需要时再建。
 
-原候选215行/49文件；最终185行/39文件（62生产声明、123测试/夹具），逐行位置/名称/源码SHA/读者与理由见t15-dead-disposition.json。全仓候选387 prop/871 member/17 export不是零dead声明；结构透传、完整领域DTO、动态键、三个资源纯读取观察口均具名登记。M4最终dead/no-shadow仍由P16收口。
+原候选215行/49文件；最终185行/39文件（62生产声明、123测试/夹具），逐行位置/名称/源码SHA/读者与理由见t15-dead-disposition-final.json。全仓候选387 prop/871 member/17 export不是零dead声明；结构透传、完整领域DTO、动态键、三个资源纯读取观察口均具名登记。M4最终dead/no-shadow仍由P16收口。
 
 整分支252个现存TS/TSX的oxlint为0warning/0error，oxfmt及diff通过（t15-branch-static-delivery）；T1拒绝矩阵一条map-spread警告已清，web cap146→145，不放宽守卫。三条独占cycle import/关系旧测试createdAt精确预期和一次shell短路导致未实际替换的命令错误均已纠正，失败日志保持真实。
 
 完整F由b27fd3d5的gen-check/lint-go/test-go三个绿色回执，加最终源码t15-release-f的lint-web/knip/强制test-web/e2e构成；后续仅前端局部删除/测试矩阵，不重复未变Go。每项实际argv、源码dirty SHA、raw SHA与退出码均已核；最终E2E169通过。产品候选推送和准确CI仍待本次提交后核验。
+
+
+## 9. 最终验收映射
+
+实际main基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`，最终产品候选 `e84acb4b131e9a6f7a147c5c50fa2b19890e9fcd`。下列文件相对 `web/apps/web/core/`；证据根为本worktree `.superpowers/sdd/P11-web-detail-data/`（E）。回执均记录实际argv、cwd、HEAD、未提交输入的逐文件SHA、退出码、原始日志SHA；不把测试名清单本身当执行结果。
+
+| 验收 | 实际代码/消费者与验证 | 结果 |
+|---|---|---|
+| A1 | services/issue原生服务；T1/T4/T5/T6/T8/T9方法请求、拒绝和退役测试；旧IssueService删除；t14-transition-audit及最终keyword | 通过；草稿GET无生产包装的终审裁定见spec§2.2 |
+| A2 | root.store、IssueResources/DetailResource、canonical及issue.read/fetch/resource回归；M02/M03/M04与T14排队起点ABA | 通过，唯一权限源/实体源未扩层 |
+| A3 | sub_issues/relation/link stores及relations/data、links/data、detail-changes；M01/M06/M09，DR1/2/5 | 通过，关系ID、权威计数、元数据状态和原子日期确认 |
+| A4 | comment/reaction/activity及detail-collaboration；真实comments/data、activity/data；M11b/M13/M14/M15 | 通过，评论内嵌表情、cursor/ID重排、纳秒及二页拒绝 |
+| A5 | description-versions.store、共享Root/Modal、实际Issue适配器和editor-lifecycle；M17/M18及DR4 | 通过，member权限、快速选择、确认恢复与旧编辑定时器互斥；M7旧DTO单独归属 |
+| A6 | workspace-draft store/service、issue-modal/draft、workspace-draft/root；M19/M20/M21 | 通过，五个有生产使用的薄方法、完整payload、列表重读、PATCH后publish与创建确认；零列宽专用项目请求 |
+| A7 | t14-transition-audit核原7+前移2实例消失；四个提及入口和use-editor-mention；M23 | 通过，M4旧JSON/机器人字段及草稿16行删除，搜索实例按P12–P15期限保留 |
+| A8 | detail-refusals/cache/host、use-detail-scope、work-item-level、peek/host-actions及T15真实编辑器/表单/父项；M26/M27 | 通过，当前错误可见/只读retry，旧权限/会话/宿主不能复活或结束新宿主 |
+| A9 | useLabelChanges和三实际选择器；identifier-width真实布局；M29/M30/M31；最终dead逐项表与252文件零警告、knip、76规则/24例外 | 通过，字段错误和只读/集合并发闭环；不宣称M4全仓dead/no-shadow已清零 |
+| A10 | T1–T14完成回执、21独立性质变异、完整F、正式re-15及根因修复、输入handoff子项；准确最终文稿HEAD CI后置收据 | 其它证据已齐；仅在最终HEAD server/web/e2e全绿后交付，不以本表预签CI |
+
+## 10. 最终本地门禁与源码桥
+
+生成检查、Go lint及Go全量在固定 `b27fd3d58c087ca5f12a0d32abd537c13c7d55bc` 运行，随后只清前端无读者代码/测试矩阵与文稿，服务端及生成合同无变化。最后前端四项用 `t15-release-f-*` 全部通过，非文档dirty输入SHA逐个与e84acb4b核对；没有为同一Go输入重复8分钟全集。
+
+| 命令 | 精确回执 | 实际结果 |
+|---|---|---|
+| make gen-check | t15-candidate-f-gen-check | exit0，生成物无diff |
+| make lint-go | t15-candidate-f-lint-go | exit0 |
+| env GOFLAGS=-p=1 make test | t15-candidate-f-test-go | exit0，全包执行、无失败；数据库套件顺序运行 |
+| make lint-web | t15-release-f-lint-web | exit0，54任务成功；含构建/类型/格式/静态；未变输入可缓存，不声称54项均重新执行 |
+| make knip | t15-release-f-knip | exit0 |
+| env TURBO_FORCE=true make test-web | t15-release-f-test-web | 18任务全执行，0缓存；Web210文件2315项，另共享包163项Vitest、api-client5项Node测试，全通过 |
+| make e2e | t15-release-f-e2e | build后169通过，含Firefox A4；无本次W11失败 |
+
+`t15-release-suite-logs.json`及同名目录保留各包实际完整测试输出/哈希，避免turbo errors-only把测试数隐藏；stderr中既有页面/测试警告没有改写成“输出pristine”。`t15-branch-static-delivery`明确覆盖base至当前全部252个现存TS/TSX：0warning/0error、格式和diff通过。web cap从本阶段基线217逐步收紧到145，editor64→59、types0（其余包未借本阶段抬上限）；确切起点以git diff为准，最终no-shadow统一清零仍P16。
+
+此前失败回执保留：ad0dc1ec的本地lint/远端web翻译键失败，9项修复的夹具纠正，死成员删除后的旧createdAt预期、三个独占import、一次错误脚本名及shell短路，都不是最终全绿；不把它们冒称行为RED。产品候选e84acb4b及完整源码manifest见 `t15-product-commit.json`；后续文稿不能改此产品输入。
+
+## 11. 独立性质变异（21项）
+
+`t15-mutation-audit.json`重核每项实际首失败、red非零退出和raw SHA、字节恢复相等、其后green退出0/raw SHA、最终源SHA及是否与恢复时不同。该表是历史原件审计，不是重复运行历史试验；e84acb4b完整F承担后续差异的回归桥。表中名为E内同名前缀的JSON/raw。
+
+| ID | 独立安全/行为性质 | 实际RED | 恢复记录 | 恢复后绿 |
+|---|---|---|---|---|
+| M01 | 关系资源ID，不以目标工作项ID删除 | m01-wrong-relation-id | m01-restoration | t1-completion |
+| M02 | 权限变化立即隐藏已持资源 | m02-getter-permission | m02-getter-permission-restoration | t2-completion |
+| M03 | 应答的实体/项目/工作区身份校验 | m03-response-scope | m03-response-scope-restoration | t2-completion |
+| M04 | 写入确认在旧读取上重放 | m04-confirmation-replay | m04-confirmation-replay-restoration | t2-completion |
+| M06 | 批量和单项共享多ID写队列 | m06-red | m06-restoration | t3-completion |
+| M09 | 元数据抓取失败仍是成功链接，补读失败只重读 | m09-red | m09-restoration | t4-completion |
+| M11b | 删除表情隔离actor | m11b-red | m11b-restoration | t6-completion |
+| M13 | 重读最后请求cursor而非最后返回cursor | m13-red | m13-restoration | t7-completion |
+| M14 | 同ID动态更新后重定位 | m14-red | m14-restoration | t7-completion |
+| M15 | 纳秒及等价时区排序精度 | m15-red | m15-restoration | t7-completion |
+| M17 | 恢复版本确认前不关闭/丢HTML | m17-red | m17-restoration | t8-completion |
+| M18 | 快速选择版本时旧详情不盖新选择 | m18-red | m18-restoration | t8-completion |
+| M19 | 先PATCH确认再无body发布 | m19-red | m19-restoration | t9-completion |
+| M20 | 草稿完整payload及明确空值 | m20-payload-red | m20-payload-restoration | t9-completion |
+| M21 | 发布进入canonical与全部已持列表 | m21-red | m21-restoration | t9-completion |
+| M23 | 提及排除inactive成员 | m23-inactive-red | m23-inactive-restored | t10-completion |
+| M26 | SWR权限ABA身份失效 | m26-permission-key-red | m26-permission-key-restored | t11-completion |
+| M27 | 旧宿主不关闭新宿主弹窗 | m27-host-global-clear-red | t12-mutations-restored | t12-completion |
+| M29 | 标签统一创建关键词守卫 | m29-label-create-direct-red | t13-label-mutation-restored | t13-label-keywords-restored |
+| M30 | 可见已加载数据驱动统一编号宽度 | m30-fixed-digit-red | t13-width-error-mutations-restored | t13-completion |
+| M31 | 原生错误按code显示 | m31-old-error-red | t13-width-error-mutations-restored | t13-completion |
+
+M24/M28等相近晚答样本不重复计为另一性质；错误归档权限假设等无效试验、编译失败和夹具未触发从计数剔除。详细原始失败与限制沿§8记录，不用本次总结补造历史通过。
+
+## 12. 死成员逐行判定与局部清理
+
+使用M1原deadsym/program/domains字节，未改工具让结果变绿。`t15-dead-exact`全仓387 prop/871 member/17 export；本分支改动集合185候选/39文件，123条来自测试/夹具，62条来自生产声明。每条的kind、文件/行、名字、读/写次数、test/str标记、源码SHA与具体保留理由在 `t15-dead-disposition-final.json`，未留未分类项。
+
+| 文件（web/下） | 候选名称 | 实际读者/保留理由 |
+|---|---|---|
+| apps/web/core/components/dropdowns/member/base.tsx | multiple, value, onChange | selection按联合类型构造后经JSX展开交给CustomSearchSelect，multiple/value/onChange由该组件读取。 |
+| apps/web/core/components/editor/use-confirmed-autosave.tsx | error | failure结构经返回值传到AutosaveError；错误码、SessionChanged过滤及重试读取failure.error。 |
+| apps/web/core/components/issues/issue-modal/modal.tsx | default, loading | primaryButtonText经props展开到Base和Form，Form按default/loading显示提交按钮。 |
+| apps/web/core/components/issues/peek-overview/root.tsx | active | 同文件owner局部对象的active在微任务清理读取；WeakMap声明与局部推断类型不是同一声明。 |
+| apps/web/core/components/issues/title-input.tsx | name | React Hook Form通过register/watch/setValue的name字符串读取，测试也观察实际输入。 |
+| apps/web/core/services/inbox/intake-description-version.ts | created_at, created_by, project, updated_at, updated_by, description_json, description_stripped, cursor, next_cursor, next_page_results, page_count, prev_cursor, prev_page_results, total_pages, total_results | M7旧领域DTO完整归属；intake-work_item_version服务传输、inbox/content/description-versions及共享版本展示使用。未接通的M7协议不以M4字段截断伪装生成合同。 |
+| apps/web/core/services/workspace.service.ts | project_id, search, workspace_search | query对象直接传旧searchWorkspace HTTP params；由power-k/ui/modal/search-menu使用，旧接口例外仍按P15到期。 |
+| apps/web/core/store/cycle.store.ts | activeCycleIdMap, getProjectCycleDetails, fetchAllCycles, fetchActiveCycle | ICycleStore声明由CycleStore实现：activeCycleIdMap在fetchAllCycles/fetchActiveCycle登记、deleteCycle删除；getProjectCycleDetails由getProjectCycleIds读取，两个fetch由updateCycleDetails跟进。无读者的progressLoader及三个getter已删除，不改M6服务协议。 |
+| apps/web/core/store/issue/issue-details/activity.store.ts | getActivitiesByIssueId | 纯读取观察口getActivitiesByIssueId由activity.store.test和detail-collaboration.test核完整页/晚答/删除/排序；没有为测试保留额外网络命令。 |
+| apps/web/core/store/issue/issue-details/comment.store.ts | isLoading | isLoading是纯读取观察口，comment.store.test核二页拒绝退出加载；不引入额外请求或另份状态。 |
+| apps/web/core/store/issue/issue-details/description-versions.store.ts | getVersion | getVersion是纯读取观察口，description-versions.store.test核缓存身份、权限失效、并存版本和删除；实际fetchVersion消费同一resource。 |
+| packages/types/src/common.ts | count, extra_stats, prev_cursor, prev_page_results, total_pages, per_page, emoji, value, url, name, background_color, disabled, tooltip | TPaginationInfo/TLogoProps完整传输类型：M7 inbox分页、favorite/views以及editor/callout的logo-selector、updateStoredLogo序列化；不因局部界面暂不逐字段读取而截断协议。 ICustomSearchSelectOption由member/base等构造，再交CustomSearchSelect读取disabled/tooltip。 |
+| packages/types/src/issues.ts | type, isDropDisabled, dropErrorMessage | display-filters-selection对display_filters用Object.keys判定可用选项；constants/issue/filter按布局提供type。 IGroupByColumn经getGroupByColumns传给kanban/swimlanes，再传isDropDisabled/dropErrorMessage到列；函数调用/推断对象产生候选，不是独立JSX props无传入的证据。 |
+| packages/types/src/issues/issue_sub_issues.ts | backlog, unstarted, started, cancelled | stateDistributionByIssueId按原生State.group构造五状态完整分布，title消费completed、分布测试逐组核值；其余键作为规定的领域分布保留，不改成只有completed的假合同。 |
+| apps/web/core/components/issues/issue-layouts/spreadsheet/columns/label-column.tsx | issue, onClose, onChange, disabled | 列组件经utils.tsx的SPREADSHEET_COLUMNS映射动态渲染；spreadsheet相应行传issue/onClose/onChange/disabled。 |
+| apps/web/core/components/issues/issue-layouts/utils.tsx | key, titleTranslationKey | useGroupByOptions返回ISSUE_GROUP_BY_OPTIONS筛选行，group-by下拉读取key/titleTranslationKey；返回类型没有直接JSX赋值。 |
+
+测试行不是自动删除对象：EditorRefApi/ResizeObserver经真实组件或库调用、mock展示props由测试边界注入、it.each插值由运行时读取。三资源纯查询观察口明确只有测试读者，保留用于资源隐藏/完整性/拒绝收尾的断言；没有为此增加HTTP命令。草稿单条GET则没有页面调用且是独立传输路径，已删。最终审计不关闭M1 handoff顶层或整个M4的dead/no-shadow总门。
+
+## 13. 分支身份、CI与交付边界
+
+分支 `codex/m4-p11`，worktree `.codex/worktress/codex/m4-p11`；base `df5d3bbc1887486bd105fe6fc663f57f5b371992`。产品候选 `e84acb4b131e9a6f7a147c5c50fa2b19890e9fcd` 已由系统 `/usr/bin/git` 自动推送，[产品候选CI 40994375314](https://github.com/open-nerve/NerveProject/actions/runs/40994375314)按准确SHA查询。**attempt1的server/web/e2e已全部success**，公开逐步骤回执 `t15-product-ci-06.json` 于2026-10-30 03:11:24 UTC核得；不以T13绿色或T14失败代替，也不以该产品候选CI替代下一个文稿提交的CI。
+
+最终文稿提交不循环写自己的SHA。提交后主控生成 `E/t15-final-delivery.json`，其中finalHead必须等于 `git rev-parse HEAD`，引用精确该SHA的CI回执（server/web/e2e均success）、工作树状态、产品源码不变证明及Task15完成记录；只有这份后置门禁通过才汇报阶段完成。spec A10与plan Task15的提交后门禁以此回执登记完成；文稿不提前打勾一个尚未产生的CI结果。文稿记录已验证的产品候选；本段不是最终HEAD的预签CI。
+
+**不合并、不清理分支/worktree、不启动P12。** 主项目仍main；实施原件E和主项目外部准备根 `.superpowers/sdd/P11-preparation-20261030/`都保留，未来授权集成且main CI通过后才能一并归档清理。
+
+## 14. 整审与移交
+
+[re-15整分支deep-review](../../../reviews/re-15-M4P11整体审核.md)记录首次6 Major/3 Minor及主控重定级为7 Major/2 Minor的依据，九项全部修复；完整逐文件读取覆盖/遗漏与Rulings原序公开。最终死成员/整分支静态补查的局部清理已复验，无新的架构协议或未修局部阻断。
+
+M1输入只记旧JSON/死成员逐项与警告结果；profile view收窄P13、弹窗迁移ID P14、全仓守卫P16。M2§12原七加两实例、详情SessionSWR与退役已接；剩余搜索四实例仍P12–P15。M3§5 is_bot、§6按需拒绝/原生错误/标签创建/宽度/宿主和§8草稿旧类型已处理；完整标签恢复M7、地址/复制/焦点/页面故事分别按后续阶段。不关闭M4设计§14、总体设计§9.4或八份输入handoff顶层，也不预建M5–M8最终closeout。

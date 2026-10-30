@@ -73,3 +73,10 @@ P11仍处理JSONContent/comment_json等，P13处理profile view断言，P14处�
 
 
 整审A-02经root具名追问base最后生产读者更正为本期缺口，已删distribution全死链、两wrapper/barrel、六死测试/fixture与两独占常量，calculateCycleProgress七测保留，A r2 Approved。当前236候选及15新纳入项逐项见review§9，不称全仓/所有触及文件零dead；原227静态盘点旧inventory误覆盖、原bytes/hash不可证明限制亦在review§9公开，产品/测试/CI raw不受影响。
+
+
+## 处理结果（M4/P11，2026-10-30）
+
+M4旧JSONContent/comment_json及无用回调参数已删除，description_json/is_bot旧读写随原生合同迁走；M7专属版本DTO仍在其服务内，不混为M4生成类型。按附录原脚本核全部本期改动：最终185候选/39文件逐行记录实际读者/传输合同/测试观察口，真无读者的props、状态、方法及独占文件已删；全仓候选不是零dead声明。整分支252个TS/TSX零warning/error，web cap降至145，未抬上限；详情输入保存/版本恢复和拒绝/卸载由真实消费者回归覆盖。详见[P11 review§9–12](../reviews/P11-web-detail-data-review.md#9-最终验收映射)。
+
+viewId收窄归P13，创建/编辑弹窗isMigrationUpdate及撤销/重做归P14，全仓no-shadow/dead终态归P16及M4收尾。P11集成待办，本输入顶层仍open，不用本阶段代替总关闭条件。

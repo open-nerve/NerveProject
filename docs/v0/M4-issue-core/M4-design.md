@@ -804,6 +804,8 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 
 ### 3.23 需要同步到上级文档的地方
 
+**P11接续（2026-10-30）：** 详情原生资源、确认写入、root统一权限失效和宿主局部状态已落地，整分支deep-review九项局部问题已修复；产品e84acb4b完整本地F通过，准确CI/最终文稿HEAD按[review§13](reviews/P11-web-detail-data-review.md#13-分支身份ci与交付边界)后置核验。总体§7.7、frontend-changes及M1/M2/M3输入子项同步；实施与终审完成、集成待办。M4§14和总体§9.4不关闭。
+
 **P6实施记录（2026-10-26）：** T1–T16实施及逐Task独评通过，内部整分支审查零新发现；[正式review](reviews/P6-issue-events-review.md)列真实命令、矩阵、变异与Minor闭环。事件事务同步发布、自动归档每项目事务/NULL actor、测试业务时钟及两队列已落地。P7首个生产订阅者、`registrationRows`对请求任务，P9项目/工作区删除任务、版本保留与清理，P15页面仍未完成；不将M4整体验收关闭。
 
 **P7接续记录（2026-10-27）：** 三link事件使目录增为15；首个生产subscriber经原事务InsertTx投递，真实worker、请求任务快照、受限运行角色及I10 API/带links删除目录已落地。下表P7三行已同步总体§6.2/§6.7/§8、12列差异和README安全；[P7 review](reviews/P7-issue-links-review.md)与[整体审核](../../reviews/re-05-M4P7整体审核.md)区分原范围整审、T16修复/本地验证、原8项已独立关闭与最后文档增量/交付HEAD CI记录。P6当时空生产订阅是历史事实，P8/P9/P11/P14/P15及M4收尾仍开放。
@@ -2323,8 +2325,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **关闭**：M1-P3 交接的筛选显示层（否定的一层删除；终态在 P16 核对）；M2 交接第 12 节的 `autorun`、三处同步读取、列表一侧的 SWR 键；M3 交接第 5 节（例外和 `workItemFilters` 删掉）、第 6 节（`autorun`、`reconciled.ts` 的扩展、S2 的 `REQUESTS`）。
 - **完成线**：`tsc`、knip、vitest 通过；S2 在四个角色下没有旧接口的请求；`store-context.test.ts` 没有严格模式的警告；`/user-properties/` 的例外已删除。
 
-### P11 `web-detail-data`：详情一侧的数据层（15个任务，实施中）
-- **状态**：已形成[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)，**P11-S1已裁定A、文档预检通过，T1–T14已实现，进入T15整审与最终验证**；[编号宽度决策记录](reviews/P11-project-number-width-decision.md)。任务顺序按实际资源依赖细化，所有验收开放。
+### P11 `web-detail-data`：详情一侧的数据层（15个任务，实施与整审完成、集成待办）
+- **状态**：已形成[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)，**实施与整审修复已完成，集成待办；最终交付CI见提交后回执**；[编号宽度决策记录](reviews/P11-project-number-width-decision.md)。实际证据见[阶段review](reviews/P11-web-detail-data-review.md)与[整分支审核](../../reviews/re-15-M4P11整体审核.md)；先不合并。
 - **目标**：详情services/stores接生成接口，沿IssueRootStore方案A管理权限读取失效；原7处数据层模块实例加前移的2处IssueService消失；宿主结束自己拥有的弹窗。
 - **任务**：
   1. 按编号读、子项/关联/链接薄服务及请求测试；实施首提交phase=M4/P11。
@@ -2343,8 +2345,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   14. 旧接口/死成员/label-create-direct守卫；完整修改、权限及竞态矩阵。
   15. 完整F、逐条验收、handoff局部处理结果、整分支deep-review及修复复审；阶段先不合并。
 - **搜索边界**：P11登记生成searchIssues合同；wrapper在P12首个生产消费者接通时创建，旧搜索类型最后随P15删除，现有P12/P14/P15页面分配不变。
-- **关闭范围**：M1旧JSONContent/comment_json，M2§12原7实例/详情SWR（加两前移实例，getUserProfileIssues核P10b已删）；M3§5 is_bot，§6按需拒绝/错误/标签创建/宿主及三件的明确处理，§8旧草稿16行。工作区标签恢复仍M7；编号字段缺口已裁定A，实施验收尚未关闭。
-- **完成线**：spec A1–A10实际通过；core/services/issue无生成Issue/Detail标注Plane响应；全部修改/拒绝/宿主有行为证据，原七加两实例零命中；搜索和M5–M7范围准确保留。当前尚未达到完成线。
+- **关闭范围**：M1旧JSONContent/comment_json，M2§12原7实例/详情SWR（加两前移实例，getUserProfileIssues核P10b已删）；M3§5 is_bot，§6按需拒绝/错误/标签创建/宿主及三件的明确处理，§8旧草稿16行。工作区标签恢复仍M7；编号列宽按负责人A裁定由展示数据统一计算，已用分页/子项/scope/权限回归核验。
+- **完成线**：spec A1–A10实际通过；core/services/issue无生成Issue/Detail标注Plane响应；全部修改/拒绝/宿主有行为证据，原七加两实例零命中；搜索和M5–M7范围准确保留。产品验收与整审已具备证据；准确最终HEAD CI按review后置回执闭合，main集成尚未授权。
 
 ### P12 `web-list-pages`：列表、看板、表格、日历（15 个任务）
 - **目标**：项目的工作项页的四种布局、拖动、快速添加、快捷操作、浮层；"添加已有"的选择器经 `issue-search`。
@@ -2574,7 +2576,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
 | P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
-| P11 `web-detail-data` | 详情一侧的数据层（15） | **T1–T14已实现，进入T15整审与最终验证**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review](reviews/P11-web-detail-data-review.md)。[P11-S1](reviews/P11-project-number-width-decision.md)按可见展示数据计算列宽；已授权顺序实施，完成后终审、暂不合并 |
+| P11 `web-detail-data` | 详情一侧的数据层（15） | **实施与整审完成、集成待办**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review](reviews/P11-web-detail-data-review.md)。[P11-S1](reviews/P11-project-number-width-decision.md)按可见展示数据计算列宽；九项终审问题已修复，完整本地F通过，准确交付HEAD CI后置核验；暂不合并 |
 | P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |
