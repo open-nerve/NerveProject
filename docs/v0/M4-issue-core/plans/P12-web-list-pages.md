@@ -111,10 +111,10 @@ make e2e
 
 **Files：** C/components/dropdowns/date.tsx、新date.test.tsx；L日期属性/表格单元格实际懒渲染调用，api-tokens自定义有效期消费者测试。
 
-- [ ] 用Popover提供唯一打开状态，去掉useDropdown与ComboDropDown互相同步；选中、Escape、Tab、外部点击只结束同一state。保留实际public props与禁用/范围/defaultOpen/closeOnSelect合同。
-- [ ] 键盘focus/Enter/Space触发能装载懒内容；先开日期再开旁边属性不会残留两个面板。无嵌套button，portal/ModalCore内可点可Tab，背景仍受外层modal隔离。
-- [ ] DOM测试对应上述事件；实际浏览器由T15核定位和focus。回归api-tokens自定义有效期/minmax，M6/M7调用编译契约不变，不运行未接通领域接口。
-- [ ] M21保留双state、M22只pointer才能渲染各红；G。记录P13 R36共享根因在本Task覆盖，筛选页面验收仍P13；提交`fix(M4/P12): 让日期下拉由单一打开状态控制`。
+- [x] 用Popover提供唯一打开状态，去掉useDropdown与ComboDropDown互相同步；选中、Escape、Tab、外部点击只结束同一state。保留实际public props与禁用/范围/defaultOpen/closeOnSelect合同。
+- [x] 键盘focus/Enter/Space触发能装载懒内容；先开日期再开旁边属性不会残留两个面板。无嵌套button，portal/ModalCore内可点可Tab，背景仍受外层modal隔离。
+- [x] DOM测试对应上述事件；实际浏览器由T15核定位和focus。回归api-tokens自定义有效期/minmax，M6/M7调用编译契约不变，不运行未接通领域接口。
+- [x] M21保留双state、M22只pointer才能渲染各红；G。记录P13 R36共享根因在本Task覆盖，筛选页面验收仍P13；提交`fix(M4/P12): 让日期下拉由单一打开状态控制`。
 
 ## Task 9：四个基础属性下拉（约650–1100行）
 

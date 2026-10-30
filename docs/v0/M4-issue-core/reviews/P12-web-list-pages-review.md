@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T7 已完成，T8–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T8 已完成，T9–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -143,3 +143,14 @@ M15 原生排序退回旧字段、M16 全局 storage 覆盖确认排序、M17 �
 最终 10 文件 197 测试（0 skip）通过，t7-final-regression2；共享强制构建 t7-shared-build、类型 t7-types-final2、关键词/i18n-keys/sync、修改路径零 lint、格式与全仓 lint 通过，web cap132→130。过程中的拆夹具导入/未用符号、同时间 ID 降序预期写反和首次 autoscroll 测试未导入计数函数均单记，不算行为红。DateDropdown 嵌套按钮与 WorkItemFilterRoot 渲染通知仍按 T8/T13 根因处理，最终不能忽略。
 
 自查核日期来源、根 PATCH 入口、拒绝/晚答、唯一移动端容器、adapter 生命周期、selector 当前日期及重试集合，未见架构阻塞。T5 检查点 c7acea58 的准确远端 CI [41025097454](https://github.com/open-nerve/NerveProject/actions/runs/41025097454) attempt1 的 server/web/e2e 均成功；回执为 t5-ci-result/jobs.json。T6/T7 尚未作为新产品检查点推送，下一次完整 F 与推送按 T10。
+
+
+## 15. T8 单状态日期下拉（2026-10-30）
+
+DateDropdown 复用已锁定的 @nerve/propel Popover，一份受控状态承接 defaultOpen、选择关闭、Escape、离开焦点和外部点击；删除 useDropdown 与 ComboDropDown 的双状态。原生触发器始终挂载，Calendar 随面板挂载，因此 renderByDefault=false 也能由键盘打开；DropdownButton 使用已有 presentation 模式，清除改成有名称的兄弟按钮。保留 min/max、disabled、closeOnSelect、格式/tooltip 和 onClose；IME Escape 不关闭。新增日期/清除双语名称。
+
+10 项实际 DOM 测试覆盖 Enter/Space、选择后重开、Escape 还焦、组合键、范围、disabled、外点/焦点离开、相邻日历互斥、真实 ModalCore 背景隔离和清除。实际 CreateApiTokenForm 的 CustomSelect→DateDropdown→提交验证今天不可选、明天可选以及 expired_at 保留当前本地时间；未把 mock 表单测试当共享兼容证据。真实 Tab、定位及三浏览器仍由 T15 证明。
+
+基线 t8-date-red2 中 6 项行为/DOM 失败已修复；M21 引入独立面板状态使选后仍可见，M22 恢复 pointer-only 准备使键盘无法打开，均实际红，恢复原字节/hash 后绿。首轮新实现两个失败为 jsdom 未模拟按钮点击获焦及动画帧卸载，夹具按真实原生事件补齐，原日志保留。
+
+最终聚焦 t8-final-regression、共享强制构建 t8-shared-build、类型 t8-types、修改路径零 lint、web cap130、关键词/i18n keys/sync 与 diff-check 通过。DateDropdown 嵌套按钮警告已消失；WorkItemFilterRoot 渲染通知仍在 T13 清单，未视为最终页面豁免。自查核所有原 public props、单一状态、真实 token 消费者与模态隔离，无架构阻塞。

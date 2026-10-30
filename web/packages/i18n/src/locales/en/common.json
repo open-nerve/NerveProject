@@ -225,6 +225,8 @@
     }
   },
   "common": {
+    "date": "Date",
+    "clear_date": "Clear date",
     "states": "States",
     "state": "State",
     "state_groups": "State groups",
