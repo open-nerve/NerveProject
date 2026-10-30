@@ -1,5 +1,10 @@
 {
   "issue": {
+    "calendar": {
+      "due_before_start": "截止日期不能早于开始日期。",
+      "previous_period": "上一时间段",
+      "next_period": "下一时间段"
+    },
     "label": "{count, plural, one {工作项} other {工作项}}",
     "edit": "编辑工作项",
     "title": {

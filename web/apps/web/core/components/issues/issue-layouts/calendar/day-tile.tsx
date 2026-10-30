@@ -11,13 +11,12 @@ import type { Issue, IssueDetail } from "@nerve/api-client";
 import { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
-import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
+import { useTranslation } from "@nerve/i18n";
 import { observer } from "mobx-react";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { ICalendarDate } from "@nerve/types";
 // components
 import { cn, renderFormattedPayloadDate } from "@nerve/utils";
-import { useDropHighlight } from "@/hooks/use-drop-highlight";
 // helpers
 import { MONTHS_LIST } from "@nerve/constants";
 // types
@@ -75,7 +74,7 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
 
   const formattedDatePayload = renderFormattedPayloadDate(date.date);
 
-  const highlightIssueOnDrop = useDropHighlight(formattedDatePayload ?? "");
+  const { t } = useTranslation();
   const dayTileRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -100,18 +99,13 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
           if (!sourceData || !destinationData) return;
 
           const issueDetails = issues?.[sourceData?.id];
-          if (issueDetails?.start_date) {
-            const issueStartDate = new Date(issueDetails.start_date);
-            const targetDate = new Date(destinationData?.date);
-            const diffInDays = differenceInCalendarDays(targetDate, issueStartDate);
-            if (diffInDays < 0) {
-              setToast({
-                type: TOAST_TYPE.ERROR,
-                title: "Error!",
-                message: "Due date cannot be before the start date of the work item.",
-              });
-              return;
-            }
+          if (issueDetails?.start_date && destinationData.date < issueDetails.start_date) {
+            setToast({
+              type: TOAST_TYPE.ERROR,
+              title: t("toast.error"),
+              message: t("issue.calendar.due_before_start"),
+            });
+            return;
           }
 
           handleDragAndDrop(
@@ -120,11 +114,10 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
             sourceData?.date,
             destinationData?.date
           );
-          highlightIssueOnDrop(source?.element?.id, false);
         },
       })
     );
-  }, [formattedDatePayload, issues, handleDragAndDrop, highlightIssueOnDrop]);
+  }, [formattedDatePayload, issues, handleDragAndDrop, t]);
 
   if (!formattedDatePayload) return null;
   const issueIds = groups?.get(formattedDatePayload)?.rows.map((row) => row.id) ?? [];

@@ -1,4 +1,4 @@
-import { followInSession } from "@/lib/in-session";
+import { followInSession, sessionGuard } from "@/lib/in-session";
 import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
@@ -12,7 +12,9 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
+import { useDropHighlight } from "@/hooks/use-drop-highlight";
 
 import { EIssuesStoreType } from "@nerve/types";
 // hooks
@@ -78,6 +80,10 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
 
   const layout = displayFilters?.calendar?.layout ?? "month";
   const { startDate, endDate } = issueCalendarView.getStartAndEndDate(layout) ?? {};
+  const host = JSON.stringify([workspaceSlug, projectId, layout, startDate, endDate]);
+  const capture = useDetailScope(workspaceSlug ?? "", projectId, host, true);
+  const highlight = useDropHighlight(host);
+  const refuse = useRefusalToast();
   const staleRefresh = useIssueListRefresh(
     issues.currentList,
     [...groups.keys()]
@@ -113,17 +119,22 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
     sourceDate: string | undefined,
     destinationDate: string | undefined
   ) => {
-    if (!issueId || !destinationDate || !sourceDate || !issueProjectId) return;
-
+    if (!issueId || !destinationDate || !sourceDate || !issueProjectId || !dropIssue || !isEditingAllowed) return;
+    if (sourceDate === destinationDate || issueProjectId !== projectId || issueMap[issueId]?.target_date !== sourceDate)
+      return;
+    const binding = issues.currentList;
+    const sameHost = capture();
+    const sameSession = sessionGuard();
+    const current = () => sameHost() && sameSession() && issues.currentList === binding;
+    if (!binding || !current()) return;
     await followInSession(
       () => handleDragDrop(issueId, sourceDate, destinationDate, workspaceSlug, issueProjectId, dropIssue),
       {
-        failed: () => {
-          setToast({
-            title: "Error!",
-            type: TOAST_TYPE.ERROR,
-            message: "Failed to perform this action",
-          });
+        done: () => {
+          if (current()) highlight(`issue-${issueId}`, false, current);
+        },
+        failed: (error) => {
+          if (current()) refuse(error);
         },
       }
     );
@@ -163,6 +174,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
       <IssueListRetry {...staleRefresh} />
       <div className="h-full w-full overflow-hidden bg-surface-1 pt-4">
         <CalendarChart
+          readOnly={!isEditingAllowed}
           issuesFilterStore={issuesFilter}
           issues={issueMap}
           groups={groups}

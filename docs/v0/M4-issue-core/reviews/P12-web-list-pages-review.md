@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T6 已完成，T7–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T7 已完成，T8–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -128,3 +128,18 @@ M11（中间 below 算成 above）实际发送 2500 而非 3500；M12（相加�
 M15 原生排序退回旧字段、M16 全局 storage 覆盖确认排序、M17 链接追加旧片段均实际断言红，原字节/hash 恢复后绿，见 M15–M17 receipts。最终聚焦 9 文件 161 测试（0 skip）通过，t6-final-regression；共享包强制构建 t6-shared-build2、类型 t6-types-final、关键词 t6-keywords、lint t6-lint-final / t6-changed-lint-final、格式 t6-format 与 diff-check 均通过。首轮 shared build 命令目录写错、测试查询了旧 preferences 路径/错误 DOM 文本、路由夹具中间提交及分页 fixture 顺序问题的原始失败保留，不计行为红。四种排序实际二页与三浏览器留 T14/T15，阶段验收仍开放。
 
 自查核对所有 metadata 消费者、原生请求字段、确认状态来源、空组 loader 与首屏错误、真实目录链接及已有 filters 回归；无未决架构问题。T5 检查点 c7acea58 的远端 server/web 已通过，E2E 仍在运行，原始状态保存在忽略证据目录。
+
+
+## 14. T7 日历确认日期和添加已有（2026-10-30）
+
+真实月/周布局在 TZ=Pacific/Kiritimati（UTC+14）跨 2026/2027 年界验证当地日、日期范围和普通筛选交集，旧月成功/失败晚答均不能覆盖新月或弹旧错误。月/周范围沿用已有 store 与生成日期工具，未新增另一套日期查询。上一/下一时间段按钮补双语可访问名称。
+
+日期拖动仍仅发 target_date：确认前原日期/计数/卡片不变，也不高亮；成功后更新目的日和计数，同日不重复写，403/422 保留原日并按码提示。根宿主复用 DetailScope/会话/当前 binding，切范围后的晚答不执行反馈；高亮由已存在的宿主 hook 在确认后安排。早于 start_date 的本地限制直接比较日期字符串，使用双语明确文案。图表显式接成员编辑权限；访客无快建/添加已有和写请求，基线已有快建保护，本次只是显式贯通只读参数（t7-guest-red 命名保留，但实际为通过，不计行为红）。
+
+日历当天入口、真实 Modal/搜索/写/列表消费者组合覆盖：空词和输入均保留 project_id/target_date:none，有截止日期或开始日期晚于目标日的项不可选；跨词已选去重，两个 PATCH 一成功一失败后仅留下失败项，重试只发它，确认后卡片在目标日且全成功才关。关闭旧日期选择器再打开新日期，旧拒绝不关新窗/不弹错；新窗提交使用新日。T1 的部分成功处理直接复用，无第二套选择或重试缓存。
+
+另修两个真实页面缺口：移动端当天列表重复挂载已删除；自动滚动旧 effect 读 ref.current 在加载骨架卸载后的首次容器挂载漏注册，改为跟随实际容器值并在卸载释放。对应 DOM 行数和实际 adapter 注册/清理断言先红后绿。M18 把本地日改 UTC 导致 31 日显示 1 日；M19 丢 none 搜索条件；M20 缓存首次选择导致部分重试发第 4 次 PATCH；三项有效行为红、原字节/hash 恢复绿，原始材料为 M18–M20 receipts。
+
+最终 10 文件 197 测试（0 skip）通过，t7-final-regression2；共享强制构建 t7-shared-build、类型 t7-types-final2、关键词/i18n-keys/sync、修改路径零 lint、格式与全仓 lint 通过，web cap132→130。过程中的拆夹具导入/未用符号、同时间 ID 降序预期写反和首次 autoscroll 测试未导入计数函数均单记，不算行为红。DateDropdown 嵌套按钮与 WorkItemFilterRoot 渲染通知仍按 T8/T13 根因处理，最终不能忽略。
+
+自查核日期来源、根 PATCH 入口、拒绝/晚答、唯一移动端容器、adapter 生命周期、selector 当前日期及重试集合，未见架构阻塞。T5 检查点 c7acea58 的准确远端 CI [41025097454](https://github.com/open-nerve/NerveProject/actions/runs/41025097454) attempt1 的 server/web/e2e 均成功；回执为 t5-ci-result/jobs.json。T6/T7 尚未作为新产品检查点推送，下一次完整 F 与推送按 T10。

@@ -99,13 +99,13 @@ make e2e
 
 ## Task 7：日历月周、拖动与添加已有（约550–1000行）
 
-**Files：** L/calendar、quick-add/form/calendar；新view.test.tsx，扩quick-add-issue-actions.test.tsx。
+**Files：** L/calendar、quick-add/form/calendar；新view.test.tsx、selection.test.tsx，共用 fake-calendar 真实宿主/transport 夹具，并回归 quick-add-issue-actions.test.tsx。
 
-- [ ] 日历月/周范围、当地日YYYY-MM-DD、跨月/年/时区边界，current scope旧查询/旧错误不覆盖新日历；日期范围与基础筛选AND，不丢none的独立搜索合同。
-- [ ] 拖动只有target_date PATCH；确认后日期/计数/位置更新，拒绝原日保留；同日不重复写。状态/标签/负责人字段不随拖动误发。
-- [ ] 添加已有空词/输入搜索都带project_id与target_date:[none]；开始日期晚于目标日禁选，已含target_date项不进候选。多选去重，await allSettled等价完整结果；保存已成功ID、只保留失败ID待重试，错误按码显示；确认后的读失败不再次PATCH已成功项。
-- [ ] host关闭/换日/换项目/退出后不关闭新selector或toast，失败保留当前选择。真实modal+calendar组合测试，不能只spy update被调用就称完成。
-- [ ] 聚焦view/quick-add/selector/root日期确认测试；M18UTC错一天、M19target_date条件丢失、M20部分成功重试再次写成功项各红；G。提交`fix(M4/P12): 完成日历日期与添加已有的确认流程`。
+- [x] 日历月/周范围、当地日YYYY-MM-DD、跨月/年/时区边界，current scope旧查询/旧错误不覆盖新日历；日期范围与基础筛选AND，不丢none的独立搜索合同。
+- [x] 拖动只有target_date PATCH；确认后日期/计数/位置更新，拒绝原日保留；同日不重复写。状态/标签/负责人字段不随拖动误发。
+- [x] 添加已有空词/输入搜索都带project_id与target_date:[none]；开始日期晚于目标日禁选，已含target_date项不进候选。多选去重，await allSettled等价完整结果；保存已成功ID、只保留失败ID待重试，错误按码显示；确认后的读失败不再次PATCH已成功项。
+- [x] host关闭/换日/换项目/退出后不关闭新selector或toast，失败保留当前选择。真实modal+calendar组合测试，不能只spy update被调用就称完成。
+- [x] 聚焦view/quick-add/selector/root日期确认测试；M18UTC错一天、M19target_date条件丢失、M20部分成功重试再次写成功项各红；G。提交`fix(M4/P12): 完成日历日期与添加已有的确认流程`。
 
 ## Task 8：DateDropdown一份状态与懒渲染（约500–900行）
 

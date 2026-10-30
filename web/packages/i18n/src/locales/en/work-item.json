@@ -1,5 +1,10 @@
 {
   "issue": {
+    "calendar": {
+      "due_before_start": "The due date cannot be before the start date.",
+      "previous_period": "Previous period",
+      "next_period": "Next period"
+    },
     "label": "{count, plural, one {Work item} other {Work items}}",
     "edit": "Edit work item",
     "title": {
