@@ -10,7 +10,7 @@ import type { MutableRefObject } from "react";
 import React, { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
-import { attachInstruction, extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
+import { attachClosestEdge, extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { observer } from "mobx-react";
 // nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
@@ -26,6 +26,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 // types
 import { HIGHLIGHT_CLASS, getIssueBlockId, isIssueNew } from "../utils";
 import { IssueBlock } from "./block";
+import { useRowExpansion } from "../row-expansion";
 import { useRegisterIdentifierWidth } from "./identifier-width";
 import type { TRenderQuickActions } from "./list-view-types";
 
@@ -66,7 +67,7 @@ export const IssueBlockRoot = observer(function IssueBlockRoot(props: Props) {
     shouldRenderByDefault,
   } = props;
   // states
-  const [isExpanded, setExpanded] = useState<boolean>(false);
+  const [isExpanded, setExpanded] = useRowExpansion(JSON.stringify([groupId, issueId, nestingLevel]));
   const [instruction, setInstruction] = useState<"DRAG_OVER" | "DRAG_BELOW" | undefined>(undefined);
   const [isCurrentBlockDragging, setIsCurrentBlockDragging] = useState(false);
   // ref
@@ -92,25 +93,11 @@ export const IssueBlockRoot = observer(function IssueBlockRoot(props: Props) {
         getData: ({ input, element }) => {
           const data = { id: issueId, type: "ISSUE" };
 
-          // attach instruction for last in list
-          return attachInstruction(data, {
-            input,
-            element,
-            currentLevel: 0,
-            indentPerLevel: 0,
-            mode: isLastChild ? "last-in-group" : "standard",
-          });
+          return attachClosestEdge(data, { input, element, allowedEdges: ["top", "bottom"] });
         },
         onDrag: ({ self }) => {
-          const extractedInstruction = extractInstruction(self?.data)?.type;
-          // check if the highlight is to be shown above or below
-          setInstruction(
-            extractedInstruction
-              ? extractedInstruction === "reorder-below" && isLastChild
-                ? "DRAG_BELOW"
-                : "DRAG_OVER"
-              : undefined
-          );
+          const edge = extractClosestEdge(self.data);
+          setInstruction(edge === "bottom" ? "DRAG_BELOW" : edge === "top" ? "DRAG_OVER" : undefined);
         },
         onDragLeave: () => {
           setInstruction(undefined);
@@ -120,7 +107,7 @@ export const IssueBlockRoot = observer(function IssueBlockRoot(props: Props) {
         },
       })
     );
-  }, [issueId, isLastChild, issueBlockRef, isSubIssue, canDropOverIssue, setInstruction]);
+  }, [issueId, issueBlockRef, isSubIssue, canDropOverIssue, setInstruction]);
 
   useOutsideClickDetector(issueBlockRef, () => {
     issueBlockRef?.current?.classList?.remove(HIGHLIGHT_CLASS);
@@ -179,7 +166,7 @@ export const IssueBlockRoot = observer(function IssueBlockRoot(props: Props) {
             shouldRenderByDefault={isExpanded}
           />
         ))}
-      {isLastChild && <DropIndicator classNames="absolute z-[2]" isVisible={instruction === "DRAG_BELOW"} />}
+      <DropIndicator classNames="absolute bottom-0 z-[2]" isVisible={instruction === "DRAG_BELOW"} />
     </div>
   );
 });

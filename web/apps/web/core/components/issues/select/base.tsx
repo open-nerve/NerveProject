@@ -1,52 +1,64 @@
-import { Field, FieldError } from "@makeplane/propel/components/field";
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import React, { useEffect, useRef, useState, useId } from "react";
+/** Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only. See the LICENSE file for details. */
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { Placement } from "@popperjs/core";
 import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
-import { GroupOutline, LabelsOutline, LoadingOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
-import { Combobox } from "@headlessui/react";
+import { Combobox, Popover } from "@headlessui/react";
+import { Field, FieldError } from "@makeplane/propel/components/field";
+import { LabelsOutline, LoadingOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import { getRandomLabelColor } from "@nerve/constants";
-// nerve imports
-import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
 import type { Label } from "@nerve/api-client";
-import { cn, isComposing } from "@nerve/utils";
-// components
+import { cn, isComposing, sortBySelectedFirst } from "@nerve/utils";
 import { IssueLabelsList } from "@/components/ui/labels-list";
-// hooks
-import { useDropdownKeyDown } from "@/hooks/use-dropdown-key-down";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import type { IssueLabelCreation } from "@/components/labels/use-label-changes";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
 
 export type TWorkItemLabelSelectBaseProps = {
   buttonClassName?: string;
   buttonContainerClassName?: string;
+  className?: string;
+  optionsClassName?: string;
+  issueName?: string;
   createLabelEnabled?: boolean;
   disabled?: boolean;
   getLabelById: (labelId: string) => Label | undefined;
-  label?: React.ReactNode;
+  label?: ReactNode;
   labelIds: string[];
   isInitializing?: boolean;
-  readStatus?: React.ReactNode;
+  readStatus?: ReactNode;
+  /** The caller owns the confirmed write and its refusal. This picker retains input on rejection. */
   onChange: (value: string[]) => void | Promise<void>;
   onDropdownOpen?: () => void;
+  onClose?: () => void;
+  onCreated?: (label: Label) => void;
+  onChangeError?: (error: unknown) => void;
   placement?: Placement;
   onCreateLabel?: IssueLabelCreation;
   tabIndex?: number;
   value: string[];
+  /** Existing detail and row pickers show every label; the form groups labels under their parent. */
+  grouped?: boolean;
 };
+
+/** One popup lifetime, independent of rerenders while a directory or write settles. */
+function PickerLifetime(props: { opened: () => void; closed: () => void }) {
+  const [callbacks] = useState(() => props);
+  useEffect(() => {
+    callbacks.opened();
+    return callbacks.closed;
+  }, [callbacks]);
+  return null;
+}
 
 export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase(props: TWorkItemLabelSelectBaseProps) {
   const {
     buttonClassName,
     buttonContainerClassName,
+    className,
+    optionsClassName,
+    issueName,
     createLabelEnabled = false,
     disabled = false,
     getLabelById,
@@ -56,311 +68,272 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
     readStatus,
     onChange,
     onDropdownOpen,
+    onClose,
+    onCreated,
+    onChangeError,
     placement,
     onCreateLabel,
     tabIndex,
     value,
+    grouped = true,
   } = props;
-  // refs
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  // states
+  const { t } = useTranslation();
+  const { isMobile } = usePlatformOS();
   const [query, setQuery] = useState("");
   const [nameError, setNameError] = useState<string>();
   const errorId = useId();
-  const pending = useRef(false);
-  const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
-  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [submitting, setSubmitting] = useState<boolean>(false);
-  // nerve hooks
-  const { t } = useTranslation();
-  const toastRefusal = useRefusalToast();
-  // store hooks
-  const { isMobile } = usePlatformOS();
-  // popper-js init
-  const { styles, attributes } = usePopper(referenceElement, popperElement, {
+  const [submitting, setSubmitting] = useState(false);
+  const owner = useRef<symbol | null>(null);
+  const pending = useRef<symbol | null>(null);
+  const [reference, setReference] = useState<HTMLButtonElement | null>(null);
+  const [panel, setPanel] = useState<HTMLElement | null>(null);
+  const { styles, attributes } = usePopper(reference, panel, {
     placement: placement ?? "bottom-start",
+    modifiers: [{ name: "preventOverflow", options: { padding: 12 } }],
   });
-  // derived values
-  const labelsList = labelIds.map((labelId) => getLabelById(labelId)).filter((label) => !!label);
-  const filteredOptions =
-    query === "" ? labelsList : labelsList?.filter((l) => l.name.toLowerCase().includes(query.toLowerCase()));
-
-  const onOpen = () => {
-    if (referenceElement) referenceElement.focus();
-    onDropdownOpen?.();
-  };
-
-  const handleClose = () => {
-    if (isDropdownOpen) setIsDropdownOpen(false);
-    if (referenceElement) referenceElement.blur();
-    setQuery("");
-  };
-
-  const toggleDropdown = () => {
-    if (!isDropdownOpen) onOpen();
-    setIsDropdownOpen((prevIsOpen) => !prevIsOpen);
-  };
-
-  const dropdownOnChange = (val: string[]) => {
-    onChange(val);
-  };
-
-  const searchInputKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const q = query.trim();
-    if (q !== "" && e.key === "Escape") {
-      e.preventDefault();
-      e.stopPropagation();
-      setQuery("");
-      return;
-    }
-    if (
-      !isInitializing &&
-      !readStatus &&
-      q !== "" &&
-      e.key === "Enter" &&
-      !isComposing(e.nativeEvent) &&
-      createLabelEnabled &&
-      filteredOptions.length === 0 &&
-      !submitting
-    ) {
-      e.preventDefault();
-      await handleAddLabel(q);
-    }
-  };
-  const handleKeyDown = useDropdownKeyDown(toggleDropdown, handleClose);
-
-  const handleOnClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    e.stopPropagation();
-    e.preventDefault();
-    toggleDropdown();
-  };
-
-  useOutsideClickDetector(dropdownRef, handleClose);
-
-  useEffect(() => {
-    if (isDropdownOpen && inputRef.current && !isMobile) {
-      inputRef.current.focus();
-    }
-  }, [isDropdownOpen, isMobile]);
-
-  const handleAddLabel = async (labelName: string) => {
-    if (!onCreateLabel || pending.current) return;
-    const name = labelName.trim();
-    if (!name) return;
-    pending.current = true;
+  const focusInput = useCallback(
+    (input: HTMLInputElement | null) => {
+      if (!isMobile) input?.focus({ preventScroll: true });
+    },
+    [isMobile]
+  );
+  const labels = labelIds.map((id) => getLabelById(id)).filter((label) => !!label);
+  const matches = (label: Label) => label.name.toLowerCase().includes(query.trim().toLowerCase());
+  const visible = grouped
+    ? labels.filter(
+        (label) =>
+          !label.parent_id && (matches(label) || labels.some((child) => child.parent_id === label.id && matches(child)))
+      )
+    : (
+        sortBySelectedFirst(
+          labels.filter(matches).map((label) => ({ value: label.id, label })),
+          value
+        ) ?? []
+      ).map((item) => item.label);
+  const begin = () => {
+    if (disabled || pending.current || !owner.current) return;
+    const current = owner.current;
+    pending.current = current;
     setSubmitting(true);
-    setNameError(undefined);
-    const selectConfirmed = async (label: Label) => {
-      try {
-        await onChange(Array.from(new Set([...value, label.id])));
-        setQuery("");
-      } catch (error) {
-        toastRefusal(error);
-      }
-    };
+    return current;
+  };
+  const finish = (current: symbol) => {
+    if (owner.current !== current) return;
+    pending.current = null;
+    setSubmitting(false);
+  };
+  const select = async (ids: string[]) => {
+    const current = begin();
+    if (!current) return;
     try {
-      const existing = labelsList.find((label) => label.name.toLowerCase() === name.toLowerCase());
-      if (existing) await selectConfirmed(existing);
-      else
-        await onCreateLabel(
-          { name, color: getRandomLabelColor() },
-          (_field, message) => setNameError(message),
-          selectConfirmed
-        );
+      await onChange([...new Set(ids)]);
+    } catch (error) {
+      if (owner.current === current) onChangeError?.(error);
     } finally {
-      pending.current = false;
-      setSubmitting(false);
+      finish(current);
     }
   };
-
-  return (
-    <Combobox
-      as="div"
-      role="presentation"
-      ref={dropdownRef}
-      tabIndex={tabIndex}
-      value={value}
-      onChange={dropdownOnChange}
-      className="relative h-full flex-shrink-0"
-      multiple
-      disabled={disabled}
-      onKeyDown={handleKeyDown}
+  const create = async () => {
+    const name = query.trim();
+    if (!name || !createLabelEnabled || !onCreateLabel || isInitializing || readStatus) return;
+    const current = begin();
+    if (!current) return;
+    setNameError(undefined);
+    try {
+      await onCreateLabel(
+        { name, color: getRandomLabelColor() },
+        (_field, message) => {
+          if (owner.current === current) setNameError(message);
+        },
+        async (label) => {
+          if (owner.current !== current) return;
+          onCreated?.(label);
+          try {
+            await onChange([...new Set([...value, label.id])]);
+            if (owner.current === current) setQuery("");
+          } catch (error) {
+            if (owner.current === current) onChangeError?.(error);
+          }
+        }
+      );
+    } finally {
+      finish(current);
+    }
+  };
+  const option = (label: Label) => (
+    <Combobox.Option
+      key={label.id}
+      as="li"
+      value={label.id}
+      className={({ active }) =>
+        cn(
+          "flex cursor-pointer items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 text-secondary select-none",
+          active && "bg-layer-1"
+        )
+      }
     >
-      <button
-        type="button"
-        ref={setReferenceElement}
-        className={cn("flex h-full cursor-pointer items-center gap-2 text-11", buttonContainerClassName)}
-        onClick={handleOnClick}
-      >
-        {buttonLabel ? (
-          buttonLabel
-        ) : value && value.length > 0 ? (
-          <span className={cn("flex h-full items-center justify-center gap-2 text-11", buttonClassName)}>
-            <IssueLabelsList
-              labels={value.map((v) => labelsList?.find((l) => l.id === v)) ?? []}
-              length={3}
-              showLength
-            />
+      {({ selected }) => (
+        <>
+          <span className="flex items-center gap-2 truncate">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: label.color }} />
+            {label.name}
           </span>
-        ) : (
-          <div
+          {selected && <TickOutline className="h-3.5 w-3.5 shrink-0" />}
+        </>
+      )}
+    </Combobox.Option>
+  );
+  return (
+    <Popover className={cn("relative h-full shrink-0", className)}>
+      {({ open, close }) => (
+        <>
+          <Popover.Button
+            type="button"
+            ref={setReference}
+            disabled={disabled || submitting}
+            tabIndex={tabIndex}
+            aria-label={issueName ? `${t("common.labels")}: ${issueName}` : t("common.labels")}
             className={cn(
-              "flex h-full items-center justify-center gap-1 rounded-sm border-[0.5px] border-strong px-2 py-1 text-11 hover:bg-layer-1",
-              buttonClassName
+              "flex h-full items-center gap-2 text-11 focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong",
+              buttonContainerClassName
             )}
           >
-            <LabelsOutline className="h-3 w-3 flex-shrink-0" />
-            <span>{t("labels")}</span>
-          </div>
-        )}
-      </button>
-      {isDropdownOpen && (
-        <Combobox.Options as="ul" className="fixed z-10" static>
-          <div
-            className="my-1 w-48 rounded-sm border-[0.5px] border-strong bg-surface-1 px-2 py-2.5 text-11 shadow-raised-200 focus:outline-none"
-            ref={setPopperElement}
+            {buttonLabel ??
+              (value.length > 0 ? (
+                <span className={cn("flex h-full items-center gap-2", buttonClassName)}>
+                  <IssueLabelsList labels={value.map((id) => getLabelById(id))} length={3} showLength />
+                </span>
+              ) : (
+                <span
+                  className={cn(
+                    "flex h-full items-center gap-1 rounded-sm border-[0.5px] border-strong px-2 py-1",
+                    buttonClassName
+                  )}
+                >
+                  <LabelsOutline className="h-3 w-3" />
+                  {t("labels")}
+                </span>
+              ))}
+          </Popover.Button>
+          {open && (
+            <PickerLifetime
+              opened={() => {
+                owner.current = Symbol("label-picker");
+                onDropdownOpen?.();
+              }}
+              closed={() => {
+                owner.current = null;
+                pending.current = null;
+                setSubmitting(false);
+                setQuery("");
+                setNameError(undefined);
+                onClose?.();
+              }}
+            />
+          )}
+          <Popover.Panel
+            portal
+            data-prevent-outside-click
+            ref={setPanel}
             style={styles.popper}
             {...attributes.popper}
+            className={cn(
+              "z-30 my-1 w-48 rounded-sm border-[0.5px] border-strong bg-surface-1 px-2 py-2.5 text-11 shadow-raised-200",
+              optionsClassName
+            )}
+            onKeyDownCapture={(event) => {
+              if (event.key !== "Escape") return;
+              event.stopPropagation();
+              if (isComposing(event.nativeEvent)) return;
+              event.preventDefault();
+              close();
+            }}
           >
-            <Field name="name" invalid={!!nameError}>
-              <div className="flex items-center gap-1.5 rounded-sm border border-subtle bg-surface-2 px-2">
-                <SearchOutline className="h-3.5 w-3.5 text-placeholder" />
-                <Combobox.Input
-                  aria-invalid={!!nameError}
-                  aria-describedby={nameError ? errorId : undefined}
-                  as="input"
-                  ref={inputRef}
-                  className="w-full bg-transparent py-1 text-11 text-secondary placeholder:text-placeholder focus:outline-none"
-                  onChange={(event) => {
-                    setQuery(event.target.value);
-                    setNameError(undefined);
-                  }}
-                  placeholder={t("search")}
-                  displayValue={(assigned: any) => assigned?.name}
-                  onKeyDown={searchInputKeyDown}
-                />
-              </div>
-              {nameError && (
-                <FieldError match size="lg" id={errorId}>
-                  {nameError}
-                </FieldError>
-              )}
-            </Field>
-            <div className="mt-2 max-h-48 overflow-y-scroll">
-              {readStatus ? (
-                readStatus
-              ) : isInitializing ? (
-                <p>{t("common.loading")}</p>
-              ) : labelsList && filteredOptions ? (
-                filteredOptions.length > 0 ? (
-                  <ul className="space-y-1">
-                    {filteredOptions.map((label) => {
-                      const children = labelsList?.filter((l) => l.parent_id === label.id);
-
-                      if (children.length === 0) {
-                        if (!label.parent_id)
-                          return (
-                            <Combobox.Option
-                              as="li"
-                              key={label.id}
-                              className={({ active }) =>
-                                `${
-                                  active ? "bg-layer-1" : ""
-                                } group flex w-full cursor-pointer items-center gap-2 truncate rounded-sm px-1 py-1.5 text-secondary select-none`
-                              }
-                              value={label.id}
-                            >
-                              {({ selected }) => (
-                                <div className="flex w-full justify-between gap-2 rounded-sm">
-                                  <div className="flex items-center justify-start gap-2 truncate">
-                                    <span
-                                      className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
-                                      style={{
-                                        backgroundColor: label.color,
-                                      }}
-                                    />
-                                    <span className="truncate">{label.name}</span>
-                                  </div>
-                                  <div className="flex shrink-0 items-center justify-center rounded-sm p-1">
-                                    <TickOutline className={`h-3 w-3 ${selected ? "opacity-100" : "opacity-0"}`} />
-                                  </div>
-                                </div>
-                              )}
-                            </Combobox.Option>
+            <Combobox
+              multiple
+              value={value}
+              disabled={disabled || submitting}
+              onChange={(ids: string[]) => {
+                void select(ids);
+              }}
+            >
+              <Combobox.Options static modal={false} as="div">
+                <Field name="name" invalid={!!nameError}>
+                  <div className="flex items-center gap-1.5 rounded-sm border border-subtle bg-surface-2 px-2">
+                    <SearchOutline className="h-3.5 w-3.5 text-placeholder" />
+                    <Combobox.Input
+                      ref={focusInput}
+                      value={query}
+                      aria-label={t("common.search.label")}
+                      aria-invalid={!!nameError}
+                      aria-describedby={nameError ? errorId : undefined}
+                      className="w-full bg-transparent py-1 text-11 text-secondary placeholder:text-placeholder focus:outline-none"
+                      placeholder={t("common.search.label")}
+                      onChange={(event) => {
+                        setQuery(event.target.value);
+                        setNameError(undefined);
+                      }}
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === "Enter" &&
+                          !isComposing(event.nativeEvent) &&
+                          visible.length === 0 &&
+                          query.trim() &&
+                          createLabelEnabled
+                        ) {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          void create();
+                        }
+                      }}
+                    />
+                  </div>
+                  {nameError && (
+                    <FieldError match size="lg" id={errorId}>
+                      {nameError}
+                    </FieldError>
+                  )}
+                </Field>
+                <div className="mt-2 max-h-48 overflow-y-auto">
+                  {readStatus ??
+                    (isInitializing ? (
+                      <p>{t("common.loading")}</p>
+                    ) : visible.length > 0 ? (
+                      <ul className="space-y-1">
+                        {visible.map((label) => {
+                          const children = grouped ? labels.filter((child) => child.parent_id === label.id) : [];
+                          return children.length ? (
+                            <li key={label.id} className="border-y border-subtle">
+                              <div className="p-2 text-primary">{label.name}</div>
+                              <ul>{children.filter((child) => matches(label) || matches(child)).map(option)}</ul>
+                            </li>
+                          ) : (
+                            option(label)
                           );
-                      } else
-                        return (
-                          <li key={label.id} className="border-y border-subtle">
-                            <div className="flex items-center gap-2 truncate p-2 text-primary select-none">
-                              <GroupOutline className="h-3 w-3" /> {label.name}
-                            </div>
-                            <ul>
-                              {children.map((child) => (
-                                <Combobox.Option
-                                  as="li"
-                                  key={child.id}
-                                  className={({ active }) =>
-                                    `${
-                                      active ? "bg-layer-1" : ""
-                                    } group flex min-w-[14rem] cursor-pointer items-center gap-2 truncate rounded-sm px-1 py-1.5 text-secondary select-none`
-                                  }
-                                  value={child.id}
-                                >
-                                  {({ selected }) => (
-                                    <div className="flex w-full justify-between gap-2 rounded-sm">
-                                      <div className="flex items-center justify-start gap-2">
-                                        <span
-                                          className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
-                                          style={{
-                                            backgroundColor: child?.color,
-                                          }}
-                                        />
-                                        <span>{child.name}</span>
-                                      </div>
-                                      <div className="flex items-center justify-center rounded-sm p-1">
-                                        <TickOutline className={`h-3 w-3 ${selected ? "opacity-100" : "opacity-0"}`} />
-                                      </div>
-                                    </div>
-                                  )}
-                                </Combobox.Option>
-                              ))}
-                            </ul>
-                          </li>
-                        );
-                    })}
-                  </ul>
-                ) : submitting ? (
-                  <LoadingOutline className="h-3.5 w-3.5 animate-spin" />
-                ) : createLabelEnabled ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!query.length) return;
-                      handleAddLabel(query);
-                    }}
-                    className={`text-left text-secondary ${query.length ? "cursor-pointer" : "cursor-default"}`}
-                  >
-                    {/* TODO: translate here */}
-                    {query.length ? (
-                      <>
-                        + Add <span className="text-primary">&quot;{query}&quot;</span> to labels
-                      </>
+                        })}
+                      </ul>
+                    ) : submitting ? (
+                      <LoadingOutline className="h-3.5 w-3.5 animate-spin" />
+                    ) : createLabelEnabled ? (
+                      <button
+                        type="button"
+                        disabled={disabled || submitting || !query.trim()}
+                        onClick={() => {
+                          void create();
+                        }}
+                        className="text-left text-secondary"
+                      >
+                        {query.trim() ? `${t("common.add_label")}: ${query.trim()}` : t("label.create.type")}
+                      </button>
                     ) : (
-                      t("label.create.type")
-                    )}
-                  </button>
-                ) : (
-                  <p className="px-1.5 py-1 text-placeholder italic">{t("no_matching_results")}</p>
-                )
-              ) : (
-                <p className="px-1.5 py-1 text-placeholder italic">{t("loading")}</p>
-              )}
-            </div>
-          </div>
-        </Combobox.Options>
+                      <p>{t("common.search.no_matching_results")}</p>
+                    ))}
+                </div>
+              </Combobox.Options>
+            </Combobox>
+          </Popover.Panel>
+        </>
       )}
-    </Combobox>
+    </Popover>
   );
 });

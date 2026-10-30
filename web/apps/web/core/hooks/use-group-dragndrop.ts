@@ -3,17 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
-import { followInSession } from "@/lib/in-session";
-
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { useParams } from "react-router";
+import { followInSession, sessionGuard } from "@/lib/in-session";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { EIssuesStoreType } from "@nerve/types";
 import type { TIssueGroupByOptions, TIssueOrderByOptions } from "@nerve/types";
 import type { GroupDropLocation } from "@/components/issues/issue-layouts/utils";
-import { handleGroupDragDrop } from "@/components/issues/issue-layouts/utils";
+import { getIssueBlockId, handleGroupDragDrop } from "@/components/issues/issue-layouts/utils";
+import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
 import { useIssueDetail } from "./store/use-issue-detail";
 import { useIssues } from "./store/use-issues";
 import { useIssuesActions } from "./use-issues-actions";
+import { useRefusalToast } from "./use-refusal-toast";
+import { useDropHighlight } from "./use-drop-highlight";
 
 type DNDStoreType =
   | EIssuesStoreType.PROJECT
@@ -27,47 +29,64 @@ export const useGroupIssuesDragNDrop = (
   groupBy: TIssueGroupByOptions | undefined,
   subGroupBy?: TIssueGroupByOptions
 ) => {
+  const { workspaceSlug, projectId } = useParams();
   const {
+    rootIssueStore: root,
     issue: { getIssueById },
   } = useIssueDetail();
   const dropIssue = useIssuesActions(storeType === EIssuesStoreType.WORKSPACE_DRAFT ? undefined : storeType)?.dropIssue;
-  const {
-    issues: { getIssueIds },
-  } = useIssues(storeType);
+  const { issues } = useIssues(storeType);
+  const scope = JSON.stringify([storeType, orderBy, groupBy, subGroupBy]);
+  const capture = useDetailScope(workspaceSlug ?? "", projectId, scope, true);
+  const highlight = useDropHighlight(JSON.stringify([workspaceSlug, projectId, scope]));
+  const refuse = useRefusalToast();
 
-  const handleOnDrop = async (source: GroupDropLocation, destination: GroupDropLocation) => {
+  return async (source: GroupDropLocation, destination: GroupDropLocation) => {
+    if (!dropIssue || !source.id || source.id === destination.id) return;
+    // Other sorts may move between groups, but never manually reorder within one group.
     if (
-      source.columnId &&
-      destination.columnId &&
-      destination.columnId === source.columnId &&
-      destination.id === source.id
+      orderBy !== "sort_order" &&
+      source.groupId === destination.groupId &&
+      source.subGroupId === destination.subGroupId
     )
       return;
-
-    if (!dropIssue) return;
+    const issue = getIssueById(source.id);
+    if (!issue || !("currentList" in issues)) return;
+    const binding = issues.currentList;
+    const sameHost = capture();
+    const sameSession = sessionGuard();
+    const permission = root.permissionReads.identity(issue.workspace_id, [issue.project_id], true);
+    const current = () =>
+      sameHost() &&
+      sameSession() &&
+      issues.currentList === binding &&
+      root.permissionReads.identity(issue.workspace_id, [issue.project_id], true) === permission;
+    if (!binding || !current()) return;
     await followInSession(
       () =>
         handleGroupDragDrop(
           source,
           destination,
           getIssueById,
-          getIssueIds,
+          issues.getIssueIds,
           dropIssue,
           groupBy,
           subGroupBy,
           orderBy !== "sort_order"
         ),
       {
-        failed: () => {
-          setToast({
-            title: "Error!",
-            type: TOAST_TYPE.ERROR,
-            message: "Failed to perform this action",
-          });
+        done: (changed) => {
+          if (changed && current())
+            highlight(
+              getIssueBlockId(source.id, destination.groupId, destination.subGroupId),
+              orderBy !== "sort_order",
+              current
+            );
+        },
+        failed: (error) => {
+          if (current() && !(error instanceof SessionChangedError)) refuse(error);
         },
       }
     );
   };
-
-  return handleOnDrop;
 };

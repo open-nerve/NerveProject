@@ -8,7 +8,7 @@ import type { Group } from "@/lib/paged-groups";
 
 import type { Issue, IssueDetail } from "@nerve/api-client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
@@ -84,7 +84,7 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
   // states
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   //refs
-  const scrollableContainerRef = useRef<HTMLDivElement | null>(null);
+  const [scrollableContainer, setScrollableContainer] = useState<HTMLDivElement | null>(null);
   // store hooks
   const {
     issues: { viewFlags },
@@ -102,7 +102,7 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
 
   // Enable Auto Scroll for calendar
   useEffect(() => {
-    const element = scrollableContainerRef.current;
+    const element = scrollableContainer;
 
     if (!element) return;
 
@@ -111,7 +111,7 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
         element,
       })
     );
-  }, [scrollableContainerRef?.current]);
+  }, [scrollableContainer]);
 
   if (!calendarPayload || !formattedDatePayload)
     return (
@@ -136,20 +136,20 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
             className={cn("flex w-full flex-col overflow-y-auto md:h-full", {
               "vertical-scrollbar scrollbar-lg": windowWidth > 768,
             })}
-            ref={scrollableContainerRef}
+            ref={setScrollableContainer}
           >
             <CalendarWeekHeader isLoading={!issues} showWeekends={showWeekends} />
             <div className="h-full w-full">
               {layout === "month" && (
                 <div className="grid h-full w-full grid-cols-1 divide-y-[0.5px] divide-subtle-1">
                   {allWeeksOfActiveMonth &&
-                    Object.values(allWeeksOfActiveMonth).map((week: ICalendarWeek, weekIndex) => (
+                    Object.entries(allWeeksOfActiveMonth).map(([weekKey, week]: [string, ICalendarWeek]) => (
                       <CalendarWeekDays
                         selectedDate={selectedDate}
                         setSelectedDate={setSelectedDate}
                         handleDragAndDrop={handleDragAndDrop}
                         issuesFilterStore={issuesFilterStore}
-                        key={weekIndex}
+                        key={weekKey}
                         week={week}
                         issues={issues}
                         groups={groups}
@@ -213,30 +213,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
             </div>
           </div>
         </IssueLayoutHOC>
-
-        {/* mobile view */}
-        <div className="md:hidden">
-          <p className="p-4 text-18 font-semibold">
-            {`${selectedDate.getDate()} ${
-              MONTHS_LIST[selectedDate.getMonth() + 1].title
-            }, ${selectedDate.getFullYear()}`}
-          </p>
-          <CalendarIssueBlocks
-            date={selectedDate}
-            issueIdList={issueIdList}
-            quickActions={quickActions}
-            loadMoreIssues={loadMoreIssues}
-            getPaginationData={getPaginationData}
-            getGroupIssueCount={getGroupIssueCount}
-            enableQuickIssueCreate={enableQuickAdd}
-            disableIssueCreation={!enableIssueCreation}
-            quickAddCallback={quickAddCallback}
-            readOnly={readOnly}
-            canEditProperties={canEditProperties}
-            isDragDisabled
-            isMobileView
-          />
-        </div>
       </div>
     </>
   );

@@ -1,3 +1,4 @@
+import { getGroupByColumns } from "../group-columns";
 import type { IssueCreate } from "@nerve/api-client";
 import type { Group } from "@/lib/paged-groups";
 /**
@@ -29,7 +30,7 @@ import type {
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // utils
 import type { GroupDropLocation } from "../utils";
-import { getGroupByColumns, isWorkspaceLevel } from "../utils";
+import { isWorkspaceLevel } from "../utils";
 import { ListGroup } from "./list-group";
 import type { TRenderQuickActions } from "./list-view-types";
 
@@ -87,6 +88,8 @@ export const List = observer(function List(props: IList) {
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
+    workspaceSlug,
+    projectId,
   });
 
   // Enable Auto Scroll for Main Kanban

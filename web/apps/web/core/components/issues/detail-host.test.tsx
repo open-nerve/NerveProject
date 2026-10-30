@@ -44,7 +44,9 @@ let element: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 type Modals = ReturnType<typeof detailHooks.useIssueDetailModals>;
 const held = new Map<string, Modals>();
+const rendered: string[] = [];
 const Probe = observer(function Probe({ id }: { id: string }) {
+  rendered.push(id);
   const modals = detailHooks.useIssueDetailModals();
   held.set(id, modals);
   return (
@@ -71,6 +73,7 @@ beforeEach(async () => {
     ).error
   ).toBeUndefined();
   held.clear();
+  rendered.length = 0;
   element = document.createElement("div");
   document.body.append(element);
   root = createRoot(element);
@@ -82,7 +85,13 @@ afterEach(async () => {
   vi.useRealTimers();
 });
 const render = async (view: ReactNode) =>
-  act(async () => root.render(<SWRConfig value={{ provider: () => new Map() }}>{view}</SWRConfig>));
+  act(async () =>
+    root.render(
+      <StrictMode>
+        <SWRConfig value={{ provider: () => new Map() }}>{view}</SWRConfig>
+      </StrictMode>
+    )
+  );
 const detail = (id: string, key = "detail") => (
   <IssueDetailRoot key={key} workspaceSlug="ws" projectId="A" issueId={id} />
 );
@@ -188,4 +197,71 @@ it("StrictMode reacquires a peek without clearing the user's selection", async (
     </StrictMode>
   );
   expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe("old");
+});
+
+it("a second mounted peek host neither duplicates nor erases the active selection", async () => {
+  tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "old" });
+  await render(<IssuePeekOverview key="one" hostScope="one" />);
+  await render(
+    <>
+      <IssuePeekOverview key="one" hostScope="one" />
+      <IssuePeekOverview key="two" hostScope="two" />
+    </>
+  );
+  expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe("old");
+  expect(element.querySelectorAll("button")).toHaveLength(1);
+});
+it("a changed route never renders the previous selection in the new host", async () => {
+  tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "old" });
+  await render(<IssuePeekOverview hostScope="one" />);
+  rendered.length = 0;
+  await render(<IssuePeekOverview hostScope="two" />);
+  expect(rendered).not.toContain("peek-old");
+});
+it("old cleanup cannot clear a new host's replacement selection", async () => {
+  tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "old" });
+  await render(<IssuePeekOverview key="one" hostScope="one" />);
+  await act(async () => {
+    tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "new" });
+    root.render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <IssuePeekOverview key="two" hostScope="two" />
+      </SWRConfig>
+    );
+  });
+  expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe("new");
+  expect(element.textContent).toContain("peek-new");
+});
+it("permission loss ends current contents and does not revive them after restoration", async () => {
+  tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "old" });
+  await render(<IssuePeekOverview hostScope="one" />);
+  await act(async () => {
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  });
+  expect(element.textContent).toBe("");
+  expect(tab.app.issue.issueDetail.peekIssue).toBeUndefined();
+  await act(async () => {
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  });
+  expect(element.textContent).toBe("");
+});
+it("session retirement hides and ends the peek immediately", async () => {
+  tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "old" });
+  await render(<IssuePeekOverview hostScope="one" />);
+  await act(async () => tab.app.dispose());
+  expect(element.textContent).toBe("");
+  expect(tab.app.issue.issueDetail.peekIssue).toBeUndefined();
+});
+
+it("reopening the same issue retires the previous peek's modal payloads", async () => {
+  tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "old" });
+  await render(<IssuePeekOverview hostScope="one" />);
+  const first = held.get("peek-old")!;
+  await act(async () => openAll(first));
+  await act(async () =>
+    tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "old" })
+  );
+  expect(first.isAnyModalOpen).toBe(false);
+  expect(held.get("peek-old")).not.toBe(first);
+  expect(held.get("peek-old")!.isAnyModalOpen).toBe(false);
 });

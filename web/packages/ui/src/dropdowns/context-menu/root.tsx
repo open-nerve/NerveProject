@@ -3,14 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
-// hooks
+import { isComposing } from "@nerve/utils";
 import { usePlatformOS } from "../../hooks/use-platform-os";
-// helpers
 import { cn } from "../../utils";
-// components
 import { ContextMenuItem } from "./item";
 
 export type TContextMenuItem = {
@@ -18,233 +15,147 @@ export type TContextMenuItem = {
   customContent?: React.ReactNode;
   title?: string;
   description?: string;
-  icon?: React.FC<any>;
+  icon?: React.ComponentType<{ className?: string }>;
   action: () => void;
   shouldRender?: boolean;
   closeOnClick?: boolean;
   disabled?: boolean;
   className?: string;
   iconClassName?: string;
-  nestedMenuItems?: TContextMenuItem[];
 };
-
-// Portal component for nested menus
-interface PortalProps {
-  children: React.ReactNode;
-  container?: Element | null;
-}
-
-export function Portal({ children, container }: PortalProps) {
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
-  if (!mounted) {
-    return null;
-  }
-
-  const targetContainer = container || document.body;
-  return ReactDOM.createPortal(children, targetContainer);
-}
-
-// Context for managing nested menus
-export const ContextMenuContext = React.createContext<{
-  closeAllSubmenus: () => void;
-  registerSubmenu: (closeSubmenu: () => void) => () => void;
-  portalContainer?: Element | null;
-} | null>(null);
-
 type ContextMenuProps = {
   parentRef: React.RefObject<HTMLElement | null>;
   items: TContextMenuItem[];
   portalContainer?: Element | null;
 };
-
-function ContextMenuWithoutPortal(props: ContextMenuProps) {
-  const { parentRef, items, portalContainer } = props;
-  // states
+function enabledItems(panel: HTMLElement) {
+  return Array.from(panel.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]:not(:disabled)'));
+}
+function ContextMenuWithoutPortal({ parentRef, items }: ContextMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({
-    x: 0,
-    y: 0,
-  });
-  const [activeItemIndex, setActiveItemIndex] = useState<number>(0);
-  // refs
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const contextMenuRef = useRef<HTMLDivElement>(null);
-  const submenuClosersRef = useRef<Set<() => void>>(new Set());
-  // derived values
-  const renderedItems = items.filter((item) => item.shouldRender !== false);
+  const returnFocus = useRef<HTMLElement | null>(null);
   const { isMobile } = usePlatformOS();
-
-  const closeAllSubmenus = React.useCallback(() => {
-    submenuClosersRef.current.forEach((closeSubmenu) => closeSubmenu());
-  }, []);
-
-  const registerSubmenu = React.useCallback((closeSubmenu: () => void) => {
-    submenuClosersRef.current.add(closeSubmenu);
-    return () => {
-      submenuClosersRef.current.delete(closeSubmenu);
-    };
-  }, []);
-
-  const handleClose = React.useCallback(() => {
-    closeAllSubmenus();
+  const handleClose = useCallback(() => {
     setIsOpen(false);
-    setActiveItemIndex(0);
-  }, [closeAllSubmenus]);
-  const contextValue = React.useMemo(
-    () => ({ closeAllSubmenus, registerSubmenu, portalContainer }),
-    [closeAllSubmenus, registerSubmenu, portalContainer]
-  );
-
-  // calculate position of context menu
+    if (returnFocus.current?.isConnected && !returnFocus.current.closest('[inert], [aria-hidden="true"]'))
+      returnFocus.current.focus();
+  }, []);
   useEffect(() => {
-    const parentElement = parentRef.current;
-    const contextMenu = contextMenuRef.current;
-    if (!parentElement || !contextMenu) return;
-
-    const handleContextMenu = (e: MouseEvent) => {
-      if (isMobile) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      const contextMenuWidth = contextMenu.clientWidth;
-      const contextMenuHeight = contextMenu.clientHeight;
-
-      const clickX = e?.pageX || 0;
-      const clickY = e?.pageY || 0;
-
-      // check if there's enough space at the bottom, otherwise show at the top
-      let top = clickY;
-      if (clickY + contextMenuHeight > window.innerHeight) top = clickY - contextMenuHeight;
-
-      // check if there's enough space on the right, otherwise show on the left
-      let left = clickX;
-      if (clickX + contextMenuWidth > window.innerWidth) left = clickX - contextMenuWidth;
-
-      setPosition({ x: left, y: top });
+    const parent = parentRef.current,
+      panel = contextMenuRef.current;
+    if (!parent || !panel) return;
+    const open = (x: number, y: number, target: EventTarget | null) => {
+      // Safari can leave focus elsewhere on right click; the invoked control owns the return, not that old focus.
+      const trigger =
+        target instanceof Element ? target.closest<HTMLElement>("a[href], button:not(:disabled), [tabindex]") : null;
+      returnFocus.current =
+        trigger && (parent.contains(trigger) || trigger.contains(parent))
+          ? trigger
+          : document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : parent;
+      setPosition({
+        x: Math.max(0, Math.min(x, window.innerWidth - panel.clientWidth)),
+        y: Math.max(0, Math.min(y, window.innerHeight - panel.clientHeight)),
+      });
       setIsOpen(true);
     };
-
-    const hideContextMenu = (e: KeyboardEvent) => {
-      if (isOpen && e.key === "Escape") handleClose();
+    const contextmenu = (event: MouseEvent) => {
+      if (isMobile) return;
+      event.preventDefault();
+      event.stopPropagation();
+      open(event.clientX, event.clientY, event.target);
     };
-
-    parentElement.addEventListener("contextmenu", handleContextMenu);
-    window.addEventListener("keydown", hideContextMenu);
-
+    const keyboard = (event: KeyboardEvent) => {
+      if (isComposing(event) || !(event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const box = parent.getBoundingClientRect();
+      open(box.left, box.bottom, event.target);
+    };
+    parent.addEventListener("contextmenu", contextmenu);
+    parent.addEventListener("keydown", keyboard);
     return () => {
-      parentElement.removeEventListener("contextmenu", handleContextMenu);
-      window.removeEventListener("keydown", hideContextMenu);
+      parent.removeEventListener("contextmenu", contextmenu);
+      parent.removeEventListener("keydown", keyboard);
     };
-  }, [contextMenuRef, handleClose, isMobile, isOpen, parentRef, setIsOpen, setPosition]);
-
-  // handle keyboard navigation
+  }, [isMobile, parentRef]);
+  useLayoutEffect(() => {
+    if (isOpen && contextMenuRef.current) (enabledItems(contextMenuRef.current)[0] ?? contextMenuRef.current).focus();
+  }, [isOpen]);
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
-
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setActiveItemIndex((prev) => (prev + 1) % renderedItems.length);
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setActiveItemIndex((prev) => (prev - 1 + renderedItems.length) % renderedItems.length);
-      }
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const item = renderedItems[activeItemIndex];
-        if (!item.disabled) {
-          renderedItems[activeItemIndex].action();
-          if (item.closeOnClick !== false) handleClose();
-        }
-      }
+    if (!isOpen) return;
+    const outside = (event: MouseEvent) => {
+      if (event.target instanceof Node && !contextMenuRef.current?.contains(event.target)) setIsOpen(false);
     };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [activeItemIndex, handleClose, isOpen, renderedItems, setIsOpen]);
-
-  // Custom handler for nested menu portal clicks
-  React.useEffect(() => {
-    const handleDocumentClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-
-      // Check if the click is on a nested menu element
-      const isNestedMenuClick = target.closest('[data-context-submenu="true"]');
-      const isMainMenuClick = contextMenuRef.current?.contains(target);
-
-      // Also check if the target itself has the data attribute
-      const isNestedMenuElement = target.hasAttribute("data-context-submenu");
-
-      // If it's a nested menu click, main menu click, or nested menu element, don't close
-      if (isNestedMenuClick || isMainMenuClick || isNestedMenuElement) {
-        return;
-      }
-
-      // If menu is open and it's an outside click, close it
-      if (isOpen) {
-        handleClose();
-      }
-    };
-
-    if (isOpen) {
-      // Use capture phase to ensure we handle the event before other handlers
-      document.addEventListener("mousedown", handleDocumentClick, true);
-      return () => {
-        document.removeEventListener("mousedown", handleDocumentClick, true);
-      };
-    }
-  }, [isOpen, handleClose]);
-
+    document.addEventListener("mousedown", outside, true);
+    return () => document.removeEventListener("mousedown", outside, true);
+  }, [isOpen]);
   return (
-    // Always rendered, so the right-click measures the menu before it shows. Closed, it is inert: its items are no Tab
-    // stops and not in the accessibility tree.
+    // Kept for measurement. Closed, no item participates in Tab or the accessibility tree.
     <div
       inert={!isOpen}
+      aria-hidden={!isOpen}
       className={cn(
         "pointer-events-none fixed top-0 left-0 z-30 h-screen w-screen cursor-default opacity-0 transition-opacity",
-        {
-          "pointer-events-auto opacity-100": isOpen,
-        }
+        { "pointer-events-auto opacity-100": isOpen }
       )}
     >
       <div
         ref={contextMenuRef}
+        role="menu"
+        tabIndex={-1}
         className="vertical-scrollbar fixed scrollbar-sm max-h-72 min-w-[12rem] overflow-y-scroll rounded-md border-[0.5px] border-subtle-1 bg-surface-1 px-2 py-2.5"
-        style={{
-          top: position.y,
-          left: position.x,
-        }}
+        style={{ top: position.y, left: position.x }}
         data-context-menu="true"
+        onKeyDown={(event) => {
+          if (isComposing(event.nativeEvent)) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            handleClose();
+            return;
+          }
+          if (event.key === "Tab") {
+            setIsOpen(false);
+            return;
+          }
+          const buttons = enabledItems(event.currentTarget);
+          const current = buttons.findIndex((button) => button === document.activeElement);
+          const next =
+            event.key === "ArrowDown"
+              ? (current + 1) % buttons.length
+              : event.key === "ArrowUp"
+                ? (current - 1 + buttons.length) % buttons.length
+                : event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? buttons.length - 1
+                    : undefined;
+          if (next !== undefined) {
+            event.preventDefault();
+            event.stopPropagation();
+            buttons[next]?.focus();
+          }
+        }}
       >
-        <ContextMenuContext.Provider value={contextValue}>
-          {renderedItems.map((item, index) => (
-            <ContextMenuItem
-              key={item.key}
-              handleActiveItem={() => setActiveItemIndex(index)}
-              handleClose={handleClose}
-              isActive={index === activeItemIndex}
-              item={item}
-            />
+        {items
+          .filter((item) => item.shouldRender !== false)
+          .map((item) => (
+            <ContextMenuItem key={item.key} item={item} handleClose={handleClose} />
           ))}
-        </ContextMenuContext.Provider>
       </div>
     </div>
   );
 }
-
 export function ContextMenu(props: ContextMenuProps) {
-  let contextMenu = <ContextMenuWithoutPortal {...props} />;
-  const portal = document.querySelector("#context-menu-portal");
-  if (portal) contextMenu = ReactDOM.createPortal(contextMenu, portal);
-  return contextMenu;
+  const menu = <ContextMenuWithoutPortal {...props} />;
+  const portal = props.portalContainer ?? document.querySelector("#context-menu-portal");
+  return portal ? ReactDOM.createPortal(menu, portal) : menu;
 }

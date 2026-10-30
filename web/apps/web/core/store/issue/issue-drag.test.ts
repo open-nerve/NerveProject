@@ -447,3 +447,41 @@ it("a drag waiting for another issue preserves its initiating permission lifetim
   await until(() => result.settled, "old drag retired");
   await expect(next).rejects.toBeInstanceOf(SessionChangedError);
 });
+
+it.each(["labels", "assignees"] as const)("moving one %s group preserves the latest other values", async (field) => {
+  const root = tab.app.issue;
+  const binding = await loadBinding(1, []);
+  runInAction(() => {
+    root.projectIssues.currentList = binding;
+  });
+  const key = field === "labels" ? "label_ids" : "assignee_ids";
+  root.acceptListIssues(
+    [{ ...issueOf("x"), [key]: ["source", "other", "destination"], updated_at: "2026-10-29T00:00:00Z" }],
+    root.captureRead()
+  );
+  const update = await requestedIssue(
+    tab.nerve,
+    () =>
+      handleGroupDragDrop(
+        { id: "x", columnId: "source", groupId: "source" },
+        { id: undefined, columnId: "destination", groupId: "destination" },
+        root.issues.getIssueById,
+        root.projectIssues.getIssueIds,
+        (project, id, body, drop) => root.projectIssues.dropIssue("ws", project, id, body, drop),
+        field,
+        undefined
+      ),
+    ["PATCH", "/api/v0/issues/x"]
+  );
+  expect(update.call.body).toEqual({ [key]: ["other", "destination"], sort_order: 65535 });
+  update.call.answer(
+    json(200, {
+      ...issueDetailOf("x"),
+      [key]: ["other", "destination"],
+      sort_order: 65535,
+      updated_at: "2026-10-30T00:00:00Z",
+    })
+  );
+  await update.promise;
+  expect(root.issues.getIssueById("x")![key]).toEqual(["other", "destination"]);
+});

@@ -528,3 +528,39 @@ it("a refused filter save keeps the current draft without refreshing or retrying
   expect(tab.app.issue.projectIssuesFilter.getIssueFilters("A")?.richFilters).toEqual({});
   expect(tab.nerve.calls).toHaveLength(3);
 });
+
+const dataOf = (entry: DropRegistration) =>
+  entry.getData!({ input: { clientX: 50, clientY: 90 }, element: entry.element } as never);
+it("actual middle list row exposes a bottom indicator and drops below through the shared root", async () => {
+  const prefs = preferencesOf();
+  prefs.display_filters.order_by = "sort_order";
+  await mountWithPreferences(prefs);
+  const rows = ["x", "a", "b", "c"].map((id, i) => Object.assign(issueDetailOf(id), { sort_order: (i + 1) * 1000 }));
+  await act(async () => tab.nerve.calls[1]!.answer(json(200, issuePageOf(rows))));
+  const column = [...dnd.drops.values()].find((entry) => dataOf(entry).type === "COLUMN")!;
+  const row = [...dnd.drops.values()].find((entry) => dataOf(entry).id === "b")!;
+  vi.spyOn(row.element, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 100, 100));
+  const drag = [...dnd.drags.values()].find((entry) => entry.getInitialData?.({} as never).id === "x")!;
+  const target = { element: column.element, data: dataOf(column) };
+  const card = { element: row.element, data: dataOf(row) };
+  await act(async () => row.onDrag!({ self: card } as never));
+  expect(
+    row.element.lastElementChild?.classList.contains("bg-accent-primary"),
+    "middle row has its bottom drop indicator"
+  ).toBe(true);
+  const payload = {
+    source: { element: drag.element, data: drag.getInitialData!({} as never) },
+    location: { initial: { dropTargets: [target] }, current: { dropTargets: [card, target] } },
+  };
+  expect(getDestinationFromDropPayload(payload as never)?.canAddIssueBelow).toBe(true);
+  await act(async () => {
+    column.onDrop!(payload as never);
+    await until(() => tab.nerve.calls.some((call) => call.method === "PATCH"), "middle drop");
+  });
+  const call = tab.nerve.calls.find((entry) => entry.method === "PATCH")!;
+  expect(call.body).toEqual({ sort_order: 3500 });
+  await act(async () =>
+    call.answer(json(200, { ...issueDetailOf("x"), sort_order: 3500, updated_at: "2026-10-29T00:00:00Z" }))
+  );
+  expect(tab.app.issue.projectIssues.getIssueIds()).toEqual(["a", "b", "x", "c"]);
+});

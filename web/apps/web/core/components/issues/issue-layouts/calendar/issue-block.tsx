@@ -6,12 +6,11 @@
 
 import type { Issue } from "@nerve/api-client";
 
-import { useState, useRef, forwardRef } from "react";
+import { useEffect, useRef, useState, forwardRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { useOutsideClickDetector } from "@nerve/hooks";
 import { Popover } from "@nerve/propel/popover";
 
 import { ControlLink } from "@nerve/ui";
@@ -40,11 +39,13 @@ type Props = {
 export const CalendarIssueBlock = observer(
   forwardRef(function CalendarIssueBlock(props: Props, ref: React.ForwardedRef<HTMLAnchorElement>) {
     const { issue, quickActions, isDragging = false } = props;
-    // states
-    const [isMenuActive, setIsMenuActive] = useState(false);
+    const [previewOpen, setPreviewOpen] = useState(false);
+    useEffect(() => {
+      if (isDragging) setPreviewOpen(false);
+    }, [isDragging]);
     // refs
     const blockRef = useRef(null);
-    const menuActionRef = useRef<HTMLDivElement | null>(null);
+    const menuActionRef = useRef<HTMLSpanElement | null>(null);
     // hooks
     const { workspaceSlug } = useParams();
     const { getProjectStates } = useProjectState();
@@ -59,23 +60,13 @@ export const CalendarIssueBlock = observer(
     const projectIdentifier = getProjectIdentifierById(issue?.project_id);
 
     // handlers
-    const handleIssuePeekOverview = (peekIssue: Issue) => handleRedirection(workspaceSlug, peekIssue, isMobile);
-
-    useOutsideClickDetector(menuActionRef, () => setIsMenuActive(false));
+    const handleIssuePeekOverview = (peekIssue: Issue, trigger: HTMLElement) =>
+      handleRedirection(workspaceSlug, peekIssue, isMobile, undefined, trigger);
 
     const customActionButton = (
-      // CustomMenu renders this inside its own <button>, which already carries the
-      // interactive semantics and keyboard handling — this div is presentational.
-      <div
-        role="presentation"
-        ref={menuActionRef}
-        className={`w-full cursor-pointer rounded-sm p-1 text-placeholder hover:bg-layer-1 ${
-          isMenuActive ? "bg-layer-1-active text-primary" : "text-secondary"
-        }`}
-        onClick={() => setIsMenuActive(!isMenuActive)}
-      >
+      <span ref={menuActionRef} className="block w-full rounded-sm p-1">
         <MoreHorizontalOutline className="h-3.5 w-3.5" />
-      </div>
+      </span>
     );
 
     const isMenuActionRefAboveScreenBottom =
@@ -95,7 +86,12 @@ export const CalendarIssueBlock = observer(
     });
 
     return (
-      <Popover delay={100} openOnHover>
+      <Popover
+        delay={100}
+        openOnHover={!isDragging}
+        open={previewOpen && !isDragging}
+        onOpenChange={(open) => setPreviewOpen(open && !isDragging)}
+      >
         <Popover.Button
           nativeButton={false}
           className="w-full"
@@ -103,7 +99,7 @@ export const CalendarIssueBlock = observer(
             <ControlLink
               id={`issue-${issue.id}`}
               href={workItemLink}
-              onClick={() => handleIssuePeekOverview(issue)}
+              onClick={(event) => handleIssuePeekOverview(issue, event.currentTarget)}
               className="block w-full rounded-sm border-b border-subtle text-13 text-primary hover:border-subtle-1 md:border-[1px]"
               disabled={isMobile}
               ref={ref}
@@ -138,18 +134,11 @@ export const CalendarIssueBlock = observer(
                     )}
                     <div className="truncate text-13 font-medium md:text-11 md:font-regular">{issue.name}</div>
                   </div>
-                  {/* Wrapper exists only to stop clicks reaching the ControlLink; the
-                      quick-action menu inside carries its own interactive semantics. */}
                   <div
-                    role="presentation"
-                    className={cn("size-5 flex-shrink-0", {
-                      "hidden group-hover/calendar-block:block": !isMobile,
-                      block: isMenuActive,
+                    className={cn("size-5 flex-shrink-0 rounded-sm has-[[aria-expanded=true]]:bg-layer-1-active", {
+                      "opacity-0 group-hover/calendar-block:opacity-100 focus-within:opacity-100 has-[[aria-expanded=true]]:opacity-100":
+                        !isMobile,
                     })}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
                   >
                     {quickActions({
                       issue,

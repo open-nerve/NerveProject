@@ -100,7 +100,7 @@ it.each(choices)(
       await vi.advanceTimersByTimeAsync(20);
     });
     expect(document.body.querySelector('[role="alert"]')?.textContent).toContain("errors.forbidden");
-    expect(host.textContent).not.toContain("common.loading");
+    expect(document.body.textContent).not.toContain("common.loading");
     await act(async () => {
       [...document.body.querySelectorAll("button")].find((button) => button.textContent === "common.retry")!.click();
       await until(() => tab.nerve.calls.length === 2, "retry GET");
@@ -111,7 +111,7 @@ it.each(choices)(
       Array.from({ length: 2 }, () => ["GET", endpoint])
     );
     expect(document.body.querySelector('[role="alert"]')).toBeNull();
-    expect(host.textContent).not.toContain("common.loading");
+    expect(document.body.textContent).not.toContain("common.loading");
   }
 );
 
@@ -172,7 +172,7 @@ it.each(["state", "member"])(
     );
     const button = host.querySelector<HTMLButtonElement>("button")!;
     expect(button.tabIndex).toBe(0);
-    expect(host.querySelectorAll("button")).toHaveLength(1);
+    expect(document.querySelectorAll("button")).toHaveLength(1);
     await act(async () => {
       button.focus();
       button.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));

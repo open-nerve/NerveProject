@@ -33,8 +33,8 @@ vi.mock("@/hooks/store/use-app-theme", () => ({ useAppTheme: () => ({ sidebarCol
 vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app.issue.issueDetail }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectRoot.project }));
 vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => ui.kind }));
-vi.mock("../utils", async (original) => ({
-  ...(await original<typeof import("../utils")>()),
+vi.mock("../group-columns", async (original) => ({
+  ...(await original<typeof import("../group-columns")>()),
   getGroupByColumns: () => [{ id: "first" }, { id: "second" }],
 }));
 vi.mock("../properties", () => ({ IssueProperties: () => null }));

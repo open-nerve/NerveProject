@@ -1,6 +1,6 @@
 # M4/P11 详情数据层规格
 
-> 状态：负责人已裁定P11-S1采用A，**实施与整审修复已完成，集成待办；最终交付CI见提交后回执**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。准备阶段已结束；当前按计划实施，A1–A9已有实际证据，A10待准确交付HEAD的CI收口；编号列宽按已加载、当前可见数据计算，不新增项目API字段，见[已裁定记录](../reviews/P11-project-number-width-decision.md)。
+> 状态：负责人已裁定P11-S1采用A，**已完成；已合并main，准确main CI全绿且证据归档清理完成，见review§15**。分支 `codex/m4-p11`，基线 `df5d3bbc1887486bd105fe6fc663f57f5b371992`。P10b 已合并且准确 main CI 全绿、证据归档和清理完成，见 [P10b review §17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。准备、实施、终审及集成均已结束，A1–A10已有实际证据；编号列宽按已加载、当前可见数据计算，不新增项目API字段，见[已裁定记录](../reviews/P11-project-number-width-decision.md)。
 
 权威输入：[M4 设计](../M4-design.md) §3.9–3.15、§7.1–7.4、§9.5、§12 P11、§13；[推进方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)；[P10b spec](P10b-web-list-data.md) §2.6/§7；输入 handoffs 的 M1-closeout、M2-closeout §12、M3-closeout §5/6/8。配套 [plan](../plans/P11-web-detail-data.md)、[阶段预检](../reviews/P11-web-detail-data-review.md)。
 
@@ -165,7 +165,7 @@ D1–D7 是既定设计内的执行细化；D8曾因上游合同缺口提交后�
 - [x] A7：原七处模块实例与两个前移实例消失；提及四处改成员目录，JSONContent/comment_json/description_json/is_bot 的 M4 旧读写删除。
 - [x] A8：每处按需拒绝可观察、结束加载/重试；详情 SessionSWR 含会话和权限身份；宿主换 scope/卸载/晚答不串弹窗。
 - [x] A9：错误按码、标签统一创建、无项目标签限制准确；编号统一列宽、分页/子项增长和scope/权限重置按§2.11通过；dead/oxlint/knip 与新守卫通过。
-- **A10（提交后核验）：**逐 Task 证据、至少15项独立性质变异、完整 F、准确最终分支 CI、deep-review 与修复复审闭环，移交记录真实。阶段先不合并，另待负责人安排。最终文稿提交内不预签CI；A10的完成状态、准确SHA及三项CI结果统一登记在实施证据目录的 `t15-final-delivery.json`，该回执通过后才交付。
+- [x] A10：逐Task证据、21项独立性质有效变异、完整F、准确最终分支CI 40996101552、deep-review及修复复审已闭环；后置`t15-final-delivery.json`已核。另获授权后合并main ce3c39ab，准确main CI 41005896280全绿、归档清理通过，证据见review§15。
 
 ## 5. 不在范围与后续
 
@@ -184,9 +184,9 @@ D1–D7 是既定设计内的执行细化；D8曾因上游合同缺口提交后�
 
 ## 7. 已知限制、交接与关闭条件
 
-基线main的未迁移详情旧地址和DTO已在P11分支替换，主目录main尚未接收本分支。准备稿的零产品验证属于历史；本阶段实施、终审及完整门禁证据见review§9–§14。P10b 归档中历史变异原件/覆盖限制继续原样保留，不用本次静态盘点补记历史通过。M4 总体验收与所有输入 handoff 的顶层 open 保持；本段执行完成时只写对应子项处理结果，不建未来最终交接文件。
+基线的旧详情地址和DTO已由P11替换并集成到main ce3c39ab。准备稿的零产品验证属于历史；本阶段实施、终审及完整门禁证据见review§9–§14。P10b 归档中历史变异原件/覆盖限制继续原样保留，不用本次静态盘点补记历史通过。M4 总体验收与所有输入 handoff 的顶层 open 保持；本段执行完成时只写对应子项处理结果，不建未来最终交接文件。
 
-阶段完成需A1–A10实证、整分支deep-review后局部问题全闭环；本段仍先不合并，集成授权另行取得。T1–T14和终审修复已完成，T15最后核准确交付提交的CI；不以准备稿、旧提交CI或产品候选CI代替最终文稿HEAD。最终提交身份及CI后置回执放忽略证据目录，避免循环提交自己的SHA。
+阶段A1–A10、整分支deep-review和修复复审均已闭环。负责人随后授权集成；最终分支42afa24f及main ce3c39ab各自的准确CI通过，已归档清理，见review§15。原始后置回执保留在主项目P11-integration归档，不将先前准备稿或产品候选CI替代最终文稿HEAD。
 
 ## 附录 A：准备证据（2026-10-30）
 

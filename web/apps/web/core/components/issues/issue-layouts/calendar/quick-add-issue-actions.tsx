@@ -8,21 +8,22 @@ import type { IssueCreate } from "@nerve/api-client";
 import type { Issue, IssueDetail } from "@nerve/api-client";
 
 import { useState } from "react";
-import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 
 import { useTranslation } from "@nerve/i18n";
 // nerve imports
 import { AddOutline } from "@makeplane/propel/icons";
-import { setPromiseToast } from "@nerve/propel/toast";
-import type { ISearchIssueResponse } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // components
-import { ExistingIssuesListModal } from "@/components/core/modals/existing-issues-list-modal";
+import {
+  ExistingIssuesListModal,
+  type SelectionSubmitResult,
+} from "@/components/core/modals/existing-issues-list-modal";
 // hooks
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { QuickAddIssueRoot } from "../quick-add";
 
@@ -44,31 +45,18 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isExistingIssueModalOpen, setIsExistingIssueModalOpen] = useState(false);
   const { updateIssue } = useIssueDetail();
-  // derived values
-  const ExistingIssuesListModalPayload = { target_date: "none" };
-
-  const handleAddIssuesToView = async (data: ISearchIssueResponse[]) => {
-    if (!workspaceSlug || !projectId) return;
-
-    const issueIds = data.map((i) => i.id);
-    const addExistingIssuesPromise = Promise.all(
-      data.map((issue) => updateIssue(workspaceSlug, projectId, issue.id, prePopulatedData ?? {}))
+  const handleAddIssuesToView = async (ids: readonly string[]): Promise<SelectionSubmitResult> => {
+    if (!workspaceSlug || !projectId || !prePopulatedData?.target_date) throw new SessionChangedError();
+    const unique = [...new Set(ids)];
+    const answers = await Promise.allSettled(
+      unique.map((id) => updateIssue(workspaceSlug, projectId, id, { target_date: prePopulatedData.target_date }))
     );
-
-    setPromiseToast(addExistingIssuesPromise, {
-      loading: t("issue.adding", { count: issueIds.length }),
-      success: {
-        title: t("toast.success"),
-        message: () => t("entity.add.success", { entity: t("issue.label", { count: 2 }) }),
-      },
-      error: {
-        title: t("toast.error"),
-        message: (err: unknown) =>
-          typeof err === "object" && err !== null && "message" in err && typeof err.message === "string"
-            ? err.message || t("common.errors.default.message")
-            : t("common.errors.default.message"),
-      },
-    });
+    return {
+      confirmedIds: unique.filter((_, index) => answers[index]!.status === "fulfilled"),
+      failures: answers.flatMap((answer, index) =>
+        answer.status === "rejected" ? [{ id: unique[index]!, error: answer.reason as unknown }] : []
+      ),
+    };
   };
 
   const handleNewIssue = () => {
@@ -89,22 +77,18 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
           projectId={projectId}
           isOpen={isExistingIssueModalOpen}
           handleClose={() => setIsExistingIssueModalOpen(false)}
-          searchParams={ExistingIssuesListModalPayload}
+          key={prePopulatedData?.target_date}
+          searchParams={{ target_date: ["none"] }}
           handleOnSubmit={handleAddIssuesToView}
-          shouldHideIssue={(issue) => {
-            if (issue.start_date && prePopulatedData?.target_date) {
-              const issueStartDate = new Date(issue.start_date);
-              const targetDate = new Date(prePopulatedData.target_date);
-              const diffInDays = differenceInCalendarDays(targetDate, issueStartDate);
-              if (diffInDays < 0) return true;
-            }
-            return false;
-          }}
+          shouldHideIssue={(issue) =>
+            !!issue.target_date ||
+            !!(issue.start_date && prePopulatedData?.target_date && issue.start_date > prePopulatedData.target_date)
+          }
         />
       )}
       <QuickAddIssueRoot
         isQuickAddOpen={isOpen}
-        setIsQuickAddOpen={(isOpen) => setIsOpen(isOpen)}
+        setIsQuickAddOpen={setIsOpen}
         layout={EIssueLayoutTypes.CALENDAR}
         prePopulatedData={prePopulatedData}
         quickAddCallback={quickAddCallback}

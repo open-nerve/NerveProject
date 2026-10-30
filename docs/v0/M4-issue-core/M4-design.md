@@ -862,7 +862,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 | P9 | 差异清单 | 四 | 动态随工作项物理删除（`CASCADE`，不是 `DO_NOTHING`）；已登记的"连带在同一事务"改为只对删除工作项、状态、标签成立，删除项目、工作区的工作项一侧与 Plane 一样在事务之外完成，但写下请求的时刻（3.6） **P9回执：** 已同步plane-diff第四节及版本索引行：活动/评论子链CASCADE、同步/异步按操作划分；T3/T5/T9–13证据见P9 review |
 | P10b | 总体设计 | 7.7 | `Reconciled.fetchPart` 和 `paged-groups.ts`；一个工作项只有一份，取服务端 `updated_at` 大的（3.22） |
 | P10a–P16 | 前端改动清单 | 3.1、3.2 | M4 一行的状态；删到 M5、M6、M7 的入口和取数（3.1、3.2）；迭代、模块、项目视图、工作区视图的工作项列表在 P10a 删除，M6、M7 加回（7.3） |
-| P12 | README | "前端"一节 | "M3 中看到的页面"改写为 M4 能到达的页面（3.1） |
+| P12 | README | "前端"一节 | 已按实际分支更新四布局/原生搜索及后续页面边界（3.1）；P12最终三浏览器已通过、准确文稿HEAD CI按后置回执核准，不宣称已集成，见P12 review§24–25 |
 | 收尾 | 总体设计 | 9.4 | M4 的状态改为"已完成" |
 
 ---
@@ -1559,8 +1559,8 @@ M4 的页面上逐项照 M3 收尾的写法改，并由故事或浏览器核对�
   - `ParentIssuesListModal` 在 **P14** 改接（`for=parent`），随 I8 的页面版本。
   - 排除自己、后代、祖先、已关联的都由服务端做。
 - **嵌套的按钮**：`DropdownButton` 放在 Headless UI 的按钮里的写法随属性下拉框和页头改；菜单的按钮里放 `IconButton` 的三处（`comments/quick-actions.tsx`、`issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`issue-activity/activity-filter.tsx`）照 `navigation/project-actions-menu.tsx` 改（`customButtonClassName`）；`peek-overview/header.tsx:188` 的 `customButton`、`default-properties.tsx` 给父工作项菜单的 `customButton` 不再是按钮里的按钮。
-- **`CustomMenu` 的键盘**：快捷操作的 `SubMenu`（5 个文件）的触发项键盘打得开；看板、日历卡片的快捷操作在键盘打开时也显示"激活"的底色。
-- **下拉框**：`DateDropdown` 只有一份打开状态（Popover，选中时 `close`），连同列表、表格单元格里的懒渲染，键盘打得开（M2 交接第 10 节）；7 个下拉框（`dropdowns/{date-range,priority,project/base,state/base}.tsx`、`issue-detail/label/select/label-select.tsx`、`issue-layouts/properties/label-dropdown.tsx`、`select/base.tsx`）的 popper 的 ref 放在列表元素上，只要 Headless UI 的一份打开状态（没有搜索框的 `Listbox`、有的 `Combobox`），在弹窗里 `modal={false}`（`useInsideModal()`，M3 交接第 7 节的"弹窗里的列表"）；`select/base.tsx` 的根不再是一个没有名字的停留点；`CustomSearchSelect` 的 `defaultOpen` 在富筛选里核对；`rich-filters/` 的 4 个调用方传经 `t()` 的 `searchPlaceholder`、`noResultsMessage`、`loadingMessage`（M3 交接第 8 节）；成员下拉框的 8 个文件、4 个筛选的新行为在页面上核对。
+- **`CustomMenu` 的键盘**：快捷操作菜单可通过键盘打开、选择、返回；P12/T11 实查 `SubMenu` 无生产者，删除不可达子菜单与适配死链，不为死分支新增机制；看板、日历卡片的快捷操作在键盘打开时也显示"激活"的底色。
+- **下拉框**：`DateDropdown` 只有一份打开状态（Popover，选中时 `close`），连同列表、表格单元格里的懒渲染，键盘打得开（M2 交接第 10 节）；7 个下拉框（`dropdowns/{date-range,priority,project/base,state/base}.tsx`、`issue-detail/label/select/label-select.tsx`、`issue-layouts/properties/label-dropdown.tsx`、`select/base.tsx`）的 popper 的 ref 放在实际浮层元素上，只要 Headless UI 的一份打开状态（离散选择：没有搜索框的 `Listbox`、有的 `Combobox`，也可复用既有 `CustomSearchSelect` 的 Headless Popover 唯一开关及静态非模态 Combobox，此时 ref 落实际 Panel；`date-range` 是 Calendar 网格，P12 预检明确与 DateDropdown 一样用 `Popover`/`Panel`，不把日历按钮伪装为选项），在弹窗里的 Listbox/Combobox 列表 `modal={false}`（`useInsideModal()`，M3 交接第 7 节的"弹窗里的列表"）；`select/base.tsx` 的根不再是一个没有名字的停留点；`CustomSearchSelect` 的 `defaultOpen` 在富筛选里核对；`rich-filters/` 的 4 个调用方传经 `t()` 的 `searchPlaceholder`、`noResultsMessage`、`loadingMessage`（M3 交接第 8 节）；成员下拉框的 8 个文件、4 个筛选的新行为在页面上核对。
 - **`@nerve/ui` 下拉框的 `any`**（`dropdowns/helper.tsx` 7 处、`custom-search-select.tsx` 2 处）改成泛型，13 个调用方一起改（M3 交接第 8 节；多数在 M4 的页面上，余下的 M6、M7 调用方改到能编译）。
 - **筛选的按钮**：`FiltersDropdown` 的 7 个调用方，故事断言按钮的名字、`aria-expanded`、Escape 之后焦点回到它。
 - **组字的判断**：新加的键盘处理只经 `isComposing`（关键词规则 `composing-check`）。
@@ -1572,6 +1572,8 @@ M4 的页面上逐项照 M3 收尾的写法改，并由故事或浏览器核对�
 - **列表里不是选项的控件**：`select/base.tsx:299`、`label-select.tsx:201` 的"新建标签"改为哨兵值的选项；`parent-issues-list-modal.tsx:162` 选项里只在指针经过时显示的链接删除（打开工作项另有菜单）。
 - **嵌套的弹窗**：工作项的弹窗里打开"Save this draft?"和选父工作项，在里层按 Escape，里层关上、外层留着（I1 的一步）。**描述编辑器的 Escape 监听**（`issue-modal/components/description-editor.tsx:90` 监听整个 `document`）改为只理会目标在它自己的弹窗里的 Escape，选父工作项的 Escape 不再关上或打开外层的东西；故事核对。
 - **复制只经 hook**：M2 交接的 6 处和 M3 交接的 10 个文件（有重叠）改经 `useCopyLink`、`useCopyText`，失败时经 `t()` 提示；`copy-hook` 的 10 个例外随之删除（7.9）。
+
+P12 T15 的实际浏览器补充：行/表格属性拒绝复用现有当前宿主的错误命令，标签由原选择器报告一次；成员按钮不在打开时替换节点，状态目录刷新保留选中文字及锚点宽度。日期及范围的外点/焦点离开只关闭，不抢回已去往相邻控件的焦点；内部选择/Escape仍归还触发器。右键菜单按实际调用的可聚焦控件归还，日历开始拖动即关闭悬停预览。完整peek读取触发既有父项核验时原行会卸载，遵循“只聚焦仍存的本宿主触发器”，不寻找全局同ID替代；加载中仍存原行的归还另有真实浏览器验证。三浏览器的具体覆盖与剩余归属见P12 review§22，不据共享控件通过关闭后续完整详情/创建或M6/M7页面验收。
 
 ### 7.6 编辑器（`@nerve/editor` 与 `core/components/editor`）
 - **代码分割**（M2 交接第 7 节）：编辑器的模块到用它的页面才加载（`React.lazy` 包住富文本、轻量编辑器的入口）；未登录时打开需要登录的页面，不再先加载 tiptap 的 Emoji 节点和 `is-emoji-supported`。个人设置页不再挂载工作项的弹窗（7.4），它在打开之前建出的编辑器随之没有。之后删除 e2e 的 `EMOJI_CHECK_WARNING`：定义（`e2e/fixtures/browser.ts:166`）、29 个故事文件的 96 行，和 `e2e/fixtures/settings-pages.ts` 的一处（它也要清掉）。
@@ -1820,7 +1822,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | C2 | 筛选的工具栏和显示设置：每种筛选、日期的两个范围、清空；刷新之后还在；`FiltersDropdown` 的名字和 Escape 之后的焦点；`CustomSearchSelect` 的 `defaultOpen` 和 4 个富筛选的调用方（M2 交接第 10 节） | P13 |
 | C3 | 7.5 的下拉框：`DateDropdown` 用键盘打开、只有一份状态；7 个下拉框的列表在按钮旁；在弹窗里打开时后面的页面隐藏；`CustomSelect` 的 3 个调用方（自动归档、日期筛选、浮层的页头）；成员下拉框的 8 个文件 | P12、P14 |
 | C4 | 工作项的弹窗：Tab 在里面转、Escape、点外面、焦点回到打开它的控件；嵌套的"Save this draft?"和选父工作项的 Escape；描述编辑器的 Escape 不再误关；弹窗里 portal 的日期、下拉框、表情能用；`ModalTitle` 的名字；在弹窗里编辑一个描述没有块 id 的工作项、打开一份这样的草稿，不做改动就关上，不问"是否保存"（`isMigrationUpdate`）；Firefox、WebKit 也看一遍焦点 | P14 |
-| C5 | 详情：属性的每个下拉框、子工作项（添加已有、新建、移走）、关联（跨项目）、链接（元数据出现）；快捷操作的子菜单用键盘打开；层叠顺序（开着弹窗时页面上的元素不画在它之上）。表情、时间线、描述的历史在 C6（它们的页面在 P15，对抗性评审 M19） | P14 |
+| C5 | 详情：属性的每个下拉框、子工作项（添加已有、新建、移走）、关联（跨项目）、链接（元数据出现）；快捷操作菜单用键盘打开（P12/T11 已删零消费者子菜单）；层叠顺序（开着弹窗时页面上的元素不画在它之上）。表情、时间线、描述的历史在 C6（它们的页面在 P15，对抗性评审 M19） | P14 |
 | C6 | 评论：发、改（"已编辑"）、删、表情；每条评论的控件以作者为名（读屏）；只有作者有编辑，作者和项目管理员有删除（决策点 8）；空评论不能发；打开表情回应的选择器时 Network 面板没有 `cdn.jsdelivr.net`、控制台没有 CSP 违规（M2 交接第 8 节）。工作项的表情、时间线（排序、只看评论或动态）、描述的历史和还原 | P15 |
 | C7 | 命令面板：工作项的命令、搜索（编号、标题）、主题命令（失败时不改主题）；在中文界面下 | P15 |
 | C8 | 复制：工作项链接、评论链接、编号、子工作项和关联的链接，在局域网 HTTP 地址上失败时有提示（M2 交接第 11 节、M3 交接第 8 节） | P15 |
@@ -2325,8 +2327,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **关闭**：M1-P3 交接的筛选显示层（否定的一层删除；终态在 P16 核对）；M2 交接第 12 节的 `autorun`、三处同步读取、列表一侧的 SWR 键；M3 交接第 5 节（例外和 `workItemFilters` 删掉）、第 6 节（`autorun`、`reconciled.ts` 的扩展、S2 的 `REQUESTS`）。
 - **完成线**：`tsc`、knip、vitest 通过；S2 在四个角色下没有旧接口的请求；`store-context.test.ts` 没有严格模式的警告；`/user-properties/` 的例外已删除。
 
-### P11 `web-detail-data`：详情一侧的数据层（15个任务，实施与整审完成、集成待办）
-- **状态**：已形成[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)，**实施与整审修复已完成，集成待办；最终交付CI见提交后回执**；[编号宽度决策记录](reviews/P11-project-number-width-decision.md)。实际证据见[阶段review](reviews/P11-web-detail-data-review.md)与[整分支审核](../../reviews/re-15-M4P11整体审核.md)；先不合并。
+### P11 `web-detail-data`：详情一侧的数据层（15个任务，已完成）
+- **状态**：**已完成**；[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[编号宽度决策](reviews/P11-project-number-width-decision.md)及[整分支审核](../../reviews/re-15-M4P11整体审核.md)。交付42afa24f已--no-ff合并main ce3c39ab，准确main CI 41005896280三任务全绿，归档清理完成，见[阶段review§15](reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。
 - **目标**：详情services/stores接生成接口，沿IssueRootStore方案A管理权限读取失效；原7处数据层模块实例加前移的2处IssueService消失；宿主结束自己拥有的弹窗。
 - **任务**：
   1. 按编号读、子项/关联/链接薄服务及请求测试；实施首提交phase=M4/P11。
@@ -2340,22 +2342,23 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   9. 草稿原生payload/分页，PATCH后无body发布，经root创建确认；不为编号列宽刷新项目。
   10. 四处提及改有效成员目录，删searchEntity与旧JSON字段/独占类型。
   11. 其余按需拒绝显示/交回，详情SessionSWR与权限key；不等到本Task才修已迁入口。
-  12. WorkItemLevelModals留原宿主；scope变更和卸载结束自有开关/peek/三份数据，保护并存宿主。
+  12. WorkItemLevelModals留原宿主；scope变更和卸载结束自有开关/peek/三份数据，保护并存宿主。P12/T12 按实际宿主/每次选择持有 Peek，读取子树随选择重建；触发元素只存 UI WeakMap，关闭仅恢复本宿主仍存在的元素，不按全局 ID 查找。
   13. 错误按码、统一标签创建；工作区标签保留M7边界；编号列宽按P11-S1裁定A统一/增宽/scope重置；核已删fetchParentStats和可选projectIdentifier。
   14. 旧接口/死成员/label-create-direct守卫；完整修改、权限及竞态矩阵。
   15. 完整F、逐条验收、handoff局部处理结果、整分支deep-review及修复复审；阶段先不合并。
 - **搜索边界**：P11登记生成searchIssues合同；wrapper在P12首个生产消费者接通时创建，旧搜索类型最后随P15删除，现有P12/P14/P15页面分配不变。
 - **关闭范围**：M1旧JSONContent/comment_json，M2§12原7实例/详情SWR（加两前移实例，getUserProfileIssues核P10b已删）；M3§5 is_bot，§6按需拒绝/错误/标签创建/宿主及三件的明确处理，§8旧草稿16行。工作区标签恢复仍M7；编号列宽按负责人A裁定由展示数据统一计算，已用分页/子项/scope/权限回归核验。
-- **完成线**：spec A1–A10实际通过；core/services/issue无生成Issue/Detail标注Plane响应；全部修改/拒绝/宿主有行为证据，原七加两实例零命中；搜索和M5–M7范围准确保留。产品验收与整审已具备证据；准确最终HEAD CI按review后置回执闭合，main集成尚未授权。
+- **完成线**：spec A1–A10实际通过；core/services/issue无生成Issue/Detail标注Plane响应；全部修改/拒绝/宿主有行为证据，原七加两实例零命中；搜索和M5–M7范围准确保留。产品验收、整审、准确最终HEAD CI及授权后的main CI均已闭合，归档清理回执见review§15。
 
-### P12 `web-list-pages`：列表、看板、表格、日历（15 个任务）
+### P12 `web-list-pages`：列表、看板、表格、日历（15个设计粗项，细化16个实施Task）
+- **状态**：T1–T15及检查点CI完成，T16整审六项重要问题已修复；最终前端2697、默认E2E180和三浏览器各11通过；候选bbd92dd0 CI全绿，准确最终文稿HEAD CI按review§26后置核准交付。阶段先不合并；[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[实施记录](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab，关键词phase已为M4/P12；七下拉拆两组验证，原22路由清单按14存在/8已删核验，范围不变。
 - **目标**：项目的工作项页的四种布局、拖动、快速添加、快捷操作、浮层；"添加已有"的选择器经 `issue-search`。
 - **任务**：
   1. 列表布局：分组、每组加载更多、快速添加（字段的提示和焦点）；I7 的页面版本。
   2. 看板和泳道（泳道的总数读 `subgroup_totals`）；确认之后才移动、被拒绝时回到原处、拖放的卡片留在放下的地方；I6 的页面版本。
   3. 表格：列、按 3.16 的排序码排序、无限滚动。
   4. 日历的月、周和拖动；I4 的页面版本（含"添加已有"）。
-  5. 快捷操作的菜单（子菜单用键盘打开、"激活"的底色）；`quick-action-dropdowns/issue-detail.tsx` 菜单按钮里的 `IconButton` 不再是按钮里的按钮；右键菜单关着时 `inert`。
+  5. 快捷操作的菜单（实际平铺菜单用键盘打开、"激活"的底色）；`quick-action-dropdowns/issue-detail.tsx` 菜单按钮里的 `IconButton` 不再是按钮里的按钮；右键菜单关着时 `inert` 且 `aria-hidden`。
   6. 行里的属性下拉框：7 个下拉框的 popper 和一份打开状态、`DateDropdown`（M2 交接第 10 节）。
   7. 列表页的层叠顺序和焦点的轮廓（7.5）。
   8. 浮层的打开、关上，宿主卸载时清空。
@@ -2576,8 +2579,8 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
 | P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
-| P11 `web-detail-data` | 详情一侧的数据层（15） | **实施与整审完成、集成待办**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review](reviews/P11-web-detail-data-review.md)。[P11-S1](reviews/P11-project-number-width-decision.md)按可见展示数据计算列宽；九项终审问题已修复，完整本地F通过，准确交付HEAD CI后置核验；暂不合并 |
-| P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
+| P11 `web-detail-data` | 详情一侧的数据层（15） | **已完成**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review§15](reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。交付42afa24f、main ce3c39ab；准确分支及main CI全绿，证据归档/清理完成；列宽按已裁定A |
+| P12 `web-list-pages` | 列表、看板、表格、日历（16） | **本地验收与整审通过，未合并**：[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[review](reviews/P12-web-list-pages-review.md)、[整审](../../reviews/re-17-M4P12整体审核.md)。基线main ce3c39ab；六项重要问题已修复，最终矩阵33项通过；准确文稿HEAD CI按review§26后置核准，先不合并 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述的历史、草稿、搜索、命令面板（15） | 未开始 |

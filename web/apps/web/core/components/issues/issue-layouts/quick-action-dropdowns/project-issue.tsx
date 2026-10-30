@@ -7,6 +7,7 @@
 import type { Issue } from "@nerve/api-client";
 
 import { useState } from "react";
+import { useTranslation } from "@nerve/i18n";
 import { pick } from "lodash-es";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
@@ -17,7 +18,6 @@ import { EIssuesStoreType } from "@nerve/types";
 import { ContextMenu, CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
-import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -30,6 +30,7 @@ import type { MenuItemFactoryProps } from "./helper";
 import { useProjectIssueMenuItems } from "./helper";
 
 export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActions(props: IQuickActionProps) {
+  const { t } = useTranslation();
   const {
     issue,
     handleDelete,
@@ -48,14 +49,11 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
   const [issueToEdit, setIssueToEdit] = useState<Issue | undefined>(undefined);
   const [deleteIssueModal, setDeleteIssueModal] = useState(false);
   const [archiveIssueModal, setArchiveIssueModal] = useState(false);
-  const [_, setDuplicateWorkItemModal] = useState(false);
   // store hooks
   const { allowPermissions } = useUserPermissions();
-  const { issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
   const { getStateById } = useProjectState();
   const { getProjectIdentifierById } = useProject();
   // derived values
-  const activeLayout = `${issuesFilter.issueFilters?.displayFilters?.layout} layout`;
   const stateDetails = getStateById(issue.state_id);
   const projectIdentifier = getProjectIdentifierById(issue?.project_id);
   // auth
@@ -94,7 +92,6 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
     issue,
     workspaceSlug,
     projectIdentifier,
-    activeLayout,
     isEditingAllowed,
     isArchivingAllowed,
     isDeletingAllowed,
@@ -103,7 +100,6 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
     setCreateUpdateIssueModal,
     setDeleteIssueModal,
     setArchiveIssueModal,
-    setDuplicateWorkItemModal,
   };
 
   const MENU_ITEMS = useProjectIssueMenuItems(menuItemProps);
@@ -153,75 +149,13 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
         placement={placements}
         customButton={customActionButton}
         portalElement={portalElement}
-        menuItemsClassName="z-[14]"
+        ariaLabel={`${t("common.options")}: ${issue.name}`}
+        menuItemsClassName="z-20"
         maxHeight="lg"
         closeOnSelect
       >
         {MENU_ITEMS.map((item) => {
           if (item.shouldRender === false) return null;
-
-          // Render submenu if nestedMenuItems exist
-          if (item.nestedMenuItems && item.nestedMenuItems.length > 0) {
-            return (
-              <CustomMenu.SubMenu
-                key={item.key}
-                trigger={
-                  <div className="flex items-center gap-2">
-                    {item.icon && <item.icon className={cn("h-3 w-3", item.iconClassName)} />}
-                    <h5>{item.title}</h5>
-                    {item.description && (
-                      <p
-                        className={cn("whitespace-pre-line text-tertiary", {
-                          "text-placeholder": item.disabled,
-                        })}
-                      >
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-                }
-                disabled={item.disabled}
-                className={cn(
-                  "flex items-center gap-2",
-                  {
-                    "text-placeholder": item.disabled,
-                  },
-                  item.className
-                )}
-              >
-                {item.nestedMenuItems.map((nestedItem) => (
-                  <CustomMenu.MenuItem
-                    key={nestedItem.key}
-                    onClick={() => {
-                      nestedItem.action();
-                    }}
-                    className={cn(
-                      "flex items-center gap-2",
-                      {
-                        "text-placeholder": nestedItem.disabled,
-                      },
-                      nestedItem.className
-                    )}
-                    disabled={nestedItem.disabled}
-                  >
-                    {nestedItem.icon && <nestedItem.icon className={cn("h-3 w-3", nestedItem.iconClassName)} />}
-                    <div>
-                      <h5>{nestedItem.title}</h5>
-                      {nestedItem.description && (
-                        <p
-                          className={cn("whitespace-pre-line text-tertiary", {
-                            "text-placeholder": nestedItem.disabled,
-                          })}
-                        >
-                          {nestedItem.description}
-                        </p>
-                      )}
-                    </div>
-                  </CustomMenu.MenuItem>
-                ))}
-              </CustomMenu.SubMenu>
-            );
-          }
 
           // Render regular menu item
           return (

@@ -8,10 +8,12 @@ import type { IssueDetail } from "@nerve/api-client";
 
 import React from "react";
 import { observer } from "mobx-react";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { ISearchIssueResponse, TWorkItemWidgets } from "@nerve/types";
+import type { TWorkItemWidgets } from "@nerve/types";
 // components
-import { ExistingIssuesListModal } from "@/components/core/modals/existing-issues-list-modal";
+import {
+  ExistingIssuesListModal,
+  type SelectionSubmitResult,
+} from "@/components/core/modals/existing-issues-list-modal";
 // hooks
 import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 // local imports
@@ -20,7 +22,7 @@ import { IssueLinkCreateUpdateModal } from "../issue-detail/links/create-update-
 import { CreateUpdateIssueModal } from "../issue-modal/modal";
 import { useLinkOperations } from "./links/helper";
 import { useSubIssueOperations } from "./sub-issues/helper";
-import { useDetailScope } from "./use-detail-scope";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 
 type Props = {
   workspaceSlug: string;
@@ -53,7 +55,6 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
   // helper hooks
   const subIssueOperations = useSubIssueOperations(workspaceSlug, projectId, issueId);
   const handleLinkOperations = useLinkOperations(workspaceSlug, projectId, issueId);
-  const capture = useDetailScope(workspaceSlug, projectId, issueId);
 
   // handlers
   const handleIssueCrudState = (key: "create" | "existing", _parentIssueId: string | null) => {
@@ -72,13 +73,12 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
     toggleSubIssuesModal(null);
   };
 
-  const handleExistingIssuesModalOnSubmit = async (_issue: ISearchIssueResponse[]) =>
-    subIssueOperations.addSubIssue(
-      workspaceSlug,
-      projectId,
-      issueId,
-      _issue.map((issue) => issue.id)
-    );
+  const handleExistingIssuesModalOnSubmit = async (ids: readonly string[]): Promise<SelectionSubmitResult> => {
+    const parent = issueCrudOperationState.existing.parentIssueId;
+    if (!parent) throw new SessionChangedError();
+    await subIssueOperations.addSubIssue(workspaceSlug, projectId, parent, [...ids]);
+    return { confirmedIds: ids, failures: [] };
+  };
 
   const handleCreateUpdateModalClose = () => {
     handleIssueCrudState("create", null);
@@ -98,27 +98,10 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
     setLastWidgetAction("relations");
   };
 
-  const handleExistingIssueModalOnSubmit = async (data: ISearchIssueResponse[]) => {
-    const current = capture();
-    if (!relationKey) return;
-    if (data.length === 0) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Please select at least one work item.",
-      });
-      return;
-    }
-
-    await createRelation(
-      workspaceSlug,
-      projectId,
-      issueId,
-      relationKey,
-      data.map((i) => i.id)
-    );
-
-    if (current()) toggleRelationModal(null, null);
+  const handleExistingIssueModalOnSubmit = async (ids: readonly string[]): Promise<SelectionSubmitResult> => {
+    if (!relationKey) throw new SessionChangedError();
+    await createRelation(workspaceSlug, projectId, issueId, relationKey, [...ids]);
+    return { confirmedIds: ids, failures: [] };
   };
 
   // helpers
@@ -128,8 +111,8 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
   };
 
   const existingIssuesModalSearchParams = {
-    sub_issue: true,
-    issue_id: issueCrudOperationState?.existing?.parentIssueId,
+    for: "sub_issue" as const,
+    issue_id: issueCrudOperationState.existing.parentIssueId ?? undefined,
   };
 
   // render conditions
@@ -184,7 +167,7 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
           projectId={projectId}
           isOpen={isRelationModalOpen?.issueId === issueId && isRelationModalOpen?.relationType === relationKey}
           handleClose={handleRelationOnClose}
-          searchParams={{ issue_relation: true, issue_id: issueId }}
+          searchParams={{ for: "relation", issue_id: issueId }}
           handleOnSubmit={handleExistingIssueModalOnSubmit}
           workspaceLevelToggle
         />

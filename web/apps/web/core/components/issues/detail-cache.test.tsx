@@ -113,3 +113,59 @@ it("requests a readable archived peek for a legitimate guest", async () => {
   await act(async () => vi.advanceTimersByTimeAsync(20));
   expect(tab.nerve.calls.map((call) => [call.method, call.path])).toEqual([["GET", "/api/v0/issues/x"]]);
 });
+
+it.each(["success", "refusal"])("a late %s cannot replace the current peek's refusal", async (answer) => {
+  tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "old" });
+  await render(<IssuePeekOverview hostScope="test-route" />);
+  await act(async () => {
+    await until(() => tab.nerve.to("/api/v0/issues/old").length === 1, "old peek read");
+  });
+  await act(async () =>
+    tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "new" })
+  );
+  await act(async () => {
+    await until(() => tab.nerve.to("/api/v0/issues/new").length === 1, "new peek read");
+    tab.nerve.to("/api/v0/issues/new")[0]!.answer(problem(403, "forbidden"));
+    await vi.advanceTimersByTimeAsync(20);
+  });
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("errors.forbidden");
+  await act(async () => {
+    tab.nerve
+      .to("/api/v0/issues/old")[0]!
+      .answer(answer === "success" ? json(200, issueDetailOf("old")) : problem(404, "not_found"));
+    await vi.advanceTimersByTimeAsync(20);
+  });
+  expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe("new");
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("errors.forbidden");
+});
+
+it("peek rereads under each permission proof while an allowed guest keeps read access", async () => {
+  tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "x" });
+  await render(<IssuePeekOverview hostScope="test-route" />);
+  await act(async () => {
+    await until(() => tab.nerve.to("/api/v0/issues/x").length === 1, "first peek read");
+    tab.nerve.to("/api/v0/issues/x")[0]!.answer(problem(403, "forbidden"));
+    await vi.advanceTimersByTimeAsync(20);
+  });
+  expect(host.querySelector('[role="alert"]')).not.toBeNull();
+  await act(async () => {
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [{ ...tab.project, member_role: 5 }]);
+  });
+  await act(async () => {
+    await until(() => tab.nerve.to("/api/v0/issues/x").length === 2, "guest read");
+  });
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+  await act(async () => {
+    tab.nerve.to("/api/v0/issues/x")[1]!.answer(problem(404, "not_found"));
+    await vi.advanceTimersByTimeAsync(20);
+  });
+  expect(host.querySelector('[role="alert"]')).not.toBeNull();
+  await act(async () => {
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  });
+  await act(async () => {
+    await until(() => tab.nerve.to("/api/v0/issues/x").length === 3, "restored member read");
+  });
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+  expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe("x");
+});

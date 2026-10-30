@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import { v4 as uuidv4 } from "uuid";
 // nerve imports
@@ -61,7 +61,8 @@ const WorkItemFilterRoot = observer(function WorkItemFilterRoot(props: TWorkItem
     ...entityConfigProps
   } = props;
   // store hooks
-  const { getOrCreateFilter, deleteFilter } = useWorkItemFilters();
+  const store = useWorkItemFilters();
+  const { getFilter, getOrCreateFilter, deleteFilter } = store;
   // derived values
   const workItemEntityID = useMemo(
     () => (isTemporary ? `TEMP-${entityId ?? uuidv4()}` : entityId),
@@ -73,40 +74,45 @@ const WorkItemFilterRoot = observer(function WorkItemFilterRoot(props: TWorkItem
     allowedFilters: filtersToShowByLayout ? filtersToShowByLayout : [],
     ...entityConfigProps,
   });
-  // get or create filter instance
-  const workItemLayoutFilter = useMemo(
-    () =>
-      getOrCreateFilter({
-        entityType,
-        entityId: workItemEntityID,
-        initialExpression: initialUserFilters,
-        onExpressionChange: updateFilters,
-        expressionOptions: {
-          saveViewOptions,
-          updateViewOptions,
-        },
-        showOnMount,
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [entityType, workItemEntityID, saveViewOptions, updateViewOptions, updateFilters]
-  );
-
-  // delete filter instance when component unmounts
-  useEffect(
-    () => () => {
-      deleteFilter(entityType, workItemEntityID);
-    },
-    [deleteFilter, entityType, workItemEntityID]
-  );
+  const key = JSON.stringify([entityType, workItemEntityID]);
+  const [current, setCurrent] = useState<{ store: typeof store; key: string; filter: IWorkItemFilterInstance }>();
+  // Registry writes and option notifications belong to the commit phase, never a render memo.
+  useLayoutEffect(() => {
+    const filter = getOrCreateFilter({
+      entityType,
+      entityId: workItemEntityID,
+      initialExpression: initialUserFilters,
+      onExpressionChange: updateFilters,
+      expressionOptions: { saveViewOptions, updateViewOptions },
+      showOnMount,
+    });
+    setCurrent({ store, key, filter });
+  }, [
+    getOrCreateFilter,
+    store,
+    entityType,
+    workItemEntityID,
+    initialUserFilters,
+    updateFilters,
+    saveViewOptions,
+    updateViewOptions,
+    showOnMount,
+    key,
+  ]);
+  useLayoutEffect(() => {
+    const owned = getFilter(entityType, workItemEntityID);
+    return () => {
+      if (getFilter(entityType, workItemEntityID) === owned) deleteFilter(entityType, workItemEntityID);
+    };
+  }, [getFilter, deleteFilter, entityType, workItemEntityID]);
+  const workItemLayoutFilter = current?.store === store && current.key === key ? current.filter : undefined;
 
   useEffect(() => {
+    if (!workItemLayoutFilter) return;
     workItemLayoutFilter.configManager.setAreConfigsReady(workItemFiltersConfig.areAllConfigsInitialized);
     workItemLayoutFilter.configManager.registerAll(workItemFiltersConfig.configs);
-  }, [
-    workItemFiltersConfig.areAllConfigsInitialized,
-    workItemFiltersConfig.configs,
-    workItemLayoutFilter.configManager,
-  ]);
+  }, [workItemFiltersConfig.areAllConfigsInitialized, workItemFiltersConfig.configs, workItemLayoutFilter]);
 
+  if (!workItemLayoutFilter) return null;
   return <>{typeof children === "function" ? children({ filter: workItemLayoutFilter }) : children}</>;
 });

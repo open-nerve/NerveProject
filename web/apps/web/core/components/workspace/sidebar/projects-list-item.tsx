@@ -43,7 +43,8 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferences";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
-import { HIGHLIGHT_CLASS, highlightIssueOnDrop } from "../../issues/issue-layouts/utils";
+import { useDropHighlight } from "@/hooks/use-drop-highlight";
+import { HIGHLIGHT_CLASS } from "../../issues/issue-layouts/utils";
 import { ProjectNavigation } from "./project-navigation";
 import { useNavigationItems } from "@/components/navigation/use-navigation-items";
 
@@ -87,6 +88,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   const isProjectListOpen = getIsProjectListOpen(projectId);
   const [instruction, setInstruction] = useState<"DRAG_OVER" | "DRAG_BELOW" | undefined>(undefined);
   // refs
+  const highlightIssueOnDrop = useDropHighlight(JSON.stringify([workspaceSlug, projectId, projectListType]));
   const projectRef = useRef<HTMLDivElement | null>(null);
   const dragHandleRef = useRef<HTMLSpanElement | null>(null);
   // router
@@ -215,7 +217,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
       })
     );
     // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-  }, [projectId, isLastChild, projectListType, handleOnProjectDrop]);
+  }, [projectId, isLastChild, projectListType, handleOnProjectDrop, highlightIssueOnDrop]);
 
   useEffect(() => {
     if (isMenuActive) toggleAnySidebarDropdown(true);

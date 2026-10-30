@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**实施与整审修复已完成，集成待办；最终交付CI见提交后回执**。T1–T14完成，T15的整审和局部修复完成，最终交付CI后置核验；保持不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**已完成；T1–T15、准确最终分支CI及获授权后的main CI均通过，归档清理完成，见review§15**。以下Task保留实施与最初交付门禁，后续集成安排以该回执为准。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 

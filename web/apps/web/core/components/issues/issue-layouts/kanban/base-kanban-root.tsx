@@ -5,8 +5,8 @@
  */
 
 import type { FC } from "react";
+import type { Issue } from "@nerve/api-client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
@@ -22,6 +22,7 @@ import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 import { useIssueListRefresh, IssueListRetry } from "@/hooks/use-issue-list-refresh";
 import { useIssueListMount } from "@/hooks/use-issue-list-mount";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 // types
 import { DeleteIssueModal } from "../../delete-issue-modal";
 import { IssueLayoutHOC } from "../issue-layout-HOC";
@@ -111,22 +112,34 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
   const { enableInlineEditing, enableQuickAdd, enableIssueCreation } = issues?.viewFlags || {};
 
   const scrollableContainerRef = useRef<HTMLDivElement | null>(null);
+  const [scrollableContainer, setScrollableContainer] = useState<HTMLDivElement | null>(null);
+  const attachScrollableContainer = useCallback((element: HTMLDivElement | null) => {
+    scrollableContainerRef.current = element;
+    setScrollableContainer(element);
+  }, []);
 
   // states
-  const [draggedIssueId, setDraggedIssueId] = useState<string | undefined>(undefined);
-  const [deleteIssueModal, setDeleteIssueModal] = useState(false);
+  // The dialog owns this selected snapshot through confirmation, including canonical removal on success.
+  const [issueToDelete, setIssueToDelete] = useState<Issue>();
 
-  const isEditingAllowed = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
+  const isEditingAllowed =
+    !!workspaceSlug &&
+    !!projectId &&
+    allowPermissions(
+      [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
+      EUserPermissionsLevel.PROJECT,
+      workspaceSlug,
+      projectId
+    );
 
   const handleOnDrop = useGroupIssuesDragNDrop(storeType, orderBy, group_by, sub_group_by);
 
-  const handleRequestDelete = useCallback((workItemId: string | undefined) => {
-    setDraggedIssueId(workItemId);
-    setDeleteIssueModal(true);
-  }, []);
+  const handleRequestDelete = useCallback(
+    (workItemId: string | undefined) => {
+      setIssueToDelete(workItemId ? getIssueById(workItemId) : undefined);
+    },
+    [getIssueById]
+  );
 
   const canEditProperties = useCallback(
     (issueProjectId: string | undefined) => {
@@ -140,18 +153,11 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
     [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed]
   );
 
-  // Enable Auto Scroll for Main Kanban
+  // The loading/verification gate can mount or replace the actual container later.
   useEffect(() => {
-    const element = scrollableContainerRef.current;
-
-    if (!element) return;
-
-    return combine(
-      autoScrollForElements({
-        element,
-      })
-    );
-  }, []);
+    if (!scrollableContainer) return;
+    return autoScrollForElements({ element: scrollableContainer });
+  }, [scrollableContainer]);
 
   const renderQuickActions: TRenderQuickActions = useCallback(
     ({ issue, parentRef, customActionButton }) => (
@@ -171,18 +177,9 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
   );
 
   const handleDeleteIssue = async () => {
-    const draggedIssue = getIssueById(draggedIssueId ?? "");
-
-    if (!draggedIssueId || !draggedIssue) return;
-
-    try {
-      await removeIssue(draggedIssue.project_id, draggedIssueId);
-      setDeleteIssueModal(false);
-      setDraggedIssueId(undefined);
-    } catch (_error) {
-      setDeleteIssueModal(false);
-      setDraggedIssueId(undefined);
-    }
+    if (!issueToDelete) throw new SessionChangedError();
+    // The confirmation owns refusal, pending and current-host completion.
+    await removeIssue(issueToDelete.project_id, issueToDelete.id);
   };
 
   const handleCollapsedGroups = useCallback(
@@ -208,16 +205,16 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
     <>
       <IssueListRetry {...staleRefresh} />
       <DeleteIssueModal
-        dataId={draggedIssueId}
-        isOpen={deleteIssueModal}
-        handleClose={() => setDeleteIssueModal(false)}
+        data={issueToDelete}
+        isOpen={!!issueToDelete}
+        handleClose={() => setIssueToDelete(undefined)}
         onSubmit={handleDeleteIssue}
       />
       <KanbanDeleteDropZone onRequestDelete={handleRequestDelete} />
       <IssueLayoutHOC layout={EIssueLayoutTypes.KANBAN}>
         <div
           className={`horizontal-scrollbar relative scrollbar-lg flex h-full w-full bg-surface-2 ${sub_group_by ? "vertical-scrollbar overflow-y-auto" : "overflow-x-auto overflow-y-hidden"}`}
-          ref={scrollableContainerRef}
+          ref={attachScrollableContainer}
         >
           <div className="relative h-full w-max min-w-full bg-surface-2">
             <div className="h-full w-max">

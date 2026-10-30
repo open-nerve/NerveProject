@@ -85,13 +85,15 @@ export async function dragOnto(
   item: Locator,
   grip: Locator,
   onto: Locator,
-  at?: { x: number; y: number }
+  at?: { x: number; y: number },
+  started?: () => Promise<void>
 ): Promise<void> {
   await transitionsEnded(page.locator("body"));
   await item.hover();
   await grip.hover();
   await page.mouse.down();
   await item.hover({ position: { x: 60, y: 8 } });
+  await started?.();
   await onto.hover(at && { position: at });
   await page.mouse.up();
 }

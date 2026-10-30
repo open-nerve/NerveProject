@@ -10,6 +10,7 @@ import { observer } from "mobx-react";
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
 //components
 import { WithDisplayPropertiesHOC } from "../properties/with-display-properties-HOC";
+import { spreadsheetSort } from "./spreadsheet-sort";
 import { HeaderColumn } from "./columns/header-column";
 
 interface Props {
@@ -28,6 +29,8 @@ export const SpreadsheetHeaderColumn = observer(function SpreadsheetHeaderColumn
     <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey={property}>
       <th
         className="h-11 min-w-36 items-center border border-t-0 border-b-0 border-subtle bg-layer-1 py-1 text-13 font-medium"
+        scope="col"
+        aria-sort={spreadsheetSort(property, displayFilters).direction}
         ref={tableHeaderCellRef}
         tabIndex={0}
       >

@@ -6,10 +6,11 @@
 
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
+import { QuickAddNameField } from "./name-field";
 import type { TQuickAddIssueForm } from "../root";
 
 export const SpreadsheetQuickAddIssueForm = observer(function SpreadsheetQuickAddIssueForm(props: TQuickAddIssueForm) {
-  const { ref, projectDetail, register, onSubmit } = props;
+  const { ref, projectDetail, register, error, onSubmit } = props;
   const { t } = useTranslation();
   return (
     <div className="pb-2">
@@ -19,13 +20,9 @@ export const SpreadsheetQuickAddIssueForm = observer(function SpreadsheetQuickAd
         className="z-10 flex items-center gap-x-5 border-[0.5px] border-t-0 border-subtle bg-surface-1 px-4 shadow-raised-200"
       >
         <h4 className="w-20 text-11 leading-5 text-placeholder">{projectDetail?.identifier ?? "..."}</h4>
-        <input
-          type="text"
-          autoComplete="off"
-          placeholder={t("issue.title.label")}
-          {...register("name", {
-            required: t("issue.title.required"),
-          })}
+        <QuickAddNameField
+          register={register}
+          error={error}
           className="w-full rounded-md bg-transparent py-3 text-13 leading-5 text-secondary outline-none"
         />
       </form>

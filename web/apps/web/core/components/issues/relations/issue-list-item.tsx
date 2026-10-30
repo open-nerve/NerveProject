@@ -75,8 +75,8 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
   });
 
   // handlers
-  const handleIssuePeekOverview = (selected: Issue) => {
-    handleRedirection(workspaceSlug, selected, isMobile);
+  const handleIssuePeekOverview = (selected: Issue, trigger: HTMLElement) => {
+    handleRedirection(workspaceSlug, selected, isMobile, undefined, trigger);
   };
 
   const handleEditIssue = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -116,7 +116,7 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
       <ControlLink
         id={`issue-${issue.id}`}
         href={workItemLink}
-        onClick={() => handleIssuePeekOverview(issue)}
+        onClick={(event) => handleIssuePeekOverview(issue, event.currentTarget)}
         className="w-full cursor-pointer"
       >
         {issue && (

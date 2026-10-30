@@ -35,6 +35,7 @@ import { useParams, useNavigate } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local components
 import { IssuePropertyLabels } from "./labels";
+import { useDetailCommand } from "../../issue-detail/use-issue-operations";
 import { WithDisplayPropertiesHOC } from "./with-display-properties-HOC";
 
 export interface IIssueProperties {
@@ -60,35 +61,25 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const navigate = useNavigate();
   const { workspaceSlug } = useParams();
 
+  const run = useDetailCommand(workspaceSlug ?? "", issue.project_id, issue.id);
+  const change = (data: Partial<IssueDetail>) => {
+    if (updateIssue) void run(() => updateIssue(issue.project_id, issue.id, data)).catch(() => undefined);
+  };
+
   // derived values
   const stateDetails = getStateById(issue.state_id);
   const subIssueCount = issue?.sub_issues_count ?? 0;
 
-  const handleState = async (stateId: string) => {
-    if (updateIssue) await updateIssue(issue.project_id, issue.id, { state_id: stateId });
-  };
-
-  const handlePriority = async (value: TIssuePriorities) => {
-    if (updateIssue) await updateIssue(issue.project_id, issue.id, { priority: value });
-  };
-
+  const handleState = (stateId: string) => change({ state_id: stateId });
+  const handlePriority = (value: TIssuePriorities) => change({ priority: value });
+  // The label picker owns its confirmation and refusal; keep its rejected promise intact.
   const handleLabel = async (ids: string[]) => {
     if (updateIssue) await updateIssue(issue.project_id, issue.id, { label_ids: ids });
   };
-
-  const handleAssignee = async (ids: string[]) => {
-    if (updateIssue) await updateIssue(issue.project_id, issue.id, { assignee_ids: ids });
-  };
-
-  const handleStartDate = async (date: Date | null) => {
-    if (updateIssue)
-      await updateIssue(issue.project_id, issue.id, { start_date: date ? renderFormattedPayloadDate(date) : null });
-  };
-
-  const handleTargetDate = async (date: Date | null) => {
-    if (updateIssue)
-      await updateIssue(issue.project_id, issue.id, { target_date: date ? renderFormattedPayloadDate(date) : null });
-  };
+  const handleAssignee = (ids: string[]) => change({ assignee_ids: ids });
+  const handleStartDate = (date: Date | null) => change({ start_date: date ? renderFormattedPayloadDate(date) : null });
+  const handleTargetDate = (date: Date | null) =>
+    change({ target_date: date ? renderFormattedPayloadDate(date) : null });
 
   const workItemLink = generateWorkItemLink({
     workspaceSlug,
@@ -166,10 +157,10 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
               to: getDate(issue.target_date) || undefined,
             }}
             onSelect={(range) => {
-              void updateIssue?.(issue.project_id, issue.id, {
+              change({
                 start_date: range?.from ? renderFormattedPayloadDate(range.from) : null,
                 target_date: range?.to ? renderFormattedPayloadDate(range.to) : null,
-              }).catch(() => undefined);
+              });
             }}
             hideIcon={{
               from: false,
@@ -313,6 +304,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
       {/* label */}
       <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="labels">
         <IssuePropertyLabels
+          issueName={issue.name}
           projectId={issue?.project_id || null}
           value={issue?.label_ids || []}
           onChange={handleLabel}

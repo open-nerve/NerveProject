@@ -5,6 +5,7 @@
  */
 
 import type { Issue } from "@nerve/api-client";
+import { openIssuePeek } from "@/components/issues/peek-overview/selection";
 
 import { useNavigate } from "react-router";
 // types
@@ -19,14 +20,16 @@ const useIssuePeekOverviewRedirection = () => {
   // router
   const navigate = useNavigate();
   //   store hooks
-  const { getIsIssuePeeked, setPeekIssue } = useIssueDetail();
+  const detail = useIssueDetail();
+  const { getIsIssuePeeked } = detail;
   const { getProjectIdentifierById } = useProject();
 
   const handleRedirection = (
     workspaceSlug: string | undefined,
     issue: Issue | undefined,
     isMobile = false,
-    nestingLevel?: number
+    nestingLevel?: number,
+    trigger?: HTMLElement
   ) => {
     if (!issue) return;
     const { project_id, id, archived_at } = issue;
@@ -44,7 +47,11 @@ const useIssuePeekOverviewRedirection = () => {
       if (isMobile) {
         navigate(workItemLink);
       } else {
-        setPeekIssue({ workspaceSlug, projectId: project_id, issueId: id, nestingLevel, isArchived: !!archived_at });
+        openIssuePeek(
+          detail,
+          { workspaceSlug, projectId: project_id, issueId: id, nestingLevel, isArchived: !!archived_at },
+          trigger
+        );
       }
     }
   };

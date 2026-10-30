@@ -50,7 +50,7 @@ export const SpreadsheetView = observer(function SpreadsheetView(props: Props) {
     loadMoreIssues,
   } = props;
   // refs
-  const containerRef = useRef<HTMLTableElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const portalRef = useRef<HTMLDivElement | null>(null);
   const spreadsheetColumnsList = SPREADSHEET_PROPERTY_LIST;
 

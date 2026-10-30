@@ -1,3 +1,5 @@
+import { useParams } from "react-router";
+import { getGroupByColumns } from "../group-columns";
 import type { IssueCreate } from "@nerve/api-client";
 import type { Group } from "@/lib/paged-groups";
 /**
@@ -25,7 +27,7 @@ import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // local imports
 import type { TRenderQuickActions } from "../list/list-view-types";
 import type { GroupDropLocation } from "../utils";
-import { getGroupByColumns, isWorkspaceLevel } from "../utils";
+import { isWorkspaceLevel } from "../utils";
 import { KanBan } from "./default";
 import { HeaderGroupByCard } from "./headers/group-by-card";
 import { HeaderSubGroupByCard } from "./headers/sub-group-by-card";
@@ -74,7 +76,7 @@ const SubGroupSwimlaneHeader = observer(function SubGroupSwimlaneHeader({
 
           const subGroupByVisibilityToggle = visibilitySubGroupByGroupCount(groupCount, showEmptyGroup);
 
-          if (subGroupByVisibilityToggle === false) return <></>;
+          if (subGroupByVisibilityToggle === false) return null;
 
           return (
             <div key={`${sub_group_by}_${_list.id}`} className="flex w-[350px] flex-shrink-0 flex-col">
@@ -168,7 +170,7 @@ const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwim
         list.map((_list: IGroupByColumn, subGroupIndex) => {
           const issueCount = getGroupIssueCount(undefined, _list.id, true) ?? 0;
           const subGroupByVisibilityToggle = visibilitySubGroupBy(_list, issueCount);
-          if (subGroupByVisibilityToggle.showGroup === false) return <></>;
+          if (subGroupByVisibilityToggle.showGroup === false) return null;
           return (
             <div key={_list.id} className="flex flex-shrink-0 flex-col">
               <div className="sticky top-[50px] z-[3] flex w-full items-center border-y-[0.5px] border-subtle bg-layer-1 py-1">
@@ -271,16 +273,21 @@ export const KanBanSwimLanes = observer(function KanBanSwimLanes(props: IKanBanS
   } = props;
   // store hooks
   const storeType = useIssueStoreType();
+  const { workspaceSlug, projectId } = useParams();
   // derived values
   const groupByList = getGroupByColumns({
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
+    workspaceSlug,
+    projectId,
   });
   const subGroupByList = getGroupByColumns({
     groupBy: sub_group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
+    workspaceSlug,
+    projectId,
   });
 
   if (!groupByList || !subGroupByList) return null;

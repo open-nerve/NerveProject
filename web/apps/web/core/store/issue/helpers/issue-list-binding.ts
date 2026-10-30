@@ -384,10 +384,15 @@ export class IssueListBinding {
       await this.fetchFirst();
       return;
     }
-    await Promise.all(requests.map((request) => this.fetch(request.part, request.first, request)));
+    await Promise.all(
+      requests
+        .filter((request) => !this.loading.has(request.part ? pagePartKey(request.part) : "whole"))
+        .map((request) => this.fetch(request.part, request.first, request))
+    );
   };
   fetchNext = (group = "", subgroup?: string) => {
-    if (!this.group(group, subgroup)?.nextCursor) return Promise.resolve(undefined);
+    if (!this.group(group, subgroup)?.nextCursor || this.loading.has(pagePartKey({ group, subgroup })))
+      return Promise.resolve(undefined);
     return this.fetch({ group, subgroup }, false);
   };
   refreshStale = async (visible?: readonly PagePart[]): Promise<void> => {

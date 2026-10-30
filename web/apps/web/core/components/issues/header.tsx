@@ -46,10 +46,15 @@ export const IssuesHeader = observer(function IssuesHeader() {
   const { isMobile } = usePlatformOS();
 
   const issuesCount = getGroupIssueCount(undefined, undefined, false);
-  const canUserCreateIssue = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
+  const canUserCreateIssue =
+    !!workspaceSlug &&
+    !!projectId &&
+    allowPermissions(
+      [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
+      EUserPermissionsLevel.PROJECT,
+      workspaceSlug,
+      projectId
+    );
 
   if (!workspaceSlug || !projectId) return null;
 

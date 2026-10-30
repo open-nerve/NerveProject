@@ -4,10 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // nerve helpers
-import { useOutsideClickDetector } from "@nerve/hooks";
 // i18n
 import { useTranslation } from "@nerve/i18n";
 import { LabelsOutline } from "@makeplane/propel/icons";
@@ -23,6 +21,7 @@ import { LabelDropdown } from "./label-dropdown";
 
 export interface IIssuePropertyLabels {
   projectId: string | null;
+  issueName?: string;
   value: string[];
   onChange: (data: string[]) => void;
   disabled?: boolean;
@@ -138,6 +137,7 @@ const LabelItem = observer(function LabelItem({ label, isMobile, disabled, fullW
 export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: IIssuePropertyLabels) {
   const {
     projectId,
+    issueName,
     value,
     onChange,
     onClose,
@@ -151,29 +151,10 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
     fullWidth = false,
     fullHeight = false,
   } = props;
-  // states
-  const [isOpen, setIsOpen] = useState(false);
-  // refs
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
   // store hooks
   const { workspaceSlug } = useParams();
   const { isMobile } = usePlatformOS();
   const storeLabels = useIssueLabels(workspaceSlug, projectId);
-
-  const handleClose = () => {
-    if (!isOpen) return;
-    setIsOpen(false);
-    if (onClose) onClose();
-  };
-
-  useOutsideClickDetector(dropdownRef, handleClose);
-
-  useEffect(() => {
-    if (isOpen && inputRef.current && !isMobile) {
-      inputRef.current.focus();
-    }
-  }, [isOpen, isMobile]);
 
   const projectLabels = storeLabels ?? [];
 
@@ -185,6 +166,8 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
             ?.filter((l) => value.includes(l?.id))
             .map((label) => (
               <LabelDropdown
+                issueName={issueName}
+                onClose={onClose}
                 disabled={disabled}
                 key={label.id}
                 projectId={projectId}
@@ -208,6 +191,8 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
             ))
         ) : (
           <LabelDropdown
+            issueName={issueName}
+            onClose={onClose}
             disabled={disabled}
             projectId={projectId}
             value={value}
@@ -230,6 +215,8 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
         )
       ) : (
         <LabelDropdown
+          issueName={issueName}
+          onClose={onClose}
           disabled={disabled}
           projectId={projectId}
           value={value}

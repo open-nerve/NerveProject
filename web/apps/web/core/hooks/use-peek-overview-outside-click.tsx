@@ -5,7 +5,7 @@
  */
 
 import type React from "react";
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 
 const usePeekOverviewOutsideClickDetector = (
   ref: React.RefObject<HTMLElement | null>,
@@ -13,8 +13,9 @@ const usePeekOverviewOutsideClickDetector = (
   issueId: string,
   excludePreventionElementIds?: string[]
 ) => {
-  const handleClick = useCallback(
-    (event: MouseEvent) => {
+  useEffect(() => {
+    const pending = new Set<ReturnType<typeof setTimeout>>();
+    const handleClick = (event: MouseEvent) => {
       if (!(event.target instanceof HTMLElement)) return;
       if (ref.current && !ref.current.contains(event.target)) {
         // check for the closest element with attribute name data-prevent-outside-click
@@ -44,25 +45,23 @@ const usePeekOverviewOutsideClickDetector = (
         const delayOutsideClickElement = event.target.closest("[data-delay-outside-click]");
         if (delayOutsideClickElement) {
           // if the click target is the closest element with attribute name data-delay-outside-click, delay the callback
-          setTimeout(() => {
+          const timer = setTimeout(() => {
+            pending.delete(timer);
             callback();
           }, 0);
+          pending.add(timer);
           return;
         }
         // else, call the callback immediately
         callback();
       }
-    },
-    [ref, callback, issueId, excludePreventionElementIds]
-  );
-
-  useEffect(() => {
+    };
     document.addEventListener("mousedown", handleClick);
-
     return () => {
       document.removeEventListener("mousedown", handleClick);
+      pending.forEach(clearTimeout);
     };
-  }, [handleClick]);
+  }, [ref, callback, issueId, excludePreventionElementIds]);
 };
 
 export default usePeekOverviewOutsideClickDetector;

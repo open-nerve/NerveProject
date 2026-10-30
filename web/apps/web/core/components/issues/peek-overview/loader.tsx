@@ -8,6 +8,7 @@ import { ArrowNarrowRightOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { Loader } from "@nerve/ui";
 // hooks
+import { useTranslation } from "@nerve/i18n";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TIssuePeekOverviewLoader = {
@@ -18,13 +19,14 @@ export function IssuePeekOverviewLoader(props: TIssuePeekOverviewLoader) {
   const { removeRoutePeekId } = props;
   // hooks
   const { isMobile } = usePlatformOS();
+  const { t } = useTranslation();
 
   return (
     <Loader className="h-screen w-full space-y-6 overflow-hidden p-5">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Tooltip label="Close the peek view" disabled={isMobile}>
-            <button onClick={removeRoutePeekId}>
+          <Tooltip label={t("common.close_peek_view")} disabled={isMobile}>
+            <button type="button" aria-label={t("common.close_peek_view")} onClick={removeRoutePeekId}>
               <ArrowNarrowRightOutline className="h-4 w-4 text-tertiary hover:text-secondary" />
             </button>
           </Tooltip>

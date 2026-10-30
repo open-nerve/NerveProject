@@ -25,6 +25,7 @@ import { useIssueListMount } from "@/hooks/use-issue-list-mount";
 // components
 import { IssueLayoutHOC } from "../issue-layout-HOC";
 import { List } from "./default";
+import { RowExpansionProvider } from "../row-expansion";
 // types
 import type { IQuickActionProps, TRenderQuickActions } from "./list-view-types";
 
@@ -77,10 +78,15 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
   );
 
   // auth
-  const isEditingAllowed = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
+  const isEditingAllowed =
+    !!workspaceSlug &&
+    !!projectId &&
+    allowPermissions(
+      [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
+      EUserPermissionsLevel.PROJECT,
+      workspaceSlug,
+      projectId
+    );
   const { enableInlineEditing, enableQuickAdd, enableIssueCreation } = issues?.viewFlags || {};
 
   const canEditProperties = useCallback(
@@ -109,8 +115,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
         readOnly={!canEditProperties(issue.project_id ?? undefined)}
       />
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [canEditProperties, removeIssue, updateIssue, archiveIssue, restoreIssue]
+    [QuickActions, canEditProperties, removeIssue, updateIssue, archiveIssue, restoreIssue]
   );
 
   const loadMoreIssues = useCallback(
@@ -139,29 +144,31 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
   );
 
   return (
-    <IssueLayoutHOC layout={EIssueLayoutTypes.LIST}>
-      <div className="relative size-full bg-surface-2">
-        <IssueListRetry {...staleRefresh} />
-        <List
-          viewId={viewId}
-          issuesMap={issueMap}
-          displayProperties={displayProperties}
-          group_by={group_by}
-          orderBy={orderBy}
-          updateIssue={updateIssue}
-          quickActions={renderQuickActions}
-          groups={groups ?? new Map()}
-          loadMoreIssues={loadMoreIssues}
-          showEmptyGroup={showEmptyGroup}
-          quickAddCallback={createIssue}
-          enableIssueQuickAdd={!!enableQuickAdd}
-          canEditProperties={canEditProperties}
-          disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
-          handleOnDrop={handleOnDrop}
-          handleCollapsedGroups={handleCollapsedGroups}
-          collapsedGroups={collapsedGroups}
-        />
-      </div>
-    </IssueLayoutHOC>
+    <RowExpansionProvider viewId={viewId}>
+      <IssueListRetry {...staleRefresh} />
+      <IssueLayoutHOC layout={EIssueLayoutTypes.LIST}>
+        <div className="relative size-full bg-surface-2">
+          <List
+            viewId={viewId}
+            issuesMap={issueMap}
+            displayProperties={displayProperties}
+            group_by={group_by}
+            orderBy={orderBy}
+            updateIssue={updateIssue}
+            quickActions={renderQuickActions}
+            groups={groups ?? new Map()}
+            loadMoreIssues={loadMoreIssues}
+            showEmptyGroup={showEmptyGroup}
+            quickAddCallback={createIssue}
+            enableIssueQuickAdd={!!enableQuickAdd}
+            canEditProperties={canEditProperties}
+            disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
+            handleOnDrop={handleOnDrop}
+            handleCollapsedGroups={handleCollapsedGroups}
+            collapsedGroups={collapsedGroups}
+          />
+        </div>
+      </IssueLayoutHOC>
+    </RowExpansionProvider>
   );
 });

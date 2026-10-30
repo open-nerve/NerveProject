@@ -26,6 +26,7 @@ import { IssuePeekOverviewHeader } from "./header";
 import { PeekOverviewIssueDetails } from "./issue-detail";
 import { IssuePeekOverviewLoader } from "./loader";
 import { PeekOverviewProperties } from "./properties";
+import { restoreIssuePeekFocus } from "./selection";
 
 interface IIssueView {
   workspaceSlug: string;
@@ -60,7 +61,6 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
   const { status: isSubmitting, setTitleStatus, setDescriptionStatus } = useIssueSaveStatus();
   const [isDeleteIssueModalOpen, setIsDeleteIssueModalOpen] = useState(false);
   const [isArchiveIssueModalOpen, setIsArchiveIssueModalOpen] = useState(false);
-  const [isDuplicateIssueModalOpen, setIsDuplicateIssueModalOpen] = useState(false);
   const [isEditIssueModalOpen, setIsEditIssueModalOpen] = useState(false);
   // ref
   const issuePeekOverviewRef = useRef<HTMLDivElement>(null);
@@ -76,19 +76,20 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
   const { isAnyModalOpen } = useIssueDetailModals();
   const issue = getIssueById(issueId);
   // remove peek id
-  const removeRoutePeekId = () => {
+  const closePeek = (returnFocus: boolean) => {
     if (!capture()() || detail.peekIssue !== selection) return;
     setPeekIssue(undefined);
     if (embedIssue && embedRemoveCurrentNotification) embedRemoveCurrentNotification();
+    if (returnFocus && !embedIssue) restoreIssuePeekFocus(selection);
   };
+
+  const removeRoutePeekId = () => closePeek(true);
 
   const toggleDeleteIssueModal = (value: boolean) => setIsDeleteIssueModalOpen(value);
   const toggleArchiveIssueModal = (value: boolean) => setIsArchiveIssueModalOpen(value);
-  const toggleDuplicateIssueModal = (value: boolean) => setIsDuplicateIssueModalOpen(value);
   const toggleEditIssueModal = (value: boolean) => setIsEditIssueModalOpen(value);
 
-  const isAnyLocalModalOpen =
-    isDeleteIssueModalOpen || isArchiveIssueModalOpen || isDuplicateIssueModalOpen || isEditIssueModalOpen;
+  const isAnyLocalModalOpen = isDeleteIssueModalOpen || isArchiveIssueModalOpen || isEditIssueModalOpen;
 
   usePeekOverviewOutsideClickDetector(
     issuePeekOverviewRef,
@@ -96,7 +97,7 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
       const isAnyDropbarOpen = editorRef.current?.isAnyDropbarOpen();
       if (!embedIssue) {
         if (!isAnyModalOpen && !isAnyLocalModalOpen && !isAnyDropbarOpen) {
-          removeRoutePeekId();
+          closePeek(false);
         }
       }
     },
@@ -116,21 +117,15 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
       !editorImageFullScreenModalElement
     ) {
       removeRoutePeekId();
-      const issueElement = document.getElementById(`issue-${issueId}`);
-      if (issueElement) issueElement?.focus();
     }
   };
 
-  useKeypress("Escape", () => !embedIssue && handleKeyDown());
+  useKeypress("Escape", (event) => !event.defaultPrevented && !embedIssue && handleKeyDown());
 
   const handleRestore = async () => {
     if (!issueOperations.restore) return;
-    try {
-      await issueOperations.restore(workspaceSlug, projectId, issueId);
-      removeRoutePeekId();
-    } catch {
-      // The operation reports its native refusal; keep this peek open.
-    }
+    await issueOperations.restore(workspaceSlug, projectId, issueId);
+    removeRoutePeekId();
   };
 
   const peekOverviewIssueClassName = cn(
@@ -146,7 +141,7 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
 
   const shouldUsePortal = !embedIssue;
 
-  const portalContainer = document.getElementById("full-screen-portal") as HTMLElement;
+  const portalContainer = document.getElementById("full-screen-portal");
 
   const content = (
     <div className="w-full text-body-sm-regular">
@@ -182,7 +177,6 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                 removeRoutePeekId={removeRoutePeekId}
                 toggleDeleteIssueModal={toggleDeleteIssueModal}
                 toggleArchiveIssueModal={toggleArchiveIssueModal}
-                toggleDuplicateIssueModal={toggleDuplicateIssueModal}
                 toggleEditIssueModal={toggleEditIssueModal}
                 handleRestoreIssue={handleRestore}
                 isArchived={is_archived}

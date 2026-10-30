@@ -1,3 +1,4 @@
+import { useParams } from "react-router";
 import type { IssueCreate } from "@nerve/api-client";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
@@ -36,12 +37,7 @@ import { useIssuesStore } from "@/hooks/use-issue-layout-store";
 import { GroupDragOverlay } from "../group-drag-overlay";
 import { ListQuickAddIssueButton, QuickAddIssueRoot } from "../quick-add";
 import type { GroupDropLocation } from "../utils";
-import {
-  getDestinationFromDropPayload,
-  getIssueBlockId,
-  getSourceFromDropPayload,
-  highlightIssueOnDrop,
-} from "../utils";
+import { getDestinationFromDropPayload, getSourceFromDropPayload } from "../utils";
 import { IssueBlocksList } from "./blocks-list";
 import { HeaderGroupByCard } from "./headers/group-by-card";
 import type { TRenderQuickActions } from "./list-view-types";
@@ -99,10 +95,11 @@ export const ListGroup = observer(function ListGroup(props: Props) {
   const groupRef = useRef<HTMLDivElement | null>(null);
   const { t } = useTranslation();
   const projectState = useProjectState();
+  const { projectId } = useParams();
 
-  const {
-    issues: { getGroupIssueCount, getPaginationData, getIssueLoader },
-  } = useIssuesStore();
+  const { issues } = useIssuesStore();
+  const { getGroupIssueCount, getPaginationData, getIssueLoader } = issues;
+  const failed = "currentList" in issues && !!issues.currentList?.error;
 
   const [intersectionElement, setIntersectionElement] = useState<HTMLDivElement | null>(null);
 
@@ -110,23 +107,28 @@ export const ListGroup = observer(function ListGroup(props: Props) {
   const nextCursor = getPaginationData(group.id, undefined)?.nextCursor;
   const isPaginating = !!getIssueLoader(group.id);
 
-  useIntersectionObserver(containerRef, isPaginating ? null : intersectionElement, loadMoreIssues, `100% 0% 100% 0%`);
+  useIntersectionObserver(
+    containerRef,
+    isPaginating || failed ? null : intersectionElement,
+    loadMoreIssues,
+    `100% 0% 100% 0%`
+  );
 
   const shouldLoadMore =
     nextCursor === undefined && groupIssueCount !== undefined && groupIssueIds
       ? groupIssueIds.length < groupIssueCount
       : !!nextCursor;
 
-  const loadMore = isPaginating ? (
-    <ListLoaderItemRow />
-  ) : (
-    // oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions
-    <div
-      className="relative flex h-11 cursor-pointer items-center gap-3 border border-transparent border-t-subtle-1 bg-surface-1 p-3 pl-8 text-13 font-medium text-accent-primary hover:text-accent-secondary hover:underline"
+  const loadMore = (
+    <button
+      type="button"
+      disabled={isPaginating}
+      aria-busy={isPaginating}
+      className="relative flex h-11 w-full items-center gap-3 border border-transparent border-t-subtle-1 bg-surface-1 p-3 pl-8 text-left text-13 font-medium text-accent-primary hover:text-accent-secondary hover:underline disabled:cursor-wait"
       onClick={() => loadMoreIssues(group.id)}
     >
       {t("common.load_more")} &darr;
-    </div>
+    </button>
   );
 
   const validateEmptyIssueGroups = (issueCount: number = 0) => {
@@ -134,8 +136,8 @@ export const ListGroup = observer(function ListGroup(props: Props) {
     return true;
   };
 
-  const prePopulateQuickAddData = (groupByKey: string | null, value: any) => {
-    const defaultState = projectState.projectStates?.find((state) => state.default);
+  const prePopulateQuickAddData = (groupByKey: string | null, value: string) => {
+    const defaultState = projectState.getProjectStates(projectId)?.find((state) => state.default);
     let preloadedData: object = { state_id: defaultState?.id };
 
     if (groupByKey === null) {
@@ -209,24 +211,13 @@ export const ListGroup = observer(function ListGroup(props: Props) {
 
           handleOnDrop(source, destination);
 
-          highlightIssueOnDrop(getIssueBlockId(source.id, destination?.groupId), orderBy !== "sort_order");
-
           if (!isExpanded) {
             handleCollapsedGroups(group.id);
           }
         },
       })
     );
-  }, [
-    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-    groupRef?.current,
-    group,
-    orderBy,
-    getGroupIndex,
-    setDragColumnOrientation,
-    setIsDraggingOverColumn,
-  ]);
-
+  }, [group, orderBy, getGroupIndex, handleOnDrop, isExpanded, handleCollapsedGroups, t]);
   const isDragAllowed = group_by ? DRAG_ALLOWED_GROUPS.includes(group_by) : true;
   const canOverlayBeVisible = orderBy !== "sort_order" || !!group.isDropDisabled;
   const isDropDisabled = !!group.isDropDisabled;
@@ -283,22 +274,18 @@ export const ListGroup = observer(function ListGroup(props: Props) {
             />
           )}
 
-          {shouldLoadMore &&
-            (group_by ? (
-              <>{loadMore}</>
-            ) : (
-              <>
-                {Array.from({ length: 2 }).map((_, index) => (
-                  // oxlint-disable-next-line react/no-array-index-key
-                  <ListLoaderItemRow key={index} />
-                ))}
-                <ListLoaderItemRow ref={setIntersectionElement} />
-              </>
-            ))}
+          {shouldLoadMore && (
+            <>
+              {loadMore}
+              {isPaginating && <ListLoaderItemRow />}
+              {!group_by && <div ref={setIntersectionElement} aria-hidden="true" />}
+            </>
+          )}
 
           {enableIssueQuickAdd && !disableIssueCreation && !isGroupByCreatedBy && (
             <div className="sticky bottom-0 z-[1] w-full flex-shrink-0">
               <QuickAddIssueRoot
+                scopeKey={JSON.stringify([group_by, group.id])}
                 layout={EIssueLayoutTypes.LIST}
                 QuickAddButton={ListQuickAddIssueButton}
                 prePopulatedData={prePopulateQuickAddData(group_by, group.id)}

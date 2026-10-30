@@ -6,6 +6,8 @@
 
 import type { Issue, IssueDetail } from "@nerve/api-client";
 
+import { useParams } from "react-router";
+import { useDetailCommand } from "../../issue-detail/use-issue-operations";
 import { useRef } from "react";
 import { observer } from "mobx-react";
 // types
@@ -25,6 +27,8 @@ type Props = {
 
 export const IssueColumn = observer(function IssueColumn(props: Props) {
   const { displayProperties, issueDetail, disableUserActions, property, updateIssue } = props;
+  const { workspaceSlug } = useParams();
+  const run = useDetailCommand(workspaceSlug ?? "", issueDetail.project_id, issueDetail.id);
   // router
   const tableCellRef = useRef<HTMLTableCellElement | null>(null);
 
@@ -33,7 +37,10 @@ export const IssueColumn = observer(function IssueColumn(props: Props) {
   if (!Column) return null;
 
   const handleUpdateIssue = async (issue: Issue, data: Partial<IssueDetail>) => {
-    if (updateIssue) await updateIssue(issue.project_id, issue.id, data);
+    if (!updateIssue) return;
+    // The label picker awaits and reports its own command; other inline controls are void event boundaries.
+    if (property === "labels") await updateIssue(issue.project_id, issue.id, data);
+    else await run(() => updateIssue(issue.project_id, issue.id, data)).catch(() => undefined);
   };
 
   return (

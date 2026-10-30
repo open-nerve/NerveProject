@@ -4,18 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import { useRef, useState } from "react";
 import { observer } from "mobx-react";
-import { usePopper } from "react-popper";
-import { Combobox } from "@headlessui/react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
-import { ProjectsOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
-import { ComboDropDown } from "@nerve/ui";
+import { ProjectsOutline } from "@makeplane/propel/icons";
+import { CustomSearchSelect } from "@nerve/ui";
 import { cn, sortBySelectedFirst } from "@nerve/utils";
-// hooks
-import { useDropdown } from "@/hooks/use-dropdown";
 // nerve imports
 import type { Project } from "@nerve/api-client";
 // local imports
@@ -48,6 +43,7 @@ const renderProjectLogo = (logoProps: Project["logo_props"]) => (
 );
 
 export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: Props) {
+  const { t } = useTranslation();
   const {
     buttonClassName,
     buttonContainerClassName,
@@ -58,7 +54,7 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
     hideIcon = false,
     multiple,
     onChange,
-    placeholder = "Project",
+    placeholder = t("common.project"),
     placement,
     projectIds,
     renderCondition,
@@ -66,33 +62,10 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
     tabIndex,
     value,
   } = props;
-  // refs
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  // popper-js refs
-  const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
-  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  // states
-  const [query, setQuery] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-  // nerve hooks
-  const { t } = useTranslation();
-  // popper-js init
-  const { styles, attributes } = usePopper(referenceElement, popperElement, {
-    placement: placement ?? "bottom-start",
-    modifiers: [
-      {
-        name: "preventOverflow",
-        options: {
-          padding: 12,
-        },
-      },
-    ],
-  });
   // store hooks
   const options = projectIds?.map((projectId) => {
     const projectDetails = getProjectById(projectId);
-    if (renderCondition && !renderCondition(projectId)) return;
+    if (!projectDetails || (renderCondition && !renderCondition(projectId))) return;
     return {
       value: projectId,
       query: `${projectDetails?.name}`,
@@ -109,27 +82,10 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
     };
   });
 
-  const filteredOptions = sortBySelectedFirst(
-    (query === "" ? options : options?.filter((o) => o?.query.toLowerCase().includes(query.toLowerCase())))?.filter(
-      (o): o is NonNullable<typeof o> => o !== undefined
-    ),
+  const sortedOptions = sortBySelectedFirst(
+    options.filter((option) => option !== undefined),
     value
   );
-
-  const { handleClose, handleKeyDown, handleOnClick, searchInputKeyDown } = useDropdown({
-    dropdownRef,
-    inputRef,
-    isOpen,
-    query,
-    setIsOpen,
-    setQuery,
-  });
-
-  const dropdownOnChange = (val: string & string[]) => {
-    onChange(val);
-    if (!multiple) handleClose();
-  };
-
   // what the button says: the project picked, how many are, or the placeholder
   const getDisplayName = () => {
     if (Array.isArray(value)) {
@@ -148,7 +104,9 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
           {value.length > 0 ? (
             value.map((projectId) => {
               const projectDetails = getProjectById(projectId);
-              return projectDetails?.logo_props ? renderProjectLogo(projectDetails.logo_props) : null;
+              return projectDetails?.logo_props ? (
+                <span key={projectId}>{renderProjectLogo(projectDetails.logo_props)}</span>
+              ) : null;
             })
           ) : (
             <ProjectsOutline className="size-3 text-tertiary" />
@@ -161,107 +119,39 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
     }
   };
 
-  const comboButton = (
-    <button
-      ref={setReferenceElement}
-      type="button"
-      className={cn(
-        "clickable block h-full max-w-full outline-none",
-        {
-          "cursor-not-allowed text-secondary": disabled,
-          "cursor-pointer": !disabled,
-        },
-        buttonContainerClassName
-      )}
-      onClick={handleOnClick}
-      disabled={disabled}
+  const content = (
+    <DropdownButton
+      presentation
+      className={cn("group-data-open:bg-layer-transparent-active", buttonClassName)}
+      isActive={false}
+      tooltipHeading={placeholder}
+      tooltipContent={getDisplayName() ?? placeholder}
+      showTooltip={showTooltip}
+      variant={buttonVariant}
     >
-      <DropdownButton
-        className={buttonClassName}
-        isActive={isOpen}
-        tooltipHeading="Project"
-        tooltipContent={value?.length ? `${value.length} project${value.length !== 1 ? "s" : ""}` : placeholder}
-        showTooltip={showTooltip}
-        variant={buttonVariant}
-        tabIndex={tabIndex}
-      >
-        {!hideIcon && getProjectIcon()}
-        {BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (
-          <span className="max-w-40 truncate">{getDisplayName()}</span>
-        )}
-      </DropdownButton>
-    </button>
+      <span className="sr-only">{placeholder}: </span>
+      {!hideIcon && getProjectIcon()}
+      <span className={BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) ? "max-w-40 truncate" : "sr-only"}>
+        {getDisplayName()}
+      </span>
+    </DropdownButton>
   );
-
-  return (
-    <ComboDropDown
-      as="div"
-      ref={dropdownRef}
-      className={cn("h-full", className)}
-      value={value}
-      onChange={dropdownOnChange}
-      disabled={disabled}
-      onKeyDown={handleKeyDown}
-      role="presentation"
-      button={comboButton}
-      multiple={multiple}
-    >
-      {isOpen && (
-        <Combobox.Options as="ul" className="fixed z-10" static>
-          <div
-            className="my-1 w-48 rounded-sm border-[0.5px] border-strong bg-surface-1 px-2 py-2.5 text-11 shadow-raised-200 focus:outline-none"
-            ref={setPopperElement}
-            style={styles.popper}
-            {...attributes.popper}
-          >
-            <div className="flex items-center gap-1.5 rounded-sm border border-subtle bg-surface-2 px-2">
-              <SearchOutline className="h-3.5 w-3.5 text-placeholder" />
-              <Combobox.Input
-                as="input"
-                ref={inputRef}
-                className="w-full bg-transparent py-1 text-11 text-secondary placeholder:text-placeholder focus:outline-none"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("search")}
-                displayValue={(assigned: any) => assigned?.name}
-                onKeyDown={searchInputKeyDown}
-              />
-            </div>
-            <div className="mt-2 max-h-48 space-y-1 overflow-y-scroll">
-              {filteredOptions ? (
-                filteredOptions.length > 0 ? (
-                  filteredOptions.map((option) => {
-                    if (!option) return;
-                    return (
-                      <Combobox.Option
-                        as="li"
-                        key={option.value}
-                        value={option.value}
-                        className={({ active, selected }) =>
-                          `flex w-full cursor-pointer items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 select-none ${
-                            active ? "bg-layer-transparent-hover" : ""
-                          } ${selected ? "text-primary" : "text-secondary"}`
-                        }
-                      >
-                        {({ selected }) => (
-                          <>
-                            <span className="flex-grow truncate">{option.content}</span>
-                            {selected && <TickOutline className="h-3.5 w-3.5 flex-shrink-0" />}
-                          </>
-                        )}
-                      </Combobox.Option>
-                    );
-                  })
-                ) : (
-                  <p className="px-1.5 py-1 text-placeholder italic">{t("no_matching_results")}</p>
-                )
-              ) : (
-                <p className="px-1.5 py-1 text-placeholder italic">{t("loading")}</p>
-              )}
-            </div>
-          </div>
-        </Combobox.Options>
-      )}
-    </ComboDropDown>
+  const shared = {
+    options: sortedOptions,
+    disabled,
+    tabIndex,
+    customButton: content,
+    className: cn("h-full shrink", className),
+    optionsClassName: "w-48",
+    customButtonClassName: cn("group h-full max-w-full hover:bg-transparent", buttonContainerClassName),
+    placement,
+    searchPlaceholder: t("common.search.label"),
+    noResultsMessage: t("no_matching_results"),
+    loadingMessage: t("common.loading"),
+  };
+  return multiple ? (
+    <CustomSearchSelect {...shared} multiple value={value} onChange={(ids: string[]) => onChange(ids)} />
+  ) : (
+    <CustomSearchSelect {...shared} value={value} onChange={(id: string) => onChange(id)} />
   );
 });

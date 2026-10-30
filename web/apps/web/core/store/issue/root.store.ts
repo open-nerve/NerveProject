@@ -39,6 +39,7 @@ import { WorkspaceDraftIssues } from "./workspace-draft";
 
 import { IssueApiService } from "@/services/issue/issue-api.service";
 import { IssueListService } from "@/services/issue/issue-list.service";
+import { IssueSearchService } from "@/services/issue/issue-search.service";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { oneAtATime } from "@/lib/one-at-a-time";
 import { compareIssueTime } from "@/lib/issue-order";
@@ -117,6 +118,7 @@ export class IssueRootStore {
   readonly activityApi: IssueActivityService;
   readonly reactionApi: IssueReactionService;
   readonly listApi: IssueListService;
+  readonly searchApi: IssueSearchService;
   private serial = 0;
   get readSerial(): number {
     return this.serial;
@@ -142,6 +144,7 @@ export class IssueRootStore {
     this.activityApi = new IssueActivityService(api);
     this.reactionApi = new IssueReactionService(api);
     this.listApi = new IssueListService(api);
+    this.searchApi = new IssueSearchService(api);
     makeObservable(this, {
       active: observable,
       currentUserId: computed,

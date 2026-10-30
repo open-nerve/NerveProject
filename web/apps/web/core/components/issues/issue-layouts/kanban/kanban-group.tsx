@@ -1,3 +1,4 @@
+import { useParams } from "react-router";
 import type { IssueCreate } from "@nerve/api-client";
 import type { Group } from "@/lib/paged-groups";
 /**
@@ -25,12 +26,7 @@ import { EIssueLayoutTypes } from "@nerve/types";
 import { cn } from "@nerve/utils";
 import type { GroupDropLocation } from "@/components/issues/issue-layouts/utils";
 // components
-import {
-  highlightIssueOnDrop,
-  getSourceFromDropPayload,
-  getDestinationFromDropPayload,
-  getIssueBlockId,
-} from "@/components/issues/issue-layouts/utils";
+import { getSourceFromDropPayload, getDestinationFromDropPayload } from "@/components/issues/issue-layouts/utils";
 import { KanbanIssueBlockLoader } from "@/components/ui/loader/layouts/kanban-layout-loader";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
@@ -76,6 +72,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     displayProperties,
     groups,
     isDropDisabled,
+    isDragDisabled,
     dropErrorMessage,
     updateIssue,
     quickActions,
@@ -91,10 +88,11 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
   const { t } = useTranslation();
   // hooks
   const projectState = useProjectState();
+  const { projectId } = useParams();
 
-  const {
-    issues: { getGroupIssueCount, getPaginationData, getIssueLoader },
-  } = useIssuesStore();
+  const { issues } = useIssuesStore();
+  const { getGroupIssueCount, getPaginationData, getIssueLoader } = issues;
+  const failed = "currentList" in issues && !!issues.currentList?.error;
 
   const [intersectionElement, setIntersectionElement] = useState<HTMLSpanElement | null>(null);
   const columnRef = useRef<HTMLDivElement | null>(null);
@@ -109,7 +107,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
 
   useIntersectionObserver(
     containerRef,
-    isPaginating ? null : intersectionElement,
+    isPaginating || failed ? null : intersectionElement,
     loadMoreIssuesInThisGroup,
     `0% 100% 100% 100%`
   );
@@ -141,28 +139,23 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
 
           if (!source || !destination) return;
 
-          if (isDropDisabled && dropErrorMessage) {
-            setToast({
-              type: TOAST_TYPE.WARNING,
-              title: t("common.warning"),
-              message: dropErrorMessage,
-            });
+          if (isDropDisabled) {
+            if (dropErrorMessage)
+              setToast({
+                type: TOAST_TYPE.WARNING,
+                title: t("common.warning"),
+                message: dropErrorMessage,
+              });
             return;
           }
 
           handleOnDrop(source, destination);
-
-          highlightIssueOnDrop(
-            getIssueBlockId(source.id, destination?.groupId, destination?.subGroupId),
-            orderBy !== "sort_order"
-          );
         },
       }),
       autoScrollForElements({
         element,
       })
     );
-    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
   }, [
     columnRef,
     groupId,
@@ -172,6 +165,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     isDropDisabled,
     dropErrorMessage,
     handleOnDrop,
+    t,
   ]);
 
   const prePopulateQuickAddData = (
@@ -180,7 +174,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     groupValue: string,
     subGroupValue: string | undefined
   ) => {
-    const defaultState = projectState.projectStates?.find((state) => state.default);
+    const defaultState = projectState.getProjectStates(projectId)?.find((state) => state.default);
     let preloadedData: object = { state_id: defaultState?.id };
 
     if (groupByKey) {
@@ -231,22 +225,23 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
 
   const nextCursor = getPaginationData(groupId, sub_group_id)?.nextCursor;
 
-  const loadMore = isPaginating ? (
-    <KanbanIssueBlockLoader />
-  ) : (
-    // oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions
-    <div
-      className="sticky bottom-0 w-full cursor-pointer p-3 text-13 font-medium text-accent-primary hover:text-accent-secondary hover:underline"
+  const loadMore = (
+    <button
+      type="button"
+      disabled={isPaginating}
+      aria-busy={isPaginating}
+      className="sticky bottom-0 w-full cursor-pointer p-3 text-13 font-medium text-accent-primary hover:text-accent-secondary hover:underline disabled:cursor-wait"
       onClick={loadMoreIssuesInThisGroup}
     >
       {t("common.load_more")} &darr;
-    </div>
+    </button>
   );
 
   const shouldLoadMore = nextCursor === undefined ? issueIds?.length < groupIssueCount : !!nextCursor;
   const canOverlayBeVisible = orderBy !== "sort_order" || isDropDisabled;
   const shouldOverlayBeVisible = isDraggingOverColumn && canOverlayBeVisible;
   const canDragIssuesInCurrentGrouping =
+    !isDragDisabled &&
     !!group_by &&
     DRAG_ALLOWED_GROUPS.includes(group_by) &&
     (sub_group_by ? DRAG_ALLOWED_GROUPS.includes(sub_group_by) : true);
@@ -283,22 +278,17 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
         canDragIssuesInCurrentGrouping={canDragIssuesInCurrentGrouping}
       />
 
-      {shouldLoadMore &&
-        (isSubGroup ? (
-          <>{loadMore}</>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {Array.from({ length: 2 }).map((_, index) => (
-              // oxlint-disable-next-line react/no-array-index-key
-              <KanbanIssueBlockLoader key={index} />
-            ))}
-            <KanbanIssueBlockLoader ref={setIntersectionElement} />
-          </div>
-        ))}
+      {shouldLoadMore && (
+        <>
+          {loadMore}
+          {!isSubGroup && !failed && <KanbanIssueBlockLoader ref={setIntersectionElement} />}
+        </>
+      )}
 
       {enableQuickIssueCreate && !disableIssueCreation && (
         <div className="sticky bottom-0 w-full bg-surface-2 py-0.5">
           <QuickAddIssueRoot
+            scopeKey={JSON.stringify([group_by, groupId, sub_group_by, sub_group_id])}
             layout={EIssueLayoutTypes.KANBAN}
             QuickAddButton={KanbanQuickAddIssueButton}
             prePopulatedData={{

@@ -36,11 +36,6 @@ export type GroupByColumnTypes =
   | "assignees"
   | "created_by";
 
-export type TGetColumns = {
-  isWorkspaceLevel?: boolean;
-  projectId?: string;
-};
-
 export interface IGroupByColumn {
   id: string;
   name: string;

@@ -23,6 +23,7 @@ import { useIssueListMount } from "@/hooks/use-issue-list-mount";
 import { IssueLayoutHOC } from "../issue-layout-HOC";
 import type { IQuickActionProps, TRenderQuickActions } from "../list/list-view-types";
 import { SpreadsheetView } from "./spreadsheet-view";
+import { RowExpansionProvider } from "../row-expansion";
 
 type SpreadsheetStoreType = EIssuesStoreType.PROJECT;
 
@@ -35,7 +36,7 @@ interface IBaseSpreadsheetRoot {
 export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: IBaseSpreadsheetRoot) {
   const { QuickActions, canEditPropertiesBasedOnProject, viewId } = props;
   // router
-  const { projectId } = useParams();
+  const { workspaceSlug, projectId } = useParams();
   // store hooks
   const storeType = useIssueStoreType() as SpreadsheetStoreType;
   const { allowPermissions } = useUserPermissions();
@@ -53,17 +54,24 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
   // derived values
   const { enableInlineEditing, enableQuickAdd, enableIssueCreation } = issues?.viewFlags || {};
   // user role validation
-  const isEditingAllowed = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
+  const isEditingAllowed =
+    !!workspaceSlug &&
+    !!projectId &&
+    allowPermissions(
+      [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
+      EUserPermissionsLevel.PROJECT,
+      workspaceSlug,
+      projectId
+    );
 
   useIssueListMount(storeType, issues.rootIssueStore, fetchIssues, { limit: 100 }, viewId);
 
   const canEditProperties = useCallback(
-    (projectId: string | undefined) => {
+    (targetProjectId: string | undefined) => {
       const isEditingAllowedBasedOnProject =
-        canEditPropertiesBasedOnProject && projectId ? canEditPropertiesBasedOnProject(projectId) : isEditingAllowed;
+        canEditPropertiesBasedOnProject && targetProjectId
+          ? canEditPropertiesBasedOnProject(targetProjectId)
+          : isEditingAllowed;
 
       return enableInlineEditing && isEditingAllowedBasedOnProject;
     },
@@ -98,30 +106,32 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
         placements={placement}
       />
     ),
-    [canEditProperties, removeIssue, updateIssue, archiveIssue, restoreIssue]
+    [QuickActions, canEditProperties, removeIssue, updateIssue, archiveIssue, restoreIssue]
   );
 
   if (!Array.isArray(issueIds)) return null;
 
   return (
-    <IssueLayoutHOC layout={EIssueLayoutTypes.SPREADSHEET}>
+    <RowExpansionProvider viewId={viewId}>
       <IssueListRetry {...staleRefresh} />
-      <SpreadsheetView
-        displayProperties={issuesFilter.issueFilters?.displayProperties ?? {}}
-        displayFilters={issuesFilter.issueFilters?.displayFilters ?? {}}
-        handleDisplayFilterUpdate={handleDisplayFiltersUpdate}
-        issueIds={issueIds}
-        quickActions={renderQuickActions}
-        updateIssue={updateIssue}
-        canEditProperties={canEditProperties}
-        quickAddCallback={createIssue}
-        enableQuickCreateIssue={enableQuickAdd}
-        disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
-        canLoadMoreIssues={!!nextCursor}
-        loadMoreIssues={() => {
-          void fetchNextIssues().catch(() => {});
-        }}
-      />
-    </IssueLayoutHOC>
+      <IssueLayoutHOC layout={EIssueLayoutTypes.SPREADSHEET}>
+        <SpreadsheetView
+          displayProperties={issuesFilter.issueFilters?.displayProperties ?? {}}
+          displayFilters={issuesFilter.issueFilters?.displayFilters ?? {}}
+          handleDisplayFilterUpdate={handleDisplayFiltersUpdate}
+          issueIds={issueIds}
+          quickActions={renderQuickActions}
+          updateIssue={updateIssue}
+          canEditProperties={canEditProperties}
+          quickAddCallback={createIssue}
+          enableQuickCreateIssue={enableQuickAdd}
+          disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
+          canLoadMoreIssues={!!nextCursor}
+          loadMoreIssues={() => {
+            void fetchNextIssues().catch(() => {});
+          }}
+        />
+      </IssueLayoutHOC>
+    </RowExpansionProvider>
   );
 });

@@ -6,22 +6,20 @@
 
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
+import { QuickAddNameField } from "./name-field";
 import type { TQuickAddIssueForm } from "../root";
 
 export const KanbanQuickAddIssueForm = observer(function KanbanQuickAddIssueForm(props: TQuickAddIssueForm) {
-  const { ref, projectDetail, register, onSubmit } = props;
+  const { ref, projectDetail, register, error, onSubmit } = props;
   const { t } = useTranslation();
   return (
     <div className="m-1 overflow-hidden rounded-sm bg-layer-2 shadow-raised-200">
       <form ref={ref} onSubmit={onSubmit} className="flex w-full items-center gap-x-3 p-3">
         <div className="w-full">
           <h4 className="text-11 leading-5 font-medium text-tertiary">{projectDetail?.identifier ?? "..."}</h4>
-          <input
-            autoComplete="off"
-            placeholder={t("issue.title.label")}
-            {...register("name", {
-              required: t("issue.title.required"),
-            })}
+          <QuickAddNameField
+            register={register}
+            error={error}
             className="w-full rounded-md bg-transparent px-2 py-1.5 pl-0 text-13 leading-5 font-medium text-secondary outline-none"
           />
         </div>

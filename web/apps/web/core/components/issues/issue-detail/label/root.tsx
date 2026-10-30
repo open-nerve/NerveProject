@@ -8,8 +8,6 @@ import type { IssueDetail } from "@nerve/api-client";
 
 import { useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { useLabelChanges, type IssueLabelCreation } from "@/components/labels/use-label-changes";
 import { useDetailCommand } from "../use-issue-operations";
 import { useDetailScope } from "../../issue-detail-widgets/use-detail-scope";
@@ -40,7 +38,6 @@ export function IssueLabel(props: TIssueLabel) {
 }
 const IssueLabelContent = observer(function IssueLabelContent(props: TIssueLabel) {
   const { workspaceSlug, projectId, issueId, disabled = false, isInboxIssue = false, onLabelUpdate } = props;
-  const { t } = useTranslation();
   const pending = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const capture = useDetailScope(workspaceSlug, projectId, issueId, true);
@@ -71,14 +68,9 @@ const IssueLabelContent = observer(function IssueLabelContent(props: TIssueLabel
           setSubmitting(false);
         }
       },
-      create: (data, underField, done) =>
-        create(projectId, data, underField, async (label) => {
-          if (!isInboxIssue)
-            setToast({ title: t("toast.success"), type: TOAST_TYPE.SUCCESS, message: t("label.create.success") });
-          await done(label);
-        }),
+      create: (data, underField, done) => create(projectId, data, underField, done),
     }),
-    [updateIssue, run, create, onLabelUpdate, isInboxIssue, projectId, t]
+    [updateIssue, run, create, onLabelUpdate, projectId]
   );
 
   return (
@@ -98,6 +90,7 @@ const IssueLabelContent = observer(function IssueLabelContent(props: TIssueLabel
           projectId={projectId}
           issueId={issueId}
           disabled={submitting}
+          showCreationToast={!isInboxIssue}
           values={issue?.label_ids || []}
           labelOperations={labelOperations}
         />

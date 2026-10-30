@@ -98,7 +98,8 @@ const SubIssuesListItemContent = observer(function SubIssuesListItemContent(prop
   const displayProperties = subIssueFilters?.displayProperties ?? {};
 
   //
-  const handleIssuePeekOverview = (selected: Issue) => handleRedirection(workspaceSlug, selected, isMobile);
+  const handleIssuePeekOverview = (selected: Issue, trigger: HTMLElement) =>
+    handleRedirection(workspaceSlug, selected, isMobile, undefined, trigger);
 
   if (!issue) return <></>;
 
@@ -118,7 +119,7 @@ const SubIssuesListItemContent = observer(function SubIssuesListItemContent(prop
       <ControlLink
         id={`issue-${issue.id}`}
         href={workItemLink}
-        onClick={() => handleIssuePeekOverview(issue)}
+        onClick={(event) => handleIssuePeekOverview(issue, event.currentTarget)}
         className="w-full cursor-pointer"
       >
         {issue && (

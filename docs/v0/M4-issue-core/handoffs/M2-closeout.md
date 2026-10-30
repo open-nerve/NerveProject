@@ -207,3 +207,10 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 §12原七处模块实例加归档header/issueId跳转两处前移实例共九处已消失，四个提及入口由本代成员目录读取；详情/版本/草稿SessionSWR键有login与权限身份，资源和队列继续只消费IssueRootStore失效水位，退役与ABA/旧宿主都有回归。getUserProfileIssues已于P10b删除；三处同步root读取未改为异步发请求。剩余四处旧搜索实例按P12/P14/P15迁移，13实例总门未提前关闭。
 
 依据[P11 review§9/12/14](../reviews/P11-web-detail-data-review.md#9-最终验收映射)和原始迁移审计；完整剪贴板/CSP/页面故事仍由后续阶段承担，顶层status保持open，P11尚未合并。
+
+## 处理结果（M4/P12，2026-10-30）
+
+- §10 DateDropdown在T8改为单Popover状态，列表/表格键盘可装载，单日期与范围相邻切换不会互抢焦；api-tokens真实自定义有效期表单及A11回归通过。七个点名控件的实际浮层ref、单状态、具名触发器和外层Modal隔离分别由T9/T10/C3核验；Calendar网格用Popover，离散搜索选项复用CustomSearchSelect，不机械套Listbox。CustomSelect的peek、自动归档、日期筛选三个真实入口有C3兼容证据。最终T16三浏览器各11项已通过，WebKit使用Docker恢复后的新收据，不据T15旧绿充数。
+- §10剩余：CustomSearchSelect的defaultOpen及rich-filters四入口完整筛选验收留P13；M6/M7共享props兼容不算领域页面验收。仅本段明确测试的控件性质已处理，不关闭整个§10或顶层交接。
+- §12 ExistingIssuesListModal的模块级ProjectService已删除，三调用改用本代root持有的IssueSearchService；原helpers拆为显式scope目录函数且保持同步零HTTP，M04/M05和路由回归捕获错范围/偷发请求。parent、inbox查重和命令搜索余下实例/旧类型继续由P14/P15负责；不虚报13实例全零。
+- §7编辑器分割和§11复制hook仍按P14/P15完成；本段watchPage只精确期待已有Canvas提示，不掩盖其它console/API失败。实施、范围与最终交付核准规则见[P12 review§23–25](../reviews/P12-web-list-pages-review.md)和[整审](../../../reviews/re-17-M4P12整体审核.md)。顶层status保持open。

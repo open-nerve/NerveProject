@@ -12,6 +12,7 @@ import { usePopper } from "react-popper";
 import { ChevronDownOutline, TickOutline } from "@makeplane/propel/icons";
 // helpers
 import { useInsideModal } from "../modals/modal-core";
+import { isComposing } from "@nerve/utils";
 import { cn } from "../utils";
 import { fieldButtonProps } from "./field-button";
 // types
@@ -25,6 +26,7 @@ import type { ICustomSelectItemProps, ICustomSelectProps } from "./helper";
 function openOnEnter(event: React.KeyboardEvent<HTMLButtonElement>) {
   if (event.key !== "Enter") return;
   event.preventDefault();
+  if (isComposing(event.nativeEvent)) return;
   event.currentTarget.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
 }
 

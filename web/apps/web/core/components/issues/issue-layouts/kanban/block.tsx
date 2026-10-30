@@ -10,6 +10,8 @@ import type { MutableRefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { attachClosestEdge, extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
+import type { Edge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve helpers
@@ -64,32 +66,11 @@ interface IssueDetailsBlockProps {
 const KanbanIssueDetailsBlock = observer(function KanbanIssueDetailsBlock(props: IssueDetailsBlockProps) {
   const { cardRef, issue, updateIssue, quickActions, isReadOnly, displayProperties } = props;
   // refs
-  const menuActionRef = useRef<HTMLDivElement | null>(null);
   // states
-  const [isMenuActive, setIsMenuActive] = useState(false);
   // hooks
   const { isMobile } = usePlatformOS();
 
-  const customActionButton = (
-    // oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions
-    <div
-      ref={menuActionRef}
-      className={`flex h-full w-full cursor-pointer items-center rounded-sm p-1 text-placeholder hover:bg-layer-1 ${
-        isMenuActive ? "bg-layer-1 text-primary" : "text-secondary"
-      }`}
-      onClick={() => setIsMenuActive(!isMenuActive)}
-    >
-      <MoreHorizontalOutline className="h-3.5 w-3.5" />
-    </div>
-  );
-
-  // oxlint-disable-next-line unicorn/consistent-function-scoping
-  const handleEventPropagation = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-  };
-
-  useOutsideClickDetector(menuActionRef, () => setIsMenuActive(false));
+  const customActionButton = <MoreHorizontalOutline className="h-3.5 w-3.5" />;
 
   return (
     <>
@@ -103,13 +84,11 @@ const KanbanIssueDetailsBlock = observer(function KanbanIssueDetailsBlock(props:
             displayProperties={displayProperties}
           />
         )}
-        {/* oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions */}
         <div
-          className={cn("absolute -top-1 right-0", {
-            "hidden group-hover/kanban-block:block": !isMobile,
-            "!block": isMenuActive,
+          className={cn("absolute -top-1 right-0 rounded-sm p-1 has-[[aria-expanded=true]]:bg-layer-1", {
+            "opacity-0 group-hover/kanban-block:opacity-100 focus-within:opacity-100 has-[[aria-expanded=true]]:opacity-100":
+              !isMobile,
           })}
-          onClick={handleEventPropagation}
         >
           {quickActions({
             issue,
@@ -163,13 +142,14 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
   const { isMobile } = usePlatformOS();
 
   // handlers
-  const handleIssuePeekOverview = (issue: Issue) => handleRedirection(workspaceSlug, issue, isMobile);
+  const handleIssuePeekOverview = (issue: Issue, trigger: HTMLElement) =>
+    handleRedirection(workspaceSlug, issue, isMobile, undefined, trigger);
 
   const issue = issuesMap[issueId];
 
-  const { setIsDragging: setIsKanbanDragging } = useKanbanView();
+  const { beginDrag } = useKanbanView();
 
-  const [isDraggingOverBlock, setIsDraggingOverBlock] = useState(false);
+  const [dropEdge, setDropEdge] = useState<Edge | null>(null);
   const [isCurrentBlockDragging, setIsCurrentBlockDragging] = useState(false);
 
   const canEditIssueProperties = canEditProperties(issue?.project_id ?? undefined);
@@ -197,7 +177,8 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
 
     if (!element) return;
 
-    return combine(
+    let finishDrag: (() => void) | undefined;
+    const unregister = combine(
       draggable({
         element,
         dragHandle: element,
@@ -205,36 +186,41 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
         getInitialData: () => ({ id: issue?.id, type: "ISSUE" }),
         onDragStart: () => {
           setIsCurrentBlockDragging(true);
-          setIsKanbanDragging(true);
+          finishDrag?.();
+          finishDrag = beginDrag();
         },
         onDrop: () => {
-          setIsKanbanDragging(false);
+          finishDrag?.();
           setIsCurrentBlockDragging(false);
         },
       }),
       dropTargetForElements({
         element,
         canDrop: ({ source }) => source?.data?.id !== issue?.id && canDropOverIssue,
-        getData: () => ({ id: issue?.id, type: "ISSUE" }),
-        onDragEnter: () => {
-          setIsDraggingOverBlock(true);
-        },
+        getData: ({ input }) =>
+          attachClosestEdge({ id: issue?.id, type: "ISSUE" }, { input, element, allowedEdges: ["top", "bottom"] }),
+        onDragEnter: ({ self }) => setDropEdge(extractClosestEdge(self.data)),
+        onDrag: ({ self }) => setDropEdge(extractClosestEdge(self.data)),
         onDragLeave: () => {
-          setIsDraggingOverBlock(false);
+          setDropEdge(null);
         },
         onDrop: () => {
-          setIsDraggingOverBlock(false);
+          setDropEdge(null);
         },
       })
     );
-    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-  }, [cardRef?.current, issue?.id, isDragAllowed, canDropOverIssue, setIsCurrentBlockDragging, setIsDraggingOverBlock]);
+    return () => {
+      unregister();
+      finishDrag?.();
+      setIsCurrentBlockDragging(false);
+    };
+  }, [issue?.id, isDragAllowed, canDropOverIssue, beginDrag]);
 
   if (!issue) return null;
 
   return (
     <>
-      <DropIndicator isVisible={!isCurrentBlockDragging && isDraggingOverBlock} />
+      <DropIndicator isVisible={!isCurrentBlockDragging && dropEdge === "top"} />
       <div
         id={`issue-${issueId}`}
         // make Z-index higher at the beginning of drag, to have a issue drag image of issue block without any overlaps
@@ -260,9 +246,9 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
             "block w-full rounded-lg border border-subtle bg-layer-2 p-3 text-13 shadow-raised-100 outline-[0.5px] outline-transparent transition-all hover:border-strong hover:shadow-raised-200",
             { "hover:cursor-pointer": isDragAllowed },
             { "border border-accent-strong hover:border-accent-strong": getIsIssuePeeked(issue.id) },
-            { "z-[100] bg-layer-1": isCurrentBlockDragging }
+            { "z-10 bg-layer-1": isCurrentBlockDragging }
           )}
-          onClick={() => handleIssuePeekOverview(issue)}
+          onClick={(event) => handleIssuePeekOverview(issue, event.currentTarget)}
         >
           <RenderIfVisible
             classNames="space-y-2"
@@ -283,6 +269,7 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
           </RenderIfVisible>
         </ControlLink>
       </div>
+      <DropIndicator isVisible={!isCurrentBlockDragging && dropEdge === "bottom"} />
     </>
   );
 });

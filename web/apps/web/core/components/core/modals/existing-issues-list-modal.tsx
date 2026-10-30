@@ -3,386 +3,293 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
-import { useEffect, useState, useRef, useMemo, useLayoutEffect } from "react";
-import { CloseOutline, RocketOutline, SearchOutline } from "@makeplane/propel/icons";
+import { useLayoutEffect, useMemo, useState } from "react";
+import { observer } from "mobx-react";
 import { Combobox } from "@headlessui/react";
-// i18n
-import { useTranslation } from "@nerve/i18n";
-// types
-import { Button } from "@nerve/propel/button";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { ISearchIssueResponse, TProjectIssuesSearchParams } from "@nerve/types";
-// ui
+import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
+import { Check } from "lucide-react";
 import { Switch } from "@makeplane/propel/components/switch";
-import { Loader, EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
-import { generateWorkItemLink, getTabIndex } from "@nerve/utils";
-// hooks
-import useDebounce from "@/hooks/use-debounce";
-import { usePlatformOS } from "@/hooks/use-platform-os";
-// services
-import { ProjectService } from "@/services/project";
-// components
-import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
-import { IssueSearchModalEmptyState } from "./issue-search-modal-empty-state";
-import { followInSession } from "@/lib/in-session";
-import { SessionChangedError } from "@/lib/auth/token-manager";
+import type { Issue } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueSearch } from "@/hooks/use-issue-search";
 import { useRefusalMessage, useRefusalToast } from "@/hooks/use-refusal-toast";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import type { IssueSearchQuery } from "@/services/issue/issue-search.service";
+import type { IssueReadToken } from "@/store/issue/root.store";
+import { IssueSearchModalEmptyState } from "./issue-search-modal-empty-state";
 
+/** The result of one selection command; only failed/unconfirmed IDs may be resubmitted. */
+export type SelectionSubmitResult = {
+  confirmedIds: readonly string[];
+  failures: readonly { id: string; error: unknown }[];
+};
 type Props = {
   workspaceSlug: string | undefined;
   projectId?: string;
   isOpen: boolean;
   handleClose: () => void;
-  searchParams: Partial<TProjectIssuesSearchParams>;
-  handleOnSubmit: (data: ISearchIssueResponse[]) => Promise<void>;
+  searchParams: Omit<IssueSearchQuery, "project_id" | "q">;
+  handleOnSubmit: (ids: readonly string[]) => Promise<SelectionSubmitResult>;
   workspaceLevelToggle?: boolean;
-  shouldHideIssue?: (issue: ISearchIssueResponse) => boolean;
-  selectedWorkItemIds?: string[];
-  workItemSearchServiceCallback?: (params: TProjectIssuesSearchParams) => Promise<ISearchIssueResponse[]>;
+  shouldHideIssue?: (issue: Issue) => boolean;
 };
+type Choice = { id: string; proof: IssueReadToken };
 
-const projectService = new ProjectService();
+export const ExistingIssuesListModal = observer(function ExistingIssuesListModal(props: Props) {
+  const { rootIssueStore: root } = useIssueDetail();
+  const workspace = props.workspaceSlug
+    ? root.rootStore.workspaceRoot.getWorkspaceBySlug(props.workspaceSlug)
+    : undefined;
+  const identity = root.permissionReads.identity(workspace?.id, props.projectId ? [props.projectId] : []);
+  const scope = JSON.stringify([props.workspaceSlug, props.projectId, props.searchParams, props.isOpen, identity]);
+  return <ExistingIssuesScope key={scope} {...props} />;
+});
 
-export function ExistingIssuesListModal(props: Props) {
-  const scope = JSON.stringify([props.workspaceSlug, props.projectId, props.searchParams, props.isOpen]);
-  return <ExistingIssuesSelection key={scope} {...props} />;
+function ExistingIssuesScope(props: Props) {
+  const [workspaceLevel, setWorkspaceLevel] = useState(false);
+  return (
+    <ExistingIssuesSelection
+      key={String(workspaceLevel)}
+      {...props}
+      workspaceLevel={workspaceLevel}
+      setWorkspaceLevel={setWorkspaceLevel}
+    />
+  );
 }
 
-function ExistingIssuesSelection(props: Props) {
+const ExistingIssuesSelection = observer(function ExistingIssuesSelection({
+  workspaceSlug,
+  projectId,
+  isOpen,
+  handleClose,
+  searchParams,
+  handleOnSubmit,
+  workspaceLevelToggle = false,
+  shouldHideIssue,
+  workspaceLevel,
+  setWorkspaceLevel,
+}: Props & { workspaceLevel: boolean; setWorkspaceLevel: (value: boolean) => void }) {
   const { t } = useTranslation();
-
-  const {
-    workspaceSlug,
-    projectId,
-    isOpen,
-    handleClose: onClose,
-    searchParams,
-    handleOnSubmit,
-    workspaceLevelToggle = false,
-    shouldHideIssue,
-    selectedWorkItemIds,
-    workItemSearchServiceCallback,
-  } = props;
-  // states
-  const [isLoading, setIsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [issues, setIssues] = useState<ISearchIssueResponse[]>([]);
-  const [selectedIssues, setSelectedIssues] = useState<ISearchIssueResponse[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchError, setSearchError] = useState<unknown>();
-  const [searchRetry, setSearchRetry] = useState(0);
-  const refusalMessage = useRefusalMessage();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isWorkspaceLevel, setIsWorkspaceLevel] = useState(false);
-  const { isMobile } = usePlatformOS();
-  const debouncedSearchTerm: string = useDebounce(searchTerm, 500);
-  const { baseTabIndex } = getTabIndex(undefined, isMobile);
-  const hasInitializedSelection = useRef(false);
-  const target = JSON.stringify(searchParams);
-  const owner = useMemo(
-    () => ({ active: isOpen, submitting: false, workspaceSlug, projectId, target }),
-    [workspaceSlug, projectId, isOpen, target]
-  );
+  const { rootIssueStore: root } = useIssueDetail();
+  const [term, setTerm] = useState("");
+  const query: IssueSearchQuery = {
+    ...searchParams,
+    ...(!workspaceLevel && projectId ? { project_id: projectId } : {}),
+    ...(term ? { q: term } : {}),
+  };
+  const search = useIssueSearch(root, workspaceSlug, query, isOpen);
+  const workspaceID = workspaceSlug ? root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id : undefined;
+  const projectIDs = query.project_id ? [query.project_id] : [];
+  const permission = root.permissionReads.identity(workspaceID, projectIDs);
+  const owner = useMemo(() => ({ root, permission, active: false, submitting: false }), [root, permission]);
+  const [selection, setSelection] = useState<{ owner: typeof owner; choices: Choice[] }>({ owner, choices: [] });
+  const [pendingOwner, setPendingOwner] = useState<typeof owner>();
   const refusal = useRefusalToast();
+  const refusalMessage = useRefusalMessage();
   useLayoutEffect(() => {
     owner.active = isOpen;
-    setIsSubmitting(false);
     return () => {
       owner.active = false;
     };
   }, [owner, isOpen]);
-
-  const handleClose = () => {
-    onClose();
-    setSearchTerm("");
-    setSelectedIssues([]);
-    setIsWorkspaceLevel(false);
-    hasInitializedSelection.current = false;
-  };
-
-  const onSubmit = async () => {
-    if (selectedIssues.length === 0) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("toast.error"),
-        message: t("issue.select.error"),
-      });
-
-      return;
-    }
-
-    if (!owner.active || owner.submitting) return;
-    owner.submitting = true;
-    setIsSubmitting(true);
-    await followInSession(() => handleOnSubmit(selectedIssues), {
-      done: () => {
-        if (owner.active) handleClose();
-      },
-      failed: (error) => {
-        if (owner.active && !(error instanceof SessionChangedError)) refusal(error);
-      },
-    });
-    owner.submitting = false;
-    if (owner.active) setIsSubmitting(false);
-  };
-
-  const handleSelectIssues = () => {
-    setSelectedIssues((prevData) => (prevData.length === filteredIssues.length ? [] : [...filteredIssues]));
-  };
-
-  useEffect(() => {
-    if (isOpen && !hasInitializedSelection.current && selectedWorkItemIds && issues.length > 0) {
-      setSelectedIssues(issues.filter((issue) => selectedWorkItemIds.includes(issue.id)));
-      hasInitializedSelection.current = true;
-    }
-  }, [isOpen, issues, selectedWorkItemIds]);
-
-  useEffect(() => {
-    if (!isOpen || !owner.workspaceSlug) return;
-    const searchService =
-      workItemSearchServiceCallback ??
-      (owner.projectId
-        ? projectService.projectIssuesSearch.bind(projectService, owner.workspaceSlug, owner.projectId)
-        : undefined);
-    if (!searchService) return;
-    let current = true;
-    setIsLoading(true);
-    setSearchError(undefined);
-    const finish = () => {
-      setIsSearching(false);
-      setIsLoading(false);
-    };
-    void followInSession(
-      () =>
-        searchService({
-          ...(JSON.parse(owner.target) as Partial<TProjectIssuesSearchParams>),
-          search: debouncedSearchTerm,
-          workspace_search: isWorkspaceLevel,
-        }),
-      {
-        done: (answer) => {
-          if (current && owner.active) {
-            setIssues(answer);
-            finish();
-          }
-        },
-        failed: (error) => {
-          if (current && owner.active && !(error instanceof SessionChangedError)) {
-            setSearchError(error);
-            finish();
-          }
-        },
-      }
+  const current = () =>
+    owner.active &&
+    root.active &&
+    !!workspaceID &&
+    root.permissionReads.identity(workspaceID, projectIDs) === owner.permission;
+  const visible = (choice: Choice) => {
+    const issue = root.issues.getIssueById(choice.id);
+    return (
+      !!issue &&
+      issue.workspace_id === workspaceID &&
+      (!query.project_id || issue.project_id === query.project_id) &&
+      root.isReadCurrent(choice.proof, projectIDs, workspaceID) &&
+      root.isReadCurrent(choice.proof, [issue.project_id], workspaceID) &&
+      !shouldHideIssue?.(issue)
     );
-    return () => {
-      current = false;
-    };
-  }, [debouncedSearchTerm, isOpen, isWorkspaceLevel, owner, workItemSearchServiceCallback, searchRetry]);
-
-  const filteredIssues = issues.filter((issue) => !shouldHideIssue?.(issue));
-
+  };
+  const selected = selection.owner === owner ? selection.choices.filter(visible) : [];
+  const issues = search.ids.flatMap((id) => {
+    const issue = root.issues.getIssueById(id);
+    return issue && !shouldHideIssue?.(issue) ? [issue] : [];
+  });
+  const pending = pendingOwner === owner;
+  const setChoices = (choices: Choice[]) => setSelection({ owner, choices });
+  const choose = (ids: string[]) => {
+    if (!current() || pending) return;
+    const proof = search.proof;
+    setChoices(
+      [...new Set(ids)].flatMap((id) => {
+        const held = selected.find((choice) => choice.id === id);
+        return held ? [held] : proof && issues.some((issue) => issue.id === id) ? [{ id, proof }] : [];
+      })
+    );
+  };
+  const close = () => {
+    owner.active = false;
+    handleClose();
+  };
+  const submit = async () => {
+    if (!current() || owner.submitting || !selected.length) return;
+    const ids = selected.map((choice) => choice.id);
+    owner.submitting = true;
+    setPendingOwner(owner);
+    try {
+      const answer = await handleOnSubmit(ids);
+      if (!current()) return;
+      const confirmed = new Set(answer.confirmedIds);
+      const failed = new Set(answer.failures.map((failure) => failure.id));
+      if ([...confirmed, ...failed].some((id) => !ids.includes(id)) || [...confirmed].some((id) => failed.has(id)))
+        throw new Error("Invalid selection confirmation");
+      setChoices(selected.filter((choice) => !confirmed.has(choice.id)));
+      if (confirmed.size === ids.length) close();
+      else refusal(answer.failures[0]?.error ?? new Error("Selection was not confirmed"));
+    } catch (error) {
+      if (current() && !(error instanceof SessionChangedError)) refusal(error);
+    } finally {
+      owner.submitting = false;
+      if (current()) setPendingOwner(undefined);
+    }
+  };
+  const allSelected = issues.length > 0 && issues.every((issue) => selected.some((choice) => choice.id === issue.id));
+  const identifier = (issue: Issue) => (
+    <span className="shrink-0 text-11 text-secondary">
+      {root.rootStore.projectRoot.project.getProjectIdentifierById(issue.project_id)}-{issue.sequence_id}
+    </span>
+  );
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
-      <Combobox
-        as="div"
-        onChange={(val: ISearchIssueResponse | null) => {
-          if (val === null) return;
-          if (selectedIssues.some((i) => i.id === val.id))
-            setSelectedIssues((prevData) => prevData.filter((i) => i.id !== val.id));
-          else setSelectedIssues((prevData) => [...prevData, val]);
-        }}
-      >
-        {searchError !== undefined && (
-          <div role="alert">
-            {refusalMessage(searchError)}
-            <button type="button" onClick={() => setSearchRetry((value) => value + 1)}>
+    <ModalCore isOpen={isOpen} handleClose={close} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+      <ModalTitle className="px-4 pt-4 text-16 font-medium">{t("issue.add.existing")}</ModalTitle>
+      <Combobox as="div" multiple value={selected.map((choice) => choice.id)} onChange={choose} disabled={pending}>
+        {search.error !== undefined && (
+          <div role="alert" className="p-3">
+            {refusalMessage(search.error)}{" "}
+            <button type="button" onClick={search.retry}>
               {t("common.retry")}
             </button>
           </div>
         )}
         <div className="relative m-1">
           <SearchOutline
-            className="text-opacity-40 pointer-events-none absolute top-3.5 left-4 h-5 w-5 text-primary"
+            className="pointer-events-none absolute top-3.5 left-4 h-5 w-5 text-secondary"
             aria-hidden="true"
           />
           <Combobox.Input
-            className="h-12 w-full border-0 bg-transparent pr-4 pl-11 text-13 text-primary outline-none placeholder:text-placeholder focus:ring-0"
+            aria-label={t("common.search.placeholder")}
+            className="h-12 w-full bg-transparent pr-4 pl-11 text-13 outline-none"
             placeholder={t("common.search.placeholder")}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            tabIndex={baseTabIndex}
+            value={term}
+            onChange={(event) => setTerm(event.target.value)}
           />
         </div>
-
-        <div className="flex flex-col-reverse gap-4 p-2 text-13 text-secondary sm:flex-row sm:items-center sm:justify-between">
-          {selectedIssues.length > 0 ? (
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              {selectedIssues.map((issue) => (
-                <div
-                  key={issue.id}
-                  className="flex items-center gap-1 rounded-md border border-subtle bg-layer-1 py-1 pl-2 text-11 whitespace-nowrap text-primary"
-                >
-                  <IssueIdentifier
-                    projectId={issue.project_id}
-                    projectIdentifier={issue.project__identifier}
-                    issueSequenceId={issue.sequence_id}
-                    size="xs"
-                    variant="secondary"
-                  />
-                  <button
-                    type="button"
-                    className="group p-1"
-                    onClick={() => setSelectedIssues((prevData) => prevData.filter((i) => i.id !== issue.id))}
-                  >
-                    <CloseOutline className="h-3 w-3 text-secondary group-hover:text-primary" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="w-min rounded-md border border-subtle bg-layer-1 p-2 text-11 whitespace-nowrap">
-              {t("issue.select.empty")}
-            </div>
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 text-13">
+          <div className="flex flex-wrap gap-2">
+            {selected.length ? (
+              selected.map(({ id }) => {
+                const issue = root.issues.getIssueById(id)!;
+                return (
+                  <span key={id} className="flex items-center gap-1 rounded-md border border-subtle p-1">
+                    {identifier(issue)}
+                    <button
+                      type="button"
+                      disabled={pending}
+                      aria-label={`${t("common.remove")} ${issue.name}`}
+                      onClick={() => choose(selected.filter((choice) => choice.id !== id).map((choice) => choice.id))}
+                    >
+                      <CloseOutline className="h-3 w-3" />
+                    </button>
+                  </span>
+                );
+              })
+            ) : (
+              <span>{t("issue.select.empty")}</span>
+            )}
+          </div>
           {workspaceLevelToggle && (
-            <Tooltip label="Toggle workspace level search" disabled={isMobile}>
-              <div
-                className={`flex flex-shrink-0 cursor-pointer items-center gap-1 text-11 ${
-                  isWorkspaceLevel ? "text-primary" : "text-secondary"
-                }`}
-              >
-                <Switch
-                  size="sm"
-                  checked={isWorkspaceLevel}
-                  onCheckedChange={setIsWorkspaceLevel}
-                  aria-label={t("common.workspace_level")}
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsWorkspaceLevel((prevData) => !prevData)}
-                  className="flex-shrink-0"
-                >
-                  {t("common.workspace_level")}
-                </button>
-              </div>
-            </Tooltip>
+            <label className="flex items-center gap-2">
+              <Switch
+                size="sm"
+                disabled={pending}
+                checked={workspaceLevel}
+                onCheckedChange={setWorkspaceLevel}
+                aria-label={t("common.workspace_level")}
+              />
+              {t("common.workspace_level")}
+            </label>
           )}
         </div>
-
         <Combobox.Options
           as="ul"
           static
-          className="vertical-scrollbar scrollbar-md max-h-80 scroll-py-2 overflow-y-auto"
+          modal={false}
+          className="vertical-scrollbar max-h-80 overflow-y-auto p-2 text-13"
         >
-          {/* TODO: Translate here */}
-          {searchTerm !== "" && (
-            <h5 className="mx-2 text-13 text-secondary">
-              Search results for <span className="text-primary">"{searchTerm}"</span> in project:
-            </h5>
-          )}
-
-          {isSearching || isLoading ? (
-            <Loader className="space-y-3 p-3">
-              <Loader.Item height="40px" />
-              <Loader.Item height="40px" />
-              <Loader.Item height="40px" />
-              <Loader.Item height="40px" />
-            </Loader>
-          ) : (
-            <>
-              {filteredIssues.length === 0 ? (
-                <IssueSearchModalEmptyState
-                  debouncedSearchTerm={debouncedSearchTerm}
-                  isSearching={isSearching}
-                  issues={filteredIssues}
-                  searchTerm={searchTerm}
+          {!search.loading &&
+            search.error === undefined &&
+            issues.map((issue) => (
+              <Combobox.Option
+                key={issue.id}
+                as="li"
+                value={issue.id}
+                className={({ active }) =>
+                  `my-0.5 flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 ${active ? "bg-layer-1" : ""}`
+                }
+              >
+                <Check
+                  aria-hidden="true"
+                  className={`h-4 w-4 ${selected.some((choice) => choice.id === issue.id) ? "" : "invisible"}`}
                 />
-              ) : (
-                <ul className={`text-13 text-primary ${filteredIssues.length > 0 ? "p-2" : ""}`}>
-                  {filteredIssues.map((issue) => {
-                    const selected = selectedIssues.some((i) => i.id === issue.id);
-
-                    return (
-                      <Combobox.Option
-                        key={issue.id}
-                        as="label"
-                        htmlFor={`issue-${issue.id}`}
-                        value={issue}
-                        className={({ active }) =>
-                          `group my-0.5 flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-2 text-secondary select-none ${
-                            active ? "bg-layer-1 text-primary" : ""
-                          } ${selected ? "text-primary" : ""}`
-                        }
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <input type="checkbox" checked={selected} readOnly />
-                          <span
-                            className="block h-1.5 w-1.5 flex-shrink-0 rounded-full"
-                            style={{
-                              backgroundColor: issue.state__color,
-                            }}
-                          />
-                          <span className="flex-shrink-0">
-                            <IssueIdentifier
-                              projectId={issue.project_id}
-                              projectIdentifier={issue.project__identifier}
-                              issueSequenceId={issue.sequence_id}
-                              size="xs"
-                              variant="secondary"
-                            />
-                          </span>
-                          <span className="truncate">{issue.name}</span>
-                        </div>
-                        <a
-                          href={generateWorkItemLink({
-                            workspaceSlug,
-                            projectId: issue?.project_id,
-                            issueId: issue?.id,
-                            projectIdentifier: issue.project__identifier,
-                            sequenceId: issue?.sequence_id,
-                          })}
-                          target="_blank"
-                          className="relative z-1 hidden flex-shrink-0 text-secondary group-hover:block hover:text-primary"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <RocketOutline className="h-4 w-4" />
-                        </a>
-                      </Combobox.Option>
-                    );
-                  })}
-                </ul>
-              )}
-            </>
-          )}
+                <span
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: root.rootStore.state.getStateById(issue.state_id)?.color }}
+                />
+                {identifier(issue)}
+                <span className="truncate">{issue.name}</span>
+              </Combobox.Option>
+            ))}
         </Combobox.Options>
+        {search.loading && (
+          <p role="status" className="p-3">
+            {t("common.loading")}
+          </p>
+        )}
+        {!search.loading && search.error === undefined && issues.length === 0 && (
+          <IssueSearchModalEmptyState
+            issues={issues}
+            searchTerm={term}
+            debouncedSearchTerm={term}
+            isSearching={false}
+          />
+        )}
       </Combobox>
       <div className="flex items-center justify-between p-3">
         <Button
           variant="link"
-          onClick={handleSelectIssues}
-          disabled={filteredIssues.length === 0}
-          className={filteredIssues.length === 0 ? "p-0" : ""}
+          disabled={pending || issues.length === 0}
+          onClick={() =>
+            choose(
+              allSelected
+                ? selected
+                    .filter((choice) => !issues.some((issue) => issue.id === choice.id))
+                    .map((choice) => choice.id)
+                : [...selected.map((choice) => choice.id), ...issues.map((issue) => issue.id)]
+            )
+          }
         >
-          {selectedIssues.length === issues.length ? t("issue.select.deselect_all") : t("issue.select.select_all")}
+          {allSelected ? t("issue.select.deselect_all") : t("issue.select.select_all")}
         </Button>
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="secondary" size="lg" onClick={handleClose}>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="lg" onClick={close}>
             {t("common.cancel")}
           </Button>
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={onSubmit}
-            loading={isSubmitting}
-            disabled={isSubmitting || selectedIssues.length === 0}
-          >
-            {isSubmitting ? t("common.adding") : t("issue.select.add_selected")}
+          <Button variant="primary" size="lg" onClick={submit} loading={pending} disabled={pending || !selected.length}>
+            {pending ? t("common.adding") : t("issue.select.add_selected")}
           </Button>
         </div>
       </div>
     </ModalCore>
   );
-}
+});

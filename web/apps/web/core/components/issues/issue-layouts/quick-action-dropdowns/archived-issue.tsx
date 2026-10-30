@@ -5,15 +5,16 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "@nerve/i18n";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // ui
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import { EIssuesStoreType } from "@nerve/types";
 import { ContextMenu, CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
-import { useIssues } from "@/hooks/store/use-issues";
+import { useDetailCommand } from "../../issue-detail/use-issue-operations";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { useUserPermissions } from "@/hooks/store/user";
 // local imports
 import { DeleteIssueModal } from "../../delete-issue-modal";
@@ -22,6 +23,7 @@ import type { MenuItemFactoryProps } from "./helper";
 import { useArchivedIssueMenuItems } from "./helper";
 
 export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickActions(props: IQuickActionProps) {
+  const { t } = useTranslation();
   const {
     issue,
     handleDelete,
@@ -36,30 +38,51 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
   const [deleteIssueModal, setDeleteIssueModal] = useState(false);
   // router
   const { workspaceSlug } = useParams();
+  const run = useDetailCommand(workspaceSlug ?? "", issue.project_id, issue.id);
   // store hooks
   const { allowPermissions } = useUserPermissions();
 
-  const { issuesFilter } = useIssues(EIssuesStoreType.ARCHIVED);
   // derived values
-  const activeLayout = `${issuesFilter.issueFilters?.displayFilters?.layout} layout`;
   // auth
   const isEditingAllowed =
-    allowPermissions([EUserPermissions.ADMIN, EUserPermissions.MEMBER], EUserPermissionsLevel.PROJECT) && !readOnly;
+    !!workspaceSlug &&
+    allowPermissions(
+      [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
+      EUserPermissionsLevel.PROJECT,
+      workspaceSlug,
+      issue.project_id
+    ) &&
+    !readOnly;
   const isRestoringAllowed =
-    handleRestore && allowPermissions([EUserPermissions.ADMIN, EUserPermissions.MEMBER], EUserPermissionsLevel.PROJECT);
+    handleRestore &&
+    !!workspaceSlug &&
+    allowPermissions(
+      [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
+      EUserPermissionsLevel.PROJECT,
+      workspaceSlug,
+      issue.project_id
+    );
 
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
     workspaceSlug,
-    activeLayout,
     isEditingAllowed,
     isDeletingAllowed: isEditingAllowed,
     isRestoringAllowed: !!isRestoringAllowed,
     setIssueToEdit: () => {},
     setCreateUpdateIssueModal: () => {},
     setDeleteIssueModal,
-    handleRestore,
+    handleRestore: handleRestore
+      ? async () => {
+          await run(handleRestore);
+          setToast({
+            type: TOAST_TYPE.SUCCESS,
+            title: t("issue.restore.success.title"),
+            message: t("issue.restore.success.message"),
+          });
+        }
+      : undefined,
   };
 
   const MENU_ITEMS = useArchivedIssueMenuItems(menuItemProps);
@@ -89,7 +112,8 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
         customButton={customActionButton}
         portalElement={portalElement}
         placement={placements}
-        menuItemsClassName="z-[14]"
+        ariaLabel={`${t("common.options")}: ${issue.name}`}
+        menuItemsClassName="z-20"
         maxHeight="lg"
         closeOnSelect
       >

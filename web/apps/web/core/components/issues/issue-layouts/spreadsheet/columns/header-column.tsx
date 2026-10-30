@@ -14,13 +14,12 @@ import {
   TickOutline,
 } from "@makeplane/propel/icons";
 // constants
-import { SPREADSHEET_PROPERTY_DETAILS } from "@nerve/constants";
 // i18n
 import { useTranslation } from "@nerve/i18n";
 // types
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssueOrderByOptions } from "@nerve/types";
 import { CustomMenu, Row } from "@nerve/ui";
-import useLocalStorage from "@/hooks/use-local-storage";
+import { spreadsheetSort } from "../spreadsheet-sort";
 import { SpreadSheetPropertyIcon } from "../../utils";
 
 interface Props {
@@ -34,22 +33,8 @@ export function HeaderColumn(props: Props) {
   const { displayFilters, handleDisplayFilterUpdate, property, onClose } = props;
   // i18n
   const { t } = useTranslation();
-  const { storedValue: selectedMenuItem, setValue: setSelectedMenuItem } = useLocalStorage(
-    "spreadsheetViewSorting",
-    ""
-  );
-  const { storedValue: activeSortingProperty, setValue: setActiveSortingProperty } = useLocalStorage(
-    "spreadsheetViewActiveSortingProperty",
-    ""
-  );
-  const propertyDetails = SPREADSHEET_PROPERTY_DETAILS[property];
-
-  const handleOrderBy = (order: TIssueOrderByOptions, itemKey: string) => {
-    handleDisplayFilterUpdate({ order_by: order });
-
-    setSelectedMenuItem(`${order}_${itemKey}`);
-    setActiveSortingProperty(order === "-created_at" ? "" : itemKey);
-  };
+  const { propertyDetails, selectedOrder, direction } = spreadsheetSort(property, displayFilters);
+  const handleOrderBy = (order: TIssueOrderByOptions) => handleDisplayFilterUpdate({ order_by: order });
 
   if (!propertyDetails) return null;
 
@@ -65,9 +50,9 @@ export function HeaderColumn(props: Props) {
             {t(propertyDetails.i18n_title)}
           </div>
           <div className="ml-3 flex">
-            {activeSortingProperty === property && (
+            {direction !== "none" && (
               <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full">
-                {propertyDetails.ascendingOrderKey === displayFilters.order_by ? (
+                {direction === "descending" ? (
                   <SortDescendingOutline className="h-3 w-3" />
                 ) : (
                   <SortAscendingOutline className="h-3 w-3" />
@@ -82,12 +67,10 @@ export function HeaderColumn(props: Props) {
       placement="bottom-start"
       closeOnSelect
     >
-      <CustomMenu.MenuItem onClick={() => handleOrderBy(propertyDetails.ascendingOrderKey, property)}>
+      <CustomMenu.MenuItem onClick={() => handleOrderBy(propertyDetails.ascendingOrderKey)}>
         <div
           className={`flex items-center justify-between gap-1.5 px-1 ${
-            selectedMenuItem === `${propertyDetails.ascendingOrderKey}_${property}`
-              ? "text-primary"
-              : "text-secondary hover:text-primary"
+            selectedOrder === propertyDetails.ascendingOrderKey ? "text-primary" : "text-secondary hover:text-primary"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -97,17 +80,13 @@ export function HeaderColumn(props: Props) {
             <span>{propertyDetails.descendingOrderTitle}</span>
           </div>
 
-          {selectedMenuItem === `${propertyDetails.ascendingOrderKey}_${property}` && (
-            <TickOutline className="h-3 w-3" />
-          )}
+          {selectedOrder === propertyDetails.ascendingOrderKey && <TickOutline className="h-3 w-3" />}
         </div>
       </CustomMenu.MenuItem>
-      <CustomMenu.MenuItem onClick={() => handleOrderBy(propertyDetails.descendingOrderKey, property)}>
+      <CustomMenu.MenuItem onClick={() => handleOrderBy(propertyDetails.descendingOrderKey)}>
         <div
           className={`flex items-center justify-between gap-1.5 px-1 ${
-            selectedMenuItem === `${propertyDetails.descendingOrderKey}_${property}`
-              ? "text-primary"
-              : "text-secondary hover:text-primary"
+            selectedOrder === propertyDetails.descendingOrderKey ? "text-primary" : "text-secondary hover:text-primary"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -117,26 +96,17 @@ export function HeaderColumn(props: Props) {
             <span>{propertyDetails.ascendingOrderTitle}</span>
           </div>
 
-          {selectedMenuItem === `${propertyDetails.descendingOrderKey}_${property}` && (
-            <TickOutline className="h-3 w-3" />
-          )}
+          {selectedOrder === propertyDetails.descendingOrderKey && <TickOutline className="h-3 w-3" />}
         </div>
       </CustomMenu.MenuItem>
-      {selectedMenuItem &&
-        selectedMenuItem !== "" &&
-        displayFilters?.order_by !== "-created_at" &&
-        selectedMenuItem.includes(property) && (
-          <CustomMenu.MenuItem
-            className={`mt-0.5 ${selectedMenuItem === `-created_at_${property}` ? "bg-layer-1" : ""}`}
-            key={property}
-            onClick={() => handleOrderBy("-created_at", property)}
-          >
-            <div className="flex items-center gap-2 px-1">
-              <Eraser className="h-3 w-3" />
-              <span>{t("common.actions.clear_sorting")}</span>
-            </div>
-          </CustomMenu.MenuItem>
-        )}
+      {direction !== "none" && selectedOrder !== "-created_at" && (
+        <CustomMenu.MenuItem className="mt-0.5" onClick={() => handleOrderBy("-created_at")}>
+          <div className="flex items-center gap-2 px-1">
+            <Eraser className="h-3 w-3" />
+            <span>{t("common.actions.clear_sorting")}</span>
+          </div>
+        </CustomMenu.MenuItem>
+      )}
     </CustomMenu>
   );
 }

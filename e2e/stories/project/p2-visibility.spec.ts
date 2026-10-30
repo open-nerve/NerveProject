@@ -219,7 +219,7 @@ test("P2 (page): the projects page shows a member the public project to join and
   // So does its menu (a right-click): the menu open is the one not inert; each card's closed menu is out of reach.
   await page.evaluate(() => navigator.clipboard.writeText(""));
   await card.click({ button: "right" });
-  await page.locator("#context-menu-portal > :not([inert])").getByRole("button", { name: "Copy link" }).click();
+  await page.locator("#context-menu-portal > :not([inert])").getByRole("menuitem", { name: "Copy link" }).click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
   await refuseClipboardWrites(page);
   await card.getByRole("button", { name: "Copy link" }).click();

@@ -219,7 +219,11 @@ export async function recordTokensShown(page: Page): Promise<() => Promise<strin
  * over it, and lined up with it, not where the page begins.
  */
 export async function expectListBesideButton(page: Page, button: Locator): Promise<void> {
-  const list = page.getByRole("listbox");
+  await expectPopupBesideButton(page.getByRole("listbox"), button);
+}
+
+/** The same geometry contract for a calendar's dialog, without pretending it is a listbox. */
+export async function expectPopupBesideButton(list: Locator, button: Locator): Promise<void> {
   await expect(list).toBeVisible();
   const [at, beside] = await Promise.all([list.boundingBox(), button.boundingBox()]);
   expect(at, "the list's box").not.toBeNull();
@@ -246,7 +250,12 @@ export async function transitionsEnded(locator: Locator): Promise<void> {
       element
         .getAnimations({ subtree: true })
         .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
-        .map((animation) => animation.finished)
+        .map((animation) =>
+          animation.finished.catch((error: unknown) => {
+            // A replaced or removed transition has also ended; retain real evaluation failures.
+            if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
+          })
+        )
     )
   );
 }

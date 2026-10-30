@@ -225,6 +225,8 @@
     }
   },
   "common": {
+    "date": "日期",
+    "clear_date": "清除日期",
     "states": "状态",
     "state": "状态",
     "state_groups": "状态组",

@@ -49,7 +49,7 @@ export const KanbanDeleteDropZone = observer(function KanbanDeleteDropZone({ onR
   return (
     <div
       className={`fixed left-1/2 -translate-x-1/2 ${
-        isDragging ? "z-40" : ""
+        isDragging ? "z-20" : ""
       } top-3 mx-3 flex w-72 items-center justify-center`}
       ref={deleteAreaRef}
     >

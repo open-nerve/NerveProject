@@ -8,6 +8,7 @@ import { heldChange } from "@/lib/auth/fake-tab";
 import { IssueDetailHost } from "../detail-host";
 import { IssueParentSelect } from "../issue-detail/parent-select";
 import { IssueView } from "./view";
+import { openIssuePeek } from "./selection";
 import type { WorkItemDetailQuickActions } from "../issue-layouts/quick-action-dropdowns";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "host" } }, publicClient: {} }));
@@ -65,7 +66,11 @@ afterEach(async () => {
   vi.useRealTimers();
 });
 const render = async (id: string, embed = true) => {
-  tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: id });
+  openIssuePeek(
+    tab.app.issue.issueDetail,
+    { workspaceSlug: "ws", projectId: "A", issueId: id },
+    document.activeElement instanceof HTMLElement ? document.activeElement : undefined
+  );
   await act(async () =>
     root.render(
       <IssueDetailHost workspaceSlug="ws" projectId="A" issueId={id}>
@@ -178,4 +183,64 @@ it("parent controls use separate native buttons beside the parent link", async (
   expect(removeButton).not.toBeNull();
   await act(async () => removeButton!.click());
   expect(remove).toHaveBeenCalledExactlyOnceWith("ws", "A", "parent", "old");
+});
+
+it("Escape belongs to the actual trigger rather than another row with the same global ID", async () => {
+  const other = document.createElement("button");
+  other.id = "issue-old";
+  const trigger = document.createElement("button");
+  document.body.append(other, trigger);
+  try {
+    trigger.focus();
+    await render("old", false);
+    container.querySelector<HTMLButtonElement>("button")!.focus();
+    await act(async () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(document.activeElement).toBe(trigger);
+  } finally {
+    other.remove();
+    trigger.remove();
+  }
+});
+it("Escape already handled by a child does not close the peek", async () => {
+  await render("old", false);
+  const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+  event.preventDefault();
+  await act(async () => document.dispatchEvent(event));
+  expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe("old");
+});
+
+it.each([false, true])("does not focus an unmounted or hidden trigger (hidden=%s)", async (hidden) => {
+  const trigger = document.createElement("button");
+  document.body.append(trigger);
+  trigger.focus();
+  await render("old", false);
+  if (hidden) trigger.setAttribute("inert", "");
+  else trigger.remove();
+  const focus = vi.spyOn(trigger, "focus");
+  await act(async () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
+  expect(focus).not.toHaveBeenCalled();
+  expect(tab.app.issue.issueDetail.peekIssue).toBeUndefined();
+  trigger.remove();
+});
+it("a previous selection cannot restore focus after a same-issue replacement", async () => {
+  const trigger = document.createElement("button");
+  document.body.append(trigger);
+  try {
+    trigger.focus();
+    await render("old", false);
+    let result!: Promise<unknown>;
+    await act(async () => {
+      result = Promise.resolve(actions.handleDelete!());
+    });
+    await render("old", false);
+    const focus = vi.spyOn(trigger, "focus");
+    await act(async () => {
+      pending.answer();
+      await result;
+    });
+    expect(focus).not.toHaveBeenCalled();
+    expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe("old");
+  } finally {
+    trigger.remove();
+  }
 });

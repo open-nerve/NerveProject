@@ -5,23 +5,19 @@
  */
 
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
-import { usePopper } from "react-popper";
 import { SignalHigh } from "lucide-react";
-import { Combobox } from "@headlessui/react";
 import { ISSUE_PRIORITIES } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 // types
 import { PriorityIcon } from "@nerve/propel/icons";
-import { ChevronDownOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
+import { ChevronDownOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TIssuePriorities } from "@nerve/types";
 // ui
-import { ComboDropDown } from "@nerve/ui";
+import { CustomSearchSelect } from "@nerve/ui";
 // helpers
 import { cn } from "@nerve/utils";
 // hooks
-import { useDropdown } from "@/hooks/use-dropdown";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // constants
 import { BACKGROUND_BUTTON_VARIANTS, BORDER_BUTTON_VARIANTS, BUTTON_VARIANTS_WITHOUT_TEXT } from "./constants";
@@ -327,28 +323,6 @@ export function PriorityDropdown(props: Props) {
     value = "none",
     renderByDefault = true,
   } = props;
-  // states
-  const [query, setQuery] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-  // refs
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  // popper-js refs
-  const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
-  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  // popper-js init
-  const { styles, attributes } = usePopper(referenceElement, popperElement, {
-    placement: placement ?? "bottom-start",
-    modifiers: [
-      {
-        name: "preventOverflow",
-        options: {
-          padding: 12,
-        },
-      },
-    ],
-  });
-
   const options = ISSUE_PRIORITIES.map((priority) => ({
     value: priority.key,
     query: priority.key,
@@ -360,141 +334,48 @@ export function PriorityDropdown(props: Props) {
     ),
   }));
 
-  const filteredOptions =
-    query === "" ? options : options.filter((o) => o.query.toLowerCase().includes(query.toLowerCase()));
-
-  const dropdownOnChange = (val: TIssuePriorities) => {
-    onChange(val);
-    handleClose();
-  };
-
-  const { handleClose, handleKeyDown, handleOnClick, searchInputKeyDown } = useDropdown({
-    dropdownRef,
-    inputRef,
-    isOpen,
-    onClose,
-    query,
-    setIsOpen,
-    setQuery,
-  });
-
   const ButtonToRender = BORDER_BUTTON_VARIANTS.includes(buttonVariant)
     ? BorderButton
     : BACKGROUND_BUTTON_VARIANTS.includes(buttonVariant)
       ? BackgroundButton
       : TransparentButton;
 
-  const comboButton = button ? (
-    <button
-      ref={setReferenceElement}
-      type="button"
-      className={cn("clickable block h-full w-full outline-none", buttonContainerClassName)}
-      onClick={handleOnClick}
-      disabled={disabled}
-      tabIndex={tabIndex}
-    >
-      {button}
-    </button>
-  ) : (
-    <button
-      ref={setReferenceElement}
-      type="button"
-      className={cn(
-        "clickable block h-full max-w-full outline-none",
-        {
-          "cursor-not-allowed text-secondary": disabled,
-          "cursor-pointer": !disabled,
-        },
-        buttonContainerClassName
-      )}
-      onClick={handleOnClick}
-      disabled={disabled}
-      tabIndex={tabIndex}
-    >
-      <ButtonToRender
-        priority={value ?? undefined}
-        className={buttonClassName}
-        highlightUrgent={highlightUrgent}
-        dropdownArrow={dropdownArrow && !disabled}
-        dropdownArrowClassName={dropdownArrowClassName}
-        hideIcon={hideIcon}
-        placeholder={placeholder}
-        showTooltip={showTooltip}
-        hideText={BUTTON_VARIANTS_WITHOUT_TEXT.includes(buttonVariant)}
-        renderToolTipByDefault={renderByDefault}
-      />
-    </button>
-  );
-
   return (
-    <ComboDropDown
-      as="div"
-      ref={dropdownRef}
-      className={cn(
-        "h-full",
-        {
-          "bg-layer-1": isOpen,
-        },
-        className
-      )}
+    <CustomSearchSelect
       value={value}
-      onChange={dropdownOnChange}
+      onChange={(priority: TIssuePriorities) => onChange(priority)}
+      options={options}
+      onClose={onClose}
       disabled={disabled}
-      onKeyDown={handleKeyDown}
-      button={comboButton}
-      renderByDefault={renderByDefault}
-    >
-      {isOpen && (
-        <Combobox.Options as="ul" className="fixed z-10" static>
-          <div
-            className="my-1 w-48 rounded-sm border-[0.5px] border-strong bg-surface-1 px-2 py-2.5 text-11 shadow-raised-200 focus:outline-none"
-            ref={setPopperElement}
-            style={styles.popper}
-            {...attributes.popper}
-          >
-            <div className="flex items-center gap-1.5 rounded-sm border border-subtle bg-surface-2 px-2">
-              <SearchOutline className="h-3.5 w-3.5 text-placeholder" />
-              <Combobox.Input
-                as="input"
-                ref={inputRef}
-                className="w-full bg-transparent py-1 text-11 text-secondary placeholder:text-placeholder focus:outline-none"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("search")}
-                displayValue={(assigned: any) => assigned?.name}
-                onKeyDown={searchInputKeyDown}
-              />
-            </div>
-            <div className="mt-2 max-h-48 space-y-1 overflow-y-scroll">
-              {filteredOptions.length > 0 ? (
-                filteredOptions.map((option) => (
-                  <Combobox.Option
-                    as="li"
-                    key={option.value}
-                    value={option.value}
-                    className={({ active, selected }) =>
-                      cn(
-                        `flex w-full cursor-pointer items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 select-none ${
-                          active ? "bg-layer-transparent-hover" : ""
-                        } ${selected ? "text-primary" : "text-secondary"}`
-                      )
-                    }
-                  >
-                    {({ selected }) => (
-                      <>
-                        <span className="flex-grow truncate">{option.content}</span>
-                        {selected && <TickOutline className="h-3.5 w-3.5 flex-shrink-0" />}
-                      </>
-                    )}
-                  </Combobox.Option>
-                ))
-              ) : (
-                <p className="px-1.5 py-1 text-placeholder italic">{t("no_matching_results")}</p>
-              )}
-            </div>
-          </div>
-        </Combobox.Options>
-      )}
-    </ComboDropDown>
+      tabIndex={tabIndex}
+      className={cn("h-full shrink", className)}
+      optionsClassName="w-48"
+      customButtonClassName={cn("group h-full max-w-full hover:bg-transparent", buttonContainerClassName)}
+      customButton={
+        <>
+          <span className="sr-only">{placeholder}: </span>
+          {button ?? (
+            <ButtonToRender
+              priority={value ?? undefined}
+              className={buttonClassName}
+              highlightUrgent={highlightUrgent}
+              dropdownArrow={dropdownArrow && !disabled}
+              dropdownArrowClassName={dropdownArrowClassName}
+              hideIcon={hideIcon}
+              placeholder={placeholder}
+              showTooltip={showTooltip}
+              hideText={BUTTON_VARIANTS_WITHOUT_TEXT.includes(buttonVariant)}
+              renderToolTipByDefault={renderByDefault}
+            />
+          )}
+          {BUTTON_VARIANTS_WITHOUT_TEXT.includes(buttonVariant) && <span className="sr-only">{value}</span>}
+        </>
+      }
+      placement={placement}
+      searchPlaceholder={t("common.search.label")}
+      noResultsMessage={t("no_matching_results")}
+      loadingMessage={t("common.loading")}
+      popperModifiers={[{ name: "preventOverflow", options: { padding: 12 } }]}
+    />
   );
 }

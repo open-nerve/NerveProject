@@ -1,5 +1,5 @@
 {
-  "phase": "M4/P11",
+  "phase": "M4/P12",
   "rules": [
     {
       "id": "deploy-files",
@@ -2324,13 +2324,13 @@
     {
       "id": "project-address-route",
       "phase": "M3/P10",
-      "why": "项目页面从路由参数读地址（项目、工作区），不从 router store 读：project store 的 currentProjectDetails 和 member store 的 projectMemberIds 读 router store 的 projectId，workspace store 的 currentWorkspace 读它的 workspaceSlug，allowPermissions 不传 slug 和项目时也退回 router store（permissions.store.ts）。router store 由 StoreWrapper 的 effect 在渲染之后写入，同一路由换了项目时晚一次提交，那一次页面按上一个项目显示、按上一个项目判断权限（M3/P10 修复轮，裁定 F-2；P10 规格 §5）。本规则只管 P10、P11 已经改过来的文件：常规设置页和它的控制区、四个功能页、自动化页、成员页、成员列表、成员选择、项目设置侧栏的头部（P10），状态设置页和它的根组件、标签设置页、标签列表和它的拖放组件（P11）；后面的阶段（M4、M6、M7 各自的页面）改它们的读法时，把那些文件加进本规则的 files，收尾删掉 projectMemberIds 这个 getter。测试不算",
+      "why": "项目页面从路由参数读地址（项目、工作区），不从 router store 读：project store 的 currentProjectDetails 和 member store 的 projectMemberIds 读 router store 的 projectId，workspace store 的 currentWorkspace 读它的 workspaceSlug，allowPermissions 不传 slug 和项目时也退回 router store（permissions.store.ts）。router store 由 StoreWrapper 的 effect 在渲染之后写入，同一路由换了项目时晚一次提交，那一次页面按上一个项目显示、按上一个项目判断权限（M3/P10 修复轮，裁定 F-2；P10 规格 §5）。本规则只管 P10、P11 已经改过来的文件：常规设置页和它的控制区、四个功能页、自动化页、成员页、成员列表、成员选择、项目设置侧栏的头部（P10），状态设置页和它的根组件、标签设置页、标签列表和它的拖放组件（P11）；后面的阶段（M4、M6、M7 各自的页面）改它们的读法时，把那些文件加进本规则的 files，收尾删掉 projectMemberIds 这个 getter。测试不算；M4/P12 扩至原22列表路径（已删除路径仍阻止复活）、显式分组目录及调用点。目录 getter 不借 router 隐式范围，缺少地址先拒绝，不触发 allowPermissions 的旧回退。",
       "files": {
-        "source": "^web/apps/web/(?:app/\\(all\\)/\\[workspaceSlug\\]/\\(settings\\)/settings/projects/\\[projectId\\]/(?:page|members/page|states/page|labels/page|automations/page|features/(?:cycles|intake|modules|views)/page)|core/components/(?:project/(?:settings/control-section|member-list|member-select)|project-states/root|labels/(?:project-setting-label-list|label-drag-n-drop-HOC)|settings/project/sidebar/header))\\.tsx$",
+        "source": "(?:^web/apps/web/(?:app/\\(all\\)/\\[workspaceSlug\\]/\\(settings\\)/settings/projects/\\[projectId\\]/(?:page|members/page|states/page|labels/page|automations/page|features/(?:cycles|intake|modules|views)/page)|core/components/(?:project/(?:settings/control-section|member-list|member-select)|project-states/root|labels/(?:project-setting-label-list|label-drag-n-drop-HOC)|settings/project/sidebar/header))\\.tsx$|^(?:web/apps/web/app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/projects/\\(detail\\)/\\[projectId\\]/issues/\\(list\\)/mobile\\-header\\.tsx|web/apps/web/app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/projects/\\(detail\\)/\\[projectId\\]/archives/issues/\\(detail\\)/header\\.tsx|web/apps/web/core/components/issues/header\\.tsx|web/apps/web/core/components/issues/archived\\-issues\\-header\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/spreadsheet/spreadsheet\\-view\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/utils\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/calendar/base\\-calendar\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/archived\\-issues\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/cycle\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/module\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/project\\-issues\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/project\\-view\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/base\\-kanban\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/roots/cycle\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/list/base\\-list\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/list/roots/cycle\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/quick\\-action\\-dropdowns/archived\\-issue\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/quick\\-action\\-dropdowns/cycle\\-issue\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/quick\\-action\\-dropdowns/module\\-issue\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/spreadsheet/base\\-spreadsheet\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/spreadsheet/roots/cycle\\-root\\.tsx|web/apps/web/core/components/issues/workspace\\-draft/delete\\-modal\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/group\\-columns\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/list/default\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/default\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/swimlanes\\.tsx|web/apps/web/core/components/issues/issue\\-detail\\-widgets/sub\\-issues/issues\\-list/root\\.tsx)$)",
         "flags": ""
       },
       "content": {
-        "source": "\\bcurrentProjectDetails\\b|\\bprojectMemberIds\\b|\\bcurrentWorkspace\\b|\\ballowPermissions\\(\\s*\\[[^\\]]*\\]\\s*,\\s*[\\w.]+\\s*(?:,\\s*[\\w.?]+\\s*)?,?\\s*\\)",
+        "source": "\\bcurrentProjectDetails\\b|\\bprojectMemberIds\\b|\\bcurrentWorkspace\\b|\\ballowPermissions\\(\\s*\\[[^\\]]*\\]\\s*,\\s*[\\w.]+\\s*(?:,\\s*[\\w.?]+\\s*)?,?\\s*\\)|\\.(?:projectStates|projectLabels|joinedProjectIds|workspaceMemberIds)\\b|\\{[^{};=]*\\b(?:projectStates|projectLabels|joinedProjectIds|workspaceMemberIds)\\b[^{};=]*\\}\\s*=|\\brootStore\\.router\\b",
         "flags": ""
       },
       "samples": {
@@ -2340,14 +2340,21 @@
           "  const { currentWorkspace } = useWorkspace();",
           "  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);",
           "  const isProjectMemberOrAdmin = allowPermissions(\n    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],\n    EUserPermissionsLevel.PROJECT\n  );",
-          "  allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug)"
+          "  allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug)",
+          "const { projectLabels } = rootStore.label;",
+          "const ids = rootStore.projectRoot.project.joinedProjectIds;",
+          "const scope = rootStore.router.projectId;"
         ],
         "miss": [
           "  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);",
           "  const canPerformProjectAdminActions = allowPermissions(\n    [EUserPermissions.ADMIN],\n    EUserPermissionsLevel.PROJECT,\n    workspaceSlug,\n    projectId\n  );",
           "    project: { getFilteredProjectMemberIds, getFilteredProjectMemberDetails, filters },",
           "  const { allowPermissions } = useUserPermissions();",
-          "  const project = getProjectById(projectId);"
+          "  const project = getProjectById(projectId);",
+          "const labels = rootStore.label.getProjectLabels(projectId);",
+          "if (!workspaceSlug || !projectId) return false;",
+          "if (!canRead(workspaceSlug)) return null;",
+          "const projectLabels = getProjectLabels(projectId);"
         ],
         "files": {
           "hit": [
@@ -2363,12 +2370,40 @@
             "web/apps/web/core/components/project-states/root.tsx",
             "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx",
             "web/apps/web/core/components/labels/project-setting-label-list.tsx",
-            "web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx"
+            "web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/issues/(list)/mobile-header.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/issues/(detail)/header.tsx",
+            "web/apps/web/core/components/issues/header.tsx",
+            "web/apps/web/core/components/issues/archived-issues-header.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/spreadsheet/spreadsheet-view.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/utils.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/calendar/base-calendar-root.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/empty-states/archived-issues.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/empty-states/cycle.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/empty-states/module.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/empty-states/project-issues.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/empty-states/project-view.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/kanban/base-kanban-root.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/kanban/roots/cycle-root.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/list/base-list-root.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/list/roots/cycle-root.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/spreadsheet/base-spreadsheet-root.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/spreadsheet/roots/cycle-root.tsx",
+            "web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/group-columns.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/list/default.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/kanban/default.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/kanban/swimlanes.tsx",
+            "web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/issues-list/root.tsx"
           ],
           "miss": [
             "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx",
             "web/apps/web/core/components/project/member-list.test.tsx",
-            "web/apps/web/core/components/project/member-list-item.tsx"
+            "web/apps/web/core/components/project/member-list-item.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/route-scope.test.tsx"
           ]
         }
       }

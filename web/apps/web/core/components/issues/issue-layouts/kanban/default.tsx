@@ -1,3 +1,5 @@
+import { useParams } from "react-router";
+import { getGroupByColumns } from "../group-columns";
 import type { IssueCreate } from "@nerve/api-client";
 import type { Group } from "@/lib/paged-groups";
 /**
@@ -29,7 +31,7 @@ import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // parent components
 import type { TRenderQuickActions } from "../list/list-view-types";
 import type { GroupDropLocation } from "../utils";
-import { getGroupByColumns, isWorkspaceLevel, getApproximateCardHeight } from "../utils";
+import { isWorkspaceLevel, getApproximateCardHeight } from "../utils";
 // components
 import { HeaderGroupByCard } from "./headers/group-by-card";
 import { KanbanGroup } from "./kanban-group";
@@ -93,6 +95,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
   // i18n
   // store hooks
   const storeType = useIssueStoreType();
+  const { workspaceSlug, projectId } = useParams();
   const issueKanBanView = useKanbanView();
   // derived values
   const isDragDisabled = !issueKanBanView?.getCanUserDragDrop(group_by, sub_group_by);
@@ -101,6 +104,8 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
+    workspaceSlug,
+    projectId,
   });
 
   if (!list) return null;

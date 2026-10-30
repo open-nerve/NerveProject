@@ -25,10 +25,15 @@ export const ProjectArchivedEmptyState = observer(function ProjectArchivedEmptyS
   const { allowPermissions } = useUserPermissions();
   // derived values
   const archivedWorkItemFilter = useWorkItemFilterInstance(EIssuesStoreType.ARCHIVED, projectId);
-  const canPerformEmptyStateActions = allowPermissions(
-    [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
+  const canPerformEmptyStateActions =
+    !!workspaceSlug &&
+    !!projectId &&
+    allowPermissions(
+      [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
+      EUserPermissionsLevel.PROJECT,
+      workspaceSlug,
+      projectId
+    );
 
   return (
     <div className="relative h-full w-full overflow-y-auto">

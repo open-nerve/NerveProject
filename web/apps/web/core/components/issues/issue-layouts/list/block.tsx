@@ -30,6 +30,7 @@ import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+import { openIssuePeek } from "../../peek-overview/selection";
 import { useIdentifierWidth } from "./identifier-width";
 import type { TRenderQuickActions } from "./list-view-types";
 
@@ -76,21 +77,26 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
   // hooks
   const { sidebarCollapsed: isSidebarCollapsed } = useAppTheme();
   const { getProjectIdentifierById } = useProject();
-  const { getIsIssuePeeked, peekIssue, setPeekIssue, subIssues: subIssuesStore } = useIssueDetail();
+  const detail = useIssueDetail();
+  const { getIsIssuePeeked, peekIssue, subIssues: subIssuesStore } = detail;
 
-  const handleIssuePeekOverview = (issue: Issue) =>
+  const handleIssuePeekOverview = (issue: Issue, trigger: HTMLElement) =>
     workspaceSlug &&
     issue &&
     issue.project_id &&
     issue.id &&
     !getIsIssuePeeked(issue.id) &&
-    setPeekIssue({
-      workspaceSlug,
-      projectId: issue.project_id,
-      issueId: issue.id,
-      nestingLevel: nestingLevel,
-      isArchived: !!issue.archived_at,
-    });
+    openIssuePeek(
+      detail,
+      {
+        workspaceSlug,
+        projectId: issue.project_id,
+        issueId: issue.id,
+        nestingLevel: nestingLevel,
+        isArchived: !!issue.archived_at,
+      },
+      trigger
+    );
 
   // derived values
   const issue = issuesMap[issueId];
@@ -131,7 +137,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
     e.stopPropagation();
     e.preventDefault();
     if (nestingLevel >= 3) {
-      handleIssuePeekOverview(issue);
+      handleIssuePeekOverview(issue, e.currentTarget);
     } else {
       if (!isExpanded && workspaceSlug && issue.project_id)
         void subIssuesStore.fetchSubIssues(workspaceSlug, issue.project_id, issue.id).catch(() => undefined);
@@ -152,7 +158,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
       <ControlLink
         id={`issue-${issue.id}`}
         href={workItemLink}
-        onClick={() => handleIssuePeekOverview(issue)}
+        onClick={(event) => handleIssuePeekOverview(issue, event.currentTarget)}
         className="w-full cursor-pointer"
       >
         <Row
@@ -179,7 +185,12 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
             }
           }}
         >
-          <div className="flex w-full gap-2 truncate">
+          <div
+            className={cn("flex w-full gap-2 pr-8", {
+              "md:pr-0": isSidebarCollapsed,
+              "lg:pr-0": !isSidebarCollapsed,
+            })}
+          >
             <div className="flex flex-grow items-center gap-0.5 truncate">
               <div className="flex items-center gap-1" style={isSubIssue ? { marginLeft } : {}}>
                 {displayProperties && (
@@ -220,17 +231,6 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
                 <p className="cursor-pointer truncate text-body-xs-medium text-primary">{issue.name}</p>
               </Tooltip>
             </div>
-            <div
-              className={cn("block rounded-sm border border-strong", {
-                "md:hidden": isSidebarCollapsed,
-                "lg:hidden": !isSidebarCollapsed,
-              })}
-            >
-              {quickActions({
-                issue,
-                parentRef: issueRef,
-              })}
-            </div>
           </div>
           <div className="flex flex-shrink-0 items-center gap-2">
             <IssueProperties
@@ -241,22 +241,14 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
               displayProperties={displayProperties}
               activeLayout="List"
             />
-            {/* oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions */}
-            <div
-              className={cn("hidden", {
-                "md:flex": isSidebarCollapsed,
-                "lg:flex": !isSidebarCollapsed,
-              })}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-            >
-              {quickActions({
-                issue,
-                parentRef: issueRef,
-              })}
-            </div>
+          </div>
+          <div
+            className={cn("absolute top-3 right-0 rounded-sm border border-strong p-1", {
+              "md:static md:border-transparent": isSidebarCollapsed,
+              "lg:static lg:border-transparent": !isSidebarCollapsed,
+            })}
+          >
+            {quickActions({ issue, parentRef: issueRef })}
           </div>
         </Row>
       </ControlLink>

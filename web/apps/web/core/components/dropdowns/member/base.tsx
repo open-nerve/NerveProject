@@ -6,7 +6,6 @@
 
 import { observer } from "mobx-react";
 import type { ComponentType, SVGProps, ReactNode } from "react";
-import { useState } from "react";
 import { useParams } from "react-router";
 import { useTranslation } from "@nerve/i18n";
 import { Avatar } from "@makeplane/propel/components/avatar";
@@ -40,12 +39,7 @@ type TMemberDropdownBaseProps = {
   renderByDefault?: boolean;
 } & MemberDropdownProps;
 
-/**
- * Picks members: a CustomSearchSelect (@nerve/ui), whose list, with its search, opens beside its button, the open
- * state Headless UI's alone, the search taking the focus as the list opens on a desktop (M3 design 7.7). A dropdown
- * its caller defers (renderByDefault false: a row of a list on a desktop) is its button alone until the pointer
- * first comes over it, as ComboDropDown (@nerve/ui) does: no select and no popper for each row.
- */
+/** One native trigger stays mounted for both keyboard and pointer users; the select mounts its panel on demand. */
 export const MemberDropdownBase = observer(function MemberDropdownBase(props: TMemberDropdownBaseProps) {
   const { t } = useTranslation();
   const {
@@ -80,8 +74,6 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
     workspace: { isUserSuspended },
   } = useMember();
   const { isMobile } = usePlatformOS();
-  const [rendered, setRendered] = useState(renderByDefault);
-  const [openOnMount, setOpenOnMount] = useState(false);
 
   // what the button says: the member picked, how many are, or the placeholder
   const getDisplayName = () => {
@@ -93,15 +85,11 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
     return showUserDetails && value ? getUserDetails(value)?.display_name || placeholder : placeholder;
   };
 
-  // the button: alone while the dropdown is deferred, then in the select's button
+  // Presentation content inside the select's stable native trigger.
   const button = (
     <DropdownButton
-      presentation={rendered}
+      presentation
       disabled={disabled}
-      onClick={() => {
-        setOpenOnMount(true);
-        setRendered(true);
-      }}
       // shown as active while the list is open (Headless UI's data-open on the select's button)
       className={cn("text-11 group-data-open:bg-layer-transparent-active", buttonClassName)}
       isActive={false}
@@ -112,6 +100,7 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
       renderToolTipByDefault={renderByDefault}
       tabIndex={tabIndex}
     >
+      {!BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && <span className="sr-only">{placeholder}</span>}
       {!hideIcon && <ButtonAvatars userIds={value} icon={icon} />}
       {BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (
         <span className="flex-grow truncate text-left text-body-xs-medium leading-5">{getDisplayName()}</span>
@@ -121,14 +110,6 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
       )}
     </DropdownButton>
   );
-  if (!rendered) {
-    return (
-      <div className="flex h-full items-center" onMouseEnter={() => setRendered(true)}>
-        {button}
-      </div>
-    );
-  }
-
   // the value and its handler as the select takes them: one member, or many
   const selection:
     | { multiple: false; value: string | null; onChange: (val: string | null) => void }
@@ -184,7 +165,6 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
       disabled={disabled}
       // Tab stops at the select's native trigger once; DropdownButton is its presentation content.
       tabIndex={tabIndex}
-      defaultOpen={openOnMount}
       placement={placement}
       // As before the select was under it: the dropdown shrinks in its row (an inbox row's assignees), and its
       // button has no hover tint of its own behind the DropdownButton's (several callers turn that one off).
