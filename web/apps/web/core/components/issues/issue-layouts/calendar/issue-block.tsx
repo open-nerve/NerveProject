@@ -6,7 +6,7 @@
 
 import type { Issue } from "@nerve/api-client";
 
-import { useRef, forwardRef } from "react";
+import { useEffect, useRef, useState, forwardRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
@@ -39,7 +39,10 @@ type Props = {
 export const CalendarIssueBlock = observer(
   forwardRef(function CalendarIssueBlock(props: Props, ref: React.ForwardedRef<HTMLAnchorElement>) {
     const { issue, quickActions, isDragging = false } = props;
-    // states
+    const [previewOpen, setPreviewOpen] = useState(false);
+    useEffect(() => {
+      if (isDragging) setPreviewOpen(false);
+    }, [isDragging]);
     // refs
     const blockRef = useRef(null);
     const menuActionRef = useRef<HTMLSpanElement | null>(null);
@@ -83,7 +86,12 @@ export const CalendarIssueBlock = observer(
     });
 
     return (
-      <Popover delay={100} openOnHover>
+      <Popover
+        delay={100}
+        openOnHover={!isDragging}
+        open={previewOpen && !isDragging}
+        onOpenChange={(open) => setPreviewOpen(open && !isDragging)}
+      >
         <Popover.Button
           nativeButton={false}
           className="w-full"

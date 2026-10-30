@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ModalCore, ModalTitle } from "@nerve/ui";
 import { CreateApiTokenForm } from "@/components/api-token/modal/form";
 import { DateDropdown } from "./date";
+import { DateRangeDropdown } from "./date-range";
 vi.mock("@/hooks/store/user", () => ({ useUserProfile: () => ({ data: { start_of_the_week: 1 } }) }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -159,30 +160,46 @@ it("pointer dismissal and focus leaving the calendar close its only state", asyn
   await act(async () => vi.advanceTimersByTimeAsync(50));
   expect(popup()).toBeNull();
 });
-it("opening the adjacent picker dismisses the previous calendar instead of leaving a second panel", async () => {
-  await act(async () =>
-    root.render(
-      <>
-        <DateDropdown buttonVariant="border-with-text" placeholder="Due date" value={null} onChange={changed} />
-        <DateDropdown buttonVariant="border-with-text" placeholder="Start date" value={null} onChange={changed} />
-      </>
-    )
-  );
-  await act(async () => {
-    trigger().focus();
-    trigger().click();
-  });
-  expect(popup()).not.toBeNull();
-  const other = (host.querySelector<HTMLButtonElement>('button[aria-label="Start date"]') ??
-    host.querySelectorAll<HTMLButtonElement>("button:not(button button)")[1])!;
-  await act(async () => {
-    other.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-    other.click();
-  });
-  await act(async () => vi.advanceTimersByTimeAsync(50));
-  expect(popup()).toBeNull();
-  expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
-});
+it.each([false, true])(
+  "opening the adjacent picker dismisses its predecessor without stealing the new focus (range=%s)",
+  async (range) => {
+    await act(async () =>
+      root.render(
+        <>
+          {range ? (
+            <DateRangeDropdown
+              buttonVariant="border-with-text"
+              customTooltipHeading="Due date"
+              value={{ from: undefined, to: undefined }}
+              onSelect={changed}
+            />
+          ) : (
+            <DateDropdown buttonVariant="border-with-text" placeholder="Due date" value={null} onChange={changed} />
+          )}
+          <DateDropdown buttonVariant="border-with-text" placeholder="Start date" value={null} onChange={changed} />
+        </>
+      )
+    );
+    await act(async () => {
+      trigger().focus();
+      trigger().click();
+    });
+    expect(popup()).not.toBeNull();
+    const other = (host.querySelector<HTMLButtonElement>('button[aria-label="Start date"]') ??
+      host.querySelectorAll<HTMLButtonElement>("button:not(button button)")[1])!;
+    await act(async () => {
+      other.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      other.click();
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(50));
+    expect(popup()).toBeNull();
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    // A pointer click need not focus the button (Safari); Escape must still return to the calendar's own trigger.
+    await press(document.querySelector('[role="dialog"]')!, "Escape");
+    await act(async () => vi.advanceTimersByTimeAsync(50));
+    expect(document.activeElement).toBe(other);
+  }
+);
 function InsideModal() {
   const [open, setOpen] = useState(false);
   return (

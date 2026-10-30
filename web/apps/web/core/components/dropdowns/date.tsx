@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@nerve/i18n";
 import { observer } from "mobx-react";
 import { CalendarOutline, CloseOutline } from "@makeplane/propel/icons";
@@ -69,6 +69,7 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
   } = props;
   // This is the Popover's sole controlled state. It also serves selection and public defaultOpen.
   const [isOpen, setIsOpen] = useState(defaultOpen && !disabled);
+  const returnFocus = useRef(true);
   const { data } = useUserProfile();
   const startOfWeek = data?.start_of_the_week;
   useEffect(() => {
@@ -129,6 +130,8 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
             detail.cancel();
             return;
           }
+          // Leaving for another control must not let the closing calendar take its focus back (Safari too).
+          returnFocus.current = open || (detail.reason !== "outside-press" && detail.reason !== "focus-out");
           setIsOpen(open);
         }}
         onOpenChangeComplete={(open) => {
@@ -142,6 +145,7 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
           placement={placement ?? "bottom-start"}
           sideOffset={4}
           initialFocus={false}
+          finalFocus={() => returnFocus.current}
           positionerClassName="z-30"
           className={cn(
             "overflow-hidden rounded-md border-[0.5px] border-strong bg-surface-1 shadow-raised-200",

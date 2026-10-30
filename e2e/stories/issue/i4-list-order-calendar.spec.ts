@@ -442,9 +442,14 @@ test.describe("calendar in UTC+14", () => {
       limit: "4",
     });
     const sourceCard = day(source).locator(`[id="issue-${moving.id}"]`);
+    await sourceCard.hover();
+    await expect(sourceCard).toHaveAttribute("aria-expanded", "true");
     const held = await sentHeld(page, "PATCH", `/api/v0/issues/${moving.id}`, () =>
-      dragOnto(page, sourceCard, sourceCard, day(target), { x: 65, y: 35 })
+      dragOnto(page, sourceCard, sourceCard, day(target), { x: 65, y: 35 }, async () => {
+        await expect(sourceCard).toHaveAttribute("aria-expanded", "false");
+      })
     );
+    await expect(sourceCard).toHaveAttribute("aria-expanded", "false");
     expect(held.body).toEqual({ target_date: target });
     await expect(sourceCard).toBeVisible();
     await expect(day(target).locator(`[id="issue-${moving.id}"]`)).toHaveCount(0);
@@ -505,7 +510,7 @@ test.describe("calendar in UTC+14", () => {
     await expectListPageQuiet(page, watch, browserName, 1, {
       failures: [`422 PATCH /api/v0/issues/${available.id}`],
       errors:
-        browserName === "chromium"
+        browserName === "chromium" || browserName === "webkit"
           ? ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"]
           : [],
     });

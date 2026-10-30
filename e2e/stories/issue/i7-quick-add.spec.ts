@@ -150,6 +150,9 @@ test("I7 (page): chosen-state quick add describes refusal before focus, keeps pe
   });
   await expectListPageQuiet(page, watch, browserName, 1, {
     failures: [`422 POST ${post}`],
-    errors: ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"],
+    errors:
+      browserName === "chromium" || browserName === "webkit"
+        ? ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"]
+        : [],
   });
 });

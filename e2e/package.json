@@ -5,6 +5,7 @@
   "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
+    "test:m4-list": "playwright test --config=playwright.m4-list.config.ts",
     "check:types": "tsc --noEmit",
     "check:lint": "node ../tools/lint-cap.mjs 0",
     "check:format": "oxfmt --check .",

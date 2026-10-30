@@ -189,7 +189,7 @@ test("I6 (page): a member moves between Done cards once, reorders below a middle
   await expectListPageQuiet(page, watch, browserName, 2, {
     failures: [`403 PATCH ${refusedPath}`],
     errors:
-      browserName === "chromium"
+      browserName === "chromium" || browserName === "webkit"
         ? ["Failed to load resource: the server responded with a status of 403 (Forbidden)"]
         : [],
   });

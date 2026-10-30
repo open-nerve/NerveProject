@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T14 已完成，T15–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T15 本地实施和验证完成，T15检查点CI与T16整审继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -228,3 +228,30 @@ I6 使用真实角色15成员，Todo 放到 Done 两卡之间，保持确认前�
 复用 dragOnto 时暴露测试辅助 transitionsEnded 把被替换/卸载的动画 AbortError 作为失败；仅将该取消视为生命周期已结束，其余错误继续抛出、无限动画仍排除。初次建数传 create 不接受的 target_date:null、同列不该重复 state 字段、尾部误用快速创建的10000间距、ModalCore 零尺寸外壳可见性、日历 query 参数顺序及 TS union 未收窄均为故事编写问题；已按既有接口/可见内容/closedWithin 改正，不修改产品迎合测试。原日志与 trace 保留，lint 的异步顺序以 reduce 保持真实用户操作顺序，无新豁免。
 
 M11-page 的错误中项 below 导致实际请求 -65335 而非250；M18-page 的 UTC 日期偏移使所选日无法续页；M19-page 丢 none 条件被实际搜索 query 捕获。三项均真实红，精确恢复原字节/hash、重建后绿；只作为已有 M11/M18/M19 的页面证据，不重算独立变异。最终 t14-final-pages 全部16项通过（0 skip，3新 page + 保留 API/S2），t14-types-second、t14-lint-second 零错误/警告，diff-check 通过。全量 F 与三浏览器仍由 T15 执行；自查无架构阻塞。
+
+
+## 22. T15 三浏览器与局部根因修复（2026-10-30）
+
+专用配置以单对象展开默认配置后替换 projects，准确列出 Chromium/Firefox/WebKit 各11项，共33项、5个文件；没有继承默认 Firefox A4 的 grep。`t15-matrix-v2-chromium/firefox/webkit` 各11通过、0 skip，当前源码已重建；`t15-matrix-final-list` 的配置/故事输入与本轮相同。安装仅使用仓库锁定 Playwright 的本地 WebKit 2359，无全局安装。
+
+| 实际入口/断言 | Chromium | Firefox | WebKit | 证据与边界 |
+|---|---|---|---|---|
+| I3 状态续页、A∩C、多标签泳道与保存布局 | 通过 | 通过 | 通过 | 同一真实API/DOM故事；布局请求 finished 后才 reload，未忽略取消请求 |
+| I4 表格四种双向排序、真实第二页；UTC+14日历范围/续页/拖动/添加已有/拒绝 | 通过 | 通过 | 通过 | 两(page)故事，真实请求及DB；拖动前确实打开预览，开始拖动及放下后均关闭 |
+| I6 成员跨列/中项below/尾部/确认/403回位 | 通过 | 通过 | 通过 | 原生拖放、确认顺序及活动；没有使用store调用冒充页面 |
+| I7 快建字段先呈现再取焦、422/pending/双提交/状态尾部 | 通过 | 通过 | 通过 | 实际表单与DB；原API故事保留 |
+| DateDropdown 与 DateRange：键盘、相邻控件、Escape焦点、完整弹层定位 | 通过 | 通过 | 通过 | 列表行；日期范围4px，外点关闭不抢新控件焦点 |
+| priority/state/label-dropdown/member 的搜索、定位、当前403一次提示 | 通过 | 通过 | 通过 | 实际列表行，不以DOM单测代替几何；状态刷新保留标签宽度 |
+| project/base 与 select/base | 通过 | 通过 | 通过 | 从项目列表打开创建窗，项目与标签搜索/完整Panel锚点/外层inert/关闭还焦；未提交创建，不提前认领P14完整创建 |
+| detail label-select | 通过 | 通过 | 通过 | 列表peek实际标签面板；完整详情验收仍P14 |
+| 菜单及关闭的右键菜单 | 通过 | 通过 | 通过 | 真实行唯一菜单、键盘箭头/Escape、右击/IME/焦点归还、关闭inert及aria-hidden |
+| peek CustomSelect / 两类关闭 | 通过 | 通过 | 通过 | 当前模式真实选中、IME Enter不打开、切Modal；加载中原节点还焦/晚读不重开；完整读取退役节点不抢焦 |
+| 自动归档、Created date筛选、API token自定义日期 | 通过 | 通过 | 通过 | 已接通页面的共享兼容；真实定位/焦点/外层模态隔离，等待外层动画结束再量定位，未取消动画/放宽阈值 |
+
+三浏览器各自精确断言console：Chromium每次实际编辑器加载一条既有EMOJI_CHECK_WARNING，Firefox/WebKit没有该提示。主动403/422在Chromium/WebKit各有一条对应状态的固定resource error，Firefox没有；无其它console/API失败/pageerror/CSP/外域/旧地址豁免。Firefox曾出现的滚动警告由样式写入探针定位到日历hover preview的跟随定位，已通过拖动时关闭修复，不列入白名单。
+
+T15局部问题及首红：`t15-inline-ime-red`/`t15-controls-red`复现行/表格未承接拒绝、IME误开、成员触发无名/替换和状态锚点宽度变化；`t15-c3-local-fixes-calendar-red`复现真实拖动预览未关闭；`t15-loading-close-red`复现加载态关闭按钮无名；`t15-two-calendars-focus-red`两项复现前一日期控件抢焦；`t15-context-return-red`复现右键返回其它控件。对应修复复用现有原语、命令与scope，无新公开协议或架构责任。最初jsdom hover未真正打开预览、配置合并导致0用例、缺WebKit、错误的测试名称/动画中测量均单列为测试/环境问题，不计产品行为红。
+
+完整peek的初次关闭断言错误地寻找卸载后新建的同ID行。DOM removal探针与网络trace证实子项读取的父项核验会卸载列表；按spec§2.7保留核验与退役保护，分成加载中仍存/完成后退役两条页面证据，不新增全局ID回退。代价是后者交由页面正常焦点管理。成员其余创建/详情/关系/子项/草稿入口的完整页面、富筛选四入口、C12全应用三浏览器仍按原Phase归属。
+
+局部最终验证：`t15-local-regression-final` 11文件117测试；`t15-context-return-green` 3文件42测试；`t15-context-ui-green` 3文件22测试；均0 skip。共享强制构建10任务、web/E2E类型与151修改路径oxlint零警告通过；web cap121、ui cap10均按实际保持，没有提高。完整F已通过：生成/Go lint/Go test为t15-F1，web lint/test/E2E为t15-F2；54静态任务、18强制测试任务零缓存，实际253文件2678测试（0 skip），默认E2E180/180（0 skip）。首轮knip报专用配置无消费者，已在e2e/package.json加入test:m4-list脚本；t15-knip-config-consumer零dead，t15-script-matrix-list仍准确33项，未扩大默认CI矩阵。t15-F-audit逐文件核对：服务端与矩阵仅晚加测试脚本，其余产品输入未变。33种历史变异均实际红、原字节恢复且绿，其中26种生产文件哈希仍与当前一致；其余明确列为历史证明，不能冒充最终字节的变异，详见t15-mutation-audit。检查点CI及T16整审继续。

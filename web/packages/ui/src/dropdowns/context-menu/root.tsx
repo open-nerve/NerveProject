@@ -39,14 +39,23 @@ function ContextMenuWithoutPortal({ parentRef, items }: ContextMenuProps) {
   const { isMobile } = usePlatformOS();
   const handleClose = useCallback(() => {
     setIsOpen(false);
-    if (returnFocus.current?.isConnected) returnFocus.current.focus();
+    if (returnFocus.current?.isConnected && !returnFocus.current.closest('[inert], [aria-hidden="true"]'))
+      returnFocus.current.focus();
   }, []);
   useEffect(() => {
     const parent = parentRef.current,
       panel = contextMenuRef.current;
     if (!parent || !panel) return;
-    const open = (x: number, y: number) => {
-      returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : parent;
+    const open = (x: number, y: number, target: EventTarget | null) => {
+      // Safari can leave focus elsewhere on right click; the invoked control owns the return, not that old focus.
+      const trigger =
+        target instanceof Element ? target.closest<HTMLElement>("a[href], button:not(:disabled), [tabindex]") : null;
+      returnFocus.current =
+        trigger && (parent.contains(trigger) || trigger.contains(parent))
+          ? trigger
+          : document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : parent;
       setPosition({
         x: Math.max(0, Math.min(x, window.innerWidth - panel.clientWidth)),
         y: Math.max(0, Math.min(y, window.innerHeight - panel.clientHeight)),
@@ -57,14 +66,14 @@ function ContextMenuWithoutPortal({ parentRef, items }: ContextMenuProps) {
       if (isMobile) return;
       event.preventDefault();
       event.stopPropagation();
-      open(event.clientX, event.clientY);
+      open(event.clientX, event.clientY, event.target);
     };
     const keyboard = (event: KeyboardEvent) => {
       if (isComposing(event) || !(event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))) return;
       event.preventDefault();
       event.stopPropagation();
       const box = parent.getBoundingClientRect();
-      open(box.left, box.bottom);
+      open(box.left, box.bottom, event.target);
     };
     parent.addEventListener("contextmenu", contextmenu);
     parent.addEventListener("keydown", keyboard);

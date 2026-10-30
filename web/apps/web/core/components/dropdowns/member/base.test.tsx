@@ -45,12 +45,15 @@ beforeEach(() => {
 });
 
 describe("MemberDropdownBase", () => {
-  it("is its button alone, no select, while its caller defers it", () => {
-    const markup = render(false);
-    expect([shown.searchSelects.length, markup.includes(">Lead</span></button>")]).toEqual([0, true]);
+  it("keeps a single native select trigger even when its caller defers content", () => {
+    render(false);
+    const content = renderToStaticMarkup(shown.searchSelects[0]?.customButton);
+    expect(shown.searchSelects).toHaveLength(1);
+    expect(content).toContain(">Lead</span>");
+    expect(content).not.toContain("<button");
   });
 
-  it("is a select with non-interactive trigger content unless its caller defers it", () => {
+  it("is a select with non-interactive trigger content for deferred and eager callers", () => {
     const markup = render();
     const button = renderToStaticMarkup(shown.searchSelects[0]?.customButton);
     expect([

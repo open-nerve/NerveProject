@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Placement } from "@popperjs/core";
 import { observer } from "mobx-react";
 import { ArrowNarrowRightOutline, CalendarOutline, CloseOutline, DueDateOutline } from "@makeplane/propel/icons";
@@ -100,6 +100,7 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
     renderInPortal = false,
   } = props;
   const [isOpen, setIsOpen] = useState(defaultOpen && !disabled);
+  const returnFocus = useRef(true);
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const { data } = useUserProfile();
   const startOfWeek = data?.start_of_the_week;
@@ -205,6 +206,8 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
             details.cancel();
             return;
           }
+          // Leaving for another control must not let the closing calendar take its focus back (Safari too).
+          returnFocus.current = open || (details.reason !== "outside-press" && details.reason !== "focus-out");
           setIsOpen(open);
         }}
       >
@@ -214,6 +217,8 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
             aria-label={label}
             data-prevent-outside-click
             initialFocus={false}
+            finalFocus={() => returnFocus.current}
+            sideOffset={4}
             placement={placement ?? "bottom-start"}
             positionerClassName="z-30"
             containerRef={renderInPortal ? undefined : { current: container }}

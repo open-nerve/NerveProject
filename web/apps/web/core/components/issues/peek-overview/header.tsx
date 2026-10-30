@@ -147,24 +147,25 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
     >
       <div className="flex items-center gap-4">
         <Tooltip label={t("common.close_peek_view")} disabled={isMobile}>
-          <button onClick={removeRoutePeekId}>
+          <button type="button" aria-label={t("common.close_peek_view")} onClick={removeRoutePeekId}>
             <ArrowNarrowRightOutline className="h-4 w-4 text-tertiary hover:text-secondary" />
           </button>
         </Tooltip>
 
         <Tooltip label={t("issue.open_in_full_screen")} disabled={isMobile}>
-          <Link to={workItemLink} onClick={() => removeRoutePeekId()}>
+          <Link aria-label={t("issue.open_in_full_screen")} to={workItemLink} onClick={() => removeRoutePeekId()}>
             <DragDropOutline className="h-4 w-4 text-tertiary hover:text-secondary" />
           </Link>
         </Tooltip>
         {currentMode && embedIssue === false && (
           <div className="flex flex-shrink-0 items-center gap-2">
             <CustomSelect
-              value={currentMode}
-              onChange={(val: any) => setPeekMode(val)}
+              value={currentMode.key}
+              onChange={(val: TPeekModes) => setPeekMode(val)}
               customButton={
                 <Tooltip label={t("common.toggle_peek_view_layout")} disabled={isMobile}>
                   <span>
+                    <span className="sr-only">{t("common.toggle_peek_view_layout")}</span>
                     <currentMode.icon className="h-4 w-4 text-tertiary hover:text-secondary" />
                   </span>
                 </Tooltip>

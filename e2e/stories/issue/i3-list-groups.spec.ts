@@ -307,7 +307,16 @@ test("I3 (page): real state continuation, saved A intersection C and label-prior
   });
   expect(confirmed.data?.map((row) => row.label_ids)).toEqual(rows.map(() => labels));
   // Change layout through the actual toolbar; then reload the saved grouping for a real swimlane page.
+  const boardRead = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === `/api/v0/projects/${project.id}/issues` &&
+      url.searchParams.get("group_by") === "label_id" &&
+      url.searchParams.get("limit") === "30"
+    );
+  });
   await page.getByRole("button", { name: "Board Layout", exact: true }).click();
+  expect(await (await boardRead).finished()).toBeNull();
   await expect
     .poll(async () => (await readProjectPreferences(api, member.token, project.id)).display_filters.layout)
     .toBe("kanban");

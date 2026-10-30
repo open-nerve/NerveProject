@@ -61,6 +61,17 @@ it("a real list row owns one menu across responsive layouts, so a context action
   expect(newTab).toHaveBeenCalledTimes(1);
   expect(panel.closest("[inert]")).not.toBeNull();
   expect(panel.closest('[aria-hidden="true"]')).not.toBeNull();
+  // Right-clicking a non-button descendant need not focus its link first (Safari).
+  const elsewhere = document.createElement("button");
+  document.body.append(elsewhere);
+  try {
+    elsewhere.focus();
+    await act(async () => row.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true })));
+    await press(document.activeElement!, "Escape");
+    expect(document.activeElement).toBe(host.querySelector('a[id="issue-x"]'));
+  } finally {
+    elsewhere.remove();
+  }
 });
 const opened = () => document.querySelector<HTMLElement>('[role="menu"]:not([inert] *)');
 const trigger = () => document.querySelector<HTMLButtonElement>("[data-main-menu] > button")!;

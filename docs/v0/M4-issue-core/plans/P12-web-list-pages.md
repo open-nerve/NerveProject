@@ -171,13 +171,13 @@ make e2e
 
 ## Task 15：C1/C3三浏览器、dead与完整门禁（约600–1000行）
 
-**Files：** 新e2e/playwright.m4-list.config.ts、新e2e/stories/issue/list-interactions.spec.ts；改到的barrel/成员/keywords/oxlint cap；测试/浏览器逐项台账。
+**Files：** e2e/package.json 的 test:m4-list 实际消费入口、新e2e/playwright.m4-list.config.ts、新e2e/stories/issue/list-interactions.spec.ts；实际发现的日期/成员/状态、行和表格拒绝、日历预览、peek页头与关闭名称、CustomSelect/ContextMenu局部修复；新inline-refusals及对应DOM回归、改到的barrel/keywords/oxlint cap；测试/浏览器逐项台账。
 
-- [ ] 专用config复用default globalSetup及fixtures设置，明确projects为chromium/firefox/webkit并覆盖默认project列表；testMatch仅I3/I4/I6/I7文件与list-interactions文件，标题grep为(page)或C1/C3交互名（testMatch只能筛文件），不继承Firefox A4 grep。未接入全局CI之前不扩大默认全套浏览器矩阵；没有专用配置消费者则不留无效文件。
-- [ ] 从e2e执行`pnpm exec playwright test --config=playwright.m4-list.config.ts --list`，核三个projects、I3/I4/I6/I7/C3每类实际非零；再分别`--project=chromium`、`--project=firefox`、`--project=webkit`串行实跑，准备当前make build。缺浏览器只通过锁定本地Playwright支持的安装方式准备，不全局装，不把缺依赖写成验收通过。
-- [ ] C1逐行为/浏览器记录，C3逐点名控件记录：键盘开DateDropdown、单状态/相邻第二控件、七个Options锚点、外层modal背景inert/隐藏、CustomSelect peek/自动归档/日期筛选与成员控件实际入口；某入口属于后续完整页面验收时精确写覆盖的共享行为与剩余，不能整项假关。各浏览器的EMOJI_CHECK_WARNING/人为拒绝console预期按实际观察固定文本与次数，没有则期待空，不使用Chromium宽泛忽略或把watch结果当预期；P14仍负责移除该提示。截图辅助，焦点与选择用可观察断言。
-- [ ] 按实际修改路径跑oxlint零警告、对应cap同步降低，不提高上限；dead按真实调用链删除或逐项判定，knip为零；守卫没有新增宽泛例外，阶段内旧模块实例/旧查询键的目标路径零命中。
-- [ ] 独立变异至少15性质，含协议/隔离/权限/分页/排序/焦点/确认/生命周期，逐条保留生产diff、首失败、恢复hash与绿。F七项串行、无缓存web实际测试数、E2E默认非零；push检查点核准确CI。G，提交`test(M4/P12): 核验三浏览器列表交互并完成阶段门禁`。
+- [x] 专用config复用default globalSetup及fixtures设置，明确projects为chromium/firefox/webkit并覆盖默认project列表；testMatch仅I3/I4/I6/I7文件与list-interactions文件，标题grep为(page)或C1/C3交互名（testMatch只能筛文件），不继承Firefox A4 grep。未接入全局CI之前不扩大默认全套浏览器矩阵；没有专用配置消费者则不留无效文件。
+- [x] 从e2e执行`pnpm exec playwright test --config=playwright.m4-list.config.ts --list`，核三个projects、I3/I4/I6/I7/C3每类实际非零；再分别`--project=chromium`、`--project=firefox`、`--project=webkit`串行实跑，准备当前make build。缺浏览器只通过锁定本地Playwright支持的安装方式准备，不全局装，不把缺依赖写成验收通过。
+- [x] C1逐行为/浏览器记录，C3逐点名控件记录：键盘开DateDropdown、单状态/相邻第二控件、七个Options锚点、外层modal背景inert/隐藏、CustomSelect peek/自动归档/日期筛选与成员控件实际入口；某入口属于后续完整页面验收时精确写覆盖的共享行为与剩余，不能整项假关。各浏览器的EMOJI_CHECK_WARNING/人为拒绝console预期按实际观察固定文本与次数，没有则期待空，不使用Chromium宽泛忽略或把watch结果当预期；P14仍负责移除该提示。截图辅助，焦点与选择用可观察断言。
+- [x] 按实际修改路径跑oxlint零警告、对应cap同步降低，不提高上限；dead按真实调用链删除或逐项判定，knip为零；守卫没有新增宽泛例外，阶段内旧模块实例/旧查询键的目标路径零命中。
+- [x] 独立变异至少15性质，含协议/隔离/权限/分页/排序/焦点/确认/生命周期，逐条保留生产diff、首失败、恢复hash与绿。F七项串行、无缓存web实际测试数、E2E默认非零；push检查点核准确CI。G，提交`test(M4/P12): 核验三浏览器列表交互并完成阶段门禁`。
 
 ## Task 16：整分支deep-review、修复与交付（约250–500行文档，修复另计）
 

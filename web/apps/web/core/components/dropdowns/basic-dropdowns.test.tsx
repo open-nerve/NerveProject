@@ -3,15 +3,23 @@
 import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
-import { ModalCore, ModalTitle } from "@nerve/ui";
+import { CustomSelect, ModalCore, ModalTitle } from "@nerve/ui";
 import { projectOf, stateOf } from "@/store/project/fake-projects";
 import { PriorityDropdown } from "./priority";
 import { ProjectDropdownBase } from "./project/base";
 import { WorkItemStateDropdownBase } from "./state/base";
+import { MemberDropdownBase } from "./member/base";
 import { DateRangeDropdown } from "./date-range";
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
-vi.mock("@/hooks/store/user", () => ({ useUserProfile: () => ({ data: { start_of_the_week: 1 } }) }));
+vi.mock("@/hooks/store/user", () => ({
+  useUserProfile: () => ({ data: { start_of_the_week: 1 } }),
+  useUser: () => ({ data: { id: "me" } }),
+}));
+vi.mock("@/hooks/store/use-member", () => ({
+  useMember: () => ({ workspace: { isUserSuspended: () => false }, getUserDetails: () => undefined }),
+}));
+vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "ws" }) }));
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let host: HTMLDivElement, root: ReturnType<typeof createRoot>;
 const changed = vi.fn(),
@@ -265,4 +273,63 @@ it.each([false, true])("date range defaultOpen and disabled preserve the %s port
   await tick();
   expect(document.querySelector('[role="dialog"]')).toBeNull();
   expect(host.querySelector<HTMLButtonElement>("button")?.disabled).toBe(true);
+});
+
+it("a CustomSelect trigger does not open or submit on either IME Enter ordering", async () => {
+  await render(
+    <CustomSelect value="side" label="Layout" onChange={changed}>
+      <CustomSelect.Option value="side">Side</CustomSelect.Option>
+    </CustomSelect>
+  );
+  const button = host.querySelector<HTMLButtonElement>("button")!;
+  await act(async () => button.focus());
+  await press(button, "Enter", true);
+  expect(list()).toBeNull();
+  await act(async () => {
+    button.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 229, bubbles: true, cancelable: true }));
+  });
+  await tick();
+  expect(list()).toBeNull();
+  expect(changed).not.toHaveBeenCalled();
+  await press(button, "Enter");
+  expect(list()).not.toBeNull();
+});
+
+it("a deferred icon-only member control stays named and preserves its native trigger across keyboard open and close", async () => {
+  await render(
+    <MemberDropdownBase
+      value={[]}
+      multiple
+      memberIds={[]}
+      getUserDetails={() => undefined}
+      onChange={changed}
+      buttonVariant="border-without-text"
+      placeholder="Assignees"
+      renderByDefault={false}
+    />
+  );
+  const trigger = host.querySelector<HTMLButtonElement>("button")!;
+  expect(trigger.textContent).toContain("Assignees");
+  await act(async () => trigger.focus());
+  await press(trigger, "Enter");
+  expect(host.querySelector("button")).toBe(trigger);
+  const input = document.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+  expect(document.activeElement).toBe(input);
+  await press(input, "Escape");
+  expect(document.activeElement).toBe(trigger);
+});
+it("a state directory refresh preserves its selected button label while the spinner is present", async () => {
+  await render(
+    <WorkItemStateDropdownBase
+      buttonVariant="border-with-text"
+      value={todo.id}
+      onChange={changed}
+      projectId={project.id}
+      stateIds={[todo.id]}
+      getStateById={() => todo}
+      getStatePercentageInGroup={() => undefined}
+      isInitializing
+    />
+  );
+  expect(host.querySelector("button")?.textContent).toContain("Todo");
 });

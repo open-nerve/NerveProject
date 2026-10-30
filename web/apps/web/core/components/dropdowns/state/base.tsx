@@ -81,29 +81,25 @@ export const WorkItemStateDropdownBase = observer(function WorkItemStateDropdown
       variant={buttonVariant}
       renderToolTipByDefault={renderByDefault}
     >
-      {isInitializing ? (
-        <Spinner className="h-3.5 w-3.5" />
-      ) : (
-        <>
-          {!hideIcon && (
+      <>
+        {!hideIcon &&
+          (isInitializing ? (
+            <Spinner className={cn("flex-shrink-0", iconSize)} />
+          ) : (
             <StateGroupIcon
               stateGroup={selected?.group ?? "backlog"}
               color={selected?.color ?? "var(--text-color-tertiary)"}
               className={cn("flex-shrink-0", iconSize)}
               percentage={getStatePercentageInGroup(selected?.id)}
             />
-          )}
-          {BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (
-            <span className="flex-grow truncate text-left">{selected?.name ?? t("state")}</span>
-          )}
-          {dropdownArrow && (
-            <ChevronDownOutline
-              className={cn("h-2.5 w-2.5 flex-shrink-0", dropdownArrowClassName)}
-              aria-hidden="true"
-            />
-          )}
-        </>
-      )}
+          ))}
+        {BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (
+          <span className="flex-grow truncate text-left">{selected?.name ?? t("state")}</span>
+        )}
+        {dropdownArrow && (
+          <ChevronDownOutline className={cn("h-2.5 w-2.5 flex-shrink-0", dropdownArrowClassName)} aria-hidden="true" />
+        )}
+      </>
     </DropdownButton>
   );
   const options = states.map((state) => ({

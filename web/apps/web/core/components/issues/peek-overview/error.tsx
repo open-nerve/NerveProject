@@ -11,6 +11,7 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 // components
 import { DetailResourceError } from "../issue-detail-widgets/resource-error";
 // hooks
+import { useTranslation } from "@nerve/i18n";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TIssuePeekOverviewError = {
@@ -26,12 +27,18 @@ export function IssuePeekOverviewError(props: TIssuePeekOverviewError) {
   const { removeRoutePeekId } = props;
   // hooks
   const { isMobile } = usePlatformOS();
+  const { t } = useTranslation();
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
       <div className="flex flex-shrink-0 justify-start">
-        <Tooltip label="Close the peek view" disabled={isMobile}>
-          <button onClick={removeRoutePeekId} className="m-5 h-5 w-5">
+        <Tooltip label={t("common.close_peek_view")} disabled={isMobile}>
+          <button
+            type="button"
+            aria-label={t("common.close_peek_view")}
+            onClick={removeRoutePeekId}
+            className="m-5 h-5 w-5"
+          >
             <ArrowNarrowRightOutline className="h-4 w-4 text-tertiary hover:text-secondary" />
           </button>
         </Tooltip>
