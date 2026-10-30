@@ -7,7 +7,7 @@
 import type { Issue, IssueDetail } from "@nerve/api-client";
 
 import type { Dispatch, MouseEvent, MutableRefObject, SetStateAction } from "react";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
@@ -31,6 +31,9 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 import type { TRenderQuickActions } from "../list/list-view-types";
 import { isIssueNew } from "../utils";
 import { IssueColumn } from "./issue-column";
+import { useRowExpansion } from "../row-expansion";
+import { useTranslation } from "@nerve/i18n";
+import { DetailResourceError } from "../../issue-detail-widgets/resource-error";
 
 interface Props {
   displayProperties: IIssueDisplayProperties;
@@ -63,7 +66,7 @@ export const SpreadsheetIssueRow = observer(function SpreadsheetIssueRow(props: 
     shouldRenderByDefault,
   } = props;
   // states
-  const [isExpanded, setExpanded] = useState<boolean>(false);
+  const [isExpanded, setExpanded] = useRowExpansion(JSON.stringify([issueId, nestingLevel]));
   // store hooks
   const { subIssues: subIssuesStore } = useIssueDetail();
   const { issueMap } = useIssues();
@@ -165,6 +168,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
   const cellRef = useRef(null);
   // router
   const { workspaceSlug } = useParams();
+  const { t } = useTranslation();
   // hooks
   const { getProjectIdentifierById } = useProject();
   const { getIsIssuePeeked, peekIssue } = useIssueDetail();
@@ -190,11 +194,11 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
     if (nestingLevel >= 3) {
       handleIssuePeekOverview(issueDetail, e.currentTarget);
     } else {
-      setExpanded((prevState) => {
-        if (!prevState && workspaceSlug && issueDetail && issueDetail.project_id)
-          subIssuesStore.fetchSubIssues(workspaceSlug, issueDetail.project_id, issueDetail.id);
-        return !prevState;
-      });
+      if (!isExpanded && workspaceSlug && issueDetail.project_id)
+        void subIssuesStore
+          .fetchSubIssues(workspaceSlug, issueDetail.project_id, issueDetail.id)
+          .catch(() => undefined);
+      setExpanded(!isExpanded);
     }
   };
 
@@ -268,6 +272,8 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
                   <button
                     type="button"
                     className="grid size-4 place-items-center rounded-xs text-placeholder hover:text-tertiary"
+                    aria-expanded={isExpanded}
+                    aria-label={`${t("common.sub_work_items")}: ${issueDetail.name}`}
                     onClick={handleToggleExpand}
                   >
                     <ChevronRightOutline
@@ -304,6 +310,18 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
             </div>
           </Row>
         </ControlLink>
+        {isExpanded && workspaceSlug && (
+          <>
+            {subIssuesStore.getLoading(issueId) && <div role="status">{t("common.loading")}</div>}
+            <DetailResourceError
+              error={subIssuesStore.getError(issueId)}
+              retry={() => subIssuesStore.retry(workspaceSlug, issueDetail.project_id, issueId)}
+              workspaceSlug={workspaceSlug}
+              projectId={issueDetail.project_id}
+              issueId={issueId}
+            />
+          </>
+        )}
       </td>
       {/* Rest of the columns */}
       {spreadsheetColumnsList.map((property) => (

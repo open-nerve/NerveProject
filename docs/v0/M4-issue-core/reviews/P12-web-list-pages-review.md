@@ -254,4 +254,21 @@ T15局部问题及首红：`t15-inline-ime-red`/`t15-controls-red`复现行/表�
 
 完整peek的初次关闭断言错误地寻找卸载后新建的同ID行。DOM removal探针与网络trace证实子项读取的父项核验会卸载列表；按spec§2.7保留核验与退役保护，分成加载中仍存/完成后退役两条页面证据，不新增全局ID回退。代价是后者交由页面正常焦点管理。成员其余创建/详情/关系/子项/草稿入口的完整页面、富筛选四入口、C12全应用三浏览器仍按原Phase归属。
 
-局部最终验证：`t15-local-regression-final` 11文件117测试；`t15-context-return-green` 3文件42测试；`t15-context-ui-green` 3文件22测试；均0 skip。共享强制构建10任务、web/E2E类型与151修改路径oxlint零警告通过；web cap121、ui cap10均按实际保持，没有提高。完整F已通过：生成/Go lint/Go test为t15-F1，web lint/test/E2E为t15-F2；54静态任务、18强制测试任务零缓存，实际253文件2678测试（0 skip），默认E2E180/180（0 skip）。首轮knip报专用配置无消费者，已在e2e/package.json加入test:m4-list脚本；t15-knip-config-consumer零dead，t15-script-matrix-list仍准确33项，未扩大默认CI矩阵。t15-F-audit逐文件核对：服务端与矩阵仅晚加测试脚本，其余产品输入未变。33种历史变异均实际红、原字节恢复且绿，其中26种生产文件哈希仍与当前一致；其余明确列为历史证明，不能冒充最终字节的变异，详见t15-mutation-audit。检查点CI及T16整审继续。
+局部最终验证：`t15-local-regression-final` 11文件117测试；`t15-context-return-green` 3文件42测试；`t15-context-ui-green` 3文件22测试；均0 skip。共享强制构建10任务、web/E2E类型与151修改路径oxlint零警告通过；web cap121、ui cap10均按实际保持，没有提高。完整F已通过：生成/Go lint/Go test为t15-F1，web lint/test/E2E为t15-F2；54静态任务、18强制测试任务零缓存，实际253文件2678测试（0 skip），默认E2E180/180（0 skip）。首轮knip报专用配置无消费者，已在e2e/package.json加入test:m4-list脚本；t15-knip-config-consumer零dead，t15-script-matrix-list仍准确33项，未扩大默认CI矩阵。t15-F-audit逐文件核对：服务端与矩阵仅晚加测试脚本，其余产品输入未变。33种历史变异均实际红、原字节恢复且绿，其中26种生产文件哈希仍与当前一致；其余明确列为历史证明，不能冒充最终字节的变异，详见t15-mutation-audit。检查点 `71e1863e` 的 [CI 41054578922](https://github.com/open-nerve/NerveProject/actions/runs/41054578922) attempt 1，server/web/e2e 均成功，回执 `t15-ci-jobs-final.json`。
+
+## 23. T16 整审发现与一次修复（2026-10-30）
+
+独立新上下文审查范围为 `ce3c39ab..71e1863e`，结论为 With fixes：Critical 0、Important 6、Minor 0；主控按逻辑、集成和测试三视角顺序复核。六项均有当前用户可触发的失败，不按文件数量机械判成跨模块设计问题：修改只在 issue UI 内恢复既有 owner/命令/读取合同，不改后端协议、权限事实、canonical 或架构守卫。逐项记录如下，最后交付结论另见整分支报告。
+
+| 问题与根因 | 修复与边界 | 行为红 → 绿 |
+|---|---|---|
+| 列表/表格展开子项后，父项权威核验卸载行，行内展开意图丢失 | 布局拥有 RowExpansionProvider，跨加载骨架保留 UI 意图；沿既有 PermissionReads 的 identity 在换路由/权限/宿主时清空，不保留旧内容、不绕过核验 | project-lifecycle 的两布局实际读取/父项核验及权限失去恢复 |
+| 列表首读失败后重试入口被加载骨架挡住 | IssueListRetry 放在同一布局的加载门外，重试仍只有 GET | 首次503→可达重试→确认列表 |
+| 看板拖动删除吞下403、提前关窗，成功删除又使 dataId 失去当前命令身份 | 将 Promise 结果交回 DeleteIssueModal；仅持选中项的确认快照供该弹窗完成，不新增实体缓存 | 当前403留窗一次错误、204重试一次成功/关闭、双击一次DELETE、卸载晚答安静 |
+| 实际 Restore 菜单把拒绝当成功、重复成功或在旧宿主提示 | helper 只承接事件 Promise；peek 的既有 operation 拥有反馈，拒绝继续传播；归档行用既有 useDetailCommand 拥有一次反馈 | 真实 view→header→menu→factory→operation 链的当前403/200及替换/卸载/权限ABA |
+| 表格在 state updater 发子项 GET，StrictMode 重发且拒绝无入口 | 请求移到事件边界，承接拒绝；复用 DetailResourceError 的 loading/error/GET retry，展开按钮有名称/状态 | StrictMode一次GET、403可见、只读重试；不另造资源状态 |
+| 看板自动滚动 effect 只在初次空 ref 注册 | 跟随实际容器节点注册，核验替换及卸载时释放旧节点 | 加载后注册、父项核验后重注册、宿主结束归零 |
+
+有效红为 `t16-project-lifecycle-red5`（6项失败）与 `t16-restore-menu-red`（7项失败）；更早缺夹具/错误按钮名/权限角色等失败不计产品红。第一轮修复绿剩一项成功删除未关窗，追到 dataId 被 canonical 删除使命令身份消失，改为当前确认快照后 `t16-lifecycle-restore-green2` 13/13；补权限结束/卸载后 `t16-lifecycle-scope-green` 19/19。`t16-affected-regression` 实际10文件86测试（不存在的额外过滤路径不计执行文件）。最终全量 test-web 覆盖255文件2697测试、18任务零缓存、0 skip；修改路径 lint 零警告，完整 lint-web 54任务、knip、build、默认 E2E180/180均通过，见 `t16-F-*`/`t16-build`。服务端未改，最终交付按输入 hash 核准复用 T15 服务端三项。
+
+最终矩阵的 Chromium/Firefox 各11/11通过；WebKit 第一次5通过/6失败，同时 Docker socket 消失、数据库连接被拒绝且 pg_dump 无法连接，原始证据为 `t16-matrix-webkit`。只读 `docker info` 确认环境不可用，已请负责人按“不动已有容器和 Docker”规则恢复服务。此轮不能计通过，也不以 T15 旧矩阵代替最终输入；保留原始证据待环境恢复重跑。文档收尾与最终准确 HEAD CI 仍在进行，当前不宣称 T16 完成。

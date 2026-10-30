@@ -26,6 +26,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 // types
 import { HIGHLIGHT_CLASS, getIssueBlockId, isIssueNew } from "../utils";
 import { IssueBlock } from "./block";
+import { useRowExpansion } from "../row-expansion";
 import { useRegisterIdentifierWidth } from "./identifier-width";
 import type { TRenderQuickActions } from "./list-view-types";
 
@@ -66,7 +67,7 @@ export const IssueBlockRoot = observer(function IssueBlockRoot(props: Props) {
     shouldRenderByDefault,
   } = props;
   // states
-  const [isExpanded, setExpanded] = useState<boolean>(false);
+  const [isExpanded, setExpanded] = useRowExpansion(JSON.stringify([groupId, issueId, nestingLevel]));
   const [instruction, setInstruction] = useState<"DRAG_OVER" | "DRAG_BELOW" | undefined>(undefined);
   const [isCurrentBlockDragging, setIsCurrentBlockDragging] = useState(false);
   // ref

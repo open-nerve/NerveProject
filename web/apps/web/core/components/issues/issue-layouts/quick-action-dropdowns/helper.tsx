@@ -68,6 +68,7 @@ export interface MenuItemFactoryProps {
   setCreateUpdateIssueModal: (open: boolean) => void;
   setDeleteIssueModal: (open: boolean) => void;
   setArchiveIssueModal?: (open: boolean) => void;
+  /** The caller owns native refusal/success and its UI lifetime; the menu only consumes the promise. */
   handleRestore?: () => Promise<void>;
 }
 
@@ -103,22 +104,8 @@ const useIssueActionHandlers = (props: MenuItemFactoryProps) => {
       handleOptionalAction(handleRestore, "Restore");
       return;
     }
-    await handleRestore()
-      // oxlint-disable-next-line promise/always-return
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Restore success",
-          message: "Your work item can be found in project work items.",
-        });
-      })
-      .catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "Work item could not be restored. Please try again.",
-        });
-      });
+    // Presentation owners already report confirmed outcomes. Never turn their refusal into a success toast.
+    await handleRestore().catch(() => undefined);
   };
 
   return {

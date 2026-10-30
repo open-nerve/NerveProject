@@ -23,6 +23,7 @@ import { useIssueListMount } from "@/hooks/use-issue-list-mount";
 import { IssueLayoutHOC } from "../issue-layout-HOC";
 import type { IQuickActionProps, TRenderQuickActions } from "../list/list-view-types";
 import { SpreadsheetView } from "./spreadsheet-view";
+import { RowExpansionProvider } from "../row-expansion";
 
 type SpreadsheetStoreType = EIssuesStoreType.PROJECT;
 
@@ -111,7 +112,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
   if (!Array.isArray(issueIds)) return null;
 
   return (
-    <>
+    <RowExpansionProvider viewId={viewId}>
       <IssueListRetry {...staleRefresh} />
       <IssueLayoutHOC layout={EIssueLayoutTypes.SPREADSHEET}>
         <SpreadsheetView
@@ -131,6 +132,6 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
           }}
         />
       </IssueLayoutHOC>
-    </>
+    </RowExpansionProvider>
   );
 });

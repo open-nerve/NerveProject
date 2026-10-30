@@ -13,6 +13,8 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { ContextMenu, CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
+import { useDetailCommand } from "../../issue-detail/use-issue-operations";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { useUserPermissions } from "@/hooks/store/user";
 // local imports
 import { DeleteIssueModal } from "../../delete-issue-modal";
@@ -36,6 +38,7 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
   const [deleteIssueModal, setDeleteIssueModal] = useState(false);
   // router
   const { workspaceSlug } = useParams();
+  const run = useDetailCommand(workspaceSlug ?? "", issue.project_id, issue.id);
   // store hooks
   const { allowPermissions } = useUserPermissions();
 
@@ -70,7 +73,16 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
     setIssueToEdit: () => {},
     setCreateUpdateIssueModal: () => {},
     setDeleteIssueModal,
-    handleRestore,
+    handleRestore: handleRestore
+      ? async () => {
+          await run(handleRestore);
+          setToast({
+            type: TOAST_TYPE.SUCCESS,
+            title: t("issue.restore.success.title"),
+            message: t("issue.restore.success.message"),
+          });
+        }
+      : undefined,
   };
 
   const MENU_ITEMS = useArchivedIssueMenuItems(menuItemProps);

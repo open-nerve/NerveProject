@@ -124,12 +124,8 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
 
   const handleRestore = async () => {
     if (!issueOperations.restore) return;
-    try {
-      await issueOperations.restore(workspaceSlug, projectId, issueId);
-      removeRoutePeekId();
-    } catch {
-      // The operation reports its native refusal; keep this peek open.
-    }
+    await issueOperations.restore(workspaceSlug, projectId, issueId);
+    removeRoutePeekId();
   };
 
   const peekOverviewIssueClassName = cn(
