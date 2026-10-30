@@ -1,6 +1,6 @@
 # M4/P12 列表页面规格
 
-> 状态：文档预检通过，尚未实施。分支 `codex/m4-p12`，基线 main `ce3c39abef99a290157b282c23180983f8746bcb`。准备阶段保持 `tools/keywords.json` 的 phase 为 `M4/P11`。本次仅准备 spec、plan 和预检，不安装依赖、不做产品原型、不运行产品测试。
+> 状态：预检通过后已获负责人授权实施，当前从 T1 顺序推进。分支 `codex/m4-p12`，基线 main `ce3c39abef99a290157b282c23180983f8746bcb`。T1 将关键词 phase 切到 `M4/P12`；阶段完成先做整分支 deep-review，不合并。附录 A 保留实施前的准备快照。
 
 权威输入：[M4 设计](../M4-design.md) §3.16–3.18、3.22、7.1、7.4、7.5、9.7、12/P12、13.1；[推进方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)；[P10b spec](P10b-web-list-data.md)、[P11 spec](P11-web-detail-data.md)及两段review的后续责任；M1-P4、M2-closeout §10/12、M3-closeout §6–8输入交接。配套[plan](../plans/P12-web-list-pages.md)、[review](../reviews/P12-web-list-pages-review.md)。
 

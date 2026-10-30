@@ -1,6 +1,6 @@
 # M4/P12 列表页面实施计划
 
-> 给执行代理：本轮仅文档预检，未获实施安排；T1–T16均未开始。获得负责人实施指令后，从T1按顺序执行。使用executing-plans；是否委派另遵负责人及适用技能要求。阶段完成做整分支deep-review、修复复审，先不合并。
+> 给执行代理：负责人已授权实施，按通过预检的 T1–T16 顺序推进。使用executing-plans；是否委派另遵负责人及适用技能要求。阶段完成做整分支deep-review、修复复审，先不合并。
 
 **目标：** 四布局和原生添加已有选择器在真实页面完成确认修改、分页/排序/拖放、键盘/焦点/宿主结束及I3/I4/I6/I7、C1/C3列表侧。
 
@@ -43,12 +43,12 @@ make e2e
 **Files：** 新C/services/issue/issue-search.service.ts/.test.ts、C/hooks/use-issue-search.ts/.test.tsx；C/store/issue/root.store.ts；C/components/core/modals/existing-issues-list-modal.tsx/.test.tsx；L/calendar/quick-add-issue-actions.tsx/.test.tsx；C/components/issues/issue-detail-widgets/issue-detail-widget-modals.tsx及其实际测试；tools/keywords.json。
 **Interfaces：** service签名及三种query见spec§2.2；hook接受显式scope/查询/打开状态，公开当前ID集合、loading/error/retry及读取证明；DetailResource负责值/证明，canonical负责Issue，选择ID/权限证明只归选择器一处。`handleOnSubmit(ids): Promise<SelectionSubmitResult>`签名按spec§2.2，三个调用方一起迁，不能继续ISearchIssueResponse或Promise<void>导致部分成功无法表达。
 
-- [ ] 重核基线、phase及exceptions；按真正现存调用建立表，三个入口与旧测试一起迁。生成query日期必须数组，for/issue_id成对；service只unwrap原生data，没有cursor/旧形状转换。
-- [ ] service真实请求测试`usesNativeSearchQueriesForAllThreeConsumers`核空词、none、for/source、关联workspace省略project；403/422/SessionChanged原错交回。hook用root/readtoken，目录当前证明后acceptListIssues，resource仅存ID，不新建权限观察者。
-- [ ] 测试`invalidatesCandidatesBeforeDebounceFires`、`doesNotPublishAcrossScopeOrPermissionABA`、`doesNotAcceptForeignSearchRows`：q刚变化旧答即使先回来也不可显示/选择；项目A→B/工作区开关/source变/关闭重开/退役/同账号权限降再恢复均隔离；冷项目/状态目录拒绝可观察，错误重试只读。
-- [ ] 选择器开时空词搜索；同scope跨词保留已选ID与有效证明，换业务/权限scope清空，旧候选立即不可点；迁真实选择、禁用pending、重复点击、失败保留、当前scope确认关窗；保持原有拒绝/旧项目晚答/切target清选择测试性质，去除测试专用旧callback注入。用ModalTitle命名，取消正tabIndex，候选只含可选选项，不保留hover嵌套链接。
-- [ ] 日历callback真正await全部写并返回确认/失败ID；部分成功移除已成功选择，只保留失败项，全成功才关。T1测试双选一成功一失败后重试只发失败ID；T7扩真实日历日期/组合边界，当前Task不得留下fire-and-forget或重复成功写。子项/关联query同Task改，不影响P14完整页面验收；删除唯一对应模块实例，不删其它旧搜索消费者。
-- [ ] 聚焦新service/hook及既有两modal/calendar测试、detail-host/子项关联受影响测试、types；M01旧搜索URL、M02延迟到debounce才失效、M03跳过返回scope证明各行为红；G。提交`feat(M4/P12): 接通列表添加已有工作项的原生搜索`。
+- [x] 重核基线、phase及exceptions；按真正现存调用建立表，三个入口与旧测试一起迁。生成query日期必须数组，for/issue_id成对；service只unwrap原生data，没有cursor/旧形状转换。
+- [x] service真实请求测试`usesNativeSearchQueriesForAllThreeConsumers`核空词、none、for/source、关联workspace省略project；403/422/SessionChanged原错交回。hook用root/readtoken，目录当前证明后acceptListIssues，resource仅存ID，不新建权限观察者。
+- [x] 测试`invalidatesCandidatesBeforeDebounceFires`、`doesNotPublishAcrossScopeOrPermissionABA`、`doesNotAcceptForeignSearchRows`：q刚变化旧答即使先回来也不可显示/选择；项目A→B/工作区开关/source变/关闭重开/退役/同账号权限降再恢复均隔离；冷项目/状态目录拒绝可观察，错误重试只读。
+- [x] 选择器开时空词搜索；同scope跨词保留已选ID与有效证明，换业务/权限scope清空，旧候选立即不可点；迁真实选择、禁用pending、重复点击、失败保留、当前scope确认关窗；保持原有拒绝/旧项目晚答/切target清选择测试性质，去除测试专用旧callback注入。用ModalTitle命名，取消正tabIndex，候选只含可选选项，不保留hover嵌套链接。
+- [x] 日历callback真正await全部写并返回确认/失败ID；部分成功移除已成功选择，只保留失败项，全成功才关。T1测试双选一成功一失败后重试只发失败ID；T7扩真实日历日期/组合边界，当前Task不得留下fire-and-forget或重复成功写。子项/关联query同Task改，不影响P14完整页面验收；删除唯一对应模块实例，不删其它旧搜索消费者。
+- [x] 聚焦新service/hook及既有两modal/calendar测试、detail-host/子项关联受影响测试、types；M01旧搜索URL、M02延迟到debounce才失效、M03跳过返回scope证明各行为红；G。提交`feat(M4/P12): 接通列表添加已有工作项的原生搜索`。
 
 ## Task 2：原22路径与显式路由scope（约650–1100行）
 

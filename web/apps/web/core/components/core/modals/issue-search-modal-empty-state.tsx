@@ -8,7 +8,6 @@ import React from "react";
 import { useTheme } from "next-themes";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import type { ISearchIssueResponse } from "@nerve/types";
 // assets
 import darkIssuesAsset from "@/app/assets/empty-state/search/issues-dark.webp?url";
 import lightIssuesAsset from "@/app/assets/empty-state/search/issues-light.webp?url";
@@ -18,10 +17,14 @@ import lightSearchAsset from "@/app/assets/empty-state/search/search-light.webp?
 import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-root";
 
 interface EmptyStateProps {
-  issues: ISearchIssueResponse[];
+  issues: readonly { id: string }[];
   searchTerm: string;
   debouncedSearchTerm: string;
   isSearching: boolean;
+}
+
+function EmptyStateContainer({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-col items-center justify-center px-3 py-8 text-center">{children}</div>;
 }
 
 export function IssueSearchModalEmptyState({ issues, searchTerm, debouncedSearchTerm, isSearching }: EmptyStateProps) {
@@ -32,10 +35,6 @@ export function IssueSearchModalEmptyState({ issues, searchTerm, debouncedSearch
   // derived values
   const searchResolvedPath = resolvedTheme === "light" ? lightSearchAsset : darkSearchAsset;
   const issuesResolvedPath = resolvedTheme === "light" ? lightIssuesAsset : darkIssuesAsset;
-
-  function EmptyStateContainer({ children }: { children: React.ReactNode }) {
-    return <div className="flex flex-col items-center justify-center px-3 py-8 text-center">{children}</div>;
-  }
 
   if (issues.length === 0 && searchTerm !== "" && debouncedSearchTerm !== "" && !isSearching) {
     return (
