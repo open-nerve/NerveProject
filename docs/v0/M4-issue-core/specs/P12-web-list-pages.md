@@ -75,7 +75,7 @@ P11编号列宽A方案原样保留：按当前布局已加载、可见的真实�
 
 ### 2.6 下拉框、键盘、焦点与层叠
 
-DateDropdown改成单一Popover打开状态，选中调同一close，保留现有日期/禁用/min/max/defaultOpen/closeOnSelect等实际调用合同。列表与表格懒渲染从键盘聚焦也能准备内容；api-tokens自定义有效期是必要的共享兼容回归。七个点名控件的popper ref挂实际浮层本身，不挂唯一子元素；离散无搜索选择用Listbox、有搜索用Combobox，一份打开状态。DateRangeDropdown的内容是Calendar网格及多个按钮，并非离散选项，因此与DateDropdown一样用Popover/Panel，不伪装成Listbox或Combobox.Options；保留原范围回调与P11一次PATCH合同。弹窗内的Listbox/Combobox经useInsideModal使列表`modal={false}`；Popover不引入另一份模态隔离，保持外层模态对背景的隔离；根节点不再是无名tab停留点。label-select的哨兵新建选项/详情表单完整正tabIndex审计仍归P14，但本Task改动不得引入新的嵌套控件或破坏标签创建确认合同。
+DateDropdown改成单一Popover打开状态，选中调同一close，保留现有日期/禁用/min/max/defaultOpen/closeOnSelect等实际调用合同。列表与表格懒渲染从键盘聚焦也能准备内容；api-tokens自定义有效期是必要的共享兼容回归。七个点名控件的popper ref挂实际浮层本身，不挂唯一子元素；离散无搜索选择用Listbox、有搜索用Combobox，一份打开状态。已有CustomSearchSelect的Popover按钮/Panel管理唯一开关、内部静态Combobox仅管搜索/选项可直接复用，ref在实际Panel，不另造开关或点击模拟。DateRangeDropdown的内容是Calendar网格及多个按钮，并非离散选项，因此与DateDropdown一样用Popover/Panel，不伪装成Listbox或Combobox.Options；保留原范围回调与P11一次PATCH合同。弹窗内的Listbox/Combobox经useInsideModal使列表`modal={false}`；Popover不引入另一份模态隔离，保持外层模态对背景的隔离；根节点不再是无名tab停留点。label-select的哨兵新建选项/详情表单完整正tabIndex审计仍归P14，但本Task改动不得引入新的嵌套控件或破坏标签创建确认合同。
 
 快捷操作SubMenu可用键盘打开、选中、返回；看板/日历卡片在键盘打开菜单时有激活底色；issue-detail快捷菜单用customButtonClassName移除嵌套IconButton。关闭的右键菜单inert，关闭后无隐藏tab停留点。列表范围的pending遮罩、日历Popover/quick-add、拖动卡片/删除区在模态层下；焦点轮廓不被overflow裁切。沿用共有原语，若修到共享菜单，只修本设计已点名的键盘/状态责任并回归现有消费者，不迁M6/M7协议。
 
@@ -134,6 +134,8 @@ peek打开/关上、切项、换项目/工作区、后退和宿主卸载结束�
 | D13 | T7 日期拖动反馈统一由已存在根宿主持有并在确认后触发，日期格只负责目标和本地日期限制；CalendarChart 用实际滚动容器挂载/释放 adapter，移除重复移动端区块。确认写、权限归属、选择器部分结果及 API 均不变。 |
 
 | D14 | T8 复用仓库已存在的 @nerve/propel Popover，以一份受控打开状态承接 defaultOpen 和选中关闭；轻量原生触发器始终在场，日历随面板懒挂载，renderByDefault 保留 tooltip 行为。清除为具名兄弟按钮；不加依赖或修改写协议。 |
+
+| D15 | T9 优先级、项目、状态直接复用已存在 CustomSearchSelect 的 Headless Popover 开关与静态非模态 Combobox，避免复制一套状态/键盘处理；只保留实际原生触发器，删除状态控件先替换触发器再模拟点击的懒加载。DateRange 只显示确认 props，清除不乐观清空；本地 portal 容器就绪后才挂日历，避免 defaultOpen 首帧迁移失焦。UI 公共接口与数据协议不变。 |
 
 以上为已定设计内的执行细化，没有待负责人裁定的新协议/架构变更。若实施发现现有权限、搜索或排序合同不能实现这些行为，先提交已完成工作并上报，不加旧形状适配或放宽守卫。
 

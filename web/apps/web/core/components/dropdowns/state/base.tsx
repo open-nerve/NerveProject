@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 import type { ReactNode } from "react";
-import { useState } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { StateGroupIcon } from "@nerve/propel/icons";
@@ -68,27 +67,19 @@ export const WorkItemStateDropdownBase = observer(function WorkItemStateDropdown
   } = props;
   const { t } = useTranslation();
   const { isMobile } = usePlatformOS();
-  const [rendered, setRendered] = useState(renderByDefault);
-  const [openOnMount, setOpenOnMount] = useState(false);
   const states = stateIds.map((id) => getStateById(id)).filter((state) => !!state);
   const stateValue = value || (showDefaultState ? states.find((state) => state.default)?.id : undefined);
   const selected = stateValue ? getStateById(stateValue) : undefined;
-  const show = () => {
-    setOpenOnMount(true);
-    setRendered(true);
-  };
   const content = button ?? (
     <DropdownButton
-      presentation={rendered}
-      tabIndex={tabIndex}
-      onClick={show}
-      disabled={disabled}
+      presentation
       className={cn("group-data-open:bg-layer-transparent-active", buttonClassName)}
       isActive={false}
       tooltipHeading={t("state")}
       tooltipContent={selected?.name ?? t("state")}
       showTooltip={showTooltip}
       variant={buttonVariant}
+      renderToolTipByDefault={renderByDefault}
     >
       {isInitializing ? (
         <Spinner className="h-3.5 w-3.5" />
@@ -115,18 +106,6 @@ export const WorkItemStateDropdownBase = observer(function WorkItemStateDropdown
       )}
     </DropdownButton>
   );
-  if (!rendered)
-    return (
-      <div className="flex h-full items-center" onMouseEnter={() => setRendered(true)}>
-        {button ? (
-          <button type="button" onClick={show} tabIndex={tabIndex} disabled={disabled}>
-            {content}
-          </button>
-        ) : (
-          content
-        )}
-      </div>
-    );
   const options = states.map((state) => ({
     value: state.id,
     query: state.name,
@@ -151,9 +130,14 @@ export const WorkItemStateDropdownBase = observer(function WorkItemStateDropdown
       onOpen={onDropdownOpen}
       onClose={onClose}
       disabled={disabled}
-      defaultOpen={openOnMount}
       tabIndex={tabIndex}
-      customButton={content}
+      customButton={
+        <>
+          <span className="sr-only">{t("state")}: </span>
+          {content}
+          {!BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && <span className="sr-only">{selected?.name}</span>}
+        </>
+      }
       customButtonClassName={cn("group h-full max-w-full hover:bg-transparent", buttonContainerClassName)}
       className={cn("h-full shrink", className)}
       optionsClassName="w-48"

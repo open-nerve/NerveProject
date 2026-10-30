@@ -120,10 +120,10 @@ make e2e
 
 **Files：** C/components/dropdowns/date-range.tsx、priority.tsx、project/base.tsx、state/base.tsx及对应测试/直接消费者。
 
-- [ ] priority/project/state按有无搜索选择Combobox/Listbox，popper ref/styles/attributes落Options列表元素；date-range的Calendar用单Popover/Panel，ref落Panel，不能将网格按钮伪装成Listbox选项。只由Headless状态决定open，不手动第二份state/点击模拟。打开搜索框获焦，Escape还给触发器。
-- [ ] useInsideModal→modal=false只适用内层列表，避免它解除/覆盖外层modal对背景的隔离；下拉触发label/disabled保持。DateRange沿P11一次PATCH两个字段的合同，拒绝不清旧值。
-- [ ] 目录当前拒绝可观察/可重试，旧scope不跟进；成员/访客按现有role精确禁用，不通过控件重写权限逻辑。M6/M7共享project/date-range消费者只兼容props。
-- [ ] 四DOM测试+既有project/base及日期原子修改回归；M23ref放子项、M24内层modal破坏外层各红；G。提交`fix(M4/P12): 修正基础属性下拉的定位和键盘状态`。
+- [x] priority/project/state复用既有CustomSearchSelect（Headless Popover唯一开关、静态非模态Combobox搜索），popper ref/styles/attributes落实际Panel，不能落其子项；date-range的Calendar用单Popover/Panel，ref落Panel，不能将网格按钮伪装成Listbox选项。只由Headless状态决定open，不手动第二份state/点击模拟。打开搜索框获焦，Escape还给触发器。
+- [x] useInsideModal→modal=false只适用内层列表，避免它解除/覆盖外层modal对背景的隔离；下拉触发label/disabled保持。DateRange沿P11一次PATCH两个字段的合同，拒绝不清旧值。
+- [x] 目录当前拒绝可观察/可重试，旧scope不跟进；成员/访客按现有role精确禁用，不通过控件重写权限逻辑。M6/M7共享project/date-range消费者只兼容props。
+- [x] 四DOM测试+既有project/base及日期原子修改回归；M23ref放子项、M24内层modal破坏外层各红；G。提交`fix(M4/P12): 修正基础属性下拉的定位和键盘状态`。
 
 ## Task 10：三个标签与通用选择控件（约600–1100行）
 

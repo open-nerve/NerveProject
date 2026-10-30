@@ -4,23 +4,19 @@
  * See the LICENSE file for details.
  */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { Placement } from "@popperjs/core";
 import { observer } from "mobx-react";
-import { createPortal } from "react-dom";
-import { usePopper } from "react-popper";
 import { ArrowNarrowRightOutline, CalendarOutline, CloseOutline, DueDateOutline } from "@makeplane/propel/icons";
-import { Combobox } from "@headlessui/react";
+import { Popover } from "@nerve/propel/popover";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 // ui
 import type { DateRange, Matcher } from "@nerve/propel/calendar";
 import { Calendar } from "@nerve/propel/calendar";
-import { ComboDropDown } from "@nerve/ui";
-import { cn, renderFormattedDate } from "@nerve/utils";
+import { cn, renderFormattedDate, isComposing } from "@nerve/utils";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
-import { useDropdown } from "@/hooks/use-dropdown";
 // components
 import { DropdownButton } from "./buttons";
 import { MergedDateDisplay } from "./merged-date";
@@ -103,60 +99,26 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
     defaultOpen = false,
     renderInPortal = false,
   } = props;
-  // states
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  const [dateRange, setDateRange] = useState<DateRange>(value);
-  // hooks
+  const [isOpen, setIsOpen] = useState(defaultOpen && !disabled);
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const { data } = useUserProfile();
   const startOfWeek = data?.start_of_the_week;
-  // refs
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
-  // popper-js refs
-  const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
-  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  // popper-js init
-  const { styles, attributes } = usePopper(referenceElement, popperElement, {
-    placement: placement ?? "bottom-start",
-    modifiers: [
-      {
-        name: "preventOverflow",
-        options: {
-          padding: 12,
-        },
-      },
-    ],
-  });
-
-  const onOpen = () => {
-    if (referenceElement) referenceElement.focus();
-  };
-
-  const { handleKeyDown, handleOnClick } = useDropdown({
-    dropdownRef,
-    isOpen,
-    onOpen,
-    setIsOpen,
-  });
+  const dateRange = value;
+  const label = customTooltipHeading ?? t("project_cycles.date_range");
+  useEffect(() => {
+    if (disabled) setIsOpen(false);
+  }, [disabled]);
 
   const disabledDays: Matcher[] = [];
   if (minDate) disabledDays.push({ before: minDate });
   if (maxDate) disabledDays.push({ after: maxDate });
 
-  const clearDates = () => {
-    const clearedRange = { from: undefined, to: undefined };
-    setDateRange(clearedRange);
-    onSelect?.(clearedRange);
-  };
-
-  const hasDisplayedDates = dateRange.from || dateRange.to;
-
-  useEffect(() => {
-    setDateRange(value);
-  }, [value]);
+  const hasDisplayedDates = value.from || value.to;
 
   const comboButton = (
-    <button
-      ref={setReferenceElement}
+    <Popover.Button
+      aria-label={label}
+      tabIndex={tabIndex}
       type="button"
       className={cn(
         "clickable block h-full max-w-full outline-none",
@@ -166,10 +128,10 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
         },
         buttonContainerClassName
       )}
-      onClick={handleOnClick}
       disabled={disabled}
     >
       <DropdownButton
+        presentation
         className={buttonClassName}
         isActive={isOpen}
         tooltipHeading={customTooltipHeading ?? t("project_cycles.date_range")}
@@ -204,16 +166,6 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
                 </>
               )
             )}
-            {isClearable && !disabled && hasDisplayedDates && (
-              <CloseOutline
-                className={cn("h-2.5 w-2.5 flex-shrink-0 cursor-pointer", clearIconClassName)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  clearDates();
-                }}
-              />
-            )}
           </div>
         ) : (
           // Original separate date display
@@ -237,66 +189,65 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
               {!hideIcon.to && <DueDateOutline className="h-3 w-3 flex-shrink-0" />}
               {dateRange.to ? renderFormattedDate(dateRange.to) : renderPlaceholder ? placeholder.to : ""}
             </span>
-            {isClearable && !disabled && hasDisplayedDates && (
-              <CloseOutline
-                className={cn("ml-1 h-2.5 w-2.5 flex-shrink-0 cursor-pointer", clearIconClassName)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  clearDates();
-                }}
-              />
-            )}
           </>
         )}
       </DropdownButton>
-    </button>
+    </Popover.Button>
   );
-
-  const comboOptions = (
-    <Combobox.Options as="ul" data-prevent-outside-click static>
-      <div
-        className="z-30 my-1 overflow-hidden rounded-md border-[0.5px] border-subtle-1 bg-surface-1"
-        ref={setPopperElement}
-        style={styles.popper}
-        {...attributes.popper}
-      >
-        <Calendar
-          className="rounded-md border border-subtle p-3 text-12"
-          captionLayout="dropdown"
-          selected={dateRange}
-          onSelect={(val: DateRange | undefined) => {
-            onSelect?.(val);
-          }}
-          mode="range"
-          disabled={disabledDays}
-          showOutsideDays
-          fixedWeeks
-          weekStartsOn={startOfWeek}
-          initialFocus
-        />
-      </div>
-    </Combobox.Options>
-  );
-
-  const Options = renderInPortal ? createPortal(comboOptions, document.body) : comboOptions;
 
   return (
-    <ComboDropDown
-      as="div"
-      ref={dropdownRef}
-      tabIndex={tabIndex}
-      className={cn("h-full", className)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          if (!isOpen) handleKeyDown(e);
-        } else handleKeyDown(e);
-      }}
-      button={comboButton}
-      disabled={disabled}
-      renderByDefault={renderByDefault}
-    >
-      {isOpen && Options}
-    </ComboDropDown>
+    <div ref={setContainer} className={cn("flex h-full items-center", className)}>
+      <Popover
+        open={isOpen}
+        modal={false}
+        onOpenChange={(open, details) => {
+          if ((open && disabled) || (details.reason === "escape-key" && isComposing(details.event))) {
+            details.cancel();
+            return;
+          }
+          setIsOpen(open);
+        }}
+      >
+        {comboButton}
+        {(renderInPortal || container) && (
+          <Popover.Panel
+            aria-label={label}
+            data-prevent-outside-click
+            initialFocus={false}
+            placement={placement ?? "bottom-start"}
+            positionerClassName="z-30"
+            containerRef={renderInPortal ? undefined : { current: container }}
+            className="overflow-hidden rounded-md border-[0.5px] border-subtle-1 bg-surface-1 shadow-raised-200"
+          >
+            <Calendar
+              className="rounded-md border border-subtle p-3 text-12"
+              captionLayout="dropdown"
+              selected={value}
+              defaultMonth={value.from ?? value.to}
+              onSelect={onSelect}
+              mode="range"
+              disabled={disabledDays}
+              showOutsideDays
+              fixedWeeks
+              weekStartsOn={startOfWeek}
+              initialFocus
+            />
+          </Popover.Panel>
+        )}
+      </Popover>
+      {isClearable && !disabled && hasDisplayedDates && (
+        <button
+          type="button"
+          aria-label={`${t("common.clear_date")}: ${label}`}
+          className={cn("rounded-sm p-0.5 text-placeholder hover:text-primary", clearIconClassName)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect?.({ from: undefined, to: undefined });
+          }}
+        >
+          <CloseOutline className="h-2.5 w-2.5" />
+        </button>
+      )}
+    </div>
   );
 });

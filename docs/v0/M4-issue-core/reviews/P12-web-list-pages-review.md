@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T8 已完成，T9–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T9 已完成，T10–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -154,3 +154,16 @@ DateDropdown 复用已锁定的 @nerve/propel Popover，一份受控状态承接
 基线 t8-date-red2 中 6 项行为/DOM 失败已修复；M21 引入独立面板状态使选后仍可见，M22 恢复 pointer-only 准备使键盘无法打开，均实际红，恢复原字节/hash 后绿。首轮新实现两个失败为 jsdom 未模拟按钮点击获焦及动画帧卸载，夹具按真实原生事件补齐，原日志保留。
 
 最终聚焦 t8-final-regression、共享强制构建 t8-shared-build、类型 t8-types、修改路径零 lint、web cap130、关键词/i18n keys/sync 与 diff-check 通过。DateDropdown 嵌套按钮警告已消失；WorkItemFilterRoot 渲染通知仍在 T13 清单，未视为最终页面豁免。自查核所有原 public props、单一状态、真实 token 消费者与模态隔离，无架构阻塞。
+
+
+## 16. T9 基础属性下拉（2026-10-30）
+
+优先级、项目、状态复用已有 CustomSearchSelect；Headless Popover 是唯一可见开关，内部静态 Combobox 只负责搜索/选项，popper ref/styles/attributes 在实际 Panel，列表保持 modal=false，不重写该共享原语。项目的嵌套按钮、缺失目录的空白候选及多图标 key 已处理；状态控件不再用另一个懒加载按钮替换原触发器，Escape 始终还给原节点。已选数组、renderCondition、禁用及 onDropdownOpen/关闭回调保持，具名原生按钮承担 tabIndex。旧项目测试由静态嵌套按钮断言迁成真实 DOM 的单一 trigger/根无 Tab 点，保留调用者 tabIndex 合同。
+
+DateRange 改成与单日期相同的既有 Popover/Calendar，不再将网格伪装成 Listbox。显示完全来自 value，选择或清除在请求拒绝时均保留旧值；原子 PATCH 两日期的真实 row/child 消费者回归仍绿。本地与 body portal 选择保持；默认打开时等待本地容器就绪才挂载，修复首次从 body 迁移导致焦点丢失/立即关闭。min/max、defaultOpen、disabled、占位/合并显示及键盘合同保留。
+
+新13项 DOM覆盖三控件无悬停键盘打开、搜索焦点/过滤、全浮层定位、IME Escape/实际 Escape、关闭还焦及重开/选择、ModalCore外层背景隔离、禁用；项目多选保持数组并排除冷/过滤项；日期范围的确认显示和两种 portal。既有 detail-refusals 的当前目录拒绝、只读重试与权限 ABA 同时通过。t9-basics-red2 的6失败已修复；项目多选初次测试缺少 Headless 实际监听的 mousedown 属夹具问题，已补真实事件序列，不算产品行为红。
+
+M23 将共享定位属性移到子节点，使实际列表失去定位；M24 将内层列表改为 modal=true，输入搜索后外层背景 aria-hidden 丢失。两项实际红，精确恢复源字节/hash、重建 UI 包后绿，见 M23/M24 receipts 及 t9-Mxx-build/red/restored；共享产品源码最终无改动。真实浏览器定位/Tab 仍留 T15。
+
+最终 t9-final-regression 通过；类型 t9-types-final2、修改路径零 lint、格式、关键词和 i18n keys 通过，web cap130→128按实际收紧。初次测试 fixture 的 stateOf 参数、缺失翻译键和测试 lint 均已修正，保留原日志。局部复用方案已同步 D15 与设计§7.5，不改变公共接口、权限所有者或 M6/M7 协议；无架构阻塞。
