@@ -144,11 +144,11 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 **Files：** spec T8；新C/lib/profile-view.ts/.test.ts；新C/components/profile/profile-route.test.tsx；profile page/layout/header/mobile-header及真实viewId传递链。
 **Interfaces：** parseProfileView(value:string|undefined):TProfileViews|undefined仅显式三个值；ProfileIssuesPage.type:TProfileViews；两个Profile布局props.viewId:TProfileViews；BaseList/BaseKanban/useIssueListMount/IssueActions.fetchIssues的可选viewId收窄为TProfileViews，非profile调用省略即可。下游row-expansion的字符串scope不必改成领域view。
 
-- [ ] Step 1：写rejectsPrototypeNamesAsViews、neverMountsGuestToolbarsOnDesktopOrMobile、endsAllProfileOverlaysWhenTargetOrViewChanges；输入constructor、toString、未知、undefined无成员列表GET；合法三值原样向下，无断言转型。
-- [ ] Step 2：运行profile-view/profile-route及list-mount/route-scope；预期原in对象判断/访客头部/缺key行为红。
-- [ ] Step 3：route一次收窄，严格类型传递并同步全部调用/测试；key含workspace/user/view且涵盖页头/手机/列表/peek；effective workspace role只AM挂载工作项工具栏和子树，M3成员摘要保留。
-- [ ] Step 4：聚焦与types绿；git grep -n 'as TProfileViews' -- web预期无输出（grep退出1是零命中）；M18放回in对象判断、M19让guest挂工具栏各红并恢复。
-- [ ] Step 5：提交fix(M4/P13): 在个人主页路由收窄视图并隔离页面身份。记录A7/A8。
+- [x] Step 1：写rejectsPrototypeNamesAsViews、neverMountsGuestToolbarsOnDesktopOrMobile、endsAllProfileOverlaysWhenTargetOrViewChanges；输入constructor、toString、未知、undefined无成员列表GET；合法三值原样向下，无断言转型。
+- [x] Step 2：运行profile-view/profile-route及list-mount/route-scope；预期原in对象判断/访客头部/缺key行为红。
+- [x] Step 3：route一次收窄，严格类型传递并同步全部调用/测试；key含workspace/user/view且涵盖页头/手机/列表/peek；effective workspace role只AM挂载工作项工具栏和子树，M3成员摘要保留。
+- [x] Step 4：聚焦与types绿；git grep -n 'as TProfileViews' -- web预期无输出（grep退出1是零命中）；M18放回in对象判断、M19让guest挂工具栏各红并恢复。
+- [x] Step 5：提交fix(M4/P13): 在个人主页路由收窄视图并隔离页面身份。记录A7/A8。
 
 ## Task 9：个人主页三关系、目录与本地偏好（约550–1100行）
 

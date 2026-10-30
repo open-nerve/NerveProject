@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { TProfileViews } from "@nerve/types";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
@@ -13,9 +14,13 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { ProjectIssueQuickActions } from "../../quick-action-dropdowns";
 import { BaseListRoot } from "../base-list-root";
 
-export const ProfileIssuesListLayout = observer(function ProfileIssuesListLayout() {
+export const ProfileIssuesListLayout = observer(function ProfileIssuesListLayout({
+  viewId,
+}: {
+  viewId: TProfileViews;
+}) {
   // router
-  const { workspaceSlug, profileViewId } = useParams();
+  const { workspaceSlug } = useParams();
   // store
   const { allowPermissions } = useUserPermissions();
 
@@ -31,7 +36,7 @@ export const ProfileIssuesListLayout = observer(function ProfileIssuesListLayout
     <BaseListRoot
       QuickActions={ProjectIssueQuickActions}
       canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
-      viewId={profileViewId}
+      viewId={viewId}
     />
   );
 });

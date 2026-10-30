@@ -1,3 +1,4 @@
+import type { TProfileViews } from "@nerve/types";
 import { followInSession, sessionGuard } from "@/lib/in-session";
 import type { Group } from "@/lib/paged-groups";
 /**
@@ -34,7 +35,7 @@ export type CalendarStoreType = EIssuesStoreType.PROJECT;
 
 interface IBaseCalendarRoot {
   QuickActions: FC<IQuickActionProps>;
-  viewId?: string | undefined;
+  viewId?: TProfileViews;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
 }
 

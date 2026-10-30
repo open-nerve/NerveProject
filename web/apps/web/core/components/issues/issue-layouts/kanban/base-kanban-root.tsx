@@ -1,3 +1,4 @@
+import type { TProfileViews } from "@nerve/types";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -37,7 +38,7 @@ type KanbanStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE;
 export interface IBaseKanBanLayout {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
-  viewId?: string | undefined;
+  viewId?: TProfileViews;
 }
 
 // Stable identity so an empty kanban-filter value doesn't churn the per-column cache's sharedDeps.

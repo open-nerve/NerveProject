@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { TProfileViews } from "@nerve/types";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
@@ -14,9 +15,13 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { ProjectIssueQuickActions } from "../../quick-action-dropdowns";
 import { BaseKanBanRoot } from "../base-kanban-root";
 
-export const ProfileIssuesKanBanLayout = observer(function ProfileIssuesKanBanLayout() {
+export const ProfileIssuesKanBanLayout = observer(function ProfileIssuesKanBanLayout({
+  viewId,
+}: {
+  viewId: TProfileViews;
+}) {
   // router
-  const { workspaceSlug, profileViewId } = useParams();
+  const { workspaceSlug } = useParams();
   const { allowPermissions } = useUserPermissions();
 
   const canEditPropertiesBasedOnProject = (projectId: string) =>
@@ -31,7 +36,7 @@ export const ProfileIssuesKanBanLayout = observer(function ProfileIssuesKanBanLa
     <BaseKanBanRoot
       QuickActions={ProjectIssueQuickActions}
       canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
-      viewId={profileViewId}
+      viewId={viewId}
     />
   );
 });

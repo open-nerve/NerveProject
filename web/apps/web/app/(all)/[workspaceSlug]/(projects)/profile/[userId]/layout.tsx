@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { Fragment } from "react";
 import { observer } from "mobx-react";
 import { Outlet } from "react-router";
 // components
@@ -15,15 +16,16 @@ import { ProfileSidebar } from "@/components/profile/sidebar";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
 import useSize from "@/hooks/use-window-size";
+import { parseProfileView } from "@/lib/profile-view";
 // local components
 import type { Route } from "./+types/layout";
 import { UserProfileHeader } from "./header";
 import { ProfileIssuesMobileHeader } from "./mobile-header";
 import { ProfileNavbar } from "./navbar";
 
-function UseProfileLayout({ params }: Route.ComponentProps) {
+function UseProfileLayout({ params }: Pick<Route.ComponentProps, "params">) {
   // router
-  const { workspaceSlug, profileViewId } = params;
+  const { workspaceSlug, userId, profileViewId } = params;
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
@@ -39,16 +41,16 @@ function UseProfileLayout({ params }: Route.ComponentProps) {
 
   // derived values
   const currentTab = PROFILE_TABS.find((tab) => tab.route === profileViewId);
-  const isIssuesTab = currentTab !== undefined;
+  const showIssues = !!isAuthorized && parseProfileView(profileViewId) !== undefined;
 
   return (
-    <>
+    <Fragment key={JSON.stringify([workspaceSlug, userId, profileViewId])}>
       {/* Passing the current tab from the route value as we need the header as top most component. */}
       <div className="flex h-full w-full flex-col overflow-hidden md:flex-row">
         <div className="flex h-full w-full flex-col overflow-hidden">
           <AppHeader
-            header={<UserProfileHeader currentTab={currentTab} showProfileIssuesFilter={isIssuesTab} />}
-            mobileHeader={isIssuesTab && <ProfileIssuesMobileHeader />}
+            header={<UserProfileHeader currentTab={currentTab} showProfileIssuesFilter={showIssues} />}
+            mobileHeader={showIssues && <ProfileIssuesMobileHeader />}
           />
           <ContentWrapper>
             <div className="flex h-full w-full flex-row md:flex-col md:overflow-hidden">
@@ -70,7 +72,7 @@ function UseProfileLayout({ params }: Route.ComponentProps) {
         </div>
         {isSmallerScreen && <ProfileSidebar />}
       </div>
-    </>
+    </Fragment>
   );
 }
 

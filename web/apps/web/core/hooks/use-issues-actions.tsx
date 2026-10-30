@@ -22,7 +22,11 @@ import { useProjectPreferencesFollow } from "./use-project-preferences-follow";
 import { useUserPermissions } from "./store/user";
 
 export interface IssueActions {
-  fetchIssues: (loadType: TLoader, options: IssueListOptions, viewId?: string) => Promise<PagedGroups | undefined>;
+  fetchIssues: (
+    loadType: TLoader,
+    options: IssueListOptions,
+    viewId?: TProfileViews
+  ) => Promise<PagedGroups | undefined>;
   fetchNextIssues: (groupId?: string, subGroupId?: string) => Promise<PagedGroups | undefined>;
   removeIssue: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   createIssue?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
@@ -162,9 +166,9 @@ const useProfileIssueActions = () => {
   const allowed = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
 
   const fetchIssues = useCallback(
-    async (loadType: TLoader, options: IssueListOptions, viewId?: string) => {
+    async (loadType: TLoader, options: IssueListOptions, viewId?: TProfileViews) => {
       if (!workspaceSlug || !userId || !viewId || !allowed) return;
-      return issues.fetchIssues(workspaceSlug, userId, loadType, options, viewId as TProfileViews);
+      return issues.fetchIssues(workspaceSlug, userId, loadType, options, viewId);
     },
     [issues.fetchIssues, workspaceSlug, userId, allowed]
   );

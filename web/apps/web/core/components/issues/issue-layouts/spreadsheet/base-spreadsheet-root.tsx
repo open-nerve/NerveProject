@@ -1,3 +1,4 @@
+import type { TProfileViews } from "@nerve/types";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -30,7 +31,7 @@ type SpreadsheetStoreType = EIssuesStoreType.PROJECT;
 interface IBaseSpreadsheetRoot {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
-  viewId?: string | undefined;
+  viewId?: TProfileViews;
 }
 
 export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: IBaseSpreadsheetRoot) {

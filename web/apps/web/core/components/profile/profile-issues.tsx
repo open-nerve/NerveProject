@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import React, { useEffect } from "react";
+import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -14,7 +14,7 @@ import { useTranslation } from "@nerve/i18n";
 import { errorMessageKey } from "@/lib/error-messages";
 // nerve imports
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
-import { EIssuesStoreType } from "@nerve/types";
+import { EIssuesStoreType, type TProfileViews } from "@nerve/types";
 // components
 import { ProfileIssuesKanBanLayout } from "@/components/issues/issue-layouts/kanban/roots/profile-issues-root";
 import { ProfileIssuesListLayout } from "@/components/issues/issue-layouts/list/roots/profile-issues-root";
@@ -26,7 +26,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 
 type Props = {
-  type: "assigned" | "subscribed" | "created";
+  type: TProfileViews;
 };
 
 export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Props) {
@@ -34,15 +34,10 @@ export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Prop
   const { workspaceSlug, userId } = useParams();
   // store hooks
   const {
-    issues: { setViewId },
     issuesFilter: { issueFilters, fetchFilters, updateFilterExpression },
   } = useIssues(EIssuesStoreType.PROFILE);
   // derived values
   const activeLayout = issueFilters?.displayFilters?.layout || undefined;
-
-  useEffect(() => {
-    if (setViewId) setViewId(type);
-  }, [type, setViewId]);
 
   const permission = useUserPermissions();
   const role = workspaceSlug ? permission.getWorkspaceRoleByWorkspaceSlug(workspaceSlug) : undefined;
@@ -74,9 +69,9 @@ export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Prop
               {profileWorkItemsFilter && <WorkItemFiltersRow filter={profileWorkItemsFilter} />}
               <div className="relative h-full w-full overflow-auto">
                 {activeLayout === "list" ? (
-                  <ProfileIssuesListLayout />
+                  <ProfileIssuesListLayout viewId={type} />
                 ) : activeLayout === "kanban" ? (
-                  <ProfileIssuesKanBanLayout />
+                  <ProfileIssuesKanBanLayout viewId={type} />
                 ) : null}
               </div>
             </div>

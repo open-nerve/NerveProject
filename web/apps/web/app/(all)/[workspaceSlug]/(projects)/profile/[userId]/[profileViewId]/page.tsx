@@ -8,6 +8,7 @@ import React from "react";
 // components
 import { PageHead } from "@/components/core/page-title";
 import { ProfileIssuesPage } from "@/components/profile/profile-issues";
+import { parseProfileView } from "@/lib/profile-view";
 import type { Route } from "./+types/page";
 
 const ProfilePageHeader = {
@@ -16,14 +17,9 @@ const ProfilePageHeader = {
   subscribed: "Profile - Subscribed",
 };
 
-function isValidProfileViewId(viewId: string): viewId is keyof typeof ProfilePageHeader {
-  return viewId in ProfilePageHeader;
-}
-
-function ProfileIssuesTypePage({ params }: Route.ComponentProps) {
-  const { profileViewId } = params;
-
-  if (!isValidProfileViewId(profileViewId)) return null;
+function ProfileIssuesTypePage({ params }: Pick<Route.ComponentProps, "params">) {
+  const profileViewId = parseProfileView(params.profileViewId);
+  if (!profileViewId) return null;
 
   const header = ProfilePageHeader[profileViewId];
 

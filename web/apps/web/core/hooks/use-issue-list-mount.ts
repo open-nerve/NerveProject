@@ -1,3 +1,4 @@
+import type { TProfileViews } from "@nerve/types";
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { useParams } from "react-router";
 import { EUserPermissions } from "@nerve/constants";
@@ -14,7 +15,7 @@ export function useIssueListMount(
   root: IssueRootStore,
   fetchIssues: IssueActions["fetchIssues"],
   options: IssueListOptions | undefined,
-  viewId?: string,
+  viewId?: TProfileViews,
   variant = ""
 ) {
   const { workspaceSlug, projectId, userId } = useParams();

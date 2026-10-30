@@ -1,3 +1,4 @@
+import type { TProfileViews } from "@nerve/types";
 import type { Group } from "@/lib/paged-groups";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
@@ -34,7 +35,7 @@ type ListStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE | EIssu
 interface IBaseListRoot {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
-  viewId?: string | undefined;
+  viewId?: TProfileViews;
 }
 export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot) {
   const { QuickActions, viewId, canEditPropertiesBasedOnProject } = props;
