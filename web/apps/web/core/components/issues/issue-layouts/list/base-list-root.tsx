@@ -114,8 +114,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
         readOnly={!canEditProperties(issue.project_id ?? undefined)}
       />
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [canEditProperties, removeIssue, updateIssue, archiveIssue, restoreIssue]
+    [QuickActions, canEditProperties, removeIssue, updateIssue, archiveIssue, restoreIssue]
   );
 
   const loadMoreIssues = useCallback(

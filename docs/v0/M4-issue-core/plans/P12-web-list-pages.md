@@ -64,10 +64,10 @@ make e2e
 
 **Files：** L/list、group-consumers.test.tsx、list-data.test.tsx；新L/list/view.test.tsx；仅确有缺口时改现有binding职责内实现。
 
-- [ ] 真实ListGroup/加载控件接同组cursor，保留原筛选；加载中去重、失败可重试、不重复/漏行、末页停止、空组显隐均测试。错误属于当前scope，不清其它组。
-- [ ] 多标签/负责人组保留完整数组；UI总数读权威值，不能按已加载长度推total。A筛选/C组第2页保持A∩C；已有子项/编号宽度测试同时回归。
-- [ ] 可见区域外已加载行、展开子项和分页后更长编号保持P11同一宽度与重置合同；不新增宽度取项目请求。加载更多按钮有可访问名称，键盘可达。
-- [ ] 聚焦group-consumers/list-data/list/view/list/identifier-width，M06续页丢filter、M07总数改已加载长度各红；G。提交`fix(M4/P12): 闭合列表分组续页和失败重试`。
+- [x] 真实ListGroup/加载控件接同组cursor，保留原筛选；加载中去重、失败可重试、不重复/漏行、末页停止、空组显隐均测试。错误属于当前scope，不清其它组。
+- [x] 多标签/负责人组保留完整数组；UI总数读权威值，不能按已加载长度推total。A筛选/C组第2页保持A∩C；已有子项/编号宽度测试同时回归。
+- [x] 可见区域外已加载行、展开子项和分页后更长编号保持P11同一宽度与重置合同；不新增宽度取项目请求。加载更多按钮有可访问名称，键盘可达。
+- [x] 聚焦group-consumers/list-data/list/view/list/identifier-width，M06续页丢filter、M07总数改已加载长度各红；G。提交`fix(M4/P12): 闭合列表分组续页和失败重试`。
 
 ## Task 4：快速添加字段错误与当前宿主（约450–850行）
 
