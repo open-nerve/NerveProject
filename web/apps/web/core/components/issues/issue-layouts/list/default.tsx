@@ -88,6 +88,7 @@ export const List = observer(function List(props: IList) {
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
+    groupIds: groups?.keys(),
     workspaceSlug,
     projectId,
   });

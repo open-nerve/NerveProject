@@ -19,6 +19,8 @@ import { CreateUpdateWorkspaceViewModal } from "@/components/workspace/views/mod
 import { useGlobalView } from "@/hooks/store/use-global-view";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
+import { useWorkspace } from "@/hooks/store/use-workspace";
+import { useLabel } from "@/hooks/store/use-label";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 // local imports
 import { WorkItemFiltersHOC } from "./base";
@@ -40,7 +42,20 @@ export const WorkspaceLevelWorkItemFiltersHOC = observer(function WorkspaceLevel
   const { getViewDetailsById, updateGlobalView } = useGlobalView();
   const { data: currentUser } = useUser();
   const { allowPermissions } = useUserPermissions();
-  const { joinedProjectIds } = useProject();
+  const { knownProjectIds, getProjectById } = useProject();
+  const { getWorkspaceBySlug } = useWorkspace();
+  const { labelMap } = useLabel();
+  const workspace = getWorkspaceBySlug(workspaceSlug);
+  const projectIds = workspace
+    ? knownProjectIds(workspace.id).filter((id) => {
+        const project = getProjectById(id);
+        return project && project.workspace_id === workspace.id && project.member_role !== null && !project.archived_at;
+      })
+    : [];
+  // Only project labels already held by this session; a cold profile does not fetch a catalog.
+  const labelIds = Object.values(labelMap)
+    .filter((label) => projectIds.includes(label.project_id))
+    .map((label) => label.id);
   const {
     workspace: { getWorkspaceMemberIds },
   } = useMember();
@@ -181,7 +196,8 @@ export const WorkspaceLevelWorkItemFiltersHOC = observer(function WorkspaceLevel
       <WorkItemFiltersHOC
         {...props}
         memberIds={getWorkspaceMemberIds(workspaceSlug)}
-        projectIds={joinedProjectIds}
+        projectIds={projectIds}
+        labelIds={labelIds}
         saveViewOptions={saveViewOptions}
         updateViewOptions={updateViewOptions}
       >

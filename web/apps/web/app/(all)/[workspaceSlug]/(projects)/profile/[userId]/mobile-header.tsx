@@ -5,6 +5,7 @@
  */
 
 import { useCallback } from "react";
+import { useLocalIssueFilterUpdate } from "@/hooks/use-local-issue-filter-update";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve constants
@@ -14,13 +15,8 @@ import { useTranslation } from "@nerve/i18n";
 // icons
 import { ChevronDownOutline } from "@makeplane/propel/icons";
 // types
-import type {
-  IIssueDisplayFilterOptions,
-  IIssueDisplayProperties,
-  TIssueLayouts,
-  EIssueLayoutTypes,
-} from "@nerve/types";
-import { EIssuesStoreType } from "@nerve/types";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
+import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
 // ui
 import { CustomMenu } from "@nerve/ui";
 // components
@@ -36,39 +32,41 @@ export const ProfileIssuesMobileHeader = observer(function ProfileIssuesMobileHe
   const { workspaceSlug, userId } = useParams();
   // store hook
   const {
-    issuesFilter: { issueFilters, updateFilters },
+    issuesFilter: { getIssueFilters, updateFilters },
   } = useIssues(EIssuesStoreType.PROFILE);
+  const issueFilters = workspaceSlug && userId ? getIssueFilters(userId, workspaceSlug) : undefined;
+  const follow = useLocalIssueFilterUpdate(workspaceSlug ?? "", undefined, userId ?? "", true);
   // derived values
   const activeLayout = issueFilters?.displayFilters?.layout;
 
   const handleLayoutChange = useCallback(
-    (layout: TIssueLayouts) => {
+    (layout: EIssueLayoutTypes) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(
-        workspaceSlug,
-        undefined,
-        EIssueFilterType.DISPLAY_FILTERS,
-        { layout: layout as EIssueLayoutTypes | undefined },
-        userId
+      return follow(() =>
+        updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, { layout }, userId)
       );
     },
-    [workspaceSlug, updateFilters, userId]
+    [workspaceSlug, updateFilters, userId, follow]
   );
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, userId);
+      return follow(() =>
+        updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, userId)
+      );
     },
-    [workspaceSlug, updateFilters, userId]
+    [workspaceSlug, updateFilters, userId, follow]
   );
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, userId);
+      return follow(() =>
+        updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, userId)
+      );
     },
-    [workspaceSlug, updateFilters, userId]
+    [workspaceSlug, updateFilters, userId, follow]
   );
 
   return (
@@ -86,17 +84,17 @@ export const ProfileIssuesMobileHeader = observer(function ProfileIssuesMobileHe
         customButtonClassName="flex flex-center text-secondary text-13"
         closeOnSelect
       >
-        {ISSUE_LAYOUTS.map((layout, index) => {
+        {ISSUE_LAYOUTS.map((layout) => {
           if (layout.key === "spreadsheet" || layout.key === "calendar") return;
           return (
             <CustomMenu.MenuItem
-              key={index}
+              key={layout.key}
               onClick={() => {
-                handleLayoutChange(ISSUE_LAYOUTS[index].key);
+                void handleLayoutChange(layout.key === "list" ? EIssueLayoutTypes.LIST : EIssueLayoutTypes.KANBAN);
               }}
               className="flex items-center gap-2"
             >
-              <IssueLayoutIcon layout={ISSUE_LAYOUTS[index].key} className="h-3 w-3" />
+              <IssueLayoutIcon layout={layout.key} className="h-3 w-3" />
               <div className="text-tertiary">{t(layout.i18n_title)}</div>
             </CustomMenu.MenuItem>
           );

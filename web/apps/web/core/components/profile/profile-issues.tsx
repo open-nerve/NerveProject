@@ -24,6 +24,7 @@ import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
+import { useLocalIssueFilterUpdate } from "@/hooks/use-local-issue-filter-update";
 
 type Props = {
   type: TProfileViews;
@@ -34,8 +35,10 @@ export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Prop
   const { workspaceSlug, userId } = useParams();
   // store hooks
   const {
-    issuesFilter: { issueFilters, fetchFilters, updateFilterExpression },
+    issuesFilter: { getIssueFilters, fetchFilters, updateFilterExpression },
   } = useIssues(EIssuesStoreType.PROFILE);
+  const issueFilters = workspaceSlug && userId ? getIssueFilters(userId, workspaceSlug) : undefined;
+  const follow = useLocalIssueFilterUpdate(workspaceSlug ?? "", undefined, userId ?? "", true);
   // derived values
   const activeLayout = issueFilters?.displayFilters?.layout || undefined;
 
@@ -59,7 +62,7 @@ export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Prop
         filtersToShowByLayout={ISSUE_DISPLAY_FILTERS_BY_PAGE.profile_issues.filters}
         initialWorkItemFilters={issueFilters}
         updateFilters={(expression) => {
-          void updateFilterExpression(workspaceSlug, userId, expression).catch(() => {});
+          void follow(() => updateFilterExpression(workspaceSlug, userId, expression));
         }}
         workspaceSlug={workspaceSlug}
       >

@@ -12,8 +12,7 @@ import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-sc
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import type { EIssuesStoreType } from "@nerve/types";
-import { EIssueLayoutTypes } from "@nerve/types";
+import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
 //hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";
@@ -47,7 +46,7 @@ const EMPTY_KANBAN_FILTERS = { group_by: [], sub_group_by: [] };
 export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBanLayout) {
   const { QuickActions, canEditPropertiesBasedOnProject, viewId } = props;
   // router
-  const { workspaceSlug, projectId } = useParams();
+  const { workspaceSlug, projectId, userId } = useParams();
   // store hooks
   const storeType = useIssueStoreType() as KanbanStoreType;
   const { allowPermissions } = useUserPermissions();
@@ -66,8 +65,12 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
     updateFilters,
   } = useIssuesActions(storeType);
 
-  const displayFilters = issuesFilter?.issueFilters?.displayFilters;
-  const displayProperties = issuesFilter?.issueFilters?.displayProperties;
+  const localFilters =
+    storeType === EIssuesStoreType.PROFILE
+      ? issues.rootIssueStore.profileIssuesFilter.getIssueFilters(userId ?? "", workspaceSlug)
+      : issuesFilter.issueFilters;
+  const displayFilters = localFilters?.displayFilters;
+  const displayProperties = localFilters?.displayProperties;
 
   const sub_group_by = displayFilters?.sub_group_by;
   const group_by = displayFilters?.group_by;
@@ -93,7 +96,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
   );
 
   const groups = issues?.groups;
-  const collapsed = issuesFilter?.issueFilters?.kanbanFilters ?? EMPTY_KANBAN_FILTERS;
+  const collapsed = localFilters?.kanbanFilters ?? EMPTY_KANBAN_FILTERS;
   const staleRefresh = useIssueListRefresh(
     issues.currentList,
     [...(groups ?? [])].flatMap(([group, data]) => {
@@ -186,7 +189,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
   const handleCollapsedGroups = useCallback(
     (toggle: "group_by" | "sub_group_by", value: string) => {
       if (workspaceSlug) {
-        let collapsedGroups = issuesFilter?.issueFilters?.kanbanFilters?.[toggle] || [];
+        let collapsedGroups = localFilters?.kanbanFilters?.[toggle] || [];
         if (collapsedGroups.includes(value)) {
           collapsedGroups = collapsedGroups.filter((_value) => _value != value);
         } else {
@@ -197,10 +200,10 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
         });
       }
     },
-    [workspaceSlug, issuesFilter, projectId, updateFilters]
+    [workspaceSlug, localFilters?.kanbanFilters, projectId, updateFilters]
   );
 
-  const collapsedGroups = issuesFilter?.issueFilters?.kanbanFilters || EMPTY_KANBAN_FILTERS;
+  const collapsedGroups = localFilters?.kanbanFilters || EMPTY_KANBAN_FILTERS;
 
   return (
     <>

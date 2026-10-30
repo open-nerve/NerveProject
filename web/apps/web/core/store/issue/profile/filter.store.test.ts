@@ -1,34 +1,49 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { beforeEach, expect, it, vi } from "vitest";
-import type { IIssueRootStore } from "../root.store";
-import { ProfileIssuesFilter } from "./filter.store";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { runInAction } from "mobx";
+import { EIssueFilterType } from "@nerve/constants";
+import { accountOf } from "@/store/member/fake-users";
+import { issueStoreTab, issuePageOf, requestedIssue } from "../fake-issues";
+import { json, problem } from "@/lib/auth/fake-nerve";
+import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
+vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "profile" } }, publicClient: {} }));
+vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
 const data = new Map<string, string>();
 const localStorage = {
   getItem: (key: string) => data.get(key) ?? null,
   setItem: (key: string, value: string) => data.set(key, value),
 };
-const root = (account = "alice") =>
-  ({
-    currentUserId: account,
-    profileIssues: { fetchIssuesWithExistingPagination: vi.fn() },
-  }) as unknown as IIssueRootStore;
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
-vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
+const tabs: Awaited<ReturnType<typeof issueStoreTab>>[] = [];
+async function profileTab(account = "alice") {
+  const tab = await issueStoreTab();
+  tabs.push(tab);
+  runInAction(() => {
+    tab.app.user.data = { ...accountOf(account), id: account };
+  });
+  return tab;
+}
 beforeEach(() => {
   data.clear();
+  vi.useFakeTimers();
   vi.stubGlobal("window", { localStorage });
   vi.stubGlobal("localStorage", localStorage);
 });
+afterEach(() => {
+  for (const tab of tabs.splice(0)) tab.app.dispose();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 it("profileViewsKeepIndependentSettings across target users and accounts", async () => {
-  const store = new ProfileIssuesFilter(root());
+  const store = (await profileTab()).app.issue.profileIssuesFilter;
   await store.updateFilterExpression("ws", "target", { and: [{ priority__in: "high" }] });
   await store.updateFilterExpression("ws", "other", { and: [{ priority__in: "low" }] });
-  const fresh = new ProfileIssuesFilter(root());
+  const fresh = (await profileTab()).app.issue.profileIssuesFilter;
   await fresh.fetchFilters("ws", "target");
   await fresh.fetchFilters("ws", "other");
   expect(fresh.getIssueFilters("target")?.richFilters).toEqual({ and: [{ priority__in: "high" }] });
   expect(fresh.getIssueFilters("other")?.richFilters).toEqual({ and: [{ priority__in: "low" }] });
-  const other = new ProfileIssuesFilter(root("bob"));
+  const other = (await profileTab("bob")).app.issue.profileIssuesFilter;
   await other.fetchFilters("ws", "target");
   expect(other.getIssueFilters("target")?.richFilters).toEqual({});
 });
@@ -49,7 +64,7 @@ it("cleans invalid stored fields while retaining a valid member project restrict
       },
     ])
   );
-  const store = new ProfileIssuesFilter(root());
+  const store = (await profileTab()).app.issue.profileIssuesFilter;
   await store.fetchFilters("ws", "target");
   expect(store.getIssueFilters("target")?.richFilters).toEqual({
     and: [{ project_id__in: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }],
@@ -57,15 +72,8 @@ it("cleans invalid stored fields while retaining a valid member project restrict
 });
 
 it("stored project restriction reaches the real member query after invalid fields are cleaned", async () => {
-  const { issueStoreTab, requestedIssue } = await import("../fake-issues");
-  const { json } = await import("@/lib/auth/fake-nerve");
-  const { runInAction } = await import("mobx");
-  vi.useFakeTimers();
-  const tab = await issueStoreTab();
+  const tab = await profileTab();
   try {
-    runInAction(() => {
-      tab.app.user.data = { id: "alice" } as NonNullable<typeof tab.app.user.data>;
-    });
     data.set(
       "issue_local_filters",
       JSON.stringify([
@@ -121,13 +129,13 @@ it("defaults malformed display settings without discarding valid siblings", asyn
       },
     ])
   );
-  const store = new ProfileIssuesFilter(root());
+  const store = (await profileTab()).app.issue.profileIssuesFilter;
   await store.fetchFilters("ws", "target");
   expect(store.getIssueFilters("target")?.displayFilters).toMatchObject({
     layout: "list",
     order_by: "sort_order",
     group_by: null,
-    sub_group_by: "labels",
+    sub_group_by: null,
     show_empty_groups: false,
     sub_issue: false,
     calendar: { layout: "week", show_weekends: false },
@@ -157,7 +165,7 @@ it("clears member-unsupported conditions on read and save while retaining projec
       { key: "PROFILE", workspaceSlug: "ws", viewId: "target", userId: "alice", filters: { rich_filters: input } },
     ])
   );
-  const store = new ProfileIssuesFilter(root());
+  const store = (await profileTab()).app.issue.profileIssuesFilter;
   await store.fetchFilters("ws", "target");
   const expected = { and: [{ priority__in: "high" }, { project_id__in: id }] };
   expect(store.getIssueFilters("target")?.richFilters).toEqual(expected);
@@ -166,23 +174,88 @@ it("clears member-unsupported conditions on read and save while retaining projec
   expect(JSON.parse(data.get("issue_local_filters")!)[0].filters.rich_filters).toEqual(expected);
 });
 
-it("returns the list read refusal after a filter change", async () => {
-  const failure = new Error("list refused");
-  let reject!: (error: Error) => void;
-  const read = new Promise<void>((_resolve, fail) => {
-    reject = fail;
-  });
-  void read.catch(() => {});
-  const owner = root();
-  vi.mocked(owner.profileIssues.fetchIssuesWithExistingPagination).mockReturnValue(read as never);
-  const changed = new ProfileIssuesFilter(owner).updateFilterExpression("ws", "target", { priority__in: "high" });
-  let settled = false;
-  void changed.then(
-    () => (settled = true),
-    () => (settled = true)
+it("returns the list read refusal without resetting saved session settings when storage is unavailable", async () => {
+  const tab = await profileTab();
+  const store = tab.app.issue.profileIssuesFilter;
+  await store.fetchFilters("ws", "target");
+  const first = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.profileIssues.fetchIssues("ws", "target", "init-loader", { limit: 20 }, "created"),
+    ["GET", "/api/v0/workspaces/ws/members/target/issues"]
   );
-  await Promise.resolve();
-  expect(settled).toBe(false);
-  reject(failure);
-  await expect(changed).rejects.toBe(failure);
+  first.call.answer(json(200, issuePageOf([])));
+  await first.promise;
+  vi.spyOn(localStorage, "setItem").mockImplementation(() => {
+    throw new Error("blocked");
+  });
+  const next = await requestedIssue(
+    tab.nerve,
+    () => store.updateFilters("ws", undefined, EIssueFilterType.DISPLAY_FILTERS, { order_by: "-updated_at" }, "target"),
+    ["GET", "/api/v0/workspaces/ws/members/target/issues"]
+  );
+  const rejected = expect(next.promise).rejects.toMatchObject({ status: 503 });
+  next.call.answer(problem(503, "unavailable"));
+  await rejected;
+  expect(store.getIssueFilters("target")?.displayFilters?.order_by).toBe("-updated_at");
+  await store.fetchFilters("ws", "target");
+  expect(store.getIssueFilters("target")?.displayFilters?.order_by).toBe("-updated_at");
+});
+
+it.each(["calendar", "spreadsheet"])(
+  "normalizes unsupported profile layout %s without losing valid siblings",
+  async (layout) => {
+    data.set(
+      "issue_local_filters",
+      JSON.stringify([
+        {
+          key: "PROFILE",
+          workspaceSlug: "ws",
+          viewId: "target",
+          userId: "alice",
+          filters: {
+            display_filters: {
+              layout,
+              group_by: "priority",
+              sub_group_by: "labels",
+              sub_issue: false,
+              show_empty_groups: false,
+              calendar: { layout: "week", show_weekends: false },
+            },
+            display_properties: { state: false },
+          },
+        },
+      ])
+    );
+    const store = (await profileTab()).app.issue.profileIssuesFilter;
+    await store.fetchFilters("ws", "target");
+    expect(store.getIssueFilters("target")?.displayFilters).toMatchObject({
+      layout: "list",
+      group_by: "priority",
+      sub_group_by: null,
+      sub_issue: false,
+      show_empty_groups: false,
+      calendar: { layout: "week", show_weekends: false },
+    });
+    expect(store.getIssueFilters("target")?.displayProperties?.state).toBe(false);
+  }
+);
+it("retains separate memory preferences for the same target across workspaces", async () => {
+  const tab = await profileTab();
+  const other = workspaceOf("other");
+  await loadWorkspaces(tab.nerve, tab.app.workspaceRoot, [tab.workspace, other]);
+  const store = tab.app.issue.profileIssuesFilter;
+  await store.fetchFilters("ws", "target");
+  await store.updateFilterExpression("ws", "target", { priority__in: "high" });
+  await store.fetchFilters("other", "target");
+  await store.updateFilterExpression("other", "target", { priority__in: "low" });
+  expect(store.getIssueFilters("target", "ws")?.richFilters).toEqual({ and: [{ priority__in: "high" }] });
+  expect(store.getIssueFilters("target", "other")?.richFilters).toEqual({ and: [{ priority__in: "low" }] });
+  const first = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.profileIssues.fetchIssues("ws", "target", "init-loader", { limit: 20 }, "subscribed"),
+    ["GET", "/api/v0/workspaces/ws/members/target/issues"]
+  );
+  expect(first.call.query).toMatchObject({ priority: "high", relation: "subscribed" });
+  first.call.answer(json(200, issuePageOf([])));
+  await first.promise;
 });

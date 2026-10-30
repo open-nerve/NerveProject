@@ -99,6 +99,8 @@ workspace 访客显示“没有权限”；桌面/手机筛选工具栏与列表
 
 页面身份包含 workspace/userId/profileViewId，页头、手机头部、筛选、列表、peek 和它们拥有的弹层同步结束。Back、同用户换 view、同 view 换用户和权限变更都测试；key 不改变本地偏好“同目标三个 view 共享”的合同。旧列表和迟到的旧 finally 不得闪到新页面。沿 IssueRootStore.permissionReads 和已有 UI owner，不新增全局清理器。
 
+T9局部实现裁定：profile内存偏好按workspace/target保存，账号仍由会话RootStore隔离；getIssueFilters增加可选workspaceSlug，页面与原生请求显式传当前地址，旧单参数调用取root当前地址。保留同一目标三个view共享偏好，已加载的会话内设置不被storage失败覆盖。列表/看板的列投影兼容增加groupIds，仅在工作区标签分组消费服务端已返回的组键；目录冷时显示中性占位而保留行、total和cursor，已持有且当前可见的标签名随后更新。候选仍只取已持有目录，无逐项目预取，无新全局状态/接口。
+
 ### 2.8 页面故事与证据
 
 | 故事 | 真实用户动作与必要断言 |

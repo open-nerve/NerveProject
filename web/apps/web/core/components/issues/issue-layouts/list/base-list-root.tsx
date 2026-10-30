@@ -13,8 +13,8 @@ import { useParams } from "react-router";
 // nerve constants
 import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // types
-import type { EIssuesStoreType, GroupByColumnTypes, TIssueKanbanFilters } from "@nerve/types";
-import { EIssueLayoutTypes } from "@nerve/types";
+import type { GroupByColumnTypes, TIssueKanbanFilters } from "@nerve/types";
+import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -40,6 +40,7 @@ interface IBaseListRoot {
 export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot) {
   const { QuickActions, viewId, canEditPropertiesBasedOnProject } = props;
   // router
+  const { workspaceSlug, projectId, userId } = useParams();
   const storeType = useIssueStoreType() as ListStoreType;
   //stores
   const { issuesFilter, issues } = useIssues(storeType);
@@ -49,17 +50,19 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
   const { allowPermissions } = useUserPermissions();
   const { issueMap } = useIssues();
 
-  const displayFilters = issuesFilter?.issueFilters?.displayFilters;
-  const displayProperties = issuesFilter?.issueFilters?.displayProperties;
+  const localFilters =
+    storeType === EIssuesStoreType.PROFILE
+      ? issues.rootIssueStore.profileIssuesFilter.getIssueFilters(userId ?? "", workspaceSlug)
+      : issuesFilter.issueFilters;
+  const displayFilters = localFilters?.displayFilters;
+  const displayProperties = localFilters?.displayProperties;
   const orderBy = displayFilters?.order_by || undefined;
 
   const group_by = (displayFilters?.group_by || null) as GroupByColumnTypes | null;
   const showEmptyGroup = displayFilters?.show_empty_groups ?? false;
 
-  const { workspaceSlug, projectId } = useParams();
   const { updateFilters } = useIssuesActions(storeType);
-  const collapsedGroups =
-    issuesFilter?.issueFilters?.kanbanFilters || ({ group_by: [], sub_group_by: [] } as TIssueKanbanFilters);
+  const collapsedGroups = localFilters?.kanbanFilters || ({ group_by: [], sub_group_by: [] } as TIssueKanbanFilters);
 
   useIssueListMount(
     storeType,
@@ -130,7 +133,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
   const handleCollapsedGroups = useCallback(
     (value: string) => {
       if (workspaceSlug) {
-        let nextCollapsedGroups = issuesFilter?.issueFilters?.kanbanFilters?.group_by || [];
+        let nextCollapsedGroups = localFilters?.kanbanFilters?.group_by || [];
         if (nextCollapsedGroups.includes(value)) {
           nextCollapsedGroups = nextCollapsedGroups.filter((_value) => _value != value);
         } else {
@@ -141,7 +144,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
         } as TIssueKanbanFilters);
       }
     },
-    [workspaceSlug, issuesFilter, projectId, updateFilters]
+    [workspaceSlug, localFilters?.kanbanFilters, projectId, updateFilters]
   );
 
   return (

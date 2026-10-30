@@ -104,6 +104,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
+    groupIds: groups.keys(),
     workspaceSlug,
     projectId,
   });

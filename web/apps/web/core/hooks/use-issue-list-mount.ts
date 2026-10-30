@@ -33,8 +33,9 @@ export function useIssueListMount(
       : role !== undefined;
   const workspaceID = workspaceSlug ? root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id : undefined;
   const projectIDs = profile
-    ? (toMemberFilters(userId ? (root.profileIssuesFilter.getIssueFilters(userId)?.richFilters ?? {}) : {})
-        .project_id ?? [])
+    ? (toMemberFilters(
+        userId ? (root.profileIssuesFilter.getIssueFilters(userId, workspaceSlug)?.richFilters ?? {}) : {}
+      ).project_id ?? [])
     : projectId
       ? [projectId]
       : [];

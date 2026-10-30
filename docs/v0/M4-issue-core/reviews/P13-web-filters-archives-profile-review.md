@@ -102,3 +102,7 @@ T6真实归档弹窗具名称、正常Tab顺序、同步提交锁、pending禁�
 T7在归档layout以工作区/项目/工作项key覆盖真实页头和正文；内容维持只读，恢复及按创建者/管理员判断的删除独立授权。删除拒绝原样交弹窗一次反馈，旧完成不能导航新页面。实际路由/菜单9项与原宿主/resource回归共8文件93项通过。描述编辑器在组件测试中是只读prop探针，真实输入仍留T11。M17前两次变异未失败：快速读取卸载旧菜单，掩盖短暂复用。保持返回后的GET在途，M17-held明确旧弹窗泄漏并红、恢复后绿；只有此回执计有效性质，诊断throw和早期夹具失败不计。首轮旧菜单fixture漏useUser和翻译键错误已修，保留失败raw。T4检查点2209d237的远端CI已全绿：https://github.com/open-nerve/NerveProject/actions/runs/41105350433 （t4-ci-poll4.json）；不是最终阶段CI。
 
 T8在route显式收窄三个TProfileViews，typed props贯穿两个profile根、BaseList/BaseKanban、mount和actions；原as TProfileViews检索为零。共用mount的日历/表格可选viewId同步机械收窄，实际非profile调用仍省略。删除晚effect设置relation；请求直接接当前typed view。profile layout的工作区/用户/view key结束页头、手机与正文owner，访客工具栏和列表同门禁，M3成员摘要保留。首红14项真实行为；最终五文件48项和Web静态54任务通过，M18/M19分别5/3项行为红并准确恢复。route测试真实layout/header/mobile/sidebar与请求链，正文用带真实列表读取和popover的探针；不冒称完整ProfileIssuesPage已验，留T9/I19。guest断言一度误把测试前置workspace GET计入页面请求，已清理观测窗口；navigate重载的测试类型错误也已修正，原始输出保留。
+
+T9把profile内存设置键补全为workspace/target，当前路由显式取对应设置；账号仍由RootStore隔离，同目标三个view共享本地设置。保存先写内存和storage，列表失败不回读覆盖；桌面、手机与富筛选复用本地更新hook消费Promise。目录只投影已持有且仍可见的项目/标签；服务端返回的冷标签组保留行、total和cursor，名称未知显示中性占位，后续目录到达可回显。实际Page/Layout/两布局14项与相关回归共10文件134项通过，store另含storage不可用、工作区隔离。M20/M21/M22分别8/7/1项行为红并逐字节恢复；M21保护既有project_id合同，不计新实现。
+
+T9七项完整门禁均在当前产品输入运行通过：生成、Go lint、串行Go全测、Web静态54任务、knip、强制Web全测18任务（Web 247文件2676项）、E2E 180项。回执为t9-full-*；静态warning cap由119降118。初期夹具项目ID/原生分组字段和测试输入键、bound方法及hook依赖错误均保留raw，未放宽原断言；冷标签分组与未消费Promise为真实页面根因。此前T4“11属性”实际只遍历旧目录9项，T10读入口发现缺创建/更新时间，将用独立页面枚举补验与修正，不能把旧测试称为11项完整覆盖。T10–T14及最终整审/分支CI仍待完成。

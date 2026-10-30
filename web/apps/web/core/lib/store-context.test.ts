@@ -128,7 +128,7 @@ afterEach(() => {
 
 describe("store-context", () => {
   it("isolates archived and profile preferences across real session replacement", async () => {
-    const { storage, context, signedIn, follow } = await load();
+    const { storage, context, SessionChangedError, signedIn, follow } = await load();
     vi.stubGlobal("window", { localStorage: storage.tab("page") });
     const { runInAction } = await import("mobx");
     await signedIn();
@@ -164,7 +164,7 @@ describe("store-context", () => {
     const y = context.rootStore;
     expect(y).not.toBe(x);
     expect(y.issue.archivedIssuesFilter.getIssueFilters("project")).toBeUndefined();
-    expect(y.issue.profileIssuesFilter.getIssueFilters("target")).toBeUndefined();
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target", "ws")).toBeUndefined();
     runInAction(() => {
       y.user.data = { id: "account-y" } as typeof y.user.data;
     });
@@ -173,15 +173,19 @@ describe("store-context", () => {
     expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
       and: [{ priority__in: "low" }],
     });
-    expect(y.issue.profileIssuesFilter.getIssueFilters("target")?.richFilters).toEqual({
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target", "ws")?.richFilters).toEqual({
       and: [{ priority__in: "low" }],
     });
-    await x.issue.archivedIssuesFilter.updateFilterExpression("ws", "project", { priority__in: "urgent" });
-    await x.issue.profileIssuesFilter.updateFilterExpression("ws", "target", { priority__in: "urgent" });
+    await expect(
+      x.issue.archivedIssuesFilter.updateFilterExpression("ws", "project", { priority__in: "urgent" })
+    ).rejects.toBeInstanceOf(SessionChangedError);
+    await expect(
+      x.issue.profileIssuesFilter.updateFilterExpression("ws", "target", { priority__in: "urgent" })
+    ).rejects.toBeInstanceOf(SessionChangedError);
     expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
       and: [{ priority__in: "low" }],
     });
-    expect(y.issue.profileIssuesFilter.getIssueFilters("target")?.richFilters).toEqual({
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target", "ws")?.richFilters).toEqual({
       and: [{ priority__in: "low" }],
     });
     await y.issue.archivedIssuesFilter.fetchFilters("ws", "project");
@@ -189,7 +193,7 @@ describe("store-context", () => {
     expect(y.issue.archivedIssuesFilter.getIssueFilters("project")?.richFilters).toEqual({
       and: [{ priority__in: "low" }],
     });
-    expect(y.issue.profileIssuesFilter.getIssueFilters("target")?.richFilters).toEqual({
+    expect(y.issue.profileIssuesFilter.getIssueFilters("target", "ws")?.richFilters).toEqual({
       and: [{ priority__in: "low" }],
     });
     vi.unstubAllGlobals();

@@ -153,13 +153,13 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 ## Task 9：个人主页三关系、目录与本地偏好（约550–1100行）
 
 **Files：** spec T9；profile mobile-header复用T5本地更新hook；新C/components/profile/profile-page.test.tsx；WorkspaceLevelWorkItemFiltersHOC只补当前已持有目录输入。
-**Interfaces：** profile.fetchIssues(slug,userID,loader,options,view:TProfileViews)沿原签名；fetchNextIssues(slug,userID,group?)沿原binding；本地key保持actor/workspace/target三维，不增加view维度。新callback消费T5接口。
+**Interfaces：** profile.fetchIssues(slug,userID,loader,options,view:TProfileViews)沿原签名；fetchNextIssues(slug,userID,group?)沿原binding；本地key保持actor/workspace/target三维，不增加view维度。新callback消费T5接口。内存缓存键同步workspace/target，当前地址显式传getIssueFilters；List/Kanban向列投影传服务端groupIds，冷标签名称用占位但不丢返回组。
 
-- [ ] Step 1：写keepsRelationAndRestrictionOnNextPage、sharesPreferencesOnlyAcrossViewsOfOneTarget、keepsUnknownLabelAndDoesNotPrefetchDirectories、doesNotPublishOldProfilePage；真实root、三种关系有交集、group二页、换view即时设置、A→B→A、storage拒绝、目录仅可见已持有。
-- [ ] Step 2：运行profile-page/filter.store/use-profile-member和两布局相关测试；预期floating Promise/labelIds未接/旧view等现有缺口行为红。
-- [ ] Step 3：列表和看板按profile允许能力工作；项目/状态组/优先级/标签分组及真实total/cursor；current view从T8 typed边界传，不靠晚effect猜relation。桌面/手机/富筛选都消费Promise；列表读错误可见GET retry，不再次本地“保存失败”。
-- [ ] Step 4：未知合法标签ID保留条件，不显示失权目录，禁止逐项目预取或workspace-labels接口；project_id限制修改别项仍保留；M20把view丢回assigned、M21改条件丢project_id、M22冷候选清掉合法label各红、恢复绿。检查点F通过后push。
-- [ ] Step 5：提交fix(M4/P13): 完成个人主页列表与本地筛选隔离。记录A8/A9/Review Focus 5。
+- [x] Step 1：写keepsRelationAndRestrictionOnNextPage、sharesPreferencesOnlyAcrossViewsOfOneTarget、keepsUnknownLabelAndDoesNotPrefetchDirectories、doesNotPublishOldProfilePage；真实root、三种关系有交集、group二页、换view即时设置、A→B→A、storage拒绝、目录仅可见已持有。
+- [x] Step 2：运行profile-page/filter.store/use-profile-member和两布局相关测试；预期floating Promise/labelIds未接/旧view等现有缺口行为红。
+- [x] Step 3：列表和看板按profile允许能力工作；项目/状态组/优先级/标签分组及真实total/cursor；current view从T8 typed边界传，不靠晚effect猜relation。桌面/手机/富筛选都消费Promise；列表读错误可见GET retry，不再次本地“保存失败”。
+- [x] Step 4：未知合法标签ID保留条件，不显示失权目录，禁止逐项目预取或workspace-labels接口；project_id限制修改别项仍保留；M20把view丢回assigned、M21改条件丢project_id、M22冷候选清掉合法label各红、恢复绿。检查点F通过后push。
+- [x] Step 5：提交fix(M4/P13): 完成个人主页列表与本地筛选隔离。记录A8/A9/Review Focus 5。
 
 ## Task 10：I5页面偏好与富筛选故事（约450–850行）
 
