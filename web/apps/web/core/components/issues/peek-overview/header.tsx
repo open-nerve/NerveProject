@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useRef } from "react";
+import { useRef, type ComponentType } from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router";
 import {
@@ -35,7 +35,7 @@ import { IconButton } from "@nerve/propel/icon-button";
 
 export type TPeekModes = "side-peek" | "modal" | "full-screen";
 
-const PEEK_OPTIONS: { key: TPeekModes; icon: any; i18n_title: string }[] = [
+const PEEK_OPTIONS: { key: TPeekModes; icon: ComponentType<{ className?: string }>; i18n_title: string }[] = [
   {
     key: "side-peek",
     icon: SidePeekOutline,
@@ -65,7 +65,6 @@ export type PeekOverviewHeaderProps = {
   embedIssue: boolean;
   toggleDeleteIssueModal: (value: boolean) => void;
   toggleArchiveIssueModal: (value: boolean) => void;
-  toggleDuplicateIssueModal: (value: boolean) => void;
   toggleEditIssueModal: (value: boolean) => void;
   handleRestoreIssue: () => Promise<void>;
   isSubmitting: TNameDescriptionLoader;
@@ -84,7 +83,6 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
     removeRoutePeekId,
     toggleDeleteIssueModal,
     toggleArchiveIssueModal,
-    toggleDuplicateIssueModal,
     toggleEditIssueModal,
     handleRestoreIssue,
     isSubmitting,
@@ -210,7 +208,6 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
               readOnly={disabled}
               toggleDeleteIssueModal={toggleDeleteIssueModal}
               toggleArchiveIssueModal={toggleArchiveIssueModal}
-              toggleDuplicateIssueModal={toggleDuplicateIssueModal}
               toggleEditIssueModal={toggleEditIssueModal}
               isPeekMode
             />

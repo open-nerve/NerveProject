@@ -146,10 +146,10 @@ make e2e
 
 **Files：** C/components/issues/peek-overview/root/header/view/issue-detail、实际打开方及L/roots/project-layout-root；host-actions.test.tsx/detail-host.test.tsx、新peek生命周期测试。
 
-- [ ] 对照P11owner机制清点每个open/close/switch/back/unmount；保留WorkItemLevelModals所在provider，不能全局清新owner。切scope同步隐藏旧项，旧HTTP无UI跟进。
-- [ ] 目录/工作项拒绝、权限降级/ABA、退役结束当前加载/内容；错误可观察。切A→B时A成功/失败/cleanup均不关B，不执行旧scroll/focus；只给仍存在的本宿主触发器归还焦点。
-- [ ] 两并存owner、StrictMode重复cleanup、同账号route变更、删除当前项/后退；props输入来自实际route不从router effect。CustomSelect页头键盘功能在T15实际核。
-- [ ] 聚焦host-actions/detail-host/新测试，M31旧owner关新peek、M32卸载仍执行focus各红；G。提交`fix(M4/P12): 让工作项浮层随实际宿主结束`。
+- [x] 对照P11owner机制清点每个open/close/switch/back/unmount；保留WorkItemLevelModals所在provider，不能全局清新owner。切scope同步隐藏旧项，旧HTTP无UI跟进。
+- [x] 目录/工作项拒绝、权限降级/ABA、退役结束当前加载/内容；错误可观察。切A→B时A成功/失败/cleanup均不关B，不执行旧scroll/focus；只给仍存在的本宿主触发器归还焦点。
+- [x] 两并存owner、StrictMode重复cleanup、同账号route变更、删除当前项/后退；props输入来自实际route不从router effect。CustomSelect页头键盘功能在T15实际核。
+- [x] 聚焦host-actions/detail-host/新测试，M31旧owner关新peek、M32卸载仍执行focus各红；G。提交`fix(M4/P12): 让工作项浮层随实际宿主结束`。
 
 ## Task 13：I3与I7真实页面故事（约650–1100行）
 

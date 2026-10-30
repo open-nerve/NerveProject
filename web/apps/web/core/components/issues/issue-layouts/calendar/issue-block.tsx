@@ -57,7 +57,8 @@ export const CalendarIssueBlock = observer(
     const projectIdentifier = getProjectIdentifierById(issue?.project_id);
 
     // handlers
-    const handleIssuePeekOverview = (peekIssue: Issue) => handleRedirection(workspaceSlug, peekIssue, isMobile);
+    const handleIssuePeekOverview = (peekIssue: Issue, trigger: HTMLElement) =>
+      handleRedirection(workspaceSlug, peekIssue, isMobile, undefined, trigger);
 
     const customActionButton = (
       <span ref={menuActionRef} className="block w-full rounded-sm p-1">
@@ -90,7 +91,7 @@ export const CalendarIssueBlock = observer(
             <ControlLink
               id={`issue-${issue.id}`}
               href={workItemLink}
-              onClick={() => handleIssuePeekOverview(issue)}
+              onClick={(event) => handleIssuePeekOverview(issue, event.currentTarget)}
               className="block w-full rounded-sm border-b border-subtle text-13 text-primary hover:border-subtle-1 md:border-[1px]"
               disabled={isMobile}
               ref={ref}

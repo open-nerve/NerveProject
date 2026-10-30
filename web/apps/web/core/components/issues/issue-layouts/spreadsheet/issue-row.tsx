@@ -172,7 +172,8 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
   const { isMobile } = usePlatformOS();
 
   // handlers
-  const handleIssuePeekOverview = (issue: Issue) => handleRedirection(workspaceSlug, issue, isMobile, nestingLevel);
+  const handleIssuePeekOverview = (issue: Issue, trigger: HTMLElement) =>
+    handleRedirection(workspaceSlug, issue, isMobile, nestingLevel, trigger);
 
   const { subIssues: subIssuesStore, issue } = useIssueDetail();
 
@@ -187,7 +188,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
     e.stopPropagation();
     e.preventDefault();
     if (nestingLevel >= 3) {
-      handleIssuePeekOverview(issueDetail);
+      handleIssuePeekOverview(issueDetail, e.currentTarget);
     } else {
       setExpanded((prevState) => {
         if (!prevState && workspaceSlug && issueDetail && issueDetail.project_id)
@@ -218,7 +219,11 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
         tabIndex={0}
         className="group/list-block relative left-0 z-10 max-w-lg bg-surface-1 md:sticky"
       >
-        <ControlLink href={workItemLink} onClick={() => handleIssuePeekOverview(issueDetail)} className="outline-none">
+        <ControlLink
+          href={workItemLink}
+          onClick={(event) => handleIssuePeekOverview(issueDetail, event.currentTarget)}
+          className="outline-none"
+        >
           <Row
             className={cn(
               "group clickable z-10 flex h-11 w-full cursor-pointer items-center border-r-[0.5px] border-subtle-1 bg-transparent text-13 after:absolute",

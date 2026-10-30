@@ -33,7 +33,6 @@ import { useWorkItemDetailMenuItems } from "./helper";
 type TWorkItemDetailQuickActionProps = IQuickActionProps & {
   toggleEditIssueModal?: (value: boolean) => void;
   toggleDeleteIssueModal?: (value: boolean) => void;
-  toggleDuplicateIssueModal?: (value: boolean) => void;
   toggleArchiveIssueModal?: (value: boolean) => void;
   isPeekMode?: boolean;
 };

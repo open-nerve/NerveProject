@@ -4,6 +4,7 @@ import { tab, view, container, dragSources, mount } from "./fake-kanban";
 import { act } from "react";
 import { expect, it, vi } from "vitest";
 import { CustomMenu } from "@nerve/ui";
+import { restoreIssuePeekFocus } from "../../peek-overview/selection";
 
 it.each(["Enter", " "])(
   "the actual card opens its menu by %s without opening peek, then returns focus",
@@ -51,4 +52,22 @@ it("a stale source drop cannot clear a newer drag's state", async () => {
   expect(tab.app.issue.issueKanBanView.isDragging).toBe(false);
   await act(async () => view.render(null));
   expect(tab.app.issue.issueKanBanView.isDragging).toBe(false);
+});
+
+it("the actual card records its own link for peek focus restoration", async () => {
+  await mount();
+  const link = container.querySelector<HTMLAnchorElement>('a[href*="/browse/"]')!;
+  expect(link).not.toBeNull();
+  await act(async () => link.click());
+  const selected = tab.app.issue.issueDetail.peekIssue;
+  expect(selected).toBeDefined();
+  const other = document.createElement("button");
+  document.body.append(other);
+  try {
+    other.focus();
+    restoreIssuePeekFocus(selected);
+    expect(document.activeElement).toBe(link);
+  } finally {
+    other.remove();
+  }
 });

@@ -142,7 +142,8 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
   const { isMobile } = usePlatformOS();
 
   // handlers
-  const handleIssuePeekOverview = (issue: Issue) => handleRedirection(workspaceSlug, issue, isMobile);
+  const handleIssuePeekOverview = (issue: Issue, trigger: HTMLElement) =>
+    handleRedirection(workspaceSlug, issue, isMobile, undefined, trigger);
 
   const issue = issuesMap[issueId];
 
@@ -247,7 +248,7 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
             { "border border-accent-strong hover:border-accent-strong": getIsIssuePeeked(issue.id) },
             { "z-10 bg-layer-1": isCurrentBlockDragging }
           )}
-          onClick={() => handleIssuePeekOverview(issue)}
+          onClick={(event) => handleIssuePeekOverview(issue, event.currentTarget)}
         >
           <RenderIfVisible
             classNames="space-y-2"

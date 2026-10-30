@@ -30,6 +30,7 @@ import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+import { openIssuePeek } from "../../peek-overview/selection";
 import { useIdentifierWidth } from "./identifier-width";
 import type { TRenderQuickActions } from "./list-view-types";
 
@@ -76,21 +77,26 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
   // hooks
   const { sidebarCollapsed: isSidebarCollapsed } = useAppTheme();
   const { getProjectIdentifierById } = useProject();
-  const { getIsIssuePeeked, peekIssue, setPeekIssue, subIssues: subIssuesStore } = useIssueDetail();
+  const detail = useIssueDetail();
+  const { getIsIssuePeeked, peekIssue, subIssues: subIssuesStore } = detail;
 
-  const handleIssuePeekOverview = (issue: Issue) =>
+  const handleIssuePeekOverview = (issue: Issue, trigger: HTMLElement) =>
     workspaceSlug &&
     issue &&
     issue.project_id &&
     issue.id &&
     !getIsIssuePeeked(issue.id) &&
-    setPeekIssue({
-      workspaceSlug,
-      projectId: issue.project_id,
-      issueId: issue.id,
-      nestingLevel: nestingLevel,
-      isArchived: !!issue.archived_at,
-    });
+    openIssuePeek(
+      detail,
+      {
+        workspaceSlug,
+        projectId: issue.project_id,
+        issueId: issue.id,
+        nestingLevel: nestingLevel,
+        isArchived: !!issue.archived_at,
+      },
+      trigger
+    );
 
   // derived values
   const issue = issuesMap[issueId];
@@ -131,7 +137,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
     e.stopPropagation();
     e.preventDefault();
     if (nestingLevel >= 3) {
-      handleIssuePeekOverview(issue);
+      handleIssuePeekOverview(issue, e.currentTarget);
     } else {
       if (!isExpanded && workspaceSlug && issue.project_id)
         void subIssuesStore.fetchSubIssues(workspaceSlug, issue.project_id, issue.id).catch(() => undefined);
@@ -152,7 +158,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
       <ControlLink
         id={`issue-${issue.id}`}
         href={workItemLink}
-        onClick={() => handleIssuePeekOverview(issue)}
+        onClick={(event) => handleIssuePeekOverview(issue, event.currentTarget)}
         className="w-full cursor-pointer"
       >
         <Row

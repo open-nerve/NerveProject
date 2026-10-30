@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T11 已完成，T12–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T12 已完成，T13–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -193,3 +193,14 @@ M25 漏只读 disabled、M26 绕过统一 create 导致字段拒绝丢失、M27 
 31 项首轮聚焦通过，后加真实列表双菜单红→绿。M28 阻断键盘、M29 漏 inert、M30 恢复嵌套 button 均有效失败，精确恢复生产字节/hash 且共享包重建后通过。相关材料为 t11-*、M28–M30 receipt。最初表格夹具缺 scrollIntoView、卡片夹具缺 ResizeObserver、测试 issueDetailOf 参数写错及路由 stub 缺符号均单独保留，不算行为红。最终受影响回归曾与 make e2e 的共享包构建重叠，导致 8 个 suite 无法解析被构建清理中的 dist；随后 lint-web 隐式执行共享包构建，又造成 10 个 suite 无法解析 dist。这两次是执行编排失败；已确认所有 turbo 命令与源码消费者必须串行，后续串行回归 13 文件 129 测试（0 skip）通过，不算产品行为失败。
 
 修改路径零 lint 已检查，web cap128→121、ui cap12→10；类型修正为 Menu.Items 实际 HTMLElement，未增加断言或放宽规则。最终 t11-final-regression3 为 13 文件 129 测试，t11-ui-tests 为 3 文件 22 测试；全仓 lint、knip 和类型通过。完整浏览器首轮 167/169：P2 仍按 button 查找已迁为 menuitem 的右键项，已同步角色定位；S8 的角色查询读取到关闭但仍保留测量 DOM 的菜单，已给根补显式 aria-hidden 并补 DOM 断言，保留 inert 和 S8 原断言。失败 trace 已归档；t11-browser-regression2 全部 169 项通过（0 skip）。C1/C3 三浏览器仍归 T15。T10 精确提交 c65a57e8 的 CI 41036854895（attempt 1）server/web/e2e 均成功。
+
+
+## 19. T12 Peek 宿主与焦点归属（2026-10-30）
+
+既有 Peek UI owner 增加实际宿主身份；第二个仍挂载的展示宿主不能接管或清除当前选择，失权/退役/路由改变同步停止旧内容。读取子树按每次选择重建，同 ID 重开也结束旧请求回调与本地弹窗载荷，权限事实仍取自 IssueRootStore。WorkItemLevelModals provider 保留原位；清理只操作自己仍持有的选择，StrictMode 重获后旧 microtask 无效。
+
+焦点不再由全局 issue-ID 搜索：列表、表格、看板、日历、父项、子项、关联实际入口将触发元素交 UI selection WeakMap，store 的业务选择无 DOM。Escape/明确关闭仅在当前宿主与选择下恢复仍连接且非 inert/aria-hidden 的原元素；外部点击不抢焦，子控件已经 preventDefault 的 Escape 不再关闭 Peek。延迟外部点击 timer 随监听所有者清理，换项/卸载不执行旧关闭。清掉无生产者的 duplicate modal props/state，并精确声明页头图标类型。
+
+t12-host-red 实际 7 失败，修复后相关 10 文件 94 测试通过（t12-final-regression2，0 skip）；包括真实卡片记录触发器、双宿主、同 ID 重开、路由同步隐藏、权限失去/恢复、访客持续读取及权限 ABA 的旧错误清除、晚成功/拒绝不覆盖新项、删除/归档/恢复及焦点归还。类型、修改路径零 lint 和 cap121 通过。最初测试循环改成 it.each 时误删 finally 括号属夹具语法错误，已修复；完整成功夹具中的后续资源读取不适合单次 core 请求计数，权限 ABA 测试改为受控 core 拒绝，直接检验每次权限证明变化后的新请求和旧错误清除；保留诊断 raw，未据失败日志宣称产品已坏。
+
+M31 首轮未失败揭示测试 StrictMode 在子树而非根，未真正执行重复挂载；现将 StrictMode 包裹渲染根，M31 去旧 owner 身份校验被实际捕获。M32 去触发器连接校验被卸载焦点用例捕获。两项 receipt2 记录变异红、原字节/hash 恢复及绿；首轮存活 receipt 不计有效性质。当前所有者/读取/焦点责任均属既有 UI 层局部修正，无架构阻塞。实际 Back/三浏览器键盘继续在 T13–T15 页面故事核验。
