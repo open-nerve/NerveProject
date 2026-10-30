@@ -133,11 +133,11 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 **Files：** spec T7；新L/roots/archive-detail.test.tsx；按实际需要修改详情只读props、归档快捷菜单与header/body owner。
 **Interfaces：** 归档详情key=JSON.stringify([workspaceSlug,projectId,archivedIssueId])，覆盖页头和正文；保留IssueDetailHost/Peek的原owner。可编辑属性与restore/delete命令分别使用既有权限。
 
-- [ ] Step 1：写keepsArchivedContentReadOnlyWithAuthorizedCommands、endsArchivedOverlaysOnBack、doesNotCloseTheNextOwnerFromOldCompletion；archive source A打开菜单/弹窗，Back到B再返回A，释放旧请求；核无编辑POST/PATCH但有权restore/delete可达。
-- [ ] Step 2：运行archive-detail与detail-host/host-actions现存测试；预期旧route子树复用或只读传播漏项对应断言红。
-- [ ] Step 3：在现存layout边界key化实际owner，页头与正文统一生命周期；详情issue.read仍可对有权guest只读，归档列表AM门禁保持。无权restore/delete不显示；只读不使合法命令失效。
-- [ ] Step 4：聚焦绿；M17移除归档key后Back测试红并恢复；模块级IssueService检索保持零，已有resource的拒绝/GET重试不回归。
-- [ ] Step 5：提交fix(M4/P13): 按归档工作项身份结束详情浮层。记录A5/A6，不关闭P14完整详情。
+- [x] Step 1：写keepsArchivedContentReadOnlyWithAuthorizedCommands、endsArchivedOverlaysOnBack、doesNotCloseTheNextOwnerFromOldCompletion；archive source A打开菜单/弹窗，Back到B再返回A，释放旧请求；核无编辑POST/PATCH但有权restore/delete可达。
+- [x] Step 2：运行archive-detail与detail-host/host-actions现存测试；预期旧route子树复用或只读传播漏项对应断言红。
+- [x] Step 3：在现存layout边界key化实际owner，页头与正文统一生命周期；详情issue.read仍可对有权guest只读，归档列表AM门禁保持。无权restore/delete不显示；只读不使合法命令失效。
+- [x] Step 4：聚焦绿；M17移除归档key后Back测试红并恢复；模块级IssueService检索保持零，已有resource的拒绝/GET重试不回归。
+- [x] Step 5：提交fix(M4/P13): 按归档工作项身份结束详情浮层。记录A5/A6，不关闭P14完整详情。
 
 ## Task 8：个人主页路由类型、工具栏与身份（约500–950行）
 

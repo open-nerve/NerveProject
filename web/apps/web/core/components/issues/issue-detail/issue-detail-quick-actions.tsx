@@ -21,6 +21,8 @@ import { useProject } from "@/hooks/store/use-project";
 import { useNavigate } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
+import { useDetailScope } from "../issue-detail-widgets/use-detail-scope";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { useDetailCommand } from "./use-issue-operations";
 import { WorkItemDetailQuickActions } from "../issue-layouts/quick-action-dropdowns";
 
@@ -40,6 +42,7 @@ export const IssueDetailQuickActions = observer(function IssueDetailQuickActions
   // router
   const navigate = useNavigate();
   const run = useDetailCommand(workspaceSlug, projectId, issueId);
+  const capture = useDetailScope(workspaceSlug, projectId, issueId);
 
   // hooks
   const { isMobile } = usePlatformOS();
@@ -89,21 +92,15 @@ export const IssueDetailQuickActions = observer(function IssueDetailQuickActions
   };
 
   const handleDeleteIssue = async () => {
-    try {
-      const deleteIssue = issue?.archived_at ? removeArchivedIssue : removeIssue;
-      const redirectionPath = issue?.archived_at
-        ? `/${workspaceSlug}/projects/${projectId}/archives/issues`
-        : `/${workspaceSlug}/projects/${projectId}/issues`;
-
-      await deleteIssue(workspaceSlug, projectId, issueId);
-      navigate(redirectionPath);
-    } catch (_error) {
-      setToast({
-        title: t("toast.error"),
-        type: TOAST_TYPE.ERROR,
-        message: t("entity.delete.failed", { entity: t("issue.label", { count: 1 }) }),
-      });
-    }
+    const current = capture();
+    if (!current()) throw new SessionChangedError();
+    const deleteIssue = issue.archived_at ? removeArchivedIssue : removeIssue;
+    const redirectionPath = issue.archived_at
+      ? `/${workspaceSlug}/projects/${projectId}/archives/issues`
+      : `/${workspaceSlug}/projects/${projectId}/issues`;
+    await deleteIssue(workspaceSlug, projectId, issueId);
+    if (!current()) throw new SessionChangedError();
+    navigate(redirectionPath);
   };
 
   const handleArchiveIssue = () => archiveIssue(workspaceSlug, projectId, issueId);

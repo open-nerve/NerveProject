@@ -15,7 +15,7 @@ import { cn } from "@nerve/utils";
 // hooks
 import { useDetailCommand } from "../../issue-detail/use-issue-operations";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { useUserPermissions } from "@/hooks/store/user";
+import { useUser, useUserPermissions } from "@/hooks/store/user";
 // local imports
 import { DeleteIssueModal } from "../../delete-issue-modal";
 import type { IQuickActionProps } from "../list/list-view-types";
@@ -30,7 +30,6 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
     handleRestore,
     customActionButton,
     portalElement,
-    readOnly = false,
     placements = "bottom-end",
     parentRef,
   } = props;
@@ -41,20 +40,11 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
   const run = useDetailCommand(workspaceSlug ?? "", issue.project_id, issue.id);
   // store hooks
   const { allowPermissions } = useUserPermissions();
+  const { data: currentUser } = useUser();
 
   // derived values
   // auth
-  const isEditingAllowed =
-    !!workspaceSlug &&
-    allowPermissions(
-      [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-      EUserPermissionsLevel.PROJECT,
-      workspaceSlug,
-      issue.project_id
-    ) &&
-    !readOnly;
-  const isRestoringAllowed =
-    handleRestore &&
+  const isProjectMember =
     !!workspaceSlug &&
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
@@ -62,13 +52,18 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
       workspaceSlug,
       issue.project_id
     );
+  const isRestoringAllowed = !!handleRestore && isProjectMember;
+  const isDeletingAllowed =
+    isProjectMember &&
+    (issue.created_by_id === currentUser?.id ||
+      allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, issue.project_id));
 
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
     workspaceSlug,
-    isEditingAllowed,
-    isDeletingAllowed: isEditingAllowed,
+    isEditingAllowed: false,
+    isDeletingAllowed,
     isRestoringAllowed: !!isRestoringAllowed,
     setIssueToEdit: () => {},
     setCreateUpdateIssueModal: () => {},

@@ -21,7 +21,7 @@ import { cn } from "@nerve/utils";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
-import { useUserPermissions } from "@/hooks/store/user";
+import { useUser, useUserPermissions } from "@/hooks/store/user";
 // helper
 import { ArchiveIssueModal } from "../../archive-issue-modal";
 import { DeleteIssueModal } from "../../delete-issue-modal";
@@ -67,25 +67,28 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
   const [archiveIssueModal, setArchiveIssueModal] = useState(false);
   // store hooks
   const { allowPermissions } = useUserPermissions();
+  const { data: currentUser } = useUser();
   const { getStateById } = useProjectState();
   const { getProjectIdentifierById } = useProject();
   // derived values
   const stateDetails = getStateById(issue.state_id);
   const projectIdentifier = getProjectIdentifierById(issue?.project_id);
   // auth
-  const isEditingAllowed =
-    allowPermissions(
-      [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-      EUserPermissionsLevel.PROJECT,
-      workspaceSlug,
-      issue.project_id ?? undefined
-    ) && !readOnly;
-
-  const isArchivingAllowed = !issue.archived_at && isEditingAllowed;
-  const isInArchivableGroup = !!stateDetails && ARCHIVABLE_STATE_GROUPS.includes(stateDetails?.group);
-  const isRestoringAllowed = !!issue.archived_at && isEditingAllowed;
-
-  const isDeletingAllowed = isEditingAllowed;
+  const isProjectMember = allowPermissions(
+    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    issue.project_id
+  );
+  const isEditingAllowed = isProjectMember && !readOnly && !issue.archived_at;
+  const isArchivingAllowed = !!handleArchive && isEditingAllowed;
+  const isInArchivableGroup = !!stateDetails && ARCHIVABLE_STATE_GROUPS.includes(stateDetails.group);
+  const isRestoringAllowed = !!handleRestore && !!issue.archived_at && isProjectMember;
+  const isDeletingAllowed =
+    isProjectMember &&
+    (!!issue.archived_at || !readOnly) &&
+    (issue.created_by_id === currentUser?.id ||
+      allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, issue.project_id));
 
   const duplicateIssuePayload = pick(
     {
