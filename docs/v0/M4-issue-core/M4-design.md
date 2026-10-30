@@ -2380,7 +2380,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   3. 日期范围草稿、Field提示与本地日；已有开区间回显不丢；DateRangeDropdown兼容传出本次点击日，由富筛选管理两步草稿，原共享调用不变；旧日期弹窗title与局部范围比较修正。
   4. 项目显示设置确认保存、并发/拒绝/确认后读失败；FiltersDropdown名称/键盘/焦点。
   5. 归档固定列表、本地设置恢复/隔离、只读字段及读取错误。
-  6. 归档弹窗ModalTitle、无正tabIndex、pending/单次反馈；恢复沿原命令合同。
+  6. 归档弹窗ModalTitle、无正tabIndex、pending/单次反馈；确认后的可选onArchived处理导航/关闭peek，命令callback不吞拒绝或提前卸载反馈宿主；恢复沿原命令合同。
   7. 归档详情页头/正文按id结束owner，Back/晚答；只读字段与有权恢复/删除分别控制。
   8. profile route一次收窄TProfileViews并向下传，删除as TProfileViews；访客桌面/手机工具栏门禁与user/view key。
   9. profile三关系、list/kanban和四组型、分页/本地设置/已持有目录；不逐项目扩取工作区标签，完整目录仍M7。

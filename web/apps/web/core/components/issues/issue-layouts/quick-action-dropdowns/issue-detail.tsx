@@ -35,6 +35,7 @@ type TWorkItemDetailQuickActionProps = IQuickActionProps & {
   toggleDeleteIssueModal?: (value: boolean) => void;
   toggleArchiveIssueModal?: (value: boolean) => void;
   isPeekMode?: boolean;
+  onArchiveConfirmed?: () => void;
 };
 
 export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickActions(
@@ -46,6 +47,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
     handleDelete,
     handleUpdate,
     handleArchive,
+    onArchiveConfirmed,
     handleRestore,
     portalElement,
     readOnly = false,
@@ -185,15 +187,18 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
   return (
     <>
       {/* Modals */}
-      <ArchiveIssueModal
-        data={issue}
-        isOpen={archiveIssueModal}
-        handleClose={() => {
-          setArchiveIssueModal(false);
-          if (toggleArchiveIssueModal) toggleArchiveIssueModal(false);
-        }}
-        onSubmit={handleArchive}
-      />
+      {handleArchive && (
+        <ArchiveIssueModal
+          data={issue}
+          isOpen={archiveIssueModal}
+          handleClose={() => {
+            setArchiveIssueModal(false);
+            if (toggleArchiveIssueModal) toggleArchiveIssueModal(false);
+          }}
+          onSubmit={handleArchive}
+          onArchived={onArchiveConfirmed}
+        />
+      )}
       <DeleteIssueModal
         data={issue}
         isOpen={deleteIssueModal}

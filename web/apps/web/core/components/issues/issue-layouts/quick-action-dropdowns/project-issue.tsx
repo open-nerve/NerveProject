@@ -117,12 +117,14 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
   return (
     <>
       {/* Modals */}
-      <ArchiveIssueModal
-        data={issue}
-        isOpen={archiveIssueModal}
-        handleClose={() => setArchiveIssueModal(false)}
-        onSubmit={handleArchive}
-      />
+      {handleArchive && (
+        <ArchiveIssueModal
+          data={issue}
+          isOpen={archiveIssueModal}
+          handleClose={() => setArchiveIssueModal(false)}
+          onSubmit={handleArchive}
+        />
+      )}
       <DeleteIssueModal
         data={issue}
         isOpen={deleteIssueModal}

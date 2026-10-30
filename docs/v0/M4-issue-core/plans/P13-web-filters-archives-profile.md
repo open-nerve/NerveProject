@@ -120,7 +120,7 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 ## Task 6：归档确认与恢复的一次反馈（约450–850行）
 
 **Files：** ArchiveIssueModal及两个直接调用；实际detail/peek命令；新archive-issue-modal.test.tsx；既有detail-commands.test.tsx、peek-overview/restore-menu.test.tsx。
-**Interfaces：** ArchiveIssueModal.onSubmit:()=>Promise<void>必传，data/dataId仍用于已知快照；scope含workspace/project/item/本次打开。根archiveIssue/unarchiveIssue及确认投影不改。
+**Interfaces：** ArchiveIssueModal.onSubmit:()=>Promise<void>必传，data/dataId仍用于已知快照；scope含workspace/project/item/本次打开。归档确认增加可选onArchived:()=>void，只在当前确认后处理导航/关闭peek；两个callback返回原命令，避免导航先卸载modal导致反馈丢失。根archiveIssue/unarchiveIssue及确认投影不改。
 
 - [ ] Step 1：写holdsOneArchiveUntilConfirmation、keepsDialogOnRefusal、doesNotCompleteANewerOpen、doesNotReportRestoreSuccessOnRefusal；真实modal+raw命令走一次，缺item不能成功；同一tick双击只一次请求，pending不能dismiss。
 - [ ] Step 2：运行modal、detail-commands、restore-menu；预期旧h3命名、正tabIndex、缺pending锁/旧宿主成功等真实失败。
