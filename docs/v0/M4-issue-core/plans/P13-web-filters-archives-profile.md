@@ -122,11 +122,11 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 **Files：** ArchiveIssueModal及两个直接调用；实际detail/peek命令；新archive-issue-modal.test.tsx；既有detail-commands.test.tsx、peek-overview/restore-menu.test.tsx。
 **Interfaces：** ArchiveIssueModal.onSubmit:()=>Promise<void>必传，data/dataId仍用于已知快照；scope含workspace/project/item/本次打开。归档确认增加可选onArchived:()=>void，只在当前确认后处理导航/关闭peek；两个callback返回原命令，避免导航先卸载modal导致反馈丢失。根archiveIssue/unarchiveIssue及确认投影不改。
 
-- [ ] Step 1：写holdsOneArchiveUntilConfirmation、keepsDialogOnRefusal、doesNotCompleteANewerOpen、doesNotReportRestoreSuccessOnRefusal；真实modal+raw命令走一次，缺item不能成功；同一tick双击只一次请求，pending不能dismiss。
-- [ ] Step 2：运行modal、detail-commands、restore-menu；预期旧h3命名、正tabIndex、缺pending锁/旧宿主成功等真实失败。
-- [ ] Step 3：ModalTitle、无正tabIndex、同步pending锁和稳定快照；按当前useDetailScope结束成功/错误/finally。归档modal单独负责反馈，两个callback只返回原命令；恢复保留P12反馈归属，不再catch后假成功。
-- [ ] Step 4：绿；M14去pending锁、M15旧宿主仍关闭新窗、M16恢复吞拒绝后报成功分别红并恢复。断言补读失败一次POST、后续仅GET；项目成员/guest/终态矩阵按原API不扩大。
-- [ ] Step 5：提交fix(M4/P13): 完成归档确认的提交锁和宿主反馈。记录A6。
+- [x] Step 1：写holdsOneArchiveUntilConfirmation、keepsDialogOnRefusal、doesNotCompleteANewerOpen、doesNotReportRestoreSuccessOnRefusal；真实modal+raw命令走一次，缺item不能成功；同一tick双击只一次请求，pending不能dismiss。
+- [x] Step 2：运行modal、detail-commands、restore-menu；预期旧h3命名、正tabIndex、缺pending锁/旧宿主成功等真实失败。
+- [x] Step 3：ModalTitle、无正tabIndex、同步pending锁和稳定快照；按当前useDetailScope结束成功/错误/finally。归档modal单独负责反馈，两个callback只返回原命令；恢复保留P12反馈归属，不再catch后假成功。
+- [x] Step 4：绿；M14去pending锁、M15旧宿主仍关闭新窗、M16恢复吞拒绝后报成功分别红并恢复。断言补读失败一次POST、后续仅GET；项目成员/guest/终态矩阵按原API不扩大。
+- [x] Step 5：提交fix(M4/P13): 完成归档确认的提交锁和宿主反馈。记录A6。
 
 ## Task 7：归档详情只读与路由身份（约400–850行）
 
