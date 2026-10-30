@@ -189,11 +189,11 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 **Files：** e2e/stories/issue/i19-member-issues.spec.ts；复用既有newAccount/member/issue fixtures。
 **Interfaces：** I19(API)保留；新增I19 (page): ...；三relation只由页签行为选择，预期集合从明确种子推导。
 
-- [ ] Step 1：以原故事active/second/hidden/exited/archived/own项目范围搭页面场景，assigned/created/subscribed有真实交集；三页签、两布局、四组型，至少一组二页保持relation/原筛选，total不按加载长度代替。
-- [ ] Step 2：build后执行pnpm exec playwright test stories/issue/i19-member-issues.spec.ts --project=chromium --grep '(page)'；必须实际页面与非零执行。
-- [ ] Step 3：workspace guest桌面/手机无工具栏、列表GET为0；workspace admin兼project guest在OwnOnly项目只看到自己创建项；未加入/退出/归档项目与计数不泄露。换用户/view及Back清旧弹层，延迟旧回答不能闪现。
-- [ ] Step 4：筛选与显示刷新恢复、跨账号/目标隔离，同目标三view共享；project_id限制不丢，冷标签限制如实验收。故事绿、watchPage断言无意外错误，M19/M20至少一种页面变异红并恢复。
-- [ ] Step 5：提交test(M4/P13): 验证个人主页三关系及访客边界。记录A7–A9。
+- [x] Step 1：以原故事active/second/hidden/exited/archived/own项目范围搭页面场景，assigned/created/subscribed有真实交集；三页签、两布局、四组型，至少一组二页保持relation/原筛选，total不按加载长度代替。
+- [x] Step 2：build后执行pnpm exec playwright test stories/issue/i19-member-issues.spec.ts --project=chromium --grep '(page)'；必须实际页面与非零执行。
+- [x] Step 3：workspace guest桌面/手机无工具栏、列表GET为0；workspace admin兼project guest在OwnOnly项目只看到自己创建项；未加入/退出/归档项目与计数不泄露。换用户/view及Back清旧弹层，延迟旧回答不能闪现。
+- [x] Step 4：筛选与显示刷新恢复、跨账号/目标隔离，同目标三view共享；project_id限制不丢，冷标签限制如实验收。故事绿、watchPage断言无意外错误，M19/M20至少一种页面变异红并恢复。
+- [x] Step 5：提交test(M4/P13): 验证个人主页三关系及访客边界。记录A7–A9。
 
 ## Task 13：C2/C9三浏览器与完整门禁（约450–950行）
 

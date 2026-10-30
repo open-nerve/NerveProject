@@ -14,7 +14,7 @@ import {
 import { expectIssuePage } from "../../fixtures/assert/issue";
 import { accountId, emailFor, newAccount, signInContext } from "../../fixtures/auth";
 import { watchPage } from "../../fixtures/browser";
-import { addCondition } from "../../fixtures/issue-filters-page";
+import { addCondition, displayPanel } from "../../fixtures/issue-filters-page";
 import {
   expectListOrder,
   expectListPageQuiet,
@@ -235,13 +235,6 @@ async function addRange(page: Page, from: string, to: string, preferencesPath: s
   expect(saved.answer.status()).toBe(200);
   await page.keyboard.press("Escape");
   return saved.body;
-}
-async function displayPanel(page: Page) {
-  const button = page.getByRole("button", { name: "Display", exact: true });
-  if ((await button.getAttribute("aria-expanded")) !== "true") await button.click();
-  const id = await button.getAttribute("aria-controls");
-  expect(id).toBeTruthy();
-  return page.locator(`[id="${id}"]`);
 }
 
 test("I5 (page): the toolbar saves started, me, none and two intersecting date ranges; reload, another account and another project keep their own settings", async ({
