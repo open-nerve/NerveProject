@@ -97,13 +97,3 @@ export interface ICustomSelectItemProps {
   value: any;
   className?: string;
 }
-
-// Submenu interfaces
-export interface ICustomSubMenuProps {
-  children: React.ReactNode;
-  trigger: React.ReactNode;
-  disabled?: boolean;
-  className?: string;
-  contentClassName?: string;
-  placement?: Placement;
-}

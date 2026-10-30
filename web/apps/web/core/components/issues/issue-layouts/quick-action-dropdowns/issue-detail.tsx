@@ -19,7 +19,6 @@ import { EIssuesStoreType } from "@nerve/types";
 import { ContextMenu, CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
-import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -30,7 +29,6 @@ import { CreateUpdateIssueModal } from "../../issue-modal/modal";
 import type { IQuickActionProps } from "../list/list-view-types";
 import type { MenuItemFactoryProps } from "./helper";
 import { useWorkItemDetailMenuItems } from "./helper";
-import { IconButton } from "@nerve/propel/icon-button";
 
 type TWorkItemDetailQuickActionProps = IQuickActionProps & {
   toggleEditIssueModal?: (value: boolean) => void;
@@ -56,7 +54,6 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
     parentRef,
     toggleEditIssueModal,
     toggleDeleteIssueModal,
-    toggleDuplicateIssueModal,
     toggleArchiveIssueModal,
     isPeekMode = false,
   } = props;
@@ -67,14 +64,11 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
   const [issueToEdit, setIssueToEdit] = useState<Issue | undefined>(undefined);
   const [deleteIssueModal, setDeleteIssueModal] = useState(false);
   const [archiveIssueModal, setArchiveIssueModal] = useState(false);
-  const [_, setDuplicateWorkItemModal] = useState(false);
   // store hooks
   const { allowPermissions } = useUserPermissions();
-  const { issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
   const { getStateById } = useProjectState();
   const { getProjectIdentifierById } = useProject();
   // derived values
-  const activeLayout = `${issuesFilter.issueFilters?.displayFilters?.layout} layout`;
   const stateDetails = getStateById(issue.state_id);
   const projectIdentifier = getProjectIdentifierById(issue?.project_id);
   // auth
@@ -121,13 +115,6 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
     if (toggleDeleteIssueModal) toggleDeleteIssueModal(true);
   };
 
-  const customDuplicateAction = async () => {
-    setDuplicateWorkItemModal(true);
-    if (toggleDuplicateIssueModal) {
-      toggleDuplicateIssueModal(true);
-    }
-  };
-
   const customArchiveAction = async () => {
     setArchiveIssueModal(true);
     if (toggleArchiveIssueModal) toggleArchiveIssueModal(true);
@@ -142,7 +129,6 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
     issue,
     workspaceSlug,
     projectIdentifier,
-    activeLayout,
     isEditingAllowed,
     isArchivingAllowed,
     isRestoringAllowed,
@@ -152,7 +138,6 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
     setCreateUpdateIssueModal: customEditAction,
     setDeleteIssueModal: customDeleteAction,
     setArchiveIssueModal: customArchiveAction,
-    setDuplicateWorkItemModal: customDuplicateAction,
     handleRestore: customRestoreAction,
   };
 
@@ -239,79 +224,16 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
       <CustomMenu
         ellipsis
         placement={placements}
-        customButton={
-          <IconButton size="lg" variant="secondary" icon={MoreHorizontalOutline} aria-label={t("common.options")} />
-        }
+        customButton={<MoreHorizontalOutline className="size-4" />}
+        customButtonClassName="grid size-7 place-items-center rounded-sm hover:bg-layer-1"
         portalElement={portalElement}
-        menuItemsClassName="z-[14]"
+        ariaLabel={`${t("common.options")}: ${issue.name}`}
+        menuItemsClassName="z-20"
         maxHeight="lg"
         closeOnSelect
       >
         {MENU_ITEMS.map((item) => {
           if (item.shouldRender === false) return null;
-
-          // Render submenu if nestedMenuItems exist
-          if (item.nestedMenuItems && item.nestedMenuItems.length > 0) {
-            return (
-              <CustomMenu.SubMenu
-                key={item.key}
-                trigger={
-                  <div className="flex items-center gap-2">
-                    {item.icon && <item.icon className={cn("h-3 w-3", item.iconClassName)} />}
-                    <h5>{item.title}</h5>
-                    {item.description && (
-                      <p
-                        className={cn("whitespace-pre-line text-tertiary", {
-                          "text-placeholder": item.disabled,
-                        })}
-                      >
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-                }
-                disabled={item.disabled}
-                className={cn(
-                  "flex items-center gap-2",
-                  {
-                    "text-placeholder": item.disabled,
-                  },
-                  item.className
-                )}
-              >
-                {item.nestedMenuItems.map((nestedItem) => (
-                  <CustomMenu.MenuItem
-                    key={nestedItem.key}
-                    onClick={() => {
-                      nestedItem.action();
-                    }}
-                    className={cn(
-                      "flex items-center gap-2",
-                      {
-                        "text-placeholder": nestedItem.disabled,
-                      },
-                      nestedItem.className
-                    )}
-                    disabled={nestedItem.disabled}
-                  >
-                    {nestedItem.icon && <nestedItem.icon className={cn("h-3 w-3", nestedItem.iconClassName)} />}
-                    <div>
-                      <h5>{nestedItem.title}</h5>
-                      {nestedItem.description && (
-                        <p
-                          className={cn("whitespace-pre-line text-tertiary", {
-                            "text-placeholder": nestedItem.disabled,
-                          })}
-                        >
-                          {nestedItem.description}
-                        </p>
-                      )}
-                    </div>
-                  </CustomMenu.MenuItem>
-                ))}
-              </CustomMenu.SubMenu>
-            );
-          }
 
           // Render regular menu item
           return (

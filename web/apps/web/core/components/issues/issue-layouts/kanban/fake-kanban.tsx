@@ -2,6 +2,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act } from "react";
 import type { ReactNode } from "react";
+import type { TRenderQuickActions } from "../list/list-view-types";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { observer } from "mobx-react";
@@ -57,7 +58,9 @@ vi.mock("@atlaskit/pragmatic-drag-and-drop/element/adapter", async (original) =>
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 export let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 export let container: HTMLDivElement;
-let view: ReturnType<typeof createRoot>;
+export let view: ReturnType<typeof createRoot>;
+export const dragSources = fixture.drags;
+let quickActions: TRenderQuickActions;
 let groupBy: TIssueGroupByOptions;
 let subgroupBy: TIssueGroupByOptions | undefined;
 export const first = listIssue("first", 1000, { state_id: "todo" });
@@ -66,6 +69,16 @@ export const b = listIssue("b", 3000, { state_id: "done" });
 export const c = listIssue("c", 4000, { state_id: "done" });
 beforeEach(async () => {
   vi.useFakeTimers();
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
+  vi.spyOn(Element.prototype, "getAnimations").mockReturnValue([]);
+  quickActions = () => null;
   groupBy = "state";
   subgroupBy = undefined;
   tab = await issueStoreTab();
@@ -92,6 +105,8 @@ afterEach(async () => {
   await act(async () => view.unmount());
   tab.app.dispose();
   container.remove();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 const Host = observer(function Host() {
@@ -111,7 +126,7 @@ const Host = observer(function Host() {
         sub_group_by={subgroupBy}
         orderBy="sort_order"
         updateIssue={undefined}
-        quickActions={() => null}
+        quickActions={quickActions}
         collapsedGroups={{ group_by: [], sub_group_by: [] }}
         handleCollapsedGroups={() => {}}
         loadMoreIssues={(group, subgroup) => {
@@ -126,7 +141,8 @@ const Host = observer(function Host() {
     </>
   );
 });
-export async function mount(rows: Issue[] = [a, b, c]) {
+export async function mount(rows: Issue[] = [a, b, c], actions?: TRenderQuickActions) {
+  if (actions) quickActions = actions;
   await answered(
     tab.nerve,
     () =>

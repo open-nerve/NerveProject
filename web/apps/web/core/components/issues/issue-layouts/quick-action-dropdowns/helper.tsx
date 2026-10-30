@@ -21,7 +21,6 @@ import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TContextMenuItem } from "@nerve/ui";
 import { copyUrlToClipboard, generateWorkItemLink } from "@nerve/utils";
-import { createCopyMenuWithDuplication } from "./copy-menu-helper";
 
 // Generic helper function to handle optional function calls gracefully
 // Overload for functions without parameters
@@ -59,7 +58,6 @@ export interface MenuItemFactoryProps {
   issue: Issue;
   workspaceSlug?: string;
   projectIdentifier?: string;
-  activeLayout?: string;
   isEditingAllowed: boolean;
   isArchivingAllowed?: boolean;
   isDeletingAllowed: boolean;
@@ -70,7 +68,6 @@ export interface MenuItemFactoryProps {
   setCreateUpdateIssueModal: (open: boolean) => void;
   setDeleteIssueModal: (open: boolean) => void;
   setArchiveIssueModal?: (open: boolean) => void;
-  setDuplicateWorkItemModal?: (open: boolean) => void;
   handleRestore?: () => Promise<void>;
 }
 
@@ -138,7 +135,6 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
 
   const {
     issue,
-    activeLayout = "",
     isEditingAllowed,
     isArchivingAllowed = false,
     isDeletingAllowed,
@@ -148,7 +144,6 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     setCreateUpdateIssueModal,
     setDeleteIssueModal,
     setArchiveIssueModal,
-    setDuplicateWorkItemModal,
   } = props;
 
   const createEditMenuItem = (customEditAction?: () => void): TContextMenuItem => ({
@@ -164,25 +159,13 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     shouldRender: isEditingAllowed,
   });
 
-  const createCopyMenuItem = (workspaceSlug?: string): TContextMenuItem => {
-    const baseItem = {
-      key: "make-a-copy",
-      title: t("common.actions.make_a_copy"),
-      icon: CopyOutline,
-      action: () => {
-        setCreateUpdateIssueModal(true);
-      },
-      shouldRender: isEditingAllowed,
-    };
-
-    return createCopyMenuWithDuplication({
-      baseItem,
-      activeLayout,
-      setCreateUpdateIssueModal,
-      setDuplicateWorkItemModal,
-      workspaceSlug,
-    });
-  };
+  const createCopyMenuItem = (): TContextMenuItem => ({
+    key: "make-a-copy",
+    title: t("common.actions.make_a_copy"),
+    icon: CopyOutline,
+    action: () => setCreateUpdateIssueModal(true),
+    shouldRender: isEditingAllowed,
+  });
 
   const createOpenInNewTabMenuItem = (): TContextMenuItem => ({
     key: "open-in-new-tab",
@@ -262,7 +245,7 @@ export const useWorkItemDetailMenuItems = (props: MenuItemFactoryProps): TContex
 
   return useMemo(
     () => [
-      factory.createCopyMenuItem(props.workspaceSlug),
+      factory.createCopyMenuItem(),
       factory.createOpenInNewTabMenuItem(),
       factory.createArchiveMenuItem(),
       factory.createRestoreMenuItem(),

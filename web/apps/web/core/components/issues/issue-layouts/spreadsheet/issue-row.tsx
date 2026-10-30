@@ -12,7 +12,6 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve helpers
-import { useOutsideClickDetector } from "@nerve/hooks";
 // types
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { IIssueDisplayProperties } from "@nerve/types";
@@ -162,10 +161,8 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
     spacingLeft = 6,
   } = props;
   // states
-  const [isMenuActive, setIsMenuActive] = useState(false);
   // refs
   const cellRef = useRef(null);
-  const menuActionRef = useRef<HTMLDivElement | null>(null);
   // router
   const { workspaceSlug } = useParams();
   // hooks
@@ -183,19 +180,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
 
   const subIssueIndentation = `${spacingLeft}px`;
 
-  useOutsideClickDetector(menuActionRef, () => setIsMenuActive(false));
-
-  const customActionButton = (
-    <div
-      ref={menuActionRef}
-      className={`flex h-full w-full cursor-pointer items-center rounded-sm p-1 text-placeholder hover:bg-layer-1 ${
-        isMenuActive ? "bg-layer-1 text-primary" : "text-secondary"
-      }`}
-      onClick={() => setIsMenuActive(!isMenuActive)}
-    >
-      <MoreHorizontalOutline className="h-3.5 w-3.5" />
-    </div>
-  );
+  const customActionButton = <MoreHorizontalOutline className="h-3.5 w-3.5" />;
   if (!issueDetail) return null;
 
   const handleToggleExpand = (e: MouseEvent<HTMLButtonElement>) => {
@@ -302,10 +287,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
                     </Tooltip>
                   </div>
                 </div>
-                <div
-                  className={`opacity-0 transition-opacity group-hover:opacity-100 ${isMenuActive ? "!opacity-100" : ""}`}
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <div className="rounded-sm p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 has-[[aria-expanded=true]]:bg-layer-1 has-[[aria-expanded=true]]:opacity-100">
                   {quickActions({
                     issue: issueDetail,
                     parentRef: cellRef,

@@ -3,60 +3,46 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
+import { isComposing } from "@nerve/utils";
 
-export const useTableKeyboardNavigation = () => {
-  const getPreviousRow = (element: HTMLElement) => {
-    const previousRow = element.closest("tr")?.previousSibling;
-
-    if (previousRow) return previousRow;
-    //if previous row does not exist in the parent check the row with the header of the table
-    return element.closest("tbody")?.previousSibling?.childNodes?.[0];
-  };
-
-  const getNextRow = (element: HTMLElement) => {
-    const nextRow = element.closest("tr")?.nextSibling;
-
-    if (nextRow) return nextRow;
-    //if next row does not exist in the parent check the row with the body of the table
-    return element.closest("thead")?.nextSibling?.childNodes?.[0];
-  };
-
-  const handleKeyBoardNavigation = function (e: React.KeyboardEvent<HTMLTableElement>) {
-    const element = e.target as HTMLElement;
-
-    if (!(element?.tagName === "TD" || element?.tagName === "TH")) return;
-
-    let c: HTMLElement | null = null;
-    if (e.key == "ArrowRight") {
-      // Right Arrow
-      c = element.nextSibling as HTMLElement;
-    } else if (e.key == "ArrowLeft") {
-      // Left Arrow
-      c = element.previousSibling as HTMLElement;
-    } else if (e.key == "ArrowUp") {
-      // Up Arrow
-      const index = Array.prototype.indexOf.call(element?.parentNode?.childNodes || [], element);
-      const prevRow = getPreviousRow(element);
-
-      c = prevRow?.childNodes?.[index] as HTMLElement;
-    } else if (e.key == "ArrowDown") {
-      // Down Arrow
-      const index = Array.prototype.indexOf.call(element?.parentNode?.childNodes || [], element);
-      const nextRow = getNextRow(element);
-
-      c = nextRow?.childNodes[index] as HTMLElement;
-    } else if (e.key == "Enter" || e.key == "Space") {
-      e.preventDefault();
-      (element?.querySelector(".clickable") as HTMLElement)?.click();
+function handleKeyboardNavigation(event: React.KeyboardEvent<HTMLTableElement>) {
+  const cell = event.target;
+  if (isComposing(event.nativeEvent) || !(cell instanceof HTMLTableCellElement)) return;
+  const table = event.currentTarget;
+  const row = cell.closest("tr");
+  if (!row) return;
+  const rows = Array.from(table.rows);
+  let next: Element | null | undefined;
+  switch (event.key) {
+    case "ArrowRight":
+      next = cell.nextElementSibling;
+      break;
+    case "ArrowLeft":
+      next = cell.previousElementSibling;
+      break;
+    case "ArrowUp":
+      next = rows[rows.indexOf(row) - 1]?.cells[cell.cellIndex];
+      break;
+    case "ArrowDown":
+      next = rows[rows.indexOf(row) + 1]?.cells[cell.cellIndex];
+      break;
+    case "Enter":
+    case " ": {
+      const control = cell.querySelector<HTMLElement>("button:not(:disabled), a[href], .clickable:not(:disabled)");
+      if (control) {
+        event.preventDefault();
+        control.focus();
+        control.click();
+      }
       return;
     }
+    default:
+      return;
+  }
+  if (!(next instanceof HTMLElement)) return;
+  event.preventDefault();
+  next.focus();
+  next.scrollIntoView({ behavior: "smooth", block: "center", inline: "end" });
+}
 
-    if (!c) return;
-
-    e.preventDefault();
-    c?.focus();
-    c?.scrollIntoView({ behavior: "smooth", block: "center", inline: "end" });
-  };
-
-  return handleKeyBoardNavigation;
-};
+export const useTableKeyboardNavigation = () => handleKeyboardNavigation;

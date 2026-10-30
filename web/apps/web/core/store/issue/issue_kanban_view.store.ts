@@ -27,7 +27,7 @@ export interface IIssueKanBanViewStore {
   canUserDragDropHorizontally: boolean;
   // actions
   handleKanBanToggle: (toggle: "groupByHeaderMinMax" | "subgroupByIssuesVisibility", value: string) => void;
-  setIsDragging: (isDragging: boolean) => void;
+  beginDrag: () => () => void;
 }
 
 export class IssueKanBanViewStore implements IIssueKanBanViewStore {
@@ -36,6 +36,7 @@ export class IssueKanBanViewStore implements IIssueKanBanViewStore {
     subgroupByIssuesVisibility: string[];
   } = { groupByHeaderMinMax: [], subgroupByIssuesVisibility: [] };
   isDragging = false;
+  private dragOwner: symbol | undefined;
   // root store
   rootStore;
 
@@ -49,14 +50,21 @@ export class IssueKanBanViewStore implements IIssueKanBanViewStore {
 
       // actions
       handleKanBanToggle: action,
-      setIsDragging: action.bound,
+      beginDrag: action.bound,
     });
 
     this.rootStore = _rootStore;
   }
 
-  setIsDragging = (isDragging: boolean) => {
-    this.isDragging = isDragging;
+  beginDrag = () => {
+    const owner = Symbol("kanban drag");
+    this.dragOwner = owner;
+    this.isDragging = true;
+    return action(() => {
+      if (this.dragOwner !== owner) return;
+      this.dragOwner = undefined;
+      this.isDragging = false;
+    });
   };
 
   getCanUserDragDrop = computedFn(

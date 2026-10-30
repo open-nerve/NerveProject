@@ -22,6 +22,26 @@ import { toasts } from "@/lib/fake-toast";
 import { loadProjects } from "@/store/project/fake-projects";
 import { issueDetailOf } from "@/store/issue/fake-issues";
 import { HIGHLIGHT_CLASS } from "../utils";
+it.each(["Enter", " "])("the calendar card menu is keyboard reachable by %s and does not open peek", async (key) => {
+  await mount();
+  const button = tile(sourceDate).element.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')!;
+  expect(button).not.toBeNull();
+  await act(async () => {
+    button.focus();
+    button.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+    await vi.advanceTimersByTimeAsync(50);
+  });
+  expect(button.getAttribute("aria-expanded")).toBe("true");
+  expect(tab.app.issue.issueDetail.peekIssue).toBeUndefined();
+  await act(async () => {
+    document
+      .querySelector('[role="menu"]:not([inert] *)')!
+      .dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    await vi.advanceTimersByTimeAsync(50);
+  });
+  expect(button.getAttribute("aria-expanded")).toBe("false");
+  expect(document.activeElement).toBe(button);
+});
 it.each(["month", "week"] as const)(
   "real %s dates keep local days across the year boundary and intersect saved filters",
   async (layout) => {

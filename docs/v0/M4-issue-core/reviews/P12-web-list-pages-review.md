@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T10 已完成，T11–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T11 已完成，T12–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -180,3 +180,16 @@ M23 将共享定位属性移到子节点，使实际列表失去定位；M24 将
 M25 漏只读 disabled、M26 绕过统一 create 导致字段拒绝丢失、M27 恢复根无名 Tab 点，均被真实断言捕获，生产字节/hash 精确恢复后绿。最终 t10-final-regression 为 11 文件 160 测试（0 skip）；类型 t10-types-final2、修改路径零 lint t10-changed-lint-final、全仓 lint cap128、i18n keys/关键词及格式均通过。完整 F 首轮 knip 发现 use-dropdown/use-dropdown-key-down 两个零消费者文件，已删除，后续 knip 为零。A11 旧故事把日历当 listbox 的定位已迁为具名 dialog，保留同一定位边界、背景隔离及关闭断言；实测发现新 Popover 的默认 8px 间距不同于原 4px，DateDropdown 显式保留 sideOffset=4，未放宽几何断言。两次失败的原始截图/trace 已保留。完整本地七项最终通过：生成/Go lint/Go test 为 t10-F1 已通过且相关源码未变；web lint/knip/强制 test-web/E2E 为 t10-F4，54 项静态任务、18 项测试任务无缓存、169/169 E2E（0 skip）；列表侧浏览器矩阵仍由 T15 验证。
 
 自查沿实际三个调用方、受控值/拒绝/关闭晚答、创建 hook 和 label root 逐条核对，当前无未决架构问题。P14 的完整详情正 tabIndex/哨兵审计仍开放，本 Task 没有据局部覆盖宣称全部关闭。
+
+
+## 18. T11 菜单键盘与当前拖动宿主（2026-10-30）
+
+沿三个实际菜单和工厂核对：两个 SubMenu 分支没有任何 nestedMenuItems 生产者，历史 copy-menu-helper 只原样返回 baseItem，因而删除两个不可达分支及 shared SubMenu、右键嵌套死链和无效 layout/duplicate 状态；没有新增子菜单或宣称其浏览器验收。D17/plan 同步实际范围，M28 改核真实菜单键盘入口。平铺菜单仍用 Headless Menu，整个 Items 接定位 ref，IME 不冒发 Enter/Escape；详情按钮用既有 customButtonClassName，删除嵌套 IconButton，并为三个入口提供当前工作项的可访问名称。
+
+右键菜单保持关闭 inert 和 aria-hidden 的测量 DOM，打开后焦点进入首个可用按钮；方向键/Home/End 只作用于当前菜单，Enter/Space 由原生按钮执行，IME 不执行，Escape 归还当前仍存在的触发位置。移除监听 window 的全局 Enter/方向键处理，避免焦点在页面别处时误操作。列表行原本为响应式布局重复挂载两个完整 QuickActions，实测同一右键拥有两份菜单；现改一份菜单以 CSS 定位，真实行用例确认动作一次。
+
+看板、日历、表格的菜单激活与可见样式直接跟随 aria-expanded/focus-within，删除子 div 的独立点击状态；键盘不再被 display:none 挡住。表格使用真实 Space、isComposing、实际表格行/单元格 Element，空白文本节点不被强转为可聚焦元素；只点击可用原生控制。看板拖动 beginDrag 返回当前 owner 的释放函数，源卸载/失效释放自己的删除区状态，旧 drop 不清新 drag。pending、日历 Popover/quick-add、卡片/删除区层级降至模态层下。
+
+31 项首轮聚焦通过，后加真实列表双菜单红→绿。M28 阻断键盘、M29 漏 inert、M30 恢复嵌套 button 均有效失败，精确恢复生产字节/hash 且共享包重建后通过。相关材料为 t11-*、M28–M30 receipt。最初表格夹具缺 scrollIntoView、卡片夹具缺 ResizeObserver、测试 issueDetailOf 参数写错及路由 stub 缺符号均单独保留，不算行为红。最终受影响回归曾与 make e2e 的共享包构建重叠，导致 8 个 suite 无法解析被构建清理中的 dist；随后 lint-web 隐式执行共享包构建，又造成 10 个 suite 无法解析 dist。这两次是执行编排失败；已确认所有 turbo 命令与源码消费者必须串行，后续串行回归 13 文件 129 测试（0 skip）通过，不算产品行为失败。
+
+修改路径零 lint 已检查，web cap128→121、ui cap12→10；类型修正为 Menu.Items 实际 HTMLElement，未增加断言或放宽规则。最终 t11-final-regression3 为 13 文件 129 测试，t11-ui-tests 为 3 文件 22 测试；全仓 lint、knip 和类型通过。完整浏览器首轮 167/169：P2 仍按 button 查找已迁为 menuitem 的右键项，已同步角色定位；S8 的角色查询读取到关闭但仍保留测量 DOM 的菜单，已给根补显式 aria-hidden 并补 DOM 断言，保留 inert 和 S8 原断言。失败 trace 已归档；t11-browser-regression2 全部 169 项通过（0 skip）。C1/C3 三浏览器仍归 T15。T10 精确提交 c65a57e8 的 CI 41036854895（attempt 1）server/web/e2e 均成功。

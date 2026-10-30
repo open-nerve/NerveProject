@@ -96,7 +96,7 @@ export const CalendarMonthsDropdown = observer(function CalendarMonthsDropdown(p
         leaveFrom="opacity-100 translate-y-0"
         leaveTo="opacity-0 translate-y-1"
       >
-        <Popover.Panel className="fixed z-50">
+        <Popover.Panel className="fixed z-20">
           <div
             ref={setPopperElement}
             style={styles.popper}

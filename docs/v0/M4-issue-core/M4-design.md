@@ -1559,7 +1559,7 @@ M4 的页面上逐项照 M3 收尾的写法改，并由故事或浏览器核对�
   - `ParentIssuesListModal` 在 **P14** 改接（`for=parent`），随 I8 的页面版本。
   - 排除自己、后代、祖先、已关联的都由服务端做。
 - **嵌套的按钮**：`DropdownButton` 放在 Headless UI 的按钮里的写法随属性下拉框和页头改；菜单的按钮里放 `IconButton` 的三处（`comments/quick-actions.tsx`、`issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`issue-activity/activity-filter.tsx`）照 `navigation/project-actions-menu.tsx` 改（`customButtonClassName`）；`peek-overview/header.tsx:188` 的 `customButton`、`default-properties.tsx` 给父工作项菜单的 `customButton` 不再是按钮里的按钮。
-- **`CustomMenu` 的键盘**：快捷操作的 `SubMenu`（5 个文件）的触发项键盘打得开；看板、日历卡片的快捷操作在键盘打开时也显示"激活"的底色。
+- **`CustomMenu` 的键盘**：快捷操作菜单可通过键盘打开、选择、返回；P12/T11 实查 `SubMenu` 无生产者，删除不可达子菜单与适配死链，不为死分支新增机制；看板、日历卡片的快捷操作在键盘打开时也显示"激活"的底色。
 - **下拉框**：`DateDropdown` 只有一份打开状态（Popover，选中时 `close`），连同列表、表格单元格里的懒渲染，键盘打得开（M2 交接第 10 节）；7 个下拉框（`dropdowns/{date-range,priority,project/base,state/base}.tsx`、`issue-detail/label/select/label-select.tsx`、`issue-layouts/properties/label-dropdown.tsx`、`select/base.tsx`）的 popper 的 ref 放在实际浮层元素上，只要 Headless UI 的一份打开状态（离散选择：没有搜索框的 `Listbox`、有的 `Combobox`，也可复用既有 `CustomSearchSelect` 的 Headless Popover 唯一开关及静态非模态 Combobox，此时 ref 落实际 Panel；`date-range` 是 Calendar 网格，P12 预检明确与 DateDropdown 一样用 `Popover`/`Panel`，不把日历按钮伪装为选项），在弹窗里的 Listbox/Combobox 列表 `modal={false}`（`useInsideModal()`，M3 交接第 7 节的"弹窗里的列表"）；`select/base.tsx` 的根不再是一个没有名字的停留点；`CustomSearchSelect` 的 `defaultOpen` 在富筛选里核对；`rich-filters/` 的 4 个调用方传经 `t()` 的 `searchPlaceholder`、`noResultsMessage`、`loadingMessage`（M3 交接第 8 节）；成员下拉框的 8 个文件、4 个筛选的新行为在页面上核对。
 - **`@nerve/ui` 下拉框的 `any`**（`dropdowns/helper.tsx` 7 处、`custom-search-select.tsx` 2 处）改成泛型，13 个调用方一起改（M3 交接第 8 节；多数在 M4 的页面上，余下的 M6、M7 调用方改到能编译）。
 - **筛选的按钮**：`FiltersDropdown` 的 7 个调用方，故事断言按钮的名字、`aria-expanded`、Escape 之后焦点回到它。
@@ -1820,7 +1820,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | C2 | 筛选的工具栏和显示设置：每种筛选、日期的两个范围、清空；刷新之后还在；`FiltersDropdown` 的名字和 Escape 之后的焦点；`CustomSearchSelect` 的 `defaultOpen` 和 4 个富筛选的调用方（M2 交接第 10 节） | P13 |
 | C3 | 7.5 的下拉框：`DateDropdown` 用键盘打开、只有一份状态；7 个下拉框的列表在按钮旁；在弹窗里打开时后面的页面隐藏；`CustomSelect` 的 3 个调用方（自动归档、日期筛选、浮层的页头）；成员下拉框的 8 个文件 | P12、P14 |
 | C4 | 工作项的弹窗：Tab 在里面转、Escape、点外面、焦点回到打开它的控件；嵌套的"Save this draft?"和选父工作项的 Escape；描述编辑器的 Escape 不再误关；弹窗里 portal 的日期、下拉框、表情能用；`ModalTitle` 的名字；在弹窗里编辑一个描述没有块 id 的工作项、打开一份这样的草稿，不做改动就关上，不问"是否保存"（`isMigrationUpdate`）；Firefox、WebKit 也看一遍焦点 | P14 |
-| C5 | 详情：属性的每个下拉框、子工作项（添加已有、新建、移走）、关联（跨项目）、链接（元数据出现）；快捷操作的子菜单用键盘打开；层叠顺序（开着弹窗时页面上的元素不画在它之上）。表情、时间线、描述的历史在 C6（它们的页面在 P15，对抗性评审 M19） | P14 |
+| C5 | 详情：属性的每个下拉框、子工作项（添加已有、新建、移走）、关联（跨项目）、链接（元数据出现）；快捷操作菜单用键盘打开（P12/T11 已删零消费者子菜单）；层叠顺序（开着弹窗时页面上的元素不画在它之上）。表情、时间线、描述的历史在 C6（它们的页面在 P15，对抗性评审 M19） | P14 |
 | C6 | 评论：发、改（"已编辑"）、删、表情；每条评论的控件以作者为名（读屏）；只有作者有编辑，作者和项目管理员有删除（决策点 8）；空评论不能发；打开表情回应的选择器时 Network 面板没有 `cdn.jsdelivr.net`、控制台没有 CSP 违规（M2 交接第 8 节）。工作项的表情、时间线（排序、只看评论或动态）、描述的历史和还原 | P15 |
 | C7 | 命令面板：工作项的命令、搜索（编号、标题）、主题命令（失败时不改主题）；在中文界面下 | P15 |
 | C8 | 复制：工作项链接、评论链接、编号、子工作项和关联的链接，在局域网 HTTP 地址上失败时有提示（M2 交接第 11 节、M3 交接第 8 节） | P15 |
@@ -2349,14 +2349,14 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：spec A1–A10实际通过；core/services/issue无生成Issue/Detail标注Plane响应；全部修改/拒绝/宿主有行为证据，原七加两实例零命中；搜索和M5–M7范围准确保留。产品验收、整审、准确最终HEAD CI及授权后的main CI均已闭合，归档清理回执见review§15。
 
 ### P12 `web-list-pages`：列表、看板、表格、日历（15个设计粗项，细化16个实施Task）
-- **状态**：预检后已获授权实施，T1–T10 已完成并通过两轮本地七项门禁（默认 E2E 169 项）；T11–T16、页面三浏览器和整分支 deep-review 继续。阶段先不合并；[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[实施记录](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab，关键词phase已为M4/P12；七下拉拆两组验证，原22路由清单按14存在/8已删核验，范围不变。
+- **状态**：预检后已获授权实施，T1–T11 已完成并通过两轮本地七项门禁（默认 E2E 169 项）；T12–T16、页面三浏览器和整分支 deep-review 继续。阶段先不合并；[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[实施记录](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab，关键词phase已为M4/P12；七下拉拆两组验证，原22路由清单按14存在/8已删核验，范围不变。
 - **目标**：项目的工作项页的四种布局、拖动、快速添加、快捷操作、浮层；"添加已有"的选择器经 `issue-search`。
 - **任务**：
   1. 列表布局：分组、每组加载更多、快速添加（字段的提示和焦点）；I7 的页面版本。
   2. 看板和泳道（泳道的总数读 `subgroup_totals`）；确认之后才移动、被拒绝时回到原处、拖放的卡片留在放下的地方；I6 的页面版本。
   3. 表格：列、按 3.16 的排序码排序、无限滚动。
   4. 日历的月、周和拖动；I4 的页面版本（含"添加已有"）。
-  5. 快捷操作的菜单（子菜单用键盘打开、"激活"的底色）；`quick-action-dropdowns/issue-detail.tsx` 菜单按钮里的 `IconButton` 不再是按钮里的按钮；右键菜单关着时 `inert`。
+  5. 快捷操作的菜单（实际平铺菜单用键盘打开、"激活"的底色）；`quick-action-dropdowns/issue-detail.tsx` 菜单按钮里的 `IconButton` 不再是按钮里的按钮；右键菜单关着时 `inert` 且 `aria-hidden`。
   6. 行里的属性下拉框：7 个下拉框的 popper 和一份打开状态、`DateDropdown`（M2 交接第 10 节）。
   7. 列表页的层叠顺序和焦点的轮廓（7.5）。
   8. 浮层的打开、关上，宿主卸载时清空。
@@ -2578,7 +2578,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
 | P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
 | P11 `web-detail-data` | 详情一侧的数据层（15） | **已完成**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review§15](reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。交付42afa24f、main ce3c39ab；准确分支及main CI全绿，证据归档/清理完成；列宽按已裁定A |
-| P12 `web-list-pages` | 列表、看板、表格、日历（16） | **实施中，T1–T10完成**：[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[review](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab；本地两轮七项门禁及默认E2E169项通过，T11–T16及阶段验收开放，先不合并 |
+| P12 `web-list-pages` | 列表、看板、表格、日历（16） | **实施中，T1–T11完成**：[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[review](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab；本地两轮七项门禁及默认E2E169项通过，T12–T16及阶段验收开放，先不合并 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述的历史、草稿、搜索、命令面板（15） | 未开始 |

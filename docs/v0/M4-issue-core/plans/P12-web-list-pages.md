@@ -137,10 +137,10 @@ make e2e
 
 **Files：** L/quick-action-dropdowns/*、P/ui/src/dropdowns/custom-menu.tsx及context-menu/root.tsx；L/roots/project-layout-root、calendar Popover、quick-add/form/calendar、calendar/issue-block、list/block、kanban/block/delete-drop-zone；新L/menus.test.tsx与受影响共享测试；表格 issue-row 现有四条键盘/静态元素警告与表格 Space/IME 一并核验。
 
-- [ ] 逐个仍存在的SubMenu写键盘事件断言：打开、箭头进入/返回、Escape、焦点归还；看板/日历卡片键盘激活底色与pointer一致。已删cycle/module菜单只登记删除，不恢复五个历史文件凑数。
-- [ ] issue-detail菜单去IconButton嵌套，使用既有customButtonClassName；ContextMenu在基线已实现inert，核真实列表关闭时不参与Tab、打开时可达；无缺口不重写已有行为。新处理经isComposing，不用keyCode229。
-- [ ] 点名pending/日历/拖动层在z-30下或有实际模态遮挡证明；Button/IconButton/CustomMenu焦点轮廓不被overflow裁。共享组件改动必须保留其它实际调用回归，不用禁动画规避生命周期问题。
-- [ ] DOM+共享菜单回归，浏览器T15核C3；M28子菜单仅pointer、M29关闭菜单可tab、M30嵌套button各红；G。提交`fix(M4/P12): 完成列表快捷菜单和模态层叠的键盘行为`。
+- [x] 核对仍存在的SubMenu实际生产者；T11盘点无 nestedMenuItems 写入者，删除两个不可达分支及唯一 shared SubMenu，不伪造子菜单验收。平铺真实入口测试打开、箭头、Escape、焦点归还；看板/日历卡片键盘激活底色与pointer一致。已删cycle/module菜单只登记删除，不恢复五个历史文件凑数。
+- [x] issue-detail菜单去IconButton嵌套，使用既有customButtonClassName；ContextMenu在基线已实现inert，核真实列表关闭时不参与Tab、打开时可达；无缺口不重写已有行为。新处理经isComposing，不用keyCode229。
+- [x] 点名pending/日历/拖动层在z-30下或有实际模态遮挡证明；Button/IconButton/CustomMenu焦点轮廓不被overflow裁。共享组件改动必须保留其它实际调用回归，不用禁动画规避生命周期问题。
+- [x] DOM+共享菜单回归，浏览器T15核C3；M28真实菜单仅pointer（原子菜单候选无实际入口，未运行）、M29关闭菜单可tab、M30嵌套button各红；G。提交`fix(M4/P12): 完成列表快捷菜单和模态层叠的键盘行为`。
 
 ## Task 12：peek宿主结束与焦点归属（约400–750行）
 
