@@ -25,12 +25,13 @@ export function IssueLabelSelectRoot(props: TIssueLabelSelectRoot) {
 
   return (
     <IssueLabelSelect
+      key={JSON.stringify([workspaceSlug, projectId, issueId])}
       workspaceSlug={workspaceSlug}
       projectId={projectId}
       issueId={issueId}
       values={values}
       onSelect={handleLabel}
-      onAddLabel={labelOperations.createLabel}
+      onAddLabel={labelOperations.create}
     />
   );
 }

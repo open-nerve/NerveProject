@@ -2613,6 +2613,43 @@
           "miss": ["docs/v0/M4-issue-core/specs/P10b-web-list-data.md", "web/packages/utils/dist/index.js"]
         }
       }
+    },
+    {
+      "id": "label-create-direct",
+      "phase": "M4/P11",
+      "why": "组件和UI hook统一经useLabelChanges.create创建标签，使原生拒绝落到name字段且只跟进当前会话/宿主；store命令只在该通用入口出现。",
+      "files": {
+        "source": "^web/apps/web/core/(?!components/labels/use-label-changes\\.ts$)(?:components|hooks)/(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\bcreateLabel\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "const { createLabel } = useLabel();",
+          "await labels.createLabel(projectId, data);",
+          "labels[\"createLabel\"](projectId, data);"
+        ],
+        "miss": [
+          "onCreateLabel(data, underField, done);",
+          "useLabelChanges(capture).create(projectId, data, underField, done);"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/issues/select/dropdown.tsx",
+            "web/apps/web/core/components/issues/issue-detail/label/root.tsx",
+            "web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx",
+            "web/apps/web/core/hooks/use-issue-labels.ts"
+          ],
+          "miss": [
+            "web/apps/web/core/components/labels/use-label-changes.ts",
+            "web/apps/web/core/components/issues/issue-properties.test.tsx",
+            "web/apps/web/core/store/label.store.ts"
+          ]
+        }
+      }
     }
   ],
   "exceptions": [

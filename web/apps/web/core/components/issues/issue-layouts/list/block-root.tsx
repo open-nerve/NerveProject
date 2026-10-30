@@ -26,6 +26,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 // types
 import { HIGHLIGHT_CLASS, getIssueBlockId, isIssueNew } from "../utils";
 import { IssueBlock } from "./block";
+import { useRegisterIdentifierWidth } from "./identifier-width";
 import type { TRenderQuickActions } from "./list-view-types";
 
 type Props = {
@@ -74,6 +75,8 @@ export const IssueBlockRoot = observer(function IssueBlockRoot(props: Props) {
   const { isMobile } = usePlatformOS();
   // store hooks
   const { subIssues: subIssuesStore } = useIssueDetail();
+
+  useRegisterIdentifierWidth(issuesMap[issueId]);
 
   const isSubIssue = nestingLevel !== 0;
 

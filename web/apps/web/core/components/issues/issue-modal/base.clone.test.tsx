@@ -4,6 +4,8 @@ import React, { act, useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EIssuesStoreType } from "@nerve/types";
+import { ApiError } from "@/lib/api-error";
+import { toasts } from "@/lib/fake-toast";
 import { issueOf } from "@/store/issue/fake-issues";
 import type { IssueDescriptionEditor } from "./components/description-editor";
 import { CreateUpdateIssueModalBase } from "./base";
@@ -75,6 +77,7 @@ let container: HTMLElement;
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.stubGlobal("ResizeObserver", NoResize);
+  toasts.length = 0;
   boundary.fetch.mockReset().mockResolvedValue({ ...issueOf("source"), description_html: "<p>source</p>" });
   boundary.create.mockReset().mockResolvedValue(issueOf("created"));
   boundary.update.mockReset();
@@ -128,3 +131,29 @@ it.each([
   );
   expect(container.querySelector<HTMLSelectElement>("select")!.disabled).toBe(disabled);
 });
+
+it.each(["create", "update"] as const)(
+  "%s refuses by the native problem code and preserves the real form",
+  async (kind) => {
+    boundary[kind].mockRejectedValue(
+      new ApiError(403, {
+        title: "Forbidden",
+        status: 403,
+        code: "forbidden",
+        detail: "not a user message",
+      })
+    );
+    const onClose = vi.fn();
+    const data = { name: "keep my text", project_id: "A", ...(kind === "update" ? { id: "existing" } : {}) };
+    await act(async () =>
+      root.render(<CreateUpdateIssueModalBase data={data} isOpen onClose={onClose} withDraftIssueWrapper={false} />)
+    );
+    await act(async () =>
+      container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    );
+    expect(boundary[kind]).toHaveBeenCalledTimes(1);
+    expect(toasts.at(-1)?.message).toBe("errors.forbidden");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(container.querySelector<HTMLInputElement>('input[name="name"]')?.value).toBe("keep my text");
+  }
+);

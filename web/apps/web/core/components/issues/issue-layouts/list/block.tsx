@@ -28,7 +28,7 @@ import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-import { calculateIdentifierWidth } from "../utils";
+import { useIdentifierWidth } from "./identifier-width";
 import type { TRenderQuickActions } from "./list-view-types";
 
 interface IssueBlockProps {
@@ -65,6 +65,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
     setIsCurrentBlockDragging,
     canDrag,
   } = props;
+  const keyMinWidth = useIdentifierWidth(displayProperties?.key);
   // ref
   const issueRef = useRef<HTMLDivElement | null>(null);
   // router
@@ -136,10 +137,6 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
       });
     }
   };
-
-  // Calculate width for: projectIdentifier + "-" + the sequence number's digits: one, as nerve's project has no
-  // count of its work items until M4 adds it (M3 design 3.2)
-  const keyMinWidth = displayProperties?.key ? calculateIdentifierWidth(projectIdentifier?.length ?? 0, 1) : 0;
 
   const workItemLink = generateWorkItemLink({
     workspaceSlug,

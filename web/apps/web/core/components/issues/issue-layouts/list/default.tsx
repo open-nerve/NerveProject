@@ -9,6 +9,10 @@ import type { Group } from "@/lib/paged-groups";
 import type { Issue, IssueDetail } from "@nerve/api-client";
 
 import { useEffect, useRef } from "react";
+import { useParams } from "react-router";
+import { useSession } from "@/lib/auth/use-session";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { IdentifierWidthScope } from "./identifier-width";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
@@ -30,6 +34,7 @@ import { ListGroup } from "./list-group";
 import type { TRenderQuickActions } from "./list-view-types";
 
 export interface IList {
+  viewId?: string;
   groups: Map<string, Group>;
   issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   group_by: TIssueGroupByOptions | null;
@@ -69,6 +74,12 @@ export const List = observer(function List(props: IList) {
   } = props;
 
   const storeType = useIssueStoreType();
+  const { loginId } = useSession();
+  const { workspaceSlug, projectId, userId } = useParams();
+  const { rootIssueStore: root } = useIssueDetail();
+  const workspace = workspaceSlug ? root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug) : undefined;
+  const identity = root.permissionReads.identity(workspace?.id, projectId ? [projectId] : []);
+  const scope = JSON.stringify([loginId, workspaceSlug, storeType, projectId, userId, props.viewId, identity]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -102,30 +113,32 @@ export const List = observer(function List(props: IList) {
           ref={containerRef}
           className="vertical-scrollbar relative scrollbar-lg size-full overflow-auto bg-surface-1"
         >
-          {columns.map((group: IGroupByColumn) => (
-            <ListGroup
-              key={group.id}
-              groupIssueIds={groups?.get(group.id)?.rows.map((row) => row.id)}
-              issuesMap={issuesMap}
-              group_by={group_by}
-              group={group}
-              updateIssue={updateIssue}
-              quickActions={quickActions}
-              orderBy={orderBy}
-              getGroupIndex={getGroupIndex}
-              handleOnDrop={handleOnDrop}
-              displayProperties={displayProperties}
-              enableIssueQuickAdd={enableIssueQuickAdd}
-              showEmptyGroup={showEmptyGroup}
-              canEditProperties={canEditProperties}
-              quickAddCallback={quickAddCallback}
-              disableIssueCreation={disableIssueCreation}
-              loadMoreIssues={loadMoreIssues}
-              containerRef={containerRef}
-              handleCollapsedGroups={handleCollapsedGroups}
-              collapsedGroups={collapsedGroups}
-            />
-          ))}
+          <IdentifierWidthScope key={scope} owner={root}>
+            {columns.map((group: IGroupByColumn) => (
+              <ListGroup
+                key={group.id}
+                groupIssueIds={groups?.get(group.id)?.rows.map((row) => row.id)}
+                issuesMap={issuesMap}
+                group_by={group_by}
+                group={group}
+                updateIssue={updateIssue}
+                quickActions={quickActions}
+                orderBy={orderBy}
+                getGroupIndex={getGroupIndex}
+                handleOnDrop={handleOnDrop}
+                displayProperties={displayProperties}
+                enableIssueQuickAdd={enableIssueQuickAdd}
+                showEmptyGroup={showEmptyGroup}
+                canEditProperties={canEditProperties}
+                quickAddCallback={quickAddCallback}
+                disableIssueCreation={disableIssueCreation}
+                loadMoreIssues={loadMoreIssues}
+                containerRef={containerRef}
+                handleCollapsedGroups={handleCollapsedGroups}
+                collapsedGroups={collapsedGroups}
+              />
+            ))}
+          </IdentifierWidthScope>
         </div>
       )}
     </div>

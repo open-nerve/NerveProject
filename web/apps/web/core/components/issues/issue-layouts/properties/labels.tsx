@@ -17,7 +17,8 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { Label } from "@nerve/api-client";
 // hooks
 import { cn } from "@nerve/utils";
-import { useLabel } from "@/hooks/store/use-label";
+import { useParams } from "react-router";
+import { useIssueLabels } from "../../use-issue-labels";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { LabelDropdown } from "./label-dropdown";
 
@@ -142,7 +143,6 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
   const {
     projectId,
     value,
-    defaultOptions = [],
     onChange,
     onClose,
     disabled,
@@ -162,9 +162,9 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   // store hooks
-  const { getProjectLabels } = useLabel();
+  const { workspaceSlug } = useParams();
   const { isMobile } = usePlatformOS();
-  const storeLabels = getProjectLabels(projectId);
+  const storeLabels = useIssueLabels(workspaceSlug, projectId);
 
   const handleClose = () => {
     if (!isOpen) return;
@@ -180,8 +180,7 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
     }
   }, [isOpen, isMobile]);
 
-  let projectLabels: Label[] = defaultOptions as Label[];
-  if (storeLabels && storeLabels.length > 0) projectLabels = storeLabels;
+  const projectLabels = storeLabels ?? [];
 
   return (
     <>

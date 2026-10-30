@@ -1,6 +1,6 @@
 # M4/P11 详情数据层：预检与实施记录
 
-日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T12已实现，继续T13。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
+日期：2026-10-30。**当前：文档预检通过，负责人已授权实施，T1–T13已实现，继续T14。** 负责人已裁定P11-S1采用A，设计/spec/plan/交接同步后完成复核。[spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[deep-review记录](../../../reviews/re-14-M4P11预检审核.md)、[已裁定记录](P11-project-number-width-decision.md)。产品验收仍开放；准备阶段证据保持原义，实施证据见§8。
 
 ## 1. 前置、身份与范围
 
@@ -228,3 +228,22 @@ T12从`8a57f52d`起实施。完成后仍不合并；T13–T15及整分支deep-re
 最终当前源：t12-web-wired **201文件2171项通过**；恢复变异后t12-regression-restored **50文件695项通过**，包含计划指定clone/loading；t12-types-reviewed、t12-static-reviewed（37个TS/TSX，0 warning/error）、t12-knip、t12-keywords（75规则/24例外）通过。删除四项旧告警后web cap由153收紧到149。M27故意全局retire其它宿主，在旧宿主卸载时把新链接弹窗清掉，断言红；M28漏掉scope换代依赖，只在卸载结束旧状态，换issue断言红。两项均恢复原字节SHA，见t12-mutations-restored.json；有效变异没有编译错误或超时冒充。
 
 G由主控分别完成要求及质量自审，未声称独立逐Task评审。局部裁定：采用显式UI context替代全局字段；用root+scope的独立React宿主身份结束所有子树局部表单，代价是权限水位改变会清空未提交输入；peek真正卸载的选择在同次layout收尾后微任务释放，防止StrictMode误清，跨route仍同步结束旧选择。通知只迁移M4嵌入宿主的显示合同，M7自身未接通接口不在本段变更。T14继续核写后错误传播/重复读取和完整命令矩阵，T15才做阶段终审。
+
+### T13：标签确认、原生拒绝与统一编号宽度
+
+从`b2412db4`起实施。五个标签创建入口/回调归入`useLabelChanges().create`，新增`label-create-direct`守卫；实际表单、详情与行下拉对重名显示name字段错误，拒绝保留输入，不制造Label或提前选中。成功只跟进本会话/宿主，重复Enter在途只发一次。无项目的标签展示只派生当前工作区已持且可见的labelMap，不请求不存在的工作区标签接口，不预取所有项目；完整能力仍归M7。base.tsx两处旧错误取值已在T9清理，本Task补实际Form创建/修改的原生拒绝测试，并以M31验证退化会失败，没有假称再次删除。
+
+List局部数值注册表统一全列宽度，IssueBlockRoot在RenderIfVisible外登记合法完整编号，递归展开子项共用；跨项目按每个实际编号取最大，不把最长前缀和最大序号拼成假编号。普通分页、筛选缩小、删除允许保留已达到宽度；login/workspace/list kind/project/profile user/view/权限identity变化重算，独立root/并存布局各自拥有注册表。未知项目不输出undefined编号，key隐藏为0，空集合不保留可见宽度；全程零编号专用HTTP。provider位于滚动容器内部，切scope不破坏滚动监听；StrictMode及旧注册清理不能影响新owner。
+
+| 证据 | 当前结果/限制 |
+|---|---|
+| 标签行为 | t13-labels-red：7项真实失败；t13-labels-environment：3文件54项通过（含既有M3统一入口和T11读取拒绝）。初次改写脚本中途退出/ResizeObserver缺失单列为测试环境问题 |
+| 宽度与错误 | t13-width-red：5项宽度行为失败；最终12项宽度测试覆盖两种布局、视口外、分页、展开子项、不同前缀、scope/权限ABA、未知目录、隐藏key、StrictMode；t13-contracts-ready：5文件71项通过 |
+| 有效变异 | M29直接create被新守卫拒绝；M30固定一位序号令统一列宽断言红，取消permission identity令ABA后错误保留49px而非35px；M31恢复error.error令两个表单错误显示unknown而非forbidden。原字节SHA恢复，t13-label-mutation-restored / t13-width-error-mutations-restored保留；memo依赖与格式的后续修改由最终全套回归桥接 |
+| 本地F | t13-f-gen-check/lint-go通过；test-go其余包通过，jobs启动Ryuk超时未进入测试，t13-jobs-retry按同一源码单包25.8秒通过；t13-f-continued-lint-web为54任务0缓存通过，knip通过；test-web为18任务0缓存，Web203文件2202项、editor7文件45项通过，副日志及hash见t13-suite-logs |
+| E2E适配 | 首轮168通过/1失败：P1仍断言Lead为嵌套button，而T11已修为单一原生按钮。只更新这处过期DOM断言，保留Tab/焦点/Escape及所有请求和控制台门禁；P1三故事通过，t13-e2e-restored完整169通过（含2Firefox），不是W11偶发 |
+| 静态 | t13-e2e-types、t13-static-final：20个TS/TSX零warning/错误且格式正确；web cap149→147，关键词76规则24例外，无新增依赖或豁免 |
+
+局部裁定：P1故事的DOM预期随T11真实控件结构同步，不保留非法嵌套来满足旧测试；代价是测试不再约束已删除的包装元素，单一语义按钮/Tab顺序/焦点恢复得到更直接约束。草稿/列表宽度没有改变项目公开字段或后端。getUserProfileIssues/fetchParentStats已无实现；peek自身的`isArchiveIssueModalOpen`是仍在使用的局部状态，不能声称整个web该名字零命中。
+
+G按要求与质量两遍主控自审，未冒称独立逐Task审者。T14继续处理根详情/peek/标签更新的拒绝传播、父项重复补读和加载收尾、展开子项的受控读取、标题/描述实际保存状态及完整命令矩阵；阶段A1–A10与T15整分支审查仍开放。本检查点推送后的准确SHA/CI回执另存忽略证据目录，不能用T9绿色CI代替。

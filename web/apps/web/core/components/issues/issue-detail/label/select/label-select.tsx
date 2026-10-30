@@ -1,3 +1,4 @@
+import { Field, FieldError } from "@makeplane/propel/components/field";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -5,7 +6,7 @@
  */
 
 import { DirectoryReadError, useDirectoryRead } from "@/components/issues/issue-detail-widgets/directory-read";
-import { Fragment, useState } from "react";
+import { Fragment, useState, useId, useRef } from "react";
 import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
 import { AddOutline, LoadingOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
@@ -14,7 +15,8 @@ import { Combobox } from "@headlessui/react";
 import { EUserPermissionsLevel, getRandomLabelColor } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import type { Label, LabelCreate } from "@nerve/api-client";
+import type { IssueLabelCreation } from "@/components/labels/use-label-changes";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { EUserProjectRoles } from "@nerve/types";
 // helpers
 import { getTabIndex, isComposing } from "@nerve/utils";
@@ -29,12 +31,13 @@ export interface IIssueLabelSelect {
   issueId: string;
   values: string[];
   onSelect: (_labelIds: string[]) => void;
-  onAddLabel: (data: LabelCreate) => Promise<Label>;
+  onAddLabel: IssueLabelCreation;
 }
 
 export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssueLabelSelect) {
   const { workspaceSlug, projectId, issueId, values, onSelect, onAddLabel } = props;
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // store hooks
   const { isMobile } = usePlatformOS();
   const { fetchProjectLabels, getProjectLabels } = useLabel();
@@ -44,6 +47,9 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
 
   const [query, setQuery] = useState("");
+  const [nameError, setNameError] = useState<string>();
+  const errorId = useId();
+  const pending = useRef(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   const canCreateLabel =
@@ -114,14 +120,25 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
   };
 
   const handleAddLabel = async (labelName: string) => {
+    if (pending.current || !labelName.trim()) return;
+    pending.current = true;
     setSubmitting(true);
+    setNameError(undefined);
     try {
-      const created = await onAddLabel({ name: labelName, color: getRandomLabelColor() });
-      onSelect([...values, created.id]);
-      setQuery("");
-    } catch {
-      // onAddLabel has shown nerve's reason; nothing is selected
+      await onAddLabel(
+        { name: labelName.trim(), color: getRandomLabelColor() },
+        (_field, message) => setNameError(message),
+        async (created) => {
+          try {
+            await onSelect([...values, created.id]);
+            setQuery("");
+          } catch (error) {
+            toastRefusal(error);
+          }
+        }
+      );
     } finally {
+      pending.current = false;
       setSubmitting(false);
     }
   };
@@ -158,18 +175,30 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
             {...attributes.popper}
           >
             <div className="px-2">
-              <div className="flex w-full items-center justify-start rounded-sm border border-subtle bg-surface-2 px-2">
-                <SearchOutline className="h-3.5 w-3.5 text-tertiary" />
-                <Combobox.Input
-                  className="w-full bg-transparent px-2 py-1 text-11 text-secondary placeholder:text-placeholder focus:outline-none"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={t("common.search.label")}
-                  displayValue={(assigned: any) => assigned?.name}
-                  onKeyDown={searchInputKeyDown}
-                  tabIndex={baseTabIndex}
-                />
-              </div>
+              <Field name="name" invalid={!!nameError}>
+                <div className="flex w-full items-center justify-start rounded-sm border border-subtle bg-surface-2 px-2">
+                  <SearchOutline className="h-3.5 w-3.5 text-tertiary" />
+                  <Combobox.Input
+                    aria-invalid={!!nameError}
+                    aria-describedby={nameError ? errorId : undefined}
+                    className="w-full bg-transparent px-2 py-1 text-11 text-secondary placeholder:text-placeholder focus:outline-none"
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setNameError(undefined);
+                    }}
+                    placeholder={t("common.search.label")}
+                    displayValue={(assigned: any) => assigned?.name}
+                    onKeyDown={searchInputKeyDown}
+                    tabIndex={baseTabIndex}
+                  />
+                </div>
+                {nameError && (
+                  <FieldError match size="lg" id={errorId}>
+                    {nameError}
+                  </FieldError>
+                )}
+              </Field>
             </div>
             <div className="vertical-scrollbar mt-2 scrollbar-sm max-h-48 overflow-y-scroll px-2 pr-0">
               {read.error ? (

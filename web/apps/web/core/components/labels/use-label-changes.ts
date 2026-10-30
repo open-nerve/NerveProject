@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { LabelCreate, LabelUpdate } from "@nerve/api-client";
+import type { Label, LabelCreate, LabelUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
@@ -33,7 +33,10 @@ export type LabelUnderField = (field: LabelFormField, message: string) => void;
  * label itself, a parent under another, or a label with labels under it (3.16: labels have two levels). A removal
  * from its group sends no parent, so nerve never refuses it so. Each settles once the page has followed the change.
  */
-export function useLabelChanges() {
+export type LabelCreated = (label: Label) => void | Promise<void>;
+export type IssueLabelCreation = (data: LabelCreate, underField: LabelUnderField, done: LabelCreated) => Promise<void>;
+
+export function useLabelChanges(captureScope?: () => () => boolean) {
   const { createLabel, updateLabel, updateLabelPosition, deleteLabel } = useLabel();
   const { t } = useTranslation();
   const failed = useRefusalToast();
@@ -52,8 +55,17 @@ export function useLabelChanges() {
 
   return {
     /** Creates a label at the top of the project of projectId, last of its labels. */
-    create: (projectId: string, data: LabelCreate, underField: LabelUnderField, done: () => void) =>
-      followInSession(() => createLabel(projectId, data), { done, failed: (error) => showRefusal(error, underField) }),
+    create: (projectId: string, data: LabelCreate, underField: LabelUnderField, done: LabelCreated) => {
+      const current = captureScope?.() ?? (() => true);
+      return followInSession(() => createLabel(projectId, data), {
+        done: (label) => {
+          if (current()) return done(label);
+        },
+        failed: (error) => {
+          if (current()) showRefusal(error, underField);
+        },
+      });
+    },
     /** Changes the label of labelId to what data names. */
     update: (labelId: string, data: LabelUpdate, underField: LabelUnderField, done: () => void) =>
       followInSession(() => updateLabel(labelId, data), { done, failed: (error) => showRefusal(error, underField) }),

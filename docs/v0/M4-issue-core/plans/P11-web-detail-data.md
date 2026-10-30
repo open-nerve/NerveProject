@@ -1,6 +1,6 @@
 # M4/P11 详情数据层实施计划
 
-> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T12已实现，继续T13**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
+> 给执行代理：获得实施安排后按本计划逐 Task 执行；使用 executing-plans，或按负责人选择使用 subagent-driven-development。[P11-S1](../reviews/P11-project-number-width-decision.md)已由负责人裁定A，**T1–T13已实现，继续T14**。任务按实际证据逐项勾选，阶段验收尚未完成；阶段结束做整分支 deep-review，修完局部问题后先不合并。
 
 **目标：** 详情资源接生成接口，保持唯一工作项、权限范围读取失效和确认写入，完成按需拒绝与宿主清理。
 
@@ -180,13 +180,13 @@ make e2e
 
 **Files：** issue-modal/base.tsx；use-label-changes.ts真实五个创建调用方；use-workspace-issue-properties相关真实调用；issue-identifier、issue-layouts/list/{base-list-root,default,list-group,blocks-list,block-root,block}.tsx、issue-layouts/utils.tsx；新同目录identifier-width.tsx/.test.tsx（显示helper/局部状态，或等价职责拆分）；tools/keywords.json；新 issue-properties.test.tsx。
 
-- [ ] 两处旧error?.error改按码文案，必要字段错误传已有Field；五处直接label创建改useLabelChanges().create，重名name字段、成功回调只本scope，拒绝不关闭/不造标签。
-- [ ] 无projectId只用当前可见且已取项目的labelMap，未取标签不显示；不新增工作区目录或逐项目预取，完整恢复仍归M7。补这种限制/不越权/拒绝测试。
-- [ ] 按spec§2.11落实A：List统一宽度状态，按每行合法Project.identifier+sequence_id算最大；IssueBlockRoot在RenderIfVisible外报告行宽，递归展开子项也接同一列。原calculateIdentifierWidth第二参数是实际序号，不传位数。未知项目不猜字符串，空集合/key隐藏输出0，无额外HTTP。
-- [ ] 新测试 `keepsOneWidthAcrossGroupsAndLoadedRows`、`growsForPagedAndExpandedRows`、`resetsForScopeAndPermissionChanges`、`doesNotReadProjectsToSizeIdentifiers`；覆盖WEB-9/10/100、profile不同前缀、视口外已加载、过滤/删除保持、权限ABA重算、空/未知目录、两个并存布局。scope含loginId/workspace/list kind/project或profile user/view/permission identity，同scope增长，换scope同步重置；只存局部数值和注册身份，旧行cleanup不得写新owner。
-- [ ] getUserProfileIssues/fetchParentStats/isArchiveIssueModalOpen 当前均已无实现，只归档删除核对，不重复开发。projectIdentifier已string|undefined保留。
-- [ ] label-create-direct规则覆盖真实调用/通用允许入口，故意直接创建变异应守卫红；不设新豁免。定向identifier-width/issue-properties/base.loading/base.clone+文案sync/types/static。
-- [ ] M29标签绕统一create、M30宽度固定1/取消权限scope重置（两性质分记录）、M31错误取error.error各红；G；F检查点。提交 `fix(M4/P11): 统一标签创建与详情错误和编号显示`。
+- [x] 两处旧error?.error改按码文案，必要字段错误传已有Field；五处直接label创建改useLabelChanges().create，重名name字段、成功回调只本scope，拒绝不关闭/不造标签。
+- [x] 无projectId只用当前可见且已取项目的labelMap，未取标签不显示；不新增工作区目录或逐项目预取，完整恢复仍归M7。补这种限制/不越权/拒绝测试。
+- [x] 按spec§2.11落实A：List统一宽度状态，按每行合法Project.identifier+sequence_id算最大；IssueBlockRoot在RenderIfVisible外报告行宽，递归展开子项也接同一列。原calculateIdentifierWidth第二参数是实际序号，不传位数。未知项目不猜字符串，空集合/key隐藏输出0，无额外HTTP。
+- [x] 新测试 `keepsOneWidthAcrossGroupsAndLoadedRows`、`growsForPagedAndExpandedRows`、`resetsForScopeAndPermissionChanges`、`doesNotReadProjectsToSizeIdentifiers`；覆盖WEB-9/10/100、profile不同前缀、视口外已加载、过滤/删除保持、权限ABA重算、空/未知目录、两个并存布局。scope含loginId/workspace/list kind/project或profile user/view/permission identity，同scope增长，换scope同步重置；只存局部数值和注册身份，旧行cleanup不得写新owner。
+- [x] getUserProfileIssues/fetchParentStats/isArchiveIssueModalOpen 当前均已无实现，只归档删除核对，不重复开发。projectIdentifier已string|undefined保留。
+- [x] label-create-direct规则覆盖真实调用/通用允许入口，故意直接创建变异应守卫红；不设新豁免。定向identifier-width/issue-properties/base.loading/base.clone+文案sync/types/static。
+- [x] M29标签绕统一create、M30宽度固定1/取消权限scope重置（两性质分记录）、M31错误取error.error各红；G；F检查点。提交 `fix(M4/P11): 统一标签创建与详情错误和编号显示`。
 
 ## Task 14：删除过渡、完整修改矩阵与回归（约350–800行）
 
