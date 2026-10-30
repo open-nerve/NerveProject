@@ -82,3 +82,7 @@ T1补subscriber配置/原生入口、profile项目条件入口以及me/none选�
 第一个产品提交将phase改为M4/P13；没有P12/P13到期例外。T2–T14及真实页面/三浏览器/完整F/最终分支CI尚待执行。
 
 T2通过真实CustomSearchSelect覆盖空条件首次打开、静态/异步候选、配置切换的旧成功/错误、卸载、重试、合法未知ID及四消费者的中英文搜索。删除旧loadOptions，仅两处值输入共用局部读取hook；所有者含config/getOptions/重试序号，旧答不写入。T1/T2六文件106测试通过，make lint-web 54任务通过（36缓存）。M02/M03/M04分别使旧答隔离、失败反馈、首次打开的真实断言失败并恢复；M04第一次因替换锚点不唯一未执行，不计有效红。新增lint问题修复后，移除旧数组index key使warning cap由121降到120。保留全部原始失败；已有member/base测试只作接线回归，未冒称真实控件运行。T3–T14仍待完成。
+
+T3用真实Calendar验证两步草稿、同日范围、已保存单端范围、反向/越界文字及aria关联、条件换id和外部值ABA。首次10项行为失败；外部值ABA新增断言先红后修。日期回归5文件43通过，UTC+14与UTC-7各10通过；M05/M06/M07分别去草稿、改UTC解析、去aria关联，产生9/6/5项行为失败并恢复。首次类型检查暴露toFilterArray泛型推断过宽，明确string后lint-web 54通过（36缓存）。旧DateFilterModal真实表单校验使用日历输入替身强制输入反向日期，单独验证date2和分号callback；不冒称该测试是完整页面日历。
+
+T3局部接口调整：实际DayPicker首次选择即返回同日起止，按旧回调第一参数无法辨认两次点击。DateRangeDropdown的onSelect向后兼容增加可选selectedDay，仅传输入事实；旧调用仍消费原range，草稿归富筛选，不激活既有未使用bothRequired或增加共享缓存。同步设计/spec/plan，P11原子修改4项和原共享日期控件回归通过。

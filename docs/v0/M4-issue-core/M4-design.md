@@ -2377,7 +2377,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **任务**（原12项粗任务细分为14项，范围不扩大；见[spec](specs/P13-web-filters-archives-profile.md)、[plan](plans/P13-web-filters-archives-profile.md)）：
   1. 原生筛选配置与subscriber显示，保留profile已有project_id约束。
   2. 四个CustomSearchSelect的翻译、defaultOpen、异步候选和当前失败重试。
-  3. 日期范围草稿、Field提示与本地日；已有开区间回显不丢；旧日期弹窗title与局部范围比较修正。
+  3. 日期范围草稿、Field提示与本地日；已有开区间回显不丢；DateRangeDropdown兼容传出本次点击日，由富筛选管理两步草稿，原共享调用不变；旧日期弹窗title与局部范围比较修正。
   4. 项目显示设置确认保存、并发/拒绝/确认后读失败；FiltersDropdown名称/键盘/焦点。
   5. 归档固定列表、本地设置恢复/隔离、只读字段及读取错误。
   6. 归档弹窗ModalTitle、无正tabIndex、pending/单次反馈；恢复沿原命令合同。
@@ -2584,7 +2584,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
 | P11 `web-detail-data` | 详情一侧的数据层（15） | **已完成**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review§15](reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。交付42afa24f、main ce3c39ab；准确分支及main CI全绿，证据归档/清理完成；列宽按已裁定A |
 | P12 web-list-pages | 列表、看板、表格、日历（16） | **已完成**：最终e6d1329b授权--no-ff合并main ff89d0a1；[准确main CI41087022719](https://github.com/open-nerve/NerveProject/actions/runs/41087022719)三任务成功；1786份实施/运行证据及14份准备证据归档逐hash通过，分支/worktree清理后再次复验。见[review§28](reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)、[整审](../../reviews/re-17-M4P12整体审核.md) |
-| P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **文档预检通过，未实施**：[spec](specs/P13-web-filters-archives-profile.md)、[plan](plans/P13-web-filters-archives-profile.md)、[review](reviews/P13-web-filters-archives-profile-review.md)、[预检](../../reviews/re-18-M4P13预检审核.md)。分支codex/m4-p13，基线main ff89d0a1，phase仍M4/P12；等待负责人启动T1 |
+| P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **实施中，T1–T3完成**：[spec](specs/P13-web-filters-archives-profile.md)、[plan](plans/P13-web-filters-archives-profile.md)、[review](reviews/P13-web-filters-archives-profile-review.md)、[预检](../../reviews/re-18-M4P13预检审核.md)。分支codex/m4-p13，基线main ff89d0a1，phase已M4/P13；继续T4–T14，整审和分支CI后先不合并 |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述的历史、草稿、搜索、命令面板（15） | 未开始 |
 | P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | 未开始 |

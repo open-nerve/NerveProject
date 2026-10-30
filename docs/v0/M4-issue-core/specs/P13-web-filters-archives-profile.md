@@ -67,7 +67,7 @@ FiltersDropdown 默认按钮及 menuButton 分支都有翻译后的 title、aria
 
 草稿归属 condition 身份，换条件、关闭宿主、换页后不写入新条件。日期按用户本地日处理，UTC±时区、闰日、年界不移一天。已有单日及开区间（例如target_date__range值为“2026-10-01,”或“,2026-10-31”）原样回显；开区间本身有效，未编辑时不标错误、不发onChange。开始用日历改为双端范围后才按未完成草稿校验，完成后一次替换；清空仍是显式动作。
 
-DateRangeDropdown 可沿既有 select 字段约定增加可选 invalid/describedBy，并传到实际触发按钮；保持 onSelect、受控 value、min/max、portal/defaultOpen、disabled 及 P11 双日期原子修改合同。不能将共享控件改成全局乐观缓存。旧 DateFilterModal 的 start/due 调用 title 经 t()；核对其范围比较确实读取 date2，局部修正后保留 M3/M6/M7 使用的原 callback 格式，不把旧格式接回 M4 原生筛选请求。
+DateRangeDropdown 沿既有 select 字段约定增加可选 invalid/describedBy，并传到实际触发按钮；onSelect 保留原第一参数，兼容增加可选第二参数 selectedDay，把日历的本次点击日期交给富筛选所有者。底层日历首次点击会返回同日起止，不能据此判定两步草稿已完成；清空动作不传 selectedDay。受控 value、min/max、portal/defaultOpen、disabled 及 P11 双日期原子修改合同保持，共享控件不持有另一份草稿。旧 DateFilterModal 的 start/due 调用 title 经 t()；核对其范围比较确实读取 date2，局部修正后保留 M3/M6/M7 使用的原 callback 格式，不把旧格式接回 M4 原生筛选请求。
 
 ### 2.5 显示设置与两类保存
 

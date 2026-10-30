@@ -401,6 +401,12 @@
       "all_applied": "All filters applied",
       "config_error": "Filter configuration error",
       "config_error_description": "This filter could not be applied. Please reload and try again."
+    },
+    "filter_dates": {
+      "incomplete": "Choose both dates to apply the range",
+      "reversed": "The end date must be on or after the start date",
+      "out_of_bounds": "Choose dates within the allowed range",
+      "choose": "Choose dates"
     }
   },
   "date_filter": {

@@ -401,6 +401,12 @@
       "all_applied": "已应用所有筛选条件",
       "config_error": "筛选配置错误",
       "config_error_description": "无法应用该筛选条件，请刷新后重试。"
+    },
+    "filter_dates": {
+      "incomplete": "请选择起止日期后应用范围",
+      "reversed": "结束日期不能早于开始日期",
+      "out_of_bounds": "请选择允许范围内的日期",
+      "choose": "选择日期"
     }
   },
   "date_filter": {

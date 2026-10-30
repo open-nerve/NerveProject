@@ -35,6 +35,8 @@ type Props = {
   className?: string;
   clearIconClassName?: string;
   disabled?: boolean;
+  invalid?: boolean;
+  describedBy?: string;
   hideIcon?: {
     from?: boolean;
     to?: boolean;
@@ -43,7 +45,7 @@ type Props = {
   mergeDates?: boolean;
   minDate?: Date;
   maxDate?: Date;
-  onSelect?: (range: DateRange | undefined) => void;
+  onSelect?: (range: DateRange | undefined, selectedDay?: Date) => void;
   placeholder?: {
     from?: string;
     to?: string;
@@ -75,6 +77,8 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
     className,
     clearIconClassName = "",
     disabled = false,
+    invalid,
+    describedBy,
     hideIcon = {
       from: true,
       to: true,
@@ -119,6 +123,8 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
   const comboButton = (
     <Popover.Button
       aria-label={label}
+      aria-invalid={invalid}
+      aria-describedby={describedBy}
       tabIndex={tabIndex}
       type="button"
       className={cn(
@@ -229,7 +235,7 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
               captionLayout="dropdown"
               selected={value}
               defaultMonth={value.from ?? value.to}
-              onSelect={onSelect}
+              onSelect={(range, selectedDay) => onSelect?.(range, selectedDay)}
               mode="range"
               disabled={disabledDays}
               showOutsideDays

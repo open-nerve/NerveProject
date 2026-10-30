@@ -87,13 +87,13 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 ## Task 3：范围草稿、字段错误与日期标题（约450–850行）
 
 **Files：** spec T3；新range.test.tsx、date-filter-modal.test.tsx；既有C/components/dropdowns/basic-dropdowns.test.tsx；Field/FieldError复用@makeplane/propel/components/field。
-**Interfaces：** range仍onChange(value:string[]):void；DateRangeDropdown的现有Props只增加invalid?:boolean、describedBy?:string并落到按钮，不改变value/onSelect。旧DateFilterModal(title,handleClose,isOpen,onSelect)的callback分号语义保持。
+**Interfaces：** range仍onChange(value:string[]):void；DateRangeDropdown增加invalid?:boolean、describedBy?:string并落到按钮，onSelect(range,selectedDay?:Date)向后兼容原第一参数，value不变。底层日历首次点击即返回同日起止，新增第二参数只传输入事实，草稿仍由富筛选持有；清空不传selectedDay。旧DateFilterModal(title,handleClose,isOpen,onSelect)的callback分号语义保持。
 
-- [ ] Step 1：写keepsTheFirstDayUntilRangeCompletes、describesIncompleteAndReversedRanges、keepsLocalCalendarDays、comparesTheActualSecondDate；真实日历连续点击起终日，检查onChange仅完整范围调用、错误先可见且按钮aria关联。用当前condition换id确保旧草稿结束。另写preservesLoadedOpenRanges：已保存“2026-10-01,”与“,2026-10-31”不标invalid/不触发onChange，编辑起日后的半成品才提示，完成双端后一次替换。
-- [ ] Step 2：聚焦range、basic-dropdowns、date-filter-modal；预期第一次选起日后丢草稿/错误仅颜色、date2误读date1的断言红。
-- [ ] Step 3：局部草稿按condition归属；本地日期解析/格式化沿现有工具，覆盖闰日和年界；Field错误与按钮关联。start/due标题经t()；修正legacy modal的第二日期比较，保留调用格式。
-- [ ] Step 4：测试绿；TZ=Pacific/Kiritimati与TZ=America/Los_Angeles分别聚焦range.test.tsx；回归P11双日期确认与真实project/cycle/inbox现存调用的类型。M05不保留起日、M06用UTC解析移日、M07去aria关联各行为红并恢复。
-- [ ] Step 5：提交fix(M4/P13): 保留日期范围草稿并关联字段提示。记录A3；不将共享控件回归写成M6/M7业务验收。
+- [x] Step 1：写keepsTheFirstDayUntilRangeCompletes、describesIncompleteAndReversedRanges、keepsLocalCalendarDays、comparesTheActualSecondDate；真实日历连续点击起终日，检查onChange仅完整范围调用、错误先可见且按钮aria关联。用当前condition换id确保旧草稿结束。另写preservesLoadedOpenRanges：已保存“2026-10-01,”与“,2026-10-31”不标invalid/不触发onChange，编辑起日后的半成品才提示，完成双端后一次替换。
+- [x] Step 2：聚焦range、basic-dropdowns、date-filter-modal；预期第一次选起日后丢草稿/错误仅颜色、date2误读date1的断言红。
+- [x] Step 3：局部草稿按condition归属；本地日期解析/格式化沿现有工具，覆盖闰日和年界；Field错误与按钮关联。start/due标题经t()；修正legacy modal的第二日期比较，保留调用格式。
+- [x] Step 4：测试绿；TZ=Pacific/Kiritimati与TZ=America/Los_Angeles分别聚焦range.test.tsx；回归P11双日期确认与真实project/cycle/inbox现存调用的类型。M05不保留起日、M06用UTC解析移日、M07去aria关联各行为红并恢复。
+- [x] Step 5：提交fix(M4/P13): 保留日期范围草稿并关联字段提示。记录A3；不将共享控件回归写成M6/M7业务验收。
 
 ## Task 4：项目显示设置与按钮合同（约600–1100行）
 
