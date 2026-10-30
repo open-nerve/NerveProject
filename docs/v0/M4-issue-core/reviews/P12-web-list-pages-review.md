@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T13 已完成，T14–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T14 已完成，T15–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -215,3 +215,16 @@ M31 首轮未失败揭示测试 StrictMode 在子树而非根，未真正执行�
 M06-page 续页丢 label_id 使 C-only 错入 A∩C；M08-page 先取焦使记录缺少错误描述；二者均实际页面红、精确恢复 hash、当前源码重新 build 后绿，作为既有 M06/M08 的额外层级证据，不重复计独立性质。M33 恢复原 filter HOC 触发渲染警告与 StrictMode 缺注册，精确恢复后绿。早期焦点探针被 Playwright press 预先聚焦、held route 阻断低层 route 观察及双 chip 定位歧义属夹具问题，分别改用失焦后的原生表单提交、真实 request 事件计数、指名 chip；原失败 trace 均保留。
 
 最终 t13-final-unit 为 6 文件 61 测试（0 skip），当前 make build、web/E2E 类型与修改路径零 lint 通过。t13-final-pages2 四项全绿（2 API + 2 Chromium page，0 skip）；每次实际加载的已知 EMOJI 警告精确计数，I7 仅明确期待一次 422，其他 API/旧地址/console/CSP/外域均为零。Firefox/WebKit 的文本与次数留 T15 实跑确认。证据 t13-*、M06-page/M08-page/M33 receipt。局部自查通过，无架构阻塞。
+
+
+## 21. T14 表格、日历、看板与 S2（2026-10-30）
+
+I4 保留两条 API 故事，新增表格和 UTC+14 日历页面。表格 101 个父项、真实目录与子项，标签名/负责人名/子项数/截止日期四种正反方向均由实际表头选择；每方向核确认 aria-sort，滚动分批收集全部 DOM 行顺序、唯一真实第二页 query 与末页，不排序服务端响应制造预期。预期独立取自建数元数据、同方向 UUID 和空值后置。I4 文件共 513 行：保留 240 行既有 API 及两个完整页面故事，按同一验收项集中，未新造只用一次的 fixture 拆散因果。
+
+日历 context 明确 Pacific/Kiritimati，不修改业务/认证时钟；通过真实月份选择到当年十二月，核跨年显示范围、单日 4+1 续页和当前周 limit30。真实指针把 16 日移到 17 日，只有 target_date PATCH，确认前原位、确认后 DOM 与一条 DB 日期活动一致。添加已有空词请求准确 target_date=none，已定日期及起始日晚于目标日项不可选；选中后通过另一真实 API 修改开始日期，使实际后端返回 422，弹窗/选择保留，恢复合法开始日期后只重试该项，确认后出现。
+
+I6 使用真实角色15成员，Todo 放到 Done 两卡之间，保持确认前原位置/计数；一次 PATCH 同时改状态与位置，DB completed_at/updated_by/唯一状态活动一致。同列中项下方只改 sort_order=250，尾部按既有排序合同为300+65535，403 拒绝有可见原因并原位，刷新后确认顺序稳定。S2 管理员/成员/访客在项目页真实切四布局，非成员保持加入界面；每次新增请求按具体路径、query、次数白名单核验，没有领域空接口豁免。
+
+复用 dragOnto 时暴露测试辅助 transitionsEnded 把被替换/卸载的动画 AbortError 作为失败；仅将该取消视为生命周期已结束，其余错误继续抛出、无限动画仍排除。初次建数传 create 不接受的 target_date:null、同列不该重复 state 字段、尾部误用快速创建的10000间距、ModalCore 零尺寸外壳可见性、日历 query 参数顺序及 TS union 未收窄均为故事编写问题；已按既有接口/可见内容/closedWithin 改正，不修改产品迎合测试。原日志与 trace 保留，lint 的异步顺序以 reduce 保持真实用户操作顺序，无新豁免。
+
+M11-page 的错误中项 below 导致实际请求 -65335 而非250；M18-page 的 UTC 日期偏移使所选日无法续页；M19-page 丢 none 条件被实际搜索 query 捕获。三项均真实红，精确恢复原字节/hash、重建后绿；只作为已有 M11/M18/M19 的页面证据，不重算独立变异。最终 t14-final-pages 全部16项通过（0 skip，3新 page + 保留 API/S2），t14-types-second、t14-lint-second 零错误/警告，diff-check 通过。全量 F 与三浏览器仍由 T15 执行；自查无架构阻塞。

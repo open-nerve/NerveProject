@@ -250,7 +250,12 @@ export async function transitionsEnded(locator: Locator): Promise<void> {
       element
         .getAnimations({ subtree: true })
         .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
-        .map((animation) => animation.finished)
+        .map((animation) =>
+          animation.finished.catch((error: unknown) => {
+            // A replaced or removed transition has also ended; retain real evaluation failures.
+            if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
+          })
+        )
     )
   );
 }

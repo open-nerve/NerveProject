@@ -137,7 +137,7 @@ peek打开/关上、切项、换项目/工作区、后退和宿主卸载结束�
 | D16 | T10 将三个标签入口收敛到既有 select/base，Popover 唯一控制开关、静态非模态 Combobox 管选项；保留受控值、统一 create 与字段拒绝。打开实例以局部 owner 隔离晚到的选择/创建反馈；详情创建成功提示移到当前选择器确认回调，行标签拒绝由现有 scope/refusal toast 显示。只是 UI 生命周期归属，不改变 root 权限、目录或写协议。 |
 | D17 | T11 实际工厂只有平铺菜单，两个 SubMenu 分支、copy-menu-helper 的历史重复项适配和 shared SubMenu 均无可达消费者，删除死链，保留现有 Headless Menu；不为死分支新增键盘机制。M28 改核真实菜单的键盘入口，原子菜单候选未运行。右键菜单保持关闭 inert，键盘处理跟随实际菜单焦点而非 window；卡片激活样式直接跟随唯一菜单状态。 |
 | D18 | T12 在既有 Peek UI owner 内区分实际宿主与每次选择；只有活跃 owner 的子树可取数/显示，切路由/失权/退役隐藏并结束自有选择，同 ID 重开也重建读取子树。触发元素保存在 UI 层按选择对象索引的 WeakMap，实际列表/卡片/父子项/关联入口传自身元素；业务 store 不存 DOM。关闭只恢复仍连接且未隐藏的本触发器，外部点击不抢焦；WorkItemLevelModals 的 provider 不移动。 |
-| D19 筛选器注册生命周期 | T13 页面发现 render 更新 MobX 与 StrictMode 清理后未重建；layout effect 持有 store/entity/key 的注册项，清理仅释放自身，同 key 换 store 同步隐藏旧项；不改筛选协议或权限所有者 | 三项真实 store 测试及 I3 页面，M33 恢复旧实现实际红→精确恢复绿 |
+| D19 | 筛选器注册生命周期： T13 页面发现 render 更新 MobX 与 StrictMode 清理后未重建；layout effect 持有 store/entity/key 的注册项，清理仅释放自身，同 key 换 store 同步隐藏旧项；不改筛选协议或权限所有者；三项真实 store 测试及 I3 页面，M33 恢复旧实现实际红→精确恢复绿 |
 
 以上为已定设计内的执行细化，没有待负责人裁定的新协议/架构变更。若实施发现现有权限、搜索或排序合同不能实现这些行为，先提交已完成工作并上报，不加旧形状适配或放宽守卫。
 

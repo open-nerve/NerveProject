@@ -164,10 +164,10 @@ make e2e
 
 **Files：** e2e/stories/issue/i4-list-order-calendar.spec.ts、i6-board-order.spec.ts；既有smoke/s2-web-app.spec.ts，T13共享fixture。
 
-- [ ] I4四种排序双向真实二页、月/周/日范围、拖到另一天且DB一条target_date动态；添加已有开窗空词、只无日期候选、选中确认后出现，错日期拒绝不关。时区用browser context明确设置，并核目标日期不漂移。
-- [ ] I6成员从Todo放Done两卡之间，UI计数/位置、准确一次PATCH与DB completed_at/updated_by/state动态；同列below中项/尾部、拒绝回位、确认后刷新稳定。pointer真实拖动，不直接调用store假扮页面拖放。
-- [ ] S2实际打开项目工作项列表/切必要布局、继承已有身份和REQUESTS白名单；新精确请求按真实合同添加。M6/M7未实现领域不能通过mock空成功混入本段范围。
-- [ ] 当前build下I4/I6页面+S2；保留原API全部断言。M11/M18/M19至少页面捕获；G，提交`test(M4/P12): 验证表格日历拖动及页面请求边界`。
+- [x] I4四种排序双向真实二页、月/周/日范围、拖到另一天且DB一条target_date动态；添加已有开窗空词、只无日期候选、选中确认后出现，错日期拒绝不关。时区用browser context明确设置，并核目标日期不漂移。
+- [x] I6成员从Todo放Done两卡之间，UI计数/位置、准确一次PATCH与DB completed_at/updated_by/state动态；同列below中项/尾部、拒绝回位、确认后刷新稳定。pointer真实拖动，不直接调用store假扮页面拖放。
+- [x] S2实际打开项目工作项列表/切必要布局、继承已有身份和REQUESTS白名单；新精确请求按真实合同添加。M6/M7未实现领域不能通过mock空成功混入本段范围。
+- [x] 当前build下I4/I6页面+S2；保留原API全部断言。M11/M18/M19至少页面捕获；G，提交`test(M4/P12): 验证表格日历拖动及页面请求边界`。
 
 ## Task 15：C1/C3三浏览器、dead与完整门禁（约600–1000行）
 

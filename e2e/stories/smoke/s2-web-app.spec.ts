@@ -338,6 +338,39 @@ for (const account of ACCOUNTS) {
       }
       if (path === "/") await expect(page).toHaveURL(`/${slug}`);
       await expect.poll(() => requests.between(load.from)).toEqual({ pending: 0, requests: load.expected });
+      if (path === "/{slug}/projects/{project}/issues" && account !== "project non-member") {
+        const range = await page.evaluate(() => {
+          const today = new Date();
+          const first = new Date(today.getFullYear(), today.getMonth(), 1);
+          const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          first.setDate(first.getDate() - first.getDay());
+          last.setDate(last.getDate() + 6 - last.getDay());
+          return [first, last]
+            .map(
+              (day) =>
+                `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`
+            )
+            .join("..");
+        });
+        const layouts = [
+          ["Board Layout", "order_by=-created_at&sub_issue=true&group_by=state_id&limit=30"],
+          ["Table Layout", "order_by=-created_at&sub_issue=true&limit=100"],
+          ["Calendar Layout", `order_by=-created_at&sub_issue=true&group_by=target_date&limit=4&target_date=${range}`],
+          ["List Layout", "order_by=-created_at&sub_issue=true&group_by=state_id&limit=50"],
+        ];
+        await layouts.reduce(async (prior, [button, query]) => {
+          await prior;
+          const from = requests.next();
+          await page.getByRole("button", { name: button, exact: true }).click();
+          const expected = [
+            "PATCH /api/v0/me/projects/{project}/preferences",
+            `GET /api/v0/projects/{project}/issues?${query}`,
+          ].toSorted();
+          await expect.poll(() => requests.between(from)).toEqual({ pending: 0, requests: expected });
+          load.expected.push(...expected);
+        }, Promise.resolve());
+        load.expected.sort();
+      }
       return load;
     };
     // the pages load one after another
