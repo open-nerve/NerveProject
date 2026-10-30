@@ -52,13 +52,13 @@ make e2e
 
 ## Task 2：原22路径与显式路由scope（约650–1100行）
 
-**Files：** spec§2.9表中14现存文件及utils调用方、tools/keywords.json；新L/route-scope.test.tsx，迁group-consumers.test.tsx省略scope的fixture。
+**Files：** spec§2.9表中14现存文件及utils调用方、tools/keywords.json；目录投影抽到新L/group-columns.tsx，保持同步单一职责；新L/route-scope.test.tsx，迁group-consumers.test.tsx省略scope的fixture。
 
-- [ ] 从准备inventory核22项当前存在/删除；不恢复8已删文件。已正确按props/route读取的只复核，归档header的local currentProjectDetails变量改名避免误命中，不能豁免规则。
-- [ ] 目录helper明确workspace/project参数，project/state/label/created_by/assignee均不回退router store；profile/归档/子项真实调用同步。rootStore的同步读取不发HTTP；workspace级调用显式标范围，draft删除保留P11的workspace权限。
-- [ ] `rendersTheNewRouteBeforeRouterStoreEffect`使route=B/store仍A，核地址、目录、权限、候选与组列全B；覆盖项目成员/访客、project_id缺失不能回落A。当前读错误仍可观察，不自行批量预取目录。
-- [ ] project-address-route保留M3已守卫路径并扩至原22项，已删项留files样本阻回归；命中/不命中样本包含多行allowPermissions、显式slug/project、合法workspace删除。故意复原隐式权限使守卫红；核M7 getter读者不提前删除。
-- [ ] 跑route-scope/group-consumers/list-data/detail-entry及相关权限回归、关键词样本/types；M04错路由、M05同步helper发请求，G。提交`fix(M4/P12): 让列表地址和目录选择使用显式路由范围`。
+- [x] 从准备inventory核22项当前存在/删除；不恢复8已删文件。已正确按props/route读取的只复核，归档header的local currentProjectDetails变量改名避免误命中，不能豁免规则。
+- [x] 目录helper明确workspace/project参数，project/state/label/created_by/assignee均不回退router store；profile/归档/子项真实调用同步。rootStore的同步读取不发HTTP；workspace级调用显式标范围，draft删除保留P11的workspace权限。
+- [x] `rendersTheNewRouteBeforeRouterStoreEffect`使route=B/store仍A，核地址、目录、权限、候选与组列全B；覆盖项目成员/访客、project_id缺失不能回落A。当前读错误仍可观察，不自行批量预取目录。
+- [x] project-address-route保留M3已守卫路径并扩至原22项，已删项留files样本阻回归；命中/不命中样本包含多行allowPermissions、显式slug/project、合法workspace删除。故意复原隐式权限使守卫红；核M7 getter读者不提前删除。
+- [x] 跑route-scope/group-consumers/list-data/detail-entry及相关权限回归、关键词样本/types；M04错路由、M05同步helper发请求，G。提交`fix(M4/P12): 让列表地址和目录选择使用显式路由范围`。
 
 ## Task 3：列表分组和续页消费者（约450–850行）
 

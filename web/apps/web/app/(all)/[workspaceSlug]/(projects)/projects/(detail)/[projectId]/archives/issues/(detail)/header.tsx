@@ -42,7 +42,7 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
     { dedupingInterval: 0 }
   );
   const issueDetails = readable ? detail.issue.getIssueDetailById(archivedIssueId) : undefined;
-  const currentProjectDetails = getProjectById(projectId);
+  const project = getProjectById(projectId);
 
   return (
     <Header>
@@ -70,11 +70,7 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
           <Breadcrumbs.Item
             component={
               <BreadcrumbLink
-                label={
-                  currentProjectDetails && issueDetails
-                    ? `${currentProjectDetails.identifier}-${issueDetails.sequence_id}`
-                    : ""
-                }
+                label={project && issueDetails ? `${project.identifier}-${issueDetails.sequence_id}` : ""}
               />
             }
           />

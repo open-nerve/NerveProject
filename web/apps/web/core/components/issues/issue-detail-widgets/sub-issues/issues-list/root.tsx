@@ -1,3 +1,4 @@
+import { getGroupByColumns } from "@/components/issues/issue-layouts/group-columns";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -16,7 +17,7 @@ import type { GroupByColumnTypes, TSubIssueOperations } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 // hooks
 import { SectionEmptyState } from "@/components/empty-state/section-empty-state-root";
-import { getGroupByColumns, isWorkspaceLevel } from "@/components/issues/issue-layouts/utils";
+import { isWorkspaceLevel } from "@/components/issues/issue-layouts/utils";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 
 import { SubIssuesListGroup } from "./list-group";
@@ -63,6 +64,7 @@ export const SubIssuesListRoot = observer(function SubIssuesListRoot(props: Prop
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
+    workspaceSlug,
     projectId,
   });
 

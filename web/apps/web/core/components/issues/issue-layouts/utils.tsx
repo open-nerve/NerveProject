@@ -1,4 +1,3 @@
-// oxlint-disable no-shadow
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -23,28 +22,19 @@ import {
   WorkItemsOutline,
 } from "@makeplane/propel/icons";
 // nerve types
-import { Avatar } from "@makeplane/propel/components/avatar";
-import { EIconSize, ISSUE_PRIORITIES, STATE_GROUPS } from "@nerve/constants";
-import { Logo } from "@nerve/propel/emoji-icon-picker";
 import type { ISvgIcons } from "@nerve/propel/icons";
-import { PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
 import type {
-  GroupByColumnTypes,
-  IGroupByColumn,
   IIssueDisplayProperties,
   IPragmaticDropPayload,
   TIssueGroupByOptions,
   IIssueFilterOptions,
   IIssueFilters,
   IIssueDisplayFilterOptions,
-  TGetColumns,
   TSpreadsheetColumn,
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 
-import { getFileURL } from "@nerve/utils";
 // store
-import { rootStore } from "@/lib/store-context";
 import type { IssueDrop } from "@/store/issue/root.store";
 import { DEFAULT_DISPLAY_PROPERTIES } from "@/store/issue/issue-details/sub_issues_filter.store";
 // constants
@@ -74,201 +64,7 @@ export type GroupDropLocation = {
 };
 
 export const isWorkspaceLevel = (type: EIssuesStoreType) =>
-  // oxlint-disable-next-line no-unneeded-ternary
-  [EIssuesStoreType.PROFILE, EIssuesStoreType.WORKSPACE_DRAFT].includes(type) ? true : false;
-
-type TGetGroupByColumns = {
-  groupBy: GroupByColumnTypes | null;
-  includeNone: boolean;
-  isWorkspaceLevel: boolean;
-  projectId?: string;
-};
-
-// NOTE: Type of groupBy is different compared to what's being passed from the components.
-// We are using `as` to typecast it to the expected type.
-// It can break the includeNone logic if not handled properly.
-export const getGroupByColumns = ({
-  groupBy,
-  includeNone,
-  isWorkspaceLevel,
-  projectId,
-}: TGetGroupByColumns): IGroupByColumn[] | undefined => {
-  // If no groupBy is specified and includeNone is true, return "All Issues" group
-  if (!groupBy && includeNone) {
-    return [
-      {
-        id: "",
-        name: "All work items",
-        payload: {},
-        icon: undefined,
-      },
-    ];
-  }
-
-  // Return undefined if no valid groupBy
-  if (!groupBy) return undefined;
-
-  // Map of group by options to their corresponding column getter functions
-  const groupByColumnMap: Record<
-    GroupByColumnTypes,
-    ({ isWorkspaceLevel, projectId }: TGetColumns) => IGroupByColumn[] | undefined
-  > = {
-    project: getProjectColumns,
-    state: getStateColumns,
-    "state_detail.group": getStateGroupColumns,
-    priority: getPriorityColumns,
-    labels: getLabelsColumns,
-    assignees: getAssigneeColumns,
-    created_by: getCreatedByColumns,
-  };
-
-  // Get and return the columns for the specified group by option
-  return groupByColumnMap[groupBy]?.({ isWorkspaceLevel, projectId });
-};
-
-const getProjectColumns = (): IGroupByColumn[] | undefined => {
-  const { joinedProjectIds: projectIds, getProjectById } = rootStore.projectRoot.project;
-  // Return undefined if no project ids
-  if (!projectIds) return;
-  // Map project ids to project columns
-  return projectIds
-    .map((projectId: string) => {
-      const project = getProjectById(projectId);
-      if (!project) return;
-      return {
-        id: project.id,
-        name: project.name,
-        icon: (
-          <div className="grid h-6 w-6 flex-shrink-0 place-items-center">
-            <Logo logo={project.logo_props} />
-          </div>
-        ),
-        payload: { project_id: project.id },
-      };
-    })
-    .filter((column) => column !== undefined) as IGroupByColumn[];
-};
-
-const getStateColumns = ({ projectId }: TGetColumns): IGroupByColumn[] | undefined => {
-  const { getProjectStates, projectStates, getStatePercentageInGroup } = rootStore.state;
-  const _states = projectId ? getProjectStates(projectId) : projectStates;
-  if (!_states) return;
-  // map project states to group by columns
-  return _states.map((state) => ({
-    id: state.id,
-    name: state.name,
-    icon: (
-      <div className="size-4 rounded-full">
-        <StateGroupIcon
-          stateGroup={state.group}
-          color={state.color}
-          size={EIconSize.LG}
-          percentage={getStatePercentageInGroup(state.id)}
-        />
-      </div>
-    ),
-    payload: { state_id: state.id },
-  }));
-};
-
-const getStateGroupColumns = (): IGroupByColumn[] => {
-  // map state groups to group by columns
-  return Object.values(STATE_GROUPS).map((stateGroup) => ({
-    id: stateGroup.key,
-    name: stateGroup.label,
-    icon: (
-      <div className="size-4 rounded-full">
-        <StateGroupIcon stateGroup={stateGroup.key} size={EIconSize.LG} />
-      </div>
-    ),
-    payload: {},
-  }));
-};
-
-const getPriorityColumns = (): IGroupByColumn[] => {
-  // map priorities to group by columns
-  return ISSUE_PRIORITIES.map((priority) => ({
-    id: priority.key,
-    name: priority.title,
-    icon: <PriorityIcon priority={priority?.key} />,
-    payload: { priority: priority.key },
-  }));
-};
-
-const getLabelsColumns = ({ isWorkspaceLevel }: TGetColumns): IGroupByColumn[] => {
-  // the workspace's labels across its projects are M7's (M3 design 7.3): a workspace level groups none of them
-  const labels = [
-    ...(isWorkspaceLevel ? [] : (rootStore.label.projectLabels ?? [])),
-    { id: "none", name: "None", color: "#666" },
-  ];
-  // map labels to group by columns
-  return labels.map((label) => ({
-    id: label.id,
-    name: label.name,
-    icon: (
-      <div className="h-[12px] w-[12px] rounded-full" style={{ backgroundColor: label.color ? label.color : "#666" }} />
-    ),
-    payload: label?.id === "none" ? {} : { label_ids: [label.id] },
-  }));
-};
-
-const getAssigneeColumns = ({ isWorkspaceLevel, projectId }: TGetColumns): IGroupByColumn[] | undefined => {
-  // store values
-  const { getUserDetails } = rootStore.memberRoot;
-  // derived values
-  const { memberIds, includeNone } = getScopeMemberIds({ isWorkspaceLevel, projectId });
-  const assigneeColumns: IGroupByColumn[] = [];
-
-  if (!memberIds) return [];
-
-  memberIds.forEach((memberId) => {
-    const member = getUserDetails(memberId);
-    if (!member) return;
-    assigneeColumns.push({
-      id: memberId,
-      name: member?.display_name || "",
-      icon: (
-        <Avatar
-          alt={member?.display_name}
-          fallback={member?.display_name?.[0]?.toUpperCase()}
-          src={getFileURL(member?.avatar_url ?? "")}
-          size="xs"
-        />
-      ),
-      payload: { assignee_ids: [memberId] },
-    });
-  });
-  if (includeNone) {
-    assigneeColumns.push({ id: "none", name: "None", icon: <Avatar size="xs" />, payload: {} });
-  }
-
-  return assigneeColumns;
-};
-
-const getCreatedByColumns = (): IGroupByColumn[] | undefined => {
-  const {
-    project: { projectMemberIds },
-    getUserDetails,
-  } = rootStore.memberRoot;
-  if (!projectMemberIds) return;
-  // Map project member ids to group by created by columns
-  return projectMemberIds.map((memberId) => {
-    const member = getUserDetails(memberId);
-    return {
-      id: memberId,
-      name: member?.display_name || "",
-      icon: (
-        <Avatar
-          alt={member?.display_name}
-          fallback={member?.display_name?.[0]?.toUpperCase()}
-          src={getFileURL(member?.avatar_url ?? "")}
-          size="xs"
-        />
-      ),
-      payload: {},
-    };
-  });
-};
+  [EIssuesStoreType.PROFILE, EIssuesStoreType.WORKSPACE_DRAFT].includes(type);
 
 export const getDisplayPropertiesCount = (
   displayProperties: IIssueDisplayProperties,
@@ -533,7 +329,7 @@ export const isDisplayFiltersApplied = (filters: Partial<IIssueFilters>): boolea
     (key) => !filters.displayProperties?.[key as keyof IIssueDisplayProperties]
   );
 
-  const isDisplayFiltersApplied = Object.keys(filters.displayFilters ?? {}).some((key) => {
+  const changedDisplayFilters = Object.keys(filters.displayFilters ?? {}).some((key) => {
     const value = filters.displayFilters?.[key as keyof IIssueDisplayFilterOptions];
     if (!value) return false;
     // -create_at is the default order
@@ -543,7 +339,7 @@ export const isDisplayFiltersApplied = (filters: Partial<IIssueFilters>): boolea
     return true;
   });
 
-  return isDisplayPropertiesApplied || isDisplayFiltersApplied;
+  return isDisplayPropertiesApplied || changedDisplayFilters;
 };
 
 /**
@@ -570,34 +366,6 @@ export const isFiltersApplied = (filters: IIssueFilterOptions): boolean =>
 export const calculateIdentifierWidth = (projectIdentifierLength: number, sequenceId: number): number => {
   const sequenceDigits = Math.max(1, Math.floor(Math.log10(sequenceId)) + 1);
   return projectIdentifierLength * 7 + 7 + sequenceDigits * 7; // project identifier chars + dash + sequence digits
-};
-
-type TGetScopeMemberIdsResult = {
-  memberIds: string[];
-  includeNone: boolean;
-};
-
-const getScopeMemberIds = ({ isWorkspaceLevel, projectId }: TGetColumns): TGetScopeMemberIdsResult => {
-  // store values
-  const { workspaceMemberIds } = rootStore.memberRoot.workspace;
-  const { projectMemberIds } = rootStore.memberRoot.project;
-  // derived values
-  const memberIds = workspaceMemberIds;
-
-  if (isWorkspaceLevel) {
-    return { memberIds: memberIds ?? [], includeNone: true };
-  }
-
-  if (projectId || (projectMemberIds && projectMemberIds.length > 0)) {
-    const { getProjectMemberIds } = rootStore.memberRoot.project;
-    const _projectMemberIds = projectId ? getProjectMemberIds(projectId, false) : projectMemberIds;
-    return {
-      memberIds: _projectMemberIds ?? [],
-      includeNone: true,
-    };
-  }
-
-  return { memberIds: [], includeNone: true };
 };
 
 const SpreadSheetPropertyIconMap: Record<string, FC<ISvgIcons>> = {

@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1 已完成，T2–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T2 已完成，T3–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -73,3 +73,11 @@ P12 spec/plan全文审查；对搜索/资源/权限/路由helper/日期/快速�
 验证：最终聚焦 10 文件 149 测试通过（0 skip），类型和格式通过；修改路径 oxlint 0 警告，web cap 随实际从 145 降为 143；关键词 76 规则/24 例外无命中，1241 翻译读取均已定义。原始 argv/cwd/源码输入哈希/dirty 状态/raw/exit 在本 worktree `.superpowers/sdd/P12-web-list-pages/` 的 `t1-final-regression`、`t1-types-final`、`t1-lint-final`、`t1-format`、`t1-keywords`、`t1-i18n` 收据。
 
 M01 错搜索地址、M02 防抖延后失效、M03 放行其它项目三项生产变异均被行为断言捕获；原字节 SHA-256 精确恢复再绿（各 receipt/patch/red/restored 原件保留）。最初新模块不存在的导入红不计行为证明。日历提前返回、权限丢失仍 loading、候选嵌套编号按钮另有实际红→绿。jsdom 缺 ResizeObserver 与一处测试 getter 名误写属于夹具修正，未计生产缺陷或变异。T1 自查与修复复核没有未决架构问题；F/页面/三浏览器/最终整分支审查与 CI 留在既定后续任务，不能由本次单元验证替代。
+
+## 9. T2 显式地址、目录和权限（2026-10-30）
+
+原22路径再次逐项核实，仍为14现存/8删除，原件 `t2-route-inventory.json` 含每项当前哈希。地址正确的只复核；归档页局部变量改名；所有列表权限调用明确工作区/项目，缺地址不触发旧回退。目录投影从 utils 拆为 group-columns 单一职责模块，全部消费者显式传 scope，同步读取不发请求；profile/workspace 与项目范围分别选目录，保留 M7 getter 的其它真实消费者。
+
+真实 route=B/store=A 夹具先复现标签/权限错误，修复后成员、访客、缺项目、跨工作区及无 HTTP 均通过。project-address-route 保留 M3 原表达式与文件并扩围到22路径及目录调用方；新增规则区分属性/解构访问与合法局部变量，不增加豁免。M04 错路由被行为断言与守卫捕获，M05 同步发 HTTP 被实际请求断言捕获；另将真实权限调用退回隐式参数，守卫确实报红。均精确恢复原字节再验证，patch/哈希/日志在实施证据目录。
+
+最终聚焦7文件102测试通过（0 skip）；共享包强制构建10任务、类型、修改路径零 lint、关键词76规则/24例外无命中。web lint cap 按实际143→137收紧；顺带修正这批组件的回调依赖和局部同名变量。证据为 `t2-final-regression`、`t2-shared-build`、`t2-types-second`、`t2-changed-lint-final`、`t2-lint-final`、`t2-keywords-final`。初次测试中的成员夹具 ID 双前缀、标签参数遗漏及扩围正则误命中合法局部名均单记为修订过程，不冒充生产缺陷。没有新权限归属、协议或架构决定。

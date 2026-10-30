@@ -14,7 +14,7 @@ import { labelOf, projectMemberOf, stateOf } from "@/store/project/fake-projects
 import { membershipOf } from "@/store/member/workspace/fake-members";
 import { KanBan } from "./kanban/default";
 import { ListGroup } from "./list/list-group";
-import { getGroupByColumns } from "./utils";
+import { getGroupByColumns } from "./group-columns";
 import { SubIssuesListGroup } from "../issue-detail-widgets/sub-issues/issues-list/list-group";
 
 const bound = vi.hoisted(() => ({ app: undefined as unknown, session: { loginId: "A" } }));
@@ -106,7 +106,7 @@ const more = (group?: string, subgroup?: string) => {
 const create = (project: string | null | undefined, body: IssueCreate) =>
   project ? tab.app.issue.projectIssues.createIssue("ws", project, body) : Promise.resolve(undefined);
 const columns = (groupBy: GroupByColumnTypes | null) =>
-  getGroupByColumns({ groupBy, includeNone: true, isWorkspaceLevel: false })!;
+  getGroupByColumns({ groupBy, includeNone: true, isWorkspaceLevel: false, workspaceSlug: "ws", projectId: "A" })!;
 
 it("hidden kanban columns render without React key warnings", async () => {
   const original = console.error;

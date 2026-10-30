@@ -18,7 +18,7 @@ import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-w
 
 export const ProjectEmptyState = observer(function ProjectEmptyState() {
   // router
-  const { projectId } = useParams();
+  const { workspaceSlug, projectId } = useParams();
   // nerve imports
   const { t } = useTranslation();
   // store hooks
@@ -27,10 +27,15 @@ export const ProjectEmptyState = observer(function ProjectEmptyState() {
   // derived values
   const projectWorkItemFilter = useWorkItemFilterInstance(EIssuesStoreType.PROJECT, projectId);
 
-  const canPerformEmptyStateActions = allowPermissions(
-    [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
+  const canPerformEmptyStateActions =
+    !!workspaceSlug &&
+    !!projectId &&
+    allowPermissions(
+      [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
+      EUserPermissionsLevel.PROJECT,
+      workspaceSlug,
+      projectId
+    );
 
   return (
     <div className="relative h-full w-full overflow-y-auto">

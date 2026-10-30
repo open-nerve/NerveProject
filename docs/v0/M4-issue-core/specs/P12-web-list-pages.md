@@ -113,7 +113,7 @@ peek打开/关上、切项、换项目/工作区、后退和宿主卸载结束�
 | 17–19 | issue-layouts/quick-action-dropdowns/archived-issue.tsx；cycle-issue.tsx；module-issue.tsx | archived补显式scope；后二者已删除 |
 | 20–22 | issue-layouts/spreadsheet/base-spreadsheet-root.tsx；spreadsheet/roots/cycle-root.tsx；workspace-draft/delete-modal.tsx | base补scope；cycle已删除；draft已由P11使用workspace props，核正确性，不硬塞project权限 |
 
-`getGroupByColumns`及内部project/state/label/created_by/assignee目录选择接显式workspace/project或明确的workspace范围；无scope不退回router。同步rootStore读取仍只能同步，按需HTTP由现有宿主负责。更新全部调用方（包括profile/归档/子项），它们只做合同兼容，不宣称P13/P14页面验收。守卫保留M3原范围并覆盖原22路径，含已删除路径的样本以防复活；同步修actual test fixture省略scope的旧写法。剩余M7读者仍在，不提前删全局projectMemberIds getter。
+`getGroupByColumns`及内部project/state/label/created_by/assignee目录选择拆到 `L/group-columns.tsx`，与拖放/显示工具分责，接显式workspace/project或明确的workspace范围；无scope不退回router。同步rootStore读取仍只能同步，按需HTTP由现有宿主负责。更新全部调用方（包括profile/归档/子项），它们只做合同兼容，不宣称P13/P14页面验收。守卫保留M3原范围并覆盖原22路径，含已删除路径的样本以防复活；同步修actual test fixture省略scope的旧写法。剩余M7读者仍在，不提前删全局projectMemberIds getter。
 
 ## 3. 补充裁定
 
