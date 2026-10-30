@@ -1,6 +1,6 @@
 # M4/P13 筛选、显示设置、归档页与个人主页
 
-> 状态：文档预检通过，未实施。分支 codex/m4-p13；基线 main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8；工作树 .codex/worktress/codex/m4-p13。负责人本轮只授权准备 spec、plan 和预检。P12 已合并、准确 main CI 全绿并归档清理，见 [P12 review §28](../reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)。
+> 状态：负责人已授权实施，T1完成，T2接续。分支 codex/m4-p13；基线 main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8；工作树 .codex/worktress/codex/m4-p13。负责人随后授权从T1实施，阶段末做deep-review，先不合并。P12 已合并、准确 main CI 全绿并归档清理，见 [P12 review §28](../reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)。
 
 权威：[M4 设计](../M4-design.md) §3.16–3.17、3.22、7.4–7.5、9.7、12/P13、14；[plan](../plans/P13-web-filters-archives-profile.md)；[阶段评审](../reviews/P13-web-filters-archives-profile-review.md)。原型与逐 Task 重放按 [02 §3](../../claude_to_gpt/02-method.md#3-哪些是要求哪些是做法) 调整为静态合同、调用链、既有测试核对、一次独立 builder-check 和主控三视角 deep-review。本次不以静态结论代替产品测试。
 
@@ -159,7 +159,7 @@ workspace 访客显示“没有权限”；桌面/手机筛选工具栏与列表
 
 ## 7. 已知限制、交接和关闭条件
 
-本轮没有产品实现、原型、逐Task重放、编译、Vitest、E2E或变异运行；A1–A12全部开放。准备材料保存在主目录 .superpowers/sdd/P13-preparation-20261031/，未来必须随实施材料归档。
+预检时没有产品实现、原型、逐Task重放、编译、Vitest、E2E或变异运行；实施进度见review§8，阶段A1–A12全部开放。准备材料保存在主目录 .superpowers/sdd/P13-preparation-20261031/，未来必须随实施材料归档。
 
 接收 M1-closeout 的 typed profile view；M2-closeout §10四选择器/defaultOpen与§12归档页头实例的页面回归；M3-closeout §6个人主页/访客工具栏/key、§7筛选与日期/归档弹窗、§8文案，以及P5/P10b/P11/P12移交。本期实施结束才逐子项记录处理结果，handoff顶层保持open。M4总验收与最终交接不在本次关闭。
 

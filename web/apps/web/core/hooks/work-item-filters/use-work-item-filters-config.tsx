@@ -23,6 +23,7 @@ import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
 import type { MemberUser, Project, State, Label } from "@nerve/api-client";
 import type { TFilterConfig, TWorkItemFilterProperty } from "@nerve/types";
+import { useTranslation } from "@nerve/i18n";
 
 import {
   getAssigneeFilterConfig,
@@ -31,6 +32,7 @@ import {
   getFileURL,
   getLabelFilterConfig,
   getMentionFilterConfig,
+  getSubscriberFilterConfig,
   getPriorityFilterConfig,
   getProjectFilterConfig,
   getStartDateFilterConfig,
@@ -66,6 +68,10 @@ export type TWorkItemFiltersConfig = {
 
 export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps): TWorkItemFiltersConfig => {
   const { allowedFilters, labelIds, memberIds, projectIds, stateIds } = props;
+  const { t } = useTranslation();
+  const meLabel = t("common.filter_options.me");
+  const noneLabel = t("common.none");
+  const subscriberLabel = t("common.filter_options.subscribers");
   // store hooks
   const { loader: projectLoader, getProjectById } = useProject();
   const { getLabelById } = useLabel();
@@ -134,11 +140,12 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
         isEnabled: isFilterEnabled("label_id") && workItemLabels !== undefined,
         filterIcon: LabelsOutline,
         labels: workItemLabels ?? [],
+        additionalOptions: [{ id: "none", value: "none", label: noneLabel }],
         getOptionIcon: (color) => (
           <span className="flex size-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: color }} />
         ),
       }),
-    [isFilterEnabled, workItemLabels]
+    [isFilterEnabled, workItemLabels, noneLabel]
   );
 
   // assignee filter config
@@ -148,6 +155,10 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
         isEnabled: isFilterEnabled("assignee_id") && members !== undefined,
         filterIcon: MembersOutline,
         members: members ?? [],
+        additionalOptions: [
+          { id: "me", value: "me", label: meLabel },
+          { id: "none", value: "none", label: noneLabel },
+        ],
         getOptionIcon: (memberDetails) => (
           <Avatar
             alt={memberDetails.display_name}
@@ -157,7 +168,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
           />
         ),
       }),
-    [isFilterEnabled, members]
+    [isFilterEnabled, members, meLabel, noneLabel]
   );
 
   // mention filter config
@@ -167,6 +178,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
         isEnabled: isFilterEnabled("mention_id") && members !== undefined,
         filterIcon: AtOutline,
         members: members ?? [],
+        additionalOptions: [{ id: "me", value: "me", label: meLabel }],
         getOptionIcon: (memberDetails) => (
           <Avatar
             alt={memberDetails.display_name}
@@ -176,7 +188,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
           />
         ),
       }),
-    [isFilterEnabled, members]
+    [isFilterEnabled, members, meLabel]
   );
 
   // created by filter config
@@ -186,6 +198,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
         isEnabled: isFilterEnabled("created_by_id") && members !== undefined,
         filterIcon: UserOutline,
         members: members ?? [],
+        additionalOptions: [{ id: "me", value: "me", label: meLabel }],
         getOptionIcon: (memberDetails) => (
           <Avatar
             alt={memberDetails.display_name}
@@ -195,7 +208,20 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
           />
         ),
       }),
-    [isFilterEnabled, members]
+    [isFilterEnabled, members, meLabel]
+  );
+
+  const subscriberFilterConfig = useMemo(
+    () => ({
+      ...getSubscriberFilterConfig<TWorkItemFilterProperty>("subscriber_id")({
+        isEnabled: isFilterEnabled("subscriber_id") && members !== undefined,
+        filterIcon: MembersOutline,
+        members: members ?? [],
+        additionalOptions: [{ id: "me", value: "me", label: meLabel }],
+      }),
+      label: subscriberLabel,
+    }),
+    [isFilterEnabled, members, meLabel, subscriberLabel]
   );
 
   // priority filter config
@@ -270,6 +296,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
       priorityFilterConfig,
       projectFilterConfig,
       mentionFilterConfig,
+      subscriberFilterConfig,
       labelFilterConfig,
       startDateFilterConfig,
       targetDateFilterConfig,

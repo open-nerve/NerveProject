@@ -1,7 +1,7 @@
 # M4/P13 筛选、归档与个人主页实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking.
-> 负责人当前只授权文档预检，尚未授权实施。未来按既有 inline/executing-plans 方式从T1推进；不因上面的通用推荐自行开启逐Task代理。阶段末使用deep-review、修复复审，先不合并。
+> 负责人已授权实施，按既有 inline/executing-plans 方式从T1推进；不因上面的通用推荐自行开启逐Task代理。阶段末使用deep-review、修复复审，先不合并。
 
 **Goal：** 完成富筛选/显示设置、归档与个人主页页面，以及I5/I15/I19、C2/C9对应部分。
 
@@ -15,7 +15,7 @@
 
 - 主目录永远main，独立分支只用约定worktree；系统/usr/bin/git负责push，详细中文提交保留feat/fix/test/docs(M4/P13)前缀。
 - plane/和refer/只读；不动已有容器和Docker；不全局安装，不加设计未点名依赖；不用stash/clean/reset --hard/force，不提取钥匙串或浏览器凭据。
-- 本次准备phase保持M4/P12，不安装依赖、不实现、不跑产品测试；未来T1才改tools/keywords.json为M4/P13，并核实际到期例外，不统一延期。
+- 准备快照的phase为M4/P12；实施T1改tools/keywords.json为M4/P13，并核实际到期例外，不统一延期。
 - IssueRootStore统一权限失效；不复制canonical或新增权限观察者，不放宽守卫；公开类型来自生成API。无any、双重断言或宽Partial假实体。
 - 新生产文件约400行内；超出按职责拆分。新增helper须有真实复用，不复制整个FakeNerve/server fixture。测试长表必要时在review记理由。
 - 新增/改动文案同步P/i18n/src/locales/en、zh-CN及键；错误按现有errorMessageKey/useRefusalToast，不拼造成功。
@@ -67,11 +67,11 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 **Files：** spec§2.1 T1；新C/components/work-item-filters/filter-config.test.tsx；tools/keywords.json；必要的P/utils导出和i18n键。
 **Interfaces：** 消费现有toProjectFilters(expression):ProjectIssueFilters、toMemberFilters(expression):ProjectIssueFilters & Pick<MemberIssueQuery,"project_id">、toFilterExpression(filters):TWorkItemFilterExpression；新增getSubscriberFilterConfig<P extends TFilterProperty>(key:P):TCreateFilterConfig<P,TCreateUserFilterParams>，由现有配置hook组合，不新增服务。
 
-- [ ] Step 1：核基线/路径/phase与exceptions，列出三页当前allowedFilters；写rendersSupportedNativeFilters和keepsSubscriberAndProjectRestriction，真实配置/HOC下断言合法subscriber正常chip、保存后仍subscriber_id；profile改priority不丢project_id。
-- [ ] Step 2：运行新filter-config及core/lib/issue-filters.test.ts、filters-hoc/base.test.tsx；预期现有缺subscriber配置的行为断言失败，不能把无匹配算红。
-- [ ] Step 3：补subscriber配置、三页允许条件及翻译；me/none精确按spec，profile已有project_id范围可编辑。共享HOC仍由P12 layout-effect注册，冷目录不清合法值；不新增created/updated过滤。
-- [ ] Step 4：同组测试绿、类型绿；M01去掉subscriber生产配置使真实chip/请求断言红，恢复绿；检查无旧URL或第二转换器。
-- [ ] Step 5：精确提交：feat(M4/P13): 补齐富筛选的原生条件配置。台账记录A1与原生转换回归。
+- [x] Step 1：核基线/路径/phase与exceptions，列出三页当前allowedFilters；写rendersSupportedNativeFilters和keepsSubscriberAndProjectRestriction，真实配置/HOC下断言合法subscriber正常chip、保存后仍subscriber_id；profile改priority不丢project_id。
+- [x] Step 2：运行新filter-config及core/lib/issue-filters.test.ts、filters-hoc/base.test.tsx；预期现有缺subscriber配置的行为断言失败，不能把无匹配算红。
+- [x] Step 3：补subscriber配置、三页允许条件及翻译；me/none精确按spec，profile已有project_id范围可编辑。共享HOC仍由P12 layout-effect注册，冷目录不清合法值；不新增created/updated过滤。
+- [x] Step 4：同组测试绿、类型绿；M01去掉subscriber生产配置使真实chip/请求断言红，恢复绿；检查无旧URL或第二转换器。
+- [x] Step 5：精确提交：feat(M4/P13): 补齐富筛选的原生条件配置。台账记录A1与原生转换回归。
 
 ## Task 2：四选择器的加载、翻译和当前性（约550–1000行）
 
@@ -225,12 +225,12 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 
 本计划14Task，spec§2.1各交付均有任务，A1–A12映射见阶段review；Review Focus五项各有真实测试落点。接口新增仅局部options状态、本地更新反馈和route parser，以及现有日期按钮可选字段；不改变后端契约或权限所有权。估计任务规模不超16项及约1500行/项，实际超出时按02重新拆分并记原因。
 
-本轮无Task已执行；上述变异是候选，不是证据。预检完成后交负责人，下一步获得实施安排才进入T1。
+准备阶段未执行Task或变异；负责人已授权实施，进度按各Task勾选与阶段review记录。未实际运行的候选变异仍不能当证据。
 
 
 ## 附录 B：逐Task聚焦命令
 
-以下命令中的新增测试由对应Task先创建；不能在本次准备阶段执行。Step 2记录真实行为失败，Step 4同命令恢复绿，退出0且非零执行才成立；每Task另执行全局types/diff-check和明确受影响回归。
+以下命令中的新增测试由对应Task先创建；本次实施按对应Task执行。Step 2记录真实行为失败，Step 4同命令恢复绿，退出0且非零执行才成立；每Task另执行全局types/diff-check和明确受影响回归。
 
 ~~~sh
 # T1

@@ -1,6 +1,6 @@
 # M4/P13 筛选、归档与个人主页：预检记录
 
-日期：2026-10-31。**文档预检通过，未实施。** [spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[deep-review预检](../../../reviews/re-18-M4P13预检审核.md)。产品A1–A12和14个Task全部开放；本记录不等于阶段实施后的整分支终审。
+日期：2026-10-31。**当前已获准实施，T1完成，T2接续；以下§1–7保留预检快照，实施接续见§8。** [spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[deep-review预检](../../../reviews/re-18-M4P13预检审核.md)。产品A1–A12和14个Task全部开放；本记录不等于阶段实施后的整分支终审。
 
 ## 1. 前置与评审方式
 
@@ -72,3 +72,11 @@ R1–R5复核均已落到spec/plan。未以“未来计划”冒称现存range�
 静态预检不能证明运行通过。选项defaultOpen、真实焦点/几何、时区和浏览器、UI owner时序以及错误恢复仍需T1起验证。无产品测试运行、无变异计数、无新接口或依赖。M4§14、总体§9.4、所有输入handoff顶层open和M5–M8最终closeout不提前关闭。
 
 P12的CI、原始红绿/trace和归档是上一阶段证据；仅用于确认本期基线可用，不能计作P13验收。
+
+## 8. 实施接续（2026-10-31）
+
+负责人授权从T1实施并在阶段末deep-review，先不合并。证据在worktree的.superpowers/sdd/P13-web-filters-archives-profile/，准备证据仍保留在主目录。
+
+T1补subscriber配置/原生入口、profile项目条件入口以及me/none选项；复用原生转换，没有伪造成员实体或增加接口。可选additionalOptions由原多选配置组合，已有消费者默认不变。起步基线77通过；新测试3个真实断言失败后修复，最终3文件81测试通过，utils包7文件62测试通过；M01移除subscriber注册导致3断言红并准确恢复。make lint-web 54任务通过（31缓存），包含关键词/翻译键/类型/格式/警告上限；没有把它称为完整F。首轮作者测试接线、profile输入与翻译键位置错误及新增测试lint告警均保留raw，修正后复验，不计作产品根因或有效行为红。
+
+第一个产品提交将phase改为M4/P13；没有P12/P13到期例外。T2–T14及真实页面/三浏览器/完整F/最终分支CI尚待执行。

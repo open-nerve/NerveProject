@@ -6,7 +6,7 @@
 
 // nerve imports
 import type { Label } from "@nerve/api-client";
-import type { TFilterProperty, TSupportedOperators } from "@nerve/types";
+import type { IFilterOption, TFilterProperty, TSupportedOperators } from "@nerve/types";
 import { EQUALITY_OPERATOR, COLLECTION_OPERATOR } from "@nerve/types";
 // local imports
 import type { TCreateFilterConfigParams, IFilterIconConfig, TCreateFilterConfig } from "../../../rich-filters";
@@ -18,6 +18,7 @@ import { createFilterConfig, getMultiSelectConfig, createOperatorConfigEntry } f
 type TCreateLabelFilterParams = TCreateFilterConfigParams &
   IFilterIconConfig<string> & {
     labels: Label[];
+    additionalOptions?: IFilterOption<string>[];
   };
 
 /**

@@ -387,7 +387,11 @@
     "developer": "Developer",
     "work_structure": "Work structure",
     "execution": "Execution",
-    "administration": "Administration"
+    "administration": "Administration",
+    "filter_options": {
+      "me": "Me",
+      "subscribers": "Subscribers"
+    }
   },
   "date_filter": {
     "before": "{title} before",

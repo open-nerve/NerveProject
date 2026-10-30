@@ -69,6 +69,22 @@ export const getMentionFilterConfig =
 
 // ------------ Created by filter ------------
 
+/** Subscribers use the existing user selection vocabulary and native subscriber_id field. */
+export const getSubscriberFilterConfig =
+  <P extends TFilterProperty>(key: P): TCreateFilterConfig<P, TCreateUserFilterParams> =>
+  (params) =>
+    createFilterConfig<P>({
+      id: key,
+      label: "Subscribers",
+      ...params,
+      icon: params.filterIcon,
+      supportedOperatorConfigsMap: new Map([
+        createOperatorConfigEntry(COLLECTION_OPERATOR.IN, params, (updatedParams) =>
+          getMemberMultiSelectConfig(updatedParams, EQUALITY_OPERATOR.EXACT)
+        ),
+      ]),
+    });
+
 /**
  * Created by filter specific params
  */

@@ -387,7 +387,11 @@
     "developer": "开发者",
     "work_structure": "工作结构",
     "execution": "执行",
-    "administration": "管理"
+    "administration": "管理",
+    "filter_options": {
+      "me": "我",
+      "subscribers": "关注人"
+    }
   },
   "date_filter": {
     "before": "{title}早于",
