@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Button, getButtonStyling } from "@nerve/propel/button";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/utils";
@@ -12,7 +12,6 @@ import { BACKGROUND_BUTTON_VARIANTS, BORDER_BUTTON_VARIANTS } from "./constants"
 import type { TButtonVariants } from "./types";
 
 export type DropdownButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  ref?: Ref<HTMLButtonElement>;
   children: ReactNode;
   isActive: boolean;
   tooltipContent?: string;

@@ -22,11 +22,7 @@ interface TSubIssuesListGroupProps {
   canEdit: boolean;
   parentIssueId: string;
   rootIssueId: string;
-  handleIssueCrudState: (
-    key: "create" | "existing" | "update" | "delete",
-    issueId: string,
-    issue?: Issue | null
-  ) => void;
+  handleIssueCrudState: (key: "update" | "delete", issueId: string, issue?: Issue | null) => void;
   subIssueOperations: TSubIssueOperations;
   storeType?: EIssuesStoreType;
   spacingLeft?: number;

@@ -306,3 +306,14 @@ M4指定目录的is_bot/description_json/comment_json均零命中，旧IssueServ
 固定审核HEAD的6 Major/3 Minor包括父项提前关闭、子项共享加载残留、祖先卸载阻止最后autosave、版本恢复未重置autosave、两处日期拆写、标签旧集合覆盖、普通表单旧scope跟进、四个翻译key和三类只读标签透传。普通表单问题按可能重置新表单/触发旧资产请求的影响升为Major；无Critical或架构阻断。所有发现均纳入局部修复，不放宽架构、权限或关键词守卫。
 
 `t15-regression-ready`的33文件524项、`t15-types-ready`已通过；静态/完整F/最终准确SHA的CI仍待完成，不能据此声称P11已交付。有效RED与夹具失败的区别、修复权衡和全部回执路径保存在台账；阶段A1–A10继续开放，最终整审报告和验收映射在门禁完成后收口。
+
+
+### T15 死成员与最终产品门禁补充
+
+M1附录原脚本恢复到本阶段忽略目录（extraction.json记录原字节SHA），先typegen再deadsym/domains。终审删除无生产调用的草稿fetchIssue/get及旧列表字段、关联createdAt/核验round只写元数据、冗余subissue接口、旧局部create/existing/removeRelation槽、无传入的评论footer/标签props/lite变体和独占toolbar，IMAGE_ITEM收为包内常量、ViewFlags死类型删除；cycle.store只删除无读者progressLoader及三个getter，其领域service调用不变。草稿测试改从真实列表重读，保留project=null和payload断言；单条生成GET合同未变，包装随P15真实入口需要时再建。
+
+原候选215行/49文件；最终185行/39文件（62生产声明、123测试/夹具），逐行位置/名称/源码SHA/读者与理由见t15-dead-disposition.json。全仓候选387 prop/871 member/17 export不是零dead声明；结构透传、完整领域DTO、动态键、三个资源纯读取观察口均具名登记。M4最终dead/no-shadow仍由P16收口。
+
+整分支252个现存TS/TSX的oxlint为0warning/0error，oxfmt及diff通过（t15-branch-static-delivery）；T1拒绝矩阵一条map-spread警告已清，web cap146→145，不放宽守卫。三条独占cycle import/关系旧测试createdAt精确预期和一次shell短路导致未实际替换的命令错误均已纠正，失败日志保持真实。
+
+完整F由b27fd3d5的gen-check/lint-go/test-go三个绿色回执，加最终源码t15-release-f的lint-web/knip/强制test-web/e2e构成；后续仅前端局部删除/测试矩阵，不重复未变Go。每项实际argv、源码dirty SHA、raw SHA与退出码均已核；最终E2E169通过。产品候选推送和准确CI仍待本次提交后核验。

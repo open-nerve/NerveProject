@@ -78,7 +78,7 @@ make e2e
 ## Task 3：子项与关联（约800–1350行）
 
 **Files：** issue-details/sub_issues.store.ts、sub_issues_filter.store.ts、relation.store.ts、root.store.ts；C/components/issues/{sub-issues,relations,issue-detail-widgets} 的真实消费者；旧 issue_relation.service.ts/types；新 relation.store.test.ts/detail-changes.test.ts、C/components/issues/relations/data.test.tsx，迁 sub_issues.fetch.test.ts。
-**Interfaces：** child collection 只存ID+读取证明；relation 行有 relationId/type/targetId/createdAt；删除以 relationId；状态分布为目录派生。
+**Interfaces：** child collection 只存ID+读取证明；relation 行只保留 relationId/type/targetId，终审移除无读者createdAt副本；删除以 relationId；状态分布为目录派生。
 
 - [x] 测同项目子项、不依赖 state_distribution、nullable parent、跨项目关联/可见范围、相同关系重复确认；删除请求断言关系 ID，关联目标标题来自 canonical 后更新可见。
 - [x] add batch 与 child parent PATCH 串行；关联两端/批量ID有稳定队列顺序；移除父子调用普通 parent_id=null PATCH，delete child 沿 root 删除树。新父/旧父、关联两端的确认回查和列表 stale 按 spec§2.4。
@@ -209,7 +209,7 @@ make e2e
 - [ ] spec A1–A10逐条绑定实际命令/源码SHA/raw，独立选择≥15种不同性质的生产变异，不能同性质换两个样本算两项；首失败、恢复绿和hash桥保留。
 - [ ] 从实际main基线审全部分支（含准备文档/所有产品提交），deep-review逻辑→集成→覆盖，实际全文清单和遗漏如实记。发现局部问题根因修复并限定复审；结构问题先提交上报。
 - [ ] 最后产品输入跑F七项，核非缓存/测试数/构建；修复后只按新的产品差异重跑必要范围。push准确候选并核server/web/e2e，不把产品候选的CI冒认为后来文档HEAD的CI。
-- [ ] 删除无读者文件/导出，记录必要后续范围与局部handoff；M4§14、总体§9.4、handoff顶层与M5–M8最终closeout均保持开放。
+- [ ] 删除无读者文件/导出，记录必要后续范围与局部handoff；终审按M1原脚本核命中，删除无生产调用的草稿单条读取包装/旧列表字段、只写元数据和未使用控件参数；保持实际列表重读断言，DTO/动态透传/测试观察口逐行说明。M4§14、总体§9.4、handoff顶层与M5–M8最终closeout均保持开放。
 - [ ] 文稿终审/静态核/精确提交后准确最终分支CI另核，回执放忽略证据目录避免循环提交自身SHA。汇报分支、基线、spec/plan/review/CI。**不合并、不清理worktree**，待负责人安排。
 - [ ] 提交 `docs(M4/P11): 汇总详情数据层验证与整分支评审`。
 

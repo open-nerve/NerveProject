@@ -8,14 +8,12 @@ import type { IssueReadToken, IssueRootStore } from "./root.store";
 
 type Verification = {
   id: string;
-  round: number;
   status: "pending" | "missing" | "error" | "unconfirmed";
   error?: unknown;
   freshnessFloor: number;
   identity: string;
 };
 export type VerificationRound = {
-  id: number;
   users: number;
   ids: Map<string, VerificationRequest>;
   scopes: Set<IssueListBinding>;
@@ -28,12 +26,11 @@ export class IssueVerification {
   private readonly affected = new Map<string, Set<IssueListBinding>>();
   private readonly inFlight = observable.map<string, VerificationRequest>({}, { deep: false });
   private current?: VerificationRound;
-  private sequence = 0;
   constructor(private readonly root: IssueRootStore) {}
   begin(fresh = false): VerificationRound {
     // Explicit recovery owns new completed-id dedupe and scope budgets even if an old read is still out.
     if (fresh) this.current = undefined;
-    const round = (this.current ??= { id: ++this.sequence, users: 0, ids: new Map(), scopes: new Set() });
+    const round = (this.current ??= { users: 0, ids: new Map(), scopes: new Set() });
     ++round.users;
     return round;
   }
@@ -101,7 +98,6 @@ export class IssueVerification {
       runInAction(() =>
         this.records.set(id, {
           id,
-          round: round.id,
           status: "pending",
           freshnessFloor: this.root.readSerial,
           identity: this.identity(id),
@@ -166,7 +162,6 @@ export class IssueVerification {
       runInAction(() =>
         this.records.set(id, {
           id,
-          round: round.id,
           status: "pending",
           freshnessFloor: minimumSerial,
           identity,
@@ -189,7 +184,6 @@ export class IssueVerification {
       runInAction(() =>
         this.records.set(id, {
           id,
-          round: round.id,
           status: "pending",
           error: record?.identity === identity ? record.error : undefined,
           freshnessFloor: this.root.readSerial,
@@ -245,7 +239,6 @@ export class IssueVerification {
       runInAction(() =>
         this.records.set(id, {
           id,
-          round: round.id,
           status: missing ? "missing" : "error",
           error: missing ? undefined : error,
           freshnessFloor: this.root.readSerial,

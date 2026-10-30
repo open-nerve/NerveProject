@@ -7,9 +7,6 @@ export class WorkspaceDraftService {
   async list(slug: string, query?: operations["listDrafts"]["parameters"]["query"]): Promise<DraftPage> {
     return unwrap(await this.api.GET("/api/v0/workspaces/{slug}/drafts", { params: { path: { slug }, query } }));
   }
-  async get(id: string): Promise<Draft> {
-    return unwrap(await this.api.GET("/api/v0/drafts/{draft_id}", { params: { path: { draft_id: id } } }));
-  }
   async create(slug: string, input: DraftCreate): Promise<Draft> {
     return unwrap(
       await this.api.POST("/api/v0/workspaces/{slug}/drafts", {

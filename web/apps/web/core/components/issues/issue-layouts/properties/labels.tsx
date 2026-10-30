@@ -5,7 +5,6 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import type { Placement } from "@popperjs/core";
 import { observer } from "mobx-react";
 // nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
@@ -30,8 +29,6 @@ export interface IIssuePropertyLabels {
   hideDropdownArrow?: boolean;
   className?: string;
   buttonClassName?: string;
-  optionsClassName?: string;
-  placement?: Placement;
   maxRender?: number;
   noLabelBorder?: boolean;
   placeholderText?: string;
@@ -147,7 +144,6 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
     disabled,
     hideDropdownArrow = false,
     buttonClassName = "",
-    placement,
     maxRender = 2,
     noLabelBorder = false,
     placeholderText,
@@ -195,7 +191,6 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
                 value={value}
                 onChange={onChange}
                 buttonClassName={buttonClassName}
-                placement={placement}
                 hideDropdownArrow={hideDropdownArrow}
                 fullWidth={fullWidth}
                 fullHeight={fullHeight}
@@ -219,7 +214,6 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
             onChange={onChange}
             hideDropdownArrow={hideDropdownArrow}
             buttonClassName={buttonClassName}
-            placement={placement}
             fullWidth={fullWidth}
             fullHeight={fullHeight}
             label={
@@ -242,7 +236,6 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
           onChange={onChange}
           hideDropdownArrow={hideDropdownArrow}
           buttonClassName={buttonClassName}
-          placement={placement}
           fullWidth={fullWidth}
           fullHeight={fullHeight}
           label={

@@ -20,7 +20,6 @@ import { useEditorConfig, useEditorMention } from "@/hooks/editor";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // services
-import { LiteToolbar } from "./lite-toolbar";
 
 type LiteTextEditorWrapperProps = MakeOptional<
   Omit<ILiteTextEditorProps, "fileHandler" | "mentionHandler">,
@@ -32,10 +31,7 @@ type LiteTextEditorWrapperProps = MakeOptional<
   showSubmitButton?: boolean;
   isSubmitting?: boolean;
   showToolbarInitially?: boolean;
-  variant?: "full" | "lite" | "none";
   parentClassName?: string;
-  editorClassName?: string;
-  submitButtonText?: string;
 } & (
     | {
         editable: false;
@@ -65,19 +61,14 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
     showSubmitButton = true,
     isSubmitting = false,
     showToolbarInitially = true,
-    variant = "full",
     parentClassName = "",
     placeholder = t("issue.comments.placeholder"),
     disabledExtensions = [],
-    editorClassName = "",
     showPlaceholderOnEmpty = true,
-    submitButtonText = "common.comment",
     ...rest
   } = props;
   // states
-  const isLiteVariant = variant === "lite";
-  const isFullVariant = variant === "full";
-  const [isFocused, setIsFocused] = useState(isFullVariant ? showToolbarInitially : true);
+  const [isFocused, setIsFocused] = useState(showToolbarInitially);
   const [editorRef, setEditorRef] = useState<EditorRefApi | null>(null);
   // store hooks
   const members = useMember();
@@ -99,17 +90,17 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
       className={cn(
         "relative rounded-sm border border-subtle",
         {
-          "p-3": editable && !isLiteVariant,
+          "p-3": editable,
         },
         parentClassName
       )}
-      onFocus={() => isFullVariant && !showToolbarInitially && setIsFocused(true)}
-      onBlur={() => isFullVariant && !showToolbarInitially && setIsFocused(false)}
+      onFocus={() => !showToolbarInitially && setIsFocused(true)}
+      onBlur={() => !showToolbarInitially && setIsFocused(false)}
     >
-      {/* Wrapper for lite toolbar layout */}
-      <div className={cn(isLiteVariant && editable ? "flex items-end gap-1" : "")}>
+      {/* Editor and confirmation toolbar keep their existing layout. */}
+      <div>
         {/* Main Editor - always rendered once */}
-        <div className={cn(isLiteVariant && editable ? "min-w-0 flex-1" : "")}>
+        <div>
           <LiteTextEditorWithRef
             ref={ref}
             disabledExtensions={disabledExtensions}
@@ -141,31 +132,13 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
             containerClassName={cn(containerClassName, "relative", {
               "p-2": !editable,
             })}
-            editorClassName={editorClassName}
             {...rest}
           />
         </div>
-
-        {/* Lite Toolbar - conditionally rendered */}
-        {isLiteVariant && editable && (
-          <LiteToolbar
-            executeCommand={(item) => {
-              // TODO: update this while toolbar homogenization
-              // @ts-expect-error type mismatch here
-              editorRef?.executeMenuItemCommand({
-                itemKey: item.itemKey,
-                ...item.extraProps,
-              });
-            }}
-            onSubmit={(e) => rest.onEnterKeyPress?.(e)}
-            isSubmitting={isSubmitting}
-            isEmpty={isEmpty}
-          />
-        )}
       </div>
 
       {/* Full Toolbar - conditionally rendered */}
-      {isFullVariant && editable && (
+      {editable && (
         <div
           className={cn(
             "origin-top overflow-hidden transition-all duration-300 ease-out",
@@ -186,7 +159,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
             isSubmitting={isSubmitting}
             editorRef={editorRef}
             showSubmitButton={showSubmitButton}
-            submitButtonText={submitButtonText}
+            submitButtonText="common.comment"
           />
         </div>
       )}

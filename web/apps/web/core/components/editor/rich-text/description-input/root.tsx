@@ -21,7 +21,6 @@ import { useWorkspace } from "@/hooks/store/use-workspace";
 type TFormData = {
   id: string;
   description_html: string;
-  isMigrationUpdate: boolean;
 };
 
 export type DescriptionInputHandle = { restore: (confirm: () => Promise<string>) => Promise<void> };

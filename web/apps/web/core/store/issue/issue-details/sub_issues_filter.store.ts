@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue } from "@nerve/api-client";
-
 import { set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
@@ -28,21 +26,7 @@ export const DEFAULT_DISPLAY_PROPERTIES = {
   priority: true,
   state: true,
 };
-interface IWorkItemSubIssueFiltersStore {
-  subIssueFilters: Record<string, Partial<ISubWorkItemFilters>>;
-  // helpers methods
-  updateSubWorkItemFilters: (
-    filterType: EIssueFilterType,
-    filters: IIssueDisplayFilterOptions | IIssueDisplayProperties | IIssueFilterOptions,
-    workItemId: string
-  ) => void;
-  getGroupedSubWorkItems: (workItemId: string) => Record<string, string[]>;
-  getFilteredSubWorkItems: (workItemId: string, filters: IIssueFilterOptions) => Issue[];
-  getSubIssueFilters: (workItemId: string) => Partial<ISubWorkItemFilters>;
-  resetFilters: (workItemId: string) => void;
-}
-
-export class WorkItemSubIssueFiltersStore implements IWorkItemSubIssueFiltersStore {
+export class WorkItemSubIssueFiltersStore {
   // observables
   subIssueFilters: Record<string, Partial<ISubWorkItemFilters>> = {};
 

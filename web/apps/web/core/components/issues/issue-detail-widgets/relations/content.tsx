@@ -48,7 +48,6 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
   const [issueCrudState, setIssueCrudState] = useState<{
     update: TIssueCrudState;
     delete: TIssueCrudState;
-    removeRelation: TIssueCrudState & { relationKey: string | undefined; relationIssueId: string | undefined };
   }>({
     update: {
       toggle: false,
@@ -59,13 +58,6 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
       toggle: false,
       issueId: undefined,
       issue: undefined,
-    },
-    removeRelation: {
-      toggle: false,
-      issueId: undefined,
-      issue: undefined,
-      relationKey: undefined,
-      relationIssueId: undefined,
     },
   });
 
@@ -81,21 +73,13 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
   // derived values
   const relations = getRelationsByIssueId(issueId);
 
-  const handleIssueCrudState = (
-    key: "update" | "delete" | "removeRelation",
-    _issueId: string | null,
-    issue: Issue | null = null,
-    relationKey?: TIssueRelationTypes | null,
-    relationIssueId?: string | null
-  ) => {
+  const handleIssueCrudState = (key: "update" | "delete", _issueId: string | null, issue: Issue | null = null) => {
     setIssueCrudState((prevState) => ({
       ...prevState,
       [key]: {
         toggle: !prevState[key].toggle,
         issueId: _issueId,
         issue: issue,
-        relationKey: relationKey,
-        relationIssueId: relationIssueId,
       },
     }));
   };

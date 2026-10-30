@@ -24,7 +24,6 @@ const cases: {
     answer: { data: [draftOf("d")], total: 80, next_cursor: "next" },
     status: 200,
   },
-  { name: "get", endpoint: ["GET", "/api/v0/drafts/d"], run: (s) => s.get("d"), answer: draftOf("d"), status: 200 },
   {
     name: "create",
     endpoint: ["POST", "/api/v0/workspaces/ws/drafts"],

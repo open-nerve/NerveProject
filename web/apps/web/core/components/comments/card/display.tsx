@@ -37,7 +37,6 @@ export type TCommentCardDisplayProps = {
   workspaceSlug: string;
   isEditing?: boolean;
   setIsEditing?: (isEditing: boolean) => void;
-  renderFooter?: (ReactionsComponent: ReactNode | null) => ReactNode;
   renderQuickActions?: () => ReactNode;
 };
 
@@ -52,7 +51,6 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
     workspaceSlug,
     isEditing = false,
     setIsEditing,
-    renderFooter,
     renderQuickActions,
   } = props;
   const { t } = useTranslation();
@@ -171,14 +169,9 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
             }}
             parentClassName="border-none"
           />
-          {shouldRenderReactions &&
-            (renderFooter ? (
-              renderFooter(
-                <CommentReactions comment={comment} disabled={disabled} activityOperations={activityOperations} />
-              )
-            ) : (
-              <CommentReactions comment={comment} disabled={disabled} activityOperations={activityOperations} />
-            ))}
+          {shouldRenderReactions && (
+            <CommentReactions comment={comment} disabled={disabled} activityOperations={activityOperations} />
+          )}
         </>
       )}
     </div>

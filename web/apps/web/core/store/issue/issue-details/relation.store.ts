@@ -7,7 +7,7 @@ import type { IssueReadToken, IssueWriteScope } from "../root.store";
 import type { IIssueDetail } from "./root.store";
 import { IssueResources } from "./resources";
 
-export type RelationRow = { relationId: string; type: IssueRelationType; targetId: string; createdAt: string };
+export type RelationRow = { relationId: string; type: IssueRelationType; targetId: string };
 export type IIssueRelationStore = IssueRelationStore;
 export type IIssueRelationStoreActions = Pick<
   IssueRelationStore,
@@ -15,10 +15,7 @@ export type IIssueRelationStoreActions = Pick<
 >;
 const rowsOf = (items: IssueRelation[]): RelationRow[] => [
   ...new Map(
-    items.map((item) => [
-      item.id,
-      { relationId: item.id, type: item.relation_type, targetId: item.issue.id, createdAt: item.created_at },
-    ])
+    items.map((item) => [item.id, { relationId: item.id, type: item.relation_type, targetId: item.issue.id }])
   ).values(),
 ];
 const merged = (held: RelationRow[] | undefined, incoming: RelationRow[]) => [
@@ -157,7 +154,6 @@ export class IssueRelationStore {
                     relationId: item.id,
                     type: REVERSE_RELATIONS[item.relation_type],
                     targetId: id,
-                    createdAt: item.created_at,
                   },
                 ],
                 token,

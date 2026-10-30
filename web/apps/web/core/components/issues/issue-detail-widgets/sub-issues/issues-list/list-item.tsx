@@ -39,11 +39,7 @@ type Props = {
   rootIssueId: string;
   spacingLeft: number;
   canEdit: boolean;
-  handleIssueCrudState: (
-    key: "create" | "existing" | "update" | "delete",
-    issueId: string,
-    issue?: Issue | null
-  ) => void;
+  handleIssueCrudState: (key: "update" | "delete", issueId: string, issue?: Issue | null) => void;
   subIssueOperations: TSubIssueOperations;
   issueId: string;
   storeType?: EIssuesStoreType;

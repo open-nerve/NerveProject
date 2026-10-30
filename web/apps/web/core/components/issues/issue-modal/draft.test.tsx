@@ -225,14 +225,15 @@ it("clearing the selected project is saved as null and is not replaced by the fi
   const saved = { ...row, project_id: null };
   await act(async () => tab.nerve.calls[0]!.answer(json(200, saved)));
   expect(tab.app.issue.workspaceDraftIssues.getIssueById("d")?.project_id).toBeNull();
-  let reread!: Promise<Draft | undefined>;
+  let reread!: Promise<Draft[]>;
   await act(async () => {
-    reread = tab.app.issue.workspaceDraftIssues.fetchIssue("ws", "d");
+    reread = tab.app.issue.workspaceDraftIssues.fetchIssues("ws");
   });
   await act(async () => until(() => tab.nerve.calls.length === 2, "reread cleared project"));
-  expect(tab.nerve.calls[1]).toMatchObject({ method: "GET", path: "/api/v0/drafts/d" });
-  await act(async () => tab.nerve.calls[1]!.answer(json(200, saved)));
-  await expect(reread).resolves.toEqual(saved);
+  expect(tab.nerve.calls[1]).toMatchObject({ method: "GET", path: "/api/v0/workspaces/ws/drafts" });
+  await act(async () => tab.nerve.calls[1]!.answer(json(200, { data: [saved], next_cursor: null, total: 1 })));
+  await expect(reread).resolves.toEqual([saved]);
+  expect(tab.app.issue.workspaceDraftIssues.getIssueById("d")?.project_id).toBeNull();
 });
 it("a publish refusal retains the saved native draft and the real form's latest input", async () => {
   await render(row, true);

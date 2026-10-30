@@ -51,7 +51,7 @@
 | 描述版本 | listDescriptionVersions → DescriptionVersionPage；getDescriptionVersion → DescriptionVersionDetail | owned_by_id；没有专用 restore endpoint；只允许管理员/成员读 |
 | 草稿 | listDrafts → DraftPage；create/get/update → Draft；delete → 204；publish → IssueDetail | Draft.payload 是 IssueDraftPayload；PATCH 是整份 payload 替换；publish **不带 body** |
 
-具体接口目标：IssueApiService 增 `getByIdentifier(slug, identifier): Promise<IssueDetail>`；新 IssueDetailService 的 `listSubIssues/addSubIssues/listRelations/createRelations/deleteRelation/listLinks/createLink/updateLink/deleteLink` 按表中的生成请求/响应类型。旧 collaboration/version/draft 服务原地换构造和方法，所有调用方在对应 Task 同步改，不维持旧参数/结果适配层。每个公开方法均有真实生成客户端请求/拒绝测试。IssueSearchService 在 P12 首个生产使用方接通时创建，理由和边界见§3 D2。
+具体接口目标：IssueApiService 增 `getByIdentifier(slug, identifier): Promise<IssueDetail>`；新 IssueDetailService 的 `listSubIssues/addSubIssues/listRelations/createRelations/deleteRelation/listLinks/createLink/updateLink/deleteLink` 按表中的生成请求/响应类型。旧 collaboration/version/draft 服务原地换构造和方法，所有调用方在对应 Task 同步改，不维持旧参数/结果适配层。每个公开方法均有真实生成客户端请求/拒绝测试。终审死成员核查确认草稿单条GET没有生产调用方：公开生成合同保持，P11只保留有消费者的五个薄服务方法，单条GET包装随P15真实入口需要时再建；表单保存后重读使用真实列表路径。IssueSearchService 在 P12 首个生产使用方接通时创建，理由和边界见§3 D2。
 
 ### 2.3 一份工作项与权限范围读取
 
@@ -81,7 +81,7 @@ T15整审补充局部执行合同：输入发生时捕获现有root权限水位�
 
 子项按原生 data 的 id 关联 canonical；状态分布由子项 state_id 和目录的 State.group 计算，不把 sub_issues_count 当所有状态分布。新接口只接同项目子项；现有测试中人为跨项目子项改为真实合同样本，跨项目权限测试放到关联资源，不削弱权限性质。跨项目状态使用已有 workspace 状态目录；成员/标签有实际展示需求时等待既有目录，拒绝交回。
 
-关联保留 relation.id/type/created_at 及关联目标 ID，展示从唯一 canonical 读；批量返回和重复确认不重复插入。删除参数从目标关系行取得 relation.id。链接存原生 IssueLink，metadata 的 title/favicon/url/favicon_url/error 按可空类型消费；创建/更新后 crawler 的 blocked/failed 是元数据状态，不等于 HTTP 写失败。调用方不再读取 created_by/detail 等旧字段。
+关联仅保留 relation.id/type 及关联目标 ID（created_at没有消费者，终审移除本地只写副本；生成响应不变），展示从唯一 canonical 读；批量返回和重复确认不重复插入。删除参数从目标关系行取得 relation.id。链接存原生 IssueLink，metadata 的 title/favicon/url/favicon_url/error 按可空类型消费；创建/更新后 crawler 的 blocked/failed 是元数据状态，不等于 HTTP 写失败。调用方不再读取 created_by/detail 等旧字段。
 
 ### 2.6 评论、表情和时间线
 

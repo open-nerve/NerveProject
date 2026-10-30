@@ -39,21 +39,9 @@ const SubIssuesContent = observer(function SubIssuesContent(props: Props) {
   const { workspaceSlug, projectId, parentIssueId, disabled } = props;
   // state
   const [issueCrudState, setIssueCrudState] = useState<{
-    create: TIssueCrudState;
-    existing: TIssueCrudState;
     update: TIssueCrudState;
     delete: TIssueCrudState;
   }>({
-    create: {
-      toggle: false,
-      parentIssueId: undefined,
-      issue: undefined,
-    },
-    existing: {
-      toggle: false,
-      parentIssueId: undefined,
-      issue: undefined,
-    },
     update: {
       toggle: false,
       parentIssueId: undefined,
@@ -79,7 +67,7 @@ const SubIssuesContent = observer(function SubIssuesContent(props: Props) {
 
   // handler
   const handleIssueCrudState = useCallback(
-    (key: "create" | "existing" | "update" | "delete", _parentIssueId: string | null, issue: Issue | null = null) => {
+    (key: "update" | "delete", _parentIssueId: string | null, issue: Issue | null = null) => {
       setIssueCrudState({
         ...issueCrudState,
         [key]: {

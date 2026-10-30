@@ -133,28 +133,34 @@ it.each(operations)("usesNativeDetailRoutesAndBodies: $name", async ({ run, endp
   expect(nerve.calls).toHaveLength(1);
 });
 
-it.each(operations.flatMap((operation) => [422, 403, 404, 409].map((status) => ({ ...operation, refusal: status }))))(
-  "doesNotTransformRefusals: $name / $refusal",
-  async ({ run, endpoint, refusal }) => {
-    const nerve = new FakeNerve();
-    const service = new IssueDetailService(nerve.client());
-    const { call, result } = await requestedIssue(nerve, () => run(service), endpoint);
-    const problem: Problem = {
-      status: refusal,
-      code: "original.code",
-      title: "Original",
-      detail: "Original detail",
-      errors: [{ field: "url", code: "invalid_format", message: "Invalid URL" }],
-    };
-    call.answer(json(refusal, problem));
-    await until(() => result.settled, "refused detail operation");
-    expect(result.value).toBeUndefined();
-    expect(result.error).toBeInstanceOf(ApiError);
-    expect((result.error as ApiError).status).toBe(refusal);
-    expect((result.error as ApiError).problem).toEqual(problem);
-    expect(nerve.calls).toHaveLength(1);
-  }
-);
+it.each(
+  operations.flatMap((operation) =>
+    [422, 403, 404, 409].map((status) => ({
+      name: operation.name,
+      run: operation.run,
+      endpoint: operation.endpoint,
+      refusal: status,
+    }))
+  )
+)("doesNotTransformRefusals: $name / $refusal", async ({ run, endpoint, refusal }) => {
+  const nerve = new FakeNerve();
+  const service = new IssueDetailService(nerve.client());
+  const { call, result } = await requestedIssue(nerve, () => run(service), endpoint);
+  const problem: Problem = {
+    status: refusal,
+    code: "original.code",
+    title: "Original",
+    detail: "Original detail",
+    errors: [{ field: "url", code: "invalid_format", message: "Invalid URL" }],
+  };
+  call.answer(json(refusal, problem));
+  await until(() => result.settled, "refused detail operation");
+  expect(result.value).toBeUndefined();
+  expect(result.error).toBeInstanceOf(ApiError);
+  expect((result.error as ApiError).status).toBe(refusal);
+  expect((result.error as ApiError).problem).toEqual(problem);
+  expect(nerve.calls).toHaveLength(1);
+});
 
 it.each(operations)("doesNotTransformRefusals: $name / session replacement", async ({ run }) => {
   const nerve = new FakeNerve();

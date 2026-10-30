@@ -51,7 +51,7 @@ it("holds relation resource IDs while all target fields come from canonical", as
   await loaded();
   expect(store().getRelationsByIssueId("source")?.blocking).toEqual([row.issue.id]);
   expect(store().getRelationRows("source")).toEqual([
-    { relationId: row.id, type: row.relation_type, targetId: row.issue.id, createdAt: row.created_at },
+    { relationId: row.id, type: row.relation_type, targetId: row.issue.id },
   ]);
   const root = tab.app.issue;
   root.issues.acceptRead({ ...row.issue, name: "New title", updated_at: "2026-10-30T00:00:00Z" }, root.captureRead());

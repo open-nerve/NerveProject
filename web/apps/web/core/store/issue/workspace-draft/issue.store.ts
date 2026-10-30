@@ -1,8 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { Draft, DraftCreate, DraftUpdate, IssueDetail } from "@nerve/api-client";
 import { observable, runInAction } from "mobx";
-import type { Group } from "@/lib/paged-groups";
-import type { TLoader, ViewFlags } from "@nerve/types";
+import type { TLoader } from "@nerve/types";
 import { oneAtATime } from "@/lib/one-at-a-time";
 import { compareCodePoints, compareIssueTime } from "@/lib/issue-order";
 import { SessionChangedError } from "@/lib/auth/token-manager";
@@ -56,9 +55,6 @@ export class WorkspaceDraftIssues {
   getError = (ws: string) => this.held(ws)?.error;
   getIssueById = (id: string, ws = this.issueStore.workspaceSlug) =>
     this.held(ws)?.value?.data.find((row) => row.id === id);
-  get issueIds(): string[] {
-    return this.held(this.issueStore.workspaceSlug)?.value?.data.map((row) => row.id) ?? [];
-  }
   getLoader = (ws: string) => {
     const resource = this.held(ws);
     if (!resource) return undefined;
@@ -93,16 +89,6 @@ export class WorkspaceDraftIssues {
     });
     if (!answer) throw new SessionChangedError();
     return answer.data;
-  };
-  fetchIssue = async (ws: string, id: string): Promise<Draft | undefined> => {
-    const resource = this.entry(ws);
-    const before = resource.value ?? empty();
-    const answer = await resource.fetch(async () => {
-      const row = await this.issueStore.draftApi.get(id);
-      this.validate([row], resource, id);
-      return { ...before, data: merged(before.data, [row]) };
-    });
-    return answer?.data.find((row) => row.id === id);
   };
   retry = async (ws: string): Promise<void> => {
     const resource = this.entry(ws);
@@ -198,8 +184,6 @@ export class WorkspaceDraftIssues {
       return issue;
     });
   // Drafts do not participate in ordinary issue layouts; retain only their common read-only facade.
-  viewFlags: ViewFlags = { enableQuickAdd: false, enableIssueCreation: false, enableInlineEditing: false };
-  groups: Map<string, Group> | undefined = undefined;
   getIssueIds = (_groupId?: string, _subGroupId?: string) => undefined;
   getPaginationData = (_groupId?: string, _subGroupId?: string) => undefined;
   getIssueLoader = (_groupId?: string, _subGroupId?: string): TLoader => "loaded";
