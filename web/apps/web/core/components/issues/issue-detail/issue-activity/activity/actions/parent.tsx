@@ -11,22 +11,30 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
 import { IssueActivityBlockComponent, IssueLink } from "./";
 
-type TIssueParentActivity = { activityId: string; showIssue?: boolean; ends: "top" | "bottom" | undefined };
+type TIssueParentActivity = {
+  activityId: string;
+  issueId: string;
+  workspaceSlug: string;
+  showIssue?: boolean;
+  ends: "top" | "bottom" | undefined;
+};
 
 export const IssueParentActivity = observer(function IssueParentActivity(props: TIssueParentActivity) {
-  const { activityId, showIssue = true, ends } = props;
+  const { activityId, issueId, workspaceSlug, showIssue = true, ends } = props;
   // hooks
   const {
     activity: { getActivityById },
   } = useIssueDetail();
 
-  const activity = getActivityById(activityId);
+  const activity = getActivityById(issueId, activityId);
 
   if (!activity) return <></>;
   return (
     <IssueActivityBlockComponent
       icon={<ParentOutline className="h-3.5 w-3.5 text-secondary" aria-hidden="true" />}
       activityId={activityId}
+      issueId={issueId}
+      workspaceSlug={workspaceSlug}
       ends={ends}
     >
       <>
@@ -37,7 +45,7 @@ export const IssueParentActivity = observer(function IssueParentActivity(props: 
           <span className="font-medium text-primary">{activity.old_value}</span>
         )}
         {showIssue && (activity.new_value ? ` for ` : ` from `)}
-        {showIssue && <IssueLink activityId={activityId} />}.
+        {showIssue && <IssueLink activityId={activityId} issueId={issueId} workspaceSlug={workspaceSlug} />}.
       </>
     </IssueActivityBlockComponent>
   );

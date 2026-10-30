@@ -1,82 +1,46 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { useMemo } from "react";
-// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TIssueLink } from "@nerve/types";
-// hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-// local imports
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { followInSession } from "@/lib/in-session";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { useDetailScope } from "../use-detail-scope";
 import type { TLinkOperations } from "../../issue-detail/links";
 
-export const useLinkOperations = (workspaceSlug: string, projectId: string, issueId: string): TLinkOperations => {
+export function useLinkOperations(workspaceSlug: string, projectId: string, issueId: string): TLinkOperations {
   const { createLink, updateLink, removeLink } = useIssueDetail();
-  // i18n
+  const capture = useDetailScope(workspaceSlug, projectId, issueId);
+  const refusal = useRefusalToast();
   const { t } = useTranslation();
-
-  const handleLinkOperations: TLinkOperations = useMemo(
+  return useMemo(
     () => ({
-      create: async (data: Partial<TIssueLink>) => {
-        try {
-          if (!workspaceSlug || !projectId || !issueId) throw new Error("Missing required fields");
-          await createLink(workspaceSlug, projectId, issueId, data);
-          setToast({
-            message: t("links.toasts.created.message"),
-            type: TOAST_TYPE.SUCCESS,
-            title: t("links.toasts.created.title"),
-          });
-        } catch (error: any) {
-          setToast({
-            message: error?.data?.error ?? t("links.toasts.not_created.message"),
-            type: TOAST_TYPE.ERROR,
-            title: t("links.toasts.not_created.title"),
-          });
-          throw error;
-        }
+      // The form owns success/close/refusal; preserve the actual command's outcome.
+      create: async (data) => {
+        await createLink(workspaceSlug, projectId, issueId, data);
       },
-      update: async (linkId: string, data: Partial<TIssueLink>) => {
-        try {
-          if (!workspaceSlug || !projectId || !issueId) throw new Error("Missing required fields");
-          await updateLink(workspaceSlug, projectId, issueId, linkId, data);
-          setToast({
-            message: t("links.toasts.updated.message"),
-            type: TOAST_TYPE.SUCCESS,
-            title: t("links.toasts.updated.title"),
-          });
-        } catch (error: any) {
-          setToast({
-            message: error?.data?.error ?? t("links.toasts.not_updated.message"),
-            type: TOAST_TYPE.ERROR,
-            title: t("links.toasts.not_updated.title"),
-          });
-          throw error;
-        }
+      update: async (linkId, data) => {
+        await updateLink(workspaceSlug, projectId, issueId, linkId, data);
       },
-      remove: async (linkId: string) => {
-        try {
-          if (!workspaceSlug || !projectId || !issueId) throw new Error("Missing required fields");
-          await removeLink(workspaceSlug, projectId, issueId, linkId);
-          setToast({
-            message: t("links.toasts.removed.message"),
-            type: TOAST_TYPE.SUCCESS,
-            title: t("links.toasts.removed.title"),
-          });
-        } catch {
-          setToast({
-            message: t("links.toasts.not_removed.message"),
-            type: TOAST_TYPE.ERROR,
-            title: t("links.toasts.not_removed.title"),
-          });
-        }
+      remove: async (linkId) => {
+        const current = capture();
+        if (!current()) return;
+        await followInSession(() => removeLink(workspaceSlug, projectId, issueId, linkId), {
+          done: () => {
+            if (current())
+              setToast({
+                type: TOAST_TYPE.SUCCESS,
+                title: t("links.toasts.removed.title"),
+                message: t("links.toasts.removed.message"),
+              });
+          },
+          failed: (error) => {
+            if (current() && !(error instanceof SessionChangedError)) refusal(error);
+          },
+        });
       },
     }),
-    [workspaceSlug, projectId, issueId, createLink, updateLink, removeLink, t]
+    [workspaceSlug, projectId, issueId, createLink, updateLink, removeLink, capture, refusal, t]
   );
-
-  return handleLinkOperations;
-};
+}

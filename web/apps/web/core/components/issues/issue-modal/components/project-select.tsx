@@ -10,6 +10,7 @@ import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
 import { Controller } from "react-hook-form";
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { ETabIndices } from "@nerve/constants";
 // types
 import { getTabIndex } from "@nerve/utils";
@@ -22,12 +23,14 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 type TIssueProjectSelectProps = {
   control: Control<IssueFormValues>;
   disabled?: boolean;
+  isDraft?: boolean;
   handleFormChange: () => void;
 };
 
 export const IssueProjectSelect = observer(function IssueProjectSelect(props: TIssueProjectSelectProps) {
-  const { control, disabled = false, handleFormChange } = props;
+  const { control, disabled = false, isDraft = false, handleFormChange } = props;
   // store hooks
+  const { t } = useTranslation();
   const { isMobile } = usePlatformOS();
   // context hooks
   const { allowedProjectIds } = useIssueModal();
@@ -39,10 +42,10 @@ export const IssueProjectSelect = observer(function IssueProjectSelect(props: TI
       control={control}
       name="project_id"
       rules={{
-        required: true,
+        required: !isDraft,
       }}
       render={({ field: { value, onChange } }) => (
-        <div className="h-7">
+        <div className="flex h-7 items-center gap-1">
           <ProjectDropdown
             value={value}
             onChange={(projectId) => {
@@ -55,6 +58,18 @@ export const IssueProjectSelect = observer(function IssueProjectSelect(props: TI
             tabIndex={getIndex("project_id")}
             disabled={disabled}
           />
+          {isDraft && value && (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => {
+                onChange(null);
+                handleFormChange();
+              }}
+            >
+              {t("workspace_draft_issues.clear_project")}
+            </button>
+          )}
         </div>
       )}
     />

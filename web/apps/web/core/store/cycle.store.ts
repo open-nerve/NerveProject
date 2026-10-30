@@ -4,24 +4,21 @@
  * See the LICENSE file for details.
  */
 
-import { isPast, isToday } from "date-fns";
 import { sortBy, set } from "lodash-es";
 import { action, computed, observable, makeObservable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // types
 import type { ICycle, TProgressSnapshot, TCycleDistribution } from "@nerve/types";
-import { orderCycles, shouldFilterCycle, getDate } from "@nerve/utils";
+import { orderCycles, shouldFilterCycle } from "@nerve/utils";
 // services
 import { CycleService } from "@/services/cycle.service";
 import { CycleArchiveService } from "@/services/cycle_archive.service";
-import { IssueService } from "@/services/issue";
 // store
 import type { RootStore } from "./root.store";
 
 export interface ICycleStore {
   // loaders
   loader: boolean;
-  progressLoader: boolean;
   // observables
   fetchedMap: Record<string, boolean>;
   cycleMap: Record<string, ICycle>;
@@ -29,11 +26,8 @@ export interface ICycleStore {
 
   // computed
   currentProjectCycleIds: string[] | null;
-  currentProjectCompletedCycleIds: string[] | null;
-  currentProjectIncompleteCycleIds: string[] | null;
   currentProjectActiveCycleId: string | null;
   currentProjectArchivedCycleIds: string[] | null;
-  currentProjectActiveCycle: ICycle | null;
 
   // computed actions
   getFilteredCycleIds: (projectId: string, sortByManual: boolean) => string[] | null;
@@ -77,7 +71,6 @@ export interface ICycleStore {
 export class CycleStore implements ICycleStore {
   // observables
   loader: boolean = false;
-  progressLoader: boolean = false;
   cycleMap: Record<string, ICycle> = {};
   activeCycleIdMap: Record<string, boolean> = {};
   //loaders
@@ -85,7 +78,6 @@ export class CycleStore implements ICycleStore {
   // root store
   rootStore;
   // services
-  issueService;
   cycleService;
   cycleArchiveService;
 
@@ -93,17 +85,13 @@ export class CycleStore implements ICycleStore {
     makeObservable(this, {
       // observables
       loader: observable.ref,
-      progressLoader: observable,
       cycleMap: observable,
       activeCycleIdMap: observable,
       fetchedMap: observable,
       // computed
       currentProjectCycleIds: computed,
-      currentProjectCompletedCycleIds: computed,
-      currentProjectIncompleteCycleIds: computed,
       currentProjectActiveCycleId: computed,
       currentProjectArchivedCycleIds: computed,
-      currentProjectActiveCycle: computed,
 
       // actions
       fetchWorkspaceCycles: action,
@@ -125,7 +113,6 @@ export class CycleStore implements ICycleStore {
     this.rootStore = _rootStore;
 
     // services
-    this.issueService = new IssueService();
     this.cycleService = new CycleService();
     this.cycleArchiveService = new CycleArchiveService();
   }
@@ -141,43 +128,6 @@ export class CycleStore implements ICycleStore {
     allCycles = sortBy(allCycles, [(c) => c.sort_order]);
     const allCycleIds = allCycles.map((c) => c.id);
     return allCycleIds;
-  }
-
-  /**
-   * returns all completed cycle ids for a project
-   */
-  get currentProjectCompletedCycleIds() {
-    const projectId = this.rootStore.router.projectId;
-    if (!projectId || !this.fetchedMap[projectId]) return null;
-    let completedCycles = Object.values(this.cycleMap ?? {}).filter((c) => {
-      const endDate = getDate(c.end_date);
-      const hasEndDatePassed = endDate && isPast(endDate);
-      const isEndDateToday = endDate && isToday(endDate);
-      return (
-        c.project_id === projectId && ((hasEndDatePassed && !isEndDateToday) || c.status?.toLowerCase() === "completed")
-      );
-    });
-    completedCycles = sortBy(completedCycles, [(c) => c.sort_order]);
-    const completedCycleIds = completedCycles.map((c) => c.id);
-    return completedCycleIds;
-  }
-
-  /**
-   * returns all incomplete cycle ids for a project
-   */
-  get currentProjectIncompleteCycleIds() {
-    const projectId = this.rootStore.router.projectId;
-    if (!projectId || !this.fetchedMap[projectId]) return null;
-    let incompleteCycles = Object.values(this.cycleMap ?? {}).filter((c) => {
-      const endDate = getDate(c.end_date);
-      const hasEndDatePassed = endDate && isPast(endDate);
-      return (
-        c.project_id === projectId && !hasEndDatePassed && !c?.archived_at && c.status?.toLowerCase() !== "completed"
-      );
-    });
-    incompleteCycles = sortBy(incompleteCycles, [(c) => c.sort_order]);
-    const incompleteCycleIds = incompleteCycles.map((c) => c.id);
-    return incompleteCycleIds;
   }
 
   /**
@@ -206,12 +156,6 @@ export class CycleStore implements ICycleStore {
     archivedCycles = sortBy(archivedCycles, [(c) => c.sort_order]);
     const archivedCycleIds = archivedCycles.map((c) => c.id);
     return archivedCycleIds;
-  }
-
-  get currentProjectActiveCycle() {
-    const projectId = this.rootStore.router.projectId;
-    if (!projectId && !this.currentProjectActiveCycleId) return null;
-    return this.cycleMap?.[this.currentProjectActiveCycleId!] ?? null;
   }
 
   /**
@@ -411,11 +355,9 @@ export class CycleStore implements ICycleStore {
    *  @returns
    */
   fetchActiveCycleProgress = async (workspaceSlug: string, projectId: string, cycleId: string) => {
-    this.progressLoader = true;
     return await this.cycleService.cycleProgress(workspaceSlug, projectId, cycleId).then((progress) => {
       runInAction(() => {
         set(this.cycleMap, [cycleId], { ...this.cycleMap[cycleId], ...progress });
-        this.progressLoader = false;
       });
       return progress;
     });

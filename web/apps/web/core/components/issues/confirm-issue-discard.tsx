@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 // ui
 import { Button } from "@nerve/propel/button";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
@@ -21,20 +21,26 @@ export function ConfirmIssueDiscard(props: Props) {
   const { isOpen, handleClose, onDiscard, onConfirm, canSave = true } = props;
 
   const [isLoading, setIsLoading] = useState(false);
+  const busy = useRef(false);
 
   const onClose = () => {
-    handleClose();
-    setIsLoading(false);
+    if (!busy.current) handleClose();
   };
 
   const handleDeletion = async () => {
+    if (busy.current || !canSave) return;
+    busy.current = true;
     setIsLoading(true);
-    await onConfirm();
-    setIsLoading(false);
+    try {
+      await onConfirm();
+    } finally {
+      busy.current = false;
+      setIsLoading(false);
+    }
   };
 
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.TOP} width={EModalWidth.XXL}>
+    <ModalCore isOpen={isOpen} handleClose={onClose} position={EModalPosition.TOP} width={EModalWidth.XXL}>
       <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
         <div className="sm:flex sm:items-start">
           <div className="mt-3 text-center sm:mt-0 sm:text-left">
@@ -49,15 +55,21 @@ export function ConfirmIssueDiscard(props: Props) {
       </div>
       <div className="flex justify-between gap-2 p-4 sm:px-6">
         <div>
-          <Button variant="secondary" onClick={onDiscard}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              if (!busy.current) onDiscard();
+            }}
+            disabled={isLoading}
+          >
             Discard
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleDeletion} loading={isLoading} disabled={!canSave}>
+          <Button variant="primary" onClick={handleDeletion} loading={isLoading} disabled={isLoading || !canSave}>
             {isLoading ? "Saving" : "Save to Drafts"}
           </Button>
         </div>

@@ -4,121 +4,60 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useMemo } from "react";
+import type { Draft } from "@nerve/api-client";
+import { ISSUE_PRIORITIES } from "@nerve/constants";
+import type { DraftEdits } from "@/services/issue/draft-input";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useDetailScope } from "../issue-detail-widgets/use-detail-scope";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 // icons
 import { DueDateOutline, StartDateOutline } from "@makeplane/propel/icons";
 // types
-import type { TIssuePriorities, TWorkspaceDraftIssue } from "@nerve/types";
 import { getDate, renderFormattedPayloadDate, shouldHighlightIssueDueDate } from "@nerve/utils";
 // components
-import { CycleDropdown } from "@/components/dropdowns/cycle";
 import { DateDropdown } from "@/components/dropdowns/date";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
-import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 // hooks
-import { useLabel } from "@/hooks/store/use-label";
-import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
-import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { IssuePropertyLabels } from "../issue-layouts/properties";
 
-export interface IIssueProperties {
-  issue: TWorkspaceDraftIssue;
-  updateIssue:
-    | ((projectId: string | null, issueId: string, data: Partial<TWorkspaceDraftIssue>) => Promise<void>)
-    | undefined;
+type Props = {
+  issue: Draft;
+  workspaceSlug: string;
+  updateIssue: (edits: DraftEdits) => Promise<void>;
   className: string;
-}
-
-export const DraftIssueProperties = observer(function DraftIssueProperties(props: IIssueProperties) {
-  const { issue, updateIssue, className } = props;
-  // store hooks
-  const { getProjectById } = useProject();
-  const { labelMap } = useLabel();
-  const { addCycleToIssue, addModulesToIssue } = useWorkspaceDraftIssues();
+};
+export const DraftIssueProperties = observer(function DraftIssueProperties({
+  issue: draft,
+  workspaceSlug,
+  updateIssue,
+  className,
+}: Props) {
+  const issue = draft.payload;
   const { getStateById } = useProjectState();
   const { isMobile } = usePlatformOS();
-  const projectDetails = getProjectById(issue.project_id);
-
-  // router
-  const { workspaceSlug } = useParams();
-  // derived values
-  const stateDetails = getStateById(issue.state_id);
-
-  const issueOperations = useMemo(
-    () => ({
-      updateIssueModules: async (moduleIds: string[]) => {
-        if (!workspaceSlug || !issue.id) return;
-        await addModulesToIssue(workspaceSlug, issue.id, moduleIds);
-      },
-      addIssueToCycle: async (cycleId: string) => {
-        if (!workspaceSlug || !issue.id) return;
-        await addCycleToIssue(workspaceSlug, issue.id, cycleId);
-      },
-      removeIssueFromCycle: async () => {
-        if (!workspaceSlug || !issue.id) return;
-        // TODO: To be checked
-        await addCycleToIssue(workspaceSlug, issue.id, "");
-      },
-    }),
-    [workspaceSlug, issue, addCycleToIssue, addModulesToIssue]
-  );
-
-  const handleState = (stateId: string) =>
-    issue?.project_id && updateIssue && updateIssue(issue.project_id, issue.id, { state_id: stateId });
-
-  const handlePriority = (value: TIssuePriorities) =>
-    issue?.project_id && updateIssue && updateIssue(issue.project_id, issue.id, { priority: value });
-
-  const handleLabel = (ids: string[]) =>
-    issue?.project_id && updateIssue && updateIssue(issue.project_id, issue.id, { label_ids: ids });
-
-  const handleAssignee = (ids: string[]) =>
-    issue?.project_id && updateIssue && updateIssue(issue.project_id, issue.id, { assignee_ids: ids });
-
-  const handleModule = useCallback(
-    (moduleIds: string[] | null) => {
-      if (!issue || !issue.module_ids || !moduleIds) return;
-      issueOperations.updateIssueModules(moduleIds);
-    },
-    [issueOperations, issue]
-  );
-
-  const handleCycle = useCallback(
-    (cycleId: string | null) => {
-      if (!issue || issue.cycle_id === cycleId) return;
-      if (cycleId) issueOperations.addIssueToCycle?.(cycleId);
-      else issueOperations.removeIssueFromCycle?.();
-    },
-    [issue, issueOperations]
-  );
-
-  const handleStartDate = (date: Date | null) =>
-    issue?.project_id &&
-    updateIssue &&
-    updateIssue(issue.project_id, issue.id, {
-      start_date: date ? (renderFormattedPayloadDate(date) ?? undefined) : undefined,
-    });
-
+  const scope = useDetailScope(workspaceSlug, undefined, draft.id, true);
+  const refuse = useRefusalToast();
+  const stateDetails = issue.state_id ? getStateById(issue.state_id) : undefined;
+  const change = async (edits: DraftEdits) => {
+    const current = scope();
+    if (!current()) return;
+    try {
+      await updateIssue(edits);
+    } catch (error) {
+      if (current()) refuse(error);
+    }
+  };
+  const handleState = (state_id: string) => change({ state_id });
+  const handlePriority = (priority: string) => change({ priority });
+  const handleLabel = (label_ids: string[]) => change({ label_ids });
+  const handleAssignee = (assignee_ids: string[]) => change({ assignee_ids });
+  const handleStartDate = (date: Date | null) => change({ start_date: date ? renderFormattedPayloadDate(date) : null });
   const handleTargetDate = (date: Date | null) =>
-    issue?.project_id &&
-    updateIssue &&
-    updateIssue(issue.project_id, issue.id, {
-      target_date: date ? (renderFormattedPayloadDate(date) ?? undefined) : undefined,
-    });
-
-  if (!issue.project_id) return null;
-
-  const defaultLabelOptions =
-    issue?.label_ids?.flatMap((id) => {
-      const label = labelMap[id];
-      return label ? [label] : [];
-    }) || [];
+    change({ target_date: date ? renderFormattedPayloadDate(date) : null });
 
   const minDate = getDate(issue.start_date);
   minDate?.setDate(minDate.getDate());
@@ -126,31 +65,28 @@ export const DraftIssueProperties = observer(function DraftIssueProperties(props
   const maxDate = getDate(issue.target_date);
   maxDate?.setDate(maxDate.getDate());
 
-  const handleEventPropagation = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-  };
-
   return (
-    <div className={className}>
+    <div className={className} data-draft-properties>
       {/* basic properties */}
       {/* state */}
-      <div className="h-5" onClick={handleEventPropagation}>
-        <StateDropdown
-          buttonContainerClassName="truncate max-w-40"
-          value={issue.state_id}
-          onChange={handleState}
-          projectId={issue.project_id}
-          buttonVariant="border-with-text"
-          renderByDefault={isMobile}
-          showTooltip
-        />
-      </div>
+      {draft.project_id && (
+        <div className="h-5">
+          <StateDropdown
+            buttonContainerClassName="truncate max-w-40"
+            value={issue.state_id}
+            onChange={handleState}
+            projectId={draft.project_id ?? undefined}
+            buttonVariant="border-with-text"
+            renderByDefault={isMobile}
+            showTooltip
+          />
+        </div>
+      )}
 
       {/* priority */}
-      <div className="h-5" onClick={handleEventPropagation}>
+      <div className="h-5">
         <PriorityDropdown
-          value={issue?.priority}
+          value={ISSUE_PRIORITIES.find((row) => row.key === issue.priority)?.key}
           onChange={handlePriority}
           buttonVariant="border-without-text"
           buttonClassName="border"
@@ -161,17 +97,18 @@ export const DraftIssueProperties = observer(function DraftIssueProperties(props
 
       {/* label */}
 
-      <IssuePropertyLabels
-        projectId={issue?.project_id || null}
-        value={issue?.label_ids || null}
-        defaultOptions={defaultLabelOptions}
-        onChange={handleLabel}
-        renderByDefault={isMobile}
-        hideDropdownArrow
-      />
+      {draft.project_id && (
+        <IssuePropertyLabels
+          projectId={draft.project_id}
+          value={issue.label_ids ?? []}
+          onChange={handleLabel}
+          renderByDefault={isMobile}
+          hideDropdownArrow
+        />
+      )}
 
       {/* start date */}
-      <div className="h-5" onClick={handleEventPropagation}>
+      <div className="h-5">
         <DateDropdown
           value={issue.start_date ?? null}
           onChange={handleStartDate}
@@ -186,7 +123,7 @@ export const DraftIssueProperties = observer(function DraftIssueProperties(props
       </div>
 
       {/* target/due date */}
-      <div className="h-5" onClick={handleEventPropagation}>
+      <div className="h-5">
         <DateDropdown
           value={issue?.target_date ?? null}
           onChange={handleTargetDate}
@@ -205,50 +142,20 @@ export const DraftIssueProperties = observer(function DraftIssueProperties(props
       </div>
 
       {/* assignee */}
-      <div className="h-5" onClick={handleEventPropagation}>
-        <MemberDropdown
-          projectId={issue?.project_id}
-          value={issue?.assignee_ids}
-          onChange={handleAssignee}
-          multiple
-          buttonVariant={issue.assignee_ids?.length > 0 ? "transparent-without-text" : "border-without-text"}
-          buttonClassName={issue.assignee_ids?.length > 0 ? "hover:bg-transparent px-0" : ""}
-          showTooltip={issue?.assignee_ids?.length === 0}
-          placeholder="Assignees"
-          optionsClassName="z-10"
-          tooltipContent=""
-          renderByDefault={isMobile}
-        />
-      </div>
-
-      {/* modules */}
-      {projectDetails?.module_view && (
-        <div className="h-5" onClick={handleEventPropagation}>
-          <ModuleDropdown
-            buttonContainerClassName="truncate max-w-40"
-            projectId={issue?.project_id}
-            value={issue?.module_ids ?? []}
-            onChange={handleModule}
-            renderByDefault={isMobile}
+      {draft.project_id && (
+        <div className="h-5">
+          <MemberDropdown
+            projectId={draft.project_id ?? undefined}
+            value={issue.assignee_ids ?? []}
+            onChange={handleAssignee}
             multiple
-            buttonVariant="border-with-text"
-            showCount
-            showTooltip
-          />
-        </div>
-      )}
-
-      {/* cycles */}
-      {projectDetails?.cycle_view && (
-        <div className="h-5" onClick={handleEventPropagation}>
-          <CycleDropdown
-            buttonContainerClassName="truncate max-w-40"
-            projectId={issue?.project_id}
-            value={issue?.cycle_id || null}
-            onChange={handleCycle}
-            buttonVariant="border-with-text"
+            buttonVariant={(issue.assignee_ids?.length ?? 0) > 0 ? "transparent-without-text" : "border-without-text"}
+            buttonClassName={(issue.assignee_ids?.length ?? 0) > 0 ? "hover:bg-transparent px-0" : ""}
+            showTooltip={issue?.assignee_ids?.length === 0}
+            placeholder="Assignees"
+            optionsClassName="z-10"
+            tooltipContent=""
             renderByDefault={isMobile}
-            showTooltip
           />
         </div>
       )}

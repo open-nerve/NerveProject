@@ -147,7 +147,17 @@
         "web/apps/web/core/components/project/project-settings-member-defaults.tsx",
         "web/apps/web/core/components/onboarding/root.tsx",
         "web/apps/web/core/hooks/use-workspaces-fetch.ts",
-        "web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx"
+        "web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx",
+        "web/apps/web/core/store/issue/issue-details/**",
+        "web/apps/web/core/components/issues/issue-detail/parent/siblings.tsx",
+        "web/apps/web/core/components/issues/issue-detail/description-versions.tsx",
+        "web/apps/web/core/components/issues/peek-overview/root.tsx",
+        "web/apps/web/core/components/issues/workspace-draft/root.tsx",
+        "web/apps/web/core/components/core/description-versions/root.tsx",
+        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/browse/\\[workItem\\]/page.tsx",
+        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/issues/(detail)/\\[issueId\\]/page.tsx",
+        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/archives/issues/(detail)/\\[archivedIssueId\\]/page.tsx",
+        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/archives/issues/(detail)/header.tsx"
       ],
       "rules": {
         "no-restricted-imports": [

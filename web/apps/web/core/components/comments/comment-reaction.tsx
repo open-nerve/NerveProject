@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueComment } from "@nerve/api-client";
+
 import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
@@ -11,10 +13,10 @@ import { useTranslation } from "@nerve/i18n";
 import { stringToEmoji } from "@nerve/propel/emoji-icon-picker";
 import { EmojiReactionGroup, EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
 import type { EmojiReactionType } from "@nerve/propel/emoji-reaction";
-import type { TCommentsOperations, TIssueComment } from "@nerve/types";
+import type { TCommentsOperations } from "@nerve/types";
 
 export type TProps = {
-  comment: TIssueComment;
+  comment: IssueComment;
   disabled?: boolean;
   activityOperations: TCommentsOperations;
 };
@@ -35,10 +37,7 @@ export const CommentReactions = observer(function CommentReactions(props: TProps
     return Object.keys(reactionIds)
       .filter((reaction) => reactionIds[reaction]?.length > 0)
       .map((reaction) => {
-        // Get user names for this reaction
-        const tooltipContent = activityOperations.getReactionUsers(reaction, reactionIds);
-        // Parse the tooltip content string to extract user names
-        const users = tooltipContent ? tooltipContent.split(", ") : [];
+        const users = activityOperations.getReactionUsers(comment.id, reaction);
 
         return {
           emoji: stringToEmoji(reaction),
@@ -47,7 +46,7 @@ export const CommentReactions = observer(function CommentReactions(props: TProps
           users: users,
         };
       });
-  }, [reactionIds, userReactions, activityOperations]);
+  }, [reactionIds, userReactions, activityOperations, comment.id]);
 
   const handleReactionClick = (emoji: string) => {
     if (disabled || !userReactions) return;

@@ -1,88 +1,53 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type {
+  ApiClient,
+  CommentReaction,
+  IssueComment,
+  IssueCommentCreate,
+  IssueCommentPage,
+  operations,
+  ReactionCreate,
+} from "@nerve/api-client";
+import { unwrap } from "@/lib/api-error";
 
-// nerve types
-import type { TIssueComment } from "@nerve/types";
-// services
-import { APIService } from "@/services/api.service";
-import { FileUploadService } from "@/services/file-upload.service";
-
-export class IssueCommentService extends APIService {
-  private fileUploadService: FileUploadService;
-
-  constructor() {
-    super();
-    // upload service
-    this.fileUploadService = new FileUploadService();
-  }
-
+export class IssueCommentService {
+  constructor(private readonly api: ApiClient) {}
   async getIssueComments(
-    workspaceSlug: string,
-    projectId: string,
     issueId: string,
-    params:
-      | {
-          created_at__gt: string;
-        }
-      | object = {}
-  ): Promise<TIssueComment[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/history/`, {
-      params: {
-        activity_type: "issue-comment",
-        ...params,
-      },
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+    query: operations["listIssueComments"]["parameters"]["query"] = {}
+  ): Promise<IssueCommentPage> {
+    return unwrap(
+      await this.api.GET("/api/v0/issues/{issue_id}/comments", { params: { path: { issue_id: issueId }, query } })
+    );
   }
-
-  async createIssueComment(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    data: Partial<TIssueComment>
-  ): Promise<TIssueComment> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/comments/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+  async createIssueComment(issueId: string, body: IssueCommentCreate): Promise<IssueComment> {
+    return unwrap(
+      await this.api.POST("/api/v0/issues/{issue_id}/comments", { params: { path: { issue_id: issueId } }, body })
+    );
   }
-
-  async patchIssueComment(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    commentId: string,
-    data: Partial<TIssueComment>
-  ): Promise<TIssueComment> {
-    return this.patch(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/comments/${commentId}/`,
-      data
-    )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+  async patchIssueComment(commentId: string, body: IssueCommentCreate): Promise<IssueComment> {
+    return unwrap(
+      await this.api.PATCH("/api/v0/issue-comments/{comment_id}", { params: { path: { comment_id: commentId } }, body })
+    );
   }
-
-  async deleteIssueComment(
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    commentId: string
-  ): Promise<void> {
-    return this.delete(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/comments/${commentId}/`
-    )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+  async deleteIssueComment(commentId: string): Promise<void> {
+    return unwrap(
+      await this.api.DELETE("/api/v0/issue-comments/{comment_id}", { params: { path: { comment_id: commentId } } })
+    );
+  }
+  async addReaction(commentId: string, body: ReactionCreate): Promise<CommentReaction> {
+    return unwrap(
+      await this.api.POST("/api/v0/issue-comments/{comment_id}/reactions", {
+        params: { path: { comment_id: commentId } },
+        body,
+      })
+    );
+  }
+  async removeReaction(commentId: string, reaction: string): Promise<void> {
+    return unwrap(
+      await this.api.DELETE("/api/v0/issue-comments/{comment_id}/reactions/{reaction}", {
+        params: { path: { comment_id: commentId, reaction } },
+      })
+    );
   }
 }

@@ -1,115 +1,58 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import { Fragment } from "react";
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { observer } from "mobx-react";
-import useSWR from "swr";
-// nerve imports
-import { EUserPermissionsLevel, EDraftIssuePaginationType } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { EmptyStateDetailed } from "@nerve/propel/empty-state";
-import { EUserWorkspaceRoles } from "@nerve/types";
-// components
-import { cn } from "@nerve/utils";
-// hooks
-import { useCommandPalette } from "@/hooks/store/use-command-palette";
-import { useProject } from "@/hooks/store/use-project";
-import { useUserPermissions } from "@/hooks/store/user";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
-import { useWorkspaceIssueProperties } from "@/hooks/use-workspace-issue-properties";
-// components
+import { useSessionSWR } from "@/lib/use-session-swr";
+import { DetailResourceError } from "../issue-detail-widgets/resource-error";
 import { DraftIssueBlock } from "./draft-issue-block";
 import { WorkspaceDraftEmptyState } from "./empty-state";
 import { WorkspaceDraftIssuesLoader } from "./loader";
 
-type TWorkspaceDraftIssuesRoot = {
+export const WorkspaceDraftIssuesRoot = observer(function WorkspaceDraftIssuesRoot({
+  workspaceSlug: ws,
+}: {
   workspaceSlug: string;
-};
-
-export const WorkspaceDraftIssuesRoot = observer(function WorkspaceDraftIssuesRoot(props: TWorkspaceDraftIssuesRoot) {
-  const { workspaceSlug } = props;
-  // nerve hooks
+}) {
   const { t } = useTranslation();
-  // hooks
-  const { loader, paginationInfo, fetchIssues, issueIds } = useWorkspaceDraftIssues();
-  const { workspaceProjectIds } = useProject();
-  const { toggleCreateProjectModal } = useCommandPalette();
-  const { allowPermissions } = useUserPermissions();
-  // derived values
-  const hasMemberLevelPermission = allowPermissions(
-    [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
+  const drafts = useWorkspaceDraftIssues();
+  const { rootIssueStore: root } = useIssueDetail();
+  const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(ws);
+  const identity = root.permissionReads.identity(workspace?.id, [], true);
+  const { error, isLoading, mutate } = useSessionSWR(
+    drafts.canRead(ws) ? ["WORKSPACE_DRAFTS", identity, ws] : null,
+    (_identity, slug) => drafts.fetchIssues(slug),
+    { dedupingInterval: 0 }
   );
-
-  //swr hook for fetching issue properties
-  useWorkspaceIssueProperties(workspaceSlug);
-
-  // fetching issues
-  const { isLoading } = useSWR(
-    workspaceSlug ? `WORKSPACE_DRAFT_ISSUES_${workspaceSlug}` : null,
-    workspaceSlug ? async () => await fetchIssues(workspaceSlug, "init-loader") : null,
-    { revalidateOnFocus: false, revalidateIfStale: false }
-  );
-
-  // handle nest issues
-  const handleNextIssues = async () => {
-    if (!paginationInfo?.next_page_results) return;
-    await fetchIssues(workspaceSlug, "pagination", EDraftIssuePaginationType.NEXT);
-  };
-
-  if (isLoading) {
-    return <WorkspaceDraftIssuesLoader items={14} />;
-  }
-
-  if (workspaceProjectIds?.length === 0)
-    return (
-      <EmptyStateDetailed
-        title={t("workspace_projects.empty_state.no_projects.title")}
-        description={t("workspace_projects.empty_state.no_projects.description")}
-        assetKey="project"
-        assetClassName="size-40"
-        actions={[
-          {
-            label: t("workspace_projects.empty_state.no_projects.primary_button.text"),
-            onClick: () => {
-              toggleCreateProjectModal(true);
-            },
-            disabled: !hasMemberLevelPermission,
-            variant: "primary",
-          },
-        ]}
-      />
-    );
-
-  if (issueIds.length <= 0) return <WorkspaceDraftEmptyState />;
-
+  if (!drafts.canRead(ws)) return null;
+  const rows = drafts.getDrafts(ws);
+  const failure = drafts.getError(ws) ?? error;
+  if (!rows && isLoading) return <WorkspaceDraftIssuesLoader items={14} />;
   return (
-    <div className="relative">
-      <div className="relative">
-        {issueIds.map((issueId: string) => (
-          <DraftIssueBlock key={issueId} workspaceSlug={workspaceSlug} issueId={issueId} />
-        ))}
-      </div>
-
-      {paginationInfo?.next_page_results && (
-        <Fragment>
-          {loader === "pagination" && issueIds.length >= 0 ? (
-            <WorkspaceDraftIssuesLoader items={1} />
-          ) : (
-            <div
-              className={cn("h-11 border-b border-subtle bg-surface-1 p-3 pl-6 text-13 font-medium transition-all", {
-                "cursor-pointer text-accent-primary underline-offset-2 hover:text-accent-secondary hover:underline":
-                  paginationInfo?.next_page_results,
-              })}
-              onClick={handleNextIssues}
-            >
-              Load More &darr;
-            </div>
-          )}
-        </Fragment>
+    <div className="relative" key={identity}>
+      <DetailResourceError
+        error={failure}
+        retry={async () => {
+          await drafts.retry(ws);
+          await mutate(drafts.getDrafts(ws), { revalidate: false });
+        }}
+        workspaceSlug={ws}
+        projectId={undefined}
+        issueId="drafts"
+      />
+      {rows?.map((row) => (
+        <DraftIssueBlock key={row.id} workspaceSlug={ws} issueId={row.id} />
+      ))}
+      {rows?.length === 0 && !failure && <WorkspaceDraftEmptyState />}
+      {drafts.hasMore(ws) && (
+        <button
+          type="button"
+          disabled={!!drafts.getLoader(ws)}
+          className="h-11 w-full border-b border-subtle bg-surface-1 p-3 text-left text-accent-primary"
+          onClick={() => void drafts.fetchIssues(ws, true).catch(() => undefined)}
+        >
+          {t("common.load_more")} &darr;
+        </button>
       )}
     </div>
   );

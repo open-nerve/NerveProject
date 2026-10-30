@@ -4,16 +4,18 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueComment } from "@nerve/api-client";
+
 import type { ReactNode } from "react";
 import { useRef } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { ReplyOutline } from "@makeplane/propel/icons";
-import type { TIssueComment } from "@nerve/types";
+
 import { cn } from "@nerve/utils";
 
 type TCommentBlock = {
-  comment: TIssueComment;
+  comment: IssueComment;
   ends: "top" | "bottom" | undefined;
   children: ReactNode;
 };

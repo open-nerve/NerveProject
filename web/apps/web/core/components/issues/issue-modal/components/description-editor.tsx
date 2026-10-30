@@ -24,10 +24,6 @@ import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import useKeypress from "@/hooks/use-keypress";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// services
-import { WorkspaceService } from "@/services/workspace.service";
-const workspaceService = new WorkspaceService();
-
 type TIssueDescriptionEditorProps = {
   control: Control<IssueFormValues>;
   isDraft: boolean;
@@ -91,7 +87,7 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
 
   return (
     <div className="relative rounded-lg border-[0.5px] border-subtle-1 bg-layer-2">
-      {descriptionHtmlData === undefined || !projectId ? (
+      {descriptionHtmlData === undefined || (!isDraft && !projectId) ? (
         <Loader className="max-h-64 min-h-[120px] space-y-2 overflow-hidden rounded-md border border-subtle p-3 py-2 pt-3">
           <Loader.Item width="100%" height="26px" />
           <div className="flex items-center gap-2">
@@ -119,7 +115,7 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
               value={descriptionHtmlData}
               workspaceSlug={workspaceSlug}
               workspaceId={workspaceId}
-              projectId={projectId}
+              projectId={projectId ?? undefined}
               onChange={(_description: object, description_html: string) => {
                 onChange(description_html);
                 handleFormChange();
@@ -128,14 +124,9 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
               ref={editorRef}
               tabIndex={getIndex("description_html")}
               placeholder={(isFocused, description) => t(getDescriptionPlaceholderI18n(isFocused, description))}
-              searchMentionCallback={async (payload) =>
-                await workspaceService.searchEntity(workspaceSlug, {
-                  ...payload,
-                  project_id: projectId,
-                })
-              }
               containerClassName="pt-3 min-h-[120px]"
               uploadFile={async (blockId, file) => {
+                if (!projectId) throw new Error("A project is required to upload an attachment");
                 try {
                   const { asset_id } = await uploadEditorAsset({
                     blockId,
@@ -151,10 +142,11 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
                   return asset_id;
                 } catch (error) {
                   console.log("Error in uploading issue asset:", error);
-                  throw new Error("Asset upload failed. Please try again later.");
+                  throw new Error("Asset upload failed. Please try again later.", { cause: error });
                 }
               }}
               duplicateFile={async (assetId: string) => {
+                if (!projectId) throw new Error("A project is required to duplicate an attachment");
                 try {
                   const { asset_id } = await duplicateEditorAsset({
                     assetId,

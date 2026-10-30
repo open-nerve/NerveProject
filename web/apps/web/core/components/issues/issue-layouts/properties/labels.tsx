@@ -5,7 +5,6 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import type { Placement } from "@popperjs/core";
 import { observer } from "mobx-react";
 // nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
@@ -17,21 +16,19 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { Label } from "@nerve/api-client";
 // hooks
 import { cn } from "@nerve/utils";
-import { useLabel } from "@/hooks/store/use-label";
+import { useParams } from "react-router";
+import { useIssueLabels } from "../../use-issue-labels";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { LabelDropdown } from "./label-dropdown";
 
 export interface IIssuePropertyLabels {
   projectId: string | null;
   value: string[];
-  defaultOptions?: unknown;
   onChange: (data: string[]) => void;
   disabled?: boolean;
   hideDropdownArrow?: boolean;
   className?: string;
   buttonClassName?: string;
-  optionsClassName?: string;
-  placement?: Placement;
   maxRender?: number;
   noLabelBorder?: boolean;
   placeholderText?: string;
@@ -142,13 +139,11 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
   const {
     projectId,
     value,
-    defaultOptions = [],
     onChange,
     onClose,
     disabled,
     hideDropdownArrow = false,
     buttonClassName = "",
-    placement,
     maxRender = 2,
     noLabelBorder = false,
     placeholderText,
@@ -162,9 +157,9 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   // store hooks
-  const { getProjectLabels } = useLabel();
+  const { workspaceSlug } = useParams();
   const { isMobile } = usePlatformOS();
-  const storeLabels = getProjectLabels(projectId);
+  const storeLabels = useIssueLabels(workspaceSlug, projectId);
 
   const handleClose = () => {
     if (!isOpen) return;
@@ -180,8 +175,7 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
     }
   }, [isOpen, isMobile]);
 
-  let projectLabels: Label[] = defaultOptions as Label[];
-  if (storeLabels && storeLabels.length > 0) projectLabels = storeLabels;
+  const projectLabels = storeLabels ?? [];
 
   return (
     <>
@@ -191,12 +185,12 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
             ?.filter((l) => value.includes(l?.id))
             .map((label) => (
               <LabelDropdown
+                disabled={disabled}
                 key={label.id}
                 projectId={projectId}
                 value={value}
                 onChange={onChange}
                 buttonClassName={buttonClassName}
-                placement={placement}
                 hideDropdownArrow={hideDropdownArrow}
                 fullWidth={fullWidth}
                 fullHeight={fullHeight}
@@ -214,12 +208,12 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
             ))
         ) : (
           <LabelDropdown
+            disabled={disabled}
             projectId={projectId}
             value={value}
             onChange={onChange}
             hideDropdownArrow={hideDropdownArrow}
             buttonClassName={buttonClassName}
-            placement={placement}
             fullWidth={fullWidth}
             fullHeight={fullHeight}
             label={
@@ -236,12 +230,12 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
         )
       ) : (
         <LabelDropdown
+          disabled={disabled}
           projectId={projectId}
           value={value}
           onChange={onChange}
           hideDropdownArrow={hideDropdownArrow}
           buttonClassName={buttonClassName}
-          placement={placement}
           fullWidth={fullWidth}
           fullHeight={fullHeight}
           label={

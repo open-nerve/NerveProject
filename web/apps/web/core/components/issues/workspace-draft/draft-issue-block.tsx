@@ -5,13 +5,16 @@
  */
 
 import React, { useRef, useState } from "react";
-import { pick } from "lodash-es";
+import type { Draft } from "@nerve/api-client";
+import { draftInput } from "@/services/issue/draft-input";
+import { draftPayloadFields } from "../issue-modal/draft-form";
+import { useTranslation } from "@nerve/i18n";
 import { observer } from "mobx-react";
 import { SquareStackIcon } from "lucide-react";
 import { CopyOutline, DeleteOutline, EditOutline } from "@makeplane/propel/icons";
 // nerve utils
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TWorkspaceDraftIssue } from "@nerve/types";
+
 import { EIssuesStoreType } from "@nerve/types";
 import type { TContextMenuItem } from "@nerve/ui";
 import { Row } from "@nerve/ui";
@@ -35,10 +38,11 @@ type Props = {
 export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
   // props
   const { workspaceSlug, issueId } = props;
+  const { t } = useTranslation();
   // states
   const [moveToIssue, setMoveToIssue] = useState(false);
   const [createUpdateIssueModal, setCreateUpdateIssueModal] = useState(false);
-  const [issueToEdit, setIssueToEdit] = useState<TWorkspaceDraftIssue | undefined>(undefined);
+  const [issueToEdit, setIssueToEdit] = useState<Draft | undefined>(undefined);
   const [deleteIssueModal, setDeleteIssueModal] = useState(false);
   // hooks
   const { getIssueById, updateIssue, deleteIssue } = useWorkspaceDraftIssues();
@@ -47,28 +51,12 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
   // ref
   const issueRef = useRef<HTMLDivElement | null>(null);
   // derived values
-  const issue = getIssueById(issueId);
+  const issue = getIssueById(issueId, workspaceSlug);
   const projectIdentifier = (issue && issue.project_id && getProjectIdentifierById(issue.project_id)) || undefined;
-  if (!issue || !projectIdentifier) return null;
+  if (!issue) return null;
 
-  const duplicateIssuePayload = pick(
-    {
-      ...issue,
-      name: `${issue.name} (copy)`,
-    },
-    [
-      "name",
-      "project_id",
-      "state_id",
-      "description_html",
-      "parent_id",
-      "priority",
-      "assignee_ids",
-      "label_ids",
-      "start_date",
-      "target_date",
-    ]
-  );
+  const copyPayload = { ...issue.payload, name: `${issue.payload.name ?? ""} (copy)` };
+  const name = issue.payload.name || t("workspace_draft_issues.untitled");
 
   const MENU_ITEMS: TContextMenuItem[] = [
     {
@@ -112,6 +100,7 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
     <>
       <WorkspaceDraftIssueDeleteIssueModal
         data={issue}
+        workspaceSlug={workspaceSlug}
         isOpen={deleteIssueModal}
         handleClose={() => setDeleteIssueModal(false)}
         onSubmit={async () => deleteIssue(workspaceSlug, issueId)}
@@ -123,10 +112,9 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
           setIssueToEdit(undefined);
           setMoveToIssue(false);
         }}
-        data={issueToEdit ?? duplicateIssuePayload}
-        onSubmit={async (data) => {
-          if (issueToEdit) await updateIssue(workspaceSlug, issueId, data);
-        }}
+        draft={issueToEdit}
+        draftSeed={issueToEdit ? undefined : copyPayload}
+        data={issueToEdit ? undefined : { ...draftPayloadFields(copyPayload), project_id: issue.project_id }}
         storeType={EIssuesStoreType.WORKSPACE_DRAFT}
         fetchIssueDetails={false}
         moveToIssue={moveToIssue}
@@ -135,7 +123,8 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
       <div
         id={`issue-${issue.id}`}
         className="relative w-full cursor-pointer border-b border-b-subtle-1"
-        onDoubleClick={() => {
+        onDoubleClick={(event) => {
+          if (event.target instanceof Element && event.target.closest("button, [data-draft-properties]")) return;
           setIssueToEdit(issue);
           setCreateUpdateIssueModal(true);
         }}
@@ -154,7 +143,7 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
             <div className="flex flex-grow items-center gap-0.5 truncate">
               <div className="flex items-center gap-1">
                 <div className="flex-shrink-0">
-                  {issue.project_id && (
+                  {projectIdentifier && (
                     <div className="flex items-center space-x-2">
                       <IdentifierText
                         identifier={projectIdentifier}
@@ -170,8 +159,8 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
                 <div className="grid size-4 flex-shrink-0 place-items-center" />
               </div>
 
-              <Tooltip label={issue.name} layout="stacked" align="start">
-                <p className="w-full cursor-pointer truncate text-13 text-primary">{issue.name}</p>
+              <Tooltip label={name} layout="stacked" align="start">
+                <p className="w-full cursor-pointer truncate text-13 text-primary">{name}</p>
               </Tooltip>
             </div>
 
@@ -190,8 +179,9 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
             <DraftIssueProperties
               className={`relative flex flex-wrap ${isSidebarCollapsed ? "md:flex-shrink-0 md:flex-grow" : "lg:flex-shrink-0 lg:flex-grow"} items-center gap-2 whitespace-nowrap`}
               issue={issue}
-              updateIssue={async (projectId, issueId, data) => {
-                await updateIssue(workspaceSlug, issueId, data);
+              workspaceSlug={workspaceSlug}
+              updateIssue={async (data) => {
+                await updateIssue(workspaceSlug, issueId, (held) => draftInput(data, held.payload));
               }}
             />
             <div
@@ -199,10 +189,6 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
                 "md:flex": isSidebarCollapsed,
                 "lg:flex": !isSidebarCollapsed,
               })}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
             >
               <WorkspaceDraftIssueQuickActions parentRef={issueRef} MENU_ITEMS={MENU_ITEMS} />
             </div>

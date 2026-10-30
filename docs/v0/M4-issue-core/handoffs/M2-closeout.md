@@ -200,3 +200,10 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 ## P10b 本段处理（2026-10-29）
 
 §12 工作项 router autorun 改为计算属性；权限观察器在 retire 释放。三处同步读取、列表 SWR loginId、共享排序 fixture 与比较器由 T3/T10 验证；详情 SWR及模块 service 按 P11–P15 原分配，P11核旧 profile 方法删除。 证据见 [P10b review](../reviews/P10b-web-list-data-review.md)；整审及N2限定修复复审已闭环，产品候选2e1264aa完整F及准确CI40896656404 attempt1三任务通过，实施与终审完成、集成待办；纯文稿HEAD CI由主控另核；整份交接 status 保持 open。
+
+
+## 处理结果（M4/P11，2026-10-30）
+
+§12原七处模块实例加归档header/issueId跳转两处前移实例共九处已消失，四个提及入口由本代成员目录读取；详情/版本/草稿SessionSWR键有login与权限身份，资源和队列继续只消费IssueRootStore失效水位，退役与ABA/旧宿主都有回归。getUserProfileIssues已于P10b删除；三处同步root读取未改为异步发请求。剩余四处旧搜索实例按P12/P14/P15迁移，13实例总门未提前关闭。
+
+依据[P11 review§9/12/14](../reviews/P11-web-detail-data-review.md#9-最终验收映射)和原始迁移审计；完整剪贴板/CSP/页面故事仍由后续阶段承担，顶层status保持open，P11尚未合并。

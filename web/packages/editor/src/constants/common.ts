@@ -129,7 +129,7 @@ const USER_ACTION_ITEMS: ToolbarMenuItem<"quote" | "code">[] = [
   { itemKey: "code", renderKey: "code", name: "Code", icon: CodeOutline },
 ];
 
-export const IMAGE_ITEM: ToolbarMenuItem<"image"> = {
+const IMAGE_ITEM: ToolbarMenuItem<"image"> = {
   itemKey: "image",
   renderKey: "image",
   name: "Image",

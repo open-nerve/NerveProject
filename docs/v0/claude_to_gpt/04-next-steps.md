@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见[§14](#14-p10b最终验收与交付边界2026-10-29)：P10b实施、整审及修复限定复审完成，产品候选完整F及准确CI通过，实施与终审完成、集成待办，纯文稿HEAD CI另核；不合并、不开始P11。§6–13保留历史快照。**
+**当前接续点见§16：P11实施与deep-review修复完成，准确交付CI后置核验，集成待办；保留分支/worktree，不合并、不开始P12。§6–15为历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -162,3 +162,17 @@ P10a 最终 d1a19e78 授权 --no-ff 合入 main `a06e3f70547b755b03bf8e6b33caafd
 **下一步只由主控核最终纯文稿与准确交付HEAD CI并向用户报告，保持未合并，不开始P11。** M4§14/总体§9.4、输入handoff顶层open和M5–M8最终closeout保持原范围。R36/R38移交P13，M6领域loader/action/嵌套button与其它既有翻译/key、act/Headless观察按阶段review保留。
 
 主目录始终main，worktree及所有证据保留。根 `.superpowers/sdd/P10b-preparation-20261029/` 在worktree外，未来授权归档时必须一并保存；不得只归档worktree而遗漏准备根。当前没有合并或清理授权。
+
+## 15. P10b完成、P11文档预检（2026-10-30）
+
+P10b最终交付2aaef85c经授权 --no-ff 合并 main `df5d3bbc1887486bd105fe6fc663f57f5b371992`，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿。worktree3247证据文件/632572496字节/2空目录、外部准备根33文件/1182444字节归档逐hash核验；分支及worktree正常清理后再次核验通过，见[P10b review§17](../M4-issue-core/reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。
+
+P11准备分支 `codex/m4-p11`，worktree `.codex/worktress/codex/m4-p11`，基线即上述main；[spec](../M4-issue-core/specs/P11-web-detail-data.md)、[plan](../M4-issue-core/plans/P11-web-detail-data.md)、[预检记录](../M4-issue-core/reviews/P11-web-detail-data-review.md)、[deep-review](../../reviews/re-14-M4P11预检审核.md)。本轮只写文档，14 Task/A1–A10全部开放，phase仍M4/P10；[编号宽度合同P11-S1](../M4-issue-core/reviews/P11-project-number-width-decision.md)已裁定A，按已加载可见数据统一列宽；修订和文档预检复核通过，仍待负责人另行安排T1，当前不实施。
+
+P11沿IssueRootStore方案A管理详情资源权限失效；按资源同步迁服务/store/类型/消费者，普通链接非M5，M7旧版本DTO只归属化不伪造新API。旧IssueService的归档页头/issueId跳转数据接线前移P11，完整页面验收仍P13/P14；搜索wrapper随P12首个生产消费者创建，旧搜索最后清理仍P15。准备证据在主目录 `.superpowers/sdd/P11-preparation-20261030/`，未来归档不能遗漏。M4总验收、输入handoff顶层和最终closeout不提前关闭。
+
+## 16. P11实施、整审及待集成（2026-10-30）
+
+分支codex/m4-p11，基线main df5d3bbc；产品e84acb4b已推送，完整本地F通过，Web210文件2315项、E2E169项，整分支252个TS/TSX零警告。首次整审283变更中271全文/6结构/6相关章节，九项问题及后续死成员/静态补查已修；不宣称每Task独评或283全文。见[P11 spec](../M4-issue-core/specs/P11-web-detail-data.md)、[plan](../M4-issue-core/plans/P11-web-detail-data.md)、[review](../M4-issue-core/reviews/P11-web-detail-data-review.md)、[re-15](../../reviews/re-15-M4P11整体审核.md)。
+
+主控只完成文稿与准确最终HEAD的server/web/e2e核验，再交负责人安排；后置t15-final-delivery.json必须与HEAD一致，不冒用产品候选CI。当前没有合并/清理/P12实施授权。准备证据位于主目录.superpowers/sdd/P11-preparation-20261030，实施证据在worktree的.superpowers/sdd/P11-web-detail-data，均保留。M4§14、总体§9.4、输入handoff顶层与M5–M8最终closeout保持开放。

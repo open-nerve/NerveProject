@@ -7,14 +7,19 @@
 import { ArrowNarrowRightOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 // assets
-import emptyIssue from "@/app/assets/empty-state/issue.svg?url";
+
 // components
-import { EmptyState } from "@/components/common/empty-state";
+import { DetailResourceError } from "../issue-detail-widgets/resource-error";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TIssuePeekOverviewError = {
   removeRoutePeekId: () => void;
+  error: unknown;
+  retry?: () => Promise<unknown>;
+  workspaceSlug: string;
+  projectId: string;
+  issueId: string;
 };
 
 export function IssuePeekOverviewError(props: TIssuePeekOverviewError) {
@@ -32,13 +37,7 @@ export function IssuePeekOverviewError(props: TIssuePeekOverviewError) {
         </Tooltip>
       </div>
 
-      <div className="h-full w-full">
-        <EmptyState
-          image={emptyIssue ?? undefined}
-          title="Work item does not exist"
-          description="The work item you are looking for does not exist, has been archived, or has been deleted."
-        />
-      </div>
+      <div className="h-full w-full">{props.retry && <DetailResourceError {...props} retry={props.retry} />}</div>
     </div>
   );
 }

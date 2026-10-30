@@ -155,6 +155,8 @@
       "deleted": {
         "success": "草稿已删除"
       }
-    }
+    },
+    "untitled": "未命名草稿",
+    "clear_project": "清空项目"
   }
 }

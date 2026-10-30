@@ -13,15 +13,13 @@ import type { MakeOptional } from "@nerve/types";
 import { cn, isCommentEmpty } from "@nerve/utils";
 // components
 import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
+import { EditorMentionsError } from "@/components/editor/mentions-error";
 import { IssueCommentToolbar } from "@/components/editor/lite-text/toolbar";
 // hooks
 import { useEditorConfig, useEditorMention } from "@/hooks/editor";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // services
-import { WorkspaceService } from "@/services/workspace.service";
-import { LiteToolbar } from "./lite-toolbar";
-const workspaceService = new WorkspaceService();
 
 type LiteTextEditorWrapperProps = MakeOptional<
   Omit<ILiteTextEditorProps, "fileHandler" | "mentionHandler">,
@@ -33,11 +31,7 @@ type LiteTextEditorWrapperProps = MakeOptional<
   showSubmitButton?: boolean;
   isSubmitting?: boolean;
   showToolbarInitially?: boolean;
-  variant?: "full" | "lite" | "none";
-  issue_id?: string;
   parentClassName?: string;
-  editorClassName?: string;
-  submitButtonText?: string;
 } & (
     | {
         editable: false;
@@ -48,6 +42,10 @@ type LiteTextEditorWrapperProps = MakeOptional<
         duplicateFile: TFileHandler["duplicate"];
       }
   );
+
+function isMutableRefObject<T>(ref: React.ForwardedRef<T>): ref is React.MutableRefObject<T | null> {
+  return !!ref && typeof ref === "object" && "current" in ref;
+}
 
 export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
   props: LiteTextEditorWrapperProps,
@@ -60,45 +58,30 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
     workspaceSlug,
     workspaceId,
     projectId,
-    issue_id,
     showSubmitButton = true,
     isSubmitting = false,
     showToolbarInitially = true,
-    variant = "full",
     parentClassName = "",
     placeholder = t("issue.comments.placeholder"),
     disabledExtensions = [],
-    editorClassName = "",
     showPlaceholderOnEmpty = true,
-    submitButtonText = "common.comment",
     ...rest
   } = props;
   // states
-  const isLiteVariant = variant === "lite";
-  const isFullVariant = variant === "full";
-  const [isFocused, setIsFocused] = useState(isFullVariant ? showToolbarInitially : true);
+  const [isFocused, setIsFocused] = useState(showToolbarInitially);
   const [editorRef, setEditorRef] = useState<EditorRefApi | null>(null);
   // store hooks
-  const { getUserDetails } = useMember();
+  const members = useMember();
+  const { getUserDetails } = members;
   // parse content
   const { getEditorMetaData } = useParseEditorContent({
     projectId,
     workspaceSlug,
   });
   // use editor mention
-  const { fetchMentions } = useEditorMention({
-    searchEntity: async (payload) =>
-      await workspaceService.searchEntity(workspaceSlug, {
-        ...payload,
-        project_id: projectId,
-        issue_id,
-      }),
-  });
+  const { fetchMentions, mentionScope } = useEditorMention({ workspaceSlug, projectId, editable, members });
   // editor config
   const { getEditorFileHandlers } = useEditorConfig();
-  function isMutableRefObject<T>(ref: React.ForwardedRef<T>): ref is React.MutableRefObject<T | null> {
-    return !!ref && typeof ref === "object" && "current" in ref;
-  }
   // derived values
   const isEmpty = isCommentEmpty(props.initialValue);
 
@@ -107,17 +90,17 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
       className={cn(
         "relative rounded-sm border border-subtle",
         {
-          "p-3": editable && !isLiteVariant,
+          "p-3": editable,
         },
         parentClassName
       )}
-      onFocus={() => isFullVariant && !showToolbarInitially && setIsFocused(true)}
-      onBlur={() => isFullVariant && !showToolbarInitially && setIsFocused(false)}
+      onFocus={() => !showToolbarInitially && setIsFocused(true)}
+      onBlur={() => !showToolbarInitially && setIsFocused(false)}
     >
-      {/* Wrapper for lite toolbar layout */}
-      <div className={cn(isLiteVariant && editable ? "flex items-end gap-1" : "")}>
+      {/* Editor and confirmation toolbar keep their existing layout. */}
+      <div>
         {/* Main Editor - always rendered once */}
-        <div className={cn(isLiteVariant && editable ? "min-w-0 flex-1" : "")}>
+        <div>
           <LiteTextEditorWithRef
             ref={ref}
             disabledExtensions={disabledExtensions}
@@ -136,11 +119,9 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
               }
             }}
             mentionHandler={{
-              searchCallback: async (query) => {
-                const res = await fetchMentions(query);
-                if (!res) throw new Error("Failed in fetching mentions");
-                return res;
-              },
+              searchCallback: fetchMentions,
+              scope: mentionScope,
+              renderError: (error, retry) => <EditorMentionsError error={error} retry={retry} />,
               renderComponent: EditorMentionsRoot,
               getMentionedEntityDetails: (id) => ({
                 display_name: getUserDetails(id)?.display_name ?? "",
@@ -151,31 +132,13 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
             containerClassName={cn(containerClassName, "relative", {
               "p-2": !editable,
             })}
-            editorClassName={editorClassName}
             {...rest}
           />
         </div>
-
-        {/* Lite Toolbar - conditionally rendered */}
-        {isLiteVariant && editable && (
-          <LiteToolbar
-            executeCommand={(item) => {
-              // TODO: update this while toolbar homogenization
-              // @ts-expect-error type mismatch here
-              editorRef?.executeMenuItemCommand({
-                itemKey: item.itemKey,
-                ...item.extraProps,
-              });
-            }}
-            onSubmit={(e) => rest.onEnterKeyPress?.(e)}
-            isSubmitting={isSubmitting}
-            isEmpty={isEmpty}
-          />
-        )}
       </div>
 
       {/* Full Toolbar - conditionally rendered */}
-      {isFullVariant && editable && (
+      {editable && (
         <div
           className={cn(
             "origin-top overflow-hidden transition-all duration-300 ease-out",
@@ -196,7 +159,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
             isSubmitting={isSubmitting}
             editorRef={editorRef}
             showSubmitButton={showSubmitButton}
-            submitButtonText={submitButtonText}
+            submitButtonText="common.comment"
           />
         </div>
       )}

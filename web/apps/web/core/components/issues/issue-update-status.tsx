@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import React from "react";
+import { useTranslation } from "@nerve/i18n";
 import { observer } from "mobx-react";
 import { RefreshOutline } from "@makeplane/propel/icons";
 // types
@@ -16,6 +16,7 @@ type Props = {
 
 export const NameDescriptionUpdateStatus = observer(function NameDescriptionUpdateStatus(props: Props) {
   const { isSubmitting } = props;
+  const { t } = useTranslation();
 
   return (
     <>
@@ -24,10 +25,10 @@ export const NameDescriptionUpdateStatus = observer(function NameDescriptionUpda
           isSubmitting === "saved" ? "fade-out" : "fade-in"
         }`}
       >
-        {isSubmitting !== "submitted" && isSubmitting !== "saved" && (
-          <RefreshOutline className="size-3.5 animate-spin text-tertiary" />
-        )}
-        <span className="text-13 text-tertiary">{isSubmitting === "submitting" ? "Saving..." : "Saved"}</span>
+        {isSubmitting === "submitting" && <RefreshOutline className="size-3.5 animate-spin text-tertiary" />}
+        <span className="text-13 text-tertiary">
+          {t(isSubmitting === "submitting" ? "saving" : isSubmitting === "failed" ? "save_failed" : "saved")}
+        </span>
       </div>
     </>
   );

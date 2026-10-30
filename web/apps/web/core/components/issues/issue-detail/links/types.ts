@@ -4,10 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssueLink } from "@nerve/types";
+import type { IssueLinkCreate, IssueLinkPatch } from "@nerve/api-client";
 
 export type TLinkOperations = {
-  create: (data: Partial<TIssueLink>) => Promise<void>;
-  update: (linkId: string, data: Partial<TIssueLink>) => Promise<void>;
+  create: (data: IssueLinkCreate) => Promise<void>;
+  update: (linkId: string, data: IssueLinkPatch) => Promise<void>;
   remove: (linkId: string) => Promise<void>;
 };

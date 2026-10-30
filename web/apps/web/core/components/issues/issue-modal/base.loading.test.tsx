@@ -1,28 +1,24 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 
+import { heldChange } from "@/lib/auth/fake-tab";
+import { toasts } from "@/lib/fake-toast";
+import { ApiError } from "@/lib/api-error";
 import type { Issue } from "@nerve/api-client";
 import React, { act, forwardRef, useImperativeHandle } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, expect, it, vi, type MockInstance } from "vitest";
+import { afterEach, beforeEach, expect, it, vi, type Mock } from "vitest";
 import { CreateUpdateIssueModalBase } from "./base";
 import type { IssuesModalProps } from "./modal";
 import type { RichTextEditor } from "@/components/editor/rich-text";
 import { configure, runInAction } from "mobx";
 // MobX actions remain real; configurable descriptors allow call-through observations.
 configure({ safeDescriptors: false });
-import { AxiosHeaders, type AxiosResponse } from "axios";
-import { APIService } from "@/services/api.service";
-import { heldChange } from "@/lib/auth/fake-tab";
 import { EIssuesStoreType } from "@nerve/types";
-import { FakeNerve, answered, json } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json, problem, type Call } from "@/lib/auth/fake-nerve";
 import { issueOf } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { projectOf, loadProjects, stateOf } from "@/store/project/fake-projects";
-// Public APIService replies include Axios metadata; entity data remains the complete real response fixture.
-function reply<T>(data: T): AxiosResponse<T> {
-  return { data, status: 200, statusText: "OK", headers: {}, config: { headers: new AxiosHeaders() } };
-}
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({
   tokenManager: { state: { loginId: "issue-modal-session" } },
@@ -125,8 +121,8 @@ class NoResize {
 }
 let root: Root;
 let container: HTMLElement;
-let get: MockInstance<APIService["get"]>;
 let failure: string | undefined;
+let native: Mock<(call: Call) => void>;
 let sourceHasHtml: boolean;
 let sourceHtml: string;
 function core(id: string): Issue {
@@ -150,23 +146,23 @@ beforeEach(() => {
   const detail = app.issue.issueDetail;
   vi.spyOn(detail.activity, "fetchActivities").mockResolvedValue([]);
   vi.spyOn(detail.comment, "fetchComments").mockResolvedValue([]);
-  vi.spyOn(detail.subIssues, "fetchSubIssues").mockResolvedValue({
-    state_distribution: { backlog: [], unstarted: [], started: [], completed: [], cancelled: [] },
-    sub_issues: [],
-  });
-  vi.spyOn(detail.relation, "fetchRelations").mockResolvedValue({
-    blocking: [],
-    blocked_by: [],
-    duplicate: [],
-    relates_to: [],
-  });
+  vi.spyOn(detail.subIssues, "fetchSubIssues").mockResolvedValue([]);
+  vi.spyOn(detail.relation, "fetchRelations").mockResolvedValue([]);
   vi.spyOn(app.state, "fetchProjectStates").mockResolvedValue([]);
-  get = vi.spyOn(APIService.prototype, "get").mockImplementation(async (url) => {
-    if (failure && url.endsWith(failure)) throw { response: { data: { code: "resource-refused" } } };
-    if (url.endsWith("/reactions/") || url.endsWith("/issue-links/")) return reply([]);
-    if (url.endsWith("/issues/parent/")) return reply(issueOf("parent", project.id, project.workspace_id));
-    return reply(core(url.split("/").at(-2)!));
+  native = vi.fn((call: Call) => {
+    if (call.method !== "GET" || !call.path.startsWith("/api/v0/issues/")) return;
+    const id = call.path.split("/").at(-1)!;
+    if (id === "links") call.answer(failure === "/links" ? problem(403, "resource-refused") : json(200, { data: [] }));
+    else if (id === "reactions")
+      call.answer(failure === "/reactions" ? problem(403, "resource-refused") : json(200, { data: [] }));
+    else if (failure === "/issues/parent/" && id === "parent") call.answer(problem(403, "resource-refused"));
+    else if (id === "parent")
+      call.answer(
+        json(200, { ...issueOf("parent", project.id, project.workspace_id), description_html: "<p>parent</p>" })
+      );
+    else if (!app.issue.verification.isUncertain(id)) call.answer(json(200, core(id)));
   });
+  nerve.respond = (call) => native(call);
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -202,7 +198,7 @@ function retry() {
   expect(retryButton).toBeDefined();
   return retryButton!;
 }
-it.each(["/reactions/", "/issue-links/", "/issues/parent/"])(
+it.each(["/reactions", "/links", "/issues/parent/"])(
   "real auxiliary refusal shows a retryable error in Base/Form, preserving input and blocking fake-empty submit (%s)",
   async (resource) => {
     failure = resource;
@@ -231,16 +227,18 @@ it.each(["/reactions/", "/issue-links/", "/issues/parent/"])(
 it.each(["resolve", "reject"])(
   "an old source settling after replacement cannot change current form or load state (%s)",
   async (settling) => {
-    const old = heldChange<AxiosResponse<Issue>>();
-    const fallback = get.getMockImplementation()!;
-    get.mockImplementation((url, ...args) => (url.endsWith("/issues/old/") ? old.sent : fallback(url, ...args)));
+    const fallback = native.getMockImplementation()!;
+    native.mockImplementation((call) => {
+      if (call.path !== "/api/v0/issues/old") fallback(call);
+    });
     await render("old");
     await title("Current input");
     sourceHtml = "<p>current</p>";
     await render("current");
     await act(async () => {
-      if (settling === "resolve") old.answer(reply({ ...core("old"), description_html: "<p>stale</p>" }));
-      else old.refuse({ response: { data: { code: "old-refused" } } });
+      if (settling === "resolve")
+        nerve.to("/api/v0/issues/old")[0]!.answer(json(200, { ...core("old"), description_html: "<p>stale</p>" }));
+      else nerve.to("/api/v0/issues/old")[0]!.answer(problem(403, "old-refused"));
     });
     expect(container.querySelector("[role=alert]")).toBeNull();
     expect(container.querySelector<HTMLInputElement>("input[name=name]")!.value).toBe("Current input");
@@ -255,15 +253,16 @@ it.each(["resolve", "reject"])(
   }
 );
 it("closing during load consumes its late failure and reopening can load another source", async () => {
-  const old = heldChange<AxiosResponse<Issue>>();
-  const fallback = get.getMockImplementation()!;
-  get.mockImplementation((url, ...args) => (url.endsWith("/issues/old/") ? old.sent : fallback(url, ...args)));
+  const fallback = native.getMockImplementation()!;
+  native.mockImplementation((call) => {
+    if (call.path !== "/api/v0/issues/old") fallback(call);
+  });
   await render("old");
   const discard = [...container.querySelectorAll("button")].find((button) => button.textContent === "discard")!;
   await act(async () => discard.click());
   expect(ui.close).toHaveBeenCalledTimes(1);
   await render("old", false);
-  await act(async () => old.refuse({ response: { data: { code: "closed-refused" } } }));
+  await act(async () => nerve.to("/api/v0/issues/old")[0]!.answer(problem(403, "closed-refused")));
   expect(container.querySelector("form")).toBeNull();
   await render("current");
   expect(container.querySelector("[role=alert]")).toBeNull();
@@ -291,7 +290,7 @@ it.each(["<p>source</p>", ""])(
   "retry synchronizes real source HTML into the wrapper draft payload (%s)",
   async (html) => {
     sourceHtml = html;
-    failure = "/reactions/";
+    failure = "/reactions";
     await render("source", true, true);
     await title("Keep for retry");
     const discard = [...container.querySelectorAll("button")].find((button) => button.textContent === "discard")!;
@@ -315,7 +314,39 @@ it.each(["<p>source</p>", ""])(
     await act(async () => saveAfterRetry.click());
     expect(ui.draft).toHaveBeenCalledExactlyOnceWith(
       ws.slug,
-      expect.objectContaining({ project_id: project.id, name: "Keep for retry", description_html: html })
+      expect.objectContaining({
+        project_id: project.id,
+        payload: expect.objectContaining({ name: "Keep for retry", description_html: html }),
+      })
     );
   }
 );
+
+it.each(["closed", "source", "unmounted"])(
+  "does not follow an old ordinary creation after its form is %s",
+  async (scope) => {
+    toasts.length = 0;
+    const pending = heldChange<Issue>();
+    ui.create.mockImplementation(() => pending.sent);
+    await render();
+    await submit();
+    expect(ui.create).toHaveBeenCalledTimes(1);
+    if (scope === "closed") await render("source", false);
+    else if (scope === "source") await render("another");
+    else await act(async () => root.render(null));
+    await act(async () => pending.answer(issueOf("created", project.id, project.workspace_id)));
+    expect(ui.close).not.toHaveBeenCalled();
+    expect(toasts).toEqual([]);
+  }
+);
+it("does not report an ordinary creation refusal from a previous source", async () => {
+  toasts.length = 0;
+  const pending = heldChange<Issue>();
+  ui.create.mockImplementation(() => pending.sent);
+  await render();
+  await submit();
+  await render("another");
+  await act(async () => pending.refuse(new ApiError(403, { status: 403, code: "forbidden", title: "Forbidden" })));
+  expect(toasts).toEqual([]);
+  expect(ui.close).not.toHaveBeenCalled();
+});

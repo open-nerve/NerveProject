@@ -1,10 +1,10 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { Issue } from "@nerve/api-client";
-import { IssueService } from "@/services/issue";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { runInAction, toJS } from "mobx";
-import { issueDetailOf, issueOf, issuePageOf, issueStoreTab, requestedIssue } from "./fake-issues";
+import { issueDetailOf, issueOf, issuePageOf, issueLinkOf, issueStoreTab, requestedIssue } from "./fake-issues";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { heldChange } from "@/lib/auth/fake-tab";
 import { track, until } from "@/lib/auth/fake-time";
 import { IssueListBinding } from "./helpers/issue-list-binding";
 import { SessionChangedError } from "@/lib/auth/token-manager";
@@ -30,9 +30,11 @@ it("postWriteEvidenceCannotReusePreWriteAuthoritativeGETWithoutFetchedLists", as
   accept({ ...issueDetailOf("x"), link_count: 5 });
   const old = await requestedIssue(tab.nerve, () => root.issues.refreshAuthoritative("x"), ["GET", "/api/v0/issues/x"]);
   const link = root.issueDetail.link;
-  vi.spyOn(IssueService.prototype, "createIssueLink").mockResolvedValue({ id: "link" } as never);
+  tab.nerve.respond = (call) => {
+    if (call.method === "POST" && call.path === "/api/v0/issues/x/links") call.answer(json(201, issueLinkOf("link")));
+  };
   vi.spyOn(root.issueDetail.activity, "fetchActivities").mockResolvedValue([]);
-  const write = track(link.createLink("ws", "A", "x", { title: "link" }));
+  const write = track(link.createLink("ws", "A", "x", { url: "https://example.test/", title: "link" }));
   await vi.advanceTimersByTimeAsync(10);
   old.call.answer(json(200, { ...issueDetailOf("x"), link_count: 5 }));
   await vi.advanceTimersByTimeAsync(10);
@@ -596,29 +598,41 @@ async function resourceOperation(kind: (typeof resources)[number], refuse = fals
   const detail = root.issueDetail;
   vi.spyOn(detail.activity, "fetchActivities").mockResolvedValue([]);
   const response = <T>(value: T) => (refuse ? Promise.reject(new Error("resource refused")) : Promise.resolve(value));
-  if (kind === "createLink") {
-    vi.spyOn(IssueService.prototype, "createIssueLink").mockImplementation(() => response({ id: "link" } as never));
-    return () => detail.link.createLink("ws", "A", "x", { title: "link" });
-  }
-  if (kind === "removeLink") {
-    detail.link.addLinks("x", [{ id: "link" } as never]);
-    vi.spyOn(IssueService.prototype, "deleteIssueLink").mockImplementation(() => response(undefined));
-    return () => detail.link.removeLink("ws", "A", "x", "link");
+  if (kind === "createLink" || kind === "removeLink") {
+    if (kind === "removeLink") {
+      const read = await requestedIssue(tab.nerve, () => detail.link.fetchLinks("ws", "A", "x"), [
+        "GET",
+        "/api/v0/issues/x/links",
+      ]);
+      read.call.answer(json(200, { data: [issueLinkOf("link")] }));
+      await read.promise;
+    }
+    tab.nerve.respond = (call) => {
+      if (call.method === "POST" && call.path === "/api/v0/issues/x/links")
+        call.answer(refuse ? problem(403, "forbidden") : json(201, issueLinkOf("link")));
+      if (call.method === "DELETE" && call.path === "/api/v0/issue-links/link")
+        call.answer(refuse ? problem(403, "forbidden") : noContent());
+    };
+    return () =>
+      kind === "createLink"
+        ? detail.link.createLink("ws", "A", "x", { url: "https://example.test/", title: "link" })
+        : detail.link.removeLink("ws", "A", "x", "link");
   }
   if (kind === "createSubIssues") {
-    vi.spyOn(IssueService.prototype, "addSubIssues").mockImplementation(() =>
-      response({
-        sub_issues: [],
-        state_distribution: { backlog: [], unstarted: [], started: [], completed: [], cancelled: [] },
-      })
-    );
-    return () => detail.subIssues.createSubIssues("ws", "A", "x", []);
+    tab.nerve.respond = (call) => {
+      if (call.method === "POST" && call.path === "/api/v0/issues/x/sub-issues")
+        call.answer(
+          refuse ? problem(403, "forbidden") : json(200, { data: [{ ...issueOf("new-child"), parent_id: "x" }] })
+        );
+      if (call.method === "GET" && call.path === "/api/v0/projects/A/states") call.answer(json(200, { data: [] }));
+    };
+    return () => detail.subIssues.createSubIssues("ws", "A", "x", ["new-child"]);
   }
   if (kind === "removeSubIssue" || kind === "deleteSubIssue") {
     accept({ ...issueOf("child"), parent_id: "x" });
-    runInAction(() => {
-      detail.subIssues.subIssues.x = ["child"];
-    });
+    tab.nerve.respond = (call) => {
+      if (call.method === "GET" && call.path === "/api/v0/projects/A/states") call.answer(json(200, { data: [] }));
+    };
     return () =>
       kind === "removeSubIssue"
         ? detail.subIssues.removeSubIssue("ws", "A", "x", "child")
@@ -637,7 +651,7 @@ async function resourceOperation(kind: (typeof resources)[number], refuse = fals
   );
   return () => inbox.updateInboxIssueStatus(EInboxIssueStatus.ACCEPTED);
 }
-it.each(resources)("legacy %s success takes new evidence after a pre-write GET", async (kind) => {
+it.each(resources)("resource %s success takes new evidence after a pre-write GET", async (kind) => {
   const root = tab.app.issue;
   accept({ ...issueDetailOf("x"), link_count: 5, sub_issues_count: 5 });
   const operateResource = await resourceOperation(kind);
@@ -659,7 +673,7 @@ it.each(resources)("legacy %s success takes new evidence after a pre-write GET",
   expect(write.error).toBeUndefined();
   expect(root.issues.getIssueById("x")).toMatchObject({ link_count: 6, sub_issues_count: 6, updated_at: version(2) });
 });
-it.each(resources)("legacy %s rejection does not start post-write evidence", async (kind) => {
+it.each(resources)("resource %s rejection does not start post-write evidence", async (kind) => {
   accept(issueDetailOf("x"));
   const operateResource = await resourceOperation(kind, true);
   const write = track(operateResource());
@@ -692,10 +706,10 @@ it("ordinary fetchSubIssues parent read shares the pre-existing GET", async () =
   const root = tab.app.issue;
   accept(issueDetailOf("x"));
   const old = await requestedIssue(tab.nerve, () => root.issues.refreshAuthoritative("x"), ["GET", "/api/v0/issues/x"]);
-  vi.spyOn(IssueService.prototype, "subIssues").mockResolvedValue({
-    sub_issues: [],
-    state_distribution: { backlog: [], unstarted: [], started: [], completed: [], cancelled: [] },
-  });
+  tab.nerve.respond = (call) => {
+    if (call.method === "GET" && call.path === "/api/v0/issues/x/sub-issues") call.answer(json(200, { data: [] }));
+    if (call.method === "GET" && call.path === "/api/v0/projects/A/states") call.answer(json(200, { data: [] }));
+  };
   const read = track(root.issueDetail.subIssues.fetchSubIssues("ws", "A", "x"));
   await vi.advanceTimersByTimeAsync(10);
   expect(tab.nerve.to("/api/v0/issues/x")).toHaveLength(1);
@@ -853,10 +867,13 @@ it.each(
     await replacement.promise;
   }
   expect(root.active).toBe(true);
-  expect(write.error).toBeUndefined();
+  if (outcome === "permission") expect(write.error).toBeInstanceOf(SessionChangedError);
+  else expect(write.error).toBeUndefined();
   expect(root.issueDetail.activity.fetchActivities).not.toHaveBeenCalled();
   expect(tab.nerve.to("/api/v0/issues/x")).toHaveLength(outcome === "superseded" ? 2 : 1);
-  expect(root.issueDetail.link.getLinksByIssueId("x")).toEqual(kind === "createLink" ? ["link"] : []);
+  expect(root.issueDetail.link.getLinksByIssueId("x")).toEqual(
+    outcome === "permission" ? undefined : kind === "createLink" ? ["link"] : []
+  );
 });
 
 it.each([false, true])(
@@ -865,31 +882,41 @@ it.each([false, true])(
     accept(issueDetailOf("x"));
     const root = tab.app.issue;
     const operateResource = await resourceOperation("createLink");
-    if (loaded) root.issueDetail.link.addLinks("x", [{ id: "old" } as never]);
-    const create = vi
-      .spyOn(IssueService.prototype, "createIssueLink")
-      .mockResolvedValueOnce({ id: "one", title: "one" } as never)
-      .mockResolvedValueOnce({ id: "two", title: "two" } as never)
-      .mockRejectedValueOnce(new Error("resource refused"));
+    if (loaded) {
+      const reading = await requestedIssue(tab.nerve, () => root.issueDetail.link.fetchLinks("ws", "A", "x"), [
+        "GET",
+        "/api/v0/issues/x/links",
+      ]);
+      reading.call.answer(json(200, { data: [issueLinkOf("old")] }));
+      await reading.promise;
+    }
+    let creates = 0;
+    tab.nerve.respond = (call) => {
+      if (call.method !== "POST" || call.path !== "/api/v0/issues/x/links") return;
+      const id = ["one", "two"][creates++];
+      call.answer(id ? json(201, { ...issueLinkOf(id), title: id }) : problem(403, "forbidden"));
+    };
     const expected = loaded ? ["old"] : [];
     for (const [i, id] of ["one", "two"].entries()) {
+      const write = track(operateResource());
       // oxlint-disable-next-line no-await-in-loop
-      const write = await requestedIssue(tab.nerve, operateResource, ["GET", "/api/v0/issues/x"]);
-      write.call.answer(json(200, { ...issueDetailOf("x"), link_count: i + 1, updated_at: version(i + 1) }));
+      await until(() => tab.nerve.to("/api/v0/issues/x").length === i + 1, "native link count read");
+      const countRead = tab.nerve.to("/api/v0/issues/x")[i]!;
+      countRead.answer(json(200, { ...issueDetailOf("x"), link_count: i + 1, updated_at: version(i + 1) }));
       // oxlint-disable-next-line no-await-in-loop
-      await write.promise;
+      await until(() => write.settled, "confirmed native link");
       expected.push(id);
-      expect(write.result.value).toMatchObject({ id, title: id });
+      expect(write.value).toMatchObject({ id, title: id });
       expect(root.issueDetail.link.getLinksByIssueId("x")).toEqual(expected);
-      expect(root.issueDetail.link.getLinkById(id)).toMatchObject({ id, title: id });
+      expect(root.issueDetail.link.getLinkById("x", id)).toMatchObject({ id, title: id });
     }
     const at = tab.nerve.calls.length;
-    await expect(operateResource()).rejects.toThrow("resource refused");
+    await expect(operateResource()).rejects.toMatchObject({ status: 403 });
     expect(root.issueDetail.link.getLinksByIssueId("x")).toEqual(expected);
-    expect(root.issueDetail.link.getLinkById("one")).toBeDefined();
-    expect(root.issueDetail.link.getLinkById("two")).toBeDefined();
-    expect(tab.nerve.calls).toHaveLength(at);
-    expect(create).toHaveBeenCalledTimes(3);
+    expect(root.issueDetail.link.getLinkById("x", "one")).toBeDefined();
+    expect(root.issueDetail.link.getLinkById("x", "two")).toBeDefined();
+    expect(tab.nerve.calls).toHaveLength(at + 1);
+    expect(creates).toBe(3);
   }
 );
 
@@ -919,4 +946,34 @@ it.each([2, 3])("newerWholeBeforeOlderWriteAnswerPreservesLatestEvidence version
   });
   expect(root.verification.isUncertain("x")).toBe(false);
   expect(tab.nerve.calls).toHaveLength(3);
+});
+
+it.each(kinds)("a confirmed %s from an old permission lifetime cannot update recovered copies", async (kind) => {
+  const { after, lists, confirm, canonical } = await copies(kind);
+  const request = await requestedIssue(tab.nerve, () => operate(kind, lists[0]), endpoint(kind));
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  const count = tab.nerve.calls.length;
+  request.call.answer(kind === "delete" ? noContent() : json(200, after));
+  await until(() => request.result.settled, "old confirmed write");
+  expect(canonical).not.toHaveBeenCalled();
+  expect(confirm.every((spy) => spy.mock.calls.length === 0)).toBe(true);
+  expect(tab.nerve.calls).toHaveLength(count);
+});
+it("a core change waiting for its list catalog cannot send after permission ABA", async () => {
+  const { lists } = await copies("update");
+  const held = heldChange<void>();
+  const prepare = vi.spyOn(lists[0]!, "prepareCatalog").mockImplementation(() => held.sent);
+  const request = operate("update", lists[0]);
+  const result = track(request);
+  await until(() => prepare.mock.calls.length === 1, "held catalog");
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  accept({ ...issueDetailOf("x"), updated_at: "2026-10-31T00:00:00Z" });
+  expect(tab.app.issue.issues.getIssueById("x")).toBeDefined();
+  const count = tab.nerve.calls.length;
+  held.answer();
+  await until(() => result.settled || tab.nerve.calls.length > count, "scope checked after catalog");
+  expect(tab.nerve.calls).toHaveLength(count);
+  await expect(request).rejects.toBeInstanceOf(SessionChangedError);
 });

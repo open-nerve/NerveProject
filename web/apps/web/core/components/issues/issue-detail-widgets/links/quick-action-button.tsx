@@ -8,7 +8,7 @@ import React from "react";
 import { observer } from "mobx-react";
 import { AddOutline } from "@makeplane/propel/icons";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 
 type Props = {
   customButton?: React.ReactNode;
@@ -18,7 +18,7 @@ type Props = {
 export const IssueLinksActionButton = observer(function IssueLinksActionButton(props: Props) {
   const { customButton, disabled = false } = props;
   // store hooks
-  const { toggleIssueLinkModal } = useIssueDetail();
+  const { toggleIssueLinkModal } = useIssueDetailModals();
 
   // handlers
   const handleOnClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {

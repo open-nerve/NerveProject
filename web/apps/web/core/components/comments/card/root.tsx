@@ -4,11 +4,14 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueComment } from "@nerve/api-client";
+
 import { useRef, useState } from "react";
+import { useWorkspace } from "@/hooks/store/use-workspace";
 import { observer } from "mobx-react";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
-import type { TIssueComment, TCommentsOperations } from "@nerve/types";
+import type { TCommentsOperations } from "@nerve/types";
 // local imports
 import { CommentQuickActions } from "../quick-actions";
 import { CommentBlock } from "../comment-block";
@@ -17,7 +20,7 @@ import { CommentCardDisplay } from "./display";
 type TCommentCard = {
   workspaceSlug: string;
   entityId: string;
-  comment: TIssueComment | undefined;
+  comment: IssueComment | undefined;
   activityOperations: TCommentsOperations;
   ends: "top" | "bottom" | undefined;
   showCopyLinkOption: boolean;
@@ -42,7 +45,7 @@ export const CommentCard = observer(function CommentCard(props: TCommentCard) {
   // refs
   const readOnlyEditorRef = useRef<EditorRefApi>(null);
   // derived values
-  const workspaceId = comment?.workspace;
+  const workspaceId = useWorkspace().getWorkspaceBySlug(workspaceSlug)?.id;
 
   if (!comment || !workspaceId) return null;
 

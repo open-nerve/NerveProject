@@ -9,10 +9,11 @@ import { observer } from "mobx-react";
 import { createPortal } from "react-dom";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
-import type { TNameDescriptionLoader } from "@nerve/types";
+import { useIssueSaveStatus } from "@/components/issues/use-issue-save-status";
 import { cn } from "@nerve/utils";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useDetailScope } from "../issue-detail-widgets/use-detail-scope";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 import useKeypress from "@/hooks/use-keypress";
 import usePeekOverviewOutsideClickDetector from "@/hooks/use-peek-overview-outside-click";
 // local imports
@@ -31,7 +32,8 @@ interface IIssueView {
   projectId: string;
   issueId: string;
   isLoading?: boolean;
-  isError?: boolean;
+  error?: unknown;
+  retry?: () => Promise<unknown>;
   is_archived: boolean;
   disabled?: boolean;
   embedIssue?: boolean;
@@ -45,7 +47,8 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
     projectId,
     issueId,
     isLoading,
-    isError,
+    error,
+    retry,
     is_archived,
     disabled = false,
     embedIssue = false,
@@ -54,7 +57,7 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
   } = props;
   // states
   const [peekMode, setPeekMode] = useState<TPeekModes>("side-peek");
-  const [isSubmitting, setIsSubmitting] = useState<TNameDescriptionLoader>("saved");
+  const { status: isSubmitting, setTitleStatus, setDescriptionStatus } = useIssueSaveStatus();
   const [isDeleteIssueModalOpen, setIsDeleteIssueModalOpen] = useState(false);
   const [isArchiveIssueModalOpen, setIsArchiveIssueModalOpen] = useState(false);
   const [isDuplicateIssueModalOpen, setIsDuplicateIssueModalOpen] = useState(false);
@@ -63,14 +66,18 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
   const issuePeekOverviewRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorRefApi>(null);
   // store hooks
+  const detail = useIssueDetail();
+  const capture = useDetailScope(workspaceSlug, projectId, issueId);
+  const selection = detail.peekIssue;
   const {
     setPeekIssue,
-    isAnyModalOpen,
     issue: { getIssueById },
-  } = useIssueDetail();
+  } = detail;
+  const { isAnyModalOpen } = useIssueDetailModals();
   const issue = getIssueById(issueId);
   // remove peek id
   const removeRoutePeekId = () => {
+    if (!capture()() || detail.peekIssue !== selection) return;
     setPeekIssue(undefined);
     if (embedIssue && embedRemoveCurrentNotification) embedRemoveCurrentNotification();
   };
@@ -101,7 +108,13 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
     const editorImageFullScreenModalElement = document.querySelector(".editor-image-full-screen-modal");
     const dropdownElement = document.activeElement?.tagName === "INPUT";
     const isAnyDropbarOpen = editorRef.current?.isAnyDropbarOpen();
-    if (!isAnyModalOpen && !dropdownElement && !isAnyDropbarOpen && !editorImageFullScreenModalElement) {
+    if (
+      !isAnyModalOpen &&
+      !isAnyLocalModalOpen &&
+      !dropdownElement &&
+      !isAnyDropbarOpen &&
+      !editorImageFullScreenModalElement
+    ) {
       removeRoutePeekId();
       const issueElement = document.getElementById(`issue-${issueId}`);
       if (issueElement) issueElement?.focus();
@@ -112,8 +125,12 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
 
   const handleRestore = async () => {
     if (!issueOperations.restore) return;
-    await issueOperations.restore(workspaceSlug, projectId, issueId);
-    removeRoutePeekId();
+    try {
+      await issueOperations.restore(workspaceSlug, projectId, issueId);
+      removeRoutePeekId();
+    } catch {
+      // The operation reports its native refusal; keep this peek open.
+    }
   };
 
   const peekOverviewIssueClassName = cn(
@@ -142,14 +159,21 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
               "0px 4px 8px 0px rgba(0, 0, 0, 0.12), 0px 6px 12px 0px rgba(16, 24, 40, 0.12), 0px 1px 16px 0px rgba(16, 24, 40, 0.12)",
           }}
         >
-          {isError ? (
+          {error ? (
             <div className="relative h-screen w-full overflow-hidden">
-              <IssuePeekOverviewError removeRoutePeekId={removeRoutePeekId} />
+              <IssuePeekOverviewError
+                removeRoutePeekId={removeRoutePeekId}
+                error={error}
+                retry={retry}
+                workspaceSlug={workspaceSlug}
+                projectId={projectId}
+                issueId={issueId}
+              />
             </div>
           ) : (
             isLoading && <IssuePeekOverviewLoader removeRoutePeekId={removeRoutePeekId} />
           )}
-          {!isLoading && !isError && issue && (
+          {!isLoading && !error && issue && (
             <>
               {/* header */}
               <IssuePeekOverviewHeader
@@ -182,7 +206,8 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                       disabled={disabled}
                       isArchived={is_archived}
                       isSubmitting={isSubmitting}
-                      setIsSubmitting={(value) => setIsSubmitting(value)}
+                      setTitleStatus={setTitleStatus}
+                      setDescriptionStatus={setDescriptionStatus}
                     />
 
                     <div className="py-2">
@@ -222,7 +247,8 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                           disabled={disabled}
                           isArchived={is_archived}
                           isSubmitting={isSubmitting}
-                          setIsSubmitting={(value) => setIsSubmitting(value)}
+                          setTitleStatus={setTitleStatus}
+                          setDescriptionStatus={setDescriptionStatus}
                         />
 
                         <div className="py-2">

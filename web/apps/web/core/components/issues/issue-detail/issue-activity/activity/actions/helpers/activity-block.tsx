@@ -13,24 +13,24 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { IssueUser } from "../";
-import { IssueCreatorDisplay } from "./issue-creator";
 
 type TIssueActivityBlockComponent = {
   icon?: ReactNode;
   activityId: string;
+  issueId: string;
+  workspaceSlug: string;
   ends: "top" | "bottom" | undefined;
   children: ReactNode;
-  customUserName?: string;
 };
 
 export function IssueActivityBlockComponent(props: TIssueActivityBlockComponent) {
-  const { icon, activityId, ends, children, customUserName } = props;
+  const { icon, activityId, issueId, workspaceSlug, ends, children } = props;
   // hooks
   const {
     activity: { getActivityById },
   } = useIssueDetail();
 
-  const activity = getActivityById(activityId);
+  const activity = getActivityById(issueId, activityId);
   const { isMobile } = usePlatformOS();
   if (!activity) return <></>;
   return (
@@ -44,11 +44,7 @@ export function IssueActivityBlockComponent(props: TIssueActivityBlockComponent)
         {icon ? icon : <HierarchyOutline className="h-3.5 w-3.5" />}
       </div>
       <div className="w-full truncate text-secondary">
-        {!activity?.field && activity?.verb === "created" ? (
-          <IssueCreatorDisplay activityId={activityId} customUserName={customUserName} />
-        ) : (
-          <IssueUser activityId={activityId} customUserName={customUserName} />
-        )}
+        <IssueUser activityId={activityId} issueId={issueId} workspaceSlug={workspaceSlug} />
         <span> {children} </span>
         <span>
           <Tooltip

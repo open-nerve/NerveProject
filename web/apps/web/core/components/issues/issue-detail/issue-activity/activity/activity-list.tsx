@@ -33,11 +33,13 @@ import {
 
 type TIssueActivityItem = {
   activityId: string;
+  issueId: string;
+  workspaceSlug: string;
   ends: "top" | "bottom" | undefined;
 };
 
 export const IssueActivityItem = observer(function IssueActivityItem(props: TIssueActivityItem) {
-  const { activityId, ends } = props;
+  const { activityId, issueId, workspaceSlug, ends } = props;
   // hooks
   const {
     activity: { getActivityById },
@@ -46,9 +48,9 @@ export const IssueActivityItem = observer(function IssueActivityItem(props: TIss
   } = useIssueDetail();
   const activityRelations = getValidKeysFromObject(ISSUE_RELATION_OPTIONS);
 
-  const componentDefaultProps = { activityId, ends };
+  const componentDefaultProps = { activityId, issueId, workspaceSlug, ends };
 
-  const activityField = getActivityById(activityId)?.field;
+  const activityField = getActivityById(issueId, activityId)?.field;
   switch (activityField) {
     case null: // default issue creation
       return <IssueDefaultActivity {...componentDefaultProps} />;

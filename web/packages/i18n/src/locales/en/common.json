@@ -22,6 +22,8 @@
   "password": "Password",
   "language": "Language",
   "saving": "Saving",
+  "saved": "Saved",
+  "save_failed": "Not saved",
   "save_changes": "Save changes",
   "deactivate_account": "Deactivate account",
   "deactivate_account_description": "Signs you out everywhere; your password and personal access tokens stop working until an administrator of this server reactivates the account. Nothing is deleted.",
@@ -463,6 +465,8 @@
     "subscribed": "Subscribed"
   },
   "description_versions": {
+    "previous_version": "Previous version",
+    "next_version": "Next version",
     "last_edited_by": "Last edited by",
     "previously_edited_by": "Previously edited by",
     "edited_by": "Edited by"

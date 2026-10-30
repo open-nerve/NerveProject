@@ -11,28 +11,36 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
 import { IssueActivityBlockComponent, IssueLink } from "./";
 
-type TIssuePriorityActivity = { activityId: string; showIssue?: boolean; ends: "top" | "bottom" | undefined };
+type TIssuePriorityActivity = {
+  activityId: string;
+  issueId: string;
+  workspaceSlug: string;
+  showIssue?: boolean;
+  ends: "top" | "bottom" | undefined;
+};
 
 export const IssuePriorityActivity = observer(function IssuePriorityActivity(props: TIssuePriorityActivity) {
-  const { activityId, showIssue = true, ends } = props;
+  const { activityId, issueId, workspaceSlug, showIssue = true, ends } = props;
   // hooks
   const {
     activity: { getActivityById },
   } = useIssueDetail();
 
-  const activity = getActivityById(activityId);
+  const activity = getActivityById(issueId, activityId);
 
   if (!activity) return <></>;
   return (
     <IssueActivityBlockComponent
       icon={<PriorityOutline className="h-3.5 w-3.5 text-secondary" aria-hidden="true" />}
       activityId={activityId}
+      issueId={issueId}
+      workspaceSlug={workspaceSlug}
       ends={ends}
     >
       <>
         set the priority to <span className="font-medium text-primary">{activity.new_value}</span>
         {showIssue ? ` for ` : ``}
-        {showIssue && <IssueLink activityId={activityId} />}.
+        {showIssue && <IssueLink activityId={activityId} issueId={issueId} workspaceSlug={workspaceSlug} />}.
       </>
     </IssueActivityBlockComponent>
   );

@@ -9,13 +9,12 @@ import type { IssueListOptions } from "@/lib/issue-filters";
 
 import type { Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
 
-import type { IssueDetail } from "@nerve/api-client";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useMemo } from "react";
 // types
 import { useParams } from "react-router";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
-import { EDraftIssuePaginationType, EUserPermissions } from "@nerve/constants";
+import { EUserPermissions } from "@nerve/constants";
 import type { TLoader, TProfileViews, TSupportedFilterForUpdate } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "./store/use-issues";
@@ -43,53 +42,53 @@ export interface IssueActions {
   ) => Promise<void>;
 }
 
-export const useIssuesActions = (storeType: EIssuesStoreType): IssueActions => {
+export function useIssuesActions(storeType: EIssuesStoreType): IssueActions;
+export function useIssuesActions(storeType: EIssuesStoreType | undefined): IssueActions | undefined;
+export function useIssuesActions(storeType: EIssuesStoreType | undefined): IssueActions | undefined {
   const projectIssueActions = useProjectIssueActions();
   const profileIssueActions = useProfileIssueActions();
   const archivedIssueActions = useArchivedIssueActions();
-  const workspaceDraftIssueActions = useWorkspaceDraftIssueActions();
 
   switch (storeType) {
+    case undefined:
+      return undefined;
     case EIssuesStoreType.PROFILE:
       return profileIssueActions;
     case EIssuesStoreType.ARCHIVED:
       return archivedIssueActions;
-    case EIssuesStoreType.WORKSPACE_DRAFT:
-      //@ts-expect-error type mismatch
-      return workspaceDraftIssueActions;
     case EIssuesStoreType.PROJECT:
     case EIssuesStoreType.DEFAULT:
       return projectIssueActions;
     default:
       throw new Error(`Unsupported issue store: ${storeType}`);
   }
-};
+}
 
 const useProjectIssueActions = () => {
   // router
-  const { workspaceSlug, projectId } = useParams();
+  const { workspaceSlug, projectId: routeProjectId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
   const follow = useProjectPreferencesFollow();
   const permission = useUserPermissions();
   const role =
-    workspaceSlug && projectId
-      ? permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId)
+    workspaceSlug && routeProjectId
+      ? permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, routeProjectId)
       : undefined;
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssueListOptions) => {
-      if (!workspaceSlug || !projectId || role === undefined) return;
-      return issues.fetchIssues(workspaceSlug, projectId, loadType, options);
+      if (!workspaceSlug || !routeProjectId || role === undefined) return;
+      return issues.fetchIssues(workspaceSlug, routeProjectId, loadType, options);
     },
-    [issues.fetchIssues, workspaceSlug, projectId, role]
+    [issues.fetchIssues, workspaceSlug, routeProjectId, role]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string, subGroupId?: string) => {
-      if (!workspaceSlug || !projectId || role === undefined) return;
-      return issues.fetchNextIssues(workspaceSlug, projectId, groupId, subGroupId);
+      if (!workspaceSlug || !routeProjectId || role === undefined) return;
+      return issues.fetchNextIssues(workspaceSlug, routeProjectId, groupId, subGroupId);
     },
-    [issues.fetchIssues, workspaceSlug, projectId, role]
+    [issues.fetchIssues, workspaceSlug, routeProjectId, role]
   );
 
   const createIssue = useCallback(
@@ -238,29 +237,29 @@ const useProfileIssueActions = () => {
 
 const useArchivedIssueActions = () => {
   // router
-  const { workspaceSlug, projectId } = useParams();
+  const { workspaceSlug, projectId: routeProjectId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.ARCHIVED);
   const permission = useUserPermissions();
   const role =
-    workspaceSlug && projectId
-      ? permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId)
+    workspaceSlug && routeProjectId
+      ? permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, routeProjectId)
       : undefined;
   const allowed = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssueListOptions) => {
-      if (!workspaceSlug || !projectId || !allowed) return;
-      return issues.fetchIssues(workspaceSlug, projectId, loadType, options);
+      if (!workspaceSlug || !routeProjectId || !allowed) return;
+      return issues.fetchIssues(workspaceSlug, routeProjectId, loadType, options);
     },
-    [issues.fetchIssues, workspaceSlug, projectId, allowed]
+    [issues.fetchIssues, workspaceSlug, routeProjectId, allowed]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string, subGroupId?: string) => {
-      if (!workspaceSlug || !projectId || !allowed) return;
-      return issues.fetchNextIssues(workspaceSlug, projectId, groupId, subGroupId);
+      if (!workspaceSlug || !routeProjectId || !allowed) return;
+      return issues.fetchNextIssues(workspaceSlug, routeProjectId, groupId, subGroupId);
     },
-    [issues.fetchIssues, workspaceSlug, projectId, allowed]
+    [issues.fetchIssues, workspaceSlug, routeProjectId, allowed]
   );
 
   const removeIssue = useCallback(
@@ -295,65 +294,5 @@ const useArchivedIssueActions = () => {
       updateFilters,
     }),
     [fetchIssues, fetchNextIssues, removeIssue, restoreIssue, updateFilters]
-  );
-};
-
-const useWorkspaceDraftIssueActions = () => {
-  // router
-  const { workspaceSlug } = useParams();
-  // store hooks
-  const { issues } = useIssues(EIssuesStoreType.WORKSPACE_DRAFT);
-  const fetchIssues = useCallback(
-    async (loadType: TLoader, _options: IssueListOptions) => {
-      if (!workspaceSlug) return;
-      return issues.fetchIssues(workspaceSlug, loadType, EDraftIssuePaginationType.INIT);
-    },
-    [workspaceSlug, issues]
-  );
-
-  const fetchNextIssues = useCallback(async () => {
-    if (!workspaceSlug) return;
-    return issues.fetchIssues(workspaceSlug, "pagination", EDraftIssuePaginationType.NEXT);
-  }, [workspaceSlug, issues]);
-
-  const createIssue = useCallback(
-    async (projectId: string | undefined | null, data: Partial<IssueDetail>) => {
-      if (!workspaceSlug || !projectId) return;
-      return await issues.createIssue(workspaceSlug, data);
-    },
-    [issues, workspaceSlug]
-  );
-  const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: Partial<IssueDetail>) => {
-      if (!workspaceSlug || !projectId) return;
-      return await issues.updateIssue(workspaceSlug, issueId, data);
-    },
-    [issues, workspaceSlug]
-  );
-  const removeIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string) => {
-      if (!workspaceSlug || !projectId) return;
-      return await issues.removeIssue(issueId);
-    },
-    [issues, workspaceSlug]
-  );
-
-  // const moveToIssue = useCallback(
-  //   async (workspaceSlug: string, issueId: string, data: Partial<IssueDetail>) => {
-  //     if (!workspaceSlug || !issueId || !data) return;
-  //     return await issues.moveToIssues(workspaceSlug, issueId, data);
-  //   },
-  //   [issues]
-  // );
-
-  return useMemo(
-    () => ({
-      fetchIssues,
-      fetchNextIssues,
-      createIssue,
-      updateIssue,
-      removeIssue,
-    }),
-    [fetchIssues, fetchNextIssues, createIssue, updateIssue, removeIssue]
   );
 };

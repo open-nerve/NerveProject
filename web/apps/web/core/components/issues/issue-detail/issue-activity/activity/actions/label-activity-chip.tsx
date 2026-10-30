@@ -6,7 +6,7 @@
 
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 
-type TIssueLabelPill = { name?: string; color?: string };
+type TIssueLabelPill = { name?: string | null; color?: string };
 
 export function LabelActivityChip(props: TIssueLabelPill) {
   const { name, color } = props;

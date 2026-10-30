@@ -6,17 +6,17 @@
 
 import type { IssueDetail } from "@nerve/api-client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { Label, LabelCreate } from "@nerve/api-client";
+import { useLabelChanges, type IssueLabelCreation } from "@/components/labels/use-label-changes";
+import { useDetailCommand } from "../use-issue-operations";
+import { useDetailScope } from "../../issue-detail-widgets/use-detail-scope";
 
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useLabel } from "@/hooks/store/use-label";
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // types
 import { LabelList, IssueLabelSelectRoot } from "./";
 // TODO: Fix this import statement, as core should not import from ee
@@ -27,21 +27,27 @@ export type TIssueLabel = {
   issueId: string;
   disabled: boolean;
   isInboxIssue?: boolean;
-  onLabelUpdate?: (labelIds: string[]) => void;
+  onLabelUpdate?: (labelIds: string[]) => void | Promise<void>;
 };
 
 export type TLabelOperations = {
   updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<IssueDetail>) => Promise<void>;
-  createLabel: (data: LabelCreate) => Promise<Label>;
+  create: IssueLabelCreation;
 };
 
-export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
+export function IssueLabel(props: TIssueLabel) {
+  return <IssueLabelContent key={JSON.stringify([props.workspaceSlug, props.projectId, props.issueId])} {...props} />;
+}
+const IssueLabelContent = observer(function IssueLabelContent(props: TIssueLabel) {
   const { workspaceSlug, projectId, issueId, disabled = false, isInboxIssue = false, onLabelUpdate } = props;
   const { t } = useTranslation();
-  const toastRefusal = useRefusalToast();
+  const pending = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const capture = useDetailScope(workspaceSlug, projectId, issueId, true);
+  const { create } = useLabelChanges(capture);
+  const run = useDetailCommand(workspaceSlug, projectId, issueId);
   // hooks
   const { updateIssue } = useIssueDetail();
-  const { createLabel } = useLabel();
   const {
     issue: { getIssueById },
   } = useIssueDetail();
@@ -52,34 +58,27 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
   const labelOperations: TLabelOperations = useMemo(
     () => ({
       updateIssue: async (slug: string, issueProjectId: string, workItemId: string, data: Partial<IssueDetail>) => {
+        if (pending.current) return;
+        pending.current = true;
+        setSubmitting(true);
         try {
-          if (onLabelUpdate) onLabelUpdate(data.label_ids || []);
-          else await updateIssue(slug, issueProjectId, workItemId, data);
-        } catch (_error) {
-          setToast({
-            title: t("toast.error"),
-            type: TOAST_TYPE.ERROR,
-            message: t("entity.update.failed", { entity: t("issue.label", { count: 1 }) }),
+          await run(async () => {
+            if (onLabelUpdate) await onLabelUpdate(data.label_ids ?? []);
+            else await updateIssue(slug, issueProjectId, workItemId, data);
           });
+        } finally {
+          pending.current = false;
+          setSubmitting(false);
         }
       },
-      createLabel: async (data: LabelCreate) => {
-        try {
-          const labelResponse = await createLabel(projectId, data);
+      create: (data, underField, done) =>
+        create(projectId, data, underField, async (label) => {
           if (!isInboxIssue)
-            setToast({
-              title: t("toast.success"),
-              type: TOAST_TYPE.SUCCESS,
-              message: t("label.create.success"),
-            });
-          return labelResponse;
-        } catch (error) {
-          toastRefusal(error);
-          throw error;
-        }
-      },
+            setToast({ title: t("toast.success"), type: TOAST_TYPE.SUCCESS, message: t("label.create.success") });
+          await done(label);
+        }),
     }),
-    [updateIssue, createLabel, onLabelUpdate, isInboxIssue, projectId, t, toastRefusal]
+    [updateIssue, run, create, onLabelUpdate, isInboxIssue, projectId, t]
   );
 
   return (
@@ -90,7 +89,7 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
         issueId={issueId}
         values={issue?.label_ids || []}
         labelOperations={labelOperations}
-        disabled={disabled}
+        disabled={disabled || submitting}
       />
 
       {!disabled && (
@@ -98,6 +97,7 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
           workspaceSlug={workspaceSlug}
           projectId={projectId}
           issueId={issueId}
+          disabled={submitting}
           values={issue?.label_ids || []}
           labelOperations={labelOperations}
         />

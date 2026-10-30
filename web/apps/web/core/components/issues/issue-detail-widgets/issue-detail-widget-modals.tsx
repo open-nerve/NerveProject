@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { IssueDetail } from "@nerve/api-client";
 
 import React from "react";
 import { observer } from "mobx-react";
@@ -13,13 +13,14 @@ import type { ISearchIssueResponse, TWorkItemWidgets } from "@nerve/types";
 // components
 import { ExistingIssuesListModal } from "@/components/core/modals/existing-issues-list-modal";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 // local imports
 import { IssueLinkCreateUpdateModal } from "../issue-detail/links/create-update-link-modal";
 // helpers
 import { CreateUpdateIssueModal } from "../issue-modal/modal";
 import { useLinkOperations } from "./links/helper";
 import { useSubIssueOperations } from "./sub-issues/helper";
+import { useDetailScope } from "./use-detail-scope";
 
 type Props = {
   workspaceSlug: string;
@@ -31,27 +32,28 @@ type Props = {
 export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals(props: Props) {
   const { workspaceSlug, projectId, issueId, hideWidgets } = props;
   // store hooks
+  const { createRelation } = useIssueDetail();
   const {
-    isIssueLinkModalOpen,
-    toggleIssueLinkModal: toggleIssueLinkModalStore,
-    setIssueLinkData,
-    isCreateIssueModalOpen,
-    toggleCreateIssueModal,
-    isSubIssuesModalOpen,
-    toggleSubIssuesModal,
     relationKey,
-    isRelationModalOpen,
-    setRelationKey,
-    setLastWidgetAction,
-    toggleRelationModal,
-    createRelation,
     issueCrudOperationState,
+    isCreateIssueModalOpen,
+    isIssueLinkModalOpen,
+    isRelationModalOpen,
+    isSubIssuesModalOpen,
+    setIssueLinkData,
+    toggleCreateIssueModal,
+    toggleIssueLinkModal: toggleIssueLinkModalStore,
+    toggleRelationModal,
+    toggleSubIssuesModal,
+    setRelationKey,
     setIssueCrudOperationState,
-  } = useIssueDetail();
+    setLastWidgetAction,
+  } = useIssueDetailModals();
 
   // helper hooks
-  const subIssueOperations = useSubIssueOperations();
+  const subIssueOperations = useSubIssueOperations(workspaceSlug, projectId, issueId);
   const handleLinkOperations = useLinkOperations(workspaceSlug, projectId, issueId);
+  const capture = useDetailScope(workspaceSlug, projectId, issueId);
 
   // handlers
   const handleIssueCrudState = (key: "create" | "existing", _parentIssueId: string | null) => {
@@ -84,12 +86,6 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
     setLastWidgetAction("sub-work-items");
   };
 
-  const handleCreateUpdateModalOnSubmit = async (_issue: Issue) => {
-    if (_issue.parent_id) {
-      await subIssueOperations.addSubIssue(workspaceSlug, projectId, _issue.parent_id, [_issue.id]);
-    }
-  };
-
   const handleIssueLinkModalOnClose = () => {
     toggleIssueLinkModalStore(false);
     setLastWidgetAction("links");
@@ -103,6 +99,7 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
   };
 
   const handleExistingIssueModalOnSubmit = async (data: ISearchIssueResponse[]) => {
+    const current = capture();
     if (!relationKey) return;
     if (data.length === 0) {
       setToast({
@@ -121,7 +118,7 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
       data.map((i) => i.id)
     );
 
-    toggleRelationModal(null, null);
+    if (current()) toggleRelationModal(null, null);
   };
 
   // helpers
@@ -152,6 +149,9 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
     <>
       {!hideWidgets?.includes("links") && (
         <IssueLinkCreateUpdateModal
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          issueId={issueId}
           isModalOpen={isIssueLinkModalOpen}
           handleOnClose={handleIssueLinkModalOnClose}
           linkOperations={handleLinkOperations}
@@ -163,7 +163,6 @@ export const IssueDetailWidgetModals = observer(function IssueDetailWidgetModals
           isOpen={issueCrudOperationState?.create?.toggle}
           data={createUpdateModalData}
           onClose={handleCreateUpdateModalClose}
-          onSubmit={handleCreateUpdateModalOnSubmit}
           isProjectSelectionDisabled
         />
       )}

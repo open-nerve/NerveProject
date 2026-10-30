@@ -1,41 +1,23 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-// nerve imports
-import type { TDescriptionVersionsListResponse, TDescriptionVersionDetails } from "@nerve/types";
-// services
-import { APIService } from "@/services/api.service";
-
-export class WorkItemVersionService extends APIService {
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type { ApiClient, DescriptionVersionPage, DescriptionVersionDetail, operations } from "@nerve/api-client";
+import { unwrap } from "@/lib/api-error";
+export class WorkItemVersionService {
+  constructor(private readonly api: ApiClient) {}
   async listDescriptionVersions(
-    workspaceSlug: string,
-    projectId: string,
-    workItemId: string
-  ): Promise<TDescriptionVersionsListResponse> {
-    return this.get(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/work-items/${workItemId}/description-versions/`
-    )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+    issueId: string,
+    query?: operations["listDescriptionVersions"]["parameters"]["query"]
+  ): Promise<DescriptionVersionPage> {
+    return unwrap(
+      await this.api.GET("/api/v0/issues/{issue_id}/description-versions", {
+        params: { path: { issue_id: issueId }, query },
+      })
+    );
   }
-
-  async retrieveDescriptionVersion(
-    workspaceSlug: string,
-    projectId: string,
-    workItemId: string,
-    versionId: string
-  ): Promise<TDescriptionVersionDetails> {
-    return this.get(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/work-items/${workItemId}/description-versions/${versionId}/`
-    )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+  async retrieveDescriptionVersion(versionId: string): Promise<DescriptionVersionDetail> {
+    return unwrap(
+      await this.api.GET("/api/v0/issue-description-versions/{version_id}", {
+        params: { path: { version_id: versionId } },
+      })
+    );
   }
 }

@@ -125,7 +125,7 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
               <ProjectIssueLayout activeLayout={activeLayout} />
             </div>
             {/* peek overview */}
-            <IssuePeekOverview />
+            <IssuePeekOverview hostScope={JSON.stringify(["project", workspaceSlug, projectId])} />
           </div>
         )}
       </ProjectLevelWorkItemFiltersHOC>

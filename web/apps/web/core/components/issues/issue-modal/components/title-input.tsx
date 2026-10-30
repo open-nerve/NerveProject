@@ -23,6 +23,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TIssueTitleInputProps = {
   control: Control<IssueFormValues>;
+  isDraft?: boolean;
   issueTitleRef: React.MutableRefObject<HTMLInputElement | null>;
   formState: FormState<IssueFormValues>;
   handleFormChange: () => void;
@@ -31,6 +32,7 @@ type TIssueTitleInputProps = {
 export const IssueTitleInput = observer(function IssueTitleInput(props: TIssueTitleInputProps) {
   const {
     control,
+    isDraft = false,
     issueTitleRef,
     formState: { errors },
     handleFormChange,
@@ -42,7 +44,7 @@ export const IssueTitleInput = observer(function IssueTitleInput(props: TIssueTi
   const { getIndex } = getTabIndex(ETabIndices.ISSUE_FORM, isMobile);
 
   const validateWhitespace = (value: string) => {
-    if (value.trim() === "") {
+    if (!isDraft && value.trim() === "") {
       return t("title_is_required");
     }
     return undefined;
@@ -54,11 +56,8 @@ export const IssueTitleInput = observer(function IssueTitleInput(props: TIssueTi
         name="name"
         rules={{
           validate: validateWhitespace,
-          required: t("title_is_required"),
-          maxLength: {
-            value: 255,
-            message: t("title_should_be_less_than_255_characters"),
-          },
+          required: isDraft ? false : t("title_is_required"),
+          maxLength: isDraft ? undefined : { value: 255, message: t("title_should_be_less_than_255_characters") },
         }}
         render={({ field: { value, onChange, ref } }) => (
           <Field name="name" invalid={Boolean(errors.name)}>
@@ -75,7 +74,6 @@ export const IssueTitleInput = observer(function IssueTitleInput(props: TIssueTi
                 }}
                 ref={issueTitleRef || ref}
                 placeholder={t("title")}
-                autoFocus
                 tabIndex={getIndex("name")}
               />
             </InputGroup>

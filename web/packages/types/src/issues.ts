@@ -27,12 +27,6 @@ export interface ILinkDetails {
 
 export type TIssuePriorities = "urgent" | "high" | "medium" | "low" | "none";
 
-export interface ViewFlags {
-  enableQuickAdd: boolean;
-  enableIssueCreation: boolean;
-  enableInlineEditing: boolean;
-}
-
 export type GroupByColumnTypes =
   | "project"
   | "state"

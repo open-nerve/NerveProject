@@ -3,192 +3,156 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
-import type { Issue, IssueDetail } from "@nerve/api-client";
-
-import type { IssueUpdate } from "@nerve/api-client";
+import type { Issue, IssueDetail, IssueUpdate } from "@nerve/api-client";
 import { computedFn } from "mobx-utils";
-// types
-
-// services
 import { SessionChangedError } from "@/lib/auth/token-manager";
-import { IssueService } from "@/services/issue";
-// types
+import { DetailResource, type DetailRead } from "./resource";
 import type { IIssueDetail } from "./root.store";
 
 export interface IIssueStoreActions {
-  // actions
   fetchIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<IssueDetail | undefined>;
   updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => Promise<void>;
   removeIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-  fetchIssueWithIdentifier: (
-    workspaceSlug: string,
-    project_identifier: string,
-    sequence_id: string
-  ) => Promise<IssueDetail | undefined>;
+  fetchIssueWithIdentifier: (workspaceSlug: string, identifier: string) => Promise<IssueDetail | undefined>;
 }
-
 export interface IIssueStore extends IIssueStoreActions {
-  // helper methods
   getIssueById: (issueId: string) => Issue | IssueDetail | undefined;
   getIssueDetailById: (issueId: string) => IssueDetail | undefined;
   getIssueIdByIdentifier: (issueIdentifier: string) => string | undefined;
+  fetchIssueCore: (workspaceSlug: string, projectId: string, issueId: string) => Promise<IssueDetail | undefined>;
 }
 
 export class IssueStore implements IIssueStore {
-  // root store
-  rootIssueDetailStore: IIssueDetail;
-  // services
-  issueService;
-
-  constructor(rootStore: IIssueDetail) {
-    // root store
-    this.rootIssueDetailStore = rootStore;
-    // services
-    this.issueService = new IssueService();
+  // Entries hold only IDs and read proofs. IssueRootStore.issues owns the single entity.
+  private readonly reads = new Map<string, DetailResource<string>>();
+  constructor(readonly rootIssueDetailStore: IIssueDetail) {}
+  private get root() {
+    return this.rootIssueDetailStore.rootIssueStore;
   }
-
-  // helper methods
-  getIssueById = computedFn((issueId: string): Issue | IssueDetail | undefined => {
-    if (!issueId) return undefined;
-    return this.rootIssueDetailStore.rootIssueStore.issues.getIssueById(issueId) ?? undefined;
+  getIssueById = computedFn((id: string) => this.root.issues.getIssueById(id));
+  getIssueDetailById = computedFn((id: string) => this.root.issues.getIssueDetailById(id));
+  getIssueIdByIdentifier = computedFn((identifier: string) => {
+    const id = this.root.issues.getIssueIdByIdentifier(identifier);
+    return id && this.root.issues.getIssueById(id) ? id : undefined;
   });
-
-  getIssueDetailById = computedFn((issueId: string) =>
-    this.rootIssueDetailStore.rootIssueStore.issues.getIssueDetailById(issueId)
-  );
-
-  getIssueIdByIdentifier = computedFn((issueIdentifier: string) => {
-    if (!issueIdentifier) return undefined;
-    return this.rootIssueDetailStore.rootIssueStore.issues.getIssueIdByIdentifier(issueIdentifier) ?? undefined;
-  });
-
-  private async loadIssueResources(workspaceSlug: string, projectId: string, issueId: string, issue: Issue) {
-    // Auxiliary resources keep their own DTOs; they are not fields of the core detail response.
+  private resource(workspaceID: string, projectIDs: string[], key: string): DetailResource<string> {
+    const identity = JSON.stringify([workspaceID, projectIDs, key]);
+    let resource = this.reads.get(identity);
+    if (!resource) {
+      resource = new DetailResource(this.root, { workspaceID, projectIDs });
+      this.reads.set(identity, resource);
+    }
+    return resource;
+  }
+  private async accept(issue: IssueDetail, read: DetailRead): Promise<string> {
+    if (!read.isCurrent([issue.project_id])) throw new SessionChangedError();
+    this.root.issues.acceptRead(issue, read.token);
+    if (!this.root.issues.getIssueDetailById(issue.id)) await this.root.verification.refresh(issue.id, false);
+    if (!read.isCurrent([issue.project_id])) throw new SessionChangedError();
+    return issue.id;
+  }
+  fetchIssueCore = async (workspaceSlug: string, projectId: string, issueId: string) => {
+    this.root.assertProjectReadable(workspaceSlug, projectId);
+    const workspace = this.root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
+    const project = this.root.rootStore.projectRoot.project.getProjectById(projectId);
+    if (!workspace || project?.workspace_id !== workspace.id) throw new SessionChangedError();
+    const resource = this.resource(workspace.id, [projectId], issueId);
+    const id = await resource.fetch(async (read) => {
+      const issue = await this.root.api.get(issueId);
+      if (issue.id !== issueId || issue.project_id !== projectId || issue.workspace_id !== workspace.id)
+        throw new SessionChangedError();
+      return this.accept(issue, read);
+    });
+    if (!id) throw new SessionChangedError();
+    return this.root.issues.getIssueDetailById(id);
+  };
+  private async loadIssueResources(workspaceSlug: string, issue: Issue, current: () => void): Promise<void> {
+    const detail = this.rootIssueDetailStore;
+    const { id, project_id: projectId } = issue;
+    const run = (request: () => Promise<unknown>) => {
+      current();
+      return request();
+    };
     await Promise.all([
-      this.rootIssueDetailStore.fetchReactions(workspaceSlug, projectId, issueId),
-      this.rootIssueDetailStore.fetchLinks(workspaceSlug, projectId, issueId),
-      ...(issue.parent_id && issue.project_id
-        ? [this.readParent(workspaceSlug, issue.project_id, issue.parent_id)]
-        : []),
+      run(() => detail.fetchReactions(workspaceSlug, projectId, id)),
+      run(() => detail.fetchLinks(workspaceSlug, projectId, id)),
+      ...(issue.parent_id ? [run(() => this.fetchIssueCore(workspaceSlug, projectId, issue.parent_id!))] : []),
     ]);
+    current();
+    await Promise.all([
+      run(() => detail.activity.fetchActivities(workspaceSlug, projectId, id)),
+      run(() => detail.comment.fetchComments(workspaceSlug, projectId, id)),
+      run(() => detail.subIssues.fetchSubIssues(workspaceSlug, projectId, id)),
+      run(() => detail.relation.fetchRelations(workspaceSlug, projectId, id)),
+      run(() => this.root.rootStore.state.fetchProjectStates(projectId)),
+    ]);
+    current();
   }
-
-  private async readParent(workspaceSlug: string, projectId: string, id: string) {
-    const root = this.rootIssueDetailStore.rootIssueStore;
-    root.assertProjectReadable(workspaceSlug, projectId);
-    const token = root.captureRead();
-    const parent = await this.issueService.retrieve(workspaceSlug, projectId, id);
-    root.issues.acceptRead(parent, token);
-  }
-
-  // actions
   fetchIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
-    const root = this.rootIssueDetailStore.rootIssueStore;
-    root.assertProjectReadable(workspaceSlug, projectId);
-    const token = root.captureRead();
-    const issue = await this.issueService.retrieve(workspaceSlug, projectId, issueId);
-
-    if (!issue) throw new Error("Work item not found");
-
-    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
-    root.issues.acceptRead(issue, token);
-    if (!root.issues.getIssueDetailById(issue.id)) await root.verification.refresh(issue.id, false);
-
-    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
-    await this.loadIssueResources(workspaceSlug, projectId, issueId, issue);
-
-    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
-
-    // fetch issue activity
-    this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-
-    // fetch issue comments
-    this.rootIssueDetailStore.comment.fetchComments(workspaceSlug, projectId, issueId);
-
-    // fetch sub issues
-    this.rootIssueDetailStore.subIssues.fetchSubIssues(workspaceSlug, projectId, issueId);
-
-    // fetch issue relations
-    this.rootIssueDetailStore.relation.fetchRelations(workspaceSlug, projectId, issueId);
-
-    // fetching states
-    // TODO: check if this function is required
-    this.rootIssueDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(projectId);
-
-    return root.issues.getIssueDetailById(issue.id);
+    const token = this.root.captureRead();
+    const issue = await this.fetchIssueCore(workspaceSlug, projectId, issueId);
+    if (!issue) return undefined;
+    const current = () => {
+      if (!this.root.isReadCurrent(token, [projectId], issue.workspace_id)) throw new SessionChangedError();
+      this.root.assertProjectReadable(workspaceSlug, projectId);
+    };
+    try {
+      await this.loadIssueResources(workspaceSlug, issue, current);
+    } catch (error) {
+      current();
+      throw error;
+    }
+    return this.root.issues.getIssueDetailById(issueId);
   };
-
+  fetchIssueWithIdentifier = async (workspaceSlug: string, identifier: string) => {
+    this.root.assertActive();
+    const workspace = this.root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
+    if (!workspace) throw new SessionChangedError();
+    const resource = this.resource(workspace.id, [], identifier);
+    const token = this.root.captureRead();
+    const id = await resource.fetch(
+      async (read) => {
+        const issue = await this.root.api.getByIdentifier(workspaceSlug, identifier);
+        if (issue.workspace_id !== workspace.id || !read.isCurrent([issue.project_id])) throw new SessionChangedError();
+        const directory = this.root.rootStore.projectRoot.project;
+        // The server parses the identifier; unknown projects then need current directory proof.
+        if (!directory.getProjectById(issue.project_id)) await directory.fetchProject(issue.project_id);
+        if (!read.isCurrent([issue.project_id])) throw new SessionChangedError();
+        const project = directory.getProjectById(issue.project_id);
+        if (project?.workspace_id !== workspace.id) throw new SessionChangedError();
+        this.root.assertProjectReadable(workspaceSlug, project.id);
+        return this.accept(issue, read);
+      },
+      (resourceID) => {
+        const issue = this.root.issues.getIssueById(resourceID);
+        return issue ? [issue.project_id] : [];
+      }
+    );
+    if (!id) throw new SessionChangedError();
+    const issue = this.root.issues.getIssueDetailById(id);
+    if (!issue) return undefined;
+    const current = () => {
+      if (!this.root.isReadCurrent(token, [issue.project_id], workspace.id)) throw new SessionChangedError();
+      this.root.assertProjectReadable(workspaceSlug, issue.project_id);
+    };
+    try {
+      await this.loadIssueResources(workspaceSlug, issue, current);
+    } catch (error) {
+      current();
+      throw error;
+    }
+    this.root.issues.addIssueIdentifier(identifier, id);
+    return this.root.issues.getIssueDetailById(id);
+  };
   updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => {
-    const currentStore = this.rootIssueDetailStore.rootIssueStore.projectIssues;
-
-    await Promise.all([
-      currentStore.updateIssue(workspaceSlug, projectId, issueId, data),
-      this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId),
-    ]);
+    const scope = this.root.scope(workspaceSlug, projectId);
+    const token = this.root.captureRead();
+    await this.root.projectIssues.updateIssue(workspaceSlug, projectId, issueId, data);
+    if (!this.root.isReadCurrent(token, [projectId], scope.workspaceID)) throw new SessionChangedError();
   };
-
-  removeIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
-    const currentStore = this.rootIssueDetailStore.rootIssueStore.projectIssues;
-    return currentStore.removeIssue(workspaceSlug, projectId, issueId);
-  };
-
-  archiveIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
-    const currentStore = this.rootIssueDetailStore.rootIssueStore.projectIssues;
-    return currentStore.archiveIssue(workspaceSlug, projectId, issueId);
-  };
-
-  fetchIssueWithIdentifier = async (workspaceSlug: string, project_identifier: string, sequence_id: string) => {
-    const root = this.rootIssueDetailStore.rootIssueStore;
-    const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
-    const directory = root.rootStore.projectRoot.project;
-    const project =
-      workspace &&
-      directory
-        .knownProjectIds(workspace.id)
-        .map((id) => directory.getProjectById(id))
-        .find((item) => item?.identifier === project_identifier && item.workspace_id === workspace.id);
-    if (!project) throw new SessionChangedError();
-    root.assertProjectReadable(workspaceSlug, project.id);
-    const token = root.captureRead();
-    const issue = await this.issueService.retrieveWithIdentifier(workspaceSlug, project_identifier, sequence_id);
-    const issueIdentifier = `${project_identifier}-${sequence_id}`;
-    const issueId = issue?.id;
-    const projectId = issue?.project_id;
-    const rootWorkItemDetailStore = this.rootIssueDetailStore.rootIssueStore.issueDetail;
-
-    if (!issue || !projectId || !issueId) throw new Error("Issue not found");
-    if (projectId !== project.id || issue.workspace_id !== project.workspace_id) throw new SessionChangedError();
-
-    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
-    root.issues.acceptRead(issue, token);
-    if (!root.issues.getIssueDetailById(issue.id)) await root.verification.refresh(issue.id, false);
-
-    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
-    await this.loadIssueResources(workspaceSlug, projectId, issueId, issue);
-
-    if (!root.isReadCurrent(token, [issue.project_id], issue.workspace_id)) throw new SessionChangedError();
-
-    // add identifiers to map
-    rootWorkItemDetailStore.rootIssueStore.issues.addIssueIdentifier(issueIdentifier, issueId);
-
-    // fetch issue activity
-    rootWorkItemDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-
-    // fetch issue comments
-    rootWorkItemDetailStore.comment.fetchComments(workspaceSlug, projectId, issueId);
-
-    // fetch sub issues
-    rootWorkItemDetailStore.subIssues.fetchSubIssues(workspaceSlug, projectId, issueId);
-
-    // fetch issue relations
-    rootWorkItemDetailStore.relation.fetchRelations(workspaceSlug, projectId, issueId);
-
-    // fetching states
-    // TODO: check if this function is required
-    rootWorkItemDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(projectId);
-
-    return root.issues.getIssueDetailById(issue.id);
-  };
+  removeIssue = (workspaceSlug: string, projectId: string, issueId: string) =>
+    this.root.projectIssues.removeIssue(workspaceSlug, projectId, issueId);
+  archiveIssue = (workspaceSlug: string, projectId: string, issueId: string) =>
+    this.root.projectIssues.archiveIssue(workspaceSlug, projectId, issueId);
 }

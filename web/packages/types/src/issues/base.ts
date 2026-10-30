@@ -6,8 +6,6 @@
 
 // issues
 export * from "./issue";
-export * from "./issue_reaction";
-export * from "./issue_link";
 export * from "./issue_attachment";
 export * from "./issue_relation";
 export * from "./issue_sub_issues";

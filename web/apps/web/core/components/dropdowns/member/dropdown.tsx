@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import { useParams } from "react-router";
+import { DirectoryReadError, useDirectoryRead } from "@/components/issues/issue-detail-widgets/directory-read";
 import { observer } from "mobx-react";
 import type { ComponentType, SVGProps } from "react";
 // hooks
@@ -26,21 +28,26 @@ export const MemberDropdown = observer(function MemberDropdown(props: TMemberDro
   const {
     getUserDetails,
     project: { getProjectMemberIds, fetchProjectMembers },
-    workspace: { workspaceMemberIds },
+    workspace: { workspaceMemberIds, fetchWorkspaceMembers },
   } = useMember();
 
   const memberIds = projectId ? getProjectMemberIds(projectId, false) : workspaceMemberIds;
 
-  const onDropdownOpen = () => {
-    if (!memberIds && projectId) fetchProjectMembers(projectId);
-  };
+  const { workspaceSlug } = useParams();
+  const read = useDirectoryRead(
+    workspaceSlug,
+    projectId,
+    projectId ? () => fetchProjectMembers(projectId) : (workspace) => fetchWorkspaceMembers(workspace)
+  );
 
   return (
     <MemberDropdownBase
       {...props}
       getUserDetails={getUserDetails}
       memberIds={memberIds ?? []}
-      onDropdownOpen={onDropdownOpen}
+      onDropdownOpen={read.load}
+      isInitializing={read.loading}
+      readStatus={read.error ? <DirectoryReadError error={read.error} retry={read.load} /> : undefined}
     />
   );
 });

@@ -12,17 +12,23 @@ import { useLabel } from "@/hooks/store/use-label";
 // components
 import { IssueActivityBlockComponent, IssueLink, LabelActivityChip } from "./";
 
-type TIssueLabelActivity = { activityId: string; showIssue?: boolean; ends: "top" | "bottom" | undefined };
+type TIssueLabelActivity = {
+  activityId: string;
+  issueId: string;
+  workspaceSlug: string;
+  showIssue?: boolean;
+  ends: "top" | "bottom" | undefined;
+};
 
 export const IssueLabelActivity = observer(function IssueLabelActivity(props: TIssueLabelActivity) {
-  const { activityId, showIssue = true, ends } = props;
+  const { activityId, issueId, workspaceSlug, showIssue = true, ends } = props;
   // hooks
   const {
     activity: { getActivityById },
   } = useIssueDetail();
   const { getLabelById } = useLabel();
 
-  const activity = getActivityById(activityId);
+  const activity = getActivityById(issueId, activityId);
   const oldLabelColor = getLabelById(activity?.old_identifier ?? "")?.color;
   const newLabelColor = getLabelById(activity?.new_identifier ?? "")?.color;
 
@@ -31,6 +37,8 @@ export const IssueLabelActivity = observer(function IssueLabelActivity(props: TI
     <IssueActivityBlockComponent
       icon={<LabelsOutline height={14} width={14} className="text-secondary" />}
       activityId={activityId}
+      issueId={issueId}
+      workspaceSlug={workspaceSlug}
       ends={ends}
     >
       <>
@@ -40,7 +48,7 @@ export const IssueLabelActivity = observer(function IssueLabelActivity(props: TI
           color={activity.old_value === "" ? newLabelColor : oldLabelColor}
         />
         {showIssue && (activity.old_value === "" ? ` to ` : ` from `)}
-        {showIssue && <IssueLink activityId={activityId} />}
+        {showIssue && <IssueLink activityId={activityId} issueId={issueId} workspaceSlug={workspaceSlug} />}
       </>
     </IssueActivityBlockComponent>
   );

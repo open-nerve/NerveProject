@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { IssueComment } from "@nerve/api-client";
+
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { observer } from "mobx-react";
@@ -14,7 +16,7 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { EditorRefApi } from "@nerve/editor";
 import { useHashScroll } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
-import type { TCommentsOperations, TIssueComment } from "@nerve/types";
+import type { TCommentsOperations } from "@nerve/types";
 import { calculateTimeAgo, cn, getFileURL, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
@@ -26,7 +28,7 @@ import { useMember } from "@/hooks/store/use-member";
 
 export type TCommentCardDisplayProps = {
   activityOperations: TCommentsOperations;
-  comment: TIssueComment;
+  comment: IssueComment;
   disabled: boolean;
   entityId: string;
   projectId?: string;
@@ -35,7 +37,6 @@ export type TCommentCardDisplayProps = {
   workspaceSlug: string;
   isEditing?: boolean;
   setIsEditing?: (isEditing: boolean) => void;
-  renderFooter?: (ReactionsComponent: ReactNode | null) => ReactNode;
   renderQuickActions?: () => ReactNode;
 };
 
@@ -50,7 +51,6 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
     workspaceSlug,
     isEditing = false,
     setIsEditing,
-    renderFooter,
     renderQuickActions,
   } = props;
   const { t } = useTranslation();
@@ -61,11 +61,9 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
   // store hooks
   const { getUserDetails } = useMember();
   // derived values
-  const userDetails = getUserDetails(comment?.actor);
-  const displayName = comment?.actor_detail?.is_bot
-    ? comment?.actor_detail?.first_name + `Bot`
-    : (userDetails?.display_name ?? comment?.actor_detail?.display_name);
-  const avatarUrl = userDetails?.avatar_url ?? comment?.actor_detail?.avatar_url;
+  const userDetails = getUserDetails(comment.actor_id);
+  const displayName = userDetails?.display_name ?? t("common.deactivated_user");
+  const avatarUrl = userDetails?.avatar_url ?? null;
 
   const userReactions = activityOperations.userReactions(comment.id);
 
@@ -171,14 +169,9 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
             }}
             parentClassName="border-none"
           />
-          {shouldRenderReactions &&
-            (renderFooter ? (
-              renderFooter(
-                <CommentReactions comment={comment} disabled={disabled} activityOperations={activityOperations} />
-              )
-            ) : (
-              <CommentReactions comment={comment} disabled={disabled} activityOperations={activityOperations} />
-            ))}
+          {shouldRenderReactions && (
+            <CommentReactions comment={comment} disabled={disabled} activityOperations={activityOperations} />
+          )}
         </>
       )}
     </div>

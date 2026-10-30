@@ -1,5 +1,15 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueDetail, IssueListPage } from "@nerve/api-client";
+import type {
+  Issue,
+  IssueDetail,
+  IssueListPage,
+  IssueLink,
+  IssueComment,
+  IssueReaction,
+  IssueActivity,
+  DescriptionVersion,
+  Draft,
+} from "@nerve/api-client";
 import { expect } from "vitest";
 import type { Group } from "@/lib/paged-groups";
 import type { Endpoint, FakeNerve } from "@/lib/auth/fake-nerve";
@@ -41,6 +51,36 @@ export const issuePageOf = (data: Issue[], nextCursor: string | null = null): Is
   total: data.length,
   data,
   next_cursor: nextCursor,
+});
+
+export const issueLinkOf = (id: string, issueId = "x"): IssueLink => ({
+  id,
+  issue_id: issueId,
+  title: null,
+  url: "https://example.test/",
+  metadata: {},
+  created_by_id: null,
+  created_at: "2026-10-30T00:00:00Z",
+  updated_at: "2026-10-30T00:00:00Z",
+});
+
+export const issueCommentOf = (id: string, issueId = "x"): IssueComment => ({
+  id,
+  issue_id: issueId,
+  actor_id: "actor",
+  comment_html: `<p>${id}</p>`,
+  edited_at: null,
+  created_at: "2026-10-30T00:00:00.123456Z",
+  updated_at: "2026-10-30T00:00:00.123456Z",
+  reactions: [],
+});
+
+export const issueReactionOf = (id: string, issueId = "x", actorId = "u-actor"): IssueReaction => ({
+  id,
+  issue_id: issueId,
+  actor_id: actorId,
+  reaction: "128077",
+  created_at: "2026-10-30T00:00:00.123456Z",
 });
 
 /** Start an operation and hold its one real HTTP request until the test answers it. */
@@ -128,3 +168,36 @@ export async function issueStoreTab() {
   nerve.calls.length = 0;
   return { app, nerve, api, workspace, project };
 }
+
+export function issueActivityOf(id: string, issueId = "x", projectId = "A"): IssueActivity {
+  return {
+    id,
+    issue_id: issueId,
+    project_id: projectId,
+    actor_id: "u-actor",
+    field: "name",
+    verb: "updated",
+    old_value: "before",
+    new_value: "after",
+    old_identifier: null,
+    new_identifier: null,
+    created_at: "2026-10-30T00:00:00.123456789Z",
+  };
+}
+
+export const descriptionVersionOf = (id: string, issueId = "x"): DescriptionVersion => ({
+  id,
+  issue_id: issueId,
+  owned_by_id: "actor",
+  created_at: "2026-10-30T00:00:00Z",
+  last_saved_at: "2026-10-30T00:01:00.123456789Z",
+});
+
+export const draftOf = (id: string, workspaceId = "id-ws"): Draft => ({
+  id,
+  workspace_id: workspaceId,
+  project_id: "A",
+  payload: { name: id, description_html: "<p>draft</p>", label_ids: ["label"], assignee_ids: ["actor"] },
+  created_at: "2026-10-30T00:00:00.000000001Z",
+  updated_at: "2026-10-30T00:00:00.000000001Z",
+});

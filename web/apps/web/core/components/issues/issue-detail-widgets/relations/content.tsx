@@ -17,11 +17,12 @@ import { cn } from "@nerve/utils";
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 // helper
 import { DeleteIssueModal } from "../../delete-issue-modal";
 import { RelationIssueList } from "../../relations/issue-list";
 import { useRelationOperations } from "./helper";
+import { DetailResourceError } from "../resource-error";
 
 type Props = {
   workspaceSlug: string;
@@ -47,7 +48,6 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
   const [issueCrudState, setIssueCrudState] = useState<{
     update: TIssueCrudState;
     delete: TIssueCrudState;
-    removeRelation: TIssueCrudState & { relationKey: string | undefined; relationIssueId: string | undefined };
   }>({
     update: {
       toggle: false,
@@ -59,49 +59,43 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
       issueId: undefined,
       issue: undefined,
     },
-    removeRelation: {
-      toggle: false,
-      issueId: undefined,
-      issue: undefined,
-      relationKey: undefined,
-      relationIssueId: undefined,
-    },
   });
 
   // store hooks
   const {
-    relation: { getRelationsByIssueId, removeRelation },
-    toggleDeleteIssueModal,
-    toggleCreateIssueModal,
+    relation: { getRelationsByIssueId, getError, retry, getProjectId },
   } = useIssueDetail();
+  const { toggleCreateIssueModal, toggleDeleteIssueModal } = useIssueDetailModals();
 
   // helper
-  const issueOperations = useRelationOperations();
+  const issueOperations = useRelationOperations(workspaceSlug, issueId);
 
   // derived values
   const relations = getRelationsByIssueId(issueId);
 
-  const handleIssueCrudState = (
-    key: "update" | "delete" | "removeRelation",
-    _issueId: string | null,
-    issue: Issue | null = null,
-    relationKey?: TIssueRelationTypes | null,
-    relationIssueId?: string | null
-  ) => {
+  const handleIssueCrudState = (key: "update" | "delete", _issueId: string | null, issue: Issue | null = null) => {
     setIssueCrudState((prevState) => ({
       ...prevState,
       [key]: {
         toggle: !prevState[key].toggle,
         issueId: _issueId,
         issue: issue,
-        relationKey: relationKey,
-        relationIssueId: relationIssueId,
       },
     }));
   };
 
   // if relations are not available, return null
-  if (!relations) return null;
+  const projectId = getProjectId(issueId);
+  const error = (
+    <DetailResourceError
+      error={getError(issueId)}
+      workspaceSlug={workspaceSlug}
+      projectId={projectId}
+      issueId={issueId}
+      retry={() => (projectId ? retry(workspaceSlug, projectId, issueId) : Promise.resolve())}
+    />
+  );
+  if (!relations) return error;
 
   // map relations to array
   const relationsArray = (Object.keys(relations) as TIssueRelationTypes[])
@@ -131,6 +125,7 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
 
   return (
     <>
+      {error}
       <div className="gap- flex flex-col">
         {filteredRelationsArray.map((relation) => (
           <div key={relation.relationKey}>
@@ -172,21 +167,6 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
           data={issueCrudState?.delete?.issue as Issue}
           onSubmit={async () => {
             if (
-              issueCrudState.removeRelation.issueId &&
-              issueCrudState.removeRelation.issue?.project_id &&
-              issueCrudState.removeRelation.relationKey &&
-              issueCrudState.removeRelation.relationIssueId
-            ) {
-              await removeRelation(
-                workspaceSlug,
-                issueCrudState.removeRelation.issue.project_id,
-                issueCrudState.removeRelation.issueId,
-                issueCrudState.removeRelation.relationKey as TIssueRelationTypes,
-                issueCrudState.removeRelation.relationIssueId,
-                true
-              );
-            }
-            if (
               issueCrudState.delete.issue &&
               issueCrudState.delete.issue.id &&
               issueCrudState.delete.issue.project_id
@@ -209,10 +189,6 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
             toggleCreateIssueModal(false);
           }}
           data={issueCrudState?.update?.issue ?? undefined}
-          onSubmit={async (_issue: Issue) => {
-            if (!_issue.id || !_issue.project_id) return;
-            await issueOperations.update(workspaceSlug, _issue.project_id, _issue.id, _issue);
-          }}
         />
       )}
     </>

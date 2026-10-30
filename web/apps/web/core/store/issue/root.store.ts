@@ -46,6 +46,13 @@ import type { Before, ConfirmedIssueChange } from "@/lib/paged-groups";
 import { heldCounterSources } from "@/lib/paged-groups.evidence";
 import type { IssueListBinding } from "./helpers/issue-list-binding";
 import { PermissionReads } from "./permission-reads";
+import type { DetailRegistration } from "./issue-details/resource";
+import { IssueDetailService } from "@/services/issue/issue-detail.service";
+import { IssueCommentService } from "@/services/issue/issue_comment.service";
+import { WorkspaceDraftService } from "@/services/issue/workspace_draft.service";
+import { WorkItemVersionService } from "@/services/issue/work_item_version.service";
+import { IssueActivityService } from "@/services/issue/issue_activity.service";
+import { IssueReactionService } from "@/services/issue/issue_reaction.service";
 
 export type IIssueRootStore = IssueRootStore;
 export type IssueWriteScope = Readonly<{ workspaceSlug: string; projectID: string; workspaceID: string }>;
@@ -103,6 +110,12 @@ export class IssueRootStore {
   readonly owner = Symbol("issue-root");
   active = true;
   readonly api: IssueApiService;
+  readonly detailApi: IssueDetailService;
+  readonly commentApi: IssueCommentService;
+  readonly draftApi: WorkspaceDraftService;
+  readonly versionApi: WorkItemVersionService;
+  readonly activityApi: IssueActivityService;
+  readonly reactionApi: IssueReactionService;
   readonly listApi: IssueListService;
   private serial = 0;
   get readSerial(): number {
@@ -111,7 +124,8 @@ export class IssueRootStore {
   readonly verification = new IssueVerification(this);
   private readonly deletions = new Map<string, { serial: number; workspaceID: string }>();
   private readonly lists = new Set<IssueListBinding>();
-  private readonly queues = new Map<string, ReturnType<typeof oneAtATime>>();
+  private readonly resources = new Set<DetailRegistration>();
+  private readonly queues = new Map<string, Promise<void>>();
   private readonly dragQueue = oneAtATime();
   private readonly pending = new Map<string, PendingWrite>();
   readonly permissionReads: PermissionReads;
@@ -121,6 +135,12 @@ export class IssueRootStore {
 
   constructor(rootStore: RootStore, api: ApiClient) {
     this.api = new IssueApiService(api);
+    this.detailApi = new IssueDetailService(api);
+    this.commentApi = new IssueCommentService(api);
+    this.draftApi = new WorkspaceDraftService(api);
+    this.versionApi = new WorkItemVersionService(api);
+    this.activityApi = new IssueActivityService(api);
+    this.reactionApi = new IssueReactionService(api);
     this.listApi = new IssueListService(api);
     makeObservable(this, {
       active: observable,
@@ -135,6 +155,8 @@ export class IssueRootStore {
 
     this.rootStore = rootStore;
     this.permissionReads = new PermissionReads(rootStore, (workspaceID, projectID, memberOnly) => {
+      for (const resource of this.resources)
+        if (resource.affects(workspaceID, projectID, memberOnly)) resource.invalidate();
       for (const list of this.lists)
         if (
           list.scope.workspaceID === workspaceID &&
@@ -172,10 +194,63 @@ export class IssueRootStore {
       this.active = false;
     });
     for (const list of this.lists) list.reconciled.invalidate();
+    for (const resource of this.resources) resource.dispose();
   }
   registerList(list: IssueListBinding): void {
     this.assertActive();
     this.lists.add(list);
+  }
+  registerResource(resource: DetailRegistration): () => void {
+    this.assertActive();
+    this.resources.add(resource);
+    return () => {
+      this.resources.delete(resource);
+    };
+  }
+  /** Reserve every affected ID before yielding; queued operations must not enqueue another write. */
+  enqueueIssueChanges<T>(
+    ids: readonly string[],
+    operation: () => Promise<T>,
+    requestedScope?: Pick<IssueWriteScope, "workspaceSlug" | "projectID">
+  ): Promise<T> {
+    const ordered = [...new Set(ids)].toSorted();
+    const permission = this.permissionReads.capture();
+    const scopes = new Map<string, Set<string>>();
+    const remember = (workspaceID: string, projectID: string) => {
+      const projects = scopes.get(workspaceID) ?? new Set<string>();
+      projects.add(projectID);
+      scopes.set(workspaceID, projects);
+    };
+    for (const id of ordered) {
+      const issue = this.issues.held(id);
+      if (issue) remember(issue.workspace_id, issue.project_id);
+    }
+    if (requestedScope) {
+      const workspace = this.rootStore.workspaceRoot.getWorkspaceBySlug(requestedScope.workspaceSlug);
+      if (!workspace) return Promise.reject(new SessionChangedError());
+      remember(workspace.id, requestedScope.projectID);
+    }
+    const run = Promise.all(ordered.map((id) => this.queues.get(id))).then(() => {
+      this.assertActive();
+      // Preserve the initiating permission lifetime, including an observed loss/recovery while waiting.
+      const current = scopes.size
+        ? [...scopes].every(([workspace, projects]) =>
+            this.permissionReads.current(permission, workspace, [...projects], true)
+          )
+        : this.permissionReads.current(permission, undefined, [], true);
+      if (!current) throw new SessionChangedError();
+      return operation();
+    });
+    const tail = run.then(
+      () => undefined,
+      () => undefined
+    );
+    for (const id of ordered) this.queues.set(id, tail);
+    void tail.then(() => {
+      for (const id of ordered) if (this.queues.get(id) === tail) this.queues.delete(id);
+      return undefined;
+    });
+    return run;
   }
   captureRead(member = false): IssueReadToken {
     this.assertActive();
@@ -237,6 +312,10 @@ export class IssueRootStore {
         )
       : [];
   }
+  /** A related command may have changed an unread old parent in any covered group. */
+  markScopeListsStale(scope: IssueWriteScope): void {
+    for (const list of this.lists) if (list.covers(scope)) list.markVerificationStale();
+  }
   observeRead(before: Issue | undefined, after: Issue): void {
     const pending = this.pending.get(after.id);
     pending?.observed.push({ version: after.updated_at, fields: this.fields(after) });
@@ -245,6 +324,7 @@ export class IssueRootStore {
   }
   invalidateProjectReads(projectID: string, workspaceID: string): void {
     this.deletions.set(projectID, { serial: ++this.serial, workspaceID });
+    for (const resource of this.resources) if (resource.affects(workspaceID, projectID)) resource.invalidate();
     for (const list of this.lists)
       if (list.covers({ projectID, workspaceID, workspaceSlug: list.scope.workspaceSlug })) {
         list.reconciled.invalidate();
@@ -270,25 +350,20 @@ export class IssueRootStore {
       issue.link_count,
     ]);
   }
-  private queue(id: string) {
-    let queue = this.queues.get(id);
-    if (!queue) {
-      queue = oneAtATime();
-      this.queues.set(id, queue);
-    }
-    return queue;
-  }
   private async write(
     id: string | undefined,
-    scope: IssueWriteScope,
+    requestedScope: IssueWriteScope | Pick<IssueWriteScope, "workspaceSlug" | "workspaceID">,
     request: (held?: Issue) => Promise<IssueDetailAnswer | null>,
     drop?: IssueDrop
   ): Promise<IssueDetailAnswer | null> {
     this.assertActive();
+    const permission = this.permissionReads.capture();
+    const initialScope = "projectID" in requestedScope ? requestedScope : undefined;
     let initial = id ? this.issues.getIssueById(id) : undefined;
     while (initial) {
+      if (!initialScope) throw new Error("An existing issue needs its project scope");
       for (const list of this.lists)
-        if (list.covers(scope) && list.reconciled.value !== undefined) {
+        if (list.covers(initialScope) && list.reconciled.value !== undefined) {
           // Each directory wait may change canonical; freeze only after this serial readiness pass.
           // oxlint-disable-next-line no-await-in-loop
           await list.prepareCatalog([initial]);
@@ -299,6 +374,15 @@ export class IssueRootStore {
       initial = latest;
     }
     this.assertActive();
+    if (
+      !this.permissionReads.current(
+        permission,
+        requestedScope.workspaceID,
+        initialScope ? [initialScope.projectID] : [],
+        true
+      )
+    )
+      throw new SessionChangedError();
     const held = id ? this.issues.getIssueById(id) : undefined;
     const pending: PendingWrite = {
       before: id
@@ -311,13 +395,21 @@ export class IssueRootStore {
     };
     if (id) this.pending.set(id, pending);
     try {
-      const permission = this.permissionReads.capture();
       const after = await request(held);
       this.assertActive();
+      if (after && after.workspace_id !== requestedScope.workspaceID) throw new SessionChangedError();
+      if (!initialScope && !after) throw new Error("A creation must return its issue");
+      const scope: IssueWriteScope = initialScope ?? { ...requestedScope, projectID: after!.project_id };
+      const current = () =>
+        this.permissionReads.current(
+          permission,
+          scope.workspaceID,
+          after ? [scope.projectID, after.project_id] : [scope.projectID],
+          true
+        );
       // The write succeeded, but an answer from an invalidated permission scope
       // cannot revise recovered entities or list membership.
-      if (after && !this.permissionReads.current(permission, scope.workspaceID, [scope.projectID, after.project_id]))
-        return after;
+      if (!current()) return after;
       const prepared = new Set<IssueListBinding>();
       const unavailable = new Set<IssueListBinding>();
       // A binding can be created while a request or directory is out. Each owns its query and proof.
@@ -331,11 +423,7 @@ export class IssueRootStore {
             ]);
           } catch (error) {
             this.assertActive();
-            if (
-              after &&
-              !this.permissionReads.current(permission, scope.workspaceID, [scope.projectID, after.project_id])
-            )
-              return after;
+            if (!current()) return after;
             if (error instanceof SessionChangedError) throw error;
             // The issue write already succeeded. Keep that fact; only this list needs authoritative replacement.
             unavailable.add(list);
@@ -343,8 +431,7 @@ export class IssueRootStore {
           }
         }
       this.assertActive();
-      if (after && !this.permissionReads.current(permission, scope.workspaceID, [scope.projectID, after.project_id]))
-        return after;
+      if (!current()) return after;
       let before = pending.before;
       if (after && before.kind === "known") {
         const old = before.issue;
@@ -380,6 +467,8 @@ export class IssueRootStore {
             pending.sources.get(list) ?? new Set()
           );
       this.issues.confirmChange(change, permission);
+      await this.issueDetail.subIssues.confirmCore(change, scope);
+      if (after) await this.issueDetail.refreshAfterChange(scope.workspaceSlug, scope.projectID, after.id);
       return after;
     } catch (error) {
       this.assertActive();
@@ -400,7 +489,14 @@ export class IssueRootStore {
       target_date: input.target_date,
       parent_id: input.parent_id,
     };
-    return this.write(undefined, scope, () => this.api.create(scope.projectID, body)).then((answer) => answer!);
+    return this.confirmCreation(scope, () => this.api.create(scope.projectID, body));
+  }
+  /** Freeze existing list evidence before sending, then confirm the new issue in every held view. */
+  confirmCreation(
+    scope: Pick<IssueWriteScope, "workspaceSlug" | "workspaceID">,
+    send: () => Promise<IssueDetailAnswer>
+  ): Promise<IssueDetailAnswer> {
+    return this.write(undefined, scope, send).then((answer) => answer!);
   }
   updateIssue(
     id: string,
@@ -408,9 +504,18 @@ export class IssueRootStore {
     drop?: IssueDrop,
     operationScope?: IssueWriteScope
   ): Promise<IssueDetailAnswer> {
+    const dragPermission = drop ? this.permissionReads.capture() : undefined;
+    const initiating = drop ? this.issues.held(id) : undefined;
+    const dragWorkspace = operationScope?.workspaceID ?? initiating?.workspace_id;
+    const dragProject = operationScope?.projectID ?? initiating?.project_id;
     const update = () =>
-      this.queue(id)(async () => {
+      this.enqueueIssueChanges([id], async () => {
         this.assertActive();
+        if (
+          dragPermission !== undefined &&
+          !this.permissionReads.current(dragPermission, dragWorkspace, dragProject ? [dragProject] : [], true)
+        )
+          throw new SessionChangedError();
         const snapshot = this.issues.getIssueById(id);
         if (!snapshot) throw new Error("Issue has not been read");
         const scope = operationScope ?? this.scope(this.workspaceSlug!, snapshot.project_id);
@@ -450,17 +555,29 @@ export class IssueRootStore {
     return drop ? this.dragQueue(update) : update();
   }
   deleteIssue(id: string, scope: IssueWriteScope): Promise<void> {
-    return this.queue(id)(async () => {
-      await this.write(id, scope, async () => {
-        await this.api.delete(id);
-        return null;
-      });
-    });
+    return this.enqueueIssueChanges(
+      [id],
+      async () => {
+        await this.write(id, scope, async () => {
+          await this.api.delete(id);
+          return null;
+        });
+      },
+      scope
+    );
   }
   archiveIssue(id: string, scope: IssueWriteScope): Promise<IssueDetailAnswer> {
-    return this.queue(id)(async () => (await this.write(id, scope, () => this.api.archive(id)))!);
+    return this.enqueueIssueChanges(
+      [id],
+      async () => (await this.write(id, scope, () => this.api.archive(id)))!,
+      scope
+    );
   }
   unarchiveIssue(id: string, scope: IssueWriteScope): Promise<IssueDetailAnswer> {
-    return this.queue(id)(async () => (await this.write(id, scope, () => this.api.unarchive(id)))!);
+    return this.enqueueIssueChanges(
+      [id],
+      async () => (await this.write(id, scope, () => this.api.unarchive(id)))!,
+      scope
+    );
   }
 }

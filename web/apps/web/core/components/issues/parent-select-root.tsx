@@ -1,15 +1,13 @@
-// oxlint-disable no-shadow
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
 
-import React from "react";
+import React, { useRef } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { useDetailCommand } from "./issue-detail/use-issue-operations";
 // components
 import type { TIssueOperations } from "@/components/issues/issue-detail";
 import { IssueParentSelect } from "@/components/issues/issue-detail/parent-select";
@@ -27,49 +25,31 @@ type TIssueParentSelect = {
 
 export const IssueParentSelectRoot = observer(function IssueParentSelectRoot(props: TIssueParentSelect) {
   const { issueId, issueOperations, projectId, workspaceSlug } = props;
-  const { t } = useTranslation();
+  const run = useDetailCommand(workspaceSlug, projectId, issueId);
+  const removing = useRef(false);
   // store hooks
   const {
     issue: { getIssueById },
   } = useIssueDetail();
-  const {
-    toggleParentIssueModal,
-    removeSubIssue,
-    subIssues: { setSubIssueHelpers, fetchSubIssues },
-  } = useIssueDetail();
+  const { removeSubIssue } = useIssueDetail();
 
   // derived values
   const issue = getIssueById(issueId);
   const parentIssue = issue?.parent_id ? getIssueById(issue.parent_id) : undefined;
 
   const handleParentIssue = async (_issueId: string | null = null) => {
-    try {
-      await issueOperations.update(workspaceSlug, projectId, issueId, { parent_id: _issueId });
-      await issueOperations.fetch(workspaceSlug, projectId, issueId, false);
-      if (_issueId) await fetchSubIssues(workspaceSlug, projectId, _issueId);
-      toggleParentIssueModal(null);
-    } catch (_error) {
-      console.error("something went wrong while fetching the issue");
-    }
+    await issueOperations.update(workspaceSlug, projectId, issueId, { parent_id: _issueId });
   };
 
-  const handleRemoveSubIssue = async (
-    workspaceSlug: string,
-    projectId: string,
-    parentIssueId: string,
-    issueId: string
-  ) => {
+  const handleRemoveSubIssue = async (ws: string, project: string, parent: string, child: string) => {
+    if (removing.current) return;
+    removing.current = true;
     try {
-      setSubIssueHelpers(parentIssueId, "issue_loader", issueId);
-      await removeSubIssue(workspaceSlug, projectId, parentIssueId, issueId);
-      await fetchSubIssues(workspaceSlug, projectId, parentIssueId);
-      setSubIssueHelpers(parentIssueId, "issue_loader", issueId);
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("common.error.label"),
-        message: t("common.something_went_wrong"),
-      });
+      await run(() => removeSubIssue(ws, project, parent, child));
+    } catch {
+      // useDetailCommand reports native refusals and suppresses stale-host feedback.
+    } finally {
+      removing.current = false;
     }
   };
 

@@ -5,13 +5,12 @@
  */
 
 import type { IssueUpdate } from "@nerve/api-client";
-import { useMemo } from "react";
+import { IssueDetailHost } from "../detail-host";
+import { useIssueOperations } from "./use-issue-operations";
 import { observer } from "mobx-react";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { followInSession } from "@/lib/in-session";
 // assets
 import emptyIssue from "@/app/assets/empty-state/issue.svg?url";
 // components
@@ -25,10 +24,13 @@ import { useNavigate } from "react-router";
 import { IssuePeekOverview } from "../peek-overview";
 import { IssueMainContent } from "./main-content";
 import { IssueDetailsSidebar } from "./sidebar";
+import { DetailResourceError } from "../issue-detail-widgets/resource-error";
 
 export type TIssueOperations<TUpdate = IssueUpdate> = {
   fetch: (workspaceSlug: string, projectId: string, issueId: string, loader?: boolean) => Promise<void>;
   update: (workspaceSlug: string, projectId: string, issueId: string, data: TUpdate) => Promise<void>;
+  /** Capture persistence authorization while the input's host is alive, for its final unmount flush. */
+  prepareUpdate?: () => TIssueOperations<TUpdate>["update"];
   restore?: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 };
 
@@ -47,37 +49,30 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
   // hooks
   const {
     issue: { getIssueById },
-    fetchIssue,
-    updateIssue,
+    rootIssueStore,
+    subIssues,
+    relation,
+    link,
   } = useIssueDetail();
   const { allowPermissions } = useUserPermissions();
   const { issueDetailSidebarCollapsed } = useAppTheme();
 
-  const issueOperations: TIssueOperations = useMemo(
-    () => ({
-      fetch: async (workspaceSlug: string, projectId: string, issueId: string) => {
-        try {
-          await fetchIssue(workspaceSlug, projectId, issueId);
-        } catch (error) {
-          console.error("Error fetching the parent issue:", error);
-        }
-      },
-      update: async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => {
-        await followInSession(() => updateIssue(workspaceSlug, projectId, issueId, data), {
-          failed: () =>
-            setToast({
-              title: t("common.error.label"),
-              type: TOAST_TYPE.ERROR,
-              message: t("entity.update.failed", { entity: t("issue.label") }),
-            }),
-        });
-      },
-    }),
-    [fetchIssue, updateIssue, t]
-  );
+  const issueOperations = useIssueOperations(workspaceSlug, projectId, issueId);
 
   // issue details
   const issue = getIssueById(issueId);
+  const uncertain = rootIssueStore.verification.isUncertain(issueId);
+  const readError =
+    subIssues.getError(issueId) ??
+    relation.getError(issueId) ??
+    link.getError(issueId) ??
+    rootIssueStore.verification.getError(issueId);
+  const retryRead = async () => {
+    const resources = [subIssues, relation, link].filter((resource) => resource.getError(issueId));
+    if (resources.length)
+      await Promise.all(resources.map((resource) => resource.retry(workspaceSlug, projectId, issueId)));
+    else await rootIssueStore.issues.refreshAuthoritative(issueId);
+  };
   // checking if issue is editable, based on user role
   const isEditable = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
@@ -88,45 +83,58 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
 
   return (
     <>
-      {!issue ? (
-        <EmptyState
-          image={emptyIssue}
-          title={t("issue.empty_state.issue_detail.title")}
-          description={t("issue.empty_state.issue_detail.description")}
-          primaryButton={{
-            text: t("issue.empty_state.issue_detail.primary_button.text"),
-            onClick: () => navigate(`/${workspaceSlug}/projects/${projectId}/issues`),
-          }}
-        />
-      ) : (
-        <div className="flex h-full w-full overflow-hidden">
-          <div className="h-full w-full space-y-6 overflow-y-auto px-9 py-5">
-            <IssueMainContent
+      <IssueDetailHost workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId}>
+        {!issue && uncertain ? (
+          readError ? (
+            <DetailResourceError
+              error={readError}
+              retry={retryRead}
               workspaceSlug={workspaceSlug}
               projectId={projectId}
               issueId={issueId}
-              issueOperations={issueOperations}
-              isEditable={isEditable}
-              isArchived={is_archived}
             />
+          ) : (
+            <div role="status">{t("common.loading")}</div>
+          )
+        ) : !issue ? (
+          <EmptyState
+            image={emptyIssue}
+            title={t("issue.empty_state.issue_detail.title")}
+            description={t("issue.empty_state.issue_detail.description")}
+            primaryButton={{
+              text: t("issue.empty_state.issue_detail.primary_button.text"),
+              onClick: () => navigate(`/${workspaceSlug}/projects/${projectId}/issues`),
+            }}
+          />
+        ) : (
+          <div className="flex h-full w-full overflow-hidden">
+            <div className="h-full w-full space-y-6 overflow-y-auto px-9 py-5">
+              <IssueMainContent
+                workspaceSlug={workspaceSlug}
+                projectId={projectId}
+                issueId={issueId}
+                issueOperations={issueOperations}
+                isEditable={isEditable}
+                isArchived={is_archived}
+              />
+            </div>
+            <div
+              className="fixed right-0 z-[5] h-full w-full min-w-[300px] border-l border-subtle bg-surface-1 sm:w-1/2 md:relative md:w-1/4 lg:min-w-80 xl:min-w-96"
+              style={issueDetailSidebarCollapsed ? { right: `-${window?.innerWidth || 0}px` } : {}}
+            >
+              <IssueDetailsSidebar
+                workspaceSlug={workspaceSlug}
+                projectId={projectId}
+                issueId={issueId}
+                issueOperations={issueOperations}
+                isEditable={!is_archived && isEditable}
+              />
+            </div>
           </div>
-          <div
-            className="fixed right-0 z-[5] h-full w-full min-w-[300px] border-l border-subtle bg-surface-1 sm:w-1/2 md:relative md:w-1/4 lg:min-w-80 xl:min-w-96"
-            style={issueDetailSidebarCollapsed ? { right: `-${window?.innerWidth || 0}px` } : {}}
-          >
-            <IssueDetailsSidebar
-              workspaceSlug={workspaceSlug}
-              projectId={projectId}
-              issueId={issueId}
-              issueOperations={issueOperations}
-              isEditable={!is_archived && isEditable}
-            />
-          </div>
-        </div>
-      )}
-
+        )}
+      </IssueDetailHost>
       {/* peek overview */}
-      <IssuePeekOverview />
+      <IssuePeekOverview hostScope={JSON.stringify(["detail", workspaceSlug, projectId, issueId])} />
     </>
   );
 });

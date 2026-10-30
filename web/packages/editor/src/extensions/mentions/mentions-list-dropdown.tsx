@@ -8,7 +8,6 @@ import { FloatingOverlay } from "@floating-ui/react";
 import type { SuggestionProps } from "@tiptap/suggestion";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { debounce } from "lodash-es";
 // nerve utils
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { cn } from "@nerve/utils";
@@ -17,13 +16,30 @@ import { DROPDOWN_NAVIGATION_KEYS, getNextValidIndex } from "@/helpers/tippy";
 // types
 import type { TMentionHandler, TMentionSection, TMentionSuggestion } from "@/types";
 
-export type MentionsListDropdownProps = SuggestionProps<TMentionSection, TMentionSuggestion> &
-  Pick<TMentionHandler, "searchCallback"> & {
+export type MentionsListDropdownProps = Pick<
+  SuggestionProps<TMentionSection, TMentionSuggestion>,
+  "command" | "query"
+> &
+  Pick<TMentionHandler, "searchCallback" | "renderError" | "scope"> & {
     onClose: () => void;
   };
 
 export const MentionsListDropdown = forwardRef(function MentionsListDropdown(props: MentionsListDropdownProps, ref) {
-  const { command, query, searchCallback, onClose } = props;
+  const { command, query, searchCallback, renderError, scope, onClose } = props;
+  const currentScope = useRef<() => boolean>(() => true);
+  const ended = useRef(false);
+  useLayoutEffect(() => {
+    currentScope.current = scope?.capture() ?? (() => true);
+    const end = () => {
+      ended.current = true;
+      setSections([]);
+      setFailure(undefined);
+      setIsLoading(false);
+      queueMicrotask(onClose);
+    };
+    if (!currentScope.current()) end();
+    return scope?.subscribe(end);
+  }, [scope, onClose]);
   // states
   const [sections, setSections] = useState<TMentionSection[]>([]);
   const [selectedIndex, setSelectedIndex] = useState({
@@ -31,11 +47,14 @@ export const MentionsListDropdown = forwardRef(function MentionsListDropdown(pro
     item: 0,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [failure, setFailure] = useState<{ error: unknown }>();
+  const [retry, setRetry] = useState(0);
   // refs
   const dropdownContainer = useRef<HTMLDivElement>(null);
 
   const selectItem = useCallback(
     (sectionIndex: number, itemIndex: number) => {
+      if (ended.current || !currentScope.current() || isLoading || failure) return;
       try {
         const item = sections?.[sectionIndex]?.items?.[itemIndex];
         const transactionId = uuidv4();
@@ -49,7 +68,7 @@ export const MentionsListDropdown = forwardRef(function MentionsListDropdown(pro
         console.error("Error selecting mention item:", error);
       }
     },
-    [command, sections]
+    [command, sections, isLoading, failure]
   );
 
   useImperativeHandle(ref, () => ({
@@ -82,38 +101,31 @@ export const MentionsListDropdown = forwardRef(function MentionsListDropdown(pro
     });
   }, [sections]);
 
-  // debounced search callback
-  const debouncedSearchCallback = useCallback(
-    debounce(async (searchQuery: string) => {
-      try {
-        const sectionsResponse = await searchCallback?.(searchQuery);
-        if (sectionsResponse) {
-          setSections(sectionsResponse);
-        }
-      } catch (error) {
-        console.error("Failed to fetch suggestions:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 300),
-    [searchCallback]
-  );
-
-  // trigger debounced search when query changes
-  useEffect(() => {
-    if (query !== undefined && query !== null) {
-      setIsLoading(true);
-      void debouncedSearchCallback(query);
-    }
-  }, [query, debouncedSearchCallback]);
-
-  // cancel pending debounced calls on unmount
-  useEffect(
-    () => () => {
-      debouncedSearchCallback.cancel();
-    },
-    [debouncedSearchCallback]
-  );
+  // End the previous request as soon as the query changes, including the next debounce window.
+  useLayoutEffect(() => {
+    let current = true;
+    setSections([]);
+    setFailure(undefined);
+    setIsLoading(!!searchCallback);
+    const timer = setTimeout(() => {
+      if (!searchCallback || ended.current || !currentScope.current()) return;
+      void searchCallback(query)
+        .then((answer) => {
+          if (current && !ended.current && currentScope.current()) setSections(answer);
+          return undefined;
+        })
+        .catch((error: unknown) => {
+          if (current && !ended.current && currentScope.current()) setFailure({ error });
+        })
+        .finally(() => {
+          if (current) setIsLoading(false);
+        });
+    }, 300);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [query, searchCallback, retry]);
 
   // scroll to the dropdown item when navigating via keyboard
   useLayoutEffect(() => {
@@ -145,6 +157,7 @@ export const MentionsListDropdown = forwardRef(function MentionsListDropdown(pro
         lockScroll
       />
       <div
+        role="presentation"
         ref={dropdownContainer}
         className="relative max-h-80 w-[14rem] space-y-2 overflow-y-auto rounded-md border-[0.5px] border-strong bg-surface-1 px-2 py-2.5 shadow-raised-200"
         style={{
@@ -159,6 +172,10 @@ export const MentionsListDropdown = forwardRef(function MentionsListDropdown(pro
       >
         {isLoading ? (
           <div className="text-center text-13 text-placeholder">Loading...</div>
+        ) : failure ? (
+          (renderError?.(failure.error, () => setRetry((value) => value + 1)) ?? (
+            <div role="alert">Unable to load suggestions.</div>
+          ))
         ) : sections.length ? (
           sections.map((section, sectionIndex) => (
             <div key={section.key} className="space-y-2">

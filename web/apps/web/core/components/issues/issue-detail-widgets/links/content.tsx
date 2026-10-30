@@ -4,7 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import React from "react";
+import { observer } from "mobx-react";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { DetailResourceError } from "../resource-error";
 // components
 import { LinkList } from "../../issue-detail/links";
 // helper
@@ -17,11 +19,23 @@ type Props = {
   disabled: boolean;
 };
 
-export function IssueLinksCollapsibleContent(props: Props) {
+export const IssueLinksCollapsibleContent = observer(function IssueLinksCollapsibleContent(props: Props) {
   const { workspaceSlug, projectId, issueId, disabled } = props;
 
   // helper
   const handleLinkOperations = useLinkOperations(workspaceSlug, projectId, issueId);
 
-  return <LinkList issueId={issueId} linkOperations={handleLinkOperations} disabled={disabled} />;
-}
+  const { link } = useIssueDetail();
+  return (
+    <>
+      <DetailResourceError
+        error={link.getError(issueId)}
+        retry={() => link.retry(workspaceSlug, projectId, issueId)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={issueId}
+      />
+      <LinkList issueId={issueId} linkOperations={handleLinkOperations} disabled={disabled} />
+    </>
+  );
+});

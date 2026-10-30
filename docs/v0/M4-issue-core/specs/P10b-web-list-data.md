@@ -1,5 +1,7 @@
 # M4/P10b 列表数据层规格
 
+> **集成更新（2026-10-30）：已完成。** 最终交付2aaef85c已合并main df5d3bbc，准确main CI 40908365144三任务全绿，证据归档和分支/worktree清理完成，见[review§17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。以下原状态段保留为交付历史；当前P11仅准备与预检。
+
 > 状态：**实施与终审完成、集成待办**。产品候选 `2e1264aa5711f4699546bb64728151da2f802a0e` 的完整 F 与准确 [CI 40896656404](https://github.com/open-nerve/NerveProject/actions/runs/40896656404) attempt1三任务通过，A1–A10/T14文稿收口；后续纯文稿HEAD自身CI由主控另核。阶段未合并、不启动P11，证据与限制见[review](../reviews/P10b-web-list-data-review.md)。
 
 ## 1. 目标

@@ -22,7 +22,7 @@
   "scripts": {
     "build": "tsc && tsdown",
     "dev": "tsdown --watch --no-clean",
-    "check:lint": "node ../../../tools/lint-cap.mjs 64",
+    "check:lint": "node ../../../tools/lint-cap.mjs 59",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt .",
@@ -57,7 +57,6 @@
     "is-emoji-supported": "catalog:",
     "jsx-dom-cjs": "catalog:",
     "linkifyjs": "catalog:",
-    "lodash-es": "catalog:",
     "lowlight": "catalog:",
     "lucide-react": "catalog:",
     "prosemirror-codemark": "catalog:",
@@ -66,7 +65,6 @@
   },
   "devDependencies": {
     "@nerve/typescript-config": "workspace:*",
-    "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

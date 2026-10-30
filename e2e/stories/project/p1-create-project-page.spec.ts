@@ -237,10 +237,10 @@ test("P1 (page): Tab goes round the creation dialog and nowhere else; the lead's
   await page.keyboard.press("Space");
   await expect(page.getByRole("option")).toHaveText([/^Private/, /^Public/]);
   await page.keyboard.press("Escape");
-  // The button Tab reaches is the DropdownButton's, in the select's (each dropdown of dropdowns/ nests one), which is
-  // out of the Tab order: Tab stops once.
-  const lead = page.getByRole("button", { name: "Lead", exact: true }).last();
-  await expect(lead.locator("xpath=ancestor::button")).toHaveAttribute("tabindex", "-1");
+  // The select owns one semantic trigger; its DropdownButton content is presentation only.
+  const lead = page.getByRole("button", { name: "Lead", exact: true });
+  await expect(lead).toHaveCount(1);
+  await expect(lead.locator("xpath=ancestor::button")).toHaveCount(0);
   await lead.click();
   await expectListBesideButton(page, lead);
   const search = page.getByRole("combobox", { name: "Search" });
@@ -249,7 +249,8 @@ test("P1 (page): Tab goes round the creation dialog and nowhere else; the lead's
   const escapes = await keydownsReachingDocument(page, "Escape");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
-  await expect(lead.locator("xpath=ancestor::button")).toHaveCSS("outline-style", "solid");
+  await expect(lead).toBeFocused();
+  await expect(lead).toHaveCSS("outline-style", "solid");
   await lead.press("Enter");
   await expectListBesideButton(page, lead);
   await page.keyboard.type("nobody");

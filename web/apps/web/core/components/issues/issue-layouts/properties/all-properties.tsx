@@ -29,7 +29,6 @@ import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 // hooks
-import { useLabel } from "@/hooks/store/use-label";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useParams, useNavigate } from "react-router";
@@ -53,7 +52,6 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const { t } = useTranslation();
   // store hooks
   const { getProjectById } = useProject();
-  const { labelMap } = useLabel();
   const { getStateById } = useProjectState();
   const { isMobile } = usePlatformOS();
   const projectDetails = getProjectById(issue.project_id);
@@ -109,12 +107,6 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const isDateRangeEnabled: boolean = Boolean(
     issue.start_date && issue.target_date && displayProperties.start_date && displayProperties.due_date
   );
-
-  const defaultLabelOptions =
-    issue?.label_ids?.flatMap((id) => {
-      const label = labelMap[id];
-      return label ? [label] : [];
-    }) || [];
 
   const minDate = getDate(issue.start_date);
   const maxDate = getDate(issue.target_date);
@@ -174,8 +166,10 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
               to: getDate(issue.target_date) || undefined,
             }}
             onSelect={(range) => {
-              handleStartDate(range?.from ?? null);
-              handleTargetDate(range?.to ?? null);
+              void updateIssue?.(issue.project_id, issue.id, {
+                start_date: range?.from ? renderFormattedPayloadDate(range.from) : null,
+                target_date: range?.to ? renderFormattedPayloadDate(range.to) : null,
+              }).catch(() => undefined);
             }}
             hideIcon={{
               from: false,
@@ -321,7 +315,6 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
         <IssuePropertyLabels
           projectId={issue?.project_id || null}
           value={issue?.label_ids || []}
-          defaultOptions={defaultLabelOptions}
           onChange={handleLabel}
           disabled={isReadOnly}
           renderByDefault={isMobile}

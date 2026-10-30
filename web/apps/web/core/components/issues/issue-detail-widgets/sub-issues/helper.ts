@@ -5,138 +5,50 @@
  */
 
 import { useMemo } from "react";
-// nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TSubIssueOperations } from "@nerve/types";
 import { copyUrlToClipboard } from "@nerve/utils";
-// hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { followInSession } from "@/lib/in-session";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { useDetailScope } from "../use-detail-scope";
 
-export const useSubIssueOperations = (): TSubIssueOperations => {
-  // translation
-  const { t } = useTranslation();
-  // store hooks
-  const {
-    subIssues: { setSubIssueHelpers },
-    createSubIssues,
-    fetchSubIssues,
-    updateSubIssue,
-    deleteSubIssue,
-    removeSubIssue,
-  } = useIssueDetail();
-
-  const subIssueOperations: TSubIssueOperations = useMemo(
-    () => ({
-      copyLink: async (path) => {
-        await copyUrlToClipboard(path);
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: t("common.link_copied"),
-          message: t("entity.link_copied_to_clipboard", {
-            entity: t("common.sub_work_items", { count: 1 }),
-          }),
-        });
-      },
-      fetchSubIssues: async (workspaceSlug, projectId, parentIssueId) => {
-        try {
-          await fetchSubIssues(workspaceSlug, projectId, parentIssueId);
-        } catch {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("entity.fetch.failed", {
-              entity: t("common.sub_work_items", { count: 2 }),
-            }),
-          });
-        }
-      },
-      addSubIssue: async (workspaceSlug, projectId, parentIssueId, issueIds) => {
-        try {
-          await createSubIssues(workspaceSlug, projectId, parentIssueId, issueIds);
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: t("toast.success"),
-            message: t("entity.add.success", {
-              entity: t("common.sub_work_items"),
-            }),
-          });
-        } catch {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("entity.add.failed", {
-              entity: t("common.sub_work_items"),
-            }),
-          });
-        }
-      },
-      updateSubIssue: async (
-        workspaceSlug,
-        projectId,
-        parentIssueId,
-        issueId,
-        issueData,
-        oldIssue = {},
-        fromModal = false
-      ) => {
-        try {
-          setSubIssueHelpers(parentIssueId, "issue_loader", issueId);
-          await updateSubIssue(workspaceSlug, projectId, parentIssueId, issueId, issueData, oldIssue, fromModal);
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: t("toast.success"),
-            message: t("sub_work_item.update.success"),
-          });
-          setSubIssueHelpers(parentIssueId, "issue_loader", issueId);
-        } catch (_error) {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("sub_work_item.update.error"),
-          });
-        }
-      },
-      removeSubIssue: async (workspaceSlug, projectId, parentIssueId, issueId) => {
-        try {
-          setSubIssueHelpers(parentIssueId, "issue_loader", issueId);
-          await removeSubIssue(workspaceSlug, projectId, parentIssueId, issueId);
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: t("toast.success"),
-            message: t("entity.remove.success", {
-              entity: t("common.sub_work_items"),
-            }),
-          });
-          setSubIssueHelpers(parentIssueId, "issue_loader", issueId);
-        } catch (_error) {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("entity.remove.failed", {
-              entity: t("common.sub_work_items"),
-            }),
-          });
-        }
-      },
-      deleteSubIssue: async (workspaceSlug, projectId, parentIssueId, issueId) => {
-        try {
-          setSubIssueHelpers(parentIssueId, "issue_loader", issueId);
-          await deleteSubIssue(workspaceSlug, projectId, parentIssueId, issueId);
-          setSubIssueHelpers(parentIssueId, "issue_loader", issueId);
-        } catch (_error) {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("entity.delete.failed", {
-              entity: t("common.sub_work_items"),
-            }),
-          });
-        }
-      },
-    }),
-    [createSubIssues, deleteSubIssue, fetchSubIssues, removeSubIssue, setSubIssueHelpers, t, updateSubIssue]
+export function useSubIssueOperations(workspaceSlug: string, projectId: string, hostId: string): TSubIssueOperations {
+  const detail = useIssueDetail();
+  const capture = useDetailScope(workspaceSlug, projectId, hostId);
+  const refusal = useRefusalToast();
+  const owner = useMemo(
+    () => ({ detail, workspaceSlug, projectId, hostId, pending: new Set<string>() }),
+    [detail, workspaceSlug, projectId, hostId]
   );
-
-  return subIssueOperations;
-};
+  return useMemo(() => {
+    const run = async (operation: () => Promise<void>, parent: string, child: string) => {
+      const current = capture();
+      const key = JSON.stringify([parent, child]);
+      if (!current() || owner.pending.has(key)) return;
+      owner.pending.add(key);
+      try {
+        await followInSession(operation, {
+          failed: (error) => {
+            if (current() && !(error instanceof SessionChangedError)) refusal(error);
+          },
+        });
+      } finally {
+        owner.pending.delete(key);
+      }
+    };
+    return {
+      copyLink: async (path) => copyUrlToClipboard(path),
+      // These callers own the dialog/read error; preserve rejection so failure cannot close the form.
+      fetchSubIssues: async (ws, project, parent) => {
+        await detail.fetchSubIssues(ws, project, parent);
+      },
+      addSubIssue: (ws, project, parent, ids) => detail.createSubIssues(ws, project, parent, ids),
+      updateSubIssue: (ws, project, parent, id, body) =>
+        run(() => detail.updateSubIssue(ws, project, parent, id, body), parent, id),
+      removeSubIssue: (ws, project, parent, id) =>
+        run(() => detail.removeSubIssue(ws, project, parent, id), parent, id),
+      deleteSubIssue: (ws, project, parent, id) => detail.deleteSubIssue(ws, project, parent, id),
+    };
+  }, [capture, detail, refusal, owner]);
+}

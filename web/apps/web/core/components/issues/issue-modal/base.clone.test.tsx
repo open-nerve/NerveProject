@@ -4,9 +4,13 @@ import React, { act, useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EIssuesStoreType } from "@nerve/types";
-import { issueOf } from "@/store/issue/fake-issues";
+import { ApiError } from "@/lib/api-error";
+import { toasts } from "@/lib/fake-toast";
+import { issueOf, issueStoreTab } from "@/store/issue/fake-issues";
 import type { IssueDescriptionEditor } from "./components/description-editor";
 import { CreateUpdateIssueModalBase } from "./base";
+vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
+let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 const boundary = vi.hoisted(() => ({ fetch: vi.fn(), create: vi.fn(), update: vi.fn() }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
@@ -17,7 +21,12 @@ vi.mock("@/hooks/context/use-issue-modal", () => ({
 }));
 vi.mock("@/hooks/store/use-issues", () => ({ useIssues: () => ({ issues: {} }) }));
 vi.mock("@/hooks/store/use-issue-detail", () => ({
-  useIssueDetail: () => ({ fetchIssue: boundary.fetch, issue: { getIssueById: () => undefined } }),
+  useIssueDetail: () => ({
+    ...tab.app.issue.issueDetail,
+    rootIssueStore: tab.app.issue,
+    fetchIssue: boundary.fetch,
+    issue: { getIssueById: () => undefined },
+  }),
 }));
 vi.mock("@/hooks/store/use-project", () => ({
   useProject: () => ({ getProjectByIdentifier: () => undefined, getProjectById: () => undefined }),
@@ -72,9 +81,13 @@ class NoResize {
 }
 let root: Root;
 let container: HTMLElement;
-beforeEach(() => {
+beforeEach(async () => {
+  vi.useFakeTimers();
+  tab = await issueStoreTab();
+  vi.useRealTimers();
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.stubGlobal("ResizeObserver", NoResize);
+  toasts.length = 0;
   boundary.fetch.mockReset().mockResolvedValue({ ...issueOf("source"), description_html: "<p>source</p>" });
   boundary.create.mockReset().mockResolvedValue(issueOf("created"));
   boundary.update.mockReset();
@@ -85,6 +98,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  tab.app.dispose();
 });
 it("reads the independent clone source, locks the real project Controller and submits source HTML without local identity", async () => {
   const data = { name: "Cloned title", project_id: "A", state_id: "state" };
@@ -128,3 +142,29 @@ it.each([
   );
   expect(container.querySelector<HTMLSelectElement>("select")!.disabled).toBe(disabled);
 });
+
+it.each(["create", "update"] as const)(
+  "%s refuses by the native problem code and preserves the real form",
+  async (kind) => {
+    boundary[kind].mockRejectedValue(
+      new ApiError(403, {
+        title: "Forbidden",
+        status: 403,
+        code: "forbidden",
+        detail: "not a user message",
+      })
+    );
+    const onClose = vi.fn();
+    const data = { name: "keep my text", project_id: "A", ...(kind === "update" ? { id: "existing" } : {}) };
+    await act(async () =>
+      root.render(<CreateUpdateIssueModalBase data={data} isOpen onClose={onClose} withDraftIssueWrapper={false} />)
+    );
+    await act(async () =>
+      container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    );
+    expect(boundary[kind]).toHaveBeenCalledTimes(1);
+    expect(toasts.at(-1)?.message).toBe("errors.forbidden");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(container.querySelector<HTMLInputElement>('input[name="name"]')?.value).toBe("keep my text");
+  }
+);

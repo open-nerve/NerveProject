@@ -8,10 +8,11 @@ import { forwardRef } from "react";
 // nerve imports
 import { RichTextEditorWithRef } from "@nerve/editor";
 import type { EditorRefApi, IRichTextEditorProps, TFileHandler } from "@nerve/editor";
-import type { MakeOptional, TSearchEntityRequestPayload, TSearchResponse } from "@nerve/types";
+import type { MakeOptional } from "@nerve/types";
 import { cn } from "@nerve/utils";
 // components
 import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
+import { EditorMentionsError } from "@/components/editor/mentions-error";
 // hooks
 import { useEditorConfig, useEditorMention } from "@/hooks/editor";
 import { useMember } from "@/hooks/store/use-member";
@@ -31,7 +32,6 @@ type RichTextEditorWrapperProps = MakeOptional<
       }
     | {
         editable: true;
-        searchMentionCallback: (payload: TSearchEntityRequestPayload) => Promise<TSearchResponse>;
         uploadFile: TFileHandler["upload"];
         duplicateFile: TFileHandler["duplicate"];
       }
@@ -51,11 +51,10 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
     ...rest
   } = props;
   // store hooks
-  const { getUserDetails } = useMember();
+  const members = useMember();
+  const { getUserDetails } = members;
   // use editor mention
-  const { fetchMentions } = useEditorMention({
-    searchEntity: editable ? async (payload) => await props.searchMentionCallback(payload) : async () => ({}),
-  });
+  const { fetchMentions, mentionScope } = useEditorMention({ workspaceSlug, projectId, editable, members });
   // editor config
   const { getEditorFileHandlers } = useEditorConfig();
   // parse content
@@ -78,11 +77,9 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
       })}
       getEditorMetaData={getEditorMetaData}
       mentionHandler={{
-        searchCallback: async (query) => {
-          const res = await fetchMentions(query);
-          if (!res) throw new Error("Failed in fetching mentions");
-          return res;
-        },
+        searchCallback: fetchMentions,
+        scope: mentionScope,
+        renderError: (error, retry) => <EditorMentionsError error={error} retry={retry} />,
         renderComponent: EditorMentionsRoot,
         getMentionedEntityDetails: (id) => ({
           display_name: getUserDetails(id)?.display_name ?? "",

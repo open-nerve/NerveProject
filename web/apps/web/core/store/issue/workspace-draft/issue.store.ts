@@ -1,356 +1,191 @@
-import type { Group } from "@/lib/paged-groups";
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type { Draft, DraftCreate, DraftUpdate, IssueDetail } from "@nerve/api-client";
+import { observable, runInAction } from "mobx";
+import type { TLoader } from "@nerve/types";
+import { oneAtATime } from "@/lib/one-at-a-time";
+import { compareCodePoints, compareIssueTime } from "@/lib/issue-order";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { DetailResource } from "../issue-details/resource";
+import type { IssueReadToken, IssueRootStore } from "../root.store";
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
-
-import { clone, update, unset, orderBy, set } from "lodash-es";
-import { action, computed, makeObservable, observable, runInAction } from "mobx";
-import { computedFn } from "mobx-utils";
-// nerve imports
-import { EDraftIssuePaginationType } from "@nerve/constants";
-import type {
-  TWorkspaceDraftIssue,
-  TWorkspaceDraftPaginationInfo,
-  TWorkspaceDraftIssueLoader,
-  TWorkspaceDraftQueryParams,
-  TLoader,
-  ViewFlags,
-} from "@nerve/types";
-import { getCurrentDateTimeInISO, convertToISODateString } from "@nerve/utils";
-// services
-import workspaceDraftService from "@/services/issue/workspace_draft.service";
-// types
-import type { IIssueRootStore } from "../root.store";
-
-export type TDraftIssuePaginationType = EDraftIssuePaginationType;
-
-export interface IWorkspaceDraftIssues {
-  // observables
-  loader: TWorkspaceDraftIssueLoader;
-  paginationInfo: Omit<TWorkspaceDraftPaginationInfo<TWorkspaceDraftIssue>, "results"> | undefined;
-  issuesMap: Record<string, TWorkspaceDraftIssue>; // issue_id -> issue;
-  issueMapIds: Record<string, string[]>; // workspace_id -> issue_ids;
-  // computed
-  issueIds: string[];
-  // computed functions
-  getIssueById: (issueId: string) => TWorkspaceDraftIssue | undefined;
-  // helper actions
-  addIssue: (issues: TWorkspaceDraftIssue[]) => void;
-  removeIssue: (issueId: string) => Promise<void>;
-  // actions
-  fetchIssues: (
-    workspaceSlug: string,
-    loadType: TWorkspaceDraftIssueLoader,
-    paginationType?: TDraftIssuePaginationType
-  ) => Promise<TWorkspaceDraftPaginationInfo<TWorkspaceDraftIssue> | undefined>;
-  createIssue: (
-    workspaceSlug: string,
-    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
-  ) => Promise<TWorkspaceDraftIssue | undefined>;
-  updateIssue: (
-    workspaceSlug: string,
-    issueId: string,
-    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
-  ) => Promise<TWorkspaceDraftIssue | undefined>;
-  deleteIssue: (workspaceSlug: string, issueId: string) => Promise<void>;
-  moveIssue: (
-    workspaceSlug: string,
-    issueId: string,
-    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
-  ) => Promise<Issue>;
-  addCycleToIssue: (
-    workspaceSlug: string,
-    issueId: string,
-    cycleId: string
-  ) => Promise<TWorkspaceDraftIssue | undefined>;
-  addModulesToIssue: (
-    workspaceSlug: string,
-    issueId: string,
-    moduleIds: string[]
-  ) => Promise<TWorkspaceDraftIssue | undefined>;
-
-  // dummies
-  viewFlags: ViewFlags;
-  groups: Map<string, Group> | undefined;
-  getIssueIds: (groupId?: string, subGroupId?: string) => string[] | undefined;
-  getPaginationData(groupId: string | undefined, subGroupId: string | undefined): Group | undefined;
-  getIssueLoader(groupId?: string, subGroupId?: string): TLoader;
-  getGroupIssueCount: (
-    groupId: string | undefined,
-    subGroupId: string | undefined,
-    isSubGroupCumulative: boolean
-  ) => number | undefined;
+type Drafts = { data: Draft[]; total?: number; next_cursor?: string | null; listed: boolean };
+type DraftInput = DraftUpdate | ((held: Draft) => DraftUpdate);
+const empty = (): Drafts => ({ data: [], listed: false });
+function merged(before: Draft[], incoming: Draft[]): Draft[] {
+  const rows = new Map(before.map((row) => [row.id, row]));
+  for (const row of incoming) {
+    const old = rows.get(row.id);
+    if (!old || compareIssueTime(old.updated_at, row.updated_at) <= 0) rows.set(row.id, row);
+  }
+  return [...rows.values()].toSorted(
+    (a, b) => compareIssueTime(b.created_at, a.created_at) || compareCodePoints(b.id, a.id)
+  );
 }
-
-export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
-  // local constants
-  paginatedCount = 50;
-  // observables
-  loader: TWorkspaceDraftIssueLoader = undefined;
-  paginationInfo: Omit<TWorkspaceDraftPaginationInfo<TWorkspaceDraftIssue>, "results"> | undefined = undefined;
-  issuesMap: Record<string, TWorkspaceDraftIssue> = {};
-  issueMapIds: Record<string, string[]> = {};
-
-  constructor(public issueStore: IIssueRootStore) {
-    makeObservable(this, {
-      loader: observable.ref,
-      paginationInfo: observable,
-      issuesMap: observable,
-      issueMapIds: observable,
-      // computed
-      issueIds: computed,
-      // action
-      fetchIssues: action,
-      createIssue: action,
-      updateIssue: action,
-      deleteIssue: action,
-      moveIssue: action,
-      addCycleToIssue: action,
-      addModulesToIssue: action,
-    });
+export type IWorkspaceDraftIssues = WorkspaceDraftIssues;
+export class WorkspaceDraftIssues {
+  private readonly resources = observable.map<string, DetailResource<Drafts>>({}, { deep: false });
+  private readonly reads = observable.map<string, "init-loader" | "pagination">();
+  private readonly mutations = observable.map<symbol, { workspaceID: string; token: IssueReadToken }>(
+    {},
+    { deep: false }
+  );
+  private readonly queues = new Map<string, ReturnType<typeof oneAtATime>>();
+  constructor(readonly issueStore: IssueRootStore) {}
+  canRead = (ws: string): boolean => {
+    const workspace = this.issueStore.rootStore.workspaceRoot.getWorkspaceBySlug(ws);
+    return this.issueStore.active && !!workspace && (workspace.role === 15 || workspace.role === 20);
+  };
+  private held(ws: string | undefined) {
+    const workspace = ws && this.issueStore.rootStore.workspaceRoot.getWorkspaceBySlug(ws);
+    return workspace && this.canRead(ws!) ? this.resources.get(workspace.id) : undefined;
   }
-
-  // computed
-  get issueIds() {
-    const workspaceSlug = this.issueStore.workspaceSlug;
-    if (!workspaceSlug) return [];
-    if (!this.issueMapIds[workspaceSlug]) return [];
-    const issueIds = this.issueMapIds[workspaceSlug];
-    return orderBy(issueIds, (issueId) => convertToISODateString(this.issuesMap[issueId]?.created_at), ["desc"]);
-  }
-
-  // computed functions
-  getIssueById = computedFn((issueId: string) => {
-    if (!issueId || !this.issuesMap[issueId]) return undefined;
-    return this.issuesMap[issueId];
-  });
-
-  // helper actions
-  addIssue = (issues: TWorkspaceDraftIssue[]) => {
-    if (issues && issues.length <= 0) return;
-    runInAction(() => {
-      issues.forEach((issue) => {
-        if (!this.issuesMap[issue.id]) set(this.issuesMap, issue.id, issue);
-        else update(this.issuesMap, issue.id, (prevIssue) => ({ ...prevIssue, ...issue }));
-      });
-    });
-  };
-
-  removeIssue = async (issueId: string) => {
-    if (!issueId || !this.issuesMap[issueId]) return;
-    runInAction(() => unset(this.issuesMap, issueId));
-  };
-
-  generateNotificationQueryParams = (
-    paramType: TDraftIssuePaginationType,
-    filterParams = {}
-  ): TWorkspaceDraftQueryParams => {
-    const queryCursorNext: string =
-      paramType === EDraftIssuePaginationType.INIT
-        ? `${this.paginatedCount}:0:0`
-        : paramType === EDraftIssuePaginationType.CURRENT
-          ? `${this.paginatedCount}:${0}:0`
-          : paramType === EDraftIssuePaginationType.NEXT && this.paginationInfo
-            ? (this.paginationInfo?.next_cursor ?? `${this.paginatedCount}:${0}:0`)
-            : `${this.paginatedCount}:${0}:0`;
-
-    const queryParams: TWorkspaceDraftQueryParams = {
-      per_page: this.paginatedCount,
-      cursor: queryCursorNext,
-      ...filterParams,
-    };
-
-    return queryParams;
-  };
-
-  // actions
-  fetchIssues = async (
-    workspaceSlug: string,
-    loadType: TWorkspaceDraftIssueLoader,
-    paginationType: TDraftIssuePaginationType = EDraftIssuePaginationType.INIT
-  ) => {
-    try {
-      this.loader = loadType;
-
-      // filter params and pagination params
-      const filterParams = {};
-      const params = this.generateNotificationQueryParams(paginationType, filterParams);
-
-      // fetching the paginated workspace draft issues
-      const draftIssuesResponse = await workspaceDraftService.getIssues(workspaceSlug, { ...params });
-      if (!draftIssuesResponse) return undefined;
-
-      const { results, ...paginationInfo } = draftIssuesResponse;
-      runInAction(() => {
-        if (results && results.length > 0) {
-          // adding issueIds
-          const issueIds = results.map((issue) => issue.id);
-          const existingIssueIds = this.issueMapIds[workspaceSlug] ?? [];
-          // new issueIds
-          const newIssueIds = issueIds.filter((issueId) => !existingIssueIds.includes(issueId));
-          this.addIssue(results);
-          // issue map update
-          update(this.issueMapIds, [workspaceSlug], (listedIssueIds = []) => [...newIssueIds, ...listedIssueIds]);
-          this.loader = undefined;
-        } else {
-          this.loader = "empty-state";
-        }
-        set(this, "paginationInfo", paginationInfo);
-      });
-      return draftIssuesResponse;
-    } catch (error) {
-      // set loader to undefined if errored out
-      this.loader = undefined;
-      throw error;
+  private entry(ws: string): DetailResource<Drafts> {
+    if (!this.canRead(ws)) throw new SessionChangedError();
+    const workspace = this.issueStore.rootStore.workspaceRoot.getWorkspaceBySlug(ws)!;
+    let resource = this.resources.get(workspace.id);
+    if (!resource) {
+      resource = new DetailResource(this.issueStore, { workspaceID: workspace.id, projectIDs: [], member: true });
+      runInAction(() => this.resources.set(workspace.id, resource!));
     }
+    return resource;
+  }
+  getDrafts = (ws: string) => this.held(ws)?.value?.data;
+  getTotal = (ws: string) => this.held(ws)?.value?.total;
+  hasMore = (ws: string) => this.held(ws)?.value?.next_cursor != null;
+  getError = (ws: string) => this.held(ws)?.error;
+  getIssueById = (id: string, ws = this.issueStore.workspaceSlug) =>
+    this.held(ws)?.value?.data.find((row) => row.id === id);
+  getLoader = (ws: string) => {
+    const resource = this.held(ws);
+    if (!resource) return undefined;
+    if (resource.loading) return this.reads.get(resource.scope.workspaceID);
+    return [...this.mutations.values()].some(
+      (row) =>
+        row.workspaceID === resource.scope.workspaceID && this.issueStore.isReadCurrent(row.token, [], row.workspaceID)
+    )
+      ? "mutation"
+      : undefined;
   };
-
-  createIssue = async (
-    workspaceSlug: string,
-    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
-  ): Promise<TWorkspaceDraftIssue | undefined> => {
-    try {
-      this.loader = "create";
-
-      const response = await workspaceDraftService.createIssue(workspaceSlug, payload);
-      if (response) {
-        runInAction(() => {
-          this.addIssue([response]);
-          update(this.issueMapIds, [workspaceSlug], (existingIssueIds = []) => [response.id, ...existingIssueIds]);
-          // increase the count of issues in the pagination info
-          if (this.paginationInfo?.total_count) {
-            set(this, "paginationInfo", {
-              ...this.paginationInfo,
-              total_count: this.paginationInfo.total_count + 1,
-            });
-          }
-        });
+  private assertCurrent(ws: string, resource: DetailResource<Drafts>, token: IssueReadToken) {
+    if (!this.canRead(ws) || !this.issueStore.isReadCurrent(token, [], resource.scope.workspaceID))
+      throw new SessionChangedError();
+  }
+  private validate(rows: Draft[], resource: DetailResource<Drafts>, id?: string) {
+    if (rows.some((row) => row.workspace_id !== resource.scope.workspaceID || (id !== undefined && row.id !== id)))
+      throw new SessionChangedError();
+  }
+  fetchIssues = async (ws: string, next = false): Promise<Draft[]> => {
+    const resource = this.entry(ws);
+    const before = resource.value;
+    if (next && before?.next_cursor === null) return before.data;
+    const cursor = next ? (before?.next_cursor ?? undefined) : undefined;
+    runInAction(() => this.reads.set(resource.scope.workspaceID, next ? "pagination" : "init-loader"));
+    const answer = await resource.fetch(async (read) => {
+      const page = await this.issueStore.draftApi.list(ws, cursor === undefined ? {} : { cursor });
+      if (!read.isCurrent()) throw new SessionChangedError();
+      this.validate(page.data, resource);
+      if (cursor !== undefined && cursor === page.next_cursor) throw new Error("Repeated draft cursor");
+      return { ...page, data: merged(next ? (before?.data ?? []) : [], page.data), listed: true };
+    });
+    if (!answer) throw new SessionChangedError();
+    return answer.data;
+  };
+  retry = async (ws: string): Promise<void> => {
+    const resource = this.entry(ws);
+    if (!(await resource.retryConfirmationRead())) await this.fetchIssues(ws);
+  };
+  private async command<T>(
+    ws: string,
+    id: string | undefined,
+    run: (resource: DetailResource<Drafts>, token: IssueReadToken) => Promise<T>
+  ): Promise<T> {
+    const resource = this.entry(ws);
+    const token = this.issueStore.captureRead(true);
+    const key = id ?? `new:${resource.scope.workspaceID}`;
+    let queue = this.queues.get(key);
+    if (!queue) {
+      queue = oneAtATime();
+      this.queues.set(key, queue);
+    }
+    return queue(async () => {
+      this.assertCurrent(ws, resource, token);
+      const operation = Symbol("draft mutation");
+      runInAction(() => this.mutations.set(operation, { workspaceID: resource.scope.workspaceID, token }));
+      try {
+        return await run(resource, token);
+      } finally {
+        runInAction(() => this.mutations.delete(operation));
       }
-
-      this.loader = undefined;
-      return response;
-    } catch (error) {
-      this.loader = undefined;
-      throw error;
-    }
-  };
-
-  updateIssue = async (
-    workspaceSlug: string,
-    issueId: string,
-    payload: Partial<TWorkspaceDraftIssue | IssueDetail>
-  ) => {
-    const issueBeforeUpdate = clone(this.getIssueById(issueId));
-    try {
-      this.loader = "update";
-      runInAction(() => {
-        set(this.issuesMap, [issueId], {
-          ...issueBeforeUpdate,
-          ...payload,
-          updated_at: getCurrentDateTimeInISO(),
-        });
+    });
+  }
+  private remember(resource: DetailResource<Drafts>, token: IssueReadToken, row: Draft) {
+    resource.receive(empty(), token, (held) => ({ ...(held ?? empty()), data: merged(held?.data ?? [], [row]) }));
+  }
+  private async refreshTotal(ws: string, resource: DetailResource<Drafts>, token: IssueReadToken) {
+    if (resource.value?.listed) await resource.refreshAfterConfirmation(() => this.fetchIssues(ws), token);
+  }
+  createIssue = (ws: string, input: DraftCreate): Promise<Draft> =>
+    this.command(ws, undefined, async (resource, token) => {
+      const row = await this.issueStore.draftApi.create(ws, input);
+      this.assertCurrent(ws, resource, token);
+      this.validate([row], resource);
+      this.remember(resource, token, row);
+      resource.confirm((value) => ({ ...value, total: undefined }), token);
+      await this.refreshTotal(ws, resource, token);
+      return row;
+    });
+  private async save(
+    ws: string,
+    id: string,
+    input: DraftInput,
+    resource: DetailResource<Drafts>,
+    token: IssueReadToken
+  ): Promise<Draft> {
+    const held = this.getIssueById(id, ws);
+    if (!held) throw new Error("Draft has not been read");
+    const body = typeof input === "function" ? input(held) : input;
+    const row = await this.issueStore.draftApi.update(id, body);
+    this.assertCurrent(ws, resource, token);
+    this.validate([row], resource, id);
+    this.remember(resource, token, row);
+    return row;
+  }
+  updateIssue = (ws: string, id: string, input: DraftInput): Promise<Draft> =>
+    this.command(ws, id, (resource, token) => this.save(ws, id, input, resource, token));
+  private remove(resource: DetailResource<Drafts>, token: IssueReadToken, id: string) {
+    resource.receive(empty(), token, (held) => ({
+      ...(held ?? empty()),
+      data: (held?.data ?? []).filter((row) => row.id !== id),
+      total: undefined,
+    }));
+  }
+  deleteIssue = (ws: string, id: string): Promise<void> =>
+    this.command(ws, id, async (resource, token) => {
+      if (!this.getIssueById(id, ws)) throw new Error("Draft has not been read");
+      await this.issueStore.draftApi.delete(id);
+      this.assertCurrent(ws, resource, token);
+      this.remove(resource, token, id);
+      await this.refreshTotal(ws, resource, token);
+    });
+  moveIssue = (ws: string, id: string, input: DraftInput): Promise<IssueDetail> =>
+    this.command(ws, id, async (resource, token) => {
+      await this.save(ws, id, input, resource, token);
+      const scope = { workspaceSlug: ws, workspaceID: resource.scope.workspaceID };
+      const issue = await this.issueStore.confirmCreation(scope, async () => {
+        this.assertCurrent(ws, resource, token);
+        const answer = await this.issueStore.draftApi.publish(id);
+        this.assertCurrent(ws, resource, token);
+        if (answer.workspace_id !== resource.scope.workspaceID) throw new SessionChangedError();
+        this.remove(resource, token, id);
+        return answer;
       });
-      const response = await workspaceDraftService.updateIssue(workspaceSlug, issueId, payload);
-      this.loader = undefined;
-      return response;
-    } catch (error) {
-      this.loader = undefined;
-      runInAction(() => {
-        set(this.issuesMap, [issueId], issueBeforeUpdate);
-      });
-      throw error;
-    }
-  };
-
-  deleteIssue = async (workspaceSlug: string, issueId: string) => {
-    try {
-      this.loader = "delete";
-
-      const response = await workspaceDraftService.deleteIssue(workspaceSlug, issueId);
-      runInAction(() => {
-        // Remove the issue from the issueMapIds
-        this.issueMapIds[workspaceSlug] = (this.issueMapIds[workspaceSlug] || []).filter((id) => id !== issueId);
-        // Remove the issue from the issuesMap
-        delete this.issuesMap[issueId];
-        // reduce the count of issues in the pagination info
-        if (this.paginationInfo?.total_count) {
-          set(this, "paginationInfo", {
-            ...this.paginationInfo,
-            total_count: this.paginationInfo.total_count - 1,
-          });
-        }
-      });
-
-      this.loader = undefined;
-      return response;
-    } catch (error) {
-      this.loader = undefined;
-      throw error;
-    }
-  };
-
-  moveIssue = async (workspaceSlug: string, issueId: string, payload: Partial<TWorkspaceDraftIssue | IssueDetail>) => {
-    try {
-      this.loader = "move";
-
-      const response = await workspaceDraftService.moveIssue(workspaceSlug, issueId, payload);
-      runInAction(() => {
-        // Remove the issue from the issueMapIds
-        this.issueMapIds[workspaceSlug] = (this.issueMapIds[workspaceSlug] || []).filter((id) => id !== issueId);
-        // Remove the issue from the issuesMap
-        delete this.issuesMap[issueId];
-        // reduce the count of issues in the pagination info
-        if (this.paginationInfo?.total_count) {
-          set(this, "paginationInfo", {
-            ...this.paginationInfo,
-            total_count: this.paginationInfo.total_count - 1,
-          });
-        }
-      });
-
-      this.loader = undefined;
-      return response;
-    } catch (error) {
-      this.loader = undefined;
-      throw error;
-    }
-  };
-
-  addCycleToIssue = async (workspaceSlug: string, issueId: string, cycleId: string) => {
-    try {
-      this.loader = "update";
-      const response = await this.updateIssue(workspaceSlug, issueId, { cycle_id: cycleId });
-      return response;
-    } catch (error) {
-      this.loader = undefined;
-      throw error;
-    }
-  };
-
-  addModulesToIssue = async (workspaceSlug: string, issueId: string, moduleIds: string[]) => {
-    try {
-      this.loader = "update";
-      const response = this.updateIssue(workspaceSlug, issueId, { module_ids: moduleIds });
-      return response;
-    } catch (error) {
-      this.loader = undefined;
-      throw error;
-    }
-  };
-
-  // dummies
-  viewFlags: ViewFlags = { enableQuickAdd: false, enableIssueCreation: false, enableInlineEditing: false };
-  groups: Map<string, Group> | undefined = undefined;
+      this.assertCurrent(ws, resource, token);
+      await this.refreshTotal(ws, resource, token);
+      return issue;
+    });
+  // Drafts do not participate in ordinary issue layouts; retain only their common read-only facade.
   getIssueIds = (_groupId?: string, _subGroupId?: string) => undefined;
-  getPaginationData = (_groupId: string | undefined, _subGroupId: string | undefined) => undefined;
-  getIssueLoader = (_groupId?: string, _subGroupId?: string) => "loaded" as TLoader;
-  getGroupIssueCount = (
-    _groupId: string | undefined,
-    _subGroupId: string | undefined,
-    _isSubGroupCumulative: boolean
-  ) => undefined;
+  getPaginationData = (_groupId?: string, _subGroupId?: string) => undefined;
+  getIssueLoader = (_groupId?: string, _subGroupId?: string): TLoader => "loaded";
+  getGroupIssueCount = (_groupId?: string, _subGroupId?: string, _isSubGroupCumulative?: boolean) => undefined;
 }

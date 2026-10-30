@@ -1,10 +1,12 @@
+import { Field, FieldError } from "@makeplane/propel/components/field";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
 
-import { Fragment, useState } from "react";
+import { DirectoryReadError, useDirectoryRead } from "@/components/issues/issue-detail-widgets/directory-read";
+import { Fragment, useState, useId, useRef } from "react";
 import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
 import { AddOutline, LoadingOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
@@ -13,7 +15,7 @@ import { Combobox } from "@headlessui/react";
 import { EUserPermissionsLevel, getRandomLabelColor } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import type { Label, LabelCreate } from "@nerve/api-client";
+import type { IssueLabelCreation } from "@/components/labels/use-label-changes";
 import { EUserProjectRoles } from "@nerve/types";
 // helpers
 import { getTabIndex, isComposing } from "@nerve/utils";
@@ -23,16 +25,17 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 //constants
 export interface IIssueLabelSelect {
+  disabled?: boolean;
   workspaceSlug: string;
   projectId: string;
   issueId: string;
   values: string[];
-  onSelect: (_labelIds: string[]) => void;
-  onAddLabel: (data: LabelCreate) => Promise<Label>;
+  onSelect: (_labelIds: string[]) => Promise<void>;
+  onAddLabel: IssueLabelCreation;
 }
 
 export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssueLabelSelect) {
-  const { workspaceSlug, projectId, issueId, values, onSelect, onAddLabel } = props;
+  const { disabled, workspaceSlug, projectId, issueId, values, onSelect, onAddLabel } = props;
   const { t } = useTranslation();
   // store hooks
   const { isMobile } = usePlatformOS();
@@ -41,21 +44,24 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
   // states
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const [query, setQuery] = useState("");
+  const [nameError, setNameError] = useState<string>();
+  const errorId = useId();
+  const pending = useRef(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   const canCreateLabel =
     projectId && allowPermissions([EUserProjectRoles.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
   const projectLabels = getProjectLabels(projectId);
+  const read = useDirectoryRead(
+    workspaceSlug,
+    projectId ?? undefined,
+    projectId ? () => fetchProjectLabels(projectId) : undefined
+  );
 
   const { baseTabIndex } = getTabIndex(undefined, isMobile);
-
-  const fetchLabels = () => {
-    setIsLoading(true);
-    if (!projectLabels && projectId) fetchProjectLabels(projectId).then(() => setIsLoading(false));
-  };
 
   const options = (projectLabels ?? []).map((label) => ({
     value: label.id,
@@ -98,7 +104,14 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
       setQuery("");
     }
 
-    if (query !== "" && e.key === "Enter" && !isComposing(e.nativeEvent) && canCreateLabel) {
+    if (
+      !read.loading &&
+      !read.error &&
+      query !== "" &&
+      e.key === "Enter" &&
+      !isComposing(e.nativeEvent) &&
+      canCreateLabel
+    ) {
       e.stopPropagation();
       e.preventDefault();
       await handleAddLabel(query);
@@ -106,14 +119,25 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
   };
 
   const handleAddLabel = async (labelName: string) => {
+    if (disabled || pending.current || !labelName.trim()) return;
+    pending.current = true;
     setSubmitting(true);
+    setNameError(undefined);
     try {
-      const created = await onAddLabel({ name: labelName, color: getRandomLabelColor() });
-      onSelect([...values, created.id]);
-      setQuery("");
-    } catch {
-      // onAddLabel has shown nerve's reason; nothing is selected
+      await onAddLabel(
+        { name: labelName.trim(), color: getRandomLabelColor() },
+        (_field, message) => setNameError(message),
+        async (created) => {
+          try {
+            await onSelect([...values, created.id]);
+            setQuery("");
+          } catch {
+            // Attachment reports its own refusal; keep the query and confirmed label available.
+          }
+        }
+      );
     } finally {
+      pending.current = false;
       setSubmitting(false);
     }
   };
@@ -123,10 +147,11 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
   return (
     <>
       <Combobox
+        disabled={disabled || submitting}
         as="div"
         className="size-full flex-shrink-0 text-left"
         value={issueLabels}
-        onChange={(value) => onSelect(value)}
+        onChange={(value) => void onSelect(value).catch(() => undefined)}
         multiple
       >
         <Combobox.Button as={Fragment}>
@@ -136,7 +161,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
             variant="tertiary"
             size="sm"
             prependIcon={<AddOutline />}
-            onClick={() => !projectLabels && fetchLabels()}
+            onClick={read.load}
           >
             {label}
           </Button>
@@ -150,21 +175,35 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
             {...attributes.popper}
           >
             <div className="px-2">
-              <div className="flex w-full items-center justify-start rounded-sm border border-subtle bg-surface-2 px-2">
-                <SearchOutline className="h-3.5 w-3.5 text-tertiary" />
-                <Combobox.Input
-                  className="w-full bg-transparent px-2 py-1 text-11 text-secondary placeholder:text-placeholder focus:outline-none"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={t("common.search.label")}
-                  displayValue={(assigned: any) => assigned?.name}
-                  onKeyDown={searchInputKeyDown}
-                  tabIndex={baseTabIndex}
-                />
-              </div>
+              <Field name="name" invalid={!!nameError}>
+                <div className="flex w-full items-center justify-start rounded-sm border border-subtle bg-surface-2 px-2">
+                  <SearchOutline className="h-3.5 w-3.5 text-tertiary" />
+                  <Combobox.Input
+                    aria-invalid={!!nameError}
+                    aria-describedby={nameError ? errorId : undefined}
+                    className="w-full bg-transparent px-2 py-1 text-11 text-secondary placeholder:text-placeholder focus:outline-none"
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setNameError(undefined);
+                    }}
+                    placeholder={t("common.search.label")}
+                    displayValue={(assigned: any) => assigned?.name}
+                    onKeyDown={searchInputKeyDown}
+                    tabIndex={baseTabIndex}
+                  />
+                </div>
+                {nameError && (
+                  <FieldError match size="lg" id={errorId}>
+                    {nameError}
+                  </FieldError>
+                )}
+              </Field>
             </div>
             <div className="vertical-scrollbar mt-2 scrollbar-sm max-h-48 overflow-y-scroll px-2 pr-0">
-              {isLoading ? (
+              {read.error ? (
+                <DirectoryReadError error={read.error} retry={read.load} />
+              ) : read.loading ? (
                 <p className="text-center text-secondary">{t("common.loading")}</p>
               ) : filteredOptions.length > 0 ? (
                 <ul className="space-y-1">
@@ -197,6 +236,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
               ) : canCreateLabel ? (
                 <div className="space-y-1">
                   <button
+                    disabled={disabled || submitting}
                     type="button"
                     onClick={(e) => {
                       e.preventDefault();

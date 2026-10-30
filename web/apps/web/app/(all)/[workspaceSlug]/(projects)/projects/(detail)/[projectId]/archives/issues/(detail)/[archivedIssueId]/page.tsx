@@ -6,7 +6,8 @@
 
 import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
-import useSWR from "swr";
+import { useSessionSWR } from "@/lib/use-session-swr";
+import { DetailResourceError } from "@/components/issues/issue-detail-widgets/resource-error";
 // ui
 import { Banner } from "@makeplane/propel/components/banner";
 import { ArchiveOutline } from "@makeplane/propel/icons";
@@ -21,7 +22,7 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import type { Route } from "./+types/page";
 
-function ArchivedIssueDetailsPage({ params }: Route.ComponentProps) {
+function ArchivedIssueDetailsPage({ params }: Pick<Route.ComponentProps, "params">) {
   // router
   const { workspaceSlug, projectId, archivedIssueId } = params;
   const navigate = useNavigate();
@@ -30,13 +31,20 @@ function ArchivedIssueDetailsPage({ params }: Route.ComponentProps) {
   const { t } = useTranslation();
   const {
     fetchIssue,
+    rootIssueStore: root,
     issue: { getIssueById },
   } = useIssueDetail();
 
   const { getProjectById } = useProject();
 
-  const { isLoading } = useSWR(`ARCHIVED_ISSUE_DETAIL_${workspaceSlug}_${projectId}_${archivedIssueId}`, () =>
-    fetchIssue(workspaceSlug, projectId, archivedIssueId)
+  const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
+  const identity = root.permissionReads.identity(workspace?.id, [projectId]);
+  const canRead =
+    root.active &&
+    root.rootStore.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) !== undefined;
+  const { isLoading, error, mutate } = useSessionSWR(
+    canRead ? ["ARCHIVED_ISSUE_DETAIL", identity, workspaceSlug, projectId, archivedIssueId] : null,
+    (_identity, ws, project, id) => fetchIssue(ws, project, id)
   );
 
   // derived values
@@ -44,7 +52,17 @@ function ArchivedIssueDetailsPage({ params }: Route.ComponentProps) {
   const project = issue ? getProjectById(issue?.project_id ?? "") : undefined;
   const pageTitle = project && issue ? `${project?.identifier}-${issue?.sequence_id} ${issue?.name}` : undefined;
 
-  if (!issue) return <></>;
+  if (!canRead) return null;
+  if (error)
+    return (
+      <DetailResourceError
+        error={error}
+        retry={() => mutate()}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={archivedIssueId}
+      />
+    );
 
   const issueLoader = !issue || isLoading;
 

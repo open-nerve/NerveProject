@@ -35,6 +35,8 @@ const BASE_URL = "http://nerve.test";
 
 export class FakeNerve {
   readonly calls: Call[] = [];
+  /** Optional synchronous response script; unhandled requests remain parked for explicit ordering assertions. */
+  respond?: (call: Call) => void;
   private issued = 0;
 
   /** The fetch of the client under test: reads the body as fetch does, parks the request until answered or failed. */
@@ -57,6 +59,7 @@ export class FakeNerve {
         answer: resolve,
         fail: () => reject(new TypeError("Failed to fetch")),
       });
+      this.respond?.(this.calls[this.calls.length - 1]!);
     });
   };
 

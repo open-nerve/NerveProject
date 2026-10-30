@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssueActivity } from "@nerve/types";
+import type { IssueActivity } from "@nerve/api-client";
 
-export const getRelationActivityContent = (activity: TIssueActivity | undefined): string | undefined => {
+export const getRelationActivityContent = (activity: IssueActivity | undefined): string | undefined => {
   if (!activity) return;
 
   switch (activity.field) {

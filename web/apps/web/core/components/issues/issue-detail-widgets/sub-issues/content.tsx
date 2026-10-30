@@ -13,11 +13,13 @@ import { EIssuesStoreType } from "@nerve/types";
 // components
 import { DeleteIssueModal } from "@/components/issues/delete-issue-modal";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 // local imports
 import { CreateUpdateIssueModal } from "../../issue-modal/modal";
 import { useSubIssueOperations } from "./helper";
 import { SubIssuesListRoot } from "./issues-list/root";
+import { DetailResourceError } from "../resource-error";
+import { useDetailScope } from "../use-detail-scope";
 
 type Props = {
   workspaceSlug: string;
@@ -28,25 +30,18 @@ type Props = {
 
 type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: Issue | undefined };
 
-export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibleContent(props: Props) {
+export function SubIssuesCollapsibleContent(props: Props) {
+  return (
+    <SubIssuesContent key={JSON.stringify([props.workspaceSlug, props.projectId, props.parentIssueId])} {...props} />
+  );
+}
+const SubIssuesContent = observer(function SubIssuesContent(props: Props) {
   const { workspaceSlug, projectId, parentIssueId, disabled } = props;
   // state
   const [issueCrudState, setIssueCrudState] = useState<{
-    create: TIssueCrudState;
-    existing: TIssueCrudState;
     update: TIssueCrudState;
     delete: TIssueCrudState;
   }>({
-    create: {
-      toggle: false,
-      parentIssueId: undefined,
-      issue: undefined,
-    },
-    existing: {
-      toggle: false,
-      parentIssueId: undefined,
-      issue: undefined,
-    },
     update: {
       toggle: false,
       parentIssueId: undefined,
@@ -60,18 +55,19 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
   });
   // store hooks
   const {
-    toggleCreateIssueModal,
-    toggleDeleteIssueModal,
-    subIssues: { subIssueHelpersByIssueId, setSubIssueHelpers },
+    fetchSubIssues,
+    subIssues: { getError, retry },
   } = useIssueDetail();
+  const { toggleCreateIssueModal, toggleDeleteIssueModal } = useIssueDetailModals();
 
   // helpers
-  const subIssueOperations = useSubIssueOperations();
-  const subIssueHelpers = subIssueHelpersByIssueId(`${parentIssueId}_root`);
+  const subIssueOperations = useSubIssueOperations(workspaceSlug, projectId, parentIssueId);
+  const captureScope = useDetailScope(workspaceSlug, projectId, parentIssueId);
+  const [visible, setVisible] = useState(false);
 
   // handler
   const handleIssueCrudState = useCallback(
-    (key: "create" | "existing" | "update" | "delete", _parentIssueId: string | null, issue: Issue | null = null) => {
+    (key: "update" | "delete", _parentIssueId: string | null, issue: Issue | null = null) => {
       setIssueCrudState({
         ...issueCrudState,
         [key]: {
@@ -84,37 +80,22 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
     [issueCrudState]
   );
 
-  const handleFetchSubIssues = useCallback(async () => {
-    const helperId = `${parentIssueId}_root`;
-    const currentSubIssueHelpers = subIssueHelpersByIssueId(helperId);
-    // setSubIssueHelpers toggles membership. Skip if visible or a fetch is already in flight
-    // so React Strict Mode's double effect does not add then remove visibility.
-    if (
-      currentSubIssueHelpers.issue_visibility.includes(parentIssueId) ||
-      currentSubIssueHelpers.preview_loader.includes(parentIssueId)
-    ) {
-      return;
-    }
-
-    try {
-      setSubIssueHelpers(helperId, "preview_loader", parentIssueId);
-      await subIssueOperations.fetchSubIssues(workspaceSlug, projectId, parentIssueId);
-      if (!subIssueHelpersByIssueId(helperId).issue_visibility.includes(parentIssueId)) {
-        setSubIssueHelpers(helperId, "issue_visibility", parentIssueId);
-      }
-    } catch (error) {
-      console.error("Error fetching sub-work items:", error);
-    } finally {
-      if (subIssueHelpersByIssueId(helperId).preview_loader.includes(parentIssueId)) {
-        setSubIssueHelpers(helperId, "preview_loader", parentIssueId);
-      }
-    }
-  }, [parentIssueId, projectId, setSubIssueHelpers, subIssueHelpersByIssueId, subIssueOperations, workspaceSlug]);
-
   useEffect(() => {
-    handleFetchSubIssues();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parentIssueId]);
+    const current = captureScope();
+    let active = true;
+    void fetchSubIssues(workspaceSlug, projectId, parentIssueId).then(
+      () => {
+        if (active && current()) setVisible(true);
+        return undefined;
+      },
+      () => {
+        /* The resource retains its refusal for the read-only retry. */
+      }
+    );
+    return () => {
+      active = false;
+    };
+  }, [captureScope, fetchSubIssues, workspaceSlug, projectId, parentIssueId]);
 
   // render conditions
   const shouldRenderDeleteIssueModal =
@@ -127,7 +108,18 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
 
   return (
     <>
-      {subIssueHelpers.issue_visibility.includes(parentIssueId) && (
+      <DetailResourceError
+        error={getError(parentIssueId)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={parentIssueId}
+        retry={async () => {
+          const current = captureScope();
+          await retry(workspaceSlug, projectId, parentIssueId);
+          if (current() && !getError(parentIssueId)) setVisible(true);
+        }}
+      />
+      {visible && (
         <SubIssuesListRoot
           storeType={EIssuesStoreType.PROJECT}
           workspaceSlug={workspaceSlug}
@@ -169,17 +161,6 @@ export const SubIssuesCollapsibleContent = observer(function SubIssuesCollapsibl
             toggleCreateIssueModal(false);
           }}
           data={issueCrudState?.update?.issue ?? undefined}
-          onSubmit={async (_issue: Issue) => {
-            await subIssueOperations.updateSubIssue(
-              workspaceSlug,
-              projectId,
-              parentIssueId,
-              _issue.id,
-              _issue,
-              issueCrudState?.update?.issue,
-              true
-            );
-          }}
         />
       )}
     </>

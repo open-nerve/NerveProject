@@ -1,10 +1,11 @@
+import { Field, FieldError } from "@makeplane/propel/components/field";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useId } from "react";
 import type { Placement } from "@popperjs/core";
 import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
@@ -14,13 +15,14 @@ import { getRandomLabelColor } from "@nerve/constants";
 // nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
-import type { Label, LabelCreate } from "@nerve/api-client";
+import type { Label } from "@nerve/api-client";
 import { cn, isComposing } from "@nerve/utils";
 // components
 import { IssueLabelsList } from "@/components/ui/labels-list";
 // hooks
 import { useDropdownKeyDown } from "@/hooks/use-dropdown-key-down";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+import type { IssueLabelCreation } from "@/components/labels/use-label-changes";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 
 export type TWorkItemLabelSelectBaseProps = {
@@ -31,10 +33,12 @@ export type TWorkItemLabelSelectBaseProps = {
   getLabelById: (labelId: string) => Label | undefined;
   label?: React.ReactNode;
   labelIds: string[];
-  onChange: (value: string[]) => void;
+  isInitializing?: boolean;
+  readStatus?: React.ReactNode;
+  onChange: (value: string[]) => void | Promise<void>;
   onDropdownOpen?: () => void;
   placement?: Placement;
-  createLabel?: (data: LabelCreate) => Promise<Label>;
+  onCreateLabel?: IssueLabelCreation;
   tabIndex?: number;
   value: string[];
 };
@@ -48,10 +52,12 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
     getLabelById,
     label: buttonLabel,
     labelIds,
+    isInitializing,
+    readStatus,
     onChange,
     onDropdownOpen,
     placement,
-    createLabel,
+    onCreateLabel,
     tabIndex,
     value,
   } = props;
@@ -60,6 +66,9 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
   const inputRef = useRef<HTMLInputElement | null>(null);
   // states
   const [query, setQuery] = useState("");
+  const [nameError, setNameError] = useState<string>();
+  const errorId = useId();
+  const pending = useRef(false);
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -107,6 +116,8 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
       return;
     }
     if (
+      !isInitializing &&
+      !readStatus &&
       q !== "" &&
       e.key === "Enter" &&
       !isComposing(e.nativeEvent) &&
@@ -135,18 +146,31 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
   }, [isDropdownOpen, isMobile]);
 
   const handleAddLabel = async (labelName: string) => {
-    if (!createLabel || submitting) return;
+    if (!onCreateLabel || pending.current) return;
     const name = labelName.trim();
     if (!name) return;
+    pending.current = true;
     setSubmitting(true);
+    setNameError(undefined);
+    const selectConfirmed = async (label: Label) => {
+      try {
+        await onChange(Array.from(new Set([...value, label.id])));
+        setQuery("");
+      } catch (error) {
+        toastRefusal(error);
+      }
+    };
     try {
-      const existing = labelsList.find((l) => l.name.toLowerCase() === name.toLowerCase());
-      const idToAdd = existing ? existing.id : (await createLabel({ name, color: getRandomLabelColor() })).id;
-      onChange(Array.from(new Set([...value, idToAdd])));
-      setQuery("");
-    } catch (error) {
-      toastRefusal(error);
+      const existing = labelsList.find((label) => label.name.toLowerCase() === name.toLowerCase());
+      if (existing) await selectConfirmed(existing);
+      else
+        await onCreateLabel(
+          { name, color: getRandomLabelColor() },
+          (_field, message) => setNameError(message),
+          selectConfirmed
+        );
     } finally {
+      pending.current = false;
       setSubmitting(false);
     }
   };
@@ -200,20 +224,36 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
             style={styles.popper}
             {...attributes.popper}
           >
-            <div className="flex items-center gap-1.5 rounded-sm border border-subtle bg-surface-2 px-2">
-              <SearchOutline className="h-3.5 w-3.5 text-placeholder" />
-              <Combobox.Input
-                as="input"
-                ref={inputRef}
-                className="w-full bg-transparent py-1 text-11 text-secondary placeholder:text-placeholder focus:outline-none"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t("search")}
-                displayValue={(assigned: any) => assigned?.name}
-                onKeyDown={searchInputKeyDown}
-              />
-            </div>
+            <Field name="name" invalid={!!nameError}>
+              <div className="flex items-center gap-1.5 rounded-sm border border-subtle bg-surface-2 px-2">
+                <SearchOutline className="h-3.5 w-3.5 text-placeholder" />
+                <Combobox.Input
+                  aria-invalid={!!nameError}
+                  aria-describedby={nameError ? errorId : undefined}
+                  as="input"
+                  ref={inputRef}
+                  className="w-full bg-transparent py-1 text-11 text-secondary placeholder:text-placeholder focus:outline-none"
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setNameError(undefined);
+                  }}
+                  placeholder={t("search")}
+                  displayValue={(assigned: any) => assigned?.name}
+                  onKeyDown={searchInputKeyDown}
+                />
+              </div>
+              {nameError && (
+                <FieldError match size="lg" id={errorId}>
+                  {nameError}
+                </FieldError>
+              )}
+            </Field>
             <div className="mt-2 max-h-48 overflow-y-scroll">
-              {labelsList && filteredOptions ? (
+              {readStatus ? (
+                readStatus
+              ) : isInitializing ? (
+                <p>{t("common.loading")}</p>
+              ) : labelsList && filteredOptions ? (
                 filteredOptions.length > 0 ? (
                   <ul className="space-y-1">
                     {filteredOptions.map((label) => {

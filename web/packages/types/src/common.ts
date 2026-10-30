@@ -31,7 +31,7 @@ export type TLogoProps = {
   };
 };
 
-export type TNameDescriptionLoader = "submitting" | "submitted" | "saved";
+export type TNameDescriptionLoader = "submitting" | "submitted" | "saved" | "failed";
 
 export type ICustomSearchSelectOption = {
   value: any;

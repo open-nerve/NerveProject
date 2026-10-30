@@ -1,5 +1,7 @@
 # M4/P10b 列表数据层实施计划
 
+> **集成更新（2026-10-30）：已完成。** 最终交付2aaef85c已合并main df5d3bbc，准确main CI 40908365144三任务全绿，证据归档和分支/worktree清理完成，见[review§17](../reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30)。以下原状态段保留为交付历史；当前P11仅准备与预检。
+
 > **给执行代理：** 按 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐Task执行，以 `- [ ]` 记录步骤。T1–T13任务门禁及独评闭环已完成；[P10B-S1权限读取失效方案A](../reviews/P10b-permission-read-decision.md)已落实。T14文稿收口完成；整分支审查及修复限定复审已闭环，产品候选完整F及准确CI通过，实施与终审完成、集成待办；文稿HEAD的准确CI另由主控核验。
 
 > **当前状态：实施与终审完成、集成待办。** 产品候选 `2e1264aa5711f4699546bb64728151da2f802a0e` 完整F七项及准确 [CI 40896656404](https://github.com/open-nerve/NerveProject/actions/runs/40896656404) attempt1的server/web/e2e均通过；原5I/3M、修复期N1及限定新增N2均闭环。纯文稿HEAD自身CI仍待主控另核。main基线a06e3f70547b755b03bf8e6b33caafd52725d0f6，未合并、不启动P11；历史失败/原件限制见review。

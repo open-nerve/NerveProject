@@ -1,5 +1,7 @@
 # M4/P10b 列表数据层：实施与评审记录
 
+> **2026-10-30 集成更新：P10b 已完成。** 最终交付 2aaef85c 经授权 --no-ff 合并 main df5d3bbc，准确 main CI 全绿，原始证据已归档，阶段分支/worktree已清理，详见§17。下文旧“待CI/未合并/不开始P11”均为当时交付快照；当前 P11 仅准备与预检。
+
 2026-10-29；分支 `codex/m4-p10b`，实际main基线 `a06e3f70547b755b03bf8e6b33caafd52725d0f6`，产品候选 `2e1264aa5711f4699546bb64728151da2f802a0e`。T1–T13逐任务独评、整分支审查及修复限定复审闭环；候选完整F七项及准确CI40896656404 attempt1三任务通过，T14文稿收口完成，**实施与终审完成、集成待办**；后续纯文稿HEAD自身CI由主控另核。阶段未合并、不启动P11。[spec](../specs/P10b-web-list-data.md)、[plan](../plans/P10b-web-list-data.md)。
 
 ## 1. 前置与证据
@@ -356,3 +358,27 @@ T11接真实拖放消费者并在发送时读取邻居。来源列表绑定在�
 独评`task-12-review.md`给出Spec通过、Quality Approved、0C/0I/0M。root核102份raw、最终147聚焦/352受影响回归/types/严格lint/format/diff的2629输入与提交一致，8提交blob和8项变异的单生产文件改动/恢复hash已核；原件为`task-12-current-report.md`、`task-12-root-audit-before-review.json`、`task-12-root-commit-mutation-check.json`。M50仅403/500错误态断言算行为红，404超时不算；早期夹具/类型失败保留，不冒充产品缺陷。旧资源service按既有测试方式mock，其canonical GET走生成客户端；不替代P11/M7资源协议集成。
 
 完整本地F于c0cd32f7干净HEAD严格串行通过，证据目录`task-12-root-final-f-attempt1`的七份raw/receipt及`root-audit.json`已核。Go为51包通过、16包无测试；lint-web54/54（36缓存）；web18任务0缓存，八包新日志合计1827项（应用164文件1665项、其余162项）；E2E169项通过（44.2s）。应用日志保留11个stderr段，含T13已认领的隐藏看板列key提示及旧领域/翻译组件提示；不声称零噪声，也不屏蔽。检查点已用系统git推送，准确CI待返回，不外推旧CI。T13继续四角色精确请求集、真实布局首读及旧接口门禁；T14仍负责A1–A10、最终F/CI与整分支deep-review，不合并。
+
+
+## 17. 授权合并、main CI与归档清理（2026-10-30）
+
+负责人明确授权 --no-ff 合并、main CI 全绿后归档清理，并仅准备 P11 文档预检。合并前主目录 main 和阶段 worktree 均干净，远端分支与本地最终交付一致；[最终交付 CI 40901961236](https://github.com/open-nerve/NerveProject/actions/runs/40901961236) attempt1，server 123546367048、web 123546367931、e2e 123552807289 均 success。
+
+- 合并：`df5d3bbc1887486bd105fe6fc663f57f5b371992`，双亲为原 main `a06e3f70547b755b03bf8e6b33caafd52725d0f6` 与交付 `2aaef85c244c56e7ec62fe07e772b763427baeaf`。
+- 合并 tree `732ad5d1a6ef049272f14811deeeff0e6dbb884c` 与交付完全相同。产品候选及文稿差异的验证桥保持原记录；本轮无新产品差异，未重复本地 F。
+- [准确 main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1：server `123569233497`、web `123569233908`、e2e `123575438287` 全 success。公开API核验UTC `2026-10-29T16:29:26`。不是拿分支CI代替mainCI。
+- 使用系统 `/usr/bin/git` 推送；首轮连接中断exit128，原样重试成功，无凭据提取。远端main随后等于合并提交。
+
+归档根为主项目 `.superpowers/sdd/P10b-integration-20261030/`。worktree 原件保存 **3247文件、632572496字节、2空目录**；worktree外 `.superpowers/sdd/P10b-preparation-20261029/` 另保存 **33文件、1182444字节**，原准备根也保留。每份manifest记路径、大小、SHA256、mode；复制前后核源、核目标，清理后再核目标通过。未知项0；仅排除77275个可重建依赖/构建文件，保留所有 .superpowers、e2e结果/报告及 .turbo日志。空hooks/rich-filters按实际遗留目录显式保留，没有未知文件被自动丢弃。
+
+| 回执 | SHA256 |
+|---|---|
+| archive-manifest.json | 6bffb85dc3cbfa9837e78a8fb8584df59ee3a3831eb8bdbe785658d930ee731d |
+| preparation-archive-manifest.json | 95aaf487dd08073ec98399cae5fbf35c8230be7756d00c68197ea05c772d8144 |
+| main-ci-success-receipt.json | 3f70eacfc9c9995f0a1f66861a4a472abfaffb832f0a9a84f44b58d55e6b23fb |
+
+确认main CI、归档源/目标及merged ancestry后，正常删除远端 `codex/m4-p10b`，`git worktree remove` 原目录，`git branch -d` 本地分支；无force/stash/clean/reset。清理回执UTC `2026-10-29T16:31:43`；main与origin/main一致且干净。`cleanup-receipt.json`、`archive-audit.md`、merge/push原件共同记录过程。
+
+旧文中 X 的实际读取位置改为归档根 `worktree-evidence/.superpowers/sdd/P10b-web-list-data/`；旧worktree内其它相对路径映射到 `worktree-evidence/`，准备原件映射到 `preparation-evidence/P10b-preparation-20261029/`。本机ignored证据不进Git，跟踪文档自足保留身份/结论/历史限制；不修饰失败或补记旧变异。
+
+P11从准确main基线建立 `codex/m4-p11`，只准备 [spec](../specs/P11-web-detail-data.md)、[plan](../plans/P11-web-detail-data.md)、[预检](P11-web-detail-data-review.md)。M4§14、总体§9.4、handoff顶层open和M5–M8最终closeout仍待后续阶段。

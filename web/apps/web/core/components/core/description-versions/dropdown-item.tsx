@@ -8,7 +8,7 @@ import { observer } from "mobx-react";
 // nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { useTranslation } from "@nerve/i18n";
-import type { TDescriptionVersion } from "@nerve/types";
+import type { DescriptionVersionOption } from "./root";
 import { CustomMenu } from "@nerve/ui";
 import { calculateTimeAgo, getFileURL } from "@nerve/utils";
 // hooks
@@ -16,7 +16,7 @@ import { useMember } from "@/hooks/store/use-member";
 
 type Props = {
   onClick: (versionId: string) => void;
-  version: TDescriptionVersion;
+  version: DescriptionVersionOption;
 };
 
 export const DescriptionVersionsDropdownItem = observer(function DescriptionVersionsDropdownItem(props: Props) {
@@ -24,7 +24,7 @@ export const DescriptionVersionsDropdownItem = observer(function DescriptionVers
   // store hooks
   const { getUserDetails } = useMember();
   // derived values
-  const versionCreator = version.owned_by ? getUserDetails(version.owned_by) : null;
+  const versionCreator = version.ownerId ? getUserDetails(version.ownerId) : null;
   // translation
   const { t } = useTranslation();
 
@@ -40,7 +40,7 @@ export const DescriptionVersionsDropdownItem = observer(function DescriptionVers
       </span>
       <p className="flex items-center gap-1.5 text-11 text-secondary">
         <span className="font-medium">{versionCreator?.display_name ?? t("common.deactivated_user")}</span>
-        <span>{calculateTimeAgo(version.last_saved_at)}</span>
+        <span>{calculateTimeAgo(version.lastSavedAt)}</span>
       </p>
     </CustomMenu.MenuItem>
   );

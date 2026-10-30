@@ -804,6 +804,8 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 
 ### 3.23 需要同步到上级文档的地方
 
+**P11接续（2026-10-30）：** 详情原生资源、确认写入、root统一权限失效和宿主局部状态已落地，整分支deep-review九项局部问题已修复；产品e84acb4b完整本地F通过，准确CI/最终文稿HEAD按[review§13](reviews/P11-web-detail-data-review.md#13-分支身份ci与交付边界)后置核验。总体§7.7、frontend-changes及M1/M2/M3输入子项同步；实施与终审完成、集成待办。M4§14和总体§9.4不关闭。
+
 **P6实施记录（2026-10-26）：** T1–T16实施及逐Task独评通过，内部整分支审查零新发现；[正式review](reviews/P6-issue-events-review.md)列真实命令、矩阵、变异与Minor闭环。事件事务同步发布、自动归档每项目事务/NULL actor、测试业务时钟及两队列已落地。P7首个生产订阅者、`registrationRows`对请求任务，P9项目/工作区删除任务、版本保留与清理，P15页面仍未完成；不将M4整体验收关闭。
 
 **P7接续记录（2026-10-27）：** 三link事件使目录增为15；首个生产subscriber经原事务InsertTx投递，真实worker、请求任务快照、受限运行角色及I10 API/带links删除目录已落地。下表P7三行已同步总体§6.2/§6.7/§8、12列差异和README安全；[P7 review](reviews/P7-issue-links-review.md)与[整体审核](../../reviews/re-05-M4P7整体审核.md)区分原范围整审、T16修复/本地验证、原8项已独立关闭与最后文档增量/交付HEAD CI记录。P6当时空生产订阅是历史事实，P8/P9/P11/P14/P15及M4收尾仍开放。
@@ -1460,14 +1462,14 @@ modules/issue/
 
 ## 7. 前端
 
-前端先做数据层（P10a 换型和删除 M6、M7 的工作项列表，P10b 列表一侧，P11 详情一侧），再做页面（P12 列表与看板、P13 筛选、归档与个人主页、P14 详情、P15 协作、草稿与搜索），最后清理（P16）：三段数据层把 M4 的全部类型、service、store 和挂载时的取数迁到新接口，页面的 Phase 加入故事时挂载路径上已经没有旧接口的请求（3.1、第 12 节）。M3/P8 量到它较小的类型集换型时有 200 个 `tsc` 错误、因此拆成 P8a、P8b（R6 第 9 节）；M4 的 `TIssue` 有 131 个使用方（`git grep -lw TIssue -- web`）、`EIssuesStoreType` 93 个。第二稿按"列表一侧、详情一侧"分两段换型，编译不过：列表和详情读的是同一份工作项（`store/issue/issue.store.ts` 的 `issuesMap`），它的类型一换，全部使用方要在同一段里改（对抗性评审 I7），所以换型单独成段（P10a，7.2）。
+前端先做数据层（P10a 换型和删除 M6、M7 的工作项列表，P10b 列表一侧，P11 详情一侧），再做页面（P12 列表与看板、P13 筛选、归档与个人主页、P14 详情、P15 协作、草稿与搜索），最后清理（P16）：三段数据层把 M4 的核心、列表、详情类型/service/store及挂载取数迁到新接口；只有issue-search随P12/P14/P15的首个对应生产消费者接通，旧搜索类型最后P15删除（P11 spec D2）。各页面的 Phase 加入故事时挂载路径上已经没有旧接口的请求（3.1、第 12 节）。M3/P8 量到它较小的类型集换型时有 200 个 `tsc` 错误、因此拆成 P8a、P8b（R6 第 9 节）；M4 的 `TIssue` 有 131 个使用方（`git grep -lw TIssue -- web`）、`EIssuesStoreType` 93 个。第二稿按"列表一侧、详情一侧"分两段换型，编译不过：列表和详情读的是同一份工作项（`store/issue/issue.store.ts` 的 `issuesMap`），它的类型一换，全部使用方要在同一段里改（对抗性评审 I7），所以换型单独成段（P10a，7.2）。
 
 ### 7.1 按会话分代（总体设计 7.7；M2 交接第 12 节；M3 交接第 6 节）
 - **service 按代建**：M4 的 service 都是生成的客户端之上的薄封装，构造时接收这一代的 `ApiClient`，由 store 建（M3 的写法）。M2 交接列出的 13 处模块级实例全部消失（R6 第 4 节），各在改它所在的代码的 Phase，`git grep` 的门禁在最后一处所在的 P15：
   - P11（数据层）：`WorkItemVersionService` 2、`WorkspaceDraftService` 1；`WorkspaceService.searchEntity` 4（编辑器的 @提及，改为前端从成员列表过滤，3.12；收集箱的一处是 M7 的组件，同样改）。
-  - P13：`IssueService` 1（已归档的详情的页头，7.4）。
+  - P11另提前完成原P13/P14的 `IssueService` 2处最小数据接线（归档详情页头、issueId跳转），以闭合P11删除旧服务的既定期限；完整页面验收仍P13/P14。详见P11 spec D3。
   - P12：`ProjectService.projectIssuesSearch` 1：添加已有工作项的弹窗（`existing-issues-list-modal.tsx`）随日历的"添加已有"改接 `issue-search`（7.5）。
-  - P14：`IssueService` 1（`issues/[issueId]` 的跳转，7.4）；`ProjectService.projectIssuesSearch` 2：选父工作项（`parent-issues-list-modal.tsx`）随 I8 的页面版本改接 `issue-search`（7.5），收集箱的查重（M7 的组件）随关联的区改接、改到能编译、行为不变。
+  - P14：`ProjectService.projectIssuesSearch` 2：选父工作项（`parent-issues-list-modal.tsx`）随 I8 的页面版本改接 `issue-search`（7.5），收集箱的查重（M7 的组件）随关联的区改接、改到能编译、行为不变。
   - P15：`WorkspaceService.searchWorkspace` 1（命令面板的搜索，3.18）；P15 的完成线是 `git grep` 不再找到 M4 的这 13 处。
 - **`IssueRootStore` 的 `autorun`**（`store/issue/root.store.ts:157`，在 action 之外写 `router` 的副本）：改为 `rootStore.router` 上的计算属性，没有要释放的反应；`store-context.test.ts` 的两条 MobX 严格模式警告随之消失（M3 交接第 6 节，P10b）。
 - **`rootStore` 的三处同步读取**（`issue-layouts/utils.tsx`、`command-palette.store.ts:94`、`store/issue/issue.store.ts:66`）：接上新接口之后仍只同步读、不发请求；要发请求的改经自己的 `RootStore`（M2 交接第 12 节）。
@@ -1504,7 +1506,7 @@ modules/issue/
 - **哪一段删哪一个类型**（对抗性评审 I7）：
   - `TIssue`、`TBaseIssue`、`TIssueMap` 在 **P10a** 换成 `Issue`（读描述的地方是 `IssueDetail`）并删除。列表、详情、浮层、弹窗、收集箱（M7 的组件）都读同一份工作项，所以它们的使用方在同一段里改。做法是"先收窄、后换型"：P10a 先删掉对 `Issue` 没有的字段的读取（3.2 的迭代、模块、附件数、估算、`is_subscribed`、`is_intake`、`description_binary` 等），这时 `TIssue` 还在，每个任务都能编译；最后一个任务把类型和那一份工作项一起换掉，只剩导入、`created_by` → `created_by_id` 一类的改名和可空性，机械的改动、按目录核对。
   - 列表的形状和枚举（`TIssuesResponse`、`TGroupedIssues` 一类，`TIssueOrderByOptions`、`TIssueGroupByOptions`、`TIssuePriorities`）在 **P10b** 随 `base-issues.store.ts` 的重写换掉：它们只有列表一侧在用。
-  - 详情的类型（评论、表情、链接、关联、动态、描述版本、草稿、搜索）在 **P11** 随各自的 store 换掉，`JSONContent`、`comment_json`、`is_bot` 一起删。
+  - 详情的类型（评论、表情、链接、关联、动态、描述版本、草稿）在 **P11** 随各自的 store 换掉，`JSONContent`、`comment_json`、`is_bot` 也在P11删除；搜索类型随P12/P14/P15的真实消费者切换，最后P15清理。
   - **过渡的类型，一个写明、有界的例外**（聚焦复核 M7）：P10a 换型之后、新的 service 到来之前，旧的 `core/services/issue/issue.service.ts`、`issue_archive.service.ts`、`issue_relation.service.ts`、`workspace_draft.service.ts` 和读它们的旧 store 仍调 Plane 的地址，签名改成了 `Issue`、`IssueDetail`（`TIssuesResponse` 里装的也是 `Issue`）。这正是下面对 M6、M7 拒绝的"把 Plane 的响应套上生成的类型"，所以只作为过渡：它能编译，Nerve 没有这些地址，运行时到不了。界限：`issue.service.ts` 的列表方法和 `issue_archive.service.ts` 在 P10b 随列表的 store 换掉；`issue.service.ts` 的其余方法、`issue_relation.service.ts`、`workspace_draft.service.ts` 在 P11 换掉；P11 的完成线核对 `core/services/issue/` 里没有用 `Issue`、`IssueDetail` 去类型 Plane 的响应的方法。界限之外只有M7的services/inbox/inbox-issue.service.ts：create的工作项输入是Partial<IssueDetail>，updateIssue使用上述旧更新请求输入（实体patch是Partial<IssueDetail>，另含既有可选string skip_activity）；update仍处理Partial<TInboxIssue>元数据，响应嵌套核心为Issue|IssueDetail。它们保留原收集箱地址、body封装与string值至M7，old-issue-urls until M7不变；不能借此声称M7已接通。M4旧服务仍按P10b/P11原期限随生成请求合同删除，不因P14页面验收延命；接新接口时按该阶段强类型合同同步输入，P14承担既定真实页面性质验收；最后M7无消费者时删除旧请求类型。
 - **M6、M7 的工作项列表在 P10a 删除，不保留旧的形状**（对抗性评审 I7 的 b）：迭代、模块、项目视图、工作区视图的列表 store（`store/issue/{cycle,module,project-views,workspace}/` 的 `issue.store.ts` 和筛选的 store）都继承 P10b 要重写的 `helpers/base-issues.store.ts`，又由仍调 Plane 接口的 service 喂数据（`cycle.service.ts`、`module.service.ts`、`workspace.service.ts` 的 `TIssuesResponse`）：基类改成解析新的契约之后它们不可能"行为不变"，留着就要一层兼容（项目的规则不许），把 Plane 的响应套上生成的 `Issue` 又违反"类型来自 OpenAPI"。所以 P10a 删除它们、四个布局根（`roots/{cycle,module,project-view,all-issue}-layout-root.tsx`）、这些页面上的列表部分（迭代、模块、项目视图的详情页，`workspace-views/[globalViewId]`，已归档的迭代、模块的根）、`EIssuesStoreType` 的 `CYCLE`、`MODULE`、`PROJECT_VIEW`、`GLOBAL` 和读它们的分支（53 个文件），以及共用的布局组件里只为它们存在的分支（分组头的"添加已有"、日历的 `addIssuesToView`、迭代和模块的空状态、活动迭代和进度侧栏对列表 store 的调用、迭代的转移弹窗）。M3 删最近访问的小组件是同一种做法。代价：M6、M7 之前只保留自身页头/详情及领域加载，没有工作项列表；这些自身接口尚未实现，保留组件不等于页面已完整可用。P10a T2 将仍需要的领域加载从将删除的列表根迁到所属页面/领域组件，不能借丢失加载或冷启动空态掩盖失败。负责人已选 P10A-S1 方案 A：P10a 核工作项列表/独占请求移除并精确记录自身未接通请求，完整页面零失败验收归M6/M7；接通时照 Plane 的源码在新列表引擎上加回并清除逐请求过渡记录（13.2），前端改动清单记录两项可见代价。
 
@@ -1515,7 +1517,7 @@ P10a quick-add 的等待输入不是工作项实体：它没有服务端编号�
 **accept的完整响应与已知描述**：以完整response.issue为底，required事实始终取响应；仅响应不含description_html且本地实际值是string时保留这一字段（含空串），响应Detail的HTML（含空串）优先。不spread整个Partial、不补undefined/default/required值；保留真实retrieve或成功编辑的已知HTML，不扩并发决胜模型。T5先落实，T6仅换生成响应合同。
 
 ### 7.3 services 与 stores（P10a、P10b、P11）
-- **services**（`core/services/issue/` 下按资源的新 service，每个方法一次调用生成的客户端）：`issue`（取、建、改、删、按编号取、归档、恢复）、`issue-list`（项目、个人主页的列表）、`sub-issue`、`issue-relation`、`issue-link`、`issue-comment`、`issue-reaction`（工作项和评论的）、`issue-activity`、`description-version`、`draft`、`issue-search`；项目的显示设置并入 M3 的 `preferences` service。M4 的 51 个旧方法中 7 个没有调用方，直接删除（R6 第 2 节）；旧 `issue.service.ts` 里属于 M6（`addIssueToCycle`、`removeIssueFromCycle`）、M7（关注的三个）、M5（附件）的方法移到各自的旧 service 文件，等各自的 M 替换（它们不在 M4 的挂载路径上，3.1）。旧 `ProjectService`（`core/services/project/project.service.ts`）的三个方法都被替换，文件删除（M3 交接第 5 节）；旧 `WorkspaceService` 的两个搜索方法删除，视图的方法（M7）留着。
+- **services**（`core/services/issue/` 下按资源的新 service，每个方法一次调用生成的客户端；issue-search在P12首个生产消费者同任务创建，不在P11留无读者wrapper）：`issue`（取、建、改、删、按编号取、归档、恢复）、`issue-list`（项目、个人主页的列表）、`sub-issue`、`issue-relation`、`issue-link`、`issue-comment`、`issue-reaction`（工作项和评论的）、`issue-activity`、`description-version`、`draft`、`issue-search`；项目的显示设置并入 M3 的 `preferences` service。M4 的 51 个旧方法中 7 个没有调用方，直接删除（R6 第 2 节）；旧 `issue.service.ts` 里属于 M6（`addIssueToCycle`、`removeIssueFromCycle`）、M7（关注的三个）、M5（附件）的方法移到各自的旧 service 文件，等各自的 M 替换（它们不在 M4 的挂载路径上，3.1）。旧 `ProjectService`（`core/services/project/project.service.ts`）的三个方法都被替换，文件删除（M3 交接第 5 节）；旧 `WorkspaceService` 的两个搜索方法删除，视图的方法（M7）留着。
 
 | store（`core/store/issue/`） | 做法 |
 |---|---|
@@ -1532,13 +1534,13 @@ P10a quick-add 的等待输入不是工作项实体：它没有服务端编号�
 - **改调的使用方**：store 的方法签名和字段一变，调用它们的页面和组件在改这个 store 的 Phase 改到能编译、行为不变；页面的新行为在 P12–P15。
 - **错误经文案表**：工作项的创建、修改读 `error?.error` 的两处（`issue-modal/base.tsx:233,323`）改按 `code` 经 `errorMessageKey`（M3 交接第 6 节）；新码的文案与码在同一个任务里加（第 12 节的约束）。
 - **工作项页面上新建标签**（`issue-detail/label/root.tsx`、`label/select/root.tsx`、`issue-layouts/properties/label-dropdown.tsx`、`select/dropdown.tsx`、`select/base.tsx`）改经 `useLabelChanges().create`（M3 交接第 6 节）。
-- **M3 交接第 6 节的另外三件**：工作区一级显示的工作项不显示没有取过标签的项目的标签（M7 加回）；`fetchParentStats` 在工作项的修改动了项目的字段时加一个不等的重取；工作项的键宽读 `next_work_item_sequence`、`TIssueIdentifierProps.projectIdentifier` 在项目未到时可以是 `undefined`。P11 逐个处理。
+- **M3 交接第6节的另外三件**：工作区完整标签仍由M7加回，P11不假设已有workspace标签API；fetchParentStats已删除，项目字段确有变更时由所属功能确认刷新。负责人2026-10-30已裁定[P11-S1方案A](reviews/P11-project-number-width-decision.md)：编号列宽由当前布局已加载、可见的编号统一计算（含展开子项，分页允许增宽，scope/权限变化重算），不新增next_work_item_sequence或为列宽刷新项目。TIssueIdentifierProps.projectIdentifier继续允许undefined，目录未到不猜编号；细节见P11 spec§2.11。
 
 ### 7.4 页面（P12–P15）
 - **项目的工作项页**（P12、P13）：列表、看板（含泳道）、日历、表格四种布局，分组、子分组、每组"加载更多"、快速添加、快捷操作、浮层；拖动（I6）；表格的列排序；日历的月、周和拖动、"添加已有"（列出没有截止日期的，7.5）；筛选的工具栏、显示设置、显示属性。迭代、模块的分组、列、筛选不出现（3.2）。
-- **`/:workspaceSlug/projects/:projectId/issues/:issueId`**（P14）：去掉 `clientLoader` 和模块级的 `IssueService`（`getIssueMetaFromURL`，`/issues/{id}/meta/`）；页面经会话的 store 取工作项、从项目列表取标识，跳到 `/browse/PROJ-12`。找不到时的按钮跳到项目列表（3.1）。
+- **`/:workspaceSlug/projects/:projectId/issues/:issueId`**（P11最小数据接线，P14完整页面验收）：去掉 `clientLoader` 和模块级的 `IssueService`（`getIssueMetaFromURL`，`/issues/{id}/meta/`）；页面经会话的 store 取工作项、从项目列表取标识，跳到 `/browse/PROJ-12`。找不到时的按钮跳到项目列表（3.1）。
 - **`/:workspaceSlug/browse/:workItem`**（P14）：经 `getIssueByIdentifier`；`useSWR` 改经 `useSessionSWR`；收集箱的跳转删除（3.1）。详情的各区：属性、描述、子工作项、关联、链接、表情、时间线（评论和动态）、描述的历史（只给管理员、成员）、归档和删除。
-- **项目的已归档工作项**（P13）：列表（只有列表布局，Plane 相同）、详情（只读，只能恢复和删除，3.8）；页头的模块级 `IssueService` 删除。
+- **项目的已归档工作项**（P13）：列表（只有列表布局，Plane 相同）、详情（只读，只能恢复和删除，3.8）；页头的模块级 `IssueService` 在P11随旧服务收口提前删除，完整页面仍由P13验收。
 - **草稿页 `/:workspaceSlug/drafts`**（P15）：列表、编辑、删除、"移到项目"。只读工作区的地址的 4 个文件改用 `useRouteWorkspace()` 或路由的 slug（M3 交接第 8 节）：草稿页的 3 个（`drafts/header.tsx`、`workspace-draft/empty-state.tsx`、`workspace-draft/root.tsx`）和命令面板的 `power-k/config/creation/command.ts`（7.9）。
 - **个人主页的三个标签页**（P13）：成员和管理员看到工作项列表（列表、看板，按项目、状态组、优先级、标签分组）；访客看到"没有权限"，筛选的工具栏不在它之上（M3 交接第 6 节，M3/P11 评审 C10）。
 - **命令面板**（P15）：工作项的命令（`power-k/ui/pages/context-based/work-item/commands.ts`，418 行，改写时按命令的种类拆成几个文件，M3 交接第 8 节）；搜索（3.18）；主题命令在应答成功之后才应用，失败时按 `code` 提示（M2 交接第 9 节，经 `inSession()`）。
@@ -2323,25 +2325,28 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **关闭**：M1-P3 交接的筛选显示层（否定的一层删除；终态在 P16 核对）；M2 交接第 12 节的 `autorun`、三处同步读取、列表一侧的 SWR 键；M3 交接第 5 节（例外和 `workItemFilters` 删掉）、第 6 节（`autorun`、`reconciled.ts` 的扩展、S2 的 `REQUESTS`）。
 - **完成线**：`tsc`、knip、vitest 通过；S2 在四个角色下没有旧接口的请求；`store-context.test.ts` 没有严格模式的警告；`/user-properties/` 的例外已删除。
 
-### P11 `web-detail-data`：详情一侧的数据层（14 个任务）
-- **目标**：详情的 services 和 stores 改接新接口；数据层的 7 处模块级实例消失；store 持有的弹窗开关由宿主结束。
+### P11 `web-detail-data`：详情一侧的数据层（15个任务，实施与整审完成、集成待办）
+- **状态**：已形成[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)，**实施与整审修复已完成，集成待办；最终交付CI见提交后回执**；[编号宽度决策记录](reviews/P11-project-number-width-decision.md)。实际证据见[阶段review](reviews/P11-web-detail-data-review.md)与[整分支审核](../../reviews/re-15-M4P11整体审核.md)；先不合并。
+- **目标**：详情services/stores接生成接口，沿IssueRootStore方案A管理权限读取失效；原7处数据层模块实例加前移的2处IssueService消失；宿主结束自己拥有的弹窗。
 - **任务**：
-  1. 子工作项、关联、链接、评论、表情、动态、描述版本、草稿、搜索的 service；按编号取。
-  2. 详情的类型（评论、表情、链接、关联、动态、描述版本、草稿、搜索）换成生成的；`JSONContent`、`comment_json`、`is_bot`、动态的细节类型删除。
-  3. 详情一侧的使用方改到能编译（含 M5、M7 的组件）。
-  4. `issue`、`sub_issues`（状态分布由目录算）、`relation` 的 store。
-  5. `link`、`comment`、`comment_reaction`、`reaction` 的 store。
-  6. `activity` 的 store：读完全部页、从最后一页的游标再读，与评论合并（3.13）。
-  7. 描述版本、草稿的 store（发布先 `PATCH` 再 `publish`）。
-  8. 模块级实例中数据层的 7 处（`WorkItemVersionService` 2、`WorkspaceDraftService` 1、`searchEntity` 4，7.1）；核 P10b T5 已迁移的 `getUserProfileIssues` 及其删除证据；编辑器的 @提及 改为从成员过滤，`entity-search` 删除。
-  9. 按需的取数被拒绝时有提示或交回（M3 交接第 6 节），vitest。
-  10. 弹窗的宿主：`WorkItemLevelModals` 留在原处，在 `projectId ?? workItemIdentifier` 改变时和卸载时关上开关；详情根 store 的开关、`peekIssue` 和三份数据由宿主结束；`isArchiveIssueModalOpen` 删除（7.1）。
-  11. 错误按码经文案表（`issue-modal/base.tsx` 的两处）；工作项页面上新建标签经 `useLabelChanges().create`。
-  12. M3 交接第 6 节的另外三件（工作区一级的标签、`fetchParentStats`、键宽）。
-  13. 详情一侧的关键词规则（`label-create-direct`）；改到的文件的死成员、oxlint；`workspace-draft-issues/base.ts` 的 16 行随类型删除或写明。
-  14. 每个修改一张 vitest 的表；review。
-- **关闭**：M1 收尾交接的 `JSONContent`、`comment_json`；M2 交接第 12 节的 7 处实例、`getUserProfileIssues`、详情一侧的 SWR 键；M3 交接第 5 节的 `is_bot`、第 6 节（按需的取数、错误的文案、标签的新建、宿主、三件）、第 8 节的 `workspace-draft-issues/base.ts` 的 16 行。
-- **完成线**：`git grep` 不再找到数据层的那 7 处模块级实例；`is_bot` 不在 `web/` 里；`core/services/issue/` 里没有用 `Issue`、`IssueDetail` 去类型 Plane 的响应的方法（7.2 的过渡结束）；vitest 覆盖每一处拒绝和宿主的清理。
+  1. 按编号读、子项/关联/链接薄服务及请求测试；实施首提交phase=M4/P11。
+  2. scoped资源、权限令牌/同队列、核心/父项读取；归档header和issueId跳转的最小数据接线。
+  3. 子项/关联store与生成类型、直接消费者一起迁；状态分布由目录算，关系删除用relationId。
+  4. 链接store和消费者；最后删除旧IssueService及对应例外。
+  5. 评论及内嵌表情的原生类型、全页读取和真实消费者；评论表情来自comment.reactions，无独立GET。
+  6. 工作项表情的原生集合、本人删除、幂等确认与真实消费者；按spec规模预留从原T5拆出，其余任务顺延。
+  7. 动态和时间线：最后请求cursor增量重读、ID覆盖/纳秒排序；删is_bot/旧细节DTO。
+  8. 描述版本store与恢复确认；M7旧DTO留所属服务，共享展示解耦，不冒充生成协议。
+  9. 草稿原生payload/分页，PATCH后无body发布，经root创建确认；不为编号列宽刷新项目。
+  10. 四处提及改有效成员目录，删searchEntity与旧JSON字段/独占类型。
+  11. 其余按需拒绝显示/交回，详情SessionSWR与权限key；不等到本Task才修已迁入口。
+  12. WorkItemLevelModals留原宿主；scope变更和卸载结束自有开关/peek/三份数据，保护并存宿主。
+  13. 错误按码、统一标签创建；工作区标签保留M7边界；编号列宽按P11-S1裁定A统一/增宽/scope重置；核已删fetchParentStats和可选projectIdentifier。
+  14. 旧接口/死成员/label-create-direct守卫；完整修改、权限及竞态矩阵。
+  15. 完整F、逐条验收、handoff局部处理结果、整分支deep-review及修复复审；阶段先不合并。
+- **搜索边界**：P11登记生成searchIssues合同；wrapper在P12首个生产消费者接通时创建，旧搜索类型最后随P15删除，现有P12/P14/P15页面分配不变。
+- **关闭范围**：M1旧JSONContent/comment_json，M2§12原7实例/详情SWR（加两前移实例，getUserProfileIssues核P10b已删）；M3§5 is_bot，§6按需拒绝/错误/标签创建/宿主及三件的明确处理，§8旧草稿16行。工作区标签恢复仍M7；编号列宽按负责人A裁定由展示数据统一计算，已用分页/子项/scope/权限回归核验。
+- **完成线**：spec A1–A10实际通过；core/services/issue无生成Issue/Detail标注Plane响应；全部修改/拒绝/宿主有行为证据，原七加两实例零命中；搜索和M5–M7范围准确保留。产品验收与整审已具备证据；准确最终HEAD CI按review后置回执闭合，main集成尚未授权。
 
 ### P12 `web-list-pages`：列表、看板、表格、日历（15 个任务）
 - **目标**：项目的工作项页的四种布局、拖动、快速添加、快捷操作、浮层；"添加已有"的选择器经 `issue-search`。
@@ -2494,7 +2499,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | M2-closeout §9 命令面板的主题命令 | 7.4 | 应答成功、且标签页仍在发出修改时的会话才 `setTheme`，失败时按 `code` 提示；vitest 和 C7（P15） |
 | M2-closeout §10 下拉框 | 7.5 | `DateDropdown` 只有一份打开状态、能用键盘打开；7 个下拉框的列表在按钮旁（P12）；`CustomSelect` 的 3 个调用方、`CustomSearchSelect` 的 4 个富筛选调用方和 `defaultOpen` 在浏览器中核对（C2、C3；P12、P13、P14） |
 | M2-closeout §11 复制到剪贴板 | 7.5 | 6 处改经 `useCopyLink`、`useCopyText`，失败时经 `t()` 提示（P14、P15，与 M3 交接第 8 节的 10 个文件一起）；C8 |
-| M2-closeout §12 stores 按会话分代 | 7.1、7.3 | `IssueRootStore` 的 `autorun` 改为 `rootStore.router` 上的计算属性，没有要释放的反应，"随退役的一代释放"由此满足，`store-context.test.ts` 没有严格模式的警告（P10b）；13 处模块级实例按 7.1 的分配消失（P11 7 处、P12 1 处、P13 1 处、P14 3 处、P15 1 处），`git grep` 的门禁在 P15；三处同步读取不发请求（P10b）；SWR 键带 `loginId`（P10b、P11）；`getUserProfileIssues` 改接/旧方法删除（P10b T5，P11核交接） |
+| M2-closeout §12 stores 按会话分代 | 7.1、7.3 | `IssueRootStore` 的 `autorun` 改为 `rootStore.router` 上的计算属性，没有要释放的反应，"随退役的一代释放"由此满足，`store-context.test.ts` 没有严格模式的警告（P10b）；13 处模块级实例按 7.1 的分配消失（P11 9处含原P13/P14各1处最小数据接线、P12 1处、P14 2处、P15 1处），`git grep` 的门禁在 P15；三处同步读取不发请求（P10b）；SWR 键带 `loginId`（P10b、P11）；`getUserProfileIssues` 改接/旧方法删除（P10b T5，P11核交接） |
 | M2-closeout §13 e2e 的 `clock.ts` | 3.20 | `e2e/fixtures/clock.ts` 按 M0-P6 的写法加入，I16 用它，不等真实的时间；nerve 一侧的 `clock.offset` 只在测试环境（P6） |
 | M3-closeout §1 事件与删除工作区的连带 | 3.6、3.19、3.20 | M3 自己的连带留在删除的事务里，邀请的一步照旧同步（P6 写明）；工作项一侧在决策点 7 选 A 时挂到 `project.deleted`、`workspace.deleted` 上、由任务完成，写明窗口和失败的处理（P9，3.6、3.19）；`registrationRows` 核对 `river_job`（P7）；`jobs_test.go:265`、`runner_test.go:136` 改为期限（P6） |
 | M3-closeout §2 加锁的约定和方案 E | 3.5、决策点 1、11.2、11.11 | 方案的选择和代价写在 3.5、决策点 1（负责人裁定 B：只锁项目行；两个代价和 B′ 写明；S5 的证据；连接池的代价和写闸门，A、B 相同）；锁之前的预检拒绝一切会被拒绝的写、不取锁（P1a，加关联的另一端在 P3）；连接池的代价和写闸门（P1b）；每个新的批量写逐个按约定五核对（3.5，P1a–P9 各自的 review；删除标签摘下 `issue_labels` 不需要预锁，理由在 3.5）；没有新的成员关系增长（3.5），不加与停用的交错测试（P1a）；M4 不物理删除账户（3.21，P9） |
@@ -2570,8 +2575,8 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P8 `drafts-search` | 草稿、搜索与 `link_count`（后端，13粗项/16 Task） | **已完成**：[spec](specs/P8-drafts-search.md)、[实际plan](plans/P8-drafts-search.md)、[review](reviews/P8-drafts-search-review.md)、[整体审核](../../reviews/re-07-M4P8整体审核.md)。T1–T16实施、首次整审及文档独评闭环，最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，经授权 `--no-ff` 合并为 `6b9d08d4821f1423c7bb9795557727c206b7880f`；准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987) attempt1三任务全绿。1,598文件、37,552,117字节及1空目录归档逐hash核验后，本地/远端分支和worktree已清理，清理后再核哈希；完整回执见review§9。M4总体及后续交接仍open |
 | P9 `purge` | 物理清理、描述版本保留与issue侧删除任务（13粗项/16 Task） | **已完成**：[spec](specs/P9-purge.md)、[plan](plans/P9-purge.md)、[review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)、[整体审核](../../reviews/re-09-M4P9整体审核.md)。最终 `369b39a09d035031dd15a1ccf18cb2b49ea33f4e` 经授权 `--no-ff` 合并 main `4599a9cfc5be90b2c242977f194157778a5f6ec9`，[main CI 40642368845](https://github.com/open-nerve/NerveProject/actions/runs/40642368845) 三任务全绿；3,317文件/136,629,586字节/1空目录归档核hash后，分支与worktree已清理，清理后再核。M4总体仍进行中 |
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
-| P10b `web-list-data` | 列表一侧的数据层（14） | **实施与终审完成、集成待办**；产品候选2e1264aa的完整F及准确CI40896656404 attempt1三任务通过，原5I/3M及N1/N2修复复审闭环。纯文稿HEAD CI由主控另核，见[阶段review](reviews/P10b-web-list-data-review.md)。未合并、不启动P11 |
-| P11 `web-detail-data` | 详情一侧的数据层（14） | 未开始 |
+| P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
+| P11 `web-detail-data` | 详情一侧的数据层（15） | **实施与整审完成、集成待办**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review](reviews/P11-web-detail-data-review.md)。[P11-S1](reviews/P11-project-number-width-decision.md)按可见展示数据计算列宽；九项终审问题已修复，完整本地F通过，准确交付HEAD CI后置核验；暂不合并 |
 | P12 `web-list-pages` | 列表、看板、表格、日历（15） | 未开始 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |

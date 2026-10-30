@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useContext } from "react";
+import { createContext, useContext } from "react";
 // mobx store
 import { StoreContext } from "@/lib/store-context";
 // types
@@ -15,3 +15,13 @@ export const useIssueDetail = (): IIssueDetail => {
   if (context === undefined) throw new Error("useIssueDetail must be used within StoreProvider");
   return context.issue.issueDetail;
 };
+
+/** Each actual detail/peek host supplies its own UI state; there is no global fallback. */
+export const IssueDetailModalContext = createContext<
+  import("@/store/issue/issue-details/modals").IssueDetailModals | undefined
+>(undefined);
+export function useIssueDetailModals() {
+  const modals = useContext(IssueDetailModalContext);
+  if (!modals) throw new Error("Issue detail modals require their detail or peek host");
+  return modals;
+}

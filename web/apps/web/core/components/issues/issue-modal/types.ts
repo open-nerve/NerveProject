@@ -5,7 +5,6 @@ import type { IssueDetail } from "@nerve/api-client";
 /** Actual editable fields; resource relations and clone identity are separate context. */
 export type IssueFormValues = Pick<
   IssueDetail,
-  | "project_id"
   | "name"
   | "description_html"
   | "state_id"
@@ -15,7 +14,7 @@ export type IssueFormValues = Pick<
   | "label_ids"
   | "start_date"
   | "target_date"
->;
+> & { project_id: string | null };
 export type IssueFormData = Partial<IssueFormValues> & { id?: string };
 export const ISSUE_FORM_FIELDS = [
   "project_id",

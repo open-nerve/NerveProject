@@ -35,6 +35,7 @@ const update: IssueUpdate = {
   sort_order: 0,
 };
 const changes = [
+  { method: "getByIdentifier", verb: "GET", path: "/api/v0/workspaces/ws/issues/Web-12", body: undefined },
   { method: "get", verb: "GET", path: "/api/v0/issues/one", body: undefined },
   { method: "create", verb: "POST", path: "/api/v0/projects/A/issues", body: create },
   { method: "update", verb: "PATCH", path: "/api/v0/issues/one", body: update },
@@ -44,10 +45,28 @@ const changes = [
 ] as const;
 
 async function invoke(service: IssueApiService, method: (typeof changes)[number]["method"]) {
+  if (method === "getByIdentifier") return service.getByIdentifier("ws", "Web-12");
   if (method === "create") return service.create("A", create);
   if (method === "update") return service.update("one", update);
   return service[method]("one");
 }
+
+it.each(["Web-12", "\u7814\u53d1-x-0012", "a/b?-12"])("passesTheWholeIdentifierToTheServer: %s", async (identifier) => {
+  const nerve = new FakeNerve();
+  const service = new IssueApiService(nerve.client());
+  const { call, result } = await requestedIssue(nerve, () => service.getByIdentifier("my-ws", identifier), [
+    "GET",
+    `/api/v0/workspaces/my-ws/issues/${encodeURIComponent(identifier)}`,
+  ]);
+  expect(call.queryEntries).toEqual([]);
+  expect(call.body).toBeUndefined();
+  const answer = issueDetailOf("server-parsed", "returned-project");
+  call.answer(json(200, answer));
+  await until(() => result.settled, "identifier lookup");
+  expect(result.value).toEqual(answer);
+  expect(result.error).toBeUndefined();
+  expect(nerve.calls).toHaveLength(1);
+});
 
 it("accepts generated closed create/update bodies, never partial entities", () => {
   expectTypeOf<Parameters<IssueApiService["create"]>[1]>().toEqualTypeOf<IssueCreate>();
@@ -87,6 +106,23 @@ it("sends skip_activity as a boolean only alongside the explicit HTML update", a
   call.answer(json(200, { ...issueDetailOf("one"), description_html: "" }));
   await until(() => result.settled, "HTML update");
   expect(result.value?.description_html).toBe("");
+  expect(nerve.calls).toHaveLength(1);
+});
+
+it.each([422, 403, 404, 409])("doesNotTransformRefusals: identifier lookup / %s", async (status) => {
+  const nerve = new FakeNerve();
+  const service = new IssueApiService(nerve.client());
+  const { call, result } = await requestedIssue(nerve, () => service.getByIdentifier("ws", "Web-12"), [
+    "GET",
+    "/api/v0/workspaces/ws/issues/Web-12",
+  ]);
+  const failure = { status, code: "original.code", title: "Original", detail: "Original detail" };
+  call.answer(json(status, failure));
+  await until(() => result.settled, "refused identifier lookup");
+  expect(result.error).toBeInstanceOf(ApiError);
+  expect((result.error as ApiError).problem).toEqual(failure);
+  expect((result.error as ApiError).status).toBe(status);
+  expect(result.value).toBeUndefined();
   expect(nerve.calls).toHaveLength(1);
 });
 

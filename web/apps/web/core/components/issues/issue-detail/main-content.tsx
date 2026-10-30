@@ -5,24 +5,22 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
-import type { TNameDescriptionLoader } from "@nerve/types";
+import { useIssueSaveStatus } from "@/components/issues/use-issue-save-status";
 import { EFileAssetType } from "@nerve/types";
 // components
-import { DescriptionVersionsRoot } from "@/components/core/description-versions";
-import { DescriptionInput } from "@/components/editor/rich-text/description-input";
+import { IssueDescriptionVersions } from "@/components/issues/issue-detail/description-versions";
+import { DescriptionInput, type DescriptionInputHandle } from "@/components/editor/rich-text/description-input";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useMember } from "@/hooks/store/use-member";
 import { useUser } from "@/hooks/store/user";
 import useReloadConfirmations from "@/hooks/use-reload-confirmation";
 import useSize from "@/hooks/use-window-size";
 // services
-import { WorkItemVersionService } from "@/services/issue";
 // local imports
 import { IssueDetailWidgets } from "../issue-detail-widgets";
 import { NameDescriptionUpdateStatus } from "../issue-update-status";
@@ -33,7 +31,6 @@ import { IssueParentDetail } from "./parent";
 import { IssueReaction } from "./reactions";
 import type { TIssueOperations } from "./root";
 // services init
-const workItemVersionService = new WorkItemVersionService();
 
 type Props = {
   workspaceSlug: string;
@@ -48,32 +45,24 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
   const { workspaceSlug, projectId, issueId, issueOperations, isEditable, isArchived } = props;
   // refs
   const editorRef = useRef<EditorRefApi>(null);
+  const descriptionInputRef = useRef<DescriptionInputHandle>(null);
   // states
-  const [isSubmitting, setIsSubmitting] = useState<TNameDescriptionLoader>("saved");
+  const { status: isSubmitting, setTitleStatus, setDescriptionStatus } = useIssueSaveStatus();
   // hooks
   const windowSize = useSize();
   const { data: currentUser } = useUser();
-  const { getUserDetails } = useMember();
   const {
     issue: { getIssueDetailById },
-    peekIssue,
   } = useIssueDetail();
-  const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting");
+  const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting" || isSubmitting === "failed");
   // derived values
   const issue = issueId ? getIssueDetailById(issueId) : undefined;
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    if (isSubmitting === "submitted") {
-      setShowAlert(false);
-      timer = setTimeout(() => setIsSubmitting("saved"), 2000);
-    } else if (isSubmitting === "submitting") setShowAlert(true);
-    return () => clearTimeout(timer);
-  }, [isSubmitting, setShowAlert, setIsSubmitting]);
+    setShowAlert(isSubmitting === "submitting" || isSubmitting === "failed");
+  }, [isSubmitting, setShowAlert]);
 
   if (!issue || !issue.project_id) return <></>;
-
-  const isPeekModeActive = Boolean(peekIssue);
 
   return (
     <>
@@ -99,14 +88,26 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
           workspaceSlug={workspaceSlug}
           projectId={issue.project_id}
           issueId={issue.id}
-          isSubmitting={isSubmitting}
-          setIsSubmitting={(value) => setIsSubmitting(value)}
+          setIsSubmitting={setTitleStatus}
           issueOperations={issueOperations}
           disabled={isArchived || !isEditable}
           value={issue.name}
         />
 
         <DescriptionInput
+          autosaveRef={descriptionInputRef}
+          prepareSubmit={
+            issueOperations.prepareUpdate
+              ? () => {
+                  const update = issueOperations.prepareUpdate!();
+                  return (value, isMigrationUpdate) =>
+                    update(workspaceSlug, projectId, issueId, {
+                      description_html: value.description_html,
+                      ...(isMigrationUpdate ? { skip_activity: true } : {}),
+                    });
+                }
+              : undefined
+          }
           issueSequenceId={issue.sequence_id}
           containerClassName="-ml-6 border-none p-0! pl-6!"
           disabled={isArchived || !isEditable}
@@ -123,7 +124,7 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
             });
           }}
           projectId={issue.project_id}
-          setIsSubmitting={(value) => setIsSubmitting(value)}
+          setIsSubmitting={setDescriptionStatus}
           workspaceSlug={workspaceSlug}
         />
 
@@ -138,26 +139,13 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
               disabled={isArchived}
             />
           )}
-          {isEditable && (
-            <DescriptionVersionsRoot
-              className="flex-shrink-0"
-              entityInformation={{
-                createdAt: issue.created_at ? new Date(issue.created_at) : new Date(),
-                createdByDisplayName: getUserDetails(issue.created_by_id ?? "")?.display_name ?? "",
-                id: issueId,
-                isRestoreDisabled: !isEditable || isArchived,
-              }}
-              fetchHandlers={{
-                listDescriptionVersions: (issueId) =>
-                  workItemVersionService.listDescriptionVersions(workspaceSlug, projectId, issueId),
-                retrieveDescriptionVersion: (issueId, versionId) =>
-                  workItemVersionService.retrieveDescriptionVersion(workspaceSlug, projectId, issueId, versionId),
-              }}
-              handleRestore={(descriptionHTML) => editorRef.current?.setEditorValue(descriptionHTML, true)}
-              projectId={projectId}
-              workspaceSlug={workspaceSlug}
-            />
-          )}
+          <IssueDescriptionVersions
+            workspaceSlug={workspaceSlug}
+            projectId={issue.project_id}
+            issueId={issueId}
+            restoreDescription={(confirm) => descriptionInputRef.current!.restore(confirm)}
+            isRestoreDisabled={!isEditable || isArchived}
+          />
         </div>
       </div>
 
@@ -166,7 +154,6 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
         projectId={projectId}
         issueId={issueId}
         disabled={!isEditable || isArchived}
-        renderWidgetModals={!isPeekModeActive}
       />
 
       {windowSize[0] < 768 && (

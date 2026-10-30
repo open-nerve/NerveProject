@@ -4,12 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue } from "@nerve/api-client";
-
 import { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
-import useSWR from "swr";
+import { DetailResourceError } from "@/components/issues/issue-detail-widgets/resource-error";
+import { useSessionSWR } from "@/lib/use-session-swr";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 
@@ -32,7 +31,7 @@ import { WorkItemDetailRoot } from "@/components/browse/workItem-detail";
 
 import type { Route } from "./+types/page";
 
-export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: Route.ComponentProps) {
+export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: Pick<Route.ComponentProps, "params">) {
   // router
   const navigate = useNavigate();
   const { workspaceSlug, workItem } = params;
@@ -42,23 +41,23 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
   const { t } = useTranslation();
   const {
     fetchIssueWithIdentifier,
+    rootIssueStore,
     issue: { getIssueById },
   } = useIssueDetail();
-  const { getProjectById, getProjectByIdentifier } = useProject();
+  const { getProjectById } = useProject();
   const { toggleIssueDetailSidebar, issueDetailSidebarCollapsed } = useAppTheme();
 
-  const [projectIdentifier, sequence_id] = workItem.split("-");
-
-  // fetching issue details
-  const { data, isLoading, error } = useSWR<Issue | undefined, Error>(
-    `ISSUE_DETAIL_${workspaceSlug}_${projectIdentifier}_${sequence_id}`,
-    () => fetchIssueWithIdentifier(workspaceSlug, projectIdentifier, sequence_id)
+  const workspaceID = rootIssueStore.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id;
+  const identity = rootIssueStore.permissionReads.identity(workspaceID, []);
+  const { data, isLoading, error, mutate } = useSessionSWR(
+    ["issue-by-identifier", workspaceSlug, workItem, identity],
+    (slug, identifier) => fetchIssueWithIdentifier(slug, identifier),
+    { dedupingInterval: 0 }
   );
 
-  // derived values
-  const projectDetails = getProjectByIdentifier(projectIdentifier);
+  // The identifier is parsed only by the server; the proven response chooses the project.
   const issueId = data?.id;
-  const projectId = data?.project_id ?? projectDetails?.id ?? "";
+  const projectId = data?.project_id ?? "";
   const issue = getIssueById(issueId || "") || undefined;
   const project = (issue?.project_id && getProjectById(issue?.project_id)) || undefined;
   const issueLoader = !issue || isLoading;
@@ -80,15 +79,26 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
 
   if ((error || data === undefined) && !isLoading) {
     return (
-      <EmptyState
-        image={resolvedTheme === "dark" ? emptyIssueDark : emptyIssueLight}
-        title={t("issue.empty_state.issue_detail.title")}
-        description={t("issue.empty_state.issue_detail.description")}
-        primaryButton={{
-          text: t("issue.empty_state.issue_detail.primary_button.text"),
-          onClick: () => navigate(`/${workspaceSlug}/workspace-views/all-issues`),
-        }}
-      />
+      <>
+        {error && (
+          <DetailResourceError
+            error={error}
+            retry={() => mutate()}
+            workspaceSlug={workspaceSlug}
+            projectId={projectId || undefined}
+            issueId={workItem}
+          />
+        )}
+        <EmptyState
+          image={resolvedTheme === "dark" ? emptyIssueDark : emptyIssueLight}
+          title={error ? t("common.error.label") : t("issue.empty_state.issue_detail.title")}
+          description={error ? undefined : t("issue.empty_state.issue_detail.description")}
+          primaryButton={{
+            text: t("issue.empty_state.issue_detail.primary_button.text"),
+            onClick: () => navigate(`/${workspaceSlug}/projects`),
+          }}
+        />
+      </>
     );
   }
 

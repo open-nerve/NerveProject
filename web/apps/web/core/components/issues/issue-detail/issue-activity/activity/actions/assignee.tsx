@@ -12,28 +12,37 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
 import { IssueActivityBlockComponent, IssueLink } from "./";
 
-type TIssueAssigneeActivity = { activityId: string; showIssue?: boolean; ends: "top" | "bottom" | undefined };
+type TIssueAssigneeActivity = {
+  activityId: string;
+  issueId: string;
+  workspaceSlug: string;
+  showIssue?: boolean;
+  ends: "top" | "bottom" | undefined;
+};
 
 export const IssueAssigneeActivity = observer(function IssueAssigneeActivity(props: TIssueAssigneeActivity) {
-  const { activityId, ends, showIssue = true } = props;
+  const { activityId, issueId, workspaceSlug, ends, showIssue = true } = props;
   // hooks
   const {
     activity: { getActivityById },
   } = useIssueDetail();
 
-  const activity = getActivityById(activityId);
+  const activity = getActivityById(issueId, activityId);
 
   if (!activity) return <></>;
+  const assigneeId = activity.new_identifier ?? activity.old_identifier;
   return (
     <IssueActivityBlockComponent
       icon={<MembersOutline className="h-3.5 w-3.5 flex-shrink-0 text-secondary" />}
       activityId={activityId}
+      issueId={issueId}
+      workspaceSlug={workspaceSlug}
       ends={ends}
     >
       <>
         {activity.old_value === "" ? `added a new assignee ` : `removed the assignee `}
         <a
-          href={`/${activity.workspace_detail?.slug}/profile/${activity.new_identifier ?? activity.old_identifier}`}
+          href={assigneeId ? `/${workspaceSlug}/profile/${assigneeId}` : undefined}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center font-medium text-primary capitalize hover:underline"
@@ -41,7 +50,7 @@ export const IssueAssigneeActivity = observer(function IssueAssigneeActivity(pro
           {activity.new_value && activity.new_value !== "" ? activity.new_value : activity.old_value}
         </a>
         {showIssue && (activity.old_value === "" ? ` to ` : ` from `)}
-        {showIssue && <IssueLink activityId={activityId} />}.
+        {showIssue && <IssueLink activityId={activityId} issueId={issueId} workspaceSlug={workspaceSlug} />}.
       </>
     </IssueActivityBlockComponent>
   );

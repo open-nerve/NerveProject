@@ -25,9 +25,17 @@ export const IssueIdentifier = observer(function IssueIdentifier(props: TIssueId
   const issue = isUsingStoreData ? getIssueById(props.issueId) : null;
   const projectIdentifier = isUsingStoreData ? getProjectIdentifierById(projectId) : props.projectIdentifier;
   const issueSequenceId = isUsingStoreData ? issue?.sequence_id : props.issueSequenceId;
+  const sequence = typeof issueSequenceId === "string" ? Number(issueSequenceId) : issueSequenceId;
   const shouldRenderIssueID = displayProperties ? displayProperties.key : true;
 
-  if (!shouldRenderIssueID) return null;
+  if (
+    !shouldRenderIssueID ||
+    !projectIdentifier ||
+    sequence == null ||
+    !Number.isSafeInteger(sequence) ||
+    sequence <= 0
+  )
+    return null;
 
   return (
     <div className="flex shrink-0 items-center space-x-2">

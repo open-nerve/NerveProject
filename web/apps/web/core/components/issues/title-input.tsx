@@ -4,7 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useId, useState } from "react";
+import { AutosaveError, useConfirmedAutosave } from "@/components/editor/use-confirmed-autosave";
 import { observer } from "mobx-react";
 import { Field } from "@makeplane/propel/components/field";
 import { TextArea } from "@makeplane/propel/components/text-area";
@@ -12,132 +13,49 @@ import { useTranslation } from "@nerve/i18n";
 import type { TNameDescriptionLoader } from "@nerve/types";
 // types
 import { cn } from "@nerve/utils";
-import useDebounce from "@/hooks/use-debounce";
 import type { TIssueOperations } from "./issue-detail";
 
 export type IssueTitleInputProps = {
   disabled?: boolean;
   value: string | undefined | null;
   workspaceSlug: string;
-  isSubmitting: TNameDescriptionLoader;
   setIsSubmitting: (value: TNameDescriptionLoader) => void;
-  issueOperations: Pick<TIssueOperations<{ name: string }>, "update">;
+  issueOperations: Pick<TIssueOperations<{ name: string }>, "update" | "prepareUpdate">;
   projectId: string;
   issueId: string;
   containerClassName?: string;
 };
 
-export const IssueTitleInput = observer(function IssueTitleInput(props: IssueTitleInputProps) {
-  const {
-    disabled,
-    value,
-    workspaceSlug,
-    isSubmitting,
-    setIsSubmitting,
-    issueId,
-    issueOperations,
-    projectId,
-    containerClassName,
-  } = props;
+export function IssueTitleInput(props: IssueTitleInputProps) {
+  return (
+    <IssueTitleInputContent key={JSON.stringify([props.workspaceSlug, props.projectId, props.issueId])} {...props} />
+  );
+}
+const sameTitle = (left: string, right: string) => left === right;
+const IssueTitleInputContent = observer(function IssueTitleInputContent(props: IssueTitleInputProps) {
+  const { disabled, value, workspaceSlug, setIsSubmitting, issueId, issueOperations, projectId, containerClassName } =
+    props;
   const { t } = useTranslation();
-  // states
-  const [title, setTitle] = useState(value || "");
   const [isLengthVisible, setIsLengthVisible] = useState(false);
-  // ref to track if there are unsaved changes
-  const hasUnsavedChanges = useRef(false);
-  // ref to store current title value for cleanup function
-  const currentTitleRef = useRef(title);
-  // hooks
-  const debouncedValue = useDebounce(title, 1500);
-
-  useEffect(() => {
-    if (value) {
-      setTitle(value);
-      currentTitleRef.current = value;
-      // Reset unsaved changes flag when value is set from props
-      hasUnsavedChanges.current = false;
-    }
-  }, [value]);
-
-  useEffect(() => {
-    const textarea = document.querySelector("#title-input");
-    if (debouncedValue && debouncedValue !== value) {
-      if (debouncedValue.trim().length > 0) {
-        issueOperations.update(workspaceSlug, projectId, issueId, { name: debouncedValue }).finally(() => {
-          setIsSubmitting("saved");
-          hasUnsavedChanges.current = false;
-          if (textarea && !textarea.matches(":focus")) {
-            const trimmedTitle = debouncedValue.trim();
-            if (trimmedTitle !== title) setTitle(trimmedTitle);
-          }
-        });
-      } else {
-        setTitle(value || "");
-        setIsSubmitting("saved");
-        hasUnsavedChanges.current = false;
-      }
-    }
-    // DO NOT Add more dependencies here. It will cause multiple requests to be sent.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedValue]);
-
-  useEffect(() => {
-    const handleBlur = () => {
-      const trimmedTitle = title.trim();
-      if (trimmedTitle !== title && isSubmitting !== "submitting") {
-        if (trimmedTitle.length > 0) {
-          setTitle(trimmedTitle);
-          setIsSubmitting("submitting");
-          hasUnsavedChanges.current = true;
-        } else {
-          setTitle(value || "");
-          setIsSubmitting("saved");
-          hasUnsavedChanges.current = false;
+  const inputId = useId();
+  const {
+    value: title,
+    change,
+    failure,
+    retry,
+  } = useConfirmedAutosave({
+    initial: value ?? "",
+    same: sameTitle,
+    save: (name) => issueOperations.update(workspaceSlug, projectId, issueId, { name }),
+    prepareSave: issueOperations.prepareUpdate
+      ? () => {
+          const update = issueOperations.prepareUpdate!();
+          return (name) => update(workspaceSlug, projectId, issueId, { name });
         }
-      }
-    };
-
-    const textarea = document.querySelector("#title-input"); // You might need to change this selector according to your TextArea component
-    if (textarea) {
-      textarea.addEventListener("blur", handleBlur);
-    }
-
-    return () => {
-      if (textarea) {
-        textarea.removeEventListener("blur", handleBlur);
-      }
-    };
-  }, [title, isSubmitting, setIsSubmitting]);
-
-  // Save on unmount if there are unsaved changes
-  useEffect(
-    () => () => {
-      if (hasUnsavedChanges.current && currentTitleRef.current.trim().length > 0) {
-        issueOperations
-          .update(workspaceSlug, projectId, issueId, { name: currentTitleRef.current.trim() })
-          .catch((error) => {
-            console.error("Failed to save title on unmount:", error);
-          })
-          .finally(() => {
-            setIsSubmitting("saved");
-            hasUnsavedChanges.current = false;
-          });
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
-
-  const handleTitleChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-      setIsSubmitting("submitting");
-      const titleFromEvent = e.target.value;
-      setTitle(titleFromEvent);
-      currentTitleRef.current = titleFromEvent;
-      hasUnsavedChanges.current = true;
-    },
-    [setIsSubmitting]
-  );
+      : undefined,
+    status: setIsSubmitting,
+    disabled,
+  });
 
   if (disabled) return <div className="text-20 font-medium whitespace-pre-line">{title}</div>;
 
@@ -151,14 +69,18 @@ export const IssueTitleInput = observer(function IssueTitleInput(props: IssueTit
               surface="inline"
               autoResize
               rows={1}
-              id="title-input"
+              id={inputId}
               disabled={disabled}
               value={title}
-              onChange={handleTitleChange}
+              onChange={(event) => change(event.target.value)}
               maxLength={255}
               placeholder={t("issue.title.label")}
               onFocus={() => setIsLengthVisible(true)}
-              onBlur={() => setIsLengthVisible(false)}
+              onBlur={() => {
+                setIsLengthVisible(false);
+                const trimmed = title.trim();
+                if (trimmed && trimmed !== title) change(trimmed);
+              }}
             />
           </div>
         </Field>
@@ -176,6 +98,7 @@ export const IssueTitleInput = observer(function IssueTitleInput(props: IssueTit
           /255
         </div>
       </div>
+      <AutosaveError failure={failure} retry={retry} />
       {title?.length === 0 && (
         <span className="text-13 font-medium text-danger-primary">{t("form.title.required")}</span>
       )}

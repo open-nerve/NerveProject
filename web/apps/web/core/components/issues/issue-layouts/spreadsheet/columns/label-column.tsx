@@ -11,7 +11,6 @@ import { observer } from "mobx-react";
 // types
 
 // hooks
-import { useLabel } from "@/hooks/store/use-label";
 // components
 import { IssuePropertyLabels } from "../../properties";
 
@@ -25,20 +24,12 @@ type Props = {
 export const SpreadsheetLabelColumn = observer(function SpreadsheetLabelColumn(props: Props) {
   const { issue, onChange, disabled, onClose } = props;
   // hooks
-  const { labelMap } = useLabel();
-
-  const defaultLabelOptions =
-    issue?.label_ids?.flatMap((id) => {
-      const label = labelMap[id];
-      return label ? [label] : [];
-    }) || [];
 
   return (
     <div className="h-11 w-full border-b-[0.5px] border-subtle">
       <IssuePropertyLabels
         projectId={issue.project_id ?? null}
         value={issue.label_ids || []}
-        defaultOptions={defaultLabelOptions}
         onChange={(data) => onChange(issue, { label_ids: data }, { changed_property: "labels", change_details: data })}
         className="h-full w-full"
         buttonClassName="px-page-x w-full h-full rounded-none"

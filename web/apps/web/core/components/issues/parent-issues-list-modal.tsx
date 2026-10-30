@@ -4,7 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { useDetailScope } from "./issue-detail-widgets/use-detail-scope";
+import { useRefusalMessage } from "@/hooks/use-refusal-toast";
 import { useParams } from "react-router";
 // icons
 import { RocketOutline, SearchOutline } from "@makeplane/propel/icons";
@@ -29,8 +31,8 @@ import { ProjectService } from "@/services/project";
 type Props = {
   isOpen: boolean;
   handleClose: () => void;
-  value?: any;
-  onChange: (issue: ISearchIssueResponse) => void;
+  value?: ISearchIssueResponse;
+  onChange: (issue: ISearchIssueResponse) => void | Promise<void>;
   projectId: string | undefined;
   issueId?: string;
 };
@@ -38,7 +40,13 @@ type Props = {
 // services
 const projectService = new ProjectService();
 
-export function ParentIssuesListModal({ isOpen, handleClose: onClose, value, onChange, projectId, issueId }: Props) {
+export function ParentIssuesListModal(props: Props) {
+  const { workspaceSlug } = useParams();
+  return props.isOpen ? (
+    <ParentIssuesListContent key={JSON.stringify([workspaceSlug, props.projectId, props.issueId])} {...props} />
+  ) : null;
+}
+function ParentIssuesListContent({ isOpen, handleClose: onClose, value, onChange, projectId, issueId }: Props) {
   // i18n
   const { t } = useTranslation();
 
@@ -50,6 +58,12 @@ export function ParentIssuesListModal({ isOpen, handleClose: onClose, value, onC
   const debouncedSearchTerm: string = useDebounce(searchTerm, 500);
 
   const { workspaceSlug } = useParams();
+  const capture = useDetailScope(workspaceSlug ?? "", projectId, issueId ?? "new", true);
+  const message = useRefusalMessage();
+  const [searchError, setSearchError] = useState<{ error: unknown }>();
+  const [attempt, setAttempt] = useState(0);
+  const pending = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const { baseTabIndex } = getTabIndex(undefined, isMobile);
 
@@ -61,6 +75,9 @@ export function ParentIssuesListModal({ isOpen, handleClose: onClose, value, onC
   useEffect(() => {
     if (!isOpen || !workspaceSlug || !projectId) return;
 
+    const current = capture();
+    let active = true;
+    setSearchError(undefined);
     setIsSearching(true);
     setIsLoading(true);
 
@@ -71,20 +88,43 @@ export function ParentIssuesListModal({ isOpen, handleClose: onClose, value, onC
         issue_id: issueId,
         workspace_search: false,
       })
-      .then((res) => setIssues(res))
+      .then((res) => {
+        if (active && current()) setIssues(res);
+        return undefined;
+      })
+      .catch((error) => {
+        if (active && current()) setSearchError({ error });
+      })
       .finally(() => {
+        if (!active || !current()) return;
         setIsSearching(false);
         setIsLoading(false);
       });
-  }, [debouncedSearchTerm, isOpen, issueId, projectId, workspaceSlug]);
+    return () => {
+      active = false;
+    };
+  }, [debouncedSearchTerm, isOpen, issueId, projectId, workspaceSlug, capture, attempt]);
 
   return (
     <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
       <Combobox
         value={value}
-        onChange={(val) => {
-          onChange(val);
-          handleClose();
+        disabled={submitting}
+        onChange={async (selected: ISearchIssueResponse | null) => {
+          if (!selected || pending.current) return;
+          const current = capture();
+          if (!current()) return;
+          pending.current = true;
+          setSubmitting(true);
+          try {
+            await onChange(selected);
+            if (current()) handleClose();
+          } catch {
+            // The command owns refusal reporting; retain the query for a deliberate retry.
+          } finally {
+            pending.current = false;
+            if (current()) setSubmitting(false);
+          }
         }}
       >
         <div className="relative m-1">
@@ -112,7 +152,14 @@ export function ParentIssuesListModal({ isOpen, handleClose: onClose, value, onC
             </h5>
           )}
 
-          {isSearching || isLoading ? (
+          {searchError ? (
+            <div role="alert">
+              {message(searchError.error)}{" "}
+              <button type="button" onClick={() => setAttempt((previous) => previous + 1)}>
+                {t("common.retry")}
+              </button>
+            </div>
+          ) : isSearching || isLoading ? (
             <Loader className="space-y-3 p-3">
               <Loader.Item height="40px" />
               <Loader.Item height="40px" />

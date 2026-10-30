@@ -11,22 +11,30 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
 import { IssueActivityBlockComponent, IssueLink } from "./";
 
-type TIssueLinkActivity = { activityId: string; showIssue?: boolean; ends: "top" | "bottom" | undefined };
+type TIssueLinkActivity = {
+  activityId: string;
+  issueId: string;
+  workspaceSlug: string;
+  showIssue?: boolean;
+  ends: "top" | "bottom" | undefined;
+};
 
 export const IssueLinkActivity = observer(function IssueLinkActivity(props: TIssueLinkActivity) {
-  const { activityId, showIssue = false, ends } = props;
+  const { activityId, issueId, workspaceSlug, showIssue = false, ends } = props;
   // hooks
   const {
     activity: { getActivityById },
   } = useIssueDetail();
 
-  const activity = getActivityById(activityId);
+  const activity = getActivityById(issueId, activityId);
 
   if (!activity) return <></>;
   return (
     <IssueActivityBlockComponent
       icon={<ChatOutline width={14} height={14} className="text-secondary" aria-hidden="true" />}
       activityId={activityId}
+      issueId={issueId}
+      workspaceSlug={workspaceSlug}
       ends={ends}
     >
       <>
@@ -34,7 +42,7 @@ export const IssueLinkActivity = observer(function IssueLinkActivity(props: TIss
           <>
             <span>added </span>
             <a
-              href={`${activity.new_value}`}
+              href={activity.new_value ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
@@ -46,7 +54,7 @@ export const IssueLinkActivity = observer(function IssueLinkActivity(props: TIss
           <>
             <span>updated the </span>
             <a
-              href={`${activity.old_value}`}
+              href={activity.old_value ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
@@ -58,7 +66,7 @@ export const IssueLinkActivity = observer(function IssueLinkActivity(props: TIss
           <>
             <span>removed this </span>
             <a
-              href={`${activity.old_value}`}
+              href={activity.old_value ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
@@ -68,7 +76,7 @@ export const IssueLinkActivity = observer(function IssueLinkActivity(props: TIss
           </>
         )}
         {showIssue && (activity.verb === "created" ? ` to ` : ` from `)}
-        {showIssue && <IssueLink activityId={activityId} />}.
+        {showIssue && <IssueLink activityId={activityId} issueId={issueId} workspaceSlug={workspaceSlug} />}.
       </>
     </IssueActivityBlockComponent>
   );

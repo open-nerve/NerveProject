@@ -6,22 +6,26 @@
 
 import { observer } from "mobx-react";
 import { ArchiveOutline, RefreshOutline } from "@makeplane/propel/icons";
-import { SITE_NAME } from "@nerve/constants";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
 import { IssueActivityBlockComponent } from "./";
 
-type TIssueArchivedAtActivity = { activityId: string; ends: "top" | "bottom" | undefined };
+type TIssueArchivedAtActivity = {
+  activityId: string;
+  issueId: string;
+  workspaceSlug: string;
+  ends: "top" | "bottom" | undefined;
+};
 
 export const IssueArchivedAtActivity = observer(function IssueArchivedAtActivity(props: TIssueArchivedAtActivity) {
-  const { activityId, ends } = props;
+  const { activityId, issueId, workspaceSlug, ends } = props;
   // hooks
   const {
     activity: { getActivityById },
   } = useIssueDetail();
 
-  const activity = getActivityById(activityId);
+  const activity = getActivityById(issueId, activityId);
 
   if (!activity) return <></>;
 
@@ -35,8 +39,9 @@ export const IssueArchivedAtActivity = observer(function IssueArchivedAtActivity
         )
       }
       activityId={activityId}
+      issueId={issueId}
+      workspaceSlug={workspaceSlug}
       ends={ends}
-      customUserName={activity.new_value === "archive" ? SITE_NAME : undefined}
     >
       {activity.new_value === "restore" ? "restored the work item" : "archived the work item"}.
     </IssueActivityBlockComponent>

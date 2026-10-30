@@ -3,22 +3,22 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
-import { useMemo, useState } from "react";
+import { useRef, useState } from "react";
 import { observer } from "mobx-react";
+import type { User } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { stringToEmoji } from "@nerve/propel/emoji-icon-picker";
 import { EmojiReactionGroup, EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
 import type { EmojiReactionType } from "@nerve/propel/emoji-reaction";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { User } from "@nerve/api-client";
-// ui
 import { cn } from "@nerve/utils";
-// helpers
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { followInSession } from "@/lib/in-session";
+import { DetailResourceError } from "@/components/issues/issue-detail-widgets/resource-error";
+import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
 
-export type TIssueReaction = {
+type IssueReactionProps = {
   workspaceSlug: string;
   projectId: string;
   issueId: string;
@@ -27,117 +27,80 @@ export type TIssueReaction = {
   className?: string;
 };
 
-export const IssueReaction = observer(function IssueReaction(props: TIssueReaction) {
+export function IssueReaction(props: IssueReactionProps) {
+  return (
+    <IssueReactionContent
+      key={`${props.workspaceSlug}/${props.projectId}/${props.issueId}/${props.currentUser.id}`}
+      {...props}
+    />
+  );
+}
+
+const IssueReactionContent = observer(function IssueReactionContent(props: IssueReactionProps) {
   const { workspaceSlug, projectId, issueId, currentUser, disabled = false, className = "" } = props;
   const { t } = useTranslation();
-  // state
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  // hooks
-  const {
-    reaction: { getReactionsByIssueId, reactionsByUser, getReactionById },
-    createReaction,
-    removeReaction,
-  } = useIssueDetail();
+  const [pending, setPending] = useState(false);
+  const sending = useRef(false);
+  const detail = useIssueDetail();
+  const { reaction } = detail;
   const { getUserDetails } = useMember();
+  const refuse = useRefusalToast();
+  const scope = useDetailScope(workspaceSlug, projectId, issueId);
+  const reactionIds = reaction.getReactionsByIssueId(issueId);
+  const userReactions = new Set(reaction.reactionsByUser(issueId, currentUser.id).map((row) => row.reaction));
 
-  const reactionIds = getReactionsByIssueId(issueId);
-  const userReactions = reactionsByUser(issueId, currentUser.id).map((r) => r.reaction);
-
-  const issueReactionOperations = useMemo(
-    () => ({
-      create: async (reaction: string) => {
-        try {
-          if (!workspaceSlug || !projectId || !issueId) throw new Error("Missing fields");
-          await createReaction(workspaceSlug, projectId, issueId, reaction);
-          setToast({
-            title: "Success!",
-            type: TOAST_TYPE.SUCCESS,
-            message: "Reaction created successfully",
-          });
-        } catch (_error) {
-          setToast({
-            title: "Error!",
-            type: TOAST_TYPE.ERROR,
-            message: "Reaction creation failed",
-          });
-        }
-      },
-      remove: async (reaction: string) => {
-        try {
-          if (!workspaceSlug || !projectId || !issueId || !currentUser?.id) throw new Error("Missing fields");
-          await removeReaction(workspaceSlug, projectId, issueId, reaction, currentUser.id);
-          setToast({
-            title: "Success!",
-            type: TOAST_TYPE.SUCCESS,
-            message: "Reaction removed successfully",
-          });
-        } catch (_error) {
-          setToast({
-            title: "Error!",
-            type: TOAST_TYPE.ERROR,
-            message: "Reaction remove failed",
-          });
-        }
-      },
-      react: async (reaction: string) => {
-        if (userReactions.includes(reaction)) await issueReactionOperations.remove(reaction);
-        else await issueReactionOperations.create(reaction);
-      },
+  const react = async (value: string) => {
+    const current = scope();
+    if (disabled || sending.current || !current()) return;
+    sending.current = true;
+    setPending(true);
+    await followInSession(
+      async () =>
+        userReactions.has(value)
+          ? detail.removeReaction(workspaceSlug, projectId, issueId, value)
+          : detail.createReaction(workspaceSlug, projectId, issueId, value),
+      {
+        failed: (error) => {
+          if (current()) refuse(error);
+        },
+      }
+    );
+    // Busy state belongs to this keyed host, even if its permission proof expired.
+    sending.current = false;
+    setPending(false);
+  };
+  const reactions: EmojiReactionType[] = Object.entries(reactionIds ?? {}).map(([value, ids]) => ({
+    emoji: stringToEmoji(value),
+    count: ids.length,
+    reacted: userReactions.has(value),
+    users: ids.map((id) => {
+      const row = reaction.getReactionById(issueId, id);
+      return (row && getUserDetails(row.actor_id)?.display_name) || t("common.deactivated_user");
     }),
-    [workspaceSlug, projectId, issueId, currentUser, createReaction, removeReaction, userReactions]
-  );
-
-  const getReactionUsers = (reaction: string): string[] => {
-    const reactionUsers = (reactionIds?.[reaction] || [])
-      .map((reactionId) => {
-        const reactionDetails = getReactionById(reactionId);
-        return reactionDetails
-          ? getUserDetails(reactionDetails?.actor)?.display_name || reactionDetails?.display_name
-          : null;
-      })
-      .filter((displayName): displayName is string => !!displayName);
-
-    return reactionUsers;
-  };
-
-  // Transform reactions data to Propel EmojiReactionType format
-  const reactions: EmojiReactionType[] = reactionIds
-    ? Object.keys(reactionIds)
-        .filter((reaction) => reactionIds[reaction]?.length > 0)
-        .map((reaction) => ({
-          emoji: stringToEmoji(reaction),
-          count: reactionIds[reaction].length,
-          reacted: userReactions.includes(reaction),
-          users: getReactionUsers(reaction),
-        }))
-    : [];
-
-  const handleReactionClick = (emoji: string) => {
-    if (disabled) return;
-    // Convert emoji back to decimal string format for the API
-    const emojiCodePoints = Array.from(emoji).map((char) => char.codePointAt(0));
-    const reactionString = emojiCodePoints.join("-");
-    issueReactionOperations.react(reactionString);
-  };
-
-  const handleEmojiSelect = (emoji: string) => {
-    // emoji is already in decimal string format from EmojiReactionPicker
-    issueReactionOperations.react(emoji);
-  };
-
+  }));
   return (
     <div className={cn("relative mt-4", className)}>
+      <DetailResourceError
+        error={reaction.getError(issueId)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={issueId}
+        retry={() => reaction.retry(workspaceSlug, projectId, issueId)}
+      />
       <EmojiReactionPicker
         isOpen={isPickerOpen}
         handleToggle={setIsPickerOpen}
-        onChange={handleEmojiSelect}
-        disabled={disabled}
+        onChange={(value) => void react(value)}
+        disabled={disabled || pending}
         label={
           <EmojiReactionGroup
             reactions={reactions}
-            onReactionClick={handleReactionClick}
+            onReactionClick={(emoji) => void react(Array.from(emoji, (char) => char.codePointAt(0)).join("-"))}
             showAddButton={!disabled}
-            onAddReaction={() => setIsPickerOpen(true)}
+            onAddReaction={() => {
+              if (!pending) setIsPickerOpen(true);
+            }}
             addReactionLabel={t("aria_labels.add_reaction")}
           />
         }

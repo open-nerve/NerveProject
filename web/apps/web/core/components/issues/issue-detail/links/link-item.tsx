@@ -14,33 +14,33 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { CustomMenu } from "@nerve/ui";
 import { calculateTimeAgo, copyTextToClipboard } from "@nerve/utils";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-import type { TLinkOperationsModal } from "./create-update-link-modal";
+import type { TLinkOperations } from "./types";
 
 type TIssueLinkItem = {
+  issueId: string;
   linkId: string;
-  linkOperations: TLinkOperationsModal;
+  linkOperations: Pick<TLinkOperations, "remove">;
   isNotAllowed: boolean;
 };
 
 export const IssueLinkItem = observer(function IssueLinkItem(props: TIssueLinkItem) {
   // props
-  const { linkId, linkOperations, isNotAllowed } = props;
+  const { issueId, linkId, linkOperations, isNotAllowed } = props;
   // hooks
   const { t } = useTranslation();
   const {
-    toggleIssueLinkModal: toggleIssueLinkModalStore,
-    setIssueLinkData,
     link: { getLinkById },
   } = useIssueDetail();
+  const { setIssueLinkData, toggleIssueLinkModal: toggleIssueLinkModalStore } = useIssueDetailModals();
   const { isMobile } = usePlatformOS();
-  const linkDetail = getLinkById(linkId);
+  const linkDetail = getLinkById(issueId, linkId);
   if (!linkDetail) return <></>;
 
   // const Icon = getIconForLink(linkDetail.url);
-  const faviconUrl: string | undefined = linkDetail.metadata?.favicon;
-  const linkTitle: string | undefined = linkDetail.metadata?.title;
+  const faviconUrl = linkDetail.metadata.favicon_url ?? linkDetail.metadata.favicon ?? undefined;
+  const linkTitle = linkDetail.metadata.title;
 
   const toggleIssueLinkModal = (modalToggle: boolean) => {
     toggleIssueLinkModalStore(modalToggle);
@@ -78,7 +78,9 @@ export const IssueLinkItem = observer(function IssueLinkItem(props: TIssueLinkIt
           <p className="group-hover-text-secondary p-1 align-bottom text-caption-sm-regular leading-5 text-placeholder">
             {calculateTimeAgo(linkDetail.created_at)}
           </p>
-          <span
+          <button
+            type="button"
+            aria-label={t("copy_link")}
             onClick={() => {
               copyTextToClipboard(linkDetail.url);
               setToast({
@@ -90,7 +92,7 @@ export const IssueLinkItem = observer(function IssueLinkItem(props: TIssueLinkIt
             className="relative grid cursor-pointer place-items-center rounded-sm p-1 text-placeholder outline-none group-hover:text-secondary hover:bg-layer-1"
           >
             <CopyOutline className="h-3.5 w-3.5 stroke-[1.5]" />
-          </span>
+          </button>
           <CustomMenu
             ellipsis
             buttonClassName="text-placeholder group-hover:text-secondary"

@@ -46,6 +46,9 @@ type Props = {
 export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: Props) {
   const { t } = useTranslation();
   const { workspaceSlug, projectId, issueId, issueOperations, isEditable } = props;
+  // Terminal property events have no success follow-up; the operation reports native refusals.
+  const updateProperty = (...args: Parameters<TIssueOperations["update"]>) =>
+    issueOperations.update(...args).catch(() => undefined);
   // store hooks
   const {
     issue: { getIssueById },
@@ -75,7 +78,7 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
             <SidebarPropertyListItem icon={StateOutline} label={t("common.state")}>
               <StateDropdown
                 value={issue?.state_id}
-                onChange={(val) => issueOperations.update(workspaceSlug, projectId, issueId, { state_id: val })}
+                onChange={(val) => updateProperty(workspaceSlug, projectId, issueId, { state_id: val })}
                 projectId={projectId}
                 disabled={!isEditable}
                 buttonVariant="transparent-with-text"
@@ -90,7 +93,7 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
             <SidebarPropertyListItem icon={MembersOutline} label={t("common.assignees")}>
               <MemberDropdown
                 value={issue?.assignee_ids ?? undefined}
-                onChange={(val) => issueOperations.update(workspaceSlug, projectId, issueId, { assignee_ids: val })}
+                onChange={(val) => updateProperty(workspaceSlug, projectId, issueId, { assignee_ids: val })}
                 disabled={!isEditable}
                 projectId={projectId}
                 placeholder={t("issue.add.assignee")}
@@ -108,7 +111,7 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
             <SidebarPropertyListItem icon={PriorityOutline} label={t("common.priority")}>
               <PriorityDropdown
                 value={issue?.priority}
-                onChange={(val) => issueOperations.update(workspaceSlug, projectId, issueId, { priority: val })}
+                onChange={(val) => updateProperty(workspaceSlug, projectId, issueId, { priority: val })}
                 disabled={!isEditable}
                 buttonVariant="transparent-with-text"
                 className="h-7.5 w-full grow rounded-sm"
@@ -131,7 +134,7 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
                 placeholder={t("issue.add.start_date")}
                 value={issue.start_date}
                 onChange={(val) =>
-                  issueOperations.update(workspaceSlug, projectId, issueId, {
+                  updateProperty(workspaceSlug, projectId, issueId, {
                     start_date: val ? renderFormattedPayloadDate(val) : null,
                   })
                 }
@@ -152,7 +155,7 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
                   placeholder={t("issue.add.due_date")}
                   value={issue.target_date}
                   onChange={(val) =>
-                    issueOperations.update(workspaceSlug, projectId, issueId, {
+                    updateProperty(workspaceSlug, projectId, issueId, {
                       target_date: val ? renderFormattedPayloadDate(val) : null,
                     })
                   }

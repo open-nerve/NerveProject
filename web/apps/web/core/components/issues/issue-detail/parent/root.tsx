@@ -93,7 +93,9 @@ export const IssueParentDetail = observer(function IssueParentDetail(props: TIss
           <IssueParentSiblings workspaceSlug={workspaceSlug} currentIssue={issue} parentIssue={parentIssue} />
 
           <CustomMenu.MenuItem
-            onClick={() => issueOperations.update(workspaceSlug, projectId, issueId, { parent_id: null })}
+            onClick={() =>
+              issueOperations.update(workspaceSlug, projectId, issueId, { parent_id: null }).catch(() => undefined)
+            }
             className="flex items-center gap-2 py-2 text-danger-primary"
           >
             <MinusCircle className="h-4 w-4" />

@@ -1,32 +1,14 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import type { TIssueActivity } from "@nerve/types";
-import { APIService } from "@/services/api.service";
-
-export class IssueActivityService extends APIService {
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type { ApiClient, IssueActivityPage, operations } from "@nerve/api-client";
+import { unwrap } from "@/lib/api-error";
+export class IssueActivityService {
+  constructor(private readonly api: ApiClient) {}
   async getIssueActivities(
-    workspaceSlug: string,
-    projectId: string,
     issueId: string,
-    params:
-      | {
-          created_at__gt: string;
-        }
-      | object = {}
-  ): Promise<TIssueActivity[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/history/`, {
-      params: {
-        activity_type: "issue-property",
-        ...params,
-      },
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+    query?: operations["listIssueActivities"]["parameters"]["query"]
+  ): Promise<IssueActivityPage> {
+    return unwrap(
+      await this.api.GET("/api/v0/issues/{issue_id}/activities", { params: { path: { issue_id: issueId }, query } })
+    );
   }
 }

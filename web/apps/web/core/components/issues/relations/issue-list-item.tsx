@@ -17,7 +17,7 @@ import type { TIssueRelationTypes } from "@nerve/types";
 import { ControlLink, CustomMenu } from "@nerve/ui";
 import { generateWorkItemLink } from "@nerve/utils";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import useIssuePeekOverviewRedirection from "@/hooks/use-issue-peek-overview-redirection";
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -26,6 +26,10 @@ import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifi
 // local imports
 import { useRelationOperations } from "../issue-detail-widgets/relations/helper";
 import { RelationIssueProperty } from "./properties";
+import { followInSession } from "@/lib/in-session";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useDetailScope } from "../issue-detail-widgets/use-detail-scope";
 
 type Props = {
   workspaceSlug: string;
@@ -33,13 +37,7 @@ type Props = {
   relationKey: TIssueRelationTypes;
   relationIssueId: string;
   disabled: boolean;
-  handleIssueCrudState: (
-    key: "update" | "delete" | "removeRelation",
-    issueId: string,
-    issue?: Issue | null,
-    relationKey?: TIssueRelationTypes | null,
-    relationIssueId?: string | null
-  ) => void;
+  handleIssueCrudState: (key: "update" | "delete", issueId: string, issue?: Issue | null) => void;
 };
 
 export const RelationIssueListItem = observer(function RelationIssueListItem(props: Props) {
@@ -51,17 +49,20 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
   const {
     issue: { getIssueById },
     removeRelation,
-    toggleCreateIssueModal,
-    toggleDeleteIssueModal,
+    relation: { getProjectId },
   } = useIssueDetail();
+  const { toggleCreateIssueModal, toggleDeleteIssueModal } = useIssueDetailModals();
   const project = useProject();
   const { isMobile } = usePlatformOS();
   // derived values
   const issue = getIssueById(relationIssueId);
   const { handleRedirection } = useIssuePeekOverviewRedirection();
-  const issueOperations = useRelationOperations();
+  const issueOperations = useRelationOperations(workspaceSlug, issueId);
   const projectDetail = (issue && issue.project_id && project.getProjectById(issue.project_id)) || undefined;
   const projectId = issue?.project_id;
+  const sourceProject = getProjectId(issueId);
+  const capture = useDetailScope(workspaceSlug, sourceProject, issueId);
+  const refusal = useRefusalToast();
 
   if (!issue || !projectId) return <></>;
 
@@ -74,8 +75,8 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
   });
 
   // handlers
-  const handleIssuePeekOverview = (issue: Issue) => {
-    handleRedirection(workspaceSlug, issue, isMobile);
+  const handleIssuePeekOverview = (selected: Issue) => {
+    handleRedirection(workspaceSlug, selected, isMobile);
   };
 
   const handleEditIssue = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -90,7 +91,6 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
     e.preventDefault();
     handleIssueCrudState("delete", relationIssueId, issue);
     toggleDeleteIssueModal(relationIssueId);
-    handleIssueCrudState("removeRelation", issueId, issue, relationKey, relationIssueId);
   };
 
   const handleCopyIssueLink = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -99,10 +99,16 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
     issueOperations.copyLink(workItemLink);
   };
 
-  const handleRemoveRelation = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+  const handleRemoveRelation = async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     e.preventDefault();
     e.stopPropagation();
-    removeRelation(workspaceSlug, projectId, issueId, relationKey, relationIssueId);
+    const current = capture();
+    if (!current() || !sourceProject) return;
+    await followInSession(() => removeRelation(workspaceSlug, sourceProject, issueId, relationKey, relationIssueId), {
+      failed: (error) => {
+        if (current() && !(error instanceof SessionChangedError)) refusal(error);
+      },
+    });
   };
 
   return (
@@ -135,6 +141,8 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
             </div>
             <div
               className="flex-shrink-0 text-13"
+              role="group"
+              onKeyDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

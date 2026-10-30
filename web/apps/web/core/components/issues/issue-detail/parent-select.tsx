@@ -14,7 +14,7 @@ import { CloseOutline, EditOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/utils";
 // hooks
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // components
@@ -55,7 +55,8 @@ export const IssueParentSelect = observer(function IssueParentSelect(props: TIss
   const {
     issue: { getIssueById },
   } = useIssueDetail();
-  const { isParentIssueModalOpen, toggleParentIssueModal } = useIssueDetail();
+  const { toggleParentIssueModal } = useIssueDetailModals();
+  const { isParentIssueModalOpen } = useIssueDetailModals();
 
   // derived values
   const issue = getIssueById(issueId);
@@ -73,10 +74,9 @@ export const IssueParentSelect = observer(function IssueParentSelect(props: TIss
         issueId={issueId}
         isOpen={isParentIssueModalOpen === issueId}
         handleClose={() => toggleParentIssueModal(null)}
-        onChange={(issue: any) => handleParentIssue(issue?.id)}
+        onChange={(selected) => handleParentIssue(selected.id)}
       />
-      <button
-        type="button"
+      <div
         className={cn(
           "group flex items-center justify-between gap-2 rounded-sm px-2 py-0.5 outline-none",
           {
@@ -86,8 +86,6 @@ export const IssueParentSelect = observer(function IssueParentSelect(props: TIss
           },
           className
         )}
-        onClick={() => toggleParentIssueModal(issue.id)}
-        disabled={disabled}
       >
         {issue.parent_id && parentIssue ? (
           <div className="flex items-center gap-1.5">
@@ -107,7 +105,9 @@ export const IssueParentSelect = observer(function IssueParentSelect(props: TIss
 
             {!disabled && (
               <Tooltip label={t("common.remove")} side="bottom" disabled={isMobile}>
-                <span
+                <button
+                  type="button"
+                  aria-label={t("common.remove")}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -115,23 +115,26 @@ export const IssueParentSelect = observer(function IssueParentSelect(props: TIss
                   }}
                 >
                   <CloseOutline className="h-2.5 w-2.5 text-tertiary hover:text-danger-primary" />
-                </span>
+                </button>
               </Tooltip>
             )}
           </div>
-        ) : (
-          <span className="text-body-xs-medium text-placeholder">{t("issue.add.parent")}</span>
-        )}
-        {!disabled && (
-          <span
-            className={cn("flex-shrink-0 p-1 opacity-0 group-hover:opacity-100", {
-              "text-placeholder": !issue.parent_id && !parentIssue,
-            })}
-          >
-            <EditOutline className="h-2.5 w-2.5 flex-shrink-0" />
-          </span>
-        )}
-      </button>
+        ) : null}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => toggleParentIssueModal(issue.id)}
+          aria-label={t("issue.add.parent")}
+          className="flex items-center gap-1"
+        >
+          {!parentIssue && <span className="text-body-xs-medium text-placeholder">{t("issue.add.parent")}</span>}
+          {!disabled && (
+            <span className="flex-shrink-0 p-1">
+              <EditOutline className="h-2.5 w-2.5 flex-shrink-0" />
+            </span>
+          )}
+        </button>
+      </div>
     </>
   );
 });

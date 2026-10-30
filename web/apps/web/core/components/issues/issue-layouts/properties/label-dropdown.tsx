@@ -1,10 +1,13 @@
+import { Field, FieldError } from "@makeplane/propel/components/field";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DirectoryReadError, useDirectoryRead } from "@/components/issues/issue-detail-widgets/directory-read";
+import { observer } from "mobx-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import type { Placement } from "@popperjs/core";
 import { useParams } from "react-router";
 import { usePopper } from "react-popper";
@@ -16,6 +19,9 @@ import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
 // types
 import type { Label } from "@nerve/api-client";
+import { useLabelChanges } from "@/components/labels/use-label-changes";
+import { useDetailScope } from "../../issue-detail-widgets/use-detail-scope";
+import { useIssueLabels } from "../../use-issue-labels";
 import { EUserProjectRoles } from "@nerve/types";
 // components
 import { ComboDropDown } from "@nerve/ui";
@@ -33,7 +39,6 @@ export interface ILabelDropdownProps {
   onChange: (data: string[]) => void;
   onClose?: () => void;
   disabled?: boolean;
-  defaultOptions?: any;
   hideDropdownArrow?: boolean;
   className?: string;
   buttonClassName?: string;
@@ -51,14 +56,19 @@ const preventPropagation = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => 
   e.preventDefault();
 };
 
-export function LabelDropdown(props: ILabelDropdownProps) {
+const EMPTY_LABELS: Label[] = [];
+
+export const LabelDropdown = observer(function LabelDropdown(props: ILabelDropdownProps) {
+  const { workspaceSlug } = useParams();
+  return <LabelDropdownContent key={JSON.stringify([workspaceSlug, props.projectId])} {...props} />;
+});
+const LabelDropdownContent = observer(function LabelDropdownContent(props: ILabelDropdownProps) {
   const {
     projectId,
     value,
     onChange,
     onClose,
     disabled,
-    defaultOptions = [],
     hideDropdownArrow = false,
     className,
     buttonClassName = "",
@@ -78,8 +88,11 @@ export function LabelDropdown(props: ILabelDropdownProps) {
 
   //states
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const [query, setQuery] = useState<string>("");
+  const [nameError, setNameError] = useState<string>();
+  const errorId = useId();
+  const pending = useRef(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   //refs
@@ -91,16 +104,22 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
 
   //hooks
-  const { fetchProjectLabels, getProjectLabels, createLabel } = useLabel();
+  const { fetchProjectLabels } = useLabel();
   const { isMobile } = usePlatformOS();
-  const storeLabels = getProjectLabels(projectId);
+  const storeLabels = useIssueLabels(workspaceSlug, projectId);
+  const capture = useDetailScope(workspaceSlug ?? "", projectId ?? undefined, "label-create", true);
+  const { create } = useLabelChanges(capture);
+  const read = useDirectoryRead(
+    workspaceSlug,
+    projectId ?? undefined,
+    projectId ? () => fetchProjectLabels(projectId) : undefined
+  );
   const { allowPermissions } = useUserPermissions();
 
   const canCreateLabel =
     projectId && allowPermissions([EUserProjectRoles.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
-  let projectLabels: Label[] = defaultOptions;
-  if (storeLabels && storeLabels.length > 0) projectLabels = storeLabels;
+  const projectLabels = storeLabels ?? EMPTY_LABELS;
 
   const options = useMemo(
     () =>
@@ -143,20 +162,11 @@ export function LabelDropdown(props: ILabelDropdownProps) {
     ],
   });
 
-  const onOpen = useCallback(() => {
-    if (!storeLabels && projectId)
-      fetchProjectLabels(projectId)
-        .then(() => setIsLoading(false))
-        .catch(() => {
-          setIsLoading(false);
-        });
-  }, [storeLabels, projectId, fetchProjectLabels, setIsLoading]);
-
   const toggleDropdown = useCallback(() => {
-    if (!isOpen) onOpen();
+    if (!isOpen) void read.load();
     setIsOpen((prevIsOpen) => !prevIsOpen);
     if (isOpen && onClose) onClose();
-  }, [onOpen, onClose, isOpen, setIsOpen]);
+  }, [read, onClose, isOpen, setIsOpen]);
 
   const handleClose = () => {
     if (!isOpen) return;
@@ -166,15 +176,26 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   };
 
   const handleAddLabel = async (labelName: string) => {
-    if (!projectId) return;
+    if (!projectId || pending.current || !labelName.trim()) return;
+    pending.current = true;
     setSubmitting(true);
+    setNameError(undefined);
     try {
-      const label = await createLabel(projectId, { name: labelName, color: getRandomLabelColor() });
-      onChange([...value, label.id]);
-      setQuery("");
-    } catch (error) {
-      toastRefusal(error);
+      await create(
+        projectId,
+        { name: labelName.trim(), color: getRandomLabelColor() },
+        (_field, message) => setNameError(message),
+        async (label) => {
+          try {
+            await onChange([...value, label.id]);
+            setQuery("");
+          } catch (error) {
+            toastRefusal(error);
+          }
+        }
+      );
     } finally {
+      pending.current = false;
       setSubmitting(false);
     }
   };
@@ -186,7 +207,14 @@ export function LabelDropdown(props: ILabelDropdownProps) {
       e.preventDefault();
     }
 
-    if (query !== "" && e.key === "Enter" && !isComposing(e.nativeEvent) && canCreateLabel) {
+    if (
+      !read.loading &&
+      !read.error &&
+      query !== "" &&
+      e.key === "Enter" &&
+      !isComposing(e.nativeEvent) &&
+      canCreateLabel
+    ) {
       e.preventDefault();
       await handleAddLabel(query);
     }
@@ -265,20 +293,34 @@ export function LabelDropdown(props: ILabelDropdownProps) {
               style={styles.popper}
               {...attributes.popper}
             >
-              <div className="flex w-full items-center justify-start rounded-sm border border-subtle bg-surface-2 px-2">
-                <SearchOutline className="h-3.5 w-3.5 text-tertiary" />
-                <Combobox.Input
-                  ref={inputRef}
-                  className="w-full bg-transparent px-2 py-1 text-caption-sm-regular text-secondary placeholder:text-placeholder focus:outline-none"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={t("common.search.label")}
-                  displayValue={(assigned: any) => assigned?.name || ""}
-                  onKeyDown={searchInputKeyDown}
-                />
-              </div>
+              <Field name="name" invalid={!!nameError}>
+                <div className="flex w-full items-center justify-start rounded-sm border border-subtle bg-surface-2 px-2">
+                  <SearchOutline className="h-3.5 w-3.5 text-tertiary" />
+                  <Combobox.Input
+                    aria-invalid={!!nameError}
+                    aria-describedby={nameError ? errorId : undefined}
+                    ref={inputRef}
+                    className="w-full bg-transparent px-2 py-1 text-caption-sm-regular text-secondary placeholder:text-placeholder focus:outline-none"
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setNameError(undefined);
+                    }}
+                    placeholder={t("common.search.label")}
+                    displayValue={(assigned: any) => assigned?.name || ""}
+                    onKeyDown={searchInputKeyDown}
+                  />
+                </div>
+                {nameError && (
+                  <FieldError match size="lg" id={errorId}>
+                    {nameError}
+                  </FieldError>
+                )}
+              </Field>
               <div className="mt-2 max-h-48 overflow-y-scroll">
-                {isLoading ? (
+                {read.error ? (
+                  <DirectoryReadError error={read.error} retry={read.load} />
+                ) : read.loading ? (
                   <p className="text-center text-secondary">{t("common.loading")}</p>
                 ) : filteredOptions && filteredOptions.length > 0 ? (
                   <ul className="space-y-1">
@@ -342,4 +384,4 @@ export function LabelDropdown(props: ILabelDropdownProps) {
       </ComboDropDown>
     </div>
   );
-}
+});

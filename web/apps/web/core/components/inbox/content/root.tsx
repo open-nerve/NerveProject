@@ -4,11 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import type { TNameDescriptionLoader } from "@nerve/types";
+import { useIssueSaveStatus } from "@/components/issues/use-issue-save-status";
 // components
 import { ContentWrapper } from "@nerve/ui";
 // hooks
@@ -42,7 +42,7 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
   /// router
   const navigate = useNavigate();
   // states
-  const [isSubmitting, setIsSubmitting] = useState<TNameDescriptionLoader>("saved");
+  const { status: isSubmitting, setTitleStatus, setDescriptionStatus } = useIssueSaveStatus();
   // hooks
   const { data: currentUser } = useUser();
   const { currentTab, fetchInboxIssueById, getIssueInboxByIssueId, getIsIssueAvailable } = useProjectInbox();
@@ -106,7 +106,8 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
             inboxIssue={inboxIssue}
             isEditable={isEditable && !isIssueDisabled && !readOnly}
             isSubmitting={isSubmitting}
-            setIsSubmitting={setIsSubmitting}
+            setTitleStatus={setTitleStatus}
+            setDescriptionStatus={setDescriptionStatus}
           />
         </ContentWrapper>
       </div>

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
@@ -14,7 +14,9 @@ import { Button } from "@nerve/propel/button";
 import { ChevronLeftOutline, ChevronRightOutline, CopyOutline } from "@makeplane/propel/icons";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TDescriptionVersion } from "@nerve/types";
+import type { DescriptionVersionOption } from "./root";
+import { followInSession } from "@/lib/in-session";
+import { useRefusalMessage } from "@/hooks/use-refusal-toast";
 import { EModalPosition, EModalWidth, Loader, ModalCore } from "@nerve/ui";
 import { calculateTimeAgo, cn, getFileURL } from "@nerve/utils";
 // components
@@ -26,16 +28,18 @@ import { IconButton } from "@nerve/propel/icon-button";
 
 type Props = {
   activeVersionDescription: string | undefined;
-  activeVersionDetails: TDescriptionVersion | undefined;
+  activeVersionDetails: DescriptionVersionOption | undefined;
   handleClose: () => void;
   handleNavigation: (direction: "prev" | "next") => void;
-  handleRestore: (descriptionHTML: string) => void;
+  handleRestore: (descriptionHTML: string) => Promise<unknown>;
   isNextDisabled: boolean;
   isOpen: boolean;
   isPrevDisabled: boolean;
   isRestoreDisabled: boolean;
   projectId: string | undefined;
   workspaceSlug: string;
+  error?: unknown;
+  retry?: () => Promise<unknown>;
 };
 
 export const DescriptionVersionsModal = observer(function DescriptionVersionsModal(props: Props) {
@@ -51,7 +55,43 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
     isRestoreDisabled,
     projectId,
     workspaceSlug,
+    error,
+    retry,
   } = props;
+  const [pending, setPending] = useState(false);
+  const [refusal, setRefusal] = useState<unknown>();
+  const sending = useRef(false);
+  const active = useRef(false);
+  const message = useRefusalMessage();
+  useLayoutEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  const close = () => {
+    if (!sending.current) handleClose();
+  };
+  const restore = async () => {
+    if (sending.current || isRestoreDisabled || activeVersionDescription === undefined || !!error) return;
+    sending.current = true;
+    setPending(true);
+    setRefusal(undefined);
+    await followInSession(() => handleRestore(activeVersionDescription), {
+      done: () => {
+        if (active.current) handleClose();
+      },
+      failed: (reason) => {
+        if (active.current) setRefusal(reason);
+      },
+    });
+    sending.current = false;
+    if (active.current) setPending(false);
+  };
+  const retryRead = async () => {
+    if (!retry || sending.current) return;
+    await followInSession(retry, { failed: () => undefined });
+  };
   // refs
   const editorRef = useRef<EditorRefApi>(null);
   // store hooks
@@ -60,7 +100,7 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
   // derived values
   const activeVersionId = activeVersionDetails?.id;
   const workspaceId = getWorkspaceBySlug(workspaceSlug)?.id;
-  const versionCreator = activeVersionDetails?.owned_by ? getUserDetails(activeVersionDetails.owned_by) : null;
+  const versionCreator = activeVersionDetails?.ownerId ? getUserDetails(activeVersionDetails.ownerId) : null;
   // translation
   const { t } = useTranslation();
 
@@ -77,7 +117,7 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
   if (!workspaceId) return null;
 
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.TOP} width={EModalWidth.XXXXL}>
+    <ModalCore isOpen={isOpen} handleClose={close} position={EModalPosition.TOP} width={EModalWidth.XXXXL}>
       <div className="p-4" data-prevent-outside-click>
         {/* Header */}
         <div className="flex items-center justify-between gap-2 py-0.5">
@@ -86,37 +126,37 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
               {t("description_versions.edited_by")}
               <span className="flex-shrink-0">
                 <Avatar
-                  alt={versionCreator?.display_name}
-                  fallback={versionCreator?.display_name?.[0]?.toUpperCase()}
+                  alt={versionCreator?.display_name || t("common.deactivated_user")}
+                  fallback={(versionCreator?.display_name || t("common.deactivated_user"))[0]?.toUpperCase()}
                   size="2xs"
                   src={getFileURL(versionCreator?.avatar_url ?? "")}
                 />
               </span>
             </p>
-            <p className="flex-shrink-0 text-secondary">
-              {calculateTimeAgo(activeVersionDetails?.last_saved_at ?? "")}
-            </p>
+            <p className="flex-shrink-0 text-secondary">{calculateTimeAgo(activeVersionDetails?.lastSavedAt ?? "")}</p>
           </div>
           <div className="flex flex-shrink-0 items-center">
             <button
               type="button"
+              aria-label={t("description_versions.previous_version")}
               onClick={() => handleNavigation("prev")}
               className={cn("grid size-6 place-items-center rounded-sm text-secondary transition-colors outline-none", {
                 "hover:bg-layer-1": !isPrevDisabled,
                 "opacity-50": isPrevDisabled,
               })}
-              disabled={isPrevDisabled}
+              disabled={isPrevDisabled || pending}
             >
               <ChevronLeftOutline className="size-4" />
             </button>
             <button
               type="button"
+              aria-label={t("description_versions.next_version")}
               onClick={() => handleNavigation("next")}
               className={cn("grid size-6 place-items-center rounded-sm text-secondary transition-colors outline-none", {
                 "hover:bg-layer-1": !isNextDisabled,
                 "opacity-50": isNextDisabled,
               })}
-              disabled={isNextDisabled}
+              disabled={isNextDisabled || pending}
             >
               <ChevronRightOutline className="size-4" />
             </button>
@@ -125,7 +165,15 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
         {/* End header */}
         {/* Version description */}
         <div className="mt-4 pb-4">
-          {activeVersionId && activeVersionDescription ? (
+          {error != null && (
+            <div role="alert">
+              {message(error)}{" "}
+              <button type="button" onClick={() => void retryRead()}>
+                {t("common.retry")}
+              </button>
+            </div>
+          )}
+          {activeVersionId && activeVersionDescription !== undefined ? (
             <RichTextEditor
               key={activeVersionId}
               editable={false}
@@ -138,7 +186,7 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
               workspaceId={workspaceId}
               workspaceSlug={workspaceSlug}
             />
-          ) : (
+          ) : error ? null : (
             <div className="space-y-1">
               <Loader.Item width="300px" height="15px" />
               <Loader.Item width="400px" height="15px" />
@@ -157,6 +205,7 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
         </div>
         {/* End version description */}
         {/* Footer */}
+        {refusal !== undefined && <p role="alert">{message(refusal)}</p>}
         <div className="flex items-center justify-between gap-2 border-t-[0.5px] border-subtle pt-4">
           <Tooltip label={t("common.actions.copy_markdown")}>
             <IconButton
@@ -169,17 +218,15 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
             />
           </Tooltip>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="lg" onClick={handleClose} tabIndex={1}>
+            <Button variant="secondary" size="lg" onClick={close} disabled={pending}>
               {t("common.cancel")}
             </Button>
             {!isRestoreDisabled && (
               <Button
                 variant="primary"
                 size="lg"
-                onClick={() => {
-                  handleRestore(activeVersionDescription ?? "<p></p>");
-                  handleClose();
-                }}
+                disabled={pending || activeVersionDescription === undefined || !!error}
+                onClick={() => void restore()}
               >
                 {t("common.actions.restore")}
               </Button>

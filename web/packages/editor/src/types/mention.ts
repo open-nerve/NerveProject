@@ -24,8 +24,16 @@ export type TMentionSection = {
 
 export type TCallbackMentionComponentProps = Pick<TMentionSuggestion, "entity_identifier" | "entity_name">;
 
+/** Host lifetime only; the editor does not interpret permission facts. */
+export type TMentionScope = {
+  capture: () => () => boolean;
+  subscribe: (invalidate: () => void) => () => void;
+};
+
 export type TMentionHandler = {
+  scope?: TMentionScope;
   getMentionedEntityDetails?: (entity_identifier: string) => { display_name: string } | undefined;
   renderComponent: (props: TCallbackMentionComponentProps) => React.ReactNode;
   searchCallback?: (query: string) => Promise<TMentionSection[]>;
+  renderError?: (error: unknown, retry: () => void) => React.ReactNode;
 };

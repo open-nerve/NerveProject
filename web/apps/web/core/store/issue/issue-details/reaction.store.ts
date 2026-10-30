@@ -1,160 +1,101 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import { pull, find, concat, set, update } from "lodash-es";
-import { action, makeObservable, observable, runInAction } from "mobx";
-// Nerve Imports
-import type { TIssueReaction, TIssueReactionMap, TIssueReactionIdMap } from "@nerve/types";
-import { groupReactions } from "@nerve/utils";
-// services
-import { IssueReactionService } from "@/services/issue";
-// types
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type { IssueReaction } from "@nerve/api-client";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { upserted } from "@/lib/reconciled";
 import type { IIssueDetail } from "./root.store";
+import { IssueResources } from "./resources";
 
-export interface IIssueReactionStoreActions {
-  // actions
-  addReactions: (issueId: string, reactions: TIssueReaction[]) => void;
-  fetchReactions: (workspaceSlug: string, projectId: string, issueId: string) => Promise<TIssueReaction[]>;
-  createReaction: (workspaceSlug: string, projectId: string, issueId: string, reaction: string) => Promise<any>;
-  removeReaction: (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    reaction: string,
-    userId: string
-  ) => Promise<any>;
-}
-
-export interface IIssueReactionStore extends IIssueReactionStoreActions {
-  // observables
-  reactions: TIssueReactionIdMap;
-  reactionMap: TIssueReactionMap;
-  // helper methods
-  getReactionsByIssueId: (issueId: string) => { [reaction_id: string]: string[] } | undefined;
-  getReactionById: (reactionId: string) => TIssueReaction | undefined;
-  reactionsByUser: (issueId: string, userId: string) => TIssueReaction[];
-}
-
-export class IssueReactionStore implements IIssueReactionStore {
-  // observables
-  reactions: TIssueReactionIdMap = {};
-  reactionMap: TIssueReactionMap = {};
-  // root store
-  rootIssueDetailStore: IIssueDetail;
-  // services
-  issueReactionService;
-
-  constructor(rootStore: IIssueDetail) {
-    makeObservable(this, {
-      // observables
-      reactions: observable,
-      reactionMap: observable,
-      // actions
-      addReactions: action.bound,
-      fetchReactions: action,
-      createReaction: action,
-      removeReaction: action,
-    });
-    // root store
-    this.rootIssueDetailStore = rootStore;
-    // services
-    this.issueReactionService = new IssueReactionService();
+export type IIssueReactionStore = IssueReactionStore;
+export type IIssueReactionStoreActions = Pick<
+  IssueReactionStore,
+  "fetchReactions" | "createReaction" | "removeReaction"
+>;
+export class IssueReactionStore {
+  private readonly resources: IssueResources<IssueReaction[]>;
+  constructor(readonly rootIssueDetailStore: IIssueDetail) {
+    this.resources = new IssueResources(this.root);
   }
-
-  // helper methods
-  getReactionsByIssueId = (issueId: string) => {
-    if (!issueId) return undefined;
-    return this.reactions[issueId] ?? undefined;
+  private get root() {
+    return this.rootIssueDetailStore.rootIssueStore;
+  }
+  getReactionsByIssueId = (id: string) => {
+    const rows = this.resources.get(id)?.value;
+    if (!rows) return undefined;
+    const groups: Record<string, string[]> = {};
+    for (const row of rows) (groups[row.reaction] ??= []).push(row.id);
+    return groups;
   };
-
-  getReactionById = (reactionId: string) => {
-    if (!reactionId) return undefined;
-    return this.reactionMap[reactionId] ?? undefined;
+  getReactionById = (id: string, reactionId: string) =>
+    this.resources.get(id)?.value?.find((row) => row.id === reactionId);
+  reactionsByUser = (id: string, actorId: string) =>
+    (this.resources.get(id)?.value ?? []).filter((row) => row.actor_id === actorId);
+  getError = (id: string) => this.resources.get(id)?.error;
+  retry = async (ws: string, project: string, id: string) => {
+    const resource = this.resources.entry(ws, project, id);
+    if (!(await resource.retryConfirmationRead())) await this.fetchReactions(ws, project, id);
   };
-
-  reactionsByUser = (issueId: string, userId: string) => {
-    if (!issueId || !userId) return [];
-
-    const reactions = this.getReactionsByIssueId(issueId);
-    if (!reactions) return [];
-
-    const _userReactions: TIssueReaction[] = [];
-    Object.keys(reactions).forEach((reaction) => {
-      if (reactions?.[reaction])
-        reactions?.[reaction].map((reactionId) => {
-          const currentReaction = this.getReactionById(reactionId);
-          if (currentReaction && currentReaction.actor === userId) _userReactions.push(currentReaction);
-        });
+  private validate(rows: IssueReaction[], id: string) {
+    if (rows.some((row) => row.issue_id !== id)) throw new SessionChangedError();
+  }
+  fetchReactions = async (ws: string, project: string, id: string): Promise<IssueReaction[]> => {
+    const resource = this.resources.entry(ws, project, id);
+    const value = await resource.fetch(async (read) => {
+      const answer = await this.root.reactionApi.listIssueReactions(id);
+      if (!read.isCurrent()) throw new SessionChangedError();
+      this.validate(answer.data, id);
+      return answer.data;
     });
-
-    return _userReactions;
+    if (!value) throw new SessionChangedError();
+    return value;
   };
-
-  addReactions = (issueId: string, reactions: TIssueReaction[]) => {
-    const groupedReactions = groupReactions(reactions || [], "reaction");
-
-    const issueReactionIdsMap: { [reaction: string]: string[] } = {};
-
-    Object.keys(groupedReactions).map((reactionId) => {
-      const reactionIds = (groupedReactions[reactionId] || []).map((reaction) => reaction.id);
-      issueReactionIdsMap[reactionId] = reactionIds;
-    });
-
-    runInAction(() => {
-      set(this.reactions, issueId, issueReactionIdsMap);
-      reactions.forEach((reaction) => set(this.reactionMap, reaction.id, reaction));
-    });
-  };
-
-  // actions
-  fetchReactions = async (workspaceSlug: string, projectId: string, issueId: string) => {
-    const response = await this.issueReactionService.listIssueReactions(workspaceSlug, projectId, issueId);
-    this.addReactions(issueId, response);
-    return response;
-  };
-
-  createReaction = async (workspaceSlug: string, projectId: string, issueId: string, reaction: string) => {
-    const response = await this.issueReactionService.createIssueReaction(workspaceSlug, projectId, issueId, {
-      reaction,
-    });
-
-    runInAction(() => {
-      update(this.reactions, [issueId, reaction], (reactionId) => {
-        if (!reactionId) return [response.id];
-        return concat(reactionId, response.id);
-      });
-      set(this.reactionMap, response.id, response);
-    });
-
-    // fetching activity
-    this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-    return response;
-  };
-
-  removeReaction = async (
-    workspaceSlug: string,
-    projectId: string,
-    issueId: string,
-    reaction: string,
-    userId: string
-  ) => {
-    const userReactions = this.reactionsByUser(issueId, userId);
-    const currentReaction = find(userReactions, { actor: userId, reaction: reaction });
-
-    if (currentReaction && currentReaction.id) {
-      runInAction(() => {
-        pull(this.reactions[issueId][reaction], currentReaction.id);
-        delete this.reactionMap[reaction];
-      });
-    }
-
-    const response = await this.issueReactionService.deleteIssueReaction(workspaceSlug, projectId, issueId, reaction);
-
-    // fetching activity
-    this.rootIssueDetailStore.activity.fetchActivities(workspaceSlug, projectId, issueId);
-    return response;
+  private write<T>(
+    ws: string,
+    project: string,
+    id: string,
+    send: () => Promise<T>,
+    confirm: (answer: T, rows: IssueReaction[]) => IssueReaction[]
+  ): Promise<T> {
+    return this.root.enqueueIssueChanges(
+      [id],
+      async () => {
+        const resource = this.resources.entry(ws, project, id);
+        const scope = this.root.scope(ws, project);
+        const token = this.root.captureRead();
+        const answer = await send();
+        if (!this.root.isReadCurrent(token, [project], scope.workspaceID)) throw new SessionChangedError();
+        this.root.assertProjectReadable(ws, project);
+        resource.receive([], token, (held) => confirm(answer, held ?? []));
+        await resource.refreshAfterConfirmation(async () => {
+          await this.root.issues.refreshAuthoritative(id, { afterWrite: true });
+          await this.rootIssueDetailStore.refreshAfterChange(ws, project, id);
+        }, token);
+        return answer;
+      },
+      { workspaceSlug: ws, projectID: project }
+    );
+  }
+  createReaction = (ws: string, project: string, id: string, reaction: string): Promise<IssueReaction> =>
+    this.write(
+      ws,
+      project,
+      id,
+      () => this.root.reactionApi.createIssueReaction(id, { reaction }),
+      (answer, held) => {
+        this.validate([answer], id);
+        if (answer.actor_id !== this.root.currentUserId || answer.reaction !== reaction)
+          throw new SessionChangedError();
+        return upserted(answer)(held);
+      }
+    );
+  removeReaction = (ws: string, project: string, id: string, reaction: string): Promise<void> => {
+    const actorId = this.root.currentUserId;
+    if (!actorId) return Promise.reject(new SessionChangedError());
+    return this.write(
+      ws,
+      project,
+      id,
+      () => this.root.reactionApi.deleteIssueReaction(id, reaction),
+      (_, held) => held.filter((row) => row.actor_id !== actorId || row.reaction !== reaction)
+    );
   };
 }

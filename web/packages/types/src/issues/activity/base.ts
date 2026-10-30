@@ -4,76 +4,13 @@
  * See the LICENSE file for details.
  */
 
-export * from "./issue_activity";
 export * from "./issue_comment";
-export * from "./issue_comment_reaction";
 
-import type { TIssuePriorities } from "../../issues";
-
-// root types
-export type TIssueActivityWorkspaceDetail = {
-  name: string;
-  slug: string;
+/** A display entry refers to a native resource, never a second copy of that resource. */
+export type TIssueActivityComment = {
   id: string;
-};
-
-export type TIssueActivityProjectDetail = {
-  id: string;
-  identifier: string;
-  name: string;
-  cover_image: string;
-  description: string | null;
-  emoji: string | null;
-  icon_prop: {
-    name: string;
-    color: string;
-  } | null;
-};
-
-export type TIssueActivityIssueDetail = {
-  id: string;
-  sequence_id: number;
-  sort_order: boolean;
-  name: string;
-  description_html: string;
-  priority: TIssuePriorities;
-  start_date: string;
-  target_date: string;
-  is_draft: boolean;
-};
-
-export type TIssueActivityUserDetail = {
-  id: string;
-  first_name: string;
-  last_name: string;
-  avatar_url: string;
-  is_bot: boolean;
-  display_name: string;
-};
-
-export type TIssueActivityComment =
-  | {
-      id: string;
-      activity_type: "COMMENT";
-      created_at?: string;
-    }
-  | {
-      id: string;
-      activity_type: "ACTIVITY";
-      created_at?: string;
-    }
-  | {
-      id: string;
-      activity_type: "STATE";
-      created_at?: string;
-    }
-  | {
-      id: string;
-      activity_type: "ASSIGNEE";
-      created_at?: string;
-    }
-  | {
-      id: string;
-      activity_type: "DEFAULT";
-      created_at?: string;
-    };
+  created_at: string;
+} & (
+  | { kind: "comment"; activity_type: "COMMENT" }
+  | { kind: "activity"; activity_type: "ACTIVITY" | "STATE" | "ASSIGNEE" | "DEFAULT" }
+);

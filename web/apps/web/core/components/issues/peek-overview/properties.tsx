@@ -46,6 +46,9 @@ interface IPeekOverviewProperties {
 export const PeekOverviewProperties = observer(function PeekOverviewProperties(props: IPeekOverviewProperties) {
   const { workspaceSlug, projectId, issueId, issueOperations, disabled } = props;
   const { t } = useTranslation();
+  // Terminal property events have no success follow-up; the operation reports native refusals.
+  const updateProperty = (...args: Parameters<TIssueOperations["update"]>) =>
+    issueOperations.update(...args).catch(() => undefined);
   // store hooks
   const {
     issue: { getIssueById },
@@ -71,7 +74,7 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
         <SidebarPropertyListItem icon={StateOutline} label={t("common.state")}>
           <StateDropdown
             value={issue?.state_id}
-            onChange={(val) => issueOperations.update(workspaceSlug, projectId, issueId, { state_id: val })}
+            onChange={(val) => updateProperty(workspaceSlug, projectId, issueId, { state_id: val })}
             projectId={projectId}
             disabled={disabled}
             buttonVariant="transparent-with-text"
@@ -86,7 +89,7 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
         <SidebarPropertyListItem icon={MembersOutline} label={t("common.assignees")}>
           <MemberDropdown
             value={issue?.assignee_ids ?? undefined}
-            onChange={(val) => issueOperations.update(workspaceSlug, projectId, issueId, { assignee_ids: val })}
+            onChange={(val) => updateProperty(workspaceSlug, projectId, issueId, { assignee_ids: val })}
             disabled={disabled}
             projectId={projectId}
             placeholder={t("issue.add.assignee")}
@@ -104,7 +107,7 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
         <SidebarPropertyListItem icon={PriorityOutline} label={t("common.priority")}>
           <PriorityDropdown
             value={issue?.priority}
-            onChange={(val) => issueOperations.update(workspaceSlug, projectId, issueId, { priority: val })}
+            onChange={(val) => updateProperty(workspaceSlug, projectId, issueId, { priority: val })}
             disabled={disabled}
             buttonVariant="transparent-with-text"
             className="h-7.5 w-full grow rounded-sm"
@@ -126,7 +129,7 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
           <DateDropdown
             value={issue.start_date}
             onChange={(val) =>
-              issueOperations.update(workspaceSlug, projectId, issueId, {
+              updateProperty(workspaceSlug, projectId, issueId, {
                 start_date: val ? renderFormattedPayloadDate(val) : null,
               })
             }
@@ -147,7 +150,7 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
             <DateDropdown
               value={issue.target_date}
               onChange={(val) =>
-                issueOperations.update(workspaceSlug, projectId, issueId, {
+                updateProperty(workspaceSlug, projectId, issueId, {
                   target_date: val ? renderFormattedPayloadDate(val) : null,
                 })
               }

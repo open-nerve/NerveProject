@@ -5,7 +5,6 @@ import type { TLegacyIssueUpdateRequest } from "@nerve/types";
  * See the LICENSE file for details.
  */
 
-import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { observer } from "mobx-react";
 // nerve imports
@@ -14,7 +13,7 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TNameDescriptionLoader } from "@nerve/types";
 import { EFileAssetType, EInboxIssueSource, EInboxIssueStatus } from "@nerve/types";
 // components
-import { DescriptionVersionsRoot } from "@/components/core/description-versions";
+import { IntakeDescriptionVersions } from "./description-versions";
 import { DescriptionInput } from "@/components/editor/rich-text/description-input";
 import { DescriptionInputLoader } from "@/components/editor/rich-text/description-input/loader";
 import type { TIssueOperations } from "@/components/issues/issue-detail";
@@ -42,11 +41,13 @@ type Props = {
   inboxIssue: IInboxIssueStore;
   isEditable: boolean;
   isSubmitting: TNameDescriptionLoader;
-  setIsSubmitting: Dispatch<SetStateAction<TNameDescriptionLoader>>;
+  setTitleStatus: (value: TNameDescriptionLoader) => void;
+  setDescriptionStatus: (value: TNameDescriptionLoader) => void;
 };
 
 export const InboxIssueMainContent = observer(function InboxIssueMainContent(props: Props) {
-  const { workspaceSlug, projectId, inboxIssue, isEditable, isSubmitting, setIsSubmitting } = props;
+  const { workspaceSlug, projectId, inboxIssue, isEditable, isSubmitting, setTitleStatus, setDescriptionStatus } =
+    props;
   // refs
   const editorRef = useRef<EditorRefApi>(null);
   // store hooks
@@ -55,18 +56,11 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
   const { loader } = useProjectInbox();
   const { removeIssue, archiveIssue } = useIssueDetail();
   // reload confirmation
-  const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting");
+  const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting" || isSubmitting === "failed");
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    if (isSubmitting === "submitted") {
-      setShowAlert(false);
-      timer = setTimeout(() => setIsSubmitting("saved"), 3000);
-    } else if (isSubmitting === "submitting") {
-      setShowAlert(true);
-    }
-    return () => clearTimeout(timer);
-  }, [isSubmitting, setShowAlert, setIsSubmitting]);
+    setShowAlert(isSubmitting === "submitting" || isSubmitting === "failed");
+  }, [isSubmitting, setShowAlert]);
 
   // derived values
   const issue = inboxIssue.issue;
@@ -130,8 +124,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
           workspaceSlug={workspaceSlug}
           projectId={issue.project_id}
           issueId={issue.id}
-          isSubmitting={isSubmitting}
-          setIsSubmitting={(value) => setIsSubmitting(value)}
+          setIsSubmitting={setTitleStatus}
           issueOperations={issueOperations}
           disabled={!isEditable}
           value={issue.name}
@@ -157,7 +150,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
               });
             }}
             projectId={issue.project_id}
-            setIsSubmitting={(value) => setIsSubmitting(value)}
+            setIsSubmitting={setDescriptionStatus}
             workspaceSlug={workspaceSlug}
           />
         )}
@@ -172,7 +165,7 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
             />
           )}
           {isEditable && (
-            <DescriptionVersionsRoot
+            <IntakeDescriptionVersions
               className="flex-shrink-0"
               entityInformation={{
                 createdAt: issue.created_at ? new Date(issue.created_at) : new Date(),
