@@ -99,6 +99,7 @@ export const DraftIssueProperties = observer(function DraftIssueProperties({
 
       {draft.project_id && (
         <IssuePropertyLabels
+          issueName={issue.name}
           projectId={draft.project_id}
           value={issue.label_ids ?? []}
           onChange={handleLabel}

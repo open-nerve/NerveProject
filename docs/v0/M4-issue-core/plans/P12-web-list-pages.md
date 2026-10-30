@@ -129,9 +129,9 @@ make e2e
 
 **Files：** C/components/issues/issue-detail/label/select/label-select.tsx、L/properties/label-dropdown.tsx、C/components/issues/select/base.tsx及测试；标签创建hook调用方仅确需兼容处。
 
-- [ ] 同T9的单state、Options ref、modal内行为；select根不再无名停留点，触发器以当前工作项命名。P11只读分支disabled和集合pending锁保留。
-- [ ] 新建标签仍经useLabelChanges().create，重复名field拒绝/失败留窗/旧scope无跟进；搜索和新建触发的职责不混淆。P14哨兵选项及详情表单正tabIndex审计如未实际覆盖，准确移交，不据本Task宣称全关。
-- [ ] 聚焦三控件DOM、P11标签创建/拒绝/只读回归和types；M25从只读分支漏disabled、M26绕统一create、M27根无名tab点各红；G与检查点F。提交`fix(M4/P12): 完成标签选择器的单状态和模态兼容`。
+- [x] 同T9的单state、Options ref、modal内行为；select根不再无名停留点，触发器以当前工作项命名。P11只读分支disabled和集合pending锁保留。
+- [x] 新建标签仍经useLabelChanges().create，重复名field拒绝/失败留窗/旧scope无跟进；搜索和新建触发的职责不混淆。P14哨兵选项及详情表单正tabIndex审计如未实际覆盖，准确移交，不据本Task宣称全关。
+- [x] 聚焦三控件DOM、P11标签创建/拒绝/只读回归和types；M25从只读分支漏disabled、M26绕统一create、M27根无名tab点各红；G与检查点F。提交`fix(M4/P12): 完成标签选择器的单状态和模态兼容`。
 
 ## Task 11：菜单键盘、右键和层叠（约650–1100行）
 

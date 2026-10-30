@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T9 已完成，T10–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T10 已完成，T11–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -167,3 +167,16 @@ DateRange 改成与单日期相同的既有 Popover/Calendar，不再将网格�
 M23 将共享定位属性移到子节点，使实际列表失去定位；M24 将内层列表改为 modal=true，输入搜索后外层背景 aria-hidden 丢失。两项实际红，精确恢复源字节/hash、重建 UI 包后绿，见 M23/M24 receipts 及 t9-Mxx-build/red/restored；共享产品源码最终无改动。真实浏览器定位/Tab 仍留 T15。
 
 最终 t9-final-regression 通过；类型 t9-types-final2、修改路径零 lint、格式、关键词和 i18n keys 通过，web cap130→128按实际收紧。初次测试 fixture 的 stateOf 参数、缺失翻译键和测试 lint 均已修正，保留原日志。局部复用方案已同步 D15 与设计§7.5，不改变公共接口、权限所有者或 M6/M7 协议；无架构阻塞。
+
+
+## 17. T10 标签选择器和确认反馈（2026-10-30）
+
+三个标签入口复用既有 select/base：Popover 维护唯一打开状态，静态多选 Combobox 保留搜索/选项键盘语义，实际 Panel 持定位 ref，内部 modal=false 保留外层 ModalCore 隔离。原生具名按钮是唯一 Tab 停留点，名称包含可用的当前工作项标题；表格、行、创建/收集箱表单和草稿调用同步透传，不新建数据协议。分组搜索保留命中子标签的父标题，普通选择不会误触发新建；原只读、pending、颜色/集合与统一 useLabelChanges.create 合同保持。
+
+选择器的局部打开 owner 约束完成回调：关闭再开，旧选择/创建不能附加标签、清新查询或弹提示。当前行标签拒绝复用 useDetailScope/useRefusalToast 可见一次；详情写仍由既有 useDetailCommand 报错，避免双报。详情创建成功提示从无宿主的 root create 回调移到当前 picker 的 onCreated，已确认创建而关联拒绝仍保留已建标签和原拒绝。未改变 IssueRootStore 权限归属或服务接口。
+
+新增 DOM 与既有拒绝测试覆盖三个真实入口的键盘、焦点、定位、ModalCore、工作项名称、关闭/重开的创建晚答和行替换晚拒绝；旧用例仅将 portal 查询范围迁到 document，未放宽断言。共享 fake-issue-properties 按两份测试实际复用拆出。t10-controls-red、t10-row-refusal-red 与 t10-closed-toast-red 的有效行为失败均已修复；computedFn 的 map 回调额外参数、空数组类型和测试 Mock 声明等实现/夹具错误另保留，不当行为变异。
+
+M25 漏只读 disabled、M26 绕过统一 create 导致字段拒绝丢失、M27 恢复根无名 Tab 点，均被真实断言捕获，生产字节/hash 精确恢复后绿。最终 t10-final-regression 为 11 文件 160 测试（0 skip）；类型 t10-types-final2、修改路径零 lint t10-changed-lint-final、全仓 lint cap128、i18n keys/关键词及格式均通过。完整 F 首轮 knip 发现 use-dropdown/use-dropdown-key-down 两个零消费者文件，已删除，后续 knip 为零。A11 旧故事把日历当 listbox 的定位已迁为具名 dialog，保留同一定位边界、背景隔离及关闭断言；实测发现新 Popover 的默认 8px 间距不同于原 4px，DateDropdown 显式保留 sideOffset=4，未放宽几何断言。两次失败的原始截图/trace 已保留。完整本地七项最终通过：生成/Go lint/Go test 为 t10-F1 已通过且相关源码未变；web lint/knip/强制 test-web/E2E 为 t10-F4，54 项静态任务、18 项测试任务无缓存、169/169 E2E（0 skip）；列表侧浏览器矩阵仍由 T15 验证。
+
+自查沿实际三个调用方、受控值/拒绝/关闭晚答、创建 hook 和 label root 逐条核对，当前无未决架构问题。P14 的完整详情正 tabIndex/哨兵审计仍开放，本 Task 没有据局部覆盖宣称全部关闭。

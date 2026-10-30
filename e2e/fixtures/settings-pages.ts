@@ -219,7 +219,11 @@ export async function recordTokensShown(page: Page): Promise<() => Promise<strin
  * over it, and lined up with it, not where the page begins.
  */
 export async function expectListBesideButton(page: Page, button: Locator): Promise<void> {
-  const list = page.getByRole("listbox");
+  await expectPopupBesideButton(page.getByRole("listbox"), button);
+}
+
+/** The same geometry contract for a calendar's dialog, without pretending it is a listbox. */
+export async function expectPopupBesideButton(list: Locator, button: Locator): Promise<void> {
   await expect(list).toBeVisible();
   const [at, beside] = await Promise.all([list.boundingBox(), button.boundingBox()]);
   expect(at, "the list's box").not.toBeNull();

@@ -313,6 +313,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
       {/* label */}
       <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="labels">
         <IssuePropertyLabels
+          issueName={issue.name}
           projectId={issue?.project_id || null}
           value={issue?.label_ids || []}
           onChange={handleLabel}

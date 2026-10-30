@@ -8,7 +8,7 @@ import type { IssueFormValues } from "../types";
 import { useState } from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
-import { Controller } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 import { ETabIndices, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ParentOutline } from "@makeplane/propel/icons";
@@ -58,6 +58,7 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
     setSelectedParentIssue,
   } = props;
   // states
+  const issueName = useWatch({ control, name: "name" });
   const [parentIssueListModalOpen, setParentIssueListModalOpen] = useState(false);
   // store hooks
   const { t } = useTranslation();
@@ -140,6 +141,7 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
         render={({ field: { value, onChange } }) => (
           <div className="h-7">
             <IssueLabelSelect
+              issueName={issueName}
               value={value}
               onChange={(labelIds) => {
                 onChange(labelIds);

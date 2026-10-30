@@ -16,7 +16,7 @@ import {
 } from "../../fixtures/dialogs";
 import {
   answerTo,
-  expectListBesideButton,
+  expectPopupBesideButton,
   expectTokenGone,
   holdAnswer,
   parseCsv,
@@ -58,17 +58,18 @@ test("A11 (page): a token created on the page shows once, with the focus on it, 
   await expect(page.getByRole("option", { name: "Custom date" })).toBeVisible();
   expect(await pageBehindHidden(page)).toBe(true);
   await page.getByRole("option", { name: "Custom date" }).click();
-  // The dropdown's button, which holds the button of its label.
+  // A single native trigger opens the calendar dialog.
   const day = page.getByRole("button", { name: "Set date" }).first();
   await day.click();
-  await expectListBesideButton(page, day);
+  const calendar = page.getByRole("dialog", { name: "Set date", exact: true });
+  await expectPopupBesideButton(calendar, day);
   expect(await pageBehindHidden(page)).toBe(true);
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(calendar).toHaveCount(0);
   await day.click();
-  await expectListBesideButton(page, day);
+  await expectPopupBesideButton(calendar, day);
   await page.getByRole("grid").getByRole("button", { disabled: false }).last().click();
-  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(calendar).toHaveCount(0);
   await expect(page.getByText(/^Expires .+ at /)).toBeVisible();
   await page.getByRole("button", { name: "Custom date" }).click();
   await page.getByRole("option", { name: "1 week" }).click();

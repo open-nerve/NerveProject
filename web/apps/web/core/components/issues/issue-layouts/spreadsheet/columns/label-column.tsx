@@ -28,6 +28,7 @@ export const SpreadsheetLabelColumn = observer(function SpreadsheetLabelColumn(p
   return (
     <div className="h-11 w-full border-b-[0.5px] border-subtle">
       <IssuePropertyLabels
+        issueName={issue.name}
         projectId={issue.project_id ?? null}
         value={issue.label_ids || []}
         onChange={(data) => onChange(issue, { label_ids: data }, { changed_property: "labels", change_details: data })}

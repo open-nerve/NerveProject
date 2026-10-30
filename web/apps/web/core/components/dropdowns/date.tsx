@@ -140,6 +140,7 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
           aria-label={placeholder}
           data-prevent-outside-click
           placement={placement ?? "bottom-start"}
+          sideOffset={4}
           initialFocus={false}
           positionerClassName="z-30"
           className={cn(
