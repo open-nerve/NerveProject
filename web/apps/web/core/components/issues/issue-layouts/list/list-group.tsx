@@ -1,3 +1,4 @@
+import { useParams } from "react-router";
 import type { IssueCreate } from "@nerve/api-client";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
@@ -99,6 +100,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
   const groupRef = useRef<HTMLDivElement | null>(null);
   const { t } = useTranslation();
   const projectState = useProjectState();
+  const { projectId } = useParams();
 
   const { issues } = useIssuesStore();
   const { getGroupIssueCount, getPaginationData, getIssueLoader } = issues;
@@ -140,7 +142,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
   };
 
   const prePopulateQuickAddData = (groupByKey: string | null, value: string) => {
-    const defaultState = projectState.projectStates?.find((state) => state.default);
+    const defaultState = projectState.getProjectStates(projectId)?.find((state) => state.default);
     let preloadedData: object = { state_id: defaultState?.id };
 
     if (groupByKey === null) {
@@ -290,6 +292,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
           {enableIssueQuickAdd && !disableIssueCreation && !isGroupByCreatedBy && (
             <div className="sticky bottom-0 z-[1] w-full flex-shrink-0">
               <QuickAddIssueRoot
+                scopeKey={JSON.stringify([group_by, group.id])}
                 layout={EIssueLayoutTypes.LIST}
                 QuickAddButton={ListQuickAddIssueButton}
                 prePopulatedData={prePopulateQuickAddData(group_by, group.id)}

@@ -30,6 +30,7 @@ vi.mock("react-router", async (original) => ({
   ...(await original<typeof import("react-router")>()),
   useParams: () => ({ workspaceSlug: "ws", projectId: "A" }),
 }));
+vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => app().issue.issueDetail }));
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => app().state }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => app().projectRoot.project }));
 vi.mock("@/hooks/store/use-kanban-view", () => ({ useKanbanView: () => ({ getCanUserDragDrop: () => false }) }));

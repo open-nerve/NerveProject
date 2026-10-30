@@ -71,12 +71,12 @@ make e2e
 
 ## Task 4：快速添加字段错误与当前宿主（约450–850行）
 
-**Files：** L/quick-add/root与form/button；扩root.pending，新root.errors.test.tsx；错误文案/en/zh-CN仅有新码/文案时改。
+**Files：** L/quick-add/root与form/button、list/list-group、kanban/kanban-group；扩root.pending/route-scope/group-consumers，新root.errors.test.tsx；错误文案/en/zh-CN仅有新码/文案时改。
 
-- [ ] 名称Field/FieldError、aria-invalid/describedby、useRefusedFocus；关闭RHF默认抢焦，空白与服务端422字段拒绝都先显示错误再焦点。有效修改/成功清错，403不冒充name校验错误；IME组字不误提交。
-- [ ] 确认前输入/pending保留、防双提交、拒绝可重试；成功后只在当前scope重置/聚焦。原root.pending的A成功后允许旧toast断言按新宿主要求迁成无旧toast，保留“B pending不会被A释放”的原性质。
-- [ ] state/priority/labels/assignees/none的既有原生预填保持，状态列末尾位置不在UI硬加；switch group/route/关闭/权限ABA后不执行旧回调或创建第二条。
-- [ ] 聚焦两root测试/group-consumers和真实Field/refused-focus回归；M08先focus后标invalid、M09丢宿主检查、M10移除pending锁分别红；G。提交`fix(M4/P12): 完成快速添加的字段反馈与确认焦点`。
+- [x] 名称Field/FieldError、aria-invalid/describedby、useRefusedFocus；关闭RHF默认抢焦，空白与服务端422字段拒绝都先显示错误再焦点。有效修改/成功清错，403不冒充name校验错误；IME组字不误提交。
+- [x] 确认前输入/pending保留、防双提交、拒绝可重试；成功后只在当前scope重置/聚焦。原root.pending的A成功后允许旧toast断言按新宿主要求迁成无旧toast，保留“B pending不会被A释放”的原性质。
+- [x] state/priority/labels/assignees/none的既有原生预填保持，状态列末尾位置不在UI硬加；switch group/route/关闭/权限ABA后不执行旧回调或创建第二条；scopeKey 区分预填值相同的不同组，两组默认状态按显式路由读取。
+- [x] 聚焦两root测试/group-consumers和真实Field/refused-focus回归；M08先focus后标invalid、M09丢宿主检查、M10移除pending锁分别红；G。提交`fix(M4/P12): 完成快速添加的字段反馈与确认焦点`。
 
 ## Task 5：看板和泳道拖放（约850–1400行）
 

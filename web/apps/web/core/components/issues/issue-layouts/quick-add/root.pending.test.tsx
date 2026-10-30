@@ -8,11 +8,12 @@ import type { FieldValues, UseFormProps } from "react-hook-form";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { EIssueLayoutTypes } from "@nerve/types";
-import { FakeNerve, json } from "@/lib/auth/fake-nerve";
+import { type FakeNerve, json } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { IssueApiService } from "@/services/issue/issue-api.service";
-import { projectOf } from "@/store/project/fake-projects";
-import { issueOf, issueDetailOf } from "@/store/issue/fake-issues";
+import { projectOf, loadProjects } from "@/store/project/fake-projects";
+import { issueOf, issueDetailOf, issueStoreTab } from "@/store/issue/fake-issues";
+import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { QuickAddIssueRoot } from "./root";
 
 const observed = vi.hoisted(() => ({
@@ -61,7 +62,9 @@ vi.mock("@nerve/propel/toast", () => ({
   TOAST_TYPE: { SUCCESS: "success", ERROR: "error" },
   setToast: observed.settledToast,
 }));
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: observed.session } }));
+vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: observed.session }, publicClient: {} }));
+vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
+vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app.issue.issueDetail }));
 vi.mock("../../create-issue-toast-action-items", () => ({ CreateIssueToastActionItems: () => null }));
 const projectA = projectOf("A", "workspace", { id: "A" });
 const projectB = projectOf("B", "other-workspace", { id: "B" });
@@ -72,13 +75,21 @@ vi.mock("@/hooks/store/use-project", () => ({
 }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 let nerve: FakeNerve;
 let api: IssueApiService;
 let container: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
-beforeEach(() => {
+beforeEach(async () => {
   vi.useFakeTimers();
-  nerve = new FakeNerve();
+  tab = await issueStoreTab();
+  nerve = tab.nerve;
+  const ws = workspaceOf("ws", { id: projectA.workspace_id });
+  const other = workspaceOf("other", { id: projectB.workspace_id });
+  await loadWorkspaces(nerve, tab.app.workspaceRoot, [ws, other]);
+  await loadProjects(nerve, tab.app.projectRoot.project, ws, [projectA]);
+  await loadProjects(nerve, tab.app.projectRoot.project, other, [projectB]);
+  nerve.calls.length = 0;
   api = new IssueApiService(nerve.client());
   observed.route = { workspaceSlug: "ws", projectId: "A" };
   observed.submissions.length = 0;
@@ -91,6 +102,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  tab.app.dispose();
   vi.useRealTimers();
 });
 const input = () => container.querySelector("input")!;
@@ -120,7 +132,8 @@ const createHTTP = () =>
       project ? api.create(project, body) : Promise.resolve(undefined)
   );
 async function requestCount(count: number) {
-  await act(async () => until(() => nerve.calls.length === count, "quick-add HTTP"));
+  await act(async () => until(() => nerve.calls.length >= count, "quick-add HTTP"));
+  expect(nerve.calls).toHaveLength(count);
 }
 async function answer(index: number, id: string, project = "A") {
   await act(async () => {
@@ -239,12 +252,7 @@ it.each(["resolve", "reject"])("A %s cannot reset B or release B's pending owner
     nerve.calls[0]!.answer(settling === "resolve" ? json(201, issueDetailOf("A1")) : json(403, { code: "forbidden" }));
     await observed.submissions[0];
   });
-  if (settling === "resolve")
-    expect(observed.settledToast.mock.calls[0]![0].actionItems.props).toMatchObject({
-      workspaceSlug: "ws",
-      projectId: "A",
-      issueId: "A1",
-    });
+  expect(observed.settledToast).not.toHaveBeenCalled();
   await expectPending("Second");
   await act(async () => {
     submit();
@@ -272,6 +280,7 @@ it.each(["resolve", "reject"])("unmount consumes late HTTP %s without local effe
     await observed.submissions[0];
   });
   expect(container.childElementCount).toBe(0);
+  expect(observed.settledToast).not.toHaveBeenCalled();
 });
 
 it("editablePrefillEmitsOnlyIssueCreateFieldsAndOmitsNullDatesAndParent", async () => {

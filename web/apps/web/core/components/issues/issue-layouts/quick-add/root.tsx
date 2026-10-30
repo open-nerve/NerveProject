@@ -6,8 +6,8 @@
 
 import type { Issue, IssueCreate } from "@nerve/api-client";
 
-import type { FC } from "react";
-import { useEffect, useRef, useState } from "react";
+import type { FC, FormEventHandler } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import type { UseFormRegister } from "react-hook-form";
@@ -16,7 +16,13 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "@nerve/i18n";
 import { AddOutline } from "@makeplane/propel/icons";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
-import { followInSession } from "@/lib/in-session";
+import { followInSession, sessionGuard } from "@/lib/in-session";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useDetailScope } from "../../issue-detail-widgets/use-detail-scope";
+import { useFormRefusal } from "@/lib/form-refusal";
+import { useRefusedFocus } from "@/lib/refused-focus";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { EUserPermissions } from "@nerve/constants";
 import type { Project } from "@nerve/api-client";
 import type { EIssueLayoutTypes } from "@nerve/types";
 import { cn } from "@nerve/utils";
@@ -33,9 +39,9 @@ export type TQuickAddIssueForm = {
   ref: React.RefObject<HTMLFormElement | null>;
   isOpen: boolean;
   projectDetail: Project;
-  hasError: boolean;
+  error: string | undefined;
   register: UseFormRegister<QuickAddValues>;
-  onSubmit: () => void;
+  onSubmit: FormEventHandler<HTMLFormElement>;
 };
 
 export type TQuickAddIssueButton = {
@@ -43,6 +49,8 @@ export type TQuickAddIssueButton = {
 };
 
 type TQuickAddIssueRoot = {
+  /** Business host identity, including equal-payload groups such as labels:none and assignees:none. */
+  scopeKey?: string;
   isQuickAddOpen?: boolean;
   layout: EIssueLayoutTypes;
   prePopulatedData?: QuickAddPrefill;
@@ -59,10 +67,31 @@ const defaultValues: QuickAddValues = {
 
 export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQuickAddIssueRoot) {
   const { workspaceSlug, projectId } = useParams();
-  if (!workspaceSlug || !projectId) return null;
+  const { rootIssueStore: root } = useIssueDetail();
+  const role =
+    workspaceSlug && projectId
+      ? root.rootStore.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId)
+      : undefined;
+  const workspace = workspaceSlug ? root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug) : undefined;
+  const identity = root.permissionReads.identity(workspace?.id, projectId ? [projectId] : []);
+  if (
+    !workspaceSlug ||
+    !projectId ||
+    !root.active ||
+    (role !== EUserPermissions.MEMBER && role !== EUserPermissions.ADMIN)
+  )
+    return null;
   return (
     <QuickAddIssueScope
-      key={`${workspaceSlug}/${projectId}`}
+      key={JSON.stringify([
+        workspaceSlug,
+        projectId,
+        identity,
+        props.prePopulatedData,
+        props.isQuickAddOpen,
+        props.layout,
+        props.scopeKey,
+      ])}
       {...props}
       workspaceSlug={workspaceSlug}
       projectId={projectId}
@@ -91,6 +120,9 @@ const QuickAddIssueScope = observer(function QuickAddIssueScope(
   const [isOpen, setIsOpen] = useState(isQuickAddOpen ?? false);
   const [pending, setPending] = useState(false);
   const busy = useRef(false);
+  const capture = useDetailScope(workspaceSlug, projectId, JSON.stringify([isOpen, prePopulatedData]));
+  const refuse = useFormRefusal(["name"] as const, {});
+  const focusAfterSuccess = useRef<(() => boolean) | null>(null);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -102,10 +134,19 @@ const QuickAddIssueScope = observer(function QuickAddIssueScope(
   const {
     reset,
     handleSubmit,
-    setFocus,
     register,
-    formState: { errors },
-  } = useForm<QuickAddValues>({ defaultValues });
+    setError,
+    formState: { errors, submitCount },
+  } = useForm<QuickAddValues>({ defaultValues, shouldFocusError: false });
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
+  useLayoutEffect(() => {
+    if (pending || !focusAfterSuccess.current) return;
+    const current = focusAfterSuccess.current;
+    focusAfterSuccess.current = null;
+    queueMicrotask(() => {
+      if (current()) formRef.current?.querySelector<HTMLInputElement>('input[name="name"]')?.focus();
+    });
+  }, [pending, submitCount, formRef]);
 
   useEffect(() => {
     if (isQuickAddOpen !== undefined) {
@@ -117,18 +158,20 @@ const QuickAddIssueScope = observer(function QuickAddIssueScope(
     if (!isOpen && !busy.current) reset({ ...defaultValues });
   }, [isOpen, reset]);
 
-  // oxlint-disable-next-line no-shadow
-  const handleIsOpen = (isOpen: boolean) => {
-    if (!isOpen && (busy.current || pending)) return;
+  const handleIsOpen = (nextOpen: boolean) => {
+    if (!nextOpen && (busy.current || pending)) return;
     if (isQuickAddOpen !== undefined && setIsQuickAddOpen) {
-      setIsQuickAddOpen(isOpen);
+      setIsQuickAddOpen(nextOpen);
     } else {
-      setIsOpen(isOpen);
+      setIsOpen(nextOpen);
     }
   };
 
   const onSubmitHandler = async (formData: QuickAddValues) => {
-    if (busy.current || !quickAddCallback) return;
+    const sameScope = capture();
+    const sameSession = sessionGuard();
+    const current = () => sameScope() && sameSession();
+    if (busy.current || !quickAddCallback || !current()) return;
     busy.current = true;
     setPending(true);
     try {
@@ -152,6 +195,7 @@ const QuickAddIssueScope = observer(function QuickAddIssueScope(
           }),
         {
           done: (issue) => {
+            if (!current()) return;
             setToast({
               type: TOAST_TYPE.SUCCESS,
               title: t("common.success"),
@@ -160,14 +204,12 @@ const QuickAddIssueScope = observer(function QuickAddIssueScope(
                 <CreateIssueToastActionItems workspaceSlug={workspaceSlug} projectId={projectId} issueId={issue.id} />
               ),
             });
-            if (mounted.current) reset(defaultValues);
+            reset(defaultValues);
+            focusAfterSuccess.current = current;
           },
           failed: (error) => {
-            setToast({
-              type: TOAST_TYPE.ERROR,
-              title: t("common.error.label"),
-              message: error instanceof Error ? error.message : t("common.error.message"),
-            });
+            if (!current() || error instanceof SessionChangedError) return;
+            refuse(error, (field, message) => setError(field, { type: "server", message }, { shouldFocus: false }));
           },
         }
       );
@@ -178,21 +220,15 @@ const QuickAddIssueScope = observer(function QuickAddIssueScope(
   };
 
   return (
-    <div
-      className={cn(
-        containerClassName,
-        errors && errors?.name && errors?.name?.message ? `border-danger-strong bg-danger-subtle` : ``
-      )}
-    >
+    <div className={cn(containerClassName, errors.name?.message ? `border-danger-strong bg-danger-subtle` : ``)}>
       {isOpen ? (
         <fieldset disabled={pending}>
           <QuickAddIssueFormRoot
             isOpen={isOpen}
             layout={layout}
             projectId={projectId}
-            // oxlint-disable-next-line no-unneeded-ternary
-            hasError={errors && errors?.name && errors?.name?.message ? true : false}
-            setFocus={setFocus}
+            ref={formRef}
+            error={errors.name?.message}
             register={register}
             onSubmit={handleSubmit(onSubmitHandler)}
             onClose={() => handleIsOpen(false)}

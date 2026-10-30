@@ -14,12 +14,13 @@ export const KanbanQuickAddIssueButton = observer(function KanbanQuickAddIssueBu
   const { onClick } = props;
   const { t } = useTranslation();
   return (
-    <div
+    <button
+      type="button"
       className="flex w-full cursor-pointer items-center gap-2 rounded-lg bg-layer-transparent px-2 py-1 py-1.5 hover:bg-layer-transparent-hover"
       onClick={onClick}
     >
       <AddOutline className="h-3.5 w-3.5" />
       <span className="text-13 font-medium">{t("issue.new")}</span>
-    </div>
+    </button>
   );
 });

@@ -1,3 +1,4 @@
+import { useParams } from "react-router";
 import type { IssueCreate } from "@nerve/api-client";
 import type { Group } from "@/lib/paged-groups";
 /**
@@ -91,6 +92,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
   const { t } = useTranslation();
   // hooks
   const projectState = useProjectState();
+  const { projectId } = useParams();
 
   const {
     issues: { getGroupIssueCount, getPaginationData, getIssueLoader },
@@ -180,7 +182,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     groupValue: string,
     subGroupValue: string | undefined
   ) => {
-    const defaultState = projectState.projectStates?.find((state) => state.default);
+    const defaultState = projectState.getProjectStates(projectId)?.find((state) => state.default);
     let preloadedData: object = { state_id: defaultState?.id };
 
     if (groupByKey) {
@@ -299,6 +301,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
       {enableQuickIssueCreate && !disableIssueCreation && (
         <div className="sticky bottom-0 w-full bg-surface-2 py-0.5">
           <QuickAddIssueRoot
+            scopeKey={JSON.stringify([group_by, groupId, sub_group_by, sub_group_id])}
             layout={EIssueLayoutTypes.KANBAN}
             QuickAddButton={KanbanQuickAddIssueButton}
             prePopulatedData={{

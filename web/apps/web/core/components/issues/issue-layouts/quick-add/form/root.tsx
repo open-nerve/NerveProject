@@ -6,10 +6,10 @@
 
 import type { Issue } from "@nerve/api-client";
 
-import type { FC } from "react";
-import { useEffect, useRef } from "react";
+import type { FC, FormEventHandler, RefObject } from "react";
+import { useEffect } from "react";
 import { observer } from "mobx-react";
-import type { UseFormRegister, UseFormSetFocus } from "react-hook-form";
+import type { UseFormRegister } from "react-hook-form";
 // nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
 // types
@@ -31,28 +31,26 @@ export type TQuickAddIssueFormRoot = {
   isOpen: boolean;
   layout: EIssueLayoutTypes;
   projectId: string;
-  hasError?: boolean;
-  setFocus: UseFormSetFocus<Pick<Issue, "name">>;
+  ref: RefObject<HTMLFormElement | null>;
+  error: string | undefined;
   register: UseFormRegister<Pick<Issue, "name">>;
-  onSubmit: () => void;
+  onSubmit: FormEventHandler<HTMLFormElement>;
   onClose: () => void;
 };
 
 export const QuickAddIssueFormRoot = observer(function QuickAddIssueFormRoot(props: TQuickAddIssueFormRoot) {
-  const { isOpen, layout, projectId, hasError = false, setFocus, register, onSubmit, onClose } = props;
+  const { isOpen, layout, projectId, ref, error, register, onSubmit, onClose } = props;
   // store hooks
   const { getProjectById } = useProject();
   // derived values
   const projectDetail = getProjectById(projectId);
-  // refs
-  const ref = useRef<HTMLFormElement>(null);
   // click detection
   useKeypress("Escape", onClose);
   useOutsideClickDetector(ref, onClose);
   // set focus on name input
   useEffect(() => {
-    setFocus("name");
-  }, [setFocus]);
+    ref.current?.querySelector<HTMLInputElement>('input[name="name"]')?.focus();
+  }, [ref]);
 
   if (!projectDetail) return <></>;
 
@@ -72,7 +70,7 @@ export const QuickAddIssueFormRoot = observer(function QuickAddIssueFormRoot(pro
       ref={ref}
       isOpen={isOpen}
       projectDetail={projectDetail}
-      hasError={hasError}
+      error={error}
       register={register}
       onSubmit={onSubmit}
     />

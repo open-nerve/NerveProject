@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -12,6 +12,9 @@ import { issueStoreTab } from "@/store/issue/fake-issues";
 import { loadProjects, projectOf, labelOf, stateOf, projectMemberOf } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import { membershipOf } from "@/store/member/workspace/fake-members";
+import { until } from "@/lib/auth/fake-time";
+import { ListGroup } from "./list/list-group";
+import { KanBan } from "./kanban/default";
 import { answered } from "@/lib/auth/fake-nerve";
 import { getGroupByColumns } from "./group-columns";
 import { IssuesHeader } from "../header";
@@ -33,6 +36,11 @@ vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("react-router", async (original) => ({
   ...(await original<typeof import("react-router")>()),
   useParams: () => bound.route,
+}));
+// No viewport geometry in jsdom; these cases exercise directory-backed prefill.
+vi.mock("@atlaskit/pragmatic-drag-and-drop-auto-scroll/element", () => ({ autoScrollForElements: () => () => {} }));
+vi.mock("@/components/core/render-if-visible-HOC", () => ({
+  default: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
 // Full filter editing and project selection have their own tests; retain the actual list breadcrumb and actions.
@@ -61,7 +69,7 @@ beforeEach(async () => {
       tab.nerve,
       () => tab.app.state.fetchProjectStates(project.id),
       ["GET", `/api/v0/projects/${project.id}/states`],
-      { data: [stateOf(project, `${project.id} state`, "unstarted", 1)] },
+      { data: [stateOf(project, `${project.id} state`, "unstarted", 1, { default: true })] },
       "states"
     );
     await answered(
@@ -176,3 +184,72 @@ it("an explicit workspace never borrows the router's projects or members and hel
   await act(async () => {});
   expect(tab.nerve.calls).toHaveLength(0);
 });
+
+it.each(["list", "kanban"] as const)(
+  "%s default quick-add state follows route B before router store's effect",
+  async (layout) => {
+    const common = {
+      orderBy: "sort_order" as const,
+      updateIssue: undefined,
+      quickActions: () => null,
+      displayProperties: undefined,
+      canEditProperties: () => true,
+      handleOnDrop: async () => {},
+      collapsedGroups: { group_by: [], sub_group_by: [] },
+      handleCollapsedGroups: () => {},
+      loadMoreIssues: () => {},
+      showEmptyGroup: true,
+      quickAddCallback: (project: string | null | undefined, body: import("@nerve/api-client").IssueCreate) =>
+        tab.app.issue.createIssue(tab.app.issue.scope("ws", project!), body),
+    };
+    await act(async () =>
+      renderer.render(
+        <MemoryRouter>
+          <StoreContext.Provider value={tab.app}>
+            {layout === "list" ? (
+              <ListGroup
+                {...common}
+                group={{ id: "", name: "All", payload: {} }}
+                group_by={null}
+                groupIssueIds={[]}
+                issuesMap={{}}
+                getGroupIndex={() => 0}
+                enableIssueQuickAdd
+                containerRef={{ current: null }}
+              />
+            ) : (
+              <KanBan
+                {...common}
+                groups={new Map()}
+                issuesMap={{}}
+                getGroupIssueCount={() => 0}
+                group_by="priority"
+                sub_group_by={undefined}
+                enableQuickIssueCreate
+              />
+            )}
+          </StoreContext.Provider>
+        </MemoryRouter>
+      )
+    );
+    const open = [...container.querySelectorAll("span")].find((node) => node.textContent === "issue.new")!;
+    expect(open.closest("button"), "quick-add has a named keyboard trigger").not.toBeNull();
+    await act(async () => open.click());
+    const input = container.querySelector("input")!;
+    expect(document.activeElement).toBe(input);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "New in B");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () =>
+      container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    );
+    await until(() => tab.nerve.calls.length === 1, "B create");
+    expect(tab.nerve.calls[0]).toMatchObject({
+      method: "POST",
+      path: "/api/v0/projects/B/issues",
+      body: { state_id: tab.app.state.getProjectStates("B")![0]!.id },
+    });
+    expect(tab.app.router.projectId).toBe("A");
+  }
+);

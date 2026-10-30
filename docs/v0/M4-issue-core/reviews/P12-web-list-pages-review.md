@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T3 已完成，T4–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T4 已完成，T5–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -91,3 +91,13 @@ M01 错搜索地址、M02 防抖延后失效、M03 放行其它项目三项生�
 M06 续页丢 label_id、M07 计数改用已加载长度均触发行为红，精确恢复哈希再绿。最终聚焦10文件247测试（0 skip），类型、修改路径零 lint、关键词及 web cap137均通过；raw/输入哈希/退出码见 `t3-final-regression`、`t3-types`、`t3-changed-lint`、`t3-lint-cap`、`t3-keywords` 和 M06/M07 receipts。生产修复及重试协同在既有 binding 职责内，自查无新架构决定。
 
 过程日志可见既有 DateDropdown 嵌套按钮，以及 WorkItemFilterRoot 渲染时通知 FiltersRow；前者由已定 T8 修复，后者在 T13 真实列表筛选加载时追根核验，最终页面零意外 console 标准不放宽。当前聚焦通过不等于这些后续项已关闭。
+
+## 11. T4 快速添加、字段反馈和宿主（2026-10-30）
+
+四布局共用 QuickAddNameField，Field/FieldControl/FieldError 保留原样式并提供名称、无效状态及错误描述；空白名称本地拒绝，422字段错误用既有文案表，403走统一拒绝提示。RHF 默认抢焦关闭，useRefusedFocus 在错误提交后取焦；输入法 Enter 由既有 isComposing 判断。首次打开和确认保存后对已挂载且已解除 pending 的实际输入框取焦，实测修复原 RHF ref 注册/reset 窗口。
+
+调用复用 DetailScope、根权限水位和会话检查。项目/权限/分组/外部关闭使旧owner结束，晚答不弹旧toast、不重置或解锁新表单；保留重复提交的同步 busy 所有者。显式 scopeKey 区分相同预填载荷的不同组；列表/看板默认状态按 route projectId 读取，新增 route B/store A 的真实 POST 断言。列表和看板的添加入口改原生按钮，实际打开后焦点落输入框。状态/优先级/标签/负责人/none 的原生预填继续由原群组回归证明。
+
+现有 root.pending 改为提供真实根权限事实，保留原 HTTP/重复提交/B pending 的断言，并把旧A成功toast改为安静；新 root.errors 通过真实 root writer 与 FakeNerve 覆盖空白、422、403、成功、IME、关闭/换组/权限ABA。M08错误前抢焦、M09丢宿主检查、M10去busy锁在最终源码上均实际红→精确哈希恢复→绿（`M08-final`/`M09-final`/`M10-final` receipts）；M10 明确观测到2个POST，而非只等到超时。早期引入 scopeKey 前同载荷换组仍弹toast的红、默认状态错项目及打开未取焦的红也保留。
+
+最终聚焦10文件99测试（0 skip）通过，类型、格式、修改路径零 lint 和关键词通过，web cap137→135按实际收紧。证据为 `t4-final-regression2`、`t4-types-final2`、`t4-changed-lint-final`、`t4-format-final`、`t4-lint-final`、`t4-keywords`。第一次final聚焦揭露首次打开取焦缺口，已修复后再跑，旧失败原件保留；初次 FieldError 缺 size 的类型错误及 jsdom 缺 IntersectionObserver 只记夹具/编译过程。无未决架构问题；真实页面、三浏览器和首轮完整 F 留 T5 及后续检查点。
