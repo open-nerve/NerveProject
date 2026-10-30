@@ -1161,13 +1161,13 @@ it("a verification from a lost permission identity does not keep the list loadin
   await verify.promise;
 });
 
+const options = (range: string) => ({ limit: 4, query: { group_by: "target_date" as const, target_date: [range] } });
 it("empty calendar intersection remains logical across writes permissions and window changes", async () => {
   const root = app.issue;
   const issues = root.projectIssues;
   runInAction(() => {
     root.projectIssuesFilter.filters.A.richFilters = { and: [{ target_date__exact: "2026-11-15" }] };
   });
-  const options = (range: string) => ({ limit: 4, query: { group_by: "target_date" as const, target_date: [range] } });
   const serial = root.readSerial;
   await issues.fetchIssues("ws", "A", "init-loader", options("2026-10-01..2026-10-31"));
   const empty = issues.currentList!;

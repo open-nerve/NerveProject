@@ -506,6 +506,12 @@ test("I5 (page): a refused preference keeps confirmed UI and database; a confirm
       });
     }
   );
+  // Refusal feedback must not move the document or detach a fixed panel from its trigger.
+  const scrollPositions = await page.evaluateHandle(() => {
+    const positions = [window.scrollY];
+    window.addEventListener("scroll", () => positions.push(window.scrollY));
+    return positions;
+  });
   const panel = await displayPanel(page);
   const priority = panel
     .getByRole("button", { name: "Display Properties", exact: true })
@@ -540,6 +546,8 @@ test("I5 (page): a refused preference keeps confirmed UI and database; a confirm
   // The route that refuses the first PATCH does not reach bodiesSentTo's fallback handler.
   expect(bodies).toEqual([{ display_filters: saved.display_filters }]);
   expect(await readProjectPreferences(api, member.token, project.id)).toEqual(saved);
+  expect([...new Set(await scrollPositions.jsonValue())]).toEqual([0]);
+  await scrollPositions.dispose();
   await expectListPageQuiet(page, watch, browserName, 1, {
     failures: [`403 PATCH ${path}`, `503 GET ${list}`],
     errors:

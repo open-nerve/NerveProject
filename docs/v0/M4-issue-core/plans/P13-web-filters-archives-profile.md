@@ -197,19 +197,19 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 
 ## Task 13：C2/C9三浏览器与完整门禁（约450–950行）
 
-**Files：** spec T13；新增e2e脚本test:m4-filters调用playwright.m4-filters.config.ts；修改到的关键词样本、翻译和dead成员报告。
+**Files：** spec T13；独立浏览器夹具web/apps/web/scripts/filter-browser与e2e/fixtures/filter-browser.ts；新增e2e脚本test:m4-filters调用playwright.m4-filters.config.ts；修改到的关键词样本、翻译和dead成员报告。
 **Interfaces：** testMatch只匹配i5-list-preferences、i15-archive-issue、i19-member-issues、filter-archive-profile-interactions；grep只(page)|C[29]:；projects显式chromium/firefox/webkit，不能继承base.projects的Firefox grep。
 
-- [ ] Step 1：写C2: .../C9: ...真实交互：四选择器逐一的键盘/加载/defaultOpen/搜索清空、FiltersDropdown默认与自定义名字/expanded/Escape回焦、两日期范围/错误、归档modal焦点、两页面Back/手机权限；定位断言实际panel与按钮邻接且可点击，不只DOM存在。
-- [ ] Step 2：新配置--list分别核三个浏览器都有预期页故事且无API故事；先Chromium聚焦，记录实际失败；配置列表检查不是产品通过。
-- [ ] Step 3：修发现的局部根因，保持modal外层隔离/portal/P12共享消费者；按实际入口逐浏览器枚举EMOJI旧警告，不能新增宽泛console忽略。精确审改到文件dead/props/exports，oxlint上限不抬高，禁止新的宽泛keywords豁免。
-- [ ] Step 4：当前make build后从e2e串行运行下列三条，预期每条非零、0失败/0skip；再完整F并核真实输入，分支push/CI准确SHA另取证。
+- [x] Step 1：写C2: .../C9: ...真实交互：四选择器逐一的键盘/加载/defaultOpen/搜索清空（single兼容与异步等待按spec裁定由独立浏览器夹具验收，可达者保留真实业务页面）、FiltersDropdown默认与自定义名字/expanded/Escape回焦、两日期范围/错误、归档modal焦点、两页面Back/手机权限；定位断言实际panel与按钮邻接且可点击，不只DOM存在。
+- [x] Step 2：新配置--list分别核三个浏览器都有预期页故事且无API故事；先Chromium聚焦，记录实际失败；配置列表检查不是产品通过。
+- [x] Step 3：修发现的局部根因，保持modal外层隔离/portal/P12共享消费者；按实际入口逐浏览器枚举EMOJI旧警告，不能新增宽泛console忽略。精确审改到文件dead/props/exports，oxlint上限不抬高，禁止新的宽泛keywords豁免。
+- [x] Step 4：当前make build后从e2e串行运行下列三条，预期每条非零、0失败/0skip；再完整F并核真实输入，分支push/CI准确SHA另取证。
   ~~~sh
   pnpm exec playwright test --config=playwright.m4-filters.config.ts --project=chromium
   pnpm exec playwright test --config=playwright.m4-filters.config.ts --project=firefox
   pnpm exec playwright test --config=playwright.m4-filters.config.ts --project=webkit
   ~~~
-- [ ] Step 5：提交test(M4/P13): 补齐筛选归档和个人主页的跨浏览器验收。记录A10/A11。
+- [x] Step 5：提交test(M4/P13): 补齐筛选归档和个人主页的跨浏览器验收。记录A10/A11。
 
 ## Task 14：整分支deep-review与分支交付
 
@@ -257,3 +257,6 @@ pnpm --filter web exec vitest run core/components/profile/profile-page.test.tsx 
 ~~~
 
 T10–T12的页面命令与T13三浏览器命令已各自列出。T14依最终改动选必要回归并核完整F，不凭计划文字生成通过数字。
+
+
+T13局部复验裁定：Firefox 的 I5 拒绝故事记录到错误 toast 入场后 HTML 滚动约90px，等待下拉动画仍失败；toast 从 absolute 改为 fixed，使其动画不扩大文档滚动区，API/焦点/提示归属不变。C2 另证明项目保存未改变筛选条件时仍 resetExpression 会重建条件ID，Escape 刚返回的按钮随之卸载；项目确认宿主比较语义，相同条件仅推进已保存基线，服务端确实清理条件时仍应用确认表达式，新草稿/旧scope检查保持。两项均在原组件职责内修复，不增加共享协议或权限所有者；新增页面滚动与真实RootStore焦点断言先红后绿，三浏览器和完整F核共享消费者。

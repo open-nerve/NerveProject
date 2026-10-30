@@ -410,10 +410,37 @@ it("actual filter menu excludes unsupported created and updated dates", async ()
     button.click();
   });
   const options = [...document.querySelectorAll('[role="option"]')].map((node) => node.textContent?.toLowerCase());
-  expect(options).toContain("target date");
-  expect(options).not.toContain("created at");
-  expect(options).not.toContain("updated at");
+  expect(options).toContain("common.filter_options.fields.target_date");
+  expect(options).not.toContain("common.filter_options.fields.created_at");
+  expect(options).not.toContain("common.filter_options.fields.updated_at");
 });
+it("an unchanged preference confirmation retains the focused condition and marks its baseline saved", async () => {
+  await mountWithPreferences();
+  await act(async () => tab.nerve.calls[1]!.answer(json(200, issuePageOf([]))));
+  const filter = mountedFilter();
+  await act(async () => {
+    filter.toggleVisibility(true);
+    filter.resetExpression({ and: [{ priority__in: "high" }] }, false);
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  const button = [...container.querySelectorAll<HTMLButtonElement>("button")].find(
+    (node) => node.textContent?.trim().toLowerCase() === "high"
+  );
+  expect(button).toBeDefined();
+  button!.focus();
+  expect(document.activeElement).toBe(button);
+  expect(filter.hasChanges).toBe(true);
+  const write = tab.nerve.calls.find((call) => call.method === "PATCH")!;
+  await act(async () => {
+    write.answer(json(200, preferencesOf({ filters: { priority: ["high"] } })));
+    await vi.advanceTimersByTimeAsync(100);
+  });
+  expect(document.activeElement).toBe(button);
+  expect(button!.isConnected).toBe(true);
+  expect(filter.hasChanges).toBe(false);
+  expect(tab.nerve.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
+});
+
 it.each([false, true])("confirmed cleaned filter is visible and cannot overwrite new input newer=%s", async (newer) => {
   await mountWithPreferences();
   await act(async () => tab.nerve.calls[1]!.answer(json(200, issuePageOf([]))));

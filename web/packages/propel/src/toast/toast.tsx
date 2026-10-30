@@ -125,7 +125,8 @@ function ToastRender({ id, toast }: { id: React.Key; toast: BaseToast.Root.Toast
       className={cn(
         // Base layout and positioning
         "group flex w-[350px] items-center rounded-lg border shadow-raised-200",
-        "absolute right-3 bottom-3 z-[calc(1000-var(--toast-index))]",
+        // A toast belongs to the viewport. Its entry/exit transform must not extend the document's scroll area.
+        "fixed right-3 bottom-3 z-[calc(1000-var(--toast-index))]",
         "ease-&lsqb;cubic-bezier(0.22,1,0.36,1)&rsqb; transition-[opacity,transform] duration-500 select-none",
 
         // Default transform with stacking and scaling

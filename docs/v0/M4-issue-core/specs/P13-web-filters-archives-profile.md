@@ -1,6 +1,6 @@
 # M4/P13 筛选、显示设置、归档页与个人主页
 
-> 状态：负责人已授权实施，T1完成，T2接续。分支 codex/m4-p13；基线 main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8；工作树 .codex/worktress/codex/m4-p13。负责人随后授权从T1实施，阶段末做deep-review，先不合并。P12 已合并、准确 main CI 全绿并归档清理，见 [P12 review §28](../reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)。
+> 状态：T1–T13实施与验证完成，接续T14整分支审查。分支 codex/m4-p13；基线 main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8；工作树 .codex/worktress/codex/m4-p13。负责人随后授权从T1实施，阶段末做deep-review，先不合并。P12 已合并、准确 main CI 全绿并归档清理，见 [P12 review §28](../reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)。
 
 权威：[M4 设计](../M4-design.md) §3.16–3.17、3.22、7.4–7.5、9.7、12/P13、14；[plan](../plans/P13-web-filters-archives-profile.md)；[阶段评审](../reviews/P13-web-filters-archives-profile-review.md)。原型与逐 Task 重放按 [02 §3](../../claude_to_gpt/02-method.md#3-哪些是要求哪些是做法) 调整为静态合同、调用链、既有测试核对、一次独立 builder-check 和主控三视角 deep-review。本次不以静态结论代替产品测试。
 
@@ -14,7 +14,7 @@ P10b 的原生转换、分组分页、IssueRootStore 权限失效方案 A，P11 
 
 ### 2.1 文件结构与任务
 
-路径缩写：C=web/apps/web/core；L=C/components/issues/issue-layouts；R=web/apps/web/app/(all)/[workspaceSlug]/(projects)；P=web/packages。表中的“新”是实施目标，本次不会创建产品文件。
+路径缩写：C=web/apps/web/core；L=C/components/issues/issue-layouts；R=web/apps/web/app/(all)/[workspaceSlug]/(projects)；P=web/packages。表中的“新”是本阶段新增目标，实际完成状态见plan及阶段review。
 
 | Task | 文件与职责 | 必要验证落点 |
 |---|---|---|
@@ -55,7 +55,7 @@ subscriber_id 数据链已存在，T1补对应配置与成员选项，不能用 
 
 四个 CustomSearchSelect 生产调用为 add-filters/dropdown、filter-item/root、select/single、select/multi。searchPlaceholder、noResultsMessage、loadingMessage 显式来自 t()；新增/改到的文案同步 en、zh-CN 和键。选项名称、清空、无可添加条件、加载失败/重试和日期弹窗名称同样可翻译。
 
-defaultOpen 在空条件首次出现时生效；异步候选未到时仍有可见加载状态，到达后不要求多点一次，不因重渲染/清空搜索反复开关。每次打开的回调仅一次。键盘 Enter/Space、输入搜索、选择、Escape/Tab 与焦点归还在真实页面验收，保持 P12 的单一打开状态和外层 ModalCore 隔离。
+defaultOpen 在空条件首次出现时生效；异步候选未到时仍有可见加载状态，到达后不要求多点一次，不因重渲染/清空搜索反复开关。每次打开的回调仅一次。键盘 Enter/Space、输入搜索、选择、Escape/Tab 与焦点归还按实际可达性验收：添加、运算符和多选在业务页面，未进入M4配置的单选在独立真实浏览器夹具，保持 P12 的单一打开状态和外层 ModalCore 隔离。
 
 single/multi 共用一个局部 options 请求生命周期：配置/条件宿主切换、卸载后旧成功、旧错误和 finally 均不能覆盖新状态。当前读取失败显示可重试反馈，不只 console.error，不冒充“无结果”。局部 hook 只管理 options/loading/error，不缓存另一份领域目录，不引入权限事实；父级身份来自原 root/route。
 
@@ -132,7 +132,7 @@ T9局部实现裁定：profile内存偏好按workspace/target保存，账号仍�
 ## 4. 验收标准
 
 - [ ] A1 三页允许筛选配置与原生词汇一致；subscriber 正常显示，日期AND/none/me/清空与既有非法字段清洗保持。
-- [ ] A2 四选择器的翻译、defaultOpen、异步当前性、失败重试及按钮名称/键盘/焦点在真实页面通过。
+- [ ] A2 四选择器的翻译、defaultOpen、异步当前性与失败重试通过；名称/键盘/焦点按实际入口在业务页面或独立真实浏览器兼容夹具验收（§2.3）。
 - [ ] A3 范围草稿不丢起日、错误文字与aria关联、本地日无偏移；旧日期弹窗标题/范围与共享消费者不回归。
 - [ ] A4 项目三个偏好字段确认写入、并发不覆盖、拒绝不变、确认后读失败只GET重试；I5(page)三层一致。
 - [ ] A5 归档本地设置恢复、固定列表、只读字段与有权命令分离；I15(page)归档/恢复/删除成立。
@@ -174,3 +174,9 @@ P12最终e6d1329b以--no-ff合并为main ff89d0a1，准确[CI 41087022719](https
 T6局部实现裁定：归档弹窗在当前确认成功后负责唯一反馈；可选onArchived回调承担随后导航/关闭peek。命令callback只返回原命令，不吞拒绝或先卸载反馈宿主。此改动只涉及原页面和弹窗的反馈归属，不新增命令层或修改根确认协议。
 
 T11页面复验补充：行归档确认由当前布局的局部 IssueArchiveHost 承载，不能放在确认后立即消失的行内；最后一行移除、列表刷新/空态仍保留本次确认的反馈宿主。导航 key 或原有 PermissionReads 身份改变即结束旧确认；不新增全局状态、权限来源或命令层。详情/peek 保持现有详情宿主。子项初读只由既有详情加载器执行，子项组件消费仍有有效读取凭据的资源及原重试入口，避免挂载后重复读取触发父项核验、卸载、再挂载循环。归档只读页隐藏新增子项/关联/链接入口，仍展示其已有内容。
+
+
+T13入口核验裁定：M4原生配置只生成multi-select，single-select是保留兼容消费者，没有业务路由可达；同步目录也不产生可控异步等待。因此新增独立浏览器夹具编译并挂载真实single/multi组件、真实i18n与样式，在三浏览器验证中英文加载/defaultOpen/搜索/键盘/焦点。该夹具只在E2E临时目录构建和服务，不进入产品路由，不冒称API或业务页故事；可达的添加、运算符、多选及日期、显示、归档仍由真实业务页面验收。代价是单选未来若重新进入产品需补对应业务接线故事，当前不为测试改变多选协议。
+
+
+T13局部复验裁定：Firefox 的 I5 拒绝故事记录到错误 toast 入场后 HTML 滚动约90px，等待下拉动画仍失败；toast 从 absolute 改为 fixed，使其动画不扩大文档滚动区，API/焦点/提示归属不变。C2 另证明项目保存未改变筛选条件时仍 resetExpression 会重建条件ID，Escape 刚返回的按钮随之卸载；项目确认宿主比较语义，相同条件仅推进已保存基线，服务端确实清理条件时仍应用确认表达式，新草稿/旧scope检查保持。两项均在原组件职责内修复，不增加共享协议或权限所有者；新增页面滚动与真实RootStore焦点断言先红后绿，三浏览器和完整F核共享消费者。

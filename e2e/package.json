@@ -9,7 +9,8 @@
     "check:types": "tsc --noEmit",
     "check:lint": "node ../tools/lint-cap.mjs 0",
     "check:format": "oxfmt --check .",
-    "fix:format": "oxfmt ."
+    "fix:format": "oxfmt .",
+    "test:m4-filters": "playwright test --config=playwright.m4-filters.config.ts"
   },
   "devDependencies": {
     "@nerve/api-client": "workspace:*",

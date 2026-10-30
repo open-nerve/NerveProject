@@ -42,18 +42,24 @@ export const FilterItem = observer(function FilterItem<P extends TFilterProperty
   const { t } = useTranslation();
   // derived values
   const filterConfig = condition?.property ? filter.configManager.getConfigByProperty(condition.property) : undefined;
-  const operatorOptions = filterConfig
-    ?.getAllDisplayOperatorOptionsByValue(condition.value as TFilterValue)
-    .map((option) => ({
-      value: option.value,
-      content: option.label,
-      query: option.label.toLowerCase(),
-    }));
+  const operatorLabel = (operator: TSupportedOperators | undefined) => {
+    if (!operator) return "--";
+    const custom = filterConfig?.getOperatorConfig(operator)?.operatorLabel;
+    if (custom) return custom;
+    const keys: Record<TSupportedOperators, string> = {
+      exact: "common.filter_options.operators.exact",
+      in: "common.filter_options.operators.in",
+      range: "common.filter_options.operators.range",
+    };
+    return t(keys[operator]);
+  };
+  const operatorOptions = filterConfig?.getAllDisplayOperatorOptionsByValue(condition.value).map((option) => ({
+    value: option.value,
+    content: operatorLabel(filterConfig.getDisplayOperatorByValue(option.value, condition.value)),
+    query: operatorLabel(filterConfig.getDisplayOperatorByValue(option.value, condition.value)).toLowerCase(),
+  }));
   const selectedOperatorFieldConfig = filterConfig?.getOperatorConfig(condition.operator);
-  const selectedOperatorOption = filterConfig?.getDisplayOperatorByValue(
-    condition.operator,
-    condition.value as TFilterValue
-  );
+  const selectedOperatorOption = filterConfig?.getDisplayOperatorByValue(condition.operator, condition.value);
   // Disable operator selection when filter is disabled or only one operator option is available and selected
   const isOperatorSelectionDisabled =
     isDisabled ||
@@ -114,7 +120,7 @@ export const FilterItem = observer(function FilterItem<P extends TFilterProperty
         disabled={isOperatorSelectionDisabled}
         customButton={
           <div className="flex h-full items-center" aria-disabled={isOperatorSelectionDisabled}>
-            {filterConfig.getLabelForOperator(selectedOperatorOption)}
+            {operatorLabel(selectedOperatorOption)}
           </div>
         }
       />

@@ -72,6 +72,36 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
   const meLabel = t("common.filter_options.me");
   const noneLabel = t("common.none");
   const subscriberLabel = t("common.filter_options.subscribers");
+  const stateGroupLabel = t("common.filter_options.fields.state_group");
+  const stateLabel = t("common.filter_options.fields.state_id");
+  const labelLabel = t("common.filter_options.fields.label_id");
+  const assigneeLabel = t("common.filter_options.fields.assignee_id");
+  const mentionLabel = t("common.filter_options.fields.mention_id");
+  const createdByLabel = t("common.filter_options.fields.created_by_id");
+  const priorityLabel = t("common.filter_options.fields.priority");
+  const startDateLabel = t("common.filter_options.fields.start_date");
+  const targetDateLabel = t("common.filter_options.fields.target_date");
+  const createdAtLabel = t("common.filter_options.fields.created_at");
+  const updatedAtLabel = t("common.filter_options.fields.updated_at");
+  const projectLabel = t("common.filter_options.fields.project_id");
+  const urgent = t("urgent");
+  const high = t("high");
+  const medium = t("medium");
+  const low = t("low");
+  const noPriority = t("none");
+  const backlog = t("project_settings.states.groups.backlog");
+  const unstarted = t("project_settings.states.groups.unstarted");
+  const started = t("project_settings.states.groups.started");
+  const completed = t("project_settings.states.groups.completed");
+  const cancelled = t("project_settings.states.groups.cancelled");
+  const priorityOptionLabels = useMemo(
+    () => ({ urgent, high, medium, low, none: noPriority }),
+    [urgent, high, medium, low, noPriority]
+  );
+  const stateGroupOptionLabels = useMemo(
+    () => ({ backlog, unstarted, started, completed, cancelled }),
+    [backlog, unstarted, started, completed, cancelled]
+  );
   // store hooks
   const { loader: projectLoader, getProjectById } = useProject();
   const { getLabelById } = useLabel();
@@ -114,29 +144,33 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
   const stateGroupFilterConfig = useMemo(
     () =>
       getStateGroupFilterConfig<TWorkItemFilterProperty>("state_group")({
+        label: stateGroupLabel,
+        getOptionLabel: (value) => stateGroupOptionLabels[value],
         isEnabled: isFilterEnabled("state_group"),
         filterIcon: StateOutline,
         getOptionIcon: (stateGroupKey) => <StateGroupIcon stateGroup={stateGroupKey} />,
       }),
-    [isFilterEnabled]
+    [stateGroupLabel, stateGroupOptionLabels, isFilterEnabled]
   );
 
   // state filter config
   const stateFilterConfig = useMemo(
     () =>
       getStateFilterConfig<TWorkItemFilterProperty>("state_id")({
+        label: stateLabel,
         isEnabled: isFilterEnabled("state_id") && workItemStates !== undefined,
         filterIcon: StateOutline,
         getOptionIcon: (state) => <StateGroupIcon stateGroup={state.group} color={state.color} />,
         states: workItemStates ?? [],
       }),
-    [isFilterEnabled, workItemStates]
+    [stateLabel, isFilterEnabled, workItemStates]
   );
 
   // label filter config
   const labelFilterConfig = useMemo(
     () =>
       getLabelFilterConfig<TWorkItemFilterProperty>("label_id")({
+        label: labelLabel,
         isEnabled: isFilterEnabled("label_id") && workItemLabels !== undefined,
         filterIcon: LabelsOutline,
         labels: workItemLabels ?? [],
@@ -145,13 +179,14 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
           <span className="flex size-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: color }} />
         ),
       }),
-    [isFilterEnabled, workItemLabels, noneLabel]
+    [labelLabel, isFilterEnabled, workItemLabels, noneLabel]
   );
 
   // assignee filter config
   const assigneeFilterConfig = useMemo(
     () =>
       getAssigneeFilterConfig<TWorkItemFilterProperty>("assignee_id")({
+        label: assigneeLabel,
         isEnabled: isFilterEnabled("assignee_id") && members !== undefined,
         filterIcon: MembersOutline,
         members: members ?? [],
@@ -168,13 +203,14 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
           />
         ),
       }),
-    [isFilterEnabled, members, meLabel, noneLabel]
+    [assigneeLabel, isFilterEnabled, members, meLabel, noneLabel]
   );
 
   // mention filter config
   const mentionFilterConfig = useMemo(
     () =>
       getMentionFilterConfig<TWorkItemFilterProperty>("mention_id")({
+        label: mentionLabel,
         isEnabled: isFilterEnabled("mention_id") && members !== undefined,
         filterIcon: AtOutline,
         members: members ?? [],
@@ -188,13 +224,14 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
           />
         ),
       }),
-    [isFilterEnabled, members, meLabel]
+    [mentionLabel, isFilterEnabled, members, meLabel]
   );
 
   // created by filter config
   const createdByFilterConfig = useMemo(
     () =>
       getCreatedByFilterConfig<TWorkItemFilterProperty>("created_by_id")({
+        label: createdByLabel,
         isEnabled: isFilterEnabled("created_by_id") && members !== undefined,
         filterIcon: UserOutline,
         members: members ?? [],
@@ -208,7 +245,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
           />
         ),
       }),
-    [isFilterEnabled, members, meLabel]
+    [createdByLabel, isFilterEnabled, members, meLabel]
   );
 
   const subscriberFilterConfig = useMemo(
@@ -228,63 +265,70 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
   const priorityFilterConfig = useMemo(
     () =>
       getPriorityFilterConfig<TWorkItemFilterProperty>("priority")({
+        label: priorityLabel,
+        getOptionLabel: (value) => priorityOptionLabels[value],
         isEnabled: isFilterEnabled("priority"),
         filterIcon: PriorityOutline,
         getOptionIcon: (priority) => <PriorityIcon priority={priority} />,
       }),
-    [isFilterEnabled]
+    [priorityLabel, priorityOptionLabels, isFilterEnabled]
   );
 
   // start date filter config
   const startDateFilterConfig = useMemo(
     () =>
       getStartDateFilterConfig<TWorkItemFilterProperty>("start_date")({
+        label: startDateLabel,
         isEnabled: isFilterEnabled("start_date"),
         filterIcon: StartDateOutline,
       }),
-    [isFilterEnabled]
+    [startDateLabel, isFilterEnabled]
   );
 
   // target date filter config
   const targetDateFilterConfig = useMemo(
     () =>
       getTargetDateFilterConfig<TWorkItemFilterProperty>("target_date")({
+        label: targetDateLabel,
         isEnabled: isFilterEnabled("target_date"),
         filterIcon: DueDateOutline,
       }),
-    [isFilterEnabled]
+    [targetDateLabel, isFilterEnabled]
   );
 
   // created at filter config
   const createdAtFilterConfig = useMemo(
     () =>
       getCreatedAtFilterConfig<TWorkItemFilterProperty>("created_at")({
+        label: createdAtLabel,
         isEnabled: isFilterEnabled("created_at"),
         filterIcon: CalendarOutline,
       }),
-    [isFilterEnabled]
+    [createdAtLabel, isFilterEnabled]
   );
 
   // updated at filter config
   const updatedAtFilterConfig = useMemo(
     () =>
       getUpdatedAtFilterConfig<TWorkItemFilterProperty>("updated_at")({
+        label: updatedAtLabel,
         isEnabled: isFilterEnabled("updated_at"),
         filterIcon: CalendarOutline,
       }),
-    [isFilterEnabled]
+    [updatedAtLabel, isFilterEnabled]
   );
 
   // project filter config
   const projectFilterConfig = useMemo(
     () =>
       getProjectFilterConfig<TWorkItemFilterProperty>("project_id")({
+        label: projectLabel,
         isEnabled: isFilterEnabled("project_id") && projects !== undefined,
         filterIcon: ProjectsOutline,
         projects: projects,
         getOptionIcon: (option) => <Logo logo={option.logo_props} size={12} />,
       }),
-    [isFilterEnabled, projects]
+    [projectLabel, isFilterEnabled, projects]
   );
 
   return {

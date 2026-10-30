@@ -17,7 +17,7 @@ export function IssueDetailWidgetButton(props: Props) {
   const { icon, title } = props;
   return (
     <span className={getButtonStyling("secondary", "lg")}>
-      {icon && icon}
+      {icon}
       <span className="text-body-xs-medium">{title}</span>
     </span>
   );

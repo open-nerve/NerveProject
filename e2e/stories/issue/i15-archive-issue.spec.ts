@@ -302,6 +302,9 @@ test("I15 (page): a terminal row archives once while pending, its saved archive 
     activity: [...createdFor(), archivedRow, restoredRow],
   });
   expect(watch.apiRequests.filter((request) => request === `POST ${restore}`)).toHaveLength(1);
+  // Let the restore's real redirect and detail read finish before starting another document navigation.
+  await expect(page).toHaveURL(`/${slug}/browse/WEB-${item.sequence_id}`);
+  await expect(page.getByRole("button", { name: "Add sub-work item", exact: true })).toBeVisible();
   await page.goto(seed.path);
   await expect(page.locator(`[id^="issue_${item.id}_"]`)).toBeAttached();
   await expectListPageQuiet(page, watch, browserName, 5);

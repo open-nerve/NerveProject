@@ -14,6 +14,7 @@ import type {
   TFilterConfig,
   TFilterProperty,
   TFilterValue,
+  SingleOrArray,
   TOperatorSpecificConfigs,
 } from "@nerve/types";
 import { FILTER_FIELD_TYPE } from "@nerve/types";
@@ -33,8 +34,8 @@ export interface IFilterConfig<P extends TFilterProperty> extends TFilterConfig<
     operator: TSupportedOperators
   ) => TOperatorSpecificConfigs[keyof TOperatorSpecificConfigs] | undefined;
   getLabelForOperator: (operator: TSupportedOperators | undefined) => string;
-  getDisplayOperatorByValue: <T extends TSupportedOperators>(operator: T, value: TFilterValue) => T;
-  getAllDisplayOperatorOptionsByValue: (value: TFilterValue) => TOperatorOptionForDisplay[];
+  getDisplayOperatorByValue: <T extends TSupportedOperators>(operator: T, value: SingleOrArray<TFilterValue>) => T;
+  getAllDisplayOperatorOptionsByValue: (value: SingleOrArray<TFilterValue>) => TOperatorOptionForDisplay[];
   // actions
   mutate: (updates: Partial<TFilterConfig<P>>) => void;
 }

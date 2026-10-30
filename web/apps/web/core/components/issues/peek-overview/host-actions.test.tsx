@@ -89,11 +89,10 @@ const render = async (id: string, embed = true) => {
   );
 };
 // The archive dialog owns confirmation before invoking the page's navigation callback.
-function command(name: "handleDelete" | "handleArchive" | "handleRestore") {
+async function command(name: "handleDelete" | "handleArchive" | "handleRestore") {
   const current = actions;
-  return Promise.resolve(current[name]!()).then(() => {
-    if (name === "handleArchive") current.onArchiveConfirmed?.();
-  });
+  await current[name]!();
+  if (name === "handleArchive") current.onArchiveConfirmed?.();
 }
 it.each(["handleDelete", "handleArchive", "handleRestore"] as const)(
   "a late %s cannot close the next peek or notification",

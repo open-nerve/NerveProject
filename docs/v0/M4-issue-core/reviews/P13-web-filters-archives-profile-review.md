@@ -1,6 +1,6 @@
 # M4/P13 筛选、归档与个人主页：预检记录
 
-日期：2026-10-31。**当前已获准实施，T1–T6完成，T7接续；以下§1–7保留预检快照，实施接续见§8。** [spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[deep-review预检](../../../reviews/re-18-M4P13预检审核.md)。产品A1–A12仍待阶段验收；本记录不等于阶段实施后的整分支终审。
+日期：2026-10-31。**当前已获准实施，T1–T13完成，T14接续；以下§1–7保留预检快照，实施接续见§8。** [spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[deep-review预检](../../../reviews/re-18-M4P13预检审核.md)。产品A1–A12仍待阶段验收；本记录不等于阶段实施后的整分支终审。
 
 ## 1. 前置与评审方式
 
@@ -117,3 +117,12 @@ T11相关组件首次7文件90项通过；增加真实确认宿主的最后一�
 
 
 T12新增五条I19页面故事并保留API故事。三关系、两布局、四组型逐一核对调用者可见集合；跨两页保持relation、project_id、筛选与total，刷新和同目标view共享，另目标与真实退出/登录后的账号隔离。OwnOnly项目按调用者而非目标用户筛选，隐藏/退出/归档项目不泄露；guest桌面和手机无工具栏且列表GET为零。旧面板和延迟回答在view/目标/Back后失效；已持有标签被选中后，冷刷新仍保留原限制且不补拉目录。M20-page破坏relation使真实Created页面断言红，逐字节恢复并重新构建后，I5/I15/I19共16项通过，静态检查通过。此变异复用M20性质，不增加独立性质数。首轮种子角色、控件名称、同账号切换夹具错误与报告均保留；请求记录夹具与延迟夹具统一按pathname匹配，使带查询参数的GET真正进入观测。T13三浏览器、完整F和T14整审仍待完成。
+
+
+T13完成C2/C9真实可达页面及single/multi×en/zh独立浏览器兼容夹具；最新三浏览器各22项通过（t13-matrix5-*），包含13个I5/I15/I19页面故事、5个真实交互故事和4个兼容夹具，不含API故事。四选择器翻译/加载/defaultOpen/搜索/键盘/回焦、默认/自定义FiltersDropdown定位、手机Layout和归档焦点/Back均有实跑。single不在当前M4配置生成路径中，按已记录裁定用生产控件夹具验证，不伪称业务入口。
+
+页面实跑修复手机Layout缺少名称/嵌套按钮、字段与运算符中文缺失；Firefox先红后绿证明toast入场扩大根滚动区，改fixed；项目确认相同表达式重建ID丢焦点，改由确认宿主保留DOM并推进已保存基线。实际RootStore新增焦点断言先红后绿，相关3文件51项通过。Firefox fill的IME收尾按Headless UI两帧机制同步；Mac WebKit使用原生Option-Tab，焦点陷阱允许容器自身；恢复故事等待真实详情加载后再跳页，避免用例取消仍在途GET。没有放宽watchPage或新增console忽略，所有失败trace和诊断raw保留。
+
+最终完整F的生成、Go lint、串行Go全测使用t13-full-*（Go测试456.216秒）；前端使用t13-full2-*：lint-web 54任务、knip通过、强制全测18任务（Web247文件2679项）、默认E2E202项通过。首次全量前端3个旧夹具仍把初读归子项widget，已改经真实详情加载器并保留错误/重试、两种旧答顺序和无重复GET；聚焦3文件34项通过，未改产品或削弱原业务断言。
+
+专项改动文件lint零告警；web cap由基线121降114，constants由1降0，未增加keywords豁免/依赖。分支检查点推送和准确CI后置核，T14尚未完成，不把本段验证当作整审或授权合并。

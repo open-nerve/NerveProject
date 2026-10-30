@@ -401,7 +401,26 @@
       "more": "+{count} more",
       "all_applied": "All filters applied",
       "config_error": "Filter configuration error",
-      "config_error_description": "This filter could not be applied. Please reload and try again."
+      "config_error_description": "This filter could not be applied. Please reload and try again.",
+      "fields": {
+        "state_group": "State Group",
+        "state_id": "State",
+        "label_id": "Label",
+        "assignee_id": "Assignees",
+        "mention_id": "Mentions",
+        "created_by_id": "Created by",
+        "priority": "Priority",
+        "start_date": "Start date",
+        "target_date": "Target date",
+        "created_at": "Created on",
+        "updated_at": "Updated on",
+        "project_id": "Projects"
+      },
+      "operators": {
+        "exact": "is",
+        "in": "is any of",
+        "range": "between"
+      }
     },
     "filter_dates": {
       "incomplete": "Choose both dates to apply the range",

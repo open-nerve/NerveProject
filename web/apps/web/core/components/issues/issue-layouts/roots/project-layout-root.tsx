@@ -5,6 +5,9 @@
  */
 
 import { useCallback, useRef } from "react";
+import { cloneDeep } from "lodash-es";
+import { runInAction } from "mobx";
+import { deepCompareFilterExpressions } from "@nerve/utils";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -72,7 +75,16 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
         ) {
           applyingConfirmation.current = true;
           try {
-            filter.resetExpression(issuesFilter.getIssueFilters(projectId)?.richFilters ?? {});
+            const confirmed = issuesFilter.getIssueFilters(projectId)?.richFilters ?? {};
+            if (deepCompareFilterExpressions(filter.expression, filter.adapter.toInternal(confirmed))) {
+              // The server accepted these conditions unchanged. Keep their DOM identity/focus while advancing
+              // the saved baseline; rebuilding equivalent conditions would discard the active keyboard control.
+              runInAction(() => {
+                filter.initialFilterExpression = cloneDeep(filter.expression);
+              });
+            } else {
+              filter.resetExpression(confirmed);
+            }
           } finally {
             applyingConfirmation.current = false;
           }

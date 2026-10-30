@@ -401,7 +401,26 @@
       "more": "还有 {count} 项",
       "all_applied": "已应用所有筛选条件",
       "config_error": "筛选配置错误",
-      "config_error_description": "无法应用该筛选条件，请刷新后重试。"
+      "config_error_description": "无法应用该筛选条件，请刷新后重试。",
+      "fields": {
+        "state_group": "状态组",
+        "state_id": "状态",
+        "label_id": "标签",
+        "assignee_id": "负责人",
+        "mention_id": "提及人",
+        "created_by_id": "创建人",
+        "priority": "优先级",
+        "start_date": "开始日期",
+        "target_date": "目标日期",
+        "created_at": "创建时间",
+        "updated_at": "更新时间",
+        "project_id": "项目"
+      },
+      "operators": {
+        "exact": "是",
+        "in": "是其中之一",
+        "range": "介于"
+      }
     },
     "filter_dates": {
       "incomplete": "请选择起止日期后应用范围",

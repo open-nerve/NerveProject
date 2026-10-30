@@ -200,13 +200,15 @@ it.each(["en", "zh-CN"] as const)(
     await act(async () =>
       root.render(<FilterItem filter={filter} condition={filter.allConditions[0]} showTransition={false} />)
     );
-    const operator = [...host.querySelectorAll("button")].find((button) => button.textContent === "is");
+    const operator = [...host.querySelectorAll("button")].find(
+      (button) => button.textContent === (language === "en" ? "is" : "是")
+    );
     expect(operator).toBeDefined();
     await act(async () => operator!.click());
     expect(document.querySelector<HTMLInputElement>('[role="combobox"]')?.placeholder).toBe(
       language === "en" ? "Search" : "搜索"
     );
-    expect(popup()?.textContent).toContain("between");
+    expect(popup()?.textContent).toContain(language === "en" ? "between" : "介于");
   }
 );
 

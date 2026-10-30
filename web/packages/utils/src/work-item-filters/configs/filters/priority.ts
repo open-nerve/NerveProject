@@ -18,7 +18,10 @@ import { createFilterConfig, getMultiSelectConfig, createOperatorConfigEntry } f
 /**
  * Priority filter specific params
  */
-type TCreatePriorityFilterParams = TCreateFilterConfigParams & IFilterIconConfig<TIssuePriorities>;
+type TCreatePriorityFilterParams = TCreateFilterConfigParams &
+  IFilterIconConfig<TIssuePriorities> & {
+    getOptionLabel?: (value: TIssuePriorities) => string;
+  };
 
 /**
  * Helper to get the priority multi select config
@@ -30,7 +33,7 @@ const getPriorityMultiSelectConfig = (params: TCreatePriorityFilterParams, singl
     {
       items: ISSUE_PRIORITIES,
       getId: (priority) => priority.key,
-      getLabel: (priority) => priority.title,
+      getLabel: (priority) => params.getOptionLabel?.(priority.key) ?? priority.title,
       getValue: (priority) => priority.key,
       getIconData: (priority) => priority.key,
     },

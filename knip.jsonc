@@ -9,6 +9,10 @@
       // 关键词守卫和翻译键的检查由 make lint-web 调用；常见密码名单的生成脚本由人手动运行（M2 设计 3.8）。package.json 的脚本中都看不到
       "entry": ["tools/keywords.mjs", "tools/i18n-keys.mjs", "tools/password-blocklist/build.mjs"],
     },
+    "web/apps/web": {
+      // P13 的独立浏览器夹具由 E2E 启动，不进入应用路由或生产构建。
+      "entry": ["scripts/filter-browser/build.mjs", "scripts/filter-browser/main.tsx"],
+    },
     "web/packages/api-client": {
       // 类型测试只由 tsc 检查，其中的函数不会被调用
       "entry": ["test/*.typecheck.ts"],
