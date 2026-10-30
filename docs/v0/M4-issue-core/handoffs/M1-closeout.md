@@ -80,3 +80,10 @@ P11仍处理JSONContent/comment_json等，P13处理profile view断言，P14处�
 M4旧JSONContent/comment_json及无用回调参数已删除，description_json/is_bot旧读写随原生合同迁走；M7专属版本DTO仍在其服务内，不混为M4生成类型。按附录原脚本核全部本期改动：最终185候选/39文件逐行记录实际读者/传输合同/测试观察口，真无读者的props、状态、方法及独占文件已删；全仓候选不是零dead声明。整分支252个TS/TSX零warning/error，web cap降至145，未抬上限；详情输入保存/版本恢复和拒绝/卸载由真实消费者回归覆盖。详见[P11 review§9–12](../reviews/P11-web-detail-data-review.md#9-最终验收映射)。
 
 viewId收窄归P13，创建/编辑弹窗isMigrationUpdate及撤销/重做归P14，全仓no-shadow/dead终态归P16及M4收尾。P11集成待办，本输入顶层仍open，不用本阶段代替总关闭条件。
+
+
+## 处理结果（M4/P13，2026-10-31）
+
+typed profile view 已从路由收窄并向下传递，web 中 as TProfileViews 零命中；非法段不发请求、三关系真实页面与 M18 变异检出。按原附录脚本清理修改范围真死代码，64→45候选（19文件）均具名列出实际读者，117个实际TS/TSX文件零oxlint；web cap121→114、constants1→0。候选不是全仓零dead。创建/编辑弹窗isMigrationUpdate、全仓no-shadow与最终dead仍归P14/P16，本交接顶层仍open。
+
+证据：[P13阶段review§9–14](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)。本期实施/终审完成，集成待办；最终文稿CI以阶段review§14后置回执核准，不提前关闭M4总交接。

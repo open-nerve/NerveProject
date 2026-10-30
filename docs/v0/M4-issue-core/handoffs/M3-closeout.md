@@ -246,3 +246,10 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 - §7剩余：详情/创建正tabIndex、标签新建哨兵、parent选择、标题/链接字段、嵌套Escape及编辑器document监听由P14完成；富筛选日期范围提示由P13；版本/动态入口由P15。getTabIndex最后消费者与全应用C12由P16/收尾核，不提前总关闭。
 - §8 原22项目路由路径按14存在/8删除逐项核对，helper无隐式router目录；project-address-route保留原范围并覆盖删除路径防复活，实际命中/不命中样本通过。M7仍有projectMemberIds读者，暂保留getter；copy-hook和ui泛型的最终清理保持原归属，未延长或放宽守卫。
 - 证据见[P12 spec§2.9](../specs/P12-web-list-pages.md)、[review§23–25](../reviews/P12-web-list-pages-review.md)、[整审](../../../reviews/re-17-M4P12整体审核.md)。T16修复后最终WebKit在Docker恢复后11项通过，三浏览器共33项；准确文稿HEAD CI按review§26后置核准；各条只是局部结果，顶层status保持open。
+
+
+## 处理结果（M4/P13，2026-10-31）
+
+§6个人主页三关系、访客桌面/手机无工具栏零列表GET、profile及归档详情身份key/Back/权限ABA完成；§7筛选按钮、日期范围错误、归档弹窗名称/焦点/双击/迟到答完成；§8四个富筛选选择器均传t()文案，en/zh-CN及真实浏览器核准。归档恢复/删除最后行反馈由局部布局宿主承载，根权限与确认协议不变。完整工作区标签目录仍M7，冷候选保留合法条件；P14完整详情/编辑器、P15复制/搜索/评论和P16总守卫仍未关闭，顶层open保持。
+
+证据：[P13阶段review§9–14](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)。本期实施/终审完成，集成待办；最终文稿CI以阶段review§14后置回执核准，不提前关闭M4总交接。

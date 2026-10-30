@@ -1,6 +1,6 @@
-# M4/P13 筛选、归档与个人主页：预检记录
+# M4/P13 筛选、归档与个人主页：实施与评审记录
 
-日期：2026-10-31。**当前已获准实施，T1–T13完成，T14接续；以下§1–7保留预检快照，实施接续见§8。** [spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[deep-review预检](../../../reviews/re-18-M4P13预检审核.md)。产品A1–A12仍待阶段验收；本记录不等于阶段实施后的整分支终审。
+日期：2026-10-31。**T1–T14 实施与终审修复完成，集成待办。** 基线 `ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8`，最终产品 `de616d06ca7befeb5a39f82a6c70ff18a3f03742`。以下 §1–7 是预检历史、§8 是实施历史，当前验收以 §9–14 为准。[spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)。最终文稿准确 CI 必须按 §14 后置核准后才交付；未经负责人安排不合并。
 
 ## 1. 前置与评审方式
 
@@ -126,3 +126,117 @@ T13完成C2/C9真实可达页面及single/multi×en/zh独立浏览器兼容夹�
 最终完整F的生成、Go lint、串行Go全测使用t13-full-*（Go测试456.216秒）；前端使用t13-full2-*：lint-web 54任务、knip通过、强制全测18任务（Web247文件2679项）、默认E2E202项通过。首次全量前端3个旧夹具仍把初读归子项widget，已改经真实详情加载器并保留错误/重试、两种旧答顺序和无重复GET；聚焦3文件34项通过，未改产品或削弱原业务断言。
 
 专项改动文件lint零告警；web cap由基线121降114，constants由1降0，未增加keywords豁免/依赖。分支检查点推送和准确CI后置核，T14尚未完成，不把本段验证当作整审或授权合并。
+
+
+## 9. 最终验收映射
+
+| 标准 | 结果 | 证据与边界 |
+|---|---|---|
+| A1 原生词汇/筛选 | 已核准 | filter-config、issue-filters、真实 HOC 和 I5/I19；subscriber、me/none、日期 AND、project_id、非法字段清洗。M01/M21。 |
+| A2 四选择器 | 已核准 | select-inputs/options 当前性测试，C2 的添加/运算符/多选业务页面及 single/multi×en/zh 生产组件夹具；defaultOpen、加载、搜索、键盘、回焦。M02–M04。 |
+| A3 日期 | 已核准 | range、本地日 UTC±、date-filter-modal/basic-dropdowns/date-range-write 回归；C2 实际日期草稿/错误名称/aria，保留原子日期写入。M05–M07。 |
+| A4 项目偏好 | 已核准 | preferences-controls、list-data、follow/integration 和 I5 页面核 PATCH、数据库、确认值、拒绝/队列/旧答及 GET-only retry。M08–M10。 |
+| A5 归档 | 已核准 | archive-page、archived/filter.store、restore-menu 和 I15 页面：固定 list、字段只读、有权恢复/删除；R1/R2 新红绿补最后一行与 storage 回页保留。M11–M16。 |
+| A6 弹窗/详情身份 | 已核准 | archive-issue-modal、archive-detail、C9/I15：同 tick 单次写、pending、名称、焦点、Back/权限 ABA 晚答；布局宿主跨空态存续。M14–M17-held/M23。 |
+| A7 typed view | 已核准 | profile-view/profile-route、list-mount、route-scope；真实路由一次收窄，非法段不读，web 中 as TProfileViews 零命中。M18。 |
+| A8 个人主页权限 | 已核准 | profile-page、I19：三关系/两布局/四组型/分页与 OwnOnly 交集；访客桌面和手机无工具栏且零列表 GET。M19/M20。 |
+| A9 本地设置 | 已核准 | archived/profile filter.store、store-context、local-update 和 I19：workspace/target/account 隔离、同目标共享 view、冷标签/未知 ID、project_id、storage 损坏/不可用与旧宿主。M11/M12/M21/M22，R1/R3。 |
+| A10 页面与三浏览器 | 已核准 | t14-full-e2e：202 通过；t14-matrix-chromium/firefox/webkit 各 22 通过，均非零、零失败/跳过。业务页面与兼容夹具分开计数。 |
+| A11 验证与清理 | 已核准 | 11 域输入匹配；生成/Go lint/Go 全测沿 T13 未变输入，Web 静态/knip/强制全测/E2E/三浏览器用 T14 新回执；117 实际文件零 lint 告警、45 候选逐读者闭合、23 个有效不同变异。最终文稿 CI 以 §14 后置回执为交付门。 |
+| A12 整审和交接 | 已核准 | 独立全分支审查 + 主控修复复审，R1–R4 全处理，M1/M2/M3 只关闭本期子项；设计/计划/spec/本记录/整体报告同步，保留分支，禁止自动合并。 |
+
+## 10. 整分支终审、修复和复审
+
+独立审者 p13_final_review 审 ff89d0a1..863283fc：131 变更路径中 124 全文、7 历史/规则文档相关章节，另 28 个相关调用方/测试全文；root.store 仅实际写入/确认路径。按逻辑、集成、覆盖依次审查，没有把三个视角说成三名审者。0 Critical、2 Important、2 Minor；负责人要求局部问题全部修复，故 R3/R4 也在本轮处理。主控对修复提交 de616d06 的 40 路径 diff、关键生产全文与消费链复审；独立报告没有被改写成已审最终提交，没有再派第二名审者。
+
+| 编号/等级 | 根因与修复 | 红绿与复审 |
+|---|---|---|
+| R1 Important | 归档重挂载无条件回读 storage，覆盖本会话选择；改为 workspace/project 首次初始化，显式跨范围 getter，账号仍由 RootStore 隔离。 | t14-r1-storage-red 两种失败明确 high→空/low；真实 A→B→A 保留条件/false/折叠后通过。新 session 恢复与退休账号拒绝由 store-context 回归。 |
+| R2 Important | 恢复/删除最后一行会卸载行内反馈 owner；同布局 IssueListCommandHost 承载确认与恢复反馈，行只提交目标，保留原权限/路由身份。项目删除同根因一起修。 | t14-r2-restore-probe、t14-r2-delete-red 均行已消失但 success=[]；真实 archive-page/list-data 补一次提示、同 tick 单写、403 留窗留行并明确重试，权限 ABA 晚答静默。 |
+| R3 Minor | 项目偏好重读以旧 storage 覆盖本地分组折叠；只首次初始化本地字段，服务器三个字段仍更新。 | t14-r3-collapse-red 明确折叠丢失；正常和 blocked 两分支同时核折叠保留、服务器新 filters 到达。 |
+| R4 Minor | DateRangeDropdown 的无行为 Props 暗示不存在的功能；按 M1 清掉声明/无调用分支及改动范围其它真死链。 | 不伪造行为红；实际调用检索、原 deadsym、types、117 文件零告警、knip、完整 Web 与三浏览器验证兼容。 |
+
+剩余 Critical/Important/Minor 确认项为零。不是无风险保证：没有逐帧审全部 trace、没有重放全部历史变异、没有重新设计未改的后端锁/API/schema。已接受范围限制见 §13 和整体审核；没有架构级阻塞。
+
+### 六个写入口的四种结果
+
+| 入口 | 确认 | 拒绝 | 旧 scope | 确认后读取失败 |
+|---|---|---|---|---|
+| 项目富筛选、显示设置三个偏好字段 | preferences-controls / list-data / I5：PATCH确认、队列、清理值、11属性、calendar/false | preferences-controls / I5：403保留确认数据、一次提示 | use-project-preferences-follow：权限/路由/会话ABA与卸载，list-data后续草稿不被旧确认覆盖 | preferences-controls / I5：保存后503保留确认值，Retry仅GET |
+| 归档本地筛选、显示、折叠 | archived/filter.store / archive-page / I15：本地恢复、固定list、隔离actor/workspace/project、无PATCH；R1 新增 blocked reads/stale stored values 的 A→B→A 会话保留 | storage损坏/抛错保留内存；当前非读取异常由use-local-issue-filter-update一次反馈 | use-local-issue-filter-update：target/permission ABA、unmount、retire | archive-page：first/next/read-after-save拒绝只GET，原行和本地选择保留 |
+| profile本地筛选、显示、折叠 | profile-page / profile/filter.store / I19：同目标共享view、workspace/target/account隔离；project_id不丢 | storage不可用保留会话内偏好；非读取拒绝由局部hook处理 | profile-route / profile-page / I19：view/target/Back/guest变化结束旧工具栏与迟到GET | profile-page桌面/手机503留本地选择、一次错误、GET重试 |
+| 项目行及详情/peek归档 | archive-issue-modal / I15：同tick双击单POST、最后一行移除后仍一次反馈；DB archived_at/activity | 真实detail菜单与I15：422/403留窗、显式重试，非终态菜单不可达 | modal item/open/permission ABA、unmount/retire；I15 Back晚答不导航/提示 | modal crossing旧归档GET引发权威补读503：确认保留、一次POST，Retry只GET |
+| 归档恢复 | archive-page / restore-menu / I15：真实列表最后一行一次反馈、同 tick 单 POST；详情/peek 的原确认与导航 | archive-page / restore-menu：403 留行且一次错误，明确重试后成功 | restore-menu：替换/卸载/权限ABA；detail scope原水位 | 间接证据：issue-changes.test.ts 的 sixWriteCopies unarchive late raw reads cannot undo confirmation；issue.store.test.ts 的 directConfirmImmediatelyVerifiesAcrossCopiesWithoutResendingWrite 验证共用核验拒绝、只 GET 重试。后者是 update 场景，不冒称 restore 直接页面测试。列表已证明恢复项不属归档集合时 fetchFirst 正常 resolve。 |
+| 项目与归档列表删除、归档详情删除 | list-data / archive-page：最后一行删除后一次反馈、同 tick 单 DELETE；archive-detail / I15：授权与导航，完整依赖删除 stamp | archive-page / archive-detail：403 留窗留行、一次原生错误、明确重试；非创建者 member 不给入口 | archive-detail：旧删除不导航或关闭下一route确认 | 间接证据：issue.store.test.ts 的 confirmedDeleteCannotBeResurrected / confirmedDeleteEndsPendingVerificationAndOldGetCannotScheduleFollowup，issue-changes 的 sixWriteCopies delete late raw reads cannot undo confirmation。删除以 tombstone 排除实体，不要求每个确认随后再发核验 GET；列表自身读取失败沿原 binding Retry。 |
+
+## 11. 验证、变异和修改范围清理
+
+证据根 E=.superpowers/sdd/P13-web-filters-archives-profile/，均为实际运行回执及原始输出。
+
+| 门禁 | 原始回执 | 最终结果与输入 |
+|---|---|---|
+| 生成 | t13-full-gen | 通过；API、生成脚本/配置、生成物输入未变，逐文件复用。 |
+| Go lint | t13-full-lint-go | 通过；使用既有主目录 2.13.2 二进制；服务端/工具/配置未变。 |
+| Go 全测 | t13-full-test-go | 通过，456.216 秒；GOFLAGS=-p=1 串行、-count=1，未冒称 T14 再跑。 |
+| Web 静态 | t14-final-lint-web | 54/54，36 缓存；76 keywords 规则/24 例外零命中，1278 翻译键通过。 |
+| knip | t14-final-knip | typegen 后 --treat-config-hints-as-errors 通过。 |
+| Web 全测 | t14-full2-test-web | TURBO_FORCE=true，18/18、零缓存；Web 247 文件/2688 项，8 包原始日志另存 t14-web-suite-logs。 |
+| 默认 E2E | t14-full-e2e | make e2e 重建实际产品，202 通过。 |
+| Chromium / Firefox / WebKit | t14-matrix-{chromium,firefox,webkit} | 各 22 通过、零失败/skip；每浏览器 13 个 I5/I15/I19 页面 + 5 个 C2/C9 业务交互 + 4 个真实组件兼容夹具。 |
+| 修改文件 oxlint | t14-final-changed-oxlint | 118 个候选路径，实际执行 117 文件，0 warnings/0 errors；配置排除的路径不伪计执行。 |
+
+13 文件 170 项修复聚焦通过；真实会话 2 文件 25 项通过。第一次完整 Web 因无路由的 store-context 夹具未传 workspaceSlug，补四处明确作用域后全量通过；没有改变账号替换、退休 Root 拒绝或已保存值断言。新项目菜单测试曾缺 ResizeObserver/有效几何；这是 jsdom 接线修正，不算产品红。早期聚焦 argv 错写不存在 widget-host，实际只有 12 个文件；后续核全路径并使用真实 issue-detail-widget-modals，未用零测试充数。所有失败 raw 保留。
+
+生成/Go 三项和最终 Web/浏览器/专项 lint 共 11 域在 t14-inputs-before-commit.json 及最终 t14-final-input-audit.json 中核运行 HEAD + dirtyInputs 与最终产品字节；记录 logSHA256，零 mismatch 才允许复用。文稿随后单独提交，不改变产品输入。测试 stderr/Node 环境警告保留于原始日志；“零 oxlint”不代表所有日志从未出现任何警告。
+
+### 有效变异
+
+| 性质 | 保护内容 | 实际行为红摘要 |
+|---|---|---|
+| M01 | 真实富筛选宿主必须注册subscriber配置并显示合法已保存条件 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  3 failed (3) |
+| M02 | 旧配置响应不能覆盖已到达的新配置 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯；Tests  1 failed / 19 passed (20) |
+| M03 | 当前读取失败必须显示可重试错误 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯；Test Files  2 failed (2)；Tests  3 failed / 17 passed (20) |
+| M04 | 加载时不能消耗空条件的首次打开 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯；Tests  5 failed / 15 passed (20) |
+| M05 | 首次选择必须保留本地起日草稿 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  9 failed / 1 passed (10) |
+| M06 | 本地日不能经UTC日期解析移日 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  6 failed / 4 passed (10) |
+| M07 | 范围错误必须与触发按钮aria关联 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  5 failed / 5 passed (10) |
+| M08 | 偏好PATCH确认前仍显示最后确认值 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  3 failed / 1 passed (4) |
+| M09 | 局部显示设置必须保留嵌套calendar和false | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  1 failed / 3 passed (4) |
+| M10 | 权限ABA后不能跟进旧页面写入 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  8 failed / 3 passed (11) |
+| M11 | 归档本地设置按 actor 隔离，不能读取另一账号 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  2 failed / 12 passed (14) |
+| M12 | 归档富筛选写入 rich_filters 后能重新加载 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  3 failed / 11 passed (14) |
+| M13 | 真实归档列表的字段按钮不可编辑 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  1 failed / 4 passed (5) |
+| M14 | 归档实际确认按钮同一轮事件只提交一次 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  1 failed / 12 passed (13) |
+| M15 | 旧归档确认不能关闭新窗口或执行导航 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  5 failed / 8 passed (13) |
+| M16 | 恢复命令拒绝后不能再报告成功或关闭peek | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  5 failed / 9 passed (14) |
+| M17-held | 归档详情路由 Back 结束页头和正文的浮层身份 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  1 failed / 8 passed (9) |
+| M18 | 只有明确合法的个人主页关系进入原生读取 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯；Test Files  2 failed (2)；Tests  5 failed / 25 passed (30) |
+| M19 | 工作区访客不挂载桌面或手机个人主页工具栏 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  3 failed / 17 passed (20) |
+| M20 | 当前个人主页视图决定首页及下一页的关系条件 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯；Test Files  2 failed (2)；Tests  8 failed / 15 passed (23) |
+| M21 | 修改其它筛选仍保留明确的项目限制 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯；Test Files  2 failed (2)；Tests  7 failed / 16 passed (23) |
+| M22 | 标签目录未加载时不丢弃合法的已保存标签条件 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯；Tests  1 failed / 22 passed (23) |
+| M23 | 归档确认移除发起行后仍保留确认反馈 | ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯；Test Files  1 failed (1)；Tests  1 failed / 14 passed (15) |
+
+共 23 个不同生产性质；M17 前两次未检出、M04 首次锚点失败不计，M09-page/M20-page 是同性质真实页面重放不再加数。productionAtExecution、逐字节 restoredAtExecution 和 currentProduction 分列于 t14-final-mutation-audit.json；M23 的旧 archive-host 现为 command-host，映射明确。不能把历史红/恢复 hash 称为最终提交上重跑。
+
+### dead 与守卫
+
+M1 附录 A 原始 deadsym/program/domains 提取及脚本 hash 在 dead-audit/scripts.json。真实编译扫描前为 prop390/member888/export20，修改范围64候选；清理后全仓候选 prop379/member881/export20，修改范围45候选/19文件均有实际读者或协议传输。净清19个候选，独占 operator-label/helper/barrel 链一并删除；不是全仓零 dead。45行的文件、名称、读者逐项写在[整体审核§5](../../../reviews/re-19-M4P13整体审核.md#5-修改范围的保留候选)，机器账为 t14-dead-ledger.json。web warning cap 121→114，constants 1→0，无新增豁免或抬上限；全仓 no-shadow/dead 终态仍 P16。
+
+## 12. 本期交接子项
+
+M1 的 typed profile view 已关闭，修改范围 dead/oxlint 具名记录；M2 §10 的四选择器/defaultOpen 已按业务入口与兼容夹具完成，§12 归档页头实例的 P11 成果只作页面回归；M3 §6 的 profile/guest/key、§7 筛选/日期/归档弹窗、§8 四选择器文案完成。三份 handoff 顶层仍 open。完整编辑器/创建/关系 P14、草稿/评论/搜索/复制 P15、C12/全仓清理/总交接 P16 与收尾不冒领。
+
+## 13. 仍有效的边界和裁定
+
+完整 workspace 标签目录仍 M7，冷页允许中性占位，合法条件与列表结果不能丢；single 当前无 M4 业务配置，夹具证明组件兼容，未来需业务故事。M6/M7 DateFilterModal 完整业务页未验收；本期只修共享日期边界并保留 callback。storage 无法保存时只保证本会话内保留，整页刷新持久化无法承诺。恢复/删除的“确认后读失败”按 §10 明确直接与共享合同间接证据，不能夸大为每个页面组合均直接验证。
+
+执行过程中全部 Ruling、理由、错误代价及独立审者 Declined to judge 七项的主控决定保留在 E/progress.md，逐条全文列于[整体审核§6](../../../reviews/re-19-M4P13整体审核.md#6-执行裁定与错误代价)。无延期 Minor。
+
+## 14. 最终交付门与保留现场
+
+分支 codex/m4-p13；基线 main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8；最终产品 de616d06ca7befeb5a39f82a6c70ff18a3f03742。T13 检查点 863283fc 的 [CI 41127298383](https://github.com/open-nerve/NerveProject/actions/runs/41127298383) 三任务成功，仅作历史检查点，不代替本轮最后提交的 CI。
+
+文稿提交后由主控推送，读取该精确 HEAD/branch/run/attempt，确认 server、web、e2e 三任务全部 success，生成 E/final-delivery.json（包含准确 CI URL、远端提交、输入/日志 hash 审计）。这份后置回执是 A11/A12 与 T14 完成交付的最后前提；若失败先按真实日志处理，不用正文勾选跳过。以此避免文稿反复写入自身 SHA 引起提交循环。
+
+当前没有合并授权。主目录保持 main，工作树/分支及证据保留；主目录 .superpowers/sdd/P13-preparation-20261031/ 也必须随未来授权集成归档，不能漏掉。M4 设计 §14、总体设计 §9.4、交接顶层与 M5–M8 最终 closeout 仍待后续阶段；本次不开始 P14。

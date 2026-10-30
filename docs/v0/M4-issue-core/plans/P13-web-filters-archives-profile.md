@@ -1,7 +1,7 @@
 # M4/P13 筛选、归档与个人主页实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking.
-> 负责人已授权实施，按既有 inline/executing-plans 方式从T1推进；不因上面的通用推荐自行开启逐Task代理。阶段末使用deep-review、修复复审，先不合并。
+> 负责人已授权实施，按既有 inline/executing-plans 方式从T1推进；不因上面的通用推荐自行开启逐Task代理。T1–T14 已完成，deep-review 及局部修复复审完成；最终 CI 按 review §14 后置核准，先不合并。
 
 **Goal：** 完成富筛选/显示设置、归档与个人主页页面，以及I5/I15/I19、C2/C9对应部分。
 
@@ -9,7 +9,7 @@
 
 **Tech Stack：** 仓库锁定的React、MobX、Headless UI、Propel、react-popper、Vitest、Playwright；无新增依赖。
 
-**Spec：** [P13 spec](../specs/P13-web-filters-archives-profile.md)。基线main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8；分支codex/m4-p13；工作树 .codex/worktress/codex/m4-p13。C/L/R/P缩写及文件结构见spec§2.1；新增目标尚不存在，不视作路径缺失。
+**Spec：** [P13 spec](../specs/P13-web-filters-archives-profile.md)。基线main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8；分支codex/m4-p13；工作树 .codex/worktress/codex/m4-p13。C/L/R/P缩写及文件结构见spec§2.1；表中的新增目标均已实现，最终路径和证据见阶段 review §9–14。
 
 ## Global Constraints
 
@@ -218,17 +218,17 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 **Files：** 本spec/plan/review；M4-design§15；M1/M2/M3-closeout中本期子项；docs/reviews下一号整体审核；忽略目录回执。
 **Interfaces：** 固定审查范围ff89d0a1..最终待交付HEAD；源码输入集合、原始raw、变异生产diff/恢复hash、准确CI组成证据，不从文稿自引用自身SHA。
 
-- [ ] Step 1：按deep-review全文审改动文件及相关测试，顺序跑逻辑/集成/覆盖三视角；列每个写入口确认、拒绝、旧scope、确认后读失败四格。跨Task类型/调用方、页面权限/队列/当前性、模块边界、无测试空过逐一核。
-- [ ] Step 2：至少15个不同生产性质有效变异：优先M01–M22，记录所属层与当前hash；同一性质换输入不多算，编译错误/无匹配不算红。没有服务端锁路径变化，不捏造新锁/Go-race实验；若出现服务端改动先按架构纪律处理。
-- [ ] Step 3：修所有局部重要问题并必要回归、复审；发现架构级问题先提交再上报。更新真实plan差异/限制，不能把未来交接关闭或已有P12成果重复计数。
-- [ ] Step 4：核最终F和三浏览器输入覆盖、dead/守卫、准确最终分支CI三任务success；若产品有变补相应证据。纯文稿CI用后置final-delivery.json绑定HEAD，避免“记录自身SHA→新提交→新CI”循环。W11按06重跑，合并CI重跑仍不过则上报。
-- [ ] Step 5：spec A1–A12按证据打勾、设计写“实施与终审完成，集成待办”、交接只记子项；中文提交docs(M4/P13): 记录筛选归档和个人主页的验收与整审。报告分支/基线/spec/plan/review，保持未合并，等待负责人安排。
+- [x] Step 1：按deep-review全文审改动文件及相关测试，顺序跑逻辑/集成/覆盖三视角；列每个写入口确认、拒绝、旧scope、确认后读失败四格。跨Task类型/调用方、页面权限/队列/当前性、模块边界、无测试空过逐一核。
+- [x] Step 2：至少15个不同生产性质有效变异：优先M01–M22，记录所属层与当前hash；同一性质换输入不多算，编译错误/无匹配不算红。没有服务端锁路径变化，不捏造新锁/Go-race实验；若出现服务端改动先按架构纪律处理。
+- [x] Step 3：修所有局部重要问题并必要回归、复审；发现架构级问题先提交再上报。更新真实plan差异/限制，不能把未来交接关闭或已有P12成果重复计数。
+- [x] Step 4：核最终F和三浏览器输入覆盖、dead/守卫、准确最终分支CI三任务success；若产品有变补相应证据。纯文稿CI用后置final-delivery.json绑定HEAD，避免“记录自身SHA→新提交→新CI”循环。W11按06重跑，合并CI重跑仍不过则上报。
+- [x] Step 5：spec A1–A12按证据打勾、设计写“实施与终审完成，集成待办”、交接只记子项；中文提交docs(M4/P13): 记录筛选归档和个人主页的验收与整审。报告分支/基线/spec/plan/review，保持未合并，等待负责人安排。
 
 ## 自查与当前边界
 
 本计划14Task，spec§2.1各交付均有任务，A1–A12映射见阶段review；Review Focus五项各有真实测试落点。接口新增仅局部options状态、本地更新反馈和route parser，以及现有日期按钮可选字段；不改变后端契约或权限所有权。估计任务规模不超16项及约1500行/项，实际超出时按02重新拆分并记原因。
 
-准备阶段未执行Task或变异；负责人已授权实施，进度按各Task勾选与阶段review记录。未实际运行的候选变异仍不能当证据。
+准备阶段未运行产品是历史事实；本轮 14 Task 已按实际回执完成。23 个不同生产性质有有效行为红与恢复证据；无匹配、编译错误及同性质页面重放不重复计数。准确最终 CI 仍须通过后置交付门，详见阶段 review §14。
 
 
 ## 附录 B：逐Task聚焦命令

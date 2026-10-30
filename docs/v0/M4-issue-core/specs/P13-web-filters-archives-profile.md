@@ -1,6 +1,6 @@
 # M4/P13 筛选、显示设置、归档页与个人主页
 
-> 状态：T1–T13实施与验证完成，接续T14整分支审查。分支 codex/m4-p13；基线 main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8；工作树 .codex/worktress/codex/m4-p13。负责人随后授权从T1实施，阶段末做deep-review，先不合并。P12 已合并、准确 main CI 全绿并归档清理，见 [P12 review §28](../reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)。
+> 状态：T1–T14 实施与终审修复完成，集成待办；最终文稿 CI 按阶段 review §14 后置核准后交付。分支 codex/m4-p13；基线 main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8；工作树 .codex/worktress/codex/m4-p13。负责人随后授权从T1实施，阶段末做deep-review，先不合并。P12 已合并、准确 main CI 全绿并归档清理，见 [P12 review §28](../reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)。
 
 权威：[M4 设计](../M4-design.md) §3.16–3.17、3.22、7.4–7.5、9.7、12/P13、14；[plan](../plans/P13-web-filters-archives-profile.md)；[阶段评审](../reviews/P13-web-filters-archives-profile-review.md)。原型与逐 Task 重放按 [02 §3](../../claude_to_gpt/02-method.md#3-哪些是要求哪些是做法) 调整为静态合同、调用链、既有测试核对、一次独立 builder-check 和主控三视角 deep-review。本次不以静态结论代替产品测试。
 
@@ -135,18 +135,20 @@ T14 修复补充：沿 T11 的布局宿主承载归档、删除确认及恢复�
 
 ## 4. 验收标准
 
-- [ ] A1 三页允许筛选配置与原生词汇一致；subscriber 正常显示，日期AND/none/me/清空与既有非法字段清洗保持。
-- [ ] A2 四选择器的翻译、defaultOpen、异步当前性与失败重试通过；名称/键盘/焦点按实际入口在业务页面或独立真实浏览器兼容夹具验收（§2.3）。
-- [ ] A3 范围草稿不丢起日、错误文字与aria关联、本地日无偏移；旧日期弹窗标题/范围与共享消费者不回归。
-- [ ] A4 项目三个偏好字段确认写入、并发不覆盖、拒绝不变、确认后读失败只GET重试；I5(page)三层一致。
-- [ ] A5 归档本地设置恢复、固定列表、只读字段与有权命令分离；I15(page)归档/恢复/删除成立。
-- [ ] A6 归档弹窗pending/ModalTitle/无正tabIndex/单次反馈，归档详情key与Back/晚答归属成立。
-- [ ] A7 三view从路由严格收窄并传递，git grep “as TProfileViews”在web零命中；非法路由不请求。
-- [ ] A8 profile管理员/成员三关系与四种分组、分页、OwnOnly；访客桌面/手机无工具栏/列表GET；I19(page)通过。
-- [ ] A9 本地设置按账号/workspace/目标隔离，同目标三view共享；冷标签边界、project_id保留、损坏/不可用storage、切页owner均有证据。
-- [ ] A10 I5/I15/I19与C2/C9在Chromium/Firefox/WebKit实际非零通过；watchPage无意外失败、旧API、无处理拒绝。
-- [ ] A11 修改范围dead/oxlint/knip、逐Task行为红绿与至少15项不同性质有效变异、完整F及准确最终分支CI闭环。
-- [ ] A12 整分支deep-review、局部问题修复复审、交接子项与文档证据完成；先交负责人安排，不自动合并。
+- [x] A1 三页允许筛选配置与原生词汇一致；subscriber 正常显示，日期AND/none/me/清空与既有非法字段清洗保持。
+- [x] A2 四选择器的翻译、defaultOpen、异步当前性与失败重试通过；名称/键盘/焦点按实际入口在业务页面或独立真实浏览器兼容夹具验收（§2.3）。
+- [x] A3 范围草稿不丢起日、错误文字与aria关联、本地日无偏移；旧日期弹窗标题/范围与共享消费者不回归。
+- [x] A4 项目三个偏好字段确认写入、并发不覆盖、拒绝不变、确认后读失败只GET重试；I5(page)三层一致。
+- [x] A5 归档本地设置恢复、固定列表、只读字段与有权命令分离；I15(page)归档/恢复/删除成立。
+- [x] A6 归档弹窗pending/ModalTitle/无正tabIndex/单次反馈，归档详情key与Back/晚答归属成立。
+- [x] A7 三view从路由严格收窄并传递，git grep “as TProfileViews”在web零命中；非法路由不请求。
+- [x] A8 profile管理员/成员三关系与四种分组、分页、OwnOnly；访客桌面/手机无工具栏/列表GET；I19(page)通过。
+- [x] A9 本地设置按账号/workspace/目标隔离，同目标三view共享；冷标签边界、project_id保留、损坏/不可用storage、切页owner均有证据。
+- [x] A10 I5/I15/I19与C2/C9在Chromium/Firefox/WebKit实际非零通过；watchPage无意外失败、旧API、无处理拒绝。
+- [x] A11 修改范围dead/oxlint/knip、逐Task行为红绿与至少15项不同性质有效变异、完整F及准确最终分支CI闭环。
+- [x] A12 整分支deep-review、局部问题修复复审、交接子项与文档证据完成；先交负责人安排，不自动合并。
+
+A1–A12 的逐项证据见[阶段 review §9](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)。最终文稿的分支 SHA/run/attempt/jobs 以后置 final-delivery.json 为准；回执未核准前不得称阶段交付完成。
 
 ## 5. 不在范围与交给后续
 
@@ -165,9 +167,9 @@ T14 修复补充：沿 T11 的布局宿主承载归档、删除确认及恢复�
 
 ## 7. 已知限制、交接和关闭条件
 
-预检时没有产品实现、原型、逐Task重放、编译、Vitest、E2E或变异运行；实施进度见review§8，阶段A1–A12全部开放。准备材料保存在主目录 .superpowers/sdd/P13-preparation-20261031/，未来必须随实施材料归档。
+预检未运行产品的描述仅属历史；T1–T14 已完成，最终验收见 review §9–14 和 re-19。准备材料在主目录 .superpowers/sdd/P13-preparation-20261031/，实施/原始验证材料在本工作树 .superpowers/sdd/P13-web-filters-archives-profile/，两者未来授权集成时必须一起归档。
 
-接收 M1-closeout 的 typed profile view；M2-closeout §10四选择器/defaultOpen与§12归档页头实例的页面回归；M3-closeout §6个人主页/访客工具栏/key、§7筛选与日期/归档弹窗、§8文案，以及P5/P10b/P11/P12移交。本期实施结束才逐子项记录处理结果，handoff顶层保持open。M4总验收与最终交接不在本次关闭。
+接收 M1-closeout 的 typed profile view；M2-closeout §10四选择器/defaultOpen与§12归档页头实例的页面回归；M3-closeout §6个人主页/访客工具栏/key、§7筛选与日期/归档弹窗、§8文案，以及P5/P10b/P11/P12移交。本期对应子项已记录处理结果，handoff 顶层保持 open。M4总验收与最终交接不在本次关闭。
 
 ## 附录 A：准备验证记录（2026-10-31）
 
