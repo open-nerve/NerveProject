@@ -111,24 +111,26 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
   if (!Array.isArray(issueIds)) return null;
 
   return (
-    <IssueLayoutHOC layout={EIssueLayoutTypes.SPREADSHEET}>
+    <>
       <IssueListRetry {...staleRefresh} />
-      <SpreadsheetView
-        displayProperties={issuesFilter.issueFilters?.displayProperties ?? {}}
-        displayFilters={issuesFilter.issueFilters?.displayFilters ?? {}}
-        handleDisplayFilterUpdate={handleDisplayFiltersUpdate}
-        issueIds={issueIds}
-        quickActions={renderQuickActions}
-        updateIssue={updateIssue}
-        canEditProperties={canEditProperties}
-        quickAddCallback={createIssue}
-        enableQuickCreateIssue={enableQuickAdd}
-        disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
-        canLoadMoreIssues={!!nextCursor}
-        loadMoreIssues={() => {
-          void fetchNextIssues().catch(() => {});
-        }}
-      />
-    </IssueLayoutHOC>
+      <IssueLayoutHOC layout={EIssueLayoutTypes.SPREADSHEET}>
+        <SpreadsheetView
+          displayProperties={issuesFilter.issueFilters?.displayProperties ?? {}}
+          displayFilters={issuesFilter.issueFilters?.displayFilters ?? {}}
+          handleDisplayFilterUpdate={handleDisplayFiltersUpdate}
+          issueIds={issueIds}
+          quickActions={renderQuickActions}
+          updateIssue={updateIssue}
+          canEditProperties={canEditProperties}
+          quickAddCallback={createIssue}
+          enableQuickCreateIssue={enableQuickAdd}
+          disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
+          canLoadMoreIssues={!!nextCursor}
+          loadMoreIssues={() => {
+            void fetchNextIssues().catch(() => {});
+          }}
+        />
+      </IssueLayoutHOC>
+    </>
   );
 });

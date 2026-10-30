@@ -2349,7 +2349,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：spec A1–A10实际通过；core/services/issue无生成Issue/Detail标注Plane响应；全部修改/拒绝/宿主有行为证据，原七加两实例零命中；搜索和M5–M7范围准确保留。产品验收、整审、准确最终HEAD CI及授权后的main CI均已闭合，归档清理回执见review§15。
 
 ### P12 `web-list-pages`：列表、看板、表格、日历（15个设计粗项，细化16个实施Task）
-- **状态**：预检后已获授权实施，T1–T5 已完成并通过首轮本地七项门禁（默认 E2E 169 项）；T6–T16、页面三浏览器和整分支 deep-review 继续。阶段先不合并；[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[实施记录](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab，关键词phase已为M4/P12；七下拉拆两组验证，原22路由清单按14存在/8已删核验，范围不变。
+- **状态**：预检后已获授权实施，T1–T6 已完成并通过首轮本地七项门禁（默认 E2E 169 项）；T7–T16、页面三浏览器和整分支 deep-review 继续。阶段先不合并；[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[实施记录](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab，关键词phase已为M4/P12；七下拉拆两组验证，原22路由清单按14存在/8已删核验，范围不变。
 - **目标**：项目的工作项页的四种布局、拖动、快速添加、快捷操作、浮层；"添加已有"的选择器经 `issue-search`。
 - **任务**：
   1. 列表布局：分组、每组加载更多、快速添加（字段的提示和焦点）；I7 的页面版本。
@@ -2578,7 +2578,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
 | P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
 | P11 `web-detail-data` | 详情一侧的数据层（15） | **已完成**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review§15](reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。交付42afa24f、main ce3c39ab；准确分支及main CI全绿，证据归档/清理完成；列宽按已裁定A |
-| P12 `web-list-pages` | 列表、看板、表格、日历（16） | **实施中，T1–T5完成**：[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[review](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab；本地首轮七项门禁及默认E2E169项通过，T6–T16及阶段验收开放，先不合并 |
+| P12 `web-list-pages` | 列表、看板、表格、日历（16） | **实施中，T1–T6完成**：[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[review](reviews/P12-web-list-pages-review.md)。基线main ce3c39ab；本地首轮七项门禁及默认E2E169项通过，T7–T16及阶段验收开放，先不合并 |
 | P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述的历史、草稿、搜索、命令面板（15） | 未开始 |

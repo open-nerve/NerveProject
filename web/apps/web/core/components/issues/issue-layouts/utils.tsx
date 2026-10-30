@@ -306,10 +306,10 @@ export function getApproximateCardHeight(displayProperties: IIssueDisplayPropert
  * @param iconKey
  */
 export function SpreadSheetPropertyIcon(props: ISvgIcons & { iconKey: string }) {
-  const { iconKey } = props;
+  const { iconKey, ...iconProps } = props;
   const Icon = SpreadSheetPropertyIconMap[iconKey];
   if (!Icon) return null;
-  return <Icon {...props} />;
+  return <Icon {...iconProps} />;
 }
 
 /**
@@ -363,7 +363,7 @@ export const calculateIdentifierWidth = (projectIdentifierLength: number, sequen
 
 const SpreadSheetPropertyIconMap: Record<string, FC<ISvgIcons>> = {
   MembersOutline: MembersOutline,
-  CalenderDays: CalendarOutline,
+  CalendarOutline: CalendarOutline,
   DueDateOutline: DueDateOutline,
   LabelsOutline: LabelsOutline,
   PriorityOutline: PriorityOutline,

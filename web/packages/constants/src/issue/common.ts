@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue } from "@nerve/api-client";
+import type { Issue, IssueListOrder } from "@nerve/api-client";
 
 import type {
   TIssueGroupByOptions,
@@ -146,20 +146,20 @@ export const SPREADSHEET_PROPERTY_LIST: (keyof IIssueDisplayProperties)[] = [
 export const SPREADSHEET_PROPERTY_DETAILS: {
   [key in keyof IIssueDisplayProperties]: {
     i18n_title: string;
-    ascendingOrderKey: TIssueOrderByOptions;
+    ascendingOrderKey: IssueListOrder;
     ascendingOrderTitle: string;
-    descendingOrderKey: TIssueOrderByOptions;
+    descendingOrderKey: IssueListOrder;
     descendingOrderTitle: string;
     icon: string;
   };
 } = {
   assignee: {
     i18n_title: "common.assignees",
-    ascendingOrderKey: "assignees__first_name",
+    ascendingOrderKey: "assignee_name",
     ascendingOrderTitle: "A",
-    descendingOrderKey: "-assignees__first_name",
+    descendingOrderKey: "-assignee_name",
     descendingOrderTitle: "Z",
-    icon: "MembersPropertyIcon",
+    icon: "MembersOutline",
   },
   created_on: {
     i18n_title: "common.sort.created_on",
@@ -167,7 +167,7 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     ascendingOrderTitle: "New",
     descendingOrderKey: "created_at",
     descendingOrderTitle: "Old",
-    icon: "CalendarDays",
+    icon: "CalendarOutline",
   },
   due_date: {
     i18n_title: "common.order_by.due_date",
@@ -175,15 +175,15 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     ascendingOrderTitle: "New",
     descendingOrderKey: "target_date",
     descendingOrderTitle: "Old",
-    icon: "DueDatePropertyIcon",
+    icon: "DueDateOutline",
   },
   labels: {
     i18n_title: "common.labels",
-    ascendingOrderKey: "labels__name",
+    ascendingOrderKey: "label_name",
     ascendingOrderTitle: "A",
-    descendingOrderKey: "-labels__name",
+    descendingOrderKey: "-label_name",
     descendingOrderTitle: "Z",
-    icon: "LabelPropertyIcon",
+    icon: "LabelsOutline",
   },
   priority: {
     i18n_title: "common.priority",
@@ -191,7 +191,7 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     ascendingOrderTitle: "None",
     descendingOrderKey: "-priority",
     descendingOrderTitle: "Urgent",
-    icon: "PriorityPropertyIcon",
+    icon: "PriorityOutline",
   },
   start_date: {
     i18n_title: "common.order_by.start_date",
@@ -199,15 +199,15 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     ascendingOrderTitle: "New",
     descendingOrderKey: "start_date",
     descendingOrderTitle: "Old",
-    icon: "StartDatePropertyIcon",
+    icon: "StartDateOutline",
   },
   state: {
     i18n_title: "common.state",
-    ascendingOrderKey: "state__name",
+    ascendingOrderKey: "state_name",
     ascendingOrderTitle: "A",
-    descendingOrderKey: "-state__name",
+    descendingOrderKey: "-state_name",
     descendingOrderTitle: "Z",
-    icon: "StatePropertyIcon",
+    icon: "StateOutline",
   },
   updated_on: {
     i18n_title: "common.sort.updated_on",
@@ -215,7 +215,7 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     ascendingOrderTitle: "New",
     descendingOrderKey: "updated_at",
     descendingOrderTitle: "Old",
-    icon: "CalendarDays",
+    icon: "CalendarOutline",
   },
   link: {
     i18n_title: "common.link",
@@ -231,7 +231,7 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     ascendingOrderTitle: "Most",
     descendingOrderKey: "sub_issues_count",
     descendingOrderTitle: "Least",
-    icon: "LayersIcon",
+    icon: "WorkItemsOutline",
   },
 };
 

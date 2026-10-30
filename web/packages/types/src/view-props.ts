@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { Issue, IssueDetail, IssueListOrder } from "@nerve/api-client";
 
 import type { FC } from "react";
 
@@ -24,28 +24,15 @@ export type TIssueGroupByOptions =
   | "target_date"
   | null;
 
+// Existing filter controls retain their display vocabulary; wire-facing columns use IssueListOrder.
 export type TIssueOrderByOptions =
-  | "-created_at"
-  | "created_at"
-  | "updated_at"
-  | "-updated_at"
-  | "priority"
-  | "-priority"
-  | "sort_order"
+  | IssueListOrder
   | "state__name"
   | "-state__name"
   | "assignees__first_name"
   | "-assignees__first_name"
   | "labels__name"
-  | "-labels__name"
-  | "target_date"
-  | "-target_date"
-  | "start_date"
-  | "-start_date"
-  | "link_count"
-  | "-link_count"
-  | "sub_issues_count"
-  | "-sub_issues_count";
+  | "-labels__name";
 
 export type TIssueGroupingFilters = "active" | "backlog";
 

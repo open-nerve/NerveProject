@@ -90,12 +90,12 @@ make e2e
 
 ## Task 6：表格排序、滚动和编号链接（约600–1000行）
 
-**Files：** L/spreadsheet全调用链、新view.test.tsx/columns/header-column.test.tsx，spec指出的两独占localStorage键。
+**Files：** L/spreadsheet全调用链、新view.test.tsx/columns/header-column.test.tsx，spec指出的两独占localStorage键；新 spreadsheet-sort 供菜单和表头共享确认投影，常量只用生成 IssueListOrder，旧筛选控件词汇保留。
 
-- [ ] 映射现有可排序列到原生order_by，仅使用3.16支持值；箭头、aria-sort来自确认displayFilters。移除第二份全局排序真值，失败保留旧偏好/箭头/数据；刷新与同账号换项目不串。
-- [ ] 单元格可编辑值仍用现有确认入口；无限滚动保留order/cursor、去重加载和最后一页结束，空/失败/重试不是假末页。四种指定排序正反方向与真实第二页留T14页面验证，本Task真实生成客户端/组件断言。
-- [ ] 子项列用project catalog中的真实identifier和sequence_id构建browse链接，无#sub-issues；目录未就绪不能造错误编号/旧ID链接。
-- [ ] 聚焦view/header-column/list-data及相关filters偏好回归；M15排序码旧字段、M16失败仍改箭头或跨项目localStorage污染、M17链接旧片段各红；G。提交`fix(M4/P12): 使用原生排序和确认偏好驱动表格`。
+- [x] 映射现有可排序列到原生order_by，仅使用3.16支持值；箭头、aria-sort来自确认displayFilters。移除第二份全局排序真值，失败保留旧偏好/箭头/数据；刷新与同账号换项目不串。
+- [x] 单元格可编辑值仍用现有确认入口；无限滚动保留order/cursor、去重加载和最后一页结束，空/失败/重试不是假末页。四种指定排序正反方向与真实第二页留T14页面验证，本Task真实生成客户端/组件断言。
+- [x] 子项列用project catalog中的真实identifier和sequence_id构建browse链接，无#sub-issues；目录未就绪不能造错误编号/旧ID链接。
+- [x] 聚焦view/header-column/list-data及相关filters偏好回归；M15排序码旧字段、M16失败仍改箭头或跨项目localStorage污染、M17链接旧片段各红；G。提交`fix(M4/P12): 使用原生排序和确认偏好驱动表格`。
 
 ## Task 7：日历月周、拖动与添加已有（约550–1000行）
 
@@ -135,7 +135,7 @@ make e2e
 
 ## Task 11：菜单键盘、右键和层叠（约650–1100行）
 
-**Files：** L/quick-action-dropdowns/*、P/ui/src/dropdowns/custom-menu.tsx及context-menu/root.tsx；L/roots/project-layout-root、calendar Popover、quick-add/form/calendar、calendar/issue-block、list/block、kanban/block/delete-drop-zone；新L/menus.test.tsx与受影响共享测试。
+**Files：** L/quick-action-dropdowns/*、P/ui/src/dropdowns/custom-menu.tsx及context-menu/root.tsx；L/roots/project-layout-root、calendar Popover、quick-add/form/calendar、calendar/issue-block、list/block、kanban/block/delete-drop-zone；新L/menus.test.tsx与受影响共享测试；表格 issue-row 现有四条键盘/静态元素警告与表格 Space/IME 一并核验。
 
 - [ ] 逐个仍存在的SubMenu写键盘事件断言：打开、箭头进入/返回、Escape、焦点归还；看板/日历卡片键盘激活底色与pointer一致。已删cycle/module菜单只登记删除，不恢复五个历史文件凑数。
 - [ ] issue-detail菜单去IconButton嵌套，使用既有customButtonClassName；ContextMenu在基线已实现inert，核真实列表关闭时不参与Tab、打开时可达；无缺口不重写已有行为。新处理经isComposing，不用keyCode229。

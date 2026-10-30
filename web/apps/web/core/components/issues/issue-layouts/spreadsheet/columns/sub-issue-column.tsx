@@ -3,48 +3,37 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
-import type { Issue } from "@nerve/api-client";
-
-import React from "react";
 import { observer } from "mobx-react";
-// types
+import { Link, useParams } from "react-router";
+import type { Issue } from "@nerve/api-client";
+import { generateWorkItemLink } from "@nerve/utils";
+import { useProject } from "@/hooks/store/use-project";
 
-// helpers
-import { Row } from "@nerve/ui";
-import { cn } from "@nerve/utils";
-// hooks
-import { useParams, useNavigate } from "react-router";
-
-type Props = {
-  issue: Issue;
-};
-
-export const SpreadsheetSubIssueColumn = observer(function SpreadsheetSubIssueColumn(props: Props) {
-  const { issue } = props;
-  // router
-  const navigate = useNavigate();
-  // hooks
+export const SpreadsheetSubIssueColumn = observer(function SpreadsheetSubIssueColumn({ issue }: { issue: Issue }) {
   const { workspaceSlug } = useParams();
-  // derived values
-  const subIssueCount = issue?.sub_issues_count ?? 0;
-
-  const redirectToIssueDetail = () => {
-    navigate(
-      `/${workspaceSlug}/projects/${issue.project_id}/${issue.archived_at ? "archives/" : ""}issues/${issue.id}#sub-issues`
-    );
-  };
-
-  const label = `${subIssueCount} sub-work item${subIssueCount !== 1 ? "s" : ""}`;
-
+  const { getProjectIdentifierById } = useProject();
+  const projectIdentifier = getProjectIdentifierById(issue.project_id);
+  const count = issue.sub_issues_count ?? 0;
+  const label = `${count} sub-work item${count !== 1 ? "s" : ""}`;
+  const className = "flex h-11 w-full items-center border-b-[0.5px] border-subtle py-1 text-11";
+  if (
+    !count ||
+    !workspaceSlug ||
+    !projectIdentifier ||
+    !Number.isSafeInteger(issue.sequence_id) ||
+    issue.sequence_id < 1
+  )
+    return <span className={className}>{label}</span>;
+  const href = generateWorkItemLink({
+    workspaceSlug,
+    projectIdentifier,
+    sequenceId: issue.sequence_id,
+    projectId: issue.project_id,
+    issueId: issue.id,
+  });
   return (
-    <Row
-      onClick={subIssueCount ? redirectToIssueDetail : () => {}}
-      className={cn("flex h-11 w-full items-center border-b-[0.5px] border-subtle py-1 text-11 hover:bg-surface-2", {
-        "cursor-pointer": subIssueCount,
-      })}
-    >
+    <Link to={href} className={`${className} clickable hover:bg-surface-2`}>
       {label}
-    </Row>
+    </Link>
   );
 });

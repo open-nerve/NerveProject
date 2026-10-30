@@ -8,6 +8,7 @@ import type { IssueDetail } from "@nerve/api-client";
 
 import type { MutableRefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "@nerve/i18n";
 import { observer } from "mobx-react";
 // nerve imports
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
@@ -32,7 +33,7 @@ type Props = {
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   canEditProperties: (projectId: string | undefined) => boolean;
   portalElement: React.MutableRefObject<HTMLDivElement | null>;
-  containerRef: MutableRefObject<HTMLTableElement | null>;
+  containerRef: MutableRefObject<HTMLDivElement | null>;
   canLoadMoreIssues: boolean;
   loadMoreIssues: () => void;
   spreadsheetColumnsList: (keyof IIssueDisplayProperties)[];
@@ -58,9 +59,10 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
   const isScrolled = useRef(false);
   const [intersectionElement, setIntersectionElement] = useState<HTMLTableSectionElement | null>(null);
 
-  const {
-    issues: { getIssueLoader },
-  } = useIssuesStore();
+  const { issues } = useIssuesStore();
+  const { getIssueLoader } = issues;
+  const failed = "currentList" in issues && !!issues.currentList?.error;
+  const { t } = useTranslation();
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
@@ -95,9 +97,14 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
     };
   }, [handleScroll, containerRef]);
 
-  const isPaginating = !!getIssueLoader();
+  const isPaginating = !!getIssueLoader("") || !!getIssueLoader();
 
-  useIntersectionObserver(containerRef, isPaginating ? null : intersectionElement, loadMoreIssues, `100% 0% 100% 0%`);
+  useIntersectionObserver(
+    containerRef,
+    isPaginating || failed ? null : intersectionElement,
+    loadMoreIssues,
+    `100% 0% 100% 0%`
+  );
 
   const handleKeyBoardNavigation = useTableKeyboardNavigation();
 
@@ -131,9 +138,23 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
       </tbody>
       {canLoadMoreIssues && (
         <tfoot ref={setIntersectionElement}>
-          {Array.from({ length: 3 }).map((_, index) => (
-            <SpreadsheetIssueRowLoader key={index} columnCount={displayPropertiesCount} />
-          ))}
+          <tr>
+            <td colSpan={displayPropertiesCount + 1}>
+              <button
+                type="button"
+                disabled={isPaginating}
+                aria-busy={isPaginating}
+                className="w-full px-3 py-2 text-left text-13 text-accent-primary disabled:cursor-wait"
+                onClick={loadMoreIssues}
+              >
+                {t("common.load_more")}
+              </button>
+            </td>
+          </tr>
+          {isPaginating &&
+            ["first", "second", "third"].map((slot) => (
+              <SpreadsheetIssueRowLoader key={slot} columnCount={displayPropertiesCount} />
+            ))}
         </tfoot>
       )}
     </table>

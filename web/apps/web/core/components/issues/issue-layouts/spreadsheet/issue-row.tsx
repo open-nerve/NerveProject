@@ -42,7 +42,7 @@ interface Props {
   nestingLevel: number;
   issueId: string;
   isScrolled: MutableRefObject<boolean>;
-  containerRef: MutableRefObject<HTMLTableElement | null>;
+  containerRef: MutableRefObject<HTMLDivElement | null>;
   spreadsheetColumnsList: (keyof IIssueDisplayProperties)[];
   spacingLeft?: number;
   shouldRenderByDefault?: boolean;

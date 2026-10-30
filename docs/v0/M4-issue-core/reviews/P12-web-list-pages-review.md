@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T5 已完成，T6–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
+日期：2026-10-30。**当前：预检通过后已获授权实施，T1–T6 已完成，T7–T16 待继续。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。本记录不是P12产品完成或阶段整分支终审；阶段 A1–A12 在最终整审时逐条收口；本次不合并。
 
 ## 1. 前置、身份与评审方式
 
@@ -115,3 +115,16 @@ M11（中间 below 算成 above）实际发送 2500 而非 3500；M12（相加�
 完整本地 F 已串行通过：gen-check、lint-go、GOFLAGS=-p=1 make test、lint-web、knip、TURBO_FORCE=true make test-web、make e2e；证据为 t5-F1-* 的 raw、argv、输入哈希与退出码。lint-web 54 项通过，test-web 18 项均强制执行无缓存，默认 E2E 169/169；这不代替 T15 的 C1 三浏览器故事。web lint cap135→133。最终聚焦11文件189测试（0 skip）通过，见 t5-final-regression；修改路径零 lint、全仓类型/格式/关键词已含 F。
 
 自查核对了所有高亮消费者、原生落点生产者、真实 hook/根写入口、确认前后计数、同组/跨组/尾部/空列、读拒绝、独立分页与类型合同。新集成测试按拖放/泳道分文件，并共用 fake-kanban，避免复制完整假 transport。初期夹具 API 拼写/参数/数据外壳和拆文件时的 mock 导入顺序失败如实保留，不算行为红。无未决架构问题。T11 另需实测路由卸载中的全局 dragging 标志是否残留，并在原拖动层职责内处理；当前还未将这一检查宣称通过。
+
+
+## 13. T6 表格确认排序、续页和编号链接（2026-10-30）
+
+表格各排序列使用生成 IssueListOrder 的原生字段，菜单选中、箭头和 th aria-sort 统一从已确认 displayFilters 投影，移除两份 localStorage 排序状态。保留现有筛选控件的显示词汇，仅通过 projectListQuery 投影原生值；未新增 API 或依赖。修正 metadata 的图标映射及 iconKey 泄漏到 SVG 的 React 警告。
+
+实际表格 DOM / FakeNerve 验证：PATCH 等待与 422 拒绝均保留确认箭头、偏好和行序；确认后才以新 order 发读取。同账号切项目和重挂载重新读取各自偏好，不串箭头。续页保留 order/cursor/limit、重复点击只一请求、pending 原生禁用；503 后停止自动续页，显式重试原请求，重叠页去重并在 null cursor 停止。首屏读取失败的重试入口移出加载骨架，空成功页无虚假续页。
+
+子项列使用项目目录 identifier 和 sequence_id 的 browse 链接，包括归档工作项；没有旧 ID 地址/#sub-issues，冷目录、无效编号、零子项不造链接。共享表格容器 ref 修正为实际 div。表格 skeleton 使用固定槽位 key。T11 接续核修 issue-row 原有四条菜单键盘/静态元素警告，本 Task 该文件仅一处 ref 类型同步，无规则豁免；其它行为修改路径零 lint。web cap133→132。
+
+M15 原生排序退回旧字段、M16 全局 storage 覆盖确认排序、M17 链接追加旧片段均实际断言红，原字节/hash 恢复后绿，见 M15–M17 receipts。最终聚焦 9 文件 161 测试（0 skip）通过，t6-final-regression；共享包强制构建 t6-shared-build2、类型 t6-types-final、关键词 t6-keywords、lint t6-lint-final / t6-changed-lint-final、格式 t6-format 与 diff-check 均通过。首轮 shared build 命令目录写错、测试查询了旧 preferences 路径/错误 DOM 文本、路由夹具中间提交及分页 fixture 顺序问题的原始失败保留，不计行为红。四种排序实际二页与三浏览器留 T14/T15，阶段验收仍开放。
+
+自查核对所有 metadata 消费者、原生请求字段、确认状态来源、空组 loader 与首屏错误、真实目录链接及已有 filters 回归；无未决架构问题。T5 检查点 c7acea58 的远端 server/web 已通过，E2E 仍在运行，原始状态保存在忽略证据目录。
