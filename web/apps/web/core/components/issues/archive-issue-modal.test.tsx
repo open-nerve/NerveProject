@@ -15,6 +15,7 @@ import { toasts } from "@/lib/fake-toast";
 import { useIssueListRefresh, IssueListRetry } from "@/hooks/use-issue-list-refresh";
 import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection";
 import { ArchiveIssueModal } from "./archive-issue-modal";
+import { IssueArchiveHost, useArchiveRequest } from "./issue-layouts/archive-host";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, navigate: vi.fn() }));
 vi.mock("@/lib/store-context", async () => ({
@@ -149,6 +150,46 @@ it("does not turn a missing item into a successful command", async () => {
   expect(dialog()).toBeNull();
   expect(writes()).toEqual([]);
   expect(close).not.toHaveBeenCalled();
+});
+
+const ArchivableRow = observer(function ArchivableRow() {
+  const requestArchive = useArchiveRequest();
+  const issue = tab.app.issue.issues.getIssueById("old");
+  if (!issue || issue.archived_at) return null;
+  return (
+    <button onClick={() => requestArchive!(issue, () => tab.app.issue.projectIssues.archiveIssue("ws", "A", issue.id))}>
+      Archive row
+    </button>
+  );
+});
+async function openRowConfirmation() {
+  await tab.render(
+    <MemoryRouter>
+      <IssueArchiveHost>
+        <ArchivableRow />
+      </IssueArchiveHost>
+    </MemoryRouter>
+  );
+  await act(async () => button("Archive row").click());
+  await submit(true);
+}
+it("the layout keeps the confirmation owner when the confirmed archive removes its last row", async () => {
+  await openRowConfirmation();
+  await act(async () => writes()[0]!.answer(json(200, archived("old"))));
+  expect(button("Archive row")).toBeUndefined();
+  expect(dialog()).toBeNull();
+  expect(toasts).toEqual([expect.objectContaining({ type: "success", title: "issue.archive.success.label" })]);
+  expect(writes()).toHaveLength(1);
+});
+it("the layout ends the pending confirmation on permission ABA without reviving it or announcing its late result", async () => {
+  await openRowConfirmation();
+  await act(async () => loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []));
+  expect(dialog()).toBeNull();
+  await act(async () => loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]));
+  expect(dialog()).toBeNull();
+  await act(async () => writes()[0]!.answer(json(200, archived("old"))));
+  expect(toasts).toEqual([]);
+  expect(writes()).toHaveLength(1);
 });
 it("an archive confirmation stays successful when a crossing read requires verification that fails, and retry sends only GET", async () => {
   const first = await requestedIssue(

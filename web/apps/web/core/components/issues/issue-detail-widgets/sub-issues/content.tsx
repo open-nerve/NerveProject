@@ -6,7 +6,7 @@
 
 import type { Issue } from "@nerve/api-client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { observer } from "mobx-react";
 
 import { EIssuesStoreType } from "@nerve/types";
@@ -19,7 +19,6 @@ import { CreateUpdateIssueModal } from "../../issue-modal/modal";
 import { useSubIssueOperations } from "./helper";
 import { SubIssuesListRoot } from "./issues-list/root";
 import { DetailResourceError } from "../resource-error";
-import { useDetailScope } from "../use-detail-scope";
 
 type Props = {
   workspaceSlug: string;
@@ -55,15 +54,14 @@ const SubIssuesContent = observer(function SubIssuesContent(props: Props) {
   });
   // store hooks
   const {
-    fetchSubIssues,
-    subIssues: { getError, retry },
+    subIssues: { getError, retry, subIssuesByIssueId },
   } = useIssueDetail();
   const { toggleCreateIssueModal, toggleDeleteIssueModal } = useIssueDetailModals();
 
   // helpers
   const subIssueOperations = useSubIssueOperations(workspaceSlug, projectId, parentIssueId);
-  const captureScope = useDetailScope(workspaceSlug, projectId, parentIssueId);
-  const [visible, setVisible] = useState(false);
+  // The detail loader owns the initial read. This getter also enforces the resource's current read proof.
+  const visible = subIssuesByIssueId(parentIssueId) !== undefined;
 
   // handler
   const handleIssueCrudState = useCallback(
@@ -79,23 +77,6 @@ const SubIssuesContent = observer(function SubIssuesContent(props: Props) {
     },
     [issueCrudState]
   );
-
-  useEffect(() => {
-    const current = captureScope();
-    let active = true;
-    void fetchSubIssues(workspaceSlug, projectId, parentIssueId).then(
-      () => {
-        if (active && current()) setVisible(true);
-        return undefined;
-      },
-      () => {
-        /* The resource retains its refusal for the read-only retry. */
-      }
-    );
-    return () => {
-      active = false;
-    };
-  }, [captureScope, fetchSubIssues, workspaceSlug, projectId, parentIssueId]);
 
   // render conditions
   const shouldRenderDeleteIssueModal =
@@ -113,11 +94,7 @@ const SubIssuesContent = observer(function SubIssuesContent(props: Props) {
         workspaceSlug={workspaceSlug}
         projectId={projectId}
         issueId={parentIssueId}
-        retry={async () => {
-          const current = captureScope();
-          await retry(workspaceSlug, projectId, parentIssueId);
-          if (current() && !getError(parentIssueId)) setVisible(true);
-        }}
+        retry={() => retry(workspaceSlug, projectId, parentIssueId)}
       />
       {visible && (
         <SubIssuesListRoot

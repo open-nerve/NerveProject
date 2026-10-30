@@ -22,7 +22,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUserPermissions } from "@/hooks/store/user";
 // helper
-import { ArchiveIssueModal } from "../../archive-issue-modal";
+import { useArchiveRequest } from "../archive-host";
 import { DeleteIssueModal } from "../../delete-issue-modal";
 import { CreateUpdateIssueModal } from "../../issue-modal/modal";
 import type { IQuickActionProps } from "../list/list-view-types";
@@ -48,7 +48,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
   const [createUpdateIssueModal, setCreateUpdateIssueModal] = useState(false);
   const [issueToEdit, setIssueToEdit] = useState<Issue | undefined>(undefined);
   const [deleteIssueModal, setDeleteIssueModal] = useState(false);
-  const [archiveIssueModal, setArchiveIssueModal] = useState(false);
+  const requestArchive = useArchiveRequest();
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { getStateById } = useProjectState();
@@ -99,7 +99,12 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
     setIssueToEdit,
     setCreateUpdateIssueModal,
     setDeleteIssueModal,
-    setArchiveIssueModal,
+    setArchiveIssueModal: () => {
+      if (handleArchive) {
+        if (!requestArchive) throw new Error("Project issue actions require an IssueArchiveHost");
+        requestArchive(issue, handleArchive);
+      }
+    },
   };
 
   const MENU_ITEMS = useProjectIssueMenuItems(menuItemProps);
@@ -117,14 +122,6 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
   return (
     <>
       {/* Modals */}
-      {handleArchive && (
-        <ArchiveIssueModal
-          data={issue}
-          isOpen={archiveIssueModal}
-          handleClose={() => setArchiveIssueModal(false)}
-          onSubmit={handleArchive}
-        />
-      )}
       <DeleteIssueModal
         data={issue}
         isOpen={deleteIssueModal}

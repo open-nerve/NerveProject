@@ -1575,6 +1575,8 @@ M4 的页面上逐项照 M3 收尾的写法改，并由故事或浏览器核对�
 
 P12 T15 的实际浏览器补充：行/表格属性拒绝复用现有当前宿主的错误命令，标签由原选择器报告一次；成员按钮不在打开时替换节点，状态目录刷新保留选中文字及锚点宽度。日期及范围的外点/焦点离开只关闭，不抢回已去往相邻控件的焦点；内部选择/Escape仍归还触发器。右键菜单按实际调用的可聚焦控件归还，日历开始拖动即关闭悬停预览。完整peek读取触发既有父项核验时原行会卸载，遵循“只聚焦仍存的本宿主触发器”，不寻找全局同ID替代；加载中仍存原行的归还另有真实浏览器验证。三浏览器的具体覆盖与剩余归属见P12 review§22，不据共享控件通过关闭后续完整详情/创建或M6/M7页面验收。
 
+P13 T11 的页面补充：行归档弹窗由当前布局局部宿主承载，确认后最后一行消失也能完成一次反馈；路由 key 或既有权限身份改变即结束旧弹窗。详情子项初读复用既有详情加载器，组件不因挂载重复读同一资源，保留原 GET 重试与读取权限凭据。归档只读页隐藏新增部件入口，部件按钮内容不再嵌套 button。此处仅调整 issue 内部展示职责，不改变 root 确认、权限或后端协议。
+
 ### 7.6 编辑器（`@nerve/editor` 与 `core/components/editor`）
 - **代码分割**（M2 交接第 7 节）：编辑器的模块到用它的页面才加载（`React.lazy` 包住富文本、轻量编辑器的入口）；未登录时打开需要登录的页面，不再先加载 tiptap 的 Emoji 节点和 `is-emoji-supported`。个人设置页不再挂载工作项的弹窗（7.4），它在打开之前建出的编辑器随之没有。之后删除 e2e 的 `EMOJI_CHECK_WARNING`：定义（`e2e/fixtures/browser.ts:166`）、29 个故事文件的 96 行，和 `e2e/fixtures/settings-pages.ts` 的一处（它也要清掉）。
 - **标注块的默认表情**（M2 交接第 8 节）：默认值的 `EMOJI_URL` 指向 `cdn.jsdelivr.net`（`editor/src/extensions/callout/utils.ts:19`），被 CSP 挡住。改为不带图片地址、只用 `EMOJI_UNICODE`（`128161`）以原生表情显示；标注块的显示在没有地址时用原生表情。表情回应的选择器（M3 改为本站的数据）在 P15 核对没有 CSP 违规。
@@ -2584,7 +2586,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
 | P11 `web-detail-data` | 详情一侧的数据层（15） | **已完成**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review§15](reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。交付42afa24f、main ce3c39ab；准确分支及main CI全绿，证据归档/清理完成；列宽按已裁定A |
 | P12 web-list-pages | 列表、看板、表格、日历（16） | **已完成**：最终e6d1329b授权--no-ff合并main ff89d0a1；[准确main CI41087022719](https://github.com/open-nerve/NerveProject/actions/runs/41087022719)三任务成功；1786份实施/运行证据及14份准备证据归档逐hash通过，分支/worktree清理后再次复验。见[review§28](reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)、[整审](../../reviews/re-17-M4P12整体审核.md) |
-| P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **实施中，T1–T10完成**：[spec](specs/P13-web-filters-archives-profile.md)、[plan](plans/P13-web-filters-archives-profile.md)、[review](reviews/P13-web-filters-archives-profile-review.md)、[预检](../../reviews/re-18-M4P13预检审核.md)。分支codex/m4-p13，基线main ff89d0a1，phase已M4/P13；继续T11–T14，整审和分支CI后先不合并 |
+| P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **实施中，T1–T11完成**：[spec](specs/P13-web-filters-archives-profile.md)、[plan](plans/P13-web-filters-archives-profile.md)、[review](reviews/P13-web-filters-archives-profile-review.md)、[预检](../../reviews/re-18-M4P13预检审核.md)。分支codex/m4-p13，基线main ff89d0a1，phase已M4/P13；继续T12–T14，整审和分支CI后先不合并 |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述的历史、草稿、搜索、命令面板（15） | 未开始 |
 | P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | 未开始 |

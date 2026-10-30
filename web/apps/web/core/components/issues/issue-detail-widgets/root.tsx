@@ -27,13 +27,15 @@ export function IssueDetailWidgets(props: Props) {
   return (
     <>
       <div className="flex flex-col space-y-4">
-        <IssueDetailWidgetActionButtons
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          issueId={issueId}
-          disabled={disabled}
-          hideWidgets={hideWidgets}
-        />
+        {!disabled && (
+          <IssueDetailWidgetActionButtons
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
+            issueId={issueId}
+            disabled={disabled}
+            hideWidgets={hideWidgets}
+          />
+        )}
         <IssueDetailWidgetCollapsibles
           workspaceSlug={workspaceSlug}
           projectId={projectId}

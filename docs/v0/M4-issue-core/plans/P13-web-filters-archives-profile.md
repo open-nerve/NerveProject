@@ -175,13 +175,14 @@ T14有产品修复时补受影响验证，最终F覆盖全部最终产品输入�
 ## Task 11：I15归档页面故事（约400–850行）
 
 **Files：** e2e/stories/issue/i15-archive-issue.spec.ts；fixtures/assert/issue既有删除图断言。
+**T11局部补充：** 真实页面红证明行内确认会随最后一行移除而丢成功反馈，新增 issue-layouts/archive-host.tsx 作为当前布局局部确认宿主，沿原 Modal/root 命令与权限身份，导航/权限 ABA 仍结束旧确认；页面验证最后一行、拒绝、Back 和旧答。详情已有完整子项加载，删除子项组件冗余挂载读取，并验证归档/普通详情/peek 的读取次数及稳定交互。只读页隐藏新增部件入口，按钮内容改为非交互 span，避免嵌套 button。均为 issue 内部展示职责调整，无后端/跨模块合同变化。
 **Interfaces：** I15(API)保留；新增I15 (page): ...，沿原archive/unarchive/delete接口，不新增后端夹具写入。
 
-- [ ] Step 1：真实行菜单归档终态项，pending双击一次POST，确认DB/活动/活动列表消失；归档列表刷新保持筛选，详情只读；restore回活动列表且一次成功提示。对非终态/403拒绝留原事实。
-- [ ] Step 2：build后执行pnpm exec playwright test stories/issue/i15-archive-issue.spec.ts --project=chromium --grep '(page)'；原样记录失败，不把API故事算页面通过。
-- [ ] Step 3：加有权删除归档项和expectIssueDeleted；只读详情的字段/评论/关系/链接无修改请求；有权guest详情与AM列表不同权限分别核，不把HTTP404改403。Back后旧弹窗及旧回答不能动新页。
-- [ ] Step 4：故事绿、请求次数与DB审计精确；拒绝和确认后补读失败均验证不重复写；可复用T6有效变异但记录真实当前hash，不能称新运行。
-- [ ] Step 5：提交test(M4/P13): 验证归档只读与恢复删除流程。记录A5/A6。
+- [x] Step 1：真实行菜单归档终态项，pending双击一次POST，确认DB/活动/活动列表消失；归档列表刷新保持筛选，详情只读；restore回活动列表且一次成功提示。对非终态/403拒绝留原事实。
+- [x] Step 2：build后执行pnpm exec playwright test stories/issue/i15-archive-issue.spec.ts --project=chromium --grep '(page)'；原样记录失败，不把API故事算页面通过。
+- [x] Step 3：加有权删除归档项和expectIssueDeleted；只读详情的字段/评论/关系/链接无修改请求；有权guest详情与AM列表不同权限分别核，不把HTTP404改403。Back后旧弹窗及旧回答不能动新页。
+- [x] Step 4：故事绿、请求次数与DB审计精确；拒绝和确认后补读失败均验证不重复写；可复用T6有效变异但记录真实当前hash，不能称新运行。
+- [x] Step 5：提交test(M4/P13): 验证归档只读与恢复删除流程。记录A5/A6。
 
 ## Task 12：I19个人主页页面故事（约500–1000行）
 

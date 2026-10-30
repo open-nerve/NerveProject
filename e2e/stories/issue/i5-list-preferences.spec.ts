@@ -14,6 +14,7 @@ import {
 import { expectIssuePage } from "../../fixtures/assert/issue";
 import { accountId, emailFor, newAccount, signInContext } from "../../fixtures/auth";
 import { watchPage } from "../../fixtures/browser";
+import { addCondition } from "../../fixtures/issue-filters-page";
 import {
   expectListOrder,
   expectListPageQuiet,
@@ -209,14 +210,6 @@ test("I5 (API): two members retain different complete list settings; me follows 
   expectIssuePage(await listIssues(api, a.token, project.id, { priority: ["low"] }), []);
 });
 
-// A condition is added through the real toolbar. Its empty value opens the value selector itself.
-async function addCondition(page: Page, name: string) {
-  await page.getByRole("button", { name: "Add filter", exact: true }).click();
-  const option = page.getByRole("option", { name, exact: true });
-  await expect(option).toBeVisible();
-  await option.click();
-  return page.getByRole("button", { name: "Remove filter", exact: true }).last().locator("..");
-}
 async function addChoice(page: Page, name: string, value: string, preferencesPath: string) {
   await addCondition(page, name);
   const saved = await sentTo(page, "PATCH", preferencesPath, () =>

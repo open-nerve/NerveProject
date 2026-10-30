@@ -171,13 +171,11 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
   const createArchiveMenuItem = (): TContextMenuItem => ({
     key: "archive",
     title: t("common.actions.archive"),
-    description: isInArchivableGroup ? undefined : t("issue.archive.description"),
     icon: ArchiveOutline,
     className: "items-start",
     iconClassName: "mt-1",
     action: () => handleOptionalAction(setArchiveIssueModal, "Archive", true),
-    disabled: !isInArchivableGroup,
-    shouldRender: isArchivingAllowed,
+    shouldRender: isArchivingAllowed && isInArchivableGroup,
   });
 
   const createRestoreMenuItem = (): TContextMenuItem => ({
