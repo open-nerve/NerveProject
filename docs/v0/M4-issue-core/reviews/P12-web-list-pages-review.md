@@ -1,6 +1,6 @@
 # M4/P12 列表页面：预检与实施记录
 
-日期：2026-10-30。**当前：全部本地验收通过，T16六项重要问题已修复，候选bbd92dd0的CI全绿；准确最终文稿HEAD由后置final-delivery.json核准交付。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[deep-review预检](../../../reviews/re-16-M4P12预检审核.md)。整分支结论见[re-17](../../../reviews/re-17-M4P12整体审核.md)，A1–A12映射见§24，最后门禁与交付条件见§25–26；不合并。
+日期：2026-10-30；集成核验：2026-10-31。**当前：P12已完成，最终e6d1329b及main ff89d0a1的准确CI均全绿，证据归档与分支/worktree清理已完成，详见§28。** [spec](../specs/P12-web-list-pages.md)、[plan](../plans/P12-web-list-pages.md)、[预检](../../../reviews/re-16-M4P12预检审核.md)、[整审](../../../reviews/re-17-M4P12整体审核.md)。§1–27保留各次准备、实施、失败与交付时的事实；其中未合并/待CI措辞为当时状态，以本节和§28为当前结论。
 
 ## 1. 前置、身份与评审方式
 
@@ -335,3 +335,20 @@ T16产品实现、全部本地验收及审查修复完成；交付生效由§26�
 最终新输入补验：`t16-I3F-lint-web`54任务、`t16-I3F-knip`零dead；`t16-I3F-e2e2`构建成功、180/180、0skip；`t16-I3-matrix-{chromium,firefox,webkit}`各11/11、0skip。初次探针和初次I3F-e2e遇临时测试容器端口绑定超时，未开始故事，不计行为红或通过；服务可连接时重跑通过，没有停启既有容器。全量前端单测的255文件2697测试原输入仅差不被其消费的这个E2E夹具，服务端输入也未变；按`t16-i3-input-domains.json`和修订后的verify-delivery明确域核准复用，不冒称重跑。26种当前变异生产hash仍一致。
 
 上述修正及文稿提交后，仍须用§26后置回执核准新HEAD的准确CI。M4总验收、合并、清理与P13范围不变。
+
+## 28. 授权合并main CI与归档清理（2026-10-31）
+
+负责人授权P12以--no-ff合并、准确main CI通过后归档清理，并只准备P13预检。最终交付e6d1329b64d1b637b41e99c4a3772a5df05ceeab的[分支CI 41075042958](https://github.com/open-nerve/NerveProject/actions/runs/41075042958) attempt1三任务success，归档内final-delivery.json核准A1–A12，不借早期候选CI代替。
+
+合并main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8，父提交依次ce3c39abef99a290157b282c23180983f8746bcb和e6d1329b64d1b637b41e99c4a3772a5df05ceeab。tree 0a5e5d29101e8e137b4ab5cb75a95d7140cb216b与最终分支完全一致；系统/usr/bin/git自动推送成功。无新产品差异，沿已核输入复用本地七项及三浏览器证据，不冒称本次重新执行本地全部套件。
+
+[准确main CI 41087022719](https://github.com/open-nerve/NerveProject/actions/runs/41087022719) attempt1成功：server job124170730426、web job124170730914、e2e job124176447555均success。公开API轮询至main-ci-24后遇403限流，终态由负责人已授权登录的Chrome页面确认；关键字段转录见main-ci-browser-observation.md，未提取凭据、未重跑。main与origin/main准确相同。
+
+证据根为主项目.superpowers/sdd/P12-integration-20261031/：
+
+- worktree-evidence归档1786文件、390466237字节；preparation-evidence/P12-preparation-20261030另14文件、115274字节；无空证据目录，未知项0。
+- 77358个可重建依赖/构建文件不归档，全部路径与分类在archive-manifest.json；未把未知ignored文件一概丢弃。旧日志绝对路径保持原样，按worktree相对路径映射到worktree-evidence；原准备目录保留。
+- 复制前后集合、长度、权限和SHA-256一致；删除前源/副本复核。确认origin/main..origin/codex/m4-p12为0后正常删除远端分支、干净worktree、本地分支，无force；删除后两归档再次逐哈希通过。
+- archive-manifest.json SHA-256：ad358777988f2400084b0656dae1a9e6ed708d90e4726867adef3a3bfb8fc5d1；preparation-archive-manifest.json：9420d790ce4d58a20f8ce1c8ad0b24166b45f890bc25156807bc696a25b23da6。准确身份与清理事实见merge-receipt.json、main-ci-success-receipt.json、cleanup-receipt.json。
+
+P12集成完成。本次事实随P13文档准备分支记录，不修改已归档原始证据，不为写入自身SHA制造循环提交。P13仅文档预检，M4§14、总体§9.4、输入handoff顶层open和M5–M8最终closeout仍开放。

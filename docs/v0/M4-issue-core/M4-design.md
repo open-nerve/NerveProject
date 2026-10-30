@@ -862,7 +862,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 | P9 | 差异清单 | 四 | 动态随工作项物理删除（`CASCADE`，不是 `DO_NOTHING`）；已登记的"连带在同一事务"改为只对删除工作项、状态、标签成立，删除项目、工作区的工作项一侧与 Plane 一样在事务之外完成，但写下请求的时刻（3.6） **P9回执：** 已同步plane-diff第四节及版本索引行：活动/评论子链CASCADE、同步/异步按操作划分；T3/T5/T9–13证据见P9 review |
 | P10b | 总体设计 | 7.7 | `Reconciled.fetchPart` 和 `paged-groups.ts`；一个工作项只有一份，取服务端 `updated_at` 大的（3.22） |
 | P10a–P16 | 前端改动清单 | 3.1、3.2 | M4 一行的状态；删到 M5、M6、M7 的入口和取数（3.1、3.2）；迭代、模块、项目视图、工作区视图的工作项列表在 P10a 删除，M6、M7 加回（7.3） |
-| P12 | README | "前端"一节 | 已按实际分支更新四布局/原生搜索及后续页面边界（3.1）；P12最终三浏览器已通过、准确文稿HEAD CI按后置回执核准，不宣称已集成，见P12 review§24–25 |
+| P12 | README | "前端"一节 | 已按实际更新四布局/原生搜索及后续页面边界；最终e6d1329b与main ff89d0a1准确CI均通过、归档清理完成，见P12 review§28 |
 | 收尾 | 总体设计 | 9.4 | M4 的状态改为"已完成" |
 
 ---
@@ -2372,23 +2372,26 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **关闭**：M2 交接第 10 节的列表一侧（`DateDropdown`、7 个下拉框）、第 12 节的一处实例（`existing-issues-list-modal.tsx` 的 `projectIssuesSearch`）；M3 交接第 6 节的 `watchPage` 一项、第 7 节的列表一侧（`CustomMenu` 的键盘、右键菜单、层叠顺序、快捷操作的嵌套按钮、`existing-issues-list-modal.tsx` 的 `tabIndex`）、第 8 节的 22 个文件。
 - **完成线**：I3、I4（含日历的"添加已有"）、I6、I7 的页面版本通过；C1 和 C3 的列表一侧通过。
 
-### P13 `web-filters-archives-profile`：筛选、显示设置、归档页、个人主页（12 个任务）
-- **目标**：筛选的工具栏和显示设置；已归档的工作项；个人主页的工作项。
-- **任务**：
-  1. 富筛选的工具栏（4 个 `CustomSearchSelect` 调用方的文字经 `t()`、`defaultOpen` 的核对）；`FiltersDropdown` 的名字；日期弹窗的 `title` 经 `t()`。
-  2. 显示设置（布局、分组、排序、空组、子工作项、显示属性）的保存；I5 的页面版本。
-  3. 日期范围的字段提示（`range.tsx`）。
-  4. 已归档的列表和详情（只读），页头的模块级 `IssueService` 删除；I15 的页面版本。
-  5. 归档、恢复的操作；归档弹窗的 `ModalTitle`、去掉 `tabIndex={1}`。
-  6. 个人主页的三个标签页；访客不取列表、工具栏不在"没有权限"之上；`as TProfileViews` 删除；I19 的页面版本。
-  7. 以页面自己的 id 给子树 key：个人主页（`userId`、`profileViewId`）、已归档的详情（`archives/issues/(detail)/[archivedIssueId]`）；后退的检查。
-  8. 已归档、个人主页的 `localStorage` 设置的页面一侧。
-  9. `watchPage`；vitest。
-  10. C2、C9 的归档页和个人主页。
-  11. 改到的文件的死成员、oxlint。
-  12. review。
-- **关闭**：M1 收尾交接的 `as TProfileViews`；M2 交接第 10 节的 `CustomSearchSelect` 一项、第 12 节的一处实例（已归档的页头）；M3 交接第 6 节（个人主页的工作项、访客的工具栏、个人主页和已归档的详情的 key）、第 7 节的筛选按钮和日期弹窗、第 8 节的 `CustomSearchSelect` 的文字。
-- **完成线**：I5、I15、I19 的页面版本通过；`git grep -n "as TProfileViews" -- web` 没有输出；C2 和 C9 的归档页、个人主页通过。
+### P13 web-filters-archives-profile：筛选、显示设置、归档页、个人主页（14个任务）
+- **目标**：沿P10b/P11/P12原生数据层、权限水位和共享控件完成本期页面。
+- **任务**（原12项粗任务细分为14项，范围不扩大；见[spec](specs/P13-web-filters-archives-profile.md)、[plan](plans/P13-web-filters-archives-profile.md)）：
+  1. 原生筛选配置与subscriber显示，保留profile已有project_id约束。
+  2. 四个CustomSearchSelect的翻译、defaultOpen、异步候选和当前失败重试。
+  3. 日期范围草稿、Field提示与本地日；已有开区间回显不丢；旧日期弹窗title与局部范围比较修正。
+  4. 项目显示设置确认保存、并发/拒绝/确认后读失败；FiltersDropdown名称/键盘/焦点。
+  5. 归档固定列表、本地设置恢复/隔离、只读字段及读取错误。
+  6. 归档弹窗ModalTitle、无正tabIndex、pending/单次反馈；恢复沿原命令合同。
+  7. 归档详情页头/正文按id结束owner，Back/晚答；只读字段与有权恢复/删除分别控制。
+  8. profile route一次收窄TProfileViews并向下传，删除as TProfileViews；访客桌面/手机工具栏门禁与user/view key。
+  9. profile三关系、list/kanban和四组型、分页/本地设置/已持有目录；不逐项目扩取工作区标签，完整目录仍M7。
+  10. I5页面：筛选及偏好的UI/请求/数据库证据。
+  11. I15页面：归档只读、恢复、删除及拒绝。
+  12. I19页面：三关系、目标隔离、成员/访客/OwnOnly。
+  13. watchPage、C2/C9归档/profile三浏览器、dead/oxlint与完整七项门禁。
+  14. 整分支deep-review、局部修复复审、文档与准确分支CI；先交负责人安排，不自动合并。
+- **提前完成的输入**：归档页头模块级IssueService在P11删除；R36单开关和R38筛选注册根因在P12修复，本期做完整页面回归，不重复记为新实现。
+- **关闭**：M1收尾交接as TProfileViews；M2§10四选择器/defaultOpen及§12归档页头实例的页面回归；M3§6个人主页/访客工具栏/页面key、§7筛选和日期/归档弹窗、§8文案。只记对应子项，顶层交接等M4收尾。
+- **完成线**：I5/I15/I19页面与C2/C9对应部分在三浏览器实际非零通过；git grep as TProfileViews在web零命中；完整F、至少15种有效生产性质变异、deep-review及准确分支CI闭环。预检时产品标准仍未勾选。
 
 ### P14 `web-issue-detail`：详情、创建弹窗、父子、关联、链接（16 个任务）
 - **目标**：工作项的详情页和浮层、创建弹窗、子工作项、关联、链接、删除；选父工作项经 `issue-search`；访客的边界；编辑器的定点修改。
@@ -2580,8 +2583,8 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P10a `web-issue-types` | 换型与删除 M6、M7 的工作项列表（9） | **已完成**：最终 d1a19e78 授权 --no-ff 合并 main a06e3f70，[main CI 40723697041](https://github.com/open-nerve/NerveProject/actions/runs/40723697041) 三任务全绿；5,898 证据文件归档核哈希、清理分支/worktree后再次核验通过。见 [review §10](reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)；M4 总验收不关闭 |
 | P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
 | P11 `web-detail-data` | 详情一侧的数据层（15） | **已完成**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review§15](reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。交付42afa24f、main ce3c39ab；准确分支及main CI全绿，证据归档/清理完成；列宽按已裁定A |
-| P12 `web-list-pages` | 列表、看板、表格、日历（16） | **本地验收与整审通过，未合并**：[spec](specs/P12-web-list-pages.md)、[plan](plans/P12-web-list-pages.md)、[review](reviews/P12-web-list-pages-review.md)、[整审](../../reviews/re-17-M4P12整体审核.md)。基线main ce3c39ab；六项重要问题已修复，最终矩阵33项通过；准确文稿HEAD CI按review§26后置核准，先不合并 |
-| P13 `web-filters-archives-profile` | 筛选、显示设置、归档页、个人主页（12） | 未开始 |
+| P12 web-list-pages | 列表、看板、表格、日历（16） | **已完成**：最终e6d1329b授权--no-ff合并main ff89d0a1；[准确main CI41087022719](https://github.com/open-nerve/NerveProject/actions/runs/41087022719)三任务成功；1786份实施/运行证据及14份准备证据归档逐hash通过，分支/worktree清理后再次复验。见[review§28](reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)、[整审](../../reviews/re-17-M4P12整体审核.md) |
+| P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **文档预检通过，未实施**：[spec](specs/P13-web-filters-archives-profile.md)、[plan](plans/P13-web-filters-archives-profile.md)、[review](reviews/P13-web-filters-archives-profile-review.md)、[预检](../../reviews/re-18-M4P13预检审核.md)。分支codex/m4-p13，基线main ff89d0a1，phase仍M4/P12；等待负责人启动T1 |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述的历史、草稿、搜索、命令面板（15） | 未开始 |
 | P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | 未开始 |

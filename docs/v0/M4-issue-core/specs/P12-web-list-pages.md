@@ -1,6 +1,6 @@
 # M4/P12 列表页面规格
 
-> 状态：T1–T16 的产品实现、全部本地验收和整审修复已通过；准确最终文稿 HEAD 的 CI 由后置 `final-delivery.json` 核准后交付生效。分支 `codex/m4-p12`，基线 main `ce3c39abef99a290157b282c23180983f8746bcb`。关键词 phase 已由 T1 切到 `M4/P12`；阶段完成先做整分支 deep-review，不合并。附录 A 保留实施前的准备快照。
+> 状态：**已完成并集成**。最终e6d1329b经授权--no-ff合并main ff89d0a1；准确分支和main CI全绿，证据归档及分支/worktree清理完成，见[review§28](../reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)。原基线ce3c39ab，phase M4/P12；附录A保留准备快照。
 
 权威输入：[M4 设计](../M4-design.md) §3.16–3.18、3.22、7.1、7.4、7.5、9.7、12/P12、13.1；[推进方法](../../claude_to_gpt/02-method.md)、[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)；[P10b spec](P10b-web-list-data.md)、[P11 spec](P11-web-detail-data.md)及两段review的后续责任；M1-P4、M2-closeout §10/12、M3-closeout §6–8输入交接。配套[plan](../plans/P12-web-list-pages.md)、[review](../reviews/P12-web-list-pages-review.md)。
 
@@ -162,7 +162,7 @@ peek打开/关上、切项、换项目/工作区、后退和宿主卸载结束�
 - [x] A9 DateDropdown及七下拉的一份状态、定位、模态兼容、共享消费者回归通过；菜单键盘/激活/inert/无嵌套按钮与焦点层叠可观察。
 - [x] A10 peek与实际宿主生命周期、并存owner、后退/切scope/权限/晚答处理通过。
 - [x] A11 watchPage/S2准确请求与零意外失败；C1三浏览器、C3列表侧逐项记录，无继承grep空过。
-- [x] A12 修改范围dead/oxlint/knip、完整本地F、至少15项不同生产性质变异、整分支deep-review/修复复审及局部交接完成；候选bbd92dd0的准确CI全绿，最终文稿HEAD仍由后置回执核server/web/e2e并作为本项交付生效条件。未经后续授权先不合并。
+- [x] A12 修改范围dead/oxlint/knip、完整本地F、至少15项不同生产性质变异、整分支deep-review/修复复审及局部交接完成；最终e6d1329b由后置回执核准准确分支CI41075042958三任务成功。后续已授权集成，main ff89d0a1的CI41087022719三任务成功，归档清理完成，见review§28。
 
 ## 5. 不在范围与交给后续
 
@@ -182,7 +182,7 @@ peek打开/关上、切项、换项目/工作区、后退和宿主卸载结束�
 
 准备阶段的零产品验证保留在附录A；实施证据见review§9以后，最终验收映射见§24。T16最终WebKit在Docker恢复后11/11通过，三浏览器共33项，无需借T15旧矩阵作最终证据；已有API故事和jsdom测试也不能代替C1/C3。准备证据在主目录 `.superpowers/sdd/P12-preparation-20261030/`，未来归档须与实施worktree证据一起保留。M4§14/总体§9.4、输入handoff顶层open和M5–M8最终closeout保持开放。
 
-A1–A12与Task16的本地验收、审查修复已闭合；准确最终HEAD的CI后置回执存忽略证据目录，不在提交里循环记录自己的SHA。只有final-delivery.json绑定当前HEAD且server/web/e2e成功才报告阶段交付；保留分支/worktree等待负责人集成安排。
+A1–A12与Task16的本地验收、审查修复已闭合；准确最终HEAD的CI后置回执存忽略证据目录，不在提交里循环记录自己的SHA。最终e6d1329b已由final-delivery.json核准准确CI41075042958，随后获授权合并main并归档清理，见review§28。
 
 ## 附录 A：准备验证记录（2026-10-30）
 
