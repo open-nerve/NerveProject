@@ -200,3 +200,5 @@ P4 修复的历史输入未撤销：共享 fixture 14 组仍在，input/sanitize
 实际构建 t11-fixed-build、C10 Chromium 4/4：两个匿名入口延迟加载、个人设置边界、原生标注创建/保存/刷新；外链、worker、CSP、pageerror、console 均严格为零。t11-build-worker-audit.json 记录 411 个 JS 产物及 hash；无 Worker/SharedWorker 构造，blob 字符串只在路由协议名单，createObjectURL 只在已有 CSV 下载，编辑器 chunk 无这两项，不扩 CSP。
 
 改动文件 oxlint 0/0，包实际净减 6 后上限 54→48，knip 通过。构建检出公开 onChange 类型对可选对象做解构，改为命名的可选 options，字段/可选性不变；运行回调不变，复构建和页面通过。T11 完成，三浏览器统一在 T16 收尾。
+
+T11 类型补验：页面数据库轮询按查询 API 的可空行类型读取（t11-e2e-types-fixed 通过）；轮询仍要求真实内容出现，未放宽数据库断言。

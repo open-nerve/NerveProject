@@ -130,7 +130,7 @@ test("C10 (page): a native callout saves and reopens without external images or 
   await page.keyboard.insertText("Native callout content");
   const savedHTML = async () =>
     (await db.query<{ description_html: string }>("SELECT description_html FROM issues WHERE id=$1", [issue.id]))[0]
-      .description_html;
+      ?.description_html;
   await expect.poll(savedHTML).toContain("Native callout content");
   expect(await savedHTML()).toContain('data-emoji-unicode="128161"');
   expect(await savedHTML()).not.toMatch(/data-emoji-url|<img/);

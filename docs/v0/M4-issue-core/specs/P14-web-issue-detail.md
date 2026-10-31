@@ -137,7 +137,7 @@ T15 六处复制使用现有 useCopyLink/useCopyText（均收值与成功文案�
 - [ ] A8：T8 已完成 I10 真 worker 元数据、bounded GET 重试、data favicon、无外连与字段拒绝（review T8，t8-restored 48/48、I10 3/3、M13/M14）；复制仍待 T15。
 - [x] A9：I17 删除整棵子树且文案明确、onSubmit 必需、拒绝留窗/成功跟进；数据库目录断言通过（T9；t9-route-green 82/82、t9-i17-route 2/2、M15；完整检查点回执另记）。
 - [ ] A10：未登录无编辑器 chunk、设置不挂载工作项弹窗，EMOJI_CHECK_WARNING 全零且 console 无豁免（T10：t10-final-pages 20/20、t10-final-unit 37/37、M16/M17 红与精确恢复；T16 三浏览器待收尾）。
-- [ ] A11：原生 callout、五处死序列化删除而安全/粘贴回归保留，打包 worker/CSP 复核通过（T11）。
+- [x] A11：原生 callout、五处死序列化删除而安全/粘贴回归保留，打包 worker/CSP 复核通过（T11：t11-restored-editor 35/35，t11-content，t11-pages 4/4，t11-build-worker-audit.json）。
 - [ ] A12：M4 无图片上传入口/请求，无附件及关注按钮；表格子项地址直接 browse 无片段（T12/T13）。
 - [ ] A13：I20、S2 身份、I22 两标签页及 Back 通过；旧会话响应无跟进（T14）。
 - [ ] A14：六处真实复制消费者成功/拒绝正确，六个 copy-hook 例外删除，P15 剩余例外具名（T15）。
