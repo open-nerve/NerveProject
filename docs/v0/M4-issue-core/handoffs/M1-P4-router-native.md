@@ -38,4 +38,4 @@ T10 已让个人设置的命令面板不挂载 WorkItemLevelModals，保留设�
 
 个人设置保留命令面板但不挂载工作项编辑器；匿名 id/编号入口不加载实现。列表/表格及普通/归档行内子项计数直达原生 browse，无 #sub-issues 片段；无目录只显示数量。C10 和 I8 在三引擎通过，接收本交接对应子项。
 
-共同证据：[阶段 review §9–14](../reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[三浏览器逐条矩阵](../reviews/P14-browser-matrix.md)与[整审 re-21](../../../reviews/re-21-M4P14整体审核.md)。产品 e0ee0ff7，本地七项分层门禁、默认 E2E 238/238、三引擎各44/44；最终文稿 CI 按后置回执。顶层 status 仍 open，真正 M4 收尾再按完整关闭条件统一关闭。
+共同证据：[阶段 review §9–14](../reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[三浏览器逐条矩阵](../reviews/P14-browser-matrix.md)与[整审 re-21](../../../reviews/re-21-M4P14整体审核.md)。验收输入 b7d1f0c2（含 I22 路由及 I9 编辑器就绪前置修正），本地七项分层门禁、默认 E2E 238/238、三引擎各44/44；最终文稿 CI 按后置回执。顶层 status 仍 open，真正 M4 收尾再按完整关闭条件统一关闭。

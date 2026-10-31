@@ -229,6 +229,6 @@ P14 分支 `codex/m4-p14`，worktree `.codex/worktress/codex/m4-p14`，基线为
 
 工作分支 `codex/m4-p14`，worktree `.codex/worktress/codex/m4-p14`；主目录保持 main `8bb4bbcb`。T1–T16 实现、本地七项分层门禁、默认 E2E 238 项及三引擎各 44 项均通过；整审的慢加载取消/保存保护与无读者清理已修复，测试准备问题已完整复验。
 
-产品提交 `e0ee0ff7`，正式 [re-21](../../reviews/re-21-M4P14整体审核.md)、[阶段 review §9–14](../M4-issue-core/reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[spec](../M4-issue-core/specs/P14-web-issue-detail.md)、[plan](../M4-issue-core/plans/P14-web-issue-detail.md)。最终文稿的 SHA/run/attempt/jobs 以实施根 `final-delivery.json` 后置核准，未核准不交付；旧产品 CI 不替代该门。
+验收提交 `b7d1f0c2`（含最终 CI 暴露的 I22 路由前置、矩阵暴露的 I9 就绪前置修正和完整本地复验），正式 [re-21](../../reviews/re-21-M4P14整体审核.md)、[阶段 review §9–14](../M4-issue-core/reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[spec](../M4-issue-core/specs/P14-web-issue-detail.md)、[plan](../M4-issue-core/plans/P14-web-issue-detail.md)。最终文稿的 SHA/run/attempt/jobs 以实施根 `final-delivery.json` 后置核准，未核准不交付；旧产品 CI 不替代该门。
 
 负责人当前要求先不合并。保留分支、worktree、准备与实施两处证据；等下一步安排。以后获准合并仍用 --no-ff，main CI 全绿后归档逐 hash 验证并正常清理。P15 尚未准备/实施；它承接时间线、评论、表情、描述历史、完整草稿、搜索/命令面板、四处剩余复制及版本 Markdown 复制。M7 slow-loading Discard 的既存关闭策略已明确交接；M4 总验收及顶层输入仍未关闭。

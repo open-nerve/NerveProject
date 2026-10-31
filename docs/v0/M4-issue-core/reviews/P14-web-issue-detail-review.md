@@ -276,7 +276,7 @@ T13 CI 的未捕获异常来自本段 fake-form 夹具保持真实项目下拉�
 
 ## 9. 最终验收映射
 
-最终产品输入 `e0ee0ff7e75ae4c2234f9c214fdbc91ed7a12de4`。以下是产品完成事实；最终文稿的远端提交和 CI 单列 §14，不能用旧 CI 替代。
+最终验收输入 `b7d1f0c2daf2f6adf719e6d58744067011d58de8`。以下是产品完成事实；最终文稿的远端提交和 CI 单列 §14，不能用旧 CI 替代。
 
 | 条款 | 最终证据 |
 |---|---|
@@ -306,13 +306,13 @@ T13 CI 的未捕获异常来自本段 fake-form 夹具保持真实项目下拉�
 | 门禁 | 准确输入及结果 |
 |---|---|
 | gen-check / lint-go / Go test | `09525b31` 的 `t16-final-*`，三项退出 0；Go `GOFLAGS=-p=1 make test` 无缓存，458.692 秒 |
-| Web lint | `e0ee0ff7` 的 `t16-delivery-lint-web`，54/54；关键词 76 条、17 例外、零命中，1284 翻译读取均有定义 |
-| knip | 同提交 `t16-delivery-knip`，退出 0，无新忽略 |
+| Web lint | `b7d1f0c2` 的 `t16-ready-final-lint-web`，54/54；关键词 76 条、17 例外、零命中，1284 翻译读取均有定义 |
+| knip | 同提交 `t16-ready-final-knip`，退出 0，无新忽略 |
 | Web test | 同提交 `TURBO_FORCE=true make test-web`，18/18 任务、零缓存命中 |
-| build + 默认 E2E | 同提交 `make e2e`，238/238（Chromium 236、既有 Firefox A4 2），66.857 秒；默认报告 103 文件逐 hash 留存 |
-| 显式 P14 矩阵 | 同提交 `t16-final-matrix-{chromium,firefox,webkit}`，各 44/44，三引擎均零 skipped/unexpected/flaky |
+| build + 默认 E2E | 同提交 `make e2e`，238/238（Chromium 236、既有 Firefox A4 2），68.971 秒；默认报告 103 文件逐 hash 留存 |
+| 显式 P14 矩阵 | 同提交 `t16-ready-matrix-{chromium,firefox,webkit}`，各 44/44，三引擎均零 skipped/unexpected/flaky |
 
-`t16-delivery-receipt.json` 集合七项真实回执；`t16-delivery-server-input-reuse.json` 证明 `09525b31..e0ee0ff7` 的 server、api、生成客户端、锁文件、Makefile、CI 和 tools 输入全无差异，因此前三项复用原始测试，不假称在最终 Web 提交重跑 Go。最后的文档提交只改 docs，仍须通过 §14 的远端准确最终 SHA CI。
+`t16-ready-final-receipt.json` 集合七项真实回执；`t16-ready-final-server-input-reuse.json` 证明 `09525b31..b7d1f0c2` 的 server、api、生成客户端、锁文件、Makefile、CI 和 tools 输入全无差异，因此前三项复用原始测试，不假称在最终 Web 提交重跑 Go。最后的文档提交只改 docs，仍须通过 §14 的远端准确最终 SHA CI。
 
 三引擎实际版本为 Chromium 153.0.8010.12、Firefox 155.0、WebKit 26.6，Playwright 1.63.0；矩阵报告与产物逐 hash 已封存。历史所有红灯仍保留，包括首轮矩阵、PNG/JSON 采集夹具问题及诊断失败，不以“最终绿”覆盖历史。
 
@@ -322,7 +322,7 @@ T13 CI 的未捕获异常来自本段 fake-form 夹具保持真实项目下拉�
 
 按 M1 原 deadsym 脚本和锁定 TS 5.8.3，初始改动候选 118/28 文件，最终 115/26 文件。删除 `dataId` 回退、恒 false `isVisible` 分支、TS 的 `resanitized` 死声明，以及五个仅文件内类型的 export。JSON/Go 的真实二次清洗字段保留。`t16-dead-final-audit.json` 对 115 项逐条写真实 JSX/测试/动态键/框架读取或明确公共 ref 合同；公开 ref 13 项不是假装已有生产读者，遵守 spec 的兼容要求，P16 继续统一盘点。
 
-最终变更输入共 169 个 TS/TSX 文件。默认 root 配置实际 lint 167 个（零错误/警告）；两个 config.ts 属既有 ignorePatterns，另用规则完全相同、仅不排除路径的证据配置显式 lint 两个，仍零错误/警告。原配置与守卫没有修改；`t16-delivery-changed-lint.json`、`t16-delivery-config-lint.json` 记录实际执行数，不能把空扫描视为通过。全局警告上限只沿任务真实净减更新。
+最终变更输入共 169 个 TS/TSX 文件。默认 root 配置实际 lint 167 个（零错误/警告）；两个 config.ts 属既有 ignorePatterns，另用规则完全相同、仅不排除路径的证据配置显式 lint 两个，仍零错误/警告。原配置与守卫没有修改；`t16-ready-final-changed-lint.json`、`t16-ready-final-config-lint.json` 记录实际执行数，不能把空扫描视为通过。全局警告上限只沿任务真实净减更新。
 
 ## 12. deep-review 与修复闭环
 
@@ -330,7 +330,7 @@ T13 CI 的未捕获异常来自本段 fake-form 夹具保持真实项目下拉�
 
 确认的 Major 是 lazy import pending 时创建窗把空 editor ref 当作忙碌，阻塞 clean/dirty 的 Escape/Discard。四个真实 chunk 持有场景原实现 4/4 行为红，修复区分“未挂载”和“已挂载且忙碌”，其后发现新可达的 Save to Drafts 也须保留 readiness，已一并闭合；普通提交与 busy 保护未放松。真实页面及现有 import reject/error-boundary 单测均通过。Minor 的死分支和仅本地类型已清完，没有未处理的本段 Major/Minor。
 
-独立首轮之后的 `9a0f32e4..e0ee0ff7` 共 22 个文件由作者复审，补读新增的 link-page/package 完整文件，并对保留控制流、调用者、公共合同及全部修改正文复核；`t16-author-increment-review.json` 和 patch 绑定输入。后续测试准备修正、运行证据、最终文档均由作者负责，**不宣称独立审者已签署最终 HEAD**。没有确认需要新增权限 owner、改变 API/数据库/跨模块协议或放宽架构守卫的问题。
+独立首轮之后的 `9a0f32e4..e0ee0ff7` 共 22 个文件由作者复审，补读新增的 link-page/package 完整文件，并对保留控制流、调用者、公共合同及全部修改正文复核；`t16-author-increment-review.json` 和 patch 绑定输入。其后 CI 发现的 I22 前置问题另由作者完整读改动文件并复核原 host/权限/路由调用链，记录为 `t16-ci-i22-review.json`，见 §14.1；I9 就绪前置的补充复审见 `t16-i9-ready-review.json` 和 §14.2。后续测试准备修正、运行证据、最终文档均由作者负责，**不宣称独立审者已签署最终 HEAD**。没有确认需要新增权限 owner、改变 API/数据库/跨模块协议或放宽架构守卫的问题。
 
 ## 13. 交接、实际决定与保留边界
 
@@ -342,11 +342,25 @@ M1-P2、M1-P4、M1-closeout、M2-closeout、M3-closeout 各追加 P14 对应子�
 
 ## 14. 最终分支 CI、证据保留与交付门
 
-分支 `codex/m4-p14`，基线 main `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`。本地产品输入 `e0ee0ff7` 已通过上述门禁。较早产品 `beda23c1` 的 [CI 41188324547](https://github.com/open-nerve/NerveProject/actions/runs/41188324547) attempt 1 三任务成功，仅作为历史证据，不能代替本最终文稿的 CI。
+分支 `codex/m4-p14`，基线 main `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`。本地验收输入 `b7d1f0c2` 已通过上述门禁。较早产品 `beda23c1` 的 [CI 41188324547](https://github.com/open-nerve/NerveProject/actions/runs/41188324547) attempt 1 三任务成功，仅作为历史证据，不能代替本最终文稿的 CI。
 
 最终文稿提交之后使用系统 Git 推送，`final-delivery.json` 后置保存准确 HEAD、远端 HEAD、run/attempt、server/web/e2e 全成功、主目录仍 main 及产品输入未变证明。**该回执不存在或校验不通过时，A16/T16 和阶段交付门未通过；不得据本节预先宣称最终 CI 全绿。** 这是避免文档自指提交 SHA 的后置记录，与 P13 相同，不是降低准确提交门槛。
 
 准备原件在主目录 `.superpowers/sdd/P14-preparation-20261031/`；实施原件在本 worktree `.superpowers/sdd/P14-web-issue-detail/`，均保留。失败 trace/截图/数据库、日志、mutation、阅读清单和回执需在以后授权合并且 main CI 通过后一起复制、逐 hash 核对，再清理分支/worktree并复验。现在不合并、不清理、不启动 P15。
+
+### 14.1 最终文稿首轮 CI 的 I22 前置修复
+
+`4fafe01e` 的 [CI 41191083876](https://github.com/open-nerve/NerveProject/actions/runs/41191083876) attempt 1，server/web 成功，E2E 的 I22 Back/Forward 用例在标题 fill 时发现元素 detached 并超时。这不是 W11。已通过负责人授权的 Chrome 读取日志；产物存储域被 Chrome 拦截，未绕过限制、未取得远端 trace，准确原文摘录在 `t16-ci-i22-ui-log.md`。
+
+本地原样 10 次通过；8 倍 CPU 的三个探针全部在 Delete 菜单得到同类 detached 行为红。可见 UI 和 trace 证明 `pushState` 已改地址、React 尚未提交目标页：WEB-1 URL 对应的正文仍是列表，peek 场景的 Lists URL 正文仍是 Beta。失败点击在约第 9 秒开始，等待到第 30 秒，不是正常步骤总耗时刚好不足。`t16-ci-i22-red-analysis.json` 保留原 trace 路径、hash 与 action 时间。
+
+局部修复仅在 I22 为每次前进/返回增加目标工作项行或详情标题的真实 UI 前置，Beta 辨识行经 API 准备；之后才打开弹窗或检验 owner 已退役。原关闭、零写入、console 断言和 30 秒超时均不改。相同 8 倍 CPU 修改后 3/3（每次约 21 秒），原两个 I22 2/2；无 CPU 探针代码进入提交。作者按逻辑/集成/覆盖三视角复审单一改动文件及调用链，无生产/架构修改。
+
+最终验收输入 `b7d1f0c2` 已重新跑 Web 四项、默认 238/238、显式三浏览器各 44/44 和 167+2 文件严格 lint；服务端输入零差异证明扩展到该提交。新回执为 `t16-ready-final-receipt.json` / `t16-ready-matrix-*`。旧输入 e0ee0ff7 的已通过本地记录与失败远端文稿记录均保留，不相互替代；本最终文稿仍须准确提交 CI 后置核准。
+
+### 14.2 Firefox 关联页面的加载前置
+
+I22 修正后的首轮显式矩阵，Chromium 44/44、Firefox 43/44。I9 在重载后立即点 Relations，trace 的输入点 (573,297) 在 lazy 描述挂载时失去目标，按钮下移约 44px，最终仍折叠；失败不是权限或关系数据缺失。原 trace、帧及分析见 `t16-i9-ready-trace-analysis.json`。I9 三次打开文档均补实际 editor 挂载前置，随后 Firefox 连续 5/5；没有固定等待、重复点击或警告忽略。作者完整读单一修改文件及关系组件/store/原编辑器边界，`t16-i9-ready-review.json` 绑定补充复审。加载期间的布局跟随和退出仍由 C10 专项验证；I9 不冒称验收此时对移动按钮的指针命中。最终完整 Web 门禁、默认 E2E 及三引擎各 44 已在最终验收输入重新通过。
 
 ## 附录：全部实际裁定（台账原顺序）
 
@@ -382,5 +396,9 @@ M1-P2、M1-P4、M1-closeout、M2-closeout、M3-closeout 各追加 P14 对应子�
 30. 描述版本 Markdown 复制与其余四处复制沿 P15 既定范围 — P14 六消费者已验证，保持公开 copyMarkdownToClipboard ref 不等于核完历史消费者提示 — 代价是那些既存复制反馈仍未收口，M2/M3 顶层 handoff 继续 open。
 31. M6/M7 自身业务不因共享 helper 已适配就提前验收，浏览器和最终构建事实只依准确产物 — 尊重 P10a 的 A 裁定和审查者只读边界 — 代价是领域自身端到端保证仍待各自里程碑，P14 不冒称全站完成。
 32. I2 Chromium 用精确 URL 的 fallback 拦截开启请求体采集，WebKit/Firefox 保持 request 观察；四个完整 body 断言不变 — 同应用 Chromium 对照证明无拦截 body=null、有拦截取得实际 JSON 且无 preload 警告；WebKit 先前对照相反 — 成本是仅采集层按浏览器分支，不更改真实业务请求或放宽警告。上一轮 Web F 236/238 的另一失败为 I10 API 仍使用旧 PNG CRC 期望，已同步已修正有效图片字节。
+
+33. I22 在每次导航及 Back/Forward 后用唯一工作项行/详情标题确认目标页面，地址栏变化不作 React 路由已提交的证明 — CI 的 detached 输入和本地 8 倍 CPU 三次 detached 菜单均指向旧页面控件；补就绪前置后同条件三次通过，保留全部关闭/零写/console 断言与原超时 — 代价是该故事验收已到达页面后的 owner 退役，不冒称覆盖路由加载未完成时继续点击旧页面的产品行为。
+
+34. I9 的三个新文档先确认真实描述 editor 已挂载再操作关系按钮 — Firefox trace 的点击点 (573,297) 在 lazy 描述进入时失去目标，关系按钮下移约44px；这是加载后关系故事缺前置，C10另验pending布局跟随 — 代价是I9不验加载过程中对移动控件的指针命中，既有C10布局跟随与慢加载取消场景保留；不加sleep/重试点击或放宽警告。
 
 没有以 deferred minor 名义搁置本段的局部缺陷；明确后续范围与未核验领域见 §13。

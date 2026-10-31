@@ -88,4 +88,4 @@ T12/T14已以真实HTTP/生成客户端验证issue-search返回完整Issue的{da
 
 描述撤销后重做由当前 autosave owner 去重；boolean skip_activity 的真实 PATCH 保留微秒审计/版本/动态，issue/draft 初始化迁移不制造 dirty，已有用户编辑仍保留。T3/T4 和三引擎 I2 实际页面完成相应子项，服务端 P4 历史清洗证据不改写。
 
-共同证据：[阶段 review §9–14](../reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[三浏览器逐条矩阵](../reviews/P14-browser-matrix.md)与[整审 re-21](../../../reviews/re-21-M4P14整体审核.md)。产品 e0ee0ff7，本地七项分层门禁、默认 E2E 238/238、三引擎各44/44；最终文稿 CI 按后置回执。顶层 status 仍 open，真正 M4 收尾再按完整关闭条件统一关闭。
+共同证据：[阶段 review §9–14](../reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[三浏览器逐条矩阵](../reviews/P14-browser-matrix.md)与[整审 re-21](../../../reviews/re-21-M4P14整体审核.md)。验收输入 b7d1f0c2（含 I22 路由及 I9 编辑器就绪前置修正），本地七项分层门禁、默认 E2E 238/238、三引擎各44/44；最终文稿 CI 按后置回执。顶层 status 仍 open，真正 M4 收尾再按完整关闭条件统一关闭。

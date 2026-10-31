@@ -1,16 +1,16 @@
 # P14 三浏览器实际执行矩阵
 
-日期：2026-10-31。固定产品提交 `e0ee0ff7e75ae4c2234f9c214fdbc91ed7a12de4`。命令均在实施 worktree 根，先完成 `make e2e` 的真实 build，再按 Chromium → Firefox → WebKit 串行执行；无并行数据库世界。
+日期：2026-10-31。固定验收输入 `b7d1f0c2daf2f6adf719e6d58744067011d58de8`。命令均在实施 worktree 根，先完成 `make e2e` 的真实 build，再按 Chromium → Firefox → WebKit 串行执行；无并行数据库世界。
 
 `pnpm --filter @nerve/e2e exec playwright test --config=playwright.m4-detail.config.ts --project=<browser> --reporter=list,html,json --output=<绝对证据路径>`；HTML/JSON 输出同样是绝对路径。每个浏览器 44 项（40 个业务页面故事、4 个已有 C2 兼容夹具），均一次通过、零 skipped/unexpected/flaky。不得把默认全量 E2E 的两个 Firefox A4 当作本矩阵。
 
 | 引擎 | 实际版本 | passed | skipped / unexpected / flaky | Playwright 报告耗时 |
 |---|---|---:|---|---:|
-| chromium | 153.0.8010.12 | 44 | 0 / 0 / 0 | 28.676 秒 |
-| firefox | 155.0 | 44 | 0 / 0 / 0 | 33.880 秒 |
-| webkit | 26.6 | 44 | 0 / 0 / 0 | 32.534 秒 |
+| chromium | 153.0.8010.12 | 44 | 0 / 0 / 0 | 28.749 秒 |
+| firefox | 155.0 | 44 | 0 / 0 / 0 | 33.079 秒 |
+| webkit | 26.6 | 44 | 0 / 0 / 0 | 33.030 秒 |
 
-Playwright 锁定 1.63.0；版本探针见 `t16-engine-probe.log`，每轮输入、原始输出、完整 JSON、HTML、产物 hash 见 `.superpowers/sdd/P14-web-issue-detail/t16-final-matrix-<browser>*`。三次报告列出的 test title 完全一致，以下每行均为三个引擎分别通过。
+Playwright 锁定 1.63.0；版本探针见 `t16-engine-probe.log`，每轮输入、原始输出、完整 JSON、HTML、产物 hash 见 `.superpowers/sdd/P14-web-issue-detail/t16-ready-matrix-<browser>*`。三次报告列出的 test title 完全一致，以下每行均为三个引擎分别通过。
 
 | 序号 | A 条款 | 实际文件/行与 test title |
 |---:|---|---|
@@ -62,3 +62,5 @@ Playwright 锁定 1.63.0；版本探针见 `t16-engine-probe.log`，每轮输入
 A3 的 issue/draft 迁移 dirty、A4 的异步字段反馈、A6/A7 的部分确认、A8 的有界读取/晚答、A9 的拒绝与会话 ABA、A14 的复制成功与等待等补充消费者单测见阶段 review §8；本表不冒称每一条边界均由页面覆盖。C3 由 I2 属性与 I8 父项、C5 由 I8/I9/I10/I17、C11 由 I20/I22/S2 的实际页面承接。
 
 首轮 44/37/34 及后续诊断的失败原件保留；最终通过不能抹去历史失败。非法控制符使用 DOM input 注入、剪贴板使用合成事件；它们验证实际表单/editor/HTTP/数据库，不能当作原生系统剪贴板权限或键盘输入 NUL 的验证。Mac WebKit 走 Option-Tab；HTTP 拒绝按各引擎的精确系统错误匹配，warning 无豁免。
+
+I22 的列表/详情路由前置已补目标行或标题；Back/Forward 同时核真实目标页。最终文稿首轮 CI 的 detached 控件失败及 CPU 限速对照见阶段 review §14.1；Firefox I9 的 editor 就绪前置及原失败 trace 见 §14.2。旧轮次原件保持。

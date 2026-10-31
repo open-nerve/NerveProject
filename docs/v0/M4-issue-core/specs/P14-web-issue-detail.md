@@ -144,6 +144,7 @@ T15 六处复制使用现有 useCopyLink/useCopyText（均收值与成功文案�
 - [x] A11：原生 callout、五处死序列化删除而安全/粘贴回归保留，打包 worker/CSP 复核通过（T11：t11-restored-editor 35/35，t11-content，t11-pages 4/4，t11-build-worker-audit.json）。
 - [x] A12：M4 无图片上传入口/请求，无附件及关注按钮；表格和行内子项地址直接 browse 无片段（T12：owner 6/6、相关 unit 46/46、真实 Editor 22/22、C12 两页和 M19；T13：两个消费者 16/16、I8 四项及 M20，三浏览器归 A15）。
 - [x] A13：I20、S2 身份、I22 两标签页及 Back 通过；旧会话响应无跟进（T14：t14-pages-fixed 7/7 Chromium，真实旧写先落库、实际双标签页换账号；M21/M22 行为红和精确恢复、t14-restored 60/60；三浏览器归 A15）。
+  T16 补 I22 每次导航及 Back/Forward 的目标行/标题前置，确保页面实际挂载后验证 owner；8 倍 CPU 原实现 0/3、修正 3/3，原关闭/零写/console 与超时不变，最终三浏览器复验通过。
 - [x] A14：六处真实复制消费者等待/成功/拒绝正确，六个 copy-hook 例外删除；T15 的 19 项聚焦、68 项受影响回归、9 项 Chromium C4 均通过，M23 两项行为红并恢复。P15 四处具名见 review T15，三浏览器归 A15。
 - [x] A15：C3 详情/C4/C5/C10/C11 三浏览器均实际非零通过；完整七项门禁、至少 16 种有效生产性质变异及恢复证据、实际改动文件 dead/oxlint 核清（T16）。
 - [x] A16：基线至最终分支 HEAD deep-review、局部问题修复复审闭环、准确分支 CI 全绿及证据归档位置明确；先交负责人安排，不自动合并（T16）。
