@@ -126,8 +126,8 @@ T15 六处复制使用现有 useCopyLink/useCopyText（均收值与成功文案�
 
 - [ ] A1：原生 id/编号入口正确，页头和正文共同身份；同参数换项、权限 ABA、Back 无旧弹层/结果（T1/T14）。
 - [ ] A2：详情标题/七类属性、字段错误描述与拒绝后焦点符合 §2.3；I2 属性完成（T2）。
-- [ ] A3：真实编辑器撤销重做与迁移保存正确；boolean skip_activity、不发 JSON；已有 issue 与 draft 的迁移不标 dirty（T3/T4）。
-- [ ] A4：I1 创建字段/归一化/码/数据库正确，表单有名字、无正 tabIndex、项目必选可读；拒绝与 pending 保留当前窗（T4）。
+- [x] A3：真实编辑器撤销重做与迁移保存正确；boolean skip_activity、不发 JSON；已有 issue 与 draft 的迁移不标 dirty（T3/T4；review §8 的 T3/T4 及 t3-i2-complete、t4-component-final）。
+- [x] A4：I1 创建字段/归一化/码/数据库正确，表单有名字、无正 tabIndex、项目必选可读；拒绝与 pending 保留当前窗（T4；t4-i1-verified 2/2、t4-component-final 41/41、t4-full-routed-e2e 205/205）。
 - [ ] A5：父项/Save this draft 内层 Escape 不影响外层，portal 背景隔离、循环 Tab、焦点回还（T5/T6/T16）。
 - [ ] A6：父项原生查询与所有消费者一致，两个已有/一个新子项、移动/解除/状态分布、排除后代，I8 完成（T6）。
 - [ ] A7：跨项目关系/反向/任一端删除/部分确认保留，I9 完成；M7 两个消费者适配且无旧 projectIssuesSearch 读者（T6/T7）。

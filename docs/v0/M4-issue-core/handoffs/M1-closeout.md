@@ -7,6 +7,10 @@ created: 2026-09-25
 
 # M1 收尾留下的清理：死成员和死 prop、oxlint、一处类型断言、弹窗描述的 ID 迁移、标注块的 Markdown 序列化
 
+## 处理结果（M4/P14，T4 子项）
+
+已有普通工作项、已有草稿的描述补块 ID 已与用户输入区分。纯迁移只更新提交 HTML 与字段基线，不单独标 dirty/发业务写；已有真实描述或标题编辑保留 dirty。普通工作项纯迁移的显式保存带 boolean skip_activity，草稿不扩协议。真实表单/根 store 的 migration 测试和 I2 真实编辑器迁移证明相互补充，详见 [P14 review §8](../reviews/P14-web-issue-detail-review.md#8-实施接续2026-10-31)。T4 完整门禁见该节回执；五处序列化清理仍待 T11，全局 dead/oxlint 仍归 T16/收尾，顶层 status 保持 open。
+
 M1 收尾把 knip、tsc 看得见的死代码和包导出都删完了（[收尾 spec](../../M1-frontend-trim/specs/closeout.md)）。下面几项留给后续各 M，做法都是"谁改谁清"：本 M 重写或修改到的代码，在本 M 结束时不再带着它们。
 
 ## 死成员和死 prop

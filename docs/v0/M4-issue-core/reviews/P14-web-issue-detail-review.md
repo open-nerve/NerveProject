@@ -118,3 +118,7 @@ Base 的同步 Promise 锁覆盖原生写、确认后消费及关闭。消费回
 行为红 t4-behavior-red 六项；M06-migration-only 将纯迁移标 dirty 后两项失败，M07 去同步锁后原生 create 被调用两次；额外日期变异检出缺失反馈。每次均字节恢复。最初 M06 同时改变 load，保留历史但以精细变异为主。空状态与提示编号另各有真实失败。夹具 import/hoisting、ModalTitle 真实上下文、data-dirty 与 Propel 属性重名、Dialog 根无自身尺寸、CSS placeholder 定位、请求路由记录顺序、Saving 状态名称和列表 id 定位错误分别修正，不记作产品行为红。首个 HTML 报告路径写在 e2e 内，已逐文件核 hash 后移到统一证据根。
 
 t4-types-final 和 e2e types 通过；改动 lint 0 warnings/0 errors。当前先提交已验证的 T4 产品与记录，随后在该准确提交上串行完整 F；F 和检查点推送尚待回执，因此 Task 4 Step 4/5 与 A3/A4 暂未勾选。关闭决策/嵌套 Escape 留 T5，父项留 T6。
+
+**检查点回执（替代上一段待执行状态）：**产品提交 `4d4463f760cbf10cf9ee52c4688dccb9e255324c` 的 gen-check、Go lint（两段 0 issues）、完整 Go 测试（461.8 秒、无缓存）通过。knip 发现夹具两个未使用导出，`e21a24e64c1f0eedaaeb3e6bbed078760ebceeee` 收为私有；全量 Web 测试发现 T1 编号入口旧夹具缺真实布局，`a9d4f118` 将相同拒绝/只读重试断言迁入真实嵌套路由，聚焦 18/18。后两提交只改测试，产品与服务端/生成物均未变，前面三项证据复用并保留准确 tested SHA，不冒称在 a9d4f118 重跑了 Go。
+
+a9d4f118 的 lint-web 54/54、knip、强制无缓存 test-web 18/18 任务、E2E 205/205（Chromium 203、Firefox A4 2）全部通过；原始回执为 `t4-full-*`、`t4-full-fixed-*`、`t4-full-routed-*`。两次夹具门禁失败记录保留。A3/A4 和 Task 4 完成线已勾，检查点待此文档提交后推送；远端准确 SHA/run 后续写交付回执。后续修改仍须按 Task 和最终 T16 复验，当前不代表 P14 已完成。

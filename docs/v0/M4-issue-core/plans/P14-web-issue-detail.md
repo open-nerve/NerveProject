@@ -95,8 +95,8 @@ make e2e
 - [x] Step 1：写 `migrationDoesNotDirtyExistingIssue`、`migrationDoesNotDirtyExistingDraft`、`migrationPreservesRealEdits`、`projectAndTitleRefusalsHaveDescriptions`。真正观察 dirty/请求/关闭提示，不只看已有草稿直接关闭这一条。
 - [x] Step 2：运行新两文件及三个原测试；确认迁移被当用户输入的行为红。API 错误通过既有 fake error 结构，不手造与 OpenAPI 不同的 body。
 - [x] Step 3：ModalTitle、FieldError/useRefusedFocus、project 提示、正 tabIndex 清除、CreateMore 单一 Switch handler；拆 form 职责时保持既有确认后消费回调边界，已创建后消费失败不能重复创建。
-- [ ] Step 4：I1 c 键打开，填写标题/描述提及/属性/日期，确认 UI 编号与 DB；空标题、倒置日期、重复提交拒绝留窗。M06 将迁移标 dirty、M07 移除同步 pending 锁各红，恢复；完整 F。
-- [ ] Step 5：记录 A3/A4；提交 `feat(M4/P14): 完善工作项弹窗字段和迁移语义`，完整本地门禁后推检查点。
+- [x] Step 4：I1 c 键打开，填写标题/描述提及/属性/日期，确认 UI 编号与 DB；空标题、倒置日期、重复提交拒绝留窗。M06 将迁移标 dirty、M07 移除同步 pending 锁各红，恢复；完整 F。
+- [x] Step 5：记录 A3/A4；提交 `feat(M4/P14): 完善工作项弹窗字段和迁移语义`，完整本地门禁后推检查点（推送/远端 CI 身份以本地交付回执记载，不提前宣称远端成功）。
 
 ## Task 5：嵌套关闭和焦点（约 500–850 行）
 
