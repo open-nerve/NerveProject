@@ -67,7 +67,7 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
 
   const requestClose = () => {
     if (isBusy()) return;
-    if (descriptionLoadState === "ready" && !editorRef.current?.isEditorReadyToDiscard()) {
+    if (descriptionLoadState === "ready" && editorRef.current && !editorRef.current.isEditorReadyToDiscard()) {
       setToast({ type: TOAST_TYPE.ERROR, title: t("error"), message: t("editor_is_not_ready_to_discard_changes") });
       return;
     }

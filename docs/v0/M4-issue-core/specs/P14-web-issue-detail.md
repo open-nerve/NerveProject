@@ -59,6 +59,8 @@ key/owner 继承 workspace、解析后的 project/issue 与现有权限身份；
 
 只保留一个表单关闭决策：同步 busy 检查、编辑器 readiness、已有 draft-discard 逻辑。外层 ModalCore、Discard 按钮和编辑器关闭入口复用它；描述编辑器不再全 document 处理别的 portal Escape，移除冗余监听或限在自己的 Dialog 内，两者不能同时触发关闭。内层 Escape 只关闭内层，不关闭创建弹窗、不额外弹 Save this draft。请求在路上不能关闭/二次提交，失败留窗，成功跟进仅限原 owner。
 
+延迟编辑器脚本尚未建立实例时，clean 表单仍可取消，有输入时进入既有草稿确认；提交继续等待编辑器就绪。已经建立但明确报告忙碌的实例仍阻止关闭，不能把“尚未挂载”与“正在处理编辑内容”混为一谈。
+
 执行顺序：T5 完成关闭策略/真实 ModalCore 嵌套单测及 Save this draft、日期/标签的页面验收；父项搜索尚未原生接通，父项 C4 页面验收随 T6 迁移一起闭合，不在 T5 放行旧 API。
 
 本段只验证 Save this draft 嵌套与迁移兼容；保存/发布草稿完整 I14/C9 留 P15，不扩展草稿协议或重写既有生命周期。

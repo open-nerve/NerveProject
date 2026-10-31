@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures/test";
 import { issueListProject, openIssueList } from "../../fixtures/issue-list-page";
 import { createIssue } from "../../fixtures/issues";
@@ -29,10 +30,7 @@ async function editorChunks() {
   return editor;
 }
 
-test("C10 (page): an open peek display panel follows its button when the editor finishes loading", async ({
-  api,
-  page,
-}, info) => {
+async function holdEditorImplementation(page: Page) {
   const chunks = (await editorChunks()).filter(({ markers }) =>
     markers.includes("Adding different instances of a keyed plugin")
   );
@@ -49,6 +47,14 @@ test("C10 (page): an open peek display panel follows its button when the editor 
     }
     await route.continue();
   });
+  return { held, release };
+}
+
+test("C10 (page): an open peek display panel follows its button when the editor finishes loading", async ({
+  api,
+  page,
+}, info) => {
+  const { held, release } = await holdEditorImplementation(page);
   try {
     const seed = await issueListProject(api, info);
     const parent = await createIssue(api, seed.member.token, seed.project.id, { name: "Loading parent" });
@@ -86,6 +92,57 @@ test("C10 (page): an open peek display panel follows its button when the editor 
     release();
   }
 });
+
+for (const dirty of [false, true]) {
+  for (const action of ["Escape", "Discard"] as const) {
+    test(`C10 (page): ${action} can leave a ${dirty ? "dirty" : "clean"} creation while the real editor chunk is still pending`, async ({
+      api,
+      db,
+      page,
+    }, info) => {
+      const { held, release } = await holdEditorImplementation(page);
+      try {
+        const seed = await issueListProject(api, info);
+        const { watch } = await openIssueList(page, seed);
+        const trigger = page.getByRole("button", { name: "Add work item", exact: true });
+        await trigger.click();
+        const form = page.getByRole("dialog", { name: "Create new work item", exact: true });
+        const title = form.getByRole("textbox", { name: "Title", exact: true });
+        await expect(title).toBeVisible();
+        await expect.poll(() => held.length).toBeGreaterThan(0);
+        await expect(form.locator('[contenteditable="true"]')).toHaveCount(0);
+        if (dirty) {
+          await title.fill("Retained before the editor loads");
+          await form.getByRole("button", { name: "Save", exact: true }).click();
+          await expect(page.getByText("Editor is not ready to discard changes", { exact: true })).toBeVisible();
+          await expect(title).toHaveValue("Retained before the editor loads");
+        }
+        if (action === "Escape") {
+          await title.focus();
+          await page.keyboard.press("Escape");
+        } else await form.getByRole("button", { name: "Discard", exact: true }).click();
+        if (dirty) {
+          const confirm = page.getByRole("dialog", { name: "Save this draft?", exact: true });
+          await expect(confirm.getByRole("heading", { name: "Save this draft?", exact: true })).toBeVisible();
+          await confirm.getByRole("button", { name: "Discard", exact: true }).click();
+        }
+        await expect(form).toHaveCount(0);
+        await expect(trigger).toBeFocused();
+        expect(watch.apiRequests.filter((request) => /^POST .*\/(issues|drafts)$/.test(request))).toEqual([]);
+        expect(await db.query("SELECT id FROM issues WHERE project_id=$1", [seed.project.id])).toEqual([]);
+        release();
+        await expectQuietConsole(page, watch);
+        expect(watch.apiFailures).toEqual([]);
+        expect(watch.oldApiRequests).toEqual([]);
+        expect(watch.pageErrors).toEqual([]);
+        expect(watch.cspViolations).toEqual([]);
+        expect(requestsElsewhere(page, watch)).toEqual([]);
+      } finally {
+        release();
+      }
+    });
+  }
+}
 
 for (const entry of ["number", "id"] as const) {
   test(`C10 (page): anonymous ${entry} entry loads no editor implementation; signing in loads it and saves real text without warnings`, async ({
