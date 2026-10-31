@@ -172,11 +172,11 @@ make e2e
 **Files：** E/stories/issue/i16-auto-archive.spec.ts、E/fixtures/{clock,test,auth,auto-archive}.ts；复用既有 archiveWatermark/completedPeriodicJobs。
 **Interfaces：** ClockWorld.advance(offset):Promise<ClockRun> 返回新的 nerve/api/startedAt。clockTest从Playwright base扩展，无普通 signedInPage/api/db fixture；页面直接使用新baseURL和既有auth helper重新登录。
 
-- [ ] Step 1：新增 `I16 (page): fresh clock process archives terminal issues and shows the system actor`；API建账号/项目/旧终态与非终态控制项，记录 old/current URL、写后水位和fresh attempt条件。
-- [ ] Step 2：make build 后 B stories/issue/i16-auto-archive.spec.ts --grep 'I16.*page'；用真实服务器/worker，不mock任务，不把expiry后的旧token/cookie当登录。原API crossing/historical negative继续回归。
-- [ ] Step 3：只补页面需要的复用fixture，推进744h后真实新登录/刷新，不改业务自动归档算法；等新进程启动后且水位后started的completed任务，不仅按finalized_at判断。
-- [ ] Step 4：页面打开归档详情，确认SITE_NAME与对应活动，手动恢复显示用户；M16 过宽fresh判断由原API负例击穿，M17把null当停用用户由页面击穿，恢复。数据库只查询断言。
-- [ ] Step 5：记录 A12，保留启动/水位/attempt/SQL读回与页面截图；提交 `test(M4/P15): 验证自动归档的新时钟进程与系统活动页面`。
+- [x] Step 1：新增 `I16 (page): fresh clock process archives terminal issues and shows the system actor`；API建账号/项目/旧终态与非终态控制项，记录 old/current URL、写后水位和fresh attempt条件。
+- [x] Step 2：make build 后 B stories/issue/i16-auto-archive.spec.ts --grep 'I16.*page'；用真实服务器/worker，不mock任务，不把expiry后的旧token/cookie当登录。原API crossing/historical negative继续回归。
+- [x] Step 3：只补页面需要的复用fixture，推进744h后真实新登录/刷新，不改业务自动归档算法；等新进程启动后且水位后started的completed任务，不仅按finalized_at判断。
+- [x] Step 4：页面打开归档详情，确认SITE_NAME与对应活动，手动恢复显示用户；M16 过宽fresh判断由原API负例击穿，M17把null当停用用户由页面击穿，恢复。数据库只查询断言。
+- [x] Step 5：记录 A12，保留启动/水位/attempt/SQL读回与页面截图；提交 `test(M4/P15): 验证自动归档的新时钟进程与系统活动页面`。
 
 ## Task 13：剩余复制消费者与例外（约 500–900 行）
 

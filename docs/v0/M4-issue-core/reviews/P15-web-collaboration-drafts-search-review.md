@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T11 完成，T12 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T12 完成，T13 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -206,3 +206,12 @@ Chromium C7 **3/3**，包括 T8 中文状态/删除回归、主题 503 原因文
 输入摘要 `4e7dc6e1a49f34e93b0a80176f1881a45de7572f2a46d0300654ac0dfab6dd92`；原件在本期证据目录的 t11-*.json/log、t11-view-byte-equivalence.json、t11-thirteen-audit.log、t11-mutations.json 和 t11-receipt.json。M2 §12/M3 §5 子项完成，顶层保持 open，M7 迁移和 M4 总收尾未关闭。A11/T11 完成，接续 T12。
 
 T10 检查点 `1047507d03435366349a5cf1a9a47f3f23d7260a` 已推送，[CI 41223646422](https://github.com/open-nerve/NerveProject/actions/runs/41223646422) 最新核验 web 成功、server 仍运行；最终结论另记，不能由本地绿推断远端绿。
+
+
+### T12：新时钟进程的自动归档页面
+
+复用 ClockWorld/clockTest 与原有真实 API seed，没有改归档算法或增加 fixture owner。旧进程页面真正就绪后关闭浏览器，推进 744h 并确认旧进程退出、新进程实例不同；在新进程重新 API 登录写入控制项，再通过真实登录表单进入归档列表。业务写后数据库微秒水位与新进程 startedAt 均有独立 SQL 布尔断言，fresh completed attempt 的 attempted_at 同时晚于二者。旧终态已归档，旧非终态、新终态和刚改终态的三个控制项保持活跃。
+
+从归档行打开 peek，再进入既有编号详情；系统动态显示 Nerve 且无用户链接，手动恢复后显示真实操作者链接，SQL 读回分别为 null/archive 和本人/restore。两张截图及 old/current URL、startedAt、水位、attempt、freshness、活动行作为附件保存；无 SQL 业务写前置。首次页面仅因误预期 archives/id 地址失败，真实 peek 全屏使用 browse 编号地址；按合同纠正测试，未改产品。
+
+M16 改用 finalized_at 判断新任务，原 API 的 crossing 负例准确失败；M17 将 null actor 当停用用户，页面的 Nerve 断言准确失败。两处字节恢复并重建后，**I16 2/2**（API 1、page 1）通过；web/E2E 类型、单文件零告警通过。最终输入 `5fdb4b1859ee992249d343a5fb1fc5d6ed88d21e9f8a7c71f0a4d2837dbe1ac4`，程序 `bab9227b037db3634dfa637f66046683cd0f7a7845f976b4168bea47649da822`。原件见 t12-*.json/log、m16-fresh-*、m17-system-actor-*、t12-mutations.json、t12-restored-results 与 t12-receipt.json。A12/T12 完成，接续 T13；三引擎仍归 T14。
