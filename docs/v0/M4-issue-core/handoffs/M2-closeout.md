@@ -235,3 +235,26 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 ## P14 集成关闭回执（2026-10-31）
 
 上述 P14 对应子项已随授权 --no-ff 集成至 main 7a81ea18；[准确 main CI](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务全绿，原分支与集成修复分支的证据逐 hash 归档复验后，两个工作树和远端/本地分支已正常清理。完整输入、两次初始失败、修复及新归档路径见 [P14 review §15–16](../reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31)。本文件顶部 status 仍 open，其它阶段和 M4 总关闭条件不提前处理。
+
+
+## P15 T11 子项接收：十三实例清账（2026-11-01）
+
+§12 历史十三实例已逐路径核为零：P11 九处、P12 一处、P14 两处、P15 命令搜索一处。以下路径相对 web/apps/web，均保留文件而无模块级 service 实例；不是声称全仓所有领域实例为零。
+
+| Path | Module instances |
+|---|---|
+| `app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/issues/(detail)/header.tsx` | 0 |
+| `app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/issues/(detail)/[issueId]/page.tsx` | 0 |
+| `core/components/core/modals/existing-issues-list-modal.tsx` | 0 |
+| `core/components/editor/lite-text/editor.tsx` | 0 |
+| `core/components/editor/rich-text/description-input/root.tsx` | 0 |
+| `core/components/inbox/modals/create-modal/issue-description.tsx` | 0 |
+| `core/components/inbox/modals/select-duplicate.tsx` | 0 |
+| `core/components/issues/issue-detail/main-content.tsx` | 0 |
+| `core/components/issues/issue-modal/components/description-editor.tsx` | 0 |
+| `core/components/issues/parent-issues-list-modal.tsx` | 0 |
+| `core/components/issues/peek-overview/issue-detail.tsx` | 0 |
+| `core/components/power-k/ui/modal/search-menu.tsx` | 0 |
+| `core/services/issue/workspace_draft.service.ts` | 0 |
+
+剩余八实例：comments/comment-create、inbox/modals/create-modal/create-root、hooks/editor/use-editor-config 的 FileService 归 M5；cycles/modal 和 cycles/progress-sidebar/sidebar-header 的 CycleService 归 M6；inbox/content/issue-root 的 IntakeWorkItemVersionService 归 M7；use-timezone 与 workspace-notification 的服务归自身领域。审计、M15 临时恢复实例的有效失败及字节恢复、31/31 消费者、四个 view 方法字节一致见 [P15 review T11](../reviews/P15-web-collaboration-drafts-search-review.md#t11旧搜索合同删除与十三实例核账)。本项完成，顶层 status 仍 open。

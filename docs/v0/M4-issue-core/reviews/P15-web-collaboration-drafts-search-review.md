@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T10 完成，T11 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T11 完成，T12 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -196,3 +196,13 @@ Chromium C7 **3/3**，包括 T8 中文状态/删除回归、主题 503 原因文
 最终输入和七项门禁见 t10-receipt.json；原先失败、变异补丁/恢复、trace、目录及单元日志均保留。Web/E2E 类型及定向 TS lint 零告警，76规则/16例外未放宽。该任务局部决定的代价分别是关闭后立即重置视图、空根命令需方向键选择，均由页面复验。A10/T10 完成后接续 T11；阶段整审与最终CI仍待T16，不合并。
 
 最终全 E2E **263/263**（Chromium 261、Firefox 2，0 skip）；完整七项门禁均有对应绿结果。搜索产品/消费者输入 d602e5f28e5ffaa689bb3f45d6e003df193664d6a8351c47c1cd3dbc9b0a0f72；只改 S6/I12 前置后的最终页面输入 489af980bbe74c30e61085b3187c1f9e6a49f7921d029c402e6f6b42c6294374，程序 041adf634f68a7bfb6eeff96febf90853c7f1d5afaad3e69684c3fd04e2d6d82。检查点提交后推送并单独核远端 CI，不将本地绿等同远端绿。
+
+### T11：旧搜索合同删除与十三实例核账
+
+删除 WorkspaceService.searchWorkspace、五个 IWorkspace*SearchResult 和 WORKSPACE_DEFAULT_SEARCH_RESULT，并删除 T10 已不需要的旧服务 mock。workspace barrel 仍导出角色、引导和导航等真实读者所需内容；没有删除整个 workspace 模块。四个 M7 view 方法从 createView 到类末尾逐字节相同，传输测试核四个路径、body、响应原值与四种原始错误传播，只证明边界保留，不代表 M7 页面已接通。
+
+新契约测试基线 1 红/4 绿，唯一失败为已退役搜索方法仍存在；删除后与 T10 消费者共 **4 文件 31/31**。包源变化后先强制重建 10 个依赖包，再验消费者与 web types，knip、5 文件 oxlint 零告警及关键词 76 规则/16 例外通过。历史 13 路径的模块级实例全部为零，8 个剩余实例逐一列归 M5/M6/M7 或各自领域；完整路径表见 M2 handoff 子回执。M15 临时恢复 search-menu 模块实例使精确审计仅该项为 1 而失败，字节恢复后同套 31/31。不是以编译失败代替性质反证。
+
+输入摘要 `4e7dc6e1a49f34e93b0a80176f1881a45de7572f2a46d0300654ac0dfab6dd92`；原件在本期证据目录的 t11-*.json/log、t11-view-byte-equivalence.json、t11-thirteen-audit.log、t11-mutations.json 和 t11-receipt.json。M2 §12/M3 §5 子项完成，顶层保持 open，M7 迁移和 M4 总收尾未关闭。A11/T11 完成，接续 T12。
+
+T10 检查点 `1047507d03435366349a5cf1a9a47f3f23d7260a` 已推送，[CI 41223646422](https://github.com/open-nerve/NerveProject/actions/runs/41223646422) 最新核验 web 成功、server 仍运行；最终结论另记，不能由本地绿推断远端绿。

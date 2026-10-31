@@ -271,3 +271,8 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 ## P14 集成关闭回执（2026-10-31）
 
 上述 P14 对应子项已随授权 --no-ff 集成至 main 7a81ea18；[准确 main CI](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务全绿，原分支与集成修复分支的证据逐 hash 归档复验后，两个工作树和远端/本地分支已正常清理。完整输入、两次初始失败、修复及新归档路径见 [P14 review §15–16](../reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31)。本文件顶部 status 仍 open，其它阶段和 M4 总关闭条件不提前处理。
+
+
+## P15 T11 子项接收：旧搜索合同（2026-11-01）
+
+§5 的 WorkspaceService.searchWorkspace、五个搜索专用 DTO、默认搜索常量和最后 mock 已删除；ProjectService/projectIssuesSearch 无真实读者，不重建空类。M7 view 四方法逐字节保留，五个传输契约测试覆盖路径、body、响应和拒绝；这不算 M7 页面验收。历史十三实例与剩余领域责任见 [M2 子回执](M2-closeout.md#p15-t11-子项接收十三实例清账2026-11-01)。31 项搜索/视图消费者、knip、类型、关键词与 M15 有效反证见 [P15 review T11](../reviews/P15-web-collaboration-drafts-search-review.md#t11旧搜索合同删除与十三实例核账)。该子项已完成，顶层 status 保持 open，M7 和 M4 总关闭不提前处理。

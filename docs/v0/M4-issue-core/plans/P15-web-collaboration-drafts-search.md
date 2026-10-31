@@ -161,11 +161,11 @@ make e2e
 **Files：** spec T11；C/services/workspace.service.test.ts（新，M7视图传输兼容测试）；旧专用搜索类型/常量及其所有 barrel、C/components/power-k/core/types.ts 读者；M2/M3 handoff子记录。
 **Interfaces：** 只删 searchWorkspace 及专用类型/常量；WorkspaceService 四个 M7 view CRUD/list 原签名/请求保持。ProjectService已不存在，不为此重建文件。
 
-- [ ] Step 1：列13历史路径与当前引用；rg 全仓核 IWorkspace*SearchResult、WORKSPACE_DEFAULT_SEARCH_RESULT、projectIssuesSearch、searchWorkspace 的真实读者。新增 view service 原契约对照用例 `retainsViewTransportWhileSearchIsRetired`。
-- [ ] Step 2：U core/services/workspace.service.test.ts；核四 view 方法的真实路径/body/响应，不能把未实现远端响应 mock 绿声称 M7 页面已接通。类型引用变化须有具体编译或静态输入证据。
-- [ ] Step 3：删除已无读者旧搜索方法/专用 DTO/常量/导出，修实际类型消费者；保留 IWorkspaceView 等 M7合同。13实例逐路径记零，另列非M4剩余实例，不用泛grep全零作虚假目标。
-- [ ] Step 4：node tools/keywords.mjs；make knip 与 web check:types；M15 临时恢复 search-menu 模块实例/旧搜索调用让精确审计或消费者请求断言失败，恢复，复跑 T10 与 view契约。全仓 project.service/projectIssuesSearch零真实读者。
-- [ ] Step 5：记录 A11/M2§12/M3§5子项，顶层open；提交 `refactor(M4/P15): 删除旧工作区搜索合同并保留视图边界`。
+- [x] Step 1：列13历史路径与当前引用；rg 全仓核 IWorkspace*SearchResult、WORKSPACE_DEFAULT_SEARCH_RESULT、projectIssuesSearch、searchWorkspace 的真实读者。新增 view service 原契约对照用例 `retainsViewTransportWhileSearchIsRetired`。
+- [x] Step 2：U core/services/workspace.service.test.ts；核四 view 方法的真实路径/body/响应，不能把未实现远端响应 mock 绿声称 M7 页面已接通。类型引用变化须有具体编译或静态输入证据。
+- [x] Step 3：删除已无读者旧搜索方法/专用 DTO/常量/导出，修实际类型消费者；保留 IWorkspaceView 等 M7合同。13实例逐路径记零，另列非M4剩余实例，不用泛grep全零作虚假目标。
+- [x] Step 4：node tools/keywords.mjs；make knip 与 web check:types；M15 临时恢复 search-menu 模块实例/旧搜索调用让精确审计或消费者请求断言失败，恢复，复跑 T10 与 view契约。全仓 project.service/projectIssuesSearch零真实读者。
+- [x] Step 5：记录 A11/M2§12/M3§5子项，顶层open；提交 `refactor(M4/P15): 删除旧工作区搜索合同并保留视图边界`。
 
 ## Task 12：自动归档时钟页面（约 350–750 行）
 
