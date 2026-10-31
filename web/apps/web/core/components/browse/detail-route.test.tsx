@@ -148,6 +148,23 @@ it("keepsNativeIdRedirect with a replaced history entry and the proven project i
   expect(tab.nerve.calls[0]?.path).toBe("/api/v0/issues/one");
   expect(lookupReads().map((call) => call.path)).toEqual(["/api/v0/workspaces/ws/issues/A-1"]);
 });
+
+it("browse entry exposes a native refusal and a read-only retry through its real layout", async () => {
+  holdIdentifier = true;
+  await mount();
+  await act(async () => until(() => lookupReads().length === 1, "numbered entry native GET"));
+  const path = lookupReads()[0]!.path;
+  await act(async () => lookupReads()[0]!.answer(problem(403, "forbidden")));
+  expect(document.querySelector('[role="alert"]')?.textContent).toContain("errors.forbidden");
+  await act(async () => {
+    [...document.querySelectorAll("button")].find((button) => button.textContent === "common.retry")!.click();
+    await until(() => lookupReads().length === 2, "numbered entry retry");
+  });
+  expect(tab.nerve.calls.map((call) => [call.method, call.path])).toEqual([
+    ["GET", path],
+    ["GET", path],
+  ]);
+});
 it.each([401, 403, 404])("does not redirect a refused native id (%s)", async (status) => {
   refusal = status;
   await mount("/ws/projects/A/issues/one");

@@ -10,7 +10,6 @@ import { until } from "@/lib/auth/fake-time";
 import { loadProjects } from "@/store/project/fake-projects";
 import Page from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/issues/(detail)/[issueId]/page";
 import ArchivedPage from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/issues/(detail)/[archivedIssueId]/page";
-import { IssueDetailsPage as BrowsePage } from "@/app/(all)/[workspaceSlug]/(projects)/browse/[workItem]/page";
 import { ProjectArchivedIssueDetailsHeader } from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/issues/(detail)/header";
 
 const ui = vi.hoisted(() => ({ navigate: vi.fn(), login: "entry-login" }));
@@ -131,12 +130,10 @@ it("the archive header uses session core data and immediately hides an invalidat
 });
 
 const pageInputs = { loaderData: undefined, actionData: undefined, matches: [] };
-it.each(["id", "browse", "archived"])("%s entry exposes a native refusal and a read-only retry", async (entry) => {
+it.each(["id", "archived"])("%s entry exposes a native refusal and a read-only retry", async (entry) => {
   await mount(
     entry === "id" ? (
       page()
-    ) : entry === "browse" ? (
-      <BrowsePage {...pageInputs} params={{ workspaceSlug: "ws", workItem: "A-12" }} />
     ) : (
       <ArchivedPage {...pageInputs} params={{ workspaceSlug: "ws", projectId: "A", archivedIssueId: "one" }} />
     )
