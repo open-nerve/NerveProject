@@ -9,14 +9,12 @@ import React from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
 import { Controller } from "react-hook-form";
-import { ETabIndices } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
 // types
 import type { ISearchIssueResponse } from "@nerve/types";
 // helpers
-import { getTabIndex } from "@nerve/utils";
 // hooks
-import { usePlatformOS } from "@/hooks/use-platform-os";
 // components
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 
@@ -30,9 +28,7 @@ type TIssueParentTagProps = {
 export const IssueParentTag = observer(function IssueParentTag(props: TIssueParentTagProps) {
   const { control, selectedParentIssue, handleFormChange, setSelectedParentIssue } = props;
   // store hooks
-  const { isMobile } = usePlatformOS();
-
-  const { getIndex } = getTabIndex(ETabIndices.ISSUE_FORM, isMobile);
+  const { t } = useTranslation();
 
   return (
     <Controller
@@ -66,7 +62,7 @@ export const IssueParentTag = observer(function IssueParentTag(props: TIssuePare
                 handleFormChange();
                 setSelectedParentIssue(null);
               }}
-              tabIndex={getIndex("remove_parent")}
+              aria-label={t("remove_parent_issue")}
             >
               <CloseOutline className="h-3 w-3 cursor-pointer" />
             </button>

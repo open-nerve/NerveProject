@@ -90,9 +90,11 @@ make e2e
 **Files：** spec T4；`C/components/issues/issue-modal/types.ts`；现有 `{base.loading,base.clone,draft}.test.tsx`；新 `form-fields.test.tsx`、`migration.test.tsx`（同目录）；`E/stories/issue/i1-create-issue.spec.ts`。
 **Interfaces：** description-editor 回调增加可选 `{isMigrationUpdate?:boolean}` 或直接转发已有编辑器 options 类型；单一表单更新函数区分用户 dirty/迁移，不扩展 DraftPayload。RHF `shouldFocusError:false`，title ref 同时交给 Controller 与已有聚焦入口。
 
-- [ ] Step 1：写 `migrationDoesNotDirtyExistingIssue`、`migrationDoesNotDirtyExistingDraft`、`migrationPreservesRealEdits`、`projectAndTitleRefusalsHaveDescriptions`。真正观察 dirty/请求/关闭提示，不只看已有草稿直接关闭这一条。
-- [ ] Step 2：运行新两文件及三个原测试；确认迁移被当用户输入的行为红。API 错误通过既有 fake error 结构，不手造与 OpenAPI 不同的 body。
-- [ ] Step 3：ModalTitle、FieldError/useRefusedFocus、project 提示、正 tabIndex 清除、CreateMore 单一 Switch handler；拆 form 职责时保持既有确认后消费回调边界，已创建后消费失败不能重复创建。
+实施补充：日期 Controller 提取为局部 `date-fields.tsx`，沿现有 DateDropdown 转发 invalid/describedBy。project dropdown 同样只转发字段反馈。创建命令省略未选择的空 state_id，由原生 API 选择默认状态；既有 power-k 创建命令补 `shortcut: "c"`，保留 ni。I1 已分别复现原先无 c 注册、空 UUID 的真实失败，无新快捷键监听器或协议。日期倒置由真实 RHF 字段测试证明拒绝/留窗/焦点，页面日历证明不能选早于开始的截止日期；不在页面伪造输入绕过控件。
+
+- [x] Step 1：写 `migrationDoesNotDirtyExistingIssue`、`migrationDoesNotDirtyExistingDraft`、`migrationPreservesRealEdits`、`projectAndTitleRefusalsHaveDescriptions`。真正观察 dirty/请求/关闭提示，不只看已有草稿直接关闭这一条。
+- [x] Step 2：运行新两文件及三个原测试；确认迁移被当用户输入的行为红。API 错误通过既有 fake error 结构，不手造与 OpenAPI 不同的 body。
+- [x] Step 3：ModalTitle、FieldError/useRefusedFocus、project 提示、正 tabIndex 清除、CreateMore 单一 Switch handler；拆 form 职责时保持既有确认后消费回调边界，已创建后消费失败不能重复创建。
 - [ ] Step 4：I1 c 键打开，填写标题/描述提及/属性/日期，确认 UI 编号与 DB；空标题、倒置日期、重复提交拒绝留窗。M06 将迁移标 dirty、M07 移除同步 pending 锁各红，恢复；完整 F。
 - [ ] Step 5：记录 A3/A4；提交 `feat(M4/P14): 完善工作项弹窗字段和迁移语义`，完整本地门禁后推检查点。
 

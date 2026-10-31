@@ -258,6 +258,8 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 
 ## 四、行为差异
 
+**M4/P14 创建与编辑表单**：沿现有表单和原生命令，描述自动补块 ID 只更新提交基线，不单独标记用户修改；有真实编辑时保留修改，普通工作项纯迁移显式保存才带 boolean skip_activity。字段反馈与拒绝后焦点统一走 FieldError/useRefusedFocus，创建请求中的空状态省略，交给服务端默认值。创建命令补设计要求的 c 快捷键，仍支持既有 ni；确认提示链接展示服务端编号。无新增协议或全局 owner；嵌套关闭与后续属性迁移仍按 P14 后续 Task 验证。
+
 整审局部收口：A-01删除跨项目子项无消费者的cycle/module目录预取，每外部项目少两旧GET，state/member/label与原拒绝边界保持；A-02删除失去最后生产读者的旧列表乐观分布更新helper/barrel/两wrapper/六死测试及两独占常量块。真实领域analytics/progress取数及calculateCycleProgress七测保留；两项独立复审Approved，非将领域数据层提前接通。
 
 **M4/P10a quick-add等待展示（R8，T4已实施并独评Approved）**：创建请求未返回前，输入在quick-add入口显示等待预览并禁用，保留Promise toast；不再将缺服务端编号/审计事实的输入作为普通卡片加入正式排序、分组或计数。成功后真实响应出现于列表，失败保留输入重试。首请求pending、双提交、跨workspace/project与旧结算边界及准确提交身份见[P10a T4/R8证据](M4-issue-core/reviews/P10a-web-issue-types-review.md#t4-r8-evidence)；未提前实现P10b协调引擎。

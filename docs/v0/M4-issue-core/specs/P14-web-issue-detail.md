@@ -19,7 +19,7 @@
 | T1 | `R/projects/(detail)/[projectId]/issues/(detail)/[issueId]/page.tsx`；`R/browse/[workItem]/{page,layout,header,work-item-header}.tsx`；`C/components/issues/detail-host.tsx` | 原生跳转回归，页头与正文共同身份 |
 | T2 | `C/components/issues/{title-input.tsx,issue-detail/sidebar.tsx,issue-detail/label/select/label-select.tsx}`；`C/components/dropdowns/` | 详情字段反馈、属性键盘与 I2 属性 |
 | T3 | `C/components/editor/{use-confirmed-autosave.tsx,rich-text/description-input/root.tsx}`；`C/components/issues/issue-detail/main-content.tsx` | 描述撤销/重做、迁移与 I2 描述 |
-| T4 | `C/components/issues/issue-modal/{base,form,provider}.tsx`、`issue-modal/types.ts`；`components/{title-input,project-select,description-editor,default-properties,parent-tag}.tsx` | 创建/编辑字段、非用户迁移、I1 |
+| T4 | `C/components/issues/issue-modal/{base,form,provider}.tsx`、`issue-modal/types.ts`；`components/{title-input,project-select,description-editor,default-properties,parent-tag,date-fields}.tsx`；现有 project/date dropdown 与 `power-k/config/creation/command.ts` | 创建/编辑字段、非用户迁移、I1；日期校验、默认状态省略、既有命令补 c 快捷键 |
 | T5 | `C/components/issues/{confirm-issue-discard.tsx,issue-modal/draft-issue-layout.tsx,issue-modal/components/description-editor.tsx}` 与 T4 表单 | 嵌套关闭、名字、忙碌与焦点 |
 | T6 | `C/components/issues/{parent-issues-list-modal.tsx,parent-select-root.tsx,issue-detail/parent-select.tsx,issue-modal/provider.tsx,issue-modal/context/issue-modal-context.tsx}`；T4 父项消费者；`issue-detail-widgets/sub-issues/`；`C/components/inbox/modals/create-modal/issue-properties.tsx` | 原生父项搜索、子项与 I8；M7 调用只适配类型 |
 | T7 | `C/components/issues/issue-detail-widgets/relations/`；`C/components/core/modals/existing-issues-list-modal.tsx`；`C/components/inbox/modals/select-duplicate.tsx`；`C/services/project/project.service.ts` | 关联与 I9；收集箱查重只改读取 |

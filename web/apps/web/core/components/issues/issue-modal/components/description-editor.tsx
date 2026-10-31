@@ -4,26 +4,24 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueFormValues } from "../types";
+import type { IssueFormValues, IssueDescriptionChangeSource } from "../types";
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
 import { Controller } from "react-hook-form";
 // nerve imports
-import { ETabIndices } from "@nerve/constants";
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EFileAssetType } from "@nerve/types";
 import { Loader } from "@nerve/ui";
-import { getDescriptionPlaceholderI18n, getTabIndex } from "@nerve/utils";
+import { getDescriptionPlaceholderI18n } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text";
 // hooks
 import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import useKeypress from "@/hooks/use-keypress";
-import { usePlatformOS } from "@/hooks/use-platform-os";
 type TIssueDescriptionEditorProps = {
   control: Control<IssueFormValues>;
   isDraft: boolean;
@@ -33,8 +31,7 @@ type TIssueDescriptionEditorProps = {
   submitBtnRef: React.MutableRefObject<HTMLButtonElement | null>;
   workspaceSlug: string;
   projectId: string | null;
-  handleFormChange: () => void;
-  handleDescriptionHTMLDataChange: (descriptionHtmlData: string) => void;
+  handleDescriptionHTMLDataChange: (descriptionHtmlData: string, source?: IssueDescriptionChangeSource) => void;
   onAssetUpload: (assetId: string) => void;
   onClose: () => void;
 };
@@ -49,7 +46,6 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
     submitBtnRef,
     workspaceSlug,
     projectId,
-    handleFormChange,
     handleDescriptionHTMLDataChange,
     onAssetUpload,
     onClose,
@@ -60,11 +56,6 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
   const { getWorkspaceBySlug } = useWorkspace();
   const workspaceId = getWorkspaceBySlug(workspaceSlug)?.id ?? "";
   const { uploadEditorAsset, duplicateEditorAsset } = useEditorAsset();
-  // platform
-  const { isMobile } = usePlatformOS();
-
-  const { getIndex } = getTabIndex(ETabIndices.ISSUE_FORM, isMobile);
-
   useEffect(() => {
     if (descriptionHtmlData !== undefined) handleDescriptionHTMLDataChange(descriptionHtmlData);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -107,7 +98,7 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
         <Controller
           name="description_html"
           control={control}
-          render={({ field: { value, onChange } }) => (
+          render={({ field: { value } }) => (
             <RichTextEditor
               editable
               id="issue-modal-editor"
@@ -116,13 +107,11 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
               workspaceSlug={workspaceSlug}
               workspaceId={workspaceId}
               projectId={projectId ?? undefined}
-              onChange={(_description: object, description_html: string) => {
-                onChange(description_html);
-                handleFormChange();
+              onChange={(_description, description_html, options) => {
+                handleDescriptionHTMLDataChange(description_html, options?.isMigrationUpdate ? "migration" : "edit");
               }}
               onEnterKeyPress={() => submitBtnRef?.current?.click()}
               ref={editorRef}
-              tabIndex={getIndex("description_html")}
               placeholder={(isFocused, description) => t(getDescriptionPlaceholderI18n(isFocused, description))}
               containerClassName="pt-3 min-h-[120px]"
               uploadFile={async (blockId, file) => {

@@ -30,3 +30,9 @@ export const ISSUE_FORM_FIELDS = [
 ] as const;
 
 export type IssueDescriptionLoadState = "loading" | "ready" | "error";
+export type IssueDescriptionChangeSource = "load" | "migration" | "edit";
+/** Local command metadata; never part of a work item or draft payload. */
+export type IssueFormSubmitOptions = {
+  isDescriptionMigration?: boolean;
+  onRefused?: (error: unknown) => void;
+};

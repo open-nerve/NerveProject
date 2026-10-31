@@ -102,6 +102,7 @@ vi.mock("./modal", () => ({
 }));
 vi.mock("@nerve/ui", async (original) => ({
   ...(await original<typeof import("@nerve/ui")>()),
+  ModalTitle: ({ children }: React.PropsWithChildren) => <h3>{children}</h3>,
   AlertModalCore: (props: React.ComponentProps<typeof AlertModalCore>) =>
     props.isOpen ? (
       <div role="alertdialog">

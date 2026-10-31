@@ -111,6 +111,7 @@ vi.mock("@/components/editor/rich-text", () => ({
 }));
 vi.mock("@nerve/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@nerve/ui")>()),
+  ModalTitle: ({ children }: React.PropsWithChildren) => <h3>{children}</h3>,
   ModalCore: ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) =>
     isOpen ? <>{children}</> : null,
 }));

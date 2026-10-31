@@ -106,3 +106,15 @@ label-select 的正 tabIndex 已于 P12 消除，T2 复验当前真实详情无�
 真实 I2 页面用 TipTap 键盘操作，已确认内容在 1.5 秒窗口内撤销再重做后无额外 PATCH；普通连续输入遇当前 503 保留内容，仅显式 Retry 再发同一内容。API/DB 核对 HTML、stripped、合并动态/版本与保存时间。初次加载真实无块 ID 描述时只发 description_html + boolean skip_activity，HTML 保存、审计/版本/主时间戳不变。普通保存不发 description_json 或 skip_activity。既有 href/checked API 故事同时复验其不能借 skip_activity 逃过审计。
 
 t3-restored 33/33，t3-i2-complete 真实页面和三个 API 场景 4/4，types 与改动文件 lint 0/0 通过，格式/diff 通过。首次页面断言遗漏编辑器的现有 paragraph class，已按实际输出修正测试，不计产品缺陷。M1-P2 的撤销重做子项已有处理结果；A3 中弹窗普通工作项/草稿迁移仍归 T4，未提前勾整条。
+
+### T4 创建/编辑字段、迁移与 I1
+
+现有表单以单一描述更新函数区分 load/migration/edit：纯迁移更新描述字段基线，不影响其他 dirty 字段；真实编辑后的迁移保留用户修改。提交元数据保留在本地函数参数，普通工作项只有纯描述迁移才添加 boolean skip_activity；草稿沿原 payload，不扩协议。RHF 关闭内置抢焦点，FieldError 与 useRefusedFocus 处理标题/项目/双日期错误；标题按 Unicode 字符校验。日期字段提取局部组件，既有 dropdown 只增加错误描述透传。移除正 tabIndex、嵌套按钮和 Create more 重复 handler。
+
+Base 的同步 Promise 锁覆盖原生写、确认后消费及关闭。消费回调失败只报告一次，已确认的创建不重发。页面实测另外定位三个原缺口：创建命令未注册设计要求的 c（沿既有命令补 shortcut，保留 ni）；空 state_id 误发无效 UUID（创建边界省略，让服务端默认）；确认提示未展示编号（原链接显示已确认编号）。没有新增监听器、权限 owner、业务缓存或服务端变化。
+
+验证：t4-component-final 41/41；t4-i1-verified 的真实页面/API 2/2，页面核空/长标题、原生 422、描述提及、两位负责人/两个标签、属性/日期、单次 Switch 切换、双击提交及 held 201。请求到达服务端后先核 DB，响应交给页面后核列表与提示 WEB-1；共用 expectIssueCreated/expectInitialDescription 核审计、版本、提及、关注、时间戳，另核纯文本和项目计数。页面日历拒绝选择倒置日期，真实 RHF 字段单测证明倒置输入的反馈/焦点/留窗。普通 issue 与 draft 迁移测试使用真实表单/根 store，编辑器只模拟既有回调；真实 TipTap 迁移来源另由 T3 I2 页面证明，不冒称已有草稿的浏览器测试。
+
+行为红 t4-behavior-red 六项；M06-migration-only 将纯迁移标 dirty 后两项失败，M07 去同步锁后原生 create 被调用两次；额外日期变异检出缺失反馈。每次均字节恢复。最初 M06 同时改变 load，保留历史但以精细变异为主。空状态与提示编号另各有真实失败。夹具 import/hoisting、ModalTitle 真实上下文、data-dirty 与 Propel 属性重名、Dialog 根无自身尺寸、CSS placeholder 定位、请求路由记录顺序、Saving 状态名称和列表 id 定位错误分别修正，不记作产品行为红。首个 HTML 报告路径写在 e2e 内，已逐文件核 hash 后移到统一证据根。
+
+t4-types-final 和 e2e types 通过；改动 lint 0 warnings/0 errors。当前先提交已验证的 T4 产品与记录，随后在该准确提交上串行完整 F；F 和检查点推送尚待回执，因此 Task 4 Step 4/5 与 A3/A4 暂未勾选。关闭决策/嵌套 Escape 留 T5，父项留 T6。

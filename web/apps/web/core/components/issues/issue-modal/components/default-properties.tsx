@@ -9,16 +9,15 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
 import { Controller, useWatch } from "react-hook-form";
-import { ETabIndices, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ParentOutline } from "@makeplane/propel/icons";
 // types
 import type { ISearchIssueResponse } from "@nerve/types";
 // ui
 import { CustomMenu } from "@nerve/ui";
-import { getDate, renderFormattedPayloadDate, getTabIndex } from "@nerve/utils";
 // components
-import { DateDropdown } from "@/components/dropdowns/date";
+import { IssueDateFields } from "./date-fields";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
@@ -27,7 +26,6 @@ import { IssueLabelSelect } from "@/components/issues/select";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
-import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TIssueDefaultPropertiesProps = {
   control: Control<IssueFormValues>;
@@ -35,8 +33,6 @@ type TIssueDefaultPropertiesProps = {
   projectId: string | null;
   workspaceSlug: string;
   selectedParentIssue: ISearchIssueResponse | null;
-  startDate: string | null;
-  targetDate: string | null;
   parentId: string | null;
   isDraft: boolean;
   handleFormChange: () => void;
@@ -50,8 +46,6 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
     projectId,
     workspaceSlug,
     selectedParentIssue,
-    startDate,
-    targetDate,
     parentId,
     isDraft,
     handleFormChange,
@@ -62,20 +56,11 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
   const [parentIssueListModalOpen, setParentIssueListModalOpen] = useState(false);
   // store hooks
   const { t } = useTranslation();
-  const { isMobile } = usePlatformOS();
   const { allowPermissions } = useUserPermissions();
   // derived values
 
-  const { getIndex } = getTabIndex(ETabIndices.ISSUE_FORM, isMobile);
-
   const canCreateLabel =
     projectId && allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
-
-  const minDate = getDate(startDate);
-  minDate?.setDate(minDate.getDate());
-
-  const maxDate = getDate(targetDate);
-  maxDate?.setDate(maxDate.getDate());
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -92,7 +77,6 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
               }}
               projectId={projectId ?? undefined}
               buttonVariant="border-with-text"
-              tabIndex={getIndex("state_id")}
             />
           </div>
         )}
@@ -109,7 +93,6 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
                 handleFormChange();
               }}
               buttonVariant="border-with-text"
-              tabIndex={getIndex("priority")}
             />
           </div>
         )}
@@ -130,7 +113,6 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
               buttonClassName={value?.length > 0 ? "hover:bg-transparent" : ""}
               placeholder={t("assignees")}
               multiple
-              tabIndex={getIndex("assignee_ids")}
             />
           </div>
         )}
@@ -148,58 +130,17 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
                 handleFormChange();
               }}
               projectId={projectId ?? undefined}
-              tabIndex={getIndex("label_ids")}
               createLabelEnabled={!!canCreateLabel}
             />
           </div>
         )}
       />
-      <Controller
-        control={control}
-        name="start_date"
-        render={({ field: { value, onChange } }) => (
-          <div className="h-7">
-            <DateDropdown
-              value={value}
-              onChange={(date) => {
-                onChange(date ? renderFormattedPayloadDate(date) : null);
-                handleFormChange();
-              }}
-              buttonVariant="border-with-text"
-              maxDate={maxDate ?? undefined}
-              placeholder={t("start_date")}
-              tabIndex={getIndex("start_date")}
-            />
-          </div>
-        )}
-      />
-      <Controller
-        control={control}
-        name="target_date"
-        render={({ field: { value, onChange } }) => (
-          <div className="h-7">
-            <DateDropdown
-              value={value}
-              onChange={(date) => {
-                onChange(date ? renderFormattedPayloadDate(date) : null);
-                handleFormChange();
-              }}
-              buttonVariant="border-with-text"
-              minDate={minDate ?? undefined}
-              placeholder={t("due_date")}
-              tabIndex={getIndex("target_date")}
-            />
-          </div>
-        )}
-      />
+      <IssueDateFields control={control} isDraft={isDraft} handleFormChange={handleFormChange} />
       <div className="h-7">
         {parentId ? (
           <CustomMenu
             customButton={
-              <button
-                type="button"
-                className="flex h-full cursor-pointer items-center justify-between gap-1 rounded-sm border-[0.5px] border-strong px-2 py-0.5 text-caption-sm-regular hover:bg-layer-1"
-              >
+              <span className="flex h-full cursor-pointer items-center justify-between gap-1 rounded-sm border-[0.5px] border-strong px-2 py-0.5 text-caption-sm-regular hover:bg-layer-1">
                 {selectedParentIssue?.project_id && (
                   <IssueIdentifier
                     projectId={selectedParentIssue.project_id}
@@ -208,12 +149,11 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
                     size="xs"
                   />
                 )}
-              </button>
+              </span>
             }
             placement="bottom-start"
             className="h-full w-full"
             customButtonClassName="h-full"
-            tabIndex={getIndex("parent_id")}
           >
             <>
               <CustomMenu.MenuItem className="!p-1" onClick={() => setParentIssueListModalOpen(true)}>

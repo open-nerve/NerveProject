@@ -10,16 +10,12 @@ import { observer } from "mobx-react";
 import type { Control, FormState } from "react-hook-form";
 import { Controller } from "react-hook-form";
 // nerve imports
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { ETabIndices } from "@nerve/constants";
 // types
 import { useTranslation } from "@nerve/i18n";
 
 // helpers
-import { getTabIndex } from "@nerve/utils";
-// hooks
-import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TIssueTitleInputProps = {
   control: Control<IssueFormValues>;
@@ -38,15 +34,13 @@ export const IssueTitleInput = observer(function IssueTitleInput(props: TIssueTi
     handleFormChange,
   } = props;
   // store hooks
-  const { isMobile } = usePlatformOS();
   const { t } = useTranslation();
-
-  const { getIndex } = getTabIndex(ETabIndices.ISSUE_FORM, isMobile);
 
   const validateWhitespace = (value: string) => {
     if (!isDraft && value.trim() === "") {
       return t("title_is_required");
     }
+    if (!isDraft && Array.from(value).length > 255) return t("errors.field.too_long");
     return undefined;
   };
   return (
@@ -57,7 +51,6 @@ export const IssueTitleInput = observer(function IssueTitleInput(props: TIssueTi
         rules={{
           validate: validateWhitespace,
           required: isDraft ? false : t("title_is_required"),
-          maxLength: isDraft ? undefined : { value: 255, message: t("title_should_be_less_than_255_characters") },
         }}
         render={({ field: { value, onChange, ref } }) => (
           <Field name="name" invalid={Boolean(errors.name)}>
@@ -72,15 +65,22 @@ export const IssueTitleInput = observer(function IssueTitleInput(props: TIssueTi
                   onChange(e.target.value);
                   handleFormChange();
                 }}
-                ref={issueTitleRef || ref}
+                ref={(node) => {
+                  ref(node);
+                  issueTitleRef.current = node;
+                }}
                 placeholder={t("title")}
-                tabIndex={getIndex("name")}
+                aria-label={t("title")}
               />
             </InputGroup>
+            {errors.name?.message && (
+              <FieldError size="2xl" match>
+                {errors.name.message}
+              </FieldError>
+            )}
           </Field>
         )}
       />
-      <span className="text-caption-sm-medium text-danger-primary">{errors?.name?.message}</span>
     </div>
   );
 });

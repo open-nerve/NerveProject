@@ -2,6 +2,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import React, { act, useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { useFormContext } from "react-hook-form";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EIssuesStoreType } from "@nerve/types";
 import { ApiError } from "@/lib/api-error";
@@ -58,6 +59,7 @@ vi.mock("@/components/dropdowns/project/dropdown", () => ({
 }));
 vi.mock("./components/description-editor", () => ({
   IssueDescriptionEditor: (props: React.ComponentProps<typeof IssueDescriptionEditor>) => {
+    useFormContext().register("description_html");
     const { descriptionHtmlData, handleDescriptionHTMLDataChange } = props;
     const updateHtml = useRef(handleDescriptionHTMLDataChange);
     updateHtml.current = handleDescriptionHTMLDataChange;
@@ -72,6 +74,7 @@ vi.mock("./components/description-editor", () => ({
 }));
 vi.mock("@nerve/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@nerve/ui")>()),
+  ModalTitle: ({ children }: React.PropsWithChildren) => <h3>{children}</h3>,
   ModalCore: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 class NoResize {

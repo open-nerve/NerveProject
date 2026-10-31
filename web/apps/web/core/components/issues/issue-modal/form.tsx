@@ -9,12 +9,18 @@
 
 import { pick } from "lodash-es";
 import { ISSUE_FORM_FIELDS } from "./types";
-import type { IssueFormData, IssueFormValues, IssueDescriptionLoadState } from "./types";
+import type {
+  IssueFormData,
+  IssueFormValues,
+  IssueDescriptionLoadState,
+  IssueDescriptionChangeSource,
+  IssueFormSubmitOptions,
+} from "./types";
 import React, { useState, useRef, useEffect } from "react";
 import { observer } from "mobx-react";
 import { FormProvider, useForm } from "react-hook-form";
 // editor
-import { ETabIndices, DEFAULT_WORK_ITEM_FORM_VALUES } from "@nerve/constants";
+import { DEFAULT_WORK_ITEM_FORM_VALUES } from "@nerve/constants";
 import type { EditorRefApi } from "@nerve/editor";
 // i18n
 import { useTranslation } from "@nerve/i18n";
@@ -22,12 +28,10 @@ import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { Switch } from "@makeplane/propel/components/switch";
-import {
-  convertWorkItemDataToSearchResponse,
-  getUpdateFormDataForReset,
-  getChangedIssuefields,
-  getTabIndex,
-} from "@nerve/utils";
+import { convertWorkItemDataToSearchResponse, getUpdateFormDataForReset, getChangedIssuefields } from "@nerve/utils";
+import { ModalTitle } from "@nerve/ui";
+import { useRefusedFocus } from "@/lib/refused-focus";
+import { useFormRefusal } from "@/lib/form-refusal";
 // components
 import {
   IssueDefaultProperties,
@@ -41,7 +45,6 @@ import { useIssueModal } from "@/hooks/context/use-issue-modal";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
-import { usePlatformOS } from "@/hooks/use-platform-os";
 
 export interface IssueFormProps {
   data?: IssueFormData;
@@ -54,7 +57,12 @@ export interface IssueFormProps {
   onCreateMoreToggleChange: (value: boolean) => void;
   onChange?: (formData: Partial<IssueFormValues> | null) => void;
   onClose: () => void;
-  onSubmit: (values: Partial<IssueFormValues>, is_draft_issue?: boolean) => Promise<void>;
+  onSubmit: (
+    values: Partial<IssueFormValues>,
+    is_draft_issue?: boolean,
+    options?: IssueFormSubmitOptions
+  ) => Promise<void>;
+  isPending?: boolean;
   workspaceSlug: string;
   projectId: string | null;
   isDraft: boolean;
@@ -82,6 +90,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     onChange,
     onClose,
     onSubmit,
+    isPending = false,
     onPublish,
     workspaceSlug,
     projectId: defaultProjectId,
@@ -103,13 +112,12 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   // refs
   const editorRef = useRef<EditorRefApi>(null);
   const submitBtnRef = useRef<HTMLButtonElement | null>(null);
-  const formRef = useRef<HTMLFormElement | null>(null);
   const modalContainerRef = useRef<HTMLDivElement | null>(null);
+  const descriptionMigration = useRef(false);
 
   // store hooks
   const { getProjectById } = useProject();
   const { selectedParentIssue, setSelectedParentIssue } = useIssueModal();
-  const { isMobile } = usePlatformOS();
 
   const {
     issue: { getIssueById },
@@ -120,6 +128,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const methods = useForm<IssueFormValues>({
     defaultValues: { ...DEFAULT_WORK_ITEM_FORM_VALUES, project_id: defaultProjectId, ...pick(data, ISSUE_FORM_FIELDS) },
     reValidateMode: "onChange",
+    shouldFocusError: false,
   });
   const {
     formState,
@@ -130,11 +139,14 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     control,
     getValues,
     setValue,
+    setError,
+    getFieldState,
+    resetField,
   } = methods;
+  const formRef = useRefusedFocus<HTMLFormElement>(formState.submitCount);
+  const refuse = useFormRefusal(["name", "project_id", "start_date", "target_date"] as const, {});
 
   const projectId = watch("project_id");
-
-  const { getIndex } = getTabIndex(ETabIndices.ISSUE_FORM, isMobile);
 
   //reset few fields on projectId change
   useEffect(() => {
@@ -165,8 +177,12 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
           description_html: formData.description_html ?? "<p></p>",
         };
 
-    await onSubmit(submitData, is_draft_issue)
+    await onSubmit(submitData, is_draft_issue, {
+      isDescriptionMigration: descriptionMigration.current,
+      onRefused: (error) => refuse(error, (field, message) => setError(field, { type: "server", message })),
+    })
       .then(() => {
+        descriptionMigration.current = false;
         reset({
           ...DEFAULT_WORK_ITEM_FORM_VALUES,
           ...(isCreateMoreToggleEnabled ? pick(data, ISSUE_FORM_FIELDS) : {}),
@@ -203,6 +219,21 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
     if (isDirty && condition) onChange(watch());
     else onChange(null);
+  };
+
+  const handleDescriptionChange = (html: string, source: IssueDescriptionChangeSource = "load") => {
+    const edited = getFieldState("description_html").isDirty;
+    if (source === "edit") {
+      descriptionMigration.current = false;
+      setValue("description_html", html, { shouldDirty: true });
+    } else if (!edited) {
+      // An initial load or a pure ID migration becomes the field's baseline, preserving all other dirty fields.
+      resetField("description_html", { defaultValue: html });
+      descriptionMigration.current = source === "migration";
+    } else if (source === "migration") {
+      setValue("description_html", html, { shouldDirty: true });
+    }
+    handleFormChange();
   };
 
   // executing this useEffect when the parent_id coming from the component prop
@@ -259,7 +290,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
             className="flex w-full flex-col"
           >
             <div className="rounded-t-lg bg-surface-1 p-5">
-              <h3 className="pb-2 text-h4-medium text-secondary">{modalTitle}</h3>
+              <ModalTitle className="pb-2 text-h4-medium text-secondary">{modalTitle}</ModalTitle>
               <div className="flex items-center justify-between pt-2 pb-4">
                 <div className="flex items-center gap-x-1">
                   <IssueProjectSelect
@@ -309,11 +340,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                     submitBtnRef={submitBtnRef}
                     workspaceSlug={workspaceSlug}
                     projectId={projectId}
-                    handleFormChange={handleFormChange}
-                    handleDescriptionHTMLDataChange={(description_html) => {
-                      setValue<"description_html">("description_html", description_html);
-                      handleFormChange();
-                    }}
+                    handleDescriptionHTMLDataChange={handleDescriptionChange}
                     onAssetUpload={onAssetUpload}
                     onClose={onClose}
                   />
@@ -328,42 +355,31 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   projectId={projectId}
                   workspaceSlug={workspaceSlug}
                   selectedParentIssue={selectedParentIssue}
-                  startDate={watch("start_date") ?? null}
-                  targetDate={watch("target_date") ?? null}
                   parentId={watch("parent_id") ?? null}
                   isDraft={isDraft}
                   handleFormChange={handleFormChange}
                   setSelectedParentIssue={setSelectedParentIssue}
                 />
               </div>
-              <div
-                className="flex items-center justify-end gap-4 border-t-[0.5px] border-subtle pt-6 pb-3"
-                tabIndex={getIndex("create_more")}
-              >
+              <div className="flex items-center justify-end gap-4 border-t-[0.5px] border-subtle pt-6 pb-3">
                 {!data?.id && (
-                  <div
-                    className="inline-flex cursor-pointer items-center gap-1.5"
-                    onClick={() => onCreateMoreToggleChange(!isCreateMoreToggleEnabled)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") onCreateMoreToggleChange(!isCreateMoreToggleEnabled);
-                    }}
-                    role="button"
-                  >
+                  <div className="inline-flex items-center gap-1.5">
                     <Switch
                       size="sm"
                       checked={isCreateMoreToggleEnabled}
-                      onCheckedChange={() => {}}
+                      onCheckedChange={onCreateMoreToggleChange}
+                      disabled={isSubmitting || isPending}
                       aria-label={t("create_more")}
                     />
                     <span className="text-caption-sm-regular">{t("create_more")}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <div tabIndex={getIndex("discard_button")}>
+                  <div>
                     <Button
                       variant="secondary"
                       size="lg"
-                      disabled={isSubmitting || isMoving}
+                      disabled={isSubmitting || isPending || isMoving}
                       onClick={() => {
                         if (descriptionLoadState !== "ready" || editorRef.current?.isEditorReadyToDiscard()) {
                           onClose();
@@ -379,14 +395,14 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                       {t("discard")}
                     </Button>
                   </div>
-                  <div tabIndex={isDraft ? getIndex("submit_button") : getIndex("draft_button")}>
+                  <div>
                     <Button
                       variant={moveToIssue ? "secondary" : "primary"}
                       size="lg"
                       type="submit"
                       ref={submitBtnRef}
                       loading={isSubmitting}
-                      disabled={isSubmitting || isMoving || descriptionLoadState !== "ready"}
+                      disabled={isSubmitting || isPending || isMoving || descriptionLoadState !== "ready"}
                     >
                       {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
                     </Button>
@@ -398,7 +414,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                       type="button"
                       loading={isMoving}
                       onClick={handleMoveToProjects}
-                      disabled={isMoving || isSubmitting || descriptionLoadState !== "ready"}
+                      disabled={isMoving || isSubmitting || isPending || descriptionLoadState !== "ready"}
                       size="lg"
                     >
                       {t("add_to_project")}
