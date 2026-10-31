@@ -9,7 +9,7 @@ import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { expectListPageQuiet, issueListProject, openIssueList } from "../../fixtures/issue-list-page";
 import { createDraft, createIssue, updateIssue } from "../../fixtures/issues";
 import { expect, test } from "../../fixtures/test";
-import { shownNameOf, emailFor, accountId, password } from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, shownNameOf, emailFor, accountId, password } from "../../fixtures/auth";
 import { sentHeld, answerTo, moveWithinApp, registerOnboarded } from "../../fixtures/settings-pages";
 
 test("C6: activity filters keep one choice, support Enter and Space, persist sorting and return focus on Escape", async ({
@@ -384,5 +384,99 @@ test("C7: empty-query commands use the current issue, Chinese state selection re
   await expect(page).toHaveURL(seed.path);
   expect(watch.apiRequests.filter((item) => item === `DELETE ${path}`)).toHaveLength(1);
   expect(watch.requestUrls.filter((url) => new URL(url).pathname.endsWith("/search"))).toEqual([]);
+  await expectListPageQuiet(page, watch);
+});
+
+test("C7: keyboard theme selection waits for confirmation, reports native refusal, then reloads only after success", async ({
+  api,
+  signedInPage,
+  db,
+  browserName,
+}, info) => {
+  const email = emailFor(info, "command-theme");
+  const page = await signedInPage(await registerOnboarded(api, email));
+  const watch = await watchPage(page);
+  await page.goto("/settings/profile/preferences");
+  await expect(page.getByRole("button", { name: "System Preference", exact: true })).toBeVisible();
+  await page.evaluate(() => {
+    document.documentElement.dataset.commandDocument = "original";
+  });
+  let refused = false;
+  const path = "/api/v0/me/profile";
+  await page.route(
+    (url) => url.pathname === path,
+    async (route) => {
+      if (route.request().method() !== "PATCH" || refused) return route.fallback();
+      refused = true;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ status: 503, code: "server_busy" }),
+      });
+    }
+  );
+  await openCommands(page);
+  await selectCommand(page, /^Change interface theme$/);
+  expect((await answerTo(page, "PATCH", path, () => selectCommand(page, /^Dark$/))).status()).toBe(503);
+  await expect(page.getByText("The server is busy. Please try again later.", { exact: true })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator("html")).toHaveAttribute("data-command-document", "original");
+  await openCommands(page);
+  await selectCommand(page, /^Change interface theme$/);
+  const held = await sentHeld(page, "PATCH", path, () => selectCommand(page, /^Dark$/));
+  expect(held.body).toEqual({ theme: "dark" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator("html")).toHaveAttribute("data-command-document", "original");
+  expect((await held.release()).status()).toBe(200);
+  await expect(page.locator("html")).not.toHaveAttribute("data-command-document", "original");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.getByRole("button", { name: "Dark", exact: true })).toBeVisible();
+  expect(
+    await db.query("SELECT p.theme FROM profiles p JOIN users u ON u.id=p.user_id WHERE u.email=$1", [email])
+  ).toEqual([{ theme: "dark" }]);
+  await expectListPageQuiet(page, watch, {
+    failures: [`503 PATCH ${path}`],
+    errors:
+      browserName === "chromium"
+        ? ["Failed to load resource: the server responded with a status of 503 (Service Unavailable)"]
+        : [],
+  });
+});
+
+test("C7: a real theme success from the previous login cannot recolor or reload the new session", async ({
+  api,
+  signedInPage,
+  context,
+}, info) => {
+  const first = emailFor(info, "theme-first"),
+    next = emailFor(info, "theme-next");
+  const page = await signedInPage(await registerOnboarded(api, first));
+  const other = await registerOnboarded(api, next);
+  expect(
+    (await api.PATCH("/api/v0/me/profile", { body: { theme: "light-contrast" }, headers: bearer(other.access_token) }))
+      .response.status
+  ).toBe(200);
+  const watch = await watchPage(page);
+  await page.goto("/settings/profile/preferences");
+  await expect(page.getByRole("button", { name: "System Preference", exact: true })).toBeVisible();
+  await openCommands(page);
+  await selectCommand(page, /^Change interface theme$/);
+  const held = await sentHeld(page, "PATCH", "/api/v0/me/profile", () => selectCommand(page, /^Dark$/));
+  await anotherTabSignsIn(context, api, next);
+  await expect(page.getByRole("button", { name: "Light high contrast", exact: true })).toBeVisible();
+  await page.evaluate(() => {
+    document.documentElement.dataset.commandDocument = "new-session";
+  });
+  const reload = page
+    .waitForEvent("request", { predicate: (request) => request.isNavigationRequest(), timeout: 1000 })
+    .then(
+      () => true,
+      () => false
+    );
+  expect((await held.release()).status()).toBe(200);
+  expect(await reload).toBe(false);
+  await expect(page.locator("html")).toHaveAttribute("data-command-document", "new-session");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light-contrast");
+  await expect(page.getByText("Theme updated", { exact: true })).toHaveCount(0);
   await expectListPageQuiet(page, watch);
 });

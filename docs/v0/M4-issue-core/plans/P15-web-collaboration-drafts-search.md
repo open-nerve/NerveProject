@@ -139,11 +139,11 @@ make e2e
 **Files：** spec T9；新 C/components/power-k/config/{preferences-commands,creation/command}.test.tsx；T6 三 route 文件；tools/keywords.json 内置 samples 正反例及 tools/keywords.mjs。
 **Interfaces：** sessionGuard + updateUserTheme；确认且同代后 setTheme/reload。useRouteWorkspace/route ctx 显式 workspace；不从 router getter推断当前范围。
 
-- [ ] Step 1：写 `themeChangesOnlyAfterSameSessionConfirmation`、`themeRefusalAndLateSuccessDoNotReload`、`creationUsesRouteWorkspaceBeforeRouterEffect`；包含 A→B→A、旧成功/失败及 code 文案。
-- [ ] Step 2：U core/components/power-k/config/preferences-commands.test.tsx core/components/power-k/config/creation/command.test.tsx；主题先应用与默认旧范围应实际红；核现有 theme-switcher 作合同样板。
-- [ ] Step 3：实现主题同代确认与创建目录/权限显式范围；四文件加入 workspace-address-route，后缀 .tsx?$ 同时覆盖 command.ts，content 不变；正例覆盖四文件、负例留其它领域和 tests。
-- [ ] Step 4：执行 node tools/keywords.mjs（同时校验 samples 正反例）；C7 从空根查询用键盘进入主题子页，验证真实浏览器主题拒绝/成功/旧代不重载；根页非空查询留 T10/T14。M12 先setTheme或省slug使拒绝/换工作区断言红，恢复。
-- [ ] Step 5：记录 A9；提交 `fix(M4/P15): 让命令主题和创建权限跟随当前会话路由`。
+- [x] Step 1：写 `themeChangesOnlyAfterSameSessionConfirmation`、`themeRefusalAndLateSuccessDoNotReload`、`creationUsesRouteWorkspaceBeforeRouterEffect`；包含 A→B→A、旧成功/失败及 code 文案。
+- [x] Step 2：U core/components/power-k/config/preferences-commands.test.tsx core/components/power-k/config/creation/command.test.tsx；主题先应用与默认旧范围应实际红；核现有 theme-switcher 作合同样板。
+- [x] Step 3：实现主题同代确认与创建目录/权限显式范围；四文件加入 workspace-address-route，后缀 .tsx?$ 同时覆盖 command.ts，content 不变；正例覆盖四文件、负例留其它领域和 tests。
+- [x] Step 4：执行 node tools/keywords.mjs（同时校验 samples 正反例）；C7 从空根查询用键盘进入主题子页，验证真实浏览器主题拒绝/成功/旧代不重载；根页非空查询留 T10/T14。M12 先setTheme或省slug使拒绝/换工作区断言红，恢复。
+- [x] Step 5：记录 A9；提交 `fix(M4/P15): 让命令主题和创建权限跟随当前会话路由`。
 
 ## Task 10：原生命令搜索与本地项目结果（约 850–1450 行）
 

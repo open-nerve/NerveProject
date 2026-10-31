@@ -10,6 +10,9 @@ import { Languages } from "lucide-react";
 import { CalendarOutline, GlobeOutline, PaletteOutline } from "@makeplane/propel/icons";
 // nerve imports
 import type { Language, ProfileUpdate, StartOfTheWeek, Theme } from "@nerve/api-client";
+import { THEME_OPTIONS } from "@nerve/constants";
+import { sessionGuard } from "@/lib/in-session";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 // components
@@ -27,32 +30,26 @@ export const usePowerKPreferencesCommands = (): TPowerKCommandConfig[] => {
   const { updateUserProfile, updateUserTheme } = useUserProfile();
   // translation
   const { t } = useTranslation();
+  const refuse = useRefusalToast();
 
   const handleUpdateTheme = useCallback(
     async (newTheme: Theme) => {
-      setTheme(newTheme);
-      return updateUserTheme(newTheme)
-        .then(() => {
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: t("power_k.preferences_actions.toast.theme.updated"),
-            message: t("power_k.preferences_actions.toast.theme.reloading"),
-          });
-          // reload the page after showing the toast
-          window.location.reload();
-          return;
-        })
-        .catch(() => {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("power_k.preferences_actions.toast.theme.error"),
-          });
-          return;
+      const inSession = sessionGuard();
+      try {
+        const confirmed = await updateUserTheme(newTheme);
+        if (!inSession()) return;
+        setTheme(confirmed.theme);
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: t("power_k.preferences_actions.toast.theme.updated"),
+          message: t("power_k.preferences_actions.toast.theme.reloading"),
         });
+        window.location.reload();
+      } catch (error) {
+        if (inSession()) refuse(error);
+      }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [setTheme, updateUserTheme]
+    [setTheme, updateUserTheme, t, refuse]
   );
 
   const handleUpdateTimezone = useCallback(
@@ -112,8 +109,8 @@ export const usePowerKPreferencesCommands = (): TPowerKCommandConfig[] => {
       i18n_title: "power_k.preferences_actions.update_theme",
       icon: PaletteOutline,
       onSelect: (data) => {
-        const theme = data as Theme;
-        void handleUpdateTheme(theme);
+        const theme = THEME_OPTIONS.find((option) => option.value === data);
+        if (theme) return handleUpdateTheme(theme.value);
       },
       isEnabled: () => true,
       isVisible: () => true,

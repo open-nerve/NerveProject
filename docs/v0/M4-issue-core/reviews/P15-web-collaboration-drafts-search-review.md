@@ -173,3 +173,12 @@ commands 入口只组合私有 context/copy/mutation hooks。显示读取与动�
 C7 真实页面又发现：编号详情删除 204 后 canonical 消失，宿主从实体派生生命周期导致跳过返回列表。真实 root/FakeNerve 宿主回归 1 红/7 绿；改按稳定路由和原根权限水位捕获，确认删除不自我退役，换路由/权限 ABA 仍拦截。最终三文件 **37/37**；Chromium **C7 1/1**，空查询键盘进入状态子页、中文筛选/IME 不提交、确认前不投影、删除 Cancel/Escape 回焦、等待中不能关闭、204 后返回列表，零旧搜索请求。初始浏览器夹具的 db.query 数组读法及 Delete Work item 大小写两处已纠正，原失败保留。
 
 Web/E2E 类型、9 文件 oxlint 零告警与格式、76 规则/16 例外通过；未放宽守卫。最终聚焦输入 `f04577d64635d78da80f3e16804e1b2d15c69896cb5a46af547005b4fd4083b2`，页面前只相差消费者测试的 memo 夹具，生产/页面字节未变；页面程序 `57096c7d2093bd0f53fdeb11bd9a5f794e35adc26cd2b3e021423e7e824d051d`。原始日志、hash、trace、变异恢复见 t8-*.json/log、t8-c7-*-results、t8-mutations.json、t8-receipt.json。A8/T8 完成，继续 T9；尚未阶段整审，不合并，下一 push 为 T10。
+
+
+### T9：主题确认与显式工作区创建范围
+
+主题经原 ProfileStore 排队确认、sessionGuard 检查后才应用返回的 theme 并重载；当前拒绝用原 code 文案，旧登录成功/失败均不反馈。创建命令通过 ctx 路由工作区、knownProjectIds 与既有项目权限筛选未归档可创建项目，交原弹窗 allowedProjectIds；不依赖 router getter，不改其它领域创建逻辑。四个指定文件已加入 workspace-address-route，.ts/.tsx 正例和领域/测试负例通过，content 逐字未改。
+
+13 条新消费者在基线全红，主题提前应用、旧代仍反馈和旧工作区目录/允许项目缺失均为行为失败。修复后连同 T6 路由页回归 **17/17**。M12 提前 setTheme 造成 7/7 红，字节恢复后 17/17。初次类型检查两处夹具 activeContext="global" 不属于合同，改 null；不是产品红。Web/E2E 类型、5 TS 文件 oxlint 零告警、格式及关键词 76/16 通过。
+
+Chromium C7 **3/3**，包括 T8 中文状态/删除回归、主题 503 原因文案且不变色不重载、真实 PATCH held 时保持主题、200 后唯一重载、另一标签页真实登录后的旧 200 不重载/变色/提示。精确允许一次 503，其余请求/CSP/控制台保持零异常。最终消费者/静态输入 `0fa087e809aeca1f43cdc4b0422de8170a2b3243b9de2a1add83ce4b22337f70`，页面输入仅相差完整 Profile 夹具/测试类型修正/守卫说明标点，生产与页面字节相同；程序 `f850f09586eaf3d197d2b50e95ab2510a06444d917427c231db3defdeb7ddc4b`。运行与变异见 t9-*.json/log、t9-c7-results、t9-mutations.json、t9-receipt.json。A9/T9 完成，接续 T10 完整七门禁检查点；不合并。
