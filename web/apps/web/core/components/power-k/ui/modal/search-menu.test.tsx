@@ -25,9 +25,6 @@ vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
 vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app.issue.issueDetail }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => tab.app.workspaceRoot }));
-vi.mock("@/hooks/store/use-power-k", () => ({
-  usePowerK: () => ({ isPowerKModalOpen: ui.open, togglePowerKModal: ui.close }),
-}));
 vi.mock("react-router", () => ({ useParams: () => ui.params, useNavigate: () => ui.navigate }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 let tab: Awaited<ReturnType<typeof issueStoreTab>>, root: Root, host: HTMLDivElement, config: SWRConfiguration;
@@ -51,6 +48,7 @@ const render = (searchTerm = "", isWorkspaceLevel = false, activePage: "update-t
         <Command shouldFilter={false}>
           <Command.List>
             <PowerKModalSearchMenu
+              isOpen={ui.open}
               activePage={activePage}
               context={context()}
               isWorkspaceLevel={isWorkspaceLevel}
@@ -176,7 +174,7 @@ it("nativeSearchOrderSurvivesCommandFiltering and selection uses native identifi
   expect(options()).toEqual(["A-3First relevance", "A-9Second relevance"]);
   await act(async () => (host.querySelector('[role="option"]') as HTMLElement).click());
   expect(ui.navigate).toHaveBeenCalledExactlyOnceWith("/ws/browse/A-3");
-  expect(ui.close).toHaveBeenCalledWith(false);
+  expect(ui.close).toHaveBeenCalledExactlyOnceWith();
 });
 it.each([403, 404, 500])("searchRefusalIsNotNoResults: %s is shown and retries only GET", async (status) => {
   await render("problem");

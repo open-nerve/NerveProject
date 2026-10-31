@@ -3,16 +3,24 @@
 import { act, type ReactNode, type KeyboardEventHandler } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { TPowerKContext } from "../../core/types";
+import type { TPowerKCommandConfig, TPowerKContext } from "../../core/types";
+import type { TPowerKCommandsListProps } from "./commands-list";
 import { ProjectsAppPowerKModalWrapper } from "./wrapper";
 import { ShortcutHandler } from "../../core/shortcut-handler";
 import { PowerKCommandRegistry } from "../../core/registry";
-const ui = vi.hoisted(() => ({ setPage: vi.fn(), command: vi.fn(), context: vi.fn(), close: vi.fn() }));
+const ui = vi.hoisted(() => ({
+  setPage: vi.fn(),
+  command: vi.fn(),
+  context: vi.fn(),
+  close: vi.fn(),
+  retainExit: false,
+}));
 vi.mock("@/hooks/store/use-power-k", () => ({ usePowerK: () => ({ activePage: null, setActivePage: ui.setPage }) }));
 vi.mock("@nerve/ui", () => ({
   EModalPosition: {},
   EModalWidth: {},
-  ModalCore: ({ children, isOpen }: { children: ReactNode; isOpen: boolean }) => (isOpen ? children : null),
+  ModalCore: ({ children, isOpen }: { children: ReactNode; isOpen: boolean }) =>
+    isOpen || ui.retainExit ? children : null,
 }));
 vi.mock("cmdk", () => ({
   Command: Object.assign(
@@ -60,6 +68,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.clearAllMocks();
+  ui.retainExit = false;
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -87,6 +96,70 @@ it("closing retires the query and command before an immediate reopen", async () 
   expect(ui.command).toHaveBeenCalledWith(null);
   expect(ui.setPage).toHaveBeenCalledWith(null);
 });
+it("a retained closing command cannot execute an action, and reopening enables it again", async () => {
+  const action = vi.fn();
+  const command: TPowerKCommandConfig = {
+    id: "action",
+    i18n_title: "action",
+    group: "general",
+    type: "action",
+    action,
+    closeOnSelect: false,
+    isEnabled: () => true,
+    isVisible: () => true,
+  };
+  const Choices = ({ handleCommandSelect }: TPowerKCommandsListProps) => (
+    <button data-testid="action" onClick={() => handleCommandSelect(command)}>
+      Execute
+    </button>
+  );
+  const show = (isOpen: boolean) =>
+    act(async () =>
+      root.render(
+        <ProjectsAppPowerKModalWrapper
+          commandsListComponent={Choices}
+          context={context}
+          isOpen={isOpen}
+          onClose={ui.close}
+        />
+      )
+    );
+  const select = () => act(async () => (host.querySelector('[data-testid="action"]') as HTMLButtonElement).click());
+  ui.retainExit = true;
+  await show(true);
+  await select();
+  expect(action).toHaveBeenCalledTimes(1);
+  action.mockClear();
+  await show(false);
+  await select();
+  expect(action).not.toHaveBeenCalled();
+  await show(true);
+  await select();
+  expect(action).toHaveBeenCalledTimes(1);
+});
+it.each(["ctrlKey", "metaKey"] as const)(
+  "a closed host retained by its exit animation releases %s+K to the document opener",
+  async (modifier) => {
+    const reopened = vi.fn();
+    const handler = new ShortcutHandler(new PowerKCommandRegistry(), () => context, reopened);
+    document.addEventListener("keydown", handler.handleKeyDown);
+    try {
+      ui.retainExit = true;
+      await render(true);
+      await render(false);
+      await act(async () => {
+        host
+          .querySelector("button")!
+          .dispatchEvent(new KeyboardEvent("keydown", { key: "k", [modifier]: true, bubbles: true, cancelable: true }));
+      });
+      expect(reopened).toHaveBeenCalledExactlyOnceWith();
+      expect(ui.close).not.toHaveBeenCalled();
+    } finally {
+      document.removeEventListener("keydown", handler.handleKeyDown);
+      handler.destroy();
+    }
+  }
+);
 it.each(["ctrlKey", "metaKey"] as const)(
   "closing with %s+K is consumed before the real document shortcut handler",
   async (modifier) => {

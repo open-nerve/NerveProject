@@ -36,6 +36,7 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
   // Handle command selection
   const handleCommandSelect = useCallback(
     (command: TPowerKCommandConfig) => {
+      if (!isOpen) return;
       if (command.type === "action") {
         // Direct action - execute and potentially close
         command.action(context);
@@ -49,12 +50,13 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
         setSearchTerm("");
       }
     },
-    [context, setActivePage]
+    [isOpen, context, setActivePage]
   );
 
   // Handle selection page item selection
   const handlePageDataSelection = useCallback(
     (data: unknown) => {
+      if (!isOpen) return;
       if (context.activeCommand?.type === "change-page") {
         context.activeCommand.onSelect(data, context);
       }
@@ -63,7 +65,7 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
         context.closePalette();
       }
     },
-    [context]
+    [isOpen, context]
   );
 
   // Handle keyboard navigation
@@ -71,7 +73,8 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
     (e: React.KeyboardEvent) => {
       // a key an input method takes is the method's: an Escape that ends a composition in the search neither clears it
       // nor closes the palette, a Backspace in one leaves the page where it is
-      if (isComposing(e.nativeEvent)) return;
+      // The exit animation can retain this input after close; only the open host owns its keys.
+      if (!isOpen || isComposing(e.nativeEvent)) return;
       // Cmd/Ctrl+K closes palette
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -106,7 +109,7 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
         return;
       }
     },
-    [searchTerm, activePage, onClose, setActivePage, context]
+    [isOpen, searchTerm, activePage, onClose, setActivePage, context]
   );
 
   // Clear this host when it closes; no timer from a previous opening may erase a new query or command.
@@ -144,6 +147,7 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
         />
         <Command.List className="vertical-scrollbar scrollbar-sm max-h-96 overflow-scroll outline-none">
           <CommandsListComponent
+            isOpen={isOpen}
             activePage={activePage}
             context={context}
             handleCommandSelect={handleCommandSelect}

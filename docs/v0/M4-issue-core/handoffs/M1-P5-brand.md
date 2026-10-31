@@ -35,3 +35,8 @@ T10 真实 SQL/组合读回确认自动归档动态行的 `actor_id` 为 SQL NUL
 T12 的真实 clockTest 页面在新进程重新登录，以 attempted_at 同时晚于新进程和业务写水位确认新归档；页面显示 SITE_NAME（Nerve），SQL 读回 actor_id=NULL，手动恢复显示真实操作者链接。M17 将系统 actor 当停用用户的变异确实失败；T14 三引擎均实际执行 I16。没有按邮箱或名字猜测的实现。系统代建收集箱仍归 M7，顶部 status 保持 open。
 
 证据：[P15 review](../reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)、[三浏览器矩阵](../reviews/P15-browser-matrix.md)。
+
+
+## P15 T16 整审复核（2026-11-01）
+
+本期子项已完成实现、整审局部修复与完整本地门禁；顶部/弹窗宿主、偏好晚答和退场选择保护已复验，92 个 TS/TSX 零告警。准确最终分支 CI 与交付状态见 [阶段记录 §10](../reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 和 [整审报告](../../../reviews/re-24-M4P15整体审核.md)。顶部 status 保持 open，P16、M7 与 M4 总关闭责任不改变；尚未合并。

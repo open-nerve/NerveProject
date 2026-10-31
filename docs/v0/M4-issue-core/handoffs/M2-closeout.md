@@ -265,3 +265,8 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 §8 两类回应使用本站 emojibase，组合 Unicode 按码点且 CSP 不扩；§9 主题只在本代原生确认后应用/重载，旧登录成功/失败无反馈；§11 时间线/布局及余下四个 M4 复制入口迁既有 hook，单一等待/成功/失败反馈，四个 M4 例外删除；C8 三引擎真实 LAN HTTP 无手势拒绝，Firefox 两条浏览器安全诊断按精确条件必须出现，其余异常仍禁止。§12 十三历史实例保持零，八个其它领域实例及 M7 view 方法维持原归属。T16 继续核顶部搜索宿主和其它偏好晚答，不能把 T14 检查点当阶段最终终审；顶部 status 仍 open。
 
 证据：[P15 review](../reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)、[三浏览器矩阵](../reviews/P15-browser-matrix.md)。
+
+
+## P15 T16 整审复核（2026-11-01）
+
+本期子项已完成实现、整审局部修复与完整本地门禁；顶部/弹窗宿主、偏好晚答和退场选择保护已复验，92 个 TS/TSX 零告警。准确最终分支 CI 与交付状态见 [阶段记录 §10](../reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 和 [整审报告](../../../reviews/re-24-M4P15整体审核.md)。顶部 status 保持 open，P16、M7 与 M4 总关闭责任不改变；尚未合并。

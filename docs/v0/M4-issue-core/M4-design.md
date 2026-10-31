@@ -2423,7 +2423,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 
 ### P15 `web-collaboration-drafts-search`：时间线、评论、表情、描述的历史、草稿、搜索、命令面板（16 个任务）
 - **目标**：时间线和评论、表情、描述的历史；草稿页；搜索；命令面板；自动归档的显示。
-- **准备入口**：[spec](specs/P15-web-collaboration-drafts-search.md)、[plan](plans/P15-web-collaboration-drafts-search.md)、[预检记录](reviews/P15-web-collaboration-drafts-search-review.md)、[deep-review](../../reviews/re-23-M4P15预检审核.md)。基线 main 7a81ea18，文档预检通过，负责人已授权实施；T1–T7 完成，phase 已进入 M4/P15。原粗任务 8 拆为工作项命令和主题/创建路由，后续顺延，原完成线保持。已有 actor/source/草稿数据层与无正 tabIndex 的位置只回归，不重复实现。
+- **准备入口**：[spec](specs/P15-web-collaboration-drafts-search.md)、[plan](plans/P15-web-collaboration-drafts-search.md)、[预检记录](reviews/P15-web-collaboration-drafts-search-review.md)、[deep-review](../../reviews/re-23-M4P15预检审核.md)。基线 main 7a81ea18，T1–T15 完成，T16 整审/局部修复及完整本地门禁通过，准确分支 CI 待核；phase M4/P15。原粗任务 8 拆为工作项命令和主题/创建路由，后续顺延，原完成线保持。已有 actor/source/草稿数据层与无正 tabIndex 的位置只回归，不重复实现。
 - **任务**：
   1. 时间线：`IssueUser` 与 `IssueCreator` 合并，执行者为空显示站点名，`archived-at.tsx` 的特判、`default.tsx` 的来源一支删除；`git grep` 核对没有按邮箱或名字猜测系统用户的代码（M1-P5 交接）；I12 的页面版本。
   2. 动态的筛选：嵌套的按钮（`activity-filter.tsx`）、`helper.tsx` 的两条 oxlint。
@@ -2434,7 +2434,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   7. 创建弹窗的"存为草稿"。
   8. 命令面板的工作项命令按复制/更新/删除职责拆分，消费原生 IssueUpdate 和既有确认写、宿主权限；复制直接用已有 hook。
   9. 主题命令确认且同会话后才应用，失败按 code 提示；创建命令显式路由 slug，workspace-address-route 后缀 .tsx?$，覆盖草稿三个文件与 command.ts 四个正例，不放宽 content。
-  10. 搜索（单 useIssueSearch debounce，服务端结果不二次过滤；项目目录显式 workspace 会话键）：命令面板经 `issue-search`，项目在列表里过滤，`WorkspaceService.searchWorkspace` 的模块级实例消失；I18 的页面版本。
+  10. 搜索（单 useIssueSearch debounce，服务端结果不二次过滤；项目目录显式 workspace 会话键）：弹窗和顶部两个真实宿主各声明展开状态，均经 `issue-search`，项目在列表里过滤，`WorkspaceService.searchWorkspace` 的模块级实例消失；I18 的页面版本。关闭/换路由退役旧查询，顶部键盘读当前展开状态、多选遵 closeOnSelect；全局快捷键忽略宿主已消费和 IME 按键，退场 wrapper 释放快捷键且停用选择动作。时区/语言等偏好反馈同样受现有登录代际保护（P15 spec §2.6）。
   11. `WorkspaceService` 的搜索方法、工作区搜索类型和参数删除；ProjectService 在 P14 最后两个读者迁移后即可删，本段核零残留，不留无消费者文件等待本段。
   12. I16 的页面版本：新 clock 进程/新 baseURL 重新登录，业务写与新进程之后的 fresh attempt；SQL 只查询断言。
   13. 版本 Markdown 用 getMarkDown + useCopyText，保留公开 void ref；复制 hook 独自反馈结果，C8 含真实 LAN HTTP。其余的复制改经 hook（`create-issue-toast-action-items.tsx`、`issue-activity/helper.tsx`、快捷操作的 `helper.tsx`、命令面板），`copy-hook` 的例外全部删除。
@@ -2594,7 +2594,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P12 web-list-pages | 列表、看板、表格、日历（16） | **已完成**：最终e6d1329b授权--no-ff合并main ff89d0a1；[准确main CI41087022719](https://github.com/open-nerve/NerveProject/actions/runs/41087022719)三任务成功；1786份实施/运行证据及14份准备证据归档逐hash通过，分支/worktree清理后再次复验。见[review§28](reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)、[整审](../../reviews/re-17-M4P12整体审核.md) |
 | P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **已完成**：最终分支 c57bbe6b 经 --no-ff 合并 main 8bb4bbcb；[main CI 41163365163](https://github.com/open-nerve/NerveProject/actions/runs/41163365163) attempt 2 三任务全绿。2,133 份运行证据与 11 份准备材料归档复验后分支/worktree 正常清理，见 [review §15](reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31) |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | **已完成**：原分支 ec5f38b5 与集成测试修复 9a86211a 均 --no-ff 合入 main 7a81ea18；[main CI 41205272945](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务成功，两个分支/worktree 已归档复验并清理。见 [review §15–16](reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31) |
-| P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述历史、草稿、搜索、命令面板（16） | **实施进行中，T1–T9 完成**：[spec](specs/P15-web-collaboration-drafts-search.md)、[plan](plans/P15-web-collaboration-drafts-search.md)、[review](reviews/P15-web-collaboration-drafts-search-review.md)、[deep-review](../../reviews/re-23-M4P15预检审核.md)。分支 codex/m4-p15，基线 7a81ea18；T1 时间线/评论锚点、T2 筛选键盘、T3 评论权限与输入、T4 两类回应和归档只读、T5 历史还原与真实 Markdown 复制完成，七项本地门禁通过；T6 原生草稿编辑/复制字段保留、菜单与发布页面、T7 创建弹窗两种存草稿与关闭、T8 原生命令拆分和确认删除宿主、T9 主题确认与路由范围完成，继续 T10，阶段末整审后先不合并 |
+| P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述历史、草稿、搜索、命令面板（16） | T1–T15 完成；T16 整审修复与完整本地七门禁通过，准确最终分支 CI 待核：[spec](specs/P15-web-collaboration-drafts-search.md)、[plan](plans/P15-web-collaboration-drafts-search.md)、[阶段记录](reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付)、[整体审核](../../reviews/re-24-M4P15整体审核.md)。分支 codex/m4-p15，基线 7a81ea18，当前不合并；P16 与 M4 收尾仍开放 |
 | P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | 未开始 |
 | 收尾 `closeout` | 交接、同步核对、浏览器核对 C12、规模和性能的数字（14） | 未开始 |
 

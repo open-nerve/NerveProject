@@ -283,3 +283,8 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 §5 原生 Issue/Comment/Draft/版本消费者与旧搜索删除均有实际页面；M7 视图/版本接口及公开 EditorRefApi 保留。§7 评论菜单/表情/历史/草稿的名称、原生键盘、字段错误先于焦点、内层 Escape 和 pending 保护经 T14 三引擎；§8 剩余四个 M4 复制入口及版本 Markdown 已由 hook 统一反馈，四例外为零。§9 本期 88 个 TS/TSX 逐文件零告警与十组死链清理见 T15，P16 全局 no-shadow、C12 和其它领域责任不提前完成。顶部 status 保持 open。
 
 证据：[P15 review](../reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)、[三浏览器矩阵](../reviews/P15-browser-matrix.md)。
+
+
+## P15 T16 整审复核（2026-11-01）
+
+本期子项已完成实现、整审局部修复与完整本地门禁；顶部/弹窗宿主、偏好晚答和退场选择保护已复验，92 个 TS/TSX 零告警。准确最终分支 CI 与交付状态见 [阶段记录 §10](../reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 和 [整审报告](../../../reviews/re-24-M4P15整体审核.md)。顶部 status 保持 open，P16、M7 与 M4 总关闭责任不改变；尚未合并。

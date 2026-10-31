@@ -7,6 +7,9 @@ import { signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { toasts } from "@/lib/fake-toast";
 import type { Profile } from "@nerve/api-client";
 import { ProfileStore } from "@/store/user/profile.store";
+import { UserStore } from "@/store/user";
+import { fakeRoot } from "@/store/fake-root";
+import { accountOf } from "@/store/member/fake-users";
 import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/core/types";
 import { usePowerKPreferencesCommands } from "./preferences-commands";
 const confirmedProfile: Profile = {
@@ -23,12 +26,13 @@ const ui = vi.hoisted(() => ({ setTheme: vi.fn(), reload: vi.fn() }));
 vi.mock("next-themes", () => ({ useTheme: () => ({ setTheme: ui.setTheme }) }));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@/hooks/store/user", () => ({
-  useUser: () => ({ updateCurrentUser: vi.fn() }),
+  useUser: () => user,
   useUserProfile: () => profile,
 }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 let profile: ProfileStore, nerve: FakeNerve, command: TPowerKCommandConfig;
+let user: UserStore, commands: TPowerKCommandConfig[];
 const ctx: TPowerKContext = {
   params: {},
   activeCommand: null,
@@ -41,7 +45,8 @@ const ctx: TPowerKContext = {
   setActivePage: () => {},
 };
 function Consumer() {
-  command = usePowerKPreferencesCommands().find((item) => item.id === "update_interface_theme")!;
+  commands = usePowerKPreferencesCommands();
+  command = commands.find((item) => item.id === "update_interface_theme")!;
   return null;
 }
 beforeEach(() => {
@@ -52,6 +57,7 @@ beforeEach(() => {
   toasts.length = 0;
   vi.stubGlobal("window", { location: { reload: ui.reload } });
   nerve = new FakeNerve();
+  user = new UserStore(fakeRoot({}), nerve.client());
   profile = new ProfileStore(nerve.client());
   renderToStaticMarkup(<Consumer />);
 });
@@ -105,3 +111,49 @@ it.each(["success", "refusal"])(
     expect(toasts).toEqual([]);
   }
 );
+
+const preferences = [
+  { id: "update_timezone", value: "Asia/Shanghai", path: "/api/v0/me", body: { user_timezone: "Asia/Shanghai" } },
+  { id: "update_start_of_week", value: 1, path: "/api/v0/me/profile", body: { start_of_the_week: 1 } },
+  { id: "update_interface_language", value: "zh-CN", path: "/api/v0/me/profile", body: { language: "zh-CN" } },
+] as const;
+for (const preference of preferences) {
+  const select = async () => {
+    const item = commands.find((candidate) => candidate.id === preference.id)!;
+    if (item.type !== "change-page") throw new Error("preference must select a value");
+    void item.onSelect(preference.value, ctx);
+    await until(() => nerve.calls.length === 1, preference.id);
+    expect(nerve.calls[0]).toMatchObject({ method: "PATCH", path: preference.path, body: preference.body });
+  };
+  const confirmed = () =>
+    json(
+      200,
+      preference.path === "/api/v0/me"
+        ? { ...accountOf("Ada"), ...preference.body }
+        : { ...confirmedProfile, ...preference.body }
+    );
+  it(`${preference.id} reports success only after its real store confirms`, async () => {
+    await select();
+    expect(toasts).toEqual([]);
+    nerve.calls[0]!.answer(confirmed());
+    await flush();
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0]?.type).toBe("success");
+    expect(ui.reload).not.toHaveBeenCalled();
+  });
+  it(`${preference.id} preserves the native refusal code`, async () => {
+    await select();
+    nerve.calls[0]!.answer(problem(503, "server_busy"));
+    await flush();
+    expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.server_busy" }]);
+  });
+  it.each(["success", "refusal"])(`${preference.id} suppresses old %s after login ABA`, async (outcome) => {
+    await select();
+    switchAccount();
+    switchAccount();
+    nerve.calls[0]!.answer(outcome === "success" ? confirmed() : problem(403, "forbidden"));
+    await flush();
+    expect(toasts).toEqual([]);
+    expect(ui.reload).not.toHaveBeenCalled();
+  });
+}

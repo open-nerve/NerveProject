@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索
 
-状态：文档预检通过，已授权实施；T1–T15 完成，继续 T16。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。按计划连续实施；验收项按实际证据勾选，阶段末 deep-review 后先不合并。
+状态：T1–T15 完成，T16 整审局部修复及完整本地门禁已通过，准确最终分支 CI 接续。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。验收项按实际证据勾选，阶段完成先不合并。
 
 ## 1. 目标
 
@@ -95,6 +95,8 @@ T8 实施补充：私有 context.ts 仅共享显式路由、canonical 读取与 
 - 删除 WorkspaceService.searchWorkspace、其模块实例以及专用 IWorkspace*SearchResult、WORKSPACE_DEFAULT_SEARCH_RESULT、旧搜索参数/六组结果映射；WorkspaceService 的 create/update/delete/getAllViews 属 M7，保留。ProjectService 已 P14 删除，只复核零残留。M6/M7 搜索结果不伪造或接旧接口，按原设计暂不提供。
 
 T14 实施补充：同一工作区内的 provider 不一定卸载，关闭命令宿主须依 workspaceSlug、route projectId、workItem 编号变化执行；不依异步加载出的项目 ID，避免仅加载详情也关闭面板。复用原 store 开关和 wrapper 关闭清理，不新增作用域所有者。Back 重开从空查询开始，旧查询 200 不复活旧结果。面板内 Cmd/Ctrl+K 关闭同时消费该按键，不能继续冒泡至 document 的打开命令。
+
+T16 整审补充：顶部 TopNavPowerK 是另一实际宿主。搜索组件显式接收宿主 isOpen，两处宿主都沿原 useIssueSearch 与目录读取；结果关闭用 context.closePalette，不再另传重复回调。顶部同样保留服务端排序、IME/229 不执行、同工作区路由变化退役、关闭清空查询/命令并恢复上下文显示；多选遵原 closeOnSelect 合同。键盘回调须读取当前展开状态。全局 ShortcutHandler 忽略已 preventDefault 或输入法占用的键，适配实际 document hydration 根上的同节点监听；不新增键盘事件总线。弹窗已逻辑关闭但退场动画仍保留 DOM 时，wrapper 不再消费快捷键，也不执行旧命令选择，由原 document opener 处理重开。时区、每周首日、语言沿已有 followInSession，仅当前登录确认后反馈，原生错误按 code 展示。
 
 ### 2.7 自动归档、复制与最终质量
 

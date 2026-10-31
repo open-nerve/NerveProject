@@ -4,13 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useLayoutEffect } from "react";
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
 // hooks
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
-import { cn } from "@nerve/utils";
+import { cn, isComposing } from "@nerve/utils";
 // power-k
 import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/core/types";
 import { ProjectsAppPowerKCommandsList } from "@/components/power-k/ui/modal/commands-list";
@@ -24,7 +24,7 @@ export const TopNavPowerK = observer(() => {
   // router
   const navigate = useNavigate();
   const params = useParams();
-  const { projectId: routerProjectId, workItem: workItemIdentifier } = params;
+  const { workspaceSlug, projectId: routerProjectId, workItem: workItemIdentifier } = params;
 
   const { t } = useTranslation();
   // states
@@ -40,6 +40,7 @@ export const TopNavPowerK = observer(() => {
     setSearchTerm("");
     setActivePage(null);
     setActiveCommand(null);
+    setShouldShowContextBasedActions(true);
   }, [setSearchTerm, setActivePage, setActiveCommand]);
 
   // expandable search hook
@@ -54,6 +55,8 @@ export const TopNavPowerK = observer(() => {
   } = useExpandableSearch({
     onClose: handleOnClose,
   });
+
+  useLayoutEffect(() => () => closePanel(), [workspaceSlug, routerProjectId, workItemIdentifier, closePanel]);
 
   // derived values
   const {
@@ -98,7 +101,7 @@ export const TopNavPowerK = observer(() => {
     return () => {
       setTopNavInputRef(null);
     };
-  }, [setTopNavInputRef]);
+  }, [setTopNavInputRef, inputRef]);
 
   const handleClear = () => {
     setSearchTerm("");
@@ -110,8 +113,7 @@ export const TopNavPowerK = observer(() => {
     (command: TPowerKCommandConfig) => {
       if (command.type === "action") {
         command.action(context);
-        // Always close on command selection
-        context.closePalette();
+        if (command.closeOnSelect === true) context.closePalette();
       } else if (command.type === "change-page") {
         context.setActiveCommand(command);
         setActivePage(command.page);
@@ -127,17 +129,18 @@ export const TopNavPowerK = observer(() => {
       if (context.activeCommand?.type === "change-page") {
         context.activeCommand.onSelect(data, context);
       }
-      // Always close on page data selection
-      context.closePalette();
+      if (context.activeCommand?.closeOnSelect === true) context.closePalette();
     },
     [context]
   );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      if (isComposing(e.nativeEvent)) return;
       // Cmd/Ctrl+K closes the search dropdown
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
+        e.stopPropagation();
         closePanel();
         return;
       }
@@ -200,7 +203,7 @@ export const TopNavPowerK = observer(() => {
         return;
       }
     },
-    [searchTerm, activePage, context, shouldShowContextBasedActions, setActivePage, closePanel]
+    [searchTerm, activePage, context, shouldShowContextBasedActions, setActivePage, closePanel, isOpen, containerRef]
   );
 
   return (
@@ -217,8 +220,6 @@ export const TopNavPowerK = observer(() => {
               "bg-layer-1": isOpen,
             }
           )}
-          onClick={() => inputRef.current?.focus()}
-          role="button"
         >
           <SearchOutline className="mr-2 size-3.5 shrink-0 text-placeholder" />
           <input
@@ -233,10 +234,16 @@ export const TopNavPowerK = observer(() => {
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
             placeholder={t("power_k.search_commands")}
+            aria-label={t("power_k.search_commands")}
             className="placeholder-text-placeholder min-w-0 flex-1 bg-transparent text-13 text-primary outline-none"
           />
           {searchTerm && (
-            <button type="button" onClick={handleClear} className="ml-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleClear}
+              aria-label={t("power_k.search_menu.clear_search")}
+              className="ml-2 shrink-0"
+            >
               <CloseOutline className="size-3.5 text-placeholder hover:text-primary" />
             </button>
           )}
@@ -258,7 +265,7 @@ export const TopNavPowerK = observer(() => {
               if (i18nValue.toLowerCase().includes(search.toLowerCase())) return 1;
               return 0;
             }}
-            shouldFilter={searchTerm.length > 0}
+            shouldFilter={!!activePage && searchTerm.length > 0}
             className="flex h-full w-full flex-col"
           >
             <Command.Input value={searchTerm} hidden />
@@ -275,7 +282,7 @@ export const TopNavPowerK = observer(() => {
                 isWorkspaceLevel={isWorkspaceLevel}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
-                handleSearchMenuClose={() => closePanel()}
+                isOpen={isOpen}
               />
             </Command.List>
             <PowerKModalFooter

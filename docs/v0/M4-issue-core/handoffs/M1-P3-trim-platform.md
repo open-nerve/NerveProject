@@ -89,3 +89,8 @@ M4 合并时：
 工作项动态的旧收集箱 source 分支已经随原生数据迁移消失，T1 复核 helpers/默认活动分支，I12 读完整时间线和隐藏历史关系；T11 删除最后 WorkspaceService.searchWorkspace 与专用 DTO/常量，未重建批量接口。T15 复核本期死成员和守卫，未恢复 access/is_epic/type_id。来源取值及收集箱自身显示仍在 M4 收尾转交 M7，顶部 status 保持 open。
 
 证据：[P15 review](../reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)、[三浏览器矩阵](../reviews/P15-browser-matrix.md)。
+
+
+## P15 T16 整审复核（2026-11-01）
+
+本期子项已完成实现、整审局部修复与完整本地门禁；顶部/弹窗宿主、偏好晚答和退场选择保护已复验，92 个 TS/TSX 零告警。准确最终分支 CI 与交付状态见 [阶段记录 §10](../reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 和 [整审报告](../../../reviews/re-24-M4P15整体审核.md)。顶部 status 保持 open，P16、M7 与 M4 总关闭责任不改变；尚未合并。

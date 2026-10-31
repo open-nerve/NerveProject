@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T15 完成，T16 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-11-01。状态：T1–T15 完成，T16 整审和完整本地门禁已通过，准确最终分支 CI 待核。§1–8 保留准备期快照，当前事实见 §9–10。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -256,3 +256,56 @@ T10 的准确提交 1047507d03435366349a5cf1a9a47f3f23d7260a 的 [CI 41223646422
 15 个受影响单元文件 **132/132**，Chromium **21/21**（C6/C7/C9、I11/12/14 与评论/布局/创建 C8），类型/翻译/格式/关键词 54/54、knip 通过。首次格式检查仅 quick-add 的 JSX 换行失败，格式化后重跑通过。全分支明确列出 88 个 TS/TSX：通常规则实际扫描 87 个零告警，配置文件因根 ignorePatterns 被跳过；以相同规则、仅去 ignorePatterns 的临时配置显式扫余下 1 个，亦零告警，未冒称 --no-ignore 覆盖配置排除。文件表、三生产候选、完整扫描及前后输出均在 t15-*。
 
 13 历史实例再核零，四 M4 copy-hook 例外为零、四 workspace-address-route 路径及正反例均保持，关键词 76/13 无命中。M15 的恢复实例反证、M12/M18 的行为反证已核原始 hash 后复用，未重复冒充新运行。本 Task 未修改守卫内容或扩大全局 no-shadow。输入 `89dfffde60176753f0678b3ae093aefc7d5605540516cf904d70580dafcff93d`，页面程序 `864e5108dc339c4f07e7c47f1f8d3b7d9495deb69d9fa417e247c663467332e4`；单位测试/AST 早一版仅相差 quick-add 格式，提交后同套再验。差异清单和四份输入子回执同步；所有 handoff 顶部 open，P16/M4 收尾未提前关闭。A15/T15 完成，进入 T16 deep-review。
+
+
+### T16：整分支审查、修复与交付门
+
+主控顺序执行 deep-review 的逻辑、集成、覆盖三个视角，范围为 main 7a81ea18 至最终候选及 dirty；没有派子代理，也未称三位独立审者。[整体审核](../../../reviews/re-24-M4P15整体审核.md) 记录 R1–R7、根因、局部裁定、失败与恢复；变动产品全文/删除基线/关联测试、实际调用者和受影响文档均纳入。
+
+顶部搜索是另一真实宿主，原全局 modal 开关导致顶部不读；现显式透传各自 isOpen、保持服务端排序、关闭统一 context.closePalette，沿原 useIssueSearch 与目录 owner。顶部回调补展开状态依赖，多选遵 closeOnSelect，关闭恢复上下文显示，路由变化退役；实际输入/清空按钮具名。时区/每周首日/语言复用 followInSession，只向当前登录反馈并保留原生 code。全局 ShortcutHandler 忽略已消费/IME 按键，解决 document hydration 同节点监听的问题；无新事件总线、队列或权限 owner。
+
+准确 T14 提交 792449e4702edc0128b8243cd02e1cfdfbcebb81 的 [CI 41229160601](https://github.com/open-nerve/NerveProject/actions/runs/41229160601) 是 server/web 成功、E2E 276 通过/1 失败，保留原失败。通过 GitHub 连接器取得 job 124622352597 的日志及 artifact 13053772034；ZIP SHA-256 为 8af1ef4c9dce01687de76fb97830edfb08c12f227835000b2de8054c94d732ab，没有提取凭据。trace 证实第二次 Cmd/Ctrl+K 在关闭约 83ms 后到达，退出动画保留旧 combobox，旧 wrapper 再次关闭而不是重开。wrapper 现只在 isOpen 时拥有按键和选择动作；关闭期间不误进子页/执行动作，document opener 可以重开。
+
+新增留存退场 DOM 的 Ctrl/Meta 与动作消费者共 3 条真实行为红，C7 页面分别证实无法重开和关闭期间误进子页；修复后单元及真实三引擎均通过。测试只延长真实 CSS 退场并断言 data-leave，不用固定 sleep 或 mock 产品开关。修复前直接 inline duration 被过渡过程还原，红运行仍已观察到真实 data-leave；最终测试改独立样式精确固定这一边界。早期顶部 first-item 焦点猜测被单测绿推翻，实际 isOpen 依赖、closeOnSelect 和上下文恢复分别有页面红；两个新 E2E helper 调用错误和一次聚焦路径少匹配均明确作为夹具/命令错误保留，不冒充产品反证。
+
+最终聚焦八文件 **89/89**。T16 完整三浏览器各 **43/43**；退场快捷键修复后各补跑 **13/13** 命令/搜索/命令复制；选择动作保护后主题退场页再各 **1/1**。未受影响的 30 项、随后未变的 12 项有路径/hash 和控制流复核，不冒称最后输入又完整执行 129 项。精确题名、每轮输入/程序摘要见 [矩阵](P15-browser-matrix.md) 和 t16-final-matrix-equivalence.json。所有实际运行 0 skip，严格网络/CSP/控制台守卫保持。
+
+本期实际 92 个 TS/TSX（含配置）零告警；按实测将 web 全仓 warning cap 112→108。新触及的 ShortcutHandler.setEnabled 零调用，删除后全仓 member 候选 876、prop 371、export 21；三个生产候选是图标 className 合同及结果对象 issue/project 真实读取，不误删。十三历史实例为零，八个其它领域实例仍按责任保留；76 条规则、13 个例外，四 M4 copy-hook 例外已零，四 route 正反例与 content 原内容均保持。
+
+核 M01–M18 的 23 次有效反证（M15 为静态审计，其余行为断言）及一份成功 build 原件：raw hash、输入稳定、变异前后恢复一致；25 个文件记录中 18 个最终字节一致，7 个变更逐段证实未去掉被测性质，详见整审。没有重跑却记新执行，也没有将 Go 普通测试写成 race。
+
+完整七门禁首轮的 F3 只有 workspace/adapter/postgres 因 Docker 映射端口查询超时失败，该包共 119 条测试/子测试记录都来自同一次 pgtest 初始化失败，业务断言未开始；其余 49 包通过。保留 t16-full-f3-test.log/json 和 t16-go-infrastructure-failure.json，未操作已有 Docker/容器；最终完整重跑见下一节。
+
+F4 发现新增测试清理函数的 Node.remove 类型不匹配，局部改用 parentNode.removeChild，之后 F4–7 全部通过。修改只有测试清理，补跑 Firefox、WebKit 主题页 2/2 通过；此前单独 Firefox 在 globalSetup 因临时数据库端口绑定超时退出，页面未执行，原失败保留。产品、断言和前三门禁输入未改变，相关等价记录见 t16-full-gate-equivalence.json 与矩阵。
+
+## 10. 最终验收与交付
+
+状态：整审局部问题均修复复审，完整七门禁已通过；准确最终分支 CI 待核，A16 保持未勾。本期不合并，主目录 main 保持基线。
+
+| 验收 | 对应证据 |
+|---|---|
+| A1 | T1 37 单元、I12 2 API/2 page、M01；最终矩阵 I12 两页 |
+| A2 | T2 19 单元、M02、C6 实际筛选/排序/焦点三引擎 |
+| A3 | T3 49 前端/19 编辑器、M03/M04、I11/I20 评论权限与真实输入 |
+| A4 | T4 55 单元、M05、I11/C6 组合码点、仅本人、归档只读与本站 picker |
+| A5 | T5 43 单元、M06/M07、I13 三页的分页/还原/真实 Markdown；M7 合同保留 |
+| A6 | T6 77 单元、M08/M09、I14 四页；完整 payload、保存失败不发布、GET-only retry |
+| A7 | T7 63 单元、M10、C9 四页；真实编辑器 readiness、两种保存、关闭/Back/迁移 |
+| A8 | T8 37 单元、M11、C7 状态与删除；T16 多选确认/关闭复验 |
+| A9 | T9 17 单元、M12、主题当前拒绝/成功/旧登录；四 route 正反例与 content 原样 |
+| A10 | T10 26 单元、M13/M14、I18 API 与六个最终页面；T16 顶部/弹窗同合同 |
+| A11 | T11 31 单元、M15、13 路径精确零；四 view 方法字节不变，M7 责任保留 |
+| A12 | T12 I16 API/page、M16/M17；三引擎新进程/新登录/写后 attempt/系统显示 |
+| A13 | T13 67 单元、M18、C8 12 页真实 LAN 拒绝；四 M4 例外零 |
+| A14 | T16 三引擎各 43 页，随后 13 页/1 页按影响复验，0 skip |
+| A15 | T15 十组死链、T16 setEnabled 删除、92 文件零告警；三合法候选、守卫/交接边界 |
+| A16 | 本节补齐完整门禁、最终准确分支 CI 后关闭；主控 deep-review 已完成 |
+
+本机原件在本 worktree 的 `.superpowers/sdd/P15-web-collaboration-drafts-search/`。运行收据保存 HEAD、dirty 文件摘要、argv、exit、raw hash 与程序 hash；历史失败不会被新绿覆盖。最终 `evidence-manifest.json` 和 `final-delivery.json` 后置核对完整证据与本地/远端准确 SHA，归档清理待另获授权合并及 main CI 后进行。
+
+
+最终完整七门禁 t16-full-retry-f1–f3 与 t16-complete-f4–f7 均 exit 0；前者输入 e14c9de376235a7f7b2ae2945213b1f4e4fd9df71df529acdd18097833d58542，后者输入 3531565df6210e93b8b8ec3e940cb7a411af9c6c48e0f40883aa84c8472ca5f5，每项执行期间输入稳定。F4 首轮仅测试样式清理的 Node.remove 类型报错，改用 parentNode.removeChild；F1–3 的服务端/生成输入不变，等价记录 t16-full-gate-equivalence.json，不重跑并不冒称同一摘要。Go 普通测试 51 个包通过、16 个包无测试文件；前端强制无缓存测试 296 个 Vitest 文件/3130 项，另 Node 5 项；默认 E2E 279/279（Chromium 277、Firefox 2，0 skip）。程序 9be9d742306019dd0a990422cce39bdd72495a32ac75c1c3c68d2ef22fa06c6d。原始日志、分包日志、完整结果快照见 t16-full-summary.json、t16-full-package-test-logs 和 t16-full-e2e-results；首轮初始化失败不覆盖。
+
+T16 自决的理由和代价见整审及本节：宿主状态显式化仍是同一组件树合同，关闭重置查询/上下文符合已批准 spec；其它偏好沿既有登录保护；严格 lint 下调额度；测试同步真实退场/页面就绪而不加生产延迟。没有待裁定架构问题。
+
+P16 的全局 dead/no-shadow、C12 与总守卫、M4 收尾逐条 §14/总体 9.4/M5–M8 转交均保持后续责任。输入 handoff 顶部 open；评论增量窗口以外的远端修改需关闭重开、LAN 有手势仍可能复制成功、M7 领域展示未接通等限制不扩大承诺。

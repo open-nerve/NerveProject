@@ -15,7 +15,7 @@ import {
 } from "../../fixtures/api";
 import { expectIssueCollection } from "../../fixtures/assert/issue";
 import { newAccount, accountId, emailFor } from "../../fixtures/auth";
-import { issueListProject, expectListPageQuiet } from "../../fixtures/issue-list-page";
+import { issueListProject, expectListPageQuiet, openIssueList } from "../../fixtures/issue-list-page";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { openCommands } from "../../fixtures/power-k";
 import { deferred } from "../../fixtures/deferred";
@@ -419,6 +419,70 @@ test("I18 (page): Back and reopening the same query retire the previous project 
     await expect(page.getByRole("combobox")).toHaveCount(0);
     await openCommands(page);
     await expect(page.getByRole("option", { name: /^Change state/ })).toBeVisible();
+    expect(watch.apiRequests.filter((request) => /^(POST|PATCH|DELETE) .*issues/.test(request))).toEqual([]);
+    await expectListPageQuiet(page, watch);
+  } finally {
+    if (!released) await release();
+  }
+});
+
+test("I18 (page): top navigation owns native search, IME and late answers across Back while the modal stays closed", async ({
+  api,
+  page,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const other = await createProject(api, seed.member.token, seed.slug, { name: "Other search", identifier: "OTHER" });
+  const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Native title" });
+  const old = await createIssue(api, seed.member.token, seed.project.id, { name: "Late old" });
+  const { watch } = await openIssueList(page, seed);
+  const input = page.getByPlaceholder("Search commands...", { exact: true });
+  const results = page.locator('[role="option"][data-value^="issue-"]');
+  await input.fill("0001");
+  await expect(results).toHaveCount(1);
+  await expect(results).toHaveAttribute("data-value", `issue-${issue.id}`);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await input.dispatchEvent("keydown", { key: "Enter", isComposing: true, bubbles: true });
+  await input.dispatchEvent("keydown", { key: "Enter", keyCode: 229, bubbles: true });
+  await expect(page).toHaveURL(seed.path);
+  await input.press("Enter");
+  await expect(page).toHaveURL(`/${seed.slug}/browse/${seed.project.identifier}-${issue.sequence_id}`);
+  await expect(input).toHaveValue("");
+  await expect(page.getByRole("textbox", { name: "Work item title", exact: true })).toHaveValue(issue.name);
+  const path = `/api/v0/workspaces/${seed.slug}/issue-search`;
+  const received = deferred<void>();
+  const release = await holdAnswer(page, "GET", path, 1, () => received.resolve());
+  let released = false;
+  try {
+    await input.fill("Late");
+    await received.promise;
+    await updateIssue(api, seed.member.token, old.id, { name: "Retired" });
+    const fresh = await createIssue(api, seed.member.token, seed.project.id, { name: "Late fresh" });
+    await moveWithinApp(page, `/${seed.slug}/projects/${other.id}/issues`);
+    await expect(page.getByRole("button", { name: "Add work item", exact: true })).toBeVisible();
+    await expect(input).toHaveValue("");
+    await expect(page.locator("[cmdk-list]")).toHaveCount(0);
+    await page.goBack();
+    await expect(page.getByRole("textbox", { name: "Work item title", exact: true })).toHaveValue(issue.name);
+    await input.fill("Late");
+    await expect(results).toHaveCount(1);
+    await expect(results).toHaveAttribute("data-value", `issue-${fresh.id}`);
+    const response = await answerTo(page, "GET", path, release);
+    released = true;
+    expect(response.status()).toBe(200);
+    expect((await response.json()).data.map((row: { id: string }) => row.id)).toEqual([old.id]);
+    await expect(results).toHaveAttribute("data-value", `issue-${fresh.id}`);
+    await input.press("ControlOrMeta+k");
+    await expect(page.locator("[cmdk-list]")).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await input.click();
+    await expect(input).toHaveValue("");
+    await expect(results).toHaveCount(0);
+    await input.fill("Native title");
+    await expect(results).toHaveAttribute("data-value", `issue-${issue.id}`);
+    await page.getByRole("button", { name: "Clear search", exact: true }).click();
+    await expect(input).toHaveValue("");
+    await expect(results).toHaveCount(0);
+    await input.press("Escape");
     expect(watch.apiRequests.filter((request) => /^(POST|PATCH|DELETE) .*issues/.test(request))).toEqual([]);
     await expectListPageQuiet(page, watch);
   } finally {

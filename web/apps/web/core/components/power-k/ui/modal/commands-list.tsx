@@ -17,7 +17,7 @@ export type TPowerKCommandsListProps = {
   isWorkspaceLevel: boolean;
   searchTerm: string;
   setSearchTerm: (value: string) => void;
-  handleSearchMenuClose?: () => void;
+  isOpen: boolean;
 };
 
 export function ProjectsAppPowerKCommandsList(props: TPowerKCommandsListProps) {
@@ -29,7 +29,7 @@ export function ProjectsAppPowerKCommandsList(props: TPowerKCommandsListProps) {
     isWorkspaceLevel,
     searchTerm,
     setSearchTerm,
-    handleSearchMenuClose,
+    isOpen,
   } = props;
 
   const searching = !activePage && !!context.params.workspaceSlug && searchTerm.trim().length > 0;
@@ -42,7 +42,7 @@ export function ProjectsAppPowerKCommandsList(props: TPowerKCommandsListProps) {
         isWorkspaceLevel={!context.params.projectId || isWorkspaceLevel}
         searchTerm={searchTerm}
         updateSearchTerm={setSearchTerm}
-        handleSearchMenuClose={handleSearchMenuClose}
+        isOpen={isOpen}
       />
       <PowerKContextBasedPagesList
         activeContext={context.activeContext}

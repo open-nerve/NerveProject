@@ -2,7 +2,6 @@
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { usePowerK } from "@/hooks/store/use-power-k";
 import { useIssueSearch } from "@/hooks/use-issue-search";
 import { useRefusalMessage } from "@/hooks/use-refusal-toast";
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -16,19 +15,18 @@ type Props = {
   isWorkspaceLevel: boolean;
   searchTerm: string;
   updateSearchTerm: (value: string) => void;
-  handleSearchMenuClose?: () => void;
+  isOpen: boolean;
 };
 
 export const PowerKModalSearchMenu = observer(function PowerKModalSearchMenu(props: Props) {
-  const { activePage, context, isWorkspaceLevel, searchTerm, updateSearchTerm, handleSearchMenuClose } = props;
+  const { activePage, context, isWorkspaceLevel, searchTerm, updateSearchTerm, isOpen } = props;
   const { rootIssueStore: root } = useIssueDetail();
-  const { isPowerKModalOpen, togglePowerKModal } = usePowerK();
   const { t } = useTranslation();
   const refusalMessage = useRefusalMessage();
   const { workspaceSlug, projectId } = context.params;
   const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug ?? "");
   const directory = root.rootStore.projectRoot.project;
-  const open = root.active && isPowerKModalOpen && !!workspace;
+  const open = root.active && isOpen && !!workspace;
   const searching = open && !activePage && searchTerm.trim().length > 0;
   const catalog = useSessionSWR(open && workspace ? ["PROJECTS", workspace.id, workspace.slug] : null, (id, slug) =>
     directory.fetchProjects({ id, slug })
@@ -82,10 +80,6 @@ export const PowerKModalSearchMenu = observer(function PowerKModalSearchMenu(pro
       </div>
     );
 
-  const close = () => {
-    handleSearchMenuClose?.();
-    togglePowerKModal(false);
-  };
   return (
     <>
       {issues.length === 0 && projects.length === 0 && (
@@ -95,7 +89,7 @@ export const PowerKModalSearchMenu = observer(function PowerKModalSearchMenu(pro
         workspaceSlug={workspace.slug}
         issues={issues}
         projects={projects}
-        closePalette={close}
+        closePalette={context.closePalette}
       />
     </>
   );

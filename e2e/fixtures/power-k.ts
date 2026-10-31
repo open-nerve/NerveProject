@@ -1,9 +1,8 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
 /** Uses the real cmdk roving selection; an empty root query never invokes retired search. */
-export async function highlightCommand(page: Page, name: RegExp) {
-  const input = page.getByRole("combobox");
+export async function highlightCommand(page: Page, name: RegExp, input: Locator = page.getByRole("combobox")) {
   const target = page.getByRole("option", { name });
   await expect(target).toBeVisible();
   const count = await page.getByRole("option").count();
@@ -17,9 +16,9 @@ export async function highlightCommand(page: Page, name: RegExp) {
   return target;
 }
 
-export async function selectCommand(page: Page, name: RegExp) {
-  await highlightCommand(page, name);
-  await page.getByRole("combobox").press("Enter");
+export async function selectCommand(page: Page, name: RegExp, input: Locator = page.getByRole("combobox")) {
+  await highlightCommand(page, name, input);
+  await input.press("Enter");
 }
 
 export async function openCommands(page: Page) {

@@ -1,4 +1,4 @@
-import { changeRole, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
+import { createLabel, changeRole, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
 import { highlightCommand, openCommands, selectCommand } from "../../fixtures/power-k";
 import { createIssueLink } from "../../fixtures/links";
 import {
@@ -436,11 +436,24 @@ test("C7: keyboard theme selection waits for confirmation, reports native refusa
   );
   await openCommands(page);
   await selectCommand(page, /^Change interface theme$/);
+  // Keep the real exit transition in progress so reopening cannot accidentally wait for unmount.
+  const panel = page.locator('[id^="headlessui-dialog-panel-"]');
+  await transitionsEnded(panel);
+  const slowExit = await page.addStyleTag({
+    content: '[id^="headlessui-dialog-panel-"][data-leave] { transition-duration: 30s !important; }',
+  });
   expect((await answerTo(page, "PATCH", path, () => selectCommand(page, /^Dark$/))).status()).toBe(503);
   await expect(page.getByText("The server is busy. Please try again later.", { exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.locator("html")).toHaveAttribute("data-command-document", "original");
+  await expect(panel).toHaveAttribute("data-leave", "");
+  await selectCommand(page, /^Change interface theme$/);
+  await expect(page.getByRole("option", { name: /^Change interface theme$/ })).toBeVisible();
   await openCommands(page);
+  await expect(panel).not.toHaveAttribute("data-leave", "");
+  await slowExit.evaluate((element) => {
+    element.parentNode?.removeChild(element);
+  });
   await selectCommand(page, /^Change interface theme$/);
   const held = await sentHeld(page, "PATCH", path, () => selectCommand(page, /^Dark$/));
   expect(held.body).toEqual({ theme: "dark" });
@@ -647,3 +660,73 @@ for (const control of [
     }
   });
 }
+
+test("C7: top navigation keeps a multi-select command open for confirmed label changes and respects IME", async ({
+  api,
+  page,
+  db,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const [alpha, beta] = await Promise.all([
+    createLabel(api, seed.member.token, seed.project.id, { name: "Alpha label" }),
+    createLabel(api, seed.member.token, seed.project.id, { name: "Beta label" }),
+  ]);
+  const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Top command labels" });
+  const watch = await openIssueDetail(page, seed, issue);
+  const input = page.getByPlaceholder("Search commands...", { exact: true });
+  await input.click();
+  await selectCommand(page, /^Add labels/, input);
+  await input.fill("Alpha");
+  const path = `/api/v0/issues/${issue.id}`;
+  await input.dispatchEvent("keydown", { key: "Enter", isComposing: true, bubbles: true });
+  expect(watch.apiRequests.filter((item) => item === `PATCH ${path}`)).toHaveLength(0);
+  const first = await sentHeld(page, "PATCH", path, () => selectCommand(page, /^Alpha label$/, input));
+  try {
+    expect(first.body).toEqual({ label_ids: [alpha.id] });
+    await expect(page.getByRole("option", { name: "Alpha label", exact: true })).toBeVisible();
+  } finally {
+    expect((await first.release()).status()).toBe(200);
+  }
+  await expect
+    .poll(async () =>
+      (
+        await db.query<{ id: string }>(
+          "SELECT label_id::text AS id FROM issue_labels WHERE issue_id=$1 AND deleted_at IS NULL ORDER BY label_id",
+          [issue.id]
+        )
+      ).map((row) => row.id)
+    )
+    .toEqual([alpha.id]);
+  await input.fill("Beta");
+  const second = await sentHeld(page, "PATCH", path, () => selectCommand(page, /^Beta label$/, input));
+  try {
+    expect(second.body).toEqual({ label_ids: [alpha.id, beta.id] });
+    await expect(page.getByRole("option", { name: "Beta label", exact: true })).toBeVisible();
+  } finally {
+    expect((await second.release()).status()).toBe(200);
+  }
+  await expect
+    .poll(async () =>
+      (
+        await db.query<{ id: string }>(
+          "SELECT label_id::text AS id FROM issue_labels WHERE issue_id=$1 AND deleted_at IS NULL ORDER BY label_id",
+          [issue.id]
+        )
+      ).map((row) => row.id)
+    )
+    .toEqual([alpha.id, beta.id].toSorted());
+  await expect(page.getByRole("option", { name: "Beta label", exact: true })).toBeVisible();
+  await input.press("Escape");
+  await expect(page.locator("[cmdk-list]")).toHaveCount(0);
+  await expect(input).toHaveValue("");
+  expect(watch.apiRequests.filter((item) => item === `PATCH ${path}`)).toHaveLength(2);
+  await input.click();
+  await expect(page.getByRole("option", { name: /^Add labels/ })).toBeVisible();
+  await input.press("Backspace");
+  await expect(page.getByRole("option", { name: /^Add labels/ })).toHaveCount(0);
+  await input.press("Escape");
+  await input.click();
+  await expect(page.getByRole("option", { name: /^Add labels/ })).toBeVisible();
+  await input.press("Escape");
+  await expectListPageQuiet(page, watch);
+});
