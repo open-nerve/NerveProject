@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T5 完成，T6 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T10 完成，T11 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -182,3 +182,17 @@ Web/E2E 类型、9 文件 oxlint 零告警与格式、76 规则/16 例外通过�
 13 条新消费者在基线全红，主题提前应用、旧代仍反馈和旧工作区目录/允许项目缺失均为行为失败。修复后连同 T6 路由页回归 **17/17**。M12 提前 setTheme 造成 7/7 红，字节恢复后 17/17。初次类型检查两处夹具 activeContext="global" 不属于合同，改 null；不是产品红。Web/E2E 类型、5 TS 文件 oxlint 零告警、格式及关键词 76/16 通过。
 
 Chromium C7 **3/3**，包括 T8 中文状态/删除回归、主题 503 原因文案且不变色不重载、真实 PATCH held 时保持主题、200 后唯一重载、另一标签页真实登录后的旧 200 不重载/变色/提示。精确允许一次 503，其余请求/CSP/控制台保持零异常。最终消费者/静态输入 `0fa087e809aeca1f43cdc4b0422de8170a2b3243b9de2a1add83ce4b22337f70`，页面输入仅相差完整 Profile 夹具/测试类型修正/守卫说明标点，生产与页面字节相同；程序 `f850f09586eaf3d197d2b50e95ab2510a06444d917427c231db3defdeb7ddc4b`。运行与变异见 t9-*.json/log、t9-c7-results、t9-mutations.json、t9-receipt.json。A9/T9 完成，接续 T10 完整七门禁检查点；不合并。
+
+### T10：原生命令搜索、本地目录与快速重开
+
+搜索消费者只用原 useIssueSearch 单次 500ms 延迟；query/作用域变化立即换 owner 隐藏旧结果，根非空查询只显示原生 Issue 与本地可见未归档 Project。目录复用会话 PROJECTS/id/slug 读取，错误与 loading 独立，不随 q 重取。删除六组旧映射和已无读者的额外 debounce/搜索 key；cmdk 不再过滤或重排服务端命中。空根命令及属性子页保留。
+
+12 条新消费者基线行为红，已有搜索 hook 12 条绿；实现后 24/24。真实 I18 首轮发现关闭宿主遗留 200ms reset 能清空首次打开的新查询；独立生命周期测试 2 红，改关闭时同步清理本宿主状态后共 **26/26**。M13 去 query owner 依赖、M14 工作区仍传 project_id 分别实际 3 红/1 红，源码逐字节恢复。I18 次轮测试误把候选包含匹配当模糊匹配，按设计 §3.18 校正为合法前导零编号 0001，仍能证明结果不可客户端二次过滤；无结果断言包含真实 Clear search 名称。最终 **I18 8/8**（4 API、4 page），含跨项目排序、中文/字面/编号、目录不重复、真实错误/GET重试、晚答与两类 OwnOnly 访客。
+
+完整 F 首轮服务端仅 identity/adapter/river 的临时容器端口查询超时（业务断言未开始）；未改 Docker/代码，完整 make test 重跑通过。随后前端 54/54、knip、强制无缓存 18/18任务通过；保留分包日志：**292 Vitest 文件、3092 用例，另 Node 5 用例**，非逐例 verbose 的 Go 结果不推测 skip 数。
+
+全量 E2E 首轮 262 通过/1 失败：S6 仍输入命令名称，与已批准非空根查询用于工作项搜索不一致；仅改用既有 selectCommand 空根键盘选择，保留 IME、Tab/inert、子页返回/关闭、实际剪贴板成功断言，定向 2/2。S6 修改前后仅该测试文件变化，F1–3/F5–6输入未变；等价证据 t10-gate-input-equivalence-final.json，修改后 F4 与全 F7 重跑。全F7第二轮I12重开在登录页失败：两次goto隔50ms，中间refresh 200响应被文档替换丢失，下一刷新401；M2-design §3.5明确该已知代价。I12补等待中间列表可见后再重开，保留204条和远端修改/删除全部断言，定向连续 **3/3**，不改认证协议。
+
+最终输入和七项门禁见 t10-receipt.json；原先失败、变异补丁/恢复、trace、目录及单元日志均保留。Web/E2E 类型及定向 TS lint 零告警，76规则/16例外未放宽。该任务局部决定的代价分别是关闭后立即重置视图、空根命令需方向键选择，均由页面复验。A10/T10 完成后接续 T11；阶段整审与最终CI仍待T16，不合并。
+
+最终全 E2E **263/263**（Chromium 261、Firefox 2，0 skip）；完整七项门禁均有对应绿结果。搜索产品/消费者输入 d602e5f28e5ffaa689bb3f45d6e003df193664d6a8351c47c1cd3dbc9b0a0f72；只改 S6/I12 前置后的最终页面输入 489af980bbe74c30e61085b3187c1f9e6a49f7921d029c402e6f6b42c6294374，程序 041adf634f68a7bfb6eeff96febf90853c7f1d5afaad3e69684c3fd04e2d6d82。检查点提交后推送并单独核远端 CI，不将本地绿等同远端绿。

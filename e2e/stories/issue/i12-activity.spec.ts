@@ -191,6 +191,8 @@ test("I12 (page): three real pages merge into one timeline, a confirmed descript
   expect((await commentDeleted(api, seed.member.token, comments[1]!.id)).status).toBe(204);
   // These old rows are outside the incremental window; reopening performs a complete read.
   await page.goto(seed.path);
+  // Complete the intermediate page's real sign-in refresh before replacing its document again.
+  await expect(page.locator(`#issue-${issue.id}`)).toBeVisible();
   await page.goto(`/${seed.slug}/browse/WEB-${issue.sequence_id}`);
   await expect(timeline.locator("xpath=./div")).toHaveCount(204);
   await expect(timeline.getByText("Remote first edit", { exact: true })).toBeVisible();

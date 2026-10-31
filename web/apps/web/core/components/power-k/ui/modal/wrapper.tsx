@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useLayoutEffect, useCallback } from "react";
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
@@ -27,6 +27,7 @@ type Props = {
 
 export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerKModalWrapper(props: Props) {
   const { commandsListComponent: CommandsListComponent, context, hideFooter = false, isOpen, onClose } = props;
+  const { setActiveCommand, setShouldShowContextBasedActions } = context;
   // states
   const [searchTerm, setSearchTerm] = useState("");
   const [isWorkspaceLevel, setIsWorkspaceLevel] = useState(false);
@@ -107,18 +108,14 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
     [searchTerm, activePage, onClose, setActivePage, context]
   );
 
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setTimeout(() => {
-        setSearchTerm("");
-        setActivePage(null);
-        context.setActiveCommand(null);
-        context.setShouldShowContextBasedActions(true);
-      }, 200);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  // Clear this host when it closes; no timer from a previous opening may erase a new query or command.
+  useLayoutEffect(() => {
+    if (isOpen) return;
+    setSearchTerm("");
+    setActivePage(null);
+    setActiveCommand(null);
+    setShouldShowContextBasedActions(true);
+  }, [isOpen, setActivePage, setActiveCommand, setShouldShowContextBasedActions]);
 
   return (
     <ModalCore
@@ -134,7 +131,7 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
           if (i18nValue.toLowerCase().includes(search.toLowerCase())) return 1;
           return 0;
         }}
-        shouldFilter={searchTerm.length > 0}
+        shouldFilter={searchTerm.length > 0 && (!!activePage || !context.params.workspaceSlug)}
         onKeyDown={handleKeyDown}
         className="w-full"
       >

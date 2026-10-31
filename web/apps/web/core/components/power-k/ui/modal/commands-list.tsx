@@ -32,6 +32,8 @@ export function ProjectsAppPowerKCommandsList(props: TPowerKCommandsListProps) {
     handleSearchMenuClose,
   } = props;
 
+  const searching = !activePage && !!context.params.workspaceSlug && searchTerm.trim().length > 0;
+
   return (
     <>
       <PowerKModalSearchMenu
@@ -47,12 +49,14 @@ export function ProjectsAppPowerKCommandsList(props: TPowerKCommandsListProps) {
         activePage={activePage}
         handleSelection={handlePageDataSelection}
       />
-      <PowerKModalPagesList
-        activePage={activePage}
-        context={context}
-        onPageDataSelect={handlePageDataSelection}
-        onCommandSelect={handleCommandSelect}
-      />
+      {!searching && (
+        <PowerKModalPagesList
+          activePage={activePage}
+          context={context}
+          onPageDataSelect={handlePageDataSelection}
+          onCommandSelect={handleCommandSelect}
+        />
+      )}
     </>
   );
 }

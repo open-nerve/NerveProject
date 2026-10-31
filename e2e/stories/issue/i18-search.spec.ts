@@ -14,7 +14,11 @@ import {
   type Api,
 } from "../../fixtures/api";
 import { expectIssueCollection } from "../../fixtures/assert/issue";
-import { newAccount } from "../../fixtures/auth";
+import { newAccount, accountId, emailFor } from "../../fixtures/auth";
+import { issueListProject, expectListPageQuiet } from "../../fixtures/issue-list-page";
+import { openIssueDetail } from "../../fixtures/issue-detail-page";
+import { openCommands } from "../../fixtures/power-k";
+import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { instantKey } from "../../fixtures/instant";
 import {
   createIssue,
@@ -25,7 +29,7 @@ import {
 } from "../../fixtures/issues";
 import { expect, test } from "../../fixtures/test";
 
-// Every precondition is an API write; selector pages and command UI belong to P15.
+// Every precondition is an API write; P15 pages exercise the same native search contract.
 async function searchWorld(api: Api, info: TestInfo) {
   const admin = await newAccount(api, info, "admin");
   const member = await newAccount(api, info, "member");
@@ -206,3 +210,170 @@ test("I18 (API): two- and three-character Chinese contains queries and literal s
     [dated.id]
   );
 });
+
+test("I18 (page): native command search keeps relevance order, exact Unicode and literal queries, workspace scope and local projects", async ({
+  api,
+  page,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const other = await createProject(api, seed.member.token, seed.slug, { name: "Command Catalog", identifier: "CAT" });
+  const a = await createIssue(api, seed.member.token, seed.project.id, { name: "Orbit release" });
+  const b = await createIssue(api, seed.member.token, other.id, { name: "Orbit release" });
+  const titleHit = await createIssue(api, seed.member.token, seed.project.id, { name: "1" });
+  const chinese = await createIssue(api, seed.member.token, seed.project.id, { name: "中文" });
+  const literal = await createIssue(api, seed.member.token, seed.project.id, { name: "Literal %_\\" });
+  const watch = await openIssueDetail(page, seed, a);
+  const path = `/api/v0/workspaces/${seed.slug}/issue-search`;
+  const queries: URLSearchParams[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === path) queries.push(url.searchParams);
+  });
+  await openCommands(page);
+  expect(queries).toEqual([]);
+  const input = page.getByRole("combobox");
+  const results = page.locator('[role="option"][data-value^="issue-"]');
+  await input.fill("1");
+  await expect(results).toHaveCount(2);
+  expect(await results.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-value")))).toEqual([
+    `issue-${a.id}`,
+    `issue-${titleHit.id}`,
+  ]);
+  expect(queries.at(-1)?.get("project_id")).toBe(seed.project.id);
+  await page.getByRole("switch", { name: "Workspace level", exact: true }).click();
+  await expect(results).toHaveCount(3);
+  expect(await results.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-value")))).toEqual([
+    `issue-${b.id}`,
+    `issue-${a.id}`,
+    `issue-${titleHit.id}`,
+  ]);
+  expect(queries.at(-1)?.has("project_id")).toBe(false);
+  const directoryBefore = watch.apiRequests.filter(
+    (request) => request === `GET /api/v0/workspaces/${seed.slug}/projects`
+  ).length;
+  const numeric = "0001";
+  const ranked = (await searchIssues(api, seed.member.token, seed.slug, { q: numeric })).data;
+  expect(ranked.map((issue) => issue.id)).toEqual([b.id, a.id]);
+  expect(ranked.every((issue) => !issue.name.includes(numeric))).toBe(true);
+  await [
+    { q: "中文", ids: [chinese.id] },
+    { q: "%_\\", ids: [literal.id] },
+    { q: "WEB-1", ids: [a.id] },
+    { q: numeric, ids: ranked.map((issue) => issue.id) },
+  ].reduce(async (previous, { q, ids }) => {
+    await previous;
+    await input.fill(q);
+    await expect(results).toHaveCount(ids.length);
+    await expect
+      .poll(() => results.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-value"))))
+      .toEqual(ids.map((id) => `issue-${id}`));
+    expect(queries.at(-1)?.get("q")).toBe(q);
+    expect(queries.at(-1)?.has("project_id")).toBe(false);
+  }, Promise.resolve());
+  await input.fill("cAtAloG");
+  const projectResult = page.getByRole("option", { name: "Command Catalog", exact: true });
+  await expect(projectResult).toBeVisible();
+  await expect(results).toHaveCount(0);
+  expect(
+    watch.apiRequests.filter((request) => request === `GET /api/v0/workspaces/${seed.slug}/projects`)
+  ).toHaveLength(directoryBefore);
+  await input.press("Enter");
+  await expect(page).toHaveURL(`/${seed.slug}/projects/${other.id}/issues`);
+  await expectListPageQuiet(page, watch);
+});
+
+test("I18 (page): search errors offer GET retry and a delayed previous query cannot replace the current results", async ({
+  api,
+  page,
+  browserName,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const first = await createIssue(api, seed.member.token, seed.project.id, { name: "First search" });
+  const next = await createIssue(api, seed.member.token, seed.project.id, { name: "Second search" });
+  const watch = await openIssueDetail(page, seed, first);
+  const path = `/api/v0/workspaces/${seed.slug}/issue-search`;
+  let refused = false;
+  await page.route(
+    (url) => url.pathname === path,
+    async (route) => {
+      if (refused) return route.fallback();
+      refused = true;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ status: 500, code: "internal_error" }),
+      });
+    }
+  );
+  await openCommands(page);
+  const input = page.getByRole("combobox");
+  await input.fill("First search");
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("Something went wrong on the server. Please try again.");
+  await expect(page.getByRole("option", { name: /^No results found/ })).toHaveCount(0);
+  expect(
+    (
+      await answerTo(page, "GET", path, () => alert.getByRole("button", { name: "Retry", exact: true }).click())
+    ).status()
+  ).toBe(200);
+  const firstResult = page.locator(`[role="option"][data-value="issue-${first.id}"]`);
+  await expect(firstResult).toBeVisible();
+  const release = await holdAnswer(page, "GET", path);
+  const sent = page.waitForRequest(
+    (request) => new URL(request.url()).pathname === path && new URL(request.url()).searchParams.get("q") === "WEB-1"
+  );
+  await input.fill("WEB-1");
+  await expect(firstResult).toHaveCount(0);
+  await sent;
+  await input.fill("WEB-2");
+  const current = page.locator(`[role="option"][data-value="issue-${next.id}"]`);
+  await expect(current).toBeVisible();
+  expect((await answerTo(page, "GET", path, release)).status()).toBe(200);
+  await expect(current).toBeVisible();
+  await expect(firstResult).toHaveCount(0);
+  await input.press("Enter");
+  await expect(page).toHaveURL(`/${seed.slug}/browse/WEB-${next.sequence_id}`);
+  expect(watch.apiRequests.filter((request) => /^(PATCH|POST|DELETE) .*issues/.test(request))).toEqual([]);
+  await expectListPageQuiet(page, watch, {
+    failures: [`500 GET ${path}`],
+    errors:
+      browserName === "chromium"
+        ? ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"]
+        : [],
+  });
+});
+
+for (const role of [5, 20] as const) {
+  test(`I18 (page): OwnOnly search uses the returned visibility for a workspace role ${role} and project guest`, async ({
+    api,
+    page,
+  }, info) => {
+    const seed = await issueListProject(api, info);
+    const email = emailFor(info, "own-only");
+    const tokens = await registerOnboarded(api, email);
+    const member = { email, token: tokens.access_token, id: await accountId(api, tokens.access_token) };
+    await inviteAndAccept(api, seed.member.token, seed.slug, member, 15);
+    await addProjectMembers(api, seed.member.token, seed.project.id, [{ member_id: member.id, role: 15 }]);
+    const own = await createIssue(api, member.token, seed.project.id, { name: "Visible needle" });
+    const hidden = await createIssue(api, seed.member.token, seed.project.id, { name: "Hidden needle" });
+    expect(
+      await projectMemberWrites(api, seed.project.id).change(
+        seed.member.token,
+        await projectMembershipOf(api, seed.member.token, seed.project.id, member.id),
+        5
+      )
+    ).toEqual({ status: 200 });
+    await changeRole(api, seed.member.token, seed.slug, member.id, role);
+    const watch = await openIssueDetail(page, { ...seed, member }, own, role === 5 ? own.name : undefined);
+    await openCommands(page);
+    await expect(page.getByRole("option", { name: /^Copy title/ })).toBeVisible();
+    if (role === 5) await expect(page.getByRole("option", { name: /^Change state/ })).toHaveCount(0);
+    const input = page.getByRole("combobox");
+    await input.fill("needle");
+    await expect(page.locator(`[role="option"][data-value="issue-${own.id}"]`)).toBeVisible();
+    await expect(page.locator(`[role="option"][data-value="issue-${hidden.id}"]`)).toHaveCount(0);
+    await input.fill(`WEB-${hidden.sequence_id}`);
+    await expect(page.getByRole("option", { name: /^No results found/ })).toBeVisible();
+    await expectListPageQuiet(page, watch);
+  });
+}

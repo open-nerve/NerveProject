@@ -147,14 +147,14 @@ make e2e
 
 ## Task 10：原生命令搜索与本地项目结果（约 850–1450 行）
 
-**Files：** spec T10；新 C/components/power-k/ui/modal/search-menu.test.tsx；既有 C/hooks/use-issue-search.test.tsx；search-results-map.tsx 改明确原生展示或删除无读者部分；E/stories/issue/i18-search.spec.ts。
+**Files：** spec T10；新 C/components/power-k/ui/modal/search-menu.test.tsx；既有 C/hooks/use-issue-search.test.tsx；search-results-map.tsx 改明确原生展示或删除无读者部分；E/stories/issue/i18-search.spec.ts；新增 wrapper.test.tsx，复验修订 E/stories/smoke/s6-dialogs.spec.ts 与 I12 重开前置。
 **Interfaces：** useIssueSearch(root,slug,IssueSearchQuery,open)，ids/proof/loading/error/retry；IssueSearchService 返回 {data:Issue[]}；项目读取 knownProjectIds(workspace.id)/getProjectById 并排除 archived；目录用现有 PROJECTS/id/slug 会话键与 fetchProjects({id,slug}) 复用读取，面板打开才启用，不随q重复取。
 
-- [ ] Step 1：写 `scopeSwitchOmitsProjectAndDropsOldResultsImmediately`、`nativeSearchOrderSurvivesCommandFiltering`、`searchRefusalIsNotNoResults`、`localProjectsUseRouteWorkspace`；包含无q、中文/编号/序号/%/_/\\、同名不同项目、迟答/权限ABA。
-- [ ] Step 2：U core/components/power-k/ui/modal/search-menu.test.tsx core/hooks/use-issue-search.test.tsx；实际 cmdk 结果排序/过滤用页面补证；检查唯一 useIssueSearch debounce，无组件双重500ms。
-- [ ] Step 3：移除 search-menu 模块级 WorkspaceService，直接原生 Issue 与本地 Project 展示；project范围传project_id/workspace范围省略；显式 loading/error/retry，结果按服务端序，删除 M6/M7 六组旧结果映射。保留既有空输入命令模式。
-- [ ] Step 4：B stories/issue/i18-search.spec.ts --grep 'I18.*page'；M13 保留旧query结果，M14 workspace仍传project_id/重新cmdk过滤，使可见范围与顺序断言红，恢复；真实错误/重试只GET。串行 F。
-- [ ] Step 5：记录 A10；提交 `feat(M4/P15): 将命令搜索接入原生工作项与本地项目目录`。
+- [x] Step 1：写 `scopeSwitchOmitsProjectAndDropsOldResultsImmediately`、`nativeSearchOrderSurvivesCommandFiltering`、`searchRefusalIsNotNoResults`、`localProjectsUseRouteWorkspace`；包含无q、中文/编号/序号/%/_/\\、同名不同项目、迟答/权限ABA。
+- [x] Step 2：U core/components/power-k/ui/modal/search-menu.test.tsx core/hooks/use-issue-search.test.tsx；实际 cmdk 结果排序/过滤用页面补证；检查唯一 useIssueSearch debounce，无组件双重500ms。
+- [x] Step 3：移除 search-menu 模块级 WorkspaceService，直接原生 Issue 与本地 Project 展示；project范围传project_id/workspace范围省略；显式 loading/error/retry，结果按服务端序，删除 M6/M7 六组旧结果映射。保留既有空输入命令模式。
+- [x] Step 4：B stories/issue/i18-search.spec.ts --grep 'I18.*page'；M13 保留旧query结果，M14 workspace仍传project_id/重新cmdk过滤，使可见范围与顺序断言红，恢复；真实错误/重试只GET。串行 F。
+- [x] Step 5：记录 A10；提交 `feat(M4/P15): 将命令搜索接入原生工作项与本地项目目录`。
 
 ## Task 11：清理旧搜索合同与十三实例（约 300–650 行）
 
