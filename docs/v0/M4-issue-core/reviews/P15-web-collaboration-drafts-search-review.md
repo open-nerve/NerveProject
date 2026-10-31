@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-10-31。状态：预检通过，已授权连续实施；T1 完成，T2 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T4 完成，T5 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -106,3 +106,16 @@ CommentCard 将明确的 workspaceSlug/projectId 和目录 displayName 交给菜
 原始证据在 t3-*.json/log、m03-admin.patch/log、m04-ime.patch/log、m04-scope.patch/log、t3-mutations.json、t3-receipt.json。依赖构建时误并行 unit 造成零用例导入失败、初始共享属性函数尝试失败、默认空对象类型构建失败均保留，已修复并重新验证，不作为有效产品 RED/GREEN。T4 表情触发器的既有嵌套警告仍归 T4 收口；当前 A3 不宣称所有评论表情控件已验收。
 
 A3 与 T3 五步完成；继续 T4。
+
+
+### T4：两类表情回应与归档只读
+
+保留原生两个 reaction owner：工作项独立集合、评论 embedded reactions，没有新 GET 或 store。评论头部和底部共用一次发送锁；计数按钮与 picker 拆为兄弟，现有 Popover 只拥有一个触发 button，等待/归档经 fieldset 禁用实际计数按钮，事件处理也检查 disabled。归档仍展示原回应；具名评论头尾按钮同时带作者，中英文一致。实际选择器用既有本站 emojibase 与码点转换，CSP 未放宽。
+
+新增消费者测试修正最初误选外层按钮和 FakeNerve body 读取后，确认 **6 红/15 绿**：嵌套按钮、评论双击多发 POST、归档隐藏及工作项等待/只读未禁用。根因修复后，六文件 **55/55**（含评论与回应数据层、权限、输入回归）；m05-codepoints 误按 UTF-16 拆分，原始请求值断言 3 红；m05-owner 去本人条件，实际他人记录丢失断言 1 红。两次源码字节恢复一致，恢复后再次 **55/55**。
+
+真实 Chromium I11/C6 **6/6**（1 API、5 page）：管理员/作者评论回归，两类回应均在持有 DELETE 时保留计数且只发一次，确认后仅剩另一人的记录；终态工作项归档后两个回应仍可读而零写。选择器 Enter/Space 打开、实际 searchbox 和 gridcell 选择组合表情、Escape 回焦；两个 POST 请求体均为 `128105-8205-128187`；资源含本站 `/assets/emojibase/15.3.2/en/data.json`，无第三方请求/CSP/控制台错误或新增豁免。评论单元另验证带肤色组合 `128105-127997-8205-128187`、403/409 不变计数和重试。
+
+首轮页面使用不存在的 common.search 键，已改既有 search；后续测试修正为等待确认后入口可用再按 Space，以及创建 Done 状态满足原归档前置，不改产品业务。全页无嵌套断言还发现 3 处既有顶栏/项目切换嵌套，T4 限定评论/回应实际拥有的控件，三处仍留最终范围核对，不宣称全应用清零。两条新测试循环 lint 告警已改为独立 Promise.all。
+
+最终产品/测试输入 `e0290810a5795fda82b0229d2f5df13deb00544a5021b3c6aa511661209a8348`；程序 `bc29a3901f4d6be0b6663e8db851bf230981dd5483711a54a43a3f1d326b3e4c`。Web/E2E 类型与 7 文件 oxlint 零告警通过；原始运行、失败、变异及恢复见 t4-*.json、m05-* 和 t4-receipt.json。A4 与 T4 五步完成，T5 接续完整七门禁检查点；尚未做阶段整审或合并。

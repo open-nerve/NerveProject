@@ -7,7 +7,7 @@
 import type { IssueComment } from "@nerve/api-client";
 
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useLocation } from "react-router";
 // nerve imports
@@ -23,7 +23,8 @@ import { LiteTextEditor } from "@/components/editor/lite-text";
 // local imports
 import { CommentReactions } from "../comment-reaction";
 import { CommentCardEditForm } from "./edit-form";
-import { EmojiReactionButton, EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
+import { EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
+import { ReactionOutline } from "@makeplane/propel/icons";
 import { useMember } from "@/hooks/store/use-member";
 
 export type TCommentCardDisplayProps = {
@@ -58,6 +59,8 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
   const [highlightClassName, setHighlightClassName] = useState("");
   // state
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [reactionPending, setReactionPending] = useState(false);
+  const reacting = useRef(false);
   // store hooks
   const { getUserDetails } = useMember();
   // derived values
@@ -91,16 +94,18 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
     return () => clearTimeout(timeout);
   }, [isHashMatch]);
 
-  const handleEmojiSelect = useCallback(
-    (emoji: string) => {
-      if (!userReactions) return;
-      // emoji is already in decimal string format from EmojiReactionPicker
-      void activityOperations.react(comment.id, emoji, userReactions);
-    },
-    [activityOperations, comment.id, userReactions]
-  );
-
-  const shouldRenderReactions = hasReactions && !disabled;
+  const handleEmojiSelect = async (emoji: string) => {
+    if (disabled || reacting.current || !userReactions) return;
+    reacting.current = true;
+    setReactionPending(true);
+    try {
+      // One lock covers the header picker and the footer. Operations own scope and refusal feedback.
+      await activityOperations.react(comment.id, emoji, userReactions);
+    } finally {
+      reacting.current = false;
+      setReactionPending(false);
+    }
+  };
 
   return (
     <div className="relative flex flex-col gap-2">
@@ -128,13 +133,15 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
             <EmojiReactionPicker
               isOpen={isPickerOpen}
               handleToggle={setIsPickerOpen}
-              onChange={handleEmojiSelect}
-              disabled={disabled}
+              onChange={(value) => void handleEmojiSelect(value)}
+              disabled={reactionPending}
+              searchPlaceholder={t("search")}
+              buttonClassName="inline-flex size-6 items-center justify-center rounded hover:bg-layer-1"
               label={
-                <EmojiReactionButton
-                  onAddReaction={() => setIsPickerOpen(true)}
-                  aria-label={t("aria_labels.add_reaction")}
-                />
+                <>
+                  <ReactionOutline aria-hidden="true" className="size-4" />
+                  <span className="sr-only">{t("aria_labels.comment_add_reaction", { name: displayName })}</span>
+                </>
               }
               placement="bottom-start"
             />
@@ -169,8 +176,15 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
             }}
             parentClassName="border-none"
           />
-          {shouldRenderReactions && (
-            <CommentReactions comment={comment} disabled={disabled} activityOperations={activityOperations} />
+          {hasReactions && (
+            <CommentReactions
+              comment={comment}
+              disabled={disabled}
+              pending={reactionPending}
+              displayName={displayName}
+              onReact={handleEmojiSelect}
+              activityOperations={activityOperations}
+            />
           )}
         </>
       )}

@@ -3,6 +3,8 @@ import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { expectListPageQuiet, issueListProject } from "../../fixtures/issue-list-page";
 import { createIssue, updateIssue } from "../../fixtures/issues";
 import { expect, test } from "../../fixtures/test";
+import { shownNameOf } from "../../fixtures/auth";
+import { sentHeld } from "../../fixtures/settings-pages";
 
 test("C6: activity filters keep one choice, support Enter and Space, persist sorting and return focus on Escape", async ({
   api,
@@ -58,5 +60,58 @@ test("C6: activity filters keep one choice, support Enter and Space, persist sor
   await expect(filter).toBeFocused();
   await sort.press("Enter");
   await expect.poll(commentOrder).toEqual([`comment-${first.id}`, `comment-${last.id}`]);
+  await expectListPageQuiet(page, watch);
+});
+
+test("C6: reaction picker has one named button, keyboard focus returns on Escape, and combined emoji data stays on this origin", async ({
+  api,
+  page,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Emoji controls" });
+  const comment = await createIssueComment(api, seed.member.token, issue.id, "<p>Discuss emoji</p>");
+  const watch = await openIssueDetail(page, seed, issue);
+  const row = page.locator(`[id="comment-${comment.id}"]`);
+  const name = `Add reaction to ${shownNameOf(seed.member.email)}’s comment`;
+  const header = row.getByRole("button", { name, exact: true }).first();
+  await expect(header).toBeVisible();
+  await expect(row.locator("button button")).toHaveCount(0);
+  await header.press("Enter");
+  const search = page.getByRole("searchbox", { name: "Search", exact: true });
+  await expect(search).toBeFocused();
+  await search.press("Escape");
+  await expect(search).toHaveCount(0);
+  await expect(header).toBeFocused();
+  await header.press("Space");
+  await search.fill("woman technologist");
+  const choice = page.getByRole("gridcell", { name: "Woman technologist", exact: true });
+  await expect(choice).toBeVisible();
+  const code = "128105-8205-128187";
+  const path = `/api/v0/issue-comments/${comment.id}/reactions`;
+  const held = await sentHeld(page, "POST", path, () => choice.press("Enter"));
+  expect(held.body).toEqual({ reaction: code });
+  await expect(header).toBeDisabled();
+  await expect(row.getByRole("button", { name: /👩‍💻/ })).toHaveCount(0);
+  expect((await held.release()).status()).toBe(201);
+  await expect(row.getByRole("button", { name: "👩‍💻 1", exact: true })).toBeVisible();
+  await expect(row.getByRole("button", { name, exact: true })).toHaveCount(2);
+  const footer = row.getByRole("button", { name, exact: true }).last();
+  await expect(footer).toBeEnabled();
+  await footer.press("Space");
+  await expect(search).toBeFocused();
+  await search.press("Escape");
+  await expect(footer).toBeFocused();
+  const issueAdd = page.getByRole("button", { name: "Add reaction", exact: true });
+  await expect(issueAdd.locator("button")).toHaveCount(0);
+  await issueAdd.press("Enter");
+  await search.fill("woman technologist");
+  const issuePath = `/api/v0/issues/${issue.id}/reactions`;
+  const issueHeld = await sentHeld(page, "POST", issuePath, () => choice.press("Space"));
+  expect(issueHeld.body).toEqual({ reaction: code });
+  expect((await issueHeld.release()).status()).toBe(201);
+  await expect(page.getByRole("button", { name: "👩‍💻 1", exact: true })).toHaveCount(2);
+  expect(watch.requestUrls.some((url) => new URL(url).pathname === "/assets/emojibase/15.3.2/en/data.json")).toBe(true);
+  expect(watch.apiRequests.filter((request) => request === `POST ${path}`)).toHaveLength(1);
+  expect(watch.apiRequests.filter((request) => request === `POST ${issuePath}`)).toHaveLength(1);
   await expectListPageQuiet(page, watch);
 });

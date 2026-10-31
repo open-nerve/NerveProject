@@ -84,11 +84,11 @@ make e2e
 **Files：** spec T4；既有 C/components/issues/issue-detail/reactions/issue.test.tsx、C/store/issue/issue-details/reaction.store.test.ts；新 C/components/comments/reaction.test.tsx；I11 页面/C6 表情。
 **Interfaces：** 沿 create/removeReaction、create/removeCommentReaction，码点十进制串；评论数据只从 embedded reactions 派生，不能加假的 GET。
 
-- [ ] Step 1：写 `removesOnlyMineAfterConfirmation`、`keepsCountsOnConflictOrRefusal`、`combinedEmojiIsOneReaction`、`archivedKeepsReadOnlyReactions`；按作者命名评论两处触发按钮。
-- [ ] Step 2：U core/components/issues/issue-detail/reactions/issue.test.tsx core/components/comments/reaction.test.tsx core/store/issue/issue-details/reaction.store.test.ts；持有请求检查双击/发前不增计数。
-- [ ] Step 3：补局部 pending/disabled/owner/命名缺口，归档仍显示已有回应且零写；用现有 picker/本站数据，不改 CSP 或组件数据协议。
-- [ ] Step 4：B stories/issue/i11-comments-reactions.spec.ts --grep 'I11.*page' 和 C6 picker；M05 删除本人判断或拆错组合码点，断言他人反应保留/原始请求码点失败，恢复；记录 Network 无 CDN、CSP 零违规。
-- [ ] Step 5：记录 A4；提交 `feat(M4/P15): 完成两类表情回应与归档只读验证`。
+- [x] Step 1：写 `removesOnlyMineAfterConfirmation`、`keepsCountsOnConflictOrRefusal`、`combinedEmojiIsOneReaction`、`archivedKeepsReadOnlyReactions`；按作者命名评论两处触发按钮。
+- [x] Step 2：U core/components/issues/issue-detail/reactions/issue.test.tsx core/components/comments/reaction.test.tsx core/store/issue/issue-details/reaction.store.test.ts；持有请求检查双击/发前不增计数。
+- [x] Step 3：补局部 pending/disabled/owner/命名缺口，归档仍显示已有回应且零写；用现有 picker/本站数据，不改 CSP 或组件数据协议。
+- [x] Step 4：B stories/issue/i11-comments-reactions.spec.ts --grep 'I11.*page' 和 C6 picker；M05 删除本人判断或拆错组合码点，断言他人反应保留/原始请求码点失败，恢复；记录 Network 无 CDN、CSP 零违规。
+- [x] Step 5：记录 A4；提交 `feat(M4/P15): 完成两类表情回应与归档只读验证`。
 
 ## Task 5：描述历史、还原与 Markdown（约 600–1100 行）
 

@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import type { User } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
+import { ReactionOutline } from "@makeplane/propel/icons";
 import { stringToEmoji } from "@nerve/propel/emoji-icon-picker";
 import { EmojiReactionGroup, EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
 import type { EmojiReactionType } from "@nerve/propel/emoji-reaction";
@@ -88,24 +89,31 @@ const IssueReactionContent = observer(function IssueReactionContent(props: Issue
         issueId={issueId}
         retry={() => reaction.retry(workspaceSlug, projectId, issueId)}
       />
-      <EmojiReactionPicker
-        isOpen={isPickerOpen}
-        handleToggle={setIsPickerOpen}
-        onChange={(value) => void react(value)}
-        disabled={disabled || pending}
-        label={
-          <EmojiReactionGroup
-            reactions={reactions}
-            onReactionClick={(emoji) => void react(Array.from(emoji, (char) => char.codePointAt(0)).join("-"))}
-            showAddButton={!disabled}
-            onAddReaction={() => {
-              if (!pending) setIsPickerOpen(true);
-            }}
-            addReactionLabel={t("aria_labels.add_reaction")}
+      <fieldset disabled={disabled || pending} className="flex min-w-0 items-center gap-2">
+        <EmojiReactionGroup
+          reactions={reactions}
+          onReactionClick={(emoji) => void react(Array.from(emoji, (char) => char.codePointAt(0)).join("-"))}
+          showAddButton={false}
+          addReactionLabel={t("aria_labels.add_reaction")}
+        />
+        {!disabled && (
+          <EmojiReactionPicker
+            isOpen={isPickerOpen}
+            handleToggle={setIsPickerOpen}
+            onChange={(value) => void react(value)}
+            disabled={disabled || pending}
+            searchPlaceholder={t("search")}
+            buttonClassName="inline-flex size-6 items-center justify-center rounded hover:bg-layer-1"
+            label={
+              <>
+                <ReactionOutline aria-hidden="true" className="size-4" />
+                <span className="sr-only">{t("aria_labels.add_reaction")}</span>
+              </>
+            }
+            placement="bottom-start"
           />
-        }
-        placement="bottom-start"
-      />
+        )}
+      </fieldset>
     </div>
   );
 });

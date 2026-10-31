@@ -8,7 +8,7 @@ import {
   createIssueComment,
   createIssueReaction,
 } from "../../fixtures/comments";
-import { createIssue } from "../../fixtures/issues";
+import { createIssue, issueArchived } from "../../fixtures/issues";
 import { expect, test } from "../../fixtures/test";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { expectListPageQuiet, issueListProject } from "../../fixtures/issue-list-page";
@@ -232,5 +232,69 @@ test("I11 (page): a named comment menu lets a project administrator delete anoth
   await expect(row).toHaveCount(0);
   expect(watch.apiRequests.filter((request) => request === `DELETE ${path}`)).toHaveLength(1);
   expect((await commentPage(api, author.token, issue.id)).data).toEqual([]);
+  await expectListPageQuiet(page, watch);
+});
+
+test("I11 (page): both reactions remove only the current actor after confirmation and remain visible without writes when archived", async ({
+  api,
+  page,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const other = await newAccount(api, info, "reaction-other");
+  await inviteAndAccept(api, seed.member.token, seed.slug, other, 15);
+  await addProjectMembers(api, seed.member.token, seed.project.id, [{ member_id: other.id, role: 15 }]);
+  const issue = await createIssue(api, seed.member.token, seed.project.id, {
+    name: "Confirmed reactions",
+    state_id: seed.states.Done,
+  });
+  const comment = await createIssueComment(api, other.token, issue.id, "<p>Other person's comment</p>");
+  await Promise.all(
+    [seed.member, other].flatMap((who) => [
+      createIssueReaction(api, who.token, issue.id),
+      createCommentReaction(api, who.token, comment.id),
+    ])
+  );
+  const watch = await openIssueDetail(page, seed, issue);
+  const row = page.locator(`[id="comment-${comment.id}"]`);
+  const commentReaction = row.getByRole("button", { name: "👍 2", exact: true });
+  const issueGroup = page.getByRole("button", { name: "Add reaction", exact: true }).locator("..");
+  const issueReaction = issueGroup.getByRole("button", { name: "👍 2", exact: true });
+  await expect(commentReaction).toBeVisible();
+  await expect(row.locator("button button")).toHaveCount(0);
+  await expect(issueGroup.locator("button button")).toHaveCount(0);
+  await expect(issueReaction.locator("xpath=ancestor::button")).toHaveCount(0);
+  const removeComment = `/api/v0/issue-comments/${comment.id}/reactions/128077`;
+  const held = await sentHeld(page, "DELETE", removeComment, () => commentReaction.dblclick());
+  await expect(commentReaction).toBeDisabled();
+  await expect(commentReaction).toHaveText("👍2");
+  await expect(page.getByRole("searchbox", { name: "Search", exact: true })).toHaveCount(0);
+  expect((await held.release()).status()).toBe(204);
+  await expect(row.getByRole("button", { name: "👍 1", exact: true })).toBeEnabled();
+  expect(
+    (await commentPage(api, seed.member.token, issue.id)).data[0]?.reactions.map((reaction) => reaction.actor_id)
+  ).toEqual([other.id]);
+  const removeIssue = `/api/v0/issues/${issue.id}/reactions/128077`;
+  const issueHeld = await sentHeld(page, "DELETE", removeIssue, () => issueReaction.dblclick());
+  await expect(issueReaction).toBeDisabled();
+  expect((await issueHeld.release()).status()).toBe(204);
+  await expect(page.getByRole("button", { name: "👍 1", exact: true })).toHaveCount(2);
+  const remaining = await api.GET("/api/v0/issues/{issue_id}/reactions", {
+    params: { path: { issue_id: issue.id } },
+    headers: bearer(seed.member.token),
+  });
+  expect(remaining.data?.data.map((reaction) => reaction.actor_id)).toEqual([other.id]);
+  expect(watch.apiRequests.filter((request) => request === `DELETE ${removeIssue}`)).toHaveLength(1);
+  expect(watch.apiRequests.filter((request) => request === `DELETE ${removeComment}`)).toHaveLength(1);
+  expect(await issueArchived(api, seed.member.token, issue.id)).toMatchObject({ status: 200 });
+  await page.reload();
+  const archivedReactions = page.getByRole("button", { name: "👍 1", exact: true });
+  await expect(archivedReactions).toHaveCount(2);
+  await expect(archivedReactions.nth(0)).toBeDisabled();
+  await expect(archivedReactions.nth(1)).toBeDisabled();
+  await expect(page.getByRole("button", { name: /^Add reaction/ })).toHaveCount(0);
+  const writes = watch.apiRequests.filter((request) => !request.startsWith("GET "));
+  await archivedReactions.nth(0).dispatchEvent("click");
+  await archivedReactions.nth(1).dispatchEvent("click");
+  expect(watch.apiRequests.filter((request) => !request.startsWith("GET "))).toEqual(writes);
   await expectListPageQuiet(page, watch);
 });
