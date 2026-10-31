@@ -91,3 +91,9 @@ viewId收窄归P13，创建/编辑弹窗isMigrationUpdate及撤销/重做归P14�
 typed profile view 已从路由收窄并向下传递，web 中 as TProfileViews 零命中；非法段不发请求、三关系真实页面与 M18 变异检出。按原附录脚本清理修改范围真死代码，64→45候选（19文件）均具名列出实际读者，117个实际TS/TSX文件零oxlint；web cap121→114、constants1→0。候选不是全仓零dead。创建/编辑弹窗isMigrationUpdate、全仓no-shadow与最终dead仍归P14/P16，本交接顶层仍open。
 
 证据：[P13阶段验收](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)及[集成回执§15](../reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31)。P13 已以 --no-ff 合并 main 8bb4bbcb，准确 main CI 41163365163 attempt2 全绿；归档逐 hash 复验与分支/worktree 清理完成。本输入顶层仍 open，M4 总交接不提前关闭。
+
+## P14 最终接收记录（2026-10-31，子项完成）
+
+issue/draft 两类表单迁移与真实编辑已区分；五处零生产 getMarkdown 读者的扩展序列化删除，14 组 HTML/恶意属性/真实编辑器安全 fixture 保留。原始 deadsym 逐项查读者，最终改动范围 115 候选/26 文件已裁定，真死分支及五个本地类型 export 已删；13 个公开 ref 合同成员保持兼容，不能称全局 dead 已清零，P16/no-shadow 终态仍待后段。
+
+共同证据：[阶段 review §9–14](../reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[三浏览器逐条矩阵](../reviews/P14-browser-matrix.md)与[整审 re-21](../../../reviews/re-21-M4P14整体审核.md)。产品 e0ee0ff7，本地七项分层门禁、默认 E2E 238/238、三引擎各44/44；最终文稿 CI 按后置回执。顶层 status 仍 open，真正 M4 收尾再按完整关闭条件统一关闭。

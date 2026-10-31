@@ -258,7 +258,7 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 
 ## 四、行为差异
 
-**M4/P14 创建与编辑表单**：沿现有表单和原生命令，描述自动补块 ID 只更新提交基线，不单独标记用户修改；有真实编辑时保留修改，普通工作项纯迁移显式保存才带 boolean skip_activity。字段反馈与拒绝后焦点统一走 FieldError/useRefusedFocus，创建请求中的空状态省略，交给服务端默认值。创建命令补设计要求的 c 快捷键，仍支持既有 ni；确认提示链接展示服务端编号。T5 保留 Plane 的 dirty→保存草稿确认流程，但将按钮、外点和 Escape 交给同一就绪/写锁/dirty 决策，删除描述编辑器的 document Escape，避免一键关闭两层；提示改为 ModalTitle 和双语文案。真实嵌套 Dialog 和 C4 页面验证焦点、背景隔离、退出动画、日期/标签 portal。无新增协议或全局 owner；三浏览器仍待 T16。
+**M4/P14 创建与编辑表单**：沿现有表单和原生命令，描述自动补块 ID 只更新提交基线，不单独标记用户修改；有真实编辑时保留修改，普通工作项纯迁移显式保存才带 boolean skip_activity。字段反馈与拒绝后焦点统一走 FieldError/useRefusedFocus，创建请求中的空状态省略，交给服务端默认值。创建命令补设计要求的 c 快捷键，仍支持既有 ni；确认提示链接展示服务端编号。T5 保留 Plane 的 dirty→保存草稿确认流程，但将按钮、外点和 Escape 交给同一就绪/写锁/dirty 决策，删除描述编辑器的 document Escape，避免一键关闭两层；提示改为 ModalTitle 和双语文案。真实嵌套 Dialog 和 C4 页面验证焦点、背景隔离、退出动画、日期/标签 portal。无新增协议或全局 owner；T16 三浏览器矩阵各 44/44 通过，含创建/嵌套/复制/权限等实际消费者。
 
 **M4/P14 父项（T6）**：Plane parent-issues-list-modal 的旧搜索/简要字段/正 tabIndex/悬停链接改为原生 Issue、已有 useIssueSearch 的权限证明与目录显示；新建无 id 不发 for，已有项由服务端 for=parent 排除所有后代。创建、详情及收集箱共用调用一致迁移，Promise 确认后才关闭；展示编号不再是 disabled button。I8/C4 页面核两已有/一新子项、进度、移动/解除、两层后代排除和内层 Escape，计数/动态均以真实服务端确认。M7 自身业务仍归 M7。
 
@@ -443,3 +443,5 @@ Plane `P/app/urls/search.py:12–25`的workspace `search/` 与project `search-is
 Plane已有活links计数：`P/db/models/issue.py:371–381`的IssueLink普通metadata，默认manager `P/db/mixins.py:56–67`排deleted_at；`P/app/views/issue/base.py:130–133,234–239`数id，无作者或metadata.error谓词；`P/app/serializers/issue.py:738–749,780–813`部分serializer公开IntegerField link_count。本项目沿用活数语义，要求每个Issue/Detail非负int64、零显式返回。base.py按issue聚合Subquery未Coalesce，而sub_issue.py:52–62明确Coalesce0，只能说明源码形式不统一，未实测断言全部响应为NULL。
 
 Plane `P/utils/order_queryset.py:18–33,153–157`当前排序allowlist无link_count；Nerve保留P5原19码、新增±link_count成当前21，全平铺/分组/子组/成员/偏好共用词汇及整数/numeric游标。不加link_count筛选、不复制派生列到issues；metadata/URL/title更新不改数量。跨请求链接变化仍是弱快照边界，后续生产前端比较器/页面由P10b–P15接手。
+
+**M4/P14 整审收口（T16）**：延迟实现尚未挂载不阻止创建窗取消；已挂载明确 busy 仍保护，Save to Drafts/普通提交均要求 ready，保留 dirty 确认，不扩草稿协议。删除已无读者的删除弹窗 dataId 回退、收集箱恒 false 的 isVisible 分支及五个文件内类型 export；公开 editor ref 维持设计兼容。默认 E2E 238/238 与 Chromium/Firefox/WebKit 各44项通过；测试按实际引擎输入/键盘/拦截能力准备，不隐藏 console warning。M7 自身关闭策略的慢加载限制与 P15 剩余复制明确交接，未冒称全站验收。见 [P14 review](M4-issue-core/reviews/P14-web-issue-detail-review.md#9-最终验收映射)。

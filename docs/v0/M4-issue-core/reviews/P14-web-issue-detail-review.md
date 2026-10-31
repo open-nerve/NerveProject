@@ -1,6 +1,6 @@
-# M4/P14 详情与弹窗：准备与预检记录
+# M4/P14 详情与弹窗：实施、整审与交付记录
 
-日期：2026-10-31。状态：**已授权实施，逐任务推进中**。基线 `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；[spec](../specs/P14-web-issue-detail.md)、[plan](../plans/P14-web-issue-detail.md)、[文档预检](../../../reviews/re-20-M4P14预检审核.md)。§1–7 保留文档预检时点，实施结果从 §8 续记；A 条款待完整证据再勾选。phase 已进入 M4/P14。
+日期：2026-10-31。状态：**实现、本地验收及整审修复完成，最终分支 CI 以后置交付门核准；先不合并**。基线 `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；[spec](../specs/P14-web-issue-detail.md)、[plan](../plans/P14-web-issue-detail.md)、[文档预检](../../../reviews/re-20-M4P14预检审核.md)。§1–7（含“未实施”表）仅保留预检历史；§8 是逐任务历史，最终状态以 §9–14 为准。phase 已进入 M4/P14。
 
 ## 1. 前置与方法
 
@@ -239,7 +239,15 @@ I20 两页通过实际 API 先创建再降级，普通访客与管理员兼访�
 
 S2 三页明确公开项目的成员 200、访客隐藏项 404、项目非成员 403，只精确放行对应拒绝。I22 真实 POST 先经 route.fetch 到 nerve 并由 DB 确认旧写者，再由第二标签页实际退出/登录另一账号，第一标签页切换工作区并打开新表单后放回旧 201；输入、地址、新账号可见数据保持，无旧成功提示，只有一次 POST。另页 Back 覆盖跨工作区、项目、工作项的创建/删除/链接/peek，Forward 不恢复旧弹层，零业务写。t14-pages-fixed 7/7 Chromium，类型、五文件 lint 0/0、格式/diff 通过；A1/A13 功能已勾，显式三浏览器与最终完整 F 仍归 T16。
 
-### T16 收尾验证（进行中）
+### T15 六处复制反馈
+
+编号、详情页头、链接行、关联 helper、子项 helper、peek 页头统一复用既有 useCopyText/useCopyLink；hook 等到浏览器实际完成才报告成功，拒绝给本地化错误。关联和子项 copyLink 类型及消费者改为 Promise<void>，没有新增复制协议。编号只复制文本；peek（包括已归档项）复制当前 origin 的原生编号地址，移除只用于旧归档路由的 isArchived 参数及零读者类型导出。链接/关系/子项的交互按钮带行名字，键盘打开菜单和执行复制不会触发行跳转。
+
+detail-copy 的七个真实消费者场景（六入口加归档 peek）各持有、成功或拒绝 clipboard Promise，调用真实组件及 hook。初次 t15-copy-red 为 11 项行为失败与 5 项未处理拒绝；修复后聚焦 19/19、受影响七文件 68/68。M23 暂时去掉共用 hook 的 await，实际链接消费者的等待与拒绝断言两项变红，另捕获一项未处理拒绝；字节恢复后 68/68。测试不以 mock toast 调用替代真实消费者。新 C4 六页从 HTTP 服务加载，受控浏览器拒绝，键盘操作后一次错误、零成功、零业务写、地址不变，连同原三项 C4 共 9/9。首次子项页的定位误用了关系菜单文案，改为真实“Copy work item link”，没有修改产品来迁就测试。
+
+定点删除六个 copy-hook 例外，关键词守卫 76 规则/17 例外零命中；类型、翻译键、12 个实际 TS 文件 oxlint 0/0 与格式/diff 通过。剩余四处仍归 M4/P15：`issues/create-issue-toast-action-items.tsx`、`issues/issue-detail/issue-activity/helper.tsx`、`issues/issue-layouts/quick-action-dropdowns/helper.tsx`、`power-k/ui/pages/context-based/work-item/commands.ts`。M2 §11 的历史六处与本段六处不完全同组，时间线和布局 helper 尚未关闭；M2/M3 顶层交接保持 open。三浏览器和 T13 CI 字体夹具修正留 T16。
+
+### T16 收尾验证与失败诊断历史
 
 T13 CI 的未捕获异常来自本段 fake-form 夹具保持真实项目下拉框时，也挂载了装饰 Logo 的浏览器字体检测。该第三方 hook 在 jsdom 使用 Node 定时器，卸载不取消加载；环境销毁后仍访问 document。临时诊断在真实表单打开时跟踪该库建立的定时器，原夹具确实启动外部字体轮询（t16-font-red），仅隔离装饰 Logo 后为零（t16-font-green）。两个探针均运行后字节恢复，不提交诊断断言，也不计入产品变异。项目选择器、表单、ModalCore 与关闭策略保持真实，浏览器 I1/C4 保留真实 Logo；不改第三方库、不吞异常或增加等待。六个表单文件 46/46、实际分支 166 个 TS/JS 文件 oxlint 0/0；完整门禁与新 CI 尚待运行。
 
@@ -266,10 +274,113 @@ T13 CI 的未捕获异常来自本段 fake-form 夹具保持真实项目下拉�
 
 上述定向复验完成，最终完整 F/三浏览器与最终分支 CI 仍待本次准确输入运行，不以诊断探针的通过代替阶段门禁。
 
-### T15 六处复制反馈
+## 9. 最终验收映射
 
-编号、详情页头、链接行、关联 helper、子项 helper、peek 页头统一复用既有 useCopyText/useCopyLink；hook 等到浏览器实际完成才报告成功，拒绝给本地化错误。关联和子项 copyLink 类型及消费者改为 Promise<void>，没有新增复制协议。编号只复制文本；peek（包括已归档项）复制当前 origin 的原生编号地址，移除只用于旧归档路由的 isArchived 参数及零读者类型导出。链接/关系/子项的交互按钮带行名字，键盘打开菜单和执行复制不会触发行跳转。
+最终产品输入 `e0ee0ff7e75ae4c2234f9c214fdbc91ed7a12de4`。以下是产品完成事实；最终文稿的远端提交和 CI 单列 §14，不能用旧 CI 替代。
 
-detail-copy 的七个真实消费者场景（六入口加归档 peek）各持有、成功或拒绝 clipboard Promise，调用真实组件及 hook。初次 t15-copy-red 为 11 项行为失败与 5 项未处理拒绝；修复后聚焦 19/19、受影响七文件 68/68。M23 暂时去掉共用 hook 的 await，实际链接消费者的等待与拒绝断言两项变红，另捕获一项未处理拒绝；字节恢复后 68/68。测试不以 mock toast 调用替代真实消费者。新 C4 六页从 HTTP 服务加载，受控浏览器拒绝，键盘操作后一次错误、零成功、零业务写、地址不变，连同原三项 C4 共 9/9。首次子项页的定位误用了关系菜单文案，改为真实“Copy work item link”，没有修改产品来迁就测试。
+| 条款 | 最终证据 |
+|---|---|
+| A1 | T1 共同路由身份、T14 owner/session；矩阵 15–16、36–37，I22 实际旧 POST 先落库再跨标签换账号 |
+| A2 | T2 字段拒绝/聚焦与七类属性，T6 父项；矩阵 33、40 |
+| A3 | T3 同轮 undo→redo、boolean migration；T4 issue/draft dirty；矩阵 32 的实际 PATCH/审计精度 |
+| A4 | T4 创建/编辑、默认状态/c 命令、FieldError、busy；矩阵 7、29 |
+| A5 | T5/T6 内层 Escape/Tab/portal；整审慢加载取消和 Save to Drafts readiness；矩阵 7–9、11–14 |
+| A6 | T6 原生父项所有读者、后代排除/移动/解除/部分确认；矩阵 8–9、40，M09/M10 |
+| A7 | T7 原生关系/查重/反向/对端权限；矩阵 41，M11/M12；M7 自身业务仍未验收 |
+| A8 | T8 URL、真实 worker 元数据/data favicon、有界 GET/晚答；矩阵 3、30，M13/M14 |
+| A9 | T9 子树/必需 onSubmit、拒绝和删除后的路由跟进；矩阵 31，M15 |
+| A10 | T10 lazy rich/lite/toolbar、设置边界、删除 Canvas/警告豁免；矩阵 10–17，M16/M17 |
+| A11 | T11 原生 callout、五个死 serializer、14 组安全 fixture 保留、worker/CSP；矩阵 18，M18 |
+| A12 | T12 M4 image/upload/附件/关注边界与 T13 原生计数地址；矩阵 19–20、38–39，M19/M20 |
+| A13 | T14 OwnOnly/admin兼guest/公开项目非成员、真实换会话与 Back；矩阵 34–37、42–44，M21/M22 |
+| A14 | T15 六处真实复制消费者等待/成功/拒绝、原生地址/键盘，六例外删除；矩阵 1–6，M23 |
+| A15 | §10 七项分层门禁、三浏览器各 44/44；§11 有效变异 23 项、逐项 dead 与改动文件 lint |
+| A16 | §12 整分支审查及作者增量复审、§13 交接边界、§14 最终文稿准确 CI 后置门；未合并 |
 
-定点删除六个 copy-hook 例外，关键词守卫 76 规则/17 例外零命中；类型、翻译键、12 个实际 TS 文件 oxlint 0/0 与格式/diff 通过。剩余四处仍归 M4/P15：`issues/create-issue-toast-action-items.tsx`、`issues/issue-detail/issue-activity/helper.tsx`、`issues/issue-layouts/quick-action-dropdowns/helper.tsx`、`power-k/ui/pages/context-based/work-item/commands.ts`。M2 §11 的历史六处与本段六处不完全同组，时间线和布局 helper 尚未关闭；M2/M3 顶层交接保持 open。三浏览器和 T13 CI 字体夹具修正留 T16。
+完整 test title/文件行号见 [P14-browser-matrix.md](P14-browser-matrix.md)。它覆盖 40 个业务页面和 4 个兼容夹具，不把夹具冒称业务页、不把默认 Firefox A4 两例冒称 P14 Firefox 验收。
+
+## 10. 最终本地门禁与浏览器
+
+实施原件统一在 worktree `.superpowers/sdd/P14-web-issue-detail/`；`run.py` 为每条命令保存 cwd、完整 argv、时间、HEAD、dirty diff/hash、退出码和 raw log hash。没有未提交产品输入混入最终门禁。
+
+| 门禁 | 准确输入及结果 |
+|---|---|
+| gen-check / lint-go / Go test | `09525b31` 的 `t16-final-*`，三项退出 0；Go `GOFLAGS=-p=1 make test` 无缓存，458.692 秒 |
+| Web lint | `e0ee0ff7` 的 `t16-delivery-lint-web`，54/54；关键词 76 条、17 例外、零命中，1284 翻译读取均有定义 |
+| knip | 同提交 `t16-delivery-knip`，退出 0，无新忽略 |
+| Web test | 同提交 `TURBO_FORCE=true make test-web`，18/18 任务、零缓存命中 |
+| build + 默认 E2E | 同提交 `make e2e`，238/238（Chromium 236、既有 Firefox A4 2），66.857 秒；默认报告 103 文件逐 hash 留存 |
+| 显式 P14 矩阵 | 同提交 `t16-final-matrix-{chromium,firefox,webkit}`，各 44/44，三引擎均零 skipped/unexpected/flaky |
+
+`t16-delivery-receipt.json` 集合七项真实回执；`t16-delivery-server-input-reuse.json` 证明 `09525b31..e0ee0ff7` 的 server、api、生成客户端、锁文件、Makefile、CI 和 tools 输入全无差异，因此前三项复用原始测试，不假称在最终 Web 提交重跑 Go。最后的文档提交只改 docs，仍须通过 §14 的远端准确最终 SHA CI。
+
+三引擎实际版本为 Chromium 153.0.8010.12、Firefox 155.0、WebKit 26.6，Playwright 1.63.0；矩阵报告与产物逐 hash 已封存。历史所有红灯仍保留，包括首轮矩阵、PNG/JSON 采集夹具问题及诊断失败，不以“最终绿”覆盖历史。
+
+## 11. 变异、dead 与守卫
+
+`t16-mutation-audit.json` 逐项收 M01–M23 的真实生产 diff、行为 RED、精确字节恢复与恢复 GREEN；23 种有效性质，超过本段至少 16 的门槛。M06 只计准确 migration-only 的红；M05 被真实 root 运行时拒绝、预期 PATCH 缺失是行为红。字体计时器探针、测试按钮/定位/数据准备错误、空任务调用都不计变异。
+
+按 M1 原 deadsym 脚本和锁定 TS 5.8.3，初始改动候选 118/28 文件，最终 115/26 文件。删除 `dataId` 回退、恒 false `isVisible` 分支、TS 的 `resanitized` 死声明，以及五个仅文件内类型的 export。JSON/Go 的真实二次清洗字段保留。`t16-dead-final-audit.json` 对 115 项逐条写真实 JSX/测试/动态键/框架读取或明确公共 ref 合同；公开 ref 13 项不是假装已有生产读者，遵守 spec 的兼容要求，P16 继续统一盘点。
+
+最终变更输入共 169 个 TS/TSX 文件。默认 root 配置实际 lint 167 个（零错误/警告）；两个 config.ts 属既有 ignorePatterns，另用规则完全相同、仅不排除路径的证据配置显式 lint 两个，仍零错误/警告。原配置与守卫没有修改；`t16-delivery-changed-lint.json`、`t16-delivery-config-lint.json` 记录实际执行数，不能把空扫描视为通过。全局警告上限只沿任务真实净减更新。
+
+## 12. deep-review 与修复闭环
+
+[正式整审 re-21](../../../reviews/re-21-M4P14整体审核.md)。唯一 fresh-context 审者对 `8bb4bbcb..9a0f32e4` 读取全部 195 个净变更文件（53,706 行）、129 个去重上下文文件，72 个业务文件按调用链分组，顺序执行逻辑、集成和覆盖三个视角。原报告与阅读清单：`final-review-independent.md`、`final-review-read-inventory.json`。
+
+确认的 Major 是 lazy import pending 时创建窗把空 editor ref 当作忙碌，阻塞 clean/dirty 的 Escape/Discard。四个真实 chunk 持有场景原实现 4/4 行为红，修复区分“未挂载”和“已挂载且忙碌”，其后发现新可达的 Save to Drafts 也须保留 readiness，已一并闭合；普通提交与 busy 保护未放松。真实页面及现有 import reject/error-boundary 单测均通过。Minor 的死分支和仅本地类型已清完，没有未处理的本段 Major/Minor。
+
+独立首轮之后的 `9a0f32e4..e0ee0ff7` 共 22 个文件由作者复审，补读新增的 link-page/package 完整文件，并对保留控制流、调用者、公共合同及全部修改正文复核；`t16-author-increment-review.json` 和 patch 绑定输入。后续测试准备修正、运行证据、最终文档均由作者负责，**不宣称独立审者已签署最终 HEAD**。没有确认需要新增权限 owner、改变 API/数据库/跨模块协议或放宽架构守卫的问题。
+
+## 13. 交接、实际决定与保留边界
+
+M1-P2、M1-P4、M1-closeout、M2-closeout、M3-closeout 各追加 P14 对应子项证据，顶层 status 均保持 open。M2 §8 的表情回应、§11 历史六处中未到 P14 的入口，M3 评论/历史/命令/草稿等仍归 P15；P14 的六处复制与 M2 原六处名单不是同一集合。
+
+保留边界明确如下：链接元数据最多 30 次/30 秒，需要时显式重读；目录未就绪时子项数不能跳转；公开 EditorRefApi 保持合同；测试的 DOM 控制符/合成 paste 不宣称系统权限覆盖；增量复审没有第二位审者。M7 收集箱在 lazy pending 期间 Discard 仍按既有 readiness 提示，外层 Escape 可退出，其关闭/草稿策略没有随共享 editor 迁移统一，已追加到 M7/M3-closeout 的 §5，不能称 M7 已完整验收。描述版本 Markdown 复制及四处剩余复制入口留 P15，M6/M7 自身业务遵守 P10a 裁定 A。
+
+全部实施裁定按台账原顺序见本文件附录；局部问题按负责人授权自行闭环。P16 的全局 dead/no-shadow、M4 设计 §14、总体设计 9.4、M5–M8 最终 M4-closeout 均留真正收尾，本期不提前勾成完成。
+
+## 14. 最终分支 CI、证据保留与交付门
+
+分支 `codex/m4-p14`，基线 main `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`。本地产品输入 `e0ee0ff7` 已通过上述门禁。较早产品 `beda23c1` 的 [CI 41188324547](https://github.com/open-nerve/NerveProject/actions/runs/41188324547) attempt 1 三任务成功，仅作为历史证据，不能代替本最终文稿的 CI。
+
+最终文稿提交之后使用系统 Git 推送，`final-delivery.json` 后置保存准确 HEAD、远端 HEAD、run/attempt、server/web/e2e 全成功、主目录仍 main 及产品输入未变证明。**该回执不存在或校验不通过时，A16/T16 和阶段交付门未通过；不得据本节预先宣称最终 CI 全绿。** 这是避免文档自指提交 SHA 的后置记录，与 P13 相同，不是降低准确提交门槛。
+
+准备原件在主目录 `.superpowers/sdd/P14-preparation-20261031/`；实施原件在本 worktree `.superpowers/sdd/P14-web-issue-detail/`，均保留。失败 trace/截图/数据库、日志、mutation、阅读清单和回执需在以后授权合并且 main CI 通过后一起复制、逐 hash 核对，再清理分支/worktree并复验。现在不合并、不清理、不启动 P15。
+
+## 附录：全部实际裁定（台账原顺序）
+
+1. 沿已批准 plan 内联执行，逐 Task 聚焦与受影响回归；T4/T9/T13/T16 才完整 F 后推送 — 遵循负责人检查点规则和避免无变化重跑 — 若有新失败或共享风险提前扩大相关验证。
+2. skill 的末尾删除 workspace 不适用，证据留到授权合并、main CI 和归档复验后 — 仓库明确保留证据 — 成本为工作树占用空间。
+3. 去重归自动保存当前 owner.value，移除描述渲染闭包判断；已有普通确认/失败/卸载机制不改。首次分立事件全绿不计缺陷红，同轮回调红和 M04 精确检出过时撤销写；M05 字符串被 root 运行时校验拦下，两个预期 PATCH 缺失而红，非编译红。均已字节恢复。
+4. 原生 Issue + 既有搜索 proof；只读编号 span 根因修嵌套，不改权限 owner；M7 仅共用读取适配。包构建和消费测试串行，避免 dist 清理竞态。
+5. 查重源是分诊项，只读 project_id/q 并保持 M7 void ID 通知，关系现有确认链只加回归；页面测试错误详见 review，不作产品红。
+6. URL trim 后服务端规范化，表单局部实例与同步锁；仅展开链接区当前 id+URL owner 调度有限 GET，普通回读不重开期限，原 resource 负责晚答确认。旧 URL 在途先结束再读新 URL，元数据终态/失败均不冒充业务失败；没有全局协调器、服务端或权限规则变化。复制留 T15。
+7. 编号页头生命周期使用路由证明的 projectId，不能以 canonical 实体存在作为动作 owner 的存活条件 — I17 删除成功后当前返回被误取消，真实 layout/header 测试同样检出 — 仍沿 useDetailScope 与共同 route key，换路由晚答不能导航，无全局 owner/协议修改。
+8. 现有编号读取由 layout 一处发起，经 Outlet context 供正文并给页头已证明 id — 页头原来独立看全局缓存，不是当前读取结果 — 代价是正文须在本路由 layout 内，真实嵌套路由测试已验证；没有新增业务缓存或权限 owner。
+9. 标题校验按后端 utf8.RuneCountInString 计 Unicode 字符，去 DOM maxlength 的 UTF-16 截断，保持 255 字符合同行为。保留原 useConfirmedAutosave/prepareSave，失败对象为既有 useRefusedFocus 的 attempt，无依赖/协议变化。
+10. label-select 正 tabIndex 已由 P12 消除，复验；双日期原子清空复用已有 inline-refusals range 与 I2 API，不添加镜像测试。父项与完整模态归既定 T6/T5，A2 留待父项闭合。提前建立 T16 的小型真实 detail 入口 fixture，避免误称 list helper。
+11. 描述回调转换为 load/migration/edit，resetField 仅替换未编辑描述的基线，已编辑描述保持 shouldDirty；标题等其他修改不清除 — 一个表单 owner 管理 dirty — 错误风险由 issue/draft 两种输入及混合编辑测试覆盖，不扩草稿协议。
+12. 创建边界省略空 state_id，既有命令补 c 并保留 ni，确认链接展示服务端编号 — 三处均 I1 真实页面复现、设计已要求 — 不新增监听器或协议；日期拆局部 Controller，不改变共享日期控件的默认行为。
+13. 聚焦回归通过后先提交产品，再在准确提交串行跑完整 F，F 完成前不推送 — 保证完整门禁有准确 tested SHA — 后续文档回执另记，不把脏树测试或文档提交冒称完整实测产品 SHA。
+14. 行内计数沿现有目录生成原生 Link，普通/归档同一 browse，无目录只显示计数 — 和 P12 表格合同一致且消除键盘及旧地址根因 — 目录尚未就绪时暂不可导航，组件和真实页面覆盖该边界；不改全局 URL helper 的其他读者。
+15. C2 布局漂移按组件内部缺陷修复 — 实际 lazy chunk 诊断证明按钮下移 48px、Popper 仍保留旧坐标；FiltersDropdown 的定位合同已存在，不改公开接口、领域消费者、权限根或依赖 — 代价是打开面板逐帧读一个矩形，以关闭/卸载释放、默认/自定义按钮和真实 C2/C10 回归覆盖。二次诊断证明宽泛 transition 还把定位 transform 缓动，因此动效仅保留 opacity/translate。原 C2 文件和几何 helper 未改。
+16. 现有权限/会话/owner 行为已满足本段，保持产品代码，补真实消费者与页面证据 — 60 项组件与 7 项页面通过；M21 删除确认故意保留旧 fake root，只改变会话，从消费者独立检出漏跟进保护 — 代价是它不替代真实会话根退役，另以 I22 实际两个标签页、真实 route.fetch 的已确认旧响应覆盖。
+17. 六个指定入口只复用既有复制 hook；归档 peek 也沿原生编号路由，去掉只驱动旧地址的参数和零读者导出 — 编号原生入口已支持归档且 spec 要求当前 origin 原生地址 — 若错会影响归档跳转，归档真实消费者复制值已覆盖，T16 核原生页面。
+18. 字体 CI 异常修在本段 fake-form 的外部浏览器装饰边界，只隔离 Logo，项目选择、表单和 ModalCore 保持真实 — fontfaceobserver 的 Node 轮询超出 jsdom 生命周期，真实浏览器终止文档会清理窗口定时器 — 代价是单测不检图标，I1/C4 页面仍使用真实 Logo；字体轮询探针原红改后绿并恢复，46/46 表单验证。
+19. 尚无编辑器实例不阻止取消，已建立实例明确忙碌仍阻止；提交继续要求实例就绪 — 延迟模块不能把用户困在创建窗，dirty 沿原草稿确认 — 若错可能损失编辑器未输出内容，故只允许 ref 为空且未建立编辑内容的情形，实际 chunk 持有及 busy 回归覆盖。
+20. 新矩阵通过 e2e/package.json 的 test:m4-detail 注册真实命令入口 — knip 正确指出原配置未被调用 — 不改忽略清单或依赖，和既有 filters/list 入口一致，成本仅增加命令名。
+21. 取消与保存分别判断 readiness，Save to Drafts 不绕过普通表单要求 — 新取消入口不能产生未就绪写入，沿同一局部组件检查，不扩 P15 草稿协议 — 代价是脚本未到达时只能保留输入或明确丢弃，不能保存草稿。
+22. 原脚本候选逐项查证后删除 dataId、恒 false 的 isVisible 分支、未读测试声明与五个零外部读取的 export — 满足已批准谁改谁清，未删真实 JSON/Go 安全字段 — 若读者盘点漏项会损失入口，已核全仓实际调用并由类型、既有消费者及完整 Web 门禁再核。
+23. 公开 EditorRefApi 按 spec §2.9 保持合同，即使部分方法当前无生产调用也不在本次破坏接口 — 明确的保持 ref 约束优先于自动候选，不冒称候选全为假阳性 — 成本为保留这些合同方法，P16/真正收尾再统一判定。
+24. 09525b31 已完整 F 通过；最后局部修复只改 Web/测试，前三项保留准确原回执并核 server/api/生成客户端/锁与构建配置无差异，后四项从新产品提交重跑 — 完整证据按实际输入分层，不伪称重跑 Go — 若输入证明不成立须重新跑对应门禁。
+25. 三浏览器输入使用同一真实非法字段和剪贴板对象，Mac Safari 采用系统 Option-Tab，预期 HTTP 拒绝按引擎精确匹配 — 首轮 trace/最小引擎探针证明原输入假设不同，业务和 DB/console 断言保持 — 代价是非法控制符由 DOM input 注入，不能冒称用户键盘可输入 NUL；粘贴仍是合成事件，不冒称系统剪贴板授权。
+26. 关系菜单先等真实折叠动画揭示行，再执行用户操作；C12 直接进入被测详情 — 原测试点中裁剪内容并自动滚动、或立即导航取消前页请求，均非本场景业务动作 — 若还有揭示完成后错位/丢点击，原几何/动作/零警告断言仍失败，快速加载跟随仍由 C10 保留。
+27. I2 的普通 JSON 请求用 request 事件观察，仅在实际拒绝阶段安装 route — WebKit 实际应用对照证实初始拦截引发多余 preload，观察器取得了完整真实 migration body — 代价是这个场景只适用于当前普通 JSON body，若以后改 streaming，完整 body 断言会失败，不能放空通过。
+28. 独立审查只覆盖 8bb4bbcb..9a0f32e4，后续修复、dead 与运行证据由作者负责复审 — 不把作者报告冒称独立签署，全部增量另记源码与门禁输入 — 代价是增量没有第二位审者，实际回归及全量门禁承担验证。
+29. M7 收集箱 pending 时 Discard 沿既有 readiness 提示，外层 Escape 仍可退出；不在 P14 改其独立关闭/草稿策略 — 已批准范围只迁共享读取与保持 editor ref，M7 自身未接通能力归 M7 — 代价为慢加载期间该按钮不可用，必须显式记录到 M7 交接，不能称 M7 完整关闭已验收。
+30. 描述版本 Markdown 复制与其余四处复制沿 P15 既定范围 — P14 六消费者已验证，保持公开 copyMarkdownToClipboard ref 不等于核完历史消费者提示 — 代价是那些既存复制反馈仍未收口，M2/M3 顶层 handoff 继续 open。
+31. M6/M7 自身业务不因共享 helper 已适配就提前验收，浏览器和最终构建事实只依准确产物 — 尊重 P10a 的 A 裁定和审查者只读边界 — 代价是领域自身端到端保证仍待各自里程碑，P14 不冒称全站完成。
+32. I2 Chromium 用精确 URL 的 fallback 拦截开启请求体采集，WebKit/Firefox 保持 request 观察；四个完整 body 断言不变 — 同应用 Chromium 对照证明无拦截 body=null、有拦截取得实际 JSON 且无 preload 警告；WebKit 先前对照相反 — 成本是仅采集层按浏览器分支，不更改真实业务请求或放宽警告。上一轮 Web F 236/238 的另一失败为 I10 API 仍使用旧 PNG CRC 期望，已同步已修正有效图片字节。
+
+没有以 deferred minor 名义搁置本段的局部缺陷；明确后续范围与未核验领域见 §13。

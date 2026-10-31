@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见§18：P12实现、本地验收及整审六项修复通过，按准确最终文稿HEAD CI后置回执核准交付；先不合并。§6–17为历史快照。**
+**当前接续点见 §22：P14 实现、本地验收和整审修复完成；准确最终文稿 CI 后置核准后交付，先不合并。§6–21 为历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -224,3 +224,11 @@ P14 分支 `codex/m4-p14`，worktree `.codex/worktress/codex/m4-p14`，基线为
 预检 5 项文稿问题均修订：编辑器工具栏运行时引入、P12 已有表格 browse 的实际剩余入口、复制 hook 的反馈归属、准确路径与旧服务最后读者、T5/T6 父项页面验收依赖。最后一项经独立定点回读确认闭合；没有待决架构问题。准备证据在主目录 `.superpowers/sdd/P14-preparation-20261031/`，未来须与实施证据一起归档。
 
 下一步等待负责人授权从 T1 实施；阶段结束须 deep-review、修复复审及准确分支 CI，先保留分支，不自动合并。M1/M2/M3 顶层 open、M4 §14/总体 §9.4 和 M5–M8 最终 closeout 继续留给 P16/收尾，不以本次准备提前关闭。
+
+## 22. P14 实施与整审收尾（2026-10-31）
+
+工作分支 `codex/m4-p14`，worktree `.codex/worktress/codex/m4-p14`；主目录保持 main `8bb4bbcb`。T1–T16 实现、本地七项分层门禁、默认 E2E 238 项及三引擎各 44 项均通过；整审的慢加载取消/保存保护与无读者清理已修复，测试准备问题已完整复验。
+
+产品提交 `e0ee0ff7`，正式 [re-21](../../reviews/re-21-M4P14整体审核.md)、[阶段 review §9–14](../M4-issue-core/reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[spec](../M4-issue-core/specs/P14-web-issue-detail.md)、[plan](../M4-issue-core/plans/P14-web-issue-detail.md)。最终文稿的 SHA/run/attempt/jobs 以实施根 `final-delivery.json` 后置核准，未核准不交付；旧产品 CI 不替代该门。
+
+负责人当前要求先不合并。保留分支、worktree、准备与实施两处证据；等下一步安排。以后获准合并仍用 --no-ff，main CI 全绿后归档逐 hash 验证并正常清理。P15 尚未准备/实施；它承接时间线、评论、表情、描述历史、完整草稿、搜索/命令面板、四处剩余复制及版本 Markdown 复制。M7 slow-loading Discard 的既存关闭策略已明确交接；M4 总验收及顶层输入仍未关闭。

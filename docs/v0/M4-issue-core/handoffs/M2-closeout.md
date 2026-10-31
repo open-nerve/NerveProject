@@ -225,3 +225,9 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 §10的四个CustomSearchSelect及defaultOpen已完成：添加/运算符/多选由真实C2业务页面验证，当前M4不生成single，single/multi×en/zh以生产组件浏览器夹具核加载/defaultOpen/搜索/键盘/回焦；三浏览器各22项中4项为兼容夹具。DateRangeDropdown第一参数和既有原子日期写保持，新增selectedDay仅由富筛选持草稿；没有把M6/M7完整页面验收提前关闭。§12归档页头旧实例在P11已移除，本期I15只作页面回归，未重复记功。其它复制/编辑器/搜索等原阶段责任及顶层open保持。
 
 证据：[P13阶段验收](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)及[集成回执§15](../reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31)。P13 已以 --no-ff 合并 main 8bb4bbcb，准确 main CI 41163365163 attempt2 全绿；归档逐 hash 复验与分支/worktree 清理完成。本输入顶层仍 open，M4 总交接不提前关闭。
+
+## P14 最终接收记录（2026-10-31，子项完成）
+
+§7 的 rich/lite/toolbar 延迟链和设置挂载已完成，EMOJI_CHECK_WARNING 及全部用法删除，三引擎 C10 无 warning。§8 callout 原生表情及 worker/CSP 复核完成，无 blob worker，不扩 CSP；表情回应仍 P15。§11 仅本期详情六消费者闭合，与历史六处集合不同，布局快捷 helper/动态及其余指定复制仍留 P15。§12 两个剩余 projectIssuesSearch 读者迁原生搜索、ProjectService 空类/旧类型删除；P11 跳转实例的历史删除只复验，不重复计功。搜索/评论/版本/草稿等后续 service 与会话责任不提前关闭。
+
+共同证据：[阶段 review §9–14](../reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[三浏览器逐条矩阵](../reviews/P14-browser-matrix.md)与[整审 re-21](../../../reviews/re-21-M4P14整体审核.md)。产品 e0ee0ff7，本地七项分层门禁、默认 E2E 238/238、三引擎各44/44；最终文稿 CI 按后置回执。顶层 status 仍 open，真正 M4 收尾再按完整关闭条件统一关闭。

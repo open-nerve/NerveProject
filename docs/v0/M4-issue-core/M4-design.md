@@ -2399,7 +2399,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 
 ### P14 `web-issue-detail`：详情、创建弹窗、父子、关联、链接（16 个任务）
 - **目标**：工作项的详情页和浮层、创建弹窗、子工作项、关联、链接、删除；选父工作项经 `issue-search`；访客的边界；编辑器的定点修改。
-- **准备入口**：[spec](specs/P14-web-issue-detail.md)、[plan](plans/P14-web-issue-detail.md)、[预检记录](reviews/P14-web-issue-detail-review.md)。基线 main 8bb4bbcb；已授权实施，phase 为 M4/P14，产品条款随完整验证勾选。
+- **准备入口**：[spec](specs/P14-web-issue-detail.md)、[plan](plans/P14-web-issue-detail.md)、[预检记录](reviews/P14-web-issue-detail-review.md)。基线 main 8bb4bbcb；实现、整审修复及本地验收完成，最终交付按 review §14 的准确分支 CI 后置回执核准，先不合并。
 - **已有输入**：P11 已完成原生 id 跳转、按编号读取、boolean 描述保存与主要宿主生命周期；P12 已完成 ExistingIssuesListModal 和表格子项列的 browse 地址；P13 已完成归档只读。P14 验真实消费者和剩余缺口，不重复宣称删除或重写。
 - **任务**：
   1. 项目 `projects/:projectId/issues/:issueId` 原生跳转与 `browse/:workItem` 按编号/useSessionSWR 回归；旧 loader/service/收集箱跳转 P11 已删。补包含页头与正文的共同身份，换项/权限失效不留旧弹层。
@@ -2591,7 +2591,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P11 `web-detail-data` | 详情一侧的数据层（15） | **已完成**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review§15](reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。交付42afa24f、main ce3c39ab；准确分支及main CI全绿，证据归档/清理完成；列宽按已裁定A |
 | P12 web-list-pages | 列表、看板、表格、日历（16） | **已完成**：最终e6d1329b授权--no-ff合并main ff89d0a1；[准确main CI41087022719](https://github.com/open-nerve/NerveProject/actions/runs/41087022719)三任务成功；1786份实施/运行证据及14份准备证据归档逐hash通过，分支/worktree清理后再次复验。见[review§28](reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)、[整审](../../reviews/re-17-M4P12整体审核.md) |
 | P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **已完成**：最终分支 c57bbe6b 经 --no-ff 合并 main 8bb4bbcb；[main CI 41163365163](https://github.com/open-nerve/NerveProject/actions/runs/41163365163) attempt 2 三任务全绿。2,133 份运行证据与 11 份准备材料归档复验后分支/worktree 正常清理，见 [review §15](reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31) |
-| P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | **实施中**：[spec](specs/P14-web-issue-detail.md)、[plan](plans/P14-web-issue-detail.md)、[review](reviews/P14-web-issue-detail-review.md)、[预检](../../reviews/re-20-M4P14预检审核.md)。分支 codex/m4-p14，基线 main 8bb4bbcb；已授权从 T1 推进，phase 为 M4/P14，阶段末整审后先不合并 |
+| P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | **实现/本地验收与整审完成，待授权合并**：[spec](specs/P14-web-issue-detail.md)、[plan](plans/P14-web-issue-detail.md)、[review §9–14](reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[整审](../../reviews/re-21-M4P14整体审核.md)。产品 e0ee0ff7，七项分层门禁及三浏览器各44通过；准确最终文稿CI以final-delivery.json核准，未核准不交付。分支 codex/m4-p14、main基线8bb4bbcb保留；M4总体仍进行中 |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述的历史、草稿、搜索、命令面板（15） | 未开始 |
 | P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | 未开始 |
 | 收尾 `closeout` | 交接、同步核对、浏览器核对 C12、规模和性能的数字（14） | 未开始 |

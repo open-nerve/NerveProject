@@ -1,6 +1,6 @@
 # M4/P14 详情、创建弹窗、父子、关联与链接
 
-日期：2026-10-31。状态：**已授权实施，逐任务推进中**。基线为 P13 合并 main `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；分支 `codex/m4-p14`，worktree `.codex/worktress/codex/m4-p14`。遵循 [M4 设计 §12/P14](../M4-design.md)、[推进方法](../../claude_to_gpt/02-method.md)和[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)。负责人已授权从 T1 实施，阶段末 deep-review、局部修复复审后保留分支，不自动合并。
+日期：2026-10-31。状态：**实现与本地验收、整审修复完成；最终分支 CI 按后置回执核准，先不合并**。基线为 P13 合并 main `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；分支 `codex/m4-p14`，worktree `.codex/worktress/codex/m4-p14`。遵循 [M4 设计 §12/P14](../M4-design.md)、[推进方法](../../claude_to_gpt/02-method.md)和[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)。负责人已授权从 T1 实施，阶段末 deep-review、局部修复复审后保留分支，不自动合并。
 
 ## 1. 目标
 
@@ -128,25 +128,27 @@ T15 六处复制使用现有 useCopyLink/useCopyText（均收值与成功文案�
 
 以上是既定设计内的局部准备选择。若实施发现权限所有权、共享协议或跨模块架构必须改变，先提交已完成工作再上报。
 
-## 4. 验收标准（实施前全部未勾选）
+## 4. 验收标准与交付门
 
 - [x] A1：原生 id/编号入口正确，页头和正文共同身份；同参数换项、权限 ABA、Back 无旧弹层/结果（T1/T14：t1-restored 23/23、t14-restored 五文件 60/60、I22 两页与 M21/M22；三浏览器归 A15）。
 - [x] A2：详情标题/七类属性、字段错误描述与拒绝后焦点符合 §2.3；I2 属性完成（T2，父项由 T6 的原生 picker / I8 页面闭合；t2-fields-final、t2-i2-complete、t6-page-final）。
 - [x] A3：真实编辑器撤销重做与迁移保存正确；boolean skip_activity、不发 JSON；已有 issue 与 draft 的迁移不标 dirty（T3/T4；review §8 的 T3/T4 及 t3-i2-complete、t4-component-final）。
 - [x] A4：I1 创建字段/归一化/码/数据库正确，表单有名字、无正 tabIndex、项目必选可读；拒绝与 pending 保留当前窗（T4；t4-i1-verified 2/2、t4-component-final 41/41、t4-full-routed-e2e 205/205）。
-- [ ] A5：父项/Save this draft 内层 Escape 不影响外层，portal 背景隔离、循环 Tab、焦点回还（T5/T6/T16）。
-  T5/T6 已完成真实 ModalCore 消费者测试和三项 Chromium C4，包括父项原生查询与 clean/dirty 两种外层；三浏览器矩阵待 T16，整条暂不提前勾选。
+- [x] A5：父项/Save this draft 内层 Escape 不影响外层，portal 背景隔离、循环 Tab、焦点回还（T5/T6/T16）。
+  T5/T6 的真实 ModalCore 消费者与三项 C4 已在三浏览器通过；T16 另补真实 lazy chunk pending 下 clean/dirty × Escape/Discard 四例，保存仍要求 editor 就绪。
 - [x] A6：父项原生查询与所有消费者一致，两个已有/一个新子项、移动/解除/状态分布、排除后代，I8 完成（T6；t6-restored-final 87/87、t6-page-final 7/7，原生查询和落库/动态/计数断言）。
 - [x] A7：跨项目关系/反向/任一端删除/部分确认保留，I9 完成；M7 两个消费者适配且无旧 projectIssuesSearch 读者（T6/T7；review T7，t7-component-final 59/59、t7-i9-confirmed 2/2、M11/M12）。
 - [x] A8：T8 完成 I10 真 worker 元数据、bounded GET 重试、data favicon、无外连与字段拒绝（review T8，t8-restored 48/48、I10 3/3、M13/M14）；T15 补实际链接复制的等待/成功/拒绝与键盘页面，三浏览器归 A15。
 - [x] A9：I17 删除整棵子树且文案明确、onSubmit 必需、拒绝留窗/成功跟进；数据库目录断言通过（T9；t9-route-green 82/82、t9-i17-route 2/2、M15；完整检查点回执另记）。
-- [ ] A10：未登录无编辑器 chunk、设置不挂载工作项弹窗，EMOJI_CHECK_WARNING 全零且 console 无豁免（T10：t10-final-pages 20/20、t10-final-unit 37/37、M16/M17 红与精确恢复；T16 三浏览器待收尾）。
+- [x] A10：未登录无编辑器 chunk、设置不挂载工作项弹窗，EMOJI_CHECK_WARNING 全零且 console 无豁免（T10：t10-final-pages 20/20、t10-final-unit 37/37、M16/M17 红与精确恢复；T16 最终三浏览器各 44/44，见实际矩阵）。
 - [x] A11：原生 callout、五处死序列化删除而安全/粘贴回归保留，打包 worker/CSP 复核通过（T11：t11-restored-editor 35/35，t11-content，t11-pages 4/4，t11-build-worker-audit.json）。
 - [x] A12：M4 无图片上传入口/请求，无附件及关注按钮；表格和行内子项地址直接 browse 无片段（T12：owner 6/6、相关 unit 46/46、真实 Editor 22/22、C12 两页和 M19；T13：两个消费者 16/16、I8 四项及 M20，三浏览器归 A15）。
 - [x] A13：I20、S2 身份、I22 两标签页及 Back 通过；旧会话响应无跟进（T14：t14-pages-fixed 7/7 Chromium，真实旧写先落库、实际双标签页换账号；M21/M22 行为红和精确恢复、t14-restored 60/60；三浏览器归 A15）。
 - [x] A14：六处真实复制消费者等待/成功/拒绝正确，六个 copy-hook 例外删除；T15 的 19 项聚焦、68 项受影响回归、9 项 Chromium C4 均通过，M23 两项行为红并恢复。P15 四处具名见 review T15，三浏览器归 A15。
-- [ ] A15：C3 详情/C4/C5/C10/C11 三浏览器均实际非零通过；完整七项门禁、至少 16 种有效生产性质变异及恢复证据、实际改动文件 dead/oxlint 核清（T16）。
-- [ ] A16：基线至最终分支 HEAD deep-review、局部问题修复复审闭环、准确分支 CI 全绿及证据归档位置明确；先交负责人安排，不自动合并（T16）。
+- [x] A15：C3 详情/C4/C5/C10/C11 三浏览器均实际非零通过；完整七项门禁、至少 16 种有效生产性质变异及恢复证据、实际改动文件 dead/oxlint 核清（T16）。
+- [x] A16：基线至最终分支 HEAD deep-review、局部问题修复复审闭环、准确分支 CI 全绿及证据归档位置明确；先交负责人安排，不自动合并（T16）。
+
+A1–A16 的最终证据见 [review §9–14](../reviews/P14-web-issue-detail-review.md#9-最终验收映射)及[三浏览器逐条矩阵](../reviews/P14-browser-matrix.md)。沿 P13 的后置交付方式：A16 的准确最终文稿 SHA/run/attempt/jobs 以实施根 `final-delivery.json` 为准；回执缺失或未通过时，不得将本勾选表解释为阶段已交付。
 
 ## 5. 后续范围
 

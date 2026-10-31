@@ -3,6 +3,8 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking.
 > 负责人已授权实施，沿既有 inline 执行方式从 T1 推进；不因通用工作流自行派逐 Task 实现代理。阶段结束做 deep-review，修复复审后先交负责人安排，不自动合并。
 
+状态：T1–T16 的实现、局部修复、本地七项与三浏览器验证已完成；T16 Step 5 的最终分支交付以后置 `final-delivery.json` 通过为准，未核准不交付。分支与 worktree 保留，未授权合并。
+
 **Goal：** 完成 P14 spec A1–A16 以及 I1/I2/I8/I9/I10/I17/I20/I22 页面、S2 身份、C3 详情侧/C4/C5/C10/C11。
 
 **Architecture：** 复用原生 IssueRootStore、PermissionReads、IssueResources、useDetailScope、确认命令与自动保存。新代码限于现有页面/表单的缺口；不改变 API、数据库、锁、权限所有权，不增加全局缓存/协调器。
@@ -224,11 +226,11 @@ make e2e
 **Files：** 新 `E/playwright.m4-detail.config.ts`、`E/stories/issue/detail-interactions.spec.ts`、`editor-loading.spec.ts` 与本段各 page；本段 review、M4 design §12/§15、handoff 对应子项、`docs/reviews/` 下实施整审新编号。
 **Interfaces：** 三个 project 的 testMatch 只含本段页面/组件目标；不能继承默认 Firefox grep。必要 page helper 在 `E/fixtures/issue-detail-page.ts`（新）复用 issue-list-page/browser/dialogs/API/assert，不能复制整套 seed/SQL/服务。
 
-- [ ] Step 1：补齐 C3 详情七类属性、C4 全弹窗/portal/nesting/迁移、C5 父子/跨项目关系/元数据/层叠、C10 build lazy/原生 callout、C11 双账号；T13 局部定位修复同时把 filter-archive-profile-interactions 的 C2 纳入三浏览器，核移动端及 peek 真实消费者；与 A1–A14 一一列出真实 test title，不靠空 grep 或 skip 通过。
-- [ ] Step 2：完整 F 后，分别执行 `pnpm --filter @nerve/e2e exec playwright test --config=playwright.m4-detail.config.ts --project=chromium`，再 firefox，再 webkit；每次证据目录分开，收 raw、JSON executed/skip、失败截图/trace/数据库及版本。不得只把默认 A4 Firefox 两例计为本段通过。
-- [ ] Step 3：M01–M23 是候选而非预填通过数，至少 16 种不同生产性质实际检出；每次保留 mutation diff/行为红/精确恢复 hash/恢复绿。遍历实际 changed files 的 dead 候选及每一读取方，删除真死成员/导出，改动文件 oxlint 零；上限只按实际净减更新，不增限盖警告。共享 helper 有真实消费者则写路径证据。
-- [ ] Step 4：固定 `8bb4bbcb..最终待交付产品HEAD`，使用 deep-review 做全分支逻辑/集成/覆盖三视角，保存完整文件阅读清单。局部问题修复、必要验证和复审全部闭环；架构级先提交上报。产品修复后完整 F/受影响三浏览器补到最终产品输入；纯 docs 绑定未变输入不假称重跑。准确最终分支 CI 独立核 SHA/run/jobs。
-- [ ] Step 5：逐条写 spec A 与 plan 完成证据、review 的实际决定/风险/未决，handoff 只接对应子项且顶层 open；准确提交/推送后记录后置 CI 收据。交付分支名、基线、spec/plan/review 路径，**先不合并**。提交 `docs(M4/P14): 归档详情阶段验证与整审闭环`。
+- [x] Step 1：补齐 C3 详情七类属性、C4 全弹窗/portal/nesting/迁移、C5 父子/跨项目关系/元数据/层叠、C10 build lazy/原生 callout、C11 双账号；T13 局部定位修复同时把 filter-archive-profile-interactions 的 C2 纳入三浏览器，核移动端及 peek 真实消费者；与 A1–A14 一一列出真实 test title，不靠空 grep 或 skip 通过。
+- [x] Step 2：完整 F 后，分别执行 `pnpm --filter @nerve/e2e exec playwright test --config=playwright.m4-detail.config.ts --project=chromium`，再 firefox，再 webkit；每次证据目录分开，收 raw、JSON executed/skip、失败截图/trace/数据库及版本。不得只把默认 A4 Firefox 两例计为本段通过。
+- [x] Step 3：M01–M23 是候选而非预填通过数，至少 16 种不同生产性质实际检出；每次保留 mutation diff/行为红/精确恢复 hash/恢复绿。遍历实际 changed files 的 dead 候选及每一读取方，删除真死成员/导出，改动文件 oxlint 零；上限只按实际净减更新，不增限盖警告。共享 helper 有真实消费者则写路径证据。
+- [x] Step 4：固定 `8bb4bbcb..最终待交付产品HEAD`，使用 deep-review 做全分支逻辑/集成/覆盖三视角，保存完整文件阅读清单。局部问题修复、必要验证和复审全部闭环；架构级先提交上报。产品修复后完整 F/受影响三浏览器补到最终产品输入；纯 docs 绑定未变输入不假称重跑。准确最终分支 CI 独立核 SHA/run/jobs。
+- [x] Step 5：逐条写 spec A 与 plan 完成证据、review 的实际决定/风险/未决，handoff 只接对应子项且顶层 open；准确提交/推送后记录后置 CI 收据。交付分支名、基线、spec/plan/review 路径，**先不合并**。提交 `docs(M4/P14): 归档详情阶段验证与整审闭环`。
 
 ## 附录 A：聚焦命令索引
 
