@@ -10,7 +10,8 @@
     "check:lint": "node ../tools/lint-cap.mjs 0",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt .",
-    "test:m4-filters": "playwright test --config=playwright.m4-filters.config.ts"
+    "test:m4-filters": "playwright test --config=playwright.m4-filters.config.ts",
+    "test:m4-detail": "playwright test --config=playwright.m4-detail.config.ts"
   },
   "devDependencies": {
     "@nerve/api-client": "workspace:*",

@@ -8,7 +8,6 @@ import { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
 import { DetailResourceError } from "@/components/issues/issue-detail-widgets/resource-error";
-import { useSessionSWR } from "@/lib/use-session-swr";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 
@@ -23,13 +22,14 @@ import { PageHead } from "@/components/core/page-title";
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
-import { useNavigate } from "react-router";
+import { useNavigate, useOutletContext } from "react-router";
 // layouts
 import { ProjectAuthWrapper } from "@/layouts/auth-layout/project-wrapper";
 // components
 import { WorkItemDetailRoot } from "@/components/browse/workItem-detail";
 
 import type { Route } from "./+types/page";
+import type { IssueRouteRead } from "./layout";
 
 export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: Pick<Route.ComponentProps, "params">) {
   // router
@@ -40,20 +40,12 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: P
   // store hooks
   const { t } = useTranslation();
   const {
-    fetchIssueWithIdentifier,
-    rootIssueStore,
     issue: { getIssueById },
   } = useIssueDetail();
   const { getProjectById } = useProject();
   const { toggleIssueDetailSidebar, issueDetailSidebarCollapsed } = useAppTheme();
 
-  const workspaceID = rootIssueStore.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id;
-  const identity = rootIssueStore.permissionReads.identity(workspaceID, []);
-  const { data, isLoading, error, mutate } = useSessionSWR(
-    ["issue-by-identifier", workspaceSlug, workItem, identity],
-    (slug, identifier) => fetchIssueWithIdentifier(slug, identifier),
-    { dedupingInterval: 0 }
-  );
+  const { data, isLoading, error, mutate } = useOutletContext<IssueRouteRead>();
 
   // The identifier is parsed only by the server; the proven response chooses the project.
   const issueId = data?.id;

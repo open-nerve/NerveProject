@@ -1,6 +1,6 @@
 import { createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
 import { accountId, emailFor, named } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectNoAddress, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectNoAddress, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -40,5 +40,5 @@ test("P9 (page): a guest opens a member's profile: its card, without the address
   // Nothing asked of the work items, by nerve's API or by the old frontend's.
   expect(watch.apiRequests.filter((request) => request.includes("issues"))).toEqual([]);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });

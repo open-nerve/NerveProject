@@ -6,8 +6,7 @@
 
 import { mergeAttributes } from "@tiptap/core";
 import type { MentionOptions } from "@tiptap/extension-mention";
-import Mention from "@tiptap/extension-mention";
-import type { MarkdownSerializerState } from "@tiptap/pm/markdown";
+import { Mention } from "@tiptap/extension-mention";
 import type { Node as NodeType } from "@tiptap/pm/model";
 // types
 import type { TMentionHandler } from "@/types";
@@ -49,17 +48,6 @@ export const CustomMentionExtensionConfig = Mention.extend<TMentionExtensionOpti
 
   renderText({ node }) {
     return getMentionDisplayText(this.options, node);
-  },
-
-  addStorage() {
-    const options = this.options;
-    return {
-      markdown: {
-        serialize(state: MarkdownSerializerState, node: NodeType) {
-          state.write(getMentionDisplayText(options, node));
-        },
-      },
-    };
   },
 });
 

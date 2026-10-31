@@ -42,17 +42,28 @@ vi.mock("@/components/editor/rich-text", () => ({
     // Match the editor contract: initialValue initializes; imperative replacement does not emit a change.
     useImperativeHandle(ref, () => ({ setEditorValue: (next: string) => setValue(next) }));
     return (
-      <textarea
-        aria-label="description"
-        value={value}
-        onChange={(event) => {
-          setValue(event.target.value);
-          props.onChange?.({}, event.target.value);
-        }}
-      />
+      <>
+        <textarea
+          aria-label="description"
+          value={value}
+          onChange={(event) => {
+            setValue(event.target.value);
+            props.onChange?.({}, event.target.value);
+          }}
+        />
+        <button
+          onClick={() => {
+            setValue(migratedDescription);
+            props.onChange?.({}, migratedDescription, { isMigrationUpdate: true });
+          }}
+        >
+          migrate blocks
+        </button>
+      </>
     );
   }),
 }));
+const migratedDescription = '<p data-id="existing-block">Original</p>';
 let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 let host: HTMLDivElement;
 let renderer: ReturnType<typeof createRoot>;
@@ -121,6 +132,17 @@ const answer = (index: number, html: string) =>
       })
     )
   );
+it.each(["debounce", "unmount"] as const)("sends a migration as boolean skip_activity through %s", async (timing) => {
+  await act(async () =>
+    [...host.querySelectorAll("button")].find((button) => button.textContent === "migrate blocks")!.click()
+  );
+  if (timing === "unmount") await leave();
+  else await act(async () => vi.advanceTimersByTimeAsync(1500));
+  await act(async () => until(() => writes().length === 1, "migration PATCH"));
+  expect(writes()[0]!.body).toEqual({ description_html: migratedDescription, skip_activity: true });
+  await answer(0, migratedDescription);
+  expect(toasts).toEqual([]);
+});
 for (const index of [0, 1]) {
   it(`flushes the last unattempted ${index === 0 ? "title" : "description"} through the real command when the entire host leaves`, async () => {
     await edit(index, "last edit");

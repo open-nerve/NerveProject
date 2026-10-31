@@ -23,6 +23,8 @@ import { BUTTON_VARIANTS_WITH_TEXT } from "./constants";
 import type { TDropdownProps } from "./types";
 
 type Props = TDropdownProps & {
+  invalid?: boolean;
+  describedBy?: string;
   clearIconClassName?: string;
   defaultOpen?: boolean;
   optionsClassName?: string;
@@ -97,6 +99,8 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
         buttonContainerClassName
       )}
       aria-label={placeholder}
+      aria-invalid={props.invalid || undefined}
+      aria-describedby={props.describedBy}
       tabIndex={tabIndex}
       disabled={disabled}
     >

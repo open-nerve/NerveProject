@@ -8,14 +8,14 @@ import { observer } from "mobx-react";
 
 import { useTranslation } from "@nerve/i18n";
 import { CopyOutline, DeleteOutline, EditOutline, LinkOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 // ui
 import { CustomMenu } from "@nerve/ui";
-import { calculateTimeAgo, copyTextToClipboard } from "@nerve/utils";
+import { calculateTimeAgo } from "@nerve/utils";
 // hooks
 import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+import { useCopyLink } from "@/hooks/use-copy-link";
 import type { TLinkOperations } from "./types";
 
 type TIssueLinkItem = {
@@ -30,6 +30,7 @@ export const IssueLinkItem = observer(function IssueLinkItem(props: TIssueLinkIt
   const { issueId, linkId, linkOperations, isNotAllowed } = props;
   // hooks
   const { t } = useTranslation();
+  const copyLink = useCopyLink();
   const {
     link: { getLinkById },
   } = useIssueDetail();
@@ -38,8 +39,8 @@ export const IssueLinkItem = observer(function IssueLinkItem(props: TIssueLinkIt
   const linkDetail = getLinkById(issueId, linkId);
   if (!linkDetail) return <></>;
 
-  // const Icon = getIconForLink(linkDetail.url);
-  const faviconUrl = linkDetail.metadata.favicon_url ?? linkDetail.metadata.favicon ?? undefined;
+  // favicon_url records the crawl source; only the server's embedded image belongs in browser requests.
+  const faviconUrl = linkDetail.metadata.favicon?.startsWith("data:image/") ? linkDetail.metadata.favicon : undefined;
   const linkTitle = linkDetail.metadata.title;
 
   const toggleIssueLinkModal = (modalToggle: boolean) => {
@@ -80,21 +81,15 @@ export const IssueLinkItem = observer(function IssueLinkItem(props: TIssueLinkIt
           </p>
           <button
             type="button"
-            aria-label={t("copy_link")}
-            onClick={() => {
-              copyTextToClipboard(linkDetail.url);
-              setToast({
-                type: TOAST_TYPE.SUCCESS,
-                title: t("common.link_copied"),
-                message: t("common.link_copied_to_clipboard"),
-              });
-            }}
+            aria-label={`${t("common.actions.copy_link")}: ${linkDetail.title || linkDetail.url}`}
+            onClick={() => copyLink(linkDetail.url, t("common.link_copied_to_clipboard"))}
             className="relative grid cursor-pointer place-items-center rounded-sm p-1 text-placeholder outline-none group-hover:text-secondary hover:bg-layer-1"
           >
             <CopyOutline className="h-3.5 w-3.5 stroke-[1.5]" />
           </button>
           <CustomMenu
             ellipsis
+            ariaLabel={t("common.item_options", { name: linkDetail.title || linkDetail.url })}
             buttonClassName="text-placeholder group-hover:text-secondary"
             placement="bottom-end"
             closeOnSelect

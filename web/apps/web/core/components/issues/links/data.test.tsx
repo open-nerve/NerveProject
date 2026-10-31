@@ -26,7 +26,10 @@ vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@makeplane/propel/components/tooltip", () => ({
   Tooltip: ({ children }: React.PropsWithChildren) => children,
 }));
-vi.mock("@makeplane/propel/components/field", () => ({ Field: ({ children }: React.PropsWithChildren) => children }));
+vi.mock("@makeplane/propel/components/field", () => ({
+  Field: ({ children }: React.PropsWithChildren) => children,
+  FieldError: ({ children }: React.PropsWithChildren) => children,
+}));
 vi.mock("@makeplane/propel/components/input", () => ({
   InputGroup: ({ children }: React.PropsWithChildren) => children,
   Input: ({
@@ -48,6 +51,7 @@ vi.mock("@nerve/propel/button", () => ({
   ),
 }));
 vi.mock("@nerve/ui", () => ({
+  ModalTitle: ({ children }: React.PropsWithChildren) => <h2>{children}</h2>,
   ModalCore: ({ children, isOpen }: React.PropsWithChildren<{ isOpen: boolean }>) =>
     isOpen ? <div role="dialog">{children}</div> : null,
   CustomMenu: Object.assign(({ children }: React.PropsWithChildren) => <div>{children}</div>, {
@@ -113,22 +117,25 @@ const submit = () =>
   act(async () =>
     container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
   );
-it("renders a null title, native favicon_url and blocked metadata as a valid link", async () => {
-  const { app, nerve } = binding.tab!;
-  const link = {
-    ...issueLinkOf("link"),
-    metadata: { favicon_url: "https://example.test/icon.ico", error: "blocked" as const },
-  };
-  const read = await requestedIssue(nerve, () => app.issue.issueDetail.link.fetchLinks("ws", "A", "x"), [
-    "GET",
-    "/api/v0/issues/x/links",
-  ]);
-  read.call.answer(json(200, { data: [link] }));
-  await read.promise;
-  await render();
-  expect(container.querySelector("a")?.textContent).toContain(link.url);
-  expect(container.querySelector("img")?.getAttribute("src")).toBe(link.metadata.favicon_url);
-});
+it.each([undefined, "data:image/png;base64,aWNvbg=="])(
+  "renders only the native embedded favicon (%s), never the source URL",
+  async (favicon) => {
+    const { app, nerve } = binding.tab!;
+    const link = {
+      ...issueLinkOf("link"),
+      metadata: { favicon_url: "https://example.test/icon.ico", favicon, error: "blocked" as const },
+    };
+    const read = await requestedIssue(nerve, () => app.issue.issueDetail.link.fetchLinks("ws", "A", "x"), [
+      "GET",
+      "/api/v0/issues/x/links",
+    ]);
+    read.call.answer(json(200, { data: [link] }));
+    await read.promise;
+    await render();
+    expect(container.querySelector("a")?.textContent).toContain(link.url);
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(favicon);
+  }
+);
 it.each([200, 500])(
   "waits for confirmation, retains refused input, and separates metadata/write/read failures (read=%s)",
   async (status) => {

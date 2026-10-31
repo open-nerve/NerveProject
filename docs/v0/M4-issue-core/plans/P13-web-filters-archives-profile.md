@@ -1,7 +1,7 @@
 # M4/P13 筛选、归档与个人主页实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking.
-> 负责人已授权实施，按既有 inline/executing-plans 方式从T1推进；不因上面的通用推荐自行开启逐Task代理。T1–T14 已完成，deep-review 及局部修复复审完成；最终 CI 按 review §14 后置核准，先不合并。
+> T1–T14、deep-review 及修复复审已完成；负责人已授权 --no-ff 合并 main 8bb4bbcb，准确 main CI 全绿，证据归档复验和分支/worktree 清理已完成，见 [review §15](../reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31)。以下为既有 inline 实施过程记录，不重新执行。
 
 **Goal：** 完成富筛选/显示设置、归档与个人主页页面，以及I5/I15/I19、C2/C9对应部分。
 

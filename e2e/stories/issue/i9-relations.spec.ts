@@ -1,5 +1,6 @@
 import {
   addProjectMembers,
+  changeProject,
   amidAnotherWorkspace,
   createProject,
   createWorkspace,
@@ -8,15 +9,191 @@ import {
 } from "../../fixtures/api";
 import { createdFor, expectIssueUpdated, itemRef, madeBy, relatedRow, unrelatedRow } from "../../fixtures/assert/issue";
 import { expectRelations } from "../../fixtures/assert/relation";
-import { newAccount } from "../../fixtures/auth";
+import { accountId, emailFor, newAccount } from "../../fixtures/auth";
 import {
   createIssue,
   createIssueRelations,
   issueRelationDeleted,
   issueRelationsCreated,
   listIssueRelations,
+  issueUpdated,
 } from "../../fixtures/issues";
 import { expect, test } from "../../fixtures/test";
+import { issueListProject, expectListPageQuiet } from "../../fixtures/issue-list-page";
+import { openIssueDetail } from "../../fixtures/issue-detail-page";
+import { answerTo, registerOnboarded, sentHeld, transitionsEnded } from "../../fixtures/settings-pages";
+
+test("I9 (page): native candidates create Blocking and cross-project Relates to; the reverse end shows Blocked by, and a member authorized only at the other end deletes the cross-project relation with both activities", async ({
+  api,
+  db,
+  page,
+  browser,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const ops = await createProject(api, seed.member.token, seed.slug, { name: "Ops", identifier: "OPS" });
+  const source = await createIssue(api, seed.member.token, seed.project.id, { name: "Implement protocol" });
+  const target = await createIssue(api, seed.member.token, seed.project.id, { name: "Verify protocol" });
+  const cross = await createIssue(api, seed.member.token, ops.id, { name: "Deploy protocol" });
+  const email = emailFor(info, "ops-member");
+  const token = (await registerOnboarded(api, email)).access_token;
+  const peer = { email, token, id: await accountId(api, token) };
+  await inviteAndAccept(api, seed.member.token, seed.slug, peer, 15);
+  await addProjectMembers(api, seed.member.token, ops.id, [{ member_id: peer.id, role: 15 }]);
+  await addProjectMembers(api, seed.member.token, seed.project.id, [{ member_id: peer.id, role: 5 }]);
+  expect((await changeProject(api, seed.member.token, seed.project.id, { guest_view_all_features: true })).status).toBe(
+    200
+  );
+  expect(await issueUpdated(api, peer.token, source.id, { name: "Not permitted" })).toEqual({
+    status: 403,
+    code: "forbidden",
+  });
+  const watch = await openIssueDetail(page, seed, source);
+  // These relation actions start on the loaded detail; C10 separately exercises the pending editor layout.
+  await expect(page.locator(`[id="editor-container-${source.id}"] [contenteditable]`)).toBeVisible();
+  const searchPath = `/api/v0/workspaces/${seed.slug}/issue-search`;
+  const modal = page.getByRole("dialog", { name: "Add existing work item", exact: true });
+  const firstSearch = await answerTo(page, "GET", searchPath, async () => {
+    await page.getByRole("button", { name: "Add relation", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Blocking", exact: true }).click();
+  });
+  expect(Object.fromEntries(new URL(firstSearch.url()).searchParams)).toEqual({
+    for: "relation",
+    issue_id: source.id,
+    project_id: seed.project.id,
+  });
+  await expect(modal.getByRole("option").filter({ hasText: source.name })).toHaveCount(0);
+  await modal.getByRole("option").filter({ hasText: target.name }).click();
+  const held = await sentHeld(page, "POST", `/api/v0/issues/${source.id}/relations`, () =>
+    modal.getByRole("button", { name: "Add selected work items", exact: true }).click()
+  );
+  try {
+    expect(held.body).toEqual({ relation_type: "blocking", issue_ids: [target.id] });
+    await expect
+      .poll(() =>
+        db.query("SELECT relation_type FROM issue_relations WHERE related_issue_id=$1 AND deleted_at IS NULL", [
+          source.id,
+        ])
+      )
+      .toEqual([{ relation_type: "blocked_by" }]);
+    await expect(modal).toHaveCount(1);
+    await expect(page.locator(`#issue-${target.id}`)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Relations 1", exact: true })).toHaveCount(0);
+  } finally {
+    expect((await held.release()).status()).toBe(201);
+  }
+  await expect(modal).toHaveCount(0);
+  await page.getByRole("button", { name: "Relations 1", exact: true }).click();
+  await expect(page.locator(`#issue-${target.id}`)).toBeVisible();
+  await page.getByRole("button", { name: "Add relation", exact: true }).click();
+  await answerTo(page, "GET", searchPath, () =>
+    page.getByRole("menuitem", { name: "Relates to", exact: true }).click()
+  );
+  await expect(modal.getByRole("option").filter({ hasText: target.name })).toHaveCount(0);
+  const workspaceSearch = await answerTo(page, "GET", searchPath, () =>
+    modal.getByRole("switch", { name: "Workspace level" }).click()
+  );
+  expect(Object.fromEntries(new URL(workspaceSearch.url()).searchParams)).toEqual({
+    for: "relation",
+    issue_id: source.id,
+  });
+  await modal.getByRole("option").filter({ hasText: cross.name }).click();
+  expect(
+    (
+      await answerTo(page, "POST", `/api/v0/issues/${source.id}/relations`, () =>
+        modal.getByRole("button", { name: "Add selected work items", exact: true }).click()
+      )
+    ).status()
+  ).toBe(201);
+  await expect(modal).toHaveCount(0);
+  await expect(page.locator(`#issue-${cross.id}`)).toBeVisible();
+  await expectRelations(
+    db,
+    [source.id],
+    [
+      { relation: `${target.name} blocked_by ${source.name}`, by: seed.member.email, deleted: false },
+      { relation: `${source.name} relates_to ${cross.name}`, by: seed.member.email, deleted: false },
+    ]
+  );
+  const sourceRef = itemRef("WEB", source),
+    targetRef = itemRef("WEB", target),
+    crossRef = itemRef("OPS", cross);
+  const sourceActivity = [...createdFor(), relatedRow("blocking", targetRef), relatedRow("relates_to", crossRef)];
+  const crossActivity = [...createdFor(), relatedRow("relates_to", sourceRef)];
+  await expectIssueUpdated(db, source.id, {
+    ...madeBy(seed.member.email, source.name),
+    by: seed.member.email,
+    activity: sourceActivity,
+    wrote: 1,
+  });
+  await expectIssueUpdated(db, target.id, {
+    ...madeBy(seed.member.email, target.name),
+    by: seed.member.email,
+    activity: [...createdFor(), relatedRow("blocked_by", sourceRef)],
+    wrote: 1,
+  });
+  await expectIssueUpdated(db, cross.id, {
+    ...madeBy(seed.member.email, cross.name),
+    by: seed.member.email,
+    activity: crossActivity,
+    wrote: 1,
+  });
+  await page.goto(`/${seed.slug}/browse/WEB-${target.sequence_id}`);
+  await expect(page.locator(`[id="editor-container-${target.id}"] [contenteditable]`)).toBeVisible();
+  await page.getByRole("button", { name: "Relations 1", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Blocked by", exact: true })).toBeVisible();
+  await expect(page.locator(`#issue-${source.id}`)).toBeVisible();
+  await expectListPageQuiet(page, watch);
+
+  const context = await browser.newContext({ baseURL: new URL(page.url()).origin });
+  try {
+    const otherPage = await context.newPage();
+    const otherWatch = await openIssueDetail(otherPage, { ...seed, project: ops, member: peer }, cross);
+    await expect(otherPage.locator(`[id="editor-container-${cross.id}"] [contenteditable]`)).toBeVisible();
+    const relationsButton = otherPage.getByRole("button", { name: "Relations 1", exact: true });
+    await relationsButton.click();
+    // Finish revealing the row before Playwright scrolls and clicks its menu through the clip.
+    await transitionsEnded(relationsButton.locator("../.."));
+    const row = otherPage.locator(`#issue-${source.id}`);
+    await expect(row).toBeVisible();
+    const relations = await listIssueRelations(api, peer.token, cross.id);
+    const relation = relations.find((r) => r.issue.id === source.id);
+    expect(relation).toBeDefined();
+    if (!relation) throw new Error("the reverse end did not list its relation");
+    await row.locator('button[aria-haspopup="menu"]').click();
+    expect(
+      (
+        await answerTo(otherPage, "DELETE", `/api/v0/issue-relations/${relation.id}`, () =>
+          otherPage.getByRole("menuitem", { name: "Remove relation", exact: true }).click()
+        )
+      ).status()
+    ).toBe(204);
+    await expect(row).toHaveCount(0);
+    await expectListPageQuiet(otherPage, otherWatch);
+  } finally {
+    await context.close();
+  }
+  await expectRelations(
+    db,
+    [source.id],
+    [
+      { relation: `${target.name} blocked_by ${source.name}`, by: seed.member.email, deleted: false },
+      { relation: `${source.name} relates_to ${cross.name}`, by: peer.email, deleted: true },
+    ]
+  );
+  await expectIssueUpdated(db, source.id, {
+    ...madeBy(seed.member.email, source.name),
+    by: peer.email,
+    activity: [...sourceActivity, unrelatedRow("relates_to", crossRef)],
+    wrote: 1,
+  });
+  await expectIssueUpdated(db, cross.id, {
+    ...madeBy(seed.member.email, cross.name),
+    by: peer.email,
+    activity: [...crossActivity, unrelatedRow("relates_to", sourceRef)],
+    wrote: 1,
+  });
+  expect(await listIssueRelations(api, peer.token, cross.id)).toEqual([]);
+});
 
 // I9, relations (M4 design 2, 3.10, 3.13): the API version, with P3's assertions (a relation within a project and one
 // across two, one row each, a work item blocking another stored as the other's blocked_by, each relation's two rows of

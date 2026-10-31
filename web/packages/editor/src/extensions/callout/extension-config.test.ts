@@ -52,6 +52,7 @@ describe("the callout's attributes read from HTML", () => {
     const { callout } = calloutOf('<div data-block-type="callout-component"><p>Note</p></div>');
     expect(callout?.attrs[ECalloutAttributeNames.EMOJI_UNICODE]).toBe("128161");
     expect(callout?.attrs[ECalloutAttributeNames.ICON_NAME]).toBeUndefined();
+    expect(callout?.attrs[ECalloutAttributeNames.EMOJI_URL]).toBeUndefined();
   });
 
   it("writes the code point back unchanged", () => {

@@ -9,7 +9,7 @@ import {
 } from "../../fixtures/api";
 import { projectSettingsOf } from "../../fixtures/assert/project";
 import { accountId, emailFor, newAccount, shownNameOf } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
 import { announced, closedByEscape, closedWithin, enabledWithin, modalDialog } from "../../fixtures/dialogs";
 import {
   answerTo,
@@ -124,14 +124,14 @@ test("P3 (page): the project's admin changes its name, identifier, description, 
   await expect(theMember.page.getByRole("button", { name: "Archive" })).toHaveCount(0);
   await expect(theMember.page.getByRole("button", { name: "Delete" })).toHaveCount(0);
   expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(theMember.page, memberWatch);
   await theMember.close();
 
   // The emoji came from nerve: nothing asked of another address, nothing blocked.
   expect(requestsElsewhere(page, watch)).toEqual([]);
   expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
   // the first load, and the reload
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });
 
 test("P3 (page): the project's admin turns its cycles, modules, views and intake on, each on its feature's page, and has its closed work items archived, after a range of his own that the page holds until nerve answers, then after 3 months; another admin's range, which nerve refuses once he has made her a member, keeps its modal open, saying why", async ({
@@ -268,7 +268,6 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   ]);
   // a load of the automations page; the browser's report of the refusal
   await expectQuietConsole(theOtherAdmin.page, annWatch, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
   });
   await theOtherAdmin.close();
@@ -283,7 +282,7 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   });
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   // a load of each feature's page, and of the automations page
-  await expectQuietConsole(page, watch, { warnings: Array.from({ length: 5 }, () => EMOJI_CHECK_WARNING) });
+  await expectQuietConsole(page, watch);
 });
 
 test("P3 (page): the project's admin makes a member its lead and its default assignee, each picked from its members who are not its guests, and lets its guests see every work item", async ({
@@ -339,7 +338,7 @@ test("P3 (page): the project's admin makes a member its lead and its default ass
     by: adminEmail,
   });
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });
 
 test("P3 (page): another project's general page, reached without leaving the route, shows that project's values; a dialog opened on one ends as a Back takes the route to the other", async ({
@@ -372,5 +371,5 @@ test("P3 (page): another project's general page, reached without leaving the rou
   await expect(page.locator("#name")).toHaveValue("Ops");
 
   expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });

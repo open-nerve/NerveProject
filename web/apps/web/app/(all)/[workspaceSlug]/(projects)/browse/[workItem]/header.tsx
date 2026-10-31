@@ -21,19 +21,19 @@ import { WorkItemDetailsHeader } from "./work-item-header";
 
 type TProps = {
   workspaceSlug: string;
-  workItem: string;
+  issueId: string | undefined;
+  projectId: string | undefined;
 };
 
 export const ProjectWorkItemDetailsHeader = observer(function ProjectWorkItemDetailsHeader(props: TProps) {
   // router
-  const { workspaceSlug, workItem } = props;
+  const { workspaceSlug, issueId, projectId } = props;
   // store hooks
   const { sidebarCollapsed } = useAppTheme();
   const {
-    issue: { getIssueById, getIssueIdByIdentifier },
+    issue: { getIssueById },
   } = useIssueDetail();
   // derived values
-  const issueId = getIssueIdByIdentifier(workItem);
   const issueDetails = issueId ? getIssueById(issueId) : undefined;
   // preferences
   const { preferences: projectPreferences } = useProjectNavigationPreferences();
@@ -63,7 +63,9 @@ export const ProjectWorkItemDetailsHeader = observer(function ProjectWorkItemDet
           </Row>
         </div>
       )}
-      <AppHeader header={<WorkItemDetailsHeader workspaceSlug={workspaceSlug} workItem={workItem} />} />
+      <AppHeader
+        header={<WorkItemDetailsHeader workspaceSlug={workspaceSlug} issueId={issueId} projectId={projectId} />}
+      />
     </>
   );
 });

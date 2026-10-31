@@ -5,8 +5,6 @@
  */
 
 import { Node, mergeAttributes } from "@tiptap/core";
-import type { MarkdownSerializerState } from "@tiptap/pm/markdown";
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // types
@@ -23,67 +21,30 @@ declare module "@tiptap/core" {
   }
 }
 
-const escapeCalloutHTML = (value: string | null | undefined): string =>
-  (value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-
 export const CustomCalloutExtensionConfig: CustomCalloutExtensionType = Node.create({
   name: CORE_EXTENSIONS.CALLOUT,
   group: "block",
   content: "block+",
 
   addAttributes() {
-    const attributes = {
-      // Reduce instead of map to accumulate the attributes directly into an object
-      ...Object.values(ECalloutAttributeNames).reduce(
-        (acc, value) => {
-          acc[value] = {
-            default: DEFAULT_CALLOUT_BLOCK_ATTRIBUTES[value],
-            // every callout attribute is a string: keep what the HTML says (TipTap's default parsing would turn a
-            // numeric string such as an emoji's code point into a number)
-            parseHTML: (element) => element.getAttribute(value),
-          };
-          return acc;
-        },
-        {} as Record<
-          ECalloutAttributeNames,
-          {
-            default: TCalloutBlockAttributes[ECalloutAttributeNames];
-            parseHTML: (element: HTMLElement) => string | null;
-          }
-        >
-      ),
-    };
-
-    return attributes;
-  },
-
-  addStorage() {
-    return {
-      markdown: {
-        serialize(state: MarkdownSerializerState, node: ProseMirrorNode) {
-          const attrs = node.attrs as TCalloutBlockAttributes;
-          const logoInUse = attrs["data-logo-in-use"];
-          // add callout logo
-          if (logoInUse === "emoji") {
-            state.write(
-              `> <img src="${escapeCalloutHTML(attrs["data-emoji-url"])}" alt="${escapeCalloutHTML(attrs["data-emoji-unicode"])}" width="30px" />\n`
-            );
-          } else {
-            state.write(`> <icon>${escapeCalloutHTML(attrs["data-icon-name"])} icon</icon>\n`);
-          }
-          // add an empty line after the logo
-          state.write("> \n");
-          // add '> ' before each line of the callout content
-          state.wrapBlock("> ", null, node, () => state.renderContent(node));
-          state.closeBlock(node);
-        },
+    return Object.values(ECalloutAttributeNames).reduce(
+      (acc, value) => {
+        acc[value] = {
+          default: DEFAULT_CALLOUT_BLOCK_ATTRIBUTES[value],
+          // every callout attribute is a string: keep what the HTML says (TipTap's default parsing would turn a
+          // numeric string such as an emoji's code point into a number)
+          parseHTML: (element) => element.getAttribute(value),
+        };
+        return acc;
       },
-    };
+      {} as Record<
+        ECalloutAttributeNames,
+        {
+          default: TCalloutBlockAttributes[ECalloutAttributeNames];
+          parseHTML: (element: HTMLElement) => string | null;
+        }
+      >
+    );
   },
 
   parseHTML() {

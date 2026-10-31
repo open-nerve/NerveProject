@@ -14,69 +14,33 @@ import {
   Node,
   nodeInputRule,
   PasteRule,
-  removeDuplicates,
 } from "@tiptap/core";
-import type { EmojiStorage } from "@tiptap/extension-emoji";
-import { emojis, emojiToShortcode, shortcodeToEmoji } from "@tiptap/extension-emoji";
+import type { EmojiItem } from "./data";
+import { emojis, emojiToShortcode, shortcodeToEmoji } from "./data";
 import { Fragment } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
 import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import type { SuggestionOptions } from "@tiptap/suggestion";
-import Suggestion from "@tiptap/suggestion";
+import { Suggestion } from "@tiptap/suggestion";
 import emojiRegex from "emoji-regex";
-import { isEmojiSupported } from "is-emoji-supported";
 // helpers
 import { customFindSuggestionMatch } from "@/helpers/find-suggestion-match";
 
-// Extended storage type to include our custom forceOpen flag
-export interface ExtendedEmojiStorage extends EmojiStorage {
+declare module "@tiptap/core" {
+  interface Commands<ReturnType> {
+    emoji: { setEmoji: (shortcode: string) => ReturnType };
+  }
+}
+
+export interface ExtendedEmojiStorage {
+  emojis: EmojiItem[];
   forceOpen: boolean;
 }
 
-type EmojiItem = {
-  /**
-   * A unique name of the emoji which will be stored as attribute
-   */
-  name: string;
-  /**
-   * The emoji unicode character
-   */
-  emoji?: string;
-  /**
-   * A list of unique shortcodes that are used by input rules to find the emoji
-   */
-  shortcodes: string[];
-  /**
-   * A list of tags that can help for searching emojis
-   */
-  tags: string[];
-  /**
-   * A name that can help to group emojis
-   */
-  group?: string;
-  /**
-   * A list of unique emoticons
-   */
-  emoticons?: string[];
-  /**
-   * The unicode version the emoji was introduced
-   */
-  version?: number;
-  /**
-   * A fallback image if the current system doesn't support the emoji or for custom emojis
-   */
-  fallbackImage?: string;
-  /**
-   * Store some custom data
-   */
-  [key: string]: unknown;
-};
-
-type EmojiOptions = {
+export type EmojiOptions = {
   HTMLAttributes: Record<string, unknown>;
   emojis: EmojiItem[];
   enableEmoticons: boolean;
-  forceFallbackImages: boolean;
   suggestion: Omit<SuggestionOptions, "editor">;
 };
 
@@ -86,7 +50,7 @@ const inputRegex = /:([a-zA-Z0-9_+-]+):$/;
 
 const pasteRegex = /:([a-zA-Z0-9_+-]+):/g;
 
-export const Emoji = Node.create<EmojiOptions, EmojiStorage>({
+export const Emoji = Node.create<EmojiOptions, ExtendedEmojiStorage>({
   name: "emoji",
 
   inline: true,
@@ -98,10 +62,8 @@ export const Emoji = Node.create<EmojiOptions, EmojiStorage>({
   addOptions() {
     return {
       HTMLAttributes: {},
-      // emojis: ,
-      emojis: emojis,
+      emojis,
       enableEmoticons: false,
-      forceFallbackImages: false,
       suggestion: {
         char: ":",
         pluginKey: EmojiSuggestionPluginKey,
@@ -150,21 +112,8 @@ export const Emoji = Node.create<EmojiOptions, EmojiStorage>({
   },
 
   addStorage() {
-    const { emojis } = this.options;
-    const supportMap: Record<number, boolean> = removeDuplicates(emojis.map((item) => item.version))
-      .filter((version) => typeof version === "number")
-      .reduce((versions, version) => {
-        const emoji = emojis.find((item) => item.version === version && item.emoji);
-
-        return {
-          ...versions,
-          [version]: emoji ? isEmojiSupported(emoji.emoji as string) : false,
-        };
-      }, {});
-
     return {
       emojis: this.options.emojis,
-      isSupported: (emojiItem) => (emojiItem.version ? supportMap[emojiItem.version] : false),
       forceOpen: false,
     };
   },
@@ -197,23 +146,7 @@ export const Emoji = Node.create<EmojiOptions, EmojiStorage>({
       return ["span", attributes, `:${node.attrs.name}:`];
     }
 
-    const renderFallbackImage = false;
-
-    return [
-      "span",
-      attributes,
-      renderFallbackImage
-        ? [
-            "img",
-            {
-              src: emojiItem.fallbackImage,
-              draggable: "false",
-              loading: "lazy",
-              align: "absmiddle",
-            },
-          ]
-        : emojiItem.emoji || `:${emojiItem.shortcodes[0]}:`,
-    ];
+    return ["span", attributes, emojiItem.emoji || `:${emojiItem.shortcodes[0]}:`];
   },
 
   renderText({ node }) {
@@ -282,10 +215,7 @@ export const Emoji = Node.create<EmojiOptions, EmojiStorage>({
 
     if (this.options.enableEmoticons) {
       // get the list of supported emoticons
-      const emoticons = this.options.emojis
-        .map((item) => item.emoticons)
-        .flat()
-        .filter((item) => item) as string[];
+      const emoticons = this.options.emojis.flatMap((item) => item.emoticons ?? []).filter(Boolean);
 
       const emoticonRegex = new RegExp(`(?:^|\\s)(${emoticons.map((item) => escapeForRegEx(item)).join("|")}) $`);
 

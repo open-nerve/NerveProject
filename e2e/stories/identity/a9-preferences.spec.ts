@@ -3,7 +3,7 @@ import type { Request } from "@playwright/test";
 import { expectPreferences } from "../../fixtures/assert/identity";
 import { anotherTabSignsIn, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { deferred } from "../../fixtures/deferred";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, expectListBesideButton, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -110,9 +110,7 @@ test("A9 (page): the preferences page changes the theme, the language and the fi
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
   // Three loads: the first, the theme's own reload, and the last.
-  await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
-  });
+  await expectQuietConsole(page, watch);
 });
 
 /** Whether request is a change of the profile. */
@@ -190,7 +188,7 @@ test("A9 (page): two changes of the language in a row reach nerve one after the 
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
   // Two loads: the first and the reload.
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });
 
 /** nerve's answer when it cannot make a change, as a problem of status and code: the page says why by the code. */
@@ -257,7 +255,6 @@ test("A9 (page): a refused change leaves the page as nerve has it", async ({ api
   expect(watch.pageErrors).toEqual([]);
   // One load; the browser's report of each refusal.
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: [
       "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
       "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
@@ -332,7 +329,7 @@ test("A9 (page): a theme change nerve answers after the tab followed another acc
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
   // One load of tab A.
-  await expectQuietConsole(tabA, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(tabA, watch);
 });
 
 test("A9 (API): a personal access token changes the theme, the language and the first day of the week", async ({

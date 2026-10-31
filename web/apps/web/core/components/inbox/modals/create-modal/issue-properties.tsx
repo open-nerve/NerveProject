@@ -6,18 +6,13 @@
 
 import type { IssueDetail } from "@nerve/api-client";
 
-import { useState } from "react";
 import { observer } from "mobx-react";
 import { ETabIndices } from "@nerve/constants";
-import { ParentOutline } from "@makeplane/propel/icons";
-import type { ISearchIssueResponse } from "@nerve/types";
-import { CustomMenu } from "@nerve/ui";
 import { renderFormattedPayloadDate, getDate, getTabIndex } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
-import { ParentIssuesListModal } from "@/components/issues/parent-issues-list-modal";
 import { IssueLabelSelect } from "@/components/issues/select";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -29,27 +24,18 @@ type TInboxIssueProperties = {
     issueKey: keyof Partial<IssueDetail>,
     issueValue: Partial<IssueDetail>[keyof Partial<IssueDetail>]
   ) => void;
-  isVisible?: boolean;
 };
 
 export const InboxIssueProperties = observer(function InboxIssueProperties(props: TInboxIssueProperties) {
-  const { projectId, data, handleData, isVisible = false } = props;
+  const { projectId, data, handleData } = props;
   // hooks
   const { isMobile } = usePlatformOS();
-  // states
-  const [parentIssueModalOpen, setParentIssueModalOpen] = useState(false);
-  const [selectedParentIssue, setSelectedParentIssue] = useState<ISearchIssueResponse | undefined>(undefined);
-
   const { getIndex } = getTabIndex(ETabIndices.INTAKE_ISSUE_FORM, isMobile);
 
   const startDate = data?.start_date;
-  const targetDate = data?.target_date;
 
   const minDate = getDate(startDate);
   minDate?.setDate(minDate.getDate());
-
-  const maxDate = getDate(targetDate);
-  maxDate?.setDate(maxDate.getDate());
 
   return (
     <div className="relative flex flex-wrap items-center gap-2">
@@ -88,20 +74,6 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
         />
       </div>
 
-      {/* start date */}
-      {isVisible && (
-        <div className="h-7">
-          <DateDropdown
-            value={data?.start_date || null}
-            onChange={(date) => handleData("start_date", date ? renderFormattedPayloadDate(date) : "")}
-            buttonVariant="border-with-text"
-            minDate={minDate ?? undefined}
-            placeholder="Start date"
-            tabIndex={getIndex("start_date")}
-          />
-        </div>
-      )}
-
       {/* due date */}
       <div className="h-7">
         <DateDropdown
@@ -113,68 +85,6 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
           tabIndex={getIndex("target_date")}
         />
       </div>
-
-      {/* add parent */}
-      {isVisible && (
-        <div className="h-7">
-          {selectedParentIssue ? (
-            <CustomMenu
-              customButton={
-                <button
-                  type="button"
-                  className="flex h-full cursor-pointer items-center justify-between gap-1 rounded-sm border-[0.5px] border-strong px-2 py-0.5 text-11 hover:bg-layer-1"
-                >
-                  <ParentOutline className="h-3 w-3 flex-shrink-0" />
-                  <span className="whitespace-nowrap">
-                    {selectedParentIssue
-                      ? `${selectedParentIssue.project__identifier}-${selectedParentIssue.sequence_id}`
-                      : `Add parent`}
-                  </span>
-                </button>
-              }
-              placement="bottom-start"
-              className="h-full w-full"
-              customButtonClassName="h-full"
-              tabIndex={getIndex("parent_id")}
-            >
-              <>
-                <CustomMenu.MenuItem className="!p-1" onClick={() => setParentIssueModalOpen(true)}>
-                  Change parent work item
-                </CustomMenu.MenuItem>
-                <CustomMenu.MenuItem
-                  className="!p-1"
-                  onClick={() => {
-                    handleData("parent_id", "");
-                    setSelectedParentIssue(undefined);
-                  }}
-                >
-                  Remove parent work item
-                </CustomMenu.MenuItem>
-              </>
-            </CustomMenu>
-          ) : (
-            <button
-              type="button"
-              className="flex h-full cursor-pointer items-center justify-between gap-1 rounded-sm border-[0.5px] border-strong px-2 py-0.5 text-11 hover:bg-layer-1"
-              onClick={() => setParentIssueModalOpen(true)}
-            >
-              <ParentOutline className="h-3 w-3 flex-shrink-0" />
-              <span className="whitespace-nowrap">Add parent</span>
-            </button>
-          )}
-
-          <ParentIssuesListModal
-            isOpen={parentIssueModalOpen}
-            handleClose={() => setParentIssueModalOpen(false)}
-            onChange={(issue) => {
-              handleData("parent_id", issue?.id);
-              setSelectedParentIssue(issue);
-            }}
-            projectId={projectId}
-            issueId={undefined}
-          />
-        </div>
-      )}
     </div>
   );
 });

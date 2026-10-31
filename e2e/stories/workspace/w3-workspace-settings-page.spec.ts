@@ -1,7 +1,7 @@
 import { changeRole, createWorkspace, slugFor } from "../../fixtures/api";
 import { expectWorkspaceDeleted } from "../../fixtures/assert/workspace";
 import { accountId, anotherTabSignsIn, emailFor } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { closedByEscape } from "../../fixtures/dialogs";
 import { furnishWorkspace } from "../../fixtures/furnish";
 import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
@@ -75,7 +75,7 @@ test("W3 (page): the admin changes the name, size and time zone, which hold afte
   await expect(theMember.page.getByRole("button", { name: "Update workspace" })).toHaveCount(0);
   await expect(theMember.page.getByRole("button", { name: "Delete", exact: true })).toHaveCount(0);
   expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(theMember.page, memberWatch);
   await theMember.close();
 
   // Made an admin, the member demotes the admin while his page is open: nerve refuses his next update, and the page
@@ -104,7 +104,6 @@ test("W3 (page): the admin changes the name, size and time zone, which hold afte
   // Two loads of the settings: the first, and the reload; the deletion's landing navigates within the app. The
   // browser's report of the refusal.
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
   });
 });
@@ -162,5 +161,5 @@ test("W3 (page): a deletion nerve made before another tab signed another account
   await expect(tabA.getByText("Workspace not found")).toBeVisible();
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   // One load of tab A.
-  await expectQuietConsole(tabA, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(tabA, watch);
 });

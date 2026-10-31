@@ -10,7 +10,7 @@ import {
 } from "./api";
 import { accountId, emailFor, password } from "./auth";
 import { signInPath, submitSignIn } from "./auth-pages";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage, type PageWatch } from "./browser";
+import { expectQuietConsole, requestsElsewhere, watchPage, type PageWatch } from "./browser";
 import { registerOnboarded } from "./settings-pages";
 import { stateIds } from "./states";
 
@@ -69,8 +69,6 @@ export async function expectListOrder(group: Locator, ids: readonly string[]) {
 export async function expectListPageQuiet(
   page: Page,
   watch: PageWatch,
-  browserName: string,
-  loads: number,
   expected: { failures?: string[]; errors?: string[] } = {}
 ) {
   expect(watch.apiFailures).toEqual(expected.failures ?? []);
@@ -78,8 +76,5 @@ export async function expectListPageQuiet(
   expect(watch.pageErrors).toEqual([]);
   expect(watch.cspViolations).toEqual([]);
   expect(requestsElsewhere(page, watch)).toEqual([]);
-  await expectQuietConsole(page, watch, {
-    warnings: browserName === "chromium" ? Array.from({ length: loads }, () => EMOJI_CHECK_WARNING) : [],
-    errors: expected.errors ?? [],
-  });
+  await expectQuietConsole(page, watch, { errors: expected.errors ?? [] });
 }

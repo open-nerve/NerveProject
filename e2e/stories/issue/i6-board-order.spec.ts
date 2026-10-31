@@ -186,7 +186,7 @@ test("I6 (page): a member moves between Done cards once, reorders below a middle
     status: 200,
     issue: { state_id: done, sort_order: 300 },
   });
-  await expectListPageQuiet(page, watch, browserName, 2, {
+  await expectListPageQuiet(page, watch, {
     failures: [`403 PATCH ${refusedPath}`],
     errors:
       browserName === "chromium" || browserName === "webkit"

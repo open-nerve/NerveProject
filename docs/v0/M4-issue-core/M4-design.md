@@ -1556,7 +1556,7 @@ M4 的页面上逐项照 M3 收尾的写法改，并由故事或浏览器核对�
 - **正的 `tabIndex`**：工作项的表单（`getTabIndex(ETabIndices.ISSUE_FORM)`）、`existing-issues-list-modal.tsx:70,156`、`parent-issues-list-modal.tsx`、`label-select.tsx` 的 `baseTabIndex`（`:53,162`）、`default-properties.tsx` 给父工作项菜单的、`archive-issue-modal.tsx`、`description-versions/modal.tsx` 写死的 `tabIndex={1}`，在 M4 删去。`existing-issues-list-modal.tsx` 是 M4 的选择器（独立评审 I7）：子工作项区的"添加已有"（`sub_issue: true`）和关联的选择（`issue_relation: true`，带工作区的开关），见 `issues/issue-detail-widgets/issue-detail-widget-modals.tsx:136-194`，另有项目日历的"添加已有"（`calendar/quick-add-issue-actions.tsx`）；它的 `tabIndex` 归 M4（P12，随它改接）。迭代、模块经它加已有的工作项的调用（`list/headers/group-by-card.tsx`、`kanban/headers/group-by-card.tsx` 的迭代、模块分支，日历的 `addIssuesToView`，`empty-states/cycle.tsx`、`module.tsx`）随 M6 的列表在 P10a 删除（7.2），M6 加回。M4 删去自己的之后 `getTabIndex` 若已没有调用方，M4 删除 `getTabIndex`、两份 `tab-indices.ts`（`web/packages/constants/src/`、`web/packages/utils/src/`）和 `CustomMenu` 读 `tabIndex` 的一支；还有 M6、M7 的调用方时写进它们的交接（M6、M7 的 M3 交接说"最后删去正的 `tabIndex` 的那一个删除 `getTabIndex`"，13.2）。P16 的第一个任务数一次。
 - **两个选择器经 `issue-search`**（3.18；独立评审 I7，对抗性评审 I5）：
   - `ExistingIssuesListModal` 在 **P12** 改接：它在项目日历上就用得到（"添加已有"：`project_id` 加 `target_date=none`，只列没有截止日期的），所以随日历的那一段改；同一个任务把它的另两个调用方的参数换成 `for=sub_issue`、`for=relation`（关联的工作区开关打开时不带 `project_id`），去掉它的正的 `tabIndex`。它一打开就以空的词搜索，`q` 为空时服务端给出最近更新的（3.18）。
-  - `ParentIssuesListModal` 在 **P14** 改接（`for=parent`），随 I8 的页面版本。
+  - `ParentIssuesListModal` 在 **P14** 改接，直接消费生成 Issue：已有工作项带 `for=parent` 与真实 `issue_id`；新建尚无源 id 时用带 `project_id` 的普通可见搜索，不发送缺源 id 的 for，随 I8 页面验证。context/form/父项展示及 M7 共用调用同 Task 适配，不翻译回旧搜索类型。
   - 排除自己、后代、祖先、已关联的都由服务端做。
 - **嵌套的按钮**：`DropdownButton` 放在 Headless UI 的按钮里的写法随属性下拉框和页头改；菜单的按钮里放 `IconButton` 的三处（`comments/quick-actions.tsx`、`issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`issue-activity/activity-filter.tsx`）照 `navigation/project-actions-menu.tsx` 改（`customButtonClassName`）；`peek-overview/header.tsx:188` 的 `customButton`、`default-properties.tsx` 给父工作项菜单的 `customButton` 不再是按钮里的按钮。
 - **`CustomMenu` 的键盘**：快捷操作菜单可通过键盘打开、选择、返回；P12/T11 实查 `SubMenu` 无生产者，删除不可达子菜单与适配死链，不为死分支新增机制；看板、日历卡片的快捷操作在键盘打开时也显示"激活"的底色。
@@ -1580,12 +1580,12 @@ P13 T11 的页面补充：行归档弹窗由当前布局局部宿主承载，确
 P13 T14 的整审补充：同一布局宿主 IssueListCommandHost 同时承载行删除确认与恢复反馈，避免恢复/删除最后一行时反馈随行卸载；在途恢复按现有权限身份与目标去重，旧路由/权限晚答仍静默。归档设置按当前会话的 workspace/project 首次读取 storage，之后不以失败读取或陈旧记录覆盖内存；项目分组折叠同样保留本地会话值，服务器三个偏好字段继续接受新确认。账号隔离仍由 RootStore 和既有存储键负责，未新增全局缓存、权限所有者或接口。
 
 ### 7.6 编辑器（`@nerve/editor` 与 `core/components/editor`）
-- **代码分割**（M2 交接第 7 节）：编辑器的模块到用它的页面才加载（`React.lazy` 包住富文本、轻量编辑器的入口）；未登录时打开需要登录的页面，不再先加载 tiptap 的 Emoji 节点和 `is-emoji-supported`。个人设置页不再挂载工作项的弹窗（7.4），它在打开之前建出的编辑器随之没有。之后删除 e2e 的 `EMOJI_CHECK_WARNING`：定义（`e2e/fixtures/browser.ts:166`）、29 个故事文件的 96 行，和 `e2e/fixtures/settings-pages.ts` 的一处（它也要清掉）。
+- **代码分割**（M2 交接第 7 节）：编辑器的模块到用它的页面才加载，`React.lazy` 包住富文本、轻量编辑器入口，且 lite-text barrel→toolbar→`TOOLBAR_ITEMS` 的运行时引入须在同一延迟边界内或删除零读者导出；以真实构建网络验证未登录详情不先加载编辑器、登录后可编辑。个人设置页不挂载工作项弹窗（7.4）。当前无读者的 emoji 支持检测和死 fallback 在 P14 删除，直接依赖无其他读者时一起清理；T10 实测上游 extension-emoji 的数据导入仍构造无用 Node 并执行检测，因此直接复用 M3 §7.7 已锁定的 emojibase-data 15.3.2，保留 1,933 条既有名称/Unicode/别名/标签/文本表情，移除无用扩展依赖链及测试垫片；不屏蔽 console。删除 `EMOJI_CHECK_WARNING` 定义及全部现存/新增引用（含 settings-pages），历史“29 故事/96 行”只作基线记录，不限制删除范围；页面仍严格断言安静控制台。
 - **标注块的默认表情**（M2 交接第 8 节）：默认值的 `EMOJI_URL` 指向 `cdn.jsdelivr.net`（`editor/src/extensions/callout/utils.ts:19`），被 CSP 挡住。改为不带图片地址、只用 `EMOJI_UNICODE`（`128161`）以原生表情显示；标注块的显示在没有地址时用原生表情。表情回应的选择器（M3 改为本站的数据）在 P15 核对没有 CSP 违规。
 - **`worker-src`**：编辑器和它的扩展没有 `blob:` 的 worker（`git grep` 没有 `new Worker`；`URL.createObjectURL` 只在 `@nerve/utils` 的 CSV 下载），CSP 不加 `worker-src`。P14 的评审在打包之后的产物上复核一次，写进评审记录（M2 交接第 8 节）。
-- **Markdown 的节点序列化删除**（M1 收尾交接）：5 个扩展（标注块、`custom-color`、`custom-image`、`emoji`、`mentions`）的 `addStorage` 的 `markdown.serialize` 没有调用方（`getMarkdown()` 不被调用，`transformCopiedText` 为假），删除；`git grep -n "markdown: {" -- web/packages/editor/src` 没有输出。
+- **Markdown 的节点序列化删除**（M1 收尾交接）：5 个扩展（标注块、`custom-color`、`custom-image`、`emoji`、`mentions`）的 `addStorage` 的 `markdown.serialize` 没有生产调用方（`getMarkdown()` 仅测试读取，`transformCopiedText` 为假），P14 删除死序列化并同步旧测试的 Markdown 输出预期；保留 HTML 清洗/往返、恶意输入、Markdown 粘贴与解析的安全回归。`git grep -n "markdown: {" -- web/packages/editor/src` 没有输出。
 - **只补块 id 的保存**：详情的描述照旧发 `skip_activity`（布尔值，不再是字符串 `"true"`）；工作项的弹窗在**编辑已有的工作项、打开草稿**时读 `isMigrationUpdate`，不把表单标成已改（新建时描述是空的，不涉及；M1 收尾交接，P14；vitest 和 C4 写这两种情形；I2 的一步）。
-- **描述保存的"撤销再重做"**（M1-P2 交接）：`description-input/root.tsx` 在 1.5 秒的保存延迟内先撤销再重做，最终发出撤销后的内容。重写保存时，待发的保存总是取最后一次的内容（重做回到上次保存的内容时取消待发的那一次），vitest 覆盖。
+- **描述保存的"撤销再重做"**（M1-P2 交接）：原 `description-input/root.tsx` 在 1.5 秒保存延迟内先撤销再重做，会发出撤销后的内容。P11 已建立 confirmed autosave，P14 复用并核真实编辑器 undo→redo：待发保存总是最后一次内容，重做回到已确认内容时取消待发保存；既有单测和新增页面共同验收，不重复建设保存所有者。
 - **不再发 `description_json`**（3.7）。
 - **@提及**：候选来自项目成员（没有项目的草稿用工作区成员），不再请求 `entity-search`（3.12）。
 - **图片**：M4 的编辑器关闭 `image` 扩展（3.1）。
@@ -2399,20 +2399,22 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 
 ### P14 `web-issue-detail`：详情、创建弹窗、父子、关联、链接（16 个任务）
 - **目标**：工作项的详情页和浮层、创建弹窗、子工作项、关联、链接、删除；选父工作项经 `issue-search`；访客的边界；编辑器的定点修改。
+- **准备入口**：[spec](specs/P14-web-issue-detail.md)、[plan](plans/P14-web-issue-detail.md)、[预检记录](reviews/P14-web-issue-detail-review.md)。基线 main 8bb4bbcb；实现、整审修复及本地验收完成，最终交付按 review §14 的准确分支 CI 后置回执核准，先不合并。
+- **已有输入**：P11 已完成原生 id 跳转、按编号读取、boolean 描述保存与主要宿主生命周期；P12 已完成 ExistingIssuesListModal 和表格子项列的 browse 地址；P13 已完成归档只读。P14 验真实消费者和剩余缺口，不重复宣称删除或重写。
 - **任务**：
-  1. `issues/:issueId` 的跳转（去掉 `clientLoader` 和模块级的 `IssueService`）；`browse/:workItem` 经按编号取、`useSessionSWR`，以 id 给子树 key；收集箱的跳转删除。
+  1. 项目 `projects/:projectId/issues/:issueId` 原生跳转与 `browse/:workItem` 按编号/useSessionSWR 回归；旧 loader/service/收集箱跳转 P11 已删。补包含页头与正文的共同身份，换项/权限失效不留旧弹层。
   2. 详情的属性和标题（`title-input.tsx` 的提示照 M3 的写法）；`label-select.tsx` 的 `baseTabIndex` 删去；I2 的页面版本。
   3. 描述的保存：`skip_activity` 为布尔值；"撤销再重做"的修复（M1-P2 交接）；不发 `description_json`。
   4. 创建弹窗：`ModalTitle`、去掉正的 `tabIndex`、编辑已有的工作项和打开草稿时读 `isMigrationUpdate`（vitest 写这两种）、按码的错误、字段的提示和 `useRefusedFocus`、项目选择的提示、弹窗里的列表 `modal={false}`；I1 的页面版本。
-  5. 嵌套的弹窗："Save this draft?"（`confirm-issue-discard.tsx:40` 改经 `ModalTitle`）和选父工作项的 Escape；描述编辑器的 Escape 监听只理会自己的弹窗。
-  6. 子工作项的区（添加已有、新建、去掉父工作项、状态分布）、父工作项的选择：`ParentIssuesListModal` 经 `for=parent`（`sr-only` 的名字、去掉 `tabIndex`、去掉悬停才显示的链接，它的 `projectIssuesSearch` 实例消失）；I8 的页面版本。
-  7. 关联的区（跨项目、两边任一个删除；选择器是 P12 改接的 `ExistingIssuesListModal`）；收集箱的查重改接 `issue-search`、改到能编译（`projectIssuesSearch` 的最后一处）；I9 的页面版本。
-  8. 链接的区（弹窗的 `ModalTitle` 和地址的提示、元数据、复制）；I10 的页面版本。
+  5. 嵌套弹窗的统一关闭决策、ModalTitle、busy/readiness 与描述编辑器 Escape 隔离。先完成真实 Dialog 嵌套单测和 Save this draft/日期标签页面；父项 C4 依赖原生读取，随 T6 闭合，不能为 T5 放行旧 API。
+  6. 子工作项区（已有/新建、移动/解除、状态分布）、原生父项选择（已有源 id 用 for=parent，新建无源 id 用普通项目搜索），sr-only 名字、无正 tabIndex/悬停链接；I8 及父项 C4 页面，M7 共用父项调用只同步原生类型/展示。
+  7. 关联区（跨项目、两边任一个删除，复用 P12 选择器）；收集箱查重只换原生读取/类型，M7 业务验收不扩大；最后两个搜索读者消失后删 ProjectService 空类/barrel/专用旧类型；I9 页面。
+  8. 链接区的 ModalTitle/字段提示、元数据与复制；沿现有 link resource 做 UI owner 有期限回读，图标只用 metadata.favicon data image，不从 favicon_url 发外部请求；I10 真 worker 页面。
   9. 删除确认框写明子树（`onSubmit` 保持必传）；I17 的页面版本。
-  10. 编辑器的代码分割；个人设置页不挂载工作项的弹窗（M1-P4、M2 交接第 7 节）；删除 `EMOJI_CHECK_WARNING`（定义、29 个故事文件的 96 行、`settings-pages.ts` 的一处）。
+  10. 编辑器代码分割含 rich/lite wrappers 和 lite toolbar→TOOLBAR_ITEMS 的 runtime 链；个人设置不挂载工作项弹窗；删除无读者的 emoji Canvas 支持检测，再删除 EMOJI_CHECK_WARNING 定义/全部当前读者/注释，历史计数不作验收门；console 观测保持严格。
   11. 标注块的原生表情；5 个扩展的 Markdown 序列化删除；`worker-src` 的复核写进 review。
   12. 编辑器关闭图片；附件区、关注按钮不挂载（3.1）。
-  13. 表格的子工作项列直接链接 `/browse/…`，去掉 `#sub-issues`（M1-P4 交接）。
+  13. P12 已完成的表格子项列 browse 地址补回归；清理 all-properties 子项计数入口剩余 #sub-issues 并直接 browse，保留键盘和事件隔离（M1-P4 交接）。
   14. I20 的页面版本（列表只有自己的、别人的工作项的地址"找不到"、不能建、不能改）；S2 按身份打开一个工作项的详情（2 节）；I22；后退的检查（弹窗、浮层、`WorkItemLevelModals`）。
   15. 详情的复制改经 hook（`identifier-text.tsx`、`links/link-item.tsx`、关联和子工作项的 `helper`、`issue-detail-quick-actions.tsx`、浮层的页头），删除它们的 `copy-hook` 例外。
   16. C3 的详情一侧、C4、C5、C10、C11；review。
@@ -2431,7 +2433,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   7. 创建弹窗的"存为草稿"。
   8. 命令面板：工作项的命令拆开（`commands.ts`）；主题命令在应答成功之后才应用（M2 交接第 9 节）；`power-k/config/creation/command.ts` 读路由的 slug；`workspace-address-route` 的文件正则放宽为 `\.tsx?$`、加上这 4 个文件。
   9. 搜索：命令面板经 `issue-search`，项目在列表里过滤，`WorkspaceService.searchWorkspace` 的模块级实例消失；I18 的页面版本。
-  10. 旧的 `ProjectService` 文件、`WorkspaceService` 的搜索方法、工作区搜索的类型和参数（36 行）删除。
+  10. `WorkspaceService` 的搜索方法、工作区搜索类型和参数删除；ProjectService 在 P14 最后两个读者迁移后即可删，本段核零残留，不留无消费者文件等待本段。
   11. I16 的页面版本（时钟）。
   12. 其余的复制改经 hook（`create-issue-toast-action-items.tsx`、`issue-activity/helper.tsx`、快捷操作的 `helper.tsx`、命令面板），`copy-hook` 的例外全部删除。
   13. C6（含时间线、表情、描述的历史）、C7、C8、C9 的草稿。
@@ -2504,7 +2506,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | M2-closeout §4 请求体检查与草稿发布 | 3.7、5.2、6.1 | 路径按下标的数值排序、开放节点的数的范围、`date` 的检查器各有测试；代价测试加上字符串的数组（P2）；map 型、递归的 schema 写明"没有用到"（5.2，P2 的 review）；草稿发布与创建工作项给出相同的 400（P8） |
 | M2-closeout §5 物理清理与删除关系图 | 3.21、4.16 | 4.16 延伸到 M4 的表；清理的集成测试覆盖超过 60 天的 PAT 和带动态的工作项（`issue_activities.issue_id` 在 M4 是 `CASCADE`，不再挡住工作项的物理删除，4.16）（P9） |
 | M2-closeout §6 定时任务和事件订阅者 | 3.19、3.20、4.18 | 定时任务的种类和模块声明会投递的种类没有 worker 时启动失败，两种漏登记的变异让测试失败（P6）；订阅者的写法写在 3.19（本文；第一个订阅者在 P7）；每张新表在同一个提交里进 `deploy/runtime-grants.sql`，两个权限测试通过（每个加表的 Phase） |
-| M2-closeout §7 编辑器的代码分割 | 7.6 | 编辑器到用它的页面才加载；`EMOJI_CHECK_WARNING` 的定义、29 个故事文件的 96 行和 `e2e/fixtures/settings-pages.ts` 的一处删除，S2 和个人设置的故事仍断言控制台没有别的警告（P14） |
+| M2-closeout §7 编辑器的代码分割 | 7.6 | 富文本、轻量编辑器及工具栏的运行时引入到用它的页面才加载；删除无读者的 emoji 检测、`EMOJI_CHECK_WARNING` 定义及当前全部引用（含 settings-pages），S2 和个人设置的故事仍严格断言安静控制台（P14）；历史计数不作删除范围上限 |
 | M2-closeout §8 CSP | 7.6、8.5 | 标注块的默认表情改为原生表情，插入标注块时没有 CSP 违规、不请求 `cdn.jsdelivr.net`（P14、C10）；表情回应的选择器同样核对（P15、C6）；编辑器不用 `blob:` 的 worker，不加 `worker-src`，P14 的 review 在打包之后的产物上复核并写明；`frame-src` 归 M7（M7 的交接已有） |
 | M2-closeout §9 命令面板的主题命令 | 7.4 | 应答成功、且标签页仍在发出修改时的会话才 `setTheme`，失败时按 `code` 提示；vitest 和 C7（P15） |
 | M2-closeout §10 下拉框 | 7.5 | `DateDropdown` 只有一份打开状态、能用键盘打开；7 个下拉框的列表在按钮旁（P12）；`CustomSelect` 的 3 个调用方、`CustomSearchSelect` 的 4 个富筛选调用方和 `defaultOpen` 在浏览器中核对（C2、C3；P12、P13、P14） |
@@ -2588,8 +2590,8 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P10b `web-list-data` | 列表一侧的数据层（14） | **已完成**：最终2aaef85c授权--no-ff合并main df5d3bbc，[准确main CI 40908365144](https://github.com/open-nerve/NerveProject/actions/runs/40908365144) attempt1三任务全绿；worktree3247文件及外部准备33文件逐hash归档，正常清理分支/worktree后再核通过。见[review§17](reviews/P10b-web-list-data-review.md#17-授权合并main-ci与归档清理2026-10-30) |
 | P11 `web-detail-data` | 详情一侧的数据层（15） | **已完成**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review§15](reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。交付42afa24f、main ce3c39ab；准确分支及main CI全绿，证据归档/清理完成；列宽按已裁定A |
 | P12 web-list-pages | 列表、看板、表格、日历（16） | **已完成**：最终e6d1329b授权--no-ff合并main ff89d0a1；[准确main CI41087022719](https://github.com/open-nerve/NerveProject/actions/runs/41087022719)三任务成功；1786份实施/运行证据及14份准备证据归档逐hash通过，分支/worktree清理后再次复验。见[review§28](reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)、[整审](../../reviews/re-17-M4P12整体审核.md) |
-| P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **实施与终审完成，集成待办**：[spec](specs/P13-web-filters-archives-profile.md)、[plan](plans/P13-web-filters-archives-profile.md)、[review](reviews/P13-web-filters-archives-profile-review.md)、[整审](../../reviews/re-19-M4P13整体审核.md)。分支 codex/m4-p13，基线 main ff89d0a1；T1–T14 完成、R1–R4 修复；准确最终 CI 由 review §14 后置回执核准，保持未合并 |
-| P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | 未开始 |
+| P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **已完成**：最终分支 c57bbe6b 经 --no-ff 合并 main 8bb4bbcb；[main CI 41163365163](https://github.com/open-nerve/NerveProject/actions/runs/41163365163) attempt 2 三任务全绿。2,133 份运行证据与 11 份准备材料归档复验后分支/worktree 正常清理，见 [review §15](reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31) |
+| P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | **实现/本地验收与整审完成，待授权合并**：[spec](specs/P14-web-issue-detail.md)、[plan](plans/P14-web-issue-detail.md)、[review §9–14](reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[整审](../../reviews/re-21-M4P14整体审核.md)。验收输入 b7d1f0c2（含 I22 路由及 I9 编辑器就绪前置修正），七项分层门禁及三浏览器各44通过；准确最终文稿CI以final-delivery.json核准，未核准不交付。分支 codex/m4-p14、main基线8bb4bbcb保留；M4总体仍进行中 |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述的历史、草稿、搜索、命令面板（15） | 未开始 |
 | P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | 未开始 |
 | 收尾 `closeout` | 交接、同步核对、浏览器核对 C12、规模和性能的数字（14） | 未开始 |

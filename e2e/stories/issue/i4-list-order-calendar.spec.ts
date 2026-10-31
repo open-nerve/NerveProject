@@ -242,7 +242,6 @@ test("I4 (API): link counts 0/1/2/2 traverse two limit-two pages in both directi
 test("I4 (page): table label, assignee, child-count and due-date orders each traverse a real second page in both directions", async ({
   api,
   page,
-  browserName,
 }, info) => {
   test.setTimeout(90_000);
   const seed = await issueListProject(api, info);
@@ -361,7 +360,7 @@ test("I4 (page): table label, assignee, child-count and due-date orders each tra
         await expect(table.getByRole("button", { name: "Load more" })).toHaveCount(0);
       });
     }, Promise.resolve());
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 test.describe("calendar in UTC+14", () => {
@@ -507,7 +506,7 @@ test.describe("calendar in UTC+14", () => {
     await expect
       .poll(() => queries.some((query) => query.get("target_date") === weekRange && query.get("limit") === "30"))
       .toBe(true);
-    await expectListPageQuiet(page, watch, browserName, 1, {
+    await expectListPageQuiet(page, watch, {
       failures: [`422 PATCH /api/v0/issues/${available.id}`],
       errors:
         browserName === "chromium" || browserName === "webkit"

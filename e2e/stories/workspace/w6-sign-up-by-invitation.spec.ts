@@ -3,7 +3,7 @@ import { countIdentity, expectNothingAdded, expectRegistered } from "../../fixtu
 import { expectInvitations, expectMembership, lastWorkspaceOf } from "../../fixtures/assert/workspace";
 import { bearer, emailFor, password, registeredPAT, type RegisterInvitation } from "../../fixtures/auth";
 import { fillSignUp, formAlert, submitSignIn, submitSignUp } from "../../fixtures/auth-pages";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { invitationLinkOf } from "../../fixtures/workspace-pages";
@@ -186,7 +186,6 @@ test("W6 (page): with sign-up off, the sign-up page says so; the invitee opens h
   ]);
   // Acme's home logs the hint once; the browser reports the refusal.
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
   });
   await context.close();

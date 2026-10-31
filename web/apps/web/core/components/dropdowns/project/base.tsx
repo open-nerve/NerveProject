@@ -18,10 +18,10 @@ import { DropdownButton } from "../buttons";
 import { BUTTON_VARIANTS_WITH_TEXT } from "../constants";
 import type { TDropdownProps } from "../types";
 
-type Props = TDropdownProps & {
-  getProjectById: (projectId: string | null | undefined) => Project | undefined;
-  projectIds: string[];
+export type ProjectDropdownProps = TDropdownProps & {
   renderCondition?: (projectId: string) => boolean;
+  invalid?: boolean;
+  describedBy?: string;
 } & (
     | {
         multiple: false;
@@ -34,6 +34,10 @@ type Props = TDropdownProps & {
         value: string[];
       }
   );
+type Props = ProjectDropdownProps & {
+  getProjectById: (projectId: string | null | undefined) => Project | undefined;
+  projectIds: string[];
+};
 
 /** A project's logo, as the dropdown's button shows it. */
 const renderProjectLogo = (logoProps: Project["logo_props"]) => (
@@ -137,6 +141,8 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
     </DropdownButton>
   );
   const shared = {
+    invalid: props.invalid,
+    describedBy: props.describedBy,
     options: sortedOptions,
     disabled,
     tabIndex,

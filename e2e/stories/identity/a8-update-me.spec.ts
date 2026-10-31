@@ -1,6 +1,6 @@
 import { accountOf, expectAccountChanged } from "../../fixtures/assert/identity";
 import { bearer, emailFor, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   answerTo,
   expectListBesideButton,
@@ -71,7 +71,7 @@ test("A8 (page): the general page changes the names, the preferences page the ti
   expect(watch.apiFailures).toEqual([]);
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });
 
 test("A8 (page): the general page saves the names nerve takes, an empty last name too, and says under the field why nerve refused one", async ({
@@ -115,7 +115,6 @@ test("A8 (page): the general page saves the names nerve takes, an empty last nam
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"],
   });
 });

@@ -1,13 +1,7 @@
 import { createProject, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
 import { expectProjectCreated } from "../../fixtures/assert/project";
 import { accountId, emailFor, named } from "../../fixtures/auth";
-import {
-  EMOJI_CHECK_WARNING,
-  expectQuietConsole,
-  recordFocuses,
-  requestsElsewhere,
-  watchPage,
-} from "../../fixtures/browser";
+import { expectQuietConsole, recordFocuses, requestsElsewhere, watchPage } from "../../fixtures/browser";
 import {
   closedByComposingEscape,
   closedByEscape,
@@ -63,7 +57,7 @@ test("P1 (page): a new project's icon picker shows the emoji nerve serves itself
   expect((await page.request.head(`${EMOJIBASE}/data.json`)).status()).toBe(200);
   expect(requestsElsewhere(page, watch)).toEqual([]);
   expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });
 
 test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; Tab goes round the features step; the project shows in the list and the sidebar; in no project, the member is offered a project to create, the guest none", async ({
@@ -191,7 +185,6 @@ test("P1 (page): a member creates a project from the projects page, its identifi
     [],
   ]);
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: [
       "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
       "Failed to load resource: the server responded with a status of 409 (Conflict)",
@@ -206,7 +199,7 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   await expect(theGuest.page.getByText("No project", { exact: true })).toBeVisible();
   await expect(theGuest.page.getByRole("button", { name: "Start your first project" })).toHaveCount(0);
   expect([guestWatch.apiFailures, guestWatch.oldApiRequests, guestWatch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(theGuest.page, guestWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(theGuest.page, guestWatch);
   await theGuest.close();
 });
 
@@ -267,5 +260,5 @@ test("P1 (page): Tab goes round the creation dialog and nowhere else; the lead's
   await expect(page.getByRole("option", { name: "You" })).toBeVisible();
 
   expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });

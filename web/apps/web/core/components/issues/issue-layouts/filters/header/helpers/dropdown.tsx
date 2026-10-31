@@ -5,7 +5,7 @@
  */
 
 import React, { Fragment, cloneElement, useState } from "react";
-import type { Placement } from "@popperjs/core";
+import type { Modifier, Placement } from "@popperjs/core";
 import { usePopper } from "react-popper";
 // headless ui
 import { Popover, Transition } from "@headlessui/react";
@@ -23,6 +23,36 @@ type Props = {
   tabIndex?: number;
   menuButton?: React.ReactNode;
   isFiltersApplied?: boolean;
+};
+
+// Popper listens for scrolling and window resizing. Content loading above this button can move it without either
+// event. Follow its geometry only for this panel's Popper lifetime, including its leave transition.
+const followReference: Modifier<"followReference", Record<string, unknown>> = {
+  name: "followReference",
+  enabled: true,
+  phase: "write",
+  fn: () => undefined,
+  effect: ({ state, instance }) => {
+    const view = state.elements.popper.ownerDocument.defaultView;
+    if (!view) return;
+    let previous = state.elements.reference.getBoundingClientRect();
+    let frame: number;
+    const follow = () => {
+      const current = state.elements.reference.getBoundingClientRect();
+      if (
+        current.x !== previous.x ||
+        current.y !== previous.y ||
+        current.width !== previous.width ||
+        current.height !== previous.height
+      ) {
+        previous = current;
+        void instance.update();
+      }
+      frame = view.requestAnimationFrame(follow);
+    };
+    frame = view.requestAnimationFrame(follow);
+    return () => view.cancelAnimationFrame(frame);
+  },
 };
 
 /**
@@ -51,6 +81,7 @@ export function FiltersDropdown(props: Props) {
   const { styles, attributes } = usePopper(referenceElement, popperElement, {
     placement: placement ?? "auto",
     strategy: "fixed",
+    modifiers: [followReference],
   });
 
   return (
@@ -96,12 +127,13 @@ export function FiltersDropdown(props: Props) {
               </Button>
             </Popover.Button>
           )}
+          {/* Popper's transform is positioning, not motion: animate only opacity and the enter/leave translate. */}
           <Transition
             as={Fragment}
-            enter="transition ease-out duration-200"
+            enter="transition-[opacity,translate] ease-out duration-200"
             enterFrom="opacity-0 translate-y-1"
             enterTo="opacity-100 translate-y-0"
-            leave="transition ease-in duration-150"
+            leave="transition-[opacity,translate] ease-in duration-150"
             leaveFrom="opacity-100 translate-y-0"
             leaveTo="opacity-0 translate-y-1"
           >

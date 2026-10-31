@@ -17,17 +17,17 @@ import {
 } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TNameDescriptionLoader } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { CustomSelect } from "@nerve/ui";
-import { copyUrlToClipboard, generateWorkItemLink } from "@nerve/utils";
+import { generateWorkItemLink } from "@nerve/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+import { useCopyLink } from "@/hooks/use-copy-link";
 // local imports
 import { WorkItemDetailQuickActions } from "../issue-layouts/quick-action-dropdowns";
 import { NameDescriptionUpdateStatus } from "../issue-update-status";
@@ -53,14 +53,13 @@ const PEEK_OPTIONS: { key: TPeekModes; icon: ComponentType<{ className?: string 
   },
 ];
 
-export type PeekOverviewHeaderProps = {
+type PeekOverviewHeaderProps = {
   peekMode: TPeekModes;
   setPeekMode: (value: TPeekModes) => void;
   removeRoutePeekId: () => void;
   workspaceSlug: string;
   projectId: string;
   issueId: string;
-  isArchived: boolean;
   disabled: boolean;
   embedIssue: boolean;
   toggleDeleteIssueModal: (value: boolean) => void;
@@ -77,7 +76,6 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
     workspaceSlug,
     projectId,
     issueId,
-    isArchived,
     disabled,
     embedIssue = false,
     removeRoutePeekId,
@@ -90,6 +88,7 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
   // ref
   const parentRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
+  const copyLink = useCopyLink();
   // store hooks
   const {
     issue: { getIssueById },
@@ -112,20 +111,12 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
     issueId,
     projectIdentifier,
     sequenceId: issueDetails?.sequence_id,
-    isArchived,
   });
 
-  const handleCopyText = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleCopyText = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     e.preventDefault();
-    copyUrlToClipboard(workItemLink).then(() => {
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("common.link_copied"),
-        message: t("common.link_copied_to_clipboard"),
-      });
-      return;
-    });
+    await copyLink(workItemLink, t("common.copied_to_clipboard"));
   };
 
   const handleDeleteIssue = async () => {

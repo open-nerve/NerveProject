@@ -22,7 +22,7 @@ export async function startLinkPage(): Promise<LinkPage> {
       response.writeHead(200, { "Content-Type": "image/png" });
       response.end(
         Buffer.from(
-          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jf1sAAAAASUVORK5CYII=",
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=",
           "base64"
         )
       );

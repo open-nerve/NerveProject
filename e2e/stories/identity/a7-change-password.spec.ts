@@ -1,6 +1,6 @@
 import { accountOf, expectPasswordChanged, tokensOf } from "../../fixtures/assert/identity";
 import { bearer, createPAT, emailFor, login, password, recordOf, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, recordFocuses, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, recordFocuses, watchPage } from "../../fixtures/browser";
 import { fieldBlock, registerOnboarded, submitPasswordChange } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -88,10 +88,7 @@ test("A7 (page): the security page changes the password, keeps its own session, 
 
   expect(watch.apiFailures).toEqual(["422 POST /api/v0/me/change-password", "422 POST /api/v0/me/change-password"]);
   expect(watch.pageErrors).toEqual([]);
-  await expectQuietConsole(page, watch, {
-    errors: [refusedResourceError, refusedResourceError],
-    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
-  });
+  await expectQuietConsole(page, watch, { errors: [refusedResourceError, refusedResourceError] });
 });
 
 test("A7 (API): a personal access token changes the password; every session ends, the token goes on", async ({

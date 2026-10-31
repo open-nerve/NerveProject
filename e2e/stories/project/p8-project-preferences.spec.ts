@@ -15,7 +15,7 @@ import {
   type ProjectPreferencesUpdate,
 } from "../../fixtures/api";
 import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import { closedWithin, modalDialog, shownWithin } from "../../fixtures/dialogs";
 import { dragOnto } from "../../fixtures/project-pages";
@@ -324,7 +324,7 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   await expect.poll(() => watch.apiRequests).toContain(`GET /api/v0/projects/${web.id}/issues`);
   await expect.poll(() => watch.apiFailures).toEqual([]);
   expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING], errors: [] });
+  await expectQuietConsole(page, watch, { errors: [] });
   // The header's more menu, by the keyboard: Enter on its button, which is named, opens it; the arrow keys reach
   // Views, then its actions, each named by it and shown as it is reached; Enter on Views opens its page.
   const more = page.getByRole("button", { name: "More tabs", exact: true });
@@ -377,7 +377,7 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   await expect.poll(() => gusWatch.apiRequests).toContain(`GET /api/v0/projects/${web.id}/issues`);
   await expect.poll(() => gusWatch.apiFailures).toEqual([]);
   expect([gusWatch.cspViolations, gusWatch.oldApiRequests, gusWatch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(theGuest.page, gusWatch, { warnings: [EMOJI_CHECK_WARNING], errors: [] });
+  await expectQuietConsole(theGuest.page, gusWatch, { errors: [] });
   // His sidebar's Docs, under the same layout as Web's work items, offers a guest his leaving in its header; asked,
   // it ends as a Back takes him to Web's work items, rather than ask it of Web (v0 design 7.7: a project's pages are
   // keyed by it).

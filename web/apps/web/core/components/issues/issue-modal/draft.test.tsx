@@ -102,6 +102,7 @@ vi.mock("./modal", () => ({
 }));
 vi.mock("@nerve/ui", async (original) => ({
   ...(await original<typeof import("@nerve/ui")>()),
+  ModalTitle: ({ children }: React.PropsWithChildren) => <h3>{children}</h3>,
   AlertModalCore: (props: React.ComponentProps<typeof AlertModalCore>) =>
     props.isOpen ? (
       <div role="alertdialog">
@@ -292,8 +293,8 @@ it.each([403, 422])("a refused draft deletion leaves the actual dialog and recor
   expect(container.querySelector("#issue-d")).not.toBeNull();
   expect(toasts.at(-1)?.message).toBe("errors.forbidden");
 });
-async function click(text: string) {
-  const button = [...container.querySelectorAll<HTMLButtonElement>("button")].find((item) => item.textContent === text);
+async function click(text: string, within: ParentNode = container) {
+  const button = [...within.querySelectorAll<HTMLButtonElement>("button")].find((item) => item.textContent === text);
   expect(button, text).toBeDefined();
   await act(async () => button!.click());
 }
@@ -318,19 +319,20 @@ it("saving a new unassigned draft on close holds the discard dialog and preserve
   await render(null, false, true);
   await input('input[name="name"]', "keep this draft");
   await click("discard");
-  await click("Save to Drafts");
+  await click("save_to_drafts");
   await act(async () => until(() => tab.nerve.calls.length === 1, "save on close"));
   expect(tab.nerve.calls[0]).toMatchObject({
     method: "POST",
     path: "/api/v0/workspaces/ws/drafts",
     body: { project_id: null, payload: { name: "keep this draft" } },
   });
-  await click("Discard");
+  const confirmation = [...container.querySelectorAll('[role="dialog"]')].at(-1)!;
+  await click("discard", confirmation);
   expect(ui.close).not.toHaveBeenCalled();
-  await click("Cancel");
+  await click("cancel", confirmation);
   expect(ui.close).not.toHaveBeenCalled();
   await act(async () => tab.nerve.calls[0]!.answer(problem(422, "validation_failed")));
-  expect(container.textContent).toContain("Save this draft?");
+  expect(container.textContent).toContain("issue.draft.save_prompt.title");
   expect(container.querySelector<HTMLInputElement>('input[name="name"]')!.value).toBe("keep this draft");
   expect(ui.close).not.toHaveBeenCalled();
 });

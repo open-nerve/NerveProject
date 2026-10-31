@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // local imports
 import { ECalloutAttributeNames } from "./types";
-import { DEFAULT_CALLOUT_BLOCK_ATTRIBUTES, getStoredLogo, updateStoredLogo } from "./utils";
+import { getStoredLogo, updateStoredLogo } from "./utils";
 
 // A new callout takes its logo from local storage, which holds whatever was put there. Only a value of the shape
 // the logo selector writes is used; anything else is dropped and the defaults apply, as for text that is not
@@ -16,8 +16,8 @@ const STORAGE_KEY = "editor-calloutComponent-logo";
 
 const DEFAULT_LOGO = {
   [ECalloutAttributeNames.LOGO_IN_USE]: "emoji",
-  [ECalloutAttributeNames.EMOJI_UNICODE]: DEFAULT_CALLOUT_BLOCK_ATTRIBUTES[ECalloutAttributeNames.EMOJI_UNICODE],
-  [ECalloutAttributeNames.EMOJI_URL]: DEFAULT_CALLOUT_BLOCK_ATTRIBUTES[ECalloutAttributeNames.EMOJI_URL],
+  [ECalloutAttributeNames.EMOJI_UNICODE]: "128161",
+  [ECalloutAttributeNames.EMOJI_URL]: undefined,
 };
 
 beforeEach(() => {
@@ -37,12 +37,12 @@ const expectDropped = (stored: string) => {
 };
 
 describe("the stored callout logo", () => {
-  it("gives the stored emoji, with the default image when none is stored", () => {
+  it("gives the stored native emoji without adding an external image", () => {
     updateStoredLogo({ in_use: "emoji", emoji: { value: "128512" } });
     expect(getStoredLogo()).toEqual({
       [ECalloutAttributeNames.LOGO_IN_USE]: "emoji",
       [ECalloutAttributeNames.EMOJI_UNICODE]: "128512",
-      [ECalloutAttributeNames.EMOJI_URL]: DEFAULT_CALLOUT_BLOCK_ATTRIBUTES[ECalloutAttributeNames.EMOJI_URL],
+      [ECalloutAttributeNames.EMOJI_URL]: undefined,
     });
   });
 

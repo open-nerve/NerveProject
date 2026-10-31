@@ -121,7 +121,7 @@ async function requestDelete(id = "parent") {
 }
 const dialog = () => document.querySelector('[role="dialog"][aria-modal="true"]');
 const confirmDelete = () =>
-  [...dialog()!.querySelectorAll("button")].find((button) => button.textContent === "Delete")!;
+  [...dialog()!.querySelectorAll("button")].find((button) => button.textContent === "delete")!;
 it("registers kanban auto-scroll when the actual container arrives and releases it on host end", async () => {
   await mount("kanban", false);
   expect(bound.scrolls.size).toBe(0);

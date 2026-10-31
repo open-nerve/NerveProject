@@ -100,6 +100,7 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
 
       <DescriptionInput
         autosaveRef={descriptionInputRef}
+        disabledExtensions={["image"]}
         prepareSubmit={
           issueOperations.prepareUpdate
             ? () => {

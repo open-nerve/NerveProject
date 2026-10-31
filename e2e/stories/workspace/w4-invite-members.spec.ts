@@ -9,13 +9,7 @@ import {
 } from "../../fixtures/api";
 import { expectInvitations } from "../../fixtures/assert/workspace";
 import { bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
-import {
-  EMOJI_CHECK_WARNING,
-  expectQuietConsole,
-  recordFocuses,
-  refuseClipboardWrites,
-  watchPage,
-} from "../../fixtures/browser";
+import { expectQuietConsole, recordFocuses, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
 import { announced, closedByEscape, closedWithin, modalDialog } from "../../fixtures/dialogs";
 import { holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -220,7 +214,7 @@ test("W4 (page): the admin invites a member and a guest, Enter on the guest's ro
   await expect(theMember.page.getByRole("button", { name: "Add member" })).toHaveCount(0);
   expect(memberWatch.apiRequests.filter((request) => request.endsWith(invitations))).toEqual([]);
   expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(theMember.page, memberWatch);
   await theMember.close();
 
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
@@ -380,8 +374,6 @@ test("W4 (page): the admin invites a member and a guest, Enter on the guest's ro
     [],
   ]);
   await expectQuietConsole(page, watch, {
-    // the members page's load, then the general page's
-    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: [
       "Failed to load resource: the server responded with a status of 404 (Not Found)",
       "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",

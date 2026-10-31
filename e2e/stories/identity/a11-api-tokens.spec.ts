@@ -5,7 +5,7 @@ import type { Download } from "@playwright/test";
 
 import { expectTokenStored } from "../../fixtures/assert/identity";
 import { anotherTabSignsIn, bearer, createPAT, emailFor, login, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   closedByBackdropClick,
   closedByEscape,
@@ -159,7 +159,7 @@ test("A11 (page): a token created on the page shows once, with the focus on it, 
   expect(watch.apiFailures).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
   // Two loads of the page: the first, and the reload; the sidebar's buttons navigate within the app.
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });
 
 test("A11 (page): what a modal's opening left unfinished stays there: a token answered after its page was left shows nowhere; its cleanup spares the next opening", async ({
@@ -309,7 +309,7 @@ test("A11 (page): what a modal's opening left unfinished stays there: a token an
 
   expect(watch.apiFailures).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });
 
 test("A11 (page): the list is the account's own: when another tab signs another account in, it shows that account's", async ({
@@ -337,7 +337,7 @@ test("A11 (page): the list is the account's own: when another tab signs another 
 
   expect(watch.apiFailures).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
-  await expectQuietConsole(tabA, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(tabA, watch);
 });
 
 test("A11 (API): a token creates, lists page by page and revokes another; a revoked or expired token fails", async ({

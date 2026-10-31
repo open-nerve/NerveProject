@@ -179,7 +179,6 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                 toggleArchiveIssueModal={toggleArchiveIssueModal}
                 toggleEditIssueModal={toggleEditIssueModal}
                 handleRestoreIssue={handleRestore}
-                isArchived={is_archived}
                 issueId={issueId}
                 workspaceSlug={workspaceSlug}
                 projectId={projectId}

@@ -96,6 +96,7 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
 
         <DescriptionInput
           autosaveRef={descriptionInputRef}
+          disabledExtensions={["image"]}
           prepareSubmit={
             issueOperations.prepareUpdate
               ? () => {

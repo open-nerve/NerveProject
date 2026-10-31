@@ -9,7 +9,7 @@ import {
 } from "../../fixtures/api";
 import { expectPreferences } from "../../fixtures/assert/workspace";
 import { bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { answerTo, bodiesSentTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -188,7 +188,6 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[`422 PATCH ${path}`], [], []]);
   // Two loads: the first and the refresh.
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"],
   });
 });

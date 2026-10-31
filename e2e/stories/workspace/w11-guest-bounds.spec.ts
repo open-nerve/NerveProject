@@ -11,7 +11,7 @@ import {
 import { workspaceTables } from "../../fixtures/assert/catalog";
 import { expectMembership, expectMembershipEnded } from "../../fixtures/assert/workspace";
 import { accountId, bearer, emailFor, newAccount } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectNoAddress, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectNoAddress, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   announced,
   closedByEscape,
@@ -271,5 +271,5 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   expect(watch.apiRequests.filter((request) => request === `POST ${leaving.path}`)).toEqual([`POST ${leaving.path}`]);
   await expectMembershipEnded(db, slug, gusEmail, gusEmail, 5, [{ identifier: "WEB", role: 5 }]);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
+  await expectQuietConsole(page, watch);
 });

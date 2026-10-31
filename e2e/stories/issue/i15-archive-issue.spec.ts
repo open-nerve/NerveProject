@@ -223,7 +223,6 @@ test("I15 (page): a terminal row archives once while pending, its saved archive 
   api,
   db,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const { member, project, states, slug } = seed;
@@ -307,7 +306,7 @@ test("I15 (page): a terminal row archives once while pending, its saved archive 
   await expect(page.getByRole("button", { name: "Add sub-work item", exact: true })).toBeVisible();
   await page.goto(seed.path);
   await expect(page.locator(`[id^="issue_${item.id}_"]`)).toBeAttached();
-  await expectListPageQuiet(page, watch, browserName, 5);
+  await expectListPageQuiet(page, watch);
 });
 
 test("I15 (page): a nonterminal row offers no archive; a refused archive keeps its dialog and a late confirmed archive after Back cannot change the new page", async ({
@@ -375,7 +374,7 @@ test("I15 (page): a nonterminal row offers no archive; a refused archive keeps i
     activity: [...createdFor(), archivedRow],
   });
   expect(watch.apiRequests.filter((request) => request === `POST ${archive}`)).toHaveLength(2);
-  await expectListPageQuiet(page, watch, browserName, 1, {
+  await expectListPageQuiet(page, watch, {
     failures: [`403 POST ${archive}`],
     errors:
       browserName === "chromium" || browserName === "webkit"
@@ -388,7 +387,6 @@ test("I15 (page): an admin deletes an archived item through its read-only detail
   api,
   db,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const { member, project, states, slug } = seed;
@@ -440,13 +438,12 @@ test("I15 (page): an admin deletes an archived item through its read-only detail
   expect(
     watch.apiRequests.filter((request) => /^(PATCH|POST|DELETE) \/api\/v0\/(issues|comments)/.test(request))
   ).toEqual([`DELETE ${path}`]);
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 test("I15 (page): a parent with children stays mounted in active detail and peek without restarting its child read", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const parent = await createIssue(api, seed.member.token, seed.project.id, { name: "Stable parent" });
@@ -473,14 +470,13 @@ test("I15 (page): a parent with children stays mounted in active detail and peek
   await page.keyboard.press("Escape");
   expect(watch.apiRequests.filter((request) => request === childrenRead)).toHaveLength(2);
   expect(watch.apiRequests.filter((request) => request === parentRead)).toHaveLength(3);
-  await expectListPageQuiet(page, watch, browserName, 2);
+  await expectListPageQuiet(page, watch);
 });
 
 test("I15 (page): a project guest may read a visible archived detail without write controls but never mounts the archived list", async ({
   api,
   page,
   signedInPage,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const { member, project, states, slug } = seed;
@@ -518,5 +514,5 @@ test("I15 (page): a project guest may read a visible archived detail without wri
   expect(
     watch.apiRequests.filter((request) => /^(PATCH|POST|DELETE) \/api\/v0\/(issues|comments)/.test(request))
   ).toEqual([]);
-  await expectListPageQuiet(page, watch, browserName, 2);
+  await expectListPageQuiet(page, watch);
 });

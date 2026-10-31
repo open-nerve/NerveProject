@@ -242,7 +242,6 @@ test("I5 (page): the toolbar saves started, me, none and two intersecting date r
   db,
   page,
   browser,
-  browserName,
   nerve,
 }, info) => {
   const seed = await issueListProject(api, info);
@@ -339,21 +338,20 @@ test("I5 (page): the toolbar saves started, me, none and two intersecting date r
       )
     );
     await expect(bPage.getByRole("button", { name: "Remove filter", exact: true })).toHaveCount(0);
-    await expectListPageQuiet(bPage, bWatch, browserName, 1);
+    await expectListPageQuiet(bPage, bWatch);
   } finally {
     await context.close();
   }
   await page.goto(`/${slug}/projects/${otherProject.id}/issues`);
   await expect(page.getByRole("button", { name: "Add filter", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Remove filter", exact: true })).toHaveCount(0);
-  await expectListPageQuiet(page, watch, browserName, 3);
+  await expectListPageQuiet(page, watch);
 });
 
 test("I5 (page): all eleven display properties and layout, grouping, ordering and extra options save from their controls without losing untouched calendar values", async ({
   api,
   db,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const { project, member } = seed;
@@ -465,7 +463,7 @@ test("I5 (page): all eleven display properties and layout, grouping, ordering an
       ).toHaveAttribute("aria-pressed", String(expected[key]))
     )
   );
-  await expectListPageQuiet(page, watch, browserName, 2);
+  await expectListPageQuiet(page, watch);
 });
 
 test("I5 (page): a refused preference keeps confirmed UI and database; a confirmed change with a failed read retries only GET", async ({
@@ -548,7 +546,7 @@ test("I5 (page): a refused preference keeps confirmed UI and database; a confirm
   expect(await readProjectPreferences(api, member.token, project.id)).toEqual(saved);
   expect([...new Set(await scrollPositions.jsonValue())]).toEqual([0]);
   await scrollPositions.dispose();
-  await expectListPageQuiet(page, watch, browserName, 1, {
+  await expectListPageQuiet(page, watch, {
     failures: [`403 PATCH ${path}`, `503 GET ${list}`],
     errors:
       browserName === "chromium" || browserName === "webkit"

@@ -6,7 +6,7 @@ import {
   createProject,
 } from "../../fixtures/api";
 import { emailFor, shownNameOf } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { cancel, chineseAdmin } from "../../fixtures/chinese";
 import { closedWithin, modalDialog } from "../../fixtures/dialogs";
 import { labelRow } from "../../fixtures/project-pages";
@@ -169,7 +169,7 @@ test("S7 (page): an admin whose language is Chinese sees a project's header, gen
   await expect.poll(() => watch.apiRequests).toContain(`GET /api/v0/me/projects/${web.id}/preferences`);
   await expect.poll(() => watch.apiRequests).toContain(`GET /api/v0/projects/${web.id}/issues`);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(6).fill(EMOJI_CHECK_WARNING), errors: [] });
+  await expectQuietConsole(page, watch, { errors: [] });
 });
 
 test("S7 (page): an admin whose language is Chinese filters the projects and the members, and reads a project's settings, its custom range and a toast in Chinese", async ({
@@ -297,5 +297,5 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   await expect(modalDialog(page).getByText("请选择 1 到 12 之间的月数。", { exact: true })).toBeVisible();
   await cancel(page);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(8).fill(EMOJI_CHECK_WARNING) });
+  await expectQuietConsole(page, watch);
 });

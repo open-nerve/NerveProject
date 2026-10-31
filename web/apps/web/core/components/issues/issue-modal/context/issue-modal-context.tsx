@@ -6,12 +6,12 @@
 
 import { createContext } from "react";
 // nerve imports
-import type { ISearchIssueResponse } from "@nerve/types";
+import type { Issue } from "@nerve/api-client";
 
 export type TIssueModalContext = {
   allowedProjectIds: string[];
-  selectedParentIssue: ISearchIssueResponse | null;
-  setSelectedParentIssue: React.Dispatch<React.SetStateAction<ISearchIssueResponse | null>>;
+  selectedParentIssue: Issue | null;
+  setSelectedParentIssue: React.Dispatch<React.SetStateAction<Issue | null>>;
 };
 
 export const IssueModalContext = createContext<TIssueModalContext | undefined>(undefined);

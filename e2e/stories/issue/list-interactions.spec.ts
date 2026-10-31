@@ -64,7 +64,6 @@ async function searchPanel(page: Page, button: Locator, option: string, insideMo
 test("C3: list dates use one keyboard state, adjacent controls close each other, and seven property panels anchor to their triggers", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await controlsProject(api, info);
   const { watch } = await openIssueList(page, seed);
@@ -126,7 +125,7 @@ test("C3: list dates use one keyboard state, adjacent controls close each other,
       .locator('[data-context-menu="true"]')
       .evaluateAll((panels) => panels.every((panel) => !!panel.closest('[inert][aria-hidden="true"]')))
   ).toBe(true);
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 test("C3: a current row property refusal is announced once without an unhandled promise or a false confirmed value", async ({
@@ -161,7 +160,7 @@ test("C3: a current row property refusal is announced once without an unhandled 
     status: 200,
     issue: { priority: "none" },
   });
-  await expectListPageQuiet(page, watch, browserName, 1, {
+  await expectListPageQuiet(page, watch, {
     failures: [`403 PATCH ${path}`],
     errors:
       browserName === "chromium" || browserName === "webkit"
@@ -173,7 +172,6 @@ test("C3: a current row property refusal is announced once without an unhandled 
 test("C3: create form project and label panels keep the outer modal isolated and return focus without submitting", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await controlsProject(api, info);
   const { watch } = await openIssueList(page, seed);
@@ -190,13 +188,12 @@ test("C3: create form project and label panels keep the outer modal isolated and
   expect(watch.apiRequests.filter((request) => request === `POST /api/v0/projects/${seed.project.id}/issues`)).toEqual(
     []
   );
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 test("C3: closing a loading peek returns keyboard focus to its still-connected trigger and a late read stays closed", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await controlsProject(api, info);
   const { watch } = await openIssueList(page, seed);
@@ -218,13 +215,12 @@ test("C3: closing a loading peek returns keyboard focus to its still-connected t
     expect(await (await refreshed).finished()).toBeNull();
   }
   await expect(peek.getByRole("button", { name: "Toggle peek view layout", exact: true })).toHaveCount(0);
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 test("C3: peek layout selects its current mode, anchors the list and leaves a retired row alone; detail labels keep one popup", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await controlsProject(api, info);
   const { watch } = await openIssueList(page, seed);
@@ -257,13 +253,12 @@ test("C3: peek layout selects its current mode, anchors the list and leaves a re
   expect(await originalTrigger!.evaluate((element) => element.isConnected)).toBe(false);
   await expect(trigger).not.toBeFocused();
   await expect(page.locator("body")).toBeFocused();
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 test("C3: settings selects and API-token calendar preserve keyboard focus, placement and outer modal isolation", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await controlsProject(api, info);
   expect(await changeProject(api, seed.member.token, seed.project.id, { archive_in: 3 })).toMatchObject({
@@ -317,5 +312,5 @@ test("C3: settings selects and API-token calendar preserve keyboard focus, place
   await expect(page.getByText(/^Expires .+ at /)).toBeVisible();
   expect(await pageBehindHidden(page)).toBe(true);
   expect(watch.apiRequests.filter((request) => request === "POST /api/v0/me/api-tokens")).toEqual([]);
-  await expectListPageQuiet(page, watch, browserName, 4);
+  await expectListPageQuiet(page, watch);
 });

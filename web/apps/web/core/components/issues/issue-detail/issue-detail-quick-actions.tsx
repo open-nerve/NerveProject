@@ -13,13 +13,14 @@ import { IconButton } from "@nerve/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { EIssuesStoreType } from "@nerve/types";
-import { generateWorkItemLink, copyTextToClipboard } from "@nerve/utils";
+import { generateWorkItemLink } from "@nerve/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useNavigate } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+import { useCopyLink } from "@/hooks/use-copy-link";
 // local imports
 import { useDetailScope } from "../issue-detail-widgets/use-detail-scope";
 import { SessionChangedError } from "@/lib/auth/token-manager";
@@ -35,6 +36,7 @@ type Props = {
 export const IssueDetailQuickActions = observer(function IssueDetailQuickActions(props: Props) {
   const { workspaceSlug, projectId, issueId } = props;
   const { t } = useTranslation();
+  const copyLink = useCopyLink();
 
   // ref
   const parentRef = useRef<HTMLDivElement>(null);
@@ -74,22 +76,7 @@ export const IssueDetailQuickActions = observer(function IssueDetailQuickActions
   });
 
   // handlers
-  const handleCopyText = async () => {
-    try {
-      const originURL = typeof window !== "undefined" && window.location.origin ? window.location.origin : "";
-      await copyTextToClipboard(`${originURL}${workItemLink}`);
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("common.link_copied"),
-        message: t("common.copied_to_clipboard"),
-      });
-    } catch (_error) {
-      setToast({
-        title: t("toast.error"),
-        type: TOAST_TYPE.ERROR,
-      });
-    }
-  };
+  const handleCopyText = () => copyLink(workItemLink, t("common.copied_to_clipboard"));
 
   const handleDeleteIssue = async () => {
     const current = capture();

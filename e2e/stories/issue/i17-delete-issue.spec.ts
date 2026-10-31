@@ -25,6 +25,117 @@ import {
 import { completedLinkCrawl, createIssueLink } from "../../fixtures/links";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
+import { issueListProject, expectListPageQuiet } from "../../fixtures/issue-list-page";
+import { openIssueDetail } from "../../fixtures/issue-detail-page";
+import { sentHeld } from "../../fixtures/settings-pages";
+
+test("I17 (page): the confirmation names the whole subtree including archived descendants; one held deletion stays open until confirmed, deletes every catalog row by the current admin, and preserves the old branch and unrelated item", async ({
+  api,
+  db,
+  page,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const writer = await newAccount(api, info, "writer");
+  await inviteAndAccept(api, seed.member.token, seed.slug, writer, 15);
+  await addProjectMembers(api, seed.member.token, seed.project.id, [{ member_id: writer.id, role: 15 }]);
+  const bug = await createLabel(api, seed.member.token, seed.project.id, { name: "Bug" });
+  const description = `<mention-component entity_name="user_mention" entity_identifier="${seed.member.id}"></mention-component>`;
+  const root = await createIssue(api, writer.token, seed.project.id, {
+    name: "Delete release tree",
+    description_html: description,
+    assignee_ids: [seed.member.id],
+    label_ids: [bug.id],
+  });
+  const child = await createIssue(api, writer.token, seed.project.id, {
+    name: "Release notes",
+    parent_id: root.id,
+    description_html: description,
+  });
+  const grandchild = await createIssue(api, writer.token, seed.project.id, {
+    name: "Archived review",
+    parent_id: child.id,
+    description_html: description,
+    state_id: seed.states.Done,
+  });
+  const old = await createIssue(api, writer.token, seed.project.id, {
+    name: "Already deleted",
+    parent_id: root.id,
+    description_html: description,
+  });
+  const neighbor = await createIssue(api, writer.token, seed.project.id, {
+    name: "Keep neighbor",
+    description_html: description,
+  });
+  const live = [root, child, grandchild];
+  await Promise.all(
+    [...live, old, neighbor].map(async (item) => {
+      const link = await createIssueLink(api, writer.token, item.id, {
+        url: `http://169.254.169.254/delete/${item.id}`,
+      });
+      await completedLinkCrawl(db, link.id, link.url);
+      const comment = await createIssueComment(api, writer.token, item.id, "<p>Keep author evidence</p>");
+      await createCommentReaction(api, writer.token, comment.id);
+      await createIssueReaction(api, writer.token, item.id);
+    })
+  );
+  expect((await issueArchived(api, writer.token, grandchild.id)).status).toBe(200);
+  expect(await issueDeleted(api, writer.token, old.id)).toEqual({ status: 204 });
+  const oldRows = await collaborationRows(db, [old.id]);
+  const neighborRows = await collaborationRows(db, [neighbor.id]);
+  for (const table of [...oldRows, ...neighborRows]) expect(table.rows.length, table.table).toBeGreaterThan(0);
+  const ops = await createProject(api, seed.member.token, seed.slug, { name: "Ops", identifier: "OPS" });
+  const deploy = await createIssue(api, seed.member.token, ops.id, { name: "Deploy stays" });
+  const ship = await createIssue(api, seed.member.token, ops.id, { name: "Ship stays" });
+  await createIssueRelations(api, seed.member.token, root.id, { relation_type: "relates_to", issue_ids: [deploy.id] });
+  await createIssueRelations(api, seed.member.token, root.id, { relation_type: "blocking", issue_ids: [ship.id] });
+  const watch = await openIssueDetail(page, seed, root);
+  await page.getByRole("button", { name: `Options: ${root.name}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Delete Work item", exact: true });
+  await expect(dialog).toContainText(
+    `Delete WEB-${root.sequence_id} and all its sub-work items, including archived descendants?`
+  );
+  const path = `/api/v0/issues/${root.id}`;
+  const held = await sentHeld(page, "DELETE", path, () =>
+    dialog.getByRole("button", { name: "Delete", exact: true }).dblclick()
+  );
+  try {
+    await expect
+      .poll(() => db.query("SELECT deleted_at IS NOT NULL AS deleted FROM issues WHERE id=$1", [root.id]))
+      .toEqual([{ deleted: true }]);
+    await expectIssueDeleted(db, root.id, seed.member.email);
+    await expect(dialog.getByRole("heading", { name: "Delete Work item" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await expect(dialog.getByRole("heading", { name: "Delete Work item" })).toBeVisible();
+    await expect(page).toHaveURL(`/${seed.slug}/browse/WEB-${root.sequence_id}`);
+    expect(watch.apiRequests.filter((request) => request === `DELETE ${path}`)).toHaveLength(1);
+  } finally {
+    expect((await held.release()).status()).toBe(204);
+  }
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(seed.path);
+  await expect(page.getByText(neighbor.name, { exact: true })).toBeVisible();
+  expect(await collaborationRows(db, [old.id])).toEqual(oldRows);
+  expect(await collaborationRows(db, [neighbor.id])).toEqual(neighborRows);
+  expect(await Promise.all(live.map(({ id }) => issueRead(api, seed.member.token, id)))).toEqual(
+    live.map(() => ({ status: 404, code: "issue.not_found" }))
+  );
+  expect(await listIssueRelations(api, seed.member.token, deploy.id)).toEqual([]);
+  expect(await listIssueRelations(api, seed.member.token, ship.id)).toEqual([]);
+  const authors = await collaborationRows(
+    db,
+    live.map(({ id }) => id)
+  );
+  for (const table of authors) {
+    expect(table.rows.length, table.table).toBeGreaterThan(0);
+    expect(
+      table.rows.every((row) => row.created_by_id === writer.id && row.updated_by_id === seed.member.id),
+      table.table
+    ).toBe(true);
+  }
+  await expectListPageQuiet(page, watch);
+});
 
 // I17, deleting a work item and the work items under it (M4 design 2, 3.4, 3.6, 3.9, 3.10): the API version, with
 // P3's assertions (the work item, two levels of work items under it, an archived one among them, and their assignees,

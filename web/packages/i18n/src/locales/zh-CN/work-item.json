@@ -1,5 +1,11 @@
 {
   "issue": {
+    "draft": {
+      "save_prompt": {
+        "title": "保存这份草稿？",
+        "description": "你可以将此工作项保存到草稿，稍后继续编辑。"
+      }
+    },
     "calendar": {
       "due_before_start": "截止日期不能早于开始日期。",
       "previous_period": "上一时间段",

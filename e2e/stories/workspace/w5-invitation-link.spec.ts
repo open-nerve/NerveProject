@@ -10,7 +10,7 @@ import {
   removeRecord,
 } from "../../fixtures/auth";
 import { submitSignIn } from "../../fixtures/auth-pages";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { invitationLinkOf } from "../../fixtures/workspace-pages";
@@ -247,7 +247,6 @@ test("W5 (page): signed out, the link shows the workspace and the role and sends
   ]);
   // Acme's home logs the hint once; the browser reports the read cut and the two refusals.
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: [
       "Failed to load resource: net::ERR_FAILED",
       "Failed to load resource: the server responded with a status of 404 (Not Found)",

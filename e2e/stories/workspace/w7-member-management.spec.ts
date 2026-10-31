@@ -11,7 +11,7 @@ import {
 } from "../../fixtures/api";
 import { expectMembership, expectMembershipEnded, expectWrittenLastBy } from "../../fixtures/assert/workspace";
 import { accountId, bearer, emailFor, registeredPAT, shownNameOf } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import {
   announced,
@@ -282,7 +282,7 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await theMember.page.getByRole("button", { name: "Open workspace switcher" }).click();
   await expect(theMember.page.getByRole("menuitem", { name: "Leave workspace" })).toBeVisible();
   expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(theMember.page, memberWatch);
   await theMember.close();
 
   const page = await signedInPage(admin);
@@ -387,7 +387,6 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
     [],
   ]);
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 409 (Conflict)"],
   });
 });

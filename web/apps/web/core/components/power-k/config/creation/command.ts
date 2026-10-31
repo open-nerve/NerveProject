@@ -64,6 +64,7 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
       group: "create",
       i18n_title: "power_k.creation_actions.create_work_item",
       icon: WorkItemsOutline,
+      shortcut: "c",
       keySequence: "ni",
       action: () => toggleCreateIssueModal(true),
       isEnabled: () => Boolean(canCreateWorkItem),

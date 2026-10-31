@@ -280,7 +280,6 @@ async function profileGroup(page: Page, name: string, path: string) {
 test("I19 (page): three real relation tabs and both layouts group only the caller's visible scope, including an admin's own-only project", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await profileProject(api, info);
   const { slug, b } = seed;
@@ -327,13 +326,12 @@ test("I19 (page): three real relation tabs and both layouts group only the calle
     watch.apiRequests.filter((request) => request.startsWith("PATCH ") && request.endsWith("/preferences"))
   ).toEqual([]);
   expect(watch.apiRequests.filter((request) => /GET \/api\/v0\/projects\/[^/]+\/labels$/.test(request))).toEqual([]);
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 test("I19 (page): a created group keeps its relation and project restriction on page two, reload and shared views while another target and account retain their own settings", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await profileProject(api, info);
   const { slug, b, c, member, project } = seed;
@@ -417,13 +415,12 @@ test("I19 (page): a created group keeps its relation and project restriction on 
   await expect(page.locator(`[id^="issue_${seed.across.id}_"]`)).toBeAttached();
   await expect(page.locator(`[id^="issue_${seed.notOwn.id}_"]`)).toBeAttached();
   await expect(page.getByRole("button", { name: "Remove filter", exact: true })).toHaveCount(0);
-  await expectListPageQuiet(page, watch, browserName, 3);
+  await expectListPageQuiet(page, watch);
 });
 
 test("I19 (page): view and target navigation end the old display panel and late member read", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await profileProject(api, info);
   const path = memberPath(seed.slug, seed.b.id);
@@ -448,13 +445,12 @@ test("I19 (page): view and target navigation end the old display panel and late 
   await expect(page).toHaveURL(`/${seed.slug}/profile/${seed.b.id}/created`);
   await profileRows(page, [seed.created.id, seed.across.id]);
   await expect(page.locator(`[id="${oldId}"]`)).toHaveCount(0);
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 test("I19 (page): a label selected from a visible detail remains a real restriction after a cold profile reload without fetching label directories", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await profileProject(api, info);
   const path = memberPath(seed.slug, seed.b.id);
@@ -484,13 +480,12 @@ test("I19 (page): a label selected from a visible detail remains a real restrict
   expect(watch.apiRequests.filter((request) => /GET \/api\/v0\/projects\/[^/]+\/labels$/.test(request))).toEqual(
     labelReads
   );
-  await expectListPageQuiet(page, watch, browserName, 2);
+  await expectListPageQuiet(page, watch);
 });
 
 test("I19 (page): a workspace guest has neither toolbar nor member issue read on desktop or mobile", async ({
   api,
   signedInPage,
-  browserName,
 }, info) => {
   const seed = await profileProject(api, info);
   const tokens = await registerOnboarded(api, emailFor(info, "profile-guest"));
@@ -517,5 +512,5 @@ test("I19 (page): a workspace guest has neither toolbar nor member issue read on
     await expect(page.getByRole("link", { name: /^(Assigned|Created|Subscribed)$/ })).toHaveCount(0);
   }, Promise.resolve());
   expect(watch.apiRequests.filter((request) => /GET .*\/members\/[^/]+\/issues$/.test(request))).toEqual([]);
-  await expectListPageQuiet(page, watch, browserName, 2);
+  await expectListPageQuiet(page, watch);
 });

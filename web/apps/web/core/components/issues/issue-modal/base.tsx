@@ -6,7 +6,9 @@
 
 import type { Issue, Draft } from "@nerve/api-client";
 
-import type { IssueFormData, IssueDescriptionLoadState } from "./types";
+import type { IssueFormData, IssueDescriptionLoadState, IssueFormSubmitOptions } from "./types";
+import { ISSUE_FORM_FIELDS } from "./types";
+import { pick } from "lodash-es";
 import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
@@ -20,7 +22,7 @@ import { draftFormData } from "./draft-form";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
 import { EIssuesStoreType } from "@nerve/types";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import type { EditorRefApi } from "@nerve/editor";
 // hooks
 import { useIssueModal } from "@/hooks/context/use-issue-modal";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -29,12 +31,9 @@ import { useProject } from "@/hooks/store/use-project";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 // services
-import { FileService } from "@/services/file.service";
-const fileService = new FileService();
 // local imports
 import { CreateIssueToastActionItems } from "../create-issue-toast-action-items";
 import { DraftIssueLayout } from "./draft-issue-layout";
-import { IssueFormRoot } from "./form";
 import type { IssueFormProps } from "./form";
 import type { IssuesModalProps } from "./modal";
 
@@ -60,7 +59,9 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const storeType = issueStoreFromProps ?? issueStoreType;
   // ref
   const issueTitleRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<EditorRefApi>(null);
   const descriptionRequest = useRef(0);
+  const submission = useRef<Promise<void> | undefined>(undefined);
   // states
   const [changesMade, setChangesMade] = useState<IssueFormData | null>(null);
   const [createMore, setCreateMore] = useState(false);
@@ -68,8 +69,8 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const [description, setDescription] = useState<string | undefined>(undefined);
   const [descriptionLoadState, setDescriptionLoadState] = useState<IssueDescriptionLoadState>("loading");
   const [descriptionAttempt, setDescriptionAttempt] = useState(0);
-  const [uploadedAssetIds, setUploadedAssetIds] = useState<string[]>([]);
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const [isPending, setIsPending] = useState(false);
   // store hooks
   const { t } = useTranslation();
   const refuse = useRefusalToast();
@@ -168,7 +169,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     setCreateMore(value);
   };
 
-  const handleClose = () => {
+  const finishClose = () => {
     descriptionRequest.current++;
 
     setActiveProjectId(null);
@@ -179,7 +180,8 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
 
   const handleCreateIssue = async (
     payload: IssueFormData,
-    is_draft_issue: boolean = false
+    is_draft_issue: boolean = false,
+    options?: IssueFormSubmitOptions
   ): Promise<Issue | Draft | undefined> => {
     if (!workspaceSlug || (!is_draft_issue && !payload.project_id) || descriptionLoadState !== "ready") return;
 
@@ -199,7 +201,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
         response = await createIssue(payload.project_id!, {
           name: payload.name,
           description_html: payload.description_html,
-          state_id: payload.state_id,
+          ...(payload.state_id ? { state_id: payload.state_id } : {}),
           priority: payload.priority,
           assignee_ids: payload.assignee_ids,
           label_ids: payload.label_ids,
@@ -211,19 +213,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
 
       if (!inSession()) throw new SessionChangedError();
       if (!response) throw new Error("Missing confirmed work item");
-      // M5 attachment follow-up cannot turn a confirmed creation into a repeatable creation failure.
-      if (uploadedAssetIds.length > 0 && response.project_id) {
-        try {
-          await fileService.updateBulkProjectAssetsUploadStatus(workspaceSlug, response.project_id, response.id, {
-            asset_ids: uploadedAssetIds,
-          });
-        } catch (error) {
-          if (inSession()) refuse(error);
-        }
-        if (!inSession()) throw new SessionChangedError();
-        setUploadedAssetIds([]);
-      }
-
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("success"),
@@ -238,12 +227,15 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       });
       return response;
     } catch (error) {
-      if (inSession()) refuse(error);
+      if (inSession()) (options?.onRefused ?? refuse)(error);
       throw error;
     }
   };
 
-  const handleUpdateIssue = async (payload: IssueFormData): Promise<Draft | undefined> => {
+  const handleUpdateIssue = async (
+    payload: IssueFormData,
+    options?: IssueFormSubmitOptions
+  ): Promise<Draft | undefined> => {
     if (!workspaceSlug || (!isDraft && !payload.project_id) || !data?.id) return;
     const session = sessionGuard();
     const current = formScope();
@@ -252,7 +244,16 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       let response: Draft | undefined;
       if (isDraft)
         response = await draftIssues.updateIssue(workspaceSlug, data.id, (held) => draftInput(payload, held.payload));
-      else if (updateIssue) await updateIssue(payload.project_id!, data.id, payload);
+      else if (updateIssue) {
+        const body = pick(
+          payload,
+          ISSUE_FORM_FIELDS.filter((field) => field !== "project_id")
+        );
+        const migration =
+          options?.isDescriptionMigration &&
+          Object.entries(body).every(([field, value]) => value === undefined || field === "description_html");
+        await updateIssue(payload.project_id!, data.id, { ...body, ...(migration ? { skip_activity: true } : {}) });
+      }
       if (!inSession()) throw new SessionChangedError();
       setToast({
         type: TOAST_TYPE.SUCCESS,
@@ -269,11 +270,11 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       });
       return response;
     } catch (error) {
-      if (inSession()) refuse(error);
+      if (inSession()) (options?.onRefused ?? refuse)(error);
       throw error;
     }
   };
-  const handlePublish = async (payload: IssueFormData) => {
+  const executePublish = async (payload: IssueFormData) => {
     if (!workspaceSlug || !isDraft || !data?.id || descriptionLoadState !== "ready") return;
     const current = formScope();
     const inSession = sessionGuard();
@@ -281,14 +282,18 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       await draftIssues.moveIssue(workspaceSlug, data.id, (held) => draftInput(payload, held.payload));
       if (!inSession() || !current()) return;
       setToast({ type: TOAST_TYPE.SUCCESS, title: t("success"), message: t("issue_created_successfully") });
-      handleClose();
+      finishClose();
     } catch (error) {
       if (inSession() && current()) refuse(error);
       throw error;
     }
   };
 
-  const handleFormSubmit = async (payload: IssueFormData, is_draft_issue: boolean = false) => {
+  const executeFormSubmit = async (
+    payload: IssueFormData,
+    is_draft_issue: boolean,
+    options?: IssueFormSubmitOptions
+  ) => {
     if (!workspaceSlug || (!is_draft_issue && !payload.project_id) || !storeType || descriptionLoadState !== "ready")
       return;
 
@@ -297,7 +302,9 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     const inSession = () => session() && current();
     if (beforeFormSubmit) await beforeFormSubmit();
     if (!inSession()) throw new SessionChangedError();
-    const response = !data?.id ? await handleCreateIssue(payload, is_draft_issue) : await handleUpdateIssue(payload);
+    const response = !data?.id
+      ? await handleCreateIssue(payload, is_draft_issue, options)
+      : await handleUpdateIssue(payload, options);
     if (!inSession()) throw new SessionChangedError();
     // Deliver the confirmed result before our own close retires this form's lifetime.
     if (response && props.onSubmit) {
@@ -311,17 +318,34 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       }
     }
     if (!inSession()) return;
-    if (data?.id || !createMore) handleClose();
-    else issueTitleRef.current?.focus();
+    if (data?.id || !createMore) {
+      // This is the confirmed command's close, not a user dismissal of a pending form.
+      finishClose();
+    } else issueTitleRef.current?.focus();
     if (!data?.id) {
       setDescription("<p></p>");
       setChangesMade(null);
     }
   };
+  const withPending = (command: () => Promise<void>) => {
+    if (submission.current) return submission.current;
+    const pending = Promise.resolve()
+      .then(command)
+      .finally(() => {
+        if (submission.current === pending) {
+          submission.current = undefined;
+          setIsPending(false);
+        }
+      });
+    submission.current = pending;
+    setIsPending(true);
+    return pending;
+  };
+  const handleFormSubmit = (payload: IssueFormData, saveDraft = false, options?: IssueFormSubmitOptions) =>
+    withPending(() => executeFormSubmit(payload, saveDraft, options));
+  const handlePublish = (payload: IssueFormData) => withPending(() => executePublish(payload));
 
   const handleFormChange = (formData: IssueFormData | null) => setChangesMade(formData);
-
-  const handleUpdateUploadedAssetIds = (assetId: string) => setUploadedAssetIds((prev) => [...prev, assetId]);
 
   const handleDuplicateIssueModal = (value: boolean) => setIsDuplicateModalOpen(value);
 
@@ -335,6 +359,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     return null;
 
   const commonIssueModalProps: IssueFormProps = {
+    editorRef,
     issueTitleRef: issueTitleRef,
     sourceIssueId,
     descriptionLoadState,
@@ -343,9 +368,9 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       ...data,
       description_html: description,
     },
-    onAssetUpload: handleUpdateUploadedAssetIds,
-    onClose: handleClose,
-    onSubmit: (payload, saveDraft = isDraft) => handleFormSubmit(payload, saveDraft),
+    onClose: finishClose,
+    onSubmit: (payload, saveDraft = isDraft, options) => handleFormSubmit(payload, saveDraft, options),
+    isPending,
     onPublish: handlePublish,
     workspaceSlug,
     projectId: activeProjectId,
@@ -361,17 +386,13 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   };
 
   return (
-    <ModalCore
+    <DraftIssueLayout
+      {...commonIssueModalProps}
       isOpen={isOpen}
-      position={EModalPosition.TOP}
-      width={isDuplicateModalOpen ? EModalWidth.VIXL : EModalWidth.XXXXL}
-      className="rounded-lg !bg-transparent shadow-none transition-[width] ease-linear"
-    >
-      {withDraftIssueWrapper ? (
-        <DraftIssueLayout {...commonIssueModalProps} changesMade={changesMade} onChange={handleFormChange} />
-      ) : (
-        <IssueFormRoot {...commonIssueModalProps} />
-      )}
-    </ModalCore>
+      promptToSaveDraft={withDraftIssueWrapper}
+      isBusy={() => !!submission.current}
+      changesMade={changesMade}
+      onChange={handleFormChange}
+    />
   );
 });

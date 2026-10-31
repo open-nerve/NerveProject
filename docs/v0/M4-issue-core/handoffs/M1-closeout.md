@@ -7,6 +7,10 @@ created: 2026-09-25
 
 # M1 收尾留下的清理：死成员和死 prop、oxlint、一处类型断言、弹窗描述的 ID 迁移、标注块的 Markdown 序列化
 
+## 处理结果（M4/P14，T4 子项）
+
+已有普通工作项、已有草稿的描述补块 ID 已与用户输入区分。纯迁移只更新提交 HTML 与字段基线，不单独标 dirty/发业务写；已有真实描述或标题编辑保留 dirty。普通工作项纯迁移的显式保存带 boolean skip_activity，草稿不扩协议。真实表单/根 store 的 migration 测试和 I2 真实编辑器迁移证明相互补充，详见 [P14 review §8](../reviews/P14-web-issue-detail-review.md#8-实施接续2026-10-31)。T4 完整门禁见该节回执；五处序列化清理仍待 T11，全局 dead/oxlint 仍归 T16/收尾，顶层 status 保持 open。
+
 M1 收尾把 knip、tsc 看得见的死代码和包导出都删完了（[收尾 spec](../../M1-frontend-trim/specs/closeout.md)）。下面几项留给后续各 M，做法都是"谁改谁清"：本 M 重写或修改到的代码，在本 M 结束时不再带着它们。
 
 ## 死成员和死 prop
@@ -86,4 +90,10 @@ viewId收窄归P13，创建/编辑弹窗isMigrationUpdate及撤销/重做归P14�
 
 typed profile view 已从路由收窄并向下传递，web 中 as TProfileViews 零命中；非法段不发请求、三关系真实页面与 M18 变异检出。按原附录脚本清理修改范围真死代码，64→45候选（19文件）均具名列出实际读者，117个实际TS/TSX文件零oxlint；web cap121→114、constants1→0。候选不是全仓零dead。创建/编辑弹窗isMigrationUpdate、全仓no-shadow与最终dead仍归P14/P16，本交接顶层仍open。
 
-证据：[P13阶段review§9–14](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)。本期实施/终审完成，集成待办；最终文稿CI以阶段review§14后置回执核准，不提前关闭M4总交接。
+证据：[P13阶段验收](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)及[集成回执§15](../reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31)。P13 已以 --no-ff 合并 main 8bb4bbcb，准确 main CI 41163365163 attempt2 全绿；归档逐 hash 复验与分支/worktree 清理完成。本输入顶层仍 open，M4 总交接不提前关闭。
+
+## P14 最终接收记录（2026-10-31，子项完成）
+
+issue/draft 两类表单迁移与真实编辑已区分；五处零生产 getMarkdown 读者的扩展序列化删除，14 组 HTML/恶意属性/真实编辑器安全 fixture 保留。原始 deadsym 逐项查读者，最终改动范围 115 候选/26 文件已裁定，真死分支及五个本地类型 export 已删；13 个公开 ref 合同成员保持兼容，不能称全局 dead 已清零，P16/no-shadow 终态仍待后段。
+
+共同证据：[阶段 review §9–14](../reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[三浏览器逐条矩阵](../reviews/P14-browser-matrix.md)与[整审 re-21](../../../reviews/re-21-M4P14整体审核.md)。验收输入 b7d1f0c2（含 I22 路由及 I9 编辑器就绪前置修正），本地七项分层门禁、默认 E2E 238/238、三引擎各44/44；最终文稿 CI 按后置回执。顶层 status 仍 open，真正 M4 收尾再按完整关闭条件统一关闭。

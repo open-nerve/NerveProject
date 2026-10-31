@@ -1,6 +1,6 @@
 # M4/P13 筛选、显示设置、归档页与个人主页
 
-> 状态：T1–T14 实施与终审修复完成，集成待办；最终文稿 CI 按阶段 review §14 后置核准后交付。分支 codex/m4-p13；基线 main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8；工作树 .codex/worktress/codex/m4-p13。负责人随后授权从T1实施，阶段末做deep-review，先不合并。P12 已合并、准确 main CI 全绿并归档清理，见 [P12 review §28](../reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)。
+> 状态：**已完成并集成**。最终分支 c57bbe6b 已授权 --no-ff 合并 main 8bb4bbcb，准确 main CI 41163365163 attempt 2 全绿，证据归档复验后分支/worktree 已清理。原基线 main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8。当前集成事实与原件新根见 [P13 review §15](../reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31)；正文实施及交付前历史证据保持原貌。
 
 权威：[M4 设计](../M4-design.md) §3.16–3.17、3.22、7.4–7.5、9.7、12/P13、14；[plan](../plans/P13-web-filters-archives-profile.md)；[阶段评审](../reviews/P13-web-filters-archives-profile-review.md)。原型与逐 Task 重放按 [02 §3](../../claude_to_gpt/02-method.md#3-哪些是要求哪些是做法) 调整为静态合同、调用链、既有测试核对、一次独立 builder-check 和主控三视角 deep-review。本次不以静态结论代替产品测试。
 

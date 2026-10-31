@@ -12,10 +12,176 @@ import {
 } from "../../fixtures/api";
 import { byId, createdFor, expectIssueCreated } from "../../fixtures/assert/issue";
 import { expectInitialDescription } from "../../fixtures/assert/issue-collaboration";
-import { newAccount } from "../../fixtures/auth";
+import { newAccount, shownNameOf } from "../../fixtures/auth";
 import { createIssue, issueCreated } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
+import { inputTextIncludingControls, recordFocuses } from "../../fixtures/browser";
+import { expectListPageQuiet, issueListProject, openIssueList } from "../../fixtures/issue-list-page";
+import { answerTo, bodiesSentTo, holdAnswer } from "../../fixtures/settings-pages";
+
+test("I1 (page): c opens a named form; field refusals retain it, native controls create one numbered work item with a mention, and a held confirmation cannot be submitted twice", async ({
+  api,
+  db,
+  page,
+  browserName,
+}, info) => {
+  test.setTimeout(60_000);
+  const seed = await issueListProject(api, info);
+  const colleague = await newAccount(api, info, "colleague");
+  await inviteAndAccept(api, seed.member.token, seed.slug, colleague, 15);
+  await addProjectMembers(api, seed.member.token, seed.project.id, [{ member_id: colleague.id, role: 15 }]);
+  const bug = await createLabel(api, seed.member.token, seed.project.id, { name: "Bug" });
+  const ui = await createLabel(api, seed.member.token, seed.project.id, { name: "UI" });
+  const { watch } = await openIssueList(page, seed);
+  await expect(page.getByRole("button", { name: "Add work item", exact: true })).toBeVisible();
+  await page.keyboard.press("c");
+  const form = page.getByRole("dialog", { name: "Create new work item", exact: true });
+  await expect(form).toHaveCount(1);
+  const title = form.getByRole("textbox", { name: "Title", exact: true });
+  const save = form.getByRole("button", { name: "Save", exact: true });
+  const path = `/api/v0/projects/${seed.project.id}/issues`;
+  const bodies = await bodiesSentTo(page, "POST", path);
+  await (
+    [
+      ["   ", "Title is required"],
+      ["x".repeat(256), "Too long"],
+    ] as const
+  ).reduce(async (previous, [value, description]) => {
+    await previous;
+    await title.fill(value!);
+    const focuses = await recordFocuses(page);
+    await save.click();
+    await expect(title).toBeFocused();
+    expect((await focuses()).at(-1)).toEqual({ id: "name", invalid: "true", description });
+    expect(bodies).toEqual([]);
+    await expect(title).toBeVisible();
+  }, Promise.resolve());
+  await inputTextIncludingControls(title, "Invalid\u0000title");
+  const focuses = await recordFocuses(page);
+  expect((await answerTo(page, "POST", path, () => save.click())).status()).toBe(422);
+  await expect(title).toBeFocused();
+  expect((await focuses()).at(-1)).toEqual({ id: "name", invalid: "true", description: "The format is not valid" });
+  expect(await db.query("SELECT id FROM issues WHERE project_id=$1", [seed.project.id])).toEqual([]);
+
+  await title.fill("  Created through the form  ");
+  const more = form.getByRole("switch", { name: "Create more", exact: true });
+  await more.click();
+  await expect(more).toBeChecked();
+  await more.click();
+  await expect(more).not.toBeChecked();
+  const editor = form.locator('[contenteditable="true"]');
+  await expect(editor).toBeVisible();
+  await editor.fill("Notes ");
+  await editor.press("End");
+  await page.keyboard.type("@");
+  await page
+    .locator('[id^="mention-item-"]')
+    .filter({ hasText: shownNameOf(colleague.email) })
+    .click();
+  await expect(editor.locator(".mention-component")).toHaveCount(1);
+  await form.getByRole("button", { name: "State: Backlog", exact: true }).click();
+  await page.getByRole("option", { name: "In Progress", exact: true }).click();
+  await form.getByRole("button", { name: "Priority: None", exact: true }).click();
+  await page.getByRole("option", { name: "High", exact: true }).click();
+  await form.getByRole("button", { name: "Assignees", exact: true }).click();
+  await page.getByRole("option", { name: /You$/ }).click();
+  await page
+    .getByRole("option")
+    .filter({ hasText: shownNameOf(colleague.email) })
+    .click();
+  await title.click();
+  await form.getByRole("button", { name: /Labels/ }).click();
+  await page.getByRole("option", { name: "Bug", exact: true }).click();
+  await page.getByRole("option", { name: "UI", exact: true }).click();
+  await title.click();
+  await (
+    [
+      ["Start date", 10],
+      ["Due date", 20],
+    ] as const
+  ).reduce(async (previous, [label, day]) => {
+    await previous;
+    await form.getByRole("button", { name: label, exact: true }).click();
+    const calendar = page.getByRole("dialog", { name: label, exact: true });
+    await calendar.getByRole("combobox", { name: "Choose the Year" }).selectOption("2026");
+    await calendar.getByRole("combobox", { name: "Choose the Month" }).selectOption("10");
+    if (label === "Due date") {
+      await expect(calendar.getByRole("button", { name: /November 9th, 2026/ })).toBeDisabled();
+      await expect(title).toBeVisible();
+    }
+    await calendar.getByRole("button", { name: new RegExp(`November ${day}th, 2026`) }).click();
+  }, Promise.resolve());
+  expect(
+    await form
+      .locator("[tabindex]")
+      .evaluateAll((nodes) => nodes.filter((node) => Number(node.getAttribute("tabindex")) > 0).length)
+  ).toBe(0);
+  const release = await holdAnswer(page, "POST", path);
+  // Record after the holding route, so the request reaches this observer before route.fetch.
+  const submissions = await bodiesSentTo(page, "POST", path);
+  await save.dblclick();
+  await expect.poll(() => submissions.length).toBe(1);
+  await expect(form.getByRole("button", { name: "Saving", exact: true })).toBeDisabled();
+  await expect(form.getByRole("button", { name: "Discard", exact: true })).toBeDisabled();
+  await expect(title).toBeVisible();
+  await expect
+    .poll(() => db.query("SELECT name FROM issues WHERE project_id=$1", [seed.project.id]))
+    .toEqual([{ name: "Created through the form" }]);
+  const response = await answerTo(page, "POST", path, release);
+  expect(response.status()).toBe(201);
+  const issue = await response.json();
+  await expect(
+    page.getByRole("region", { name: "Notifications" }).getByRole("link", { name: "WEB-1", exact: true })
+  ).toBeVisible();
+  expect(bodies).toHaveLength(1);
+  expect(submissions).toHaveLength(1);
+  expect(submissions[0]).toMatchObject({
+    name: "  Created through the form  ",
+    state_id: seed.states["In Progress"],
+    priority: "high",
+    assignee_ids: [seed.member.id, colleague.id],
+    label_ids: [bug.id, ui.id],
+    start_date: "2026-11-10",
+    target_date: "2026-11-20",
+  });
+  await expect(form).toHaveCount(0);
+  const row = page.locator(`[id="issue-${issue.id}"]`);
+  await expect(row).toContainText("WEB-1");
+  await expect(row).toContainText("Created through the form");
+  await expectIssueCreated(db, issue.id, {
+    sequence_id: 1,
+    name: "Created through the form",
+    state: "In Progress",
+    priority: "high",
+    start_date: "2026-11-10",
+    target_date: "2026-11-20",
+    sort_order: 65535,
+    parent: null,
+    completed: false,
+    by: seed.member.email,
+    assignees: [seed.member.email, colleague.email].toSorted(),
+    labels: ["Bug", "UI"],
+    subscribers: [seed.member.email, colleague.email].toSorted(),
+    activity: createdFor(seed.member, colleague),
+  });
+  const html = (submissions[0] as { description_html: string }).description_html;
+  expect(html).toContain(`entity_identifier="${colleague.id}"`);
+  await expectInitialDescription(db, issue.id, html, [colleague.id]);
+  expect(await db.query("SELECT description_stripped FROM issues WHERE id=$1", [issue.id])).toEqual([
+    { description_stripped: "Notes" },
+  ]);
+  expect(
+    await db.query("SELECT last_issue_sequence::int AS sequence FROM projects WHERE id=$1", [seed.project.id])
+  ).toEqual([{ sequence: 1 }]);
+  await expectListPageQuiet(page, watch, {
+    failures: [`422 POST ${path}`],
+    errors:
+      browserName === "chromium" || browserName === "webkit"
+        ? ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"]
+        : [],
+  });
+});
 
 // I1, creating a work item (M4 design 2, 3.7, 3.13): the API version, with P1a's assertions (the work item's rows,
 // its number, the default state and assignee, its assignees, labels and subscribers, the activity of its creation and

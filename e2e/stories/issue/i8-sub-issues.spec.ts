@@ -4,6 +4,7 @@ import {
   createProject,
   createWorkspace,
   inviteAndAccept,
+  readProjectPreferences,
   slugFor,
 } from "../../fixtures/api";
 import {
@@ -28,6 +29,217 @@ import {
 } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
+import {
+  issueListProject,
+  expectListPageQuiet,
+  openIssueList,
+  saveListPreferences,
+} from "../../fixtures/issue-list-page";
+import { openIssueDetail } from "../../fixtures/issue-detail-page";
+import { answerTo, sentHeld } from "../../fixtures/settings-pages";
+
+for (const layout of ["list", "spreadsheet"] as const) {
+  test(`I8 (page): ${layout} child count opens the exact native parent detail by click and keyboard without a fragment`, async ({
+    api,
+    page,
+  }, info) => {
+    const seed = await issueListProject(api, info);
+    const parent = await createIssue(api, seed.member.token, seed.project.id, { name: "Counted parent" });
+    const first = await createIssue(api, seed.member.token, seed.project.id, {
+      name: "Counted first child",
+      parent_id: parent.id,
+    });
+    const second = await createIssue(api, seed.member.token, seed.project.id, {
+      name: "Counted second child",
+      parent_id: parent.id,
+    });
+    await createIssue(api, seed.member.token, seed.project.id, { name: "Unrelated work item" });
+    const preferences = await readProjectPreferences(api, seed.member.token, seed.project.id);
+    await saveListPreferences(api, seed, {
+      filters: {},
+      display_filters: { ...preferences.display_filters, layout, sub_issue: false },
+      display_properties: { ...preferences.display_properties, sub_issue_count: true },
+    });
+    const { watch } = await openIssueList(page, seed);
+    const count = page.getByRole("link", {
+      name: layout === "list" ? "Sub-work items: 2" : "2 sub-work items",
+      exact: true,
+    });
+    const address = `/${seed.slug}/browse/WEB-${parent.sequence_id}`;
+    await (["click", "keyboard"] as const).reduce(async (previous, method) => {
+      await previous;
+      await expect(count).toBeVisible();
+      await expect(count).toHaveAttribute("href", address);
+      if (method === "click") await count.click();
+      else {
+        await count.focus();
+        await expect(count).toBeFocused();
+        await page.keyboard.press("Enter");
+      }
+      await expect(page).toHaveURL(address);
+      await expect(page.getByRole("textbox", { name: "Work item title", exact: true })).toHaveValue(parent.name);
+      await expect(page.locator(`#issue-${first.id}`)).toContainText(first.name);
+      await expect(page.locator(`#issue-${second.id}`)).toContainText(second.name);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await page.goBack();
+      await expect(page).toHaveURL(seed.path);
+    }, Promise.resolve());
+    await expectListPageQuiet(page, watch);
+  });
+}
+
+test("I8 (page): native searches add two existing children and create one; progress is confirmed, descendants cannot be parents, and moving and removing a parent update counts and activity", async ({
+  api,
+  db,
+  page,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const top = await createIssue(api, seed.member.token, seed.project.id, { name: "Release plan" });
+  const first = await createIssue(api, seed.member.token, seed.project.id, { name: "Write notes" });
+  const done = await createIssue(api, seed.member.token, seed.project.id, {
+    name: "Done build",
+    state_id: seed.states.Done,
+  });
+  const alternate = await createIssue(api, seed.member.token, seed.project.id, { name: "Next release" });
+  const child = await createIssue(api, seed.member.token, seed.project.id, {
+    name: "Nested child",
+    parent_id: first.id,
+  });
+  await createIssue(api, seed.member.token, seed.project.id, { name: "Nested grandchild", parent_id: child.id });
+  const watch = await openIssueDetail(page, seed, top);
+  const add = page.getByRole("button", { name: "Add sub-work item", exact: true });
+  // Opening the actual widget's menu is also a keyboard-accessible, named entry.
+  await add.click();
+  const searchPath = `/api/v0/workspaces/${seed.slug}/issue-search`;
+  const search = await answerTo(page, "GET", searchPath, () =>
+    page.getByRole("menuitem", { name: "Add existing", exact: true }).click()
+  );
+  expect(Object.fromEntries(new URL(search.url()).searchParams)).toEqual({
+    project_id: seed.project.id,
+    for: "sub_issue",
+    issue_id: top.id,
+  });
+  const existing = page.getByRole("dialog", { name: "Add existing work item", exact: true });
+  await existing.getByRole("option").filter({ hasText: "Write notes" }).click();
+  await existing.getByRole("option").filter({ hasText: "Done build" }).click();
+  const held = await sentHeld(page, "POST", `/api/v0/issues/${top.id}/sub-issues`, () =>
+    existing.getByRole("button", { name: "Add selected work items", exact: true }).click()
+  );
+  try {
+    expect(held.body).toEqual({ sub_issue_ids: [first.id, done.id] });
+    await expect
+      .poll(() => db.query("SELECT id FROM issues WHERE parent_id=$1 ORDER BY id", [top.id]))
+      .toEqual([first, done].toSorted(byId).map(({ id }) => ({ id })));
+    await expect(existing).toHaveCount(1);
+    await expect(page.locator(`#issue-${first.id}`)).toHaveCount(0);
+  } finally {
+    expect((await held.release()).status()).toBe(200);
+  }
+  await expect(existing).toHaveCount(0);
+  await expect(page.locator(`#issue-${first.id}`)).toBeVisible();
+  await expect(page.locator(`#issue-${done.id}`)).toBeVisible();
+  await expect(page.getByText("1/2 Done", { exact: true })).toBeVisible();
+  const topRef = itemRef("WEB", top);
+  await expectIssueUpdated(db, first.id, {
+    ...madeBy(seed.member.email, first.name),
+    parent: top.name,
+    by: seed.member.email,
+    activity: [...createdFor(), parentRow(null, topRef)],
+    wrote: 1,
+  });
+
+  await add.click();
+  await page.getByRole("menuitem", { name: "Create new", exact: true }).click();
+  const form = page.getByRole("dialog", { name: "Create new work item", exact: true });
+  await form.getByRole("textbox", { name: "Title", exact: true }).fill("Draft notice");
+  const created = await answerTo(page, "POST", `/api/v0/projects/${seed.project.id}/issues`, () =>
+    form.getByRole("button", { name: "Save", exact: true }).click()
+  );
+  expect(created.status()).toBe(201);
+  const createdRow = (
+    await db.query<{ id: string; sequence_id: string; sort_order: number }>(
+      "SELECT id, sequence_id, sort_order FROM issues WHERE project_id=$1 AND name=$2",
+      [seed.project.id, "Draft notice"]
+    )
+  )[0]!;
+  await expect(form).toHaveCount(0);
+  await expect(page.locator(`#issue-${createdRow.id}`)).toBeVisible();
+  await expect(page.getByText("1/3 Done", { exact: true })).toBeVisible();
+  await expectIssueCreated(db, createdRow.id, {
+    ...madeBy(seed.member.email, "Draft notice"),
+    sequence_id: Number(createdRow.sequence_id),
+    sort_order: createdRow.sort_order,
+    parent: top.name,
+    by: seed.member.email,
+    activity: createdFor(),
+  });
+
+  // Follow the child's own native address; the picker must exclude it and every level below it.
+  const childHref = await page.locator(`#issue-${first.id}`).getAttribute("href");
+  expect(childHref).toBe(`/${seed.slug}/browse/WEB-${first.sequence_id}`);
+  await page.goto(childHref!);
+  const changeParent = page.getByRole("button", { name: "Add parent work item", exact: true });
+  const parentSearch = await answerTo(page, "GET", searchPath, () => changeParent.click());
+  expect(Object.fromEntries(new URL(parentSearch.url()).searchParams)).toEqual({
+    project_id: seed.project.id,
+    for: "parent",
+    issue_id: first.id,
+  });
+  const picker = page.getByRole("dialog", { name: "Add parent work item", exact: true });
+  await expect(picker.getByRole("option").filter({ hasText: alternate.name })).toBeVisible();
+  await Promise.all(
+    [first.name, top.name, "Nested child", "Nested grandchild"].map((excluded) =>
+      expect(picker.getByRole("option").filter({ hasText: excluded })).toHaveCount(0)
+    )
+  );
+  const moved = await sentHeld(page, "PATCH", `/api/v0/issues/${first.id}`, () =>
+    picker.getByRole("option").filter({ hasText: alternate.name }).click()
+  );
+  try {
+    expect(moved.body).toEqual({ parent_id: alternate.id });
+    await expect
+      .poll(() => db.query("SELECT parent_id FROM issues WHERE id=$1", [first.id]))
+      .toEqual([{ parent_id: alternate.id }]);
+    await expect(picker).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(picker).toHaveCount(1);
+  } finally {
+    expect((await moved.release()).status()).toBe(200);
+  }
+  await expect(picker).toHaveCount(0);
+  const parentControl = changeParent.locator("..");
+  await expect(parentControl.getByRole("link")).toHaveAttribute(
+    "href",
+    `/${seed.slug}/browse/WEB-${alternate.sequence_id}`
+  );
+  const movedActivity = [...createdFor(), parentRow(null, topRef), parentRow(topRef, itemRef("WEB", alternate))];
+  await expectIssueUpdated(db, first.id, {
+    ...madeBy(seed.member.email, first.name),
+    parent: alternate.name,
+    by: seed.member.email,
+    activity: movedActivity,
+    wrote: 1,
+  });
+  expect(await issueRead(api, seed.member.token, top.id)).toMatchObject({ issue: { sub_issues_count: 2 } });
+  expect(await issueRead(api, seed.member.token, alternate.id)).toMatchObject({ issue: { sub_issues_count: 1 } });
+  expect(
+    (
+      await answerTo(page, "PATCH", `/api/v0/issues/${first.id}`, () =>
+        parentControl.getByRole("button", { name: "Remove", exact: true }).click()
+      )
+    ).status()
+  ).toBe(200);
+  await expect(parentControl.getByRole("link")).toHaveCount(0);
+  await expectIssueUpdated(db, first.id, {
+    ...madeBy(seed.member.email, first.name),
+    parent: null,
+    by: seed.member.email,
+    activity: [...movedActivity, parentRow(itemRef("WEB", alternate), null)],
+    wrote: 1,
+  });
+  expect(await issueRead(api, seed.member.token, alternate.id)).toMatchObject({ issue: { sub_issues_count: 0 } });
+  await expectListPageQuiet(page, watch);
+});
 
 // I8, the work items under a work item (M4 design 2, 3.9, 3.13): the API version, with P3's assertions (work items
 // put under one, one created under it, moved under another and from under any, each move a row of the moved work

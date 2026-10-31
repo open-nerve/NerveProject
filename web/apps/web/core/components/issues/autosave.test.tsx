@@ -20,13 +20,24 @@ vi.mock("@/components/editor/rich-text", () => ({
     const [value, setValue] = useState(props.initialValue);
     useEffect(() => setValue(props.initialValue), [props.initialValue]);
     return (
-      <textarea
-        value={value}
-        onChange={(event) => {
-          setValue(event.target.value);
-          props.onChange?.({}, event.target.value);
-        }}
-      />
+      <>
+        <textarea
+          value={value}
+          onChange={(event) => {
+            setValue(event.target.value);
+            props.onChange?.({}, event.target.value);
+          }}
+        />
+        <button
+          onClick={() => {
+            props.onChange?.({}, "undo");
+            props.onChange?.({}, props.initialValue);
+            setValue(props.initialValue);
+          }}
+        >
+          undo then redo
+        </button>
+      </>
     );
   },
 }));
@@ -104,12 +115,12 @@ function Harness({
 }
 const render = async (kind: Kind, confirmed = "original", submit = save) =>
   act(async () => root.render(<Harness kind={kind} confirmed={confirmed} submit={submit} />));
-const type = async (value: string) =>
-  act(async () => {
-    const textarea = host.querySelector("textarea")!;
-    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(textarea, value);
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
-  });
+function input(value: string) {
+  const textarea = host.querySelector("textarea")!;
+  Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(textarea, value);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+const type = async (value: string) => act(async () => input(value));
 const debounce = async () => {
   await act(async () => vi.advanceTimersByTimeAsync(1500));
   await act(async () => {});
@@ -119,6 +130,34 @@ const unmount = async () => {
   mounted = false;
 };
 for (const kind of ["title", "description"] as const) {
+  it(`${kind} redoReplacesPendingUndoEvenAtConfirmedValue before the render catches up`, async () => {
+    await render(kind, "confirmed");
+    // An editor can emit both transactions in the same event turn. React has not committed between them.
+    await act(async () => {
+      if (kind === "description") host.querySelector<HTMLButtonElement>("button")!.click();
+      else {
+        input("undo");
+        input("confirmed");
+      }
+    });
+    await debounce();
+    expect(save).not.toHaveBeenCalled();
+    expect(host.querySelector("textarea")!.value).toBe("confirmed");
+    expect(host.querySelector("output")!.textContent).toBe("saved");
+    await unmount();
+    expect(save).not.toHaveBeenCalled();
+  });
+  it(`${kind} ignores a late answer after the editor owner has been replaced`, async () => {
+    await render(kind);
+    await type("old owner");
+    await debounce();
+    await act(async () => root.render(<Harness key="another-owner" kind={kind} confirmed="new owner" />));
+    await act(async () => requests[0]!.answer());
+    expect(host.querySelector("textarea")!.value).toBe("new owner");
+    expect(host.querySelector("output")!.textContent).toBe("saved");
+    await debounce();
+    expect(save.mock.calls).toEqual([["old owner"]]);
+  });
   it(`${kind} preserves refused input, shows failure and retries only on request`, async () => {
     await render(kind);
     await type("keep this");

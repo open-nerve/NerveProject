@@ -11,7 +11,7 @@ import {
 } from "../../fixtures/api";
 import { expectMember } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
 import { closedByEscape, closedWithin, enabledWithin, modalDialog } from "../../fixtures/dialogs";
 import { PROJECT_MEMBER, valued } from "../../fixtures/mounts";
 import { pageContent } from "../../fixtures/project-pages";
@@ -182,8 +182,6 @@ test("P2 (page): a member opens a public project he is no member of by its addre
     [],
   ]);
   await expectQuietConsole(page, watch, {
-    // the three loads: the settings page, the private project's, the archived one's
-    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
   });
 });
@@ -268,7 +266,6 @@ test("P2 (page): the projects page shows a member the public project to join and
   await expect.poll(() => watch.apiFailures).toEqual([`404 POST /api/v0/projects/${gone.id}/join`]);
   expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
   });
 });

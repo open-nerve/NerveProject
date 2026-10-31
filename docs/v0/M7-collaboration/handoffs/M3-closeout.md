@@ -57,3 +57,11 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **关闭条件**：两条地址规则的范围含这些文件，`copy-hook` 没有 `M7/closeout` 的例外。
 
 来源：[M3 设计](../../M3-workspace-project/M3-design.md) 13.2 的 M7 一行；M3/P7a、P7b、P8a、P8b、P9、P10、P11 的 spec 第 5 节和评审第 6 节中交给 M7 的各条；[M3 收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 2 节。
+
+## 5. M4/P14 共用编辑器与收集箱的接续边界（2026-10-31）
+
+P14 的 rich/lite 入口改为 lazy，公开 props/ref 保持；收集箱查重已适配原生搜索。收集箱 create-modal/issue-properties 的 isVisible 默认 false、唯一真实调用者不传，开始日期与父项分支没有可达入口，P14 整审已删除这些死分支及专属状态/导入；原优先级、成员、标签、截止日期仍在。§3 的旧父项嵌套按钮行是历史输入，M7 若重新设计可用父项入口，仍须按自己的交互合同实现。
+
+明确保留的未完成项：`inbox/modals/create-modal/create-root.tsx` 的 Discard 在 editor 尚未挂载时仍按现有 readiness 返回提示，外层 `create-modal/modal.tsx` 的 document Escape 可退出。慢加载会延长按钮不可用时间，不能将它说成已经沿 M4 创建窗统一关闭，也不能将共享 ref 兼容视为 M7 自身业务验收。M7 应结合原有 Escape/dirty/保存草稿规则统一关闭策略，并加真实 lazy pending、busy、内层 Escape、输入保留回归。按已批准 P10a 裁定 A，M7 自身页面和接口仍由 M7 验收，本期未修改其协议/关闭政策。
+
+证据：[P14 整审](../../../reviews/re-21-M4P14整体审核.md)、[P14 review §13](../../M4-issue-core/reviews/P14-web-issue-detail-review.md#13-交接实际决定与保留边界)。本 handoff 顶层保持 open。

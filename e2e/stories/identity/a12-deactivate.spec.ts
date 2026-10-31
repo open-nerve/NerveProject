@@ -5,7 +5,7 @@ import { accountOf, accountStateOf, expectDeactivated, tokensOf } from "../../fi
 import { formAlert, signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import { bearer, createPAT, emailFor, login, password, recordOf, register, registeredPAT } from "../../fixtures/auth";
 import { deferred } from "../../fixtures/deferred";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { closedByEscape, modalDialog } from "../../fixtures/dialogs";
 import { answerTo, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -85,7 +85,6 @@ test("A12 (page): the general page deactivates the account once confirmed; the s
   expect(watch.pageErrors).toEqual([]);
   await expectQuietConsole(page, watch, {
     errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
-    warnings: [EMOJI_CHECK_WARNING],
   });
 });
 
@@ -153,7 +152,6 @@ test("A12 (page): a deactivation nerve fails says why, sent once however often C
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"],
   });
 });

@@ -4,86 +4,57 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueFormValues } from "../types";
+import type { IssueFormValues, IssueDescriptionChangeSource } from "../types";
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
 import { Controller } from "react-hook-form";
 // nerve imports
-import { ETabIndices } from "@nerve/constants";
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { EFileAssetType } from "@nerve/types";
 import { Loader } from "@nerve/ui";
-import { getDescriptionPlaceholderI18n, getTabIndex } from "@nerve/utils";
+import { getDescriptionPlaceholderI18n } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text";
 // hooks
-import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import useKeypress from "@/hooks/use-keypress";
-import { usePlatformOS } from "@/hooks/use-platform-os";
 type TIssueDescriptionEditorProps = {
   control: Control<IssueFormValues>;
   isDraft: boolean;
-  issueId: string | undefined;
   descriptionHtmlData: string | undefined;
   editorRef: React.MutableRefObject<EditorRefApi | null>;
   submitBtnRef: React.MutableRefObject<HTMLButtonElement | null>;
   workspaceSlug: string;
   projectId: string | null;
-  handleFormChange: () => void;
-  handleDescriptionHTMLDataChange: (descriptionHtmlData: string) => void;
-  onAssetUpload: (assetId: string) => void;
-  onClose: () => void;
+  handleDescriptionHTMLDataChange: (descriptionHtmlData: string, source?: IssueDescriptionChangeSource) => void;
+};
+
+// The shared editor contract requires these callbacks for editable content. Images are absent from
+// this schema; a future accidental caller must reject rather than claim an upload succeeded.
+const imageUnavailable = async (): Promise<never> => {
+  throw new Error("Images are not available for work items.");
 };
 
 export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(props: TIssueDescriptionEditorProps) {
   const {
     control,
     isDraft,
-    issueId,
     descriptionHtmlData,
     editorRef,
     submitBtnRef,
     workspaceSlug,
     projectId,
-    handleFormChange,
     handleDescriptionHTMLDataChange,
-    onAssetUpload,
-    onClose,
   } = props;
   // i18n
   const { t } = useTranslation();
   // store hooks
   const { getWorkspaceBySlug } = useWorkspace();
   const workspaceId = getWorkspaceBySlug(workspaceSlug)?.id ?? "";
-  const { uploadEditorAsset, duplicateEditorAsset } = useEditorAsset();
-  // platform
-  const { isMobile } = usePlatformOS();
-
-  const { getIndex } = getTabIndex(ETabIndices.ISSUE_FORM, isMobile);
-
   useEffect(() => {
     if (descriptionHtmlData !== undefined) handleDescriptionHTMLDataChange(descriptionHtmlData);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [descriptionHtmlData]);
-
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (editorRef.current?.isEditorReadyToDiscard()) {
-      onClose();
-    } else {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Editor is still processing changes. Please wait before proceeding.",
-      });
-      event.preventDefault(); // Prevent default action if editor is not ready to discard
-    }
-  };
-
-  useKeypress("Escape", handleKeyDown);
 
   return (
     <div className="relative rounded-lg border-[0.5px] border-subtle-1 bg-layer-2">
@@ -107,60 +78,25 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
         <Controller
           name="description_html"
           control={control}
-          render={({ field: { value, onChange } }) => (
+          render={({ field: { value } }) => (
             <RichTextEditor
               editable
+              disabledExtensions={["image"]}
               id="issue-modal-editor"
               initialValue={value ?? ""}
               value={descriptionHtmlData}
               workspaceSlug={workspaceSlug}
               workspaceId={workspaceId}
               projectId={projectId ?? undefined}
-              onChange={(_description: object, description_html: string) => {
-                onChange(description_html);
-                handleFormChange();
+              onChange={(_description, description_html, options) => {
+                handleDescriptionHTMLDataChange(description_html, options?.isMigrationUpdate ? "migration" : "edit");
               }}
               onEnterKeyPress={() => submitBtnRef?.current?.click()}
               ref={editorRef}
-              tabIndex={getIndex("description_html")}
               placeholder={(isFocused, description) => t(getDescriptionPlaceholderI18n(isFocused, description))}
               containerClassName="pt-3 min-h-[120px]"
-              uploadFile={async (blockId, file) => {
-                if (!projectId) throw new Error("A project is required to upload an attachment");
-                try {
-                  const { asset_id } = await uploadEditorAsset({
-                    blockId,
-                    data: {
-                      entity_identifier: issueId ?? "",
-                      entity_type: isDraft ? EFileAssetType.DRAFT_ISSUE_DESCRIPTION : EFileAssetType.ISSUE_DESCRIPTION,
-                    },
-                    file,
-                    projectId,
-                    workspaceSlug,
-                  });
-                  onAssetUpload(asset_id);
-                  return asset_id;
-                } catch (error) {
-                  console.log("Error in uploading issue asset:", error);
-                  throw new Error("Asset upload failed. Please try again later.", { cause: error });
-                }
-              }}
-              duplicateFile={async (assetId: string) => {
-                if (!projectId) throw new Error("A project is required to duplicate an attachment");
-                try {
-                  const { asset_id } = await duplicateEditorAsset({
-                    assetId,
-                    entityId: issueId,
-                    entityType: isDraft ? EFileAssetType.DRAFT_ISSUE_DESCRIPTION : EFileAssetType.ISSUE_DESCRIPTION,
-                    projectId,
-                    workspaceSlug,
-                  });
-                  onAssetUpload(asset_id);
-                  return asset_id;
-                } catch {
-                  throw new Error("Asset duplication failed. Please try again later.");
-                }
-              }}
+              uploadFile={imageUnavailable}
+              duplicateFile={imageUnavailable}
             />
           )}
         />

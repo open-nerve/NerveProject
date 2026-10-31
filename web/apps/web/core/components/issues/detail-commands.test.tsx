@@ -17,6 +17,7 @@ import { IssuePeekOverview } from "./peek-overview/root";
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "commands" } }, publicClient: {} }));
 vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "commands" }) }));
 vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
+vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectRoot.project }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("react-router", () => ({ useNavigate: () => vi.fn() }));

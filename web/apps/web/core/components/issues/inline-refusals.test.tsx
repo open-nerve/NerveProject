@@ -20,7 +20,11 @@ vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => tab.app.state }));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
-vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "ws" }), useNavigate: () => vi.fn() }));
+vi.mock("react-router", async (original) => ({
+  ...(await original<typeof import("react-router")>()),
+  useParams: () => ({ workspaceSlug: "ws" }),
+  useNavigate: () => vi.fn(),
+}));
 // Only the input boundary is substituted; actual row/column UI ownership and native confirmation stay real.
 vi.mock("@/components/dropdowns/priority", () => ({
   PriorityDropdown: (props: ComponentProps<typeof PriorityDropdown>) => (
