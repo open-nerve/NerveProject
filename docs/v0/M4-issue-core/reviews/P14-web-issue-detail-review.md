@@ -1,6 +1,6 @@
 # M4/P14 详情与弹窗：准备与预检记录
 
-日期：2026-10-31。状态：**预检通过，产品尚未实施**。基线 `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；[spec](../specs/P14-web-issue-detail.md)、[plan](../plans/P14-web-issue-detail.md)、[文档预检](../../../reviews/re-20-M4P14预检审核.md)。所有产品 A 条款与 T1–T16 步骤未勾选，phase 仍为 M4/P13。
+日期：2026-10-31。状态：**已授权实施，逐任务推进中**。基线 `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；[spec](../specs/P14-web-issue-detail.md)、[plan](../plans/P14-web-issue-detail.md)、[文档预检](../../../reviews/re-20-M4P14预检审核.md)。§1–7 保留文档预检时点，实施结果从 §8 续记；A 条款待完整证据再勾选。phase 已进入 M4/P14。
 
 ## 1. 前置与方法
 
@@ -66,3 +66,15 @@ M1/M2/M3 输入子项映射见 spec §7，顶层 handoff 仍 open。P15 接时�
 ## 7. 已知限制与证据保留
 
 P13 main 第一次 CI 为已知 W11 偶发；UI 日志与一次失败作业重跑证据保留在 P13 集成根，最终结论看 §1 指向的后置收据。P14 未执行产品测试，未声称上述潜在实现缺口已修复。公开 CI metadata 可核 SHA 与作业结论，详细日志/重跑沿已授权浏览器，不提取凭据。
+
+## 8. 实施接续（2026-10-31）
+
+负责人已授权完成 P14、阶段末 deep-review 和局部修复，先不合并。实施证据根为本 worktree `.superpowers/sdd/P14-web-issue-detail/`；每次 run.py 回执记录 cwd/argv、HEAD 与 dirty diff/新增文件哈希、raw/exit，准备根继续保留。
+
+### T1 入口与共同路由身份
+
+编号读取仍沿原 useSessionSWR 和 root；仅将这一次读取移到路由 layout，经 Outlet context 给正文、经已证明 id 给页头，取消页头自行查询编号缓存。共同 Fragment 身份含原编号、workspace、服务端解析后的项目/工作项、既有权限 identity 与 loginId。没有新权限观察器、第二缓存或后端协议。T1 将 phase 改为 M4/P14，76 规则/24 例外检查通过，无到期延期。
+
+原生 id replace、401/403/404 拒绝、A→B→A、真实页头删除框、加载/拒绝不露缓存操作和权限 ABA 与既有详情宿主回归共 23 项；基线原宿主 13 项绿。行为红 t1-red-final 的两项分别为缓存页头操作和共同边界内局部状态残留；前期夹具/类型错误单独保留，不当性质红。M01 去共同 key 检出后逐字节恢复。共同 key 的独立局部状态用宿主探针隔离验证，实际菜单/删除框另用真实组件，不能冒称浏览器证明；页面与会话 A1 剩余归 T14/T16。
+
+局部决定：路由上下文只传已有 SWR 读取结果，不创建业务读模型；代价是正文依赖自己的 layout，已由真实嵌套路由测试核对。编号索引仍有 WorkItemLevelModals、命令面板和导航真实读者，保留。原生 id 后的第二次 core GET 来自已有 sub-issues 父项权威核验（调用栈诊断已留存），不误当路由重复请求删除。

@@ -21,20 +21,19 @@ import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 type TProps = {
   workspaceSlug: string;
-  workItem: string;
+  issueId: string | undefined;
 };
 
 export const WorkItemDetailsHeader = observer(function WorkItemDetailsHeader(props: TProps) {
   // router
   const navigate = useNavigate();
-  const { workspaceSlug, workItem } = props;
+  const { workspaceSlug, issueId } = props;
   // store hooks
   const { getProjectById, loader } = useProject();
   const {
-    issue: { getIssueById, getIssueIdByIdentifier },
+    issue: { getIssueById },
   } = useIssueDetail();
   // derived values
-  const issueId = getIssueIdByIdentifier(workItem);
   const issueDetails = issueId ? getIssueById(issueId) : undefined;
   const projectId = issueDetails ? issueDetails?.project_id : undefined;
   const projectDetails = projectId ? getProjectById(projectId) : undefined;

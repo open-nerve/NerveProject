@@ -1,7 +1,7 @@
 # M4/P14 详情、创建弹窗、父子、关联与链接实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking.
-> 本轮仅文档预检，未获实施授权。获准后沿既有 inline 执行方式从 T1 开始；不因通用工作流自行派逐 Task 实现代理。阶段结束做 deep-review，修复复审后先交负责人安排，不自动合并。
+> 负责人已授权实施，沿既有 inline 执行方式从 T1 推进；不因通用工作流自行派逐 Task 实现代理。阶段结束做 deep-review，修复复审后先交负责人安排，不自动合并。
 
 **Goal：** 完成 P14 spec A1–A16 以及 I1/I2/I8/I9/I10/I17/I20/I22 页面、S2 身份、C3 详情侧/C4/C5/C10/C11。
 
@@ -9,7 +9,7 @@
 
 **Tech Stack：** 仓库锁定的 React/MobX/Headless UI/Propel/TipTap/Vitest/Playwright；无新增依赖。
 
-**Spec：** [P14 spec](../specs/P14-web-issue-detail.md)。基线 main `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；分支 `codex/m4-p14`；worktree `.codex/worktress/codex/m4-p14`。C/P/R/E 路径缩写见 spec §2.1。下文所有步骤尚未实施，新增文件在任务中明确标为“新”。
+**Spec：** [P14 spec](../specs/P14-web-issue-detail.md)。基线 main `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；分支 `codex/m4-p14`；worktree `.codex/worktress/codex/m4-p14`。C/P/R/E 路径缩写见 spec §2.1。步骤按实际验证逐项勾选，新增文件在任务中明确标为“新”。
 
 ## Global Constraints
 
@@ -57,11 +57,11 @@ make e2e
 **Files：** spec §2.1 T1；`tools/keywords.json`；新 `C/components/browse/detail-route.test.tsx`；既有 `C/components/issues/detail-host.test.tsx`。
 **Interfaces：** 沿已有 `fetchIssueCore`、`fetchIssueWithIdentifier` 与 `useSessionSWR`。不新增 endpoint；统一包含 header/body 的身份边界，key 不只放 DescriptionInput。
 
-- [ ] Step 1：核 main 基线/干净状态与 phase 例外，读 Plane 保留入口；写 `keepsNativeIdRedirect`、`retiresHeaderAndBodyTogether`，包含 loading、拒绝、相同路由换编号及 A→B→A。核 P11 已删除项不重复记删除。
-- [ ] Step 2：运行新 `core/components/browse/detail-route.test.tsx` 和既有详情 owner 回归；缺 key 的旧弹层性质须实际失败，已有原生入口通过作为基线。
-- [ ] Step 3：只补共同身份/页头读取边界、必要中文文案；phase 改 M4/P14。不要在前端大小写归一编号、不要新建权限 observer。
-- [ ] Step 4：M01 去共同身份失效使旧弹层测试失败，恢复；核实际 route/guard 索引、401/403/404 处理及类型/diff。
-- [ ] Step 5：记录 A1 与已完成输入；提交 `feat(M4/P14): 补齐详情路由的共同身份边界`。
+- [x] Step 1：核 main 基线/干净状态与 phase 例外，读 Plane 保留入口；写 `keepsNativeIdRedirect`、`retiresHeaderAndBodyTogether`，包含 loading、拒绝、相同路由换编号及 A→B→A。核 P11 已删除项不重复记删除。
+- [x] Step 2：运行新 `core/components/browse/detail-route.test.tsx` 和既有详情 owner 回归；缺 key 的旧弹层性质须实际失败，已有原生入口通过作为基线。
+- [x] Step 3：只补共同身份/页头读取边界、必要中文文案；phase 改 M4/P14。不要在前端大小写归一编号、不要新建权限 observer。
+- [x] Step 4：M01 去共同身份失效使旧弹层测试失败，恢复；核实际 route/guard 索引、401/403/404 处理及类型/diff。
+- [x] Step 5：记录 A1 与已完成输入；提交 `feat(M4/P14): 补齐详情路由的共同身份边界`。
 
 ## Task 2：详情标题和属性、I2 属性（约 700–1100 行）
 
@@ -253,4 +253,4 @@ make e2e
 
 ## 附录 B：准备与实施界线
 
-本 plan 只静态预检，没有“已完成 Task”或产品测试结果。准备核对会删除不存在的旧路径、明确新增文件、验证 task/接口/调用/完成线一致，再把结果写 P14 review 与 re-20；守卫 phase 仍 M4/P13。预检后等待负责人启动 T1。
+准备时本 plan 只静态预检，没有产品测试结果；re-20 保留该历史时点。负责人现已授权实施，T1 将 phase 改为 M4/P14；后续完成状态以步骤、阶段 review 和实施台账的准确输入/结果为准，不改写准备原件。
