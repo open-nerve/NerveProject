@@ -2851,14 +2851,6 @@
       "match": "copyTextToClipboard(",
       "reason": "M8 的 Webhook 页面自己复制密钥，成功和失败各自说；M8 改这个页面时改用 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
       "until": "M8/closeout"
-    },
-    {
-      "rule": "old-issue-urls",
-      "path": "web/apps/web/core/services/project/project.service.ts",
-      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/search-issues/",
-      "count": 1,
-      "reason": "T7暂留；P12/P14改接existing-issues-list-modal、parent-issues-list-modal、inbox/select-duplicate；P15删除projectIssuesSearch，P14若已无读者立即删",
-      "until": "M4/P16"
     }
   ]
 }

@@ -3,29 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
+import { observer } from "mobx-react";
 import { useParams } from "react-router";
-import { useTheme } from "next-themes";
 import { Combobox } from "@headlessui/react";
-// nerve imports
-import { useTranslation } from "@nerve/i18n";
 import { SearchOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { ISearchIssueResponse } from "@nerve/types";
-import { Loader, EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
-// assets
-import darkIssuesAsset from "@/app/assets/empty-state/search/issues-dark.webp?url";
-import lightIssuesAsset from "@/app/assets/empty-state/search/issues-light.webp?url";
-import darkSearchAsset from "@/app/assets/empty-state/search/search-dark.webp?url";
-import lightSearchAsset from "@/app/assets/empty-state/search/search-light.webp?url";
-// components
-import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-root";
-// hooks
-import { useProject } from "@/hooks/store/use-project";
-import useDebounce from "@/hooks/use-debounce";
-// services
-import { ProjectService } from "@/services/project";
+import { useTranslation } from "@nerve/i18n";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueSearch } from "@/hooks/use-issue-search";
+import { useRefusalMessage } from "@/hooks/use-refusal-toast";
+import { IssueSearchModalEmptyState } from "@/components/core/modals/issue-search-modal-empty-state";
+import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
+import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
 
 type Props = {
   isOpen: boolean;
@@ -34,136 +24,115 @@ type Props = {
   onSubmit: (issueId: string) => void;
 };
 
-const projectService = new ProjectService();
-
-export function SelectDuplicateInboxIssueModal(props: Props) {
-  const { isOpen, onClose, onSubmit, value } = props;
-  // router
+export const SelectDuplicateInboxIssueModal = observer(function SelectDuplicateInboxIssueModal(props: Props) {
   const { workspaceSlug, projectId, issueId } = useParams();
-  // states
-  const [query, setQuery] = useState("");
-  const [issues, setIssues] = useState<ISearchIssueResponse[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  // theme hook
-  const { resolvedTheme } = useTheme();
-  // hooks
-  const { getProjectById } = useProject();
+  const { rootIssueStore: root } = useIssueDetail();
+  const workspace = workspaceSlug ? root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug) : undefined;
+  const identity = root.permissionReads.identity(workspace?.id, projectId ? [projectId] : [], true);
+  return props.isOpen ? (
+    <DuplicateSelection key={JSON.stringify([workspaceSlug, projectId, issueId, identity])} {...props} />
+  ) : null;
+});
+
+const DuplicateSelection = observer(function DuplicateSelection({ isOpen, value, onClose, onSubmit }: Props) {
   const { t } = useTranslation();
-  // derived values
-  const debouncedSearchTerm: string = useDebounce(query, 500);
-  const searchResolvedPath = resolvedTheme === "light" ? lightSearchAsset : darkSearchAsset;
-  const issuesResolvedPath = resolvedTheme === "light" ? lightIssuesAsset : darkIssuesAsset;
-
-  useEffect(() => {
-    if (!isOpen || !workspaceSlug || !projectId) return;
-
-    setIsSearching(true);
-    projectService
-      .projectIssuesSearch(workspaceSlug, projectId, {
-        search: debouncedSearchTerm,
-        workspace_search: false,
-      })
-      .then((res: ISearchIssueResponse[]) => setIssues(res))
-      .finally(() => setIsSearching(false));
-  }, [debouncedSearchTerm, isOpen, projectId, workspaceSlug]);
-
-  const filteredIssues = issues.filter((issue) => issue.id !== issueId);
-
-  const handleClose = () => {
-    onClose();
-    setQuery("");
+  const { workspaceSlug, projectId, issueId } = useParams();
+  const { rootIssueStore: root } = useIssueDetail();
+  const [term, setTerm] = useState("");
+  // An intake item is not an Issue source. Its duplicate picker reads the project's candidates only.
+  const search = useIssueSearch(
+    root,
+    workspaceSlug,
+    { project_id: projectId, ...(term ? { q: term } : {}) },
+    isOpen && !!projectId
+  );
+  const capture = useDetailScope(workspaceSlug ?? "", projectId, issueId ?? "inbox", true);
+  const message = useRefusalMessage();
+  const submitted = useRef(false);
+  const issues = search.ids.flatMap((id) => {
+    const issue = root.issues.getIssueById(id);
+    return issue && issue.id !== issueId ? [issue] : [];
+  });
+  const choose = (id: string | null) => {
+    if (!id || id === issueId || submitted.current || !projectId || !search.proof || !search.ids.includes(id)) return;
+    const current = capture();
+    const workspace = workspaceSlug ? root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug) : undefined;
+    const issue = root.issues.getIssueById(id);
+    if (
+      !current() ||
+      !workspace ||
+      !issue ||
+      issue.project_id !== projectId ||
+      issue.workspace_id !== workspace.id ||
+      !root.isReadCurrent(search.proof, [projectId], workspace.id)
+    )
+      return;
+    // This remains an ID notification; the intake consumer owns its separate business command.
+    onSubmit(id);
+    submitted.current = true;
+    if (current()) onClose();
   };
-
-  const handleSubmit = (selectedItem: string) => {
-    if (!selectedItem || selectedItem.length === 0)
-      return setToast({
-        title: "Error",
-        type: TOAST_TYPE.ERROR,
-      });
-    onSubmit(selectedItem);
-    handleClose();
-  };
-
-  const issueList =
-    filteredIssues.length > 0 ? (
-      <div className="p-2">
-        {query === "" && <h2 className="mt-4 mb-2 px-3 text-11 font-semibold text-primary">Select work item</h2>}
-        <ul className="text-13 text-primary">
-          {filteredIssues.map((issue) => {
-            const stateColor = issue.state__color || "";
-
-            return (
-              <Combobox.Option
-                key={issue.id}
-                as="li"
-                value={issue.id}
-                className={({ active, selected }) =>
-                  `flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-secondary select-none ${
-                    active || selected ? "bg-layer-1 text-primary" : ""
-                  } `
-                }
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="block h-1.5 w-1.5 flex-shrink-0 rounded-full"
-                    style={{
-                      backgroundColor: stateColor,
-                    }}
-                  />
-                  <span className="flex-shrink-0 text-11 text-secondary">
-                    {getProjectById(issue?.project_id)?.identifier}-{issue.sequence_id}
-                  </span>
-                  <span className="text-secondary">{issue.name}</span>
-                </div>
-              </Combobox.Option>
-            );
-          })}
-        </ul>
-      </div>
-    ) : (
-      <div className="flex flex-col items-center justify-center px-3 py-8 text-center">
-        {query === "" ? (
-          <SimpleEmptyState title={t("issue_relation.empty_state.no_issues.title")} assetPath={issuesResolvedPath} />
-        ) : (
-          <SimpleEmptyState title={t("issue_relation.empty_state.search.title")} assetPath={searchResolvedPath} />
-        )}
-      </div>
-    );
-
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
-      <Combobox
-        value={value}
-        onChange={(selected: string | null) => {
-          if (selected !== null) handleSubmit(selected);
-        }}
-      >
+    <ModalCore isOpen={isOpen} handleClose={onClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+      <ModalTitle className="px-4 pt-4 text-16 font-medium">{t("inbox_issue.actions.mark_as_duplicate")}</ModalTitle>
+      <Combobox as="div" value={value ?? null} onChange={choose}>
         <div className="relative m-1">
           <SearchOutline
-            className="text-opacity-40 pointer-events-none absolute top-3.5 left-4 h-5 w-5 text-primary"
+            className="pointer-events-none absolute top-3.5 left-4 h-5 w-5 text-secondary"
             aria-hidden="true"
           />
-          <input
-            type="text"
-            className="h-12 w-full border-0 bg-transparent pr-4 pl-11 text-primary outline-none focus:ring-0 sm:text-13"
-            placeholder="Search..."
-            onChange={(e) => setQuery(e.target.value)}
+          <Combobox.Input
+            aria-label={t("common.search.placeholder")}
+            placeholder={t("common.search.placeholder")}
+            className="h-12 w-full bg-transparent pr-4 pl-11 text-13 outline-none"
+            value={term}
+            onChange={(event) => setTerm(event.target.value)}
           />
         </div>
-
-        <Combobox.Options as="ul" static className="max-h-80 scroll-py-2 divide-y divide-subtle-1 overflow-y-auto">
-          {isSearching ? (
-            <Loader className="space-y-3 p-3">
-              <Loader.Item height="40px" />
-              <Loader.Item height="40px" />
-              <Loader.Item height="40px" />
-              <Loader.Item height="40px" />
-            </Loader>
-          ) : (
-            <>{issueList}</>
-          )}
+        {search.error !== undefined && (
+          <div role="alert" className="p-3">
+            {message(search.error)}{" "}
+            <button type="button" onClick={search.retry}>
+              {t("common.retry")}
+            </button>
+          </div>
+        )}
+        {search.loading && (
+          <p role="status" className="p-3">
+            {t("common.loading")}
+          </p>
+        )}
+        {!search.loading && search.error === undefined && issues.length === 0 && (
+          <IssueSearchModalEmptyState
+            issues={issues}
+            searchTerm={term}
+            debouncedSearchTerm={term}
+            isSearching={false}
+          />
+        )}
+        <Combobox.Options
+          as="ul"
+          static
+          modal={false}
+          className="vertical-scrollbar max-h-80 overflow-y-auto p-2 text-13"
+        >
+          {issues.map((issue) => (
+            <Combobox.Option
+              as="li"
+              key={issue.id}
+              value={issue.id}
+              className="my-0.5 flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-secondary data-focus:bg-layer-1"
+            >
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ backgroundColor: root.rootStore.state.getStateById(issue.state_id)?.color }}
+              />
+              <IssueIdentifier projectId={issue.project_id} issueId={issue.id} size="xs" variant="secondary" />
+              <span className="truncate">{issue.name}</span>
+            </Combobox.Option>
+          ))}
         </Combobox.Options>
       </Combobox>
     </ModalCore>
   );
-}
+});

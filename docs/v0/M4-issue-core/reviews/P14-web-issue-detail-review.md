@@ -146,3 +146,13 @@ ParentIssuesListModal 直接消费生成 Issue 和已有 useIssueSearch，输入
 M09 去实际查询 for，精确参数断言红；M10 跳过实际父项命令，三种确认/拒绝测试均因过早关闭而红；均字节恢复。Web/E2E 类型通过，t6-lint-final 0/0，格式/diff 通过。另有夹具修正：FakeNerve 读取 query 而非不存在的 url；审计 helper 的 wrote 是本次写数而非累计；旧命令夹具补目录 hook。一次并发包重建造成 dist 短暂缺失，只计环境失败，改为先构建再测试；不作为行为红。后续包构建与读取这些包的验证必须串行。
 
 T4 检查点远端回执：准确 `503b6778a3ca21ea4c04f85990d0a92be38efee3` 的 [CI 41173311219](https://github.com/open-nerve/NerveProject/actions/runs/41173311219) completed/success，原始公开元数据 t4-ci-latest.json 已保存；不是当前未推 T5/T6 的 CI 证明。
+
+### T7 关联与收集箱查重
+
+收集箱查重沿 Plane 的单选 ID 通知，保持 onSubmit(id):void 和 M7 自身业务写不变；读取改用已有 useIssueSearch、原生 Issue 与项目/状态目录。分诊项不是工作项源，因此查询只含 project_id/q，不伪造 for=relation；仍排除当前源 id。输入、源、权限 ABA 和重开使旧读取失效，提交前复核 proof；当前读取拒绝有 GET 重试、ModalTitle 和输入名称。移除最后的 ProjectService 类及 barrel、两个专用旧搜索类型和精确一条例外；生产零旧读者，76 条规则/23 个例外通过，knip 通过。
+
+关系链路已有原子批量确认、跨项目作用域和确认后 GET 失败只读重试，本次保留并复验；选择器新增部分确认性质，重试只包含未确认项。M11 去真实 widget 的 for=relation，原生参数断言失败；M12 保留已确认选择项，部分确认断言失败。两项均逐字节恢复。
+
+验证：t7-component-final 六文件 59/59；t7-i9-confirmed 页面/API 2/2 Chromium。页面真实添加同项目 Blocking、跨项目 Relates to，持有响应时先核 DB 已写且 UI 未确认；对端显示 Blocked by。另一个账号在 Web 仅访客、Ops 为成员，源项修改明确 403，仍可从 Ops 对端删掉跨项目边；两端动态、关系审计/删除者与原始边一致。没有以“反向显示”代替任一端授权证明。A7 完成。
+
+Web/E2E 类型、变更 lint 0/0、格式/diff 均核验。初次新查重七项因仍发旧请求/未处理拒绝而红；后续测试问题（mock 路由未触发 context、POST 预期应为 201、折叠区需展开、首次搜索应答与切范围的等待、页面账号需完成引导）均修正并保留日志，不算产品缺陷或有效变异。未增加全局缓存/权限 owner、依赖或写协议，T9 完整 F 前不推送。

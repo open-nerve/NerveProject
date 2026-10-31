@@ -125,11 +125,11 @@ make e2e
 **Files：** spec T7；既有 `C/components/issues/relations/data.test.tsx`；新 `C/components/inbox/modals/select-duplicate.test.tsx`；`E/stories/issue/i9-relations.spec.ts`。
 **Interfaces：** ExistingIssuesListModal 原 `searchParams:Omit<IssueSearchQuery,"project_id"|"q">`、`handleOnSubmit(ids):Promise<SelectionSubmitResult>` 保持；M7 查重 `onSubmit(id):void` 保持，仅换原生读取/展示。
 
-- [ ] Step 1：核关系 enum 的生成词汇与真实 helper；补跨项目/反向/部分确认、确认后 GET 拒绝只读重试；查重空词/快速词切换/权限失效/当前 error+retry 测试。
-- [ ] Step 2：运行 relations/data 与新查重组件测试，确认旧 ProjectService 请求或未处理拒绝失败；不得用 M7 未实现的业务写作为本段测试前提。
-- [ ] Step 3：关系 UI 用既有 root 命令闭合不足；查重用 useIssueSearch/Issue，移除旧实例；全仓复核最后两个读者消失后，删除 project.service.ts 整个零消费者类、project/index.ts 的导出、专用搜索类型和例外；P15 保留 WorkspaceService 清理，不重复删除这个文件。
-- [ ] Step 4：I9 页面同项目 blocks、跨项目 relates_to、对端 blocked_by 与删边核 DB 两端动态；M11 去 for=relation/M12 重试已确认项分别红，恢复；不能把只测对端方向当任一端授权已验。
-- [ ] Step 5：记录 A7 与零旧方法读者；提交 `feat(M4/P14): 完成关联页面和原生查重读取`。
+- [x] Step 1：核关系 enum 的生成词汇与真实 helper；补跨项目/反向/部分确认、确认后 GET 拒绝只读重试；查重空词/快速词切换/权限失效/当前 error+retry 测试。
+- [x] Step 2：运行 relations/data 与新查重组件测试，确认旧 ProjectService 请求或未处理拒绝失败；不得用 M7 未实现的业务写作为本段测试前提。
+- [x] Step 3：关系 UI 用既有 root 命令闭合不足；查重用 useIssueSearch/Issue，移除旧实例；全仓复核最后两个读者消失后，删除 project.service.ts 整个零消费者类、project/index.ts 的导出、专用搜索类型和例外；P15 保留 WorkspaceService 清理，不重复删除这个文件。
+- [x] Step 4：I9 页面同项目 blocks、跨项目 relates_to、对端 blocked_by 与删边核 DB 两端动态；M11 去 for=relation/M12 重试已确认项分别红，恢复；不能把只测对端方向当任一端授权已验。
+- [x] Step 5：记录 A7 与零旧方法读者；提交 `feat(M4/P14): 完成关联页面和原生查重读取`。
 
 ## Task 8：链接表单与元数据、I10（约 800–1300 行）
 

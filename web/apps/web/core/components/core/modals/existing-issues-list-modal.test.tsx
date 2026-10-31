@@ -155,3 +155,21 @@ it("rejects a confirmation for IDs outside the submitted snapshot", async () => 
   expect(selectionButton("issue.select.add_selected").disabled).toBe(false);
   expect(toasts).toHaveLength(1);
 });
+it("retries only the unconfirmed candidates after a partial confirmation", async () => {
+  await render();
+  await act(async () => tab.searches()[0]!.answer(json(200, { data: [issueOf("Confirmed"), issueOf("Refused")] })));
+  await act(async () => selectionButton("issue.select.select_all").click());
+  await send();
+  expect(submit).toHaveBeenLastCalledWith(["Confirmed", "Refused"]);
+  await act(async () =>
+    pending.answer({ confirmedIds: ["Confirmed"], failures: [{ id: "Refused", error: new Error("refused") }] })
+  );
+  expect(close).not.toHaveBeenCalled();
+  expect(document.querySelector('[aria-label="common.remove Confirmed"]')).toBeNull();
+  expect(document.querySelector('[aria-label="common.remove Refused"]')).not.toBeNull();
+  pending = heldChange<SelectionSubmitResult>();
+  await send();
+  expect(submit).toHaveBeenLastCalledWith(["Refused"]);
+  await act(async () => pending.answer({ confirmedIds: ["Refused"], failures: [] }));
+  expect(close).toHaveBeenCalledOnce();
+});
