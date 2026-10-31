@@ -48,6 +48,8 @@ test("I9 (page): native candidates create Blocking and cross-project Relates to;
     code: "forbidden",
   });
   const watch = await openIssueDetail(page, seed, source);
+  // These relation actions start on the loaded detail; C10 separately exercises the pending editor layout.
+  await expect(page.locator(`[id="editor-container-${source.id}"] [contenteditable]`)).toBeVisible();
   const searchPath = `/api/v0/workspaces/${seed.slug}/issue-search`;
   const modal = page.getByRole("dialog", { name: "Add existing work item", exact: true });
   const firstSearch = await answerTo(page, "GET", searchPath, async () => {
@@ -136,6 +138,7 @@ test("I9 (page): native candidates create Blocking and cross-project Relates to;
     wrote: 1,
   });
   await page.goto(`/${seed.slug}/browse/WEB-${target.sequence_id}`);
+  await expect(page.locator(`[id="editor-container-${target.id}"] [contenteditable]`)).toBeVisible();
   await page.getByRole("button", { name: "Relations 1", exact: true }).click();
   await expect(page.getByRole("button", { name: "Blocked by", exact: true })).toBeVisible();
   await expect(page.locator(`#issue-${source.id}`)).toBeVisible();
@@ -145,6 +148,7 @@ test("I9 (page): native candidates create Blocking and cross-project Relates to;
   try {
     const otherPage = await context.newPage();
     const otherWatch = await openIssueDetail(otherPage, { ...seed, project: ops, member: peer }, cross);
+    await expect(otherPage.locator(`[id="editor-container-${cross.id}"] [contenteditable]`)).toBeVisible();
     const relationsButton = otherPage.getByRole("button", { name: "Relations 1", exact: true });
     await relationsButton.click();
     // Finish revealing the row before Playwright scrolls and clicks its menu through the clip.
