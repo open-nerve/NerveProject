@@ -4,10 +4,12 @@ import { act, createContext, useContext } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ProjectsAppPowerKProvider } from "./projects-app-provider";
+import { PowerKStore } from "@/store/power-k.store";
 
 const ui = vi.hoisted(() => ({ toggle: vi.fn(), setPage: vi.fn(), navigate: vi.fn() }));
 type Params = { workspaceSlug?: string; projectId?: string; workItem?: string };
 const ParamsContext = createContext<Params>({});
+const PowerKContext = createContext<PowerKStore | undefined>(undefined);
 vi.mock("react-router", () => ({ useParams: () => useContext(ParamsContext), useNavigate: () => ui.navigate }));
 vi.mock("@/hooks/store/use-issue-detail", () => ({
   useIssueDetail: () => ({
@@ -18,12 +20,13 @@ vi.mock("@/hooks/store/use-issue-detail", () => ({
   }),
 }));
 vi.mock("@/hooks/store/use-power-k", () => ({
-  usePowerK: () => ({
-    activeContext: "global",
-    isPowerKModalOpen: false,
-    togglePowerKModal: ui.toggle,
-    setActivePage: ui.setPage,
-  }),
+  usePowerK: () =>
+    useContext(PowerKContext) ?? {
+      activeContext: "global",
+      isPowerKModalOpen: false,
+      togglePowerKModal: ui.toggle,
+      setActivePage: ui.setPage,
+    },
 }));
 vi.mock("./config/commands", () => ({ useProjectsAppPowerKCommands: () => [] }));
 vi.mock("./global-shortcuts", () => ({ GlobalShortcutsProvider: () => <span data-shortcuts /> }));
@@ -46,12 +49,14 @@ afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
 });
-const render = (params: Params) =>
+const render = (params: Params, powerK?: PowerKStore) =>
   act(async () =>
     root.render(
-      <ParamsContext.Provider value={params}>
-        <ProjectsAppPowerKProvider />
-      </ParamsContext.Provider>
+      <PowerKContext.Provider value={powerK}>
+        <ParamsContext.Provider value={params}>
+          <ProjectsAppPowerKProvider />
+        </ParamsContext.Provider>
+      </PowerKContext.Provider>
     )
   );
 
@@ -62,6 +67,35 @@ it("personal settings keeps its palette and shortcuts without mounting work-item
   expect(host.querySelector("[data-work-item]")).toBeNull();
   expect(host.querySelector("[data-project]")).toBeNull();
   expect(host.querySelector("[data-workspace]")).toBeNull();
+});
+
+it.each([
+  [
+    { workspaceSlug: "ws", projectId: "A" },
+    { workspaceSlug: "ws", projectId: "B" },
+  ],
+  [
+    { workspaceSlug: "ws", workItem: "A-1" },
+    { workspaceSlug: "ws", workItem: "A-2" },
+  ],
+  [
+    { workspaceSlug: "ws", workItem: "A-1" },
+    { workspaceSlug: "ws", projectId: "A" },
+  ],
+])("route scope changes retire the real palette state and Back cannot reopen it: %j", async (first, next) => {
+  const powerK = new PowerKStore();
+  await render(first, powerK);
+  await act(async () => {
+    powerK.togglePowerKModal(true);
+    powerK.setActivePage("update-work-item-state");
+  });
+  await render({ ...first }, powerK);
+  expect(powerK.isPowerKModalOpen).toBe(true);
+  await render(next, powerK);
+  expect(powerK.isPowerKModalOpen).toBe(false);
+  expect(powerK.activePage).toBeNull();
+  await render(first, powerK);
+  expect(powerK.isPowerKModalOpen).toBe(false);
 });
 it("workspace and project routes retain their command hosts and retire them on returning to personal settings", async () => {
   await render({ workspaceSlug: "ws" });

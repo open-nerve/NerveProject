@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索
 
-状态：文档预检通过，已授权实施；T1–T13 完成，继续 T14。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。按计划连续实施；验收项按实际证据勾选，阶段末 deep-review 后先不合并。
+状态：文档预检通过，已授权实施；T1–T14 完成，继续 T15。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。按计划连续实施；验收项按实际证据勾选，阶段末 deep-review 后先不合并。
 
 ## 1. 目标
 
@@ -29,7 +29,7 @@
 | T11 | C/services/workspace.service.ts；C/components/power-k/core/types.ts；P/{types,constants}/src/workspace.ts | 旧搜索方法/类型/常量与最后模块实例清零 |
 | T12 | E/stories/issue/i16-auto-archive.spec.ts；E/fixtures/{clock,auto-archive,auth}.ts | I16 真实时钟页面与系统操作者 |
 | T13 | C/components/issues/{create-issue-toast-action-items,issue-detail/issue-activity/helper,issue-layouts/quick-action-dropdowns/helper}.tsx；T8 拆分后的复制命令 | 余下四处复制 hook 与 M4 例外清零 |
-| T14 | E/stories/issue/collaboration-interactions.spec.ts（新）、E/playwright.m4-collaboration.config.ts（新） | C6/C7/C8/C9 三浏览器和会话/Back |
+| T14 | E/stories/issue/collaboration-interactions.spec.ts（新）、E/playwright.m4-collaboration.config.ts（新）、E/package.json 执行入口、E/fixtures/settings-pages.ts、C/components/power-k/{projects-app-provider,ui/modal/wrapper}.tsx 与对应测试；E/fixtures/{issue-list-page,issue-collaboration-page}.ts | C6/C7/C8/C9 三浏览器和会话/Back |
 | T15 | 本阶段实际改动文件与 tools/keywords.json | 死成员、逐文件 lint、守卫、差异清单 |
 | T16 | 本 spec/plan/review、交接子回执、docs/reviews/ | 完整门禁、整分支 deep-review、修复复审与交付 |
 
@@ -94,13 +94,15 @@ T8 实施补充：私有 context.ts 仅共享显式路由、canonical 读取与 
 - 404/403/500 读取错误不显示成无结果；当前查询可重试，权限或会话变化立即隐藏旧项。中文 q、编号、纯序号、字面 %/_/\、排序/limit、OwnOnly 在 I18 保留；q 超长和字段错误按服务端合同处理，不截断用户输入。
 - 删除 WorkspaceService.searchWorkspace、其模块实例以及专用 IWorkspace*SearchResult、WORKSPACE_DEFAULT_SEARCH_RESULT、旧搜索参数/六组结果映射；WorkspaceService 的 create/update/delete/getAllViews 属 M7，保留。ProjectService 已 P14 删除，只复核零残留。M6/M7 搜索结果不伪造或接旧接口，按原设计暂不提供。
 
+T14 实施补充：同一工作区内的 provider 不一定卸载，关闭命令宿主须依 workspaceSlug、route projectId、workItem 编号变化执行；不依异步加载出的项目 ID，避免仅加载详情也关闭面板。复用原 store 开关和 wrapper 关闭清理，不新增作用域所有者。Back 重开从空查询开始，旧查询 200 不复活旧结果。面板内 Cmd/Ctrl+K 关闭同时消费该按键，不能继续冒泡至 document 的打开命令。
+
 ### 2.7 自动归档、复制与最终质量
 
 I16 页面使用 clockTest/ClockWorld 独立数据库；推进业务时钟后取得新 nerve.baseURL 并重新登录（旧 cookie/access 不能跨 +744h 假有效），等新进程中在业务写后启动并 completed 的真实 auto_archive attempt，再从归档列表打开详情。只给 SQL 查询作断言，不 SQL 写前置或用 sleep 代替时钟；NULL actor 按 SITE_NAME，手动恢复真实用户显示。页面断言旧完成项已归档、非终态/新更新控制项未归档，保留原 API 水位/跨越 attempt 测试。
 
 余下四个复制位置及历史 Markdown 共用现有 useCopyLink/useCopyText 两参数 Promise<void>；hook 处理成功/失败，外层不据 resolved Promise 设置“Copied”或额外成功（hook 在失败也 resolve）。创建 toast 移除自行推测成功的 copied 状态或只用 hook 反馈；评论链接含当前 origin 与 #comment-id。消费者真实拒绝/等待测试和 LAN HTTP 浏览器验证都有，不只测 hook。C8 同时复验 P14 已迁移的工作项链接/编号、子项及关联链接，不把 P14 的受控拒绝冒充本次 LAN HTTP 验收。
 
-实施核准：HTTP 不等于复制必失败，M2 已有 execCommand 兼容成功路径继续保留。C8 在真实 LAN origin、非安全上下文、无异步 clipboard API 下，先以键盘到达或选择真实控件，等浏览器临时用户激活实际失效再触发该控件，由浏览器实际拒绝复制；记录这三个状态和反馈，不替换任一剪贴板 API，也不把无手势激活写成真实键盘复制失败。必要小 helper 提前在 T13 落于 E/fixtures/issue-collaboration-page.ts；power-k.ts 抽出既有键盘选中动作供命令复用，原 selectCommand 激活行为保持。
+实施核准：HTTP 不等于复制必失败，M2 已有 execCommand 兼容成功路径继续保留。C8 在真实 LAN origin、非安全上下文、无异步 clipboard API 下，先以键盘到达或选择真实控件，等浏览器临时用户激活实际失效再触发该控件，由浏览器实际拒绝复制；记录这三个状态和反馈，不替换任一剪贴板 API，也不把无手势激活写成真实键盘复制失败。必要小 helper 提前在 T13 落于 E/fixtures/issue-collaboration-page.ts；power-k.ts 抽出既有键盘选中动作供命令复用，原 selectCommand 激活行为保持。Firefox 在此故意不安全的测试前置下必须逐条报告 HTTP 密码字段和无手势 execCommand 拒绝两条安全诊断：精确核文案、登录 URL、本站实际加载脚本及数量，缺失或额外诊断都失败；沿既有 expectQuietConsole 的调用者期望合同，不过滤或放宽全局监听。主题成功重载等待新文档 load 后再做布局可见性断言，不接受自动化提前强制布局警告。
 
 本期仅删除四个 M4 copy-hook 例外，M6–M8 例外保持各自归属；13 个历史 M4 模块级实例逐路径清点，允许其它领域仍有独立旧实例。改动 TS/TSX 逐文件 lint 清零，按 02 分类删除本期死参数/成员；P16 全局 no-shadow/守卫终态不提前宣称。
 
@@ -136,7 +138,7 @@ I16 页面使用 clockTest/ClockWorld 独立数据库；推进业务时钟后取
 - [x] A11：T11 旧搜索方法/类型/常量无真实读者；历史 13 模块实例逐路径为零，M7 视图服务完整。
 - [x] A12：T12 I16 页面真实新时钟进程/新登录/新 attempt、自动归档和站点名/手动用户显示通过。
 - [x] A13：T13 四处 hook 与 T5 Markdown 的消费者等待/拒绝均正确，四 M4 copy-hook 例外删除，C8 LAN HTTP 有实际证据。
-- [ ] A14：T14 C6/C7/C8/C9 草稿及本期 I 页面在 Chromium、Firefox、WebKit 各有实际非零结果；页面无未说明失败请求、CSP/console/unhandled 错误。
+- [x] A14：T14 C6/C7/C8/C9 草稿及本期 I 页面在 Chromium、Firefox、WebKit 各有实际非零结果；页面无未说明失败请求、CSP/console/unhandled 错误。
 - [ ] A15：T15 改动文件 dead/oxlint 清零、字段/旧 URL/路由/复制守卫通过，差异与边界文档准确。
 - [ ] A16：T16 完整七项门禁、整分支 deep-review/局部修复复审、准确最终分支 HEAD CI、全要求证据闭环；阶段完成后先不合并。
 

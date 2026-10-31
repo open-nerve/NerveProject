@@ -18,7 +18,8 @@ import { newAccount, accountId, emailFor } from "../../fixtures/auth";
 import { issueListProject, expectListPageQuiet } from "../../fixtures/issue-list-page";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { openCommands } from "../../fixtures/power-k";
-import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
+import { deferred } from "../../fixtures/deferred";
+import { answerTo, holdAnswer, moveWithinApp, registerOnboarded } from "../../fixtures/settings-pages";
 import { instantKey } from "../../fixtures/instant";
 import {
   createIssue,
@@ -337,7 +338,7 @@ test("I18 (page): search errors offer GET retry and a delayed previous query can
   await expectListPageQuiet(page, watch, {
     failures: [`500 GET ${path}`],
     errors:
-      browserName === "chromium"
+      browserName === "chromium" || browserName === "webkit"
         ? ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"]
         : [],
   });
@@ -377,3 +378,50 @@ for (const role of [5, 20] as const) {
     await expectListPageQuiet(page, watch);
   });
 }
+
+// A held real search answer cannot revive a result after project A -> B -> Back to A.
+test("I18 (page): Back and reopening the same query retire the previous project search answer", async ({
+  api,
+  page,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const old = await createIssue(api, seed.member.token, seed.project.id, { name: "Old needle" });
+  const beta = await createProject(api, seed.member.token, seed.slug, { name: "Beta", identifier: "BETA" });
+  const betaIssue = await createIssue(api, seed.member.token, beta.id, { name: "Other project" });
+  const watch = await openIssueDetail(page, seed, old);
+  const path = `/api/v0/workspaces/${seed.slug}/issue-search`;
+  await openCommands(page);
+  const fetched = deferred<void>();
+  const release = await holdAnswer(page, "GET", path, 1, () => fetched.resolve());
+  await page.getByRole("combobox").fill("needle");
+  await fetched.promise;
+  let released = false;
+  try {
+    await updateIssue(api, seed.member.token, old.id, { name: "Removed title" });
+    const current = await createIssue(api, seed.member.token, seed.project.id, { name: "Current needle" });
+    await moveWithinApp(page, `/${seed.slug}/projects/${beta.id}/issues`);
+    await expect(page.locator(`#issue-${betaIssue.id}`)).toBeVisible();
+    await expect(page.getByRole("combobox")).toHaveCount(0);
+    await page.goBack();
+    await expect(page).toHaveURL(`/${seed.slug}/browse/WEB-${old.sequence_id}`);
+    await expect(page.getByRole("textbox", { name: "Work item title", exact: true })).toBeVisible();
+    await openCommands(page);
+    await page.getByRole("combobox").fill("needle");
+    const result = page.locator(`[role="option"][data-value="issue-${current.id}"]`);
+    await expect(result).toBeVisible();
+    const previous = await answerTo(page, "GET", path, release);
+    released = true;
+    expect(previous.status()).toBe(200);
+    expect((await previous.json()).data.map((row: { id: string }) => row.id)).toEqual([old.id]);
+    await expect(result).toBeVisible();
+    await expect(page.locator(`[role="option"][data-value="issue-${old.id}"]`)).toHaveCount(0);
+    await page.getByRole("combobox").press("ControlOrMeta+k");
+    await expect(page.getByRole("combobox")).toHaveCount(0);
+    await openCommands(page);
+    await expect(page.getByRole("option", { name: /^Change state/ })).toBeVisible();
+    expect(watch.apiRequests.filter((request) => /^(POST|PATCH|DELETE) .*issues/.test(request))).toEqual([]);
+    await expectListPageQuiet(page, watch);
+  } finally {
+    if (!released) await release();
+  }
+});

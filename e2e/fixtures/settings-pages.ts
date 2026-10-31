@@ -65,8 +65,15 @@ export async function sentTo(
 /**
  * Holds from page nerve's answers to the next count requests of method to path: each request reaches nerve at once,
  * and page gets the answer only when the function returned is called. Later requests pass.
+ * received runs after each held answer has arrived from nerve, allowing a test to order subsequent API writes.
  */
-export async function holdAnswer(page: Page, method: string, path: string, count = 1): Promise<() => Promise<void>> {
+export async function holdAnswer(
+  page: Page,
+  method: string,
+  path: string,
+  count = 1,
+  received?: () => void
+): Promise<() => Promise<void>> {
   const released = deferred();
   let held = 0;
   await page.route(
@@ -78,6 +85,7 @@ export async function holdAnswer(page: Page, method: string, path: string, count
       }
       held++;
       const response = await route.fetch();
+      received?.();
       await released.promise;
       await route.fulfill({ response });
     }

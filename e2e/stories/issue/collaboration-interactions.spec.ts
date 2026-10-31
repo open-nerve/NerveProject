@@ -1,7 +1,11 @@
 import { changeRole, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
 import { highlightCommand, openCommands, selectCommand } from "../../fixtures/power-k";
 import { createIssueLink } from "../../fixtures/links";
-import { collaborationLANPage, copyWithoutUserActivation } from "../../fixtures/issue-collaboration-page";
+import {
+  collaborationLANPage,
+  copyWithoutUserActivation,
+  expectLANClipboardWarnings,
+} from "../../fixtures/issue-collaboration-page";
 import { createState } from "../../fixtures/states";
 import { modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
@@ -17,6 +21,7 @@ import { sentHeld, answerTo, moveWithinApp, registerOnboarded, transitionsEnded 
 test("C6: activity filters keep one choice, support Enter and Space, persist sorting and return focus on Escape", async ({
   api,
   page,
+  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Activity controls" });
@@ -39,7 +44,8 @@ test("C6: activity filters keep one choice, support Enter and Space, persist sor
   await page.keyboard.press("Enter");
   const updates = page.getByRole("button", { name: "Updates", exact: true });
   const comments = page.getByRole("button", { name: "Comments", exact: true });
-  await page.keyboard.press("Tab");
+  // Safari on macOS includes buttons in sequential navigation through Option-Tab.
+  await page.keyboard.press(browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab");
   await expect(updates).toBeFocused();
   await page.keyboard.press("Space");
   await expect(updates).toHaveAttribute("aria-pressed", "false");
@@ -217,7 +223,7 @@ test("C9: creation saves an empty-title real editor draft, retains field refusal
   await expectListPageQuiet(page, watch, {
     failures: [`422 POST ${path}`],
     errors:
-      browserName === "chromium"
+      browserName === "chromium" || browserName === "webkit"
         ? ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"]
         : [],
   });
@@ -269,7 +275,7 @@ test("C9: Back retires a pending draft save and its prompt before the confirmed 
   }
 });
 
-test("C9: a draft editor does not return after the workspace member becomes a guest and reloads current permissions", async ({
+test("C9: a draft editor stays retired across member to guest to member permissions after real reloads", async ({
   api,
   page,
   db,
@@ -297,6 +303,17 @@ test("C9: a draft editor does not return after the workspace member becomes a gu
   expect(watch.apiRequests.filter((request) => request.endsWith(`/workspaces/${seed.slug}/drafts`))).toHaveLength(
     readsBefore
   );
+  await changeRole(api, seed.member.token, seed.slug, member.id, 15);
+  await page.reload();
+  const trigger = page.getByRole("button", { name: "Draft a work item", exact: true });
+  await expect(trigger).toBeEnabled();
+  await expect(modalDialog(page)).toHaveCount(0);
+  await trigger.press("Enter");
+  const reopened = page.getByRole("dialog", { name: "Create a draft", exact: true });
+  await expect(reopened.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("");
+  await expect(reopened.locator('[contenteditable="true"]')).toBeVisible();
+  await reopened.getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(modalDialog(page)).toHaveCount(0);
   expect(
     await db.query("SELECT count(*)::int AS count FROM draft_issues WHERE workspace_id=$1", [seed.project.workspace_id])
   ).toEqual([{ count: 0 }]);
@@ -429,7 +446,9 @@ test("C7: keyboard theme selection waits for confirmation, reports native refusa
   expect(held.body).toEqual({ theme: "dark" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.locator("html")).toHaveAttribute("data-command-document", "original");
-  expect((await held.release()).status()).toBe(200);
+  // Let the new document finish loading before Playwright's visibility probes can force its first layout.
+  const [, confirmed] = await Promise.all([page.waitForEvent("load"), held.release()]);
+  expect(confirmed.status()).toBe(200);
   await expect(page.locator("html")).not.toHaveAttribute("data-command-document", "original");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.getByRole("button", { name: "Dark", exact: true })).toBeVisible();
@@ -439,7 +458,7 @@ test("C7: keyboard theme selection waits for confirmation, reports native refusa
   await expectListPageQuiet(page, watch, {
     failures: [`503 PATCH ${path}`],
     errors:
-      browserName === "chromium"
+      browserName === "chromium" || browserName === "webkit"
         ? ["Failed to load resource: the server responded with a status of 503 (Service Unavailable)"]
         : [],
   });
@@ -501,6 +520,7 @@ for (const control of [
     api,
     db,
     browser,
+    browserName,
   }, info) => {
     const seed = await issueListProject(api, info);
     const source = await createIssue(api, seed.member.token, seed.project.id, { name: "LAN copy source" });
@@ -610,7 +630,11 @@ for (const control of [
         body: JSON.stringify({ origin: lan.origin, ...clipboardContext, control }, null, 2),
         contentType: "application/json",
       });
-      await expectListPageQuiet(page, watch);
+      const loginPath = ["layout", "peek", "creation"].includes(control)
+        ? seed.path
+        : `/${seed.slug}/browse/WEB-${source.sequence_id}`;
+      const warnings = expectLANClipboardWarnings(watch, browserName, lan.origin, signInPath(loginPath));
+      await expectListPageQuiet(page, watch, { warnings });
     } catch (error) {
       await info.attach("lan-http-failure", {
         body: await page.locator("body").ariaSnapshot(),

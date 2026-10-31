@@ -402,7 +402,7 @@ test("I14 (page): publish saves latest form first, retains it on refusal, and co
   await expectListPageQuiet(page, watch, {
     failures: [`409 POST ${publishPath}`, `500 GET ${listPath}`],
     errors:
-      browserName === "chromium"
+      browserName === "chromium" || browserName === "webkit"
         ? [
             "Failed to load resource: the server responded with a status of 409 (Conflict)",
             "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",

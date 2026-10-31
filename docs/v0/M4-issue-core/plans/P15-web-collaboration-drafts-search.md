@@ -191,19 +191,19 @@ make e2e
 
 ## Task 14：三浏览器组件矩阵与会话（约 850–1400 行）
 
-**Files：** spec T14；新 E/playwright.m4-collaboration.config.ts、E/fixtures/issue-collaboration-page.ts（仅必要小helper）；各owning Task I页面/C6–C9；扩现有会话story时只加本期行为。
+**Files：** spec T14；E/package.json 执行入口；新 E/playwright.m4-collaboration.config.ts、E/fixtures/issue-collaboration-page.ts（仅必要小helper）；各owning Task I页面/C6–C9；E/fixtures/settings-pages.ts 增实际答复就绪回调；C/components/power-k/projects-app-provider.tsx 与测试补同工作区路由退役，ui/modal/wrapper.tsx 与测试消费关闭快捷键；issue-list-page.ts 透传既有精确控制台期望，issue-collaboration-page.ts 必须断言 Firefox 的两条测试触发安全诊断；reviews/P15-browser-matrix.md。扩现有会话story时只加本期行为。
 **Interfaces：** 配置仿playwright.m4-detail.config.ts，显式chromium/firefox/webkit三project且各无默认A4 grep；testMatch包含本期I11/12/13/14/16/18/20和collaboration-interactions，grep严格匹配本期page/C6–9。
 
-- [ ] Step 1：登记逐条 C6时间线/筛选/表情/历史，C7命令/中文搜索/主题，C8复制，C9草稿的具名矩阵；I20只选新增comment分支，原I20仍全F覆盖。每个browser必须实际非零。
-- [ ] Step 2：先 --list 核匹配标题/文件不遗漏I16 clock且无默认Firefox A4；此步只是选择审计，不算执行。复用每Task页面，补两标签页成功旧答、权限ABA、Back/重开、拒绝后键盘恢复。
-- [ ] Step 3：只修局部真实缺口；不得降低watchPage、CSP、旧API或console门槛。真实编辑器/portal/cmdk排序/响应持有不能用生产mock替代。新helper不复制SQL与seed整套。
-- [ ] Step 4：make build；逐个串行运行 `pnpm --filter @nerve/e2e exec playwright test --config playwright.m4-collaboration.config.ts --project=chromium`、firefox、webkit（各独立output/report目录）；留实际passed/failed/skipped/trace/截图与服务hash。串行 F。
-- [ ] Step 5：记录 A14与每行证据；提交 `test(M4/P15): 补齐协作草稿命令的三浏览器矩阵`。
+- [x] Step 1：登记逐条 C6时间线/筛选/表情/历史，C7命令/中文搜索/主题，C8复制，C9草稿的具名矩阵；I20只选新增comment分支，原I20仍全F覆盖。每个browser必须实际非零。
+- [x] Step 2：先 --list 核匹配标题/文件不遗漏I16 clock且无默认Firefox A4；此步只是选择审计，不算执行。复用每Task页面，补两标签页成功旧答、权限ABA、Back/重开、拒绝后键盘恢复。
+- [x] Step 3：只修局部真实缺口；不得降低watchPage、CSP、旧API或console门槛。真实编辑器/portal/cmdk排序/响应持有不能用生产mock替代。新helper不复制SQL与seed整套。
+- [x] Step 4：make build；逐个串行运行 `pnpm --filter @nerve/e2e exec playwright test --config playwright.m4-collaboration.config.ts --project=chromium`、firefox、webkit（各独立output/report目录）；留实际passed/failed/skipped/trace/截图与服务hash。串行 F。
+- [x] Step 5：记录 A14与每行证据；提交 `test(M4/P15): 补齐协作草稿命令的三浏览器矩阵`。
 
 ## Task 15：本期死成员、lint与边界（约 350–850 行）
 
 **Files：** 本期真实变动TS/TSX、tools/keywords.json；docs/v0/{frontend-changes,plane-diff}.md；阶段review与相关输入handoff子回执。
-**Interfaces：** 按02死代码四分类逐个记录成员/参数/消费者；生成DTO和M7共享props不因名字相似误删，不提前扩大P16全局no-shadow任务。
+**Interfaces：** 沿02删干净原则，按真实死成员、真实读取、外部合同、其它领域保留四类逐个记录成员/参数/消费者；生成DTO和M7共享props不因名字相似误删，不提前扩大P16全局no-shadow任务。
 
 - [ ] Step 1：从基线..HEAD及dirty枚举完整生产改动，读每个文件，查引用；核时间线helper、activity-filter、版本modal指定告警已零，旧未使用enableReplies等若无合法用途同任务删除全部传参。
 - [ ] Step 2：对实际TS文件跑 pnpm exec oxlint --max-warnings=0 <明确文件表>，make knip、node tools/keywords.mjs、翻译键检查（沿make lint-web），记录真实文件数而非全仓警告配额。

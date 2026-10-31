@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T13 完成，T14 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T14 完成，T15 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -228,3 +228,18 @@ C8 初轮 **12 失败**不是产品拒绝丢失：LAN 下现有 execCommand 兼�
 最终 **Chromium C8 12/12，0 skip**：编号、详情、外链、关系、子项、peek、评论、列表、创建提示和命令 ID/标题/URL；每例附真实 origin、secureContext=false、activeGesture=false、asyncClipboard=false，唯一错误、无复制成功/导航/业务写，网络/CSP/控制台守卫不变。复用 power-k 的键盘选择部分为 highlightCommand，selectCommand 原激活保持；helper 生命周期包含 newContext/newPage 失败清理。Web/E2E types、7 TS 文件零告警与格式通过。
 
 最终输入 `757bb23328732fcb91af61bcc701700ceef859b2350313b0bc4f6dbc0fd30e79`，程序 `ec384903fe32e0405e2871d4c155801bd98d1cd94f0b2db2f435a389fdcf8b69`；t13-*.json/log、t13-c8-*-results、m18-outer-copy-success.patch、t13-mutations.json、t13-receipt.json 保留全部前后证据。A13/T13 完成，接续 T14 三浏览器与完整检查点；不合并。
+
+
+### T14：三浏览器矩阵、路由退役与快捷键
+
+八个文件、每引擎 41 个具名页面（C6–C9 与 I11/12/13/14/16/18/20）实际运行通过，0 skip；逐行题名及证据见 [浏览器矩阵](P15-browser-matrix.md)。先列出 123 个匹配仅作选择审计，随后分别执行。C9 真实重新加载 member→guest→member 后旧编辑器与确认窗不复活；I18 持有旧范围真实 200，经 A→B→Back→A、同词重查后只能显示新结果，关闭重开为空。
+
+两处真实产品缺口均在既有命令面板生命周期内修复：provider 原来只在工作区变化/卸载退役，同工作区换项目或编号仍留面板；现把路由 projectId/workItemIdentifier 纳入原 layout cleanup，真实 PowerKStore 三例先红后绿。Ctrl/Meta+K 关闭只 preventDefault，事件继续冒泡到文档的“打开”监听，导致面板立即重开并保留查询；wrapper 消费该快捷键的传播，接入真实 ShortcutHandler/registry 的两个消费者先红后绿。聚焦四文件 **48/48**，没有新权限 owner 或延时。
+
+首次 Firefox 27 绿/14 红，主要是 C8 实际浏览器安全诊断与 C7 重载期间评估的布局警告，加上上述快捷键问题。C7 等待真实重载 load 再观察；C8 必须精确断言一次 LAN 密码表单诊断（本次登录 URL）及一次 execCommand 拒绝（同源且已请求的 assets JS/正行号），不是过滤任意警告；缺失、多余或外部来源都会失败。修复后 Firefox **41/41**。
+
+首次 WebKit 34 绿/7 红：macOS Safari 遵既有 P13/P14 的 Option+Tab 到按钮；六个拒绝用例必须期待引擎实际发出的精确 Failed to load resource 状态/数量。I13 的初始 route 拦截会关闭缓存并产生未使用预加载警告，沿 P14 已证实方案先完成真实列表加载，再安装必要拒绝/分页拦截并在应用内导航，未隐藏 warning。七项定向通过后 WebKit **41/41**、Chromium 最终 **41/41**；I13 前置改变后 Firefox **3/3**，其它 38 项逐文件核输入差异仅 WebKit 条件及单测语义标记，未冒称整套再次运行。
+
+矩阵最终输入 85b650eaa2d3796749c5d8d6a4529e9ecf9506a19b26eaf4412fb6f8c6217a39，程序 4e7df898b364b478f07ab515ab075861e389a874e521ef544c46c8df19fa3bfe。完整 F 的前四项通过；Knip 首次发现新配置未由入口脚本引用，按其它矩阵登记 e2e/package.json 的 test:m4-collaboration，从 F4 复跑，未加忽略项。只有脚本登记改变，F1–3 与页面生产输入相同，等价证据见 t14-input-equivalence.json。最终 F4–7 输入 6048df79212af9baccc1d6262f6e1fbae005b5aba26d91efc49461a8cc5570e9；七门禁全绿，前端静态 54/54、无缓存 18/18 测试任务（**294 文件/3108 Vitest，另 Node 5**），默认 E2E **277/277**（Chromium 275、Firefox 2），0 skip。报告、trace、初始失败、分包日志、构建 hash 与后置提交回执均留在 t14-*。
+
+T10 的准确提交 1047507d03435366349a5cf1a9a47f3f23d7260a 的 [CI 41223646422](https://github.com/open-nerve/NerveProject/actions/runs/41223646422) attempt 1 已核 server/web/e2e 全部 success。A14/T14 完成，本次检查点提交后推送核独立 CI；继续 T15，不合并。

@@ -76,6 +76,8 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
       // Cmd/Ctrl+K closes palette
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
+        // This close must not also reach the document shortcut that opens the palette.
+        e.stopPropagation();
         onClose();
         return;
       }

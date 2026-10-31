@@ -20,8 +20,8 @@ import { stateIds } from "../../fixtures/states";
 import { instantKey } from "../../fixtures/instant";
 import { expect, test } from "../../fixtures/test";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
-import { expectListPageQuiet, issueListProject } from "../../fixtures/issue-list-page";
-import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
+import { expectListPageQuiet, issueListProject, openIssueList } from "../../fixtures/issue-list-page";
+import { answerTo, moveWithinApp, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { pageBehindHidden, focusInDialog } from "../../fixtures/dialogs";
 
 // I13 creates independent history by changing author, without manipulating time.
@@ -112,6 +112,9 @@ test("I13 (page): history loads a second page, copies actual Markdown after sett
   }, Promise.resolve());
   const versions = await descriptionPage(api, seed.member.token, issue.id, undefined, 100);
   expect(versions.data).toHaveLength(3);
+  // Load the app before intercepting API requests: WebKit otherwise reloads already consumed module preloads.
+  const { watch } = await openIssueList(page, seed);
+  await expect(page.getByRole("button", { name: "Add work item", exact: true })).toBeVisible();
   // The worker keeps only 20 versions. Request small real pages instead of racing retention with 51 versions.
   await page.route(
     (url) => url.pathname === `/api/v0/issues/${issue.id}/description-versions`,
@@ -121,7 +124,7 @@ test("I13 (page): history loads a second page, copies actual Markdown after sett
       await route.continue({ url: url.toString() });
     }
   );
-  const watch = await openIssueDetail(page, seed, issue);
+  await moveWithinApp(page, `/${seed.slug}/browse/WEB-${issue.sequence_id}`);
   await page.getByRole("button", { name: "Load more", exact: true }).click();
   await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
   const trigger = page.getByRole("button", { name: /^Last edited by/ });
@@ -198,7 +201,7 @@ test("I13 (page): history loads a second page, copies actual Markdown after sett
   await expectListPageQuiet(page, watch, {
     failures: [`403 PATCH ${path}`],
     errors:
-      browserName === "chromium"
+      browserName === "chromium" || browserName === "webkit"
         ? ["Failed to load resource: the server responded with a status of 403 (Forbidden)"]
         : [],
   });
@@ -218,6 +221,8 @@ test("I13 (page): archived history keeps list and detail refusal retries separat
   expect((await issueArchived(api, seed.member.token, issue.id)).status).toBe(200);
   const version = (await descriptionPage(api, seed.member.token, issue.id)).data[0]!;
   const paths = [`/api/v0/issues/${issue.id}/description-versions`, `/api/v0/issue-description-versions/${version.id}`];
+  const { watch } = await openIssueList(page, seed);
+  await expect(page.getByRole("button", { name: "Add work item", exact: true })).toBeVisible();
   const refused = new Set<string>();
   await page.route(
     (url) => paths.includes(url.pathname),
@@ -232,7 +237,8 @@ test("I13 (page): archived history keeps list and detail refusal retries separat
       });
     }
   );
-  const watch = await openIssueDetail(page, seed, issue, issue.name);
+  await moveWithinApp(page, `/${seed.slug}/browse/WEB-${issue.sequence_id}`);
+  await expect(page.getByText(issue.name, { exact: true })).toBeVisible();
   await expect(page.getByRole("alert")).toBeVisible();
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   const trigger = page.getByRole("button", { name: /^Last edited by/ });
@@ -253,7 +259,7 @@ test("I13 (page): archived history keeps list and detail refusal retries separat
   await expectListPageQuiet(page, watch, {
     failures: paths.map((path) => `500 GET ${path}`),
     errors:
-      browserName === "chromium"
+      browserName === "chromium" || browserName === "webkit"
         ? paths.map(() => "Failed to load resource: the server responded with a status of 500 (Internal Server Error)")
         : [],
   });
