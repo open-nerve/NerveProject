@@ -1,9 +1,80 @@
 import { createLabel } from "../../fixtures/api";
-import { createIssue } from "../../fixtures/issues";
+import { createIssue, createIssueRelations } from "../../fixtures/issues";
+import { createIssueLink } from "../../fixtures/links";
+import { openIssueDetail } from "../../fixtures/issue-detail-page";
+import { refuseClipboardWrites } from "../../fixtures/browser";
 import { expect, test } from "../../fixtures/test";
 import { expectListPageQuiet, issueListProject, openIssueList } from "../../fixtures/issue-list-page";
 import { modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { answerTo, transitionsEnded } from "../../fixtures/settings-pages";
+
+for (const control of ["identifier", "detail", "link", "relation", "sub-item", "peek"] as const) {
+  test(`C4 (page): ${control} copy is keyboard reachable and reports a refused clipboard write without success or navigation`, async ({
+    api,
+    page,
+  }, info) => {
+    const seed = await issueListProject(api, info);
+    const source = await createIssue(api, seed.member.token, seed.project.id, { name: "Copy source" });
+    if (control === "link")
+      await createIssueLink(api, seed.member.token, source.id, { title: "Guide", url: "https://example.test/guide" });
+    if (control === "relation") {
+      const target = await createIssue(api, seed.member.token, seed.project.id, { name: "Related target" });
+      await createIssueRelations(api, seed.member.token, source.id, {
+        relation_type: "relates_to",
+        issue_ids: [target.id],
+      });
+    }
+    if (control === "sub-item")
+      await createIssue(api, seed.member.token, seed.project.id, { name: "Child target", parent_id: source.id });
+
+    const watch =
+      control === "peek" ? (await openIssueList(page, seed)).watch : await openIssueDetail(page, seed, source);
+    if (control === "peek") {
+      await page.locator(`#issue-${source.id}`).click();
+      await expect(page.getByRole("button", { name: "Close the peek view", exact: true })).toBeVisible();
+    }
+    if (control === "relation") await page.getByRole("button", { name: "Relations 1", exact: true }).click();
+    await refuseClipboardWrites(page);
+    const before = page.url();
+    const requestsBeforeCopy = watch.apiRequests.length;
+    let copy;
+    if (control === "relation" || control === "sub-item") {
+      const options = page.getByRole("button", {
+        name: `${control === "relation" ? "Related target" : "Child target"} options`,
+        exact: true,
+      });
+      await options.focus();
+      await expect(options).toBeFocused();
+      await page.keyboard.press("Enter");
+      copy = page.getByRole("menuitem", {
+        name: control === "sub-item" ? "Copy work item link" : "Copy link",
+        exact: true,
+      });
+    } else {
+      copy = page.getByRole("button", {
+        name:
+          control === "identifier"
+            ? `Copy ID: WEB-${source.sequence_id}`
+            : control === "link"
+              ? "Copy link: Guide"
+              : "Copy link",
+        exact: true,
+      });
+    }
+    await copy.focus();
+    await expect(copy).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Something went wrong. Please try again.", { exact: true })).toHaveCount(1);
+    await expect(page.getByText(/^(Link copied|Work item (link|ID) copied to clipboard)$/)).toHaveCount(0);
+    await expect(page).toHaveURL(before);
+    if (control !== "peek")
+      await expect(page.getByRole("button", { name: "Close the peek view", exact: true })).toHaveCount(0);
+    expect(
+      watch.apiRequests.slice(requestsBeforeCopy).filter((request) => /^(POST|PATCH|DELETE) /.test(request))
+    ).toEqual([]);
+    await expectListPageQuiet(page, watch);
+  });
+}
 
 test("C4: creation owns dismissal, nested draft confirmation owns its Escape and Tab loop, and date/label portals retain the outer form and its focus", async ({
   api,

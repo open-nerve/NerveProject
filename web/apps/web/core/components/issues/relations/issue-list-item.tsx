@@ -93,10 +93,10 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
     toggleDeleteIssueModal(relationIssueId);
   };
 
-  const handleCopyIssueLink = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+  const handleCopyIssueLink = async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     e.stopPropagation();
     e.preventDefault();
-    issueOperations.copyLink(workItemLink);
+    await issueOperations.copyLink(workItemLink);
   };
 
   const handleRemoveRelation = async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -156,7 +156,7 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
               />
             </div>
             <div className="flex-shrink-0 pl-2 text-13">
-              <CustomMenu placement="bottom-end" ellipsis>
+              <CustomMenu placement="bottom-end" ellipsis ariaLabel={t("common.item_options", { name: issue.name })}>
                 {!disabled && (
                   <CustomMenu.MenuItem onClick={handleEditIssue}>
                     <div className="flex items-center gap-2">

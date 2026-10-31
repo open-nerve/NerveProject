@@ -254,6 +254,10 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 
 证据：[P13阶段验收](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)及[集成回执§15](../reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31)。P13 已以 --no-ff 合并 main 8bb4bbcb，准确 main CI 41163365163 attempt2 全绿；归档逐 hash 复验与分支/worktree 清理完成。本输入顶层仍 open，M4 总交接不提前关闭。
 
+## P14 实施接续：详情复制（T15，阶段尚未完成）
+
+§8 十个复制消费者中，本段六处已迁移 useCopyLink/useCopyText，六个精确例外已删除。创建确认 toast、时间线、布局快捷 helper、命令面板四处仍归 P15，逐文件路径及实际组件/页面证据见 [P14 review T15](../reviews/P14-web-issue-detail-review.md#t15-六处复制反馈)。三浏览器与整审尚未闭合，顶层 status 保持 open。
+
 ## P14 实施接续：会话与详情宿主（T14，阶段尚未完成）
 
 §6 的编号/id 共同身份、详情/页头/命令/peek 宿主和 Back 已有实际消费者及页面证据：T1 的路由/权限 ABA、T14 的同 id 重开与旧关闭回调，I22 实际双标签页换账号前旧 POST 已落库、放回旧答不跟进，Back 跨工作区/项目/id 后创建/删除/链接/peek 均结束、Forward 不复活。I20 的普通访客/管理员兼访客与 S2 的 200/404/403 按真实 API 和页面逐项核验。60 项组件、7 项 Chromium 页面、M21/M22 行为红及精确恢复见 [P14 review T14](../reviews/P14-web-issue-detail-review.md#t14-访客会话与-back)。三浏览器/阶段整审仍待 T16，复制待 T15；评论/草稿完整流/搜索等保持后续阶段归属，顶层 status 仍 open。

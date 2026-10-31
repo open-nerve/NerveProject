@@ -6,7 +6,8 @@
 
 import { useMemo } from "react";
 import type { IssueUpdate } from "@nerve/api-client";
-import { copyUrlToClipboard } from "@nerve/utils";
+import { useTranslation } from "@nerve/i18n";
+import { useCopyLink } from "@/hooks/use-copy-link";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { followInSession } from "@/lib/in-session";
@@ -14,18 +15,20 @@ import { SessionChangedError } from "@/lib/auth/token-manager";
 import { useDetailScope } from "../use-detail-scope";
 
 export type TRelationIssueOperations = {
-  copyLink: (path: string) => void;
+  copyLink: (path: string) => Promise<void>;
   update: (workspaceSlug: string, projectId: string, issueId: string, body: IssueUpdate) => Promise<void>;
   remove: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 };
 export function useRelationOperations(workspaceSlug: string, hostId: string): TRelationIssueOperations {
+  const { t } = useTranslation();
+  const copyLink = useCopyLink();
   const detail = useIssueDetail();
   const project = detail.relation.getProjectId(hostId) ?? detail.issue.getIssueById(hostId)?.project_id;
   const capture = useDetailScope(workspaceSlug, project, hostId);
   const refusal = useRefusalToast();
   return useMemo(
     () => ({
-      copyLink: async (path: string) => copyUrlToClipboard(path),
+      copyLink: (path: string) => copyLink(path, t("common.copied_to_clipboard")),
       update: async (ws: string, projectId: string, id: string, body: IssueUpdate) => {
         const current = capture();
         if (!current()) return;
@@ -37,6 +40,6 @@ export function useRelationOperations(workspaceSlug: string, hostId: string): TR
       },
       remove: (ws: string, projectId: string, id: string) => detail.removeIssue(ws, projectId, id),
     }),
-    [capture, detail, refusal]
+    [capture, detail, refusal, copyLink, t]
   );
 }

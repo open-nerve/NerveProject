@@ -2720,27 +2720,6 @@
     },
     {
       "rule": "copy-hook",
-      "path": "web/apps/web/core/components/issues/issue-detail-widgets/relations/helper.tsx",
-      "match": "copyUrlToClipboard(",
-      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
-      "until": "M4/closeout"
-    },
-    {
-      "rule": "copy-hook",
-      "path": "web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/helper.ts",
-      "match": "copyUrlToClipboard(",
-      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
-      "until": "M4/closeout"
-    },
-    {
-      "rule": "copy-hook",
-      "path": "web/apps/web/core/components/issues/issue-detail/identifier-text.tsx",
-      "match": "navigator.clipboard",
-      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
-      "until": "M4/closeout"
-    },
-    {
-      "rule": "copy-hook",
       "path": "web/apps/web/core/components/issues/issue-detail/issue-activity/helper.tsx",
       "match": "copyUrlToClipboard(",
       "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
@@ -2748,28 +2727,7 @@
     },
     {
       "rule": "copy-hook",
-      "path": "web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx",
-      "match": "copyTextToClipboard(",
-      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
-      "until": "M4/closeout"
-    },
-    {
-      "rule": "copy-hook",
-      "path": "web/apps/web/core/components/issues/issue-detail/links/link-item.tsx",
-      "match": "copyTextToClipboard(",
-      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
-      "until": "M4/closeout"
-    },
-    {
-      "rule": "copy-hook",
       "path": "web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/helper.tsx",
-      "match": "copyUrlToClipboard(",
-      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
-      "until": "M4/closeout"
-    },
-    {
-      "rule": "copy-hook",
-      "path": "web/apps/web/core/components/issues/peek-overview/header.tsx",
       "match": "copyUrlToClipboard(",
       "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
       "until": "M4/closeout"

@@ -213,11 +213,11 @@ make e2e
 **Files：** spec T15；`C/hooks/use-copy-link.ts` 复用；新 `C/components/issues/detail-copy.test.tsx`；`E/stories/issue/detail-interactions.spec.ts`；`tools/keywords.json`。
 **Interfaces：** `useCopyLink(): (link:string,copied:string)=>Promise<void>` 与 `useCopyText(): (text:string,copied:string)=>Promise<void>`；两者内部已经负责提示，不在消费者 await 后再显示成功。relations/sub-issues 已是 hook，其操作类型 copyLink 改为返回 Promise<void>，同步所有调用，不把异步函数继续标成 void。编号仅文本；链接由当前 origin/原生 browse 地址构造。
 
-- [ ] Step 1：逐一列六消费者与 copy-hook 例外；真实按钮/菜单上 mock clipboard 的 resolve/reject，断言一次成功或一次失败，拒绝无假成功/未处理 Promise。
-- [ ] Step 2：运行新 detail-copy 与现有 use-copy-link 测试；失败由当前忽略 Promise 的消费者触发，不重复写 hook 镜像测试。
-- [ ] Step 3：六处迁移，交互元素有行名字/键盘 focus；同步删除这六个例外与零读者 util import，P15 的四处留下并具名记录。
-- [ ] Step 4：在 HTTP 地址或受控拒绝的真实 page 触发复制失败文案，三浏览器不依赖 Chromium 专属 clipboard permission；M23 假成功/吞拒绝使消费者测试红，恢复，关键词守卫与类型通过。
-- [ ] Step 5：记录 A14；提交 `fix(M4/P14): 让详情复制按实际结果反馈`。
+- [x] Step 1：逐一列六消费者与 copy-hook 例外；真实按钮/菜单上 mock clipboard 的 resolve/reject，断言一次成功或一次失败，拒绝无假成功/未处理 Promise。
+- [x] Step 2：运行新 detail-copy 与现有 use-copy-link 测试；失败由当前忽略 Promise 的消费者触发，不重复写 hook 镜像测试。
+- [x] Step 3：六处迁移，交互元素有行名字/键盘 focus；同步删除这六个例外与零读者 util import，P15 的四处留下并具名记录。
+- [x] Step 4：在 HTTP 地址或受控拒绝的真实 page 触发复制失败文案，三浏览器不依赖 Chromium 专属 clipboard permission；M23 假成功/吞拒绝使消费者测试红，恢复，关键词守卫与类型通过。
+- [x] Step 5：记录 A14；提交 `fix(M4/P14): 让详情复制按实际结果反馈`。
 
 ## Task 16：组件矩阵、门禁、整审与交接（约 900–1400 行）
 

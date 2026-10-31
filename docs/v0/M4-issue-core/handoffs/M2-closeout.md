@@ -216,6 +216,10 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 - §7编辑器分割和§11复制hook仍按P14/P15完成；本段watchPage只精确期待已有Canvas提示，不掩盖其它console/API失败。实施、范围与最终交付核准规则见[P12 review§23–25](../reviews/P12-web-list-pages-review.md)和[整审](../../../reviews/re-17-M4P12整体审核.md)。顶层status保持open。
 
 
+## P14 实施接续：详情复制（T15，阶段尚未完成）
+
+§11 的 peek、链接、关系、子项已改经既有复制 hook，并增加编号和详情页头真实消费者的等待/成功/拒绝回归；共删除六个 M3 所列 copy-hook 例外。注意这里的历史六处与 P14 的六处不完全相同：时间线与布局快捷 helper 仍归 P15，不能把 §11 提前全关。19 项聚焦、68 项受影响组件、9 项 Chromium C4 与 M23 行为红/精确恢复见 [P14 review T15](../reviews/P14-web-issue-detail-review.md#t15-六处复制反馈)；三浏览器和整审留 T16，顶层 status 仍 open。
+
 ## 处理结果（M4/P13，2026-10-31）
 
 §10的四个CustomSearchSelect及defaultOpen已完成：添加/运算符/多选由真实C2业务页面验证，当前M4不生成single，single/multi×en/zh以生产组件浏览器夹具核加载/defaultOpen/搜索/键盘/回焦；三浏览器各22项中4项为兼容夹具。DateRangeDropdown第一参数和既有原子日期写保持，新增selectedDay仅由富筛选持草稿；没有把M6/M7完整页面验收提前关闭。§12归档页头旧实例在P11已移除，本期I15只作页面回归，未重复记功。其它复制/编辑器/搜索等原阶段责任及顶层open保持。

@@ -212,7 +212,7 @@ const SubIssuesListItemContent = observer(function SubIssuesListItemContent(prop
             </div>
 
             <div className="flex-shrink-0 text-13">
-              <CustomMenu placement="bottom-end" ellipsis>
+              <CustomMenu placement="bottom-end" ellipsis ariaLabel={t("common.item_options", { name: issue.name })}>
                 {canEdit && (
                   <CustomMenu.MenuItem
                     onClick={() => {
@@ -228,8 +228,10 @@ const SubIssuesListItemContent = observer(function SubIssuesListItemContent(prop
                 )}
 
                 <CustomMenu.MenuItem
-                  onClick={() => {
-                    subIssueOperations.copyLink(workItemLink);
+                  onClick={async (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    await subIssueOperations.copyLink(workItemLink);
                   }}
                 >
                   <div className="flex items-center gap-2">

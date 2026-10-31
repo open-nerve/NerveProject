@@ -4,10 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
+import { useTranslation } from "@nerve/i18n";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TIdentifierTextProps, TIdentifierTextVariant, TIssueIdentifierSize } from "@nerve/types";
 import { cn } from "@nerve/utils";
+import { useCopyText } from "@/hooks/use-copy-link";
 
 const SIZE_MAP: Record<TIssueIdentifierSize, string> = {
   xs: "text-caption-sm-regular",
@@ -27,23 +28,8 @@ const VARIANT_MAP: Record<TIdentifierTextVariant, string> = {
 
 export function IdentifierText(props: TIdentifierTextProps) {
   const { identifier, enableClickToCopyIdentifier = false, size = "lg", variant = "default" } = props;
-  // handlers
-  const handleCopyIssueIdentifier = () => {
-    if (enableClickToCopyIdentifier) {
-      navigator.clipboard
-        .writeText(identifier)
-        .then(() => {
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: "Work item ID copied to clipboard",
-          });
-          return;
-        })
-        .catch(() => {
-          console.error("Failed to copy work item ID");
-        });
-    }
-  };
+  const { t } = useTranslation();
+  const copyText = useCopyText();
 
   const textSizeClassName = SIZE_MAP[size];
   const variantClassName = VARIANT_MAP[variant];
@@ -52,12 +38,12 @@ export function IdentifierText(props: TIdentifierTextProps) {
   if (!enableClickToCopyIdentifier) return <span className={className}>{identifier}</span>;
 
   return (
-    <Tooltip label="Click to copy" disabled={!enableClickToCopyIdentifier}>
+    <Tooltip label={t("common.actions.copy_id")}>
       <button
         type="button"
         className={cn(className, "cursor-pointer")}
-        onClick={handleCopyIssueIdentifier}
-        disabled={!enableClickToCopyIdentifier}
+        aria-label={`${t("common.actions.copy_id")}: ${identifier}`}
+        onClick={() => copyText(identifier, t("common.work_item_id_copied"))}
       >
         {identifier}
       </button>

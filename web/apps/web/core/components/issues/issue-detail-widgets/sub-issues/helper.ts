@@ -6,7 +6,8 @@
 
 import { useMemo } from "react";
 import type { TSubIssueOperations } from "@nerve/types";
-import { copyUrlToClipboard } from "@nerve/utils";
+import { useTranslation } from "@nerve/i18n";
+import { useCopyLink } from "@/hooks/use-copy-link";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { followInSession } from "@/lib/in-session";
@@ -14,6 +15,8 @@ import { SessionChangedError } from "@/lib/auth/token-manager";
 import { useDetailScope } from "../use-detail-scope";
 
 export function useSubIssueOperations(workspaceSlug: string, projectId: string, hostId: string): TSubIssueOperations {
+  const { t } = useTranslation();
+  const copyLink = useCopyLink();
   const detail = useIssueDetail();
   const capture = useDetailScope(workspaceSlug, projectId, hostId);
   const refusal = useRefusalToast();
@@ -38,7 +41,7 @@ export function useSubIssueOperations(workspaceSlug: string, projectId: string, 
       }
     };
     return {
-      copyLink: async (path) => copyUrlToClipboard(path),
+      copyLink: (path) => copyLink(path, t("common.copied_to_clipboard")),
       // These callers own the dialog/read error; preserve rejection so failure cannot close the form.
       fetchSubIssues: async (ws, project, parent) => {
         await detail.fetchSubIssues(ws, project, parent);
@@ -50,5 +53,5 @@ export function useSubIssueOperations(workspaceSlug: string, projectId: string, 
         run(() => detail.removeSubIssue(ws, project, parent, id), parent, id),
       deleteSubIssue: (ws, project, parent, id) => detail.deleteSubIssue(ws, project, parent, id),
     };
-  }, [capture, detail, refusal, owner]);
+  }, [capture, detail, refusal, owner, copyLink, t]);
 }

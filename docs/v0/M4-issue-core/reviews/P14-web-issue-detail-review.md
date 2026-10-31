@@ -229,7 +229,7 @@ t13-restored 两文件 16/16；t13-pages 的 I8 页面/API 4/4 Chromium。实际
 
 **检查点回执：**修复提交 f2448dfaf7c57e77de736f5636810bd6a5b209ed 的 lint-web 54/54、knip、强制无缓存 test-web 18/18 任务及 E2E 221/221（Chromium 219、Firefox A4 2）全通过。前三项保持 c3489a1a 的实际 tested SHA；server、api、生成客户端和锁文件从该点至本提交逐路径 diff 为空。七项分层回执与 103 个 E2E 原件的复制 hash 在 t13-full-anchor-receipt.json，不把文档更新冒称重跑。T13 完成线已勾，本次文档检查点随即推送；准确远端 CI 后置记录，T14–T16 尚未完成。
 
-检查点文档 8b1fa70e623bc9e75eda4e33b0acd7a2325c120d 已经系统 git 自动推送，准确 [CI 41184198943](https://github.com/open-nerve/NerveProject/actions/runs/41184198943) 已启动；T13 task-done 23/23。远端终态待后置核准。
+检查点文档 8b1fa70e623bc9e75eda4e33b0acd7a2325c120d 已经系统 git 自动推送；T13 task-done 23/23。准确 [CI 41184198943](https://github.com/open-nerve/NerveProject/actions/runs/41184198943) attempt 1 的 server 通过、web 单测失败、e2e 未执行。已直接从本机登录浏览器读取：261 文件/2799 断言通过，但 close-policy.test.tsx 的字体检测定时器在 jsdom 销毁后访问 document，留下一个未捕获异常。原始公开元数据与 UI 日志转录 t13-ci-browser-failure.md 保留，T16 修正并重新验证；不能将本地绿或断言全过代替此失败。
 
 ### T14 访客、会话与 Back
 
@@ -238,3 +238,11 @@ t13-restored 两文件 16/16；t13-pages 的 I8 页面/API 4/4 Chromium。实际
 I20 两页通过实际 API 先创建再降级，普通访客与管理员兼访客都验证 OwnOnly 列表仅自己的行、隐藏项与不存在项 404 的体/Content-Type/页面提示逐值相同；开放全部后按返回权限展示编辑或只读，数据库与零业务写断言保持。最初管理员夹具先邀请为管理员却按项目成员添加，被既有规则正确拒绝 422；参照现有 adminGuest 的 API 次序，改为先项目访客、再提升工作区角色，未修改产品规则，不计产品缺陷红。
 
 S2 三页明确公开项目的成员 200、访客隐藏项 404、项目非成员 403，只精确放行对应拒绝。I22 真实 POST 先经 route.fetch 到 nerve 并由 DB 确认旧写者，再由第二标签页实际退出/登录另一账号，第一标签页切换工作区并打开新表单后放回旧 201；输入、地址、新账号可见数据保持，无旧成功提示，只有一次 POST。另页 Back 覆盖跨工作区、项目、工作项的创建/删除/链接/peek，Forward 不恢复旧弹层，零业务写。t14-pages-fixed 7/7 Chromium，类型、五文件 lint 0/0、格式/diff 通过；A1/A13 功能已勾，显式三浏览器与最终完整 F 仍归 T16。
+
+### T15 六处复制反馈
+
+编号、详情页头、链接行、关联 helper、子项 helper、peek 页头统一复用既有 useCopyText/useCopyLink；hook 等到浏览器实际完成才报告成功，拒绝给本地化错误。关联和子项 copyLink 类型及消费者改为 Promise<void>，没有新增复制协议。编号只复制文本；peek（包括已归档项）复制当前 origin 的原生编号地址，移除只用于旧归档路由的 isArchived 参数及零读者类型导出。链接/关系/子项的交互按钮带行名字，键盘打开菜单和执行复制不会触发行跳转。
+
+detail-copy 的七个真实消费者场景（六入口加归档 peek）各持有、成功或拒绝 clipboard Promise，调用真实组件及 hook。初次 t15-copy-red 为 11 项行为失败与 5 项未处理拒绝；修复后聚焦 19/19、受影响七文件 68/68。M23 暂时去掉共用 hook 的 await，实际链接消费者的等待与拒绝断言两项变红，另捕获一项未处理拒绝；字节恢复后 68/68。测试不以 mock toast 调用替代真实消费者。新 C4 六页从 HTTP 服务加载，受控浏览器拒绝，键盘操作后一次错误、零成功、零业务写、地址不变，连同原三项 C4 共 9/9。首次子项页的定位误用了关系菜单文案，改为真实“Copy work item link”，没有修改产品来迁就测试。
+
+定点删除六个 copy-hook 例外，关键词守卫 76 规则/17 例外零命中；类型、翻译键、12 个实际 TS 文件 oxlint 0/0 与格式/diff 通过。剩余四处仍归 M4/P15：`issues/create-issue-toast-action-items.tsx`、`issues/issue-detail/issue-activity/helper.tsx`、`issues/issue-layouts/quick-action-dropdowns/helper.tsx`、`power-k/ui/pages/context-based/work-item/commands.ts`。M2 §11 的历史六处与本段六处不完全同组，时间线和布局 helper 尚未关闭；M2/M3 顶层交接保持 open。三浏览器和 T13 CI 字体夹具修正留 T16。
