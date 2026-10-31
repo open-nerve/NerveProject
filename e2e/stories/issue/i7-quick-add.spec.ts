@@ -148,7 +148,7 @@ test("I7 (page): chosen-state quick add describes refusal before focus, keeps pe
     by: member.email,
     activity: createdFor(),
   });
-  await expectListPageQuiet(page, watch, browserName, 1, {
+  await expectListPageQuiet(page, watch, {
     failures: [`422 POST ${post}`],
     errors:
       browserName === "chromium" || browserName === "webkit"

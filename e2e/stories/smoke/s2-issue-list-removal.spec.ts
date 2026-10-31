@@ -2,7 +2,7 @@ import type { Page, Request } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { createProject, createWorkspace, slugFor } from "../../fixtures/api";
 import { emailFor } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
 import { APP, PROJECT, PROJECT_MEMBER, WORKSPACE, valued } from "../../fixtures/mounts";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -144,7 +144,7 @@ for (const entry of entries) {
           .map(({ text, location }) => ({ text, url: location.url }))
       ).toEqual([{ text: logged, url: `${origin}${domain}` }]);
       beforeProbe = structuredClone(watch);
-      await expectQuietConsole(page, watch, { errors: [logged], warnings: [EMOJI_CHECK_WARNING] });
+      await expectQuietConsole(page, watch, { errors: [logged] });
       expect(whole()).toEqual({ pending: 0, requests: expected.toSorted() });
     } finally {
       const file = testInfo.outputPath("removal-page-observations.json");

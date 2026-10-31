@@ -10,7 +10,7 @@ import {
 } from "../../fixtures/api";
 import { expectStates, statesOfANewProject, type StateRow } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, login } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   announced,
   closedByEscape,
@@ -286,7 +286,6 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
     [],
   ]);
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: Array(2).fill("Failed to load resource: the server responded with a status of 409 (Conflict)"),
   });
 
@@ -316,7 +315,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
     await expect(other.page.getByRole("button", { name: /^Mark as default: / }), who).toHaveCount(controls ? 4 : 0);
     await expect(other.page.getByRole("button", { name: /^Edit / }), who).toHaveCount(controls ? 5 : 0);
     expect([otherWatch.apiFailures, otherWatch.pageErrors], who).toEqual([[], []]);
-    await expectQuietConsole(other.page, otherWatch, { warnings: [EMOJI_CHECK_WARNING] });
+    await expectQuietConsole(other.page, otherWatch);
     await other.close();
   };
   await seenBy("its member", mem, false);

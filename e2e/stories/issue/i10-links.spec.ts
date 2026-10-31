@@ -175,7 +175,7 @@ test("I10 (page): URL refusals are described before focus; a confirmed link firs
         linkDeletedRow(nextURL),
       ],
     });
-    await expectListPageQuiet(page, watch, browserName, 1, {
+    await expectListPageQuiet(page, watch, {
       failures: [`422 POST ${path}`, `409 POST ${path}`],
       errors:
         browserName === "chromium"

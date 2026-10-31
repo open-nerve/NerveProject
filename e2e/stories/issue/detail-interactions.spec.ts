@@ -9,7 +9,6 @@ test("C4: creation owns dismissal, nested draft confirmation owns its Escape and
   api,
   db,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   await createLabel(api, seed.member.token, seed.project.id, { name: "Visible label" });
@@ -90,14 +89,13 @@ test("C4: creation owns dismissal, nested draft confirmation owns its Escape and
     watch.apiRequests.filter((request) => request.startsWith("POST /api/v0/projects/") || request.includes("/drafts"))
   ).toEqual([]);
   expect(await db.query("SELECT id FROM issues WHERE project_id=$1", [seed.project.id])).toEqual([]);
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 for (const dirty of [false, true]) {
   test(`C4: native parent search owns only its inner Escape and restores a ${dirty ? "dirty" : "clean"} creation form`, async ({
     api,
     page,
-    browserName,
   }, info) => {
     const seed = await issueListProject(api, info);
     await createIssue(api, seed.member.token, seed.project.id, { name: "Candidate parent" });
@@ -133,6 +131,6 @@ for (const dirty of [false, true]) {
     await expect(modalDialog(page)).toHaveCount(0);
     await expect(create).toBeFocused();
     expect(watch.apiRequests.filter((request) => request.startsWith("POST /api/v0/projects/"))).toEqual([]);
-    await expectListPageQuiet(page, watch, browserName, 1);
+    await expectListPageQuiet(page, watch);
   });
 }

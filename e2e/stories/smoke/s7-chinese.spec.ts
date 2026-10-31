@@ -1,6 +1,6 @@
 import { invitationTo, invite } from "../../fixtures/api";
 import { emailFor, register, shownNameOf } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { cancel, chineseAdmin, speakChinese } from "../../fixtures/chinese";
 import { modalDialog } from "../../fixtures/dialogs";
 import { registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
@@ -122,7 +122,7 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   expect((await sending.release()).status()).toBe(201);
   await expect(modalDialog(page)).toHaveCount(0);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
+  await expectQuietConsole(page, watch);
 });
 
 test("S7 (page): one whose language is Chinese, not onboarded yet, reads the onboarding's title in Chinese", async ({

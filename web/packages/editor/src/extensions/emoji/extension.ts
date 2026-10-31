@@ -5,7 +5,7 @@
  */
 
 // local imports
-import { gitHubEmojis, shortcodeToEmoji } from "@tiptap/extension-emoji";
+import { emojis, shortcodeToEmoji } from "./data";
 import type { MarkdownSerializerState } from "@tiptap/pm/markdown";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Emoji } from "./emoji";
@@ -30,9 +30,7 @@ export const EmojiExtension = Emoji.extend({
     };
   },
 }).configure({
-  // Filter out emojis without emoji value and remove fallbackImage property to prevent CDN calls
-
-  emojis: gitHubEmojis.filter((item) => item.emoji).map(({ fallbackImage, ...emoji }) => emoji),
+  emojis,
   suggestion: emojiSuggestion,
   enableEmoticons: true,
 });

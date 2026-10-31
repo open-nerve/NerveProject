@@ -188,7 +188,7 @@ test("I2 (page): the detail announces title refusals before focus, saves each pr
       .locator("[tabindex]")
       .evaluateAll((nodes) => nodes.filter((node) => Number(node.getAttribute("tabindex")) > 0).length)
   ).toBe(0);
-  await expectListPageQuiet(page, watch, browserName, 1, {
+  await expectListPageQuiet(page, watch, {
     failures: [`422 PATCH ${path}`],
     errors:
       browserName === "chromium"

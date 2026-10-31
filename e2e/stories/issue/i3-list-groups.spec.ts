@@ -199,7 +199,6 @@ test("I3 (API): state groups and priority-label lanes count unique issues; compl
 test("I3 (page): real state continuation, saved A intersection C and label-priority lanes keep order, complete labels and unique totals", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const { member, project, states } = seed;
@@ -333,5 +332,5 @@ test("I3 (page): real state continuation, saved A intersection C and label-prior
         query.get("group_by") === "priority" && query.get("sub_group_by") === "label_id" && query.get("limit") === "10"
     )
   ).toBe(true);
-  await expectListPageQuiet(page, watch, browserName, 3);
+  await expectListPageQuiet(page, watch);
 });

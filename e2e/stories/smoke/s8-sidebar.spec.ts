@@ -2,7 +2,7 @@ import type { Locator } from "@playwright/test";
 
 import { createProject, createWorkspace, slugFor } from "../../fixtures/api";
 import { emailFor } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { chooseByKeyboard } from "../../fixtures/menus";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -123,5 +123,5 @@ test("S8 (page): the sidebar's copy for peeking holds no control while it is hid
   await chooseByKeyboard(page, menu, "Settings");
   await expect(page).toHaveURL(`/${slug}/settings/projects/${web.id}`);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });

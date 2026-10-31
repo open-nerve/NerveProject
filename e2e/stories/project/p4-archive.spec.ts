@@ -18,7 +18,7 @@ import {
   type LabelRow,
 } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import {
   closedByComposingEscape,
@@ -303,7 +303,7 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   await expect(theOtherAdmin.page.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
   expect([wesWatch.apiFailures, wesWatch.oldApiRequests, wesWatch.pageErrors]).toEqual([[], [], []]);
   // Two loads: the archived projects, and Web's settings.
-  await expectQuietConsole(theOtherAdmin.page, wesWatch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(theOtherAdmin.page, wesWatch);
   await theOtherAdmin.close();
 
   // Archived again, Web is deleted from the archived projects, by its name and the words that confirm it, not before
@@ -332,5 +332,5 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   await expectProjectDeleted(db, web.id, adminEmail);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   // Two loads: the settings, and the archived projects; the archiving's landing navigates within the app.
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });

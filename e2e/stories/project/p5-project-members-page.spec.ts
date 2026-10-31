@@ -9,7 +9,7 @@ import {
 } from "../../fixtures/api";
 import { expectMembers, type MemberRow } from "../../fixtures/assert/project";
 import { accountId, emailFor, newAccount, shownNameOf } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   closedByEscape,
   closedWithin,
@@ -221,7 +221,6 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
     [],
   ]);
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 409 (Conflict)"],
   });
 
@@ -238,7 +237,7 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   expect((await left).status()).toBe(204);
   await expect(theMember.page).toHaveURL(`/${slug}/projects`);
   expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(theMember.page, memberWatch);
   await theMember.close();
 
   // ann, a guest now, leaves by the sidebar, which offers it to guests alone: its modal asks Web's name and "Leave
@@ -277,7 +276,6 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
     [],
   ]);
   await expectQuietConsole(theGuest.page, guestWatch, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
   });
   await theGuest.close();

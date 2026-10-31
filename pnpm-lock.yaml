@@ -63,9 +63,6 @@ catalogs:
     '@tiptap/extension-blockquote':
       specifier: ^2.22.3
       version: 2.26.1
-    '@tiptap/extension-emoji':
-      specifier: ^2.22.3
-      version: 2.26.1
     '@tiptap/extension-image':
       specifier: ^2.22.3
       version: 2.26.1
@@ -162,9 +159,6 @@ catalogs:
     i18next-resources-to-backend:
       specifier: 1.2.1
       version: 1.2.1
-    is-emoji-supported:
-      specifier: ^0.0.5
-      version: 0.0.5
     isbot:
       specifier: ^5.1.31
       version: 5.2.1
@@ -609,9 +603,6 @@ importers:
       '@tiptap/extension-blockquote':
         specifier: 'catalog:'
         version: 2.26.1(@tiptap/core@2.26.3(@tiptap/pm@2.26.1))
-      '@tiptap/extension-emoji':
-        specifier: 'catalog:'
-        version: 2.26.1(@tiptap/core@2.26.3(@tiptap/pm@2.26.1))(@tiptap/pm@2.26.1)(@tiptap/suggestion@2.26.1(@tiptap/core@2.26.3(@tiptap/pm@2.26.1))(@tiptap/pm@2.26.1))(emojibase@16.0.0)
       '@tiptap/extension-image':
         specifier: 'catalog:'
         version: 2.26.1(@tiptap/core@2.26.3(@tiptap/pm@2.26.1))
@@ -651,12 +642,12 @@ importers:
       emoji-regex:
         specifier: 'catalog:'
         version: 10.5.0
+      emojibase-data:
+        specifier: 'catalog:'
+        version: 15.3.2(emojibase@16.0.0)
       highlight.js:
         specifier: 'catalog:'
         version: 11.11.1
-      is-emoji-supported:
-        specifier: 'catalog:'
-        version: 0.0.5
       jsx-dom-cjs:
         specifier: 'catalog:'
         version: 8.1.6
@@ -2830,13 +2821,6 @@ packages:
       '@tiptap/core': ^2.7.0
       '@tiptap/pm': ^2.7.0
 
-  '@tiptap/extension-emoji@2.26.1':
-    resolution: {integrity: sha512-CtK10GF80Qr4lgJ7P6W6tVThOjpq1lh8oyoBospZ+CjD4GYcY73bdl+FP0uxhZdJsMHzaqzMP5wWQ54zHsIaIg==}
-    peerDependencies:
-      '@tiptap/core': ^2.7.0
-      '@tiptap/pm': ^2.7.0
-      '@tiptap/suggestion': ^2.7.0
-
   '@tiptap/extension-floating-menu@2.26.3':
     resolution: {integrity: sha512-i2dsIMa0L6vjCPnTiXjPZXZqUu3sIIIAI+E1T4p0FsGYjjPTmN+AgkJqeO3bbe5XHmWcWKtgQevNCMF0kmU5rQ==}
     peerDependencies:
@@ -4094,9 +4078,6 @@ packages:
   is-binary-path@2.1.0:
     resolution: {integrity: sha512-ZMERYes6pDydyuGidse7OsHxtbI7WVeUEozgR/g7rd0xUimYNlvZRE/K2MgZTjWy725IfelLeVcEM97mmtRGXw==}
     engines: {node: '>=8'}
-
-  is-emoji-supported@0.0.5:
-    resolution: {integrity: sha512-WOlXUhDDHxYqcSmFZis+xWhhqXiK2SU0iYiqmth5Ip0FHLZQAt9rKL5ahnilE8/86WH8tZ3bmNNNC+bTzamqlw==}
 
   is-extglob@2.1.1:
     resolution: {integrity: sha512-SbKbANkN603Vi4jEZv49LeVJMn4yGwsbzZworEoyEiutsN3nJYdbO36zfhGJ6QEDpOZIFkDtnq5JRxmvl3jsoQ==}
@@ -7268,17 +7249,6 @@ snapshots:
       '@tiptap/core': 2.26.3(@tiptap/pm@2.26.1)
       '@tiptap/pm': 2.26.1
 
-  '@tiptap/extension-emoji@2.26.1(@tiptap/core@2.26.3(@tiptap/pm@2.26.1))(@tiptap/pm@2.26.1)(@tiptap/suggestion@2.26.1(@tiptap/core@2.26.3(@tiptap/pm@2.26.1))(@tiptap/pm@2.26.1))(emojibase@16.0.0)':
-    dependencies:
-      '@tiptap/core': 2.26.3(@tiptap/pm@2.26.1)
-      '@tiptap/pm': 2.26.1
-      '@tiptap/suggestion': 2.26.1(@tiptap/core@2.26.3(@tiptap/pm@2.26.1))(@tiptap/pm@2.26.1)
-      emoji-regex: 10.5.0
-      emojibase-data: 15.3.2(emojibase@16.0.0)
-      is-emoji-supported: 0.0.5
-    transitivePeerDependencies:
-      - emojibase
-
   '@tiptap/extension-floating-menu@2.26.3(@tiptap/core@2.26.3(@tiptap/pm@2.26.1))(@tiptap/pm@2.26.1)':
     dependencies:
       '@tiptap/core': 2.26.3(@tiptap/pm@2.26.1)
@@ -8671,8 +8641,6 @@ snapshots:
   is-binary-path@2.1.0:
     dependencies:
       binary-extensions: 2.3.0
-
-  is-emoji-supported@0.0.5: {}
 
   is-extglob@2.1.1: {}
 

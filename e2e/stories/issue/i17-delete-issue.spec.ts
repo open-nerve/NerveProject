@@ -33,7 +33,6 @@ test("I17 (page): the confirmation names the whole subtree including archived de
   api,
   db,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const writer = await newAccount(api, info, "writer");
@@ -135,7 +134,7 @@ test("I17 (page): the confirmation names the whole subtree including archived de
       table.table
     ).toBe(true);
   }
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 // I17, deleting a work item and the work items under it (M4 design 2, 3.4, 3.6, 3.9, 3.10): the API version, with

@@ -11,7 +11,7 @@ import {
   lastWorkspaceOf,
 } from "../../fixtures/assert/workspace";
 import { anotherTabSignsIn, bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { deferred } from "../../fixtures/deferred";
 import { enabledWithin } from "../../fixtures/dialogs";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
@@ -152,7 +152,7 @@ test("W1 (page): at /create-workspace an onboarded account is told under the fie
   await expect(url).toHaveValue("");
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   // The new workspace's home.
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 
   // A nerve with creation switched off, on the same database: the page says so, and offers no form, nor a letter to
   // an instance admin, whom nerve does not have.
@@ -264,7 +264,7 @@ test("W1 (page): a newcomer's onboarding creates a workspace after the profile s
   expect(await lastWorkspaceOf(db, email)).toBe(id);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   // The workspace's home.
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });
 
 test("W1 (page): a newcomer who puts off the invitations at their step lands in the workspace he created, having invited no one; for one who creates a workspace for himself alone the creation ends the onboarding, the form busy until nerve answers, and an end nerve refuses leads to that step", async ({
@@ -297,7 +297,7 @@ test("W1 (page): a newcomer who puts off the invitations at their step lands in 
   expect(watch.apiRequests.filter((request) => request.endsWith(`/api/v0/workspaces/${slug}/invitations`))).toEqual([]);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   // The workspace's home.
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 
   // Bob creates a workspace for himself alone: the creation ends the onboarding, and the form stays busy until nerve
   // has answered the end (after the step's write): no second click checks the new workspace's slug again.
@@ -343,7 +343,6 @@ test("W1 (page): a newcomer who puts off the invitations at their step lands in 
   expect([watchBob.oldApiRequests, watchBob.pageErrors]).toEqual([[], []]);
   // The end refused, then the workspace's home.
   await expectQuietConsole(there.page, watchBob, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 503 (Service Unavailable)"],
   });
   await there.close();
@@ -376,7 +375,7 @@ test("W1 (page): one who joined a workspace before onboarding is done after the 
   expect([(await finished.release()).status(), finished.body]).toEqual([200, FINISHED]);
   await expect(page).toHaveURL(`/${alpha.slug}`);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 
   // Bob joined Alpha too, and created Zeta, which comes after it, and left the onboarding at its invitation step.
   const bob = await newcomer("bob");

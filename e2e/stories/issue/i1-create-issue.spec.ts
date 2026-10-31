@@ -174,7 +174,7 @@ test("I1 (page): c opens a named form; field refusals retain it, native controls
   expect(
     await db.query("SELECT last_issue_sequence::int AS sequence FROM projects WHERE id=$1", [seed.project.id])
   ).toEqual([{ sequence: 1 }]);
-  await expectListPageQuiet(page, watch, browserName, 1, {
+  await expectListPageQuiet(page, watch, {
     failures: [`422 POST ${path}`],
     errors:
       browserName === "chromium"

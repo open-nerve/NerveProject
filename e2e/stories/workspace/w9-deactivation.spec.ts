@@ -12,7 +12,7 @@ import { accountOf, accountStateOf, expectDeactivated, tokensOf } from "../../fi
 import { expectMembership } from "../../fixtures/assert/workspace";
 import { signInPath } from "../../fixtures/auth-pages";
 import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { nerveUsers, nerveUsersFails } from "../../fixtures/users";
@@ -323,7 +323,6 @@ test("W9 (page): the only admin of a workspace with another member deactivates f
     [],
   ]);
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING],
     errors: [
       "Failed to load resource: the server responded with a status of 409 (Conflict)",
       "Failed to load resource: the server responded with a status of 409 (Conflict)",

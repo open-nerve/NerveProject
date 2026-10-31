@@ -14,7 +14,7 @@ import {
   lastWorkspaceOf,
 } from "../../fixtures/assert/workspace";
 import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole } from "../../fixtures/browser";
+import { expectQuietConsole } from "../../fixtures/browser";
 import { furnishWorkspace } from "../../fixtures/furnish";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -142,13 +142,10 @@ test("W2 (page): signed in, an account lands on the workspace it opened last; on
     await expect(signedIn.page).toHaveURL(landing);
     return signedIn;
   };
-  /**
-   * Nothing failed in the browser of signedIn, where loads documents opened a workspace's page (each logs
-   * EMOJI_CHECK_WARNING); then it closes.
-   */
-  const nothingFailed = async ({ page, watch, close }: Awaited<ReturnType<typeof signIn>>, loads: number) => {
+  /** Nothing failed in the signed-in browser; then it closes. */
+  const nothingFailed = async ({ page, watch, close }: Awaited<ReturnType<typeof signIn>>) => {
     expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-    await expectQuietConsole(page, watch, { warnings: Array.from({ length: loads }, () => EMOJI_CHECK_WARNING) });
+    await expectQuietConsole(page, watch);
     await close();
   };
 
@@ -159,14 +156,14 @@ test("W2 (page): signed in, an account lands on the workspace it opened last; on
   expect([switched.answer.status(), switched.body]).toEqual([200, { last_workspace_id: secondWorkspace.id }]);
   await expect(one.page).toHaveURL(`/${second}`);
   expect(await lastWorkspaceOf(db, aliceEmail)).toBe(secondWorkspace.id);
-  await nothingFailed(one, 1);
+  await nothingFailed(one);
 
   // Signed in again, she lands on Second, and deletes it from its general page: the root lands her on First.
   const two = await signIn(`/${second}`);
   await two.page.goto(`/${second}/settings`);
   expect((await deleteFromGeneralPage(two.page, second, "Second")).status()).toBe(204);
   await expect(two.page).toHaveURL(`/${first}`);
-  await nothingFailed(two, 2);
+  await nothingFailed(two);
 
   // Signed in again, she lands on First. She makes bob its admin, and leaves it: the root lands her on the page that
   // creates a workspace, as it does when she signs in again.
@@ -177,6 +174,6 @@ test("W2 (page): signed in, an account lands on the workspace it opened last; on
   const leaving = { method: "POST", path: `/api/v0/workspaces/${first}/leave` };
   expect((await endMembership(three.page, aliceEmail, "Leave", leaving)).status()).toBe(204);
   await expect(three.page).toHaveURL("/create-workspace");
-  await nothingFailed(three, 2);
-  await nothingFailed(await signIn("/create-workspace"), 0);
+  await nothingFailed(three);
+  await nothingFailed(await signIn("/create-workspace"));
 });

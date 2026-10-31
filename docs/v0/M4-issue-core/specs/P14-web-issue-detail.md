@@ -95,6 +95,8 @@ RichTextEditor/LiteTextEditor 的公开 props/ref 保持兼容；实现通过动
 
 emoji.ts 当前 supportMap/isSupported 没有读者，renderFallbackImage 已固定 false。删除无读取方的 Canvas 支持检测和死 fallback；is-emoji-supported 若全仓无其他直接读者，同步删 package/catalog/lock 中相应依赖项，不能留下无消费者依赖或屏蔽 console。删除 EMOJI_CHECK_WARNING 定义、当前全部引用及过时注释；33 个命中文件是准备快照，不把历史“29故事/96行”当验收门。expectQuietConsole 保持严格，不能过滤或改 watchPage 让警告静默。
 
+T10 实测补充：`@tiptap/extension-emoji` 的数据导入也会构造未使用的默认 Node，执行相同检测。改用 M3 §7.7 已采用、catalog 已锁定的 `emojibase-data` 15.3.2，不引入新依赖品种/版本；在 editor 包直接声明此数据依赖，删除 extension-emoji 及 is-emoji-supported 的无用依赖链和测试垫片。纯数据映射保留既有 1,933 条 Unicode 表情的持久化名称、字符、别名、搜索标签与文本表情；全量逐条比对证据为 `t10-emoji-data-parity.json`。不修改 node_modules、不增加构建拦截或 console 过滤。
+
 标注块默认 unicode 为 128161，URL 不再指向 jsdelivr；保存/读取已有合法本地原生 emoji/icon，默认与存储 fallback 同步。五处扩展 markdown.serialize 在生产无 getMarkdown 调用、transformCopiedText=false；删除 custom-color/custom-image/emoji/mentions/callout 的死序列化及专用类型/转义 helper，保留 HTML parse/render、Markdown **粘贴解析**、编辑器 ref 的 convertHTMLToMarkdown。P4 曾保留并修复序列化，这次删除按既定 P14 设计收口：共享 issue-richtext fixture 只删不再消费的 expected_markdown/markdown_element，保留所有恶意属性、HTML 清洗、真实编辑器往返断言，不能整组删安全用例。打包后查 worker 创建/URL，并在真实页面观察 CSP；没有 blob worker 就不扩 worker-src，更不为 jsdelivr 放宽 CSP。
 
 M4 详情/浮层、创建/编辑/草稿弹窗的描述编辑器明确 disabledExtensions 包含 image；CoreEditorExtensions 已同时控制 image 和 imageComponent。测试 slash、粘贴、拖拽无上传请求、无附件/关注按钮挂载。不要把关闭图片变成所有 M6/M7 编辑器全局默认；M5 接图片重新开启及身份清洗规则。本期不移除服务端已批准的 HTML 图片清洗能力。
@@ -134,7 +136,7 @@ T15 六处复制使用现有 useCopyLink/useCopyText（均收值与成功文案�
 - [x] A7：跨项目关系/反向/任一端删除/部分确认保留，I9 完成；M7 两个消费者适配且无旧 projectIssuesSearch 读者（T6/T7；review T7，t7-component-final 59/59、t7-i9-confirmed 2/2、M11/M12）。
 - [ ] A8：T8 已完成 I10 真 worker 元数据、bounded GET 重试、data favicon、无外连与字段拒绝（review T8，t8-restored 48/48、I10 3/3、M13/M14）；复制仍待 T15。
 - [x] A9：I17 删除整棵子树且文案明确、onSubmit 必需、拒绝留窗/成功跟进；数据库目录断言通过（T9；t9-route-green 82/82、t9-i17-route 2/2、M15；完整检查点回执另记）。
-- [ ] A10：未登录无编辑器 chunk、设置不挂载工作项弹窗，EMOJI_CHECK_WARNING 全零且 console 无豁免（T10/T16）。
+- [ ] A10：未登录无编辑器 chunk、设置不挂载工作项弹窗，EMOJI_CHECK_WARNING 全零且 console 无豁免（T10：t10-final-pages 20/20、t10-final-unit 37/37、M16/M17 红与精确恢复；T16 三浏览器待收尾）。
 - [ ] A11：原生 callout、五处死序列化删除而安全/粘贴回归保留，打包 worker/CSP 复核通过（T11）。
 - [ ] A12：M4 无图片上传入口/请求，无附件及关注按钮；表格子项地址直接 browse 无片段（T12/T13）。
 - [ ] A13：I20、S2 身份、I22 两标签页及 Back 通过；旧会话响应无跟进（T14）。

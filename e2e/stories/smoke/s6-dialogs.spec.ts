@@ -1,6 +1,6 @@
 import { createWorkspace, slugFor } from "../../fixtures/api";
 import { createPAT, emailFor, shownNameOf } from "../../fixtures/auth";
-import { expectQuietConsole, EMOJI_CHECK_WARNING, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   closedByComposingEscape,
   closedByEscape,
@@ -93,7 +93,7 @@ test("S6 (page): the command palette and its list of keyboard shortcuts are moda
   await expect(page.getByText("Current page URL copied to clipboard.")).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(page.url());
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });
 
 test("S6 (page): a dialog opened over another, the revoke dialog over the settings dialog of the user menu: the settings dialog is inert and hidden behind it; Escape closes the top one alone, the focus back where it was, then its tooltip, then the other", async ({
@@ -149,5 +149,5 @@ test("S6 (page): a dialog opened over another, the revoke dialog over the settin
   expect(await closedByEscape(page)).toBe(true);
   expect(await pageBehindHidden(page)).toBe(false);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  await expectQuietConsole(page, watch);
 });

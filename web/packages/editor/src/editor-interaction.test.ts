@@ -11,6 +11,7 @@ import { CoreEditorExtensions } from "@/extensions/extensions";
 import { SideMenuExtension } from "@/extensions/side-menu";
 import { SlashCommands } from "@/extensions/slash-commands";
 import { getEditorRefHelpers } from "@/helpers/editor-ref";
+import { openEmojiPicker } from "@/helpers/editor-commands";
 import { CoreEditorProps } from "@/props";
 import type { EditorRefApi, TFileHandler, TMentionHandler } from "@/types";
 
@@ -116,6 +117,17 @@ const blockIds = (editor: Editor) => {
 const LEGACY_DESCRIPTION = "<p>Steps</p><ul><li><p>open the page</p></li></ul>";
 
 describe("a rich-text editor built like the kept ones", () => {
+  it("closes the force-open emoji picker with Escape and clears its state", async () => {
+    const editor = await createEditor();
+    editor.view.dom.focus();
+    await vi.waitFor(() => expect(editor.isFocused).toBe(true));
+    openEmojiPicker(editor);
+    await vi.waitFor(() => expect(editor.storage.utility.activeDropbarExtensions).toContain("emoji"));
+    expect(editor.storage.emoji.forceOpen).toBe(true);
+    expect(press(editor, "Escape")).toBe(true);
+    expect(editor.storage.emoji.forceOpen).toBe(false);
+  });
+
   it("takes typed text and gives it back as HTML and as Markdown", async () => {
     const editor = await createEditor();
 
@@ -281,6 +293,24 @@ describe("a rich-text editor built like the kept ones", () => {
     expect(parse(saved).querySelectorAll("[data-id]")).toHaveLength(after.length);
     const reopened = await createEditor({ content: saved });
     expect(blockIds(reopened)).toEqual(after);
+  });
+
+  it("restores persisted emoji names and accepts their aliases without image or canvas support", async () => {
+    const canvas = vi.spyOn(HTMLCanvasElement.prototype, "getContext");
+    const editor = await createEditor({
+      content:
+        '<p><span data-type="emoji" data-name="+1">👍</span> <span data-type="emoji" data-name="heart">❤</span></p>',
+    });
+    expect(editor.getText()).toBe("👍 ❤");
+    editor.commands.focus("end");
+    expect(editor.commands.setEmoji("smile")).toBe(true);
+    expect(editor.commands.setEmoji("not-a-real-emoji")).toBe(false);
+    expect(editor.getText()).toBe("👍 ❤😄");
+    const saved = editor.getHTML();
+    expect(parse(saved).querySelectorAll("img")).toHaveLength(0);
+    expect(saved).toContain('data-name="+1"');
+    expect((await createEditor({ content: saved })).getText()).toBe(editor.getText());
+    expect(canvas).not.toHaveBeenCalled();
   });
 
   it("creates editors one after another in one process: editable, read-only, editable", async () => {

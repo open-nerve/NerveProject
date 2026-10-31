@@ -4,8 +4,7 @@ import type { Api } from "./api";
 import { bearer, register, type AuthTokens } from "./auth";
 import { deferred } from "./deferred";
 
-// The personal settings (M2 design 7.7), as a person uses them. Each load of a settings page logs
-// EMOJI_CHECK_WARNING (browser.ts), which the stories name.
+// The personal settings (M2 design 7.7), as a person uses them.
 
 /** Signs email up through the API, onboarded so that the settings open, and returns the session's tokens. */
 export async function registerOnboarded(api: Api, email: string): Promise<AuthTokens> {

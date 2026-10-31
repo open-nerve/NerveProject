@@ -80,13 +80,12 @@ test("C2: actual add, multi-value and operator selectors support keyboard search
   await expect(date.locator('button[aria-invalid="true"]')).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 test("C2: display panels anchor and return focus on desktop and mobile; mobile layout has one named clickable trigger", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   await createIssue(api, seed.member.token, seed.project.id, { name: "Display row" });
@@ -128,13 +127,12 @@ test("C2: display panels anchor and return focus on desktop and mobile; mobile l
   await page.keyboard.press("Enter");
   await page.getByRole("menuitem", { name: "Board", exact: true }).click();
   await expect(layout).toHaveAttribute("aria-expanded", "false");
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 test("C9: an archive confirmation traps focus, cancels without a write and returns to its row; Back closes it", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const item = await createIssue(api, seed.member.token, seed.project.id, {
@@ -169,13 +167,12 @@ test("C9: an archive confirmation traps focus, cancels without a write and retur
   await expect(page).toHaveURL(`/${seed.slug}/projects`);
   await expect(dialog).toHaveCount(0);
   expect(watch.apiRequests.filter((request) => request === `POST /api/v0/issues/${item.id}/archive`)).toEqual([]);
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 test("C2: a parent's real custom display and filter buttons anchor their panels and return focus inside the peek", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const parent = await createIssue(api, seed.member.token, seed.project.id, { name: "Filter parent" });
@@ -204,7 +201,7 @@ test("C2: a parent's real custom display and filter buttons anchor their panels 
     await expect(trigger).toBeFocused();
     await expect(peek.getByText("Filter child", { exact: true })).toBeVisible();
   }, Promise.resolve());
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });
 
 for (const kind of ["single", "multi"] as const) {
@@ -261,7 +258,6 @@ for (const kind of ["single", "multi"] as const) {
 test("C2: Chinese project filters translate condition names, built-in choices and operators", async ({
   api,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   await createIssue(api, seed.member.token, seed.project.id, { name: "Chinese row", priority: "high" });
@@ -281,5 +277,5 @@ test("C2: Chinese project filters translate condition names, built-in choices an
   await page.getByRole("button", { name: "是", exact: true }).last().click();
   await expect(page.getByRole("option", { name: "介于", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expectListPageQuiet(page, watch, browserName, 1);
+  await expectListPageQuiet(page, watch);
 });

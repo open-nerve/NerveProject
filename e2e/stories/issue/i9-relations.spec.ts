@@ -28,7 +28,6 @@ test("I9 (page): native candidates create Blocking and cross-project Relates to;
   db,
   page,
   browser,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const ops = await createProject(api, seed.member.token, seed.slug, { name: "Ops", identifier: "OPS" });
@@ -140,7 +139,7 @@ test("I9 (page): native candidates create Blocking and cross-project Relates to;
   await page.getByRole("button", { name: "Relations 1", exact: true }).click();
   await expect(page.getByRole("button", { name: "Blocked by", exact: true })).toBeVisible();
   await expect(page.locator(`#issue-${source.id}`)).toBeVisible();
-  await expectListPageQuiet(page, watch, browserName, 2);
+  await expectListPageQuiet(page, watch);
 
   const context = await browser.newContext({ baseURL: new URL(page.url()).origin });
   try {
@@ -162,7 +161,7 @@ test("I9 (page): native candidates create Blocking and cross-project Relates to;
       ).status()
     ).toBe(204);
     await expect(row).toHaveCount(0);
-    await expectListPageQuiet(otherPage, otherWatch, browserName, 1);
+    await expectListPageQuiet(otherPage, otherWatch);
   } finally {
     await context.close();
   }

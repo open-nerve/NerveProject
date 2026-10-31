@@ -158,11 +158,11 @@ make e2e
 **Files：** spec T10；新 `C/components/editor/lazy-editors.test.tsx`；既有 `C/components/modals/work-item-level.test.tsx`；新 `C/components/power-k/projects-app-provider.test.tsx`；新 `E/stories/issue/editor-loading.spec.ts`。
 **Interfaces：** rich/lite wrapper 的公开 props、forwarded ref、onReady/上传 handler 签名保持；可导出纯 type 到相邻 types 文件，dynamic import 只加载实际实现，Suspense 包在 wrapper 边界。失败不伪装编辑器已就绪，不允许在未 ready 时误保存空描述。
 
-- [ ] Step 1：盘全仓 editor runtime imports、isSupported/检测读者、33 个 EMOJI 命中文件；写 `preservesRefAndReadinessAcrossLazyLoad`、`settingsDoesNotMountWorkItemModals`。用 E2E 观察真实 build 的初始及登录后请求，记录编辑器 chunk 身份来源。
-- [ ] Step 2：测试 lazy 未完成时不调用编辑/保存、完成后原 ref 可用、加载错误进入已有错误边界；初始匿名网络断言由真实产物失败证明，不用仅 mock import 计数。
-- [ ] Step 3：按需 wrappers、settings workspace 挂载边界；核 lite-text/index.ts → toolbar.tsx → TOOLBAR_ITEMS 的第三条 eager 链，把工具栏与其真实消费者置于同一延迟边界或去无读者导出，不保留绕过 lazy 的 barrel；删除无读者 emoji 检测/死 fallback 及确实无使用者依赖；清所有 EMOJI_CHECK_WARNING 引用/定义/注释，按新严格零警告简化 expectListPageQuiet 的无用参数并同步全调用，不能保留空参兼容层。
-- [ ] Step 4：包构建后 unit/受影响 settings、S2 与 editor-loading 回归；M16 恢复 eager import 或 settings host 使 C10/组件失败；M17 恢复无读者检测使严格 console 测试失败；恢复绿。保留其他实际预期错误精确匹配。
-- [ ] Step 5：记录 A10、依赖读者盘点；提交 `perf(M4/P14): 按需载入编辑器并移除死表情检测`。
+- [x] Step 1：盘全仓 editor runtime imports、isSupported/检测读者、33 个 EMOJI 命中文件；写 `preservesRefAndReadinessAcrossLazyLoad`、`settingsDoesNotMountWorkItemModals`。用 E2E 观察真实 build 的初始及登录后请求，记录编辑器 chunk 身份来源。
+- [x] Step 2：测试 lazy 未完成时不调用编辑/保存、完成后原 ref 可用、加载错误进入已有错误边界；初始匿名网络断言由真实产物失败证明，不用仅 mock import 计数。
+- [x] Step 3：按需 wrappers、settings workspace 挂载边界；核 lite-text/index.ts → toolbar.tsx → TOOLBAR_ITEMS 的第三条 eager 链，把工具栏与其真实消费者置于同一延迟边界或去无读者导出，不保留绕过 lazy 的 barrel；删除无读者 emoji 检测/死 fallback 及确实无使用者依赖；清所有 EMOJI_CHECK_WARNING 引用/定义/注释，按新严格零警告简化 expectListPageQuiet 的无用参数并同步全调用，不能保留空参兼容层。实际构建还检出上游数据导入构造无用 Node 的副作用，沿 M3 已锁定的 emojibase-data 15.3.2 直接读取纯数据，逐条核对既有名称/别名兼容，删除该无用扩展依赖链和测试垫片。
+- [x] Step 4：包构建后 unit/受影响 settings、S2 与 editor-loading 回归；M16 恢复 eager import 或 settings host 使 C10/组件失败；M17 恢复无读者检测使严格 console 测试失败；恢复绿。保留其他实际预期错误精确匹配。
+- [x] Step 5：记录 A10、依赖读者盘点；提交 `perf(M4/P14): 按需载入编辑器并移除死表情检测`。
 
 ## Task 11：标注块、死序列化与 CSP（约 550–950 行）
 

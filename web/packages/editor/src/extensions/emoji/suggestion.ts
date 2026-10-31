@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { EmojiOptions, EmojiStorage } from "@tiptap/extension-emoji";
 import { ReactRenderer } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";
 // constants
@@ -16,21 +15,21 @@ import { DROPDOWN_NAVIGATION_KEYS } from "@/helpers/tippy";
 // local imports
 import { EmojisListDropdown } from "./components/emojis-list";
 import type { EmojisListDropdownProps, EmojiItem } from "./components/emojis-list";
-import type { ExtendedEmojiStorage } from "./emoji";
+import type { ExtendedEmojiStorage, EmojiOptions } from "./emoji";
 
 const DEFAULT_EMOJIS = ["+1", "-1", "smile", "orange_heart", "eyes"];
 
 export const emojiSuggestion: EmojiOptions["suggestion"] = {
   items: ({ editor, query }: { editor: Editor; query: string }): EmojiItem[] => {
-    const { emojis } = editor.storage.emoji as EmojiStorage;
+    const { emojis } = editor.storage.emoji as ExtendedEmojiStorage;
 
     if (query.trim() === "") {
       const defaultEmojis = DEFAULT_EMOJIS.map((name) =>
         emojis.find((emoji) => emoji.shortcodes.includes(name) || emoji.name === name)
       )
-        .filter(Boolean)
+        .filter((emoji) => emoji !== undefined)
         .slice(0, 5);
-      return defaultEmojis as EmojiItem[];
+      return defaultEmojis;
     }
     return emojis
       .filter(({ shortcodes, tags }) => {
@@ -40,23 +39,25 @@ export const emojiSuggestion: EmojiOptions["suggestion"] = {
           tags.find((tag: string) => tag.startsWith(lowerQuery))
         );
       })
-      .slice(0, 5) as EmojiItem[];
+      .slice(0, 5);
   },
 
   allowSpaces: false,
 
   render: () => {
     let component: ReactRenderer<CommandListInstance, EmojisListDropdownProps> | null = null;
-    let cleanup: () => void = () => {};
+    let cleanup: (() => void) | undefined;
     let editorRef: Editor | null = null;
 
     const handleClose = (editor?: Editor) => {
       component?.destroy();
       component = null;
-      (editor || editorRef)?.commands.removeActiveDropbarExtension(CORE_EXTENSIONS.EMOJI);
-      const emojiStorage = editor?.storage.emoji as ExtendedEmojiStorage;
-      emojiStorage.forceOpen = false;
-      cleanup();
+      const currentEditor = editor ?? editorRef;
+      currentEditor?.commands.removeActiveDropbarExtension(CORE_EXTENSIONS.EMOJI);
+      const emojiStorage = currentEditor?.storage.emoji as ExtendedEmojiStorage | undefined;
+      if (emojiStorage) emojiStorage.forceOpen = false;
+      cleanup?.();
+      cleanup = undefined;
     };
 
     return {
@@ -85,7 +86,7 @@ export const emojiSuggestion: EmojiOptions["suggestion"] = {
         const forceOpen = emojiStorage.forceOpen || false;
         component.updateProps({ ...props, forceOpen });
         if (!props.clientRect) return;
-        cleanup();
+        cleanup?.();
         cleanup = updateFloatingUIFloaterPosition(props.editor, component.element as HTMLElement).cleanup;
       },
       onKeyDown: ({ event }) => {

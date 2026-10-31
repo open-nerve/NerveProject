@@ -36,7 +36,6 @@ test("I8 (page): native searches add two existing children and create one; progr
   api,
   db,
   page,
-  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const top = await createIssue(api, seed.member.token, seed.project.id, { name: "Release plan" });
@@ -183,7 +182,7 @@ test("I8 (page): native searches add two existing children and create one; progr
     wrote: 1,
   });
   expect(await issueRead(api, seed.member.token, alternate.id)).toMatchObject({ issue: { sub_issues_count: 0 } });
-  await expectListPageQuiet(page, watch, browserName, 2);
+  await expectListPageQuiet(page, watch);
 });
 
 // I8, the work items under a work item (M4 design 2, 3.9, 3.13): the API version, with P3's assertions (work items

@@ -12,13 +12,7 @@ import {
 } from "../../fixtures/api";
 import { accountId, emailFor, register, type AuthTokens } from "../../fixtures/auth";
 import { signInPath } from "../../fixtures/auth-pages";
-import {
-  EMOJI_CHECK_WARNING,
-  expectQuietConsole,
-  requestsElsewhere,
-  watchPage,
-  type PageWatch,
-} from "../../fixtures/browser";
+import { expectQuietConsole, requestsElsewhere, watchPage, type PageWatch } from "../../fixtures/browser";
 import {
   APP,
   ARCHIVED,
@@ -85,18 +79,14 @@ async function open(page: Page, path: string): Promise<Visit> {
 /**
  * Signed out, the app asks nerve for the instance's settings only: without a refresh token it neither
  * refreshes nor asks for /me (M2 design 7.1), so no API call fails; the page's Content-Security-Policy
- * blocks nothing of it (8.3); and its console has no error, and no warning but thirdPartyWarnings.
+ * blocks nothing of it (8.3); and its console has no error or warning.
  */
-async function expectQuietSignedOut(
-  page: Page,
-  watch: PageWatch,
-  thirdPartyWarnings: readonly string[] = []
-): Promise<void> {
+async function expectQuietSignedOut(page: Page, watch: PageWatch): Promise<void> {
   expect(watch.apiRequests).toEqual(["GET /api/v0/instance"]);
   expect(watch.apiFailures).toEqual([]);
   expect(watch.cspViolations).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
-  await expectQuietConsole(page, watch, { warnings: thirdPartyWarnings });
+  await expectQuietConsole(page, watch);
 }
 
 test("S2: a user opens the home page in a browser", async ({ page }) => {
@@ -121,7 +111,7 @@ test("S2: a user opens a deep link directly", async ({ page, request }) => {
   await expect(page).toHaveURL(signInPath(deepLink));
   expect(failed).toEqual([]);
   expect(elsewhere).toEqual([]);
-  await expectQuietSignedOut(page, watch, [EMOJI_CHECK_WARNING]);
+  await expectQuietSignedOut(page, watch);
 });
 
 /** The accounts of the workspace S2 signs in to: its admin; a member and a guest of it in its project too; a member of it who is not. */
@@ -298,20 +288,19 @@ function followRequests(page: Page, names: Record<string, string>) {
 /**
  * The end of a story that loads one page: waits until the requests followed are exactly expected, none pending; then
  * no API request failed or went to an old address, the Content-Security-Policy blocked nothing and the page threw
- * nothing; its console is quiet but for warnings; and, read once more after all that, nothing came after the list was
+ * nothing; its console is quiet; and, read once more after all that, nothing came after the list was
  * whole.
  */
 async function expectExactly(
   page: Page,
   watch: PageWatch,
   requests: ReturnType<typeof followRequests>,
-  expected: string[],
-  warnings: readonly string[]
+  expected: string[]
 ): Promise<void> {
   const whole = { pending: 0, requests: expected.toSorted() };
   await expect.poll(() => requests.between(0)).toEqual(whole);
   expect([watch.apiFailures, watch.oldApiRequests, watch.cspViolations, watch.pageErrors]).toEqual([[], [], [], []]);
-  await expectQuietConsole(page, watch, { warnings });
+  await expectQuietConsole(page, watch);
   expect(requests.between(0)).toEqual(whole);
 }
 
@@ -394,8 +383,7 @@ for (const account of ACCOUNTS) {
     expect(watch.oldApiRequests).toEqual([]);
     expect(watch.cspViolations).toEqual([]);
     expect(watch.pageErrors).toEqual([]);
-    // The hint is logged once for each load (EMOJI_CHECK_WARNING).
-    await expectQuietConsole(page, watch, { warnings: visits.map(() => EMOJI_CHECK_WARNING) });
+    await expectQuietConsole(page, watch);
     // Nothing came after any list was whole, the menu's last.
     const lists = [...loads, menu];
     for (const [index, { from, expected }] of lists.entries()) {
@@ -419,7 +407,7 @@ test("S2: the admin of two workspaces opens a project of one at the other's addr
   // a project counts in the address's workspace alone (M3 design 3.19): its own resources are not fetched here
   await page.goto(`/${slug}/settings/projects/${lab.id}`);
   await expect(page.getByText("Project not found")).toBeVisible();
-  await expectExactly(page, watch, requests, [...APP, ...WORKSPACE, ...PROJECT], [EMOJI_CHECK_WARNING]);
+  await expectExactly(page, watch, requests, [...APP, ...WORKSPACE, ...PROJECT]);
 });
 
 test("S2: the admin of a project opens it archived: the archived screen, and the project's read alone, not what its members read", async ({
@@ -433,7 +421,7 @@ test("S2: the admin of a project opens it archived: the archived screen, and the
   const requests = followRequests(page, { [slug]: "{slug}", [project.id]: "{project}" });
   await page.goto(`/${slug}/projects/${project.id}/issues`);
   await expect(page.getByText("This project is archived")).toBeVisible();
-  await expectExactly(page, watch, requests, [...APP, ...WORKSPACE, ...PROJECT], [EMOJI_CHECK_WARNING]);
+  await expectExactly(page, watch, requests, [...APP, ...WORKSPACE, ...PROJECT]);
 });
 
 test("S2: a newcomer opens /, which sends him to the onboarding: it asks for his workspaces, as the app does, and no more", async ({
@@ -446,7 +434,7 @@ test("S2: a newcomer opens /, which sends him to the onboarding: it asks for his
   await page.goto("/");
   await expect(page).toHaveURL("/onboarding");
   await expect(page.getByText("Create your profile.")).toBeVisible();
-  await expectExactly(page, watch, requests, APP, []);
+  await expectExactly(page, watch, requests, APP);
 });
 
 test("S2: a member of a workspace opens his profile's settings directly: they ask for his workspaces, as the app does, which their sidebar lists, and no more", async ({
@@ -460,5 +448,5 @@ test("S2: a member of a workspace opens his profile's settings directly: they as
   const requests = followRequests(page, {});
   await page.goto("/settings/profile/general");
   await expect(page.getByRole("link", { name: "Acme" })).toBeVisible();
-  await expectExactly(page, watch, requests, APP, [EMOJI_CHECK_WARNING]);
+  await expectExactly(page, watch, requests, APP);
 });

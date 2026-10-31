@@ -147,7 +147,7 @@ test("I2 (page): real description editing and undo-redo keep the visible value, 
       version_matches: true,
     },
   ]);
-  await expectListPageQuiet(page, watch, browserName, 1, {
+  await expectListPageQuiet(page, watch, {
     failures: [`503 PATCH ${path}`],
     errors:
       browserName === "chromium"

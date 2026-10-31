@@ -178,3 +178,15 @@ I17 页面进一步复现删除后停在编号页：canonical 实体删除使 wo
 类型、实际 11 个改动 TS 文件 oxlint 0/0、格式/diff 通过。首次翻译键错层被真实页面检出，单测翻译读取改为真实嵌套路径后修复；DB 确认前需等待提交、ModalCore 根无自身尺寸需断言可见 heading，两项夹具问题单独留痕。先提交本次产品，再在准确提交串行完整 F；T9 的完整门禁和推送步骤尚待回执，不将当前聚焦通过冒称全量通过。
 
 **检查点回执（替代上一段待执行状态）：**`8a35d029` 的 gen-check、Go lint、无缓存完整 Go 测试（466.9 秒）均通过；knip 发现 T8 表单类型仅本文件读取，`8c9c7e0eb5c3bbd3b7e54a4b88ce9e16edf1702f` 收回该无用导出。服务端/生成输入无变化，前三项原始 tested SHA 保留。后者 lint-web 54/54、knip、强制无缓存 test-web 18/18 任务与 E2E 212/212（Chromium 210、Firefox A4 2）全通过。原始日志及 SHA/hash 绑定见 t9-gates-receipt.json；默认 HTML/test-results 已逐文件核 hash 复制到统一证据根。Task 9 完成线已勾，本次文档提交后推送检查点，后置远端回执另补；不代表 T10–T16 已通过。
+
+T9 后置远端回执：提交 `0e8c912a3efd345ee4c39906aa7ea7cb0ef10cee` 的 [CI 41178590419](https://github.com/open-nerve/NerveProject/actions/runs/41178590419) server/web/e2e 均成功；原始 run/jobs 在统一证据根 t9-ci-latest.json、t9-ci-jobs.json。
+
+### T10 编辑器加载与警告根因
+
+富文本/轻量入口保留公开 props/ref，Suspense 内按挂载加载实现；工具栏 barrel 的第三条 eager 链无外部读取者，撤回该导出。个人设置仍有命令面板和快捷键，但无 workspace 时不挂工作项弹窗。6 项 lazy 测试覆盖等待期间不 ready、参数更新、ref/内容回调、卸载与错误进入既有边界；真实构建按代码标记识别并附 hash，两个匿名入口都不取编辑器 chunk，登录后读取、输入和数据库保存正常。未通过时没有空内容误保存。
+
+初次删除自定义 supportMap 后，真实 C10 仍红：上游 extension-emoji 的数据导入会创建默认 Node，实际执行另一份 Canvas 检测。沿 M3 已锁定的 emojibase-data 15.3.2 直接消费纯数据，逐条比对 1,933 条名称/字符/别名/标签/文本表情完全一致（t10-emoji-data-parity.json），删除无用扩展和检测依赖、Canvas 测试垫片及 external 配置。无新依赖品种/版本，无 node_modules 修改或构建拦截。设计、spec、plan 同步记录这一局部根因处置。
+
+全 E2E 的 EMOJI 警告常量/豁免/注释和 helper 无用参数已清零；watchPage/expectQuietConsole 保持严格。实际键盘测试另检出强制打开表情菜单后 Escape 使用空 editor 的异常，改为当前 editor owner 并安全释放定位监听；真实命令红/绿保存在 t10-emoji-command-red、t10-emoji-fixed，错误命令探针不计产品红。
+
+M16 恢复设置页宿主使 2 项组件测试失败；M17 重新引入未使用的上游扩展使真实构建页面精确因 Canvas 警告失败，均有 patch、字节恢复 hash 和恢复绿。最终 web 5 文件 37/37、editor 编辑/安全往返 15/15、C10/S2/A7/A9 Chromium 20/20；类型、knip 通过，实际 67 个 TS 改动文件 oxlint 0/0，editor 上限按真实净减从 59 降至 54。最后仅将建议列表的类型提取恢复为原有边界，不改运行逻辑；补类型/lint 复核。全量 F 在 T13 检查点执行，A10 三浏览器归 T16。

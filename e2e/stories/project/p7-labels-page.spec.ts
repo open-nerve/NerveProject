@@ -13,7 +13,7 @@ import {
 } from "../../fixtures/api";
 import { expectLabels } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   announced,
   closedByEscape,
@@ -251,7 +251,7 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
     await expect(other.page.getByRole("button", { name: / options$/ }), who).toHaveCount(controls ? 4 : 0);
     await expect(other.page.getByRole("button", { name: /^Delete / }), who).toHaveCount(controls ? 3 : 0);
     expect([otherWatch.apiFailures, otherWatch.pageErrors], who).toEqual([[], []]);
-    await expectQuietConsole(other.page, otherWatch, { warnings: [EMOJI_CHECK_WARNING] });
+    await expectQuietConsole(other.page, otherWatch);
     await other.close();
   };
   await seenBy("its member", mem, false);
@@ -320,7 +320,6 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
     [],
   ]);
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: [
       "Failed to load resource: the server responded with a status of 409 (Conflict)",
       "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
