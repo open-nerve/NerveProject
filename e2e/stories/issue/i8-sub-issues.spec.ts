@@ -4,6 +4,7 @@ import {
   createProject,
   createWorkspace,
   inviteAndAccept,
+  readProjectPreferences,
   slugFor,
 } from "../../fixtures/api";
 import {
@@ -28,9 +29,64 @@ import {
 } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
-import { issueListProject, expectListPageQuiet } from "../../fixtures/issue-list-page";
+import {
+  issueListProject,
+  expectListPageQuiet,
+  openIssueList,
+  saveListPreferences,
+} from "../../fixtures/issue-list-page";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { answerTo, sentHeld } from "../../fixtures/settings-pages";
+
+for (const layout of ["list", "spreadsheet"] as const) {
+  test(`I8 (page): ${layout} child count opens the exact native parent detail by click and keyboard without a fragment`, async ({
+    api,
+    page,
+  }, info) => {
+    const seed = await issueListProject(api, info);
+    const parent = await createIssue(api, seed.member.token, seed.project.id, { name: "Counted parent" });
+    const first = await createIssue(api, seed.member.token, seed.project.id, {
+      name: "Counted first child",
+      parent_id: parent.id,
+    });
+    const second = await createIssue(api, seed.member.token, seed.project.id, {
+      name: "Counted second child",
+      parent_id: parent.id,
+    });
+    await createIssue(api, seed.member.token, seed.project.id, { name: "Unrelated work item" });
+    const preferences = await readProjectPreferences(api, seed.member.token, seed.project.id);
+    await saveListPreferences(api, seed, {
+      filters: {},
+      display_filters: { ...preferences.display_filters, layout, sub_issue: false },
+      display_properties: { ...preferences.display_properties, sub_issue_count: true },
+    });
+    const { watch } = await openIssueList(page, seed);
+    const count = page.getByRole("link", {
+      name: layout === "list" ? "Sub-work items: 2" : "2 sub-work items",
+      exact: true,
+    });
+    const address = `/${seed.slug}/browse/WEB-${parent.sequence_id}`;
+    await (["click", "keyboard"] as const).reduce(async (previous, method) => {
+      await previous;
+      await expect(count).toBeVisible();
+      await expect(count).toHaveAttribute("href", address);
+      if (method === "click") await count.click();
+      else {
+        await count.focus();
+        await expect(count).toBeFocused();
+        await page.keyboard.press("Enter");
+      }
+      await expect(page).toHaveURL(address);
+      await expect(page.getByRole("textbox", { name: "Work item title", exact: true })).toHaveValue(parent.name);
+      await expect(page.locator(`#issue-${first.id}`)).toContainText(first.name);
+      await expect(page.locator(`#issue-${second.id}`)).toContainText(second.name);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await page.goBack();
+      await expect(page).toHaveURL(seed.path);
+    }, Promise.resolve());
+    await expectListPageQuiet(page, watch);
+  });
+}
 
 test("I8 (page): native searches add two existing children and create one; progress is confirmed, descendants cannot be parents, and moving and removing a parent update counts and activity", async ({
   api,

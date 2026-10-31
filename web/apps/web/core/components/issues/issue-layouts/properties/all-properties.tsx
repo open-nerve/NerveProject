@@ -15,13 +15,7 @@ import { useTranslation } from "@nerve/i18n";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { IIssueDisplayProperties, TIssuePriorities } from "@nerve/types";
 // ui
-import {
-  cn,
-  getDate,
-  renderFormattedPayloadDate,
-  generateWorkItemLink,
-  shouldHighlightIssueDueDate,
-} from "@nerve/utils";
+import { getDate, renderFormattedPayloadDate, generateWorkItemLink, shouldHighlightIssueDueDate } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
 import { DateRangeDropdown } from "@/components/dropdowns/date-range";
@@ -31,7 +25,7 @@ import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
-import { useParams, useNavigate } from "react-router";
+import { Link, useParams } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local components
 import { IssuePropertyLabels } from "./labels";
@@ -58,7 +52,6 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const projectDetails = getProjectById(issue.project_id);
 
   // router
-  const navigate = useNavigate();
   const { workspaceSlug } = useParams();
 
   const run = useDetailCommand(workspaceSlug ?? "", issue.project_id, issue.id);
@@ -81,16 +74,25 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const handleTargetDate = (date: Date | null) =>
     change({ target_date: date ? renderFormattedPayloadDate(date) : null });
 
-  const workItemLink = generateWorkItemLink({
-    workspaceSlug,
-    projectId: issue?.project_id,
-    issueId: issue?.id,
-    projectIdentifier: projectDetails?.identifier,
-    sequenceId: issue?.sequence_id,
-    isArchived: !!issue?.archived_at,
-  });
-
-  const redirectToIssueDetail = () => navigate(`${workItemLink}#sub-issues`);
+  const workItemLink =
+    workspaceSlug && projectDetails?.identifier && Number.isSafeInteger(issue.sequence_id) && issue.sequence_id > 0
+      ? generateWorkItemLink({
+          workspaceSlug,
+          projectId: issue.project_id,
+          issueId: issue.id,
+          projectIdentifier: projectDetails.identifier,
+          sequenceId: issue.sequence_id,
+        })
+      : null;
+  const countLabel = `${t("common.sub_work_items")}: ${subIssueCount}`;
+  const countClassName =
+    "flex h-5 flex-shrink-0 items-center justify-center gap-2 overflow-hidden rounded-sm border-[0.5px] border-strong px-2.5 py-1";
+  const countContent = (
+    <>
+      <ViewsOutline className="h-3 w-3 flex-shrink-0" />
+      <span className="text-caption-sm-regular">{subIssueCount}</span>
+    </>
+  );
 
   if (!displayProperties || !issue.project_id) return null;
 
@@ -260,25 +262,23 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
         displayPropertyKey="sub_issue_count"
         shouldRenderProperty={(properties) => !!properties.sub_issue_count && !!subIssueCount}
       >
-        <Tooltip label={`${t("common.sub_work_items")}: ${subIssueCount}`} disabled={isMobile}>
-          {/* oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions */}
-          <div
-            onFocus={handleEventPropagation}
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              if (subIssueCount) redirectToIssueDetail();
-            }}
-            className={cn(
-              "flex h-5 flex-shrink-0 items-center justify-center gap-2 overflow-hidden rounded-sm border-[0.5px] border-strong px-2.5 py-1",
-              {
-                "cursor-pointer hover:bg-layer-1": subIssueCount,
-              }
-            )}
-          >
-            <ViewsOutline className="h-3 w-3 flex-shrink-0" />
-            <div className="text-caption-sm-regular">{subIssueCount}</div>
-          </div>
+        <Tooltip label={countLabel} disabled={isMobile}>
+          {workItemLink ? (
+            <Link
+              to={workItemLink}
+              aria-label={countLabel}
+              className={`${countClassName} clickable hover:bg-layer-1`}
+              onFocus={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+              }}
+            >
+              {countContent}
+            </Link>
+          ) : (
+            <span className={countClassName}>{countContent}</span>
+          )}
         </Tooltip>
       </WithDisplayPropertiesHOC>
 

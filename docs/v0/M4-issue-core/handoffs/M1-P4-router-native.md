@@ -27,3 +27,9 @@ M4 合并时：
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P4 评审记录](../../M1-frontend-trim/reviews/P4-router-native-review.md)第 7 节。
+
+## P14 实施结论（待阶段集成）
+
+T10 已让个人设置的命令面板不挂载 WorkItemLevelModals，保留设置页合法命令；实际构建 C10 页面证明未载入编辑器。T13 保留 P12 已修好的表格 browse 链接，另将行内子项计数改为有名字的原生 Link：普通/归档均直接 browse，无片段，项目目录缺失或编号无效时只显示计数。点击及 Enter 不触发行操作；没有新增读取请求。
+
+两个实际消费者测试 16/16、I8 页面/API 4/4 Chromium 通过；M20 恢复片段使两项真实点击测试失败，字节恢复后全绿。证据见 [P14 review](../reviews/P14-web-issue-detail-review.md) T10/T13。顶层保持 open，待 P14 终审、授权集成及 M4 收尾再按总关闭条件处理。

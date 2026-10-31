@@ -191,9 +191,9 @@ make e2e
 **Files：** spec T13 的表格列与 properties/all-properties.tsx；新 `C/components/issues/issue-layouts/spreadsheet/columns/sub-issue-column.test.tsx`、`C/components/issues/issue-layouts/properties/all-properties.test.tsx`；扩 I8 页面地址场景。
 **Interfaces：** 用现有项目目录的 identifier 与 Issue.sequence_id，Link 直达 browse；不额外为生成 URL 请求 issue 详情。
 
-- [ ] Step 1：写普通/归档工作项 `linksDirectlyToBrowseWithoutFragment`、目录未就绪无坏 URL；断言可见工作项与标识正确，非仅字符串包含 browse。
-- [ ] Step 2：新 column test 在已由 P12 修好的表格上应绿；再在新 properties/all-properties.test.tsx 测真实子项计数点击，证明 all-properties 的 #sub-issues 残留行为红。核当前路由读取来源，不用 store 旧地址拼接。
-- [ ] Step 3：保留已正确的表格链接；修 all-properties 子项计数入口的原生地址/无效片段，目录缺失不生成坏链接，同 Task 同步必要翻译、键盘可达性及行内事件隔离。
+- [x] Step 1：写普通/归档工作项 `linksDirectlyToBrowseWithoutFragment`、目录未就绪无坏 URL；断言可见工作项与标识正确，非仅字符串包含 browse。
+- [x] Step 2：新 column test 在已由 P12 修好的表格上应绿；再在新 properties/all-properties.test.tsx 测真实子项计数点击，证明 all-properties 的 #sub-issues 残留行为红。核当前路由读取来源，不用 store 旧地址拼接。
+- [x] Step 3：保留已正确的表格链接；修 all-properties 子项计数入口的原生地址/无效片段，目录缺失不生成坏链接，同 Task 同步必要翻译、键盘可达性及行内事件隔离。
 - [ ] Step 4：I8 页面从表格及行内子项计数打开该工作项的详情（含子项区）；M20 恢复无效片段使真实点击断言红，恢复；完整 F，包含 T10–T12 的包产物变更。
 - [ ] Step 5：记录 A12、M1-P4 子项；提交 `fix(M4/P14): 让子工作项列直接打开原生详情`，完整本地门禁后推检查点。
 
