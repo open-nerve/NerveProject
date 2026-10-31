@@ -107,7 +107,7 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
       isOpen={isOpen}
       handleClose={requestClose}
       position={EModalPosition.TOP}
-      width={props.isDuplicateModalOpen ? EModalWidth.VIXL : EModalWidth.XXXXL}
+      width={EModalWidth.XXXXL}
       className="rounded-lg !bg-transparent shadow-none transition-[width] ease-linear"
     >
       <ConfirmIssueDiscard

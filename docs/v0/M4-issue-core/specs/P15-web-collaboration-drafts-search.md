@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索
 
-状态：文档预检通过，已授权实施；T1–T14 完成，继续 T15。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。按计划连续实施；验收项按实际证据勾选，阶段末 deep-review 后先不合并。
+状态：文档预检通过，已授权实施；T1–T15 完成，继续 T16。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。按计划连续实施；验收项按实际证据勾选，阶段末 deep-review 后先不合并。
 
 ## 1. 目标
 
@@ -139,7 +139,7 @@ I16 页面使用 clockTest/ClockWorld 独立数据库；推进业务时钟后取
 - [x] A12：T12 I16 页面真实新时钟进程/新登录/新 attempt、自动归档和站点名/手动用户显示通过。
 - [x] A13：T13 四处 hook 与 T5 Markdown 的消费者等待/拒绝均正确，四 M4 copy-hook 例外删除，C8 LAN HTTP 有实际证据。
 - [x] A14：T14 C6/C7/C8/C9 草稿及本期 I 页面在 Chromium、Firefox、WebKit 各有实际非零结果；页面无未说明失败请求、CSP/console/unhandled 错误。
-- [ ] A15：T15 改动文件 dead/oxlint 清零、字段/旧 URL/路由/复制守卫通过，差异与边界文档准确。
+- [x] A15：T15 改动文件 dead/oxlint 清零、字段/旧 URL/路由/复制守卫通过，差异与边界文档准确。
 - [ ] A16：T16 完整七项门禁、整分支 deep-review/局部修复复审、准确最终分支 HEAD CI、全要求证据闭环；阶段完成后先不合并。
 
 ## 5. 后续范围

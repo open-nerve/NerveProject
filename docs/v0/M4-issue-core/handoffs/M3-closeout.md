@@ -276,3 +276,10 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 ## P15 T11 子项接收：旧搜索合同（2026-11-01）
 
 §5 的 WorkspaceService.searchWorkspace、五个搜索专用 DTO、默认搜索常量和最后 mock 已删除；ProjectService/projectIssuesSearch 无真实读者，不重建空类。M7 view 四方法逐字节保留，五个传输契约测试覆盖路径、body、响应和拒绝；这不算 M7 页面验收。历史十三实例与剩余领域责任见 [M2 子回执](M2-closeout.md#p15-t11-子项接收十三实例清账2026-11-01)。31 项搜索/视图消费者、knip、类型、关键词与 M15 有效反证见 [P15 review T11](../reviews/P15-web-collaboration-drafts-search-review.md#t11旧搜索合同删除与十三实例核账)。该子项已完成，顶层 status 保持 open，M7 和 M4 总关闭不提前处理。
+
+
+## P15 协作子项接收（2026-11-01）
+
+§5 原生 Issue/Comment/Draft/版本消费者与旧搜索删除均有实际页面；M7 视图/版本接口及公开 EditorRefApi 保留。§7 评论菜单/表情/历史/草稿的名称、原生键盘、字段错误先于焦点、内层 Escape 和 pending 保护经 T14 三引擎；§8 剩余四个 M4 复制入口及版本 Markdown 已由 hook 统一反馈，四例外为零。§9 本期 88 个 TS/TSX 逐文件零告警与十组死链清理见 T15，P16 全局 no-shadow、C12 和其它领域责任不提前完成。顶部 status 保持 open。
+
+证据：[P15 review](../reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)、[三浏览器矩阵](../reviews/P15-browser-matrix.md)。

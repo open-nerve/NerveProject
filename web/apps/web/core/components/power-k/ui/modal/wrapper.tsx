@@ -20,13 +20,12 @@ import { PowerKModalHeader } from "./header";
 type Props = {
   commandsListComponent: React.FC<TPowerKCommandsListProps>;
   context: TPowerKContext;
-  hideFooter?: boolean;
   isOpen: boolean;
   onClose: () => void;
 };
 
 export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerKModalWrapper(props: Props) {
-  const { commandsListComponent: CommandsListComponent, context, hideFooter = false, isOpen, onClose } = props;
+  const { commandsListComponent: CommandsListComponent, context, isOpen, onClose } = props;
   const { setActiveCommand, setShouldShowContextBasedActions } = context;
   // states
   const [searchTerm, setSearchTerm] = useState("");
@@ -155,13 +154,11 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
           />
         </Command.List>
         {/* Footer hints */}
-        {!hideFooter && (
-          <PowerKModalFooter
-            isWorkspaceLevel={isWorkspaceLevel}
-            projectId={context.params.projectId}
-            onWorkspaceLevelChange={setIsWorkspaceLevel}
-          />
-        )}
+        <PowerKModalFooter
+          isWorkspaceLevel={isWorkspaceLevel}
+          projectId={context.params.projectId}
+          onWorkspaceLevelChange={setIsWorkspaceLevel}
+        />
       </Command>
     </ModalCore>
   );

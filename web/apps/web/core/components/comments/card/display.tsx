@@ -31,7 +31,6 @@ export type TCommentCardDisplayProps = {
   activityOperations: TCommentsOperations;
   comment: IssueComment;
   disabled: boolean;
-  entityId: string;
   projectId?: string;
   readOnlyEditorRef: React.RefObject<EditorRefApi | null>;
   workspaceId: string;

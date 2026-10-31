@@ -69,7 +69,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const [description, setDescription] = useState<string | undefined>(undefined);
   const [descriptionLoadState, setDescriptionLoadState] = useState<IssueDescriptionLoadState>("loading");
   const [descriptionAttempt, setDescriptionAttempt] = useState(0);
-  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   // store hooks
   const { t } = useTranslation();
@@ -175,7 +174,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     setActiveProjectId(null);
     setChangesMade(null);
     onClose();
-    handleDuplicateIssueModal(false);
   };
 
   const handleCreateIssue = async (
@@ -218,11 +216,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
         title: t("success"),
         message: `${is_draft_issue ? t("draft_created") : t("issue_created_successfully")} `,
         actionItems: !is_draft_issue && response?.project_id && (
-          <CreateIssueToastActionItems
-            workspaceSlug={workspaceSlug}
-            projectId={response?.project_id}
-            issueId={response.id}
-          />
+          <CreateIssueToastActionItems workspaceSlug={workspaceSlug} issueId={response.id} />
         ),
       });
       return response;
@@ -261,11 +255,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
         message: t("issue_updated_successfully"),
         actionItems:
           showActionItemsOnUpdate && payload.project_id ? (
-            <CreateIssueToastActionItems
-              workspaceSlug={workspaceSlug}
-              projectId={payload.project_id}
-              issueId={data.id}
-            />
+            <CreateIssueToastActionItems workspaceSlug={workspaceSlug} issueId={data.id} />
           ) : undefined,
       });
       return response;
@@ -347,8 +337,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
 
   const handleFormChange = (formData: IssueFormData | null) => setChangesMade(formData);
 
-  const handleDuplicateIssueModal = (value: boolean) => setIsDuplicateModalOpen(value);
-
   // don't open the modal outside a workspace or if there are no projects
   if (
     !workspaceSlug ||
@@ -382,8 +370,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     moveToIssue: moveToIssue,
     modalTitle: modalTitle,
     primaryButtonText: primaryButtonText,
-    isDuplicateModalOpen: isDuplicateModalOpen,
-    handleDuplicateIssueModal: handleDuplicateIssueModal,
     isProjectSelectionDisabled: isProjectSelectionDisabled,
   };
 

@@ -28,3 +28,10 @@ M4 合并时：由系统代为创建或操作的工作项记在谁名下、界�
 ## 处理结果（M4/P6）
 
 T10 真实 SQL/组合读回确认自动归档动态行的 `actor_id` 为 SQL NULL；`issue.archived` 事件不持久化，其 `shared.Event.ActorID` 为 nil，由事件发布组合断言核对。两者都没有零UUID、项目作者或按邮箱/名字伪造的系统账户；T15全门禁及变异复核见 [P6 review §2](../reviews/P6-issue-events-review.md#2-验收标准逐条核对)。前端站点名显示及系统代建收集箱工作项仍按P15/M7原落点办理，整体 `status: open`。
+
+
+## P15 协作子项接收（2026-11-01）
+
+T12 的真实 clockTest 页面在新进程重新登录，以 attempted_at 同时晚于新进程和业务写水位确认新归档；页面显示 SITE_NAME（Nerve），SQL 读回 actor_id=NULL，手动恢复显示真实操作者链接。M17 将系统 actor 当停用用户的变异确实失败；T14 三引擎均实际执行 I16。没有按邮箱或名字猜测的实现。系统代建收集箱仍归 M7，顶部 status 保持 open。
+
+证据：[P15 review](../reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)、[三浏览器矩阵](../reviews/P15-browser-matrix.md)。

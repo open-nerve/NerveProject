@@ -82,3 +82,10 @@ M4 合并时：
 ## P10b 本段处理（2026-10-29）
 
 否定显示层及 hook 已由 T8 删除，negation-filters 守卫及 T13 M43 反例见阶段 review；选择器呈现归 P13，P16 核终态。 证据见 [P10b review](../reviews/P10b-web-list-data-review.md)；整审及N2限定修复复审已闭环，产品候选2e1264aa完整F及准确CI40896656404 attempt1三任务通过，实施与终审完成、集成待办；纯文稿HEAD CI由主控另核；整份交接 status 保持 open。
+
+
+## P15 协作子项接收（2026-11-01）
+
+工作项动态的旧收集箱 source 分支已经随原生数据迁移消失，T1 复核 helpers/默认活动分支，I12 读完整时间线和隐藏历史关系；T11 删除最后 WorkspaceService.searchWorkspace 与专用 DTO/常量，未重建批量接口。T15 复核本期死成员和守卫，未恢复 access/is_epic/type_id。来源取值及收集箱自身显示仍在 M4 收尾转交 M7，顶部 status 保持 open。
+
+证据：[P15 review](../reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)、[三浏览器矩阵](../reviews/P15-browser-matrix.md)。

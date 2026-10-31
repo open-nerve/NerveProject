@@ -258,3 +258,10 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 | `core/services/issue/workspace_draft.service.ts` | 0 |
 
 剩余八实例：comments/comment-create、inbox/modals/create-modal/create-root、hooks/editor/use-editor-config 的 FileService 归 M5；cycles/modal 和 cycles/progress-sidebar/sidebar-header 的 CycleService 归 M6；inbox/content/issue-root 的 IntakeWorkItemVersionService 归 M7；use-timezone 与 workspace-notification 的服务归自身领域。审计、M15 临时恢复实例的有效失败及字节恢复、31/31 消费者、四个 view 方法字节一致见 [P15 review T11](../reviews/P15-web-collaboration-drafts-search-review.md#t11旧搜索合同删除与十三实例核账)。本项完成，顶层 status 仍 open。
+
+
+## P15 协作子项接收（2026-11-01）
+
+§8 两类回应使用本站 emojibase，组合 Unicode 按码点且 CSP 不扩；§9 主题只在本代原生确认后应用/重载，旧登录成功/失败无反馈；§11 时间线/布局及余下四个 M4 复制入口迁既有 hook，单一等待/成功/失败反馈，四个 M4 例外删除；C8 三引擎真实 LAN HTTP 无手势拒绝，Firefox 两条浏览器安全诊断按精确条件必须出现，其余异常仍禁止。§12 十三历史实例保持零，八个其它领域实例及 M7 view 方法维持原归属。T16 继续核顶部搜索宿主和其它偏好晚答，不能把 T14 检查点当阶段最终终审；顶部 status 仍 open。
+
+证据：[P15 review](../reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)、[三浏览器矩阵](../reviews/P15-browser-matrix.md)。

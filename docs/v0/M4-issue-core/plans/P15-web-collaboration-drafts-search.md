@@ -205,11 +205,11 @@ make e2e
 **Files：** 本期真实变动TS/TSX、tools/keywords.json；docs/v0/{frontend-changes,plane-diff}.md；阶段review与相关输入handoff子回执。
 **Interfaces：** 沿02删干净原则，按真实死成员、真实读取、外部合同、其它领域保留四类逐个记录成员/参数/消费者；生成DTO和M7共享props不因名字相似误删，不提前扩大P16全局no-shadow任务。
 
-- [ ] Step 1：从基线..HEAD及dirty枚举完整生产改动，读每个文件，查引用；核时间线helper、activity-filter、版本modal指定告警已零，旧未使用enableReplies等若无合法用途同任务删除全部传参。
-- [ ] Step 2：对实际TS文件跑 pnpm exec oxlint --max-warnings=0 <明确文件表>，make knip、node tools/keywords.mjs、翻译键检查（沿make lint-web），记录真实文件数而非全仓警告配额。
-- [ ] Step 3：根因消除本期dead/lint，必要按小职责拆分；同步差异清单、P15处理子回执及M7保留边界，顶部handoff仍open。phase只M4/P15。
-- [ ] Step 4：复跑受影响unit/B与types/diff；比对13路径、四M4copy例外、四workspace-route正例；静态守卫变化有实际反例，恢复后通过。不把此Task当C12/M4closeout。
-- [ ] Step 5：记录 A15；提交 `refactor(M4/P15): 清理协作页面死成员并同步边界记录`。
+- [x] Step 1：从基线..HEAD及dirty枚举完整生产改动，读每个文件，查引用；核时间线helper、activity-filter、版本modal指定告警已零，旧未使用enableReplies等若无合法用途同任务删除全部传参。
+- [x] Step 2：对实际TS文件跑 pnpm exec oxlint --max-warnings=0 <明确文件表>，make knip、node tools/keywords.mjs、翻译键检查（沿make lint-web），记录真实文件数而非全仓警告配额。
+- [x] Step 3：根因消除本期dead/lint，必要按小职责拆分；同步差异清单、P15处理子回执及M7保留边界，顶部handoff仍open。phase只M4/P15。
+- [x] Step 4：复跑受影响unit/B与types/diff；比对13路径、四M4copy例外、四workspace-route正例；静态守卫变化有实际反例，恢复后通过。不把此Task当C12/M4closeout。
+- [x] Step 5：记录 A15；提交 `refactor(M4/P15): 清理协作页面死成员并同步边界记录`。
 
 ## Task 16：完整门禁、整分支审查与交付（约 350–950 行）
 

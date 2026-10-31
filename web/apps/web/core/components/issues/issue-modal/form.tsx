@@ -73,8 +73,6 @@ export interface IssueFormProps {
     default: string;
     loading: string;
   };
-  isDuplicateModalOpen: boolean;
-  handleDuplicateIssueModal: (isOpen: boolean) => void;
   isProjectSelectionDisabled?: boolean;
 }
 
@@ -114,7 +112,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   // refs
   const submitBtnRef = useRef<HTMLButtonElement | null>(null);
-  const modalContainerRef = useRef<HTMLDivElement | null>(null);
   const descriptionMigration = useRef(false);
 
   // store hooks
@@ -254,23 +251,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     else onChange(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirty]);
-
-  useEffect(() => {
-    const formElement = formRef?.current;
-    const modalElement = modalContainerRef?.current;
-
-    if (!formElement || !modalElement) return;
-
-    const resizeObserver = new ResizeObserver(() => {
-      modalElement.style.maxHeight = `${formElement?.offsetHeight}px`;
-    });
-
-    resizeObserver.observe(formElement);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [formRef, modalContainerRef]);
 
   return (
     <FormProvider {...methods}>

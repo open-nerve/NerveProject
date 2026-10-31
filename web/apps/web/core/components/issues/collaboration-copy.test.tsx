@@ -40,7 +40,7 @@ function Consumer({ kind }: { kind: ConsumerKind }) {
     setCreateUpdateIssueModal: () => {},
     setDeleteIssueModal: () => {},
   });
-  if (kind === "creation") return <CreateIssueToastActionItems workspaceSlug="ws" projectId="A" issueId="x" />;
+  if (kind === "creation") return <CreateIssueToastActionItems workspaceSlug="ws" issueId="x" />;
   return (
     <button
       onClick={() => {

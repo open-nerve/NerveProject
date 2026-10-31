@@ -15,7 +15,6 @@ import { useCopyLink } from "@/hooks/use-copy-link";
 
 type TCreateIssueToastActionItems = {
   workspaceSlug: string;
-  projectId: string;
   issueId: string;
 };
 

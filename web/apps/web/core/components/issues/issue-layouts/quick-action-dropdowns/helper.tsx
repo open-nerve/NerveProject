@@ -105,7 +105,6 @@ const useIssueActionHandlers = (props: MenuItemFactoryProps) => {
   };
 
   return {
-    workItemLink,
     handleCopyIssueLink,
     handleOpenInNewTab,
     handleIssueRestore,
@@ -129,16 +128,14 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     setArchiveIssueModal,
   } = props;
 
-  const createEditMenuItem = (customEditAction?: () => void): TContextMenuItem => ({
+  const createEditMenuItem = (): TContextMenuItem => ({
     key: "edit",
     title: t("common.actions.edit"),
     icon: EditOutline,
-    action:
-      customEditAction ||
-      (() => {
-        setIssueToEdit(issue);
-        setCreateUpdateIssueModal(true);
-      }),
+    action: () => {
+      setIssueToEdit(issue);
+      setCreateUpdateIssueModal(true);
+    },
     shouldRender: isEditingAllowed,
   });
 
@@ -193,7 +190,6 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
   });
 
   return {
-    ...actionHandlers,
     createEditMenuItem,
     createCopyMenuItem,
     createOpenInNewTabMenuItem,

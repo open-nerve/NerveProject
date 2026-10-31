@@ -255,12 +255,10 @@ it("renders the native comment with nullable edited time and the member-director
       <CommentCard
         workspaceSlug="ws"
         projectId="A"
-        entityId="x"
         comment={comment}
         activityOperations={operations}
         ends={undefined}
         showCopyLinkOption={false}
-        enableReplies={false}
         disabled
       />
     );

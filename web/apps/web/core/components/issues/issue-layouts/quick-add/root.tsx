@@ -200,9 +200,7 @@ const QuickAddIssueScope = observer(function QuickAddIssueScope(
               type: TOAST_TYPE.SUCCESS,
               title: t("common.success"),
               message: t("issue.create.success"),
-              actionItems: (
-                <CreateIssueToastActionItems workspaceSlug={workspaceSlug} projectId={projectId} issueId={issue.id} />
-              ),
+              actionItems: <CreateIssueToastActionItems workspaceSlug={workspaceSlug} issueId={issue.id} />,
             });
             reset(defaultValues);
             focusAfterSuccess.current = current;

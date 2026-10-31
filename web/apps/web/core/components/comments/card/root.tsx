@@ -19,27 +19,16 @@ import { CommentCardDisplay } from "./display";
 
 type TCommentCard = {
   workspaceSlug: string;
-  entityId: string;
   comment: IssueComment | undefined;
   activityOperations: TCommentsOperations;
   ends: "top" | "bottom" | undefined;
   showCopyLinkOption: boolean;
-  enableReplies: boolean;
   disabled?: boolean;
   projectId?: string;
 };
 
 export const CommentCard = observer(function CommentCard(props: TCommentCard) {
-  const {
-    workspaceSlug,
-    entityId,
-    comment,
-    activityOperations,
-    ends,
-    showCopyLinkOption,
-    disabled = false,
-    projectId,
-  } = props;
+  const { workspaceSlug, comment, activityOperations, ends, showCopyLinkOption, disabled = false, projectId } = props;
   // states
   const [isEditing, setIsEditing] = useState(false);
   // refs
@@ -53,7 +42,6 @@ export const CommentCard = observer(function CommentCard(props: TCommentCard) {
     <CommentBlock comment={comment} ends={ends}>
       <CommentCardDisplay
         activityOperations={activityOperations}
-        entityId={entityId}
         comment={comment}
         disabled={disabled}
         projectId={projectId}

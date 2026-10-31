@@ -54,12 +54,10 @@ const Card = observer(function Card({ disabled = false }: { disabled?: boolean }
     <CommentCard
       workspaceSlug="ws"
       projectId="A"
-      entityId="x"
       comment={row}
       activityOperations={operations}
       ends={undefined}
       showCopyLinkOption
-      enableReplies={false}
       disabled={disabled}
     />
   );

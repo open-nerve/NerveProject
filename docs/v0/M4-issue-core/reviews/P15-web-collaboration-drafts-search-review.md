@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T14 完成，T15 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T15 完成，T16 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -243,3 +243,16 @@ C8 初轮 **12 失败**不是产品拒绝丢失：LAN 下现有 execCommand 兼�
 矩阵最终输入 85b650eaa2d3796749c5d8d6a4529e9ecf9506a19b26eaf4412fb6f8c6217a39，程序 4e7df898b364b478f07ab515ab075861e389a874e521ef544c46c8df19fa3bfe。完整 F 的前四项通过；Knip 首次发现新配置未由入口脚本引用，按其它矩阵登记 e2e/package.json 的 test:m4-collaboration，从 F4 复跑，未加忽略项。只有脚本登记改变，F1–3 与页面生产输入相同，等价证据见 t14-input-equivalence.json。最终 F4–7 输入 6048df79212af9baccc1d6262f6e1fbae005b5aba26d91efc49461a8cc5570e9；七门禁全绿，前端静态 54/54、无缓存 18/18 测试任务（**294 文件/3108 Vitest，另 Node 5**），默认 E2E **277/277**（Chromium 275、Firefox 2），0 skip。报告、trace、初始失败、分包日志、构建 hash 与后置提交回执均留在 t14-*。
 
 T10 的准确提交 1047507d03435366349a5cf1a9a47f3f23d7260a 的 [CI 41223646422](https://github.com/open-nerve/NerveProject/actions/runs/41223646422) attempt 1 已核 server/web/e2e 全部 success。A14/T14 完成，本次检查点提交后推送核独立 CI；继续 T15，不合并。
+
+
+### T15：死成员与边界清账
+
+逐文件查引用后删除十组无读者链：CommentCard 的 enableReplies/entityId（含 display 与全部调用者）、CommentBlock 的未读 ref、创建提示的 projectId（实际取 canonical issue.project_id）、未挂载 modalContainerRef 的 ResizeObserver、恒 false 的重复项弹窗状态/宽度分支及表单透传、菜单工厂无人提供的 customEditAction、两个未读取返回扩展（workItemLink 和 actionHandlers spread）、无人设置的 hideFooter。CommentCreate 的 entityId、详情真正使用的 customEditAction、M7 收集箱同名 props 与公共 EditorRefApi 全部保留。
+
+原 M1 附录脚本用仓库已锁定 TypeScript 重跑，全仓候选 prop 372→371、member 877、export 21；这些是扫描候选，不能声称全仓死成员清零。当前生产变动只剩三个候选：命令图标的 className 为第三方 ComponentType 合同，搜索结果 issue/project 为数组元素的真实读取，全部人工核调用链保留。测试候选按 mock 组件输入、editor/ResizeObserver 运行时接口和断言记录字段核对，不把 AST 看不到的框架调用误删。手工审查抓到的已传参未读取链不依赖 AST 是否报出。
+
+四分类记录：真实死成员删除；真实读取保留；第三方/协议合同保留；其它领域的八实例及 M7 DTO/props 按既有归属保留。初步把 handleSearchMenuClose 当成死参数的判断被全仓引用推翻：TopNavPowerK 是实际调用者，因此此任务不删除；同时发现搜索 gate 只认弹窗开关，顶部宿主需在 T16 整审确认并修复。这里不把静态引用少当作无业务用途。
+
+15 个受影响单元文件 **132/132**，Chromium **21/21**（C6/C7/C9、I11/12/14 与评论/布局/创建 C8），类型/翻译/格式/关键词 54/54、knip 通过。首次格式检查仅 quick-add 的 JSX 换行失败，格式化后重跑通过。全分支明确列出 88 个 TS/TSX：通常规则实际扫描 87 个零告警，配置文件因根 ignorePatterns 被跳过；以相同规则、仅去 ignorePatterns 的临时配置显式扫余下 1 个，亦零告警，未冒称 --no-ignore 覆盖配置排除。文件表、三生产候选、完整扫描及前后输出均在 t15-*。
+
+13 历史实例再核零，四 M4 copy-hook 例外为零、四 workspace-address-route 路径及正反例均保持，关键词 76/13 无命中。M15 的恢复实例反证、M12/M18 的行为反证已核原始 hash 后复用，未重复冒充新运行。本 Task 未修改守卫内容或扩大全局 no-shadow。输入 `89dfffde60176753f0678b3ae093aefc7d5605540516cf904d70580dafcff93d`，页面程序 `864e5108dc339c4f07e7c47f1f8d3b7d9495deb69d9fa417e247c663467332e4`；单位测试/AST 早一版仅相差 quick-add 格式，提交后同套再验。差异清单和四份输入子回执同步；所有 handoff 顶部 open，P16/M4 收尾未提前关闭。A15/T15 完成，进入 T16 deep-review。
