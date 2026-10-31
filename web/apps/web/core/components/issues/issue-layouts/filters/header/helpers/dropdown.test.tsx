@@ -40,6 +40,8 @@ describe("FiltersDropdown's actual button and panel", () => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     vi.useFakeTimers();
     vi.spyOn(Element.prototype, "getAnimations").mockReturnValue([]);
+    vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(1280);
+    vi.spyOn(document.documentElement, "clientHeight", "get").mockReturnValue(720);
     host = document.createElement("div");
     document.body.append(host);
     root = createRoot(host);
@@ -51,6 +53,51 @@ describe("FiltersDropdown's actual button and panel", () => {
     vi.useRealTimers();
   });
   for (const custom of [false, true]) {
+    it(`${custom ? "custom" : "default"} follows a shifted anchor while open and releases it when closed`, async () => {
+      await act(async () =>
+        root.render(
+          <FiltersDropdown title="Display" placement="bottom-end" menuButton={custom ? <svg /> : undefined}>
+            <button>Panel option</button>
+          </FiltersDropdown>
+        )
+      );
+      const button = host.querySelector<HTMLButtonElement>("button")!;
+      let y = 100;
+      const measure = vi.spyOn(button, "getBoundingClientRect").mockImplementation(() => new DOMRect(300, y, 22, 22));
+      await act(async () => {
+        button.click();
+        await vi.advanceTimersByTimeAsync(400);
+      });
+      const panel = document.getElementById(button.getAttribute("aria-controls")!)!;
+      expect(panel.style.transform).toContain(", 122px)");
+      // A sibling finishes loading: the anchor moves without a scroll, resize, or React render of this component.
+      y = 164;
+      await act(async () => vi.advanceTimersByTimeAsync(100));
+      expect(panel.style.transform).toContain(", 186px)");
+      await act(async () => {
+        button.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        await vi.advanceTimersByTimeAsync(400);
+      });
+      expect(host.textContent).not.toContain("Panel option");
+      const callsAfterClose = measure.mock.calls.length;
+      y = 200;
+      await act(async () => vi.advanceTimersByTimeAsync(1000));
+      expect(measure.mock.calls).toHaveLength(callsAfterClose);
+      await act(async () => {
+        button.click();
+        await vi.advanceTimersByTimeAsync(400);
+      });
+      const reopened = document.getElementById(button.getAttribute("aria-controls")!)!;
+      expect(reopened.style.transform).toContain(", 222px)");
+      await act(async () => {
+        root.render(null);
+        await vi.advanceTimersByTimeAsync(100);
+      });
+      const callsAfterUnmount = measure.mock.calls.length;
+      await act(async () => vi.advanceTimersByTimeAsync(1000));
+      expect(measure.mock.calls).toHaveLength(callsAfterUnmount);
+    });
+
     it(`${custom ? "custom" : "default"} names one trigger, locates the real panel, and returns focus after Escape`, async () => {
       await act(async () =>
         root.render(

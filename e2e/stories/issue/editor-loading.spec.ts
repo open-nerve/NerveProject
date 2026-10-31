@@ -5,7 +5,7 @@ import { issueListProject, openIssueList } from "../../fixtures/issue-list-page"
 import { createIssue } from "../../fixtures/issues";
 import { password } from "../../fixtures/auth";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
-import { answerTo } from "../../fixtures/settings-pages";
+import { answerTo, expectPopupBesideButton, transitionsEnded } from "../../fixtures/settings-pages";
 import { expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
 
 // Identify the actual build by production code in it, not an assumed bundler filename.
@@ -28,6 +28,64 @@ async function editorChunks() {
   );
   return editor;
 }
+
+test("C10 (page): an open peek display panel follows its button when the editor finishes loading", async ({
+  api,
+  page,
+}, info) => {
+  const chunks = (await editorChunks()).filter(({ markers }) =>
+    markers.includes("Adding different instances of a keyed plugin")
+  );
+  let release!: () => void;
+  const loaded = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const held: string[] = [];
+  await page.route("**/assets/*.js", async (route) => {
+    const file = new URL(route.request().url()).pathname.split("/").at(-1);
+    if (chunks.some((chunk) => chunk.file === file)) {
+      held.push(file!);
+      await loaded;
+    }
+    await route.continue();
+  });
+  try {
+    const seed = await issueListProject(api, info);
+    const parent = await createIssue(api, seed.member.token, seed.project.id, { name: "Loading parent" });
+    await createIssue(api, seed.member.token, seed.project.id, { name: "Loading child", parent_id: parent.id });
+    const { watch } = await openIssueList(page, seed);
+    await page.locator(`#issue-${parent.id}`).click();
+    const peek = page.locator("#full-screen-portal");
+    await expect(peek.getByText("Loading child", { exact: true })).toBeVisible();
+    const trigger = peek.getByRole("button", { name: "Display", exact: true });
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    const panel = page.locator(`[id="${await trigger.getAttribute("aria-controls")}"]`);
+    await transitionsEnded(panel);
+    await expectPopupBesideButton(panel, trigger);
+    await expect.poll(() => held.length).toBeGreaterThan(0);
+    const editor = peek.locator(`[id="editor-container-${parent.id}"] [contenteditable]`);
+    await expect(editor).toHaveCount(0);
+    const before = (await trigger.boundingBox())!;
+    release();
+    await expect(editor).toBeVisible();
+    expect((await trigger.boundingBox())!.y).toBeGreaterThan(before.y);
+    // The open panel catches up on a rendered frame; no resize or scroll is sent to make it move.
+    await expect(async () => expectPopupBesideButton(panel, trigger)).toPass({ timeout: 3000 });
+    await page.keyboard.press("Escape");
+    await expect(panel).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    expect(watch.apiFailures).toEqual([]);
+    expect(watch.oldApiRequests).toEqual([]);
+    expect(watch.pageErrors).toEqual([]);
+    expect(watch.cspViolations).toEqual([]);
+    expect(requestsElsewhere(page, watch)).toEqual([]);
+    await expectQuietConsole(page, watch);
+  } finally {
+    release();
+  }
+});
 
 for (const entry of ["number", "id"] as const) {
   test(`C10 (page): anonymous ${entry} entry loads no editor implementation; signing in loads it and saves real text without warnings`, async ({

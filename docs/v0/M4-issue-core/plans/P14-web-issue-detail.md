@@ -194,7 +194,7 @@ make e2e
 - [x] Step 1：写普通/归档工作项 `linksDirectlyToBrowseWithoutFragment`、目录未就绪无坏 URL；断言可见工作项与标识正确，非仅字符串包含 browse。
 - [x] Step 2：新 column test 在已由 P12 修好的表格上应绿；再在新 properties/all-properties.test.tsx 测真实子项计数点击，证明 all-properties 的 #sub-issues 残留行为红。核当前路由读取来源，不用 store 旧地址拼接。
 - [x] Step 3：保留已正确的表格链接；修 all-properties 子项计数入口的原生地址/无效片段，目录缺失不生成坏链接，同 Task 同步必要翻译、键盘可达性及行内事件隔离。
-- [ ] Step 4：I8 页面从表格及行内子项计数打开该工作项的详情（含子项区）；M20 恢复无效片段使真实点击断言红，恢复；完整 F，包含 T10–T12 的包产物变更。
+- [ ] Step 4：I8 页面从表格及行内子项计数打开该工作项的详情（含子项区）；M20 恢复无效片段使真实点击断言红，恢复；完整 F，包含 T10–T12 的包产物变更。完整门禁发现 C2 的布局漂移：补 FiltersDropdown 真实组件与 C10 持有编辑器 chunk 的页面红/绿，内部定位随打开面板的 anchor 变化更新并在关闭/卸载时释放，保留原 C2 几何断言；不改公开接口或领域调用方。
 - [ ] Step 5：记录 A12、M1-P4 子项；提交 `fix(M4/P14): 让子工作项列直接打开原生详情`，完整本地门禁后推检查点。
 
 ## Task 14：访客、S2 身份、会话与 Back（约 900–1400 行）
@@ -224,7 +224,7 @@ make e2e
 **Files：** 新 `E/playwright.m4-detail.config.ts`、`E/stories/issue/detail-interactions.spec.ts`、`editor-loading.spec.ts` 与本段各 page；本段 review、M4 design §12/§15、handoff 对应子项、`docs/reviews/` 下实施整审新编号。
 **Interfaces：** 三个 project 的 testMatch 只含本段页面/组件目标；不能继承默认 Firefox grep。必要 page helper 在 `E/fixtures/issue-detail-page.ts`（新）复用 issue-list-page/browser/dialogs/API/assert，不能复制整套 seed/SQL/服务。
 
-- [ ] Step 1：补齐 C3 详情七类属性、C4 全弹窗/portal/nesting/迁移、C5 父子/跨项目关系/元数据/层叠、C10 build lazy/原生 callout、C11 双账号；与 A1–A14 一一列出真实 test title，不靠空 grep 或 skip 通过。
+- [ ] Step 1：补齐 C3 详情七类属性、C4 全弹窗/portal/nesting/迁移、C5 父子/跨项目关系/元数据/层叠、C10 build lazy/原生 callout、C11 双账号；T13 局部定位修复同时把 filter-archive-profile-interactions 的 C2 纳入三浏览器，核移动端及 peek 真实消费者；与 A1–A14 一一列出真实 test title，不靠空 grep 或 skip 通过。
 - [ ] Step 2：完整 F 后，分别执行 `pnpm --filter @nerve/e2e exec playwright test --config=playwright.m4-detail.config.ts --project=chromium`，再 firefox，再 webkit；每次证据目录分开，收 raw、JSON executed/skip、失败截图/trace/数据库及版本。不得只把默认 A4 Firefox 两例计为本段通过。
 - [ ] Step 3：M01–M23 是候选而非预填通过数，至少 16 种不同生产性质实际检出；每次保留 mutation diff/行为红/精确恢复 hash/恢复绿。遍历实际 changed files 的 dead 候选及每一读取方，删除真死成员/导出，改动文件 oxlint 零；上限只按实际净减更新，不增限盖警告。共享 helper 有真实消费者则写路径证据。
 - [ ] Step 4：固定 `8bb4bbcb..最终待交付产品HEAD`，使用 deep-review 做全分支逻辑/集成/覆盖三视角，保存完整文件阅读清单。局部问题修复、必要验证和复审全部闭环；架构级先提交上报。产品修复后完整 F/受影响三浏览器补到最终产品输入；纯 docs 绑定未变输入不假称重跑。准确最终分支 CI 独立核 SHA/run/jobs。
