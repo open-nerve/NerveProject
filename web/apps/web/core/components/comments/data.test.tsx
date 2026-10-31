@@ -16,7 +16,10 @@ import { IssueActivityCommentRoot } from "../issues/issue-detail/issue-activity/
 import { E_SORT_ORDER } from "@nerve/constants";
 import { MemoryRouter } from "react-router";
 import { CommentCard } from "./card/root";
-const binding = vi.hoisted(() => ({ tab: undefined as Awaited<ReturnType<typeof issueStoreTab>> | undefined }));
+const binding = vi.hoisted(() => ({
+  tab: undefined as Awaited<ReturnType<typeof issueStoreTab>> | undefined,
+  ready: true,
+}));
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
@@ -26,7 +29,10 @@ vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => binding
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => binding.tab!.app.workspaceRoot }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => binding.tab!.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
-vi.mock("@/hooks/store/user", () => ({ useUser: () => binding.tab!.app.user }));
+vi.mock("@/hooks/store/user", () => ({
+  useUser: () => binding.tab!.app.user,
+  useUserPermissions: () => binding.tab!.app.user.permission,
+}));
 vi.mock("@/hooks/store/use-editor-asset", () => ({
   useEditorAsset: () => ({ uploadEditorAsset: vi.fn(), duplicateEditorAsset: vi.fn() }),
 }));
@@ -36,12 +42,16 @@ vi.mock("@/components/editor/lite-text", () => ({
     initialValue,
     onChange,
     isSubmitting,
+    onEnterKeyPress,
+    editorProps,
     ref,
   }: {
     id: string;
     initialValue: string;
     onChange: (json: unknown, html: string) => void;
     isSubmitting?: boolean;
+    onEnterKeyPress?: (event?: React.KeyboardEvent) => void;
+    editorProps?: { attributes: Record<string, string> };
     ref?: React.Ref<{
       clearEditor: () => void;
       setEditorValue: (html: string) => void;
@@ -52,14 +62,18 @@ vi.mock("@/components/editor/lite-text", () => ({
     useImperativeHandle(ref, () => ({
       clearEditor: () => setText(""),
       setEditorValue: setText,
-      isEditorReadyToDiscard: () => true,
+      isEditorReadyToDiscard: () => binding.ready,
     }));
     return (
       <textarea
+        {...editorProps?.attributes}
         id={id}
         data-editor
         value={text}
         disabled={isSubmitting}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && !event.shiftKey && !event.ctrlKey && !event.metaKey) onEnterKeyPress?.(event);
+        }}
         onChange={(event) => {
           setText(event.target.value);
           onChange(undefined, event.target.value);
@@ -77,8 +91,9 @@ function Host({ id = "x", edit = false }: { id?: string; edit?: boolean }) {
   const operations = useWorkItemCommentOperations("ws", "A", id);
   return edit ? (
     <CommentCardEditForm
+      key={id}
       activityOperations={operations}
-      comment={comment}
+      comment={id === "x" ? comment : { ...comment, id: "other-comment", issue_id: id }}
       isEditing
       projectId="A"
       workspaceId="id-ws"
@@ -99,6 +114,7 @@ function Host({ id = "x", edit = false }: { id?: string; edit?: boolean }) {
 beforeEach(async () => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.useFakeTimers();
+  binding.ready = true;
   binding.tab = await issueStoreTab();
   vi.spyOn(binding.tab.app.issue.issueDetail.comment, "refreshAfterChange").mockResolvedValue();
   runInAction(() => {
@@ -153,6 +169,13 @@ it.each(["create", "edit"] as const)(
     expect(finished).not.toHaveBeenCalled();
     const sent = tab.nerve.to(path).filter((call) => call.method === method);
     expect(sent).toHaveLength(1);
+    await enter();
+    await act(async () =>
+      container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    );
+    expect(tab.nerve.to(path).filter((call) => call.method === method)).toHaveLength(1);
+    expect(container.querySelector("textarea")?.disabled).toBe(true);
+    expect(container.querySelector("textarea")?.closest("[inert]")).not.toBeNull();
     await act(async () => sent[0]!.answer(problem(403, "forbidden")));
     expect(container.querySelector("textarea")?.value).toBe("<p>keep my text</p>");
     expect(edited).not.toHaveBeenCalled();
@@ -180,7 +203,7 @@ it.each(["create", "edit"] as const)(
     } else expect(edited).toHaveBeenCalledExactlyOnceWith(false);
   }
 );
-it("an old host's successful create does not clear new input or follow up in the new issue", async () => {
+it("refusalKeepsInputAndOldSuccessDoesNotClearNewHost after a confirmed create", async () => {
   const tab = binding.tab!;
   await render();
   await fill("<p>old input</p>");
@@ -258,4 +281,103 @@ it("renders the native comment with nullable edited time and the member-director
   expect(container.querySelector(`[id="comment-${comment.id}"]`)?.contains(container.querySelector("textarea"))).toBe(
     true
   );
+});
+
+for (const edit of [false, true]) {
+  it(`imeAndEmptyDoNotSend for ${edit ? "edit" : "create"}, including the editor callback and form submit`, async () => {
+    if (edit) {
+      const read = await requestedIssue(
+        binding.tab!.nerve,
+        () => binding.tab!.app.issue.issueDetail.comment.fetchComments("ws", "A", "x"),
+        ["GET", "/api/v0/issues/x/comments"]
+      );
+      read.call.answer(json(200, { data: [comment], next_cursor: null }));
+      await read.promise;
+      binding.tab!.nerve.calls.length = 0;
+    }
+    await render("x", edit);
+    await fill("<p>中文</p>");
+    const input = container.querySelector("textarea")!;
+    await act(async () => {
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true, cancelable: true })
+      );
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", keyCode: 229, bubbles: true, cancelable: true })
+      );
+    });
+    expect(binding.tab!.nerve.calls).toHaveLength(0);
+    binding.ready = false;
+    await enter();
+    await act(async () =>
+      container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    );
+    expect(binding.tab!.nerve.calls).toHaveLength(0);
+    binding.ready = true;
+    await fill("<p><br></p>");
+    await enter();
+    await act(async () =>
+      container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    );
+    expect(binding.tab!.nerve.calls).toHaveLength(0);
+  });
+  it(`a ${edit ? "edit" : "create"} field refusal is visible and described before focus, retaining the input`, async () => {
+    if (edit) {
+      const read = await requestedIssue(
+        binding.tab!.nerve,
+        () => binding.tab!.app.issue.issueDetail.comment.fetchComments("ws", "A", "x"),
+        ["GET", "/api/v0/issues/x/comments"]
+      );
+      read.call.answer(json(200, { data: [comment], next_cursor: null }));
+      await read.promise;
+    }
+    await render("x", edit);
+    await fill("<p>kept</p>");
+    await enter();
+    const path = edit ? "/api/v0/issue-comments/c-z" : "/api/v0/issues/x/comments";
+    const method = edit ? "PATCH" : "POST";
+    await act(async () =>
+      until(() => binding.tab!.nerve.to(path).some((call) => call.method === method), "field refusal request")
+    );
+    await act(async () =>
+      binding
+        .tab!.nerve.to(path)
+        .find((call) => call.method === method)!
+        .answer(
+          json(422, { status: 422, code: "validation_failed", errors: [{ field: "comment_html", code: "required" }] })
+        )
+    );
+    expect(container.querySelector("textarea")?.value).toBe("<p>kept</p>");
+    const invalid = container.querySelector<HTMLElement>('[aria-invalid="true"]');
+    expect(invalid).not.toBeNull();
+    expect(document.getElementById(invalid!.getAttribute("aria-describedby")!)?.textContent).toBe(
+      "errors.field.required"
+    );
+    expect(document.activeElement).toBe(invalid);
+    expect(toasts).toHaveLength(0);
+  });
+}
+
+it("an old edit confirmation neither closes the replacement form nor changes its input or feedback", async () => {
+  const tab = binding.tab!;
+  const read = await requestedIssue(tab.nerve, () => tab.app.issue.issueDetail.comment.fetchComments("ws", "A", "x"), [
+    "GET",
+    "/api/v0/issues/x/comments",
+  ]);
+  read.call.answer(json(200, { data: [comment], next_cursor: null }));
+  await read.promise;
+  await render("x", true);
+  await fill("<p>Old edit</p>");
+  await enter();
+  await act(async () => until(() => tab.nerve.to("/api/v0/issue-comments/c-z").length === 1, "old edit"));
+  await render("other", true);
+  await fill("<p>Replacement edit</p>");
+  await act(async () =>
+    tab.nerve
+      .to("/api/v0/issue-comments/c-z")[0]!
+      .answer(json(200, { ...comment, comment_html: "<p>Old confirmed edit</p>" }))
+  );
+  expect(container.querySelector("textarea")?.value).toBe("<p>Replacement edit</p>");
+  expect(edited).not.toHaveBeenCalled();
+  expect(toasts).toHaveLength(0);
 });

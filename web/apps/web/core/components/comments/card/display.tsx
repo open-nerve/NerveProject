@@ -37,7 +37,7 @@ export type TCommentCardDisplayProps = {
   workspaceSlug: string;
   isEditing?: boolean;
   setIsEditing?: (isEditing: boolean) => void;
-  renderQuickActions?: () => ReactNode;
+  renderQuickActions?: (displayName: string) => ReactNode;
 };
 
 export const CommentCardDisplay = observer(function CommentCardDisplay(props: TCommentCardDisplayProps) {
@@ -138,7 +138,7 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
               }
               placement="bottom-start"
             />
-            {renderQuickActions ? renderQuickActions() : null}
+            {renderQuickActions ? renderQuickActions(displayName) : null}
           </div>
         )}
       </div>

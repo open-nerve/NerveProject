@@ -62,8 +62,11 @@ export const CommentCard = observer(function CommentCard(props: TCommentCard) {
         workspaceSlug={workspaceSlug}
         isEditing={isEditing}
         setIsEditing={setIsEditing}
-        renderQuickActions={() => (
+        renderQuickActions={(displayName) => (
           <CommentQuickActions
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
+            displayName={displayName}
             activityOperations={activityOperations}
             comment={comment}
             setEditMode={() => setIsEditing(true)}

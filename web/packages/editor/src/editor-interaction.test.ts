@@ -4,6 +4,7 @@
  */
 
 import { Editor } from "@tiptap/core";
+import type { EditorProps } from "@tiptap/pm/view";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 // local imports
@@ -60,14 +61,20 @@ const createEditor = async ({
   editable = true,
   content = "",
   disabledExtensions = [],
-}: { editable?: boolean; content?: string; disabledExtensions?: TExtensions[] } = {}) => {
+  attributes,
+}: {
+  editable?: boolean;
+  content?: string;
+  disabledExtensions?: TExtensions[];
+  attributes?: EditorProps["attributes"];
+} = {}) => {
   const element = document.createElement("div");
   document.body.append(element);
   const editor = new Editor({
     element,
     editable,
     parseOptions: { preserveWhitespace: true },
-    editorProps: CoreEditorProps({ editorClassName: "" }),
+    editorProps: CoreEditorProps({ editorClassName: "consumer-editor", attributes }),
     extensions: [
       ...CoreEditorExtensions({
         disabledExtensions,
@@ -394,4 +401,30 @@ describe("a rich-text editor built like the kept ones", () => {
     expect(third.getText()).not.toContain("Notes");
     expect(first.getText()).toContain("open the page now");
   });
+});
+
+it("a caller describes an invalid editor without losing its shared typography, including changed refusal attributes", async () => {
+  const editor = await createEditor({
+    attributes: {
+      "aria-label": "Comment",
+      "aria-invalid": "true",
+      "aria-describedby": "comment-error",
+      class: "caller-class",
+    },
+  });
+  expect(editor.view.dom.getAttribute("aria-invalid")).toBe("true");
+  expect(editor.view.dom.getAttribute("aria-describedby")).toBe("comment-error");
+  expect(editor.view.dom.classList.contains("prose-brand")).toBe(true);
+  expect(editor.view.dom.classList.contains("consumer-editor")).toBe(true);
+  expect(editor.view.dom.classList.contains("caller-class")).toBe(true);
+  editor.setOptions({
+    editorProps: CoreEditorProps({
+      editorClassName: "consumer-editor",
+      attributes: { "aria-invalid": "false", "aria-describedby": "" },
+    }),
+  });
+  expect(editor.view.dom.getAttribute("aria-invalid")).toBe("false");
+  expect(editor.view.dom.getAttribute("role")).toBe("textbox");
+  expect(editor.view.dom.getAttribute("aria-describedby")).toBe("");
+  expect(editor.view.dom.classList.contains("prose-brand")).toBe(true);
 });

@@ -6,13 +6,13 @@
 
 import type { IssueCommentCreate } from "@nerve/api-client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useForm, Controller } from "react-hook-form";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
 import type { TCommentsOperations } from "@nerve/types";
-import { cn, isCommentEmpty } from "@nerve/utils";
+import { cn, isCommentEmpty, isComposing } from "@nerve/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
 // hooks
@@ -22,6 +22,8 @@ import { FileService } from "@/services/file.service";
 import { followInSession } from "@/lib/in-session";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useFormRefusal } from "@/lib/form-refusal";
+import { useRefusedFocus } from "@/lib/refused-focus";
 import { useDetailScope } from "../issues/issue-detail-widgets/use-detail-scope";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -56,8 +58,11 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
   // refs
   const editorRef = useRef<EditorRefApi>(null);
   const sending = useRef(false);
+  const [isSubmitting, setSubmitting] = useState(false);
   const capture = useDetailScope(workspaceSlug, projectId, entityId);
   const refusal = useRefusalToast();
+  const formRefusal = useFormRefusal(["comment_html"], {});
+  const errorId = useId();
   const { t } = useTranslation();
   // store hooks
   const workspaceStore = useWorkspace();
@@ -67,19 +72,30 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
   const {
     handleSubmit,
     control,
-    watch,
-    formState: { isSubmitting },
+    formState: { errors, submitCount },
+    setError,
+    clearErrors,
     reset,
   } = useForm<IssueCommentCreate>({
     defaultValues: {
       comment_html: "<p></p>",
     },
+    shouldFocusError: false,
   });
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
 
   const onSubmit = async (formData: IssueCommentCreate) => {
     const current = capture();
-    if (!current() || sending.current) return;
+    if (
+      !current() ||
+      sending.current ||
+      isCommentEmpty(formData.comment_html) ||
+      !editorRef.current?.isEditorReadyToDiscard()
+    )
+      return;
     sending.current = true;
+    setSubmitting(true);
+    clearErrors("comment_html");
     await followInSession(() => activityOperations.createComment(formData), {
       done: async (comment) => {
         if (!current()) return;
@@ -104,73 +120,79 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
         onSubmitCallback?.(comment.id);
       },
       failed: (error) => {
-        if (current() && !(error instanceof SessionChangedError)) refusal(error);
+        if (current() && !(error instanceof SessionChangedError))
+          formRefusal(error, (field, message) => setError(field, { type: "server", message }));
       },
     });
-    if (current()) sending.current = false;
+    sending.current = false;
+    setSubmitting(false);
   };
-
-  const commentHTML = watch("comment_html");
-  const isEmpty = isCommentEmpty(commentHTML);
 
   if (!workspaceId) return null;
 
   return (
     <form
+      ref={formRef}
       className={cn("sticky bottom-0 z-[4] bg-surface-1 sm:static")}
       onSubmit={handleSubmit(onSubmit)}
-      onKeyDown={(e) => {
-        if (
-          e.key === "Enter" &&
-          !e.shiftKey &&
-          !e.ctrlKey &&
-          !e.metaKey &&
-          !isEmpty &&
-          !isSubmitting &&
-          editorRef.current?.isEditorReadyToDiscard()
-        )
-          handleSubmit(onSubmit)(e);
+      onKeyDownCapture={(e) => {
+        if (e.key === "Enter" && isComposing(e.nativeEvent)) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
       }}
     >
-      <Controller
-        name="comment_html"
-        control={control}
-        render={({ field: { value, onChange } }) => (
-          <LiteTextEditor
-            editable
-            workspaceId={workspaceId}
-            id={"add_comment_" + entityId}
-            value="<p></p>"
-            workspaceSlug={workspaceSlug}
-            projectId={projectId}
-            onEnterKeyPress={(e) => {
-              if (!isEmpty && !isSubmitting) {
-                handleSubmit(onSubmit)(e);
-              }
-            }}
-            ref={editorRef}
-            initialValue={value ?? "<p></p>"}
-            containerClassName="min-h-min"
-            onChange={(_json, comment_html) => onChange(comment_html)}
-            isSubmitting={isSubmitting}
-            uploadFile={async (blockId, file) => {
-              const { asset_id } = await activityOperations.uploadCommentAsset(blockId, file);
-              setUploadedAssetIds((prev) => [...prev, asset_id]);
-              return asset_id;
-            }}
-            duplicateFile={async (assetId: string) => {
-              const { asset_id } = await activityOperations.duplicateCommentAsset(assetId);
-              setUploadedAssetIds((prev) => [...prev, asset_id]);
-              return asset_id;
-            }}
-            showToolbarInitially={showToolbarInitially}
-            parentClassName="p-2"
-            displayConfig={{
-              fontSize: "small-font",
-            }}
-          />
+      <div inert={isSubmitting}>
+        <Controller
+          name="comment_html"
+          control={control}
+          render={({ field: { value, onChange } }) => (
+            <LiteTextEditor
+              editable
+              editorProps={{
+                attributes: {
+                  role: "textbox",
+                  "aria-multiline": "true",
+                  "aria-label": t("common.comment"),
+                  "aria-invalid": String(!!errors.comment_html),
+                  "aria-describedby": errors.comment_html ? errorId : "",
+                },
+              }}
+              workspaceId={workspaceId}
+              id={"add_comment_" + entityId}
+              value="<p></p>"
+              workspaceSlug={workspaceSlug}
+              projectId={projectId}
+              onEnterKeyPress={(e) => void handleSubmit(onSubmit)(e)}
+              ref={editorRef}
+              initialValue={value ?? "<p></p>"}
+              containerClassName="min-h-min"
+              onChange={(_json, comment_html) => onChange(comment_html)}
+              isSubmitting={isSubmitting}
+              uploadFile={async (blockId, file) => {
+                const { asset_id } = await activityOperations.uploadCommentAsset(blockId, file);
+                setUploadedAssetIds((prev) => [...prev, asset_id]);
+                return asset_id;
+              }}
+              duplicateFile={async (assetId: string) => {
+                const { asset_id } = await activityOperations.duplicateCommentAsset(assetId);
+                setUploadedAssetIds((prev) => [...prev, asset_id]);
+                return asset_id;
+              }}
+              showToolbarInitially={showToolbarInitially}
+              parentClassName="p-2"
+              displayConfig={{
+                fontSize: "small-font",
+              }}
+            />
+          )}
+        />
+        {errors.comment_html && (
+          <p id={errorId} className="text-13 text-danger-primary">
+            {errors.comment_html.message}
+          </p>
         )}
-      />
+      </div>
     </form>
   );
 });

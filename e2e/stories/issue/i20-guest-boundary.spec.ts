@@ -11,7 +11,7 @@ import {
   readProjectPreferences,
 } from "../../fixtures/api";
 import { expectIssuePage } from "../../fixtures/assert/issue";
-import { newAccount, accountId, emailFor } from "../../fixtures/auth";
+import { newAccount, accountId, emailFor, shownNameOf } from "../../fixtures/auth";
 import { commentPage, createIssueComment } from "../../fixtures/comments";
 import { createIssue, issueCreated, issueRead, listIssues } from "../../fixtures/issues";
 import {
@@ -70,7 +70,7 @@ test("I20 (API): a member creates his issue before becoming a guest; own-only hi
 });
 
 for (const workspaceAdmin of [false, true]) {
-  test(`I20 (page): project guest with workspace admin=${workspaceAdmin} follows own-only and the returned grant, with hidden and absent details indistinguishable`, async ({
+  test(`I20 (page): project guest with workspace admin=${workspaceAdmin} comments on his visible issue following own-only and the returned grant, with hidden and absent details indistinguishable`, async ({
     api,
     db,
     page,
@@ -87,6 +87,7 @@ for (const workspaceAdmin of [false, true]) {
       description_html: '<p class="editor-paragraph-block" data-id="own-description">Own description</p>',
     });
     const other = await createIssue(api, seed.member.token, seed.project.id, { name: "Hidden member detail" });
+    const adminComment = await createIssueComment(api, seed.member.token, own.id, "<p>Admin on a visible issue</p>");
     expect(
       (await changeProject(api, seed.member.token, seed.project.id, { guest_view_all_features: false })).status
     ).toBe(200);
@@ -125,6 +126,31 @@ for (const workspaceAdmin of [false, true]) {
       await expect(page.getByRole("menuitem", { name: "Delete", exact: true })).toHaveCount(0);
       await page.keyboard.press("Escape");
     }
+    const commentEditor = page.locator(`[id="editor-container-add_comment_${own.id}"] [contenteditable="true"]`);
+    await expect(commentEditor).toBeVisible();
+    await commentEditor.fill("Guest contribution");
+    const createdComment = await answerTo(page, "POST", `/api/v0/issues/${own.id}/comments`, () =>
+      commentEditor.press("Enter")
+    );
+    expect(createdComment.status()).toBe(201);
+    const comment = await createdComment.json();
+    await expect(
+      page.locator(`[id="comment-${comment.id}"]`).getByText("Guest contribution", { exact: true })
+    ).toBeVisible();
+    await page
+      .locator(`[id="comment-${comment.id}"]`)
+      .getByRole("button", { name: `Options for ${shownNameOf(email)}’s comment`, exact: true })
+      .click();
+    await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Delete", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page
+      .locator(`[id="comment-${adminComment.id}"]`)
+      .getByRole("button", { name: `Options for ${shownNameOf(seed.member.email)}’s comment`, exact: true })
+      .click();
+    await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: "Delete", exact: true })).toHaveCount(workspaceAdmin ? 1 : 0);
+    await page.keyboard.press("Escape");
     const rejected: { body: unknown; contentType: string | undefined; alert: string | null }[] = [];
     const failures: string[] = [];
     await [other.sequence_id, 999999].reduce(async (previous, sequence) => {
@@ -162,7 +188,7 @@ for (const workspaceAdmin of [false, true]) {
       watch.apiRequests.filter((request) =>
         /^(POST|PATCH|DELETE) \/api\/v0\/(issues|projects\/[^/]+\/issues)/.test(request)
       )
-    ).toEqual([]);
+    ).toEqual([`POST /api/v0/issues/${own.id}/comments`]);
     await expectListPageQuiet(page, watch, {
       failures,
       errors:

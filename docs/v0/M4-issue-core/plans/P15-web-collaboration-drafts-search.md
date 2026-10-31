@@ -70,14 +70,14 @@ make e2e
 
 ## Task 3：评论权限、输入与作者命名（约 800–1400 行）
 
-**Files：** spec T3；既有 C/components/comments/data.test.tsx；新 comments/permissions.test.tsx；E/stories/issue/{i11-comments-reactions,i20-guest-boundary}.spec.ts。
+**Files：** spec T3；P/editor/src/{props,hooks/use-editor}.ts、editor-interaction.test.ts（字段属性局部修复与回归）；既有 C/components/comments/data.test.tsx；新 comments/permissions.test.tsx；E/stories/issue/{i11-comments-reactions,i20-guest-boundary}.spec.ts。
 **Interfaces：** IssueCommentCreate/IssueComment 原生类型；CommentCard 明确提供项目上下文与 displayName 给 QuickActions。create/update 返回原生确认，remove 沿现有 follow；不扩回复/可见范围。
 
-- [ ] Step 1：写 `adminDeletesButCannotEditOthersComment`、`guestCommentsOwnVisibleIssue`、`imeAndEmptyDoNotSend`、`refusalKeepsInputAndOldSuccessDoesNotClearNewHost`；覆盖作者/普通成员/管理员/管理员兼访客/归档。
-- [ ] Step 2：U core/components/comments/data.test.tsx core/components/comments/permissions.test.tsx；断言真实菜单项目、名字与请求数量，真实编辑器 IME 留页面补证，不能只测传入布尔值。
-- [ ] Step 3：修项目 ADMIN 删除他人、作者专有编辑、单一按钮、author-name 翻译和提交 readiness/发送锁；区分评论权限和工作项编辑权限；错误保留输入并按 code/field 显示。
-- [ ] Step 4：B stories/issue/i11-comments-reactions.spec.ts stories/issue/i20-guest-boundary.spec.ts --grep 'I11.*page|I20.*comment'；M03 去 ADMIN 删除授权，M04 忽略 scope/IME 分别使权限/晚答/不发送断言红，恢复；API I11 旧权限与反应级联回归。
-- [ ] Step 5：记录 A3 与实际拒绝/焦点/双击证据；提交 `feat(M4/P15): 完成评论授权与可靠提交交互`。
+- [x] Step 1：写 `adminDeletesButCannotEditOthersComment`、`guestCommentsOwnVisibleIssue`、`imeAndEmptyDoNotSend`、`refusalKeepsInputAndOldSuccessDoesNotClearNewHost`；覆盖作者/普通成员/管理员/管理员兼访客/归档。
+- [x] Step 2：U core/components/comments/data.test.tsx core/components/comments/permissions.test.tsx；断言真实菜单项目、名字与请求数量，真实编辑器 IME 留页面补证，不能只测传入布尔值。
+- [x] Step 3：修项目 ADMIN 删除他人、作者专有编辑、单一按钮、author-name 翻译和提交 readiness/发送锁；区分评论权限和工作项编辑权限；错误保留输入并按 code/field 显示。已有编辑器属性组合/同步按 spec 实施补充，额外执行 editor-interaction 与 sanitization-roundtrip 两文件及 I2 描述页面回归，不改共享公开接口。
+- [x] Step 4：B stories/issue/i11-comments-reactions.spec.ts stories/issue/i20-guest-boundary.spec.ts --grep 'I11.*page|I20.*comment'；M03 去 ADMIN 删除授权，M04 忽略 scope/IME 分别使权限/晚答/不发送断言红，恢复；API I11 旧权限与反应级联回归。
+- [x] Step 5：记录 A3 与实际拒绝/焦点/双击证据；提交 `feat(M4/P15): 完成评论授权与可靠提交交互`。
 
 ## Task 4：工作项与评论回应（约 550–1000 行）
 

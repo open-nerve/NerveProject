@@ -245,4 +245,4 @@ P15 分支 codex/m4-p15，worktree .codex/worktress/codex/m4-p15，基线 main 7
 
 负责人已授权按预检通过的 spec/plan 从 T1 连续推进，局部问题自主根因修复，架构问题先提交再上报；阶段末 deep-review，先不合并。分支 codex/m4-p15 和既有 worktree 继续使用，主目录 main 不动。
 
-T1 已完成：phase M4/P15，时间线 37 个聚焦单元测试、I12 两 API/两页面、两个有效变异及类型/静态检查通过；真实页面发现的评论重复 DOM ID 已修复，公开 comment-{id} 锚点保持。完整证据、首次误判及修复见 [P15 review §9](../M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)。T2 也已完成：筛选器单一具名原生按钮、选项键盘操作、保留最后项和刷新偏好、Escape 回焦，19 单元/1 页面与 M02 变异通过。继续 T3，不重做预检；完整七门禁和 push 位于 T5/T10/T14/T16。P14 已完成，M4 总体仍进行中。
+T1 已完成：phase M4/P15，时间线 37 个聚焦单元测试、I12 两 API/两页面、两个有效变异及类型/静态检查通过；真实页面发现的评论重复 DOM ID 已修复，公开 comment-{id} 锚点保持。完整证据、首次误判及修复见 [P15 review §9](../M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)。T2 也已完成：筛选器单一具名原生按钮、选项键盘操作、保留最后项和刷新偏好、Escape 回焦，19 单元/1 页面与 M02 变异通过。T3 也已完成：评论作者/管理员权限、访客可见项评论、IME/就绪/并发/拒绝/晚答；49 个前端聚焦及回归、19 个编辑器回归、I11/I20 6 个故事与 5 个受影响故事通过，三组变异有效。继续 T4，不重做预检；完整七门禁和 push 位于 T5/T10/T14/T16。P14 已完成，M4 总体仍进行中。

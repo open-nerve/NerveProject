@@ -35,6 +35,7 @@
       "clear_email": "Clear email",
       "show_password": "Show password",
       "hide_password": "Hide password"
-    }
+    },
+    "comment_options": "Options for {name}’s comment"
   }
 }

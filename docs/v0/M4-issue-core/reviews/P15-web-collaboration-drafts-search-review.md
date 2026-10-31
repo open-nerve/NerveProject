@@ -91,3 +91,18 @@ A1 与 T1 五步完成；三引擎矩阵、完整阶段 CI 和整分支审查仍
 真实 root、useLocalStorage 和 Popover 的 controls 测试先在嵌套 button 断言失败（18 绿/1 红），修复后 19/19。C6 真实页面经 Enter/Space、Tab 进首选项、最后一项拒绝取消、Escape 回焦，验证筛选实际时间线、排序及刷新保留；最终 1/1。首次整页无嵌套断言发现其它动作/表情控件仍嵌套，T2 按 owning 范围验证筛选触发器内外均无嵌套，其余由 T3/T4 修复并在 T14 整体验证，没有宣称整页已清零。
 
 M02 删除 root 最后一项保护后，按 Enter 后的 aria-pressed 真实断言由 true 变 false，测试红；逐字节恢复。Web/E2E 类型检查和四文件 oxlint 零告警（含 helper），format/diff 通过。第一次类型命令误写 check-types、提示无此脚本，已按计划 check:types 重跑通过，原输出保留。原始证据 t2-*.json、m02.patch/json；A2 与 T2 五步完成，完整七门禁仍在 T5。
+
+
+### T3：评论权限与可靠输入
+
+CommentCard 将明确的 workspaceSlug/projectId 和目录 displayName 交给菜单，管理员删除沿现有 allowPermissions；作者仍独占编辑。工作区管理员兼项目访客对可见项沿现有豁免，OwnOnly 不变。菜单只保留一个原生具名按钮，中英作者命名同步；删除等待中禁用入口。创建/编辑统一在实际发送处检查非空、ready、scope 和锁，捕获阶段挡住 IME Enter/229，输入保持既有 HTML 合同。请求自身持有 busy，防重复 handleSubmit 提前释放；局部 inert 期间不能继续改尚未确认的输入。普通拒绝按 code，字段拒绝按 field；确认后才清空/退出，旧宿主创建/编辑的晚答不触发新宿主关闭或成功反馈。
+
+初始两组测试中先修正测试账号 id 与缺少 ResizeObserver 的环境问题，再观察 **6 红/9 绿** 的产品失败（管理员动作、创建/编辑 IME、字段拒绝）。后续连续提交使 busy 提前解除的两个红例及删除未锁入口两个红例均已局部修复。字段错误的首版 group 方案被 a11y lint 拒绝，没有豁免；改为真实编辑器属性后发现原 CoreEditorProps 浅覆盖会丢 typography，带 [editable] 的 TipTap hook 又不会在普通更新同步属性。两处均按原接口局部修复，保留默认 class/textbox 和输入实例，在 layout effect 更新字段属性后由 useRefusedFocus 回焦；范围与额外回归已同步 spec/plan/design，不改模块依赖、公共 DTO/权限 owner。对象属性组合/更新有真实 TipTap 红绿；原函数属性路径保持原样，不新增对当前 TipTap 初始化函数的支持承诺。
+
+页面先后为 **4 绿/1 红**：先发现切 editable 重建导致回焦目标消失，再在保持实例后发现属性旧值。后一轮补充根因，没有把首轮修正冒充完整解决。最终 I11/I20 **6/6**（2 API、4 page）：真实编辑器的空/IME、422 字段提示与回焦、双击创建只一次且只有 comment_html、作者编辑确认、管理员菜单不含编辑但可删他人、普通访客及工作区管理员兼项目访客的评论/OwnOnly 都通过。受控 422 仅用于输入拒绝，成功写与其它故事均用真实服务端；各页面保持旧接口/非预期错误/CSP/站外请求守卫。
+
+输入摘要 `49fa22798ae9107c349fcd1ce511c9bf07e00dd7503cad08748b07366a46a200`：前端六文件 **49/49**，其中本 Task 两文件 **16/16**；编辑器交互/清洗 **19/19**（产品文件与最终输入逐文件一致）；I11/I20 成功后只追加旧编辑宿主单元测试，页面输入的产品/故事 hash 保持不变。受影响 I2 描述/I12/C6 **5/5**（1 API、4 page；grep 的 page 也匹配了 I12 API 标题中的 pages，照实际记数）。Web/E2E types、14 个 TS/TSX 文件 oxlint **0 warning/0 error**。M03 去管理员删除、M04 去 IME 和去旧宿主确认保护，分别由菜单、写请求、旧回调断言捕获；三组源码 hash 全部恢复。未放宽关键词/CSP/架构守卫。
+
+原始证据在 t3-*.json/log、m03-admin.patch/log、m04-ime.patch/log、m04-scope.patch/log、t3-mutations.json、t3-receipt.json。依赖构建时误并行 unit 造成零用例导入失败、初始共享属性函数尝试失败、默认空对象类型构建失败均保留，已修复并重新验证，不作为有效产品 RED/GREEN。T4 表情触发器的既有嵌套警告仍归 T4 收口；当前 A3 不宣称所有评论表情控件已验收。
+
+A3 与 T3 五步完成；继续 T4。

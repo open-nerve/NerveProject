@@ -6,19 +6,20 @@
 
 import type { IssueComment, IssueCommentCreate } from "@nerve/api-client";
 
-import { useEffect, useRef } from "react";
+import { useId, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useForm } from "react-hook-form";
 import type { EditorRefApi } from "@nerve/editor";
 import { CloseOutline, TickOutline } from "@makeplane/propel/icons";
 // nerve imports
 import type { TCommentsOperations } from "@nerve/types";
-import { cn, isCommentEmpty } from "@nerve/utils";
+import { cn, isCommentEmpty, isComposing } from "@nerve/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
 import { followInSession } from "@/lib/in-session";
 import { SessionChangedError } from "@/lib/auth/token-manager";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useFormRefusal } from "@/lib/form-refusal";
+import { useRefusedFocus } from "@/lib/refused-focus";
 import { useDetailScope } from "../../issues/issue-detail-widgets/use-detail-scope";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -48,19 +49,24 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
   // refs
   const editorRef = useRef<EditorRefApi>(null);
   const sending = useRef(false);
+  const [isSubmitting, setSubmitting] = useState(false);
   const capture = useDetailScope(workspaceSlug, projectId, `${comment.issue_id}:${comment.id}:${isEditing}`);
-  const refusal = useRefusalToast();
+  const refusal = useFormRefusal(["comment_html"], {});
+  const errorId = useId();
   const { t } = useTranslation();
   // form info
   const {
-    formState: { isSubmitting },
+    formState: { errors, submitCount },
     handleSubmit,
-    setFocus,
+    setError,
+    clearErrors,
     watch,
     setValue,
   } = useForm<IssueCommentCreate>({
     defaultValues: { comment_html: comment?.comment_html },
+    shouldFocusError: false,
   });
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
   const commentHTML = watch("comment_html");
 
   const isEmpty = isCommentEmpty(commentHTML);
@@ -70,8 +76,16 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
 
   const onEnter = async (formData: IssueCommentCreate) => {
     const current = capture();
-    if (!current() || sending.current) return;
+    if (
+      !current() ||
+      sending.current ||
+      isCommentEmpty(formData.comment_html) ||
+      !editorRef.current?.isEditorReadyToDiscard()
+    )
+      return;
     sending.current = true;
+    setSubmitting(true);
+    clearErrors("comment_html");
     await followInSession(() => activityOperations.updateComment(comment.id, formData), {
       done: (answer) => {
         if (!current()) return;
@@ -81,29 +95,39 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
         setIsEditing(false);
       },
       failed: (error) => {
-        if (current() && !(error instanceof SessionChangedError)) refusal(error);
+        if (current() && !(error instanceof SessionChangedError))
+          refusal(error, (field, message) => setError(field, { type: "server", message }));
       },
     });
-    if (current()) sending.current = false;
+    sending.current = false;
+    setSubmitting(false);
   };
-
-  useEffect(() => {
-    if (isEditing) {
-      setFocus("comment_html");
-    }
-  }, [isEditing, setFocus]);
 
   return (
     <form
+      ref={formRef}
       className="flex flex-col gap-2"
       onSubmit={handleSubmit(onEnter)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !isEmpty) handleSubmit(onEnter)(e);
+      onKeyDownCapture={(e) => {
+        if (e.key === "Enter" && isComposing(e.nativeEvent)) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
       }}
     >
-      <div>
+      <div inert={isSubmitting}>
         <LiteTextEditor
           editable
+          editorProps={{
+            attributes: {
+              role: "textbox",
+              "aria-multiline": "true",
+              "aria-label": t("common.comment"),
+              "aria-invalid": String(!!errors.comment_html),
+              "aria-describedby": errors.comment_html ? errorId : "",
+            },
+          }}
+          autofocus
           workspaceId={workspaceId}
           workspaceSlug={workspaceSlug}
           ref={editorRef}
@@ -111,11 +135,8 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
           initialValue={commentHTML ?? ""}
           value={null}
           onChange={(_json, comment_html) => setValue("comment_html", comment_html)}
-          onEnterKeyPress={(e) => {
-            if (!isEmpty && !isSubmitting) {
-              handleSubmit(onEnter)(e);
-            }
-          }}
+          onEnterKeyPress={(e) => void handleSubmit(onEnter)(e)}
+          isSubmitting={isSubmitting}
           showSubmitButton={false}
           uploadFile={async (blockId, file) => {
             const { asset_id } = await activityOperations.uploadCommentAsset(blockId, file, comment.id);
@@ -131,11 +152,17 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
             fontSize: "small-font",
           }}
         />
+        {errors.comment_html && (
+          <p id={errorId} className="text-13 text-danger-primary">
+            {errors.comment_html.message}
+          </p>
+        )}
       </div>
       <div className="flex gap-2 self-end">
         {!isEmpty && (
           <button
             type="button"
+            aria-label={t("save")}
             onClick={handleSubmit(onEnter)}
             disabled={isDisabled}
             className={cn(
@@ -148,6 +175,7 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
         )}
         <button
           type="button"
+          aria-label={t("common.cancel")}
           disabled={isSubmitting}
           className={cn(
             "group grid size-7 place-items-center rounded-lg border border-danger-subtle bg-danger-subtle shadow-raised-100 duration-300",

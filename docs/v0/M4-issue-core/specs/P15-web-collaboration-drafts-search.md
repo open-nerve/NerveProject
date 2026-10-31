@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索
 
-状态：文档预检通过，已授权实施；T1–T2 完成，继续 T3。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。按计划连续实施；验收项按实际证据勾选，阶段末 deep-review 后先不合并。
+状态：文档预检通过，已授权实施；T1–T3 完成，继续 T4。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。按计划连续实施；验收项按实际证据勾选，阶段末 deep-review 后先不合并。
 
 ## 1. 目标
 
@@ -18,7 +18,7 @@
 |---|---|---|
 | T1 | C/components/issues/issue-detail/issue-activity/{activity-comment-root,activity/actions/helpers/issue-user,activity/actions/archived-at,activity/actions/default}.tsx | 时间线、系统 actor、I12 |
 | T2 | C/components/issues/issue-detail/issue-activity/{root,activity-filter,filter-root,sort-root,helper}.tsx | 过滤/排序键盘与命名、点名 lint |
-| T3 | C/components/comments/{comment-create,quick-actions,card/root,card/display,card/edit-form}.tsx；时间线 helper | 评论权限、提交、命名、I11/I20 |
+| T3 | C/components/comments/{comment-create,quick-actions,card/root,card/display,card/edit-form}.tsx；时间线 helper；P/editor/src/{props,hooks/use-editor}.ts 的已有属性组合/同步 | 评论权限、提交、命名、I11/I20 |
 | T4 | C/components/comments/comment-reaction.tsx、card/display.tsx；C/components/issues/issue-detail/reactions/issue.tsx | 两类表情和 CSP |
 | T5 | C/components/core/description-versions/{root,modal,dropdown}.tsx；C/components/issues/issue-detail/description-versions.tsx | 历史、还原、Markdown 复制、I13 |
 | T6 | A/drafts/{page,header}.tsx；C/components/issues/workspace-draft/；C/components/issues/issue-modal/base.tsx、draft-form.ts | 个人草稿整流、I14 |
@@ -50,6 +50,8 @@
 时间线沿 P11：初次读完评论、活动全部 cursor 页，按 kind+id 合并，以保留纳秒的 (created_at,id) 排序。增量从**生成最后一页的请求 cursor**重读到末页；描述合并会移动旧活动 id 的 created_at，须替换重排而非只追加。远端编辑/删除落在增量窗口之外的评论，关闭重开全量读后体现；不新增实时同步承诺。
 
 CommentCreate/Edit 发送 `IssueCommentCreate { comment_html: string }`，等待确认才清空/退出；空 HTML 不能发，清洗后空的服务端 422 必须可见；保留提及和既定 HTML 合同，不恢复 access/回复/JSON。重击和 Enter/按钮并发最多一次写；编辑器未 ready 不误提交。已存在的 disabled/read 权限分离，I20 用先成员创建、后降级的真实账号前置。
+
+T3 实施补充：字段错误直接关联真实编辑器，不能用不支持 aria-invalid 的 group 代替输入。已有 editorProps.attributes 的对象属性与默认样式/role 合并，并在既有编辑器上同步；保留公共接口、HTML 与 [editable] 重建合同，函数路径不扩承诺。提交期间局部 inert 锁住输入而不重建编辑器，忙碌由实际请求持有；共享编辑器交互/清洗与描述页面追加回归。
 
 表情沿十进制码点串，组合字符不拆成 UTF-16 单元；工作项回应由独立集合，评论回应只来自评论内嵌 reactions。增加 409 reaction_exists 时不假加计数，删除只删本人该码点；确认后回读/拒绝/重复点击与权限失效受现有队列和 owner 管理。实际 picker 使用本站资源/原生表情，无 CDN/CSP 违规，不扩大 CSP。
 
@@ -119,7 +121,7 @@ I16 页面使用 clockTest/ClockWorld 独立数据库；推进业务时钟后取
 
 - [x] A1：T1 的 actor/null/fallback 与无猜测扫描，I12 全页/增量/重排/关闭重开页面通过。
 - [x] A2：T2 动态过滤/排序有名字、键盘与回焦正确、无嵌套按钮，至少留一个过滤项；三点名文件 lint 由各 owning Task 收口。
-- [ ] A3：T3 作者编辑/作者及管理员删除、访客自己项评论、空/IME/重击/拒绝/晚答有组件和 I11/I20 页面证据。
+- [x] A3：T3 作者编辑/作者及管理员删除、访客自己项评论、空/IME/重击/拒绝/晚答有组件和 I11/I20 页面证据。
 - [ ] A4：T4 两类表情确认/仅删自己/重复拒绝/组合码点与归档只读、实际 picker CSP/本站资源通过。
 - [ ] A5：T5 历史分页/切换/还原与 I13、ModalTitle/焦点、Markdown 等待/失败反馈通过，M7 展示合同不变。
 - [ ] A6：T6 个人草稿列表/分页/无项目/字段保留/删除/发布及 I14 通过；PATCH 失败无 POST、POST 无 body、成功同步列表计数。
