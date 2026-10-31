@@ -102,13 +102,13 @@ export const create =
       body: Parameters<typeof tab.app.issue.projectIssues.createIssue>[2]
     ) => ReturnType<typeof tab.app.issue.projectIssues.createIssue>
   >();
-export const update =
+const update =
   vi.fn<
     (project: string, id: string, body: Parameters<typeof tab.app.issue.projectIssues.updateIssue>[3]) => Promise<void>
   >();
 export const original = () => ({ ...issueDetailOf("x"), name: "Existing", description_html: "<p>Original</p>" });
 export const writes = () => tab.nerve.calls.filter((call) => call.method !== "GET");
-export const button = (name: string) =>
+const button = (name: string) =>
   [...host.querySelectorAll("button")].find((node) => node.textContent?.trim() === name)!;
 export const dirty = () => host.querySelector("[data-form-dirty]")?.textContent;
 export const html = () => host.querySelector("[data-form-html]")?.textContent;
