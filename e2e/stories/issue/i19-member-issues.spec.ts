@@ -17,7 +17,13 @@ import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import type { Page, TestInfo } from "@playwright/test";
 import { watchPage } from "../../fixtures/browser";
 import { addCondition, displayPanel } from "../../fixtures/issue-filters-page";
-import { expectListPageQuiet, issueListProject, listGroup, openIssueList } from "../../fixtures/issue-list-page";
+import {
+  expectListPageQuiet,
+  issueListProject,
+  listGroup,
+  openIssueList,
+  scrollToLastListRow,
+} from "../../fixtures/issue-list-page";
 import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { createIssueComment } from "../../fixtures/comments";
 import { createIssue, listMemberIssues, memberIssuesListed, type MemberIssueQuery } from "../../fixtures/issues";
@@ -364,6 +370,7 @@ test("I19 (page): a created group keeps its relation and project restriction on 
   const high = listGroup(page, "High");
   await expect(high.locator('[class~="group/list-header"]')).toHaveText("High52");
   await expect(high.locator('[id^="issue_"]')).toHaveCount(50);
+  await scrollToLastListRow(high);
   expect(
     (await answerTo(page, "GET", path, () => high.getByRole("button", { name: /^Load more/ }).click())).status()
   ).toBe(200);
@@ -458,6 +465,8 @@ test("I19 (page): a label selected from a visible detail remains a real restrict
   const { watch } = await openIssueList(page, { ...seed, path: `/${seed.slug}/profile/${seed.b.id}/assigned` });
   await page.locator(`#issue-${seed.assigned.id}`).click();
   const peek = page.locator("#full-screen-portal");
+  // This story seeds the label directory after detail loading; C10 owns interactions during editor loading.
+  await expect(peek.locator(`[id="editor-container-${seed.assigned.id}"] [contenteditable]`)).toBeVisible();
   const labels = peek.getByRole("button", { name: `Labels: ${seed.assigned.name}`, exact: true });
   await labels.click();
   await expect(page.getByRole("option", { name: seed.label.name, exact: true })).toBeVisible();

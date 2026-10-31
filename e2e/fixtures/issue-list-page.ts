@@ -66,6 +66,12 @@ export async function expectListOrder(group: Locator, ids: readonly string[]) {
     .poll(() => group.locator('[id^="issue_"]').evaluateAll((rows) => rows.map((row) => row.id.split("_")[1])))
     .toEqual(ids);
 }
+/** Reach real virtual row contents before pointing at the following pagination control. */
+export async function scrollToLastListRow(group: Locator) {
+  const last = group.locator('[id^="issue_"]').last();
+  await last.scrollIntoViewIfNeeded();
+  await last.getByRole("link").scrollIntoViewIfNeeded();
+}
 export async function expectListPageQuiet(
   page: Page,
   watch: PageWatch,
