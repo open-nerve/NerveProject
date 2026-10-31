@@ -57,3 +57,26 @@ it("only generated payload keys survive, even if a caller supplies an issue or a
   };
   expect(draftInput(input, input)).toStrictEqual({ payload: { name: "kept" } });
 });
+
+it("form empty references and dates clear their wire keys, while empty text and arrays stay valid draft input", () => {
+  expect(
+    draftInput(
+      {
+        project_id: "",
+        state_id: "",
+        parent_id: "",
+        start_date: "",
+        target_date: "",
+        name: "",
+        description_html: "",
+        priority: "",
+        assignee_ids: [],
+        label_ids: [],
+      },
+      original
+    )
+  ).toStrictEqual({
+    project_id: null,
+    payload: { name: "", description_html: "", priority: "", assignee_ids: [], label_ids: [] },
+  });
+});

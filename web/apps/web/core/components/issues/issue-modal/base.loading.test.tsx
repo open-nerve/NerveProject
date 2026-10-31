@@ -80,7 +80,11 @@ vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => app.s
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => app.workspaceRoot }));
 vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 vi.mock("@/hooks/store/workspace-draft", () => ({
-  useWorkspaceDraftIssues: () => ({ moveIssue: vi.fn(), createIssue: ui.draft }),
+  useWorkspaceDraftIssues: () => ({
+    moveIssue: vi.fn(),
+    createIssue: ui.draft,
+    canRead: app.issue.workspaceDraftIssues.canRead,
+  }),
 }));
 vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => EIssuesStoreType.PROJECT }));
 vi.mock("@/hooks/use-issues-actions", () => ({
@@ -207,6 +211,13 @@ it.each(["/reactions", "/links", "/issues/parent/"])(
     expect(container.querySelector("[role=alert]")).not.toBeNull();
     expect(container.querySelector("textarea[aria-label=description]")).toBeNull();
     expect(container.querySelector<HTMLButtonElement>("button[type=submit]")!.disabled).toBe(true);
+    const draftSave = [...container.querySelectorAll<HTMLButtonElement>("button")].find(
+      (button) => button.textContent === "save_to_drafts"
+    );
+    expect(draftSave).toBeDefined();
+    expect(draftSave!.disabled).toBe(true);
+    await act(async () => draftSave!.click());
+    expect(ui.draft).not.toHaveBeenCalled();
     await title("Keep my title");
     await submit();
     expect(ui.create).not.toHaveBeenCalled();

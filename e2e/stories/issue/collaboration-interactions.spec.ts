@@ -1,10 +1,14 @@
+import { changeRole, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
+import { modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
+import { watchPage } from "../../fixtures/browser";
 import { createIssueComment } from "../../fixtures/comments";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
-import { expectListPageQuiet, issueListProject } from "../../fixtures/issue-list-page";
-import { createIssue, updateIssue } from "../../fixtures/issues";
+import { expectListPageQuiet, issueListProject, openIssueList } from "../../fixtures/issue-list-page";
+import { createDraft, createIssue, updateIssue } from "../../fixtures/issues";
 import { expect, test } from "../../fixtures/test";
-import { shownNameOf } from "../../fixtures/auth";
-import { sentHeld } from "../../fixtures/settings-pages";
+import { shownNameOf, emailFor, accountId, password } from "../../fixtures/auth";
+import { sentHeld, answerTo, moveWithinApp, registerOnboarded } from "../../fixtures/settings-pages";
 
 test("C6: activity filters keep one choice, support Enter and Space, persist sorting and return focus on Escape", async ({
   api,
@@ -113,5 +117,209 @@ test("C6: reaction picker has one named button, keyboard focus returns on Escape
   expect(watch.requestUrls.some((url) => new URL(url).pathname === "/assets/emojibase/15.3.2/en/data.json")).toBe(true);
   expect(watch.apiRequests.filter((request) => request === `POST ${path}`)).toHaveLength(1);
   expect(watch.apiRequests.filter((request) => request === `POST ${issuePath}`)).toHaveLength(1);
+  await expectListPageQuiet(page, watch);
+});
+
+test("C9: creation saves an empty-title real editor draft, retains field refusals, and its nested prompt owns Escape and confirmed close", async ({
+  api,
+  page,
+  db,
+  browserName,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const { watch } = await openIssueList(page, seed);
+  const trigger = page.getByRole("button", { name: "Add work item", exact: true });
+  await trigger.click();
+  const form = page.getByRole("dialog", { name: "Create new work item", exact: true });
+  const title = form.getByRole("textbox", { name: "Title", exact: true });
+  const editor = form.locator('[contenteditable="true"]');
+  await expect(editor).toBeVisible();
+  await editor.fill("Keep unfinished content");
+  const path = `/api/v0/workspaces/${seed.slug}/drafts`;
+  let reject = true;
+  await page.route(
+    (url) => url.pathname === path,
+    async (route) => {
+      if (!reject || route.request().method() !== "POST") return route.fallback();
+      reject = false;
+      await route.fulfill({
+        status: 422,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ status: 422, code: "validation_failed", errors: [{ field: "name", code: "too_long" }] }),
+      });
+    }
+  );
+  expect(
+    (
+      await answerTo(page, "POST", path, () =>
+        form.getByRole("button", { name: "Save to Drafts", exact: true }).click()
+      )
+    ).status()
+  ).toBe(422);
+  await expect(title).toHaveValue("");
+  await expect(title).toHaveAttribute("aria-invalid", "true");
+  await expect(title).toBeFocused();
+  await expect(editor).toContainText("Keep unfinished content");
+  const held = await sentHeld(page, "POST", path, () =>
+    form.getByRole("button", { name: "Save to Drafts", exact: true }).dblclick()
+  );
+  expect(held.body).toMatchObject({
+    project_id: seed.project.id,
+    payload: { name: "", description_html: expect.stringContaining("Keep unfinished content") },
+  });
+  expect(held.body).not.toHaveProperty("skip_activity");
+  await page.keyboard.press("Escape");
+  await expect(modalDialog(page)).toHaveCount(1);
+  expect((await held.release()).status()).toBe(201);
+  await expect(modalDialog(page)).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await expect(editor).toBeVisible();
+  await title.fill("Retain on inner Escape");
+  await editor.fill("Save from close");
+  await form.getByRole("switch", { name: "Create more", exact: true }).click();
+  const discard = form.getByRole("button", { name: "Discard", exact: true });
+  await discard.press("Enter");
+  const prompt = page.getByRole("dialog", { name: "Save this draft?", exact: true });
+  await expect(prompt.getByRole("heading", { name: "Save this draft?", exact: true })).toBeVisible();
+  expect(await pageBehindHidden(page)).toBe(true);
+  await prompt.getByRole("button", { name: "Cancel", exact: true }).press("Escape");
+  await expect(prompt).toHaveCount(0);
+  await expect(discard).toBeFocused();
+  await expect(title).toHaveValue("Retain on inner Escape");
+  await expect(editor).toContainText("Save from close");
+  await discard.click();
+  const saved = await sentHeld(page, "POST", path, () =>
+    prompt.getByRole("button", { name: "Save to Drafts", exact: true }).dblclick()
+  );
+  await page.keyboard.press("Escape");
+  await expect(modalDialog(page)).toHaveCount(2);
+  expect((await saved.release()).status()).toBe(201);
+  await expect(modalDialog(page)).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  expect(watch.apiRequests.filter((request) => request === `POST ${path}`)).toHaveLength(3);
+  expect(
+    await db.query(
+      "SELECT payload->>'name' AS name, payload->>'description_html' AS html FROM draft_issues WHERE workspace_id=$1 ORDER BY created_at",
+      [seed.project.workspace_id]
+    )
+  ).toEqual([
+    { name: "", html: expect.stringContaining("Keep unfinished content") },
+    { name: "Retain on inner Escape", html: expect.stringContaining("Save from close") },
+  ]);
+  expect(await db.query("SELECT count(*)::int AS count FROM issues WHERE project_id=$1", [seed.project.id])).toEqual([
+    { count: 0 },
+  ]);
+  await expectListPageQuiet(page, watch, {
+    failures: [`422 POST ${path}`],
+    errors:
+      browserName === "chromium"
+        ? ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"]
+        : [],
+  });
+});
+
+test("C9: Back retires a pending draft save and its prompt before the confirmed old reply reaches another workspace form", async ({
+  api,
+  page,
+  db,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const beta = slugFor(info, "beta-drafts");
+  await createWorkspace(api, seed.member.token, { name: "Beta drafts", slug: beta });
+  const { watch } = await openIssueList(page, seed);
+  await moveWithinApp(page, `/${beta}/drafts`);
+  await expect(page.getByRole("button", { name: "Draft a work item", exact: true })).toBeVisible();
+  await moveWithinApp(page, seed.path);
+  await page.getByRole("button", { name: "Add work item", exact: true }).click();
+  const form = page.getByRole("dialog", { name: "Create new work item", exact: true });
+  await expect(form.locator('[contenteditable="true"]')).toBeVisible();
+  await form.getByRole("textbox", { name: "Title", exact: true }).fill("Old draft confirmed later");
+  await form.getByRole("button", { name: "Discard", exact: true }).click();
+  const prompt = page.getByRole("dialog", { name: "Save this draft?", exact: true });
+  const path = `/api/v0/workspaces/${seed.slug}/drafts`;
+  const held = await sentHeld(page, "POST", path, () =>
+    prompt.getByRole("button", { name: "Save to Drafts", exact: true }).click()
+  );
+  let released = false;
+  try {
+    await expect
+      .poll(() =>
+        db.query("SELECT count(*)::int AS count FROM draft_issues WHERE workspace_id=$1", [seed.project.workspace_id])
+      )
+      .toEqual([{ count: 1 }]);
+    await page.goBack();
+    await expect(page).toHaveURL(`/${beta}/drafts`);
+    await expect(modalDialog(page)).toHaveCount(0);
+    await page.getByRole("button", { name: "Draft a work item", exact: true }).click();
+    const next = page.getByRole("dialog", { name: "Create a draft", exact: true });
+    await next.getByRole("textbox", { name: "Title", exact: true }).fill("Keep new workspace input");
+    expect((await held.release()).status()).toBe(201);
+    released = true;
+    await expect(next.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("Keep new workspace input");
+    await expect(page.getByText("Draft created", { exact: true })).toHaveCount(0);
+    expect(watch.apiRequests.filter((request) => request === `POST ${path}`)).toHaveLength(1);
+    await expectListPageQuiet(page, watch);
+  } finally {
+    if (!released) await held.release();
+  }
+});
+
+test("C9: a draft editor does not return after the workspace member becomes a guest and reloads current permissions", async ({
+  api,
+  page,
+  db,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const email = emailFor(info, "draft-permission");
+  const { access_token: token } = await registerOnboarded(api, email);
+  const member = { email, token, id: await accountId(api, token) };
+  await inviteAndAccept(api, seed.member.token, seed.slug, member, 15);
+  const watch = await watchPage(page);
+  const path = `/${seed.slug}/drafts`;
+  await page.goto(signInPath(path));
+  expect(await submitSignIn(page, email, password)).toBe(200);
+  await page.getByRole("button", { name: "Draft a work item", exact: true }).click();
+  const form = modalDialog(page);
+  await expect(form.locator('[contenteditable="true"]')).toBeVisible();
+  await form.getByRole("textbox", { name: "Title", exact: true }).fill("Must not revive");
+  await form.getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(modalDialog(page)).toHaveCount(2);
+  await changeRole(api, seed.member.token, seed.slug, member.id, 5);
+  const readsBefore = watch.apiRequests.filter((request) => request.endsWith(`/workspaces/${seed.slug}/drafts`)).length;
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Draft a work item", exact: true })).toBeDisabled();
+  await expect(modalDialog(page)).toHaveCount(0);
+  expect(watch.apiRequests.filter((request) => request.endsWith(`/workspaces/${seed.slug}/drafts`))).toHaveLength(
+    readsBefore
+  );
+  expect(
+    await db.query("SELECT count(*)::int AS count FROM draft_issues WHERE workspace_id=$1", [seed.project.workspace_id])
+  ).toEqual([{ count: 0 }]);
+  await expectListPageQuiet(page, watch);
+});
+
+test("C9: real editor block-id migration in a copied draft is not an unsaved user edit", async ({
+  api,
+  page,
+  db,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const payload = { name: "Legacy draft", description_html: "<p>Before block IDs</p>" };
+  const draft = await createDraft(api, seed.member.token, seed.slug, { payload });
+  const { watch } = await openIssueList(page, seed);
+  await moveWithinApp(page, `/${seed.slug}/drafts`);
+  await page.locator(`[id="issue-${draft.id}"] button[aria-haspopup="menu"]:visible`).last().click();
+  await page.getByRole("menuitem", { name: "Make a copy", exact: true }).click();
+  const form = page.getByRole("dialog", { name: "Create a draft", exact: true });
+  await expect(form.locator('[contenteditable="true"] p[data-id]')).toHaveText("Before block IDs");
+  await expect(form.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("Legacy draft (copy)");
+  await form.getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(modalDialog(page)).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Save this draft?", exact: true })).toHaveCount(0);
+  expect(watch.apiRequests.filter((request) => /^(POST|PATCH|DELETE) .*drafts/.test(request))).toEqual([]);
+  expect(await db.query("SELECT payload FROM draft_issues WHERE workspace_id=$1", [seed.project.workspace_id])).toEqual(
+    [{ payload }]
+  );
   await expectListPageQuiet(page, watch);
 });

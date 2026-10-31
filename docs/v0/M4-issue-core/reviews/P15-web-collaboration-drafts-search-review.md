@@ -149,3 +149,16 @@ I14 Chromium 共 **7 个故事验证通过（3 API、4 page，分两次）**：�
 77 单元及六故事输入 `6c6225843c85a8e8cb7a18f8fbf2db03507e0e265c7b79a707b5bd54ec9f7232`；最后复制页/静态输入 `8123471c45452c1e0ffcf96395b398b0e5418e6dbe151ff6a3591e852bc96aeb`，只改该新增故事的按钮大小写与不变排序语义；程序均 `49c97b3a58dce1d572a087e77a09b60cf488d11f531a724bc09ed80ebd58c9ec`。原始失败、变异、恢复和成功在 t6-*.json/log、t6-*-results、t6-mutations.json、t6-receipt.json。误调用不存在 make check-keywords 的命令失败如实保留，正确 node tools/keywords.mjs 已过。A6 与 T6 完成，接续 T7；跨浏览器完整矩阵仍归 T14。
 
 T5 检查点 f6eb9a5784974d416bda08cbaa0aa3a6aecc4126 已推送；[CI 41215094874](https://github.com/open-nerve/NerveProject/actions/runs/41215094874) attempt 1 在 2026-10-31 15:52 UTC 的 server/web 为 success，E2E 仍在运行，未提前记全绿。T6 不到完整七门禁推送点，下一检查点 T10。
+
+
+### T7：创建弹窗存草稿与单关闭决策
+
+普通新建表单增加直接 Save to Drafts，沿同一个 base 提交锁和原生草稿 owner；空标题不走发布校验，描述未 ready 或加载失败不能保存，字段拒绝在提示提交后回焦。两种入口都按现有草稿 owner 的 workspace 权限；访客无直接入口/关闭存草稿提示。关闭确认通过私有 closeAfterSave 告知原提交 owner，成功才完成关闭，解决 createMore=true 时确认窗留下的问题；直接保存保持继续创建原行为，metadata 不进入 Issue/Draft 请求。
+
+既有关闭/迁移三个文件先 27/27。新增测试看到缺少入口和“继续创建”确认后未关闭；修复后五文件 52/52。首次真实 C9 两红一绿，trace 证实未选状态发送 payload.state_id=""，服务端按 UUID 合同 400 拒绝；这不是发布语义或服务端 bug。在原 draftInput 规范化空引用/日期为清键、空 project 为 null，合法空文本/数组和未编辑字段保持。真实表单与适配器各有一个有效红，再经页面绿；未修改后端校验、权限或所有权。
+
+最终七文件 **63/63**；包含空标题、直接/关闭保存、拒绝保留和字段先读后回焦、忙碌重复提交、缺项目草稿原回归、描述读取失败、纯迁移与混合用户编辑、guest 权限。真实 Chromium 四文件 **33/33**，其中 C9 四页覆盖真实 TipTap 直接保存/422 拒绝/空标题、继续创建选中时关闭保存、嵌套 Escape 回焦/inert、Back 退役旧命令而不关闭新工作区表单、重新加载 guest 权限后编辑器不复活、复制草稿纯 block-id 迁移不提示保存/不写 DB；其余 I14/C4/C10/C12 复验通过。权限页不声称服务端主动推送：无刷新时同 DOM 权限变化由 owner 单元验证，完整会话/ABA 矩阵仍归 T14。
+
+M10-ready 去编辑器就绪检查使零写断言收到 1 POST；M10-escape 将内层关闭误接外层使保留 1 dialog 断言收到 0；两个变异字节恢复后 63/63。Web/E2E 类型、11 文件 oxlint 零 warning/格式、关键词 76/17 无命中。最终输入 `7b2f0517e35f382535230aa3195b51b1a26080dcda4e23bf498995c15885fc30`，程序 `6dd421fb184433a2af0f298d728c62b0f5efb79fa73a29cd0548cb6c95b7ddbb`；原始命令/失败/trace/变异在 t7-*.json/log、t7-*-results、m10-*、t7-mutations.json、t7-receipt.json。初始 portal helper、真实/假时钟 fixture 混用均已纠正并保留，不算产品红。
+
+A7 与 T7 完成，接续 T8。T5 提交 f6eb9a57 的 [CI 41215094874](https://github.com/open-nerve/NerveProject/actions/runs/41215094874) attempt 1 已在 2026-10-31 16:00 UTC 核验 server/web/e2e 全部 success；只覆盖该检查点，不冒称尚未推送的 T6/T7 已有远端绿。下一完整七门禁与 push 为 T10。

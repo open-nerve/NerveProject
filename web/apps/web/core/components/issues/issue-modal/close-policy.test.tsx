@@ -4,7 +4,7 @@ import { act, useState } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { close, create, formUI, host, tab, mountDialog, useFormFixture, writes } from "./fake-form";
 import { ParentIssuesListModal } from "../parent-issues-list-modal";
-import { issueDetailOf } from "@/store/issue/fake-issues";
+import { draftOf, issueDetailOf } from "@/store/issue/fake-issues";
 import { json, problem } from "@/lib/auth/fake-nerve";
 
 function ParentField() {
@@ -39,13 +39,15 @@ async function openForm() {
   await click("Open form");
   expect(dialogs()).toHaveLength(1);
 }
-async function rename() {
+async function fill(selector: string, value: string) {
   await act(async () => {
-    const input = document.querySelector<HTMLInputElement>("#name")!;
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "Edited");
+    const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!;
+    const proto = input.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, "value")!.set!.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
 }
+const rename = () => fill("#name", "Edited");
 async function escape(target = document.activeElement as HTMLElement) {
   await act(async () =>
     target.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }))
@@ -66,7 +68,7 @@ it.each([false, true])("innerEscapeDoesNotOpenDiscard or close the outer form (d
   expect(close).not.toHaveBeenCalled();
   expect(document.activeElement).toBe(trigger);
 });
-it("innerEscapeLeavesDirtyOuterOpen and returns to the discard trigger", async () => {
+it("innerEscapeOnlyClosesDraftPrompt and returns to the discard trigger", async () => {
   await openForm();
   await rename();
   const discard = button("discard");
@@ -120,4 +122,102 @@ it("returnsFocusToConnectedTrigger after outer Escape, and readiness blocks the 
   expect(close).toHaveBeenCalledOnce();
   expect(dialogs()).toHaveLength(0);
   expect(document.activeElement).toBe(button("Open form", host));
+});
+
+it("saveToDraftsFromCreateKeepsFormOnRefusal: empty title bypasses publish validation and one confirmed draft closes the form", async () => {
+  await openForm();
+  await fill("#name", "");
+  await fill('textarea[aria-label="description"]', "<p>Unfinished</p>");
+  const saveDraft = button("save_to_drafts");
+  expect(saveDraft).toBeDefined();
+  await act(async () => {
+    saveDraft.click();
+    saveDraft.click();
+  });
+  await vi.waitFor(() => expect(writes()).toHaveLength(1));
+  expect(writes()[0]).toMatchObject({
+    method: "POST",
+    path: "/api/v0/workspaces/ws/drafts",
+    body: {
+      project_id: "A",
+      payload: { name: "", description_html: "<p>Unfinished</p>" },
+    },
+  });
+  expect(writes()[0]!.body).toEqual({
+    project_id: "A",
+    payload: {
+      name: "",
+      description_html: "<p>Unfinished</p>",
+      priority: "none",
+      assignee_ids: [],
+      label_ids: [],
+    },
+  });
+  expect(writes()[0]!.body).not.toHaveProperty("skip_activity");
+  expect(writes()[0]!.body).not.toHaveProperty("is_draft");
+  await escape(dialogs()[0]);
+  expect(close).not.toHaveBeenCalled();
+  await act(async () =>
+    writes()[0]!.answer(
+      json(422, { status: 422, code: "validation_failed", errors: [{ field: "name", code: "too_long" }] })
+    )
+  );
+  expect(dialogs()).toHaveLength(1);
+  expect(document.querySelector<HTMLInputElement>("#name")!.value).toBe("");
+  expect(document.querySelector<HTMLTextAreaElement>('[aria-label="description"]')!.value).toBe("<p>Unfinished</p>");
+  expect(document.querySelector("#name")!.getAttribute("aria-invalid")).toBe("true");
+  expect(document.activeElement).toBe(document.querySelector("#name"));
+  await click("save_to_drafts");
+  await vi.waitFor(() => expect(writes()).toHaveLength(2));
+  await act(async () =>
+    writes()[1]!.answer(
+      json(201, { ...draftOf("new-draft"), payload: { name: "", description_html: "<p>Unfinished</p>" } })
+    )
+  );
+  expect(close).toHaveBeenCalledOnce();
+  expect(dialogs()).toHaveLength(0);
+  expect(writes()).toHaveLength(2);
+  expect(create).not.toHaveBeenCalled();
+});
+
+it("draft saving from a create form checks the actual editor readiness before sending", async () => {
+  await openForm();
+  expect(button("save_to_drafts")).toBeDefined();
+  formUI.editorReady = false;
+  await click("save_to_drafts");
+  expect(writes()).toHaveLength(0);
+  expect(close).not.toHaveBeenCalled();
+  expect(dialogs()).toHaveLength(1);
+});
+
+it("saving on close finishes the create form even when create more was selected", async () => {
+  await openForm();
+  await act(async () => document.querySelector<HTMLElement>('[role="switch"][aria-label="create_more"]')!.click());
+  await rename();
+  await click("discard");
+  expect(dialogs()).toHaveLength(2);
+  await click("save_to_drafts", dialogs().at(-1)!);
+  await vi.waitFor(() => expect(writes()).toHaveLength(1));
+  await act(async () => writes()[0]!.answer(json(201, { ...draftOf("saved"), payload: { name: "Edited" } })));
+  expect(close).toHaveBeenCalledOnce();
+  expect(dialogs()).toHaveLength(0);
+});
+
+it("a workspace guest cannot save from either the direct action or close prompt", async () => {
+  await openForm();
+  await rename();
+  await act(async () => {
+    const previous = tab.nerve.respond;
+    tab.nerve.respond = (call) => {
+      if (call.path === "/api/v0/workspaces") call.answer(json(200, { data: [{ ...tab.workspace, role: 5 }] }));
+      else previous?.(call);
+    };
+    await tab.app.workspaceRoot.fetchWorkspaces();
+    tab.nerve.respond = previous;
+  });
+  expect(button("save_to_drafts")).toBeUndefined();
+  await click("discard");
+  expect(dialogs()).toHaveLength(0);
+  expect(close).toHaveBeenCalledOnce();
+  expect(writes()).toHaveLength(0);
 });

@@ -318,7 +318,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       }
     }
     if (!inSession()) return;
-    if (data?.id || !createMore) {
+    if (data?.id || !createMore || options?.closeAfterSave) {
       // This is the confirmed command's close, not a user dismissal of a pending form.
       finishClose();
     } else issueTitleRef.current?.focus();
@@ -363,6 +363,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     issueTitleRef: issueTitleRef,
     sourceIssueId,
     hasDraftSeed: props.isDraft && props.draftSeed !== undefined,
+    canSaveDraft: draftIssues.canRead(workspaceSlug),
     descriptionLoadState,
     onRetryDescription: () => setDescriptionAttempt((attempt) => attempt + 1),
     data: {
@@ -390,7 +391,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     <DraftIssueLayout
       {...commonIssueModalProps}
       isOpen={isOpen}
-      promptToSaveDraft={withDraftIssueWrapper}
+      promptToSaveDraft={withDraftIssueWrapper && draftIssues.canRead(workspaceSlug)}
       isBusy={() => !!submission.current}
       changesMade={changesMade}
       onChange={handleFormChange}

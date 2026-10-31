@@ -12,6 +12,7 @@ import {
   html,
   host,
   mountExisting,
+  mountNew,
   original,
   submit,
   type,
@@ -83,4 +84,38 @@ it("an explicit save of only an existing issue's migrated HTML uses boolean skip
   await act(async () =>
     writes()[0]!.answer(json(200, { ...original(), description_html: '<p data-id="migrated">Original</p>' }))
   );
+});
+
+it("migrationOnlyDoesNotPromptSave for a newly opened form", async () => {
+  await mountNew();
+  await click("migrate description");
+  expect(dirty()).toBe("false");
+  await click("discard");
+  expect(close).toHaveBeenCalledOnce();
+  expect(host.textContent).not.toContain("issue.draft.save_prompt.title");
+  expect(writes()).toEqual([]);
+});
+
+it("closing saves the user's edit together with migrated HTML as a draft without a migration flag", async () => {
+  await mountNew();
+  await type('textarea[aria-label="description"]', "<p>Actual edit</p>");
+  await click("migrate description");
+  await click("discard");
+  expect(host.textContent).toContain("issue.draft.save_prompt.title");
+  const inner = [...host.querySelectorAll('[role="dialog"]')].at(-1)!;
+  await act(async () =>
+    [...inner.querySelectorAll("button")].find((node) => node.textContent === "save_to_drafts")!.click()
+  );
+  await act(async () => until(() => writes().length === 1, "save edited draft"));
+  expect(writes()[0]).toMatchObject({
+    method: "POST",
+    path: "/api/v0/workspaces/ws/drafts",
+    body: {
+      project_id: "A",
+      payload: { name: "New", description_html: '<p data-id="migrated">Actual edit</p>' },
+    },
+  });
+  expect(writes()[0]!.body).not.toHaveProperty("skip_activity");
+  await act(async () => writes()[0]!.answer(json(201, draftOf("saved"))));
+  expect(close).toHaveBeenCalledOnce();
 });

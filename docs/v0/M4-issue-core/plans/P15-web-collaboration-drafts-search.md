@@ -117,11 +117,11 @@ make e2e
 **Files：** spec T7；既有 C/components/issues/issue-modal/{draft,close-policy,migration}.test.tsx；I14 页面和 collaboration-interactions 的 C9。
 **Interfaces：** 沿 CreateUpdateIssueModal discriminated props、onSubmit(formData,true)、DraftIssueLayout 单关闭决策、ModalCore 与 EditorRefApi readiness；无新全局弹窗开关。
 
-- [ ] Step 1：扩 `saveToDraftsFromCreateKeepsFormOnRefusal`、`innerEscapeOnlyClosesDraftPrompt`、`migrationOnlyDoesNotPromptSave`；含缺项目/空标题、描述加载失败、混合用户编辑、无重复保存。
-- [ ] Step 2：U core/components/issues/issue-modal/draft.test.tsx core/components/issues/issue-modal/close-policy.test.tsx core/components/issues/issue-modal/migration.test.tsx；对已有 P14 关闭/迁移规则先绿基线。
-- [ ] Step 3：补直接 Save to drafts 和关闭确认路径的实际遗漏，拒绝保留外层和编辑内容，确认后关闭正确宿主；不向普通 Issue 请求注入 draft 标志或 skip_activity。
-- [ ] Step 4：B stories/issue/collaboration-interactions.spec.ts --grep 'C9:'；真实 TipTap/portal 键盘及回焦、Back、权限切换；M10 放行未 ready 或传播内层 Escape，使错误保存/误关外层断言红后恢复。
-- [ ] Step 5：记录 A7；提交 `feat(M4/P15): 收口创建弹窗的草稿保存与关闭`。
+- [x] Step 1：扩 `saveToDraftsFromCreateKeepsFormOnRefusal`、`innerEscapeOnlyClosesDraftPrompt`、`migrationOnlyDoesNotPromptSave`；含缺项目/空标题、描述加载失败、混合用户编辑、无重复保存。
+- [x] Step 2：U core/components/issues/issue-modal/draft.test.tsx core/components/issues/issue-modal/close-policy.test.tsx core/components/issues/issue-modal/migration.test.tsx；对已有 P14 关闭/迁移规则先绿基线。
+- [x] Step 3：补直接 Save to drafts 和关闭确认路径的实际遗漏，拒绝保留外层和编辑内容，确认后关闭正确宿主；不向普通 Issue 请求注入 draft 标志或 skip_activity。
+- [x] Step 4：B stories/issue/collaboration-interactions.spec.ts --grep 'C9:'；真实 TipTap/portal 键盘及回焦、Back、权限切换；M10 放行未 ready 或传播内层 Escape，使错误保存/误关外层断言红后恢复。
+- [x] Step 5：记录 A7；提交 `feat(M4/P15): 收口创建弹窗的草稿保存与关闭`。
 
 ## Task 8：工作项命令按职责拆分（约 650–1150 行）
 

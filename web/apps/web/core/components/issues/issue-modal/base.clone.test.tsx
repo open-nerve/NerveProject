@@ -33,7 +33,9 @@ vi.mock("@/hooks/store/use-project", () => ({
   useProject: () => ({ getProjectByIdentifier: () => undefined, getProjectById: () => undefined }),
 }));
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => ({ getStateById: () => undefined }) }));
-vi.mock("@/hooks/store/workspace-draft", () => ({ useWorkspaceDraftIssues: () => ({ moveIssue: vi.fn() }) }));
+vi.mock("@/hooks/store/workspace-draft", () => ({
+  useWorkspaceDraftIssues: () => ({ moveIssue: vi.fn(), canRead: () => true }),
+}));
 vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => EIssuesStoreType.PROJECT }));
 vi.mock("@/hooks/use-issues-actions", () => ({
   useIssuesActions: () => ({ createIssue: boundary.create, updateIssue: boundary.update }),

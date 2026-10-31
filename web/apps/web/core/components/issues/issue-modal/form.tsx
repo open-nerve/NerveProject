@@ -48,6 +48,7 @@ export interface IssueFormProps {
   data?: IssueFormData;
   sourceIssueId?: string;
   hasDraftSeed?: boolean;
+  canSaveDraft?: boolean;
   descriptionLoadState?: IssueDescriptionLoadState;
   onRetryDescription?: () => void;
   issueTitleRef: React.MutableRefObject<HTMLInputElement | null>;
@@ -83,6 +84,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     data,
     sourceIssueId,
     hasDraftSeed = false,
+    canSaveDraft = false,
     descriptionLoadState = "ready",
     onRetryDescription,
     issueTitleRef,
@@ -108,6 +110,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   // states
   const [isMoving, setIsMoving] = useState<boolean>(false);
+  const [draftSubmitCount, setDraftSubmitCount] = useState(0);
 
   // refs
   const submitBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -139,8 +142,9 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     setError,
     getFieldState,
     resetField,
+    clearErrors,
   } = methods;
-  const formRef = useRefusedFocus<HTMLFormElement>(formState.submitCount);
+  const formRef = useRefusedFocus<HTMLFormElement>(formState.submitCount + draftSubmitCount);
   const refuse = useFormRefusal(["name", "project_id", "start_date", "target_date"] as const, {});
 
   const projectId = watch("project_id");
@@ -382,6 +386,22 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                       {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
                     </Button>
                   </div>
+
+                  {!data?.id && !isDraft && canSaveDraft && (
+                    <Button
+                      variant="secondary"
+                      type="button"
+                      size="lg"
+                      disabled={isSubmitting || isPending || descriptionLoadState !== "ready"}
+                      onClick={async () => {
+                        clearErrors();
+                        await handleFormSubmit(getValues(), true);
+                        setDraftSubmitCount((count) => count + 1);
+                      }}
+                    >
+                      {t("save_to_drafts")}
+                    </Button>
+                  )}
 
                   {moveToIssue && (
                     <Button
