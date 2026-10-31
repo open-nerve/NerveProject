@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T4 完成，T5 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T5 完成，T6 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -119,3 +119,18 @@ A3 与 T3 五步完成；继续 T4。
 首轮页面使用不存在的 common.search 键，已改既有 search；后续测试修正为等待确认后入口可用再按 Space，以及创建 Done 状态满足原归档前置，不改产品业务。全页无嵌套断言还发现 3 处既有顶栏/项目切换嵌套，T4 限定评论/回应实际拥有的控件，三处仍留最终范围核对，不宣称全应用清零。两条新测试循环 lint 告警已改为独立 Promise.all。
 
 最终产品/测试输入 `e0290810a5795fda82b0229d2f5df13deb00544a5021b3c6aa511661209a8348`；程序 `bc29a3901f4d6be0b6663e8db851bf230981dd5483711a54a43a3f1d326b3e4c`。Web/E2E 类型与 7 文件 oxlint 零告警通过；原始运行、失败、变异及恢复见 t4-*.json、m05-* 和 t4-receipt.json。A4 与 T4 五步完成，T5 接续完整七门禁检查点；尚未做阶段整审或合并。
+
+
+### T5：描述历史、确认还原与 Markdown 复制
+
+版本读资源和 restoreDescription 确认链保持；共享 modal 补真实 ModalTitle。复制改从 ready 的编辑器取 getMarkDown，交现有 useCopyText 等待并由 hook 唯一报告结果；复制等待中不能再次发送。公共 EditorRefApi 的 void 复制方法、M7 IntakeDescriptionVersions 的原 props/旧 DTO 适配与恢复包装不变，没有把 M7 页面提前验收。
+
+真实 modal 消费者先观察 4 红/16 绿（缺少标题、提前/重复成功反馈与未 ready 复制）；局部修复后 20/20。扩版本资源和懒编辑器回归共 43/43。M06 提前关闭、旧版本替换当前选择及 M07 复制前假成功三组变异分别触发真实断言失败，源码逐字节恢复，恢复后 43/43。
+
+I13 Chromium 4/4（原 API 1、page 3）：真实分页/选中历史、TipTap 输出精确 `# Original\n\nKeep **bold**.\n`、持有 clipboard 只写一次且确认前零反馈；403 还原保留对话和内容，随后双击只发一次普通 description_html PATCH，Escape 不关等待对话，确认后关闭且回焦。600 秒内同作者合并后版本 id 集合未增加，不承诺一次还原必新建版本。归档页列表/详情各自 500 后可重试、只读无还原；访客可读自己的可见详情，隐藏历史入口且零历史请求。仅精确预期拒绝被记录，其余网络/CSP/控制台守卫保持。
+
+首轮页面 1 绿/3 红：51 条历史前置与 P7 保留最近 20 的 worker 竞态，最旧详情真实 404；改为 3 条真实历史、浏览器 list 请求转发合法 limit=2，所有回答仍来自真实后端，不停 worker 或造响应。该页面验证分页消费，默认上限和保留策略沿既有 API/服务端测试。另两例因为只读标题没有 textbox，扩既有 openIssueDetail 可选只读标题断言，默认可编辑断言不变。第二轮 3 绿/1 红来自 portal 根零尺寸，改核具名 dialog 唯一性、实际内容可见与焦点在内；没有改产品或加延迟。
+
+最终聚焦输入摘要 `f957ac0ead30df123a8c33e052c58366b72a8b18338db925d17774a7cf7a49ad`，程序 `44134c4ca2909d671e482bca8cccdd40254485ba49ddcb66601ae9007048f102`。检查点七项完整门禁最终均 exit 0：Go 51 个包通过、16 个无测试包（非 verbose，逐测试 skip 未知）；Web 静态 54/54（36 缓存），knip 通过；无缓存 Vitest 286 文件/3020 项和 Node 5 项通过，默认 E2E 248/248（246 Chromium、2 Firefox，0 skip）。首轮 F4 唯一失败是警告实测 112 低于旧 cap 114，同提交下调到 112 后从 F4 继续；F1–F3 的源码输入未变，逐文件核对见 t5-gate-input-equivalence.json，没有重跑服务端或冒称同一摘要。后四门禁输入 `f7a21a156d9d0538bf51f1222a9f924b86e40f483206fc88700ae7166d2509d6`，完整 E2E 程序 `a39471da10293ddc47720e59c6a2608b50715005fca0a7070e84e7268479aada`。默认结果另存 t5-full-e2e-results 并有 manifest，防后续覆盖。所有原始输出/变异/恢复在 t5-*.json/log、m06-*/m07-*、t5-mutations.json，检查点 commit 与 CI 在 t5-receipt.json 后置记录。当前阶段整审尚未执行、不合并。
+
+A5 与 T5 五步完成，继续 T6。准确提交及分支 CI 后置记录，不以本地验证代替远端结果。

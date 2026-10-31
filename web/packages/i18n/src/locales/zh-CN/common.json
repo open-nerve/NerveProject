@@ -517,7 +517,9 @@
     "next_version": "下一版本",
     "last_edited_by": "最后编辑者",
     "previously_edited_by": "之前编辑者",
-    "edited_by": "编辑者"
+    "edited_by": "编辑者",
+    "title": "描述历史",
+    "markdown_copied": "Markdown 已复制到剪贴板。"
   },
   "accordion_navigation_control": "折叠侧边栏导航",
   "horizontal_navigation_bar": "标签式导航",

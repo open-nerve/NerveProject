@@ -103,7 +103,7 @@ function render(scopeKey = "one") {
   );
 }
 const click = (selector: string) => act(async () => container.querySelector<HTMLButtonElement>(selector)!.click());
-it("switching quickly to a newer choice never lets a late old description cover it", async () => {
+it("historyRefusalStaysOpenAndLateReadCannotReplaceSelection: a late old description never covers the newer choice", async () => {
   await render();
   await click('[data-version="a"]');
   await click("[data-next]");

@@ -95,11 +95,11 @@ make e2e
 **Files：** spec T5；既有 C/components/core/description-versions/{root,modal}.test.tsx、C/components/issues/issue-detail/description-versions.test.tsx；E/stories/issue/i13-description-history.spec.ts。
 **Interfaces：** 现有 readDescription/handleRestore Promise 和 restoreDescription 协调；EditorRefApi.getMarkDown():string + useCopyText(text,message):Promise<void>，不修改公共 ref。
 
-- [ ] Step 1：写 `historyRefusalStaysOpenAndLateReadCannotReplaceSelection`、`restoresViaConfirmedPatch`、`markdownCopyWaitsAndReportsRefusalOnce`；核列表续页/详情重试/无新版本承诺及 M7 展示适配原调用。
-- [ ] Step 2：U core/components/core/description-versions/root.test.tsx core/components/core/description-versions/modal.test.tsx core/components/issues/issue-detail/description-versions.test.tsx；新增 ModalTitle 名字/无正 tabIndex/未 ready 不复制断言。
-- [ ] Step 3：补 ModalTitle、局部交互和版本复制，删除调用 void copyMarkdown 的假成功分支；还原沿原写协调，不额外创建版本或清空未确认输入。
-- [ ] Step 4：B stories/issue/i13-description-history.spec.ts --grep 'I13.*page'；M06 先关窗/错版本旧答，M07 复制前报成功分别被测试捕获，恢复；含 archive/guest/history list failure、恢复后描述确认。串行 F。
-- [ ] Step 5：记录 A5、共享 M7 仅合同兼容；提交 `feat(M4/P15): 完成描述历史的可访问还原与复制`。
+- [x] Step 1：写 `historyRefusalStaysOpenAndLateReadCannotReplaceSelection`、`restoresViaConfirmedPatch`、`markdownCopyWaitsAndReportsRefusalOnce`；核列表续页/详情重试/无新版本承诺及 M7 展示适配原调用。
+- [x] Step 2：U core/components/core/description-versions/root.test.tsx core/components/core/description-versions/modal.test.tsx core/components/issues/issue-detail/description-versions.test.tsx；新增 ModalTitle 名字/无正 tabIndex/未 ready 不复制断言。
+- [x] Step 3：补 ModalTitle、局部交互和版本复制，删除调用 void copyMarkdown 的假成功分支；还原沿原写协调，不额外创建版本或清空未确认输入。
+- [x] Step 4：B stories/issue/i13-description-history.spec.ts --grep 'I13.*page'；M06 先关窗/错版本旧答，M07 复制前报成功分别被测试捕获，恢复；含 archive/guest/history list failure、恢复后描述确认。串行 F。
+- [x] Step 5：记录 A5、共享 M7 仅合同兼容；提交 `feat(M4/P15): 完成描述历史的可访问还原与复制`。
 
 ## Task 6：个人草稿页面与发布（约 850–1450 行）
 
