@@ -232,3 +232,11 @@ P14 分支 `codex/m4-p14`，worktree `.codex/worktress/codex/m4-p14`，基线为
 验收提交 `b7d1f0c2`（含最终 CI 暴露的 I22 路由前置、矩阵暴露的 I9 就绪前置修正和完整本地复验），正式 [re-21](../../reviews/re-21-M4P14整体审核.md)、[阶段 review §9–14](../M4-issue-core/reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[spec](../M4-issue-core/specs/P14-web-issue-detail.md)、[plan](../M4-issue-core/plans/P14-web-issue-detail.md)。最终文稿的 SHA/run/attempt/jobs 以实施根 `final-delivery.json` 后置核准，未核准不交付；旧产品 CI 不替代该门。
 
 负责人当前要求先不合并。保留分支、worktree、准备与实施两处证据；等下一步安排。以后获准合并仍用 --no-ff，main CI 全绿后归档逐 hash 验证并正常清理。P15 尚未准备/实施；它承接时间线、评论、表情、描述历史、完整草稿、搜索/命令面板、四处剩余复制及版本 Markdown 复制。M7 slow-loading Discard 的既存关闭策略已明确交接；M4 总验收及顶层输入仍未关闭。
+
+## 23. 当前接续：P14 完成、P15 文档预检（2026-10-31）
+
+P14 原分支 ec5f38b5、分页与 peek 标签前置修复 9a86211a 均已按授权 --no-ff 合入 main 7a81ea18；[准确 main CI](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务成功。原工作树、修复工作树与准备证据逐 hash 归档和删除后复验完成，两个远端/本地分支及 worktree 已正常清理。主目录仍 main，详细记录见 [P14 review §16](../M4-issue-core/reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31)。
+
+P15 分支 codex/m4-p15，worktree .codex/worktress/codex/m4-p15，基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9。[spec](../M4-issue-core/specs/P15-web-collaboration-drafts-search.md)、[plan](../M4-issue-core/plans/P15-web-collaboration-drafts-search.md)、[预检记录](../M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md)、[deep-review](../../reviews/re-23-M4P15预检审核.md) 文档预检通过，16 Task/80 步及 16 A 均未实施，phase 仍 M4/P14。独立 builder 与主控三视角只核文档合同；没有安装 P15 依赖或运行产品测试。准备证据在主目录 .superpowers/sdd/P15-preparation-20261031/。
+
+等负责人授权后从 T1 推进；阶段末 deep-review、局部问题完整修复复审，先不合并。P16、M4 §14、总体设计 9.4、输入 handoff 顶部关闭和 M5–M8 最终 M4-closeout 均仍待后续。

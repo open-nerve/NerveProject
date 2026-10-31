@@ -1,6 +1,6 @@
 # M4/P14 详情与弹窗：实施、整审与交付记录
 
-日期：2026-10-31。状态：**原分支已授权合入 main，集成 CI 的测试前置修复及最终 main 核准中（§15）**。基线 `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；[spec](../specs/P14-web-issue-detail.md)、[plan](../plans/P14-web-issue-detail.md)、[文档预检](../../../reviews/re-20-M4P14预检审核.md)。§1–7（含“未实施”表）仅保留预检历史；§8 是逐任务历史，实施验收见 §9–14，后续集成事实以 §15 起为准。phase 已进入 M4/P14。
+日期：2026-10-31。状态：**P14 已完成授权集成、准确 main CI、证据归档与两分支/worktree 清理（§16）**。基线 `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；[spec](../specs/P14-web-issue-detail.md)、[plan](../plans/P14-web-issue-detail.md)、[文档预检](../../../reviews/re-20-M4P14预检审核.md)。§1–7（含“未实施”表）仅保留预检历史；§8 是逐任务历史，实施验收见 §9–14，后续集成事实以 §15 起为准。phase 已进入 M4/P14。
 
 ## 1. 前置与方法
 
@@ -377,6 +377,18 @@ I22 修正后的首轮显式矩阵，Chromium 44/44、Firefox 43/44。I9 在重�
 追加三视角复审和原始依据见 re-22；补前置后限速 3/3，最终无插桩静态 54/54、knip、完整 E2E 238/238（build 加运行 66.875 秒），三回执 ci-fix-label-* 绑定同一输入 a4e577d542c0ed0bb77b378c8b4c846671ee2dd65260cd4d943a3aa234ba2ce2。未变输入复用证明追加 ci-fix-label-input-reuse.json。W11 未修改，两轮失败、浏览器重跑和新标签报告均保留。
 
 全部集成证据在主目录 `.superpowers/sdd/P14-integration-20261031/`。修复提交推送后，ci-fix-delivery.json 后置核准确修复 HEAD 与分支 CI；随后在既有授权内 --no-ff 合并 main，并以 main-ci-success-receipt.json 核准确 main。只有 main 三任务全绿、原 P14 与修复 worktree 的材料均归档逐 hash 复验后，才能正常清理两个工作树/分支。准备 P15 的文档不得作为其产品实现。
+
+## 16. 授权集成、main CI 与归档清理（2026-10-31）
+
+原 P14 分支 ec5f38b5 先经 --no-ff 合并为 7c978546；其两次真实失败及 I19/I3 根因修复见 §15。修复分支先提交 f93c6968，[CI 41199938927](https://github.com/open-nerve/NerveProject/actions/runs/41199938927) 的分页均通过；attempt 1 仅 06 已知 W11 快捷键失败，经浏览器重跑后 W11 通过，attempt 2 另一个 I19 标签准备因编辑器挂载位移而失败，两次均 237 通过/1 失败。追加真实编辑器就绪前置并复审后，最终修复提交 `9a86211ac3492104e7453ad8f21110052f88db8b` 的 [CI 41203359318](https://github.com/open-nerve/NerveProject/actions/runs/41203359318) attempt 1 三任务成功，才再次 --no-ff 合并为 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`。全部失败摘录、下载报告、公开 API 原件及重跑截图留在归档根，W11 未修改。准确 [main CI 41205272945](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 的 server/web/e2e 全部成功，本地 main 与 origin/main 一致且干净。
+
+原分支的完整验收记录不变：服务端三项输入 09525b31、Web 四项输入 b7d1f0c2、显式三浏览器各 44；最终原分支 ec5f38b5 CI 41194458572 attempt 1 全绿。集成修复只改三个 E2E 文件和评审文档，最终本地默认 238/238、静态 54/54 与 knip 通过；未变输入的复用证明和新 CI 各自留原始记录，不混称同一轮运行。
+
+先验证原 retained manifest 的 5,281 份实施证据和 24 份准备材料，再盘点整个原工作树，保留 5,460 文件/848,684,576 字节；修复工作树另保留 151 文件/1,417,044 字节；原准备目录保留 24 文件/227,764 字节。包括 ignored 台账、失败与成功日志、trace/截图/数据库、审查、变异、.turbo 以及空证据目录；未识别路径为 0，仅排除可按锁文件/源码重建的依赖和构建产物。原件全部在删除前逐 hash 与副本比对，删除后副本再次核验。
+
+归档根为主目录 `.superpowers/sdd/P14-integration-20261031/`：原工作树在 worktree-evidence/，修复工作树在 ci-fix-archive/worktree-evidence/，准备在 preparation-evidence/P14-preparation-20261031/；本次 main CI 和限速诊断原件直接位于归档根。archive-manifest.json、ci-fix-archive/archive-manifest.json、preparation-archive-manifest.json 记录逐文件 hash；cleanup-receipt.json 记录清理前 ancestry/远端零独有提交、正常删除两个远端/本地分支及工作树、删除后复验。未用强制删除或 stash/clean/reset。
+
+P14 阶段已完成。M4 仍进行中；P15 只准备 spec/plan/预检，P16 及真正收尾未开始。M1/M2/M3 输入顶部仍 open，M5–M8 的最终 M4-closeout 留总收尾，不以阶段合并代替。
 
 ## 附录：全部实际裁定（台账原顺序）
 

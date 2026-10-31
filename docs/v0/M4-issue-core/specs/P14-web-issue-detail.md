@@ -1,6 +1,6 @@
 # M4/P14 详情、创建弹窗、父子、关联与链接
 
-日期：2026-10-31。状态：**实现与本地验收、整审修复完成；最终分支 CI 按后置回执核准，先不合并**。基线为 P13 合并 main `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；分支 `codex/m4-p14`，worktree `.codex/worktress/codex/m4-p14`。遵循 [M4 设计 §12/P14](../M4-design.md)、[推进方法](../../claude_to_gpt/02-method.md)和[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)。负责人已授权从 T1 实施，阶段末 deep-review、局部修复复审后保留分支，不自动合并。
+日期：2026-10-31。状态：**P14 已完成，授权合并、main CI 及归档清理见 review §16**。基线为 P13 合并 main `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；分支 `codex/m4-p14`，worktree `.codex/worktress/codex/m4-p14`。遵循 [M4 设计 §12/P14](../M4-design.md)、[推进方法](../../claude_to_gpt/02-method.md)和[硬规则](../../claude_to_gpt/03-rules-and-pitfalls.md)。上述分支/worktree 为历史实施位置，已按负责人后续授权正常清理；最终集成与证据位置见 [review §16](../reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31)。
 
 ## 1. 目标
 

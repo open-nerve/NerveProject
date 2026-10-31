@@ -2399,7 +2399,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 
 ### P14 `web-issue-detail`：详情、创建弹窗、父子、关联、链接（16 个任务）
 - **目标**：工作项的详情页和浮层、创建弹窗、子工作项、关联、链接、删除；选父工作项经 `issue-search`；访客的边界；编辑器的定点修改。
-- **准备入口**：[spec](specs/P14-web-issue-detail.md)、[plan](plans/P14-web-issue-detail.md)、[预检记录](reviews/P14-web-issue-detail-review.md)。基线 main 8bb4bbcb；实现、整审修复及本地验收完成，最终交付按 review §14 的准确分支 CI 后置回执核准，先不合并。
+- **准备入口**：[spec](specs/P14-web-issue-detail.md)、[plan](plans/P14-web-issue-detail.md)、[预检记录](reviews/P14-web-issue-detail-review.md)。基线 main 8bb4bbcb；已完成授权集成至 main 7a81ea18，准确 CI 全绿与归档清理见 [review §16](reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31)。
 - **已有输入**：P11 已完成原生 id 跳转、按编号读取、boolean 描述保存与主要宿主生命周期；P12 已完成 ExistingIssuesListModal 和表格子项列的 browse 地址；P13 已完成归档只读。P14 验真实消费者和剩余缺口，不重复宣称删除或重写。
 - **任务**：
   1. 项目 `projects/:projectId/issues/:issueId` 原生跳转与 `browse/:workItem` 按编号/useSessionSWR 回归；旧 loader/service/收集箱跳转 P11 已删。补包含页头与正文的共同身份，换项/权限失效不留旧弹层。
@@ -2421,8 +2421,9 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **关闭**：M1-P2 交接（撤销再重做）；M1-P4 交接（弹窗的挂载、`#sub-issues`）；M1 收尾交接（`isMigrationUpdate`、Markdown 序列化）；M2 交接第 7 节、第 8 节（标注块、`worker-src`）、第 11 节的详情一侧、第 12 节的 3 处实例（跳转 1、`projectIssuesSearch` 2）；M3 交接第 6 节的工作项页面的 key、第 7 节的弹窗、名字、`tabIndex`（`parent-issues-list-modal.tsx`、`label-select.tsx`）、嵌套的按钮、字段的提示、弹窗里的列表、列表里不是选项的控件、嵌套的弹窗、描述编辑器的 Escape，第 8 节的删除确认框。
 - **完成线**：I1、I2、I8、I9、I10、I17、I20、I22 的页面版本通过（选择器经 `issue-search` 的排除）；S2 按身份打开详情；C3 的详情一侧、C4、C5、C10、C11 通过。
 
-### P15 `web-collaboration-drafts-search`：时间线、评论、表情、描述的历史、草稿、搜索、命令面板（15 个任务）
+### P15 `web-collaboration-drafts-search`：时间线、评论、表情、描述的历史、草稿、搜索、命令面板（16 个任务）
 - **目标**：时间线和评论、表情、描述的历史；草稿页；搜索；命令面板；自动归档的显示。
+- **准备入口**：[spec](specs/P15-web-collaboration-drafts-search.md)、[plan](plans/P15-web-collaboration-drafts-search.md)、[预检记录](reviews/P15-web-collaboration-drafts-search-review.md)、[deep-review](../../reviews/re-23-M4P15预检审核.md)。基线 main 7a81ea18，文档预检通过，暂不实现；phase 保持 M4/P14。原粗任务 8 拆为工作项命令和主题/创建路由，后续顺延，原完成线保持。已有 actor/source/草稿数据层与无正 tabIndex 的位置只回归，不重复实现。
 - **任务**：
   1. 时间线：`IssueUser` 与 `IssueCreator` 合并，执行者为空显示站点名，`archived-at.tsx` 的特判、`default.tsx` 的来源一支删除；`git grep` 核对没有按邮箱或名字猜测系统用户的代码（M1-P5 交接）；I12 的页面版本。
   2. 动态的筛选：嵌套的按钮（`activity-filter.tsx`）、`helper.tsx` 的两条 oxlint。
@@ -2431,14 +2432,15 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   5. 描述的历史（`ModalTitle`、去掉 `tabIndex={1}`、一条 oxlint）和还原；I13 的页面版本。
   6. 草稿页：列表、编辑、删除、移到项目；草稿页的 3 个只读工作区的文件改用 `useRouteWorkspace()`；I14 的页面版本。
   7. 创建弹窗的"存为草稿"。
-  8. 命令面板：工作项的命令拆开（`commands.ts`）；主题命令在应答成功之后才应用（M2 交接第 9 节）；`power-k/config/creation/command.ts` 读路由的 slug；`workspace-address-route` 的文件正则放宽为 `\.tsx?$`、加上这 4 个文件。
-  9. 搜索：命令面板经 `issue-search`，项目在列表里过滤，`WorkspaceService.searchWorkspace` 的模块级实例消失；I18 的页面版本。
-  10. `WorkspaceService` 的搜索方法、工作区搜索类型和参数删除；ProjectService 在 P14 最后两个读者迁移后即可删，本段核零残留，不留无消费者文件等待本段。
-  11. I16 的页面版本（时钟）。
-  12. 其余的复制改经 hook（`create-issue-toast-action-items.tsx`、`issue-activity/helper.tsx`、快捷操作的 `helper.tsx`、命令面板），`copy-hook` 的例外全部删除。
-  13. C6（含时间线、表情、描述的历史）、C7、C8、C9 的草稿。
-  14. 改到的文件的死成员、oxlint。
-  15. review。
+  8. 命令面板的工作项命令按复制/更新/删除职责拆分，消费原生 IssueUpdate 和既有确认写、宿主权限；复制直接用已有 hook。
+  9. 主题命令确认且同会话后才应用，失败按 code 提示；创建命令显式路由 slug，workspace-address-route 后缀 .tsx?$，覆盖草稿三个文件与 command.ts 四个正例，不放宽 content。
+  10. 搜索（单 useIssueSearch debounce，服务端结果不二次过滤；项目目录显式 workspace 会话键）：命令面板经 `issue-search`，项目在列表里过滤，`WorkspaceService.searchWorkspace` 的模块级实例消失；I18 的页面版本。
+  11. `WorkspaceService` 的搜索方法、工作区搜索类型和参数删除；ProjectService 在 P14 最后两个读者迁移后即可删，本段核零残留，不留无消费者文件等待本段。
+  12. I16 的页面版本：新 clock 进程/新 baseURL 重新登录，业务写与新进程之后的 fresh attempt；SQL 只查询断言。
+  13. 版本 Markdown 用 getMarkDown + useCopyText，保留公开 void ref；复制 hook 独自反馈结果，C8 含真实 LAN HTTP。其余的复制改经 hook（`create-issue-toast-action-items.tsx`、`issue-activity/helper.tsx`、快捷操作的 `helper.tsx`、命令面板），`copy-hook` 的例外全部删除。
+  14. C6（含时间线、表情、描述的历史）、C7、C8、C9 的草稿。
+  15. 改到的文件的死成员、oxlint。
+  16. review。
 - **关闭**：M1-P3 交接的收集箱来源的一支（`default.tsx`；取值转交 M7）；M1-P5 交接（自动归档的显示、没有猜测的代码）；M2 交接第 8 节的表情回应、第 9 节、第 11 节的余下部分、第 12 节（最后一处实例，`git grep` 的门禁）；M3 交接第 5 节的旧 `ProjectService`、`WorkspaceService`、搜索的类型，第 7 节的每一行的控件、评论的嵌套按钮，第 8 节的复制、只读工作区的 4 个文件、3 个文件的 oxlint、`commands.ts`。
 - **完成线**：I11–I14、I16、I18 的页面版本和 I20 的评论通过；`copy-hook` 没有 M4 的例外；`git grep` 不再找到 M4 的 13 处模块级实例；C6–C8 和 C9 的草稿通过。
 
@@ -2591,8 +2593,8 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P11 `web-detail-data` | 详情一侧的数据层（15） | **已完成**：[spec](specs/P11-web-detail-data.md)、[plan](plans/P11-web-detail-data.md)、[review§15](reviews/P11-web-detail-data-review.md#15-授权合并main-ci与归档清理2026-10-30)。交付42afa24f、main ce3c39ab；准确分支及main CI全绿，证据归档/清理完成；列宽按已裁定A |
 | P12 web-list-pages | 列表、看板、表格、日历（16） | **已完成**：最终e6d1329b授权--no-ff合并main ff89d0a1；[准确main CI41087022719](https://github.com/open-nerve/NerveProject/actions/runs/41087022719)三任务成功；1786份实施/运行证据及14份准备证据归档逐hash通过，分支/worktree清理后再次复验。见[review§28](reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)、[整审](../../reviews/re-17-M4P12整体审核.md) |
 | P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **已完成**：最终分支 c57bbe6b 经 --no-ff 合并 main 8bb4bbcb；[main CI 41163365163](https://github.com/open-nerve/NerveProject/actions/runs/41163365163) attempt 2 三任务全绿。2,133 份运行证据与 11 份准备材料归档复验后分支/worktree 正常清理，见 [review §15](reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31) |
-| P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | **实现/本地验收与整审完成，待授权合并**：[spec](specs/P14-web-issue-detail.md)、[plan](plans/P14-web-issue-detail.md)、[review §9–14](reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[整审](../../reviews/re-21-M4P14整体审核.md)。验收输入 b7d1f0c2（含 I22 路由及 I9 编辑器就绪前置修正），七项分层门禁及三浏览器各44通过；准确最终文稿CI以final-delivery.json核准，未核准不交付。分支 codex/m4-p14、main基线8bb4bbcb保留；M4总体仍进行中 |
-| P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述的历史、草稿、搜索、命令面板（15） | 未开始 |
+| P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | **已完成**：原分支 ec5f38b5 与集成测试修复 9a86211a 均 --no-ff 合入 main 7a81ea18；[main CI 41205272945](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务成功，两个分支/worktree 已归档复验并清理。见 [review §15–16](reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31) |
+| P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述历史、草稿、搜索、命令面板（16） | **文档预检通过，尚未实施**：[spec](specs/P15-web-collaboration-drafts-search.md)、[plan](plans/P15-web-collaboration-drafts-search.md)、[review](reviews/P15-web-collaboration-drafts-search-review.md)、[deep-review](../../reviews/re-23-M4P15预检审核.md)。分支 codex/m4-p15，基线 7a81ea18，待负责人授权从 T1 开始 |
 | P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | 未开始 |
 | 收尾 `closeout` | 交接、同步核对、浏览器核对 C12、规模和性能的数字（14） | 未开始 |
 
@@ -2631,7 +2633,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | I4 | S1 必须在设计时定下：§16 的"手写的 pgx 查询"违反 `TestModulesRunSQLOnlyThroughSQLC`；结果要写进 3.16、11.5、§16 | 0.3 记 S1、S2 的结果；3.16 写下可行的形状、`nil` 切片的规则、空的一页的总数、规模的目标（约 2 万）、连接的参数由 nerve 设（P5 的任务和读回的测试）；§16 删去那条退路；11.5 记结论；M8 的交接只核对连接的参数 |
 | I5 | `listChange` 让看板最常见的一步（拖进没有载入完的列）变成整个列表的重取 | 3.22 按修改前的那一份和确认的应答判断成员关系，四种组合都确知地加减；只在 `before` 不知道、本地判断不了的筛选（和取数与修改重叠时的版本判断）标 `stale`；写成 vitest 的表（9.5） |
 | I6 | 经接口写入的描述没有块 id，第一个打开它的成员触发的保存在逐字比较下算一次修改 | 选 b：`skip_activity` 的保存在纯文本和提及的集合都不变时"内容不变"（3.7）；剩下的口子（只改格式不留痕迹）登记差异（4.17）、写进 8.2；S3 移到 P4，样例含经接口写入的 HTML 和编辑器的重新序列化（0.3、9.1）；§16 改写这一行 |
-| I7 | `ExistingIssuesListModal` 是 M4 的选择器，第一稿当成 M6 的，到 P15 才让它编译；选父工作项的排除也在 P15 | 7.5 写明两个选择器经 `issue-search`（`for=parent`、`for=sub_issue`、`for=relation`），在 I8、I9 的页面版本所在的 P14 改接；它的正的 `tabIndex` 归 M4；M6 只留迭代、模块的调用方；7.1、P14 的任务 6、7，P15 的任务 10 改为删除旧 service 和类型；13.1 的第二张表、13.2 的 M6 一行 |
+| I7 | `ExistingIssuesListModal` 是 M4 的选择器，第一稿当成 M6 的，到 P15 才让它编译；选父工作项的排除也在 P15 | 7.5 写明两个选择器经 `issue-search`（`for=parent`、`for=sub_issue`、`for=relation`），在 I8、I9 的页面版本所在的 P14 改接；它的正的 `tabIndex` 归 M4；M6 只留迭代、模块的调用方；7.1、P14 的任务 6、7，P15 原粗任务 10（现 T11）删除旧 service 的搜索成员和类型；13.1 的第二张表、13.2 的 M6 一行 |
 | I8 | 把 `WorkItemLevelModals` 移到项目的 key 之下会让 `/browse/…`、首页、草稿页、个人主页没有创建、删除的弹窗 | 7.1 改为宿主留在原处，在 `projectId ?? workItemIdentifier` 改变时和卸载时关上开关，后退的检查照旧；P11 的任务 10；9.5 |
 | M1 | 约定七的理由漏了最坏的后果（活的关联行指向已删除的工作项），交错里没有"加关联与删除对方的项目" | 3.5 的约定七写三种后果（S5 的 E5、E5b）；加交错 23（P3）；11.2；交错数改为 23（9.3、第 14 节） |
 | M2 | 版本的保留与清理可以在同一批行上死锁 | 3.14、3.5（取锁表和后台写的一条）、3.21：保留只删未删除的工作项的未删除的版本，软删除的只归清理；9.3 |
@@ -2648,7 +2650,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | M13 | 11.10 的另一种做法不全；改为词汇在 `issue/domain`，`project` 经端口检查 | 控制者裁定改做法：3.17、11.10 重写（另一种做法是放进 `shared`，不取的理由）；3.3、6.1、6.2、6.3、6.5、6.6 加 `IssueListSettings`；4.15、5.2、9.1、3.23 的 P5 一行、P5 的任务 2、13.2 的 M6 一行 |
 | M14 | 13 处模块级实例分在三个 Phase，各处说法不一 | 7.1 定一个分配（P11 7、P13 1、P14 4、P15 1），`git grep` 的门禁在 P15；13.1、各 Phase 的任务和完成线照它 |
 | M15 | 关键词守卫的 `until` 两处差一 | 7.9 写明规则；改 `phase` 的提交同时改到期的 `until`，`/user-properties/` 的改为 `M4/P11`；3.17、第 12 节约束 6、P1 的任务 1 |
-| M16 | 只读工作区的文件是 4 个还是 3 个；`command.ts` 没有任务，规则的正则不含 `.ts` | 7.4、7.9：4 个，`workspace-address-route` 的文件正则放宽为 `\.tsx?$`；P15 的任务 8 |
+| M16 | 只读工作区的文件是 4 个还是 3 个；`command.ts` 没有任务，规则的正则不含 `.ts` | 7.4、7.9：4 个，`workspace-address-route` 的文件正则放宽为 `\.tsx?$`；P15 原粗任务 8，现工作项命令 T8、主题与四文件路由 T9 |
 | M17 | 弹窗的 `isMigrationUpdate` 针对的是编辑已有的工作项、打开草稿，不是新建；C4 没有这一项 | 3.7、7.6、9.5 写明两种情形；C4 加上；P14 的任务 4 |
 | M18 | 描述的历史、草稿的游标没有载荷和篡改的测试 | 8.6；P4 的任务 7、P8 的任务 2（另一个人的草稿的 `id` 不泄露）；13.1 的 M2 第 2 节一行 |
 | M19 | 13.1 的"`DetachLabel` 按 `id` 先锁"在 3.5、P1 里没有依据 | 3.5 写明 B 之下每个写 `issue_labels` 的事务都持项目 N，不需要预锁；13.1 去掉那一句 |
