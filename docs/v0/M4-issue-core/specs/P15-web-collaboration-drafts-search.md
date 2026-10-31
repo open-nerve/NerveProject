@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索
 
-状态：文档预检通过，尚未实施。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。本次只完成 spec、plan 与预检；产品验收和实现步骤全部保留未勾。
+状态：文档预检通过，已授权实施；T1 完成，继续 T2。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。按计划连续实施；验收项按实际证据勾选，阶段末 deep-review 后先不合并。
 
 ## 1. 目标
 
@@ -115,9 +115,9 @@ I16 页面使用 clockTest/ClockWorld 独立数据库；推进业务时钟后取
 
 ## 4. 验收标准
 
-下列均是未来实施验收，本次预检不勾选。
+下列按逐 Task 实际证据勾选；三浏览器和整分支交付在后续对应 Task 验收。
 
-- [ ] A1：T1 的 actor/null/fallback 与无猜测扫描，I12 全页/增量/重排/关闭重开页面通过。
+- [x] A1：T1 的 actor/null/fallback 与无猜测扫描，I12 全页/增量/重排/关闭重开页面通过。
 - [ ] A2：T2 动态过滤/排序有名字、键盘与回焦正确、无嵌套按钮，至少留一个过滤项；三点名文件 lint 由各 owning Task 收口。
 - [ ] A3：T3 作者编辑/作者及管理员删除、访客自己项评论、空/IME/重击/拒绝/晚答有组件和 I11/I20 页面证据。
 - [ ] A4：T4 两类表情确认/仅删自己/重复拒绝/组合码点与归档只读、实际 picker CSP/本站资源通过。
@@ -157,4 +157,4 @@ P16 负责全局死成员/no-shadow/守卫终态及 C12 准备；M4 真正收尾
 
 ## 附录 A：准备与实施证据界线
 
-准备目录（主项目根）：`.superpowers/sdd/P15-preparation-20261031/`。记录实际源码/测试/设计阅读范围、路径/合同/要求映射、builder-check 与 deep-review 文档预检；未来执行证据放 P15 worktree 的 `.superpowers/sdd/P15-web-collaboration-drafts-search/`。P14 main CI 仅是本期基线，不能当作上述 A1–A16 的 P15 验收。准确准备提交和后置收据由预检完成时补记。
+准备目录（主项目根）：`.superpowers/sdd/P15-preparation-20261031/`。记录实际源码/测试/设计阅读范围、路径/合同/要求映射、builder-check 与 deep-review 文档预检；执行证据放 P15 worktree 的 `.superpowers/sdd/P15-web-collaboration-drafts-search/`。P14 main CI 仅是本期基线，不能当作上述 A1–A16 的 P15 验收。准确准备提交为 3d73aa68，后置准备收据已核准；实施进度及局部修复见阶段 review §9。

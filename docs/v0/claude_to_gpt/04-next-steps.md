@@ -240,3 +240,9 @@ P14 原分支 ec5f38b5、分页与 peek 标签前置修复 9a86211a 均已按授
 P15 分支 codex/m4-p15，worktree .codex/worktress/codex/m4-p15，基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9。[spec](../M4-issue-core/specs/P15-web-collaboration-drafts-search.md)、[plan](../M4-issue-core/plans/P15-web-collaboration-drafts-search.md)、[预检记录](../M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md)、[deep-review](../../reviews/re-23-M4P15预检审核.md) 文档预检通过，16 Task/80 步及 16 A 均未实施，phase 仍 M4/P14。独立 builder 与主控三视角只核文档合同；没有安装 P15 依赖或运行产品测试。准备证据在主目录 .superpowers/sdd/P15-preparation-20261031/。
 
 等负责人授权后从 T1 推进；阶段末 deep-review、局部问题完整修复复审，先不合并。P16、M4 §14、总体设计 9.4、输入 handoff 顶部关闭和 M5–M8 最终 M4-closeout 均仍待后续。
+
+## 24. 当前接续：P15 已授权实施（2026-10-31）
+
+负责人已授权按预检通过的 spec/plan 从 T1 连续推进，局部问题自主根因修复，架构问题先提交再上报；阶段末 deep-review，先不合并。分支 codex/m4-p15 和既有 worktree 继续使用，主目录 main 不动。
+
+T1 已完成：phase M4/P15，时间线 37 个聚焦单元测试、I12 两 API/两页面、两个有效变异及类型/静态检查通过；真实页面发现的评论重复 DOM ID 已修复，公开 comment-{id} 锚点保持。完整证据、首次误判及修复见 [P15 review §9](../M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)。继续 T2，不重做预检；完整七门禁和 push 位于 T5/T10/T14/T16。P14 已完成，M4 总体仍进行中。

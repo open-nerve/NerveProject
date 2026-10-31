@@ -1,6 +1,6 @@
-# M4/P15 协作、草稿与命令搜索：预检记录
+# M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-10-31。状态：文档预检通过；尚未实施。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-10-31。状态：预检通过，已授权连续实施；T1 完成，T2 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -66,3 +66,19 @@ P16 全局 dead/no-shadow、C12 和总守卫；M5 文件/图片；M6/M7 自身�
 静态预检 exit 0：本分支只改 16 份 Markdown 文档；88 个确定路径中 73 个已存在、15 个明确待新增；386 个本地链接没有新增错误。设计中原有的 M5–M8 四个未来 M4-closeout 链接保持待收尾，不伪造文件消除检查。主目录 main 与 origin/main 均为上述基线且干净，P14 准确 main CI 和清理回执及三个归档 manifest 的 hash 已核对。最终文稿复核输出另存 precheck-static-final.log。
 
 准确文档提交和远端 HEAD 以 precheck-delivery.json 后置记录，主目录仍是通过 CI 的 main，P15 分支/工作树保留给后续 T1。最终阶段整分支审查与 CI 在实施后执行，本次不宣称已完成。
+
+## 9. 逐任务实施记录
+
+实施根：P15 worktree 内 `.superpowers/sdd/P15-web-collaboration-drafts-search/`。run.py 每次保留完整 argv、HEAD/dirty 文件 hash、输入摘要、raw/exit、构建程序 hash；Task 收据汇总具体命令，不以最后一次绿覆盖此前失败。用户授权连续实施、阶段末 deep-review，先不合并；完整七门禁及推送检查点为 T5/T10/T14/T16。
+
+### T1：时间线与系统操作者
+
+首个实施提交把 phase 改为 M4/P15；守卫 76 条、17 个例外无命中，没有延期例外。原时间线按 kind+id 和纳秒排序、末页请求 cursor 增量读、系统/null/缺失目录分支已正确，保持数据层和 actor 代码不变。新增三页与描述活动移位、同 id 评论/活动、系统同名真人及创建/归档/恢复的消费者验证。历史 13 处实例按现状只余 search-menu 的 WorkspaceService，按 T10/T11 处理，其它领域实例不计入本期清零。
+
+I12 新页面经真实 API 准备 103 条活动和 102 条评论，默认每页 50，不拦截或伪造页面响应；首开读三页，真实编辑器确认描述保存后同一活动 id 移到评论之后，无重复/丢失，两集合都从旧末页请求 cursor 重读。远端旧评论编辑/删除在关闭再打开时完整体现。另一个页面验证隐藏历史关联不泄露，邻近可见活动仍显示；原两个 API 故事保留。
+
+页面首轮及修改定位后的复验均为 3 通过/1 失败。首次以为是 :scope 选择器包含自身，第二次同样失败推翻了这一归因；trace 证明评论外行和内部编辑器使用同一 raw id，选择器命中两个父容器。补真实 CommentCard 消费者 DOM 身份测试，确实失败（4 通过/1 失败）；局部修复为 CommentBlock 统一持有既有公开 comment-{id} 锚点，display 继续依此滚动而不另占该 id，编辑器保留原生 id。公开评论链接/高亮合同不变。此处提前修复 T3/T13 依赖的同域展示问题，无权限/API/模型改动；代价是锚点定位完整行，由实际页面确认。未把更换选择器当作产品修复。
+
+最终输入摘要 `f3027af0b545421036a832896804d0dbcd6c438dbc76be110ea87949eda3ec5f`：四文件 unit **37/37**；I12 Chromium **4/4**（2 API、2 page）；Web/E2E types、六个改动 TS/TSX 文件 oxlint **0 warning/0 error**、format/diff/关键词通过。m01-cursor（丢末页请求位置）与 m01-system（缺失目录误判系统）分别在真实断言层失败，源码逐字节恢复后 unit 再次绿。此前 no-await-in-loop 的两个新增测试告警改为有序 reduce/独立 Promise.all，不加豁免。精确日志/恢复 hash 见 t1-final-*.json、t1-restored-unit.json、t1-mutations.json 与 t1-receipt.json。
+
+A1 与 T1 五步完成；三引擎矩阵、完整阶段 CI 和整分支审查仍归后续 Task，当前不声称已通过。

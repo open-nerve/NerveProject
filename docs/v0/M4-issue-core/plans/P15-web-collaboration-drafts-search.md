@@ -1,7 +1,7 @@
 # M4/P15 协作、草稿与命令搜索实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking.
-> 当前仅授权准备文档和预检；所有实施步骤未开始。获得实施授权后沿既有 inline 方式执行，不自行派逐 Task 实现代理。阶段完成做 deep-review，先不合并。
+> 负责人已授权实施，沿既有 inline 方式从 T1 连续执行，不自行派逐 Task 实现代理。阶段完成做 deep-review，先不合并。
 
 **Goal：** 完成 [P15 spec](../specs/P15-web-collaboration-drafts-search.md) A1–A16 与 I11–I14/I16/I18 页面、I20 评论、C6–C8/C9 草稿。
 **Architecture：** 复用当前 IssueRootStore/PermissionReads/确认写与 DetailResource、useIssueSearch、原生 Draft；仅补 UI 消费者、页面与局部质量，不增加全局协调器或后端协议。
@@ -51,11 +51,11 @@ make e2e
 **Files：** spec T1；既有 C/components/issues/issue-detail/issue-activity/data.test.tsx、C/store/issue/issue-details/{activity.store,activity-order}.test.ts；E/stories/issue/i12-activity.spec.ts。
 **Interfaces：** 沿 activity/comment fetch 与增量请求 cursor、IssueUser 原 props；已有 null/SITE_NAME 和 source 清理仅复验。
 
-- [ ] Step 1：核基线、Plane 时间线保留行为及历史 13 实例路径，phase 改 M4/P15；扩 `reordersMergedActivityAcrossPages`、`distinguishesSystemAndMissingActor` 和 I12 (page)。至少超过两页、同毫秒不同纳秒和 kind/id 碰撞。
-- [ ] Step 2：U core/components/issues/issue-detail/issue-activity/data.test.tsx core/store/issue/issue-details/activity.store.test.ts core/store/issue/issue-details/activity-order.test.ts；确认已有绿/实际缺口，不重写已完成的数据层。
-- [ ] Step 3：补必要展示/本地化，首开读全页、增量按末页请求 cursor 合并；无 system 用户猜测。关闭重开清除远端删改的旧评论，保留增量窗口限制。
-- [ ] Step 4：B stories/issue/i12-activity.spec.ts --grep 'I12.*page'；M01 用末页返回 null 代替请求 cursor 或仅 append 使遗漏/重复断言红，字节恢复再绿；系统 actor 三分支与 hidden reference 回归。
-- [ ] Step 5：记录 A1、没有重复实现的输入；提交 `feat(M4/P15): 补齐原生时间线页面与系统操作者验证`。
+- [x] Step 1：核基线、Plane 时间线保留行为及历史 13 实例路径，phase 改 M4/P15；扩 `reordersMergedActivityAcrossPages`、`distinguishesSystemAndMissingActor` 和 I12 (page)。至少超过两页、同毫秒不同纳秒和 kind/id 碰撞。
+- [x] Step 2：U core/components/issues/issue-detail/issue-activity/data.test.tsx core/store/issue/issue-details/activity.store.test.ts core/store/issue/issue-details/activity-order.test.ts；确认已有绿/实际缺口，不重写已完成的数据层。
+- [x] Step 3：补必要展示/本地化，首开读全页、增量按末页请求 cursor 合并；无 system 用户猜测。关闭重开清除远端删改的旧评论，保留增量窗口限制。
+- [x] Step 4：B stories/issue/i12-activity.spec.ts --grep 'I12.*page'；M01 用末页返回 null 代替请求 cursor 或仅 append 使遗漏/重复断言红，字节恢复再绿；系统 actor 三分支与 hidden reference 回归。
+- [x] Step 5：记录 A1、没有重复实现的输入；提交 `feat(M4/P15): 补齐原生时间线页面与系统操作者验证`。
 
 ## Task 2：动态过滤与键盘（约 300–650 行）
 
@@ -224,4 +224,4 @@ make e2e
 
 ## 附录：准备与实施界线
 
-本计划 Task 1–16 和 A1–A16 均待实施。准备阶段仅静态核路径、签名、依赖、覆盖和既有合并证据，并进行 fresh builder-check 与 deep-review 文档预检；没有产品原型、安装依赖或 P15 测试结果。后续若授权实施，从 T1 开始，不重复准备已通过的合同。
+准备阶段只核文档，准备证据不替代实施证据。负责人现已授权从 T1 连续执行；各 Task 勾选与实际失败、修复、回归见阶段 review §9 及实施台账，不重复已通过的准备合同。

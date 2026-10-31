@@ -32,11 +32,13 @@ vi.mock("@/hooks/store/use-editor-asset", () => ({
 }));
 vi.mock("@/components/editor/lite-text", () => ({
   LiteTextEditor: ({
+    id,
     initialValue,
     onChange,
     isSubmitting,
     ref,
   }: {
+    id: string;
     initialValue: string;
     onChange: (json: unknown, html: string) => void;
     isSubmitting?: boolean;
@@ -54,6 +56,7 @@ vi.mock("@/components/editor/lite-text", () => ({
     }));
     return (
       <textarea
+        id={id}
         data-editor
         value={text}
         disabled={isSubmitting}
@@ -249,4 +252,10 @@ it("renders the native comment with nullable edited time and the member-director
   expect(container.textContent).toContain("common.deactivated_user");
   expect(container.textContent).not.toContain("edited");
   expect(container.querySelector("textarea")?.value).toBe(comment.comment_html);
+  // The fragment target and the editor each need a unique DOM identity.
+  expect(container.querySelectorAll(`[id="${comment.id}"]`)).toHaveLength(1);
+  expect(container.querySelectorAll(`[id="comment-${comment.id}"]`)).toHaveLength(1);
+  expect(container.querySelector(`[id="comment-${comment.id}"]`)?.contains(container.querySelector("textarea"))).toBe(
+    true
+  );
 });

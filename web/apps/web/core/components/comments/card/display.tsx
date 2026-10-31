@@ -103,7 +103,7 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
   const shouldRenderReactions = hasReactions && !disabled;
 
   return (
-    <div id={commentBlockId} className="relative flex flex-col gap-2">
+    <div className="relative flex flex-col gap-2">
       <div className="relative mb-3 flex w-full items-center gap-2">
         <Avatar alt={displayName} fallback={displayName?.[0]?.toUpperCase()} size="2xs" src={getFileURL(avatarUrl)} />
         <div className="flex flex-1 flex-wrap items-center gap-1">
