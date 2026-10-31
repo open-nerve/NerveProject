@@ -362,6 +362,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     editorRef,
     issueTitleRef: issueTitleRef,
     sourceIssueId,
+    hasDraftSeed: props.isDraft && props.draftSeed !== undefined,
     descriptionLoadState,
     onRetryDescription: () => setDescriptionAttempt((attempt) => attempt + 1),
     data: {

@@ -1,4 +1,5 @@
-import type { TestInfo } from "@playwright/test";
+import type { Page, TestInfo } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 
 import {
   addProjectMembers,
@@ -12,7 +13,12 @@ import {
 } from "../../fixtures/api";
 import { createdFor, expectIssueCreated } from "../../fixtures/assert/issue";
 import { expectInitialDescription } from "../../fixtures/assert/issue-collaboration";
-import { bearer, newAccount } from "../../fixtures/auth";
+import { bearer, emailFor, newAccount, password } from "../../fixtures/auth";
+import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
+import { watchPage } from "../../fixtures/browser";
+import { focusInDialog, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import { expectListPageQuiet, issueListProject } from "../../fixtures/issue-list-page";
+import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import {
   createDraft,
   createIssue,
@@ -191,4 +197,282 @@ test("I14 (API): archived and left private projects keep drafts in the personal 
   });
   expect(await draftRead(api, member.token, draft.id)).toEqual({ status: 200, draft });
   expect(await draftPublished(api, member.token, draft.id)).toEqual({ status: 404, code: "project.not_found" });
+});
+
+async function openDrafts(page: Page, slug: string, email: string) {
+  const watch = await watchPage(page);
+  await page.goto(signInPath(`/${slug}/drafts`));
+  expect(await submitSignIn(page, email, password)).toBe(200);
+  await expect(page).toHaveURL(`/${slug}/drafts`);
+  await expect(page.getByRole("button", { name: "Draft a work item", exact: true })).toBeVisible();
+  return watch;
+}
+
+test("I14 (page): personal unassigned drafts paginate with server totals, preserve unresolved fields through real editing, and delete once from a keyboard or pointer menu", async ({
+  api,
+  page,
+  db,
+}, info) => {
+  const email = emailFor(info, "unassigned-drafts");
+  const { access_token: token } = await registerOnboarded(api, email);
+  const slug = slugFor(info);
+  await createWorkspace(api, token, { name: "No projects", slug });
+  await Promise.all(
+    Array.from({ length: 50 }, (_, index) => createDraft(api, token, slug, { payload: { name: `Saved ${index}` } }))
+  );
+  const payload = {
+    name: "Unassigned original",
+    description_html: "<p>Keep unfinished content</p>",
+    priority: "future-invalid-priority",
+    state_id: randomUUID(),
+    parent_id: randomUUID(),
+    assignee_ids: [randomUUID()],
+    label_ids: [randomUUID()],
+    start_date: "2026-10-01",
+    target_date: "2026-10-30",
+  };
+  const draft = await createDraft(api, token, slug, { payload });
+  const watch = await openDrafts(page, slug, email);
+  await expect(page.locator('[id^="issue-"]')).toHaveCount(50);
+  await expect(page.getByText("51", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Load more", exact: false }).click();
+  await expect(page.locator('[id^="issue-"]')).toHaveCount(51);
+  await expect(page.getByRole("button", { name: "Load more", exact: false })).toHaveCount(0);
+  const row = page.locator(`[id="issue-${draft.id}"]`);
+  const trigger = row.locator('button[aria-haspopup="menu"]:visible').last();
+  await expect(trigger).toHaveAccessibleName("Unassigned original options");
+  await trigger.focus();
+  await trigger.click({ button: "right" });
+  await expect(page.getByRole("menu")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  expect(
+    await page
+      .locator('[data-context-menu="true"]')
+      .evaluateAll((menus) => menus.every((menu) => !!menu.closest('[inert][aria-hidden="true"]')))
+  ).toBe(true);
+  await trigger.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).press("Enter");
+  const modal = modalDialog(page);
+  await expect(modal.getByRole("textbox", { name: "Title", exact: true })).toHaveValue(payload.name);
+  expect(await pageBehindHidden(page)).toBe(true);
+  await expect(modal.locator('[contenteditable="true"]')).toContainText("Keep unfinished content");
+  await modal.getByRole("textbox", { name: "Title", exact: true }).fill("Unassigned edited");
+  const save = await sentHeld(page, "PATCH", `/api/v0/drafts/${draft.id}`, () =>
+    modal.getByRole("button", { name: "Update", exact: true }).dblclick()
+  );
+  expect(save.body).toMatchObject({
+    project_id: null,
+    payload: {
+      ...payload,
+      name: "Unassigned edited",
+      description_html: expect.stringContaining("Keep unfinished content"),
+    },
+  });
+  await page.keyboard.press("Escape");
+  await expect(modal).toHaveCount(1);
+  expect(await focusInDialog(page)).toBe(true);
+  expect((await save.release()).status()).toBe(200);
+  await expect(modal).toHaveCount(0);
+  await row.getByText("Unassigned edited", { exact: true }).dblclick();
+  await expect(modal.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("Unassigned edited");
+  await expect(modal.locator('[contenteditable="true"]')).toContainText("Keep unfinished content");
+  await page.keyboard.press("Escape");
+  await expect(modal).toHaveCount(0);
+  await trigger.press("Enter");
+  await page.getByRole("menuitem", { name: "Delete", exact: true }).press("Enter");
+  await expect(modal.getByRole("heading", { name: "Delete draft", exact: true })).toBeVisible();
+  const deletion = await sentHeld(page, "DELETE", `/api/v0/drafts/${draft.id}`, () =>
+    modal.getByRole("button", { name: "Delete", exact: true }).dblclick()
+  );
+  await page.keyboard.press("Escape");
+  await expect(modal).toHaveCount(1);
+  expect((await deletion.release()).status()).toBe(204);
+  await expect(row).toHaveCount(0);
+  await expect(page.getByText("50", { exact: true })).toBeVisible();
+  expect(watch.apiRequests.filter((request) => request === `PATCH /api/v0/drafts/${draft.id}`)).toHaveLength(1);
+  expect(watch.apiRequests.filter((request) => request === `DELETE /api/v0/drafts/${draft.id}`)).toHaveLength(1);
+  expect(watch.apiRequests.some((request) => /issue.*preferences|display-properties/.test(request))).toBe(false);
+  expect(
+    await db.query("SELECT payload, project_id, deleted_at IS NOT NULL AS deleted FROM draft_issues WHERE id=$1", [
+      draft.id,
+    ])
+  ).toEqual([
+    {
+      payload: {
+        ...payload,
+        name: "Unassigned edited",
+        description_html: expect.stringContaining("Keep unfinished content"),
+      },
+      project_id: null,
+      deleted: true,
+    },
+  ]);
+  await expectListPageQuiet(page, watch);
+});
+
+test("I14 (page): publish saves latest form first, retains it on refusal, and confirmed publication retries only its failed list read", async ({
+  api,
+  page,
+  db,
+  browserName,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const draft = await createDraft(api, seed.member.token, seed.slug, {
+    project_id: seed.project.id,
+    payload: { name: "Publish original", description_html: "<p>Published content</p>" },
+  });
+  const path = `/api/v0/drafts/${draft.id}`;
+  const publishPath = `${path}/publish`;
+  const listPath = `/api/v0/workspaces/${seed.slug}/drafts`;
+  const watch = await openDrafts(page, seed.slug, seed.member.email);
+  const row = page.locator(`[id="issue-${draft.id}"]`);
+  await row.locator('button[aria-haspopup="menu"]:visible').last().press("Enter");
+  await page.getByRole("menuitem", { name: "Move to project", exact: true }).press("Enter");
+  const modal = modalDialog(page);
+  await expect(modal.locator('[contenteditable="true"]')).toContainText("Published content");
+  await modal.getByRole("textbox", { name: "Title", exact: true }).fill("Latest published");
+  let refusePublish = true;
+  await page.route(
+    (url) => url.pathname === publishPath,
+    async (route) => {
+      if (!refusePublish) return route.fallback();
+      refusePublish = false;
+      await route.fulfill({
+        status: 409,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ status: 409, title: "Conflict", code: "issue.draft_changed" }),
+      });
+    }
+  );
+  const publish = modal.getByRole("button", { name: "Add to project", exact: true });
+  const refused = page.waitForResponse((response) => new URL(response.url()).pathname === publishPath);
+  const saved = await sentHeld(page, "PATCH", path, () => publish.dblclick());
+  expect(saved.body).toMatchObject({ project_id: seed.project.id, payload: { name: "Latest published" } });
+  expect(watch.apiRequests.filter((request) => request === `POST ${publishPath}`)).toHaveLength(0);
+  expect((await saved.release()).status()).toBe(200);
+  expect((await refused).status()).toBe(409);
+  await expect(publish).toBeEnabled();
+  await expect(modal.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("Latest published");
+  expect(await draftRead(api, seed.member.token, draft.id)).toMatchObject({
+    status: 200,
+    draft: { payload: { name: "Latest published" } },
+  });
+  let failList = true;
+  await page.route(
+    (url) => url.pathname === listPath,
+    async (route) => {
+      if (route.request().method() !== "GET" || !failList) return route.fallback();
+      failList = false;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ status: 500, title: "Unavailable", code: "unavailable" }),
+      });
+    }
+  );
+  const sent = await sentHeld(page, "POST", publishPath, () => publish.dblclick());
+  expect(sent.body).toBeNull();
+  await page.keyboard.press("Escape");
+  await expect(modal).toHaveCount(1);
+  const confirmation = await sent.release();
+  expect(confirmation.status()).toBe(201);
+  const published = await confirmation.json();
+  await expect(modal).toHaveCount(0);
+  await expect(row).toHaveCount(0);
+  await expect(page.getByRole("alert")).toBeVisible();
+  expect(
+    (
+      await answerTo(page, "GET", listPath, () =>
+        page.getByRole("alert").getByRole("button", { name: "Retry", exact: true }).click()
+      )
+    ).status()
+  ).toBe(200);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByText("0", { exact: true })).toBeVisible();
+  expect(watch.apiRequests.filter((request) => request === `POST ${publishPath}`)).toHaveLength(2);
+  expect(watch.apiRequests.filter((request) => request === `PATCH ${path}`)).toHaveLength(2);
+  expect(await db.query("SELECT name, project_id FROM issues WHERE id=$1", [published.id])).toEqual([
+    { name: "Latest published", project_id: seed.project.id },
+  ]);
+  expect(await db.query("SELECT count(*)::int AS count FROM issues WHERE project_id=$1", [seed.project.id])).toEqual([
+    { count: 1 },
+  ]);
+  await expectListPageQuiet(page, watch, {
+    failures: [`409 POST ${publishPath}`, `500 GET ${listPath}`],
+    errors:
+      browserName === "chromium"
+        ? [
+            "Failed to load resource: the server responded with a status of 409 (Conflict)",
+            "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+          ]
+        : [],
+  });
+});
+
+test("I14 (page): a workspace guest opens the draft route without personal reads or creation controls", async ({
+  api,
+  page,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const email = emailFor(info, "draft-guest");
+  const { access_token: token } = await registerOnboarded(api, email);
+  await inviteAndAccept(api, seed.member.token, seed.slug, { email, token }, 5);
+  await createDraft(api, seed.member.token, seed.slug, { payload: { name: "Other personal secret" } });
+  const watch = await openDrafts(page, seed.slug, email);
+  await expect(page.getByRole("button", { name: "Draft a work item", exact: true })).toBeDisabled();
+  await expect(page.getByText("Other personal secret", { exact: true })).toHaveCount(0);
+  expect(watch.apiRequests.filter((request) => request.includes("/drafts"))).toEqual([]);
+  await expectListPageQuiet(page, watch);
+});
+
+test("I14 (page): making a copy preserves unresolved draft fields through the actual editor and leaves the original unchanged", async ({
+  api,
+  page,
+  db,
+}, info) => {
+  const email = emailFor(info, "copy-draft");
+  const { access_token: token } = await registerOnboarded(api, email);
+  const slug = slugFor(info);
+  await createWorkspace(api, token, { name: "Unassigned copies", slug });
+  const payload = {
+    name: "Original copy source",
+    description_html: "<p>Preserve unfinished content</p>",
+    priority: "future-invalid-priority",
+    state_id: randomUUID(),
+    parent_id: randomUUID(),
+    assignee_ids: [randomUUID()],
+    label_ids: [randomUUID()],
+    start_date: "2026-10-01",
+    target_date: "2026-10-30",
+  };
+  const original = await createDraft(api, token, slug, { payload });
+  const watch = await openDrafts(page, slug, email);
+  await page.locator(`[id="issue-${original.id}"] button[aria-haspopup="menu"]:visible`).last().click();
+  await page.getByRole("menuitem", { name: "Make a copy", exact: true }).click();
+  const modal = modalDialog(page);
+  await expect(modal.locator('[contenteditable="true"]')).toContainText("Preserve unfinished content");
+  await modal.getByRole("textbox", { name: "Title", exact: true }).fill("Copied draft");
+  const saved = await sentHeld(page, "POST", `/api/v0/workspaces/${slug}/drafts`, () =>
+    modal.getByRole("button", { name: "Save to Drafts", exact: true }).dblclick()
+  );
+  expect(saved.body).toEqual({ project_id: null, payload: { ...payload, name: "Copied draft" } });
+  const response = await saved.release();
+  expect(response.status()).toBe(201);
+  const copy = await response.json();
+  await expect(modal).toHaveCount(0);
+  await expect(page.locator(`[id="issue-${copy.id}"]`)).toContainText("Copied draft");
+  expect(watch.apiRequests.filter((request) => request === `POST /api/v0/workspaces/${slug}/drafts`)).toHaveLength(1);
+  expect(
+    await db.query("SELECT id, payload, project_id FROM draft_issues WHERE workspace_id=$1 ORDER BY id", [
+      original.workspace_id,
+    ])
+  ).toEqual(
+    [
+      { id: original.id, payload, project_id: null },
+      { id: copy.id, payload: { ...payload, name: "Copied draft" }, project_id: null },
+    ].toSorted((a, b) => a.id.localeCompare(b.id))
+  );
+  await expectListPageQuiet(page, watch);
 });

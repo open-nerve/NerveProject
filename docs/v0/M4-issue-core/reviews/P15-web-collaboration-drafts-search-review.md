@@ -134,3 +134,18 @@ I13 Chromium 4/4（原 API 1、page 3）：真实分页/选中历史、TipTap �
 最终聚焦输入摘要 `f957ac0ead30df123a8c33e052c58366b72a8b18338db925d17774a7cf7a49ad`，程序 `44134c4ca2909d671e482bca8cccdd40254485ba49ddcb66601ae9007048f102`。检查点七项完整门禁最终均 exit 0：Go 51 个包通过、16 个无测试包（非 verbose，逐测试 skip 未知）；Web 静态 54/54（36 缓存），knip 通过；无缓存 Vitest 286 文件/3020 项和 Node 5 项通过，默认 E2E 248/248（246 Chromium、2 Firefox，0 skip）。首轮 F4 唯一失败是警告实测 112 低于旧 cap 114，同提交下调到 112 后从 F4 继续；F1–F3 的源码输入未变，逐文件核对见 t5-gate-input-equivalence.json，没有重跑服务端或冒称同一摘要。后四门禁输入 `f7a21a156d9d0538bf51f1222a9f924b86e40f483206fc88700ae7166d2509d6`，完整 E2E 程序 `a39471da10293ddc47720e59c6a2608b50715005fca0a7070e84e7268479aada`。默认结果另存 t5-full-e2e-results 并有 manifest，防后续覆盖。所有原始输出/变异/恢复在 t5-*.json/log、m06-*/m07-*、t5-mutations.json，检查点 commit 与 CI 在 t5-receipt.json 后置记录。当前阶段整审尚未执行、不合并。
 
 A5 与 T5 五步完成，继续 T6。准确提交及分支 CI 后置记录，不以本地验证代替远端结果。
+
+
+### T6：个人草稿页面与确认发布
+
+沿 P8/P11 的原生 Draft、整份 draftInput、队列和确认创建 owner，没有新接口或列表镜像。header/empty-state 显式按路由 workspace 判权限，root 保留 route prop；列表失败保留已加载页，retry 重取响应 total。无项目编辑器为数组提供展示空值，未编辑 payload 由 held 原值保留。右键 ContextMenu 从两套响应式 QuickActions 提到行的唯一拥有者，条目在行统一翻译；按钮复用既有具名文案。复制草稿使用私有 hasDraftSeed，使直接/关闭保存只将实际编辑合入原生种子，不能展示的未知 priority 不丢失；普通创建及现有编辑语义保持。
+
+初次消费者 3 红来自 route 权限串用；真实页面又暴露两个右键 menu 和缺失数组导致的 value.length 异常，均根因修复。后续页面失败分别为右键非聚焦文本的焦点假设、ContextMenu 原始翻译键，改实际按钮右键并修 owner 翻译。一次 Ryuk 端口绑定超时发生在 globalSetup、零用例，原输入重跑绿，未操作既有 Docker/容器。复制两条保存测试各自因未知 priority 丢失而红，修复后绿；初版关闭测试的 mock 强制关 wrapper 已纠正，不把该 mock 失败当产品红。
+
+最终九文件 **77/77**；实际表单覆盖空标题/九字段、项目 null、403/409/422 拒绝、PATCH 失败无 POST、先保存再无 body 发布、确认后的 GET-only retry、权限退役晚答。M08 将完整 payload 改为局部替换、M09 吞 PATCH 拒绝仍发布，均触发实际消费者断言红，源码字节恢复后七文件 55/55；随后复制修复扩大九文件 77/77。Web/E2E types 与 11 文件格式、oxlint 零告警、关键词 76 规则/17 例外无命中通过。
+
+I14 Chromium 共 **7 个故事验证通过（3 API、4 page，分两次）**：首轮 6 绿/1 红只因复制页按钮大小写写成 Save to drafts；按实际 Save to Drafts 修正后复制 1/1，另六故事和产品输入不变。51 条真实草稿按 50+1 分页、服务端 total；无项目的九字段编辑/重开/删除、键盘/指针菜单、held 双击一次写、发布拒绝保留与确认后读重试、访客零草稿读取；复制经真实 TipTap 发整份保留输入且 DB 原记录不变。只有指定 409/500 拒绝被允许，网络/CSP/页面错误守卫保持。copy 测试的 sort 警告改 toSorted，没有加豁免。
+
+77 单元及六故事输入 `6c6225843c85a8e8cb7a18f8fbf2db03507e0e265c7b79a707b5bd54ec9f7232`；最后复制页/静态输入 `8123471c45452c1e0ffcf96395b398b0e5418e6dbe151ff6a3591e852bc96aeb`，只改该新增故事的按钮大小写与不变排序语义；程序均 `49c97b3a58dce1d572a087e77a09b60cf488d11f531a724bc09ed80ebd58c9ec`。原始失败、变异、恢复和成功在 t6-*.json/log、t6-*-results、t6-mutations.json、t6-receipt.json。误调用不存在 make check-keywords 的命令失败如实保留，正确 node tools/keywords.mjs 已过。A6 与 T6 完成，接续 T7；跨浏览器完整矩阵仍归 T14。
+
+T5 检查点 f6eb9a5784974d416bda08cbaa0aa3a6aecc4126 已推送；[CI 41215094874](https://github.com/open-nerve/NerveProject/actions/runs/41215094874) attempt 1 在 2026-10-31 15:52 UTC 的 server/web 为 success，E2E 仍在运行，未提前记全绿。T6 不到完整七门禁推送点，下一检查点 T10。

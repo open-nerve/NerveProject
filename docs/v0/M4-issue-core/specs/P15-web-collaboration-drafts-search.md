@@ -68,7 +68,7 @@ Markdown 复制调用已有 `EditorRefApi.getMarkDown(): string` 后交 `useCopy
 原生 Draft 为 `{id, workspace_id, project_id: string|null, payload, created_at, updated_at}`，不是 Issue。payload 仅 name、description_html、state_id、priority、assignee_ids、label_ids、start_date、target_date、parent_id 九字段；全部可省略，无 null，保留暂不满足发布语义的内容。workspace ADMIN/MEMBER 才读写个人草稿；他人草稿 404、访客 403，不能靠不存在的 created_by_id 判断所有权。
 
 - 无项目/空标题/空 payload 可存；分页 total 来自响应，不从当前页长度推断。无项目不隐藏整行/编辑器，不读工作项 filter/display preferences。
-- PATCH payload 是整份替换；表单局部编辑通过 `draftInput(edits, held.payload)` 保留所有未编辑合法字段（包括暂不能显示的 priority/引用）。payload 字段清空即删除键，数组 []、合法空串按合同保留；顶层 project_id=null 才清空项目，省略保持。
+- PATCH payload 是整份替换；表单局部编辑通过 `draftInput(edits, held.payload)` 保留所有未编辑合法字段（包括暂不能显示的 priority/引用）。payload 字段清空即删除键，数组 []、合法空串按合同保留；顶层 project_id=null 才清空项目，省略保持。复制草稿的表单也只提交实际编辑，由 draftSeed 保留不能解析的原生字段；展示用默认值不代表清空。
 - `updateIssue(ws,id,input): Promise<Draft>` 与 `moveIssue(ws,id,input): Promise<IssueDetail>` 沿既有 WorkspaceDraftIssues。发布先 PATCH 最新完整表单和项目，确认后 POST publish **无 body**；保存失败不得 POST。publish 403/409 draft_changed/422 保留已确认 Draft、输入、错误，不能假删除。
 - 发布成功进入 root.confirmCreation 的 canonical/列表/计数确认，草稿消失；后续 GET 失败显示读错误并 GET-only retry。成功不补发第二次创建或项目序号读取。删除拒绝留弹窗/行；发布/删除双击一次写，命令晚答不影响新工作区。
 - “存为草稿”及嵌套 Save this draft 复用 P14 单关闭决策，内层 Escape 只关内层并回焦；描述加载失败不保存缺失内容，重试后可继续。迁移只补块 id 不算用户修改；混合真实编辑保留。
@@ -124,7 +124,7 @@ I16 页面使用 clockTest/ClockWorld 独立数据库；推进业务时钟后取
 - [x] A3：T3 作者编辑/作者及管理员删除、访客自己项评论、空/IME/重击/拒绝/晚答有组件和 I11/I20 页面证据。
 - [x] A4：T4 两类表情确认/仅删自己/重复拒绝/组合码点与归档只读、实际 picker CSP/本站资源通过。
 - [x] A5：T5 历史分页/切换/还原与 I13、ModalTitle/焦点、Markdown 等待/失败反馈通过，M7 展示合同不变。
-- [ ] A6：T6 个人草稿列表/分页/无项目/字段保留/删除/发布及 I14 通过；PATCH 失败无 POST、POST 无 body、成功同步列表计数。
+- [x] A6：T6 个人草稿列表/分页/无项目/字段保留/删除/发布及 I14 通过；PATCH 失败无 POST、POST 无 body、成功同步列表计数。
 - [ ] A7：T7 创建弹窗两种存草稿路径、描述未 ready/拒绝保留、嵌套 Escape/Back/纯迁移由真实编辑器和 C9 验证。
 - [ ] A8：T8 工作项命令职责拆分，IssueUpdate、权限/归档/确认/晚答/删除宿主正确。
 - [ ] A9：T9 主题仅确认同代后生效，失败不改主题；四 route 文件与 .ts/.tsx 守卫正反例通过。

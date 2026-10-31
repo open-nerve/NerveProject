@@ -47,6 +47,7 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 export interface IssueFormProps {
   data?: IssueFormData;
   sourceIssueId?: string;
+  hasDraftSeed?: boolean;
   descriptionLoadState?: IssueDescriptionLoadState;
   onRetryDescription?: () => void;
   issueTitleRef: React.MutableRefObject<HTMLInputElement | null>;
@@ -81,6 +82,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const {
     data,
     sourceIssueId,
+    hasDraftSeed = false,
     descriptionLoadState = "ready",
     onRetryDescription,
     issueTitleRef,
@@ -151,6 +153,17 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
+  const submissionData = (formData: Partial<IssueFormValues>) => {
+    if (!data?.id && !hasDraftSeed) return formData;
+    // Seeded drafts retain wire fields that the display controls cannot resolve.
+    // Only actual edits replace those fields; the command owner merges the seed.
+    return {
+      ...getChangedIssuefields(formData, dirtyFields as { [key: string]: boolean | undefined }),
+      project_id: getValues("project_id"),
+      ...(data?.id ? { id: data.id, description_html: formData.description_html ?? "<p></p>" } : {}),
+    };
+  };
+
   const handleFormSubmit = async (formData: Partial<IssueFormValues>, is_draft_issue = isDraft) => {
     if (descriptionLoadState !== "ready") return;
     // Check if the editor is ready to discard
@@ -163,16 +176,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
       return;
     }
 
-    const submitData = !data?.id
-      ? formData
-      : {
-          ...getChangedIssuefields(formData, dirtyFields as { [key: string]: boolean | undefined }),
-          project_id: getValues<"project_id">("project_id"),
-          id: data.id,
-          description_html: formData.description_html ?? "<p></p>",
-        };
-
-    await onSubmit(submitData, is_draft_issue, {
+    await onSubmit(submissionData(formData), is_draft_issue, {
       isDescriptionMigration: descriptionMigration.current,
       onRefused: (error) => refuse(error, (field, message) => setError(field, { type: "server", message })),
     })
@@ -212,7 +216,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const handleFormChange = () => {
     if (!onChange) return;
 
-    if (isDirty && condition) onChange(watch());
+    if (isDirty && condition) onChange(submissionData(watch()));
     else onChange(null);
   };
 
@@ -242,7 +246,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   useEffect(() => {
     if (!onChange) return;
 
-    if (isDirty && condition) onChange(watch());
+    if (isDirty && condition) onChange(submissionData(watch()));
     else onChange(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirty]);

@@ -43,7 +43,7 @@ export const WorkspaceDraftIssuesRoot = observer(function WorkspaceDraftIssuesRo
       {rows?.map((row) => (
         <DraftIssueBlock key={row.id} workspaceSlug={ws} issueId={row.id} />
       ))}
-      {rows?.length === 0 && !failure && <WorkspaceDraftEmptyState />}
+      {rows?.length === 0 && !failure && <WorkspaceDraftEmptyState workspaceSlug={ws} />}
       {drafts.hasMore(ws) && (
         <button
           type="button"

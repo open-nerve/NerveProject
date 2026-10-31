@@ -106,11 +106,11 @@ make e2e
 **Files：** spec T6；既有 C/components/issues/workspace-draft/root.test.tsx、C/components/issues/issue-modal/draft.test.tsx、C/store/issue/workspace-draft/issue.store.test.ts、C/services/issue/draft-input.test.ts；新 workspace-draft/page.test.tsx；E/stories/issue/i14-drafts.spec.ts。
 **Interfaces：** 沿 Draft/DraftInput、draftInput、updateIssue/deleteIssue/moveIssue。UI 保留完整 payload，顶层 project_id 与 payload clear 分开；moveIssue 本身负责 PATCH→无 body POST。
 
-- [ ] Step 1：写 `savesUnassignedDraftWithoutLosingUntouchedFields`、`publishSavesThenSendsNoBody`、`saveFailureNeverPublishes`、`publishRefusalKeepsConfirmedDraft`、`confirmedPublishRetriesOnlyReads`；含非法 priority、失效引用、null清项目/省略保持、空串/[]/清键。
-- [ ] Step 2：U core/components/issues/workspace-draft/root.test.tsx core/components/issues/workspace-draft/page.test.tsx core/components/issues/issue-modal/draft.test.tsx core/store/issue/workspace-draft/issue.store.test.ts core/services/issue/draft-input.test.ts；已有队列合同保持绿，实际 UI 缺口才修。
-- [ ] Step 3：header/empty-state 显式 route slug，root 保留路由 prop；补分页/无项目/编辑/删除/发布的权限、输入与错误状态。禁止按页长猜 total、根据已解析显示表单丢未编辑字段、直接 acceptRead 替代创建确认。
-- [ ] Step 4：B stories/issue/i14-drafts.spec.ts --grep 'I14.*page'；API seed 后真实输入保存、重开、删草稿、移到项目，assert DB 和列表计数。M08 payload局部覆盖、M09 PATCH失败仍POST分别实际红后恢复；OwnOnly/访客/换workspace晚答回归。
-- [ ] Step 5：记录 A6 与 P8/P11 原能力复验边界；提交 `feat(M4/P15): 完成个人草稿页面与确认发布流程`。
+- [x] Step 1：写 `savesUnassignedDraftWithoutLosingUntouchedFields`、`publishSavesThenSendsNoBody`、`saveFailureNeverPublishes`、`publishRefusalKeepsConfirmedDraft`、`confirmedPublishRetriesOnlyReads`；含非法 priority、失效引用、null清项目/省略保持、空串/[]/清键。
+- [x] Step 2：U core/components/issues/workspace-draft/root.test.tsx core/components/issues/workspace-draft/page.test.tsx core/components/issues/issue-modal/draft.test.tsx core/store/issue/workspace-draft/issue.store.test.ts core/services/issue/draft-input.test.ts；已有队列合同保持绿，实际 UI 缺口才修。
+- [x] Step 3：header/empty-state 显式 route slug，root 保留路由 prop；补分页/无项目/编辑/删除/发布的权限、输入与错误状态。禁止按页长猜 total、根据已解析显示表单丢未编辑字段、直接 acceptRead 替代创建确认。
+- [x] Step 4：B stories/issue/i14-drafts.spec.ts --grep 'I14.*page'；API seed 后真实输入保存、重开、删草稿、移到项目，assert DB 和列表计数。M08 payload局部覆盖、M09 PATCH失败仍POST分别实际红后恢复；OwnOnly/访客/换workspace晚答回归。
+- [x] Step 5：记录 A6 与 P8/P11 原能力复验边界；提交 `feat(M4/P15): 完成个人草稿页面与确认发布流程`。
 
 ## Task 7：创建弹窗存草稿（约 500–1000 行）
 
