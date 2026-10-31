@@ -258,7 +258,7 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 
 ## 四、行为差异
 
-**M4/P14 创建与编辑表单**：沿现有表单和原生命令，描述自动补块 ID 只更新提交基线，不单独标记用户修改；有真实编辑时保留修改，普通工作项纯迁移显式保存才带 boolean skip_activity。字段反馈与拒绝后焦点统一走 FieldError/useRefusedFocus，创建请求中的空状态省略，交给服务端默认值。创建命令补设计要求的 c 快捷键，仍支持既有 ni；确认提示链接展示服务端编号。无新增协议或全局 owner；嵌套关闭与后续属性迁移仍按 P14 后续 Task 验证。
+**M4/P14 创建与编辑表单**：沿现有表单和原生命令，描述自动补块 ID 只更新提交基线，不单独标记用户修改；有真实编辑时保留修改，普通工作项纯迁移显式保存才带 boolean skip_activity。字段反馈与拒绝后焦点统一走 FieldError/useRefusedFocus，创建请求中的空状态省略，交给服务端默认值。创建命令补设计要求的 c 快捷键，仍支持既有 ni；确认提示链接展示服务端编号。T5 保留 Plane 的 dirty→保存草稿确认流程，但将按钮、外点和 Escape 交给同一就绪/写锁/dirty 决策，删除描述编辑器的 document Escape，避免一键关闭两层；提示改为 ModalTitle 和双语文案。真实嵌套 Dialog 和 C4 页面验证焦点、背景隔离、退出动画、日期/标签 portal。无新增协议或全局 owner；父项查询和三浏览器仍按 T6/T16 验证。
 
 整审局部收口：A-01删除跨项目子项无消费者的cycle/module目录预取，每外部项目少两旧GET，state/member/label与原拒绝边界保持；A-02删除失去最后生产读者的旧列表乐观分布更新helper/barrel/两wrapper/六死测试及两独占常量块。真实领域analytics/progress取数及calculateCycleProgress七测保留；两项独立复审Approved，非将领域数据层提前接通。
 

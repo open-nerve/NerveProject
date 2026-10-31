@@ -122,3 +122,13 @@ t4-types-final 和 e2e types 通过；改动 lint 0 warnings/0 errors。当前�
 **检查点回执（替代上一段待执行状态）：**产品提交 `4d4463f760cbf10cf9ee52c4688dccb9e255324c` 的 gen-check、Go lint（两段 0 issues）、完整 Go 测试（461.8 秒、无缓存）通过。knip 发现夹具两个未使用导出，`e21a24e64c1f0eedaaeb3e6bbed078760ebceeee` 收为私有；全量 Web 测试发现 T1 编号入口旧夹具缺真实布局，`a9d4f118` 将相同拒绝/只读重试断言迁入真实嵌套路由，聚焦 18/18。后两提交只改测试，产品与服务端/生成物均未变，前面三项证据复用并保留准确 tested SHA，不冒称在 a9d4f118 重跑了 Go。
 
 a9d4f118 的 lint-web 54/54、knip、强制无缓存 test-web 18/18 任务、E2E 205/205（Chromium 203、Firefox A4 2）全部通过；原始回执为 `t4-full-*`、`t4-full-fixed-*`、`t4-full-routed-*`。两次夹具门禁失败记录保留。A3/A4 和 Task 4 完成线已勾，检查点待此文档提交后推送；远端准确 SHA/run 后续写交付回执。后续修改仍须按 Task 和最终 T16 复验，当前不代表 P14 已完成。
+
+### T5 嵌套关闭与焦点
+
+沿用 DraftIssueLayout 管理 dirty 与草稿确认，让它同时拥有外层 ModalCore；同一 requestClose 检查同步写锁、编辑器就绪和 dirty，再决定关闭或显示保存草稿提示。Base 的确认完成走 finishClose，表单按钮和外点/Escape 走 requestClose；保存和发布复用原同步锁。描述编辑器不再监听全 document 的 Escape。ConfirmIssueDiscard 用 ModalTitle 和同步 en/zh-CN 文案，保留既有保存拒绝和输入。未改共享 ModalCore、权限或草稿协议。
+
+真实嵌套组件首先复现外层无改动被一并关闭、有改动时多开保存提示，以及提示无可访问标题。M08 在实际关闭 owner 临时恢复 document Escape，两个嵌套用例均失败，随后逐字节恢复。父项单测只替换尚待 T6 迁移的旧查询服务，Dialog/portal 为真实组件；不把它冒称原生父项页面证明。
+
+验证：t5-restored 六文件 46/46；t5-page-regression 的 C4、I1 页面/API 与 C3 共 9/9 Chromium 通过；t5-types、t5-lint（0 警告/0 错误）和 diff 检查通过。C4 证明日期/标签 portal 的 Escape 留住外层、背景隔离、内层 Tab 首尾循环、内外层外点、dirty 输入保留与焦点回还；没有意外创建请求和落库。编译使用 t5-packages / t5-build 产物。A5 仍留父项真实页面（T6）和三浏览器（T16）。
+
+夹具修正与产品缺陷分记：real timer 前先以 fake timer 完成 FakeNerve 初始化；mock helper 必须先导入，否则先载入的 useDetailScope 指向真实默认空 store；旧断言改为翻译 key。常驻确认框需等退出动画卸载，真实页面需等外层恢复唯一 modal 且目标实际聚焦再发送下一键；首次即时断言失败保留，未以任意 sleep、重试产品写或放宽错误白名单掩盖。自查确认无新增全局协调器、无重复关闭决策。

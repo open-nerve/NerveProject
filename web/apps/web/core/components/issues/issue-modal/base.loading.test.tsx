@@ -296,10 +296,10 @@ it.each(["<p>source</p>", ""])(
     await title("Keep for retry");
     const discard = [...container.querySelectorAll("button")].find((button) => button.textContent === "discard")!;
     await act(async () => discard.click());
-    const save = [...container.querySelectorAll("button")].find((button) => button.textContent === "Save to Drafts")!;
+    const save = [...container.querySelectorAll("button")].find((button) => button.textContent === "save_to_drafts")!;
     expect(save.disabled).toBe(true);
     expect(ui.draft).not.toHaveBeenCalled();
-    const cancel = [...container.querySelectorAll("button")].find((button) => button.textContent === "Cancel")!;
+    const cancel = [...container.querySelectorAll("button")].find((button) => button.textContent === "cancel")!;
     await act(async () => cancel.click());
     failure = undefined;
     await act(async () => retry().click());
@@ -309,7 +309,7 @@ it.each(["<p>source</p>", ""])(
     )!;
     await act(async () => discardAfterRetry.click());
     const saveAfterRetry = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === "Save to Drafts"
+      (button) => button.textContent === "save_to_drafts"
     )!;
     expect(saveAfterRetry.disabled).toBe(false);
     await act(async () => saveAfterRetry.click());

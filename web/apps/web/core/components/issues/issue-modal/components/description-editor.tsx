@@ -12,7 +12,6 @@ import { Controller } from "react-hook-form";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EFileAssetType } from "@nerve/types";
 import { Loader } from "@nerve/ui";
 import { getDescriptionPlaceholderI18n } from "@nerve/utils";
@@ -21,7 +20,6 @@ import { RichTextEditor } from "@/components/editor/rich-text";
 // hooks
 import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import useKeypress from "@/hooks/use-keypress";
 type TIssueDescriptionEditorProps = {
   control: Control<IssueFormValues>;
   isDraft: boolean;
@@ -33,7 +31,6 @@ type TIssueDescriptionEditorProps = {
   projectId: string | null;
   handleDescriptionHTMLDataChange: (descriptionHtmlData: string, source?: IssueDescriptionChangeSource) => void;
   onAssetUpload: (assetId: string) => void;
-  onClose: () => void;
 };
 
 export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(props: TIssueDescriptionEditorProps) {
@@ -48,7 +45,6 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
     projectId,
     handleDescriptionHTMLDataChange,
     onAssetUpload,
-    onClose,
   } = props;
   // i18n
   const { t } = useTranslation();
@@ -60,21 +56,6 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
     if (descriptionHtmlData !== undefined) handleDescriptionHTMLDataChange(descriptionHtmlData);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [descriptionHtmlData]);
-
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (editorRef.current?.isEditorReadyToDiscard()) {
-      onClose();
-    } else {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Editor is still processing changes. Please wait before proceeding.",
-      });
-      event.preventDefault(); // Prevent default action if editor is not ready to discard
-    }
-  };
-
-  useKeypress("Escape", handleKeyDown);
 
   return (
     <div className="relative rounded-lg border-[0.5px] border-subtle-1 bg-layer-2">

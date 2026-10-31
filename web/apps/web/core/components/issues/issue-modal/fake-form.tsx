@@ -7,12 +7,14 @@ import {
   useRef,
   useState,
   type ComponentProps,
-  type PropsWithChildren,
+  type ComponentType,
 } from "react";
 import { createRoot } from "react-dom/client";
 import { useFormContext } from "react-hook-form";
 import { afterEach, beforeEach, vi, type Mock } from "vitest";
 import type { Draft } from "@nerve/api-client";
+import type { EditorRefApi } from "@nerve/editor";
+import type { ModalCore, ModalTitle } from "@nerve/ui";
 import { EIssuesStoreType } from "@nerve/types";
 import type { RichTextEditor } from "@/components/editor/rich-text";
 import { issueDetailOf, issueStoreTab, draftOf, requestedIssue } from "@/store/issue/fake-issues";
@@ -45,15 +47,34 @@ vi.mock("@/hooks/use-issues-actions", () => ({
 vi.mock("@/components/issues/create-issue-toast-action-items", () => ({ CreateIssueToastActionItems: () => null }));
 vi.mock("./components/parent-tag", () => ({ IssueParentTag: () => null }));
 // Adjacent properties are covered by I1/I2. Keep the real field Controllers here.
-vi.mock("./components/default-properties", async () => ({
-  IssueDefaultProperties: (await import("./components/date-fields")).IssueDateFields,
-}));
-vi.mock("@nerve/ui", async (original) => ({
-  ...(await original<typeof import("@nerve/ui")>()),
-  ModalCore: ({ children, isOpen }: PropsWithChildren<{ isOpen: boolean }>) =>
-    isOpen ? <div role="dialog">{children}</div> : null,
-  ModalTitle: ({ children }: PropsWithChildren) => <h3>{children}</h3>,
-}));
+vi.mock("./components/default-properties", async () => {
+  const { IssueDateFields } = await import("./components/date-fields");
+  return {
+    IssueDefaultProperties: (props: ComponentProps<typeof IssueDateFields>) => {
+      const Extra = formUI.extra;
+      return (
+        <>
+          <IssueDateFields {...props} />
+          {Extra && <Extra />}
+        </>
+      );
+    },
+  };
+});
+vi.mock("@nerve/ui", async (original) => {
+  const actual = await original<typeof import("@nerve/ui")>();
+  return {
+    ...actual,
+    ModalCore: (props: ComponentProps<typeof ModalCore>) =>
+      formUI.realDialogs ? (
+        <actual.ModalCore {...props} />
+      ) : props.isOpen ? (
+        <div role="dialog">{props.children}</div>
+      ) : null,
+    ModalTitle: (props: ComponentProps<typeof ModalTitle>) =>
+      formUI.realDialogs ? <actual.ModalTitle {...props} /> : <h3>{props.children}</h3>,
+  };
+});
 vi.mock("@/components/editor/rich-text", () => ({
   RichTextEditor: forwardRef((props: ComponentProps<typeof RichTextEditor>, ref) => {
     const [value, setValue] = useState(props.initialValue);
@@ -61,7 +82,10 @@ vi.mock("@/components/editor/rich-text", () => ({
       formState: { isDirty },
       getValues,
     } = useFormContext<IssueFormValues>();
-    useImperativeHandle(ref, () => ({ isEditorReadyToDiscard: () => true, clearEditor: () => setValue("") }));
+    useImperativeHandle(ref, () => ({
+      isEditorReadyToDiscard: () => formUI.editorReady,
+      clearEditor: () => setValue(""),
+    }));
     useEffect(() => {
       if (props.value != null) setValue(props.value);
     }, [props.value]);
@@ -91,6 +115,10 @@ vi.mock("@/components/editor/rich-text", () => ({
 }));
 
 export let tab: Awaited<ReturnType<typeof issueStoreTab>>;
+export const formUI: { realDialogs: boolean; editorReady: boolean; extra?: ComponentType } = {
+  realDialogs: false,
+  editorReady: true,
+};
 export let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 export const close: Mock<() => void> = vi.fn();
@@ -115,9 +143,13 @@ export const html = () => host.querySelector("[data-form-html]")?.textContent;
 export const submit = () =>
   act(async () => host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
 export const click = (name: string) => act(async () => button(name).click());
-export function useFormFixture() {
+export function useFormFixture({ realDialogs = false }: { realDialogs?: boolean } = {}) {
   beforeEach(async () => {
+    formUI.realDialogs = realDialogs;
+    formUI.editorReady = true;
+    formUI.extra = undefined;
     vi.useFakeTimers();
+    if (realDialogs) vi.spyOn(Element.prototype, "getAnimations").mockReturnValue([]);
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     vi.stubGlobal(
       "ResizeObserver",
@@ -130,6 +162,7 @@ export function useFormFixture() {
     tab = await issueStoreTab();
     tab.app.issue.issues.acceptRead(original(), tab.app.issue.captureRead());
     tab.nerve.calls.length = 0;
+    if (realDialogs) vi.useRealTimers();
     close.mockReset();
     confirmed.mockReset();
     toasts.length = 0;
@@ -144,13 +177,35 @@ export function useFormFixture() {
     root = createRoot(host);
   });
   afterEach(async () => {
-    await act(async () => root.unmount());
-    host.remove();
-    tab.app.dispose();
+    await act(async () => root?.unmount());
+    host?.remove();
+    tab?.app.dispose();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 }
+function DialogHost() {
+  const [open, setOpen] = useState(false);
+  return (
+    <main>
+      <button type="button" onClick={() => setOpen(true)}>
+        Open form
+      </button>
+      <CreateUpdateIssueModalBase
+        isOpen={open}
+        data={{ name: "New", project_id: "A", description_html: "<p>New</p>" }}
+        fetchIssueDetails={false}
+        onClose={() => {
+          close();
+          setOpen(false);
+        }}
+        onSubmit={confirmed}
+      />
+    </main>
+  );
+}
+export const mountDialog = () => act(async () => root.render(<DialogHost />));
 export async function mountExisting(kind: "issue" | "draft") {
   let draft: Draft | undefined;
   if (kind === "draft") {
@@ -193,9 +248,11 @@ export const mountNew = () =>
   );
 function Form({ overrides }: { overrides: Partial<IssueFormProps> }) {
   const title = useRef<HTMLInputElement>(null);
+  const editor = useRef<EditorRefApi>(null);
   return (
     <IssueFormRoot
       issueTitleRef={title}
+      editorRef={editor}
       isCreateMoreToggleEnabled={false}
       onCreateMoreToggleChange={() => {}}
       onAssetUpload={() => {}}

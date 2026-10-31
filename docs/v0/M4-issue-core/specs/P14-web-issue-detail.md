@@ -129,6 +129,7 @@ T15 六处复制使用现有 useCopyLink/useCopyText（均收值与成功文案�
 - [x] A3：真实编辑器撤销重做与迁移保存正确；boolean skip_activity、不发 JSON；已有 issue 与 draft 的迁移不标 dirty（T3/T4；review §8 的 T3/T4 及 t3-i2-complete、t4-component-final）。
 - [x] A4：I1 创建字段/归一化/码/数据库正确，表单有名字、无正 tabIndex、项目必选可读；拒绝与 pending 保留当前窗（T4；t4-i1-verified 2/2、t4-component-final 41/41、t4-full-routed-e2e 205/205）。
 - [ ] A5：父项/Save this draft 内层 Escape 不影响外层，portal 背景隔离、循环 Tab、焦点回还（T5/T6/T16）。
+  T5 已完成真实 ModalCore 的五项消费者测试和 Chromium C4；父项真实查询/页面待 T6，三浏览器矩阵待 T16，整条暂不提前勾选。
 - [ ] A6：父项原生查询与所有消费者一致，两个已有/一个新子项、移动/解除/状态分布、排除后代，I8 完成（T6）。
 - [ ] A7：跨项目关系/反向/任一端删除/部分确认保留，I9 完成；M7 两个消费者适配且无旧 projectIssuesSearch 读者（T6/T7）。
 - [ ] A8：I10 真 worker 元数据、bounded GET 重试、data favicon、无外连，字段拒绝与复制分别验证（T8/T15）。

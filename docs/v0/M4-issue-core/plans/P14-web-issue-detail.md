@@ -103,11 +103,11 @@ make e2e
 **Files：** spec T5、T4 base/form；新 `C/components/issues/issue-modal/close-policy.test.tsx`；新 `E/stories/issue/detail-interactions.spec.ts` 的 C4 场景。
 **Interfaces：** 只有一个 `requestClose():void` 本地决策，读取当前 sending/readiness/dirty 并调用现有 onClose/draft discard；外层 ModalCore 与按钮复用。若抽 hook，用 `useIssueModalClose` 作为局部实现，不暴露全局注册/事件总线。
 
-- [ ] Step 1：写 `innerEscapeLeavesDirtyOuterOpen`、`innerEscapeDoesNotOpenDiscard`、`pendingCannotCloseOrResubmit`、`returnsFocusToConnectedTrigger`；外层无改动/有改动两种，Save this draft 与父项内层各一组。
-- [ ] Step 2：真实 ModalCore 嵌套 DOM 测试确认 document Escape 的缺口；不 mock 掉 Dialog/portal。复用已有 @nerve/ui modal 测试作为基础，业务消费者另验。
-- [ ] Step 3：统一关闭入口，移除或严格缩限描述编辑器 Escape；补 ConfirmIssueDiscard ModalTitle 和文案。保留当前草稿保存/拒绝，不把完整保存发布搬入本段。
-- [ ] Step 4：C4 此步只验 Save this draft、日期/标签 portal、Tab 环、背景隐藏、Escape/外点、返回焦点；父项的真实页面场景依赖 T6 原生查询，放 T6 Step 4 闭合，不在此放行旧 API。M08 用嵌套 ModalCore 消费者单测检出全 document Escape 回归，恢复。T16 统一三浏览器。
-- [ ] Step 5：记录 A5；提交 `fix(M4/P14): 统一弹窗关闭并隔离嵌套 Escape`。
+- [x] Step 1：写 `innerEscapeLeavesDirtyOuterOpen`、`innerEscapeDoesNotOpenDiscard`、`pendingCannotCloseOrResubmit`、`returnsFocusToConnectedTrigger`；外层无改动/有改动两种，Save this draft 与父项内层各一组。
+- [x] Step 2：真实 ModalCore 嵌套 DOM 测试确认 document Escape 的缺口；不 mock 掉 Dialog/portal。复用已有 @nerve/ui modal 测试作为基础，业务消费者另验。
+- [x] Step 3：统一关闭入口，移除或严格缩限描述编辑器 Escape；补 ConfirmIssueDiscard ModalTitle 和文案。保留当前草稿保存/拒绝，不把完整保存发布搬入本段。
+- [x] Step 4：C4 此步只验 Save this draft、日期/标签 portal、Tab 环、背景隐藏、Escape/外点、返回焦点；父项的真实页面场景依赖 T6 原生查询，放 T6 Step 4 闭合，不在此放行旧 API。M08 用嵌套 ModalCore 消费者单测检出全 document Escape 回归，恢复。T16 统一三浏览器。
+- [x] Step 5：记录 A5；提交 `fix(M4/P14): 统一弹窗关闭并隔离嵌套 Escape`。
 
 ## Task 6：原生父项选择与子项、I8（约 900–1400 行）
 

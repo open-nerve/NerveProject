@@ -52,6 +52,7 @@ export interface IssueFormProps {
   descriptionLoadState?: IssueDescriptionLoadState;
   onRetryDescription?: () => void;
   issueTitleRef: React.MutableRefObject<HTMLInputElement | null>;
+  editorRef: React.RefObject<EditorRefApi | null>;
   isCreateMoreToggleEnabled: boolean;
   onAssetUpload: (assetId: string) => void;
   onCreateMoreToggleChange: (value: boolean) => void;
@@ -86,6 +87,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     descriptionLoadState = "ready",
     onRetryDescription,
     issueTitleRef,
+    editorRef,
     onAssetUpload,
     onChange,
     onClose,
@@ -110,7 +112,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const [isMoving, setIsMoving] = useState<boolean>(false);
 
   // refs
-  const editorRef = useRef<EditorRefApi>(null);
   const submitBtnRef = useRef<HTMLButtonElement | null>(null);
   const modalContainerRef = useRef<HTMLDivElement | null>(null);
   const descriptionMigration = useRef(false);
@@ -195,7 +196,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   };
 
   const handleMoveToProjects = async () => {
-    if (!data?.id || !onPublish || isMoving || isSubmitting || descriptionLoadState !== "ready") return;
+    if (!data?.id || !onPublish || isMoving || isSubmitting || isPending || descriptionLoadState !== "ready") return;
     if (!editorRef.current?.isEditorReadyToDiscard()) return;
     setIsMoving(true);
     try {
@@ -342,7 +343,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                     projectId={projectId}
                     handleDescriptionHTMLDataChange={handleDescriptionChange}
                     onAssetUpload={onAssetUpload}
-                    onClose={onClose}
                   />
                 )}
               </div>
@@ -380,17 +380,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                       variant="secondary"
                       size="lg"
                       disabled={isSubmitting || isPending || isMoving}
-                      onClick={() => {
-                        if (descriptionLoadState !== "ready" || editorRef.current?.isEditorReadyToDiscard()) {
-                          onClose();
-                        } else {
-                          setToast({
-                            type: TOAST_TYPE.ERROR,
-                            title: "Error!",
-                            message: "Editor is still processing changes. Please wait before proceeding.",
-                          });
-                        }
-                      }}
+                      onClick={onClose}
                     >
                       {t("discard")}
                     </Button>
