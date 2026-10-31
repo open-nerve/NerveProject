@@ -5,7 +5,7 @@
  */
 
 import type { OrganizationSize } from "@nerve/api-client";
-import type { TStaticViewTypes, IWorkspaceSearchResults } from "@nerve/types";
+import type { TStaticViewTypes } from "@nerve/types";
 import { EUserWorkspaceRoles } from "@nerve/types";
 
 export const ORGANIZATION_SIZE: OrganizationSize[] = ["Just myself", "2-10", "11-50", "51-200", "201-500", "500+"];
@@ -108,13 +108,3 @@ export const WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS: IWorkspaceSidebarNavi
 ];
 
 export const IS_FAVORITE_MENU_OPEN = "is_favorite_menu_open";
-export const WORKSPACE_DEFAULT_SEARCH_RESULT: IWorkspaceSearchResults = {
-  results: {
-    workspace: [],
-    project: [],
-    issue: [],
-    cycle: [],
-    module: [],
-    issue_view: [],
-  },
-};

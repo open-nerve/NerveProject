@@ -16,7 +16,6 @@ const ui = vi.hoisted(() => ({
   open: true,
   navigate: vi.fn(),
   close: vi.fn(),
-  legacy: vi.fn(),
   params: { workspaceSlug: "ws", projectId: "A" as string | undefined },
 }));
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
@@ -31,12 +30,6 @@ vi.mock("@/hooks/store/use-power-k", () => ({
 }));
 vi.mock("react-router", () => ({ useParams: () => ui.params, useNavigate: () => ui.navigate }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-// Retired transport is isolated solely to make any accidental call observable, never to fake the native API.
-vi.mock("@/services/workspace.service", () => ({
-  WorkspaceService: class {
-    searchWorkspace = ui.legacy;
-  },
-}));
 let tab: Awaited<ReturnType<typeof issueStoreTab>>, root: Root, host: HTMLDivElement, config: SWRConfiguration;
 const scrollDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
 let projects: Project[], holdDirectory: boolean;
@@ -92,10 +85,6 @@ beforeEach(async () => {
   ui.params = { workspaceSlug: "ws", projectId: "A" };
   ui.navigate.mockReset();
   ui.close.mockReset();
-  ui.legacy.mockReset();
-  ui.legacy.mockResolvedValue({
-    results: { workspace: [], project: [], issue: [], cycle: [], module: [], issue_view: [] },
-  });
   tab = await issueStoreTab();
   projects = [tab.project];
   holdDirectory = false;
@@ -143,7 +132,6 @@ it("no query, a closed palette and property pages never request issues; the dire
   await render("dark", false, "update-theme");
   await tick(500);
   expect(searches()).toHaveLength(2);
-  expect(ui.legacy).not.toHaveBeenCalled();
 });
 it.each(["中文", "A-1", "1", "%_\\"])(
   "one debounce passes the exact native query %s without legacy transport",
@@ -154,7 +142,6 @@ it.each(["中文", "A-1", "1", "%_\\"])(
     await tick(1);
     expect(searches()).toHaveLength(1);
     expect(searches()[0]!.query).toEqual({ q, project_id: "A" });
-    expect(ui.legacy).not.toHaveBeenCalled();
   }
 );
 it("scopeSwitchOmitsProjectAndDropsOldResultsImmediately", async () => {
