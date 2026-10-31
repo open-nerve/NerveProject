@@ -370,7 +370,11 @@ I22 修正后的首轮显式矩阵，Chromium 44/44、Firefox 43/44。I9 在重�
 
 现有 issue-list-page fixture 新增 scrollToLastListRow，I3/I19 两处指针翻页先抵达末行真实链接，再执行原按钮 click。原数据/顺序/过滤/权限/HTTP 和错误断言不改；无固定等待、强制点击或盲目重试。I3 的键盘翻页与日历分页结构不改。逻辑、集成、覆盖三视角复审见 [re-22](../../../reviews/re-22-M4P14集成修复审核.md)。该修正不宣称改变产品虚拟化高度策略，实际覆盖边界在报告中保留。
 
-最终未插桩三个测试文件输入已通过 make lint-web（54/54，36 缓存）、make knip、make e2e（238/238，build 加运行 67.489 秒）。产品、生成协议、依赖与构建配置无改动；gen/lint-go/Go test/Web test 保留 §10 的原测试输入与回执，输入复用证明为 ci-fix-input-reuse.json。P14 44 项矩阵所选故事不变，共同 fixture 仅新增未调用 helper、旧函数逐字不变，三引擎证据保留原输入，不伪称新运行。
+第一轮未插桩三个测试文件输入已通过 make lint-web（54/54，36 缓存）、make knip、make e2e（238/238，build 加运行 67.489 秒）。产品、生成协议、依赖与构建配置无改动；gen/lint-go/Go test/Web test 保留 §10 的原测试输入与回执，第一轮输入复用证明为 ci-fix-input-reuse.json。P14 44 项矩阵所选故事不变，共同 fixture 仅新增未调用 helper、旧函数逐字不变，三引擎证据保留原输入，不伪称新运行。
+
+修复提交 f93c6968 的 [CI 41199938927](https://github.com/open-nerve/NerveProject/actions/runs/41199938927) attempt 1 的分页均通过，仅 06 已知 W11 快捷键失败（237/1）；按纪律重跑后 W11 通过，但另一个 I19 冷启动标签故事失败（237/1）。实际 trace 证明描述编辑器恰在点击期间挂载、把标签按钮下推，旧坐标落到父工作项行，没有标签 GET。原用例本地 8 倍 CPU 3/3，未复现；不能虚构本地红绿。该普通筛选故事补真实 contenteditable 可见前置后仍用原鼠标 click，目录一次读取、冷启动筛选与 quiet 断言不变；加载中交互继续由 C10 覆盖。局部决定的代价是此故事只验加载后目录，不冒称加载中可点击，未改产品或守卫。
+
+追加三视角复审和原始依据见 re-22；补前置后限速 3/3，最终无插桩静态 54/54、knip、完整 E2E 238/238（build 加运行 66.875 秒），三回执 ci-fix-label-* 绑定同一输入 a4e577d542c0ed0bb77b378c8b4c846671ee2dd65260cd4d943a3aa234ba2ce2。未变输入复用证明追加 ci-fix-label-input-reuse.json。W11 未修改，两轮失败、浏览器重跑和新标签报告均保留。
 
 全部集成证据在主目录 `.superpowers/sdd/P14-integration-20261031/`。修复提交推送后，ci-fix-delivery.json 后置核准确修复 HEAD 与分支 CI；随后在既有授权内 --no-ff 合并 main，并以 main-ci-success-receipt.json 核准确 main。只有 main 三任务全绿、原 P14 与修复 worktree 的材料均归档逐 hash 复验后，才能正常清理两个工作树/分支。准备 P15 的文档不得作为其产品实现。
 
