@@ -1,8 +1,9 @@
 import { createLabel } from "../../fixtures/api";
+import { createIssue } from "../../fixtures/issues";
 import { expect, test } from "../../fixtures/test";
 import { expectListPageQuiet, issueListProject, openIssueList } from "../../fixtures/issue-list-page";
 import { modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
-import { transitionsEnded } from "../../fixtures/settings-pages";
+import { answerTo, transitionsEnded } from "../../fixtures/settings-pages";
 
 test("C4: creation owns dismissal, nested draft confirmation owns its Escape and Tab loop, and date/label portals retain the outer form and its focus", async ({
   api,
@@ -91,3 +92,47 @@ test("C4: creation owns dismissal, nested draft confirmation owns its Escape and
   expect(await db.query("SELECT id FROM issues WHERE project_id=$1", [seed.project.id])).toEqual([]);
   await expectListPageQuiet(page, watch, browserName, 1);
 });
+
+for (const dirty of [false, true]) {
+  test(`C4: native parent search owns only its inner Escape and restores a ${dirty ? "dirty" : "clean"} creation form`, async ({
+    api,
+    page,
+    browserName,
+  }, info) => {
+    const seed = await issueListProject(api, info);
+    await createIssue(api, seed.member.token, seed.project.id, { name: "Candidate parent" });
+    const { watch } = await openIssueList(page, seed);
+    const create = page.getByRole("button", { name: "Add work item", exact: true });
+    await create.click();
+    const outer = page.getByRole("dialog", { name: "Create new work item", exact: true });
+    const title = outer.getByRole("textbox", { name: "Title", exact: true });
+    await expect(title).toBeVisible();
+    if (dirty) await title.fill("Unsaved child");
+    const parent = outer.getByRole("button", { name: "Add parent", exact: true });
+    await parent.focus();
+    const found = await answerTo(page, "GET", `/api/v0/workspaces/${seed.slug}/issue-search`, () =>
+      page.keyboard.press("Enter")
+    );
+    expect(Object.fromEntries(new URL(found.url()).searchParams)).toEqual({ project_id: seed.project.id });
+    const inner = page.getByRole("dialog", { name: "Add parent work item", exact: true });
+    await expect(inner.getByRole("option").filter({ hasText: "Candidate parent" })).toBeVisible();
+    expect(await pageBehindHidden(page)).toBe(true);
+    await inner.getByRole("combobox").focus();
+    await page.keyboard.press("Escape");
+    await expect(modalDialog(page)).toHaveCount(1);
+    await expect(inner).toHaveCount(0);
+    await expect(parent).toBeFocused();
+    await expect(title).toHaveValue(dirty ? "Unsaved child" : "");
+    await expect(page.getByRole("dialog", { name: "Save this draft?", exact: true })).toHaveCount(0);
+    await outer.getByRole("button", { name: "Discard", exact: true }).click();
+    if (dirty)
+      await page
+        .getByRole("dialog", { name: "Save this draft?", exact: true })
+        .getByRole("button", { name: "Discard", exact: true })
+        .click();
+    await expect(modalDialog(page)).toHaveCount(0);
+    await expect(create).toBeFocused();
+    expect(watch.apiRequests.filter((request) => request.startsWith("POST /api/v0/projects/"))).toEqual([]);
+    await expectListPageQuiet(page, watch, browserName, 1);
+  });
+}

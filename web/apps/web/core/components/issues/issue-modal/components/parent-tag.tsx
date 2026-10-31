@@ -12,23 +12,25 @@ import { Controller } from "react-hook-form";
 import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
 // types
-import type { ISearchIssueResponse } from "@nerve/types";
+import type { Issue } from "@nerve/api-client";
 // helpers
 // hooks
 // components
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
+import { useProjectState } from "@/hooks/store/use-project-state";
 
 type TIssueParentTagProps = {
   control: Control<IssueFormValues>;
-  selectedParentIssue: ISearchIssueResponse;
+  selectedParentIssue: Issue;
   handleFormChange: () => void;
-  setSelectedParentIssue: (issue: ISearchIssueResponse | null) => void;
+  setSelectedParentIssue: (issue: Issue | null) => void;
 };
 
 export const IssueParentTag = observer(function IssueParentTag(props: TIssueParentTagProps) {
   const { control, selectedParentIssue, handleFormChange, setSelectedParentIssue } = props;
   // store hooks
   const { t } = useTranslation();
+  const { getStateById } = useProjectState();
 
   return (
     <Controller
@@ -38,17 +40,16 @@ export const IssueParentTag = observer(function IssueParentTag(props: TIssuePare
         <div className="flex w-min items-center gap-2 rounded-sm bg-surface-2 p-2 text-caption-sm-regular whitespace-nowrap">
           <div className="flex items-center gap-2">
             <span
-              className="block h-1.5 w-1.5 rounded-full"
+              className="block h-1.5 w-1.5 rounded-full bg-icon-placeholder"
               style={{
-                backgroundColor: selectedParentIssue.state__color,
+                backgroundColor: getStateById(selectedParentIssue.state_id)?.color,
               }}
             />
             <span className="flex-shrink-0 text-secondary">
               {selectedParentIssue?.project_id && (
                 <IssueIdentifier
                   projectId={selectedParentIssue.project_id}
-                  projectIdentifier={selectedParentIssue?.project__identifier}
-                  issueSequenceId={selectedParentIssue.sequence_id}
+                  issueId={selectedParentIssue.id}
                   size="xs"
                 />
               )}

@@ -13,6 +13,7 @@ import type { TIssueOperations } from "@/components/issues/issue-detail";
 import { IssueParentSelect } from "@/components/issues/issue-detail/parent-select";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useProject } from "@/hooks/store/use-project";
 
 type TIssueParentSelect = {
   className?: string;
@@ -32,6 +33,7 @@ export const IssueParentSelectRoot = observer(function IssueParentSelectRoot(pro
     issue: { getIssueById },
   } = useIssueDetail();
   const { removeSubIssue } = useIssueDetail();
+  const { getProjectIdentifierById } = useProject();
 
   // derived values
   const issue = getIssueById(issueId);
@@ -53,7 +55,11 @@ export const IssueParentSelectRoot = observer(function IssueParentSelectRoot(pro
     }
   };
 
-  const workItemLink = `/${workspaceSlug}/projects/${parentIssue?.project_id}/issues/${parentIssue?.id}`;
+  const parentIdentifier = parentIssue ? getProjectIdentifierById(parentIssue.project_id) : undefined;
+  const workItemLink =
+    parentIssue && parentIdentifier
+      ? `/${workspaceSlug}/browse/${parentIdentifier}-${parentIssue.sequence_id}`
+      : undefined;
 
   if (!issue) return <></>;
 

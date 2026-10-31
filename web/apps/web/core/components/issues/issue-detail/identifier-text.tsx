@@ -47,14 +47,15 @@ export function IdentifierText(props: TIdentifierTextProps) {
 
   const textSizeClassName = SIZE_MAP[size];
   const variantClassName = VARIANT_MAP[variant];
+  const className = cn("text-12 font-medium whitespace-nowrap text-tertiary", textSizeClassName, variantClassName);
+  // A display-only identifier is also rendered inside links, menu triggers and listbox options.
+  if (!enableClickToCopyIdentifier) return <span className={className}>{identifier}</span>;
 
   return (
     <Tooltip label="Click to copy" disabled={!enableClickToCopyIdentifier}>
       <button
         type="button"
-        className={cn("text-12 font-medium whitespace-nowrap text-tertiary", textSizeClassName, variantClassName, {
-          "cursor-pointer": enableClickToCopyIdentifier,
-        })}
+        className={cn(className, "cursor-pointer")}
         onClick={handleCopyIssueIdentifier}
         disabled={!enableClickToCopyIdentifier}
       >

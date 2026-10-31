@@ -28,7 +28,7 @@ import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { Switch } from "@makeplane/propel/components/switch";
-import { convertWorkItemDataToSearchResponse, getUpdateFormDataForReset, getChangedIssuefields } from "@nerve/utils";
+import { getUpdateFormDataForReset, getChangedIssuefields } from "@nerve/utils";
 import { ModalTitle } from "@nerve/ui";
 import { useRefusedFocus } from "@/lib/refused-focus";
 import { useFormRefusal } from "@/lib/form-refusal";
@@ -43,8 +43,6 @@ import {
 // hooks
 import { useIssueModal } from "@/hooks/context/use-issue-modal";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useProject } from "@/hooks/store/use-project";
-import { useProjectState } from "@/hooks/store/use-project-state";
 
 export interface IssueFormProps {
   data?: IssueFormData;
@@ -117,13 +115,11 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const descriptionMigration = useRef(false);
 
   // store hooks
-  const { getProjectById } = useProject();
   const { selectedParentIssue, setSelectedParentIssue } = useIssueModal();
 
   const {
     issue: { getIssueById },
   } = useIssueDetail();
-  const { getStateById } = useProjectState();
 
   // form info
   const methods = useForm<IssueFormValues>({
@@ -237,23 +233,12 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     handleFormChange();
   };
 
-  // executing this useEffect when the parent_id coming from the component prop
+  const parentId = watch("parent_id");
+  const parent = parentId ? getIssueById(parentId) : undefined;
   useEffect(() => {
-    const parentId = watch("parent_id") || undefined;
-    if (!parentId) return;
-    if (parentId === selectedParentIssue?.id || selectedParentIssue) return;
-
-    const issue = getIssueById(parentId);
-    if (!issue) return;
-
-    const projectDetails = getProjectById(issue.project_id);
-    if (!projectDetails) return;
-
-    const stateDetails = getStateById(issue.state_id);
-
-    setSelectedParentIssue(convertWorkItemDataToSearchResponse(workspaceSlug, issue, projectDetails, stateDetails));
-    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-  }, [watch, getIssueById, getProjectById, selectedParentIssue, getStateById]);
+    if (selectedParentIssue === (parent ?? null)) return;
+    setSelectedParentIssue(parent ?? null);
+  }, [parent, selectedParentIssue, setSelectedParentIssue]);
 
   // executing this useEffect when isDirty changes
   useEffect(() => {

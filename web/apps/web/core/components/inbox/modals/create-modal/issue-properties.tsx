@@ -4,13 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueDetail } from "@nerve/api-client";
+import type { Issue, IssueDetail } from "@nerve/api-client";
 
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { ETabIndices } from "@nerve/constants";
 import { ParentOutline } from "@makeplane/propel/icons";
-import type { ISearchIssueResponse } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";
 import { renderFormattedPayloadDate, getDate, getTabIndex } from "@nerve/utils";
 // components
@@ -18,6 +17,7 @@ import { DateDropdown } from "@/components/dropdowns/date";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { ParentIssuesListModal } from "@/components/issues/parent-issues-list-modal";
+import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 import { IssueLabelSelect } from "@/components/issues/select";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -38,7 +38,7 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
   const { isMobile } = usePlatformOS();
   // states
   const [parentIssueModalOpen, setParentIssueModalOpen] = useState(false);
-  const [selectedParentIssue, setSelectedParentIssue] = useState<ISearchIssueResponse | undefined>(undefined);
+  const [selectedParentIssue, setSelectedParentIssue] = useState<Issue | undefined>(undefined);
 
   const { getIndex } = getTabIndex(ETabIndices.INTAKE_ISSUE_FORM, isMobile);
 
@@ -125,11 +125,11 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
                   className="flex h-full cursor-pointer items-center justify-between gap-1 rounded-sm border-[0.5px] border-strong px-2 py-0.5 text-11 hover:bg-layer-1"
                 >
                   <ParentOutline className="h-3 w-3 flex-shrink-0" />
-                  <span className="whitespace-nowrap">
-                    {selectedParentIssue
-                      ? `${selectedParentIssue.project__identifier}-${selectedParentIssue.sequence_id}`
-                      : `Add parent`}
-                  </span>
+                  <IssueIdentifier
+                    projectId={selectedParentIssue.project_id}
+                    issueId={selectedParentIssue.id}
+                    size="xs"
+                  />
                 </button>
               }
               placement="bottom-start"

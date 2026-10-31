@@ -7,7 +7,7 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { ISearchIssueResponse } from "@nerve/types";
+import type { Issue } from "@nerve/api-client";
 // components
 import { IssueModalContext } from "@/components/issues/issue-modal/context";
 // hooks
@@ -21,7 +21,7 @@ export type TIssueModalProviderProps = {
 export const IssueModalProvider = observer(function IssueModalProvider(props: TIssueModalProviderProps) {
   const { children, allowedProjectIds } = props;
   // states
-  const [selectedParentIssue, setSelectedParentIssue] = useState<ISearchIssueResponse | null>(null);
+  const [selectedParentIssue, setSelectedParentIssue] = useState<Issue | null>(null);
   // store hooks
   const { projectsWithCreatePermissions } = useUser();
   // derived values

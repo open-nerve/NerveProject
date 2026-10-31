@@ -114,11 +114,11 @@ make e2e
 **Files：** spec T6 与 T4 选择器/context消费者；既有 `C/components/issues/parent-selection.test.tsx`；新 `parent-issues-list-modal.test.tsx`；`E/stories/issue/i8-sub-issues.spec.ts`。
 **Interfaces：** `ParentIssuesListModal` value/onChange 改生成 Issue；所有生产调用同提交。读取复用 `useIssueSearch(root,workspaceSlug,query,open)` 的 ids/proof/loading/error/retry；onChange Promise 确认后才关闭，不拿已失效 proof 提交。
 
-- [ ] Step 1：盘全读者含 M7 create-modal；写 `newIssueSearchOmitsForAndSource`、`existingParentSearchUsesSource`、`oldSearchCannotBeSelectedAfterProjectOrPermissionChange`、当前读取拒绝/retry 和 void/Promise 回调两类。
-- [ ] Step 2：新 picker 测试与既有 parent-selection 运行红；核空词合法、新建无 id 不用 for，父项 id 不同于自身，至少两层后代用于排除断言。
-- [ ] Step 3：原生 Issue 一路传递、目录显示、ModalTitle/输入名/无正 tabIndex/hover 链接；删除该转换器的零读者部分，不干掉 M7 仍需的其他旧搜索类型。子项复用既有命令、确认分布/计数。
-- [ ] Step 4：I8 API 建前置，页面加已有两个/新建一个/换父/解除，核 query for、候选排除、DB 动态与计数；同时在 detail-interactions.spec.ts 闭合 T5 留下的父项 C4 页面：原生请求、背景隐藏、内层 Escape、外层 dirty/无改动均不受影响及焦点返回；M09 去 for 或 proof、M10 仅更新 UI 不确认父子分别检出并恢复。类型核 M7 调用能编译。
-- [ ] Step 5：记录 A5 的父项页面、A6/A7 与 M7 边界；提交 `feat(M4/P14): 接通原生父项选择和子工作项页面`。
+- [x] Step 1：盘全读者含 M7 create-modal；写 `newIssueSearchOmitsForAndSource`、`existingParentSearchUsesSource`、`oldSearchCannotBeSelectedAfterProjectOrPermissionChange`、当前读取拒绝/retry 和 void/Promise 回调两类。
+- [x] Step 2：新 picker 测试与既有 parent-selection 运行红；核空词合法、新建无 id 不用 for，父项 id 不同于自身，至少两层后代用于排除断言。
+- [x] Step 3：原生 Issue 一路传递、目录显示、ModalTitle/输入名/无正 tabIndex/hover 链接；删除该转换器的零读者部分，不干掉 M7 仍需的其他旧搜索类型。子项复用既有命令、确认分布/计数。
+- [x] Step 4：I8 API 建前置，页面加已有两个/新建一个/换父/解除，核 query for、候选排除、DB 动态与计数；同时在 detail-interactions.spec.ts 闭合 T5 留下的父项 C4 页面：原生请求、背景隐藏、内层 Escape、外层 dirty/无改动均不受影响及焦点返回；M09 去 for 或 proof、M10 仅更新 UI 不确认父子分别检出并恢复。类型核 M7 调用能编译。
+- [x] Step 5：记录 A5 的父项页面、A6/A7 与 M7 边界；提交 `feat(M4/P14): 接通原生父项选择和子工作项页面`。
 
 ## Task 7：关联与收集箱查询适配、I9（约 650–1100 行）
 

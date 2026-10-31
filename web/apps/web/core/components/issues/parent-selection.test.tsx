@@ -26,29 +26,9 @@ vi.mock("@/hooks/store/use-issue-detail", async (original) => ({
   useIssueDetail: () => tab.app.issue.issueDetail,
 }));
 vi.mock("./issue-detail/issue-identifier", () => ({ IssueIdentifier: () => null }));
-// P14 still owns search migration; this fixture models that existing boundary only.
-vi.mock("@/services/project", () => ({
-  ProjectService: class {
-    async projectIssuesSearch() {
-      return [
-        {
-          id: "next",
-          name: "Next parent",
-          project_id: "A",
-          project__identifier: "A",
-          project__name: "A",
-          sequence_id: 1,
-          start_date: null,
-          state__color: "#fff",
-          state__name: "Todo",
-          workspace__slug: "ws",
-        },
-      ];
-    }
-  },
-}));
 vi.mock("@nerve/ui", async (original) => ({
   ...(await original<typeof import("@nerve/ui")>()),
+  ModalTitle: ({ children }: PropsWithChildren) => <h3>{children}</h3>,
   ModalCore: ({ children, isOpen }: PropsWithChildren<{ isOpen: boolean }>) =>
     isOpen ? <div role="dialog">{children}</div> : null,
 }));
@@ -78,7 +58,9 @@ beforeEach(async () => {
   tab.app.issue.issues.acceptRead(issueDetailOf("x"), tab.app.issue.captureRead());
   tab.nerve.respond = (call) => {
     if (call.method !== "GET") return;
-    if (call.path === "/api/v0/issues/next") call.answer(json(200, issueDetailOf("next")));
+    if (call.path === "/api/v0/workspaces/ws/issue-search")
+      call.answer(json(200, { data: [{ ...issueDetailOf("next"), name: "Next parent" }] }));
+    else if (call.path === "/api/v0/issues/next") call.answer(json(200, issueDetailOf("next")));
     else call.answer(json(200, { data: [], next_cursor: null }));
   };
   toasts.length = 0;
@@ -115,6 +97,7 @@ const select = async () => {
 };
 it.each([200, 403, 422])("waits for parent confirmation and retains search on refusal (%s)", async (status) => {
   await select();
+  expect(host.querySelector('[role="dialog"]')).not.toBeNull();
   await act(async () => until(() => tab.nerve.calls.some((call) => call.method === "PATCH"), "parent write"));
   expect(host.querySelector('[role="dialog"]')).not.toBeNull();
   await select();

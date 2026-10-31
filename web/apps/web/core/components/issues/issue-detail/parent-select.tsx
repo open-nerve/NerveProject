@@ -35,7 +35,7 @@ type TIssueParentSelect = {
     parentIssueId: string,
     issueId: string
   ) => Promise<void>;
-  workItemLink: string;
+  workItemLink: string | undefined;
 };
 
 export const IssueParentSelect = observer(function IssueParentSelect(props: TIssueParentSelect) {
@@ -89,19 +89,21 @@ export const IssueParentSelect = observer(function IssueParentSelect(props: TIss
       >
         {issue.parent_id && parentIssue ? (
           <div className="flex items-center gap-1.5">
-            <Tooltip label={`Title: ${parentIssue.name}`} layout="stacked" disabled={isMobile}>
-              <Link to={workItemLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                {parentIssue?.project_id && parentIssueProjectDetails && (
-                  <IssueIdentifier
-                    projectId={parentIssue.project_id}
-                    projectIdentifier={parentIssueProjectDetails?.identifier}
-                    issueSequenceId={parentIssue.sequence_id}
-                    size="xs"
-                    variant="secondary"
-                  />
-                )}
-              </Link>
-            </Tooltip>
+            {workItemLink && (
+              <Tooltip label={parentIssue.name} layout="stacked" disabled={isMobile}>
+                <Link to={workItemLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                  {parentIssue?.project_id && parentIssueProjectDetails && (
+                    <IssueIdentifier
+                      projectId={parentIssue.project_id}
+                      projectIdentifier={parentIssueProjectDetails?.identifier}
+                      issueSequenceId={parentIssue.sequence_id}
+                      size="xs"
+                      variant="secondary"
+                    />
+                  )}
+                </Link>
+              </Tooltip>
+            )}
 
             {!disabled && (
               <Tooltip label={t("common.remove")} side="bottom" disabled={isMobile}>

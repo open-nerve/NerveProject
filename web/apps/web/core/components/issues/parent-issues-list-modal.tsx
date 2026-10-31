@@ -3,232 +3,162 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
-import React, { useEffect, useState, useRef } from "react";
-import { useDetailScope } from "./issue-detail-widgets/use-detail-scope";
-import { useRefusalMessage } from "@/hooks/use-refusal-toast";
+import { useRef, useState } from "react";
+import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// icons
-import { RocketOutline, SearchOutline } from "@makeplane/propel/icons";
-// headless ui
 import { Combobox } from "@headlessui/react";
-// i18n
+import { SearchOutline } from "@makeplane/propel/icons";
+import type { Issue } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
-// types
-import type { ISearchIssueResponse } from "@nerve/types";
-// ui
-import { Loader, EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
-import { generateWorkItemLink, getTabIndex } from "@nerve/utils";
-// components
+import { Loader, EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueSearch } from "@/hooks/use-issue-search";
+import { useRefusalMessage } from "@/hooks/use-refusal-toast";
 import { IssueSearchModalEmptyState } from "@/components/core/modals/issue-search-modal-empty-state";
-import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
-// hooks
-import useDebounce from "@/hooks/use-debounce";
-import { usePlatformOS } from "@/hooks/use-platform-os";
-// services
-import { ProjectService } from "@/services/project";
+import { IssueIdentifier } from "./issue-detail/issue-identifier";
+import { useDetailScope } from "./issue-detail-widgets/use-detail-scope";
 
 type Props = {
   isOpen: boolean;
   handleClose: () => void;
-  value?: ISearchIssueResponse;
-  onChange: (issue: ISearchIssueResponse) => void | Promise<void>;
+  value?: Issue | null;
+  onChange: (issue: Issue) => void | Promise<void>;
   projectId: string | undefined;
   issueId?: string;
 };
 
-// services
-const projectService = new ProjectService();
-
-export function ParentIssuesListModal(props: Props) {
+export const ParentIssuesListModal = observer(function ParentIssuesListModal(props: Props) {
   const { workspaceSlug } = useParams();
+  const { rootIssueStore: root } = useIssueDetail();
+  const workspace = workspaceSlug ? root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug) : undefined;
+  const permission = root.permissionReads.identity(workspace?.id, props.projectId ? [props.projectId] : [], true);
   return props.isOpen ? (
-    <ParentIssuesListContent key={JSON.stringify([workspaceSlug, props.projectId, props.issueId])} {...props} />
+    <ParentIssuesListContent
+      key={JSON.stringify([workspaceSlug, props.projectId, props.issueId, permission])}
+      {...props}
+    />
   ) : null;
-}
-function ParentIssuesListContent({ isOpen, handleClose: onClose, value, onChange, projectId, issueId }: Props) {
-  // i18n
+});
+
+const ParentIssuesListContent = observer(function ParentIssuesListContent({
+  isOpen,
+  handleClose: onClose,
+  value,
+  onChange,
+  projectId,
+  issueId,
+}: Props) {
   const { t } = useTranslation();
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [issues, setIssues] = useState<ISearchIssueResponse[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const { isMobile } = usePlatformOS();
-  const debouncedSearchTerm: string = useDebounce(searchTerm, 500);
-
   const { workspaceSlug } = useParams();
+  const { rootIssueStore: root } = useIssueDetail();
+  const [term, setTerm] = useState("");
+  const search = useIssueSearch(
+    root,
+    workspaceSlug,
+    {
+      project_id: projectId,
+      ...(issueId ? { for: "parent" as const, issue_id: issueId } : {}),
+      ...(term ? { q: term } : {}),
+    },
+    isOpen && !!projectId
+  );
   const capture = useDetailScope(workspaceSlug ?? "", projectId, issueId ?? "new", true);
   const message = useRefusalMessage();
-  const [searchError, setSearchError] = useState<{ error: unknown }>();
-  const [attempt, setAttempt] = useState(0);
-  const pending = useRef(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const { baseTabIndex } = getTabIndex(undefined, isMobile);
-
-  const handleClose = () => {
-    onClose();
-    setSearchTerm("");
+  const busy = useRef(false);
+  const [pending, setPending] = useState(false);
+  const issues = search.ids.flatMap((id) => {
+    const issue = root.issues.getIssueById(id);
+    return issue ? [issue] : [];
+  });
+  const close = () => {
+    if (!busy.current) onClose();
   };
-
-  useEffect(() => {
-    if (!isOpen || !workspaceSlug || !projectId) return;
-
+  const choose = async (selected: Issue | null) => {
+    if (!selected || busy.current || !projectId || !search.proof || !search.ids.includes(selected.id)) return;
     const current = capture();
-    let active = true;
-    setSearchError(undefined);
-    setIsSearching(true);
-    setIsLoading(true);
-
-    projectService
-      .projectIssuesSearch(workspaceSlug, projectId, {
-        search: debouncedSearchTerm,
-        parent: true,
-        issue_id: issueId,
-        workspace_search: false,
-      })
-      .then((res) => {
-        if (active && current()) setIssues(res);
-        return undefined;
-      })
-      .catch((error) => {
-        if (active && current()) setSearchError({ error });
-      })
-      .finally(() => {
-        if (!active || !current()) return;
-        setIsSearching(false);
-        setIsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [debouncedSearchTerm, isOpen, issueId, projectId, workspaceSlug, capture, attempt]);
-
+    const workspace = workspaceSlug ? root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug) : undefined;
+    const issue = root.issues.getIssueById(selected.id);
+    if (
+      !current() ||
+      !workspace ||
+      !issue ||
+      issue.project_id !== projectId ||
+      issue.workspace_id !== workspace.id ||
+      !root.isReadCurrent(search.proof, [projectId], workspace.id)
+    )
+      return;
+    busy.current = true;
+    setPending(true);
+    try {
+      await onChange(issue);
+      if (current()) onClose();
+    } catch {
+      // The command owns its refusal. Keep the input and candidates for an explicit retry.
+    } finally {
+      busy.current = false;
+      if (current()) setPending(false);
+    }
+  };
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
-      <Combobox
-        value={value}
-        disabled={submitting}
-        onChange={async (selected: ISearchIssueResponse | null) => {
-          if (!selected || pending.current) return;
-          const current = capture();
-          if (!current()) return;
-          pending.current = true;
-          setSubmitting(true);
-          try {
-            await onChange(selected);
-            if (current()) handleClose();
-          } catch {
-            // The command owns refusal reporting; retain the query for a deliberate retry.
-          } finally {
-            pending.current = false;
-            if (current()) setSubmitting(false);
-          }
-        }}
-      >
+    <ModalCore isOpen={isOpen} handleClose={close} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+      <ModalTitle className="px-4 pt-4 text-16 font-medium">{t("issue.add.parent")}</ModalTitle>
+      <Combobox as="div" value={value ?? null} by="id" disabled={pending} onChange={choose}>
         <div className="relative m-1">
           <SearchOutline
-            className="text-opacity-40 pointer-events-none absolute top-3.5 left-4 h-5 w-5 text-primary"
+            className="pointer-events-none absolute top-3.5 left-4 h-5 w-5 text-secondary"
             aria-hidden="true"
           />
           <Combobox.Input
-            className="h-12 w-full border-0 bg-transparent pr-4 pl-11 text-primary outline-none placeholder:text-placeholder focus:ring-0 sm:text-13"
+            aria-label={t("common.search.placeholder")}
+            className="h-12 w-full bg-transparent pr-4 pl-11 text-13 outline-none"
             placeholder={t("common.search.placeholder")}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            displayValue={() => ""}
-            tabIndex={baseTabIndex}
+            value={term}
+            onChange={(event) => setTerm(event.target.value)}
           />
         </div>
+        {search.error !== undefined && (
+          <div role="alert" className="p-3">
+            {message(search.error)}{" "}
+            <button type="button" onClick={search.retry}>
+              {t("common.retry")}
+            </button>
+          </div>
+        )}
+        {search.loading ? (
+          <Loader className="space-y-3 p-3">
+            <Loader.Item height="40px" />
+            <Loader.Item height="40px" />
+          </Loader>
+        ) : search.error === undefined && issues.length === 0 ? (
+          <IssueSearchModalEmptyState
+            issues={issues}
+            searchTerm={term}
+            debouncedSearchTerm={term}
+            isSearching={false}
+          />
+        ) : null}
         <Combobox.Options
           as="ul"
           static
-          className="vertical-scrollbar scrollbar-md max-h-80 scroll-py-2 overflow-y-auto"
+          className="vertical-scrollbar scrollbar-md max-h-80 scroll-py-2 overflow-y-auto p-2"
         >
-          {searchTerm !== "" && (
-            <h5 className="mx-2 text-13 text-secondary">
-              Search results for <span className="text-primary">"{searchTerm}"</span> in project:
-            </h5>
-          )}
-
-          {searchError ? (
-            <div role="alert">
-              {message(searchError.error)}{" "}
-              <button type="button" onClick={() => setAttempt((previous) => previous + 1)}>
-                {t("common.retry")}
-              </button>
-            </div>
-          ) : isSearching || isLoading ? (
-            <Loader className="space-y-3 p-3">
-              <Loader.Item height="40px" />
-              <Loader.Item height="40px" />
-              <Loader.Item height="40px" />
-              <Loader.Item height="40px" />
-            </Loader>
-          ) : (
-            <>
-              {issues.length === 0 ? (
-                <IssueSearchModalEmptyState
-                  debouncedSearchTerm={debouncedSearchTerm}
-                  isSearching={isSearching}
-                  issues={issues}
-                  searchTerm={searchTerm}
-                />
-              ) : (
-                <ul className={`text-13 ${issues.length > 0 ? "p-2" : ""}`}>
-                  {issues.map((issue) => (
-                    <Combobox.Option
-                      as="li"
-                      key={issue.id}
-                      value={issue}
-                      className={({ active, selected }) =>
-                        `group my-0.5 flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-2 text-secondary select-none ${
-                          active ? "bg-layer-1 text-primary" : ""
-                        } ${selected ? "text-primary" : ""}`
-                      }
-                    >
-                      <div className="flex flex-grow items-center gap-2 truncate">
-                        <span
-                          className="block h-1.5 w-1.5 flex-shrink-0 rounded-full"
-                          style={{
-                            backgroundColor: issue.state__color,
-                          }}
-                        />
-                        <span className="flex-shrink-0">
-                          <IssueIdentifier
-                            projectId={issue.project_id}
-                            projectIdentifier={issue.project__identifier}
-                            issueSequenceId={issue.sequence_id}
-                            size="xs"
-                            variant="secondary"
-                          />
-                        </span>{" "}
-                        <span className="truncate">{issue.name}</span>
-                      </div>
-                      <a
-                        href={generateWorkItemLink({
-                          workspaceSlug,
-                          projectId: issue?.project_id,
-                          issueId: issue?.id,
-                          projectIdentifier: issue.project__identifier,
-                          sequenceId: issue?.sequence_id,
-                        })}
-                        target="_blank"
-                        className="relative z-1 hidden flex-shrink-0 text-secondary group-hover:block hover:text-primary"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <RocketOutline className="h-4 w-4" />
-                      </a>
-                    </Combobox.Option>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
+          {issues.map((issue) => (
+            <Combobox.Option
+              as="li"
+              key={issue.id}
+              value={issue}
+              className="my-0.5 flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-13 text-secondary select-none data-focus:bg-layer-1 data-focus:text-primary"
+            >
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-icon-placeholder"
+                style={{ backgroundColor: root.rootStore.state.getStateById(issue.state_id)?.color }}
+              />
+              <IssueIdentifier projectId={issue.project_id} issueId={issue.id} size="xs" variant="secondary" />
+              <span className="truncate">{issue.name}</span>
+            </Combobox.Option>
+          ))}
         </Combobox.Options>
       </Combobox>
     </ModalCore>
   );
-}
+});

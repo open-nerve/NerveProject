@@ -132,3 +132,17 @@ a9d4f118 的 lint-web 54/54、knip、强制无缓存 test-web 18/18 任务、E2E
 验证：t5-restored 六文件 46/46；t5-page-regression 的 C4、I1 页面/API 与 C3 共 9/9 Chromium 通过；t5-types、t5-lint（0 警告/0 错误）和 diff 检查通过。C4 证明日期/标签 portal 的 Escape 留住外层、背景隔离、内层 Tab 首尾循环、内外层外点、dirty 输入保留与焦点回还；没有意外创建请求和落库。编译使用 t5-packages / t5-build 产物。A5 仍留父项真实页面（T6）和三浏览器（T16）。
 
 夹具修正与产品缺陷分记：real timer 前先以 fake timer 完成 FakeNerve 初始化；mock helper 必须先导入，否则先载入的 useDetailScope 指向真实默认空 store；旧断言改为翻译 key。常驻确认框需等退出动画卸载，真实页面需等外层恢复唯一 modal 且目标实际聚焦再发送下一键；首次即时断言失败保留，未以任意 sleep、重试产品写或放宽错误白名单掩盖。自查确认无新增全局协调器、无重复关闭决策。
+
+### T6 原生父项与子项页面
+
+ParentIssuesListModal 直接消费生成 Issue 和已有 useIssueSearch，输入变更立即隐藏旧候选，HTTP 延迟沿原 hook；新建查询只有 project_id/q，已有项带 for=parent 和源 id。选择时复核当前 proof/目录范围；权限 ABA、切项目/源/关闭重开退休旧宿主，Promise 回调成功后才关闭，拒绝和 pending 留住选择器。标题/输入有翻译名称，重试在 Options 外，删除 hover 链接和正 tabIndex。颜色与标识只读目录，不补造字段。
+
+创建 context/provider、默认属性、父项 tag、详情与 M7 创建共用调用同批改为 Issue；表单从当前可见实体同步父项，项目切换/清除不留下旧选择。删除零生产读者的 convertWorkItemDataToSearchResponse 和专用镜像测试，保留状态目录分组的两个性质测试。M7 仅适配共用类型/展示，业务写和自身页面验收不扩；旧 ProjectService 还有 select-duplicate 读者，按 T7 删除。
+
+局部加固：实际选项测试发现 IdentifierText 在禁止复制时仍渲染 disabled button；其只读分支改 span，所有展示消费者自然免于按钮嵌套，复制分支仍归 T15。父项详情链接直接用可见目录生成 browse 地址，缺目录不生成链接。未改后端权限、层级排除或实体协议。
+
+验证：t6-restored-final 十二文件 87/87，包含现有子项读取/确认后 GET 拒绝、命令与全部表单；t6-page-final 的 I8 页面/API、三项 C4 和 I1 页面/API 共 7/7 Chromium 通过。I8 从真实菜单添加两个已有项与一个新项，响应扣留时 DB 先确认而 UI 不提前显示；1/2→1/3 Done、父项排除自身/当前父项/两层后代、移动/解除后的原生链接、计数和逐条审计均核对。C4 父项原生搜索空词查询仅 project_id，内层 Escape 不影响 clean/dirty 外层并回焦点。A2/A6 闭合，A5 三浏览器仍待 T16。
+
+M09 去实际查询 for，精确参数断言红；M10 跳过实际父项命令，三种确认/拒绝测试均因过早关闭而红；均字节恢复。Web/E2E 类型通过，t6-lint-final 0/0，格式/diff 通过。另有夹具修正：FakeNerve 读取 query 而非不存在的 url；审计 helper 的 wrote 是本次写数而非累计；旧命令夹具补目录 hook。一次并发包重建造成 dist 短暂缺失，只计环境失败，改为先构建再测试；不作为行为红。后续包构建与读取这些包的验证必须串行。
+
+T4 检查点远端回执：准确 `503b6778a3ca21ea4c04f85990d0a92be38efee3` 的 [CI 41173311219](https://github.com/open-nerve/NerveProject/actions/runs/41173311219) completed/success，原始公开元数据 t4-ci-latest.json 已保存；不是当前未推 T5/T6 的 CI 证明。

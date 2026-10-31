@@ -2,19 +2,11 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act, useState } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { close, create, formUI, host, mountDialog, useFormFixture, writes } from "./fake-form";
+import { close, create, formUI, host, tab, mountDialog, useFormFixture, writes } from "./fake-form";
 import { ParentIssuesListModal } from "../parent-issues-list-modal";
 import { issueDetailOf } from "@/store/issue/fake-issues";
 import { json, problem } from "@/lib/auth/fake-nerve";
 
-// This task exercises the actual nested consumer and Dialog; T6 replaces its legacy search boundary.
-vi.mock("@/services/project", () => ({
-  ProjectService: class {
-    async projectIssuesSearch() {
-      return [];
-    }
-  },
-}));
 function ParentField() {
   const [open, setOpen] = useState(false);
   return (
@@ -29,6 +21,9 @@ function ParentField() {
 useFormFixture({ realDialogs: true });
 beforeEach(() => {
   formUI.extra = ParentField;
+  tab.nerve.respond = (call) => {
+    if (call.path === "/api/v0/workspaces/ws/issue-search") call.answer(json(200, { data: [] }));
+  };
 });
 const dialogs = () => [...document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')];
 const button = (name: string, root: ParentNode = document) =>

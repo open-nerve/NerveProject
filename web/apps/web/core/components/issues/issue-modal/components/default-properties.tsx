@@ -13,7 +13,7 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ParentOutline } from "@makeplane/propel/icons";
 // types
-import type { ISearchIssueResponse } from "@nerve/types";
+import type { Issue } from "@nerve/api-client";
 // ui
 import { CustomMenu } from "@nerve/ui";
 // components
@@ -32,11 +32,11 @@ type TIssueDefaultPropertiesProps = {
   id: string | undefined;
   projectId: string | null;
   workspaceSlug: string;
-  selectedParentIssue: ISearchIssueResponse | null;
+  selectedParentIssue: Issue | null;
   parentId: string | null;
   isDraft: boolean;
   handleFormChange: () => void;
-  setSelectedParentIssue: (issue: ISearchIssueResponse) => void;
+  setSelectedParentIssue: (issue: Issue) => void;
 };
 
 export const IssueDefaultProperties = observer(function IssueDefaultProperties(props: TIssueDefaultPropertiesProps) {
@@ -144,8 +144,7 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
                 {selectedParentIssue?.project_id && (
                   <IssueIdentifier
                     projectId={selectedParentIssue.project_id}
-                    projectIdentifier={selectedParentIssue?.project__identifier}
-                    issueSequenceId={selectedParentIssue.sequence_id}
+                    issueId={selectedParentIssue.id}
                     size="xs"
                   />
                 )}
