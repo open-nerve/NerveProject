@@ -28,6 +28,8 @@ vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "for
 vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
+// The project selector stays real; its decorative logo's browser font polling does not belong to jsdom's form owner.
+vi.mock("@nerve/propel/emoji-icon-picker", () => ({ Logo: () => null }));
 vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "ws", projectId: "A" }) }));
 vi.mock("@/hooks/context/use-issue-modal", () => ({
   useIssueModal: () => ({ allowedProjectIds: ["A"], selectedParentIssue: null, setSelectedParentIssue: () => {} }),
