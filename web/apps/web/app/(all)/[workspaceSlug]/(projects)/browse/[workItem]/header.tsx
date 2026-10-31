@@ -22,11 +22,12 @@ import { WorkItemDetailsHeader } from "./work-item-header";
 type TProps = {
   workspaceSlug: string;
   issueId: string | undefined;
+  projectId: string | undefined;
 };
 
 export const ProjectWorkItemDetailsHeader = observer(function ProjectWorkItemDetailsHeader(props: TProps) {
   // router
-  const { workspaceSlug, issueId } = props;
+  const { workspaceSlug, issueId, projectId } = props;
   // store hooks
   const { sidebarCollapsed } = useAppTheme();
   const {
@@ -62,7 +63,9 @@ export const ProjectWorkItemDetailsHeader = observer(function ProjectWorkItemDet
           </Row>
         </div>
       )}
-      <AppHeader header={<WorkItemDetailsHeader workspaceSlug={workspaceSlug} issueId={issueId} />} />
+      <AppHeader
+        header={<WorkItemDetailsHeader workspaceSlug={workspaceSlug} issueId={issueId} projectId={projectId} />}
+      />
     </>
   );
 });

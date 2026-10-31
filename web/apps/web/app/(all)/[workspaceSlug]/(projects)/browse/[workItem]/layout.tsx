@@ -36,7 +36,11 @@ const ProjectIssueDetailsLayout = observer(function ProjectIssueDetailsLayout({
   const scope = JSON.stringify([workspaceSlug, workItem, data?.project_id, data?.id, identity, loginId]);
   return (
     <Fragment key={scope}>
-      <ProjectWorkItemDetailsHeader workspaceSlug={workspaceSlug} issueId={isLoading || error ? undefined : data?.id} />
+      <ProjectWorkItemDetailsHeader
+        workspaceSlug={workspaceSlug}
+        issueId={isLoading || error ? undefined : data?.id}
+        projectId={isLoading || error ? undefined : (data?.project_id ?? undefined)}
+      />
       <ContentWrapper className="overflow-hidden">
         <Outlet context={read} />
       </ContentWrapper>

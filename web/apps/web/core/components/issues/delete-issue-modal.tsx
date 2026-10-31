@@ -73,9 +73,12 @@ export const DeleteIssueModal = observer(function DeleteIssueModal(props: Props)
 
   const authorized = isIssueCreator || canPerformProjectAdminActions;
 
-  const onClose = () => {
+  const finishClose = () => {
     setIsDeleting(false);
     handleClose();
+  };
+  const onClose = () => {
+    if (!sending.current) finishClose();
   };
 
   const handleIssueDelete = async () => {
@@ -105,7 +108,7 @@ export const DeleteIssueModal = observer(function DeleteIssueModal(props: Props)
             entity: isSubIssue ? t("common.sub_work_item") : t("common.work_item"),
           }),
         });
-        onClose();
+        finishClose();
       },
       failed: (error) => {
         if (current() && !(error instanceof SessionChangedError)) refusal(error);
@@ -124,16 +127,14 @@ export const DeleteIssueModal = observer(function DeleteIssueModal(props: Props)
       isSubmitting={isDeleting}
       isOpen={isOpen}
       title={t("entity.delete.label", { entity: t("common.work_item") })}
-      content={
-        <>
-          {/* TODO: Translate here */}
-          {"Are you sure you want to delete work item "}
-          <span className="font-medium break-words text-primary">
-            {projectDetails?.identifier}-{issue?.sequence_id}
-          </span>
-          {" ? All of the data related to the work item will be permanently removed. This action cannot be undone."}
-        </>
-      }
+      primaryButtonText={{ loading: t("deleting"), default: t("delete") }}
+      secondaryButtonText={t("common.cancel")}
+      content={t("delete_issue_subtree", {
+        identifier:
+          projectDetails?.identifier && issue
+            ? `${projectDetails.identifier}-${issue.sequence_id}`
+            : t("common.work_item"),
+      })}
     />
   );
 });

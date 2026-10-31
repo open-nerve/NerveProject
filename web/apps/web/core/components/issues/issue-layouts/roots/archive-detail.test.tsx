@@ -212,7 +212,7 @@ it("a refused archived deletion stays in its current confirmation with one nativ
   await mount();
   await openDelete();
   const confirm = [...dialog()!.querySelectorAll<HTMLButtonElement>("button")].find(
-    (button) => button.textContent === "Delete"
+    (button) => button.textContent === "delete"
   )!;
   expect(confirm).toBeDefined();
   await act(async () => confirm.click());
@@ -227,7 +227,7 @@ it("an old archived deletion cannot navigate away or close the next route's conf
   await mount();
   await openDelete();
   const confirm = [...dialog()!.querySelectorAll<HTMLButtonElement>("button")].find(
-    (button) => button.textContent === "Delete"
+    (button) => button.textContent === "delete"
   )!;
   expect(confirm).toBeDefined();
   await act(async () => confirm.click());
@@ -256,7 +256,7 @@ it("a current authorized deletion returns to the archive list after confirmation
   await mount();
   await openDelete();
   const confirm = [...dialog()!.querySelectorAll<HTMLButtonElement>("button")].find(
-    (button) => button.textContent === "Delete"
+    (button) => button.textContent === "delete"
   )!;
   await act(async () => confirm.click());
   await until(() => writes().length === 1, "delete request");

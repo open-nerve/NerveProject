@@ -187,7 +187,7 @@ it.each([false, true])(
     expect(remove).toBeDefined();
     await act(async () => remove!.click());
     const confirm = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(
-      (candidate) => candidate.textContent === "Delete"
+      (candidate) => candidate.textContent === "delete"
     );
     expect(confirm).toBeDefined();
     await act(async () => {

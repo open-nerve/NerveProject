@@ -166,3 +166,13 @@ Web/E2E 类型、变更 lint 0/0、格式/diff 均核验。初次新查重七项
 图标只读 metadata.favicon 的 data:image，favicon_url 仅来源记录，不进入 img.src；无嵌入图标/blocked/failed 使用原链接图标。初始行为红为表单/图标六项、无回读五项；M13 临时恢复外部源图标时两项红，M14 临时放宽回读预算到 300 次/300 秒时第 31 次请求检出，均字节恢复。t8-restored 六文件 48/48，包含确认后 GET 拒绝只 GET 重试、真实资源 URL 变更/删除与迟到读取。
 
 t8-i10-confirmed 的页面/API 3/3 Chromium 通过：真实输入空白/原生 422/409 的 recordFocuses、持有创建响应前 DB 先确认且不能关闭/重复写、初始地址与真实 worker 后到 title/data icon、标题编辑零新 job、URL 编辑新 job、删除与全部动态/审计一致；无外部浏览器请求/CSP/旧 API。Web/E2E 类型和改动 lint 0/0 通过。测试修正记录保留：Problem fixture 补必需 message；PageWatch 用 requestUrls；route.fetch 持有先于旧 body recorder 时计数改用页面 request 事件；同址动态链接需限定链接区，Links 本来默认展开，写后 DOM id 会重建，定位采用当前标题的相对区域而不保存旧 id。均不是产品红。A8 的复制验证仍待 T15，三浏览器随 T16。
+
+### T9 子树删除确认
+
+双语确认明确删除全部子项及归档后代，按钮沿既有翻译。没有查询隐藏子树数量。保留必需 Promise 回调、权限判断和 followInSession；同步 sending 同时保护关闭事件，确认成功的 finishClose 单独执行，拒绝留窗可重试。组件先检出中英文说明缺口与同一事件周期关闭漏洞；M15 将关闭移到服务端确认前，三项断言失败且字节恢复。
+
+I17 页面进一步复现删除后停在编号页：canonical 实体删除使 work-item-header 丢掉项目 id、卸载动作 owner，当前成功因此被当成旧宿主。局部根因修复将路由已证明的 projectId 传到页头，不再靠被删实体维持动作生命周期；useDetailScope 和共同路由 key 不变。真实编号路由单测先红，修复后证实当前删除返回列表，切到新编号后旧答仍无导航。归档和列表四组旧测试同步翻译键，不改生产权限、资源 owner 或服务端协议。
+
+验证：t9-route-green 六文件 82/82（含原有归档/列表确认），t9-component-final 22/22；t9-i17-route 页面/API 2/2 Chromium。页面由另一作者创建两层后代、归档项和六种协作记录，并有跨项目双向关系；持有真实 DELETE 响应时先核目录中全部表的同一删除时刻/当前写者、禁止关闭/重复发送，兑现后返回列表；已删除分支和无关项逐行不变，协作创建者仍为原作者。复用 expectIssueDeleted/catalog 与 collaborationRows，无复制 SQL 目录。
+
+类型、实际 11 个改动 TS 文件 oxlint 0/0、格式/diff 通过。首次翻译键错层被真实页面检出，单测翻译读取改为真实嵌套路径后修复；DB 确认前需等待提交、ModalCore 根无自身尺寸需断言可见 heading，两项夹具问题单独留痕。先提交本次产品，再在准确提交串行完整 F；T9 的完整门禁和推送步骤尚待回执，不将当前聚焦通过冒称全量通过。

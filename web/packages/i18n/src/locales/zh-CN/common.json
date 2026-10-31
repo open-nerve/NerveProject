@@ -156,6 +156,7 @@
   "open_in_new_tab": "在新标签页中打开",
   "delete": "删除",
   "deleting": "删除中",
+  "delete_issue_subtree": "确认删除 {identifier} 及其全部子工作项（包含已归档的后代）吗？相关数据会一并删除，此操作无法撤销。",
   "make_a_copy": "创建副本",
   "move_to_project": "移动到项目",
   "greeting": {

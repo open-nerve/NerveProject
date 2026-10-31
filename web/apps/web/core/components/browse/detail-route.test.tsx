@@ -8,7 +8,7 @@ import type { RootStore } from "@/store/root.store";
 import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection";
 import { issueDetailOf } from "@/store/issue/fake-issues";
 import { loadProjects, stateOf } from "@/store/project/fake-projects";
-import { json, problem } from "@/lib/auth/fake-nerve";
+import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, until } from "@/lib/auth/fake-time";
 import { FiltersDropdown } from "@/components/issues/issue-layouts/filters";
 import Layout from "@/app/(all)/[workspaceSlug]/(projects)/browse/[workItem]/layout";
@@ -98,6 +98,7 @@ beforeEach(async () => {
   refusal = undefined;
   tab.nerve.calls.length = 0;
   tab.nerve.respond = (call) => {
+    if (call.method !== "GET") return;
     if (call.path === "/api/v0/workspaces/ws/projects") return;
     if (call.path.startsWith("/api/v0/workspaces/ws/issues/")) {
       if (!holdIdentifier)
@@ -124,6 +125,7 @@ async function mount(path = "/ws/browse/A-1") {
         children: [{ index: true, Component: RoutePage }],
       },
       { path: "/:workspaceSlug/projects/:projectId/issues/:issueId", Component: RouteIdEntry },
+      { path: "*", element: <div>outside detail</div> },
     ],
     { initialEntries: [path] }
   );
@@ -273,4 +275,43 @@ it("retires all header-local state at the common route boundary", async () => {
   await act(async () => router.navigate("/ws/browse/A-1"));
   await ready();
   expect(headerInput().value).toBe("");
+});
+
+async function submitDelete() {
+  await act(async () => {
+    trigger("Header")!.click();
+    await vi.advanceTimersByTimeAsync(30);
+  });
+  await act(async () => {
+    [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')]
+      .find((item) => item.textContent?.includes("common.actions.delete"))!
+      .click();
+    await vi.advanceTimersByTimeAsync(30);
+  });
+  await act(async () => {
+    [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')]
+      .find((button) => button.textContent === "delete")!
+      .click();
+    await until(() => tab.nerve.calls.some((call) => call.method === "DELETE"), "deletion sent");
+  });
+  return tab.nerve.calls.find((call) => call.method === "DELETE")!;
+}
+it("follows a confirmed numbered-route deletion after the canonical entity disappears", async () => {
+  await mount();
+  await ready();
+  const pending = await submitDelete();
+  expect(router.state.location.pathname).toBe("/ws/browse/A-1");
+  await act(async () => pending.answer(noContent()));
+  expect(tab.app.issue.issues.getIssueById("one")).toBeUndefined();
+  expect(router.state.location.pathname).toBe("/ws/projects/A/issues");
+});
+it("does not follow the old deletion after another numbered route owns the header", async () => {
+  await mount();
+  await ready();
+  const pending = await submitDelete();
+  await act(async () => router.navigate("/ws/browse/A-2"));
+  await ready("two");
+  await act(async () => pending.answer(noContent()));
+  expect(router.state.location.pathname).toBe("/ws/browse/A-2");
+  expect(trigger("Header")).not.toBeNull();
 });

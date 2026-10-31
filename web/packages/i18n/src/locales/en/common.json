@@ -156,6 +156,7 @@
   "open_in_new_tab": "Open in new tab",
   "delete": "Delete",
   "deleting": "Deleting",
+  "delete_issue_subtree": "Delete {identifier} and all its sub-work items, including archived descendants? All related data will be removed. This action cannot be undone.",
   "make_a_copy": "Make a copy",
   "move_to_project": "Move to project",
   "greeting": {

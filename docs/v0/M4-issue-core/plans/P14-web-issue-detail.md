@@ -147,9 +147,9 @@ make e2e
 **Files：** spec T9；既有 `C/components/issues/delete-issue-modal.test.tsx`；`E/stories/issue/i17-delete-issue.spec.ts`、`E/fixtures/assert/issue.ts`（复用目录断言，不复制 SQL 帮手）。
 **Interfaces：** `onSubmit:()=>Promise<void>` 仍必传；保留 DeleteIssueModal 当前 scope/pending/确认跟进，不改 API 204 与子树清理合同。
 
-- [ ] Step 1：扩 `statesWholeSubtreeWithoutLeakingHiddenCounts`、`keepsDialogOnRefusal`、`doesNotCloseNewOwnerAfterOldDelete`；API 创建非删除者数据、两层子项、归档后代及跨项目关联。
-- [ ] Step 2：现有 delete modal 测试与页面新增场景确认文案/时序缺口；不把 CSS 文案快照当删除目录性质。
-- [ ] Step 3：文案明确子树且 en/zh-CN 完整；必要局部修复保留同步锁。禁止先客户端枚举隐藏子项或用非空断言绕过必需回调。
+- [x] Step 1：扩 `statesWholeSubtreeWithoutLeakingHiddenCounts`、`keepsDialogOnRefusal`、`doesNotCloseNewOwnerAfterOldDelete`；API 创建非删除者数据、两层子项、归档后代及跨项目关联。
+- [x] Step 2：现有 delete modal 测试与页面新增场景确认文案/时序缺口；不把 CSS 文案快照当删除目录性质。
+- [x] Step 3：文案明确子树且 en/zh-CN 完整；必要局部修复保留同步锁。禁止先客户端枚举隐藏子项或用非空断言绕过必需回调。
 - [ ] Step 4：I17 真实点击确认后 expectIssueDeleted 核所有目录、同一 deleted_at/写者与留存无关项；M15 让确认前关闭或忽略拒绝须红，恢复；完整 F。
 - [ ] Step 5：记录 A9；提交 `feat(M4/P14): 明确并验证子树删除确认`，完整本地门禁后推检查点。
 
