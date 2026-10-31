@@ -99,6 +99,8 @@ export function useConfirmedAutosave<T>({
   const change = useCallback(
     (next: T) => {
       if (!owner.active || owner.replacing || latest.current.disabled) return;
+      // Editors may emit several transactions before React commits. Compare with the current revision.
+      if (latest.current.same(next, owner.value)) return;
       owner.prepared = latest.current.prepareSave?.();
       owner.value = next;
       owner.revision += 1;

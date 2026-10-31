@@ -96,3 +96,13 @@ label-select 的正 tabIndex 已于 P12 消除，T2 复验当前真实详情无�
 行为红 t2-fields-behavior-red 为四项：空白、超长、服务端聚焦、卸载校验；最初语法错误不计行为红。M02 去 FieldError 描述关联、M03 提前聚焦各准确检出空 description，均字节恢复。FieldError size 的类型缺口已修；首次页面失败为测试未计入选项头像的可访问名称，改为唯一可见姓名匹配后通过，产品无额外修改。
 
 最终 t2-fields-final 63/63、t2-i2-complete API/页面 2/2、t2-types-final、t2-lint-clean 0 warnings/0 errors 通过；改动格式和 diff 检查通过。浏览器实际页面载入与编辑器警告仍按既有精确一条断言，T10 才删源头及所有白名单；未增加旧 API/外部请求例外。
+
+### T3 描述确认保存、撤销重做和迁移
+
+已有普通拒绝保留、旧确认、卸载刷新和恢复版本机制保留。新增同一回调轮内连续撤销/重做测试，定位 DescriptionInput 按闭包中的渲染值提前返回：重做回到已确认内容时，会留下刚产生的撤销待保存值。去重移到 useConfirmedAutosave 的当前 owner.value；DescriptionInput 总把变化交给它。没有新增定时器、队列或持久化协议。
+
+首次分立 input 事件的 t3-red 实际全绿，不能计为缺陷红；同一编辑器回调轮的 t3-batched-callback-red 真实检出撤销值残留。恢复旧渲染比较的 M04 再检出错误保存一次；M05 将两个迁移 flag 变为字符串，真实 root 的运行时校验阻止 PATCH，debounce/unmount 两条预期写均未出现而失败，不是编译错误。两变异的纯补丁、输入和字节恢复哈希均归档。
+
+真实 I2 页面用 TipTap 键盘操作，已确认内容在 1.5 秒窗口内撤销再重做后无额外 PATCH；普通连续输入遇当前 503 保留内容，仅显式 Retry 再发同一内容。API/DB 核对 HTML、stripped、合并动态/版本与保存时间。初次加载真实无块 ID 描述时只发 description_html + boolean skip_activity，HTML 保存、审计/版本/主时间戳不变。普通保存不发 description_json 或 skip_activity。既有 href/checked API 故事同时复验其不能借 skip_activity 逃过审计。
+
+t3-restored 33/33，t3-i2-complete 真实页面和三个 API 场景 4/4，types 与改动文件 lint 0/0 通过，格式/diff 通过。首次页面断言遗漏编辑器的现有 paragraph class，已按实际输出修正测试，不计产品缺陷。M1-P2 的撤销重做子项已有处理结果；A3 中弹窗普通工作项/草稿迁移仍归 T4，未提前勾整条。

@@ -182,7 +182,6 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
         projectId={projectId}
         dragDropEnabled
         onChange={(_document, description_html, options) => {
-          if (description_html === localDescription.description_html) return;
           change({ id: entityId, description_html, isMigrationUpdate: !!options?.isMigrationUpdate });
         }}
         placeholder={placeholder ?? ((isFocused, value) => t(getDescriptionPlaceholderI18n(isFocused, value)))}

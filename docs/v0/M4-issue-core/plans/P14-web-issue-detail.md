@@ -79,11 +79,11 @@ make e2e
 **Files：** spec T3；现有 `C/components/issues/{autosave,editor-lifecycle,editor-status}.test.tsx`；`E/stories/issue/i2-description.spec.ts`。
 **Interfaces：** 保持 `DescriptionInput` 的 onSubmit/prepareSubmit 与 `useConfirmedAutosave`；只消费 `isMigrationUpdate` 生成 boolean skip_activity。
 
-- [ ] Step 1：核已有 undo/redo 性质，补 `redoReplacesPendingUndoEvenAtConfirmedValue`、普通拒绝保持内容、旧 owner 晚答测试；设计页面真实 TipTap 编辑→撤销→重做且在 1.5 秒窗口内完成。
-- [ ] Step 2：运行上述三个既有 unit 文件；新增 UI 场景经真实编辑器，不能把 textarea mock 单测称为 C4 浏览器证据。
-- [ ] Step 3：仅在复现缺口时修 autosave 根因；已通过部分保留。页面记录 payload 不含 description_json，迁移 true 是布尔值，内容/链接/checked 变化不能伪装迁移免审计。
-- [ ] Step 4：I2 用 DB 断言 HTML/stripped、动态/版本/时间戳，普通连续编辑与纯补 id 分开；M04 保留过时待发保存、M05 改 string flag 各检出并恢复。
-- [ ] Step 5：记录 A3、M1-P2 子项；提交 `test(M4/P14): 验证描述撤销重做和迁移保存`，若有根因修复用 fix 前缀并说明。
+- [x] Step 1：核已有 undo/redo 性质，补 `redoReplacesPendingUndoEvenAtConfirmedValue`、普通拒绝保持内容、旧 owner 晚答测试；设计页面真实 TipTap 编辑→撤销→重做且在 1.5 秒窗口内完成。
+- [x] Step 2：运行上述三个既有 unit 文件；新增 UI 场景经真实编辑器，不能把 textarea mock 单测称为 C4 浏览器证据。
+- [x] Step 3：仅在复现缺口时修 autosave 根因；已通过部分保留。页面记录 payload 不含 description_json，迁移 true 是布尔值，内容/链接/checked 变化不能伪装迁移免审计。
+- [x] Step 4：I2 用 DB 断言 HTML/stripped、动态/版本/时间戳，普通连续编辑与纯补 id 分开；M04 保留过时待发保存、M05 改 string flag 各检出并恢复。
+- [x] Step 5：记录 A3、M1-P2 子项；提交 `test(M4/P14): 验证描述撤销重做和迁移保存`，若有根因修复用 fix 前缀并说明。
 
 ## Task 4：创建/编辑字段与迁移、I1（约 900–1400 行）
 
