@@ -17,7 +17,13 @@ import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import type { Page, TestInfo } from "@playwright/test";
 import { watchPage } from "../../fixtures/browser";
 import { addCondition, displayPanel } from "../../fixtures/issue-filters-page";
-import { expectListPageQuiet, issueListProject, listGroup, openIssueList } from "../../fixtures/issue-list-page";
+import {
+  expectListPageQuiet,
+  issueListProject,
+  listGroup,
+  openIssueList,
+  scrollToLastListRow,
+} from "../../fixtures/issue-list-page";
 import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { createIssueComment } from "../../fixtures/comments";
 import { createIssue, listMemberIssues, memberIssuesListed, type MemberIssueQuery } from "../../fixtures/issues";
@@ -364,6 +370,7 @@ test("I19 (page): a created group keeps its relation and project restriction on 
   const high = listGroup(page, "High");
   await expect(high.locator('[class~="group/list-header"]')).toHaveText("High52");
   await expect(high.locator('[id^="issue_"]')).toHaveCount(50);
+  await scrollToLastListRow(high);
   expect(
     (await answerTo(page, "GET", path, () => high.getByRole("button", { name: /^Load more/ }).click())).status()
   ).toBe(200);

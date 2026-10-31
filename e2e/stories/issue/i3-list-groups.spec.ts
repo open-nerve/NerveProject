@@ -19,6 +19,7 @@ import {
   openIssueList,
   listGroup,
   expectListOrder,
+  scrollToLastListRow,
   expectListPageQuiet,
 } from "../../fixtures/issue-list-page";
 
@@ -283,6 +284,7 @@ test("I3 (page): real state continuation, saved A intersection C and label-prior
     cGroup,
     rows.slice(0, 50).map((row) => row.id)
   );
+  await scrollToLastListRow(cGroup);
   await cGroup.getByRole("button", { name: "Load more" }).click();
   await expectListOrder(
     cGroup,

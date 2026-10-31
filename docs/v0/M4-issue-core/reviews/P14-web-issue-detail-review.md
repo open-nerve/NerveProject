@@ -1,6 +1,6 @@
 # M4/P14 详情与弹窗：实施、整审与交付记录
 
-日期：2026-10-31。状态：**实现、本地验收及整审修复完成，最终分支 CI 以后置交付门核准；先不合并**。基线 `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；[spec](../specs/P14-web-issue-detail.md)、[plan](../plans/P14-web-issue-detail.md)、[文档预检](../../../reviews/re-20-M4P14预检审核.md)。§1–7（含“未实施”表）仅保留预检历史；§8 是逐任务历史，最终状态以 §9–14 为准。phase 已进入 M4/P14。
+日期：2026-10-31。状态：**原分支已授权合入 main，集成 CI 的测试前置修复及最终 main 核准中（§15）**。基线 `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`；[spec](../specs/P14-web-issue-detail.md)、[plan](../plans/P14-web-issue-detail.md)、[文档预检](../../../reviews/re-20-M4P14预检审核.md)。§1–7（含“未实施”表）仅保留预检历史；§8 是逐任务历史，实施验收见 §9–14，后续集成事实以 §15 起为准。phase 已进入 M4/P14。
 
 ## 1. 前置与方法
 
@@ -361,6 +361,18 @@ M1-P2、M1-P4、M1-closeout、M2-closeout、M3-closeout 各追加 P14 对应子�
 ### 14.2 Firefox 关联页面的加载前置
 
 I22 修正后的首轮显式矩阵，Chromium 44/44、Firefox 43/44。I9 在重载后立即点 Relations，trace 的输入点 (573,297) 在 lazy 描述挂载时失去目标，按钮下移约 44px，最终仍折叠；失败不是权限或关系数据缺失。原 trace、帧及分析见 `t16-i9-ready-trace-analysis.json`。I9 三次打开文档均补实际 editor 挂载前置，随后 Firefox 连续 5/5；没有固定等待、重复点击或警告忽略。作者完整读单一修改文件及关系组件/store/原编辑器边界，`t16-i9-ready-review.json` 绑定补充复审。加载期间的布局跟随和退出仍由 C10 专项验证；I9 不冒称验收此时对移动按钮的指针命中。最终完整 Web 门禁、默认 E2E 及三引擎各 44 已在最终验收输入重新通过。
+
+## 15. main CI 虚拟列表分页前置修复（2026-10-31）
+
+负责人授权后，最终分支 ec5f38b5 经 --no-ff 合并为 main `7c978546ad8b5927a59e04c83475081df477756a`，树与分支终态相同。其 [CI 41196503733](https://github.com/open-nerve/NerveProject/actions/runs/41196503733) attempt 1 的 I19、attempt 2 的 I3 各失败一次，均 237 通过；两次 server/web 成功。这些是实际失败，不能沿用分支绿灯宣布集成完成。
+
+按 02 §9 从 main 新建 codex/m4-p14-ci。两个浏览器下载的报告均核对页面 digest；trace、无 continuation 的请求记录和 8 倍 CPU 对照共同证明：直接点击远处页尾时，自动滚动触发虚拟行从占位切换到实际内容，按钮在 pointerdown/up 间下移 132px，click 落入列表容器。I19 原常速 5/5、限速 2/3；I3 原限速 0/3，修复后两者限速均 3/3。诊断插桩和 120 秒整例预算均精确恢复，不进入最终测试。
+
+现有 issue-list-page fixture 新增 scrollToLastListRow，I3/I19 两处指针翻页先抵达末行真实链接，再执行原按钮 click。原数据/顺序/过滤/权限/HTTP 和错误断言不改；无固定等待、强制点击或盲目重试。I3 的键盘翻页与日历分页结构不改。逻辑、集成、覆盖三视角复审见 [re-22](../../../reviews/re-22-M4P14集成修复审核.md)。该修正不宣称改变产品虚拟化高度策略，实际覆盖边界在报告中保留。
+
+最终未插桩三个测试文件输入已通过 make lint-web（54/54，36 缓存）、make knip、make e2e（238/238，build 加运行 67.489 秒）。产品、生成协议、依赖与构建配置无改动；gen/lint-go/Go test/Web test 保留 §10 的原测试输入与回执，输入复用证明为 ci-fix-input-reuse.json。P14 44 项矩阵所选故事不变，共同 fixture 仅新增未调用 helper、旧函数逐字不变，三引擎证据保留原输入，不伪称新运行。
+
+全部集成证据在主目录 `.superpowers/sdd/P14-integration-20261031/`。修复提交推送后，ci-fix-delivery.json 后置核准确修复 HEAD 与分支 CI；随后在既有授权内 --no-ff 合并 main，并以 main-ci-success-receipt.json 核准确 main。只有 main 三任务全绿、原 P14 与修复 worktree 的材料均归档逐 hash 复验后，才能正常清理两个工作树/分支。准备 P15 的文档不得作为其产品实现。
 
 ## 附录：全部实际裁定（台账原顺序）
 
