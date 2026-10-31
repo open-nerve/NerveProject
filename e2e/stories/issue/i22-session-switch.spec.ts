@@ -121,20 +121,54 @@ test("I22 (page): Back across workspace, project and issue ends creation, deleti
   const beta = slugFor(info, "beta");
   await createWorkspace(api, seed.member.token, { name: "Beta", slug: beta });
   const betaProject = await createProject(api, seed.member.token, beta, { name: "Beta work", identifier: "BETA" });
+  const betaItem = await createIssue(api, seed.member.token, betaProject.id, { name: "Beta list is mounted" });
   const { watch } = await openIssueList(page, seed);
+  await expect(page.locator(`#issue-${item.id}`)).toBeVisible();
   const detail = `/${seed.slug}/browse/WEB-${item.sequence_id}`;
   const cases = [
-    { kind: "create", previous: `/${beta}/projects/${betaProject.id}/issues`, current: seed.path },
-    { kind: "peek", previous: `/${beta}/projects/${betaProject.id}/issues`, current: seed.path },
-    { kind: "delete", previous: `/${seed.slug}/browse/WEB-${neighbor.sequence_id}`, current: detail },
-    { kind: "link", previous: `/${seed.slug}/browse/OPS-${other.sequence_id}`, current: detail },
+    {
+      kind: "create",
+      previous: `/${beta}/projects/${betaProject.id}/issues`,
+      previousItem: betaItem,
+      current: seed.path,
+    },
+    {
+      kind: "peek",
+      previous: `/${beta}/projects/${betaProject.id}/issues`,
+      previousItem: betaItem,
+      current: seed.path,
+    },
+    {
+      kind: "delete",
+      previous: `/${seed.slug}/browse/WEB-${neighbor.sequence_id}`,
+      previousItem: neighbor,
+      current: detail,
+    },
+    { kind: "link", previous: `/${seed.slug}/browse/OPS-${other.sequence_id}`, previousItem: other, current: detail },
   ] as const;
   await cases.reduce(async (previousCase, entry) => {
     await previousCase;
+    // pushState changes the address before React commits the route. Establish each actual page, including
+    // Back/Forward destinations, so an action cannot open an old host that the pending navigation then retires.
+    const expectPreviousPage = async () => {
+      await expect(page).toHaveURL(entry.previous);
+      if (entry.kind === "create" || entry.kind === "peek")
+        await expect(page.locator(`#issue-${entry.previousItem.id}`)).toBeVisible();
+      else
+        await expect(page.getByRole("textbox", { name: "Work item title", exact: true })).toHaveValue(
+          entry.previousItem.name
+        );
+    };
+    const expectCurrentPage = async () => {
+      await expect(page).toHaveURL(entry.current);
+      if (entry.kind === "create" || entry.kind === "peek")
+        await expect(page.locator(`#issue-${item.id}`)).toBeVisible();
+      else await expect(page.getByRole("textbox", { name: "Work item title", exact: true })).toHaveValue(item.name);
+    };
     await moveWithinApp(page, entry.previous);
-    await expect(page).toHaveURL(entry.previous);
+    await expectPreviousPage();
     await moveWithinApp(page, entry.current);
-    await expect(page).toHaveURL(entry.current);
+    await expectCurrentPage();
     if (entry.kind === "create") {
       await page.getByRole("button", { name: "Add work item", exact: true }).click();
       await page
@@ -153,11 +187,11 @@ test("I22 (page): Back across workspace, project and issue ends creation, deleti
       await expect(page.getByRole("dialog", { name: "Add link", exact: true })).toHaveCount(1);
     }
     await page.goBack();
-    await expect(page).toHaveURL(entry.previous);
+    await expectPreviousPage();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Close the peek view", exact: true })).toHaveCount(0);
     await page.goForward();
-    await expect(page).toHaveURL(entry.current);
+    await expectCurrentPage();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Close the peek view", exact: true })).toHaveCount(0);
   }, Promise.resolve());
