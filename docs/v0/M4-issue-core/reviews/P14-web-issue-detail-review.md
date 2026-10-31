@@ -249,6 +249,10 @@ T13 CI 的未捕获异常来自本段 fake-form 夹具保持真实项目下拉�
 
 整审发现并由主控与独立审查者共同确认一项 Major 局部问题：ready 的描述数据与尚未加载完成的编辑器实现是两种状态，requestClose 把空 ref 误当忙碌，阻止 clean 取消和 dirty 草稿确认。四个真实 C10 页面持有实际 chunk，覆盖 clean/dirty × Escape/Discard，原实现全部行为失败。只修正当前局部关闭条件，提交保护不改，已有实例 readiness=false 仍受保护；46 个表单组件测试及四页通过，类型、lint、格式/diff 通过。首轮修复后两页的失败为测试对零尺寸 Dialog 根节点判断可见，改验其真实标题后通过；没有改产品几何来迁就测试。新四页会进入三个浏览器各 44 项的最终矩阵，完整 F 在修复提交重新执行。
 
+09525b31 的完整七项门禁全部通过：无缓存 Go 458.692 秒、Web lint 54/54、knip、无缓存 Web test 18/18 任务、完整 E2E 238/238；103 个报告原件逐 hash 保存于 t16-final-receipt.json。主控随后检查修复增量，补出同一 readiness 边界：允许进入草稿确认后，Save to Drafts 也必须等待编辑器就绪。真实 pending chunk 页面原先发出了草稿 POST 并得到 400，而没有本地就绪提示；在 handleCreateDraftIssue 加与表单相同的检查，取消仍可用。t16-lazy-draft-behavior-red 和 t16-fix-pass-pages 4/4 证明闭环，77 项受影响 Web 测试及 36 项编辑器回归通过。首次错误按钮大小写、以及对被内层 aria-hidden 的外层字段使用默认 role 定位，分别是测试错误；改用实际文案、先 Cancel 回到外层核内容再 Discard，没有改变产品焦点隔离。
+
+按 M1 原始 deadsym 脚本盘点改动范围 118 个候选/28 文件，并逐项查真实读者。确无调用者的 DeleteIssueModal.dataId 回退、InboxIssueProperties.isVisible 恒 false 分支及其专属状态/父项 UI、测试类型里未读的 resanitized 声明已删除；五个仅文件内消费的类型收回 export。共享 JSON 中 resanitized 仍由 Go 清洗测试读取，保留；公开 EditorRefApi 按 spec §2.9 保持兼容，不能将无当前生产调用的合同方法假称已有读者。候选逐项裁定和最终复跑数随整审收据记录。T6 对 M7 父项先作类型适配的历史不改写，本次确认无入口后删除死分支，不扩大 M7 业务。
+
 ### T15 六处复制反馈
 
 编号、详情页头、链接行、关联 helper、子项 helper、peek 页头统一复用既有 useCopyText/useCopyLink；hook 等到浏览器实际完成才报告成功，拒绝给本地化错误。关联和子项 copyLink 类型及消费者改为 Promise<void>，没有新增复制协议。编号只复制文本；peek（包括已归档项）复制当前 origin 的原生编号地址，移除只用于旧归档路由的 isArchived 参数及零读者类型导出。链接/关系/子项的交互按钮带行名字，键盘打开菜单和执行复制不会触发行跳转。

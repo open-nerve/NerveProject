@@ -35,7 +35,7 @@ type TIssueLinkCreateFormFieldOptions = {
   id?: string;
 };
 
-export type TIssueLinkCreateEditModal = {
+type TIssueLinkCreateEditModal = {
   workspaceSlug: string;
   projectId: string;
   issueId: string;

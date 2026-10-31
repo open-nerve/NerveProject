@@ -13,7 +13,7 @@ import { IssueModalContext } from "@/components/issues/issue-modal/context";
 // hooks
 import { useUser } from "@/hooks/store/user/user-user";
 
-export type TIssueModalProviderProps = {
+type TIssueModalProviderProps = {
   allowedProjectIds?: string[];
   children: React.ReactNode;
 };

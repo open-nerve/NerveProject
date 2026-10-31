@@ -21,7 +21,7 @@ import { ConfirmIssueDiscard } from "../confirm-issue-discard";
 import { IssueFormRoot } from "./form";
 import type { IssueFormProps } from "./form";
 
-export interface DraftIssueProps extends IssueFormProps {
+interface DraftIssueProps extends IssueFormProps {
   isOpen: boolean;
   promptToSaveDraft: boolean;
   isBusy: () => boolean;
@@ -91,6 +91,10 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
 
   const handleCreateDraftIssue = async () => {
     if (!changesMade || isBusy() || descriptionLoadState !== "ready") return;
+    if (!editorRef.current?.isEditorReadyToDiscard()) {
+      setToast({ type: TOAST_TYPE.ERROR, title: t("error"), message: t("editor_is_not_ready_to_discard_changes") });
+      return;
+    }
     try {
       await props.onSubmit(changesMade, true);
     } catch {

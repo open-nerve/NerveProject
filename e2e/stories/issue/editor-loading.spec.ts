@@ -113,9 +113,6 @@ for (const dirty of [false, true]) {
         await expect(form.locator('[contenteditable="true"]')).toHaveCount(0);
         if (dirty) {
           await title.fill("Retained before the editor loads");
-          await form.getByRole("button", { name: "Save", exact: true }).click();
-          await expect(page.getByText("Editor is not ready to discard changes", { exact: true })).toBeVisible();
-          await expect(title).toHaveValue("Retained before the editor loads");
         }
         if (action === "Escape") {
           await title.focus();
@@ -124,6 +121,11 @@ for (const dirty of [false, true]) {
         if (dirty) {
           const confirm = page.getByRole("dialog", { name: "Save this draft?", exact: true });
           await expect(confirm.getByRole("heading", { name: "Save this draft?", exact: true })).toBeVisible();
+          await confirm.getByRole("button", { name: "Save to Drafts", exact: true }).click();
+          await expect(page.getByText("Editor is not ready to discard changes", { exact: true })).toBeVisible();
+          await confirm.getByRole("button", { name: "Cancel", exact: true }).click();
+          await expect(title).toHaveValue("Retained before the editor loads");
+          await form.getByRole("button", { name: "Discard", exact: true }).click();
           await confirm.getByRole("button", { name: "Discard", exact: true }).click();
         }
         await expect(form).toHaveCount(0);

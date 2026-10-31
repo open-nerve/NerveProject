@@ -61,7 +61,6 @@ type Fixture = {
   input: string;
   sanitized: string;
   reserialized: string;
-  resanitized: string;
   editor_document?: JSONContent;
   preserved_elements?: {
     selector: string;

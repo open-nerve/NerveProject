@@ -18,7 +18,7 @@ import { fieldErrorKeys } from "@/lib/error-messages";
 import { useRefusedFocus } from "@/lib/refused-focus";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 
-export type IssueTitleInputProps = {
+type IssueTitleInputProps = {
   disabled?: boolean;
   value: string | undefined | null;
   workspaceSlug: string;

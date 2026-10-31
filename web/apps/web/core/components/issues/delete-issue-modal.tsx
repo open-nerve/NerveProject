@@ -17,7 +17,6 @@ import type { TDeDupeIssue } from "@nerve/types";
 // ui
 import { AlertModalCore } from "@nerve/ui";
 // hooks
-import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import { followInSession } from "@/lib/in-session";
@@ -28,7 +27,6 @@ import { useDetailScope } from "./issue-detail-widgets/use-detail-scope";
 type Props = {
   isOpen: boolean;
   handleClose: () => void;
-  dataId?: string | null | undefined;
   data?: Issue | TDeDupeIssue;
   isSubIssue?: boolean;
   /** Deletes it: the confirmation is busy until it settles. */
@@ -36,19 +34,17 @@ type Props = {
 };
 
 export const DeleteIssueModal = observer(function DeleteIssueModal(props: Props) {
-  const { dataId, data, isOpen, handleClose, isSubIssue = false, onSubmit } = props;
+  const { data: issue, isOpen, handleClose, isSubIssue = false, onSubmit } = props;
   // states
   const [isDeleting, setIsDeleting] = useState(false);
   const sending = useRef(false);
   // store hooks
   const { workspaceSlug } = useParams();
-  const { issueMap } = useIssues();
   const { getProjectById } = useProject();
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
 
   const { data: currentUser } = useUser();
-  const issue = data ? data : dataId ? issueMap[dataId] : undefined;
   const capture = useDetailScope(workspaceSlug ?? "", issue?.project_id ?? undefined, `${issue?.id ?? ""}:${isOpen}`);
   const refusal = useRefusalToast();
 
@@ -57,7 +53,7 @@ export const DeleteIssueModal = observer(function DeleteIssueModal(props: Props)
     sending.current = false;
   }, [isOpen, issue?.id]);
 
-  if (!dataId && !data) return null;
+  if (!issue) return null;
 
   // derived values
   const projectDetails = getProjectById(issue?.project_id);

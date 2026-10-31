@@ -32,7 +32,7 @@ import { IssuePropertyLabels } from "./labels";
 import { useDetailCommand } from "../../issue-detail/use-issue-operations";
 import { WithDisplayPropertiesHOC } from "./with-display-properties-HOC";
 
-export interface IIssueProperties {
+interface IIssueProperties {
   issue: Issue;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   displayProperties: IIssueDisplayProperties | undefined;
