@@ -44,8 +44,14 @@ test("I2 (page): real description editing and undo-redo keep the visible value, 
   });
   const beforeMigration = await descriptionAuditRows(db, issue.id);
   const path = `/api/v0/issues/${issue.id}`;
-  // Observe the real PATCH bodies without intercepting the initial module graph. WebKit's
-  // interception disables HTTP caching and fetches already-imported preloads a second time.
+  // Chromium exposes this fetch body only with interception enabled. Its requests still go
+  // to nerve unchanged. WebKit already exposes the body; early interception there refetches
+  // imported preloads and produces a test-induced warning, so it stays passive until refusal.
+  if (browserName === "chromium")
+    await page.route(
+      (url) => url.pathname === path,
+      (route) => route.fallback()
+    );
   const bodies: unknown[] = [];
   page.on("request", (request) => {
     if (request.method() === "PATCH" && new URL(request.url()).pathname === path) bodies.push(request.postDataJSON());

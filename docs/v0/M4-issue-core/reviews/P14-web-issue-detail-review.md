@@ -262,6 +262,8 @@ T13 CI 的未捕获异常来自本段 fake-form 夹具保持真实项目下拉�
 - 关系面板尚在裁剪展开时，测试直接 focus/click 隐藏行使 Firefox 自动滚动裁剪容器，触发 Popper 更新警告并可能丢失菜单。逐帧 probe 三轮记录了高度、scrollTop 和焦点；在现有 transitionsEnded 条件边界等行实际展开后操作。I9、关系复制、I10 三场景各重复三次全部通过，t16-visible-relations-firefox 9/9；没有延时 sleep、force click 或警告豁免。
 - WebKit 的 I2 预加载警告由测试在初始载入前安装 page.route 引起：相同实际应用无 route 时单次加载且零警告，有 route 时同脚本被再次 preload，已执行的模块被报告未消费。t16-app-preload-probe-scoped / body-probe 对照保存 Network/Performance 和真实 migration body；独立小 HTML 探针未复现的记录也保留。I2 改用 request 事件观察现有普通 JSON body，仅在编辑器初始化完成后安装下一次 503 拒绝；迁移、撤销重做、重试、全部请求体及审计断言不变。WebKit 同场景连续三次通过（t16-description-webkit 3/3）。
 
+后续 `d2ef5d0b` 的完整 Web 门禁前三项通过，默认 E2E 236/238：I10 API 的旧 PNG CRC 期望未同步；I2 Chromium 的被动 request 事件没有提供 body。两者均为测试准备错误，失败原件 141 文件已按 hash 保留。相同应用的 Chromium 双场景对照 `t16-app-body-chromium-probe` 证明：无拦截 body=null，有精确 URL fallback 拦截可得完整真实 JSON，均无预加载警告。因此 I2 只在 Chromium 开启该透传，WebKit/Firefox 保持观察；其后 I2 三引擎各 1/1 通过（`t16-body-and-favicon-*` 的标签虽含 favicon，矩阵 grep 交集实际只执行 I2，不能宣称 I10 同时通过）。I10 正确字节的 API 断言留下一轮完整 E2E 核验。没有删除请求体断言、增加重试或放宽警告。
+
 上述定向复验完成，最终完整 F/三浏览器与最终分支 CI 仍待本次准确输入运行，不以诊断探针的通过代替阶段门禁。
 
 ### T15 六处复制反馈

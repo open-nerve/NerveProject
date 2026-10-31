@@ -240,7 +240,7 @@ test("I10 (API): a member adds a bare local URL, receives pending metadata, craw
     const metadata = {
       title: "Release & notes",
       favicon:
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jf1sAAAAASUVORK5CYII=",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=",
       url: page.url,
       favicon_url: new URL("/icon.png", page.url).href,
     };
