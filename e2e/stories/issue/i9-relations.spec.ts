@@ -21,7 +21,7 @@ import {
 import { expect, test } from "../../fixtures/test";
 import { issueListProject, expectListPageQuiet } from "../../fixtures/issue-list-page";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
-import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
+import { answerTo, registerOnboarded, sentHeld, transitionsEnded } from "../../fixtures/settings-pages";
 
 test("I9 (page): native candidates create Blocking and cross-project Relates to; the reverse end shows Blocked by, and a member authorized only at the other end deletes the cross-project relation with both activities", async ({
   api,
@@ -145,7 +145,10 @@ test("I9 (page): native candidates create Blocking and cross-project Relates to;
   try {
     const otherPage = await context.newPage();
     const otherWatch = await openIssueDetail(otherPage, { ...seed, project: ops, member: peer }, cross);
-    await otherPage.getByRole("button", { name: "Relations 1", exact: true }).click();
+    const relationsButton = otherPage.getByRole("button", { name: "Relations 1", exact: true });
+    await relationsButton.click();
+    // Finish revealing the row before Playwright scrolls and clicks its menu through the clip.
+    await transitionsEnded(relationsButton.locator("../.."));
     const row = otherPage.locator(`#issue-${source.id}`);
     await expect(row).toBeVisible();
     const relations = await listIssueRelations(api, peer.token, cross.id);

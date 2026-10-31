@@ -14,7 +14,7 @@ import { expect, test } from "../../fixtures/test";
 import type { Database } from "../../fixtures/db";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { expectListPageQuiet, issueListProject } from "../../fixtures/issue-list-page";
-import { answerTo, bodiesSentTo } from "../../fixtures/settings-pages";
+import { answerTo } from "../../fixtures/settings-pages";
 
 /** The description's audit identity, read without losing the database's sub-millisecond precision. */
 async function descriptionAuditRows(db: Database, id: string) {
@@ -44,20 +44,12 @@ test("I2 (page): real description editing and undo-redo keep the visible value, 
   });
   const beforeMigration = await descriptionAuditRows(db, issue.id);
   const path = `/api/v0/issues/${issue.id}`;
-  let refuse = false;
-  await page.route(
-    (url) => url.pathname === path,
-    async (route) => {
-      if (route.request().method() !== "PATCH" || !refuse) return route.fallback();
-      refuse = false;
-      await route.fulfill({
-        status: 503,
-        contentType: "application/problem+json",
-        body: JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, code: "server_busy" }),
-      });
-    }
-  );
-  const bodies = await bodiesSentTo(page, "PATCH", path);
+  // Observe the real PATCH bodies without intercepting the initial module graph. WebKit's
+  // interception disables HTTP caching and fetches already-imported preloads a second time.
+  const bodies: unknown[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PATCH" && new URL(request.url()).pathname === path) bodies.push(request.postDataJSON());
+  });
   const migrationAnswer = page.waitForResponse(
     (response) => response.request().method() === "PATCH" && new URL(response.url()).pathname === path
   );
@@ -104,7 +96,21 @@ test("I2 (page): real description editing and undo-redo keep the visible value, 
   expect(bodies).toHaveLength(2);
   expect(await descriptionAuditRows(db, issue.id)).toEqual(beforeUndo);
 
-  refuse = true;
+  // Install the one controlled refusal only when the initialized editor is ready to edit.
+  let refuse = true;
+  await page.route(
+    (url) => url.pathname === path,
+    async (route) => {
+      if (route.request().method() !== "PATCH" || !refuse) return route.fallback();
+      refuse = false;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, code: "server_busy" }),
+      });
+    }
+  );
+
   expect(
     (
       await answerTo(page, "PATCH", path, async () => {
@@ -150,7 +156,7 @@ test("I2 (page): real description editing and undo-redo keep the visible value, 
   await expectListPageQuiet(page, watch, {
     failures: [`503 PATCH ${path}`],
     errors:
-      browserName === "chromium"
+      browserName === "chromium" || browserName === "webkit"
         ? ["Failed to load resource: the server responded with a status of 503 (Service Unavailable)"]
         : [],
   });

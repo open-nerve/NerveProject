@@ -16,7 +16,7 @@ import { newAccount, shownNameOf } from "../../fixtures/auth";
 import { createIssue, issueCreated } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
-import { recordFocuses } from "../../fixtures/browser";
+import { inputTextIncludingControls, recordFocuses } from "../../fixtures/browser";
 import { expectListPageQuiet, issueListProject, openIssueList } from "../../fixtures/issue-list-page";
 import { answerTo, bodiesSentTo, holdAnswer } from "../../fixtures/settings-pages";
 
@@ -57,7 +57,7 @@ test("I1 (page): c opens a named form; field refusals retain it, native controls
     expect(bodies).toEqual([]);
     await expect(title).toBeVisible();
   }, Promise.resolve());
-  await title.fill("Invalid\u0000title");
+  await inputTextIncludingControls(title, "Invalid\u0000title");
   const focuses = await recordFocuses(page);
   expect((await answerTo(page, "POST", path, () => save.click())).status()).toBe(422);
   await expect(title).toBeFocused();
@@ -177,7 +177,7 @@ test("I1 (page): c opens a named form; field refusals retain it, native controls
   await expectListPageQuiet(page, watch, {
     failures: [`422 POST ${path}`],
     errors:
-      browserName === "chromium"
+      browserName === "chromium" || browserName === "webkit"
         ? ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"]
         : [],
   });

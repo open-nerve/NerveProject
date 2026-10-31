@@ -21,7 +21,7 @@ import { newAccount, shownNameOf } from "../../fixtures/auth";
 import { createIssue, issueArchived, issueUpdated, updateIssue, type IssueUpdate } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
-import { recordFocuses } from "../../fixtures/browser";
+import { inputTextIncludingControls, recordFocuses } from "../../fixtures/browser";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { expectListPageQuiet, issueListProject } from "../../fixtures/issue-list-page";
 import { answerTo, bodiesSentTo } from "../../fixtures/settings-pages";
@@ -68,7 +68,7 @@ test("I2 (page): the detail announces title refusals before focus, saves each pr
   }, Promise.resolve());
   const focuses = await recordFocuses(page);
   const refusal = await answerTo(page, "PATCH", path, async () => {
-    await title.fill("Invalid\u0000title");
+    await inputTextIncludingControls(title, "Invalid\u0000title");
     await state.focus();
   });
   expect(refusal.status()).toBe(422);
@@ -191,7 +191,7 @@ test("I2 (page): the detail announces title refusals before focus, saves each pr
   await expectListPageQuiet(page, watch, {
     failures: [`422 PATCH ${path}`],
     errors:
-      browserName === "chromium"
+      browserName === "chromium" || browserName === "webkit"
         ? ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"]
         : [],
   });

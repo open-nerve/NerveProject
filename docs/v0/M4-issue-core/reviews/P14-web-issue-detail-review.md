@@ -253,6 +253,17 @@ T13 CI 的未捕获异常来自本段 fake-form 夹具保持真实项目下拉�
 
 按 M1 原始 deadsym 脚本盘点改动范围 118 个候选/28 文件，并逐项查真实读者。确无调用者的 DeleteIssueModal.dataId 回退、InboxIssueProperties.isVisible 恒 false 分支及其专属状态/父项 UI、测试类型里未读的 resanitized 声明已删除；五个仅文件内消费的类型收回 export。共享 JSON 中 resanitized 仍由 Go 清洗测试读取，保留；公开 EditorRefApi 按 spec §2.9 保持兼容，不能将无当前生产调用的合同方法假称已有读者。候选逐项裁定和最终复跑数随整审收据记录。T6 对 M7 父项先作类型适配的历史不改写，本次确认无入口后删除死分支，不扩大 M7 业务。
 
+**三浏览器首轮与夹具诊断：**beda23c1 的 Web 后四项完整门禁全部通过，前面三项输入未变，分层回执 t16-closed-receipt.json；显式矩阵首轮 Chromium 44/44、Firefox 37/44、WebKit 34/44，失败原件全部保留，不能宣称三浏览器已经通过。T16 逐项定位后仅修复测试准备，未改产品行为或扩展警告白名单：
+
+- Firefox 原生插入会丢 NUL；trace 中原请求实际是 `Invalidtitle`，服务端正确接受。用 DOM 原生 setter/input 注入准确非法内容并先核字段值，随后真实提交、422、聚焦、数据不变断言保持；三处共用 browser helper。浏览器最小探针 t16-engine-probe 同时记录实际三引擎版本。
+- Firefox 的 synthetic ClipboardEvent 构造未携带 DataTransfer。三引擎统一给合成事件明确的真实剪贴板对象，继续运行真实 editor/schema/存储；区分主 .tiptap 与 ProseMirror 的临时隐藏粘贴目标，并等待前一次粘贴的真实焦点恢复后发送下一次输入。C12 详情直接登录该入口，避免原夹具刚开始列表读取就整页导航导致合法取消请求。
+- Mac WebKit 默认用 Option-Tab 遍历按钮，沿已有 C2 的平台键位验证内层 Tab 环，不改产品焦点逻辑；对应 [Apple 键盘说明](https://help.apple.com/safari/mac/8.0/en.lproj/cpsh003.html)。WebKit 和 Chromium 对既有明确 422/409/404/403/503 的系统 console 消息逐项匹配，应用错误与全部 warning 仍严格为零。
+- I10 的测试 PNG IDAT CRC 错误，Firefox 正确报损坏；t16-favicon-crc.json 校验并仅修 checksum，C12 同样使用有效图片输入。真实 worker 元数据、data favicon、零外连断言不变。
+- 关系面板尚在裁剪展开时，测试直接 focus/click 隐藏行使 Firefox 自动滚动裁剪容器，触发 Popper 更新警告并可能丢失菜单。逐帧 probe 三轮记录了高度、scrollTop 和焦点；在现有 transitionsEnded 条件边界等行实际展开后操作。I9、关系复制、I10 三场景各重复三次全部通过，t16-visible-relations-firefox 9/9；没有延时 sleep、force click 或警告豁免。
+- WebKit 的 I2 预加载警告由测试在初始载入前安装 page.route 引起：相同实际应用无 route 时单次加载且零警告，有 route 时同脚本被再次 preload，已执行的模块被报告未消费。t16-app-preload-probe-scoped / body-probe 对照保存 Network/Performance 和真实 migration body；独立小 HTML 探针未复现的记录也保留。I2 改用 request 事件观察现有普通 JSON body，仅在编辑器初始化完成后安装下一次 503 拒绝；迁移、撤销重做、重试、全部请求体及审计断言不变。WebKit 同场景连续三次通过（t16-description-webkit 3/3）。
+
+上述定向复验完成，最终完整 F/三浏览器与最终分支 CI 仍待本次准确输入运行，不以诊断探针的通过代替阶段门禁。
+
 ### T15 六处复制反馈
 
 编号、详情页头、链接行、关联 helper、子项 helper、peek 页头统一复用既有 useCopyText/useCopyLink；hook 等到浏览器实际完成才报告成功，拒绝给本地化错误。关联和子项 copyLink 类型及消费者改为 Promise<void>，没有新增复制协议。编号只复制文本；peek（包括已归档项）复制当前 origin 的原生编号地址，移除只用于旧归档路由的 isArchived 参数及零读者类型导出。链接/关系/子项的交互按钮带行名字，键盘打开菜单和执行复制不会触发行跳转。

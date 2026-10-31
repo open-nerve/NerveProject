@@ -32,7 +32,7 @@ import { expect, test } from "../../fixtures/test";
 import { issueListProject, expectListPageQuiet } from "../../fixtures/issue-list-page";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { answerTo, bodiesSentTo, sentHeld } from "../../fixtures/settings-pages";
-import { recordFocuses } from "../../fixtures/browser";
+import { inputTextIncludingControls, recordFocuses } from "../../fixtures/browser";
 
 test("I10 (page): URL refusals are described before focus; a confirmed link first shows its address, then real worker metadata without external image requests; title and URL edits, a duplicate refusal and deletion retain exact activity", async ({
   api,
@@ -59,7 +59,7 @@ test("I10 (page): URL refusals are described before focus; a confirmed link firs
     await expect(url).toBeFocused();
     expect((await blankFocus()).at(-1)).toEqual({ id: "url", invalid: "true", description: "URL is invalid" });
     expect(bodies).toEqual([]);
-    await url.fill("https://bad.test/\u0000");
+    await inputTextIncludingControls(url, "https://bad.test/\u0000");
     await title.focus();
     const refusedFocus = await recordFocuses(page);
     expect((await answerTo(page, "POST", path, () => submit.click())).status()).toBe(422);
@@ -178,7 +178,7 @@ test("I10 (page): URL refusals are described before focus; a confirmed link firs
     await expectListPageQuiet(page, watch, {
       failures: [`422 POST ${path}`, `409 POST ${path}`],
       errors:
-        browserName === "chromium"
+        browserName === "chromium" || browserName === "webkit"
           ? [
               "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
               "Failed to load resource: the server responded with a status of 409 (Conflict)",

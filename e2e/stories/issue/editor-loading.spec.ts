@@ -3,6 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures/test";
 import { issueListProject, openIssueList } from "../../fixtures/issue-list-page";
+import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { createIssue } from "../../fixtures/issues";
 import { password } from "../../fixtures/auth";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
@@ -271,16 +272,16 @@ for (const owner of ["detail", "creation"] as const) {
   }, info) => {
     const seed = await issueListProject(api, info);
     const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Image boundary" });
-    const { watch } = await openIssueList(page, seed);
-    if (owner === "detail") await page.goto(`/${seed.slug}/browse/WEB-${issue.sequence_id}`);
-    else {
+    const watch =
+      owner === "detail" ? await openIssueDetail(page, seed, issue) : (await openIssueList(page, seed)).watch;
+    if (owner === "creation") {
       await page.getByRole("button", { name: "Add work item", exact: true }).click();
       await page.getByRole("textbox", { name: "Title", exact: true }).fill("Created without images");
     }
     const editor = page.locator(
       owner === "detail"
-        ? `[id="editor-container-${issue.id}"] [contenteditable="true"]`
-        : '[id="editor-container-issue-modal-editor"] [contenteditable="true"]'
+        ? `[id="editor-container-${issue.id}"] .tiptap[contenteditable="true"]`
+        : '[id="editor-container-issue-modal-editor"] .tiptap[contenteditable="true"]'
     );
     await expect(editor).toBeVisible();
     await editor.pressSequentially("/");
@@ -291,13 +292,17 @@ for (const owner of ["detail", "creation"] as const) {
     await editor.press("ControlOrMeta+a");
     await editor.press("Backspace");
     await editor.evaluate((element) => {
-      const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j8RkAAAAASUVORK5CYII=";
+      const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
       const file = new File([Uint8Array.from(atob(png), (char) => char.charCodeAt(0))], "boundary.png", {
         type: "image/png",
       });
       const clipboard = new DataTransfer();
       clipboard.items.add(file);
-      element.dispatchEvent(new ClipboardEvent("paste", { clipboardData: clipboard, bubbles: true, cancelable: true }));
+      // Firefox's synthetic ClipboardEvent ignores the constructor's clipboardData. Give every
+      // engine the same actual DataTransfer; editor handlers and persistence remain real.
+      const paste = new ClipboardEvent("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(paste, "clipboardData", { value: clipboard });
+      element.dispatchEvent(paste);
       const dropped = new DataTransfer();
       dropped.items.add(file);
       const rect = element.getBoundingClientRect();
@@ -310,18 +315,20 @@ for (const owner of ["detail", "creation"] as const) {
           cancelable: true,
         })
       );
+    });
+    // ProseMirror may briefly own a hidden paste target for a file without insertable text.
+    // Wait for its real focus restoration before sending the next, separate clipboard input.
+    await expect(editor).toBeFocused();
+    await editor.evaluate((element) => {
       // A file clipboard is handled as a file. Separately paste document HTML, whose text remains
       // available even though its image node is absent from the M4 editor schema.
       const documentClipboard = new DataTransfer();
+      const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
       documentClipboard.setData("text/html", `<p>Kept paste text</p><img src="data:image/png;base64,${png}">`);
       documentClipboard.setData("text/plain", "Kept paste text");
-      element.dispatchEvent(
-        new ClipboardEvent("paste", {
-          clipboardData: documentClipboard,
-          bubbles: true,
-          cancelable: true,
-        })
-      );
+      const paste = new ClipboardEvent("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(paste, "clipboardData", { value: documentClipboard });
+      element.dispatchEvent(paste);
     });
     await expect(editor).toHaveText("Kept paste text");
     await page.keyboard.insertText(" plus typed");

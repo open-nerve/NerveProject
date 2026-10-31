@@ -166,7 +166,7 @@ for (const workspaceAdmin of [false, true]) {
     await expectListPageQuiet(page, watch, {
       failures,
       errors:
-        browserName === "chromium"
+        browserName === "chromium" || browserName === "webkit"
           ? failures.map(() => "Failed to load resource: the server responded with a status of 404 (Not Found)")
           : [],
     });

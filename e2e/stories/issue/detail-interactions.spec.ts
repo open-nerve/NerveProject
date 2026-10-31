@@ -33,7 +33,12 @@ for (const control of ["identifier", "detail", "link", "relation", "sub-item", "
       await page.locator(`#issue-${source.id}`).click();
       await expect(page.getByRole("button", { name: "Close the peek view", exact: true })).toBeVisible();
     }
-    if (control === "relation") await page.getByRole("button", { name: "Relations 1", exact: true }).click();
+    if (control === "relation") {
+      const relations = page.getByRole("button", { name: "Relations 1", exact: true });
+      await relations.click();
+      // A row clipped by the opening panel is not yet a visible keyboard target.
+      await transitionsEnded(relations.locator("../.."));
+    }
     await refuseClipboardWrites(page);
     const before = page.url();
     const requestsBeforeCopy = watch.apiRequests.length;
@@ -80,6 +85,7 @@ test("C4: creation owns dismissal, nested draft confirmation owns its Escape and
   api,
   db,
   page,
+  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   await createLabel(api, seed.member.token, seed.project.id, { name: "Visible label" });
@@ -130,9 +136,11 @@ test("C4: creation owns dismissal, nested draft confirmation owns its Escape and
   const first = inner.getByRole("button", { name: "Discard", exact: true });
   const last = inner.getByRole("button", { name: "Save to Drafts", exact: true });
   await first.focus();
-  await page.keyboard.press("Shift+Tab");
+  // Safari on macOS traverses all controls with Option-Tab (the same native path used by C2).
+  const tab = browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab";
+  await page.keyboard.press(`Shift+${tab}`);
   await expect(last).toBeFocused();
-  await page.keyboard.press("Tab");
+  await page.keyboard.press(tab);
   await expect(first).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(inner).toHaveCount(0);

@@ -1,4 +1,23 @@
-import { expect, type Page, type Request } from "@playwright/test";
+import { expect, type Locator, type Page, type Request } from "@playwright/test";
+
+/**
+ * Injects an exact invalid control value through the DOM input event, before a real form submission.
+ * Firefox's keyboard insertion drops NUL, so fill() would silently test a different, valid value.
+ * No request or validation is mocked; the story still checks the actual refusal, focus and database.
+ */
+export async function inputTextIncludingControls(field: Locator, value: string): Promise<void> {
+  await field.focus();
+  await field.evaluate((element, text) => {
+    if (!(element instanceof HTMLInputElement) && !(element instanceof HTMLTextAreaElement))
+      throw new Error("The control value requires an input or textarea");
+    const prototype = element instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+    const setValue = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+    if (!setValue) throw new Error("The native value setter is unavailable");
+    setValue.call(element, text);
+    element.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
+  }, value);
+  await expect(field).toHaveValue(value);
+}
 
 /** What a page did that a story checks: its API calls, and what went wrong in it. */
 export interface PageWatch {

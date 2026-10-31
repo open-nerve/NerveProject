@@ -487,7 +487,7 @@ for (const identity of ["member", "guest", "project non-member"] as const) {
     await expectListPageQuiet(page, watch, {
       failures: status === 200 ? [] : [`${status} GET ${path}`],
       errors:
-        browserName === "chromium" && status !== 200
+        (browserName === "chromium" || browserName === "webkit") && status !== 200
           ? [
               `Failed to load resource: the server responded with a status of ${status} (${status === 404 ? "Not Found" : "Forbidden"})`,
             ]
