@@ -109,3 +109,39 @@ test("C10 (page): personal settings keeps the command palette without loading a 
   expect(watch.cspViolations).toEqual([]);
   await expectQuietConsole(page, watch);
 });
+
+test("C10 (page): a native callout saves and reopens without external images or workers", async ({
+  api,
+  db,
+  page,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Native callout" });
+  const workers: string[] = [];
+  page.on("worker", (worker) => workers.push(worker.url()));
+  const watch = await watchPage(page);
+  await page.goto(signInPath(`/${seed.slug}/browse/WEB-${issue.sequence_id}`));
+  expect(await submitSignIn(page, seed.member.email, password)).toBe(200);
+  const editor = page.locator(`[id="editor-container-${issue.id}"] [contenteditable="true"]`);
+  await expect(editor).toBeVisible();
+  await editor.pressSequentially("/callout");
+  await page.getByRole("button", { name: "Callout", exact: true }).click();
+  await expect(editor.getByText("💡", { exact: true })).toBeVisible();
+  await page.keyboard.insertText("Native callout content");
+  const savedHTML = async () =>
+    (await db.query<{ description_html: string }>("SELECT description_html FROM issues WHERE id=$1", [issue.id]))[0]
+      .description_html;
+  await expect.poll(savedHTML).toContain("Native callout content");
+  expect(await savedHTML()).toContain('data-emoji-unicode="128161"');
+  expect(await savedHTML()).not.toMatch(/data-emoji-url|<img/);
+  await page.reload();
+  await expect(editor).toContainText("Native callout content");
+  await expect(editor.getByText("💡", { exact: true })).toBeVisible();
+  expect(workers).toEqual([]);
+  expect(requestsElsewhere(page, watch)).toEqual([]);
+  expect(watch.cspViolations).toEqual([]);
+  expect(watch.pageErrors).toEqual([]);
+  expect(watch.apiFailures).toEqual([]);
+  expect(watch.oldApiRequests).toEqual([]);
+  await expectQuietConsole(page, watch);
+});

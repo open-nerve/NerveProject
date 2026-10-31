@@ -313,6 +313,31 @@ describe("a rich-text editor built like the kept ones", () => {
     expect(canvas).not.toHaveBeenCalled();
   });
 
+  it("inserts a native callout and reopens it without an image URL", async () => {
+    localStorage.removeItem("editor-calloutComponent-logo");
+    const editor = await createEditor();
+    expect(editor.commands.insertCallout()).toBe(true);
+    const html = editor.getHTML();
+    const callout = parse(html).querySelector('[data-block-type="callout-component"]');
+    expect(callout?.getAttribute("data-emoji-unicode")).toBe("128161");
+    expect(callout?.hasAttribute("data-emoji-url")).toBe(false);
+    expect((await createEditor({ content: html })).getHTML()).toBe(html);
+  });
+
+  it("still parses pasted Markdown after removing unused custom serializers", async () => {
+    const editor = await createEditor();
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", {
+      value: { getData: (type: string) => (type === "text/plain" ? "**Bold** and _italic_\n\n- First\n- Second" : "") },
+    });
+    editor.view.dom.dispatchEvent(paste);
+    const body = parse(editor.getHTML());
+    expect(body.querySelector("strong")?.textContent).toBe("Bold");
+    expect(body.querySelector("em")?.textContent).toBe("italic");
+    expect(Array.from(body.querySelectorAll("li"), (item) => item.textContent)).toEqual(["First", "Second"]);
+    expect(refOf(editor).getMarkDown()).toContain("**Bold**");
+  });
+
   it("creates editors one after another in one process: editable, read-only, editable", async () => {
     const first = await createEditor({ content: LEGACY_DESCRIPTION });
     expect(blockIds(first).every(({ id }) => typeof id === "string")).toBe(true);

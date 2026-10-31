@@ -26,8 +26,8 @@ type Props = {
   isEditable: boolean;
 };
 
-export function CustomImageExtension(props: Props) {
-  const { fileHandler, isEditable } = props;
+export function CustomImageExtension(options: Props) {
+  const { fileHandler, isEditable } = options;
   // derived values
   const { getAssetSrc, getAssetDownloadSrc, restore: restoreImageFn } = fileHandler;
 
@@ -55,10 +55,6 @@ export function CustomImageExtension(props: Props) {
         fileMap: new Map(),
         deletedImageSet: new Map<string, boolean>(),
         maxFileSize,
-        // escape markdown for images
-        markdown: {
-          serialize() {},
-        },
       };
     },
 

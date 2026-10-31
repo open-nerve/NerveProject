@@ -70,8 +70,6 @@ type Fixture = {
     text?: string;
   }[];
   editable?: boolean;
-  expected_markdown?: string;
-  markdown_element?: { tag: string; attributes: Record<string, string>; text: string };
 };
 const fixtures = JSON.parse(readFileSync("../../../api/testdata/issue-richtext.json", "utf8")) as { cases: Fixture[] };
 
@@ -108,19 +106,6 @@ it("keeps every saved node and mark through the real editor schema", async () =>
       for (const mark of node.marks) marks.add(mark.type.name);
     });
     nodes.add("doc");
-    if (fixture.expected_markdown !== undefined) {
-      const markdown = editor.storage.markdown.getMarkdown();
-      expect(markdown, fixture.name).toBe(fixture.expected_markdown);
-      const fragment = markdown.split("\n")[0].replace(/^> /, "");
-      const markdownBody = new DOMParser().parseFromString(fragment, "text/html").body;
-      expect(markdownBody.children, fixture.name).toHaveLength(1);
-      const element = markdownBody.children[0];
-      expect(element.tagName.toLowerCase()).toBe(fixture.markdown_element?.tag);
-      expect(Object.fromEntries(Array.from(element.attributes, (attr) => [attr.name, attr.value]))).toEqual(
-        fixture.markdown_element?.attributes
-      );
-      expect(element.textContent).toBe(fixture.markdown_element?.text);
-    }
   }
   const schema = editors[0].schema;
   expect([...nodes].toSorted()).toEqual(Object.keys(schema.nodes).toSorted());

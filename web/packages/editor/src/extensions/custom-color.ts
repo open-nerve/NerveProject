@@ -103,19 +103,6 @@ export const CustomColorExtension = Mark.create({
     };
   },
 
-  addStorage() {
-    return {
-      markdown: {
-        serialize: {
-          open: "",
-          close: "",
-          mixable: true,
-          expelEnclosingWhitespace: true,
-        },
-      },
-    };
-  },
-
   parseHTML() {
     return [
       {

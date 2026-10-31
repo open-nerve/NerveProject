@@ -190,3 +190,13 @@ T9 后置远端回执：提交 `0e8c912a3efd345ee4c39906aa7ea7cb0ef10cee` 的 [C
 全 E2E 的 EMOJI 警告常量/豁免/注释和 helper 无用参数已清零；watchPage/expectQuietConsole 保持严格。实际键盘测试另检出强制打开表情菜单后 Escape 使用空 editor 的异常，改为当前 editor owner 并安全释放定位监听；真实命令红/绿保存在 t10-emoji-command-red、t10-emoji-fixed，错误命令探针不计产品红。
 
 M16 恢复设置页宿主使 2 项组件测试失败；M17 重新引入未使用的上游扩展使真实构建页面精确因 Canvas 警告失败，均有 patch、字节恢复 hash 和恢复绿。最终 web 5 文件 37/37、editor 编辑/安全往返 15/15、C10/S2/A7/A9 Chromium 20/20；类型、knip 通过，实际 67 个 TS 改动文件 oxlint 0/0，editor 上限按真实净减从 59 降至 54。最后仅将建议列表的类型提取恢复为原有边界，不改运行逻辑；补类型/lint 复核。全量 F 在 T13 检查点执行，A10 三浏览器归 T16。
+
+### T11 原生标注与死序列化
+
+标注默认及存储 fallback 只保留原生 Unicode 128161，不补 CDN 地址；既有显式 URL、原生表情、图标的解析与安全边界保留。五处 custom-color/custom-image/emoji/mentions/callout markdown.serialize 在生产无 getMarkdown 读者且 transformCopiedText=false，已删除；一并删除 callout 专用转义 helper、无读者 MarkdownStorage 类型和测试投影。提及文字仍供 renderText，图片存储仍供真实图片消费者，tiptap-markdown 的粘贴解析及 ref 的 HTML→Markdown 保持。
+
+P4 修复的历史输入未撤销：共享 fixture 14 组仍在，input/sanitized/恶意属性/保留断言逐字段核一致，仅删 5 组死 Markdown 投影、改 3 组由默认值产生的 HTML URL。证据 t11-fixture-preservation.json；Go content 测试通过。35 项真实编辑器/安全/存储测试验证插入、旧内容读取、HTML 往返和 Markdown 粘贴。M18 恢复 CDN 默认检出 13 项失败，字节恢复后 35/35 绿。
+
+实际构建 t11-fixed-build、C10 Chromium 4/4：两个匿名入口延迟加载、个人设置边界、原生标注创建/保存/刷新；外链、worker、CSP、pageerror、console 均严格为零。t11-build-worker-audit.json 记录 411 个 JS 产物及 hash；无 Worker/SharedWorker 构造，blob 字符串只在路由协议名单，createObjectURL 只在已有 CSV 下载，编辑器 chunk 无这两项，不扩 CSP。
+
+改动文件 oxlint 0/0，包实际净减 6 后上限 54→48，knip 通过。构建检出公开 onChange 类型对可选对象做解构，改为命名的可选 options，字段/可选性不变；运行回调不变，复构建和页面通过。T11 完成，三浏览器统一在 T16 收尾。

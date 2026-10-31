@@ -10,17 +10,7 @@
       "expected_text": "Note",
       "expected_mentions": [],
       "expected_links": [],
-      "expected_checked": [],
-      "expected_markdown": "> <img src=\"https://example.test/emoji.png\" alt=\"&quot; onerror=&quot;boom\" width=\"30px\" />\n> \n> Note",
-      "markdown_element": {
-        "tag": "img",
-        "attributes": {
-          "src": "https://example.test/emoji.png",
-          "alt": "\" onerror=\"boom",
-          "width": "30px"
-        },
-        "text": ""
-      }
+      "expected_checked": []
     },
     {
       "name": "raw-api-readonly",
@@ -615,37 +605,25 @@
       "name": "callout-icon-injection",
       "input": "<div data-block-type=\"callout-component\" data-logo-in-use=\"icon\" data-icon-name=\"&lt;/icon&gt;&lt;img src=x onerror=boom&gt;\"><p>Note</p></div>",
       "sanitized": "<div data-block-type=\"callout-component\" data-logo-in-use=\"icon\" data-icon-name=\"&lt;/icon&gt;&lt;img src=x onerror=boom&gt;\"><p>Note</p></div>",
-      "reserialized": "<div data-icon-name=\"</icon><img src=x onerror=boom>\" data-emoji-unicode=\"128161\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"icon\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
-      "resanitized": "<div data-icon-name=\"&lt;/icon&gt;&lt;img src=x onerror=boom&gt;\" data-emoji-unicode=\"128161\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"icon\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "reserialized": "<div data-icon-name=\"</icon><img src=x onerror=boom>\" data-emoji-unicode=\"128161\" data-logo-in-use=\"icon\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "resanitized": "<div data-icon-name=\"&lt;/icon&gt;&lt;img src=x onerror=boom&gt;\" data-emoji-unicode=\"128161\" data-logo-in-use=\"icon\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
       "editable": false,
       "expected_text": "Note",
       "expected_mentions": [],
       "expected_links": [],
-      "expected_checked": [],
-      "expected_markdown": "> <icon>&lt;/icon&gt;&lt;img src=x onerror=boom&gt; icon</icon>\n> \n> Note",
-      "markdown_element": {
-        "tag": "icon",
-        "attributes": {},
-        "text": "</icon><img src=x onerror=boom> icon"
-      }
+      "expected_checked": []
     },
     {
       "name": "callout-safe-icon",
       "input": "<div data-block-type=\"callout-component\" data-logo-in-use=\"icon\" data-icon-name=\"lightbulb\" data-icon-color=\"#ff0000\" data-background=\"#ffffff\"><p>Note</p></div>",
       "sanitized": "<div data-block-type=\"callout-component\" data-logo-in-use=\"icon\" data-icon-name=\"lightbulb\" data-icon-color=\"#ff0000\" data-background=\"#ffffff\"><p>Note</p></div>",
-      "reserialized": "<div data-icon-color=\"#ff0000\" data-icon-name=\"lightbulb\" data-emoji-unicode=\"128161\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"icon\" data-background=\"#ffffff\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
-      "resanitized": "<div data-icon-color=\"#ff0000\" data-icon-name=\"lightbulb\" data-emoji-unicode=\"128161\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"icon\" data-background=\"#ffffff\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "reserialized": "<div data-icon-color=\"#ff0000\" data-icon-name=\"lightbulb\" data-emoji-unicode=\"128161\" data-logo-in-use=\"icon\" data-background=\"#ffffff\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "resanitized": "<div data-icon-color=\"#ff0000\" data-icon-name=\"lightbulb\" data-emoji-unicode=\"128161\" data-logo-in-use=\"icon\" data-background=\"#ffffff\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
       "editable": false,
       "expected_text": "Note",
       "expected_mentions": [],
       "expected_links": [],
-      "expected_checked": [],
-      "expected_markdown": "> <icon>lightbulb icon</icon>\n> \n> Note",
-      "markdown_element": {
-        "tag": "icon",
-        "attributes": {},
-        "text": "lightbulb icon"
-      }
+      "expected_checked": []
     },
     {
       "name": "callout-safe-emoji",
@@ -657,17 +635,7 @@
       "expected_text": "Note",
       "expected_mentions": [],
       "expected_links": [],
-      "expected_checked": [],
-      "expected_markdown": "> <img src=\"https://example.test/emoji.png?a=1&amp;b=2\" alt=\"😄\" width=\"30px\" />\n> \n> Note",
-      "markdown_element": {
-        "tag": "img",
-        "attributes": {
-          "src": "https://example.test/emoji.png?a=1&b=2",
-          "alt": "😄",
-          "width": "30px"
-        },
-        "text": ""
-      }
+      "expected_checked": []
     },
     {
       "name": "attribute-free-text-style",
@@ -729,22 +697,12 @@
       "name": "callout-unsafe-url",
       "input": "<div data-block-type=\"callout-component\" data-logo-in-use=\"emoji\" data-emoji-unicode=\"😄\" data-emoji-url=\"javascript:alert(1)\"><p>Note</p></div>",
       "sanitized": "<div data-block-type=\"callout-component\" data-logo-in-use=\"emoji\" data-emoji-unicode=\"😄\"><p>Note</p></div>",
-      "reserialized": "<div data-emoji-unicode=\"😄\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"emoji\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
-      "resanitized": "<div data-emoji-unicode=\"😄\" data-emoji-url=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" data-logo-in-use=\"emoji\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "reserialized": "<div data-emoji-unicode=\"😄\" data-logo-in-use=\"emoji\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
+      "resanitized": "<div data-emoji-unicode=\"😄\" data-logo-in-use=\"emoji\" data-block-type=\"callout-component\"><p class=\"editor-paragraph-block\">Note</p></div>",
       "expected_text": "Note",
       "expected_mentions": [],
       "expected_links": [],
-      "expected_checked": [],
-      "expected_markdown": "> <img src=\"https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png\" alt=\"😄\" width=\"30px\" />\n> \n> Note",
-      "markdown_element": {
-        "tag": "img",
-        "attributes": {
-          "src": "https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f4a1.png",
-          "alt": "😄",
-          "width": "30px"
-        },
-        "text": ""
-      }
+      "expected_checked": []
     },
     {
       "name": "color-attribute-injection",

@@ -169,11 +169,11 @@ make e2e
 **Files：** spec T11；`P/editor/src/extensions/callout/{utils.test.ts,extension-config.test.ts}`；`P/editor/src/hooks/use-editor.ts` 的死 MarkdownStorage 类型视读者删除；`E/stories/issue/editor-loading.spec.ts`。
 **Interfaces：** 保持 HTML parse/render 与 getMarkDown→convertHTMLToMarkdown；去五个扩展专用 markdown.serialize，不删除 tiptap-markdown 解析能力。默认 emoji unicode=128161、URL undefined；旧合法 icon/emoji 存储兼容按现有边界。
 
-- [ ] Step 1：先核所有 getMarkdown/transformCopiedText 生产读者为零，列五处注册与专用 tests/helper；扩真实 Editor callout 插入/存储恢复/HTML 往返及 Markdown 粘贴断言，清点 P4 恶意属性 fixture 不丢。
-- [ ] Step 2：运行 `pnpm --filter @nerve/editor exec vitest run src/extensions/callout/utils.test.ts src/extensions/callout/extension-config.test.ts src/sanitization-roundtrip.test.ts`；新增纯原生默认不得含 jsdelivr 的行为红。
-- [ ] Step 3：删除死序列化与专用类型/helper；删除 fixture 的两种死 Markdown 投影字段，恶意 HTML cases 和 Go 清洗/roundtrip 输入保留。更新 HTML 测试的原生默认预期，不能泛化删除 URL 安全断言。
-- [ ] Step 4：上述 tests、editor-interaction 与既有服务端 content 清洗测试回归；`make build` 后审 worker 创建/URL/blob 命中及真实页面 CSP；M18 恢复 CDN 默认须产生网络/CSP或属性断言红，恢复。记录实际产物路径与 hash，不仅源码零命中。
-- [ ] Step 5：记录 A11、M1/P4 历史修复与本期死代码删除的区别；提交 `refactor(M4/P14): 清理死 Markdown 序列化并使用原生标注图标`。
+- [x] Step 1：先核所有 getMarkdown/transformCopiedText 生产读者为零，列五处注册与专用 tests/helper；扩真实 Editor callout 插入/存储恢复/HTML 往返及 Markdown 粘贴断言，清点 P4 恶意属性 fixture 不丢。
+- [x] Step 2：运行 `pnpm --filter @nerve/editor exec vitest run src/extensions/callout/utils.test.ts src/extensions/callout/extension-config.test.ts src/sanitization-roundtrip.test.ts`；新增纯原生默认不得含 jsdelivr 的行为红。
+- [x] Step 3：删除死序列化与专用类型/helper；删除 fixture 的两种死 Markdown 投影字段，恶意 HTML cases 和 Go 清洗/roundtrip 输入保留。更新 HTML 测试的原生默认预期，不能泛化删除 URL 安全断言。
+- [x] Step 4：上述 tests、editor-interaction 与既有服务端 content 清洗测试回归；`make build` 后审 worker 创建/URL/blob 命中及真实页面 CSP；M18 恢复 CDN 默认须产生网络/CSP或属性断言红，恢复。记录实际产物路径与 hash，不仅源码零命中。
+- [x] Step 5：记录 A11、M1/P4 历史修复与本期死代码删除的区别；提交 `refactor(M4/P14): 清理死 Markdown 序列化并使用原生标注图标`。
 
 ## Task 12：M4 编辑器图片与未开放入口（约 300–650 行）
 
