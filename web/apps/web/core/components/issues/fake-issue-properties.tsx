@@ -17,7 +17,11 @@ vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one
 vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
-vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "ws" }), useNavigate: () => vi.fn() }));
+vi.mock("react-router", async (original) => ({
+  ...(await original<typeof import("react-router")>()),
+  useParams: () => ({ workspaceSlug: "ws" }),
+  useNavigate: () => vi.fn(),
+}));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
 vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app.issue.issueDetail }));
 vi.mock("@/hooks/store/use-label", () => ({ useLabel: () => tab.app.label }));
