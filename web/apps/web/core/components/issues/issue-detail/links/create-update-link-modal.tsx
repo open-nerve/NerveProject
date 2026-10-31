@@ -29,7 +29,7 @@ import type { TLinkOperations } from "./types";
 
 type TLinkOperationsModal = Pick<TLinkOperations, "create" | "update">;
 
-export type TIssueLinkCreateFormFieldOptions = {
+type TIssueLinkCreateFormFieldOptions = {
   title: string;
   url: string;
   id?: string;
