@@ -180,11 +180,11 @@ make e2e
 **Files：** spec T12；新 `C/components/issues/editor-capabilities.test.tsx`；`E/stories/issue/editor-loading.spec.ts`、detail interactions。
 **Interfaces：** 沿 disabledExtensions 中已有 `image` 标识禁用两个图片扩展；M4 描述入口传配置，M6/M7 wrapper 默认不变。若共享 M4 专用配置可复用，必须列真实调用。
 
-- [ ] Step 1：列详情/peek、创建/编辑/草稿描述的实际入口；写 `m4EditorsDisableImageWithoutChangingOtherEditors`；核附件/关注 UI 是否已经不挂载，已有零命中只作输入。
-- [ ] Step 2：运行新 capabilities、现有 issue-modal/editor 生命周期测试；真实 Editor schema/slash 查询与上传 handler spy 证明未开放图片不可触发，不只是检查 prop 字符串。
-- [ ] Step 3：在 M4 入口关闭 image，去因此零读者的局部上传 wiring；共享 M5 文件 service/API 保留真实其他读者，不扩大到全仓删除。
-- [ ] Step 4：页面粘贴/拖入 image、slash 查询无上传、无附件/关注入口，允许文本输入保存；M19 开回 image 使真实交互测试红，恢复；未开放功能不能用空 service 假成功。
-- [ ] Step 5：记录 A12 和 M5 开启前提；提交 `fix(M4/P14): 关闭未开放的工作项图片入口`。
+- [x] Step 1：列详情/peek、创建/编辑/草稿描述的实际入口；写 `m4EditorsDisableImageWithoutChangingOtherEditors`；核附件/关注 UI 是否已经不挂载，已有零命中只作输入。
+- [x] Step 2：运行新 capabilities、现有 issue-modal/editor 生命周期测试；真实 Editor schema/slash 查询与上传 handler spy 证明未开放图片不可触发，不只是检查 prop 字符串。
+- [x] Step 3：在 M4 入口关闭 image，去因此零读者的局部上传 wiring；共享 M5 文件 service/API 保留真实其他读者，不扩大到全仓删除。
+- [x] Step 4：页面粘贴/拖入 image、slash 查询无上传、无附件/关注入口，允许文本输入保存；M19 开回 image 使真实交互测试红，恢复；未开放功能不能用空 service 假成功。
+- [x] Step 5：记录 A12 和 M5 开启前提；提交 `fix(M4/P14): 关闭未开放的工作项图片入口`。
 
 ## Task 13：子项计数入口与表格地址回归（约 350–700 行）
 

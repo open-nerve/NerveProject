@@ -255,7 +255,6 @@ function Form({ overrides }: { overrides: Partial<IssueFormProps> }) {
       editorRef={editor}
       isCreateMoreToggleEnabled={false}
       onCreateMoreToggleChange={() => {}}
-      onAssetUpload={() => {}}
       onClose={close}
       onSubmit={async () => {}}
       workspaceSlug="ws"

@@ -272,6 +272,8 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 
 **M4/P14 标注/序列化（T11）**：标注默认灯泡使用原生字符，存储 fallback 不补外部图片；移除五处无生产读者的定制 Markdown 序列化，保留 HTML 往返、Markdown 粘贴和已有合法图标。P4 的 14 组安全输入全部保留，只删除死投影，构建与真实页面均无需扩 CSP。
 
+**M4/P14 图片（T12）**：M4 详情、peek 和创建/编辑/草稿的描述关闭 image，图片节点、slash、文件粘贴/拖入均不可上传，移除弹窗专属上传及创建后附件关联；文字仍正常保存。共享编辑器默认及收集箱等其他真实文件消费者保留，文件能力按 M5 实现后再开启。
+
 整审局部收口：A-01删除跨项目子项无消费者的cycle/module目录预取，每外部项目少两旧GET，state/member/label与原拒绝边界保持；A-02删除失去最后生产读者的旧列表乐观分布更新helper/barrel/两wrapper/六死测试及两独占常量块。真实领域analytics/progress取数及calculateCycleProgress七测保留；两项独立复审Approved，非将领域数据层提前接通。
 
 **M4/P10a quick-add等待展示（R8，T4已实施并独评Approved）**：创建请求未返回前，输入在quick-add入口显示等待预览并禁用，保留Promise toast；不再将缺服务端编号/审计事实的输入作为普通卡片加入正式排序、分组或计数。成功后真实响应出现于列表，失败保留输入重试。首请求pending、双提交、跨workspace/project与旧结算边界及准确提交身份见[P10a T4/R8证据](M4-issue-core/reviews/P10a-web-issue-types-review.md#t4-r8-evidence)；未提前实现P10b协调引擎。

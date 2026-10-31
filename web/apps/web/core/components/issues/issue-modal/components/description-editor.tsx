@@ -12,46 +12,45 @@ import { Controller } from "react-hook-form";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
-import { EFileAssetType } from "@nerve/types";
 import { Loader } from "@nerve/ui";
 import { getDescriptionPlaceholderI18n } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text";
 // hooks
-import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 type TIssueDescriptionEditorProps = {
   control: Control<IssueFormValues>;
   isDraft: boolean;
-  issueId: string | undefined;
   descriptionHtmlData: string | undefined;
   editorRef: React.MutableRefObject<EditorRefApi | null>;
   submitBtnRef: React.MutableRefObject<HTMLButtonElement | null>;
   workspaceSlug: string;
   projectId: string | null;
   handleDescriptionHTMLDataChange: (descriptionHtmlData: string, source?: IssueDescriptionChangeSource) => void;
-  onAssetUpload: (assetId: string) => void;
+};
+
+// The shared editor contract requires these callbacks for editable content. Images are absent from
+// this schema; a future accidental caller must reject rather than claim an upload succeeded.
+const imageUnavailable = async (): Promise<never> => {
+  throw new Error("Images are not available for work items.");
 };
 
 export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(props: TIssueDescriptionEditorProps) {
   const {
     control,
     isDraft,
-    issueId,
     descriptionHtmlData,
     editorRef,
     submitBtnRef,
     workspaceSlug,
     projectId,
     handleDescriptionHTMLDataChange,
-    onAssetUpload,
   } = props;
   // i18n
   const { t } = useTranslation();
   // store hooks
   const { getWorkspaceBySlug } = useWorkspace();
   const workspaceId = getWorkspaceBySlug(workspaceSlug)?.id ?? "";
-  const { uploadEditorAsset, duplicateEditorAsset } = useEditorAsset();
   useEffect(() => {
     if (descriptionHtmlData !== undefined) handleDescriptionHTMLDataChange(descriptionHtmlData);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -82,6 +81,7 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
           render={({ field: { value } }) => (
             <RichTextEditor
               editable
+              disabledExtensions={["image"]}
               id="issue-modal-editor"
               initialValue={value ?? ""}
               value={descriptionHtmlData}
@@ -95,42 +95,8 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
               ref={editorRef}
               placeholder={(isFocused, description) => t(getDescriptionPlaceholderI18n(isFocused, description))}
               containerClassName="pt-3 min-h-[120px]"
-              uploadFile={async (blockId, file) => {
-                if (!projectId) throw new Error("A project is required to upload an attachment");
-                try {
-                  const { asset_id } = await uploadEditorAsset({
-                    blockId,
-                    data: {
-                      entity_identifier: issueId ?? "",
-                      entity_type: isDraft ? EFileAssetType.DRAFT_ISSUE_DESCRIPTION : EFileAssetType.ISSUE_DESCRIPTION,
-                    },
-                    file,
-                    projectId,
-                    workspaceSlug,
-                  });
-                  onAssetUpload(asset_id);
-                  return asset_id;
-                } catch (error) {
-                  console.log("Error in uploading issue asset:", error);
-                  throw new Error("Asset upload failed. Please try again later.", { cause: error });
-                }
-              }}
-              duplicateFile={async (assetId: string) => {
-                if (!projectId) throw new Error("A project is required to duplicate an attachment");
-                try {
-                  const { asset_id } = await duplicateEditorAsset({
-                    assetId,
-                    entityId: issueId,
-                    entityType: isDraft ? EFileAssetType.DRAFT_ISSUE_DESCRIPTION : EFileAssetType.ISSUE_DESCRIPTION,
-                    projectId,
-                    workspaceSlug,
-                  });
-                  onAssetUpload(asset_id);
-                  return asset_id;
-                } catch {
-                  throw new Error("Asset duplication failed. Please try again later.");
-                }
-              }}
+              uploadFile={imageUnavailable}
+              duplicateFile={imageUnavailable}
             />
           )}
         />

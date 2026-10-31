@@ -31,8 +31,6 @@ import { useProject } from "@/hooks/store/use-project";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 // services
-import { FileService } from "@/services/file.service";
-const fileService = new FileService();
 // local imports
 import { CreateIssueToastActionItems } from "../create-issue-toast-action-items";
 import { DraftIssueLayout } from "./draft-issue-layout";
@@ -71,7 +69,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const [description, setDescription] = useState<string | undefined>(undefined);
   const [descriptionLoadState, setDescriptionLoadState] = useState<IssueDescriptionLoadState>("loading");
   const [descriptionAttempt, setDescriptionAttempt] = useState(0);
-  const [uploadedAssetIds, setUploadedAssetIds] = useState<string[]>([]);
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   // store hooks
@@ -216,19 +213,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
 
       if (!inSession()) throw new SessionChangedError();
       if (!response) throw new Error("Missing confirmed work item");
-      // M5 attachment follow-up cannot turn a confirmed creation into a repeatable creation failure.
-      if (uploadedAssetIds.length > 0 && response.project_id) {
-        try {
-          await fileService.updateBulkProjectAssetsUploadStatus(workspaceSlug, response.project_id, response.id, {
-            asset_ids: uploadedAssetIds,
-          });
-        } catch (error) {
-          if (inSession()) refuse(error);
-        }
-        if (!inSession()) throw new SessionChangedError();
-        setUploadedAssetIds([]);
-      }
-
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("success"),
@@ -363,8 +347,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
 
   const handleFormChange = (formData: IssueFormData | null) => setChangesMade(formData);
 
-  const handleUpdateUploadedAssetIds = (assetId: string) => setUploadedAssetIds((prev) => [...prev, assetId]);
-
   const handleDuplicateIssueModal = (value: boolean) => setIsDuplicateModalOpen(value);
 
   // don't open the modal outside a workspace or if there are no projects
@@ -386,7 +368,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       ...data,
       description_html: description,
     },
-    onAssetUpload: handleUpdateUploadedAssetIds,
     onClose: finishClose,
     onSubmit: (payload, saveDraft = isDraft, options) => handleFormSubmit(payload, saveDraft, options),
     isPending,

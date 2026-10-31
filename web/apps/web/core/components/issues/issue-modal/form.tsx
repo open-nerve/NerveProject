@@ -52,7 +52,6 @@ export interface IssueFormProps {
   issueTitleRef: React.MutableRefObject<HTMLInputElement | null>;
   editorRef: React.RefObject<EditorRefApi | null>;
   isCreateMoreToggleEnabled: boolean;
-  onAssetUpload: (assetId: string) => void;
   onCreateMoreToggleChange: (value: boolean) => void;
   onChange?: (formData: Partial<IssueFormValues> | null) => void;
   onClose: () => void;
@@ -86,7 +85,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     onRetryDescription,
     issueTitleRef,
     editorRef,
-    onAssetUpload,
     onChange,
     onClose,
     onSubmit,
@@ -320,14 +318,12 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   <IssueDescriptionEditor
                     control={control}
                     isDraft={isDraft}
-                    issueId={data?.id}
                     descriptionHtmlData={data?.description_html}
                     editorRef={editorRef}
                     submitBtnRef={submitBtnRef}
                     workspaceSlug={workspaceSlug}
                     projectId={projectId}
                     handleDescriptionHTMLDataChange={handleDescriptionChange}
-                    onAssetUpload={onAssetUpload}
                   />
                 )}
               </div>

@@ -10,10 +10,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CoreEditorExtensions } from "@/extensions/extensions";
 import { SideMenuExtension } from "@/extensions/side-menu";
 import { SlashCommands } from "@/extensions/slash-commands";
+import { getSlashCommandFilteredSections } from "@/extensions/slash-commands/command-items-list";
 import { getEditorRefHelpers } from "@/helpers/editor-ref";
 import { openEmojiPicker } from "@/helpers/editor-commands";
 import { CoreEditorProps } from "@/props";
-import type { EditorRefApi, TFileHandler, TMentionHandler } from "@/types";
+import type { EditorRefApi, TExtensions, TFileHandler, TMentionHandler } from "@/types";
 
 // The kept editors, driven the way a user drives them: typing, keys, the toolbar and the ref API the web
 // app calls. Each editor is a real TipTap Editor built as useEditor builds the rich-text editor of a work
@@ -55,7 +56,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const createEditor = async ({ editable = true, content = "" }: { editable?: boolean; content?: string } = {}) => {
+const createEditor = async ({
+  editable = true,
+  content = "",
+  disabledExtensions = [],
+}: { editable?: boolean; content?: string; disabledExtensions?: TExtensions[] } = {}) => {
   const element = document.createElement("div");
   document.body.append(element);
   const editor = new Editor({
@@ -65,7 +70,7 @@ const createEditor = async ({ editable = true, content = "" }: { editable?: bool
     editorProps: CoreEditorProps({ editorClassName: "" }),
     extensions: [
       ...CoreEditorExtensions({
-        disabledExtensions: [],
+        disabledExtensions,
         editable,
         enableHistory: true,
         fileHandler,
@@ -73,7 +78,7 @@ const createEditor = async ({ editable = true, content = "" }: { editable?: bool
         mentionHandler,
       }),
       SideMenuExtension({ dragDropEnabled: true }),
-      SlashCommands({ disabledExtensions: [] }),
+      SlashCommands({ disabledExtensions }),
     ],
     content,
   });
@@ -322,6 +327,30 @@ describe("a rich-text editor built like the kept ones", () => {
     expect(callout?.getAttribute("data-emoji-unicode")).toBe("128161");
     expect(callout?.hasAttribute("data-emoji-url")).toBe(false);
     expect((await createEditor({ content: html })).getHTML()).toBe(html);
+  });
+
+  it("removes both image nodes and upload entry points when a consumer disables images, while keeping text", async () => {
+    const upload = vi.spyOn(fileHandler, "upload");
+    const duplicate = vi.spyOn(fileHandler, "duplicate");
+    const editor = await createEditor({ disabledExtensions: ["image"] });
+    expect(editor.schema.nodes.image).toBeUndefined();
+    expect(editor.schema.nodes.imageComponent).toBeUndefined();
+    expect(getSlashCommandFilteredSections({ disabledExtensions: ["image"] })({ query: "image" })).toEqual([]);
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", {
+      value: {
+        files: [new File(["image"], "sample.png", { type: "image/png" })],
+        getData: (type: string) =>
+          type === "text/nerve-editor-html"
+            ? '<p>Kept text</p><img src="asset-1"><image-component src="asset-2"></image-component>'
+            : "",
+      },
+    });
+    editor.view.dom.dispatchEvent(paste);
+    expect(editor.getText()).toBe("Kept text");
+    expect(parse(editor.getHTML()).querySelector("img,image-component")).toBeNull();
+    expect(upload).not.toHaveBeenCalled();
+    expect(duplicate).not.toHaveBeenCalled();
   });
 
   it("still parses pasted Markdown after removing unused custom serializers", async () => {

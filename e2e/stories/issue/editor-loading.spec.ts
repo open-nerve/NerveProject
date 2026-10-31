@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { expect, test } from "../../fixtures/test";
-import { issueListProject } from "../../fixtures/issue-list-page";
+import { issueListProject, openIssueList } from "../../fixtures/issue-list-page";
 import { createIssue } from "../../fixtures/issues";
 import { password } from "../../fixtures/auth";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
@@ -145,3 +145,102 @@ test("C10 (page): a native callout saves and reopens without external images or 
   expect(watch.oldApiRequests).toEqual([]);
   await expectQuietConsole(page, watch);
 });
+
+for (const owner of ["detail", "creation"] as const) {
+  test(`C12 (page): ${owner} has no image, attachment or subscription action; image paste and drop make no upload and text still saves`, async ({
+    api,
+    db,
+    page,
+  }, info) => {
+    const seed = await issueListProject(api, info);
+    const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Image boundary" });
+    const { watch } = await openIssueList(page, seed);
+    if (owner === "detail") await page.goto(`/${seed.slug}/browse/WEB-${issue.sequence_id}`);
+    else {
+      await page.getByRole("button", { name: "Add work item", exact: true }).click();
+      await page.getByRole("textbox", { name: "Title", exact: true }).fill("Created without images");
+    }
+    const editor = page.locator(
+      owner === "detail"
+        ? `[id="editor-container-${issue.id}"] [contenteditable="true"]`
+        : '[id="editor-container-issue-modal-editor"] [contenteditable="true"]'
+    );
+    await expect(editor).toBeVisible();
+    await editor.pressSequentially("/");
+    await expect(page.getByRole("button", { name: "Callout", exact: true })).toBeVisible();
+    await editor.pressSequentially("image");
+    await expect(page.locator("#slash-command")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Image", exact: true })).toHaveCount(0);
+    await editor.press("ControlOrMeta+a");
+    await editor.press("Backspace");
+    await editor.evaluate((element) => {
+      const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j8RkAAAAASUVORK5CYII=";
+      const file = new File([Uint8Array.from(atob(png), (char) => char.charCodeAt(0))], "boundary.png", {
+        type: "image/png",
+      });
+      const clipboard = new DataTransfer();
+      clipboard.items.add(file);
+      element.dispatchEvent(new ClipboardEvent("paste", { clipboardData: clipboard, bubbles: true, cancelable: true }));
+      const dropped = new DataTransfer();
+      dropped.items.add(file);
+      const rect = element.getBoundingClientRect();
+      element.dispatchEvent(
+        new DragEvent("drop", {
+          dataTransfer: dropped,
+          clientX: rect.left + 5,
+          clientY: rect.top + 5,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+      // A file clipboard is handled as a file. Separately paste document HTML, whose text remains
+      // available even though its image node is absent from the M4 editor schema.
+      const documentClipboard = new DataTransfer();
+      documentClipboard.setData("text/html", `<p>Kept paste text</p><img src="data:image/png;base64,${png}">`);
+      documentClipboard.setData("text/plain", "Kept paste text");
+      element.dispatchEvent(
+        new ClipboardEvent("paste", {
+          clipboardData: documentClipboard,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+    });
+    await expect(editor).toHaveText("Kept paste text");
+    await page.keyboard.insertText(" plus typed");
+    await expect(editor).toHaveText("Kept paste text plus typed");
+    await expect(editor.locator("img,input[type=file],image-component")).toHaveCount(0);
+    await expect(page.getByText("Attachments", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^(un)?subscribe$/i })).toHaveCount(0);
+    if (owner === "creation") {
+      expect(
+        (
+          await answerTo(page, "POST", `/api/v0/projects/${seed.project.id}/issues`, () =>
+            page
+              .getByRole("dialog", { name: "Create new work item", exact: true })
+              .getByRole("button", { name: "Save", exact: true })
+              .click()
+          )
+        ).status()
+      ).toBe(201);
+    }
+    await expect
+      .poll(
+        async () =>
+          (
+            await db.query<{ description_stripped: string }>(
+              "SELECT description_stripped FROM issues WHERE project_id=$1 AND name=$2",
+              [seed.project.id, owner === "detail" ? "Image boundary" : "Created without images"]
+            )
+          )[0]?.description_stripped
+      )
+      .toBe("Kept paste text plus typed");
+    expect(watch.apiRequests.filter((request) => /asset|upload|attachment|subscribe/i.test(request))).toEqual([]);
+    expect(watch.oldApiRequests).toEqual([]);
+    expect(watch.apiFailures).toEqual([]);
+    expect(watch.pageErrors).toEqual([]);
+    expect(watch.cspViolations).toEqual([]);
+    expect(requestsElsewhere(page, watch)).toEqual([]);
+    await expectQuietConsole(page, watch);
+  });
+}

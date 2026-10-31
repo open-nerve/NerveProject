@@ -138,7 +138,7 @@ T15 六处复制使用现有 useCopyLink/useCopyText（均收值与成功文案�
 - [x] A9：I17 删除整棵子树且文案明确、onSubmit 必需、拒绝留窗/成功跟进；数据库目录断言通过（T9；t9-route-green 82/82、t9-i17-route 2/2、M15；完整检查点回执另记）。
 - [ ] A10：未登录无编辑器 chunk、设置不挂载工作项弹窗，EMOJI_CHECK_WARNING 全零且 console 无豁免（T10：t10-final-pages 20/20、t10-final-unit 37/37、M16/M17 红与精确恢复；T16 三浏览器待收尾）。
 - [x] A11：原生 callout、五处死序列化删除而安全/粘贴回归保留，打包 worker/CSP 复核通过（T11：t11-restored-editor 35/35，t11-content，t11-pages 4/4，t11-build-worker-audit.json）。
-- [ ] A12：M4 无图片上传入口/请求，无附件及关注按钮；表格子项地址直接 browse 无片段（T12/T13）。
+- [ ] A12：M4 无图片上传入口/请求，无附件及关注按钮；表格子项地址直接 browse 无片段（T12：owner 6/6、完整相关 unit 46/46、真实 Editor 22/22、C12 两页和 M19；T13 地址待完成）。
 - [ ] A13：I20、S2 身份、I22 两标签页及 Back 通过；旧会话响应无跟进（T14）。
 - [ ] A14：六处真实复制消费者成功/拒绝正确，六个 copy-hook 例外删除，P15 剩余例外具名（T15）。
 - [ ] A15：C3 详情/C4/C5/C10/C11 三浏览器均实际非零通过；完整七项门禁、至少 16 种有效生产性质变异及恢复证据、实际改动文件 dead/oxlint 核清（T16）。
