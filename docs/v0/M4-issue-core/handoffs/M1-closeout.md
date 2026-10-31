@@ -86,4 +86,4 @@ viewId收窄归P13，创建/编辑弹窗isMigrationUpdate及撤销/重做归P14�
 
 typed profile view 已从路由收窄并向下传递，web 中 as TProfileViews 零命中；非法段不发请求、三关系真实页面与 M18 变异检出。按原附录脚本清理修改范围真死代码，64→45候选（19文件）均具名列出实际读者，117个实际TS/TSX文件零oxlint；web cap121→114、constants1→0。候选不是全仓零dead。创建/编辑弹窗isMigrationUpdate、全仓no-shadow与最终dead仍归P14/P16，本交接顶层仍open。
 
-证据：[P13阶段review§9–14](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)。本期实施/终审完成，集成待办；最终文稿CI以阶段review§14后置回执核准，不提前关闭M4总交接。
+证据：[P13阶段验收](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)及[集成回执§15](../reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31)。P13 已以 --no-ff 合并 main 8bb4bbcb，准确 main CI 41163365163 attempt2 全绿；归档逐 hash 复验与分支/worktree 清理完成。本输入顶层仍 open，M4 总交接不提前关闭。

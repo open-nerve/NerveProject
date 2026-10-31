@@ -1,6 +1,6 @@
 # M4/P13 筛选、归档与个人主页：实施与评审记录
 
-日期：2026-10-31。**T1–T14 实施与终审修复完成，集成待办。** 基线 `ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8`，最终产品 `de616d06ca7befeb5a39f82a6c70ff18a3f03742`。以下 §1–7 是预检历史、§8 是实施历史，当前验收以 §9–14 为准。[spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)。最终文稿准确 CI 必须按 §14 后置核准后才交付；未经负责人安排不合并。
+日期：2026-10-31。**已完成、合并且 main CI 全绿，归档清理完成；当前状态见 §15。** 基线 `ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8`，最终产品 `de616d06ca7befeb5a39f82a6c70ff18a3f03742`。以下 §1–7 是预检历史、§8 是实施历史，产品验收以 §9–14 为准，集成以 §15 为准。[spec](../specs/P13-web-filters-archives-profile.md)、[plan](../plans/P13-web-filters-archives-profile.md)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)。§14 的分支交付门已后置核准；其未授权/保留现场措辞是集成前历史，随后授权及清理见 §15。
 
 ## 1. 前置与评审方式
 
@@ -240,3 +240,18 @@ M1 的 typed profile view 已关闭，修改范围 dead/oxlint 具名记录；M2
 文稿提交后由主控推送，读取该精确 HEAD/branch/run/attempt，确认 server、web、e2e 三任务全部 success，生成 E/final-delivery.json（包含准确 CI URL、远端提交、输入/日志 hash 审计）。这份后置回执是 A11/A12 与 T14 完成交付的最后前提；若失败先按真实日志处理，不用正文勾选跳过。以此避免文稿反复写入自身 SHA 引起提交循环。
 
 当前没有合并授权。主目录保持 main，工作树/分支及证据保留；主目录 .superpowers/sdd/P13-preparation-20261031/ 也必须随未来授权集成归档，不能漏掉。M4 设计 §14、总体设计 §9.4、交接顶层与 M5–M8 最终 closeout 仍待后续阶段；本次不开始 P14。
+
+## 15. 授权合并、main CI与归档清理（2026-10-31）
+
+负责人明确授权后，最终分支 `c57bbe6b79d1c7b13c2248e5c621e9f9f75517f0` 以 `--no-ff` 合并为 main `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`。父提交为原 main `ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8` 与该最终分支；树 `786f21b6d5f6d2363c296170dc5d1b8742a9a852` 与分支相同，未追加产品改动。合并前重跑交付审计通过；本地最终门禁按原输入复用，不把合并冒称本地重新跑全套。
+
+准确分支 [CI 41143853934](https://github.com/open-nerve/NerveProject/actions/runs/41143853934) attempt 1 三任务成功是前置。准确 [main CI 41163365163](https://github.com/open-nerve/NerveProject/actions/runs/41163365163) attempt 1 为已知 W11 偶发：w11-guest-bounds.spec.ts:190 期待 1 个 modal、收到 0，201 passed/1 failed。主控经已授权登录 Chrome 直接读日志并仅重跑失败作业，未专项排查、改测试或提取凭据。**attempt 2 的 server、web、e2e 全部 completed/success**：job 分别 124430126997、124430127589、124430126349；准确 SHA/branch/run/jobs 的公开原件与成功收据均留存。
+
+稳定归档根为主项目 `.superpowers/sdd/P13-integration-20261031/`（下称 I）：
+
+- 原 P13 worktree 证据的新根为 `I/worktree-evidence/<原 worktree 相对路径>`；历史文中的 E 现在对应 `I/worktree-evidence/.superpowers/sdd/P13-web-filters-archives-profile/`。保存 2,133 文件、302,334,574 字节及 2 个空目录，逐文件 SHA/尺寸/模式与实体目录成员核验；只排除锁文件可重建的依赖/构建产物，unknown=0。原文件内容未改写。
+- 主目录准备根另保存为 `I/preparation-evidence/P13-preparation-20261031/`：11 文件、93,099 字节，源/副本核验一致；未来不依赖已删 worktree。
+- `archive-manifest.json` SHA-256 为 `ea6639c86c1f3ce130fe3373952290311b7edfbc67e6b53b9337c100ba42543e`；`preparation-archive-manifest.json` 为 `512f651dc80813d080862eeaa32dddbdb7ff361733bb317a9158e43b64ec2f69`。
+- `premerge.json`、`merge.json`、`main-ci-12-run.json`、`main-ci-12-jobs.json`、`main-ci-success-receipt.json`、`main-ci-attempt1-w11-and-rerun.md`、`cleanup-receipt.json` 分别记录前置/合并/准确 CI/历史失败重跑/清理。§14 的 `final-delivery.json` 随 E 原样归档。
+
+源与归档一致后，核 root/worktree 干净、main=origin/main、远端分支没有未合并提交，使用系统 git 正常删除远端 codex/m4-p13、移除 worktree、branch -d 删除本地分支，没有 force/stash/clean/reset。删除后再次校验归档全部 hash/成员成功；主目录仍 main 干净。P13 集成完成，P14 仅进入 spec/plan 预检；M4 总完成线和输入顶层关闭仍等后续。

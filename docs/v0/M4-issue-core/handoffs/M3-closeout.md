@@ -252,4 +252,4 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 
 §6个人主页三关系、访客桌面/手机无工具栏零列表GET、profile及归档详情身份key/Back/权限ABA完成；§7筛选按钮、日期范围错误、归档弹窗名称/焦点/双击/迟到答完成；§8四个富筛选选择器均传t()文案，en/zh-CN及真实浏览器核准。归档恢复/删除最后行反馈由局部布局宿主承载，根权限与确认协议不变。完整工作区标签目录仍M7，冷候选保留合法条件；P14完整详情/编辑器、P15复制/搜索/评论和P16总守卫仍未关闭，顶层open保持。
 
-证据：[P13阶段review§9–14](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)。本期实施/终审完成，集成待办；最终文稿CI以阶段review§14后置回执核准，不提前关闭M4总交接。
+证据：[P13阶段验收](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)及[集成回执§15](../reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31)。P13 已以 --no-ff 合并 main 8bb4bbcb，准确 main CI 41163365163 attempt2 全绿；归档逐 hash 复验与分支/worktree 清理完成。本输入顶层仍 open，M4 总交接不提前关闭。

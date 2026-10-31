@@ -205,7 +205,7 @@ P13分支codex/m4-p13、worktree .codex/worktress/codex/m4-p13，以ff89d0a1为�
 预检通过，下一步等负责人授权从T1实施。沿原root权限/canonical/确认写入；区分项目服务端偏好与归档/profile本地设置；合法开区间和未知已保存标签不被新控件清掉；完整工作区标签仍M7。阶段结束须deep-review和修复复审，先不合并。M4§14/总体§9.4、输入handoff顶层open及M5–M8最终closeout保持开放。
 
 
-## 20. 当前接续：P13实施与终审完成，集成待办（2026-10-31）
+## 20. 历史接续：P13实施与终审完成，集成待办（2026-10-31）
 
 P13分支codex/m4-p13，基线main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8，worktree .codex/worktress/codex/m4-p13。T1–T14完成，独立整审0 Critical/2 Important/2 Minor，四项局部问题均修复为de616d06；[spec](../M4-issue-core/specs/P13-web-filters-archives-profile.md)、[plan](../M4-issue-core/plans/P13-web-filters-archives-profile.md)、[阶段review](../M4-issue-core/reviews/P13-web-filters-archives-profile-review.md)、[整体审核](../../reviews/re-19-M4P13整体审核.md)。没有待决架构问题。
 
@@ -214,3 +214,13 @@ P13分支codex/m4-p13，基线main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8，wo
 主控提交文稿后须核精确最终HEAD的server/web/e2e三任务success，写工作树证据根.superpowers/sdd/P13-web-filters-archives-profile/final-delivery.json；回执未满足前不宣布交付。最终文稿SHA不写回自身形成提交循环。已有863283fc检查点CI不代替最终CI。
 
 负责人要求先别合并，当前不做main合并/分支与worktree清理，不开始P14。准备根在主目录.superpowers/sdd/P13-preparation-20261031，未来归档须与实施根一起保存。M4设计§14、总体§9.4与M5–M8最终交接继续由P16/收尾处理。
+
+## 21. 当前接续：P13完成、P14文档预检通过（2026-10-31）
+
+P13 最终 c57bbe6b 已按授权 --no-ff 合并 main `8bb4bbcb52a224ace4cb2f9d383bca9b97a022bf`，两父和 tree 已核准。[main CI 41163365163](https://github.com/open-nerve/NerveProject/actions/runs/41163365163) attempt1 为已知 W11 弹窗偶发，授权浏览器重跑失败作业后 attempt2 server/web/e2e 全绿。2,133 份实施/运行证据及 11 份准备材料归档逐 hash 通过；远端/本地分支及 worktree 正常清理后再次复验。原件在主目录 `.superpowers/sdd/P13-integration-20261031/`，详见 [P13 review §15](../M4-issue-core/reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31)。
+
+P14 分支 `codex/m4-p14`，worktree `.codex/worktress/codex/m4-p14`，基线为上述 main；主目录保持 main。[spec](../M4-issue-core/specs/P14-web-issue-detail.md)、[plan](../M4-issue-core/plans/P14-web-issue-detail.md)、[阶段记录](../M4-issue-core/reviews/P14-web-issue-detail-review.md)和 [deep-review 预检](../../reviews/re-20-M4P14预检审核.md)已完成。16 Task/80 步骤和 A1–A16 全部未实施，phase 保持 M4/P13；只有文档变更，没有依赖安装、原型或产品测试。
+
+预检 5 项文稿问题均修订：编辑器工具栏运行时引入、P12 已有表格 browse 的实际剩余入口、复制 hook 的反馈归属、准确路径与旧服务最后读者、T5/T6 父项页面验收依赖。最后一项经独立定点回读确认闭合；没有待决架构问题。准备证据在主目录 `.superpowers/sdd/P14-preparation-20261031/`，未来须与实施证据一起归档。
+
+下一步等待负责人授权从 T1 实施；阶段结束须 deep-review、修复复审及准确分支 CI，先保留分支，不自动合并。M1/M2/M3 顶层 open、M4 §14/总体 §9.4 和 M5–M8 最终 closeout 继续留给 P16/收尾，不以本次准备提前关闭。

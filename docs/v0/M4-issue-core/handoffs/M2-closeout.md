@@ -220,4 +220,4 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 
 §10的四个CustomSearchSelect及defaultOpen已完成：添加/运算符/多选由真实C2业务页面验证，当前M4不生成single，single/multi×en/zh以生产组件浏览器夹具核加载/defaultOpen/搜索/键盘/回焦；三浏览器各22项中4项为兼容夹具。DateRangeDropdown第一参数和既有原子日期写保持，新增selectedDay仅由富筛选持草稿；没有把M6/M7完整页面验收提前关闭。§12归档页头旧实例在P11已移除，本期I15只作页面回归，未重复记功。其它复制/编辑器/搜索等原阶段责任及顶层open保持。
 
-证据：[P13阶段review§9–14](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)。本期实施/终审完成，集成待办；最终文稿CI以阶段review§14后置回执核准，不提前关闭M4总交接。
+证据：[P13阶段验收](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)及[集成回执§15](../reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31)。P13 已以 --no-ff 合并 main 8bb4bbcb，准确 main CI 41163365163 attempt2 全绿；归档逐 hash 复验与分支/worktree 清理完成。本输入顶层仍 open，M4 总交接不提前关闭。
