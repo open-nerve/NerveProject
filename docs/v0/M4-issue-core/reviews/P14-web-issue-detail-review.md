@@ -176,3 +176,5 @@ I17 页面进一步复现删除后停在编号页：canonical 实体删除使 wo
 验证：t9-route-green 六文件 82/82（含原有归档/列表确认），t9-component-final 22/22；t9-i17-route 页面/API 2/2 Chromium。页面由另一作者创建两层后代、归档项和六种协作记录，并有跨项目双向关系；持有真实 DELETE 响应时先核目录中全部表的同一删除时刻/当前写者、禁止关闭/重复发送，兑现后返回列表；已删除分支和无关项逐行不变，协作创建者仍为原作者。复用 expectIssueDeleted/catalog 与 collaborationRows，无复制 SQL 目录。
 
 类型、实际 11 个改动 TS 文件 oxlint 0/0、格式/diff 通过。首次翻译键错层被真实页面检出，单测翻译读取改为真实嵌套路径后修复；DB 确认前需等待提交、ModalCore 根无自身尺寸需断言可见 heading，两项夹具问题单独留痕。先提交本次产品，再在准确提交串行完整 F；T9 的完整门禁和推送步骤尚待回执，不将当前聚焦通过冒称全量通过。
+
+**检查点回执（替代上一段待执行状态）：**`8a35d029` 的 gen-check、Go lint、无缓存完整 Go 测试（466.9 秒）均通过；knip 发现 T8 表单类型仅本文件读取，`8c9c7e0eb5c3bbd3b7e54a4b88ce9e16edf1702f` 收回该无用导出。服务端/生成输入无变化，前三项原始 tested SHA 保留。后者 lint-web 54/54、knip、强制无缓存 test-web 18/18 任务与 E2E 212/212（Chromium 210、Firefox A4 2）全通过。原始日志及 SHA/hash 绑定见 t9-gates-receipt.json；默认 HTML/test-results 已逐文件核 hash 复制到统一证据根。Task 9 完成线已勾，本次文档提交后推送检查点，后置远端回执另补；不代表 T10–T16 已通过。
