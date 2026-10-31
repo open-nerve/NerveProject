@@ -199,14 +199,14 @@ make e2e
 
 ## Task 14：访客、S2 身份、会话与 Back（约 900–1400 行）
 
-**Files：** spec T14；`E/stories/issue/i20-guest-boundary.spec.ts`；新 `E/stories/issue/i22-session-switch.spec.ts`；`E/stories/smoke/s2-web-app.spec.ts`；既有 `C/components/modals/work-item-level.test.tsx` 与 `C/components/issues/peek-overview/host-actions.test.tsx`。
+**Files：** spec T14；`E/stories/issue/i20-guest-boundary.spec.ts`；新 `E/stories/issue/i22-session-switch.spec.ts`；`E/stories/smoke/s2-web-app.spec.ts`；既有 `C/components/modals/work-item-level.test.tsx`、`C/components/issues/delete-issue-modal.test.tsx` 与 `C/components/issues/peek-overview/host-actions.test.tsx`。删除确认消费者的会话测试直接检验 M21，不伪造 root 退役来代替消费者保护。
 **Interfaces：** 复用 root 权限身份和 followInSession，不新建角色谓词。E2E 真实 route.fetch/fulfill，可持有已由 nerve 确认的响应，不能伪造成功体。
 
-- [ ] Step 1：准备 OwnOnly 自己/别人及管理员兼访客、公开项目非成员；写 I20 page 与 S2 三身份。I22 两账号两标签页；DB 先确认旧写，再换账号并兑现旧答。
-- [ ] Step 2：运行既有 owner/peek unit、新页面；先给已满足性质真实绿，发现局部 late follow 缺口才修，不重写权限 root 或放宽 404/403 断言。
-- [ ] Step 3：闭合详情/页头/peek/WorkItemLevelModals 的必要漏点，含 Back 跨工作区/项目/id、同 id 重开、权限 ABA 和旧 finally；路由 key 不替代异步 owner 核查。
-- [ ] Step 4：I20 请求/可见行/DB 与拒绝白名单精确，I22 旧响应无 toast/navigation/新页数据；M21 去会话跟进核查必须实际失败；M22 去 owner 关闭保护让晚答误关新窗须失败，恢复。
-- [ ] Step 5：记录 A1/A13；提交 `test(M4/P14): 覆盖详情访客边界和跨标签页会话失效`，若有产品修复同步记录。
+- [x] Step 1：准备 OwnOnly 自己/别人及管理员兼访客、公开项目非成员；写 I20 page 与 S2 三身份。I22 两账号两标签页；DB 先确认旧写，再换账号并兑现旧答。
+- [x] Step 2：运行既有 owner/peek unit、新页面；先给已满足性质真实绿，发现局部 late follow 缺口才修，不重写权限 root 或放宽 404/403 断言。
+- [x] Step 3：闭合详情/页头/peek/WorkItemLevelModals 的必要漏点，含 Back 跨工作区/项目/id、同 id 重开、权限 ABA 和旧 finally；路由 key 不替代异步 owner 核查。
+- [x] Step 4：I20 请求/可见行/DB 与拒绝白名单精确，I22 旧响应无 toast/navigation/新页数据；M21 去会话跟进核查必须实际失败；M22 去 owner 关闭保护让晚答误关新窗须失败，恢复。
+- [x] Step 5：记录 A1/A13；提交 `test(M4/P14): 覆盖详情访客边界和跨标签页会话失效`，若有产品修复同步记录。
 
 ## Task 15：六处详情复制（约 450–800 行）
 

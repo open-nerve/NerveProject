@@ -13,9 +13,10 @@ const binding = vi.hoisted(() => ({
   tab: undefined as Awaited<ReturnType<typeof issueStoreTab>> | undefined,
   close: vi.fn(),
   locale: "en" as "en" | "zh",
+  session: { state: { loginId: "one" } },
 }));
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
+vi.mock("@/lib/auth/api-client", () => ({ tokenManager: binding.session, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
 vi.mock("@nerve/i18n", () => ({
   useTranslation: () => ({
@@ -77,6 +78,7 @@ beforeEach(async () => {
   toasts.length = 0;
   binding.close.mockReset();
   binding.locale = "en";
+  binding.session.state.loginId = "one";
   binding.tab = await issueStoreTab();
   for (const id of ["one", "two"])
     binding.tab.app.issue.issues.acceptRead(issueDetailOf(id), binding.tab.app.issue.captureRead());
@@ -158,6 +160,15 @@ it("does not close or unlock the reopened same issue when the old deletion answe
   await render("one", false);
   await render("one");
   await act(async () => binding.tab!.nerve.calls[0]!.answer(noContent()));
+  expect(binding.close).not.toHaveBeenCalled();
+  expect(toasts).toHaveLength(0);
+});
+
+it.each([true, false])("does not follow an old session's deletion settlement (confirmed=%s)", async (confirmed) => {
+  await render("one");
+  await act(async () => container.querySelector("button")!.click());
+  binding.session.state.loginId = "two";
+  await act(async () => binding.tab!.nerve.calls[0]!.answer(confirmed ? noContent() : problem(403, "forbidden")));
   expect(binding.close).not.toHaveBeenCalled();
   expect(toasts).toHaveLength(0);
 });

@@ -3,6 +3,7 @@
 import { act, createContext, useContext, StrictMode, type ComponentProps, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { loadProjects } from "@/store/project/fake-projects";
 import { CommandPaletteStore } from "@/store/command-palette.store";
 import { issueDetailOf, issueStoreTab } from "@/store/issue/fake-issues";
 import { settle } from "@/lib/auth/fake-time";
@@ -135,4 +136,31 @@ it("a current deletion refusal is not reported to the modal as success", async (
   ui.remove.mockRejectedValue(error);
   await expect(deleteProps.onSubmit!()).rejects.toBe(error);
   expect(ui.navigate).not.toHaveBeenCalled();
+});
+
+it("permission ABA retires the command owner's callbacks even when the route and issue return unchanged", async () => {
+  await render(view());
+  await act(async () => commands.toggleCreateIssueModal(true));
+  const oldClose = createProps.onClose;
+  await act(async () => {
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [{ ...tab.project, member_role: 5 }]);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  });
+  expect(commands.isCreateIssueModalOpen).toBe(false);
+  await act(async () => commands.toggleCreateIssueModal(true));
+  await act(async () => oldClose());
+  expect(commands.isCreateIssueModalOpen).toBe(true);
+});
+
+it("a route ABA does not let the first same-issue close callback dismiss the new modal", async () => {
+  await render(view());
+  await act(async () => commands.toggleCreateIssueModal(true));
+  const oldClose = createProps.onClose;
+  ui.params = { ...ui.params, projectId: "B" };
+  await render(view());
+  ui.params = { ...ui.params, projectId: "A" };
+  await render(view());
+  await act(async () => commands.toggleCreateIssueModal(true));
+  await act(async () => oldClose());
+  expect(commands.isCreateIssueModalOpen).toBe(true);
 });

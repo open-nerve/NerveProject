@@ -3,6 +3,7 @@ import type { Page, Request, Response, TestInfo } from "@playwright/test";
 import {
   addProjectMembers,
   archiveProject,
+  changeProject,
   createProject,
   createWorkspace,
   inviteAndAccept,
@@ -24,7 +25,9 @@ import {
   WORKSPACE_MENU,
   valued,
 } from "../../fixtures/mounts";
-import { registerOnboarded } from "../../fixtures/settings-pages";
+import { createIssue } from "../../fixtures/issues";
+import { expectListPageQuiet } from "../../fixtures/issue-list-page";
+import { answerTo, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 /** A page of the frontend's router, not a file: nerve answers it with index.html. */
@@ -450,3 +453,45 @@ test("S2: a member of a workspace opens his profile's settings directly: they as
   await expect(page.getByRole("link", { name: "Acme" })).toBeVisible();
   await expectExactly(page, watch, requests, APP);
 });
+
+for (const identity of ["member", "guest", "project non-member"] as const) {
+  test(`S2 (detail): public-project ${identity} receives exactly the permitted detail or its 404/403 refusal`, async ({
+    api,
+    signedInPage,
+    browserName,
+  }, info) => {
+    const { slug, project, tokens } = await acme(api, info);
+    expect(
+      (await changeProject(api, tokens.admin.access_token, project.id, { guest_view_all_features: false })).status
+    ).toBe(200);
+    const issue = await createIssue(api, tokens.admin.access_token, project.id, {
+      name: "S2 visible only with a grant",
+    });
+    const page = await signedInPage(tokens[identity]);
+    const watch = await watchPage(page);
+    const path = `/api/v0/workspaces/${slug}/issues/WEB-${issue.sequence_id}`;
+    const response = await answerTo(page, "GET", path, () =>
+      page.goto(`/${slug}/browse/WEB-${issue.sequence_id}`).then(() => undefined)
+    );
+    const status = identity === "member" ? 200 : identity === "guest" ? 404 : 403;
+    expect(response.status()).toBe(status);
+    if (identity === "member")
+      await expect(page.getByRole("textbox", { name: "Work item title", exact: true })).toHaveValue(issue.name);
+    else {
+      await expect(page.getByRole("alert")).toContainText(
+        identity === "guest" ? "The work item does not exist, or you cannot see it." : "Your role does not allow this."
+      );
+      await expect(page.getByText(issue.name, { exact: true })).toHaveCount(0);
+      await expect(page.getByRole("textbox", { name: "Work item title", exact: true })).toHaveCount(0);
+    }
+    await expectListPageQuiet(page, watch, {
+      failures: status === 200 ? [] : [`${status} GET ${path}`],
+      errors:
+        browserName === "chromium" && status !== 200
+          ? [
+              `Failed to load resource: the server responded with a status of ${status} (${status === 404 ? "Not Found" : "Forbidden"})`,
+            ]
+          : [],
+    });
+  });
+}

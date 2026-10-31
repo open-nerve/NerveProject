@@ -228,3 +228,13 @@ t13-restored 两文件 16/16；t13-pages 的 I8 页面/API 4/4 Chromium。实际
 局部修复在当前 Popper 实例生命周期中逐帧比较按钮矩形，仅变化时 update，实例销毁即取消；公开 props 和所有领域调用方不变。首轮组件 32/32、新 C10 通过，但两个原 C2 仍失败。t13-c2-timing 的逐帧数据证明坐标已经更新，宽泛 transition 却把定位 transform 也缓动了 200ms，开启新的过渡；因此将进出动效限定为 opacity/translate，Popper transform 直接定位。构建 CSS 证实 Tailwind 的 translate-y 使用独立 translate 属性。原 C2 文件及几何 helper 均未修改，t13-anchor-motion-pages 的 16/16（C2/C9/C10/C12）通过；组件覆盖两按钮、关闭/重开/卸载及项目成员/个人主页消费者 32/32，类型与改动文件 lint 0/0。完整 F 后四项将从此修复提交重新执行；T16 加 C2 三浏览器，不能以 Chromium 代替。
 
 **检查点回执：**修复提交 f2448dfaf7c57e77de736f5636810bd6a5b209ed 的 lint-web 54/54、knip、强制无缓存 test-web 18/18 任务及 E2E 221/221（Chromium 219、Firefox A4 2）全通过。前三项保持 c3489a1a 的实际 tested SHA；server、api、生成客户端和锁文件从该点至本提交逐路径 diff 为空。七项分层回执与 103 个 E2E 原件的复制 hash 在 t13-full-anchor-receipt.json，不把文档更新冒称重跑。T13 完成线已勾，本次文档检查点随即推送；准确远端 CI 后置记录，T14–T16 尚未完成。
+
+检查点文档 8b1fa70e623bc9e75eda4e33b0acd7a2325c120d 已经系统 git 自动推送，准确 [CI 41184198943](https://github.com/open-nerve/NerveProject/actions/runs/41184198943) 已启动；T13 task-done 23/23。远端终态待后置核准。
+
+### T14 访客、会话与 Back
+
+本任务新增验证，没有改变产品权限、会话或宿主逻辑。五个组件文件含编号入口/共同身份、详情宿主、命令宿主、peek 和删除确认；新增权限 ABA、路由 ABA、旧会话成功/拒绝，连同已有同 id 重开与迟到答共 60/60。M21 去掉真实 followInSession 的会话核查，两个真实删除确认消费者测试分别因旧成功/拒绝跟进而红；M22 去掉命令宿主关闭保护，三个旧回调误关新窗测试红。两个生产文件逐字节恢复，t14-restored 60/60，不把假 root 的退役当作消费者核查。
+
+I20 两页通过实际 API 先创建再降级，普通访客与管理员兼访客都验证 OwnOnly 列表仅自己的行、隐藏项与不存在项 404 的体/Content-Type/页面提示逐值相同；开放全部后按返回权限展示编辑或只读，数据库与零业务写断言保持。最初管理员夹具先邀请为管理员却按项目成员添加，被既有规则正确拒绝 422；参照现有 adminGuest 的 API 次序，改为先项目访客、再提升工作区角色，未修改产品规则，不计产品缺陷红。
+
+S2 三页明确公开项目的成员 200、访客隐藏项 404、项目非成员 403，只精确放行对应拒绝。I22 真实 POST 先经 route.fetch 到 nerve 并由 DB 确认旧写者，再由第二标签页实际退出/登录另一账号，第一标签页切换工作区并打开新表单后放回旧 201；输入、地址、新账号可见数据保持，无旧成功提示，只有一次 POST。另页 Back 覆盖跨工作区、项目、工作项的创建/删除/链接/peek，Forward 不恢复旧弹层，零业务写。t14-pages-fixed 7/7 Chromium，类型、五文件 lint 0/0、格式/diff 通过；A1/A13 功能已勾，显式三浏览器与最终完整 F 仍归 T16。

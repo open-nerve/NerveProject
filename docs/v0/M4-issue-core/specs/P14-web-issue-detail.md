@@ -128,7 +128,7 @@ T15 六处复制使用现有 useCopyLink/useCopyText（均收值与成功文案�
 
 ## 4. 验收标准（实施前全部未勾选）
 
-- [ ] A1：原生 id/编号入口正确，页头和正文共同身份；同参数换项、权限 ABA、Back 无旧弹层/结果（T1/T14）。
+- [x] A1：原生 id/编号入口正确，页头和正文共同身份；同参数换项、权限 ABA、Back 无旧弹层/结果（T1/T14：t1-restored 23/23、t14-restored 五文件 60/60、I22 两页与 M21/M22；三浏览器归 A15）。
 - [x] A2：详情标题/七类属性、字段错误描述与拒绝后焦点符合 §2.3；I2 属性完成（T2，父项由 T6 的原生 picker / I8 页面闭合；t2-fields-final、t2-i2-complete、t6-page-final）。
 - [x] A3：真实编辑器撤销重做与迁移保存正确；boolean skip_activity、不发 JSON；已有 issue 与 draft 的迁移不标 dirty（T3/T4；review §8 的 T3/T4 及 t3-i2-complete、t4-component-final）。
 - [x] A4：I1 创建字段/归一化/码/数据库正确，表单有名字、无正 tabIndex、项目必选可读；拒绝与 pending 保留当前窗（T4；t4-i1-verified 2/2、t4-component-final 41/41、t4-full-routed-e2e 205/205）。
@@ -141,7 +141,7 @@ T15 六处复制使用现有 useCopyLink/useCopyText（均收值与成功文案�
 - [ ] A10：未登录无编辑器 chunk、设置不挂载工作项弹窗，EMOJI_CHECK_WARNING 全零且 console 无豁免（T10：t10-final-pages 20/20、t10-final-unit 37/37、M16/M17 红与精确恢复；T16 三浏览器待收尾）。
 - [x] A11：原生 callout、五处死序列化删除而安全/粘贴回归保留，打包 worker/CSP 复核通过（T11：t11-restored-editor 35/35，t11-content，t11-pages 4/4，t11-build-worker-audit.json）。
 - [x] A12：M4 无图片上传入口/请求，无附件及关注按钮；表格和行内子项地址直接 browse 无片段（T12：owner 6/6、相关 unit 46/46、真实 Editor 22/22、C12 两页和 M19；T13：两个消费者 16/16、I8 四项及 M20，三浏览器归 A15）。
-- [ ] A13：I20、S2 身份、I22 两标签页及 Back 通过；旧会话响应无跟进（T14）。
+- [x] A13：I20、S2 身份、I22 两标签页及 Back 通过；旧会话响应无跟进（T14：t14-pages-fixed 7/7 Chromium，真实旧写先落库、实际双标签页换账号；M21/M22 行为红和精确恢复、t14-restored 60/60；三浏览器归 A15）。
 - [ ] A14：六处真实复制消费者成功/拒绝正确，六个 copy-hook 例外删除，P15 剩余例外具名（T15）。
 - [ ] A15：C3 详情/C4/C5/C10/C11 三浏览器均实际非零通过；完整七项门禁、至少 16 种有效生产性质变异及恢复证据、实际改动文件 dead/oxlint 核清（T16）。
 - [ ] A16：基线至最终分支 HEAD deep-review、局部问题修复复审闭环、准确分支 CI 全绿及证据归档位置明确；先交负责人安排，不自动合并（T16）。
