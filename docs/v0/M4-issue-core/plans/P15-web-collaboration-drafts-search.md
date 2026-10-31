@@ -125,14 +125,14 @@ make e2e
 
 ## Task 8：工作项命令按职责拆分（约 650–1150 行）
 
-**Files：** spec T8；新 C/components/power-k/ui/pages/context-based/work-item/{copy-commands,mutation-commands}.ts、commands.test.tsx（入口 commands.ts 保留）；既有 projects-app-provider.test.tsx。
+**Files：** spec T8；新 C/components/power-k/ui/pages/context-based/work-item/{context,copy-commands,mutation-commands}.ts、commands.test.tsx（入口 commands.ts 保留）；既有 projects-app-provider.test.tsx、modals/work-item-level.tsx/test.tsx；新增 E/fixtures/power-k.ts 复用真实键盘选择。
 **Interfaces：** TPowerKCommandConfig[] 聚合；写请求 IssueUpdate、原生 updateIssue；删除由既有 WorkItemLevelModals 接管，复制子 hook 本任务直接用既有 useCopyText/useCopyLink。
 
-- [ ] Step 1：写 `commandWritesOnlyNativeFieldsInCurrentScope`、`ownOnlyAdminAndArchiveUseReturnedGrant`、`oldContextCannotMutateNewIssue`；逐条覆盖状态/优先级/指派/标签/删除/三复制命令，基线命令入口实际307行，历史418行仅为交接快照。
-- [ ] Step 2：U core/components/power-k/ui/pages/context-based/work-item/commands.test.tsx core/components/power-k/projects-app-provider.test.tsx；测试真实命令 action/consumer 和 FakeNerve，错误码文案/确认前不投影。
-- [ ] Step 3：按复制/写命令拆分，入口只组合；类型为 IssueUpdate，路由/本代实体显式；属性命令读取轮到写时的权威值以保留队列中前次确认，删除不绕确认窗。同步删除旧文件 copy-hook 例外，T13核全部四项终态。
-- [ ] Step 4：C7 先以空根查询进入工作项命令，验证键盘、禁用与删除回焦；中文输入只在 activePage 已选中的属性子页验证。根页非空中文/自由查询等 T10 迁完原生搜索后执行，不能在此提前触发旧搜索接口或豁免请求守卫。M11 去旧 scope 或确认字段保护使对应请求/晚答断言红，恢复；三复制消费者至少有真实拒绝测试，T13补全矩阵。
-- [ ] Step 5：记录 A8 及命令拆分新增文件；提交 `refactor(M4/P15): 按职责拆分工作项命令并复用确认写`。
+- [x] Step 1：写 `commandWritesOnlyNativeFieldsInCurrentScope`、`ownOnlyAdminAndArchiveUseReturnedGrant`、`oldContextCannotMutateNewIssue`；逐条覆盖状态/优先级/指派/标签/删除/三复制命令，基线命令入口实际307行，历史418行仅为交接快照。
+- [x] Step 2：U core/components/power-k/ui/pages/context-based/work-item/commands.test.tsx core/components/power-k/projects-app-provider.test.tsx；测试真实命令 action/consumer 和 FakeNerve，错误码文案/确认前不投影。
+- [x] Step 3：按复制/写命令拆分，入口只组合；类型为 IssueUpdate，路由/本代实体显式；属性命令读取轮到写时的权威值以保留队列中前次确认，删除不绕确认窗。同步删除旧文件 copy-hook 例外，T13核全部四项终态。
+- [x] Step 4：C7 先以空根查询进入工作项命令，验证键盘、禁用与删除回焦；中文输入只在 activePage 已选中的属性子页验证。根页非空中文/自由查询等 T10 迁完原生搜索后执行，不能在此提前触发旧搜索接口或豁免请求守卫。M11 去旧 scope 或确认字段保护使对应请求/晚答断言红，恢复；三复制消费者至少有真实拒绝测试，T13补全矩阵。
+- [x] Step 5：记录 A8 及命令拆分新增文件；提交 `refactor(M4/P15): 按职责拆分工作项命令并复用确认写`。
 
 ## Task 9：主题确认与工作区路由守卫（约 500–950 行）
 

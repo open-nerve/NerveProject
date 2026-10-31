@@ -2734,14 +2734,6 @@
     },
     {
       "rule": "copy-hook",
-      "path": "web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts",
-      "match": "copyTextToClipboard(",
-      "count": 3,
-      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
-      "until": "M4/closeout"
-    },
-    {
-      "rule": "copy-hook",
       "path": "web/apps/web/core/components/cycles/quick-actions.tsx",
       "match": "copyUrlToClipboard(",
       "reason": "M6 的迭代、模块页面自己复制到剪贴板，成功和失败各自说；M6 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",

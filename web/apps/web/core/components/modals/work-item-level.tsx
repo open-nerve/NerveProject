@@ -55,12 +55,13 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
   // derived values
   const { fetchSubIssues: fetchSubWorkItems } = useIssueDetail();
 
-  const scopeProject = routerProjectId ?? workItemDetails?.project_id ?? undefined;
   const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug ?? "");
-  const identity = root.permissionReads.identity(workspace?.id, scopeProject ? [scopeProject] : [], true);
+  const identity = root.permissionReads.identity(workspace?.id, routerProjectId ? [routerProjectId] : [], true);
   const scope = JSON.stringify([workspaceSlug, routerProjectId ?? workItemIdentifier, workItemIdentifier, identity]);
   const owner = useMemo(() => ({ active: false, scope, commands, root }), [commands, root, scope]);
-  const capture = useDetailScope(workspaceSlug ?? "", scopeProject, workItemId ?? "commands");
+  // The numbered route survives a confirmed deletion even though its canonical issue is gone.
+  // Scope this host by its route and root-owned permission watermark, not by the entity's presence.
+  const capture = useDetailScope(workspaceSlug ?? "", routerProjectId, workItemIdentifier ?? "commands", true);
   useLayoutEffect(() => {
     if (commandOwners.has(commands)) {
       toggleCreateIssueModal(false);

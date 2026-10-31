@@ -1,4 +1,6 @@
 import { changeRole, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
+import { openCommands, selectCommand } from "../../fixtures/power-k";
+import { createState } from "../../fixtures/states";
 import { modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import { watchPage } from "../../fixtures/browser";
@@ -321,5 +323,66 @@ test("C9: real editor block-id migration in a copied draft is not an unsaved use
   expect(await db.query("SELECT payload FROM draft_issues WHERE workspace_id=$1", [seed.project.workspace_id])).toEqual(
     [{ payload }]
   );
+  await expectListPageQuiet(page, watch);
+});
+
+test("C7: empty-query commands use the current issue, Chinese state selection respects IME, and deletion keeps its confirmation and focus", async ({
+  api,
+  page,
+  db,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const state = await createState(api, seed.member.token, seed.project.id, {
+    name: "处理中",
+    color: "#333333",
+    group: "started",
+  });
+  const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Command target" });
+  const watch = await openIssueDetail(page, seed, issue);
+  const title = page.getByRole("textbox", { name: "Work item title", exact: true });
+  await title.focus();
+  await openCommands(page);
+  await selectCommand(page, /^Change state/);
+  const input = page.getByRole("combobox");
+  await input.fill("处理");
+  await expect(page.getByRole("option", { name: "处理中", exact: true })).toBeVisible();
+  const path = `/api/v0/issues/${issue.id}`;
+  const writes = () => watch.apiRequests.filter((item) => item === `PATCH ${path}`);
+  await input.dispatchEvent("keydown", { key: "Enter", isComposing: true, bubbles: true });
+  await expect(input).toHaveValue("处理");
+  expect(writes()).toHaveLength(0);
+  const held = await sentHeld(page, "PATCH", path, () => selectCommand(page, /^处理中$/));
+  expect(held.body).toEqual({ state_id: state.id });
+  await expect(page.getByRole("combobox")).toHaveCount(0);
+  await expect(page.getByText("处理中", { exact: true })).toHaveCount(0);
+  expect((await held.release()).status()).toBe(200);
+  await expect(page.getByRole("combobox")).toHaveCount(0);
+  await expect
+    .poll(
+      async () =>
+        (await db.query<{ state_id: string }>("SELECT state_id FROM issues WHERE id=$1", [issue.id]))[0]?.state_id
+    )
+    .toBe(state.id);
+  await title.focus();
+  await openCommands(page);
+  await selectCommand(page, /^Delete/);
+  const dialog = page.getByRole("dialog", { name: "Delete Work item", exact: true });
+  await expect(dialog).toHaveCount(1);
+  await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(title).toBeFocused();
+  expect(watch.apiRequests.filter((item) => item === `DELETE ${path}`)).toHaveLength(0);
+  await openCommands(page);
+  await selectCommand(page, /^Delete/);
+  const deletion = await sentHeld(page, "DELETE", path, () =>
+    dialog.getByRole("button", { name: "Delete", exact: true }).click()
+  );
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(1);
+  expect((await deletion.release()).status()).toBe(204);
+  await expect(page).toHaveURL(seed.path);
+  expect(watch.apiRequests.filter((item) => item === `DELETE ${path}`)).toHaveLength(1);
+  expect(watch.requestUrls.filter((url) => new URL(url).pathname.endsWith("/search"))).toEqual([]);
   await expectListPageQuiet(page, watch);
 });

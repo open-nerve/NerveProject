@@ -162,3 +162,14 @@ T5 检查点 f6eb9a5784974d416bda08cbaa0aa3a6aecc4126 已推送；[CI 4121509487
 M10-ready 去编辑器就绪检查使零写断言收到 1 POST；M10-escape 将内层关闭误接外层使保留 1 dialog 断言收到 0；两个变异字节恢复后 63/63。Web/E2E 类型、11 文件 oxlint 零 warning/格式、关键词 76/17 无命中。最终输入 `7b2f0517e35f382535230aa3195b51b1a26080dcda4e23bf498995c15885fc30`，程序 `6dd421fb184433a2af0f298d728c62b0f5efb79fa73a29cd0548cb6c95b7ddbb`；原始命令/失败/trace/变异在 t7-*.json/log、t7-*-results、m10-*、t7-mutations.json、t7-receipt.json。初始 portal helper、真实/假时钟 fixture 混用均已纠正并保留，不算产品红。
 
 A7 与 T7 完成，接续 T8。T5 提交 f6eb9a57 的 [CI 41215094874](https://github.com/open-nerve/NerveProject/actions/runs/41215094874) attempt 1 已在 2026-10-31 16:00 UTC 核验 server/web/e2e 全部 success；只覆盖该检查点，不冒称尚未推送的 T6/T7 已有远端绿。下一完整七门禁与 push 为 T10。
+
+
+### T8：原生命令拆分、确认队列与删除宿主
+
+commands 入口只组合私有 context/copy/mutation hooks。显示读取与动作生命周期分离，首屏命令无需额外通知；状态/优先级使用生成 IssueUpdate，指派/标签在原 root 写队列轮到执行时再基于已确认数组切换。成员编辑与作者/管理员删除分别判定，归档只读仍允许已授权删除；拒绝按 code，旧路由/会话不提示。三复制走原 hook 的单一异步反馈，删除本文件 copy-hook 例外，没有新增队列、协议或权限 owner。
+
+基线 16 红/10 绿，修复后暴露首屏生命周期 active 尚未提交导致命令隐藏；独立 DOM 断言 1 红，已修。初版两个 OwnOnly 夹具把 API 禁止返回的他人实体强行 acceptRead；改按 API 返回集合构造，业务 OwnOnly 仍由 I20 API/页面负例负责，不把 UI 自行过滤当成新权限事实。M11 去旧回调检查后真实多发 PATCH，1 红/26 skip，源码字节恢复。
+
+C7 真实页面又发现：编号详情删除 204 后 canonical 消失，宿主从实体派生生命周期导致跳过返回列表。真实 root/FakeNerve 宿主回归 1 红/7 绿；改按稳定路由和原根权限水位捕获，确认删除不自我退役，换路由/权限 ABA 仍拦截。最终三文件 **37/37**；Chromium **C7 1/1**，空查询键盘进入状态子页、中文筛选/IME 不提交、确认前不投影、删除 Cancel/Escape 回焦、等待中不能关闭、204 后返回列表，零旧搜索请求。初始浏览器夹具的 db.query 数组读法及 Delete Work item 大小写两处已纠正，原失败保留。
+
+Web/E2E 类型、9 文件 oxlint 零告警与格式、76 规则/16 例外通过；未放宽守卫。最终聚焦输入 `f04577d64635d78da80f3e16804e1b2d15c69896cb5a46af547005b4fd4083b2`，页面前只相差消费者测试的 memo 夹具，生产/页面字节未变；页面程序 `57096c7d2093bd0f53fdeb11bd9a5f794e35adc26cd2b3e021423e7e824d051d`。原始日志、hash、trace、变异恢复见 t8-*.json/log、t8-c7-*-results、t8-mutations.json、t8-receipt.json。A8/T8 完成，继续 T9；尚未阶段整审，不合并，下一 push 为 T10。

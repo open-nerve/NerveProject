@@ -78,6 +78,8 @@ Markdown 复制调用已有 `EditorRefApi.getMarkDown(): string` 后交 `useCopy
 
 工作项 commands.ts 拆成复制、属性更新/指派、删除等小 hook/配置，聚合入口保留原返回 `TPowerKCommandConfig[]`；新文件随消费者一起落地。写入使用生成 `IssueUpdate` 白名单及现有详情命令，不能用 Partial<IssueDetail> 当请求。判权显式 route slug+项目，关闭/换项/同账号换代均清旧命令上下文，错误按 code；删仍走既有确认弹窗。编号/标题/链接复制统一 T13，T8 不制造临时例外。
 
+T8 实施补充：私有 context.ts 仅共享显式路由、canonical 读取与 UI 生命周期；权限仍由 IssueRootStore 拥有。连续指派/标签在既有 root.updateIssue 的 makeBody 回调中取轮到写时的值，避免详情 facade 的预先组装覆盖前次确认。删除宿主按稳定路由及根拥有的权限水位判断生命周期，不能把确认删除造成的实体消失当成换页；工作项编号路由使用工作区权限水位，任何项目权限变更均退役旧回调。
+
 任务顺序保持 T8/T9 先补动作、T10 再迁根页搜索。前两项页面验证从空根查询进入子页；中文输入只在 activePage 已选中的属性子页验证。根页非空查询会经过尚未迁移的搜索消费者，故中文/自由查询的端到端验收放 T10/T14；不为提前验证放宽旧接口守卫。
 
 主题：沿 appearance/theme-switcher 的 sessionGuard，等 updateUserTheme 确认且仍同代才 setTheme/reload；失败保留原主题、按 code 提示，旧会话成功也不重载新页。其它本次改到的 preference 回调不得新添未处理拒绝。创建命令不用依赖 router store 的 workspaceProjectIds/canPerformAnyCreateAction 做范围推断；使用 route workspace 对应目录和现有授权，保留非 M4 创建命令原业务边界。
@@ -126,7 +128,7 @@ I16 页面使用 clockTest/ClockWorld 独立数据库；推进业务时钟后取
 - [x] A5：T5 历史分页/切换/还原与 I13、ModalTitle/焦点、Markdown 等待/失败反馈通过，M7 展示合同不变。
 - [x] A6：T6 个人草稿列表/分页/无项目/字段保留/删除/发布及 I14 通过；PATCH 失败无 POST、POST 无 body、成功同步列表计数。
 - [x] A7：T7 创建弹窗两种存草稿路径、描述未 ready/拒绝保留、嵌套 Escape/Back/纯迁移由真实编辑器和 C9 验证。
-- [ ] A8：T8 工作项命令职责拆分，IssueUpdate、权限/归档/确认/晚答/删除宿主正确。
+- [x] A8：T8 工作项命令职责拆分，IssueUpdate、权限/归档/确认/晚答/删除宿主正确。
 - [ ] A9：T9 主题仅确认同代后生效，失败不改主题；四 route 文件与 .ts/.tsx 守卫正反例通过。
 - [ ] A10：T10 命令原生搜索与项目本地过滤、服务端排序、中文/字面/编号/范围/错误/晚答及 I18 页面通过。
 - [ ] A11：T11 旧搜索方法/类型/常量无真实读者；历史 13 模块实例逐路径为零，M7 视图服务完整。
