@@ -132,7 +132,7 @@ T15 六处复制使用现有 useCopyLink/useCopyText（均收值与成功文案�
   T5/T6 已完成真实 ModalCore 消费者测试和三项 Chromium C4，包括父项原生查询与 clean/dirty 两种外层；三浏览器矩阵待 T16，整条暂不提前勾选。
 - [x] A6：父项原生查询与所有消费者一致，两个已有/一个新子项、移动/解除/状态分布、排除后代，I8 完成（T6；t6-restored-final 87/87、t6-page-final 7/7，原生查询和落库/动态/计数断言）。
 - [x] A7：跨项目关系/反向/任一端删除/部分确认保留，I9 完成；M7 两个消费者适配且无旧 projectIssuesSearch 读者（T6/T7；review T7，t7-component-final 59/59、t7-i9-confirmed 2/2、M11/M12）。
-- [ ] A8：I10 真 worker 元数据、bounded GET 重试、data favicon、无外连，字段拒绝与复制分别验证（T8/T15）。
+- [ ] A8：T8 已完成 I10 真 worker 元数据、bounded GET 重试、data favicon、无外连与字段拒绝（review T8，t8-restored 48/48、I10 3/3、M13/M14）；复制仍待 T15。
 - [ ] A9：I17 删除整棵子树且文案明确、onSubmit 必需、拒绝留窗/成功跟进；数据库目录断言通过（T9）。
 - [ ] A10：未登录无编辑器 chunk、设置不挂载工作项弹窗，EMOJI_CHECK_WARNING 全零且 console 无豁免（T10/T16）。
 - [ ] A11：原生 callout、五处死序列化删除而安全/粘贴回归保留，打包 worker/CSP 复核通过（T11）。

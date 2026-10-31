@@ -156,3 +156,13 @@ T4 检查点远端回执：准确 `503b6778a3ca21ea4c04f85990d0a92be38efee3` 的
 验证：t7-component-final 六文件 59/59；t7-i9-confirmed 页面/API 2/2 Chromium。页面真实添加同项目 Blocking、跨项目 Relates to，持有响应时先核 DB 已写且 UI 未确认；对端显示 Blocked by。另一个账号在 Web 仅访客、Ops 为成员，源项修改明确 403，仍可从 Ops 对端删掉跨项目边；两端动态、关系审计/删除者与原始边一致。没有以“反向显示”代替任一端授权证明。A7 完成。
 
 Web/E2E 类型、变更 lint 0/0、格式/diff 均核验。初次新查重七项因仍发旧请求/未处理拒绝而红；后续测试问题（mock 路由未触发 context、POST 预期应为 201、折叠区需展开、首次搜索应答与切范围的等待、页面账号需完成引导）均修正并保留日志，不算产品缺陷或有效变异。未增加全局缓存/权限 owner、依赖或写协议，T9 完整 F 前不推送。
+
+### T8 链接字段与元数据回读
+
+链接表单改为按工作区/项目/项/link id/权限命名的局部实例，关闭重开退休旧命令；同一同步 sending 锁覆盖 RHF 校验、写入确认和关闭。URL 去两端空白，空白在表单拒绝；其余 scheme/唯一性归一化交给既有原生服务端，不另造客户端 URL 规则。FieldError、useFormRefusal 和 submitCount/useRefusedFocus 统一处理 422 和 409 link_exists，错误可读后才聚焦、不重复 toast；确认后读取失败仍按已成功写处理。补 ModalTitle，待发送 Escape/外点/取消无效。
+
+新增 useLinkMetadataRefresh 只在展开的链接区调度原 link resource。作用域包含 root/宿主/既有权限身份及当前 id+URL 集合；换地址/删除结束原窗口，新链接身份可开始自己的窗口，普通 GET 的新对象或元数据变化不会重置期限。空 metadata 才等待，有字段（含 null/空值）或 error 为终态；每秒至多一 GET、30 次/30 秒内停止，一条在途请求未结束时不重叠。离页/折叠/权限失效取消定时；拒绝保留资源错误并停止自动读取，Retry 只读且打开新窗口，到期保留地址并显示双语重试入口。仍由原资源确认日志抵消 URL A 的晚答和已删除链接，无第二缓存或后端更动。
+
+图标只读 metadata.favicon 的 data:image，favicon_url 仅来源记录，不进入 img.src；无嵌入图标/blocked/failed 使用原链接图标。初始行为红为表单/图标六项、无回读五项；M13 临时恢复外部源图标时两项红，M14 临时放宽回读预算到 300 次/300 秒时第 31 次请求检出，均字节恢复。t8-restored 六文件 48/48，包含确认后 GET 拒绝只 GET 重试、真实资源 URL 变更/删除与迟到读取。
+
+t8-i10-confirmed 的页面/API 3/3 Chromium 通过：真实输入空白/原生 422/409 的 recordFocuses、持有创建响应前 DB 先确认且不能关闭/重复写、初始地址与真实 worker 后到 title/data icon、标题编辑零新 job、URL 编辑新 job、删除与全部动态/审计一致；无外部浏览器请求/CSP/旧 API。Web/E2E 类型和改动 lint 0/0 通过。测试修正记录保留：Problem fixture 补必需 message；PageWatch 用 requestUrls；route.fetch 持有先于旧 body recorder 时计数改用页面 request 事件；同址动态链接需限定链接区，Links 本来默认展开，写后 DOM id 会重建，定位采用当前标题的相对区域而不保存旧 id。均不是产品红。A8 的复制验证仍待 T15，三浏览器随 T16。

@@ -4,23 +4,26 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useRef } from "react";
+import { useRef, useState } from "react";
+import type { FormEvent } from "react";
+import type { IssueLink } from "@nerve/api-client";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { useTranslation } from "@nerve/i18n";
 // nerve types
 import { Button } from "@nerve/propel/button";
 import { followInSession } from "@/lib/in-session";
 import { SessionChangedError } from "@/lib/auth/token-manager";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useFormRefusal } from "@/lib/form-refusal";
+import { useRefusedFocus } from "@/lib/refused-focus";
 import { useDetailScope } from "../../issue-detail-widgets/use-detail-scope";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 // nerve ui
-import { ModalCore } from "@nerve/ui";
+import { ModalCore, ModalTitle } from "@nerve/ui";
 // hooks
-import { useIssueDetailModals } from "@/hooks/store/use-issue-detail";
+import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 // types
 import type { TLinkOperations } from "./types";
 
@@ -49,37 +52,64 @@ const defaultValues: TIssueLinkCreateFormFieldOptions = {
 export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdateModal(
   props: TIssueLinkCreateEditModal
 ) {
-  const { workspaceSlug, projectId, issueId, isModalOpen, handleOnClose, linkOperations } = props;
+  const { rootIssueStore: root } = useIssueDetail();
+  const { issueLinkData } = useIssueDetailModals();
+  const preloadedData = issueLinkData?.issue_id === props.issueId ? issueLinkData : null;
+  const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(props.workspaceSlug);
+  const permission = root.permissionReads.identity(workspace?.id, [props.projectId], true);
+  return props.isModalOpen ? (
+    <LinkForm
+      key={JSON.stringify([props.workspaceSlug, props.projectId, props.issueId, preloadedData?.id, permission])}
+      {...props}
+      preloadedData={preloadedData}
+    />
+  ) : null;
+});
+
+function LinkForm({
+  workspaceSlug,
+  projectId,
+  issueId,
+  isModalOpen,
+  handleOnClose,
+  linkOperations,
+  preloadedData,
+}: TIssueLinkCreateEditModal & { preloadedData: IssueLink | null }) {
   // i18n
   const { t } = useTranslation();
   // react hook form
   const {
-    formState: { errors, isSubmitting },
+    formState: { errors, submitCount },
     handleSubmit,
     control,
-    reset,
+    setError,
   } = useForm<TIssueLinkCreateFormFieldOptions>({
-    defaultValues,
+    defaultValues: preloadedData
+      ? { id: preloadedData.id, url: preloadedData.url, title: preloadedData.title ?? "" }
+      : defaultValues,
+    shouldFocusError: false,
   });
   // store hooks
   const { setIssueLinkData } = useIssueDetailModals();
-  const { issueLinkData } = useIssueDetailModals();
-  const preloadedData = issueLinkData?.issue_id === issueId ? issueLinkData : null;
-  const capture = useDetailScope(workspaceSlug, projectId, `${issueId}:${isModalOpen}:${preloadedData?.id ?? "new"}`);
+  const capture = useDetailScope(workspaceSlug, projectId, issueId, true);
   const sending = useRef(false);
-  const refusal = useRefusalToast();
+  const [isSubmitting, setSubmitting] = useState(false);
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
+  const refusal = useFormRefusal(["url", "title"], { "issue.link_exists": "url" });
 
-  const onClose = () => {
+  const finishClose = () => {
     setIssueLinkData(null);
     if (handleOnClose) handleOnClose();
+  };
+  const onClose = () => {
+    if (!sending.current) finishClose();
   };
 
   const handleFormSubmit = async (formData: TIssueLinkCreateFormFieldOptions) => {
     const current = capture();
-    if (!current() || sending.current) return;
-    sending.current = true;
-    const parsedUrl = /^https?:\/\//i.test(formData.url) ? formData.url : `http://${formData.url}`;
-    const body = { title: formData.title || null, url: parsedUrl };
+    if (!current()) return;
+    // The API owns scheme normalization and validation; retain its exact uniqueness semantics.
+    const body = { title: formData.title || null, url: formData.url.trim() };
     await followInSession(
       () => (formData.id ? linkOperations.update(formData.id, body) : linkOperations.create(body)),
       {
@@ -91,33 +121,36 @@ export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdat
             title: t(`links.toasts.${verb}.title`),
             message: t(`links.toasts.${verb}.message`),
           });
-          onClose();
+          finishClose();
         },
         failed: (error) => {
-          if (current() && !(error instanceof SessionChangedError)) refusal(error);
+          if (current() && !(error instanceof SessionChangedError))
+            refusal(error, (field, message) => setError(field, { type: "server", message }));
         },
       }
     );
-    if (current()) sending.current = false;
   };
-
-  useEffect(() => {
-    sending.current = false;
-    if (isModalOpen)
-      reset(
-        preloadedData
-          ? { id: preloadedData.id, url: preloadedData.url, title: preloadedData.title ?? "" }
-          : defaultValues
-      );
-  }, [preloadedData, reset, isModalOpen, issueId]);
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const current = capture();
+    if (!current() || sending.current) return;
+    sending.current = true;
+    setSubmitting(true);
+    try {
+      await handleSubmit(handleFormSubmit)(event);
+    } finally {
+      sending.current = false;
+      if (current()) setSubmitting(false);
+    }
+  };
 
   return (
     <ModalCore isOpen={isModalOpen} handleClose={onClose}>
-      <form onSubmit={handleSubmit(handleFormSubmit)}>
+      <form ref={formRef} onSubmit={(event) => void submit(event)}>
         <div className="space-y-5 p-5">
-          <h3 className="text-h4-medium text-secondary">
+          <ModalTitle className="text-h4-medium text-secondary">
             {preloadedData?.id ? t("common.update_link") : t("common.add_link")}
-          </h3>
+          </ModalTitle>
           <div className="mt-2 space-y-3">
             <div>
               <label htmlFor="url" className="mb-2 text-secondary">
@@ -127,7 +160,7 @@ export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdat
                 control={control}
                 name="url"
                 rules={{
-                  required: "URL is required",
+                  validate: (value) => value.trim().length > 0 || t("common.url_is_invalid"),
                 }}
                 render={({ field: { value, onChange, ref } }) => (
                   <Field name="url" invalid={Boolean(errors.url)}>
@@ -136,18 +169,21 @@ export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdat
                         size="2xl"
                         id="url"
                         type="text"
+                        disabled={isSubmitting}
                         value={value}
                         onChange={onChange}
                         ref={ref}
                         placeholder={t("common.type_or_paste_a_url")}
                       />
                     </InputGroup>
+                    {errors.url?.message && (
+                      <FieldError size="2xl" match>
+                        {errors.url.message}
+                      </FieldError>
+                    )}
                   </Field>
                 )}
               />
-              {errors.url && (
-                <span className="text-caption-sm-regular text-danger-primary">{t("common.url_is_invalid")}</span>
-              )}
             </div>
             <div>
               <label htmlFor="title" className="mb-2 text-secondary">
@@ -164,12 +200,18 @@ export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdat
                         size="2xl"
                         id="title"
                         type="text"
+                        disabled={isSubmitting}
                         value={value}
                         onChange={onChange}
                         ref={ref}
                         placeholder={t("common.link_title_placeholder")}
                       />
                     </InputGroup>
+                    {errors.title?.message && (
+                      <FieldError size="2xl" match>
+                        {errors.title.message}
+                      </FieldError>
+                    )}
                   </Field>
                 )}
               />
@@ -177,7 +219,7 @@ export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdat
           </div>
         </div>
         <div className="flex items-center justify-end gap-2 border-t-[0.5px] border-subtle px-5 py-4">
-          <Button type="button" variant="secondary" size="lg" onClick={onClose}>
+          <Button type="button" variant="secondary" size="lg" disabled={isSubmitting} onClick={onClose}>
             {t("common.cancel")}
           </Button>
           <Button variant="primary" size="lg" type="submit" loading={isSubmitting}>
@@ -195,4 +237,4 @@ export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdat
       </form>
     </ModalCore>
   );
-});
+}

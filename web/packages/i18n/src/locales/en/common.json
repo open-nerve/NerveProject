@@ -197,6 +197,9 @@
     "saturday": "Saturday"
   },
   "links": {
+    "metadata": {
+      "expired": "The link preview is still unavailable. Retry to check again."
+    },
     "toasts": {
       "created": {
         "title": "Link created",

@@ -136,11 +136,11 @@ make e2e
 **Files：** spec T8；新 `C/components/issues/issue-detail-widgets/links/use-link-metadata-refresh.ts` 及 `.test.tsx`；既有 `C/components/issues/links/data.test.tsx`；新 `C/components/issues/issue-detail/links/form.test.tsx`；`E/stories/issue/i10-links.spec.ts`。
 **Interfaces：** 局部 `useLinkMetadataRefresh({workspaceSlug,projectId,issueId,active})` 消费已有 link resource，不存第二份数据；对外只提供当前等待/到期状态和 GET retry。单 owner 一次在途，候选 id+URL，30 次/30 秒上界；窗口不因 fetch 导致的 rerender 重置，用户 retry 才重开。
 
-- [ ] Step 1：补 URL 空白/无 scheme/422/409、pending关闭；元数据晚到、空 metadata、终态成功/blocked/failed、换 URL/删除/权限失效、到期/读取拒绝/retry 测试；持有 GET 证明无重叠请求。
-- [ ] Step 2：运行新增 hook/form 与现有 links/data 测试；真实组件断言 `favicon_url` 永不进入 img.src，metadata.favicon 才显示。
-- [ ] Step 3：FieldError/ModalTitle/refused focus、当前 owner 的有界回读、data favicon fallback。既有 IssueResources 校验晚答；如缺 token 行为，在原资源根因修，不给 hook 加假数据补丁。
-- [ ] Step 4：I10 复用真实 local server/worker，证明先地址后 title/icon、改标题/URL、删除、DB job完成；M13 直接用 favicon_url、M14 去 owner/有界停止各失败，恢复。确认后的 GET 失败只读重试可数请求。
-- [ ] Step 5：记录 A8 与轮询代价；提交 `feat(M4/P14): 完善链接字段和元数据回读`。
+- [x] Step 1：补 URL 空白/无 scheme/422/409、pending关闭；元数据晚到、空 metadata、终态成功/blocked/failed、换 URL/删除/权限失效、到期/读取拒绝/retry 测试；持有 GET 证明无重叠请求。
+- [x] Step 2：运行新增 hook/form 与现有 links/data 测试；真实组件断言 `favicon_url` 永不进入 img.src，metadata.favicon 才显示。
+- [x] Step 3：FieldError/ModalTitle/refused focus、当前 owner 的有界回读、data favicon fallback。既有 IssueResources 校验晚答；如缺 token 行为，在原资源根因修，不给 hook 加假数据补丁。
+- [x] Step 4：I10 复用真实 local server/worker，证明先地址后 title/icon、改标题/URL、删除、DB job完成；M13 直接用 favicon_url、M14 去 owner/有界停止各失败，恢复。确认后的 GET 失败只读重试可数请求。
+- [x] Step 5：记录 A8 与轮询代价；提交 `feat(M4/P14): 完善链接字段和元数据回读`。
 
 ## Task 9：删除整棵子树、I17（约 500–850 行）
 

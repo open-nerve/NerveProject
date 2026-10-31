@@ -38,8 +38,8 @@ export const IssueLinkItem = observer(function IssueLinkItem(props: TIssueLinkIt
   const linkDetail = getLinkById(issueId, linkId);
   if (!linkDetail) return <></>;
 
-  // const Icon = getIconForLink(linkDetail.url);
-  const faviconUrl = linkDetail.metadata.favicon_url ?? linkDetail.metadata.favicon ?? undefined;
+  // favicon_url records the crawl source; only the server's embedded image belongs in browser requests.
+  const faviconUrl = linkDetail.metadata.favicon?.startsWith("data:image/") ? linkDetail.metadata.favicon : undefined;
   const linkTitle = linkDetail.metadata.title;
 
   const toggleIssueLinkModal = (modalToggle: boolean) => {

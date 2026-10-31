@@ -197,6 +197,9 @@
     "saturday": "星期六"
   },
   "links": {
+    "metadata": {
+      "expired": "链接预览暂未就绪，可重试查看。"
+    },
     "toasts": {
       "created": {
         "title": "链接已创建",
