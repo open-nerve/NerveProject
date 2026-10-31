@@ -1,0 +1,62 @@
+import { createIssueComment } from "../../fixtures/comments";
+import { openIssueDetail } from "../../fixtures/issue-detail-page";
+import { expectListPageQuiet, issueListProject } from "../../fixtures/issue-list-page";
+import { createIssue, updateIssue } from "../../fixtures/issues";
+import { expect, test } from "../../fixtures/test";
+
+test("C6: activity filters keep one choice, support Enter and Space, persist sorting and return focus on Escape", async ({
+  api,
+  page,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Activity controls" });
+  const first = await createIssueComment(api, seed.member.token, issue.id, "<p>First comment</p>");
+  await updateIssue(api, seed.member.token, issue.id, { name: "Updated title" });
+  const last = await createIssueComment(api, seed.member.token, issue.id, "<p>Last comment</p>");
+  const watch = await openIssueDetail(page, seed, issue);
+  const filter = page.getByRole("button", { name: "Filters", exact: true });
+  const sort = page.getByRole("button", { name: "Toggle sort order", exact: true });
+  const firstRow = page.locator(`[id="comment-${first.id}"]`);
+  const timeline = firstRow.locator("..");
+  const updated = page.getByText("set the name to Updated title.", { exact: true });
+  const commentOrder = () => timeline.locator("xpath=./div[@id]").evaluateAll((rows) => rows.map((row) => row.id));
+  await expect(firstRow).toBeVisible();
+  await expect(updated).toBeVisible();
+  expect(await commentOrder()).toEqual([`comment-${first.id}`, `comment-${last.id}`]);
+  await expect(filter.locator("button")).toHaveCount(0);
+  await expect(filter.locator("xpath=ancestor::button")).toHaveCount(0);
+  await filter.focus();
+  await page.keyboard.press("Enter");
+  const updates = page.getByRole("button", { name: "Updates", exact: true });
+  const comments = page.getByRole("button", { name: "Comments", exact: true });
+  await page.keyboard.press("Tab");
+  await expect(updates).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(updates).toHaveAttribute("aria-pressed", "false");
+  await expect(updated).toHaveCount(0);
+  await page.getByRole("button", { name: "State", exact: true }).press("Enter");
+  await page.getByRole("button", { name: "Assignee", exact: true }).press("Space");
+  await expect(comments).toHaveAttribute("aria-disabled", "true");
+  await comments.press("Enter");
+  await expect(comments).toHaveAttribute("aria-pressed", "true");
+  await expect(firstRow).toBeVisible();
+  await comments.press("Escape");
+  await expect(updates).toHaveCount(0);
+  await expect(filter).toBeFocused();
+  await sort.press("Space");
+  await expect.poll(commentOrder).toEqual([`comment-${last.id}`, `comment-${first.id}`]);
+  await page.reload();
+  await expect(firstRow).toBeVisible();
+  expect(await commentOrder()).toEqual([`comment-${last.id}`, `comment-${first.id}`]);
+  await expect(updated).toHaveCount(0);
+  await filter.press("Space");
+  await expect(comments).toHaveAttribute("aria-pressed", "true");
+  await expect(updates).toHaveAttribute("aria-pressed", "false");
+  await updates.press("Enter");
+  await expect(updated).toBeVisible();
+  await updates.press("Escape");
+  await expect(filter).toBeFocused();
+  await sort.press("Enter");
+  await expect.poll(commentOrder).toEqual([`comment-${first.id}`, `comment-${last.id}`]);
+  await expectListPageQuiet(page, watch);
+});

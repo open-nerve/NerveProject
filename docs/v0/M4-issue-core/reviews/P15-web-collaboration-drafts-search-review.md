@@ -82,3 +82,12 @@ I12 新页面经真实 API 准备 103 条活动和 102 条评论，默认每页 
 最终输入摘要 `f3027af0b545421036a832896804d0dbcd6c438dbc76be110ea87949eda3ec5f`：四文件 unit **37/37**；I12 Chromium **4/4**（2 API、2 page）；Web/E2E types、六个改动 TS/TSX 文件 oxlint **0 warning/0 error**、format/diff/关键词通过。m01-cursor（丢末页请求位置）与 m01-system（缺失目录误判系统）分别在真实断言层失败，源码逐字节恢复后 unit 再次绿。此前 no-await-in-loop 的两个新增测试告警改为有序 reduce/独立 Promise.all，不加豁免。精确日志/恢复 hash 见 t1-final-*.json、t1-restored-unit.json、t1-mutations.json 与 t1-receipt.json。
 
 A1 与 T1 五步完成；三引擎矩阵、完整阶段 CI 和整分支审查仍归后续 Task，当前不声称已通过。
+
+
+### T2：动态过滤与键盘
+
+筛选触发器由嵌套 IconButton 改为图标与屏幕阅读器文本，PopoverMenu 仍唯一拥有原生按钮；选项改为原生切换按钮，以 aria-pressed 呈现选择、aria-disabled 表明最后一项不可取消。沿既有 root 的至少保留一项逻辑与 localStorage，不新增数据/状态镜像或共享库接口。
+
+真实 root、useLocalStorage 和 Popover 的 controls 测试先在嵌套 button 断言失败（18 绿/1 红），修复后 19/19。C6 真实页面经 Enter/Space、Tab 进首选项、最后一项拒绝取消、Escape 回焦，验证筛选实际时间线、排序及刷新保留；最终 1/1。首次整页无嵌套断言发现其它动作/表情控件仍嵌套，T2 按 owning 范围验证筛选触发器内外均无嵌套，其余由 T3/T4 修复并在 T14 整体验证，没有宣称整页已清零。
+
+M02 删除 root 最后一项保护后，按 Enter 后的 aria-pressed 真实断言由 true 变 false，测试红；逐字节恢复。Web/E2E 类型检查和四文件 oxlint 零告警（含 helper），format/diff 通过。第一次类型命令误写 check-types、提示无此脚本，已按计划 check:types 重跑通过，原输出保留。原始证据 t2-*.json、m02.patch/json；A2 与 T2 五步完成，完整七门禁仍在 T5。

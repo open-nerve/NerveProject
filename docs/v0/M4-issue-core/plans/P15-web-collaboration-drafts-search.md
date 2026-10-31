@@ -62,11 +62,11 @@ make e2e
 **Files：** spec T2；新 C/components/issues/issue-detail/issue-activity/controls.test.tsx；新 E/stories/issue/collaboration-interactions.spec.ts 的 C6 过滤部分。
 **Interfaces：** 保留 selectedFilters/toggleFilter、sortOrder/toggleSort 合同；PopoverMenu 触发器只有一个 button，菜单选项用可键盘激活语义。
 
-- [ ] Step 1：写 `filtersKeepOneChoiceAndReturnFocus`，测默认过滤、禁止最后一项清空、排序与持久偏好、具名按钮、Enter/Space/Escape。
-- [ ] Step 2：U core/components/issues/issue-detail/issue-activity/controls.test.tsx core/components/issues/issue-detail/issue-activity/data.test.tsx；嵌套 button/静态可点击项应有具体 DOM 或键盘失败。
-- [ ] Step 3：修触发器与交互语义，helper 点名 lint 已消失的逐项核零；保留源数据的原生 id/排序，不增加新的列表镜像。
-- [ ] Step 4：B stories/issue/collaboration-interactions.spec.ts --grep 'C6:.*filters'；M02 破坏键盘激活或允许空过滤使对应断言红，恢复；实际 Popover 打开/选择/回焦及该文件 oxlint 零告警。
-- [ ] Step 5：记录 A2；提交 `fix(M4/P15): 收口动态过滤的键盘与按钮语义`。
+- [x] Step 1：写 `filtersKeepOneChoiceAndReturnFocus`，测默认过滤、禁止最后一项清空、排序与持久偏好、具名按钮、Enter/Space/Escape。
+- [x] Step 2：U core/components/issues/issue-detail/issue-activity/controls.test.tsx core/components/issues/issue-detail/issue-activity/data.test.tsx；嵌套 button/静态可点击项应有具体 DOM 或键盘失败。
+- [x] Step 3：修触发器与交互语义，helper 点名 lint 已消失的逐项核零；保留源数据的原生 id/排序，不增加新的列表镜像。
+- [x] Step 4：B stories/issue/collaboration-interactions.spec.ts --grep 'C6:.*filters'；M02 破坏键盘激活或允许空过滤使对应断言红，恢复；实际 Popover 打开/选择/回焦及该文件 oxlint 零告警。
+- [x] Step 5：记录 A2；提交 `fix(M4/P15): 收口动态过滤的键盘与按钮语义`。
 
 ## Task 3：评论权限、输入与作者命名（约 800–1400 行）
 
