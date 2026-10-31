@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { useTranslation } from "@nerve/i18n";
 import { observer } from "mobx-react";
 import { useSessionSWR } from "@/lib/use-session-swr";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -26,6 +27,7 @@ type TProps = {
 };
 
 export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchivedIssueDetailsHeader(props: TProps) {
+  const { t } = useTranslation();
   // router
   const { workspaceSlug, projectId, archivedIssueId } = props;
   // store hooks
@@ -53,7 +55,7 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
             component={
               <BreadcrumbLink
                 href={`/${workspaceSlug}/projects/${projectId}/archives/issues`}
-                label="Archives"
+                label={t("archives")}
                 icon={<ArchiveOutline className="h-4 w-4 text-tertiary" />}
               />
             }
@@ -62,7 +64,7 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
             component={
               <BreadcrumbLink
                 href={`/${workspaceSlug}/projects/${projectId}/archives/issues`}
-                label="Work items"
+                label={t("work_items")}
                 icon={<WorkItemsOutline className="h-4 w-4 text-tertiary" />}
               />
             }

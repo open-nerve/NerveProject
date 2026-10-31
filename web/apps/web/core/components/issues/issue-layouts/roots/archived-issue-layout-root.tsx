@@ -20,6 +20,7 @@ import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/f
 // hooks
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 import { useIssues } from "@/hooks/store/use-issues";
+import { useLocalIssueFilterUpdate } from "@/hooks/use-local-issue-filter-update";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 // local imports
 import { IssuePeekOverview } from "../../peek-overview";
@@ -30,8 +31,9 @@ export const ArchivedIssueLayoutRoot = observer(function ArchivedIssueLayoutRoot
   const { workspaceSlug, projectId } = useParams();
   // hooks
   const { issuesFilter } = useIssues(EIssuesStoreType.ARCHIVED);
+  const update = useLocalIssueFilterUpdate(workspaceSlug ?? "", projectId, projectId ?? "");
   // derived values
-  const workItemFilters = projectId ? issuesFilter?.getIssueFilters(projectId) : undefined;
+  const workItemFilters = projectId ? issuesFilter?.getIssueFilters(projectId, workspaceSlug) : undefined;
 
   const permission = useUserPermissions();
   const role =
@@ -56,7 +58,7 @@ export const ArchivedIssueLayoutRoot = observer(function ArchivedIssueLayoutRoot
         filtersToShowByLayout={ISSUE_DISPLAY_FILTERS_BY_PAGE.archived_issues.filters}
         initialWorkItemFilters={workItemFilters}
         updateFilters={(expression) => {
-          void issuesFilter.updateFilterExpression(workspaceSlug, projectId, expression).catch(() => {});
+          void update(() => issuesFilter.updateFilterExpression(workspaceSlug, projectId, expression));
         }}
         projectId={projectId}
         workspaceSlug={workspaceSlug}

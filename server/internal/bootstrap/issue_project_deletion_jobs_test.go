@@ -144,7 +144,8 @@ func holdProjectDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) pg
 }
 
 // The sole committed deletion job is running and its worker is directly
-// blocked by this fixture. Stable backend/query identities exclude other waits.
+// blocked by this fixture on the expected table. A periodic worker can also
+// wait on this transaction; stable backend/query identities exclude that wait.
 func deletionWorkerBlocked(t *testing.T, pool *pgxpool.Pool, holder pgx.Tx, job deletionJob, table string) uint32 {
 	t.Helper()
 	return deletionWorkerBlockedBy(t, pool, holder.Conn().PgConn().PID(), job, table)
@@ -155,7 +156,7 @@ func deletionWorkerBlockedBy(t *testing.T, pool *pgxpool.Pool, holder uint32, jo
 	waitDeletionJob(t, pool, job, "running")
 	var pid uint32
 	requestEventuallyWithin(t, "deletion worker at row barrier", 10*time.Second, func(ctx context.Context) bool {
-		rows, err := pool.Query(ctx, "SELECT pid FROM pg_stat_activity WHERE $1::int=ANY(pg_blocking_pids(pid)) AND wait_event_type='Lock'", holder)
+		rows, err := pool.Query(ctx, "SELECT pid FROM pg_stat_activity WHERE datname=current_database() AND $1::int=ANY(pg_blocking_pids(pid)) AND wait_event_type='Lock' AND strpos(query,$2)>0", holder, table)
 		if err != nil {
 			t.Fatal(err)
 		}

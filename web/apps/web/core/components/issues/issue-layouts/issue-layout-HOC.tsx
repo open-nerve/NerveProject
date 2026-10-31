@@ -18,6 +18,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // local imports
 import { IssueLayoutEmptyState } from "./empty-states";
+import { IssueListCommandHost } from "./command-host";
 
 function ActiveLoader(props: { layout: EIssueLayoutTypes }) {
   const { layout } = props;
@@ -48,13 +49,17 @@ export const IssueLayoutHOC = observer(function IssueLayoutHOC(props: Props) {
 
   const issueCount = "total" in issues ? issues.total : issues.getGroupIssueCount(undefined, undefined, false);
 
-  if (issues?.getIssueLoader() === "init-loader" || issueCount === undefined) {
-    return <ActiveLoader layout={layout} />;
-  }
-
-  if (issueCount === 0 && layout !== EIssueLayoutTypes.CALENDAR) {
-    return <IssueLayoutEmptyState storeType={storeType} />;
-  }
-
-  return <LayoutErrorBoundary key={layout}>{props.children}</LayoutErrorBoundary>;
+  const loading = issues?.getIssueLoader() === "init-loader" || issueCount === undefined;
+  const empty = issueCount === 0 && layout !== EIssueLayoutTypes.CALENDAR;
+  return (
+    <IssueListCommandHost>
+      {loading ? (
+        <ActiveLoader layout={layout} />
+      ) : empty ? (
+        <IssueLayoutEmptyState storeType={storeType} />
+      ) : (
+        <LayoutErrorBoundary key={layout}>{props.children}</LayoutErrorBoundary>
+      )}
+    </IssueListCommandHost>
+  );
 });

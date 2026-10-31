@@ -70,6 +70,7 @@ export const FilterValueInput = observer(function FilterValueInput<P extends TFi
   if (filterFieldConfig?.type === FILTER_FIELD_TYPE.DATE_RANGE) {
     return (
       <DateRangeFilterValueInput<P>
+        key={condition.id}
         config={filterFieldConfig as TDateRangeFilterFieldConfig<string>}
         condition={condition as TFilterConditionNode<P, string>}
         isDisabled={isDisabled}

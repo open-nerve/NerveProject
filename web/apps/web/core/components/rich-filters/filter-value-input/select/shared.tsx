@@ -5,33 +5,23 @@
  */
 
 // nerve imports
-import type { TSupportedFilterFieldConfigs, IFilterOption, TFilterValue } from "@nerve/types";
+import type { IFilterOption, TFilterValue } from "@nerve/types";
+import { useTranslation } from "@nerve/i18n";
 import { cn } from "@nerve/utils";
 // local imports
 import { COMMON_FILTER_ITEM_BORDER_CLASSNAME } from "../../shared";
 
-type TLoadOptionsProps<V extends TFilterValue> = {
-  config: TSupportedFilterFieldConfigs<V>;
-  setOptions: (options: IFilterOption<V>[]) => void;
-  setLoading?: (loading: boolean) => void;
-};
-
-export const loadOptions = async <V extends TFilterValue>(props: TLoadOptionsProps<V>) => {
-  const { config, setOptions, setLoading } = props;
-
-  // if the config has a getOptions function, load the options
-  if ("getOptions" in config && typeof config.getOptions === "function") {
-    setLoading?.(true);
-    try {
-      const result = await config.getOptions();
-      setOptions(result);
-    } catch (error) {
-      console.error("Failed to load options:", error);
-    } finally {
-      setLoading?.(false);
-    }
-  }
-};
+export function FilterOptionsError({ retry, disabled }: { retry: () => void; disabled?: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <div role="alert" className="px-2 text-11 text-danger-primary">
+      {t("common.filter_options.load_failed")}
+      <button type="button" onClick={retry} disabled={disabled} className="ml-2 underline">
+        {t("common.retry")}
+      </button>
+    </div>
+  );
+}
 
 export const getFormattedOptions = <V extends TFilterValue>(options: IFilterOption<V>[]) =>
   options.map((option) => ({

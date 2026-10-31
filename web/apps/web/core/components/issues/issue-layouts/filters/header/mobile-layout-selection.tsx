@@ -6,7 +6,7 @@
 
 import { ISSUE_LAYOUTS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { Button } from "@nerve/propel/button";
+import { getButtonStyling } from "@nerve/propel/button";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
 import type { EIssueLayoutTypes } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";
@@ -20,26 +20,26 @@ export function MobileLayoutSelection({
   layouts: EIssueLayoutTypes[];
   onChange: (layout: EIssueLayoutTypes) => void;
   activeLayout?: EIssueLayoutTypes;
-  isMobile?: boolean;
 }) {
   const { t } = useTranslation();
   return (
     <CustomMenu
+      ariaLabel={t("common.layout")}
       maxHeight="md"
       className="flex flex-grow justify-center text-13 text-secondary"
       placement="bottom-start"
       customButton={
-        <Button variant="secondary" className="relative px-2">
+        <span className={getButtonStyling("secondary", "lg")}>
           {activeLayout && <IssueLayoutIcon layout={activeLayout} size={14} strokeWidth={2} className="h-3.5 w-3.5" />}
           <ChevronDownOutline className="my-auto size-3 text-secondary" />
-        </Button>
+        </span>
       }
       customButtonClassName="flex flex-grow justify-center text-secondary text-13"
       closeOnSelect
     >
-      {ISSUE_LAYOUTS.filter((l) => layouts.includes(l.key)).map((layout, index) => (
+      {ISSUE_LAYOUTS.filter((l) => layouts.includes(l.key)).map((layout) => (
         <CustomMenu.MenuItem
-          key={index}
+          key={layout.key}
           onClick={() => {
             onChange(layout.key);
           }}

@@ -186,7 +186,7 @@ P11交付42afa24f已按授权--no-ff合并main `ce3c39abef99a290157b282c23180983
 
 P12用已有root统一权限/canonical/确认写入，原生搜索同Task迁日历/子项/关联三个消费者；原22路由清单14存在8已删；DateDropdown和七下拉、四布局、I3/I4/I6/I7以及C1三浏览器/C3列表侧是实际完成线。P13–P16范围保留；M4§14/总体§9.4、输入handoff顶层及最终closeout不提前关闭。预检结论以当前review为准，获负责人下一步实施安排后再从T1开始。
 
-## 18. P12实施、整审修复与剩余验证（2026-10-30）
+## 18. 历史接续：P12实施、整审修复与剩余验证（2026-10-30）
 
 分支 `codex/m4-p12`，worktree `.codex/worktress/codex/m4-p12`，基线 main `ce3c39abef99a290157b282c23180983f8746bcb`。T1–T15完成，T16六项重要问题已修复为 `49b628fb`；[spec](../M4-issue-core/specs/P12-web-list-pages.md)、[plan](../M4-issue-core/plans/P12-web-list-pages.md)、[阶段记录](../M4-issue-core/reviews/P12-web-list-pages-review.md)、[整分支审核](../../reviews/re-17-M4P12整体审核.md)。
 
@@ -195,3 +195,22 @@ P12用已有root统一权限/canonical/确认写入，原生搜索同Task迁日�
 后置0cdd315d CI首次I3失败，attempt2三任务成功；本地CPU8复现导航后应用尚未挂载便开始行序预算，已仅修正夹具为先等分组attached，再按原5秒断言完整ID。新输入静态/knip、完整E2E180、三浏览器各11均通过，未变输入的前端单测/服务端门禁按明确域复用；原远端trace下载失败，不把本地机制冒作其唯一根因。新提交仍另核准确CI，详情见[review§27](../M4-issue-core/reviews/P12-web-list-pages-review.md#27-后置ci的i3诊断与测试同步修正2026-10-30)。
 
 主目录保持main。当前授权为完成P12、deep-review后保留分支；不合并、不清理、不开始P13。准备证据在主目录 `.superpowers/sdd/P12-preparation-20261030/`，实施证据在worktree `.superpowers/sdd/P12-web-list-pages/`，未来归档均须保留。M4§14、总体§9.4、输入交接顶层open和M5–M8最终closeout仍开放。
+
+## 19. 历史接续：P12完成、P13文档预检（2026-10-31）
+
+P12最终e6d1329b已授权--no-ff合并main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8，准确[main CI41087022719](https://github.com/open-nerve/NerveProject/actions/runs/41087022719)三任务成功。1786份实施/运行证据及14份准备材料归档逐hash通过，正常删除远端/本地分支及worktree后再次复验。主目录main干净，证据根.superpowers/sdd/P12-integration-20261031，见[P12 review§28](../M4-issue-core/reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)。Git合并、push及远端删除均自动完成；公开API限流后已通过授权Chrome核CI，无需取凭据或负责人代操作。
+
+P13分支codex/m4-p13、worktree .codex/worktress/codex/m4-p13，以ff89d0a1为基线。只有[spec](../M4-issue-core/specs/P13-web-filters-archives-profile.md)、[plan](../M4-issue-core/plans/P13-web-filters-archives-profile.md)、[阶段review](../M4-issue-core/reviews/P13-web-filters-archives-profile-review.md)、[deep-review预检](../../reviews/re-18-M4P13预检审核.md)及集成/设计状态同步。14Task，A1–A12全部开放，phase保持M4/P12；未实现、未装依赖、未跑产品测试。准备证据在主项目.superpowers/sdd/P13-preparation-20261031，未来必须一并归档。
+
+预检通过，下一步等负责人授权从T1实施。沿原root权限/canonical/确认写入；区分项目服务端偏好与归档/profile本地设置；合法开区间和未知已保存标签不被新控件清掉；完整工作区标签仍M7。阶段结束须deep-review和修复复审，先不合并。M4§14/总体§9.4、输入handoff顶层open及M5–M8最终closeout保持开放。
+
+
+## 20. 当前接续：P13实施与终审完成，集成待办（2026-10-31）
+
+P13分支codex/m4-p13，基线main ff89d0a1219a8d09ff924f5bd5257c486cd7e2b8，worktree .codex/worktress/codex/m4-p13。T1–T14完成，独立整审0 Critical/2 Important/2 Minor，四项局部问题均修复为de616d06；[spec](../M4-issue-core/specs/P13-web-filters-archives-profile.md)、[plan](../M4-issue-core/plans/P13-web-filters-archives-profile.md)、[阶段review](../M4-issue-core/reviews/P13-web-filters-archives-profile-review.md)、[整体审核](../../reviews/re-19-M4P13整体审核.md)。没有待决架构问题。
+
+修复后Web247文件2688项、默认E2E202、三浏览器各22通过；Web静态54、knip、117实际文件零告警，23不同性质有效变异。生成/Go lint/Go全测按未变输入逐hash复用T13，11域最终输入审计零mismatch。45项修改范围deadsym保留候选逐读者说明；M1/M2/M3只记录本期子项，顶层open。single无当前M4业务入口，4个兼容夹具不冒称业务故事；完整标签目录仍M7。
+
+主控提交文稿后须核精确最终HEAD的server/web/e2e三任务success，写工作树证据根.superpowers/sdd/P13-web-filters-archives-profile/final-delivery.json；回执未满足前不宣布交付。最终文稿SHA不写回自身形成提交循环。已有863283fc检查点CI不代替最终CI。
+
+负责人要求先别合并，当前不做main合并/分支与worktree清理，不开始P14。准备根在主目录.superpowers/sdd/P13-preparation-20261031，未来归档须与实施根一起保存。M4设计§14、总体§9.4与M5–M8最终交接继续由P16/收尾处理。

@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
 import { useTranslation } from "@nerve/i18n";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
@@ -13,14 +12,12 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { ContextMenu, CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
-import { useDetailCommand } from "../../issue-detail/use-issue-operations";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { useUserPermissions } from "@/hooks/store/user";
+import { useUser, useUserPermissions } from "@/hooks/store/user";
 // local imports
-import { DeleteIssueModal } from "../../delete-issue-modal";
 import type { IQuickActionProps } from "../list/list-view-types";
 import type { MenuItemFactoryProps } from "./helper";
 import { useArchivedIssueMenuItems } from "./helper";
+import { useDeleteRequest, useRestoreRequest } from "../command-host";
 
 export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickActions(props: IQuickActionProps) {
   const { t } = useTranslation();
@@ -30,31 +27,20 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
     handleRestore,
     customActionButton,
     portalElement,
-    readOnly = false,
     placements = "bottom-end",
     parentRef,
   } = props;
-  // states
-  const [deleteIssueModal, setDeleteIssueModal] = useState(false);
+  const requestDelete = useDeleteRequest();
   // router
   const { workspaceSlug } = useParams();
-  const run = useDetailCommand(workspaceSlug ?? "", issue.project_id, issue.id);
+  const requestRestore = useRestoreRequest();
   // store hooks
   const { allowPermissions } = useUserPermissions();
+  const { data: currentUser } = useUser();
 
   // derived values
   // auth
-  const isEditingAllowed =
-    !!workspaceSlug &&
-    allowPermissions(
-      [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-      EUserPermissionsLevel.PROJECT,
-      workspaceSlug,
-      issue.project_id
-    ) &&
-    !readOnly;
-  const isRestoringAllowed =
-    handleRestore &&
+  const isProjectMember =
     !!workspaceSlug &&
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
@@ -62,27 +48,26 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
       workspaceSlug,
       issue.project_id
     );
+  const isRestoringAllowed = !!handleRestore && !!requestRestore && isProjectMember;
+  const isDeletingAllowed =
+    isProjectMember &&
+    (issue.created_by_id === currentUser?.id ||
+      allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, issue.project_id));
 
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
     workspaceSlug,
-    isEditingAllowed,
-    isDeletingAllowed: isEditingAllowed,
+    isEditingAllowed: false,
+    isDeletingAllowed,
     isRestoringAllowed: !!isRestoringAllowed,
     setIssueToEdit: () => {},
     setCreateUpdateIssueModal: () => {},
-    setDeleteIssueModal,
-    handleRestore: handleRestore
-      ? async () => {
-          await run(handleRestore);
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: t("issue.restore.success.title"),
-            message: t("issue.restore.success.message"),
-          });
-        }
-      : undefined,
+    setDeleteIssueModal: () => {
+      if (!requestDelete) throw new Error("Archived issue actions require an IssueListCommandHost");
+      requestDelete(issue, handleDelete);
+    },
+    handleRestore: handleRestore && requestRestore ? () => requestRestore(issue, handleRestore) : undefined,
   };
 
   const MENU_ITEMS = useArchivedIssueMenuItems(menuItemProps);
@@ -98,14 +83,6 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
   });
   return (
     <>
-      {/* Modals */}
-      <DeleteIssueModal
-        data={issue}
-        isOpen={deleteIssueModal}
-        handleClose={() => setDeleteIssueModal(false)}
-        onSubmit={handleDelete}
-      />
-
       <ContextMenu parentRef={parentRef} items={CONTEXT_MENU_ITEMS} />
       <CustomMenu
         ellipsis

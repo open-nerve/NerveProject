@@ -214,3 +214,10 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 - §10剩余：CustomSearchSelect的defaultOpen及rich-filters四入口完整筛选验收留P13；M6/M7共享props兼容不算领域页面验收。仅本段明确测试的控件性质已处理，不关闭整个§10或顶层交接。
 - §12 ExistingIssuesListModal的模块级ProjectService已删除，三调用改用本代root持有的IssueSearchService；原helpers拆为显式scope目录函数且保持同步零HTTP，M04/M05和路由回归捕获错范围/偷发请求。parent、inbox查重和命令搜索余下实例/旧类型继续由P14/P15负责；不虚报13实例全零。
 - §7编辑器分割和§11复制hook仍按P14/P15完成；本段watchPage只精确期待已有Canvas提示，不掩盖其它console/API失败。实施、范围与最终交付核准规则见[P12 review§23–25](../reviews/P12-web-list-pages-review.md)和[整审](../../../reviews/re-17-M4P12整体审核.md)。顶层status保持open。
+
+
+## 处理结果（M4/P13，2026-10-31）
+
+§10的四个CustomSearchSelect及defaultOpen已完成：添加/运算符/多选由真实C2业务页面验证，当前M4不生成single，single/multi×en/zh以生产组件浏览器夹具核加载/defaultOpen/搜索/键盘/回焦；三浏览器各22项中4项为兼容夹具。DateRangeDropdown第一参数和既有原子日期写保持，新增selectedDay仅由富筛选持草稿；没有把M6/M7完整页面验收提前关闭。§12归档页头旧实例在P11已移除，本期I15只作页面回归，未重复记功。其它复制/编辑器/搜索等原阶段责任及顶层open保持。
+
+证据：[P13阶段review§9–14](../reviews/P13-web-filters-archives-profile-review.md#9-最终验收映射)、[整体审核](../../../reviews/re-19-M4P13整体审核.md)。本期实施/终审完成，集成待办；最终文稿CI以阶段review§14后置回执核准，不提前关闭M4总交接。

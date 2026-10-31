@@ -180,7 +180,6 @@ export const CycleSidebarHeader = observer(function CycleSidebarHeader(props: Pr
                     )} → ${renderFormattedDateInUserTimezone(cycleDetails.end_date ?? "")}`}
                     mergeDates
                     showTooltip={!!cycleDetails.start_date && !!cycleDetails.end_date} // show tooltip only if both start and end date are present
-                    required={cycleDetails.status !== "draft"}
                     disabled={!isEditingAllowed || isArchived || isCompleted}
                   />
                 )}

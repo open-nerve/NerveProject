@@ -157,9 +157,15 @@ func TestIssueDeleteSubscriberRegistration(t *testing.T) {
 // The fully composed worker must drain batches even while another transaction
 // owns the deleted project's N lock; audit time remains the original event's.
 func TestNewAppDeleteRowsJobRuns(t *testing.T) {
-	w := newIssueWorldWith(t, func(cfg *config.Config) { cfg.Issue.DeleteBatch = 1 })
+	var retention time.Duration
+	w := newIssueWorldWith(t, func(cfg *config.Config) {
+		cfg.Issue.DeleteBatch = 1
+		retention = cfg.Cleanup.PurgeAfter
+	})
 	item := w.newWorkItem(t)
-	at := time.Now().Add(-61 * 24 * time.Hour).Truncate(time.Microsecond)
+	// Keep the request's old audit time without making the asserted rows eligible
+	// for the independently scheduled purge that runs on application startup.
+	at := time.Now().Add(-retention / 2).Truncate(time.Microsecond)
 	by := w.ids["bob"]
 	draft := uuid.NewV7()
 	if _, err := w.pool.Exec(pgtest.Soon(t), "INSERT INTO draft_issues(id,workspace_id,created_by_id) VALUES($1,$2,$3)", draft, w.acme, by); err != nil {
@@ -219,6 +225,11 @@ func TestNewAppDeleteRowsJobRuns(t *testing.T) {
 			t.Fatal("composed deletion did not complete while project lock held", ctx.Err())
 		}
 	}
+	// A periodic purge may run between job completion and the audit read.
+	// Exercise that order explicitly: this fixture must remain within retention.
+	if count, err := issue.Provide(w.pool).Purger.Purge(pgtest.Soon(t), time.Now().Add(-retention), 1); err != nil || count != 0 {
+		t.Fatalf("purge removed audit fixtures: count=%d err=%v", count, err)
+	}
 	for _, target := range []struct {
 		table string
 		id    uuid.UUID
@@ -226,7 +237,7 @@ func TestNewAppDeleteRowsJobRuns(t *testing.T) {
 		var deleted, updated time.Time
 		var actor uuid.UUID
 		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at,updated_at,updated_by_id FROM "+target.table+" WHERE id=$1", target.id).Scan(&deleted, &updated, &actor); err != nil {
-			t.Fatal(err)
+			t.Fatalf("%s audit row: %v", target.table, err)
 		}
 		if !deleted.Equal(at) || !updated.Equal(at) || actor != by {
 			t.Fatalf("%s audit=%s/%s/%s", target.table, deleted, updated, actor)

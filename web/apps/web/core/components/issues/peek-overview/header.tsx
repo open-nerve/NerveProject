@@ -136,7 +136,6 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
 
   const handleArchiveIssue = async () => {
     await archiveIssue(workspaceSlug, projectId, issueId);
-    removeRoutePeekId();
   };
 
   return (
@@ -205,6 +204,7 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
               issue={issueDetails}
               handleDelete={handleDeleteIssue}
               handleArchive={handleArchiveIssue}
+              onArchiveConfirmed={removeRoutePeekId}
               handleRestore={handleRestoreIssue}
               readOnly={disabled}
               toggleDeleteIssueModal={toggleDeleteIssueModal}

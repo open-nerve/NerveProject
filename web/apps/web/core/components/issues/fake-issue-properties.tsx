@@ -26,7 +26,10 @@ vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => tab.app.work
 vi.mock("@/hooks/store/use-project-inbox", () => ({
   useProjectInbox: () => ({ getIssueInboxByIssueId: () => undefined }),
 }));
-vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => tab.app.user.permission }));
+vi.mock("@/hooks/store/user", () => ({
+  useUser: () => tab.app.user,
+  useUserPermissions: () => tab.app.user.permission,
+}));
 export let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 export let host: HTMLDivElement;
 export let renderer: ReturnType<typeof createRoot>;

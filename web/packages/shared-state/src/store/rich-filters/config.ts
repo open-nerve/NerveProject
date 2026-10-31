@@ -8,21 +8,15 @@ import { set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
-import { EMPTY_OPERATOR_LABEL } from "@nerve/constants";
 import type {
   TSupportedOperators,
   TFilterConfig,
   TFilterProperty,
   TFilterValue,
+  SingleOrArray,
   TOperatorSpecificConfigs,
 } from "@nerve/types";
 import { FILTER_FIELD_TYPE } from "@nerve/types";
-import { getOperatorLabel, isDateFilterType, getDateOperatorLabel, isDateFilterOperator } from "@nerve/utils";
-
-type TOperatorOptionForDisplay = {
-  value: TSupportedOperators;
-  label: string;
-};
 
 export interface IFilterConfig<P extends TFilterProperty> extends TFilterConfig<P> {
   // computed
@@ -32,9 +26,7 @@ export interface IFilterConfig<P extends TFilterProperty> extends TFilterConfig<
   getOperatorConfig: (
     operator: TSupportedOperators
   ) => TOperatorSpecificConfigs[keyof TOperatorSpecificConfigs] | undefined;
-  getLabelForOperator: (operator: TSupportedOperators | undefined) => string;
-  getDisplayOperatorByValue: <T extends TSupportedOperators>(operator: T, value: TFilterValue) => T;
-  getAllDisplayOperatorOptionsByValue: (value: TFilterValue) => TOperatorOptionForDisplay[];
+  getDisplayOperatorByValue: <T extends TSupportedOperators>(operator: T, value: SingleOrArray<TFilterValue>) => T;
   // actions
   mutate: (updates: Partial<TFilterConfig<P>>) => void;
 }
@@ -107,27 +99,6 @@ export class FilterConfig<P extends TFilterProperty> implements IFilterConfig<P>
   );
 
   /**
-   * Returns the label for an operator.
-   * @param operator - The operator.
-   * @returns The label for the operator.
-   */
-  getLabelForOperator: IFilterConfig<P>["getLabelForOperator"] = computedFn((operator) => {
-    if (!operator) return EMPTY_OPERATOR_LABEL;
-
-    const operatorConfig = this.getOperatorConfig(operator);
-
-    if (operatorConfig?.operatorLabel) {
-      return operatorConfig.operatorLabel;
-    }
-
-    if (operatorConfig?.type && isDateFilterType(operatorConfig.type) && isDateFilterOperator(operator)) {
-      return getDateOperatorLabel(operator);
-    }
-
-    return getOperatorLabel(operator);
-  });
-
-  /**
    * Returns the operator for a value.
    * @param value - The value.
    * @returns The operator for the value.
@@ -138,29 +109,6 @@ export class FilterConfig<P extends TFilterProperty> implements IFilterConfig<P>
       return operatorConfig.singleValueOperator as typeof operator;
     }
     return operator;
-  });
-
-  /**
-   * Returns all supported operator options for display in the filter UI.
-   * This method filters out operators that are already applied (unless multiple filters are allowed).
-   *
-   * @param value - The current filter value used to determine the appropriate operator variant
-   * @returns Array of operator options with their display labels and values
-   */
-  getAllDisplayOperatorOptionsByValue: IFilterConfig<P>["getAllDisplayOperatorOptionsByValue"] = computedFn((value) => {
-    const operatorOptions: TOperatorOptionForDisplay[] = [];
-
-    // Process each supported operator to build display options
-    for (const operator of this.allEnabledSupportedOperators) {
-      const displayOperator = this.getDisplayOperatorByValue(operator, value);
-      const displayOperatorLabel = this.getLabelForOperator(displayOperator);
-      operatorOptions.push({
-        value: operator,
-        label: displayOperatorLabel,
-      });
-    }
-
-    return operatorOptions;
   });
 
   // ------------ actions ------------

@@ -303,7 +303,7 @@ it("memberInitialAndNextPagesKeepRelationAndExplicitProjectScope", async () => {
   const scopedProject = "019a0000-0000-7000-8000-000000000001";
   await loadProjects(nerve, app.projectRoot.project, ws, [projectOf("P", ws.id, { id: scopedProject })]);
   runInAction(() => {
-    app.issue.profileIssuesFilter.filters.actor = {
+    app.issue.profileIssuesFilter.filters[JSON.stringify(["ws", "actor"])] = {
       richFilters: { project_id__in: "019a0000-0000-7000-8000-000000000001,019a0000-0000-7000-8000-000000000002" },
       displayProperties: undefined,
       kanbanFilters: undefined,
@@ -629,7 +629,7 @@ it.each([
   { project_id__in: ",019a0000-0000-7000-8000-000000000001" },
 ])("F01 clears an unrepresentable member project condition %j", async (expression) => {
   runInAction(() => {
-    app.issue.profileIssuesFilter.filters.actor = {
+    app.issue.profileIssuesFilter.filters[JSON.stringify(["ws", "actor"])] = {
       richFilters: expression,
       displayProperties: undefined,
       kanbanFilters: undefined,
@@ -667,7 +667,7 @@ it.each([
   "fix1 I2/I3 member consumer defaults malformed structure while preserving valid conditions %j",
   async (expression, expected) => {
     runInAction(() => {
-      app.issue.profileIssuesFilter.filters.actor = {
+      app.issue.profileIssuesFilter.filters[JSON.stringify(["ws", "actor"])] = {
         richFilters: JSON.parse(JSON.stringify(expression)),
         displayProperties: undefined,
         kanbanFilters: undefined,
@@ -1161,13 +1161,13 @@ it("a verification from a lost permission identity does not keep the list loadin
   await verify.promise;
 });
 
+const options = (range: string) => ({ limit: 4, query: { group_by: "target_date" as const, target_date: [range] } });
 it("empty calendar intersection remains logical across writes permissions and window changes", async () => {
   const root = app.issue;
   const issues = root.projectIssues;
   runInAction(() => {
     root.projectIssuesFilter.filters.A.richFilters = { and: [{ target_date__exact: "2026-11-15" }] };
   });
-  const options = (range: string) => ({ limit: 4, query: { group_by: "target_date" as const, target_date: [range] } });
   const serial = root.readSerial;
   await issues.fetchIssues("ws", "A", "init-loader", options("2026-10-01..2026-10-31"));
   const empty = issues.currentList!;

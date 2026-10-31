@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
-import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
+import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE, EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
@@ -18,6 +18,8 @@ import { DisplayFiltersSelection, FiltersDropdown } from "@/components/issues/is
 import { WorkItemFiltersToggle } from "@/components/work-item-filters/filters-toggle";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
+import { useUserPermissions } from "@/hooks/store/user";
+import { useLocalIssueFilterUpdate } from "@/hooks/use-local-issue-filter-update";
 
 export const ArchivedIssuesHeader = observer(function ArchivedIssuesHeader() {
   // router
@@ -26,6 +28,12 @@ export const ArchivedIssuesHeader = observer(function ArchivedIssuesHeader() {
   const {
     issuesFilter: { issueFilters, updateFilters },
   } = useIssues(EIssuesStoreType.ARCHIVED);
+  const update = useLocalIssueFilterUpdate(workspaceSlug ?? "", projectId, projectId ?? "");
+  const permission = useUserPermissions();
+  const role =
+    workspaceSlug && projectId
+      ? permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId)
+      : undefined;
   // i18n
   const { t } = useTranslation();
   // for archived issues list layout is the only option
@@ -34,19 +42,17 @@ export const ArchivedIssuesHeader = observer(function ArchivedIssuesHeader() {
   const handleDisplayFiltersUpdate = (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
     if (!workspaceSlug || !projectId) return;
 
-    updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, {
-      ...issueFilters?.displayFilters,
-      ...updatedDisplayFilter,
-    });
+    void update(() => updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter));
   };
 
   const handleDisplayPropertiesUpdate = (property: Partial<IIssueDisplayProperties>) => {
     if (!workspaceSlug || !projectId) return;
 
-    updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property);
+    void update(() => updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property));
   };
 
-  if (!workspaceSlug || !projectId) return null;
+  if (!workspaceSlug || !projectId || (role !== EUserPermissions.ADMIN && role !== EUserPermissions.MEMBER))
+    return null;
   return (
     <Header variant={EHeaderVariant.SECONDARY}>
       <Header.LeftItem>

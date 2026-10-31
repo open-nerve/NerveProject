@@ -24,17 +24,14 @@ import { MergedDateDisplay } from "./merged-date";
 import type { TButtonVariants } from "./types";
 
 type Props = {
-  applyButtonText?: string;
-  bothRequired?: boolean;
   buttonClassName?: string;
   buttonContainerClassName?: string;
-  buttonFromDateClassName?: string;
-  buttonToDateClassName?: string;
   buttonVariant: TButtonVariants;
-  cancelButtonText?: string;
   className?: string;
   clearIconClassName?: string;
   disabled?: boolean;
+  invalid?: boolean;
+  describedBy?: string;
   hideIcon?: {
     from?: boolean;
     to?: boolean;
@@ -43,13 +40,12 @@ type Props = {
   mergeDates?: boolean;
   minDate?: Date;
   maxDate?: Date;
-  onSelect?: (range: DateRange | undefined) => void;
+  onSelect?: (range: DateRange | undefined, selectedDay?: Date) => void;
   placeholder?: {
     from?: string;
     to?: string;
   };
   placement?: Placement;
-  required?: boolean;
   showTooltip?: boolean;
   tabIndex?: number;
   value: {
@@ -69,12 +65,12 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
   const {
     buttonClassName,
     buttonContainerClassName,
-    buttonFromDateClassName,
-    buttonToDateClassName,
     buttonVariant,
     className,
     clearIconClassName = "",
     disabled = false,
+    invalid,
+    describedBy,
     hideIcon = {
       from: true,
       to: true,
@@ -119,6 +115,8 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
   const comboButton = (
     <Popover.Button
       aria-label={label}
+      aria-invalid={invalid}
+      aria-describedby={describedBy}
       tabIndex={tabIndex}
       type="button"
       className={cn(
@@ -171,22 +169,12 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
         ) : (
           // Original separate date display
           <>
-            <span
-              className={cn(
-                "flex h-full flex-grow items-center justify-center gap-1 rounded-xs",
-                buttonFromDateClassName
-              )}
-            >
+            <span className="flex h-full flex-grow items-center justify-center gap-1 rounded-xs">
               {!hideIcon.from && <CalendarOutline className="h-3 w-3 flex-shrink-0" />}
               {dateRange.from ? renderFormattedDate(dateRange.from) : renderPlaceholder ? placeholder.from : ""}
             </span>
             <ArrowNarrowRightOutline className="h-3 w-3 flex-shrink-0" />
-            <span
-              className={cn(
-                "flex h-full flex-grow items-center justify-center gap-1 rounded-xs",
-                buttonToDateClassName
-              )}
-            >
+            <span className="flex h-full flex-grow items-center justify-center gap-1 rounded-xs">
               {!hideIcon.to && <DueDateOutline className="h-3 w-3 flex-shrink-0" />}
               {dateRange.to ? renderFormattedDate(dateRange.to) : renderPlaceholder ? placeholder.to : ""}
             </span>
@@ -229,7 +217,7 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
               captionLayout="dropdown"
               selected={value}
               defaultMonth={value.from ?? value.to}
-              onSelect={onSelect}
+              onSelect={(range, selectedDay) => onSelect?.(range, selectedDay)}
               mode="range"
               disabled={disabledDays}
               showOutsideDays

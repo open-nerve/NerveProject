@@ -6,6 +6,7 @@
 
 import React, { useState } from "react";
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 // constants
 import { DATE_AFTER_FILTER_OPTIONS } from "@nerve/constants";
 // components
@@ -20,6 +21,7 @@ type Props = {
 
 export const FilterStartDate = observer(function FilterStartDate(props: Props) {
   const { appliedFilters, handleUpdate, searchQuery } = props;
+  const { t } = useTranslation();
   const [previewEnabled, setPreviewEnabled] = useState(true);
   const [isDateFilterModalOpen, setIsDateFilterModalOpen] = useState(false);
 
@@ -47,11 +49,11 @@ export const FilterStartDate = observer(function FilterStartDate(props: Props) {
           handleClose={() => setIsDateFilterModalOpen(false)}
           isOpen={isDateFilterModalOpen}
           onSelect={(val) => handleUpdate(val)}
-          title="Start date"
+          title={t("start_date")}
         />
       )}
       <FilterHeader
-        title={`Start date${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
+        title={`${t("start_date")}${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
         isPreviewEnabled={previewEnabled}
         handleIsPreviewEnabled={() => setPreviewEnabled(!previewEnabled)}
       />

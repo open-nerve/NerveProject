@@ -6,7 +6,7 @@
 
 // nerve imports
 import type { MemberUser, Project } from "@nerve/api-client";
-import type { TOperatorConfigMap, TSupportedOperators } from "@nerve/types";
+import type { IFilterOption, TOperatorConfigMap, TSupportedOperators } from "@nerve/types";
 import { COMPARISON_OPERATOR, EQUALITY_OPERATOR } from "@nerve/types";
 // local imports
 import { getDatePickerConfig, getDateRangePickerConfig, getMultiSelectConfig } from "../core";
@@ -21,6 +21,7 @@ import { createOperatorConfigEntry } from "../shared";
 export type TCreateUserFilterParams = TCreateFilterConfigParams &
   IFilterIconConfig<MemberUser> & {
     members: MemberUser[];
+    additionalOptions?: IFilterOption<string>[];
   };
 
 /**

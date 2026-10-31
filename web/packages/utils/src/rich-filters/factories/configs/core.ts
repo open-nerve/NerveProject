@@ -5,7 +5,7 @@
  */
 
 // nerve imports
-import type { TFilterValue, TSupportedOperators, TBaseFilterFieldConfig } from "@nerve/types";
+import type { IFilterOption, TFilterValue, TSupportedOperators, TBaseFilterFieldConfig } from "@nerve/types";
 import { FILTER_FIELD_TYPE } from "@nerve/types";
 // local imports
 import type { IFilterIconConfig } from "./shared";
@@ -28,7 +28,7 @@ interface TOptionTransforms<TItem, TValue extends TFilterValue = string, TIconDa
  * Multi-select filter configuration
  */
 type TMultiSelectConfig<TValue extends TFilterValue = string> = TBaseFilterFieldConfig & {
-  defaultValue?: TValue[];
+  additionalOptions?: IFilterOption<TValue>[];
   singleValueOperator: TSupportedOperators;
 };
 
@@ -52,39 +52,25 @@ export const getMultiSelectConfig = <
     type: FILTER_FIELD_TYPE.MULTI_SELECT,
     ...config,
     operatorLabel: config?.operatorLabel,
-    getOptions: () =>
-      transforms.items.map((item) => ({
+    getOptions: () => [
+      ...(config.additionalOptions ?? []),
+      ...transforms.items.map((item) => ({
         id: transforms.getId(item),
         label: transforms.getLabel(item),
         value: transforms.getValue(item),
         icon: iconConfig?.getOptionIcon?.(transforms.getIconData?.(item) as TIconData),
       })),
+    ],
   });
 
 // ------------ Date filters ------------
-
-/**
- * Date filter configuration
- */
-type TDateConfig = TBaseFilterFieldConfig & {
-  min?: Date;
-  max?: Date;
-};
-
-/**
- * Date range filter configuration
- */
-type TDateRangeConfig = TBaseFilterFieldConfig & {
-  min?: Date;
-  max?: Date;
-};
 
 /**
  * Helper to get the date picker config
  * @param config - Date-specific configuration
  * @returns The date picker config
  */
-export const getDatePickerConfig = (config: TDateConfig) =>
+export const getDatePickerConfig = (config: TBaseFilterFieldConfig) =>
   createFilterFieldConfig<typeof FILTER_FIELD_TYPE.DATE, Date>({
     type: FILTER_FIELD_TYPE.DATE,
     ...config,
@@ -95,7 +81,7 @@ export const getDatePickerConfig = (config: TDateConfig) =>
  * @param config - Date range-specific configuration
  * @returns The date range picker config
  */
-export const getDateRangePickerConfig = (config: TDateRangeConfig) =>
+export const getDateRangePickerConfig = (config: TBaseFilterFieldConfig) =>
   createFilterFieldConfig<typeof FILTER_FIELD_TYPE.DATE_RANGE, Date>({
     type: FILTER_FIELD_TYPE.DATE_RANGE,
     ...config,

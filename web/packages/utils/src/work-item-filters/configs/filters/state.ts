@@ -18,7 +18,10 @@ import { createFilterConfig, getMultiSelectConfig, createOperatorConfigEntry } f
 /**
  * State group filter specific params
  */
-type TCreateStateGroupFilterParams = TCreateFilterConfigParams & IFilterIconConfig<StateGroup>;
+type TCreateStateGroupFilterParams = TCreateFilterConfigParams &
+  IFilterIconConfig<StateGroup> & {
+    getOptionLabel?: (value: StateGroup) => string;
+  };
 
 /**
  * Helper to get the state group multi select config
@@ -33,7 +36,7 @@ const getStateGroupMultiSelectConfig = (
     {
       items: Object.values(STATE_GROUPS),
       getId: (state) => state.key,
-      getLabel: (state) => state.label,
+      getLabel: (state) => params.getOptionLabel?.(state.key) ?? state.label,
       getValue: (state) => state.key,
       getIconData: (state) => state.key,
     },

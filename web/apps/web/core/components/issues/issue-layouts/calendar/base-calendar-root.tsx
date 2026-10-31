@@ -34,12 +34,11 @@ export type CalendarStoreType = EIssuesStoreType.PROJECT;
 
 interface IBaseCalendarRoot {
   QuickActions: FC<IQuickActionProps>;
-  viewId?: string | undefined;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
 }
 
 export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseCalendarRoot) {
-  const { QuickActions, viewId, canEditPropertiesBasedOnProject } = props;
+  const { QuickActions, canEditPropertiesBasedOnProject } = props;
 
   // router
   const { workspaceSlug, projectId } = useParams();
@@ -109,7 +108,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
           query: { group_by: "target_date", target_date: [`${startDate}..${endDate}`] },
         }
       : undefined,
-    viewId,
+    undefined,
     layout
   );
 

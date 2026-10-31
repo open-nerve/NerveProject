@@ -1,3 +1,4 @@
+import type { TProfileViews } from "@nerve/types";
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { useParams } from "react-router";
 import { EUserPermissions } from "@nerve/constants";
@@ -14,7 +15,7 @@ export function useIssueListMount(
   root: IssueRootStore,
   fetchIssues: IssueActions["fetchIssues"],
   options: IssueListOptions | undefined,
-  viewId?: string,
+  viewId?: TProfileViews,
   variant = ""
 ) {
   const { workspaceSlug, projectId, userId } = useParams();
@@ -32,8 +33,9 @@ export function useIssueListMount(
       : role !== undefined;
   const workspaceID = workspaceSlug ? root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id : undefined;
   const projectIDs = profile
-    ? (toMemberFilters(userId ? (root.profileIssuesFilter.getIssueFilters(userId)?.richFilters ?? {}) : {})
-        .project_id ?? [])
+    ? (toMemberFilters(
+        userId ? (root.profileIssuesFilter.getIssueFilters(userId, workspaceSlug)?.richFilters ?? {}) : {}
+      ).project_id ?? [])
     : projectId
       ? [projectId]
       : [];

@@ -5,15 +5,15 @@ import { BaseIssuesStore } from "../helpers/base-issues.store";
 import type { IArchivedIssuesFilter } from "./filter.store";
 export type IArchivedIssues = ArchivedIssues;
 export class ArchivedIssues extends BaseIssuesStore<IArchivedIssuesFilter> {
-  viewFlags = { enableQuickAdd: false, enableIssueCreation: false, enableInlineEditing: true };
+  viewFlags = { enableQuickAdd: false, enableIssueCreation: false, enableInlineEditing: false };
   fetchIssues = (slug: string, projectID: string, _loader: TLoader, options: IssueListOptions) => {
     const scope = this.rootIssueStore.scope(slug, projectID);
-    const filters = this.issueFilterStore.getIssueFilters(projectID);
+    const filters = this.issueFilterStore.getIssueFilters(projectID, slug);
     const query = {
       ...projectListQuery(toProjectFilters(filters?.richFilters ?? {}), filters?.displayFilters),
-      archived: "true",
       limit: options.limit,
       ...options.query,
+      archived: "true",
     };
     return this.select({ ...scope, scope: "project", query }, options).fetchFirst();
   };

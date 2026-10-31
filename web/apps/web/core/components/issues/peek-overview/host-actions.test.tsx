@@ -88,13 +88,19 @@ const render = async (id: string, embed = true) => {
     )
   );
 };
+// The archive dialog owns confirmation before invoking the page's navigation callback.
+async function command(name: "handleDelete" | "handleArchive" | "handleRestore") {
+  const current = actions;
+  await current[name]!();
+  if (name === "handleArchive") current.onArchiveConfirmed?.();
+}
 it.each(["handleDelete", "handleArchive", "handleRestore"] as const)(
   "a late %s cannot close the next peek or notification",
   async (name) => {
     await render("old");
     let result!: Promise<unknown>;
     await act(async () => {
-      result = Promise.resolve(actions[name]!());
+      result = command(name);
     });
     await render("new");
     await act(async () => {
@@ -111,7 +117,7 @@ it.each(["handleDelete", "handleArchive", "handleRestore"] as const)(
     await render("old");
     let result!: Promise<unknown>;
     await act(async () => {
-      result = Promise.resolve(actions[name]!());
+      result = command(name);
     });
     await act(async () => {
       pending.answer();
@@ -136,7 +142,7 @@ it.each(["handleDelete", "handleArchive", "handleRestore"] as const)(
     await render("old");
     let result!: Promise<unknown>;
     await act(async () => {
-      result = Promise.resolve(actions[name]!());
+      result = command(name);
     });
     await render("old");
     const replacement = tab.app.issue.issueDetail.peekIssue;

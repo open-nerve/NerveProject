@@ -5,6 +5,7 @@
  */
 
 import { useCallback } from "react";
+import { useLocalIssueFilterUpdate } from "@/hooks/use-local-issue-filter-update";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve constants
@@ -27,33 +28,41 @@ export const ProfileIssuesFilter = observer(function ProfileIssuesFilter() {
   const { workspaceSlug, userId } = useParams();
   // store hook
   const {
-    issuesFilter: { issueFilters, updateFilters },
+    issuesFilter: { getIssueFilters, updateFilters },
   } = useIssues(EIssuesStoreType.PROFILE);
+  const issueFilters = workspaceSlug && userId ? getIssueFilters(userId, workspaceSlug) : undefined;
+  const follow = useLocalIssueFilterUpdate(workspaceSlug ?? "", undefined, userId ?? "", true);
   // derived values
   const activeLayout = issueFilters?.displayFilters?.layout;
 
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, { layout: layout }, userId);
+      return follow(() =>
+        updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, { layout }, userId)
+      );
     },
-    [workspaceSlug, updateFilters, userId]
+    [workspaceSlug, updateFilters, userId, follow]
   );
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, userId);
+      return follow(() =>
+        updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, userId)
+      );
     },
-    [workspaceSlug, updateFilters, userId]
+    [workspaceSlug, updateFilters, userId, follow]
   );
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, userId);
+      return follow(() =>
+        updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, userId)
+      );
     },
-    [workspaceSlug, updateFilters, userId]
+    [workspaceSlug, updateFilters, userId, follow]
   );
 
   return (

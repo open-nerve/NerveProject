@@ -5,17 +5,19 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { RootStore } from "@/store/root.store";
 import { issueDetailOf } from "@/store/issue/fake-issues";
-import { loadProjects } from "@/store/project/fake-projects";
+import { loadProjects, stateOf } from "@/store/project/fake-projects";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection";
+import { IssueDetailQuickActions } from "../issue-detail/issue-detail-quick-actions";
 import { IssueDetailHost } from "../detail-host";
 import { useIssueOperations } from "../issue-detail/use-issue-operations";
 import { ArchivedIssueQuickActions } from "../issue-layouts/quick-action-dropdowns/archived-issue";
+import { IssueListCommandHost } from "../issue-layouts/command-host";
 import { IssueView } from "./view";
 import { openIssuePeek } from "./selection";
-const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined }));
+const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, navigate: vi.fn() }));
 vi.mock("@/lib/store-context", async () => ({
   get rootStore() {
     return bound.app;
@@ -26,6 +28,7 @@ vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one
 vi.mock("react-router", async (original) => ({
   ...(await original<typeof import("react-router")>()),
   useParams: () => ({ workspaceSlug: "ws", projectId: "A" }),
+  useNavigate: () => bound.navigate,
 }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
@@ -42,32 +45,44 @@ beforeEach(async () => {
   tab = await issueSelectionTab();
   bound.app = tab.app;
   toasts.length = 0;
+  bound.navigate.mockReset();
   for (const id of ["old", "next"]) tab.app.issue.issues.acceptRead(archived(id), tab.app.issue.captureRead());
 });
 afterEach(async () => tab.close());
-function Peek({ id }: { id: string }) {
+function Peek({ id, isArchived = true }: { id: string; isArchived?: boolean }) {
   const operations = useIssueOperations("ws", "A", id);
   return (
     <IssueDetailHost workspaceSlug="ws" projectId="A" issueId={id}>
-      <IssueView workspaceSlug="ws" projectId="A" issueId={id} is_archived issueOperations={operations} embedIssue />
+      <IssueView
+        workspaceSlug="ws"
+        projectId="A"
+        issueId={id}
+        is_archived={isArchived}
+        issueOperations={operations}
+        embedIssue
+      />
     </IssueDetailHost>
   );
 }
-async function render(id = "old", kind: "peek" | "archived" = "peek") {
+async function render(id = "old", kind: "peek" | "archived" | "detail" = "peek") {
   openIssuePeek(tab.app.issue.issueDetail, { workspaceSlug: "ws", projectId: "A", issueId: id, isArchived: true });
   await tab.render(
     <MemoryRouter>
-      {kind === "peek" ? (
+      {kind === "detail" ? (
+        <IssueDetailQuickActions workspaceSlug="ws" projectId="A" issueId={id} />
+      ) : kind === "peek" ? (
         <Peek key={id} id={id} />
       ) : (
-        <ArchivedIssueQuickActions
-          issue={archived(id)}
-          parentRef={{ current: null }}
-          handleDelete={async () => {}}
-          handleRestore={async () => {
-            await tab.app.issue.archivedIssues.restoreIssue("ws", "A", id);
-          }}
-        />
+        <IssueListCommandHost>
+          <ArchivedIssueQuickActions
+            issue={archived(id)}
+            parentRef={{ current: null }}
+            handleDelete={async () => {}}
+            handleRestore={async () => {
+              await tab.app.issue.archivedIssues.restoreIssue("ws", "A", id);
+            }}
+          />
+        </IssueListCommandHost>
       )}
     </MemoryRouter>
   );
@@ -82,7 +97,7 @@ async function restore() {
   await until(() => writes().length === 1, "restore POST");
   expect(writes()[0]!.path).toBe("/api/v0/issues/old/unarchive");
 }
-it.each(["peek", "archived"] as const)(
+it.each(["peek", "archived", "detail"] as const)(
   "%s restore refusal shows exactly one native reason and remains archived",
   async (kind) => {
     await render("old", kind);
@@ -93,7 +108,7 @@ it.each(["peek", "archived"] as const)(
     if (kind === "peek") expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe("old");
   }
 );
-it.each(["peek", "archived"] as const)("%s restore confirms with exactly one success", async (kind) => {
+it.each(["peek", "archived", "detail"] as const)("%s restore confirms with exactly one success", async (kind) => {
   await render("old", kind);
   await restore();
   expect(toasts).toEqual([]);
@@ -102,12 +117,13 @@ it.each(["peek", "archived"] as const)("%s restore confirms with exactly one suc
   expect(tab.app.issue.issues.getIssueById("old")?.archived_at).toBeNull();
   if (kind === "peek") expect(tab.app.issue.issueDetail.peekIssue).toBeUndefined();
 });
-it.each(["peek", "archived"] as const)("%s old restore cannot report after host unmount", async (kind) => {
+it.each(["peek", "archived", "detail"] as const)("%s old restore cannot report after host unmount", async (kind) => {
   await render("old", kind);
   await restore();
   await tab.render(null);
   await act(async () => writes()[0]!.answer(json(200, restored())));
   expect(toasts).toEqual([]);
+  expect(bound.navigate).not.toHaveBeenCalled();
 });
 it.each(["replace", "unmount", "permission ABA"] as const)("old restore cannot report after %s", async (end) => {
   await render();
@@ -123,3 +139,60 @@ it.each(["replace", "unmount", "permission ABA"] as const)("old restore cannot r
   expect(toasts).toEqual([]);
   if (end === "replace") expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe("next");
 });
+
+it("the archive layout cannot report an old restore after its project permission leaves and returns", async () => {
+  await render("old", "archived");
+  await restore();
+  await act(async () => {
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+  });
+  await act(async () => writes()[0]!.answer(json(200, restored())));
+  expect(toasts).toEqual([]);
+  expect(bound.navigate).not.toHaveBeenCalled();
+});
+
+it.each([false, true])(
+  "actual peek archive has one outcome and closes only on confirmation (refused=%s)",
+  async (refused) => {
+    tab.app.issue.issues.acceptRead(issueDetailOf("old"), tab.app.issue.captureRead());
+    tab.nerve.respond = (call) => {
+      if (call.path.endsWith("/states"))
+        call.answer(json(200, { data: [stateOf(tab.project, "Done", "completed", 1, { id: "state" })] }));
+    };
+    await tab.app.state.fetchProjectStates("A");
+    openIssuePeek(tab.app.issue.issueDetail, { workspaceSlug: "ws", projectId: "A", issueId: "old" });
+    await tab.render(
+      <MemoryRouter>
+        <Peek id="old" isArchived={false} />
+      </MemoryRouter>
+    );
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-main-menu] > button")!.click());
+    const archive = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+      (item) => item.textContent === "common.actions.archive" && !item.closest("[inert]")
+    );
+    expect(archive).toBeDefined();
+    await act(async () => archive!.click());
+    const confirm = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(
+      (b) => b.textContent === "common.archive"
+    );
+    expect(confirm).toBeDefined();
+    await act(async () => confirm!.click());
+    await until(() => writes().length === 1, "archive POST");
+    expect(writes()[0]!.path).toBe("/api/v0/issues/old/archive");
+    await act(async () =>
+      writes()[0]!.answer(
+        refused
+          ? problem(422, "issue.not_archivable")
+          : json(200, { ...archived(), updated_at: "2026-10-31T00:00:00Z" })
+      )
+    );
+    expect(toasts).toEqual([
+      expect.objectContaining({
+        type: refused ? "error" : "success",
+        message: refused ? "errors.issue_not_archivable" : "issue.archive.success.message",
+      }),
+    ]);
+    expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe(refused ? "old" : undefined);
+  }
+);

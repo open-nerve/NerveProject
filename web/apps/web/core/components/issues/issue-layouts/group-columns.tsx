@@ -12,6 +12,7 @@ type ColumnScope = {
   workspaceSlug: string | undefined;
   projectId: string | undefined;
   isWorkspaceLevel: boolean;
+  groupIds?: Iterable<string>;
 };
 
 /** Synchronous directory projection. The host supplies the address and owns any directory reads/errors. */
@@ -111,17 +112,24 @@ function priorityColumns(): IGroupByColumn[] {
     payload: { priority: priority.key },
   }));
 }
-function labelColumns({ isWorkspaceLevel, projectId }: ColumnScope): IGroupByColumn[] {
-  // Cross-project labels remain the workspace view's responsibility; never borrow the router's project labels.
-  const labels = [
-    ...(isWorkspaceLevel ? [] : (rootStore.label.getProjectLabels(projectId) ?? [])),
-    { id: "none", name: "None", color: "#666" },
-  ];
-  return labels.map((label) => ({
-    id: label.id,
-    name: label.name,
-    icon: <div className="h-3 w-3 rounded-full" style={{ backgroundColor: label.color || "#666" }} />,
-    payload: label.id === "none" ? {} : { label_ids: [label.id] },
+function labelColumns({ isWorkspaceLevel, projectId, workspaceSlug, groupIds }: ColumnScope): IGroupByColumn[] {
+  const workspace = workspaceSlug ? rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug) : undefined;
+  const labels = isWorkspaceLevel
+    ? Object.values(rootStore.label.labelMap).filter((label) => {
+        const project = rootStore.projectRoot.project.getProjectById(label.project_id);
+        return (
+          project && project.workspace_id === workspace?.id && project.member_role !== null && !project.archived_at
+        );
+      })
+    : (rootStore.label.getProjectLabels(projectId) ?? []);
+  const held = new Map(labels.map((label) => [label.id, label]));
+  // The server owns group membership/counts. A cold catalog may withhold a name, never a returned group.
+  const ids = new Set([...held.keys(), ...(isWorkspaceLevel ? (groupIds ?? []) : []), "none"]);
+  return [...ids].map((id) => ({
+    id,
+    name: id === "none" ? "None" : (held.get(id)?.name ?? "—"),
+    icon: <div className="h-3 w-3 rounded-full" style={{ backgroundColor: held.get(id)?.color || "#666" }} />,
+    payload: id === "none" ? {} : { label_ids: [id] },
   }));
 }
 function memberIds(scope: ColumnScope): string[] {

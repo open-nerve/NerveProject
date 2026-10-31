@@ -22,8 +22,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUserPermissions } from "@/hooks/store/user";
 // helper
-import { ArchiveIssueModal } from "../../archive-issue-modal";
-import { DeleteIssueModal } from "../../delete-issue-modal";
+import { useArchiveRequest, useDeleteRequest } from "../command-host";
 import { CreateUpdateIssueModal } from "../../issue-modal/modal";
 import type { IQuickActionProps } from "../list/list-view-types";
 import type { MenuItemFactoryProps } from "./helper";
@@ -47,8 +46,8 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
   // states
   const [createUpdateIssueModal, setCreateUpdateIssueModal] = useState(false);
   const [issueToEdit, setIssueToEdit] = useState<Issue | undefined>(undefined);
-  const [deleteIssueModal, setDeleteIssueModal] = useState(false);
-  const [archiveIssueModal, setArchiveIssueModal] = useState(false);
+  const requestDelete = useDeleteRequest();
+  const requestArchive = useArchiveRequest();
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { getStateById } = useProjectState();
@@ -98,8 +97,16 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
     isInArchivableGroup,
     setIssueToEdit,
     setCreateUpdateIssueModal,
-    setDeleteIssueModal,
-    setArchiveIssueModal,
+    setDeleteIssueModal: () => {
+      if (!requestDelete) throw new Error("Project issue actions require an IssueListCommandHost");
+      requestDelete(issue, handleDelete);
+    },
+    setArchiveIssueModal: () => {
+      if (handleArchive) {
+        if (!requestArchive) throw new Error("Project issue actions require an IssueListCommandHost");
+        requestArchive(issue, handleArchive);
+      }
+    },
   };
 
   const MENU_ITEMS = useProjectIssueMenuItems(menuItemProps);
@@ -117,18 +124,6 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
   return (
     <>
       {/* Modals */}
-      <ArchiveIssueModal
-        data={issue}
-        isOpen={archiveIssueModal}
-        handleClose={() => setArchiveIssueModal(false)}
-        onSubmit={handleArchive}
-      />
-      <DeleteIssueModal
-        data={issue}
-        isOpen={deleteIssueModal}
-        handleClose={() => setDeleteIssueModal(false)}
-        onSubmit={handleDelete}
-      />
       <CreateUpdateIssueModal
         isOpen={createUpdateIssueModal}
         onClose={() => {

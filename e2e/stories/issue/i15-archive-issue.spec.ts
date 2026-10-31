@@ -29,7 +29,12 @@ import {
   createIssueComment,
   createIssueReaction,
 } from "../../fixtures/comments";
-import { bearer, newAccount } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, newAccount } from "../../fixtures/auth";
+import { watchPage } from "../../fixtures/browser";
+import { modalDialog, sentWithin } from "../../fixtures/dialogs";
+import { addCondition } from "../../fixtures/issue-filters-page";
+import { expectListPageQuiet, issueListProject, openIssueList } from "../../fixtures/issue-list-page";
+import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import {
   createIssue,
   createIssueRelations,
@@ -212,4 +217,306 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   // either way among them.
   expect(await issueDeleted(api, admin.token, id)).toEqual({ status: 204 });
   await expectIssueDeleted(db, id, admin.email);
+});
+
+test("I15 (page): a terminal row archives once while pending, its saved archive filter survives reload, its detail is read-only and restore returns it once", async ({
+  api,
+  db,
+  page,
+  browserName,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const { member, project, states, slug } = seed;
+  const item = await createIssue(api, member.token, project.id, {
+    name: "Archive this terminal item",
+    state_id: states.Done,
+    priority: "high",
+    description_html: "<p>Keep this description</p>",
+  });
+  const contrast = await createIssue(api, member.token, project.id, {
+    name: "Other archive",
+    state_id: states.Done,
+    priority: "low",
+  });
+  expect((await issueArchived(api, member.token, contrast.id)).status).toBe(200);
+  const { watch } = await openIssueList(page, seed);
+  await page.getByRole("button", { name: `Options: ${item.name}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: "Archive", exact: true }).click();
+  const dialog = modalDialog(page);
+  await expect(dialog).toHaveAccessibleName(`Archive Work item WEB ${item.sequence_id}`);
+  const archive = `/api/v0/issues/${item.id}/archive`;
+  const held = await sentHeld(page, "POST", archive, () =>
+    dialog.getByRole("button", { name: "Archive", exact: true }).dblclick()
+  );
+  await expect(dialog.getByRole("button", { name: "Archiving", exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(1);
+  expect(watch.apiRequests.filter((request) => request === `POST ${archive}`)).toHaveLength(1);
+  expect((await held.release()).status()).toBe(200);
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText("Archive success", { exact: true })).toHaveCount(1);
+  await expect(page.locator(`[id^="issue_${item.id}_"]`)).toHaveCount(0);
+  await expectIssueArchival(db, item.id, {
+    archived: true,
+    by: member.email,
+    activity: [...createdFor(), archivedRow],
+  });
+
+  const archives = `/${slug}/projects/${project.id}/archives/issues`;
+  await page.goto(archives);
+  await expect(page.locator(`[id^="issue_${item.id}_"]`)).toBeAttached();
+  await addCondition(page, "Priority");
+  await page.getByRole("option", { name: "High", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(`[id^="issue_${contrast.id}_"]`)).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator(`[id^="issue_${item.id}_"]`)).toBeAttached();
+  await expect(page.locator(`[id^="issue_${contrast.id}_"]`)).toHaveCount(0);
+  expect(
+    watch.apiRequests.filter((request) => request.startsWith("PATCH ") && request.endsWith("/preferences"))
+  ).toEqual([]);
+  await page.goto(`${archives}/${item.id}`);
+  await expect(page.getByText(item.name, { exact: true })).toBeVisible();
+  await expect(page.getByText("Keep this description", { exact: true })).toBeVisible();
+  await expect(page.locator('textarea, [contenteditable="true"]')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add comment", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add link", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add relation", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add sub-work item", exact: true })).toHaveCount(0);
+  const writesBefore = watch.apiRequests.filter((request) =>
+    /^(PATCH|POST|DELETE) \/api\/v0\/(issues|comments)/.test(request)
+  );
+  expect(writesBefore).toEqual([`POST ${archive}`]);
+  await page.getByRole("button", { name: `Options: ${item.name}`, exact: true }).click();
+  const restore = `/api/v0/issues/${item.id}/unarchive`;
+  expect(
+    (
+      await answerTo(page, "POST", restore, () => page.getByRole("menuitem", { name: "Restore", exact: true }).click())
+    ).status()
+  ).toBe(200);
+  await expect(page.getByText("Restore success", { exact: true })).toHaveCount(1);
+  await expectIssueArchival(db, item.id, {
+    archived: false,
+    by: member.email,
+    activity: [...createdFor(), archivedRow, restoredRow],
+  });
+  expect(watch.apiRequests.filter((request) => request === `POST ${restore}`)).toHaveLength(1);
+  // Let the restore's real redirect and detail read finish before starting another document navigation.
+  await expect(page).toHaveURL(`/${slug}/browse/WEB-${item.sequence_id}`);
+  await expect(page.getByRole("button", { name: "Add sub-work item", exact: true })).toBeVisible();
+  await page.goto(seed.path);
+  await expect(page.locator(`[id^="issue_${item.id}_"]`)).toBeAttached();
+  await expectListPageQuiet(page, watch, browserName, 5);
+});
+
+test("I15 (page): a nonterminal row offers no archive; a refused archive keeps its dialog and a late confirmed archive after Back cannot change the new page", async ({
+  api,
+  db,
+  page,
+  browserName,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const { member, project, states, slug } = seed;
+  const active = await createIssue(api, member.token, project.id, {
+    name: "Still in progress",
+    state_id: states["In Progress"],
+  });
+  const item = await createIssue(api, member.token, project.id, { name: "Terminal to refuse", state_id: states.Done });
+  const { watch } = await openIssueList(page, seed);
+  await page.getByRole("button", { name: `Options: ${active.name}`, exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: /^Archive/ })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  const archive = `/api/v0/issues/${item.id}/archive`;
+  let refuse = true;
+  await page.route(`**${archive}`, async (route) => {
+    if (route.request().method() !== "POST" || !refuse) return route.fallback();
+    refuse = false;
+    await route.fulfill({
+      status: 403,
+      contentType: "application/problem+json",
+      body: JSON.stringify({ type: "about:blank", title: "Forbidden", status: 403, code: "forbidden" }),
+    });
+  });
+  await page.getByRole("button", { name: `Options: ${item.name}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: "Archive", exact: true }).click();
+  const dialog = modalDialog(page);
+  expect(
+    (
+      await answerTo(page, "POST", archive, () => dialog.getByRole("button", { name: "Archive", exact: true }).click())
+    ).status()
+  ).toBe(403);
+  await expect(dialog).toHaveCount(1);
+  await expect(page.getByText("Your role does not allow this.", { exact: true })).toHaveCount(1);
+  await expectIssueArchival(db, item.id, { archived: false, by: member.email, activity: createdFor() });
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  // Establish a client-side Back target, then keep only the POST's confirmed response in flight.
+  await page
+    .getByRole("complementary", { name: "Main sidebar", exact: true })
+    .getByRole("link", { name: "Projects", exact: true })
+    .click();
+  await expect(page).toHaveURL(`/${slug}/projects`);
+  await page.getByRole("heading", { name: "Web", exact: true }).click();
+  await expect(page).toHaveURL(seed.path);
+  await page.getByRole("button", { name: `Options: ${item.name}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: "Archive", exact: true }).click();
+  const held = await sentHeld(page, "POST", archive, () =>
+    modalDialog(page).getByRole("button", { name: "Archive", exact: true }).click()
+  );
+  await page.goBack();
+  await expect(page).toHaveURL(`/${slug}/projects`);
+  await expect(modalDialog(page)).toHaveCount(0);
+  expect((await held.release()).status()).toBe(200);
+  await expect(page).toHaveURL(`/${slug}/projects`);
+  await expect(page.getByText("Archive success", { exact: true })).toHaveCount(0);
+  await expectIssueArchival(db, item.id, {
+    archived: true,
+    by: member.email,
+    activity: [...createdFor(), archivedRow],
+  });
+  expect(watch.apiRequests.filter((request) => request === `POST ${archive}`)).toHaveLength(2);
+  await expectListPageQuiet(page, watch, browserName, 1, {
+    failures: [`403 POST ${archive}`],
+    errors:
+      browserName === "chromium" || browserName === "webkit"
+        ? ["Failed to load resource: the server responded with a status of 403 (Forbidden)"]
+        : [],
+  });
+});
+
+test("I15 (page): an admin deletes an archived item through its read-only detail and every dependent row shares the deletion stamp", async ({
+  api,
+  db,
+  page,
+  browserName,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const { member, project, states, slug } = seed;
+  const label = await createLabel(api, member.token, project.id, { name: "Complete graph" });
+  const item = await createIssue(api, member.token, project.id, {
+    name: "Archived parent to delete",
+    state_id: states.Done,
+    assignee_ids: [member.id],
+    label_ids: [label.id],
+    description_html: `<mention-component entity_name="user_mention" entity_identifier="${member.id}"></mention-component>`,
+  });
+  const child = await createIssue(api, member.token, project.id, { name: "Dependent child" });
+  const one = await createIssue(api, member.token, project.id, { name: "Related forward" });
+  const two = await createIssue(api, member.token, project.id, { name: "Related backward" });
+  expect((await subIssuesAdded(api, member.token, item.id, [child.id])).status).toBe(200);
+  await createIssueRelations(api, member.token, item.id, { relation_type: "relates_to", issue_ids: [one.id] });
+  await createIssueRelations(api, member.token, item.id, { relation_type: "blocking", issue_ids: [two.id] });
+  await createIssueLink(api, member.token, item.id, { url: `http://169.254.169.254/i15-page/${item.id}` });
+  const comment = await createIssueComment(api, member.token, item.id, "<p>Read-only discussion</p>");
+  await createCommentReaction(api, member.token, comment.id);
+  await createIssueReaction(api, member.token, item.id);
+  expect((await issueArchived(api, member.token, item.id)).status).toBe(200);
+  const archives = `/${slug}/projects/${project.id}/archives/issues`;
+  const { watch } = await openIssueList(page, { ...seed, path: `${archives}/${item.id}` });
+  await expect(page.getByText(item.name, { exact: true })).toBeVisible();
+  await expect(page.getByText("Read-only discussion", { exact: true })).toBeVisible();
+  await expect(page.locator('textarea, [contenteditable="true"]')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add relation", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add link", exact: true })).toHaveCount(0);
+  const path = `/api/v0/issues/${item.id}`;
+  // Header and detail each load the core; the child loader also verifies the parent before rendering.
+  // Their initial core requests may coalesce. A stable read-only interaction must not restart any of them.
+  const parentReads = watch.apiRequests.filter((request) => request === `GET ${path}`).length;
+  expect(await sentWithin(page, "PATCH", path, () => page.getByText(item.name, { exact: true }).dblclick())).toBe(
+    false
+  );
+  expect(watch.apiRequests.filter((request) => request === `GET ${path}`)).toHaveLength(parentReads);
+  expect(watch.apiRequests.filter((request) => request === `GET ${path}/sub-issues`)).toHaveLength(1);
+  await page.getByRole("button", { name: `Options: ${item.name}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  const dialog = modalDialog(page);
+  expect(
+    (
+      await answerTo(page, "DELETE", path, () => dialog.getByRole("button", { name: "Delete", exact: true }).click())
+    ).status()
+  ).toBe(204);
+  await expect(page).toHaveURL(archives);
+  await expectIssueDeleted(db, item.id, member.email);
+  expect(
+    watch.apiRequests.filter((request) => /^(PATCH|POST|DELETE) \/api\/v0\/(issues|comments)/.test(request))
+  ).toEqual([`DELETE ${path}`]);
+  await expectListPageQuiet(page, watch, browserName, 1);
+});
+
+test("I15 (page): a parent with children stays mounted in active detail and peek without restarting its child read", async ({
+  api,
+  page,
+  browserName,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const parent = await createIssue(api, seed.member.token, seed.project.id, { name: "Stable parent" });
+  const child = await createIssue(api, seed.member.token, seed.project.id, {
+    name: "Stable child",
+    parent_id: parent.id,
+  });
+  const { watch } = await openIssueList(page, seed);
+  await page.locator(`#issue-${parent.id}`).click();
+  const peek = page.locator("#full-screen-portal");
+  await expect(peek.getByText(child.name, { exact: true })).toBeVisible();
+  const parentRead = `GET /api/v0/issues/${parent.id}`;
+  const childrenRead = `${parentRead}/sub-issues`;
+  await peek.getByRole("button", { name: "Add relation", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Relates to", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  expect(watch.apiRequests.filter((request) => request === childrenRead)).toHaveLength(1);
+  expect(watch.apiRequests.filter((request) => request === parentRead)).toHaveLength(2);
+  await peek.getByRole("button", { name: "Close the peek view", exact: true }).click();
+  await page.goto(`/${seed.slug}/browse/WEB-${parent.sequence_id}`);
+  await expect(page.getByText(child.name, { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Add relation", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Relates to", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  expect(watch.apiRequests.filter((request) => request === childrenRead)).toHaveLength(2);
+  expect(watch.apiRequests.filter((request) => request === parentRead)).toHaveLength(3);
+  await expectListPageQuiet(page, watch, browserName, 2);
+});
+
+test("I15 (page): a project guest may read a visible archived detail without write controls but never mounts the archived list", async ({
+  api,
+  page,
+  signedInPage,
+  browserName,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const { member, project, states, slug } = seed;
+  const tokens = await registerOnboarded(api, emailFor(info, "archive-guest"));
+  const guest = {
+    id: await accountId(api, tokens.access_token),
+    token: tokens.access_token,
+    email: emailFor(info, "archive-guest"),
+  };
+  await inviteAndAccept(api, member.token, slug, guest, 5);
+  await addProjectMembers(api, member.token, project.id, [{ member_id: guest.id, role: 5 }]);
+  await changeProject(api, member.token, project.id, { guest_view_all_features: true });
+  const item = await createIssue(api, member.token, project.id, {
+    name: "Visible guest archive",
+    state_id: states.Done,
+    description_html: "<p>Guest reads this</p>",
+  });
+  expect((await issueArchived(api, member.token, item.id)).status).toBe(200);
+  await signedInPage(tokens);
+  const watch = await watchPage(page);
+  const archives = `/${slug}/projects/${project.id}/archives/issues`;
+  await page.goto(`${archives}/${item.id}`);
+  await expect(page.getByText(item.name, { exact: true })).toBeVisible();
+  await expect(page.getByText("Guest reads this", { exact: true })).toBeVisible();
+  await expect(page.locator('textarea, [contenteditable="true"]')).toHaveCount(0);
+  await page.getByRole("button", { name: `Options: ${item.name}`, exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Restore", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: "Delete", exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await page.goto(archives);
+  await expect(page).toHaveTitle(/Archived work items/);
+  await expect(page.getByRole("button", { name: "Display", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add filter", exact: true })).toHaveCount(0);
+  expect(watch.apiRequests.filter((request) => request === `GET /api/v0/projects/${project.id}/issues`)).toEqual([]);
+  expect(
+    watch.apiRequests.filter((request) => /^(PATCH|POST|DELETE) \/api\/v0\/(issues|comments)/.test(request))
+  ).toEqual([]);
+  await expectListPageQuiet(page, watch, browserName, 2);
 });

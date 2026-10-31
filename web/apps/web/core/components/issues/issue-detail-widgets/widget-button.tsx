@@ -6,20 +6,19 @@
 
 import React from "react";
 // helpers
-import { Button } from "@nerve/propel/button";
+import { getButtonStyling } from "@nerve/propel/button";
 
 type Props = {
   icon: React.ReactNode;
   title: string;
-  disabled?: boolean;
 };
 
 export function IssueDetailWidgetButton(props: Props) {
-  const { icon, title, disabled = false } = props;
+  const { icon, title } = props;
   return (
-    <Button variant="secondary" disabled={disabled} size="lg">
-      {icon && icon}
+    <span className={getButtonStyling("secondary", "lg")}>
+      {icon}
       <span className="text-body-xs-medium">{title}</span>
-    </Button>
+    </span>
   );
 }

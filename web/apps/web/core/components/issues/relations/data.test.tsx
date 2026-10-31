@@ -8,6 +8,8 @@ import { configure } from "mobx";
 import type { Issue } from "@nerve/api-client";
 import type { IssuesModalProps } from "../issue-modal/modal";
 import { issueDetailOf, issueStoreTab } from "@/store/issue/fake-issues";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { track, until } from "@/lib/auth/fake-time";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { RelationsCollapsibleContent } from "../issue-detail-widgets/relations/content";
 import { RelationIssueListItem } from "./issue-list-item";
@@ -256,18 +258,40 @@ it("the actual cross-project row removes its relation in the source project's sc
   await act(async () => nerve.calls[0]!.answer(problem(403, "forbidden")));
   expect(app.issue.issueDetail.relation.getRelationsByIssueId("source")?.blocking).toEqual(["cross"]);
 });
-it("a failed child read offers retry and displays the children after that read succeeds", async () => {
+function prepareDetailReads() {
   const { nerve } = binding.tab!;
   nerve.respond = (call) => {
     if (call.path === "/api/v0/projects/A/states") call.answer(json(200, { data: [] }));
     if (call.path === "/api/v0/issues/source") call.answer(json(200, issueDetailOf("source")));
+    if (/\/issues\/source\/(reactions|links|comments|relations)$/.test(call.path))
+      call.answer(json(200, { data: [], next_cursor: null }));
   };
+}
+async function loadDetailChildren() {
+  const { app, nerve } = binding.tab!;
+  const path = "/api/v0/issues/source/sub-issues";
+  const before = nerve.to(path).length;
+  const promise = app.issue.issueDetail.fetchIssue("ws", "A", "source");
+  const result = track(promise);
+  await until(() => nerve.to(path).length > before || result.settled, "detail-owned child read");
+  expect(result.settled).toBe(false);
+  expect(nerve.to(path)).toHaveLength(before + 1);
+  return { promise };
+}
+it("a failed child read offers retry and displays the children after that read succeeds", async () => {
+  const { nerve } = binding.tab!;
+  prepareDetailReads();
+  // The page's real detail loader owns initial resource reads; the widget owns display and retry.
+  const initial = await loadDetailChildren();
+  const rejected = expect(initial.promise).rejects.toMatchObject({ status: 500 });
   await act(async () =>
     renderer.render(
       <SubIssuesCollapsibleContent workspaceSlug="ws" projectId="A" parentIssueId="source" disabled={false} />
     )
   );
+  expect(nerve.to("/api/v0/issues/source/sub-issues")).toHaveLength(1);
   await act(async () => nerve.to("/api/v0/issues/source/sub-issues")[0]!.answer(problem(500, "unavailable")));
+  await rejected;
   expect(container.querySelector('[role="alert"]')).not.toBeNull();
   expect(container.querySelector("[data-subitems]")).toBeNull();
   await act(async () =>
@@ -280,6 +304,7 @@ it("a failed child read offers retry and displays the children after that read s
   );
   expect(container.querySelector('[role="alert"]')).toBeNull();
   expect(container.querySelector("[data-subitems]")).not.toBeNull();
+  expect(nerve.to("/api/v0/issues/source/sub-issues")).toHaveLength(2);
 });
 it("the real detail host still offers resource retry while its canonical issue is awaiting verification", async () => {
   const { app, nerve } = binding.tab!;
@@ -322,13 +347,12 @@ it("the real detail host still offers resource retry while its canonical issue i
 });
 
 it.each(["old-first", "new-first"])(
-  "reopening a child tree owns its pending read independently (%s)",
+  "reopening a child tree follows the current detail read without restarting it (%s)",
   async (order) => {
     const { nerve } = binding.tab!;
-    nerve.respond = (call) => {
-      if (call.path === "/api/v0/projects/A/states") call.answer(json(200, { data: [] }));
-      if (call.path === "/api/v0/issues/source") call.answer(json(200, issueDetailOf("source")));
-    };
+    prepareDetailReads();
+    const initial = await loadDetailChildren();
+    const stale = expect(initial.promise).rejects.toBeInstanceOf(SessionChangedError);
     const view = (
       <SubIssuesCollapsibleContent workspaceSlug="ws" projectId="A" parentIssueId="source" disabled={false} />
     );
@@ -336,6 +360,7 @@ it.each(["old-first", "new-first"])(
     const path = "/api/v0/issues/source/sub-issues";
     expect(nerve.to(path)).toHaveLength(1);
     await act(async () => renderer.render(null));
+    const current = await loadDetailChildren();
     await act(async () => renderer.render(view));
     expect(nerve.to(path)).toHaveLength(2);
     const answer = (index: number) => act(async () => nerve.to(path)[index]!.answer(json(200, { data: [] })));
@@ -347,7 +372,10 @@ it.each(["old-first", "new-first"])(
       await answer(1);
       await answer(0);
     }
+    await stale;
+    await current.promise;
     expect(container.querySelector("[data-subitems]")).not.toBeNull();
+    expect(nerve.to(path)).toHaveLength(2);
   }
 );
 

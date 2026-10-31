@@ -33,7 +33,7 @@ export class ProfileIssues extends BaseIssuesStore {
     const workspaceID = this.rootIssueStore.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id;
     if (!workspaceID) return Promise.resolve(undefined);
     this.setViewId(view);
-    const filters = this.issueFilterStore.getIssueFilters(userID);
+    const filters = this.issueFilterStore.getIssueFilters(userID, workspaceSlug);
     const expression = filters?.richFilters ?? {};
     const query = {
       ...memberListQuery(toMemberFilters(expression), filters?.displayFilters, view),

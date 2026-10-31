@@ -10,12 +10,5 @@ import { ArchivedIssueQuickActions } from "../../quick-action-dropdowns";
 import { BaseListRoot } from "../base-list-root";
 
 export const ArchivedIssueListLayout = observer(function ArchivedIssueListLayout() {
-  const canEditPropertiesBasedOnProject = () => false;
-
-  return (
-    <BaseListRoot
-      QuickActions={ArchivedIssueQuickActions}
-      canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
-    />
-  );
+  return <BaseListRoot QuickActions={ArchivedIssueQuickActions} />;
 });
