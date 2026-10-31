@@ -68,11 +68,11 @@ make e2e
 **Files：** spec T2；`C/lib/{refused-focus,form-refusal}.ts` 只复用；新 `C/components/issues/detail-fields.test.tsx`；`E/stories/issue/i2-update-issue.spec.ts`。
 **Interfaces：** `IssueTitleInput` 原 props、IssueUpdate 原字段；useRefusedFocus 的 attempt 仅在失败尝试变化。Field/FieldError 的 id 描述由既有机制管理；label-select 删除 baseTabIndex 后同 Task 删实际传参。
 
-- [ ] Step 1：写 `announcesRefusalBeforeFocus`、`doesNotMoveFocusWhileTyping` 和属性清除/双日期测试；页面通过真实输入逐项修改标题、状态、优先级、两负责人/标签及日期，记录 PATCH 与 DB。
-- [ ] Step 2：运行 `core/components/issues/detail-fields.test.tsx core/components/issues/autosave.test.tsx`，失败须指向可读错误/焦点或具体属性，不以 mock 替代 FieldError 的 DOM 行为。
-- [ ] Step 3：完成字段错误、标签焦点顺序、已有 dropdown 在弹窗的 modal=false/嵌套按钮缺口；同步文案与所有调用，不改变日期原子写合同。
-- [ ] Step 4：I2 页面用 recordFocuses 证明空白/超长/服务端字段拒绝时焦点已经 aria-invalid+description；M02 去错误关联/M03 让错误时机提前分别红，恢复绿。
-- [ ] Step 5：属性矩阵、A2 台账和精确提交 `feat(M4/P14): 完善详情字段反馈与键盘操作`。
+- [x] Step 1：写 `announcesRefusalBeforeFocus`、`doesNotMoveFocusWhileTyping` 和属性清除/双日期测试；页面通过真实输入逐项修改标题、状态、优先级、两负责人/标签及日期，记录 PATCH 与 DB。
+- [x] Step 2：运行 `core/components/issues/detail-fields.test.tsx core/components/issues/autosave.test.tsx`，失败须指向可读错误/焦点或具体属性，不以 mock 替代 FieldError 的 DOM 行为。
+- [x] Step 3：完成字段错误、标签焦点顺序、已有 dropdown 在弹窗的 modal=false/嵌套按钮缺口；同步文案与所有调用，不改变日期原子写合同。
+- [x] Step 4：I2 页面用 recordFocuses 证明空白/超长/服务端字段拒绝时焦点已经 aria-invalid+description；M02 去错误关联/M03 让错误时机提前分别红，恢复绿。
+- [x] Step 5：属性矩阵、A2 台账和精确提交 `feat(M4/P14): 完善详情字段反馈与键盘操作`。
 
 ## Task 3：描述保存与 I2 描述（约 400–850 行）
 

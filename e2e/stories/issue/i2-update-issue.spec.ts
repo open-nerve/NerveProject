@@ -21,11 +21,181 @@ import { newAccount, shownNameOf } from "../../fixtures/auth";
 import { createIssue, issueArchived, issueUpdated, updateIssue, type IssueUpdate } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
+import { recordFocuses } from "../../fixtures/browser";
+import { openIssueDetail } from "../../fixtures/issue-detail-page";
+import { expectListPageQuiet, issueListProject } from "../../fixtures/issue-list-page";
+import { answerTo, bodiesSentTo } from "../../fixtures/settings-pages";
 
 // I2, changing a work item (M4 design 2, 3.7, 3.13): the API version, with P1b's assertions (its name, state,
 // priority, assignees and labels, each change's rows of its activity, completed_at, who changed it last and when) and
 // P2's (its dates and their rows, the dates held in order once merged, an archived work item not changed). The
-// description cases are in i2-description.spec.ts; the page version is P14's.
+// description cases are in i2-description.spec.ts; P14's real detail page version follows.
+
+test("I2 (page): the detail announces title refusals before focus, saves each property through its real control and clears selected collections and dates", async ({
+  api,
+  db,
+  page,
+  browserName,
+}, info) => {
+  test.setTimeout(60_000);
+  const seed = await issueListProject(api, info);
+  const colleague = await newAccount(api, info, "colleague");
+  await inviteAndAccept(api, seed.member.token, seed.slug, colleague, 15);
+  await addProjectMembers(api, seed.member.token, seed.project.id, [{ member_id: colleague.id, role: 15 }]);
+  const bug = await createLabel(api, seed.member.token, seed.project.id, { name: "Bug" });
+  const ui = await createLabel(api, seed.member.token, seed.project.id, { name: "UI" });
+  const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Original detail" });
+  const path = `/api/v0/issues/${issue.id}`;
+  const watch = await openIssueDetail(page, seed, issue);
+  const bodies = await bodiesSentTo(page, "PATCH", path);
+  const title = page.getByRole("textbox", { name: "Work item title", exact: true });
+  const titleId = await title.getAttribute("id");
+  const state = page.getByRole("button", { name: "State: Backlog", exact: true });
+  // Ordinary revalidation keeps focus where the person put it. Only a refused save refocuses its field.
+  await (
+    [
+      ["   ", "Title is required"],
+      ["x".repeat(256), "Too long"],
+    ] as const
+  ).reduce(async (previous, [value, description]) => {
+    await previous;
+    await title.fill(value);
+    await state.focus();
+    const focuses = await recordFocuses(page);
+    await expect(title).toBeFocused();
+    expect((await focuses()).at(-1)).toEqual({ id: titleId, invalid: "true", description });
+    expect(bodies).toEqual([]);
+  }, Promise.resolve());
+  const focuses = await recordFocuses(page);
+  const refusal = await answerTo(page, "PATCH", path, async () => {
+    await title.fill("Invalid\u0000title");
+    await state.focus();
+  });
+  expect(refusal.status()).toBe(422);
+  await expect(title).toBeFocused();
+  expect((await focuses()).at(-1)).toEqual({
+    id: titleId,
+    invalid: "true",
+    description: "The format is not valid",
+  });
+  expect(await db.query("SELECT name FROM issues WHERE id=$1", [issue.id])).toEqual([{ name: "Original detail" }]);
+
+  const patches: IssueUpdate[] = [];
+  const change = async (body: IssueUpdate, act: () => Promise<void>) => {
+    const previous = bodies.length;
+    expect((await answerTo(page, "PATCH", path, act)).status()).toBe(200);
+    expect(bodies.slice(previous)).toEqual([body]);
+    patches.push(body);
+  };
+  await change({ name: "Edited detail" }, () => title.fill("Edited detail"));
+  await expect(title).not.toHaveAttribute("aria-invalid", "true");
+  await state.click();
+  await change({ state_id: seed.states.Done }, () => page.getByRole("option", { name: "Done", exact: true }).click());
+  await expect(page.getByRole("button", { name: "State: Done", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Priority: None", exact: true }).click();
+  await change({ priority: "high" }, () => page.getByRole("option", { name: "High", exact: true }).click());
+  const members = page.getByText("Assignees", { exact: true }).locator("../..").getByRole("button");
+  await members.click();
+  await change({ assignee_ids: [seed.member.id] }, () => page.getByRole("option", { name: /You$/ }).click());
+  await change({ assignee_ids: [seed.member.id, colleague.id] }, () =>
+    page
+      .getByRole("option")
+      .filter({ hasText: shownNameOf(colleague.email) })
+      .click()
+  );
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Labels: Edited detail", exact: true }).click();
+  await change({ label_ids: [bug.id] }, () => page.getByRole("option", { name: "Bug", exact: true }).click());
+  await change({ label_ids: [bug.id, ui.id] }, () => page.getByRole("option", { name: "UI", exact: true }).click());
+  await page.keyboard.press("Escape");
+  await (
+    [
+      ["Add start date", 10, { start_date: "2026-11-10" }],
+      ["Add due date", 20, { target_date: "2026-11-20" }],
+    ] as const
+  ).reduce(async (previous, [label, day, body]) => {
+    await previous;
+    await page.getByRole("button", { name: label, exact: true }).click();
+    const calendar = page.getByRole("dialog", { name: label, exact: true });
+    await calendar.getByRole("combobox", { name: "Choose the Year" }).selectOption("2026");
+    await calendar.getByRole("combobox", { name: "Choose the Month" }).selectOption("10");
+    await change(body, () =>
+      calendar.getByRole("button", { name: new RegExp(`November ${day}(?:th|st|nd|rd), 2026`) }).click()
+    );
+  }, Promise.resolve());
+  expect(
+    await db.query(
+      `SELECT i.name, s.name AS state, i.priority, to_char(i.start_date, 'YYYY-MM-DD') AS start_date,
+              to_char(i.target_date, 'YYYY-MM-DD') AS target_date, i.completed_at IS NOT NULL AS completed
+         FROM issues i JOIN states s ON s.id=i.state_id WHERE i.id=$1`,
+      [issue.id]
+    )
+  ).toEqual([
+    {
+      name: "Edited detail",
+      state: "Done",
+      priority: "high",
+      start_date: "2026-11-10",
+      target_date: "2026-11-20",
+      completed: true,
+    },
+  ]);
+  expect(
+    await db.query(
+      "SELECT assignee_id::text AS id FROM issue_assignees WHERE issue_id=$1 AND deleted_at IS NULL ORDER BY assignee_id",
+      [issue.id]
+    )
+  ).toEqual([seed.member.id, colleague.id].toSorted().map((id) => ({ id })));
+  expect(
+    await db.query(
+      "SELECT label_id::text AS id FROM issue_labels WHERE issue_id=$1 AND deleted_at IS NULL ORDER BY label_id",
+      [issue.id]
+    )
+  ).toEqual([bug.id, ui.id].toSorted().map((id) => ({ id })));
+
+  await members.click();
+  await change({ assignee_ids: [colleague.id] }, () => page.getByRole("option", { name: /You$/ }).click());
+  await change({ assignee_ids: [] }, () =>
+    page
+      .getByRole("option")
+      .filter({ hasText: shownNameOf(colleague.email) })
+      .click()
+  );
+  await page.keyboard.press("Escape");
+  const labels = page.getByText("Labels", { exact: true }).locator("../..");
+  await change({ label_ids: [ui.id] }, () => labels.getByRole("button", { name: "Bug", exact: true }).click());
+  await change({ label_ids: [] }, () => labels.getByRole("button", { name: "UI", exact: true }).click());
+  await page.getByRole("button", { name: "Add start date", exact: true }).hover();
+  await change({ start_date: null }, () =>
+    page.getByRole("button", { name: "Clear date: Add start date", exact: true }).click()
+  );
+  await page.getByRole("button", { name: "Add due date", exact: true }).hover();
+  await change({ target_date: null }, () =>
+    page.getByRole("button", { name: "Clear date: Add due date", exact: true }).click()
+  );
+  expect(
+    await db.query(
+      `SELECT start_date, target_date,
+       (SELECT count(*)::int FROM issue_assignees WHERE issue_id=i.id AND deleted_at IS NULL) AS assignees,
+       (SELECT count(*)::int FROM issue_labels WHERE issue_id=i.id AND deleted_at IS NULL) AS labels
+     FROM issues i WHERE id=$1`,
+      [issue.id]
+    )
+  ).toEqual([{ start_date: null, target_date: null, assignees: 0, labels: 0 }]);
+  expect(bodies).toEqual([{ name: "Invalid\u0000title" }, ...patches]);
+  expect(
+    await page
+      .locator("[tabindex]")
+      .evaluateAll((nodes) => nodes.filter((node) => Number(node.getAttribute("tabindex")) > 0).length)
+  ).toBe(0);
+  await expectListPageQuiet(page, watch, browserName, 1, {
+    failures: [`422 PATCH ${path}`],
+    errors:
+      browserName === "chromium"
+        ? ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"]
+        : [],
+  });
+});
 
 test("I2 (API): a member renames a work item; another makes it high and moves it to a completed state, which completes it; the first assigns it to another account instead of himself and labels it otherwise, the others kept, taking off rows the second wrote; its values sent as they are write nothing; an account and a label added again and a new label, the two labels out of their ids' order, are added in id order; a label, then an account, taken off alone each change it, the rows taken off before keeping their stamps; moving it back completes it no more; its dates are set, then a start date alone after the target date kept and a target date alone before the start date kept are refused (422), both moved past the target date it had are taken, and the target date is cleared; problems of the values are refused before any read, alike for a work item that is not there, and a state and a label the project lacks under the lock, each set at once (422), writing nothing; a work item sharing an account and a label with it is left as created; an archived work item is not changed (409): each change one row of its activity a field, a label or an account added or taken off, all its rows the changer's at its moment", async ({
   api,

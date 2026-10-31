@@ -7,13 +7,16 @@
 import { useId, useState } from "react";
 import { AutosaveError, useConfirmedAutosave } from "@/components/editor/use-confirmed-autosave";
 import { observer } from "mobx-react";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { TextArea } from "@makeplane/propel/components/text-area";
 import { useTranslation } from "@nerve/i18n";
 import type { TNameDescriptionLoader } from "@nerve/types";
 // types
 import { cn } from "@nerve/utils";
 import type { TIssueOperations } from "./issue-detail";
+import { fieldErrorKeys } from "@/lib/error-messages";
+import { useRefusedFocus } from "@/lib/refused-focus";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 
 export type IssueTitleInputProps = {
   disabled?: boolean;
@@ -32,6 +35,14 @@ export function IssueTitleInput(props: IssueTitleInputProps) {
   );
 }
 const sameTitle = (left: string, right: string) => left === right;
+const titleError = (name: string) => {
+  const length = Array.from(name.trim()).length;
+  return length === 0 ? "form.title.required" : length > 255 ? "errors.field.too_long" : undefined;
+};
+function validateTitle(name: string): void {
+  const message = titleError(name);
+  if (message) throw new Error(message);
+}
 const IssueTitleInputContent = observer(function IssueTitleInputContent(props: IssueTitleInputProps) {
   const { disabled, value, workspaceSlug, setIsSubmitting, issueId, issueOperations, projectId, containerClassName } =
     props;
@@ -46,23 +57,33 @@ const IssueTitleInputContent = observer(function IssueTitleInputContent(props: I
   } = useConfirmedAutosave({
     initial: value ?? "",
     same: sameTitle,
-    save: (name) => issueOperations.update(workspaceSlug, projectId, issueId, { name }),
+    save: (name) => {
+      validateTitle(name);
+      return issueOperations.update(workspaceSlug, projectId, issueId, { name });
+    },
     prepareSave: issueOperations.prepareUpdate
       ? () => {
           const update = issueOperations.prepareUpdate!();
-          return (name) => update(workspaceSlug, projectId, issueId, { name });
+          return (name) => {
+            validateTitle(name);
+            return update(workspaceSlug, projectId, issueId, { name });
+          };
         }
       : undefined,
     status: setIsSubmitting,
     disabled,
   });
+  const currentFailure = failure?.error instanceof SessionChangedError ? undefined : failure;
+  const fieldError = titleError(title) ?? fieldErrorKeys(currentFailure?.error).name;
+  const fieldRef = useRefusedFocus<HTMLDivElement>(currentFailure);
+  const length = Array.from(title).length;
 
   if (disabled) return <div className="text-20 font-medium whitespace-pre-line">{title}</div>;
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5" ref={fieldRef}>
       <div className={cn("relative", containerClassName)}>
-        <Field name="title" invalid={title?.length === 0}>
+        <Field name="title" invalid={!!fieldError}>
           <div className="flex w-full">
             <TextArea
               size="2xl"
@@ -70,10 +91,10 @@ const IssueTitleInputContent = observer(function IssueTitleInputContent(props: I
               autoResize
               rows={1}
               id={inputId}
+              aria-label={t("issue.title.label")}
               disabled={disabled}
               value={title}
               onChange={(event) => change(event.target.value)}
-              maxLength={255}
               placeholder={t("issue.title.label")}
               onFocus={() => setIsLengthVisible(true)}
               onBlur={() => {
@@ -83,6 +104,11 @@ const IssueTitleInputContent = observer(function IssueTitleInputContent(props: I
               }}
             />
           </div>
+          {fieldError && (
+            <FieldError size="2xl" match>
+              {t(fieldError)}
+            </FieldError>
+          )}
         </Field>
         <div
           className={cn(
@@ -92,15 +118,18 @@ const IssueTitleInputContent = observer(function IssueTitleInputContent(props: I
             }
           )}
         >
-          <span className={`${title.length === 0 || title.length > 255 ? "text-danger-primary" : ""}`}>
-            {title.length}
-          </span>
+          <span className={`${fieldError ? "text-danger-primary" : ""}`}>{length}</span>
           /255
         </div>
       </div>
-      <AutosaveError failure={failure} retry={retry} />
-      {title?.length === 0 && (
-        <span className="text-13 font-medium text-danger-primary">{t("form.title.required")}</span>
+      {fieldError ? (
+        currentFailure && (
+          <button type="button" onClick={retry}>
+            {t("common.retry")}
+          </button>
+        )
+      ) : (
+        <AutosaveError failure={failure} retry={retry} />
       )}
     </div>
   );

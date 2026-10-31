@@ -78,3 +78,21 @@ P13 main 第一次 CI 为已知 W11 偶发；UI 日志与一次失败作业重�
 原生 id replace、401/403/404 拒绝、A→B→A、真实页头删除框、加载/拒绝不露缓存操作和权限 ABA 与既有详情宿主回归共 23 项；基线原宿主 13 项绿。行为红 t1-red-final 的两项分别为缓存页头操作和共同边界内局部状态残留；前期夹具/类型错误单独保留，不当性质红。M01 去共同 key 检出后逐字节恢复。共同 key 的独立局部状态用宿主探针隔离验证，实际菜单/删除框另用真实组件，不能冒称浏览器证明；页面与会话 A1 剩余归 T14/T16。
 
 局部决定：路由上下文只传已有 SWR 读取结果，不创建业务读模型；代价是正文依赖自己的 layout，已由真实嵌套路由测试核对。编号索引仍有 WorkItemLevelModals、命令面板和导航真实读者，保留。原生 id 后的第二次 core GET 来自已有 sub-issues 父项权威核验（调用栈诊断已留存），不误当路由重复请求删除。
+
+### T2 详情字段反馈与 I2 属性
+
+标题保留原确认自动保存与 prepareUpdate，只在两个保存入口前做本地校验；空白或超过 255 个 Unicode 字符不发请求。服务端按 rune 计长，移除按 UTF-16 单元截断的 maxlength，以一致的字符计数展示与验证。既有 Field/FieldError、fieldErrorKeys 和 useRefusedFocus 负责描述和拒绝后聚焦，普通输入只清理旧错误，不移动焦点。复用现有英文/中文文案，无新错误协议。
+
+| 属性/性质 | 真实 UI、请求与持久化证据 | 补充回归 |
+|---|---|---|
+| 标题 | I2 页面空白、256 字符、真实服务端 NUL 拒绝；recordFocuses 记录聚焦时 invalid 和描述；合法值 PATCH 后落库 | detail-fields 6 项：拒绝保留/重试、普通输入、卸载校验、255 emoji |
+| 状态/优先级 | Backlog→Done、none→high，精确 PATCH 与 DB completed_at | I2 API 原活动与时间戳断言 |
+| 负责人/标签 | 各选两个，再逐一清空，精确数组 PATCH 与未删除关联行断言 | 已有 issue-properties 真实标签按钮序列化和清空回归 |
+| 起止日期 | 两个真实 Calendar 选值与分别清空、DB 日期与 null | 已有 inline-refusals range 测试保持一次双 null PATCH；I2 API 保留倒置拒绝与双日期原子更新 |
+| 父项 | 原生选择器迁移及页面证明随 T6，A2 仍待这一项闭合 | 不在 T2 允许旧搜索请求 |
+
+label-select 的正 tabIndex 已于 P12 消除，T2 复验当前真实详情无正 tabIndex，不伪造一次删除。日期/标签控件沿既有弹层，模态嵌套的完整证明随 T5/T6。提前添加计划 T16 中的 issue-detail-page 夹具，仅统一真实编号入口登录/观察，不拦截或伪造响应。
+
+行为红 t2-fields-behavior-red 为四项：空白、超长、服务端聚焦、卸载校验；最初语法错误不计行为红。M02 去 FieldError 描述关联、M03 提前聚焦各准确检出空 description，均字节恢复。FieldError size 的类型缺口已修；首次页面失败为测试未计入选项头像的可访问名称，改为唯一可见姓名匹配后通过，产品无额外修改。
+
+最终 t2-fields-final 63/63、t2-i2-complete API/页面 2/2、t2-types-final、t2-lint-clean 0 warnings/0 errors 通过；改动格式和 diff 检查通过。浏览器实际页面载入与编辑器警告仍按既有精确一条断言，T10 才删源头及所有白名单；未增加旧 API/外部请求例外。
