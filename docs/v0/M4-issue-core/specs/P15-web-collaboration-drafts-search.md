@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索
 
-状态：文档预检通过，已授权实施；T1–T12 完成，继续 T13。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。按计划连续实施；验收项按实际证据勾选，阶段末 deep-review 后先不合并。
+状态：文档预检通过，已授权实施；T1–T13 完成，继续 T14。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。按计划连续实施；验收项按实际证据勾选，阶段末 deep-review 后先不合并。
 
 ## 1. 目标
 
@@ -100,6 +100,8 @@ I16 页面使用 clockTest/ClockWorld 独立数据库；推进业务时钟后取
 
 余下四个复制位置及历史 Markdown 共用现有 useCopyLink/useCopyText 两参数 Promise<void>；hook 处理成功/失败，外层不据 resolved Promise 设置“Copied”或额外成功（hook 在失败也 resolve）。创建 toast 移除自行推测成功的 copied 状态或只用 hook 反馈；评论链接含当前 origin 与 #comment-id。消费者真实拒绝/等待测试和 LAN HTTP 浏览器验证都有，不只测 hook。C8 同时复验 P14 已迁移的工作项链接/编号、子项及关联链接，不把 P14 的受控拒绝冒充本次 LAN HTTP 验收。
 
+实施核准：HTTP 不等于复制必失败，M2 已有 execCommand 兼容成功路径继续保留。C8 在真实 LAN origin、非安全上下文、无异步 clipboard API 下，先以键盘到达或选择真实控件，等浏览器临时用户激活实际失效再触发该控件，由浏览器实际拒绝复制；记录这三个状态和反馈，不替换任一剪贴板 API，也不把无手势激活写成真实键盘复制失败。必要小 helper 提前在 T13 落于 E/fixtures/issue-collaboration-page.ts；power-k.ts 抽出既有键盘选中动作供命令复用，原 selectCommand 激活行为保持。
+
 本期仅删除四个 M4 copy-hook 例外，M6–M8 例外保持各自归属；13 个历史 M4 模块级实例逐路径清点，允许其它领域仍有独立旧实例。改动 TS/TSX 逐文件 lint 清零，按 02 分类删除本期死参数/成员；P16 全局 no-shadow/守卫终态不提前宣称。
 
 ## 3. 准备期决定
@@ -133,7 +135,7 @@ I16 页面使用 clockTest/ClockWorld 独立数据库；推进业务时钟后取
 - [x] A10：T10 命令原生搜索与项目本地过滤、服务端排序、中文/字面/编号/范围/错误/晚答及 I18 页面通过。
 - [x] A11：T11 旧搜索方法/类型/常量无真实读者；历史 13 模块实例逐路径为零，M7 视图服务完整。
 - [x] A12：T12 I16 页面真实新时钟进程/新登录/新 attempt、自动归档和站点名/手动用户显示通过。
-- [ ] A13：T13 四处 hook 与 T5 Markdown 的消费者等待/拒绝均正确，四 M4 copy-hook 例外删除，C8 LAN HTTP 有实际证据。
+- [x] A13：T13 四处 hook 与 T5 Markdown 的消费者等待/拒绝均正确，四 M4 copy-hook 例外删除，C8 LAN HTTP 有实际证据。
 - [ ] A14：T14 C6/C7/C8/C9 草稿及本期 I 页面在 Chromium、Firefox、WebKit 各有实际非零结果；页面无未说明失败请求、CSP/console/unhandled 错误。
 - [ ] A15：T15 改动文件 dead/oxlint 清零、字段/旧 URL/路由/复制守卫通过，差异与边界文档准确。
 - [ ] A16：T16 完整七项门禁、整分支 deep-review/局部修复复审、准确最终分支 HEAD CI、全要求证据闭环；阶段完成后先不合并。

@@ -180,14 +180,14 @@ make e2e
 
 ## Task 13：剩余复制消费者与例外（约 500–900 行）
 
-**Files：** spec T13；新 C/components/issues/collaboration-copy.test.tsx；T5 modal、T8 copy-commands测试；tools/keywords.json；C8 页面。
+**Files：** spec T13；新 C/components/issues/collaboration-copy.test.tsx；T5 modal、T8 copy-commands测试；tools/keywords.json；C8 页面；提前落 T14 点名的 E/fixtures/issue-collaboration-page.ts 小 helper，E/fixtures/power-k.ts 抽出键盘选中复用。
 **Interfaces：** useCopyLink/useCopyText均两参数Promise<void>且catch失败；copyCommentLink若改为Promise<void>须同步TCommentsOperations及所有消费者。优先保持既有void受控入口，不为反馈增加公共返回值。
 
-- [ ] Step 1：写 `copyWaitsForClipboardAndReportsOneOutcome` 参数化创建toast/评论/布局快捷操作/命令编号标题URL，加T5Markdown；持有/resolve/reject，检查链接origin/#comment及零业务写。
-- [ ] Step 2：U core/components/issues/collaboration-copy.test.tsx core/components/power-k/ui/pages/context-based/work-item/commands.test.tsx core/components/core/description-versions/modal.test.tsx；禁止只mockhook，实际消费者触发clipboard Promise。
-- [ ] Step 3：余下三个位置迁hook，T8已迁只复核；删局部copied假成功与重复toast、四M4例外清零。菜单/按钮可键盘到达；保留M6–M8例外以及公共EditorRefApi。
-- [ ] Step 4：B stories/issue/collaboration-interactions.spec.ts --grep 'C8:'；C8必须在真实LAN HTTP地址核工作项/评论/编号/子项/关联入口，复用P14已有消费者；受控拒绝仅作其它分支补证，不代替LAN验证。M18去hook await或外层假成功让消费者等待/错误计数红，恢复；关键词通过。
-- [ ] Step 5：记录 A13/T5联动；提交 `fix(M4/P15): 统一协作入口复制反馈并清空M4例外`。
+- [x] Step 1：写 `copyWaitsForClipboardAndReportsOneOutcome` 参数化创建toast/评论/布局快捷操作/命令编号标题URL，加T5Markdown；持有/resolve/reject，检查链接origin/#comment及零业务写。
+- [x] Step 2：U core/components/issues/collaboration-copy.test.tsx core/components/power-k/ui/pages/context-based/work-item/commands.test.tsx core/components/core/description-versions/modal.test.tsx；禁止只mockhook，实际消费者触发clipboard Promise。
+- [x] Step 3：余下三个位置迁hook，T8已迁只复核；删局部copied假成功与重复toast、四M4例外清零。菜单/按钮可键盘到达；保留M6–M8例外以及公共EditorRefApi。
+- [x] Step 4：B stories/issue/collaboration-interactions.spec.ts --grep 'C8:'；C8必须在真实LAN HTTP地址核工作项/评论/编号/子项/关联入口，复用P14已有消费者；受控拒绝仅作其它分支补证，不代替LAN验证。M18去hook await或外层假成功让消费者等待/错误计数红，恢复；关键词通过。
+- [x] Step 5：记录 A13/T5联动；提交 `fix(M4/P15): 统一协作入口复制反馈并清空M4例外`。
 
 ## Task 14：三浏览器组件矩阵与会话（约 850–1400 行）
 

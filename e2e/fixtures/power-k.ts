@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
 /** Uses the real cmdk roving selection; an empty root query never invokes retired search. */
-export async function selectCommand(page: Page, name: RegExp) {
+export async function highlightCommand(page: Page, name: RegExp) {
   const input = page.getByRole("combobox");
   const target = page.getByRole("option", { name });
   await expect(target).toBeVisible();
@@ -14,7 +14,12 @@ export async function selectCommand(page: Page, name: RegExp) {
   };
   await advance(count + 1);
   await expect(target).toHaveAttribute("aria-selected", "true");
-  await input.press("Enter");
+  return target;
+}
+
+export async function selectCommand(page: Page, name: RegExp) {
+  await highlightCommand(page, name);
+  await page.getByRole("combobox").press("Enter");
 }
 
 export async function openCommands(page: Page) {

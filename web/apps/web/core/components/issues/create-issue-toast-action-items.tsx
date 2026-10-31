@@ -4,12 +4,14 @@
  * See the LICENSE file for details.
  */
 
-import React, { useState } from "react";
+import type { MouseEvent } from "react";
 import { observer } from "mobx-react";
-import { copyUrlToClipboard, generateWorkItemLink } from "@nerve/utils";
+import { useTranslation } from "@nerve/i18n";
+import { generateWorkItemLink } from "@nerve/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
+import { useCopyLink } from "@/hooks/use-copy-link";
 
 type TCreateIssueToastActionItems = {
   workspaceSlug: string;
@@ -21,8 +23,8 @@ export const CreateIssueToastActionItems = observer(function CreateIssueToastAct
   props: TCreateIssueToastActionItems
 ) {
   const { workspaceSlug, issueId } = props;
-  // state
-  const [copied, setCopied] = useState(false);
+  const { t } = useTranslation();
+  const copyLink = useCopyLink();
   // store hooks
   const {
     issue: { getIssueById },
@@ -43,16 +45,10 @@ export const CreateIssueToastActionItems = observer(function CreateIssueToastAct
     sequenceId: issue?.sequence_id,
   });
 
-  const copyToClipboard = async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    try {
-      await copyUrlToClipboard(workItemLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 3000);
-    } catch (_error) {
-      setCopied(false);
-    }
+  const copyToClipboard = async (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    await copyLink(workItemLink, t("common.copied_to_clipboard"));
   };
 
   return (
@@ -66,20 +62,13 @@ export const CreateIssueToastActionItems = observer(function CreateIssueToastAct
         {projectIdentifier ? `${projectIdentifier}-${issue.sequence_id}` : issue.name}
       </a>
 
-      {copied ? (
-        <>
-          <span className="cursor-default px-2 py-1 text-secondary">Copied!</span>
-        </>
-      ) : (
-        <>
-          <button
-            className="hidden cursor-pointer rounded-sm px-2 py-1 text-tertiary group-hover:flex hover:bg-surface-2 hover:text-secondary"
-            onClick={copyToClipboard}
-          >
-            Copy link
-          </button>
-        </>
-      )}
+      <button
+        type="button"
+        className="cursor-pointer rounded-sm px-2 py-1 text-tertiary hover:bg-surface-2 hover:text-secondary"
+        onClick={copyToClipboard}
+      >
+        {t("common.actions.copy_link")}
+      </button>
     </div>
   );
 });

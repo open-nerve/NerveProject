@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T12 完成，T13 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-10-31。状态：预检通过，已授权连续实施；T1–T13 完成，T14 接续。§1–8 保留准备期快照，实施事实见 §9；阶段末审查与交付尚未执行。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -215,3 +215,16 @@ T10 检查点 `1047507d03435366349a5cf1a9a47f3f23d7260a` 已推送，[CI 4122364
 从归档行打开 peek，再进入既有编号详情；系统动态显示 Nerve 且无用户链接，手动恢复后显示真实操作者链接，SQL 读回分别为 null/archive 和本人/restore。两张截图及 old/current URL、startedAt、水位、attempt、freshness、活动行作为附件保存；无 SQL 业务写前置。首次页面仅因误预期 archives/id 地址失败，真实 peek 全屏使用 browse 编号地址；按合同纠正测试，未改产品。
 
 M16 改用 finalized_at 判断新任务，原 API 的 crossing 负例准确失败；M17 将 null actor 当停用用户，页面的 Nerve 断言准确失败。两处字节恢复并重建后，**I16 2/2**（API 1、page 1）通过；web/E2E 类型、单文件零告警通过。最终输入 `5fdb4b1859ee992249d343a5fb1fc5d6ed88d21e9f8a7c71f0a4d2837dbe1ac4`，程序 `bab9227b037db3634dfa637f66046683cd0f7a7845f976b4168bea47649da822`。原件见 t12-*.json/log、m16-fresh-*、m17-system-actor-*、t12-mutations.json、t12-restored-results 与 t12-receipt.json。A12/T12 完成，接续 T13；三引擎仍归 T14。
+
+
+### T13：复制消费者单一反馈与真实 LAN 拒绝
+
+创建 toast、评论 helper、布局快捷 helper 三处迁既有 useCopyLink；T8 已迁命令复制，本轮连同 T5 Markdown 复验。创建 toast 删除 copied/定时器和吞错，按钮始终可见且使用已有译文；评论保留 void 受控入口及原 scope/follow，只让 hook 负责复制反馈；布局返回 hook Promise。删除最后三个 M4 copy-hook 例外，共四处闭合，M6–M8 保留，关键词 **76 规则/13 例外**。
+
+初次三文件 5 红/38 绿抓到创建无反馈、评论错误通道和布局拒绝逃逸；后续六红来自新测试把 fake-i18n 原样 key 误当译文，按既有测试替身合同纠正预期，真实翻译由页面核。最终五文件 **67/67**，覆盖持有/成功/拒绝、当前 origin/评论片段、无提前/重复成功、零业务写，以及 T8 命令、T5 Markdown、P14 六复制与评论原回归。M18 加外层提前成功使创建两例在等待断言准确红，字节恢复后 67/67。
+
+C8 初轮 **12 失败**不是产品拒绝丢失：LAN 下现有 execCommand 兼容在用户手势中真实成功，测试错误假设 HTTP 必拒绝；空浏览器授权列表也不能禁止该手势兼容路径，单例仍成功，原失败截图/日志均保留。设计 C8 的“失败时提示”是条件要求，不移除 M2 兼容能力。小 helper 绑定本机非回环 IPv4 的独立 nerve 子进程、同套自有测试库，真实登录；键盘选中控件后按 navigator.userActivation.isActive 条件等待失效，再调用真实控件，由浏览器本身拒绝，未替换 clipboard/execCommand，不使用固定 sleep。与真实键盘复制成功明确区分。
+
+最终 **Chromium C8 12/12，0 skip**：编号、详情、外链、关系、子项、peek、评论、列表、创建提示和命令 ID/标题/URL；每例附真实 origin、secureContext=false、activeGesture=false、asyncClipboard=false，唯一错误、无复制成功/导航/业务写，网络/CSP/控制台守卫不变。复用 power-k 的键盘选择部分为 highlightCommand，selectCommand 原激活保持；helper 生命周期包含 newContext/newPage 失败清理。Web/E2E types、7 TS 文件零告警与格式通过。
+
+最终输入 `757bb23328732fcb91af61bcc701700ceef859b2350313b0bc4f6dbc0fd30e79`，程序 `ec384903fe32e0405e2871d4c155801bd98d1cd94f0b2db2f435a389fdcf8b69`；t13-*.json/log、t13-c8-*-results、m18-outer-copy-success.patch、t13-mutations.json、t13-receipt.json 保留全部前后证据。A13/T13 完成，接续 T14 三浏览器与完整检查点；不合并。

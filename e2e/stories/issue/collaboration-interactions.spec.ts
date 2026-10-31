@@ -1,5 +1,7 @@
 import { changeRole, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
-import { openCommands, selectCommand } from "../../fixtures/power-k";
+import { highlightCommand, openCommands, selectCommand } from "../../fixtures/power-k";
+import { createIssueLink } from "../../fixtures/links";
+import { collaborationLANPage, copyWithoutUserActivation } from "../../fixtures/issue-collaboration-page";
 import { createState } from "../../fixtures/states";
 import { modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
@@ -7,10 +9,10 @@ import { watchPage } from "../../fixtures/browser";
 import { createIssueComment } from "../../fixtures/comments";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { expectListPageQuiet, issueListProject, openIssueList } from "../../fixtures/issue-list-page";
-import { createDraft, createIssue, updateIssue } from "../../fixtures/issues";
+import { createDraft, createIssue, createIssueRelations, updateIssue } from "../../fixtures/issues";
 import { expect, test } from "../../fixtures/test";
 import { anotherTabSignsIn, bearer, shownNameOf, emailFor, accountId, password } from "../../fixtures/auth";
-import { sentHeld, answerTo, moveWithinApp, registerOnboarded } from "../../fixtures/settings-pages";
+import { sentHeld, answerTo, moveWithinApp, registerOnboarded, transitionsEnded } from "../../fixtures/settings-pages";
 
 test("C6: activity filters keep one choice, support Enter and Space, persist sorting and return focus on Escape", async ({
   api,
@@ -480,3 +482,144 @@ test("C7: a real theme success from the previous login cannot recolor or reload 
   await expect(page.getByText("Theme updated", { exact: true })).toHaveCount(0);
   await expectListPageQuiet(page, watch);
 });
+
+for (const control of [
+  "identifier",
+  "detail",
+  "link",
+  "relation",
+  "sub-item",
+  "peek",
+  "comment",
+  "layout",
+  "creation",
+  "command-id",
+  "command-title",
+  "command-url",
+] as const) {
+  test(`C8: ${control} copy on LAN HTTP without a user gesture reports one refusal without success, writes or navigation`, async ({
+    api,
+    db,
+    browser,
+  }, info) => {
+    const seed = await issueListProject(api, info);
+    const source = await createIssue(api, seed.member.token, seed.project.id, { name: "LAN copy source" });
+    const comment =
+      control === "comment"
+        ? await createIssueComment(api, seed.member.token, source.id, "<p>LAN discussion</p>")
+        : undefined;
+    if (control === "link")
+      await createIssueLink(api, seed.member.token, source.id, { title: "Guide", url: "https://example.test/guide" });
+    if (control === "relation") {
+      const target = await createIssue(api, seed.member.token, seed.project.id, { name: "Related target" });
+      await createIssueRelations(api, seed.member.token, source.id, {
+        relation_type: "relates_to",
+        issue_ids: [target.id],
+      });
+    }
+    if (control === "sub-item")
+      await createIssue(api, seed.member.token, seed.project.id, { name: "Child target", parent_id: source.id });
+    const lan = await collaborationLANPage(browser, db, info);
+    const page = lan.page;
+    try {
+      const watch = ["layout", "peek", "creation"].includes(control)
+        ? (await openIssueList(page, seed)).watch
+        : await openIssueDetail(page, seed, source);
+      expect(new URL(page.url()).protocol).toBe("http:");
+      expect(new URL(page.url()).hostname).not.toMatch(/^(localhost|127\.|\[?::1)/);
+      expect(await page.evaluate(() => window.isSecureContext)).toBe(false);
+      if (control === "creation") {
+        await page.getByRole("button", { name: "Add work item", exact: true }).click();
+        const form = page.getByRole("dialog", { name: "Create new work item", exact: true });
+        await form.getByRole("textbox", { name: "Title", exact: true }).fill("Created on LAN");
+        await expect(form.locator('[contenteditable="true"]')).toBeVisible();
+        expect(
+          (
+            await answerTo(page, "POST", `/api/v0/projects/${seed.project.id}/issues`, () =>
+              form.getByRole("button", { name: "Save", exact: true }).click()
+            )
+          ).status()
+        ).toBe(201);
+        await expect(form).toHaveCount(0);
+      }
+      if (control === "peek") {
+        await page.locator(`#issue-${source.id}`).click();
+        await expect(page.getByRole("button", { name: "Close the peek view", exact: true })).toBeVisible();
+      }
+      if (control === "relation") {
+        const relations = page.getByRole("button", { name: "Relations 1", exact: true });
+        await relations.click();
+        await transitionsEnded(relations.locator("../.."));
+      }
+      const before = page.url();
+      const requestsBefore = watch.apiRequests.length;
+      let clipboardContext: Awaited<ReturnType<typeof copyWithoutUserActivation>>;
+      if (control.startsWith("command-")) {
+        await openCommands(page);
+        const command = await highlightCommand(
+          page,
+          control === "command-id" ? /^Copy ID/ : control === "command-title" ? /^Copy title/ : /^Copy URL/
+        );
+        clipboardContext = await copyWithoutUserActivation(command);
+      } else {
+        let copy;
+        if (["relation", "sub-item", "comment", "layout"].includes(control)) {
+          const options =
+            control === "comment"
+              ? page
+                  .locator(`[id="comment-${comment!.id}"]`)
+                  .getByRole("button", { name: `Options for ${shownNameOf(seed.member.email)}’s comment`, exact: true })
+              : page.getByRole("button", {
+                  name:
+                    control === "layout"
+                      ? `Options: ${source.name}`
+                      : `${control === "relation" ? "Related target" : "Child target"} options`,
+                  exact: true,
+                });
+          await options.focus();
+          await page.keyboard.press("Enter");
+          copy = page.getByRole("menuitem", {
+            name: control === "sub-item" ? "Copy work item link" : "Copy link",
+            exact: true,
+          });
+        } else {
+          copy = page.getByRole("button", {
+            name:
+              control === "identifier"
+                ? `Copy ID: WEB-${source.sequence_id}`
+                : control === "link"
+                  ? "Copy link: Guide"
+                  : "Copy link",
+            exact: true,
+          });
+        }
+        await copy.focus();
+        await expect(copy).toBeFocused();
+        clipboardContext = await copyWithoutUserActivation(copy);
+      }
+      expect(clipboardContext).toEqual({ secureContext: false, activeGesture: false, asyncClipboard: false });
+      await expect(page.getByText("Something went wrong. Please try again.", { exact: true })).toHaveCount(1);
+      await expect(
+        page.getByText(/^(Link copied!?|Copied!|(?:Work item|Comment) (link|ID|title|URL) copied to clipboard)$/)
+      ).toHaveCount(0);
+      await expect(page).toHaveURL(before);
+      expect(
+        watch.apiRequests.slice(requestsBefore).filter((request) => /^(POST|PATCH|DELETE) /.test(request))
+      ).toEqual([]);
+      await info.attach("lan-http-clipboard", {
+        body: JSON.stringify({ origin: lan.origin, ...clipboardContext, control }, null, 2),
+        contentType: "application/json",
+      });
+      await expectListPageQuiet(page, watch);
+    } catch (error) {
+      await info.attach("lan-http-failure", {
+        body: await page.locator("body").ariaSnapshot(),
+        contentType: "text/plain",
+      });
+      await info.attach("lan-http-failure-screen", { body: await page.screenshot(), contentType: "image/png" });
+      throw error;
+    } finally {
+      await lan.close();
+    }
+  });
+}
