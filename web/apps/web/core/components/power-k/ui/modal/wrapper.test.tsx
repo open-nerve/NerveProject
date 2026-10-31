@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { act, type ReactNode, type KeyboardEventHandler } from "react";
+import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { TPowerKCommandConfig, TPowerKContext } from "../../core/types";
@@ -21,18 +21,6 @@ vi.mock("@nerve/ui", () => ({
   EModalWidth: {},
   ModalCore: ({ children, isOpen }: { children: ReactNode; isOpen: boolean }) =>
     isOpen || ui.retainExit ? children : null,
-}));
-vi.mock("cmdk", () => ({
-  Command: Object.assign(
-    ({ children, onKeyDown }: { children: ReactNode; onKeyDown: KeyboardEventHandler }) => (
-      <div role="dialog" aria-label="Commands" onKeyDown={onKeyDown}>
-        {children}
-      </div>
-    ),
-    {
-      List: ({ children }: { children: ReactNode }) => children,
-    }
-  ),
 }));
 vi.mock("./footer", () => ({ PowerKModalFooter: () => null }));
 vi.mock("./header", () => ({
@@ -67,6 +55,14 @@ const render = (isOpen: boolean) =>
 beforeEach(() => {
   vi.useFakeTimers();
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
   vi.clearAllMocks();
   ui.retainExit = false;
   host = document.createElement("div");
@@ -76,6 +72,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 it("a closed host has no delayed reset capable of erasing the newly opened query", async () => {

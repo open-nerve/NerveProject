@@ -287,4 +287,4 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 
 ## P15 T16 整审复核（2026-11-01）
 
-本期子项已完成实现、整审局部修复与完整本地门禁；顶部/弹窗宿主、偏好晚答和退场选择保护已复验，92 个 TS/TSX 零告警。准确最终分支 CI 与交付状态见 [阶段记录 §10](../reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 和 [整审报告](../../../reviews/re-24-M4P15整体审核.md)。顶部 status 保持 open，P16、M7 与 M4 总关闭责任不改变；尚未合并。
+本期子项已完成实现、整审及后置 CI 的局部修复与完整本地门禁，最终候选 CI 后置核准，集成待办；顶部/弹窗宿主、偏好晚答和退场选择保护已复验，92 个 TS/TSX 零告警。准确最终分支 CI 与交付状态见 [阶段记录 §10](../reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 和 [整审报告](../../../reviews/re-24-M4P15整体审核.md)。顶部 status 保持 open，P16、M7 与 M4 总关闭责任不改变；尚未合并。

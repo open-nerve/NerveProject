@@ -86,3 +86,12 @@ T16 增加顶部宿主的 C7/I18 两页，矩阵现为 43 行。先完整执行 
 先前实际失败继续保留：T14 CI 的 C7 退场重开失败、T16 顶部入口/关闭重开断言以及两个新夹具调用错误均在原始目录。后者不是产品缺陷；前者有根因修复与有效红绿，不归类为 W11 或用重跑代替修复。
 
 最终 F4 发现测试样式清理的 Node.remove 类型不匹配，改用 parentNode.removeChild；没有改产品代码或断言。最终输入 3531565df6210e93b8b8ec3e940cb7a411af9c6c48e0f40883aa84c8472ca5f5 下，完整默认 E2E 279/279 已包含 Chromium 主题页，随后 t16-fixture-types-browsers 用单 worker 顺序补验 Firefox、WebKit 的同一主题页，2/2、0 skip，程序摘要仍为 9be9d742306019dd0a990422cce39bdd72495a32ac75c1c3c68d2ef22fa06c6d。此前单独 Firefox 运行在 globalSetup 的临时数据库端口绑定等待超时，未进入页面测试；保留原失败收据，不算产品失败或有效反证。
+
+
+## 后置 CI 的跨平台按键补验
+
+43872333 的 Linux C7 失败已按整体审核 R8 复现并修复：退场 cmdk 仍会消费 Ctrl+K。实际 wrapper 单元改用真实 cmdk；页面每引擎显式按 Control+k 与 Meta+k，继续验证旧动作停用、退场中重开、503 与确认成功重载，未移除 data-leave 断言。
+
+`t16-ci-commands-chromium/firefox/webkit` 各 **13/13**、0 skip；输入 `91e06c16ab96bbb4c42f69949aec62722fc5f597aa7a945d2270b90943ded514`，程序 `329e0da55edc82fd767d0bb7bb7ede8ec104ae3f8c3c3a6b2124f522de0d3ef0`。影响范围仍为 C7 四项、I18 六项、C8 命令复制三项；其它 30 项沿未变行为与原始 hash 复用。
+
+为满足 no-await-in-loop，把两次按键串行抽为测试内局部函数，行为与断言未变；`t16-ci-theme-final` 单 worker 串行执行三个引擎，各 **1/1**、0 skip，输入 `f6d7c5f62b1145f677d063aa745c4cb0a65b64855534d048bdab859b3993335e`，程序摘要不变。最终完整默认 E2E 与准确候选 CI 见阶段记录 §10–11；不把历史每引擎 43 项冒称在最后一轮重新全跑。

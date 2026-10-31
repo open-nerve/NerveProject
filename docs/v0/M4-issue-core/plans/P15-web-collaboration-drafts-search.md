@@ -218,11 +218,15 @@ make e2e
 
 整审局部修复范围：C/components/navigation/top-nav-power-k.tsx 与真实 cmdk/原生 store 测试；power-k 的 search-menu/commands-list/wrapper 两宿主显式 isOpen；core/shortcut-handler.ts 与同 document 消费按键测试；preferences-commands.ts 与真实 UserStore/ProfileStore 晚答测试。C7/I18 增顶部入口的真实键盘、多选确认、IME、Back/旧 200、关闭重开页面，三浏览器矩阵每引擎增至 43 页。沿原 owner/队列/权限合同，不改服务端或共享类型语义；修复前行为失败、测试夹具错误与恢复分别留存。顶部旧样式容器去伪按钮角色，实际输入/清空按钮具名；改动文件零告警后按实测降低警告上限。退场 DOM 保留期间，关闭 wrapper 释放重开快捷键且拒绝旧动作；C7 真实退场的两类失败先红后绿，三引擎补跑。
 
+后置 CI 修复：真实 cmdk 的 Ctrl+K 导航在退场阶段也会消费重开键；vimBindings 随 isOpen 停用，保持原 document opener。wrapper 测试去掉 cmdk mock，C7 每引擎显式跑 Control+k 与 Meta+k；先复现同一失败，再修复复审及完整门禁，不只重跑远端。
+
 - [x] Step 1：逐 A1–A16 建映射、逐文件检查，核每项RUN/exit/输入hash/恢复hash；写所有自决理由与错判代价，不把static/precheck或上一phaseCI当产品验收。
 - [x] Step 2：在最终代码/测试输入串行完整F；T14矩阵已通过且输入未变可复用逐文件hash证据，变更影响项重跑，不靠turbo旧缓存；确保本期stories实际匹配。
 - [x] Step 3：使用deep-review完整读变更及关联测试，按逻辑/集成/覆盖分类；局部修复完整并定向复审，结构问题先提交上报。报告明确审查范围、审者/方法、发现、修复和剩余边界。
-- [ ] Step 4：核最终候选相关门禁、修改后所需三浏览器，文稿静态自查；系统git提交/推送，核准确最终HEAD的server/web/e2e CI，保留失败/重跑。归档完整证据manifest，final-delivery后置验本地/远端SHA。
-- [ ] Step 5：勾A与T1–T16仅在对应证据齐全后，提供分支、基线、spec/plan/review/整审路径和CI；阶段完成先不合并，等负责人安排。提交 `docs(M4/P15): 汇总协作阶段验收审查与交付证据`。
+- [x] Step 4：核最终候选相关门禁、修改后所需三浏览器，文稿静态自查；系统git提交/推送，核准确最终HEAD的server/web/e2e CI，保留失败/重跑。归档完整证据manifest，final-delivery后置验本地/远端SHA。
+- [x] Step 5：勾A与T1–T16仅在对应证据齐全后，提供分支、基线、spec/plan/review/整审路径和CI；阶段完成先不合并，等负责人安排。最终候选同时提交修复与文稿：`fix(M4/P15): 释放退场命令的 Ctrl 快捷键并完成阶段验收`。
+
+T16 已完成本地验收与局部复审；最后候选一次包含产品修复与验收文稿，其 SHA/run/attempt/jobs 以阶段记录 §10 指定的 final-delivery.json 后置核准。回执不匹配 HEAD 或 CI 未通过时，不宣布阶段交付；不依赖更早产品 CI，也不为回写自身 SHA 追加提交。
 
 ## 附录：准备与实施界线
 

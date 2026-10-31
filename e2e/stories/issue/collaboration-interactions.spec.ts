@@ -446,11 +446,19 @@ test("C7: keyboard theme selection waits for confirmation, reports native refusa
   await expect(page.getByText("The server is busy. Please try again later.", { exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.locator("html")).toHaveAttribute("data-command-document", "original");
-  await expect(panel).toHaveAttribute("data-leave", "");
-  await selectCommand(page, /^Change interface theme$/);
-  await expect(page.getByRole("option", { name: /^Change interface theme$/ })).toBeVisible();
-  await openCommands(page);
-  await expect(panel).not.toHaveAttribute("data-leave", "");
+  // Exercise both modifiers on every platform: cmdk also binds Control+K to Vim navigation.
+  const reopenDuringExit = async (shortcut: "Control+k" | "Meta+k") => {
+    await expect(panel).toHaveAttribute("data-leave", "");
+    await selectCommand(page, /^Change interface theme$/);
+    await expect(page.getByRole("option", { name: /^Change interface theme$/ })).toBeVisible();
+    await page.keyboard.press(shortcut);
+    await expect(page.getByRole("combobox")).toBeFocused();
+    await expect(page.getByRole("combobox")).toHaveValue("");
+    await expect(panel).not.toHaveAttribute("data-leave", "");
+  };
+  await reopenDuringExit("Control+k");
+  await page.keyboard.press("Escape");
+  await reopenDuringExit("Meta+k");
   await slowExit.evaluate((element) => {
     element.parentNode?.removeChild(element);
   });

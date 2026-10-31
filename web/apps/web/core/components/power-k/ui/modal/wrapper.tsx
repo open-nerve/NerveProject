@@ -130,6 +130,8 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
       className="divide-opacity-10 flex flex-col items-center justify-center divide-y divide-subtle-1"
     >
       <Command
+        // An exiting list must release Ctrl+K to the document opener, not consume it as Vim navigation.
+        vimBindings={isOpen}
         filter={(i18nValue: string, search: string) => {
           if (i18nValue === "no-results") return 1;
           if (i18nValue.toLowerCase().includes(search.toLowerCase())) return 1;

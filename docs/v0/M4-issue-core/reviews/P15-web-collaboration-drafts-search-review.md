@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-11-01。状态：T1–T15 完成，T16 整审和完整本地门禁已通过，准确最终分支 CI 待核。§1–8 保留准备期快照，当前事实见 §9–10。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-11-01。状态：T1–T16 实施与终审修复完成，完整本地门禁通过；最终候选 CI 按 §10 后置核准后交付，集成待办。§1–8 保留准备期快照，当前事实见 §9–10。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -260,7 +260,7 @@ T10 的准确提交 1047507d03435366349a5cf1a9a47f3f23d7260a 的 [CI 41223646422
 
 ### T16：整分支审查、修复与交付门
 
-主控顺序执行 deep-review 的逻辑、集成、覆盖三个视角，范围为 main 7a81ea18 至最终候选及 dirty；没有派子代理，也未称三位独立审者。[整体审核](../../../reviews/re-24-M4P15整体审核.md) 记录 R1–R7、根因、局部裁定、失败与恢复；变动产品全文/删除基线/关联测试、实际调用者和受影响文档均纳入。
+主控顺序执行 deep-review 的逻辑、集成、覆盖三个视角，范围为 main 7a81ea18 至最终候选及 dirty；没有派子代理，也未称三位独立审者。[整体审核](../../../reviews/re-24-M4P15整体审核.md) 记录 R1–R8、根因、局部裁定、失败与恢复；变动产品全文/删除基线/关联测试、实际调用者和受影响文档均纳入。
 
 顶部搜索是另一真实宿主，原全局 modal 开关导致顶部不读；现显式透传各自 isOpen、保持服务端排序、关闭统一 context.closePalette，沿原 useIssueSearch 与目录 owner。顶部回调补展开状态依赖，多选遵 closeOnSelect，关闭恢复上下文显示，路由变化退役；实际输入/清空按钮具名。时区/每周首日/语言复用 followInSession，只向当前登录反馈并保留原生 code。全局 ShortcutHandler 忽略已消费/IME 按键，解决 document hydration 同节点监听的问题；无新事件总线、队列或权限 owner。
 
@@ -268,7 +268,7 @@ T10 的准确提交 1047507d03435366349a5cf1a9a47f3f23d7260a 的 [CI 41223646422
 
 新增留存退场 DOM 的 Ctrl/Meta 与动作消费者共 3 条真实行为红，C7 页面分别证实无法重开和关闭期间误进子页；修复后单元及真实三引擎均通过。测试只延长真实 CSS 退场并断言 data-leave，不用固定 sleep 或 mock 产品开关。修复前直接 inline duration 被过渡过程还原，红运行仍已观察到真实 data-leave；最终测试改独立样式精确固定这一边界。早期顶部 first-item 焦点猜测被单测绿推翻，实际 isOpen 依赖、closeOnSelect 和上下文恢复分别有页面红；两个新 E2E helper 调用错误和一次聚焦路径少匹配均明确作为夹具/命令错误保留，不冒充产品反证。
 
-最终聚焦八文件 **89/89**。T16 完整三浏览器各 **43/43**；退场快捷键修复后各补跑 **13/13** 命令/搜索/命令复制；选择动作保护后主题退场页再各 **1/1**。未受影响的 30 项、随后未变的 12 项有路径/hash 和控制流复核，不冒称最后输入又完整执行 129 项。精确题名、每轮输入/程序摘要见 [矩阵](P15-browser-matrix.md) 和 t16-final-matrix-equivalence.json。所有实际运行 0 skip，严格网络/CSP/控制台守卫保持。
+最终聚焦八文件 **89/89**。T16 完整三浏览器各 **43/43**；退场快捷键修复后各补跑 **13/13** 命令/搜索/命令复制；选择动作保护后主题退场页再各 **1/1**。未受影响的 30 项、随后未变的 12 项有路径/hash 和控制流复核，不冒称最后输入又完整执行 129 项。精确题名、每轮输入/程序摘要见 [矩阵](P15-browser-matrix.md) 和 t16-final-matrix-equivalence.json。上述通过的运行均为 0 skip，严格网络/CSP/控制台守卫保持。
 
 本期实际 92 个 TS/TSX（含配置）零告警；按实测将 web 全仓 warning cap 112→108。新触及的 ShortcutHandler.setEnabled 零调用，删除后全仓 member 候选 876、prop 371、export 21；三个生产候选是图标 className 合同及结果对象 issue/project 真实读取，不误删。十三历史实例为零，八个其它领域实例仍按责任保留；76 条规则、13 个例外，四 M4 copy-hook 例外已零，四 route 正反例与 content 原内容均保持。
 
@@ -280,7 +280,7 @@ F4 发现新增测试清理函数的 Node.remove 类型不匹配，局部改用 
 
 ## 10. 最终验收与交付
 
-状态：整审局部问题均修复复审，完整七门禁已通过；准确最终分支 CI 待核，A16 保持未勾。本期不合并，主目录 main 保持基线。
+状态：整审及后置 CI 的局部问题均修复复审，完整七门禁通过，A1–A16 和 T1–T16 已登记；最终候选 HEAD 按下文后置收据核准后才交付，CI 未通过时不得报告阶段完成。本期不合并，主目录 main 保持基线。
 
 | 验收 | 对应证据 |
 |---|---|
@@ -299,13 +299,32 @@ F4 发现新增测试清理函数的 Node.remove 类型不匹配，局部改用 
 | A13 | T13 67 单元、M18、C8 12 页真实 LAN 拒绝；四 M4 例外零 |
 | A14 | T16 三引擎各 43 页，随后 13 页/1 页按影响复验，0 skip |
 | A15 | T15 十组死链、T16 setEnabled 删除、92 文件零告警；三合法候选、守卫/交接边界 |
-| A16 | 本节补齐完整门禁、最终准确分支 CI 后关闭；主控 deep-review 已完成 |
+| A16 | 完整七门禁、主控三视角 deep-review 与 R1–R8 闭环；最终候选 HEAD 的准确 CI 和证据 manifest 以本节后置收据核准 |
+
+整审提交 `438723335779f958e8209a1ccf625f80182abbef` 的 [CI 41234416035](https://github.com/open-nerve/NerveProject/actions/runs/41234416035) attempt 1 为 server/web 成功、E2E 278 通过/1 失败。后置审查确认 cmdk 在关闭退场期间消费 Control+K，已按 R8 局部修复；真实单元和页面复现同一失败后转绿。原始 run/jobs、日志、trace 和产物摘要保留，T14 原失败也不覆写。最终候选准确 CI 由后置收据核准。
+
+最后候选一次包含经完整验证的产品修复与验收文稿，提交前核产品/测试字节与最新完整门禁一致。最终准确 40 位 SHA、远端 ref、CI run/attempt/jobs 及证据清单摘要写入本机 `final-delivery.json`；该文件后置生成，只有三任务全绿、工作树干净且本地/远端 SHA 一致才交付，不用旧候选的 CI 代替，也不回写自身 SHA 形成提交循环。
+
+准备期原件仍在主目录 `.superpowers/sdd/P15-preparation-20261031/`（30 份文件）；实施期与准备期均纳入 evidence-manifest.json 的逐文件摘要和空目录记录，未来获准合并后的归档不得遗漏任一处。
 
 本机原件在本 worktree 的 `.superpowers/sdd/P15-web-collaboration-drafts-search/`。运行收据保存 HEAD、dirty 文件摘要、argv、exit、raw hash 与程序 hash；历史失败不会被新绿覆盖。最终 `evidence-manifest.json` 和 `final-delivery.json` 后置核对完整证据与本地/远端准确 SHA，归档清理待另获授权合并及 main CI 后进行。
 
 
-最终完整七门禁 t16-full-retry-f1–f3 与 t16-complete-f4–f7 均 exit 0；前者输入 e14c9de376235a7f7b2ae2945213b1f4e4fd9df71df529acdd18097833d58542，后者输入 3531565df6210e93b8b8ec3e940cb7a411af9c6c48e0f40883aa84c8472ca5f5，每项执行期间输入稳定。F4 首轮仅测试样式清理的 Node.remove 类型报错，改用 parentNode.removeChild；F1–3 的服务端/生成输入不变，等价记录 t16-full-gate-equivalence.json，不重跑并不冒称同一摘要。Go 普通测试 51 个包通过、16 个包无测试文件；前端强制无缓存测试 296 个 Vitest 文件/3130 项，另 Node 5 项；默认 E2E 279/279（Chromium 277、Firefox 2，0 skip）。程序 9be9d742306019dd0a990422cce39bdd72495a32ac75c1c3c68d2ef22fa06c6d。原始日志、分包日志、完整结果快照见 t16-full-summary.json、t16-full-package-test-logs 和 t16-full-e2e-results；首轮初始化失败不覆盖。
+后置 CI 修复前的完整七门禁 t16-full-retry-f1–f3 与 t16-complete-f4–f7 均 exit 0；前者输入 e14c9de376235a7f7b2ae2945213b1f4e4fd9df71df529acdd18097833d58542，后者输入 3531565df6210e93b8b8ec3e940cb7a411af9c6c48e0f40883aa84c8472ca5f5，每项执行期间输入稳定。F4 首轮仅测试样式清理的 Node.remove 类型报错，改用 parentNode.removeChild；F1–3 的服务端/生成输入不变，等价记录 t16-full-gate-equivalence.json，不重跑并不冒称同一摘要。Go 普通测试 51 个包通过、16 个包无测试文件；前端强制无缓存测试 296 个 Vitest 文件/3130 项，另 Node 5 项；默认 E2E 279/279（Chromium 277、Firefox 2，0 skip）。程序 9be9d742306019dd0a990422cce39bdd72495a32ac75c1c3c68d2ef22fa06c6d。原始日志、分包日志、完整结果快照见 t16-full-summary.json、t16-full-package-test-logs 和 t16-full-e2e-results；首轮初始化失败不覆盖。
 
 T16 自决的理由和代价见整审及本节：宿主状态显式化仍是同一组件树合同，关闭重置查询/上下文符合已批准 spec；其它偏好沿既有登录保护；严格 lint 下调额度；测试同步真实退场/页面就绪而不加生产延迟。没有待裁定架构问题。
 
 P16 的全局 dead/no-shadow、C12 与总守卫、M4 收尾逐条 §14/总体 9.4/M5–M8 转交均保持后续责任。输入 handoff 顶部 open；评论增量窗口以外的远端修改需关闭重开、LAN 有手势仍可能复制成功、M7 领域展示未接通等限制不扩大承诺。
+
+
+## 11. 后置 CI 的 Ctrl+K 修复与最终候选
+
+43872333 的 CI 41234416035 attempt 1：server/web 成功、E2E 278 通过/1 失败。详细日志和 trace 由 GitHub 连接器直接读取，无需负责人代取或提取凭据。失败是 C7 在 Linux 的 Control+K 被退场 cmdk 当作 Vim 导航消费；原 Mac 页面只按 ControlOrMeta→Meta，wrapper 单元的 cmdk mock 未覆盖这一分支。data-open 在退场也保留，不据它误判为已重开或共享动画库故障。证据、摘要和复审见 [整体审核 R8](../../../reviews/re-24-M4P15整体审核.md)。
+
+移除 cmdk mock 后，Ctrl 单元真实失败（1 失败/6 通过）；页面显式 Control 同样准确复现。沿现有组件把 vimBindings 绑定 isOpen，关闭时释放键、打开时行为保持。最终 C7 在每个引擎显式验证 Control+k 和 Meta+k；89 项聚焦测试、三引擎各 13 项以及最终主题页各 1 项通过。首轮新测试的顺序循环触发 no-await-in-loop；改局部函数按顺序调用，不豁免规则、不并发操作同一页面，92 文件再次严格 lint 零告警。
+
+局部裁定：问题限于既有命令组件内部的关闭阶段所有权；改动一个生产文件的现有库参数，无协议/领域/共享库变化。代价是退出中的列表停止 Vim 导航，避免它与全局重新打开冲突；原命令、复制、搜索和所有写的确认/拒绝合同均回归通过。
+
+修复后的完整七门禁 `t16-ci-full-f1–f7` 全部 exit 0，在同一输入 `f6d7c5f62b1145f677d063aa745c4cb0a65b64855534d048bdab859b3993335e` 下顺序执行，期间无文件变化；程序 `329e0da55edc82fd767d0bb7bb7ede8ec104ae3f8c3c3a6b2124f522de0d3ef0`。生成检查、Go lint、Go 普通测试 51 包通过（另 16 包无测试）、前端类型/格式/lint 54/54、knip、强制无缓存前端测试 296 文件/3130 项加 Node 5 项，以及完整默认 E2E **279/279**（Chromium 277、Firefox 2，0 skip）均通过。原始收据、八包测试日志和完整页面结果已独立复制到 `t16-ci-full-summary.json`、`t16-ci-full-package-test-logs/`、`t16-ci-full-e2e-results/`；旧轮与原失败保留。
+
+最后候选一次提交这项修复、完整验收文稿及证据入口；本地通过不代替准确最终 HEAD CI。后置 final-delivery.json 必须验本地/远端同一 SHA、三个 CI 作业全绿、主目录 main 未变、两处证据逐文件摘要，才报告阶段交付。没有合并、清理或启动 P16。

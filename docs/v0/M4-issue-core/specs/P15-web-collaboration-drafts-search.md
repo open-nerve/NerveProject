@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索
 
-状态：T1–T15 完成，T16 整审局部修复及完整本地门禁已通过，准确最终分支 CI 接续。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。验收项按实际证据勾选，阶段完成先不合并。
+状态：T1–T16 实施与终审修复已完成，完整本地门禁通过；最终候选（含文稿）的准确 CI 由阶段记录 §10 指定的后置收据核准后交付，集成待办。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。验收项按实际证据勾选，阶段完成先不合并。
 
 ## 1. 目标
 
@@ -98,6 +98,8 @@ T14 实施补充：同一工作区内的 provider 不一定卸载，关闭命令
 
 T16 整审补充：顶部 TopNavPowerK 是另一实际宿主。搜索组件显式接收宿主 isOpen，两处宿主都沿原 useIssueSearch 与目录读取；结果关闭用 context.closePalette，不再另传重复回调。顶部同样保留服务端排序、IME/229 不执行、同工作区路由变化退役、关闭清空查询/命令并恢复上下文显示；多选遵原 closeOnSelect 合同。键盘回调须读取当前展开状态。全局 ShortcutHandler 忽略已 preventDefault 或输入法占用的键，适配实际 document hydration 根上的同节点监听；不新增键盘事件总线。弹窗已逻辑关闭但退场动画仍保留 DOM 时，wrapper 不再消费快捷键，也不执行旧命令选择，由原 document opener 处理重开。时区、每周首日、语言沿已有 followInSession，仅当前登录确认后反馈，原生错误按 code 展示。
 
+T16 后置 CI 补充：退场中的 cmdk 原生 Ctrl+K 列表导航也须随宿主关闭而停用（vimBindings 仅在 isOpen 时启用），保证 Ctrl/Meta 两种重开键都交给原 document opener。复审使用真实 cmdk，C7 在每个引擎显式覆盖两种键，不以本机 ControlOrMeta 的单一映射代替跨平台合同。
+
 ### 2.7 自动归档、复制与最终质量
 
 I16 页面使用 clockTest/ClockWorld 独立数据库；推进业务时钟后取得新 nerve.baseURL 并重新登录（旧 cookie/access 不能跨 +744h 假有效），等新进程中在业务写后启动并 completed 的真实 auto_archive attempt，再从归档列表打开详情。只给 SQL 查询作断言，不 SQL 写前置或用 sleep 代替时钟；NULL actor 按 SITE_NAME，手动恢复真实用户显示。页面断言旧完成项已归档、非终态/新更新控制项未归档，保留原 API 水位/跨越 attempt 测试。
@@ -142,7 +144,7 @@ I16 页面使用 clockTest/ClockWorld 独立数据库；推进业务时钟后取
 - [x] A13：T13 四处 hook 与 T5 Markdown 的消费者等待/拒绝均正确，四 M4 copy-hook 例外删除，C8 LAN HTTP 有实际证据。
 - [x] A14：T14 C6/C7/C8/C9 草稿及本期 I 页面在 Chromium、Firefox、WebKit 各有实际非零结果；页面无未说明失败请求、CSP/console/unhandled 错误。
 - [x] A15：T15 改动文件 dead/oxlint 清零、字段/旧 URL/路由/复制守卫通过，差异与边界文档准确。
-- [ ] A16：T16 完整七项门禁、整分支 deep-review/局部修复复审、准确最终分支 HEAD CI、全要求证据闭环；阶段完成后先不合并。
+- [x] A16：T16 完整七项门禁、整分支 deep-review/局部修复复审、准确分支 HEAD CI、全要求证据闭环；本地与整审证据已登记，最终候选仅在阶段记录 §10 后置收据与 HEAD 一致且 CI 全绿后交付，CI 未通过不得报告阶段完成。阶段完成后先不合并。
 
 ## 5. 后续范围
 
