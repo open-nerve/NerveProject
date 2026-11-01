@@ -1,6 +1,6 @@
 # P16 / C12 准备与三浏览器自动回归
 
-状态：T10 准备与受影响自动回归完成，准确检查点 CI 全绿，见阶段 review §21。本文是 **C12 准备与自动回归记录**，不是控制者最终全路径 C12 验收；后者随 M4 closeout 完成。基线、spec、plan 与阶段证据见 [P16 review](P16-web-cleanup-review.md)。
+状态：T10 准备与受影响自动回归完成；P16已合并且准确main CI全绿，证据稳定归档及清理见 [阶段review §23](P16-web-cleanup-review.md#23-授权合并main-ci-与归档清理2026-11-01)。本文是 **C12 准备与自动回归记录**，不是控制者最终全路径 C12 验收；后者随 M4 closeout 完成。基线、spec、plan 与阶段证据见 [P16 review](P16-web-cleanup-review.md)。
 
 ## 1. 范围、选择与运行方法
 
@@ -67,10 +67,14 @@ pnpm --filter @nerve/e2e exec playwright test --config=playwright.m4-cleanup.con
 - 上述构建 bin SHA `145877f59635091780620fcaff922afd5938a7a665bd2ff2601927ef0cee5554`。新配置原规则显式扫描 `t10-config-lint` 为 0 诊断。
 - M21 恢复旧冒泡 focus 行为后真实列按钮的 opacity 由 1 变 0，被原页面断言检出；`t10-M21-red` 保留红日志，恢复源码 SHA `dce7371c7a81127a038a78cfb868c70f43a9d0f989c0193bb2f6ab0eb5b86bd2`，重建及后续三引擎原用例通过。原始失败/恢复，不把测试同步错误计作有效变异。
 - 最后测试修正后，`t10-i11-final-{chromium,firefox,webkit}` 各 10/10，`t10-font-final-{firefox,webkit}` 各 13/13；Chromium S2 由最终完整 E2E 284/284 覆盖。受测产品/bin 不变，新增严格文字断言及字体同步未放宽既有观察；详见阶段 review §20 和 `t10-f-r3-input-equivalence.json`。
-- 完整 F 已通过，准确检查点 CI 全绿见阶段 review §20–21；最终文稿提交 CI 仍由§22后置收据核对。
+- 完整 F 已通过，准确检查点 CI 全绿见阶段 review §20–21；最终文稿提交 CI 已由§22后置收据核对，§23列准确main CI和稳定归档。
 
 ## 5. Closeout 待办
 
 - [ ] 控制者在最终 main 版本逐行完成三个浏览器全页面 C12，核焦点轮廓、裁切、键盘/右键、关闭/Back，以及真实请求/控制台。
 - [ ] 将本期自动结果和最终人工结果分列，记录准确版本及未执行格，不能用清单或历史运行替代。
 - [ ] 与 M4 设计 §3.23/§14、总体设计 9.4、规模数字和最终交接一起完成，P16 本阶段不提前关闭。
+
+## 6. 收尾准备接续（2026-11-01）
+
+[closeout spec](../specs/closeout.md)与[plan](../plans/closeout.md)已将本表21组入口逐格纳入最终控制者C12，T5–T7分组执行，T14绑定最终main；[预检](closeout-preflight.md)通过但尚未实施。本文§5三项保持未勾。P16阶段的自动125项/引擎及局部轮廓测量仍是准备证据，不能直接改名为最终C12。

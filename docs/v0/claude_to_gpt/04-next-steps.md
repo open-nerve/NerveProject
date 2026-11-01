@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见 §27：P16 实施与整审完成，产品候选 CI 全绿、最终文稿 CI 由交付收据签结；按负责人要求先不合并。此前各节保留历史快照。**
+**当前接续点见 §28：P16 已合并、main CI 全绿且归档清理完成；M4 closeout 的 spec/plan/文档预检已准备，暂不实施。此前各节保留历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -269,7 +269,7 @@ P16 分支 `codex/m4-p16`，worktree `.codex/worktress/codex/m4-p16`，基线 ma
 
 等负责人授权后从T1开始。M6/M7最后读者保留、全仓no-shadow和M4逐行dead ledger、共享选择器类型/真实行为、S2终稿与C12准备为下一阶段范围；最终C12、M4§14/总体9.4、输入顶层关闭和M5–M8最终交接均留closeout。
 
-## 27. 当前接续：P16 实施与整审交付（2026-11-01）
+## 27. 历史接续：P16 实施与整审交付（2026-11-01）
 
 分支 `codex/m4-p16`，worktree `.codex/worktress/codex/m4-p16`，基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`。[spec](../M4-issue-core/specs/P16-web-cleanup.md)、[plan](../M4-issue-core/plans/P16-web-cleanup.md)、[阶段记录](../M4-issue-core/reviews/P16-web-cleanup-review.md#22-t11-整分支审查与交付)、[整审报告](../../reviews/re-27-M4P16整体审核.md)。主控顺序完成 deep-review 三视角；全部局部发现已修复并限定复审，无待决架构问题。本地验证及准确产品候选 CI 全绿；最后文稿提交由下述准确收据后置核准，先不合并。
 
@@ -278,3 +278,11 @@ P16 分支 `codex/m4-p16`，worktree `.codex/worktress/codex/m4-p16`，基线 ma
 最终文稿的准确SHA/run/attempt/jobs由worktree `.superpowers/sdd/P16-web-cleanup/final-delivery.json`后置核准；必须本地/远端HEAD一致且三作业全绿才交付。实施证据和主目录 `.superpowers/sdd/P16-preparation-20261101/` 准备材料都保留，未来归档须覆盖两根。主目录始终main，本轮不合并、不清理worktree、不启动closeout。
 
 最终控制者全路径C12、M4设计§3.23/§14、总体9.4、规模数字、八份输入顶部关闭和M5–M8最终M4-closeout仍留独立收尾；P16通过不等于M4已完成。
+
+## 28. 当前接续：P16 完成、M4 收尾文档预检（2026-11-01）
+
+P16 最终 `582694d96303f11cf57568f8c84edd3006a36752` 已经授权 `--no-ff` 合入 main `01e40e113e11365a4eeacc2794973de2751dde61`；[main CI 41290496985](https://github.com/open-nerve/NerveProject/actions/runs/41290496985) attempt1 server/web/e2e全绿，E2E284/284。2,432文件、320,408,795字节及18空目录归档逐hash核验，P16本地/远端分支和worktree正常清理，清理后复验通过。[P16回执与稳定归档入口](../M4-issue-core/reviews/P16-web-cleanup-review.md#23-授权合并main-ci-与归档清理2026-11-01)。
+
+收尾分支 `codex/m4-closeout`，worktree `.codex/worktress/codex/m4-closeout`，基线同上main。[spec](../M4-issue-core/specs/closeout.md)、[plan](../M4-issue-core/plans/closeout.md)、[预检记录](../M4-issue-core/reviews/closeout-preflight.md)、[deep-review报告](../../reviews/re-28-M4收尾预检审核.md)已完成文档预检；14Task覆盖C12三引擎21组入口、18完成条款、全M4整审、20k列表/清理计时缺口、8输入和4输出及最后集成。独立builder无待答实质问题，主控文稿修订已复核。
+
+**本轮暂不实施。** T1尚未开始，phase仍M4/P16，M4§14/总体9.4未改完成，八份输入仍open，M5–M8最终M4-closeout尚未创建。没有收尾产品代码、依赖安装、C12实跑或规模测量；准备证据在主目录 `.superpowers/sdd/M4-closeout-preparation-20261101/`，未来与实施证据一并归档。等负责人安排后才从T1推进，阶段做deep-review并先不合并。

@@ -1,10 +1,10 @@
 # M4/P16 前端清理：预检与后续实施记录
 
-日期：2026-11-01。状态：实施与整审完成，集成待办；产品候选准确 CI 全绿，最终文稿 CI 由§22后置收据签结。基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，分支 `codex/m4-p16`；[spec](../specs/P16-web-cleanup.md)、[plan](../plans/P16-web-cleanup.md)、[准备盘点](P16-web-cleanup-inventory.md)、[deep-review预检](../../../reviews/re-26-M4P16预检审核.md)。
+日期：2026-11-01。状态：P16 已完成，授权合并、准确 main CI 全绿及归档清理见§23；§22及此前的集成待办描述保留为历史快照。基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，分支 `codex/m4-p16`；[spec](../specs/P16-web-cleanup.md)、[plan](../plans/P16-web-cleanup.md)、[准备盘点](P16-web-cleanup-inventory.md)、[deep-review预检](../../../reviews/re-26-M4P16预检审核.md)。
 
 ## 1. 前置与方法
 
-§1–8 保留准备时点的决定、限制和核验；当前实施验收以§9以后及§21–22为准。
+§1–8 保留准备时点的决定、限制和核验；实施验收以§9以后及§21–22为准，最新集成状态与稳定证据入口以§23为准。
 
 P15 的授权合并、准确 main CI、证据归档及正常清理见 [P15 review §13](P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)。本期分支从该 main 基线独立建 worktree，主目录仍 main；原生 worktree 工具不能指定负责人的路径，因此用系统 git worktree add。
 
@@ -211,3 +211,31 @@ T10 提交 `f03b6a28526ff367c6da481ca843def4167eb05c` 已由系统 Git 推送，
 局部裁定：共享编辑器由实际DOM/面板拥有者负责focus和释放，理由是原回调不覆盖直接退役；误判代价是输入或外层Escape回归，已用真实公开ref、数据库页面和三引擎覆盖。自动输入沿编辑器键盘路径，理由是DOM-only选择会被回焦同步覆盖；误判代价是掩盖产品输入缺陷，因此保留受控原回调复现和原严格console/请求观察。最终ledger按当前symbol读者重映射，理由是夹具移动/分类变化不等于删除；误判代价是误删动态合同，原AST与逐行映射及DOM反证共同约束。
 
 最终文稿提交另行推送并核准确HEAD；`.superpowers/sdd/P16-web-cleanup/final-delivery.json`必须同时记录本地/远端相同40位SHA、run/attempt和三作业success，才能交付。该后置收据不由旧候选CI代替。当前保留分支和worktree，未合并、未清理、未启动M4 closeout。
+
+## 23. 授权合并、main CI 与归档清理（2026-11-01）
+
+负责人明确授权 P16 用 `--no-ff` 合入 main、等 main CI 全绿后归档清理，并只准备 M4 closeout 的spec/plan/预检。
+
+- 原阶段基线：`313728cbc61003d7ed072c1e1e191e1cc2a3d75a`。
+- 最终分支：`582694d96303f11cf57568f8c84edd3006a36752`；[分支 CI 41285885235](https://github.com/open-nerve/NerveProject/actions/runs/41285885235) attempt1三作业success。归档内final-delivery.json同时核本地/远端HEAD与原验证清单。
+- 合并main：`01e40e113e11365a4eeacc2794973de2751dde61`，父提交依次为上述基线与最终分支；tree `8f846c7a7ceacf39f531b73a0ff8d5395d0901ad`，与已验证P16分支完全相同。系统git推送成功。
+- [准确 main CI 41290496985](https://github.com/open-nerve/NerveProject/actions/runs/41290496985) attempt1：server `124800555838`、web `124800555703`、e2e `124803005916`全部success；E2E原日志为 **284 passed (9.2m)**。未发生需处理的W11失败。原始run/jobs响应和日志已留存，不用上一提交的绿代替本次结果。
+
+稳定归档根是主目录 `.superpowers/sdd/P16-integration-20261101/`，以下路径均相对此根：
+
+| 原材料 | 归档路径/核验 |
+|---|---|
+| P16工作树全部ignored实施/审查/截图/trace/报告与turbo证据 | `worktree-evidence/`：2,314文件、319,707,933字节、18空目录；包含原 `.superpowers/`、`e2e/.superpowers/`、test-results、playwright-report、各.turbo |
+| 主目录P16准备原件 | `preparation-evidence/P16-preparation-20261101/`：118文件、700,862字节 |
+| 工作树归档manifest | `archive-manifest.json`，SHA-256 `090c64a84a42c1c67a4b7124bec4419ab39b89a19c6d7c998cee71c3410a40dd` |
+| 准备归档manifest | `preparation-archive-manifest.json`，SHA-256 `f811658a7c50009d8df71b5e2dbed8ea125bc32f8353dff89a354eb3411572ab` |
+| Git/CI事实 | `merge-receipt.json`、`main-ci-final{,-run,-jobs}.json`、`main-e2e.log` |
+| 清理事实 | `cleanup-prechecks.json`、`cleanup-command-log.json`、`cleanup-receipt.json`；源/目标核hash、字节、mode及成员清单，unknown=0 |
+
+合计 **2,432文件、320,408,795字节**。旧正文中指向P16 worktree下的 `.superpowers/sdd/P16-web-cleanup/`，现在对应 `worktree-evidence/.superpowers/sdd/P16-web-cleanup/`；e2e及turbo证据同样保留相对路径。准备根另有上表稳定副本，不能把旧路径不存在理解为证据已丢。
+
+清理前确认：主目录干净main且HEAD=origin/main=准确CI SHA，P16最终SHA为main祖先，远端only commits=0，本地/远端分支同SHA，全部证据归档已核。仅排除可从锁文件/源码重建的依赖与构建产物（manifest逐规则列出），没有unknown材料。之后系统git删除远端 `codex/m4-p16`、正常 `git worktree remove`、`git branch -d`；没有force、stash、clean或reset-hard。清理后两份归档复验通过，原worktree/两端分支不再存在，主目录仍干净main。
+
+本次代码与分支已测tree相同，合并期间没有新产品修改/失败/未解问题，因此复用P16已完成本地F和三引擎证据，另完成准确main CI；没有声称重新在本机跑了全部套件。**P16已完成，M4总体仍进行中。**
+
+M4 closeout文档分支 `codex/m4-closeout` 从本次main建立，原生worktree接口不能指定负责人约定路径，按用户优先规则用系统git创建 `.codex/worktress/codex/m4-closeout`。新[spec](../specs/closeout.md)、[plan](../plans/closeout.md)、[预检](closeout-preflight.md)只做准备；T1、最终C12/性能、§14全部勾选/总体9.4、八输入关闭与四输出尚未实施。

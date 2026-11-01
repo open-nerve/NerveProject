@@ -1,6 +1,6 @@
 # M4 / P16 `web-cleanup` 执行计划
 
-> 已获授权实施；按 T1 起顺序推进。基线 `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，工作树 `<repo>/.codex/worktress/codex/m4-p16`，分支 `codex/m4-p16`。以 [spec](../specs/P16-web-cleanup.md) 为权威，以下步骤按实际证据勾选。
+> P16 已授权合并且准确 main CI 全绿、证据归档清理完成，见 [review §23](../reviews/P16-web-cleanup-review.md#23-授权合并main-ci-与归档清理2026-11-01)。以下保留实施计划与实际勾选；原基线 `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，原分支 `codex/m4-p16`。后文“先不合并”为当时实施纪律，最新集成事实以上述回执为准。
 
 **目标：** 以真实读者、类型和运行证据完成 M4 前端清理，准备 C12，保持已批准的领域边界。
 
