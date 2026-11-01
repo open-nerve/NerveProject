@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
@@ -102,14 +103,21 @@ func newIssueRouteWithGate(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager
 
 func newIssueRouteWithConfig(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher, gate issueapp.WriteGate, cfg config.Config) moduleRoute {
 	t.Helper()
-	return newRouteWithTimeout(t, issue.New(issue.Deps{Events: events, Pool: pool, Tx: tx, JobTx: newIssueJobTx(pool, cfg), ArchivePolicies: project.Provide(pool).ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
+	return newRouteWithTimeout(t, newIssueModuleWithConfig(t, pool, tx, clock, events, gate, cfg).Register, cfg.Server.RequestTimeout)
+}
+
+// Share one module construction between HTTP and real Runner tests so their
+// request and background use cases receive the same observable publisher.
+func newIssueModuleWithConfig(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher, gate issueapp.WriteGate, cfg config.Config) *issue.Module {
+	t.Helper()
+	return issue.New(issue.Deps{Events: events, Pool: pool, Tx: tx, Logger: slog.New(slog.DiscardHandler), JobTx: newIssueJobTx(pool, cfg), ArchivePolicies: project.Provide(pool).ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
 		WriteGate: gate, Clock: clock,
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory},
 		Members:    issueMembers{members: workspace.Provide(pool).WorkspaceMemberDirectory},
-		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register, cfg.Server.RequestTimeout)
+		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}})
 }
 
 // Each write on the work-item side runs every statement of its transaction
