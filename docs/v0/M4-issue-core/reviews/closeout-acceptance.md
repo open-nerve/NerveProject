@@ -249,3 +249,24 @@ T3 逐项绑定具名测试、子例、真实锁/闸门观察及五次 race 执�
 - 基线/完整文件清单、22/26/44/45/12/18 源条数已固定，增长原文无删减；当前条目均待后续验证。
 - phase 改为 `M4/closeout`；规则与例外的逐字段内容保持不变。`t1-lint-web` exit 0：原 76 规则/13 例外的 samples 与到期检查通过、无命中；54/54 任务成功（37 命中本地共享缓存），1294 翻译键有定义，输入未变。
 - P16 已归档清理，本阶段不重复清理；原始归档收据位于主目录 `.superpowers/sdd/P16-integration-20261101/`。
+
+## 9. T2 历史锁断言收口
+
+15 个测试文件去掉重复错误分类/探针，生产代码没有变更。原 13 文件的 16 处 SQLSTATE 比较逐处记录于 `t2-lock-disposition.json`，全文读取的输入见 `source-read-ledger.json`。
+
+| 原场景 | 处理及保持的性质 |
+|---|---|
+| identity 的账户/凭据、workspace 的目录/成员/邀请、project 的默认状态 | 复用 `postgres.LockNotAvailable`；真实 200/300/500ms 锁超时及副作用断言保留 |
+| identity `rowLockedByAnother`、bootstrap `webFree` | 复用 `pgtest.RowWaits` 的 NOWAIT 持锁探针；缺行和其他错误直接失败 |
+| workspace `waitsFor` 及其三个消费者 | 原断言只判断锁兼容性，改用 `RowWaits`；删除无读者的旧帮手。实际排队、排序和重读仍用独立连接/锁等待观察证明 |
+| bootstrap `heldBy`、demotion 的联表探针 | 保留带多条件/联表的原 SQL、单行要求及失败分支，只复用错误分类 |
+| 残留 `55P03` | 仅生产分类常量、分类/503 专测的输入、注释及诊断文案；不做字面量机械清零。`40P01` 的独立拒绝断言保留 |
+
+实际运行（所有收据和完整日志均在实施证据根）：
+
+- `t2-before`：原 63 个顶层测试全部先通过，含子测试 163 项；39.12s。
+- `t2-after`：计划指定的 postgres、identity、workspace、project、bootstrap 完整包范围，1177 个顶层、含子测试 6305 项通过；377.11s。只有 2 个显式 opt-in 规模测试跳过，另 8 个生成/无测试包无用例；规模结果留 T8/T9 单独验。
+- `t2-mutant-remove-lock`：仅临时移除 `LockMemberWorkspaces` 的 `FOR NO KEY UPDATE`，`TestLockMemberWorkspaces` 明确因 acme/gamma 的 `FOR SHARE` 不再阻塞而失败。恢复收据记录前后相同 SHA256 `6489b3444692470325a448a7b6f82fbf0bad57ca4dc4ff58f44c6bcd51f5162e`；不提交变异。
+- `t2-race`：同一受测输入下原 63 项各跑 5 次，315 个顶层执行、含子测试 815 项通过；132.04s，无 race/意外 40P01。`t2-race-summary.json` 逐测试计数为 5，和全包输入相等。
+
+T2 四步完成。这些证据覆盖锁断言整理；D02 的全 26 交错和真实池验收仍分别由 T3/T9 补齐。

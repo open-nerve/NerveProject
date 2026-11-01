@@ -70,10 +70,10 @@ pnpm --filter @nerve/e2e exec playwright test --config=playwright.m4-cleanup.con
 **Files：** identity/provide_test.go；identity/adapter/postgres/{admin,accounts,credentials}_test.go；workspace/adapter/postgres/{directory,directory_share,update_invitation,locks,deactivation,deactivation_invitations_lock,delete_workspace_invitations}_test.go；project/adapter/postgres/state_writes_test.go；bootstrap/{project_write_locks,demotion,interleaving_growth}_test.go。均相对S/modules或S。
 **Interfaces：** `postgres.LockNotAvailable(err error) bool` 分类真实/包装PgError；`pgtest.RowWaits(t testing.TB,pool *pgxpool.Pool,table string,id uuid.UUID,lock string) bool` 用NOWAIT且缺行/其他错误失败。workspace旧waitsFor的300ms超时与NOWAIT并非完全同义。
 
-- [ ] Step 1：读完整被改测试，区分“持锁可观测”与“实际等待/lock_timeout本身”性质，记录16处比较和3个消费者的处置；核原测试先过。
-- [ ] Step 2：仅把错误分类重复换成postgres.LockNotAvailable；只有在原断言不依赖等待时长/顺序时才用RowWaits，移除无读者的waitsFor和imports。仍证明超时的路径保留真实超时，不改生产事务行为。
-- [ ] Step 3：在server串行运行 `go test -p=1 -count=1 ./internal/platform/postgres/... ./internal/modules/identity/... ./internal/modules/workspace/... ./internal/modules/project/... ./internal/bootstrap`。检查原具体测试确实执行、非法错误/缺行不会算成功、锁被去掉会失败；合法分类专测不删。
-- [ ] Step 4：记录残留字面量各自理由与无重复helper，受影响交错用`-race -count=5`重验无40P01，提交 `test(M4/closeout): 统一历史锁错误断言并保留等待语义`。
+- [x] Step 1：读完整被改测试，区分“持锁可观测”与“实际等待/lock_timeout本身”性质，记录16处比较和3个消费者的处置；核原测试先过。
+- [x] Step 2：仅把错误分类重复换成postgres.LockNotAvailable；只有在原断言不依赖等待时长/顺序时才用RowWaits，移除无读者的waitsFor和imports。仍证明超时的路径保留真实超时，不改生产事务行为。
+- [x] Step 3：在server串行运行 `go test -p=1 -count=1 ./internal/platform/postgres/... ./internal/modules/identity/... ./internal/modules/workspace/... ./internal/modules/project/... ./internal/bootstrap`。检查原具体测试确实执行、非法错误/缺行不会算成功、锁被去掉会失败；合法分类专测不删。
+- [x] Step 4：记录残留字面量各自理由与无重复helper，受影响交错用`-race -count=5`重验无40P01，提交 `test(M4/closeout): 统一历史锁错误断言并保留等待语义`。
 
 ## Task 3：服务端全量性质与二十六交错（约250–450行台账；补测按缺口）
 

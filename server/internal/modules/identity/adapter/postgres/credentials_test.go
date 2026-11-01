@@ -8,8 +8,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -195,8 +193,8 @@ func TestTheCredentialLockBlocksLocksNotInserts(t *testing.T) {
 	if insert != nil {
 		t.Errorf("inserting a session under the lock: %v, want no wait", insert)
 	}
-	var pgErr *pgconn.PgError
-	if !errors.As(secondLock, &pgErr) || pgErr.Code != "55P03" {
+
+	if !postgres.LockNotAvailable(secondLock) {
 		t.Errorf("a second lock: %v, want lock_not_available after waiting", secondLock)
 	}
 }

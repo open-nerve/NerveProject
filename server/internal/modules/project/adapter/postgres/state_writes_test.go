@@ -9,8 +9,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -250,8 +248,8 @@ func TestMarkDefaultStateAnswersTheFailureOfItsSecondStatement(t *testing.T) {
 		marked, err = w.s.MarkDefaultState(ctx, w.web, todo, w.alice, now)
 		return err
 	})
-	var pgErr *pgconn.PgError
-	if marked || !errors.As(err, &pgErr) || pgErr.Code != "55P03" {
+
+	if marked || !postgres.LockNotAvailable(err) {
 		t.Errorf("MarkDefaultState(Todo) with Todo held = %v, %v; want lock_not_available (55P03)", marked, err)
 	}
 }

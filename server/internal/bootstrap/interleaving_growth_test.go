@@ -11,7 +11,6 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
@@ -186,15 +185,7 @@ func (r growthRace) standing(t *testing.T) string {
 // Its wait for a connection of the pool ends soon.
 func (r growthRace) webFree(t *testing.T) bool {
 	t.Helper()
-	_, err := r.pool.Exec(pgtest.Soon(t), "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE NOWAIT", r.web)
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "55P03" {
-		return false
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	return true
+	return !pgtest.RowWaits(t, r.pool, "projects", r.web, "FOR UPDATE")
 }
 
 // demotedHolding stops a role change after its write of the membership,

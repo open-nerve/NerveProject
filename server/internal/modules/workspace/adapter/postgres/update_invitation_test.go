@@ -8,7 +8,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
@@ -92,7 +91,7 @@ func TestLockInvitationLocksTheRowForUpdate(t *testing.T) {
 		_, err := s.LockInvitation(ctx, carol.ID)
 		return err
 	})
-	var pgErr *pgconn.PgError
+
 	for name, take := range map[string]func(ctx context.Context) error{
 		"LockInvitation": func(ctx context.Context) error {
 			_, err := s.LockInvitation(ctx, carol.ID)
@@ -103,7 +102,7 @@ func TestLockInvitationLocksTheRowForUpdate(t *testing.T) {
 			return err
 		},
 	} {
-		if err := withLockTimeout(t, tx, pool, take); !errors.As(err, &pgErr) || pgErr.Code != "55P03" {
+		if err := withLockTimeout(t, tx, pool, take); !postgres.LockNotAvailable(err) {
 			t.Errorf("%s of carol's while it is locked: %v; want lock_not_available after waiting", name, err)
 		}
 	}
