@@ -9,6 +9,7 @@ import {
   flip,
   FloatingOverlay,
   FloatingPortal,
+  FloatingFocusManager,
   shift,
   useClick,
   useDismiss,
@@ -18,9 +19,10 @@ import {
 } from "@floating-ui/react";
 import type { Editor } from "@tiptap/core";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 // nerve imports
 import { cn, isComposing } from "@nerve/utils";
+import { EditorLabelsContext } from "@/components/editor-labels";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // extensions
@@ -53,6 +55,7 @@ export type RowDragHandleProps = {
 
 export function RowDragHandle(props: RowDragHandleProps) {
   const { editor, row } = props;
+  const labels = useContext(EditorLabelsContext);
   // states
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   // Track active event listeners for cleanup
@@ -89,11 +92,8 @@ export function RowDragHandle(props: RowDragHandleProps) {
     onOpenChange: (open) => {
       setIsDropdownOpen(open);
       if (open) {
-        editor.commands.addActiveDropbarExtension(CORE_EXTENSIONS.TABLE);
-      } else {
-        setTimeout(() => {
-          editor.commands.removeActiveDropbarExtension(CORE_EXTENSIONS.TABLE);
-        }, 0);
+        const table = findTable(editor.state.selection);
+        if (table) editor.view.dispatch(selectRow(table, row, editor.state.tr));
       }
     },
     whileElementsMounted: autoUpdate,
@@ -102,6 +102,15 @@ export function RowDragHandle(props: RowDragHandleProps) {
   const dismiss = useDismiss(context, { escapeKey: false });
   const role = useRole(context);
   const { getReferenceProps, getFloatingProps } = useInteractions([dismiss, click, role]);
+
+  // The mounted panel owns the keyboard guard, including removal by table/readonly retirement.
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+    editor.commands.addActiveDropbarExtension(CORE_EXTENSIONS.TABLE);
+    return () => {
+      editor.commands.removeActiveDropbarExtension(CORE_EXTENSIONS.TABLE);
+    };
+  }, [editor, isDropdownOpen]);
 
   useEffect(() => {
     if (!isDropdownOpen) return;
@@ -230,12 +239,16 @@ export function RowDragHandle(props: RowDragHandleProps) {
         <button
           ref={refs.setReference}
           {...getReferenceProps()}
+          aria-label={labels.tableRowOptions}
           type="button"
           onMouseDown={handleMouseDown}
-          className={cn("rounded-sm border border-strong-1 bg-layer-1 py-1 transition-all duration-200 outline-none", {
-            "border-accent-strong bg-accent-primary !opacity-100": isDropdownOpen,
-            "hover:bg-layer-1-hover": !isDropdownOpen,
-          })}
+          className={cn(
+            "rounded-sm border border-strong-1 bg-layer-1 py-1 transition-all duration-200 focus-visible:!opacity-100 focus-visible:outline-2 focus-visible:outline-accent-strong",
+            {
+              "border-accent-strong bg-accent-primary !opacity-100": isDropdownOpen,
+              "hover:bg-layer-1-hover": !isDropdownOpen,
+            }
+          )}
         >
           <MoreHorizontalOutline className="size-4 rotate-90 text-primary" />
         </button>
@@ -249,17 +262,20 @@ export function RowDragHandle(props: RowDragHandleProps) {
             }}
             lockScroll
           />
-          <div
-            className="max-h-[90vh] w-[12rem] overflow-y-auto rounded-md border-[0.5px] border-strong bg-surface-1 px-2 py-2.5 shadow-raised-200"
-            ref={refs.setFloating}
-            {...getFloatingProps()}
-            style={{
-              ...floatingStyles,
-              zIndex: 100,
-            }}
-          >
-            <RowOptionsDropdown editor={editor} onClose={() => context.onOpenChange(false)} />
-          </div>
+          <FloatingFocusManager context={context} returnFocus={false}>
+            <div
+              aria-label={labels.tableRowOptions}
+              className="max-h-[90vh] w-[12rem] overflow-y-auto rounded-md border-[0.5px] border-strong bg-surface-1 px-2 py-2.5 shadow-raised-200"
+              ref={refs.setFloating}
+              {...getFloatingProps()}
+              style={{
+                ...floatingStyles,
+                zIndex: 100,
+              }}
+            >
+              <RowOptionsDropdown editor={editor} onClose={() => context.onOpenChange(false)} />
+            </div>
+          </FloatingFocusManager>
         </FloatingPortal>
       )}
     </>

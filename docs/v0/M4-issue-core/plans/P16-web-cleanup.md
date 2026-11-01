@@ -61,7 +61,7 @@ make e2e
 - [x] Step 2：执行UI类型和组件测试，确认负例确实因旧any不报错而触发unused expect-error，运行缺口给具体值/回调失败；已有正常键盘绿性质保持。记录原始baseline，不把no-test-found当红。
 - [x] Step 3：实现强类型合同并逐32文件适配；泛型贯穿options/common.ts，不使用宽泛boolean/any/unknown双断言。保持单选内部null不外发、0/空串、对象、不提交表单、多选数组/关闭策略；同步删真实死参数/分支及改动文件warning、下调cap。
 - [x] Step 4：UI测试、web实际消费者测试及全包类型；B list-interactions C3的设置/表单/peek入口、filter-archive-profile-interactions C2选择器；M02错值类型、M03错单多回调、M04单选吞0、M05多选选后关闭、M06空态回调、M07改对象值各由对应编译/行为断言检出并恢复。串行F并固定候选输入。
-- [ ] Step 5：逐调用路径记兼容结论、A2/类型fixture入口与局限；提交 `refactor(M4/P16): 贯通共享下拉框的选择值与回调类型` 后push检查点，核远端HEAD为该提交并记录CI。
+- [x] Step 5：逐调用路径记兼容结论、A2/类型fixture入口与局限；提交 `refactor(M4/P16): 贯通共享下拉框的选择值与回调类型` 后push检查点，核远端HEAD为该提交并记录CI。
 
 ## Task 3：全仓no-shadow升错（约450–1000行）
 
@@ -94,7 +94,7 @@ make e2e
 - [x] Step 2：逐实际行为缺口补拥有者测试：可交互项Enter/Space可达、无嵌套button、layout/effect取当前输入、菜单/编辑器不开新增网络。数组/局部绑定等纯机械清理复用既有回归，不为每行重命名单独造测试。
 - [x] Step 3：修真正交互语义、effect或数据转换；真dead移除整链；按每包实际数同提交降低cap，改动文件告警清零。新UI文字双语，不增加role空壳/空handler/disable。
 - [x] Step 4：逐文件oxlint零、全包数等于cap、no-shadow仍0/error、类型与所属组件/编辑器/HTML安全回归；M13交互失去键盘、M14旧闭包忽略新输入由具体断言检出；cap一少一多的现成lint-cap诊断以临时参数验证不变。串行F并固定候选输入。
-- [ ] Step 5：写A5、基线→终值表和具体删除/修复证据；提交 `refactor(M4/P16): 收口前端告警并同步降低各包上限` 后push检查点，核远端HEAD和CI。
+- [x] Step 5：写A5、基线→终值表和具体删除/修复证据；提交 `refactor(M4/P16): 收口前端告警并同步降低各包上限` 后push检查点，核远端HEAD和CI。
 
 ## Task 6：关键词终态（约150–350行）
 
@@ -145,10 +145,10 @@ make e2e
 **Files：** 新 reviews/P16-C12-preparation.md；必要时新E/playwright.m4-cleanup.config.ts、E/package.json脚本；既有四个M4config及对应故事/fixtures只按缺口补充。
 **Interfaces：** 继承base的testDir/setup/fixtures/process，不复制Playwright世界；三project同scope，默认A4限制不带入。
 
-- [ ] Step 1：逐spec§2.10页面/身份/焦点/右键/Back列矩阵，映射现有C1–C11/I/S2，重复test id去重；已有题名C12不等于全部最终C12。
-- [ ] Step 2：明确组合配置并--list，检查Chromium/Firefox/WebKit各非零、标题和范围相同；没有执行的页面格标待收尾，不写通过。
-- [ ] Step 3：只补当前改动暴露的焦点裁切/菜单/右键缺口，保留真实控件与数据库/请求观察；框架已有fixture直接复用。
-- [ ] Step 4：make build后串行三引擎受影响入口；记录各格实际run/skip/截图/trace和console，新config用显式文件路径补oxlint；若根ignorePatterns跳过，按P15已证实方法复制完全相同规则到临时配置、只去掉ignorePatterns后扫描该文件（--no-ignore本身不能覆盖配置排除；生产配置不变）；M20恢复默认Firefox A4 grep由清单断言失败，M21关键焦点/右键行为失效由真实页面断言失败。恢复；串行F并固定候选输入。
+- [x] Step 1：逐spec§2.10页面/身份/焦点/右键/Back列矩阵，映射现有C1–C11/I/S2，重复test id去重；已有题名C12不等于全部最终C12。
+- [x] Step 2：明确组合配置并--list，检查Chromium/Firefox/WebKit各非零、标题和范围相同；没有执行的页面格标待收尾，不写通过。
+- [x] Step 3：只补当前改动暴露的焦点裁切/菜单/右键缺口，保留真实控件与数据库/请求观察；框架已有fixture直接复用。
+- [x] Step 4：make build后串行三引擎受影响入口；记录各格实际run/skip/截图/trace和console，新config用显式文件路径补oxlint；若根ignorePatterns跳过，按P15已证实方法复制完全相同规则到临时配置、只去掉ignorePatterns后扫描该文件（--no-ignore本身不能覆盖配置排除；生产配置不变）；M20恢复默认Firefox A4 grep由清单断言失败，M21关键焦点/右键行为失效由真实页面断言失败。恢复；串行F并固定候选输入。
 - [ ] Step 5：写A10，清楚标“C12准备及受影响自动回归完成，控制者最终全路径C12待closeout”；提交 `test(M4/P16): 准备三浏览器收尾矩阵并核共享控件影响` 后push检查点，核远端HEAD和CI。
 
 ## Task 11：整分支deep-review与阶段交付（约350–800行文档，修复另计）
@@ -166,4 +166,4 @@ make e2e
 
 M01/T1消费者审计；M02–M07/T2类型与真实选择；M08–M10/T3升错/序列化；M11–M12/T4逐行审计/动态读者；M13–M14/T5键盘/effect；M15–M16/T6关键词；M17/T7隐式getter；M18–M19/T9请求/访客；M20–M21/T10浏览器清单/真实控件。若某性质没有产品变化、原有覆盖已证实，核原始hash与输入等价后复用，不能强造不适用变异或以任意TS失败替代行为证据。最终明确逐条在哪层被检出。
 
-准备期仅源码/测试阅读、静态盘点、文档审查；没有运行以上Task、未新增产品代码、未更改phase。实施授权后从T1开始。
+准备期仅源码/测试阅读、静态盘点和文档审查；实施授权后已从 T1 按本表推进，当前结果以勾选项与阶段 review 为准。

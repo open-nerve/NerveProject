@@ -1,6 +1,6 @@
 # M4/P16 前端清理：预检与后续实施记录
 
-日期：2026-11-01。状态：预检通过，已授权实施，T1–T3 本地任务完成，T2 检查点 CI 待核。基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，分支 `codex/m4-p16`；[spec](../specs/P16-web-cleanup.md)、[plan](../plans/P16-web-cleanup.md)、[准备盘点](P16-web-cleanup-inventory.md)、[deep-review预检](../../../reviews/re-26-M4P16预检审核.md)。
+日期：2026-11-01。状态：预检通过，已授权实施，T1–T9 已完成，T2 失败已由 T5 修复并验证，T10 本地验证完成，准确检查点 CI 与 T11 终审待核。基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，分支 `codex/m4-p16`；[spec](../specs/P16-web-cleanup.md)、[plan](../plans/P16-web-cleanup.md)、[准备盘点](P16-web-cleanup-inventory.md)、[deep-review预检](../../../reviews/re-26-M4P16预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -17,15 +17,15 @@ brainstorming 要求的 fresh builder-check 只读完整 spec/plan/inventory 与
 | 标准 | Task与证据落点 | 当前状态 |
 |---|---|---|
 | A1 | T1完整last-reader表、M6/M7子交接与静态反例，见§9 | 已通过 |
-| A2 | T2 类型/消费者/运行与反例见§10 | 本地通过 |
+| A2 | T2 类型/消费者/运行与反例见§10 | 已通过，失败修复见§13–14 |
 | A3 | T3 全仓0/error、词法/运行/反例见§11 | 已通过 |
-| A4 | T4新AST逐行ledger、历史52行、动态读者/删除链 | 待实施 |
-| A5 | T5 M4领域/全期改动零告警与各包精确cap | 待实施 |
-| A6 | T6关键词、旧搜索具名扫描、正反例与未来边界 | 待实施/回归 |
-| A7 | T7隐式getter/显式方法区分、M7三文件与原store测试 | 待实施/回归 |
-| A8 | T8 README/两清单/交接子项与实际能力对账 | 待实施 |
-| A9 | T9 S2入口/四身份精确请求与拥有者测试 | 待实施 |
-| A10 | T10三引擎同范围清单、影响回归、最终C12留收尾 | 待实施 |
+| A4 | T4新AST逐行ledger、历史52行、动态读者/删除链 | 已通过，见§12 |
+| A5 | T5 M4领域/全期改动零告警与各包精确cap | 已通过，见§14 |
+| A6 | T6关键词、旧搜索具名扫描、正反例与未来边界 | 已通过，见§15 |
+| A7 | T7隐式getter/显式方法区分、M7三文件与原store测试 | 已通过，见§16 |
+| A8 | T8 README/两清单/交接子项与实际能力对账 | 已通过，见§17 |
+| A9 | T9 S2入口/四身份精确请求与拥有者测试 | 已通过，见§18 |
+| A10 | T10三引擎同范围清单、影响回归、最终C12留收尾 | 本地通过，见§20及 C12 表 |
 | A11 | T11完整F、deep-review/修复复审、准确分支HEAD CI | 待实施 |
 
 ## 3. 准备决定
@@ -177,3 +177,15 @@ Task BASE `e0c75a6b`。S2 REQUESTS新增管理员/成员归档、各自个人三
 新增断言先证实访客草稿正文空白：组件 `t9-guest-refusal-red` 与实际 `t9-s2-baseline` 均缺无权限说明。WorkspaceDraftIssuesRoot沿既有canRead判断，在已知访客角色时显示现存双语拒绝文字；加载/退役仍不发请求，未改角色/协议。首次S2管理员/成员失败另是测试预期错误：误套普通项目包装层和服务端偏好默认值；沿core.ts归档独立路由、getComputedDisplayFilters及profile/archived store重新核准本地默认值，未把它记成产品缺陷或照抄实际请求白名单。
 
 修复后两组件文件5/5、S2 13/13、I14/I19页面9/9，make lint-web54任务通过；统一产品/测试输入 `6a97e025ffdae1e84a34a034493bdf3517bb8dbe1316ec91b4ec17b4fb2798f3`，收据输入/输出相同。M18在页面注入一次重复归档GET，M19在访客个人页注入实际列表GET，两次原精确数组断言均显示Received多1；这是浏览器网络故障注入，未声称两个生产实现曾有该错误。临时测试字节恢复、受测bin hash未变，S2恢复13/13。原始补丁/红原因/恢复hash在`t9-request-probes.json`，初次报告和各反例trace另存，不覆盖失败证据。三引擎复验归T10。
+
+## 19. T5 检查点准确 CI 回执
+
+准确提交 `c4881cf5981d752d3e6895296a3f84c289102eea` 的 [CI 41278107421](https://github.com/open-nerve/NerveProject/actions/runs/41278107421) 首次运行 server（124764318834）、web（124764318884）、e2e（124766373832）全部 success。公开 run metadata 核 head_sha/conclusion，连接器核三作业与步骤，原件 `t5-ci-final.json` / `t5-ci-jobs-final.json`。T2 的原 run 失败仍保留；其 I13 根因经 T5 本地红绿、真实页面十遍及本次准确 CI 关闭。此结果只代表 T5 检查点，不替代 T10/T11 最终 HEAD 验证。
+
+## 20. T10 三浏览器准备与局部根因修复
+
+完整范围、身份、键盘/轮廓边界及逐引擎证据见 [C12 准备表](P16-C12-preparation.md)。组合配置复用现有世界，实际去重每引擎 125 项；123 项整矩阵加 2 项嵌套补充，各引擎均成功、无跳过/重试。中间只增加测试，产品输入及 bin 相同，`t10-matrix-complete.json` 核 id 并集和文件差异。
+
+真实失败推动三项 editor 局部修复：包装层只代理自身 focus，widget DOM 生命周期负责 ReactRenderer 创建/销毁，已挂载菜单 effect 负责 table 键盘标志清理。行列控件具名、键盘初始焦点/回焦、原行列选择命令与当前语言 context 在真实组件及数据库页面回归通过。新增宿主切换语言、草稿弹窗/peek 两级 Escape 检查未发现另一项产品缺陷。ContinueWriting 空首段疑点经边界用例证伪，原逻辑保留。Firefox S2 硬导航中止字体请求按实际就绪同步修复，不放宽 console 断言。
+
+完整 F 七项串行验证通过：F1–F3 原件 `t10-final-f1-gen-check` 至 `t10-final-f3-test`，输入 SHA `e48268d018d2f9a2942c61b4bc2a9ec3f48768dd370dcad59d0b63ab24ee1a44`；F5–F6 原件 `t10-r2-f5-knip` / `t10-r2-f6-test-web`，输入 SHA `b2a27d8b467e9028863d9a777be0da0be0c584e272723a5c2909125a8242df16`；F4/F7 采用 `t10-r3-f4-lint-web` / `t10-r3-f7-e2e`，输入 SHA `4e528b54eba7c3eaeebd689f20f2dd6221a7252300e6a1ba5666da518c800857`。每份收据 input/outputState 相同。首次 F4 只发现 S2 使用 FontFaceSet 展开语法不在当前 DOM 类型声明中；改用现有 forEach API 保留同一失败字体检查，不增加类型豁免。其后完整 E2E 揭示 I11 DOM-only 全选与回焦同步竞争，受控真实回调复现了文字追加；正式用例沿既有 I2/I12 采用键盘全选并加强全文/请求断言，三个引擎各十遍通过，最终完整 E2E 284/284。过程与未复现的先行实验见 `i11-root-cause.md`，临时诊断全部撤回。三输入之间仅这两个 E2E 测试文件变化，3,956 个非 Markdown 文件逐 hash 对账，生成/服务端和前端单测/依赖输入未变；据 `t10-f-r3-input-equivalence.json` 复用 F1–F3/F5–F6，不冒称同一全仓 SHA 或重跑。Firefox/WebKit S2 最终另各复验 13 项通过。三引擎、配置显式 lint、M20/M21 红绿均可追溯，所有原失败保留。准确检查点 CI 另记§21，不用本地或 T5 绿代替。

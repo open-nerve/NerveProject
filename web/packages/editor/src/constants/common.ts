@@ -20,7 +20,7 @@ import {
   ToDoOutline,
   UnderlineOutline,
 } from "@makeplane/propel/icons";
-import type { TCommandExtraProps, TEditorCommands } from "@/types";
+import type { EditorColor, TCommandExtraProps, TEditorCommands } from "@/types";
 
 // Utility type to enforce the necessary extra props or make extraProps optional
 type ExtraPropsForCommand<T extends TEditorCommands> = T extends keyof TCommandExtraProps
@@ -147,7 +147,7 @@ export const TOOLBAR_ITEMS: {
 };
 
 export const COLORS_LIST: {
-  key: string;
+  key: EditorColor;
   label: string;
   textColor: string;
   backgroundColor: string;

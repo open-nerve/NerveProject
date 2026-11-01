@@ -24,8 +24,6 @@ type TableRowDragHandlePluginState = {
   // track table structure to detect changes
   tableHeight?: number;
   tableNodePos?: number;
-  // track renderers for cleanup
-  renderers?: ReactRenderer[];
 };
 
 const TABLE_ROW_DRAG_HANDLE_PLUGIN_KEY = new PluginKey("tableRowDragHandlePlugin");
@@ -66,63 +64,49 @@ export const TableRowDragHandlePlugin = (editor: Editor): Plugin<TableRowDragHan
             decorations: mapped,
             tableHeight: tableMap.height,
             tableNodePos: table.pos,
-            renderers: prev.renderers,
           };
         }
 
-        // Clean up old renderers before creating new ones
-        prev.renderers?.forEach((renderer) => {
-          try {
-            renderer.destroy();
-          } catch (error) {
-            console.error("Error destroying renderer:", error);
-          }
-        });
-
         // recreate all decorations
         const decorations: Decoration[] = [];
-        const renderers: ReactRenderer[] = [];
 
         for (let row = 0; row < tableMap.height; row++) {
           const pos = getTableCellWidgetDecorationPos(table, tableMap, row * tableMap.width);
 
-          const dragHandleComponent = new ReactRenderer(RowDragHandle, {
-            props: {
-              editor,
-              row,
-            } satisfies RowDragHandleProps,
-            editor,
-          });
-
-          renderers.push(dragHandleComponent);
-          decorations.push(Decoration.widget(pos, () => dragHandleComponent.element));
+          // Create only when ProseMirror mounts the widget, and retire with that same DOM owner.
+          // Intermediate transactions may discard a decoration before it ever gets a DOM node.
+          let renderer: ReactRenderer | undefined;
+          decorations.push(
+            Decoration.widget(
+              pos,
+              () => {
+                renderer = new ReactRenderer(RowDragHandle, {
+                  props: { editor, row } satisfies RowDragHandleProps,
+                  editor,
+                });
+                return renderer.element;
+              },
+              {
+                ignoreSelection: true,
+                stopEvent: () => true,
+                destroy: () => renderer?.destroy(),
+              }
+            )
+          );
         }
 
         return {
           decorations: DecorationSet.create(newState.doc, decorations),
           tableHeight: tableMap.height,
           tableNodePos: table.pos,
-          renderers,
         };
       },
     },
     props: {
       decorations(state) {
+        if (!editor.isEditable) return undefined;
         return (TABLE_ROW_DRAG_HANDLE_PLUGIN_KEY.getState(state) as TableRowDragHandlePluginState | undefined)
           ?.decorations;
       },
-    },
-    destroy() {
-      // Clean up all renderers when plugin is destroyed
-      const state =
-        editor.state &&
-        (TABLE_ROW_DRAG_HANDLE_PLUGIN_KEY.getState(editor.state) as TableRowDragHandlePluginState | undefined);
-      state?.renderers?.forEach((renderer: ReactRenderer) => {
-        try {
-          renderer.destroy();
-        } catch (error) {
-          console.error("Error destroying renderer:", error);
-        }
-      });
     },
   });

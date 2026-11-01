@@ -2445,7 +2445,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：I11–I14、I16、I18 的页面版本和 I20 的评论通过；`copy-hook` 没有 M4 的例外；`git grep` 不再找到 M4 的 13 处模块级实例；C6–C8 和 C9 的草稿通过。
 
 ### P16 `web-cleanup`：死成员、`no-shadow` 与守卫的终态（11 个任务）
-- **准备入口**：[spec](specs/P16-web-cleanup.md)、[plan](plans/P16-web-cleanup.md)、[review](reviews/P16-web-cleanup-review.md)。基线 main 313728cbc61003d7ed072c1e1e191e1cc2a3d75a；文档预检通过，尚未实施。当前32个选择器生产文件、46条已知no-shadow（38显示+8隐藏）和453个M4 dead候选（member/prop），均以真实读者决定处理；历史粗项数不当作当前执行上限。
+- **准备入口**：[spec](specs/P16-web-cleanup.md)、[plan](plans/P16-web-cleanup.md)、[review](reviews/P16-web-cleanup-review.md)。基线 main 313728cbc61003d7ed072c1e1e191e1cc2a3d75a；文档预检通过并已授权实施，T1–T10 本地验证完成，准确检查点 CI 与 T11 终审待核。准备基线为32个选择器生产文件、46条已知no-shadow（38显示+8隐藏）和453个M4 dead候选；实际处理以 review 的新扫描与真实读者为准，不把历史粗项数当执行上限。
 - **目标**：M4 领域的死成员、oxlint、关键词守卫到达终态；跨 M 的共用件按交接处理。
 - **任务**：
   1. 数一次 `getTabIndex` 的调用方：没有了就删除它和常量、`CustomMenu` 读 `tabIndex` 的一支；还有 M6、M7 的就写进它们的交接（M3 交接第 7 节）。

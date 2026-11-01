@@ -7,9 +7,10 @@ import { EditorBubbleMenu } from "@/components/menus/bubble-menu/root";
 import { LinkEditView } from "@/components/links/link-edit-view";
 import { EditorContainer } from "@/components/editors/editor-container";
 import { EditorContent } from "@tiptap/react";
+import { EditorContentWrapper } from "@/components/editors/editor-content";
 import { RowDragHandle } from "@/extensions/table/plugins/drag-handles/row/drag-handle";
 import { ColumnDragHandle } from "@/extensions/table/plugins/drag-handles/column/drag-handle";
-import { EditorLabelsContext } from "@/components/editor-labels";
+import { defaultEditorLabels, EditorLabelsContext } from "@/components/editor-labels";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 afterEach(() => {
@@ -33,7 +34,7 @@ describe("the real editor's interactive hosts", () => {
           createElement(
             EditorLabelsContext,
             {
-              value: { continueWriting: "Continue writing", resizeImage },
+              value: { ...defaultEditorLabels, resizeImage },
             },
             <EditorContainer editor={editor} id="image" displayConfig={{}} editorContainerClassName="" isTouchDevice>
               <EditorContent editor={editor} />
@@ -95,9 +96,11 @@ describe("the real editor's interactive hosts", () => {
       const trigger = host.querySelector("button")!;
       await act(async () => trigger.click());
       expect(document.body.textContent).toContain(kind === "row" ? "Insert above" : "Insert left");
-      const tab = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
-      await act(async () => trigger.dispatchEvent(tab));
-      expect(tab.defaultPrevented).toBe(false);
+      for (const button of document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button'))
+        expect((button.getAttribute("aria-label") ?? button.textContent ?? "").trim()).not.toBe("");
+      await vi.waitFor(() =>
+        expect(document.activeElement?.textContent).toBe(kind === "row" ? "Header row" : "Header column")
+      );
       await act(async () =>
         trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", isComposing: true, bubbles: true }))
       );
@@ -126,41 +129,78 @@ describe("the real editor's interactive hosts", () => {
     }
   });
 
-  it("offers a native action to continue after a final table without submitting the enclosing form", async () => {
-    const editor = await createEditor({ content: "<table><tbody><tr><td><p>Last</p></td></tr></tbody></table>" });
-    const host = document.createElement("div");
-    document.body.append(host);
-    const root = createRoot(host);
-    const submit = vi.fn();
-    await act(async () =>
-      root.render(
-        createElement(
-          "form",
-          { onSubmit: submit },
-          <EditorContainer
-            editor={editor}
-            id="description"
-            displayConfig={{}}
-            editorContainerClassName=""
-            isTouchDevice
-          >
-            <EditorContent editor={editor} />
-          </EditorContainer>
-        )
-      )
-    );
-    try {
-      const button = host.querySelector<HTMLButtonElement>('button[aria-label="Continue writing"]');
-      expect(button).not.toBeNull();
-      button!.focus();
-      await act(async () => button!.click());
-      await vi.waitFor(() => expect(editor.isFocused).toBe(true));
-      expect(editor.state.doc.lastChild?.type.name).toBe("paragraph");
-      expect(submit).not.toHaveBeenCalled();
-    } finally {
-      await act(async () => root.unmount());
+  it.each(["row", "column"] as const)(
+    "does not redirect a real %s widget's focus from the content wrapper",
+    async (kind) => {
+      const editor = await createEditor({
+        content: "<p>Before</p><table><tbody><tr><td><p>Cell</p></td></tr></tbody></table>",
+      });
+      const host = document.createElement("div");
+      document.body.append(host);
+      const root = createRoot(host);
+      await act(async () => root.render(<EditorContentWrapper editor={editor} id="table-focus" tabIndex={0} />));
+      try {
+        await act(async () => editor.commands.setTextSelection(editor.state.doc.firstChild!.nodeSize + 4));
+        const trigger = host.querySelector<HTMLButtonElement>(`button[aria-label="Table ${kind} options"]`)!;
+        expect(trigger).not.toBeNull();
+        await act(async () => {
+          trigger.focus();
+          // TipTap's focus command runs in a frame; let it run before asserting that it did not steal widget focus.
+          await new Promise(requestAnimationFrame);
+        });
+        expect(document.activeElement).toBe(trigger);
+        const wrapper = host.firstElementChild as HTMLElement;
+        await act(async () => {
+          wrapper.focus();
+          await new Promise(requestAnimationFrame);
+        });
+        expect(document.activeElement).toBe(editor.view.dom);
+      } finally {
+        await act(async () => root.unmount());
+      }
     }
-  });
+  );
+
+  it.each(["", "<p></p>"])(
+    "offers a native action to continue after a final table from prefix %s without submitting the enclosing form",
+    async (prefix) => {
+      const editor = await createEditor({
+        content: prefix + "<table><tbody><tr><td><p>Last</p></td></tr></tbody></table>",
+      });
+      const host = document.createElement("div");
+      document.body.append(host);
+      const root = createRoot(host);
+      const submit = vi.fn();
+      await act(async () =>
+        root.render(
+          createElement(
+            "form",
+            { onSubmit: submit },
+            <EditorContainer
+              editor={editor}
+              id="description"
+              displayConfig={{}}
+              editorContainerClassName=""
+              isTouchDevice
+            >
+              <EditorContent editor={editor} />
+            </EditorContainer>
+          )
+        )
+      );
+      try {
+        const button = host.querySelector<HTMLButtonElement>('button[aria-label="Continue writing"]');
+        expect(button).not.toBeNull();
+        button!.focus();
+        await act(async () => button!.click());
+        await vi.waitFor(() => expect(editor.isFocused).toBe(true));
+        expect(editor.state.doc.lastChild?.type.name).toBe("paragraph");
+        expect(submit).not.toHaveBeenCalled();
+      } finally {
+        await act(async () => root.unmount());
+      }
+    }
+  );
 
   it("releases a bubble menu's unfinished selection listeners when its host unmounts", async () => {
     const editor = await createEditor({ content: "<p>Select me</p>" });

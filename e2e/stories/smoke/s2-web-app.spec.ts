@@ -431,6 +431,18 @@ for (const account of ACCOUNTS) {
         }, Promise.resolve());
         load.expected.sort();
       }
+      // API completion precedes font layout. Finish this page's fonts before the next hard navigation,
+      // otherwise Firefox can report an aborted font from the page the test just replaced.
+      expect(
+        await page.evaluate(async () => {
+          await document.fonts.ready;
+          const failed: string[] = [];
+          document.fonts.forEach((font) => {
+            if (font.status === "error") failed.push(font.family);
+          });
+          return failed;
+        })
+      ).toEqual([]);
       return load;
     };
     // the pages load one after another

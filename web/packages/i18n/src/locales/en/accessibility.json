@@ -40,7 +40,20 @@
     "comment_add_reaction": "Add reaction to {name}’s comment",
     "editor": {
       "continue_writing": "Continue writing",
-      "resize_image": "Resize image"
+      "resize_image": "Resize image",
+      "table_row_options": "Table row options",
+      "table_column_options": "Table column options",
+      "table_colors": {
+        "gray": "Gray",
+        "peach": "Peach",
+        "pink": "Pink",
+        "orange": "Orange",
+        "green": "Green",
+        "light-blue": "Light blue",
+        "dark-blue": "Dark blue",
+        "purple": "Purple",
+        "none": "No background color"
+      }
     }
   }
 }

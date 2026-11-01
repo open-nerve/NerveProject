@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import { useContext } from "react";
+import { EditorLabelsContext } from "@/components/editor-labels";
 import { Disclosure } from "@headlessui/react";
 import type { Editor } from "@tiptap/core";
 import { Ban } from "lucide-react";
@@ -13,8 +15,6 @@ import { cn } from "@nerve/utils";
 // constants
 import { COLORS_LIST } from "@/constants/common";
 import { CORE_EXTENSIONS } from "@/constants/extension";
-
-// TODO: implement text color selector
 
 type Props = {
   editor: Editor;
@@ -31,18 +31,9 @@ const handleBackgroundColorChange = (editor: Editor, color: string | null) => {
     .run();
 };
 
-// const handleTextColorChange = (editor: Editor, color: string | null) => {
-//   editor
-//     .chain()
-//     .focus()
-//     .updateAttributes(CORE_EXTENSIONS.TABLE_CELL, {
-//       textColor: color,
-//     })
-//     .run();
-// };
-
 export function TableDragHandleDropdownColorSelector(props: Props) {
   const { editor, onSelect } = props;
+  const labels = useContext(EditorLabelsContext);
 
   return (
     <Disclosure defaultOpen>
@@ -66,35 +57,13 @@ export function TableDragHandleDropdownColorSelector(props: Props) {
         )}
       </Disclosure.Button>
       <Disclosure.Panel className="mb-1.5 space-y-2 p-1">
-        {/* <div className="space-y-1.5">
-          <p className="text-11 text-tertiary font-semibold">Text colors</p>
-          <div className="flex items-center flex-wrap gap-2">
-            {COLORS_LIST.map((color) => (
-              <button
-                key={color.key}
-                type="button"
-                className="flex-shrink-0 size-6 rounded-sm border-[0.5px] border-strong-1 hover:opacity-60 transition-opacity"
-                style={{
-                  backgroundColor: color.textColor,
-                }}
-                onClick={() => handleTextColorChange(editor, color.textColor)}
-              />
-            ))}
-            <button
-              type="button"
-              className="flex-shrink-0 size-6 grid place-items-center rounded-sm text-tertiary border-[0.5px] border-strong-1 hover:bg-layer-1 transition-colors"
-              onClick={() => handleTextColorChange(editor, null)}
-            >
-              <Ban className="size-4" />
-            </button>
-          </div>
-        </div> */}
         <div className="space-y-1">
           <p className="text-11 font-semibold text-tertiary">Background colors</p>
           <div className="flex flex-wrap items-center gap-2">
             {COLORS_LIST.map((color) => (
               <button
                 key={color.key}
+                aria-label={labels.tableColors[color.key]}
                 type="button"
                 className="size-6 flex-shrink-0 rounded-sm border-[0.5px] border-strong-1 transition-opacity hover:opacity-60"
                 style={{
@@ -107,6 +76,7 @@ export function TableDragHandleDropdownColorSelector(props: Props) {
               />
             ))}
             <button
+              aria-label={labels.tableColors.none}
               type="button"
               className="grid size-6 flex-shrink-0 place-items-center rounded-sm border-[0.5px] border-strong-1 text-tertiary transition-colors hover:bg-layer-1-hover"
               onClick={() => {

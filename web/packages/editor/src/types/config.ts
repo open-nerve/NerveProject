@@ -30,8 +30,13 @@ export type TDisplayConfig = {
   lineSpacing?: TEditorLineSpacing;
 };
 
+export type EditorColor = "gray" | "peach" | "pink" | "orange" | "green" | "light-blue" | "dark-blue" | "purple";
+
 /** Consumer-supplied labels, shared with React NodeViews through the editor's context. */
 export type EditorLabels = {
   continueWriting: string;
   resizeImage: string;
+  tableRowOptions: string;
+  tableColumnOptions: string;
+  tableColors: Record<EditorColor | "none", string>;
 };
