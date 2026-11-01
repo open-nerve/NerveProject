@@ -285,4 +285,4 @@ P16 最终 `582694d96303f11cf57568f8c84edd3006a36752` 已经授权 `--no-ff` 合
 
 收尾分支 `codex/m4-closeout`，worktree `.codex/worktress/codex/m4-closeout`，基线同上main。[spec](../M4-issue-core/specs/closeout.md)、[plan](../M4-issue-core/plans/closeout.md)、[预检记录](../M4-issue-core/reviews/closeout-preflight.md)、[deep-review报告](../../reviews/re-28-M4收尾预检审核.md)已完成文档预检；14Task覆盖C12三引擎21组入口、18完成条款、全M4整审、20k列表/清理计时缺口、8输入和4输出及最后集成。独立builder无待答实质问题，主控文稿修订已复核。
 
-**本轮暂不实施。** T1尚未开始，phase仍M4/P16，M4§14/总体9.4未改完成，八份输入仍open，M5–M8最终M4-closeout尚未创建。没有收尾产品代码、依赖安装、C12实跑或规模测量；准备证据在主目录 `.superpowers/sdd/M4-closeout-preparation-20261101/`，未来与实施证据一并归档。等负责人安排后才从T1推进，阶段做deep-review并先不合并。
+**2026-11-01 已获准实施。** 从 T1 顺序执行，phase 已改为 M4/closeout，范围及原文来源见 [验收台账](../M4-issue-core/reviews/closeout-acceptance.md)，C12 见 [最终矩阵](../M4-issue-core/reviews/closeout-browser-matrix.md)。T1 已固定 22 故事、26 交错、44 同步行、45 差异行、C1–C12、18 完成条款、18 Phase 两类来源与八输入；lint-web 通过。其他条目按实际证据推进，不预签结。阶段末 deep-review 后先不合并，T14 仅准备集成包；最终 main CI、M4 §14 全勾和总体 §9.4 完成标记仍需后续集成。准备证据保留在主目录 `.superpowers/sdd/M4-closeout-preparation-20261101/`，本次实施证据在 worktree `.superpowers/sdd/M4-closeout/`，技能进度在 `.superpowers/sdd/closeout/`，未来均须归档。

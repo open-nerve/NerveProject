@@ -1,6 +1,6 @@
 # M4 / closeout：最终验收与交接收尾
 
-状态：文档预检通过；本轮仅准备，不实施。实施基线为 P16 合并后的 main `01e40e113e11365a4eeacc2794973de2751dde61`，分支 `codex/m4-closeout`，工作树 `<repo>/.codex/worktress/codex/m4-closeout`。本轮不改 `tools/keywords.json.phase`，不勾 M4 完成标准，不关闭输入交接，不创建 M5–M8 的最终交接。实施和后续合并分别等待负责人安排。
+状态：文档预检通过，2026-11-01 获准从 T1 开始实施。实施基线为 P16 合并后的 main `01e40e113e11365a4eeacc2794973de2751dde61`，分支 `codex/m4-closeout`，工作树 `<repo>/.codex/worktress/codex/m4-closeout`。按任务完成 C12、证据和交接，实施进度见 [验收台账](../reviews/closeout-acceptance.md)。阶段末 deep-review，先不合并；最终 main CI 和完成标记仍待后续集成授权。
 
 ## 1. 目标
 
@@ -88,7 +88,7 @@ LAN HTTP 复制覆盖原十二入口和 `useCopyLink` / `useCopyText` 真实路�
 
 ## 4. 验收标准：设计 §14 全量映射
 
-以下均是**未来收尾任务**。D06、D09设计已有子项勾选只代表历史已批准/已验证，仍核它们的当前适用性；本表不提前签结。
+以下由本次收尾逐项执行。D06、D09设计已有子项勾选只代表历史已批准/已验证，仍核它们的当前适用性；本表不提前签结。
 
 | ID | 完成标准（以设计原文为权威） | 任务 | 必留证据 |
 |---|---|---|---|
@@ -119,7 +119,7 @@ LAN HTTP 复制覆盖原十二入口和 `useCopyLink` / `useCopyText` 真实路�
 
 不实现M5附件、M6迭代模块、M7协作/视图自身接口、M8发布/性能新架构；不恢复Plane旧列表引擎，不扩大项目API提供next_work_item_sequence，不改变P10b权限owner。图片/完整标签目录/最后getTabIndex与projectMemberIds读者按原归属转交。
 
-本轮仅产出spec、plan、预检报告与P16集成接续文档；没有收尾产品代码、没有C12实跑/规模测量、没有输入status关闭或总体完成勾选。下次授权实施才从T1开始。
+预检阶段仅产出 spec、plan、预检报告与 P16 集成接续文档；该历史边界不代表本次实施结果。本次执行 T1–T13 和 T14 Step 1，最终集成步骤留待负责人安排。
 
 ## 6. 风险
 

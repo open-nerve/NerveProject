@@ -1,6 +1,6 @@
 # M4 / closeout 执行计划
 
-> 当前只做预检，暂不实施。未来获准后使用 `superpowers:executing-plans` 按任务执行，依据 [spec](../specs/closeout.md)；每一步凭实际证据勾选。工作树 `<repo>/.codex/worktress/codex/m4-closeout`，基线 `01e40e113e11365a4eeacc2794973de2751dde61`。
+> 预检已通过，2026-11-01 获准使用 `superpowers:executing-plans` 从 T1 执行，依据 [spec](../specs/closeout.md)；每一步凭实际证据勾选。工作树 `<repo>/.codex/worktress/codex/m4-closeout`，基线 `01e40e113e11365a4eeacc2794973de2751dde61`。本轮完成后 deep-review、保留分支，先不合并。
 
 **目标：** 完成 C12、设计 §14 十八条及最终交接，以准确 main CI 和归档收据关闭 M4。
 
@@ -60,10 +60,10 @@ pnpm --filter @nerve/e2e exec playwright test --config=playwright.m4-cleanup.con
 **Files：** tools/keywords.json；D/reviews/closeout-acceptance.md（新增）、closeout-browser-matrix.md（新增）；准备inventory及所有Phase review。
 **Interfaces：** D01–D18对应spec§4；故事条目键为story+page/API+增长条款，交错键为设计编号，浏览器键为页面组+路径+身份+引擎。
 
-- [ ] Step 1：核main和本分支基线、P16精确mainCI/归档；记录full-M4与closeout两个范围及全部文件清单、基线源码/文档hash。没有实施授权不得做后续步骤。
-- [ ] Step 2：phase改M4/closeout；确认copy-hook无M4例外、old URLs/negation没有因收尾新增放行；运行`make lint-web`，以原关键词samples核到期行为。
-- [ ] Step 3：从设计§2/§3.5/§3.23/§4.17/§8.8/§9.7/§14逐条生成映射并人工核增长项；列22故事、26交错、44同步行、45差异行、C1–C12、18完成条款，按当前实际内容核数而非硬删多项。
-- [ ] Step 4：给每条来源、当前测试/源码、待验证证据位置、owner Task；核所有18个Phase spec§5/review§6与8输入。每个未满足项保持未勾；记录预算与预计改动量，提交 `docs(M4/closeout): 固定最终验收范围与证据目录`。
+- [x] Step 1：核main和本分支基线、P16精确mainCI/归档；记录full-M4与closeout两个范围及全部文件清单、基线源码/文档hash。没有实施授权不得做后续步骤。
+- [x] Step 2：phase改M4/closeout；确认copy-hook无M4例外、old URLs/negation没有因收尾新增放行；运行`make lint-web`，以原关键词samples核到期行为。
+- [x] Step 3：从设计§2/§3.5/§3.23/§4.17/§8.8/§9.7/§14逐条生成映射并人工核增长项；列22故事、26交错、44同步行、45差异行、C1–C12、18完成条款，按当前实际内容核数而非硬删多项。
+- [x] Step 4：给每条来源、当前测试/源码、待验证证据位置、owner Task；核所有18个Phase spec§5/review§6与8输入。每个未满足项保持未勾；记录预算与预计改动量，提交 `docs(M4/closeout): 固定最终验收范围与证据目录`。
 
 ## Task 2：收掉历史锁断言重复（约100–300行）
 
@@ -210,6 +210,6 @@ NERVE_PURGE_SCALE=1 NERVE_PURGE_SCALE_EVIDENCE="$M4_CLOSEOUT_EVIDENCE/perf/purge
 
 ## 预检与交付边界
 
-本轮上述步骤全部未执行。静态预检核每D对应Task、每C12组归属、数据/计时边界、源码帮手与后续交接，不跑F/规模/C12，不改phase或status。实施起所需环境/真实结果由T1以后给出。
+预检时上述步骤全部未执行；静态预检只核每D对应Task、每C12组归属、数据/计时边界、源码帮手与后续交接。当前实施所需环境、真实结果和 phase/status 变更由 T1 以后逐项记录，不能引用预检作为运行成功的证据。
 
-预检方法与发现见 [closeout-preflight](../reviews/closeout-preflight.md)；原始盘点在主目录 `.superpowers/sdd/M4-closeout-preparation-20261101/`。完成预检后提交文稿、保留分支，等待下一次实施安排。
+预检方法与发现见 [closeout-preflight](../reviews/closeout-preflight.md)；原始盘点在主目录 `.superpowers/sdd/M4-closeout-preparation-20261101/`。实施证据与进度见 [验收台账](../reviews/closeout-acceptance.md)。
