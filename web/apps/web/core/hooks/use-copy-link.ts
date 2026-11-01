@@ -7,6 +7,7 @@ import { useParams } from "react-router";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { copyTextToClipboard, copyUrlToClipboard } from "@nerve/utils";
+import { sessionGuard } from "@/lib/in-session";
 
 /**
  * Writes a text to the clipboard by write, and says whether it could (M3 design 7.7): the success under the title of
@@ -20,10 +21,13 @@ function useCopy(
 ): (text: string, copied: string) => Promise<void> {
   const { t } = useTranslation();
   return async (text, copied) => {
+    const inSession = sessionGuard();
     try {
       await write(text);
+      if (!inSession()) return;
       setToast({ type: TOAST_TYPE.SUCCESS, title: t(titleKey), message: copied });
     } catch {
+      if (!inSession()) return;
       // the browser did not let the page write the clipboard
       setToast({
         type: TOAST_TYPE.ERROR,

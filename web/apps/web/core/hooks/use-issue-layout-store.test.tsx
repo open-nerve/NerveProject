@@ -4,12 +4,13 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EIssuesStoreType } from "@nerve/types";
+import { EIssueFilterType } from "@nerve/constants";
 import type { RootStore } from "@/store/root.store";
 import { StoreContext } from "@/lib/store-context";
-import { issueDetailOf, issueStoreTab, requestedIssue } from "@/store/issue/fake-issues";
+import { issueDetailOf, issuePageOf, issueStoreTab, requestedIssue } from "@/store/issue/fake-issues";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
-import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
-import { json } from "@/lib/auth/fake-nerve";
+import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
+import { json, noContent } from "@/lib/auth/fake-nerve";
 import { IssuesStoreContext, useIssueStoreType } from "./use-issue-layout-store";
 import { useIssuesActions, type IssueActions } from "./use-issues-actions";
 
@@ -40,14 +41,18 @@ afterEach(() => {
   tab.app.dispose();
   vi.useRealTimers();
 });
-async function mount(run: () => void, context?: EIssuesStoreType, use?: () => Promise<void>) {
+async function mount(
+  run: () => void,
+  context?: EIssuesStoreType,
+  use?: (render: () => Promise<void>) => Promise<void>
+) {
   const root = createRoot(document.createElement("div"));
   const Probe = () => {
     run();
     return null;
   };
-  try {
-    await act(async () =>
+  const render = () =>
+    act(async () =>
       root.render(
         <StoreContext.Provider value={tab.app}>
           <IssuesStoreContext.Provider value={context}>
@@ -56,7 +61,9 @@ async function mount(run: () => void, context?: EIssuesStoreType, use?: () => Pr
         </StoreContext.Provider>
       )
     );
-    await use?.();
+  try {
+    await render();
+    await use?.(render);
   } finally {
     await act(async () => root.unmount());
   }
@@ -136,3 +143,66 @@ it("does not fetch archive or profile lists for guests", async () => {
   });
   expect(tab.nerve.calls).toEqual([]);
 });
+
+it.each(["restore", "delete", "collapse"] as const)(
+  "archive %s follows the current workspace after the mounted hook changes routes",
+  async (operation) => {
+    const other = workspaceOf("other");
+    const project = projectOf("B", other.id, { id: "B" });
+    await loadWorkspaces(tab.nerve, tab.app.workspaceRoot, [tab.workspace, other]);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, other, [project]);
+    const filters = tab.app.issue.archivedIssuesFilter;
+    await filters.fetchFilters("ws", "A");
+    await filters.fetchFilters("other", "B");
+    const oldFilters = JSON.stringify(filters.getIssueFilters("A", "ws"));
+    const archived = {
+      ...issueDetailOf("old", "B"),
+      workspace_id: other.id,
+      archived_at: "2026-10-30T00:00:00Z",
+    };
+    tab.nerve.calls.length = 0;
+    fixture.params = { workspaceSlug: "ws", projectId: "A" };
+    let actions!: IssueActions;
+    await mount(
+      () => {
+        actions = useIssuesActions(EIssuesStoreType.ARCHIVED);
+      },
+      EIssuesStoreType.ARCHIVED,
+      async (render) => {
+        fixture.params = { workspaceSlug: "other", projectId: "B" };
+        await render();
+        if (operation === "collapse") {
+          await actions.updateFilters("B", EIssueFilterType.KANBAN_FILTERS, { group_by: ["done"] });
+          expect(filters.getIssueFilters("B", "other")?.kanbanFilters?.group_by).toEqual(["done"]);
+          expect(JSON.stringify(filters.getIssueFilters("A", "ws"))).toBe(oldFilters);
+          expect(tab.nerve.calls).toEqual([]);
+          return;
+        }
+        const read = await requestedIssue(
+          tab.nerve,
+          () => actions.fetchIssues("init-loader", { limit: 20, query: { group_by: undefined } }),
+          ["GET", "/api/v0/projects/B/issues"]
+        );
+        read.call.answer(json(200, issuePageOf([archived])));
+        await read.promise;
+        const list = tab.app.issue.archivedIssues.currentList!;
+        expect(list.scope.workspaceSlug).toBe("other");
+        expect(list.reconciled.value?.total).toBe(1);
+        const sent = await requestedIssue(
+          tab.nerve,
+          () => (operation === "restore" ? actions.restoreIssue!("B", "old") : actions.removeIssue("B", "old")),
+          operation === "restore" ? ["POST", "/api/v0/issues/old/unarchive"] : ["DELETE", "/api/v0/issues/old"]
+        );
+        sent.call.answer(
+          operation === "restore"
+            ? json(200, { ...archived, archived_at: null, updated_at: "2026-11-01T00:00:00Z" })
+            : noContent()
+        );
+        await expect(sent.promise).resolves.toBeUndefined();
+        expect(list.reconciled.value?.total).toBe(0);
+        expect(tab.app.issue.archivedIssues.getIssueIds()).toEqual([]);
+        expect(tab.nerve.calls).toHaveLength(2);
+      }
+    );
+  }
+);

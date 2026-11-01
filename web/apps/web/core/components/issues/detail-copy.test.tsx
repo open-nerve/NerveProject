@@ -20,8 +20,9 @@ import { IssuePeekOverviewHeader } from "./peek-overview/header";
 const binding = vi.hoisted(() => ({
   tab: undefined as Awaited<ReturnType<typeof issueStoreTab>> | undefined,
   peek: vi.fn(),
+  session: { loginId: "copy" },
 }));
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "copy" } }, publicClient: {} }));
+vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: binding.session }, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
 vi.mock("@/hooks/store/use-issue-detail", async (original) => ({
   ...(await original<typeof import("@/hooks/store/use-issue-detail")>()),
@@ -54,6 +55,7 @@ let write: ReturnType<typeof vi.fn<(text: string) => Promise<void>>>;
 beforeEach(async () => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.useFakeTimers();
+  binding.session.loginId = "copy";
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -173,9 +175,14 @@ async function clickCopy(kind: Consumer) {
   await act(async () => button.click());
 }
 for (const kind of consumers) {
-  it.each([true, false])(
-    `${kind}'s real copy waits for the clipboard and reports its actual settlement once (accepted=%s)`,
-    async (accepted) => {
+  it.each([
+    { accepted: true, switched: false },
+    { accepted: false, switched: false },
+    { accepted: true, switched: true },
+    { accepted: false, switched: true },
+  ])(
+    `${kind}'s real copy reports settlement only to its session (accepted=$accepted, switched=$switched)`,
+    async ({ accepted, switched }) => {
       if (kind === "archived-peek") {
         const app = binding.tab!.app;
         app.issue.issues.acceptRead(
@@ -201,13 +208,14 @@ for (const kind of consumers) {
             : `${window.location.origin}/ws/browse/A-${kind === "relation" || kind === "sub-item" ? 8 : 7}`;
       expect.soft(write.mock.calls).toEqual([[copied]]);
       expect.soft(toasts).toHaveLength(0);
+      if (switched) binding.session.loginId = "other-account";
       await act(async () => {
         if (accepted) pending.answer();
         else pending.refuse(new DOMException("Permission denied", "NotAllowedError"));
       });
-      expect(toasts).toHaveLength(1);
-      if (accepted) expect(toasts[0]?.type).toBe("success");
-      else
+      expect(toasts).toHaveLength(switched ? 0 : 1);
+      if (!switched && accepted) expect(toasts[0]?.type).toBe("success");
+      else if (!switched)
         expect(toasts[0]).toEqual({
           type: "error",
           title: "toast.error",
