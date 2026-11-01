@@ -80,10 +80,10 @@ pnpm --filter @nerve/e2e exec playwright test --config=playwright.m4-cleanup.con
 **Files：** S/modules/{access,issue,project}及相关workspace/identity矩阵；S/archtest、platform/{jobs,outbound,postgres,httpserver/apitest}；bootstrap的interleaving/issue_*、purge*、registration测试。
 **Interfaces：** 设计§3.5逐项→实际test/subtest→真实连接/锁/闸门→观察结果；D02–D07映射不能只填一个`make test`。
 
-- [ ] Step 1：逐operation核规则表/判定/矩阵、双向apitest公开码与project.state_in_use；核全部访客/创建者/离开身份、读列表与计数/动态/关注，拒绝路径在取锁前结束。
-- [ ] Step 2：按当前最终写路径重推全局锁序与gate资源；跨项目同时取闸门/锁顺序、邀请排序、关联归属、异步删除窗口/固定时钟/迟到purge边界均有真实观察。26项每一项指向具名test，不以文件名命中数充数。I21仅任务/数据库、I22仅页面、I16的PAT读取严格按设计适用范围，不补虚构版本。
-- [ ] Step 3：在server执行 `go test -p=1 -count=1 ./internal/archtest ./internal/modules/access/... ./internal/platform/jobs/... ./internal/platform/outbound/...`；再按26项映射构造准确包/锚定`-run`分批跑 `go test -p=1 -race -count=5`。保存选择清单和每项5次执行，零40P01；不把已设计的迟到清理重试案例当未经允许的新死锁。
-- [ ] Step 4：核清理catalog/grants/runtime、registrationRows实际river_job、InsertTx提交/回滚、两类漏worker变异、业务clock无固定余量；缺口先红再根因修复/复审。汇入至少15有效变异候选，记录D02–D07，提交测试或证据文稿。
+- [x] Step 1：逐operation核规则表/判定/矩阵、双向apitest公开码与project.state_in_use；核全部访客/创建者/离开身份、读列表与计数/动态/关注，拒绝路径在取锁前结束。
+- [x] Step 2：按当前最终写路径重推全局锁序与gate资源；跨项目同时取闸门/锁顺序、邀请排序、关联归属、异步删除窗口/固定时钟/迟到purge边界均有真实观察。26项每一项指向具名test，不以文件名命中数充数。I21仅任务/数据库、I22仅页面、I16的PAT读取严格按设计适用范围，不补虚构版本。
+- [x] Step 3：在server执行 `go test -p=1 -count=1 ./internal/archtest ./internal/modules/access/... ./internal/platform/jobs/... ./internal/platform/outbound/...`；再按26项映射构造准确包/锚定`-run`分批跑 `go test -p=1 -race -count=5`。保存选择清单和每项5次执行，零40P01；不把已设计的迟到清理重试案例当未经允许的新死锁。
+- [x] Step 4：核清理catalog/grants/runtime、registrationRows实际river_job、InsertTx提交/回滚、两类漏worker变异、业务clock无固定余量；缺口先红再根因修复/复审。汇入至少15有效变异候选，记录D02–D07，提交测试或证据文稿。
 
 ## Task 4：故事增长、会话和门禁检查点（约250–450行）
 
