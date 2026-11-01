@@ -65,6 +65,7 @@ function HeaderBoundary({ children }: { children: ReactNode }) {
 let tab: Awaited<ReturnType<typeof issueSelectionTab>>;
 let router: ReturnType<typeof createMemoryRouter>;
 let holdIdentifier = false;
+let holdCore = false;
 let refusal: number | undefined;
 const source = (id: string) => ({ ...issueDetailOf(id), sequence_id: id === "one" ? 1 : 2 });
 const params = (values: Readonly<Record<string, string | undefined>>) => ({
@@ -95,6 +96,7 @@ beforeEach(async () => {
   bound.app = tab.app;
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [{ ...tab.project, member_role: 20 }]);
   holdIdentifier = false;
+  holdCore = false;
   refusal = undefined;
   tab.nerve.calls.length = 0;
   tab.nerve.respond = (call) => {
@@ -106,7 +108,8 @@ beforeEach(async () => {
           refusal ? problem(refusal, "issue.not_found") : json(200, source(call.path.endsWith("-1") ? "one" : "two"))
         );
     } else if (/^\/api\/v0\/issues\/[^/]+$/.test(call.path)) {
-      call.answer(refusal ? problem(refusal, "issue.not_found") : json(200, source(call.path.split("/").at(-1)!)));
+      if (!holdCore)
+        call.answer(refusal ? problem(refusal, "issue.not_found") : json(200, source(call.path.split("/").at(-1)!)));
     } else if (call.path.endsWith("/states")) {
       call.answer(json(200, { data: [stateOf(tab.project, "Todo", "unstarted", 1, { id: "state" })] }));
     } else call.answer(json(200, { data: [], next_cursor: null }));
@@ -172,6 +175,47 @@ it.each([401, 403, 404])("does not redirect a refused native id (%s)", async (st
   await mount("/ws/projects/A/issues/one");
   await act(async () => until(() => document.querySelector('[role="alert"]') !== null, "visible refusal"));
   expect(router.state.location.pathname).toBe("/ws/projects/A/issues/one");
+  expect(lookupReads()).toHaveLength(0);
+});
+
+it.each([200, 403, 404])("a warm native ID waits for its current read before handling %s", async (status) => {
+  const path = "/ws/projects/A/issues/one";
+  const cores = () => tab.nerve.to("/api/v0/issues/one");
+  await mount(path);
+  await ready();
+  await act(async () => {
+    await router.navigate("/outside");
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  holdCore = true;
+  const previousCoreReads = cores().length;
+  const previousLookups = lookupReads().length;
+  await act(async () => router.navigate(path));
+  await act(async () => until(() => cores().length > previousCoreReads, "warm ID revalidation"));
+  expect(router.state.location.pathname).toBe(path);
+  expect(lookupReads()).toHaveLength(previousLookups);
+  await act(async () =>
+    cores()
+      .at(-1)!
+      .answer(status === 200 ? json(200, source("one")) : problem(status, "issue.not_found"))
+  );
+  if (status === 200) {
+    await ready();
+    expect(router.state.location.pathname).toBe("/ws/browse/A-1");
+  } else {
+    expect(router.state.location.pathname).toBe(path);
+    expect(document.querySelector('[role="alert"]')).not.toBeNull();
+    expect(lookupReads()).toHaveLength(previousLookups);
+  }
+});
+
+it("a completed native ID read cannot redirect after its entry has unmounted", async () => {
+  holdCore = true;
+  await mount("/ws/projects/A/issues/one");
+  await act(async () => until(() => tab.nerve.to("/api/v0/issues/one").length === 1, "held native ID read"));
+  await act(async () => router.navigate("/outside"));
+  await act(async () => tab.nerve.to("/api/v0/issues/one")[0]!.answer(json(200, source("one"))));
+  expect(router.state.location.pathname).toBe("/outside");
   expect(lookupReads()).toHaveLength(0);
 });
 it.each(["Header", "Body"] as const)(
