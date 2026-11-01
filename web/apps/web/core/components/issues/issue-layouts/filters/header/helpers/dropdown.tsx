@@ -5,7 +5,7 @@
  */
 
 import React, { Fragment, cloneElement, useState } from "react";
-import type { Modifier, Placement } from "@popperjs/core";
+import { detectOverflow, type Modifier, type Placement } from "@popperjs/core";
 import { usePopper } from "react-popper";
 // headless ui
 import { Popover, Transition } from "@headlessui/react";
@@ -36,22 +36,49 @@ const followReference: Modifier<"followReference", Record<string, unknown>> = {
     const view = state.elements.popper.ownerDocument.defaultView;
     if (!view) return;
     let previous = state.elements.reference.getBoundingClientRect();
+    let previousPanel = state.elements.popper.getBoundingClientRect();
     let frame: number;
     const follow = () => {
       const current = state.elements.reference.getBoundingClientRect();
+      const currentPanel = state.elements.popper.getBoundingClientRect();
       if (
         current.x !== previous.x ||
         current.y !== previous.y ||
         current.width !== previous.width ||
-        current.height !== previous.height
+        current.height !== previous.height ||
+        currentPanel.width !== previousPanel.width ||
+        currentPanel.height !== previousPanel.height
       ) {
         previous = current;
+        previousPanel = currentPanel;
         void instance.update();
       }
       frame = view.requestAnimationFrame(follow);
     };
     frame = view.requestAnimationFrame(follow);
     return () => view.cancelAnimationFrame(frame);
+  },
+};
+
+// Flipping alone cannot fit a tall panel when neither side of the trigger has enough room.
+// Keep its anchor and give the existing scrollable content the space in the chosen clipping boundary.
+const fitAvailableHeight: Modifier<"fitAvailableHeight", Record<string, unknown>> = {
+  name: "fitAvailableHeight",
+  enabled: true,
+  phase: "beforeWrite",
+  requires: ["computeStyles"],
+  fn: ({ state }) => {
+    const overflow = detectOverflow(state, { padding: 8 });
+    const side = state.placement.split("-")[0];
+    const available =
+      state.rects.popper.height -
+      (side === "top"
+        ? overflow.top
+        : side === "bottom"
+          ? overflow.bottom
+          : Math.max(0, overflow.top) + Math.max(0, overflow.bottom));
+    // The shell has two 4px margins and two 1px borders outside the content.
+    Object.assign(state.styles.popper, { "--filter-content-height": `${Math.max(0, available - 10)}px` });
   },
 };
 
@@ -81,7 +108,7 @@ export function FiltersDropdown(props: Props) {
   const { styles, attributes } = usePopper(referenceElement, popperElement, {
     placement: placement ?? "auto",
     strategy: "fixed",
-    modifiers: [followReference],
+    modifiers: [followReference, fitAvailableHeight],
   });
 
   return (
@@ -149,7 +176,7 @@ export function FiltersDropdown(props: Props) {
               {...attributes.popper}
             >
               <div className="my-1 overflow-hidden rounded-sm border border-subtle bg-surface-1 shadow-raised-100">
-                <div className="flex max-h-[30rem] w-[18.75rem] flex-col overflow-hidden lg:max-h-[37.5rem]">
+                <div className="flex max-h-[min(30rem,var(--filter-content-height))] w-[18.75rem] flex-col overflow-hidden lg:max-h-[min(37.5rem,var(--filter-content-height))]">
                   {children}
                 </div>
               </div>

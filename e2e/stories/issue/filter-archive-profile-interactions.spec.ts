@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import type { Locator, Page } from "@playwright/test";
 import { test } from "../../fixtures/filter-browser";
 import { expect } from "../../fixtures/test";
@@ -29,6 +30,7 @@ async function searchAndClear(page: Page, search: string, noResults = "No option
 async function besideSearch(page: Page, button: Locator) {
   const panel = page.locator("[data-popper-placement]").filter({ has: page.getByRole("combobox") });
   await expectPopupBesideButton(panel, button);
+  await c12Evidence(page, "B07", `search-${(await button.getAttribute("aria-label")) ?? (await button.innerText())}`);
 }
 
 test("C2: actual add, multi-value and operator selectors support keyboard search, clearing and focus; date drafts expose their error", async ({
@@ -76,6 +78,7 @@ test("C2: actual add, multi-value and operator selectors support keyboard search
   await expect(date.locator('button[aria-invalid="true"]')).toHaveAccessibleDescription(
     "Choose both dates to apply the range"
   );
+  await c12Evidence(page, "B07", "date-draft-error");
   await page.locator('[data-day="2026-10-31"] button').click();
   await expect(date.locator('button[aria-invalid="true"]')).toHaveCount(0);
   await page.keyboard.press("Escape");
@@ -114,6 +117,7 @@ test("C2: display panels anchor and return focus on desktop and mobile; mobile l
       expect(trigger.x + trigger.width / 2).toBeLessThanOrEqual(box.x + box.width);
     }
     const group = panel.getByRole("button", { name: "Group by", exact: true });
+    await c12Evidence(page, "B07", `display-${width}`);
     if ((await group.getAttribute("aria-expanded")) !== "true") await group.click();
     await group.locator("../..").getByRole("button", { name: "Priority", exact: true }).click();
     await page.keyboard.press("Escape");
@@ -133,6 +137,7 @@ test("C2: display panels anchor and return focus on desktop and mobile; mobile l
 test("C9: an archive confirmation traps focus, cancels without a write and returns to its row; Back closes it", async ({
   api,
   page,
+  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const item = await createIssue(api, seed.member.token, seed.project.id, {
@@ -149,8 +154,11 @@ test("C9: an archive confirmation traps focus, cancels without a write and retur
   await transitionsEnded(dialog);
   expect(await pageBehindHidden(page)).toBe(true);
   await dialog.getByRole("button", { name: "Archive", exact: true }).focus();
-  await page.keyboard.press("Tab");
+  await page.keyboard.press(browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab");
   await expect.poll(() => dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toHaveCSS("outline-style", /auto|solid/);
+  await c12Evidence(page, "B08", "archive-tab-trap");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   expect(await pageBehindHidden(page)).toBe(false);
@@ -173,6 +181,7 @@ test("C9: an archive confirmation traps focus, cancels without a write and retur
 test("C2: a parent's real custom display and filter buttons anchor their panels and return focus inside the peek", async ({
   api,
   page,
+  browserName,
 }, info) => {
   const seed = await issueListProject(api, info);
   const parent = await createIssue(api, seed.member.token, seed.project.id, { name: "Filter parent" });
@@ -182,24 +191,49 @@ test("C2: a parent's real custom display and filter buttons anchor their panels 
   const peek = page.locator("#full-screen-portal");
   await expect(peek.getByText("Filter child", { exact: true })).toBeVisible();
   const toolbar = peek.getByRole("button", { name: "Display", exact: true }).locator("../..");
-  await ["Display", "Filters"].reduce(async (previous, name) => {
-    await previous;
-    const trigger = toolbar.getByRole("button", { name, exact: true });
-    await trigger.focus();
-    await page.keyboard.press("Enter");
-    await expect(trigger).toHaveAttribute("aria-expanded", "true");
-    const id = await trigger.getAttribute("aria-controls");
-    expect(id).toBeTruthy();
-    const panel = page.locator(`[id="${id}"]`);
-    await transitionsEnded(panel);
-    await expectPopupBesideButton(panel, trigger);
-    await expect(trigger.locator("button")).toHaveCount(0);
-    if (name === "Filters") await panel.getByPlaceholder("Search").fill("priority");
-    else await panel.getByRole("button", { name: "ID", exact: true }).click();
-    await page.keyboard.press("Escape");
-    await expect(panel).toHaveCount(0);
-    await expect(trigger).toBeFocused();
-    await expect(peek.getByText("Filter child", { exact: true })).toBeVisible();
+  await [720, 500].reduce(async (sized, height) => {
+    await sized;
+    await page.setViewportSize({ width: 1280, height });
+    await ["Display", "Filters"].reduce(async (previous, name) => {
+      await previous;
+      const trigger = toolbar.getByRole("button", { name, exact: true });
+      await trigger.focus();
+      await page.keyboard.press("Enter");
+      await expect(trigger).toHaveAttribute("aria-expanded", "true");
+      const id = await trigger.getAttribute("aria-controls");
+      expect(id).toBeTruthy();
+      const panel = page.locator(`[id="${id}"]`);
+      await transitionsEnded(panel);
+      await expectPopupBesideButton(panel, trigger);
+      await c12Evidence(page, "B06", `sub-item-${name}-${height}`);
+      await expect
+        .poll(
+          async () => {
+            const box = await panel.boundingBox();
+            return !!box && box.y >= 0 && box.y + box.height <= page.viewportSize()!.height;
+          },
+          { message: `${name}: the whole panel must fit inside the viewport` }
+        )
+        .toBe(true);
+      await expect(trigger.locator("button")).toHaveCount(0);
+      const controls = panel.getByRole("button");
+      const lastControl = controls.last();
+      await controls.nth((await controls.count()) - 2).focus();
+      await page.keyboard.press(browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab");
+      await expect(lastControl).toBeFocused();
+      await expect(lastControl).toHaveCSS("outline-style", /auto|solid/);
+      const lastBox = await lastControl.boundingBox();
+      expect(lastBox).not.toBeNull();
+      expect(lastBox!.y).toBeGreaterThanOrEqual(0);
+      expect(lastBox!.y + lastBox!.height).toBeLessThanOrEqual(height);
+      await c12Evidence(page, "B06", `sub-item-${name}-${height}-last-control`);
+      if (name === "Filters") await panel.getByPlaceholder("Search").fill("priority");
+      else await panel.getByRole("button", { name: "ID", exact: true }).click();
+      await page.keyboard.press("Escape");
+      await expect(panel).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+      await expect(peek.getByText("Filter child", { exact: true })).toBeVisible();
+    }, Promise.resolve());
   }, Promise.resolve());
   await expectListPageQuiet(page, watch);
 });
@@ -276,6 +310,7 @@ test("C2: Chinese project filters translate condition names, built-in choices an
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "是", exact: true }).last().click();
   await expect(page.getByRole("option", { name: "介于", exact: true })).toBeVisible();
+  await c12Evidence(page, "B07", "chinese-operator");
   await page.keyboard.press("Escape");
   await expectListPageQuiet(page, watch);
 });

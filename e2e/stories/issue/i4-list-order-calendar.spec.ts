@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import type { IssueListOrder } from "@nerve/api-client";
 
 import {
@@ -349,6 +350,7 @@ test("I4 (page): table label, assignee, child-count and due-date orders each tra
           Promise.resolve()
         );
         await expect(tableRows).toHaveCount(101);
+        await c12Evidence(page, "B04", `table-${sort.order}-${direction}`);
         expect(wanted.map((_, index) => observed.get(index))).toEqual(wanted);
         const continuation = queries.slice(fromQuery).filter((query) => query.has("cursor"));
         expect(continuation).toHaveLength(1);
@@ -427,6 +429,7 @@ test.describe("calendar in UTC+14", () => {
     const day = (date: string) => page.locator(`button[aria-label="${date}"]`).locator("..");
     const crowdedTile = day(crowdedDate);
     await expect(crowdedTile.locator('[id^="issue-"]')).toHaveCount(4);
+    await c12Evidence(page, "B03", "month-four-per-day");
     await crowdedTile.getByRole("button", { name: "Load more", exact: true }).click();
     await expect
       .poll(() =>
@@ -452,6 +455,7 @@ test.describe("calendar in UTC+14", () => {
     expect(held.body).toEqual({ target_date: target });
     await expect(sourceCard).toBeVisible();
     await expect(day(target).locator(`[id="issue-${moving.id}"]`)).toHaveCount(0);
+    await c12Evidence(page, "B03", "date-drag-pending");
     expect(await held.release().then((response) => response.status())).toBe(200);
     await expect(day(target).locator(`[id="issue-${moving.id}"]`)).toBeVisible();
     await expect(sourceCard).toHaveCount(0);
@@ -480,6 +484,7 @@ test.describe("calendar in UTC+14", () => {
     await expect(dialog.getByRole("heading", { name: "Add existing work item", exact: true })).toBeVisible();
     expect(await closedWithin(page)).toBe(false);
     await expect(dialog.getByRole("button", { name: "Remove Available undated", exact: true })).toBeVisible();
+    await c12Evidence(page, "B03", "add-existing-refused");
     expect(await issueRead(api, member.token, available.id)).toMatchObject({
       status: 200,
       issue: { target_date: null },
@@ -500,12 +505,19 @@ test.describe("calendar in UTC+14", () => {
       issue: { target_date: target },
     });
 
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole("button", { name: target, exact: true }).click();
+    await expect(page.getByText(`17 December, ${year}`, { exact: true })).toBeVisible();
+    await expect(page.locator(`[id="issue-${available.id}"]:visible`)).toHaveCount(1);
+    await c12Evidence(page, "B03", "mobile-selected-day");
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.getByRole("button", { name: "Options", exact: true }).click();
     await page.getByRole("button", { name: "Week layout", exact: true }).click();
     await page.keyboard.press("Escape");
     await expect
       .poll(() => queries.some((query) => query.get("target_date") === weekRange && query.get("limit") === "30"))
       .toBe(true);
+    await c12Evidence(page, "B03", "week-local-range");
     await expectListPageQuiet(page, watch, {
       failures: [`422 PATCH /api/v0/issues/${available.id}`],
       errors:

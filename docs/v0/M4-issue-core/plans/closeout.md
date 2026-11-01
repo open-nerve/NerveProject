@@ -93,17 +93,17 @@ pnpm --filter @nerve/e2e exec playwright test --config=playwright.m4-cleanup.con
 - [x] Step 1：读设计22行的增长项、现有page/API测试和共享assert；标注I12打开读完整页、I16新鲜attempt、I21固定clock、删除M3轮询和拒绝侧效应等，不靠story题名代替断言。
 - [x] Step 2：由full-M4变更清单找await后navigation/toast/theme/refresh/clipboard，逐hook映射账户切换后兑现测试；存在实际漏网先写最小用例并修，保持root权限代际唯一owner。
 - [x] Step 3：执行相关vitest及默认F；S2四角色逐冷加载精确method/path/query/重复数，M4入口无旧API/无权请求，13模块级实例按P15具名账本复核；M6/M7自身页面按原归属记录。
-- [ ] Step 4：原scope通过且新缺口闭环，提交并push检查点；核远端准确HEAD和CI（已登录连接器可取日志/重跑），补D01/D08/D14/D15；非W11失败按实际根因处理。
+- [x] Step 4：原scope通过且新缺口闭环，提交并push检查点；核远端准确HEAD和CI（已登录连接器可取日志/重跑），补D01/D08/D14/D15；非W11失败按实际根因处理。
 
 ## Task 5：C12 列表与筛选（约200–400行矩阵）
 
 **Files：** closeout-browser-matrix.md；既有list-interactions、filter-archive-profile-interactions及I3–I7/I15/I19故事；playwright.m4-cleanup.config.ts。
 **Interfaces：** spec§2.2前九组：项目列表/看板/日历/表格/quick-add/peek/筛选显示/归档/个人三关系；每组Cr/Fx/Wk都有路径细分。
 
-- [ ] Step 1：make build，记源码/bin/配置hash；`--list`核三个引擎完整非零，API建立数据。matrix先列待验格，禁止预填通过。
-- [ ] Step 2：三个引擎逐格操作分组/排序/筛选/显示、空/多页/拒绝、键盘右键、慢网拖动与拒绝回退、日期/周起始、快捷创建/peek关闭；核真实写入或不写。适用身份见P16表，S2四身份保全。
-- [ ] Step 3：每个代表控件及不同裁切祖先状态留成功截图，控制者看焦点轮廓、弹层锚点、背景隔离/回焦；Tab/ShiftTab/IME/Escape/Back和会话退役逐项记动作/实际结果；收网络/console/CSP，无任意忽略。
-- [ ] Step 4：局部缺陷先具名重现测试再修；重建受影响候选，重验相关引擎/格。记录当前证据不声称最终main已验，提交本组记录和必要修复。
+- [x] Step 1：make build，记源码/bin/配置hash；`--list`核三个引擎完整非零，API建立数据。matrix先列待验格，禁止预填通过。
+- [x] Step 2：三个引擎逐格操作分组/排序/筛选/显示、空/多页/拒绝、键盘右键、慢网拖动与拒绝回退、日期/周起始、快捷创建/peek关闭；核真实写入或不写。适用身份见P16表，S2四身份保全。
+- [x] Step 3：每个代表控件及不同裁切祖先状态留成功截图，控制者看焦点轮廓、弹层锚点、背景隔离/回焦；Tab/ShiftTab/IME/Escape/Back和会话退役逐项记动作/实际结果；收网络/console/CSP，无任意忽略。
+- [x] Step 4：局部缺陷先具名重现测试再修；重建受影响候选，重验相关引擎/格。记录当前证据不声称最终main已验，提交本组记录和必要修复。
 
 ## Task 6：C12 详情与编辑器（约250–500行矩阵/必要回归）
 

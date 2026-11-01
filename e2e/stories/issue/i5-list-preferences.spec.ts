@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import type { ProjectDisplayFilters, ProjectDisplayProperties, ProjectIssueFilters } from "@nerve/api-client";
 import type { Page } from "@playwright/test";
 
@@ -382,6 +383,7 @@ test("I5 (page): all eleven display properties and layout, grouping, ordering an
     ["created_on", "Created on"],
     ["updated_on", "Updated on"],
   ];
+  await c12Evidence(page, "B07", "eleven-display-properties");
   const expected = { ...initial.display_properties };
   const propertyGroup = panel.getByRole("button", { name: "Display Properties", exact: true }).locator("../..");
   await properties.reduce(async (before, [key, name]) => {
@@ -527,7 +529,11 @@ test("I5 (page): a refused preference keeps confirmed UI and database; a confirm
   ).toEqual([{ display_properties: initial.display_properties }]);
   const sub = panel.getByRole("button", { name: "Show sub-work items", exact: true });
   failRead = true;
-  const changed = await answerTo(page, "PATCH", path, () => sub.click());
+  // The refusal toast covers this lower control's pointer center while it is visible.
+  // Continue through its real keyboard activation, without waiting out or hiding the feedback.
+  await sub.focus();
+  await c12Evidence(page, "B07", "preference-refusal-keyboard-focus");
+  const changed = await answerTo(page, "PATCH", path, () => sub.press("Space"));
   expect(changed.status()).toBe(200);
   await expect(sub).toHaveAttribute("aria-pressed", String(!initial.display_filters.sub_issue));
   const saved = await readProjectPreferences(api, member.token, project.id);

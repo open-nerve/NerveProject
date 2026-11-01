@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
   readProjectPreferences,
@@ -266,6 +267,7 @@ test("I3 (page): real state continuation, saved A intersection C and label-prior
     [...rows, cOnly].map((row) => row.id)
   );
   await expect(todo.getByRole("button", { name: "Load more" })).toHaveCount(0);
+  await c12Evidence(page, "B01", "continuation-complete");
   expect(Object.fromEntries(queries.find((query) => query.has("cursor"))!)).toMatchObject({
     group_by: "state_id",
     group_key: states.Todo,
@@ -328,6 +330,7 @@ test("I3 (page): real state continuation, saved A intersection C and label-prior
   await page.reload();
   await expect(page.getByRole("button", { name: "Label A 52", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Label C 52", exact: true })).toBeVisible();
+  await c12Evidence(page, "B02", "label-priority-lanes");
   expect(
     queries.some(
       (query) =>

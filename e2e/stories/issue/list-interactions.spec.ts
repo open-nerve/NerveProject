@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { type Api, changeProject, createLabel, readProjectPreferences } from "../../fixtures/api";
 import { createIssue, issueRead } from "../../fixtures/issues";
@@ -48,7 +49,7 @@ async function controlsProject(api: Api, info: TestInfo) {
 }
 
 /** Keyboard opens the real search panel; its complete panel (including the input) owns the placement. */
-async function searchPanel(page: Page, button: Locator, option: string, insideModal = false) {
+async function searchPanel(page: Page, button: Locator, option: string, insideModal = false, group = "B01") {
   await button.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("option", { name: option, exact: true })).toBeVisible();
@@ -56,6 +57,11 @@ async function searchPanel(page: Page, button: Locator, option: string, insideMo
   await expectPopupBesideButton(panel, button);
   await expect(page.getByRole("combobox")).toBeFocused();
   if (insideModal) expect(await pageBehindHidden(page)).toBe(true);
+  await c12Evidence(
+    page,
+    insideModal ? "B11" : group,
+    `selector-${(await button.getAttribute("aria-label")) ?? option}`
+  );
   await page.keyboard.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await expect(button).toBeFocused();
@@ -74,10 +80,12 @@ test("C3: list dates use one keyboard state, adjacent controls close each other,
   await page.keyboard.press("Enter");
   const startCalendar = page.getByRole("dialog", { name: "Start date", exact: true });
   await expectPopupBesideButton(startCalendar, start);
+  await c12Evidence(page, "B01", "start-calendar");
   await due.click();
   await expect(startCalendar).toHaveCount(0);
   const dueCalendar = page.getByRole("dialog", { name: "Due date", exact: true });
   await expectPopupBesideButton(dueCalendar, due);
+  await c12Evidence(page, "B01", "due-calendar");
   await page.keyboard.press("Escape");
   await expect(dueCalendar).toHaveCount(0);
   await expect(due).toBeFocused();
@@ -96,6 +104,7 @@ test("C3: list dates use one keyboard state, adjacent controls close each other,
   await page.keyboard.press("Enter");
   const rangeCalendar = page.getByRole("dialog", { name: "Date Range", exact: true });
   await expectPopupBesideButton(rangeCalendar, range);
+  await c12Evidence(page, "B01", "range-calendar");
   await page.keyboard.press("Escape");
   await expect(rangeCalendar).toHaveCount(0);
   await expect(range).toBeFocused();
@@ -115,6 +124,12 @@ test("C3: list dates use one keyboard state, adjacent controls close each other,
   await expect(menu.getByRole("menuitem").first()).toBeFocused();
   await page.keyboard.press("ArrowDown");
   await expect(menu.getByRole("menuitem").nth(1)).toBeFocused();
+  await c12Evidence(page, "B01", "context-keyboard");
+  await page.keyboard.press("End");
+  await expect(menu.getByRole("menuitem").last()).toBeFocused();
+  await c12Evidence(page, "B01", "context-end");
+  await page.keyboard.press("Home");
+  await expect(menu.getByRole("menuitem").first()).toBeFocused();
   await composingKey(menu, "Escape");
   await expect(menu).toBeVisible();
   await page.keyboard.press("Escape");
@@ -156,6 +171,7 @@ test("C3: a current row property refusal is announced once without an unhandled 
   ).toBe(403);
   await expect(page.getByText("Your role does not allow this.", { exact: true })).toHaveCount(1);
   await expect(priority).toBeVisible();
+  await c12Evidence(page, "B01", "property-refused");
   expect(await issueRead(api, seed.member.token, seed.row.id)).toMatchObject({
     status: 200,
     issue: { priority: "none" },
@@ -203,6 +219,7 @@ test("C3: closing a loading peek returns keyboard focus to its still-connected t
   try {
     const close = peek.getByRole("button", { name: "Close the peek view", exact: true });
     await expect(close).toBeVisible();
+    await c12Evidence(page, "B06", "loading-peek");
     await close.focus();
     await page.keyboard.press("Enter");
     await expect(close).toHaveCount(0);
@@ -236,6 +253,7 @@ test("C3: peek layout selects its current mode, anchors the list and leaves a re
   await page.keyboard.press("Enter");
   await expectListBesideButton(page, mode);
   await expect(page.getByRole("option", { name: "Side Peek", exact: true })).toHaveAttribute("aria-selected", "true");
+  await c12Evidence(page, "B06", "mode-options");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("listbox")).toHaveCount(0);
@@ -244,7 +262,13 @@ test("C3: peek layout selects its current mode, anchors the list and leaves a re
   await expect(page.getByRole("option", { name: "Modal", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("Escape");
   await transitionsEnded(peek);
-  await searchPanel(page, peek.getByRole("button", { name: "Labels: Control row", exact: true }), "Visible label");
+  await searchPanel(
+    page,
+    peek.getByRole("button", { name: "Labels: Control row", exact: true }),
+    "Visible label",
+    false,
+    "B06"
+  );
   const close = peek.getByRole("button", { name: "Close the peek view", exact: true });
   await close.focus();
   await page.keyboard.press("Enter");
@@ -272,6 +296,7 @@ test("C3: settings selects and API-token calendar preserve keyboard focus, place
   await page.keyboard.press("Enter");
   await expectListBesideButton(page, months);
   await expect(page.getByRole("option", { name: "3 months", exact: true })).toHaveAttribute("aria-selected", "true");
+  await c12Evidence(page, "B21", "automation-months");
   await page.keyboard.press("Escape");
   await expect(months).toBeFocused();
 
@@ -284,6 +309,7 @@ test("C3: settings selects and API-token calendar preserve keyboard focus, place
   await filter.focus();
   await page.keyboard.press("Enter");
   await expectListBesideButton(page, filter);
+  await c12Evidence(page, "B21", "project-date-filter");
   expect(await pageBehindHidden(page)).toBe(true);
   await page.getByRole("option", { name: "Created date before", exact: true }).click();
   await expect(page.getByRole("button", { name: "Created date before", exact: true })).toBeFocused();
@@ -302,6 +328,7 @@ test("C3: settings selects and API-token calendar preserve keyboard focus, place
   await page.keyboard.press("Enter");
   const calendar = page.getByRole("dialog", { name: "Set date", exact: true });
   await expectPopupBesideButton(calendar, day);
+  await c12Evidence(page, "B21", "token-expiration-calendar");
   expect(await pageBehindHidden(page)).toBe(true);
   await page.keyboard.press("Escape");
   await expect(calendar).toHaveCount(0);

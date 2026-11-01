@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
   amidAnotherWorkspace,
@@ -249,6 +250,7 @@ test("I15 (page): a terminal row archives once while pending, its saved archive 
   );
   await expect(dialog.getByRole("button", { name: "Archiving", exact: true })).toBeDisabled();
   await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+  await c12Evidence(page, "B08", "archive-pending");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(1);
   expect(watch.apiRequests.filter((request) => request === `POST ${archive}`)).toHaveLength(1);
@@ -283,6 +285,7 @@ test("I15 (page): a terminal row archives once while pending, its saved archive 
   await expect(page.getByRole("button", { name: "Add link", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add relation", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add sub-work item", exact: true })).toHaveCount(0);
+  await c12Evidence(page, "B08", "archived-read-only");
   const writesBefore = watch.apiRequests.filter((request) =>
     /^(PATCH|POST|DELETE) \/api\/v0\/(issues|comments)/.test(request)
   );
