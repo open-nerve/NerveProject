@@ -17,7 +17,7 @@ import type {
   TIssueGroupByOptions,
   TIssueOrderByOptions,
 } from "@nerve/types";
-import { checkDateCriteria, convertToISODateString, parseDateFilter } from "@nerve/utils";
+import { checkDateCriteria, convertToISODateString, getDate, parseDateFilter } from "@nerve/utils";
 import { issueFieldForGroup } from "@/lib/issue-filters";
 
 const getSortOrderToFilterEmptyValues = (key: string, object: any) => {
@@ -56,7 +56,7 @@ const checkIssueDateFilter = (
       console.warn(`[filters] Ignoring unparsable date filter "${filterValue}"`);
       return true;
     }
-    return checkDateCriteria(new Date(issueDate), parsed.date, parsed.type);
+    return checkDateCriteria(getDate(issueDate) ?? null, parsed.date, parsed.type);
   });
 };
 
