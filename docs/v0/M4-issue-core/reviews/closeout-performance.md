@@ -1,6 +1,6 @@
 # M4 收尾规模实测
 
-状态：T8 列表和搜索已验收；T9 删除、连接池和清理待补。最终输入等价由T13核对，M8接收全部实际成本。
+状态：T8 列表和搜索已验收；T9 删除、连接池和清理实测通过，完整七门禁收口中。最终输入等价由T13核对，M8接收全部实际成本。
 
 ## 1. 口径与环境
 
@@ -60,7 +60,7 @@
 
 失败typed SQL的两个独立EXPLAIN分别4865.549/4886.636ms：单格条件被下推到两路窗口结果，规划器估18行，Nested Loop实际排除101,995,000对行。`cells AS MATERIALIZED` 固定连接/格计数后再选页的边界；不改四级总数、权限、快照、cursor/页大小，不新增索引或放宽期限。`t8-list-20k-fixed` 绿，随后全39场景绿，失败原始收据和plan全部保留。
 
-20k空页模块请求从3秒超时降为199.632ms，两个实际SQL92.394/101.789ms；独立EXPLAIN134.200/另见raw。这不是通用索引优化：100k首屏SQL中位从本次原始601.118ms到618.285ms（约+2.9%），仍与P5的622.38ms相当；100k空页从761.545到1031.342ms（约+35.4%）。EXPLAIN首屏temp written由14,854到17,892 blocks；空页temp read/write由2,876/2,938到13,099/16,000 blocks。代价来自完整格结果物化，明确交M8；不删坏样本、不用机器误差抹去这项回归。
+20k空页模块请求从3秒超时降为199.632ms，两个实际SQL92.394/101.789ms；独立EXPLAIN134.200/137.850ms。这不是通用索引优化：100k首屏SQL中位从本次原始601.118ms到618.285ms（约+2.9%），仍与P5的622.38ms相当；100k空页从761.545到1031.342ms（约+35.4%）。EXPLAIN首屏temp written由14,854到17,892 blocks；空页temp read/write由2,876/2,938到13,099/16,000 blocks。代价来自完整格结果物化，明确交M8；不删坏样本、不用机器误差抹去这项回归。
 
 ### 2.2 与§3.16/P5的同口径核对
 
@@ -110,3 +110,100 @@
 `t8-selection-red` 缺20k时失败、`t8-selection-green` 增枚举后通过；13×3场景及13搜索都真实运行，默认opt-in skip不计成功。局部查询改动另过普通仓储分组/续页/精度/数组合同、API权限/分组/排序/快照；最终架构/lint/全F与受影响三引擎列表在T9/T13收口。
 
 补充 `t8-arch-race.json`：两项静态SQL/模块范围守卫与三项读快照交错在-race下通过（exit0，21.071秒），仅上述验收文档变化，服务端逐文件hash与性能样本一致。
+
+## 5. 删除与热项目连接池
+
+2026-11-01，原 `TestTheDeletionsAtTheScaleTarget`：6个项目各20k issue/660k主体行，按UUID顺序交错；描述动态每项目80,000条独立1,024字节载荷。初始count/fanout/交错runs/描述distinct均由既有独立检查确认。原始证据 `perf/deletion/`；种数据54.937秒、ANALYZE 1.731秒，均不计入请求/任务。没有更改生产批量、45秒任务预算或15秒请求期限。
+
+单项目DELETE 204为6.930ms；五项目工作区DELETE 204为8.683ms，均小于15秒。七job的下表时钟都来自各自DB行及状态转移，不把整个Go测试95.298秒当后台执行时间。`finalized_at`是worker终止记录，完成状态批写/观察时刻可以稍后，因此另列收尾差值。
+
+| job | scope | queue | created→attempted 秒 | attempted→finalized 秒 | finalized→完成转移 秒 | 观察到running→completed 秒 |
+|---|---|---|---:|---:|---:|---:|
+| 5 | project | default | 0.001889 | 6.282775 | 0.140509 | 6.422604 |
+| 6 | project | default | 0.001710 | 14.569132 | 0.044610 | 14.613529 |
+| 7 | project | default | 0.001204 | 14.569465 | 0.044289 | 14.613527 |
+| 8 | project | default | 0.000982 | 14.569675 | 0.044085 | 14.613527 |
+| 9 | project | default | 0.000736 | 14.594108 | 0.019657 | 14.613526 |
+| 10 | project | default | 0.000479 | 14.571403 | 0.042366 | 14.613525 |
+| 11 | workspace_drafts | default | 0.000269 | 0.002235 | 0.126742 | 0.128729 |
+
+每个job只有一个真实running、attempt1、completed、error=0、snooze=0，原项目/工作区At/By保持。处理期间对未删邻项目各20次读/写，marker证明探针前已有批次提交、探针后还有未删行且继续推进：
+
+| 场景 | GET p50/p95/max ms | PATCH p50/p95/max ms |
+|---|---|---|
+| project-baseline | 1.006/1.543/7.207 | 2.564/3.088/5.648 |
+| project-processing | 1.064/1.242/1.921 | 2.751/2.950/3.354 |
+| workspace-baseline | 0.987/1.430/3.334 | 2.567/3.357/4.653 |
+| workspace-processing | 42.011/56.531/66.615 | 43.041/54.461/576.006 |
+
+原连接池测试使用请求池10连接、写闸门K=2/queue64，200并发突发在释放前134个503（Retry-After:1）、释放后66个200；持锁期78次独立项目读取最慢19.774ms，小于500ms。链式写时工作区PATCH、成员PATCH、DELETE分别3.388/5.240/23.730ms，均小于1秒。没有串行伪造突发、额外连接替代请求池或延长边界。
+
+五项目同时软删时邻项目PATCH最大576.006ms，明显高于基线；这是观察到的资源竞争成本，完整原样交M8。当前只证明单个热项目隔离，不能推广成多热项目或多进程全局公平。
+
+## 6. 一次真实物理清理
+
+新增 `TestPurgeScale`，仅 `NERVE_PURGE_SCALE=1` 启用。三个测试文件519行，复用既有issueWorld/API框架、owner大数据seed和Runner；原框架的成员关系夹具仍由owner帮手建立。准备应用和worker完整停止后，按固定anchor把两个已软删除范围分别设为61天/59天，活范围不改。启动观察应用使用非owner runtime；没有直接调purger冒充任务或对既有容器操作。
+
+三项实际变异先红后恢复，均到达业务断言而非编译失败：
+
+| 反例 | 实际失败 | 恢复证据 |
+|---|---|---|
+| no-work | `purge left old issues rows=20000` | `mutations/t9-purge-negative-no-work/result.json`；before=restored SHA |
+| cutoff | `purge changed 59-day or live rows` | `mutations/t9-purge-negative-cutoff/result.json`；before=restored SHA |
+| old-boundary | `purge scale job is not one fresh successful attempt` | `mutations/t9-purge-negative-old-boundary/result.json`；before=restored SHA |
+
+恢复后 `t9-purge` 实跑通过：新job=13，上次purge id=4，periodic队列、一个running/attempt1、completed、零错误/snooze。697条实际生产DELETE查询直接删除660,026行，13张issue表、5张project表、旧PAT均实际非空；4张workspace表执行但删除0行。每批≤1000，所有SQL同一cutoff `2026-09-02T12:53:07.941269Z`，运行角色 `test_1_server`，双连接读回生产设置。
+
+种数据8.939秒、ANALYZE 0.405秒；queue等待0.103922秒，观察running→completed 12.214602秒，启动应用至观察完成14.052359秒。计时含pgx追踪和River状态转移观察，不含逐DELETE行触发器；没有为清理新设生产时间SLA。
+
+| 表 | 实际直接删除行 | SQL累计 ms |
+|---|---:|---:|
+| comment_reactions | 1 | 1.742 |
+| issue_reactions | 1 | 1.415 |
+| issue_mentions | 1 | 1.427 |
+| issue_description_versions | 60000 | 251.948 |
+| issue_activities | 400003 | 8990.149 |
+| issue_comments | 40001 | 385.422 |
+| issue_links | 1 | 0.964 |
+| issue_relations | 1 | 0.774 |
+| issue_assignees | 40000 | 112.487 |
+| issue_labels | 40000 | 113.530 |
+| issue_subscribers | 60000 | 201.843 |
+| draft_issues | 1 | 0.705 |
+| issues | 20000 | 2078.332 |
+| project_user_properties | 3 | 1.014 |
+| project_members | 3 | 0.804 |
+| labels | 2 | 5.684 |
+| states | 6 | 2.272 |
+| projects | 1 | 41.083 |
+| workspace_user_properties | 0 | 0.530 |
+| workspace_member_invites | 0 | 0.491 |
+| workspace_members | 0 | 0.508 |
+| workspaces | 0 | 0.506 |
+| api_tokens | 1 | 0.731 |
+
+61天范围清空；59天/活项目的全部19类记录（18表+PAT）逐行JSON与count均不变，工作区4表完整快照也不变。证据在 `perf/purge/{before,after,fixture,boundary,job,transitions,sql,summary,environment}.json`。物理清理主体成本是40万动态和2万issue行；这是单轮实测，批次间异常恢复/目录遗漏/父CASCADE等性质沿T3独立证据，不以本规模替代。
+
+## 7. T9收据与后续边界
+
+三项测量同一源文件清单SHA256 `722a5bd1974d277064a3946c9e53521db1db479b42c444197a8d4c05ed177353`，基线/提交前HEAD `48e73489d419352246507b402decd1dcab442997`；每份收据保存完整argv、输入逐文件hash、日志hash、开始/结束、exit0、inputUnchanged。默认CI的opt-in skip不算规模成功。
+
+| 收据 | 秒 |
+|---|---:|
+| `t9-purge.json` | 39.327 |
+| `t9-deletion.json` | 95.298 |
+| `t9-pool.json` | 4.986 |
+
+T9完整七门禁均 exit 0、输入未变、日志 hash 已核；输入清单 SHA256 `0474d71730514859a7fd091f2592e1cea26cf739cedbdb710869681f8f5696e3`。测量后的变化仅为本次验收文档，产品及测试逐文件 hash 相同。
+
+| 收据 | 秒 | 实际结果 |
+|---|---:|---|
+| `t9-f-gen.json` | 3.140 | 生成核对通过 |
+| `t9-f-lint-go.json` | 10.546 | Go lint 通过 |
+| `t9-f-test-go.json` | 453.645 | 服务端及工具全测通过；opt-in 规模另由上表实际运行 |
+| `t9-f-lint-web.json` | 4.192 | Web lint/type/关键词门禁通过 |
+| `t9-f-knip.json` | 2.250 | 未使用导出检查通过 |
+| `t9-f-test-web.json` | 39.868 | 18/18 任务成功、无缓存 |
+| `t9-f-e2e.json` | 113.553 | 297/297 通过，无失败/跳过 |
+
+T13核最终输入与受影响C12，T12的M8输出链接本表及全部raw，仍不提前宣称main集成完成。检查点提交和远端 CI 的精确 SHA/attempt/job 保存在外置 `t9-ci-receipt.json`，不会以本地门禁冒充远端结果。

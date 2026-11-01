@@ -146,9 +146,9 @@ NERVE_SEARCH_PERF=1 NERVE_SEARCH_PERF_EVIDENCE="$M4_CLOSEOUT_EVIDENCE/perf/searc
 **Files：** 既有S/bootstrap/issue_scale*_test.go、issue_pool_test.go、purge_runtime_test.go、job_state_observer_test.go；新增purge_scale_test.go，按职责可拆purge_scale_fixture_test.go/purge_scale_evidence_test.go，各约400行内。
 **Interfaces：** `func TestPurgeScale(t *testing.T)`，只有NERVE_PURGE_SCALE=1运行；NERVE_PURGE_SCALE_EVIDENCE输出绝对目录。复用`newSplitRoles`、`newIssueWorldOn`、`issueWorld.seedAtScale`、`observeJobStates`和真实Runner，不能直接调用purger冒充任务。
 
-- [ ] Step 1：定义20k旧项目约660k主体行、59天/活行/PAT对照和稀疏子表；准备阶段runtime API建立框架，隔离owner按既有scale seed补量。以独立count/fanout确认输入。停准备应用后固定年龄化，断言没有仍跑的准备任务。
-- [ ] Step 2：实现opt-in测量，用runtime登录启动真实观察应用。记录cutoff和启动后新job watermark，旧/新PAT及每张实际有数据表的前后count/快照；观察真实running/终态，必须是本次aging之后的新尝试。保存job id、queue、attempt、running/finalized及种数据/等待/工作各时间。无任务、空清理、删近期行或owner执行必须失败。
-- [ ] Step 3：新增测试先以漏运行/错误cutoff/错证据边界的有效负例证明不空过，再恢复。数据库套件串行，在server运行：
+- [x] Step 1：定义20k旧项目约660k主体行、59天/活行/PAT对照和稀疏子表；准备阶段runtime API建立框架，隔离owner按既有scale seed补量。以独立count/fanout确认输入。停准备应用后固定年龄化，断言没有仍跑的准备任务。
+- [x] Step 2：实现opt-in测量，用runtime登录启动真实观察应用。记录cutoff和启动后新job watermark，旧/新PAT及每张实际有数据表的前后count/快照；观察真实running/终态，必须是本次aging之后的新尝试。保存job id、queue、attempt、running/finalized及种数据/等待/工作各时间。无任务、空清理、删近期行或owner执行必须失败。
+- [x] Step 3：新增测试先以漏运行/错误cutoff/错证据边界的有效负例证明不空过，再恢复。数据库套件串行，在server运行：
 
 ~~~sh
 NERVE_MEASURE_SCALE=1 NERVE_SCALE_EVIDENCE="$M4_CLOSEOUT_EVIDENCE/perf/deletion" go test -p=1 -count=1 -timeout=40m -v ./internal/bootstrap -run '^TestTheDeletionsAtTheScaleTarget$'
@@ -156,7 +156,7 @@ go test -p=1 -count=1 -timeout=10m -v ./internal/bootstrap -run '^(TestChainedWo
 NERVE_PURGE_SCALE=1 NERVE_PURGE_SCALE_EVIDENCE="$M4_CLOSEOUT_EVIDENCE/perf/purge" go test -p=1 -count=1 -timeout=30m -v ./internal/bootstrap -run '^TestPurgeScale$'
 ~~~
 
-- [ ] Step 4：删除请求<15s且七job各一个running/attempt1/无snooze/error，连接池真10/K2/queue64和503，purge确实清掉旧范围保留近期/活行。清理无设计耗时SLA，实际成本全交M8；意外高风险先提交上报。完整F后提交并push检查点，记录D02/D07/D16。
+- [x] Step 4：删除请求<15s且七job各一个running/attempt1/无snooze/error，连接池真10/K2/queue64和503，purge确实清掉旧范围保留近期/活行。清理无设计耗时SLA，实际成本全交M8；意外高风险先提交上报。完整F后提交并push检查点，记录D02/D07/D16。
 
 ## Task 10：整个M4深度审查与修复（约300–800行报告；产品按发现）
 
