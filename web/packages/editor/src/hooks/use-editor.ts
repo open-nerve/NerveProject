@@ -12,6 +12,7 @@ import { CoreEditorExtensions } from "@/extensions";
 import { getEditorRefHelpers } from "@/helpers/editor-ref";
 // props
 import { CoreEditorProps } from "@/props";
+import { CORE_EXTENSIONS } from "@/constants/extension";
 // types
 import type { TEditorHookProps } from "@/types";
 const defaultEditorProps: NonNullable<TEditorHookProps["editorProps"]> = {};
@@ -53,6 +54,9 @@ export const useEditor = (props: TEditorHookProps) => {
       immediatelyRender: false,
       shouldRerenderOnTransaction: false,
       autofocus,
+      // Markdown already parses formatting (including escaped syntax). Only non-Markdown transforms
+      // run afterwards, so mark paste rules cannot reinterpret the resulting literal text.
+      enablePasteRules: [CORE_EXTENSIONS.CUSTOM_LINK, CORE_EXTENSIONS.EMOJI],
       parseOptions: { preserveWhitespace: true },
       editorProps: mergedEditorProps,
       extensions: [

@@ -5,6 +5,7 @@ import { CoreEditorExtensions } from "@/extensions/extensions";
 import { SideMenuExtension } from "@/extensions/side-menu";
 import { SlashCommands } from "@/extensions/slash-commands";
 import { CoreEditorProps } from "@/props";
+import { CORE_EXTENSIONS } from "@/constants/extension";
 import type { TExtensions, TFileHandler, TMentionHandler } from "@/types";
 
 export const fileHandler: TFileHandler = {
@@ -52,6 +53,7 @@ export const createEditor = async ({
   const editor = new Editor({
     element,
     editable,
+    enablePasteRules: [CORE_EXTENSIONS.CUSTOM_LINK, CORE_EXTENSIONS.EMOJI],
     parseOptions: { preserveWhitespace: true },
     editorProps: CoreEditorProps({ editorClassName: "consumer-editor", attributes }),
     extensions: [
