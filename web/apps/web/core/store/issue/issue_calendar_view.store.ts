@@ -5,16 +5,18 @@
  */
 
 import { observable, action, makeObservable, runInAction, computed, reaction } from "mobx";
+import type { IReactionDisposer } from "mobx";
 
 // helpers
 import { computedFn } from "mobx-utils";
 import type { ICalendarPayload, ICalendarWeek } from "@nerve/types";
 import { EStartOfTheWeek } from "@nerve/types";
-import { generateCalendarData, getWeekNumberOfDate } from "@nerve/utils";
+import { generateCalendarData } from "@nerve/utils";
 // types
 import type { IIssueRootStore } from "./root.store";
 
 export interface ICalendarStore {
+  dispose(): void;
   calendarFilters: {
     activeMonthDate: Date;
     activeWeekDate: Date;
@@ -32,16 +34,12 @@ export interface ICalendarStore {
         [weekNumber: string]: ICalendarWeek;
       }
     | undefined;
-  activeWeekNumber: number;
   allDaysOfActiveWeek: ICalendarWeek | undefined;
   getStartAndEndDate: (layout: "week" | "month") => { startDate: string; endDate: string } | undefined;
 }
 
 export class CalendarStore implements ICalendarStore {
-  loader: boolean = false;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  error: any | null = null;
-
+  private readonly stopObservingPreference: IReactionDisposer;
   // observables
   calendarFilters: { activeMonthDate: Date; activeWeekDate: Date } = {
     activeMonthDate: new Date(),
@@ -53,9 +51,6 @@ export class CalendarStore implements ICalendarStore {
 
   constructor(_rootStore: IIssueRootStore) {
     makeObservable(this, {
-      loader: observable.ref,
-      error: observable.ref,
-
       // observables
       calendarFilters: observable.ref,
       calendarPayload: observable.ref,
@@ -67,7 +62,6 @@ export class CalendarStore implements ICalendarStore {
 
       //computed
       allWeeksOfActiveMonth: computed,
-      activeWeekNumber: computed,
       allDaysOfActiveWeek: computed,
     });
 
@@ -75,13 +69,17 @@ export class CalendarStore implements ICalendarStore {
     this.initCalendar();
 
     // Watch for changes in startOfWeek preference and regenerate calendar
-    reaction(
+    this.stopObservingPreference = reaction(
       () => this.rootStore.rootStore.user.userProfile.data?.start_of_the_week,
       () => {
         // Regenerate calendar when startOfWeek preference changes
         this.regenerateCalendar();
       }
     );
+  }
+
+  dispose(): void {
+    this.stopObservingPreference();
   }
 
   get allWeeksOfActiveMonth() {
@@ -112,10 +110,6 @@ export class CalendarStore implements ICalendarStore {
     });
 
     return reorderedWeeks;
-  }
-
-  get activeWeekNumber() {
-    return getWeekNumberOfDate(this.calendarFilters.activeWeekDate);
   }
 
   get allDaysOfActiveWeek() {

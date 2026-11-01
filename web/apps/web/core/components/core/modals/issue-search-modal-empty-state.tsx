@@ -17,7 +17,7 @@ import lightSearchAsset from "@/app/assets/empty-state/search/search-light.webp?
 import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-root";
 
 interface EmptyStateProps {
-  issues: readonly { id: string }[];
+  issueCount: number;
   searchTerm: string;
   debouncedSearchTerm: string;
   isSearching: boolean;
@@ -27,7 +27,12 @@ function EmptyStateContainer({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col items-center justify-center px-3 py-8 text-center">{children}</div>;
 }
 
-export function IssueSearchModalEmptyState({ issues, searchTerm, debouncedSearchTerm, isSearching }: EmptyStateProps) {
+export function IssueSearchModalEmptyState({
+  issueCount,
+  searchTerm,
+  debouncedSearchTerm,
+  isSearching,
+}: EmptyStateProps) {
   // theme hook
   const { resolvedTheme } = useTheme();
   // nerve hooks
@@ -36,13 +41,13 @@ export function IssueSearchModalEmptyState({ issues, searchTerm, debouncedSearch
   const searchResolvedPath = resolvedTheme === "light" ? lightSearchAsset : darkSearchAsset;
   const issuesResolvedPath = resolvedTheme === "light" ? lightIssuesAsset : darkIssuesAsset;
 
-  if (issues.length === 0 && searchTerm !== "" && debouncedSearchTerm !== "" && !isSearching) {
+  if (issueCount === 0 && searchTerm !== "" && debouncedSearchTerm !== "" && !isSearching) {
     return (
       <EmptyStateContainer>
         <SimpleEmptyState title={t("issue_relation.empty_state.no_issues.title")} assetPath={issuesResolvedPath} />
       </EmptyStateContainer>
     );
-  } else if (issues.length === 0) {
+  } else if (issueCount === 0) {
     return (
       <EmptyStateContainer>
         <SimpleEmptyState title={t("issue_relation.empty_state.search.title")} assetPath={searchResolvedPath} />

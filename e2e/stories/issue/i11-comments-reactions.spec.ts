@@ -158,9 +158,12 @@ test("I11 (page): real comment input ignores IME and empty submission, retains a
   await expect(field).toBeFocused();
   await expect(field).toHaveAccessibleDescription("Required");
   await expect(editor).toHaveText("中文输入");
-  await editor.fill("Confirmed comment");
+  // Use the editor's keyboard selection so refocus reconciliation preserves the replacement range.
+  await editor.press("ControlOrMeta+A");
+  await page.keyboard.insertText("Confirmed comment");
+  await expect(editor).toHaveText("Confirmed comment");
   const held = await sentHeld(page, "POST", path, () => submit.dblclick());
-  expect(held.body).toEqual({ comment_html: expect.stringContaining("Confirmed comment") });
+  expect(held.body).toEqual({ comment_html: expect.stringMatching(/^<p\b[^>]*>Confirmed comment<\/p>$/) });
   await expect(submit).toBeDisabled();
   expect(watch.apiRequests.filter((request) => request === `POST ${path}`)).toHaveLength(2);
   const created = await held.release();
@@ -179,14 +182,16 @@ test("I11 (page): real comment input ignores IME and empty submission, retains a
   await page.getByRole("menuitem", { name: "Edit", exact: true }).press("Enter");
   const editing = row.locator('[contenteditable="true"]');
   await expect(editing).toBeFocused();
-  await editing.fill("Edited comment");
+  await editing.press("ControlOrMeta+A");
+  await page.keyboard.insertText("Edited comment");
+  await expect(editing).toHaveText("Edited comment");
   await editing.dispatchEvent("keydown", { key: "Enter", isComposing: true, bubbles: true });
   await editing.dispatchEvent("keydown", { key: "Enter", keyCode: 229, bubbles: true });
   const editPath = `/api/v0/issue-comments/${comment.id}`;
   expect(watch.apiRequests.filter((request) => request === `PATCH ${editPath}`)).toEqual([]);
   const editHeld = await sentHeld(page, "PATCH", editPath, () => editing.press("Enter"));
   await expect(row.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
-  expect(editHeld.body).toEqual({ comment_html: expect.stringContaining("Edited comment") });
+  expect(editHeld.body).toEqual({ comment_html: expect.stringMatching(/^<p\b[^>]*>Edited comment<\/p>$/) });
   expect((await editHeld.release()).status()).toBe(200);
   await expect(row.getByText("Edited comment", { exact: true })).toBeVisible();
   await expect(row.locator('[contenteditable="true"]')).toHaveCount(0);

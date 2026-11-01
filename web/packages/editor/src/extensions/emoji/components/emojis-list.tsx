@@ -138,12 +138,6 @@ export const EmojisListDropdown = forwardRef(function EmojisListDropdown(
         style={{
           zIndex: 100,
         }}
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-        onMouseDown={(e) => {
-          e.stopPropagation();
-        }}
       >
         {items.length ? (
           items.map((item, index) => {
@@ -161,7 +155,10 @@ export const EmojisListDropdown = forwardRef(function EmojisListDropdown(
                     "bg-layer-1-hover": isSelected,
                   }
                 )}
-                onClick={() => selectItem(index)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  selectItem(index);
+                }}
                 onMouseEnter={() => setSelectedIndex(index)}
               >
                 <span className="grid size-5 flex-shrink-0 place-items-center text-14">{item.emoji}</span>

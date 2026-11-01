@@ -218,6 +218,22 @@ it("withholds cached header commands during the current read and after its refus
   expect(trigger("Header")).toBeNull();
   expect(trigger("Body")).toBeNull();
 });
+it("withholds a warm route's body and header until its new lookup has finished", async () => {
+  await mount();
+  await ready();
+  await act(async () => {
+    await router.navigate("/outside");
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  holdIdentifier = true;
+  await act(async () => router.navigate("/ws/browse/A-1"));
+  await act(async () => until(() => lookupReads().length === 2, "return lookup"));
+  // The same SWR key still has data, but its previous answer is not the new route's read.
+  expect(trigger("Header")).toBeNull();
+  expect(trigger("Body")).toBeNull();
+  await act(async () => lookupReads()[1]!.answer(json(200, source("one"))));
+  await ready();
+});
 it("ends header state on permission ABA without restoring the old menu", async () => {
   await mount();
   await ready();

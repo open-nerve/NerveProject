@@ -18,7 +18,7 @@ import { DateRangeDropdown } from "@/components/dropdowns/date-range";
 import { COMMON_FILTER_ITEM_BORDER_CLASSNAME } from "../../shared";
 
 type TDateRangeFilterValueInputProps<P extends TFilterProperty> = {
-  config: TDateRangeFilterFieldConfig<string>;
+  config: TDateRangeFilterFieldConfig;
   condition: TFilterConditionNode<P, string>;
   isDisabled?: boolean;
   onChange: (value: string[]) => void;

@@ -30,13 +30,12 @@ import { QuickAddIssueRoot } from "../quick-add";
 type TCalendarQuickAddIssueActions = {
   prePopulatedData?: Partial<IssueDetail>;
   quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
-  onOpen?: () => void;
 };
 
 export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIssueActions(
   props: TCalendarQuickAddIssueActions
 ) {
-  const { prePopulatedData, quickAddCallback, onOpen } = props;
+  const { prePopulatedData, quickAddCallback } = props;
   const { t } = useTranslation();
   // router
   const { workspaceSlug, projectId } = useParams();
@@ -61,7 +60,6 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
 
   const handleNewIssue = () => {
     setIsOpen(true);
-    if (onOpen) onOpen();
   };
   const handleExistingIssue = () => {
     setIsExistingIssueModalOpen(true);

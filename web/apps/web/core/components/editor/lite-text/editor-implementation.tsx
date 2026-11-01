@@ -12,6 +12,7 @@ import { useTranslation } from "@nerve/i18n";
 import type { LiteTextEditorWrapperProps } from "./types";
 import { cn, isCommentEmpty } from "@nerve/utils";
 // components
+import { useEditorLabels } from "@/components/editor/use-editor-labels";
 import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
 import { EditorMentionsError } from "@/components/editor/mentions-error";
 import { IssueCommentToolbar } from "@/components/editor/lite-text/toolbar";
@@ -30,6 +31,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
   ref: React.ForwardedRef<EditorRefApi>
 ) {
   const { t } = useTranslation();
+  const labels = useEditorLabels();
   const {
     containerClassName,
     editable,
@@ -80,6 +82,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
         {/* Main Editor - always rendered once */}
         <div>
           <LiteTextEditorWithRef
+            labels={labels}
             ref={ref}
             disabledExtensions={disabledExtensions}
             editable={editable}

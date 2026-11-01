@@ -1,5 +1,4 @@
 // oxlint-disable promise/always-return
-// oxlint-disable no-shadow
 // oxlint-disable jsx_a11y/prefer-tag-over-role
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
@@ -258,7 +257,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
         <div className="w-full rounded-lg">
           <form
             ref={formRef}
-            onSubmit={handleSubmit((data) => handleFormSubmit(data))}
+            onSubmit={handleSubmit((values) => handleFormSubmit(values))}
             className="flex w-full flex-col"
           >
             <div className="rounded-t-lg bg-surface-1 p-5">

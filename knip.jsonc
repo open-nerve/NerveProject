@@ -13,6 +13,10 @@
       // P13 的独立浏览器夹具由 E2E 启动，不进入应用路由或生产构建。
       "entry": ["scripts/filter-browser/build.mjs", "scripts/filter-browser/main.tsx"],
     },
+    "web/packages/ui": {
+      // 强类型 JSX 合同只由 tsc 检查，不从生产 barrel 导出或运行
+      "entry": ["src/dropdowns/select-contract.typecheck.tsx"],
+    },
     "web/packages/api-client": {
       // 类型测试只由 tsc 检查，其中的函数不会被调用
       "entry": ["test/*.typecheck.ts"],

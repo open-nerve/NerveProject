@@ -17,11 +17,10 @@ type Props = {
   displayFilters: IIssueDisplayFilterOptions | undefined;
   groupByOptions: TIssueGroupByOptions[];
   handleUpdate: (val: TIssueGroupByOptions) => void;
-  ignoreGroupedFilters: Partial<TIssueGroupByOptions>[];
 };
 
 export const FilterGroupBy = observer(function FilterGroupBy(props: Props) {
-  const { displayFilters, groupByOptions, handleUpdate, ignoreGroupedFilters } = props;
+  const { displayFilters, groupByOptions, handleUpdate } = props;
   // hooks
   const { t } = useTranslation();
   const [previewEnabled, setPreviewEnabled] = useState(true);
@@ -47,7 +46,6 @@ export const FilterGroupBy = observer(function FilterGroupBy(props: Props) {
               groupBy.key === selectedSubGroupBy
             )
               return null;
-            if (ignoreGroupedFilters.includes(groupBy?.key)) return null;
 
             return (
               <FilterOption

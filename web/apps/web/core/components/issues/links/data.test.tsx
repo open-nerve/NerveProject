@@ -37,7 +37,6 @@ vi.mock("@makeplane/propel/components/input", () => ({
     ...props
   }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
     size?: string;
-    ref?: React.Ref<HTMLInputElement>;
   }) => <input {...props} />,
 }));
 vi.mock("@nerve/propel/button", () => ({

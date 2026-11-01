@@ -80,14 +80,7 @@ export const SubWorkItemTitleActions = observer(function SubWorkItemTitleActions
   );
 
   return (
-    // prevent click everywhere
-    <div
-      className="flex items-center gap-2"
-      onClick={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-      }}
-    >
+    <div className="flex items-center gap-2">
       <SubIssueDisplayFilters
         layoutDisplayFiltersOptions={layoutDisplayFiltersOptions}
         displayProperties={subIssueFilters?.displayProperties ?? {}}

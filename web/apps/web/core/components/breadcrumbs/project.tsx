@@ -35,11 +35,10 @@ export const ProjectBreadcrumb = observer(function ProjectBreadcrumb(props: TPro
 
   // derived values
   const switcherOptions = joinedProjectIds
-    // oxlint-disable-next-line no-shadow
-    .map((projectId) => {
-      const project = getProjectById(projectId);
+    .map((targetProjectId) => {
+      const project = getProjectById(targetProjectId);
       return {
-        value: projectId,
+        value: targetProjectId,
         query: project?.name,
         content: (
           <SwitcherLabel

@@ -20,7 +20,6 @@ import { DRAG_ALLOWED_GROUPS } from "@nerve/constants";
 // i18n
 import { useTranslation } from "@nerve/i18n";
 //types
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IIssueDisplayProperties, TIssueGroupByOptions, TIssueOrderByOptions } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 import { cn } from "@nerve/utils";
@@ -47,8 +46,6 @@ interface IKanbanGroup {
   group_by: TIssueGroupByOptions | undefined;
   sub_group_id?: string;
   isDragDisabled: boolean;
-  isDropDisabled: boolean;
-  dropErrorMessage: string | undefined;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   enableQuickIssueCreate?: boolean;
@@ -71,9 +68,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     issuesMap,
     displayProperties,
     groups,
-    isDropDisabled,
     isDragDisabled,
-    dropErrorMessage,
     updateIssue,
     quickActions,
     canEditProperties,
@@ -122,7 +117,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
     return combine(
       dropTargetForElements({
         element,
-        getData: () => ({ groupId, subGroupId: sub_group_id, columnId: `${groupId}__${sub_group_id}`, type: "COLUMN" }),
+        getData: () => ({ groupId, subGroupId: sub_group_id, type: "COLUMN" }),
         onDragEnter: () => {
           setIsDraggingOverColumn(true);
         },
@@ -139,16 +134,6 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
 
           if (!source || !destination) return;
 
-          if (isDropDisabled) {
-            if (dropErrorMessage)
-              setToast({
-                type: TOAST_TYPE.WARNING,
-                title: t("common.warning"),
-                message: dropErrorMessage,
-              });
-            return;
-          }
-
           handleOnDrop(source, destination);
         },
       }),
@@ -156,17 +141,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
         element,
       })
     );
-  }, [
-    columnRef,
-    groupId,
-    sub_group_id,
-    setIsDraggingOverColumn,
-    orderBy,
-    isDropDisabled,
-    dropErrorMessage,
-    handleOnDrop,
-    t,
-  ]);
+  }, [columnRef, groupId, sub_group_id, setIsDraggingOverColumn, orderBy, handleOnDrop, t]);
 
   const prePopulateQuickAddData = (
     groupByKey: string | undefined,
@@ -238,7 +213,7 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
   );
 
   const shouldLoadMore = nextCursor === undefined ? issueIds?.length < groupIssueCount : !!nextCursor;
-  const canOverlayBeVisible = orderBy !== "sort_order" || isDropDisabled;
+  const canOverlayBeVisible = orderBy !== "sort_order";
   const shouldOverlayBeVisible = isDraggingOverColumn && canOverlayBeVisible;
   const canDragIssuesInCurrentGrouping =
     !isDragDisabled &&
@@ -259,8 +234,6 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
       <GroupDragOverlay
         dragColumnOrientation={sub_group_by ? "justify-start" : "justify-center"}
         canOverlayBeVisible={canOverlayBeVisible}
-        isDropDisabled={isDropDisabled}
-        dropErrorMessage={dropErrorMessage}
         orderBy={orderBy}
         isDraggingOverColumn={isDraggingOverColumn}
       />

@@ -6,7 +6,6 @@
 
 import { findParentNodeClosestToPos } from "@tiptap/core";
 import type { Editor, KeyboardShortcutCommand } from "@tiptap/core";
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { CellSelection } from "@tiptap/pm/tables";
 import { TableMap } from "@tiptap/pm/tables";
 // constants
@@ -20,7 +19,6 @@ type CellCoord = {
 };
 
 type TableInfo = {
-  node: ProseMirrorNode;
   pos: number;
   map: TableMap;
   totalColumns: number;
@@ -73,7 +71,6 @@ const getTableInfo = (editor: Editor): TableInfo | null => {
 
   const tableMap = TableMap.get(table.node);
   return {
-    node: table.node,
     pos: table.pos,
     map: tableMap,
     totalColumns: tableMap.width,

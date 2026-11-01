@@ -34,7 +34,6 @@ function ImageFullScreenModalWithoutPortal(props: Props) {
   const [magnification, setMagnification] = useState<number>(1);
   const [initialMagnification, setInitialMagnification] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
-  const modalRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   const widthInNumber = useMemo(() => {
@@ -81,7 +80,7 @@ function ImageFullScreenModalWithoutPortal(props: Props) {
         targetZoom = ZOOM_STEPS.find((step) => step > prev) ?? MAX_ZOOM;
       } else {
         // Reverse the array to find the next lower step
-        targetZoom = [...ZOOM_STEPS].reverse().find((step) => step < prev) ?? MIN_ZOOM;
+        targetZoom = ZOOM_STEPS.findLast((step) => step < prev) ?? MIN_ZOOM;
       }
 
       // Reset position when zoom matches initial magnification
@@ -207,15 +206,12 @@ function ImageFullScreenModalWithoutPortal(props: Props) {
       aria-modal="true"
       aria-label="Fullscreen image viewer"
     >
-      <div
-        ref={modalRef}
-        onMouseDown={(e) => e.target === modalRef.current && handleClose()}
-        className="relative grid size-full place-items-center overflow-hidden"
-      >
+      <div className="relative grid size-full place-items-center overflow-hidden">
+        <button type="button" aria-label="Close image viewer" onClick={handleClose} className="absolute inset-0" />
         <button
           type="button"
           onClick={handleClose}
-          className="absolute top-10 right-10 grid size-8 place-items-center"
+          className="absolute top-10 right-10 z-10 grid size-8 place-items-center"
           aria-label="Close image viewer"
         >
           <CloseOutline className="size-8 text-white/60 transition-colors hover:text-white" />
@@ -223,6 +219,7 @@ function ImageFullScreenModalWithoutPortal(props: Props) {
         <img
           ref={setImageRef}
           src={src}
+          alt=""
           className="read-only-image rounded-lg"
           style={{
             width: `${widthInNumber * initialMagnification}px`,
@@ -297,6 +294,7 @@ function ImageFullScreenModalWithoutPortal(props: Props) {
 }
 
 export function ImageFullScreenModal(props: Props) {
+  if (!props.isFullScreenEnabled) return null;
   let modal = <ImageFullScreenModalWithoutPortal {...props} />;
   const portal = document.querySelector("#editor-portal");
   if (portal) {

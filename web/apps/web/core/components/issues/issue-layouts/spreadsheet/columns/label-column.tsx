@@ -17,7 +17,7 @@ import { IssuePropertyLabels } from "../../properties";
 type Props = {
   issue: Issue;
   onClose: () => void;
-  onChange: (issue: Issue, data: Partial<IssueDetail>, updates: any) => void;
+  onChange: (issue: Issue, data: Partial<IssueDetail>) => void;
   disabled: boolean;
 };
 
@@ -31,7 +31,7 @@ export const SpreadsheetLabelColumn = observer(function SpreadsheetLabelColumn(p
         issueName={issue.name}
         projectId={issue.project_id ?? null}
         value={issue.label_ids || []}
-        onChange={(data) => onChange(issue, { label_ids: data }, { changed_property: "labels", change_details: data })}
+        onChange={(data) => onChange(issue, { label_ids: data })}
         className="h-full w-full"
         buttonClassName="px-page-x w-full h-full rounded-none"
         hideDropdownArrow

@@ -7,8 +7,6 @@ import type { TFileHandler, TMentionHandler } from "@/types";
 
 const fileHandler: TFileHandler = {
   assetsUploadStatus: {},
-  cancel: () => {},
-  checkIfAssetExists: async () => true,
   delete: async () => {},
   getAssetDownloadSrc: async (path) => path,
   getAssetSrc: async (path) => path,

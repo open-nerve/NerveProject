@@ -18,7 +18,7 @@ import { DateDropdown } from "@/components/dropdowns/date";
 type Props = {
   issue: Issue;
   onClose: () => void;
-  onChange: (issue: Issue, data: Partial<IssueDetail>, updates: any) => void;
+  onChange: (issue: Issue, data: Partial<IssueDetail>) => void;
   disabled: boolean;
 };
 
@@ -32,14 +32,7 @@ export const SpreadsheetStartDateColumn = observer(function SpreadsheetStartDate
         maxDate={getDate(issue.target_date)}
         onChange={(data) => {
           const startDate = data ? renderFormattedPayloadDate(data) : null;
-          onChange(
-            issue,
-            { start_date: startDate },
-            {
-              changed_property: "start_date",
-              change_details: startDate,
-            }
-          );
+          onChange(issue, { start_date: startDate });
         }}
         disabled={disabled}
         placeholder="Start date"

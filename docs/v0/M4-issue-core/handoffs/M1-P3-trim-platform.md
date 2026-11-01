@@ -94,3 +94,10 @@ M4 合并时：
 ## P15 T16 整审复核（2026-11-01）
 
 本期子项已完成实现、整审及后置 CI 的局部修复与完整本地门禁，最终候选 CI 后置核准，集成待办；顶部/弹窗宿主、偏好晚答和退场选择保护已复验，92 个 TS/TSX 零告警。准确最终分支 CI 与交付状态见 [阶段记录 §10](../reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 和 [整审报告](../../../reviews/re-24-M4P15整体审核.md)。顶部 status 保持 open，P16、M7 与 M4 总关闭责任不改变；尚未合并。
+
+
+## P16 T6/T8 子项接收（2026-11-01）
+
+否定显示层已删，原negation-filters规则及samples通过；旧八类工作项地址/否定字段0例外，M4复制0例外。具名旧搜索只剩测试中的删除断言，无生产方法/调用。M15/M16在真实M4扫描路径分别恢复旧地址/否定字段均准确失败，清理探针后守卫76规则/13例外通过；规则与期限未改。见[P16 review §15](../reviews/P16-web-cleanup-review.md#15-t6-关键词终态)。
+
+P15已授权合入main313728cb、准确main CI41268545437全绿并归档清理，上节“尚未合并”仅记录当时交付时点，现状见[P15 review §13](../reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)。收集箱来源的最终转交和本输入总关闭仍待M4 closeout，顶部保持open。

@@ -33,7 +33,7 @@ export const KanbanDeleteDropZone = observer(function KanbanDeleteDropZone({ onR
     return combine(
       dropTargetForElements({
         element,
-        getData: () => ({ columnId: "issue-trash-box", groupId: "issue-trash-box", type: "DELETE" }),
+        getData: () => ({ groupId: "issue-trash-box", type: "DELETE" }),
         onDragEnter: () => setIsDragOverDelete(true),
         onDragLeave: () => setIsDragOverDelete(false),
         onDrop: (payload) => {

@@ -20,7 +20,6 @@ type Props = {
   aspectRatio: number;
   downloadSrc: string;
   handleAlignmentChange: (alignment: TCustomImageAlignment) => void;
-  height: string;
   isTouchDevice: boolean;
   src: string;
   width: string;

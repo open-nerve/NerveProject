@@ -101,7 +101,7 @@ export function ModuleForm(props: Props) {
                     }}
                     multiple={false}
                     buttonVariant="border-with-text"
-                    renderCondition={(projectId) => !!projectsWithCreatePermissions?.[projectId]}
+                    renderCondition={(targetProjectId) => !!projectsWithCreatePermissions?.[targetProjectId]}
                     tabIndex={getIndex("cover_image")}
                   />
                 </div>
@@ -136,7 +136,7 @@ export function ModuleForm(props: Props) {
                       onChange={onChange}
                       placeholder={t("title")}
                       tabIndex={getIndex("name")}
-                      autoFocus
+                      data-autofocus
                     />
                   </InputGroup>
                 </Field>

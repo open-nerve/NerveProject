@@ -49,16 +49,6 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
   const assigneesResolvedPath = resolvedTheme === "light" ? lightAssigneeAsset : darkAssigneeAsset;
   const labelsResolvedPath = resolvedTheme === "light" ? lightLabelAsset : darkLabelAsset;
 
-  const currentValue = (tab: string | null) => {
-    switch (tab) {
-      case "Assignees":
-        return 0;
-      case "Labels":
-        return 1;
-      default:
-        return 0;
-    }
-  };
   const loaders = (
     <Loader className="space-y-3">
       <Loader.Item height="30px" />
@@ -71,7 +61,7 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
     <div className="col-span-1 flex min-h-[17rem] flex-col gap-4 overflow-hidden rounded-lg border border-subtle bg-surface-1 p-4 lg:col-span-2 xl:col-span-1">
       <Tab.Group
         as={Fragment}
-        defaultIndex={currentValue(tab)}
+        defaultIndex={tab === "Labels" ? 1 : 0}
         onChange={(i) => {
           switch (i) {
             case 0:
@@ -126,7 +116,7 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
           >
             {cycle && !isEmpty(cycle.distribution) ? (
               cycle?.distribution?.assignees && cycle.distribution.assignees.length > 0 ? (
-                cycle.distribution?.assignees?.map((assignee, index) => {
+                cycle.distribution?.assignees?.map((assignee) => {
                   if (assignee.assignee_id)
                     return (
                       <SingleProgressStats
@@ -150,7 +140,7 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
                   else
                     return (
                       <SingleProgressStats
-                        key={`unassigned-${index}`}
+                        key="unassigned"
                         title={
                           <div className="flex items-center gap-2">
                             <div className="h-5 w-5 rounded-full border-2 border-subtle bg-layer-1">
@@ -183,9 +173,9 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
           >
             {cycle && !isEmpty(cycle.distribution) ? (
               cycle?.distribution?.labels && cycle.distribution.labels.length > 0 ? (
-                cycle.distribution.labels?.map((label, index) => (
+                cycle.distribution.labels?.map((label) => (
                   <SingleProgressStats
-                    key={label.label_id ?? `no-label-${index}`}
+                    key={label.label_id ?? "no-label"}
                     title={
                       <div className="flex items-center gap-2 truncate">
                         <span

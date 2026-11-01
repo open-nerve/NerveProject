@@ -45,14 +45,16 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: P
   const { getProjectById } = useProject();
   const { toggleIssueDetailSidebar, issueDetailSidebarCollapsed } = useAppTheme();
 
-  const { data, isLoading, error, mutate } = useOutletContext<IssueRouteRead>();
+  const { data, isLoading, isValidating, error, mutate } = useOutletContext<IssueRouteRead>();
 
   // The identifier is parsed only by the server; the proven response chooses the project.
   const issueId = data?.id;
   const projectId = data?.project_id ?? "";
   const issue = getIssueById(issueId || "") || undefined;
   const project = (issue?.project_id && getProjectById(issue?.project_id)) || undefined;
-  const issueLoader = !issue || isLoading;
+  // A warm SWR answer must not mount interactive children during the new route read.
+  const pending = isLoading || isValidating;
+  const issueLoader = !issue || pending;
   const pageTitle = project && issue ? `${project?.identifier}-${issue?.sequence_id} ${issue?.name}` : undefined;
 
   useEffect(() => {
@@ -69,7 +71,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: P
     return () => window.removeEventListener("resize", handleToggleIssueDetailSidebar);
   }, [issueDetailSidebarCollapsed, toggleIssueDetailSidebar]);
 
-  if ((error || data === undefined) && !isLoading) {
+  if ((error || data === undefined) && !pending) {
     return (
       <>
         {error && (

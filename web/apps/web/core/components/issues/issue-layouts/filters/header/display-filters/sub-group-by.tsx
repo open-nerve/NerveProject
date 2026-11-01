@@ -16,14 +16,13 @@ type Props = {
   displayFilters: IIssueDisplayFilterOptions;
   handleUpdate: (val: TIssueGroupByOptions) => void;
   subGroupByOptions: TIssueGroupByOptions[];
-  ignoreGroupedFilters: Partial<TIssueGroupByOptions>[];
 };
 
 export const FilterSubGroupBy = observer(function FilterSubGroupBy(props: Props) {
   // hooks
   const { t } = useTranslation();
 
-  const { displayFilters, handleUpdate, subGroupByOptions, ignoreGroupedFilters } = props;
+  const { displayFilters, handleUpdate, subGroupByOptions } = props;
 
   const [previewEnabled, setPreviewEnabled] = useState(true);
 
@@ -41,7 +40,6 @@ export const FilterSubGroupBy = observer(function FilterSubGroupBy(props: Props)
         <div>
           {ISSUE_GROUP_BY_OPTIONS.filter((option) => subGroupByOptions.includes(option.key)).map((subGroupBy) => {
             if (selectedGroupBy !== null && subGroupBy.key === selectedGroupBy) return null;
-            if (ignoreGroupedFilters.includes(subGroupBy?.key)) return null;
 
             return (
               <FilterOption

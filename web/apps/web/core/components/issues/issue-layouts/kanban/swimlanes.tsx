@@ -211,8 +211,6 @@ const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwim
                     loadMoreIssues={loadMoreIssues}
                     handleOnDrop={handleOnDrop}
                     orderBy={orderBy}
-                    isDropDisabled={_list.isDropDisabled}
-                    dropErrorMessage={_list.dropErrorMessage}
                   />
                 </div>
               )}

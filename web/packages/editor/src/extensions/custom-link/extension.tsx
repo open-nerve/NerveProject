@@ -60,15 +60,6 @@ declare module "@tiptap/core" {
         class?: string | null;
       }) => ReturnType;
       /**
-       * Toggle a link mark
-       */
-      toggleLink: (attributes: {
-        href: string;
-        target?: string | null;
-        rel?: string | null;
-        class?: string | null;
-      }) => ReturnType;
-      /**
        * Unset a link mark
        */
       unsetLink: () => ReturnType;
@@ -80,8 +71,6 @@ declare module "@tiptap/core" {
 }
 
 type CustomLinkStorage = {
-  isPreviewOpen: boolean;
-  posToInsert: { from: number; to: number };
   isBubbleMenuOpen: boolean;
 };
 
@@ -183,14 +172,6 @@ export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
         ({ chain }) =>
           chain().setMark(this.name, attributes).setMeta("preventAutolink", true).run(),
 
-      toggleLink:
-        (attributes) =>
-        ({ chain }) =>
-          chain()
-            .toggleMark(this.name, attributes, { extendEmptyMarkRange: true })
-            .setMeta("preventAutolink", true)
-            .run(),
-
       unsetLink:
         () =>
         ({ chain }) =>
@@ -264,9 +245,7 @@ export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
 
   addStorage() {
     return {
-      isPreviewOpen: false,
       isBubbleMenuOpen: false,
-      posToInsert: { from: 0, to: 0 },
     };
   },
 });

@@ -16,8 +16,6 @@ import { CoreEditorExtensions } from "./extensions";
 
 const fileHandler: TFileHandler = {
   assetsUploadStatus: {},
-  cancel: () => {},
-  checkIfAssetExists: async () => true,
   delete: async () => {},
   getAssetDownloadSrc: async (path) => path,
   getAssetSrc: async (path) => path,

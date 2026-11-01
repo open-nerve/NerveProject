@@ -10,8 +10,10 @@ import { useTranslation } from "@nerve/i18n";
 // nerve imports
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import type { IFilterInstance } from "@nerve/shared-state";
-import type { TExternalFilter, TFilterProperty, TSupportedOperators } from "@nerve/types";
+import type { ICustomSearchSelectOption, TExternalFilter, TFilterProperty, TSupportedOperators } from "@nerve/types";
 import { CustomSearchSelect } from "@nerve/ui";
+
+const ALL_FILTERS_APPLIED = "all_filters_applied";
 
 export type TAddFilterDropdownProps<P extends TFilterProperty, E extends TExternalFilter> = {
   customButton: React.ReactNode;
@@ -43,7 +45,6 @@ export const AddFilterDropdown = observer(function AddFilterDropdown<
           )}
           <span>{config.label}</span>
         </div>
-        {config.rightContent}
       </div>
     ),
     query: config.label.toLowerCase(),
@@ -51,10 +52,10 @@ export const AddFilterDropdown = observer(function AddFilterDropdown<
 
   // If all filters are applied, show disabled options
   const allFiltersApplied = filterOptions.length === 0;
-  const displayOptions = allFiltersApplied
+  const displayOptions: ICustomSearchSelectOption<P | typeof ALL_FILTERS_APPLIED>[] = allFiltersApplied
     ? [
         {
-          value: "all_filters_applied",
+          value: ALL_FILTERS_APPLIED,
           content: <div className="text-placeholder italic">{t("common.filter_options.all_applied")}</div>,
           query: t("common.filter_options.all_applied").toLowerCase(),
           disabled: true,
@@ -62,7 +63,8 @@ export const AddFilterDropdown = observer(function AddFilterDropdown<
       ]
     : filterOptions;
 
-  const handleFilterSelect = (property: P) => {
+  const handleFilterSelect = (property: P | typeof ALL_FILTERS_APPLIED) => {
+    if (property === ALL_FILTERS_APPLIED) return;
     const config = filter.configManager.getConfigByProperty(property);
     if (config?.firstOperator) {
       props.handleFilterSelect(property, config.firstOperator);
@@ -82,7 +84,7 @@ export const AddFilterDropdown = observer(function AddFilterDropdown<
         noResultsMessage={t("common.filter_options.no_results")}
         loadingMessage={t("common.filter_options.loading")}
         defaultOpen={defaultOpen}
-        value={""}
+        value={null}
         onChange={handleFilterSelect}
         options={displayOptions}
         optionsClassName="w-56"

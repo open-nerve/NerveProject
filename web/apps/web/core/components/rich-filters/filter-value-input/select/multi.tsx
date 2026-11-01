@@ -40,7 +40,7 @@ export const MultiSelectFilterValueInput = observer(function MultiSelectFilterVa
     <>
       <CustomSearchSelect
         {...getCommonCustomSearchSelectProps(isDisabled)}
-        value={toFilterArray(condition.value)}
+        value={toFilterArray<string>(condition.value)}
         onChange={handleSelectChange}
         options={loading ? undefined : formattedOptions}
         searchPlaceholder={t("common.filter_options.search")}

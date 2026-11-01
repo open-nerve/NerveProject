@@ -188,7 +188,7 @@ export const getDate = (date: string | Date | undefined | null): Date | undefine
   try {
     if (!date || date === "") return;
 
-    if (typeof date !== "string" && !(date instanceof String)) return date;
+    if (typeof date !== "string") return date;
 
     const [yearString, monthString, dayString] = date.substring(0, 10).split("-");
     const year = parseInt(yearString);
@@ -229,15 +229,6 @@ export const convertToEpoch = (dateString: string | undefined) => {
 
   const date = new Date(dateString);
   return date.getTime();
-};
-
-/**
- * get current Date time in UTC ISO format
- * @returns
- */
-export const getCurrentDateTimeInISO = () => {
-  const date = new Date();
-  return date.toISOString();
 };
 
 /**
@@ -365,11 +356,3 @@ export const formatDateRange = (
 
   return "";
 };
-
-/**
- * Checks if a date is valid
- * @param date The date to check
- * @returns Whether the date is valid or not
- */
-export const isValidDate = (date: unknown): date is string | Date =>
-  (typeof date === "string" || typeof date === "object") && date !== null && !isNaN(Date.parse(date as string));

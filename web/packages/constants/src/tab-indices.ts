@@ -4,26 +4,6 @@
  * See the LICENSE file for details.
  */
 
-const ISSUE_FORM_TAB_INDICES = [
-  "name",
-  "description_html",
-  "state_id",
-  "priority",
-  "assignee_ids",
-  "label_ids",
-  "start_date",
-  "target_date",
-  "cycle_id",
-  "module_ids",
-  "parent_id",
-  "create_more",
-  "discard_button",
-  "draft_button",
-  "submit_button",
-  "project_id",
-  "remove_parent",
-];
-
 const INTAKE_ISSUE_CREATE_FORM_TAB_INDICES = [
   "name",
   "description_html",
@@ -56,7 +36,6 @@ const PROJECT_MODULE_TAB_INDICES = [
 const PROJECT_VIEW_TAB_INDICES = ["name", "description", "filters", "cancel", "submit"];
 
 export enum ETabIndices {
-  ISSUE_FORM = "issue-form",
   INTAKE_ISSUE_FORM = "intake-issue-form",
   PROJECT_CYCLE = "project-cycle",
   PROJECT_MODULE = "project-module",
@@ -64,7 +43,6 @@ export enum ETabIndices {
 }
 
 export const TAB_INDEX_MAP: Record<ETabIndices, string[]> = {
-  [ETabIndices.ISSUE_FORM]: ISSUE_FORM_TAB_INDICES,
   [ETabIndices.INTAKE_ISSUE_FORM]: INTAKE_ISSUE_CREATE_FORM_TAB_INDICES,
   [ETabIndices.PROJECT_CYCLE]: PROJECT_CYCLE_TAB_INDICES,
   [ETabIndices.PROJECT_MODULE]: PROJECT_MODULE_TAB_INDICES,

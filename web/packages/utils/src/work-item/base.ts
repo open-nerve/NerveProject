@@ -7,38 +7,13 @@
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { isEmpty } from "lodash-es";
 // nerve imports
-import { ISSUE_DISPLAY_FILTERS_BY_PAGE, STATE_GROUPS } from "@nerve/constants";
+import { STATE_GROUPS } from "@nerve/constants";
 import type { StateGroup } from "@nerve/api-client";
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssueParams } from "@nerve/types";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 // local imports
 import { getDate } from "../datetime";
 import { isEditorEmpty } from "../editor";
-
-export const handleIssueQueryParamsByLayout = (
-  layout: EIssueLayoutTypes | undefined,
-  viewType: "my_issues" | "issues" | "profile_issues" | "archived_issues" | "draft_issues"
-): TIssueParams[] | null => {
-  const queryParams: TIssueParams[] = ["filters"];
-
-  if (!layout) return null;
-
-  const currentViewLayoutOptions = ISSUE_DISPLAY_FILTERS_BY_PAGE[viewType].layoutOptions[layout];
-
-  // add display filters query params
-  Object.keys(currentViewLayoutOptions.display_filters).forEach((option) => {
-    queryParams.push(option as TIssueParams);
-  });
-
-  // add extra options query params
-  if (currentViewLayoutOptions.extra_options.access) {
-    currentViewLayoutOptions.extra_options.values.forEach((option) => {
-      queryParams.push(option);
-    });
-  }
-
-  return queryParams;
-};
 
 /**
  * @description check if the issue due date should be highlighted
@@ -61,24 +36,6 @@ export const shouldHighlightIssueDueDate = (
 
   // if the issue is overdue, highlight the due date
   return targetDateDistance <= 0;
-};
-
-export const formatTextList = (TextArray: string[]): string => {
-  const count = TextArray.length;
-  switch (count) {
-    case 0:
-      return "";
-    case 1:
-      return TextArray[0];
-    case 2:
-      return `${TextArray[0]} and ${TextArray[1]}`;
-    case 3:
-      return `${TextArray.slice(0, 2).join(", ")}, and ${TextArray[2]}`;
-    case 4:
-      return `${TextArray.slice(0, 3).join(", ")}, and ${TextArray[3]}`;
-    default:
-      return `${TextArray.slice(0, 3).join(", ")}, and +${count - 3} more`;
-  }
 };
 
 export const getDescriptionPlaceholderI18n = (isFocused: boolean, description: string | undefined): string => {

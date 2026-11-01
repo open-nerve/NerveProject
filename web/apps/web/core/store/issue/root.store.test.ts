@@ -55,3 +55,25 @@ it("retire releases permission observation and does not advance old identities",
     vi.useRealTimers();
   }
 });
+
+it("updates the live calendar preference but stops observing it when the issue root retires", () => {
+  const app = new RootStore(new FakeNerve().client());
+  const calendar = app.issue.issueCalendarView;
+  try {
+    const before = calendar.calendarPayload;
+    runInAction(() => {
+      app.user.userProfile.data = { start_of_the_week: 1 } as NonNullable<typeof app.user.userProfile.data>;
+    });
+    expect(calendar.calendarPayload).not.toBe(before);
+    const start = calendar.getStartAndEndDate("week")!.startDate;
+    expect(new Date(`${start}T12:00:00`).getDay()).toBe(1);
+    app.issue.retire();
+    const retired = calendar.calendarPayload;
+    runInAction(() => {
+      app.user.userProfile.data = { start_of_the_week: 0 } as NonNullable<typeof app.user.userProfile.data>;
+    });
+    expect(calendar.calendarPayload).toBe(retired);
+  } finally {
+    app.dispose();
+  }
+});

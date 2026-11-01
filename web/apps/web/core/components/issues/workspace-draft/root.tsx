@@ -24,7 +24,12 @@ export const WorkspaceDraftIssuesRoot = observer(function WorkspaceDraftIssuesRo
     (_identity, slug) => drafts.fetchIssues(slug),
     { dedupingInterval: 0 }
   );
-  if (!drafts.canRead(ws)) return null;
+  if (!drafts.canRead(ws))
+    return workspace?.role === 5 ? (
+      <div className="grid h-full place-items-center text-secondary">
+        {t("you_do_not_have_the_permission_to_access_this_page")}
+      </div>
+    ) : null;
   const rows = drafts.getDrafts(ws);
   const failure = drafts.getError(ws) ?? error;
   if (!rows && isLoading) return <WorkspaceDraftIssuesLoader items={14} />;

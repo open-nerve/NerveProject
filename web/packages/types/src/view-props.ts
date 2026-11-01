@@ -11,8 +11,6 @@ import type { FC } from "react";
 import type { LOGICAL_OPERATOR, TSupportedOperators } from "./rich-filters";
 import type { CompleteOrEmpty } from "./utils";
 
-export type TIssueLayouts = "list" | "kanban" | "calendar" | "spreadsheet";
-
 export type TIssueGroupByOptions =
   | "state"
   | "priority"
@@ -33,8 +31,6 @@ export type TIssueOrderByOptions =
   | "-assignees__first_name"
   | "labels__name"
   | "-labels__name";
-
-export type TIssueGroupingFilters = "active" | "backlog";
 
 export type TIssueExtraOptions = "show_empty_groups" | "sub_issue";
 
@@ -172,6 +168,6 @@ export interface IWorkspaceViewProps {
 export type TSpreadsheetColumn = FC<{
   issue: Issue;
   onClose: () => void;
-  onChange: (issue: Issue, data: Partial<IssueDetail>, updates: any) => void;
+  onChange: (issue: Issue, data: Partial<IssueDetail>) => void;
   disabled: boolean;
 }>;

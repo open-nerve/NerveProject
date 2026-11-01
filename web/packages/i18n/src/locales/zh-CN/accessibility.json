@@ -37,6 +37,23 @@
       "hide_password": "隐藏密码"
     },
     "comment_options": "{name}的评论选项",
-    "comment_add_reaction": "为{name}的评论添加回应"
+    "comment_add_reaction": "为{name}的评论添加回应",
+    "editor": {
+      "continue_writing": "继续输入",
+      "resize_image": "调整图片大小",
+      "table_row_options": "表格行选项",
+      "table_column_options": "表格列选项",
+      "table_colors": {
+        "gray": "灰色",
+        "peach": "桃色",
+        "pink": "粉色",
+        "orange": "橙色",
+        "green": "绿色",
+        "light-blue": "浅蓝色",
+        "dark-blue": "深蓝色",
+        "purple": "紫色",
+        "none": "不设置背景颜色"
+      }
+    }
   }
 }

@@ -30,7 +30,7 @@ export const TimezoneSelect = observer(function TimezoneSelect(props: TTimezoneS
   return (
     <div>
       <CustomSearchSelect
-        value={value}
+        value={value ?? null}
         // a zone the list lacks, or any zone while the list loads, shows by its name
         label={value ? (selectedValue(value) ?? value) : t("select_a_timezone")}
         options={isDisabled || disabled ? [] : timezones}

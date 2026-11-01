@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索：预检、实施与交付记录
 
-日期：2026-11-01。状态：T1–T16 实施与终审修复完成，完整本地门禁通过；最终候选 CI 按 §10 后置核准后交付，集成待办。§1–8 保留准备期快照，当前事实见 §9–10。基线 main 7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9，分支 codex/m4-p15；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[deep-review 预检](../../../reviews/re-23-M4P15预检审核.md)。
+日期：2026-11-01。状态：已完成。原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。当前集成事实见 §12–13，§1–11 保留准备、实施和交付时点。原实施基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`，分支 `codex/m4-p15`；[spec](../specs/P15-web-collaboration-drafts-search.md)、[plan](../plans/P15-web-collaboration-drafts-search.md)、[实施终审](../../../reviews/re-24-M4P15整体审核.md)。
 
 ## 1. 前置与方法
 
@@ -340,3 +340,24 @@ P16 的全局 dead/no-shadow、C12 与总守卫、M4 收尾逐条 §14/总体 9.
 完整本地七门禁在同一输入 `d82bfe2eae1187b319892b0b259b1716e2339effe38dd16a31e7df4a60240a75` 下全部 exit 0；Go普通测试51包/另16包无测试、静态54/54（36缓存）、knip、无缓存296文件/3130 Vitest加Node5、默认E2E **279/279**（Chromium277、Firefox2，0 skip）。最终程序摘要 `17ef9aeb121b49d128cf11dfe8910b8704f98ee2179a59a119db506f920a0c10`。七项运行期间输入稳定；事后仅补本节与审核的已得结果，不改变任何测试或产品字节。
 
 修复原件在本工作树 `.superpowers/sdd/P15-ci-i13/`，`final-summary.json`、分包日志、完整页面结果和所有历史失败均保留。主目录 `.superpowers/sdd/P15-integration-20261101/` 保存原 main 失败元数据、日志与 artifact；ZIP SHA-256 `89cde27ef838dade8796238a444f87199213c03be47f5215ccfa54a40a894685`，通过 GitHub 连接器取得，没有提取凭据。修复分支准确 CI、后续 --no-ff/main CI 与归档清理由后置集成收据核准；P16 仍只准备、不实现。
+
+
+## 13. 授权集成、main CI 与归档清理（2026-11-01）
+
+P15 已完成：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。
+
+原 P15 最终 `de9a36fcc7819a671d0fc5c6def5e2a5fa846177` 的 CI 41238185478 attempt 1 已全绿。第一次授权合并为 `b79c25f1ac6ca68667318bfa2062af3dfe7102e6`，两父为 7a81ea18/de9a36fc，tree 与阶段分支相同；其 CI 41263412461 的 I13 失败和修复见 §12，不覆盖历史失败。
+
+修复分支最终 `bcee63cd0afe1e9c88e15abfa93f97567127201c` 已通过完整本地门禁和 deep-review；精确分支 CI 以主目录集成根 `ci-fix-delivery.json` 绑定。随后 --no-ff 合并为 `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，两父与同 tree 证明见 `ci-fix-merge-receipt.json`；准确 [main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) attempt 1 的 server/web/e2e 全部 success，E2E **279/279**、0 skip；公开原始 JSON、步骤与日志均按准确 SHA 保存，日志逐文件摘要和 job/run/head 见 `ci-log-manifest.json`。分支绿、本地绿和 main 绿分别核验。
+
+稳定归档根为主目录 `.superpowers/sdd/P15-integration-20261101/`：原 P15 的 `.superpowers/`、e2e 报告/结果和全部 turbo 日志保留在 `worktree-evidence/`；修复工作树原件在 `ci-fix-archive/worktree-evidence/`；原根外 30 份准备材料在 `preparation-evidence/P15-preparation-20261031/`。每个原路径均在 manifest 保留，不把历史路径删除解释为证据丢失；依赖/编译产物的可重建排除与空目录也逐项列明。
+
+| 清单 | 文件数 | SHA-256 |
+|---|---:|---|
+| `archive-manifest.json` | 4,594 | 3ac1bedd59e2ae20768b2237a07d7ced91ec4e50be4e84a1c19c3a7ee1947e14 |
+| `ci-fix-archive/archive-manifest.json` | 670 | 995082fefd58c8b271ec049eba77542e7dfe4d417d7cc75a0fc78343582adcc7 |
+| `preparation-archive-manifest.json` | 30 | 3b2e99e6a70c86597e0cf0a18c9e69297dd3ff3b04a4847ddd32716e70c114e1 |
+
+`main-ci-success-receipt.json`、`cleanup-prechecks.json`、`cleanup-command-log.json` 与 `cleanup-receipt.json` 证明：源工作树干净、全部源提交是 main 祖先、远端独有提交 0、unknown 0；归档逐大小/hash/模式核准后，用系统 Git 正常删除远端分支、worktree 和本地分支，没有 force、stash、clean 或 reset --hard。删除后再次核验归档与本地/远端 main 一致。
+
+P16 只准备 spec/plan 和预检，产品未实现，phase 仍 M4/P15。M4 §14、总体 9.4、八份输入 handoff 顶部和 M5–M8 最终交接仍留 P16/closeout；不因 P15 完成提前关闭。

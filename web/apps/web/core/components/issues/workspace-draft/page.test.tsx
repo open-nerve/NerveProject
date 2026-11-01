@@ -131,6 +131,7 @@ it("personal pagination uses response total, keeps its rows on refusal and retri
 it("workspace guests do not fetch personal drafts even while the router still names a member workspace", async () => {
   await roles(5);
   await render();
+  expect(container.textContent).toContain("you_do_not_have_the_permission_to_access_this_page");
   expect(container.textContent).not.toContain("other:");
   expect(tab.nerve.calls).toHaveLength(0);
   expect(button("workspace_draft_issues.draft_an_issue").disabled).toBe(true);

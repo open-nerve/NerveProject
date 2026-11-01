@@ -55,7 +55,6 @@ import {
 export const HIGHLIGHT_CLASS = "highlight";
 
 export type GroupDropLocation = {
-  columnId: string;
   groupId: string;
   subGroupId?: string;
   id: string | undefined;
@@ -114,7 +113,6 @@ export const getSourceFromDropPayload = (payload: IPragmaticDropPayload): GroupD
   return {
     groupId: sourceColumData.groupId,
     subGroupId: sourceColumData.subGroupId as string | undefined,
-    columnId: `${sourceColumData.groupId}__${sourceColumData.subGroupId}`,
     id: sourceIssueData.id,
   };
 };
@@ -155,7 +153,6 @@ export const getDestinationFromDropPayload = (payload: IPragmaticDropPayload): G
   return {
     groupId: destinationColumnData.groupId,
     subGroupId: destinationColumnData.subGroupId as string | undefined,
-    columnId: `${destinationColumnData.groupId}__${destinationColumnData.subGroupId}`,
     id: destinationIssueData?.id as string | undefined,
     canAddIssueBelow: !!destinationIssueData && extractClosestEdge(destinationIssueData) === "bottom",
   };

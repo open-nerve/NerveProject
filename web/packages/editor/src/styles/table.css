@@ -1,6 +1,7 @@
 .table-wrapper {
   overflow-x: auto;
-  padding-bottom: 26px;
+  /* Leave room for the real row/column triggers and their keyboard outlines inside the scrollport. */
+  padding: 4px 12px 26px;
 
   table {
     border-collapse: collapse;

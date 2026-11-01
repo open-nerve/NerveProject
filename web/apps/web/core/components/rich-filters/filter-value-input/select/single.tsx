@@ -44,7 +44,7 @@ export const SingleSelectFilterValueInput = observer(function SingleSelectFilter
     <>
       <CustomSearchSelect
         {...getCommonCustomSearchSelectProps(isDisabled)}
-        value={toFilterArray(condition.value)[0] ?? null}
+        value={toFilterArray<string>(condition.value)[0] ?? null}
         onChange={handleSelectChange}
         options={loading ? undefined : formattedOptions}
         searchPlaceholder={t("common.filter_options.search")}

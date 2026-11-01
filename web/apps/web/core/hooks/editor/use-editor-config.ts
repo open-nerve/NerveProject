@@ -35,11 +35,6 @@ export const useEditorConfig = () => {
 
       return {
         assetsUploadStatus: assetsUploadPercentage,
-        cancel: fileService.cancelUpload,
-        checkIfAssetExists: async (assetId: string) => {
-          const res = await fileService.checkIfAssetExists(workspaceSlug, assetId);
-          return res?.exists ?? false;
-        },
         delete: async (src: string) => {
           if (src?.startsWith("http")) {
             await fileService.deleteOldWorkspaceAsset(workspaceId, src);

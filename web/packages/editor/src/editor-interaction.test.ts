@@ -3,19 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Editor } from "@tiptap/core";
-import type { EditorProps } from "@tiptap/pm/view";
+import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 // local imports
-import { CoreEditorExtensions } from "@/extensions/extensions";
-import { SideMenuExtension } from "@/extensions/side-menu";
-import { SlashCommands } from "@/extensions/slash-commands";
 import { getSlashCommandFilteredSections } from "@/extensions/slash-commands/command-items-list";
 import { getEditorRefHelpers } from "@/helpers/editor-ref";
 import { openEmojiPicker } from "@/helpers/editor-commands";
 import { CoreEditorProps } from "@/props";
-import type { EditorRefApi, TExtensions, TFileHandler, TMentionHandler } from "@/types";
+import type { EditorRefApi } from "@/types";
 
 // The kept editors, driven the way a user drives them: typing, keys, the toolbar and the ref API the web
 // app calls. Each editor is a real TipTap Editor built as useEditor builds the rich-text editor of a work
@@ -24,76 +20,13 @@ import type { EditorRefApi, TExtensions, TFileHandler, TMentionHandler } from "@
 // `editable` prop changes, useEditor destroys the editor and creates a new one, so "read-only, then
 // editable again" is two editors here as well.
 
-const fileHandler: TFileHandler = {
-  assetsUploadStatus: {},
-  cancel: () => {},
-  checkIfAssetExists: async () => true,
-  delete: async () => {},
-  getAssetDownloadSrc: async (path) => path,
-  getAssetSrc: async (path) => path,
-  restore: async () => {},
-  upload: async () => "asset-id",
-  duplicate: async () => "asset-id",
-  validation: { maxFileSize: 5 * 1024 * 1024 },
-};
-
-const ADA = { id: "user-ada", display_name: "Ada", url: "/profile/user-ada" };
-
-const mentionHandler: TMentionHandler = {
-  getMentionedEntityDetails: (id) => (id === ADA.id ? { display_name: ADA.display_name } : undefined),
-  renderComponent: () => null,
-};
-
-const getEditorMetaData = () => ({
-  file_assets: [{ id: "asset-1", name: "diagram.png", url: "https://files.example/asset-1" }],
-  user_mentions: [ADA],
-});
-
-const openEditors: Editor[] = [];
+import { ADA, createEditor, destroyEditors, fileHandler, getEditorMetaData } from "./editor-test-fixture";
 
 afterEach(() => {
-  for (const editor of openEditors.splice(0)) editor.destroy();
+  destroyEditors();
   document.body.replaceChildren();
   vi.restoreAllMocks();
 });
-
-const createEditor = async ({
-  editable = true,
-  content = "",
-  disabledExtensions = [],
-  attributes,
-}: {
-  editable?: boolean;
-  content?: string;
-  disabledExtensions?: TExtensions[];
-  attributes?: EditorProps["attributes"];
-} = {}) => {
-  const element = document.createElement("div");
-  document.body.append(element);
-  const editor = new Editor({
-    element,
-    editable,
-    parseOptions: { preserveWhitespace: true },
-    editorProps: CoreEditorProps({ editorClassName: "consumer-editor", attributes }),
-    extensions: [
-      ...CoreEditorExtensions({
-        disabledExtensions,
-        editable,
-        enableHistory: true,
-        fileHandler,
-        getEditorMetaData,
-        mentionHandler,
-      }),
-      SideMenuExtension({ dragDropEnabled: true }),
-      SlashCommands({ disabledExtensions }),
-    ],
-    content,
-  });
-  openEditors.push(editor);
-  // the editor finishes setting up (initial ids, focus) in its "create" event, one task later
-  await new Promise((resolve) => editor.on("create", resolve));
-  return editor;
-};
 
 const refOf = (editor: Editor): EditorRefApi => getEditorRefHelpers({ editor, getEditorMetaData });
 
@@ -197,6 +130,21 @@ describe("a rich-text editor built like the kept ones", () => {
     typeText(editable, "check the result");
     expect(parse(editable.getHTML()).querySelectorAll("li")).toHaveLength(2);
     expect(editable.getText()).toContain("check the result");
+  });
+
+  it("observes a browser edit inside a table and keeps the NodeView content after an update", async () => {
+    const editor = await createEditor({ content: "<table><tbody><tr><td><p>Before</p></td></tr></tbody></table>" });
+    const cell = editor.view.dom.querySelector("td p")!;
+    expect(cell.textContent).toBe("Before");
+    // This is the DOM change made by native typing/IME; it must be read back by ProseMirror's real observer.
+    cell.firstChild!.textContent = "After";
+    await vi.waitFor(() => expect(editor.getText()).toContain("After"));
+    expect(parse(editor.getHTML()).querySelector("td p")?.textContent).toBe("After");
+    editor.commands.setTextSelection(3);
+    expect(editor.commands.addColumnAfter()).toBe(true);
+    expect(editor.view.dom.querySelectorAll("col")).toHaveLength(2);
+    expect(editor.view.dom.querySelectorAll("td")).toHaveLength(2);
+    expect(editor.getText()).toContain("After");
   });
 
   it("inserts a user mention that is saved, read back and copied as Markdown", async () => {

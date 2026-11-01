@@ -11,6 +11,7 @@ import type { EditorRefApi } from "@nerve/editor";
 import type { RichTextEditorWrapperProps } from "./types";
 import { cn } from "@nerve/utils";
 // components
+import { useEditorLabels } from "@/components/editor/use-editor-labels";
 import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
 import { EditorMentionsError } from "@/components/editor/mentions-error";
 // hooks
@@ -31,6 +32,7 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
     disabledExtensions = [],
     ...rest
   } = props;
+  const labels = useEditorLabels();
   // store hooks
   const members = useMember();
   const { getUserDetails } = members;
@@ -46,6 +48,7 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
 
   return (
     <RichTextEditorWithRef
+      labels={labels}
       ref={ref}
       disabledExtensions={disabledExtensions}
       editable={editable}

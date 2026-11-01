@@ -16,7 +16,7 @@ import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 type Props = {
   issue: Issue;
   onClose: () => void;
-  onChange: (issue: Issue, data: Partial<IssueDetail>, updates: any) => void;
+  onChange: (issue: Issue, data: Partial<IssueDetail>) => void;
   disabled: boolean;
 };
 
@@ -28,7 +28,7 @@ export const SpreadsheetStateColumn = observer(function SpreadsheetStateColumn(p
       <StateDropdown
         projectId={issue.project_id ?? undefined}
         value={issue.state_id}
-        onChange={(data) => onChange(issue, { state_id: data }, { changed_property: "state", change_details: data })}
+        onChange={(data) => onChange(issue, { state_id: data })}
         disabled={disabled}
         buttonVariant="transparent-with-text"
         buttonClassName="text-left rounded-none px-page-x"

@@ -5,21 +5,23 @@
  */
 
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 import { PAST_DURATION_FILTER_OPTIONS } from "@nerve/constants";
 import { CloseOutline } from "@makeplane/propel/icons";
 import type { TInboxIssueFilterDateKeys } from "@nerve/types";
 import { renderFormattedDate } from "@nerve/utils";
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
 
-type InboxIssueAppliedFiltersDate = {
+type InboxIssueAppliedFiltersDateProps = {
   filterKey: TInboxIssueFilterDateKeys;
   label: string;
 };
 
 export const InboxIssueAppliedFiltersDate = observer(function InboxIssueAppliedFiltersDate(
-  props: InboxIssueAppliedFiltersDate
+  props: InboxIssueAppliedFiltersDateProps
 ) {
   const { filterKey, label } = props;
+  const { t } = useTranslation();
   // hooks
   const { inboxFilters, handleInboxIssueFilters } = useProjectInbox();
   // derived values
@@ -49,22 +51,26 @@ export const InboxIssueAppliedFiltersDate = observer(function InboxIssueAppliedF
         return (
           <div key={value} className="relative flex items-center gap-1 rounded-sm bg-layer-1 p-1 text-11">
             <div className="truncate text-11">{optionDetail?.name}</div>
-            <div
+            <button
+              type="button"
+              aria-label={`${t("remove")} ${optionDetail.name}`}
               className="relative flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden text-tertiary transition-all hover:text-secondary"
               onClick={() => handleInboxIssueFilters(filterKey, handleFilterValue(optionDetail?.value))}
             >
               <CloseOutline className="h-3 w-3" />
-            </div>
+            </button>
           </div>
         );
       })}
 
-      <div
+      <button
+        type="button"
+        aria-label={`${t("common.clear_all")} ${label}`}
         className="relative flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden text-tertiary transition-all hover:text-secondary"
         onClick={clearFilter}
       >
         <CloseOutline className="h-3 w-3" />
-      </div>
+      </button>
     </div>
   );
 });

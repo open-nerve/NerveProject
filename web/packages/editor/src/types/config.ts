@@ -6,8 +6,6 @@
 
 export type TFileHandler = {
   assetsUploadStatus: Record<string, number>; // blockId => progress percentage
-  cancel: () => void;
-  checkIfAssetExists: (assetId: string) => Promise<boolean>;
   delete: (assetSrc: string) => Promise<void>;
   getAssetDownloadSrc: (path: string) => Promise<string>;
   getAssetSrc: (path: string) => Promise<string>;
@@ -30,4 +28,15 @@ type TEditorLineSpacing = "regular" | "small" | "mobile-regular";
 export type TDisplayConfig = {
   fontSize?: TEditorFontSize;
   lineSpacing?: TEditorLineSpacing;
+};
+
+export type EditorColor = "gray" | "peach" | "pink" | "orange" | "green" | "light-blue" | "dark-blue" | "purple";
+
+/** Consumer-supplied labels, shared with React NodeViews through the editor's context. */
+export type EditorLabels = {
+  continueWriting: string;
+  resizeImage: string;
+  tableRowOptions: string;
+  tableColumnOptions: string;
+  tableColors: Record<EditorColor | "none", string>;
 };

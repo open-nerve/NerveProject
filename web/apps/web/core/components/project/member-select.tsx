@@ -19,7 +19,7 @@ import { getFileURL } from "@nerve/utils";
 import { useMember } from "@/hooks/store/use-member";
 
 type Props = {
-  value: any;
+  value: string | null;
   onChange: (val: string) => void;
   isDisabled?: boolean;
 };
@@ -59,14 +59,8 @@ export const MemberSelect = observer(function MemberSelect(props: Props) {
         ),
       };
     })
-    .filter((option) => !!option) as
-    | {
-        value: string;
-        query: string;
-        content: React.ReactNode;
-      }[]
-    | undefined;
-  const selectedOption = projectId ? getProjectMemberDetails(value, projectId) : null;
+    .filter((option) => option !== undefined);
+  const selectedOption = projectId && value ? getProjectMemberDetails(value, projectId) : null;
 
   return (
     <CustomSearchSelect

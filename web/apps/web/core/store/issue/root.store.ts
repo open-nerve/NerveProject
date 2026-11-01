@@ -184,7 +184,7 @@ export class IssueRootStore {
     this.archivedIssuesFilter = new ArchivedIssuesFilter(this);
     this.archivedIssues = new ArchivedIssues(this, this.archivedIssuesFilter);
 
-    this.issueKanBanView = new IssueKanBanViewStore(this);
+    this.issueKanBanView = new IssueKanBanViewStore();
     this.issueCalendarView = new CalendarStore(this);
   }
   assertActive(): void {
@@ -193,6 +193,7 @@ export class IssueRootStore {
   retire(): void {
     if (!this.active) return;
     this.permissionReads.retire();
+    this.issueCalendarView.dispose();
     runInAction(() => {
       this.active = false;
     });

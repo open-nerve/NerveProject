@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-export { EmojiReactionGroup, EmojiReactionButton } from "./emoji-reaction";
+export { EmojiReactionGroup } from "./emoji-reaction";
 export type { EmojiReactionType } from "./emoji-reaction";
 
 export { EmojiReactionPicker } from "./emoji-reaction-picker";

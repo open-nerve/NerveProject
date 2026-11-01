@@ -881,9 +881,6 @@ importers:
       mobx-utils:
         specifier: 'catalog:'
         version: 6.0.8(mobx@6.12.0)
-      uuid:
-        specifier: 14.0.0
-        version: 14.0.0
     devDependencies:
       '@nerve/typescript-config':
         specifier: workspace:*
@@ -958,9 +955,6 @@ importers:
       '@nerve/constants':
         specifier: workspace:*
         version: link:../constants
-      '@nerve/hooks':
-        specifier: workspace:*
-        version: link:../hooks
       '@nerve/propel':
         specifier: workspace:*
         version: link:../propel
@@ -973,9 +967,6 @@ importers:
       '@popperjs/core':
         specifier: 'catalog:'
         version: 2.11.8
-      lodash-es:
-        specifier: 4.18.1
-        version: 4.18.1
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -989,9 +980,6 @@ importers:
       '@nerve/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
-      '@types/lodash-es':
-        specifier: 'catalog:'
-        version: 4.17.12
       '@types/node':
         specifier: 'catalog:'
         version: 22.12.0

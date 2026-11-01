@@ -26,8 +26,8 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
 
   const editorState = useEditorState({
     editor,
-    selector: ({ editor }: { editor: Editor }) => ({
-      linkExtensionStorage: editor.storage.link,
+    selector: ({ editor: activeEditor }: { editor: Editor }) => ({
+      linkExtensionStorage: activeEditor.storage.link,
     }),
   });
 
@@ -67,9 +67,8 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
     clearHoverTimeout();
     hoverTimeoutRef.current = window.setTimeout(() => {
       setIsOpen(false);
-      editorState.linkExtensionStorage.isPreviewOpen = false;
     }, 400);
-  }, [clearHoverTimeout, editorState.linkExtensionStorage]);
+  }, [clearHoverTimeout]);
 
   const handleLinkHover = useCallback(
     (event: MouseEvent) => {
@@ -113,7 +112,6 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
             to: pos + node.nodeSize,
             closeLinkView: () => {
               setIsOpen(false);
-              editorState.linkExtensionStorage.isPreviewOpen = false;
             },
           });
           setIsOpen(true);
@@ -160,8 +158,7 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
         setCloseTimeout();
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editor, isOpen, setCloseTimeout, refs.floating]
+    [editor, isOpen, setCloseTimeout, refs.floating, containerRef]
   );
 
   // Set up event listeners
@@ -178,8 +175,7 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
       container.removeEventListener("mouseenter", handleContainerMouseEnter);
       container.removeEventListener("mouseleave", handleContainerMouseLeave);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleLinkHover, handleContainerMouseEnter, handleContainerMouseLeave]);
+  }, [containerRef, handleLinkHover, handleContainerMouseEnter, handleContainerMouseLeave]);
 
   // Cleanup timeout on unmount
   useEffect(() => () => clearHoverTimeout(), [clearHoverTimeout]);

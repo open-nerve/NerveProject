@@ -14,12 +14,10 @@ import { APIService } from "@/services/api.service";
 import { FileUploadService } from "@/services/file-upload.service";
 
 export class FileService extends APIService {
-  private cancelSource: any;
   private fileUploadService: FileUploadService;
 
   constructor() {
     super();
-    this.cancelUpload = this.cancelUpload.bind(this);
     // upload service
     this.fileUploadService = new FileUploadService();
   }
@@ -141,19 +139,6 @@ export class FileService extends APIService {
       });
   }
 
-  async checkIfAssetExists(
-    workspaceSlug: string,
-    assetId: string
-  ): Promise<{
-    exists: boolean;
-  }> {
-    return this.get(`/api/assets/v2/workspaces/${workspaceSlug}/check/${assetId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async restoreOldEditorAsset(workspaceId: string, src: string): Promise<void> {
     const assetKey = getAssetIdFromUrl(src);
     return this.post(`/api/workspaces/file-assets/${workspaceId}/${assetKey}/restore/`)
@@ -161,10 +146,6 @@ export class FileService extends APIService {
       .catch((error) => {
         throw error?.response?.data;
       });
-  }
-
-  cancelUpload() {
-    this.cancelSource.cancel("Upload canceled");
   }
 
   async duplicateAsset(

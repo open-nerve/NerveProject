@@ -131,7 +131,7 @@ const ParentIssuesListContent = observer(function ParentIssuesListContent({
           </Loader>
         ) : search.error === undefined && issues.length === 0 ? (
           <IssueSearchModalEmptyState
-            issues={issues}
+            issueCount={issues.length}
             searchTerm={term}
             debouncedSearchTerm={term}
             isSearching={false}

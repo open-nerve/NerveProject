@@ -220,7 +220,7 @@ export const DragHandlePlugin = (options: SideMenuPluginProps): SideMenuHandleOp
       dragHandleElement?.classList.add("drag-handle-hidden");
   };
 
-  const view = (view: EditorView, sideMenu: HTMLDivElement | null) => {
+  const createView = (view: EditorView, sideMenu: HTMLDivElement | null) => {
     dragHandleElement = createDragHandleElement();
     dragHandleElement.addEventListener("dragstart", (e) => handleDragStart(e, view));
     dragHandleElement.addEventListener("dragend", (e) => handleDragEnd(e, view));
@@ -348,7 +348,7 @@ export const DragHandlePlugin = (options: SideMenuPluginProps): SideMenuHandleOp
   };
 
   return {
-    view,
+    view: createView,
     domEvents,
   };
 };

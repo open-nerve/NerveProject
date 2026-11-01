@@ -73,7 +73,8 @@ export function autolink(options: AutolinkOptions): Plugin {
             .filter((link) => link.isLink)
             // Calculate link position.
             .map((link) => ({
-              ...link,
+              value: link.value,
+              href: link.href,
               from: lastWordAndBlockOffset + link.start + 1,
               to: lastWordAndBlockOffset + link.end + 1,
             }))

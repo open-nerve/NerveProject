@@ -17,9 +17,13 @@ export const createIdsForView = (view: EditorView, options: UniqueIDOptions) => 
   const { tr, doc } = state;
   const { types, attributeName, generateUniqueID } = options;
 
-  // size > 2 means more than just the default empty paragraph
-  const hasContent = doc.content.size > 2;
-  if (!hasContent) {
+  // A leaf block (an image or rule) is smaller than an empty paragraph but is still content.
+  // Give it its identity before React mounts its NodeView, so the first edit does not replace that view.
+  if (
+    doc.childCount === 1 &&
+    doc.firstChild?.type === state.schema.nodes.paragraph &&
+    doc.firstChild.content.size === 0
+  ) {
     return;
   }
 

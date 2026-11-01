@@ -1,7 +1,7 @@
 # M4/P15 协作、草稿与命令搜索实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking.
-> 负责人已授权实施，沿既有 inline 方式从 T1 连续执行，不自行派逐 Task 实现代理。阶段完成做 deep-review，先不合并。
+> 已完成实施、deep-review 与后续授权集成；P15 已完成：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。见 [review §13](../reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)。下文步骤是已执行记录，不重新启动实施。
 
 **Goal：** 完成 [P15 spec](../specs/P15-web-collaboration-drafts-search.md) A1–A16 与 I11–I14/I16/I18 页面、I20 评论、C6–C8/C9 草稿。
 **Architecture：** 复用当前 IssueRootStore/PermissionReads/确认写与 DetailResource、useIssueSearch、原生 Draft；仅补 UI 消费者、页面与局部质量，不增加全局协调器或后端协议。

@@ -16,7 +16,7 @@ import { PriorityDropdown } from "@/components/dropdowns/priority";
 type Props = {
   issue: Issue;
   onClose: () => void;
-  onChange: (issue: Issue, data: Partial<IssueDetail>, updates: any) => void;
+  onChange: (issue: Issue, data: Partial<IssueDetail>) => void;
   disabled: boolean;
 };
 
@@ -27,7 +27,7 @@ export const SpreadsheetPriorityColumn = observer(function SpreadsheetPriorityCo
     <div className="h-11 border-b-[0.5px] border-subtle">
       <PriorityDropdown
         value={issue.priority}
-        onChange={(data) => onChange(issue, { priority: data }, { changed_property: "priority", change_details: data })}
+        onChange={(data) => onChange(issue, { priority: data })}
         disabled={disabled}
         buttonVariant="transparent-with-text"
         buttonClassName="text-left rounded-none px-page-x"

@@ -99,7 +99,6 @@ export const FilterItem = observer(function FilterItem<P extends TFilterProperty
         icon={filterConfig.icon}
         isDisabled={isDisabled}
         label={filterConfig.label}
-        tooltipContent={typeof filterConfig.tooltipContent === "string" ? filterConfig.tooltipContent : undefined}
       />
 
       {/* Operator section */}

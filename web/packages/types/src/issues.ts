@@ -12,7 +12,6 @@ import type {
   IIssueDisplayProperties,
   TIssueExtraOptions,
   TIssueGroupByOptions,
-  TIssueGroupingFilters,
   TIssueOrderByOptions,
 } from "./view-props";
 
@@ -41,8 +40,6 @@ export interface IGroupByColumn {
   name: string;
   icon?: ReactElement | undefined;
   payload: Partial<IssueDetail>;
-  isDropDisabled?: boolean;
-  dropErrorMessage?: string;
 }
 
 export interface ILayoutDisplayFiltersOptions {
@@ -51,7 +48,6 @@ export interface ILayoutDisplayFiltersOptions {
     group_by?: TIssueGroupByOptions[];
     sub_group_by?: TIssueGroupByOptions[];
     order_by?: TIssueOrderByOptions[];
-    type?: TIssueGroupingFilters[];
   };
   extra_options: {
     access: boolean;

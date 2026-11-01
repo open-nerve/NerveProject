@@ -288,3 +288,25 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 ## P15 T16 整审复核（2026-11-01）
 
 本期子项已完成实现、整审及后置 CI 的局部修复与完整本地门禁，最终候选 CI 后置核准，集成待办；顶部/弹窗宿主、偏好晚答和退场选择保护已复验，92 个 TS/TSX 零告警。准确最终分支 CI 与交付状态见 [阶段记录 §10](../reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 和 [整审报告](../../../reviews/re-24-M4P15整体审核.md)。顶部 status 保持 open，P16、M7 与 M4 总关闭责任不改变；尚未合并。
+
+
+## P16 T4 子项接收（2026-11-01）
+
+P16 T7 补充：M4历史两处隐式成员getter读取已无，现有同名数组均由显式项目参数方法取得。仅M7两个视图宿主及收集箱筛选仍读getter；接口、computed注册、类getter和专属测试随最后读者一起迁移，详见[M7回执§7](../../M7-collaboration/handoffs/M3-closeout.md#7-m4p16-成员-getter-最后读者回执2026-11-01)。21个成员store测试、web类型与M17属性符号反证通过；不改权限/会话合同，顶部仍open。
+
+原版 AST 当前449候选逐项核读者：91项无读者声明及独占链删除，358项动态/类型/生产或测试合同保留；历史52行逐名追到P11/P14/P15删除提交，M7 view四方法保持。公开 EditorRefApi、第三方合并命令和表格 NodeView 继续保留；真实表格编辑与内容容器变异证明动态读者。完整 [逐项审计](../reviews/P16-dead-members.md) 与 [T4证据](../reviews/P16-web-cleanup-review.md#12-t4-死成员与历史-52-行) 可复核。
+
+本期T4子项已核，T5告警终态、T11全分支复核和M4收尾仍待办；顶部status保持open，不用此回执提前关闭交接。
+
+
+## P16 T1–T8 接收进度（2026-11-01）
+
+T1最后焦点索引、T2共享泛型、T3 no-shadow升错、T4逐项死成员及历史52行、T5完整M4改动范围告警/精确cap、T6关键词终态、T7成员getter读者已核实。T5七门禁与默认E2E279通过；具体输入、变异和尚待远端CI的状态见[P16 review §9–16](../reviews/P16-web-cleanup-review.md#9-t1-焦点索引与实施入口)。README及前端/差异清单已对应P12–P15实际集成能力，原历史验收/失败证据保留。P15当前集成状态见[P15 review §13](../reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)。
+
+M6/M7存活合同与领域页仍由原拥有者接收；T9–T11和控制者最终C12尚未完成，八份M4输入顶部保持open。M4设计§14/总体9.4、最终M4-closeout及性能数字只在收尾核，不提前勾总完成。
+
+## P16 T11 本地复核回执（2026-11-01）
+
+T1–T10 实施与整分支 deep-review 本地核验完成，原 AST 最终353个M4候选逐行映射、历史52行可追溯；整个M4改动范围零告警、全仓no-shadow为error且零命中，实际包cap合计86。共享Select类型、真实编辑器及菜单生命周期、最终S2与三引擎各125项均有实际回归；完整F默认E2E284通过。准确产品/最终文稿CI及交付签结见[P16 review §21–22](../reviews/P16-web-cleanup-review.md#22-t11-整分支审查与交付)与[整审报告](../../../reviews/re-27-M4P16整体审核.md)。
+
+前段T1–T8待办保留为历史快照。存活的M6/M7最后读者未误删，接收责任与删除条件不变；控制者最终C12、M4总完成与最终交接关闭仍归closeout。本文件顶部status继续open，P16尚未合并。

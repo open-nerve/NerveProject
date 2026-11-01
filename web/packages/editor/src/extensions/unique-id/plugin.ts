@@ -39,13 +39,13 @@ export const createUniqueIDPlugin = (options: UniqueIDOptions) => {
       const changes = getChangedRanges(transform);
 
       // Get all IDs from the entire document to check for duplicates globally
-      const allNodesInDoc: Array<{ node: ProseMirrorNode; pos: number }> = [];
-      newState.doc.descendants((node, pos) => {
+      const allNodesInDoc: ProseMirrorNode[] = [];
+      newState.doc.descendants((node) => {
         if (types.includes(node.type.name)) {
-          allNodesInDoc.push({ node, pos });
+          allNodesInDoc.push(node);
         }
       });
-      const allIds = allNodesInDoc.map(({ node }) => node.attrs[attributeName]).filter((id) => id !== null);
+      const allIds = allNodesInDoc.map((node) => node.attrs[attributeName]).filter((id) => id !== null);
       const duplicatedIds = findDuplicates(allIds);
 
       changes.forEach(({ newRange }) => {

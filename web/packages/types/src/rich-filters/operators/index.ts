@@ -43,7 +43,7 @@ export const MULTI_VALUE_OPERATORS: ReadonlyArray<TSupportedOperators> = [
 /**
  * All operators that can be used in filter conditions
  */
-export const OPERATORS = {
+const OPERATORS = {
   ...EQUALITY_OPERATOR,
   ...COLLECTION_OPERATOR,
   ...COMPARISON_OPERATOR,

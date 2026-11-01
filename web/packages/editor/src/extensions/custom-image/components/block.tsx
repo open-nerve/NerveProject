@@ -5,9 +5,10 @@
  */
 
 import { NodeSelection } from "@tiptap/pm/state";
-import React, { useRef, useState, useCallback, useLayoutEffect, useEffect } from "react";
+import React, { useRef, useState, useCallback, useContext, useLayoutEffect, useEffect } from "react";
 // nerve imports
-import { cn } from "@nerve/utils";
+import { cn, isComposing } from "@nerve/utils";
+import { EditorLabelsContext } from "@/components/editor-labels";
 // local imports
 import { ECustomImageAttributeNames } from "../types";
 import type { Pixel, TCustomImageAttributes, TCustomImageSize } from "../types";
@@ -28,6 +29,7 @@ type CustomImageBlockProps = CustomImageNodeViewProps & {
 };
 
 export function CustomImageBlock(props: CustomImageBlockProps) {
+  const labels = useContext(EditorLabelsContext);
   // props
   const {
     editor,
@@ -167,6 +169,14 @@ export function CustomImageBlock(props: CustomImageBlockProps) {
     updateAttributesSafely(size, "Failed to update attributes at the end of resizing:");
   }, [size, updateAttributesSafely]);
 
+  const resizeWithKeyboard = (amount: number) => {
+    if (!size.aspectRatio) return;
+    const width = Math.max(MIN_SIZE, parseFloat(size.width) + amount);
+    const resized: TCustomImageSize = { ...size, width: `${width}px`, height: `${width / size.aspectRatio}px` };
+    setSize(resized);
+    updateAttributesSafely(resized, "Failed to resize image:");
+  };
+
   const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -238,7 +248,6 @@ export function CustomImageBlock(props: CustomImageBlockProps) {
       <div
         ref={containerRef}
         className="group/image-component relative inline-block max-w-full"
-        onMouseDown={handleImageMouseDown}
         style={{
           width: size.width,
           ...(size.aspectRatio && { aspectRatio: size.aspectRatio }),
@@ -248,6 +257,7 @@ export function CustomImageBlock(props: CustomImageBlockProps) {
           <div className="animate-pulse rounded-md bg-layer-1" style={{ width: size.width, height: size.height }} />
         )}
         <img
+          onMouseDown={handleImageMouseDown}
           ref={imageRef}
           src={displayedImageSrc}
           alt=""
@@ -313,7 +323,6 @@ export function CustomImageBlock(props: CustomImageBlockProps) {
             handleAlignmentChange={(alignment) =>
               updateAttributesSafely({ alignment }, "Failed to update attributes while changing alignment:")
             }
-            height={size.height}
             isTouchDevice={isTouchDevice}
             width={size.width}
             src={resolvedImageSrc}
@@ -333,9 +342,11 @@ export function CustomImageBlock(props: CustomImageBlockProps) {
                 }
               )}
             />
-            <div
+            <button
+              type="button"
+              aria-label={labels.resizeImage}
               className={cn(
-                "absolute bottom-0 size-4 translate-y-1/2 rounded-full border-2 border-white bg-accent-primary transition-opacity duration-100 ease-in-out",
+                "absolute bottom-0 size-4 translate-y-1/2 rounded-full border-2 border-white bg-accent-primary transition-opacity duration-100 ease-in-out focus:opacity-100 focus-visible:outline-2 focus-visible:outline-accent-strong",
                 {
                   "pointer-events-auto opacity-100": isResizing,
                   "pointer-events-none opacity-0 group-hover/image-component:pointer-events-auto group-hover/image-component:opacity-100":
@@ -344,8 +355,17 @@ export function CustomImageBlock(props: CustomImageBlockProps) {
                   "right-0 translate-x-1/2 cursor-nwse-resize": nodeAlignment !== "right",
                 }
               )}
+              onClick={(event) => {
+                if (event.detail === 0) resizeWithKeyboard(10);
+              }}
               onMouseDown={handleResizeStart}
               onTouchStart={handleResizeStart}
+              onKeyDown={(event) => {
+                if (isComposing(event.nativeEvent) || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+                event.preventDefault();
+                event.stopPropagation();
+                resizeWithKeyboard(event.key === "ArrowRight" ? 10 : -10);
+              }}
             />
           </>
         )}

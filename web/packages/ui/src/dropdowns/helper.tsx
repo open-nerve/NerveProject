@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-// FIXME: fix this!!!
 import type { Modifier, Placement } from "@popperjs/core";
 import type { ICustomSearchSelectOption } from "@nerve/types";
 
@@ -33,7 +32,7 @@ export interface ICustomMenuDropdownProps extends IDropdownProps {
   noBorder?: boolean;
   verticalEllipsis?: boolean;
   /** Called each time the menu's button opens the menu, by the pointer or the keyboard. */
-  menuButtonOnClick?: (...args: any) => void;
+  menuButtonOnClick?: () => void;
   menuItemsClassName?: string;
   /** Called each time the menu closes, whatever closed it. */
   onMenuClose?: () => void;
@@ -51,49 +50,50 @@ export interface ISelectFieldProps {
   invalid?: boolean;
 }
 
-export interface ICustomSelectProps extends IDropdownProps, ISelectFieldProps {
+export interface ICustomSelectProps<T> extends IDropdownProps, ISelectFieldProps {
   children: React.ReactNode;
-  value: any;
-  onChange: any;
+  value: T | null;
+  onChange: (value: T) => void;
 }
 
-interface CustomSearchSelectProps extends ISelectFieldProps {
+interface CustomSearchSelectProps<T extends string | number> extends ISelectFieldProps {
   footerOption?: React.ReactNode;
-  onChange: any;
   onClose?: () => void;
   searchPlaceholder?: string;
   noResultsMessage?: string;
   loadingMessage?: string;
-  options?: ICustomSearchSelectOption[];
+  options?: ICustomSearchSelectOption<T>[];
   /** Whether the search takes the focus as the list opens: it does unless the caller says not. */
   focusSearchOnOpen?: boolean;
   /** Popper's modifiers for the list, beside its placement. */
   popperModifiers?: Partial<Modifier<string, object>>[];
 }
 
-interface SingleValueProps {
+interface SingleValueProps<T> {
   multiple?: false;
-  value: any;
+  value: T | null;
+  onChange: (value: T) => void;
 }
 
-interface MultipleValuesProps {
-  multiple?: true;
-  value: any[] | null;
+interface MultipleValuesProps<T> {
+  multiple: true;
+  value: T[] | null;
+  onChange: (values: T[]) => void;
 }
 
-export type ICustomSearchSelectProps = IDropdownProps &
-  CustomSearchSelectProps &
-  (SingleValueProps | MultipleValuesProps);
+export type ICustomSearchSelectProps<T extends string | number> = IDropdownProps &
+  CustomSearchSelectProps<T> &
+  (SingleValueProps<T> | MultipleValuesProps<T>);
 
 export interface ICustomMenuItemProps {
   children: React.ReactNode;
   disabled?: boolean;
-  onClick?: (args?: any) => void;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   className?: string;
 }
 
-export interface ICustomSelectItemProps {
+export interface ICustomSelectItemProps<T> {
   children: React.ReactNode;
-  value: any;
+  value: T;
   className?: string;
 }
