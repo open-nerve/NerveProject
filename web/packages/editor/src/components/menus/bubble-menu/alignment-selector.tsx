@@ -27,6 +27,7 @@ export function TextAlignmentSelector(props: Props) {
   const textAlignmentOptions: {
     itemKey: TEditorCommands;
     renderKey: string;
+    name: string;
     icon: ComponentType<SVGProps<SVGSVGElement>>;
     command: () => void;
     isActive: () => boolean;
@@ -34,6 +35,7 @@ export function TextAlignmentSelector(props: Props) {
     {
       itemKey: "text-align",
       renderKey: "text-align-left",
+      name: "Left align",
       icon: AlignLeftOutline,
       command: () =>
         menuItem.command({
@@ -44,6 +46,7 @@ export function TextAlignmentSelector(props: Props) {
     {
       itemKey: "text-align",
       renderKey: "text-align-center",
+      name: "Center align",
       icon: AlignCenterOutline,
       command: () =>
         menuItem.command({
@@ -54,6 +57,7 @@ export function TextAlignmentSelector(props: Props) {
     {
       itemKey: "text-align",
       renderKey: "text-align-right",
+      name: "Right align",
       icon: AlignRightOutline,
       command: () =>
         menuItem.command({
@@ -70,6 +74,8 @@ export function TextAlignmentSelector(props: Props) {
         <button
           key={item.renderKey}
           type="button"
+          aria-label={item.name}
+          aria-pressed={item.isActive()}
           onClick={(e) => {
             e.stopPropagation();
             item.command();

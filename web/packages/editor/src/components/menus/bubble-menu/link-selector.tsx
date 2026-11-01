@@ -81,6 +81,7 @@ export function BubbleMenuLinkSelector(props: Props) {
           <input
             ref={inputRef}
             type="url"
+            aria-label="Link URL"
             placeholder="Enter or paste a link"
             onClick={(e) => e.stopPropagation()}
             className="flex-1 rounded-sm border-r-[0.5px] border-strong bg-surface-1 px-1.5 py-2 text-11 outline-none placeholder:text-placeholder"
@@ -97,6 +98,7 @@ export function BubbleMenuLinkSelector(props: Props) {
           {editor.getAttributes("link").href ? (
             <button
               type="button"
+              aria-label="Remove link"
               className="grid place-items-center rounded-xs p-1 text-danger-primary transition-all hover:bg-danger-subtle-hover"
               onClick={(e) => {
                 unsetLinkEditor(editor);
@@ -109,6 +111,7 @@ export function BubbleMenuLinkSelector(props: Props) {
           ) : (
             <button
               type="button"
+              aria-label="Add link"
               className="grid aspect-square h-full place-items-center rounded-xs p-1 text-tertiary transition-all hover:bg-layer-1"
               onClick={(e) => {
                 e.stopPropagation();

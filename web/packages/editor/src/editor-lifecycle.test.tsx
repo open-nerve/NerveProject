@@ -20,6 +20,47 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("the real editor's interactive hosts", () => {
+  it.each(["unmount", "destroy", "active"] as const)("keeps an anchor scroll owned by its %s host", async (exit) => {
+    const editor = await createEditor({ content: '<p data-id="retired-anchor">Target</p>' });
+    const previousURL = window.location.href;
+    window.history.replaceState(null, "", "#retired-anchor");
+    const frames = new Map<number, FrameRequestCallback>();
+    let nextFrame = 0;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      const id = ++nextFrame;
+      frames.set(id, callback);
+      return id;
+    });
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
+    const nodeDOM = vi.spyOn(editor.view, "nodeDOM");
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    await act(async () =>
+      root.render(
+        <EditorContainer editor={editor} id="anchor" displayConfig={{}} editorContainerClassName="" isTouchDevice>
+          <EditorContent editor={editor} />
+        </EditorContainer>
+      )
+    );
+    const target = editor.view.dom.querySelector('[data-id="retired-anchor"]')!;
+    Object.defineProperty(target, "scrollIntoView", { value: vi.fn() });
+    try {
+      expect(frames.size).toBeGreaterThan(0);
+      if (exit === "unmount") await act(async () => root.unmount());
+      else if (exit === "destroy") await act(async () => editor.destroy());
+      nodeDOM.mockClear();
+      expect(() => {
+        for (const callback of frames.values()) callback(0);
+      }).not.toThrow();
+      expect(nodeDOM).toHaveBeenCalledTimes(exit === "active" ? 1 : 0);
+      expect(target.scrollIntoView).toHaveBeenCalledTimes(exit === "active" ? 1 : 0);
+    } finally {
+      if (exit !== "unmount") await act(async () => root.unmount());
+      window.history.replaceState(null, "", previousURL);
+    }
+  });
+
   it("resizes a real image NodeView with keys and updates its consumer-provided language", async () => {
     const editor = await createEditor({
       content:

@@ -33,9 +33,10 @@ export function EditorContainer(props: Props) {
   // refs
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScrolledOnce = useRef(false);
+  const scrollFrame = useRef<number | null>(null);
   const scrollToNode = useCallback(
     (nodeId: string) => {
-      if (!editor) return false;
+      if (editor.isDestroyed) return false;
 
       const doc = editor.state.doc;
       let pos: number | null = null;
@@ -52,14 +53,16 @@ export function EditorContainer(props: Props) {
       }
 
       const nodePosition = pos;
-      requestAnimationFrame(() => {
+      scrollFrame.current = requestAnimationFrame(() => {
+        scrollFrame.current = null;
+        if (editor.isDestroyed || !containerRef.current?.isConnected) return;
         const domNode = editor.view.nodeDOM(nodePosition);
         if (domNode instanceof HTMLElement) {
           domNode.scrollIntoView({ behavior: "instant", block: "center" });
         }
+        hasScrolledOnce.current = true;
       });
 
-      hasScrolledOnce.current = true;
       return true;
     },
 
@@ -71,6 +74,10 @@ export function EditorContainer(props: Props) {
     if (nodeId && !hasScrolledOnce.current) {
       scrollToNode(nodeId);
     }
+    return () => {
+      if (scrollFrame.current !== null) cancelAnimationFrame(scrollFrame.current);
+      scrollFrame.current = null;
+    };
   }, [scrollToNode]);
 
   const continueWriting = () => {
