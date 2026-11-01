@@ -292,6 +292,8 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 
 ## P16 T4 子项接收（2026-11-01）
 
+P16 T7 补充：M4历史两处隐式成员getter读取已无，现有同名数组均由显式项目参数方法取得。仅M7两个视图宿主及收集箱筛选仍读getter；接口、computed注册、类getter和专属测试随最后读者一起迁移，详见[M7回执§7](../../M7-collaboration/handoffs/M3-closeout.md#7-m4p16-成员-getter-最后读者回执2026-11-01)。21个成员store测试、web类型与M17属性符号反证通过；不改权限/会话合同，顶部仍open。
+
 原版 AST 当前449候选逐项核读者：91项无读者声明及独占链删除，358项动态/类型/生产或测试合同保留；历史52行逐名追到P11/P14/P15删除提交，M7 view四方法保持。公开 EditorRefApi、第三方合并命令和表格 NodeView 继续保留；真实表格编辑与内容容器变异证明动态读者。完整 [逐项审计](../reviews/P16-dead-members.md) 与 [T4证据](../reviews/P16-web-cleanup-review.md#12-t4-死成员与历史-52-行) 可复核。
 
 本期T4子项已核，T5告警终态、T11全分支复核和M4收尾仍待办；顶部status保持open，不用此回执提前关闭交接。

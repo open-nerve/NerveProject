@@ -112,11 +112,11 @@ make e2e
 **Files：** C/store/member/project/project-member.store.ts及测试，C/components/issues/issue-layouts/utils.tsx；inventory所列M7三文件和现有handoff。
 **Interfaces：** getProjectMemberIds(projectId,false)显式读取保持；M7仍读projectMemberIds getter，保留存活合同。
 
-- [ ] Step 1：rg所有同名读写，区分getter、interface/computed注册、测试和M4局部数组，确认M4历史两读者已无。
-- [ ] Step 2：核M7 mobile-header/view-list-header/filter-selection的实际路径与用法，运行现有project成员store测试与类型，不能只grep名字断言0。
-- [ ] Step 3：不删存活getter；记录M7最后迁移读者后连同interface/computed注册与专属测试更新的条件；不改成员目录权限/会话。
-- [ ] Step 4：M17静态审计区分一个M4显式参数方法调用和一个恢复的隐式getter读取，后者失败；字节恢复，成员store和受影响消费者回归。
-- [ ] Step 5：写A7/M7子交接；提交 `docs(M4/P16): 明确成员隐式getter的最后迁移责任`。
+- [x] Step 1：rg所有同名读写，区分getter、interface/computed注册、测试和M4局部数组，确认M4历史两读者已无。
+- [x] Step 2：核M7 mobile-header/view-list-header/filter-selection的实际路径与用法，运行现有project成员store测试与类型，不能只grep名字断言0。
+- [x] Step 3：不删存活getter；记录M7最后迁移读者后连同interface/computed注册与专属测试更新的条件；不改成员目录权限/会话。
+- [x] Step 4：M17静态审计区分一个M4显式参数方法调用和一个恢复的隐式getter读取，后者失败；字节恢复，成员store和受影响消费者回归。
+- [x] Step 5：写A7/M7子交接；提交 `docs(M4/P16): 明确成员隐式getter的最后迁移责任`。
 
 ## Task 8：前端说明与子交接终稿（约250–500行）
 

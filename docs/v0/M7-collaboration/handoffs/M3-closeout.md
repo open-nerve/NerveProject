@@ -75,3 +75,17 @@ M4 原创建表单的 `ISSUE_FORM` 已无读者，本期删除其枚举、独占
 最后删除条件：M6/M7 迁移上述表单与两处归档弹窗 `tabIndex={1}` 到自然 Tab 顺序，并完成各自弹窗/portal/回焦回归；全仓确认 `getTabIndex`、枚举/映射及各共享控件的属性读者都迁完后，最后迁移者删除两份 `tab-indices.ts` 和 barrel。共享菜单的非正索引用途须独立核实保留，不以 M4 零正索引等同全部焦点属性可删。未改未来领域键盘顺序、接口或顶部 open 状态。
 
 证据：[P16 review §9](../../M4-issue-core/reviews/P16-web-cleanup-review.md#9-t1-焦点索引与实施入口)、本期 `t1-focus-inventory.json`（逐调用、直接属性、M01 静态输入反例）。
+
+## 7. M4/P16 成员 getter 最后读者回执（2026-11-01）
+
+§4的M4历史两读者已迁移；`issues/issue-layouts/utils.tsx`不再读隐式getter。当前M4子项工具栏与工作项命令的同名局部数组来自 `getProjectMemberIds(projectId, false)`，不能因为局部变量同名判为未迁移。TypeScript checker沿属性声明确认生产读者只有以下三文件，全部归M7：
+
+| 实际文件（web/apps/web/ 下） | 用法 |
+|---|---|
+| app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/views/(list)/mobile-header.tsx | 解构getter，交ViewFiltersSelection.memberIds |
+| core/components/views/view-list-header.tsx | 解构getter，交桌面ViewFiltersSelection.memberIds |
+| core/components/inbox/inbox-filter/filters/filter-selection.tsx | 解构getter，共给负责人/创建人两个FilterMember |
+
+M7最后迁移这三处后，重新核全仓读者，再一起删除 `IProjectMemberStore.projectMemberIds`、makeObservable的computed注册、类getter及其专属测试断言。显式参数的getProjectMemberIds/getFilteredProjectMemberIds和其它成员权限/排序测试保留；不得只删类getter留半条合同。本期保留三消费者与getter，未提前接通M7页面或改变目录权限。
+
+证据：[P16 review §16](../../M4-issue-core/reviews/P16-web-cleanup-review.md#16-t7-成员getter最后读者)、t7-member-readers-restored（3生产/2测试读取、0未分类/0M4），M17恢复一个M4隐式读取准确失败、同名显式参数正例通过，成员store21测试与web typegen/tsc通过。顶部status继续open。

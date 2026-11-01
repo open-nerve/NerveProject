@@ -147,3 +147,9 @@ Task BASE `c4881cf5`。phase仍M4/P16，原76规则/13例外与全部samples通�
 具名全web TS/TSX扫描：projectIssuesSearch无出现；searchWorkspace只剩workspace.service.test的“不再存在”断言，没有生产声明/调用。不能把它写成连测试字符串也不存在。规则不覆盖deleted-issues、cycle-issues、inbox-issues等独立未来领域地址；编辑器包自己的剪贴板也不属于web copy-hook范围。没有借清理扩大这些已批准边界。
 
 M15/M16在真实git扫描可见的M4临时TS文件中分别加入旧工作项URL、allowNegative，原 `node tools/keywords.mjs` 均exit1并准确报告各一命中；原生/api/v0、issues-detail及合法同名片段正例通过。临时文件已删除，原规则/配置字节hash相等，整份守卫恢复通过。`t6-keyword-probes.json`、各原始receipt/raw和`t6-final-inventory.json`保存源码、诊断及复原证据。本Task无产品/规则改动，既有终态合法，不强造例外或伪称行为修复。
+
+## 16. T7 成员getter最后读者
+
+Task BASE `4c9685cd`。沿原TypeScript program解析property access/object binding的属性声明，生产3读取都指向IProjectMemberStore，分别是M7 mobile-header、view-list-header、inbox filter-selection；测试2读取在project-member.store.test。声明/interface、computed注册不算读者；M4同名局部数组是显式getProjectMemberIds调用，历史utils.tsx两读者已无。未发现无法分类的同名属性。保留仍活getter及消费者；准确路径、两个收集箱使用点与最后删除条件已写[M7回执§7](../../M7-collaboration/handoffs/M3-closeout.md#7-m4p16-成员-getter-最后读者回执2026-11-01)。
+
+M17以同一M4临时文件中的显式方法调用为正例，再替换为store.projectMemberIds。真实checker明确新增一个M4属性读取并exit1；去掉临时文件，原store字节未变，重扫3生产/2测试、0M4/0未分类通过。`t7-member-probes.json`和三个原始receipt保存输入/诊断/恢复；`t7-member-store` 21/21、`t7-web-types` typegen/tsc通过。本Task没有产品改动，成员目录权限与会话责任保持。
