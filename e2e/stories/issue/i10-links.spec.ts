@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import type { TestInfo } from "@playwright/test";
 
 import {
@@ -65,6 +66,7 @@ test("I10 (page): URL refusals are described before focus; a confirmed link firs
     expect((await answerTo(page, "POST", path, () => submit.click())).status()).toBe(422);
     await expect(url).toBeFocused();
     expect((await refusedFocus()).at(-1)).toEqual({ id: "url", invalid: "true", description: "Not allowed" });
+    await c12Evidence(page, "B12", "link-url-refused");
     await url.fill(`  ${source.url.slice("http://".length)}  `);
     const held = await sentHeld(page, "POST", path, () => submit.dblclick());
     try {
@@ -76,6 +78,7 @@ test("I10 (page): URL refusals are described before focus; a confirmed link firs
         .toEqual([{ url: source.url, metadata: {} }]);
       await page.keyboard.press("Escape");
       await expect(form).toHaveCount(1);
+      await c12Evidence(page, "B12", "link-pending");
     } finally {
       expect((await held.release()).status()).toBe(201);
     }
@@ -97,6 +100,7 @@ test("I10 (page): URL refusals are described before focus; a confirmed link firs
     source.release();
     const firstJob = await completedLinkCrawl(db, link.id, source.url);
     await expect(anchor).toContainText("Release & notes", { timeout: 10000 });
+    await c12Evidence(page, "B12", "link-worker-metadata");
     const row = anchor.locator("../..");
     await expect(row.getByRole("img", { name: "favicon" })).toHaveAttribute("src", /^data:image\/png;base64,/);
     expect(watch.requestUrls.some((requestURL) => requestURL.startsWith(new URL(source.url).origin))).toBe(false);
@@ -145,6 +149,7 @@ test("I10 (page): URL refusals are described before focus; a confirmed link firs
       description: "This work item already has this link.",
     });
     await expect(form.getByText("This work item already has this link.", { exact: true })).toHaveCount(1);
+    await c12Evidence(page, "B12", "link-duplicate-refused");
     await page.keyboard.press("Escape");
     await expect(form).toHaveCount(0);
     await moved.locator("../..").locator('button[aria-haspopup="menu"]').click();

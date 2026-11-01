@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
   changeProject,
@@ -128,6 +129,7 @@ for (const workspaceAdmin of [false, true]) {
     }
     const commentEditor = page.locator(`[id="editor-container-add_comment_${own.id}"] [contenteditable="true"]`);
     await expect(commentEditor).toBeVisible();
+    await c12Evidence(page, "B10", `own-only-${workspaceAdmin ? "workspace-admin" : "guest"}`);
     await commentEditor.fill("Guest contribution");
     const createdComment = await answerTo(page, "POST", `/api/v0/issues/${own.id}/comments`, () =>
       commentEditor.press("Enter")
@@ -162,6 +164,7 @@ for (const workspaceAdmin of [false, true]) {
       expect(response.status()).toBe(404);
       const alert = page.getByRole("alert");
       await expect(alert).toContainText("The work item does not exist, or you cannot see it.");
+      await c12Evidence(page, "B10", `not-found-${sequence}-${workspaceAdmin ? "workspace-admin" : "guest"}`);
       await expect(page.getByText(other.name, { exact: true })).toHaveCount(0);
       rejected.push({
         body: await response.json(),

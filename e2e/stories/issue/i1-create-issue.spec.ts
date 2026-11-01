@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
   amidAnotherWorkspace,
@@ -54,6 +55,7 @@ test("I1 (page): c opens a named form; field refusals retain it, native controls
     await save.click();
     await expect(title).toBeFocused();
     expect((await focuses()).at(-1)).toEqual({ id: "name", invalid: "true", description });
+    await c12Evidence(page, "B11", `creation-${description}`);
     expect(bodies).toEqual([]);
     await expect(title).toBeVisible();
   }, Promise.resolve());
@@ -62,6 +64,7 @@ test("I1 (page): c opens a named form; field refusals retain it, native controls
   expect((await answerTo(page, "POST", path, () => save.click())).status()).toBe(422);
   await expect(title).toBeFocused();
   expect((await focuses()).at(-1)).toEqual({ id: "name", invalid: "true", description: "The format is not valid" });
+  await c12Evidence(page, "B11", "creation-server-refusal");
   expect(await db.query("SELECT id FROM issues WHERE project_id=$1", [seed.project.id])).toEqual([]);
 
   await title.fill("  Created through the form  ");
@@ -124,6 +127,7 @@ test("I1 (page): c opens a named form; field refusals retain it, native controls
   await expect.poll(() => submissions.length).toBe(1);
   await expect(form.getByRole("button", { name: "Saving", exact: true })).toBeDisabled();
   await expect(form.getByRole("button", { name: "Discard", exact: true })).toBeDisabled();
+  await c12Evidence(page, "B11", "creation-confirmation-pending");
   await expect(title).toBeVisible();
   await expect
     .poll(() => db.query("SELECT name FROM issues WHERE project_id=$1", [seed.project.id]))

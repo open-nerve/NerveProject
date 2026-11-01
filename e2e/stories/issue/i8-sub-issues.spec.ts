@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
   amidAnotherWorkspace,
@@ -131,6 +132,7 @@ test("I8 (page): native searches add two existing children and create one; progr
       .poll(() => db.query("SELECT id FROM issues WHERE parent_id=$1 ORDER BY id", [top.id]))
       .toEqual([first, done].toSorted(byId).map(({ id }) => ({ id })));
     await expect(existing).toHaveCount(1);
+    await c12Evidence(page, "B12", "sub-items-add-pending");
     await expect(page.locator(`#issue-${first.id}`)).toHaveCount(0);
   } finally {
     expect((await held.release()).status()).toBe(200);
@@ -165,6 +167,7 @@ test("I8 (page): native searches add two existing children and create one; progr
   await expect(form).toHaveCount(0);
   await expect(page.locator(`#issue-${createdRow.id}`)).toBeVisible();
   await expect(page.getByText("1/3 Done", { exact: true })).toBeVisible();
+  await c12Evidence(page, "B12", "three-confirmed-sub-items");
   await expectIssueCreated(db, createdRow.id, {
     ...madeBy(seed.member.email, "Draft notice"),
     sequence_id: Number(createdRow.sequence_id),
@@ -187,6 +190,7 @@ test("I8 (page): native searches add two existing children and create one; progr
   });
   const picker = page.getByRole("dialog", { name: "Add parent work item", exact: true });
   await expect(picker.getByRole("option").filter({ hasText: alternate.name })).toBeVisible();
+  await c12Evidence(page, "B12", "parent-search-excludes-descendants");
   await Promise.all(
     [first.name, top.name, "Nested child", "Nested grandchild"].map((excluded) =>
       expect(picker.getByRole("option").filter({ hasText: excluded })).toHaveCount(0)

@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
   amidAnotherWorkspace,
@@ -106,6 +107,7 @@ test("I17 (page): the confirmation names the whole subtree including archived de
     await expectIssueDeleted(db, root.id, seed.member.email);
     await expect(dialog.getByRole("heading", { name: "Delete Work item" })).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+    await c12Evidence(page, "B13", "subtree-delete-pending");
     await page.keyboard.press("Escape");
     await expect(dialog.getByRole("heading", { name: "Delete Work item" })).toBeVisible();
     await expect(page).toHaveURL(`/${seed.slug}/browse/WEB-${root.sequence_id}`);
@@ -116,6 +118,7 @@ test("I17 (page): the confirmation names the whole subtree including archived de
   await expect(dialog).toHaveCount(0);
   await expect(page).toHaveURL(seed.path);
   await expect(page.getByText(neighbor.name, { exact: true })).toBeVisible();
+  await c12Evidence(page, "B13", "delete-confirmed-list");
   expect(await collaborationRows(db, [old.id])).toEqual(oldRows);
   expect(await collaborationRows(db, [neighbor.id])).toEqual(neighborRows);
   expect(await Promise.all(live.map(({ id }) => issueRead(api, seed.member.token, id)))).toEqual(

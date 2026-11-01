@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
@@ -75,11 +76,13 @@ test("C10 (page): an open peek display panel follows its button when the editor 
     const editor = peek.locator(`[id="editor-container-${parent.id}"] [contenteditable]`);
     await expect(editor).toHaveCount(0);
     const before = (await trigger.boundingBox())!;
+    await c12Evidence(page, "B06", "pending-editor-display-anchor");
     release();
     await expect(editor).toBeVisible();
     expect((await trigger.boundingBox())!.y).toBeGreaterThan(before.y);
     // The open panel catches up on a rendered frame; no resize or scroll is sent to make it move.
     await expect(async () => expectPopupBesideButton(panel, trigger)).toPass({ timeout: 3000 });
+    await c12Evidence(page, "B06", "loaded-editor-display-anchor");
     await page.keyboard.press("Escape");
     await expect(panel).toHaveCount(0);
     await expect(trigger).toBeFocused();
@@ -124,6 +127,7 @@ for (const dirty of [false, true]) {
           await expect(confirm.getByRole("heading", { name: "Save this draft?", exact: true })).toBeVisible();
           await confirm.getByRole("button", { name: "Save to Drafts", exact: true }).click();
           await expect(page.getByText("Editor is not ready to discard changes", { exact: true })).toBeVisible();
+          await c12Evidence(page, "B11", `pending-editor-${action}-refused-save`);
           await confirm.getByRole("button", { name: "Cancel", exact: true }).click();
           await expect(title).toHaveValue("Retained before the editor loads");
           await form.getByRole("button", { name: "Discard", exact: true }).click();
@@ -191,6 +195,7 @@ for (const entry of ["number", "id"] as const) {
       ).status()
     ).toBe(200);
     await expect(editor).toHaveText("Ready after loading");
+    await c12Evidence(page, "B10", `${entry}-entry-lazy-editor-saved`);
     expect(await db.query("SELECT description_stripped FROM issues WHERE id=$1", [issue.id])).toEqual([
       { description_stripped: "Ready after loading" },
     ]);
@@ -254,6 +259,7 @@ test("C10 (page): a native callout saves and reopens without external images or 
   expect(await savedHTML()).not.toMatch(/data-emoji-url|<img/);
   await page.reload();
   await expect(editor).toContainText("Native callout content");
+  await c12Evidence(page, "B14", "native-callout-reopened");
   await expect(editor.getByText("💡", { exact: true })).toBeVisible();
   expect(workers).toEqual([]);
   expect(requestsElsewhere(page, watch)).toEqual([]);
@@ -333,6 +339,7 @@ for (const owner of ["detail", "creation"] as const) {
     await expect(editor).toHaveText("Kept paste text");
     await page.keyboard.insertText(" plus typed");
     await expect(editor).toHaveText("Kept paste text plus typed");
+    await c12Evidence(page, "B14", `${owner}-paste-keeps-text-without-upload`);
     await expect(editor.locator("img,input[type=file],image-component")).toHaveCount(0);
     await expect(page.getByText("Attachments", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^(un)?subscribe$/i })).toHaveCount(0);
