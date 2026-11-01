@@ -6,7 +6,7 @@
 
 import type { EditorProps } from "@tiptap/pm/view";
 // nerve utils
-import { cn } from "@nerve/utils";
+import { cn, isComposing } from "@nerve/utils";
 // helpers
 import { processAssetDuplication } from "@/helpers/paste-asset";
 
@@ -33,15 +33,9 @@ export const CoreEditorProps = (props: TArgs): EditorProps => {
             ),
           },
     handleDOMEvents: {
-      keydown: (_view, event) => {
-        // prevent default event listeners from firing when slash command is active
-        if (["ArrowUp", "ArrowDown", "Enter"].includes(event.key)) {
-          const slashCommand = document.querySelector("#slash-command");
-          if (slashCommand) {
-            return true;
-          }
-        }
-      },
+      // Leave IME keys to the browser before suggestion/keymap handlers run. Returning true here
+      // stops ProseMirror's handlers without preventing the browser's composition default.
+      keydown: (_view, event) => isComposing(event),
     },
     handlePaste: (view, event) => {
       if (!event.clipboardData) return false;

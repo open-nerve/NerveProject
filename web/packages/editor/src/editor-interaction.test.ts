@@ -62,6 +62,23 @@ const blockIds = (editor: Editor) => {
 const LEGACY_DESCRIPTION = "<p>Steps</p><ul><li><p>open the page</p></li></ul>";
 
 describe("a rich-text editor built like the kept ones", () => {
+  it("the slash default background action clears background and retains text color", async () => {
+    const editor = await createEditor({
+      content: '<p><span data-text-color="gray" data-background-color="peach">Before /background</span></p>',
+    });
+    const action = getSlashCommandFilteredSections({ disabledExtensions: [] })({ query: "Default background" })
+      .flatMap((section) => section.items)
+      .find((item) => item.key === "background-color-default")!;
+    expect(action).toBeDefined();
+    editor.commands.setTextSelection(19);
+    action.command({ editor, range: { from: 8, to: 19 } });
+    expect(editor.getText()).toBe("Before ");
+    typeText(editor, "After");
+    expect(editor.getText()).toBe("Before After");
+    const color = editor.state.doc.firstChild?.lastChild?.marks.find((mark) => mark.type.name === "customColor");
+    expect(color?.attrs).toEqual({ color: "gray", backgroundColor: null });
+  });
+
   it("closes the force-open emoji picker with Escape and clears its state", async () => {
     const editor = await createEditor();
     editor.view.dom.focus();

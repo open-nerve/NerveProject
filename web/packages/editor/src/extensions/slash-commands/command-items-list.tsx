@@ -253,7 +253,7 @@ export const getSlashCommandFilteredSections =
               backgroundColor: "var(--background-color-surface-1)",
               border: "1px solid var(--border-color-strong)",
             },
-            command: ({ editor, range }) => toggleTextColor(undefined, editor, range),
+            command: ({ editor, range }) => toggleBackgroundColor(undefined, editor, range),
           },
           ...COLORS_LIST.map(
             (color) =>
