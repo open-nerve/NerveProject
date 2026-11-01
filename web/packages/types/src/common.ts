@@ -33,8 +33,8 @@ export type TLogoProps = {
 
 export type TNameDescriptionLoader = "submitting" | "submitted" | "saved" | "failed";
 
-export type ICustomSearchSelectOption = {
-  value: any;
+export type ICustomSearchSelectOption<T extends string | number = string> = {
+  value: T;
   query: string;
   content: ReactNode;
   disabled?: boolean;

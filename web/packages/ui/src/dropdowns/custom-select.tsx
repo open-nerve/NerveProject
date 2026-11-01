@@ -30,7 +30,7 @@ function openOnEnter(event: React.KeyboardEvent<HTMLButtonElement>) {
   event.currentTarget.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
 }
 
-function CustomSelect(props: ICustomSelectProps) {
+function CustomSelect<T>(props: ICustomSelectProps<T>) {
   const {
     customButtonClassName = "",
     buttonClassName = "",
@@ -68,7 +68,9 @@ function CustomSelect(props: ICustomSelectProps) {
     <Listbox
       as="div"
       value={value}
-      onChange={onChange}
+      onChange={(picked: T | null) => {
+        if (picked !== null) onChange(picked);
+      }}
       className={cn("relative flex-shrink-0 text-left", className)}
       disabled={disabled}
     >
@@ -147,7 +149,7 @@ function CustomSelect(props: ICustomSelectProps) {
   );
 }
 
-function Option(props: ICustomSelectItemProps) {
+function Option<T>(props: ICustomSelectItemProps<T>) {
   const { children, value, className } = props;
 
   return (

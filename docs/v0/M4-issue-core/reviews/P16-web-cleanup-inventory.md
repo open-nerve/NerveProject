@@ -158,3 +158,45 @@ M4同名局部变量使用显式getProjectMemberIds(projectId,false)，不是get
 - `e2e/playwright.m4-list.config.ts`、`playwright.m4-filters.config.ts`、`playwright.m4-detail.config.ts`、`playwright.m4-collaboration.config.ts`：三个引擎的真实项目；T10去重合成矩阵。
 
 尚未新增任何P16测试或运行产品矩阵。本次只准备实现入口，逐项验证留授权实施。
+
+## T2 实施消费者核验（2026-11-01）
+
+
+依据实际 TypeScript program/checker 的 instantiated JSX props，32文件/34点 value/onChange 无 any；SearchSelect 显示的联合是判别联合投影，不是公开 boolean/value 脱钩；正负 tsc 验证相关性。独立 JSX children 的泛型无法证明 Select.Option 与父组件 T 相等，仍靠真实消费者和运行选项核对。
+
+| 路径 | 调用 | value 类型 | 适配/兼容结论 |
+|---|---|---|---|
+| `web/apps/web/core/components/navigation/project-header.tsx` | CustomSearchSelect:102 | `string  /  string[]  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/core/theme/theme-switch.tsx` | CustomSelect:25 | `I_THEME_OPTION  /  null` | I_THEME_OPTION 对象原样传递，真实选择验证引用身份。 |
+| `web/apps/web/core/components/global/timezone-select.tsx` | CustomSearchSelect:32 | `string  /  string[]  /  null` | 将 undefined 当前空值在拥有者处归一为 null；onChange 仍只发时区字符串。 |
+| `web/apps/web/core/components/profile/start-of-week-preference.tsx` | CustomSelect:53 | `0  /  1  /  2  /  3  /  4  /  5  /  6  /  null` | 将尚未加载的当前空值归一为 null，数字 0–6 不变。 |
+| `web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx` | CustomSelect:74 | `"en"  /  "zh-CN"  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/api-token/modal/form.tsx` | CustomSelect:170 | `"1_week"  /  "1_month"  /  "3_months"  /  "1_year"  /  "custom"  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/dropdowns/member/base.tsx` | CustomSearchSelect:159 | `string  /  string[]  /  null` | 保留 selection 判别联合，成员 option 默认 string，暂停成员 disabled 保持。 |
+| `web/apps/web/core/components/projects/create/attributes.tsx` | CustomSelect:39 | `0  /  2  /  null  /  undefined` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/dropdowns/priority.tsx` | CustomSearchSelect:344 | `TIssuePriorities  /  TIssuePriorities[]  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/dropdowns/state/base.tsx` | CustomSearchSelect:121 | `string  /  string[]  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/dropdowns/project/base.tsx` | CustomSearchSelect:159 | `string  /  string[]  /  null` | 保留两条按 multiple 判别的实际 JSX，string/string[] 回调独立。 |
+| `web/apps/web/core/components/dropdowns/project/base.tsx` | CustomSearchSelect:161 | `string  /  string[]  /  null` | 保留两条按 multiple 判别的实际 JSX，string/string[] 回调独立。 |
+| `web/apps/web/core/components/core/filters/date-filter-select.tsx` | CustomSelect:49 | `string  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/issues/peek-overview/header.tsx` | CustomSelect:152 | `"side-peek"  /  "modal"  /  "full-screen"  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/modules/select/status.tsx` | CustomSelect:36 | `"backlog"  /  "completed"  /  "cancelled"  /  "planned"  /  "in-progress"  /  "paused"  /  null  /  undefined` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/modules/module-status-dropdown.tsx` | CustomSelect:30 | `"backlog"  /  "completed"  /  "cancelled"  /  "planned"  /  "in-progress"  /  "paused"  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/modules/progress-sidebar/root.tsx` | CustomSelect:193 | `"backlog"  /  "completed"  /  "cancelled"  /  "planned"  /  "in-progress"  /  "paused"  /  null` | 移除 status 回调 any 与 value 遮蔽，字段当前空值归一 null；wire key 仍为 status。 |
+| `web/apps/web/core/components/workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx` | CustomSelect:158 | `string  /  null  /  undefined` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/rich-filters/add-filters/dropdown.tsx` | CustomSearchSelect:83 | `P  /  "all_filters_applied"  /  (P  /  "all_filters_applied")[]  /  null` | 明确 P/disabled 空列表哨兵，当前无选择用 null，哨兵不发业务回调。 |
+| `web/apps/web/core/components/rich-filters/filter-value-input/select/multi.tsx` | CustomSearchSelect:41 | `string  /  string[]  /  null` | 按已有 string condition 显式 toFilterArray<string>，数组选择保持。 |
+| `web/apps/web/core/components/rich-filters/filter-value-input/select/single.tsx` | CustomSearchSelect:45 | `string  /  string[]  /  null` | 按已有 string condition 显式 toFilterArray<string>，相同值取消的 null 仍由拥有者处理。 |
+| `web/apps/web/core/components/rich-filters/filter-item/root.tsx` | CustomSearchSelect:106 | `TSupportedOperators  /  TSupportedOperators[]  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/workspace/settings/workspace-details.tsx` | CustomSelect:188 | `"Just myself"  /  "2-10"  /  "11-50"  /  "51-200"  /  "201-500"  /  "500+"  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/workspace/settings/invitations-list-item.tsx` | CustomSelect:102 | `5  /  15  /  20  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/workspace/settings/member-columns.tsx` | CustomSelect:129 | `5  /  15  /  20  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/workspace/invite-modal/fields.tsx` | CustomSelect:98 | `5  /  15  /  20  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/automation/auto-archive-automation.tsx` | CustomSelect:109 | `number  /  null` | 数字与 custom 哨兵由真实 callback 区分；独立 Option 泛型无法证明父子相等，不冒称此保证。 |
+| `web/apps/web/core/components/project/form.tsx` | CustomSelect:239 | `0  /  2  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/project/settings/member-columns.tsx` | CustomSelect:103 | `5  /  15  /  20  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/project/add-project-members-modal.tsx` | CustomSearchSelect:170 | `string  /  string[]  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/project/add-project-members-modal.tsx` | CustomSelect:222 | `5  /  15  /  20  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/apps/web/core/components/project/member-select.tsx` | CustomSearchSelect:66 | `string  /  string[]  /  null` | 移除 value:any 与 filter 类型断言；明确 nullable string，none 哨兵及调用者转 null 不变。 |
+| `web/apps/web/core/components/workspace/create-workspace-form.tsx` | CustomSelect:131 | `"Just myself"  /  "2-10"  /  "11-50"  /  "51-200"  /  "201-500"  /  "500+"  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+| `web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx` | CustomSearchSelect:63 | `string  /  string[]  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |

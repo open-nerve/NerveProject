@@ -229,3 +229,28 @@ it("notifies one opening while a real search select rerenders with new options",
   expect(popup()).not.toBeNull();
   expect(opened).toHaveBeenCalledTimes(1);
 });
+
+it("an exhausted add-filter menu keeps its explanatory option disabled and never emits its sentinel", async () => {
+  const filter = new WorkItemFilterStore().getOrCreateFilter({
+    entityType: EIssuesStoreType.PROJECT,
+    entityId: "exhausted",
+  });
+  filter.configManager.setAreConfigsReady(true);
+  await act(async () =>
+    root.render(
+      <AddFilterDropdown
+        filter={filter}
+        handleFilterSelect={changed}
+        customButton={<span>Add filter</span>}
+        buttonConfig={{ defaultOpen: true }}
+      />
+    )
+  );
+  const disabled = document.querySelector<HTMLElement>('[role="option"]')!;
+  expect(disabled).not.toBeNull();
+  expect(disabled.getAttribute("aria-disabled")).toBe("true");
+  expect(disabled.textContent).toContain("All filters applied");
+  await choose();
+  expect(changed).not.toHaveBeenCalled();
+  expect(popup()).not.toBeNull();
+});

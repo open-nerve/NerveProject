@@ -57,10 +57,10 @@ make e2e
 **Files：** spec§2.2、inventory的32生产文件及类型读者；新增 P/ui/src/dropdowns/select-contract.typecheck.tsx、select-contract.test.tsx（两个文件各有单一用途）；既有 C/components/dropdowns/basic-dropdowns.test.tsx、rich-filters选择器测试。
 **Interfaces：** Select<T>任意值/可空当前值/回调T；SearchSelect<T extends string|number>按multiple字面量区分T与T[]；菜单展开无参，item为真实MouseEvent；共同字段、portal、键盘合同不变。
 
-- [ ] Step 1：先读实际UI+消费者与现有测试；写类型正负例（string/number/主题对象、单多值/错误回调/错误option）及真实组件 `preservesEmptyAndZeroSelections`、`multiSelectionStaysOpenAndReturnsAnArray`、`objectSelectionReturnsTheOriginalThemeOption`。类型fixture由tsc实际include，不运行负例。
-- [ ] Step 2：执行UI类型和组件测试，确认负例确实因旧any不报错而触发unused expect-error，运行缺口给具体值/回调失败；已有正常键盘绿性质保持。记录原始baseline，不把no-test-found当红。
-- [ ] Step 3：实现强类型合同并逐32文件适配；泛型贯穿options/common.ts，不使用宽泛boolean/any/unknown双断言。保持单选内部null不外发、0/空串、对象、不提交表单、多选数组/关闭策略；同步删真实死参数/分支及改动文件warning、下调cap。
-- [ ] Step 4：UI测试、web实际消费者测试及全包类型；B list-interactions C3的设置/表单/peek入口、filter-archive-profile-interactions C2选择器；M02错值类型、M03错单多回调、M04单选吞0、M05多选选后关闭、M06空态回调、M07改对象值各由对应编译/行为断言检出并恢复。串行F并固定候选输入。
+- [x] Step 1：先读实际UI+消费者与现有测试；写类型正负例（string/number/主题对象、单多值/错误回调/错误option）及真实组件 `preservesEmptyAndZeroSelections`、`multiSelectionStaysOpenAndReturnsAnArray`、`objectSelectionReturnsTheOriginalThemeOption`。类型fixture由tsc实际include，不运行负例。
+- [x] Step 2：执行UI类型和组件测试，确认负例确实因旧any不报错而触发unused expect-error，运行缺口给具体值/回调失败；已有正常键盘绿性质保持。记录原始baseline，不把no-test-found当红。
+- [x] Step 3：实现强类型合同并逐32文件适配；泛型贯穿options/common.ts，不使用宽泛boolean/any/unknown双断言。保持单选内部null不外发、0/空串、对象、不提交表单、多选数组/关闭策略；同步删真实死参数/分支及改动文件warning、下调cap。
+- [x] Step 4：UI测试、web实际消费者测试及全包类型；B list-interactions C3的设置/表单/peek入口、filter-archive-profile-interactions C2选择器；M02错值类型、M03错单多回调、M04单选吞0、M05多选选后关闭、M06空态回调、M07改对象值各由对应编译/行为断言检出并恢复。串行F并固定候选输入。
 - [ ] Step 5：逐调用路径记兼容结论、A2/类型fixture入口与局限；提交 `refactor(M4/P16): 贯通共享下拉框的选择值与回调类型` 后push检查点，核远端HEAD为该提交并记录CI。
 
 ## Task 3：全仓no-shadow升错（约450–1000行）

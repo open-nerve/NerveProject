@@ -204,9 +204,9 @@ export const ModuleProgressSidebar = observer(function ModuleProgressSidebar(pro
                       {(moduleStatus && t(moduleStatus?.i18n_label)) ?? t("project_modules.status.backlog")}
                     </span>
                   }
-                  value={value}
-                  onChange={(value: any) => {
-                    submitChanges({ status: value });
+                  value={value ?? null}
+                  onChange={(status: IModule["status"]) => {
+                    submitChanges({ status });
                   }}
                   disabled={!isEditingAllowed || isArchived}
                 >

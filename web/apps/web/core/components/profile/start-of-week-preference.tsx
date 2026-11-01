@@ -51,7 +51,7 @@ export const StartOfWeekPreference = observer(function StartOfWeekPreference(pro
       description={props.option.description}
       control={
         <CustomSelect
-          value={userProfile?.start_of_the_week}
+          value={userProfile?.start_of_the_week ?? null}
           label={labelKey && t(labelKey)}
           onChange={handleStartOfWeekChange}
           buttonClassName="border border-subtle-1"

@@ -1,6 +1,6 @@
 # M4/P16 前端清理：预检与后续实施记录
 
-日期：2026-11-01。状态：预检通过，已授权实施，T1 完成，后续任务进行中。基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，分支 `codex/m4-p16`；[spec](../specs/P16-web-cleanup.md)、[plan](../plans/P16-web-cleanup.md)、[准备盘点](P16-web-cleanup-inventory.md)、[deep-review预检](../../../reviews/re-26-M4P16预检审核.md)。
+日期：2026-11-01。状态：预检通过，已授权实施，T1 完成，T2 本地验收通过，检查点 CI 待核。基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，分支 `codex/m4-p16`；[spec](../specs/P16-web-cleanup.md)、[plan](../plans/P16-web-cleanup.md)、[准备盘点](P16-web-cleanup-inventory.md)、[deep-review预检](../../../reviews/re-26-M4P16预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -17,7 +17,7 @@ brainstorming 要求的 fresh builder-check 只读完整 spec/plan/inventory 与
 | 标准 | Task与证据落点 | 当前状态 |
 |---|---|---|
 | A1 | T1完整last-reader表、M6/M7子交接与静态反例，见§9 | 已通过 |
-| A2 | T2 UI类型正负例、真实值/键盘/portal及所有消费者 | 待实施 |
+| A2 | T2 类型/消费者/运行与反例见§10 | 本地通过 |
 | A3 | T3全仓诊断/屏蔽0、规则error、合法/非法输入、词法含义 | 待实施 |
 | A4 | T4新AST逐行ledger、历史52行、动态读者/删除链 | 待实施 |
 | A5 | T5 M4领域/全期改动零告警与各包精确cap | 待实施 |
@@ -73,3 +73,15 @@ T1/T7把M6/M7真实读者与最后删除条件写入现有输入，closeout再�
 `ISSUE_FORM` 只有自身映射读取，M4 创建窗已自然 Tab；删除独占数组、枚举与映射共22行。四个存活组、utils 函数、constants/utils 两份 barrel 不动。44处 CustomMenu 直接 JSX 中没有 tabIndex 或展开属性，仅表格列头 header-column 有 customButtonTabIndex=-1；这个非正焦点用途仍保留。菜单默认0及 `tabIndex ?? customButtonTabIndex` 按批准 D2 保持，不能把旧收集箱父项入口当现存读者。两个字面正索引仍在 M6 的归档弹窗，写入 M6/M7 现有 M3-closeout 子回执，顶层 open 不变。
 
 原始证据均在本 worktree `.superpowers/sdd/P16-web-cleanup/`：`t1-focus-inventory.json`（7个函数读者、44个菜单、2个未来域字面正索引），M01 给审计输入追加 M4 button tabIndex=1，被准确标为一条；源文件没有变异，无需冒称运行行为失败。`t1-baseline-dropdowns`/`t1-final-dropdowns` 原始收据及日志均22/22；`t1-final-build` 10任务成功；`t1-final-types` 22任务成功（含web typegen/tsc及共享包）；`t1-keywords` 76规则/13例外无命中。改动 constants 的 oxlint 0/0，diff --check通过。产品变更只有无读者组删除，未修改存活表单键盘/菜单行为。
+
+## 10. T2 共享选择器合同与检查点
+
+Task BASE `31733739`。`CustomSelect<T>` 保留任意值与可空当前值，`CustomSearchSelect<T extends string | number>` 把 options/value/onChange 按 multiple 字面量关联；内部两条 Combobox 边界明确单值与数组。菜单展开仍无参，item 为按钮 MouseEvent。common.ts 的 option 默认 string 保持其余旧读者。32生产文件/34调用逐项结论见 [inventory 的 T2 表](P16-web-cleanup-inventory.md#t2-实施消费者核验2026-11-01)，实际 TS checker 核 value/onChange 没有 any；独立 JSX Option 与父组件 T 的一致性仍由消费者回归证明，不能由该类型接口单独保证。
+
+基线 null 多选崩溃的根因是公开合同允许 null，原 any 原样交给 Headless UI multiple 分支，其选项判定对 null 调 some；数组基线正常。现在在第三方边界将多选空态归一为 []，单选清空搜索仍不外发 null；主题对象引用、0/空串/false、菜单焦点/IME/表单语义保持。消费者将尚未加载的值归一 null，成员值去 any，rich filters 明确 string 数组与禁用哨兵。module status 回调按字段类型传递 status，消除一条遮蔽；web cap108→107，其余不抬高。
+
+类型 fixture 被 UI tsconfig 实际包含，knip 只有该文件的具名 entry；未加入生产 barrel，函数不执行。基线 t2-red-types-corrected 是七个 unused expect-error；t2-baseline-values 为1失败/10成功（null多选）。终态 t2-values-r1 11/11、t2-consumers-runtime 42/42、t2-rich-sentinel 16/16，依赖构建/全类型通过。M02/M03 产生指定 TS2322；M04吞0/空串、M05多选误关闭、M06清空外发null、M07对象变字符串均有实际 AssertionError。M06首次先被缺失option助手拦下，不计有效断言；调整断言顺序后r2才计通过。所有变异原字节恢复，有补丁/输入输出hash。误在变异中采到的11条UI诊断不用于cap，恢复后是10条。
+
+完整本地 F 七项串行通过，统一产品输入 hash `5c373a5a409a6197308b9f4abf8ef58cab37e94e3dcaa4b6b7e444d75e188c98`，每项输入/输出一致。gen-check、lint-go、Go test、lint-web(54任务)、knip、强制 test-web(18任务，零缓存)、E2E **279/279**，包含 C3 列表/表单/peek/设置与 C2 真实筛选及兼容夹具。默认 E2E 是 Chromium 主集加两条 Firefox A4，不是三浏览器矩阵。原始 t2-f1至t2-f7 收据、日志与 t2-full-gates-summary.json 保存在 worktree 证据根；本段文稿不改变受测产品。检查点提交后再核准确远端 HEAD/CI，结果写提交后收据和后续记录，当前不宣称该 CI 已完成。
+
+准备提交52a312f8的 run41270383724已核server/web/e2e三项success；仅作为准备提交状态，不替代本产品检查点。

@@ -38,7 +38,7 @@ function WhileOpen(props: { onOpen?: () => void; onClose?: () => void }) {
   return null;
 }
 
-export function CustomSearchSelect(props: ICustomSearchSelectProps) {
+export function CustomSearchSelect<T extends string | number>(props: ICustomSearchSelectProps<T>) {
   const {
     customButtonClassName = "",
     buttonClassName = "",
@@ -51,14 +51,11 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
     input = false,
     label,
     maxHeight = "md",
-    multiple = false,
     noChevron = false,
-    onChange,
     options,
     onOpen,
     onClose,
     optionsClassName = "",
-    value,
     tabIndex,
     searchPlaceholder = "Search",
     noResultsMessage = "No matches found",
@@ -95,13 +92,6 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
 
   const filteredOptions =
     query === "" ? options : options?.filter((option) => option.query.toLowerCase().includes(query.toLowerCase()));
-
-  const comboboxProps: any = {
-    value,
-    disabled,
-  };
-
-  if (multiple) comboboxProps.multiple = true;
 
   return (
     // The button is Headless UI's Popover's, which Tab reaches (a Combobox's button is out of the Tab order: Headless
@@ -188,20 +178,7 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
                 close();
               }}
             >
-              <Combobox
-                {...comboboxProps}
-                // A pick of a single value closes the list. Headless UI's Combobox picks null when its input is
-                // emptied (single mode): the input here only filters the options, so emptying the search leaves the
-                // value as it is.
-                onChange={(picked: unknown) => {
-                  if (multiple) {
-                    onChange(picked);
-                  } else if (picked !== null) {
-                    onChange(picked);
-                    close();
-                  }
-                }}
-              >
+              <SelectionCombobox selection={props} close={close}>
                 {/* Static: the list shows while the panel does, whatever the Combobox's own state. Not modal: the
                     panel is the list's, and a modal list makes the rest of the page inert (Headless UI 2.2). */}
                 <Combobox.Options
@@ -218,7 +195,6 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder={searchPlaceholder}
-                      displayValue={(assigned: any) => assigned?.name}
                     />
                   </div>
                   <div
@@ -277,12 +253,50 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
                   </div>
                   {footerOption}
                 </Combobox.Options>
-              </Combobox>
+              </SelectionCombobox>
             </Popover.Panel>,
             document.body
           )}
         </>
       )}
     </Popover>
+  );
+}
+
+/** Keep mode, value and callback correlated at the third-party boundary; null is only a single-mode search reset. */
+function SelectionCombobox<T extends string | number>({
+  selection,
+  close,
+  children,
+}: {
+  selection: ICustomSearchSelectProps<T>;
+  close: () => void;
+  children: React.ReactNode;
+}) {
+  if (selection.multiple) {
+    return (
+      <Combobox<T[], true>
+        multiple
+        value={selection.value ?? []}
+        onChange={selection.onChange}
+        disabled={selection.disabled}
+      >
+        {children}
+      </Combobox>
+    );
+  }
+  return (
+    <Combobox<T | null>
+      value={selection.value}
+      disabled={selection.disabled}
+      onChange={(picked) => {
+        if (picked !== null) {
+          selection.onChange(picked);
+          close();
+        }
+      }}
+    >
+      {children}
+    </Combobox>
   );
 }
