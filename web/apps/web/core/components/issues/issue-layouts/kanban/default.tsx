@@ -48,8 +48,6 @@ export interface IKanBan {
   sub_group_by: TIssueGroupByOptions | undefined;
   group_by: TIssueGroupByOptions | undefined;
   orderBy: TIssueOrderByOptions | undefined;
-  isDropDisabled?: boolean;
-  dropErrorMessage?: string | undefined;
   sub_group_id?: string;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
@@ -88,8 +86,6 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
     handleOnDrop,
     showEmptyGroup = true,
     orderBy,
-    isDropDisabled,
-    dropErrorMessage,
     subGroupIndex = 0,
   } = props;
   // i18n
@@ -209,8 +205,6 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                     orderBy={orderBy}
                     sub_group_id={sub_group_id}
                     isDragDisabled={isDragDisabled}
-                    isDropDisabled={!!subList.isDropDisabled || !!isDropDisabled}
-                    dropErrorMessage={subList.dropErrorMessage ?? dropErrorMessage}
                     updateIssue={updateIssue}
                     quickActions={quickActions}
                     enableQuickIssueCreate={enableQuickIssueCreate}

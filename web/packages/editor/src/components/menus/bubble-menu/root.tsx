@@ -49,17 +49,11 @@ export type EditorStateType = {
   center: boolean;
   color:
     | {
-        key: string;
-        label: string;
         textColor: string;
-        backgroundColor: string;
       }
     | undefined;
   backgroundColor:
     | {
-        key: string;
-        label: string;
-        textColor: string;
         backgroundColor: string;
       }
     | undefined;

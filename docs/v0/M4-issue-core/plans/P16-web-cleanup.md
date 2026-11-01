@@ -79,11 +79,11 @@ make e2e
 **Files：** 原M1 closeout plan附录三个脚本只复制到ignored证据目录；当前M4候选生产/测试文件；新增 reviews/P16-dead-members.md，M1/M3子回执。
 **Interfaces：** 保持原AST分类、第三方回调/公开ref/原生DTO/表格列合同，只删无读者链。
 
-- [ ] Step 1：typegen后运行原deadsym --tsv、domains --rows M4；逐项标生产/测试/第三方/误归属，核与准备453候选的差异，不拿历史数量冻结清单。
-- [ ] Step 2：沿symbol追真实读者/写入及唯一用途分支；历史52行从原报告/版本逐名映射到现状，零候选不等于整文件已删，WorkspaceService view四方法逐一保留。
-- [ ] Step 3：删除真实dead及独占参数/导出/分支；保留项每行具名读取位置/动态机制和相应测试。公开EditorRefApi与TipTap插件等不以脚本零read删合同；只因测试方便而留的多余fixture字段也须收掉。
-- [ ] Step 4：新AST逐行ledger对账、knip、类型和对应行为测试；M11审计输入缺一行必须失败，M12一个真实动态协议/列回调去除由对应消费者测试失败。审计断言和产品断言分列；恢复后再次生成完整终态。
-- [ ] Step 5：写A4、各kind/文件计数、历史52逐名落点与新旧identity映射；提交 `refactor(M4/P16): 清理死成员并核实动态合同的真实读者`。
+- [x] Step 1：typegen后运行原deadsym --tsv、domains --rows M4；逐项标生产/测试/第三方/误归属，核与准备453候选的差异，不拿历史数量冻结清单。
+- [x] Step 2：沿symbol追真实读者/写入及唯一用途分支；历史52行从原报告/版本逐名映射到现状，零候选不等于整文件已删，WorkspaceService view四方法逐一保留。
+- [x] Step 3：删除真实dead及独占参数/导出/分支；保留项每行具名读取位置/动态机制和相应测试。公开EditorRefApi与TipTap插件等不以脚本零read删合同；只因测试方便而留的多余fixture字段也须收掉。
+- [x] Step 4：新AST逐行ledger对账、knip、类型和对应行为测试；M11审计输入缺一行必须失败，M12一个真实动态协议/列回调去除由对应消费者测试失败。审计断言和产品断言分列；恢复后再次生成完整终态。
+- [x] Step 5：写A4、各kind/文件计数、历史52逐名落点与新旧identity映射；提交 `refactor(M4/P16): 清理死成员并核实动态合同的真实读者`。
 
 ## Task 5：告警终态与精确cap（约700–1400行）
 

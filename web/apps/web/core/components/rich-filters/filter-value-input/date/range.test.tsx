@@ -11,7 +11,7 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@/hooks/store/user", () => ({ useUserProfile: () => ({ data: { start_of_the_week: 1 } }) }));
 let host: HTMLDivElement, root: ReturnType<typeof createRoot>;
 const changed = vi.fn();
-const config: TDateRangeFilterFieldConfig<string> = { type: FILTER_FIELD_TYPE.DATE_RANGE };
+const config: TDateRangeFilterFieldConfig = { type: FILTER_FIELD_TYPE.DATE_RANGE };
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.useFakeTimers();

@@ -4,25 +4,19 @@
  * See the LICENSE file for details.
  */
 
-import type { Editor, NodeViewProps } from "@tiptap/core";
-import type { Node as ProseMirrorNode, ResolvedPos } from "@tiptap/pm/model";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TableMap, updateColumnsOnResize } from "@tiptap/pm/tables";
-import type { Decoration, NodeView } from "@tiptap/pm/view";
+import type { NodeView } from "@tiptap/pm/view";
 import { h } from "jsx-dom-cjs";
 
 export class TableView implements NodeView {
   node: ProseMirrorNode;
   cellMinWidth: number;
-  decorations: readonly Decoration[];
-  editor: Editor;
-  getPos: NodeViewProps["getPos"];
-  hoveredCell: ResolvedPos | null = null;
   map: TableMap;
   root: HTMLElement;
   table: HTMLTableElement;
   colgroup: HTMLTableColElement;
   tbody: HTMLElement;
-  controls?: HTMLElement;
 
   get dom() {
     return this.root;
@@ -32,19 +26,9 @@ export class TableView implements NodeView {
     return this.tbody;
   }
 
-  constructor(
-    node: ProseMirrorNode,
-    cellMinWidth: number,
-    decorations: readonly Decoration[],
-    editor: Editor,
-    getPos: NodeViewProps["getPos"]
-  ) {
+  constructor(node: ProseMirrorNode, cellMinWidth: number) {
     this.node = node;
     this.cellMinWidth = cellMinWidth;
-    this.decorations = decorations;
-    this.editor = editor;
-    this.getPos = getPos;
-    this.hoveredCell = null;
     this.map = TableMap.get(node);
 
     this.colgroup = h(
@@ -66,13 +50,12 @@ export class TableView implements NodeView {
     this.render();
   }
 
-  update(node: ProseMirrorNode, decorations: readonly Decoration[]) {
+  update(node: ProseMirrorNode) {
     if (node.type !== this.node.type) {
       return false;
     }
 
     this.node = node;
-    this.decorations = [...decorations];
     this.map = TableMap.get(this.node);
 
     this.render();

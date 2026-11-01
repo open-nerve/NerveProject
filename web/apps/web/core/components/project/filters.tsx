@@ -11,7 +11,7 @@ import { FilterOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import type { TProjectFilters } from "@nerve/types";
-import { cn, calculateTotalFilters } from "@nerve/utils";
+import { calculateTotalFilters } from "@nerve/utils";
 // components
 import { FiltersDropdown } from "@/components/issues/issue-layouts/filters";
 // hooks
@@ -21,19 +21,7 @@ import { useProjectFilter } from "@/hooks/store/use-project-filter";
 import { ProjectFiltersSelection } from "./dropdowns/filters";
 import { ProjectOrderByDropdown } from "./dropdowns/order-by";
 
-type Props = {
-  filterMenuButton?: React.ReactNode;
-  classname?: string;
-  filterClassname?: string;
-  isMobile?: boolean;
-};
-
-const HeaderFilters = observer(function HeaderFilters({
-  filterMenuButton,
-  isMobile,
-  classname = "",
-  filterClassname = "",
-}: Props) {
+const HeaderFilters = observer(function HeaderFilters() {
   // i18n
   const { t } = useTranslation();
   // router
@@ -72,7 +60,7 @@ const HeaderFilters = observer(function HeaderFilters({
   const isFiltersApplied = calculateTotalFilters(filters ?? {}) !== 0;
 
   return (
-    <div className={cn("flex gap-3", classname)}>
+    <div className="flex gap-3">
       <ProjectOrderByDropdown
         value={displayFilters?.order_by}
         onChange={(val) => {
@@ -81,15 +69,13 @@ const HeaderFilters = observer(function HeaderFilters({
             order_by: val,
           });
         }}
-        isMobile={isMobile}
       />
-      <div className={cn(filterClassname)}>
+      <div>
         <FiltersDropdown
           icon={<FilterOutline className="h-3 w-3" />}
           title={t("common.filters")}
           placement="bottom-end"
           isFiltersApplied={isFiltersApplied}
-          menuButton={filterMenuButton || null}
         >
           <ProjectFiltersSelection
             displayFilters={displayFilters ?? {}}

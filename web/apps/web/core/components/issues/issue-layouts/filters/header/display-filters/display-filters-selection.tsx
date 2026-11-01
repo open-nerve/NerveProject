@@ -7,12 +7,7 @@
 import React from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
-import type {
-  IIssueDisplayFilterOptions,
-  IIssueDisplayProperties,
-  ILayoutDisplayFiltersOptions,
-  TIssueGroupByOptions,
-} from "@nerve/types";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, ILayoutDisplayFiltersOptions } from "@nerve/types";
 // components
 import {
   FilterDisplayProperties,
@@ -28,7 +23,6 @@ type Props = {
   handleDisplayFiltersUpdate: (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => void;
   handleDisplayPropertiesUpdate: (updatedDisplayProperties: Partial<IIssueDisplayProperties>) => void;
   layoutDisplayFiltersOptions: ILayoutDisplayFiltersOptions | undefined;
-  ignoreGroupedFilters?: Partial<TIssueGroupByOptions>[];
 };
 
 export const DisplayFiltersSelection = observer(function DisplayFiltersSelection(props: Props) {
@@ -38,7 +32,6 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
     handleDisplayFiltersUpdate,
     handleDisplayPropertiesUpdate,
     layoutDisplayFiltersOptions,
-    ignoreGroupedFilters = [],
   } = props;
 
   const isDisplayFilterEnabled = (displayFilter: keyof IIssueDisplayFilterOptions) =>
@@ -68,7 +61,6 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
                 group_by: val,
               })
             }
-            ignoreGroupedFilters={ignoreGroupedFilters}
           />
         </div>
       )}
@@ -86,7 +78,6 @@ export const DisplayFiltersSelection = observer(function DisplayFiltersSelection
                 })
               }
               subGroupByOptions={layoutDisplayFiltersOptions?.display_filters.sub_group_by ?? []}
-              ignoreGroupedFilters={ignoreGroupedFilters}
             />
           </div>
         )}

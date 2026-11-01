@@ -7,7 +7,6 @@
 import { cloneDeep, isEqual } from "lodash-es";
 import { action, computed, makeObservable, observable, toJS } from "mobx";
 import { computedFn } from "mobx-utils";
-import { v4 as uuidv4 } from "uuid";
 // nerve imports
 import type {
   TClearFilterOptions,
@@ -50,7 +49,6 @@ import { FilterInstanceHelper } from "./filter-helpers";
 /**
  * Interface for a filter instance.
  * Provides methods to manage the filter expression and notify changes.
- * - id: The id of the filter instance
  * - expression: The filter expression
  * - adapter: The filter adapter
  * - configManager: The filter config manager
@@ -67,7 +65,6 @@ import { FilterInstanceHelper } from "./filter-helpers";
  */
 export interface IFilterInstance<P extends TFilterProperty, E extends TExternalFilter> {
   // observables
-  id: string;
   initialFilterExpression: TFilterExpression<P> | null;
   expression: TFilterExpression<P> | null;
   adapter: IFilterAdapter<P, E>;
@@ -128,7 +125,6 @@ type TFilterParams<P extends TFilterProperty, E extends TExternalFilter> = {
 
 export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter> implements IFilterInstance<P, E> {
   // observables
-  id: string;
   initialFilterExpression: TFilterExpression<P> | null;
   expression: TFilterExpression<P> | null;
   expressionOptions: TExpressionOptions<E>;
@@ -140,7 +136,6 @@ export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter
   private helper: IFilterInstanceHelper<P, E>;
 
   constructor(params: TFilterParams<P, E>) {
-    this.id = uuidv4();
     this.adapter = params.adapter;
     this.helper = new FilterInstanceHelper<P, E>(this, {
       adapter: this.adapter,
@@ -158,7 +153,6 @@ export class FilterInstance<P extends TFilterProperty, E extends TExternalFilter
 
     makeObservable(this, {
       // observables
-      id: observable,
       initialFilterExpression: observable,
       expression: observable,
       expressionOptions: observable.struct,

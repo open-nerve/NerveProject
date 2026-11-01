@@ -184,7 +184,6 @@ export class WorkspaceDraftIssues {
       return issue;
     });
   // Drafts do not participate in ordinary issue layouts; retain only their common read-only facade.
-  getIssueIds = (_groupId?: string, _subGroupId?: string) => undefined;
   getPaginationData = (_groupId?: string, _subGroupId?: string) => undefined;
   getIssueLoader = (_groupId?: string, _subGroupId?: string): TLoader => "loaded";
   getGroupIssueCount = (_groupId?: string, _subGroupId?: string, _isSubGroupCumulative?: boolean) => undefined;

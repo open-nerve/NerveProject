@@ -34,8 +34,6 @@ export const createFilterConfig = <P extends TFilterProperty>(config: TFilterCon
 export type TCreateFilterConfigParams = Omit<TBaseFilterFieldConfig, "isOperatorEnabled"> & {
   isEnabled: boolean;
   label?: string; // presentation label supplied by the caller, e.g. its current language
-  rightContent?: React.ReactNode; // content to display on the right side of the filter option in the dropdown
-  tooltipContent?: React.ReactNode; // content to display when hovering over the applied filter item in the filter list
 };
 
 /**
@@ -95,8 +93,8 @@ export const createFilterFieldConfig = <T extends TFilterFieldType, V extends TF
     : T extends typeof FILTER_FIELD_TYPE.MULTI_SELECT
       ? TMultiSelectFilterFieldConfig<V>
       : T extends typeof FILTER_FIELD_TYPE.DATE
-        ? TDateFilterFieldConfig<V>
+        ? TDateFilterFieldConfig
         : T extends typeof FILTER_FIELD_TYPE.DATE_RANGE
-          ? TDateRangeFilterFieldConfig<V>
+          ? TDateRangeFilterFieldConfig
           : never
 ): TSupportedFilterFieldConfigs<V> => config as TSupportedFilterFieldConfigs<V>;

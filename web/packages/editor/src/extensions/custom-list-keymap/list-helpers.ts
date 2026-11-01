@@ -122,21 +122,21 @@ export const handleBackspace = (editor: Editor, name: string, parentListTypes: s
 
     const $listPos = editor.state.doc.resolve($anchor.before() - 1);
 
-    const listDescendants: Array<{ node: Node; pos: number }> = [];
+    const listDescendants: number[] = [];
 
     $listPos.node().descendants((node, pos) => {
       if (node.type.name === name) {
-        listDescendants.push({ node, pos });
+        listDescendants.push(pos);
       }
     });
 
     const lastItem = listDescendants.at(-1);
 
-    if (!lastItem) {
+    if (lastItem === undefined) {
       return false;
     }
 
-    const $lastItemPos = editor.state.doc.resolve($listPos.start() + lastItem.pos + 1);
+    const $lastItemPos = editor.state.doc.resolve($listPos.start() + lastItem + 1);
 
     // Check if positions are within the valid range
     const startPos = $anchor.start() - 1;

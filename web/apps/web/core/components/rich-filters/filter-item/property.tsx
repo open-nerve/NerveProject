@@ -46,20 +46,15 @@ export const FilterItemProperty = observer(function FilterItemProperty<
   );
 });
 
-type TPropertyButtonProps<P extends TFilterProperty, E extends TExternalFilter> = IFilterItemPropertyProps<P, E> & {
-  className?: string;
-};
-
-function PropertyButton<P extends TFilterProperty, E extends TExternalFilter>(props: TPropertyButtonProps<P, E>) {
-  const { icon: Icon, label, tooltipContent, className } = props;
+function PropertyButton<P extends TFilterProperty, E extends TExternalFilter>(props: IFilterItemPropertyProps<P, E>) {
+  const { icon: Icon, label, tooltipContent } = props;
 
   return (
     <Tooltip label={tooltipContent ?? ""} layout="stacked" side="bottom" align="start" disabled={!tooltipContent}>
       <div
         className={cn(
           "flex h-full min-w-0 items-center gap-1 px-2 py-[5px] text-11 text-tertiary",
-          COMMON_FILTER_ITEM_BORDER_CLASSNAME,
-          className
+          COMMON_FILTER_ITEM_BORDER_CLASSNAME
         )}
       >
         {Icon && (

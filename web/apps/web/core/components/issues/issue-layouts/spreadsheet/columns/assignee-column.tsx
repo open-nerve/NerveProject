@@ -16,7 +16,7 @@ import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 type Props = {
   issue: Issue;
   onClose: () => void;
-  onChange: (issue: Issue, data: Partial<IssueDetail>, updates: any) => void;
+  onChange: (issue: Issue, data: Partial<IssueDetail>) => void;
   disabled: boolean;
 };
 
@@ -28,14 +28,7 @@ export const SpreadsheetAssigneeColumn = observer(function SpreadsheetAssigneeCo
       <MemberDropdown
         value={issue?.assignee_ids ?? []}
         onChange={(data) => {
-          onChange(
-            issue,
-            { assignee_ids: data },
-            {
-              changed_property: "assignees",
-              change_details: data,
-            }
-          );
+          onChange(issue, { assignee_ids: data });
         }}
         projectId={issue?.project_id ?? undefined}
         disabled={disabled}

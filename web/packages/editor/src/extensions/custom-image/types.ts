@@ -66,7 +66,6 @@ export type CustomImageExtensionOptions = {
 
 export type CustomImageExtensionStorage = {
   fileMap: Map<string, UploadEntity>;
-  deletedImageSet: Map<string, boolean>;
   maxFileSize: number;
 };
 

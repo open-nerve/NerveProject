@@ -101,3 +101,10 @@ issue/draft 两类表单迁移与真实编辑已区分；五处零生产 getMark
 ## P14 集成关闭回执（2026-10-31）
 
 上述 P14 对应子项已随授权 --no-ff 集成至 main 7a81ea18；[准确 main CI](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务全绿，原分支与集成修复分支的证据逐 hash 归档复验后，两个工作树和远端/本地分支已正常清理。完整输入、两次初始失败、修复及新归档路径见 [P14 review §15–16](../reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31)。本文件顶部 status 仍 open，其它阶段和 M4 总关闭条件不提前处理。
+
+
+## P16 T4 子项接收（2026-11-01）
+
+原版 AST 当前449候选逐项核读者：91项无读者声明及独占链删除，358项动态/类型/生产或测试合同保留；历史52行逐名追到P11/P14/P15删除提交，M7 view四方法保持。公开 EditorRefApi、第三方合并命令和表格 NodeView 继续保留；真实表格编辑与内容容器变异证明动态读者。完整 [逐项审计](../reviews/P16-dead-members.md) 与 [T4证据](../reviews/P16-web-cleanup-review.md#12-t4-死成员与历史-52-行) 可复核。
+
+本期T4子项已核，T5告警终态、T11全分支复核和M4收尾仍待办；顶部status保持open，不用此回执提前关闭交接。

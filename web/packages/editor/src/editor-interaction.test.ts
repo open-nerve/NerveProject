@@ -26,8 +26,6 @@ import type { EditorRefApi, TExtensions, TFileHandler, TMentionHandler } from "@
 
 const fileHandler: TFileHandler = {
   assetsUploadStatus: {},
-  cancel: () => {},
-  checkIfAssetExists: async () => true,
   delete: async () => {},
   getAssetDownloadSrc: async (path) => path,
   getAssetSrc: async (path) => path,
@@ -197,6 +195,21 @@ describe("a rich-text editor built like the kept ones", () => {
     typeText(editable, "check the result");
     expect(parse(editable.getHTML()).querySelectorAll("li")).toHaveLength(2);
     expect(editable.getText()).toContain("check the result");
+  });
+
+  it("observes a browser edit inside a table and keeps the NodeView content after an update", async () => {
+    const editor = await createEditor({ content: "<table><tbody><tr><td><p>Before</p></td></tr></tbody></table>" });
+    const cell = editor.view.dom.querySelector("td p")!;
+    expect(cell.textContent).toBe("Before");
+    // This is the DOM change made by native typing/IME; it must be read back by ProseMirror's real observer.
+    cell.firstChild!.textContent = "After";
+    await vi.waitFor(() => expect(editor.getText()).toContain("After"));
+    expect(parse(editor.getHTML()).querySelector("td p")?.textContent).toBe("After");
+    editor.commands.setTextSelection(3);
+    expect(editor.commands.addColumnAfter()).toBe(true);
+    expect(editor.view.dom.querySelectorAll("col")).toHaveLength(2);
+    expect(editor.view.dom.querySelectorAll("td")).toHaveLength(2);
+    expect(editor.getText()).toContain("After");
   });
 
   it("inserts a user mention that is saved, read back and copied as Markdown", async () => {

@@ -96,7 +96,7 @@ it("actual hook and actions issue delayed PATCH; session change suppresses refus
   const probe = await mounted();
   const request = await requestedIssue(
     state.tab!.nerve,
-    () => probe.drop({ columnId: "", groupId: "", id: "x" }, { columnId: "", groupId: "", id: "n" }),
+    () => probe.drop({ groupId: "", id: "x" }, { groupId: "", id: "n" }),
     ["PATCH", "/api/v0/issues/x"]
   );
   expect(request.call.body).toEqual({ sort_order: -63535 });
@@ -109,7 +109,7 @@ it("actual hook and actions issue delayed PATCH; session change suppresses refus
 });
 it("workspace draft never enters ordinary issue drag API", async () => {
   const probe = await mounted(EIssuesStoreType.WORKSPACE_DRAFT);
-  await probe.drop({ columnId: "", groupId: "", id: "x" }, { columnId: "", groupId: "", id: "n" });
+  await probe.drop({ groupId: "", id: "x" }, { groupId: "", id: "n" });
   expect(state.tab!.nerve.calls).toEqual([]);
   await probe.close();
 });
@@ -120,7 +120,7 @@ it.each(["unmount", "route", "binding", "permissionABA"] as const)(
     const probe = await mounted();
     const request = await requestedIssue(
       state.tab!.nerve,
-      () => probe.drop({ columnId: "", groupId: "", id: "x" }, { columnId: "", groupId: "", id: "n" }),
+      () => probe.drop({ groupId: "", id: "x" }, { groupId: "", id: "n" }),
       ["PATCH", "/api/v0/issues/x"]
     );
     if (change === "unmount") await probe.close();
@@ -147,7 +147,7 @@ it("current refusal is localized by problem code", async () => {
   const probe = await mounted();
   const request = await requestedIssue(
     state.tab!.nerve,
-    () => probe.drop({ columnId: "", groupId: "", id: "x" }, { columnId: "", groupId: "", id: "n" }),
+    () => probe.drop({ groupId: "", id: "x" }, { groupId: "", id: "n" }),
     ["PATCH", "/api/v0/issues/x"]
   );
   request.call.answer(problem(403, "forbidden"));
@@ -157,7 +157,7 @@ it("current refusal is localized by problem code", async () => {
 });
 it("a non-manual sort never sends same-column manual reorder", async () => {
   const probe = await mounted(EIssuesStoreType.PROJECT, "-created_at");
-  const pending = probe.drop({ columnId: "", groupId: "", id: "x" }, { columnId: "", groupId: "", id: "n" });
+  const pending = probe.drop({ groupId: "", id: "x" }, { groupId: "", id: "n" });
   await vi.advanceTimersByTimeAsync(1);
   // Release a faulty write before the assertion, so a red run cannot strand the operation.
   state

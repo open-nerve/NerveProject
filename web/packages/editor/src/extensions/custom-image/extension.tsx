@@ -53,7 +53,6 @@ export function CustomImageExtension(options: Props) {
 
       return {
         fileMap: new Map(),
-        deletedImageSet: new Map<string, boolean>(),
         maxFileSize,
       };
     },

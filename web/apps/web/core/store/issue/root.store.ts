@@ -184,7 +184,7 @@ export class IssueRootStore {
     this.archivedIssuesFilter = new ArchivedIssuesFilter(this);
     this.archivedIssues = new ArchivedIssues(this, this.archivedIssuesFilter);
 
-    this.issueKanBanView = new IssueKanBanViewStore(this);
+    this.issueKanBanView = new IssueKanBanViewStore();
     this.issueCalendarView = new CalendarStore(this);
   }
   assertActive(): void {

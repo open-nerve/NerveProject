@@ -6,8 +6,6 @@
 
 export type TFileHandler = {
   assetsUploadStatus: Record<string, number>; // blockId => progress percentage
-  cancel: () => void;
-  checkIfAssetExists: (assetId: string) => Promise<boolean>;
   delete: (assetSrc: string) => Promise<void>;
   getAssetDownloadSrc: (path: string) => Promise<string>;
   getAssetSrc: (path: string) => Promise<string>;

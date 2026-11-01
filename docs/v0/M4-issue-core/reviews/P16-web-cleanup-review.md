@@ -107,3 +107,20 @@ M08一次性合法TS中的嵌套遮蔽只产生一条no-shadow/error并exit1；M
 | 其它含tools/E | 0 | 0 |
 
 总计184→129；八条被屏蔽的隐藏诊断未计入原cap，不拿解除屏蔽后的临时192作为上限。所有本Task实际变更文件零诊断，完整M4期间文件与M4领域剩余仍在T5处理。原始证据在本worktree证据根：t3-before/unsuppressed/after-r2的逐包JSON与rows、t3-removed-suppressions、t3-suppression-final、t3-rule-examples、t3-M10补丁/恢复hash、t3-owned-ui-green、t3-shared-build、t3-final-lint-web-r2、t3-final-knip-r2、t3-final-test-web及对应raw。阅读发现的编辑器生命周期问题已记待核清单，后续T4/T5继续根因核验，不提前宣称整分支终审通过。
+
+
+## 12. T4 死成员与历史 52 行
+
+Task BASE `a3af031b`。typegen 后按 M1 附录原脚本重新扫描，未改变 DOMAINS、过滤测试或重新定义 dead。准备453行到T4起点449行的四项差异、每条声明和读者/验证、历史52行与实际删除提交见 [逐项审计](P16-dead-members.md)。449项中删除91项及独占链，保留358项；全仓 member875→801、prop365→334、export21→2。剩余两个 export 是编译负例入口，不执行。没有以候选为零要求删除公开 ref、合并 Commands、NodeView/Plugin 或结构类型合同。表格六列不再构造无人读取的第三参数，FilterInstance 的无读者 id 删除后同步删独占 uuid 依赖和对应 lock importer 三行。
+
+历史52行分别在 P11/P14/P15 已删除，原始报告、文件内 owner.symbol 与删除 diff 逐名核准。WorkspaceService 四个 M7 view 方法仍有 store 读者和传输契约测试；类型文件的其它角色/引导声明保持，不能把旧候选消失写成整文件消失。T4 新增 ledger 是逐项审计表，行数来自449项记录而非组件职责扩张。
+
+验证：`t4-static-final-types-r2` 11任务通过；删 uuid 后 `t4-knip-r2` 通过；`t4-web-tests` 18任务通过、零缓存；`t4-lint-web` 54任务通过。web cap79→78、utils5→4，其余不变，总127；custom-image/block 两条既有告警仍按已批准 T5 处理，不宣称 T4 所碰文件全零。`t4-final-ast` 的 M4 报告 SHA256 为 `70710c06dcc6fa61088e6b9e6ae5182bf61420071bc5734a823c126a5d174df3`；AST/knip/全前端输入相同 `2b814a18bb5c31087bba5116de2a811721429bcf95325b460219ade78422eae4`。lint 在补 ledger/精确 cap 后执行，原始 receipt 记录差异。此组输入还包含下节路由修复的三个未提交文件；不将它伪称仅 T4 提交的独立测试，T5 全门禁将验证合并输入。
+
+M11 删除审计输入 D001，真实 ledger checker 报 missing rows；恢复449行及原脚本hash后通过。M12 将 TableView.contentDOM 改为 undefined，类型仍通过，但真实编辑器表格单元格消失、编辑测试失败；恢复字节后测试通过。该测试基线已绿，只补动态协议保护，不宣称原实现有缺陷。M11 为审计反证、M12 为真实 DOM 行为反证，补丁/红日志/恢复hash分别保留。对照原报告的第三方 code/codeBlock 合并声明被证明仍有类型消费者，尝试删除造成指定 TS2717 后原字节恢复，没有为了降数留破坏。
+
+## 13. T2 检查点 CI 的 I13 失败与后续处理
+
+准确提交 `f0e2ac3c599e4e79f4ca5c0c9aae6b756fa19d39` 的 [CI 41272608224](https://github.com/open-nerve/NerveProject/actions/runs/41272608224) server/web 成功，E2E 278通过、I13历史分页1失败，不能记为该检查点全绿。连接器取得作业124750553462日志与报告13070691374，原报告zip SHA256 `595f454dd220ab19b705b52072fa0430a450acdeeaa3bd020d09021f973ec3b4`。trace显示 cursor 第二页已成功返回，随后当前编号路由的验证读完成导致历史重新挂载，首页又覆盖成两项。
+
+本地有效红 `ci-history-warm-route-red-r2` 证实：返回访问过的编号路由，SWR已有旧数据时 isLoading=false，但本次读取尚在 isValidating，页头/正文提前进入交互。两个路由宿主等待本次 lookup 完成，`ci-history-warm-route-green` 14条通过；首次红因假时钟尚未过 dedupe cleanup 未抵达被验行为，不计有效红。此为既有路由边界的局部修复，沿用原 owner 和读取合同，不改权限/分页协议。真实 I13 页面复验与准确后续提交 CI 归 T5，当前仍待验证。

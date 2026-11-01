@@ -85,8 +85,8 @@ it("calendar sends generated update fields and a destination drop", async () => 
 it("group consumer passes neighbor IDs and computes legal none values from held issue", async () => {
   const update = vi.fn().mockResolvedValue(undefined);
   await handleGroupDragDrop(
-    { id: "x", columnId: "high", groupId: "high", subGroupId: "u" },
-    { id: "neighbor", columnId: "none", groupId: "none", subGroupId: "none" },
+    { id: "x", groupId: "high", subGroupId: "u" },
+    { id: "neighbor", groupId: "none", subGroupId: "none" },
     () => ({ ...issueOf("x"), priority: "high", assignee_ids: ["u"] }),
     () => ["neighbor"],
     update,
@@ -265,8 +265,8 @@ it.each(["labels", "assignees"] as const)(
       tab.nerve,
       () =>
         handleGroupDragDrop(
-          { id: "x", columnId: "high", groupId: "high", subGroupId: "old" },
-          { id: undefined, columnId: "none", groupId: "none", subGroupId: "none" },
+          { id: "x", groupId: "high", subGroupId: "old" },
+          { id: undefined, groupId: "none", subGroupId: "none" },
           root.issues.getIssueById,
           root.projectIssues.getIssueIds,
           (project, id, makeBody, drop) => root.projectIssues.dropIssue("ws", project, id, makeBody, drop),
@@ -463,8 +463,8 @@ it.each(["labels", "assignees"] as const)("moving one %s group preserves the lat
     tab.nerve,
     () =>
       handleGroupDragDrop(
-        { id: "x", columnId: "source", groupId: "source" },
-        { id: undefined, columnId: "destination", groupId: "destination" },
+        { id: "x", groupId: "source" },
+        { id: undefined, groupId: "destination" },
         root.issues.getIssueById,
         root.projectIssues.getIssueIds,
         (project, id, body, drop) => root.projectIssues.dropIssue("ws", project, id, body, drop),

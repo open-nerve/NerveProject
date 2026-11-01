@@ -15,15 +15,9 @@ import {
   CellSelection,
   columnResizing,
   deleteCellSelection,
-  deleteTable,
-  fixTables,
   goToNextCell,
-  mergeCells,
-  setCellAttr,
-  splitCell,
   tableEditing,
   toggleHeader,
-  toggleHeaderCell,
 } from "@tiptap/pm/tables";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
@@ -60,18 +54,11 @@ declare module "@tiptap/core" {
       addRowBefore: () => ReturnType;
       addRowAfter: () => ReturnType;
       deleteRow: () => ReturnType;
-      deleteTable: () => ReturnType;
-      mergeCells: () => ReturnType;
-      splitCell: () => ReturnType;
       toggleHeaderColumn: () => ReturnType;
       toggleHeaderRow: () => ReturnType;
-      toggleHeaderCell: () => ReturnType;
       clearSelectedCells: () => ReturnType;
-      mergeOrSplit: () => ReturnType;
-      setCellAttribute: (name: string, value: any) => ReturnType;
       goToNextCell: () => ReturnType;
       goToPreviousCell: () => ReturnType;
-      fixTables: () => ReturnType;
       setCellSelection: (position: { anchorCell: number; headCell?: number }) => ReturnType;
     };
   }
@@ -160,18 +147,6 @@ export const Table = Node.create<TableOptions>({
         ({ state, dispatch }) =>
           addRowAfter(state, dispatch),
       deleteRow: deleteRowOrTable,
-      deleteTable:
-        () =>
-        ({ state, dispatch }) =>
-          deleteTable(state, dispatch),
-      mergeCells:
-        () =>
-        ({ state, dispatch }) =>
-          mergeCells(state, dispatch),
-      splitCell:
-        () =>
-        ({ state, dispatch }) =>
-          splitCell(state, dispatch),
       toggleHeaderColumn:
         () =>
         ({ state, dispatch }) =>
@@ -180,27 +155,10 @@ export const Table = Node.create<TableOptions>({
         () =>
         ({ state, dispatch }) =>
           toggleHeader("row")(state, dispatch),
-      toggleHeaderCell:
-        () =>
-        ({ state, dispatch }) =>
-          toggleHeaderCell(state, dispatch),
       clearSelectedCells:
         () =>
         ({ state, dispatch }) =>
           deleteCellSelection(state, dispatch),
-      mergeOrSplit:
-        () =>
-        ({ state, dispatch }) => {
-          if (mergeCells(state, dispatch)) {
-            return true;
-          }
-
-          return splitCell(state, dispatch);
-        },
-      setCellAttribute:
-        (name, value) =>
-        ({ state, dispatch }) =>
-          setCellAttr(name, value)(state, dispatch),
       goToNextCell:
         () =>
         ({ state, dispatch }) =>
@@ -209,15 +167,6 @@ export const Table = Node.create<TableOptions>({
         () =>
         ({ state, dispatch }) =>
           goToNextCell(-1)(state, dispatch),
-      fixTables:
-        () =>
-        ({ state, dispatch }) => {
-          if (dispatch) {
-            fixTables(state);
-          }
-
-          return true;
-        },
       setCellSelection:
         (position) =>
         ({ tr, dispatch }) => {
@@ -268,10 +217,10 @@ export const Table = Node.create<TableOptions>({
   },
 
   addNodeView() {
-    return ({ editor, node, decorations, getPos }) => {
+    return ({ node }) => {
       const { cellMinWidth } = this.options;
 
-      return new TableView(node, cellMinWidth, decorations, editor, getPos);
+      return new TableView(node, cellMinWidth);
     };
   },
 

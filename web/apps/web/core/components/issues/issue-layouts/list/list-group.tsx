@@ -16,7 +16,6 @@ import { observer } from "mobx-react";
 // nerve imports
 import { DRAG_ALLOWED_GROUPS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type {
   IGroupByColumn,
   TIssueGroupByOptions,
@@ -199,16 +198,6 @@ export const ListGroup = observer(function ListGroup(props: Props) {
 
           if (!source || !destination) return;
 
-          if (group.isDropDisabled) {
-            if (group.dropErrorMessage)
-              setToast({
-                type: TOAST_TYPE.WARNING,
-                title: t("common.warning"),
-                message: group.dropErrorMessage,
-              });
-            return;
-          }
-
           handleOnDrop(source, destination);
 
           if (!isExpanded) {
@@ -219,8 +208,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
     );
   }, [group, orderBy, getGroupIndex, handleOnDrop, isExpanded, handleCollapsedGroups, t]);
   const isDragAllowed = group_by ? DRAG_ALLOWED_GROUPS.includes(group_by) : true;
-  const canOverlayBeVisible = orderBy !== "sort_order" || !!group.isDropDisabled;
-  const isDropDisabled = !!group.isDropDisabled;
+  const canOverlayBeVisible = orderBy !== "sort_order";
 
   const isGroupByCreatedBy = group_by === "created_by";
   const shouldExpand = (!!groupIssueCount && isExpanded) || !group_by;
@@ -230,7 +218,6 @@ export const ListGroup = observer(function ListGroup(props: Props) {
       ref={groupRef}
       className={cn(`relative flex flex-shrink-0 flex-col`, {
         "border-accent-strong": isDraggingOverColumn,
-        "border-danger-subtle": isDraggingOverColumn && isDropDisabled,
       })}
     >
       <Row
@@ -254,8 +241,6 @@ export const ListGroup = observer(function ListGroup(props: Props) {
           <GroupDragOverlay
             dragColumnOrientation={dragColumnOrientation}
             canOverlayBeVisible={canOverlayBeVisible}
-            isDropDisabled={isDropDisabled}
-            dropErrorMessage={group.dropErrorMessage}
             orderBy={orderBy}
             isDraggingOverColumn={isDraggingOverColumn}
           />

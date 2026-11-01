@@ -159,4 +159,4 @@ EmojiReaction.displayName = "EmojiReaction";
 EmojiReactionButton.displayName = "EmojiReactionButton";
 EmojiReactionGroup.displayName = "EmojiReactionGroup";
 
-export { EmojiReactionButton, EmojiReactionGroup };
+export { EmojiReactionGroup };

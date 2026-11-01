@@ -27,48 +27,40 @@ type TBaseDateFilterFieldConfig = TBaseFilterFieldConfig & {
 
 /**
  * Date filter configuration - for temporal filtering.
- * - defaultValue: Initial date/time value
  * - min: Minimum allowed date
  * - max: Maximum allowed date
  */
-export type TDateFilterFieldConfig<V extends TFilterValue> = TBaseDateFilterFieldConfig & {
+export type TDateFilterFieldConfig = TBaseDateFilterFieldConfig & {
   type: typeof FILTER_FIELD_TYPE.DATE;
-  defaultValue?: V;
 };
 
 /**
  * Date range filter configuration - for temporal filtering.
- * - defaultValue: Initial date/time range values
  * - min: Minimum allowed date
  * - max: Maximum allowed date
  */
-export type TDateRangeFilterFieldConfig<V extends TFilterValue> = TBaseDateFilterFieldConfig & {
+export type TDateRangeFilterFieldConfig = TBaseDateFilterFieldConfig & {
   type: typeof FILTER_FIELD_TYPE.DATE_RANGE;
-  defaultValue?: V[];
 };
 
 // -------- SELECT FILTER CONFIGURATIONS --------
 
 /**
  * Single-select filter configuration - dropdown with one selectable option.
- * - defaultValue: Initial selected value
  * - getOptions: Options as static array or async function
  */
 export type TSingleSelectFilterFieldConfig<V extends TFilterValue> = TBaseFilterFieldConfig & {
   type: typeof FILTER_FIELD_TYPE.SINGLE_SELECT;
-  defaultValue?: V;
   getOptions: IFilterOption<V>[] | (() => IFilterOption<V>[] | Promise<IFilterOption<V>[]>);
 };
 
 /**
  * Multi-select filter configuration - allows selecting multiple options.
- * - defaultValue: Initial selected values array
  * - getOptions: Options as static array or async function
  * - singleValueOperator: Operator to show when single value is selected
  */
 export type TMultiSelectFilterFieldConfig<V extends TFilterValue> = TBaseFilterFieldConfig & {
   type: typeof FILTER_FIELD_TYPE.MULTI_SELECT;
-  defaultValue?: V[];
   getOptions: IFilterOption<V>[] | (() => IFilterOption<V>[] | Promise<IFilterOption<V>[]>);
   singleValueOperator: TSupportedOperators;
 };
@@ -79,8 +71,8 @@ export type TMultiSelectFilterFieldConfig<V extends TFilterValue> = TBaseFilterF
  * All supported filter configurations
  */
 export type TSupportedFilterFieldConfigs<V extends TFilterValue = TFilterValue> =
-  | TDateFilterFieldConfig<V>
-  | TDateRangeFilterFieldConfig<V>
+  | TDateFilterFieldConfig
+  | TDateRangeFilterFieldConfig
   | TSingleSelectFilterFieldConfig<V>
   | TMultiSelectFilterFieldConfig<V>;
 

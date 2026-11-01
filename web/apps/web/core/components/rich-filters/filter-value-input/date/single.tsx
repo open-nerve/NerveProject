@@ -13,7 +13,7 @@ import { DateDropdown } from "@/components/dropdowns/date";
 import { COMMON_FILTER_ITEM_BORDER_CLASSNAME, EMPTY_FILTER_PLACEHOLDER_TEXT } from "../../shared";
 
 type TSingleDateFilterValueInputProps<P extends TFilterProperty> = {
-  config: TDateFilterFieldConfig<string>;
+  config: TDateFilterFieldConfig;
   condition: TFilterConditionNode<P, string>;
   isDisabled?: boolean;
   onChange: (value: string | null | undefined) => void;

@@ -6,17 +6,10 @@
 
 // nerve imports
 import { Loader } from "@nerve/ui";
-import { cn } from "@nerve/utils";
 
-type Props = {
-  className?: string;
-};
-
-export function DescriptionInputLoader(props: Props) {
-  const { className } = props;
-
+export function DescriptionInputLoader() {
   return (
-    <Loader className={cn("space-y-2", className)}>
+    <Loader className="space-y-2">
       <Loader.Item width="100%" height="26px" />
       <div className="flex items-center gap-2">
         <Loader.Item width="26px" height="26px" />

@@ -20,7 +20,7 @@ import { useProjectState } from "@/hooks/store/use-project-state";
 type Props = {
   issue: Issue;
   onClose: () => void;
-  onChange: (issue: Issue, data: Partial<IssueDetail>, updates: any) => void;
+  onChange: (issue: Issue, data: Partial<IssueDetail>) => void;
   disabled: boolean;
 };
 
@@ -38,14 +38,7 @@ export const SpreadsheetDueDateColumn = observer(function SpreadsheetDueDateColu
         minDate={getDate(issue.start_date)}
         onChange={(data) => {
           const targetDate = data ? renderFormattedPayloadDate(data) : null;
-          onChange(
-            issue,
-            { target_date: targetDate },
-            {
-              changed_property: "target_date",
-              change_details: targetDate,
-            }
-          );
+          onChange(issue, { target_date: targetDate });
         }}
         disabled={disabled}
         placeholder="Due date"

@@ -312,6 +312,4 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
       displayFilterKeys.includes(serverDisplayfilter)
     );
   };
-
-  getShouldClearIssues = (display: IIssueDisplayFilterOptions) => Object.hasOwn(display, "layout");
 }

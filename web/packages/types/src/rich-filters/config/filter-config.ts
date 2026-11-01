@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { FC, ReactNode, SVGAttributes } from "react";
+import type { FC, SVGAttributes } from "react";
 import type { TFilterProperty } from "../expression";
 import type { TOperatorConfigMap } from "../operator-configs";
 
@@ -22,6 +22,4 @@ export type TFilterConfig<P extends TFilterProperty> = {
   isEnabled: boolean;
   allowMultipleFilters?: boolean;
   supportedOperatorConfigsMap: TOperatorConfigMap;
-  rightContent?: ReactNode; // content to display on the right side of the filter option in the dropdown
-  tooltipContent?: ReactNode; // content to display when hovering over the applied filter item in the filter list
 };

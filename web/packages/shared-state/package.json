@@ -26,8 +26,7 @@
     "@nerve/utils": "workspace:*",
     "lodash-es": "catalog:",
     "mobx": "catalog:",
-    "mobx-utils": "catalog:",
-    "uuid": "catalog:"
+    "mobx-utils": "catalog:"
   },
   "devDependencies": {
     "@nerve/typescript-config": "workspace:*",

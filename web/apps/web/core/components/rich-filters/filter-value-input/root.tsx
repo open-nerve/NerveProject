@@ -58,7 +58,7 @@ export const FilterValueInput = observer(function FilterValueInput<P extends TFi
   if (filterFieldConfig?.type === FILTER_FIELD_TYPE.DATE) {
     return (
       <SingleDateFilterValueInput<P>
-        config={filterFieldConfig as TDateFilterFieldConfig<string>}
+        config={filterFieldConfig as TDateFilterFieldConfig}
         condition={condition as TFilterConditionNode<P, string>}
         isDisabled={isDisabled}
         onChange={(value) => onChange(value as SingleOrArray<V>)}
@@ -71,7 +71,7 @@ export const FilterValueInput = observer(function FilterValueInput<P extends TFi
     return (
       <DateRangeFilterValueInput<P>
         key={condition.id}
-        config={filterFieldConfig as TDateRangeFilterFieldConfig<string>}
+        config={filterFieldConfig as TDateRangeFilterFieldConfig}
         condition={condition as TFilterConditionNode<P, string>}
         isDisabled={isDisabled}
         onChange={(value) => onChange(value as SingleOrArray<V>)}

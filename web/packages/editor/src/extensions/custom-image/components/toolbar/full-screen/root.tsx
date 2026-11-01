@@ -15,7 +15,6 @@ type Props = {
   image: {
     aspectRatio: number;
     downloadSrc: string;
-    height: string;
     src: string;
     width: string;
   };

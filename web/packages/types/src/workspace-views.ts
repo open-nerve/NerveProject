@@ -38,6 +38,6 @@ export interface IWorkspaceView {
   };
 }
 
-export const STATIC_VIEW_TYPES = ["all-issues", "assigned", "created", "subscribed"];
+const STATIC_VIEW_TYPES = ["all-issues", "assigned", "created", "subscribed"];
 
 export type TStaticViewTypes = (typeof STATIC_VIEW_TYPES)[number];

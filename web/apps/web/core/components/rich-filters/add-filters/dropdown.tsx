@@ -45,7 +45,6 @@ export const AddFilterDropdown = observer(function AddFilterDropdown<
           )}
           <span>{config.label}</span>
         </div>
-        {config.rightContent}
       </div>
     ),
     query: config.label.toLowerCase(),

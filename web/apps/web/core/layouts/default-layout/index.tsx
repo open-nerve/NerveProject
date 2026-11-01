@@ -9,14 +9,11 @@ import { cn } from "@nerve/utils";
 
 type Props = {
   children: ReactNode;
-  gradient?: boolean;
   className?: string;
 };
 
-function DefaultLayout({ children, gradient = false, className }: Props) {
-  return (
-    <div className={cn(`h-screen w-full overflow-hidden ${gradient ? "" : "bg-surface-1"}`, className)}>{children}</div>
-  );
+function DefaultLayout({ children, className }: Props) {
+  return <div className={cn("h-screen w-full overflow-hidden bg-surface-1", className)}>{children}</div>;
 }
 
 export default DefaultLayout;

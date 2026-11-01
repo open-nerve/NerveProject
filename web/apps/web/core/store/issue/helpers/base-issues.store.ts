@@ -55,11 +55,6 @@ export class BaseIssuesStore<TFilter extends IBaseIssueFilterStore = IBaseIssueF
     this.currentList?.verifying
       ? "init-loader"
       : this.currentList?.loaders.get(group === undefined ? "whole" : pagePartKey({ group, subgroup }));
-  clear = (_clearOptions = true): void => {
-    runInAction(() => {
-      this.currentList = undefined;
-    });
-  };
   createIssue = (slug: string, project: string, body: IssueCreate): Promise<IssueDetail> =>
     this.rootIssueStore.createIssue(this.rootIssueStore.scope(slug, project), body);
   updateIssue = async (slug: string, project: string, id: string, body: IssueUpdate): Promise<void> => {

@@ -313,7 +313,6 @@ export function CustomImageBlock(props: CustomImageBlockProps) {
             handleAlignmentChange={(alignment) =>
               updateAttributesSafely({ alignment }, "Failed to update attributes while changing alignment:")
             }
-            height={size.height}
             isTouchDevice={isTouchDevice}
             width={size.width}
             src={resolvedImageSrc}

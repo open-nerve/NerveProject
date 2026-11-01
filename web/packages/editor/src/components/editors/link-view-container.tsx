@@ -67,9 +67,8 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
     clearHoverTimeout();
     hoverTimeoutRef.current = window.setTimeout(() => {
       setIsOpen(false);
-      editorState.linkExtensionStorage.isPreviewOpen = false;
     }, 400);
-  }, [clearHoverTimeout, editorState.linkExtensionStorage]);
+  }, [clearHoverTimeout]);
 
   const handleLinkHover = useCallback(
     (event: MouseEvent) => {
@@ -113,7 +112,6 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
             to: pos + node.nodeSize,
             closeLinkView: () => {
               setIsOpen(false);
-              editorState.linkExtensionStorage.isPreviewOpen = false;
             },
           });
           setIsOpen(true);

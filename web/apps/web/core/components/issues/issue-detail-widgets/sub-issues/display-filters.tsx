@@ -81,7 +81,6 @@ export const SubIssueDisplayFilters = observer(function SubIssueDisplayFilters(p
                     group_by: val,
                   })
                 }
-                ignoreGroupedFilters={[]}
               />
             </div>
 

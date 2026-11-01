@@ -16,12 +16,11 @@ type Props = {
   getFloatingProps: UseInteractionsReturn["getFloatingProps"];
   getReferenceProps: UseInteractionsReturn["getReferenceProps"];
   menuButton: React.ReactNode;
-  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   options: UseFloatingReturn;
 };
 
 export function FloatingMenuRoot(props: Props) {
-  const { children, classNames, getFloatingProps, getReferenceProps, menuButton, onClick, options } = props;
+  const { children, classNames, getFloatingProps, getReferenceProps, menuButton, options } = props;
   // derived values
   const { refs, floatingStyles, context } = options;
 
@@ -33,9 +32,8 @@ export function FloatingMenuRoot(props: Props) {
           {...getReferenceProps()}
           type="button"
           className={classNames?.button}
-          onClick={(e) => {
+          onClick={() => {
             context.onOpenChange(!context.open);
-            onClick?.(e);
           }}
         >
           {menuButton}

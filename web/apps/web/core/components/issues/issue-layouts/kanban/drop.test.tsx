@@ -87,8 +87,8 @@ it.each([403, 422])("refused %s drop leaves cards, canonical and counts unchange
 it("an initially missing drop target cannot silently become the column tail", async () => {
   const update = vi.fn();
   await handleGroupDragDrop(
-    { id: "first", columnId: "todo", groupId: "todo" },
-    { id: "gone", columnId: "done", groupId: "done" },
+    { id: "first", groupId: "todo" },
+    { id: "gone", groupId: "done" },
     () => first,
     () => ["a", "b"],
     update,
