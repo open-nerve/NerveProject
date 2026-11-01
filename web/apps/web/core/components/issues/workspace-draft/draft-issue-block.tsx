@@ -17,7 +17,7 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 
 import { EIssuesStoreType } from "@nerve/types";
 import type { TContextMenuItem } from "@nerve/ui";
-import { Row } from "@nerve/ui";
+import { ContextMenu, Row } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
@@ -61,7 +61,7 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
   const MENU_ITEMS: TContextMenuItem[] = [
     {
       key: "edit",
-      title: "edit",
+      title: t("edit"),
       icon: EditOutline,
       action: () => {
         setIssueToEdit(issue);
@@ -70,7 +70,7 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
     },
     {
       key: "make-a-copy",
-      title: "make_a_copy",
+      title: t("make_a_copy"),
       icon: CopyOutline,
       action: () => {
         setCreateUpdateIssueModal(true);
@@ -78,7 +78,7 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
     },
     {
       key: "move-to-issues",
-      title: "move_to_project",
+      title: t("move_to_project"),
       icon: SquareStackIcon,
       action: () => {
         setMoveToIssue(true);
@@ -88,7 +88,7 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
     },
     {
       key: "delete",
-      title: "delete",
+      title: t("delete"),
       icon: DeleteOutline,
       action: () => {
         setDeleteIssueModal(true);
@@ -98,6 +98,7 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
 
   return (
     <>
+      <ContextMenu parentRef={issueRef} items={MENU_ITEMS} />
       <WorkspaceDraftIssueDeleteIssueModal
         data={issue}
         workspaceSlug={workspaceSlug}
@@ -171,7 +172,7 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
                 "lg:hidden": !isSidebarCollapsed,
               })}
             >
-              <WorkspaceDraftIssueQuickActions parentRef={issueRef} MENU_ITEMS={MENU_ITEMS} />
+              <WorkspaceDraftIssueQuickActions MENU_ITEMS={MENU_ITEMS} label={t("common.item_options", { name })} />
             </div>
           </div>
 
@@ -190,7 +191,7 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
                 "lg:flex": !isSidebarCollapsed,
               })}
             >
-              <WorkspaceDraftIssueQuickActions parentRef={issueRef} MENU_ITEMS={MENU_ITEMS} />
+              <WorkspaceDraftIssueQuickActions MENU_ITEMS={MENU_ITEMS} label={t("common.item_options", { name })} />
             </div>
           </div>
         </Row>

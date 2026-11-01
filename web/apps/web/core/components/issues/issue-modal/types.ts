@@ -34,5 +34,6 @@ export type IssueDescriptionChangeSource = "load" | "migration" | "edit";
 /** Local command metadata; never part of a work item or draft payload. */
 export type IssueFormSubmitOptions = {
   isDescriptionMigration?: boolean;
+  closeAfterSave?: boolean;
   onRefused?: (error: unknown) => void;
 };

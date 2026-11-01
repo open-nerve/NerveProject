@@ -97,3 +97,7 @@ typed profile view 已从路由收窄并向下传递，web 中 as TProfileViews 
 issue/draft 两类表单迁移与真实编辑已区分；五处零生产 getMarkdown 读者的扩展序列化删除，14 组 HTML/恶意属性/真实编辑器安全 fixture 保留。原始 deadsym 逐项查读者，最终改动范围 115 候选/26 文件已裁定，真死分支及五个本地类型 export 已删；13 个公开 ref 合同成员保持兼容，不能称全局 dead 已清零，P16/no-shadow 终态仍待后段。
 
 共同证据：[阶段 review §9–14](../reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[三浏览器逐条矩阵](../reviews/P14-browser-matrix.md)与[整审 re-21](../../../reviews/re-21-M4P14整体审核.md)。验收输入 b7d1f0c2（含 I22 路由及 I9 编辑器就绪前置修正），本地七项分层门禁、默认 E2E 238/238、三引擎各44/44；最终文稿 CI 按后置回执。顶层 status 仍 open，真正 M4 收尾再按完整关闭条件统一关闭。
+
+## P14 集成关闭回执（2026-10-31）
+
+上述 P14 对应子项已随授权 --no-ff 集成至 main 7a81ea18；[准确 main CI](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务全绿，原分支与集成修复分支的证据逐 hash 归档复验后，两个工作树和远端/本地分支已正常清理。完整输入、两次初始失败、修复及新归档路径见 [P14 review §15–16](../reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31)。本文件顶部 status 仍 open，其它阶段和 M4 总关闭条件不提前处理。

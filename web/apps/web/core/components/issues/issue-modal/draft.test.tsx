@@ -7,7 +7,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
-import { draftOf, issueStoreTab, requestedIssue } from "@/store/issue/fake-issues";
+import { draftOf, issueDetailOf, issueStoreTab, requestedIssue } from "@/store/issue/fake-issues";
 import { toasts } from "@/lib/fake-toast";
 import { EIssuesStoreType } from "@nerve/types";
 import type { RichTextEditor } from "@/components/editor/rich-text";
@@ -98,7 +98,7 @@ vi.mock("../workspace-draft/quick-action", () => ({
 }));
 vi.mock("./modal", () => ({
   CreateUpdateIssueModal: (props: IssuesModalProps) =>
-    props.isOpen ? <CreateUpdateIssueModalBase {...props} withDraftIssueWrapper={false} /> : null,
+    props.isOpen ? <CreateUpdateIssueModalBase {...props} /> : null,
 }));
 vi.mock("@nerve/ui", async (original) => ({
   ...(await original<typeof import("@nerve/ui")>()),
@@ -136,7 +136,21 @@ beforeEach(async () => {
   ui.close.mockClear();
   ui.confirmed.mockClear();
   toasts.length = 0;
-  row = { ...draftOf("d"), project_id: null };
+  row = {
+    ...draftOf("d"),
+    project_id: null,
+    payload: {
+      name: "before",
+      description_html: "<p>Keep unresolved content</p>",
+      priority: "future-invalid-priority",
+      state_id: "missing-state",
+      parent_id: "missing-parent",
+      assignee_ids: ["missing-member"],
+      label_ids: ["missing-label"],
+      start_date: "2026-10-01",
+      target_date: "2026-10-30",
+    },
+  };
   const read = await requestedIssue(tab.nerve, () => tab.app.issue.workspaceDraftIssues.fetchIssues("ws"), [
     "GET",
     "/api/v0/workspaces/ws/drafts",
@@ -184,7 +198,7 @@ const submit = () =>
   act(async () =>
     container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
   );
-it("opens a real editor with no eligible projects and saves an incomplete draft", async () => {
+it("savesUnassignedDraftWithoutLosingUntouchedFields: empty name preserves unknown priority and all unresolved references", async () => {
   await render();
   expect(container.querySelector('[aria-label="description"]')).not.toBeNull();
   await input('input[name="name"]', "");
@@ -196,6 +210,25 @@ it("opens a real editor with no eligible projects and saves an incomplete draft"
   expect(ui.close).toHaveBeenCalledOnce();
   expect(ui.confirmed).toHaveBeenCalledOnce();
   expect(tab.nerve.calls).toHaveLength(1);
+});
+it.each(["submit", "close"])("copying a native draft preserves its unresolved payload via %s", async (action) => {
+  await act(async () => renderer.render(<DraftIssueBlock workspaceSlug="ws" issueId="d" />));
+  await click("make-a-copy");
+  await input('input[name="name"]', "Copied draft");
+  if (action === "submit") await submit();
+  else {
+    await click("discard");
+    await click("save_to_drafts", [...container.querySelectorAll('[role="dialog"]')].at(-1)!);
+  }
+  await act(async () => until(() => tab.nerve.calls.length === 1, "copy draft"));
+  expect(tab.nerve.calls[0]).toMatchObject({
+    method: "POST",
+    path: "/api/v0/workspaces/ws/drafts",
+    body: { project_id: null, payload: { ...row.payload, name: "Copied draft" } },
+  });
+  await act(async () => tab.nerve.calls[0]!.answer(problem(422, "validation_failed")));
+  expect(container.querySelector<HTMLInputElement>('input[name="name"]')!.value).toBe("Copied draft");
+  expect(tab.app.issue.workspaceDraftIssues.getIssueById("d")).toEqual(row);
 });
 it.each([403, 422])("keepsDraftInputAndDialogAfterRefusal (%s)", async (status) => {
   await render();
@@ -236,25 +269,90 @@ it("clearing the selected project is saved as null and is not replaced by the fi
   await expect(reread).resolves.toEqual([saved]);
   expect(tab.app.issue.workspaceDraftIssues.getIssueById("d")?.project_id).toBeNull();
 });
-it("a publish refusal retains the saved native draft and the real form's latest input", async () => {
+it.each([403, 409, 422])(
+  "publishRefusalKeepsConfirmedDraft: refusal %s retains saved native fields and latest input",
+  async (status) => {
+    await render(row, true);
+    await input('input[name="name"]', "publish me");
+    await act(async () =>
+      [...container.querySelectorAll<HTMLButtonElement>("button")]
+        .find((button) => button.textContent === "add_to_project")!
+        .click()
+    );
+    await act(async () => until(() => tab.nerve.calls.length === 1, "publish saves first"));
+    expect(tab.nerve.calls[0]!.method).toBe("PATCH");
+    const saved = { ...row, payload: { ...row.payload, name: "publish me" } };
+    await act(async () => tab.nerve.calls[0]!.answer(json(200, saved)));
+    await act(async () => until(() => tab.nerve.calls.length === 2, "publish request"));
+    expect(tab.nerve.calls[1]!.path).toBe("/api/v0/drafts/d/publish");
+    expect(tab.nerve.calls[1]!.body).toBeUndefined();
+    await act(async () =>
+      tab.nerve.calls[1]!.answer(
+        problem(status, status === 409 ? "issue.draft_changed" : status === 403 ? "forbidden" : "validation_failed")
+      )
+    );
+    expect(ui.close).not.toHaveBeenCalled();
+    expect(tab.app.issue.workspaceDraftIssues.getIssueById("d")).toEqual(saved);
+    expect(container.querySelector<HTMLInputElement>('input[name="name"]')!.value).toBe("publish me");
+  }
+);
+
+it("saveFailureNeverPublishes: repeated publish clicks send one PATCH and keep the form after refusal", async () => {
   await render(row, true);
-  await input('input[name="name"]', "publish me");
-  await act(async () =>
-    [...container.querySelectorAll<HTMLButtonElement>("button")]
-      .find((button) => button.textContent === "add_to_project")!
-      .click()
-  );
-  await act(async () => until(() => tab.nerve.calls.length === 1, "publish saves first"));
-  expect(tab.nerve.calls[0]!.method).toBe("PATCH");
-  const saved = { ...row, payload: { ...row.payload, name: "publish me" } };
-  await act(async () => tab.nerve.calls[0]!.answer(json(200, saved)));
-  await act(async () => until(() => tab.nerve.calls.length === 2, "publish request"));
-  expect(tab.nerve.calls[1]!.path).toBe("/api/v0/drafts/d/publish");
-  expect(tab.nerve.calls[1]!.body).toBeUndefined();
-  await act(async () => tab.nerve.calls[1]!.answer(problem(422, "validation_failed")));
+  await input('input[name="name"]', "keep this input");
+  const publish = [...container.querySelectorAll("button")].find((node) => node.textContent === "add_to_project")!;
+  await act(async () => {
+    publish.click();
+    publish.click();
+  });
+  await act(async () => until(() => tab.nerve.calls.length === 1, "single save"));
+  expect(tab.nerve.calls[0]).toMatchObject({ method: "PATCH", path: "/api/v0/drafts/d" });
+  expect(publish.disabled).toBe(true);
+  await act(async () => tab.nerve.calls[0]!.answer(problem(422, "validation_failed")));
+  expect(tab.nerve.calls).toHaveLength(1);
   expect(ui.close).not.toHaveBeenCalled();
-  expect(tab.app.issue.workspaceDraftIssues.getIssueById("d")).toEqual(saved);
-  expect(container.querySelector<HTMLInputElement>('input[name="name"]')!.value).toBe("publish me");
+  expect(container.querySelector<HTMLInputElement>('input[name="name"]')!.value).toBe("keep this input");
+  expect(tab.app.issue.workspaceDraftIssues.getIssueById("d")).toEqual(row);
+});
+
+it("publishSavesThenSendsNoBody and confirmedPublishRetriesOnlyReads: confirmed publication consumes the draft despite a failed total refresh", async () => {
+  await render(row, true);
+  await input('input[name="name"]', "latest publish");
+  await click("add_to_project");
+  await act(async () => until(() => tab.nerve.calls.length === 1, "save latest form"));
+  const payload = { ...row.payload, name: "latest publish" };
+  expect(tab.nerve.calls[0]).toMatchObject({
+    method: "PATCH",
+    path: "/api/v0/drafts/d",
+    body: { project_id: null, payload },
+  });
+  expect(ui.close).not.toHaveBeenCalled();
+  await act(async () => tab.nerve.calls[0]!.answer(json(200, { ...row, payload })));
+  await act(async () => until(() => tab.nerve.calls.length === 2, "publish saved draft"));
+  expect(tab.nerve.calls[1]).toMatchObject({ method: "POST", path: "/api/v0/drafts/d/publish" });
+  expect(tab.nerve.calls[1]!.body).toBeUndefined();
+  const issue = issueDetailOf("published");
+  await act(async () => tab.nerve.calls[1]!.answer(json(201, issue)));
+  await act(async () => until(() => tab.nerve.calls.length === 3, "confirmed total read"));
+  expect(tab.nerve.calls[2]).toMatchObject({ method: "GET", path: "/api/v0/workspaces/ws/drafts" });
+  await act(async () => tab.nerve.calls[2]!.answer(problem(500, "unavailable")));
+  expect(ui.close).toHaveBeenCalledOnce();
+  expect(tab.app.issue.workspaceDraftIssues.getIssueById("d")).toBeUndefined();
+  expect(tab.app.issue.issues.getIssueDetailById("published")).toEqual(issue);
+  expect(tab.app.issue.workspaceDraftIssues.getError("ws")).toMatchObject({ status: 500 });
+  let retry!: Promise<void>;
+  await act(async () => {
+    retry = tab.app.issue.workspaceDraftIssues.retry("ws");
+  });
+  await act(async () => until(() => tab.nerve.calls.length === 4, "GET-only retry"));
+  expect(tab.nerve.calls[3]).toMatchObject({ method: "GET", path: "/api/v0/workspaces/ws/drafts" });
+  await act(async () => {
+    tab.nerve.calls[3]!.answer(json(200, { data: [], total: 0, next_cursor: null }));
+    await retry;
+  });
+  expect(tab.app.issue.workspaceDraftIssues.getTotal("ws")).toBe(0);
+  expect(tab.nerve.to("/api/v0/drafts/d/publish")).toHaveLength(1);
+  expect(tab.nerve.to("/api/v0/drafts/d")).toHaveLength(1);
 });
 
 it("editsAndDeletesAnUnassignedDraft: the actual row opens an unassigned draft and deletes it with workspace membership", async () => {

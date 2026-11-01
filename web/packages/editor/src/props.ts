@@ -12,18 +12,26 @@ import { processAssetDuplication } from "@/helpers/paste-asset";
 
 type TArgs = {
   editorClassName: string;
+  attributes?: EditorProps["attributes"];
 };
 
 export const CoreEditorProps = (props: TArgs): EditorProps => {
-  const { editorClassName } = props;
+  const { editorClassName, attributes } = props;
 
   return {
-    attributes: {
-      class: cn(
-        "prose-brand prose-headings:font-display font-default max-w-full prose focus:outline-none",
-        editorClassName
-      ),
-    },
+    // TipTap initializes DOM attributes from an object; preserve a caller's existing function contract unchanged.
+    attributes:
+      typeof attributes === "function"
+        ? attributes
+        : {
+            role: "textbox",
+            ...attributes,
+            class: cn(
+              "prose-brand prose-headings:font-display font-default max-w-full prose focus:outline-none",
+              editorClassName,
+              attributes?.class
+            ),
+          },
     handleDOMEvents: {
       keydown: (_view, event) => {
         // prevent default event listeners from firing when slash command is active

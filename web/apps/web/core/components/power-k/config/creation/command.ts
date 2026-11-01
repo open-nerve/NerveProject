@@ -15,6 +15,7 @@ import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUser } from "@/hooks/store/user";
+import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useInstance } from "@/hooks/store/use-instance";
 
 export type TPowerKCreationCommandKeys =
@@ -32,10 +33,10 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
   // store
   const { config } = useInstance();
   const {
-    canPerformAnyCreateAction,
     permission: { allowPermissions, canCreateProject },
   } = useUser();
-  const { workspaceProjectIds, getProjectById } = useProject();
+  const { knownProjectIds, getProjectById } = useProject();
+  const { getWorkspaceBySlug } = useWorkspace();
   const {
     toggleCreateIssueModal,
     toggleCreateProjectModal,
@@ -44,7 +45,24 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
     toggleCreateViewModal,
   } = useCommandPalette();
   // derived values
-  const canCreateWorkItem = canPerformAnyCreateAction && workspaceProjectIds && workspaceProjectIds.length > 0;
+  const creatableProjects = (ctx: TPowerKContext) => {
+    const workspace = getWorkspaceBySlug(ctx.params.workspaceSlug ?? "");
+    if (!workspace) return [];
+    return knownProjectIds(workspace.id).filter((id) => {
+      const project = getProjectById(id);
+      return (
+        project?.workspace_id === workspace.id &&
+        !project.archived_at &&
+        allowPermissions(
+          [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
+          EUserPermissionsLevel.PROJECT,
+          workspace.slug,
+          id
+        )
+      );
+    });
+  };
+  const canCreateWorkItem = (ctx: TPowerKContext) => creatableProjects(ctx).length > 0;
   const hasProjectMemberLevelPermissions = (ctx: TPowerKContext) =>
     allowPermissions(
       [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
@@ -66,9 +84,12 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
       icon: WorkItemsOutline,
       shortcut: "c",
       keySequence: "ni",
-      action: () => toggleCreateIssueModal(true),
-      isEnabled: () => Boolean(canCreateWorkItem),
-      isVisible: () => Boolean(canCreateWorkItem),
+      action: (ctx) => {
+        const projects = creatableProjects(ctx);
+        if (projects.length) toggleCreateIssueModal(true, undefined, projects);
+      },
+      isEnabled: canCreateWorkItem,
+      isVisible: canCreateWorkItem,
       closeOnSelect: true,
     },
     create_view: {

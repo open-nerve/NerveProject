@@ -4,27 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import type { IWorkspaceSearchResults, IWorkspaceView } from "@nerve/types";
+import type { IWorkspaceView } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 
 export class WorkspaceService extends APIService {
-  async searchWorkspace(
-    workspaceSlug: string,
-    params: {
-      project_id?: string;
-      search: string;
-      workspace_search: boolean;
-    }
-  ): Promise<IWorkspaceSearchResults> {
-    return this.get(`/api/workspaces/${workspaceSlug}/search/`, {
-      params,
-    })
-      .then((res) => res?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
   async createView(workspaceSlug: string, data: Partial<IWorkspaceView>): Promise<IWorkspaceView> {
     return this.post(`/api/workspaces/${workspaceSlug}/views/`, data)
       .then((response) => response?.data)

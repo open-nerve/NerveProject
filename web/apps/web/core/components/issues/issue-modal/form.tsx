@@ -47,6 +47,8 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 export interface IssueFormProps {
   data?: IssueFormData;
   sourceIssueId?: string;
+  hasDraftSeed?: boolean;
+  canSaveDraft?: boolean;
   descriptionLoadState?: IssueDescriptionLoadState;
   onRetryDescription?: () => void;
   issueTitleRef: React.MutableRefObject<HTMLInputElement | null>;
@@ -71,8 +73,6 @@ export interface IssueFormProps {
     default: string;
     loading: string;
   };
-  isDuplicateModalOpen: boolean;
-  handleDuplicateIssueModal: (isOpen: boolean) => void;
   isProjectSelectionDisabled?: boolean;
 }
 
@@ -81,6 +81,8 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const {
     data,
     sourceIssueId,
+    hasDraftSeed = false,
+    canSaveDraft = false,
     descriptionLoadState = "ready",
     onRetryDescription,
     issueTitleRef,
@@ -106,10 +108,10 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   // states
   const [isMoving, setIsMoving] = useState<boolean>(false);
+  const [draftSubmitCount, setDraftSubmitCount] = useState(0);
 
   // refs
   const submitBtnRef = useRef<HTMLButtonElement | null>(null);
-  const modalContainerRef = useRef<HTMLDivElement | null>(null);
   const descriptionMigration = useRef(false);
 
   // store hooks
@@ -137,8 +139,9 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     setError,
     getFieldState,
     resetField,
+    clearErrors,
   } = methods;
-  const formRef = useRefusedFocus<HTMLFormElement>(formState.submitCount);
+  const formRef = useRefusedFocus<HTMLFormElement>(formState.submitCount + draftSubmitCount);
   const refuse = useFormRefusal(["name", "project_id", "start_date", "target_date"] as const, {});
 
   const projectId = watch("project_id");
@@ -150,6 +153,17 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  const submissionData = (formData: Partial<IssueFormValues>) => {
+    if (!data?.id && !hasDraftSeed) return formData;
+    // Seeded drafts retain wire fields that the display controls cannot resolve.
+    // Only actual edits replace those fields; the command owner merges the seed.
+    return {
+      ...getChangedIssuefields(formData, dirtyFields as { [key: string]: boolean | undefined }),
+      project_id: getValues("project_id"),
+      ...(data?.id ? { id: data.id, description_html: formData.description_html ?? "<p></p>" } : {}),
+    };
+  };
 
   const handleFormSubmit = async (formData: Partial<IssueFormValues>, is_draft_issue = isDraft) => {
     if (descriptionLoadState !== "ready") return;
@@ -163,16 +177,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
       return;
     }
 
-    const submitData = !data?.id
-      ? formData
-      : {
-          ...getChangedIssuefields(formData, dirtyFields as { [key: string]: boolean | undefined }),
-          project_id: getValues<"project_id">("project_id"),
-          id: data.id,
-          description_html: formData.description_html ?? "<p></p>",
-        };
-
-    await onSubmit(submitData, is_draft_issue, {
+    await onSubmit(submissionData(formData), is_draft_issue, {
       isDescriptionMigration: descriptionMigration.current,
       onRefused: (error) => refuse(error, (field, message) => setError(field, { type: "server", message })),
     })
@@ -212,7 +217,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const handleFormChange = () => {
     if (!onChange) return;
 
-    if (isDirty && condition) onChange(watch());
+    if (isDirty && condition) onChange(submissionData(watch()));
     else onChange(null);
   };
 
@@ -242,27 +247,10 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   useEffect(() => {
     if (!onChange) return;
 
-    if (isDirty && condition) onChange(watch());
+    if (isDirty && condition) onChange(submissionData(watch()));
     else onChange(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirty]);
-
-  useEffect(() => {
-    const formElement = formRef?.current;
-    const modalElement = modalContainerRef?.current;
-
-    if (!formElement || !modalElement) return;
-
-    const resizeObserver = new ResizeObserver(() => {
-      modalElement.style.maxHeight = `${formElement?.offsetHeight}px`;
-    });
-
-    resizeObserver.observe(formElement);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [formRef, modalContainerRef]);
 
   return (
     <FormProvider {...methods}>
@@ -378,6 +366,22 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                       {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
                     </Button>
                   </div>
+
+                  {!data?.id && !isDraft && canSaveDraft && (
+                    <Button
+                      variant="secondary"
+                      type="button"
+                      size="lg"
+                      disabled={isSubmitting || isPending || descriptionLoadState !== "ready"}
+                      onClick={async () => {
+                        clearErrors();
+                        await handleFormSubmit(getValues(), true);
+                        setDraftSubmitCount((count) => count + 1);
+                      }}
+                    >
+                      {t("save_to_drafts")}
+                    </Button>
+                  )}
 
                   {moveToIssue && (
                     <Button

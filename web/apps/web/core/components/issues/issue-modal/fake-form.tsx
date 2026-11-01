@@ -262,8 +262,6 @@ function Form({ overrides }: { overrides: Partial<IssueFormProps> }) {
       workspaceSlug="ws"
       projectId={null}
       isDraft={false}
-      isDuplicateModalOpen={false}
-      handleDuplicateIssueModal={() => {}}
       data={{ name: "", description_html: "<p></p>", project_id: null }}
       {...overrides}
     />

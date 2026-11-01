@@ -1,74 +1,60 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { Command } from "cmdk";
-import { observer } from "mobx-react";
-// nerve imports
-import type { IWorkspaceSearchResults } from "@nerve/types";
-// hooks
-import { useParams, useNavigate } from "react-router";
-// helpers
+import type { Issue, Project } from "@nerve/api-client";
+import { ProjectsOutline } from "@makeplane/propel/icons";
+import { useTranslation } from "@nerve/i18n";
+import { useNavigate } from "react-router";
 import { PowerKModalCommandItem } from "./command-item";
-import { POWER_K_SEARCH_RESULTS_GROUPS_MAP } from "./search-results-map";
 
 type Props = {
+  workspaceSlug: string;
+  issues: { issue: Issue; project: Project }[];
+  projects: Project[];
   closePalette: () => void;
-  results: IWorkspaceSearchResults;
 };
 
-export const PowerKModalSearchResults = observer(function PowerKModalSearchResults(props: Props) {
-  const { closePalette, results } = props;
-  // router
+/** The sequence of issues is the native service's relevance order, without another client-side rank or filter. */
+export function PowerKModalSearchResults({ workspaceSlug, issues, projects, closePalette }: Props) {
   const navigate = useNavigate();
-  const { projectId } = useParams();
-
+  const { t } = useTranslation();
+  const open = (path: string) => {
+    closePalette();
+    navigate(path);
+  };
   return (
     <>
-      {Object.keys(results.results).map((key) => {
-        const section = results.results[key as keyof typeof results.results];
-        const currentSection = POWER_K_SEARCH_RESULTS_GROUPS_MAP[key as keyof typeof POWER_K_SEARCH_RESULTS_GROUPS_MAP];
-
-        if (!currentSection) return null;
-        if (section.length <= 0) return null;
-
-        return (
-          <Command.Group key={key} heading={currentSection.title}>
-            {section.map((item) => {
-              let value = `${key}-${item?.id}-${item.name}`;
-
-              if ("project__identifier" in item) {
-                value = `${value}-${item.project__identifier}`;
+      {issues.length > 0 && (
+        <Command.Group heading={t("work_items")}>
+          {issues.map(({ issue, project }) => (
+            <PowerKModalCommandItem
+              key={issue.id}
+              value={`issue-${issue.id}`}
+              label={
+                <div className="flex gap-2">
+                  <span className="text-tertiary">
+                    {project.identifier}-{issue.sequence_id}
+                  </span>
+                  {issue.name}
+                </div>
               }
-
-              if ("sequence_id" in item) {
-                value = `${value}-${item.sequence_id}`;
-              }
-
-              return (
-                <PowerKModalCommandItem
-                  key={item.id}
-                  label={currentSection.itemName(item)}
-                  icon={currentSection.icon}
-                  onSelect={() => {
-                    closePalette();
-                    navigate(currentSection.path(item, projectId));
-                    // const itemProjectId =
-                    //   item?.project_id ||
-                    //   (Array.isArray(item?.project_ids) && item?.project_ids?.length > 0
-                    //     ? item?.project_ids[0]
-                    //     : undefined);
-                    // if (itemProjectId) openProjectAndScrollToSidebar(itemProjectId);
-                  }}
-                  value={value}
-                />
-              );
-            })}
-          </Command.Group>
-        );
-      })}
+              onSelect={() => open(`/${workspaceSlug}/browse/${project.identifier}-${issue.sequence_id}`)}
+            />
+          ))}
+        </Command.Group>
+      )}
+      {projects.length > 0 && (
+        <Command.Group heading={t("common.projects")}>
+          {projects.map((project) => (
+            <PowerKModalCommandItem
+              key={project.id}
+              value={`project-${project.id}`}
+              icon={ProjectsOutline}
+              label={project.name}
+              onSelect={() => open(`/${workspaceSlug}/projects/${project.id}/issues`)}
+            />
+          ))}
+        </Command.Group>
+      )}
     </>
   );
-});
+}

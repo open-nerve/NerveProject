@@ -5,27 +5,30 @@
  */
 
 import { observer } from "mobx-react";
-import { useTranslation } from "@nerve/i18n";
 // ui
 import type { TContextMenuItem } from "@nerve/ui";
-import { ContextMenu, CustomMenu } from "@nerve/ui";
+import { CustomMenu } from "@nerve/ui";
 // helpers
 import { cn } from "@nerve/utils";
 
 export interface Props {
-  parentRef: React.RefObject<HTMLElement | null>;
   MENU_ITEMS: TContextMenuItem[];
+  label: string;
 }
 
 export const WorkspaceDraftIssueQuickActions = observer(function WorkspaceDraftIssueQuickActions(props: Props) {
-  const { parentRef, MENU_ITEMS } = props;
-
-  const { t } = useTranslation();
+  const { MENU_ITEMS, label } = props;
 
   return (
     <>
-      <ContextMenu parentRef={parentRef} items={MENU_ITEMS} />
-      <CustomMenu ellipsis placement="bottom-end" menuItemsClassName="z-[14]" maxHeight="lg" closeOnSelect>
+      <CustomMenu
+        ariaLabel={label}
+        ellipsis
+        placement="bottom-end"
+        menuItemsClassName="z-[14]"
+        maxHeight="lg"
+        closeOnSelect
+      >
         {MENU_ITEMS.map((item) => (
           <CustomMenu.MenuItem
             key={item.key}
@@ -43,7 +46,7 @@ export const WorkspaceDraftIssueQuickActions = observer(function WorkspaceDraftI
           >
             {item.icon && <item.icon className={cn("h-3 w-3", item.iconClassName)} />}
             <div>
-              <h5>{t(item.title || "")}</h5>
+              <h5>{item.title}</h5>
               {item.description && (
                 <p
                   className={cn("whitespace-pre-line text-tertiary", {

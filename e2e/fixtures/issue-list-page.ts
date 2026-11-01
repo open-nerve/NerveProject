@@ -75,12 +75,12 @@ export async function scrollToLastListRow(group: Locator) {
 export async function expectListPageQuiet(
   page: Page,
   watch: PageWatch,
-  expected: { failures?: string[]; errors?: string[] } = {}
+  expected: { failures?: string[]; errors?: string[]; warnings?: string[] } = {}
 ) {
   expect(watch.apiFailures).toEqual(expected.failures ?? []);
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
   expect(watch.cspViolations).toEqual([]);
   expect(requestsElsewhere(page, watch)).toEqual([]);
-  await expectQuietConsole(page, watch, { errors: expected.errors ?? [] });
+  await expectQuietConsole(page, watch, { errors: expected.errors ?? [], warnings: expected.warnings ?? [] });
 }

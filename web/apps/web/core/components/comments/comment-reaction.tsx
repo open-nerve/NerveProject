@@ -10,7 +10,8 @@ import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import { stringToEmoji } from "@nerve/propel/emoji-icon-picker";
+import { ReactionOutline } from "@makeplane/propel/icons";
+import { emojiToString, stringToEmoji } from "@nerve/propel/emoji-icon-picker";
 import { EmojiReactionGroup, EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
 import type { EmojiReactionType } from "@nerve/propel/emoji-reaction";
 import type { TCommentsOperations } from "@nerve/types";
@@ -19,10 +20,13 @@ export type TProps = {
   comment: IssueComment;
   disabled?: boolean;
   activityOperations: TCommentsOperations;
+  pending: boolean;
+  displayName: string;
+  onReact: (value: string) => Promise<void>;
 };
 
 export const CommentReactions = observer(function CommentReactions(props: TProps) {
-  const { comment, activityOperations, disabled = false } = props;
+  const { comment, activityOperations, disabled = false, pending, displayName, onReact } = props;
   const { t } = useTranslation();
   // state
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -48,46 +52,37 @@ export const CommentReactions = observer(function CommentReactions(props: TProps
       });
   }, [reactionIds, userReactions, activityOperations, comment.id]);
 
-  const handleReactionClick = (emoji: string) => {
-    if (disabled || !userReactions) return;
-    // Convert emoji back to decimal string format for the API
-    const emojiCodePoints = Array.from(emoji).map((char) => char.codePointAt(0));
-    const reactionString = emojiCodePoints.join("-");
-    activityOperations.react(comment.id, reactionString, userReactions);
-  };
-
-  const handleEmojiSelect = (emoji: string) => {
-    if (!userReactions) return;
-    // emoji is already in decimal string format from EmojiReactionPicker
-    activityOperations.react(comment.id, emoji, userReactions);
-  };
-
   if (!userReactions) return null;
 
   // Don't render anything if there are no reactions and it's disabled
   if (reactions.length === 0 && disabled) return null;
 
-  // Don't show the add button if there are no reactions
-  const showAddButton = !disabled && reactions.length > 0;
-
+  const label = t("aria_labels.comment_add_reaction", { name: displayName });
   return (
-    <div className="relative">
-      <EmojiReactionPicker
-        isOpen={isPickerOpen}
-        handleToggle={setIsPickerOpen}
-        onChange={handleEmojiSelect}
-        disabled={disabled}
-        label={
-          <EmojiReactionGroup
-            reactions={reactions}
-            onReactionClick={handleReactionClick}
-            showAddButton={showAddButton}
-            onAddReaction={() => setIsPickerOpen(true)}
-            addReactionLabel={t("aria_labels.add_reaction")}
-          />
-        }
-        placement="bottom-start"
+    <fieldset disabled={disabled || pending} className="relative flex min-w-0 items-center gap-2">
+      <EmojiReactionGroup
+        reactions={reactions}
+        onReactionClick={(emoji) => void onReact(emojiToString(emoji))}
+        showAddButton={false}
+        addReactionLabel={label}
       />
-    </div>
+      {!disabled && (
+        <EmojiReactionPicker
+          isOpen={isPickerOpen}
+          handleToggle={setIsPickerOpen}
+          onChange={(value) => void onReact(value)}
+          disabled={pending}
+          searchPlaceholder={t("search")}
+          buttonClassName="inline-flex size-6 items-center justify-center rounded hover:bg-layer-1"
+          label={
+            <>
+              <ReactionOutline aria-hidden="true" className="size-4" />
+              <span className="sr-only">{label}</span>
+            </>
+          }
+          placement="bottom-start"
+        />
+      )}
+    </fieldset>
   );
 });

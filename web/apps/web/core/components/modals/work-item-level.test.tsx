@@ -7,7 +7,7 @@ import { loadProjects } from "@/store/project/fake-projects";
 import { CommandPaletteStore } from "@/store/command-palette.store";
 import { issueDetailOf, issueStoreTab } from "@/store/issue/fake-issues";
 import { settle } from "@/lib/auth/fake-time";
-import { json } from "@/lib/auth/fake-nerve";
+import { json, noContent } from "@/lib/auth/fake-nerve";
 import type { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 import type { DeleteIssueModal } from "@/components/issues/delete-issue-modal";
 import { WorkItemLevelModals } from "./work-item-level";
@@ -163,4 +163,20 @@ it("a route ABA does not let the first same-issue close callback dismiss the new
   await act(async () => commands.toggleCreateIssueModal(true));
   await act(async () => oldClose());
   expect(commands.isCreateIssueModalOpen).toBe(true);
+});
+
+it("a confirmed deletion on the numbered route navigates even after its canonical entity disappears", async () => {
+  ui.params = { workspaceSlug: "ws", projectId: undefined };
+  await render(view());
+  await act(async () => commands.toggleDeleteIssueModal(true));
+  ui.remove.mockImplementation((project: string, id: string) =>
+    tab.app.issue.issueDetail.removeIssue("ws", project, id)
+  );
+  tab.nerve.respond = (call) => call.answer(noContent());
+  await act(async () => {
+    const result = await settle(Promise.resolve(deleteProps.onSubmit!()), "confirmed deletion");
+    expect(result.error).toBeUndefined();
+  });
+  expect(tab.app.issue.issues.getIssueById("old")).toBeUndefined();
+  expect(ui.navigate).toHaveBeenCalledExactlyOnceWith("/ws/projects/A/issues");
 });

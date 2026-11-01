@@ -65,6 +65,79 @@ it("repositionsMergedDescriptionActivity", async () => {
   expect(store().getActivitiesByIssueId("x")).toEqual(["middle", "old-description"]);
   expect(store().getActivityById("x", first.id)).toEqual(newer);
 });
+it("reordersMergedActivityAcrossPages without losing nanoseconds or colliding comment ids", async () => {
+  const at = (id: string, nanosecond: number): IssueActivity => ({
+    ...row,
+    id,
+    created_at: `2026-10-30T00:00:00.00000000${nanosecond}Z`,
+  });
+  const description = { ...at("description", 2), field: "description", new_value: "First" };
+  const pages = [
+    [at("z", 1), description],
+    [at("collision", 3), at("b", 4)],
+    [at("a", 5), at("tail", 6)],
+  ];
+  const sent = await requestedIssue(tab.nerve, read, ["GET", route]);
+  await pages.reduce(async (previous, data, index) => {
+    await previous;
+    await until(() => tab.nerve.to(route).length === index + 1 || sent.result.settled, "next activity page");
+    expect(tab.nerve.to(route)).toHaveLength(index + 1);
+    expect(store().getActivitiesByIssueId("x")).toBeUndefined();
+    const call = tab.nerve.to(route)[index]!;
+    expect(call.queryEntries).toEqual(index === 0 ? [] : [["cursor", `page-${index + 1}`]]);
+    call.answer(json(200, { data, next_cursor: index === 2 ? null : `page-${index + 2}` }));
+  }, Promise.resolve());
+  await sent.promise;
+  const comments = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.issueDetail.comment.fetchComments("ws", "A", "x"),
+    ["GET", "/api/v0/issues/x/comments"]
+  );
+  comments.call.answer(
+    json(200, {
+      data: [
+        { ...issueCommentOf("collision"), created_at: "2026-10-30T00:00:00.000000003Z" },
+        { ...issueCommentOf("between"), created_at: "2026-10-30T00:00:00.000000007Z" },
+      ],
+      next_cursor: null,
+    })
+  );
+  await comments.promise;
+  const identities = () =>
+    store()
+      .getActivityAndCommentsByIssueId("x", E_SORT_ORDER.ASC)!
+      .map((entry) => `${entry.kind}:${entry.id}`);
+  expect(identities()).toEqual([
+    "activity:z",
+    "activity:description",
+    "activity:collision",
+    "comment:collision",
+    "activity:b",
+    "activity:a",
+    "activity:tail",
+    "comment:between",
+  ]);
+  const again = await requestedIssue(tab.nerve, () => read(true), ["GET", route]);
+  expect(again.call.queryEntries).toEqual([["cursor", "page-3"]]);
+  again.call.answer(json(200, { data: pages[2], next_cursor: "new-last" }));
+  await until(() => tab.nerve.to(route).length === 5 || again.result.settled, "incremental activity tail");
+  expect(tab.nerve.to(route)).toHaveLength(5);
+  const moved = { ...description, created_at: "2026-10-30T00:00:00.000000009Z", new_value: "Final" };
+  tab.nerve.to(route)[4]!.answer(json(200, { data: [at("after", 8), moved], next_cursor: null }));
+  await again.promise;
+  expect(identities()).toEqual([
+    "activity:z",
+    "activity:collision",
+    "comment:collision",
+    "activity:b",
+    "activity:a",
+    "activity:tail",
+    "comment:between",
+    "activity:after",
+    "activity:description",
+  ]);
+  expect(store().getActivityById("x", "description")).toEqual(moved);
+});
 it.each([false, true])("keepsTheLastCompleteValueAfterPageTwoFails (previous=%s)", async (previous) => {
   if (previous) await loaded();
   const sent = await requestedIssue(tab.nerve, read, ["GET", route]);

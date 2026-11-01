@@ -23,7 +23,10 @@ vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => binding
 vi.mock("@/hooks/store/use-label", () => ({ useLabel: () => ({ getLabelById: () => undefined }) }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => binding.tab!.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-member", () => ({
-  useMember: () => ({ getUserDetails: (id: string) => (id === "u-actor" ? userOf("Actor") : undefined) }),
+  useMember: () => ({
+    getUserDetails: (id: string) =>
+      id === "u-actor" ? userOf("Actor") : id === "named-like-system" ? userOf("Nerve") : undefined,
+  }),
 }));
 vi.mock("@/hooks/store/user", () => ({ useUser: () => binding.tab!.app.user }));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
@@ -55,15 +58,25 @@ async function loaded(row: IssueActivity) {
   await sent.promise;
 }
 const render = (item: React.ReactNode) => act(async () => renderer.render(<MemoryRouter>{item}</MemoryRouter>));
-it.each(["u-actor", "ended-user", null])("native actor %s uses the directory or the system fallback", async (actor) => {
-  await loaded({ ...issueActivityOf("a"), actor_id: actor });
-  await render(<IssueActivityItem workspaceSlug="ws" issueId="x" activityId="a" ends={undefined} />);
-  expect(container.textContent).toContain(
-    actor === null ? "Nerve" : actor === "u-actor" ? "Actor" : "common.deactivated_user"
-  );
-  if (actor === "u-actor") expect(container.querySelector("a")?.getAttribute("href")).toBe("/ws/profile/u-actor");
-  else expect(container.querySelector("a")).toBeNull();
-});
+for (const action of ["created", "archive", "restore"] as const) {
+  it.each([
+    { actor: "u-actor", name: "Actor", href: "/ws/profile/u-actor" },
+    { actor: "ended-user", name: "common.deactivated_user", href: null },
+    { actor: null, name: "Nerve", href: null },
+    { actor: "named-like-system", name: "Nerve", href: "/ws/profile/named-like-system" },
+  ])(`distinguishesSystemAndMissingActor during ${action}: $actor`, async ({ actor, name, href }) => {
+    await loaded({
+      ...issueActivityOf("a"),
+      actor_id: actor,
+      field: action === "created" ? null : "archived_at",
+      verb: action === "created" ? "created" : "updated",
+      new_value: action === "created" ? null : action,
+    });
+    await render(<IssueActivityItem workspaceSlug="ws" issueId="x" activityId="a" ends={undefined} />);
+    expect(container.textContent).toContain(name);
+    expect(container.querySelector("a")?.getAttribute("href") ?? null).toBe(href);
+  });
+}
 it("native creation with nullable fields renders without invented source details", async () => {
   await loaded({ ...issueActivityOf("a"), field: null, verb: "created", old_value: null, new_value: null });
   await render(<IssueActivityItem workspaceSlug="ws" issueId="x" activityId="a" ends={undefined} />);

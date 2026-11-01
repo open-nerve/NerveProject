@@ -76,10 +76,16 @@ afterEach(async () => {
   binding.tab!.app.dispose();
   vi.useRealTimers();
 });
-const render = (id = "x") =>
+const render = (id = "x", disabled = false) =>
   act(async () =>
     renderer.render(
-      <IssueReaction workspaceSlug="ws" projectId="A" issueId={id} currentUser={binding.tab!.app.user.data!} />
+      <IssueReaction
+        workspaceSlug="ws"
+        projectId="A"
+        issueId={id}
+        currentUser={binding.tab!.app.user.data!}
+        disabled={disabled}
+      />
     )
   );
 async function loaded() {
@@ -149,4 +155,49 @@ it("a refused old command releases its local busy state after permission recover
   await act(async () => tab.nerve.to("/api/v0/issues/x/reactions")[0]!.answer(problem(403, "forbidden")));
   expect(toasts).toHaveLength(0);
   expect(container.querySelector<HTMLButtonElement>("[data-add]")!.disabled).toBe(false);
+});
+
+it("archivedKeepsReadOnlyReactions and disables actual reaction controls", async () => {
+  await loaded();
+  await render("x", true);
+  const button = container.querySelector<HTMLButtonElement>("[data-reaction]")!;
+  expect(button.textContent).toBe("2 Actor,Other");
+  expect(button.matches(":disabled")).toBe(true);
+  await act(async () => button.click());
+  expect(binding.tab!.nerve.calls.map((call) => call.method)).toEqual(["GET"]);
+});
+it("removesOnlyMineAfterConfirmation and rejects repeated click while busy", async () => {
+  await loaded();
+  await render();
+  const button = container.querySelector<HTMLButtonElement>("[data-reaction]")!;
+  await act(async () => {
+    button.click();
+    button.click();
+  });
+  await act(async () =>
+    until(() => binding.tab!.nerve.to("/api/v0/issues/x/reactions/128077").length === 1, "one removal")
+  );
+  expect(button.matches(":disabled")).toBe(true);
+  expect(button.textContent).toBe("2 Actor,Other");
+  await act(async () => binding.tab!.nerve.to("/api/v0/issues/x/reactions/128077")[0]!.answer(noContent()));
+  expect(button.textContent).toBe("1 Other");
+  expect(binding.tab!.nerve.calls.map((call) => call.method)).toEqual(["GET", "DELETE"]);
+});
+it("keepsCountsOnConflictOrRefusal for a 409 addition to someone else's reaction", async () => {
+  const tab = binding.tab!;
+  const sent = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.issueDetail.reaction.fetchReactions("ws", "A", "x"),
+    ["GET", "/api/v0/issues/x/reactions"]
+  );
+  sent.call.answer(json(200, { data: [theirs] }));
+  await sent.promise;
+  await render();
+  const button = container.querySelector<HTMLButtonElement>("[data-reaction]")!;
+  await act(async () => button.click());
+  await act(async () => until(() => tab.nerve.to("/api/v0/issues/x/reactions").length === 2, "addition"));
+  expect(button.textContent).toBe("1 Other");
+  await act(async () => tab.nerve.to("/api/v0/issues/x/reactions")[1]!.answer(problem(409, "issue.reaction_exists")));
+  expect(button.textContent).toBe("1 Other");
+  expect(toasts).toHaveLength(1);
 });

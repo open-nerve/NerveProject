@@ -267,3 +267,24 @@ preferences/workItemFilters与S2 REQUESTS增长仍由P10b；搜索/旧ProjectSer
 §6 页头/正文共同路由身份、host 卸载、权限/账号 ABA、I20/S2/I22 实际页面通过。§7 本期详情/创建/父项/链接/删除的名字、FieldError/焦点、非正 tabIndex、键盘菜单、portal 背景、内层 Escape/Tab 与 Save this draft 三浏览器闭合；lazy pending 可取消，保存仍需 ready，已挂载忙碌仍保护。评论、描述历史、草稿等剩余名字/键盘/字段项目不归本期。§8 删除确认 onSubmit 保持必需、子树文案/数据库已验；六复制入口闭合，四处剩余与描述版本 Markdown 复制留 P15。
 
 共同证据：[阶段 review §9–14](../reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[三浏览器逐条矩阵](../reviews/P14-browser-matrix.md)与[整审 re-21](../../../reviews/re-21-M4P14整体审核.md)。验收输入 b7d1f0c2（含 I22 路由及 I9 编辑器就绪前置修正），本地七项分层门禁、默认 E2E 238/238、三引擎各44/44；最终文稿 CI 按后置回执。顶层 status 仍 open，真正 M4 收尾再按完整关闭条件统一关闭。
+
+## P14 集成关闭回执（2026-10-31）
+
+上述 P14 对应子项已随授权 --no-ff 集成至 main 7a81ea18；[准确 main CI](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务全绿，原分支与集成修复分支的证据逐 hash 归档复验后，两个工作树和远端/本地分支已正常清理。完整输入、两次初始失败、修复及新归档路径见 [P14 review §15–16](../reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31)。本文件顶部 status 仍 open，其它阶段和 M4 总关闭条件不提前处理。
+
+
+## P15 T11 子项接收：旧搜索合同（2026-11-01）
+
+§5 的 WorkspaceService.searchWorkspace、五个搜索专用 DTO、默认搜索常量和最后 mock 已删除；ProjectService/projectIssuesSearch 无真实读者，不重建空类。M7 view 四方法逐字节保留，五个传输契约测试覆盖路径、body、响应和拒绝；这不算 M7 页面验收。历史十三实例与剩余领域责任见 [M2 子回执](M2-closeout.md#p15-t11-子项接收十三实例清账2026-11-01)。31 项搜索/视图消费者、knip、类型、关键词与 M15 有效反证见 [P15 review T11](../reviews/P15-web-collaboration-drafts-search-review.md#t11旧搜索合同删除与十三实例核账)。该子项已完成，顶层 status 保持 open，M7 和 M4 总关闭不提前处理。
+
+
+## P15 协作子项接收（2026-11-01）
+
+§5 原生 Issue/Comment/Draft/版本消费者与旧搜索删除均有实际页面；M7 视图/版本接口及公开 EditorRefApi 保留。§7 评论菜单/表情/历史/草稿的名称、原生键盘、字段错误先于焦点、内层 Escape 和 pending 保护经 T14 三引擎；§8 剩余四个 M4 复制入口及版本 Markdown 已由 hook 统一反馈，四例外为零。§9 本期 88 个 TS/TSX 逐文件零告警与十组死链清理见 T15，P16 全局 no-shadow、C12 和其它领域责任不提前完成。顶部 status 保持 open。
+
+证据：[P15 review](../reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)、[三浏览器矩阵](../reviews/P15-browser-matrix.md)。
+
+
+## P15 T16 整审复核（2026-11-01）
+
+本期子项已完成实现、整审及后置 CI 的局部修复与完整本地门禁，最终候选 CI 后置核准，集成待办；顶部/弹窗宿主、偏好晚答和退场选择保护已复验，92 个 TS/TSX 零告警。准确最终分支 CI 与交付状态见 [阶段记录 §10](../reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 和 [整审报告](../../../reviews/re-24-M4P15整体审核.md)。顶部 status 保持 open，P16、M7 与 M4 总关闭责任不改变；尚未合并。

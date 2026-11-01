@@ -6,34 +6,43 @@
 
 import type { IssueComment } from "@nerve/api-client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { DeleteOutline, EditOutline, LinkOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import { IconButton } from "@nerve/propel/icon-button";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import type { TCommentsOperations } from "@nerve/types";
 import type { TContextMenuItem } from "@nerve/ui";
 import { CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
-import { useUser } from "@/hooks/store/user";
+import { useUser, useUserPermissions } from "@/hooks/store/user";
 
 type TCommentCard = {
   activityOperations: TCommentsOperations;
   comment: IssueComment;
   setEditMode: () => void;
   showCopyLinkOption: boolean;
+  workspaceSlug: string;
+  projectId: string | undefined;
+  displayName: string;
 };
 
 export const CommentQuickActions = observer(function CommentQuickActions(props: TCommentCard) {
-  const { activityOperations, comment, setEditMode, showCopyLinkOption } = props;
+  const { activityOperations, comment, setEditMode, showCopyLinkOption, workspaceSlug, projectId, displayName } = props;
   // store hooks
   const { data: currentUser } = useUser();
+  const { allowPermissions } = useUserPermissions();
+  const sending = useRef(false);
+  const [pending, setPending] = useState(false);
   // derived values
   const isAuthor = currentUser?.id === comment.actor_id;
   const canEdit = isAuthor;
-  const canDelete = isAuthor;
+  const canDelete =
+    isAuthor ||
+    (!!projectId &&
+      allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId));
   // translation
   const { t } = useTranslation();
 
@@ -56,7 +65,18 @@ export const CommentQuickActions = observer(function CommentQuickActions(props: 
         },
         {
           key: "delete",
-          action: () => activityOperations.removeComment(comment.id),
+          action: async () => {
+            if (sending.current) return;
+            sending.current = true;
+            setPending(true);
+            try {
+              // The operation owns session checks and refusal feedback; the menu owns its busy lifetime.
+              await activityOperations.removeComment(comment.id);
+            } finally {
+              sending.current = false;
+              setPending(false);
+            }
+          },
           title: t("common.actions.delete"),
           icon: DeleteOutline,
           shouldRender: canDelete,
@@ -70,9 +90,10 @@ export const CommentQuickActions = observer(function CommentQuickActions(props: 
 
   return (
     <CustomMenu
-      customButton={
-        <IconButton icon={MoreHorizontalOutline} variant="ghost" size="sm" aria-label={t("common.options")} />
-      }
+      disabled={pending}
+      ariaLabel={t("aria_labels.comment_options", { name: displayName })}
+      customButton={<MoreHorizontalOutline className="size-4" aria-hidden="true" />}
+      customButtonClassName="inline-flex size-6 items-center justify-center rounded-md text-secondary hover:bg-layer-1 focus-visible:outline-offset-2"
       closeOnSelect
     >
       {MENU_ITEMS.map((item) => (

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useLayoutEffect, useCallback } from "react";
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
@@ -20,13 +20,13 @@ import { PowerKModalHeader } from "./header";
 type Props = {
   commandsListComponent: React.FC<TPowerKCommandsListProps>;
   context: TPowerKContext;
-  hideFooter?: boolean;
   isOpen: boolean;
   onClose: () => void;
 };
 
 export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerKModalWrapper(props: Props) {
-  const { commandsListComponent: CommandsListComponent, context, hideFooter = false, isOpen, onClose } = props;
+  const { commandsListComponent: CommandsListComponent, context, isOpen, onClose } = props;
+  const { setActiveCommand, setShouldShowContextBasedActions } = context;
   // states
   const [searchTerm, setSearchTerm] = useState("");
   const [isWorkspaceLevel, setIsWorkspaceLevel] = useState(false);
@@ -36,6 +36,7 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
   // Handle command selection
   const handleCommandSelect = useCallback(
     (command: TPowerKCommandConfig) => {
+      if (!isOpen) return;
       if (command.type === "action") {
         // Direct action - execute and potentially close
         command.action(context);
@@ -49,12 +50,13 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
         setSearchTerm("");
       }
     },
-    [context, setActivePage]
+    [isOpen, context, setActivePage]
   );
 
   // Handle selection page item selection
   const handlePageDataSelection = useCallback(
     (data: unknown) => {
+      if (!isOpen) return;
       if (context.activeCommand?.type === "change-page") {
         context.activeCommand.onSelect(data, context);
       }
@@ -63,7 +65,7 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
         context.closePalette();
       }
     },
-    [context]
+    [isOpen, context]
   );
 
   // Handle keyboard navigation
@@ -71,10 +73,13 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
     (e: React.KeyboardEvent) => {
       // a key an input method takes is the method's: an Escape that ends a composition in the search neither clears it
       // nor closes the palette, a Backspace in one leaves the page where it is
-      if (isComposing(e.nativeEvent)) return;
+      // The exit animation can retain this input after close; only the open host owns its keys.
+      if (!isOpen || isComposing(e.nativeEvent)) return;
       // Cmd/Ctrl+K closes palette
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
+        // This close must not also reach the document shortcut that opens the palette.
+        e.stopPropagation();
         onClose();
         return;
       }
@@ -104,21 +109,17 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
         return;
       }
     },
-    [searchTerm, activePage, onClose, setActivePage, context]
+    [isOpen, searchTerm, activePage, onClose, setActivePage, context]
   );
 
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setTimeout(() => {
-        setSearchTerm("");
-        setActivePage(null);
-        context.setActiveCommand(null);
-        context.setShouldShowContextBasedActions(true);
-      }, 200);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  // Clear this host when it closes; no timer from a previous opening may erase a new query or command.
+  useLayoutEffect(() => {
+    if (isOpen) return;
+    setSearchTerm("");
+    setActivePage(null);
+    setActiveCommand(null);
+    setShouldShowContextBasedActions(true);
+  }, [isOpen, setActivePage, setActiveCommand, setShouldShowContextBasedActions]);
 
   return (
     <ModalCore
@@ -129,12 +130,14 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
       className="divide-opacity-10 flex flex-col items-center justify-center divide-y divide-subtle-1"
     >
       <Command
+        // An exiting list must release Ctrl+K to the document opener, not consume it as Vim navigation.
+        vimBindings={isOpen}
         filter={(i18nValue: string, search: string) => {
           if (i18nValue === "no-results") return 1;
           if (i18nValue.toLowerCase().includes(search.toLowerCase())) return 1;
           return 0;
         }}
-        shouldFilter={searchTerm.length > 0}
+        shouldFilter={searchTerm.length > 0 && (!!activePage || !context.params.workspaceSlug)}
         onKeyDown={handleKeyDown}
         className="w-full"
       >
@@ -146,6 +149,7 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
         />
         <Command.List className="vertical-scrollbar scrollbar-sm max-h-96 overflow-scroll outline-none">
           <CommandsListComponent
+            isOpen={isOpen}
             activePage={activePage}
             context={context}
             handleCommandSelect={handleCommandSelect}
@@ -156,13 +160,11 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
           />
         </Command.List>
         {/* Footer hints */}
-        {!hideFooter && (
-          <PowerKModalFooter
-            isWorkspaceLevel={isWorkspaceLevel}
-            projectId={context.params.projectId}
-            onWorkspaceLevelChange={setIsWorkspaceLevel}
-          />
-        )}
+        <PowerKModalFooter
+          isWorkspaceLevel={isWorkspaceLevel}
+          projectId={context.params.projectId}
+          onWorkspaceLevelChange={setIsWorkspaceLevel}
+        />
       </Command>
     </ModalCore>
   );

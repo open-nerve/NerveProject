@@ -5,7 +5,7 @@
  */
 
 import { useEditorState, useEditor as useTiptapEditor } from "@tiptap/react";
-import { useImperativeHandle, useEffect } from "react";
+import { useImperativeHandle, useEffect, useLayoutEffect, useMemo } from "react";
 // extensions
 import { CoreEditorExtensions } from "@/extensions";
 // helpers
@@ -14,6 +14,7 @@ import { getEditorRefHelpers } from "@/helpers/editor-ref";
 import { CoreEditorProps } from "@/props";
 // types
 import type { TEditorHookProps } from "@/types";
+const defaultEditorProps: NonNullable<TEditorHookProps["editorProps"]> = {};
 
 export const useEditor = (props: TEditorHookProps) => {
   const {
@@ -21,7 +22,7 @@ export const useEditor = (props: TEditorHookProps) => {
     disabledExtensions,
     editable = true,
     editorClassName = "",
-    editorProps = {},
+    editorProps = defaultEditorProps,
     enableHistory,
     extensions = [],
     fileHandler,
@@ -42,6 +43,10 @@ export const useEditor = (props: TEditorHookProps) => {
     value,
   } = props;
 
+  const mergedEditorProps = useMemo(() => {
+    const { attributes, ...customEditorProps } = editorProps;
+    return { ...CoreEditorProps({ editorClassName, attributes }), ...customEditorProps };
+  }, [editorClassName, editorProps]);
   const editor = useTiptapEditor(
     {
       editable,
@@ -49,12 +54,7 @@ export const useEditor = (props: TEditorHookProps) => {
       shouldRerenderOnTransaction: false,
       autofocus,
       parseOptions: { preserveWhitespace: true },
-      editorProps: {
-        ...CoreEditorProps({
-          editorClassName,
-        }),
-        ...editorProps,
-      },
+      editorProps: mergedEditorProps,
       extensions: [
         ...CoreEditorExtensions({
           disabledExtensions,
@@ -85,6 +85,12 @@ export const useEditor = (props: TEditorHookProps) => {
     },
     [editable]
   );
+
+  // With explicit recreation dependencies TipTap does not synchronize options on an ordinary render.
+  // Refusal attributes must reach the existing field before its parent's committed focus effect.
+  useLayoutEffect(() => {
+    if (editor && !editor.isDestroyed) editor.setOptions({ editorProps: mergedEditorProps });
+  }, [editor, mergedEditorProps]);
 
   // Effect for syncing SWR data
   useEffect(() => {

@@ -77,10 +77,11 @@ async function loaded(disabled = false) {
   );
 }
 it.each([200, 403, 422])(
-  "M4 restoration updates the editor only with confirmed HTML and never emits another write (%s)",
+  "restoresViaConfirmedPatch: M4 updates the editor only with confirmed HTML and never emits another write (%s)",
   async (status) => {
     await loaded();
     const sent = await requestedIssue(tab.nerve, () => view.handleRestore("selected"), ["PATCH", "/api/v0/issues/x"]);
+    expect(sent.call.body).toEqual({ description_html: "selected" });
     expect(editor.current.setEditorValue).not.toHaveBeenCalled();
     await act(async () =>
       sent.call.answer(

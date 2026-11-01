@@ -15,7 +15,11 @@ import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 // constants
 import { useUserPermissions } from "@/hooks/store/user";
 
-export const WorkspaceDraftEmptyState = observer(function WorkspaceDraftEmptyState() {
+export const WorkspaceDraftEmptyState = observer(function WorkspaceDraftEmptyState({
+  workspaceSlug,
+}: {
+  workspaceSlug: string;
+}) {
   // state
   const [isDraftIssueModalOpen, setIsDraftIssueModalOpen] = useState(false);
   // store hooks
@@ -24,7 +28,8 @@ export const WorkspaceDraftEmptyState = observer(function WorkspaceDraftEmptySta
   // derived values
   const canPerformEmptyStateActions = allowPermissions(
     [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
+    EUserPermissionsLevel.WORKSPACE,
+    workspaceSlug
   );
 
   return (

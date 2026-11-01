@@ -2,13 +2,14 @@
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EFileAssetType, type TCommentsOperations } from "@nerve/types";
-import { copyUrlToClipboard, generateWorkItemLink } from "@nerve/utils";
+import { generateWorkItemLink } from "@nerve/utils";
 import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useUser } from "@/hooks/store/user";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useCopyLink } from "@/hooks/use-copy-link";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { followInSession } from "@/lib/in-session";
 import { useDetailScope } from "../../issue-detail-widgets/use-detail-scope";
@@ -25,6 +26,7 @@ export const useWorkItemCommentOperations = (
   const { data: currentUser } = useUser();
   const { t } = useTranslation();
   const refusal = useRefusalToast();
+  const copyLink = useCopyLink();
   const capture = useDetailScope(workspaceSlug ?? "", projectId, issueId ?? "");
   const scope = () => {
     if (!workspaceSlug || !projectId || !issueId || !capture()()) throw new SessionChangedError();
@@ -56,8 +58,8 @@ export const useWorkItemCommentOperations = (
           projectIdentifier: getProjectById(owner.project)?.identifier,
           sequenceId: issue.sequence_id,
         });
-        await copyUrlToClipboard(`${link}#comment-${id}`);
-      }, "issue.comments.copy_link.success");
+        await copyLink(`${link}#comment-${id}`, t("issue.comments.copy_link.success"));
+      });
     },
     // Forms own confirmation, clearing and refusal; preserve the native command result.
     createComment: async (body) => {

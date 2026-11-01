@@ -20,7 +20,8 @@ import {
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TContextMenuItem } from "@nerve/ui";
-import { copyUrlToClipboard, generateWorkItemLink } from "@nerve/utils";
+import { generateWorkItemLink } from "@nerve/utils";
+import { useCopyLink } from "@/hooks/use-copy-link";
 
 // Generic helper function to handle optional function calls gracefully
 // Overload for functions without parameters
@@ -75,6 +76,8 @@ export interface MenuItemFactoryProps {
 // Common action handlers hook
 const useIssueActionHandlers = (props: MenuItemFactoryProps) => {
   const { issue, workspaceSlug, projectIdentifier, handleRestore } = props;
+  const copyLink = useCopyLink();
+  const { t } = useTranslation();
 
   const workItemLink = useMemo(
     () =>
@@ -88,14 +91,7 @@ const useIssueActionHandlers = (props: MenuItemFactoryProps) => {
     [workspaceSlug, projectIdentifier, issue]
   );
 
-  const handleCopyIssueLink = () =>
-    copyUrlToClipboard(workItemLink).then(() =>
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Link copied",
-        message: "Work item link copied to clipboard",
-      })
-    );
+  const handleCopyIssueLink = () => copyLink(workItemLink, t("common.copied_to_clipboard"));
 
   const handleOpenInNewTab = () => window.open(workItemLink, "_blank", "noopener,noreferrer");
 
@@ -109,7 +105,6 @@ const useIssueActionHandlers = (props: MenuItemFactoryProps) => {
   };
 
   return {
-    workItemLink,
     handleCopyIssueLink,
     handleOpenInNewTab,
     handleIssueRestore,
@@ -133,16 +128,14 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     setArchiveIssueModal,
   } = props;
 
-  const createEditMenuItem = (customEditAction?: () => void): TContextMenuItem => ({
+  const createEditMenuItem = (): TContextMenuItem => ({
     key: "edit",
     title: t("common.actions.edit"),
     icon: EditOutline,
-    action:
-      customEditAction ||
-      (() => {
-        setIssueToEdit(issue);
-        setCreateUpdateIssueModal(true);
-      }),
+    action: () => {
+      setIssueToEdit(issue);
+      setCreateUpdateIssueModal(true);
+    },
     shouldRender: isEditingAllowed,
   });
 
@@ -197,7 +190,6 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
   });
 
   return {
-    ...actionHandlers,
     createEditMenuItem,
     createCopyMenuItem,
     createOpenInNewTabMenuItem,

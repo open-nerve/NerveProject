@@ -11,7 +11,8 @@
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt .",
     "test:m4-filters": "playwright test --config=playwright.m4-filters.config.ts",
-    "test:m4-detail": "playwright test --config=playwright.m4-detail.config.ts"
+    "test:m4-detail": "playwright test --config=playwright.m4-detail.config.ts",
+    "test:m4-collaboration": "playwright test --config=playwright.m4-collaboration.config.ts"
   },
   "devDependencies": {
     "@nerve/api-client": "workspace:*",

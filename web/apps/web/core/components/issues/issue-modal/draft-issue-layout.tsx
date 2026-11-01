@@ -96,7 +96,7 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
       return;
     }
     try {
-      await props.onSubmit(changesMade, true);
+      await props.onSubmit(changesMade, true, { closeAfterSave: true });
     } catch {
       /* The command owner retains the form and reports the refusal. */
     }
@@ -107,7 +107,7 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
       isOpen={isOpen}
       handleClose={requestClose}
       position={EModalPosition.TOP}
-      width={props.isDuplicateModalOpen ? EModalWidth.VIXL : EModalWidth.XXXXL}
+      width={EModalWidth.XXXXL}
       className="rounded-lg !bg-transparent shadow-none transition-[width] ease-linear"
     >
       <ConfirmIssueDiscard

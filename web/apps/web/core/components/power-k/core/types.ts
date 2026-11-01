@@ -97,5 +97,3 @@ export type TPowerKCommandConfig = {
         action: (ctx: TPowerKContext) => void | Promise<void>; // Direct action
       }
   );
-
-export type TPowerKSearchResultsKeys = "workspace" | "project" | "issue" | "cycle" | "module" | "issue_view";

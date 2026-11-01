@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking.
 > 负责人已授权实施，沿既有 inline 执行方式从 T1 推进；不因通用工作流自行派逐 Task 实现代理。阶段结束做 deep-review，修复复审后先交负责人安排，不自动合并。
 
-状态：T1–T16 的实现、局部修复、本地七项与三浏览器验证已完成；T16 Step 5 的最终分支交付以后置 `final-delivery.json` 通过为准，未核准不交付。分支与 worktree 保留，未授权合并。
+状态：T1–T16、deep-review 与最终分支交付已完成；随后授权 --no-ff 集成、准确 main CI 全绿、证据归档复验与两分支/worktree 清理均完成，见 [review §16](../reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31)。以下任务保留实际实施历史。
 
 **Goal：** 完成 P14 spec A1–A16 以及 I1/I2/I8/I9/I10/I17/I20/I22 页面、S2 身份、C3 详情侧/C4/C5/C10/C11。
 

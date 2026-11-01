@@ -8,12 +8,9 @@ import { Command } from "cmdk";
 import { useTranslation } from "@nerve/i18n";
 import { SearchOutline } from "@makeplane/propel/icons";
 // components
-import type { TPowerKContext } from "@/components/power-k/core/types";
 import { PowerKModalCommandItem } from "@/components/power-k/ui/modal/command-item";
 
 export type TPowerKModalNoSearchResultsCommandProps = {
-  context: TPowerKContext;
-  searchTerm: string;
   updateSearchTerm: (value: string) => void;
 };
 

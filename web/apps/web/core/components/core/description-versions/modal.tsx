@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
@@ -12,12 +12,11 @@ import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { ChevronLeftOutline, ChevronRightOutline, CopyOutline } from "@makeplane/propel/icons";
-import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { DescriptionVersionOption } from "./root";
 import { followInSession } from "@/lib/in-session";
 import { useRefusalMessage } from "@/hooks/use-refusal-toast";
-import { EModalPosition, EModalWidth, Loader, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, Loader, ModalCore, ModalTitle } from "@nerve/ui";
 import { calculateTimeAgo, cn, getFileURL } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text";
@@ -25,6 +24,7 @@ import { RichTextEditor } from "@/components/editor/rich-text";
 import { useMember } from "@/hooks/store/use-member";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { IconButton } from "@nerve/propel/icon-button";
+import { useCopyText } from "@/hooks/use-copy-link";
 
 type Props = {
   activeVersionDescription: string | undefined;
@@ -59,6 +59,8 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
     retry,
   } = props;
   const [pending, setPending] = useState(false);
+  const [copyPending, setCopyPending] = useState(false);
+  const copying = useRef(false);
   const [refusal, setRefusal] = useState<unknown>();
   const sending = useRef(false);
   const active = useRef(false);
@@ -103,22 +105,33 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
   const versionCreator = activeVersionDetails?.ownerId ? getUserDetails(activeVersionDetails.ownerId) : null;
   // translation
   const { t } = useTranslation();
+  const copyText = useCopyText();
 
-  const handleCopyMarkdown = useCallback(() => {
-    if (!editorRef.current) return;
-    editorRef.current.copyMarkdownToClipboard();
-    setToast({
-      type: TOAST_TYPE.SUCCESS,
-      title: t("toast.success"),
-      message: "Markdown copied to clipboard.",
-    });
-  }, [t]);
+  const handleCopyMarkdown = async () => {
+    if (
+      sending.current ||
+      copying.current ||
+      activeVersionDescription === undefined ||
+      error ||
+      !editorRef.current?.isEditorReadyToDiscard()
+    )
+      return;
+    copying.current = true;
+    setCopyPending(true);
+    try {
+      await copyText(editorRef.current.getMarkDown(), t("description_versions.markdown_copied"));
+    } finally {
+      copying.current = false;
+      if (active.current) setCopyPending(false);
+    }
+  };
 
   if (!workspaceId) return null;
 
   return (
     <ModalCore isOpen={isOpen} handleClose={close} position={EModalPosition.TOP} width={EModalWidth.XXXXL}>
       <div className="p-4" data-prevent-outside-click>
+        <ModalTitle className="sr-only">{t("description_versions.title")}</ModalTitle>
         {/* Header */}
         <div className="flex items-center justify-between gap-2 py-0.5">
           <div className="flex flex-shrink-0 items-center gap-2 text-13">
@@ -212,7 +225,8 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
               type="button"
               variant="ghost"
               size="base"
-              onClick={handleCopyMarkdown}
+              onClick={() => void handleCopyMarkdown()}
+              disabled={pending || copyPending || activeVersionDescription === undefined || !!error}
               icon={CopyOutline}
               aria-label={t("common.actions.copy_markdown")}
             />

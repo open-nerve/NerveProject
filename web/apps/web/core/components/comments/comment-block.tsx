@@ -7,7 +7,6 @@
 import type { IssueComment } from "@nerve/api-client";
 
 import type { ReactNode } from "react";
-import { useRef } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { ReplyOutline } from "@makeplane/propel/icons";
@@ -22,14 +21,12 @@ type TCommentBlock = {
 
 export const CommentBlock = observer(function CommentBlock(props: TCommentBlock) {
   const { comment, ends, children } = props;
-  const commentBlockRef = useRef<HTMLDivElement>(null);
 
   if (!comment) return null;
   return (
     <div
-      id={comment.id}
+      id={`comment-${comment.id}`}
       className={`relative flex gap-3 ${ends === "top" ? `pb-2` : ends === "bottom" ? `pt-2` : `py-2`}`}
-      ref={commentBlockRef}
     >
       <div
         className="transition-border absolute top-0 bottom-0 left-[13px] w-px bg-layer-3 duration-1000"

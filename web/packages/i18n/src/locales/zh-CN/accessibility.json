@@ -35,6 +35,8 @@
       "clear_email": "清除邮箱",
       "show_password": "显示密码",
       "hide_password": "隐藏密码"
-    }
+    },
+    "comment_options": "{name}的评论选项",
+    "comment_add_reaction": "为{name}的评论添加回应"
   }
 }

@@ -23,14 +23,17 @@ export function draftPayload(before: IssueDraftPayload, edits: DraftEdits = {}):
       if (value !== null && value !== undefined) payload[key] = value;
     } else {
       const value = Object.hasOwn(edits, key) ? edits[key] : before[key];
-      if (value !== null && value !== undefined) payload[key] = value;
+      // Empty reference/date controls mean clear, not a UUID/date wire value.
+      const cleared =
+        value === "" && (key === "state_id" || key === "parent_id" || key === "start_date" || key === "target_date");
+      if (value !== null && value !== undefined && !cleared) payload[key] = value;
     }
   }
   return payload;
 }
 export function draftInput(edits: DraftEdits, before: IssueDraftPayload = {}): DraftCreate {
   return {
-    ...(Object.hasOwn(edits, "project_id") ? { project_id: edits.project_id } : {}),
+    ...(Object.hasOwn(edits, "project_id") ? { project_id: edits.project_id === "" ? null : edits.project_id } : {}),
     payload: draftPayload(before, edits),
   };
 }

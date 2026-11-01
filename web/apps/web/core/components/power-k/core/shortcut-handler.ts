@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { isComposing } from "@nerve/utils";
 import type { IPowerKCommandRegistry } from "./registry";
 import type { TPowerKCommandConfig, TPowerKContext } from "./types";
 
@@ -59,17 +60,11 @@ export class ShortcutHandler {
   }
 
   /**
-   * Enable/disable the shortcut handler
-   */
-  setEnabled(enabled: boolean): void {
-    this.isEnabled = enabled;
-  }
-
-  /**
    * Main keyboard event handler
    */
   handleKeyDown = (e: KeyboardEvent): void => {
-    if (!this.isEnabled) return;
+    // React hydrates at document; another listener on that node can receive a host-consumed key.
+    if (!this.isEnabled || e.defaultPrevented || isComposing(e)) return;
 
     const key = e.key.toLowerCase();
     const hasModifier = e.metaKey || e.ctrlKey || e.altKey || e.shiftKey;

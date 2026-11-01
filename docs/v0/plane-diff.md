@@ -445,3 +445,12 @@ Plane已有活links计数：`P/db/models/issue.py:371–381`的IssueLink普通me
 Plane `P/utils/order_queryset.py:18–33,153–157`当前排序allowlist无link_count；Nerve保留P5原19码、新增±link_count成当前21，全平铺/分组/子组/成员/偏好共用词汇及整数/numeric游标。不加link_count筛选、不复制派生列到issues；metadata/URL/title更新不改数量。跨请求链接变化仍是弱快照边界，后续生产前端比较器/页面由P10b–P15接手。
 
 **M4/P14 整审收口（T16）**：延迟实现尚未挂载不阻止创建窗取消；已挂载明确 busy 仍保护，Save to Drafts/普通提交均要求 ready，保留 dirty 确认，不扩草稿协议。删除已无读者的删除弹窗 dataId 回退、收集箱恒 false 的 isVisible 分支及五个文件内类型 export；公开 editor ref 维持设计兼容。默认 E2E 238/238 与 Chromium/Firefox/WebKit 各44项通过；测试按实际引擎输入/键盘/拦截能力准备，不隐藏 console warning。M7 自身关闭策略的慢加载限制与 P15 剩余复制明确交接，未冒称全站验收。见 [P14 review](M4-issue-core/reviews/P14-web-issue-detail-review.md#9-最终验收映射)。
+
+
+## 六、M4/P15 协作页面的原生边界（2026-11-01）
+
+时间线直接合并原生活动/评论资源并读完分页；评论不保留 replies/access 或按邮箱猜系统用户的分支。评论作者可改、作者或获现有管理员授权者可删；归档展示原评论/回应但不发送修改。描述历史通过普通 PATCH 还原，Markdown 从真实编辑器读出后交原复制 hook，公开 editor ref 与 M7 版本适配仍保留。
+
+草稿页面读原生个人资源和服务端 total，未编辑的完整 payload 保留，确认保存后才无 body 发布；普通创建可保存空标题草稿。命令根页空查询保留命令，非空改经原生工作项搜索和显式项目目录本地过滤，保持服务端相关性顺序；旧 WorkspaceService.searchWorkspace 与六类结果分组退役，M7 四 view 方法仍有真实读者。主题确认后才应用/重载，复制由既有 hook 单独报告结果。T14 路由切换退役命令、关闭快捷键消费事件；T15 删除无消费者扩展、恒 false 重复弹窗分支和空 ref 监听，不取消有真实调用者的顶部搜索关闭回调。
+
+这些是 M4/P15 的消费者收口，详细局部决定、反证和真实三引擎矩阵见 [P15 review](M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md)。T16 已复审顶部与弹窗两个真实宿主，关闭改用既有 context.closePalette 单一回调，不再保留重复关闭参数；补登录偏好晚答与 document/退场键盘保护。后置 CI 补真实 cmdk 的 Ctrl+K 退场保护，完整本地门禁重跑通过，最终候选 SHA/CI 按阶段记录 §10 后置核准，P15 集成待办；没有扩大服务端/权限 owner、CSP、剪贴板兼容或 M6/M7 页面的验收归属。

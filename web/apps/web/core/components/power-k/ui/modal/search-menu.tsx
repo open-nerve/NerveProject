@@ -1,25 +1,13 @@
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-import { useState, useEffect } from "react";
-import { useParams } from "react-router";
-// nerve imports
-import { WORKSPACE_DEFAULT_SEARCH_RESULT } from "@nerve/constants";
-import type { IWorkspaceSearchResults } from "@nerve/types";
-import { cn } from "@nerve/utils";
-// hooks
-import { usePowerK } from "@/hooks/store/use-power-k";
-import useDebounce from "@/hooks/use-debounce";
-import { WorkspaceService } from "@/services/workspace.service";
-// local imports
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueSearch } from "@/hooks/use-issue-search";
+import { useRefusalMessage } from "@/hooks/use-refusal-toast";
+import { useSessionSWR } from "@/lib/use-session-swr";
 import type { TPowerKContext, TPowerKPageType } from "../../core/types";
 import { PowerKModalNoSearchResultsCommand } from "./no-results-command";
 import { PowerKModalSearchResults } from "./search-results";
-// services init
-const workspaceService = new WorkspaceService();
 
 type Props = {
   activePage: TPowerKPageType | null;
@@ -27,84 +15,82 @@ type Props = {
   isWorkspaceLevel: boolean;
   searchTerm: string;
   updateSearchTerm: (value: string) => void;
-  handleSearchMenuClose?: () => void;
+  isOpen: boolean;
 };
 
-export function PowerKModalSearchMenu(props: Props) {
-  const { activePage, context, isWorkspaceLevel, searchTerm, updateSearchTerm, handleSearchMenuClose } = props;
-  // states
-  const [resultsCount, setResultsCount] = useState(0);
-  const [isSearching, setIsSearching] = useState(false);
-  const [results, setResults] = useState<IWorkspaceSearchResults>(WORKSPACE_DEFAULT_SEARCH_RESULT);
-  const debouncedSearchTerm = useDebounce(searchTerm, 500);
-  // navigation
-  const { workspaceSlug, projectId } = useParams();
-  // store hooks
-  const { togglePowerKModal } = usePowerK();
+export const PowerKModalSearchMenu = observer(function PowerKModalSearchMenu(props: Props) {
+  const { activePage, context, isWorkspaceLevel, searchTerm, updateSearchTerm, isOpen } = props;
+  const { rootIssueStore: root } = useIssueDetail();
+  const { t } = useTranslation();
+  const refusalMessage = useRefusalMessage();
+  const { workspaceSlug, projectId } = context.params;
+  const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug ?? "");
+  const directory = root.rootStore.projectRoot.project;
+  const open = root.active && isOpen && !!workspace;
+  const searching = open && !activePage && searchTerm.trim().length > 0;
+  const catalog = useSessionSWR(open && workspace ? ["PROJECTS", workspace.id, workspace.slug] : null, (id, slug) =>
+    directory.fetchProjects({ id, slug })
+  );
+  const search = useIssueSearch(
+    root,
+    workspaceSlug,
+    { q: searchTerm, ...(!isWorkspaceLevel && projectId ? { project_id: projectId } : {}) },
+    searching
+  );
+  if (!searching || !workspace) return null;
 
-  useEffect(() => {
-    if (activePage || !workspaceSlug) return;
-    setIsSearching(true);
-
-    if (debouncedSearchTerm) {
-      workspaceService
-        .searchWorkspace(workspaceSlug, {
-          ...(projectId ? { project_id: projectId } : {}),
-          search: debouncedSearchTerm,
-          workspace_search: !projectId ? true : isWorkspaceLevel,
-        })
-        // oxlint-disable-next-line no-shadow oxlint-disable-next-line promise/always-return
-        .then((results) => {
-          setResults(results);
-          const count = Object.keys(results.results).reduce(
-            (accumulator, key) => results.results[key as keyof typeof results.results]?.length + accumulator,
-            0
-          );
-          setResultsCount(count);
-        })
-        .catch(() => {
-          setResults(WORKSPACE_DEFAULT_SEARCH_RESULT);
-          setResultsCount(0);
-        })
-        .finally(() => setIsSearching(false));
-    } else {
-      setResults(WORKSPACE_DEFAULT_SEARCH_RESULT);
-      setIsSearching(false);
-    }
-  }, [debouncedSearchTerm, isWorkspaceLevel, projectId, workspaceSlug, activePage]);
-
-  if (activePage) return null;
-
-  const handleClosePalette = () => {
-    handleSearchMenuClose?.();
-    togglePowerKModal(false);
-  };
+  const needle = searchTerm.toLowerCase();
+  const projects = directory.knownProjectIds(workspace.id).flatMap((id) => {
+    const project = directory.getProjectById(id);
+    return project &&
+      project.workspace_id === workspace.id &&
+      !project.archived_at &&
+      (isWorkspaceLevel || !projectId || id === projectId) &&
+      (project.name.toLowerCase().includes(needle) || project.identifier.toLowerCase().includes(needle))
+      ? [project]
+      : [];
+  });
+  const issues = search.ids.flatMap((id) => {
+    const issue = root.issues.getIssueById(id);
+    const project = issue ? directory.getProjectById(issue.project_id) : undefined;
+    return issue && project && project.workspace_id === workspace.id ? [{ issue, project }] : [];
+  });
+  const incomplete = issues.length !== search.ids.length;
+  const error =
+    search.error ?? catalog.error ?? (incomplete ? new Error("Search directory is unavailable") : undefined);
+  if (error)
+    return (
+      <div role="alert" className="p-4 text-13 text-secondary">
+        <p>{refusalMessage(error)}</p>
+        <button
+          className="mt-2 underline"
+          onClick={() => {
+            if (search.error || incomplete) search.retry();
+            if (catalog.error) void catalog.mutate().catch(() => undefined);
+          }}
+        >
+          {t("common.retry")}
+        </button>
+      </div>
+    );
+  if (search.loading || catalog.data === undefined)
+    return (
+      <div role="status" className="p-4 text-13 text-secondary">
+        {t("common.loading")}
+      </div>
+    );
 
   return (
     <>
-      {searchTerm.trim() !== "" && (
-        <div className="mt-4 flex items-center justify-between gap-2 px-4">
-          <h5
-            className={cn("text-11 text-primary", {
-              "animate-pulse": isSearching,
-            })}
-          >
-            Search results for <span className="font-medium">"{searchTerm}"</span> in{" "}
-            {isWorkspaceLevel ? "workspace" : "project"}:
-          </h5>
-        </div>
+      {issues.length === 0 && projects.length === 0 && (
+        <PowerKModalNoSearchResultsCommand updateSearchTerm={updateSearchTerm} />
       )}
-
-      {/* Show empty state only when not loading and no results */}
-      {!isSearching && resultsCount === 0 && searchTerm.trim() !== "" && debouncedSearchTerm.trim() !== "" && (
-        <PowerKModalNoSearchResultsCommand
-          context={context}
-          searchTerm={searchTerm}
-          updateSearchTerm={updateSearchTerm}
-        />
-      )}
-
-      {searchTerm.trim() !== "" && <PowerKModalSearchResults closePalette={handleClosePalette} results={results} />}
+      <PowerKModalSearchResults
+        workspaceSlug={workspace.slug}
+        issues={issues}
+        projects={projects}
+        closePalette={context.closePalette}
+      />
     </>
   );
-}
+});

@@ -231,3 +231,42 @@ P10b仍承担列表/会话分代、router派生、三处同步读取边界与SWR
 §7 的 rich/lite/toolbar 延迟链和设置挂载已完成，EMOJI_CHECK_WARNING 及全部用法删除，三引擎 C10 无 warning。§8 callout 原生表情及 worker/CSP 复核完成，无 blob worker，不扩 CSP；表情回应仍 P15。§11 仅本期详情六消费者闭合，与历史六处集合不同，布局快捷 helper/动态及其余指定复制仍留 P15。§12 两个剩余 projectIssuesSearch 读者迁原生搜索、ProjectService 空类/旧类型删除；P11 跳转实例的历史删除只复验，不重复计功。搜索/评论/版本/草稿等后续 service 与会话责任不提前关闭。
 
 共同证据：[阶段 review §9–14](../reviews/P14-web-issue-detail-review.md#9-最终验收映射)、[三浏览器逐条矩阵](../reviews/P14-browser-matrix.md)与[整审 re-21](../../../reviews/re-21-M4P14整体审核.md)。验收输入 b7d1f0c2（含 I22 路由及 I9 编辑器就绪前置修正），本地七项分层门禁、默认 E2E 238/238、三引擎各44/44；最终文稿 CI 按后置回执。顶层 status 仍 open，真正 M4 收尾再按完整关闭条件统一关闭。
+
+## P14 集成关闭回执（2026-10-31）
+
+上述 P14 对应子项已随授权 --no-ff 集成至 main 7a81ea18；[准确 main CI](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务全绿，原分支与集成修复分支的证据逐 hash 归档复验后，两个工作树和远端/本地分支已正常清理。完整输入、两次初始失败、修复及新归档路径见 [P14 review §15–16](../reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31)。本文件顶部 status 仍 open，其它阶段和 M4 总关闭条件不提前处理。
+
+
+## P15 T11 子项接收：十三实例清账（2026-11-01）
+
+§12 历史十三实例已逐路径核为零：P11 九处、P12 一处、P14 两处、P15 命令搜索一处。以下路径相对 web/apps/web，均保留文件而无模块级 service 实例；不是声称全仓所有领域实例为零。
+
+| Path | Module instances |
+|---|---|
+| `app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/issues/(detail)/header.tsx` | 0 |
+| `app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/issues/(detail)/[issueId]/page.tsx` | 0 |
+| `core/components/core/modals/existing-issues-list-modal.tsx` | 0 |
+| `core/components/editor/lite-text/editor.tsx` | 0 |
+| `core/components/editor/rich-text/description-input/root.tsx` | 0 |
+| `core/components/inbox/modals/create-modal/issue-description.tsx` | 0 |
+| `core/components/inbox/modals/select-duplicate.tsx` | 0 |
+| `core/components/issues/issue-detail/main-content.tsx` | 0 |
+| `core/components/issues/issue-modal/components/description-editor.tsx` | 0 |
+| `core/components/issues/parent-issues-list-modal.tsx` | 0 |
+| `core/components/issues/peek-overview/issue-detail.tsx` | 0 |
+| `core/components/power-k/ui/modal/search-menu.tsx` | 0 |
+| `core/services/issue/workspace_draft.service.ts` | 0 |
+
+剩余八实例：comments/comment-create、inbox/modals/create-modal/create-root、hooks/editor/use-editor-config 的 FileService 归 M5；cycles/modal 和 cycles/progress-sidebar/sidebar-header 的 CycleService 归 M6；inbox/content/issue-root 的 IntakeWorkItemVersionService 归 M7；use-timezone 与 workspace-notification 的服务归自身领域。审计、M15 临时恢复实例的有效失败及字节恢复、31/31 消费者、四个 view 方法字节一致见 [P15 review T11](../reviews/P15-web-collaboration-drafts-search-review.md#t11旧搜索合同删除与十三实例核账)。本项完成，顶层 status 仍 open。
+
+
+## P15 协作子项接收（2026-11-01）
+
+§8 两类回应使用本站 emojibase，组合 Unicode 按码点且 CSP 不扩；§9 主题只在本代原生确认后应用/重载，旧登录成功/失败无反馈；§11 时间线/布局及余下四个 M4 复制入口迁既有 hook，单一等待/成功/失败反馈，四个 M4 例外删除；C8 三引擎真实 LAN HTTP 无手势拒绝，Firefox 两条浏览器安全诊断按精确条件必须出现，其余异常仍禁止。§12 十三历史实例保持零，八个其它领域实例及 M7 view 方法维持原归属。T16 继续核顶部搜索宿主和其它偏好晚答，不能把 T14 检查点当阶段最终终审；顶部 status 仍 open。
+
+证据：[P15 review](../reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)、[三浏览器矩阵](../reviews/P15-browser-matrix.md)。
+
+
+## P15 T16 整审复核（2026-11-01）
+
+本期子项已完成实现、整审及后置 CI 的局部修复与完整本地门禁，最终候选 CI 后置核准，集成待办；顶部/弹窗宿主、偏好晚答和退场选择保护已复验，92 个 TS/TSX 零告警。准确最终分支 CI 与交付状态见 [阶段记录 §10](../reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 和 [整审报告](../../../reviews/re-24-M4P15整体审核.md)。顶部 status 保持 open，P16、M7 与 M4 总关闭责任不改变；尚未合并。

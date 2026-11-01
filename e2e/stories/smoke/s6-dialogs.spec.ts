@@ -10,6 +10,7 @@ import {
   modalDialog,
   pageBehindHidden,
 } from "../../fixtures/dialogs";
+import { selectCommand } from "../../fixtures/power-k";
 import { chooseByKeyboard } from "../../fixtures/menus";
 import { tabCycle } from "../../fixtures/project-pages";
 import { registerOnboarded, transitionsEnded } from "../../fixtures/settings-pages";
@@ -42,8 +43,8 @@ test("S6 (page): the command palette and its list of keyboard shortcuts are moda
   // A page of the palette (the first day of the week): a Backspace in its empty search goes back, but one that ends a
   // composition there is the method's, and the page stays.
   const paletteSearch = modalDialog(page).getByRole("combobox");
-  await paletteSearch.fill("Change first day of week");
-  await page.keyboard.press("Enter");
+  // Nonempty root text searches work items; commands remain keyboard-selectable from the empty root.
+  await selectCommand(page, /^Change first day of week/);
   const monday = modalDialog(page).getByRole("option", { name: "Monday", exact: true });
   await expect(monday).toBeVisible();
   const left = hiddenWithin(monday);
@@ -88,8 +89,7 @@ test("S6 (page): the command palette and its list of keyboard shortcuts are moda
   // The palette's command that copies the page's address.
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.keyboard.press("ControlOrMeta+k");
-  await page.keyboard.type("Copy current page URL");
-  await page.keyboard.press("Enter");
+  await selectCommand(page, /^Copy current page URL/);
   await expect(page.getByText("Current page URL copied to clipboard.")).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(page.url());
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
