@@ -11,6 +11,7 @@ import { observer } from "mobx-react";
 // lucide icons
 import { Circle } from "lucide-react";
 import { AddOutline, ArrowCollapseOutline, FullScreenOutline } from "@makeplane/propel/icons";
+import { useTranslation } from "@nerve/i18n";
 import type { TIssueKanbanFilters, TIssueGroupByOptions } from "@nerve/types";
 // ui
 // components
@@ -48,6 +49,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
   const [isOpen, setIsOpen] = React.useState(false);
   // hooks
   const storeType = useIssueStoreType();
+  const { t } = useTranslation();
   return (
     <>
       <CreateUpdateIssueModal
@@ -87,6 +89,9 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
 
         {sub_group_by === null && (
           <button
+            type="button"
+            aria-label={title}
+            aria-expanded={!verticalAlignPosition}
             className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover"
             onClick={() => handleCollapsedGroups("group_by", column_id)}
           >
@@ -96,6 +101,8 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
 
         {!disableIssueCreation && (
           <button
+            type="button"
+            aria-label={`${t("create_work_item")}: ${title}`}
             className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover"
             onClick={() => {
               setIsOpen(true);

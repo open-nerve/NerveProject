@@ -233,6 +233,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
           count={groupIssueCount}
           issuePayload={group.payload}
           disableIssueCreation={disableIssueCreation || isGroupByCreatedBy}
+          isExpanded={isExpanded}
           handleCollapsedGroups={handleCollapsedGroups}
         />
       </Row>

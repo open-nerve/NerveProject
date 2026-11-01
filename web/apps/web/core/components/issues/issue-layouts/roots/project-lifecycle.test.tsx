@@ -58,9 +58,9 @@ vi.mock("@atlaskit/pragmatic-drag-and-drop/element/adapter", async (original) =>
 }));
 let tab: Awaited<ReturnType<typeof issueSelectionTab>>;
 const parent = { ...issueOf("parent"), state_id: "state", sub_issues_count: 1 };
-const list = (layout: "list" | "kanban" | "spreadsheet") => ({
+const list = (layout: "list" | "kanban" | "spreadsheet", grouped = false) => ({
   total: 1,
-  groups: [{ key: layout === "kanban" ? "state" : "", total: 1, data: [parent], next_cursor: null }],
+  groups: [{ key: layout === "kanban" || grouped ? "state" : "", total: 1, data: [parent], next_cursor: null }],
 });
 const lists = () => tab.nerve.to("/api/v0/projects/A/issues");
 const deletes = () => tab.nerve.calls.filter((call) => call.method === "DELETE");
@@ -79,13 +79,16 @@ afterEach(async () => tab.close());
 async function mount(
   layout: "list" | "kanban" | "spreadsheet",
   answer = true,
-  filters: ReturnType<typeof preferencesOf>["filters"] = {}
+  filters: ReturnType<typeof preferencesOf>["filters"] = {},
+  grouped = false,
+  subgroup: "priority" | null = null
 ) {
   const prefs = preferencesOf();
   prefs.filters = filters;
   prefs.display_filters.layout = layout;
-  prefs.display_filters.group_by = layout === "kanban" ? "state_id" : null;
+  prefs.display_filters.group_by = layout === "kanban" || grouped ? "state_id" : null;
   prefs.display_filters.order_by = "sort_order";
+  prefs.display_filters.sub_group_by = subgroup;
   prefs.display_properties = {
     key: true,
     assignee: false,
@@ -111,7 +114,7 @@ async function mount(
   await until(() => tab.nerve.calls.length === 1, "preferences");
   await act(async () => tab.nerve.calls[0]!.answer(json(200, prefs)));
   await until(() => lists().length === 1, "initial list");
-  if (answer) await act(async () => lists()[0]!.answer(json(200, list(layout))));
+  if (answer) await act(async () => lists()[0]!.answer(json(200, list(layout, grouped))));
   return prefs;
 }
 async function requestDelete(id = "parent") {
@@ -297,3 +300,76 @@ it.each([5, 15] as const)(
     expect(writes()).toHaveLength(1);
   }
 );
+
+it.each(["list", "kanban"] as const)(
+  "R10 %s group has a focusable named collapse control and preserves local intent",
+  async (layout) => {
+    await mount(layout, true, {}, true);
+    const toggle = document.querySelector<HTMLButtonElement>('button[aria-label="Todo"][aria-expanded]');
+    expect(toggle, "group collapse is a named native button").not.toBeNull();
+    expect(toggle!.type).toBe("button");
+    expect(toggle!.getAttribute("aria-expanded")).toBe("true");
+    await act(async () => {
+      toggle!.focus();
+      toggle!.click();
+    });
+    expect(document.activeElement).toBe(toggle);
+    expect(toggle!.getAttribute("aria-expanded")).toBe("false");
+    expect(tab.app.issue.projectIssuesFilter.getIssueFilters("A")?.kanbanFilters?.group_by).toEqual(["state"]);
+    expect(document.querySelector('a[href*="/browse/"]')).toBeNull();
+    await act(async () => toggle!.click());
+    expect(toggle!.getAttribute("aria-expanded")).toBe("true");
+    expect(document.querySelector('a[href*="/browse/"]')).not.toBeNull();
+    expect(tab.nerve.calls.every((call) => call.method === "GET")).toBe(true);
+  }
+);
+it.each(["list", "kanban"] as const)(
+  "R10 %s group has a named create button that opens the actual form",
+  async (layout) => {
+    await mount(layout, true, {}, true);
+    const add = document.querySelector<HTMLButtonElement>('button[aria-label="create_work_item: Todo"]');
+    expect(add, "group creation is a named native button").not.toBeNull();
+    expect(add!.type).toBe("button");
+    const respond = tab.nerve.respond;
+    tab.nerve.respond = (call) => {
+      if (call.path === "/api/v0/workspaces/ws/projects") call.answer(json(200, { data: [tab.project] }));
+      else respond?.(call);
+    };
+    await act(async () => {
+      add!.focus();
+      add!.click();
+    });
+    expect(dialog()).not.toBeNull();
+    expect(dialog()!.querySelector('input[name="name"]')).not.toBeNull();
+    expect(tab.nerve.calls.every((call) => call.method === "GET")).toBe(true);
+  }
+);
+
+it.each([5, 15] as const)("R11 swimlane headers respect project role %s creation permissions", async (role) => {
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [
+    { ...tab.project, member_role: role, guest_view_all_features: true },
+  ]);
+  tab.nerve.calls.length = 0;
+  await mount("kanban", false, {}, true, "priority");
+  await act(async () =>
+    lists()[0]!.answer(
+      json(200, {
+        total: 1,
+        groups: [
+          {
+            key: "state",
+            total: 1,
+            subgroups: [{ key: "high", total: 1, data: [{ ...parent, priority: "high" }], next_cursor: null }],
+          },
+        ],
+        subgroup_totals: [{ key: "high", total: 1 }],
+      })
+    )
+  );
+  expect(document.querySelector('a[href*="/browse/"]')).not.toBeNull();
+  const create = document.querySelector<HTMLButtonElement>('button[aria-label="create_work_item: Todo"]');
+  if (role === 5) expect(create).toBeNull();
+  else expect(create?.disabled).toBe(false);
+  expect(dialog()).toBeNull();
+  expect(tab.nerve.calls.every((call) => call.method === "GET")).toBe(true);
+});
