@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见 §29：M4 closeout T1–T9 已完成；负责人已批准 R06 方案 A，T10 源头修复、联合回归和新构建 E2E 已通过，R06 已闭环。继续全期 deep-review 和收尾，暂不合并。此前各节保留历史快照。**
+**当前接续点见§30：M4收尾R01–R34修复和五项无Docker门禁通过；Docker服务再次中断，最终C12/Go全测/默认E2E待恢复。先不合并，旧节保留历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -296,3 +296,13 @@ R06 复现：先读取项目详情，再让完整项目目录不再包含该私�
 负责人已批准 A：先同步设计/spec/plan，再由 ProjectStore 修正完整目录缺席与旧详情选择语义，保持 IssueRootStore 统一拥有工作项权限失效。修复涵盖跨归档类别的来源回退、迟到详情、确认重放和成员角色旧答；退出/排序亦接入同一边界。最后联合 62 文件 920 项通过；2026-11-02 最后产品候选完整 web 281 文件 3061 项、lint 54/54、knip 和新构建 E2E 297/297 已通过，R06 实施闭环。最终三引擎与完整 F 仍在 T13。详见 [问题、决定和证据](../M4-issue-core/reviews/closeout-permission-decision.md) 和 [全 M4 审查记录](../../reviews/re-29-M4整体审核.md)。
 
 分支 `codex/m4-closeout`，收尾基线 `01e40e113e11365a4eeacc2794973de2751dde61`；主目录保持 main。历史停报提交 `0d1983f1f11fa51dda1ba521bbc87ccc005704f0` 的 CI `41318564500` attempt 1 三作业全绿，新修复不冒用该结果。继续 T10 剩余完整审查与 T11–T14 Step 1；C12 最终输入、最终完整 F、准确分支 CI 和 fresh-context 分支审查尚未收口。D18、完成标记和 main CI 仍留待未来获准集成，不合并、不清理当前分支或 worktree。
+
+## 30. M4 收尾最终候选与环境中断（2026-11-02）
+
+分支`codex/m4-closeout`，基线/main仍`01e40e113e11365a4eeacc2794973de2751dde61`。T1–T9与T11/T12完成，T10全期源码审查、24有效反证和R01–R34修复已核，最后C12绑定留T13。八输入closed、M5–M8四输出open；19项批准决定映射已补[验收台账](../M4-issue-core/reviews/closeout-acceptance.md#15-d09-批准决定与最终实现)。
+
+T13新增29项三引擎补验；Chromium首轮167全过，Firefox发现两产品缺陷R33/R34及paste夹具边界，修复后10项受影响回归通过。WebKit日期reload/模块加载中开启拦截的夹具时序已修，针对3项复验通过、无守卫豁免。第二次WebKit全量96项通过后Docker socket消失，后续71项DB连接拒绝/超时失败；只读docker info确认服务不可用。已请求负责人恢复，没有操作Docker或已有容器。
+
+生成检查、Go lint、Web lint54/54、knip、无缓存Web全测18/18任务均通过；313个vitest文件3374项与api-client原生5项、零skip。源码/收据共同输入`a300f2074adc7556eb3e57d34ab5c1eb0d2b1721a19f6a2f9d41b86ff2d97fe4`，当前二进制`t13-build-6`。原始日志/trace、失败和准备草稿在`.superpowers/sdd/M4-closeout/`，进度仍在`.superpowers/sdd/closeout/`。
+
+恢复后完成最终三引擎、Go全测和默认E2E；实际看图/输入绑定、七节review和D17规模终表、一次新上下文整分支deep-review、精确分支CI随后签结。T14只准备集成包，M4§14/总体9.4、main绑定和归档清理均等待之后授权。不能把当前静态门禁或旧检查点CI当最终通过。

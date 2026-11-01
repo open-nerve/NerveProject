@@ -6,7 +6,7 @@
 
 import type { Editor } from "@tiptap/core";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { DeleteOutline, LinkOutline, TickOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { cn, isComposing } from "@nerve/utils";
@@ -31,9 +31,12 @@ export function BubbleMenuLinkSelector(props: Props) {
   const { context } = options;
   // refs
   const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (context.open) inputRef.current?.focus();
-  }, [context.open]);
+  // FloatingPortal mounts its children after the open render. Focus the actual input
+  // on attachment, rather than an effect which can run while its ref is still null.
+  const attachInput = useCallback((input: HTMLInputElement | null) => {
+    inputRef.current = input;
+    input?.focus();
+  }, []);
 
   const handleLinkSubmit = useCallback(() => {
     const input = inputRef.current;
@@ -79,7 +82,7 @@ export function BubbleMenuLinkSelector(props: Props) {
           })}
         >
           <input
-            ref={inputRef}
+            ref={attachInput}
             type="url"
             aria-label="Link URL"
             placeholder="Enter or paste a link"

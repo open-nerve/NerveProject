@@ -160,6 +160,21 @@ it("duplicates the caret's whole block on keyboard activation without consulting
   expect(current.editor.state.doc.child(2).textContent).toBe("Second block");
 });
 
+it.each(["<p>Last block</p>", "<blockquote><p>Last block</p></blockquote>"])(
+  "leaves a valid text cursor in the duplicated last block: %s",
+  async (content) => {
+    const current = await mount(content);
+    const originalSize = current.editor.state.doc.content.size;
+    await act(async () => current.handle.click());
+    await act(async () => named("Duplicate")[0].click());
+    expect(current.editor.state.selection.$from.parent.inlineContent).toBe(true);
+    expect(current.editor.state.selection.from).toBeGreaterThan(originalSize);
+    await act(async () => current.editor.commands.insertContent(" appended"));
+    expect(current.editor.state.doc.child(0).textContent).toBe("Last block");
+    expect(current.editor.state.doc.child(1).textContent).toBe("Last block appended");
+  }
+);
+
 it("focuses block actions and returns to the handle on Escape without dismissing an outer layer", async () => {
   const current = await mount("<p>Focus block</p>");
   await act(async () => current.handle.click());

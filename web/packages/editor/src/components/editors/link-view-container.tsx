@@ -52,7 +52,7 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
 
   const dismiss = useDismiss(context);
 
-  const { getReferenceProps, getFloatingProps } = useInteractions([dismiss]);
+  const { getFloatingProps } = useInteractions([dismiss]);
 
   // Clear any existing timeout
   const clearHoverTimeout = useCallback(() => {
@@ -78,11 +78,8 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
       const target = (event.target as HTMLElement)?.closest("a");
       if (!target) return;
 
-      const referenceProps = getReferenceProps();
-      Object.entries(referenceProps).forEach(([key, value]) => {
-        target.setAttribute(key, value as string);
-      });
-
+      // This anchor belongs to ProseMirror, not React. useDismiss installs native document
+      // listeners; serializing its React reference handlers as attributes would violate CSP.
       const view = editor.view;
       if (!view) return;
 
@@ -120,7 +117,7 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
         console.error("Error handling link hover:", error);
       }
     },
-    [editor, editorState.linkExtensionStorage, getReferenceProps, isOpen, linkViewProps, clearHoverTimeout]
+    [editor, editorState.linkExtensionStorage, isOpen, linkViewProps, clearHoverTimeout]
   );
 
   // Handle mouse enter on floating element (cancel close timeout)

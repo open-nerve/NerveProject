@@ -1,6 +1,6 @@
 # M4 收尾验收台账
 
-状态：实施中。2026-11-01 获准从 T1 开始；各项先登记、凭本次证据签结。最终 main CI、M4 §14 全勾和总体 §9.4 完成标记仍待集成。
+状态：T1–T9、T11/T12已完成；T10源码审查与修复完成、最终C12绑定留T13。T13五项无Docker门禁通过；三引擎C12/Go全测/默认E2E因Docker服务中断待恢复。最终main CI、M4§14全勾和总体§9.4完成标记仍待集成。
 
 基线 `01e40e113e11365a4eeacc2794973de2751dde61`；实施起点 `726f7156c2a053bd67fba1bfcaef5541df347749`；全期范围 `1eb9686a6ca527984337821af5fa7efae8c620e2..候选HEAD`。主目录 main 保持不动。P16 main CI [41290496985](https://github.com/open-nerve/NerveProject/actions/runs/41290496985) 和本分支预检 CI [41293001954](https://github.com/open-nerve/NerveProject/actions/runs/41293001954) 均为准确 SHA、attempt 1、success。
 
@@ -22,7 +22,7 @@
 | D06 | P7出站IANA/DNS/固定IP/每跳重检/本机地址与I10 blocked | T3/T6/T10 | T3出站每跳固定IP/危险分支零dial通过，见[§4](closeout-server-contracts.md)；T6页面/T13待验 |
 | D07 | purge目录/外键/I21、删除窗口/交错24/25/M3有限轮询 | T3/T9/T13 | T3 catalog/runtime/删除窗口/L24/L25通过，已批准迟到重试单列，见[§4](closeout-server-contracts.md)；T9七个软删job一次完成、一次runtime清理660,026行且59天/活行不变，见[规模](closeout-performance.md#6-一次真实物理清理)；T13待验 |
 | D08 | 七门禁、架构/SQLCSchemaScope/grants双测/CLI/keywords/lint/knip/gen | T4/T9/T13/T14 | T4与T9七门禁通过；T9 E2E 297/297，见[命令收据](closeout-performance.md#7-t9收据与后续边界)。T13最终候选/T14 mainCI待验 |
-| D09 | 八决策/十一架构问题已批准并落实 | T1/T10 | 待验；已批准文本与最终实现对照，无重开未经批准合同 |
+| D09 | 八决策/十一架构问题已批准并落实 | T1/T10 | 通过；[八决策/十一架构与最终实现](#15-d09-批准决定与最终实现)逐项核对，无重开未经批准合同 |
 | D10 | §13.1逐项/8输入closed；§13.2四输出及原文/收集箱细节 | T12/T13 | T12实施完成：[逐条交接](closeout-handoffs.md)，205原条款/43结论、36阶段移交分别核对；8输入closed、4输出open，1237链接有效，两段原文逐字相同且历史正文保留。最终整审/T13输入绑定待验 |
 | D11 | §3.23每行、§4.17每行、frontend M4、README§8.8 | T11 | T11完成[44同步/45差异映射](closeout-sync.md)：43同步已核、SYNC44集成待办；目标段/原文/hash齐全 |
 | D12 | C1–C12各Phase有证据，C12最终三引擎 | T5/T6/T7/T13/T14 | T5–T7候选验收通过：原125+新增13项/引擎，21组×3与730个截图记录（T6含一张未完成中文例的部分状态）已看；[逐格记录](closeout-browser-matrix.md)。T13最终输入/T14 main绑定待办 |
@@ -101,95 +101,95 @@ T3 逐项绑定具名测试、子例、真实锁/闸门观察及五次 race 执�
 
 | ID | 原文键/主题 | 目标/责任 | 状态 |
 |---|---|---|---|
-| SYNC01 | P1a | 总体设计 / 4.2 / 加锁顺序延伸到 M4 的表；工作项的写最先锁项目行、不锁工作区行，取锁之前做不加锁的预检（凡拒绝的都在那里答）；删除工作区先锁它的项目再读时刻；写明 B 的两个代价（3.5，决策点 1） | T11 待验 |
-| SYNC02 | P1b | 总体设计 / 4.2 / 取连接之前进入按项目的写闸门、`lock_timeout` 的兜底，满时 503 `server_busy`；写明连接池的代价（3.5，架构问题 11） | T11 待验 |
-| SYNC03 | P1b | 总体设计 / 6.2 / 平台包 `platform/gate`（带 `context` 的按键的信号量，3.5，架构问题 11） | T11 待验 |
-| SYNC04 | P1a | 总体设计 / 6.2 / 模块 `issue` 和它的 13 张表（3.3，架构问题 1） | T11 待验 |
-| SYNC05 | P1a | M3 设计 / 3.6 的取锁表、17.4 / "删除工作区"一行改为先锁项目、再读时刻；17.4"M4 的工作项写入……不默认沿用"后补一句 M4 的选择（3.5） | T11 待验 |
-| SYNC06 | P1a | M3 设计 / 3.17 / 删除状态：有工作项（含已归档的）用它时 409 `project.state_in_use`（3.6） | T11 待验 |
-| SYNC07 | P1a | 差异清单 / 二·按表 / `issues`、`issue_assignees`、`issue_labels`、`issue_subscribers`、`issue_activities` 逐列（4.2–4.5、4.11） | T11 待验 |
-| SYNC08 | P1a | 差异清单 / 四 / 4.17 中标 P1a 的行 | T11 待验 |
-| SYNC09 | P1b | 差异清单 / 四 / 4.17 中标 P1b 的行 | T11 待验 |
-| SYNC10 | P2 | 总体设计 / 6.5 / `AllowCreator` 要求创建者仍是项目的有效成员、角色不低于成员；`OwnOnly` 与"一条访客规则"（3.4，架构问题 3） | T11 待验 |
-| SYNC11 | P2 | M2 设计 / 3.11 / 格式检查器登记 `date`；字段错误的路径按数组下标的数值排序；不限类型的节点检查数的范围（6.1，M2 交接第 4 节） | T11 待验 |
-| SYNC12 | P2 | 差异清单 / 四 / 4.17 中标 P2 的行（访客规则、创建者、归档只读、按编号取的 404 和折叠、起止日期） | T11 待验 |
-| SYNC13 | P3 | 总体设计 / 3.4 / 集合型的列表加上子工作项、关联、链接、工作项的表情（3.16 末尾）。P3 有第一个（`listSubIssues`） | T11 待验 |
-| SYNC14 | P3 | 总体设计 / 3.6 / "关联对象只返回 ID"的第二个例外：关联内嵌对方工作项的列表行（3.10） | T11 待验 |
-| SYNC15 | P3 | 总体设计 / 4.2 / 约定七（跨项目的写按 `id` 升序锁住涉及的项目）和关联行的约定五例外（3.5） | T11 待验 |
-| SYNC16 | P3 | 差异清单 / 二·按表、四 / `issue_relations` 逐列（4.6）；4.17 中标 P3 的行 | T11 待验 |
-| SYNC17 | P4 | 总体设计 / 1.1 / "评论（支持回复）"改为"评论"（决策点 6）；"历史版本：工作项快照、描述修改历史"改为"描述修改历史（可查看、可还原）"（决策点 5） | T11 待验 |
-| SYNC18 | P4 | 总体设计 / 5.2、5.3、6.6、6.7 / 表数 45 改为 44，删去 `issue_versions`；6.6 删去"同时写 `issue_versions`"；6.7 的保留任务写明"每个工作项最新的 20 个描述版本"（3.14） | T11 待验 |
-| SYNC19 | P4 | M2 设计 / 3.12 / 页大小的规则移到 `shared`（M3 交接第 9 节） | T11 待验 |
-| SYNC20 | P4 | 差异清单 / 一、二·按表、四 / 一：`issue_versions` 不保留；二：`issue_comments`、`issue_reactions`、`comment_reactions`、`issue_mentions`、`issue_description_versions` 逐列（4.7、4.9、4.10、4.12、4.14）；四：4.17 中标 P4 的行 | T11 待验 |
-| SYNC21 | P5 | 总体设计 / 3.3 / 筛选的写法补上 `none`（含日期的 `none`）、可重复的日期参数、单日、不合格的取值 422（3.16）；已在P5/T16同步，实际依据见 [P5 review §2](P5-issue-list-review.md#2-验收标准逐条核对) | T11 待验 |
-| SYNC22 | P5 | 总体设计 / 3.4 / 不分组的列表带 `total`；子分组的结构 `subgroups` 和泳道的总数 `subgroup_totals`；只返回非空的组；分组时不带 `group_key` 的游标 422；列表的读在一个 `REPEATABLE READ` 的快照里；一组（一格）的"加载更多"是同一个请求加 `group_key`（`sub_group_key`），不再是"加上这一组的筛选"；游标的载荷写明排序、以 `id` 结尾；未知的 `order_by`、`group_by` 422（3.16，架构问题 6）；已在P5/T16同步，实际依据见 [P5 review §2](P5-issue-list-review.md#2-验收标准逐条核对) | T11 待验 |
-| SYNC23 | P5 | 总体设计 / 6.2 / 列表的词汇在 `issue/domain`，`project` 经它声明、`issue.Provide` 实现的 `IssueListSettings` 检查显示设置（3.17，架构问题 10）；已在P5/T16同步，实际依据见 [P5 review §2](P5-issue-list-review.md#2-验收标准逐条核对) | T11 待验 |
-| SYNC24 | P5 | M3 设计 / 3.18 / 项目的显示设置加 `filters`、`display_filters`、`display_properties` 三列，格式见本文 3.17；已在P5/T16同步，实际依据见 [P5 review §2](P5-issue-list-review.md#2-验收标准逐条核对) | T11 待验 |
-| SYNC25 | P5 | 差异清单 / 二·按表、三、四 / `project_user_properties` 加三列、不建 `rich_filters`（4.15）；三：列表的响应、排序键、分组键的名字；四：4.17 中标 P5 的行；已在P5/T16同步，实际依据见 [P5 review §2](P5-issue-list-review.md#2-验收标准逐条核对) | T11 待验 |
-| SYNC26 | P6 | 总体设计 / 6.2、6.3 / `shared` 加事件的值和 `EventPublisher`；6.3 第 3 条写明订阅者的写法：同步、在事务里、出错回滚，异步的事经 `InsertTx`（3.19，决策点 3） | T11 待验 |
-| SYNC27 | P6 | 总体设计 / 6.7 / 定时任务的清单和间隔、两个队列；测试的时钟偏移（3.20，架构问题 7） | T11 待验 |
-| SYNC28 | P6 | M2 设计 / 3.15、3.17 / 事务内投递经只投递的 River 客户端（在模块之前建出）；队列与并发；定时任务和模块声明会投递的种类没有 worker 时构造失败（3.20） | T11 待验 |
-| SYNC29 | P6 | 差异清单 / 四 / 自动归档的执行者为空（决策点 4）；按间隔而不是固定时刻运行 | T11 待验 |
-| SYNC30 | P7 | 总体设计 / 6.2、8（安全） / `platform/outbound`：防 SSRF 的出站客户端，M8 复用（3.11、8.1，架构问题 8） | T11 待验 |
-| SYNC31 | P7 | 差异清单 / 二·按表、四 / `issue_links` 逐列（4.8）；抓取的上限、`metadata` 的形状 | T11 待验 |
-| SYNC32 | P7 | README / "安全"一节 / 8.8 中 P7 的行；P6、P9 的"部署"行同样按 8.8 | T11 待验 |
-| SYNC33 | P8 | 总体设计 / 5.4 / 草稿：`project_id` 是一列；发布用存着的载荷、要求 `issue.create`；409 `issue.draft_changed`（3.15） | T11 待验 |
-| SYNC34 | P8 | 总体设计 / 6.9 / `description_stripped` 不用于搜索；搜索的匹配和顺序、选择器的排除、`q` 为空时给出最近更新的、日期的条件、编号的折叠（3.7、3.18） | T11 待验 |
-| SYNC35 | P8 | 差异清单 / 二·按表、四 / `draft_issues` 逐列（4.13）；`issues` 的 trigram 索引落地；4.17 中标 P8 的行 | T11 待验 |
-| SYNC36 | P8 | README / "部署"一节 / 迁移执行 `CREATE EXTENSION pg_trgm`（库属主即可，8.8） | T11 待验 |
-| SYNC37 | P9 | 总体设计 / 5.5、6.7 / 60 天清理：每个模块清理自己的表，一个任务按顺序运行；删除关系图（3.21、4.16，架构问题 9）；描述版本保留只碰活版本、清理处理墓碑；迟到软删与父CASCADE的交叠例外见3.6 **P9回执：** 已同步总体§5.5/6.7：23表单任务清理、活版本保留、严格cutoff/父CASCADE与迟到40P01边界；T1–6/T12–15证据见P9 review | T11 待验 |
-| SYNC38 | P9 | 总体设计 / 5.5、6.3 / "连带删除在同一个事务里同步完成"改为：删除项目、工作区时工作项一侧的行由事件的订阅者投递的任务分批软删除，写下请求的时刻和删除者；第一个跨模块的异步副作用（`project.deleted`、`workspace.deleted`）；v0 的规模目标（一个项目至多约 2 万个未删除的工作项）（3.6、3.19，决策点 7） **P9回执：** 已同步总体§5.5/6.3：M3同步、issue同事务投递后分批软删/立即不可见/原AtBy；T9–13与约2万issue每项目实测见P9 spec附录B | T11 待验 |
-| SYNC39 | P9 | M3 设计 / 3.6、13.2 / 删除项目、工作区的步骤后面是发布事件，不再调 `IssueCascade` 的删除；13.2 设想的"删除工作区的连带挂到事件上"对工作项一侧做了（3.19） **P9回执：** 已同步M3§3.3/3.6/6.2/6.5/13.2：只移除issue两同步删除能力，邀请/M3同步与StateInUse/DetachLabel保留；T9/T10回执见P9 review | T11 待验 |
-| SYNC40 | P9 | 差异清单 / 四 / 动态随工作项物理删除（`CASCADE`，不是 `DO_NOTHING`）；已登记的"连带在同一事务"改为只对删除工作项、状态、标签成立，删除项目、工作区的工作项一侧与 Plane 一样在事务之外完成，但写下请求的时刻（3.6） **P9回执：** 已同步plane-diff第四节及版本索引行：活动/评论子链CASCADE、同步/异步按操作划分；T3/T5/T9–13证据见P9 review | T11 待验 |
-| SYNC41 | P10b | 总体设计 / 7.7 / `Reconciled.fetchPart` 和 `paged-groups.ts`；一个工作项只有一份，取服务端 `updated_at` 大的（3.22） | T11 待验 |
-| SYNC42 | P10a–P16 | 前端改动清单 / 3.1、3.2 / M4 一行的状态；删到 M5、M6、M7 的入口和取数（3.1、3.2）；迭代、模块、项目视图、工作区视图的工作项列表在 P10a 删除，M6、M7 加回（7.3） | T11 待验 |
-| SYNC43 | P12 | README / "前端"一节 / 已按实际更新四布局/原生搜索及后续页面边界；最终e6d1329b与main ff89d0a1准确CI均通过、归档清理完成，见P12 review§28 | T11 待验 |
-| SYNC44 | 收尾 | 总体设计 / 9.4 / M4 的状态改为"已完成" | T11 待验 |
-| DIFF01 | 工作项的写的取锁 | 差异清单第四节；P1a | T11 待验 |
-| DIFF02 | 一个项目上的并发写 | 差异清单第四节；P1b | T11 待验 |
-| DIFF03 | 删除项目、工作区时工作项一侧的行 | 差异清单第四节；P9 | T11 待验 |
-| DIFF04 | 负责人、标签不合格 | 差异清单第四节；P1a | T11 待验 |
-| DIFF05 | 起止日期 | 差异清单第四节；P2 | T11 待验 |
-| DIFF06 | 默认负责人 | 差异清单第四节；P1a | T11 待验 |
-| DIFF07 | 负责人的动态 | 差异清单第四节；P1a | T11 待验 |
-| DIFF08 | 只补块 id 的保存 | 差异清单第四节；P4 | T11 待验 |
-| DIFF09 | 描述的动态的合并 | 差异清单第四节；P4 | T11 待验 |
-| DIFF10 | 自动关注 | 差异清单第四节；P1a（评论、提及 P4） | T11 待验 |
-| DIFF11 | 编号 | 差异清单第四节；P1a | T11 待验 |
-| DIFF12 | 删除状态 | 差异清单第四节；P1a | T11 待验 |
-| DIFF13 | 修改的响应 | 差异清单第四节；P1b | T11 待验 |
-| DIFF14 | 负责人的读取 | 差异清单第四节；P1b | T11 待验 |
-| DIFF15 | 创建者的权限 | 差异清单第四节；P2 | T11 待验 |
-| DIFF16 | 访客只看自己的工作项 | 差异清单第四节；P2（各列表在各自的 Phase） | T11 待验 |
-| DIFF17 | 访客删除自己建的工作项 | 差异清单第四节；P2 | T11 待验 |
-| DIFF18 | 已归档的工作项 | 差异清单第四节；P2（子资源在各自的 Phase） | T11 待验 |
-| DIFF19 | 归档、恢复 | 差异清单第四节；P2 | T11 待验 |
-| DIFF20 | 按编号取 | 差异清单第四节；P2 | T11 待验 |
-| DIFF21 | 删除工作项 | 差异清单第四节；P3（确认框 P14） | T11 待验 |
-| DIFF22 | 父工作项 | 差异清单第四节；P3 | T11 待验 |
-| DIFF23 | 加子工作项的动态 | 差异清单第四节；P3 | T11 待验 |
-| DIFF24 | 子工作项数 | 差异清单第四节；P3 | T11 待验 |
-| DIFF25 | 关联 | 差异清单第四节；P3 | T11 待验 |
-| DIFF26 | 关联的动态 | 差异清单第四节；P3 | T11 待验 |
-| DIFF27 | 空评论 | 差异清单第四节；P4 | T11 待验 |
-| DIFF28 | 改、删别人的评论 | 差异清单第四节；P4 | T11 待验 |
-| DIFF29 | 表情的值 | 差异清单第四节；P4 | T11 待验 |
-| DIFF30 | 评论、表情的动态 | 差异清单第四节；P4 | T11 待验 |
-| DIFF31 | 提及的同步 | 差异清单第四节；P4 | T11 待验 |
-| DIFF32 | 描述的历史 | 差异清单第四节；P4 | T11 待验 |
-| DIFF33 | 动态的列表 | 差异清单第四节；P4 | T11 待验 |
-| DIFF34 | 时间线的增量读取 | 差异清单第四节；P4 | T11 待验 |
-| DIFF35 | 列表的分组、排序 | 差异清单第四节；P5 | T11 待验 |
-| DIFF36 | 已归档的项目的工作项列表 | 差异清单第四节；P5 | T11 待验 |
-| DIFF37 | 个人主页的工作项 | 差异清单第四节；P5 | T11 待验 |
-| DIFF38 | 显示设置 | 差异清单第四节；P5 | T11 待验 |
-| DIFF39 | 自动归档的执行者 | 差异清单第四节；P6 | T11 待验 |
-| DIFF40 | 定时任务的时刻 | 差异清单第四节；P6 | T11 待验 |
-| DIFF41 | 链接的地址 | 差异清单第四节；P7 | T11 待验 |
-| DIFF42 | 链接的抓取 | 差异清单第四节；P7 | T11 待验 |
-| DIFF43 | 草稿 | 差异清单第四节；P8 | T11 待验 |
-| DIFF44 | 搜索 | 差异清单第四节；P8 | T11 待验 |
-| DIFF45 | 物理清理 | 差异清单第四节；P9 | T11 待验 |
+| SYNC01 | P1a | 总体设计 / 4.2 / 加锁顺序延伸到 M4 的表；工作项的写最先锁项目行、不锁工作区行，取锁之前做不加锁的预检（凡拒绝的都在那里答）；删除工作区先锁它的项目再读时刻；写明 B 的两个代价（3.5，决策点 1） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC02 | P1b | 总体设计 / 4.2 / 取连接之前进入按项目的写闸门、`lock_timeout` 的兜底，满时 503 `server_busy`；写明连接池的代价（3.5，架构问题 11） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC03 | P1b | 总体设计 / 6.2 / 平台包 `platform/gate`（带 `context` 的按键的信号量，3.5，架构问题 11） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC04 | P1a | 总体设计 / 6.2 / 模块 `issue` 和它的 13 张表（3.3，架构问题 1） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC05 | P1a | M3 设计 / 3.6 的取锁表、17.4 / "删除工作区"一行改为先锁项目、再读时刻；17.4"M4 的工作项写入……不默认沿用"后补一句 M4 的选择（3.5） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC06 | P1a | M3 设计 / 3.17 / 删除状态：有工作项（含已归档的）用它时 409 `project.state_in_use`（3.6） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC07 | P1a | 差异清单 / 二·按表 / `issues`、`issue_assignees`、`issue_labels`、`issue_subscribers`、`issue_activities` 逐列（4.2–4.5、4.11） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC08 | P1a | 差异清单 / 四 / 4.17 中标 P1a 的行 | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC09 | P1b | 差异清单 / 四 / 4.17 中标 P1b 的行 | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC10 | P2 | 总体设计 / 6.5 / `AllowCreator` 要求创建者仍是项目的有效成员、角色不低于成员；`OwnOnly` 与"一条访客规则"（3.4，架构问题 3） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC11 | P2 | M2 设计 / 3.11 / 格式检查器登记 `date`；字段错误的路径按数组下标的数值排序；不限类型的节点检查数的范围（6.1，M2 交接第 4 节） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC12 | P2 | 差异清单 / 四 / 4.17 中标 P2 的行（访客规则、创建者、归档只读、按编号取的 404 和折叠、起止日期） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC13 | P3 | 总体设计 / 3.4 / 集合型的列表加上子工作项、关联、链接、工作项的表情（3.16 末尾）。P3 有第一个（`listSubIssues`） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC14 | P3 | 总体设计 / 3.6 / "关联对象只返回 ID"的第二个例外：关联内嵌对方工作项的列表行（3.10） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC15 | P3 | 总体设计 / 4.2 / 约定七（跨项目的写按 `id` 升序锁住涉及的项目）和关联行的约定五例外（3.5） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC16 | P3 | 差异清单 / 二·按表、四 / `issue_relations` 逐列（4.6）；4.17 中标 P3 的行 | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC17 | P4 | 总体设计 / 1.1 / "评论（支持回复）"改为"评论"（决策点 6）；"历史版本：工作项快照、描述修改历史"改为"描述修改历史（可查看、可还原）"（决策点 5） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC18 | P4 | 总体设计 / 5.2、5.3、6.6、6.7 / 表数 45 改为 44，删去 `issue_versions`；6.6 删去"同时写 `issue_versions`"；6.7 的保留任务写明"每个工作项最新的 20 个描述版本"（3.14） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC19 | P4 | M2 设计 / 3.12 / 页大小的规则移到 `shared`（M3 交接第 9 节） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC20 | P4 | 差异清单 / 一、二·按表、四 / 一：`issue_versions` 不保留；二：`issue_comments`、`issue_reactions`、`comment_reactions`、`issue_mentions`、`issue_description_versions` 逐列（4.7、4.9、4.10、4.12、4.14）；四：4.17 中标 P4 的行 | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC21 | P5 | 总体设计 / 3.3 / 筛选的写法补上 `none`（含日期的 `none`）、可重复的日期参数、单日、不合格的取值 422（3.16）；已在P5/T16同步，实际依据见 [P5 review §2](P5-issue-list-review.md#2-验收标准逐条核对) | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC22 | P5 | 总体设计 / 3.4 / 不分组的列表带 `total`；子分组的结构 `subgroups` 和泳道的总数 `subgroup_totals`；只返回非空的组；分组时不带 `group_key` 的游标 422；列表的读在一个 `REPEATABLE READ` 的快照里；一组（一格）的"加载更多"是同一个请求加 `group_key`（`sub_group_key`），不再是"加上这一组的筛选"；游标的载荷写明排序、以 `id` 结尾；未知的 `order_by`、`group_by` 422（3.16，架构问题 6）；已在P5/T16同步，实际依据见 [P5 review §2](P5-issue-list-review.md#2-验收标准逐条核对) | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC23 | P5 | 总体设计 / 6.2 / 列表的词汇在 `issue/domain`，`project` 经它声明、`issue.Provide` 实现的 `IssueListSettings` 检查显示设置（3.17，架构问题 10）；已在P5/T16同步，实际依据见 [P5 review §2](P5-issue-list-review.md#2-验收标准逐条核对) | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC24 | P5 | M3 设计 / 3.18 / 项目的显示设置加 `filters`、`display_filters`、`display_properties` 三列，格式见本文 3.17；已在P5/T16同步，实际依据见 [P5 review §2](P5-issue-list-review.md#2-验收标准逐条核对) | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC25 | P5 | 差异清单 / 二·按表、三、四 / `project_user_properties` 加三列、不建 `rich_filters`（4.15）；三：列表的响应、排序键、分组键的名字；四：4.17 中标 P5 的行；已在P5/T16同步，实际依据见 [P5 review §2](P5-issue-list-review.md#2-验收标准逐条核对) | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC26 | P6 | 总体设计 / 6.2、6.3 / `shared` 加事件的值和 `EventPublisher`；6.3 第 3 条写明订阅者的写法：同步、在事务里、出错回滚，异步的事经 `InsertTx`（3.19，决策点 3） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC27 | P6 | 总体设计 / 6.7 / 定时任务的清单和间隔、两个队列；测试的时钟偏移（3.20，架构问题 7） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC28 | P6 | M2 设计 / 3.15、3.17 / 事务内投递经只投递的 River 客户端（在模块之前建出）；队列与并发；定时任务和模块声明会投递的种类没有 worker 时构造失败（3.20） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC29 | P6 | 差异清单 / 四 / 自动归档的执行者为空（决策点 4）；按间隔而不是固定时刻运行 | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC30 | P7 | 总体设计 / 6.2、8（安全） / `platform/outbound`：防 SSRF 的出站客户端，M8 复用（3.11、8.1，架构问题 8） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC31 | P7 | 差异清单 / 二·按表、四 / `issue_links` 逐列（4.8）；抓取的上限、`metadata` 的形状 | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC32 | P7 | README / "安全"一节 / 8.8 中 P7 的行；P6、P9 的"部署"行同样按 8.8 | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC33 | P8 | 总体设计 / 5.4 / 草稿：`project_id` 是一列；发布用存着的载荷、要求 `issue.create`；409 `issue.draft_changed`（3.15） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC34 | P8 | 总体设计 / 6.9 / `description_stripped` 不用于搜索；搜索的匹配和顺序、选择器的排除、`q` 为空时给出最近更新的、日期的条件、编号的折叠（3.7、3.18） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC35 | P8 | 差异清单 / 二·按表、四 / `draft_issues` 逐列（4.13）；`issues` 的 trigram 索引落地；4.17 中标 P8 的行 | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC36 | P8 | README / "部署"一节 / 迁移执行 `CREATE EXTENSION pg_trgm`（库属主即可，8.8） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC37 | P9 | 总体设计 / 5.5、6.7 / 60 天清理：每个模块清理自己的表，一个任务按顺序运行；删除关系图（3.21、4.16，架构问题 9）；描述版本保留只碰活版本、清理处理墓碑；迟到软删与父CASCADE的交叠例外见3.6 **P9回执：** 已同步总体§5.5/6.7：23表单任务清理、活版本保留、严格cutoff/父CASCADE与迟到40P01边界；T1–6/T12–15证据见P9 review | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC38 | P9 | 总体设计 / 5.5、6.3 / "连带删除在同一个事务里同步完成"改为：删除项目、工作区时工作项一侧的行由事件的订阅者投递的任务分批软删除，写下请求的时刻和删除者；第一个跨模块的异步副作用（`project.deleted`、`workspace.deleted`）；v0 的规模目标（一个项目至多约 2 万个未删除的工作项）（3.6、3.19，决策点 7） **P9回执：** 已同步总体§5.5/6.3：M3同步、issue同事务投递后分批软删/立即不可见/原AtBy；T9–13与约2万issue每项目实测见P9 spec附录B | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC39 | P9 | M3 设计 / 3.6、13.2 / 删除项目、工作区的步骤后面是发布事件，不再调 `IssueCascade` 的删除；13.2 设想的"删除工作区的连带挂到事件上"对工作项一侧做了（3.19） **P9回执：** 已同步M3§3.3/3.6/6.2/6.5/13.2：只移除issue两同步删除能力，邀请/M3同步与StateInUse/DetachLabel保留；T9/T10回执见P9 review | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC40 | P9 | 差异清单 / 四 / 动态随工作项物理删除（`CASCADE`，不是 `DO_NOTHING`）；已登记的"连带在同一事务"改为只对删除工作项、状态、标签成立，删除项目、工作区的工作项一侧与 Plane 一样在事务之外完成，但写下请求的时刻（3.6） **P9回执：** 已同步plane-diff第四节及版本索引行：活动/评论子链CASCADE、同步/异步按操作划分；T3/T5/T9–13证据见P9 review | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC41 | P10b | 总体设计 / 7.7 / `Reconciled.fetchPart` 和 `paged-groups.ts`；一个工作项只有一份，取服务端 `updated_at` 大的（3.22） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC42 | P10a–P16 | 前端改动清单 / 3.1、3.2 / M4 一行的状态；删到 M5、M6、M7 的入口和取数（3.1、3.2）；迭代、模块、项目视图、工作区视图的工作项列表在 P10a 删除，M6、M7 加回（7.3） | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC43 | P12 | README / "前端"一节 / 已按实际更新四布局/原生搜索及后续页面边界；最终e6d1329b与main ff89d0a1准确CI均通过、归档清理完成，见P12 review§28 | T11已核，见[逐行证据](closeout-sync.md) |
+| SYNC44 | 收尾 | 总体设计 / 9.4 / M4 的状态改为"已完成" | 集成待办（D18） |
+| DIFF01 | 工作项的写的取锁 | 差异清单第四节；P1a | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF02 | 一个项目上的并发写 | 差异清单第四节；P1b | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF03 | 删除项目、工作区时工作项一侧的行 | 差异清单第四节；P9 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF04 | 负责人、标签不合格 | 差异清单第四节；P1a | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF05 | 起止日期 | 差异清单第四节；P2 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF06 | 默认负责人 | 差异清单第四节；P1a | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF07 | 负责人的动态 | 差异清单第四节；P1a | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF08 | 只补块 id 的保存 | 差异清单第四节；P4 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF09 | 描述的动态的合并 | 差异清单第四节；P4 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF10 | 自动关注 | 差异清单第四节；P1a（评论、提及 P4） | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF11 | 编号 | 差异清单第四节；P1a | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF12 | 删除状态 | 差异清单第四节；P1a | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF13 | 修改的响应 | 差异清单第四节；P1b | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF14 | 负责人的读取 | 差异清单第四节；P1b | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF15 | 创建者的权限 | 差异清单第四节；P2 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF16 | 访客只看自己的工作项 | 差异清单第四节；P2（各列表在各自的 Phase） | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF17 | 访客删除自己建的工作项 | 差异清单第四节；P2 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF18 | 已归档的工作项 | 差异清单第四节；P2（子资源在各自的 Phase） | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF19 | 归档、恢复 | 差异清单第四节；P2 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF20 | 按编号取 | 差异清单第四节；P2 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF21 | 删除工作项 | 差异清单第四节；P3（确认框 P14） | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF22 | 父工作项 | 差异清单第四节；P3 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF23 | 加子工作项的动态 | 差异清单第四节；P3 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF24 | 子工作项数 | 差异清单第四节；P3 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF25 | 关联 | 差异清单第四节；P3 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF26 | 关联的动态 | 差异清单第四节；P3 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF27 | 空评论 | 差异清单第四节；P4 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF28 | 改、删别人的评论 | 差异清单第四节；P4 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF29 | 表情的值 | 差异清单第四节；P4 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF30 | 评论、表情的动态 | 差异清单第四节；P4 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF31 | 提及的同步 | 差异清单第四节；P4 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF32 | 描述的历史 | 差异清单第四节；P4 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF33 | 动态的列表 | 差异清单第四节；P4 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF34 | 时间线的增量读取 | 差异清单第四节；P4 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF35 | 列表的分组、排序 | 差异清单第四节；P5 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF36 | 已归档的项目的工作项列表 | 差异清单第四节；P5 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF37 | 个人主页的工作项 | 差异清单第四节；P5 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF38 | 显示设置 | 差异清单第四节；P5 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF39 | 自动归档的执行者 | 差异清单第四节；P6 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF40 | 定时任务的时刻 | 差异清单第四节；P6 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF41 | 链接的地址 | 差异清单第四节；P7 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF42 | 链接的抓取 | 差异清单第四节；P7 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF43 | 草稿 | 差异清单第四节；P8 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF44 | 搜索 | 差异清单第四节；P8 | T11已核，见[逐行证据](closeout-sync.md) |
+| DIFF45 | 物理清理 | 差异清单第四节；P9 | T11已核，见[逐行证据](closeout-sync.md) |
 
 ## 6. C1–C12 与最终浏览器记录
 
@@ -214,35 +214,35 @@ T3 逐项绑定具名测试、子例、真实锁/闸门观察及五次 race 执�
 
 | Phase | spec §5 / review §6 | 后续归属 |
 |---|---|---|
-| P10a | [spec](../specs/P10a-web-issue-types.md) / [review](P10a-web-issue-types-review.md) | T12 待核全部原条款 |
-| P10b | [spec](../specs/P10b-web-list-data.md) / [review](P10b-web-list-data-review.md) | T12 待核全部原条款 |
-| P11 | [spec](../specs/P11-web-detail-data.md) / [review](P11-web-detail-data-review.md) | T12 待核全部原条款 |
-| P12 | [spec](../specs/P12-web-list-pages.md) / [review](P12-web-list-pages-review.md) | T12 待核全部原条款 |
-| P13 | [spec](../specs/P13-web-filters-archives-profile.md) / [review](P13-web-filters-archives-profile-review.md) | T12 待核全部原条款 |
-| P14 | [spec](../specs/P14-web-issue-detail.md) / [review](P14-web-issue-detail-review.md) | T12 待核全部原条款 |
-| P15 | [spec](../specs/P15-web-collaboration-drafts-search.md) / [review](P15-web-collaboration-drafts-search-review.md) | T12 待核全部原条款 |
-| P16 | [spec](../specs/P16-web-cleanup.md) / [review](P16-web-cleanup-review.md) | T12 待核全部原条款 |
-| P1a | [spec](../specs/P1a-issues.md) / [review](P1a-issues-review.md) | T12 待核全部原条款 |
-| P1b | [spec](../specs/P1b-issue-update.md) / [review](P1b-issue-update-review.md) | T12 待核全部原条款 |
-| P2 | [spec](../specs/P2-issue-access.md) / [review](P2-issue-access-review.md) | T12 待核全部原条款 |
-| P3 | [spec](../specs/P3-issue-hierarchy.md) / [review](P3-issue-hierarchy-review.md) | T12 待核全部原条款 |
-| P4 | [spec](../specs/P4-issue-collaboration.md) / [review](P4-issue-collaboration-review.md) | T12 待核全部原条款 |
-| P5 | [spec](../specs/P5-issue-list.md) / [review](P5-issue-list-review.md) | T12 待核全部原条款 |
-| P6 | [spec](../specs/P6-issue-events.md) / [review](P6-issue-events-review.md) | T12 待核全部原条款 |
-| P7 | [spec](../specs/P7-issue-links.md) / [review](P7-issue-links-review.md) | T12 待核全部原条款 |
-| P8 | [spec](../specs/P8-drafts-search.md) / [review](P8-drafts-search-review.md) | T12 待核全部原条款 |
-| P9 | [spec](../specs/P9-purge.md) / [review](P9-purge-review.md) | T12 待核全部原条款 |
+| P10a | [spec](../specs/P10a-web-issue-types.md) / [review](P10a-web-issue-types-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P10b | [spec](../specs/P10b-web-list-data.md) / [review](P10b-web-list-data-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P11 | [spec](../specs/P11-web-detail-data.md) / [review](P11-web-detail-data-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P12 | [spec](../specs/P12-web-list-pages.md) / [review](P12-web-list-pages-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P13 | [spec](../specs/P13-web-filters-archives-profile.md) / [review](P13-web-filters-archives-profile-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P14 | [spec](../specs/P14-web-issue-detail.md) / [review](P14-web-issue-detail-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P15 | [spec](../specs/P15-web-collaboration-drafts-search.md) / [review](P15-web-collaboration-drafts-search-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P16 | [spec](../specs/P16-web-cleanup.md) / [review](P16-web-cleanup-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P1a | [spec](../specs/P1a-issues.md) / [review](P1a-issues-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P1b | [spec](../specs/P1b-issue-update.md) / [review](P1b-issue-update-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P2 | [spec](../specs/P2-issue-access.md) / [review](P2-issue-access-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P3 | [spec](../specs/P3-issue-hierarchy.md) / [review](P3-issue-hierarchy-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P4 | [spec](../specs/P4-issue-collaboration.md) / [review](P4-issue-collaboration-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P5 | [spec](../specs/P5-issue-list.md) / [review](P5-issue-list-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P6 | [spec](../specs/P6-issue-events.md) / [review](P6-issue-events-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P7 | [spec](../specs/P7-issue-links.md) / [review](P7-issue-links-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P8 | [spec](../specs/P8-drafts-search.md) / [review](P8-drafts-search-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
+| P9 | [spec](../specs/P9-purge.md) / [review](P9-purge-review.md) | T12全部原条款已核，见[交接索引](closeout-handoffs.md) |
 
 | 输入 | 关闭条件 |
 |---|---|
-| [M0-P4-pg-trgm](../handoffs/M0-P4-pg-trgm.md) | T12 全部条款完成或具名转交；当前保持 open |
-| [M1-P2-trim-content](../handoffs/M1-P2-trim-content.md) | T12 全部条款完成或具名转交；当前保持 open |
-| [M1-P3-trim-platform](../handoffs/M1-P3-trim-platform.md) | T12 全部条款完成或具名转交；当前保持 open |
-| [M1-P4-router-native](../handoffs/M1-P4-router-native.md) | T12 全部条款完成或具名转交；当前保持 open |
-| [M1-P5-brand](../handoffs/M1-P5-brand.md) | T12 全部条款完成或具名转交；当前保持 open |
-| [M1-closeout](../handoffs/M1-closeout.md) | T12 全部条款完成或具名转交；当前保持 open |
-| [M2-closeout](../handoffs/M2-closeout.md) | T12 全部条款完成或具名转交；当前保持 open |
-| [M3-closeout](../handoffs/M3-closeout.md) | T12 全部条款完成或具名转交；当前保持 open |
+| [M0-P4-pg-trgm](../handoffs/M0-P4-pg-trgm.md) | T12 全部条款完成或具名转交，现closed；见[逐条结论](closeout-handoffs.md) |
+| [M1-P2-trim-content](../handoffs/M1-P2-trim-content.md) | T12 全部条款完成或具名转交，现closed；见[逐条结论](closeout-handoffs.md) |
+| [M1-P3-trim-platform](../handoffs/M1-P3-trim-platform.md) | T12 全部条款完成或具名转交，现closed；见[逐条结论](closeout-handoffs.md) |
+| [M1-P4-router-native](../handoffs/M1-P4-router-native.md) | T12 全部条款完成或具名转交，现closed；见[逐条结论](closeout-handoffs.md) |
+| [M1-P5-brand](../handoffs/M1-P5-brand.md) | T12 全部条款完成或具名转交，现closed；见[逐条结论](closeout-handoffs.md) |
+| [M1-closeout](../handoffs/M1-closeout.md) | T12 全部条款完成或具名转交，现closed；见[逐条结论](closeout-handoffs.md) |
+| [M2-closeout](../handoffs/M2-closeout.md) | T12 全部条款完成或具名转交，现closed；见[逐条结论](closeout-handoffs.md) |
+| [M3-closeout](../handoffs/M3-closeout.md) | T12 全部条款完成或具名转交，现closed；见[逐条结论](closeout-handoffs.md) |
 
 ## 8. T1 核对记录
 
@@ -308,3 +308,29 @@ WebKit补验到4项通过时Docker socket消失，登录/DB连接继而失败；
 T7三引擎各53唯一项加S2四身份补验通过；合并T5/T6后138项/引擎、原375项全覆盖。`t7-coverage.json`保留每个file/title/id/project的最终成功来源、失败尝试收据、产品等价与72项真实LAN原生返回值。完整三引擎矩阵见[浏览器台账](closeout-browser-matrix.md#t7-协作搜索与-lan-验收)。
 
 本任务只补E2E观察与有手势LAN路径，无生产修改。Chromium初次toast文本重复、命令末尾句号的断言问题已修正；Firefox警告核对真实eval调用位置及完整文案，未忽略意外console。240图由控制者在27张比较索引及3张额外原图逐张核查，含I16系统归档/成员恢复的六张原附件。源码输入/日志hash与全部原始trace留存。D12为候选验收完成，最终输入等价、mainCI及集成签结不提前标完成。
+
+## 15. D09 批准决定与最终实现
+
+八决策和十一架构项均按已批准选项逐项核对；下表只证明现有合同已落实，不重开架构批准。实际执行与输入绑定分别见服务端合同、C12、七门禁和`t13-evidence-binding.json`。
+
+| 批准项 | 最终实现与保留边界 | 源码 / 回归入口 | 本次证据 |
+|---|---|---|---|
+| 决策1 B | 普通工作项预检→gate→项目N；无工作区S；草稿例外及审计时刻代价保留 | [实现](../../../../server/internal/modules/issue/app/lock.go)、[回归](../../../../server/internal/bootstrap/issue_write_locks_test.go) | L03/04/05/20/21、T3五遍race；T9真实10连接/K2 |
+| 决策2 A | 一个M4、18个Phase加收尾，未提前分拆完成标记 | [设计§15](../M4-design.md#15-phase-进度表) | 本页D17逐first-parent集成范围与M4§15；本轮集成待办 |
+| 决策3 A | 同步事务内发布，订阅者经InsertTx投递；失败随事务回滚 | [实现](../../../../server/internal/shared/events.go)、[回归](../../../../server/internal/bootstrap/events_test.go) | T3实际river_job提交/回滚及T10 R03真实订阅者观察 |
+| 决策4 A | 自动归档ActorID空表示Nerve，不造系统账户 | [实现](../../../../server/internal/modules/issue/domain/events.go)、[回归](../../../../server/internal/bootstrap/issue_lifecycle_events_test.go) | I16 API/PAT读取及三引擎真实系统动态截图 |
+| 决策5 A | 只有描述历史，无全工作项issue_versions快照 | [实现](../../../../server/internal/modules/issue/app/description_versions.go) | I13历史还原；44同步/45差异对应原文已核 |
+| 决策6 A | 评论平铺，无回复parent_id | [实现](../../../../server/internal/modules/issue/app/comments.go)、[回归](../../../../server/internal/bootstrap/issue_comments_test.go) | I11评论/反应；契约与数据库无回复字段 |
+| 决策7 A | 项目/工作区删除立即不可见；事件投递键集分批软删，原At/By及45秒预算 | [实现](../../../../server/internal/modules/issue/app/delete_rows.go)、[回归](../../../../server/internal/modules/issue/adapter/river/delete_rows_test.go) | T9真实20k项目、五项目工作区、七job单次完成；R02时长溢出已修 |
+| 决策8 B | 管理员可删他人评论不能改；updated_by/ActorID留痕，不加删除动态 | [实现](../../../../server/internal/modules/issue/app/comment_writes.go)、[回归](../../../../server/internal/bootstrap/issue_comment_events_test.go) | 权限矩阵、I11/I12页面管理员他人菜单、T3公开码 |
+| 架构11.1 | issue拥有13表；app声明端口、adapter清洗，domain保持纯净 | [实现](../../../../server/internal/modules/issue/module.go)、[回归](../../../../server/internal/archtest/composition_test.go) | Provide→组合根→New及purity/deps/SQLC守卫；R06只改变已有ProjectStore事实选择 |
+| 架构11.2 | 跨项目gate/行锁去重升序；关联与草稿保持专门编排 | [实现](../../../../server/internal/modules/issue/app/lock_across.go)、[回归](../../../../server/internal/bootstrap/issue_relation_locks_test.go) | L01–26全部具名映射；后台/版本保留/迟到重试边界单列 |
+| 架构11.3 | Grant.OwnOnly与HiddenFrom、SQL可见集合一致 | [实现](../../../../server/internal/modules/issue/app/lock.go)、[回归](../../../../server/internal/modules/issue/app/guest_rule_test.go) | 全矩阵、访客逐body一致；R06真实目录缺席+晚答页面回归 |
+| 架构11.4 | 事务内事件与River插入分层，工作客户端最后登记；缺worker启动失败 | [实现](../../../../server/internal/platform/jobs/inserter.go)、[回归](../../../../server/internal/platform/jobs/registration_test.go) | T3两种有效漏登记变异、提交/回滚及clock边界 |
+| 架构11.5 | 目录经typed数组传入静态SQL，无跨模块读表例外 | [实现](../../../../server/internal/modules/issue/domain/listvocab.go)、[回归](../../../../server/internal/archtest/sqlc_test.go) | TestSQLCSchemaScope；T8三规模39场景，cells物化代价明确 |
+| 架构11.6 | none/日期AND/组格续页/21合法排序码和精确游标；两端同全序 | [实现](../../../../server/internal/modules/issue/domain/listvocab.go)、[回归](../../../../server/internal/bootstrap/issue_list_pages_test.go) | 共享issue-order.json、九反例、Go/vitest与I3/I4/I5 |
+| 架构11.7 | 测试offset只影响业务时钟；新库每刻仅一个nerve进程 | [实现](../../../../server/internal/bootstrap/clock.go) | e2e/fixtures/clock.ts和smoke/clock-lifecycle.spec.ts；I16/I21 |
+| 架构11.8 | outbound独立包，所有DNS候选/每跳重检/固定IP且不用代理 | [实现](../../../../server/internal/platform/outbound/client.go)、[回归](../../../../server/internal/platform/outbound/transport_test.go) | IANA首尾/本机地址、零危险dial、I10 blocked与真实metadata |
+| 架构11.9 | 模块清理issue→project→workspace→identity；CASCADE/SET NULL目录守卫 | [实现](../../../../server/internal/bootstrap/purge.go)、[回归](../../../../server/internal/bootstrap/purge_runtime_test.go) | T3目录与L24/25，T9真实runtime一次660026行；账户不清理 |
+| 架构11.10 | 列表词汇归issue/domain，project经IssueListSettings端口验证 | [实现](../../../../server/internal/modules/issue/domain/listvocab.go)、[回归](../../../../server/internal/modules/issue/app/list_settings_test.go) | 显示三列/合法形状、I5真实保存，未引入第二份词汇 |
+| 架构11.11 | 预检后取连接前进入按项目gate；K2/queue64、期限/503集中映射 | [实现](../../../../server/internal/bootstrap/gate.go)、[回归](../../../../server/internal/bootstrap/gate_test.go) | T9 200并发、无关读78次、503/Retry-After；多热项目代价交M8 |

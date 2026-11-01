@@ -191,7 +191,9 @@ export function BlockMenu(props: Props) {
             .insertContentAt(insertPos, contentToInsert, {
               updateSelection: true,
             })
-            .focus(Math.min(insertPos + 1, docSize), { scrollIntoView: false })
+            // insertContentAt already resolves a valid selection in the updated document.
+            // Clamping a text position against the old size can land between block nodes.
+            .focus(null, { scrollIntoView: false })
             .run();
         } catch (error) {
           if (error instanceof Error) {

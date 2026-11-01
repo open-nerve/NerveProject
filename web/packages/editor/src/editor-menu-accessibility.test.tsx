@@ -3,6 +3,7 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { EditorContent } from "@tiptap/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { LinkViewContainer } from "@/components/editors/link-view-container";
 import { EditorBubbleMenu } from "@/components/menus/bubble-menu/root";
 import { createEditor, destroyEditors } from "./editor-test-fixture";
 
@@ -75,6 +76,7 @@ it.each([false, true])("names the link URL and its action when a link exists: %s
   await act(async () => namedButton("Link").click());
   const input = document.querySelector<HTMLInputElement>('input[type="url"]')!;
   expect(input.getAttribute("aria-label")).toBe("Link URL");
+  expect(document.activeElement, "URL input takes focus when the portal mounts").toBe(input);
   const action = namedButton(linked ? "Remove link" : "Add link");
   expect(action.type).toBe("button");
   input.value = "https://example.org";
@@ -100,4 +102,38 @@ it("distinguishes text and background swatches and their clear actions by name",
   expect(editor.getAttributes("customColor").backgroundColor).toBe("peach");
   await act(async () => namedButton("Clear background color").click());
   expect(editor.getAttributes("customColor").backgroundColor).toBeNull();
+});
+
+it("keeps hovered editor links free of inline event attributes and dismisses the preview", async () => {
+  const editor = await createEditor({ content: '<p><a href="https://example.com">Link words</a></p>' });
+  const host = document.createElement("div");
+  document.body.append(host);
+  root = createRoot(host);
+  await act(async () =>
+    root.render(
+      <>
+        <EditorContent editor={editor} />
+        <LinkViewContainer editor={editor} containerRef={{ current: host }} />
+      </>
+    )
+  );
+  const link = editor.view.dom.querySelector("a")!;
+  const hover = () =>
+    act(async () => {
+      link.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+    });
+  const preview = () => [...host.querySelectorAll("p")].find((p) => p.textContent === "https://example.com");
+  await hover();
+  await vi.waitFor(() => expect(preview()).toBeDefined());
+  expect(link.getAttributeNames().filter((attribute) => /^on/i.test(attribute))).toEqual([]);
+  await act(async () => {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  });
+  await vi.waitFor(() => expect(preview()).toBeUndefined());
+  await hover();
+  await vi.waitFor(() => expect(preview()).toBeDefined());
+  await act(async () => {
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+  });
+  await vi.waitFor(() => expect(preview()).toBeUndefined());
 });
