@@ -1,6 +1,6 @@
 # M4 / P16 `web-cleanup` 执行计划
 
-> 准备期；尚未授权实现。基线 `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，工作树 `<repo>/.codex/worktress/codex/m4-p16`，分支 `codex/m4-p16`。以 [spec](../specs/P16-web-cleanup.md) 为权威，以下步骤均未执行。
+> 已获授权实施；按 T1 起顺序推进。基线 `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，工作树 `<repo>/.codex/worktress/codex/m4-p16`，分支 `codex/m4-p16`。以 [spec](../specs/P16-web-cleanup.md) 为权威，以下步骤按实际证据勾选。
 
 **目标：** 以真实读者、类型和运行证据完成 M4 前端清理，准备 C12，保持已批准的领域边界。
 
@@ -9,7 +9,7 @@
 ## Global Constraints
 
 - 主目录一直 main；仅 P16 worktree 实施。plane/refer 只读，不动已有容器/Docker、不全局安装、不引未点名依赖、不 stash/clean/reset --hard、不取凭据。详细中文提交，系统 `/usr/bin/git` 推送；阶段完成先不合并。
-- 本次只写文档。实施 T1 起才把 phase 改 M4/P16，最终 closeout 另改。规则/样本/忽略范围/到期日不放宽，cap只降；有意义的类型负例不能运行到应用中。
+- 实施 T1 起把 phase 改 M4/P16，最终 closeout 另改。规则/样本/忽略范围/到期日不放宽，cap只降；有意义的类型负例不能运行到应用中。
 - 计划保持约1500行以内且≤16Task；新生产文件约400行内、单Task含测试约1500行作为复核参考，十一Task估计约6000–10000行总改动（含删除、ledger与测试，非承诺必须改够）；超出按职责先拆到≤16，仍超才按设计D2上报分段。不因大批量重命名把不同职责塞入大组件。
 - IssueRootStore权限/确认写、会话代际/路由owner、原生生成API、M7 view/版本/成员目录合同保持；测试复用已有帮手，数据库只作断言，不重造完整世界。
 - 名称/提示新文案 en/zh-CN；键盘复用isComposing。局部root cause自行修，架构/协议/跨领域责任新变化先提交已完成工作再报告。
@@ -46,11 +46,11 @@ make e2e
 **Files：** P/utils/src/tab-indices.ts、P/constants/src/tab-indices.ts及barrel，P/ui/src/dropdowns/{custom-menu,helper}.tsx，inventory所列七个消费者，tools/keywords.json，M6/M7现有handoff。
 **Interfaces：** getTabIndex/ETabIndices/CustomMenu.buttonTabIndex维持存活读者合同；仅无读者的独立分支可删。
 
-- [ ] Step 1：重验main基线/分支、当前消费者；建立实施台账，phase改M4/P16并执行关键词检查，不改例外到期日。
-- [ ] Step 2：逐七文件核getTabIndex实际调用、枚举组、CustomMenu直接tabIndex和barrel；区分M4已删路径、M6/M7仍在路径。
-- [ ] Step 3：记录存活共享代码与最后删除条件，更新M6/M7现有交接子项；只删确无消费者的独立成员，不改未来领域键盘行为。
-- [ ] Step 4：类型/关键词/受影响shared UI测试；静态负例M01在审计输入加回一个M4正tabIndex读者必须被标出，恢复。若零产品改动不伪造运行修复。
-- [ ] Step 5：写A1、当前路径和两域归属；提交 `refactor(M4/P16): 核清焦点索引的最后消费者与删除条件`。
+- [x] Step 1：重验main基线/分支、当前消费者；建立实施台账，phase改M4/P16并执行关键词检查，不改例外到期日。
+- [x] Step 2：逐七文件核getTabIndex实际调用、枚举组、CustomMenu直接tabIndex和barrel；区分M4已删路径、M6/M7仍在路径。
+- [x] Step 3：记录存活共享代码与最后删除条件，更新M6/M7现有交接子项；只删确无消费者的独立成员，不改未来领域键盘行为。
+- [x] Step 4：类型/关键词/受影响shared UI测试；静态负例M01在审计输入加回一个M4正tabIndex读者必须被标出，恢复。若零产品改动不伪造运行修复。
+- [x] Step 5：写A1、当前路径和两域归属；提交 `refactor(M4/P16): 核清焦点索引的最后消费者与删除条件`。
 
 ## Task 2：共享下拉框泛型与消费者（约800–1400行）
 

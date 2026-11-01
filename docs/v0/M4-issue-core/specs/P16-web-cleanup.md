@@ -1,6 +1,6 @@
 # M4 / P16 `web-cleanup`：前端清理与守卫终态
 
-状态：文档预检通过；尚未实施。基线 `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`（P15 集成修复后的 main 提交），分支 `codex/m4-p16`。本次授权仅准备 spec、plan 和预检；以下 A1–A11 均未验收，`tools/keywords.json.phase` 仍为 `M4/P15`。
+状态：预检通过，已获授权实施，T1 完成，后续任务进行中。基线 `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`（P15 集成修复后的 main 提交），分支 `codex/m4-p16`。本次按已通过预检的计划实施；各 A 项凭实际证据勾选，`tools/keywords.json.phase` 已推进 `M4/P16`。阶段完成后 deep-review，先不合并。
 
 ## 1. 目标
 
@@ -117,7 +117,7 @@ S2 保留 admin/member/guest/project-non-member 四身份、实际冷加载的�
 
 ## 4. 验收标准
 
-- [ ] A1：T1 当前 getTabIndex/常量/菜单完整读者清单，M4零读者，存活接口及 M6/M7 删除条件准确。
+- [x] A1：T1 当前 getTabIndex/常量/菜单完整读者清单，M4零读者，存活接口及 M6/M7 删除条件准确。
 - [ ] A2：T2 无点名 any，泛型/单多判别和所有当前消费者编译；类型负例及空态/数字/对象/真实键盘回归通过。
 - [ ] A3：T3 全仓 no-shadow 为0且升 error；全部8处既有屏蔽已删、无专项或全规则disable绕过；合法/遮蔽正反例有效，词法与序列化含义不变。
 - [ ] A4：T4 新报告每个 M4 候选与历史52行可追溯；真死链删完，保留均有真实读者/合同与验证。
@@ -148,4 +148,4 @@ S2 保留 admin/member/guest/project-non-member 四身份、实际冷加载的�
 
 ## 附录 A：准备证据界线
 
-主目录 `.superpowers/sdd/P16-preparation-20261101/` 保存实际源码检索、P15 AST等价来源、只读告警输出、builder-check、文档deep-review和静态核验。实施证据将位于 P16 worktree 的 `.superpowers/sdd/P16-web-cleanup/`；目前没有该阶段产品实现/测试证据。P15 main CI 和当前静态 inventory 只证明基线及计划输入，不勾上面的 A 条款。
+主目录 `.superpowers/sdd/P16-preparation-20261101/` 保存实际源码检索、P15 AST等价来源、只读告警输出、builder-check、文档deep-review和静态核验。实施证据将位于 P16 worktree 的 `.superpowers/sdd/P16-web-cleanup/`；T1 起另记本阶段产品实现/测试证据。P15 main CI 和当前静态 inventory 只证明基线及计划输入，不勾上面的 A 条款。

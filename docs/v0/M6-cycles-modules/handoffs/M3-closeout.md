@@ -53,3 +53,13 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - **关闭条件**：`project-address-route` 的范围含这些文件，`copy-hook` 没有 `M6/closeout` 的例外。
 
 来源：[M3 设计](../../M3-workspace-project/M3-design.md) 13.2 的 M6 一行；M3/P8a、P8b、P9、P10、P11 的 spec 第 5 节和评审第 6 节中交给 M6 的各条；[M3 收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 2 节。
+
+## 5. M4/P16 焦点索引最后读者回执（2026-11-01）
+
+M4 原创建表单的 `ISSUE_FORM` 已无读者，本期删除其枚举、独占数组和映射项；其余四组及 `getTabIndex`、两份 barrel 保留。当前七个调用文件：M6 的 `cycles/form.tsx`、`modules/form.tsx`，M7 的 `views/form.tsx` 与 `inbox/modals/create-modal/{create-root,issue-properties,issue-title,issue-description}.tsx`。视图表单虽由 M7 实现，M6 修改共用项目弹窗宿主时仍按本交接既有分工处理。
+
+全 web 44 处直接 `CustomMenu` JSX 无 `tabIndex` 属性/展开属性；M4 的 `issues/issue-layouts/spreadsheet/columns/header-column.tsx` 仍传 `customButtonTabIndex={-1}`，用于表格列头控件，不是正索引残留。P14 已删除收集箱父项死入口，§3 所记该 `CustomMenu` 正索引与嵌套按钮现属历史；不能据此删除整个菜单焦点接口。`tabIndex ?? customButtonTabIndex` 本期保持，后续按真实最后读者再收口。
+
+最后删除条件：M6/M7 迁移上述表单与两处归档弹窗 `tabIndex={1}` 到自然 Tab 顺序，并完成各自弹窗/portal/回焦回归；全仓确认 `getTabIndex`、枚举/映射及各共享控件的属性读者都迁完后，最后迁移者删除两份 `tab-indices.ts` 和 barrel。共享菜单的非正索引用途须独立核实保留，不以 M4 零正索引等同全部焦点属性可删。未改未来领域键盘顺序、接口或顶部 open 状态。
+
+证据：[P16 review §9](../../M4-issue-core/reviews/P16-web-cleanup-review.md#9-t1-焦点索引与实施入口)、本期 `t1-focus-inventory.json`（逐调用、直接属性、M01 静态输入反例）。
