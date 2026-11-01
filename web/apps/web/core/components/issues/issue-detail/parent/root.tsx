@@ -32,10 +32,11 @@ export type TIssueParentDetail = {
   issueId: string;
   issue: Issue;
   issueOperations: TIssueOperations;
+  disabled: boolean;
 };
 
 export const IssueParentDetail = observer(function IssueParentDetail(props: TIssueParentDetail) {
-  const { workspaceSlug, projectId, issueId, issue, issueOperations } = props;
+  const { workspaceSlug, projectId, issueId, issue, issueOperations, disabled } = props;
   const { t } = useTranslation();
   // hooks
   const { issueMap } = useIssues();
@@ -53,53 +54,60 @@ export const IssueParentDetail = observer(function IssueParentDetail(props: TIss
   );
   const stateColor = issueParentState?.color || undefined;
 
-  if (!parentIssue) return <></>;
+  if (!issue.parent_id) return null;
 
-  const workItemLink = generateWorkItemLink({
-    workspaceSlug,
-    projectId: parentIssue?.project_id,
-    issueId: parentIssue.id,
-    projectIdentifier,
-    sequenceId: parentIssue.sequence_id,
-  });
+  const workItemLink = parentIssue
+    ? generateWorkItemLink({
+        workspaceSlug,
+        projectId: parentIssue.project_id,
+        issueId: parentIssue.id,
+        projectIdentifier,
+        sequenceId: parentIssue.sequence_id,
+      })
+    : undefined;
 
   return (
     <>
       <div className="mb-5 flex w-min items-center gap-3 rounded-md border border-strong bg-layer-1 px-2.5 py-1 text-11 whitespace-nowrap">
-        <ControlLink
-          href={workItemLink}
-          onClick={(event) => handleRedirection(workspaceSlug, parentIssue, isMobile, undefined, event.currentTarget)}
-        >
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2.5">
-              <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: stateColor }} />
-              {parentIssue.project_id && (
-                <IssueIdentifier
-                  projectId={parentIssue.project_id}
-                  issueId={parentIssue.id}
-                  size="xs"
-                  variant="secondary"
-                />
-              )}
+        {parentIssue && workItemLink && (
+          <ControlLink
+            href={workItemLink}
+            onClick={(event) => handleRedirection(workspaceSlug, parentIssue, isMobile, undefined, event.currentTarget)}
+          >
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
+                <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: stateColor }} />
+                {parentIssue.project_id && (
+                  <IssueIdentifier
+                    projectId={parentIssue.project_id}
+                    issueId={parentIssue.id}
+                    size="xs"
+                    variant="secondary"
+                  />
+                )}
+              </div>
+              <span className="truncate text-primary">{(parentIssue?.name ?? "").substring(0, 50)}</span>
             </div>
-            <span className="truncate text-primary">{(parentIssue?.name ?? "").substring(0, 50)}</span>
-          </div>
-        </ControlLink>
+          </ControlLink>
+        )}
 
-        <CustomMenu ellipsis optionsClassName="p-1.5">
+        {/* The visible child's relationship owns the menu, not a parent detail temporarily under verification. */}
+        <CustomMenu key={issue.parent_id} ellipsis ariaLabel={t("issue.sibling.label")} optionsClassName="p-1.5">
           <div className="border-b border-strong text-11 font-medium text-secondary">{t("issue.sibling.label")}</div>
 
-          <IssueParentSiblings workspaceSlug={workspaceSlug} currentIssue={issue} parentIssue={parentIssue} />
+          <IssueParentSiblings workspaceSlug={workspaceSlug} currentIssue={issue} parentId={issue.parent_id} />
 
-          <CustomMenu.MenuItem
-            onClick={() =>
-              issueOperations.update(workspaceSlug, projectId, issueId, { parent_id: null }).catch(() => undefined)
-            }
-            className="flex items-center gap-2 py-2 text-danger-primary"
-          >
-            <MinusCircle className="h-4 w-4" />
-            <span>{t("issue.remove.parent.label")}</span>
-          </CustomMenu.MenuItem>
+          {!disabled && parentIssue && (
+            <CustomMenu.MenuItem
+              onClick={() =>
+                issueOperations.update(workspaceSlug, projectId, issueId, { parent_id: null }).catch(() => undefined)
+              }
+              className="flex items-center gap-2 py-2 text-danger-primary"
+            >
+              <MinusCircle className="h-4 w-4" />
+              <span>{t("issue.remove.parent.label")}</span>
+            </CustomMenu.MenuItem>
+          )}
         </CustomMenu>
       </div>
     </>

@@ -249,7 +249,7 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                             workspaceSlug={workspaceSlug}
                             projectId={projectId}
                             issueId={issueId}
-                            disabled={disabled}
+                            disabled={disabled || is_archived}
                           />
                         </div>
 
