@@ -206,7 +206,8 @@ paths:
         For the project's admins, and its members who are the workspace's
         admins. The project is archived as of the request: listProjects lists
         it among the archived ones, and until it is unarchived updateProject
-        alone refuses it (project.archived); deleting it, changing one's
+        refuses it (project.archived). Work-item mutations also enforce their
+        project.archived checks. Deleting the project, changing one's
         display settings in it, adding members to it and joining it work as
         on any project. An archived project archived again takes the new
         time. A project that does not exist, is deleted, or that the caller
