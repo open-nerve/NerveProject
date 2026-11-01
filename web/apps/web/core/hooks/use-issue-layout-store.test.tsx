@@ -172,7 +172,7 @@ it.each(["restore", "delete", "collapse"] as const)(
         fixture.params = { workspaceSlug: "other", projectId: "B" };
         await render();
         if (operation === "collapse") {
-          await actions.updateFilters("B", EIssueFilterType.KANBAN_FILTERS, { group_by: ["done"] });
+          await actions.updateFilters("B", EIssueFilterType.KANBAN_FILTERS, { group_by: ["done"], sub_group_by: [] });
           expect(filters.getIssueFilters("B", "other")?.kanbanFilters?.group_by).toEqual(["done"]);
           expect(JSON.stringify(filters.getIssueFilters("A", "ws"))).toBe(oldFilters);
           expect(tab.nerve.calls).toEqual([]);

@@ -76,7 +76,7 @@ for (const kind of ["link", "text", "project"] as const) {
     it.each(lateSettlings)(
       `${kind} copy $settles after ${switches} account changes without following into the current session`,
       async ({ settle }) => {
-        const pending = heldChange<void>();
+        const pending = heldChange<undefined>();
         const write = kind === "text" ? browser.copyTextToClipboard : browser.copyUrlToClipboard;
         write.mockReturnValueOnce(pending.sent);
         const finished =

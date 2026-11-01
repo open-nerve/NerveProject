@@ -36,6 +36,7 @@ vi.mock("./archive-restore-modal", () => ({ ArchiveRestoreProjectModal: () => nu
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 // a tooltip shows its label beside what it is the tooltip of
 vi.mock("@makeplane/propel/components/tooltip", () => import("@/lib/fake-controls"));
 
