@@ -15,6 +15,7 @@ import {
   issueArchived,
   issueUpdated,
   updateIssue,
+  type IssueUpdate,
 } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { instantKey } from "../../fixtures/instant";
@@ -112,9 +113,21 @@ test("I13 (page): history loads a second page, copies actual Markdown after sett
   }, Promise.resolve());
   const versions = await descriptionPage(api, seed.member.token, issue.id, undefined, 100);
   expect(versions.data).toHaveLength(3);
-  // Load the app before intercepting API requests: WebKit otherwise reloads already consumed module preloads.
+  // Warm the actual detail/editor before interception: WebKit refetches module preloads
+  // when routing disables its HTTP cache. Also settle the real block-ID migration before
+  // installing a refusal for an ordinary restoration through the same PATCH endpoint.
   const { watch } = await openIssueList(page, seed);
-  await expect(page.getByRole("button", { name: "Add work item", exact: true })).toBeVisible();
+  const path = `/api/v0/issues/${issue.id}`;
+  const detailPath = `/${seed.slug}/browse/WEB-${issue.sequence_id}`;
+  expect((await answerTo(page, "PATCH", path, () => moveWithinApp(page, detailPath))).status()).toBe(200);
+  const editor = page.locator(`[id="editor-container-${issue.id}"] [contenteditable="true"]`);
+  await expect(editor).toHaveText("Revision 2");
+  await moveWithinApp(page, seed.path);
+  await expect(page.getByRole("link").filter({ has: page.getByText(issue.name, { exact: true }) })).toBeVisible();
+  const writes: IssueUpdate[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PATCH" && new URL(request.url()).pathname === path) writes.push(request.postDataJSON());
+  });
   // The worker keeps only 20 versions. Request small real pages instead of racing retention with 51 versions.
   await page.route(
     (url) => url.pathname === `/api/v0/issues/${issue.id}/description-versions`,
@@ -124,7 +137,9 @@ test("I13 (page): history loads a second page, copies actual Markdown after sett
       await route.continue({ url: url.toString() });
     }
   );
-  await moveWithinApp(page, `/${seed.slug}/browse/WEB-${issue.sequence_id}`);
+  expect(
+    (await answerTo(page, "GET", `${path}/description-versions`, () => moveWithinApp(page, detailPath))).status()
+  ).toBe(200);
   await page.getByRole("button", { name: "Load more", exact: true }).click();
   await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
   const trigger = page.getByRole("button", { name: /^Last edited by/ });
@@ -164,12 +179,12 @@ test("I13 (page): history loads a second page, copies actual Markdown after sett
   await clipboard.evaluate((state) => state.finish());
   await expect(page.getByText("Markdown copied to clipboard.", { exact: true })).toHaveCount(1);
   await expect(copy).toBeEnabled();
-  const path = `/api/v0/issues/${issue.id}`;
   let refused = false;
   await page.route(
     (url) => url.pathname === path,
     async (route) => {
       if (route.request().method() !== "PATCH" || refused) return route.fallback();
+      if ((route.request().postDataJSON() as IssueUpdate).skip_activity) return route.fallback();
       refused = true;
       await route.fulfill({
         status: 403,
@@ -192,12 +207,15 @@ test("I13 (page): history loads a second page, copies actual Markdown after sett
   expect((await held.release()).status()).toBe(200);
   await expect(modal).toHaveCount(0);
   await expect(trigger).toBeFocused();
-  const editor = page.locator(`[id="editor-container-${issue.id}"] [contenteditable="true"]`);
   await expect(editor.getByRole("heading", { name: "Original", exact: true })).toBeVisible();
   expect((await descriptionPage(api, seed.member.token, issue.id, undefined, 100)).data.map((row) => row.id)).toEqual(
     versions.data.map((row) => row.id)
   );
-  expect(watch.apiRequests.filter((request) => request === `PATCH ${path}`)).toHaveLength(2);
+  // Only the two explicit restorations count here; real block-ID migrations may also save.
+  expect(writes.filter((body) => !body.skip_activity)).toEqual([
+    { description_html: original },
+    { description_html: original },
+  ]);
   await expectListPageQuiet(page, watch, {
     failures: [`403 PATCH ${path}`],
     errors:
