@@ -292,3 +292,13 @@ C12 图像证据见[浏览器矩阵](closeout-browser-matrix.md#t5-列表筛选�
 实际产品缺陷：peek 子项显示面板底部741.375px超过720px，筛选面板也越界。具名 `t5-peek-clipping-red` 先业务失败；在既有 FiltersDropdown 内按 Popper 裁切边界限制内容高度，并跟踪面板大小变化，保留原滚动内容和锚点。重建后720/500两高度、真实Tab末项/返回焦点在三引擎通过；单位回归7项通过。未改权限/接口/owner/依赖。
 
 截图首次过早读取过渡开始帧，记录帮手改为等实际有限动画结束。Firefox偏好拒绝的错误toast挡住下一按钮鼠标中心，改用焦点+真实Space复核下一次写入，拒绝/滚动/DB断言不变。原生轮廓允许浏览器 auto 或 solid，不能用只接受 solid 的测试误报产品失败。全套Web lint54/54及本组类型/lint通过，最终F另由T9/T13收口。
+
+## 13. T6 详情与编辑器（完成）
+
+原38项/引擎均已通过（`t6-chromium/firefox/webkit`），198张成功截图已由控制者检查。覆盖字段拒绝/慢写、父子/关联/链接、删除、权限与会话、描述及表格行列菜单；最终补验见下。
+
+补真实Tab时发现链接卡片复制按钮的 `outline-none` 令焦点不可见：`t6-keyboard-chromium` 的链接复制例先业务失败，改用既有 `focus-visible` 轮廓；`t6-keyboard-4-chromium/firefox` 各8项通过。菜单须从真实Tab触发器进入，程序focus加方向键在Firefox不足以证明键盘轮廓；表格相邻内容区会消费Tab导航单元格，补验从相邻控件往返，没有放宽断言或修改编辑器。
+
+WebKit补验到4项通过时Docker socket消失，登录/DB连接继而失败；只读 `docker info` 也无法连接。`t6-docker-interruption.json` 保留中断原因，当时等待负责人恢复服务，不能把中途结果当全绿。新增中文编辑器具名行/列菜单及继续输入用例，类型/lint/格式已通过，中断时浏览器尚待验。`t6-final-lint-3` 全部54项通过；此前新增测试导入与await-in-loop问题已修正，未放宽规则。
+
+负责人恢复Docker后，WebKit八个原生键盘补验全部通过；新增中文例的测试定位先后修正后，`t6-chinese-2-{chromium,firefox,webkit}` 各1通过。中文行/列菜单及继续输入的实际名称、Tab轮廓、菜单位置和回焦均已查看。原38+新增1项/引擎的最终有效并集为39，262份观察/30张比较索引已检查；包含的中途失败部分图不算整例通过。[矩阵T6记录](closeout-browser-matrix.md#t6-详情与编辑器验收)、`t6-coverage.json` 和 `t6-visual-review.json` 保留完整来源。T6四步完成，B13命令入口及协作六组留T7，未签结整体C12。

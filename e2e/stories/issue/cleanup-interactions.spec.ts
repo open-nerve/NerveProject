@@ -281,8 +281,8 @@ test("C12 (cleanup): Chinese editor names identify the native table menus and co
   const editor = page.locator(`[id="editor-container-${issue.id}"] [contenteditable="true"]`);
   await expect(editor).toContainText("末尾单元格");
   const tab = browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab";
+  await editor.getByText("末尾单元格", { exact: true }).click();
   const checkMenu = async (kind: "row" | "column") => {
-    await editor.getByText("末尾单元格", { exact: true }).click();
     const name = kind === "row" ? "表格行选项" : "表格列选项";
     const trigger = editor.getByRole("button", { name, exact: true }).first();
     await trigger.focus();
@@ -301,7 +301,9 @@ test("C12 (cleanup): Chinese editor names identify the native table menus and co
   };
   await checkMenu("row");
   await checkMenu("column");
-  const continueWriting = page.getByRole("button", { name: "继续输入", exact: true });
+  const continueWriting = page
+    .locator(`[id="editor-container-${issue.id}"]`)
+    .getByRole("button", { name: "继续输入", exact: true });
   await continueWriting.focus();
   await page.keyboard.press(`Shift+${tab}`);
   await page.keyboard.press(tab);
