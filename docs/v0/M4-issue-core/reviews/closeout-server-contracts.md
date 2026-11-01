@@ -18,7 +18,7 @@
 ## 2. 权限、锁与拒绝
 
 - 规则、operation 目录、矩阵和路由形成双向核对：`TestOperations`、`TestThePermissionMatrixCoversEveryOperation`、`TestMatrixViolationsCatchesEachGap`/`EachColumnGap`、`TestMemberIssueMatrixAccountTargets`，以及 search/drafts 专门矩阵。借别例的 issue/编号不能冒充目标列覆盖，分别有反例守卫。
-- 工作区管理员仍遵守项目成员身份；非项目成员无写权，项目访客遵守 OwnOnly。AllowCreator 要求创建者仍有效且至少项目成员。先判断不可见，再返回禁止，工作区管理员不能越过项目访客限制。读列表、子项计数、关注、动态、搜索、个人三种关系使用同一可见性条件。
+- 工作区管理员仍遵守项目成员身份；非项目成员无写权，项目访客遵守 OwnOnly。AllowCreator 要求创建者仍有效且至少项目成员。先判断不可见，再返回禁止，工作区管理员身份不豁免项目访客的 OwnOnly 可见范围；有效项目访客同时是工作区管理员时，写角色按既有管理员规则通过（例如删除自己创建的工作项答 204），不借 AllowCreator 放宽。读列表、子项计数、关注、动态、搜索、个人三种关系使用同一可见性条件。
 - `TestEachIssueWriteLocksItsProjectFirst` 按 operation 逐项观察真实请求 PID/事务；拒绝先结束、不取 gate/连接/行锁、不写表。普通写先不锁的预检，再 gate，再事务内排序项目锁及重判。持项目 N 时不取冲突的工作区锁，外键 KEY SHARE 兼容。
 - 草稿 CRUD 为 W(S)→排序 P(S)→D(U)，不走项目写 gate；发布先 gate，再 W(S)→P(N)→D(U)，锁后项目变更答 409，不临时追拿第二个项目。关联删可在任一端获权，但锁和存在性核对都覆盖两端；预检看不到的项目不入锁集，等待期间新获可见性不能扩张原请求范围。
 - 工作区/身份旧邀请锁排序、项目首锁、连续热写和跨项目排序在 T2 与本次 L20/L21 联合核对。池测试实际使用 pool=10、K=2；200 个同项目写中 2 个在库、64 个排队、134 个 503，另项目 20 个读受原阈值约束。T9 再记录分层耗时，当前不把断言通过冒充性能表。
@@ -70,27 +70,27 @@
 
 ## 5. 变异候选及本轮已杀死项
 
-T10 至少 15 个有效变异必须逐个具有业务断言失败、源码恢复和原态通过证据。下表是候选索引，未执行的明确待验，不能计入完成数；编译失败、默认 skip、只找字符串不计。
+T10 至少 15 个有效变异必须逐个具有业务断言失败、源码恢复和原态通过证据。下表保留原候选索引，未抽取的不能计入完成数；当前完整结果为 [15 项关键性质及 9 项补充](closeout-mutations.md)；编译失败、默认 skip、只找字符串不计。
 
 | ID | 暂时破坏的性质 | 预期捕获位置 | 当前状态 |
 |---|---|---|---|
 | M01 | 工作区成员锁漏 FOR NO KEY UPDATE | `TestLockMemberWorkspaces` 的 acme/gamma FOR SHARE 探针 | 已杀死；`t2-mutant-remove-lock`，恢复 hash 见收据 |
 | M02 | 周期任务没有 worker 仍允许构造 | `TestJobRegistration/periodic_worker_removed` | 已杀死；`t3-mutant-periodic-worker`，实际 New() 为 nil、期望缺 worker 错误 |
 | M03 | 会投递的 kind 没有 worker 仍允许构造 | `TestJobRegistration/enqueued_worker_removed` | 已杀死；`t3-mutant-enqueued-worker`，实际 New() 为 nil、期望缺 worker 错误 |
-| M04 | OwnOnly 放行其他创建者 | access 判定/权限矩阵 | T10 待执行 |
-| M05 | 创建者离开后仍 AllowCreator | access 判定/矩阵离开身份 | T10 待执行 |
-| M06 | 跳过锁下调用者重判 | L04/L05 | T10 待执行 |
-| M07 | 删除关联仅锁有权限的一端 | L21/L26 | T10 待执行 |
-| M08 | 描述活动合并改成新增 | L15/描述事件断言 | T10 待执行 |
-| M09 | link_count 纳入墓碑 | `TestFlatIssueListOrders/link_count` | T10 待执行 |
-| M10 | 数值游标丢精度或 UUID tie | `TestListNumericCursor`/fixture 精确 ID | T10 待执行 |
-| M11 | outbound 接受私网 DNS 答案 | `TestOutboundPinsEveryHop` 零危险 dial | T10 待执行 |
-| M12 | outbound 跳转不重新检查 | `TestOutboundPinsEveryHop` 每跳拒绝 | T10 待执行 |
-| M13 | purge cutoff 含等于边界 | `TestIssuePurgeAllTables` 严格边界 | T10 待执行 |
-| M14 | purge 遗漏一个 child 表 | catalog/全表清理反例 | T10 待执行 |
-| M15 | issue 列表旧会话迟到写入 | root store 账户切换兑现用例 | T10 待执行 |
-| M16 | copy await 后忽略账户代际 | T4 即将补的迟到成功/拒绝用例 | T4 先红绿，T10 核有效性 |
-| M17 | 归档动作保留旧工作区闭包 | T4 真实 store 路由重用用例 | T4 先核是否可复现，未确认 |
-| M18 | draft publish 绕过 payload 锁后重读 | `TestDraftPublishUsesPayloadAfterPatchWait` | T10 待执行 |
+| M04 | OwnOnly 放行其他创建者 | access 判定/权限矩阵 | 已杀死；见 closeout-mutations K07 |
+| M05 | 创建者离开后仍 AllowCreator | access 判定/矩阵离开身份 | 已杀死；见 closeout-mutations K08 |
+| M06 | 跳过锁下调用者重判 | L04/L05 | 候选未抽取，不计完成数；正向/交错证据见 §2–4 |
+| M07 | 删除关联仅锁有权限的一端 | L21/L26 | 候选未抽取，不计完成数；正向/交错证据见 §2–4 |
+| M08 | 描述活动合并改成新增 | L15/描述事件断言 | 已杀死；见 closeout-mutations K10 |
+| M09 | link_count 纳入墓碑 | `TestFlatIssueListCountOrder/link_count_limit2` | 已杀死；见 closeout-mutations K11 |
+| M10 | 数值游标丢精度或 UUID tie | `TestListNumericCursor`/fixture 精确 ID | 已杀死；见 closeout-mutations K12 |
+| M11 | outbound 接受私网 DNS 答案 | `TestOutboundPinsEveryHop` 零危险 dial | 已杀死；见 closeout-mutations K13 |
+| M12 | outbound 跳转不重新检查 | `TestOutboundPinsEveryHop` 每跳拒绝 | 候选未抽取，不计完成数；正向/交错证据见 §2–4 |
+| M13 | purge cutoff 含等于边界 | `TestIssuePurgeAllTables` 严格边界 | 候选未抽取，不计完成数；正向/交错证据见 §2–4 |
+| M14 | purge 遗漏一个 child 表 | catalog/全表清理反例 | 候选未抽取，不计完成数；正向/交错证据见 §2–4 |
+| M15 | issue 列表旧会话迟到写入 | root store 账户切换兑现用例 | 已杀死；见 closeout-mutations K15 |
+| M16 | copy await 后忽略账户代际 | T4 即将补的迟到成功/拒绝用例 | T4 真实生命周期反证已修复；不重复计入 K01–K15 |
+| M17 | 归档动作保留旧工作区闭包 | T4 真实 store 路由重用用例 | T4 真实生命周期反证已修复；不重复计入 K01–K15 |
+| M18 | draft publish 绕过 payload 锁后重读 | `TestDraftPublishUsesPayloadAfterPatchWait` | 候选未抽取，不计完成数；正向/交错证据见 §2–4 |
 
 两 worker 源码都恢复到 `f50129aa848f5bdd4253077c15669874e4d5f3542e87ad7ffe7171049b210a22`；每次 diff、变异输入、失败原文、恢复 hash 分别保存。恢复后完整 registration 23 子例通过，接着 26 交错在同一原态输入跑完；没有把变异留在提交内。
