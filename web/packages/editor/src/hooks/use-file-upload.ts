@@ -54,16 +54,24 @@ export const useUploader = (args: TUploaderArgs) => {
       try {
         if (loadFileFromFileSystem) {
           const reader = new FileReader();
-          reader.onload = () => {
-            if (reader.result) {
-              loadFileFromFileSystem(reader.result as string);
-            } else {
-              console.error("Failed to read the file: reader.result is null");
-            }
-          };
-          reader.onerror = () => {
-            console.error("Error reading file");
-          };
+          reader.addEventListener(
+            "load",
+            () => {
+              if (reader.result) {
+                loadFileFromFileSystem(reader.result as string);
+              } else {
+                console.error("Failed to read the file: reader.result is null");
+              }
+            },
+            { once: true }
+          );
+          reader.addEventListener(
+            "error",
+            () => {
+              console.error("Error reading file");
+            },
+            { once: true }
+          );
           reader.readAsDataURL(file);
         }
         const url = await editorCommand(file);

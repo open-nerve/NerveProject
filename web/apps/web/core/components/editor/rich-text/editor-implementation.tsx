@@ -5,6 +5,7 @@
  */
 
 import { forwardRef } from "react";
+import { useTranslation } from "@nerve/i18n";
 // nerve imports
 import { RichTextEditorWithRef } from "@nerve/editor";
 import type { EditorRefApi } from "@nerve/editor";
@@ -31,6 +32,7 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
     disabledExtensions = [],
     ...rest
   } = props;
+  const { t } = useTranslation();
   // store hooks
   const members = useMember();
   const { getUserDetails } = members;
@@ -46,6 +48,10 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
 
   return (
     <RichTextEditorWithRef
+      labels={{
+        continueWriting: t("aria_labels.editor.continue_writing"),
+        resizeImage: t("aria_labels.editor.resize_image"),
+      }}
       ref={ref}
       disabledExtensions={disabledExtensions}
       editable={editable}

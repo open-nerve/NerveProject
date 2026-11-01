@@ -124,3 +124,18 @@ M11 删除审计输入 D001，真实 ledger checker 报 missing rows；恢复449
 准确提交 `f0e2ac3c599e4e79f4ca5c0c9aae6b756fa19d39` 的 [CI 41272608224](https://github.com/open-nerve/NerveProject/actions/runs/41272608224) server/web 成功，E2E 278通过、I13历史分页1失败，不能记为该检查点全绿。连接器取得作业124750553462日志与报告13070691374，原报告zip SHA256 `595f454dd220ab19b705b52072fa0430a450acdeeaa3bd020d09021f973ec3b4`。trace显示 cursor 第二页已成功返回，随后当前编号路由的验证读完成导致历史重新挂载，首页又覆盖成两项。
 
 本地有效红 `ci-history-warm-route-red-r2` 证实：返回访问过的编号路由，SWR已有旧数据时 isLoading=false，但本次读取尚在 isValidating，页头/正文提前进入交互。两个路由宿主等待本次 lookup 完成，`ci-history-warm-route-green` 14条通过；首次红因假时钟尚未过 dedupe cleanup 未抵达被验行为，不计有效红。此为既有路由边界的局部修复，沿用原 owner 和读取合同，不改权限/分页协议。真实 I13 页面复验与准确后续提交 CI 归 T5，当前仍待验证。
+
+
+## 14. T5 告警终态与局部行为修复
+
+Task BASE `5b3472bd`。重新取全部14个包/tools/E实际诊断，按原 domains M4 与 M3收尾 `53a6a05b` 以来整个M4改动路径并集核验，T4之后剩余41条/26文件，不能只取P16增量。当前范围零诊断；总数127→86，web78→69、editor32→0，ui4/propel6/utils4/hooks3保持，所有其它包0。规则、ignore、豁免和cap算法未放宽；临时给web上限68/70均被原lint-cap分别以“超上限/必须下调”拒绝。
+
+局部修复沿现有拥有者：CalendarStore 将原 reaction disposer 交回 IssueRootStore.retire；SideMenu 将 DragHandlePlugin 的真实销毁函数接回 ProseMirror view 生命周期；BubbleMenu 释放未结束选择的mousemove/mouseup并在editor切换时复位。真实编辑器测试证实旧监听/DOM未释放，恢复后通过。表格行列菜单原先任意键都阻止并关闭，改为只处理非IME的Escape并回焦；丢失drag marker时仍释放自身window监听。链接输入确认避开IME并阻止父表单提交，label与input关联，主动打开时显式聚焦。原静态外层拦点击删去；子项工具栏实际是折叠trigger的兄弟，不再preventDefault吞子按钮默认动作。
+
+通知筛选为原生button，Enter/Space一次切换且不提交父表单。编辑器空白区域用原生“继续输入”操作把焦点交给正文，图片选择交给真实img；缩放握柄保留指针拖动并支持方向键和原生键盘激活。两条新增名称由宿主en/zh-CN文案传入轻量EditorLabelsContext，真实NodeView在切换名称后保持同一控件；不增依赖/网络/业务状态拥有者，不启用M4图片。该回归还证实旧size>2判断误把单张图当空文档，首次改尺寸才生成id导致控件重建；现在只跳过默认空段落，实际叶子块在挂载前获得既有id，旧迁移meta保持。
+
+机械清理明确保留所读字段：autolink.value/href/from/to、slash section.key/title/items；使用findLast/flatMap/一次性FileReader事件，未改变序列化格式。各进度分布的唯一无负责人/无标签桶用固定key，列表骨架用既有不同分组数量作key。Editor NodeView共享同一真实工厂，T5生命周期用例拆到 editor-lifecycle.test.tsx，旧 editor-interaction.test.ts 仍保留原15条，避免复制一套假编辑器。
+
+证据根同前：`t5-ci-page-build`与`t5-ci-i13-page`在相同输入上真实I13重复10/10；T2检查点失败原因见§13，后续CI尚待核。`t5-all-types-r2`跨包构建/类型11任务通过；`t5-editor-lifecycle-final`真实编辑两文件22条通过，后补marker收尾的`t5-last-hosts`7条通过；`t5-mutants-restored`日历/通知6条通过。M13恢复不可键盘访问div被真实按钮/激活断言拒绝，M14保留旧周起始偏好被实际星期断言拒绝；补丁/红日志/字节恢复在t5-mutations.json。最初Bubble测试直接卸载被第三方挪出的根DOM导致NotFoundError，不计行为红；加真实外层宿主后r2确实检出未移除监听。单图测试曾带已存id作为对照通过，最终恢复无id旧文档重现并修正根因，不掩盖失败。
+
+冻结输入后完整 F 七项串行通过：gen-check、lint-go、Go test（455.775秒）、lint-web（54任务）、knip、强制test-web（18任务、零缓存）和默认E2E 279/279。七项输入hash均为 `97771a1fb8edf91f81b0e37ebd39c3653ab9a3894f4249b209c26ddc52ce50b7`，各自输入/输出逐文件状态一致；`t5-f1`至`t5-f7`原始收据与`t5-full-gates-summary.json`可复核。该默认集仍非三引擎矩阵。仅在F结束后更新本文稿；准确检查点提交的CI后置核验，不提前记全绿。

@@ -150,22 +150,22 @@ export function EditorBubbleMenu(props: Props) {
   };
 
   useEffect(() => {
+    setIsSelecting(false);
+    function handleMouseMove() {
+      if (!editor.isDestroyed && !editor.state.selection.empty) {
+        setIsSelecting(true);
+        document.removeEventListener("mousemove", handleMouseMove);
+      }
+    }
+
+    function handleMouseUp() {
+      setIsSelecting(false);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    }
+
     function handleMouseDown(e: MouseEvent) {
       if (menuRef.current?.contains(e.target as Node)) return;
-
-      function handleMouseMove() {
-        if (!editor.state.selection.empty) {
-          setIsSelecting(true);
-          document.removeEventListener("mousemove", handleMouseMove);
-        }
-      }
-
-      function handleMouseUp() {
-        setIsSelecting(false);
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      }
-
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     }
@@ -174,6 +174,8 @@ export function EditorBubbleMenu(props: Props) {
 
     return () => {
       document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [editor]);
 

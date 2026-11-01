@@ -241,3 +241,35 @@ M4同名局部变量使用显式getProjectMemberIds(projectId,false)，不是get
 | `web/packages/utils/src/editor/markdown-parser/root.ts` | child | 按实际词法符号改局部名；对象key和公共回调合同保持 |
 | `web/apps/web/core/components/issues/issue-detail/main-content.tsx` | 无有效诊断 | 删除失效 no-shadow 屏蔽 |
 | `web/apps/web/core/components/issues/peek-overview/issue-detail.tsx` | 无有效诊断 | 删除失效 no-shadow 屏蔽 |
+
+## T5 告警终态（2026-11-01）
+
+按原 domains 的 M4 加 `53a6a05b..当前工作树` 全M4改动路径并集核验，T4后剩余41条/26文件，以下全部归零。`t5-frozen-lint-scope.json` 记957个改动路径，包含删除/非TS路径，不称957个存活源码文件。各包仍按自身check:lint范围扫描，不扫描生成dist来改数。
+
+| 文件（C=web/apps/web/core，E=web/packages/editor/src） | 原条数 | 处理 |
+|---|---:|---|
+| C/components/workspace-notifications/sidebar/filters/menu/menu-option-item.tsx | 2 | 原生按钮、aria-pressed与键盘切换 |
+| 同目录root.tsx | 1 | 只解构value/label |
+| C/components/issues/issue-detail-widgets/sub-issues/title-actions.tsx | 2 | 删吞默认动作的外层点击拦截，按钮与折叠trigger本为兄弟 |
+| C/components/issues/issue-layouts/calendar/issue-block-root.tsx | 1 | effect依赖真实issue/canDrag，不依赖ref.current |
+| C/components/ui/loader/layouts/list-layout-loader.tsx | 1 | 不同骨架组数为key |
+| C/components/core/sidebar/progress-stats/assignee.tsx、label.tsx | 2 | 唯一无负责人/无标签桶固定key |
+| E/components/menus/bubble-menu/node-selector.tsx | 1 | findLast保留最后激活项 |
+| E/extensions/custom-image/components/toolbar/full-screen/modal.tsx | 3 | findLast、原生背景关闭按钮和装饰图片alt |
+| E/components/menus/bubble-menu/link-selector.tsx | 1 | 打开时显式聚焦、IME不确认 |
+| E/extensions/custom-image/components/uploader.tsx | 2 | 原生上传按钮，重试为兄弟控件 |
+| E/extensions/custom-link/helpers/autolink.ts | 1 | 明确value/href/from/to，保留实际href读者 |
+| E/extensions/slash-commands/command-items-list.tsx | 1 | 明确key/title/items |
+| E/components/editors/editor-container.tsx | 3 | 原生继续输入操作，不把整个容器伪装button |
+| E/extensions/emoji/components/emojis-list.tsx | 2 | 删除无用祖先点击拦截，真实项处理点击 |
+| E/extensions/slash-commands/root.tsx | 2 | 命名导入、可选销毁回调 |
+| E/extensions/code/lowlight-plugin.ts | 1 | flatMap替代中间展开数组 |
+| E/extensions/slash-commands/command-menu.tsx | 2 | 删除无用祖先点击/按下拦截 |
+| E/extensions/custom-image/components/block.tsx | 2 | 真img选择与原生缩放握柄，键盘保持NodeView身份 |
+| E/extensions/starter-kit.ts、text-align.ts、quote.ts | 3 | 对应命名导入 |
+| E/extensions/extensions.ts | 2 | TaskItem/TaskList命名导入 |
+| E/components/links/link-edit-view.tsx | 3 | label、显式聚焦、fieldset；IME/表单事件合同回归 |
+| E/hooks/use-file-upload.ts | 2 | FileReader一次性load/error监听 |
+| E/helpers/common.ts | 1 | 实际读取新URL的protocol |
+
+完整实际诊断数/上限：web69、editor0、ui4、propel6、utils4、hooks3，其它8范围0，总86；M4并集0、no-shadow0、error0。T5同时补生命周期局部根因和CI暖路由时序，详见[review §13–14](P16-web-cleanup-review.md#14-t5-告警终态与局部行为修复)。没有新增disable/ignore、抬cap或启用M4图片。

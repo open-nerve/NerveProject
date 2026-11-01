@@ -90,10 +90,10 @@ make e2e
 **Files：** inventory计划告警范围与实际新增改动文件；各包package.json。C/components/{dropdowns/layout,issues/issue-layouts/calendar/issue-block-root,issues/issue-detail-widgets/sub-issues/title-actions}.tsx、P/editor存活菜单/插件为关键行为读取点；其它具体文件逐项台账，不把未知文件列为已改。
 **Interfaces：** 保持键盘/焦点/effect和未启用的图片上传边界；lint-cap严格相等不变。
 
-- [ ] Step 1：刷新所有包diagnostics，合并domains M4、M3基线53a6a05b至本期的TS/TSX改动集合及T2/T3触及文件；核准备103条显示+8条隐藏诊断、63文件（含无效屏蔽）的实际剩余，不能只按本分支增量漏掉M4早期改动。
-- [ ] Step 2：逐实际行为缺口补拥有者测试：可交互项Enter/Space可达、无嵌套button、layout/effect取当前输入、菜单/编辑器不开新增网络。数组/局部绑定等纯机械清理复用既有回归，不为每行重命名单独造测试。
-- [ ] Step 3：修真正交互语义、effect或数据转换；真dead移除整链；按每包实际数同提交降低cap，改动文件告警清零。新UI文字双语，不增加role空壳/空handler/disable。
-- [ ] Step 4：逐文件oxlint零、全包数等于cap、no-shadow仍0/error、类型与所属组件/编辑器/HTML安全回归；M13交互失去键盘、M14旧闭包忽略新输入由具体断言检出；cap一少一多的现成lint-cap诊断以临时参数验证不变。串行F并固定候选输入。
+- [x] Step 1：刷新所有包diagnostics，合并domains M4、M3基线53a6a05b至本期的TS/TSX改动集合及T2/T3触及文件；核准备103条显示+8条隐藏诊断、63文件（含无效屏蔽）的实际剩余，不能只按本分支增量漏掉M4早期改动。
+- [x] Step 2：逐实际行为缺口补拥有者测试：可交互项Enter/Space可达、无嵌套button、layout/effect取当前输入、菜单/编辑器不开新增网络。数组/局部绑定等纯机械清理复用既有回归，不为每行重命名单独造测试。
+- [x] Step 3：修真正交互语义、effect或数据转换；真dead移除整链；按每包实际数同提交降低cap，改动文件告警清零。新UI文字双语，不增加role空壳/空handler/disable。
+- [x] Step 4：逐文件oxlint零、全包数等于cap、no-shadow仍0/error、类型与所属组件/编辑器/HTML安全回归；M13交互失去键盘、M14旧闭包忽略新输入由具体断言检出；cap一少一多的现成lint-cap诊断以临时参数验证不变。串行F并固定候选输入。
 - [ ] Step 5：写A5、基线→终值表和具体删除/修复证据；提交 `refactor(M4/P16): 收口前端告警并同步降低各包上限` 后push检查点，核远端HEAD和CI。
 
 ## Task 6：关键词终态（约150–350行）

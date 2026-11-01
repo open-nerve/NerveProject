@@ -14,6 +14,7 @@ import type { TCustomComponentsMetaData } from "@nerve/utils";
 import type { TTextAlign } from "@/extensions";
 // types
 import type { TDisplayConfig, TEditorAsset, TExtensions, TFileHandler, TMentionHandler } from "@/types";
+import type { EditorLabels } from "./config";
 
 export type TEditorCommands =
   | "text"
@@ -99,6 +100,7 @@ export type EditorRefApi = {
 
 // editor props
 export type IEditorProps = {
+  labels?: EditorLabels;
   autofocus?: boolean;
   bubbleMenuEnabled?: boolean;
   containerClassName?: string;

@@ -193,6 +193,7 @@ export class IssueRootStore {
   retire(): void {
     if (!this.active) return;
     this.permissionReads.retire();
+    this.issueCalendarView.dispose();
     runInAction(() => {
       this.active = false;
     });

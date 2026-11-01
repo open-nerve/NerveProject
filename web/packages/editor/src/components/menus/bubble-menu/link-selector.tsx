@@ -6,10 +6,10 @@
 
 import type { Editor } from "@tiptap/core";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DeleteOutline, LinkOutline, TickOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { cn } from "@nerve/utils";
+import { cn, isComposing } from "@nerve/utils";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // helpers
@@ -31,6 +31,9 @@ export function BubbleMenuLinkSelector(props: Props) {
   const { context } = options;
   // refs
   const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (context.open) inputRef.current?.focus();
+  }, [context.open]);
 
   const handleLinkSubmit = useCallback(() => {
     const input = inputRef.current;
@@ -84,13 +87,12 @@ export function BubbleMenuLinkSelector(props: Props) {
             defaultValue={editor.getAttributes("link").href || ""}
             onKeyDown={(e) => {
               setError(false);
-              if (e.key === "Enter") {
+              if (e.key === "Enter" && !isComposing(e.nativeEvent)) {
                 e.preventDefault();
                 handleLinkSubmit();
               }
             }}
             onFocus={() => setError(false)}
-            autoFocus
           />
           {editor.getAttributes("link").href ? (
             <button

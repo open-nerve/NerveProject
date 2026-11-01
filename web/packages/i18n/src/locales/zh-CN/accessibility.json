@@ -37,6 +37,10 @@
       "hide_password": "隐藏密码"
     },
     "comment_options": "{name}的评论选项",
-    "comment_add_reaction": "为{name}的评论添加回应"
+    "comment_add_reaction": "为{name}的评论添加回应",
+    "editor": {
+      "continue_writing": "继续输入",
+      "resize_image": "调整图片大小"
+    }
   }
 }

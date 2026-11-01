@@ -6,7 +6,7 @@
 
 import type { Editor } from "@tiptap/react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useContext, useEffect, useRef } from "react";
 // nerve utils
 import { cn } from "@nerve/utils";
 // constants
@@ -14,6 +14,7 @@ import { DEFAULT_DISPLAY_CONFIG } from "@/constants/config";
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // components
 import { LinkContainer } from "@/components/link-container";
+import { EditorLabelsContext } from "@/components/editor-labels";
 // types
 import type { TDisplayConfig } from "@/types";
 
@@ -28,6 +29,7 @@ type Props = {
 
 export function EditorContainer(props: Props) {
   const { children, displayConfig, editor, editorContainerClassName, id, isTouchDevice } = props;
+  const labels = useContext(EditorLabelsContext);
   // refs
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScrolledOnce = useRef(false);
@@ -71,8 +73,7 @@ export function EditorContainer(props: Props) {
     }
   }, [scrollToNode]);
 
-  const handleContainerClick = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    if (event.target !== event.currentTarget) return;
+  const continueWriting = () => {
     if (!editor) return;
     if (!editor.isEditable) return;
     try {
@@ -117,7 +118,7 @@ export function EditorContainer(props: Props) {
   };
 
   const handleContainerMouseLeave = () => {
-    const dragHandleElement = document.querySelector("#editor-side-menu");
+    const dragHandleElement = containerRef.current?.querySelector("#editor-side-menu");
     if (!dragHandleElement?.classList.contains("side-menu-hidden")) {
       dragHandleElement?.classList.add("side-menu-hidden");
     }
@@ -127,7 +128,6 @@ export function EditorContainer(props: Props) {
     <div
       ref={containerRef}
       id={`editor-container-${id}`}
-      onClick={handleContainerClick}
       onMouseLeave={handleContainerMouseLeave}
       className={cn(
         `editor-container relative cursor-text line-spacing-${displayConfig.lineSpacing ?? DEFAULT_DISPLAY_CONFIG.lineSpacing}`,
@@ -138,7 +138,15 @@ export function EditorContainer(props: Props) {
         editorContainerClassName
       )}
     >
-      {children}
+      {editor.isEditable && (
+        <button
+          type="button"
+          aria-label={labels.continueWriting}
+          className="absolute inset-0 rounded-sm focus-visible:outline-2 focus-visible:outline-accent-strong"
+          onClick={continueWriting}
+        />
+      )}
+      <div className="pointer-events-none relative [&>*]:pointer-events-auto">{children}</div>
       {!isTouchDevice && <LinkContainer editor={editor} containerRef={containerRef} />}
     </div>
   );

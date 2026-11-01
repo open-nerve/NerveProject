@@ -90,8 +90,7 @@ export function CustomImageUploader(props: CustomImageUploaderProps) {
         }
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [imageComponentImageFileMap, imageEntityId, updateAttributes, getPos]
+    [imageComponentImageFileMap, imageEntityId, updateAttributes, getPos, editor, node.type.name, setIsUploaded]
   );
 
   const uploadImageEditorCommand = useCallback(
@@ -227,14 +226,16 @@ export function CustomImageUploader(props: CustomImageUploaderProps) {
       onDragOver={onDragEnter}
       onDragLeave={onDragLeave}
       contentEditable={false}
-      onClick={() => {
-        if (!failedToLoadImage && editor.isEditable && !hasDuplicationFailed) {
-          fileInputRef.current?.click();
-        }
-      }}
     >
-      <ImageOutline className="size-4" />
-      <div className="flex-1 text-14 font-medium">{getDisplayMessage()}</div>
+      <button
+        type="button"
+        disabled={failedToLoadImage || hasDuplicationFailed || !editor.isEditable || isImageBeingUploaded}
+        className="flex flex-1 items-center gap-2 text-left text-14 font-medium"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <ImageOutline className="size-4" />
+        <span>{getDisplayMessage()}</span>
+      </button>
       {hasDuplicationFailed && editor.isEditable && (
         <button
           type="button"

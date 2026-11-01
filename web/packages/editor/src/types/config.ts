@@ -29,3 +29,9 @@ export type TDisplayConfig = {
   fontSize?: TEditorFontSize;
   lineSpacing?: TEditorLineSpacing;
 };
+
+/** Consumer-supplied labels, shared with React NodeViews through the editor's context. */
+export type EditorLabels = {
+  continueWriting: string;
+  resizeImage: string;
+};

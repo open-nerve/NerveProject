@@ -15,6 +15,7 @@ import { useEditor } from "@/hooks/use-editor";
 // types
 import type { IEditorProps } from "@/types";
 import { EditorContentWrapper } from "./editor-content";
+import { defaultEditorLabels, EditorLabelsContext } from "@/components/editor-labels";
 
 type Props = IEditorProps & {
   children?: (editor: Editor) => React.ReactNode;
@@ -24,6 +25,7 @@ type Props = IEditorProps & {
 
 export function EditorWrapper(props: Props) {
   const {
+    labels = defaultEditorLabels,
     children,
     containerClassName,
     disabledExtensions,
@@ -84,17 +86,19 @@ export function EditorWrapper(props: Props) {
   if (!editor) return null;
 
   return (
-    <EditorContainer
-      displayConfig={displayConfig}
-      editor={editor}
-      editorContainerClassName={editorContainerClassName}
-      id={id}
-      isTouchDevice={!!isTouchDevice}
-    >
-      {children?.(editor)}
-      <div className="flex flex-col">
-        <EditorContentWrapper editor={editor} id={id} tabIndex={tabIndex} />
-      </div>
-    </EditorContainer>
+    <EditorLabelsContext value={labels}>
+      <EditorContainer
+        displayConfig={displayConfig}
+        editor={editor}
+        editorContainerClassName={editorContainerClassName}
+        id={id}
+        isTouchDevice={!!isTouchDevice}
+      >
+        {children?.(editor)}
+        <div className="flex flex-col">
+          <EditorContentWrapper editor={editor} id={id} tabIndex={tabIndex} />
+        </div>
+      </EditorContainer>
+    </EditorLabelsContext>
   );
 }

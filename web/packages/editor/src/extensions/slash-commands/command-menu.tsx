@@ -141,12 +141,6 @@ export const SlashCommandsMenu = forwardRef(function SlashCommandsMenu(props: Sl
         style={{
           zIndex: 100,
         }}
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-        onMouseDown={(e) => {
-          e.stopPropagation();
-        }}
       >
         {sections.map((section, sectionIndex) => (
           <div key={section.key} className="space-y-2">

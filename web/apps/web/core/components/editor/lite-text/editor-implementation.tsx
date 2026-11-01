@@ -80,6 +80,10 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
         {/* Main Editor - always rendered once */}
         <div>
           <LiteTextEditorWithRef
+            labels={{
+              continueWriting: t("aria_labels.editor.continue_writing"),
+              resizeImage: t("aria_labels.editor.resize_image"),
+            }}
             ref={ref}
             disabledExtensions={disabledExtensions}
             editable={editable}

@@ -20,7 +20,7 @@ import type { Editor } from "@tiptap/core";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 // nerve imports
-import { cn } from "@nerve/utils";
+import { cn, isComposing } from "@nerve/utils";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // extensions
@@ -99,20 +99,23 @@ export function RowDragHandle(props: RowDragHandleProps) {
     whileElementsMounted: autoUpdate,
   });
   const click = useClick(context);
-  const dismiss = useDismiss(context);
+  const dismiss = useDismiss(context, { escapeKey: false });
   const role = useRole(context);
   const { getReferenceProps, getFloatingProps } = useInteractions([dismiss, click, role]);
 
   useEffect(() => {
     if (!isDropdownOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || isComposing(event)) return;
       context.onOpenChange(false);
+      const trigger = refs.domReference.current;
+      if (trigger instanceof HTMLElement) trigger.focus();
       event.preventDefault();
       event.stopPropagation();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isDropdownOpen, context]);
+  }, [isDropdownOpen, context, refs.domReference]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -148,6 +151,11 @@ export function RowDragHandle(props: RowDragHandleProps) {
       const dragMarker = tableElement instanceof HTMLElement ? getRowDragMarker(tableElement) : null;
 
       const handleFinish = (): void => {
+        window.removeEventListener("mouseup", handleFinish);
+        window.removeEventListener("mousemove", handleMove);
+        // Clear the ref
+        activeListenersRef.current.mouseup = undefined;
+        activeListenersRef.current.mousemove = undefined;
         if (!dropMarker || !dragMarker) return;
         hideDropMarker(dropMarker);
         hideDragMarker(dragMarker);
@@ -168,11 +176,6 @@ export function RowDragHandle(props: RowDragHandleProps) {
           }
           editor.view.dispatch(tr);
         }
-        window.removeEventListener("mouseup", handleFinish);
-        window.removeEventListener("mousemove", handleMove);
-        // Clear the ref
-        activeListenersRef.current.mouseup = undefined;
-        activeListenersRef.current.mousemove = undefined;
       };
 
       let pseudoRow: HTMLElement | undefined;
