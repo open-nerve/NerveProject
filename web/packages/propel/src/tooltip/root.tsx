@@ -29,6 +29,7 @@ type ITooltipProps = {
 };
 
 export function Tooltip(props: ITooltipProps) {
+  const tooltipId = React.useId();
   const {
     tooltipHeading,
     tooltipContent,
@@ -54,7 +55,11 @@ export function Tooltip(props: ITooltipProps) {
   return (
     <BaseTooltip.Provider>
       <BaseTooltip.Root delay={openDelay} closeDelay={closeDelay} disabled={disabled}>
-        <BaseTooltip.Trigger render={children} />
+        <BaseTooltip.Trigger
+          render={React.cloneElement(children, {
+            "aria-describedby": [children.props["aria-describedby"], tooltipId].filter(Boolean).join(" "),
+          })}
+        />
         <BaseTooltip.Portal>
           <BaseTooltip.Positioner
             className={cn(
@@ -67,21 +72,20 @@ export function Tooltip(props: ITooltipProps) {
             side={finalSide}
             sideOffset={sideOffset}
             align={finalAlign}
-            render={
-              <BaseTooltip.Popup>
-                {tooltipHeading && <p className="text-caption-md-medium text-primary">{tooltipHeading}</p>}
-                {tooltipContent && (
-                  <p
-                    className={cn("text-caption-sm-regular text-secondary", {
-                      "mt-1": tooltipHeading && tooltipHeading !== "",
-                    })}
-                  >
-                    {tooltipContent}
-                  </p>
-                )}
-              </BaseTooltip.Popup>
-            }
-          />
+          >
+            <BaseTooltip.Popup id={tooltipId} role="tooltip">
+              {tooltipHeading && <p className="text-caption-md-medium text-primary">{tooltipHeading}</p>}
+              {tooltipContent && (
+                <div
+                  className={cn("text-caption-sm-regular text-secondary", {
+                    "mt-1": tooltipHeading && tooltipHeading !== "",
+                  })}
+                >
+                  {tooltipContent}
+                </div>
+              )}
+            </BaseTooltip.Popup>
+          </BaseTooltip.Positioner>
         </BaseTooltip.Portal>
       </BaseTooltip.Root>
     </BaseTooltip.Provider>
