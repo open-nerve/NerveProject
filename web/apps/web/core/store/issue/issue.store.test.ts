@@ -5,7 +5,7 @@ import { issueDetailOf, issueOf, issuePageOf, issueStoreTab, requestedIssue } fr
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { IssueListBinding } from "./helpers/issue-list-binding";
-import { loadProjects, projectOf } from "@/store/project/fake-projects";
+import { loadProject, loadProjects, projectOf } from "@/store/project/fake-projects";
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({
@@ -474,8 +474,9 @@ it("SessionChangedDeleteDoesNotCreateTombstone", async () => {
 });
 
 it.each([200, 403, 404, 500])(
-  "authoritative retry after permission recovery does not join old in-flight GET (%s)",
+  "R06 authoritative retry after permission recovery does not join old in-flight GET (%s)",
   async (status) => {
+    await loadProject(tab.nerve, tab.app.projectRoot.project, tab.project);
     accept(issueOf("x"));
     const old = await requestedIssue(tab.nerve, () => tab.app.issue.issues.refreshAuthoritative("x"), [
       "GET",

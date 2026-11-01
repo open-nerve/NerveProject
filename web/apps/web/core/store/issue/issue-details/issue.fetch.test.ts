@@ -8,7 +8,7 @@ import { FakeNerve, answered, json, noContent, problem, type Call } from "@/lib/
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { issueOf, issueLinkOf, issueReactionOf, requestedIssue } from "@/store/issue/fake-issues";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
-import { projectOf, loadProjects, stateOf } from "@/store/project/fake-projects";
+import { projectOf, loadProject, loadProjects, stateOf } from "@/store/project/fake-projects";
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 const binding = vi.hoisted(() => ({ app: undefined as unknown }));
@@ -313,18 +313,23 @@ it.each([false, true].flatMap((identifier) => ["initial", "next"].map((page) => 
   }
 );
 
-it.each([false, true])("drops an old detail after observed loss and recovery (%s)", async (identifier) => {
-  const { fetch, source } = resources(null);
+it.each([false, true])("R06 drops an old detail after observed loss and recovery (%s)", async (identifier) => {
+  await loadProject(nerve, app.projectRoot.project, project);
+  const { fetch, source, native } = resources(null);
   nerve.respond = undefined;
   const reading = track(fetch(identifier));
   await until(() => nerve.calls.some((call) => call.path.includes("/issues/")), "core GET");
   const core = nerve.calls.find((call) => call.path.includes("/issues/"))!;
   await loadProjects(nerve, app.projectRoot.project, ws, []);
   await loadProjects(nerve, app.projectRoot.project, ws, [project]);
+  const afterCore = nerve.calls.length;
+  // Answer unintended auxiliary requests too: the regression must fail on accepted data, not a fake timeout.
+  nerve.respond = native;
   core.answer(json(200, source));
   await until(() => reading.settled, "old detail");
-  expect(reading.error).toBeInstanceOf(SessionChangedError);
-  expect(app.issue.issues.held(source.id)).toBeUndefined();
+  expect.soft(reading.error).toBeInstanceOf(SessionChangedError);
+  expect.soft(app.issue.issues.held(source.id)).toBeUndefined();
+  expect.soft(nerve.calls.slice(afterCore)).toEqual([]);
 });
 
 it.each(["unknown", "revoked"])("detail preflight rejects %s scope before restricted GET", async (kind) => {

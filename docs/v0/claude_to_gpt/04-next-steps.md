@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见 §29：M4 closeout T1–T9 已完成；T10 发现 R06 跨模块权限来源问题，证据与建议已准备，提交后待负责人决策。暂不合并。此前各节保留历史快照。**
+**当前接续点见 §29：M4 closeout T1–T9 已完成；负责人已批准 R06 方案 A，T10 源头修复、联合回归和新构建 E2E 已通过，R06 已闭环。继续全期 deep-review 和收尾，暂不合并。此前各节保留历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -287,12 +287,12 @@ P16 最终 `582694d96303f11cf57568f8c84edd3006a36752` 已经授权 `--no-ff` 合
 
 **2026-11-01 已获准实施。** 从 T1 顺序执行，phase 已改为 M4/closeout，范围及原文来源见 [验收台账](../M4-issue-core/reviews/closeout-acceptance.md)，C12 见 [最终矩阵](../M4-issue-core/reviews/closeout-browser-matrix.md)。T1 已固定 22 故事、26 交错、44 同步行、45 差异行、C1–C12、18 完成条款、18 Phase 两类来源与八输入；lint-web 通过。其他条目按实际证据推进，不预签结。阶段末 deep-review 后先不合并，T14 仅准备集成包；最终 main CI、M4 §14 全勾和总体 §9.4 完成标记仍需后续集成。准备证据保留在主目录 `.superpowers/sdd/M4-closeout-preparation-20261101/`，本次实施证据在 worktree `.superpowers/sdd/M4-closeout/`，技能进度在 `.superpowers/sdd/closeout/`，未来均须归档。
 
-## 29. M4 收尾实施：R06 待负责人决策
+## 29. M4 收尾实施：R06 已获批准，继续 T10
 
-T1–T9 已完成，C12 三引擎与规模测量证据已保留。T10 全 M4 deep-review 已修复 R01–R05，最新产品提交 `83543d5f29cda1e76fc99df3885ddc54ecd47a3f`；审查仍未完成。
+T1–T9 已完成，C12 三引擎与规模测量证据已保留。T10 全 M4 deep-review 已修复 R01–R05，R01–R05 产品检查点 `83543d5f29cda1e76fc99df3885ddc54ecd47a3f`；审查仍未完成。
 
 R06 复现：先读取项目详情，再让完整项目目录不再包含该私有项目，旧详情仍保持权限事实，工作项缓存与迟到列表没有失效。不预读详情的对照通过。原用例已精确还原并 51/51 通过，诊断补丁单独保存。
 
-推荐修正 ProjectStore 的完整目录缺席与旧详情选择语义，保持 IssueRootStore 统一拥有工作项权限失效；涉及 M3/M4 协同，按负责人纪律先提交再上报。详见 [问题与建议](../M4-issue-core/reviews/closeout-permission-decision.md) 和 [全 M4 审查记录](../../reviews/re-29-M4整体审核.md)。
+负责人已批准 A：先同步设计/spec/plan，再由 ProjectStore 修正完整目录缺席与旧详情选择语义，保持 IssueRootStore 统一拥有工作项权限失效。修复涵盖跨归档类别的来源回退、迟到详情、确认重放和成员角色旧答；退出/排序亦接入同一边界。最后联合 62 文件 920 项通过；2026-11-02 最后产品候选完整 web 281 文件 3061 项、lint 54/54、knip 和新构建 E2E 297/297 已通过，R06 实施闭环。最终三引擎与完整 F 仍在 T13。详见 [问题、决定和证据](../M4-issue-core/reviews/closeout-permission-decision.md) 和 [全 M4 审查记录](../../reviews/re-29-M4整体审核.md)。
 
-分支 `codex/m4-closeout`，收尾基线 `01e40e113e11365a4eeacc2794973de2751dde61`；主目录保持 main。获批准后先同步设计/spec/plan 再修复 R06，继续 T10 剩余完整审查与 T11–T14 Step 1；C12 最终输入、最终完整 F、准确分支 CI 和 fresh-context 分支审查尚未收口。D18、完成标记和 main CI 仍留待未来获准集成，不合并、不清理当前分支或 worktree。
+分支 `codex/m4-closeout`，收尾基线 `01e40e113e11365a4eeacc2794973de2751dde61`；主目录保持 main。历史停报提交 `0d1983f1f11fa51dda1ba521bbc87ccc005704f0` 的 CI `41318564500` attempt 1 三作业全绿，新修复不冒用该结果。继续 T10 剩余完整审查与 T11–T14 Step 1；C12 最终输入、最终完整 F、准确分支 CI 和 fresh-context 分支审查尚未收口。D18、完成标记和 main CI 仍留待未来获准集成，不合并、不清理当前分支或 worktree。

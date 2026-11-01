@@ -5,7 +5,7 @@ import { FakeNerve, answered, json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { issueDetailOf, issuePageOf, listIssue, requestedIssue } from "../fake-issues";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
-import { loadProjects, projectOf, stateOf, labelOf } from "@/store/project/fake-projects";
+import { loadProject, loadProjects, projectOf, stateOf, labelOf } from "@/store/project/fake-projects";
 import { membershipOf } from "@/store/member/workspace/fake-members";
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
@@ -773,11 +773,40 @@ it("losing one project during its list read does not clear another project's lis
   expect(app.issue.issues.held("old")).toBeUndefined();
 });
 
+it.each(([5, 15, 20] as const).flatMap((role) => [false, true].map((detail) => ({ role, detail }))))(
+  "R06 project directory absence invalidates even a previously loaded detail (detail=$detail role=$role)",
+  async ({ detail, role }) => {
+    const privateProject = { ...project, network: 0 as const, member_role: role };
+    const otherProject = projectOf("B", ws.id, { id: "B" });
+    await loadProjects(nerve, app.projectRoot.project, ws, [privateProject, otherProject]);
+    if (detail) await loadProject(nerve, app.projectRoot.project, privateProject);
+    await load();
+    expect(app.issue.issues.getIssueById("a")?.id).toBe("a");
+    const token = app.issue.captureRead();
+    const delayed = await requestedIssue(
+      nerve,
+      () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
+      ["GET", "/api/v0/projects/A/issues"]
+    );
+    // A complete, newer directory no longer contains the private project after the caller loses membership.
+    await loadProjects(nerve, app.projectRoot.project, ws, [otherProject]);
+    expect.soft(app.projectRoot.project.getProjectById("A")).toBeUndefined();
+    expect.soft(app.issue.isReadCurrent(token, ["A"], ws.id)).toBe(false);
+    expect.soft(app.issue.issues.getIssueById("a")).toBeUndefined();
+    expect.soft(app.issue.projectIssues.groups).toBeUndefined();
+    delayed.call.answer(json(200, issuePageOf([listIssue("old", 1)])));
+    await delayed.promise;
+    expect.soft(app.issue.issues.held("old")).toBeUndefined();
+    expect.soft(app.issue.projectIssues.groups).toBeUndefined();
+  }
+);
+
 it("workspace admin with project guest observes the guest visibility switch and hides held data until a new page", async () => {
   const admin = { ...ws, role: 20 as const };
   const guest = projectOf("A", ws.id, { id: "A", member_role: 5, guest_view_all_features: true });
   await loadWorkspaces(nerve, app.workspaceRoot, [admin]);
   await loadProjects(nerve, app.projectRoot.project, admin, [guest]);
+  await loadProject(nerve, app.projectRoot.project, guest);
   const first = await requestedIssue(
     nerve,
     () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
@@ -807,7 +836,8 @@ it("workspace admin with project guest observes the guest visibility switch and 
   expect(app.issue.projectIssues.getIssueIds()).toEqual(["fresh"]);
 });
 
-it("refreshing an unchanged permission signature does not invalidate an in-flight list", async () => {
+it("R06 refreshing an unchanged permission signature does not invalidate an in-flight list", async () => {
+  await loadProject(nerve, app.projectRoot.project, project);
   const read = await requestedIssue(
     nerve,
     () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 10 }),
@@ -871,7 +901,8 @@ it("member pages invalidate only the covered project set, retaining an unrelated
   expect(app.issue.issues.held("b2")).toBeUndefined();
 });
 
-it("member part after project permission loss cannot replace rows or total of the old page", async () => {
+it("R06 member part after project permission loss cannot replace rows or total of the old page", async () => {
+  await loadProject(nerve, app.projectRoot.project, project);
   const { IssueListBinding } = await import("./issue-list-binding");
   const member = new IssueListBinding(app.issue, {
     scope: "member",
@@ -985,7 +1016,8 @@ it("project member changing to guest invalidates an old answer although both rol
   expect(app.issue.projectIssues.getIssueIds()).toEqual(["guest-visible"]);
 });
 
-it("permission recovery retries a fresh whole page rather than an obsolete failed part", async () => {
+it("R06 permission recovery retries a fresh whole page rather than an obsolete failed part", async () => {
+  await loadProject(nerve, app.projectRoot.project, project);
   await load();
   const next = await requestedIssue(nerve, () => app.issue.projectIssues.fetchNextIssues("ws", "A", "B"), [
     "GET",

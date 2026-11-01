@@ -5,7 +5,7 @@
  */
 
 import { maxBy, sortBy } from "lodash-es";
-import { action, computed, makeObservable } from "mobx";
+import { action, comparer, computed, makeObservable, observable, reaction, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
 import type {
@@ -34,6 +34,8 @@ import type { IProjectFilterStore } from "./project_filter.store";
 type WorkspaceRef = Pick<Workspace, "id" | "slug">;
 /** A project as the store changes it where no answer of nerve names its workspace. */
 type ProjectRef = Pick<Project, "id" | "workspace_id">;
+type DirectoryRead = { source: ReconciledByKey<Project[]>; workspaceId: string; answeredAt: number };
+type ProjectRead = { directories: DirectoryRead[]; positiveWatermark: number };
 /** A field of a project that is on or off, as nerve's ProjectUpdate changes it: a feature, the guests' view. */
 export type ProjectToggleField = {
   [K in keyof ProjectUpdate]-?: Exclude<ProjectUpdate[K], undefined> extends boolean ? K : never;
@@ -78,6 +80,8 @@ export interface IProjectStore {
   joinProject: (projectId: string) => Promise<Project>;
   leaveProject: (project: ProjectRef) => Promise<void>;
   updateProjectSortOrder: (project: ProjectRef, droppedOnId: string | undefined, dropAtEnd: boolean) => Promise<void>;
+  /** Confirm an asynchronous change only while its original project facts remain current, including across recovery. */
+  withCurrentProject: <T>(projectId: string, send: () => Promise<T>, confirm: (result: T) => void) => Promise<T>;
   confirmProject: (project: ProjectRef, change: Change<Project>) => void;
 }
 
@@ -93,11 +97,18 @@ export class ProjectStore implements IProjectStore {
   private readonly unarchived = new ReconciledByKey<Project[]>();
   /** Each workspace's archived projects. */
   private readonly archived = new ReconciledByKey<Project[]>();
+  /** Directory keys survive temporary workspace absence, so dispatch snapshots include earlier accepted reads. */
+  private readonly directoryWorkspaces = new Set<string>();
   /**
-   * Each project as nerve last read it alone; null once deleted or left: then only a list gives it (a fetch out
+   * Each project as nerve last answered it alone, by a read or a full write response; null once deleted or left: then only a list gives it (a fetch out
    * meanwhile drops it from its answer).
    */
   private readonly details = new ReconciledByKey<Project | null>();
+  /** Only provenance: after a newer presence disappears, an older copy in the other class cannot take its place. */
+  private readonly latestPresence = observable.map<
+    string,
+    { workspaceId: string; archived: boolean; answeredAt: number }
+  >();
   // services
   private readonly service: ProjectsService;
   private readonly preferences: ProjectPreferencesService;
@@ -141,7 +152,20 @@ export class ProjectStore implements IProjectStore {
   /** The current workspace's two lists, each undefined until fetched. */
   private get currentLists() {
     const workspace = this.rootStore.workspaceRoot.currentWorkspace;
-    return { unarchived: this.unarchived.get(workspace?.id), archived: this.archived.get(workspace?.id) };
+    return {
+      unarchived: this.visibleDirectory(workspace?.id, false),
+      archived: this.visibleDirectory(workspace?.id, true),
+    };
+  }
+
+  /** Every public directory projection uses the same current facts as permissions and project details. */
+  private visibleDirectory(workspaceId: string | undefined, archived: boolean): Project[] | undefined {
+    return (archived ? this.archived : this.unarchived).get(workspaceId)?.flatMap(({ id }) => {
+      const project = this.getProjectById(id);
+      return project && project.workspace_id === workspaceId && (project.archived_at !== null) === archived
+        ? [project]
+        : [];
+    });
   }
 
   get loader(): TLoader {
@@ -202,8 +226,18 @@ export class ProjectStore implements IProjectStore {
         if (project) copies.push({ project, answeredAt: lists.answeredAt(id) });
       }
     }
-    const newest = maxBy(copies, "answeredAt")?.project;
-    return newest && workspaces.some((workspace) => workspace.id === newest.workspace_id) ? newest : undefined;
+    const newest = maxBy(copies, "answeredAt");
+    if (!newest || !workspaces.some((workspace) => workspace.id === newest.project.workspace_id)) return undefined;
+    const { project, answeredAt } = newest;
+    if ((this.latestPresence.get(projectId)?.answeredAt ?? 0) > answeredAt) return undefined;
+    const directory = project.archived_at ? this.archived : this.unarchived;
+    // A complete directory also answers absence, but only for its workspace and archive class.
+    if (
+      directory.answeredAt(project.workspace_id) > answeredAt &&
+      !directory.get(project.workspace_id)?.some((listed) => listed.id === projectId)
+    )
+      return undefined;
+    return project;
   });
 
   /** IDs represented in the workspace's lists or individual reads, for permission-scope observation. */
@@ -212,6 +246,7 @@ export class ProjectStore implements IProjectStore {
       ...(this.unarchived.get(workspaceId) ?? []).map((project) => project.id),
       ...(this.archived.get(workspaceId) ?? []).map((project) => project.id),
       ...this.details.values().flatMap((project) => (project?.workspace_id === workspaceId ? [project.id] : [])),
+      ...[...this.latestPresence].flatMap(([id, presence]) => (presence.workspaceId === workspaceId ? [id] : [])),
     ]),
   ];
 
@@ -230,16 +265,23 @@ export class ProjectStore implements IProjectStore {
    * confirmed meanwhile; gives what it shows, or undefined for a fetch a newer one overtook or a change of session cut
    * (Reconciled.fetch)
    */
-  fetchProjects = (workspace: WorkspaceRef): Promise<Project[] | undefined> =>
-    this.unarchived.fetch(workspace.id, () => this.service.list(workspace.slug, false));
+  fetchProjects = (workspace: WorkspaceRef): Promise<Project[] | undefined> => this.fetchDirectory(workspace, false);
 
   /** @description fetches the workspace's archived projects, as fetchProjects */
   fetchArchivedProjects = (workspace: WorkspaceRef): Promise<Project[] | undefined> =>
-    this.archived.fetch(workspace.id, () => this.service.list(workspace.slug, true));
+    this.fetchDirectory(workspace, true);
 
   /** @description reads the project alone, as the caller sees it (a page of the project), as fetchProjects */
-  fetchProject = (projectId: string): Promise<Project | null | undefined> =>
-    this.details.fetch(projectId, () => this.service.get(projectId));
+  fetchProject = async (projectId: string): Promise<Project | null | undefined> => {
+    const directories = this.captureFacts();
+    const project = await this.details.fetch(projectId, async () => {
+      const answer = await this.service.get(projectId);
+      return this.afterFacts(answer, directories).project;
+    });
+    if (project && this.details.get(projectId) === project)
+      this.notePresence(project, this.details.answeredAt(projectId));
+    return project;
+  };
 
   /** @description whether identifier can name a new project of the workspace */
   checkProjectIdentifier = (workspaceSlug: string, identifier: string): Promise<IdentifierAvailability> =>
@@ -252,7 +294,7 @@ export class ProjectStore implements IProjectStore {
   createProject = (workspaceSlug: string, data: ProjectCreate): Promise<Project> =>
     this.changes(async () => {
       const project = await this.service.create(workspaceSlug, data);
-      this.unarchived.confirm(project.workspace_id, prepended([project]));
+      this.unarchived.confirm(project.workspace_id, this.inDirectory(project, false, prepended([project])));
       return project;
     });
 
@@ -289,45 +331,60 @@ export class ProjectStore implements IProjectStore {
 
   /** @description archives a project: it moves to the end of its workspace's archived list until the next fetch */
   archiveProject = (projectId: string): Promise<Project> =>
-    this.changes(async () => {
-      const project = await this.service.archive(projectId);
-      this.unarchived.confirm(project.workspace_id, dropped(project.id));
-      this.archived.confirm(project.workspace_id, upserted(project));
-      this.details.confirm(project.id, () => project);
-      return project;
-    });
+    this.changes(() =>
+      this.changeProject(
+        projectId,
+        () => this.service.archive(projectId),
+        (project) => {
+          this.unarchived.confirm(project.workspace_id, this.inDirectory(project, false, dropped(project.id)));
+          this.archived.confirm(project.workspace_id, this.inDirectory(project, true, upserted(project)));
+        }
+      )
+    );
 
   /** @description unarchives a project: it moves to the end of its workspace's list until the next fetch */
   restoreProject = (projectId: string): Promise<Project> =>
-    this.changes(async () => {
-      const project = await this.service.unarchive(projectId);
-      this.archived.confirm(project.workspace_id, dropped(project.id));
-      this.unarchived.confirm(project.workspace_id, upserted(project));
-      this.details.confirm(project.id, () => project);
-      return project;
-    });
+    this.changes(() =>
+      this.changeProject(
+        projectId,
+        () => this.service.unarchive(projectId),
+        (project) => {
+          this.archived.confirm(project.workspace_id, this.inDirectory(project, true, dropped(project.id)));
+          this.unarchived.confirm(project.workspace_id, this.inDirectory(project, false, upserted(project)));
+        }
+      )
+    );
 
   /**
    * @description makes the caller a member of a project; the store then shows it as he now sees it, in its place in
    * its list, else last. Fails, changing nothing, when nerve refuses.
    */
   joinProject = (projectId: string): Promise<Project> =>
-    this.changes(async () => {
-      const project = await this.service.join(projectId);
-      (project.archived_at ? this.archived : this.unarchived).confirm(project.workspace_id, upserted(project));
-      this.details.confirm(project.id, () => project);
-      return project;
-    });
+    this.changes(() =>
+      this.changeProject(
+        projectId,
+        () => this.service.join(projectId),
+        (project) => {
+          (project.archived_at ? this.archived : this.unarchived).confirm(
+            project.workspace_id,
+            this.inDirectory(project, project.archived_at !== null, upserted(project))
+          );
+        }
+      )
+    );
 
   /**
    * @description ends the caller's membership of a project, which the store then no longer gives (nerve may still
    * list a public one to him: the next fetch shows it). Fails, changing nothing, when nerve refuses (its only admin).
    */
   leaveProject = (project: ProjectRef): Promise<void> =>
-    this.changes(async () => {
-      await this.service.leave(project.id);
-      this.forget(project);
-    });
+    this.changes(() =>
+      this.withCurrentProject(
+        project.id,
+        () => this.service.leave(project.id),
+        () => this.forget(project)
+      )
+    );
 
   /**
    * @description moves a project in the caller's sidebar where he dropped it: before the project droppedOnId names, or
@@ -341,8 +398,13 @@ export class ProjectStore implements IProjectStore {
       if (!joined.some((held) => held.id === project.id)) throw new Error("Project not found");
       const sortOrder = placeAt(joined, "sort_order", droppedOnId, dropAtEnd ? "end" : "before", SIDEBAR_STEP);
       if (sortOrder === undefined) return;
-      const { sort_order } = await this.preferences.update(project.id, { sort_order: sortOrder });
-      this.confirmProject(project, (held) => ({ ...held, sort_order }));
+      await this.withCurrentProject(
+        project.id,
+        () => this.preferences.update(project.id, { sort_order: sortOrder }),
+        ({ sort_order }) => {
+          this.confirmProject(project, (held) => ({ ...held, sort_order }));
+        }
+      );
     });
 
   /**
@@ -352,17 +414,166 @@ export class ProjectStore implements IProjectStore {
    */
   confirmProject = (project: ProjectRef, change: Change<Project>): void => {
     const inPlace: Change<Project[]> = (list) => list.map((held) => (held.id === project.id ? change(held) : held));
-    this.unarchived.confirm(project.workspace_id, inPlace);
-    this.archived.confirm(project.workspace_id, inPlace);
-    this.details.confirm(project.id, (held) => held && change(held));
+    const held = this.getProjectById(project.id);
+    if (!held) return;
+    this.unarchived.confirm(project.workspace_id, this.inDirectory(held, false, inPlace));
+    this.archived.confirm(project.workspace_id, this.inDirectory(held, true, inPlace));
+    this.details.confirm(
+      project.id,
+      this.untilFact(
+        held,
+        (value) => value && change(value),
+        (_value, current) => current
+      )
+    );
   };
 
   /** Sends a change of a project, its turn come, and makes nerve's answer on its list and its own read. */
   private async send(projectId: string, data: ProjectUpdate): Promise<Project> {
-    const project = await this.service.update(projectId, data);
-    this.unarchived.confirm(project.workspace_id, replaced(project));
-    this.details.confirm(project.id, () => project);
-    return project;
+    return this.changeProject(
+      projectId,
+      () => this.service.update(projectId, data),
+      (project) => {
+        this.unarchived.confirm(project.workspace_id, this.inDirectory(project, false, replaced(project)));
+      }
+    );
+  }
+
+  /** Provenance at dispatch, for every source: positive answers and each complete directory's coverage. */
+  private captureFacts(): ProjectRead {
+    const directories = [this.unarchived, this.archived].flatMap((source) =>
+      [...this.directoryWorkspaces].map((id) => ({ source, workspaceId: id, answeredAt: source.answeredAt(id) }))
+    );
+    // Reconciled publishes an answer before the fetch continuation records its provenance. A reaction may
+    // dispatch another request in that interval; its snapshot must already include the accepted answer.
+    const accepted = [
+      ...directories.map(({ answeredAt }) => answeredAt),
+      ...this.details.values().flatMap((project) => (project ? [this.details.answeredAt(project.id)] : [])),
+      ...[...this.latestPresence.values()].map(({ answeredAt }) => answeredAt),
+    ];
+    return {
+      positiveWatermark: accepted.reduce((latest, answeredAt) => Math.max(latest, answeredAt), 0),
+      directories,
+    };
+  }
+
+  private async fetchDirectory(workspace: WorkspaceRef, archived: boolean): Promise<Project[] | undefined> {
+    this.directoryWorkspaces.add(workspace.id);
+    const source = archived ? this.archived : this.unarchived;
+    const reads = this.captureFacts();
+    const projects = await source.fetch(workspace.id, async () =>
+      (await this.service.list(workspace.slug, archived)).flatMap((answer) => {
+        const current = this.afterFacts(answer, reads).project;
+        return current && (current.archived_at !== null) === archived ? [current] : [];
+      })
+    );
+    if (projects && source.get(workspace.id) === projects) {
+      runInAction(() => projects.forEach((project) => this.notePresence(project, source.answeredAt(workspace.id))));
+    }
+    return projects;
+  }
+
+  private notePresence(project: Project, answeredAt: number): void {
+    if ((this.latestPresence.get(project.id)?.answeredAt ?? 0) > answeredAt) return;
+    runInAction(() =>
+      this.latestPresence.set(project.id, {
+        workspaceId: project.workspace_id,
+        archived: project.archived_at !== null,
+        answeredAt,
+      })
+    );
+  }
+
+  /** Newer positive proof or a complete directory supersedes an older request, including absence in its class. */
+  private afterFacts(answer: Project, reads: ProjectRead): { newer: boolean; project: Project | null } {
+    if ((this.latestPresence.get(answer.id)?.answeredAt ?? 0) > reads.positiveWatermark) {
+      return { newer: true, project: this.getProjectById(answer.id) ?? null };
+    }
+    const newer = [this.unarchived, this.archived].flatMap((source) => {
+      const workspaceId = answer.workspace_id;
+      const before =
+        reads.directories.find((read) => read.source === source && read.workspaceId === workspaceId)?.answeredAt ?? 0;
+      return source.answeredAt(workspaceId) > before ? [{ source, workspaceId }] : [];
+    });
+    const copies = newer.flatMap(({ source, workspaceId }) => {
+      const project = source.get(workspaceId)?.find((listed) => listed.id === answer.id);
+      return project ? [{ project, answeredAt: source.answeredAt(workspaceId) }] : [];
+    });
+    const project = maxBy(copies, "answeredAt")?.project;
+    if (project) return { newer: true, project };
+    const knownClass = this.latestPresence.get(answer.id)?.archived ?? answer.archived_at !== null;
+    const directory = knownClass ? this.archived : this.unarchived;
+    const absent = newer.some(({ source }) => source === directory);
+    return { newer: absent, project: absent ? null : answer };
+  }
+
+  /** Reconcile old confirmations with newer directory facts, never leave a revoked row in an old raw response. */
+  private untilFact<V>(
+    project: Project,
+    change: Change<V>,
+    resolved: (value: V, project: Project | null) => V
+  ): Change<V> {
+    const reads = this.captureFacts();
+    return (value, answered) => {
+      const fact = this.afterFacts(project, reads);
+      return fact.newer ? resolved(value, fact.project) : change(value, answered);
+    };
+  }
+
+  private inDirectory(project: Project, archived: boolean, change: Change<Project[]>): Change<Project[]> {
+    return this.untilFact(project, change, (value, current) =>
+      current && (current.archived_at !== null) === archived
+        ? upserted(current)(value)
+        : dropped<Project>(project.id)(value)
+    );
+  }
+
+  /**
+   * A write may confirm its data while the facts it started with still stand. An intervening change of fact,
+   * including disappearance followed by recovery, makes its old response unsuitable for updating the store.
+   * The transient observation ends on success or failure; identical directory refreshes keep the write valid.
+   */
+  withCurrentProject = async <T>(
+    projectId: string,
+    send: () => Promise<T>,
+    confirm: (result: T) => void
+  ): Promise<T> => {
+    let current = true;
+    const stop = reaction(
+      () => this.getProjectById(projectId),
+      () => {
+        current = false;
+      },
+      { equals: comparer.structural }
+    );
+    let result: T;
+    try {
+      result = await send();
+    } finally {
+      stop();
+    }
+    if (current) runInAction(() => confirm(result));
+    return result;
+  };
+
+  private changeProject(
+    projectId: string,
+    send: () => Promise<Project>,
+    confirm: (project: Project) => void
+  ): Promise<Project> {
+    const reads = this.captureFacts();
+    return this.withCurrentProject(projectId, send, (project) => {
+      if (this.afterFacts(project, reads).project === null) return;
+      confirm(project);
+      // A confirmed full response is independent positive proof, including when no detail was loaded before it.
+      const choose = this.untilFact<Project | null>(
+        project,
+        () => project,
+        (_value, current) => current
+      );
+      this.details.receive(project.id, project, (held) => choose(held ?? null));
+      this.notePresence(project, this.details.answeredAt(project.id));
+    });
   }
 
   /** The project as the store gives it; fails when it gives none. */
@@ -374,7 +585,7 @@ export class ProjectStore implements IProjectStore {
 
   /** The workspace's projects the caller is a member of, not archived, by their place in his sidebar. */
   private joinedIn(workspaceId: string | undefined): Project[] {
-    const joined = (this.unarchived.get(workspaceId) ?? []).filter((project) => project.member_role !== null);
+    const joined = (this.visibleDirectory(workspaceId, false) ?? []).filter((project) => project.member_role !== null);
     return sortBy(joined, "sort_order");
   }
 
