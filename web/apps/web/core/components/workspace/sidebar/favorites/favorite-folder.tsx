@@ -111,7 +111,7 @@ export function FavoriteFolder(props: Props) {
       dropTargetForElements({
         element,
         canDrop: ({ source }) => getCanDrop(source, favorite, false),
-        getData: ({ input, element }) => {
+        getData: ({ input, element: targetElement }) => {
           const blockedStates: InstructionType[] = [];
           if (!isLastChild) {
             blockedStates.push("reorder-below");
@@ -119,7 +119,7 @@ export function FavoriteFolder(props: Props) {
 
           return attachInstruction(initialData, {
             input,
-            element,
+            element: targetElement,
             currentLevel: 0,
             indentPerLevel: 0,
             mode: isLastChild ? "last-in-group" : "standard",
@@ -127,8 +127,8 @@ export function FavoriteFolder(props: Props) {
           });
         },
         onDrag: ({ source, self, location }) => {
-          const instruction = getInstructionFromPayload(self, source, location);
-          setInstruction(instruction);
+          const dropInstruction = getInstructionFromPayload(self, source, location);
+          setInstruction(dropInstruction);
         },
         onDragLeave: () => {
           setInstruction(undefined);
@@ -183,29 +183,28 @@ export function FavoriteFolder(props: Props) {
               <>
                 <Tooltip label={`${favorite.name}`} layout="stacked" side="right" sideOffset={40} disabled={isMobile}>
                   <div className="flex flex-grow truncate">
+                    <Tooltip
+                      label={favorite.sort_order === null ? "Join the project to rearrange" : "Drag to rearrange"}
+                      align="end"
+                      disabled={isDragging || isMobile}
+                    >
+                      <span
+                        className={cn(
+                          "absolute top-1/2 -left-3 hidden -translate-y-1/2 cursor-grab items-center justify-center rounded-sm text-placeholder group-hover/project-item:flex",
+                          {
+                            "cursor-not-allowed opacity-60": favorite.sort_order === null,
+                            "cursor-grabbing": isDragging,
+                          }
+                        )}
+                      >
+                        <DragHandle className="bg-transparent" />
+                      </span>
+                    </Tooltip>
                     <Disclosure.Button
                       as="button"
                       type="button"
                       className="flex w-full flex-grow items-center gap-1.5 text-left select-none"
                     >
-                      <Tooltip
-                        label={favorite.sort_order === null ? "Join the project to rearrange" : "Drag to rearrange"}
-                        align="end"
-                        disabled={isDragging || isMobile}
-                      >
-                        <button
-                          type="button"
-                          className={cn(
-                            "absolute top-1/2 -left-3 hidden -translate-y-1/2 cursor-grab items-center justify-center rounded-sm text-placeholder group-hover/project-item:flex",
-                            {
-                              "cursor-not-allowed opacity-60": favorite.sort_order === null,
-                              "cursor-grabbing": isDragging,
-                            }
-                          )}
-                        >
-                          <DragHandle className="bg-transparent" />
-                        </button>
-                      </Tooltip>
                       <div className="grid size-5 flex-shrink-0 place-items-center">
                         <FavoriteFolderIcon />
                       </div>

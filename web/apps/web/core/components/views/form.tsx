@@ -116,18 +116,17 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
               }
               // TODO: fix types
               onChange={(val: any) => {
-                // oxlint-disable-next-line no-shadow
-                let logoValue = {};
+                let selectedLogo = {};
 
                 if (val?.type === "emoji")
-                  logoValue = {
+                  selectedLogo = {
                     value: val.value,
                   };
-                else if (val?.type === "icon") logoValue = val.value;
+                else if (val?.type === "icon") selectedLogo = val.value;
 
                 setValue("logo_props", {
                   in_use: val?.type,
-                  [val?.type]: logoValue,
+                  [val?.type]: selectedLogo,
                 });
                 setIsOpen(false);
               }}

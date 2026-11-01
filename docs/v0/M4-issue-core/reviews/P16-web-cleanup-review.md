@@ -1,6 +1,6 @@
 # M4/P16 前端清理：预检与后续实施记录
 
-日期：2026-11-01。状态：预检通过，已授权实施，T1 完成，T2 本地验收通过，检查点 CI 待核。基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，分支 `codex/m4-p16`；[spec](../specs/P16-web-cleanup.md)、[plan](../plans/P16-web-cleanup.md)、[准备盘点](P16-web-cleanup-inventory.md)、[deep-review预检](../../../reviews/re-26-M4P16预检审核.md)。
+日期：2026-11-01。状态：预检通过，已授权实施，T1–T3 本地任务完成，T2 检查点 CI 待核。基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，分支 `codex/m4-p16`；[spec](../specs/P16-web-cleanup.md)、[plan](../plans/P16-web-cleanup.md)、[准备盘点](P16-web-cleanup-inventory.md)、[deep-review预检](../../../reviews/re-26-M4P16预检审核.md)。
 
 ## 1. 前置与方法
 
@@ -18,7 +18,7 @@ brainstorming 要求的 fresh builder-check 只读完整 spec/plan/inventory 与
 |---|---|---|
 | A1 | T1完整last-reader表、M6/M7子交接与静态反例，见§9 | 已通过 |
 | A2 | T2 类型/消费者/运行与反例见§10 | 本地通过 |
-| A3 | T3全仓诊断/屏蔽0、规则error、合法/非法输入、词法含义 | 待实施 |
+| A3 | T3 全仓0/error、词法/运行/反例见§11 | 已通过 |
 | A4 | T4新AST逐行ledger、历史52行、动态读者/删除链 | 待实施 |
 | A5 | T5 M4领域/全期改动零告警与各包精确cap | 待实施 |
 | A6 | T6关键词、旧搜索具名扫描、正反例与未来边界 | 待实施/回归 |
@@ -85,3 +85,25 @@ Task BASE `31733739`。`CustomSelect<T>` 保留任意值与可空当前值，`Cu
 完整本地 F 七项串行通过，统一产品输入 hash `5c373a5a409a6197308b9f4abf8ef58cab37e94e3dcaa4b6b7e444d75e188c98`，每项输入/输出一致。gen-check、lint-go、Go test、lint-web(54任务)、knip、强制 test-web(18任务，零缓存)、E2E **279/279**，包含 C3 列表/表单/peek/设置与 C2 真实筛选及兼容夹具。默认 E2E 是 Chromium 主集加两条 Firefox A4，不是三浏览器矩阵。原始 t2-f1至t2-f7 收据、日志与 t2-full-gates-summary.json 保存在 worktree 证据根；本段文稿不改变受测产品。检查点提交后再核准确远端 HEAD/CI，结果写提交后收据和后续记录，当前不宣称该 CI 已完成。
 
 准备提交52a312f8的 run41270383724已核server/web/e2e三项success；仅作为准备提交状态，不替代本产品检查点。
+
+## 11. T3 遮蔽升错与共享旧链清理
+
+Task BASE `f0e2ac3c`。预检46条中的module status已在T2修正；本期全包/tools/E先实测37条显示，再移除8处旧屏蔽，得到45条/32文件。38个词法绑定改名覆盖29文件：其中外层插件工厂改名一次清除四处view遮蔽；内部引用及shorthand的 element/editor/className/view 等key保持。两个私有Props类型改名而不改公共组件。另两处无效屏蔽一并删除；逐文件表见[inventory T3](P16-web-cleanup-inventory.md#t3-遮蔽与屏蔽逐文件处理2026-11-01)。最后根规则 no-shadow=error，全仓该诊断0、总error0，无专项或全规则disable绕过。
+
+局部行为缺口均先由真实DOM回归证实：旧LayoutDropDown缓存旧翻译、Enter无法打开列表；日期/成员移除项只有div，没有原生键盘按钮；收藏夹Disclosure内又嵌套button。LayoutDropDown复用现有CustomSelect，仍传同一布局枚举、onChange和禁用布局集合，删除整个旧dropdown目录及独占键盘hook/barrel。knip随即找出UI的三个无读者依赖（@nerve/hooks、lodash-es、@types/lodash-es），已连同锁文件该importer九行删除；其余解析版本未改变。筛选项使用具名type=button，逐值移除与清全部传值保持；收藏夹拖动握柄移到Disclosure按钮之外。M6两张表单使用Modal的data-autofocus保留标题初始焦点；现存Tab组及M6/M7业务责任不变。cycle分组无成员/无标签项使用稳定key，默认tab映射内联。
+
+四个新增拥有者测试共7项通过：layout同挂载语言更新/键盘选择和关闭回焦、两个筛选项精确剩余值/无表单提交、两张真实表单在Modal内初始聚焦、收藏夹无嵌套按钮且Space可展开。类型及格式/lint54任务通过；共享构建10任务、knip通过、强制完整test-web18任务（零缓存）通过。首次绿色尝试因脚本语法错误未发生产品写入，原样红记录保留；修复后的测试环境缺ResizeObserver导致一项失败，按现有jsdom测试补环境能力后7项通过，没有修改生产以迎合测试。E2E影响回归继续在T5/T10检查点执行。
+
+M08一次性合法TS中的嵌套遮蔽只产生一条no-shadow/error并exit1；M09不同绑定无诊断/exit0。M10把插件返回对象的view键错误改成createView，真实Editor消费者在SideMenu创建时报dragHandleView is not a function（1失败/13未选）；这明确证明公共key没有随局部名重命名。变异字节已精确恢复，随后完整前端测试通过。
+
+| 包 | T2上限 | T3实际/上限 |
+|---|---:|---:|
+| web | 107 | 79 |
+| editor | 48 | 32 |
+| ui | 10 | 4 |
+| propel | 10 | 6 |
+| utils | 6 | 5 |
+| hooks | 3 | 3 |
+| 其它含tools/E | 0 | 0 |
+
+总计184→129；八条被屏蔽的隐藏诊断未计入原cap，不拿解除屏蔽后的临时192作为上限。所有本Task实际变更文件零诊断，完整M4期间文件与M4领域剩余仍在T5处理。原始证据在本worktree证据根：t3-before/unsuppressed/after-r2的逐包JSON与rows、t3-removed-suppressions、t3-suppression-final、t3-rule-examples、t3-M10补丁/恢复hash、t3-owned-ui-green、t3-shared-build、t3-final-lint-web-r2、t3-final-knip-r2、t3-final-test-web及对应raw。阅读发现的编辑器生命周期问题已记待核清单，后续T4/T5继续根因核验，不提前宣称整分支终审通过。

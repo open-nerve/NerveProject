@@ -66,13 +66,13 @@ make e2e
 ## Task 3：全仓no-shadow升错（约450–1000行）
 
 **Files：** `.oxlintrc.json`，inventory列出的27个显式告警文件及8个屏蔽文件（共35）、其所属测试/package.json；不改工具规则实现。
-**Interfaces：** 仅重命名局部绑定，wire/property key/公共API不改；涉及原有其它warning的局部修复保留运行语义。
+**Interfaces：** 重命名局部绑定，wire/property key/消费者API不改；涉及其它warning的修复保持原合同。LayoutDropDown 复用现有 CustomSelect 并删除唯一用途旧 Dropdown 链，按 spec§2.3 先补键盘和语言更新回归。
 
-- [ ] Step 1：对所有包/tools/E取oxlint JSON，按code枚举显示38条与8处屏蔽隐藏的8条（当前合46条/33文件，连同2处无效屏蔽共35文件）；解除屏蔽后刷新清单并核同文件其它warning，逐行确认内外绑定与shorthand键。
-- [ ] Step 2：先跑对应现有测试/类型；为闭包或组件实际缺口补 `shadowedCallbackKeepsItsOriginalValue` 等拥有者测试，不为单纯重命名复制实现。固定改前输入和实际告警。
-- [ ] Step 3：根因清理绑定和所碰文件其它告警，删掉全部8处旧屏蔽（含无效两处），根规则设no-shadow为error；每包按实际数同提交下调cap，无ignore/override/disable豁免。隐藏8条从未计入原cap，不把移除屏蔽后的暂时增加当成抬cap依据。
-- [ ] Step 4：逐包真实扫描no-shadow 0、无error，专项及全规则disable扫描0；M08在一次性合法TS输入中放嵌套遮蔽必须诊断error，M09不遮蔽正例通过；M10涉及序列化的重命名若变键由现有消费者/新增必要断言检出；全部恢复再核类型/测试/cap。
-- [ ] Step 5：写A3、35文件实际处理与无屏蔽/全仓扫描/升错证据；提交 `refactor(M4/P16): 清零变量遮蔽并将规则提升为错误`。
+- [x] Step 1：对所有包/tools/E取oxlint JSON，按code枚举显示38条与8处屏蔽隐藏的8条（当前合46条/33文件，连同2处无效屏蔽共35文件）；解除屏蔽后刷新清单并核同文件其它warning，逐行确认内外绑定与shorthand键。
+- [x] Step 2：先跑对应现有测试/类型；为闭包或组件实际缺口补 `shadowedCallbackKeepsItsOriginalValue` 等拥有者测试，不为单纯重命名复制实现。固定改前输入和实际告警。
+- [x] Step 3：根因清理绑定和所碰文件其它告警，删掉全部8处旧屏蔽（含无效两处），根规则设no-shadow为error；每包按实际数同提交下调cap，无ignore/override/disable豁免。隐藏8条从未计入原cap，不把移除屏蔽后的暂时增加当成抬cap依据。
+- [x] Step 4：逐包真实扫描no-shadow 0、无error，专项及全规则disable扫描0；M08在一次性合法TS输入中放嵌套遮蔽必须诊断error，M09不遮蔽正例通过；M10涉及序列化的重命名若变键由现有消费者/新增必要断言检出；全部恢复再核类型/测试/cap。
+- [x] Step 5：写A3、35文件实际处理与无屏蔽/全仓扫描/升错证据；提交 `refactor(M4/P16): 清零变量遮蔽并将规则提升为错误`。
 
 ## Task 4：死成员与历史52行（约700–1500行）
 

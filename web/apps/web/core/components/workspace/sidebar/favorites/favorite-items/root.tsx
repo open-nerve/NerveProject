@@ -91,7 +91,7 @@ export const FavoriteRoot = observer(function FavoriteRoot(props: Props) {
         onDragStart: () => {
           setIsDragging(true);
         },
-        getData: ({ input, element }) => {
+        getData: ({ input, element: targetElement }) => {
           const blockedStates: InstructionType[] = ["make-child"];
           if (!isLastChild) {
             blockedStates.push("reorder-below");
@@ -99,7 +99,7 @@ export const FavoriteRoot = observer(function FavoriteRoot(props: Props) {
 
           return attachInstruction(initialData, {
             input,
-            element,
+            element: targetElement,
             currentLevel: 1,
             indentPerLevel: 0,
             mode: isLastChild ? "last-in-group" : "standard",
@@ -107,8 +107,8 @@ export const FavoriteRoot = observer(function FavoriteRoot(props: Props) {
           });
         },
         onDrag: ({ self, source, location }) => {
-          const instruction = getInstructionFromPayload(self, source, location);
-          setInstruction(instruction);
+          const dropInstruction = getInstructionFromPayload(self, source, location);
+          setInstruction(dropInstruction);
         },
         onDragLeave: () => {
           setInstruction(undefined);

@@ -170,14 +170,13 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
       dropTargetForElements({
         element,
         canDrop: ({ source }) => source?.data?.id !== projectId && source?.data?.dragInstanceId === "PROJECTS",
-        // oxlint-disable-next-line no-shadow
-        getData: ({ input, element }) => {
+        getData: ({ input, element: targetElement }) => {
           const data = { id: projectId };
 
           // attach instruction for last in list
           return attachInstruction(data, {
             input,
-            element,
+            element: targetElement,
             currentLevel: 0,
             indentPerLevel: 0,
             mode: isLastChild ? "last-in-group" : "standard",

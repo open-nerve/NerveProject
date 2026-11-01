@@ -90,7 +90,7 @@ export function CycleForm(props: Props) {
                     }}
                     multiple={false}
                     buttonVariant="border-with-text"
-                    renderCondition={(projectId) => !!projectsWithCreatePermissions?.[projectId]}
+                    renderCondition={(targetProjectId) => !!projectsWithCreatePermissions?.[targetProjectId]}
                     tabIndex={getIndex("cover_image")}
                   />
                 </div>
@@ -124,7 +124,7 @@ export function CycleForm(props: Props) {
                       value={value}
                       onChange={onChange}
                       tabIndex={getIndex("description")}
-                      autoFocus
+                      data-autofocus
                       aria-label={t("title")}
                     />
                   </InputGroup>

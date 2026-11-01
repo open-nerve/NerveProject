@@ -200,3 +200,44 @@ M4同名局部变量使用显式getProjectMemberIds(projectId,false)，不是get
 | `web/apps/web/core/components/project/member-select.tsx` | CustomSearchSelect:66 | `string  /  string[]  /  null` | 移除 value:any 与 filter 类型断言；明确 nullable string，none 哨兵及调用者转 null 不变。 |
 | `web/apps/web/core/components/workspace/create-workspace-form.tsx` | CustomSelect:131 | `"Just myself"  /  "2-10"  /  "11-50"  /  "51-200"  /  "201-500"  /  "500+"  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
 | `web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx` | CustomSearchSelect:63 | `string  /  string[]  /  null` | 现有值/回调与选项对应；编译保持合同，无需产品改动。 |
+
+## T3 遮蔽与屏蔽逐文件处理（2026-11-01）
+
+准备35文件中，module/progress-sidebar 的一条已在T2删除。T3解除屏蔽后45条/32文件，加两处无效屏蔽共34文件；完整原始诊断和词法rename位置见 t3-unsuppressed-rows.json、t3-renames.json。
+
+| 路径 | 原绑定 | 处理 |
+|---|---|---|
+| `web/apps/web/core/components/breadcrumbs/project.tsx` | projectId | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/cycles/active-cycle/cycle-stats.tsx` | tab | 移除多余选项映射函数；分组空项使用稳定key |
+| `web/apps/web/core/components/cycles/form.tsx` | projectId | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/cycles/modal.tsx` | projectId | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/dropdowns/layout.tsx` | props | 现有 CustomSelect 接管；删旧闭包/断言，语言与键盘回归 |
+| `web/apps/web/core/components/inbox/content/issue-root.tsx` | workspaceSlug, projectId | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/inbox/inbox-filter/applied-filters/date.tsx` | InboxIssueAppliedFiltersDate | 私有Props类型改名；可移除项改具名原生按钮，实际值回归 |
+| `web/apps/web/core/components/inbox/inbox-filter/applied-filters/member.tsx` | InboxIssueAppliedFiltersMember | 私有Props类型改名；可移除项改具名原生按钮，实际值回归 |
+| `web/apps/web/core/components/inbox/modals/snooze-issue-modal.tsx` | date | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/issues/issue-modal/form.tsx` | data | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/modules/form.tsx` | projectId | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/navigation/use-navigation-items.ts` | workspaceSlug, projectId | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/ui/loader/layouts/calendar-layout-loader.tsx` | index | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/views/form.tsx` | logoValue | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/workspace/sidebar/favorites/favorite-folder.tsx` | element, instruction | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/workspace/sidebar/favorites/favorite-items/root.tsx` | element, instruction | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx` | element | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/editor/src/components/editors/link-view-container.tsx` | editor | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/editor/src/components/menus/bubble-menu/root.tsx` | editor, editor | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/editor/src/extensions/custom-image/components/upload-status.tsx` | editor | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/editor/src/extensions/image/extension.tsx` | props | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/editor/src/extensions/table/plugins/drag-handles/column/drag-handle.tsx` | table | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/editor/src/extensions/table/plugins/drag-handles/row/drag-handle.tsx` | table | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/editor/src/extensions/utility.ts` | asset | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/editor/src/helpers/editor-commands.ts` | range | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/editor/src/helpers/editor-ref.ts` | itemKey, args, itemKey | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/editor/src/plugins/drag-handle.ts` | view, view, view, view | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/propel/src/calendar/root.tsx` | className, props | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/propel/src/charts/area-chart/root.tsx` | props, props | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/packages/ui/src/dropdown/common/options.tsx` | query | 迁移最后消费者后删除整个旧链及独占依赖 |
+| `web/packages/ui/src/dropdown/single-select.tsx` | options, query | 迁移最后消费者后删除整个旧链及独占依赖 |
+| `web/packages/utils/src/editor/markdown-parser/root.ts` | child | 按实际词法符号改局部名；对象key和公共回调合同保持 |
+| `web/apps/web/core/components/issues/issue-detail/main-content.tsx` | 无有效诊断 | 删除失效 no-shadow 屏蔽 |
+| `web/apps/web/core/components/issues/peek-overview/issue-detail.tsx` | 无有效诊断 | 删除失效 no-shadow 屏蔽 |

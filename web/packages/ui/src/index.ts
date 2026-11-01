@@ -10,7 +10,6 @@ export * from "./content-wrapper";
 export * from "./control-link";
 export * from "./drag-handle";
 export * from "./drop-indicator";
-export * from "./dropdown";
 export * from "./dropdowns";
 export * from "./favorite-star";
 export * from "./form-fields";

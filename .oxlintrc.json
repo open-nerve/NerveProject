@@ -36,6 +36,7 @@
     "react/prop-types": "off",
     "react/jsx-curly-brace-presence": "error",
     "no-unreachable": "error",
+    "no-shadow": "error",
     "unicorn/filename-case": "off",
     "unicorn/no-null": "off",
     "unicorn/prevent-abbreviations": "off",

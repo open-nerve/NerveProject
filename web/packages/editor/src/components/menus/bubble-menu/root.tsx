@@ -89,7 +89,7 @@ export function EditorBubbleMenu(props: Props) {
 
   const editorState: EditorStateType = useEditorState({
     editor,
-    selector: ({ editor }) => ({
+    selector: ({ editor: activeEditor }) => ({
       code: formattingItems.code.isActive(),
       bold: formattingItems.bold.isActive(),
       italic: formattingItems.italic.isActive(),
@@ -98,8 +98,8 @@ export function EditorBubbleMenu(props: Props) {
       left: formattingItems["text-align"].isActive({ alignment: "left" }),
       right: formattingItems["text-align"].isActive({ alignment: "right" }),
       center: formattingItems["text-align"].isActive({ alignment: "center" }),
-      color: COLORS_LIST.find((c) => TextColorItem(editor).isActive({ color: c.key })),
-      backgroundColor: COLORS_LIST.find((c) => BackgroundColorItem(editor).isActive({ color: c.key })),
+      color: COLORS_LIST.find((c) => TextColorItem(activeEditor).isActive({ color: c.key })),
+      backgroundColor: COLORS_LIST.find((c) => BackgroundColorItem(activeEditor).isActive({ color: c.key })),
     }),
   });
 
@@ -109,15 +109,15 @@ export function EditorBubbleMenu(props: Props) {
 
   const bubbleMenuProps: EditorBubbleMenuProps = {
     editor,
-    shouldShow: ({ state, editor }) => {
+    shouldShow: ({ state, editor: activeEditor }) => {
       const { selection } = state;
       const { empty } = selection;
 
       if (
         empty ||
-        !editor.isEditable ||
-        editor.isActive(CORE_EXTENSIONS.IMAGE) ||
-        editor.isActive(CORE_EXTENSIONS.CUSTOM_IMAGE) ||
+        !activeEditor.isEditable ||
+        activeEditor.isActive(CORE_EXTENSIONS.IMAGE) ||
+        activeEditor.isActive(CORE_EXTENSIONS.CUSTOM_IMAGE) ||
         isNodeSelection(selection) ||
         isCellSelection(selection) ||
         isSelecting

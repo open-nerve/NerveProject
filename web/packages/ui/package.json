@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
-    "check:lint": "node ../../../tools/lint-cap.mjs 10",
+    "check:lint": "node ../../../tools/lint-cap.mjs 4",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt .",
@@ -26,17 +26,14 @@
     "@headlessui/react": "catalog:",
     "@makeplane/propel": "catalog:",
     "@nerve/constants": "workspace:*",
-    "@nerve/hooks": "workspace:*",
     "@nerve/propel": "workspace:*",
     "@nerve/types": "workspace:*",
     "@nerve/utils": "workspace:*",
     "@popperjs/core": "catalog:",
-    "lodash-es": "catalog:",
     "react-popper": "catalog:"
   },
   "devDependencies": {
     "@nerve/typescript-config": "workspace:*",
-    "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

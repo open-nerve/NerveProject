@@ -100,10 +100,9 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
           });
         }
       },
-      // oxlint-disable-next-line no-shadow
-      archive: async (workspaceSlug: string, projectId: string, issueId: string) => {
+      archive: async (targetWorkspaceSlug: string, targetProjectId: string, issueId: string) => {
         try {
-          await archiveIssue(workspaceSlug, projectId, issueId);
+          await archiveIssue(targetWorkspaceSlug, targetProjectId, issueId);
         } catch (error) {
           console.error("Error in archiving issue:", error);
         }

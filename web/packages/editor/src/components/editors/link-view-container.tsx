@@ -26,8 +26,8 @@ export function LinkViewContainer({ editor, containerRef }: Props) {
 
   const editorState = useEditorState({
     editor,
-    selector: ({ editor }: { editor: Editor }) => ({
-      linkExtensionStorage: editor.storage.link,
+    selector: ({ editor: activeEditor }: { editor: Editor }) => ({
+      linkExtensionStorage: activeEditor.storage.link,
     }),
   });
 

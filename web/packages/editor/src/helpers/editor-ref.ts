@@ -113,7 +113,8 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
       const { itemKey } = props;
       const editorItems = getEditorMenuItems(editor);
 
-      const getEditorMenuItem = (itemKey: TEditorCommands) => editorItems.find((item) => item.key === itemKey);
+      const getEditorMenuItem = (candidateKey: TEditorCommands) =>
+        editorItems.find((item) => item.key === candidateKey);
 
       const item = getEditorMenuItem(itemKey);
       if (item) {
@@ -122,7 +123,7 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
         console.warn(`No command found for item: ${itemKey}`);
       }
     },
-    focus: (args) => editor?.commands.focus(args),
+    focus: (focusOptions) => editor?.commands.focus(focusOptions),
     getCoordsFromPos: (pos) => editor?.view.coordsAtPos(pos ?? editor.state.selection.from),
     getCurrentCursorPosition: () => editor?.state.selection.from,
     getAttributesWithExtendedMark: (mark, attribute) => {
@@ -168,7 +169,8 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
       const { itemKey } = props;
       const editorItems = getEditorMenuItems(editor);
 
-      const getEditorMenuItem = (itemKey: TEditorCommands) => editorItems.find((item) => item.key === itemKey);
+      const getEditorMenuItem = (candidateKey: TEditorCommands) =>
+        editorItems.find((item) => item.key === candidateKey);
       const item = getEditorMenuItem(itemKey);
       if (!item) return false;
 
