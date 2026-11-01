@@ -139,3 +139,11 @@ Task BASE `5b3472bd`。重新取全部14个包/tools/E实际诊断，按原 doma
 证据根同前：`t5-ci-page-build`与`t5-ci-i13-page`在相同输入上真实I13重复10/10；T2检查点失败原因见§13，后续CI尚待核。`t5-all-types-r2`跨包构建/类型11任务通过；`t5-editor-lifecycle-final`真实编辑两文件22条通过，后补marker收尾的`t5-last-hosts`7条通过；`t5-mutants-restored`日历/通知6条通过。M13恢复不可键盘访问div被真实按钮/激活断言拒绝，M14保留旧周起始偏好被实际星期断言拒绝；补丁/红日志/字节恢复在t5-mutations.json。最初Bubble测试直接卸载被第三方挪出的根DOM导致NotFoundError，不计行为红；加真实外层宿主后r2确实检出未移除监听。单图测试曾带已存id作为对照通过，最终恢复无id旧文档重现并修正根因，不掩盖失败。
 
 冻结输入后完整 F 七项串行通过：gen-check、lint-go、Go test（455.775秒）、lint-web（54任务）、knip、强制test-web（18任务、零缓存）和默认E2E 279/279。七项输入hash均为 `97771a1fb8edf91f81b0e37ebd39c3653ab9a3894f4249b209c26ddc52ce50b7`，各自输入/输出逐文件状态一致；`t5-f1`至`t5-f7`原始收据与`t5-full-gates-summary.json`可复核。该默认集仍非三引擎矩阵。仅在F结束后更新本文稿；准确检查点提交的CI后置核验，不提前记全绿。
+
+## 15. T6 关键词终态
+
+Task BASE `c4881cf5`。phase仍M4/P16，原76规则/13例外与全部samples通过。旧地址八类（issues、work-items、archived-issues、draft-issues、draft-to-issue、search-issues、entity-search、user-issues）和否定筛选均0例外、0未覆盖命中；M4复制0例外。copy-hook余10条：M6的cycle quick-actions、module links/list-item与quick-actions、两个context-based cycle/module commands共5条；M7的inbox header、project view quick-actions、workspace两份view quick-action共4条；M8 webhook secret-key1条。对应M6/M7/M8 closeout到期日不改，另3条为analytics两条与来源品牌说明一条。
+
+具名全web TS/TSX扫描：projectIssuesSearch无出现；searchWorkspace只剩workspace.service.test的“不再存在”断言，没有生产声明/调用。不能把它写成连测试字符串也不存在。规则不覆盖deleted-issues、cycle-issues、inbox-issues等独立未来领域地址；编辑器包自己的剪贴板也不属于web copy-hook范围。没有借清理扩大这些已批准边界。
+
+M15/M16在真实git扫描可见的M4临时TS文件中分别加入旧工作项URL、allowNegative，原 `node tools/keywords.mjs` 均exit1并准确报告各一命中；原生/api/v0、issues-detail及合法同名片段正例通过。临时文件已删除，原规则/配置字节hash相等，整份守卫恢复通过。`t6-keyword-probes.json`、各原始receipt/raw和`t6-final-inventory.json`保存源码、诊断及复原证据。本Task无产品/规则改动，既有终态合法，不强造例外或伪称行为修复。

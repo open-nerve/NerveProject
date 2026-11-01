@@ -101,11 +101,11 @@ make e2e
 **Files：** tools/keywords.json现有三规则及samples，具名searchWorkspace/projectIssuesSearch扫描；既有tools/keywords.mjs保持策略。
 **Interfaces：** old-issue-urls的八类匹配范围、negation-filters全名和copy-hook各领域到期日不变。
 
-- [ ] Step 1：读phase与当前exceptions，确认旧URL/否定筛选0例外、M4复制0、其它copy10条准确归属；匹配规则外的M6/M7旧地址另列所有者，不称全应用零旧接口。
-- [ ] Step 2：执行node tools/keywords.mjs及既有samples；已有终态绿先记录，不为清理任务强造生产改动。
-- [ ] Step 3：只删除已不匹配的真实陈旧例外或补必要样本；当前0条即合法，不添加虚假M5/M6/M7例外，保持正则/范围/期限。
-- [ ] Step 4：M15审计输入加入M4旧工作项地址、M16恢复否定字段必须被真实规则检出；原生/api/v0和合法同名片段通过。M4复制及旧搜索具名扫描复核，恢复后整份守卫绿。
-- [ ] Step 5：写A6、具体命中/例外数量与适用范围；提交 `test(M4/P16): 固定旧地址与筛选守卫的最终边界`。
+- [x] Step 1：读phase与当前exceptions，确认旧URL/否定筛选0例外、M4复制0、其它copy10条准确归属；匹配规则外的M6/M7旧地址另列所有者，不称全应用零旧接口。
+- [x] Step 2：执行node tools/keywords.mjs及既有samples；已有终态绿先记录，不为清理任务强造生产改动。
+- [x] Step 3：只删除已不匹配的真实陈旧例外或补必要样本；当前0条即合法，不添加虚假M5/M6/M7例外，保持正则/范围/期限。
+- [x] Step 4：M15审计输入加入M4旧工作项地址、M16恢复否定字段必须被真实规则检出；原生/api/v0和合法同名片段通过。M4复制及旧搜索具名扫描复核，恢复后整份守卫绿。
+- [x] Step 5：写A6、具体命中/例外数量与适用范围；提交 `test(M4/P16): 固定旧地址与筛选守卫的最终边界`。
 
 ## Task 7：成员getter最后读者（约120–350行）
 
