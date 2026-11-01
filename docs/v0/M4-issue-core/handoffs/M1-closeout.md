@@ -108,3 +108,10 @@ issue/draft 两类表单迁移与真实编辑已区分；五处零生产 getMark
 原版 AST 当前449候选逐项核读者：91项无读者声明及独占链删除，358项动态/类型/生产或测试合同保留；历史52行逐名追到P11/P14/P15删除提交，M7 view四方法保持。公开 EditorRefApi、第三方合并命令和表格 NodeView 继续保留；真实表格编辑与内容容器变异证明动态读者。完整 [逐项审计](../reviews/P16-dead-members.md) 与 [T4证据](../reviews/P16-web-cleanup-review.md#12-t4-死成员与历史-52-行) 可复核。
 
 本期T4子项已核，T5告警终态、T11全分支复核和M4收尾仍待办；顶部status保持open，不用此回执提前关闭交接。
+
+
+## P16 T1–T8 接收进度（2026-11-01）
+
+T1最后焦点索引、T2共享泛型、T3 no-shadow升错、T4逐项死成员及历史52行、T5完整M4改动范围告警/精确cap、T6关键词终态、T7成员getter读者已核实。T5七门禁与默认E2E279通过；具体输入、变异和尚待远端CI的状态见[P16 review §9–16](../reviews/P16-web-cleanup-review.md#9-t1-焦点索引与实施入口)。README及前端/差异清单已对应P12–P15实际集成能力，原历史验收/失败证据保留。P15当前集成状态见[P15 review §13](../reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)。
+
+M6/M7存活合同与领域页仍由原拥有者接收；T9–T11和控制者最终C12尚未完成，八份M4输入顶部保持open。M4设计§14/总体9.4、最终M4-closeout及性能数字只在收尾核，不提前勾总完成。

@@ -454,3 +454,12 @@ Plane `P/utils/order_queryset.py:18–33,153–157`当前排序allowlist无link_
 草稿页面读原生个人资源和服务端 total，未编辑的完整 payload 保留，确认保存后才无 body 发布；普通创建可保存空标题草稿。命令根页空查询保留命令，非空改经原生工作项搜索和显式项目目录本地过滤，保持服务端相关性顺序；旧 WorkspaceService.searchWorkspace 与六类结果分组退役，M7 四 view 方法仍有真实读者。主题确认后才应用/重载，复制由既有 hook 单独报告结果。T14 路由切换退役命令、关闭快捷键消费事件；T15 删除无消费者扩展、恒 false 重复弹窗分支和空 ref 监听，不取消有真实调用者的顶部搜索关闭回调。
 
 这些是 M4/P15 的消费者收口，详细局部决定、反证和真实三引擎矩阵见 [P15 review](M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md)。T16 已复审顶部与弹窗两个真实宿主，关闭改用既有 context.closePalette 单一回调，不再保留重复关闭参数；补登录偏好晚答与 document/退场键盘保护。后置 CI 补真实 cmdk 的 Ctrl+K 退场保护，完整本地门禁重跑通过，最终候选 SHA/CI 按阶段记录 §10 后置核准，P15 已完成：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。集成证据见 [review §13](M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)；没有扩大服务端/权限 owner、CSP、剪贴板兼容或 M6/M7 页面的验收归属。
+
+
+## 七、M4/P16 前端合同清理（2026-11-01，分支实施中）
+
+共享下拉框沿存活消费者贯通类型，多个选择值不再经any擦除；空多选归一数组，主题对象/0/空串保持原值。最后旧LayoutDropDown消费者转原CustomSelect，旧dropdown目录及独占依赖删除。焦点索引只删无人使用的ISSUE_FORM组，M6/M7四个表单组和非正菜单索引保持；成员隐式getter只剩M7三文件，接口和测试随最后迁移一起处理。
+
+no-shadow全仓清零并升error；死成员按原脚本逐行追生产、测试和第三方协议读者，未把公开EditorRefApi、TipTap命令与NodeView当成零读者删除。T5告警目标归零、包上限合计86，菜单与编辑器改用真实原生控件并回归IME/回焦，监听及MobX reaction按原拥有者释放。图片节点身份修复仅维持共享编辑器合同，M4仍不启用图片/附件。
+
+本期未改数据库、服务端协议、权限水位/确认写所有者或M6/M7页面归属。关键词旧八类工作项URL、否定筛选与M4复制例外均清空；其余10条复制例外仍按M6/M7/M8到期，不声称整个应用没有旧领域接口。证据见[P16 review](M4-issue-core/reviews/P16-web-cleanup-review.md)；S2与三引擎影响回归、deep-review、最终准确HEAD CI仍按阶段计划核验，M4 closeout未开始。

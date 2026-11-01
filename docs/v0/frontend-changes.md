@@ -266,7 +266,7 @@ M4/P10a删除迭代、模块、项目视图与工作区视图的工作项列表�
 | 工作区的地址 | M3 页面上只读工作区的 20 个文件不再读路由 store 的 `currentWorkspace`：经 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`：路由的 slug 经调用者的工作区列表找到），工作区级的权限判断写明 slug；关键词规则 `workspace-address-route` 看住它们，与项目一侧的 `project-address-route` 同一个写法 | 地址只从路由参数（总体设计 7.7） | 已完成 | M3/收尾 |
 | 共用的写法 | 复制只经 `useCopyLink`、`useCopyText`（`core/hooks/use-copy-link.ts`）：API 令牌弹窗的复制和命令面板的"复制当前页面的地址"也经它们（复制失败是共用的提示，两条专用的文案删除；命令面板的复制成功时与别处的复制链接同一个样子，标题是"Link copied!"，原来作标题的"Current page URL copied to clipboard."现在是说明）；关键词规则 `copy-hook` 看住，M4、M6、M7、M8 的 20 个文件是带期限的例外。问题码只经 `problemCode()`（`core/lib/api-error.ts`），提示里的拒绝的文字只经 `useRefusalMessage`（`useRefusalToast` 和主题切换的失败提示都经它）。`ButtonAvatars` 的 `showTooltip` 删除（没有读者）。`make lint-web` 加 `tools/i18n-keys.mjs`：页面读的每个键在语言文件中都有（它第一次运行就找到侧边栏的四个没有定义的键和一个没有读者的日期筛选项） | 一件事只有一份写法 | 已完成 | M3/收尾 |
 
-### 3.3 M4/P12 列表页面（2026-10-30，验收与审查通过、未合并）
+### 3.3 M4/P12 列表页面（原验收快照；现已集成）
 
 | 改动 | 结果与范围 | 证据 |
 |---|---|---|
@@ -291,6 +291,14 @@ M4/P10a删除迭代、模块、项目视图与工作区视图的工作项列表�
 T1–T15 的范围和证据见 [P15 阶段记录](M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)。时间线分页/排序与系统 actor、评论作者编辑/管理员删除、两类表情、描述历史分页与确认还原/Markdown 复制、个人草稿整份 payload 与确认发布、命令原生写与搜索、主题确认和复制反馈均沿既有原生 owner。十三历史模块实例已零，旧搜索方法/类型/常量删除，M7 四 view 方法和版本旧 DTO 保留。
 
 T14 每引擎 41 项、完整七门禁（默认 E2E 277/277）已通过；T15 清除十组死链，88 个实际改动 TS/TSX 零告警，132 单元与 21 受影响页面通过。T16 修复顶部实际宿主搜索/多选、登录偏好晚答及 document/退场键盘时序；最终 92 个 TS/TSX 零告警、89 个聚焦用例通过，三引擎各 43 项并按影响补跑。后置 CI 另补真实 cmdk 的 Ctrl+K 退场保护，C7 每引擎显式覆盖 Ctrl/Meta；完整本地七门禁已重跑通过，最终候选 SHA/CI 按 [阶段记录 §10](M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 后置核准，P15 已完成：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。集成证据见 [review §13](M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)。P16 全局清理/C12 和 M4 总收尾继续开放；不冒称 M5–M8 领域页已接通。
+
+### 3.5 M4/P16 前端清理（2026-11-01，分支实施中）
+
+共享 Select 的任意值/空态与 SearchSelect 的单多值回调现在保留实际类型；对象、0、空串及多选 null 均有真实消费者回归。全仓 no-shadow 为0并升 error，8处旧屏蔽已删除。原AST的T4清单449项逐行裁定，删除91项及独占链、保留358项动态/类型合同；历史52行逐名追到P11/P14/P15。M6/M7最后焦点索引与M7三个隐式成员getter读者仍保留，并交接删除条件。
+
+T5按整个M4改动路径与M4领域并集清零告警，实际包上限合计86（web69/editor0/ui4/propel6/utils4/hooks3）；未放宽规则/范围/例外。原生交互、IME、编辑器监听和日历reaction释放得到修复，编号暖路由等待本次读取，避免历史分页重挂载。七项本地门禁和默认E2E279/279通过，T5检查点远端CI后置核验。具体清单、原始输入与无效尝试的边界见[P16 review](M4-issue-core/reviews/P16-web-cleanup-review.md)及[死成员逐项审计](M4-issue-core/reviews/P16-dead-members.md)。
+
+P16的S2补充、受影响三引擎回归和整分支deep-review继续推进；最终控制者C12、全M4性能数字、八份输入总关闭及M5–M8最终交接仍归closeout。M4页面之外的领域自身接口不因此可用。
 
 ## 四、品牌
 

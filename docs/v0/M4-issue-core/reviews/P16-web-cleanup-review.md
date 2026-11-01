@@ -153,3 +153,9 @@ M15/M16在真实git扫描可见的M4临时TS文件中分别加入旧工作项URL
 Task BASE `4c9685cd`。沿原TypeScript program解析property access/object binding的属性声明，生产3读取都指向IProjectMemberStore，分别是M7 mobile-header、view-list-header、inbox filter-selection；测试2读取在project-member.store.test。声明/interface、computed注册不算读者；M4同名局部数组是显式getProjectMemberIds调用，历史utils.tsx两读者已无。未发现无法分类的同名属性。保留仍活getter及消费者；准确路径、两个收集箱使用点与最后删除条件已写[M7回执§7](../../M7-collaboration/handoffs/M3-closeout.md#7-m4p16-成员-getter-最后读者回执2026-11-01)。
 
 M17以同一M4临时文件中的显式方法调用为正例，再替换为store.projectMemberIds。真实checker明确新增一个M4属性读取并exit1；去掉临时文件，原store字节未变，重扫3生产/2测试、0M4/0未分类通过。`t7-member-probes.json`和三个原始receipt保存输入/诊断/恢复；`t7-member-store` 21/21、`t7-web-types` typegen/tsc通过。本Task没有产品改动，成员目录权限与会话责任保持。
+
+## 17. T8 前端说明与子交接
+
+Task BASE `565a2927`。README把P12分支和P13–P15待验收历史字样改为已集成的四布局、富筛选、归档/个人三关系、详情/创建/协作/草稿/命令两宿主能力；P16仍明确为实施分支。前端改动清单保留P12原验收数字并修正当前集成标题，新增P16实证；plane-diff对应泛型、旧dropdown链、动态协议、no-shadow与关键词边界。评论只跟进已载增量窗口、HTTP复制失败、M4图片/附件禁用和M6–M8自身页未接通均保持准确。
+
+M1-P3/M1-closeout/M3-closeout只补当前子回执，历史“当时未合并”和失败记录不覆盖；链接P15实际main313728cb/CI/归档说明现状。八份输入顶部全部open，M4设计§14和总体9.4字节未改，未创建未来M4-closeout。静态逐新链接及章节核验14项通过、diff --check通过，A1–A8勾选、A9–A11未勾；`t8-doc-check.json`保存检查输入hash和逐链接。无产品改动，不重复运行整套产品测试。
