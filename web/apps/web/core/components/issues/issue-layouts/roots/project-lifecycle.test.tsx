@@ -76,8 +76,13 @@ beforeEach(async () => {
   toasts.length = 0;
 });
 afterEach(async () => tab.close());
-async function mount(layout: "list" | "kanban" | "spreadsheet", answer = true) {
+async function mount(
+  layout: "list" | "kanban" | "spreadsheet",
+  answer = true,
+  filters: ReturnType<typeof preferencesOf>["filters"] = {}
+) {
   const prefs = preferencesOf();
+  prefs.filters = filters;
   prefs.display_filters.layout = layout;
   prefs.display_filters.group_by = layout === "kanban" ? "state_id" : null;
   prefs.display_filters.order_by = "sort_order";
@@ -107,6 +112,7 @@ async function mount(layout: "list" | "kanban" | "spreadsheet", answer = true) {
   await act(async () => tab.nerve.calls[0]!.answer(json(200, prefs)));
   await until(() => lists().length === 1, "initial list");
   if (answer) await act(async () => lists()[0]!.answer(json(200, list(layout))));
+  return prefs;
 }
 async function requestDelete(id = "parent") {
   const source = [...bound.drags.values()].find((drag) => drag.getInitialData!({} as never).id === id)!;
@@ -253,3 +259,41 @@ it.each([true, false])("late drag deletion after host unmount has no feedback (s
   );
   expect(toasts).toEqual([]);
 });
+
+it.each([5, 15] as const)(
+  "R09 project role %s can clear personal filters on an empty list without gaining issue creation",
+  async (role) => {
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [
+      { ...tab.project, member_role: role, guest_view_all_features: true },
+    ]);
+    tab.nerve.calls.length = 0;
+    const preferences = await mount("list", false, { priority: ["high"] });
+    const empty = { total: 0, groups: [{ key: "", total: 0, data: [], next_cursor: null }] };
+    await act(async () => lists()[0]!.answer(json(200, empty)));
+    const clear = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+      (button) => button.textContent === "project_issues.empty_state.issues_empty_filter.secondary_button.text"
+    )!;
+    expect(clear).toBeDefined();
+    expect(clear.disabled).toBe(false);
+    await act(async () => clear.click());
+    const writes = () => tab.nerve.calls.filter((call) => call.method !== "GET");
+    await act(async () => until(() => writes().length === 1, "clear personal filters"));
+    expect(writes()[0]).toMatchObject({
+      method: "PATCH",
+      path: "/api/v0/me/projects/A/preferences",
+      body: { filters: {} },
+    });
+    expect(lists()).toHaveLength(1);
+    expect(lists()[0]!.query.priority).toBe("high");
+    await act(async () => writes()[0]!.answer(json(200, { ...preferences, filters: {} })));
+    await act(async () => until(() => lists().length === 2, "unfiltered list"));
+    expect(lists()[1]!.query.priority).toBeUndefined();
+    await act(async () => lists()[1]!.answer(json(200, empty)));
+    const create = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+      (button) => button.textContent === "project_empty_state.work_items.cta_primary"
+    )!;
+    expect(create).toBeDefined();
+    expect(create.disabled).toBe(role === 5);
+    expect(writes()).toHaveLength(1);
+  }
+);
