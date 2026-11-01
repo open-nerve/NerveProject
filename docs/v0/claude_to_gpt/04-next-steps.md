@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见 §25：P15 实施与终审完成、集成待办；最终候选 CI 按后置收据核准后交付，先不合并，等负责人安排。此前各节保留历史快照。**
+**当前接续点见 §26：P15 已完成集成与归档清理；P16 文档预检通过，暂不实现。此前各节保留历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -248,7 +248,7 @@ P15 分支 codex/m4-p15，worktree .codex/worktress/codex/m4-p15，基线 main 7
 T1 已完成：phase M4/P15，时间线 37 个聚焦单元测试、I12 两 API/两页面、两个有效变异及类型/静态检查通过；真实页面发现的评论重复 DOM ID 已修复，公开 comment-{id} 锚点保持。完整证据、首次误判及修复见 [P15 review §9](../M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#9-逐任务实施记录)。T2 也已完成：筛选器单一具名原生按钮、选项键盘操作、保留最后项和刷新偏好、Escape 回焦，19 单元/1 页面与 M02 变异通过。T3 也已完成：评论作者/管理员权限、访客可见项评论、IME/就绪/并发/拒绝/晚答；49 个前端聚焦及回归、19 个编辑器回归、I11/I20 6 个故事与 5 个受影响故事通过，三组变异有效。T4 已完成：两类回应的本人删除、确认计数、重复请求/拒绝、组合码点和归档只读，55 单元/6 故事及两组变异通过；实际 picker 本站资源、键盘与 CSP 通过。T5 已完成：历史分页/还原拒绝和确认、真实 Markdown 等待/单一反馈、归档/访客边界，43 单元/4 故事及三组变异通过；完整七门禁均通过（Go 51 包，Vitest 3020+Node 5，默认 E2E 248）。警告上限按实际从 114 收紧到 112。T6 已完成：个人草稿九字段保留、复制/编辑/删除、分页、发布确认与 GET-only retry，77 单元、7 个 I14 故事及 M08/M09 变异通过。T7 已完成：创建弹窗两种存草稿、就绪/字段拒绝、关闭意图和纯迁移，63 单元、33 个受影响故事及两组 M10 变异通过。T8 已完成：原生命令拆分、队列权威值/权限和生命周期、复制拒绝与删除宿主，37 单元/1 C7 页面及 M11 变异通过。T9 已完成：主题同代确认/拒绝与显式目录，17 单元/3 C7 页面及 M12 变异通过。继续 T10，不重做预检；T5 f6eb9a57 的 CI 41215094874 attempt 1 已全绿，后续完整门禁和 push 位于 T10/T14/T16。P14 已完成，M4 总体仍进行中。
 
 
-## 25. 当前接续：P15 实施与终审完成，集成待办（2026-11-01）
+## 25. 历史接续：P15 实施与终审完成，集成待办（2026-11-01）
 
 分支 `codex/m4-p15`，worktree `.codex/worktress/codex/m4-p15`，基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`。T1–T16 与 A1–A16 已登记；[spec](../M4-issue-core/specs/P15-web-collaboration-drafts-search.md)、[plan](../M4-issue-core/plans/P15-web-collaboration-drafts-search.md)、[阶段记录 §10](../M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付)、[deep-review 整体审核](../../reviews/re-24-M4P15整体审核.md)。主控按逻辑、集成、覆盖三视角顺序整审，R1–R8 全部局部修复复审，没有待决架构问题。
 
@@ -259,3 +259,12 @@ T1 已完成：phase M4/P15，时间线 37 个聚焦单元测试、I12 两 API/�
 最终候选一次包含修复与文稿，其精确 SHA/run/attempt/jobs 由实施根 `.superpowers/sdd/P15-web-collaboration-drafts-search/final-delivery.json` 后置核准；必须与本地/远端 HEAD 一致、CI 三任务全绿后才交付，不用旧提交 CI 代替。evidence-manifest.json 同时覆盖实施根和主目录 `.superpowers/sdd/P15-preparation-20261031/` 的 30 份准备材料。当前保留分支、worktree 和全部证据，未合并、未清理。
 
 下一步等待负责人安排。P16 全局 dead/no-shadow 与守卫、C12、M4 §14/总体 §9.4、输入 handoff 顶部关闭、M5–M8 的最终 M4-closeout 均保留后续责任；本轮不开始 P16。主目录一直保持 main。
+
+
+## 26. 当前接续：P15 完成、P16 文档预检（2026-11-01）
+
+P15 已完成：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。I13 首次 main 失败的请求串扰、测试修复和完整验证见 [P15 review §12–13](../M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)。
+
+P16 分支 `codex/m4-p16`，worktree `.codex/worktress/codex/m4-p16`，基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`。[spec](../M4-issue-core/specs/P16-web-cleanup.md)、[plan](../M4-issue-core/plans/P16-web-cleanup.md)、[review](../M4-issue-core/reviews/P16-web-cleanup-review.md)、[预检审核](../../reviews/re-26-M4P16预检审核.md)已完成准备核验，11 Task/55步骤与11A均未实施。没有产品代码、依赖安装或P16产品测试；phase仍M4/P15。主目录准备原件在 `.superpowers/sdd/P16-preparation-20261101/`，后续归档须同时保留。
+
+等负责人授权后从T1开始。M6/M7最后读者保留、全仓no-shadow和M4逐行dead ledger、共享选择器类型/真实行为、S2终稿与C12准备为下一阶段范围；最终C12、M4§14/总体9.4、输入顶层关闭和M5–M8最终交接均留closeout。

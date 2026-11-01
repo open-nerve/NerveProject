@@ -2423,7 +2423,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 
 ### P15 `web-collaboration-drafts-search`：时间线、评论、表情、描述的历史、草稿、搜索、命令面板（16 个任务）
 - **目标**：时间线和评论、表情、描述的历史；草稿页；搜索；命令面板；自动归档的显示。
-- **准备入口**：[spec](specs/P15-web-collaboration-drafts-search.md)、[plan](plans/P15-web-collaboration-drafts-search.md)、[预检记录](reviews/P15-web-collaboration-drafts-search-review.md)、[deep-review](../../reviews/re-23-M4P15预检审核.md)。基线 main 7a81ea18，T1–T16 实施与终审修复完成、集成待办；完整本地门禁通过，最终候选 CI 以阶段记录 §10 后置核准后交付；phase M4/P15。原粗任务 8 拆为工作项命令和主题/创建路由，后续顺延，原完成线保持。已有 actor/source/草稿数据层与无正 tabIndex 的位置只回归，不重复实现。
+- **准备入口**：[spec](specs/P15-web-collaboration-drafts-search.md)、[plan](plans/P15-web-collaboration-drafts-search.md)、[预检记录](reviews/P15-web-collaboration-drafts-search-review.md)、[deep-review](../../reviews/re-23-M4P15预检审核.md)。P15 已完成：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。见 [review §13](reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)；phase M4/P15。
 - **任务**：
   1. 时间线：`IssueUser` 与 `IssueCreator` 合并，执行者为空显示站点名，`archived-at.tsx` 的特判、`default.tsx` 的来源一支删除；`git grep` 核对没有按邮箱或名字猜测系统用户的代码（M1-P5 交接）；I12 的页面版本。
   2. 动态的筛选：嵌套的按钮（`activity-filter.tsx`）、`helper.tsx` 的两条 oxlint。
@@ -2445,10 +2445,11 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：I11–I14、I16、I18 的页面版本和 I20 的评论通过；`copy-hook` 没有 M4 的例外；`git grep` 不再找到 M4 的 13 处模块级实例；C6–C8 和 C9 的草稿通过。
 
 ### P16 `web-cleanup`：死成员、`no-shadow` 与守卫的终态（11 个任务）
+- **准备入口**：[spec](specs/P16-web-cleanup.md)、[plan](plans/P16-web-cleanup.md)、[review](reviews/P16-web-cleanup-review.md)。基线 main 313728cbc61003d7ed072c1e1e191e1cc2a3d75a；文档预检通过，尚未实施。当前32个选择器生产文件、46条已知no-shadow（38显示+8隐藏）和453个M4 dead候选（member/prop），均以真实读者决定处理；历史粗项数不当作当前执行上限。
 - **目标**：M4 领域的死成员、oxlint、关键词守卫到达终态；跨 M 的共用件按交接处理。
 - **任务**：
   1. 数一次 `getTabIndex` 的调用方：没有了就删除它和常量、`CustomMenu` 读 `tabIndex` 的一支；还有 M6、M7 的就写进它们的交接（M3 交接第 7 节）。
-  2. `@nerve/ui` 下拉框的泛型和 13 个调用方（M3 交接第 8 节）。
+  2. `@nerve/ui` 下拉框的泛型及全部实际调用方（M3 交接第 8 节）；P16 准备基线为 32 个生产文件、34 个直接调用点，原 13 个为历史估计，另核共享类型和包装器。
   3. `eslint(no-shadow)` 全仓清零，升为错误（M1 收尾交接）。
   4. 死成员：`--rows M4` 的余下的行和按路径归到 M3 的 52 行，清零或写进 review（M1 收尾交接、M3 交接第 8 节）。
   5. oxlint 各包的上限调低（`tools/lint-cap.mjs`）。
@@ -2594,8 +2595,8 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P12 web-list-pages | 列表、看板、表格、日历（16） | **已完成**：最终e6d1329b授权--no-ff合并main ff89d0a1；[准确main CI41087022719](https://github.com/open-nerve/NerveProject/actions/runs/41087022719)三任务成功；1786份实施/运行证据及14份准备证据归档逐hash通过，分支/worktree清理后再次复验。见[review§28](reviews/P12-web-list-pages-review.md#28-授权合并main-ci与归档清理2026-10-31)、[整审](../../reviews/re-17-M4P12整体审核.md) |
 | P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **已完成**：最终分支 c57bbe6b 经 --no-ff 合并 main 8bb4bbcb；[main CI 41163365163](https://github.com/open-nerve/NerveProject/actions/runs/41163365163) attempt 2 三任务全绿。2,133 份运行证据与 11 份准备材料归档复验后分支/worktree 正常清理，见 [review §15](reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31) |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | **已完成**：原分支 ec5f38b5 与集成测试修复 9a86211a 均 --no-ff 合入 main 7a81ea18；[main CI 41205272945](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务成功，两个分支/worktree 已归档复验并清理。见 [review §15–16](reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31) |
-| P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述历史、草稿、搜索、命令面板（16） | **实施与终审完成、集成待办**：T1–T16 与 A1–A16 已登记，含后置 CI 修复的完整本地七门禁通过；最终候选 CI 以阶段记录 §10 后置核准后交付。[spec](specs/P15-web-collaboration-drafts-search.md)、[plan](plans/P15-web-collaboration-drafts-search.md)、[阶段记录](reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付)、[整体审核](../../reviews/re-24-M4P15整体审核.md)。分支 codex/m4-p15，基线 7a81ea18，当前不合并；P16 与 M4 收尾仍开放 |
-| P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | 未开始 |
+| P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述历史、草稿、搜索、命令面板（16） | **已完成**：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。 [review §13](reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01) |
+| P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | **文档预检通过，尚未实施**：[spec](specs/P16-web-cleanup.md)、[plan](plans/P16-web-cleanup.md)、[review](reviews/P16-web-cleanup-review.md)、[预检审核](../../reviews/re-26-M4P16预检审核.md)。11 Task/55步骤与11验收项均未勾，phase仍M4/P15 |
 | 收尾 `closeout` | 交接、同步核对、浏览器核对 C12、规模和性能的数字（14） | 未开始 |
 
 ## 16. 风险

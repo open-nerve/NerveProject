@@ -1,6 +1,6 @@
 # M4/P15 协作、草稿与命令搜索
 
-状态：T1–T16 实施与终审修复已完成，完整本地门禁通过；最终候选（含文稿）的准确 CI 由阶段记录 §10 指定的后置收据核准后交付，集成待办。基线 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`；分支 `codex/m4-p15`。验收项按实际证据勾选，阶段完成先不合并。
+状态：已完成。原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。集成收据见 [review §13](../reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)。实施基线为 main `7a81ea18d8e9d80f079e4e30ae0e90b11be23ef9`，原分支 `codex/m4-p15`；以下保留原实施范围和验收证据，M4 总体仍进行中。
 
 ## 1. 目标
 
