@@ -13,7 +13,14 @@ export async function c12Evidence(page: Page, group: string, state: string) {
   );
   await transitionsEnded(page.locator("body"));
   const info = test.info();
-  const name = `c12-${group}-${state.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  const baseName = `c12-${group}-${state.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  const occurrence =
+    info.attachments.filter(
+      (attachment) =>
+        attachment.contentType === "image/png" &&
+        (attachment.name === baseName || attachment.name.startsWith(`${baseName}-capture-`))
+    ).length + 1;
+  const name = occurrence === 1 ? baseName : `${baseName}-capture-${occurrence}`;
   const screenshot = info.outputPath(`${name}.png`);
   const observations = await page.evaluate(() => {
     const viewport = { width: window.innerWidth, height: window.innerHeight };
@@ -52,7 +59,7 @@ export async function c12Evidence(page: Page, group: string, state: string) {
     JSON.stringify(
       {
         group,
-        state,
+        state: occurrence === 1 ? state : `${state}-capture-${occurrence}`,
         title: info.title,
         testId: info.testId,
         project: info.project.name,

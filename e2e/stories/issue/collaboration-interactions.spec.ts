@@ -1,9 +1,11 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import { createLabel, changeRole, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
 import { highlightCommand, openCommands, selectCommand } from "../../fixtures/power-k";
 import { createIssueLink } from "../../fixtures/links";
 import {
   collaborationLANPage,
   copyWithoutUserActivation,
+  observeLANClipboard,
   expectLANClipboardWarnings,
 } from "../../fixtures/issue-collaboration-page";
 import { createState } from "../../fixtures/states";
@@ -47,6 +49,7 @@ test("C6: activity filters keep one choice, support Enter and Space, persist sor
   // Safari on macOS includes buttons in sequential navigation through Option-Tab.
   await page.keyboard.press(browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab");
   await expect(updates).toBeFocused();
+  await c12Evidence(page, "B16", "timeline-filter-tab");
   await page.keyboard.press("Space");
   await expect(updates).toHaveAttribute("aria-pressed", "false");
   await expect(updated).toHaveCount(0);
@@ -100,11 +103,13 @@ test("C6: reaction picker has one named button, keyboard focus returns on Escape
   await search.fill("woman technologist");
   const choice = page.getByRole("gridcell", { name: "Woman technologist", exact: true });
   await expect(choice).toBeVisible();
+  await c12Evidence(page, "B16", "combined-emoji-keyboard-picker");
   const code = "128105-8205-128187";
   const path = `/api/v0/issue-comments/${comment.id}/reactions`;
   const held = await sentHeld(page, "POST", path, () => choice.press("Enter"));
   expect(held.body).toEqual({ reaction: code });
   await expect(header).toBeDisabled();
+  await c12Evidence(page, "B16", "emoji-post-pending");
   await expect(row.getByRole("button", { name: /👩‍💻/ })).toHaveCount(0);
   expect((await held.release()).status()).toBe(201);
   await expect(row.getByRole("button", { name: "👩‍💻 1", exact: true })).toBeVisible();
@@ -124,6 +129,7 @@ test("C6: reaction picker has one named button, keyboard focus returns on Escape
   expect(issueHeld.body).toEqual({ reaction: code });
   expect((await issueHeld.release()).status()).toBe(201);
   await expect(page.getByRole("button", { name: "👩‍💻 1", exact: true })).toHaveCount(2);
+  await c12Evidence(page, "B16", "emoji-confirmed-comment-and-issue");
   expect(watch.requestUrls.some((url) => new URL(url).pathname === "/assets/emojibase/15.3.2/en/data.json")).toBe(true);
   expect(watch.apiRequests.filter((request) => request === `POST ${path}`)).toHaveLength(1);
   expect(watch.apiRequests.filter((request) => request === `POST ${issuePath}`)).toHaveLength(1);
@@ -168,6 +174,7 @@ test("C9: creation saves an empty-title real editor draft, retains field refusal
   ).toBe(422);
   await expect(title).toHaveValue("");
   await expect(title).toHaveAttribute("aria-invalid", "true");
+  await c12Evidence(page, "B18", "draft-field-refusal");
   await expect(title).toBeFocused();
   await expect(editor).toContainText("Keep unfinished content");
   const held = await sentHeld(page, "POST", path, () =>
@@ -192,6 +199,7 @@ test("C9: creation saves an empty-title real editor draft, retains field refusal
   await discard.press("Enter");
   const prompt = page.getByRole("dialog", { name: "Save this draft?", exact: true });
   await expect(prompt.getByRole("heading", { name: "Save this draft?", exact: true })).toBeVisible();
+  await c12Evidence(page, "B18", "nested-draft-save-prompt");
   expect(await pageBehindHidden(page)).toBe(true);
   await prompt.getByRole("button", { name: "Cancel", exact: true }).press("Escape");
   await expect(prompt).toHaveCount(0);
@@ -267,6 +275,7 @@ test("C9: Back retires a pending draft save and its prompt before the confirmed 
     expect((await held.release()).status()).toBe(201);
     released = true;
     await expect(next.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("Keep new workspace input");
+    await c12Evidence(page, "B18", "back-preserves-next-workspace-form");
     await expect(page.getByText("Draft created", { exact: true })).toHaveCount(0);
     expect(watch.apiRequests.filter((request) => request === `POST ${path}`)).toHaveLength(1);
     await expectListPageQuiet(page, watch);
@@ -311,6 +320,7 @@ test("C9: a draft editor stays retired across member to guest to member permissi
   await trigger.press("Enter");
   const reopened = page.getByRole("dialog", { name: "Create a draft", exact: true });
   await expect(reopened.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("");
+  await c12Evidence(page, "B18", "permission-return-fresh-draft");
   await expect(reopened.locator('[contenteditable="true"]')).toBeVisible();
   await reopened.getByRole("button", { name: "Discard", exact: true }).click();
   await expect(modalDialog(page)).toHaveCount(0);
@@ -335,6 +345,7 @@ test("C9: real editor block-id migration in a copied draft is not an unsaved use
   const form = page.getByRole("dialog", { name: "Create a draft", exact: true });
   await expect(form.locator('[contenteditable="true"] p[data-id]')).toHaveText("Before block IDs");
   await expect(form.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("Legacy draft (copy)");
+  await c12Evidence(page, "B18", "legacy-draft-id-migration");
   await form.getByRole("button", { name: "Discard", exact: true }).click();
   await expect(modalDialog(page)).toHaveCount(0);
   await expect(page.getByRole("dialog", { name: "Save this draft?", exact: true })).toHaveCount(0);
@@ -365,6 +376,7 @@ test("C7: empty-query commands use the current issue, Chinese state selection re
   const input = page.getByRole("combobox");
   await input.fill("处理");
   await expect(page.getByRole("option", { name: "处理中", exact: true })).toBeVisible();
+  await c12Evidence(page, "B19", "chinese-state-command");
   const path = `/api/v0/issues/${issue.id}`;
   const writes = () => watch.apiRequests.filter((item) => item === `PATCH ${path}`);
   await input.dispatchEvent("keydown", { key: "Enter", isComposing: true, bubbles: true });
@@ -388,6 +400,7 @@ test("C7: empty-query commands use the current issue, Chinese state selection re
   const dialog = page.getByRole("dialog", { name: "Delete Work item", exact: true });
   await expect(dialog).toHaveCount(1);
   await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
+  await c12Evidence(page, "B13", "command-delete-confirmation");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(title).toBeFocused();
@@ -473,6 +486,7 @@ test("C7: keyboard theme selection waits for confirmation, reports native refusa
   await expect(page.locator("html")).not.toHaveAttribute("data-command-document", "original");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.getByRole("button", { name: "Dark", exact: true })).toBeVisible();
+  await c12Evidence(page, "B21", "theme-confirmed-dark");
   expect(
     await db.query("SELECT p.theme FROM profiles p JOIN users u ON u.id=p.user_id WHERE u.email=$1", [email])
   ).toEqual([{ theme: "dark" }]);
@@ -519,6 +533,7 @@ test("C7: a real theme success from the previous login cannot recolor or reload 
   expect(await reload).toBe(false);
   await expect(page.locator("html")).toHaveAttribute("data-command-document", "new-session");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light-contrast");
+  await c12Evidence(page, "B21", "old-theme-success-keeps-new-session");
   await expect(page.getByText("Theme updated", { exact: true })).toHaveCount(0);
   await expectListPageQuiet(page, watch);
 });
@@ -537,136 +552,177 @@ for (const control of [
   "command-title",
   "command-url",
 ] as const) {
-  test(`C8: ${control} copy on LAN HTTP without a user gesture reports one refusal without success, writes or navigation`, async ({
-    api,
-    db,
-    browser,
-    browserName,
-  }, info) => {
-    const seed = await issueListProject(api, info);
-    const source = await createIssue(api, seed.member.token, seed.project.id, { name: "LAN copy source" });
-    const comment =
-      control === "comment"
-        ? await createIssueComment(api, seed.member.token, source.id, "<p>LAN discussion</p>")
-        : undefined;
-    if (control === "link")
-      await createIssueLink(api, seed.member.token, source.id, { title: "Guide", url: "https://example.test/guide" });
-    if (control === "relation") {
-      const target = await createIssue(api, seed.member.token, seed.project.id, { name: "Related target" });
-      await createIssueRelations(api, seed.member.token, source.id, {
-        relation_type: "relates_to",
-        issue_ids: [target.id],
-      });
-    }
-    if (control === "sub-item")
-      await createIssue(api, seed.member.token, seed.project.id, { name: "Child target", parent_id: source.id });
-    const lan = await collaborationLANPage(browser, db, info);
-    const page = lan.page;
-    try {
-      const watch = ["layout", "peek", "creation"].includes(control)
-        ? (await openIssueList(page, seed)).watch
-        : await openIssueDetail(page, seed, source);
-      expect(new URL(page.url()).protocol).toBe("http:");
-      expect(new URL(page.url()).hostname).not.toMatch(/^(localhost|127\.|\[?::1)/);
-      expect(await page.evaluate(() => window.isSecureContext)).toBe(false);
-      if (control === "creation") {
-        await page.getByRole("button", { name: "Add work item", exact: true }).click();
-        const form = page.getByRole("dialog", { name: "Create new work item", exact: true });
-        await form.getByRole("textbox", { name: "Title", exact: true }).fill("Created on LAN");
-        await expect(form.locator('[contenteditable="true"]')).toBeVisible();
-        expect(
-          (
-            await answerTo(page, "POST", `/api/v0/projects/${seed.project.id}/issues`, () =>
-              form.getByRole("button", { name: "Save", exact: true }).click()
-            )
-          ).status()
-        ).toBe(201);
-        await expect(form).toHaveCount(0);
-      }
-      if (control === "peek") {
-        await page.locator(`#issue-${source.id}`).click();
-        await expect(page.getByRole("button", { name: "Close the peek view", exact: true })).toBeVisible();
-      }
-      if (control === "relation") {
-        const relations = page.getByRole("button", { name: "Relations 1", exact: true });
-        await relations.click();
-        await transitionsEnded(relations.locator("../.."));
-      }
-      const before = page.url();
-      const requestsBefore = watch.apiRequests.length;
-      let clipboardContext: Awaited<ReturnType<typeof copyWithoutUserActivation>>;
-      if (control.startsWith("command-")) {
-        await openCommands(page);
-        const command = await highlightCommand(
-          page,
-          control === "command-id" ? /^Copy ID/ : control === "command-title" ? /^Copy title/ : /^Copy URL/
-        );
-        clipboardContext = await copyWithoutUserActivation(command);
-      } else {
-        let copy;
-        if (["relation", "sub-item", "comment", "layout"].includes(control)) {
-          const options =
-            control === "comment"
-              ? page
-                  .locator(`[id="comment-${comment!.id}"]`)
-                  .getByRole("button", { name: `Options for ${shownNameOf(seed.member.email)}’s comment`, exact: true })
-              : page.getByRole("button", {
-                  name:
-                    control === "layout"
-                      ? `Options: ${source.name}`
-                      : `${control === "relation" ? "Related target" : "Child target"} options`,
-                  exact: true,
-                });
-          await options.focus();
-          await page.keyboard.press("Enter");
-          copy = page.getByRole("menuitem", {
-            name: control === "sub-item" ? "Copy work item link" : "Copy link",
-            exact: true,
+  for (const gesture of [false, true]) {
+    test(
+      gesture
+        ? `C12: ${control} copy on LAN HTTP with a real keyboard gesture reports the native result without writes or navigation`
+        : `C8: ${control} copy on LAN HTTP without a user gesture reports one refusal without success, writes or navigation`,
+      async ({ api, db, browser, browserName }, info) => {
+        const seed = await issueListProject(api, info);
+        const source = await createIssue(api, seed.member.token, seed.project.id, { name: "LAN copy source" });
+        const comment =
+          control === "comment"
+            ? await createIssueComment(api, seed.member.token, source.id, "<p>LAN discussion</p>")
+            : undefined;
+        if (control === "link")
+          await createIssueLink(api, seed.member.token, source.id, {
+            title: "Guide",
+            url: "https://example.test/guide",
           });
-        } else {
-          copy = page.getByRole("button", {
-            name:
-              control === "identifier"
-                ? `Copy ID: WEB-${source.sequence_id}`
-                : control === "link"
-                  ? "Copy link: Guide"
-                  : "Copy link",
-            exact: true,
+        if (control === "relation") {
+          const target = await createIssue(api, seed.member.token, seed.project.id, { name: "Related target" });
+          await createIssueRelations(api, seed.member.token, source.id, {
+            relation_type: "relates_to",
+            issue_ids: [target.id],
           });
         }
-        await copy.focus();
-        await expect(copy).toBeFocused();
-        clipboardContext = await copyWithoutUserActivation(copy);
+        if (control === "sub-item")
+          await createIssue(api, seed.member.token, seed.project.id, { name: "Child target", parent_id: source.id });
+        const lan = await collaborationLANPage(browser, db, info);
+        const page = lan.page;
+        try {
+          const watch = ["layout", "peek", "creation"].includes(control)
+            ? (await openIssueList(page, seed)).watch
+            : await openIssueDetail(page, seed, source);
+          expect(new URL(page.url()).protocol).toBe("http:");
+          expect(new URL(page.url()).hostname).not.toMatch(/^(localhost|127\.|\[?::1)/);
+          expect(await page.evaluate(() => window.isSecureContext)).toBe(false);
+          if (control === "creation") {
+            await page.getByRole("button", { name: "Add work item", exact: true }).click();
+            const form = page.getByRole("dialog", { name: "Create new work item", exact: true });
+            await form.getByRole("textbox", { name: "Title", exact: true }).fill("Created on LAN");
+            await expect(form.locator('[contenteditable="true"]')).toBeVisible();
+            expect(
+              (
+                await answerTo(page, "POST", `/api/v0/projects/${seed.project.id}/issues`, () =>
+                  form.getByRole("button", { name: "Save", exact: true }).click()
+                )
+              ).status()
+            ).toBe(201);
+            await expect(form).toHaveCount(0);
+          }
+          if (control === "peek") {
+            await page.locator(`#issue-${source.id}`).click();
+            await expect(page.getByRole("button", { name: "Close the peek view", exact: true })).toBeVisible();
+          }
+          if (control === "relation") {
+            const relations = page.getByRole("button", { name: "Relations 1", exact: true });
+            await relations.click();
+            await transitionsEnded(relations.locator("../.."));
+          }
+          const before = page.url();
+          const requestsBefore = watch.apiRequests.length;
+          const nativeClipboard = await observeLANClipboard(page);
+          const activate = async (target: Parameters<typeof copyWithoutUserActivation>[0]) => {
+            if (gesture) await target.press("Enter");
+            else await copyWithoutUserActivation(target);
+          };
+          if (control.startsWith("command-")) {
+            await openCommands(page);
+            const command = await highlightCommand(
+              page,
+              control === "command-id" ? /^Copy ID/ : control === "command-title" ? /^Copy title/ : /^Copy URL/
+            );
+            await activate(command);
+          } else {
+            let copy;
+            if (["relation", "sub-item", "comment", "layout"].includes(control)) {
+              const options =
+                control === "comment"
+                  ? page.locator(`[id="comment-${comment!.id}"]`).getByRole("button", {
+                      name: `Options for ${shownNameOf(seed.member.email)}’s comment`,
+                      exact: true,
+                    })
+                  : page.getByRole("button", {
+                      name:
+                        control === "layout"
+                          ? `Options: ${source.name}`
+                          : `${control === "relation" ? "Related target" : "Child target"} options`,
+                      exact: true,
+                    });
+              await options.focus();
+              await page.keyboard.press("Enter");
+              copy = page.getByRole("menuitem", {
+                name: control === "sub-item" ? "Copy work item link" : "Copy link",
+                exact: true,
+              });
+            } else {
+              copy = page.getByRole("button", {
+                name:
+                  control === "identifier"
+                    ? `Copy ID: WEB-${source.sequence_id}`
+                    : control === "link"
+                      ? "Copy link: Guide"
+                      : "Copy link",
+                exact: true,
+              });
+            }
+            await copy.focus();
+            await expect(copy).toBeFocused();
+            await activate(copy);
+          }
+          const calls = await nativeClipboard.evaluate((state) => state.calls);
+          expect(calls).toHaveLength(1);
+          const result = calls[0]!;
+          expect(result).toMatchObject({
+            command: "copy",
+            secureContext: false,
+            activeGesture: gesture,
+            asyncClipboard: false,
+          });
+          expect(result.text).toEqual(expect.any(String));
+          expect(result.text!.length).toBeGreaterThan(0);
+          if (!gesture) expect(result.returned).toBe(false);
+          await expect(page.getByText("Something went wrong. Please try again.", { exact: true })).toHaveCount(
+            result.returned ? 0 : 1
+          );
+          const copyNotice = page
+            .getByRole("region", { name: "Notifications", exact: true })
+            .getByRole("dialog")
+            .filter({
+              has: page.getByText(
+                /^(Link copied!?|Copied!|(?:Work item|Comment) (link|ID|title|URL) copied to clipboard\.?)$/
+              ),
+            });
+          await expect(copyNotice).toHaveCount(result.returned ? 1 : 0);
+          await c12Evidence(
+            page,
+            "B20",
+            `${control}-${gesture ? "keyboard" : "no-gesture"}-${result.returned ? "copied" : "refused"}`
+          );
+          await expect(page).toHaveURL(before);
+          expect(
+            watch.apiRequests.slice(requestsBefore).filter((request) => /^(POST|PATCH|DELETE) /.test(request))
+          ).toEqual([]);
+          await info.attach("lan-http-clipboard", {
+            body: JSON.stringify({ origin: lan.origin, control, gesture, native: result }, null, 2),
+            contentType: "application/json",
+          });
+          const loginPath = ["layout", "peek", "creation"].includes(control)
+            ? seed.path
+            : `/${seed.slug}/browse/WEB-${source.sequence_id}`;
+          const warnings = expectLANClipboardWarnings(
+            watch,
+            browserName,
+            lan.origin,
+            signInPath(loginPath),
+            !result.returned,
+            result.diagnosticSource
+          );
+          await expectListPageQuiet(page, watch, { warnings });
+        } catch (error) {
+          await info.attach("lan-http-failure", {
+            body: await page.locator("body").ariaSnapshot(),
+            contentType: "text/plain",
+          });
+          await info.attach("lan-http-failure-screen", { body: await page.screenshot(), contentType: "image/png" });
+          throw error;
+        } finally {
+          await lan.close();
+        }
       }
-      expect(clipboardContext).toEqual({ secureContext: false, activeGesture: false, asyncClipboard: false });
-      await expect(page.getByText("Something went wrong. Please try again.", { exact: true })).toHaveCount(1);
-      await expect(
-        page.getByText(/^(Link copied!?|Copied!|(?:Work item|Comment) (link|ID|title|URL) copied to clipboard)$/)
-      ).toHaveCount(0);
-      await expect(page).toHaveURL(before);
-      expect(
-        watch.apiRequests.slice(requestsBefore).filter((request) => /^(POST|PATCH|DELETE) /.test(request))
-      ).toEqual([]);
-      await info.attach("lan-http-clipboard", {
-        body: JSON.stringify({ origin: lan.origin, ...clipboardContext, control }, null, 2),
-        contentType: "application/json",
-      });
-      const loginPath = ["layout", "peek", "creation"].includes(control)
-        ? seed.path
-        : `/${seed.slug}/browse/WEB-${source.sequence_id}`;
-      const warnings = expectLANClipboardWarnings(watch, browserName, lan.origin, signInPath(loginPath));
-      await expectListPageQuiet(page, watch, { warnings });
-    } catch (error) {
-      await info.attach("lan-http-failure", {
-        body: await page.locator("body").ariaSnapshot(),
-        contentType: "text/plain",
-      });
-      await info.attach("lan-http-failure-screen", { body: await page.screenshot(), contentType: "image/png" });
-      throw error;
-    } finally {
-      await lan.close();
-    }
-  });
+    );
+  }
 }
 
 test("C7: top navigation keeps a multi-select command open for confirmed label changes and respects IME", async ({
@@ -724,6 +780,7 @@ test("C7: top navigation keeps a multi-select command open for confirmed label c
     )
     .toEqual([alpha.id, beta.id].toSorted());
   await expect(page.getByRole("option", { name: "Beta label", exact: true })).toBeVisible();
+  await c12Evidence(page, "B19", "top-command-multi-label-confirmed");
   await input.press("Escape");
   await expect(page.locator("[cmdk-list]")).toHaveCount(0);
   await expect(input).toHaveValue("");

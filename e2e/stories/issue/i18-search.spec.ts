@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import { readFileSync } from "node:fs";
 import type { TestInfo } from "@playwright/test";
 
@@ -269,6 +270,7 @@ test("I18 (page): native command search keeps relevance order, exact Unicode and
       .poll(() => results.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-value"))))
       .toEqual(ids.map((id) => `issue-${id}`));
     expect(queries.at(-1)?.get("q")).toBe(q);
+    await c12Evidence(page, "B19", `modal-query-${q}`);
     expect(queries.at(-1)?.has("project_id")).toBe(false);
   }, Promise.resolve());
   await input.fill("cAtAloG");
@@ -311,6 +313,7 @@ test("I18 (page): search errors offer GET retry and a delayed previous query can
   await input.fill("First search");
   const alert = page.getByRole("alert");
   await expect(alert).toContainText("Something went wrong on the server. Please try again.");
+  await c12Evidence(page, "B19", "search-get-refusal");
   await expect(page.getByRole("option", { name: /^No results found/ })).toHaveCount(0);
   expect(
     (
@@ -375,6 +378,7 @@ for (const role of [5, 20] as const) {
     await expect(page.locator(`[role="option"][data-value="issue-${hidden.id}"]`)).toHaveCount(0);
     await input.fill(`WEB-${hidden.sequence_id}`);
     await expect(page.getByRole("option", { name: /^No results found/ })).toBeVisible();
+    await c12Evidence(page, "B19", `own-only-no-result-role-${role}`);
     await expectListPageQuiet(page, watch);
   });
 }
@@ -415,6 +419,7 @@ test("I18 (page): Back and reopening the same query retire the previous project 
     expect((await previous.json()).data.map((row: { id: string }) => row.id)).toEqual([old.id]);
     await expect(result).toBeVisible();
     await expect(page.locator(`[role="option"][data-value="issue-${old.id}"]`)).toHaveCount(0);
+    await c12Evidence(page, "B19", "modal-back-late-answer-retired");
     await page.getByRole("combobox").press("ControlOrMeta+k");
     await expect(page.getByRole("combobox")).toHaveCount(0);
     await openCommands(page);
@@ -466,11 +471,13 @@ test("I18 (page): top navigation owns native search, IME and late answers across
     await input.fill("Late");
     await expect(results).toHaveCount(1);
     await expect(results).toHaveAttribute("data-value", `issue-${fresh.id}`);
+    await c12Evidence(page, "B19", "top-back-late-answer-retired");
     const response = await answerTo(page, "GET", path, release);
     released = true;
     expect(response.status()).toBe(200);
     expect((await response.json()).data.map((row: { id: string }) => row.id)).toEqual([old.id]);
     await expect(results).toHaveAttribute("data-value", `issue-${fresh.id}`);
+    await c12Evidence(page, "B19", "top-back-late-answer-retired");
     await input.press("ControlOrMeta+k");
     await expect(page.locator("[cmdk-list]")).toHaveCount(0);
     await expect(page.getByRole("dialog")).toHaveCount(0);

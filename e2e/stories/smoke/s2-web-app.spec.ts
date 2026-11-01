@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import type { Page, Request, Response, TestInfo } from "@playwright/test";
 
 import {
@@ -459,6 +460,7 @@ for (const account of ACCOUNTS) {
     const menu = { from: requests.next(), expected: WORKSPACE_MENU.toSorted() };
     await page.getByRole("button", { name: "Open workspace switcher" }).click();
     await expect(page.getByRole("menuitem", { name: "Leave workspace" })).toBeVisible();
+    await c12Evidence(page, "B21", `workspace-menu-${account}`);
     await page.keyboard.press("Escape");
     await expect(page.getByRole("menuitem", { name: "Leave workspace" })).toHaveCount(0);
 

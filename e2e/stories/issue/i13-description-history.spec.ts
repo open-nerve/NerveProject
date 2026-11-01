@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
   createProject,
@@ -145,9 +146,11 @@ test("I13 (page): history loads a second page, copies actual Markdown after sett
   const trigger = page.getByRole("button", { name: /^Last edited by/ });
   await trigger.press("Enter");
   await expect(page.getByRole("menuitem")).toHaveCount(3);
+  await c12Evidence(page, "B17", "history-second-page-menu");
   await page.getByRole("menuitem").last().press("Enter");
   const modal = page.getByRole("dialog", { name: "Description history", exact: true });
   await expect(modal.getByRole("heading", { name: "Original", exact: true })).toBeVisible();
+  await c12Evidence(page, "B17", "history-original-content");
   expect(await pageBehindHidden(page)).toBe(true);
   expect(
     await modal
@@ -196,13 +199,17 @@ test("I13 (page): history loads a second page, copies actual Markdown after sett
   const restore = modal.getByRole("button", { name: "Restore", exact: true });
   expect((await answerTo(page, "PATCH", path, () => restore.click())).status()).toBe(403);
   await expect(modal.getByRole("alert")).toBeVisible();
+  await c12Evidence(page, "B17", "history-request-refusal");
   await expect(modal.getByRole("heading", { name: "Original", exact: true })).toBeVisible();
+  await c12Evidence(page, "B17", "history-original-content");
   const held = await sentHeld(page, "PATCH", path, () => restore.dblclick());
   expect(held.body).toMatchObject({ description_html: original });
   await expect(restore).toBeDisabled();
+  await c12Evidence(page, "B17", "restore-pending");
   await page.keyboard.press("Escape");
   await expect(modal).toHaveCount(1);
   await expect(modal.getByRole("heading", { name: "Original", exact: true })).toBeVisible();
+  await c12Evidence(page, "B17", "history-original-content");
   expect(await focusInDialog(page)).toBe(true);
   expect((await held.release()).status()).toBe(200);
   await expect(modal).toHaveCount(0);
@@ -265,10 +272,12 @@ test("I13 (page): archived history keeps list and detail refusal retries separat
   await page.getByRole("menuitem").press("Enter");
   const modal = page.getByRole("dialog", { name: "Description history", exact: true });
   await expect(modal.getByRole("alert")).toBeVisible();
+  await c12Evidence(page, "B17", "history-request-refusal");
   await expect(modal.getByRole("button", { name: "Copy markdown", exact: true })).toBeDisabled();
   await modal.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(modal.getByText("Archived text", { exact: true })).toBeVisible();
   await expect(modal.getByRole("button", { name: "Restore", exact: true })).toHaveCount(0);
+  await c12Evidence(page, "B17", "archived-history-read-only");
   await expect(modal.getByRole("button", { name: "Copy markdown", exact: true })).toBeEnabled();
   await page.keyboard.press("Escape");
   await expect(modal).toHaveCount(0);
@@ -308,5 +317,6 @@ test("I13 (page): a project guest reads his own visible item without any history
   await expect(page.getByText("Guest text", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Last edited by/ })).toHaveCount(0);
   expect(watch.apiRequests.filter((request) => request.includes("description-versions"))).toEqual([]);
+  await c12Evidence(page, "B17", "guest-no-history");
   await expectListPageQuiet(page, watch);
 });
