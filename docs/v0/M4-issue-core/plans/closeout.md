@@ -184,10 +184,10 @@ NERVE_PURGE_SCALE=1 NERVE_PURGE_SCALE_EVIDENCE="$M4_CLOSEOUT_EVIDENCE/perf/purge
 **Files：** D/handoffs/{M0-P4-pg-trgm,M1-P2-trim-content,M1-P3-trim-platform,M1-P4-router-native,M1-P5-brand,M1-closeout,M2-closeout,M3-closeout}.md；新增docs/v0/{M5-files,M6-cycles-modules,M7-collaboration,M8-open-release}/handoffs/M4-closeout.md。
 **Interfaces：** input文件+原条款→Phase review+验收证据或outgoing文件+具名子项+完成条件；输出status=open，输入所有条款有结论后status=closed。
 
-- [ ] Step 1：用§13.1逐原条款及此前各Phase spec§5/review§6核落点；八文件不只按顶层标题算条数。实际已完成项链接当前/历史等价证据；转交写清原因/代价/后续何时验，保留原历史处理段。
-- [ ] Step 2：写M5附件/同事务迁移/图片identity/删除图/事件决定，M6新列表引擎/自身页面未接通的实际75请求等证据/条件/最后读者，M7收集箱枚举与系统身份/通知发出时权限/视图/跨项目/旧DTO与版本最后读者，M8事件列表/出站/部署/性能/锁等待代价；照spec§2.4并逐个原交接防漏。
-- [ ] Step 3：M2-closeout§1的原标题与全部内容逐字复制到M5，再另写已提供NewInserter和未来CLI组合职责；M0-P4“部署要求”整段原样复制到M8。以读取源文本和目标引用块的逐字比较留收据；修历史相对链接时原文块不改，外加新可点击链接。
-- [ ] Step 4：核新表扩furnishIssueRows、订阅project/workspace.deleted、物理清理owner，M6/M7恢复列表期限/不恢复旧引擎，M1-P3/P5来源/文案/系统创建者细节完整。原条款全有结论才改8个closed；检查四输出存在且open、双向链接有效。提交交接结果，D10才可签实施完成。
+- [x] Step 1：用§13.1逐原条款及此前各Phase spec§5/review§6核落点；八文件不只按顶层标题算条数。实际已完成项链接当前/历史等价证据；转交写清原因/代价/后续何时验，保留原历史处理段。
+- [x] Step 2：写M5附件/同事务迁移/图片identity/删除图/事件决定，M6新列表引擎/自身页面未接通的实际75请求等证据/条件/最后读者，M7收集箱枚举与系统身份/通知发出时权限/视图/跨项目/旧DTO与版本最后读者，M8事件列表/出站/部署/性能/锁等待代价；照spec§2.4并逐个原交接防漏。
+- [x] Step 3：M2-closeout§1的原标题与全部内容逐字复制到M5，再另写已提供NewInserter和未来CLI组合职责；M0-P4“部署要求”整段原样复制到M8。以读取源文本和目标引用块的逐字比较留收据；修历史相对链接时原文块不改，外加新可点击链接。
+- [x] Step 4：核新表扩furnishIssueRows、订阅project/workspace.deleted、物理清理owner，M6/M7恢复列表期限/不恢复旧引擎，M1-P3/P5来源/文案/系统创建者细节完整。原条款全有结论才改8个closed；检查四输出存在且open、双向链接有效。提交交接结果，D10才可签实施完成。
 
 ## Task 13：最终验收与收尾分支整审（约400–700行）
 

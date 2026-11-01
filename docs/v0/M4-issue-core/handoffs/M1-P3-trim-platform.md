@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M1/P3
 to: M4
 created: 2026-09-24
@@ -101,3 +101,9 @@ M4 合并时：
 否定显示层已删，原negation-filters规则及samples通过；旧八类工作项地址/否定字段0例外，M4复制0例外。具名旧搜索只剩测试中的删除断言，无生产方法/调用。M15/M16在真实M4扫描路径分别恢复旧地址/否定字段均准确失败，清理探针后守卫76规则/13例外通过；规则与期限未改。见[P16 review §15](../reviews/P16-web-cleanup-review.md#15-t6-关键词终态)。
 
 P15已授权合入main313728cb、准确main CI41268545437全绿并归档清理，上节“尚未合并”仅记录当时交付时点，现状见[P15 review §13](../reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)。收集箱来源的最终转交和本输入总关闭仍待M4 closeout，顶部保持open。
+
+## M4 收尾签结（2026-11-02）
+
+原条款、历史回执全部保留。逐条结论见[收尾交接索引](../reviews/closeout-handoffs.md#M1-P3-trim-platform-01)，其中每个正文条款有源行、结论和证据；原范围已实现的事项按阶段与当前验收核对，未来事项以具名转交关闭，四份接收交接保持 open。
+
+接收者：[M5 附件与 CLI](../../M5-files/handoffs/M4-closeout.md)、[M6 迭代模块](../../M6-cycles-modules/handoffs/M4-closeout.md)、[M7 协作视图](../../M7-collaboration/handoffs/M4-closeout.md)、[M8 发布](../../M8-open-release/handoffs/M4-closeout.md)。收尾 C12 最新输入、分支 CI 与未来 main 集成继续由[验收台账](../reviews/closeout-acceptance.md)控制；本签结不提前宣布 M4 全部完成。

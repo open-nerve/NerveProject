@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M0/P4
 to: M4
 created: 2026-09-22
@@ -20,3 +20,9 @@ created: 2026-09-22
 服务端子项已承接：T9迁移00029在postgres:18.6镜像内由rolsuper=false且具数据库CREATE的owner安装pg_trgm，建活issues.name部分GIN；预存扩展Down/Up OID保持，Down只删本迁移索引。runtime真实similarity/草稿CRUD及禁止DDL、全关系/函数目录、sqlc原生float32均验证。T15恰好10万中英文Store+RO/RR实测（PG18.6/libc/en_US.utf8），最终SQL/17实参/EXPLAIN/5warm与first-observed有原件；八标题场景顺扫、单项目login bitmap，不保证三字符必走索引。README已说明镜像扩展、非superuser数据库CREATE、runtime PUBLIC EXECUTE依赖及收回后的显式函数授权。最终locale/部署/升级维护仍交M8，顶部status继续open。
 
 准确产品HEAD `10f44790ccb842e758f0ab50ecb4d294dc15a6e6`，首次整审 `166b9efd..10f44790`；[P8 review §8](../reviews/P8-drafts-search-review.md#8-实施验收与首次整审2026-10-27)列A条款/真实RUN/变异恢复/四次七门禁及准确产品checkpoint CI，[整体审核](../../../reviews/re-07-M4P8整体审核.md)列三镜头/186文件覆盖与历史D1。文档增量独评及最终准确HEAD CI由后续提交和ignored收据追踪，未合并、不清理；不以本期子项已处理改写历史关闭条件或M4整体状态。
+
+## M4 收尾签结（2026-11-02）
+
+原条款、历史回执全部保留。逐条结论见[收尾交接索引](../reviews/closeout-handoffs.md#M0-P4-pg-trgm-01)，其中每个正文条款有源行、结论和证据；原范围已实现的事项按阶段与当前验收核对，未来事项以具名转交关闭，四份接收交接保持 open。
+
+接收者：[M5 附件与 CLI](../../M5-files/handoffs/M4-closeout.md)、[M6 迭代模块](../../M6-cycles-modules/handoffs/M4-closeout.md)、[M7 协作视图](../../M7-collaboration/handoffs/M4-closeout.md)、[M8 发布](../../M8-open-release/handoffs/M4-closeout.md)。收尾 C12 最新输入、分支 CI 与未来 main 集成继续由[验收台账](../reviews/closeout-acceptance.md)控制；本签结不提前宣布 M4 全部完成。

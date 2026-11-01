@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M1/P5
 to: M4
 created: 2026-09-24
@@ -40,3 +40,9 @@ T12 的真实 clockTest 页面在新进程重新登录，以 attempted_at 同时
 ## P15 T16 整审复核（2026-11-01）
 
 本期子项已完成实现、整审及后置 CI 的局部修复与完整本地门禁，最终候选 CI 后置核准，集成待办；顶部/弹窗宿主、偏好晚答和退场选择保护已复验，92 个 TS/TSX 零告警。准确最终分支 CI 与交付状态见 [阶段记录 §10](../reviews/P15-web-collaboration-drafts-search-review.md#10-最终验收与交付) 和 [整审报告](../../../reviews/re-24-M4P15整体审核.md)。顶部 status 保持 open，P16、M7 与 M4 总关闭责任不改变；尚未合并。
+
+## M4 收尾签结（2026-11-02）
+
+原条款、历史回执全部保留。逐条结论见[收尾交接索引](../reviews/closeout-handoffs.md#M1-P5-brand-01)，其中每个正文条款有源行、结论和证据；原范围已实现的事项按阶段与当前验收核对，未来事项以具名转交关闭，四份接收交接保持 open。
+
+接收者：[M5 附件与 CLI](../../M5-files/handoffs/M4-closeout.md)、[M6 迭代模块](../../M6-cycles-modules/handoffs/M4-closeout.md)、[M7 协作视图](../../M7-collaboration/handoffs/M4-closeout.md)、[M8 发布](../../M8-open-release/handoffs/M4-closeout.md)。收尾 C12 最新输入、分支 CI 与未来 main 集成继续由[验收台账](../reviews/closeout-acceptance.md)控制；本签结不提前宣布 M4 全部完成。

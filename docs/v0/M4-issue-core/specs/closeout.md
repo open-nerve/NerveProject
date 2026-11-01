@@ -136,7 +136,7 @@ LAN HTTP 复制覆盖原十二入口和 `useCopyLink` / `useCopyText` 真实路�
 
 ## 7. 关闭条件与证据保留
 
-输入八文件顶层当前仍open；只在T12实际逐条签结后改closed，外部未来工作用“转交关闭”并链接四输出。输出是交给未来M的未完成工作，status应open。未实现/未验/等待集成必须如实记录，不为完成统计改文字。
+T12（2026-11-02）已逐条签结：输入八文件顶层 closed，外部未来工作以“转交关闭”链接四输出；四份输出均 open。205 条原文与 36 份阶段移交的结论、原文复制与历史保留证明见[交接索引](../reviews/closeout-handoffs.md)。输出是交给未来 M 的未完成工作，不能因输入关闭改称实现。未实现/未验/等待集成必须如实记录，不为完成统计改文字。
 
 实施证据 `.superpowers/sdd/M4-closeout/`，本轮准备证据在主目录 `.superpowers/sdd/M4-closeout-preparation-20261101/`；未来归档两处并逐hash、大小、mode/成员清单验证后正常删除worktree/已合并分支。最后CI收据外置，保存准确HEAD/run/attempt/jobs和最终main等价关系。不能用清理旧worktree丢掉唯一的截图/报告。
 

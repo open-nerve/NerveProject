@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M1/P4
 to: M4
 created: 2026-09-24
@@ -43,3 +43,9 @@ T10 已让个人设置的命令面板不挂载 WorkItemLevelModals，保留设�
 ## P14 集成关闭回执（2026-10-31）
 
 上述 P14 对应子项已随授权 --no-ff 集成至 main 7a81ea18；[准确 main CI](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务全绿，原分支与集成修复分支的证据逐 hash 归档复验后，两个工作树和远端/本地分支已正常清理。完整输入、两次初始失败、修复及新归档路径见 [P14 review §15–16](../reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31)。本文件顶部 status 仍 open，其它阶段和 M4 总关闭条件不提前处理。
+
+## M4 收尾签结（2026-11-02）
+
+原条款、历史回执全部保留。逐条结论见[收尾交接索引](../reviews/closeout-handoffs.md#M1-P4-router-native-01)，其中每个正文条款有源行、结论和证据；原范围已实现的事项按阶段与当前验收核对，未来事项以具名转交关闭，四份接收交接保持 open。
+
+接收者：[M5 附件与 CLI](../../M5-files/handoffs/M4-closeout.md)、[M6 迭代模块](../../M6-cycles-modules/handoffs/M4-closeout.md)、[M7 协作视图](../../M7-collaboration/handoffs/M4-closeout.md)、[M8 发布](../../M8-open-release/handoffs/M4-closeout.md)。收尾 C12 最新输入、分支 CI 与未来 main 集成继续由[验收台账](../reviews/closeout-acceptance.md)控制；本签结不提前宣布 M4 全部完成。
