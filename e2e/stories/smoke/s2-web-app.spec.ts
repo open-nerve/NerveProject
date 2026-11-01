@@ -121,6 +121,31 @@ test("S2: a user opens a deep link directly", async ({ page, request }) => {
 const ACCOUNTS = ["admin", "member", "guest", "project non-member"] as const;
 type Account = (typeof ACCOUNTS)[number];
 
+/** These local profile filters add one native relation read, with no preference or label-catalog fetch. */
+const profileVisits = (member: "admin" | "member"): [path: string, requests: string[]][] =>
+  ["assigned", "created", "subscribed"].map((relation) => [
+    `/{slug}/profile/{${member}}/${relation}`,
+    [
+      ...APP,
+      ...WORKSPACE,
+      `GET /api/v0/workspaces/{slug}/members/{${member}}/issues?relation=${relation}&order_by=sort_order&sub_issue=false&limit=100`,
+    ],
+  ]);
+
+const archivedIssuesVisit: [path: string, requests: string[]] = [
+  "/{slug}/projects/{project}/archives/issues",
+  [
+    ...APP,
+    ...WORKSPACE,
+    // core.ts mounts archives outside ProjectLayout; its display filters are local, not project preferences.
+    "GET /api/v0/projects/{project}/issues?order_by=sort_order&sub_issue=true&limit=100&archived=true",
+  ],
+];
+const draftsVisit: [path: string, requests: string[]] = [
+  "/{slug}/drafts",
+  [...APP, ...WORKSPACE, "GET /api/v0/workspaces/{slug}/drafts"],
+];
+
 /**
  * The pages each account opens, in order, each as its path ({slug}, {project}, {admin} and {guest} for their values:
  * the workspace's, the project's, the ids of its admin and its guest) and the requests it makes as it loads: "/", which
@@ -135,6 +160,9 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/projects", [...APP, ...WORKSPACE, ...ARCHIVED]],
     ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
     ["/{slug}/settings/members", [...APP, ...WORKSPACE, ...INVITATIONS]],
+    archivedIssuesVisit,
+    ...profileVisits("admin"),
+    draftsVisit,
     [
       "/{slug}/projects/{project}/issues",
       [
@@ -155,6 +183,9 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/projects", [...APP, ...WORKSPACE, ...ARCHIVED]],
     ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
+    archivedIssuesVisit,
+    ...profileVisits("member"),
+    draftsVisit,
     [
       "/{slug}/projects/{project}/issues",
       [
@@ -177,6 +208,11 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
     ["/{slug}/profile/{admin}", [...APP, ...WORKSPACE]],
     ["/{slug}/profile/{guest}", [...APP, ...WORKSPACE]],
+    ["/{slug}/profile/{admin}/assigned", [...APP, ...WORKSPACE]],
+    ["/{slug}/profile/{admin}/created", [...APP, ...WORKSPACE]],
+    ["/{slug}/profile/{admin}/subscribed", [...APP, ...WORKSPACE]],
+    ["/{slug}/profile/{guest}/assigned", [...APP, ...WORKSPACE]],
+    ["/{slug}/drafts", [...APP, ...WORKSPACE]],
     [
       "/{slug}/projects/{project}/issues",
       [
@@ -216,7 +252,7 @@ async function acme(
   slug: string;
   project: Project;
   tokens: Record<Account, AuthTokens>;
-  ids: { admin: string; guest: string };
+  ids: { admin: string; member: string; guest: string };
 }> {
   const signUp = async (label: string) => {
     const email = emailFor(testInfo, label);
@@ -235,9 +271,13 @@ async function acme(
   await join(member, 15);
   await join(guest, 5);
   await join(outsider, 15);
-  const ids = { admin: await accountId(api, token), guest: await accountId(api, guest.tokens.access_token) };
+  const ids = {
+    admin: await accountId(api, token),
+    member: await accountId(api, member.tokens.access_token),
+    guest: await accountId(api, guest.tokens.access_token),
+  };
   await addProjectMembers(api, token, project.id, [
-    { member_id: await accountId(api, member.tokens.access_token), role: 15 },
+    { member_id: ids.member, role: 15 },
     { member_id: ids.guest, role: 5 },
   ]);
   const tokens = {
@@ -316,7 +356,13 @@ for (const account of ACCOUNTS) {
     const { slug, project, tokens, ids } = await acme(api, testInfo);
     const page = await signedInPage(tokens[account]);
     const watch = await watchPage(page);
-    const names = { [slug]: "{slug}", [project.id]: "{project}", [ids.admin]: "{admin}", [ids.guest]: "{guest}" };
+    const names = {
+      [slug]: "{slug}",
+      [project.id]: "{project}",
+      [ids.admin]: "{admin}",
+      [ids.member]: "{member}",
+      [ids.guest]: "{guest}",
+    };
     const requests = followRequests(page, names);
 
     /** Opens path and waits until its requests are requested, none pending: gives the index of its first and its list. */
@@ -329,6 +375,28 @@ for (const account of ACCOUNTS) {
         else await expect(join).toHaveCount(0);
       }
       if (path === "/") await expect(page).toHaveURL(`/${slug}`);
+      if (path.includes("/profile/")) {
+        if (account === "guest") {
+          await expect(
+            page.getByText("You do not have the permission to access this page.", { exact: true })
+          ).toBeVisible();
+          await expect(page.getByRole("button", { name: "Display", exact: true })).toHaveCount(0);
+          await expect(page.getByRole("button", { name: "Add filter", exact: true })).toHaveCount(0);
+          await expect(page.getByRole("button", { name: /^(List|Board) Layout$/ })).toHaveCount(0);
+          await expect(page.getByRole("link", { name: /^(Assigned|Created|Subscribed)$/ })).toHaveCount(0);
+        } else await expect(page.getByRole("button", { name: "List Layout", exact: true })).toBeVisible();
+      }
+      if (path === "/{slug}/drafts") {
+        const create = page.getByRole("button", { name: "Draft a work item", exact: true });
+        if (account === "guest") {
+          await expect(create).toBeDisabled();
+          await expect(
+            page.getByText("You do not have the permission to access this page.", { exact: true })
+          ).toBeVisible();
+        } else await expect(create).toBeEnabled();
+      }
+      if (path === archivedIssuesVisit[0])
+        await expect(page.getByRole("button", { name: "Display", exact: true })).toBeVisible();
       await expect.poll(() => requests.between(load.from)).toEqual({ pending: 0, requests: load.expected });
       if (path === "/{slug}/projects/{project}/issues" && account !== "project non-member") {
         const range = await page.evaluate(() => {

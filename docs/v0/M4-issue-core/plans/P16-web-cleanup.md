@@ -134,11 +134,11 @@ make e2e
 **Files：** E/stories/smoke/s2-web-app.spec.ts；既有issue-list-page/issue-detail-page/browser/auth/issue/issue-list夹具；T2–T5发现的对应组件测试。
 **Interfaces：** followRequests/expectExactly保持精确方法+path+query与重复数，前置经API，不SQL写；四身份与404/403规则不改。
 
-- [ ] Step 1：建立主入口→实际故事/请求表；在S2现有REQUESTS之外补admin/member归档/个人三关系/草稿，保留guest不读个人列表及草稿拒绝、project-non-member不读项目工作项；详情/命令动作与既有S2(detail)/I18/C7互链。
-- [ ] Step 2：跑B stories/smoke/s2-web-app.spec.ts，缺口先有明确路径/预期请求差异；先读生产合同推expected，不把watch实际输出自动照抄成白名单。
-- [ ] Step 3：补入口分支/夹具必要字段与拥有者测试；请求精确、拒绝有可见说明、无旧地址/未处理拒绝/未说明console；不重复实现已有功能，不改权限规则。
-- [ ] Step 4：S2全文件与受影响I故事通过；M18偷偷增加列表GET/重复GET、M19访客个人页误取列表由具体请求断言检出；恢复再绿，API写后确认与DOM就绪不用sleep代替。
-- [ ] Step 5：写A9、四身份/全部M4入口覆盖和实际case数；提交 `test(M4/P16): 补齐最终页面入口与精确请求检查`。
+- [x] Step 1：建立主入口→实际故事/请求表；在S2现有REQUESTS之外补admin/member归档/个人三关系/草稿，保留guest不读个人列表及草稿拒绝、project-non-member不读项目工作项；详情/命令动作与既有S2(detail)/I18/C7互链。
+- [x] Step 2：跑B stories/smoke/s2-web-app.spec.ts，缺口先有明确路径/预期请求差异；先读生产合同推expected，不把watch实际输出自动照抄成白名单。
+- [x] Step 3：补入口分支/夹具必要字段与拥有者测试；请求精确、拒绝有可见说明、无旧地址/未处理拒绝/未说明console；不重复实现已有功能，不改权限规则。
+- [x] Step 4：S2全文件与受影响I故事通过；M18偷偷增加列表GET/重复GET、M19访客个人页误取列表由具体请求断言检出；恢复再绿，API写后确认与DOM就绪不用sleep代替。
+- [x] Step 5：写A9、四身份/全部M4入口覆盖和实际case数；提交 `test(M4/P16): 补齐最终页面入口与精确请求检查`。
 
 ## Task 10：C12三浏览器准备与影响回归（约300–650行）
 

@@ -159,3 +159,21 @@ M17以同一M4临时文件中的显式方法调用为正例，再替换为store.
 Task BASE `565a2927`。README把P12分支和P13–P15待验收历史字样改为已集成的四布局、富筛选、归档/个人三关系、详情/创建/协作/草稿/命令两宿主能力；P16仍明确为实施分支。前端改动清单保留P12原验收数字并修正当前集成标题，新增P16实证；plane-diff对应泛型、旧dropdown链、动态协议、no-shadow与关键词边界。评论只跟进已载增量窗口、HTTP复制失败、M4图片/附件禁用和M6–M8自身页未接通均保持准确。
 
 M1-P3/M1-closeout/M3-closeout只补当前子回执，历史“当时未合并”和失败记录不覆盖；链接P15实际main313728cb/CI/归档说明现状。八份输入顶部全部open，M4设计§14和总体9.4字节未改，未创建未来M4-closeout。静态逐新链接及章节核验14项通过、diff --check通过，A1–A8勾选、A9–A11未勾；`t8-doc-check.json`保存检查输入hash和逐链接。无产品改动，不重复运行整套产品测试。
+
+## 18. T9 S2 最终入口与请求
+
+Task BASE `e0c75a6b`。S2 REQUESTS新增管理员/成员归档、各自个人三关系及草稿；访客补三关系/自己个人页和草稿。四条身份故事共49次冷加载（13/13/15/8），仍按method+path+query和重复数逐次、结尾再次对账。全文件保持13个故事，含未登录、错误工作区、归档项目、新手引导、个人设置及详情三身份；未复制世界夹具，前置仍全部API。
+
+| 入口 | 身份和真实覆盖 | 请求/边界 |
+|---|---|---|
+| 项目列表及四布局 | S2四身份，I3/I4/I6/I7、C3补数据/交互 | 成员一次列表GET及既有两次不同宿主偏好GET；非成员只读项目，不读工作项 |
+| 归档列表 | S2 admin/member，I15/C9补恢复/删除/Back | APP+WORKSPACE及一次issues?order_by=sort_order&sub_issue=true&limit=100&archived=true；归档不经过普通ProjectLayout，不取项目包装层资源 |
+| 个人三关系 | S2 admin/member各自assigned/created/subscribed；I19补跨人/可见项目与续页 | 一次member issues GET，relation准确、order_by=sort_order、sub_issue=false、limit=100；不额外取偏好或标签目录 |
+| 访客个人页 | S2别人三关系/自己assigned/两个原入口；I19桌面手机 | 无个人列表GET、Display/Add filter/布局/关系导航；可见无权限说明 |
+| 草稿 | S2 admin/member/guest；I14和C9补保存/发布/取消/Back | 成员一次无query的个人drafts GET；访客零草稿请求、创建禁用且解释拒绝 |
+| 编号/项目ID详情 | S2(detail)成员200、访客404、非成员403；I1/I2、editor-loading C10两地址 | 按实际回答与DOM/console核身份；不是把动作请求冒充冷加载清单 |
+| 顶部/弹窗命令搜索 | I18两宿主、C7原生动作/IME/Back | 由既有真实动作故事验证，S2无伪造搜索请求名单 |
+
+新增断言先证实访客草稿正文空白：组件 `t9-guest-refusal-red` 与实际 `t9-s2-baseline` 均缺无权限说明。WorkspaceDraftIssuesRoot沿既有canRead判断，在已知访客角色时显示现存双语拒绝文字；加载/退役仍不发请求，未改角色/协议。首次S2管理员/成员失败另是测试预期错误：误套普通项目包装层和服务端偏好默认值；沿core.ts归档独立路由、getComputedDisplayFilters及profile/archived store重新核准本地默认值，未把它记成产品缺陷或照抄实际请求白名单。
+
+修复后两组件文件5/5、S2 13/13、I14/I19页面9/9，make lint-web54任务通过；统一产品/测试输入 `6a97e025ffdae1e84a34a034493bdf3517bb8dbe1316ec91b4ec17b4fb2798f3`，收据输入/输出相同。M18在页面注入一次重复归档GET，M19在访客个人页注入实际列表GET，两次原精确数组断言均显示Received多1；这是浏览器网络故障注入，未声称两个生产实现曾有该错误。临时测试字节恢复、受测bin hash未变，S2恢复13/13。原始补丁/红原因/恢复hash在`t9-request-probes.json`，初次报告和各反例trace另存，不覆盖失败证据。三引擎复验归T10。
