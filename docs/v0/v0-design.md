@@ -192,7 +192,7 @@ GET   /api/v0/issues/{issue_id}/comments
   - `group_by=state_id&sub_group_by=priority` 返回组内 `subgroups`。组续页保留原筛选、`group_by`、`order_by`，另加 `group_key` 和该组游标；泳道还保留 `sub_group_by` 并加 `sub_group_key`。返回平面封套，`total` 为该组/格总数；`label_id=A&group_by=label_id&group_key=C` 仍是 A AND C。
   - 未知 `order_by`、`group_by`、`sub_group_by`、不合格组键及缺少续页所需组/格键均 422；有子分组时只支持格续页。键组合和错误优先级见 [P5 spec §2.4](M4-issue-core/specs/P5-issue-list.md#24-分组与响应)。
   - 列表鉴权、目录、三条静态 SQL、隐藏父项及空游标页补 `total` 都在同一独立 READ ONLY / REPEATABLE READ 快照内。每次请求重新鉴权，不承诺两次请求共用快照。
-  - 工作项默认 `order_by=-created_at`，P5 支持19码；载荷为 `[order,key,id]`，键按排序定型、同键以同方向 `id` 稳序。时间保留微秒、名字按仅折 ASCII 大写后的 Unicode 码点序、两方向 null 均末尾。canonical 封套仍复用 shared；姓名或子项数跨请求变化可使行移动。精确键/游标和后续前端共用样例见 [P5 spec §2.5](M4-issue-core/specs/P5-issue-list.md#25-排序与游标)。
+  - 工作项默认 `order_by=-created_at`，当前支持21码（P5原19码，P8新增正反向 `link_count`）；载荷为 `[order,key,id]`，键按排序定型、同键以同方向 `id` 稳序。时间保留微秒、名字按仅折 ASCII 大写后的 Unicode 码点序、两方向 null 均末尾。canonical 封套仍复用 shared；姓名或子项数跨请求变化可使行移动。精确键/游标和后续前端共用样例见 [P5 spec §2.5](M4-issue-core/specs/P5-issue-list.md#25-排序与游标)。
 
 ### 3.5 错误
 - 统一使用 RFC 9457（`application/problem+json`），`code` 是给程序判断用的固定字符串：
@@ -334,7 +334,7 @@ draft_issues(id, workspace_id, project_id NULL, payload jsonb,
   - 工作项只有处于"已完成"或"已取消"状态组时才能归档。
   - 迭代只有已结束的才能归档；模块只有状态为"已完成"或"已取消"的才能归档。
   - 项目由项目管理员归档。
-  - **自动归档**：项目设置了 `archive_in`（1–12 个月）后，定时任务每天把已完成或已取消、并且超过 `archive_in × 30` 天未更新的工作项自动归档，同时记录一条操作动态。
+  - **自动归档**：项目设置了 `archive_in`（1–12 个月）后，定时任务按配置间隔（默认24小时，启动即运行一轮）把已完成或已取消、并且超过 `archive_in × 30` 天未更新的工作项自动归档，同时记录一条操作动态。
   - 迭代归档时，同时移除指向它的收藏（照搬 Plane）。
 - **审计字段**：`created_by` / `updated_by` 在业务代码中显式赋值为当前账户；`created_at` / `updated_at` 同样由应用在每次插入、每次业务更新时显式写入，取自用例的时钟，数据库的 `DEFAULT now()` 只是应用之外写入时的兜底（M2 设计 3.13）。
 - **排序**：`sort_order` 是浮点数，拖拽时由前端计算新值；初始值的算法和 Plane 一致。
@@ -411,6 +411,7 @@ modules/issue/
                      声明在 app/ports.go，由使用方定义（M2 设计 3.3）
   adapter/
     postgres/        仓储实现（基于 sqlc）；列表引擎这类复杂读取写成专门的查询
+    content/         HTML 清洗及内容标识提取，实现 app 声明的小接口；domain 保持纯规则
     http/            handler：把 oapi-codegen 生成的请求类型转成用例的输入，再把结果转成响应
   module.go          模块入口：给别的模块提供只依赖连接池的适配器的模块有 Provide(pool)，返回这些适配器（6.3 第 4 条）；New(依赖)；(*Module).Register(router, api) 把模块生成的路由挂到 bootstrap 的根路由上，
                      api（httpserver.API）提供错误映射和按路由的中间件；PublicOperations() 列出不需要令牌的操作；

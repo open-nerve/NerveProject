@@ -24,9 +24,9 @@
 | D08 | 七门禁、架构/SQLCSchemaScope/grants双测/CLI/keywords/lint/knip/gen | T4/T9/T13/T14 | T4与T9七门禁通过；T9 E2E 297/297，见[命令收据](closeout-performance.md#7-t9收据与后续边界)。T13最终候选/T14 mainCI待验 |
 | D09 | 八决策/十一架构问题已批准并落实 | T1/T10 | 待验；已批准文本与最终实现对照，无重开未经批准合同 |
 | D10 | §13.1逐项/8输入closed；§13.2四输出及原文/收集箱细节 | T12/T13 | 待验；双向交接索引、逐条证据、原文一致性 |
-| D11 | §3.23每行、§4.17每行、frontend M4、README§8.8 | T11 | 待验；44/45逐行映射与最终数量、目标段/来源 |
+| D11 | §3.23每行、§4.17每行、frontend M4、README§8.8 | T11 | T11完成[44同步/45差异映射](closeout-sync.md)：43同步已核、SYNC44集成待办；目标段/原文/hash齐全 |
 | D12 | C1–C12各Phase有证据，C12最终三引擎 | T5/T6/T7/T13/T14 | T5–T7候选验收通过：原125+新增13项/引擎，21组×3与730个截图记录（T6含一张未完成中文例的部分状态）已看；[逐格记录](closeout-browser-matrix.md)。T13最终输入/T14 main绑定待办 |
-| D13 | M4 dead无未解释行；全仓no-shadow零/error；cap实数下降 | T11/T13 | 待验；原脚本hash、完整raw、逐行ledger、14范围实际cap |
+| D13 | M4 dead无未解释行；全仓no-shadow零/error；cap实数下降 | T11/T13 | T11静态检查通过：[当前354/102来源、历史52逐名](closeout-dead-members.md)，全仓797/328/2；14范围86告警，M4域及全期2124触及路径零诊断，no-shadow零/error；T13最终输入复核待办 |
 | D14 | M4挂载零旧/无权请求、S2四身份、copy-hook无M4例外、13实例清空 | T4/T5/T6/T7/T11 | T4 S2四身份精确请求/重复数、76规则13例外无命中、13历史实例AST为零；见[§3](closeout-web-contracts.md#3-s1s2-与旧实例)。C12/T11终核待验 |
 | D15 | await后跳转/提示核会话，改动hook有换账户兑现测试，C11 | T4/T7/T10 | T4全期hook/调用方映射、复制晚答与归档地址缺口已红绿修复，见[§2](closeout-web-contracts.md#2-等待后的会话与宿主)；T7/C11页面三引擎通过，旧范围迟到结果无副作用；T10复审待验 |
 | D16 | 列表10k/20k/100k、中文两字搜索、规模删除请求/任务、一次清理并交M8 | T8/T9/T12 | T8列表39+搜索13场景通过，首+5warm与原始失败/计划已留存；[实测](closeout-performance.md)。T9规模删除/连接池/清理及三项有效负例通过，见同表§5–7；T12 M8交接待验 |

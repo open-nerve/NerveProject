@@ -174,10 +174,10 @@ NERVE_PURGE_SCALE=1 NERVE_PURGE_SCALE_EVIDENCE="$M4_CLOSEOUT_EVIDENCE/perf/purge
 **Files：** M4-design.md、v0-design.md（此时不改9.4完成）、M2/M3设计涉及段、plane-diff.md、frontend-changes.md、README.md；closeout-dead-members.md（新增）、各包cap（只有实际告警改变时）。
 **Interfaces：** §3.23当前44条、§4.17当前45条，每行原文键→实际目标段→事实证据→核对结论；不靠grep关键字就记同步。
 
-- [ ] Step 1：逐同步行看目标完整段落、逐差异看行为/表列/索引；README§8.8安全/部署/前端、M4前端改动、旧阶段历史状态标识准确。集成项如9.4仍明确待T14。
-- [ ] Step 2：按M1附录原版deadsym/domains/lib/program和P16ledger，在当前typegen输入跑完整AST；保存脚本hash、输入、raw/global及M4行。逐当前行记录删除或真实读者，追溯历史52行；不能改DOMAINS/过滤测试或把453/353历史数当终数。
-- [ ] Step 3：完整lint按原14范围实数，M4域及全M4改动文件零诊断、全仓no-shadow=0且error；cap实际相等只降、无屏蔽残留。`make lint-web`/`make knip`、关键词及13实例精确ledger验证；动态/第三方/测试读者逐行可查。
-- [ ] Step 4：任何删除代码先读最后消费者并补适当回归；这一步后如输入变了更新影响证据。写终数/规则hash/误报理由及44/45映射，提交，不提前勾总体完成。
+- [x] Step 1：逐同步行看目标完整段落、逐差异看行为/表列/索引；README§8.8安全/部署/前端、M4前端改动、旧阶段历史状态标识准确。集成项如9.4仍明确待T14。
+- [x] Step 2：按M1附录原版deadsym/domains/lib/program和P16ledger，在当前typegen输入跑完整AST；保存脚本hash、输入、raw/global及M4行。逐当前行记录删除或真实读者，追溯历史52行；不能改DOMAINS/过滤测试或把453/353历史数当终数。
+- [x] Step 3：完整lint按原14范围实数，M4域及全M4改动文件零诊断、全仓no-shadow=0且error；cap实际相等只降、无屏蔽残留。`make lint-web`/`make knip`、关键词及13实例精确ledger验证；动态/第三方/测试读者逐行可查。
+- [x] Step 4：任何删除代码先读最后消费者并补适当回归；这一步后如输入变了更新影响证据。写终数/规则hash/误报理由及44/45映射，提交，不提前勾总体完成。
 
 ## Task 12：八输入和四输出交接（约500–900行）
 

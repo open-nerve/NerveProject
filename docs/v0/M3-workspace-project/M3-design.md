@@ -541,9 +541,9 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
 - **项目工作项列表的三类设置已在 M4/P5 加回**：`00026_project_project_user_properties_issue_display.sql` 为 `project_user_properties` 加 `filters`、`display_filters`、`display_properties` 三列 `jsonb NOT NULL`（11→14列），不建 `rich_filters`。`workspace_user_properties` 仍只有本节原工作区导航范围，不加这些列。
   - `filters` 默认 `{}`，十个可选 `string[]` 键为 state_id/state_group/priority/label_id/assignee_id/created_by_id/mention_id/subscriber_id/start_date/target_date；不含 archived/sub_issue/project_id，每元素是单个筛选原子或日期条件，不能再塞 CSV 多项。
   - `display_filters` 固定七键，默认 `{"layout":"list","group_by":null,"sub_group_by":null,"order_by":"-created_at","sub_issue":true,"show_empty_groups":true,"calendar":{"layout":"month","show_weekends":false}}`；layout 为 list/kanban/calendar/spreadsheet，calendar.layout 为 month/week，分组和排序复用项目列表词汇。
-  - `display_properties` 固定 assignee/start_date/due_date/labels/key/priority/state/sub_issue_count/link/created_on/updated_on 十一 boolean，默认全 true；link 只是偏好，不提前提供 `Issue.link_count`。
+  - `display_properties` 固定 assignee/start_date/due_date/labels/key/priority/state/sub_issue_count/link/created_on/updated_on 十一 boolean，默认全 true；link 只是显示偏好；`Issue.link_count` 后由 M4/P8 提供，不由偏好端口计算。
   - DB CHECK 只校对象/键集合/类型并用 CASE 保护，词值经 project/app 声明、issue.Provide 提供的纯 `IssueListSettings` 校验，bootstrap 转换各模块 app 小值。既有 GET/PATCH `/api/v0/me/projects/{project_id}/preferences` 使用闭合 typed DTO；结构/null/未知字段400，合法结构的非法词422。GET缺行给默认不写；PATCH逐顶层字段整体替换、{}清filters、省略保留，五个独立set避免 navigation/三设置/顺序互相覆盖；成员退出恢复保留完整偏好与审计，归档读写沿原规则。证据见 [P5 review T13a/b、T14/T15](../M4-issue-core/reviews/P5-issue-list-review.md)。
-  - 前端工作项筛选 store 仍调用 Plane `/projects/{id}/user-properties/`；旧 ProjectService 方法、workItemFilters 与相关 `until:M4/P11` 例外交 P10b 迁移，P11详情数据与后续页面仍开放，服务端三列交付不代表已迁移前端。
+  - P5交付时前端仍使用旧 `/user-properties/`；该历史边界已由 M4/P10b 迁移，旧方法、workItemFilters 与对应例外已删除。P11详情数据及P12–P15页面也已集成，当前直接使用原生三类设置。
 - **行的生命周期**：
   - 项目的显示设置随项目成员关系一起建（Plane `ProjectMember` 的创建路径）。`sort_order`：建项目、添加成员时是他在这个工作区已有的最小值减 10000，没有时 65535（`views/project/member.py:96-118`）；加入项目时是模型的默认值 65535（Plane 的 `join` 用 `bulk_create`，`views/project/invite.py:175-185`）。都照搬。
   - 工作区的显示设置在第一次修改时建：`PATCH` 经部分唯一索引做 `INSERT … ON CONFLICT (workspace_id, user_id) WHERE deleted_at IS NULL DO UPDATE`（spike：两次写入只有一行，值是后一次的；sqlc 能生成）。没有这一行时 `GET` 返回默认值，不写库：总体设计 3.2 规定 GET 没有副作用，Plane 在 GET 里 `get_or_create`（`views/workspace/user.py:269-277`），登记差异。
@@ -1228,7 +1228,7 @@ modules/access/
 - **services**（`core/services/`）：`workspace.service.ts`、`project/*.service.ts`、`issue/issue_label.service.ts` 中 M3 的 56 个方法改为按资源的新 service（`workspace`、`workspace-member`、`workspace-invitation`、`project`、`project-member`、`state`、`label`、`preferences`），每个方法一次调用生成的客户端。`user.service.ts` 的 `currentUserSettings`、`leaveWorkspace`、`joinProject`、`leaveProject` 移入对应的新 service 或删除（M2 交接第 11 节）。
 - **挂载路径上的取数**：`WorkspaceAuthWrapper`、`ProjectAuthWrapper`、`TopNavigationRoot` 挂载时的取数在 P8a、P8b 处理：M6、M7 的删除和工作区一侧的改调在 P8a，项目一侧的随各自的 store 在 P8b 改调；M3 自己的都按 7.1 由权限启用（3.1、第 12 节）。
 - **P8a、P8b 的使用方**：store 的方法签名和字段一变，调用它们的页面和组件（第 1 节：`useProject` 129 个文件等）要在改这个 store 的 Phase 改到能编译、行为不变；页面的新行为（新手引导、邀请页、设置页）在 P9–P11。
-- **旧 `ProjectService`（`core/services/project/project.service.ts`）留下三个方法**，其余的删除：
+- **M3交付时的旧 `ProjectService` 历史快照**（`core/services/project/project.service.ts`）：当时留下三个方法，其余删除；三个方法及整个旧service现已由M4/P10b–P14迁移并删除。以下保留原消费链说明：
   - 取、改项目用户属性的两个方法：M4 的筛选 store 使用（`core/store/issue/project/filter.store.ts:127,174,236,256`，3.18）。它们的地址是 M3 替换的地址（`/user-properties/`），关键词守卫为它们登记例外（7.10）。
   - `projectIssuesSearch`：工作项搜索，三个调用方属于后续的 M，要在 M3 之后仍能编译（Codex M-3）：`core/components/issues/parent-issues-list-modal.tsx:68`（选父工作项，M4）、`core/components/core/modals/existing-issues-list-modal.tsx:104`（向迭代、模块加已有的工作项，M6）、`core/components/inbox/modals/select-duplicate.tsx:62`（收集箱查重，M7）。它的地址 `/search-issues/` 不是 M3 替换的地址，不在关键词规则里，不需要例外。
   - 选"留在旧 service"而不是"与调用方一起移到一个新的旧搜索 service"：移动只是换个文件名，三个调用方和它们的 M 都不变，M4 定下工作项搜索的接口时一次替换。
