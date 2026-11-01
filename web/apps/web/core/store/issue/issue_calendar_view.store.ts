@@ -197,10 +197,12 @@ export class CalendarStore implements ICalendarStore {
    */
   regenerateCalendar = () => {
     const startOfWeek = this.rootStore.rootStore.user.userProfile.data?.start_of_the_week ?? EStartOfTheWeek.SUNDAY;
-    const { activeMonthDate } = this.calendarFilters;
+    const { activeMonthDate, activeWeekDate } = this.calendarFilters;
 
     // Force complete regeneration by passing null to clear all cached data
     const newCalendarPayload = generateCalendarData(null, activeMonthDate, startOfWeek);
+    // Month and week navigation retain independent dates; both need the new week boundary.
+    generateCalendarData(newCalendarPayload, activeWeekDate, startOfWeek);
 
     runInAction(() => {
       this.calendarPayload = newCalendarPayload;

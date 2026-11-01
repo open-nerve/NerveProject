@@ -15,12 +15,13 @@ import {
   drop,
 } from "./fake-calendar";
 import { act } from "react";
+import type { Profile } from "@nerve/api-client";
 import { expect, it, vi } from "vitest";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import { loadProjects } from "@/store/project/fake-projects";
-import { issueDetailOf } from "@/store/issue/fake-issues";
+import { issueDetailOf, requestedIssue } from "@/store/issue/fake-issues";
 import { HIGHLIGHT_CLASS } from "../utils";
 it.each(["Enter", " "])("the calendar card menu is keyboard reachable by %s and does not open peek", async (key) => {
   await mount();
@@ -62,6 +63,56 @@ it("the mobile selected-day section is mounted once", async () => {
   expect([...document.querySelectorAll("p")].filter((node) => node.textContent === "31 December, 2026")).toHaveLength(
     1
   );
+});
+it("keeps the navigated week and both date ranges when a confirmed start-of-week preference changes", async () => {
+  await mount("week");
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>('button[aria-label="issue.calendar.next_period"]')!.click()
+  );
+  await until(() => lists().length === 2, "January week read");
+  expect(lists()[1]!.query.target_date).toBe("2027-01-03..2027-01-09");
+  await act(async () => lists()[1]!.answer(json(200, { total: 0, groups: [] })));
+  const preference = await requestedIssue(
+    tab.nerve,
+    () => tab.app.user.userProfile.updateUserProfile({ start_of_the_week: 1 }),
+    ["PATCH", "/api/v0/me/profile"]
+  );
+  expect(preference.call.body).toEqual({ start_of_the_week: 1 });
+  expect(tab.app.issue.issueCalendarView.getStartAndEndDate("week")).toEqual({
+    startDate: "2027-01-03",
+    endDate: "2027-01-09",
+  });
+  const profile: Profile = {
+    theme: "system",
+    language: "en",
+    start_of_the_week: 1,
+    is_onboarded: true,
+    is_tour_completed: false,
+    last_workspace_id: tab.workspace.id,
+    updated_at: "2027-01-07T12:00:00Z",
+    onboarding_step: { profile_complete: true, workspace_create: true, workspace_invite: true, workspace_join: true },
+  };
+  await act(async () => {
+    preference.call.answer(json(200, profile));
+    await preference.promise;
+  });
+  expect(tab.app.issue.issueCalendarView.getStartAndEndDate("week")).toEqual({
+    startDate: "2027-01-04",
+    endDate: "2027-01-10",
+  });
+  expect(tab.app.issue.issueCalendarView.getStartAndEndDate("month")).toEqual({
+    startDate: "2026-11-30",
+    endDate: "2027-01-03",
+  });
+  await until(() => lists().length === 3, "confirmed Monday range read");
+  expect(lists()[2]!.query).toMatchObject({
+    group_by: "target_date",
+    priority: "urgent",
+    target_date: "2027-01-04..2027-01-10",
+    limit: "30",
+  });
+  await act(async () => lists()[2]!.answer(json(200, { total: 0, groups: [] })));
+  expect(tile("2027-01-07").element.querySelector('button[aria-label="2027-01-07"]')?.textContent?.trim()).toBe("7");
 });
 it("date drag has no premature highlight or move, confirms only target_date and does not repeat a same-day drop", async () => {
   await mount();
