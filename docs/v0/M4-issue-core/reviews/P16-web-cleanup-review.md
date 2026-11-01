@@ -1,8 +1,10 @@
 # M4/P16 前端清理：预检与后续实施记录
 
-日期：2026-11-01。状态：预检通过，已授权实施，T1–T9 已完成，T2 失败已由 T5 修复并验证，T10 本地验证完成，准确检查点 CI 与 T11 终审待核。基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，分支 `codex/m4-p16`；[spec](../specs/P16-web-cleanup.md)、[plan](../plans/P16-web-cleanup.md)、[准备盘点](P16-web-cleanup-inventory.md)、[deep-review预检](../../../reviews/re-26-M4P16预检审核.md)。
+日期：2026-11-01。状态：实施与整审完成，集成待办；产品候选准确 CI 全绿，最终文稿 CI 由§22后置收据签结。基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`，分支 `codex/m4-p16`；[spec](../specs/P16-web-cleanup.md)、[plan](../plans/P16-web-cleanup.md)、[准备盘点](P16-web-cleanup-inventory.md)、[deep-review预检](../../../reviews/re-26-M4P16预检审核.md)。
 
 ## 1. 前置与方法
+
+§1–8 保留准备时点的决定、限制和核验；当前实施验收以§9以后及§21–22为准。
 
 P15 的授权合并、准确 main CI、证据归档及正常清理见 [P15 review §13](P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)。本期分支从该 main 基线独立建 worktree，主目录仍 main；原生 worktree 工具不能指定负责人的路径，因此用系统 git worktree add。
 
@@ -25,8 +27,8 @@ brainstorming 要求的 fresh builder-check 只读完整 spec/plan/inventory 与
 | A7 | T7隐式getter/显式方法区分、M7三文件与原store测试 | 已通过，见§16 |
 | A8 | T8 README/两清单/交接子项与实际能力对账 | 已通过，见§17 |
 | A9 | T9 S2入口/四身份精确请求与拥有者测试 | 已通过，见§18 |
-| A10 | T10三引擎同范围清单、影响回归、最终C12留收尾 | 本地通过，见§20及 C12 表 |
-| A11 | T11完整F、deep-review/修复复审、准确分支HEAD CI | 待实施 |
+| A10 | T10三引擎同范围清单、影响回归、最终C12留收尾 | 已通过，见§20–21及 C12 表 |
+| A11 | T11完整F、deep-review/修复复审、准确分支HEAD CI | 本地及候选通过；最终文稿按§22后置收据签结 |
 
 ## 3. 准备决定
 
@@ -46,7 +48,7 @@ spec D1–D8均为已批准设计内的落地决定，无待裁定项。保持�
 
 T1/T7把M6/M7真实读者与最后删除条件写入现有输入，closeout再汇成最终M4-closeout。M7视图服务/版本旧DTO、完整工作区标签、收集箱来源/系统创建者和lazy pending discard仍在各自阶段。全M4终审、控制者全路径C12、§3.23/§14、总体9.4、性能数字与八份输入顶部关闭继续留closeout。
 
-## 7. 已知限制与待验证
+## 7. 准备时点的已知限制与待验证
 
 静态候选453行尚未逐一完成T4裁定；103条显示+8条隐藏诊断的63文件待核范围不是固定上限，当前TS接口编译绿也不能证明泛型新增合同。类型子元素与父组件的泛型关系不能由独立JSX Option保证。现存M6/M7页面未接通的责任未改变，旧URL规则零命中不能代表全应用零旧请求。三浏览器准备还未运行P16测试，不能把P12–P15的旧矩阵当本期结果。
 
@@ -189,3 +191,23 @@ Task BASE `e0c75a6b`。S2 REQUESTS新增管理员/成员归档、各自个人三
 真实失败推动三项 editor 局部修复：包装层只代理自身 focus，widget DOM 生命周期负责 ReactRenderer 创建/销毁，已挂载菜单 effect 负责 table 键盘标志清理。行列控件具名、键盘初始焦点/回焦、原行列选择命令与当前语言 context 在真实组件及数据库页面回归通过。新增宿主切换语言、草稿弹窗/peek 两级 Escape 检查未发现另一项产品缺陷。ContinueWriting 空首段疑点经边界用例证伪，原逻辑保留。Firefox S2 硬导航中止字体请求按实际就绪同步修复，不放宽 console 断言。
 
 完整 F 七项串行验证通过：F1–F3 原件 `t10-final-f1-gen-check` 至 `t10-final-f3-test`，输入 SHA `e48268d018d2f9a2942c61b4bc2a9ec3f48768dd370dcad59d0b63ab24ee1a44`；F5–F6 原件 `t10-r2-f5-knip` / `t10-r2-f6-test-web`，输入 SHA `b2a27d8b467e9028863d9a777be0da0be0c584e272723a5c2909125a8242df16`；F4/F7 采用 `t10-r3-f4-lint-web` / `t10-r3-f7-e2e`，输入 SHA `4e528b54eba7c3eaeebd689f20f2dd6221a7252300e6a1ba5666da518c800857`。每份收据 input/outputState 相同。首次 F4 只发现 S2 使用 FontFaceSet 展开语法不在当前 DOM 类型声明中；改用现有 forEach API 保留同一失败字体检查，不增加类型豁免。其后完整 E2E 揭示 I11 DOM-only 全选与回焦同步竞争，受控真实回调复现了文字追加；正式用例沿既有 I2/I12 采用键盘全选并加强全文/请求断言，三个引擎各十遍通过，最终完整 E2E 284/284。过程与未复现的先行实验见 `i11-root-cause.md`，临时诊断全部撤回。三输入之间仅这两个 E2E 测试文件变化，3,956 个非 Markdown 文件逐 hash 对账，生成/服务端和前端单测/依赖输入未变；据 `t10-f-r3-input-equivalence.json` 复用 F1–F3/F5–F6，不冒称同一全仓 SHA 或重跑。Firefox/WebKit S2 最终另各复验 13 项通过。三引擎、配置显式 lint、M20/M21 红绿均可追溯，所有原失败保留。准确检查点 CI 另记§21，不用本地或 T5 绿代替。
+
+## 21. T10 检查点与准确 CI
+
+T10 提交 `f03b6a28526ff367c6da481ca843def4167eb05c` 已由系统 Git 推送，远端检查点 [CI 41284262845](https://github.com/open-nerve/NerveProject/actions/runs/41284262845) 第 1 次运行三作业全部 success：web（124782250185）、server（124782250297）、e2e（124783945606）。公开 run/jobs 原件 `t10-ci-final-run.json` / `t10-ci-final-jobs.json` 核准 head_sha、branch、作业与步骤终态；T5 的绿色没有代替本提交。
+
+## 22. T11 整分支审查与交付
+
+基线 `313728cbc61003d7ed072c1e1e191e1cc2a3d75a` 至产品候选 `f03b6a28526ff367c6da481ca843def4167eb05c`，主控按 deep-review 顺序完成逻辑、集成、测试覆盖三视角；[整审报告](../../../reviews/re-27-M4P16整体审核.md)记各发现、必要测试、修复和限定复审。无待决架构/协议或跨模块责任重定义问题。代码、本地验证及准确产品候选 CI 审查通过；全部局部发现已修复复审。最终文稿提交仍须以下述后置收据核对准确 HEAD，满足后才签结阶段交付。
+
+终态证据：
+
+- 原 AST 在 fresh typegen 后运行，2,268 个源码/生成类型输入；全仓 member798/prop332/export2，M4候选353行全部具名对账，见 [ledger §7](P16-dead-members.md#7-t11-最终源码对账)。T4 的449=91删除+358保留及历史52行保留原快照，当前353不冒充新增删除。build/cache曾移走74个ignored类型文件，显式typegen后所有2,268个输入hash仍相同；不拿缺类型的扫描作终态。
+- `t11-current-lint` 与 `t11-current-scope-check` 在准确候选上重新执行：14个原lint范围实际cap总86、no-shadow/error为0；M4领域与全期963个修改路径零诊断。关键词76规则/13例外零命中，原规则、domains和豁免未放宽。
+- `t11-mutation-audit.json`复核20个有效负例和1个正例，核原失败原因、日志hash、输入稳定与源码恢复；M06首次无关错误、未复现的I11诊断和测试预期错误不计有效反证。历史源码后有合法改动时按被验合同逐段核对，不冒称全文件仍同hash。
+- 本地完整F与三引擎125项/引擎的组成见§20及[C12表](P16-C12-preparation.md)；最终默认E2E284/284，I11三引擎各10/10，Firefox/WebKit S2各13/13。`t11-candidate-input-equivalence.json`将当前产品提交与3,956个非Markdown输入逐hash绑定，没有新产品修改或未解测试失败，不重复未受影响套件。
+- 文档核验覆盖新增相对链接/章节、A条款、8份handoff仍open、main工作树、M4设计§14/总体设计字节未变；`t11-files-final.json`列全分支文件/hash，最终 `evidence-manifest.json`覆盖实施根和主目录准备根。完整证据保留到未来授权集成和归档复验。
+
+局部裁定：共享编辑器由实际DOM/面板拥有者负责focus和释放，理由是原回调不覆盖直接退役；误判代价是输入或外层Escape回归，已用真实公开ref、数据库页面和三引擎覆盖。自动输入沿编辑器键盘路径，理由是DOM-only选择会被回焦同步覆盖；误判代价是掩盖产品输入缺陷，因此保留受控原回调复现和原严格console/请求观察。最终ledger按当前symbol读者重映射，理由是夹具移动/分类变化不等于删除；误判代价是误删动态合同，原AST与逐行映射及DOM反证共同约束。
+
+最终文稿提交另行推送并核准确HEAD；`.superpowers/sdd/P16-web-cleanup/final-delivery.json`必须同时记录本地/远端相同40位SHA、run/attempt和三作业success，才能交付。该后置收据不由旧候选CI代替。当前保留分支和worktree，未合并、未清理、未启动M4 closeout。

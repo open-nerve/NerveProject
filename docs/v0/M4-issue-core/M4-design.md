@@ -2445,7 +2445,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：I11–I14、I16、I18 的页面版本和 I20 的评论通过；`copy-hook` 没有 M4 的例外；`git grep` 不再找到 M4 的 13 处模块级实例；C6–C8 和 C9 的草稿通过。
 
 ### P16 `web-cleanup`：死成员、`no-shadow` 与守卫的终态（11 个任务）
-- **准备入口**：[spec](specs/P16-web-cleanup.md)、[plan](plans/P16-web-cleanup.md)、[review](reviews/P16-web-cleanup-review.md)。基线 main 313728cbc61003d7ed072c1e1e191e1cc2a3d75a；文档预检通过并已授权实施，T1–T10 本地验证完成，准确检查点 CI 与 T11 终审待核。准备基线为32个选择器生产文件、46条已知no-shadow（38显示+8隐藏）和453个M4 dead候选；实际处理以 review 的新扫描与真实读者为准，不把历史粗项数当执行上限。
+- **准备入口**：[spec](specs/P16-web-cleanup.md)、[plan](plans/P16-web-cleanup.md)、[review](reviews/P16-web-cleanup-review.md)。基线 main 313728cbc61003d7ed072c1e1e191e1cc2a3d75a；文档预检通过并已授权实施，T1–T10 本地验证完成，T11 整审完成，准确产品候选 CI 全绿；最终文稿 CI 按 review §22 后置签结，阶段尚未合并。准备基线为32个选择器生产文件、46条已知no-shadow（38显示+8隐藏）和453个M4 dead候选；实际处理以 review 的新扫描与真实读者为准，不把历史粗项数当执行上限。
 - **目标**：M4 领域的死成员、oxlint、关键词守卫到达终态；跨 M 的共用件按交接处理。
 - **任务**：
   1. 数一次 `getTabIndex` 的调用方：没有了就删除它和常量、`CustomMenu` 读 `tabIndex` 的一支；还有 M6、M7 的就写进它们的交接（M3 交接第 7 节）。
@@ -2596,7 +2596,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **已完成**：最终分支 c57bbe6b 经 --no-ff 合并 main 8bb4bbcb；[main CI 41163365163](https://github.com/open-nerve/NerveProject/actions/runs/41163365163) attempt 2 三任务全绿。2,133 份运行证据与 11 份准备材料归档复验后分支/worktree 正常清理，见 [review §15](reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31) |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | **已完成**：原分支 ec5f38b5 与集成测试修复 9a86211a 均 --no-ff 合入 main 7a81ea18；[main CI 41205272945](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务成功，两个分支/worktree 已归档复验并清理。见 [review §15–16](reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31) |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述历史、草稿、搜索、命令面板（16） | **已完成**：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。 [review §13](reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01) |
-| P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | **实施中**：[spec](specs/P16-web-cleanup.md)、[plan](plans/P16-web-cleanup.md)、[review](reviews/P16-web-cleanup-review.md)、[预检审核](../../reviews/re-26-M4P16预检审核.md)。按已授权计划从 T1 推进；phase=M4/P16，阶段末 deep-review，先不合并 |
+| P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | **实施与整审完成，集成待办**：[spec](specs/P16-web-cleanup.md)、[plan](plans/P16-web-cleanup.md)、[review](reviews/P16-web-cleanup-review.md)、[整体审核](../../reviews/re-27-M4P16整体审核.md)。phase=M4/P16；准确产品候选CI全绿，最终文稿按review§22后置收据签结，先不合并 |
 | 收尾 `closeout` | 交接、同步核对、浏览器核对 C12、规模和性能的数字（14） | 未开始 |
 
 ## 16. 风险

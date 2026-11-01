@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见 §26：P15 已完成集成与归档清理；P16 文档预检通过，暂不实现。此前各节保留历史快照。**
+**当前接续点见 §27：P16 实施与整审完成，产品候选 CI 全绿、最终文稿 CI 由交付收据签结；按负责人要求先不合并。此前各节保留历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -261,10 +261,20 @@ T1 已完成：phase M4/P15，时间线 37 个聚焦单元测试、I12 两 API/�
 下一步等待负责人安排。P16 全局 dead/no-shadow 与守卫、C12、M4 §14/总体 §9.4、输入 handoff 顶部关闭、M5–M8 的最终 M4-closeout 均保留后续责任；本轮不开始 P16。主目录一直保持 main。
 
 
-## 26. 当前接续：P15 完成、P16 文档预检（2026-11-01）
+## 26. 历史接续：P15 完成、P16 文档预检（2026-11-01）
 
 P15 已完成：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。I13 首次 main 失败的请求串扰、测试修复和完整验证见 [P15 review §12–13](../M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)。
 
 P16 分支 `codex/m4-p16`，worktree `.codex/worktress/codex/m4-p16`，基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`。[spec](../M4-issue-core/specs/P16-web-cleanup.md)、[plan](../M4-issue-core/plans/P16-web-cleanup.md)、[review](../M4-issue-core/reviews/P16-web-cleanup-review.md)、[预检审核](../../reviews/re-26-M4P16预检审核.md)已完成准备核验，11 Task/55步骤与11A均未实施。没有产品代码、依赖安装或P16产品测试；phase仍M4/P15。主目录准备原件在 `.superpowers/sdd/P16-preparation-20261101/`，后续归档须同时保留。
 
 等负责人授权后从T1开始。M6/M7最后读者保留、全仓no-shadow和M4逐行dead ledger、共享选择器类型/真实行为、S2终稿与C12准备为下一阶段范围；最终C12、M4§14/总体9.4、输入顶层关闭和M5–M8最终交接均留closeout。
+
+## 27. 当前接续：P16 实施与整审交付（2026-11-01）
+
+分支 `codex/m4-p16`，worktree `.codex/worktress/codex/m4-p16`，基线 main `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`。[spec](../M4-issue-core/specs/P16-web-cleanup.md)、[plan](../M4-issue-core/plans/P16-web-cleanup.md)、[阶段记录](../M4-issue-core/reviews/P16-web-cleanup-review.md#22-t11-整分支审查与交付)、[整审报告](../../reviews/re-27-M4P16整体审核.md)。主控顺序完成 deep-review 三视角；全部局部发现已修复并限定复审，无待决架构问题。本地验证及准确产品候选 CI 全绿；最后文稿提交由下述准确收据后置核准，先不合并。
+
+本地七门禁通过，默认E2E284/284；三引擎各125个唯一用例组成与补验见[C12准备表](../M4-issue-core/reviews/P16-C12-preparation.md)。全仓no-shadow=0且error，M4领域/本M改动范围零告警，原AST353个M4候选逐行核真实读者；20个有效负例及1正例均核原始失败/恢复，不用候选数冒充删除数。共享选择器、编号暖路由、编辑器focus/退役和I11测试选区竞争的原因、失败及修复均保留。
+
+最终文稿的准确SHA/run/attempt/jobs由worktree `.superpowers/sdd/P16-web-cleanup/final-delivery.json`后置核准；必须本地/远端HEAD一致且三作业全绿才交付。实施证据和主目录 `.superpowers/sdd/P16-preparation-20261101/` 准备材料都保留，未来归档须覆盖两根。主目录始终main，本轮不合并、不清理worktree、不启动closeout。
+
+最终控制者全路径C12、M4设计§3.23/§14、总体9.4、规模数字、八份输入顶部关闭和M5–M8最终M4-closeout仍留独立收尾；P16通过不等于M4已完成。

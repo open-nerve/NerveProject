@@ -149,18 +149,18 @@ make e2e
 - [x] Step 2：明确组合配置并--list，检查Chromium/Firefox/WebKit各非零、标题和范围相同；没有执行的页面格标待收尾，不写通过。
 - [x] Step 3：只补当前改动暴露的焦点裁切/菜单/右键缺口，保留真实控件与数据库/请求观察；框架已有fixture直接复用。
 - [x] Step 4：make build后串行三引擎受影响入口；记录各格实际run/skip/截图/trace和console，新config用显式文件路径补oxlint；若根ignorePatterns跳过，按P15已证实方法复制完全相同规则到临时配置、只去掉ignorePatterns后扫描该文件（--no-ignore本身不能覆盖配置排除；生产配置不变）；M20恢复默认Firefox A4 grep由清单断言失败，M21关键焦点/右键行为失效由真实页面断言失败。恢复；串行F并固定候选输入。
-- [ ] Step 5：写A10，清楚标“C12准备及受影响自动回归完成，控制者最终全路径C12待closeout”；提交 `test(M4/P16): 准备三浏览器收尾矩阵并核共享控件影响` 后push检查点，核远端HEAD和CI。
+- [x] Step 5：写A10，清楚标“C12准备及受影响自动回归完成，控制者最终全路径C12待closeout”；提交 `test(M4/P16): 准备三浏览器收尾矩阵并核共享控件影响` 后push检查点，核远端HEAD和CI。
 
 ## Task 11：整分支deep-review与阶段交付（约350–800行文档，修复另计）
 
 **Files：** 全分支baseline..candidate，spec/plan/review/inventory/dead与C12表、设计§15、输入子回执，新增docs/reviews/re-NN-M4P16整体审核.md（届时取下一个编号）。
 **Interfaces：** 复用既有资源/权限/会话，不把预检结论当实现批准。
 
-- [ ] Step 1：固定候选输入、更新AST/改动文件警告/全仓no-shadow/cap/关键词终态，A1–A10逐条要求与实际证据对账；未影响旧证据须hash和input等价证明才能复用。
-- [ ] Step 2：由主控按deep-review顺序审逻辑、集成、覆盖，读跨Task调用链和测试；至少抽十五个有意义负例/变异并复核红失败原因与恢复。无授权不另起并行审者。
-- [ ] Step 3：局部根因修复并补必要验证，按修复范围复审；结构/高风险问题先提交现有成果再报负责人，保持未完成状态。
-- [ ] Step 4：最终串行F（同输入已有最终F且无新变化不重复），逐引擎影响回归、文档/所有输入验真、完整证据manifest；提交/推送后核准确branch HEAD三CI job全绿，不用较早检查点代替。
-- [ ] Step 5：全部条件成立才勾A11与阶段完成、记录review/deep-review/CI/raw入口；提交 `docs(M4/P16): 记录前端清理终审与阶段验收` 并推送，最终文档提交也须准确HEAD三CI job全绿，提交后收据留在证据目录，不能以此前候选绿代替。先不合并，不清理worktree，不启动closeout实现。
+- [x] Step 1：固定候选输入、更新AST/改动文件警告/全仓no-shadow/cap/关键词终态，A1–A10逐条要求与实际证据对账；未影响旧证据须hash和input等价证明才能复用。
+- [x] Step 2：由主控按deep-review顺序审逻辑、集成、覆盖，读跨Task调用链和测试；至少抽十五个有意义负例/变异并复核红失败原因与恢复。无授权不另起并行审者。
+- [x] Step 3：局部根因修复并补必要验证，按修复范围复审；结构/高风险问题先提交现有成果再报负责人，保持未完成状态。
+- [x] Step 4：最终串行F（同输入已有最终F且无新变化不重复），逐引擎影响回归、文档/所有输入验真、完整证据manifest；提交/推送后核准确branch HEAD三CI job全绿，不用较早检查点代替。
+- [x] Step 5：全部条件成立才勾A11与阶段完成、记录review/deep-review/CI/raw入口；提交 `docs(M4/P16): 记录前端清理终审与阶段验收` 并推送，最终文档提交也须准确HEAD三CI job全绿，提交后收据留在证据目录，不能以此前候选绿代替。先不合并，不清理worktree，不启动closeout实现。
 
 ## 变异与证据索引
 
