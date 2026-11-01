@@ -328,3 +328,15 @@ P16 的全局 dead/no-shadow、C12 与总守卫、M4 收尾逐条 §14/总体 9.
 修复后的完整七门禁 `t16-ci-full-f1–f7` 全部 exit 0，在同一输入 `f6d7c5f62b1145f677d063aa745c4cb0a65b64855534d048bdab859b3993335e` 下顺序执行，期间无文件变化；程序 `329e0da55edc82fd767d0bb7bb7ede8ec104ae3f8c3c3a6b2124f522de0d3ef0`。生成检查、Go lint、Go 普通测试 51 包通过（另 16 包无测试）、前端类型/格式/lint 54/54、knip、强制无缓存前端测试 296 文件/3130 项加 Node 5 项，以及完整默认 E2E **279/279**（Chromium 277、Firefox 2，0 skip）均通过。原始收据、八包测试日志和完整页面结果已独立复制到 `t16-ci-full-summary.json`、`t16-ci-full-package-test-logs/`、`t16-ci-full-e2e-results/`；旧轮与原失败保留。
 
 最后候选一次提交这项修复、完整验收文稿及证据入口；本地通过不代替准确最终 HEAD CI。后置 final-delivery.json 必须验本地/远端同一 SHA、三个 CI 作业全绿、主目录 main 未变、两处证据逐文件摘要，才报告阶段交付。没有合并、清理或启动 P16。
+
+## 12. main 首次 CI 的 I13 测试修复（2026-11-01）
+
+负责人授权后，P15 已由 de9a36fc --no-ff 合入 main b79c25f1；阶段最终 CI 41238185478 三任务全绿。首次 [main CI 41263412461](https://github.com/open-nerve/NerveProject/actions/runs/41263412461) attempt 1 则是 server/web 成功、E2E 278 通过/1 失败。I13 把编辑器初始化的格式迁移 PATCH 错当成还原而合成 403，真正还原收到 200 后弹窗正确关闭；不是已知 W11，也不是产品吞错。三个请求的原始 body/status 与 trace 摘要见主目录集成根 `i13-failure-analysis.json`。
+
+按 02 在新的 `codex/m4-p15-ci` 工作树局部修复：先实际加载详情和编辑器、等待迁移确认，返回列表后才开启分页/拒绝拦截；拒绝仅针对普通还原；发出时记录 body，两次还原与 Original HTML 逐值相等，正常格式迁移不再算作重复提交。WebKit 真实详情预热消除测试 routing 与预加载缓存相互干扰，严格 console/CSP/网络检查保持。只改一个 E2E 文件与审查记录，产品/API/权限/队列/依赖/phase 不变。
+
+主控顺序完成逻辑、集成、覆盖三视角的 [deep-review](../../../reviews/re-25-M4P15集成修复审核.md)，没有待决架构问题。I13 三引擎各3项，共9/9；旧总 PATCH 计数反证准确失败 expected 2 / received 3，恢复逐hash相同。早期扣住前一写却等待后一写的夹具假设被既有队列推翻，WebKit预加载警告和一次错误选择器原件保留，没有记成产品反证或隐藏警告。
+
+完整本地七门禁在同一输入 `d82bfe2eae1187b319892b0b259b1716e2339effe38dd16a31e7df4a60240a75` 下全部 exit 0；Go普通测试51包/另16包无测试、静态54/54（36缓存）、knip、无缓存296文件/3130 Vitest加Node5、默认E2E **279/279**（Chromium277、Firefox2，0 skip）。最终程序摘要 `17ef9aeb121b49d128cf11dfe8910b8704f98ee2179a59a119db506f920a0c10`。七项运行期间输入稳定；事后仅补本节与审核的已得结果，不改变任何测试或产品字节。
+
+修复原件在本工作树 `.superpowers/sdd/P15-ci-i13/`，`final-summary.json`、分包日志、完整页面结果和所有历史失败均保留。主目录 `.superpowers/sdd/P15-integration-20261101/` 保存原 main 失败元数据、日志与 artifact；ZIP SHA-256 `89cde27ef838dade8796238a444f87199213c03be47f5215ccfa54a40a894685`，通过 GitHub 连接器取得，没有提取凭据。修复分支准确 CI、后续 --no-ff/main CI 与归档清理由后置集成收据核准；P16 仍只准备、不实现。
