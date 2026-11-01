@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-**当前接续点见 §28：P16 已合并、main CI 全绿且归档清理完成；M4 closeout 的 spec/plan/文档预检已准备，暂不实施。此前各节保留历史快照。**
+**当前接续点见 §29：M4 closeout T1–T9 已完成；T10 发现 R06 跨模块权限来源问题，证据与建议已准备，提交后待负责人决策。暂不合并。此前各节保留历史快照。**
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -286,3 +286,13 @@ P16 最终 `582694d96303f11cf57568f8c84edd3006a36752` 已经授权 `--no-ff` 合
 收尾分支 `codex/m4-closeout`，worktree `.codex/worktress/codex/m4-closeout`，基线同上main。[spec](../M4-issue-core/specs/closeout.md)、[plan](../M4-issue-core/plans/closeout.md)、[预检记录](../M4-issue-core/reviews/closeout-preflight.md)、[deep-review报告](../../reviews/re-28-M4收尾预检审核.md)已完成文档预检；14Task覆盖C12三引擎21组入口、18完成条款、全M4整审、20k列表/清理计时缺口、8输入和4输出及最后集成。独立builder无待答实质问题，主控文稿修订已复核。
 
 **2026-11-01 已获准实施。** 从 T1 顺序执行，phase 已改为 M4/closeout，范围及原文来源见 [验收台账](../M4-issue-core/reviews/closeout-acceptance.md)，C12 见 [最终矩阵](../M4-issue-core/reviews/closeout-browser-matrix.md)。T1 已固定 22 故事、26 交错、44 同步行、45 差异行、C1–C12、18 完成条款、18 Phase 两类来源与八输入；lint-web 通过。其他条目按实际证据推进，不预签结。阶段末 deep-review 后先不合并，T14 仅准备集成包；最终 main CI、M4 §14 全勾和总体 §9.4 完成标记仍需后续集成。准备证据保留在主目录 `.superpowers/sdd/M4-closeout-preparation-20261101/`，本次实施证据在 worktree `.superpowers/sdd/M4-closeout/`，技能进度在 `.superpowers/sdd/closeout/`，未来均须归档。
+
+## 29. M4 收尾实施：R06 待负责人决策
+
+T1–T9 已完成，C12 三引擎与规模测量证据已保留。T10 全 M4 deep-review 已修复 R01–R05，最新产品提交 `83543d5f29cda1e76fc99df3885ddc54ecd47a3f`；审查仍未完成。
+
+R06 复现：先读取项目详情，再让完整项目目录不再包含该私有项目，旧详情仍保持权限事实，工作项缓存与迟到列表没有失效。不预读详情的对照通过。原用例已精确还原并 51/51 通过，诊断补丁单独保存。
+
+推荐修正 ProjectStore 的完整目录缺席与旧详情选择语义，保持 IssueRootStore 统一拥有工作项权限失效；涉及 M3/M4 协同，按负责人纪律先提交再上报。详见 [问题与建议](../M4-issue-core/reviews/closeout-permission-decision.md) 和 [全 M4 审查记录](../../reviews/re-29-M4整体审核.md)。
+
+分支 `codex/m4-closeout`，收尾基线 `01e40e113e11365a4eeacc2794973de2751dde61`；主目录保持 main。获批准后先同步设计/spec/plan 再修复 R06，继续 T10 剩余完整审查与 T11–T14 Step 1；C12 最终输入、最终完整 F、准确分支 CI 和 fresh-context 分支审查尚未收口。D18、完成标记和 main CI 仍留待未来获准集成，不合并、不清理当前分支或 worktree。
