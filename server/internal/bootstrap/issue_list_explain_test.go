@@ -109,7 +109,36 @@ func listScaleMetadata(t *testing.T, roles splitRoles, pool *pgxpool.Pool) map[s
 	if err := roles.owner.QueryRow(ctx, "SELECT current_user").Scan(&owner); err != nil {
 		t.Fatal(err)
 	}
+	if user == owner {
+		t.Fatal("scale observations must use the runtime role")
+	}
 	values["postgres"], values["runtime"], values["owner"], values["timezone"], values["utc_scan"] = version, user, owner, timezone, utc
+	var collate, ctype, provider string
+	if err := pool.QueryRow(ctx, "SELECT datcollate,datctype,datlocprovider::text FROM pg_database WHERE datname=current_database()").Scan(&collate, &ctype, &provider); err != nil {
+		t.Fatal(err)
+	}
+	values["locale"] = map[string]string{"collate": collate, "ctype": ctype, "provider": provider}
+	// Keep the first lease while acquiring the second: two reads from a released
+	// lease could silently verify the same physical connection twice.
+	var connections []map[string]any
+	var previousPID uint32
+	for range 2 {
+		conn, err := pool.Acquire(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer conn.Release()
+		if err = conn.QueryRow(ctx, "SELECT current_user,current_setting('jit'),current_setting('plan_cache_mode')").Scan(&user, &jit, &plan); err != nil {
+			t.Fatal(err)
+		}
+		pid := conn.Conn().PgConn().PID()
+		if pid == previousPID || user != roles.serverName || jit != "off" || plan != "force_custom_plan" {
+			t.Fatal("distinct runtime connection configuration", pid, previousPID, user, jit, plan)
+		}
+		previousPID = pid
+		connections = append(connections, map[string]any{"pid": pid, "runtime": user, "jit": jit, "plan_cache_mode": plan})
+	}
+	values["connections"] = connections
 	rows, err := pool.Query(ctx, "SELECT indexdef FROM pg_indexes WHERE schemaname='public' ORDER BY tablename,indexname")
 	if err != nil {
 		t.Fatal(err)

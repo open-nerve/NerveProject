@@ -35,6 +35,10 @@ type listScaleFixture struct {
 func seedListScale(t *testing.T, n int, roles splitRoles, pool *pgxpool.Pool) listScaleFixture {
 	t.Helper()
 	w := newIssueWorldOn(t, roles.serverURL, pool, func(*config.Config) {})
+	// The fixture deliberately includes expired tombstones. Finish RunOnStart
+	// before inserting them; the configured hourly purge cannot recur during
+	// this suite's 40-minute deadline. Readiness alone does not join workers.
+	waitForCompletedKinds(t, roles.owner, map[string]int{"cleanup.purge_deleted": 1}, &lockedBuffer{})
 	f := listScaleFixture{w: w, owner: roles.owner}
 	for p, name := range []string{"Web", "Visible", "Own", "Exited", "Archived"} {
 		id := w.web

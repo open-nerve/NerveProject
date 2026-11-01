@@ -130,16 +130,16 @@ pnpm --filter @nerve/e2e exec playwright test --config=playwright.m4-cleanup.con
 **Files：** S/bootstrap/issue_list_scale_test.go、issue_list_scale_{seed,oracle,check}_test.go（以实际现有文件核路径）；S/modules/issue/adapter/postgres/search_performance_test.go及既有helpers。
 **Interfaces：** TestIssueListScale原循环增20000；TestSearch100KPerformance保持13场景。精确输出沿原listEvidence/search证据结构，新增20k不能只复制结果目录。
 
-- [ ] Step 1：给规模选择清单增加20k的必要断言/静态校验，原10k/100k仍在；读fixture分布/独立oracle，先确认缺20k记录会拒绝完整性验收。测试大数据由显式env控制。
-- [ ] Step 2：只扩规模枚举与必要的结果汇总，不改生产SQL/阈值；在server执行（M4_CLOSEOUT_EVIDENCE是根的绝对路径）：
+- [x] Step 1：给规模选择清单增加20k的必要断言/静态校验，原10k/100k仍在；读fixture分布/独立oracle，先确认缺20k记录会拒绝完整性验收。测试大数据由显式env控制。
+- [x] Step 2：先以原生产 SQL 扩规模枚举并测量，不改阈值。实测发现的局部问题按 spec C06 修复并复验：等待启动 purge 完成后才写历史墓碑样本；子分组 `cells` 固定物化边界，避免单格过滤下推后两路窗口结果的嵌套循环。保留所有原始失败和修复后样本；在server执行（M4_CLOSEOUT_EVIDENCE是根的绝对路径）：
 
 ~~~sh
 NERVE_LIST_SCALE=1 NERVE_LIST_SCALE_EVIDENCE="$M4_CLOSEOUT_EVIDENCE/perf/list" go test -p=1 -count=1 -timeout=40m -v ./internal/bootstrap -run '^TestIssueListScale$'
 NERVE_SEARCH_PERF=1 NERVE_SEARCH_PERF_EVIDENCE="$M4_CLOSEOUT_EVIDENCE/perf/search" go test -p=1 -count=1 -timeout=20m -v ./internal/modules/issue/adapter/postgres -run '^TestSearch100KPerformance$'
 ~~~
 
-- [ ] Step 3：核3×13列表和13搜索均实际运行、不为空或skip；1首样本+5warm、正确ID/顺序/total/continuation/空fallback，运行role/locale/连接设置。分别列module/request、SQL、EXPLAIN execution与计划，不混加不同口径。
-- [ ] Step 4：按spec判据对照§3.16/最终P5；异常先核分布/执行计划与负载后只对未解场景复测，所有样本保留。未解释的100k退化留D04未勾，架构级优化不自行新增索引/改分页合同。写perf表并提交。
+- [x] Step 3：核3×13列表和13搜索均实际运行、不为空或skip；1首样本+5warm、正确ID/顺序/total/continuation/空fallback，运行role/locale/连接设置。分别列module/request、SQL、EXPLAIN execution与计划，不混加不同口径。
+- [x] Step 4：按spec判据对照§3.16/最终P5；异常先核分布/执行计划与负载后只对未解场景复测，所有样本保留。未解释的100k退化留D04未勾，架构级优化不自行新增索引/改分页合同。写perf表并提交。
 
 ## Task 9：删除、连接池与一次物理清理（约450–900行）
 

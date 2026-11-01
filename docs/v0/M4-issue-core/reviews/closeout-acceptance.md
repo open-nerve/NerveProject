@@ -17,7 +17,7 @@
 | D01 | I1–I22适用的页面/API/任务版本与全部增长断言、S1/S2在CI通过 | T1/T4/T13/T14 | T4 [22故事增长](closeout-web-contracts.md#1-二十二故事的实际观察)与默认284项通过；最终候选/main CI待T13/T14 |
 | D02 | 完整权限矩阵/访客一致性/26交错、拒绝不取锁、真实池与503 | T2/T3/T9/T10 | T2/T3 权限与26交错通过：43测试各5次、零skip/race/40P01；[直接证据](closeout-server-contracts.md)。T9真实池测量、T10复审待验 |
 | D03 | issue与project双向公开码、access判定/规则/操作目录/矩阵齐全 | T3/T13 | T3 operation/规则/矩阵/双向公开码通过，见[§2/§4](closeout-server-contracts.md)；T13最终门禁待验 |
-| D04 | 21个合法排序码（含各自升降取值，sort_order仅升序）/筛选/分组/续页/共享fixture/游标可见性/100k/连接设置/9反例 | T3/T4/T8 | T3 Go排序/游标/分组性质通过，数值计数skip替代证据见[§1/§4](closeout-server-contracts.md)；T4页面排序/分组/筛选增长与默认E2E通过，见[Web合同](closeout-web-contracts.md)；T8规模待验 |
+| D04 | 21个合法排序码（含各自升降取值，sort_order仅升序）/筛选/分组/续页/共享fixture/游标可见性/100k/连接设置/9反例 | T3/T4/T8 | T3 Go排序/游标/分组性质通过，数值计数skip替代证据见[§1/§4](closeout-server-contracts.md)；T4页面排序/分组/筛选增长与默认E2E通过，见[Web合同](closeout-web-contracts.md)；T8三规模39场景及runtime双连接通过，[规模实测与局部修复](closeout-performance.md) |
 | D05 | 事务投递提交/回滚、两类缺worker变异、registrationRows、固定时钟/无固定余量 | T3/T10/T13 | T3实际InsertTx/river_job、两类漏worker变异与恢复通过，见[§4/§5](closeout-server-contracts.md)；T4 clock故事/T13待验 |
 | D06 | P7出站IANA/DNS/固定IP/每跳重检/本机地址与I10 blocked | T3/T6/T10 | T3出站每跳固定IP/危险分支零dial通过，见[§4](closeout-server-contracts.md)；T6页面/T13待验 |
 | D07 | purge目录/外键/I21、删除窗口/交错24/25/M3有限轮询 | T3/T9/T13 | T3 catalog/runtime/删除窗口/L24/L25通过，已批准迟到重试单列，见[§4](closeout-server-contracts.md)；T9规模/T13待验 |
@@ -29,7 +29,7 @@
 | D13 | M4 dead无未解释行；全仓no-shadow零/error；cap实数下降 | T11/T13 | 待验；原脚本hash、完整raw、逐行ledger、14范围实际cap |
 | D14 | M4挂载零旧/无权请求、S2四身份、copy-hook无M4例外、13实例清空 | T4/T5/T6/T7/T11 | T4 S2四身份精确请求/重复数、76规则13例外无命中、13历史实例AST为零；见[§3](closeout-web-contracts.md#3-s1s2-与旧实例)。C12/T11终核待验 |
 | D15 | await后跳转/提示核会话，改动hook有换账户兑现测试，C11 | T4/T7/T10 | T4全期hook/调用方映射、复制晚答与归档地址缺口已红绿修复，见[§2](closeout-web-contracts.md#2-等待后的会话与宿主)；T7/C11页面三引擎通过，旧范围迟到结果无副作用；T10复审待验 |
-| D16 | 列表10k/20k/100k、中文两字搜索、规模删除请求/任务、一次清理并交M8 | T8/T9/T12 | 待验；场景/分布/正确性/原始samples/耗时表、M8链接 |
+| D16 | 列表10k/20k/100k、中文两字搜索、规模删除请求/任务、一次清理并交M8 | T8/T9/T12 | T8列表39+搜索13场景通过，首+5warm与原始失败/计划已留存；[实测](closeout-performance.md)。T9删除/清理与T12 M8交接待验 |
 | D17 | 规模估计与实际对照 | T1/T13 | 待验；分阶段与本收尾计划/实改文件和行数、差异原因 |
 | D18 | 总体设计9.4为已完成 | T14（集成后） | 待验；完成标记提交、最终mainSHA/三作业success、归档清理收据 |
 
