@@ -118,7 +118,7 @@ type ObjectInfo struct {
 
 func ValidateUpload(g UploadGrant, sizeLimit int64, now time.Time) error {
 	if g.Key.Kind() != 'u' || sizeLimit < 1 || sizeLimit > MaxObjectSize || g.Size < 1 || g.Size > sizeLimit ||
-		!validMediaType(g.ContentType) || !validExpiry(g.ExpiresAt, now, MaxUploadTTL) {
+		!ValidMediaType(g.ContentType) || !validExpiry(g.ExpiresAt, now, MaxUploadTTL) {
 		return ErrInvalidUpload
 	}
 	return nil
@@ -126,7 +126,7 @@ func ValidateUpload(g UploadGrant, sizeLimit int64, now time.Time) error {
 
 func ValidateRead(g ReadGrant, now time.Time) error {
 	if g.Key.Kind() != 'o' || (g.Method != "GET" && g.Method != "HEAD") ||
-		!validName(g.Name) || !validMediaType(g.ContentType) || !validExpiry(g.ExpiresAt, now, MaxReadTTL) {
+		!validName(g.Name) || !ValidMediaType(g.ContentType) || !validExpiry(g.ExpiresAt, now, MaxReadTTL) {
 		return ErrInvalidRead
 	}
 	if g.Inline {
@@ -143,7 +143,8 @@ func validExpiry(expiresAt, now time.Time, limit time.Duration) bool {
 	return expiresAt.After(now) && !expiresAt.After(now.Add(limit))
 }
 
-func validMediaType(value string) bool {
+// ValidMediaType accepts a canonical type without parameters, for grants and stored metadata.
+func ValidMediaType(value string) bool {
 	media, params, err := mime.ParseMediaType(value)
 	return err == nil && media == value && len(params) == 0 && strings.Contains(media, "/") && !strings.Contains(media, "*")
 }

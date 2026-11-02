@@ -72,6 +72,11 @@ func TestAssetMACPurposeAndRestart(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		t.Cleanup(func() {
+			if err := store.Close(); err != nil {
+				t.Error(err)
+			}
+		})
 		return store
 	}
 	key, err := domain.NewObjectKey('u', uuid.New(), uuid.New())

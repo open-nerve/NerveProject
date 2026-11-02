@@ -77,15 +77,15 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 
 ## Task 3（T3）：磁盘对象与完整上传（A2/A4）
 
-**Files：** A/adapter/local/store.go、object.go、upload_test.go、object_test.go。
+**Files：** A/adapter/local/store.go、object.go、upload.go、reader.go、upload_test.go、object_test.go；domain/storage.go 的共用 MIME 规则；T2 的两处 Store 测试夹具补 Close。
 
 **Interfaces：** 消费 T1/T2；产生 Put/Inspect/Open/Delete/Close，严格使用 spec 的对象布局。
 
-- [ ] Step 1：`TestLocalUploadPublishesOnlyCompleteObjects` 用阻塞 reader 在写到一半时 Inspect 必须不存在；完成后 bytes/size/type/ETag 一致。少字节、超额、reader 错、ctx 取消、磁盘拒绝均不发布且本次 tmp 清空。
-- [ ] Step 2：`TestLocalObjectConfinement` 放外部哨兵、符号链接、非法 key、非普通数据文件；读取/写入/删除不触及哨兵，不挂住。并发相同 key 上传只允许一个完整对象，失败者不能删胜者目录。
-- [ ] Step 3：运行聚焦测试确认红，使用 os.Root、独立临时目录、SHA-256、元数据版本与原子 rename 实现；所有 ctx/文件句柄归属明确。Delete 缺失幂等，故障保留错误，不能错误吞成成功。
-- [ ] Step 4：`go test -race -count=1 ./internal/modules/asset/adapter/local` 绿；变异提前发布/忽略 reader 错/允许 key 逃逸必须失败，恢复；检查多个实例共享同配置 root 时不复用临时目录名。
-- [ ] Step 5：两轮复核后提交 `feat(M5/P1): 实现受根目录约束的完整文件上传`。
+- [x] Step 1：`TestLocalUploadPublishesOnlyCompleteObjects` 用阻塞 reader 在写到一半时 Inspect 必须不存在；完成后 bytes/size/type/ETag 一致。少字节、超额、reader 错、ctx 取消、磁盘拒绝均不发布且本次 tmp 清空。
+- [x] Step 2：`TestLocalObjectConfinement` 放外部哨兵、符号链接、非法 key、非普通数据文件；读取/写入/删除不触及哨兵，不挂住。并发相同 key 上传只允许一个完整对象，失败者不能删胜者目录。
+- [x] Step 3：运行聚焦测试确认红，使用 os.Root、独立临时目录、SHA-256、元数据版本与原子 rename 实现；所有 ctx/文件句柄归属明确。Delete 缺失幂等，故障保留错误，不能错误吞成成功。
+- [x] Step 4：`go test -race -count=1 ./internal/modules/asset/adapter/local` 绿；变异提前发布/忽略 reader 错/跳过 key 格式拒绝必须失败，恢复；外部哨兵与符号链接另验证根目录约束，不能把格式层的变异声称为实际逃逸。检查多个实例共享同配置 root 时不复用临时目录名。
+- [x] Step 5：两轮复核后提交 `feat(M5/P1): 实现受根目录约束的完整文件上传`。
 
 ## Task 4（T4）：条件封存与共享存储合同（A2/A4）
 

@@ -37,6 +37,11 @@ func signingStore(t *testing.T, now *time.Time) *Store {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		if err := s.Close(); err != nil {
+			t.Error(err)
+		}
+	})
 	return s
 }
 
