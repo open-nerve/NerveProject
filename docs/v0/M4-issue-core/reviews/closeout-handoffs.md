@@ -315,3 +315,5 @@
 - M5 的旧 M3 交接中“附件弹窗随工作项 key 结束”由 P14 完成宿主；M5-01 负责真实附件接通后验收。M6 的 M3 添加已有/正tabIndex 与 M2 日期/项目菜单由 M6-02/04接；M7 的 M3 查重/最后getTabIndex及projectMemberIds、M2 frame-src 由 M7-01/04/05接。M8 的 M3 事件/层级/ModalTitle/文字必传与 M1 第三方表情由 M8-01/06接。这些外部交接本身仍由接收方关闭。
 - `furnishIssueRows`、父项目/工作区删除事件和物理清理 owner 在 M5-03、M6-03明确；收集箱三个来源、文案、两处原删除的身份推测完整留在 M7-01。输入 status=closed 不代表这些未来功能已完成。
 - 证据：`t12-handoffs.json`（原条款/36段全文/各落点与 SHA）、`t12-verbatim.json`（两份原样复制）、`t12-verify.json`（覆盖/链接/状态/历史保持）。它们连同 T1 和各 Phase 归档一起保留，最终收尾归档入口由 closeout review 记录。
+
+收尾整审F3补充接收：`EditorRefApi.copyMarkdownToClipboard`的监听/拒绝风险见[死成员原记录](closeout-dead-members.md#editorrefapi-copy-risk)与[M5首次复用前验收](../../M5-files/handoffs/M4-closeout.md#M5-editor-copy)。不新增本期产品入口，八输入历史正文和205原条款不变。

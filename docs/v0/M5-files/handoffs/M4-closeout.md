@@ -19,6 +19,11 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 - M4 不挂载附件区。工作项详情子树已按工作项身份设 key；M5 挂入确认框、上传弹窗时核换工作项、换工作区、换账户和迟到上传结果，不能把旧文件写给新宿主。
 - 现有文件服务调用方仍包括 `comments/comment-create`、`inbox/modals/create-modal/create-root`、`hooks/editor/use-editor-config`。接真实接口时逐个替换旧地址和到期关键词例外，复用会话有效性与已有 `EditorRefApi`，不恢复模块级带会话实例。
 
+<a id="M5-editor-copy"></a>
+**旧复制入口的具名风险与接收条件：** `EditorRefApi.copyMarkdownToClipboard`（`web/packages/editor/src/helpers/editor-ref.ts`）仍保留为公开ref合同，但当前M4产品走`getMarkDown`与`useCopyText`。旧方法添加document copy监听后依赖copy事件自行释放；`execCommand("copy")`返回false、抛错或未派发事件时没有对应释放路径，也不提供可靠拒绝反馈。来源见[死成员复核](../../M4-issue-core/reviews/closeout-dead-members.md#editorrefapi-copy-risk)及[收尾整审F3](../../../reviews/re-30-M4收尾整体审核.md#F3)。
+
+M5执行者在**首次复用该方法的页面合入前**，须改走现有受控复制通道，或先修复该方法的监听生命周期与失败反馈，再开放消费者。验收包括成功、无用户手势、拒绝/false/异常、宿主卸载和换编辑器：操作结束或退出后监听均释放；后续其他编辑器/页面的copy不被旧内容或旧监听截获；不得出现失败成功提示。没有完成这些条件前，不因“EditorRefApi已保留”认为此入口已经验收。本条不要求M4启用或改写当前未使用入口。
+
 **何时验收：** M5 首次启用附件/图片的阶段。真实上传成功、拒绝、取消、过期会话、换宿主、预签名失败均有页面与持久化断言；无成功假提示、无旧作用域写入。
 
 <a id="M5-02"></a>

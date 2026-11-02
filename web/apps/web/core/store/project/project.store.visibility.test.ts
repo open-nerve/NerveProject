@@ -420,3 +420,64 @@ it("R06 a request dispatched by the accepted directory's observer starts after t
   expect(await reads[0]).toEqual(fresh);
   expect(store.getProjectById(a.id)).toEqual(fresh);
 });
+
+it.each(
+  [false, true].flatMap((archived) =>
+    [false, true].flatMap((empty) => [false, true].map((fromObserver) => ({ archived, empty, fromObserver })))
+  )
+)(
+  "R39 an older directory keeps a later detail, including an omitted row archived=$archived empty=$empty fromObserver=$fromObserver",
+  async ({ archived, empty, fromObserver }) => {
+    const { nerve, store } = await fixture();
+    const initial = archived ? archivedA : a;
+    if (archived) {
+      await loadProjects(nerve, store, ws, [b]);
+      await loadArchivedProjects(nerve, store, ws, [initial]);
+    }
+    const at = nerve.calls.length;
+    const listing = track(archived ? store.fetchArchivedProjects(ws) : store.fetchProjects(ws));
+    await until(() => nerve.calls.length === at + 1, "older full directory");
+    expect(nerve.calls[at]?.query).toEqual({ archived: String(archived) });
+    // A newer detail from another workspace must not be carried into this directory.
+    await loadProject(nerve, store, elsewhere);
+    const detailAt = nerve.calls.length;
+    const detail = track(store.fetchProject(a.id));
+    await until(() => nerve.calls.length === detailAt + 1, "new detail after directory dispatch");
+    const fresh = { ...initial, name: "new detail fact", member_role: 5 as const };
+    const observed: (string | undefined)[] = [];
+    const peer = projectOf("PEER", ws.id, { archived_at: initial.archived_at });
+    const releaseDirectory = () => nerve.calls[at]?.answer(json(200, { data: empty ? [] : [peer] }));
+    dispose.push(
+      reaction(
+        () => store.getProjectById(a.id)?.name,
+        (name) => {
+          observed.push(name);
+          // Release at acceptance, before fetchProject's continuation records its provenance.
+          if (fromObserver && name === fresh.name) releaseDirectory();
+        }
+      )
+    );
+    nerve.calls[detailAt]?.answer(json(200, fresh));
+    if (!fromObserver) {
+      await until(() => detail.settled, "new detail accepted before the old directory");
+      releaseDirectory();
+    }
+    await until(() => detail.settled && listing.settled, "both read answers");
+    expect(detail.error).toBeUndefined();
+    expect(listing.error).toBeUndefined();
+    expect(observed).toContain(fresh.name);
+    expect.soft(store.getProjectById(a.id)).toEqual(fresh);
+    expect.soft(listing.value).toContainEqual(fresh);
+    expect.soft(store.getProjectByIdentifier(a.identifier)).toEqual(fresh);
+    expect.soft(store.totalProjectIds).toContain(a.id);
+    expect.soft(store.joinedProjectIds.includes(a.id)).toBe(!archived);
+    expect.soft(store.totalProjectIds).not.toContain(elsewhere.id);
+    expect(store.getProjectById(elsewhere.id)).toEqual(elsewhere);
+    // A directory actually requested after that positive proof still revokes it.
+    if (archived) await loadArchivedProjects(nerve, store, ws, []);
+    else await loadProjects(nerve, store, ws, []);
+    expect(store.getProjectById(a.id)).toBeUndefined();
+    expect(store.getProjectByIdentifier(a.identifier)).toBeUndefined();
+    expect(store.totalProjectIds).not.toContain(a.id);
+  }
+);

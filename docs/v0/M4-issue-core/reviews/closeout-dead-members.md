@@ -480,7 +480,8 @@
 | G101 | `web/packages/shared-state/src/store/rich-filters/config.ts` | IFilterConfig 被 filter-item/root 与 add-filters/dropdown 读取操作符/显示操作符，配置管理器调用 mutate。 |
 | G102 | `web/packages/types/src/rich-filters/field-types/shared.ts` | filter-value-input/dropdown/search-options 渲染选项 icon/iconClassName/disabled/description。 |
 
-EditorRefApi 保留 P14 公开 ref 协议：实现由 useImperativeHandle 提供，真实消费者按命令分发；其中图片相关能力在 M4 禁用、没有当前产品调用的方法不宣称业务通过。`copyMarkdownToClipboard` 旧方法的潜在监听/拒绝处理风险随 M5 编辑器复用条件转交；当前 M4 走 `getMarkDown` + `useCopyText`。
+<a id="editorrefapi-copy-risk"></a>
+EditorRefApi 保留 P14 公开 ref 协议：实现由 useImperativeHandle 提供，真实消费者按命令分发；其中图片相关能力在 M4 禁用、没有当前产品调用的方法不宣称业务通过。`copyMarkdownToClipboard` 旧方法的潜在监听/拒绝处理风险由[M5具名接收条款](../../M5-files/handoffs/M4-closeout.md#M5-editor-copy)承接，首次复用前须验证失败/卸载释放及后续copy隔离；当前 M4 走 `getMarkDown` + `useCopyText`。
 
 ## 4. 历史 52 行
 
@@ -586,4 +587,4 @@ EditorRefApi 保留 P14 公开 ref 协议：实现由 useImperativeHandle 提供
 
 ## T13 最终复核
 
-`dead-audit-final-4/`复用原脚本：全仓797成员/328属性/2导出，M4仍354行/102来源；与本表逐名一致，仅editor-menu-accessibility.test.tsx新增import使children行号13→14。14个lint范围仍86告警、M4及全期触及路径零诊断，no-shadow零/error；`t13-evidence-binding.json`、`t13-final2-lint-audit-results.json`及最终lint/knip保留证据。
+`dead-audit-final-5/`复用原脚本：全仓797成员/328属性/2导出，M4仍354行/102来源；与本表逐名一致，仅editor-menu-accessibility.test.tsx新增import使children行号13→14。14个lint范围仍86告警、M4及全期触及路径零诊断，no-shadow零/error；`t13-evidence-binding.json`、`t13-final3-lint-audit-results.json`及最终lint/knip保留证据。

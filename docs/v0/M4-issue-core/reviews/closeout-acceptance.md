@@ -1,6 +1,6 @@
 # M4 收尾验收台账
 
-状态：分支实施验收完成，整分支终审与最终CI签结中；不合并。D18、最终main绑定及完成标记保持待集成。
+状态：实施与终审完成、集成待办。最终准确候选SHA与三个分支CI作业由外置final-delivery.json事后签结；不合并。D18、最终main绑定及完成标记保持待集成。
 
 基线 `01e40e113e11365a4eeacc2794973de2751dde61`；实施起点 `726f7156c2a053bd67fba1bfcaef5541df347749`；全期范围 `1eb9686a6ca527984337821af5fa7efae8c620e2..候选HEAD`。主目录 main 保持不动。P16 main CI [41290496985](https://github.com/open-nerve/NerveProject/actions/runs/41290496985) 和本分支预检 CI [41293001954](https://github.com/open-nerve/NerveProject/actions/runs/41293001954) 均为准确 SHA、attempt 1、success。
 
@@ -25,8 +25,8 @@
 | D09 | 八决策/十一架构问题已批准并落实 | T1/T10 | 通过：[八决策/十一架构逐项实现与证据](#15-d09-批准决定与最终实现)；R06按负责人批准A落地，没有未经批准的合同变动 |
 | D10 | §13.1逐项/8输入closed；§13.2四输出及原文/收集箱细节 | T12/T13 | 通过：[交接索引](closeout-handoffs.md)，205原条款/43结论、36阶段移交核对；8输入closed、4输出open；M2/M0两段原文逐字相同、历史正文保留；最终链接/输入再核 |
 | D11 | §3.23每行、§4.17每行、frontend M4、README§8.8 | T11 | 分支可执行内容通过：[44同步/45差异](closeout-sync.md)，43同步已核、SYNC44为最终集成状态；目标段/原文/hash齐全，README及前端M4边界已同步 |
-| D12 | C1–C12各Phase有证据，C12最终三引擎 | T5/T6/T7/T13/T14 | 分支C12通过：[21组×3引擎](closeout-browser-matrix.md)，最终逐项167项/引擎无skip/flaky，Chromium整轮加整份I18补验；历史730图已看，最终增量57状态/引擎及各组代表图另签。完整原始附件保留，main等价待T14 |
-| D13 | M4 dead无未解释行；全仓no-shadow零/error；cap实数下降 | T11/T13 | 通过：[354行/102来源](closeout-dead-members.md)、历史52逐名；最终AST同名行一致，仅1处import使行号移动；14范围86告警、M4和全期触及路径零诊断，no-shadow零/error；最终lint/knip通过 |
+| D12 | C1–C12各Phase有证据，C12最终三引擎 | T5/T6/T7/T13/T14 | 分支C12通过：[21组×3引擎](closeout-browser-matrix.md)，最终新build10各完整167项/引擎，无skip/flaky；原并集仅保留历史；历史730图已看，最终增量57状态/引擎及各组代表图另签。完整原始附件保留，main等价待T14 |
+| D13 | M4 dead无未解释行；全仓no-shadow零/error；cap实数下降 | T11/T13 | 通过：[354行/102来源](closeout-dead-members.md)、历史52逐名；最终AST具名候选一致，无新增未解释行；14范围86告警、M4和全期触及路径零诊断，no-shadow零/error；最终lint/knip通过 |
 | D14 | M4挂载零旧/无权请求、S2四身份、copy-hook无M4例外、13实例清空 | T4/T5/T6/T7/T11 | 通过：S2四身份精确请求/重复数、76规则13例外无命中、13历史实例AST为零；[Web合同](closeout-web-contracts.md#3-s1s2-与旧实例)、最终三引擎C12与lint/knip；copy-hook无M4例外 |
 | D15 | await后跳转/提示核会话，改动hook有换账户兑现测试，C11 | T4/T7/T10 | 通过：[异步hook/调用方](closeout-web-contracts.md#2-等待后的会话与宿主)、复制晚答/路由缺口红绿、R06失权与热ID/兄弟菜单；最终C11及29项整审页面补验保持旧范围晚答无副作用 |
 | D16 | 列表10k/20k/100k、中文两字搜索、规模删除请求/任务、一次清理并交M8 | T8/T9/T12 | 通过：[T8列表39/搜索13、T9删除/池/清理](closeout-performance.md)，原测量及三有效负例保留；[M8-05](../../M8-open-release/handoffs/M4-closeout.md#M8-05)完整接收代价。t13-performance-equivalence.json证实工作负载/运行SQL等价，不声称新二进制重测 |
@@ -335,3 +335,7 @@ T7三引擎各53唯一项加S2四身份补验通过；合并T5/T6后138项/引�
 | 架构11.9 | 模块清理issue→project→workspace→identity；CASCADE/SET NULL目录守卫 | [实现](../../../../server/internal/bootstrap/purge.go)、[回归](../../../../server/internal/bootstrap/purge_runtime_test.go) | T3目录与L24/25，T9真实runtime一次660026行；账户不清理 |
 | 架构11.10 | 列表词汇归issue/domain，project经IssueListSettings端口验证 | [实现](../../../../server/internal/modules/issue/domain/listvocab.go)、[回归](../../../../server/internal/modules/issue/app/list_settings_test.go) | 显示三列/合法形状、I5真实保存，未引入第二份词汇 |
 | 架构11.11 | 预检后取连接前进入按项目gate；K2/queue64、期限/503集中映射 | [实现](../../../../server/internal/bootstrap/gate.go)、[回归](../../../../server/internal/bootstrap/gate_test.go) | T9 200并发、无关读78次、503/Retry-After；多热项目代价交M8 |
+
+## 16. 终审修复后的最终候选
+
+新build10对应`t13-c12-final3-{chromium,firefox,webkit}`，三引擎各完整167/167通过，无skip/flaky，三个整轮与构建输入逐字节一致；不再使用旧并集作为最终候选。原375项选择和72项原生LAN复制全部保留。最终819原图选择303张，34张比较图板；本轮实际查看21张图板中的189张原图，另114张逐场景身份和PNG hash继承上轮实际观察，全部58张变化图已重新查看。其余原图作为自动回归附件保留，不冒称人工逐图检查。 R39/R40及F2/F3已闭环；Web3392、默认E2E336、Go1893顶层/10191含子例和七门禁见阶段review。D10/D13补旧编辑器复制入口具名风险/首次复用验收，八输入关闭、四输出开放的边界不变。准确候选SHA及分支CI只以外置final-delivery.json核准；D18和最终main绑定继续待获准集成。

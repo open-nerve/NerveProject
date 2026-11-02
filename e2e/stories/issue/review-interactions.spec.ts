@@ -230,7 +230,11 @@ test("C12 (review): a hot ID entry waits for its new read and a retired entry ca
   await expect(page).toHaveURL(idPath);
   expect((await fresh.release()).status()).toBe(200);
   await expect(page).toHaveURL(numberPath);
+  await expect(page.getByRole("textbox", { name: "Work item title", exact: true })).toHaveValue(issue.name);
   await moveWithinApp(page, seed.path);
+  // The history helper changes the URL before React commits the destination. Retire
+  // this entry through the real list before testing a separate entry's late answer.
+  await expect(page.locator(`#issue-${issue.id}`)).toBeVisible();
   const late = await sentHeld(page, "GET", `/api/v0/issues/${issue.id}`, () => moveWithinApp(page, idPath));
   await moveWithinApp(page, `/${seed.slug}/projects`);
   await expect(page.getByRole("button", { name: "Add Project", exact: true })).toBeVisible();

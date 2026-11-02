@@ -461,12 +461,27 @@ export class ProjectStore implements IProjectStore {
     this.directoryWorkspaces.add(workspace.id);
     const source = archived ? this.archived : this.unarchived;
     const reads = this.captureFacts();
-    const projects = await source.fetch(workspace.id, async () =>
-      (await this.service.list(workspace.slug, archived)).flatMap((answer) => {
+    const reading = source.fetch(workspace.id, () => this.service.list(workspace.slug, archived));
+    // Reconcile cross-source facts during the existing read replay, immediately before publication.
+    // Doing this in the async read callback leaves another microtask in which a detail can be accepted.
+    source.confirm(workspace.id, (value, answered) => {
+      if (answered === undefined) return value;
+      const currentRows = value.flatMap((answer) => {
         const current = this.afterFacts(answer, reads).project;
         return current && (current.archived_at !== null) === archived ? [current] : [];
-      })
-    );
+      });
+      const projects = new Map(currentRows.map((project) => [project.id, project]));
+      // Absence in this older answer cannot revoke a detail accepted while the directory was out.
+      // Keep only currently visible proof in this exact workspace and archive class.
+      for (const detail of this.details.values()) {
+        if (!detail || this.details.answeredAt(detail.id) <= reads.positiveWatermark) continue;
+        const current = this.getProjectById(detail.id);
+        if (current?.workspace_id === workspace.id && (current.archived_at !== null) === archived)
+          projects.set(current.id, current);
+      }
+      return [...projects.values()];
+    });
+    const projects = await reading;
     if (projects && source.get(workspace.id) === projects) {
       runInAction(() => projects.forEach((project) => this.notePresence(project, source.answeredAt(workspace.id))));
     }

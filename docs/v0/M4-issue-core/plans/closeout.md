@@ -195,9 +195,13 @@ NERVE_PURGE_SCALE=1 NERVE_PURGE_SCALE_EVIDENCE="$M4_CLOSEOUT_EVIDENCE/perf/purge
 **Interfaces：** review沿P3七节：方式/验收/决定/发现修复/plan差异/交接/限制；十八D项各有完整证据而非只“完成”。
 
 - [x] Step 1：固定最终产品候选，核所有C12格/性能/变异/各门禁与当前输入一致；新产品变化才重跑受影响检查，再串行F收口。数实际全部用例与skip原因，保存输入/输出manifest。
-- [ ] Step 2：deep-review closeout基线至最终候选完整文件，主控三视角按任务间集成复审；至少15有效反证与-race证据可核，修复后同范围复审。全M4报告与此报告是两个范围，不互相冒充。
+- [x] Step 2：deep-review closeout基线至最终候选完整文件，主控三视角按任务间集成复审；至少15有效反证与-race证据可核，修复后同范围复审。全M4报告与此报告是两个范围，不互相冒充。
 - [x] Step 3：十八D逐条给命令/raw/路径/局限/后置集成项；各Phase估计与实际、新增/删除/生成/文档分开，写D17。更新spec验收和plan已执行步骤，但D18/最终main绑定仍待集成，M4§14复合项不提前全勾、总体9.4继续进行中。
 - [ ] Step 4：提交终稿并push准确HEAD，等三个分支CI作业success；核本地/远端相同40位SHA，最终外置final-delivery.json记run/attempt/jobs。阶段状态“实施与终审完成、集成待办”，保留分支/worktree，通知负责人，不自动合并。
+
+T13终审修复检查点：F1/R39仍在已批准A的ProjectStore事实协调范围；12红→相关725绿。F2为本Task要求的当前接续状态同步，F3补实际M5具名风险/验收/双向索引。CI新增R40仅修正热ID故事真实页面就绪；CPU8倍5红→5绿。新产品build10三引擎各完整167、Web3392、默认E2E336及七门禁/证据绑定均已通过；不重派第二次独立审查。
+
+Step 4准确SHA/CI是提交后的事实，Git内不提前勾选自身未来CI；实际签结记录在外置`final-delivery.json`与技能ledger。T14 Step1的最终CI字段同从该收据取得，不制造文档自引用提交循环。
 
 ## Task 14：集成准备与获准后的最终签结（约150–350行文档/收据）
 
