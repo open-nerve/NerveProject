@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 > 状态：预检通过，实施中；见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。负责人已授权按既有节奏连续推进，常规预检通过后继续，不另设确认门。
-> T9 修订已授权：按[最终裁定](../reviews/P1-storage-namespace-decision.md#6-最终裁定2026-11-02)使用 `/static/local/{key}`，补路径规范化、开发代理及构建边界。T9、T10、T11 尚未完成；完整门禁通过前不推送产品检查点。
+> T9 修订已授权：按[最终裁定](../reviews/P1-storage-namespace-decision.md#6-最终裁定2026-11-02)使用 `/static/local/{key}`，补路径规范化、开发代理及构建边界。T9 实现与七项本地门禁已通过，准备推送产品检查点；T10 整审与 T11 集成尚未完成。
 
 **Goal：** 建立可真实传输、检查、封存和读取的 local 存储能力，给 P2 资产用例提供经过验证的小接口。
 
@@ -122,7 +122,7 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 **Interfaces：** `(*API).TransferMiddleware(Limiter) func(http.Handler) http.Handler` 只做既有 requestMeta 与传入 limiter；不走 authenticate/publicOperations，不调 JSON deadline/bodyLimit。handler 的并发预算与 idle/total 控制保持在文件传输职责内。
 
 - [x] Step 1：`TestTransferMiddlewarePreservesClientScope` 覆盖受信/不受信代理、IPv4-mapped/IPv6 prefix、独立 bucket、429 Retry-After；复用现有请求帮手，不复制 clientIPs 算法。
-- [x] Step 2：`TestLocalTransferDeadlines` 使用实际 net.Listener/httpserver.Server 和阻塞 reader/writer：小全局期限但足量进度上传成功，idle/total/cancel 真正终止 socket；名额满 503，退出路径释放，之后新上传可成功；实际 8 MiB 健康/停读下载均验证。真实阶段证据再运行一次 >30 秒、>1 MiB 的默认期限慢流（T9，仍待完成）。
+- [x] Step 2：`TestLocalTransferDeadlines` 使用实际 net.Listener/httpserver.Server 和阻塞 reader/writer：小全局期限但足量进度上传成功，idle/total/cancel 真正终止 socket；名额满 503，退出路径释放，之后新上传可成功；实际 8 MiB 健康/停读下载均验证。真实阶段证据再运行一次 >30 秒、>1 MiB 的默认期限慢流（T9 已完成，实测 31.9s）。
 - [x] Step 3：确认红后实现 spec 的 overflow-safe 预算和 ResponseController；上下文取消解除阻塞 I/O，Unsupported 在写字节前明确失败。全局配置未放宽；GET/HEAD 后台读只设总期限，新上传上限降低后旧对象仍可在最长时限内读取。
 - [x] Step 4：`go test -race -count=1 ./internal/platform/httpserver ./internal/modules/asset/...`；移除 Unwrap、名额释放、读 idle、写 idle、取消中断的五项变异均由定向断言杀死，已恢复原实现与原守卫。
 - [x] Step 5：两轮复核后提交 `feat(M5/P1): 约束文件传输的期限与并发资源`。
@@ -163,9 +163,9 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 - [x] Step 1b：将 re-32 路径反例落为通用 Router 的永久测试，先确认 307 红，再按规范化逐段判断归属；编码、重复斜杠、点段、进入再离开以及相邻树控制同时验证。原始/最终路径二点法变异须被杀，恢复后提交。
 - [x] Step 1c：真实 Vite + 上游测试先红，再实现具名本地传输插件；精确路径分派、原始方法/头/字节/query、private/no-store、失败日志、断连/取消/关闭均验收；构建/public 占 static 必须失败。使用 Node 标准库避免默认代理错误输出凭证，120s idle 宽于 Go 最大 idle。无新依赖，不关闭全部错误日志；变异泄露错误文本/吞掉取消须被杀，恢复后提交。
 - [x] Step 1d：完成工作区与文件请求的联合回归、静态缓存/缺失 chunk/emojibase、API 隔离、race；同步实际偏差和证据，不把设计复核当阶段整审。
-- [ ] Step 1e：完整 E2E 复现 C12 的菜单延迟恢复焦点与 F6 竞争，保留 trace；仅让故事等待菜单关闭后的真实焦点后置条件，再验证通知关闭。旧代码重复 10 次中 3 次同因失败；修复后重复验证与完整 E2E 都须通过，不改产品焦点/动画策略，不当作 W11。
-- [ ] Step 2：聚焦 race/变异后恢复全部代码，检查 git diff 和工作树；依顺序完成 `make gen && make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`。容器重套件只串行。
-- [ ] Step 3：记录命令、退出码、准确 tested diff/HEAD、原件路径/hash/bytes；失败先定根因，环境重跑独立记。仅已知 W11 用既定处理，不专项扩范围。
+- [x] Step 1e：完整 E2E 复现 C12 的菜单延迟恢复焦点与 F6 竞争，保留 trace；仅让故事等待菜单关闭后的真实焦点后置条件，再验证通知关闭。旧代码重复 10 次中 3 次同因失败；修复后重复验证与完整 E2E 都须通过，不改产品焦点/动画策略，不当作 W11。
+- [x] Step 2：聚焦 race/变异后恢复全部代码，检查 git diff 和工作树；依顺序完成 `make gen && make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`。容器重套件只串行。
+- [x] Step 3：记录命令、退出码、准确 tested diff/HEAD、原件路径/hash/bytes；失败先定根因，环境重跑独立记。仅已知 W11 用既定处理，不专项扩范围。
 - [ ] Step 4：提交完整检查点后使用系统 git 推送；按准确 HEAD 查询 branch CI，不以别的提交绿灯代替。
 
 ## Task 10（T10）：deep-review、修复与复审
