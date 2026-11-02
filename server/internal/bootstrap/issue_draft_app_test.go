@@ -25,8 +25,8 @@ func TestDraftAppPersonalProjectsWithRealAuthorization(t *testing.T) {
 	r := newSplitRoles(t)
 	w := newIssueWorldOn(t, r.serverURL, r.owner, func(*config.Config) {})
 	store := issuepg.New(r.server)
-	p := issueProjects{projects: project.Provide(r.server).IssueProjects}
-	ws := issueWorkspaces{directory: workspace.Provide(r.server).WorkspaceDirectory}
+	p := issueProjects{projects: project.Provide(r.server, nil).IssueProjects}
+	ws := issueWorkspaces{directory: workspace.Provide(r.server, nil).WorkspaceDirectory}
 	tx := postgres.NewTxManager(r.server, time.Second)
 	readTx := postgres.NewTxManager(r.server, time.Second, postgres.ReadOnlySnapshot())
 	locks := issueapp.NewDraftLocks(issueapp.NewLocks(p, store, authorizerOn(r.server), nil, tx), ws, p, store)

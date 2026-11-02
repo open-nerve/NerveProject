@@ -41,7 +41,7 @@ func Workspaces(ctx context.Context, cfg config.Config, logOut, out io.Writer, c
 		Clock:    businessClock,
 		Logger:   logger,
 		Accounts: workspaceAccounts{accounts: identity.Provide(pool).Accounts},
-		Counts:   project.Provide(pool).ProjectMembershipCounts,
+		Counts:   project.Provide(pool, nil).ProjectMembershipCounts,
 	})
 	line, err := cmd(ctx, admin)
 	if err != nil {

@@ -19,8 +19,8 @@ import (
 
 func purgeID(n int) uuid.UUID { return uuid.MustParse(fmt.Sprintf("0199a2b4-0000-7000-8000-%012x", n)) }
 
-func purgeMethods(s *postgresadapter.Store) map[string]func(context.Context, app.PurgeBatch) ([]uuid.UUID, error) {
-	return map[string]func(context.Context, app.PurgeBatch) ([]uuid.UUID, error){
+func purgeMethods(s *postgresadapter.Store) map[string]func(context.Context, app.PurgeBatch) (app.PurgePage, error) {
+	return map[string]func(context.Context, app.PurgeBatch) (app.PurgePage, error){
 		"comment_reactions":          s.PurgeCommentReactions,
 		"issue_reactions":            s.PurgeIssueReactions,
 		"issue_mentions":             s.PurgeIssueMentions,
@@ -62,13 +62,13 @@ func TestIssuePurgeAllTables(t *testing.T) {
 			method := purgeMethods(s)[st.table]
 			// Smaller eligible id remains: removing id > After deletes it instead of 30.
 			ids, err := method(ctx, app.PurgeBatch{Cutoff: cutoff, After: purgeID(15), Limit: 1})
-			if err != nil || !slices.Equal(ids, []uuid.UUID{purgeID(30)}) {
+			if err != nil || ids.Deleted != 1 || ids.Scanned != 1 || ids.After != purgeID(30) {
 				t.Fatalf("nonzero cursor batch=%v,%v; want [30] while eligible 10 remains", ids, err)
 			}
 			rollback := errors.New("rollback caller")
 			err = postgres.NewTxManager(pool, time.Second).WithinTx(ctx, func(txctx context.Context) error {
 				ids, e := method(txctx, app.PurgeBatch{Cutoff: cutoff, Limit: 1})
-				if e != nil || !slices.Equal(ids, []uuid.UUID{purgeID(10)}) {
+				if e != nil || ids.Deleted != 1 || ids.Scanned != 1 || ids.After != purgeID(10) {
 					t.Fatalf("independent batch=%v,%v; want [10]", ids, e)
 				}
 				return rollback
@@ -76,7 +76,7 @@ func TestIssuePurgeAllTables(t *testing.T) {
 			if !errors.Is(err, rollback) {
 				t.Fatal(err)
 			}
-			if count, err := issue.Provide(pool).Purger.Purge(ctx, cutoff, 1); err != nil || count != 0 {
+			if count, err := purgeAll(issue.Provide(pool, nil).Purger, ctx, cutoff, 1); err != nil || count != 0 {
 				t.Fatalf("remaining purge=%d,%v; want 0", count, err)
 			}
 			for _, n := range []int{10, 20, 30, 40, 50} {
@@ -88,7 +88,7 @@ func TestIssuePurgeAllTables(t *testing.T) {
 			// Make every table nonempty for the real Provide binding, not only its adapter.
 			st.insert(t, pool, p, parent, purgeID(60), by, 60)
 			exec(t, pool, "UPDATE "+st.table+" SET deleted_at=$2 WHERE id=$1", purgeID(60), old)
-			if count, err := issue.Provide(pool).Purger.Purge(ctx, cutoff, 1); err != nil || count != 1 {
+			if count, err := purgeAll(issue.Provide(pool, nil).Purger, ctx, cutoff, 1); err != nil || count != 1 {
 				t.Fatalf("bound %s direct deletion=%d,%v; want 1", st.table, count, err)
 			}
 			// A later statement's failure cannot roll back the prior pool batch.
@@ -98,7 +98,7 @@ func TestIssuePurgeAllTables(t *testing.T) {
 			}
 			exec(t, pool, `CREATE FUNCTION fail_purge() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF OLD.id='0199a2b4-0000-7000-8000-000000000046'::uuid THEN RAISE EXCEPTION 'purge fixture failure'; END IF; RETURN OLD; END $$`)
 			exec(t, pool, "CREATE TRIGGER fail_purge BEFORE DELETE ON "+st.table+" FOR EACH ROW EXECUTE FUNCTION fail_purge()")
-			count, purgeErr := issue.Provide(pool).Purger.Purge(ctx, cutoff, 1)
+			count, purgeErr := purgeAll(issue.Provide(pool, nil).Purger, ctx, cutoff, 1)
 			var pe *pgconn.PgError
 			if count != 1 || !errors.As(purgeErr, &pe) || pe.Message != "purge fixture failure" {
 				t.Fatalf("%s committed count=%d,%v; want 1 and original PG error", st.table, count, purgeErr)
@@ -122,7 +122,7 @@ func TestIssuePurgeAllTables(t *testing.T) {
 		}{{30, &old}, {10, &old}, {20, &cutoff}, {40, &recent}, {50, nil}} {
 			exec(t, pool, "INSERT INTO draft_issues(id,workspace_id,created_by_id,deleted_at) VALUES($1,$2,$3,$4)", purgeID(row.n), workspace, by, row.at)
 		}
-		if count, err := issue.Provide(pool).Purger.Purge(ctx, cutoff, 1); err != nil || count != 2 {
+		if count, err := purgeAll(issue.Provide(pool, nil).Purger, ctx, cutoff, 1); err != nil || count != 2 {
 			t.Fatalf("workspace-only drafts=%d,%v; want 2", count, err)
 		}
 		var ids []uuid.UUID
@@ -169,7 +169,7 @@ func testIssuePurgeGraph(t *testing.T) {
 	// 12 owned child rows + the reaction fixture's extra comment + 3 reverse
 	// relations + 1 workspace-only draft + 1 root; recent descendants cascade.
 	const wantDirect = 18
-	if count, err := issue.Provide(pool).Purger.Purge(ctx, cutoff, 1); err != nil || count != wantDirect {
+	if count, err := purgeAll(issue.Provide(pool, nil).Purger, ctx, cutoff, 1); err != nil || count != wantDirect {
 		t.Fatalf("graph direct count=%d,%v; want %d", count, err, wantDirect)
 	}
 	var remaining []uuid.UUID

@@ -25,17 +25,23 @@ func TestIssueLockProbeWithConcurrentPurge(t *testing.T) {
 			continue
 		}
 		iw.checkProjectLocksWith(t, w, func(t *testing.T, pool *pgxpool.Pool, tables, mode string) pgx.Tx {
-			first, query := "issues", "PurgeIssues"
+			// Stop the worker before its issue candidate scan. The protected
+			// path only issues DELETE when a committed candidate exists.
+			first := lockedTables(t, pool, "comment_reactions", "EXCLUSIVE")
+			waitForPurgeBehind(t, pool, first.Conn().PgConn().PID(), "PurgeCommentReactions")
 			if tables == issueTables {
-				first, query = "comment_reactions", "PurgeCommentReactions"
-			}
-			held := lockedTables(t, pool, first, mode)
-			waitForPurgeBehind(t, pool, held.Conn().PgConn().PID(), query)
-			if tables != first {
-				if _, err := held.Exec(pgtest.Soon(t), "LOCK TABLE "+tables+" IN "+mode+" MODE"); err != nil {
+				if _, err := first.Exec(pgtest.Soon(t), "LOCK TABLE "+tables+" IN "+mode+" MODE"); err != nil {
 					t.Fatal(err)
 				}
+				return first
 			}
+			old := w.newWorkItem(t)
+			if _, err := pool.Exec(pgtest.Soon(t), "UPDATE issues SET deleted_at=now()-interval '61 days' WHERE id=$1", old); err != nil {
+				t.Fatal(err)
+			}
+			held := lockedTables(t, pool, tables, mode)
+			release(t, first)
+			waitForPurgeBehind(t, pool, held.Conn().PgConn().PID(), "DeletePurgeIssues")
 			return held
 		})
 		return

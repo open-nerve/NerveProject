@@ -1,6 +1,6 @@
 # M5 / P2 阶段评审记录
 
-> 实施中：T1–T3完成，T4–T14待执行；没有进行整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
+> 实施中：T1–T4完成，T5–T14待执行；没有进行整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
 
 ## 1. 方式
 
@@ -30,11 +30,11 @@ T1确认必须的完整Go依赖传递链，补齐spec/plan；T1无ETag输入，�
 
 ## 6. 后续责任
 
-T4开始父清理前进与持久任务游标。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
+T5开始首张资产表、删除协作与已知对象回收。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
 
 ## 7. 已知限制
 
-当前已有基础纯规则/校验、本地有限清单/临时回收、宿主授权与锁编排；尚无资产业务路由、file_assets或新清理worker。不能根据T1–T3通过声称F1/F3/F13/F14/F15已满足。
+当前已有基础纯规则/校验、本地有限清单/临时回收、宿主授权与锁编排、父清理单页与River持久进度；尚无资产业务路由、file_assets或资产清理worker。不能根据T1–T4通过声称F1/F3/F13/F14/F15已满足。
 
 ## 8. T2本地清单、临时目录与配置
 
@@ -53,3 +53,14 @@ T4开始父清理前进与持久任务游标。P4/P5绑定、P3 S3、P6/P7页面
 - 局部裁定：issue 以 `AssetProjectReader` 读取已持锁项目的归档状态，避免再次锁项目；错误接线会破坏拒绝次序，真实查询及矩阵约束它。T3 提取统一 `projectWrites` 并验证资产转接使用同一实例；实际业务模块在 T5 一次构造，HTTP 交错在 T11 证明，不以转接单测替代最终接线。
 - plan 原有回调示意与锁次序笔误已按 spec 和实际符号同步：Check 在父锁后、资产锁前；`AccessHeld` 携带最终锁后的时刻；`ParentKey.Kind` 使用具名 ScopeKind。业务用例仍须完成用途、绑定、父链和 revision 复查。
 - `task-3-race.log`：asset/issue/project/workspace 全包、bootstrap 与 archtest 的串行 race 回归通过，bootstrap 653.318秒；源码快照核验未变。lint 首轮发现三个适配器未被使用，真实锁/矩阵改为经过这些适配器后，`task-3-lint-final.log` 为0 issues。真实 P 锁转接、错误原样传递与最终聚焦 race 通过（bootstrap 45.388秒）；没有放宽 lint 或架构守卫。阶段验收仍不勾选。
+
+## 10. T4父清理分页与River持久进度
+
+- 四个owner改为每次一表一页的Page，生产中不再保留无界Purge入口；原清理图、60天边界、独立提交、迟到删除与父CASCADE测试经测试专用drain迁移，未删原断言。issue/project/workspace构造时复制明确保护标识，当前生产为空；真实资产约束及精确目录在T5接上，不把空集合当保护已交付。
+- `PurgeProtected`仅识别23503与schema/table/constraint全匹配。真实PG父→子→资产及自引用证明整批失败全部回滚，逐候选得到Scanned3/Deleted1/Blocked2，受阻前后邻域继续；取消/未知FK/23001/40P01保留此前独立提交进度并返回错误。
+- 普通固定SQL用有限物化候选CTE和DELETE CTE分别返回扫描数、删除数与候选最大ID，DELETE再核cutoff。实际PID/SQL/blocker交错先复现候选被并发删除时错误耗尽，再复现候选被改到精确cutoff仍遭删除；两个方向修复后通过。无跨模块SQL、额外父锁或表名拼接。
+- bootstrap预算使用运行时钟，单轮业务cutoff保存在全局模块/表/After游标；worker在snooze和错误前RecordOutput，编码上限16KiB，未知版本/模块/表或损坏输出明确失败。真实River在同一job的snooze后停机，换Runner且业务快进30天仍从原After/cutoff继续，完整页前进后完成；不声称每页恰好一次或计数跨重试恰好一次。
+- `task-4-mutations.json`六项变异全部被杀且恢复字节hash一致：Deleted判断耗尽、只看23503、重置cutoff、丢After、漏RecordOutput、扫描数冒充删除数。失败源码/日志分别保留，不把编译错误当性质红。
+- 首次受影响race暴露旧请求探针仍等待空页DELETE；新受保护路径空页不发DELETE。夹具先阻住真实前置清理、提交过期候选，再移交issues屏障；日志确认真实DeletePurgeIssues与业务MarkChanged各自PID/SQL，原项目锁/工作区锁/未提前写断言保留。聚焦RED与GREEN原件在task-4-purge-probe-*.log。
+- 最终串行race覆盖platform/postgres、四owner的app/adapter及bootstrap清理/父CASCADE回归全部通过，bootstrap52.129秒；archtest1.690秒；全server lint 0 issues。1506个测试输入hash在task-4-final-inputs.json，运行后核验未变。原首次race失败及错误cwd的lint调用保留；正式结果只取final日志。
+- 局部裁定及代价：单页接口让遗漏调用者编译失败；保护标识构造复制避免后注入；有限CTE保留真实扫描成本；DELETE cutoff复核避免等待后的过期事实；真实候选夹具保持原锁证明。完整理由与错误代价在台账，阶段A1–A12仍未勾选。

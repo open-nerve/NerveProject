@@ -166,7 +166,7 @@ func TestADeactivationAndACreationHeLeadsSerialize(t *testing.T) {
 			var req *http.Request
 			var rec *httptest.ResponseRecorder
 			create := func(gate *gate) func() error {
-				route := newProjectRoute(t, r.pool, r.authorizer(), gatedShares{workspace.Provide(r.pool).WorkspaceMembers, gate})
+				route := newProjectRoute(t, r.pool, r.authorizer(), gatedShares{workspace.Provide(r.pool, nil).WorkspaceMembers, gate})
 				return func() error {
 					req, rec = route.send(http.MethodPost, "/api/v0/workspaces/acme/projects", r.alice,
 						`{"name":"Ops","identifier":"OPS","project_lead_id":"`+r.bob.String()+`"}`)

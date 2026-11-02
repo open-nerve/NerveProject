@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T3已完成，接续T4。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T4已完成，接续T5。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -91,11 +91,11 @@
 
 **Interfaces：** ProtectedReference/ProtectedForeignKey/PurgePage和固定Candidates/Delete小操作见protected-purge；各owner产出Page而非无界Purge循环，bootstrap转成全局模块/表/After/cutoff游标，River RecordOutput+Snooze。
 
-- [ ] Step 1：真实PG TestProtectedPurgeProgress：父→issue→asset模拟、自引用、最小/最大受阻中间成功，要求Scanned3/Deleted1/Blocked2/After3；精确schema/table/constraint，未知23503/23001/40P01不吞。TestPurgeCursorResume验证一页与固定cutoff/错误进度；原M4无资产行为保持。
-- [ ] Step 2：串行 `go -C server test ./internal/platform/postgres ./internal/bootstrap -run 'ProtectedPurge|PurgeCursor|Purge.*Module' -count=1`，保存红，不能借更改期望掩盖skip。
-- [ ] Step 3：实现整批失败整体回滚再逐候选独立短事务；After来自扫描位置，已提交count随error返回。unknown cursor/过时table返回error；普通步骤同形分页保持其原固定SQL，受保护步骤只对明确声明祖先开启。此时资产表尚未存在，生产保护集合为空，真实模拟测试覆盖算法。
-- [ ] Step 4：真实River进度保存/snooze一次重入测试及所有owner purge回归；变异Deleted==0停止、只看23503、倒退cutoff/丢After、Snooze不RecordOutput须失败。目录不加NO ACTION白名单。
-- [ ] Step 5：提交，记录每个受影响caller已迁移；正式资产祖先精确集合由T5实际catalog推导。
+- [x] Step 1：真实PG TestProtectedPurgeProgress：父→issue→asset模拟、自引用、最小/最大受阻中间成功，要求Scanned3/Deleted1/Blocked2/After3；精确schema/table/constraint，未知23503/23001/40P01不吞。TestPurgeCursorResume验证一页与固定cutoff/错误进度；原M4无资产行为保持。
+- [x] Step 2：串行 `go -C server test ./internal/platform/postgres ./internal/bootstrap -run 'ProtectedPurge|PurgeCursor|Purge.*Module' -count=1`，保存红，不能借更改期望掩盖skip。
+- [x] Step 3：实现整批失败整体回滚再逐候选独立短事务；After来自扫描位置，已提交count随error返回。unknown cursor/过时table返回error；普通步骤保持单条自有固定SQL，以有限候选/删除CTE分别返回扫描和删除进度，DELETE再核cutoff；受保护步骤只对明确声明祖先开启。此时资产表尚未存在，生产保护集合为空，真实模拟测试覆盖算法。
+- [x] Step 4：真实River进度保存/snooze一次重入测试及所有owner purge回归；变异Deleted==0停止、只看23503、倒退cutoff/丢After、Snooze不RecordOutput须失败。目录不加NO ACTION白名单。
+- [x] Step 5：提交，记录每个受影响caller已迁移；正式资产祖先精确集合由T5实际catalog推导。
 
 ## Task 5（T5）：首张资产表、删除协作与已知对象回收
 

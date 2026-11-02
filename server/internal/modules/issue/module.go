@@ -16,6 +16,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/content"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/crawler"
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http"
@@ -58,22 +60,22 @@ type Provided struct {
 }
 
 // Provide builds issue's adapters for the other modules.
-func Provide(pool *pgxpool.Pool) Provided {
-	store := postgresadapter.New(pool)
+func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provided {
+	store := postgresadapter.NewPurgeStore(pool, protected)
 	return Provided{AssetParents: store, Purger: app.NewPurger([]app.PurgeStep{
 		{Table: "comment_reactions", Delete: store.PurgeCommentReactions},
 		{Table: "issue_reactions", Delete: store.PurgeIssueReactions},
 		{Table: "issue_mentions", Delete: store.PurgeIssueMentions},
 		{Table: "issue_description_versions", Delete: store.PurgeIssueDescriptionVersions},
 		{Table: "issue_activities", Delete: store.PurgeIssueActivities},
-		{Table: "issue_comments", Delete: store.PurgeIssueComments},
+		{Table: "issue_comments", Protected: true, Delete: store.PurgeIssueComments},
 		{Table: "issue_links", Delete: store.PurgeIssueLinks},
 		{Table: "issue_relations", Delete: store.PurgeIssueRelations},
 		{Table: "issue_assignees", Delete: store.PurgeIssueAssignees},
 		{Table: "issue_labels", Delete: store.PurgeIssueLabels},
 		{Table: "issue_subscribers", Delete: store.PurgeIssueSubscribers},
-		{Table: "draft_issues", Delete: store.PurgeDraftIssues},
-		{Table: "issues", Delete: store.PurgeIssues},
+		{Table: "draft_issues", Protected: true, Delete: store.PurgeDraftIssues},
+		{Table: "issues", Protected: true, Delete: store.PurgeIssues},
 	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}}
 }
 

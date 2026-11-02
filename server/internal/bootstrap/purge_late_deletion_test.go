@@ -112,7 +112,7 @@ func TestPurgeParentCascadesUnprocessedIssueRows(t *testing.T) {
 			if err := tx.Commit(context.Background()); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := retentionPurge(w, at).Execute(pgtest.Soon(t)); err != nil {
+			if _, err := drainPurge(retentionPurge(w, at), pgtest.Soon(t)); err != nil {
 				t.Fatal(err)
 			}
 			for k, ids := range recorded {
@@ -146,7 +146,7 @@ func TestPurgeParentCascadesUnprocessedIssueRows(t *testing.T) {
 				t.Fatal("parent purge changed users/profiles")
 			}
 			before := registrationRows(t, w.pool)
-			if _, err := retentionPurge(w, at).Execute(pgtest.Soon(t)); err != nil {
+			if _, err := drainPurge(retentionPurge(w, at), pgtest.Soon(t)); err != nil {
 				t.Fatal(err)
 			}
 			if registrationRows(t, w.pool) != before {

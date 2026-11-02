@@ -101,7 +101,7 @@ func testIssueLinkPrecheckResources(t *testing.T) {
 	waitUniqueLinkCrawl(t, w, link)
 	one := poolOfOne(t, w.pool.Config().ConnString())
 	store := issuepg.New(one)
-	projects := issueProjects{projects: project.Provide(one).IssueProjects}
+	projects := issueProjects{projects: project.Provide(one, nil).IssueProjects}
 	resources := &collaborationWriteResources{}
 	locks := issueapp.NewLocks(projects, store, authorizerOn(one), resources, resources)
 	before := collaborationState(t, w)

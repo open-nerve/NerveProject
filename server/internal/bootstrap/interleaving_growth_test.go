@@ -106,8 +106,8 @@ func (r growthRace) authorizer() shared.Authorizer {
 
 // authorizerOn is access's Authorizer as bootstrap wires it, on pool.
 func authorizerOn(pool *pgxpool.Pool) shared.Authorizer {
-	return access.New(access.Deps{WorkspaceRoles: workspace.Provide(pool).WorkspaceRoles,
-		ProjectAccess: accessProjects{projects: project.Provide(pool).ProjectAccess}})
+	return access.New(access.Deps{WorkspaceRoles: workspace.Provide(pool, nil).WorkspaceRoles,
+		ProjectAccess: accessProjects{projects: project.Provide(pool, nil).ProjectAccess}})
 }
 
 // cascadeOn is project's cascade as bootstrap wires it, on pool, over
@@ -139,7 +139,7 @@ func (m gatedShares) ShareMembers(ctx context.Context, workspaceID uuid.UUID, us
 // answers it with its answer, which another goroutine may call.
 func (r growthRace) growth(t *testing.T, add bool, g *gate) func() (*http.Request, *httptest.ResponseRecorder) {
 	t.Helper()
-	route := newProjectRoute(t, r.pool, r.authorizer(), gatedShares{workspace.Provide(r.pool).WorkspaceMembers, g})
+	route := newProjectRoute(t, r.pool, r.authorizer(), gatedShares{workspace.Provide(r.pool, nil).WorkspaceMembers, g})
 	web := "/api/v0/projects/" + r.web.String()
 	if add {
 		return func() (*http.Request, *httptest.ResponseRecorder) {
@@ -349,7 +349,7 @@ func TestADemotionAndAProjectsDeletionSerialize(t *testing.T) {
 			} else {
 				cascade = projectapp.NewCascade(store, store, gatedDemoter{store, g}, store)
 			}
-			route := newProjectRoute(t, r.pool, auth, workspace.Provide(r.pool).WorkspaceMembers)
+			route := newProjectRoute(t, r.pool, auth, workspace.Provide(r.pool, nil).WorkspaceMembers)
 			var req *http.Request
 			var rec *httptest.ResponseRecorder
 			deletion := func() error {

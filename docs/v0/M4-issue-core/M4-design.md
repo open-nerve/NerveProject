@@ -731,7 +731,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - 为什么不在运行中改时钟：那要一个改时钟的接口或信号，是只为测试存在的生产代码路径；以启动参数给出，生产代码里只有一个装饰器。
 
 ### 3.21 60 天的物理清理（总体设计 5.5、6.7；M2 交接第 5 节；架构问题 9）
-> 以下描述 M4 已验收的纯数据库清理合同。2026-11-02 负责人在 M5/P2 选择方案 A：新增资产父引用用 NO ACTION 保留外部对象恢复记录，清理者必须先处理文件、跳过受阻父候选并让邻域继续；目录守卫增加精确受保护依赖及真实反例，不普遍放开 NO ACTION。M5 联合实施前仍是下述 M4 实现；见 [P2 裁定](../M5-files/reviews/P2-purge-contract-decision.md)。
+> 以下描述 M4 已验收的纯数据库清理合同。2026-11-02 负责人在 M5/P2 选择方案 A：新增资产父引用用 NO ACTION 保留外部对象恢复记录，清理者必须先处理文件、跳过受阻父候选并让邻域继续；目录守卫增加精确受保护依赖及真实反例，不普遍放开 NO ACTION。下述条目保留 M4 已验收实现的历史事实。M5/P2 T4 已将父清理改为有限单页和 River 持久游标，普通 SQL 分开返回扫描/删除数并在 DELETE 再核 cutoff；真实资产表、NO ACTION 与联合目录验证接续 T5。现行合同见 [父清理合同](../M5-files/specs/P2-protected-purge.md)；裁定见 [P2 裁定](../M5-files/reviews/P2-purge-contract-decision.md)。
 
 - **每个模块清理自己的表**：`identity`、`workspace`、`project`、`issue` 各交出一个 `Purger`：按它的表从子到父，删除 `deleted_at < cutoff` 的行，每张表一个按 `id` 的键集循环，每批一个事务、一条语句：`DELETE FROM t WHERE id IN (SELECT id FROM t WHERE deleted_at < $1 AND id > $after ORDER BY id LIMIT $2) RETURNING id`，下一批的 `$after` 是这一批最大的 `id`，直到删除 0 行。第三稿的语句没有 `id > $after`，与删除的任务同一个毛病：SP4 量到 80 万行 31.4 秒、每批 8 → 113 ms（聚焦复核 I2）。描述版本的保留是每个项目一条语句（3.14），不分批，不受影响。模块的 sqlc 查询只碰自己的表（`TestSQLCSchemaScope`）。
 - **一个定时任务**：`bootstrap` 把四个清理者组成一个任务 `cleanup.purge_deleted`，按 `issue` → `project` → `workspace` → `identity` 的顺序运行（子模块先清理，父表的 `CASCADE` 多半已无事可做）。一个任务而不是四个：四个各自运行时，清理项目的批量与清理工作项的批量可以在同一批行上按不同的顺序相遇（外键的 `CASCADE` 在父表的删除里删除子行），一个任务按顺序执行就没有并发。

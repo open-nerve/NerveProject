@@ -1,6 +1,6 @@
 # M5 / P2：受保护资产与父行物理清理合同
 
-> 负责人已批准 A；本文件把该范围细化为可验证的工程合同。尚未实施；P2 总体预检已把 API、状态机和权限端口一并完成，见主 spec 与 re-34，实施仍须逐 Task 验证。
+> 负责人已批准 A；本文件是实施合同。父清理分页与恢复在 T4 落地，真实资产 FK、对象回收和目录联合验证接续 T5；各项实测状态见[阶段评审记录](../reviews/P2-assets-review.md)，不能将预检或局部验证当作全部交付。
 > 来源：[裁定与独立复核](../reviews/P2-purge-contract-decision.md)、M4 §3.21/§4.16/§11.9、M5 §4.2/§7/§10。
 
 ## 1. 不可丢失的事实
@@ -22,11 +22,13 @@
 
 每页输出 `Scanned`、`Deleted`、`Blocked`、`After`；下一页按扫描位置前进。只有 `Scanned == 0` 才算该表耗尽，不能以 `Deleted == 0` 提前终止。选择后被其他事务删掉或不再满足 cutoff 的候选也计入扫描位置，删除数仍按真实 RETURNING 行计。
 
+普通子表同样区分扫描与删除：一条自有固定 SQL 用有限候选 CTE 和 DELETE CTE，返回候选数、实际删除数与候选最大 ID；DELETE 再核 cutoff。并发删除或候选时间变化不能把已扫描页说成空页，也不能删除等待后已不满足 cutoff 的行。仍为一条快速批删，没有新增父锁；代价是有限候选的物化。T4 已用实际请求 PID、SQL 与 blocker 复现并验证这两个方向。
+
 SQL 仍由各 owner 的 sqlc 生成，只访问自己的表。基础设施仅提取 PostgreSQL 错误身份和执行上述受保护批次算法；调用方提供自身生成查询，不传跨业务模块事务闭包，不让共享层拼表名或执行业务 SQL。适配器持有的保护标识来自 bootstrap 的明确构造参数，构造后不补注入、不运行时查找服务。
 
 ## 3. 类型和构造边界
 
-以下是 P2 新增合同，不是已有方法：
+以下是 T4 已落地的基础设施合同：
 
 ```go
 // platform/postgres 的基础设施值；Schema/Table/Constraint 必须全部匹配。
@@ -40,9 +42,9 @@ func ProtectedForeignKey(err error, references []ProtectedReference) bool
 
 `ProtectedForeignKey` 仅接受 `*pgconn.PgError` 经 errors.As 得到的 23503，且三项身份精确命中。测试中的 `public/probe_asset/probe_asset_issue_fk` 已由真实 PostgreSQL 返回验证；生产需使用真实 `file_assets` 命名验证。不得按错误文本或仅按 SQLSTATE 分类。
 
-asset 模块外观交出 `ProtectedParentReferences()` 的新副本（不得暴露可变全局 slice），来源为其明确的迁移约束。bootstrap 转成父 adapter 的上述消费方值。issue/project/workspace 的 Provide 构造参数新增明确的保护引用输入；app 不 import platform 类型，自己的 PurgePage 由 adapter 转换。identity 的现有清理无需改变。
+asset 模块外观交出 `ProtectedParentReferences()` 的新副本（不得暴露可变全局 slice），来源为其明确的迁移约束。bootstrap 转成父 adapter 的上述消费方值。issue/project/workspace 的 Provide 构造参数新增明确的保护引用输入；app 不 import platform 类型，自己的 PurgePage 由 adapter 转换。identity 无受保护父步骤，但同样改为有限单页协议。
 
-批次算法的基础设施消费者只接受两个小操作：`Candidates(ctx, cutoff, after, limit) ([]uuid.UUID, error)` 和 `Delete(ctx, cutoff, ids) ([]uuid.UUID, error)`。各 owner 以具名 adapter 绑定它自己的固定 sqlc 查询。不得根据外部输入选 SQL、表或列。原普通子表保留快速批删；只为目录推导出的受保护祖先使用这一执行方式。
+批次算法的基础设施消费者只接受两个小操作：`Candidates(ctx, cutoff, after, limit) ([]uuid.UUID, error)` 和 `Delete(ctx, cutoff, ids) ([]uuid.UUID, error)`。各 owner 以具名 adapter 绑定它自己的固定 sqlc 查询。不得根据外部输入选 SQL、表或列。普通子表保留单条快速批删；只为目录推导出的受保护祖先使用先选候选、批删失败再逐候选的方式。实际基础设施入口为 `PurgeProtected`，owner 的 `Purger.Page` 每次只执行一个步骤的一页；整轮循环只在有运行预算的 bootstrap 编排内，测试中的 drain 不进入产品。
 
 阶段需要处理的祖先至少包括 `issue_comments`、`draft_issues`、`issues`（含自引用）、`states`、`projects`、`workspaces`。不是按这份手写列表豁免未来节点：目录测试独立沿 CASCADE 边反向寻找通往资产 NO ACTION 边的所有可清理祖先，再与受保护步骤声明精确对照。
 
@@ -56,7 +58,7 @@ asset 模块外观交出 `ProtectedParentReferences()` 的新副本（不得暴�
 - `bootstrap` 的物理清理顺序为 asset → issue → project → workspace → identity。资产对象 I/O 在业务事务/连接之外；提交 metadata 变化时只锁本资产，不倒过来追父锁。
 - `files` 清理任务、原 purge 和请求写的交错要用实际 PID/阻塞行证明；23503 的保护与允许 40P01 重试是不同合同，不把前者吞掉所有数据库错误。
 
-暂时无法回收的范围不会阻止后面的无关候选。完整轮次在有限工作预算后按持久游标继续；进程退出允许重复检查已处理页，但不能丢恢复依据。具体任务游标与配置已写入 [对象恢复合同](P2-recovery.md) §2/§6；尚未实施。
+暂时无法回收的范围不会阻止后面的无关候选。完整轮次在有限工作预算后按持久游标继续；进程退出允许重复检查已处理页，但不能丢恢复依据。具体任务游标与配置已写入 [对象恢复合同](P2-recovery.md) §2/§6；父清理游标已由 T4 验证，资产对象任务接续 T5/T9。
 
 ## 5. 守卫演进
 
@@ -76,7 +78,7 @@ asset 模块外观交出 `ProtectedParentReferences()` 的新副本（不得暴�
 
 预检探针在独立测试数据库中模拟 parent → issue → asset 以及 issue 自引用；实际 NO ACTION 报错能保留叶子约束身份，整批回滚完整，逐候选检查得到 Scanned=3、Deleted=1、Blocked=2、After=3，移除恢复记录后下一轮可删除剩余两个父行。精确 schema/table/constraint/SQLSTATE 另经真实 PostgreSQL 核对。
 
-原件位于本工作树 `.superpowers/sdd/P2-assets/`：`p2_purge_forward_probe.source.go`、`purge-forward-probe.log`（2.062s）及 `p2_purge_identity_probe.source.go`、`purge-identity-probe.log`（3.315s）。探针源执行后移出产品目录；没有产品实现或守卫改动。
+原件位于本工作树 `.superpowers/sdd/P2-assets/`：`p2_purge_forward_probe.source.go`、`purge-forward-probe.log`（2.062s）及 `p2_purge_identity_probe.source.go`、`purge-identity-probe.log`（3.315s）。这些规划探针源执行后移出产品目录，当时没有产品实现或守卫改动；后续永久实现与测试另按 Task 留证。
 
 这些证明 PostgreSQL 语义和所选分页策略可行；尚不证明真实 asset 表/对象删除、全部 owner 接线、锁序、规模性能或崩溃恢复已通过。实现时必须把性质转成真实模块与完整程序的永久测试，不能用探针代替阶段验收。
 

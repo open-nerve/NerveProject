@@ -145,7 +145,7 @@ func TestAutoArchiveUsesLockedPolicyOneProjectAtATime(t *testing.T) {
 	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+other.String(), `{"archive_in":1}`, 200)
 	g, second := newGate(), newGate()
 	events := newArchiveRaceEvents(t, w)
-	p := project.Provide(w.pool)
+	p := project.Provide(w.pool, nil)
 	states := &archiveFirstStates{StateCatalog: issueProjects{projects: p.IssueProjects}, gates: []*gate{g, second}}
 	job := issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: states, Issues: issuepostgres.New(w.pool), Tx: newIssueJobTx(w.pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), Clock: clockAt(at), Events: events})
 	count := 0

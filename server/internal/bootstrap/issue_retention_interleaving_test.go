@@ -50,7 +50,7 @@ func (r *retentionRows) TrimDescriptionVersions(ctx context.Context, id uuid.UUI
 	return r.DescriptionVersionTrimmer.TrimDescriptionVersions(ctx, id)
 }
 func retentionJob(w issueWorld, tx shared.TxManager, rows issueapp.DescriptionVersionTrimmer) *issueapp.TrimVersions {
-	p := issueProjects{projects: project.Provide(w.pool).IssueProjects}
+	p := issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}
 	return issueapp.NewTrimVersions(issueapp.TrimVersionsDeps{Projects: p, Gate: p, Rows: rows, Tx: tx})
 }
 func retentionTx(w issueWorld) *requestProbe {

@@ -49,7 +49,7 @@ func (p archiveHeldPolicies) ArchiveProjects(ctx context.Context) ([]uuid.UUID, 
 }
 
 func archiveRaceJob(w issueWorld, c issueapp.Clock, e shared.EventPublisher, scanned, locked *gate) *issueapp.AutoArchive {
-	p := project.Provide(w.pool)
+	p := project.Provide(w.pool, nil)
 	var policies issueapp.ArchivePolicies = p.ArchivePolicies
 	var states issueapp.StateCatalog = issueProjects{projects: p.IssueProjects}
 	if scanned != nil {

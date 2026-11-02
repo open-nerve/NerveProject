@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1 已完成集成和归档，P2 实施中（T1–T3已完成）；见[预检记录](../../reviews/re-31-M5设计与P1预检.md)。
+> 状态：P1 已完成集成和归档，P2 实施中（T1–T4已完成）；见[预检记录](../../reviews/re-31-M5设计与P1预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 > 设计基线分支 `codex/m5-design` 已合入并归档；P1 已合入并归档，当前工作分支为 `codex/m5-p2`，P2从已通过预检进入实施。2026-11-02 负责人授权按既有节奏连续推进；常规设计、预检、实现、deep-review、`--no-ff` 集成、CI 和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
@@ -103,7 +103,7 @@ asset 表合入的同一阶段更新真实删除 fixture、目录/外键守卫�
 
 事件任务沿用原 At/By，重试不覆写更早删除审计。物理清理先移除外部对象并在锁下确认 metadata 已无待清理 key，然后移除无引用的资产墓碑，最后才允许相应父行被 purge。失败保留记录，下轮重试；不能先删 DB 行再忘记对象。跨 owner 的 purge 顺序由 bootstrap 明列，循环引用通过所属模块清空失效引用解除，不关闭外键。
 
-**2026-11-02 负责人裁定 A（P2 待实施）：** `file_assets` 的业务父引用采用即时 `NO ACTION`，防止任一直达或传递 CASCADE 抹掉恢复记录。asset 对象/墓碑清理先于父 owner；父清理须有界识别和跳过受阻候选，仍推进无关候选。覆盖 comment/draft/issue、issue 自引用、states→issues、project/workspace 全部路径；不把首批删除 0 行误当候选耗尽。守卫精确验证受保护 FK、清理者、父候选协议和顺序，原任意 RESTRICT/NO ACTION、漏表/漏 FK 负例仍拒绝；增加移除数据库保护/跳过依赖验证的反例。不是把 NO ACTION 直接列为安全 action。
+**2026-11-02 负责人裁定 A（T4父分页/持久游标已实施，T5真实资产保护待实施）：** `file_assets` 的业务父引用采用即时 `NO ACTION`，防止任一直达或传递 CASCADE 抹掉恢复记录。asset 对象/墓碑清理先于父 owner；父清理须有界识别和跳过受阻候选，仍推进无关候选。覆盖 comment/draft/issue、issue 自引用、states→issues、project/workspace 全部路径；不把首批删除 0 行误当候选耗尽。守卫精确验证受保护 FK、清理者、父候选协议和顺序，原任意 RESTRICT/NO ACTION、漏表/漏 FK 负例仍拒绝；增加移除数据库保护/跳过依赖验证的反例。不是把 NO ACTION 直接列为安全 action。
 
 收益是协议遗漏或对象故障不会丢掉唯一恢复依据；代价是相关父墓碑在对象故障时继续保留，不能靠 CASCADE 按时强删。所有对象 I/O 在事务外，父 owner 小端口与 asset 自有 SQL 在 bootstrap 接合；完整协议、锁图和前进证明在 [P2 spec](specs/P2-assets.md) 及其 access/recovery/protected-purge 子合同固定，完整预检记录见 [re-34](../../reviews/re-34-M5P2预检.md)。[问题、探针与已批准方案](reviews/P2-purge-contract-decision.md)保留替代 C（全锁内 owner 协议，无数据库兜底）和未采纳理由。
 
@@ -299,7 +299,7 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 |---|---|---|
 | 设计与 P1 预检 | 已完成 | [预检记录](../../reviews/re-31-M5设计与P1预检.md) |
 | P1 | 已完成：noff main 85dc4087，CI 41471671630 全绿，792 文件归档核验并清理 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) / [阶段记录](reviews/P1-local-storage-review.md) / [整审](../../reviews/re-33-M5P1整体审核.md) |
-| P2 | 实施中；T1–T3已完成，接续T4；清理合同方案A已授权 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [预检](../../reviews/re-34-M5P2预检.md) / [裁定](reviews/P2-purge-contract-decision.md) |
+| P2 | 实施中；T1–T4已完成，接续T5；清理合同方案A已授权 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [预检](../../reviews/re-34-M5P2预检.md) / [裁定](reviews/P2-purge-contract-decision.md) |
 | P3–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。

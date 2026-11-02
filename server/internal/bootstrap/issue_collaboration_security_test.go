@@ -83,7 +83,7 @@ func TestCollaborationSecurity(t *testing.T) {
 		c := w.newComment(t, "alice", id)
 		one := poolOfOne(t, w.pool.Config().ConnString())
 		store := issuepg.New(one)
-		projects := issueProjects{projects: project.Provide(one).IssueProjects}
+		projects := issueProjects{projects: project.Provide(one, nil).IssueProjects}
 		resources := &collaborationWriteResources{}
 		locks := issueapp.NewLocks(projects, store, authorizerOn(one), resources, resources)
 		edit := issueapp.NewUpdateIssueComment(issueapp.UpdateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: store, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}})

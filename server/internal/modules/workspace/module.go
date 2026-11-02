@@ -14,6 +14,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
@@ -79,15 +81,15 @@ type Provided struct {
 }
 
 // Provide builds workspace's adapters for the other modules.
-func Provide(pool *pgxpool.Pool) Provided {
+func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provided {
 	directory := postgresadapter.NewDirectory(pool)
-	store := postgresadapter.New(pool)
+	store := postgresadapter.NewPurgeStore(pool, protected)
 	return Provided{
 		Purger: app.NewPurger([]app.PurgeStep{
 			{Table: "workspace_user_properties", Delete: store.PurgeWorkspaceUserProperties},
 			{Table: "workspace_member_invites", Delete: store.PurgeWorkspaceMemberInvites},
 			{Table: "workspace_members", Delete: store.PurgeWorkspaceMembers},
-			{Table: "workspaces", Delete: store.PurgeWorkspaces},
+			{Table: "workspaces", Protected: true, Delete: store.PurgeWorkspaces},
 		}),
 		AssetParents: store, WorkspaceRoles: store, WorkspaceDirectory: directory,
 		WorkspaceMembers: directory, WorkspaceMemberDirectory: directory,

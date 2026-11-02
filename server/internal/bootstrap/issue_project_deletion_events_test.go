@@ -49,7 +49,7 @@ func TestProjectDeletionPublishesAndEnqueuesAtomically(t *testing.T) {
 		}
 		return nil
 	}})
-	route := newProjectRouteWithPublisher(t, pool, postgres.NewTxManager(pool, 2*time.Second), authorizerOn(pool), workspace.Provide(pool).WorkspaceMembers, events)
+	route := newProjectRouteWithPublisher(t, pool, postgres.NewTxManager(pool, 2*time.Second), authorizerOn(pool), workspace.Provide(pool, nil).WorkspaceMembers, events)
 	// A synchronous cascade cannot return 204 while the first issue batch is held.
 	route.answerWithin(t, contract, http.MethodDelete, "/api/v0/projects/"+web.String(), aliceID, "", 204)
 	for _, k := range keys {
@@ -126,7 +126,7 @@ func TestProjectDeletionPublicationFailuresRollback(t *testing.T) {
 				}
 				return errors.New("reject project subscriber")
 			}})
-			route := newProjectRouteWithPublisher(t, pool, postgres.NewTxManager(pool, 2*time.Second), authorizerOn(pool), workspace.Provide(pool).WorkspaceMembers, events)
+			route := newProjectRouteWithPublisher(t, pool, postgres.NewTxManager(pool, 2*time.Second), authorizerOn(pool), workspace.Provide(pool, nil).WorkspaceMembers, events)
 			actor, status := aliceID, 500
 			if failure == "unseen" {
 				actor, status = uuid.NewV7(), 404

@@ -217,7 +217,7 @@ func TestDescriptionVersionsReadSnapshot(t *testing.T) {
 	id := w.newWorkItem(t)
 	v := savedVersion(t, w, id)
 	store := issuepg.New(w.pool)
-	projects := issueProjects{projects: project.Provide(w.pool).IssueProjects}
+	projects := issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}
 	changed := false
 	wrapped := versionSnapshotStore{Store: store, inspect: func(ctx context.Context) {
 		var readOnly, isolation string

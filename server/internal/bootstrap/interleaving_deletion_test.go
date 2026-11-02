@@ -120,7 +120,7 @@ func TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects(t *testing.T) {
 			defer cancel()
 			g := newGate()
 			route := newProjectRoute(t, r.pool, gatedAuthorizer{Authorizer: r.authorizer(), action: w.action, gate: g},
-				workspace.Provide(r.pool).WorkspaceMembers)
+				workspace.Provide(r.pool, nil).WorkspaceMembers)
 			var req *http.Request
 			var rec *httptest.ResponseRecorder
 			wrote := run(func() error {
@@ -232,8 +232,8 @@ func TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize(t *testing.T) {
 	defer cancel()
 	g := newGate()
 	joining := newProjectRoute(t, r.pool, gatedAuthorizer{Authorizer: r.authorizer(), action: projectdomain.ActionJoin, gate: g},
-		workspace.Provide(r.pool).WorkspaceMembers)
-	adding := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool).WorkspaceMembers)
+		workspace.Provide(r.pool, nil).WorkspaceMembers)
+	adding := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool, nil).WorkspaceMembers)
 	var joinRec, addRec *httptest.ResponseRecorder
 	var addReq *http.Request
 	joined := run(func() error {

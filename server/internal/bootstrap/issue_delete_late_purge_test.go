@@ -63,7 +63,7 @@ func TestLateDeleteRowsAfterPurge(t *testing.T) {
 			if _, err := w.pool.Exec(pgtest.Soon(t), `UPDATE `+parent+` SET deleted_at=clock_timestamp()-interval '61 days' WHERE id=$1`, id); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := retentionPurge(w, time.Now()).Execute(pgtest.Soon(t)); err != nil {
+			if _, err := drainPurge(retentionPurge(w, time.Now()), pgtest.Soon(t)); err != nil {
 				t.Fatal(err)
 			}
 			assertLateCatalogEmpty(t, w, catalog)
@@ -139,8 +139,8 @@ func TestLateDeleteRowsAndPurgeRetry(t *testing.T) {
 				t.Cleanup(pp.Close)
 				p := retentionPurge(issueWorld{pool: pp}, time.Now())
 				for i, m := range p.modules {
-					p.modules[i] = purgeFunc(func(ctx context.Context, cutoff time.Time, batch int) (int, error) {
-						n, err := m.Purge(ctx, cutoff, batch)
+					p.modules[i].rows = purgeFunc(func(ctx context.Context, cutoff time.Time, batch int, cursor purgePageCursor) (purgePageProgress, error) {
+						n, err := m.rows.Page(ctx, cutoff, batch, cursor)
 						if err != nil {
 							purgeErrors <- err
 						}

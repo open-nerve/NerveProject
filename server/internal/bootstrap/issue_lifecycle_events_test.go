@@ -261,7 +261,7 @@ func TestIssueDeletionEventsCascade(t *testing.T) {
 				parent.answerWithin(t, w.contract, http.MethodDelete, "/api/v0/workspaces/acme", w.ids["alice"], "", 204)
 				waitWorkspaceDeletion(t, pool, w.acme)
 			} else {
-				parent := newProjectRouteWithPublisher(t, pool, tx, authorizerOn(pool), workspace.Provide(pool).WorkspaceMembers, events)
+				parent := newProjectRouteWithPublisher(t, pool, tx, authorizerOn(pool), workspace.Provide(pool, nil).WorkspaceMembers, events)
 				parent.answerWithin(t, w.contract, http.MethodDelete, "/api/v0/projects/"+w.web.String(), w.ids["alice"], "", 204)
 				waitProjectDeletion(t, pool, w.web)
 			}

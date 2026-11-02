@@ -8,6 +8,7 @@ package postgresadapter
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,7 +20,8 @@ import (
 
 // Store implements the workspace repository ports of app.
 type Store struct {
-	pool *pgxpool.Pool
+	pool      *pgxpool.Pool
+	protected []postgres.ProtectedReference
 }
 
 // New returns the store over pool.
@@ -38,4 +40,9 @@ func notFound(err error) error {
 		return app.ErrNotFound
 	}
 	return err
+}
+
+// NewPurgeStore fixes the accepted constraint identities at construction.
+func NewPurgeStore(pool *pgxpool.Pool, references []postgres.ProtectedReference) *Store {
+	return &Store{pool: pool, protected: slices.Clone(references)}
 }

@@ -46,8 +46,8 @@ func TestIssueListReadSnapshot(t *testing.T) {
 	own := w.newWorkItemBy(t, "walt", w.web, `{"name":"Own","label_ids":`+idArray(w.bug)+`}`)
 	w.send(t, "alice", http.MethodPatch, "/api/v0/issues/"+own.String(), `{"parent_id":"`+parent.String()+`"}`, 200)
 	one := poolOfOne(t, w.pool.Config().ConnString())
-	projects := project.Provide(one)
-	workspaces := workspace.Provide(one)
+	projects := project.Provide(one, nil)
+	workspaces := workspace.Provide(one, nil)
 	auth := access.New(access.Deps{WorkspaceRoles: workspaces.WorkspaceRoles, ProjectAccess: accessProjects{projects: projects.ProjectAccess}})
 	dirs := issueProjects{projects: projects.IssueProjects}
 	store := issuepg.New(one)
@@ -91,7 +91,7 @@ func TestMemberIssueReadSnapshot(t *testing.T) {
 	pm := queryIDs(t, w.pool, "SELECT id FROM project_members WHERE project_id=$1 AND member_id=$2", w.web, w.ids["walt"])[0]
 	w.send(t, "alice", http.MethodPatch, "/api/v0/project-members/"+pm.String(), `{"role":5}`, 200)
 	one := poolOfOne(t, w.pool.Config().ConnString())
-	projects, workspaces := project.Provide(one), workspace.Provide(one)
+	projects, workspaces := project.Provide(one, nil), workspace.Provide(one, nil)
 	auth := access.New(access.Deps{WorkspaceRoles: workspaces.WorkspaceRoles, ProjectAccess: accessProjects{projects: projects.ProjectAccess}})
 	dirs := issueProjects{projects: projects.IssueProjects}
 	store := issuepg.New(one)

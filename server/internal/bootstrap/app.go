@@ -132,9 +132,9 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	// offers the others, built from the pool alone; then the modules, each
 	// with every port it needs, so no construction waits on another.
 	identityPorts := identity.Provide(pool)
-	workspacePorts := workspace.Provide(pool)
-	projectPorts := project.Provide(pool)
-	issuePorts := issue.Provide(pool)
+	workspacePorts := workspace.Provide(pool, nil)
+	projectPorts := project.Provide(pool, nil)
+	issuePorts := issue.Provide(pool, nil)
 	authorizer := access.New(access.Deps{
 		WorkspaceRoles: workspacePorts.WorkspaceRoles,
 		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
@@ -208,7 +208,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	purge := newPurgeDeleted([]Purger{issuePorts.Purger, projectPorts.Purger, workspacePorts.Purger, identityPorts.Purger}, businessClock, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch)
+	purge := newPurgeDeleted([]purgeModule{{"issue", forIssuePurge(issuePorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
 	definitions := append(append(ident.Jobs(), issues.Jobs()...), purgeJob(purge, cfg.Cleanup.PurgeInterval))
 	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, append(identity.EnqueuedKinds(), issue.EnqueuedKinds()...))
 	if err != nil {

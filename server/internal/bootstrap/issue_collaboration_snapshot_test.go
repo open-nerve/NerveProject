@@ -64,7 +64,7 @@ func TestCollaborationSnapshot(t *testing.T) {
 					invalidSnapshots = append(invalidSnapshots, fmt.Sprintf("read %d: %s/%s: %v", checks, ro, isolation, err))
 				}
 			}
-			projects := activitySnapshotProjects{issueProjects: issueProjects{projects: project.Provide(w.pool).IssueProjects}, inspect: inspect}
+			projects := activitySnapshotProjects{issueProjects: issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}, inspect: inspect}
 			plainLocks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{})
 			readTx := postgres.NewTxManager(w.pool, 2*time.Second, postgres.ReadOnlySnapshot())
 			rows := collaborationSnapshotRows{Store: store, inspect: inspect}

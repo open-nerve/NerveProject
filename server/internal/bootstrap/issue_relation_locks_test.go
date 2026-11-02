@@ -126,7 +126,7 @@ func TestDeleteRelationChecksBothLockedProjects(t *testing.T) {
 			defer func() { releaseAndJoinGate(t, barrier, deleteDone) }()
 			held(t, pgtest.Soon(t), barrier, deleteDone, "project deletion before commit")
 			store := issuepg.New(w.pool)
-			projects := issueProjects{projects: project.Provide(w.pool).IssueProjects}
+			projects := issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}
 			authorizer := &relationCountingAuthorizer{Authorizer: authorizerOn(w.pool)}
 			tx := requestTx(w.pool)
 			locks := issueapp.NewLocks(projects, store, authorizer, newWriteGate(config.WriteGateConfig{PerProject: 1, MaxQueue: 1, MaxWait: time.Second}), tx)

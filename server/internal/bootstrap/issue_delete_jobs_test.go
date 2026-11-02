@@ -227,7 +227,7 @@ func TestNewAppDeleteRowsJobRuns(t *testing.T) {
 	}
 	// A periodic purge may run between job completion and the audit read.
 	// Exercise that order explicitly: this fixture must remain within retention.
-	if count, err := issue.Provide(w.pool).Purger.Purge(pgtest.Soon(t), time.Now().Add(-retention), 1); err != nil || count != 0 {
+	if count, err := drainPurgeModule(forIssuePurge(issue.Provide(w.pool, nil).Purger), pgtest.Soon(t), time.Now().Add(-retention), 1); err != nil || count != 0 {
 		t.Fatalf("purge removed audit fixtures: count=%d err=%v", count, err)
 	}
 	for _, target := range []struct {

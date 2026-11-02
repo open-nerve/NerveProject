@@ -1,6 +1,6 @@
 # M5 / P2：资产用例与生命周期
 
-> 状态：预检通过，T1–T3已完成、接续T4；见[完整预检记录](../../../reviews/re-34-M5P2预检.md)。负责人已批准清理方案 A，见[裁定](../reviews/P2-purge-contract-decision.md)。P2 基线是 P1 noff main `85dc4087a28570f59a62825f5dc861152e41c833`，准确 main CI 41471671630 三 job 全绿，P1 已归档清理。
+> 状态：预检通过，T1–T4已完成、接续T5；见[完整预检记录](../../../reviews/re-34-M5P2预检.md)。负责人已批准清理方案 A，见[裁定](../reviews/P2-purge-contract-decision.md)。P2 基线是 P1 noff main `85dc4087a28570f59a62825f5dc861152e41c833`，准确 main CI 41471671630 三 job 全绿，P1 已归档清理。
 > 上位：[M5 design](../M5-design.md) §3–§7、§10–§13。必读子合同：[权限与锁序](P2-access.md)、[对象恢复](P2-recovery.md)、[父行物理清理](P2-protected-purge.md)。它们是本 spec 的组成部分。
 
 ## 1. 目标与边界
@@ -94,7 +94,7 @@ duplicate 可跨用途，但目标重新执行大小/图片验证；非图片附
 
 图片只支持 JPEG/PNG/WebP/GIF，校验头部格式与声明一致，DecodeConfig 最多1MiB输入，每边1..16384、像素乘积≤40,000,000（防溢出先检查后乘）。探测允许从有界头缓存重读，然后完整字节流算摘要；不做全图像解码，不把头检查称为验证所有像素/帧。损坏后段可能经头检查但浏览器无法显示，这是明确限制；nosniff和仅栅格inline保持。新增依赖仅设计点名的 `golang.org/x/image v0.47.0` WebP；必要传递 x/sys v0.49.0、x/text v0.43.0，以及后者要求的 x/tools v0.51.0、x/sync v0.24.0 在 go.mod/sum 中解释并回归。无其他新增库、无全局安装。
 
-已核[官方 WebP](https://pkg.go.dev/golang.org/x/image@v0.47.0/webp)及[该版本 go.mod](https://github.com/golang/image/blob/v0.47.0/go.mod)；仓库Go1.27满足其Go1.26底线。依赖尚未安装，所有测试均待实现。
+已核[官方 WebP](https://pkg.go.dev/golang.org/x/image@v0.47.0/webp)及[该版本 go.mod](https://github.com/golang/image/blob/v0.47.0/go.mod)；仓库Go1.27满足其Go1.26底线。T1已安装并验证该必要依赖链；完整资产生命周期验收仍按后续Task执行。
 
 ### 2.5 删除、清理与观察
 
@@ -112,7 +112,7 @@ duplicate 可跨用途，但目标重新执行大小/图片验证；非图片附
 
 ## 4. 验收标准
 
-以下全部尚未实现/验收，不能提前勾选。
+以下阶段标准均尚未完整验收，不能用单个Task通过提前勾选。
 
 - [ ] A1 六个API、10种用途、严格DTO/错误/两语/生成物与真实路由目录一致。
 - [ ] A2 真实 PUT→complete→content→GET 字节与摘要一致，重复complete只有一个final；旧PUT不能改已发布字节。

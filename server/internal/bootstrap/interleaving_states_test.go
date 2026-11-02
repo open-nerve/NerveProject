@@ -137,7 +137,7 @@ func creates(name string, group projectdomain.StateGroup) stateWrite {
 
 func deletes(name string) stateWrite {
 	return stateWrite{"deletes " + name, func(ctx context.Context, w memberWorld, states stateStore, ids map[string]uuid.UUID) error {
-		return projectapp.NewDeleteState(w.projectLocks(), states, issue.Provide(w.pool).IssueCascade, w.tx(), clock.System{}).Execute(w.asBob(ctx),
+		return projectapp.NewDeleteState(w.projectLocks(), states, issue.Provide(w.pool, nil).IssueCascade, w.tx(), clock.System{}).Execute(w.asBob(ctx),
 			ids[name])
 	}, func(states map[string]projectState) { delete(states, name) }}
 }

@@ -86,8 +86,8 @@ func newProjectRouteOn(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, au
 func newProjectRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, auth shared.Authorizer, members projectapp.WorkspaceMembers, events shared.EventPublisher) moduleRoute {
 	t.Helper()
 	return newRoute(t, project.New(project.Deps{Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
-		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members,
-		Issues: issue.Provide(pool).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool).ListSettings}}).Register)
+		Workspaces: projectWorkspaces{directory: workspace.Provide(pool, nil).WorkspaceDirectory}, Members: members,
+		Issues: issue.Provide(pool, nil).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool, nil).ListSettings}}).Register)
 }
 
 // send sends method path as caller, with body when it is not empty, and
@@ -202,7 +202,7 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 		t.Fatal(err)
 	}
 	one := poolOfOne(t, r.pool.Config().ConnString())
-	route := newProjectRoute(t, one, authorizerOn(one), workspace.Provide(one).WorkspaceMembers)
+	route := newProjectRoute(t, one, authorizerOn(one), workspace.Provide(one, nil).WorkspaceMembers)
 	contract := apitest.Load(t)
 	send := func(method, path string, caller uuid.UUID, body string, want int) string {
 		t.Helper()

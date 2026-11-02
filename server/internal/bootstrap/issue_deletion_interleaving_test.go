@@ -362,5 +362,5 @@ func furnishDeletionIssue(t *testing.T, w issueWorld, projectID, issueID uuid.UU
 func newDeletionRowsForTest(w issueWorld) *issueapp.DeleteRows {
 	store := issuepg.New(w.pool)
 	cfg := config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}
-	return issueapp.NewDeleteRows(issueapp.DeleteRowsDeps{Rows: store, Relations: issueapp.NewRelationDeletions(store, issueProjects{projects: project.Provide(w.pool).IssueProjects}), Remaining: store, Tx: newIssueJobTx(w.pool, cfg), RuntimeNow: time.Now, Batch: 2, Budget: time.Second})
+	return issueapp.NewDeleteRows(issueapp.DeleteRowsDeps{Rows: store, Relations: issueapp.NewRelationDeletions(store, issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}), Remaining: store, Tx: newIssueJobTx(w.pool, cfg), RuntimeNow: time.Now, Batch: 2, Budget: time.Second})
 }

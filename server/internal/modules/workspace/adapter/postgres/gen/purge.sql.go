@@ -12,132 +12,147 @@ import (
 	"uuid"
 )
 
-const purgeWorkspaceMemberInvites = `-- name: PurgeWorkspaceMemberInvites :many
-DELETE FROM workspace_member_invites
-WHERE id IN (
-    SELECT candidate.id FROM workspace_member_invites AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
-    ORDER BY candidate.id LIMIT $3
-)
+const deletePurgeWorkspaces = `-- name: DeletePurgeWorkspaces :many
+DELETE FROM workspaces
+WHERE deleted_at < $1 AND id = ANY($2::uuid[])
 RETURNING id
+`
+
+type DeletePurgeWorkspacesParams struct {
+	Cutoff *time.Time
+	Ids    []uuid.UUID
+}
+
+func (q *Queries) DeletePurgeWorkspaces(ctx context.Context, arg DeletePurgeWorkspacesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deletePurgeWorkspaces, arg.Cutoff, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const purgeWorkspaceMemberInvites = `-- name: PurgeWorkspaceMemberInvites :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM workspace_member_invites AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM workspace_member_invites AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeWorkspaceMemberInvitesParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeWorkspaceMemberInvites(ctx context.Context, arg PurgeWorkspaceMemberInvitesParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeWorkspaceMemberInvites, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeWorkspaceMemberInvitesRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeWorkspaceMembers = `-- name: PurgeWorkspaceMembers :many
-DELETE FROM workspace_members
-WHERE id IN (
+func (q *Queries) PurgeWorkspaceMemberInvites(ctx context.Context, arg PurgeWorkspaceMemberInvitesParams) (PurgeWorkspaceMemberInvitesRow, error) {
+	row := q.db.QueryRow(ctx, purgeWorkspaceMemberInvites, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeWorkspaceMemberInvitesRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeWorkspaceMembers = `-- name: PurgeWorkspaceMembers :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM workspace_members AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM workspace_members AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeWorkspaceMembersParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeWorkspaceMembers(ctx context.Context, arg PurgeWorkspaceMembersParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeWorkspaceMembers, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeWorkspaceMembersRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeWorkspaceUserProperties = `-- name: PurgeWorkspaceUserProperties :many
-DELETE FROM workspace_user_properties
-WHERE id IN (
+func (q *Queries) PurgeWorkspaceMembers(ctx context.Context, arg PurgeWorkspaceMembersParams) (PurgeWorkspaceMembersRow, error) {
+	row := q.db.QueryRow(ctx, purgeWorkspaceMembers, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeWorkspaceMembersRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeWorkspaceUserProperties = `-- name: PurgeWorkspaceUserProperties :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM workspace_user_properties AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM workspace_user_properties AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeWorkspaceUserPropertiesParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeWorkspaceUserProperties(ctx context.Context, arg PurgeWorkspaceUserPropertiesParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeWorkspaceUserProperties, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeWorkspaceUserPropertiesRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeWorkspaces = `-- name: PurgeWorkspaces :many
-DELETE FROM workspaces
-WHERE id IN (
-    SELECT candidate.id FROM workspaces AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
-    ORDER BY candidate.id LIMIT $3
-)
-RETURNING id
+func (q *Queries) PurgeWorkspaceUserProperties(ctx context.Context, arg PurgeWorkspaceUserPropertiesParams) (PurgeWorkspaceUserPropertiesRow, error) {
+	row := q.db.QueryRow(ctx, purgeWorkspaceUserProperties, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeWorkspaceUserPropertiesRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeWorkspacesCandidates = `-- name: PurgeWorkspacesCandidates :many
+SELECT id FROM workspaces
+WHERE deleted_at < $1 AND id > $2
+ORDER BY id LIMIT $3
 `
 
-type PurgeWorkspacesParams struct {
+type PurgeWorkspacesCandidatesParams struct {
 	Cutoff     *time.Time
 	AfterID    uuid.UUID
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeWorkspaces(ctx context.Context, arg PurgeWorkspacesParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeWorkspaces, arg.Cutoff, arg.AfterID, arg.BatchLimit)
+func (q *Queries) PurgeWorkspacesCandidates(ctx context.Context, arg PurgeWorkspacesCandidatesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, purgeWorkspacesCandidates, arg.Cutoff, arg.AfterID, arg.BatchLimit)
 	if err != nil {
 		return nil, err
 	}

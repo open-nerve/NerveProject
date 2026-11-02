@@ -136,7 +136,7 @@ func TestListDirectoriesComposition(t *testing.T) {
 	// One borrowed connection is occupied by the transaction. Any directory
 	// escaping its ctx would wait for another and hit the deadline.
 	one := poolOfOne(t, w.pool.Config().ConnString())
-	projects := issueProjects{projects: project.Provide(one).IssueProjects}
+	projects := issueProjects{projects: project.Provide(one, nil).IssueProjects}
 	var assignees issueapp.AssigneeDirectory = issuepostgres.New(one)
 	profiles := issueProfiles{profiles: identity.Provide(one).PublicProfiles}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

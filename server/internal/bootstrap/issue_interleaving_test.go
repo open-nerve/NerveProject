@@ -152,7 +152,7 @@ func (w issueWorld) wroteNothing(t *testing.T, iw itemWrite) {
 // project module's route.
 func aliceOnWeb(method string, path func(t *testing.T, w issueWorld) string, body string) racingWrite {
 	return func(t *testing.T, w issueWorld, tx shared.TxManager, e *exchange) func() error {
-		route := newProjectRouteOn(t, w.pool, tx, authorizerOn(w.pool), workspace.Provide(w.pool).WorkspaceMembers)
+		route := newProjectRouteOn(t, w.pool, tx, authorizerOn(w.pool), workspace.Provide(w.pool, nil).WorkspaceMembers)
 		return w.sending(e, route, "alice", method, path(t, w), body)
 	}
 }

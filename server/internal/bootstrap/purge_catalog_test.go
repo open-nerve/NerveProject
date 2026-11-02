@@ -74,9 +74,9 @@ func purgeTables(t *testing.T, pool *pgxpool.Pool) []string {
 
 func providedPurgeTables(pool *pgxpool.Pool) []string {
 	var tables []string
-	tables = append(tables, issue.Provide(pool).Purger.Tables()...)
-	tables = append(tables, project.Provide(pool).Purger.Tables()...)
-	tables = append(tables, workspace.Provide(pool).Purger.Tables()...)
+	tables = append(tables, issue.Provide(pool, nil).Purger.Tables()...)
+	tables = append(tables, project.Provide(pool, nil).Purger.Tables()...)
+	tables = append(tables, workspace.Provide(pool, nil).Purger.Tables()...)
 	return append(tables, identity.Provide(pool).Purger.Tables()...)
 }
 

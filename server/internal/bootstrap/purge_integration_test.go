@@ -56,7 +56,7 @@ func TestPurgePeriodicRunsDoNotOverlap(t *testing.T) {
 			unblock := func() { once.Do(func() { close(release) }) }
 			var calls, current, maximum atomic.Int32
 			entered := make(chan int32, 32)
-			uc := newPurgeDeleted([]Purger{purgeFunc(func(workctx context.Context, _ time.Time, _ int) (int, error) {
+			uc := newPurgeDeleted([]purgeModule{{"probe", purgeFunc(func(workctx context.Context, _ time.Time, _ int, _ purgePageCursor) (purgePageProgress, error) {
 				n := calls.Add(1)
 				active := current.Add(1)
 				defer current.Add(-1)
@@ -69,17 +69,17 @@ func TestPurgePeriodicRunsDoNotOverlap(t *testing.T) {
 				// River makes the default first short retry available. The second
 				// real failure of this same job receives the longer retryable backoff.
 				if retry && n <= 2 {
-					return 0, errors.New("purge retry fixture")
+					return purgePageProgress{}, errors.New("purge retry fixture")
 				}
 				select {
 				case <-release:
-					return 1, nil
+					return purgePageProgress{Scanned: 1, Deleted: 1, Done: true}, nil
 				case <-workctx.Done():
-					return 0, workctx.Err()
+					return purgePageProgress{}, workctx.Err()
 				case <-ctx.Done():
-					return 0, ctx.Err()
+					return purgePageProgress{}, ctx.Err()
 				}
-			})}, newClock(testConfig(t, "", false)), 60*24*time.Hour, 1)
+			})}}, newClock(testConfig(t, "", false)), time.Now, 60*24*time.Hour, 1, 30*time.Second)
 			control := jobs.Job{Worker: jobs.Register(&purgeControlWorker{}), Periodic: &jobs.PeriodicSpec{
 				Args: purgeControlArgs{}, ID: "test.purge_control", Interval: time.Second, RunOnStart: true, InsertOpts: &river.InsertOpts{Queue: "periodic"},
 			}}

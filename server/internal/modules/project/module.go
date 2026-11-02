@@ -20,6 +20,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
@@ -170,15 +172,15 @@ type Provided struct {
 }
 
 // Provide builds project's adapters for the other modules.
-func Provide(pool *pgxpool.Pool) Provided {
-	store := postgresadapter.New(pool)
+func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provided {
+	store := postgresadapter.NewPurgeStore(pool, protected)
 	return Provided{
 		Purger: app.NewPurger([]app.PurgeStep{
 			{Table: "project_user_properties", Delete: store.PurgeProjectUserProperties},
 			{Table: "project_members", Delete: store.PurgeProjectMembers},
 			{Table: "labels", Delete: store.PurgeLabels},
-			{Table: "states", Delete: store.PurgeStates},
-			{Table: "projects", Delete: store.PurgeProjects},
+			{Table: "states", Protected: true, Delete: store.PurgeStates},
+			{Table: "projects", Protected: true, Delete: store.PurgeProjects},
 		}),
 		AssetParents: store, ArchivePolicies: store, ProjectAccess: store,
 		ProjectMembershipCounts: store, IssueProjects: store,

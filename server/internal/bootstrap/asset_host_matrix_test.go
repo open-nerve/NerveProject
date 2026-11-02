@@ -24,7 +24,7 @@ import (
 // These are the actual module facades and actual access rules on API-created
 // hosts. No asset HTTP API or binding is claimed by this host-only matrix.
 func assetOwners(w issueWorld) assetHostAccess {
-	wp, pp := workspace.Provide(w.pool), project.Provide(w.pool)
+	wp, pp := workspace.Provide(w.pool, nil), project.Provide(w.pool, nil)
 	auth := access.New(access.Deps{WorkspaceRoles: wp.WorkspaceRoles, ProjectAccess: accessProjects{projects: pp.ProjectAccess}})
 	ws := workspace.New(workspace.Deps{Pool: w.pool, Authorizer: auth})
 	pr := project.New(project.Deps{Pool: w.pool, Authorizer: auth})
@@ -36,17 +36,17 @@ func checkAssetOwner(t *testing.T, w issueWorld, a assetHostAccess, actor shared
 	t.Helper()
 	return postgres.NewTxManager(w.pool, 2*time.Second).WithinTx(t.Context(), func(ctx context.Context) error {
 		if h.WorkspaceID != uuid.Nil() {
-			if _, err := (assetWorkspaceLocks{workspace.Provide(w.pool).AssetParents}).ShareMany(ctx, []uuid.UUID{h.WorkspaceID}); err != nil {
+			if _, err := (assetWorkspaceLocks{workspace.Provide(w.pool, nil).AssetParents}).ShareMany(ctx, []uuid.UUID{h.WorkspaceID}); err != nil {
 				return err
 			}
 		}
 		if h.ProjectID != uuid.Nil() {
-			if _, err := (assetProjectLocks{project.Provide(w.pool).IssueProjects}).LockMany(ctx, []uuid.UUID{h.ProjectID}); err != nil {
+			if _, err := (assetProjectLocks{project.Provide(w.pool, nil).IssueProjects}).LockMany(ctx, []uuid.UUID{h.ProjectID}); err != nil {
 				return err
 			}
 		}
 		if h.DraftID != uuid.Nil() {
-			if _, err := (assetDraftLocks{issue.Provide(w.pool).AssetParents}).LockMany(ctx, []uuid.UUID{h.DraftID}); err != nil {
+			if _, err := (assetDraftLocks{issue.Provide(w.pool, nil).AssetParents}).LockMany(ctx, []uuid.UUID{h.DraftID}); err != nil {
 				return err
 			}
 		}

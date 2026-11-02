@@ -75,7 +75,7 @@ func TestARemovalAndTheRemovedMembersProjectSerialize(t *testing.T) {
 			var req *http.Request
 			var rec *httptest.ResponseRecorder
 			create := func(gated *gate) func() error {
-				route := newProjectRoute(t, r.pool, r.authorizer(), gatedShares{workspace.Provide(r.pool).WorkspaceMembers, gated})
+				route := newProjectRoute(t, r.pool, r.authorizer(), gatedShares{workspace.Provide(r.pool, nil).WorkspaceMembers, gated})
 				return func() error {
 					req, rec = route.send(http.MethodPost, "/api/v0/workspaces/acme/projects", r.bob, `{"name":"Ops","identifier":"OPS"}`)
 					return nil

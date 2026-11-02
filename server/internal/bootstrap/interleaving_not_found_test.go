@@ -141,8 +141,8 @@ func TestAWriteOnAProjectDeletedWhileItWaitsFindsNoProject(t *testing.T) {
 			g := newGate()
 			probe := requestTx(r.pool)
 			deleting := newProjectRouteOn(t, r.pool, probe, gatedAuthorizer{Authorizer: r.authorizer(), action: projectdomain.ActionDelete, gate: g},
-				workspace.Provide(r.pool).WorkspaceMembers)
-			route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool).WorkspaceMembers)
+				workspace.Provide(r.pool, nil).WorkspaceMembers)
+			route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool, nil).WorkspaceMembers)
 			var deleteReq, writeReq *http.Request
 			var deleteRec, writeRec *httptest.ResponseRecorder
 			var deleted, wrote <-chan error
@@ -196,7 +196,7 @@ func TestAWriteOnAProjectWhoseWorkspaceIsDeletedWhileItWaitsFindsNoProject(t *te
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g := newGate()
-			route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool).WorkspaceMembers)
+			route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool, nil).WorkspaceMembers)
 			probe := requestTx(r.pool)
 			var deleted, wrote <-chan error
 			defer func() { releaseAndJoinGate(t, g, deleted, wrote) }()

@@ -31,7 +31,7 @@ func TestAssetParentLocksAndFacts(t *testing.T) {
 	secondProject := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Second", "TWO")
 	i := w.newWorkItem(t)
 	c := w.newComment(t, "bob", i)
-	workspaces, issues, projects := workspace.Provide(w.pool).AssetParents, issue.Provide(w.pool).AssetParents, project.Provide(w.pool)
+	workspaces, issues, projects := workspace.Provide(w.pool, nil).AssetParents, issue.Provide(w.pool, nil).AssetParents, project.Provide(w.pool, nil)
 	for _, tc := range []struct {
 		table, conflict, compatible string
 		ids                         []uuid.UUID

@@ -91,7 +91,7 @@ func TestRelationListReadSnapshot(t *testing.T) {
 	w.send(t, "alice", http.MethodPatch, "/api/v0/issues/"+other.String(), fmt.Sprintf(`{"parent_id":%q}`, parent), 200)
 	w.send(t, "alice", http.MethodPost, relationsOf(source), relating("duplicate", other), 201)
 	one := poolOfOne(t, w.pool.Config().ConnString())
-	dirs := issueProjects{projects: project.Provide(one).IssueProjects}
+	dirs := issueProjects{projects: project.Provide(one, nil).IssueProjects}
 	store := issuepg.New(one)
 	tx := &checkedListSnapshot{t: t, pool: one, tx: postgres.NewTxManager(one, 3*time.Second, postgres.ReadOnlySnapshot())}
 	u := issueapp.NewListIssueRelations(issueapp.ListIssueRelationsDeps{Locks: issueapp.NewLocks(dirs, store, authorizerOn(one), versionReadOnly{}, versionReadOnly{}), Relations: store, Projects: dirs, ReadTx: tx})
