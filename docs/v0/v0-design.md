@@ -752,7 +752,7 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 | M2 | 账户认证 | 已完成 | [M2-design.md](M2-auth/M2-design.md) |
 | M3 | 工作区与项目 | 已完成 | [M3-design.md](M3-workspace-project/M3-design.md) |
 | M4 | 工作项核心 | 已完成 | [M4-design.md](M4-issue-core/M4-design.md)、[收官证据](M4-issue-core/reviews/closeout-integration.md) |
-| M5 | 文件 | 未开始 | — |
+| M5 | 文件 | 进行中 | [M5-design.md](M5-files/M5-design.md)、[设计与 P1 预检](../reviews/re-31-M5设计与P1预检.md) |
 | M6 | 迭代与模块 | 未开始 | — |
 | M7 | 协作功能 | 未开始 | — |
 | M8 | 开放与发布 | 未开始 | — |
