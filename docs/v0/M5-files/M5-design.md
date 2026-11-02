@@ -12,7 +12,9 @@ M5 使头像、个人封面、工作区图标、项目封面、工作项附件�
 
 前置依据是[总体设计 §6.7](../v0-design.md#67-后台任务与文件存储)、[执行方法](../claude_to_gpt/02-method.md)、[硬规则](../claude_to_gpt/03-rules-and-pitfalls.md)。全部输入交接及逐条落点见 §13；原文保留，不把过时的代码数量当成当前事实。
 
-### 1.1 当前事实
+### 1.1 设计起点事实
+
+以下为 M5 设计起点快照。P1 已实现 asset 本地存储与 raw 传输，当前整审/CI/集成状态见 [P1 review](reviews/P1-local-storage-review.md)；file_assets 与业务入口仍由后续阶段承担。
 
 - 尚无 `asset` 后端模块和 `file_assets` 迁移。用户、工作区、项目的 URL 字段存在但没有真实文件引用。
 - `FileService` / `FileUploadService` 仍调用旧 Plane 路由和 multipart POST。当前编辑器资产 store、编辑器配置、旧评论创建和 inbox 创建处仍有消费者；实现时重新扫描，不沿用旧交接的实例数量。

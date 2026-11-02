@@ -192,7 +192,7 @@ func TestLocalTransferDeadlines(t *testing.T) {
 		}
 		conn := connection.(*net.TCPConn)
 		defer func() { _ = conn.Close() }()
-		if err := conn.SetReadBuffer(1024); err != nil {
+		if err := conn.SetReadBuffer(64 << 10); err != nil {
 			t.Fatal(err)
 		}
 		if err := conn.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
@@ -211,13 +211,23 @@ func TestLocalTransferDeadlines(t *testing.T) {
 		}
 		// Do not drain the receive buffer. The real TCP write must time out well
 		// before the five-second global deadline and the three-second total.
+		stalled := time.NewTimer(1500 * time.Millisecond)
+		defer stalled.Stop()
 		select {
 		case <-w.finished:
-		case <-time.After(1500 * time.Millisecond):
+		case <-stalled.C:
 			t.Fatal("stalled client retained the write/socket")
 		}
-		if err := conn.SetReadBuffer(4 << 20); err != nil {
-			t.Fatal(err)
+		// Handler completion proves its defers ran; independently observe the
+		// accepted socket's actual Close before draining its bounded tail.
+		accepted := <-w.accepted
+		select {
+		case err := <-accepted.closed:
+			if err != nil {
+				t.Fatalf("stalled socket close = %v", err)
+			}
+		case <-stalled.C:
+			t.Fatal("stalled handler ended without closing its socket")
 		}
 		partial, err := io.ReadAll(response.Body)
 		if !errors.Is(err, io.ErrUnexpectedEOF) || len(partial) >= len(data) || string(partial) != data[:len(partial)] {

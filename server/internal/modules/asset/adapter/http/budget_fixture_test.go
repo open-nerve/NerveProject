@@ -29,6 +29,42 @@ type budgetWorld struct {
 	started       chan struct{}
 	finished      chan string
 	cancellations chan context.CancelFunc
+	accepted      chan *budgetConnection
+}
+
+// Bound queued output without replacing real TCP backpressure or deadlines.
+// A fixed send buffer also keeps the tail after a stalled write small enough
+// to drain without depending on a platform's receive-window resizing policy.
+type budgetListener struct {
+	net.Listener
+	accepted chan *budgetConnection
+}
+
+func (l budgetListener) Accept() (net.Conn, error) {
+	connection, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	tcp := connection.(*net.TCPConn)
+	if err := tcp.SetWriteBuffer(32 << 10); err != nil {
+		_ = tcp.Close()
+		return nil, err
+	}
+	conn := &budgetConnection{TCPConn: tcp, closed: make(chan error, 1)}
+	l.accepted <- conn
+	return conn, nil
+}
+
+type budgetConnection struct {
+	*net.TCPConn
+	closed chan error
+	once   sync.Once
+}
+
+func (c *budgetConnection) Close() error {
+	err := c.TCPConn.Close()
+	c.once.Do(func() { c.closed <- err })
+	return err
 }
 
 type observingUploader struct {
@@ -60,7 +96,7 @@ func budgetTestFiles() config.FilesConfig {
 
 func newBudgetWorld(t *testing.T, files config.FilesConfig, globalRead, globalWrite time.Duration) *budgetWorld {
 	t.Helper()
-	w := &budgetWorld{root: t.TempDir(), client: &http.Client{Timeout: 5 * time.Second}, started: make(chan struct{}, 32), finished: make(chan string, 32), cancellations: make(chan context.CancelFunc, 32)}
+	w := &budgetWorld{root: t.TempDir(), client: &http.Client{Timeout: 5 * time.Second}, started: make(chan struct{}, 32), finished: make(chan string, 32), cancellations: make(chan context.CancelFunc, 32), accepted: make(chan *budgetConnection, 32)}
 	s, err := local.New(local.Config{Root: w.root, SizeLimit: domain.MaxObjectSize}, local.Deps{UploadMAC: storagetest.MAC("budget-upload"), ReadMAC: storagetest.MAC("budget-read"), RuntimeNow: time.Now})
 	if err != nil {
 		t.Fatal(err)
@@ -96,7 +132,7 @@ func newBudgetWorld(t *testing.T, files config.FilesConfig, globalRead, globalWr
 	server := httpserver.NewServer(config.ServerConfig{ReadHeaderTimeout: time.Second, ReadTimeout: globalRead, WriteTimeout: globalWrite, ShutdownTimeout: time.Second}, wrapped, logger)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- server.Serve(ctx, listener) }()
+	go func() { done <- server.Serve(ctx, budgetListener{listener, w.accepted}) }()
 	t.Cleanup(func() {
 		cancel()
 		select {
