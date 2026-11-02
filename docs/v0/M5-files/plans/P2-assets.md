@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，没有开始 T1。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1已完成，接续T2。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -55,11 +55,11 @@
 
 **Interfaces：** 消费P1 ObjectKey/MaxObjectSize；产出本计划domain值、ContentValidator及ContentProof。domain内部非法输入先返回具名纯错误，HTTP公共码在T6映射。
 
-- [ ] Step 1：写TestAssetPurposeScopes/TestStorageMetadataBounds/TestContentValidation。用10种合法组合和跨用途/多余父字段；JSON null/版本2/重复key/别的assetID/第四候选；真实4格式、SVG伪PNG、1MiB+1头、16385边/40,000,001像素、同大小异字节、过长/少1字节与取消。
-- [ ] Step 2：运行 `go -C server test ./internal/modules/asset/domain ./internal/modules/asset/adapter/content -count=1`，保存真正性质红；先不存在包时的setup错误不能替代断言红。
-- [ ] Step 3：实现纯规则与流式validator；直接调用png/jpeg/gif及webp DecodeConfig，不用init注册解码器。锁定x/image v0.47.0，说明必要x/sys0.49.0/x/text0.43.0，其他依赖不升级。修改phase并核关键词例外。
-- [ ] Step 4：同命令绿及既有asset合同；变异去候选上限、把ETag当摘要、图片仅信声明分别杀死；验证reader cancel/Close资源不漏。
-- [ ] Step 5：中文提交，记录实际依赖diff与未运行范围。
+- [x] Step 1：写TestAssetPurposeScopes/TestStorageMetadataBounds/TestContentValidation。用10种合法组合和跨用途/多余父字段；JSON null/版本2/重复key/别的assetID/第四候选；真实4格式、SVG伪PNG、1MiB+1头、16385边/40,000,001像素、同大小异字节、过长/少1字节与取消。
+- [x] Step 2：运行 `go -C server test ./internal/modules/asset/domain ./internal/modules/asset/adapter/content -count=1`，保存真正性质红；先不存在包时的setup错误不能替代断言红。
+- [x] Step 3：实现纯规则与流式validator；直接调用png/jpeg/gif及webp DecodeConfig，不用init注册解码器。锁定x/image v0.47.0，说明必要x/sys0.49.0/x/text0.43.0及后者要求的x/tools0.51.0/x/sync0.24.0，其他依赖不升级。修改phase并核关键词例外。
+- [x] Step 4：同命令绿及既有asset合同；变异去候选上限、只摘要首块、图片仅信声明分别杀死；验证reader取消与有限读。validator消费io.Reader不拥有Close，T7用例在所有出口关闭ObjectReader，不能在本Task假称已证明该层资源释放。
+- [x] Step 5：中文提交，记录实际依赖diff与未运行范围。
 
 ## Task 2（T2）：local有界清单与临时残留回收
 

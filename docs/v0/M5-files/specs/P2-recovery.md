@@ -4,7 +4,7 @@
 
 ## 1. 有界 metadata
 
-`storage_metadata` 为 schema_version=1 的具名 JSON 对象，顶层仅 `schema_version, origin, staging, final, candidates`；origin 为 upload/copy。使用 JSON struct，不使用 map[string]any；读取严格拒绝未知版本/非法 key，SQL CHECK 保障基本对象形状、字段类型、候选数组长度≤3。整个编码上限 16 KiB。所有 key 必须属于本资产 ID；同一 key 不能出现在两个位置。
+`storage_metadata` 为 schema_version=1 的具名 JSON 对象，顶层仅 `schema_version, origin, staging, final, candidates`；origin 为 upload/copy。使用 JSON struct，不使用 map[string]any；读取严格拒绝未知版本/非法 key，SQL CHECK 保障基本对象形状、字段类型、候选数组长度≤3。整个编码上限 16 KiB，每个不透明 ETag 最长1024字节；超出拒绝而不截断版本。所有 key 必须属于本资产 ID；同一 key 不能出现在两个位置。
 
 ```go
 type ObjectRecord struct {

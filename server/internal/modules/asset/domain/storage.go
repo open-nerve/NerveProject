@@ -129,12 +129,8 @@ func ValidateRead(g ReadGrant, now time.Time) error {
 		!validName(g.Name) || !ValidMediaType(g.ContentType) || !validExpiry(g.ExpiresAt, now, MaxReadTTL) {
 		return ErrInvalidRead
 	}
-	if g.Inline {
-		switch g.ContentType {
-		case "image/jpeg", "image/png", "image/webp", "image/gif":
-		default:
-			return ErrInvalidRead
-		}
+	if g.Inline && !RasterMediaType(g.ContentType) {
+		return ErrInvalidRead
 	}
 	return nil
 }

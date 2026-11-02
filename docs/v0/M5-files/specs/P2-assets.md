@@ -1,6 +1,6 @@
 # M5 / P2：资产用例与生命周期
 
-> 状态：预检通过，T1尚未开始；见[完整预检记录](../../../reviews/re-34-M5P2预检.md)。负责人已批准清理方案 A，见[裁定](../reviews/P2-purge-contract-decision.md)。P2 基线是 P1 noff main `85dc4087a28570f59a62825f5dc861152e41c833`，准确 main CI 41471671630 三 job 全绿，P1 已归档清理。
+> 状态：预检通过，T1已完成、接续T2；见[完整预检记录](../../../reviews/re-34-M5P2预检.md)。负责人已批准清理方案 A，见[裁定](../reviews/P2-purge-contract-decision.md)。P2 基线是 P1 noff main `85dc4087a28570f59a62825f5dc861152e41c833`，准确 main CI 41471671630 三 job 全绿，P1 已归档清理。
 > 上位：[M5 design](../M5-design.md) §3–§7、§10–§13。必读子合同：[权限与锁序](P2-access.md)、[对象恢复](P2-recovery.md)、[父行物理清理](P2-protected-purge.md)。它们是本 spec 的组成部分。
 
 ## 1. 目标与边界
@@ -92,7 +92,7 @@ duplicate 可跨用途，但目标重新执行大小/图片验证；非图片附
 
 `asset/app.ContentValidator.Validate(ctx, reader, expectedSize, contentType, imageRequired) (ContentProof,error)` 返回完整 SHA256 与可选 Width/Height；adapter/content 实现。读取最多 expectedSize+1 字节、64KiB缓冲，直到EOF；同大小不同内容必须由摘要区分。只有七种非attachment用途要求图片；ISSUE_ATTACHMENT、COMMENT_ATTACHMENT、DRAFT_ISSUE_ATTACHMENT允许任意非空字节，三者始终强制attachment，不因声明image/png就inline。
 
-图片只支持 JPEG/PNG/WebP/GIF，校验头部格式与声明一致，DecodeConfig 最多1MiB输入，每边1..16384、像素乘积≤40,000,000（防溢出先检查后乘）。探测允许从有界头缓存重读，然后完整字节流算摘要；不做全图像解码，不把头检查称为验证所有像素/帧。损坏后段可能经头检查但浏览器无法显示，这是明确限制；nosniff和仅栅格inline保持。新增依赖仅设计点名的 `golang.org/x/image v0.47.0` WebP；必要间接 x/sys v0.49.0、x/text v0.43.0 在 go.mod/sum 中解释并回归。无其他新增库、无全局安装。
+图片只支持 JPEG/PNG/WebP/GIF，校验头部格式与声明一致，DecodeConfig 最多1MiB输入，每边1..16384、像素乘积≤40,000,000（防溢出先检查后乘）。探测允许从有界头缓存重读，然后完整字节流算摘要；不做全图像解码，不把头检查称为验证所有像素/帧。损坏后段可能经头检查但浏览器无法显示，这是明确限制；nosniff和仅栅格inline保持。新增依赖仅设计点名的 `golang.org/x/image v0.47.0` WebP；必要传递 x/sys v0.49.0、x/text v0.43.0，以及后者要求的 x/tools v0.51.0、x/sync v0.24.0 在 go.mod/sum 中解释并回归。无其他新增库、无全局安装。
 
 已核[官方 WebP](https://pkg.go.dev/golang.org/x/image@v0.47.0/webp)及[该版本 go.mod](https://github.com/golang/image/blob/v0.47.0/go.mod)；仓库Go1.27满足其Go1.26底线。依赖尚未安装，所有测试均待实现。
 
@@ -140,7 +140,7 @@ P1保留的C12菜单/F6焦点Minor未修，后续UI三浏览器验收继续跟�
 1. NO ACTION保护正确性不等于回收必然成功；存储持续失败会保留父行，需要错误计数与可恢复游标。
 2. 既有单页purge改造是已批准A的工程范围，所有owner旧回归、真实目录和任务重启必须联合验证，不把接口编译通过当并发证明。
 3. 图片仅受限头部验证；local清单O(N)/页；URL是短期bearer，已发出地址不保证即时撤回。这些限制不可在最终描述省略。
-4. P2完整spec的builder check及plan自检已通过，当前尚未启动T1、未改迁移/产品/依赖；按连续授权推进。只有新的重大风险/关键分歧才提交上报，不能把文档预检当实现验证。
+4. P2完整spec的builder check及plan自检已通过，T1纯规则/图片校验及必需依赖已实施并验证，迁移/API/整体清理尚未实现；按连续授权推进。只有新的重大风险/关键分歧才提交上报，不能把文档预检当实现验证。
 
 ## 附录A：预检探针
 
