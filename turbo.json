@@ -51,6 +51,7 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/api/dist/openapi.yaml",
+        "$TURBO_ROOT$/api/storage-local.json",
         "$TURBO_ROOT$/server/internal/modules/workspace/domain/reserved_slugs.txt"
       ],
       "outputs": []

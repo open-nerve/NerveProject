@@ -13,7 +13,7 @@
 
 ### 2.1 路径、对象与发布
 
-- HTTP：`PUT /storage/local/{key}`、`GET /storage/local/{key}`、`HEAD /storage/local/{key}`；另有 `/storage/` 的明确 404 Problem fallback，未知文件路径不能落入 SPA。
+- HTTP：`PUT /storage/local/{key}`、`GET /storage/local/{key}`、`HEAD /storage/local/{key}`；另有 `/storage` 和 `/storage/` 的明确 404 Problem fallback，未知文件路径不能落入 SPA。涉及该路径树的 `..`、重复斜杠规范化在进入 ServeMux 前直接拒绝为 404 no-store Problem，不把签名 query 随重定向带到其他端点。
 - key：`u-<assetUUID的32位小写hex>-<objectUUID的32位小写hex>` 或 `o-...`。`u` 是上传暂存，`o` 是封存/复制结果；两段均非 nil UUID。文件名、客户端路径、编码斜杠和 `..` 不能成为 key。
 - local 默认根目录 `./data/files`，仅内部包含 `objects/<key>/{data,meta.json}` 和 `tmp/<随机目录>`。目录 0700，文件 0600；已存在根目录必须是可用目录，不改变用户已有权限。配置/日志不得泄露绝对目录，测试用独占临时目录。
 - 使用当前 Go 1.27.1 的 `os.Root` 约束所有对象访问；只接受普通文件/目录，拒绝符号链接逃逸和非普通字节文件。部署目录是服务进程独占的受信任目录，不把 os.Root 宣称为可抵御拥有该目录写权的系统管理员。
@@ -83,7 +83,7 @@ type MAC interface { Tag([]byte) [16]byte; Verify([]byte, [16]byte) bool }
 
 ### 2.4 原始 HTTP 合同
 
-- 验证签名前不查询对象是否存在。签名/路径/用途/时效错误统一 403 `asset.invalid_signature`，响应不回显 URL/key。有效签名对应对象缺失才是 404 `asset.object_not_found`。
+- 验证签名前不查询对象是否存在。匹配具体传输端点后的签名/key/路径编码/用途/时效错误统一 403 `asset.invalid_signature`，响应不回显 URL/key；进入端点前的非规范路径按 §2.1 拒绝。有效签名对应对象缺失才是 404 `asset.object_not_found`。
 - PUT 要求已声明的非负 Content-Length 等于签名 size；没有或不等为 400 `asset.invalid_upload`，超过 files.size_limit 为 413 `payload_too_large`；实际读出超额体同样拒绝，少字节不得发布。Content-Type 必须匹配签名的规范化 media type，不允许客户端另附 charset 等参数。
 - 验签按全局 100 MiB 格式边界检查，当前 size_limit 由传输层和 Put 单独执行；降低配置上限后，旧签名的超限请求仍明确返回 413。短体同时触发请求取消时保留实际读取错误，返回 400；读取后端故障不能误归为上传错误。
 - 成功 PUT 为 204；重复 key 为 409 `asset.object_exists`。原始存储 HTTP 与普通 JSON API 的鉴权模型不同，不能把它加入 API 的 publicOperations 以绕过 bearer 守卫。
@@ -121,6 +121,8 @@ asset 的 module.Register 只注册本段 raw 路由。bootstrap 创建 local �
 Go 的 testConfig 为每个世界提供独立 t.TempDir。E2E 的 startNerve 默认把文件目录放进该进程日志的输出目录；clock world 重启显式复用该世界的文件根目录，而不同 world 不共用。只保留测试自身生成物，原件按项目既有归档规则处理，不执行全局清理。
 
 完整程序增加精确 raw route 集合与无签名拒绝测试；既有 /api/v0 注册集合、公开操作、安全头、401 与请求体上限/期限守卫继续原样成立。不靠宽泛忽略 /storage 下所有路由使新端点脱离目录检查。
+
+`api/storage-local.json` 是 raw 路由和 asset 专用 `x-problem-codes` 的机器目录。组合测试比较全路由与“既有 API + 平台 + raw 目录”的精确并集，源码错误码与目录逐项一致；前端消息表精确等于业务 OpenAPI 与 raw 错误目录的并集，两份翻译同时验证。它不生成业务 SDK，也不把 raw 端点加入 publicOperations。
 
 ## 3. 验收
 

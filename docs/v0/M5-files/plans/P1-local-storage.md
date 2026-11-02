@@ -139,15 +139,16 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 
 ## Task 8（T8）：整程序合同与失败边界（A1/A9）
 
-**Files：** B/asset_transfer_test.go、contract_test.go；H 的现有 body/deadline/security 测试；docs/v0/M5-files/reviews/P1-local-storage-review.md。
+**Files：** B/asset_transfer_test.go、asset_contract_test.go、asset_api_isolation_test.go、asset_fixture_test.go 与既有 contract_test.go；H/routes.go 的具名路径树策略、A/adapter/http/transfer.go 的声明；api/storage-local.json；前端 error-messages.ts/test 与 en/zh-CN errors.json、tools/i18n-keys.mjs、turbo.json 的测试输入；docs/v0/M5-files/reviews/P1-local-storage-review.md。
 
 **Interfaces：** 原 /api/v0 精确 route/publicOperations 合同保持；追加 raw route 精确集合，只允许 spec 列出的 PUT/GET/HEAD 与 storage fallback，不许 broad ignore。
 
-- [ ] Step 1：`TestRawStorageRoutesAreExact` 核对实际 router.Patterns；新增任意遗漏的 storage 路由会让测试红。无签名请求全部拒绝，未知 storage 路径是 404 Problem，未误入 SPA。
-- [ ] Step 2：`TestStorageDoesNotWidenJSONAPI` 证明 JSON 仍受原 1 MiB/15 秒控制，认证/结构检查与 no-store 未变；原 health/readiness 和安全头仍成立。
-- [ ] Step 3：对所需的真实组合断言补最小代码/测试，先红后绿；不把新 asset 的安全策略注入其他业务模块。
-- [ ] Step 4：`go test -count=1 ./internal/bootstrap -run 'TestRawStorage|TestStorageDoesNot|TestAPIRoutes|TestPublicOperations|TestOperationsThatNeed'` 和架构包；精确路由/隔离失败负例归档。
-- [ ] Step 5：两轮复核后提交 `test(M5/P1): 验证文件端点与原 API 合同同时成立`。
+- [x] Step 1：`TestRawStorageRoutesAreExact` 核对实际 router.Patterns；新增任意遗漏的 storage 路由会让测试红。无签名请求全部拒绝，未知 storage 路径是 404 Problem，未误入 SPA。
+- [x] Step 2：`TestStorageDoesNotWidenJSONAPI` 证明 JSON 仍受原 1 MiB/15 秒控制，认证/结构检查与 no-store 未变；原 health/readiness 和安全头仍成立。
+- [x] Step 3：对所需的真实组合断言补最小代码/测试，先红后绿；不把新 asset 的安全策略注入其他业务模块。
+- [x] Step 3a：raw 错误目录与源码精确核对，补齐中英文消息；前端消息守卫准确比较 OpenAPI/raw 并集，运行 `make test-web`。T5/T6 首次引入码的同 Task 文案遗漏在首个产品检查点前补齐，保留偏差记录。
+- [x] Step 4：`go test -count=1 ./internal/bootstrap -run 'TestRawStorage|TestStorageDoesNot|TestAPIRoutes|TestPublicOperations|TestOperationsThatNeed'` 和架构包；精确路由/隔离失败负例归档。
+- [x] Step 5：两轮复核后提交 `fix(M5/P1): 约束签名路径并核对整程序合同`。
 
 ## Task 9（T9）：实际慢流、七项门禁与检查点
 

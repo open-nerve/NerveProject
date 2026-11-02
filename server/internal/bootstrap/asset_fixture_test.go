@@ -9,11 +9,27 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/configs"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/local"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 )
+
+// Keep network and file budgets exactly as shipped; only isolate the address,
+// filesystem and database, and retain the existing cheap business test setup.
+func defaultAssetConfig(t *testing.T, dbURL string) config.Config {
+	t.Helper()
+	defaults, err := config.Load(config.Sources{Embedded: configs.FS(), Environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=" + dbURL}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := testConfig(t, dbURL, false)
+	defaults.Server.Addr, defaults.Server.AddrFile = cfg.Server.Addr, cfg.Server.AddrFile
+	defaults.Files.Local.Root = cfg.Files.Local.Root
+	cfg.Server, cfg.Files = defaults.Server, defaults.Files
+	return cfg
+}
 
 func testFilesConfig(t *testing.T) config.FilesConfig {
 	t.Helper()

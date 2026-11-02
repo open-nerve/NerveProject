@@ -4,7 +4,7 @@
 //   it is an object there, not a text);
 // - any other string of dotted words whose first word is a top-level key of the locale
 //   ("project_settings.states.groups.backlog"), wherever the code holds it: a whole key, or a prefix the code completes.
-//   nerve's problem codes ("<module>.<code>": the x-problem-codes of api/dist/openapi.yaml, read as
+//   nerve's problem codes ("<module>.<code>": the x-problem-codes of api/dist/openapi.yaml and api/storage-local.json, read as
 //   error-messages.test.ts reads them) are no keys, though a module may share a namespace's name ("issue"): such a
 //   string is not a read;
 // - a template's start before its first ${…} (`greeting.${period}`): a prefix with keys under it.
@@ -18,6 +18,7 @@ import path from "node:path";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const LOCALE = "web/packages/i18n/src/locales/en";
 const CONTRACT = "api/dist/openapi.yaml";
+const STORAGE_CONTRACT = "api/storage-local.json";
 const SOURCES = ["web/apps/web/app", "web/apps/web/core", "web/packages/constants/src", "web/packages/types/src"];
 
 // A small locale and contract, texts that read a key the locale does not define (hit) and texts that do not (miss):
@@ -136,6 +137,15 @@ const vocab = vocabulary(
 );
 const codes = problemCodes(fs.readFileSync(path.join(ROOT, CONTRACT), "utf8").split("\n"));
 if (codes.size === 0) fail(`read no x-problem-codes from ${CONTRACT}`);
+const storageCodes = JSON.parse(fs.readFileSync(path.join(ROOT, STORAGE_CONTRACT), "utf8"))["x-problem-codes"];
+if (
+  !Array.isArray(storageCodes) ||
+  storageCodes.length === 0 ||
+  storageCodes.some((code) => typeof code !== "string")
+) {
+  fail(`invalid x-problem-codes in ${STORAGE_CONTRACT}`);
+}
+for (const code of storageCodes) codes.add(code);
 
 const read = new Set();
 const undefinedKeys = [];

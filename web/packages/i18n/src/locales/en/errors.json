@@ -1,5 +1,13 @@
 {
   "errors": {
+    "asset_invalid_signature": "The file link is invalid or has expired. Please request a new link.",
+    "asset_invalid_upload": "The uploaded file does not match the upload request. Please select the file again.",
+    "asset_object_not_found": "The file is no longer available.",
+    "asset_object_exists": "This upload has already been stored. Please request a new upload to send another file.",
+    "asset_object_changed": "The file changed during this operation. Please try again.",
+    "asset_invalid_range": "The requested part of the file is not available. Please download the file again.",
+    "asset_precondition_failed": "The file no longer matches this request. Please refresh and try again.",
+    "asset_transfer_timeout": "The file transfer timed out. Please check your connection and try again.",
     "draft_not_found": "The draft does not exist, or you cannot see it.",
     "draft_changed": "The draft's project changed. Please try again.",
     "bad_request": "The request was not understood. Check the fields and try again.",

@@ -48,6 +48,9 @@ function listsUnder(key: RegExp): string[] {
 }
 
 const problemCodes = new Set(listsUnder(/^\s*x-problem-codes:\s*$/));
+const storageContract = JSON.parse(
+  readFileSync(new URL("../../../../../api/storage-local.json", import.meta.url), "utf8")
+) as { "x-problem-codes": string[] };
 // FieldError.code's enum: the only "enum:" list under the FieldError schema.
 const fieldErrorStart = spec.findIndex((line) => /^ {4}FieldError:$/.test(line));
 const fieldCodes = (() => {
@@ -71,10 +74,13 @@ describe("the message tables", () => {
     expect(problemCodes).toContain("identity.email_taken");
     expect(problemCodes).toContain("bad_request");
     expect(fieldCodes).toContain("common_password");
+    expect(storageContract["x-problem-codes"]).toContain("asset.invalid_signature");
   });
 
-  it("have a message for every problem code of the contract, and no other", () => {
-    expect(new Set(Object.keys(PROBLEM_MESSAGES))).toEqual(problemCodes);
+  it("have exactly the problem codes of the JSON API and raw storage contracts", () => {
+    expect(new Set(Object.keys(PROBLEM_MESSAGES))).toEqual(
+      new Set([...problemCodes, ...storageContract["x-problem-codes"]])
+    );
   });
 
   it("have a message for every FieldError.code of the contract, and no other", () => {

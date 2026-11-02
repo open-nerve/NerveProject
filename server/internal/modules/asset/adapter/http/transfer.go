@@ -71,6 +71,7 @@ func NewTransfer(deps Deps) (*Transfer, error) {
 }
 
 func (t *Transfer) Register(router *httpserver.Router, middleware func(http.Handler) http.Handler) {
+	router.RejectPathRedirects("/storage")
 	router.Handle("PUT /storage/local/{key}", middleware(http.HandlerFunc(t.upload)))
 	router.Handle("GET /storage/local/{key}", middleware(http.HandlerFunc(t.read)))
 	router.Handle("HEAD /storage/local/{key}", middleware(http.HandlerFunc(t.read)))
