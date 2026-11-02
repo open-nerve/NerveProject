@@ -83,6 +83,10 @@ export async function startNerve(
       NERVE_SERVER__ADDR: "127.0.0.1:0",
       NERVE_SERVER__ADDR_FILE: addrFile,
       NERVE_FILES__LOCAL__ROOT: storageRoot,
+      // Catalog stories upload many real files from one loopback address.
+      // Keep the limiter enabled with an explicit test-only capacity.
+      NERVE_FILES__TRANSFER_RATE__PER_MINUTE: "10000",
+      NERVE_FILES__TRANSFER_RATE__BURST: "1000",
       ...env,
     },
     stdio: ["ignore", log, log],

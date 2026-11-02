@@ -2,7 +2,7 @@ import { expect } from "@playwright/test";
 
 import type { WorkspacePreferences } from "../api";
 import type { Database } from "../db";
-import { issueOwnedTable, workspaceTables } from "./catalog";
+import { asynchronousDeletionTable, workspaceTables } from "./catalog";
 
 // Database assertions of the workspace stories. The page version and the
 // API version of a story call the same function (M3 design 2).
@@ -277,11 +277,11 @@ export async function expectWorkspaceDeleted(
       undeletedOrLater: 0,
       deletedEarlier: deletedAlone.includes(table),
     }));
-  const immediate = names.filter((name) => !issueOwnedTable(name));
-  const deferred = names.filter(issueOwnedTable);
+  const immediate = names.filter((name) => !asynchronousDeletionTable(name));
+  const deferred = names.filter(asynchronousDeletionTable);
   expect(await readRows(immediate), `the synchronous rows under ${slug}`).toEqual(expected(immediate));
   await expect
-    .poll(() => readRows(deferred), { message: `the issue rows under ${slug}`, timeout: 15_000 })
+    .poll(() => readRows(deferred), { message: `the asynchronous issue/asset rows under ${slug}`, timeout: 15_000 })
     .toEqual(expected(deferred));
 }
 

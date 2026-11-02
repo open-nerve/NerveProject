@@ -22,6 +22,7 @@ export async function createClockWorld(options: {
   logFile: (generation: number) => string;
   /** Defaults to the real wall clock; injectable to observe startup ordering. */
   now?: () => Date;
+  env?: Record<string, string>;
 }): Promise<ClockWorld> {
   await createDatabase(options.databaseName, templateDatabase);
   const db = openDatabase(options.databaseName);
@@ -45,6 +46,7 @@ export async function createClockWorld(options: {
   async function start(offset?: string): Promise<ClockRun> {
     const startedAt = now();
     const nerve = await startNerve(db.url, options.logFile(generation++), {
+      ...options.env,
       ...(offset === undefined ? {} : { NERVE_CLOCK__OFFSET: offset }),
       ...(storageRoot === undefined ? {} : { NERVE_FILES__LOCAL__ROOT: storageRoot }),
     });

@@ -78,13 +78,21 @@ export async function keysBelow(db: Database, table: string): Promise<ForeignKey
       expect.arrayContaining([
         { child: "comment_reactions", column: "comment_id", parent: "issue_comments", target: "id" },
         { child: "issue_comments", column: "issue_id", parent: "issues", target: "id" },
+        { child: "file_assets", column: "issue_id", parent: "issues", target: "id" },
+        { child: "file_assets", column: "comment_id", parent: "issue_comments", target: "id" },
       ])
     );
   }
   return keys;
 }
 
-/** Only issue-owned tables wait for background deletion; unknown catalog tables remain immediate. */
-export function issueOwnedTable(name: string): boolean {
-  return name === "issues" || name === "draft_issues" || name === "comment_reactions" || name.startsWith("issue_");
+/** The explicitly asynchronous issue/asset owners wait for their committed jobs; unknown tables remain immediate. */
+export function asynchronousDeletionTable(name: string): boolean {
+  return (
+    name === "file_assets" ||
+    name === "issues" ||
+    name === "draft_issues" ||
+    name === "comment_reactions" ||
+    name.startsWith("issue_")
+  );
 }

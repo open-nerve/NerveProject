@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1 已完成集成和归档，P2 实施中（T1–T8已完成）；见[预检记录](../../reviews/re-31-M5设计与P1预检.md)。
+> 状态：P1 已完成集成和归档，P2 实施中（T1–T9已完成，T10故事完成、完整门禁待核）；见[预检记录](../../reviews/re-31-M5设计与P1预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 > 设计基线分支 `codex/m5-design` 已合入并归档；P1 已合入并归档，当前工作分支为 `codex/m5-p2`，P2从已通过预检进入实施。2026-11-02 负责人授权按既有节奏连续推进；常规设计、预检、实现、deep-review、`--no-ff` 集成、CI 和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
@@ -299,7 +299,7 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 |---|---|---|
 | 设计与 P1 预检 | 已完成 | [预检记录](../../reviews/re-31-M5设计与P1预检.md) |
 | P1 | 已完成：noff main 85dc4087，CI 41471671630 全绿，792 文件归档核验并清理 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) / [阶段记录](reviews/P1-local-storage-review.md) / [整审](../../reviews/re-33-M5P1整体审核.md) |
-| P2 | 实施中；T1–T9已完成，接续T10；清理合同方案A已授权 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [预检](../../reviews/re-34-M5P2预检.md) / [裁定](reviews/P2-purge-contract-decision.md) |
+| P2 | 实施中；T1–T9已完成，T10故事完成、完整门禁待核；清理合同方案A已授权 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [预检](../../reviews/re-34-M5P2预检.md) / [裁定](reviews/P2-purge-contract-decision.md) |
 | P3–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。

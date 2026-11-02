@@ -6,6 +6,7 @@ import { accountId, bearer, createPAT, emailFor, login, newAccount } from "../..
 import { keysBelow, projectTables, workspaceTables } from "../../fixtures/assert/catalog";
 import { expectIssueDeleted } from "../../fixtures/assert/issue";
 import { expectProjectDeleted } from "../../fixtures/assert/project";
+import { expectExpiredPreparations } from "../../fixtures/assert/storage";
 import { expectWorkspaceDeleted } from "../../fixtures/assert/workspace";
 import { archiveWatermark, completedPeriodicJobs } from "../../fixtures/auto-archive";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "../../fixtures/comments";
@@ -13,7 +14,10 @@ import type { Database } from "../../fixtures/db";
 import { furnishIssueRows, furnishWorkspace } from "../../fixtures/furnish";
 import { createIssue, createIssueRelations, issueDeleted, issueRead } from "../../fixtures/issues";
 import { completedLinkCrawl, createIssueLink } from "../../fixtures/links";
+import { furnishIssueFiles, waitForFileSafety } from "../../fixtures/storage";
 import { clockTest as test, expect } from "../../fixtures/test";
+
+test.use({ clockEnv: { NERVE_FILES__UPLOAD_TTL: "10s" } });
 
 type Account = Awaited<ReturnType<typeof newAccount>>;
 type Row = { id: string; deleted_at: string | null; [column: string]: unknown };
@@ -116,6 +120,7 @@ async function seed(api: Api, db: Database, info: TestInfo, admin: Account, memb
   const child = await createIssue(api, token, project.id, { name: "Child", parent_id: root.id });
   await createIssue(api, token, project.id, { name: "Grandchild", parent_id: child.id });
   const comment = await createIssueComment(api, token, root.id, "<p>Physical second-level reaction</p>");
+  await furnishIssueFiles(api, token, root.id, comment.id);
   await createCommentReaction(api, token, comment.id);
   await createIssueReaction(api, token, root.id);
   const link = await createIssueLink(api, token, root.id, { url: `http://169.254.169.254/furnish/${root.id}` });
@@ -249,10 +254,21 @@ test("I21 (API): a fresh purge after +61d physically removes old FK chains and P
     ).toBe(true);
   }
   const oldNeighbors = await capture(db, [old.parents, old.neighborIDs]);
+  await waitForFileSafety(
+    db,
+    [...oldRows, ...oldNeighbors]
+      .filter(({ table }) => table === "file_assets")
+      .flatMap(({ rows }) => rows.map(({ id }) => id))
+  );
   const previous = world.current.nerve;
   await world.advance("1464h");
   expect(previous.exitCode, "the previous process exited before its replacement").toBe(0);
   const api = world.current.api;
+  await Promise.all(
+    [admin, member].map(async (account) => {
+      account.token = (await login(api, account.email)).access_token;
+    })
+  );
   const recent = await seed(api, db, info, admin, member, "recent");
   await remove(api, db, admin, recent);
   const live = await seed(api, db, info, admin, member, "live");
@@ -316,7 +332,16 @@ test("I21 (API): a fresh purge after +61d physically removes old FK chains and P
   );
   await unchanged(db, recentRows);
   await unchanged(db, retained);
-  await unchanged(db, oldNeighbors);
+  await unchanged(
+    db,
+    oldNeighbors.filter(({ table }) => table !== "file_assets")
+  );
+  await expectExpiredPreparations(
+    db,
+    oldNeighbors.filter(({ table }) => table === "file_assets").flatMap(({ rows }) => rows),
+    world.current.nerve.storageRoot,
+    world.current.startedAt
+  );
   expect(await db.query("SELECT id FROM users WHERE id=ANY($1::uuid[]) ORDER BY id", [[admin.id, member.id]])).toEqual(
     [admin.id, member.id].toSorted().map((id) => ({ id }))
   );

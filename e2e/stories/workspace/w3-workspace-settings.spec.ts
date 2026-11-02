@@ -10,7 +10,7 @@ import {
   slugFor,
   type Workspace,
 } from "../../fixtures/api";
-import { issueOwnedTable, projectTables, workspaceTables } from "../../fixtures/assert/catalog";
+import { asynchronousDeletionTable, projectTables, workspaceTables } from "../../fixtures/assert/catalog";
 import { expectLabels, expectProjectCreated, expectProjectDeleted, type LabelRow } from "../../fixtures/assert/project";
 import {
   expectInvitations,
@@ -378,7 +378,7 @@ test("W3 (API): deleting a workspace with zero projects consumes its projectless
     );
   await Promise.all(
     tables
-      .filter((name) => !issueOwnedTable(name))
+      .filter((name) => !asynchronousDeletionTable(name))
       .map(async (table) => {
         expect(await read(table), `synchronous rows of ${table}`).toEqual([
           { count: before.get(table), live: 0, stamped: before.get(table) },
@@ -386,7 +386,7 @@ test("W3 (API): deleting a workspace with zero projects consumes its projectless
       })
   );
   await Promise.all(
-    tables.filter(issueOwnedTable).map(async (table) => {
+    tables.filter(asynchronousDeletionTable).map(async (table) => {
       await expect
         .poll(() => read(table), { message: `issue rows of ${table}`, timeout: 15_000 })
         .toEqual([{ count: before.get(table), live: 0, stamped: before.get(table) }]);
