@@ -69,3 +69,5 @@ P2 承接准备件、确认/封存候选、业务权限和清理，并把 asset 
 - 完整七门禁首次运行于 `b051df25258de313f6dcfac7387055c93fa7630a`：gen/gen-check 与 lint-go 通过，make test 用时 347.277s，仅 `TestBuiltInProfiles` 和 `TestEveryModuleDeclaresItsActionsOrHasNone` 失败。前者补齐 spec 中的具体默认值，后者按既有枚举机制登记 P1 没有业务动作的 asset；守卫谓词、精确全路由与角色规则不改。聚焦配置/动作/反例测试转绿，完整门禁在修复后重新执行。
 
 - `f6cde552`：gen/gen-check、lint-go、make test 全绿（346.872s）。lint-web 的关键词检查把标准 HTTP `upgrade` 头当作付费功能；按现有精确例外机制登记一次命中与 M9 复核，不修改规则。单独 knip 揪出 fixture 内部 `listen` 的多余导出，已收回，不加忽略。后续门禁从 lint-web 继续，服务端与生成输入保持原字节，结果按输入哈希关联到最终提交。
+
+- `07bd0781`：lint-web 54/54、knip、test-web 18/18 通过；完整构建成功，E2E 335 通过、1 个既有 C12 移动偏好故事失败。trace 证明 F6 后通知区已聚焦，4ms 后菜单延迟恢复焦点到 Layout，Close 重新 aria-hidden；原故事独立重复 10 次有 3 次同因失败。故事改为在 Escape 后等待对应 Layout/Display 按钮真正恢复焦点，再按 F6；保留次数、数据库与通知关闭断言，不加 sleep/重试，不改共用组件。修复后相同条件连续 10 次通过，lint-web 通过，完整 E2E 仍待复验；首次全量原件在 `task-9-first-e2e/`。

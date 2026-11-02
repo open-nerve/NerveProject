@@ -154,7 +154,7 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 
 ## Task 9（T9）：实际慢流、七项门禁与检查点
 
-**Files：** B/asset_transfer_slow_test.go、asset_namespace_test.go、asset_transfer_test.go；A/adapter/localprotocol/path.go 与原签发/handler；H/routes.go、path_redirect_test.go；workspace/domain/reserved_slugs.txt、reserved_test.go；web/apps/web/local-transfer.ts、transfer-proxy.ts 与相邻测试、vite.config.ts；api/storage-local.json；M3/M5 设计、spec/plan/review、README；本 worktree `.superpowers/sdd/P1-local-storage` 原件。
+**Files：** e2e/stories/issue/review-boundaries.spec.ts（门禁复现的既有焦点时序）；B/asset_transfer_slow_test.go、asset_namespace_test.go、asset_transfer_test.go；A/adapter/localprotocol/path.go 与原签发/handler；H/routes.go、path_redirect_test.go；workspace/domain/reserved_slugs.txt、reserved_test.go；web/apps/web/local-transfer.ts、transfer-proxy.ts 与相邻测试、vite.config.ts；api/storage-local.json；M3/M5 设计、spec/plan/review、README；本 worktree `.superpowers/sdd/P1-local-storage` 原件。
 
 **Interfaces：** localprotocol 仅固定本地传输 Root/ObjectPrefix/Path，domain/app 不感知路径；Router 路径策略保持通用。localTransfer(target) 返回 Vite Plugin；具名传输器用 Node http/https 标准库，完整拥有上游与关闭，日志不给任意错误文本。原 /api 仍走已有 Vite proxy。
 
@@ -163,6 +163,7 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 - [x] Step 1b：将 re-32 路径反例落为通用 Router 的永久测试，先确认 307 红，再按规范化逐段判断归属；编码、重复斜杠、点段、进入再离开以及相邻树控制同时验证。原始/最终路径二点法变异须被杀，恢复后提交。
 - [x] Step 1c：真实 Vite + 上游测试先红，再实现具名本地传输插件；精确路径分派、原始方法/头/字节/query、private/no-store、失败日志、断连/取消/关闭均验收；构建/public 占 static 必须失败。使用 Node 标准库避免默认代理错误输出凭证，120s idle 宽于 Go 最大 idle。无新依赖，不关闭全部错误日志；变异泄露错误文本/吞掉取消须被杀，恢复后提交。
 - [x] Step 1d：完成工作区与文件请求的联合回归、静态缓存/缺失 chunk/emojibase、API 隔离、race；同步实际偏差和证据，不把设计复核当阶段整审。
+- [ ] Step 1e：完整 E2E 复现 C12 的菜单延迟恢复焦点与 F6 竞争，保留 trace；仅让故事等待菜单关闭后的真实焦点后置条件，再验证通知关闭。旧代码重复 10 次中 3 次同因失败；修复后重复验证与完整 E2E 都须通过，不改产品焦点/动画策略，不当作 W11。
 - [ ] Step 2：聚焦 race/变异后恢复全部代码，检查 git diff 和工作树；依顺序完成 `make gen && make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`。容器重套件只串行。
 - [ ] Step 3：记录命令、退出码、准确 tested diff/HEAD、原件路径/hash/bytes；失败先定根因，环境重跑独立记。仅已知 W11 用既定处理，不专项扩范围。
 - [ ] Step 4：提交完整检查点后使用系统 git 推送；按准确 HEAD 查询 branch CI，不以别的提交绿灯代替。
