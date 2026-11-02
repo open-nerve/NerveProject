@@ -196,7 +196,11 @@ export const getDate = (date: string | Date | undefined | null): Date | undefine
     const day = parseInt(dayString);
     if (!isNumber(year) || !isNumber(month) || !isNumber(day)) return;
 
-    return new Date(year, month - 1, day);
+    // The numeric Date constructor remaps years 0–99 to 1900–1999. API dates keep their literal year.
+    const parsed = new Date(0);
+    parsed.setFullYear(year, month - 1, day);
+    parsed.setHours(0, 0, 0, 0);
+    return parsed;
   } catch (_e) {
     return undefined;
   }
@@ -277,7 +281,7 @@ export const parseDateFilter = (filterValue: string): { type: "after" | "before"
     date = processRelativeDate(dateStr);
   } else {
     // Handle absolute dates (e.g., "2024-12-01;after")
-    date = new Date(dateStr);
+    date = getDate(dateStr) ?? new Date(NaN);
   }
 
   return { type, date };

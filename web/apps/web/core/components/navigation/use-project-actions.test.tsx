@@ -18,6 +18,7 @@ vi.mock("@nerve/utils", () => ({ copyUrlToClipboard: browser.copyUrlToClipboard 
 vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "acme" }) }));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 
 /** web's cycles tab, open. */
 const cycles: TNavigationItem = {

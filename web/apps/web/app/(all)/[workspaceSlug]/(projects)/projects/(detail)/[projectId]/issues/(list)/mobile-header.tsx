@@ -21,6 +21,7 @@ import {
 } from "@/components/issues/issue-layouts/filters";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
+import { useProjectPreferencesFollow } from "@/hooks/use-project-preferences-follow";
 
 export const ProjectIssuesMobileHeader = observer(function ProjectIssuesMobileHeader() {
   // i18n
@@ -31,30 +32,37 @@ export const ProjectIssuesMobileHeader = observer(function ProjectIssuesMobileHe
   const {
     issuesFilter: { issueFilters, updateFilters },
   } = useIssues(EIssuesStoreType.PROJECT);
+  const follow = useProjectPreferencesFollow();
   const activeLayout = issueFilters?.displayFilters?.layout;
 
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
       if (!workspaceSlug || !projectId) return;
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout });
+      void follow(workspaceSlug, projectId, () =>
+        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout })
+      );
     },
-    [workspaceSlug, projectId, updateFilters]
+    [workspaceSlug, projectId, updateFilters, follow]
   );
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
       if (!workspaceSlug || !projectId) return;
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter);
+      void follow(workspaceSlug, projectId, () =>
+        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter)
+      );
     },
-    [workspaceSlug, projectId, updateFilters]
+    [workspaceSlug, projectId, updateFilters, follow]
   );
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
       if (!workspaceSlug || !projectId) return;
-      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property);
+      void follow(workspaceSlug, projectId, () =>
+        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property)
+      );
     },
-    [workspaceSlug, projectId, updateFilters]
+    [workspaceSlug, projectId, updateFilters, follow]
   );
 
   return (

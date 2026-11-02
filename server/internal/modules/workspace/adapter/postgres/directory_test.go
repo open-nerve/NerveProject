@@ -8,8 +8,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -127,8 +125,8 @@ func TestShareMembersLocksTheRowsAskedFor(t *testing.T) {
 			updated = tag.RowsAffected()
 			return err
 		})
-		var pgErr *pgconn.PgError
-		if waited := errors.As(err, &pgErr) && pgErr.Code == "55P03"; waited != tt.waits || (!waited && (err != nil || updated != 1)) {
+
+		if waited := postgres.LockNotAvailable(err); waited != tt.waits || (!waited && (err != nil || updated != 1)) {
 			t.Errorf("%s: updating it = %d rows, %v; want a wait %v, or else its one row", tt.name, updated, err, tt.waits)
 		}
 	}
@@ -181,8 +179,8 @@ func TestShareMembersLocksInIDOrder(t *testing.T) {
 			updated = tag.RowsAffected()
 			return err
 		})
-		var pgErr *pgconn.PgError
-		if waited := errors.As(err, &pgErr) && pgErr.Code == "55P03"; waited != tt.waits || (!waited && (err != nil || updated != 1)) {
+
+		if waited := postgres.LockNotAvailable(err); waited != tt.waits || (!waited && (err != nil || updated != 1)) {
 			t.Errorf("updating %s while ShareMembers waits for carol's = %d rows, %v; want a wait %v, or else its one row", tt.name, updated, err, tt.waits)
 		}
 	}
@@ -232,8 +230,8 @@ func TestShareMembersLockIsForShare(t *testing.T) {
 			acme.ID, bob)
 		return err
 	})
-	var pgErr *pgconn.PgError
-	if !errors.As(err, &pgErr) || pgErr.Code != "55P03" {
+
+	if !postgres.LockNotAvailable(err) {
 		t.Errorf("updating bob's row while ShareMembers holds it = %v; want lock_not_available after waiting", err)
 	}
 }

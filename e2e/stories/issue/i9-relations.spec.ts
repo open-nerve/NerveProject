@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
   changeProject,
@@ -76,6 +77,7 @@ test("I9 (page): native candidates create Blocking and cross-project Relates to;
       )
       .toEqual([{ relation_type: "blocked_by" }]);
     await expect(modal).toHaveCount(1);
+    await c12Evidence(page, "B12", "relation-pending");
     await expect(page.locator(`#issue-${target.id}`)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Relations 1", exact: true })).toHaveCount(0);
   } finally {
@@ -106,6 +108,7 @@ test("I9 (page): native candidates create Blocking and cross-project Relates to;
   ).toBe(201);
   await expect(modal).toHaveCount(0);
   await expect(page.locator(`#issue-${cross.id}`)).toBeVisible();
+  await c12Evidence(page, "B12", "cross-project-relation-confirmed");
   await expectRelations(
     db,
     [source.id],

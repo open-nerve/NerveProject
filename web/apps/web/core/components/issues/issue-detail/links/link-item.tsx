@@ -83,7 +83,7 @@ export const IssueLinkItem = observer(function IssueLinkItem(props: TIssueLinkIt
             type="button"
             aria-label={`${t("common.actions.copy_link")}: ${linkDetail.title || linkDetail.url}`}
             onClick={() => copyLink(linkDetail.url, t("common.link_copied_to_clipboard"))}
-            className="relative grid cursor-pointer place-items-center rounded-sm p-1 text-placeholder outline-none group-hover:text-secondary hover:bg-layer-1"
+            className="relative grid cursor-pointer place-items-center rounded-sm p-1 text-placeholder group-hover:text-secondary hover:bg-layer-1 focus-visible:outline-2 focus-visible:outline-accent-strong"
           >
             <CopyOutline className="h-3.5 w-3.5 stroke-[1.5]" />
           </button>

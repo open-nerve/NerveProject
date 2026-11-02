@@ -6,7 +6,7 @@
 
 import type { Editor } from "@tiptap/core";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { DeleteOutline, LinkOutline, TickOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { cn, isComposing } from "@nerve/utils";
@@ -31,9 +31,12 @@ export function BubbleMenuLinkSelector(props: Props) {
   const { context } = options;
   // refs
   const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (context.open) inputRef.current?.focus();
-  }, [context.open]);
+  // FloatingPortal mounts its children after the open render. Focus the actual input
+  // on attachment, rather than an effect which can run while its ref is still null.
+  const attachInput = useCallback((input: HTMLInputElement | null) => {
+    inputRef.current = input;
+    input?.focus();
+  }, []);
 
   const handleLinkSubmit = useCallback(() => {
     const input = inputRef.current;
@@ -79,8 +82,9 @@ export function BubbleMenuLinkSelector(props: Props) {
           })}
         >
           <input
-            ref={inputRef}
+            ref={attachInput}
             type="url"
+            aria-label="Link URL"
             placeholder="Enter or paste a link"
             onClick={(e) => e.stopPropagation()}
             className="flex-1 rounded-sm border-r-[0.5px] border-strong bg-surface-1 px-1.5 py-2 text-11 outline-none placeholder:text-placeholder"
@@ -97,6 +101,7 @@ export function BubbleMenuLinkSelector(props: Props) {
           {editor.getAttributes("link").href ? (
             <button
               type="button"
+              aria-label="Remove link"
               className="grid place-items-center rounded-xs p-1 text-danger-primary transition-all hover:bg-danger-subtle-hover"
               onClick={(e) => {
                 unsetLinkEditor(editor);
@@ -109,6 +114,7 @@ export function BubbleMenuLinkSelector(props: Props) {
           ) : (
             <button
               type="button"
+              aria-label="Add link"
               className="grid aspect-square h-full place-items-center rounded-xs p-1 text-tertiary transition-all hover:bg-layer-1"
               onClick={(e) => {
                 e.stopPropagation();

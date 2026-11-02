@@ -38,46 +38,6 @@ export const SlashCommandsMenu = forwardRef(function SlashCommandsMenu(props: Sl
     },
     [command, sections]
   );
-  // handle arrow key navigation
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (DROPDOWN_NAVIGATION_KEYS.includes(e.key)) {
-        e.preventDefault();
-        const currentSection = selectedIndex.section;
-        const currentItem = selectedIndex.item;
-        let nextSection = currentSection;
-        let nextItem = currentItem;
-
-        if (e.key === "ArrowUp") {
-          nextItem = currentItem - 1;
-          if (nextItem < 0) {
-            nextSection = currentSection - 1;
-            if (nextSection < 0) nextSection = sections.length - 1;
-            nextItem = sections[nextSection]?.items?.length - 1;
-          }
-        }
-        if (e.key === "ArrowDown") {
-          nextItem = currentItem + 1;
-          if (nextItem >= sections[currentSection]?.items?.length) {
-            nextSection = currentSection + 1;
-            if (nextSection >= sections.length) nextSection = 0;
-            nextItem = 0;
-          }
-        }
-        if (e.key === "Enter") {
-          selectItem(currentSection, currentItem);
-        }
-        setSelectedIndex({
-          section: nextSection,
-          item: nextItem,
-        });
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [sections, selectedIndex, setSelectedIndex, selectItem]);
   // initialize the select index to 0 by default
   useEffect(() => {
     setSelectedIndex({
@@ -96,6 +56,7 @@ export const SlashCommandsMenu = forwardRef(function SlashCommandsMenu(props: Sl
     item?.scrollIntoView({ block: "nearest" });
   }, [sections, selectedIndex]);
 
+  // The editor's Suggestion plugin owns navigation; other fields must keep their native keys.
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: { event: KeyboardEvent }) => {
       if (!DROPDOWN_NAVIGATION_KEYS.includes(event.key)) return false;

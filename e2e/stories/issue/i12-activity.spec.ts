@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import type { components } from "@nerve/api-client";
 
 import { addProjectMembers, createProject, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
@@ -144,6 +145,7 @@ test("I12 (page): three real pages merge into one timeline, a confirmed descript
   await expect(timeline.locator("xpath=./div")).toHaveCount(205);
   await expect(timeline.getByText("Comment 100", { exact: true })).toBeVisible();
   await expect(timeline.getByText("Between saves", { exact: true })).toBeVisible();
+  await c12Evidence(page, "B16", "timeline-three-real-pages");
   expect(
     await timeline.locator("xpath=./div[@id]").evaluateAll((rows) => rows.map((row) => row.id.replace(/^comment-/, "")))
   ).toEqual([...comments.map((comment) => comment.id), between.id]);
@@ -196,6 +198,7 @@ test("I12 (page): three real pages merge into one timeline, a confirmed descript
   await page.goto(`/${seed.slug}/browse/WEB-${issue.sequence_id}`);
   await expect(timeline.locator("xpath=./div")).toHaveCount(204);
   await expect(timeline.getByText("Remote first edit", { exact: true })).toBeVisible();
+  await c12Evidence(page, "B16", "timeline-reopened-remote-edit");
   await expect(page.locator(`[id="comment-${comments[1]!.id}"]`)).toHaveCount(0);
   await expect(descriptionRow).toHaveCount(1);
   await expectListPageQuiet(page, watch);
@@ -224,6 +227,7 @@ test("I12 (page): hidden historical relation references stay absent while the ne
   await expect(page.getByText("set the name to Visible neighbor.", { exact: true })).toBeVisible();
   await expect(page.locator("body")).not.toContainText("HID-");
   await expect(page.locator("body")).not.toContainText("Secret historical item");
+  await c12Evidence(page, "B16", "hidden-relation-absent");
   expect(
     (await exhaust((cursor) => activityPage(api, reader.token, issue.id, cursor, 1))).rows.map((row) => row.field)
   ).toEqual([null, "name"]);

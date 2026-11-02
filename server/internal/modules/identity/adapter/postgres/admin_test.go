@@ -8,7 +8,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
@@ -69,11 +68,6 @@ func withLockTimeout(tx *postgres.TxManager, pool *pgxpool.Pool, fn func(ctx con
 	})
 }
 
-func isLockTimeout(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "55P03"
-}
-
 func TestLockAccountFindsTheAccountByAddress(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newUser("alice@corp.com"), newUser("bob@corp.com")
@@ -127,7 +121,7 @@ func TestLockAccountIsTheAccountRowLock(t *testing.T) {
 		return s.CreateSession(ctx, app.NewSession{ID: uuid.NewV7(), UserID: alice.ID, TokenHash: hash[:], ExpiresAt: now.Add(time.Hour), Now: now})
 	})
 
-	if !isLockTimeout(same) || !isLockTimeout(byAddress) {
+	if !postgres.LockNotAvailable(same) || !postgres.LockNotAvailable(byAddress) {
 		t.Errorf("locking the held account by id: %v, by address: %v; want both to wait", same, byAddress)
 	}
 	if other != nil || insert != nil {

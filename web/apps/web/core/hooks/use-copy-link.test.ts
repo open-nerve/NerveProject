@@ -5,6 +5,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toasts } from "@/lib/fake-toast";
+import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { useCopyLink, useCopyProjectLink, useCopyText } from "./use-copy-link";
 
 // Copying a link (M3 design 7.7): the hooks run as plain functions, with stand-ins for the clipboard's write, which
@@ -18,8 +19,10 @@ vi.mock("@nerve/utils", () => ({
 vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "acme" }) }));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 
 beforeEach(() => {
+  signedIn();
   browser.copyTextToClipboard.mockReset();
   browser.copyTextToClipboard.mockResolvedValue(undefined);
   browser.copyUrlToClipboard.mockReset();
@@ -67,3 +70,31 @@ describe("useCopyProjectLink", () => {
     ]);
   });
 });
+
+for (const kind of ["link", "text", "project"] as const) {
+  for (const switches of [1, 2]) {
+    it.each(lateSettlings)(
+      `${kind} copy $settles after ${switches} account changes without following into the current session`,
+      async ({ settle }) => {
+        const pending = heldChange<undefined>();
+        const write = kind === "text" ? browser.copyTextToClipboard : browser.copyUrlToClipboard;
+        write.mockReturnValueOnce(pending.sent);
+        const finished =
+          kind === "project"
+            ? useCopyProjectLink()("p-web")
+            : kind === "text"
+              ? useCopyText()("old account text", "old account copied")
+              : useCopyLink()("/acme/projects/p-web/issues", "old account copied");
+        expect(write).toHaveBeenCalledTimes(1);
+        expect(toasts).toEqual([]);
+        for (let count = 0; count < switches; count++) switchAccount();
+        const currentToast = { type: "success", title: "Current session", message: "Keep this" };
+        toasts.push(currentToast);
+        settle(pending);
+        await expect(finished).resolves.toBeUndefined();
+        expect(toasts).toEqual([currentToast]);
+        expect(write).toHaveBeenCalledTimes(1);
+      }
+    );
+  }
+}

@@ -13,9 +13,10 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    // Firefox runs A4's page tests alone. They show that in Firefox a release of the refresh lock made as its task
+    // Firefox runs A4 and the static-resource regressions. A4 shows that a refresh lock release made as its task
     // settles can reach the next tab before the task's localStorage writes, and that one task later it follows them (M3
     // closeout, F-A4). The other stories expect Chromium's console messages and clipboard permissions.
-    { name: "firefox", use: { ...devices["Desktop Firefox"] }, grep: /A4 \(page\)/ },
+    // Static resources also exercise Firefox's native NS_BINDING_ABORTED image restart.
+    { name: "firefox", use: { ...devices["Desktop Firefox"] }, grep: /A4 \(page\)|static resource guard/ },
   ],
 });

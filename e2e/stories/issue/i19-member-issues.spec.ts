@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   type Api,
   addProjectMembers,
@@ -306,6 +307,7 @@ test("I19 (page): three real relation tabs and both layouts group only the calle
     if (relation !== "assigned") await page.getByRole("link", { name: title, exact: true }).click();
     await expect(page).toHaveURL(`/${slug}/profile/${b.id}/${relation}`);
     await profileRows(page, ids);
+    await c12Evidence(page, "B09", `profile-${relation}`);
     await (["List Layout", "Board Layout"] as const).reduce(async (prior, layout) => {
       await prior;
       const button = page.getByRole("button", { name: layout, exact: true });
@@ -519,6 +521,7 @@ test("I19 (page): a workspace guest has neither toolbar nor member issue read on
     await expect(page.getByRole("button", { name: "Add filter", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^(List|Board) Layout$/ })).toHaveCount(0);
     await expect(page.getByRole("link", { name: /^(Assigned|Created|Subscribed)$/ })).toHaveCount(0);
+    await c12Evidence(page, "B09", `profile-guest-${viewport.width}`);
   }, Promise.resolve());
   expect(watch.apiRequests.filter((request) => /GET .*\/members\/[^/]+\/issues$/.test(request))).toEqual([]);
   await expectListPageQuiet(page, watch);

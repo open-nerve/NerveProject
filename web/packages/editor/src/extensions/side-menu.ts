@@ -76,10 +76,23 @@ const SideMenu = (options: SideMenuPluginProps) => {
     view: (view) => {
       hideSideMenu();
       view?.dom.parentElement?.appendChild(editorSideMenu);
-      // side menu elements' initialization
-      const dragHandle = dragDropEnabled ? dragHandleView(view, editorSideMenu) : undefined;
+      // A hidden handle is still a keyboard stop. Own its lifetime with editability,
+      // including editors that become read-only without replacing their view.
+      let dragHandle: ReturnType<typeof dragHandleView> | undefined;
+      const syncDragHandle = (currentView: EditorView) => {
+        if (dragDropEnabled && currentView.editable) {
+          dragHandle ??= dragHandleView(currentView, editorSideMenu);
+        } else {
+          dragHandle?.destroy();
+          dragHandle = undefined;
+          currentView.dom.classList.remove("dragging");
+          hideSideMenu();
+        }
+      };
+      syncDragHandle(view);
 
       return {
+        update: syncDragHandle,
         destroy: () => {
           dragHandle?.destroy();
           editorSideMenu.remove();
@@ -140,12 +153,12 @@ const SideMenu = (options: SideMenuPluginProps) => {
         // keydown: () => hideSideMenu(),
         mousewheel: () => hideSideMenu(),
         dragenter: (view) => {
-          if (dragDropEnabled) {
+          if (dragDropEnabled && view.editable) {
             dragHandleDOMEvents?.dragenter?.(view);
           }
         },
         drop: (view, event) => {
-          if (dragDropEnabled) {
+          if (dragDropEnabled && view.editable) {
             dragHandleDOMEvents?.drop?.(view, event);
           }
         },

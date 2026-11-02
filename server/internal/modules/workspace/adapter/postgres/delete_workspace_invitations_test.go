@@ -110,10 +110,10 @@ func TestLockWorkspaceInvitationsLocksInIDOrder(t *testing.T) {
 	locked := func() string {
 		var held []string
 		for _, id := range all {
-			if waitsFor(t, pool, "workspace_member_invites", id, "FOR SHARE") {
+			if pgtest.RowWaits(t, pool, "workspace_member_invites", id, "FOR SHARE") {
 				held = append(held, names[id])
 			}
-			if waitsFor(t, pool, "workspace_member_invites", id, "FOR KEY SHARE") {
+			if pgtest.RowWaits(t, pool, "workspace_member_invites", id, "FOR KEY SHARE") {
 				held = append(held, names[id]+" FOR UPDATE")
 			}
 		}

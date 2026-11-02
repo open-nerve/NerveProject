@@ -6,7 +6,6 @@
 
 import * as React from "react";
 import { AnimatedCounter } from "../animated-counter";
-import { stringToEmoji } from "../emoji-icon-picker";
 import { ReactionOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "../tooltip";
 import { cn } from "../utils";
@@ -27,6 +26,7 @@ interface EmojiReactionProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   onReactionClick?: (emoji: string) => void;
   className?: string;
   showCount?: boolean;
+  maxDisplayUsers?: number;
 }
 
 interface EmojiReactionGroupProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -56,6 +56,7 @@ const EmojiReaction = React.forwardRef(function EmojiReaction(
     onReactionClick,
     className,
     showCount = true,
+    maxDisplayUsers = 5,
     ...props
   }: EmojiReactionProps,
   ref: React.ForwardedRef<HTMLButtonElement>
@@ -67,24 +68,25 @@ const EmojiReaction = React.forwardRef(function EmojiReaction(
   const tooltipContent = React.useMemo(() => {
     if (!users.length) return null;
 
-    const displayUsers = users.slice(0, 5);
+    const displayUsers = users.slice(0, maxDisplayUsers);
     const remainingCount = users.length - displayUsers.length;
 
     return (
       <div className="text-11">
-        <div className="mb-1 font-medium">{stringToEmoji(emoji)}</div>
+        <div className="mb-1 font-medium">{emoji}</div>
         <div>
           {displayUsers.join(", ")}
           {remainingCount > 0 && ` and ${remainingCount} more`}
         </div>
       </div>
     );
-  }, [emoji, users]);
+  }, [emoji, users, maxDisplayUsers]);
 
   const button = (
     <button
       ref={ref}
       onClick={handleClick}
+      aria-pressed={reacted}
       className={cn(
         "inline-flex items-center gap-0.5 rounded-full border px-1.5 text-11 transition-all duration-200",
         reacted
@@ -146,7 +148,8 @@ const EmojiReactionGroup = React.forwardRef(function EmojiReactionGroup(
           emoji={reaction.emoji}
           count={reaction.count}
           reacted={reaction.reacted}
-          users={reaction.users?.slice(0, maxDisplayUsers)}
+          users={reaction.users}
+          maxDisplayUsers={maxDisplayUsers}
           onReactionClick={onReactionClick}
         />
       ))}

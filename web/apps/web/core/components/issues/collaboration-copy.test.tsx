@@ -10,7 +10,8 @@ import { CreateIssueToastActionItems } from "./create-issue-toast-action-items";
 import { useWorkItemCommentOperations } from "./issue-detail/issue-activity/helper";
 import { useProjectIssueMenuItems } from "./issue-layouts/quick-action-dropdowns/helper";
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "copy" } }, publicClient: {} }));
+const session = vi.hoisted(() => ({ loginId: "copy" }));
+vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: session }, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
@@ -57,6 +58,7 @@ function Consumer({ kind }: { kind: ConsumerKind }) {
 }
 beforeEach(async () => {
   vi.useFakeTimers();
+  session.loginId = "copy";
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   tab = await issueStoreTab();
   tab.app.issue.issues.acceptRead(issue, tab.app.issue.captureRead());
@@ -81,31 +83,41 @@ afterEach(async () => {
   vi.useRealTimers();
 });
 for (const kind of ["creation", "comment", "layout"] as const) {
-  it.each(["success", "refusal"])(`copyWaitsForClipboardAndReportsOneOutcome: ${kind} %s`, async (outcome) => {
-    await act(async () => root.render(<Consumer kind={kind} />));
-    await act(async () => host.querySelector("button")!.click());
-    expect(write).toHaveBeenCalledExactlyOnceWith(
-      `${window.location.origin}/ws/browse/A-1${kind === "comment" ? "#comment-discussion" : ""}`
-    );
-    expect(toasts).toEqual([]);
-    expect(host.textContent).not.toContain("Copied!");
-    await act(async () => {
-      if (outcome === "success") clipboard.answer();
-      else clipboard.refuse(new DOMException("Denied", "NotAllowedError"));
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    expect(escaped).toEqual([]);
-    expect(toasts).toHaveLength(1);
-    expect(toasts[0]).toMatchObject(
-      outcome === "success"
-        ? {
-            type: "success",
-            title: "common.link_copied",
-            message: kind === "comment" ? "issue.comments.copy_link.success" : "common.copied_to_clipboard",
-          }
-        : { type: "error", message: "something_went_wrong_please_try_again" }
-    );
-    expect(host.textContent).not.toContain("Copied!");
-    expect(tab.nerve.calls).toEqual([]);
-  });
+  it.each([
+    { outcome: "success", switched: false },
+    { outcome: "refusal", switched: false },
+    { outcome: "success", switched: true },
+    { outcome: "refusal", switched: true },
+  ])(
+    `copyWaitsForClipboardAndReportsOnlyItsSession: ${kind} $outcome, switched=$switched`,
+    async ({ outcome, switched }) => {
+      await act(async () => root.render(<Consumer kind={kind} />));
+      await act(async () => host.querySelector("button")!.click());
+      expect(write).toHaveBeenCalledExactlyOnceWith(
+        `${window.location.origin}/ws/browse/A-1${kind === "comment" ? "#comment-discussion" : ""}`
+      );
+      expect(toasts).toEqual([]);
+      expect(host.textContent).not.toContain("Copied!");
+      if (switched) session.loginId = "other-account";
+      await act(async () => {
+        if (outcome === "success") clipboard.answer();
+        else clipboard.refuse(new DOMException("Denied", "NotAllowedError"));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(escaped).toEqual([]);
+      expect(toasts).toHaveLength(switched ? 0 : 1);
+      if (!switched)
+        expect(toasts[0]).toMatchObject(
+          outcome === "success"
+            ? {
+                type: "success",
+                title: "common.link_copied",
+                message: kind === "comment" ? "issue.comments.copy_link.success" : "common.copied_to_clipboard",
+              }
+            : { type: "error", message: "something_went_wrong_please_try_again" }
+        );
+      expect(host.textContent).not.toContain("Copied!");
+      expect(tab.nerve.calls).toEqual([]);
+    }
+  );
 }

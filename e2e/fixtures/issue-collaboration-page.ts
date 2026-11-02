@@ -1,5 +1,5 @@
 import { networkInterfaces } from "node:os";
-import { expect, type Browser, type BrowserContext, type Locator, type TestInfo } from "@playwright/test";
+import { expect, type Browser, type BrowserContext, type Locator, type Page, type TestInfo } from "@playwright/test";
 import type { Database } from "./db";
 import { startNerve } from "./server";
 import type { PageWatch } from "./browser";
@@ -60,21 +60,59 @@ export async function copyWithoutUserActivation(control: Locator) {
   });
 }
 
-/** Firefox must report both deliberately exercised security conditions; no other diagnostic is accepted. */
-export function expectLANClipboardWarnings(watch: PageWatch, browserName: string, origin: string, loginPath: string) {
+/** Observe the native fallback's actual result without changing its implementation, arguments or return value. */
+export async function observeLANClipboard(page: Page) {
+  return page.evaluateHandle(() => {
+    const native = document.execCommand;
+    const calls: {
+      command: string;
+      returned: boolean;
+      text: string | null;
+      secureContext: boolean;
+      activeGesture: boolean;
+      asyncClipboard: boolean;
+      diagnosticSource: string | null;
+    }[] = [];
+    document.execCommand = (...args: Parameters<typeof document.execCommand>) => {
+      const context = {
+        command: args[0],
+        text: document.activeElement instanceof HTMLTextAreaElement ? document.activeElement.value : null,
+        secureContext: window.isSecureContext,
+        activeGesture: navigator.userActivation.isActive,
+        asyncClipboard: !!navigator.clipboard,
+        diagnosticSource: (new Error() as Error & { fileName?: string }).fileName ?? null,
+      };
+      const returned = native.apply(document, args);
+      calls.push({ ...context, returned });
+      return returned;
+    };
+    return { calls };
+  });
+}
+
+/** Firefox's insecure-login warning is expected; a native denial additionally has its exact diagnostic. */
+export function expectLANClipboardWarnings(
+  watch: PageWatch,
+  browserName: string,
+  origin: string,
+  loginPath: string,
+  denied: boolean,
+  diagnosticSource: string | null
+) {
   if (browserName !== "firefox") return [];
-  expect(watch.consoleWarnings).toHaveLength(2);
+  expect(watch.consoleWarnings).toHaveLength(denied ? 2 : 1);
   const [passwordWarning, clipboardWarning] = watch.consoleWarnings;
   expect(passwordWarning).toBe(
     `[JavaScript Warning: "Password fields present on an insecure (http://) page. This is a security risk that allows user login credentials to be stolen." {file: "${new URL(loginPath, origin).href}" line: 0}]`
   );
+  if (!denied) return [passwordWarning!];
   const source = clipboardWarning?.match(
     /^\[JavaScript Warning: "document\.execCommand\(‘cut’\/‘copy’\) was denied because it was not called from inside a short running user-generated event handler\." \{file: "([^"]+)" line: [1-9]\d*\}\]$/
   );
   expect(source).not.toBeNull();
-  const script = new URL(source![1]!);
-  expect(script.origin).toBe(new URL(origin).origin);
-  expect(script.pathname).toMatch(/^\/assets\/[^/]+\.js$/);
-  expect(watch.requestUrls).toContain(script.href);
+  // Firefox reports the eval source invoking the native API, not a sourceURL or the production caller.
+  // Match the source observed at that exact call; keep the diagnostic text and warning count strict.
+  expect(diagnosticSource).toMatch(/^debugger eval code line [1-9]\d* > eval$/);
+  expect(source![1]).toBe(diagnosticSource);
   return [passwordWarning!, clipboardWarning!];
 }

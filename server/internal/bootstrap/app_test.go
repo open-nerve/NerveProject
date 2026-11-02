@@ -132,7 +132,10 @@ func runBuiltApp(t *testing.T, a *app) string {
 	cfg := a.cfg
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- a.run(ctx) }()
+	go func() {
+		defer close(done)
+		done <- a.run(ctx)
+	}()
 	// Cleanups run last-in first-out: run stops before buildApp's close.
 	t.Cleanup(func() {
 		cancel()

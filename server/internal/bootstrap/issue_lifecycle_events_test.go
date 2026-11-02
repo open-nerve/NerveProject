@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"net/http"
 	"reflect"
@@ -12,7 +13,13 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/riverqueue/river"
+
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
+	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -204,22 +211,62 @@ func TestIssueArchivalEvents(t *testing.T) {
 }
 
 func TestIssueDeletionEventsCascade(t *testing.T) {
-	// Project/workspace requests enqueue their deletion tasks; the background
-	// batch writes must not publish individual issue lifecycle events.
-	for _, workspace := range []bool{false, true} {
-		t.Run(fmt.Sprintf("workspace=%t", workspace), func(t *testing.T) {
-			w := newIssueWorld(t)
-			_, ids, _ := lifecycleTree(t, w, false)
-			if workspace {
-				w.send(t, "alice", http.MethodDelete, "/api/v0/workspaces/acme", "", 204)
-				waitWorkspaceDeletion(t, w.pool, w.acme)
-			} else {
-				w.send(t, "alice", http.MethodDelete, "/api/v0/projects/"+w.web.String(), "", 204)
-				waitProjectDeletion(t, w.pool, w.web)
+	// One real module owns both the positive-control request and the Runner's
+	// background writes. Without an attached observer, a zero count proves nothing.
+	for _, wholeWorkspace := range []bool{false, true} {
+		t.Run(fmt.Sprintf("workspace=%t", wholeWorkspace), func(t *testing.T) {
+			dbURL := pgtest.NewDatabase(t)
+			pool := openPool(t, dbURL)
+			var w issueWorld
+			var ids []uuid.UUID
+			if !t.Run("prepare", func(t *testing.T) {
+				w = newIssueWorldOn(t, dbURL, pool, func(*config.Config) {})
+				_, ids, _ = lifecycleTree(t, w, false)
+			}) {
+				return
 			}
-
-			if live := queryIDs(t, w.pool, "SELECT id FROM issues WHERE id=ANY($1) AND deleted_at IS NULL", ids); len(live) != 0 || issueEventCount(t, w) != 0 {
-				t.Fatal("cascade failed or enqueued issue events", live)
+			// The preparation app has stopped, so no unobserved worker can consume
+			// this test's deletion jobs. The assertion pool outlives both runners.
+			cfg := testConfig(t, dbURL, false)
+			client, err := jobs.NewInserter(pool)
+			if err != nil {
+				t.Fatal(err)
+			}
+			events := projectDeletionPublisher(t, pool, shared.EventSubscriber{
+				Name: "observe all issue lifecycle events", Types: issue.EventTypes(),
+				Handle: func(ctx context.Context, e shared.Event) error {
+					return (issueInserter{client: client}).InsertTx(ctx, issueEventProbeArgs{Event: e}, &river.InsertOpts{Queue: "issue_events"})
+				},
+			})
+			tx := postgres.NewTxManager(pool, cfg.Database.CommitTimeout)
+			module := newIssueModuleWithConfig(t, pool, tx, clock.System{}, events, newWriteGate(cfg.Issue.WriteGate), cfg)
+			route := newRouteWithTimeout(t, module.Register, cfg.Server.RequestTimeout)
+			route.answerWithin(t, w.contract, http.MethodPatch, "/api/v0/issues/"+ids[0].String(), w.ids["alice"], `{"name":"Event observer control"}`, 200)
+			if issueEventCount(t, w) != 1 {
+				t.Fatal("event observer did not see the positive control")
+			}
+			runner, err := jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout,
+				Logger: slog.New(slog.DiscardHandler), DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, module.Jobs(), issue.EnqueuedKinds())
+			if err != nil {
+				t.Fatal(err)
+			}
+			runner.Start(t.Context())
+			t.Cleanup(func() {
+				if err := runner.Stop(context.Background()); err != nil {
+					t.Error(err)
+				}
+			})
+			if wholeWorkspace {
+				parent := newWorkspaceRouteWithPublisher(t, pool, tx, events)
+				parent.answerWithin(t, w.contract, http.MethodDelete, "/api/v0/workspaces/acme", w.ids["alice"], "", 204)
+				waitWorkspaceDeletion(t, pool, w.acme)
+			} else {
+				parent := newProjectRouteWithPublisher(t, pool, tx, authorizerOn(pool), workspace.Provide(pool).WorkspaceMembers, events)
+				parent.answerWithin(t, w.contract, http.MethodDelete, "/api/v0/projects/"+w.web.String(), w.ids["alice"], "", 204)
+				waitProjectDeletion(t, pool, w.web)
+			}
+			if live := queryIDs(t, pool, "SELECT id FROM issues WHERE id=ANY($1) AND deleted_at IS NULL", ids); len(live) != 0 || issueEventCount(t, w) != 1 {
+				t.Fatal("cascade failed or published extra issue events", live)
 			}
 		})
 	}

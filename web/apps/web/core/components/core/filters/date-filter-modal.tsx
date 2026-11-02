@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Button } from "@nerve/propel/button";
 import { Calendar } from "@nerve/propel/calendar";
@@ -25,14 +26,16 @@ type TFormValues = {
   date2: Date;
 };
 
-const defaultValues: TFormValues = {
-  filterType: "range",
-  date1: new Date(),
-  date2: new Date(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()),
-};
-
 export function DateFilterModal({ title, handleClose, isOpen, onSelect }: Props) {
   const { t } = useTranslation();
+  const [defaultValues] = useState<TFormValues>(() => {
+    const today = new Date();
+    return {
+      filterType: "range",
+      date1: today,
+      date2: new Date(today.getFullYear(), today.getMonth() + 1, today.getDate()),
+    };
+  });
   const { handleSubmit, watch, control } = useForm<TFormValues>({
     defaultValues,
   });
@@ -85,7 +88,7 @@ export function DateFilterModal({ title, handleClose, isOpen, onSelect }: Props)
                     onChange(date);
                   }}
                   mode="single"
-                  disabled={date2Value ? [{ after: date2Value }] : undefined}
+                  disabled={watch("filterType") === "range" && date2Value ? [{ after: date2Value }] : undefined}
                 />
               );
             }}

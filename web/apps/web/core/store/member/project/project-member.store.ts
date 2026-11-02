@@ -73,7 +73,7 @@ export class ProjectMemberStore implements IProjectMemberStore {
   /** The users the stores read, which the workspace's members' profiles fill. */
   private readonly memberRoot: Pick<IMemberRootStore, "memberMap">;
   /** The projects the caller sees, which show what the changes of their members make of them. */
-  private readonly projects: Pick<IProjectStore, "getProjectById" | "confirmProject">;
+  private readonly projects: Pick<IProjectStore, "getProjectById" | "confirmProject" | "withCurrentProject">;
   // services
   private readonly service: ProjectMembersService;
   /** The changes of the memberships, sent one at a time. */
@@ -169,27 +169,35 @@ export class ProjectMemberStore implements IProjectMemberStore {
    * memberships as nerve answers them. Fails, changing nothing, when nerve refuses.
    */
   bulkAddMembersToProject = (projectId: string, data: ProjectMembersAdd): Promise<ProjectMember[]> =>
-    this.changes(async () => {
-      const added = await this.service.add(projectId, data);
-      this.members.confirm(projectId, (memberships) => ({ ...memberships, ...byMember(added) }));
-      const ids = added.map((membership) => membership.member_id);
-      this.confirmOnProject(projectId, (project) => ({ ...project, member_ids: union(project.member_ids, ids) }));
-      return added;
-    });
+    this.changes(() =>
+      this.projects.withCurrentProject(
+        projectId,
+        () => this.service.add(projectId, data),
+        (added) => {
+          this.members.confirm(projectId, (memberships) => ({ ...memberships, ...byMember(added) }));
+          const ids = added.map((membership) => membership.member_id);
+          this.confirmOnProject(projectId, (project) => ({ ...project, member_ids: union(project.member_ids, ids) }));
+        }
+      )
+    );
 
   /**
    * @description changes a member's role; the store then has nerve's answer, and the project the caller's own role
    * when it is his. Fails, changing nothing, when nerve refuses or the store has no membership of his.
    */
   updateMemberRole = (projectId: string, userId: string, role: ProjectRole): Promise<ProjectMember> =>
-    this.changes(async () => {
-      const membership = await this.service.update(this.membership(projectId, userId).id, { role });
-      this.members.confirm(projectId, (memberships) => ({ ...memberships, [userId]: membership }));
-      if (userId === this.userStore.data?.id) {
-        this.confirmOnProject(projectId, (project) => ({ ...project, member_role: membership.role }));
-      }
-      return membership;
-    });
+    this.changes(() =>
+      this.projects.withCurrentProject(
+        projectId,
+        () => this.service.update(this.membership(projectId, userId).id, { role }),
+        (membership) => {
+          this.members.confirm(projectId, (memberships) => ({ ...memberships, [userId]: membership }));
+          if (userId === this.userStore.data?.id) {
+            this.confirmOnProject(projectId, (project) => ({ ...project, member_role: membership.role }));
+          }
+        }
+      )
+    );
 
   /**
    * @description ends a member's membership of a project, which the store then no longer has. Fails, changing
@@ -197,11 +205,19 @@ export class ProjectMemberStore implements IProjectMemberStore {
    * his.
    */
   removeMemberFromProject = (projectId: string, userId: string): Promise<void> =>
-    this.changes(async () => {
-      await this.service.remove(this.membership(projectId, userId).id);
-      this.members.confirm(projectId, (memberships) => omit(memberships, userId));
-      this.confirmOnProject(projectId, (project) => ({ ...project, member_ids: without(project.member_ids, userId) }));
-    });
+    this.changes(() =>
+      this.projects.withCurrentProject(
+        projectId,
+        () => this.service.remove(this.membership(projectId, userId).id),
+        () => {
+          this.members.confirm(projectId, (memberships) => omit(memberships, userId));
+          this.confirmOnProject(projectId, (project) => ({
+            ...project,
+            member_ids: without(project.member_ids, userId),
+          }));
+        }
+      )
+    );
 
   /** The membership of the member userId names in the project, as the store has it; fails when it has none. */
   private membership(projectId: string, userId: string): ProjectMember {

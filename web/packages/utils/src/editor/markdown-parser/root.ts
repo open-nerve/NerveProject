@@ -9,7 +9,7 @@
 // - Adds a space after checkbox inputs for correct GFM task list rendering
 // - Converts to Markdown using rehype→remark, GFM, and remark-stringify
 
-import type { Element as HASTElement, ElementContent, Parent as HASTParent } from "hast";
+import type { Element as HASTElement, Parent as HASTParent } from "hast";
 import rehypeParse from "rehype-parse";
 import rehypeRemark from "rehype-remark";
 import remarkGfm from "remark-gfm";
@@ -37,7 +37,7 @@ function addSpacesToCheckboxes() {
           child.type === "element" &&
           child.tagName === "li" &&
           child.properties &&
-          child.properties["data-type"] === "taskItem"
+          child.properties.dataType === "taskItem"
         ) {
           const liElement = child;
 
@@ -57,32 +57,16 @@ function addSpacesToCheckboxes() {
             ) as HASTElement | undefined;
 
             if (checkbox) {
-              // Extract text content from the div, unwrapping any paragraph tags
-              const textContent: ElementContent[] = [];
-              if (contentDiv.children) {
-                for (const contentChild of contentDiv.children) {
-                  if (contentChild.type === "element" && contentChild.tagName === "p") {
-                    // Unwrap paragraph - add its children directly
-                    const pElement = contentChild;
-                    if (pElement.children) {
-                      textContent.push(...pElement.children);
-                    }
-                  } else {
-                    // Keep other elements as-is
-                    textContent.push(contentChild);
-                  }
-                }
+              // Keep paragraph and nested-list boundaries; GFM expects the checkbox in the first paragraph.
+              const firstParagraph = contentDiv.children[0];
+              if (firstParagraph?.type === "element" && firstParagraph.tagName === "p") {
+                firstParagraph.children.unshift(checkbox, { type: "text", value: " " });
+                liElement.children = contentDiv.children;
               }
-
-              // Flatten the structure: move checkbox and content to be direct children of li
-              liElement.children = [
-                checkbox,
-                { type: "text", value: " " }, // Add space after checkbox
-                ...textContent,
-              ];
             }
           }
-        } else if (child && child.type === "element") {
+        }
+        if (child && child.type === "element") {
           helper(child);
         }
       }
@@ -133,11 +117,7 @@ export function convertHTMLToMarkdown(args: TArgs): string {
       },
     })
     .use(remarkGfm)
-    .use(remarkStringify, {
-      handlers: {
-        text: (node: { value: string }): string => node.value,
-      },
-    })
+    .use(remarkStringify)
     .processSync(updatedDescriptionHtml);
 
   const markdown = String(result.value ?? result);

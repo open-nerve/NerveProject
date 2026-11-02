@@ -1,6 +1,6 @@
 # M4 / P16 `web-cleanup`：前端清理与守卫终态
 
-状态：P16 实施与整审完成，集成待办；完整本地验证与准确产品候选 CI 通过，最终文稿提交 CI 按 review §22 后置收据签结。基线 `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`（P15 集成修复后的 main 提交），分支 `codex/m4-p16`。本次按已通过预检的计划实施；各 A 项凭实际证据勾选，`tools/keywords.json.phase` 已推进 `M4/P16`。阶段完成后 deep-review，先不合并。
+状态：P16 已完成。最终分支 `582694d96303f11cf57568f8c84edd3006a36752` 经授权 `--no-ff` 合并为 main `01e40e113e11365a4eeacc2794973de2751dde61`，[main CI 41290496985](https://github.com/open-nerve/NerveProject/actions/runs/41290496985) attempt1 三作业全绿；证据归档及分支/worktree正常清理完成，见 [review §23](../reviews/P16-web-cleanup-review.md#23-授权合并main-ci-与归档清理2026-11-01)。原实施基线 `313728cbc61003d7ed072c1e1e191e1cc2a3d75a`；phase仍为M4/P16，最终C12和M4 closeout尚未实施。
 
 ## 1. 目标
 
@@ -129,7 +129,7 @@ S2 保留 admin/member/guest/project-non-member 四身份、实际冷加载的�
 - [x] A8：T8 README/两清单/子交接逐句为真，未提前关闭M4或未来领域。
 - [x] A9：T9 实际消费者缺口补齐，S2主入口和四身份精确请求/拒绝/无旧地址通过。
 - [x] A10：T10 C12表完整，三浏览器同范围非零清单、受影响回归有实际证据，最终C12仍明确留收尾。
-- [x] A11：T11 本地七门禁、deep-review修复复审、产品候选准确HEAD CI和证据清单已核；最终文稿准确HEAD须由 review §22 后置收据确认三CI全绿才签结，交付后先不合并。
+- [x] A11：T11 本地七门禁、deep-review修复复审、产品候选准确HEAD CI和证据清单已核；最终文稿准确HEAD已按review §22后置收据确认三CI全绿；随后授权集成及准确main全绿/归档清理见review §23。
 
 ## 5. 后续范围
 
@@ -150,4 +150,4 @@ S2 保留 admin/member/guest/project-non-member 四身份、实际冷加载的�
 
 ## 附录 A：准备证据界线
 
-主目录 `.superpowers/sdd/P16-preparation-20261101/` 保存实际源码检索、P15 AST等价来源、只读告警输出、builder-check、文档deep-review和静态核验。实施证据将位于 P16 worktree 的 `.superpowers/sdd/P16-web-cleanup/`；T1 起另记本阶段产品实现/测试证据。P15 main CI 和当前静态 inventory 只证明基线及计划输入，不勾上面的 A 条款。
+准备时主目录 `.superpowers/sdd/P16-preparation-20261101/` 保存源码检索、P15 AST等价来源、只读告警输出、builder-check、文档deep-review和静态核验；当时P15 main CI与静态inventory只证明基线和计划输入，不能勾A条款。随后T1–T11实际实施/测试证据已完成，A条款据阶段review签结。两处原件现均有稳定归档，路径及hash见review §23。

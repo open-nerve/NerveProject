@@ -1,3 +1,5 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
+import { bearer } from "../../fixtures/auth";
 import type { Locator } from "@playwright/test";
 import { createDraft, createIssue } from "../../fixtures/issues";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
@@ -69,6 +71,7 @@ test("C12 (cleanup): continue writing is in the native Tab order, keeps a visibl
   await page.keyboard.press(`Shift+${tab}`);
   await page.keyboard.press(tab);
   await visibleFocus(button);
+  await c12Evidence(page, "B14", "continue-writing-tab");
   await page.keyboard.press(tab);
   await expect(editor).toBeFocused();
   await button.focus();
@@ -82,6 +85,7 @@ test("C12 (cleanup): continue writing is in the native Tab order, keeps a visibl
     ).status()
   ).toBe(200);
   await expect(editor.locator(":scope > p").last()).toHaveText("After table");
+  await c12Evidence(page, "B14", "written-after-final-table");
   expect(await db.query("SELECT description_stripped FROM issues WHERE id=$1", [issue.id])).toEqual([
     { description_stripped: "Last cellAfter table" },
   ]);
@@ -92,6 +96,7 @@ for (const kind of ["row", "column"] as const) {
   test(`C12 (cleanup): a table ${kind} menu closes before its draft dialog or peek and leaves no stale keyboard guard`, async ({
     api,
     page,
+    browserName,
   }, info) => {
     const seed = await issueListProject(api, info);
     const description = "<table><tbody><tr><td><p>Nested cell</p></td></tr></tbody></table>";
@@ -112,13 +117,23 @@ for (const kind of ["row", "column"] as const) {
     const first = panel.getByRole("button", { name: kind === "row" ? "Header row" : "Header column", exact: true });
     await form.locator('[contenteditable="true"]').getByText("Nested cell", { exact: true }).click();
     const formTrigger = form.getByRole("button", { name, exact: true }).first();
+    const tab = browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab";
+    // Return via the neighbouring control; crossing the editable table uses its own cell-navigation keys.
+    const away = kind === "row" ? `Shift+${tab}` : tab;
+    const back = kind === "row" ? tab : `Shift+${tab}`;
     await formTrigger.focus();
+    await page.keyboard.press(away);
+    await page.keyboard.press(back);
+    await visibleFocus(formTrigger);
     await page.keyboard.press("Enter");
     await expect(first).toBeFocused();
+    await expect(first).toHaveCSS("outline-style", /^(auto|solid)$/);
     expect(await pageBehindHidden(page)).toBe(true);
+    await c12Evidence(page, "B15", `draft-${kind}-menu`);
     await page.keyboard.press("Escape");
     await expect(panel).toHaveCount(0);
     await expect(form.getByRole("heading", { name: "Create a draft", exact: true })).toBeVisible();
+    await c12Evidence(page, "B15", `draft-${kind}-returned-focus`);
     await expect(formTrigger).toBeFocused();
     expect(await pageBehindHidden(page)).toBe(true);
     await page.keyboard.press("Escape");
@@ -132,11 +147,15 @@ for (const kind of ["row", "column"] as const) {
     await peek.locator('[contenteditable="true"]').getByText("Nested cell", { exact: true }).click();
     const peekTrigger = peek.getByRole("button", { name, exact: true }).first();
     await peekTrigger.focus();
+    await page.keyboard.press(away);
+    await page.keyboard.press(back);
+    await visibleFocus(peekTrigger);
     await page.keyboard.press("Enter");
     await expect(first).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(panel).toHaveCount(0);
     await expect(peekTrigger).toBeFocused();
+    await c12Evidence(page, "B15", `peek-${kind}-returned-focus`);
     await expect(peek.getByRole("button", { name: "Close the peek view", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(peek.getByRole("button", { name: "Close the peek view", exact: true })).toHaveCount(0);
@@ -177,6 +196,7 @@ for (const kind of ["row", "column"] as const) {
     await page.keyboard.press(tab);
     await page.keyboard.press(`Shift+${tab}`);
     await visibleFocus(trigger);
+    await c12Evidence(page, "B15", `${kind}-trigger-tab`);
     await page.keyboard.press("Enter");
     const panel = page.getByRole("dialog", {
       name: kind === "row" ? "Table row options" : "Table column options",
@@ -189,6 +209,7 @@ for (const kind of ["row", "column"] as const) {
     await page.keyboard.press(tab);
     await expect(first).not.toBeFocused();
     await expect.poll(() => panel.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    await c12Evidence(page, "B15", `${kind}-menu-tab`);
     await page.keyboard.press("Escape");
     await expect(panel).toHaveCount(0);
     await expect(trigger).toBeFocused();
@@ -211,6 +232,7 @@ for (const kind of ["row", "column"] as const) {
     await expect(editor).toBeFocused();
     await expect(editor.locator("tr")).toHaveCount(kind === "row" ? 3 : 2);
     await expect(editor.locator("td")).toHaveCount(6);
+    await c12Evidence(page, "B15", `${kind}-second-target-inserted`);
     await expect(editor.locator("tr").first().locator("td").first()).toHaveText("First");
     expect(
       await db.query(
@@ -235,3 +257,57 @@ for (const kind of ["row", "column"] as const) {
     await expectListPageQuiet(page, watch);
   });
 }
+
+test("C12 (cleanup): Chinese editor names identify the native table menus and continue-writing focus target", async ({
+  api,
+  page,
+  browserName,
+}, info) => {
+  const seed = await issueListProject(api, info);
+  const issue = await createIssue(api, seed.member.token, seed.project.id, {
+    name: "中文表格",
+    description_html: "<table><tbody><tr><td><p>末尾单元格</p></td></tr></tbody></table>",
+  });
+  expect(
+    (
+      await api.PATCH("/api/v0/me/profile", {
+        headers: bearer(seed.member.token),
+        body: { language: "zh-CN" },
+      })
+    ).response.status
+  ).toBe(200);
+  const { watch } = await openIssueList(page, seed);
+  await moveWithinApp(page, `/${seed.slug}/browse/WEB-${issue.sequence_id}`);
+  const editor = page.locator(`[id="editor-container-${issue.id}"] [contenteditable="true"]`);
+  await expect(editor).toContainText("末尾单元格");
+  const tab = browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab";
+  await editor.getByText("末尾单元格", { exact: true }).click();
+  const checkMenu = async (kind: "row" | "column") => {
+    const name = kind === "row" ? "表格行选项" : "表格列选项";
+    const trigger = editor.getByRole("button", { name, exact: true }).first();
+    await trigger.focus();
+    await page.keyboard.press(kind === "row" ? `Shift+${tab}` : tab);
+    await page.keyboard.press(kind === "row" ? tab : `Shift+${tab}`);
+    await visibleFocus(trigger);
+    await page.keyboard.press("Enter");
+    const panel = page.getByRole("dialog", { name, exact: true });
+    await expect(panel).toBeVisible();
+    await page.keyboard.press(tab);
+    await expect.poll(() => panel.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    await c12Evidence(page, "B15", `chinese-${kind}-menu`);
+    await page.keyboard.press("Escape");
+    await expect(panel).toHaveCount(0);
+    await visibleFocus(trigger);
+  };
+  await checkMenu("row");
+  await checkMenu("column");
+  const continueWriting = page
+    .locator(`[id="editor-container-${issue.id}"]`)
+    .getByRole("button", { name: "继续输入", exact: true });
+  await continueWriting.focus();
+  await page.keyboard.press(`Shift+${tab}`);
+  await page.keyboard.press(tab);
+  await visibleFocus(continueWriting);
+  await c12Evidence(page, "B14", "chinese-continue-writing");
+  await expectListPageQuiet(page, watch);
+});

@@ -89,7 +89,9 @@ func (c Config) validate() error {
 	switch {
 	case c.Auth.RefreshDeadline <= 0:
 		fail("auth.refresh_deadline", "must be positive, got %s", c.Auth.RefreshDeadline)
-	case c.Auth.RefreshDeadline+c.Database.CommitTimeout >= webRefreshTimeout:
+	// Subtract only after checking one positive term against the budget;
+	// adding two valid durations could wrap and admit an excessive timeout.
+	case c.Auth.RefreshDeadline >= webRefreshTimeout || c.Database.CommitTimeout >= webRefreshTimeout-c.Auth.RefreshDeadline:
 		fail("auth.refresh_deadline", "plus database.commit_timeout (%s) must be less than %s, the web client's refresh timeout, got %s",
 			c.Database.CommitTimeout, webRefreshTimeout, c.Auth.RefreshDeadline)
 	}
@@ -196,10 +198,11 @@ func (i IssueConfig) validate(requestTimeout time.Duration, fail func(key, forma
 	switch {
 	case i.WriteLockTimeout <= 0:
 		fail("issue.write_lock_timeout", "must be positive, got %s", i.WriteLockTimeout)
-	case requestTimeout > 0 && g.MaxWait+i.WriteLockTimeout >= requestTimeout:
+	case requestTimeout > 0 && (i.WriteLockTimeout >= requestTimeout || g.MaxWait >= requestTimeout-i.WriteLockTimeout):
 		// A write may wait up to max_wait at the gate and then up to its
 		// lock timeout for a lock; one that waits both out must still
 		// answer 503 before its request's deadline cancels it.
+		// Compare the remaining budget instead of an overflowing sum.
 		fail("issue.write_lock_timeout", "plus issue.write_gate.max_wait (%s) must be less than server.request_timeout (%s), got %s",
 			g.MaxWait, requestTimeout, i.WriteLockTimeout)
 	}

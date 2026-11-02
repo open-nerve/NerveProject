@@ -204,6 +204,8 @@ export function EditorBubbleMenu(props: Props) {
               <button
                 key={item.key}
                 type="button"
+                aria-label={item.name}
+                aria-pressed={editorState[item.key]}
                 onClick={(e) => {
                   item.command();
                   e.stopPropagation();

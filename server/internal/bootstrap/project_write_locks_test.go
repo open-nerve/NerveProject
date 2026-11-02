@@ -12,10 +12,10 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -206,9 +206,9 @@ func heldBy(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) bool {
 	t.Helper()
 	sql += " NOWAIT"
 	tag, err := pool.Exec(pgtest.Soon(t), sql, args...)
-	var pgErr *pgconn.PgError
+
 	switch {
-	case errors.As(err, &pgErr) && pgErr.Code == "55P03":
+	case postgres.LockNotAvailable(err):
 		return true
 	case err != nil || tag.RowsAffected() != 1:
 		t.Fatalf("%s: %v, %v; want one row", sql, tag, err)

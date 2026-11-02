@@ -7,8 +7,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -126,9 +124,8 @@ func TestTheDirectorysLockIsForShare(t *testing.T) {
 						return err
 					})
 
-					var pgErr *pgconn.PgError
 					switch {
-					case tt.waits && (!errors.As(err, &pgErr) || pgErr.Code != "55P03"):
+					case tt.waits && (!postgres.LockNotAvailable(err)):
 						t.Errorf("%s() = %s, %v; want lock_not_available after waiting", tt.then, got, err)
 					case !tt.waits && (err != nil || got != ids[tt.slug]):
 						t.Errorf("%s() = %s, %v; want %s's id %s without waiting", tt.then, got, err, tt.slug, ids[tt.slug])

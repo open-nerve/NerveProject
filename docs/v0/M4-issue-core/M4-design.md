@@ -634,6 +634,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   4. 第一页：`row_number() OVER (PARTITION BY 组键[, 子组键] ORDER BY 全序)`，每组取前 `limit + 1` 行（多出的一行只用来判断有没有下一页、给出 `next_cursor`，不返回）。
   5. 总数是每一行上的窗口列：每一级的总数在那一级恰好一个工作项一行的阶段用 `count(*) OVER (PARTITION BY …)` 算出：全部的总数在 `filtered` 上，组的总数在按组键展开之后、按子组键展开之前，子组（泳道）的总数在只按子组键展开的一级（每个工作项每个子组键一行），格的总数在两次展开之后；随行带出。仍是一条 SQL（v0 3.4）。`UNION ALL` 拼"行"和"总数"、`GROUPING SETS` 都能生成，但运行时 pgx 不能把 `NULL` 扫进非空类型的列（S1），不用。
   6. 一页为空时没有行带出总数：不带游标的请求就是 0；带游标（`next_cursor` 之后已没有行，或篡改过的游标）时，用例以同样的筛选去掉游标、`limit 1` 再查一次取 `total`。只在这种少见的情况多一次往返。
+  - 收尾T8的局部执行计划修正：子分组的 `cells AS MATERIALIZED` 在两路窗口结果连接并计算格总数之后设边界，再施加组键/子组键/游标。原20k单格空页的组键下推让规划器把约1万行的两路结果误估成极少行，选择嵌套循环并排除101,995,000对行；固定边界保留上述四级总数与分页语义。首屏物化/temp代价及三规模复验按 [closeout spec C06](specs/closeout.md#3-与设计的差异和补充局部裁定) 留证，不加索引或放宽请求期限。
 - **行的完整数组和计数**只为返回的行算（关联子查询 `ARRAY(SELECT label_id …)`、`count(*)`）；按计数、名字排序时，排序键要为全部满足筛选的行算出（Plane 干脆不支持，R4 第 E.2 节第 6 条）。
 - **代价与规模的目标**：按 CTE 里的键 `CASE` 排序用不上索引，每个请求扫描、排序这个项目满足筛选的全部行（S1）。实测：1 万个工作项 2–100 ms；10 万个工作项，默认的一页约 55–125 ms，`label_name` 约 210–430 ms，分组约 0.2–0.7 s，泳道约 0.7–1.0 s。**v0 的目标**（决策点 7 的一部分，负责人已裁定）：一个项目至多约 2 万个未删除的工作项时，列表在这个实测的代价之内；更大的项目是 M8 的性能工作（13.2）。删除在这个规模上能否完成见决策点 7，不在 M4 加索引式的特化（例如为 `-created_at` 单列一条可用 `(project_id, created_at DESC, id DESC)` 的查询，S1 测到 0.3 ms，留给 M8 按数字决定）。
 - **连接的参数由 nerve 自己设**：JIT 的编译（每次 150–500 ms）和预备语句的通用计划都让这几条查询更慢（S1）。`platform/postgres` 建连接池时在每个连接的运行参数里设 `jit = off`、`plan_cache_mode = force_custom_plan`（pgx 的 `RuntimeParams`），不交给部署；一个测试从池里的连接读回这两个值（P5）。M8 的部署交接只核对它们（13.2）。
@@ -777,6 +778,10 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - 看板上最常见的一步（I6、总体设计 8.2：把卡片拖进一个没有载入完的列）因此是确知的：不重取整个看板，已载入的页和滚动的位置都留着。
 - **删除的读代际**：deleteIssue 的成功应答是 204，after 为无，不能比较 after.updated_at；已知 id 使用本会话确认删除墓碑，未知子树不猜 id 和精确减数。成功确认先推进本项目读取水位并 invalidate 相关列表在外读，再标 stale/写已知墓碑，随后才允许新水位刷新；所有 list/详情/getIssue 回查在写 canonical、合页或清 stale 前核发出时的会话/项目令牌。多项目 profile 若覆盖失效项目则整页丢弃并保持 stale，不能裁行后复用旧 total；其它独立项目保持。拒绝、SessionChanged、普通404不创建墓碑或推进删除水位，并发再次删除会使中间刷新同样失效。
 - **权限读取水位（P10B-S1 A）**：同一登录内，已观察到失权后恢复相同角色，旧读仍失效。`IssueRootStore` 唯一拥有按工作区及项目记录的权限水位和观察生命周期；观察其所属 `WorkspaceRootStore.workspaces`、`ProjectStore` 对已知/在外读取范围给出的有效角色变化，在目录权威结果被接受或确认的成员变化生效时记录，不在 computed getter 写入，也不以目录对象引用变化充当权限变化。新注册范围先建立当前权限基线；未知、未加载或非成员不得发受限读。普通重取给出相同有效权限不推进水位。若需 MobX 观察器，它只跟踪权限证据，不恢复 router/user/catalog 副本 autorun，且由 `retire()` 幂等释放。工作区失权覆盖其项目和成员列表；项目失权或收窄影响该项目及覆盖它的成员列表，非相关工作区/项目不动。访客项目读仍由服务器决定可见内容，不推导 own-only；归档及成员列表只允许 admin/member。
+  - **M4 收尾 R06（负责人 2026-11-01 批准方案 A）**：ProjectStore 是项目目录和详情的事实拥有者。成功的完整项目目录按工作区 ID 与归档类别给出存在及缺席事实；比旧记录更新、覆盖同一归档类别的目录已不含该项目时，旧详情或旧列表副本不能继续证明当前可见性。其他工作区与另一归档类别不据此删除；缺席不等于永久删除。目录失败不撤销已有事实，无变化目录不触发工作项权限身份变化。新的有效详情、完整目录或缺席后发起的写入所返回的完整项目答复可以恢复可见性；缺席之前发出的迟到详情不能越过该缺席重新建立权限，先恢复再到达的旧答也不能覆盖新事实。已确认创建/加入/归档/恢复和普通修改继续按现有协调重放，但失效旧来源不能复活撤销的可见性。读取与写入交错、两份目录和新旧详情的比较在 ProjectStore 内解决，不增加第二项目缓存或新端点。IssueRootStore 沿现有 getter 观察项目事实并独占工作项权限失效；删除水位与架构守卫不变。联合回归覆盖旧详情、缺席、迟到/拒绝、恢复、归档切换、无变化目录、公共项目非成员和无关范围。
+
+  - **R39 反向时序：** 较早完整目录在等待期间若接受了新详情，其空集合或缺少该项目的结果也必须在发布前与新事实协调；只有仍可见、同工作区、同归档类别的事实可补入。协调与发布之间不能再让新事实丢失。随后新发的完整目录仍可凭真实缺席撤销可见性；侧栏、目录、按编号查询与详情共用协调后的结果。R39以接受观察器立即释放旧目录和真实IssueRootStore联合红绿覆盖该反向时序。
+  - R06 的 M3 来源元数据只存 ID/类别/应答顺序，不复制项目实体、不充当 M4 权限水位。各项目 getter 和目录投影统一选择；新类别消失不能回退到旧类别。项目成员的角色确认及项目写入沿 ProjectStore 的同一在途事实检查，事实失效后不把迟到确认或旧重放写回。临时观察只活到该请求成功/失败，不新增会话级副本同步；完整语义见 M3 §7.3 和 closeout spec §2.5。
   - 权限签名由现有目录事实而非新 M3 协议构成：工作区按其 `Workspace.role`；项目同时保留所属工作区身份、现有 `getProjectRoleByWorkspaceSlugAndProjectId` 的有效读门控及原始 `Project.member_role`，原始项目角色为 guest 时还包含 `Project.guest_view_all_features`。工作区 admin 兼项目 guest 仍按原始项目角色及开关受服务器 guest 可见性规则约束（3.4），即使权限 getter 将其有效角色折为 admin；不在客户端过滤 own-only。已知可读签名变为不可读或不同签名时使原身份失效，包括 admin/member 降为 guest（即使仍非 undefined），以及原始 guest 的开关变化；恢复或改变后取新身份、由服务端回答收敛。原始项目 member 的 guest 开关变化不改变其读取签名；相同签名的目录刷新不作废。工作区角色变化以各受影响读取范围的实际权限签名判，不以对象更替或名称变更作废。
   - 每次请求真正发出前取得原 owner、逐请求序号及其范围权限证据；whole、part、详情和权威/核实读取在任何 canonical、rows、total、stale 或核实状态写入前复核。单项目按所属工作区和项目核；成员列表含显式 `project_id` 时按这些项目核，否则按该工作区它可覆盖的项目范围核，任一相关水位推进整页丢弃，不裁行复用 total。状态只存权限/代际元数据，不存第二份实体；新权限水位独立于 owner、readSerial、成功树删除水位和每 id 核实 freshnessFloor，不创建墓碑或把拒绝当删除。
   - 失权期间已持有的相关列表和实体不可见；恢复后旧持有值仍不可作为可靠结果暴露，须以恢复后新身份发起的有效权威读取重新证实，列表以新 whole 收敛。保留已有值供既有协调边界管理，不作为第二缓存；无关范围及其已持有值保持。恢复后的 scope 身份纳入现有 loginId 的 SWR key，令新 GET 不复用失效旧 in-flight；同一有效身份仍去重，普通卸载或一个共享消费者离开不作废别人的有效读取。核实协调的在途去重按同一权限身份判断，过期结果不清状态，新身份允许显式重试；只缩短去重窗口不能处理 ABA。
@@ -804,17 +809,19 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 
 ### 3.23 需要同步到上级文档的地方
 
-**P11接续（2026-10-30）：** 详情原生资源、确认写入、root统一权限失效和宿主局部状态已落地，整分支deep-review九项局部问题已修复；产品e84acb4b完整本地F通过，准确CI/最终文稿HEAD按[review§13](reviews/P11-web-detail-data-review.md#13-分支身份ci与交付边界)后置核验。总体§7.7、frontend-changes及M1/M2/M3输入子项同步；实施与终审完成、集成待办。M4§14和总体§9.4不关闭。
+**收尾核对（2026-11-02）：** P1a–P16已集成，准确阶段 main CI 与归档见§15及各阶段review。下列各日期段保留当时状态，不覆盖当前进度；本轮只校准同步事实，M4总体§14复合完成项与总体§9.4仍待最终集成。44行逐项映射已由[收尾T11](reviews/closeout-sync.md)登记（43核对完成、总体9.4留集成），非以阶段已合并替代最终C12验收。
 
-**P6实施记录（2026-10-26）：** T1–T16实施及逐Task独评通过，内部整分支审查零新发现；[正式review](reviews/P6-issue-events-review.md)列真实命令、矩阵、变异与Minor闭环。事件事务同步发布、自动归档每项目事务/NULL actor、测试业务时钟及两队列已落地。P7首个生产订阅者、`registrationRows`对请求任务，P9项目/工作区删除任务、版本保留与清理，P15页面仍未完成；不将M4整体验收关闭。
+**P11接续（2026-10-30，集成前历史）：** 详情原生资源、确认写入、root统一权限失效和宿主局部状态已落地，整分支deep-review九项局部问题已修复；产品e84acb4b完整本地F通过，准确CI/最终文稿HEAD按[review§13](reviews/P11-web-detail-data-review.md#13-分支身份ci与交付边界)后置核验。总体§7.7、frontend-changes及M1/M2/M3输入子项同步；实施与终审完成、集成待办。M4§14和总体§9.4不关闭。
 
-**P7接续记录（2026-10-27）：** 三link事件使目录增为15；首个生产subscriber经原事务InsertTx投递，真实worker、请求任务快照、受限运行角色及I10 API/带links删除目录已落地。下表P7三行已同步总体§6.2/§6.7/§8、12列差异和README安全；[P7 review](reviews/P7-issue-links-review.md)与[整体审核](../../reviews/re-05-M4P7整体审核.md)区分原范围整审、T16修复/本地验证、原8项已独立关闭与最后文档增量/交付HEAD CI记录。P6当时空生产订阅是历史事实，P8/P9/P11/P14/P15及M4收尾仍开放。
+**P6实施记录（2026-10-26，历史快照）：** T1–T16实施及逐Task独评通过，内部整分支审查零新发现；[正式review](reviews/P6-issue-events-review.md)列真实命令、矩阵、变异与Minor闭环。事件事务同步发布、自动归档每项目事务/NULL actor、测试业务时钟及两队列已落地。P7首个生产订阅者、`registrationRows`对请求任务，P9项目/工作区删除任务、版本保留与清理，P15页面仍未完成；不将M4整体验收关闭。
+
+**P7接续记录（2026-10-27，历史快照）：** 三link事件使目录增为15；首个生产subscriber经原事务InsertTx投递，真实worker、请求任务快照、受限运行角色及I10 API/带links删除目录已落地。下表P7三行已同步总体§6.2/§6.7/§8、12列差异和README安全；[P7 review](reviews/P7-issue-links-review.md)与[整体审核](../../reviews/re-05-M4P7整体审核.md)区分原范围整审、T16修复/本地验证、原8项已独立关闭与最后文档增量/交付HEAD CI记录。P6当时空生产订阅是历史事实，P8/P9/P11/P14/P15及M4收尾仍开放。
 
 **P8接续记录（2026-10-27，集成前历史）：** T1–T15与逐Task独评已完成，产品`10f44790`的完整本地七门禁通过；首次整审覆盖基线`166b9efd..10f44790`全部186文件，三个产品分区零发现，仅历史文档Minor D1在本次摘要中修正。下表P8四行已同步总体§5.4/6.9、草稿九列/三索引/搜索与21码差异、README部署；[P8 review](reviews/P8-drafts-search-review.md)和[整体审核](../../reviews/re-07-M4P8整体审核.md)列准确范围/证据/限制。文档独评10f44790..a65e8605已Approved/D1 ADDRESSED（task-16-review.md），最终准确HEAD CI按后续收据追踪，未合并；P9/前端/M5–M8与M4总体仍开放。
 
 **P8集成接续（2026-10-27）：** 最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 已授权 `--no-ff` 合并为 main `6b9d08d4821f1423c7bb9795557727c206b7880f`，准确[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987)全绿；归档核验及P8本地/远端分支、worktree清理完成，见[P8 review §9](reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)。上段保留当时审查范围与未合并状态；该次快照中的P9仅进入规格/计划准备与静态预检，尚未实施，M4总体及后续交接仍开放。
 
-**P9当前接续（2026-10-28）：** M4/P9实施与终审完成、集成待办。产品HEAD `e003e96625ba51264d3aeb77729729d53a770103`，首次整审238文件60363行及两次局部复审已闭环，见 [P9 review](reviews/P9-purge-review.md) 和 [整体审核](../../reviews/re-09-M4P9整体审核.md)。此状态只属于M4/P9，M4总体、输入handoff总状态与后续阶段不关闭。
+**P9接续（2026-10-28，集成前历史）：** M4/P9实施与终审完成、集成待办。产品HEAD `e003e96625ba51264d3aeb77729729d53a770103`，首次整审238文件60363行及两次局部复审已闭环，见 [P9 review](reviews/P9-purge-review.md) 和 [整体审核](../../reviews/re-09-M4P9整体审核.md)。此状态只属于M4/P9，M4总体、输入handoff总状态与后续阶段不关闭。
 
 **规则**照 M3 设计 3.20：每处偏离，在实现它的那个 Phase 的同一次合并中同步到上级文档和差异清单；建表、改表的 Phase 逐列更新差异清单。收尾只按本表逐行核对。总体设计 9.4 中 M4 的状态随本文的合并改为"进行中"（2026-10-17，已改）。负责人已裁定第 10 节、批准第 11 节（2026-10-17，全部按建议），下表每一行的内容都已确定，按标出的 Phase 同步。
 
@@ -2463,6 +2470,9 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **完成线**：`domains.mjs --rows M4` 清零或逐行写进 review；`no-shadow` 全仓 0；各包的警告数等于新的上限。
 
 ### 收尾 `closeout`（14 个任务）
+
+2026-11-01实施接续：下面是设计粗项，实际14Task及其D01–D18全量映射见[收尾spec](specs/closeout.md)、[plan](plans/closeout.md)。预检通过后已获准从T1推进，当前证据见[验收台账](reviews/closeout-acceptance.md)和[C12矩阵](reviews/closeout-browser-matrix.md)。T13先保留“集成待办”，T14另获授权并确认main CI后记录完成事实，最后收据外置；不提前勾§14。
+
 1. `tools/keywords.json` 的 `phase` 改为 `M4/closeout`，守卫通过（`copy-hook` 没有 M4 的例外）。
 2. 全部故事、门禁在主干上通过；不稳定的故事修正。
 3. 控制者的浏览器核对 C12（Chromium、Firefox、WebKit）。
@@ -2596,8 +2606,8 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P13 web-filters-archives-profile | 筛选、显示设置、归档页、个人主页（14） | **已完成**：最终分支 c57bbe6b 经 --no-ff 合并 main 8bb4bbcb；[main CI 41163365163](https://github.com/open-nerve/NerveProject/actions/runs/41163365163) attempt 2 三任务全绿。2,133 份运行证据与 11 份准备材料归档复验后分支/worktree 正常清理，见 [review §15](reviews/P13-web-filters-archives-profile-review.md#15-授权合并main-ci与归档清理2026-10-31) |
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | **已完成**：原分支 ec5f38b5 与集成测试修复 9a86211a 均 --no-ff 合入 main 7a81ea18；[main CI 41205272945](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务成功，两个分支/worktree 已归档复验并清理。见 [review §15–16](reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31) |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述历史、草稿、搜索、命令面板（16） | **已完成**：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。 [review §13](reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01) |
-| P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | **实施与整审完成，集成待办**：[spec](specs/P16-web-cleanup.md)、[plan](plans/P16-web-cleanup.md)、[review](reviews/P16-web-cleanup-review.md)、[整体审核](../../reviews/re-27-M4P16整体审核.md)。phase=M4/P16；准确产品候选CI全绿，最终文稿按review§22后置收据签结，先不合并 |
-| 收尾 `closeout` | 交接、同步核对、浏览器核对 C12、规模和性能的数字（14） | 未开始 |
+| P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | **已完成**：[spec](specs/P16-web-cleanup.md)、[plan](plans/P16-web-cleanup.md)、[review §23](reviews/P16-web-cleanup-review.md#23-授权合并main-ci-与归档清理2026-11-01)、[整体审核](../../reviews/re-27-M4P16整体审核.md)。最终582694d9经授权no-ff合入main 01e40e11，[CI 41290496985](https://github.com/open-nerve/NerveProject/actions/runs/41290496985)三作业全绿、E2E284/284；2,432证据文件归档核验，分支/worktree正常清理。M4收尾实施见下一行 |
+| 收尾 `closeout` | 交接、同步核对、最终C12、规模性能、全部完成标准（14） | **实施与终审完成、集成待办**：[spec](specs/closeout.md)、[plan](plans/closeout.md)、[阶段review](reviews/closeout-review.md)、[验收台账](reviews/closeout-acceptance.md)。分支codex/m4-closeout，基线main 01e40e113e11365a4eeacc2794973de2751dde61；R01–R40闭环，新build10三引擎各完整167项及七门禁通过。准确候选SHA/分支CI由外置final-delivery.json核准；先不合并，§14/总体9.4最终标记待集成 |
 
 ## 16. 风险
 | 风险 | 影响 | 应对 |

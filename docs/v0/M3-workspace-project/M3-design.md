@@ -541,9 +541,9 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
 - **项目工作项列表的三类设置已在 M4/P5 加回**：`00026_project_project_user_properties_issue_display.sql` 为 `project_user_properties` 加 `filters`、`display_filters`、`display_properties` 三列 `jsonb NOT NULL`（11→14列），不建 `rich_filters`。`workspace_user_properties` 仍只有本节原工作区导航范围，不加这些列。
   - `filters` 默认 `{}`，十个可选 `string[]` 键为 state_id/state_group/priority/label_id/assignee_id/created_by_id/mention_id/subscriber_id/start_date/target_date；不含 archived/sub_issue/project_id，每元素是单个筛选原子或日期条件，不能再塞 CSV 多项。
   - `display_filters` 固定七键，默认 `{"layout":"list","group_by":null,"sub_group_by":null,"order_by":"-created_at","sub_issue":true,"show_empty_groups":true,"calendar":{"layout":"month","show_weekends":false}}`；layout 为 list/kanban/calendar/spreadsheet，calendar.layout 为 month/week，分组和排序复用项目列表词汇。
-  - `display_properties` 固定 assignee/start_date/due_date/labels/key/priority/state/sub_issue_count/link/created_on/updated_on 十一 boolean，默认全 true；link 只是偏好，不提前提供 `Issue.link_count`。
+  - `display_properties` 固定 assignee/start_date/due_date/labels/key/priority/state/sub_issue_count/link/created_on/updated_on 十一 boolean，默认全 true；link 只是显示偏好；`Issue.link_count` 后由 M4/P8 提供，不由偏好端口计算。
   - DB CHECK 只校对象/键集合/类型并用 CASE 保护，词值经 project/app 声明、issue.Provide 提供的纯 `IssueListSettings` 校验，bootstrap 转换各模块 app 小值。既有 GET/PATCH `/api/v0/me/projects/{project_id}/preferences` 使用闭合 typed DTO；结构/null/未知字段400，合法结构的非法词422。GET缺行给默认不写；PATCH逐顶层字段整体替换、{}清filters、省略保留，五个独立set避免 navigation/三设置/顺序互相覆盖；成员退出恢复保留完整偏好与审计，归档读写沿原规则。证据见 [P5 review T13a/b、T14/T15](../M4-issue-core/reviews/P5-issue-list-review.md)。
-  - 前端工作项筛选 store 仍调用 Plane `/projects/{id}/user-properties/`；旧 ProjectService 方法、workItemFilters 与相关 `until:M4/P11` 例外交 P10b 迁移，P11详情数据与后续页面仍开放，服务端三列交付不代表已迁移前端。
+  - P5交付时前端仍使用旧 `/user-properties/`；该历史边界已由 M4/P10b 迁移，旧方法、workItemFilters 与对应例外已删除。P11详情数据及P12–P15页面也已集成，当前直接使用原生三类设置。
 - **行的生命周期**：
   - 项目的显示设置随项目成员关系一起建（Plane `ProjectMember` 的创建路径）。`sort_order`：建项目、添加成员时是他在这个工作区已有的最小值减 10000，没有时 65535（`views/project/member.py:96-118`）；加入项目时是模型的默认值 65535（Plane 的 `join` 用 `bulk_create`，`views/project/invite.py:175-185`）。都照搬。
   - 工作区的显示设置在第一次修改时建：`PATCH` 经部分唯一索引做 `INSERT … ON CONFLICT (workspace_id, user_id) WHERE deleted_at IS NULL DO UPDATE`（spike：两次写入只有一行，值是后一次的；sqlc 能生成）。没有这一行时 `GET` 返回默认值，不写库：总体设计 3.2 规定 GET 没有副作用，Plane 在 GET 里 `get_or_create`（`views/workspace/user.py:269-277`），登记差异。
@@ -1228,12 +1228,18 @@ modules/access/
 - **services**（`core/services/`）：`workspace.service.ts`、`project/*.service.ts`、`issue/issue_label.service.ts` 中 M3 的 56 个方法改为按资源的新 service（`workspace`、`workspace-member`、`workspace-invitation`、`project`、`project-member`、`state`、`label`、`preferences`），每个方法一次调用生成的客户端。`user.service.ts` 的 `currentUserSettings`、`leaveWorkspace`、`joinProject`、`leaveProject` 移入对应的新 service 或删除（M2 交接第 11 节）。
 - **挂载路径上的取数**：`WorkspaceAuthWrapper`、`ProjectAuthWrapper`、`TopNavigationRoot` 挂载时的取数在 P8a、P8b 处理：M6、M7 的删除和工作区一侧的改调在 P8a，项目一侧的随各自的 store 在 P8b 改调；M3 自己的都按 7.1 由权限启用（3.1、第 12 节）。
 - **P8a、P8b 的使用方**：store 的方法签名和字段一变，调用它们的页面和组件（第 1 节：`useProject` 129 个文件等）要在改这个 store 的 Phase 改到能编译、行为不变；页面的新行为（新手引导、邀请页、设置页）在 P9–P11。
-- **旧 `ProjectService`（`core/services/project/project.service.ts`）留下三个方法**，其余的删除：
+- **M3交付时的旧 `ProjectService` 历史快照**（`core/services/project/project.service.ts`）：当时留下三个方法，其余删除；三个方法及整个旧service现已由M4/P10b–P14迁移并删除。以下保留原消费链说明：
   - 取、改项目用户属性的两个方法：M4 的筛选 store 使用（`core/store/issue/project/filter.store.ts:127,174,236,256`，3.18）。它们的地址是 M3 替换的地址（`/user-properties/`），关键词守卫为它们登记例外（7.10）。
   - `projectIssuesSearch`：工作项搜索，三个调用方属于后续的 M，要在 M3 之后仍能编译（Codex M-3）：`core/components/issues/parent-issues-list-modal.tsx:68`（选父工作项，M4）、`core/components/core/modals/existing-issues-list-modal.tsx:104`（向迭代、模块加已有的工作项，M6）、`core/components/inbox/modals/select-duplicate.tsx:62`（收集箱查重，M7）。它的地址 `/search-issues/` 不是 M3 替换的地址，不在关键词规则里，不需要例外。
   - 选"留在旧 service"而不是"与调用方一起移到一个新的旧搜索 service"：移动只是换个文件名，三个调用方和它们的 M 都不变，M4 定下工作项搜索的接口时一次替换。
   - 旧 service 在 M4 替换最后一个方法时删除（13.2）。
 - **时区**：工作区和项目设置的时区选择用 M2 的 `GET /api/v0/timezones`（M2 交接第 11 节）。
+
+**M4 收尾 R06（负责人 2026-11-01 批准方案 A）**：ProjectStore 是项目目录和详情的事实拥有者。成功的完整项目目录按工作区 ID 与归档类别给出存在及缺席事实；比旧记录更新、覆盖同一归档类别的目录已不含该项目时，旧详情或旧列表副本不能继续证明当前可见性。其他工作区与另一归档类别不据此删除；缺席不等于永久删除。目录失败不撤销已有事实，无变化目录不触发工作项权限身份变化。新的有效详情、完整目录或缺席后发起的写入所返回的完整项目答复可以恢复可见性；缺席之前发出的迟到详情不能越过该缺席重新建立权限，先恢复再到达的旧答也不能覆盖新事实。已确认创建/加入/归档/恢复和普通修改继续按现有协调重放，但失效旧来源不能复活撤销的可见性。读取与写入交错、两份目录和新旧详情的比较在 ProjectStore 内解决，不增加第二项目缓存或新端点。IssueRootStore 沿现有 getter 观察项目事实并独占工作项权限失效；删除水位与架构守卫不变。联合回归覆盖旧详情、缺席、迟到/拒绝、恢复、归档切换、无变化目录、公共项目非成员和无关范围。
+
+较早完整目录在等待期间若接受了新详情，其空集合或缺少该项目的结果也必须在发布前与新事实协调；只有仍可见、同工作区、同归档类别的事实可补入。协调与发布之间不能再让新事实丢失。随后新发的完整目录仍可凭真实缺席撤销可见性；侧栏、目录、按编号查询与详情共用协调后的结果。R39以接受观察器立即释放旧目录和真实IssueRootStore联合红绿覆盖该反向时序。
+
+R06 的来源记录只包含项目 ID、工作区 ID、最后有效归档类别和应答顺序，以及已取目录的工作区键；不复制 `Project`，也不是工作项权限水位。新类别的正面事实随后缺席时，不得回退到旧类别副本。详情、目录投影、侧栏和按编号查询共用此判定。异步写在真正发送时观察原项目事实；事实中途改变（包括消失后恢复）就不把旧确认写回缓存，成功/失败均释放临时观察。项目成员的角色/增删经同一个 `withCurrentProject` 边界，退出及侧栏排序亦同；返回值仍是服务器对该操作的实际回答。内容完全相同的目录、失败目录或无关范围不使写入失效；新事实已经取代旧事实时，宁可保留新事实，后续有效读取再反映该次服务器写入，不能用旧整对象覆盖它。请求发出时记录已接受目录、详情和完整写确认的来源顺序，包含在该应答触发的观察器内立即发出的请求；较早的目录或详情不能覆盖之后的新正面事实。确认重放遇到更晚的独立事实时，用该事实替换相应项目，或按缺席剔除，不能只跳过旧修改而留下旧原始行。永久删除仍按服务器确认的删除处理。
 
 ### 7.4 落点、新手引导、邀请页与注册页
 - **落点**（3.14，P8a）：`AuthenticationWrapper` 取 `GET /api/v0/workspaces`（SWR 键带 `loginId`），按"上次的工作区仍在列表中 → 它；否则最早创建的 → 它；一个都没有 → `/create-workspace`"算出，纯函数有 vitest。M2 为"完成引导的用户直接去 `/create-workspace`"写的分支改为这条规则。四处 `await fetchCurrentUserSettings()` 删除（M2 交接第 2 节）。切换工作区、创建工作区、接受邀请之后经 `PATCH /api/v0/me/profile` 写 `last_workspace_id`（P9）。

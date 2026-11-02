@@ -48,8 +48,10 @@ export function CodeBlockComponent({ node }: Props) {
       <Tooltip tooltipContent="Copy code">
         <button
           type="button"
+          aria-label="Copy code"
+          contentEditable={false}
           className={cn(
-            "group/button absolute top-2 right-2 z-10 hidden size-8 items-center justify-center rounded-md border border-subtle bg-layer-1 backdrop-blur-sm transition duration-150 ease-in-out group-hover/code:flex",
+            "group/button focus-visible:outline-accent-primary absolute top-2 right-2 z-10 flex size-8 items-center justify-center rounded-md border border-subtle bg-layer-1 opacity-0 backdrop-blur-sm transition duration-150 ease-in-out group-hover/code:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2",
             {
               "bg-success-subtle hover:bg-success-subtle-1 active:bg-success-subtle-1": copied,
             }

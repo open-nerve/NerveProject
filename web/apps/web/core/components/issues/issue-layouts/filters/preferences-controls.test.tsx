@@ -11,6 +11,7 @@ import { issueOf, issuePageOf, issueStoreTab, requestedIssue } from "@/store/iss
 import { preferencesOf } from "@/store/project/fake-projects";
 import { IssueListRetry, useIssueListRefresh } from "@/hooks/use-issue-list-refresh";
 import { HeaderFilters } from "../../filters";
+import { ProjectIssuesMobileHeader } from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/issues/(list)/mobile-header";
 
 const fixture = vi.hoisted(() => ({ app: undefined as unknown, toast: vi.fn() }));
 vi.mock("@/lib/store-context", async () => {
@@ -35,11 +36,11 @@ let host: HTMLDivElement, root: ReturnType<typeof createRoot>;
 const initial = preferencesOf({
   display_filters: { ...preferencesOf().display_filters, calendar: { layout: "week", show_weekends: false } },
 });
-const View = observer(function View() {
+const View = observer(function View({ mobile = false }: { mobile?: boolean }) {
   const retry = useIssueListRefresh(tab.app.issue.projectIssues.currentList, []);
   return (
     <>
-      <HeaderFilters workspaceSlug="ws" projectId="A" />
+      {mobile ? <ProjectIssuesMobileHeader /> : <HeaderFilters workspaceSlug="ws" projectId="A" />}
       <IssueListRetry {...retry} />
     </>
   );
@@ -53,6 +54,14 @@ const click = (name: string) => act(async () => button(name).click());
 beforeEach(async () => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.useFakeTimers();
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
   vi.spyOn(Element.prototype, "getAnimations").mockReturnValue([]);
   tab = await issueStoreTab();
   fixture.app = tab.app;
@@ -86,6 +95,7 @@ afterEach(async () => {
   host.remove();
   tab.app.dispose();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
@@ -175,6 +185,60 @@ it("keeps a saved display setting when its new list read fails and retries only 
   expect(fixture.toast).toHaveBeenCalledTimes(1);
   await click("common.retry");
   await act(async () => until(() => tab.nerve.calls.length === 5, "read retry"));
+  expect(tab.nerve.calls[4]).toMatchObject({ method: "GET", path: read.path, query: read.query });
+  expect(patches()).toHaveLength(1);
+  await act(async () => tab.nerve.calls[4].answer(json(200, issuePageOf([issueOf("fresh")]))));
+  expect(tab.app.issue.projectIssues.getIssueIds()).toEqual(["fresh"]);
+});
+
+async function mountMobile() {
+  await act(async () =>
+    root.render(
+      <StoreContext.Provider value={tab.app}>
+        <View mobile />
+      </StoreContext.Provider>
+    )
+  );
+}
+
+it.each(["layout", "property", "display"] as const)(
+  "the mobile %s control retains confirmed preferences and reports a rejected save once",
+  async (control) => {
+    await mountMobile();
+    if (control === "layout") {
+      await click("common.layout");
+      await act(async () => document.querySelector<HTMLElement>('[role="menuitem"]')!.click());
+    } else {
+      await click("common.display");
+      await click(control === "property" ? "common.priority" : "issue.display.extra.show_sub_issues");
+    }
+    await act(async () => until(() => patches().length === 1, "mobile preference patch"));
+    await act(async () => patches()[0].answer(problem(403, "forbidden")));
+    expect(tab.app.issue.projectIssuesFilter.getIssueFilters("A")).toMatchObject({
+      displayFilters: initial.display_filters,
+      displayProperties: initial.display_properties,
+    });
+    expect(fixture.toast).toHaveBeenCalledTimes(1);
+    expect(fixture.toast).toHaveBeenCalledWith(expect.objectContaining({ message: "errors.forbidden" }));
+    expect(tab.nerve.calls.filter((call) => call.method === "GET" && call.path.endsWith("/issues"))).toHaveLength(1);
+  }
+);
+
+it("the mobile display control follows a confirmed query change and retries only its refused read", async () => {
+  await mountMobile();
+  await click("common.display");
+  await click("issue.display.extra.show_sub_issues");
+  await act(async () => until(() => patches().length === 1, "mobile display patch"));
+  const display = { ...initial.display_filters, sub_issue: false };
+  await act(async () => {
+    patches()[0].answer(json(200, preferencesOf({ ...initial, display_filters: display })));
+    await until(() => tab.nerve.calls.length === 4, "mobile confirmed query read");
+  });
+  const read = tab.nerve.calls[3];
+  await act(async () => read.answer(problem(503, "server_busy")));
+  expect(button("issue.display.extra.show_sub_issues").getAttribute("aria-pressed")).toBe("false");
+  await click("common.retry");
+  await act(async () => until(() => tab.nerve.calls.length === 5, "mobile read retry"));
   expect(tab.nerve.calls[4]).toMatchObject({ method: "GET", path: read.path, query: read.query });
   expect(patches()).toHaveLength(1);
   await act(async () => tab.nerve.calls[4].answer(json(200, issuePageOf([issueOf("fresh")]))));

@@ -485,3 +485,54 @@ it.each(["labels", "assignees"] as const)("moving one %s group preserves the lat
   await update.promise;
   expect(root.issues.getIssueById("x")![key]).toEqual(["other", "destination"]);
 });
+
+it.each([
+  { lower: 8e307, upper: 1.6e308, midpoint: 1.2e308 },
+  { lower: -1.6e308, upper: -8e307, midpoint: -1.2e308 },
+  { lower: -1.6e308, upper: 1.6e308, midpoint: 0 },
+  { lower: 2 * Number.MIN_VALUE, upper: 4 * Number.MIN_VALUE, midpoint: 3 * Number.MIN_VALUE },
+])(
+  "finite neighboring sort values yield a finite wire midpoint: $lower / $upper",
+  async ({ lower, upper, midpoint }) => {
+    const root = tab.app.issue;
+    const binding = new IssueListBinding(root, {
+      scope: "project",
+      workspaceSlug: "ws",
+      workspaceID: "id-ws",
+      projectID: "A",
+      query: { order_by: "sort_order" },
+    });
+    const reading = await requestedIssue(tab.nerve, () => binding.fetchFirst(), ["GET", "/api/v0/projects/A/issues"]);
+    reading.call.answer(
+      json(
+        200,
+        issuePageOf([
+          { ...issueOf("lower"), sort_order: lower },
+          { ...issueOf("upper"), sort_order: upper },
+        ])
+      )
+    );
+    await reading.promise;
+    runInAction(() => {
+      root.projectIssues.currentList = binding;
+    });
+    const before = root.issues.getIssueById("x");
+    const move = await requestedIssue(
+      tab.nerve,
+      () =>
+        root.projectIssues.dropIssue("ws", "A", "x", () => ({}), {
+          group: "",
+          beforeId: "upper",
+          afterId: "lower",
+        }),
+      ["PATCH", "/api/v0/issues/x"]
+    );
+    const body = move.call.body;
+    // Settle the real request before checking its serialized value, including on the red run.
+    move.call.answer(problem(403, "forbidden"));
+    await expect(move.promise).rejects.toMatchObject({ status: 403 });
+    expect(body).toEqual({ sort_order: midpoint });
+    expect(root.issues.getIssueById("x")).toEqual(before);
+    expect(binding.group()?.rows.map((row) => row.id)).toEqual(["lower", "upper"]);
+  }
+);

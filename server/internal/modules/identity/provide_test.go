@@ -7,11 +7,10 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -20,12 +19,7 @@ import (
 // (55P03) at once instead of waiting.
 func (a *account) rowLockedByAnother(t *testing.T) bool {
 	t.Helper()
-	_, err := a.pool.Exec(context.Background(), "SELECT 1 FROM users WHERE id = $1 FOR NO KEY UPDATE NOWAIT", a.id)
-	var pgErr *pgconn.PgError
-	if err != nil && (!errors.As(err, &pgErr) || pgErr.Code != "55P03") {
-		t.Fatal(err)
-	}
-	return err != nil
+	return pgtest.RowWaits(t, a.pool, "users", a.id, "FOR NO KEY UPDATE")
 }
 
 // Provide's CredentialLock is M2's credential lock (M3 design 6.5, 6.6): a

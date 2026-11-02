@@ -243,7 +243,7 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 分页 | `每页条数:页码:是否上一页` 形式的偏移游标 | canonical不透明键集游标；工作项载荷[order,key,id]，默认-created_at；P5当时十九码，P8保留原19并新增±link_count为当前21。两向null末尾、同键id同方向、名字仅折ASCII后按码点序，非Plane名字键兼容层 |
 | 工作项列表路径/名称 | 多层workspace/project及旧results/名字查询键 | `listIssues`：GET `/api/v0/projects/{project_id}/issues`；`listMemberIssues`：GET `/api/v0/workspaces/{slug}/members/{user_id}/issues?relation=assigned\|created\|subscribed`。筛选/分组用state_id/state_group/priority/label_id/assignee_id/created_by_id/target_date，个人另project_id；排序用state_name/label_name/assignee_name/sub_issues_count等，不用state__name/labels__name/assignees__first_name |
 | 工作项列表响应 | results及按页裁剪的关系数组，部分serializer已含link_count | `IssueListPage`/`Issue`：平面/组格续页{total,data,next_cursor}，分组{total,groups:[{key,total,data,next_cursor}]}，泳道组内subgroups及顶层subgroup_totals。缺分支省略、空[]、末页null，Issue不含description_html；P8全部Issue/Detail required非负int64 link_count，0显式返回，仅数活links、不看作者/metadata，支持±排序与整数游标。组格续页保留筛选另加group_key/sub_group_key，所有读取同独立RO/RR快照 |
-| 项目的工作项显示设置路径 | `/projects/{id}/user-properties/` | 沿GET/PATCH `/api/v0/me/projects/{project_id}/preferences`，三字段闭合typed结构；结构400、词值422，逐顶层字段整体替换，省略保留、{}清filters；前端旧store/service迁移仍属P10b |
+| 项目的工作项显示设置路径 | `/projects/{id}/user-properties/` | 沿GET/PATCH `/api/v0/me/projects/{project_id}/preferences`，三字段闭合typed结构；结构400、词值422，逐顶层字段整体替换，省略保留、{}清filters；前端旧store/service已由P10b迁移并集成 |
 | 集合型的列表（工作区、成员、项目等） | 一次返回全部，响应是裸数组 | 同样一次返回全部、不分页，响应是 `{"data": [...]}` 封套，每个列表写明顺序（M3 设计 3.12） |
 | 关联字段 | 名字不带 `_id`（`workspace`、`member`、`project_lead`），有的内嵌对象 | 只给 id，名字带 `_id`（`WorkspaceMember.workspace_id`）；例外有两个：工作区成员内嵌成员的公开资料 `member`（`MemberUser`，v0-design 3.6；M3 设计 5.2），关联内嵌对方工作项的列表行 `issue`（`IssueRelation.issue`，M4/P3；M4 设计 3.10） |
 | 工作区的显示设置的路径 | `/api/workspaces/{slug}/user-properties/`（与工作项的筛选合在一起） | `GET`、`PATCH /api/v0/me/workspaces/{slug}/preferences`，只有项目导航的两项（M3 设计 3.18）；没有 `/sidebar-preferences/` |
@@ -278,11 +278,11 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 
 **M4/P10a quick-add等待展示（R8，T4已实施并独评Approved）**：创建请求未返回前，输入在quick-add入口显示等待预览并禁用，保留Promise toast；不再将缺服务端编号/审计事实的输入作为普通卡片加入正式排序、分组或计数。成功后真实响应出现于列表，失败保留输入重试。首请求pending、双提交、跨workspace/project与旧结算边界及准确提交身份见[P10a T4/R8证据](M4-issue-core/reviews/P10a-web-issue-types-review.md#t4-r8-evidence)；未提前实现P10b协调引擎。
 
-P10a移除迭代、模块、项目/工作区视图的工作项列表及专属动作，领域自身页头/详情/归档目录取数保留。M6/M7前既缺列表，也可能因自身旧接口未接通而拿不到名称/详情/统计/目录；实际观察与恢复责任见[P10a移交](M4-issue-core/reviews/P10a-web-issue-types-review.md#6-移交事项)。详情reaction/link不再从core嵌套展开读取，改由各自原资源GET入cache，非null父另一次raw retrieve；目标链3 GET/非null父4 GET，其他历史side-load另计，新增资源由所属fetch等待并传拒绝，真实Base提供有限重试。R10写请求wire/次数不变只适用于create/update，不表示所有读请求数量/时序不变。列表关系extractor已删，详情关系资源保留；其余P11数据层责任未完成。
+P10a移除迭代、模块、项目/工作区视图的工作项列表及专属动作，领域自身页头/详情/归档目录取数保留。M6/M7前既缺列表，也可能因自身旧接口未接通而拿不到名称/详情/统计/目录；实际观察与恢复责任见[P10a移交](M4-issue-core/reviews/P10a-web-issue-types-review.md#6-移交事项)。详情reaction/link不再从core嵌套展开读取，改由各自原资源GET入cache，非null父另一次raw retrieve；目标链3 GET/非null父4 GET，其他历史side-load另计，新增资源由所属fetch等待并传拒绝，真实Base提供有限重试。R10写请求wire/次数不变只适用于create/update，不表示所有读请求数量/时序不变。列表关系extractor已删，详情关系资源保留；其余详情资源已由P11原生数据层接通并集成；M6/M7自身接口仍按上述边界待办。
 
-实施与终审完成、集成待办；最终文稿提交后准确HEAD CI以交付回执核验；最后产品5f7085bce4aa5103a0133fa982847d274efa6e47，准确产品CI已核成功，最后交付HEAD CI待核。
+上述 P10a 产品 `5f7085bc` 是集成前历史快照；最终 `d1a19e78` 已合入 main `a06e3f70`，main CI `40723697041` 三作业成功并归档清理，见 [P10a review §10](M4-issue-core/reviews/P10a-web-issue-types-review.md#10-授权合并main-ci-与归档清理2026-10-29)。
 
-M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md) 的事务、时钟及自动归档证据为准；P7已实现的链接/出站/请求任务见[P7 review](M4-issue-core/reviews/P7-issue-links-review.md)；P9后台删除/保留/清理的当前证据见 [P9 review](M4-issue-core/reviews/P9-purge-review.md)，页面及后续阶段仍开放。
+M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-review.md) 的事务、时钟及自动归档证据为准；P7已实现的链接/出站/请求任务见[P7 review](M4-issue-core/reviews/P7-issue-links-review.md)；P9后台删除/保留/清理的当前证据见 [P9 review](M4-issue-core/reviews/P9-purge-review.md)，这些阶段已集成；页面由 P10a–P16 接通并集成，M4 总体最终验收仍在收尾阶段进行。
 
 | 行为 | Plane | Nerve |
 |---|---|---|
@@ -294,6 +294,10 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 已归档项目的工作项列表（M4/P5） | issue_objects返回空 | 显式项目列表照常读，archived=false/true分别经issue.read/issue.archive；项目写仍409。个人跨项目目录排除归档项目 |
 | 个人主页工作项（M4/P5） | 访客可读且未完整施加访客规则 | member_issue.list仅工作区管理员/成员；actor可见性/OwnOnly与路径目标三关系分离，inactive目标仍可存在；I19/I20及矩阵已验证 |
 | 项目工作项显示设置（M4/P5） | filters/rich_filters/display_filters/display_properties四列旧格式 | 项目仅三列新格式，不建rich_filters；GET无写、按人隔离、恢复保留、不同字段并发不丢值，I5及四方向race验证；工作区范围不变 |
+| 定时任务的时刻 | 每天固定时刻 | 配置间隔及 RunOnStart；自动归档、描述版本保留和物理清理走 periodic 队列，普通请求任务走 default，登记缺 worker 时构造失败（M4/P6、P9） |
+| 草稿（M4/P8） | 访客可用；发布请求体，父工作项外键 | 只有工作区管理员/成员自己的草稿；发布需 issue.create，用锁下已存 payload，附件同事务移交留 M5；父项在 payload，细节与逐源码对照见§五 |
+| 搜索（M4/P8） | 编号数字可跨项目误匹配；部分入口缺访客规则，选择器可成环 | 完整编号精确折叠匹配；每候选执行 OwnOnly；parent/sub 排全部后代/祖先；空词最近更新，见§五的两路源码对照 |
+| 物理清理 | DO_NOTHING 的活动阻挡工作项物理删除 | 活动/评论子链随工作项 CASCADE，单任务按各模块所有权处理23表；严格60天 cutoff，迟到软删与父CASCADE的40P01允许重试（M4/P9） |
 | 写操作动态 | Celery 异步写入 | 与业务写入在同一事务中同步写入 |
 | 软删除的连带删除 | Celery 异步执行 | 删除工作项、状态、标签仍原事务同步；删除项目/工作区时M3行同步、同事务投issue分批任务，issue资源提交后即不可见、后台写原请求At/By；默认60天后的父CASCADE与迟到任务交叠允许40P01重试 |
 | 最近访问 | 在 GET 请求中顺带写入 | 由前端显式调用接口记录，GET 请求没有副作用 |
@@ -317,7 +321,7 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 已归档的工作项 | 只挡修改；评论、链接、表情、关联不挡；能成为父工作项 | 修改 409 `issue.archived`，什么都没改的修改也是；恢复、删除照常；在已归档的项目里先答 409 `project.archived`；往它下面加子工作项、从它加关联、删除它的关联（任一端已归档）409 `issue.archived`；不能被改成别的工作项的父工作项、被加到别的工作项下面、成为关联的对方（422 `not_allowed`）；已归档的子工作项、对方不在子工作项和关联的列表、`sub_issues_count` 里，恢复之后重新出现（M4/P3）（M4 设计 3.8、3.9、3.10；评论/表情P4及链接P7的写已接归档只读，页面仍按各自Phase） |
 | 工作项的归档、恢复 | 归档答 `{archived_at}`，恢复 204；再归档、恢复没归档的 404；状态不在"已完成""已取消"组时 400 | 都答 `IssueDetail`；已归档的再归档、未归档的再恢复不写、200；状态不在"已完成""已取消"组时 409 `issue.not_archivable`；各写一条动态（`archived_at` 的 `manual_archive`、`restore`），动态的 `comment` 不同（M4 设计 3.8、3.13） |
 | 按编号取工作项 | 格式不对 400，不是成员 403 | `GET /api/v0/workspaces/{slug}/issues/{identifier}`：不是工作区的有效成员 404 `workspace.not_found`；之后格式不对、项目或编号不存在、看不到、访客规则都是同一个 404 `issue.not_found`；看得到项目而不是它的有效成员的（工作区管理员；项目公开时，工作区成员）403 `forbidden`，与取工作项相同；标识经同一个折叠比较（`identifier-fold.json`，`i`、`ı`、`I`、`İ` 一样）（M4 设计 3.7） |
-| 删除工作项 | 动态保留，另写一条"已删除"的动态；确认框不提子工作项 | 工作项及各层子工作项连同负责人、标签、双方向关联、链接、关注、提及、动态、评论/两层表情和描述版本按原事务审计软删；已软删行不覆戳，关系先锁后判另一端项目删除归属。不写"已删除"动态；物理清理时活动/评论子链采用CASCADE，不沿用DO_NOTHING阻挡说法。完整issue侧13表目录见P9 spec；子树确认框仍P14 |
+| 删除工作项 | 动态保留，另写一条"已删除"的动态；确认框不提子工作项 | 工作项及各层子工作项连同负责人、标签、双方向关联、链接、关注、提及、动态、评论/两层表情和描述版本按原事务审计软删；已软删行不覆戳，关系先锁后判另一端项目删除归属。不写"已删除"动态；物理清理时活动/评论子链采用CASCADE，不沿用DO_NOTHING阻挡说法。完整issue侧13表目录见P9 spec；子树确认框已由P14接通并集成 |
 | 父工作项 | 不检查自己、不检查成环 | 父工作项要是同一个项目里调用者看得到、未归档的工作项，不是它自己、不是它下面的：创建、修改的 `parent_id` 不是这样的工作项（不存在、已删除的也是）422 `parent_id` `not_allowed`；加子工作项的父工作项是路径里的工作项，调用者看不到它（不存在、已删除的也是）404 `issue.not_found`，它的项目已归档 409 `project.archived`，它已归档 409 `issue.archived`，放进去的每一个不是同一个项目里调用者看得到、未归档的工作项（不存在、已删除的也是），或是父工作项自己、它上面的，各在它的位置 422 `sub_issue_ids[i]` `not_allowed`，一次答全部；同一个项目里改父工作项的写在项目的 N 之下一个接一个，两个并发的移动不会合起来成环（M4 设计 3.9） |
 | 加子工作项的动态 | `old_value` 是子工作项自己的编号；`comment` 是 "updated the parent issue to" | 是它原来的父工作项的编号（没有时为空），`old_identifier` 是原来的父工作项（M4 设计 3.13 第 5 行）；`comment` 是 "updated the parent work item to"，修改父工作项的一行同样（Nerve 说 work item，同 M4/P2 的归档、恢复两行） |
 | 子工作项数 | 数 `issue_objects` 里的直接子工作项（不含已删除、已归档、草稿、分诊状态的，也不含已归档的项目里的），不论调用者看不看得到 | `sub_issues_count` 数未删除、未归档的直接子工作项中调用者看得到的：项目里"只看自己"的访客只数自己建的（M4 设计 3.9；按它排序在 M4 的 P5） |
@@ -331,7 +335,8 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 空评论 | 服务端接受 | 清洗后无文字且无 mention/image 节点，422 `comment_html/required`（M4/P4） |
 | 改、删别人的评论 | 项目管理员可以改、删 | 仅作者编辑；作者或项目管理员删除，其他人 403 `issue.not_author`；隐藏先统一子资源 404，项目归档先于工作项归档 409，归档先于相同 HTML 无改动（M4/P4） |
 | 表情的值与归属 | 任意文本；重复 400 | 十进制格式 `^[0-9]{1,7}(-[0-9]{1,7}){0,15}$` 且 ≤128 字符；自己的重复 409，删除只找自己的活行，无该行 404；评论表情不推进 issue/comment 审计（M4/P4） |
-| 评论、表情的动态 | 写，从不显示 | 不写；通知事件留 P6，评论删除的痕迹仅审计，当前无事件发布（M4/P4） |
+| 描述的动态的合并 | 只改 created_at，值保持陈旧 | 合并保留最初 old_value，更新最后 new_value 和 created_at；当前描述变化与事务回滚均有仓储证据（M4/P4） |
+| 评论、表情的动态 | 写，从不显示 | 不写评论/表情活动；P6已发布评论新增/修改/删除和两类表情新增/删除事件；评论删除的痕迹是审计及 issue.comment_deleted，不在时间线另写活动（M4/P4、P6） |
 | 提及的同步 | 与请求体比较，不带描述的修改删掉全部 | 从实际保存后的清洗描述做集合同步；普通相同 HTML 不写，skip=true 相同内容仍同步资格；去掉提及不取消旧关注（M4/P4） |
 | 描述的历史 | 访客能读；版本后台生成 | 仅管理员/成员可读，访客规则仍在先；同所有者且距最后保存 0–600 秒（含端点）滑动合并，其他情况新建；普通 PATCH 还原；仅描述历史，无 issue_versions；P9周期仅对未删项目/工作项/版本按last_saved_at DESC,id DESC保留20；归档仍处理、软删版本归purge（P4历史请求规则不变） |
 | 动态的列表 | 不分页；不带类型时 500；每行带完整工作项、项目、工作区；泄漏隐藏引用 | `(created_at,id)` 升序游标分页，只给精简 DTO/actor_id、不返回 comment；引用 old/new 两端都按历史有效成员关系和 OwnOnly 过滤，先过滤再 LIMIT。历史目录看 is_active，不看 deleted_at/归档，物理清理引用后略去；目标权限、目录与查询处于同一只读快照（M4/P4） |
@@ -456,10 +461,10 @@ Plane `P/utils/order_queryset.py:18–33,153–157`当前排序allowlist无link_
 这些是 M4/P15 的消费者收口，详细局部决定、反证和真实三引擎矩阵见 [P15 review](M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md)。T16 已复审顶部与弹窗两个真实宿主，关闭改用既有 context.closePalette 单一回调，不再保留重复关闭参数；补登录偏好晚答与 document/退场键盘保护。后置 CI 补真实 cmdk 的 Ctrl+K 退场保护，完整本地门禁重跑通过，最终候选 SHA/CI 按阶段记录 §10 后置核准，P15 已完成：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。集成证据见 [review §13](M4-issue-core/reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01)；没有扩大服务端/权限 owner、CSP、剪贴板兼容或 M6/M7 页面的验收归属。
 
 
-## 七、M4/P16 前端合同清理（2026-11-01，分支实施中）
+## 七、M4/P16 前端合同清理（2026-11-01，已集成）
 
 共享下拉框沿存活消费者贯通类型，多个选择值不再经any擦除；空多选归一数组，主题对象/0/空串保持原值。最后旧LayoutDropDown消费者转原CustomSelect，旧dropdown目录及独占依赖删除。焦点索引只删无人使用的ISSUE_FORM组，M6/M7四个表单组和非正菜单索引保持；成员隐式getter只剩M7三文件，接口和测试随最后迁移一起处理。
 
 no-shadow全仓清零并升error；死成员按原脚本逐行追生产、测试和第三方协议读者，未把公开EditorRefApi、TipTap命令与NodeView当成零读者删除。T5告警目标归零、包上限合计86，菜单与编辑器改用真实原生控件并回归IME/回焦，监听及MobX reaction按原拥有者释放。图片节点身份修复仅维持共享编辑器合同，M4仍不启用图片/附件。
 
-本期未改数据库、服务端协议、权限水位/确认写所有者或M6/M7页面归属。关键词旧八类工作项URL、否定筛选与M4复制例外均清空；其余10条复制例外仍按M6/M7/M8到期，不声称整个应用没有旧领域接口。证据见[P16 review](M4-issue-core/reviews/P16-web-cleanup-review.md)；S2与三引擎影响回归、deep-review、最终准确HEAD CI仍按阶段计划核验，M4 closeout未开始。
+本期未改数据库、服务端协议、权限水位/确认写所有者或M6/M7页面归属。关键词旧八类工作项URL、否定筛选与M4复制例外均清空；其余10条复制例外仍按M6/M7/M8到期，不声称整个应用没有旧领域接口。证据见[P16 review](M4-issue-core/reviews/P16-web-cleanup-review.md)；S2、三引擎影响回归及 deep-review 已通过；最终 `582694d9` 合入 main `01e40e11`，准确 main CI `41290496985` 三作业全绿，证据归档和分支/worktree清理完成。M4 closeout正在实施，最终总体完成标记仍待获准集成。

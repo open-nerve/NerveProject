@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import { createProject, createWorkspace, readProjectPreferences, slugFor } from "../../fixtures/api";
 import { createdFor, expectIssueCreated, expectIssuePage, madeBy } from "../../fixtures/assert/issue";
 import { newAccount } from "../../fixtures/auth";
@@ -100,6 +101,7 @@ test("I7 (page): chosen-state quick add describes refusal before focus, keeps pe
   ).toBe(false);
   await expect(name).toHaveAttribute("aria-invalid", "true");
   await expect(name).toHaveAccessibleDescription("Work item title is required.");
+  await c12Evidence(page, "B05", "required-name");
   await expect(name).toBeFocused();
   const refused = (await focuses()).filter((focus) => focus.invalid === "true");
   expect(refused.at(-1)?.description).toBe("Work item title is required.");
@@ -123,6 +125,7 @@ test("I7 (page): chosen-state quick add describes refusal before focus, keeps pe
   await name.fill("  Quick add  ");
   await name.press("Enter");
   await expect(name).toHaveAccessibleDescription("Too short");
+  await c12Evidence(page, "B05", "refused-name");
   await expect(name).toHaveValue("  Quick add  ");
   await expect(name).toBeFocused();
   const attempts = () => watch.apiRequests.filter((request) => request === `POST ${post}`).length;
@@ -133,6 +136,7 @@ test("I7 (page): chosen-state quick add describes refusal before focus, keeps pe
   await expect(name).toHaveValue("  Quick add  ");
   expect(await sentWithin(page, "POST", post, () => page.keyboard.press("Enter"))).toBe(false);
   expect(attempts()).toBe(before + 1);
+  await c12Evidence(page, "B05", "creation-pending");
   await expectListOrder(todo, [first.id, last.id]);
   const response = await held.release();
   expect(response.status()).toBe(201);

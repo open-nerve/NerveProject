@@ -32,7 +32,7 @@ const InstanceWrapper = lazy(function InstanceWrapper() {
 /** The toasts, their region named in the user's language: the translation's provider holds it. */
 function AppToast({ theme }: { theme: string | undefined }) {
   const { t } = useTranslation();
-  return <Toast theme={resolveGeneralTheme(theme)} label={t("aria_labels.toasts")} />;
+  return <Toast theme={resolveGeneralTheme(theme)} label={t("aria_labels.toasts")} closeLabel={t("close")} />;
 }
 
 export interface IAppProvider {

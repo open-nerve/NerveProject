@@ -23,9 +23,11 @@ export const ProjectEmptyState = observer(function ProjectEmptyState() {
   const { t } = useTranslation();
   // store hooks
   const { toggleCreateIssueModal } = useCommandPalette();
-  const { allowPermissions } = useUserPermissions();
+  const { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   // derived values
   const projectWorkItemFilter = useWorkItemFilterInstance(EIssuesStoreType.PROJECT, projectId);
+  const canReadProject =
+    !!workspaceSlug && !!projectId && getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) !== undefined;
 
   const canPerformEmptyStateActions =
     !!workspaceSlug &&
@@ -48,7 +50,7 @@ export const ProjectEmptyState = observer(function ProjectEmptyState() {
             {
               label: t("project_issues.empty_state.issues_empty_filter.secondary_button.text"),
               onClick: projectWorkItemFilter?.clearFilters,
-              disabled: !canPerformEmptyStateActions || !projectWorkItemFilter,
+              disabled: !canReadProject || !projectWorkItemFilter,
               variant: "secondary",
             },
           ]}

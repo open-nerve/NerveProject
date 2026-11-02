@@ -73,6 +73,7 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
             issueId={issueId}
             issue={issue}
             issueOperations={issueOperations}
+            disabled={isArchived || !isEditable}
           />
         )}
 

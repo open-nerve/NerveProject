@@ -52,6 +52,8 @@ type ToastProps = {
   theme: "light" | "dark" | "system";
   /** The name of the toasts' region, in the user's language. */
   label: string;
+  /** The close button's name, in the user's language. */
+  closeLabel: string;
 };
 
 const toastManager = BaseToast.createToastManager();
@@ -61,7 +63,7 @@ export function Toast(props: ToastProps) {
     <BaseToast.Provider toastManager={toastManager}>
       <BaseToast.Portal>
         <BaseToast.Viewport data-theme={props.theme} aria-label={props.label}>
-          <ToastList />
+          <ToastList closeLabel={props.closeLabel} />
         </BaseToast.Viewport>
       </BaseToast.Portal>
     </BaseToast.Provider>
@@ -107,12 +109,20 @@ const TOAST_DATA = {
   },
 };
 
-function ToastList() {
+function ToastList({ closeLabel }: Pick<ToastProps, "closeLabel">) {
   const { toasts } = BaseToast.useToastManager();
-  return toasts.map((toast) => <ToastRender key={toast.id} id={toast.id} toast={toast} />);
+  return toasts.map((toast) => <ToastRender key={toast.id} id={toast.id} toast={toast} closeLabel={closeLabel} />);
 }
 
-function ToastRender({ id, toast }: { id: React.Key; toast: BaseToast.Root.ToastObject }) {
+function ToastRender({
+  id,
+  toast,
+  closeLabel,
+}: {
+  id: React.Key;
+  toast: BaseToast.Root.ToastObject;
+  closeLabel: string;
+}) {
   const toastData = toast.data as SetToastProps;
   const type = toastData.type as TOAST_TYPE;
   const data = TOAST_DATA[type];
@@ -165,7 +175,10 @@ function ToastRender({ id, toast }: { id: React.Key; toast: BaseToast.Root.Toast
         e.preventDefault();
       }}
     >
-      <BaseToast.Close className="absolute top-3 right-3 cursor-pointer text-icon-secondary hover:text-icon-tertiary">
+      <BaseToast.Close
+        aria-label={closeLabel}
+        className="absolute top-3 right-3 cursor-pointer text-icon-secondary hover:text-icon-tertiary"
+      >
         <CloseOutline width={16} height={16} />
       </BaseToast.Close>
       <div className="flex w-full items-start gap-2 p-4">

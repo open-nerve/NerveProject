@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
   changeProject,
@@ -94,6 +95,7 @@ test("I22 (page): a real creation is committed before another tab signs out and 
     expect((await held.release()).status()).toBe(201);
     released = true;
     await expect(form.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("Keep next account's input");
+    await c12Evidence(page, "B11", "late-creation-preserves-next-account-form");
     await expect(page).toHaveURL(betaPath);
     await expect(page.getByText("Work item created successfully", { exact: true })).toHaveCount(0);
     await expect(page.getByText(oldName, { exact: true })).toHaveCount(0);

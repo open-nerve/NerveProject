@@ -10,6 +10,12 @@ import type { IssueDrop, IIssueRootStore } from "../root.store";
 import type { IBaseIssueFilterStore } from "./issue-filter-helper.store";
 import { IssueListBinding, type IssueListScope } from "./issue-list-binding";
 
+const sortMidpoint = (a: number, b: number): number => {
+  const sum = a + b;
+  // Finite neighbors can overflow their sum; keep sum-first precision for subnormal values.
+  return Number.isFinite(sum) ? sum / 2 : a / 2 + b / 2;
+};
+
 /** The layout's selection; each query keeps its own registered reconciliation value. */
 export class BaseIssuesStore<TFilter extends IBaseIssueFilterStore = IBaseIssueFilterStore> {
   private readonly bindings = new Map<string, IssueListBinding>();
@@ -122,7 +128,7 @@ export class BaseIssuesStore<TFilter extends IBaseIssueFilterStore = IBaseIssueF
         }
         body.sort_order =
           before && after
-            ? (before.sort_order + after.sort_order) / 2
+            ? sortMidpoint(before.sort_order, after.sort_order)
             : before
               ? before.sort_order - 65535
               : after

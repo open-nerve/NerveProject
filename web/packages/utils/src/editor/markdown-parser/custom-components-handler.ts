@@ -21,17 +21,17 @@ export const parseCustomComponents = (args: TArgs): Record<string, Handle> => {
   return {
     "image-component": (_state, node) => {
       const properties = node.properties || {};
-      const src = String(properties.src);
+      const src = String(properties.src ?? "");
       const fileAssetDetails = getFileAssetDetails(src);
       if (!src || !fileAssetDetails) return createTextNode("");
-      return createTextNode(`![${fileAssetDetails.name}](${fileAssetDetails.url})`);
+      return { type: "image", alt: fileAssetDetails.name, url: fileAssetDetails.url };
     },
     img: (_state, node) => {
       const properties = node.properties || {};
-      const src = String(properties.src);
-      const alt = String(properties.alt);
-      if (!src || !alt) return createTextNode("");
-      return createTextNode(`![${alt || "Image"}](${src})`);
+      const src = String(properties.src ?? "");
+      const alt = String(properties.alt ?? "");
+      if (!src) return createTextNode("");
+      return { type: "image", alt: alt || "Image", url: src };
     },
     "mention-component": (_state, node) => {
       const properties = node.properties || {};
@@ -47,7 +47,7 @@ export const parseCustomComponents = (args: TArgs): Record<string, Handle> => {
         tag = `@${userDetails.display_name || "Unknown user"}`;
       }
 
-      return createTextNode(`[${tag}](${url}) `);
+      return [{ type: "link", url, children: [createTextNode(tag)] }, createTextNode(" ")];
     },
   };
 };

@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import type { ProjectDisplayFilters, ProjectDisplayProperties, ProjectIssueFilters } from "@nerve/api-client";
 import type { Page } from "@playwright/test";
 
@@ -382,6 +383,7 @@ test("I5 (page): all eleven display properties and layout, grouping, ordering an
     ["created_on", "Created on"],
     ["updated_on", "Updated on"],
   ];
+  await c12Evidence(page, "B07", "eleven-display-properties");
   const expected = { ...initial.display_properties };
   const propertyGroup = panel.getByRole("button", { name: "Display Properties", exact: true }).locator("../..");
   await properties.reduce(async (before, [key, name]) => {
@@ -420,6 +422,20 @@ test("I5 (page): all eleven display properties and layout, grouping, ordering an
       )
     ).status()
   ).toBe(200);
+  expect(initial.display_filters.sub_issue).toBe(true);
+  // Saving the final filter starts a real list read after its PATCH confirms.
+  // Observe that answer before the toggle so reload cannot cancel the pending GET.
+  const refreshedList = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "GET" &&
+      url.pathname === `/api/v0/projects/${project.id}/issues` &&
+      url.searchParams.get("sub_issue") === "false" &&
+      url.searchParams.get("group_by") === "priority" &&
+      url.searchParams.get("sub_group_by") === "label_id" &&
+      url.searchParams.get("order_by") === "-updated_at"
+    );
+  });
   await ["Show empty groups", "Show sub-work items"].reduce(async (before, name) => {
     await before;
     const button = panel.getByRole("button", { name, exact: true });
@@ -451,6 +467,9 @@ test("I5 (page): all eleven display properties and layout, grouping, ordering an
   expect(queries.at(-1)?.get("group_by")).toBe("priority");
   expect(queries.at(-1)?.get("sub_group_by")).toBe("label_id");
   expect(queries.at(-1)?.get("order_by")).toBe("-updated_at");
+  const refreshed = await refreshedList;
+  expect(refreshed.status()).toBe(200);
+  expect(await refreshed.finished()).toBeNull();
   await page.reload();
   panel = await displayPanel(page);
   await Promise.all(
@@ -527,7 +546,11 @@ test("I5 (page): a refused preference keeps confirmed UI and database; a confirm
   ).toEqual([{ display_properties: initial.display_properties }]);
   const sub = panel.getByRole("button", { name: "Show sub-work items", exact: true });
   failRead = true;
-  const changed = await answerTo(page, "PATCH", path, () => sub.click());
+  // The refusal toast covers this lower control's pointer center while it is visible.
+  // Continue through its real keyboard activation, without waiting out or hiding the feedback.
+  await sub.focus();
+  await c12Evidence(page, "B07", "preference-refusal-keyboard-focus");
+  const changed = await answerTo(page, "PATCH", path, () => sub.press("Space"));
   expect(changed.status()).toBe(200);
   await expect(sub).toHaveAttribute("aria-pressed", String(!initial.display_filters.sub_issue));
   const saved = await readProjectPreferences(api, member.token, project.id);

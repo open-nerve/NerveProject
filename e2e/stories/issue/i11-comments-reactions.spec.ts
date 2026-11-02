@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import { addProjectMembers, createProject, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
 import { bearer, newAccount, accountId, emailFor, shownNameOf } from "../../fixtures/auth";
 import {
@@ -157,6 +158,7 @@ test("I11 (page): real comment input ignores IME and empty submission, retains a
   await expect(field).toHaveAttribute("aria-invalid", "true");
   await expect(field).toBeFocused();
   await expect(field).toHaveAccessibleDescription("Required");
+  await c12Evidence(page, "B16", "comment-field-refusal");
   await expect(editor).toHaveText("中文输入");
   // Use the editor's keyboard selection so refocus reconciliation preserves the replacement range.
   await editor.press("ControlOrMeta+A");
@@ -164,6 +166,7 @@ test("I11 (page): real comment input ignores IME and empty submission, retains a
   await expect(editor).toHaveText("Confirmed comment");
   const held = await sentHeld(page, "POST", path, () => submit.dblclick());
   expect(held.body).toEqual({ comment_html: expect.stringMatching(/^<p\b[^>]*>Confirmed comment<\/p>$/) });
+  await c12Evidence(page, "B16", "comment-create-pending");
   await expect(submit).toBeDisabled();
   expect(watch.apiRequests.filter((request) => request === `POST ${path}`)).toHaveLength(2);
   const created = await held.release();
@@ -185,6 +188,7 @@ test("I11 (page): real comment input ignores IME and empty submission, retains a
   await editing.press("ControlOrMeta+A");
   await page.keyboard.insertText("Edited comment");
   await expect(editing).toHaveText("Edited comment");
+  await c12Evidence(page, "B16", "comment-author-edit");
   await editing.dispatchEvent("keydown", { key: "Enter", isComposing: true, bubbles: true });
   await editing.dispatchEvent("keydown", { key: "Enter", keyCode: 229, bubbles: true });
   const editPath = `/api/v0/issue-comments/${comment.id}`;
@@ -224,6 +228,7 @@ test("I11 (page): a named comment menu lets a project administrator delete anoth
   await page.keyboard.press("Space");
   await expect(page.getByRole("menuitem", { name: "Edit", exact: true })).toHaveCount(0);
   await expect(page.getByRole("menuitem", { name: "Delete", exact: true })).toBeVisible();
+  await c12Evidence(page, "B16", "administrator-other-author-menu");
   await page.keyboard.press("Escape");
   await expect(options).toBeFocused();
   await options.press("Enter");
@@ -233,6 +238,7 @@ test("I11 (page): a named comment menu lets a project administrator delete anoth
   );
   await expect(row.getByText("Author content", { exact: true })).toBeVisible();
   await expect(options).toBeDisabled();
+  await c12Evidence(page, "B16", "comment-delete-pending");
   expect((await held.release()).status()).toBe(204);
   await expect(row).toHaveCount(0);
   expect(watch.apiRequests.filter((request) => request === `DELETE ${path}`)).toHaveLength(1);
@@ -272,6 +278,7 @@ test("I11 (page): both reactions remove only the current actor after confirmatio
   const held = await sentHeld(page, "DELETE", removeComment, () => commentReaction.dblclick());
   await expect(commentReaction).toBeDisabled();
   await expect(commentReaction).toHaveText("👍2");
+  await c12Evidence(page, "B16", "comment-reaction-delete-pending");
   await expect(page.getByRole("searchbox", { name: "Search", exact: true })).toHaveCount(0);
   expect((await held.release()).status()).toBe(204);
   await expect(row.getByRole("button", { name: "👍 1", exact: true })).toBeEnabled();
@@ -296,6 +303,7 @@ test("I11 (page): both reactions remove only the current actor after confirmatio
   await expect(archivedReactions).toHaveCount(2);
   await expect(archivedReactions.nth(0)).toBeDisabled();
   await expect(archivedReactions.nth(1)).toBeDisabled();
+  await c12Evidence(page, "B16", "archived-reactions-read-only");
   await expect(page.getByRole("button", { name: /^Add reaction/ })).toHaveCount(0);
   const writes = watch.apiRequests.filter((request) => !request.startsWith("GET "));
   await archivedReactions.nth(0).dispatchEvent("click");

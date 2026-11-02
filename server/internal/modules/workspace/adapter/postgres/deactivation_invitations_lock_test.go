@@ -80,10 +80,10 @@ func TestLockInvitationsToDeleteLocksWhatItReturns(t *testing.T) {
 	}
 	var locked, stronger []uuid.UUID
 	for id := range names {
-		if waitsFor(t, pool, "workspace_member_invites", id, "FOR SHARE") {
+		if pgtest.RowWaits(t, pool, "workspace_member_invites", id, "FOR SHARE") {
 			locked = append(locked, id)
 		}
-		if waitsFor(t, pool, "workspace_member_invites", id, "FOR KEY SHARE") {
+		if pgtest.RowWaits(t, pool, "workspace_member_invites", id, "FOR KEY SHARE") {
 			stronger = append(stronger, id)
 		}
 	}
@@ -134,7 +134,7 @@ func TestLockInvitationsToDeleteLocksInIDOrder(t *testing.T) {
 	}()
 	pgtest.WaitForLockWaitOn(t, pool, "workspace_member_invites", 10*time.Second)
 
-	if !waitsFor(t, pool, "workspace_member_invites", toAcme, "FOR SHARE") {
+	if !pgtest.RowWaits(t, pool, "workspace_member_invites", toAcme, "FOR SHARE") {
 		t.Error("a FOR SHARE of acme's invitation while LockInvitationsToDelete waits for omega's does not wait; want acme's locked first")
 	}
 	if err := release(); err != nil {

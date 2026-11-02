@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
   amidAnotherWorkspace,
@@ -79,6 +80,7 @@ test("I2 (page): the detail announces title refusals before focus, saves each pr
     description: "The format is not valid",
   });
   expect(await db.query("SELECT name FROM issues WHERE id=$1", [issue.id])).toEqual([{ name: "Original detail" }]);
+  await c12Evidence(page, "B10", "title-server-refusal");
 
   const patches: IssueUpdate[] = [];
   const change = async (body: IssueUpdate, act: () => Promise<void>) => {
@@ -92,6 +94,7 @@ test("I2 (page): the detail announces title refusals before focus, saves each pr
   await state.click();
   await change({ state_id: seed.states.Done }, () => page.getByRole("option", { name: "Done", exact: true }).click());
   await expect(page.getByRole("button", { name: "State: Done", exact: true })).toBeVisible();
+  await c12Evidence(page, "B10", "confirmed-title-and-state");
   await page.getByRole("button", { name: "Priority: None", exact: true }).click();
   await change({ priority: "high" }, () => page.getByRole("option", { name: "High", exact: true }).click());
   const members = page.getByText("Assignees", { exact: true }).locator("../..").getByRole("button");

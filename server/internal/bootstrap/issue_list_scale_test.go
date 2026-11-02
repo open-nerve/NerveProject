@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,6 +45,13 @@ func scaleRequest(t *testing.T, f listScaleFixture, route moduleRoute, trace *li
 	var pid uint32
 	for _, r := range sample.Statements {
 		if r.Error != "" || r.Ended.IsZero() || r.Started.Before(start) || r.Ended.After(start.Add(elapsed)) {
+			if dir := os.Getenv("NERVE_LIST_SCALE_EVIDENCE"); dir != "" {
+				target := filepath.Join(dir, "failed", strings.ReplaceAll(t.Name(), "/", "-"))
+				listEvidence(t, target, id, sample)
+				// Replaying the captured typed SQL is diagnostic only. The failed
+				// request remains failed; its timeout and measured samples are intact.
+				explainListStatements(t, f.w.pool, filepath.Join(target, "plans"), id, sample.Statements)
+			}
 			t.Fatal("invalid trace boundary", r)
 		}
 		if pid != 0 && pid != r.PID {
@@ -78,7 +86,7 @@ func TestIssueListScale(t *testing.T) {
 		dir = t.TempDir()
 	}
 	t.Log("evidence:", dir)
-	for _, n := range []int{10000, 100000} {
+	for _, n := range []int{10000, 20000, 100000} {
 		t.Run(strconv.Itoa(n), func(t *testing.T) {
 			roles := newSplitRoles(t)
 			trace := &listTrace{}

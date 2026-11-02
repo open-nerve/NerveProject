@@ -112,7 +112,10 @@ WITH projects AS (
     END) AS g(key) ON true
 ), subgroup_counts AS (
     SELECT e.id, e.sub_group_key, count(*) OVER (PARTITION BY e.sub_group_key) AS subgroup_total FROM subgroup_expanded e
-), cells AS (
+), cells AS MATERIALIZED (
+    -- Keep cell selection outside the join of independently counted streams.
+    -- Pushing a single cell's keys down misestimates both streams and can turn
+    -- their identity join into a quadratic nested loop before the empty fallback.
     SELECT g.id, g.own_only, g.total, g.child_count, g.link_count, g.k_text, g.k_num, g.k_null, g.group_key, g.group_total, s.sub_group_key, s.subgroup_total,
            count(*) OVER (PARTITION BY g.group_key, s.sub_group_key) AS cell_total
     FROM group_counts g JOIN subgroup_counts s ON s.id=g.id

@@ -92,7 +92,7 @@ const useProjectIssueActions = () => {
       if (!workspaceSlug || !routeProjectId || role === undefined) return;
       return issues.fetchNextIssues(workspaceSlug, routeProjectId, groupId, subGroupId);
     },
-    [issues.fetchIssues, workspaceSlug, routeProjectId, role]
+    [issues.fetchNextIssues, workspaceSlug, routeProjectId, role]
   );
 
   const createIssue = useCallback(
@@ -177,7 +177,7 @@ const useProfileIssueActions = () => {
       if (!workspaceSlug || !userId || !allowed) return;
       return issues.fetchNextIssues(workspaceSlug, userId, groupId);
     },
-    [issues.fetchIssues, workspaceSlug, userId, allowed]
+    [issues.fetchNextIssues, workspaceSlug, userId, allowed]
   );
 
   const createIssue = useCallback(
@@ -235,7 +235,7 @@ const useProfileIssueActions = () => {
       dropIssue,
       updateFilters,
     }),
-    [fetchIssues, createIssue, updateIssue, removeIssue, archiveIssue, dropIssue, updateFilters]
+    [fetchIssues, fetchNextIssues, createIssue, updateIssue, removeIssue, archiveIssue, dropIssue, updateFilters]
   );
 };
 
@@ -263,7 +263,7 @@ const useArchivedIssueActions = () => {
       if (!workspaceSlug || !routeProjectId || !allowed) return;
       return issues.fetchNextIssues(workspaceSlug, routeProjectId, groupId, subGroupId);
     },
-    [issues.fetchIssues, workspaceSlug, routeProjectId, allowed]
+    [issues.fetchNextIssues, workspaceSlug, routeProjectId, allowed]
   );
 
   const removeIssue = useCallback(
@@ -271,14 +271,14 @@ const useArchivedIssueActions = () => {
       if (!workspaceSlug || !projectId) return;
       return await issues.removeIssue(workspaceSlug, projectId, issueId);
     },
-    [issues.removeIssue]
+    [issues.removeIssue, workspaceSlug]
   );
   const restoreIssue = useCallback(
     async (projectId: string | undefined | null, issueId: string) => {
       if (!workspaceSlug || !projectId) return;
       return await issues.restoreIssue(workspaceSlug, projectId, issueId);
     },
-    [issues.restoreIssue]
+    [issues.restoreIssue, workspaceSlug]
   );
 
   const updateFilters = useCallback(
@@ -286,7 +286,7 @@ const useArchivedIssueActions = () => {
       if (!workspaceSlug) return;
       return await issuesFilter.updateFilters(workspaceSlug, projectId, filterType, filters);
     },
-    [issuesFilter.updateFilters]
+    [issuesFilter.updateFilters, workspaceSlug]
   );
 
   return useMemo(

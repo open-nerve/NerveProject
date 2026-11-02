@@ -10,6 +10,7 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { CircleDashed } from "lucide-react";
 import { AddOutline } from "@makeplane/propel/icons";
+import { useTranslation } from "@nerve/i18n";
 // types
 import type { TIssueGroupByOptions } from "@nerve/types";
 // ui
@@ -26,14 +27,33 @@ interface IHeaderGroupByCard {
   count: number;
   issuePayload: Partial<IssueDetail>;
   disableIssueCreation?: boolean;
+  isExpanded: boolean;
   handleCollapsedGroups: (value: string) => void;
 }
 
 export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHeaderGroupByCard) {
-  const { groupID, icon, title, count, issuePayload, disableIssueCreation, handleCollapsedGroups } = props;
+  const {
+    groupID,
+    groupBy,
+    icon,
+    title,
+    count,
+    issuePayload,
+    disableIssueCreation,
+    isExpanded,
+    handleCollapsedGroups,
+  } = props;
   // states
   const [isOpen, setIsOpen] = useState(false);
   const storeType = useIssueStoreType();
+  const { t } = useTranslation();
+  const heading = (
+    <>
+      <span className="line-clamp-1 inline-block truncate font-medium text-primary">{title}</span>
+      <span className="pl-2 text-13 font-medium text-tertiary">{count || 0}</span>
+      <span className="px-2.5" />
+    </>
+  );
   return (
     <>
       <div className="group/list-header flex w-full flex-shrink-0 items-center gap-2 py-1.5">
@@ -41,26 +61,31 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
           {icon ?? <CircleDashed className="size-3.5" strokeWidth={2} />}
         </div>
 
-        {/* eslint-disable-next-line jsx_a11y/click-events-have-key-events eslint-disable-next-line jsx_a11y/no-static-element-interactions */}
-        <div
-          className="relative flex w-full cursor-pointer flex-row items-center gap-1 overflow-hidden"
-          onClick={() => handleCollapsedGroups(groupID)}
-        >
-          <div className="line-clamp-1 inline-block truncate font-medium text-primary">{title}</div>
-          <div className="pl-2 text-13 font-medium text-tertiary">{count || 0}</div>
-          <div className="px-2.5"></div>
-        </div>
+        {groupBy ? (
+          <button
+            type="button"
+            aria-label={title}
+            aria-expanded={isExpanded}
+            className="relative flex w-full cursor-pointer flex-row items-center gap-1 overflow-hidden rounded-xs text-left"
+            onClick={() => handleCollapsedGroups(groupID)}
+          >
+            {heading}
+          </button>
+        ) : (
+          <div className="relative flex w-full flex-row items-center gap-1 overflow-hidden">{heading}</div>
+        )}
 
         {!disableIssueCreation && (
-          // oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions
-          <div
+          <button
+            type="button"
+            aria-label={`${t("create_work_item")}: ${title}`}
             className="flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xs transition-all hover:bg-layer-1"
             onClick={() => {
               setIsOpen(true);
             }}
           >
             <AddOutline width={14} />
-          </div>
+          </button>
         )}
 
         <CreateUpdateIssueModal

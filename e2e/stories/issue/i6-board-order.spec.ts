@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
   createProject,
@@ -125,6 +126,7 @@ test("I6 (page): a member moves between Done cards once, reorders below a middle
     dragOnto(page, card(move.id), card(move.id), card(right.id), { x: 100, y: 4 })
   );
   expect(held.body).toEqual({ state_id: done, sort_order: 200 });
+  await c12Evidence(page, "B02", "drag-pending");
   await expectListOrder(doneColumn, [left.id, right.id]);
   await expectListOrder(todoColumn, [move.id]);
   expect(await held.release().then((response) => response.status())).toBe(200);
@@ -179,6 +181,7 @@ test("I6 (page): a member moves between Done cards once, reorders below a middle
   await expectListOrder(doneColumn, [move.id, right.id, left.id]);
   await expectListOrder(todoColumn, []);
   await expect(page.getByText("Your role does not allow this.", { exact: true })).toBeVisible();
+  await c12Evidence(page, "B02", "drag-refused");
   await page.reload();
   await expectListOrder(doneColumn, [move.id, right.id, left.id]);
   await expectListOrder(todoColumn, []);

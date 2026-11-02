@@ -13,7 +13,14 @@ import { fetchedWhileChangeIsOut, inTurn, sent } from "@/store/fake-queue";
 import { fakeRoot } from "@/store/fake-root";
 import { ProjectMemberStore } from "@/store/member/project/project-member.store";
 import { userOf } from "@/store/member/fake-users";
-import { loadArchivedProjects, projectMemberOf, projectOf, projectTab } from "@/store/project/fake-projects";
+import {
+  loadArchivedProjects,
+  loadProject,
+  loadProjects,
+  projectMemberOf,
+  projectOf,
+  projectTab,
+} from "@/store/project/fake-projects";
 import { UserStore } from "@/store/user";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
@@ -134,6 +141,20 @@ describe("ProjectMemberStore, the members", () => {
 });
 
 describe("ProjectMemberStore, the changes", () => {
+  it("R06 an old self-role confirmation cannot overwrite a recovered project's new role", async () => {
+    const { nerve, projects, store } = await loaded();
+    await loadProject(nerve, projects, web);
+    const at = nerve.calls.length;
+    const writing = track(store.updateMemberRole(web.id, ann.member_id, 15));
+    await until(() => nerve.calls.length === at + 1, "old role write");
+    await loadProjects(nerve, projects, acme, [ops]);
+    const fresh = { ...web, member_role: 5 as const, name: "recovered as guest" };
+    await loadProjects(nerve, projects, acme, [fresh, ops]);
+    nerve.calls[at]?.answer(json(200, { ...ann, role: 15 }));
+    await until(() => writing.settled, "late role response");
+    expect(writing.error).toBeUndefined();
+    expect(projects.getProjectById(web.id)).toEqual(fresh);
+  });
   it("adds the members nerve answers, whom the project then has among its members", async () => {
     const { nerve, projects, store } = await loaded();
     const added = track(store.bulkAddMembersToProject(web.id, adding));

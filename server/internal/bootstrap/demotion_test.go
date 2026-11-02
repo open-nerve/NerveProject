@@ -2,17 +2,16 @@ package bootstrap
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"testing"
 	"time"
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 	"github.com/open-nerve/NerveProject/server/migrations"
@@ -142,8 +141,8 @@ func sendHoldingTheMemberships(t *testing.T, contract *apitest.Contract, pool *p
 	pgtest.WaitForLockWaitOn(t, pool, "project_members", 10*time.Second)
 	_, err = pool.Exec(ctx, `SELECT 1 FROM projects p JOIN workspaces w ON w.id = p.workspace_id
 		WHERE w.slug = 'acme' FOR SHARE OF p NOWAIT`)
-	var pgErr *pgconn.PgError
-	if !errors.As(err, &pgErr) || pgErr.Code != "55P03" {
+
+	if !postgres.LockNotAvailable(err) {
 		t.Errorf("a FOR SHARE of acme's project while %s %s waits = %v; want lock_not_available (55P03)", req.Method, req.URL.Path, err)
 	}
 	release(projectMembership)

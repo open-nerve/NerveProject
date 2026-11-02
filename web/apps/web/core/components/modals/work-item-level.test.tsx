@@ -51,10 +51,13 @@ beforeEach(async () => {
   ui.navigate.mockReset();
   ui.remove.mockReset();
   ui.params = { workspaceSlug: "ws", projectId: "A" };
-  tab.nerve.respond = (call) => call.answer(json(200, issueDetailOf("old")));
+  tab.nerve.respond = (call) => {
+    if (call.method === "GET" && call.path === "/api/v0/issues/old") call.answer(json(200, issueDetailOf("old")));
+  };
   expect(
     (await settle(tab.app.issue.issueDetail.issue.fetchIssueCore("ws", "A", "old"), "detail")).error
   ).toBeUndefined();
+  tab.nerve.respond = undefined;
   element = document.createElement("div");
   document.body.append(element);
   root = createRoot(element);
@@ -143,8 +146,13 @@ it("permission ABA retires the command owner's callbacks even when the route and
   await act(async () => commands.toggleCreateIssueModal(true));
   const oldClose = createProps.onClose;
   await act(async () => {
-    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [{ ...tab.project, member_role: 5 }]);
-    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+    const guest = { ...tab.project, member_role: 5 as const };
+    const changed = await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [guest]);
+    expect(changed.error).toBeUndefined();
+    expect(changed.value).toEqual([guest]);
+    const restored = await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
+    expect(restored.error).toBeUndefined();
+    expect(restored.value).toEqual([tab.project]);
   });
   expect(commands.isCreateIssueModalOpen).toBe(false);
   await act(async () => commands.toggleCreateIssueModal(true));

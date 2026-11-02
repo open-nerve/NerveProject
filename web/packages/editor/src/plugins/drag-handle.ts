@@ -44,10 +44,11 @@ const createDragHandleElement = (): HTMLElement => {
   const dragHandleElement = document.createElement("button");
   dragHandleElement.type = "button";
   dragHandleElement.id = "drag-handle";
+  dragHandleElement.setAttribute("aria-label", "Block actions");
   dragHandleElement.draggable = true;
   dragHandleElement.dataset.dragHandle = "";
   dragHandleElement.classList.value =
-    "hidden sm:flex items-center size-5 aspect-square rounded-xs cursor-grab outline-none hover:bg-layer-1-hover active:bg-layer-1 active:cursor-grabbing transition-[background-color,_opacity] duration-200 ease-linear";
+    "hidden sm:flex items-center size-5 aspect-square rounded-xs cursor-grab focus-visible:outline-2 focus-visible:outline-accent-primary hover:bg-layer-1-hover active:bg-layer-1 active:cursor-grabbing transition-[background-color,_opacity] duration-200 ease-linear";
 
   const iconElement1 = document.createElement("span");
   iconElement1.classList.value = "pointer-events-none text-tertiary";
@@ -142,6 +143,18 @@ const nodePosAtDOMForBlockQuotes = (node: Element, view: EditorView) => {
   })?.inside;
 };
 
+// A keyboard click has no pointer coordinates. Resolve the block from the editor's own selection.
+const selectedBlockPosition = (view: EditorView) => {
+  const { selection } = view.state;
+  if (selection instanceof NodeSelection) return selection.from;
+  const { $from } = selection;
+  for (let depth = $from.depth; depth > 0; depth--) {
+    const name = $from.node(depth).type.name;
+    if (name === CORE_EXTENSIONS.LIST_ITEM || name === CORE_EXTENSIONS.TASK_ITEM) return $from.before(depth);
+  }
+  return $from.depth > 0 ? $from.before($from.depth) : null;
+};
+
 export const DragHandlePlugin = (options: SideMenuPluginProps): SideMenuHandleOptions => {
   let listType = "";
   let isDragging = false;
@@ -188,6 +201,12 @@ export const DragHandlePlugin = (options: SideMenuPluginProps): SideMenuHandleOp
   }
 
   const handleClick = (event: MouseEvent, view: EditorView) => {
+    if (!view.editable) return;
+    if (event.type === "click" && event.detail === 0) {
+      const pos = selectedBlockPosition(view);
+      if (pos !== null) view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)));
+      return;
+    }
     handleNodeSelection(event, view, false, options);
   };
 
@@ -226,6 +245,18 @@ export const DragHandlePlugin = (options: SideMenuPluginProps): SideMenuHandleOp
     dragHandleElement.addEventListener("dragend", (e) => handleDragEnd(e, view));
     dragHandleElement.addEventListener("click", (e) => handleClick(e, view));
     dragHandleElement.addEventListener("contextmenu", (e) => handleClick(e, view));
+    dragHandleElement.addEventListener("focus", () => {
+      // Pointer focus must leave the hovered handle in place until click/drag selects that block.
+      if (!view.editable || !sideMenu || !dragHandleElement?.matches(":focus-visible")) return;
+      const pos = selectedBlockPosition(view);
+      const node = pos === null ? null : view.nodeDOM(pos);
+      if (!(node instanceof Element)) return;
+      const rect = node.getBoundingClientRect();
+      sideMenu.style.left = `${rect.left - options.dragHandleWidth}px`;
+      sideMenu.style.top = `${rect.top}px`;
+      sideMenu.classList.remove("side-menu-hidden");
+      showDragHandle();
+    });
 
     const dragOverHandler = (e: DragEvent) => {
       e.preventDefault();

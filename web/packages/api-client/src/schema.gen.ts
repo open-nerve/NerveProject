@@ -631,7 +631,7 @@ export interface paths {
         put?: never;
         /**
          * Archive a project
-         * @description For the project's admins, and its members who are the workspace's admins. The project is archived as of the request: listProjects lists it among the archived ones, and until it is unarchived updateProject alone refuses it (project.archived); deleting it, changing one's display settings in it, adding members to it and joining it work as on any project. An archived project archived again takes the new time. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not archive, forbidden. The role is decided after the project row is locked.
+         * @description For the project's admins, and its members who are the workspace's admins. The project is archived as of the request: listProjects lists it among the archived ones, and until it is unarchived updateProject refuses it (project.archived). Work-item mutations also enforce their project.archived checks. Deleting the project, changing one's display settings in it, adding members to it and joining it work as on any project. An archived project archived again takes the new time. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not archive, forbidden. The role is decided after the project row is locked.
          */
         post: operations["archiveProject"];
         delete?: never;
@@ -1180,7 +1180,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a comment as its author or project administrator
-         * @description Uses issue_comment.write then checks author or ProjectAdmin, before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Project archiving refuses before issue archiving. Soft-deletes only the live comment, updates its parent work item using the same writer and moment, and creates no activity. Busy projects answer 503 server_busy with Retry-After.
+         * @description Uses issue_comment.write then checks author or ProjectAdmin, before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Project archiving refuses before issue archiving. Soft-deletes the live comment and its live reactions, preserving earlier deletion stamps. The parent work item audit uses the same writer and moment; no activity is created. Busy projects answer 503 server_busy with Retry-After.
          */
         delete: operations["deleteIssueComment"];
         options?: never;

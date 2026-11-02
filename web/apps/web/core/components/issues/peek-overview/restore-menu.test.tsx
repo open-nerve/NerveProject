@@ -34,7 +34,10 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 // Leave the actual view -> header -> menu -> factory -> operation chain intact; omit unrelated content loads.
 vi.mock("../issue-detail/issue-activity", () => ({ IssueActivity: () => null }));
-vi.mock("../issue-detail-widgets", () => ({ IssueDetailWidgets: () => null }));
+// Keep real widget action buttons and their dialogs; unrelated resource sections do not affect the mode controls.
+vi.mock("../issue-detail-widgets/issue-detail-widget-collapsibles", () => ({
+  IssueDetailWidgetCollapsibles: () => null,
+}));
 vi.mock("./issue-detail", () => ({ PeekOverviewIssueDetails: () => null }));
 vi.mock("./properties", () => ({ PeekOverviewProperties: () => null }));
 let tab: Awaited<ReturnType<typeof issueSelectionTab>>;
@@ -49,7 +52,17 @@ beforeEach(async () => {
   for (const id of ["old", "next"]) tab.app.issue.issues.acceptRead(archived(id), tab.app.issue.captureRead());
 });
 afterEach(async () => tab.close());
-function Peek({ id, isArchived = true }: { id: string; isArchived?: boolean }) {
+function Peek({
+  id,
+  isArchived = true,
+  embed = true,
+  disabled = false,
+}: {
+  id: string;
+  isArchived?: boolean;
+  embed?: boolean;
+  disabled?: boolean;
+}) {
   const operations = useIssueOperations("ws", "A", id);
   return (
     <IssueDetailHost workspaceSlug="ws" projectId="A" issueId={id}>
@@ -59,7 +72,8 @@ function Peek({ id, isArchived = true }: { id: string; isArchived?: boolean }) {
         issueId={id}
         is_archived={isArchived}
         issueOperations={operations}
-        embedIssue
+        embedIssue={embed}
+        disabled={disabled}
       />
     </IssueDetailHost>
   );
@@ -196,3 +210,51 @@ it.each([false, true])(
     expect(tab.app.issue.issueDetail.peekIssue?.issueId).toBe(refused ? "old" : undefined);
   }
 );
+
+for (const layout of ["side_peek", "modal", "full_screen"] as const) {
+  it.each(["archived", "guest", "editable"])(`R07 ${layout} keeps widget writes unavailable for %s`, async (mode) => {
+    if (mode === "guest")
+      await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [
+        { ...tab.project, member_role: 5, guest_view_all_features: true },
+      ]);
+    tab.app.issue.issues.acceptRead(
+      mode === "archived" ? archived() : issueDetailOf("old"),
+      tab.app.issue.captureRead()
+    );
+    openIssuePeek(tab.app.issue.issueDetail, {
+      workspaceSlug: "ws",
+      projectId: "A",
+      issueId: "old",
+      isArchived: mode === "archived",
+    });
+    await tab.render(
+      <MemoryRouter>
+        <Peek id="old" isArchived={mode === "archived"} disabled={mode === "guest"} embed={false} />
+      </MemoryRouter>
+    );
+    if (layout !== "side_peek") {
+      const trigger = document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!;
+      expect(trigger).not.toBeNull();
+      await act(async () => trigger.click());
+      const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((item) =>
+        item.textContent?.includes(`common.${layout}`)
+      )!;
+      expect(option).toBeDefined();
+      await act(async () => option.click());
+      expect(document.querySelector('[role="listbox"]')).toBeNull();
+    }
+    const actions = [...document.querySelectorAll<HTMLButtonElement>("button")].filter((button) =>
+      ["issue.add.sub_issue", "issue.add.relation", "issue.add.link"].includes(button.textContent ?? "")
+    );
+    if (mode === "editable") {
+      expect(actions).toHaveLength(3);
+      await act(async () => actions.find((button) => button.textContent === "issue.add.link")!.click());
+      expect(document.querySelector('[role="dialog"]')?.textContent).toContain("common.add_link");
+      expect(document.querySelector('input[id="url"]')).not.toBeNull();
+    } else {
+      expect(actions).toHaveLength(0);
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    }
+    expect(tab.nerve.calls.filter((call) => call.method !== "GET")).toEqual([]);
+  });
+}

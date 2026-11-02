@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import { createLabel } from "../../fixtures/api";
 import { createIssue, createIssueRelations } from "../../fixtures/issues";
 import { createIssueLink } from "../../fixtures/links";
@@ -12,6 +13,7 @@ for (const control of ["identifier", "detail", "link", "relation", "sub-item", "
   test(`C4 (page): ${control} copy is keyboard reachable and reports a refused clipboard write without success or navigation`, async ({
     api,
     page,
+    browserName,
   }, info) => {
     const seed = await issueListProject(api, info);
     const source = await createIssue(api, seed.member.token, seed.project.id, { name: "Copy source" });
@@ -42,6 +44,7 @@ for (const control of ["identifier", "detail", "link", "relation", "sub-item", "
     await refuseClipboardWrites(page);
     const before = page.url();
     const requestsBeforeCopy = watch.apiRequests.length;
+    const tab = browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab";
     let copy;
     if (control === "relation" || control === "sub-item") {
       const options = page.getByRole("button", {
@@ -49,6 +52,8 @@ for (const control of ["identifier", "detail", "link", "relation", "sub-item", "
         exact: true,
       });
       await options.focus();
+      await page.keyboard.press(`Shift+${tab}`);
+      await page.keyboard.press(tab);
       await expect(options).toBeFocused();
       await page.keyboard.press("Enter");
       copy = page.getByRole("menuitem", {
@@ -67,9 +72,23 @@ for (const control of ["identifier", "detail", "link", "relation", "sub-item", "
       });
     }
     await copy.focus();
+    if (control === "relation" || control === "sub-item") {
+      await page.keyboard.press("ArrowUp");
+      await page.keyboard.press("ArrowDown");
+    } else {
+      await page.keyboard.press(`Shift+${tab}`);
+      await page.keyboard.press(tab);
+    }
     await expect(copy).toBeFocused();
+    await expect(copy).toHaveCSS("outline-style", /^(auto|solid)$/);
+    await c12Evidence(
+      page,
+      control === "peek" ? "B06" : ["relation", "sub-item", "link"].includes(control) ? "B12" : "B10",
+      `copy-${control}-focused`
+    );
     await page.keyboard.press("Enter");
     await expect(page.getByText("Something went wrong. Please try again.", { exact: true })).toHaveCount(1);
+    await c12Evidence(page, "B10", `copy-${control}-refused`);
     await expect(page.getByText(/^(Link copied|Work item (link|ID) copied to clipboard)$/)).toHaveCount(0);
     await expect(page).toHaveURL(before);
     if (control !== "peek")
@@ -103,6 +122,7 @@ test("C4: creation owns dismissal, nested draft confirmation owns its Escape and
   await date.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog", { name: "Start date", exact: true })).toBeVisible();
+  await c12Evidence(page, "B11", "nested-date");
   expect(await pageBehindHidden(page)).toBe(true);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Start date", exact: true })).toHaveCount(0);
@@ -112,6 +132,7 @@ test("C4: creation owns dismissal, nested draft confirmation owns its Escape and
   await labels.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("option", { name: "Visible label", exact: true })).toBeVisible();
+  await c12Evidence(page, "B11", "nested-labels");
   expect(await pageBehindHidden(page)).toBe(true);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
@@ -142,6 +163,7 @@ test("C4: creation owns dismissal, nested draft confirmation owns its Escape and
   await expect(last).toBeFocused();
   await page.keyboard.press(tab);
   await expect(first).toBeFocused();
+  await c12Evidence(page, "B11", "draft-confirmation-tab-loop");
   await page.keyboard.press("Escape");
   await expect(inner).toHaveCount(0);
   await expect(modalDialog(page)).toHaveCount(1);
@@ -195,6 +217,7 @@ for (const dirty of [false, true]) {
     await expect(inner.getByRole("option").filter({ hasText: "Candidate parent" })).toBeVisible();
     expect(await pageBehindHidden(page)).toBe(true);
     await inner.getByRole("combobox").focus();
+    await c12Evidence(page, "B11", `parent-search-${dirty ? "dirty" : "clean"}`);
     await page.keyboard.press("Escape");
     await expect(modalDialog(page)).toHaveCount(1);
     await expect(inner).toHaveCount(0);

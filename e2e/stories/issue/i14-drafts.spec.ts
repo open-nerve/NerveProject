@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import type { Page, TestInfo } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 
@@ -237,6 +238,7 @@ test("I14 (page): personal unassigned drafts paginate with server totals, preser
   await expect(page.getByText("51", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Load more", exact: false }).click();
   await expect(page.locator('[id^="issue-"]')).toHaveCount(51);
+  await c12Evidence(page, "B18", "unassigned-drafts-51-rows");
   await expect(page.getByRole("button", { name: "Load more", exact: false })).toHaveCount(0);
   const row = page.locator(`[id="issue-${draft.id}"]`);
   const trigger = row.locator('button[aria-haspopup="menu"]:visible').last();
@@ -256,6 +258,7 @@ test("I14 (page): personal unassigned drafts paginate with server totals, preser
   await page.getByRole("menuitem", { name: "Edit", exact: true }).press("Enter");
   const modal = modalDialog(page);
   await expect(modal.getByRole("textbox", { name: "Title", exact: true })).toHaveValue(payload.name);
+  await c12Evidence(page, "B18", "unassigned-draft-edit");
   expect(await pageBehindHidden(page)).toBe(true);
   await expect(modal.locator('[contenteditable="true"]')).toContainText("Keep unfinished content");
   await modal.getByRole("textbox", { name: "Title", exact: true }).fill("Unassigned edited");
@@ -283,6 +286,7 @@ test("I14 (page): personal unassigned drafts paginate with server totals, preser
   await trigger.press("Enter");
   await page.getByRole("menuitem", { name: "Delete", exact: true }).press("Enter");
   await expect(modal.getByRole("heading", { name: "Delete draft", exact: true })).toBeVisible();
+  await c12Evidence(page, "B18", "draft-delete-confirmation");
   const deletion = await sentHeld(page, "DELETE", `/api/v0/drafts/${draft.id}`, () =>
     modal.getByRole("button", { name: "Delete", exact: true }).dblclick()
   );
@@ -355,6 +359,7 @@ test("I14 (page): publish saves latest form first, retains it on refusal, and co
   expect((await refused).status()).toBe(409);
   await expect(publish).toBeEnabled();
   await expect(modal.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("Latest published");
+  await c12Evidence(page, "B18", "publication-conflict-keeps-input");
   expect(await draftRead(api, seed.member.token, draft.id)).toMatchObject({
     status: 200,
     draft: { payload: { name: "Latest published" } },
@@ -382,6 +387,7 @@ test("I14 (page): publish saves latest form first, retains it on refusal, and co
   await expect(modal).toHaveCount(0);
   await expect(row).toHaveCount(0);
   await expect(page.getByRole("alert")).toBeVisible();
+  await c12Evidence(page, "B18", "published-list-get-refusal");
   expect(
     (
       await answerTo(page, "GET", listPath, () =>
@@ -422,6 +428,7 @@ test("I14 (page): a workspace guest opens the draft route without personal reads
   await createDraft(api, seed.member.token, seed.slug, { payload: { name: "Other personal secret" } });
   const watch = await openDrafts(page, seed.slug, email);
   await expect(page.getByRole("button", { name: "Draft a work item", exact: true })).toBeDisabled();
+  await c12Evidence(page, "B18", "guest-draft-route");
   await expect(page.getByText("Other personal secret", { exact: true })).toHaveCount(0);
   expect(watch.apiRequests.filter((request) => request.includes("/drafts"))).toEqual([]);
   await expectListPageQuiet(page, watch);
@@ -454,6 +461,7 @@ test("I14 (page): making a copy preserves unresolved draft fields through the ac
   const modal = modalDialog(page);
   await expect(modal.locator('[contenteditable="true"]')).toContainText("Preserve unfinished content");
   await modal.getByRole("textbox", { name: "Title", exact: true }).fill("Copied draft");
+  await c12Evidence(page, "B18", "unassigned-copy-preserves-content");
   const saved = await sentHeld(page, "POST", `/api/v0/workspaces/${slug}/drafts`, () =>
     modal.getByRole("button", { name: "Save to Drafts", exact: true }).dblclick()
   );

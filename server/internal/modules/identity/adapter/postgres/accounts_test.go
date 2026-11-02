@@ -9,8 +9,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -143,8 +141,8 @@ func TestTheShareLockBlocksDeactivationNotAnotherShare(t *testing.T) {
 			if share != nil {
 				t.Errorf("a second FOR SHARE: %v, want no wait", share)
 			}
-			var pgErr *pgconn.PgError
-			if !errors.As(deactivation, &pgErr) || pgErr.Code != "55P03" {
+
+			if !postgres.LockNotAvailable(deactivation) {
 				t.Errorf("deactivation's lock: %v, want lock_not_available after waiting", deactivation)
 			}
 		})
@@ -319,8 +317,7 @@ func TestAShareThatFailsReturnsTheError(t *testing.T) {
 				return shareErr
 			})
 
-			var pgErr *pgconn.PgError
-			if !errors.As(shareErr, &pgErr) || pgErr.Code != "55P03" || found || state != (app.AccountState{}) {
+			if !postgres.LockNotAvailable(shareErr) || found || state != (app.AccountState{}) {
 				t.Errorf("%s() while the row is locked = %+v, found %v, %v (the transaction: %v); want lock_not_available and nothing found",
 					name, state, found, shareErr, err)
 			}

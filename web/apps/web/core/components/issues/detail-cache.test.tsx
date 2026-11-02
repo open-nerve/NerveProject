@@ -57,7 +57,11 @@ const render = (view: ReactNode) =>
     renderer.render(<SWRConfig value={{ provider: () => cache, shouldRetryOnError: false }}>{view}</SWRConfig>)
   );
 const siblings = () => (
-  <IssueParentSiblings workspaceSlug="ws" currentIssue={issueOf("child")} parentIssue={issueOf("parent")} />
+  <IssueParentSiblings
+    workspaceSlug="ws"
+    currentIssue={{ ...issueOf("child"), parent_id: "parent" }}
+    parentId="parent"
+  />
 );
 const variants = [
   { name: "siblings", path: "/api/v0/issues/parent/sub-issues", view: siblings },

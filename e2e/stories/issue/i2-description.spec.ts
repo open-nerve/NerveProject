@@ -1,3 +1,4 @@
+import { c12Evidence } from "../../fixtures/c12-evidence";
 import { addProjectMembers, createProject, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
 import { expectDescriptionActivity } from "../../fixtures/assert/issue-collaboration";
 import { newAccount } from "../../fixtures/auth";
@@ -128,6 +129,7 @@ test("I2 (page): real description editing and undo-redo keep the visible value, 
   ).toBe(503);
   await expect(editor).toHaveText("Second final");
   await expect(page.getByRole("alert")).toContainText("The server is busy. Please try again later.");
+  await c12Evidence(page, "B14", "refused-description-keeps-input");
   expect(await descriptionAuditRows(db, issue.id)).toEqual(beforeUndo);
   expect(
     (
@@ -135,6 +137,7 @@ test("I2 (page): real description editing and undo-redo keep the visible value, 
     ).status()
   ).toBe(200);
   await expect(page.getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
+  await c12Evidence(page, "B14", "description-retry-confirmed");
   expect(bodies).toHaveLength(4);
   const last = bodies[3] as IssueUpdate;
   expect(bodies[2]).toEqual(last);
