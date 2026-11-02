@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T9已完成，T10故事已完成，完整七项与首次产品检查点待核。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T10本地验收完成，完整七项通过，推进T11。首次产品检查点远端CI独立记录，不用本地绿替代。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -170,7 +170,7 @@ T10完整门禁补齐：六个API加入既有权限矩阵及目标目录负例�
 - [x] Step 2：运行选定files/M3M4删除故事的Playwright命令（先make build，使用现有e2e命令入口）；保存新增性质红；SQL仅断言，禁止前置插资产冒充API。
 - [x] Step 3：实现fixture/完整故事，短upload_ttl显式10s、正常transfer budget，条件等待runtime expiry（不是sleep）；Clock只快进业务保留，刷新有效凭据后继续，不能用过期session测试伪装文件故障。
 - [x] Step 4：聚焦故事绿、至少读字节摘要/数据库恢复状态/实际目录邻域；借平台clock重启验证root复用与清理恢复。knownW11若出现按一次重跑规则，不专项查。
-- [ ] Step 5：提交。首次产品检查点前串行完整七项，记录每项实际输入/生成物已提交后gen-check；全通过才system git push当前HEAD并核准确CI，继续独立T11而不将远端未知写成通过。
+- [x] Step 5：提交。首次产品检查点前串行完整七项，记录每项实际输入/生成物已提交后gen-check；全通过才system git push当前HEAD并核准确CI，继续独立T11而不将远端未知写成通过。
 
 ## Task 11（T11）：跨模块交错与资源故障验收
 

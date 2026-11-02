@@ -139,3 +139,5 @@ T10已补齐API故事，首次完整七项检查点待核，接续T11交错验�
 - 局部裁定：仅在尚未发布的资产HTTP边界，将内部签名headers字典转换为按名称排序的封闭name/value列表；完整保留头名称和值，空集为数组。代价是调用者须按新生成类型逐项设头，本分支Go/TS夹具已同步，P3与后续UI沿用此合同。内部SignedRequest、raw传输、MAC与全局封闭对象守卫均未改；设计/spec/plan先同步后实现。
 - 修复后task-10-directory-green.log为两个总目录及负例通过，task-10-matrix-green.log为36个资产矩阵单元通过（2.726秒），task-10-header-api-green.log为真实申请/上传/确认/复制通过（2.965秒）。完整七项按新准确提交另行记录。
 - 第二轮固定于23168a6e/tree 9c65fdb3：gen-check、Go lint及完整Go通过（531.43秒）；lint-web在关键词检查处失败，后三项未执行。旧plane-user-assets规则把名称相同的Nerve生成用途误当旧协议。局部裁定为识别旧地址/旧弹窗/旧EFileAssetType访问与手写枚举声明，仍扫描整个web，不豁免生成文件、不增加到期例外。内置样本区分生成类型和普通新协议值；在生成文件实际注入六种旧形式均被拒绝，恢复原字节SHA后检查通过（task-10-keywords-{red,green}.log及receipt）。代价是纯业务用途名称不再构成违规，符合M5已批准的生成枚举合同；旧协议识别与模块架构守卫不变。
+
+- T10最终本地七项收据：前三项为23168a6e的gen-check/Go lint/完整Go；仅关键词规则和评审文字改变，task-10-seven-carry.json核服务端/工具模块/契约/生成物逐字节一致。后四项在8bf79770/tree62ce4454执行：lint-web 54/54、knip零问题、test-web 18/18、E2E 341/341（2.4分钟）。task-10-seven-web-integrity.json核4514个跟踪输入全程无变动。原始失败、各轮命令/准确输入/日志/报告完整保留；检查点远端CI另记，不推定已通过。
