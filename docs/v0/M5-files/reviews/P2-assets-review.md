@@ -1,6 +1,6 @@
 # M5 / P2 阶段评审记录
 
-> 实施中：T1–T8完成，T9–T14待执行；没有进行整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
+> 实施中：T1–T9完成，T10–T14待执行；没有进行整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
 
 ## 1. 方式
 
@@ -30,11 +30,11 @@ T1确认必须的完整Go依赖传递链，补齐spec/plan；T1无ETag输入，�
 
 ## 6. 后续责任
 
-T8已完成复制与删除准备件，现有六个真实接口；接续T9完整对象对账与真实worker恢复。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
+T9已完成对象/临时目录对账与真实worker恢复；接续T10 API故事与首次完整七项检查点。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
 
 ## 7. 已知限制
 
-当前已有基础纯规则/校验、本地有限清单/临时回收、宿主授权与锁编排、父清理单页与River持久进度；已有file_assets、同步删除和资产清理worker；已有六个业务操作和真实上传/复制/读取/软删除字节链；完整对象对账/重启恢复尚未交付。不能根据T1–T8通过声称F1/F3/F13/F14/F15已满足。
+当前已有基础纯规则/校验、本地有限清单/临时回收、宿主授权与锁编排、父清理单页与River持久进度；已有file_assets、同步删除和资产清理worker；已有六个业务操作和真实上传/复制/读取/软删除字节链；已补齐对象对账/重启恢复。完整API故事和交错验收仍待T10/T11，不能根据T1–T9通过声称F1/F3/F13/F14/F15已满足。
 
 ## 8. T2本地清单、临时目录与配置
 
@@ -114,3 +114,14 @@ T8已完成复制与删除准备件，现有六个真实接口；接续T9完整�
 - `task-8-mutations.json`五项行为失败且恢复hash：只验目标（错误201）、目标先拒绝（403替代404）、允许已删资产迟到发布（错误200）、复用源key（目标所有权结构校验拒绝，API500）、跳过源已发布SHA（错误201）。测试不以编译失败代替性质证据。
 - 最终受影响race通过（bootstrap39.525秒、archtest1.824秒），完整asset HTTP与错误目录4.778秒通过，server lint 0 issues，`make test-web`18/18（1缓存，39.622秒）。3860个选定源码输入哈希未变；84个生成文件的SHA256/bytes/行数在`task-8-generated.json`，命令与退出码在`task-8-verification.json`。完整七项、E2E故事、远端检查点和阶段整审仍按T10–T13执行。
 - 局部裁定：源实物缺失统一为asset.object_missing，与后端异常分开；复制没有上传能力，失败目标由7天准备件规则和候选安全期回收；共用封存变化始终带回T7回归。原因与代价已记台账，A1–A12和输入handoff仍开放。
+
+## 15. T9完整对账、迟到对象与持久恢复
+
+- 产品提交423281e6。`task-9-inventory-red.log`实际复现旧代码扫完rows即Complete，孤立对象和旧临时目录仍在；补齐rows→objects→tmp→done，只有全部阶段结束才Complete。T2清单/临时端口在bootstrap注入同一本地store，domain保持纯净，没有新SQL、跨模块锁或守卫豁免。
+- `TestAssetCleanupClocksAndLateObjects`与`StrictBusinessBoundaries`验证7d/60d/24h严格边界及+1微秒；业务+61d不越过持久grant/lease，当前外部预算1s不重算记录safe_after。真实旧u/o、同assetID不同key、活final、未过安全期的staging/candidate、另一root与未知布局各自有实物断言。隔离存储fixture的bound状态只证明保护规则，不声称P2提供绑定API。
+- `TestAssetCleanupLateBytesAfterAcknowledgement`先确认不存在对象并移除恢复记录，再在存储边界注入同一旧u/o的迟到实物；记录不会重新认领，真实24小时相等时保留、+1微秒后回收。这是故障fixture，不声称过期公共上传授权能重新签发。发布纯状态测试分别拒绝已移除/已认领key且不改审计。
+- 对账最后只在自身资产表短事务读全部metadata引用，外部Delete不占连接/事务；对象列表必须升序且有限，Token为不透明页起点、ObjectAfter为页内安全位置，未完整处理不采用Next。临时失败保留部分进度/实物；所有已知key安全期仍用记录值。预算到期重放当前项，普通存储失败可越过该项继续邻域并由下周期重看。
+- `TestAssetSweepRestarts`运行真实River与local：5个对象、batch2，chmod造成真实Delete失败；相邻项继续且snooze游标落入metadata.output；停止runner、关闭store，按同根重建实例，业务+61d/真实+49h仍沿原双cutoff续扫；保留错误历史与累计Failed=1；新job从头回收旧失败项、后来低ID及上一轮年轻对象。未把重建runner说成杀死宿主OS进程。
+- output支持objects/tmp/done并严格核阶段字段、编码token≤8KiB/总output≤16KiB；`RecordOutput`失败原样返回，不以snooze错误冒充验证。首次River夹具在空errors数组上遇到cardinality=NULL，改只读断言coalesce；原件保留，非产品失败。
+- `task-9-mutations.json`九项均行为失败且SHA恢复：业务时钟裁孤立年龄、忽略持久runtime安全期、未提交认领就Delete、丢River output、重认领已移除key、重认领reclaiming key、存储错误当Complete、预算中途跳过整页、忽略活引用。该轮没有编译红或幸存项。
+- `task-9-focused-green.log`、`task-9-verification.json`：受影响race通过（bootstrap45.367秒、archtest1.669秒），完整HTTP/错误目录4.697秒通过，server lint 0 issues；3867个选定源码输入哈希未变。本Task没有API/生成物/前端错误改动，T8生成物收据仍适用。完整七项与首次推送检查点留T10，不把尚未跑的E2E或远端状态写成通过。局部裁定/代价见台账与recovery§6；A1–A12及handoff继续开放。

@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T8已完成，接续T9。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T9已完成，接续T10。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -152,11 +152,11 @@
 
 **Interfaces：** Cleanup.Execute与SweepCursor/Result按文件结构区；ObjectLister与TemporaryCleaner按T2；RecordOutput不是app依赖，只在river adapter。父cleanup固定cutoff与模块顺序同T4。
 
-- [ ] Step 1：TestAssetCleanupClocksAndLateObjects：7d/60d相等不删、+epsilon才入选，business+61d且runtime上传/lease未过保留、配置变小仍按记录安全期、后到u/o、活final、跨root邻域。TestAssetSweepRestarts：真实job至少3页，小预算snooze、进程重新构造、失败output/实际storage失败及重试，最终无丢页。
-- [ ] Step 2：串行 `go -C server test ./internal/modules/asset/... ./internal/bootstrap -run 'AssetCleanup|AssetSweep|PurgeCursor' -count=1` 红；River假实现只证明调用，不能替代持久状态。
-- [ ] Step 3：完善未知对象/tmp核验与runtime24h、有限游标和错误计数；最后读自己的metadata，不在asset锁后读带锁owner；RecordOutput后才snooze，错误保留安全游标和key。阶段完整才Complete，不以0Deleted推断耗尽。
-- [ ] Step 4：绿、故障再试与下一周期重新从头找旧受阻/新低ID；变异用业务时钟判断grant/age、runtime门无视、删除前不认领、output丢失、key被重新认领、错误当Complete，都由永久测试拦截。
-- [ ] Step 5：提交；记录清理失败仍可观察且相关父保留，不能只报最后成功。
+- [x] Step 1：TestAssetCleanupClocksAndLateObjects：7d/60d相等不删、+epsilon才入选，business+61d且runtime上传/lease未过保留、配置变小仍按记录安全期、后到u/o、活final、跨root邻域。TestAssetSweepRestarts：真实job至少3页，小预算snooze、进程重新构造、失败output/实际storage失败及重试，最终无丢页。
+- [x] Step 2：串行 `go -C server test ./internal/modules/asset/... ./internal/bootstrap -run 'AssetCleanup|AssetSweep|PurgeCursor' -count=1` 红；River假实现只证明调用，不能替代持久状态。
+- [x] Step 3：完善未知对象/tmp核验与runtime24h、有限游标和错误计数；最后读自己的metadata，不在asset锁后读带锁owner；RecordOutput后才snooze，错误保留安全游标和key。阶段完整才Complete，不以0Deleted推断耗尽。
+- [x] Step 4：绿、故障再试与下一周期重新从头找旧受阻/新低ID；变异用业务时钟判断grant/age、runtime门无视、删除前不认领、output丢失、key被重新认领、错误当Complete，都由永久测试拦截。
+- [x] Step 5：提交；记录清理失败仍可观察且相关父保留，不能只报最后成功。
 
 ## Task 10（T10）：真实API故事与完整删除fixture
 
