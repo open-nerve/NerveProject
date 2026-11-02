@@ -159,7 +159,7 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 **Interfaces：** localprotocol 仅固定本地传输 Root/ObjectPrefix/Path，domain/app 不感知路径；Router 路径策略保持通用。localTransfer(target) 返回 Vite Plugin；具名传输器用 Node http/https 标准库，完整拥有上游与关闭，日志不给任意错误文本。原 /api 仍走已有 Vite proxy。
 
 - [x] Step 1：实际默认 server read=30s/API=15s 下上传 >1 MiB，按进度调节持续 >30s 且小于本次计算预算；成功 204、seal/GET 字节一致。用有界条件/节流器制造慢流，不用 sleep 同步竞争。
-- [ ] Step 1a：先写真实 storage 工作区/静态资源回归，签发路径约定改为 `/static/local`，观察旧实现失败；迁移 raw 目录、注册、签发/精确检查及相关合同。static 只从 reserved 移入 server，新增保留名字总集合不变断言，原 M3 根路径守卫不放宽。聚焦测试/架构绿后提交。
+- [x] Step 1a：先写真实 storage 工作区/静态资源回归，签发路径约定改为 `/static/local`，观察旧实现失败；迁移 raw 目录、注册、签发/精确检查及相关合同。static 只从 reserved 移入 server，新增保留名字总集合不变断言，原 M3 根路径守卫不放宽。聚焦测试/架构绿后提交。
 - [ ] Step 1b：将 re-32 路径反例落为通用 Router 的永久测试，先确认 307 红，再按规范化逐段判断归属；编码、重复斜杠、点段、进入再离开以及相邻树控制同时验证。原始/最终路径二点法变异须被杀，恢复后提交。
 - [ ] Step 1c：真实 Vite + 上游测试先红，再实现具名本地传输插件；精确路径分派、原始方法/头/字节/query、private/no-store、失败日志、断连/取消/关闭均验收；构建/public 占 static 必须失败。使用 Node 标准库避免默认代理错误输出凭证，120s idle 宽于 Go 最大 idle。无新依赖，不关闭全部错误日志；变异泄露错误文本/吞掉取消须被杀，恢复后提交。
 - [ ] Step 1d：完成工作区与文件请求的联合回归、静态缓存/缺失 chunk/emojibase、API 隔离、race；同步实际偏差和证据，不把设计复核当阶段整审。

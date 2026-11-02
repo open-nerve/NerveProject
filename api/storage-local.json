@@ -1,11 +1,11 @@
 {
   "description": "本地签名原始传输的精确路由与 asset 专用错误目录；平台错误沿用公共合同，业务 OpenAPI 和 publicOperations 不包含这些路由。",
   "routes": [
-    "PUT /storage/local/{key}",
-    "GET /storage/local/{key}",
-    "HEAD /storage/local/{key}",
-    "/storage",
-    "/storage/"
+    "PUT /static/local/{key}",
+    "GET /static/local/{key}",
+    "HEAD /static/local/{key}",
+    "/static",
+    "/static/"
   ],
   "x-problem-codes": [
     "asset.invalid_signature",

@@ -44,7 +44,7 @@ func signingKey(t *testing.T, kind byte) domain.ObjectKey {
 func signedURL(t *testing.T, request domain.SignedRequest) *url.URL {
 	t.Helper()
 	u, err := url.Parse(request.URL)
-	if err != nil || u.IsAbs() || u.Host != "" || u.Fragment != "" || !strings.HasPrefix(u.Path, "/storage/local/") {
+	if err != nil || u.IsAbs() || u.Host != "" || u.Fragment != "" || !strings.HasPrefix(u.Path, "/static/local/") {
 		t.Fatalf("not a same-origin transfer URL: %+v, %v", request, err)
 	}
 	return u
@@ -60,7 +60,7 @@ func TestSignedTransferBindsEveryField(t *testing.T) {
 		t.Fatal(err)
 	}
 	putURL := signedURL(t, put)
-	if put.Method != "PUT" || putURL.Path != "/storage/local/"+string(upload.Key) || !reflect.DeepEqual(put.Headers, map[string]string{"Content-Type": "image/png"}) || !put.ExpiresAt.Equal(upload.ExpiresAt.Truncate(time.Second)) {
+	if put.Method != "PUT" || putURL.Path != "/static/local/"+string(upload.Key) || !reflect.DeepEqual(put.Headers, map[string]string{"Content-Type": "image/png"}) || !put.ExpiresAt.Equal(upload.ExpiresAt.Truncate(time.Second)) {
 		t.Fatalf("upload request = %+v", put)
 	}
 	gotUpload, err := s.VerifyUpload(string(upload.Key), putURL.RawQuery, "PUT")

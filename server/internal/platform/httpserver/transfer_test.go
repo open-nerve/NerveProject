@@ -38,13 +38,13 @@ func TestTransferMiddlewarePreservesClientScope(t *testing.T) {
 				}
 				w.WriteHeader(http.StatusNoContent)
 			}))
-			first := post("/storage/local/key", "bad", body)
+			first := post("/static/local/key", "bad", body)
 			first.RemoteAddr = tc.remote
 			first.Header.Set("X-Forwarded-For", tc.forwarded)
 			if response := serve(h, first); response.Code != 204 {
 				t.Fatalf("first transfer = %d %s", response.Code, response.Body)
 			}
-			second := post("/storage/local/other", "bad", body)
+			second := post("/static/local/other", "bad", body)
 			second.RemoteAddr = tc.secondRemote
 			second.Header.Set("X-Forwarded-For", tc.secondForwarded)
 			response := serve(h, second)

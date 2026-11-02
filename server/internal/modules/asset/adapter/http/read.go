@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/localprotocol"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 )
@@ -16,7 +17,7 @@ var singleByteRange = regexp.MustCompile(`^bytes=([0-9]+-[0-9]*|-[0-9]+)$`)
 
 func (t *Transfer) read(w http.ResponseWriter, r *http.Request) {
 	grant, err := t.deps.ReadVerifier.VerifyRead(r.PathValue("key"), r.URL.RawQuery, r.Method)
-	if err != nil || r.URL.EscapedPath() != "/storage/local/"+string(grant.Key) {
+	if err != nil || r.URL.EscapedPath() != localprotocol.Path(grant.Key) {
 		transferProblem(w, http.StatusForbidden, "asset.invalid_signature")
 		return
 	}

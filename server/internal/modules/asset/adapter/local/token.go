@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/localprotocol"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
 )
@@ -40,7 +41,7 @@ func signToken(p payload, mac app.MAC) (string, error) {
 	if len(query) > maxQueryBytes {
 		return "", domain.ErrInvalidSignature
 	}
-	return "/storage/local/" + string(p.Key) + "?" + query, nil
+	return localprotocol.Path(p.Key) + "?" + query, nil
 }
 
 func verifyToken(key, rawQuery, method, purpose string, mac app.MAC) (payload, error) {

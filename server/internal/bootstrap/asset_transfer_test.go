@@ -18,7 +18,7 @@ func TestRawStorageRoutesAreExact(t *testing.T) {
 	for _, op := range apitest.Load(t).Operations() {
 		want = append(want, op.Pattern())
 	}
-	// Compare the whole router: an alias outside /storage is not an exemption.
+	// Compare the whole router: an alias outside /static is not an exemption.
 	slices.Sort(want)
 	got := a.router.Patterns()
 	slices.Sort(got)
@@ -33,7 +33,7 @@ func TestRawStorageUnsignedAndUnknownPaths(t *testing.T) {
 	noRedirect.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	for _, method := range []string{"PUT", "GET", "HEAD"} {
 		t.Run(method+" without signature", func(t *testing.T) {
-			req := newRequest(t, method, base+"/storage/local/"+string(assetKey(t, 'o')), "irrelevant-bearer", nil)
+			req := newRequest(t, method, base+"/static/local/"+string(assetKey(t, 'o')), "irrelevant-bearer", nil)
 			res, body := send(t, req)
 			if res.StatusCode != http.StatusForbidden || res.Header.Get("Content-Type") != httpserver.ContentTypeProblem || res.Header.Get("Cache-Control") != "no-store" || res.Header.Get("WWW-Authenticate") != "" {
 				t.Fatalf("unsigned %s status=%d headers=%v body=%s", method, res.StatusCode, res.Header, body)
@@ -48,9 +48,9 @@ func TestRawStorageUnsignedAndUnknownPaths(t *testing.T) {
 		})
 	}
 	for _, path := range []string{
-		"/storage", "/storage/", "/storage/missing", "/storage/local", "/storage/local/a/b",
-		"/storage//missing", "/storage/local/../../settings", "//storage/local/../../settings",
-		"/elsewhere/../storage/missing", "/%73torage/local/../../settings",
+		"/static", "/static/", "/static/missing", "/static/local", "/static/local/a/b",
+		"/static//missing", "/static/local/../../settings", "//static/local/../../settings",
+		"/elsewhere/../static/missing", "/%73tatic/local/../../settings",
 	} {
 		t.Run(path, func(t *testing.T) {
 			req := newRequest(t, "GET", base+path+"?payload=secret&tag=secret", "", nil)
@@ -68,7 +68,7 @@ func TestRawStorageUnsignedAndUnknownPaths(t *testing.T) {
 			}
 		})
 	}
-	for _, path := range []string{"/elsewhere/../settings", "/storage-more/../settings"} {
+	for _, path := range []string{"/elsewhere/../settings", "/static-more/../settings"} {
 		res, err := noRedirect.Get(base + path)
 		if err != nil {
 			t.Fatal(err)

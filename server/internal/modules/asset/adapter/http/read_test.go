@@ -149,5 +149,5 @@ func unsafeReadURL(t *testing.T, g domain.ReadGrant) string {
 		t.Fatal(err)
 	}
 	tag := storagetest.MAC("read-http-test").Tag(encoded)
-	return "/storage/local/" + string(g.Key) + "?payload=" + base64.RawURLEncoding.EncodeToString(encoded) + "&tag=" + base64.RawURLEncoding.EncodeToString(tag[:])
+	return "/static/local/" + string(g.Key) + "?payload=" + base64.RawURLEncoding.EncodeToString(encoded) + "&tag=" + base64.RawURLEncoding.EncodeToString(tag[:])
 }

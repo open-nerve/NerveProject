@@ -244,13 +244,13 @@ func TestLocalHTTPUploadContract(t *testing.T) {
 	})
 	t.Run("invalid signature never reveals existence", func(t *testing.T) {
 		info := w.upload(t, "abc", "text/plain")
-		_, exists := request(t, w, "PUT", "/storage/local/"+string(info.Key)+"?payload=wrong&tag=wrong", strings.NewReader("abc"), nil)
-		response, missing := request(t, w, "PUT", "/storage/local/"+string(transferKey(t, 'u'))+"?payload=wrong&tag=wrong", strings.NewReader("abc"), nil)
+		_, exists := request(t, w, "PUT", "/static/local/"+string(info.Key)+"?payload=wrong&tag=wrong", strings.NewReader("abc"), nil)
+		response, missing := request(t, w, "PUT", "/static/local/"+string(transferKey(t, 'u'))+"?payload=wrong&tag=wrong", strings.NewReader("abc"), nil)
 		if response.StatusCode != 403 || !bytes.Equal(exists, missing) || !bytes.Contains(missing, []byte(`"code":"asset.invalid_signature"`)) {
 			t.Fatalf("signature response: %d %s / %s", response.StatusCode, exists, missing)
 		}
 	})
-	for _, path := range []string{"/storage", "/storage/", "/storage/unknown/key", "/storage/local/key/extra"} {
+	for _, path := range []string{"/static", "/static/", "/static/unknown/key", "/static/local/key/extra"} {
 		response, data := request(t, w, "GET", path, nil, nil)
 		if response.StatusCode != 404 || response.Header.Get("Content-Type") != httpserver.ContentTypeProblem || bytes.Contains(data, []byte("SPA")) {
 			t.Fatalf("fallback %s = %d %s", path, response.StatusCode, data)

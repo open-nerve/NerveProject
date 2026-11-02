@@ -203,7 +203,7 @@ func (w *budgetWorld) nextUploadWorks(t *testing.T) {
 func transferKeyFromRequest(t *testing.T, request domain.SignedRequest) domain.ObjectKey {
 	t.Helper()
 	path, _, _ := strings.Cut(request.URL, "?")
-	key, err := domain.ParseObjectKey(strings.TrimPrefix(path, "/storage/local/"))
+	key, err := domain.ParseObjectKey(strings.TrimPrefix(path, "/static/local/"))
 	if err != nil {
 		t.Fatal(err)
 	}
