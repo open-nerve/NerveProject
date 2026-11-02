@@ -2,8 +2,6 @@ package local
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -14,22 +12,11 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/storagetest"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
 )
 
-// These keys are test inputs only. Bootstrap separately exercises real identity HKDF.
-type testMAC string
-
-func (m testMAC) Tag(message []byte) [16]byte {
-	h := hmac.New(sha256.New, []byte(m))
-	_, _ = h.Write(message)
-	return [16]byte(h.Sum(nil)[:16])
-}
-
-func (m testMAC) Verify(message []byte, tag [16]byte) bool {
-	want := m.Tag(message)
-	return hmac.Equal(want[:], tag[:])
-}
+type testMAC = storagetest.MAC
 
 func signingStore(t *testing.T, now *time.Time) *Store {
 	t.Helper()

@@ -89,15 +89,15 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 
 ## Task 4（T4）：条件封存与共享存储合同（A2/A4）
 
-**Files：** A/adapter/local/seal.go、seal_test.go；A/app/storage_contract_test.go；必要的测试帮助放 A 下测试包，不建无生产读者的通用库。
+**Files：** A/adapter/local/seal.go、seal_test.go；A/app/storage_contract_test.go；A/adapter/storagetest/mac.go 复用测试 MAC，架构守卫禁止生产代码导入。不建无生产读者的通用库。
 
 **Interfaces：** Seal(ctx, source, destination, expectedETag)；source 可 u/o，destination 必须新的 o。共同合同不承诺 staging 可重写，不依赖 local ETag 必为 SHA256 来约束未来 S3 ETag。
 
-- [ ] Step 1：`TestLocalSealKeepsPublishedBytes`：source ETag 错/缺失不产生目标；测试中将 data 改成同长度不同字节但保留旧 meta，Seal 也必须拒绝；两个不同随机候选并发字节一致，旧 u key 重放不能改变任一 o；o key 不能用 UploadGrant 签发。
-- [ ] Step 2：`TestStorageContract` 经真实 HTTP PUT 和未来 T5 注册的 handler 验证完整链（T5 前可分离已有 store 子合同，未接 HTTP 的部分不得标完成）；错误缺失与 I/O 故障可区分，Delete/Open/ctx/句柄结束符合消费合同。
-- [ ] Step 3：确认新增失败后实现，复制期间不关闭调用方的其他对象、不在读取旧 ETag 之后重新打开可能已换掉的文件。目标已存在为冲突，不覆盖；未知结果的重试由 P2 的候选状态负责。
-- [ ] Step 4：`go test -race -count=1 ./internal/modules/asset/...`；变异移除 ETag 比较/让公开 PUT 接受 o，预期合同失败，恢复后绿。
-- [ ] Step 5：两轮复核后提交 `feat(M5/P1): 实现条件封存及存储共享合同`。
+- [x] Step 1：`TestLocalSealKeepsPublishedBytes`：source ETag 错/缺失不产生目标；测试中将 data 改成同长度不同字节但保留旧 meta，Seal 也必须拒绝；两个不同随机候选并发字节一致，旧 u key 重放不能改变任一 o；o key 不能用 UploadGrant 签发。
+- [x] Step 2（store 子合同）：`TestStorageContract` 已验证缺失、Delete/Open/ctx/句柄结束和 opaque ETag；T3 的故障测试区分 I/O 与缺失。真实 HTTP PUT→Seal→GET/HEAD 完整链移至 T5，仍待完成，不能据此勾 A2。
+- [x] Step 3：确认新增失败后实现，复制期间不关闭调用方的其他对象、不在读取旧 ETag 之后重新打开可能已换掉的文件。目标已存在为冲突，不覆盖；未知结果的重试由 P2 的候选状态负责。
+- [x] Step 4：`go test -race -count=1 ./internal/modules/asset/...`；变异跳过复制后 ETag 核对/允许签发 o 上传，合同均失败，恢复后绿；公开 HTTP 的对应变异留 T5。
+- [x] Step 5：两轮复核后提交 `feat(M5/P1): 实现条件封存及存储共享合同`。
 
 ## Task 5（T5）：真实 raw HTTP 上传与读取（A3/A6/A9）
 
