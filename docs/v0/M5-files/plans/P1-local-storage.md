@@ -173,9 +173,9 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 **Files：** 本阶段全部变更与其真实调用/测试；下一编号 docs/reviews/re-NN-M5P1整体审核.md；P1 review。
 
 - [x] Step 1：按 deep-review 完整读取逻辑、集成、测试三视角，特别复查本 plan 的六条 Review Focus 和 A1–A10；记录局部问题、结构问题和具名测试缺口。
-- [ ] Step 2：局部根因自主修复，必要回归/变异并复审；若确有架构级新问题，提交已完成工作和证据再上报，不做旁路补丁。
+- [x] Step 2：局部根因自主修复，必要回归/变异并复审；若确有架构级新问题，提交已完成工作和证据再上报，不做旁路补丁。
 - [ ] Step 3：修复有产品变化则重跑受影响及完整七项后推最终 HEAD，确认最终分支 CI；补 P1 review 七节：范围、逐条验收、测试、审查问题、plan 差异、交接、集成状态。
-- [ ] Step 4：A1–A9 据实勾选，A10 的 main/归档部分留待 T11，不把“实施与整审完成”写成“已合入”。
+- [x] Step 4：A1–A9 据实勾选，A10 的 main/归档部分留待 T11，不把“实施与整审完成”写成“已合入”。
 
 ## Task 11（T11）：noff、main CI、归档与下一段
 
