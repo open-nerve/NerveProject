@@ -110,8 +110,13 @@ func TestBuiltInProfiles(t *testing.T) {
 					WriteLockTimeout:     5 * time.Second,
 					AutoArchiveInterval:  map[string]time.Duration{"test": 2 * time.Second, "dev": 24 * time.Hour, "prod": 24 * time.Hour}[tt.env],
 				},
-				Files: config.FilesConfig{SizeLimit: 5 << 20},
-				Log:   config.LogConfig{Level: tt.level, Format: tt.format},
+				Files: config.FilesConfig{
+					SizeLimit: 5 << 20, Driver: "local", Local: config.LocalFilesConfig{Root: "./data/files"},
+					MinTransferBytesPerSecond: 128 << 10, TransferGrace: 15 * time.Second,
+					TransferIdleTimeout: 30 * time.Second, MaxTransferDuration: 15 * time.Minute,
+					MaxConcurrentTransfers: 16, TransferRate: config.BucketConfig{PerMinute: 60, Burst: 20},
+				},
+				Log: config.LogConfig{Level: tt.level, Format: tt.format},
 			}
 			if !reflect.DeepEqual(cfg, want) {
 				t.Errorf("Load() =\n%+v\nwant\n%+v", cfg, want)

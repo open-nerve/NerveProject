@@ -36,6 +36,8 @@ var actionlessModules = []string{
 	"instance",
 	// It decides the other modules' actions, and has none of its own.
 	"access",
+	// M5/P1 exposes signed byte transport only, with no business asset actions.
+	"asset",
 }
 
 // moduleViolations reports where the module directories and the two lists

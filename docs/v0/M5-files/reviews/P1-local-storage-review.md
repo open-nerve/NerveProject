@@ -52,7 +52,7 @@
 
 ## 6. 交接
 
-P2 承接准备件、确认/封存候选、业务权限和清理；P3 承接 S3；P6/P7 承接浏览器传输与宿主入口。当前不关闭 M5 的完整故事或任何尚需业务链证明的输入交接。
+P2 承接准备件、确认/封存候选、业务权限和清理，并把 asset 从 actionlessModules 移到真实 Actions/规则清单；P3 承接 S3；P6/P7 承接浏览器传输与宿主入口。当前不关闭 M5 的完整故事或任何尚需业务链证明的输入交接。
 
 ## 7. 集成状态
 
@@ -65,3 +65,5 @@ P2 承接准备件、确认/封存候选、业务权限和清理；P3 承接 S3�
 - 开发插件用 Node 标准库流式传输，仅分派文件树，Go 保留验签/业务预算；独占上游、取消和关闭，日志只含固定错误类别。真实 Vite/TCP 共 11 项测试通过：方法/query/二进制、Range/HEAD/304/private、部分流断连、上游中途截断、关闭、public 与晚发 bundle 冲突。日志含 query、取消失效两项变异均被杀死并恢复。
 - 原件：`task-9-namespace-*.log`、`task-9-path-*.log`、`task-9-vite-*.log`、`task-9-proxy-*.log`、`task-9-combined-race.log`。类型检查使用仓库 `check:types` 先生成路由类型；直接 tsc 的缺生成物与测试 fixture 类型错误保留为初轮失败，已修正后通过。
 - 夹具校正：macOS 临时目录先取 realpath，避免 Vite 构建根的符号路径差；Vite 把 port=0 当默认值，改用官方 middleware mode 配真实随机端口，避免并行端口竞争。开发服务器的 missing.js 断言明确 JavaScript Accept，生产缺失 chunk 的 404 由 Go 完整程序测试独立验证。未修改这些既有行为。
+
+- 完整七门禁首次运行于 `b051df25258de313f6dcfac7387055c93fa7630a`：gen/gen-check 与 lint-go 通过，make test 用时 347.277s，仅 `TestBuiltInProfiles` 和 `TestEveryModuleDeclaresItsActionsOrHasNone` 失败。前者补齐 spec 中的具体默认值，后者按既有枚举机制登记 P1 没有业务动作的 asset；守卫谓词、精确全路由与角色规则不改。聚焦配置/动作/反例测试转绿，完整门禁在修复后重新执行。

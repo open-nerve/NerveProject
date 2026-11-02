@@ -119,7 +119,7 @@ socket 期限使用系统真实单调时钟，不使用业务 clock 或用于签
 
 ### 2.6 组合与隔离
 
-asset 的 module.Register 只注册本段 raw 路由。bootstrap 创建 local 资源并在任一后续构造错误和 close 时释放；先停止 HTTP，再停止 jobs，最后关闭存储和 migrator/pool，避免 P2 的清理任务仍在使用已关闭存储。不能让每次 newApp 测试共享默认磁盘目录。
+asset 的 module.Register 只注册本段 raw 路由；P1 没有业务动作，按既有动作目录明确列入 actionlessModules，不改目录核对机制。P2 接业务用例时改为实际 Actions/规则登记。bootstrap 创建 local 资源并在任一后续构造错误和 close 时释放；先停止 HTTP，再停止 jobs，最后关闭存储和 migrator/pool，避免 P2 的清理任务仍在使用已关闭存储。不能让每次 newApp 测试共享默认磁盘目录。
 
 Go 的 testConfig 为每个世界提供独立 t.TempDir。E2E 的 startNerve 默认把文件目录放进该进程日志的输出目录；clock world 重启显式复用该世界的文件根目录，而不同 world 不共用。只保留测试自身生成物，原件按项目既有归档规则处理，不执行全局清理。
 
