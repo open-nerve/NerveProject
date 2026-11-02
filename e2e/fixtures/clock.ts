@@ -27,6 +27,7 @@ export async function createClockWorld(options: {
   const db = openDatabase(options.databaseName);
   const now = options.now ?? (() => new Date());
   let generation = 0;
+  let storageRoot: string | undefined;
   let current: ClockRun | undefined;
   let closed = false;
   let closing = false;
@@ -43,11 +44,11 @@ export async function createClockWorld(options: {
 
   async function start(offset?: string): Promise<ClockRun> {
     const startedAt = now();
-    const nerve = await startNerve(
-      db.url,
-      options.logFile(generation++),
-      offset === undefined ? {} : { NERVE_CLOCK__OFFSET: offset }
-    );
+    const nerve = await startNerve(db.url, options.logFile(generation++), {
+      ...(offset === undefined ? {} : { NERVE_CLOCK__OFFSET: offset }),
+      ...(storageRoot === undefined ? {} : { NERVE_FILES__LOCAL__ROOT: storageRoot }),
+    });
+    storageRoot ??= nerve.storageRoot;
     return { nerve, api: createApi(nerve.baseURL), startedAt };
   }
 

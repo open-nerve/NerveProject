@@ -14,6 +14,10 @@ plane/
 # 个人本地配置覆盖（见 docs/v0/v0-design.md 6.8）
 config.local.yaml
 
+# 默认的本地文件存储（相对于 nerve 的工作目录）
+/data/files/
+/server/data/files/
+
 # Claude Code 的隔离工作区
 .claude/worktrees/
 

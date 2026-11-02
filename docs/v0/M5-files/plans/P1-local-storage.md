@@ -39,7 +39,7 @@
 | A/adapter/local/store.go、object.go、seal.go | root 生命周期、不可变对象布局、检查/读/删、条件封存 |
 | A/adapter/local/sign.go、token.go | 按用途 MAC、规范载荷、相对 URL；不查 DB |
 | A/adapter/http/transfer.go、read.go、upload.go、budget.go | raw 路由、验签顺序、标准读取、流量预算和并发 |
-| A/module.go | 模块外观、资源生命周期和注册；无运行时服务定位 |
+| A/module.go | 模块外观与注册；资源由 bootstrap 明确拥有，无运行时服务定位 |
 | H/transfer.go | 只复用客户端 metadata/限流，保持 JSON 中间件原样 |
 | C/files.go、files_test.go，config.go/validate.go | 精确配置和可测试预算约束，日志不含 root |
 | B/assets.go、app.go、asset_transfer_test.go | MAC/配置/限流接线与正常/失败/关闭清理 |
@@ -127,15 +127,15 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 
 ## Task 7（T7）：应用接线与测试存储隔离（A8）
 
-**Files：** B/assets.go、app.go、app_test.go、asset_lifecycle_test.go；A/module.go；e2e/fixtures/server.ts、clock.ts；.gitignore；README.md。
+**Files：** B/assets.go、app.go、app_test.go、asset_fixture_test.go、asset_lifecycle_test.go；A/module.go；e2e/fixtures/server.ts、clock.ts 和 stories/smoke/clock-lifecycle.spec.ts；.gitignore；README.md。T6 的 budget_test.go 按职责拆出 budget_fixture_test.go，保持约 400 行文件边界。
 
 **Interfaces：** bootstrap 构造 local 后取得关闭函数放入 app 的明确资源所有权；任何后续错误调用同一清理路径。正常停机 HTTP → jobs → storage → migrator/pool，不能先关 jobs 还可能使用的存储。传输限流复用 bootstrap 的单一 limiter，运行时钟 time.Now，不用 businessClock。
 
-- [ ] Step 1：`TestAssetLifetimeFollowsApp` 验证正常 close、后续模块构造失败、重复关闭的定义行为；用可观察 Close 计数/临时目录重新打开验证，不依赖不稳定系统 FD 总数。
-- [ ] Step 2：测试世界 A/B 相同 key 不共享文件；同世界重启且相同配置/密钥能读取旧 seal；新密钥不能。E2E clock world 明确复用 root，不能以每个日志路径自动变根覆盖重启性质。
-- [ ] Step 3：实现配置映射和 Register；Go testConfig 使用 t.TempDir，e2e process 默认输出目录并提供可覆盖 root。仅忽略 `/data/files/`、`/server/data/files/` 默认生成目录，不扩大整个仓库忽略范围；补运行目录/持久 key/备份说明。
-- [ ] Step 4：`go test -count=1 ./internal/bootstrap -run 'TestAssetLifetime|TestAssetMAC|TestApp'` 与既有 clock-lifecycle 页面/夹具测试；无默认目录污染，根 main 不受修改。
-- [ ] Step 5：两轮复核后提交 `feat(M5/P1): 接线文件模块并隔离各测试世界的存储`。
+- [x] Step 1：`TestAssetLifetimeFollowsApp` 验证正常 close、后续模块构造失败、重复关闭的定义行为；用可观察 Close 计数/临时目录重新打开验证，不依赖不稳定系统 FD 总数。
+- [x] Step 2：测试世界 A/B 相同 key 不共享文件；同世界重启且相同配置/密钥能读取旧 seal；新密钥不能。E2E clock world 明确复用 root，不能以每个日志路径自动变根覆盖重启性质。
+- [x] Step 3：实现配置映射和 Register；Go testConfig 使用 t.TempDir，e2e process 默认输出目录并提供可覆盖 root。仅忽略 `/data/files/`、`/server/data/files/` 默认生成目录，不扩大整个仓库忽略范围；补运行目录/持久 key/备份说明。
+- [x] Step 4：`go test -count=1 ./internal/bootstrap -run 'TestAssetLifetime|TestAssetMAC|TestApp'` 与既有 clock-lifecycle 页面/夹具测试；无默认目录污染，根 main 不受修改。
+- [x] Step 5：两轮复核后提交 `feat(M5/P1): 接线文件模块并隔离各测试世界的存储`。
 
 ## Task 8（T8）：整程序合同与失败边界（A1/A9）
 

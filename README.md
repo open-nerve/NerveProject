@@ -128,6 +128,9 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
 
   六配置、runtime角色、失败/窗口及实测入口见 [P9 review](docs/v0/M4-issue-core/reviews/P9-purge-review.md)。六项目各660000行的规模原件和全部160个存活邻居读写样本见 [P9 spec附录B](docs/v0/M4-issue-core/specs/P9-purge.md)；数据只代表记录的机器/数据库/池/缓存与observer条件，M8继续承担部署与超目标规模评估。
 
+- **本地文件存储**：`files.driver=local`，`files.local.root` 默认为相对于 nerve **进程工作目录**的 `./data/files`；生产部署应通过 `NERVE_FILES__LOCAL__ROOT` 指定稳定的绝对路径，并让服务进程独占该目录。数据库备份不包含文件字节，备份时需一起保存文件根目录及签名密钥，恢复到彼此一致的时点。M5/P1 仅建立受签名保护的传输底座，用户申请上传与附件页面随后续阶段接入。
+  - 文件签名从同一 Ed25519 密钥按用途派生；保持目录和密钥后，重启不使未过期文件链接失效。换密钥或 dev/test 使用临时密钥重启后，旧上传/读取链接失效；存储文件不会因此删除。
+  - 普通 JSON 接口的请求体和期限保持原值；原始文件传输按文件大小、最低速率、空闲期限和最大时长单独约束，并有独立的并发与 IP 限流。配置项见 [M5/P1 spec](docs/v0/M5-files/specs/P1-local-storage.md#25-期限并发和配置)。
 - **设 `NERVE_ENV=prod`**。不设时 nerve 按 dev 的默认值运行：注册默认开放；没有配置签名密钥时用临时密钥，重启后已签发的访问令牌全部失效。nerve 不是 prod、却监听在本机回环地址之外时，启动日志会记一条 WARN 提醒。
 - **签名密钥**：prod 必须提供 Ed25519 私钥（PKCS#8 PEM 文件），用 `auth.jwt.private_key_file`（环境变量 `NERVE_AUTH__JWT__PRIVATE_KEY_FILE`）指向它；没有提供或读不出来时 nerve 拒绝启动，错误指出这个配置项。生成：
 

@@ -1,10 +1,44 @@
 package bootstrap
 
 import (
+	"errors"
+	"log/slog"
+	"time"
+
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/local"
 	assetapp "github.com/open-nerve/NerveProject/server/internal/modules/asset/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 )
+
+type assetComponents struct {
+	module *asset.Module
+	close  func() error
+}
+
+func newAssets(files config.FilesConfig, keys *identity.Keys, logger *slog.Logger) (assetComponents, error) {
+	if files.Driver != "local" {
+		return assetComponents{}, errors.New("files.driver must be local")
+	}
+	upload, read, err := assetMACs(keys)
+	if err != nil {
+		return assetComponents{}, err
+	}
+	store, err := local.New(local.Config{Root: files.Local.Root, SizeLimit: files.SizeLimit}, local.Deps{UploadMAC: upload, ReadMAC: read, RuntimeNow: time.Now})
+	if err != nil {
+		return assetComponents{}, err
+	}
+	module, err := asset.New(asset.Deps{
+		UploadVerifier: store, ReadVerifier: store, Uploader: store, Reader: store,
+		Files: files, RuntimeNow: time.Now, Errors: httpserver.NewAPIErrors(logger),
+	})
+	if err != nil {
+		return assetComponents{}, errors.Join(err, store.Close())
+	}
+	return assetComponents{module: module, close: store.Close}, nil
+}
 
 // assetMACs is the only composition point that selects file MAC purposes.
 // It uses already loaded keys; no storage adapter reads credentials or key files.
