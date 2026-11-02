@@ -152,3 +152,25 @@ T10已补齐API故事和首次完整本地七项，T11真实交错/资源/回滚
 - 首次credential/resource运行遇Ryuk端口未建立后容器消失，产品测试尚未开始；原件task-11-resources-first.log保留。只读Docker核验可用后正常重跑，不操作已有容器或Docker配置。
 - 四项生产行为变异均被真实PG/程序拦截：去账户首锁、错分项目门、把Host.Check移到锁外、asset在project之前。每次原字节恢复SHA一致；原件task-11-mutations.json及各日志/变异/备份。无编译红充数。
 - 最终命令为`go -C server test -p 1 -json -race ./internal/bootstrap -run 'Asset.*(Interleav|Resource|Rollback|Lock)' -count=5 -timeout=15m`：220.83秒退出0，10组各5遍，包含子测试共240个pass节点，无失败/skip/竞态/40P01；4,521输入SHA全程未变，见task-11-race-{inputs,result}.json与完整jsonl。Task结束只复核这份原始证据与源码哈希，不重复另一轮五遍测试。
+
+## 18. T12阶段证据索引（整审与最终CI待完成）
+
+以下为已运行证据的汇总，不提前勾选spec。最终七项、整审和精确CI另附收据。
+
+| 标准 | 永久测试 / 故事 | 原始证据 |
+|---|---|---|
+| A1 | 六个asset HTTP操作、TestThePermissionMatrixCoversEveryOperation、TestAssetMatrixCoverageGuards、TestContractFollowsAuthoringRules | T6–T8生成/HTTP全目录；T10六操作36矩阵单元、gen-check及完整Go |
+| A2 | TestAssetCompleteRealBytes、TestAssetCompleteRaces；F1/F3 | T7完整实物/败选/重放，T10完整E2E341项 |
+| A3 | TestAssetHostAccessRealMatrix、TestAssetDuplicateAuthorizationAndBytes；F13；撤权/密码重置交错 | T3的156角色、T8双端隐藏顺序、T10/T11 |
+| A4 | TestAssetContentLockOrder、TestAssetCopyProjectLockOrder、TestAssetSharedGateInterleaving、TestAssetMembershipInterleaving | T11真实PID/锁强度/双向先后、4变异、race五遍 |
+| A5 | TestAssetStorageDoesNotHoldResources、TestAssetSealFailureRecovery、TestAssetCompleteStorageFailures | T7候选/lease/流取消；T11三阶段资源与迟到拒绝 |
+| A6 | TestAssetDuplicateAuthorizationAndBytes、TestAssetDuplicateRevalidatesImagePurpose、TestAssetDuplicateRechecksSourceAndTarget | T8五变异、T10 F3/F13、T11复制源撤权与目标范围改变 |
+| A7 | TestAssetDeletionFollowsIssueTree、TestAssetParentJobsUseOriginalTransaction、TestAssetScopeDeletionRollback；F14/I15/I17/I21/P4/W3 | T5同步/原事务/原AtBy、T10目录全边/真实实物、T11五种COMMIT故障 |
+| A8 | TestAssetCleanupRetentionAndRuntime、TestAssetCleanupClocksAndLateObjects、TestAssetCleanupStrictBusinessBoundaries、TestAssetCleanupLateBytesAfterAcknowledgement；F15 | T5/T9双时钟、迟到对象、已确认清理回放；T10真实进程重启 |
+| A9 | TestAssetProtectedCatalogRejectsMissingAncestorsAndConstraints、TestAssetProtectedParentsProgressAndConverge、TestAssetProtectedParentDoesNotBlockWiredPurge | T4–T5直接/传递祖先、精确23503、扫描/删除分离、恢复收敛及接线反例 |
+| A10 | TestLocalInventoryPages、TestAssetCleanupBudgetResumesInsidePage、TestAssetSweepRestarts | T2真实10,000对象/10页与窗口容量；T9真实River snooze/restart与固定cutoff |
+| A11 | TestContentValidation、TestContentDimensionsAndHeaderBudget、TestContentFullStreamHash、TestContentCancellationAtEOF、TestAssetCompleteOneDeadlineAndCancellation | T1四格式/头限制/全流hash及依赖；T7/T11读者与资源释放 |
+| A12 | T12最终七项、T13 deep-review、T14准确main/归档 | 待后续完成；分支与main分别核验 |
+
+- 定向变异收据共60项：T1=4、T2=4、T3=6、T4=6、T5=7+接线1、T6=7、T7=7、T8=5、T9=9、T11=4。逐份核原始日志确有断言失败，不含编译失败、初次存活或夹具错误；task-12-mutations-verified.json保留每项命令、源码恢复依据和日志位置。没有为凑数量重放未变输入。
+- T10旧关键词纠正同时落实M2交接§1已有明确要求：Nerve生成用途不再按裸名称误报，旧Plane地址/弹窗/枚举仍被拦截；六个旧形式的实际反例另列，不计入上述60项。

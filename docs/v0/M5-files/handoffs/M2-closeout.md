@@ -44,3 +44,7 @@ M2（账户认证）的接口里，头像、封面是可为 `null` 的地址，M
 - **关闭条件**：`storage.ts` 照这个写法加入，上传的故事用它核对存储里的文件。
 
 来源：[M2 设计](../../M2-auth/M2-design.md) 13.2 中接收者含 M5 的各行；[M2/P5 spec](../../M2-auth/specs/P5-web-account.md) 第 5 节；[M0-P6 的交接](../../M2-auth/handoffs/M0-P6-e2e-notes.md)；[M2 收尾 spec](../../M2-auth/specs/closeout.md) 第 3 节。
+
+## 处理结果（M5/P2）
+
+P2已有资产表、生成AssetPurpose和真实业务/字节两段协议；按§1调整关键词的裸用途分支，旧地址/弹窗/旧枚举实际反例仍失败。§5的e2e/fixtures/storage.ts已用显式token、生成类型与独立无凭据raw传输实现。用户反向字段、头像封面UI、会话store、services删净及S3 CSP仍在P3–P7，本交接保持open。证据见[P2阶段评审](../reviews/P2-assets-review.md)，整审/集成结果仍单独核验。
