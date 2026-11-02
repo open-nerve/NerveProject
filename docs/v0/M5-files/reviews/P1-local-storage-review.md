@@ -1,6 +1,6 @@
 # M5 / P1 本地存储评审记录
 
-> 状态：T1–T9 实施与七项本地门禁完成；T10 整审、夹具修复与本地复审完成；最终远端 CI、T11 集成尚未完成。
+> 状态：T1–T9 实施与七项本地门禁完成；T10 整审、夹具修复与复审完成，追加整包预算复验中；最终远端 CI、T11 集成尚未完成。
 > T9 已按 [re-32](../../../reviews/re-32-M5文件路由方案A复核.md)落实 `/static/local`、逐段路径策略与具名开发代理；聚焦回归与完整七项本地门禁通过；阶段初审见 re-33，准确远端 CI 的唯一 server 失败按 §10 处理。
 > 分支：`codex/m5-p1`；基线：`fb3e788b7be33467018385c9a67d515e51b79dad`。原件目录为本 worktree 的 `.superpowers/sdd/P1-local-storage`，集成后补归档映射。
 
@@ -58,6 +58,8 @@ P2 承接准备件、确认/封存候选、业务权限和清理，并把 asset 
 
 设计基线 main 的 [CI 41414200682](https://github.com/open-nerve/NerveProject/actions/runs/41414200682) 已全绿且归档清理完成。P1 检查点 ecefb0bc 已推送，尚未合并；CI 41455598403 attempt 1 的 web 成功、server 失败、E2E skipped。详细日志已由连接器取得并保留，无需提取凭据；T10 修复及准确最终 CI 后按连续授权执行 T11，不以设计 CI 替代产品 CI。
 
+随后 `18906f08` 修复夹具，`0189c2ab` 补验收文档。前者运行因后续提交自动取消；后者 [CI 41460165212](https://github.com/open-nerve/NerveProject/actions/runs/41460165212) 的两次 server 均因 bootstrap 整包 600s 上限失败、web 成功、E2E skipped，asset HTTP 包两次均通过。整包预算修订与最新准确 CI 接续见 §10，不以重跑本身冒称查明环境根因。
+
 ## 8. T9 命名空间修订实施证据（2026-11-02）
 
 - `868e9a24`：asset/adapter/localprotocol 统一 `/static/local`，static 只调整保留分类，domain/app 无协议依赖。真实 storage 工作区与签发 URL 先红后绿，原根路径守卫、组合 race 和架构测试通过。
@@ -98,3 +100,9 @@ P2 承接准备件、确认/封存候选、业务权限和清理，并把 asset 
 - 明确边界：P1 不承诺主机掉电后的强持久性，也未验收 P2 业务链、S3 或第三方可写文件根。
 
 主审修复复核：18906f08 的差异仅两份测试与文档，生产输入与 T9 七门禁逐文件哈希相同；`verify-task-10-inputs.py` 验证了此边界、日志原件与文档链接。监听器仍使用真实 TCP/期限，Close 观测在底层 Close 返回后发出；退出及截断断言没有放宽。R1 本机验证通过，Linux 证明仍以最终准确 CI 为准；R3 已同步，R2 具名保留。准确 CI 收据归入本阶段原件，T11 集成后在本记录追加实际 main 与归档身份，历史失败不覆写。
+
+R1 后续 Linux 证明：run 41460165212 的 attempt 1/2 均通过 asset HTTP 包（4.240s/4.474s）。新的 R4 为组合包累计到默认 10m，不是原传输断言再现。两次被截断用例各刚运行 0s，原件 `ci-41460165212-server.log`、`ci-41460165212-attempt-2-server.log`。同一 bootstrap 输入在旧 CI 为 448.711s、本机为 344.749s，差异核对为空。
+
+R4 裁定：显式 Go 整包预算 15m、server 作业预算 20m，单项测试与生产期限保持。首次按既有环境规则重跑一次仍触顶后处理预算，不继续重跑碰运气。此为局部测试编排校正；完整本机 `make test` 与准确新 HEAD CI 重新验收。其余本地门禁的产品输入未变，验证回执明确列出两份测试、Makefile 和 CI 文件的变化，不把旧命令结果冒记为新命令结果。
+
+R4 本机复验：实际 `make test` 以 `-count=1 -timeout=15m` 完整执行 server/tools，全部通过，bootstrap 349.526s；命令展开和完整输出分别为 `task-10-test-command.log`、`task-10-full-test.log`。生产源码及其他门禁输入保持原字节；最终新 HEAD 的 CI 仍须单独核验。

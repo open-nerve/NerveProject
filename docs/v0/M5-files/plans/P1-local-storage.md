@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 > 状态：预检通过，实施中；见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。负责人已授权按既有节奏连续推进，常规预检通过后继续，不另设确认门。
-> T9 修订已授权：按[最终裁定](../reviews/P1-storage-namespace-decision.md#6-最终裁定2026-11-02)使用 `/static/local/{key}`，补路径规范化、开发代理及构建边界。T9 实现与七项本地门禁已通过，检查点 ecefb0bc 已推送，CI 41455598403 的 server 停读下载测试失败；T10 初审完成，正在修复验证夹具并取得最终准确 CI，T11 集成尚未开始。
+> T9 修订已授权：按[最终裁定](../reviews/P1-storage-namespace-decision.md#6-最终裁定2026-11-02)使用 `/static/local/{key}`，补路径规范化、开发代理及构建边界。实现、七项本地门禁和整审已完成；停读下载夹具已修并在 Linux 通过。随后整包累计触及默认 10 分钟，T10 正按明确套件预算复验，最终准确 CI 与 T11 集成尚未完成，历史失败见阶段 review。
 
 **Goal：** 建立可真实传输、检查、封存和读取的 local 存储能力，给 P2 资产用例提供经过验证的小接口。
 
@@ -170,7 +170,7 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 
 ## Task 10（T10）：deep-review、修复与复审
 
-**Files：** 本阶段全部变更与其真实调用/测试；下一编号 docs/reviews/re-NN-M5P1整体审核.md；P1 review。
+**Files：** 本阶段全部变更与其真实调用/测试；docs/reviews/re-33-M5P1整体审核.md；P1 review；Makefile/.github/workflows/ci.yml 的整包测试预算（15m/20m，单项期限不变）。
 
 - [x] Step 1：按 deep-review 完整读取逻辑、集成、测试三视角，特别复查本 plan 的六条 Review Focus 和 A1–A10；记录局部问题、结构问题和具名测试缺口。
 - [x] Step 2：局部根因自主修复，必要回归/变异并复审；若确有架构级新问题，提交已完成工作和证据再上报，不做旁路补丁。
