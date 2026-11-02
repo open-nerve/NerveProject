@@ -29,6 +29,7 @@ import {
 import { createIssue } from "../../fixtures/issues";
 import { expectListPageQuiet } from "../../fixtures/issue-list-page";
 import { answerTo, registerOnboarded } from "../../fixtures/settings-pages";
+import { watchStaticResources } from "../../fixtures/static-resources";
 import { expect, test } from "../../fixtures/test";
 
 /** A page of the frontend's router, not a file: nerve answers it with index.html. */
@@ -40,13 +41,9 @@ interface Visit {
   /** Static resources that loaded, as "<status> <url>". */
   loaded: string[];
   /** Static resources that failed: an HTTP error, or refused or aborted by the browser. */
-  failed: string[];
+  failed: () => Promise<string[]>;
   /** Requests to any origin other than nerve's; the frontend is served same-origin. */
   elsewhere: string[];
-}
-
-function isStatic(url: string): boolean {
-  return !new URL(url).pathname.startsWith("/api/");
 }
 
 /**
@@ -57,18 +54,7 @@ function isStatic(url: string): boolean {
  */
 async function open(page: Page, path: string): Promise<Visit> {
   const watch = await watchPage(page);
-  const loaded: string[] = [];
-  const failed: string[] = [];
-  page.on("response", (res) => {
-    if (isStatic(res.url())) {
-      (res.status() < 400 ? loaded : failed).push(`${res.status()} ${res.url()}`);
-    }
-  });
-  page.on("requestfailed", (req) => {
-    if (isStatic(req.url())) {
-      failed.push(`${req.failure()?.errorText} ${req.url()}`);
-    }
-  });
+  const resources = watchStaticResources(page);
   const [document] = await Promise.all([
     page.goto(path),
     page.waitForResponse((res) => new URL(res.url()).pathname === "/api/v0/instance", { timeout: 10_000 }),
@@ -77,7 +63,24 @@ async function open(page: Page, path: string): Promise<Visit> {
     throw new Error(`no document response for ${path}`);
   }
   await expect(page.getByRole("button", { name: "Go to workspace" })).toBeVisible();
-  return { document, watch, loaded, failed, elsewhere: requestsElsewhere(page, watch) };
+  // Both theme variants must really load, including the one hidden by CSS.
+  await expect
+    .poll(() =>
+      page
+        .locator('img[alt="Nerve"]')
+        .evaluateAll(
+          (images: HTMLImageElement[]) =>
+            images.length > 0 && images.every((image) => image.complete && image.naturalWidth > 0)
+        )
+    )
+    .toBe(true);
+  return {
+    document,
+    watch,
+    loaded: resources.loaded,
+    failed: resources.failures,
+    elsewhere: requestsElsewhere(page, watch),
+  };
 }
 
 /**
@@ -100,7 +103,7 @@ test("S2: a user opens the home page in a browser", async ({ page }) => {
   expect(document.headers()["content-type"]).toBe("text/html; charset=utf-8");
   expect(document.headers()["content-security-policy"]).toMatch(/^default-src 'self'; script-src 'self' 'sha256-/);
   expect(loaded).toContainEqual(expect.stringMatching(/^200 .*\/assets\/[^/]+\.js$/));
-  expect(failed).toEqual([]);
+  expect(await failed()).toEqual([]);
   expect(elsewhere).toEqual([]);
   await expectQuietSignedOut(page, watch);
 });
@@ -113,7 +116,7 @@ test("S2: a user opens a deep link directly", async ({ page, request }) => {
   expect(await document.body()).toEqual(await (await request.get("/")).body());
   // Signed out, the page behind the sign-in goes to the sign-in page, which comes back to it.
   await expect(page).toHaveURL(signInPath(deepLink));
-  expect(failed).toEqual([]);
+  expect(await failed()).toEqual([]);
   expect(elsewhere).toEqual([]);
   await expectQuietSignedOut(page, watch);
 });

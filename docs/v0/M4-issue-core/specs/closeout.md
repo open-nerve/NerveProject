@@ -1,6 +1,6 @@
 # M4 / closeout：最终验收与交接收尾
 
-状态：文档预检通过，2026-11-01 获准从 T1 开始实施。实施基线为 P16 合并后的 main `01e40e113e11365a4eeacc2794973de2751dde61`，分支 `codex/m4-closeout`，工作树 `<repo>/.codex/worktress/codex/m4-closeout`。按任务完成 C12、证据和交接，实施进度见 [验收台账](../reviews/closeout-acceptance.md)。阶段末 deep-review，先不合并；最终 main CI 和完成标记仍待后续集成授权。
+状态：T1–T12与T13最终本地验收完成；一次新上下文整分支deep-review和准确分支CI待签结。分支codex/m4-closeout，基线01e40e113e11365a4eeacc2794973de2751dde61；阶段先不合并，最终main CI和完成标记仍待集成。证据见[验收台账](../reviews/closeout-acceptance.md)与[阶段review](../reviews/closeout-review.md)。
 
 ## 1. 目标
 
@@ -118,7 +118,7 @@ LAN HTTP 复制覆盖原十二入口和 `useCopyLink` / `useCopyText` 真实路�
 | D17 | 规模估计与实际对照 | T1/T13 | 分阶段与本收尾计划/实改文件和行数、差异原因 |
 | D18 | 总体设计9.4为已完成 | T14（集成后） | 完成标记提交、最终mainSHA/三作业success、归档清理收据 |
 
-- [ ] 上述十八项各自附证据；无隐含跳过、未解释失败或悬空转交。
+- [x] 上述十八项各自附分支证据或明确的集成待办；无隐含跳过、未解释失败或悬空转交，D18及最终main绑定仍未完成。
 - [ ] 全M4与closeout整审及局部复审完成；发现按根因闭环。
 - [ ] 最终集成与归档后，M4总完成条件全部成立。
 

@@ -94,3 +94,7 @@ T10 至少 15 个有效变异必须逐个具有业务断言失败、源码恢复
 | M18 | draft publish 绕过 payload 锁后重读 | `TestDraftPublishUsesPayloadAfterPatchWait` | 候选未抽取，不计完成数；正向/交错证据见 §2–4 |
 
 两 worker 源码都恢复到 `f50129aa848f5bdd4253077c15669874e4d5f3542e87ad7ffe7171049b210a22`；每次 diff、变异输入、失败原文、恢复 hash 分别保存。恢复后完整 registration 23 子例通过，接着 26 交错在同一原态输入跑完；没有把变异留在提交内。
+
+## 6. T13 最终绑定
+
+上文是T3当时快照；后来T8/T9规模、T4及最终clock/I10/I21页面已完成。六份race收据与24个有效变异的失败日志、恢复目标/控制源码在`t13-evidence-binding.json`逐hash复核，最终F全Go测试与三引擎C12通过。列表cells物化由T8快照/race覆盖，R01/R02/R03分别有后置race。当前只待获准后的main绑定，完整范围与局限见[收尾review](closeout-review.md)。

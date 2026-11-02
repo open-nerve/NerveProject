@@ -33,8 +33,8 @@ afterEach(async () => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-async function mount(content: string, editable = true) {
-  const editor = await createEditor({ content, editable });
+async function mount(content: string) {
+  const editor = await createEditor({ content });
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
@@ -68,10 +68,25 @@ it("opens only the clicked editor's block actions and duplicates only its select
 });
 
 it("does not open block mutation controls for a read-only editor", async () => {
-  const current = await mount("<p>Read only</p>", false);
+  const current = await mount("<p>Read only</p>");
+  await act(async () => current.editor.setEditable(false));
+  expect(current.editor.view.dom.parentElement!.querySelector("#drag-handle")).toBeNull();
+  expect(current.handle.isConnected).toBe(false);
   await act(async () => current.handle.click());
   expect(named("Delete")).toHaveLength(0);
   expect(current.api.isAnyDropbarOpen()).toBe(false);
+  await act(async () => current.editor.setEditable(true));
+  const restored = current.editor.view.dom.parentElement!.querySelector<HTMLButtonElement>("#drag-handle")!;
+  expect(restored).not.toBeNull();
+  await act(async () => restored.click());
+  await act(async () => named("Duplicate")[0].click());
+  expect(current.editor.state.doc.childCount).toBe(2);
+});
+
+it("does not mount an invisible keyboard stop when the editor starts read-only", async () => {
+  const editor = await createEditor({ content: "<p>Archived content</p>", editable: false });
+  expect(editor.getText()).toBe("Archived content");
+  expect(editor.view.dom.parentElement!.querySelector("#drag-handle")).toBeNull();
 });
 
 it.each(["outside", "unmount"] as const)("releases the public dropbar state after %s dismissal", async (exit) => {

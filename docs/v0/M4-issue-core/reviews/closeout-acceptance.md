@@ -1,6 +1,6 @@
 # M4 收尾验收台账
 
-状态：T1–T9、T11/T12已完成；T10源码审查与修复完成、最终C12绑定留T13。T13五项无Docker门禁通过；三引擎C12/Go全测/默认E2E因Docker服务中断待恢复。最终main CI、M4§14全勾和总体§9.4完成标记仍待集成。
+状态：分支实施验收完成，整分支终审与最终CI签结中；不合并。D18、最终main绑定及完成标记保持待集成。
 
 基线 `01e40e113e11365a4eeacc2794973de2751dde61`；实施起点 `726f7156c2a053bd67fba1bfcaef5541df347749`；全期范围 `1eb9686a6ca527984337821af5fa7efae8c620e2..候选HEAD`。主目录 main 保持不动。P16 main CI [41290496985](https://github.com/open-nerve/NerveProject/actions/runs/41290496985) 和本分支预检 CI [41293001954](https://github.com/open-nerve/NerveProject/actions/runs/41293001954) 均为准确 SHA、attempt 1、success。
 
@@ -14,24 +14,24 @@
 
 | ID | 范围 | Owner | 当前证据与结论 |
 |---|---|---|---|
-| D01 | I1–I22适用的页面/API/任务版本与全部增长断言、S1/S2在CI通过 | T1/T4/T13/T14 | T4 [22故事增长](closeout-web-contracts.md#1-二十二故事的实际观察)与默认284项通过；最终候选/main CI待T13/T14 |
-| D02 | 完整权限矩阵/访客一致性/26交错、拒绝不取锁、真实池与503 | T2/T3/T9/T10 | T2/T3 权限与26交错通过：43测试各5次、零skip/race/40P01；[直接证据](closeout-server-contracts.md)。T9真实10连接/K2/queue64、200并发及78次无关读通过，见[规模](closeout-performance.md#5-删除与热项目连接池)；T10复审待验 |
-| D03 | issue与project双向公开码、access判定/规则/操作目录/矩阵齐全 | T3/T13 | T3 operation/规则/矩阵/双向公开码通过，见[§2/§4](closeout-server-contracts.md)；T13最终门禁待验 |
-| D04 | 21个合法排序码（含各自升降取值，sort_order仅升序）/筛选/分组/续页/共享fixture/游标可见性/100k/连接设置/9反例 | T3/T4/T8 | T3 Go排序/游标/分组性质通过，数值计数skip替代证据见[§1/§4](closeout-server-contracts.md)；T4页面排序/分组/筛选增长与默认E2E通过，见[Web合同](closeout-web-contracts.md)；T8三规模39场景及runtime双连接通过，[规模实测与局部修复](closeout-performance.md) |
-| D05 | 事务投递提交/回滚、两类缺worker变异、registrationRows、固定时钟/无固定余量 | T3/T10/T13 | T3实际InsertTx/river_job、两类漏worker变异与恢复通过，见[§4/§5](closeout-server-contracts.md)；T4 clock故事/T13待验 |
-| D06 | P7出站IANA/DNS/固定IP/每跳重检/本机地址与I10 blocked | T3/T6/T10 | T3出站每跳固定IP/危险分支零dial通过，见[§4](closeout-server-contracts.md)；T6页面/T13待验 |
-| D07 | purge目录/外键/I21、删除窗口/交错24/25/M3有限轮询 | T3/T9/T13 | T3 catalog/runtime/删除窗口/L24/L25通过，已批准迟到重试单列，见[§4](closeout-server-contracts.md)；T9七个软删job一次完成、一次runtime清理660,026行且59天/活行不变，见[规模](closeout-performance.md#6-一次真实物理清理)；T13待验 |
-| D08 | 七门禁、架构/SQLCSchemaScope/grants双测/CLI/keywords/lint/knip/gen | T4/T9/T13/T14 | T4与T9七门禁通过；T9 E2E 297/297，见[命令收据](closeout-performance.md#7-t9收据与后续边界)。T13最终候选/T14 mainCI待验 |
-| D09 | 八决策/十一架构问题已批准并落实 | T1/T10 | 通过；[八决策/十一架构与最终实现](#15-d09-批准决定与最终实现)逐项核对，无重开未经批准合同 |
-| D10 | §13.1逐项/8输入closed；§13.2四输出及原文/收集箱细节 | T12/T13 | T12实施完成：[逐条交接](closeout-handoffs.md)，205原条款/43结论、36阶段移交分别核对；8输入closed、4输出open，1237链接有效，两段原文逐字相同且历史正文保留。最终整审/T13输入绑定待验 |
-| D11 | §3.23每行、§4.17每行、frontend M4、README§8.8 | T11 | T11完成[44同步/45差异映射](closeout-sync.md)：43同步已核、SYNC44集成待办；目标段/原文/hash齐全 |
-| D12 | C1–C12各Phase有证据，C12最终三引擎 | T5/T6/T7/T13/T14 | T5–T7候选验收通过：原125+新增13项/引擎，21组×3与730个截图记录（T6含一张未完成中文例的部分状态）已看；[逐格记录](closeout-browser-matrix.md)。T13最终输入/T14 main绑定待办 |
-| D13 | M4 dead无未解释行；全仓no-shadow零/error；cap实数下降 | T11/T13 | T11静态检查通过：[当前354/102来源、历史52逐名](closeout-dead-members.md)，全仓797/328/2；14范围86告警，M4域及全期2124触及路径零诊断，no-shadow零/error；T13最终输入复核待办 |
-| D14 | M4挂载零旧/无权请求、S2四身份、copy-hook无M4例外、13实例清空 | T4/T5/T6/T7/T11 | T4 S2四身份精确请求/重复数、76规则13例外无命中、13历史实例AST为零；见[§3](closeout-web-contracts.md#3-s1s2-与旧实例)。C12/T11终核待验 |
-| D15 | await后跳转/提示核会话，改动hook有换账户兑现测试，C11 | T4/T7/T10 | T4全期hook/调用方映射、复制晚答与归档地址缺口已红绿修复，见[§2](closeout-web-contracts.md#2-等待后的会话与宿主)；T7/C11页面三引擎通过，旧范围迟到结果无副作用；T10复审待验 |
-| D16 | 列表10k/20k/100k、中文两字搜索、规模删除请求/任务、一次清理并交M8 | T8/T9/T12 | T8列表39+搜索13场景通过，首+5warm与原始失败/计划已留存；[实测](closeout-performance.md)。T9规模删除/连接池/清理及三项有效负例通过，见同表§5–7；T12已完整移交[M8-05](../../M8-open-release/handoffs/M4-closeout.md#M8-05)及部署/池等待边界；T13最终输入等价待核 |
-| D17 | 规模估计与实际对照 | T1/T13 | 待验；分阶段与本收尾计划/实改文件和行数、差异原因 |
-| D18 | 总体设计9.4为已完成 | T14（集成后） | 待验；完成标记提交、最终mainSHA/三作业success、归档清理收据 |
+| D01 | I1–I22适用的页面/API/任务版本与全部增长断言、S1/S2在CI通过 | T1/T4/T13/T14 | 分支范围通过：[22故事增长](closeout-web-contracts.md#1-二十二故事的实际观察)、最终默认E2E及三引擎C12见[review](closeout-review.md)；准确分支CI由final-delivery.json签结，最终main CI待T14 |
+| D02 | 完整权限矩阵/访客一致性/26交错、拒绝不取锁、真实池与503 | T2/T3/T9/T10 | 通过：T2/T3矩阵与26交错，43测试各5次、零skip/race/意外40P01；[直接证据](closeout-server-contracts.md)。T9真实10连接/K2/queue64、200并发及78次无关读，[规模](closeout-performance.md#5-删除与热项目连接池)；T10复核、最终F与六份race输入绑定已核 |
+| D03 | issue与project双向公开码、access判定/规则/操作目录/矩阵齐全 | T3/T13 | 通过：operation/规则/矩阵/issue与project双向公开码，[直接证据](closeout-server-contracts.md)；最终F全部Go包和架构门禁通过 |
+| D04 | 21个合法排序码（含各自升降取值，sort_order仅升序）/筛选/分组/续页/共享fixture/游标可见性/100k/连接设置/9反例 | T3/T4/T8 | 通过：Go/前端排序、游标、分组、筛选、共享fixture和九反例；T8三规模39场景及runtime双连接，[实测与代价](closeout-performance.md)；最终F和C12原故事全部保留 |
+| D05 | 事务投递提交/回滚、两类缺worker变异、registrationRows、固定时钟/无固定余量 | T3/T10/T13 | 通过：实际InsertTx/river_job、两类漏worker有效变异及源码恢复；[服务端](closeout-server-contracts.md)、最终clock生命周期/I16/I21和F；业务clock与River实时时间不混用 |
+| D06 | P7出站IANA/DNS/固定IP/每跳重检/本机地址与I10 blocked | T3/T6/T10 | 通过：IANA每网段首尾、DNS全部候选/每跳固定IP/本机危险分支零dial，[服务端](closeout-server-contracts.md)；I10真实页面blocked/metadata及最终三引擎C12 |
+| D07 | purge目录/外键/I21、删除窗口/交错24/25/M3有限轮询 | T3/T9/T13 | 通过：catalog/runtime/删除窗口/L24/L25与已批准迟到重试边界；[服务端](closeout-server-contracts.md)；T9七job一次完成、真实清理660026行且59天/活行保留；最终I21/F通过 |
+| D08 | 七门禁、架构/SQLCSchemaScope/grants双测/CLI/keywords/lint/knip/gen | T4/T9/T13/T14 | 分支本地七门禁通过，精确argv/exit/输入/log hash与实际计数见[review](closeout-review.md)及t13-F-summary.json；分支CI另核准确HEAD，main CI待T14 |
+| D09 | 八决策/十一架构问题已批准并落实 | T1/T10 | 通过：[八决策/十一架构逐项实现与证据](#15-d09-批准决定与最终实现)；R06按负责人批准A落地，没有未经批准的合同变动 |
+| D10 | §13.1逐项/8输入closed；§13.2四输出及原文/收集箱细节 | T12/T13 | 通过：[交接索引](closeout-handoffs.md)，205原条款/43结论、36阶段移交核对；8输入closed、4输出open；M2/M0两段原文逐字相同、历史正文保留；最终链接/输入再核 |
+| D11 | §3.23每行、§4.17每行、frontend M4、README§8.8 | T11 | 分支可执行内容通过：[44同步/45差异](closeout-sync.md)，43同步已核、SYNC44为最终集成状态；目标段/原文/hash齐全，README及前端M4边界已同步 |
+| D12 | C1–C12各Phase有证据，C12最终三引擎 | T5/T6/T7/T13/T14 | 分支C12通过：[21组×3引擎](closeout-browser-matrix.md)，最终逐项167项/引擎无skip/flaky，Chromium整轮加整份I18补验；历史730图已看，最终增量57状态/引擎及各组代表图另签。完整原始附件保留，main等价待T14 |
+| D13 | M4 dead无未解释行；全仓no-shadow零/error；cap实数下降 | T11/T13 | 通过：[354行/102来源](closeout-dead-members.md)、历史52逐名；最终AST同名行一致，仅1处import使行号移动；14范围86告警、M4和全期触及路径零诊断，no-shadow零/error；最终lint/knip通过 |
+| D14 | M4挂载零旧/无权请求、S2四身份、copy-hook无M4例外、13实例清空 | T4/T5/T6/T7/T11 | 通过：S2四身份精确请求/重复数、76规则13例外无命中、13历史实例AST为零；[Web合同](closeout-web-contracts.md#3-s1s2-与旧实例)、最终三引擎C12与lint/knip；copy-hook无M4例外 |
+| D15 | await后跳转/提示核会话，改动hook有换账户兑现测试，C11 | T4/T7/T10 | 通过：[异步hook/调用方](closeout-web-contracts.md#2-等待后的会话与宿主)、复制晚答/路由缺口红绿、R06失权与热ID/兄弟菜单；最终C11及29项整审页面补验保持旧范围晚答无副作用 |
+| D16 | 列表10k/20k/100k、中文两字搜索、规模删除请求/任务、一次清理并交M8 | T8/T9/T12 | 通过：[T8列表39/搜索13、T9删除/池/清理](closeout-performance.md)，原测量及三有效负例保留；[M8-05](../../M8-open-release/handoffs/M4-closeout.md#M8-05)完整接收代价。t13-performance-equivalence.json证实工作负载/运行SQL等价，不声称新二进制重测 |
+| D17 | 规模估计与实际对照 | T1/T13 | 通过：[review§5](closeout-review.md#5-最终实现与计划的差异规模)，各Phase最终plan任务/有行估计数与first-parent增删逐项对照；手写、生成/锁和文档分列，不补造历史估计 |
+| D18 | 总体设计9.4为已完成 | T14（集成后） | 待获准集成：验收内容mainCI通过后另worktree写完成标记，再--no-ff合入并核最终mainCI，归档复验/正常清理；本分支不提前标完成 |
 
 ## 3. 二十二个故事与增长断言
 
@@ -39,28 +39,28 @@
 
 | ID | 故事 | 当前测试入口 | Owner/状态 |
 |---|---|---|---|
-| I1 | 创建工作项 | [i1-create-issue.spec.ts](../../../../e2e/stories/issue/i1-create-issue.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I2 | 在详情页改每个字段 | [i2-description.spec.ts](../../../../e2e/stories/issue/i2-description.spec.ts)、[i2-update-issue.spec.ts](../../../../e2e/stories/issue/i2-update-issue.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I3 | 列表与看板：分组、子分组 | [i3-list-groups.spec.ts](../../../../e2e/stories/issue/i3-list-groups.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I4 | 表格排序与日历 | [i4-list-order-calendar.spec.ts](../../../../e2e/stories/issue/i4-list-order-calendar.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I5 | 筛选与显示设置的保存 | [i5-list-preferences.spec.ts](../../../../e2e/stories/issue/i5-list-preferences.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I6 | 在看板上拖动（总体设计 8.2 的示例） | [i6-board-order.spec.ts](../../../../e2e/stories/issue/i6-board-order.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I7 | 快速添加 | [i7-quick-add.spec.ts](../../../../e2e/stories/issue/i7-quick-add.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I8 | 子工作项 | [i8-sub-issues.spec.ts](../../../../e2e/stories/issue/i8-sub-issues.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I9 | 关联 | [i9-relations.spec.ts](../../../../e2e/stories/issue/i9-relations.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I10 | 链接与元数据 | [i10-links.spec.ts](../../../../e2e/stories/issue/i10-links.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I11 | 评论与表情回应 | [i11-comments-reactions.spec.ts](../../../../e2e/stories/issue/i11-comments-reactions.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I12 | 操作动态的时间线 | [i12-activity.spec.ts](../../../../e2e/stories/issue/i12-activity.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I13 | 描述的历史与还原 | [i13-description-history.spec.ts](../../../../e2e/stories/issue/i13-description-history.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I14 | 草稿发布 | [i14-drafts.spec.ts](../../../../e2e/stories/issue/i14-drafts.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I15 | 归档、恢复与归档页 | [i15-archive-issue.spec.ts](../../../../e2e/stories/issue/i15-archive-issue.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I16 | 自动归档 | [i16-auto-archive.spec.ts](../../../../e2e/stories/issue/i16-auto-archive.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I17 | 删除（连同子树） | [i17-catalog.spec.ts](../../../../e2e/stories/issue/i17-catalog.spec.ts)、[i17-delete-issue.spec.ts](../../../../e2e/stories/issue/i17-delete-issue.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I18 | 搜索 | [i18-search.spec.ts](../../../../e2e/stories/issue/i18-search.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I19 | 个人主页的工作项 | [i19-member-issues.spec.ts](../../../../e2e/stories/issue/i19-member-issues.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I20 | 访客的边界（权限矩阵的页面抽样，9.2） | [i20-guest-boundary.spec.ts](../../../../e2e/stories/issue/i20-guest-boundary.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I21 | 物理清理 | [i21-purge.spec.ts](../../../../e2e/stories/issue/i21-purge.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
-| I22 | 工作项页上的会话切换 | [i22-session-switch.spec.ts](../../../../e2e/stories/issue/i22-session-switch.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，C12/main待验 |
+| I1 | 创建工作项 | [i1-create-issue.spec.ts](../../../../e2e/stories/issue/i1-create-issue.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I2 | 在详情页改每个字段 | [i2-description.spec.ts](../../../../e2e/stories/issue/i2-description.spec.ts)、[i2-update-issue.spec.ts](../../../../e2e/stories/issue/i2-update-issue.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I3 | 列表与看板：分组、子分组 | [i3-list-groups.spec.ts](../../../../e2e/stories/issue/i3-list-groups.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I4 | 表格排序与日历 | [i4-list-order-calendar.spec.ts](../../../../e2e/stories/issue/i4-list-order-calendar.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I5 | 筛选与显示设置的保存 | [i5-list-preferences.spec.ts](../../../../e2e/stories/issue/i5-list-preferences.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I6 | 在看板上拖动（总体设计 8.2 的示例） | [i6-board-order.spec.ts](../../../../e2e/stories/issue/i6-board-order.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I7 | 快速添加 | [i7-quick-add.spec.ts](../../../../e2e/stories/issue/i7-quick-add.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I8 | 子工作项 | [i8-sub-issues.spec.ts](../../../../e2e/stories/issue/i8-sub-issues.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I9 | 关联 | [i9-relations.spec.ts](../../../../e2e/stories/issue/i9-relations.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I10 | 链接与元数据 | [i10-links.spec.ts](../../../../e2e/stories/issue/i10-links.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I11 | 评论与表情回应 | [i11-comments-reactions.spec.ts](../../../../e2e/stories/issue/i11-comments-reactions.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I12 | 操作动态的时间线 | [i12-activity.spec.ts](../../../../e2e/stories/issue/i12-activity.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I13 | 描述的历史与还原 | [i13-description-history.spec.ts](../../../../e2e/stories/issue/i13-description-history.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I14 | 草稿发布 | [i14-drafts.spec.ts](../../../../e2e/stories/issue/i14-drafts.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I15 | 归档、恢复与归档页 | [i15-archive-issue.spec.ts](../../../../e2e/stories/issue/i15-archive-issue.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I16 | 自动归档 | [i16-auto-archive.spec.ts](../../../../e2e/stories/issue/i16-auto-archive.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I17 | 删除（连同子树） | [i17-catalog.spec.ts](../../../../e2e/stories/issue/i17-catalog.spec.ts)、[i17-delete-issue.spec.ts](../../../../e2e/stories/issue/i17-delete-issue.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I18 | 搜索 | [i18-search.spec.ts](../../../../e2e/stories/issue/i18-search.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I19 | 个人主页的工作项 | [i19-member-issues.spec.ts](../../../../e2e/stories/issue/i19-member-issues.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I20 | 访客的边界（权限矩阵的页面抽样，9.2） | [i20-guest-boundary.spec.ts](../../../../e2e/stories/issue/i20-guest-boundary.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I21 | 物理清理 | [i21-purge.spec.ts](../../../../e2e/stories/issue/i21-purge.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
+| I22 | 工作项页上的会话切换 | [i22-session-switch.spec.ts](../../../../e2e/stories/issue/i22-session-switch.spec.ts) | T4源码/增长及默认E2E通过；[直接映射](closeout-web-contracts.md#1-二十二故事的实际观察)，最终C12已通过；main待集成 |
 
 ## 4. 二十六个交错
 
@@ -195,18 +195,18 @@ T3 逐项绑定具名测试、子例、真实锁/闸门观察及五次 race 执�
 
 | 编号 | 原阶段 | 当前验收位置 |
 |---|---|---|
-| C1 | P12 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
-| C2 | P13 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
-| C3 | P12、P14 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
-| C4 | P14 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
-| C5 | P14 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
-| C6 | P15 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
-| C7 | P15 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
-| C8 | P15 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
-| C9 | P13、P15 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
-| C10 | P14 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
-| C11 | P14 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
-| C12 | 收尾 | T5–T7；[最终矩阵](closeout-browser-matrix.md)，待验；完整合同见原文清单 |
+| C1 | P12 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
+| C2 | P13 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
+| C3 | P12、P14 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
+| C4 | P14 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
+| C5 | P14 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
+| C6 | P15 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
+| C7 | P15 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
+| C8 | P15 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
+| C9 | P13、P15 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
+| C10 | P14 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
+| C11 | P14 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
+| C12 | 收尾 | T5–T7历史观察＋T13最终候选补验通过；[逐格及视觉边界](closeout-browser-matrix.md)，main绑定待T14 |
 
 ## 7. 阶段遗留与输入交接
 
@@ -308,6 +308,7 @@ WebKit补验到4项通过时Docker socket消失，登录/DB连接继而失败；
 T7三引擎各53唯一项加S2四身份补验通过；合并T5/T6后138项/引擎、原375项全覆盖。`t7-coverage.json`保留每个file/title/id/project的最终成功来源、失败尝试收据、产品等价与72项真实LAN原生返回值。完整三引擎矩阵见[浏览器台账](closeout-browser-matrix.md#t7-协作搜索与-lan-验收)。
 
 本任务只补E2E观察与有手势LAN路径，无生产修改。Chromium初次toast文本重复、命令末尾句号的断言问题已修正；Firefox警告核对真实eval调用位置及完整文案，未忽略意外console。240图由控制者在27张比较索引及3张额外原图逐张核查，含I16系统归档/成员恢复的六张原附件。源码输入/日志hash与全部原始trace留存。D12为候选验收完成，最终输入等价、mainCI及集成签结不提前标完成。
+
 
 ## 15. D09 批准决定与最终实现
 

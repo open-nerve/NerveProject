@@ -85,6 +85,16 @@ test("C12 (review): keyboard and pointer block actions target their own block, r
   await c12Evidence(page, "B14", "review-pointer-duplicates-first-block");
   expect((await issueArchived(api, seed.member.token, issue.id)).status).toBe(200);
   await page.reload();
+  // Absence alone also passes while the detail's lazy editor has not mounted.
+  const archivedEditor = container.locator(".tiptap");
+  await expect(archivedEditor).toBeVisible();
+  await expect(archivedEditor).toHaveAttribute("contenteditable", "false");
+  await expect(archivedEditor.locator(":scope > p")).toHaveText([
+    "First block",
+    "First block",
+    "Second block",
+    "Second block",
+  ]);
   await expect(container.locator('[contenteditable="true"]')).toHaveCount(0);
   await expect(menu).toHaveCount(0);
   await expect(container.getByRole("button", { name: "Block actions", exact: true })).not.toBeVisible();
@@ -360,6 +370,18 @@ test("C12 (review): named bubble formatting preserves text color while clearing 
   await page.getByRole("button", { name: "Background color: Green", exact: true }).click();
   await expect(editor.locator("[data-text-color='pink']")).toBeVisible();
   await expect(editor.locator("[data-background-color='green']")).toBeVisible();
+  const colorTrigger = page.getByRole("button", { name: "Color", exact: true });
+  const colors = page.getByRole("dialog").filter({ hasText: "Text colors" });
+  // A swatch must keep its anchor visible throughout the command, not hide it and
+  // reopen later at the editor's debounced update (which sends the panel to 0,0).
+  expect(await colorTrigger.isVisible()).toBe(true);
+  await expect
+    .poll(async () => {
+      const trigger = await colorTrigger.boundingBox();
+      const panel = await colors.boundingBox();
+      return !!trigger && !!panel && Math.abs(panel.x - trigger.x) < 16 && panel.y >= trigger.y;
+    })
+    .toBe(true);
   await c12Evidence(page, "B14", "review-named-color-controls");
   expect(
     (

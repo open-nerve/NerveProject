@@ -394,9 +394,11 @@ test("I18 (page): Back and reopening the same query retire the previous project 
   const betaIssue = await createIssue(api, seed.member.token, beta.id, { name: "Other project" });
   const watch = await openIssueDetail(page, seed, old);
   const path = `/api/v0/workspaces/${seed.slug}/issue-search`;
-  await openCommands(page);
   const fetched = deferred<void>();
+  // Install interception before the modal starts its font request; switching Chromium's
+  // interception on mid-request can leave document.fonts.ready pending during capture.
   const release = await holdAnswer(page, "GET", path, 1, () => fetched.resolve());
+  await openCommands(page);
   await page.getByRole("combobox").fill("needle");
   await fetched.promise;
   let released = false;

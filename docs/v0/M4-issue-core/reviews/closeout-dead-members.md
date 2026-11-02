@@ -583,3 +583,7 @@ EditorRefApi 保留 P14 公开 ref 协议：实现由 useImperativeHandle 提供
 | E13 | copy-hook / `web/apps/web/core/components/web-hooks/form/secret-key.tsx` / `copyTextToClipboard(` | 47 | M8/closeout |
 
 迭代 analytics 的服务与传输测试同时归 M6；M6/M7 的复制入口和 M8 Webhook 密钥复制必须迁移现有安全 hook，来源注释保留到 M9。后续交接保留这些精确读者与期限，不把例外数量写成任意豁免。
+
+## T13 最终复核
+
+`dead-audit-final-4/`复用原脚本：全仓797成员/328属性/2导出，M4仍354行/102来源；与本表逐名一致，仅editor-menu-accessibility.test.tsx新增import使children行号13→14。14个lint范围仍86告警、M4及全期触及路径零诊断，no-shadow零/error；`t13-evidence-binding.json`、`t13-final2-lint-audit-results.json`及最终lint/knip保留证据。

@@ -279,7 +279,7 @@ P16 分支 `codex/m4-p16`，worktree `.codex/worktress/codex/m4-p16`，基线 ma
 
 最终控制者全路径C12、M4设计§3.23/§14、总体9.4、规模数字、八份输入顶部关闭和M5–M8最终M4-closeout仍留独立收尾；P16通过不等于M4已完成。
 
-## 28. 当前接续：P16 完成、M4 收尾文档预检（2026-11-01）
+## 28. 历史接续：P16 完成、M4 收尾文档预检（2026-11-01）
 
 P16 最终 `582694d96303f11cf57568f8c84edd3006a36752` 已经授权 `--no-ff` 合入 main `01e40e113e11365a4eeacc2794973de2751dde61`；[main CI 41290496985](https://github.com/open-nerve/NerveProject/actions/runs/41290496985) attempt1 server/web/e2e全绿，E2E284/284。2,432文件、320,408,795字节及18空目录归档逐hash核验，P16本地/远端分支和worktree正常清理，清理后复验通过。[P16回执与稳定归档入口](../M4-issue-core/reviews/P16-web-cleanup-review.md#23-授权合并main-ci-与归档清理2026-11-01)。
 
@@ -287,7 +287,7 @@ P16 最终 `582694d96303f11cf57568f8c84edd3006a36752` 已经授权 `--no-ff` 合
 
 **2026-11-01 已获准实施。** 从 T1 顺序执行，phase 已改为 M4/closeout，范围及原文来源见 [验收台账](../M4-issue-core/reviews/closeout-acceptance.md)，C12 见 [最终矩阵](../M4-issue-core/reviews/closeout-browser-matrix.md)。T1 已固定 22 故事、26 交错、44 同步行、45 差异行、C1–C12、18 完成条款、18 Phase 两类来源与八输入；lint-web 通过。其他条目按实际证据推进，不预签结。阶段末 deep-review 后先不合并，T14 仅准备集成包；最终 main CI、M4 §14 全勾和总体 §9.4 完成标记仍需后续集成。准备证据保留在主目录 `.superpowers/sdd/M4-closeout-preparation-20261101/`，本次实施证据在 worktree `.superpowers/sdd/M4-closeout/`，技能进度在 `.superpowers/sdd/closeout/`，未来均须归档。
 
-## 29. M4 收尾实施：R06 已获批准，继续 T10
+## 29. 历史接续：M4 收尾实施：R06 已获批准，继续 T10
 
 T1–T9 已完成，C12 三引擎与规模测量证据已保留。T10 全 M4 deep-review 已修复 R01–R05，R01–R05 产品检查点 `83543d5f29cda1e76fc99df3885ddc54ecd47a3f`；审查仍未完成。
 
@@ -297,7 +297,7 @@ R06 复现：先读取项目详情，再让完整项目目录不再包含该私�
 
 分支 `codex/m4-closeout`，收尾基线 `01e40e113e11365a4eeacc2794973de2751dde61`；主目录保持 main。历史停报提交 `0d1983f1f11fa51dda1ba521bbc87ccc005704f0` 的 CI `41318564500` attempt 1 三作业全绿，新修复不冒用该结果。继续 T10 剩余完整审查与 T11–T14 Step 1；C12 最终输入、最终完整 F、准确分支 CI 和 fresh-context 分支审查尚未收口。D18、完成标记和 main CI 仍留待未来获准集成，不合并、不清理当前分支或 worktree。
 
-## 30. M4 收尾最终候选与环境中断（2026-11-02）
+## 30. 历史接续：M4 收尾最终候选与环境中断（2026-11-02）
 
 分支`codex/m4-closeout`，基线/main仍`01e40e113e11365a4eeacc2794973de2751dde61`。T1–T9与T11/T12完成，T10全期源码审查、24有效反证和R01–R34修复已核，最后C12绑定留T13。八输入closed、M5–M8四输出open；19项批准决定映射已补[验收台账](../M4-issue-core/reviews/closeout-acceptance.md#15-d09-批准决定与最终实现)。
 
@@ -306,3 +306,9 @@ T13新增29项三引擎补验；Chromium首轮167全过，Firefox发现两产品
 生成检查、Go lint、Web lint54/54、knip、无缓存Web全测18/18任务均通过；313个vitest文件3374项与api-client原生5项、零skip。源码/收据共同输入`a300f2074adc7556eb3e57d34ab5c1eb0d2b1721a19f6a2f9d41b86ff2d97fe4`，当前二进制`t13-build-6`。原始日志/trace、失败和准备草稿在`.superpowers/sdd/M4-closeout/`，进度仍在`.superpowers/sdd/closeout/`。
 
 恢复后完成最终三引擎、Go全测和默认E2E；实际看图/输入绑定、七节review和D17规模终表、一次新上下文整分支deep-review、精确分支CI随后签结。T14只准备集成包，M4§14/总体9.4、main绑定和归档清理均等待之后授权。不能把当前静态门禁或旧检查点CI当最终通过。
+
+## 31. 当前接续：M4 收尾最终本地验收通过（2026-11-02）
+
+负责人恢复Docker后，T13完成最终候选的七项本地门禁及三引擎C12各167项、无skip/flaky（Chromium整轮加整份I18补验，另两引擎完整新轮）。R35静态图片重启分类、R36选色焦点和R37只读拖柄已在根因处修复，失败和有效红绿证据保留。[阶段review](../M4-issue-core/reviews/closeout-review.md)、[全M4审查](../../reviews/re-29-M4整体审核.md)、[收尾分支审查](../../reviews/re-30-M4收尾整体审核.md)分别记范围与结果；准确提交和CI随后由外置final-delivery.json核准。
+
+T1–T12和T13本地验收完成；一次fresh-context整分支deep-review与准确分支CI尚待签结。八输入已closed，M5–M8四输出open是接收方后续工作。T14只准备可评审的集成包，分支codex/m4-closeout和worktree保持，main仍01e40e113e11365a4eeacc2794973de2751dde61；M4§14、总体9.4完成标记、最终main CI和归档清理均不提前执行。两个证据根及技能台账完整保留。

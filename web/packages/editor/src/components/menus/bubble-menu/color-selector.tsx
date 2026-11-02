@@ -7,7 +7,7 @@
 import type { Editor } from "@tiptap/react";
 import { Ban } from "lucide-react";
 import { TextOutline } from "@makeplane/propel/icons";
-import { useMemo } from "react";
+import { useMemo, type MouseEvent } from "react";
 // nerve utils
 import { cn } from "@nerve/utils";
 // constants
@@ -22,6 +22,10 @@ type Props = {
   editor: Editor;
   editorState: EditorStateType;
 };
+
+// These portal buttons must not blur the editor during pointer commands: the bubble
+// menu is their anchor. Keyboard focus remains available through the native buttons.
+const preserveEditorFocus = (event: MouseEvent<HTMLButtonElement>) => event.preventDefault();
 
 export function BubbleMenuColorSelector(props: Props) {
   const { editor, editorState } = props;
@@ -78,6 +82,7 @@ export function BubbleMenuColorSelector(props: Props) {
                 style={{
                   backgroundColor: color.textColor,
                 }}
+                onMouseDown={preserveEditorFocus}
                 onClick={() => TextColorItem(editor).command({ color: color.key })}
               />
             ))}
@@ -85,6 +90,7 @@ export function BubbleMenuColorSelector(props: Props) {
               type="button"
               aria-label="Clear text color"
               className="grid size-6 flex-shrink-0 place-items-center rounded-sm border-[0.5px] border-strong-1 text-tertiary transition-colors hover:bg-layer-1"
+              onMouseDown={preserveEditorFocus}
               onClick={() => TextColorItem(editor).command({ color: undefined })}
             >
               <Ban className="size-4" />
@@ -104,6 +110,7 @@ export function BubbleMenuColorSelector(props: Props) {
                 style={{
                   backgroundColor: color.backgroundColor,
                 }}
+                onMouseDown={preserveEditorFocus}
                 onClick={() => BackgroundColorItem(editor).command({ color: color.key })}
               />
             ))}
@@ -111,6 +118,7 @@ export function BubbleMenuColorSelector(props: Props) {
               type="button"
               aria-label="Clear background color"
               className="grid size-6 flex-shrink-0 place-items-center rounded-sm border-[0.5px] border-strong-1 text-tertiary transition-colors hover:bg-layer-1"
+              onMouseDown={preserveEditorFocus}
               onClick={() => BackgroundColorItem(editor).command({ color: undefined })}
             >
               <Ban className="size-4" />

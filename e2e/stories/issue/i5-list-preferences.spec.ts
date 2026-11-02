@@ -422,6 +422,20 @@ test("I5 (page): all eleven display properties and layout, grouping, ordering an
       )
     ).status()
   ).toBe(200);
+  expect(initial.display_filters.sub_issue).toBe(true);
+  // Saving the final filter starts a real list read after its PATCH confirms.
+  // Observe that answer before the toggle so reload cannot cancel the pending GET.
+  const refreshedList = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "GET" &&
+      url.pathname === `/api/v0/projects/${project.id}/issues` &&
+      url.searchParams.get("sub_issue") === "false" &&
+      url.searchParams.get("group_by") === "priority" &&
+      url.searchParams.get("sub_group_by") === "label_id" &&
+      url.searchParams.get("order_by") === "-updated_at"
+    );
+  });
   await ["Show empty groups", "Show sub-work items"].reduce(async (before, name) => {
     await before;
     const button = panel.getByRole("button", { name, exact: true });
@@ -453,6 +467,9 @@ test("I5 (page): all eleven display properties and layout, grouping, ordering an
   expect(queries.at(-1)?.get("group_by")).toBe("priority");
   expect(queries.at(-1)?.get("sub_group_by")).toBe("label_id");
   expect(queries.at(-1)?.get("order_by")).toBe("-updated_at");
+  const refreshed = await refreshedList;
+  expect(refreshed.status()).toBe(200);
+  expect(await refreshed.finished()).toBeNull();
   await page.reload();
   panel = await displayPanel(page);
   await Promise.all(
