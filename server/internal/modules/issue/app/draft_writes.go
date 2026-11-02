@@ -81,6 +81,7 @@ func (u *UpdateDraft) Execute(ctx context.Context, id uuid.UUID, in domain.Draft
 type DeleteDraftDeps struct {
 	Locks  DraftLocks
 	Drafts DraftWriter
+	Assets DraftAssets
 	Clock  Clock
 }
 type DeleteDraft struct{ d DeleteDraftDeps }
@@ -92,6 +93,10 @@ func (u *DeleteDraft) Execute(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 	return u.d.Locks.run(ctx, actor, draftWrite{DraftID: &id}, func(ctx context.Context, _ draftHeld) error {
-		return u.d.Drafts.DeleteDraft(ctx, DraftDeletion{ID: id, By: actor.UserID, At: u.d.Clock.Now()})
+		deletion := DraftDeletion{ID: id, By: actor.UserID, At: u.d.Clock.Now()}
+		if err := u.d.Drafts.DeleteDraft(ctx, deletion); err != nil {
+			return err
+		}
+		return u.d.Assets.DeleteDraftAssets(ctx, deletion)
 	})
 }

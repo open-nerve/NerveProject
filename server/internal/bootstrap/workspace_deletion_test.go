@@ -129,7 +129,7 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	}
 
 	for i, k := range keys {
-		if !projectIssueTable(k.table) {
+		if !parentAsyncTable(k.table) {
 			if rows := k.unstamped(t, pool, recorded[i], deleted, adminID); rows != "" {
 				t.Errorf("M3 rows not immediate: %s %s", k, rows)
 			}

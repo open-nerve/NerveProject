@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
@@ -110,7 +111,7 @@ func newIssueRouteWithConfig(t *testing.T, pool *pgxpool.Pool, tx shared.TxManag
 // request and background use cases receive the same observable publisher.
 func newIssueModuleWithConfig(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher, gate issueapp.WriteGate, cfg config.Config) *issue.Module {
 	t.Helper()
-	return issue.New(issue.Deps{Events: events, Pool: pool, Tx: tx, Logger: slog.New(slog.DiscardHandler), JobTx: newIssueJobTx(pool, cfg), ArchivePolicies: project.Provide(pool, nil).ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
+	return issue.New(issue.Deps{DraftAssets: issueDraftAssets{assets: asset.Provide(pool).DraftAssets}, Events: events, Pool: pool, Tx: tx, Logger: slog.New(slog.DiscardHandler), JobTx: newIssueJobTx(pool, cfg), ArchivePolicies: project.Provide(pool, nil).ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
 		WriteGate: gate, Clock: clock,

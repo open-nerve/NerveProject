@@ -68,17 +68,18 @@ func (w draftWorkspace) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (b
 }
 
 type draftStore struct {
-	log       *callLog
-	row       domain.Draft
-	found     bool
-	readCount int
-	reading   func(int)
-	waited    func()
-	written   app.DraftWrite
-	deleted   app.DraftDeletion
-	rows      []domain.Draft
-	total     int64
-	list      app.DraftListRead
+	log           *callLog
+	row           domain.Draft
+	found         bool
+	readCount     int
+	reading       func(int)
+	waited        func()
+	written       app.DraftWrite
+	deleted       app.DraftDeletion
+	assetsDeleted app.DraftDeletion
+	rows          []domain.Draft
+	total         int64
+	list          app.DraftListRead
 }
 
 func (s *draftStore) GetDraft(ctx context.Context, id uuid.UUID) (domain.Draft, bool, error) {
@@ -143,5 +144,10 @@ func (w *draftWorld) create() *app.CreateDraft {
 	return app.NewCreateDraft(app.CreateDraftDeps{Locks: w.locks(), Workspaces: w.w, Drafts: w.s, Clock: clockAt{at: clockNow, log: w.log}})
 }
 func (w *draftWorld) delete() *app.DeleteDraft {
-	return app.NewDeleteDraft(app.DeleteDraftDeps{Locks: w.locks(), Drafts: w.s, Clock: clockAt{at: clockNow, log: w.log}})
+	return app.NewDeleteDraft(app.DeleteDraftDeps{Locks: w.locks(), Drafts: w.s, Assets: w.s, Clock: clockAt{at: clockNow, log: w.log}})
+}
+
+func (s *draftStore) DeleteDraftAssets(ctx context.Context, d app.DraftDeletion) error {
+	s.assetsDeleted = d
+	return s.log.add(ctx, "DeleteDraftAssets")
 }

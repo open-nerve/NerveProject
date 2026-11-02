@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
@@ -239,7 +240,7 @@ func tokensIn(t *testing.T, tables map[string]string, links []invitationLink) []
 func registrationRows(t *testing.T, pool *pgxpool.Pool) string {
 	t.Helper()
 	tables := tableRows(t, pool, riversOwn)
-	kinds := append(identity.EnqueuedKinds(), issue.EnqueuedKinds()...)
+	kinds := slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), asset.EnqueuedKinds())
 	var requests string
 	if err := pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(row_to_json(j)::text, E'\n' ORDER BY id), '')
 		FROM (SELECT id,kind,args FROM river_job WHERE kind=ANY($1::text[])) j`, kinds).Scan(&requests); err != nil {

@@ -58,11 +58,28 @@ func TestLateDeleteRowsAfterPurge(t *testing.T) {
 				}
 				pending = append(pending, parentDeletionJob(t, w.pool, "workspace_drafts", ws))
 			}
+			assetScope := "project"
+			if parent == "workspaces" {
+				assetScope = "workspace"
+			}
+			waitAssetScopeDeletion(t, w.pool, assetScope, id)
 			// Age only the requested parent: this isolates its real CASCADE from
 			// earlier state/label purges. The original job's request audit is retained.
 			if _, err := w.pool.Exec(pgtest.Soon(t), `UPDATE `+parent+` SET deleted_at=clock_timestamp()-interval '61 days' WHERE id=$1`, id); err != nil {
 				t.Fatal(err)
 			}
+			if _, err := drainPurge(retentionPurge(w, time.Now()), pgtest.Soon(t)); err != nil {
+				t.Fatal(err)
+			}
+			var retained int
+			key := "project_id"
+			if parent == "workspaces" {
+				key = "workspace_id"
+			}
+			if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM file_assets WHERE "+key+"=$1", id).Scan(&retained); err != nil || retained == 0 {
+				t.Fatalf("parent purge lost retained assets: %d %v", retained, err)
+			}
+			recoverAssetRows(t, w, time.Now())
 			if _, err := drainPurge(retentionPurge(w, time.Now()), pgtest.Soon(t)); err != nil {
 				t.Fatal(err)
 			}

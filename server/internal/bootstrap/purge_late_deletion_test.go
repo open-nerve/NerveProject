@@ -13,6 +13,7 @@ import (
 )
 
 // This is an isolated storage state: only the parent tombstone is written.
+// Asset recovery must finish before the protected parent CASCADE proceeds.
 // The request-driven River lifecycle is tested separately. This fixture alone
 // claims no delete_rows worker, retry or deadlock property.
 func TestPurgeParentCascadesUnprocessedIssueRows(t *testing.T) {
@@ -112,6 +113,27 @@ func TestPurgeParentCascadesUnprocessedIssueRows(t *testing.T) {
 			if err := tx.Commit(context.Background()); err != nil {
 				t.Fatal(err)
 			}
+			if _, err := drainPurge(retentionPurge(w, at), pgtest.Soon(t)); err != nil {
+				t.Fatal(err)
+			}
+			// The first pass cannot erase assets or their required ancestors.
+			assetKey := foreignKey{parent, "file_assets", "workspace_id"}
+			if parent == "projects" {
+				assetKey.column = "project_id"
+			}
+			if len(assetKey.undeleted(t, w.pool, parents[0])) == 0 {
+				t.Fatal("parent CASCADE erased unrecovered assets")
+			}
+			recoverAssetRows(t, w, at)
+			// Recovery adopts each parent's original stamp. Recent assets stay
+			// retained, while every other recent row must remain byte-identical.
+			for _, id := range parents[:2] {
+				var bad int
+				if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM file_assets a JOIN "+parent+" p ON p.id=a."+assetKey.column+" WHERE p.id=$1 AND (a.deleted_at IS DISTINCT FROM p.deleted_at OR a.deleted_by_id IS DISTINCT FROM p.updated_by_id OR a.updated_at IS DISTINCT FROM p.deleted_at)", id).Scan(&bad); err != nil || bad != 0 {
+					t.Fatalf("recovery lost parent stamp: bad=%d err=%v", bad, err)
+				}
+			}
+			recent[assetKey] = assetKey.rows(t, w.pool, parents[1])
 			if _, err := drainPurge(retentionPurge(w, at), pgtest.Soon(t)); err != nil {
 				t.Fatal(err)
 			}

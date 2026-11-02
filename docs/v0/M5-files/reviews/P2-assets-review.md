@@ -1,6 +1,6 @@
 # M5 / P2 阶段评审记录
 
-> 实施中：T1–T4完成，T5–T14待执行；没有进行整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
+> 实施中：T1–T5完成，T6–T14待执行；没有进行整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
 
 ## 1. 方式
 
@@ -30,11 +30,11 @@ T1确认必须的完整Go依赖传递链，补齐spec/plan；T1无ETag输入，�
 
 ## 6. 后续责任
 
-T5开始首张资产表、删除协作与已知对象回收。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
+T5已完成首张资产表、删除协作与已知对象回收；接续T6申请与读取接口。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
 
 ## 7. 已知限制
 
-当前已有基础纯规则/校验、本地有限清单/临时回收、宿主授权与锁编排、父清理单页与River持久进度；尚无资产业务路由、file_assets或资产清理worker。不能根据T1–T4通过声称F1/F3/F13/F14/F15已满足。
+当前已有基础纯规则/校验、本地有限清单/临时回收、宿主授权与锁编排、父清理单页与River持久进度；已有file_assets、同步删除和资产清理worker；尚无资产业务路由，完整对象对账/重启恢复也未交付。不能根据T1–T5通过声称F1/F3/F13/F14/F15已满足。
 
 ## 8. T2本地清单、临时目录与配置
 
@@ -56,7 +56,7 @@ T5开始首张资产表、删除协作与已知对象回收。P4/P5绑定、P3 S
 
 ## 10. T4父清理分页与River持久进度
 
-- 四个owner改为每次一表一页的Page，生产中不再保留无界Purge入口；原清理图、60天边界、独立提交、迟到删除与父CASCADE测试经测试专用drain迁移，未删原断言。issue/project/workspace构造时复制明确保护标识，当前生产为空；真实资产约束及精确目录在T5接上，不把空集合当保护已交付。
+- 四个owner改为每次一表一页的Page，生产中不再保留无界Purge入口；原清理图、60天边界、独立提交、迟到删除与父CASCADE测试经测试专用drain迁移，未删原断言。issue/project/workspace构造时复制明确保护标识，T4当时生产为空；后续T5已将真实资产约束及精确目录接上，不把空集合当保护已交付。
 - `PurgeProtected`仅识别23503与schema/table/constraint全匹配。真实PG父→子→资产及自引用证明整批失败全部回滚，逐候选得到Scanned3/Deleted1/Blocked2，受阻前后邻域继续；取消/未知FK/23001/40P01保留此前独立提交进度并返回错误。
 - 普通固定SQL用有限物化候选CTE和DELETE CTE分别返回扫描数、删除数与候选最大ID，DELETE再核cutoff。实际PID/SQL/blocker交错先复现候选被并发删除时错误耗尽，再复现候选被改到精确cutoff仍遭删除；两个方向修复后通过。无跨模块SQL、额外父锁或表名拼接。
 - bootstrap预算使用运行时钟，单轮业务cutoff保存在全局模块/表/After游标；worker在snooze和错误前RecordOutput，编码上限16KiB，未知版本/模块/表或损坏输出明确失败。真实River在同一job的snooze后停机，换Runner且业务快进30天仍从原After/cutoff继续，完整页前进后完成；不声称每页恰好一次或计数跨重试恰好一次。
@@ -64,3 +64,18 @@ T5开始首张资产表、删除协作与已知对象回收。P4/P5绑定、P3 S
 - 首次受影响race暴露旧请求探针仍等待空页DELETE；新受保护路径空页不发DELETE。夹具先阻住真实前置清理、提交过期候选，再移交issues屏障；日志确认真实DeletePurgeIssues与业务MarkChanged各自PID/SQL，原项目锁/工作区锁/未提前写断言保留。聚焦RED与GREEN原件在task-4-purge-probe-*.log。
 - 最终串行race覆盖platform/postgres、四owner的app/adapter及bootstrap清理/父CASCADE回归全部通过，bootstrap52.129秒；archtest1.690秒；全server lint 0 issues。1506个测试输入hash在task-4-final-inputs.json，运行后核验未变。原首次race失败及错误cwd的lint调用保留；正式结果只取final日志。
 - 局部裁定及代价：单页接口让遗漏调用者编译失败；保护标识构造复制避免后注入；有限CTE保留真实扫描成本；DELETE cutoff复核避免等待后的过期事实；真实候选夹具保持原锁证明。完整理由与错误代价在台账，阶段A1–A12仍未勾选。
+
+## 11. T5资产首表、同步删除与受保护恢复
+
+- 00034建立23列file_assets、六个具名即时NO ACTION父引用及无条件索引，审计SET NULL。SQL约束拒绝metadata缺字段、JSON null、未知版本、错误类型、第四候选、超16KiB及错误范围组合；完整迁移上下往返、精确约束/索引目录和24张墓碑表目录已扩展。原守卫拒绝新表/新边的红保存在task-5-old-catalog-red.log，没有先排除asset再写断言。
+- 资产仓储只用自有sqlc固定查询；SaveAsset比较StorageRevision并保留申请者/用途/父范围/大小，读取非法metadata明确失败。purge SQL在候选和DELETE两处均要求严格60天及全部key记录为空。原生成物重新生成后逐hash相等，未手改生成结果。
+- issue子树、comment同步事件和真正DeleteDraft在原事务使用原At/By标记资产；三层子树/评论/草稿与未删邻域均通过。后续订阅者失败会连同资产和父行整体回滚。PublishDraft内部消费草稿不调用删除资产端口，负例有真实程序回归。
+- project/workspace事件只InsertTx范围任务。实际事务内可见、事务外不可见，rollback后任务为0；真实运行中的asset.delete_scope任务按ID/完整参数/一次成功attempt观察，原时间和删除人不变。scope分页第二批失败只回滚本批，已提交批次的游标保留并恢复。
+- 已知对象回收先读owner原始父删除事实，再锁资产核scope/revision；最早父时间及原删除人不后移。先提交reclaiming，再在无数据库连接/事务时Delete，成功后短事务核同一key/phase移记录。真实本地文件失败时文件、metadata和父保护都保留；重试成功后资产行与父行逐步收敛。候选文件已删但确认事务失败的场景保留reclaiming并幂等重试，旧父事实遇新revision会跳过。
+- 真实本地对象覆盖live final、59天、精确60天、61天、pending staging、7天过期件与业务快进但真实上传安全期未过。T5只交付已知key，孤立对象/tmp对账、迟到落盘和真实asset worker跨进程恢复仍是T9责任。
+- 目录从全库真实FK图推导所有受保护可清理祖先，包括states→issues及issue自引用，与声明步骤集合精确相等；user虽不purge仍核FK/index。删声明、漏祖先、CASCADE/SET NULL/RESTRICT/deferred变体均拒绝。六类父表加issue自引用，各以batch1/3验证最小/最大受阻、中间可删，先Scanned3/Deleted1/Blocked2，再经实际资产purge释放后收敛。
+- 原项目/工作区/工作项删除目录夹具已补真实资产行，不过滤新表。旧迟到父CASCADE先证明受保护资产保留，再用实际owner事实恢复后验证原级联清空；未改近期/存活邻域及账户不变断言。资产近期删除审计按新的原父时间合同单独逐值核对。此处存储夹具不冒称T10公开API故事。
+- 实际runtime账号暴露遗漏file_assets权限，deploy/runtime-grants.sql已按既有四项DML补齐，未增加DDL/TRUNCATE等权限；原全目录权限检查与受限账号删除/清理回归通过。部分旧测试专用Runner漏注册新kind也已补齐真实资产范围worker，保留原issue事件观测。运行账号的DELETE观察器实测asset→issue→project→workspace→identity；完整应用的周期清理遇受保护项目仍能完成并清理无关邻项。
+- task-5-mutations.json中七项行为变异全被杀且恢复字节hash一致：CASCADE、漏states、Deleted零提前耗尽、metadata未空硬删、Delete失败清记录、PublishDraft误删资产、非事务入队。task-5-wiring-mutation.json另证明生产保护标识为空时完整程序失败；首次untyped nil仅编译失败，另存compile-attempt，不计性质证据。全部历史失败和修复日志保留。
+- 实际符号较plan原示意精简为FindAsset/CreateAsset/SaveAsset与原Asset审计、revision；SweepCursor同时保存业务/runtime cutoff，Scanned和Removed分开。候选DB确认失败不前移游标，对象删除失败保留记录并让下一次从邻域继续，失败行由下轮周期重看。详细理由及错误代价见台账各Ruling。
+- 最终验证通过：输入1542文件快照为task-5-final-inputs.json，运行后逐hash未变；资产全包、迁移、archtest race及父模块/组合层扩大race均通过，bootstrap188.804秒，lint为0 issues。收据在task-5-verification.json；无完整七项或远端CI通过声明，按计划T10前不推产品检查点。

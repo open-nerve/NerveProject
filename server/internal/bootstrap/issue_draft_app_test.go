@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
@@ -70,7 +71,7 @@ func TestDraftAppPersonalProjectsWithRealAuthorization(t *testing.T) {
 	if err != nil || cleared.ProjectID != nil {
 		t.Fatalf("clear=%+v err=%v", cleared, err)
 	}
-	if err := issueapp.NewDeleteDraft(issueapp.DeleteDraftDeps{Locks: locks, Drafts: store, Clock: clock.System{}}).Execute(ctx, second.ID); err != nil {
+	if err := issueapp.NewDeleteDraft(issueapp.DeleteDraftDeps{Locks: locks, Drafts: store, Assets: issueDraftAssets{assets: asset.Provide(r.server).DraftAssets}, Clock: clock.System{}}).Execute(ctx, second.ID); err != nil {
 		t.Fatalf("delete after loss of visibility=%v", err)
 	}
 	_, err = get.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: w.ids["wanda"]}), d.ID)

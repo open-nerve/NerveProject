@@ -10,17 +10,20 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// Only the issue-owned portion is asynchronous; unknown catalog tables still
+// Only the explicitly owned portions are asynchronous; unknown catalog tables still
 // participate in the immediate assertions rather than receiving an exemption.
 func projectIssueTable(table string) bool {
 	return table == "draft_issues" || table == "issues" || table == "comment_reactions" || len(table) > 6 && table[:6] == "issue_"
 }
+
+func parentAsyncTable(table string) bool { return table == "file_assets" || projectIssueTable(table) }
 
 type deletionJob struct {
 	ID     int64     `json:"-"`
@@ -88,6 +91,7 @@ func waitProjectDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) {
 	t.Helper()
 	job := projectDeletionJob(t, pool, project)
 	waitDeletionJob(t, pool, job, "completed")
+	waitAssetScopeDeletion(t, pool, "project", project)
 }
 
 func waitDeletionJob(t *testing.T, pool *pgxpool.Pool, job deletionJob, want string) {
@@ -183,7 +187,8 @@ func projectDeletionPublisher(t *testing.T, pool *pgxpool.Pool, observers ...sha
 	if err != nil {
 		t.Fatal(err)
 	}
-	subscribers := append(issue.Subscribers(issueInserter{client: client}), observers...)
+	subscribers := append(issue.Subscribers(issueInserter{client: client}), asset.Subscribers(asset.Provide(pool), assetInserter{client: client})...)
+	subscribers = append(subscribers, observers...)
 	d, err := newDispatcher(eventTypes(), subscribers)
 	if err != nil {
 		t.Fatal(err)
@@ -210,7 +215,8 @@ func waitWorkspaceDeletion(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID
 	// These are this request's projects, excluding earlier deletions.
 	projects := queryIDs(t, pool, "SELECT p.id FROM projects p JOIN workspaces w ON w.id=p.workspace_id WHERE w.id=$1 AND p.deleted_at=w.deleted_at ORDER BY p.id", workspace)
 	for _, project := range projects {
-		waitProjectDeletion(t, pool, project)
+		waitDeletionJob(t, pool, projectDeletionJob(t, pool, project), "completed")
 	}
 	waitDeletionJob(t, pool, parentDeletionJob(t, pool, "workspace_drafts", workspace), "completed")
+	waitAssetScopeDeletion(t, pool, "workspace", workspace)
 }

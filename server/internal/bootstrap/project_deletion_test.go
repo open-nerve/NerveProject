@@ -123,6 +123,8 @@ func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	relate(t, pool, issue, blocker, "blocked_by", by)
 	seedIssueLinks(t, pool, issue, by)
 	seedIssueDrafts(t, pool, project, by)
+	seedIssueAsset(t, pool, issue, by)
+	seedIssueAsset(t, pool, blocker, by)
 }
 
 // noRowLastWrittenBy fails the test when a row under the parent row id, by
@@ -185,7 +187,7 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	}
 	after := time.Now()
 	for i, k := range keys {
-		if !projectIssueTable(k.table) {
+		if !parentAsyncTable(k.table) {
 			if rows := k.unstamped(t, pool, recorded[i], web, daveID); rows != "" {
 				t.Errorf("M3 %s not synchronously stamped: %s", k, rows)
 			}
@@ -303,7 +305,7 @@ func TestAProjectDeletionRefusedAtItsCommitChangesNoRow(t *testing.T) {
 	before := rowsOf()
 	jobsBefore := registrationRows(t, pool)
 	for _, k := range keys {
-		if projectIssueTable(k.table) {
+		if parentAsyncTable(k.table) {
 			continue
 		}
 		restore := refusingCommits(t, pool, k.table)

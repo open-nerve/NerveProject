@@ -115,10 +115,11 @@ type (
 
 // Deps are what bootstrap gives the module (M4 design 6.6, step 6).
 type Deps struct {
-	Outbound *outbound.Client
-	Logger   *slog.Logger
-	Events   shared.EventPublisher
-	Pool     *pgxpool.Pool
+	DraftAssets app.DraftAssets
+	Outbound    *outbound.Client
+	Logger      *slog.Logger
+	Events      shared.EventPublisher
+	Pool        *pgxpool.Pool
 	// Tx are the transactions of the module's writes, each of which waits
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
@@ -190,7 +191,7 @@ func New(d Deps) *Module {
 			GetDraft:                app.NewGetDraft(app.GetDraftDeps{ReadTx: d.ReadTx, Locks: draftLocks}),
 			CreateDraft:             app.NewCreateDraft(app.CreateDraftDeps{Locks: draftLocks, Workspaces: d.Workspaces, Drafts: store, Clock: d.Clock}),
 			UpdateDraft:             app.NewUpdateDraft(app.UpdateDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
-			DeleteDraft:             app.NewDeleteDraft(app.DeleteDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
+			DeleteDraft:             app.NewDeleteDraft(app.DeleteDraftDeps{Locks: draftLocks, Drafts: store, Assets: d.DraftAssets, Clock: d.Clock}),
 			UpdateIssueLink:         app.NewUpdateIssueLink(app.UpdateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
 			DeleteIssueLink:         app.NewDeleteIssueLink(app.DeleteIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
 			CreateIssueLink:         app.NewCreateIssueLink(app.CreateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),

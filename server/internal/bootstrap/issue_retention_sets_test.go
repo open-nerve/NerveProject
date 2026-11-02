@@ -8,6 +8,7 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
@@ -17,7 +18,7 @@ import (
 )
 
 func retentionPurge(w issueWorld, at time.Time) *purgeDeleted {
-	return newPurgeDeleted([]purgeModule{{"issue", forIssuePurge(issue.Provide(w.pool, nil).Purger)}, {"project", forProjectPurge(project.Provide(w.pool, nil).Purger)}, {"workspace", forWorkspacePurge(workspace.Provide(w.pool, nil).Purger)}, {"identity", forIdentityPurge(identity.Provide(w.pool).Purger)}}, clockAt(at), time.Now, 60*24*time.Hour, 2, 10*time.Second)
+	return newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(asset.Provide(w.pool).Purger)}, {"issue", forIssuePurge(issue.Provide(w.pool, protectedAssetReferences()).Purger)}, {"project", forProjectPurge(project.Provide(w.pool, protectedAssetReferences()).Purger)}, {"workspace", forWorkspacePurge(workspace.Provide(w.pool, protectedAssetReferences()).Purger)}, {"identity", forIdentityPurge(identity.Provide(w.pool).Purger)}}, clockAt(at), time.Now, 60*24*time.Hour, 2, 10*time.Second)
 }
 
 // Each scenario publishes its complete fixture atomically. The live parent

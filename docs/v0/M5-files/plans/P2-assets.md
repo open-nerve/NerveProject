@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T4已完成，接续T5。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T5已完成，接续T6。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -39,13 +39,13 @@
 详细位置见spec§2.1；新增文件命名按本计划。每层自己的值由bootstrap显式转换。下列共享数据指asset自身domain/app类型，不给其他模块增加asset import。
 
 - domain.Asset：spec表字段的具名业务值；domain.NewAsset/Scope/Purpose/StorageMetadata，ContentProof{SHA256 string; Width,Height *int}。
-- app.AssetReader.Get(ctx,id)(domain.Asset,bool,error)；app.AssetLocker.LockAssets(ctx,ids)([]domain.Asset,error)；app.AssetCreator.Insert(ctx,AssetWrite)(domain.Asset,error)；app.MetadataWriter.Update(ctx,MetadataWrite)(domain.Asset,error)。MetadataWrite含ID/ExpectedRevision/新metadata/可选uploaded与原始Stamp，SQL校验revision受影响行。
-- app.Stamp{At time.Time; By *uuid.UUID}；app.AssetWrite{Asset domain.Asset; Stamp Stamp}；app.DeletionStamp同Stamp；app.ParentKey{Kind domain.ScopeKind; ID uuid.UUID}。用途/父链/大小等immutable字段只有后续owner绑定协议能改，P2通用metadata写不开放它们。
+- app.AssetReader.FindAsset(ctx,id)(domain.Asset,error)（含墓碑，调用者判业务可见性）；app.AssetLocker.LockAssets(ctx,ids)([]domain.Asset,error)；app.AssetCreator.CreateAsset(ctx,domain.Asset)(domain.Asset,error)；app.MetadataWriter.SaveAsset(ctx,domain.Asset)(domain.Asset,error)。SaveAsset按传入StorageRevision做CAS，SQL只写metadata、确认状态、attributes和审计，不更新父范围/用途/大小；未命中返回ErrAssetScopeChanged。
+- app.DeletionStamp{At time.Time; By *uuid.UUID}；资产新行和保存值直接携带各自审计字段，不增加第二份Stamp；app.ParentKey{Kind domain.ScopeKind; ID uuid.UUID}。用途/父链/大小等immutable字段只有后续owner绑定协议能改，P2通用metadata写不开放它们。
 - app.ContentValidator.Validate(ctx,io.Reader,size int64,contentType string,imageRequired bool)(domain.ContentProof,error)。取消/超限error保留分类；完整hash，图片仅头。
 - app.Access.Within(ctx,actor,[]HostRequest,[]uuid.UUID,func(context.Context,AccessHeld)error)error 是asset包内方法；AccessHeld含Hosts/Assets/最终锁后时刻At，各owner只实现Inspect/Check和小锁端口。内部回调不得导出为模块间接口。
 - app.ParentDeletionReader.Deletions(ctx,[]Host)(map[ParentKey]DeletionStamp,error)；自有Rows的按scope、回收、purge分页由T5定义固定查询，不拼外部表名。
 - owner app各自PurgeCursor{Table string; After uuid.UUID}、PurgeProgress{Cursor;Scanned,Deleted,Blocked int;Done bool}；Purger.Page(ctx,cutoff,batch,cursor)(PurgeProgress,error)。bootstrap消费方同形值经具名转换，不让owner import bootstrap/platform app类型。
-- app.SweepCursor{Version int;Phase string;After uuid.UUID;Token string;Cutoff time.Time}；SweepResult{Cursor;Scanned,Deleted,Blocked int;Complete bool}；Cleanup.Execute(ctx,cursor)(SweepResult,error)。River adapter保存≤16KiB output；错误也带已安全提交游标。
+- app.SweepCursor{Version int;Stage string;After uuid.UUID;Token string;Cutoff,RuntimeCutoff time.Time}；SweepResult{Cursor;Scanned,Removed int;Complete bool}；Cleanup.Execute(ctx,cursor)(SweepResult,error)。River adapter保存≤16KiB output；错误也带已安全提交游标。
 
 ---
 
@@ -99,16 +99,16 @@
 
 ## Task 5（T5）：首张资产表、删除协作与已知对象回收
 
-**Files：** 新建`server/migrations/sql/00034_asset_file_assets.sql`、migrations/asset_schema_test.go、asset/adapter/postgres/{store,rows,metadata,deletion,purge}.go与queries及gen；asset/app/{cleanup,delete_rows,purge}.go/adapter/river、asset/provide.go/module_events.go/module_jobs.go；修改owner墓碑查询、issue/app/draft_writes.go、bootstrap/assets.go/app.go/事件目录/删除目录/purge_catalog_test.go、server/sqlc.yaml、plane-diff.md。
+**Files：** 新建`server/migrations/sql/00034_asset_file_assets.sql`、migrations/asset_schema_test.go、asset/adapter/postgres/{store,rows,metadata,deletion,purge}.go与queries及gen；asset/app/{cleanup,delete_rows,purge}.go/adapter/river、asset/provide.go/module_events.go/module_jobs.go；修改owner墓碑查询、issue/app/draft_writes.go、bootstrap/assets.go/app.go/事件目录/删除目录/purge_catalog_test.go、server/sqlc.yaml、deploy/runtime-grants.sql、plane-diff.md。
 
-**Interfaces：** 产出AssetReader/Locker/Creator/MetadataWriter，删除同步端口、ParentDeletionReader，asset.Provided，ProtectedParentReferences()副本、Purger.Page，DeleteScope.Execute(ctx,scope,id,Stamp,cursor)(SweepResult,error)。NewInserter适配器仅InsertTx；任务kind asset.delete_scope / asset.cleanup，现有cleanup.purge_deleted继续。
+**Interfaces：** 产出AssetReader/Locker/Creator/MetadataWriter，删除同步端口、ParentDeletionReader，asset.Provided，ProtectedParentReferences()副本、Purger.Page，DeleteScope.Execute(ctx,scope,id,DeletionStamp,cursor)(SweepResult,error)。ScopeDeletions消费方适配器仅InsertTx；任务kind asset.delete_scope / asset.cleanup，现有cleanup.purge_deleted继续。
 
-- [ ] Step 1：写TestAssetSchemaConstraints、TestAssetDeletionGraph、TestAssetPurgePreservesObjects、TestAssetParentDeletionRollback。构造真实本地对象+自有存储层行，三个层级、活/59d邻域、对象Delete失败、60d精确边界；原issue/delete/PG父CASCADE与目录guard都保留。SQL非法JSON缺字段/null、scope/check、metadata非空硬删必须失败。
-- [ ] Step 2：聚焦 `go -C server test ./migrations ./internal/modules/asset/... ./internal/bootstrap -run 'AssetSchema|AssetDeletion|AssetPurge|AssetParent|PurgeCatalog|ParentCascades' -count=1`；记录红和原guard拒绝新受保护边，不能先豁免再写实现。
-- [ ] Step 3：迁移/固定查询/模块所有权同时落地；SQL metadata-empty保护purge。同步issue.deleted/issue.comment_deleted及真正DeleteDraft同原事务标记；project/workspace事件只InsertTx范围任务。原At/By不后移。asset扫父事实/过期件/已知key，认领reclaiming→事务外Delete→锁下移记录，物理行严格>60d且全空。
-- [ ] Step 4：按access构造顺序拆newAssets为早期storage资源与一次完整asset.New；close所有失败路径保持。目录真实读全FK，精确验证六个资产NO ACTION边，沿CASCADE反向推全部可清理祖先与步骤集合相等；user虽不purge仍验FK/index。将动态表数更新为真实24并保留非purge来源负例，不筛asset。
-- [ ] Step 5：聚焦绿、全部asset/受影响owner/archtest、原删除/清理组合回归；变异CASCADE、漏states祖先、首页0提前停、未空metadata删行、失败Delete清记录、PublishDraft误调用删除、任务InsertTx改非事务，分别杀死。fixture是真实存储层证明，API与e2e扩展仍在T10，不写成已交付。
-- [ ] Step 6：提交；首次表/同步删除/父任务/已知对象恢复/保护目录一个交付单元，不单独推半成品检查点。
+- [x] Step 1：写TestAssetSchemaConstraints、TestAssetDeletionGraph、TestAssetPurgePreservesObjects、TestAssetParentDeletionRollback。构造真实本地对象+自有存储层行，三个层级、活/59d邻域、对象Delete失败、60d精确边界；原issue/delete/PG父CASCADE与目录guard都保留。SQL非法JSON缺字段/null、scope/check、metadata非空硬删必须失败。
+- [x] Step 2：聚焦 `go -C server test -p 1 ./migrations ./internal/modules/asset/... ./internal/bootstrap -run 'AssetSchema|AssetDeletion|AssetPurge|AssetParent|PurgeCatalog|ParentCascades' -count=1`；记录红和原guard拒绝新受保护边，不能先豁免再写实现。
+- [x] Step 3：迁移/固定查询/模块所有权同时落地；SQL metadata-empty保护purge。同步issue.deleted/issue.comment_deleted及真正DeleteDraft同原事务标记；project/workspace事件只InsertTx范围任务。原At/By不后移。asset扫父事实/过期件/已知key，认领reclaiming→事务外Delete→锁下移记录，物理行严格>60d且全空。
+- [x] Step 4：按access构造顺序拆newAssets为早期storage资源与一次完整asset.New；close所有失败路径保持。目录真实读全FK，精确验证六个资产NO ACTION边，沿CASCADE反向推全部可清理祖先与步骤集合相等；user虽不purge仍验FK/index。将动态表数更新为真实24并保留非purge来源负例，不筛asset。
+- [x] Step 5：聚焦绿、全部asset/受影响owner/archtest、原删除/清理组合回归；变异CASCADE、漏states祖先、首页0提前停、未空metadata删行、失败Delete清记录、PublishDraft误调用删除、任务InsertTx改非事务，分别杀死。fixture是真实存储层证明，API与e2e扩展仍在T10，不写成已交付。
+- [x] Step 6：提交；首次表/同步删除/父任务/已知对象恢复/保护目录一个交付单元，不单独推半成品检查点。
 
 ## Task 6（T6）：申请、元数据与读取签发
 

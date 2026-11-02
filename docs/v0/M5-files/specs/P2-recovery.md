@@ -99,6 +99,8 @@ List token 为 adapter 自有、不透明、版本化的分页位置，非法 to
 
 单次 asset sweep 依次扫描父删除/准备件过期、候选/staging、对象清单、临时目录。游标含 version、阶段、after/token、该轮 cutoff；最大 16 KiB，不含文件名、URL、正文。每页提交后记录进度；预算耗尽返回非 Complete，River adapter 用 `RecordOutput` 写入 job metadata.output 再 `JobSnooze(0)`。重启读取相同游标，正常新周期从空开始，停止后允许重放最后未持久化页，所有操作幂等。
 
+T5实际协议为 `SweepCursor{Version,Stage,After,Token,Cutoff,RuntimeCutoff}` 与 `SweepResult{Cursor,Scanned,Removed,Complete}`。rows阶段的Cutoff固定本轮业务时间，RuntimeCutoff固定本轮真实24小时线；scope阶段Cutoff是原删除At，RuntimeCutoff为空。Removed在rows阶段只计成功删除且数据库已确认移除的key，在scope阶段计已提交标记的资产行；不以它判断页是否耗尽。T9扩展objects/tmp阶段，不能把T5已知对象回收说成孤立对象对账已完成。
+
 已核仓库固定 River v0.47.0：RecordOutput 在 Work 中合法，Snooze 会保存 MetadataUpdates；不是修改 job.Args 后假定能持久化。实施须真实 worker 回归，不能只用 app 假实现证明。输出编码/版本错误原样失败；不通过 ClientFromContext 或二次 running client 绕过构造。
 
 既有 cleanup.purge_deleted 也改为明确的单页 owner 协议：每个模块外观提供自己的 `PurgeCursor{Table,After}` 与 `PurgeProgress{Cursor,Scanned,Deleted,Blocked,Done}`，bootstrap 转为消费方值；每次只处理一个有限页。全局 cursor 保存模块名、表名、After、单轮固定 cutoff，按 asset → issue → project → workspace → identity 推进，预算复用 cleanup_budget。资产墓碑清理先执行，受保护父候选按 protected-purge 合同跳过，下一周期重看。

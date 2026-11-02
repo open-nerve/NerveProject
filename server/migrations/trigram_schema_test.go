@@ -41,14 +41,14 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 33 {
-		t.Fatalf("Up() = %d migrations, %v; want 33", len(up), err)
+	if err != nil || len(up) != 34 {
+		t.Fatalf("Up() = %d migrations, %v; want 34", len(up), err)
 	}
 	wantSchema := []struct {
 		query string
 		names []string
 	}{
-		{tablesQuery, []string{"api_tokens", "auth_sessions", "comment_reactions", "draft_issues", "issue_activities", "issue_assignees", "issue_comments", "issue_description_versions", "issue_labels", "issue_links", "issue_mentions", "issue_reactions", "issue_relations",
+		{tablesQuery, []string{"api_tokens", "auth_sessions", "comment_reactions", "draft_issues", "file_assets", "issue_activities", "issue_assignees", "issue_comments", "issue_description_versions", "issue_labels", "issue_links", "issue_mentions", "issue_reactions", "issue_relations",
 			"issue_subscribers", "issues", "labels", "profiles", "project_members", "project_user_properties", "projects", "river_job",
 			"river_leader", "river_notification", "river_queue", "states", "users", "workspace_member_invites", "workspace_members",
 			"workspace_user_properties", "workspaces"}},
@@ -80,8 +80,8 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 	if _, err := pool.Exec(ctx, "DROP FUNCTION public.similarity(integer)"); err != nil {
 		t.Fatal(err)
 	}
-	// Roll back the later retention indexes before checking migration 29.
-	for version := int64(33); version >= 29; version-- {
+	// Roll back the later migrations before checking migration 29.
+	for version := int64(34); version >= 29; version-- {
 		down, err := m.Down(ctx)
 		if err != nil || down == nil || down.Version != version {
 			t.Fatalf("Down version %d = %+v, %v", version, down, err)
@@ -103,8 +103,8 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 33 {
-		t.Errorf("Up() again = %d migrations, %v; want 33", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 34 {
+		t.Errorf("Up() again = %d migrations, %v; want 34", len(again), err)
 	}
 	checkSchema("Up again")
 	assertTrigramIndex(t, pool)

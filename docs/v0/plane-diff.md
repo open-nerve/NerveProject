@@ -224,7 +224,9 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `cycle_issues` | **新增**部分唯一约束 `(issue_id)`：一个工作项最多属于一个迭代 | Plane 只在代码里检查 |
 | `modules` | 删除旧的 `description_text`、`description_html` | 遗留列 |
 | `*_user_properties`、`issue_views` | 删除旧的 `filters` 列；筛选条件按 Nerve 自己的格式存储（列名与格式在 M3/M4 确定）；`issue_views` 删除 `query` 列 | 筛选格式改变（见接口差异） |
-| `file_assets` | 删除 `page_id`；`draft_issue_id` 改为引用新的 `draft_issues`；`entity_type` 去掉 `PAGE_DESCRIPTION` | 文档页已砍掉；草稿重新设计 |
+| `file_assets`（M5/P2 T5） | 移除 page_id、Django asset 路径、entity_identifier、is_archived、external_id/source；新增 COMMENT_ATTACHMENT，去掉 PAGE_DESCRIPTION，保留10种用途；size由浮点改1–100MiB整数，user_id必填且作为不可变申请者 | 与当前用途/新草稿对应；最终随机对象key只存于具名metadata，不复用展示文件名作为路径。对照Plane `apps/api/plane/db/models/asset.py` |
+| `file_assets`（M5/P2 T5） | 新增scope_kind、bound_at、upload_expires_at、storage_revision、deleted_by_id；attributes由服务端构造；is_deleted与deleted_at一致；metadata版本/形状/≤3候选/16KiB有SQL约束 | 明确准备件宿主、真实上传安全期限、并发CAS和恢复原删除者；不是通用客户端JSON容器。API与绑定仍按后续Task/Phase交付 |
+| `file_assets`（M5/P2 T5） | 六个业务父FK由CASCADE改为具名、即时、非deferred NO ACTION，父列都有无条件索引；审计FK仍SET NULL；墓碑/未绑定件分页索引明确 | 已批准方案A：对象故障不丢恢复记录，代价是相关父墓碑延后清理；自有SQL仅在严格60天且全部key记录为空时删资产行，父清理跳过精确受阻候选并继续邻域 |
 | `draft_issues` | **已重新设计（M4/P8，00028）**：Plane24列重构为九列，八个身份/审计列加optional创建字段的payload；不保留模块/迭代/估算/type | 本期逐列/FK/三索引及实际源码对照见文末P8附录，v0-design §5.4 |
 
 ---
