@@ -28,7 +28,7 @@ type Check struct {
 type Router struct {
 	mux             *http.ServeMux
 	patterns        []string
-	noPathRedirects []string
+	noPathRedirects [][]string
 }
 
 // NewRouter returns a router holding the platform routes:
@@ -99,13 +99,14 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 // RejectPathRedirects rejects ServeMux's dot/repeated-slash normalization within
-// or into this path tree. Register before serving. Signed paths must not redirect
-// their query parameters to another endpoint; other trees keep normal routing.
+// or through this path tree, including paths that leave it again. Register before
+// serving. Signed paths must not redirect their query parameters to another
+// endpoint; other trees keep normal routing.
 func (r *Router) RejectPathRedirects(prefix string) {
 	if prefix == "/" || !strings.HasPrefix(prefix, "/") || path.Clean(prefix) != prefix {
 		panic("path redirect policy requires a canonical non-root prefix")
 	}
-	r.noPathRedirects = append(r.noPathRedirects, prefix)
+	r.noPathRedirects = append(r.noPathRedirects, strings.Split(prefix[1:], "/"))
 }
 
 func (r *Router) rejectsPathRedirect(req *http.Request) bool {
@@ -114,12 +115,24 @@ func (r *Router) rejectsPathRedirect(req *http.Request) bool {
 	if escaped == clean || escaped == clean+"/" {
 		return false
 	}
-	original := "/" + strings.TrimLeft(req.URL.Path, "/")
-	normalized := path.Clean(req.URL.Path)
-	for _, prefix := range r.noPathRedirects {
-		for _, candidate := range []string{original, normalized} {
-			if candidate == prefix || strings.HasPrefix(candidate, prefix+"/") {
-				return true
+	// Checking only the original and final paths misses a traversal that enters
+	// the protected tree and then climbs out. Decode as URL.Path already does,
+	// and inspect each intermediate prefix without rebuilding whole paths.
+	var stack []string
+	for segment := range strings.SplitSeq(req.URL.Path, "/") {
+		switch segment {
+		case "", ".":
+			continue
+		case "..":
+			if len(stack) > 0 {
+				stack = stack[:len(stack)-1]
+			}
+		default:
+			stack = append(stack, segment)
+			for _, prefix := range r.noPathRedirects {
+				if slices.Equal(stack, prefix) {
+					return true
+				}
 			}
 		}
 	}
