@@ -1,7 +1,7 @@
 # M5 / P1 本地存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：P1 已集成、main CI 全绿并归档清理；后续 P2 完整预检在下一分支进行。见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。负责人已授权按既有节奏连续推进，常规预检通过后继续，不另设确认门。
+> 状态：P1 已集成、main CI 全绿并归档清理；后续 P2 完整预检已在下一分支通过。见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。负责人已授权按既有节奏连续推进，常规预检通过后继续，不另设确认门。
 > T9 修订已授权：按[最终裁定](../reviews/P1-storage-namespace-decision.md#6-最终裁定2026-11-02)使用 `/static/local/{key}`，补路径规范化、开发代理及构建边界。实现、七项本地门禁和整审已完成；停读下载夹具已修并在 Linux 通过。随后整包累计触及默认 10 分钟，T10 的准确最终 CI 与 T11 的 P1 集成/归档已完成，历史失败和最终收据见阶段 review §10/§11。
 
 **Goal：** 建立可真实传输、检查、封存和读取的 local 存储能力，给 P2 资产用例提供经过验证的小接口。
@@ -182,6 +182,6 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 - [x] Step 1：核无未知修改、目标 main 与已验收基线关系，按当前授权使用 --no-ff 合并 P1，正常系统 git 推送 main。
 - [x] Step 2：等准确 main SHA 的三个 CI 作业全绿；失败按日志根因处理，W11 重跑仍失败停下报告。分支绿不能替代 main。
 - [x] Step 3：归档所有原件到主目录 ignored 证据区，验证 SHA-256/bytes/mode/membership 与回执引用，未知文件为零后常规删本段 remote/local branch 与 worktree，不 force。
-- [ ] Step 4：记录 A10/设计进度与 main 收据，准备 P2 的完整 spec/plan/锁图/预检，再按当前连续授权推进；不关闭尚未完成的 M5 总体标准。
+- [x] Step 4：记录 A10/设计进度与 main 收据，准备 P2 的完整 spec/plan/锁图/预检，再按当前连续授权推进；不关闭尚未完成的 M5 总体标准。
 
-T11 接续：P1 集成证据已完成并归档；Step 4 中 A10/进度已同步，P2 已准备草稿且清理合同 A 获授权，其完整预检尚未完成，因此保留此跨阶段子项未勾选。主目录独立台账继续跟踪，不改写已归档原件。
+T11 接续完成：P1 集成/归档证据及 A10/进度已完成；P2 的清理合同 A 获授权，完整 spec/plan 与独立 builder check、主控预检已通过（re-34）。主目录独立台账记录接续，不改写已归档原件。
