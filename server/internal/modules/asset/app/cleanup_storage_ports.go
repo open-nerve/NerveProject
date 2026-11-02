@@ -12,6 +12,8 @@ type ObjectPage struct {
 	Next    string
 }
 type ObjectLister interface {
+	// List returns at most limit objects, in strictly ascending key order.
+	// Next is opaque; an empty value means exhaustion. Pages are not snapshots.
 	List(context.Context, string, int) (ObjectPage, error)
 }
 type TemporaryCleaner interface {

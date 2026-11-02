@@ -42,6 +42,7 @@ func (w *CleanupWorker) Work(ctx context.Context, job *river.Job[CleanupArgs]) e
 		return nil
 	}
 	result, err := w.uc.Execute(ctx, previous.Cursor)
+	result.Failed += previous.Failed
 	return finishSweep(ctx, result, err, "rows")
 }
 func (w *CleanupWorker) Timeout(*river.Job[CleanupArgs]) time.Duration {

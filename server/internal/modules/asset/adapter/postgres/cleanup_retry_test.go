@@ -38,7 +38,7 @@ func TestAssetCleanupReplaysDeletedCandidateUntilAcknowledged(t *testing.T) {
 	}
 	fault := errors.New("acknowledgement transaction failed")
 	writer := &recoveryWriter{MetadataWriter: w.store, failAt: 2, fault: fault}
-	uc := app.NewCleanup(app.CleanupDeps{Rows: w.store, Locks: w.store, Writer: writer, Parents: parentFacts{}, Objects: objects, Tx: postgres.NewTxManager(w.pool, time.Second), Clock: cleanupClock(w.now), RuntimeNow: func() time.Time { return w.now }, Batch: 2, Budget: time.Second, OperationTimeout: time.Second})
+	uc := app.NewCleanup(app.CleanupDeps{Rows: w.store, Locks: w.store, Writer: writer, Parents: parentFacts{}, Objects: objects, Inventory: objects, Temporary: objects, Tx: postgres.NewTxManager(w.pool, time.Second), Clock: cleanupClock(w.now), RuntimeNow: func() time.Time { return w.now }, Batch: 2, Budget: time.Second, OperationTimeout: time.Second})
 	progress, err := uc.Execute(t.Context(), app.SweepCursor{})
 	if !errors.Is(err, fault) || progress.Removed != 0 || progress.Cursor.After != uuid.Nil() {
 		t.Fatalf("failed ack advanced: %+v %v", progress, err)
@@ -79,7 +79,7 @@ func TestAssetCleanupSkipsChangedRevisionAfterParentFacts(t *testing.T) {
 	if _, err := w.store.CreateAsset(t.Context(), a); err != nil {
 		t.Fatal(err)
 	}
-	uc := app.NewCleanup(app.CleanupDeps{Rows: w.store, Locks: w.store, Writer: w.store, Parents: changingParentFacts{w, a}, Objects: objects, Tx: postgres.NewTxManager(w.pool, time.Second), Clock: cleanupClock(w.now), RuntimeNow: func() time.Time { return w.now }, Batch: 2, Budget: time.Second, OperationTimeout: time.Second})
+	uc := app.NewCleanup(app.CleanupDeps{Rows: w.store, Locks: w.store, Writer: w.store, Parents: changingParentFacts{w, a}, Objects: objects, Inventory: objects, Temporary: objects, Tx: postgres.NewTxManager(w.pool, time.Second), Clock: cleanupClock(w.now), RuntimeNow: func() time.Time { return w.now }, Batch: 2, Budget: time.Second, OperationTimeout: time.Second})
 	r, err := uc.Execute(t.Context(), app.SweepCursor{})
 	if err != nil || !r.Complete || r.Scanned != 1 {
 		t.Fatalf("sweep=%+v %v", r, err)

@@ -32,7 +32,7 @@ func (u *DeleteScope) Execute(ctx context.Context, kind domain.ScopeKind, id uui
 		}
 		cursor = SweepCursor{Version: 1, Stage: "scope", Cutoff: stamp.At.UTC()}
 	}
-	if cursor.Version != 1 || cursor.Stage != "scope" || !cursor.Cutoff.Equal(stamp.At) || cursor.Token != "" || !cursor.RuntimeCutoff.IsZero() {
+	if !cursor.ValidScope() || !cursor.Cutoff.Equal(stamp.At) {
 		return result, errors.New("invalid asset deletion cursor")
 	}
 	result.Cursor = cursor

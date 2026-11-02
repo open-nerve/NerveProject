@@ -49,7 +49,11 @@ func decodeOutput(metadata []byte, stage string) (app.SweepResult, bool, error) 
 }
 func validOutput(r app.SweepResult, stage string) error {
 	c := r.Cursor
-	if c.Version != 1 || c.Stage != stage || c.Cutoff.IsZero() || c.Token != "" || r.Scanned < 0 || r.Removed < 0 || (stage == "rows" && c.RuntimeCutoff.IsZero()) || (stage == "scope" && !c.RuntimeCutoff.IsZero()) {
+	valid := stage == "scope" && c.ValidScope()
+	if stage == "rows" {
+		valid = c.ValidCleanup() && (r.Complete == (c.Stage == "done"))
+	}
+	if !valid || r.Scanned < 0 || r.Removed < 0 || r.Failed < 0 {
 		return errors.New("invalid asset sweep output")
 	}
 	return nil

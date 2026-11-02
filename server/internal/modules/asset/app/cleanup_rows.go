@@ -49,6 +49,9 @@ func (u *Cleanup) cleanRow(ctx context.Context, snapshot domain.Asset, facts map
 		// A failed object remains reclaiming. Advancing the row lets the next
 		// attempt visit its neighbours; a fresh cycle retries this bounded key set.
 		if err != nil {
+			if ctx.Err() != nil {
+				return removed, false, ctx.Err()
+			}
 			return removed, true, err
 		}
 		err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {

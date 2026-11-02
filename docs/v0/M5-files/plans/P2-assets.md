@@ -45,7 +45,7 @@
 - app.Access.Within(ctx,actor,[]HostRequest,[]uuid.UUID,func(context.Context,AccessHeld)error)error 是asset包内方法；AccessHeld含Hosts/Assets/最终锁后时刻At，各owner只实现Inspect/Check和小锁端口。内部回调不得导出为模块间接口。
 - app.ParentDeletionReader.Deletions(ctx,[]Host)(map[ParentKey]DeletionStamp,error)；自有Rows的按scope、回收、purge分页由T5定义固定查询，不拼外部表名。
 - owner app各自PurgeCursor{Table string; After uuid.UUID}、PurgeProgress{Cursor;Scanned,Deleted,Blocked int;Done bool}；Purger.Page(ctx,cutoff,batch,cursor)(PurgeProgress,error)。bootstrap消费方同形值经具名转换，不让owner import bootstrap/platform app类型。
-- app.SweepCursor{Version int;Stage string;After uuid.UUID;Token string;Cutoff,RuntimeCutoff time.Time}；SweepResult{Cursor;Scanned,Removed int;Complete bool}；Cleanup.Execute(ctx,cursor)(SweepResult,error)。River adapter保存≤16KiB output；错误也带已安全提交游标。
+- app.SweepCursor{Version int;Stage string;After uuid.UUID;Token string;ObjectAfter domain.ObjectKey;Cutoff,RuntimeCutoff time.Time}；SweepResult{Cursor;Scanned,Removed,Failed int;Complete bool}；Cleanup.Execute(ctx,cursor)(SweepResult,error)。River adapter保存≤16KiB output；错误也带已安全提交游标。
 
 ---
 
@@ -148,7 +148,7 @@
 
 ## Task 9（T9）：孤立对象、迟到结果与真实River恢复
 
-**Files：** app/cleanup_inventory.go/cleanup_cursor.go与测试、adapter/river/cleanup.go/delete_scope.go及真实worker测试、bootstrap/assets_cleanup_test.go/purge_cursor_test.go；完善T5已知对象清理与目录。
+**Files：** app/cleanup_inventory.go/cleanup_cursor.go与测试、adapter/river/workers.go/output.go及真实worker测试、bootstrap/assets_cleanup_test.go/purge_cursor_test.go；完善T5已知对象清理与目录。
 
 **Interfaces：** Cleanup.Execute与SweepCursor/Result按文件结构区；ObjectLister与TemporaryCleaner按T2；RecordOutput不是app依赖，只在river adapter。父cleanup固定cutoff与模块顺序同T4。
 

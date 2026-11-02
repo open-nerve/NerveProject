@@ -69,8 +69,27 @@ func (w assetWorld) object(t *testing.T, s *local.Store, a domain.Asset, kind by
 	hash := sha256.Sum256([]byte("abc"))
 	return domain.ObjectRecord{Key: info.Key, Phase: domain.ObjectActive, SafeAfter: w.now.Add(-time.Hour), Size: 3, ContentType: a.ContentType, ETag: info.ETag, SHA256: hex.EncodeToString(hash[:])}
 }
-func (w assetWorld) cleanup(objects app.ObjectDeleter, facts parentFacts, now time.Time) *app.Cleanup {
-	return app.NewCleanup(app.CleanupDeps{Rows: w.store, Locks: w.store, Writer: w.store, Parents: facts, Objects: objects, Tx: postgres.NewTxManager(w.pool, time.Second), Clock: cleanupClock(now), RuntimeNow: func() time.Time { return w.now }, Batch: 2, Budget: time.Second, OperationTimeout: time.Second})
+
+type cleanupObjects interface {
+	app.ObjectDeleter
+	app.ObjectLister
+	app.TemporaryCleaner
+}
+
+type faultingCleanupObjects struct {
+	*local.Store
+	deleter app.ObjectDeleter
+}
+
+func (s faultingCleanupObjects) Delete(ctx context.Context, key domain.ObjectKey) error {
+	return s.deleter.Delete(ctx, key)
+}
+
+func (w assetWorld) cleanup(objects cleanupObjects, facts parentFacts, now time.Time) *app.Cleanup {
+	return app.NewCleanup(w.cleanupDeps(objects, facts, now))
+}
+func (w assetWorld) cleanupDeps(objects cleanupObjects, facts parentFacts, now time.Time) app.CleanupDeps {
+	return app.CleanupDeps{Rows: w.store, Locks: w.store, Writer: w.store, Parents: facts, Objects: objects, Inventory: objects, Temporary: objects, Tx: postgres.NewTxManager(w.pool, time.Second), Clock: cleanupClock(now), RuntimeNow: func() time.Time { return w.now }, Batch: 2, Budget: time.Second, OperationTimeout: time.Second}
 }
 
 func TestAssetPurgePreservesObjects(t *testing.T) {
@@ -102,7 +121,7 @@ func TestAssetPurgePreservesObjects(t *testing.T) {
 		}
 		return fault
 	})
-	result, err := w.cleanup(failing, nil, w.now).Execute(t.Context(), app.SweepCursor{})
+	result, err := w.cleanup(faultingCleanupObjects{storage, failing}, nil, w.now).Execute(t.Context(), app.SweepCursor{})
 	if !errors.Is(err, fault) || result.Cursor.After != a.ID || result.Removed != 0 {
 		t.Fatalf("failed object progress=%+v error=%v", result, err)
 	}

@@ -3,6 +3,7 @@ package riveradapter
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -48,7 +49,7 @@ func TestAssetWorkersRequireDurableOutput(t *testing.T) {
 			uc.err = fault
 		}
 		err := NewCleanupWorker(uc, time.Second).Work(t.Context(), &river.Job[CleanupArgs]{JobRow: &rivertype.JobRow{}})
-		if err == nil || uc.calls != 1 || uc.cursor != (app.SweepCursor{}) || (failed && !errors.Is(err, fault)) {
+		if err == nil || !strings.Contains(err.Error(), "RecordOutput") || uc.calls != 1 || uc.cursor != (app.SweepCursor{}) || (failed && !errors.Is(err, fault)) {
 			t.Fatalf("cleanup output failure=%v calls=%d cursor=%+v", err, uc.calls, uc.cursor)
 		}
 		args := DeleteScopeArgs{Scope: domain.ScopeProject, ID: uuid.NewV7(), At: c.Cutoff}
@@ -59,7 +60,7 @@ func TestAssetWorkersRequireDurableOutput(t *testing.T) {
 			scope.err = fault
 		}
 		err = NewDeleteScopeWorker(scope, time.Second).Work(t.Context(), &river.Job[DeleteScopeArgs]{JobRow: &rivertype.JobRow{}, Args: args})
-		if err == nil || scope.calls != 1 || scope.id != args.ID || scope.kind != args.Scope || !scope.stamp.At.Equal(args.At) || (failed && !errors.Is(err, fault)) {
+		if err == nil || !strings.Contains(err.Error(), "RecordOutput") || scope.calls != 1 || scope.id != args.ID || scope.kind != args.Scope || !scope.stamp.At.Equal(args.At) || (failed && !errors.Is(err, fault)) {
 			t.Fatalf("scope output failure=%v calls=%d", err, scope.calls)
 		}
 	}

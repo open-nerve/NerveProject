@@ -89,7 +89,7 @@ type ObjectLister interface { List(context.Context, string, int) (ObjectPage,err
 type TemporaryCleaner interface { SweepTemporary(context.Context,time.Time,int,string) (next string,removed int,err error) }
 ```
 
-List token 为 adapter 自有、不透明、版本化的分页位置，非法 token 返回错误。local 只扫描自身 objects 下合法随机 key 的目录；`ReadDir(256)` 流式枚举，保留 after 之后最小的 limit+1 项的有限堆，内存 O(batch)，按 key 排序返回。每次枚举/读取均检查 ctx；全扫描校验目录名/类型，metadata及内部布局只读本页返回项，不提供快照；后页的损坏到该页明确失败。目录/metadata 损坏、非法项或符号链接明确报错并不删除它，不扫描根外路径。不把孤立目录当正常 ObjectInfo 返回。
+List token 为 adapter 自有、不透明、版本化的分页位置，非法 token 返回错误。跨适配器合同要求每页至多 batch 项、key 严格升序；Next 为空表示穷尽，非空不得等于输入 token，也不得随空页返回。local 只扫描自身 objects 下合法随机 key 的目录；`ReadDir(256)` 流式枚举，保留 after 之后最小的 limit+1 项的有限堆，内存 O(batch)，按 key 排序返回。每次枚举/读取均检查 ctx；全扫描校验目录名/类型，metadata及内部布局只读本页返回项，不提供快照；后页的损坏到该页明确失败。目录/metadata 损坏、非法项或符号链接明确报错并不删除它，不扫描根外路径。不把孤立目录当正常 ObjectInfo 返回。
 
 此 local 平坦布局需要 O(N) 扫描/页；deadline 限制单次工作时间而不是宣称任意 N 都能完成。P2 实测 10,000 个目录和≥3 页的有限内存、取消、结果覆盖；M8 记录目标部署规模的全轮成本。若真实目标规模导致单页持续超时，必须再设计索引/分片，不能无限延长期限或静默越过页面。P1 现存磁盘布局不在本段暗中迁移。
 
@@ -101,7 +101,9 @@ List token 为 adapter 自有、不透明、版本化的分页位置，非法 to
 
 单次 asset sweep 依次扫描父删除/准备件过期、候选/staging、对象清单、临时目录。游标含 version、阶段、after/token、该轮 cutoff；最大 16 KiB，不含文件名、URL、正文。每页提交后记录进度；预算耗尽返回非 Complete，River adapter 用 `RecordOutput` 写入 job metadata.output 再 `JobSnooze(0)`。重启读取相同游标，正常新周期从空开始，停止后允许重放最后未持久化页，所有操作幂等。
 
-T5实际协议为 `SweepCursor{Version,Stage,After,Token,Cutoff,RuntimeCutoff}` 与 `SweepResult{Cursor,Scanned,Removed,Complete}`。rows阶段的Cutoff固定本轮业务时间，RuntimeCutoff固定本轮真实24小时线；scope阶段Cutoff是原删除At，RuntimeCutoff为空。Removed在rows阶段只计成功删除且数据库已确认移除的key，在scope阶段计已提交标记的资产行；不以它判断页是否耗尽。T9扩展objects/tmp阶段，不能把T5已知对象回收说成孤立对象对账已完成。
+T9 在 T5 协议上补齐 `SweepCursor{Version,Stage,After,Token,ObjectAfter,Cutoff,RuntimeCutoff}` 与 `SweepResult{Cursor,Scanned,Removed,Failed,Complete}`。清理依次为 rows→objects→tmp→done，只有 done 才 Complete。Cutoff 固定本轮业务时间，RuntimeCutoff 固定本轮真实24小时线；scope 独立使用原删除 At，RuntimeCutoff/Token/ObjectAfter 为空。After 仅用于 rows/scope；objects 的 Token 是不透明的页起点，ObjectAfter 是页内已安全尝试的最后 key，完整页后才消费 Next 并清空 ObjectAfter。对象在删除后令页内容变动也能安全续扫；预算到期的当前 key 保留待重放，普通对象失败则记已尝试并返回错误，下一周期重看。token 的 JSON 编码限制8KiB，外层 output 仍≤16KiB；页错误在外部删除前拒绝。
+
+Scanned 计本次调用已安全扫描的行/对象（临时端口不提供扫描数）；Removed 在 rows 只计外部删除成功且数据库确认移除的 key，在 objects/tmp 计成功删除项，在 scope 计已提交标记的资产行。Failed 在 app 计本次明确故障，River 累加进同一 job 的 output，重试成功不抹去故障次数和 River errors；预算耗尽的正常让出不计故障。这些数值不作为穷尽判据，也不冒充跨重放的唯一实物计数。
 
 已核仓库固定 River v0.47.0：RecordOutput 在 Work 中合法，Snooze 会保存 MetadataUpdates；不是修改 job.Args 后假定能持久化。实施须真实 worker 回归，不能只用 app 假实现证明。输出编码/版本错误原样失败；不通过 ClientFromContext 或二次 running client 绕过构造。
 
