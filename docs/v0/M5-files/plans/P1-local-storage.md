@@ -65,15 +65,15 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 
 ## Task 2（T2）：用途隔离签名（A3）
 
-**Files：** A/adapter/local/sign.go、token.go、sign_test.go；A/adapter/local/store.go 的构造参数；B/assets.go 的 MAC 构造帮手。
+**Files：** A/adapter/local/sign.go、token.go、sign_test.go；A/adapter/local/store.go 的构造参数；A/keys.go 的稳定用途常量；B/assets.go 的 MAC 构造帮手、asset_mac_test.go 的真实 HKDF/重启核验。
 
 **Interfaces：** 消费 T1 的 grant/MAC；产生 SignUpload/SignRead/VerifyUpload/VerifyRead。Store 的文件能力在 T3 接入，签名代码不可通过 nil 文件依赖猜测结果。
 
-- [ ] Step 1：`TestSignedTransferBindsEveryField` 对 method/key/size/type/name/inline/expiry/version 各变一项，均拒绝；合法返回同源相对 URL 和仅 Content-Type 必需头。
-- [ ] Step 2：`TestSignedTransferRejectsAmbiguousQuery` 覆盖重复 payload/tag、未知 query、非规范编码、4097 字节、错误 purpose、GET 改 HEAD、u 改 o、nil/空 MAC 依赖；错误无输入回显。
-- [ ] Step 3：用测试自己生成的 identity Keys 通过 bootstrap MAC 连接验证用途隔离及相同 PEM 重启；asset 测试可用简单测试 MAC，但不能替代组合层真 HKDF 证明。跑对应包新增测试确认红，再实现固定格式和恒定时间 Verify。
-- [ ] Step 4：`go test -count=1 ./internal/modules/asset/... ./internal/bootstrap -run 'TestSignedTransfer|TestAssetMAC'` 绿；删除 method/purpose/expiry 校验的定向变异分别被杀，恢复复测。
-- [ ] Step 5：两轮复核后提交 `feat(M5/P1): 加入用途隔离的本地上传与读取签名`。
+- [x] Step 1：`TestSignedTransferBindsEveryField` 对 method/key/size/type/name/inline/expiry/version 各变一项，均拒绝；合法返回同源相对 URL 和仅 Content-Type 必需头。
+- [x] Step 2：`TestSignedTransferRejectsAmbiguousQuery` 覆盖重复 payload/tag、未知 query、非规范编码、4097 字节、错误 purpose、GET 改 HEAD、u 改 o、nil/空 MAC 依赖；错误无输入回显。
+- [x] Step 3：用测试自己生成的 identity Keys 通过 bootstrap MAC 连接验证用途隔离及相同 PEM 重启；asset 测试可用简单测试 MAC，但不能替代组合层真 HKDF 证明。跑对应包新增测试确认红，再实现固定格式和恒定时间 Verify。
+- [x] Step 4：`go test -count=1 ./internal/modules/asset/... ./internal/bootstrap -run 'TestSignedTransfer|TestAssetMAC'` 绿；删除 method/purpose/expiry 校验的定向变异分别被杀，恢复复测。
+- [x] Step 5：两轮复核后提交 `feat(M5/P1): 加入用途隔离的本地上传与读取签名`。
 
 ## Task 3（T3）：磁盘对象与完整上传（A2/A4）
 

@@ -71,7 +71,9 @@ type MAC interface { Tag([]byte) [16]byte; Verify([]byte, [16]byte) bool }
 
 - bootstrap 通过已加载的 `identity.Keys.MAC` 派生 `asset-upload`、`asset-read`，asset 只持有 app.MAC；不重复读密钥、不加密钥文件、不将 identity import 到 asset。
 - 签名格式版本 1，规范化载荷固定字段顺序；URL query 只接受 `payload`、`tag` 各一次，拒绝未知项、重复项、非规范 base64url 和大于 4096 字节的 query。载荷绑定版本、用途、method、key、精确大小/类型或读取处置/名称、到期秒；URL path key 与签名 key 必须相等。
+- v1 JSON 顺序固定为 `v/purpose/method/key/size/content_type/name/inline/expires_at`，不省略零值；purpose 为 upload/read。上传的 name/inline 必须为空/false，读取的 size 为 0。验 MAC 后重新编码比对原字节，拒绝重复字段、未知字段和非规范 JSON；query 的两项可调换顺序，但值不得用百分号或 padding 编码变体。
 - 请求过期条件 `runtimeNow >= expires_at`；上传签发最多 15 分钟，读取最多 65 分钟，过去或超过窗口不能签发。签名用运行时钟，不受测试用业务 clock.offset 影响。
+- 签发先按原始精度校验窗口，再向下取整到 UTC 秒，并确认取整后仍未到期；返回的 expires_at 为实际签名时刻，不能用取整接纳略超期限的输入。
 - PUT 必须是 `u` key，GET/HEAD 必须是 `o` key；GET 签名不能当 HEAD 签名，上传/读取 MAC 不能互用。客户端不能通过改 query 选择 inline、下载名或类型。
 - local 返回同源相对 URL，不读取 Host/X-Forwarded-Host 来组装目的地址；后续生成合同用 uri-reference。SignedRequest.Headers 只有客户端须提供的头，PUT 包含 Content-Type，Content-Length 由浏览器根据 File 自动提供但仍在签名中约束。
 - 使用持久密钥时重启可验证旧签名；不同密钥或不同 purpose 必须失败。测试密钥在测试内创建，不能读取本机凭据或用户密钥。

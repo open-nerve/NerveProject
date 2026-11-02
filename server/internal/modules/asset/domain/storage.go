@@ -25,6 +25,7 @@ var (
 	ErrInvalidObjectKey = errors.New("invalid asset object key")
 	ErrInvalidUpload    = errors.New("invalid asset upload grant")
 	ErrInvalidRead      = errors.New("invalid asset read grant")
+	ErrInvalidSignature = errors.New("invalid asset transfer signature")
 	ErrObjectNotFound   = errors.New("asset object not found")
 	ErrObjectChanged    = errors.New("asset object changed")
 	ErrObjectExists     = errors.New("asset object already exists")
