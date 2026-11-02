@@ -154,7 +154,7 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 
 **Files：** B/asset_transfer_slow_test.go；本 worktree `.superpowers/sdd/P1-local-storage` 的日志、manifest、结果汇总；review。
 
-- [ ] Step 1：实际默认 server read=30s/API=15s 下上传 >1 MiB，按进度调节持续 >30s 且小于本次计算预算；成功 204、seal/GET 字节一致。用有界条件/节流器制造慢流，不用 sleep 同步竞争。
+- [x] Step 1：实际默认 server read=30s/API=15s 下上传 >1 MiB，按进度调节持续 >30s 且小于本次计算预算；成功 204、seal/GET 字节一致。用有界条件/节流器制造慢流，不用 sleep 同步竞争。
 - [ ] Step 2：聚焦 race/变异后恢复全部代码，检查 git diff 和工作树；依顺序完成 `make gen && make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`。容器重套件只串行。
 - [ ] Step 3：记录命令、退出码、准确 tested diff/HEAD、原件路径/hash/bytes；失败先定根因，环境重跑独立记。仅已知 W11 用既定处理，不专项扩范围。
 - [ ] Step 4：提交完整检查点后使用系统 git 推送；按准确 HEAD 查询 branch CI，不以别的提交绿灯代替。
