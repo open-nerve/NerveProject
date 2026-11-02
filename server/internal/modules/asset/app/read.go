@@ -103,8 +103,15 @@ func ownedAsset(ctx context.Context, rows AssetReader, actor shared.Actor, id uu
 }
 
 func currentAsset(before, row domain.Asset, host Host) error {
+	if row.StorageRevision != before.StorageRevision {
+		return domain.ErrAssetScopeChanged
+	}
+	return currentPlacement(before, row, host)
+}
+
+func currentPlacement(before, row domain.Asset, host Host) error {
 	boundSame := before.BoundAt == nil && row.BoundAt == nil || before.BoundAt != nil && row.BoundAt != nil && before.BoundAt.Equal(*row.BoundAt)
-	if row.Placement != before.Placement || hostOf(row.Placement) != host || row.Purpose != before.Purpose || !boundSame || row.StorageRevision != before.StorageRevision {
+	if row.Placement != before.Placement || hostOf(row.Placement) != host || row.Purpose != before.Purpose || !boundSame {
 		return domain.ErrAssetScopeChanged
 	}
 	return nil

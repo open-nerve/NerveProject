@@ -13,7 +13,9 @@ var (
 	ErrAssetTooLarge        = errors.New("asset too large")
 	ErrAssetTypeUnsupported = errors.New("unsupported asset type")
 	ErrInvalidMetadata      = errors.New("invalid asset storage metadata")
-	ErrAssetContentInvalid  = errors.New("invalid asset content")
+	ErrAssetContentInvalid  = shared.NewError(shared.KindInvalid, "asset.content_invalid", "The file does not match its declared size, type or image requirements.")
+	ErrAssetObjectMissing   = shared.NewError(shared.KindConflict, "asset.object_missing", "The uploaded content is not available yet.")
+	ErrAssetObjectChanged   = shared.NewError(shared.KindConflict, "asset.object_changed", "The content changed while it was being verified. Please try again.")
 	ErrAssetNotFound        = shared.NewError(shared.KindNotFound, "asset.not_found", "The asset does not exist, or you cannot see it.")
 	ErrAssetScopeChanged    = shared.NewError(shared.KindConflict, "asset.scope_changed", "The asset's scope or storage state changed. Please try again.")
 	ErrAssetNotUploaded     = shared.NewError(shared.KindConflict, "asset.not_uploaded", "The asset's content has not been completed.")
@@ -99,4 +101,12 @@ func RasterMediaType(value string) bool {
 	default:
 		return false
 	}
+}
+
+// Candidate slots and storage operations have independent retryable causes.
+func AssetBusy() *shared.Error {
+	return &shared.Error{Kind: shared.KindUnavailable, Code: "asset.busy", Detail: "Previous content attempts are still being recovered. Please retry shortly.", RetryDelay: time.Second}
+}
+func AssetStorageUnavailable() *shared.Error {
+	return &shared.Error{Kind: shared.KindUnavailable, Code: "asset.storage_unavailable", Detail: "File storage is temporarily unavailable. Please retry shortly.", RetryDelay: time.Second}
 }

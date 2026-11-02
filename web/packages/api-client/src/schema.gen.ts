@@ -46,6 +46,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/assets/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify and publish immutable content
+         * @description Commits an independent candidate before inspecting, validating and sealing the uploaded bytes without database resources. Rechecks current host write permission and the candidate lease before publishing. Repeated authorized confirmation returns the existing result without changing its audit data. Failed or losing candidates remain recoverable; a storage failure does not mean the object is absent. asset.busy and asset.storage_unavailable include Retry-After of one second.
+         */
+        post: operations["completeAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/assets/{id}/content": {
         parameters: {
             query?: never;
@@ -3123,6 +3145,33 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Metadata visible to its applicant. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Asset"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    completeAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description The uniquely published asset. */
             200: {
                 headers: {
                     [name: string]: unknown;

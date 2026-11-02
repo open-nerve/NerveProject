@@ -83,7 +83,7 @@ duplicate 可跨用途，但目标重新执行大小/图片验证；非图片附
 | 422 validation_failed | 非法用途/范围/name/size格式等；沿用 shared.Invalid 字段顺序 |
 | 422 asset.content_invalid | 实物大小/MIME不符、图片头/尺寸非法、超过头部上限 |
 | 503 asset.busy | 未回收候选已3个；Retry-After:1 |
-| 503 asset.storage_unavailable | 存储 I/O/校验读取取消之外的明确后端故障，不能映404 |
+| 503 asset.storage_unavailable | 独立 I/O 预算超时或请求取消之外的后端故障；Retry-After:1，不能映404 |
 | 503 server_busy | 既有 gate/锁等待转换只在 bootstrap，Retry-After:1 |
 
 既有归档码 409 project.archived / 409 issue.archived 由 owner 保持并在相应用途操作声明；一般401、bodyshape400、404路径/405/413/429等公共错误保持真实全程序目录。准确复用 forbidden / issue.not_author / project.archived / issue.archived，不能在 adapter 变更它们的状态或判定顺序。
@@ -140,7 +140,7 @@ P1保留的C12菜单/F6焦点Minor未修，后续UI三浏览器验收继续跟�
 1. NO ACTION保护正确性不等于回收必然成功；存储持续失败会保留父行，需要错误计数与可恢复游标。
 2. 既有单页purge改造是已批准A的工程范围，所有owner旧回归、真实目录和任务重启必须联合验证，不把接口编译通过当并发证明。
 3. 图片仅受限头部验证；local清单O(N)/页；URL是短期bearer，已发出地址不保证即时撤回。这些限制不可在最终描述省略。
-4. P2完整spec的builder check及plan自检已通过，T1纯规则/图片校验及必需依赖已实施并验证，迁移/API/整体清理尚未实现；按连续授权推进。只有新的重大风险/关键分歧才提交上报，不能把文档预检当实现验证。
+4. P2完整spec的builder check及plan自检已通过，T1–T7已完成，含首表、四个业务操作、已知对象恢复和受保护父清理；复制/删除准备件、完整对象对账及阶段联合验收尚待T8–T14；按连续授权推进。只有新的重大风险/关键分歧才提交上报，不能把文档预检当实现验证。
 
 ## 附录A：预检探针
 

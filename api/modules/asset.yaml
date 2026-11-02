@@ -52,6 +52,40 @@ paths:
                 $ref: '#/components/schemas/Asset'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/assets/{id}/complete:
+    parameters:
+      - $ref: '#/components/parameters/AssetID'
+    post:
+      operationId: completeAsset
+      tags: [asset]
+      summary: Verify and publish immutable content
+      description: >-
+        Commits an independent candidate before inspecting, validating and sealing
+        the uploaded bytes without database resources. Rechecks current host write
+        permission and the candidate lease before publishing. Repeated authorized
+        confirmation returns the existing result without changing its audit data.
+        Failed or losing candidates remain recoverable; a storage failure does not
+        mean the object is absent. asset.busy and asset.storage_unavailable
+        include Retry-After of one second.
+      security: [{bearer: []}]
+      x-problem-codes: [forbidden, issue.not_author, project.archived, issue.archived, asset.not_found, asset.scope_changed, asset.too_large, asset.type_unsupported, asset.object_missing, asset.object_changed, asset.content_invalid, asset.busy, asset.storage_unavailable, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {}
+      responses:
+        '200':
+          description: The uniquely published asset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/assets/{id}/content:
     parameters:
       - $ref: '#/components/parameters/AssetID'

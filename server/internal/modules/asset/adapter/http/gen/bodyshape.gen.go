@@ -18,9 +18,11 @@ func BodyShapes() *bodyshape.Table {
 			/* 5 */ {Types: bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 6 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 7 */ {Types: bodyshape.Integer, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 8 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{}},
 		},
 		Roots: map[string]int{
-			"POST /api/v0/assets": 0,
+			"POST /api/v0/assets":               0,
+			"POST /api/v0/assets/{id}/complete": 8,
 		},
 	}
 }

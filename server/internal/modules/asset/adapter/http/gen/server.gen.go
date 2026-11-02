@@ -205,8 +205,14 @@ type AssetID = uuid.UUID
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
 
+// CompleteAssetJSONBody defines parameters for CompleteAsset.
+type CompleteAssetJSONBody = map[string]interface{}
+
 // CreateAssetJSONRequestBody defines body for CreateAsset for application/json ContentType.
 type CreateAssetJSONRequestBody = NewAsset
+
+// CompleteAssetJSONRequestBody defines body for CompleteAsset for application/json ContentType.
+type CompleteAssetJSONRequestBody = CompleteAssetJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -216,6 +222,9 @@ type ServerInterface interface {
 	// GetAsset Read private asset metadata
 	// (GET /api/v0/assets/{id})
 	GetAsset(w http.ResponseWriter, r *http.Request, id AssetID)
+	// CompleteAsset Verify and publish immutable content
+	// (POST /api/v0/assets/{id}/complete)
+	CompleteAsset(w http.ResponseWriter, r *http.Request, id AssetID)
 	// ResolveAssetContent Sign a read of completed content
 	// (GET /api/v0/assets/{id}/content)
 	ResolveAssetContent(w http.ResponseWriter, r *http.Request, id AssetID)
@@ -261,6 +270,32 @@ func (siw *ServerInterfaceWrapper) GetAsset(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAsset(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteAsset operation middleware
+func (siw *ServerInterfaceWrapper) CompleteAsset(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id AssetID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteAsset(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -418,6 +453,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/assets", wrapper.CreateAsset)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/assets/{id}", wrapper.GetAsset)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/assets/{id}/complete", wrapper.CompleteAsset)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/assets/{id}/content", wrapper.ResolveAssetContent)
 
 	return m
@@ -525,6 +561,53 @@ func (response GetAssetdefaultApplicationProblemPlusJSONResponse) VisitGetAssetR
 	return err
 }
 
+type CompleteAssetRequestObject struct {
+	ID   AssetID `json:"id"`
+	Body *CompleteAssetJSONRequestBody
+}
+
+type CompleteAssetResponseObject interface {
+	VisitCompleteAssetResponse(w http.ResponseWriter) error
+}
+
+type CompleteAsset200JSONResponse Asset
+
+func (response CompleteAsset200JSONResponse) VisitCompleteAssetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteAssetdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CompleteAssetdefaultApplicationProblemPlusJSONResponse) VisitCompleteAssetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ResolveAssetContentRequestObject struct {
 	ID AssetID `json:"id"`
 }
@@ -579,6 +662,9 @@ type StrictServerInterface interface {
 	// GetAsset Read private asset metadata
 	// (GET /api/v0/assets/{id})
 	GetAsset(ctx context.Context, request GetAssetRequestObject) (GetAssetResponseObject, error)
+	// CompleteAsset Verify and publish immutable content
+	// (POST /api/v0/assets/{id}/complete)
+	CompleteAsset(ctx context.Context, request CompleteAssetRequestObject) (CompleteAssetResponseObject, error)
 	// ResolveAssetContent Sign a read of completed content
 	// (GET /api/v0/assets/{id}/content)
 	ResolveAssetContent(ctx context.Context, request ResolveAssetContentRequestObject) (ResolveAssetContentResponseObject, error)
@@ -673,6 +759,39 @@ func (sh *strictHandler) GetAsset(w http.ResponseWriter, r *http.Request, id Ass
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetAssetResponseObject); ok {
 		if err := validResponse.VisitGetAssetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CompleteAsset operation middleware
+func (sh *strictHandler) CompleteAsset(w http.ResponseWriter, r *http.Request, id AssetID) {
+	var request CompleteAssetRequestObject
+
+	request.ID = id
+
+	var body CompleteAssetJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CompleteAsset(ctx, request.(CompleteAssetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompleteAsset")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompleteAssetResponseObject); ok {
+		if err := validResponse.VisitCompleteAssetResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

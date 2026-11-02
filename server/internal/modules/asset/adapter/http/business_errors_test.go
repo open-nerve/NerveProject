@@ -55,17 +55,22 @@ func TestAssetBusinessProblemMapping(t *testing.T) {
 		status int
 		paths  []string
 	}{
-		{domain.ErrAssetNotFound, "asset.not_found", 404, []string{"prepare", "get", "content"}},
-		{domain.ErrAssetScopeChanged, "asset.scope_changed", 409, []string{"prepare", "get", "content"}},
-		{shared.Forbidden(), "forbidden", 403, []string{"prepare", "get", "content"}},
+		{domain.ErrAssetNotFound, "asset.not_found", 404, []string{"prepare", "get", "content", "complete"}},
+		{domain.ErrAssetScopeChanged, "asset.scope_changed", 409, []string{"prepare", "get", "content", "complete"}},
+		{shared.Forbidden(), "forbidden", 403, []string{"prepare", "get", "content", "complete"}},
 		{domain.ErrAssetNotUploaded, "asset.not_uploaded", 409, []string{"content"}},
-		{domain.ErrAssetTooLarge, "asset.too_large", 413, []string{"prepare"}},
-		{domain.ErrAssetTypeUnsupported, "asset.type_unsupported", 415, []string{"prepare"}},
+		{domain.ErrAssetTooLarge, "asset.too_large", 413, []string{"prepare", "complete"}},
+		{domain.ErrAssetTypeUnsupported, "asset.type_unsupported", 415, []string{"prepare", "complete"}},
 		{shared.Invalid(shared.FieldError{Field: "name", Code: shared.FieldInvalidFormat, Message: "is invalid"}), "validation_failed", 422, []string{"prepare"}},
-		{shared.ServerBusy(time.Second), "server_busy", 503, []string{"prepare", "content"}},
-		{shared.NewError(shared.KindForbidden, "issue.not_author", "Only the author may edit."), "issue.not_author", 403, []string{"prepare"}},
-		{shared.NewError(shared.KindConflict, "project.archived", "The project is archived."), "project.archived", 409, []string{"prepare"}},
-		{shared.NewError(shared.KindConflict, "issue.archived", "The issue is archived."), "issue.archived", 409, []string{"prepare"}},
+		{shared.ServerBusy(time.Second), "server_busy", 503, []string{"prepare", "content", "complete"}},
+		{shared.NewError(shared.KindForbidden, "issue.not_author", "Only the author may edit."), "issue.not_author", 403, []string{"prepare", "complete"}},
+		{shared.NewError(shared.KindConflict, "project.archived", "The project is archived."), "project.archived", 409, []string{"prepare", "complete"}},
+		{shared.NewError(shared.KindConflict, "issue.archived", "The issue is archived."), "issue.archived", 409, []string{"prepare", "complete"}},
+		{domain.ErrAssetObjectMissing, "asset.object_missing", 409, []string{"complete"}},
+		{domain.ErrAssetObjectChanged, "asset.object_changed", 409, []string{"complete"}},
+		{domain.ErrAssetContentInvalid, "asset.content_invalid", 422, []string{"complete"}},
+		{domain.AssetBusy(), "asset.busy", 503, []string{"complete"}},
+		{domain.AssetStorageUnavailable(), "asset.storage_unavailable", 503, []string{"complete"}},
 	} {
 		for _, operation := range tc.paths {
 			t.Run(tc.code+"/"+operation, func(t *testing.T) {
@@ -76,10 +81,14 @@ func TestAssetBusinessProblemMapping(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				Register(router, api, UseCases{Prepare: prepareError{tc.err}, Get: getError{tc.err}, ResolveContent: contentError{tc.err}})
+				Register(router, api, UseCases{Prepare: prepareError{tc.err}, Get: getError{tc.err}, Complete: getError{tc.err}, ResolveContent: contentError{tc.err}})
 				method, path, body := "GET", "/api/v0/assets/"+uuid.New().String(), ""
 				if operation == "prepare" {
 					method, path, body = "POST", "/api/v0/assets", `{"purpose":"USER_AVATAR","scope":{"kind":"user"},"name":"x.png","size":3,"content_type":"image/png"}`
+				}
+				if operation == "complete" {
+					method, body = "POST", `{}`
+					path += "/complete"
 				}
 				if operation == "content" {
 					path += "/content"

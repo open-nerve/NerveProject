@@ -18,12 +18,16 @@ type PrepareUseCase interface {
 type GetUseCase interface {
 	Execute(context.Context, uuid.UUID) (domain.Asset, error)
 }
+type CompleteUseCase interface {
+	Execute(context.Context, uuid.UUID) (domain.Asset, error)
+}
 type ResolveContentUseCase interface {
 	Execute(context.Context, uuid.UUID) (domain.SignedRequest, error)
 }
 type UseCases struct {
 	Prepare        PrepareUseCase
 	Get            GetUseCase
+	Complete       CompleteUseCase
 	ResolveContent ResolveContentUseCase
 }
 type handler struct{ uc UseCases }

@@ -17,6 +17,10 @@ import { SessionUnavailableError } from "@/lib/auth/token-manager";
 export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "asset.not_found": "errors.asset_not_found",
   "asset.scope_changed": "errors.asset_scope_changed",
+  "asset.object_missing": "errors.asset_object_missing",
+  "asset.content_invalid": "errors.asset_content_invalid",
+  "asset.busy": "errors.asset_busy",
+  "asset.storage_unavailable": "errors.asset_storage_unavailable",
   "asset.not_uploaded": "errors.asset_not_uploaded",
   "asset.too_large": "errors.asset_too_large",
   "asset.type_unsupported": "errors.asset_type_unsupported",

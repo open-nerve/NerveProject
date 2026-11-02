@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/content"
 	assethttp "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/http"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/local"
 	assetapp "github.com/open-nerve/NerveProject/server/internal/modules/asset/app"
@@ -17,6 +18,7 @@ import (
 type assetComponents struct {
 	store    *local.Store
 	transfer assethttp.Deps
+	sealing  assetapp.SealingDeps
 	close    func() error
 }
 
@@ -36,7 +38,7 @@ func newAssets(files config.FilesConfig, keys *identity.Keys, logger *slog.Logge
 		UploadVerifier: store, ReadVerifier: store, Uploader: store, Reader: store,
 		Files: files, RuntimeNow: time.Now, Errors: httpserver.NewAPIErrors(logger),
 	}
-	return assetComponents{store: store, transfer: transfer, close: store.Close}, nil
+	return assetComponents{store: store, transfer: transfer, sealing: assetapp.SealingDeps{Inspector: store, Reader: store, Sealer: store, Validator: content.Validator{}}, close: store.Close}, nil
 }
 
 // assetMACs is the only composition point that selects file MAC purposes.

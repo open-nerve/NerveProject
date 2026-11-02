@@ -60,6 +60,8 @@ type StorageMetadata struct {
 4. complete 竞争者若见已有 final：重新授权后返回已有 DTO，不能改写 final/审计。自己的败选候选仍被回收。若在外部阶段报错，也先在短授权事务重读一次已发布结果：只有另一请求确已成功时才可返回同一 DTO；否则原缺失/变化/无效内容/存储错误如实返回。
 5. duplicate 最终还核源 final key/摘要及源权限；失败目标保持 pending，不暴露候选。每次 duplicate 是新资产，不提供跨请求幂等键；响应丢失后的重复可能生成额外准备件，7 天规则负责回收。
 
+整个外部段共用一次 deadline，两个 Open 的读取者由 app 关闭，读取或 Close 失败都不发布；请求取消沿用平台取消语义，独立 I/O 预算超时及未分类后端故障为 503 asset.storage_unavailable（Retry-After:1），不暴露磁盘路径/签名 URL。候选增补只改 metadata/revision；成功发布才更新资产业务审计。
+
 外部调用成功、DB rollback/取消、进程退出都不能忘掉 candidate。超 lease 的迟到成功不能晋升 final；即使 backend 在 deadline 后才落盘，也只是恢复记录或后续 orphan。客户端旧 PUT 永远只能写 u-key，不持有 o-key 写能力。
 
 ## 4. 回收认领与安全

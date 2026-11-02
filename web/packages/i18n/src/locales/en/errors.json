@@ -2,6 +2,10 @@
   "errors": {
     "asset_not_found": "The file does not exist, or you cannot access it.",
     "asset_scope_changed": "The file or its location changed. Please try again.",
+    "asset_object_missing": "The uploaded file is not available yet. Please upload it and try again.",
+    "asset_content_invalid": "The file does not match its declared size, type or image requirements.",
+    "asset_busy": "Previous file attempts are still being recovered. Please retry shortly.",
+    "asset_storage_unavailable": "File storage is temporarily unavailable. Please retry shortly.",
     "asset_not_uploaded": "The file upload has not been completed.",
     "asset_too_large": "The file exceeds the allowed size.",
     "asset_type_unsupported": "Please choose a JPEG, PNG, WebP or GIF image.",

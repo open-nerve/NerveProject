@@ -22,6 +22,7 @@ type Deps struct {
 	ReadTx       shared.TxManager
 	UploadSigner app.UploadSigner
 	ReadSigner   app.ReadSigner
+	Sealing      app.SealingDeps
 }
 type Module struct {
 	transfer                       *httpadapter.Transfer
@@ -32,7 +33,7 @@ type Module struct {
 }
 
 func New(d Deps) (*Module, error) {
-	if d.Ports.store == nil || d.Parents == nil || d.Objects == nil || d.JobTx == nil || d.ReadTx == nil || d.UploadSigner == nil || d.ReadSigner == nil {
+	if d.Ports.store == nil || d.Parents == nil || d.Objects == nil || d.JobTx == nil || d.ReadTx == nil || d.UploadSigner == nil || d.ReadSigner == nil || d.Sealing.Inspector == nil || d.Sealing.Reader == nil || d.Sealing.Sealer == nil || d.Sealing.Validator == nil {
 		return nil, errors.New("asset module lacks lifecycle dependencies")
 	}
 	transfer, err := httpadapter.NewTransfer(d.Transfer)
@@ -45,6 +46,7 @@ func New(d Deps) (*Module, error) {
 	cleanup := app.NewCleanup(app.CleanupDeps{Rows: d.Ports.store, Locks: d.Ports.store, Writer: d.Ports.store, Parents: d.Parents, Objects: d.Objects, Tx: d.JobTx, Clock: d.Access.Clock, RuntimeNow: d.Transfer.RuntimeNow, Batch: files.CleanupBatch, Budget: files.CleanupBudget, OperationTimeout: files.OperationTimeout})
 	deletion := app.NewDeleteScope(app.DeleteScopeDeps{Rows: d.Ports.store, Locks: d.Ports.store, Writer: d.Ports.store, Tx: d.JobTx, Batch: files.CleanupBatch, Budget: files.CleanupBudget})
 	uc := httpadapter.UseCases{
+		Complete:       app.NewComplete(app.CompleteDeps{Rows: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.Transfer.RuntimeNow}),
 		Prepare:        app.NewPrepare(app.PrepareDeps{Access: access, Rows: d.Ports.store, Signer: d.UploadSigner, Budget: files, SizeLimit: files.SizeLimit, UploadTTL: files.UploadTTL, RuntimeNow: d.Transfer.RuntimeNow}),
 		Get:            app.NewGet(app.GetDeps{Rows: d.Ports.store, Hosts: d.Access.Hosts, ReadTx: d.ReadTx}),
 		ResolveContent: app.NewResolveContent(app.ResolveContentDeps{Rows: d.Ports.store, Access: access, Signer: d.ReadSigner, RuntimeNow: d.Transfer.RuntimeNow}),

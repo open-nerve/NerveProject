@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T5已完成，接续T6。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T7已完成，接续T8。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -128,11 +128,11 @@
 
 **Interfaces：** Complete.Execute(ctx,id)(domain.Asset,error)；消费T1validator/P1六端口/T5metadata与T3Access。候选与结果提交用同一路径，中间没有gate/tx/连接。
 
-- [ ] Step 1：TestAssetCompleteRealBytes：真实HTTP PUT/GET，完整hash、重复complete同ID/final/审计；TestAssetCompleteRaces与TestAssetSealFailureRecovery：双独立候选、同大小不同字节、旧PUT重放、封存成功DB rollback、暂停>lease、另一请求已发布后本请求失败，保留每个对象和记录断言。
-- [ ] Step 2：运行 `go -C server test ./internal/modules/asset/... ./internal/bootstrap -run 'AssetComplete|AssetSeal' -count=1`，红与失效原因留原件。
-- [ ] Step 3：新增complete契约、生成；严格两段短事务和总外部deadline；完整双次流式校验，只有一个final胜者；lease/phase核验，不把timeout当不存在。storage error/no object/version change区分。
-- [ ] Step 4：聚焦绿及validator/local合同；变异固定seal key、去expectedETag、信源metadata不验目的、最后不重验权限、超lease仍晋升、败者覆盖整份JSON，分别在实际层杀死。更新API错误两语若新增，已声明码不重复扩张。
-- [ ] Step 5：提交，记录真实对象keys只入私有证据，不放日志/DTO。
+- [x] Step 1：TestAssetCompleteRealBytes：真实HTTP PUT/GET，完整hash、重复complete同ID/final/审计；TestAssetCompleteRaces与TestAssetSealFailureRecovery：双独立候选、同大小不同字节、旧PUT重放、封存成功DB rollback、暂停>lease、另一请求已发布后本请求失败，保留每个对象和记录断言。
+- [x] Step 2：运行 `go -C server test ./internal/modules/asset/... ./internal/bootstrap -run 'AssetComplete|AssetSeal' -count=1`，红与失效原因留原件。
+- [x] Step 3：新增complete契约、生成；严格两段短事务和总外部deadline；完整双次流式校验，只有一个final胜者；lease/phase核验，不把timeout当不存在。storage error/no object/version change区分。
+- [x] Step 4：聚焦绿及validator/local合同；变异固定seal key、去expectedETag、信源metadata不验目的、最后不重验权限、超lease仍晋升、败者覆盖整份JSON，分别在实际层杀死。更新API错误两语若新增，已声明码不重复扩张。
+- [x] Step 5：提交，记录真实对象keys只入私有证据，不放日志/DTO。
 
 ## Task 8（T8）：复制与删除准备件
 

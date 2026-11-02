@@ -18,7 +18,7 @@ import (
 func TestAssetContentReadNoWrites(t *testing.T) {
 	var cfg config.Config
 	w := newIssueWorldWith(t, func(c *config.Config) { c.Auth.JWT.PrivateKeyFile = writeFile(t, testKeyPEM); cfg = *c })
-	waitForCompletedKinds(t, w.pool, map[string]int{"asset.cleanup": 1}, &lockedBuffer{})
+	waitForCompletedKinds(t, w.pool, map[string]int{"asset.cleanup": 1, "cleanup.purge_deleted": 1}, &lockedBuffer{})
 	id := w.newWorkItem(t)
 	row := assetRowForHost(t, w, domain.ScopeIssue, id, id)
 	key, err := domain.NewObjectKey('o', row.ID, uuid.New())
@@ -30,8 +30,8 @@ func TestAssetContentReadNoWrites(t *testing.T) {
 	if _, err := assetpg.New(w.pool).SaveAsset(t.Context(), row); err != nil {
 		t.Fatal(err)
 	}
-	_, err = w.pool.Exec(t.Context(), `CREATE TABLE asset_read_audit (op text NOT NULL);
-CREATE FUNCTION audit_asset_write() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN INSERT INTO asset_read_audit VALUES(TG_OP); RETURN NULL; END $$;
+	_, err = w.pool.Exec(t.Context(), `CREATE TABLE asset_read_audit (op text NOT NULL, statement text NOT NULL);
+CREATE FUNCTION audit_asset_write() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN INSERT INTO asset_read_audit VALUES(TG_OP,current_query()); RETURN NULL; END $$;
 CREATE TRIGGER audit_asset_write AFTER INSERT OR UPDATE OR DELETE ON file_assets FOR EACH STATEMENT EXECUTE FUNCTION audit_asset_write();`)
 	if err != nil {
 		t.Fatal(err)
@@ -67,6 +67,16 @@ CREATE TRIGGER audit_asset_write AFTER INSERT OR UPDATE OR DELETE ON file_assets
 	}
 	var count int
 	if err := w.pool.QueryRow(t.Context(), "SELECT count(*) FROM asset_read_audit").Scan(&count); err != nil || count != 0 || snapshot() != before {
+		rows, _ := w.pool.Query(t.Context(), "SELECT op,statement FROM asset_read_audit")
+		if rows != nil {
+			defer rows.Close()
+			for rows.Next() {
+				var op, statement string
+				if scanErr := rows.Scan(&op, &statement); scanErr == nil {
+					t.Logf("unexpected DML %s: %s", op, statement)
+				}
+			}
+		}
 		t.Fatalf("content reads wrote rows: audit=%d err=%v", count, err)
 	}
 }

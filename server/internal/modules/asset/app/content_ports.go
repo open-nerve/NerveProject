@@ -11,3 +11,11 @@ import (
 type ContentValidator interface {
 	Validate(context.Context, io.Reader, int64, string, bool) (domain.ContentProof, error)
 }
+
+// SealingDeps are the byte-operation ports; none acquires database resources.
+type SealingDeps struct {
+	Inspector ObjectInspector
+	Reader    ObjectReader
+	Sealer    ObjectSealer
+	Validator ContentValidator
+}
