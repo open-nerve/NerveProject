@@ -1,7 +1,7 @@
 # M5 / P1 本地存储评审记录
 
 > 状态：T1–T8 实施与局部复核完成；T9 完整门禁、T10 deep-review、T11 集成尚未完成。
-> 当前阻塞：T9 复现 `/storage` 文件路由截获合法同名工作区页面，既有 M3 守卫失败。已提交完成工作和[问题与待裁定方案](P1-storage-namespace-decision.md)，等待负责人决定路径合同；当前不可合并。
+> T9 已获最终授权：按 [re-32](../../../reviews/re-32-M5文件路由方案A复核.md)使用 `/static/local`，修正通用路径策略和开发代理边界；原失败保留，实施/完整验收未完成。
 > 分支：`codex/m5-p1`；基线：`fb3e788b7be33467018385c9a67d515e51b79dad`。原件目录为本 worktree 的 `.superpowers/sdd/P1-local-storage`，集成后补归档映射。
 
 ## 1. 范围

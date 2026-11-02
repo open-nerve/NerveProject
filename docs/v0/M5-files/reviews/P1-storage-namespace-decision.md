@@ -1,4 +1,4 @@
-# M5/P1：文件路由与工作区命名空间冲突（待裁定）
+# M5/P1：文件路由与工作区命名空间冲突（历史发现及最终裁定）
 
 发现日期：2026-11-02。分支 `codex/m5-p1`，复现产品提交 `7cc4731b228d07872bd093e9e060168db32fac94`。T1–T8 和 T9 默认慢流已提交；完整七门禁只完成生成检查，阶段 deep-review 尚未开始。
 
@@ -33,7 +33,7 @@ M3 允许工作区使用 `storage` 作为 slug，页面路径为 `/storage/proje
 | task-9-namespace-control-without-registration.log | 2304 | a9239df6406bcd60ed89abbecb0881d864227ac0271dfba69f3f41f7bd72e907 |
 | task-9-namespace-reserved-guard.log | 339 | efd45d061856105bfd59811dd86111400cf05adf145b1bfef37b189ca1f08ac5 |
 
-## 3. 方案 A（推荐）：使用已保留的服务端命名空间
+## 3. 原方案 A（独立复核后不再首选）：使用已保留的服务端命名空间
 
 把 local 传输移到 **`/assets/storage/local/{key}`**；fallback 和禁止重定向策略仅覆盖 `/assets/storage` 子树。`assets` 已被 M3 保留，现有工作区地址和数据保持原样。
 
@@ -51,6 +51,10 @@ M3 允许工作区使用 `storage` 作为 slug，页面路径为 `/storage/proje
 
 把 storage 加入保留名单只能阻止新创建，既有同名工作区还需盘点、迁移 slug 和处理旧链接。该方案扩大到 M3 的命名/迁移合同，需要单独设计和数据操作授权，成本及风险更高。
 
-## 5. 停点
+## 5. 发现时停点
 
 等待负责人裁定后再修改相关产品行为。默认 5 MiB 慢流 31.9s 及 race、封存/读取一致性已通过；`make gen && make gen-check` 通过。其余六项完整门禁、P1 整分支 deep-review、产品推送、合并和清理均未完成，M5 仍在 P1。
+
+## 6. 最终裁定（2026-11-02）
+
+负责人在[re-32 独立复核](../../../reviews/re-32-M5文件路由方案A复核.md)后授权按最终方案继续：使用 `/static/local/{key}`，asset 独占 `/static`。M3 将 static 从 reserved 转到 server，保留名字总集合不变；现有工作区无需迁移。同步设计/spec/plan 后继续 T9，修正通用路径规范化漏检、具名开发代理的签名日志与取消/关闭边界，验证构建资源隔离；完成七门禁和阶段整审后按原连续授权推进。原 A/B 与历史失败保留，不以裁定代替实现验收。

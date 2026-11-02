@@ -127,13 +127,15 @@ asset 表合入的同一阶段更新真实删除 fixture、目录/外键守卫�
 
 复用 `identity.Keys.MAC(purpose)` 已提供的用途隔离能力，bootstrap 为上传/读取分别派生 `asset-upload` / `asset-read` 的 MAC，asset 只接收 Tag/Verify 小接口，不 import identity，也不接触原始密钥。生产继续要求既有持久 signing key；同一密钥重启仍能验证，dev/test 使用既有临时密钥时重启使旧 URL 失效。轮换签名密钥同步使这些 URL 失效，不新增另一套密钥文件和发现逻辑。
 
-原始传输端点 `PUT /storage/local/{key}`、`GET/HEAD /storage/local/{key}` 在普通 JSON API 之外，仍使用 request ID、安全头、日志与有限并发/速率限制；不能以这一例外跳过整个程序路由清单核对。每个请求用 ResponseController 设置读写期限，预算由声明大小、配置最低传输速度和固定余量计算，设置明确最大值；超额体由 MaxBytesReader 拒绝，空闲/总期限到达结束连接。其他 API 默认的 1 MiB/15 秒和连接全局默认保持不变。
+原始传输端点 `PUT /static/local/{key}`、`GET/HEAD /static/local/{key}` 在普通 JSON API 之外，仍使用 request ID、安全头、日志与有限并发/速率限制；不能以这一例外跳过整个程序路由清单核对。每个请求用 ResponseController 设置读写期限，预算由声明大小、配置最低传输速度和固定余量计算，设置明确最大值；超额体由 MaxBytesReader 拒绝，空闲/总期限到达结束连接。其他 API 默认的 1 MiB/15 秒和连接全局默认保持不变。
 
 传输空闲以活跃方向的实际字节进度判断：上传读侧、下载写侧；GET/HEAD 用于检测断连的后台读只设总期限，不能因没有新请求数据打断健康下载。期限使用真实系统单调时钟，取消时实际中断 socket，进度续期不能覆盖取消。`size_limit` 限制新上传；旧对象读取按可信大小计算预算，并受显式最长传输时限约束。
 
 读取有正确 Content-Type、Content-Length、Content-Disposition 和 nosniff。普通附件一律 attachment；inline 仅限服务确认的 JPEG/PNG/WebP/GIF。支持标准 HEAD、单段 Range/If-Range 与过期检查，拒绝不支持的多范围；每次先验证授权签名再处理条件缓存请求。含签名 query 的完整地址不记日志，错误不泄露磁盘路径。
 
-`/storage` 路径树明确拒绝 ServeMux 的 `..`/重复斜杠重定向，避免签名 query 被带到其他端点；未知路径返回 404 no-store Problem。匹配具体端点后的无效签名仍为统一 403。平台提供按具名路径树声明的路由策略，普通 API/页面路径保持原规则。raw 路由与 asset 专用错误码登记在 `api/storage-local.json`，全程序路由、源码错误码及中英文消息按精确目录验证，不进入业务 OpenAPI 的 bearer/publicOperations 合同。
+`/static` 路径树明确拒绝 ServeMux 的 `..`/重复斜杠重定向，避免签名 query 被带到其他端点；未知路径返回 404 no-store Problem。匹配具体端点后的无效签名仍为统一 403。平台提供按具名路径树声明的路由策略，逐段识别规范化中途进入再离开的路径，普通 API/页面路径保持原规则。raw 路由与 asset 专用错误码登记在 `api/storage-local.json`，全程序路由、源码错误码及中英文消息按精确目录验证，不进入业务 OpenAPI 的 bearer/publicOperations 合同。
+
+`/static` 是 M3 已预留的文件根：static 从 reserved 转入 server，保留名字总集合不变，storage 工作区不迁移。构建/public 不占该树，`/assets` 继续专属构建资源；Vite 的具名开发传输插件原样流式转发 `/static`，拥有取消/关闭和安全错误出口，不让默认代理日志记录签名 query。Go 继续负责验签与预算；具体合同见 P1 spec §2.7。
 
 ### 5.4 s3 与兼容性
 
@@ -290,7 +292,7 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | 阶段 | 状态 | spec / plan / review |
 |---|---|---|
 | 设计与 P1 预检 | 已完成 | [预检记录](../../reviews/re-31-M5设计与P1预检.md) |
-| P1 | T1–T8 已实施；T9 发现路由与合法工作区命名冲突，等待裁定 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) / [问题与方案](reviews/P1-storage-namespace-decision.md) |
+| P1 | T1–T8 已实施；T9 按最终授权改用 static 预留根，并补规范化/代理边界 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) / [问题与方案](reviews/P1-storage-namespace-decision.md) |
 | P2–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。

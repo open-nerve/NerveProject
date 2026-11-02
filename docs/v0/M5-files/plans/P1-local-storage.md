@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 > 状态：预检通过，实施中；见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。负责人已授权按既有节奏连续推进，常规预检通过后继续，不另设确认门。
-> T9 停点：真实复现 `/storage` 截获合法同名工作区页面，现有 M3 守卫失败；见[问题与待裁定方案](../reviews/P1-storage-namespace-decision.md)。已完成工作先提交，等待命名空间裁定后修订合同并继续；T9、T10、T11 尚未完成，当前不得推送产品检查点或合并。
+> T9 修订已授权：按[最终裁定](../reviews/P1-storage-namespace-decision.md#6-最终裁定2026-11-02)使用 `/static/local/{key}`，补路径规范化、开发代理及构建边界。T9、T10、T11 尚未完成；完整门禁通过前不推送产品检查点。
 
 **Goal：** 建立可真实传输、检查、封存和读取的 local 存储能力，给 P2 资产用例提供经过验证的小接口。
 
@@ -28,6 +28,7 @@
 3. ResponseController 在双层包装 writer 下是否真正生效；普通 API 的限制是否被顺带放宽（T6/T8/T9）。
 4. Range/304 是否在验签之前返回，文件名/类型是否能改变浏览器解释或泄露路径（T5）。
 5. newApp 后续构造失败、clock world 重启、并行测试配置是否泄露文件句柄或共享目录（T7/T8）。
+6. 命名空间与 M3 保留集合、构建资源边界，非规范路径中途进入再离开、开发代理上下游取消与错误日志的签名泄露（T9 修订）。
 
 ## 文件分工与接口
 
@@ -153,9 +154,15 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 
 ## Task 9（T9）：实际慢流、七项门禁与检查点
 
-**Files：** B/asset_transfer_slow_test.go；本 worktree `.superpowers/sdd/P1-local-storage` 的日志、manifest、结果汇总；review。
+**Files：** B/asset_transfer_slow_test.go、asset_namespace_test.go、asset_transfer_test.go；A/adapter/localprotocol/path.go 与原签发/handler；H/routes.go、path_redirect_test.go；workspace/domain/reserved_slugs.txt、reserved_test.go；web/apps/web/local-transfer.ts、transfer-proxy.ts 与相邻测试、vite.config.ts；api/storage-local.json；M3/M5 设计、spec/plan/review、README；本 worktree `.superpowers/sdd/P1-local-storage` 原件。
+
+**Interfaces：** localprotocol 仅固定本地传输 Root/ObjectPrefix/Path，domain/app 不感知路径；Router 路径策略保持通用。localTransfer(target) 返回 Vite Plugin；具名传输器用 Node http/https 标准库，完整拥有上游与关闭，日志不给任意错误文本。原 /api 仍走已有 Vite proxy。
 
 - [x] Step 1：实际默认 server read=30s/API=15s 下上传 >1 MiB，按进度调节持续 >30s 且小于本次计算预算；成功 204、seal/GET 字节一致。用有界条件/节流器制造慢流，不用 sleep 同步竞争。
+- [ ] Step 1a：先写真实 storage 工作区/静态资源回归，签发路径约定改为 `/static/local`，观察旧实现失败；迁移 raw 目录、注册、签发/精确检查及相关合同。static 只从 reserved 移入 server，新增保留名字总集合不变断言，原 M3 根路径守卫不放宽。聚焦测试/架构绿后提交。
+- [ ] Step 1b：将 re-32 路径反例落为通用 Router 的永久测试，先确认 307 红，再按规范化逐段判断归属；编码、重复斜杠、点段、进入再离开以及相邻树控制同时验证。原始/最终路径二点法变异须被杀，恢复后提交。
+- [ ] Step 1c：真实 Vite + 上游测试先红，再实现具名本地传输插件；精确路径分派、原始方法/头/字节/query、private/no-store、失败日志、断连/取消/关闭均验收；构建/public 占 static 必须失败。使用 Node 标准库避免默认代理错误输出凭证，120s idle 宽于 Go 最大 idle。无新依赖，不关闭全部错误日志；变异泄露错误文本/吞掉取消须被杀，恢复后提交。
+- [ ] Step 1d：完成工作区与文件请求的联合回归、静态缓存/缺失 chunk/emojibase、API 隔离、race；同步实际偏差和证据，不把设计复核当阶段整审。
 - [ ] Step 2：聚焦 race/变异后恢复全部代码，检查 git diff 和工作树；依顺序完成 `make gen && make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`。容器重套件只串行。
 - [ ] Step 3：记录命令、退出码、准确 tested diff/HEAD、原件路径/hash/bytes；失败先定根因，环境重跑独立记。仅已知 W11 用既定处理，不专项扩范围。
 - [ ] Step 4：提交完整检查点后使用系统 git 推送；按准确 HEAD 查询 branch CI，不以别的提交绿灯代替。
@@ -164,7 +171,7 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 
 **Files：** 本阶段全部变更与其真实调用/测试；下一编号 docs/reviews/re-NN-M5P1整体审核.md；P1 review。
 
-- [ ] Step 1：按 deep-review 完整读取逻辑、集成、测试三视角，特别复查本 plan 的五条 Review Focus 和 A1–A10；记录局部问题、结构问题和具名测试缺口。
+- [ ] Step 1：按 deep-review 完整读取逻辑、集成、测试三视角，特别复查本 plan 的六条 Review Focus 和 A1–A10；记录局部问题、结构问题和具名测试缺口。
 - [ ] Step 2：局部根因自主修复，必要回归/变异并复审；若确有架构级新问题，提交已完成工作和证据再上报，不做旁路补丁。
 - [ ] Step 3：修复有产品变化则重跑受影响及完整七项后推最终 HEAD，确认最终分支 CI；补 P1 review 七节：范围、逐条验收、测试、审查问题、plan 差异、交接、集成状态。
 - [ ] Step 4：A1–A9 据实勾选，A10 的 main/归档部分留待 T11，不把“实施与整审完成”写成“已合入”。

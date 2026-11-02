@@ -1,7 +1,7 @@
 # M5 / P1：本地存储与签名传输
 
 > 状态：预检通过，实施中；见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。上位设计：[M5-design](../M5-design.md)。
-> T9 停点：`/storage` 与合法工作区 slug 冲突，既有 M3 命名空间守卫失败；当前路径合同待[负责人裁定](../reviews/P1-storage-namespace-decision.md)，不可合并。预检通过是实施前的历史结论，尚不代表全程序兼容性通过。
+> T9 修订已获授权：采用 `/static/local/{key}`，按[独立复核](../../../reviews/re-32-M5文件路由方案A复核.md)补路径规范化与开发代理日志边界；见[最终裁定](../reviews/P1-storage-namespace-decision.md#6-最终裁定2026-11-02)。实施与最终验证仍未完成。
 > 文档基线：`3db22f06ad9e82a483c05c8078801af00a5cae02`；实施基线为 `fb3e788b7be33467018385c9a67d515e51b79dad`；[准确 main CI](https://github.com/open-nerve/NerveProject/actions/runs/41414200682) attempt 1 三作业全绿，设计证据已归档并核验，设计分支/worktree 已正常清理。
 
 ## 1. 交付边界
@@ -14,7 +14,9 @@
 
 ### 2.1 路径、对象与发布
 
-- HTTP：`PUT /storage/local/{key}`、`GET /storage/local/{key}`、`HEAD /storage/local/{key}`；另有 `/storage` 和 `/storage/` 的明确 404 Problem fallback，未知文件路径不能落入 SPA。涉及该路径树的 `..`、重复斜杠规范化在进入 ServeMux 前直接拒绝为 404 no-store Problem，不把签名 query 随重定向带到其他端点。
+- HTTP：`PUT /static/local/{key}`、`GET /static/local/{key}`、`HEAD /static/local/{key}`；另有 `/static` 和 `/static/` 的明确 404 Problem fallback，未知文件路径不能落入 SPA。涉及该路径树的 `..`、重复斜杠规范化在进入 ServeMux 前直接拒绝为 404 no-store Problem，不把签名 query 随重定向带到其他端点。
+- `/static` 独占原始文件传输；M3 保留名单中的 static 从 reserved 移到 server，保留名字总集合不变，storage 仍可创建。构建/public 不得占 `/static`；普通 `/assets` 的 hash 文件、emojibase 与缺失 chunk 语义保持。旧 `/storage` 不保留文件别名或重定向。
+- 非规范路径的归属按规范化过程逐段判断：中途进入再离开 `/static` 也拒绝；平台机制不写 asset 特判，普通页面/API 保持既有规范化。
 - key：`u-<assetUUID的32位小写hex>-<objectUUID的32位小写hex>` 或 `o-...`。`u` 是上传暂存，`o` 是封存/复制结果；两段均非 nil UUID。文件名、客户端路径、编码斜杠和 `..` 不能成为 key。
 - local 默认根目录 `./data/files`，仅内部包含 `objects/<key>/{data,meta.json}` 和 `tmp/<随机目录>`。目录 0700，文件 0600；已存在根目录必须是可用目录，不改变用户已有权限。配置/日志不得泄露绝对目录，测试用独占临时目录。
 - 使用当前 Go 1.27.1 的 `os.Root` 约束所有对象访问；只接受普通文件/目录，拒绝符号链接逃逸和非普通字节文件。部署目录是服务进程独占的受信任目录，不把 os.Root 宣称为可抵御拥有该目录写权的系统管理员。
@@ -121,9 +123,17 @@ asset 的 module.Register 只注册本段 raw 路由。bootstrap 创建 local �
 
 Go 的 testConfig 为每个世界提供独立 t.TempDir。E2E 的 startNerve 默认把文件目录放进该进程日志的输出目录；clock world 重启显式复用该世界的文件根目录，而不同 world 不共用。只保留测试自身生成物，原件按项目既有归档规则处理，不执行全局清理。
 
-完整程序增加精确 raw route 集合与无签名拒绝测试；既有 /api/v0 注册集合、公开操作、安全头、401 与请求体上限/期限守卫继续原样成立。不靠宽泛忽略 /storage 下所有路由使新端点脱离目录检查。
+完整程序增加精确 raw route 集合与无签名拒绝测试；既有 /api/v0 注册集合、公开操作、安全头、401 与请求体上限/期限守卫继续原样成立。不靠宽泛忽略 /static 下所有路由使新端点脱离目录检查。
 
 `api/storage-local.json` 是 raw 路由和 asset 专用 `x-problem-codes` 的机器目录。组合测试比较全路由与“既有 API + 平台 + raw 目录”的精确并集，源码错误码与目录逐项一致；前端消息表精确等于业务 OpenAPI 与 raw 错误目录的并集，两份翻译同时验证。它不生成业务 SDK，也不把 raw 端点加入 publicOperations。
+
+### 2.7 开发传输与构建边界
+
+Vite 使用具名 local-transfer 插件将 `/static` 的请求原样流式送到本地 Go；方法、字节、必要头和 query 不改写，相邻 `/static-more` 仍是普通页面。代理只做传输与生命周期管理，验签/权限仍由 Go 负责；用于分派的路径归属检查不替代 Go 的拒绝策略。
+
+该插件用 Node 标准库管理自己的上游请求和失败出口，不引入依赖，不注册 Vite 默认的 raw proxy，避免默认错误/debug 日志输出 capability query。日志只含固定上下文和安全的错误类别，不含原 URL、query、body、任意错误 message/stack；上游不可达返回固定 502 no-store，正文开始后的失败截断，不追加错误尾。取消/断连/开发服务器关闭必须释放上游；代理空闲预算为 120 秒，宽于 Go 允许的最大 60 秒 idle，不改变 Go 的业务预算。
+
+构建时拒绝 public 或 bundle 占用 `/static`，保留 Vite 构建资源的原缓存行为。真实开发服务器测试须证明签名标记不会出现在上游失败日志中；不能仅检查配置文本。
 
 ## 3. 验收
 
@@ -137,7 +147,7 @@ Go 的 testConfig 为每个世界提供独立 t.TempDir。E2E 的 startNerve 默
 | A6 | Range/HEAD/条件缓存/文件名注入/类型处置和过期后请求行为满足 §2.4 |
 | A7 | 单 IP 限流、可信代理、IPv6 及并发满额拒绝有效；任一错误后额度与并发名额恢复符合规则 |
 | A8 | bootstrap 正常/失败/关闭释放根句柄；固定密钥跨重启签名可用，新密钥不可用；不同测试世界目录隔离 |
-| A9 | 全程序 raw 路由精确匹配；原 API 认证/结构/缓存/安全头无回归；目录内恶意符号链接/设备类路径不被当文件提供 |
+| A9 | 全程序 raw 路由精确匹配；合法 storage 工作区页面、保留名字总集合、构建资源与开发传输/失败日志边界均验证；原 API 认证/结构/缓存/安全头无回归；目录内恶意符号链接/设备类路径不被当文件提供 |
 | A10 | 有意义的负例和定向变异、七项本地门禁、deep-review/修复复审、准确分支与 main CI，以及证据归档完成 |
 
 F2/F3 的 P1 证据仅限 local 存储合同，不能提前勾选完整 M5 故事或关闭业务资产生命周期交接。
