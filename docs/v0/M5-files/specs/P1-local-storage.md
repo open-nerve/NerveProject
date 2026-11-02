@@ -1,7 +1,7 @@
 # M5 / P1：本地存储与签名传输
 
-> 状态：预检通过，实施中；见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。上位设计：[M5-design](../M5-design.md)。
-> T9 修订已获授权：采用 `/static/local/{key}`，按[独立复核](../../../reviews/re-32-M5文件路由方案A复核.md)补路径规范化与开发代理日志边界；见[最终裁定](../reviews/P1-storage-namespace-decision.md#6-最终裁定2026-11-02)。T1–T9 实现和七项本地门禁已通过；整审及局部修复复审完成，停读下载夹具已在 Linux 通过；整包预算修订后的最终准确 CI 和集成仍待完成。
+> 状态：已完成集成、main CI 与归档清理；见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。上位设计：[M5-design](../M5-design.md)。
+> T9 修订已获授权：采用 `/static/local/{key}`，按[独立复核](../../../reviews/re-32-M5文件路由方案A复核.md)补路径规范化与开发代理日志边界；见[最终裁定](../reviews/P1-storage-namespace-decision.md#6-最终裁定2026-11-02)。T1–T9 实现和七项本地门禁已通过；整审及局部修复复审完成，停读下载夹具已在 Linux 通过；整包预算修订后的准确最终分支 CI 与 main CI 全绿，归档清理完成，见阶段 review §11。
 > 文档基线：`3db22f06ad9e82a483c05c8078801af00a5cae02`；实施基线为 `fb3e788b7be33467018385c9a67d515e51b79dad`；[准确 main CI](https://github.com/open-nerve/NerveProject/actions/runs/41414200682) attempt 1 三作业全绿，设计证据已归档并核验，设计分支/worktree 已正常清理。
 
 ## 1. 交付边界
@@ -119,7 +119,7 @@ socket 期限使用系统真实单调时钟，不使用业务 clock 或用于签
 
 ### 2.6 组合与隔离
 
-asset 的 module.Register 只注册本段 raw 路由；P1 没有业务动作，按既有动作目录明确列入 actionlessModules，不改目录核对机制。P2 接业务用例时改为实际 Actions/规则登记。bootstrap 创建 local 资源并在任一后续构造错误和 close 时释放；先停止 HTTP，再停止 jobs，最后关闭存储和 migrator/pool，避免 P2 的清理任务仍在使用已关闭存储。不能让每次 newApp 测试共享默认磁盘目录。
+asset 的 module.Register 只注册本段 raw 路由；P1 没有业务动作，按既有动作目录明确列入 actionlessModules，不改目录核对机制。P2 接业务用例时须按真实授权入口核对登记；P2 预检已确认权限委托宿主使用既有 Actions，保留具名 actionless 登记并更新理由，见 P2 spec §2.2。bootstrap 创建 local 资源并在任一后续构造错误和 close 时释放；先停止 HTTP，再停止 jobs，最后关闭存储和 migrator/pool，避免 P2 的清理任务仍在使用已关闭存储。不能让每次 newApp 测试共享默认磁盘目录。
 
 Go 的 testConfig 为每个世界提供独立 t.TempDir。E2E 的 startNerve 默认把文件目录放进该进程日志的输出目录；clock world 重启显式复用该世界的文件根目录，而不同 world 不共用。只保留测试自身生成物，原件按项目既有归档规则处理，不执行全局清理。
 
@@ -137,7 +137,7 @@ Vite 使用具名 local-transfer 插件将 `/static` 的请求原样流式送到
 
 ## 3. 验收
 
-实现与本地验收已满足 A1–A9，逐条证据见 [review §2/§9/§10](../reviews/P1-local-storage-review.md)。R1 夹具修复的本机重复、反例、受影响包与 Linux 包测试通过；准确最终 Linux 分支 CI、main CI 及归档由 A10 单独保留，不能据以下勾选声称已经合入。
+A1–A10 已满足；局部验证见 [review §2/§9/§10](../reviews/P1-local-storage-review.md)，准确分支/main CI 和归档清理收据见 review §11。前述实现过程中的待办是历史时点。
 
 - [x] A1：模块、小端口与架构守卫。
 - [x] A2：真实字节、完整发布与删除合同。
@@ -148,7 +148,7 @@ Vite 使用具名 local-transfer 插件将 `/static` 的请求原样流式送到
 - [x] A7：限流、并发与失败资源恢复。
 - [x] A8：生命周期、密钥与目录隔离。
 - [x] A9：路由、命名空间、开发传输与守卫无回归。
-- [ ] A10：最终准确分支/main CI 和归档尚待 T10/T11 完成。
+- [x] A10：准确分支 CI 41466462231、noff main 85dc4087 的 CI 41471671630 全绿；792 文件归档核验及分支/worktree清理后复验完成，见 review §11。
 
 | 编号 | 可观察条件 |
 |---|---|

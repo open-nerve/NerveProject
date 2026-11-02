@@ -1,6 +1,6 @@
 # M5 / P2：资产用例与生命周期
 
-> 状态：预检阻断草稿，尚未通过，不得据此实施。已复现物理清理合同冲突，见[问题与方案](../reviews/P2-purge-contract-decision.md)。当前工作树已快进到 P1 合并提交 `85dc4087a28570f59a62825f5dc861152e41c833`，其 main CI 尚待通过；仅准备文档，实施基线仍须 CI 与本预检裁定均完成后固定。
+> 状态：预检草稿，清理合同 A 已授权，完整预检尚未通过，不得据此实施。已按负责人 A 同步清理合同选择，见[问题与方案](../reviews/P2-purge-contract-decision.md)。当前工作树已快进到 P1 合并提交 `85dc4087a28570f59a62825f5dc861152e41c833`，其 main CI 41471671630 已三 job 全绿；P1 已归档清理。此为 P2 基线，完整 P2 预检仍须完成才可实施。
 > 上位：[M5 design](../M5-design.md) §3–§7、§10–§13；P1 的 local 合同与最终审查是输入。本段只准备文档，尚未安装依赖、生成代码或修改产品。
 
 ## 1. 目标与范围
@@ -26,7 +26,7 @@ P2 为全部用途提供准备能力。头像/封面字段引用在 P4 绑定；
 
 asset 迁移以 Plane 快照 file_assets 为起点，精确 bigint 大小、用途/父字段 CHECK、具名对象状态、上传期限与绑定事实；去除 Page、外部导入及冗余 entity_identifier。保留字段与差异逐项登记 plane-diff。本阶段不加 users/workspaces/projects 的反向资产引用列。
 
-父 ID 必须由 owner 的实际读/授权结果确定。asset 只查询自己的表；前端从 OpenAPI 生成类型，不手写旧 Plane 形状的兼容层。P1 的 actionlessModules 登记在本段首个业务动作加入时移出，实际 Actions/规则、全路由、错误目录和两种语言文案同时补齐。
+父 ID 必须由 owner 的实际读/授权结果确定。asset 只查询自己的表；前端从 OpenAPI 生成类型，不手写旧 Plane 形状的兼容层。asset 的权限委托宿主使用已有 Actions；与 identity 一样，拥有业务 HTTP 不等于必须复制一套共享角色 Action。保留具名 actionless 登记并把理由改为实际委托，目录谓词和原负例不变；新增精确 API→宿主授权矩阵，全部路由、错误目录和两种语言文案同时补齐。此项校正 P1 对后续阶段的假定，不构造无生产用途的 asset.* 规则。
 
 ### 2.3 权限与锁序的现有事实
 
@@ -41,10 +41,12 @@ asset 迁移以 Plane 快照 file_assets 为起点，精确 bigint 大小、用�
 
 ### 2.4 删除与清理
 
+已批准 A 的精确父清理协议、类型、守卫证明和规划探针见 [P2-protected-purge](P2-protected-purge.md)。
+
 - 普通 issue 删除逐项发 issue.deleted；comment 删除发 comment.deleted；DeleteDraft 当前只有直接数据库删除，没有现成删除事件。必须在 owner 的原事务接入具名资产删除协作，同时保持原 At/By 与失败回滚。
 - 项目/工作区批量删除不发逐项 issue.deleted；订阅 project.deleted/workspace.deleted，在原事务投递资产自己的有界任务。父范围删除后立即拒绝新资产授权，异步处理速度不能决定可见性。
 - 父范围清理、准备件过期、候选回收、墓碑 purge 和孤立对象对账应分清职责，所有批次和单次时间有限，失败保留恢复记录；对象 I/O 不占业务连接。
-- 当前 bootstrap purge 次序为 issue→project→workspace→identity。资产对象清理和资产墓碑删除须在父行物理删除前完成；失败不能通过 CASCADE 忽略，也不能在父模块写 asset SQL。
+- 负责人已批准 A：资产对业务父的外键使用即时 NO ACTION。当前 bootstrap purge 次序为 issue→project→workspace→identity；新增 asset 对象/墓碑清理在前，父 owner 以自身小端口跳过受阻候选并推进邻域。包括 states→issues 与 issue 自引用；失败不能通过 CASCADE 忽略，不在父模块写 asset SQL。目录守卫精确核这些受保护边及协议，不能普遍放行 NO ACTION。
 - 首张表同时延伸真实删除 fixture、目录/外键守卫、furnishIssueRows 与 M3/M4 删除故事；不加豁免，不把只造一个 UUID 当实物生命周期证明。
 
 ## 3. 必要验证矩阵

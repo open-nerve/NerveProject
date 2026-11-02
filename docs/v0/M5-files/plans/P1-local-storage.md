@@ -1,8 +1,8 @@
 # M5 / P1 本地存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，实施中；见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。负责人已授权按既有节奏连续推进，常规预检通过后继续，不另设确认门。
-> T9 修订已授权：按[最终裁定](../reviews/P1-storage-namespace-decision.md#6-最终裁定2026-11-02)使用 `/static/local/{key}`，补路径规范化、开发代理及构建边界。实现、七项本地门禁和整审已完成；停读下载夹具已修并在 Linux 通过。随后整包累计触及默认 10 分钟，T10 正按明确套件预算复验，最终准确 CI 与 T11 集成尚未完成，历史失败见阶段 review。
+> 状态：P1 已集成、main CI 全绿并归档清理；后续 P2 完整预检在下一分支进行。见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。负责人已授权按既有节奏连续推进，常规预检通过后继续，不另设确认门。
+> T9 修订已授权：按[最终裁定](../reviews/P1-storage-namespace-decision.md#6-最终裁定2026-11-02)使用 `/static/local/{key}`，补路径规范化、开发代理及构建边界。实现、七项本地门禁和整审已完成；停读下载夹具已修并在 Linux 通过。随后整包累计触及默认 10 分钟，T10 的准确最终 CI 与 T11 的 P1 集成/归档已完成，历史失败和最终收据见阶段 review §10/§11。
 
 **Goal：** 建立可真实传输、检查、封存和读取的 local 存储能力，给 P2 资产用例提供经过验证的小接口。
 
@@ -174,12 +174,14 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 
 - [x] Step 1：按 deep-review 完整读取逻辑、集成、测试三视角，特别复查本 plan 的六条 Review Focus 和 A1–A10；记录局部问题、结构问题和具名测试缺口。
 - [x] Step 2：局部根因自主修复，必要回归/变异并复审；若确有架构级新问题，提交已完成工作和证据再上报，不做旁路补丁。
-- [ ] Step 3：修复有产品变化则重跑受影响及完整七项后推最终 HEAD，确认最终分支 CI；补 P1 review 七节：范围、逐条验收、测试、审查问题、plan 差异、交接、集成状态。
+- [x] Step 3：修复有产品变化则重跑受影响及完整七项后推最终 HEAD，确认最终分支 CI；补 P1 review 七节：范围、逐条验收、测试、审查问题、plan 差异、交接、集成状态。
 - [x] Step 4：A1–A9 据实勾选，A10 的 main/归档部分留待 T11，不把“实施与整审完成”写成“已合入”。
 
 ## Task 11（T11）：noff、main CI、归档与下一段
 
-- [ ] Step 1：核无未知修改、目标 main 与已验收基线关系，按当前授权使用 --no-ff 合并 P1，正常系统 git 推送 main。
-- [ ] Step 2：等准确 main SHA 的三个 CI 作业全绿；失败按日志根因处理，W11 重跑仍失败停下报告。分支绿不能替代 main。
-- [ ] Step 3：归档所有原件到主目录 ignored 证据区，验证 SHA-256/bytes/mode/membership 与回执引用，未知文件为零后常规删本段 remote/local branch 与 worktree，不 force。
+- [x] Step 1：核无未知修改、目标 main 与已验收基线关系，按当前授权使用 --no-ff 合并 P1，正常系统 git 推送 main。
+- [x] Step 2：等准确 main SHA 的三个 CI 作业全绿；失败按日志根因处理，W11 重跑仍失败停下报告。分支绿不能替代 main。
+- [x] Step 3：归档所有原件到主目录 ignored 证据区，验证 SHA-256/bytes/mode/membership 与回执引用，未知文件为零后常规删本段 remote/local branch 与 worktree，不 force。
 - [ ] Step 4：记录 A10/设计进度与 main 收据，准备 P2 的完整 spec/plan/锁图/预检，再按当前连续授权推进；不关闭尚未完成的 M5 总体标准。
+
+T11 接续：P1 集成证据已完成并归档；Step 4 中 A10/进度已同步，P2 已准备草稿且清理合同 A 获授权，其完整预检尚未完成，因此保留此跨阶段子项未勾选。主目录独立台账继续跟踪，不改写已归档原件。

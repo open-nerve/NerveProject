@@ -1,8 +1,8 @@
 # M5 / P1 本地存储评审记录
 
-> 状态：T1–T9 实施与七项本地门禁完成；T10 整审、夹具修复与复审完成，追加整包预算复验中；最终远端 CI、T11 集成尚未完成。
-> T9 已按 [re-32](../../../reviews/re-32-M5文件路由方案A复核.md)落实 `/static/local`、逐段路径策略与具名开发代理；聚焦回归与完整七项本地门禁通过；阶段初审见 re-33，准确远端 CI 的唯一 server 失败按 §10 处理。
-> 分支：`codex/m5-p1`；基线：`fb3e788b7be33467018385c9a67d515e51b79dad`。原件目录为本 worktree 的 `.superpowers/sdd/P1-local-storage`，集成后补归档映射。
+> 状态：P1 实施、七项本地门禁、deep-review/局部修复、分支和 main CI、归档清理均已完成。T11 的后续 P2 完整预检仍在下一工作树推进。当前收据见 §11，前文待办语句保留为历史快照。
+> T9 已按 [re-32](../../../reviews/re-32-M5文件路由方案A复核.md)落实 `/static/local`、逐段路径策略与具名开发代理；聚焦回归与完整七项本地门禁通过；阶段初审见 re-33，原检查点远端 CI 的 server 失败和修复过程见 §10，最终通过见 §11。
+> 分支：`codex/m5-p1`；基线：`fb3e788b7be33467018385c9a67d515e51b79dad`。原工作树已清理；原件新根及映射见 §11。
 
 ## 1. 范围
 
@@ -21,7 +21,7 @@
 | A7 | 独立 IP bucket/可信代理/IPv6、满额 503、各类退出释放；停读下载写超时和健康下载同时验证 |
 | A8 | 正常 HTTP→jobs→storage→DB、后续构造失败、重复 close；同 key 跨世界不同字节，clock 重启复用 root；7 项 E2E 生命周期通过 |
 | A9 | 原 namespace 回归已按最终授权修复：真实 storage 工作区页面、保留集合和原根路径守卫通过；逐段路径反例、真实 Vite 传输/取消/安全日志及构建冲突守卫通过。七项本地门禁已通过，准确测试树和日志见 §9 |
-| A10 | T1–T8 局部红绿/变异留原件；七项本地门禁、独立整审及局部修复复审已通过；准确最终 branch/main CI 和归档仍未完成 |
+| A10 | T1–T8 局部红绿/变异留原件；七项本地门禁、独立整审及局部修复复审已通过；准确最终 branch/main CI 全绿，归档和清理后复验已完成（§11） |
 
 ## 3. 测试
 
@@ -52,7 +52,7 @@
 
 ## 6. 交接
 
-P2 承接准备件、确认/封存候选、业务权限和清理，并把 asset 从 actionlessModules 移到真实 Actions/规则清单；P3 承接 S3；P6/P7 承接浏览器传输与宿主入口。当前不关闭 M5 的完整故事或任何尚需业务链证明的输入交接。
+P2 承接准备件、确认/封存候选、业务权限和清理；原先预计移出 actionlessModules，P2 预检已按真实 owner 授权委托校正为保留具名登记并更新理由，守卫谓词不变，见 P2 spec §2.2；P3 承接 S3；P6/P7 承接浏览器传输与宿主入口。当前不关闭 M5 的完整故事或任何尚需业务链证明的输入交接。
 
 ## 7. 集成状态
 
@@ -92,6 +92,8 @@ P2 承接准备件、确认/封存候选、业务权限和清理，并把 asset 
 
 ## 10. T10 整审与修复复审
 
+本节按发生时点保留过程；最终验收与集成事实见 §11。
+
 独立整审 [re-33](../../../reviews/re-33-M5P1整体审核.md)覆盖基线 fb3e788b 至 ecefb0bc 的 18 个提交。初审 With fixes：一项 Important 为 Linux 停读下载夹具，两个 Minor 为既有焦点竞争和状态文档。主审接受分级；当前不提前宣称最终分支或 main 通过。
 
 - R1：原夹具用 1 KiB 接收缓冲制造背压，退出后动态放大，排空仍受原 3s 客户端期限约束。失败时 handler 已退出；修订为真实 accepted TCP 固定 32 KiB 发送缓冲、客户端固定 64 KiB 接收缓冲，额外观察底层 Close；业务代码、1500ms 退出上界及 3s 客户端期限不变。依旧要求 unexpectedEOF、非完整原字节前缀和下一上传 204，不把 timeout 视为成功。本机 race 重复 20 次通过；删除 idle 写期限的变异在 1.57s 被原退出断言拦截，原实现按字节恢复后 asset/platform/config/arch 全包 race 通过。准确 Linux CI 仍待复验，原件为 `task-10-download-{green,no-idle-mutation}.log`、`task-10-restored-race.log`。
@@ -106,3 +108,15 @@ R1 后续 Linux 证明：run 41460165212 的 attempt 1/2 均通过 asset HTTP �
 R4 裁定：显式 Go 整包预算 15m、server 作业预算 20m，单项测试与生产期限保持。首次按既有环境规则重跑一次仍触顶后处理预算，不继续重跑碰运气。此为局部测试编排校正；完整本机 `make test` 与准确新 HEAD CI 重新验收。其余本地门禁的产品输入未变，验证回执明确列出两份测试、Makefile 和 CI 文件的变化，不把旧命令结果冒记为新命令结果。
 
 R4 本机复验：实际 `make test` 以 `-count=1 -timeout=15m` 完整执行 server/tools，全部通过，bootstrap 349.526s；命令展开和完整输出分别为 `task-10-test-command.log`、`task-10-full-test.log`。生产源码及其他门禁输入保持原字节；最终新 HEAD 的 CI 仍须单独核验。
+
+
+## 11. P1 集成、准确 main CI 与归档清理
+
+- 最终分支 `854dd183a916ca403bb2c299aa2dd7338355813f`，[CI 41466462231](https://github.com/open-nerve/NerveProject/actions/runs/41466462231) attempt 1：server/web/e2e 全绿，bootstrap 596.052s、E2E 336/336（14.5m）。
+- `--no-ff` 合并 main `85dc4087a28570f59a62825f5dc861152e41c833`，两父提交为设计基线 fb3e788b 与上述分支；合并 tree 与分支完全相同。正常系统 Git 推送成功。
+- 准确 [main CI 41471671630](https://github.com/open-nerve/NerveProject/actions/runs/41471671630) 三 job 全绿，bootstrap 580.819s、E2E 336/336（14.9m）。原始失败仍保留，没有用分支绿替代 main。
+- 归档根：`/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P1-integration-20261102`。共 792 文件、32,203,620 字节，另含目录的清单共 1,427 项；SHA-256/bytes/mode/membership 核验通过，未知文件为零。`manifest.json` 是完整清单，`integration.json` 记录清理后复验与远端分支不存在。
+- 映射：原 `.superpowers/sdd/P1-local-storage` → `payload/p1`；原 `e2e/test-results` → `payload/e2e-test-results`；原 `e2e/playwright-report` → `payload/e2e-playwright-report`；证据目录自身忽略文件 → `payload/scaffold.gitignore`。原始日志、失败报告、trace、变异源码/结果与回执均保留。
+- 本地/远端 `codex/m5-p1` 及其 worktree 已常规删除，未使用 force；删除后再次验证归档通过。main 始终留在主目录。
+- A1–A10 已满足；唯一产品 Minor 为既有 C12 菜单/F6 焦点竞争，后续 UI 三浏览器核验，未声称产品已修。全部局部裁定及代价按原次序保存在 `payload/p1/all-rulings.md`；历史 /storage 方案由后续已授权 /static/local 裁定替代。
+- P2 从上述 main 接续。其文件恢复记录与父 CASCADE 的新冲突已隔离复现、独立复核，负责人选择数据库兜底 A；这是 P2 的联合预检工作，不是 P1 未完成项，也不表示 P2 预检已通过。

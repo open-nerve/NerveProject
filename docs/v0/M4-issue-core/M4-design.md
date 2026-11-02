@@ -731,6 +731,8 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - 为什么不在运行中改时钟：那要一个改时钟的接口或信号，是只为测试存在的生产代码路径；以启动参数给出，生产代码里只有一个装饰器。
 
 ### 3.21 60 天的物理清理（总体设计 5.5、6.7；M2 交接第 5 节；架构问题 9）
+> 以下描述 M4 已验收的纯数据库清理合同。2026-11-02 负责人在 M5/P2 选择方案 A：新增资产父引用用 NO ACTION 保留外部对象恢复记录，清理者必须先处理文件、跳过受阻父候选并让邻域继续；目录守卫增加精确受保护依赖及真实反例，不普遍放开 NO ACTION。M5 联合实施前仍是下述 M4 实现；见 [P2 裁定](../M5-files/reviews/P2-purge-contract-decision.md)。
+
 - **每个模块清理自己的表**：`identity`、`workspace`、`project`、`issue` 各交出一个 `Purger`：按它的表从子到父，删除 `deleted_at < cutoff` 的行，每张表一个按 `id` 的键集循环，每批一个事务、一条语句：`DELETE FROM t WHERE id IN (SELECT id FROM t WHERE deleted_at < $1 AND id > $after ORDER BY id LIMIT $2) RETURNING id`，下一批的 `$after` 是这一批最大的 `id`，直到删除 0 行。第三稿的语句没有 `id > $after`，与删除的任务同一个毛病：SP4 量到 80 万行 31.4 秒、每批 8 → 113 ms（聚焦复核 I2）。描述版本的保留是每个项目一条语句（3.14），不分批，不受影响。模块的 sqlc 查询只碰自己的表（`TestSQLCSchemaScope`）。
 - **一个定时任务**：`bootstrap` 把四个清理者组成一个任务 `cleanup.purge_deleted`，按 `issue` → `project` → `workspace` → `identity` 的顺序运行（子模块先清理，父表的 `CASCADE` 多半已无事可做）。一个任务而不是四个：四个各自运行时，清理项目的批量与清理工作项的批量可以在同一批行上按不同的顺序相遇（外键的 `CASCADE` 在父表的删除里删除子行），一个任务按顺序执行就没有并发。
 - **时刻**：`cutoff = 现在 - cleanup.purge_after`（默认 `1440h`，即 60 天，Plane 的 `HARD_DELETE_AFTER_DAYS`）；"现在"取用例的时钟（测试里偏移，3.20）。每批 `cleanup.purge_batch` 行（默认 1000）。
@@ -1090,7 +1092,7 @@ issue_comments
 （draft_issues.payload 里的状态、标签、负责人、父工作项的 id 不是外键：发布时检查，3.15）
 ```
 - 每条指向 `workspaces`、`projects`、`states`、`labels`、`issues`、`issue_comments` 的外键都有不带条件的索引；清理的级联按它们找子行（3.21）。
-- 以后的 M 加入的反向外键（`ON DELETE` 照搬 Plane，与这张图一致）：M5 `file_assets.issue_id`、`comment_id`、`draft_issue_id`（`CASCADE`）；M6 `cycle_issues.issue_id`、`module_issues.issue_id`（`CASCADE`，`cycle_issues` 另有 `(issue_id)` 的部分唯一）；M7 `intake_issues.issue_id`（`CASCADE`）、`duplicate_to_id`（`SET NULL`）（R1 第 15 节；13.2）。M4 不指向它们的任何表。
+- 以后的 M 加入的反向外键（文件恢复记录按下述裁定区别于纯数据库级联）：M5 `file_assets.issue_id`、`comment_id`、`draft_issue_id` 按 2026-11-02 的 P2 裁定改用即时 `NO ACTION`（待 M5/P2 实施，不随父级丢失对象恢复记录）；M6 `cycle_issues.issue_id`、`module_issues.issue_id`（`CASCADE`，`cycle_issues` 另有 `(issue_id)` 的部分唯一）；M7 `intake_issues.issue_id`（`CASCADE`）、`duplicate_to_id`（`SET NULL`）（R1 第 15 节；13.2）。M4 不指向它们的任何表。
 - 通知、最近访问、收藏按 `entity_identifier` 引用工作项、没有外键（M7）：工作项删除时 Plane 删除最近访问（`API/app/views/issue/base.py:721-727`），M7 决定（13.2）。
 
 ### 4.17 行为差异（登记到差异清单第四节）
@@ -2042,6 +2044,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **另一种做法**：放在 `issue/adapter/crawler` 里。M8 要复制一份，两份防护会走散。
 
 ### 11.9 60 天的物理清理按模块（3.21；负责人已批准，2026-10-17）
+> M5/P2 补充裁定（2026-11-02，负责人 A）：数据库兜底保护文件恢复记录；新增资产父 FK 使用 NO ACTION，外部对象清理成功后才删除资产行。父候选按完整直接/传递依赖跳过受阻项，邻域继续。需联合更新精确目录/锁序/故障回归，不能按表忽略守卫；原 M4 完成证据不改写为已验收文件清理。
+
 - **问题**：总体设计 5.5、6.7 只写了"60 天后物理清理"；它要删除 M2、M3、M4 的表，而模块的查询只能碰自己的表。
 - **做法**：每个模块交出一个清理者，删除自己的表里软删除超过期限的行（分批、子先于父）；组合根把它们组成一个任务、按 `issue` → `project` → `workspace` → `identity` 的顺序运行；指向被清理的表的外键都是 `CASCADE` 或 `SET NULL`（动态改为 `CASCADE`），一个目录测试守住。账户不清理。
 - **另一种做法**：一个清理任务直接按目录删除全部表（不分模块）。它要读写每个模块的表，越过 sqlc 的守卫。
