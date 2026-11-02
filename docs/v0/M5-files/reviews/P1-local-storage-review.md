@@ -1,7 +1,7 @@
 # M5 / P1 本地存储评审记录
 
 > 状态：T1–T8 实施与局部复核完成；T9 完整门禁、T10 deep-review、T11 集成尚未完成。
-> T9 已获最终授权：按 [re-32](../../../reviews/re-32-M5文件路由方案A复核.md)使用 `/static/local`，修正通用路径策略和开发代理边界；原失败保留，实施/完整验收未完成。
+> T9 已按 [re-32](../../../reviews/re-32-M5文件路由方案A复核.md)落实 `/static/local`、逐段路径策略与具名开发代理；聚焦回归通过，完整七项门禁及阶段整审仍未完成。
 > 分支：`codex/m5-p1`；基线：`fb3e788b7be33467018385c9a67d515e51b79dad`。原件目录为本 worktree 的 `.superpowers/sdd/P1-local-storage`，集成后补归档映射。
 
 ## 1. 范围
@@ -20,7 +20,7 @@
 | A6 | HEAD/Range/条件缓存、处置/文件名、错误 no-store、验签先于 304；中途故障截断且下一请求可用 |
 | A7 | 独立 IP bucket/可信代理/IPv6、满额 503、各类退出释放；停读下载写超时和健康下载同时验证 |
 | A8 | 正常 HTTP→jobs→storage→DB、后续构造失败、重复 close；同 key 跨世界不同字节，clock 重启复用 root；7 项 E2E 生命周期通过 |
-| A9 | raw/API 的 T8 聚焦断言、源目录符号链接/FIFO 拒绝和组合/平台/架构 race 通过；但 T9 发现合法 storage 工作区页面被截获，既有 M3 根路径守卫失败，**当前未满足全程序兼容性**；见待裁定方案 |
+| A9 | 原 namespace 回归已按最终授权修复：真实 storage 工作区页面、保留集合和原根路径守卫通过；逐段路径反例、真实 Vite 传输/取消/安全日志及构建冲突守卫通过。完整七项门禁仍待核验 |
 | A10 | T1–T8 局部红绿/变异留原件；完整七门禁、独立整审、准确 branch/main CI 和归档仍未完成 |
 
 ## 3. 测试
@@ -57,3 +57,11 @@ P2 承接准备件、确认/封存候选、业务权限和清理；P3 承接 S3�
 ## 7. 集成状态
 
 设计基线 main 的 [CI 41414200682](https://github.com/open-nerve/NerveProject/actions/runs/41414200682) 已全绿且归档清理完成。P1 尚未首次产品推送，也未合并；T9 七门禁后推分支，T10 整审通过后按连续授权执行 T11，不以设计 CI 替代产品 CI。
+
+## 8. T9 命名空间修订实施证据（2026-11-02）
+
+- `868e9a24`：asset/adapter/localprotocol 统一 `/static/local`，static 只调整保留分类，domain/app 无协议依赖。真实 storage 工作区与签发 URL 先红后绿，原根路径守卫、组合 race 和架构测试通过。
+- `8e980a7e`：通用 Router 检查规范化中途进入再离开；9 个漏检子例先得 307 并泄露 query，修复后 13 个危险路径与 7 个控制通过。临时恢复二点法会失败，恢复后平台与架构 race 通过。
+- 开发插件用 Node 标准库流式传输，仅分派文件树，Go 保留验签/业务预算；独占上游、取消和关闭，日志只含固定错误类别。真实 Vite/TCP 共 11 项测试通过：方法/query/二进制、Range/HEAD/304/private、部分流断连、上游中途截断、关闭、public 与晚发 bundle 冲突。日志含 query、取消失效两项变异均被杀死并恢复。
+- 原件：`task-9-namespace-*.log`、`task-9-path-*.log`、`task-9-vite-*.log`、`task-9-proxy-*.log`、`task-9-combined-race.log`。类型检查使用仓库 `check:types` 先生成路由类型；直接 tsc 的缺生成物与测试 fixture 类型错误保留为初轮失败，已修正后通过。
+- 夹具校正：macOS 临时目录先取 realpath，避免 Vite 构建根的符号路径差；Vite 把 port=0 当默认值，改用官方 middleware mode 配真实随机端口，避免并行端口竞争。开发服务器的 missing.js 断言明确 JavaScript Accept，生产缺失 chunk 的 404 由 Go 完整程序测试独立验证。未修改这些既有行为。
