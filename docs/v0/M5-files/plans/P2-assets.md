@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T11本地验收完成，推进T12最终门禁与证据汇总。首次产品检查点远端CI独立记录，不用本地绿替代。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T12本地验收完成，推进T13整分支审查。首次产品检查点远端CI独立记录，不用本地绿替代。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -188,10 +188,10 @@ T10完整门禁补齐：六个API加入既有权限矩阵及目标目录负例�
 
 **Files：** 本phase相关产品/测试/plane-diff、docs/v0/M5-files/reviews/P2-assets-review.md、input handoff处理结果，ignored证据台账。
 
-- [ ] Step 1：逐A1–A11对应实际测试；汇总至少15个有效定向变异（权限/锁/gate/版本/lease/回收/purge/runtime/目录/错误）。变异前备份原字节，单项运行后恢复hash，禁止stash/reset/clean；编译红单列，不冒充性质红。
-- [ ] Step 2：串行完整 `make gen`→提交生成物→`make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make e2e`。记录raw命令、准确tree、退出码、数字及历史失败；容器单套件。
-- [ ] Step 3：review逐条证据与局部裁定/代价；更新M5进度为实施完成待整审，M4/M5联合合同标实际落点；输入handoff只追加处理结果保持open。
-- [ ] Step 4：提交推送检查点，核准确SHA/run/三个job，不能用旧绿替代。现有工具能读日志直接读，不取凭据；真实失败走根因，W11一次重跑仍失败停报。
+- [x] Step 1：逐A1–A11对应实际测试；汇总至少15个有效定向变异（权限/锁/gate/版本/lease/回收/purge/runtime/目录/错误）。变异前备份原字节，单项运行后恢复hash，禁止stash/reset/clean；编译红单列，不冒充性质红。
+- [x] Step 2：串行完整 `make gen`→提交生成物→`make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make e2e`。记录raw命令、准确tree、退出码、数字及历史失败；容器单套件。
+- [x] Step 3：review逐条证据与局部裁定/代价；更新M5进度为实施完成待整审，M4/M5联合合同标实际落点；输入handoff只追加处理结果保持open。
+- [x] Step 4：提交推送检查点，核准确SHA/run/三个job，不能用旧绿替代。现有工具能读日志直接读，不取凭据；真实失败走根因，W11一次重跑仍失败停报。
 
 ## Task 13（T13）：deep-review与修复闭环
 

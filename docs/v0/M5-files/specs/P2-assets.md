@@ -1,6 +1,6 @@
 # M5 / P2：资产用例与生命周期
 
-> 状态：预检通过，T1–T11本地验收完成，推进T12最终门禁与证据汇总；见[完整预检记录](../../../reviews/re-34-M5P2预检.md)。负责人已批准清理方案 A，见[裁定](../reviews/P2-purge-contract-decision.md)。P2 基线是 P1 noff main `85dc4087a28570f59a62825f5dc861152e41c833`，准确 main CI 41471671630 三 job 全绿，P1 已归档清理。
+> 状态：预检通过，T1–T12本地验收完成，推进T13整分支审查；见[完整预检记录](../../../reviews/re-34-M5P2预检.md)。负责人已批准清理方案 A，见[裁定](../reviews/P2-purge-contract-decision.md)。P2 基线是 P1 noff main `85dc4087a28570f59a62825f5dc861152e41c833`，准确 main CI 41471671630 三 job 全绿，P1 已归档清理。
 > 上位：[M5 design](../M5-design.md) §3–§7、§10–§13。必读子合同：[权限与锁序](P2-access.md)、[对象恢复](P2-recovery.md)、[父行物理清理](P2-protected-purge.md)。它们是本 spec 的组成部分。
 
 ## 1. 目标与边界
