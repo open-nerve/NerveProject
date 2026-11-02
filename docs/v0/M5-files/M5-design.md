@@ -290,7 +290,7 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | 阶段 | 状态 | spec / plan / review |
 |---|---|---|
 | 设计与 P1 预检 | 已完成 | [预检记录](../../reviews/re-31-M5设计与P1预检.md) |
-| P1 | 进行中；预检已通过，从 T1 实施 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) |
+| P1 | T1–T8 已实施；T9 发现路由与合法工作区命名冲突，等待裁定 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) / [问题与方案](reviews/P1-storage-namespace-decision.md) |
 | P2–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。

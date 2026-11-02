@@ -1,6 +1,7 @@
 # M5 / P1：本地存储与签名传输
 
 > 状态：预检通过，实施中；见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。上位设计：[M5-design](../M5-design.md)。
+> T9 停点：`/storage` 与合法工作区 slug 冲突，既有 M3 命名空间守卫失败；当前路径合同待[负责人裁定](../reviews/P1-storage-namespace-decision.md)，不可合并。预检通过是实施前的历史结论，尚不代表全程序兼容性通过。
 > 文档基线：`3db22f06ad9e82a483c05c8078801af00a5cae02`；实施基线为 `fb3e788b7be33467018385c9a67d515e51b79dad`；[准确 main CI](https://github.com/open-nerve/NerveProject/actions/runs/41414200682) attempt 1 三作业全绿，设计证据已归档并核验，设计分支/worktree 已正常清理。
 
 ## 1. 交付边界

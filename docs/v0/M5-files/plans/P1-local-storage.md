@@ -2,6 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 > 状态：预检通过，实施中；见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。负责人已授权按既有节奏连续推进，常规预检通过后继续，不另设确认门。
+> T9 停点：真实复现 `/storage` 截获合法同名工作区页面，现有 M3 守卫失败；见[问题与待裁定方案](../reviews/P1-storage-namespace-decision.md)。已完成工作先提交，等待命名空间裁定后修订合同并继续；T9、T10、T11 尚未完成，当前不得推送产品检查点或合并。
 
 **Goal：** 建立可真实传输、检查、封存和读取的 local 存储能力，给 P2 资产用例提供经过验证的小接口。
 
