@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"reflect"
 	"time"
@@ -43,7 +44,10 @@ type Deps struct {
 	Errors         ErrorWriter
 }
 
-type Transfer struct{ deps Deps }
+type Transfer struct {
+	deps  Deps
+	slots chan struct{}
+}
 
 func NewTransfer(deps Deps) (*Transfer, error) {
 	for _, dep := range []any{deps.UploadVerifier, deps.ReadVerifier, deps.Uploader, deps.Reader, deps.Errors} {
@@ -60,7 +64,10 @@ func NewTransfer(deps Deps) (*Transfer, error) {
 	if deps.RuntimeNow == nil || deps.Files.SizeLimit < 1 || deps.Files.SizeLimit > domain.MaxObjectSize {
 		return nil, errors.New("invalid asset transfer configuration")
 	}
-	return &Transfer{deps: deps}, nil
+	if _, err := deps.Files.TransferBudget(deps.Files.SizeLimit); err != nil || deps.Files.TransferIdleTimeout <= 0 || deps.Files.TransferIdleTimeout > time.Minute || deps.Files.MaxConcurrentTransfers < 1 || deps.Files.MaxConcurrentTransfers > 256 {
+		return nil, errors.New("invalid asset transfer budget configuration")
+	}
+	return &Transfer{deps: deps, slots: make(chan struct{}, deps.Files.MaxConcurrentTransfers)}, nil
 }
 
 func (t *Transfer) Register(router *httpserver.Router, middleware func(http.Handler) http.Handler) {
@@ -89,6 +96,7 @@ func clearContentHeaders(header http.Header) {
 
 func (t *Transfer) failed(w http.ResponseWriter, r *http.Request, err error) {
 	var tooLarge *http.MaxBytesError
+	var timeout net.Error
 	switch {
 	case errors.Is(err, domain.ErrInvalidUpload), r.Method == http.MethodPut && errors.Is(err, io.ErrUnexpectedEOF):
 		transferProblem(w, http.StatusBadRequest, "asset.invalid_upload")
@@ -100,6 +108,8 @@ func (t *Transfer) failed(w http.ResponseWriter, r *http.Request, err error) {
 		transferProblem(w, http.StatusConflict, "asset.object_changed")
 	case errors.As(err, &tooLarge):
 		transferProblem(w, http.StatusRequestEntityTooLarge, httpserver.CodePayloadTooLarge)
+	case errors.Is(err, context.DeadlineExceeded), errors.As(err, &timeout) && timeout.Timeout():
+		transferProblem(w, http.StatusRequestTimeout, "asset.transfer_timeout")
 	default:
 		clearContentHeaders(w.Header())
 		t.deps.Errors.Write(w, r, err)

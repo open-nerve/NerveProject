@@ -119,11 +119,11 @@ HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, 
 
 **Interfaces：** `(*API).TransferMiddleware(Limiter) func(http.Handler) http.Handler` 只做既有 requestMeta 与传入 limiter；不走 authenticate/publicOperations，不调 JSON deadline/bodyLimit。handler 的并发预算与 idle/total 控制保持在文件传输职责内。
 
-- [ ] Step 1：`TestTransferMiddlewarePreservesClientScope` 覆盖受信/不受信代理、IPv4-mapped/IPv6 prefix、独立 bucket、429 Retry-After；复用现有请求帮手，不复制 clientIPs 算法。
-- [ ] Step 2：`TestLocalTransferDeadlines` 使用实际 net.Listener/httpserver.Server 和阻塞 reader/writer：小全局期限但足量进度上传成功，idle/total/cancel 真正终止 socket；名额满 503，全部退出路径释放，之后新上传可成功。真实阶段证据再运行一次 >30 秒、>1 MiB 的默认期限慢流（T9）。
-- [ ] Step 3：确认红后实现 spec 的 overflow-safe 预算和 ResponseController；上下文取消要解除阻塞 I/O，Unsupported 在写字节前明确失败。不能调用全局 server 配置来扩大所有请求。
-- [ ] Step 4：`go test -race -count=1 ./internal/platform/httpserver ./internal/modules/asset/...`；移除 Unwrap/名额释放/某期限的变异应被限定测试杀死，恢复原实现与原守卫。
-- [ ] Step 5：两轮复核后提交 `feat(M5/P1): 约束文件传输的期限与并发资源`。
+- [x] Step 1：`TestTransferMiddlewarePreservesClientScope` 覆盖受信/不受信代理、IPv4-mapped/IPv6 prefix、独立 bucket、429 Retry-After；复用现有请求帮手，不复制 clientIPs 算法。
+- [x] Step 2：`TestLocalTransferDeadlines` 使用实际 net.Listener/httpserver.Server 和阻塞 reader/writer：小全局期限但足量进度上传成功，idle/total/cancel 真正终止 socket；名额满 503，退出路径释放，之后新上传可成功；实际 8 MiB 健康/停读下载均验证。真实阶段证据再运行一次 >30 秒、>1 MiB 的默认期限慢流（T9，仍待完成）。
+- [x] Step 3：确认红后实现 spec 的 overflow-safe 预算和 ResponseController；上下文取消解除阻塞 I/O，Unsupported 在写字节前明确失败。全局配置未放宽；GET/HEAD 后台读只设总期限，新上传上限降低后旧对象仍可在最长时限内读取。
+- [x] Step 4：`go test -race -count=1 ./internal/platform/httpserver ./internal/modules/asset/...`；移除 Unwrap、名额释放、读 idle、写 idle、取消中断的五项变异均由定向断言杀死，已恢复原实现与原守卫。
+- [x] Step 5：两轮复核后提交 `feat(M5/P1): 约束文件传输的期限与并发资源`。
 
 ## Task 7（T7）：应用接线与测试存储隔离（A8）
 

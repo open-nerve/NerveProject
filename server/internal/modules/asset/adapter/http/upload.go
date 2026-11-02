@@ -20,7 +20,20 @@ func (t *Transfer) upload(w http.ResponseWriter, r *http.Request) {
 		transferProblem(w, http.StatusBadRequest, "asset.invalid_upload")
 		return
 	}
-	if err := t.deps.Uploader.Put(r.Context(), grant, http.MaxBytesReader(w, r.Body, grant.Size)); err != nil {
+	release, ok := t.claim(w)
+	if !ok {
+		return
+	}
+	defer release()
+	budget, err := t.begin(w, r, grant.Size, true)
+	if err != nil {
+		t.failed(w, r, err)
+		return
+	}
+	defer budget.close()
+	r = r.WithContext(budget.ctx)
+	body := budgetReader{reader: http.MaxBytesReader(w, r.Body, grant.Size), budget: budget}
+	if err := t.deps.Uploader.Put(r.Context(), grant, body); err != nil {
 		t.failed(w, r, err)
 		return
 	}

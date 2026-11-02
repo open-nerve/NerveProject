@@ -20,12 +20,25 @@ func (t *Transfer) read(w http.ResponseWriter, r *http.Request) {
 		transferProblem(w, http.StatusForbidden, "asset.invalid_signature")
 		return
 	}
+	release, ok := t.claim(w)
+	if !ok {
+		return
+	}
+	defer release()
 	info, reader, err := t.deps.Reader.OpenTransfer(r.Context(), grant.Key)
 	if err != nil {
 		t.failed(w, r, err)
 		return
 	}
 	defer func() { _ = reader.Close() }()
+	budget, err := t.begin(w, r, info.Size, false)
+	if err != nil {
+		t.failed(w, r, err)
+		return
+	}
+	defer budget.close()
+	r = r.WithContext(budget.ctx)
+	w = &budgetWriter{ResponseWriter: w, budget: budget}
 	if info.ContentType != grant.ContentType {
 		t.failed(w, r, domain.ErrObjectChanged)
 		return

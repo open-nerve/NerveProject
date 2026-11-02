@@ -45,7 +45,8 @@ func TestStorageContract(t *testing.T) {
 		}
 	})
 	logger := slog.New(slog.DiscardHandler)
-	transfer, err := httpadapter.NewTransfer(httpadapter.Deps{UploadVerifier: s, ReadVerifier: s, Uploader: s, Reader: s, RuntimeNow: func() time.Time { return now }, Files: config.FilesConfig{SizeLimit: 5242880}, Errors: httpserver.NewAPIErrors(logger)})
+	files := config.FilesConfig{SizeLimit: 5242880, MinTransferBytesPerSecond: 131072, TransferGrace: 15 * time.Second, TransferIdleTimeout: 30 * time.Second, MaxTransferDuration: 15 * time.Minute, MaxConcurrentTransfers: 16}
+	transfer, err := httpadapter.NewTransfer(httpadapter.Deps{UploadVerifier: s, ReadVerifier: s, Uploader: s, Reader: s, RuntimeNow: func() time.Time { return now }, Files: files, Errors: httpserver.NewAPIErrors(logger)})
 	if err != nil {
 		t.Fatal(err)
 	}

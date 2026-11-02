@@ -30,15 +30,21 @@ const maxFileSize int64 = 100 << 20
 // TransferBudget uses bounded integer arithmetic. Checking bounds first keeps
 // the ceiling and duration conversion safe, even for directly constructed configs.
 func (c FilesConfig) TransferBudget(size int64) (time.Duration, error) {
-	if c.SizeLimit < 1 || c.SizeLimit > maxFileSize || size > c.SizeLimit ||
+	if c.SizeLimit < 1 || c.SizeLimit > maxFileSize ||
 		c.MaxTransferDuration <= 0 || c.MaxTransferDuration > time.Hour {
 		return 0, errors.New("invalid file transfer budget")
 	}
-	budget, err := fileTransferBudget(size, c.MinTransferBytesPerSecond, c.TransferGrace)
-	if err != nil || budget > c.MaxTransferDuration {
+	uploadBudget, err := fileTransferBudget(c.SizeLimit, c.MinTransferBytesPerSecond, c.TransferGrace)
+	if err != nil || uploadBudget > c.MaxTransferDuration {
 		return 0, errors.New("invalid file transfer budget")
 	}
-	return budget, nil
+	budget, err := fileTransferBudget(size, c.MinTransferBytesPerSecond, c.TransferGrace)
+	if err != nil {
+		return 0, err
+	}
+	// SizeLimit only limits new uploads. Previously stored objects may be larger;
+	// they can still be read within the administrator's explicit duration cap.
+	return min(budget, c.MaxTransferDuration), nil
 }
 
 func fileTransferBudget(size, rate int64, grace time.Duration) (time.Duration, error) {

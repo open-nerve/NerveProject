@@ -29,6 +29,10 @@ type transferWorld struct {
 	clock  atomic.Int64
 }
 
+func transferTestFiles() config.FilesConfig {
+	return config.FilesConfig{SizeLimit: 5242880, MinTransferBytesPerSecond: 131072, TransferGrace: 15 * time.Second, TransferIdleTimeout: 30 * time.Second, MaxTransferDuration: 15 * time.Minute, MaxConcurrentTransfers: 16}
+}
+
 func newTransferWorld(t *testing.T, configure ...func(*Deps)) *transferWorld {
 	t.Helper()
 	w := &transferWorld{}
@@ -46,7 +50,7 @@ func newTransferWorld(t *testing.T, configure ...func(*Deps)) *transferWorld {
 		}
 	})
 	logger := slog.New(slog.DiscardHandler)
-	deps := Deps{UploadVerifier: s, ReadVerifier: s, Uploader: s, Reader: s, Files: config.FilesConfig{SizeLimit: 5242880}, RuntimeNow: w.now, Errors: httpserver.NewAPIErrors(logger)}
+	deps := Deps{UploadVerifier: s, ReadVerifier: s, Uploader: s, Reader: s, Files: transferTestFiles(), RuntimeNow: w.now, Errors: httpserver.NewAPIErrors(logger)}
 	for _, change := range configure {
 		change(&deps)
 	}
@@ -137,7 +141,7 @@ func request(t *testing.T, w *transferWorld, method, path string, body io.Reader
 
 func TestTransferRequiresDependencies(t *testing.T) {
 	w := newTransferWorld(t)
-	valid := Deps{UploadVerifier: w.store, ReadVerifier: w.store, Uploader: w.store, Reader: w.store, Files: config.FilesConfig{SizeLimit: 5242880}, RuntimeNow: w.now, Errors: httpserver.NewAPIErrors(slog.New(slog.DiscardHandler))}
+	valid := Deps{UploadVerifier: w.store, ReadVerifier: w.store, Uploader: w.store, Reader: w.store, Files: transferTestFiles(), RuntimeNow: w.now, Errors: httpserver.NewAPIErrors(slog.New(slog.DiscardHandler))}
 	var typedNil *local.Store
 	for _, change := range []func(*Deps){
 		func(d *Deps) { d.UploadVerifier = nil }, func(d *Deps) { d.ReadVerifier = nil }, func(d *Deps) { d.Uploader = nil }, func(d *Deps) { d.Reader = nil }, func(d *Deps) { d.Errors = nil }, func(d *Deps) { d.RuntimeNow = nil },

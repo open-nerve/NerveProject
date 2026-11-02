@@ -129,6 +129,8 @@ asset 表合入的同一阶段更新真实删除 fixture、目录/外键守卫�
 
 原始传输端点 `PUT /storage/local/{key}`、`GET/HEAD /storage/local/{key}` 在普通 JSON API 之外，仍使用 request ID、安全头、日志与有限并发/速率限制；不能以这一例外跳过整个程序路由清单核对。每个请求用 ResponseController 设置读写期限，预算由声明大小、配置最低传输速度和固定余量计算，设置明确最大值；超额体由 MaxBytesReader 拒绝，空闲/总期限到达结束连接。其他 API 默认的 1 MiB/15 秒和连接全局默认保持不变。
 
+传输空闲以活跃方向的实际字节进度判断：上传读侧、下载写侧；GET/HEAD 用于检测断连的后台读只设总期限，不能因没有新请求数据打断健康下载。期限使用真实系统单调时钟，取消时实际中断 socket，进度续期不能覆盖取消。`size_limit` 限制新上传；旧对象读取按可信大小计算预算，并受显式最长传输时限约束。
+
 读取有正确 Content-Type、Content-Length、Content-Disposition 和 nosniff。普通附件一律 attachment；inline 仅限服务确认的 JPEG/PNG/WebP/GIF。支持标准 HEAD、单段 Range/If-Range 与过期检查，拒绝不支持的多范围；每次先验证授权签名再处理条件缓存请求。含签名 query 的完整地址不记日志，错误不泄露磁盘路径。
 
 ### 5.4 s3 与兼容性

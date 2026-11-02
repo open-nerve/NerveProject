@@ -37,7 +37,7 @@ func TestFilesConfigurationBudgets(t *testing.T) {
 				t.Errorf("budget(%d) = %v, %v; want %s", tc.size, got, err, tc.want)
 			}
 		}
-		for _, size := range []int64{-1, 0, 5242881, 9223372036854775807} {
+		for _, size := range []int64{-1, 0, 104857601, 9223372036854775807} {
 			if _, err := cfg.Files.TransferBudget(size); err == nil {
 				t.Errorf("budget accepts size %d", size)
 			}
@@ -55,6 +55,19 @@ func TestFilesConfigurationBudgets(t *testing.T) {
 			if _, err := c.TransferBudget(5242880); err == nil {
 				t.Errorf("directly constructed invalid config admitted a budget: %+v", c)
 			}
+		}
+	})
+	t.Run("older objects retain bounded read budgets after a lower upload limit", func(t *testing.T) {
+		cfg, err := load("NERVE_FILES__SIZE_LIMIT=1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if budget, err := cfg.Files.TransferBudget(5242880); err != nil || budget != 55*time.Second {
+			t.Fatalf("existing object budget = %s, %v", budget, err)
+		}
+		cfg.Files.MaxTransferDuration = 16 * time.Second
+		if budget, err := cfg.Files.TransferBudget(5242880); err != nil || budget != 16*time.Second {
+			t.Fatalf("existing object capped budget = %s, %v", budget, err)
 		}
 	})
 	t.Run("YAML values retain their numeric types", func(t *testing.T) {

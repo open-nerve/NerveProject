@@ -106,11 +106,13 @@ type MAC interface { Tag([]byte) [16]byte; Verify([]byte, [16]byte) bool }
 | `files.max_concurrent_transfers` | 16 | 1–256；无等待队列，满额 503 `server_busy` |
 | `files.transfer_rate` | 60/min，burst 20 | 复用 BucketConfig 及其合法性规则，独立于 JSON anonymous 桶 |
 
-`size_limit` 在 1–104857600（100 MiB）之间；默认未变。单请求总预算 = grace + ceil(size/min_rate) 秒，默认 5 MiB 为 55 秒。读取从可信对象大小计算；所有乘加/ceil 拒绝溢出，不被负数、float 或超大值绕过。
+`size_limit` 在 1–104857600（100 MiB）之间；默认未变。单请求总预算 = grace + ceil(size/min_rate) 秒，默认 5 MiB 为 55 秒。读取从可信对象大小计算；降低新上传上限不使旧对象失读，读取预算最多取 max_transfer_duration。有效配置必须容纳最大新上传的完整预算。所有乘加/ceil 拒绝溢出，不被负数、float 或超大值绕过。
 
 原始请求仍经过平台 request ID/recover/access log/security headers。复用 httpserver 已有 trusted proxies/IPv6 处理与 ratelimit，不复制客户端 IP 解析；新增仅做 request meta 和给定 bucket 限流的传输包装，不改普通 API Middlewares。
 
-取得传输名额后，设置 context 总期限及 ResponseController 读写期限；每次实际读写按 min(剩余总预算, idle_timeout) 续设空闲期限。上传响应写期限覆盖整个传输预算及固定 5 秒响应余量。不能清零全局 deadline，不能仅靠 context 取消而留下阻塞的 socket 读写。写出响应后失败截断连接，不在文件尾追加 JSON。所有退出路径释放名额、reader 和本次临时文件。
+取得传输名额后，设置 context 总期限及 ResponseController 读写期限；上传读侧、下载写侧按实际进度和 min(剩余总预算, idle_timeout) 续期，零进度不延长空闲期限。GET/HEAD 的后台读只设总期限，不能把没有新请求数据当作下载空闲。上传响应写期限覆盖整个传输预算及固定 5 秒响应余量。不能清零全局 deadline，不能仅靠 context 取消而留下阻塞的 socket 读写。
+
+socket 期限使用系统真实单调时钟，不使用业务 clock 或用于签名测试的可注入时刻；进度续期与取消中断串行保护，防止续期覆盖已生效的取消。正常结束先注销取消回调再结束预算 ctx，避免回调抢在 HTTP 最后刷新头部时令连接过期。上传空闲/总时限在响应尚未开始时返回 408 `asset.transfer_timeout`，主动取消仍沿用平台 499；写出响应后失败截断连接，不在文件尾追加 JSON。所有退出路径释放名额、reader 和本次临时文件。
 
 ### 2.6 组合与隔离
 
