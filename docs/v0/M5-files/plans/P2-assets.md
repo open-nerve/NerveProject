@@ -164,6 +164,8 @@
 
 **Interfaces：** `prepareFile(api,token,input):Promise<PreparedAsset>`、`uploadFile(upload,bytes):Promise<void>`、`completeFile(api,token,id):Promise<Asset>`、`readFile(api,token,id):Promise<Buffer>`；沿用既有API客户端显式token，TS来自生成schema，raw传输不带API bearer/cookies。`clockEnv`为每个真实进程世界显式传入测试配置。
 
+T10完整门禁补齐：六个API加入既有权限矩阵及目标目录负例；矩阵使用明确的未传输准备件存储夹具，真实字节成功链由F1/F3及组合测试证明。Upload.headers采用封闭name/value列表，HTTP转换内部签名头字典，重新生成全部契约；不更改封闭对象守卫或模块豁免。
+
 - [x] Step 1：故事只经API建workspace/project/issue/comment/draft和真实file；furnishIssueRows每类新parent FK至少一个有字节的资产，删除多层/反向关系/活邻域齐备，createdBy与deletedBy不同。API无bound，因此不制造假附件计数/页面断言。
 - [x] Step 2：运行选定files/M3M4删除故事的Playwright命令（先make build，使用现有e2e命令入口）；保存新增性质红；SQL仅断言，禁止前置插资产冒充API。
 - [x] Step 3：实现fixture/完整故事，短upload_ttl显式10s、正常transfer budget，条件等待runtime expiry（不是sleep）；Clock只快进业务保留，刷新有效凭据后继续，不能用过期session测试伪装文件故障。

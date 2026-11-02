@@ -1,6 +1,6 @@
 # M5 / P2：资产用例与生命周期
 
-> 状态：预检通过，T1–T5已完成、接续T6；见[完整预检记录](../../../reviews/re-34-M5P2预检.md)。负责人已批准清理方案 A，见[裁定](../reviews/P2-purge-contract-decision.md)。P2 基线是 P1 noff main `85dc4087a28570f59a62825f5dc861152e41c833`，准确 main CI 41471671630 三 job 全绿，P1 已归档清理。
+> 状态：预检通过，T1–T9已完成，T10故事与完整门禁发现的目录/DTO修复已通过聚焦验证，完整门禁待复验；见[完整预检记录](../../../reviews/re-34-M5P2预检.md)。负责人已批准清理方案 A，见[裁定](../reviews/P2-purge-contract-decision.md)。P2 基线是 P1 noff main `85dc4087a28570f59a62825f5dc861152e41c833`，准确 main CI 41471671630 三 job 全绿，P1 已归档清理。
 > 上位：[M5 design](../M5-design.md) §3–§7、§10–§13。必读子合同：[权限与锁序](P2-access.md)、[对象恢复](P2-recovery.md)、[父行物理清理](P2-protected-purge.md)。它们是本 spec 的组成部分。
 
 ## 1. 目标与边界
@@ -49,12 +49,12 @@
 NewAsset = {purpose, scope:{kind,id?}, name, size, content_type}
 Asset = {id,purpose,scope,name,size,content_type,state:pending|uploaded,
          is_bound:boolean,created_at,updated_at,width:integer|null,height:integer|null}
-Upload = {method:"PUT",url,headers:map<string,string>,expires_at}
+Upload = {method:"PUT",url,headers:Array<{name:string,value:string}>,expires_at}
 Content = {url,expires_at}
 DuplicateAsset = {purpose,scope:{kind,id?},name?}
 ```
 
-服务端从 owner 解析的完整父链不接受客户端重复声明。DTO scope 采用当下资产保存的 kind/id，不包含未授权其他父信息。sha256 用于服务端验证与证据，不在 API 强制公开；width/height 仅实际图片校验成功时有值。
+服务端从 owner 解析的完整父链不接受客户端重复声明。DTO scope 采用当下资产保存的 kind/id，不包含未授权其他父信息。sha256 用于服务端验证与证据，不在 API 强制公开；width/height 仅实际图片校验成功时有值。上传headers由HTTP边界将存储端口字典转为按名称排序、无重复名称的name/value列表，每项对象封闭；无必要头时返回空数组。调用者逐项设置请求头。此形状遵守M0既有封闭对象合同，内部SignedRequest及签名语义不变，不能给动态字典新增守卫豁免。
 
 | operationId / 路径 | 请求 | 成功 | 业务行为 |
 |---|---|---|---|
@@ -140,7 +140,7 @@ P1保留的C12菜单/F6焦点Minor未修，后续UI三浏览器验收继续跟�
 1. NO ACTION保护正确性不等于回收必然成功；存储持续失败会保留父行，需要错误计数与可恢复游标。
 2. 既有单页purge改造是已批准A的工程范围，所有owner旧回归、真实目录和任务重启必须联合验证，不把接口编译通过当并发证明。
 3. 图片仅受限头部验证；local清单O(N)/页；URL是短期bearer，已发出地址不保证即时撤回。这些限制不可在最终描述省略。
-4. P2完整spec的builder check及plan自检已通过，T1–T8已完成，含首表、六个业务操作、已知对象恢复和受保护父清理；完整对象对账及阶段联合验收尚待T9–T14；按连续授权推进。只有新的重大风险/关键分歧才提交上报，不能把文档预检当实现验证。
+4. P2完整spec的builder check及plan自检已通过，T1–T9已完成，T10真实故事已通过聚焦验证；完整七项与T11–T14联合验收仍待完成，按连续授权推进。只有新的重大风险/关键分歧才提交上报，不能把文档预检当实现验证。
 
 ## 附录A：预检探针
 

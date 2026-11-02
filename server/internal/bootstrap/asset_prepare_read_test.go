@@ -9,6 +9,7 @@ import (
 	"time"
 	"uuid"
 
+	assetgen "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/http/gen"
 	assetpg "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -33,11 +34,19 @@ type preparedAssetAnswer struct {
 		Height      *int      `json:"height"`
 	} `json:"asset"`
 	Upload struct {
-		Method    string            `json:"method"`
-		URL       string            `json:"url"`
-		Headers   map[string]string `json:"headers"`
-		ExpiresAt time.Time         `json:"expires_at"`
+		Method    string                  `json:"method"`
+		URL       string                  `json:"url"`
+		Headers   []assetgen.UploadHeader `json:"headers"`
+		ExpiresAt time.Time               `json:"expires_at"`
 	} `json:"upload"`
+}
+
+func (p preparedAssetAnswer) uploadRequest() domain.SignedRequest {
+	headers := make(map[string]string, len(p.Upload.Headers))
+	for _, header := range p.Upload.Headers {
+		headers[header.Name] = header.Value
+	}
+	return domain.SignedRequest{Method: p.Upload.Method, URL: p.Upload.URL, Headers: headers, ExpiresAt: p.Upload.ExpiresAt}
 }
 
 func assetPrepareBody(purpose, scope, name, contentType string, size int64) string {
@@ -101,7 +110,7 @@ func TestAssetPrepareReadContent(t *testing.T) {
 			if !row.CreatedAt.After(before.Add(23 * time.Hour)) {
 				t.Fatal("audit time did not use the shifted business clock")
 			}
-			if got.Upload.Method != "PUT" || got.Upload.Headers["Content-Type"] != "image/png" || len(got.Upload.Headers) != 1 ||
+			if got.Upload.Method != "PUT" || len(got.Upload.Headers) != 1 || got.Upload.Headers[0].Name != "Content-Type" || got.Upload.Headers[0].Value != "image/png" ||
 				got.Upload.ExpiresAt.Before(before.Add(15*time.Minute-time.Second)) || got.Upload.ExpiresAt.After(after.Add(15*time.Minute)) ||
 				row.UploadExpiresAt == nil || !row.UploadExpiresAt.Equal(got.Upload.ExpiresAt) || row.Metadata.Staging == nil {
 				t.Fatalf("upload capability does not match persisted expiry: %s", body)
@@ -115,7 +124,7 @@ func TestAssetPrepareReadContent(t *testing.T) {
 			if err != nil || parsed.Path != "/static/local/"+string(row.Metadata.Staging.Key) {
 				t.Fatalf("upload path=%q err=%v", got.Upload.URL, err)
 			}
-			assetRequest(t, w.base, domain.SignedRequest{Method: got.Upload.Method, URL: got.Upload.URL, Headers: got.Upload.Headers}, "img", 204)
+			assetRequest(t, w.base, got.uploadRequest(), "img", 204)
 			info, err := store.Inspect(t.Context(), row.Metadata.Staging.Key)
 			if err != nil || info.Size != 3 || info.ContentType != "image/png" {
 				t.Fatalf("real object=%+v err=%v", info, err)

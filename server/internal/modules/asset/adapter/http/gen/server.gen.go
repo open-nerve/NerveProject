@@ -197,14 +197,22 @@ type PreparedAsset struct {
 
 // Upload defines model for Upload.
 type Upload struct {
-	ExpiresAt time.Time         `json:"expires_at"`
-	Headers   map[string]string `json:"headers"`
-	Method    UploadMethod      `json:"method"`
-	URL       string            `json:"url"`
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// Headers Required transport headers, sorted by name with no duplicate names. Set each name/value on the upload request.
+	Headers []UploadHeader `json:"headers"`
+	Method  UploadMethod   `json:"method"`
+	URL     string         `json:"url"`
 }
 
 // UploadMethod defines model for Upload.Method.
 type UploadMethod string
+
+// UploadHeader defines model for UploadHeader.
+type UploadHeader struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
 
 // AssetID defines model for AssetID.
 type AssetID = uuid.UUID

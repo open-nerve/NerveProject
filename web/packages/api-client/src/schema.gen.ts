@@ -1721,13 +1721,16 @@ export interface components {
             width: number | null;
             height: number | null;
         };
+        UploadHeader: {
+            name: string;
+            value: string;
+        };
         Upload: {
             /** @enum {string} */
             method: "PUT";
             url: string;
-            headers: {
-                [key: string]: string;
-            };
+            /** @description Required transport headers, sorted by name with no duplicate names. Set each name/value on the upload request. */
+            headers: components["schemas"]["UploadHeader"][];
             /** Format: date-time */
             expires_at: string;
         };
@@ -3002,6 +3005,7 @@ export type NewAsset = components['schemas']['NewAsset'];
 export type FieldError = components['schemas']['FieldError'];
 export type Problem = components['schemas']['Problem'];
 export type Asset = components['schemas']['Asset'];
+export type UploadHeader = components['schemas']['UploadHeader'];
 export type Upload = components['schemas']['Upload'];
 export type PreparedAsset = components['schemas']['PreparedAsset'];
 export type DuplicateAsset = components['schemas']['DuplicateAsset'];

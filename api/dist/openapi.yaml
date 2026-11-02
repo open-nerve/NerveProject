@@ -3071,6 +3071,18 @@ components:
             - integer
             - 'null'
           minimum: 1
+    UploadHeader:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - value
+      properties:
+        name:
+          type: string
+          minLength: 1
+        value:
+          type: string
     Upload:
       type: object
       additionalProperties: false
@@ -3087,9 +3099,10 @@ components:
         url:
           type: string
         headers:
-          type: object
-          additionalProperties:
-            type: string
+          type: array
+          description: Required transport headers, sorted by name with no duplicate names. Set each name/value on the upload request.
+          items:
+            $ref: '#/components/schemas/UploadHeader'
         expires_at:
           type: string
           format: date-time

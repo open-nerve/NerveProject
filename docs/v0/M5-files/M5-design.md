@@ -117,7 +117,7 @@ asset 表合入的同一阶段更新真实删除 fixture、目录/外键守卫�
 
 ### 5.2 三步上传与不可变发布
 
-1. **申请**：普通 JSON API 在事务里授权并创建 pending 资产和 staging 对象记录；写入声明大小/规范化 MIME/期限。提交后返回资产 ID 与 `{method: PUT, url, headers, expires_at}`。申请超过限制直接拒绝，不能像 Plane 用 min 悄悄截小。
+1. **申请**：普通 JSON API 在事务里授权并创建 pending 资产和 staging 对象记录；写入声明大小/规范化 MIME/期限。提交后返回资产 ID 与 `{method: PUT, url, headers, expires_at}`；headers为按名称排序、无重复名称的`[{name,value}]`，每项对象封闭，调用者逐项设置请求头，内部存储端口仍用字典。申请超过限制直接拒绝，不能像 Plane 用 min 悄悄截小。
 2. **传输**：前端只使用返回的精确目的地址和必要头发送 File 字节，不附加 API bearer token 或 cookies；不能把任意调用方 URL交给带认证的 API client。大小和类型签入授权；Content-Length 由浏览器根据 File 自动设置，不尝试设置浏览器禁用头。
 3. **确认准备**：重新授权，确认 pending 且未进入清理，建立随机的 seal 候选 key 记录。外部 I/O 期间不持有业务事务、行锁或数据库连接。
 4. **实物检查与封存**：检查 staging 存在、精确大小、声明类型及内容约束。以 ETag/版本条件把相同对象复制到本次独有的 seal key；再检查封存结果。图片做受限头部/尺寸/格式验证，附件下载不依赖客户端 MIME 作为安全依据。

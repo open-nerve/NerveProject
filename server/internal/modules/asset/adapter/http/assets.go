@@ -2,6 +2,8 @@ package httpadapter
 
 import (
 	"context"
+	"maps"
+	"slices"
 	"uuid"
 
 	"github.com/oapi-codegen/nullable"
@@ -24,7 +26,11 @@ func (h handler) CreateAsset(ctx context.Context, r gen.CreateAssetRequestObject
 	if err != nil {
 		return nil, err
 	}
-	return gen.CreateAsset201JSONResponse{Asset: assetDTO(got.Asset), Upload: gen.Upload{Method: gen.UploadMethod(got.Upload.Method), URL: got.Upload.URL, Headers: got.Upload.Headers, ExpiresAt: got.Upload.ExpiresAt}}, nil
+	headers := make([]gen.UploadHeader, 0, len(got.Upload.Headers))
+	for _, name := range slices.Sorted(maps.Keys(got.Upload.Headers)) {
+		headers = append(headers, gen.UploadHeader{Name: name, Value: got.Upload.Headers[name]})
+	}
+	return gen.CreateAsset201JSONResponse{Asset: assetDTO(got.Asset), Upload: gen.Upload{Method: gen.UploadMethod(got.Upload.Method), URL: got.Upload.URL, Headers: headers, ExpiresAt: got.Upload.ExpiresAt}}, nil
 }
 func (h handler) GetAsset(ctx context.Context, r gen.GetAssetRequestObject) (gen.GetAssetResponseObject, error) {
 	got, err := h.uc.Get.Execute(ctx, r.ID)

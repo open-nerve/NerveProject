@@ -30,7 +30,7 @@ export async function prepareFile(api: Api, token: string, body: NewAsset): Prom
 export function sendFile(upload: Upload, bytes: Uint8Array): Promise<Response> {
   return fetch(upload.url, {
     method: upload.method,
-    headers: upload.headers,
+    headers: Object.fromEntries(upload.headers.map(({ name, value }) => [name, value])),
     credentials: "omit",
     body: new Uint8Array(bytes),
     signal: AbortSignal.timeout(15_000),

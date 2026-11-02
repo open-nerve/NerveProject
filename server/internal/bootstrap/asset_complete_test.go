@@ -26,7 +26,7 @@ func prepareAssetHTTP(t *testing.T, w issueWorld, actor, purpose, scope, name, c
 }
 func putAssetHTTP(t *testing.T, w issueWorld, prepared preparedAssetAnswer, data []byte, status int) {
 	t.Helper()
-	assetRequest(t, w.base, domain.SignedRequest{Method: prepared.Upload.Method, URL: prepared.Upload.URL, Headers: prepared.Upload.Headers}, string(data), status)
+	assetRequest(t, w.base, prepared.uploadRequest(), string(data), status)
 }
 func readAssetHTTP(t *testing.T, w issueWorld, actor string, id uuid.UUID) (*http.Response, []byte) {
 	t.Helper()
