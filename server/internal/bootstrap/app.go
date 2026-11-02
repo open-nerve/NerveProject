@@ -214,6 +214,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		return nil, err
 	}
 	files, err := asset.New(asset.Deps{Transfer: assets.transfer, Ports: assetPorts, Objects: assets.store, JobTx: tx,
+		ReadTx: postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()), UploadSigner: assets.store, ReadSigner: assets.store,
 		Parents: assetParentReader{workspaces: workspacePorts.AssetParents, projects: projectPorts.AssetParents, issues: issuePorts.AssetParents},
 		Access:  assetapp.AccessDeps{Hosts: assetHostAccess{workspaces: ws.AssetAccess(), projects: proj.AssetAccess(), issues: issues.AssetAccess()}, Workspaces: assetWorkspaceLocks{parents: workspacePorts.AssetParents}, Projects: assetProjectLocks{projects: projectPorts.IssueProjects}, Drafts: assetDraftLocks{parents: issuePorts.AssetParents}, Caller: identityPorts.CredentialLock, Gate: forAssetWrites(projectWrites), Tx: busyTx{tx: issueTx}, CredentialClock: businessClock, Clock: businessClock},
 	})

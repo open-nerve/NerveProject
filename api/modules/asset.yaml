@@ -1,0 +1,236 @@
+# asset 业务接口；原始字节传输单独由 storage-local.json 描述。
+openapi: 3.1.0
+info:
+  title: Nerve asset API
+  version: v0
+paths:
+  /api/v0/assets:
+    post:
+      operationId: createAsset
+      tags: [asset]
+      summary: Prepare a private upload
+      description: >-
+        Creates an unbound asset owned by the caller after authorizing its current
+        host. The upload capability is returned only after the record commits.
+        Send its exact method and headers with the declared number of bytes.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, forbidden, issue.not_author, project.archived, issue.archived, asset.not_found, asset.scope_changed, asset.too_large, asset.type_unsupported, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewAsset'
+      responses:
+        '201':
+          description: Private pending asset and a signed upload request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreparedAsset'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/assets/{id}:
+    parameters:
+      - $ref: '#/components/parameters/AssetID'
+    get:
+      operationId: getAsset
+      tags: [asset]
+      summary: Read private asset metadata
+      description: >-
+        Reads the asset and its current host authorization in one read-only
+        snapshot. A missing, deleted or invisible host and another applicant's
+        asset all answer asset.not_found. No storage key or capability is returned.
+      security: [{bearer: []}]
+      x-problem-codes: [forbidden, asset.not_found, asset.scope_changed]
+      responses:
+        '200':
+          description: Metadata visible to its applicant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/assets/{id}/content:
+    parameters:
+      - $ref: '#/components/parameters/AssetID'
+    get:
+      operationId: resolveAssetContent
+      tags: [asset]
+      summary: Sign a read of completed content
+      description: >-
+        Rechecks the applicant's credential and current host authorization before
+        signing an uploaded asset's immutable final object. Does not write database
+        rows. Expiry is the next UTC whole hour, or the following hour when fewer
+        than five minutes remain. Attachments always download; verified image
+        purposes can display inline. A previously issued URL remains a bearer
+        capability until its expiry even if permission is subsequently revoked.
+      security: [{bearer: []}]
+      x-problem-codes: [forbidden, asset.not_found, asset.scope_changed, asset.not_uploaded, server_busy]
+      responses:
+        '200':
+          description: Signed GET URL with its actual expiry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Content'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  parameters:
+    AssetID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Problem:
+      description: Error (RFC 9457 problem details).
+      headers:
+        Retry-After:
+          description: >-
+            Whole seconds to wait before trying again, rounded up; sent with
+            rate_limited and server_busy.
+          schema:
+            type: integer
+            minimum: 1
+        WWW-Authenticate:
+          description: >-
+            Sent with every 401 (RFC 9110 15.5.2): Bearer error="invalid_token"
+            (RFC 6750 3) when the bearer token sent is refused before the
+            operation runs, being invalid or expired; plain Bearer for every
+            other 401, including a credential that the operation finds revoked
+            while it runs.
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../common.yaml#/components/schemas/Problem'
+  schemas:
+    AssetPurpose:
+      type: string
+      enum: [USER_AVATAR, USER_COVER, WORKSPACE_LOGO, PROJECT_COVER, ISSUE_ATTACHMENT, ISSUE_DESCRIPTION, COMMENT_DESCRIPTION, COMMENT_ATTACHMENT, DRAFT_ISSUE_DESCRIPTION, DRAFT_ISSUE_ATTACHMENT]
+    AssetScope:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [user, workspace, project, new_project, issue, comment, new_comment, draft]
+        id:
+          description: Host UUID; required except for user, which forbids this field. new_project names a workspace; new_comment names an issue.
+          type: string
+          format: uuid
+    NewAsset:
+      type: object
+      additionalProperties: false
+      required: [purpose, scope, name, size, content_type]
+      properties:
+        purpose:
+          $ref: '#/components/schemas/AssetPurpose'
+        scope:
+          $ref: '#/components/schemas/AssetScope'
+        name:
+          description: 1–255 Unicode characters, without path separators or control characters.
+          type: string
+        size:
+          description: Exact nonzero byte length; exceeding this instance's file_size_limit answers 413 asset.too_large.
+          type: integer
+          format: int64
+        content_type:
+          description: Canonical MIME without parameters. Image purposes accept only image/jpeg, image/png, image/webp and image/gif.
+          type: string
+    Asset:
+      type: object
+      additionalProperties: false
+      required: [id, purpose, scope, name, size, content_type, state, is_bound, created_at, updated_at, width, height]
+      properties:
+        id:
+          type: string
+          format: uuid
+        purpose:
+          $ref: '#/components/schemas/AssetPurpose'
+        scope:
+          $ref: '#/components/schemas/AssetScope'
+        name:
+          type: string
+        size:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 104857600
+        content_type:
+          type: string
+        state:
+          type: string
+          enum: [pending, uploaded]
+        is_bound:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        width:
+          type: [integer, 'null']
+          minimum: 1
+        height:
+          type: [integer, 'null']
+          minimum: 1
+    PreparedAsset:
+      type: object
+      additionalProperties: false
+      required: [asset, upload]
+      properties:
+        asset:
+          $ref: '#/components/schemas/Asset'
+        upload:
+          $ref: '#/components/schemas/Upload'
+    Upload:
+      type: object
+      additionalProperties: false
+      required: [method, url, headers, expires_at]
+      properties:
+        method:
+          type: string
+          enum: [PUT]
+        url:
+          type: string
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        expires_at:
+          type: string
+          format: date-time
+    Content:
+      type: object
+      additionalProperties: false
+      required: [url, expires_at]
+      properties:
+        url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    DuplicateAsset:
+      type: object
+      additionalProperties: false
+      required: [purpose, scope]
+      properties:
+        purpose:
+          $ref: '#/components/schemas/AssetPurpose'
+        scope:
+          $ref: '#/components/schemas/AssetScope'
+        name:
+          type: string

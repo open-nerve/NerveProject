@@ -67,7 +67,7 @@ DuplicateAsset = {purpose,scope:{kind,id?},name?}
 
 duplicate 可跨用途，但目标重新执行大小/图片验证；非图片附件不能借复制变成头像。name 缺省沿用已授权源名。必须检查目标 scope 与 purpose 合法；不得先向可写目标复制后才验证源。没有公开任意 owner 更换/恢复接口。
 
-具名错误一次加入 domain、x-problem-codes、HTTP映射、PROBLEM_MESSAGES、en/zh-CN errors.json，运行 make test-web。预期新码如下（实际共享状态码复用既有，不另造镜像）：
+具名错误在首次实际操作消费的同Task加入 domain、x-problem-codes、HTTP映射、PROBLEM_MESSAGES、en/zh-CN errors.json，运行 make test-web；T6只注册三个实际操作，其余由T7/T8同时登记，保持错误目录精确等式。预期新码如下（实际共享状态码复用既有，不另造镜像）：
 
 | 状态/码 | 精确条件 |
 |---|---|

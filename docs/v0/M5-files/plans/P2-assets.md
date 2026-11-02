@@ -114,13 +114,13 @@
 
 **Files：** 新建api/modules/asset.yaml、http/gen/oapi-codegen.yaml及生成，asset/app/{prepare,read}.go、http/{assets,handler}.go；修改api/openapi.yaml、module.go、bootstrap/actions/routes/error目录测试、两语错误文案及配置样例。
 
-**Interfaces：** Prepare.Execute(ctx,domain.NewAsset)(PreparedAsset,error)，PreparedAsset{Asset,Upload}；Get.Execute(ctx,id)(domain.Asset,error)；ResolveContent.Execute(ctx,id)(domain.SignedRequest,error)。路由只先登记本Task三个实际操作，不为T7/T8返回桩；共有DTO及错误一次定义。OpenAPI组件名为NewAsset、Asset、PreparedAsset、Upload、Content、DuplicateAsset，PreparedAsset含asset/upload；无手写TS镜像。
+**Interfaces：** Prepare.Execute(ctx,domain.NewAsset)(PreparedAsset,error)，PreparedAsset{Asset,Upload}；Get.Execute(ctx,id)(domain.Asset,error)；ResolveContent.Execute(ctx,id)(domain.SignedRequest,error)。路由只先登记本Task三个实际操作，不为T7/T8返回桩；共有DTO先定义，错误在首次实际操作消费的同Task登记（不能为未来操作伪造错误合同）。OpenAPI组件名为NewAsset、Asset、PreparedAsset、Upload、Content、DuplicateAsset，PreparedAsset含asset/upload；无手写TS镜像。
 
-- [ ] Step 1：TestAssetPrepareReadContent：10种用途API申请、严格bodyshape/422与scope解析、大小限额、签名必要headers、DB失败不返回URL、持久expiry/safeAfter、元数据无key；pending content409。TestAssetContentReadNoWrites用实际SQL审计/行快照断言零UPDATE，并覆盖整点+不足5m换下一整点。
-- [ ] Step 2：组合/HTTP测试红，契约source/response精确核验；纯返回固定DTO不能让字节相关断言通过。
-- [ ] Step 3：先契约再生成实现；public business错误按spec精确码和状态登记、两语同步。Prepare在授权事务记录staging后CPU签名，成功commit才返回；resolve不写DB。完整asset.New接已创建owner门面/CallerLock，更新actionless理由但不改guard判词。
-- [ ] Step 4：运行 `make gen`、`go -C server test ./internal/modules/asset/... ./internal/bootstrap -run 'AssetPrepare|AssetContent|AssetRead|Actions|Routes|Problem|Errors' -count=1`、`make test-web`；生成物随提交记录hash/行数。变异遗漏required header、完整query日志、无CallerLock、JSON限额放宽至少有对应失败证据。
-- [ ] Step 5：提交。普通read URL在P7完成实物后增加真GET字节证据，当前不能假称F1闭环。
+- [x] Step 1：TestAssetPrepareReadContent：10种用途API申请、严格bodyshape/422与scope解析、大小限额、签名必要headers、DB失败不返回URL、持久expiry/safeAfter、元数据无key；pending content409。TestAssetContentReadNoWrites用实际SQL审计/行快照断言零UPDATE，并覆盖整点+不足5m换下一整点。
+- [x] Step 2：组合/HTTP测试红，契约source/response精确核验；纯返回固定DTO不能让字节相关断言通过。
+- [x] Step 3：先契约再生成实现；本Task实际可达的public business错误按spec精确码和状态登记、两语同步；T7/T8各自首次消费的错误随其操作登记。Prepare在授权事务记录staging后CPU签名，成功commit才返回；resolve不写DB。完整asset.New接已创建owner门面/CallerLock，更新actionless理由但不改guard判词。
+- [x] Step 4：运行 `make gen`、`go -C server test ./internal/modules/asset/... ./internal/bootstrap -run 'AssetPrepare|AssetContent|AssetRead|Actions|Routes|Problem|Errors' -count=1`、`make test-web`；生成物随提交记录hash/行数。变异遗漏required header、完整query日志、无CallerLock、JSON限额放宽至少有对应失败证据。
+- [x] Step 5：提交。普通read URL在T7完成实物后增加真GET字节证据，当前不能假称F1闭环。
 
 ## Task 7（T7）：确认与唯一不可变发布
 

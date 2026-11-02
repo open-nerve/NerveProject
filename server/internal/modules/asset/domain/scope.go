@@ -43,6 +43,16 @@ type Placement struct {
 	UserID, WorkspaceID, ProjectID, IssueID, CommentID, DraftID uuid.UUID
 }
 
+func (p Purpose) Valid() bool {
+	switch p {
+	case UserAvatar, UserCover, WorkspaceLogo, ProjectCover, IssueAttachment, IssueDescription,
+		CommentDescription, CommentAttachment, DraftIssueDescription, DraftIssueAttachment:
+		return true
+	default:
+		return false
+	}
+}
+
 func (p Purpose) ImageRequired() bool {
 	switch p {
 	case UserAvatar, UserCover, WorkspaceLogo, ProjectCover, IssueDescription, CommentDescription, DraftIssueDescription:

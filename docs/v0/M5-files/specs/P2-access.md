@@ -19,7 +19,7 @@
 
 表中动作不是 asset 的新 Action。workspace/project 在自己的 app 复用 decide，issue 在自己的 app 复用 Locks.seeAs/decide、commentCheck/targetCheck、DraftLocks.read。asset 不接收 Authorizer，也不查询成员/项目/issue 表。具名 actionless 登记说明委托，原动作目录等式及负例不变。
 
-优先级：结构 400/字段 422；认证 401；指名准备件不是申请者/资产已删/宿主不可见或不存在，一律 asset.not_found；可见后角色/评论作者不足 403；写权限通过后项目归档 → 工作项归档 → 状态冲突。owner 的“资源不存在”只在 bootstrap 的具名转换映射为 asset.not_found，基础设施错误原样返回，不能把任何 error 都变 404。预检重放同一可见性顺序；归档检查在锁下最后判定。
+HTTP前置处理沿用M2：生成层先绑定路径参数，之后认证（401）、JSON结构检查（400）和资产字段校验（422）；不因新增资产接口改变平台认证顺序。已认证且结构/字段合法后，指名准备件不是申请者/资产已删/宿主不可见或不存在，一律 asset.not_found；可见后角色/评论作者不足 403；写权限通过后项目归档 → 工作项归档 → 状态冲突。owner 的“资源不存在”只在 bootstrap 的具名转换映射为 asset.not_found，基础设施错误原样返回，不能把任何 error 都变 404。预检重放同一可见性顺序；归档检查在锁下最后判定。
 
 草稿复用现有作者私有规则，已归档但未删除的项目不额外禁止草稿保存/准备；项目删除则拒绝。发布时再判目标项目创建权限属于 P5。更换草稿项目后，P2 旧准备件的项目快照不再匹配，返回 scope_changed；不在 asset 锁后追新项目。P5 随 UpdateDraft/PublishDraft 的同事务迁移处理仍是后续责任。
 

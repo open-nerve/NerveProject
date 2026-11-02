@@ -42,8 +42,8 @@ func testFilesConfig(t *testing.T) config.FilesConfig {
 	}
 }
 
-// The P1 facade has no business signing endpoint yet. This second handle uses
-// only the test's PEM/config and the real local ports to prepare signed requests.
+// Raw transport and storage-layer tests use this second handle with their
+// own PEM/config and real local ports; business stories use the asset API.
 func assetClientStore(t *testing.T, cfg config.Config) *local.Store {
 	t.Helper()
 	pem, err := readSigningKey(cfg.Auth.JWT.PrivateKeyFile)

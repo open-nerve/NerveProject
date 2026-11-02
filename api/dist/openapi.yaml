@@ -17,7 +17,94 @@ tags:
     description: Projects, their members, their states and their labels.
   - name: issue
     description: Work items.
+  - name: asset
+    description: Private file preparations and content capabilities.
 paths:
+  /api/v0/assets:
+    post:
+      operationId: createAsset
+      tags:
+        - asset
+      summary: Prepare a private upload
+      description: Creates an unbound asset owned by the caller after authorizing its current host. The upload capability is returned only after the record commits. Send its exact method and headers with the declared number of bytes.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - forbidden
+        - issue.not_author
+        - project.archived
+        - issue.archived
+        - asset.not_found
+        - asset.scope_changed
+        - asset.too_large
+        - asset.type_unsupported
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewAsset'
+      responses:
+        '201':
+          description: Private pending asset and a signed upload request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreparedAsset'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/assets/{id}:
+    parameters:
+      - $ref: '#/components/parameters/AssetID'
+    get:
+      operationId: getAsset
+      tags:
+        - asset
+      summary: Read private asset metadata
+      description: Reads the asset and its current host authorization in one read-only snapshot. A missing, deleted or invisible host and another applicant's asset all answer asset.not_found. No storage key or capability is returned.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - forbidden
+        - asset.not_found
+        - asset.scope_changed
+      responses:
+        '200':
+          description: Metadata visible to its applicant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/assets/{id}/content:
+    parameters:
+      - $ref: '#/components/parameters/AssetID'
+    get:
+      operationId: resolveAssetContent
+      tags:
+        - asset
+      summary: Sign a read of completed content
+      description: Rechecks the applicant's credential and current host authorization before signing an uploaded asset's immutable final object. Does not write database rows. Expiry is the next UTC whole hour, or the following hour when fewer than five minutes remain. Attachments always download; verified image purposes can display inline. A previously issued URL remains a bearer capability until its expiry even if permission is subsequently revoked.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - forbidden
+        - asset.not_found
+        - asset.scope_changed
+        - asset.not_uploaded
+        - server_busy
+      responses:
+        '200':
+          description: Signed GET URL with its actual expiry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Content'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/auth/register:
     post:
       operationId: register
@@ -2708,36 +2795,64 @@ components:
       scheme: bearer
       description: An access token (JWT) from register, login or refresh, or a personal access token (nrv_pat_…).
   schemas:
-    RegisterInvitation:
-      description: 'The invitation a registration names, from its link (/workspace-invitations?invitation_id=…&token=…): while sign-up is off, it lets the address it was sent to register.'
+    AssetPurpose:
+      type: string
+      enum:
+        - USER_AVATAR
+        - USER_COVER
+        - WORKSPACE_LOGO
+        - PROJECT_COVER
+        - ISSUE_ATTACHMENT
+        - ISSUE_DESCRIPTION
+        - COMMENT_DESCRIPTION
+        - COMMENT_ATTACHMENT
+        - DRAFT_ISSUE_DESCRIPTION
+        - DRAFT_ISSUE_ATTACHMENT
+    AssetScope:
       type: object
       additionalProperties: false
       required:
-        - id
-        - token
+        - kind
       properties:
+        kind:
+          type: string
+          enum:
+            - user
+            - workspace
+            - project
+            - new_project
+            - issue
+            - comment
+            - new_comment
+            - draft
         id:
-          description: The link's invitation_id.
+          description: Host UUID; required except for user, which forbids this field. new_project names a workspace; new_comment names an issue.
           type: string
           format: uuid
-        token:
-          description: The link's token.
-          type: string
-    RegisterRequest:
+    NewAsset:
       type: object
       additionalProperties: false
       required:
-        - email
-        - password
+        - purpose
+        - scope
+        - name
+        - size
+        - content_type
       properties:
-        email:
-          description: The sign-in address; stored trimmed and in lower case.
+        purpose:
+          $ref: '#/components/schemas/AssetPurpose'
+        scope:
+          $ref: '#/components/schemas/AssetScope'
+        name:
+          description: 1–255 Unicode characters, without path separators or control characters.
           type: string
-          format: email
-        password:
+        size:
+          description: Exact nonzero byte length; exceeding this instance's file_size_limit answers 413 asset.too_large.
+          type: integer
+          format: int64
+        content_type:
+          description: Canonical MIME without parameters. Image purposes accept only image/jpeg, image/png, image/webp and image/gif.
           type: string
-        invitation:
-          $ref: '#/components/schemas/RegisterInvitation'
     FieldError:
       description: One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared.
       type: object
@@ -2793,6 +2908,137 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FieldError'
+    Asset:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - purpose
+        - scope
+        - name
+        - size
+        - content_type
+        - state
+        - is_bound
+        - created_at
+        - updated_at
+        - width
+        - height
+      properties:
+        id:
+          type: string
+          format: uuid
+        purpose:
+          $ref: '#/components/schemas/AssetPurpose'
+        scope:
+          $ref: '#/components/schemas/AssetScope'
+        name:
+          type: string
+        size:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 104857600
+        content_type:
+          type: string
+        state:
+          type: string
+          enum:
+            - pending
+            - uploaded
+        is_bound:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        width:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+        height:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+    Upload:
+      type: object
+      additionalProperties: false
+      required:
+        - method
+        - url
+        - headers
+        - expires_at
+      properties:
+        method:
+          type: string
+          enum:
+            - PUT
+        url:
+          type: string
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        expires_at:
+          type: string
+          format: date-time
+    PreparedAsset:
+      type: object
+      additionalProperties: false
+      required:
+        - asset
+        - upload
+      properties:
+        asset:
+          $ref: '#/components/schemas/Asset'
+        upload:
+          $ref: '#/components/schemas/Upload'
+    Content:
+      type: object
+      additionalProperties: false
+      required:
+        - url
+        - expires_at
+      properties:
+        url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    RegisterInvitation:
+      description: 'The invitation a registration names, from its link (/workspace-invitations?invitation_id=…&token=…): while sign-up is off, it lets the address it was sent to register.'
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - token
+      properties:
+        id:
+          description: The link's invitation_id.
+          type: string
+          format: uuid
+        token:
+          description: The link's token.
+          type: string
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          description: The sign-in address; stored trimmed and in lower case.
+          type: string
+          format: email
+        password:
+          type: string
+        invitation:
+          $ref: '#/components/schemas/RegisterInvitation'
     AuthTokens:
       description: 'A session''s tokens. Send access_token as "Authorization: Bearer"; when it expires, exchange refresh_token for the next pair at POST /api/v0/auth/refresh.'
       type: object
@@ -5287,6 +5533,13 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
   parameters:
+    AssetID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     Limit:
       name: limit
       in: query

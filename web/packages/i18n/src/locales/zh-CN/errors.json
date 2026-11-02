@@ -1,5 +1,10 @@
 {
   "errors": {
+    "asset_not_found": "文件不存在，或你没有访问权限。",
+    "asset_scope_changed": "文件或所属位置已变化，请重试。",
+    "asset_not_uploaded": "文件尚未完成上传。",
+    "asset_too_large": "文件超过允许的大小。",
+    "asset_type_unsupported": "请选择 JPEG、PNG、WebP 或 GIF 图片。",
     "asset_invalid_signature": "文件链接无效或已过期，请重新获取链接。",
     "asset_invalid_upload": "上传的文件与申请不符，请重新选择文件。",
     "asset_object_not_found": "文件已不可用。",

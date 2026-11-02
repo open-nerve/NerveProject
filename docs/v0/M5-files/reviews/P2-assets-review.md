@@ -1,6 +1,6 @@
 # M5 / P2 阶段评审记录
 
-> 实施中：T1–T5完成，T6–T14待执行；没有进行整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
+> 实施中：T1–T6完成，T7–T14待执行；没有进行整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
 
 ## 1. 方式
 
@@ -30,11 +30,11 @@ T1确认必须的完整Go依赖传递链，补齐spec/plan；T1无ETag输入，�
 
 ## 6. 后续责任
 
-T5已完成首张资产表、删除协作与已知对象回收；接续T6申请与读取接口。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
+T6已完成申请、元数据和内容签发三个接口；接续T7确认与不可变对象发布。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
 
 ## 7. 已知限制
 
-当前已有基础纯规则/校验、本地有限清单/临时回收、宿主授权与锁编排、父清理单页与River持久进度；已有file_assets、同步删除和资产清理worker；尚无资产业务路由，完整对象对账/重启恢复也未交付。不能根据T1–T5通过声称F1/F3/F13/F14/F15已满足。
+当前已有基础纯规则/校验、本地有限清单/临时回收、宿主授权与锁编排、父清理单页与River持久进度；已有file_assets、同步删除和资产清理worker；已有三个业务路由；确认/复制/删除及完整对象对账/重启恢复尚未交付。不能根据T1–T6通过声称F1/F3/F13/F14/F15已满足。
 
 ## 8. T2本地清单、临时目录与配置
 
@@ -79,3 +79,16 @@ T5已完成首张资产表、删除协作与已知对象回收；接续T6申请�
 - task-5-mutations.json中七项行为变异全被杀且恢复字节hash一致：CASCADE、漏states、Deleted零提前耗尽、metadata未空硬删、Delete失败清记录、PublishDraft误删资产、非事务入队。task-5-wiring-mutation.json另证明生产保护标识为空时完整程序失败；首次untyped nil仅编译失败，另存compile-attempt，不计性质证据。全部历史失败和修复日志保留。
 - 实际符号较plan原示意精简为FindAsset/CreateAsset/SaveAsset与原Asset审计、revision；SweepCursor同时保存业务/runtime cutoff，Scanned和Removed分开。候选DB确认失败不前移游标，对象删除失败保留记录并让下一次从邻域继续，失败行由下轮周期重看。详细理由及错误代价见台账各Ruling。
 - 最终验证通过：输入1542文件快照为task-5-final-inputs.json，运行后逐hash未变；资产全包、迁移、archtest race及父模块/组合层扩大race均通过，bootstrap188.804秒，lint为0 issues。收据在task-5-verification.json；无完整七项或远端CI通过声明，按计划T10前不推产品检查点。
+
+
+## 12. T6申请、元数据与内容签发
+
+- 三个实际操作 createAsset/getAsset/resolveAssetContent 按契约生成Go/bodyshape/TS后接入完整asset模块。没有complete/duplicate/delete桩；新五个错误码与两语文案同Task登记，未改变动作或错误目录守卫。413/415仅在HTTP边界映射，其余owner错误原样保留。
+- `task-6-prepare-red.log`与`task-6-read-red.log`为真实路由缺失的HTTP性质红。十种用途、十二种用途/范围组合经过API申请并真实PUT，检查完整父范围、必要Content-Type、持久expiry和本次传输预算+30s的SafeAfter；业务时钟+24h仍签运行时期限。无效结构/字段、实例限额与100MiB上限、非图片用途声明、非申请者逐值404以及pending内容409均验证。
+- 延后到COMMIT才失败的真实数据库约束证明申请行回滚、API只返回500而无URL。元数据不返回key/上传capability；普通读取在同一只读快照授权。真实HTTP在FindAsset结束后停住，第二请求删除issue并提交，恢复后的原读仍见同一快照，新读404；记录生产BEGIN为REPEATABLE READ READ ONLY。
+- 内容签发使用同一Access/CallerLock/owner门面和最终锁下复查，不UPDATE资产。三轮GET内容/元数据的真实语句级DML审计为0，整行快照不变。精确UTC整点、恰好5m、少1ns、非UTC输入和跨日由实际签发用例测试；声明image/png的附件仍强制attachment。
+- `task-6-mutations.json`七项行为变异失败且原字节哈希恢复：漏required header、完整query进入访问日志、移除CallerLock、放宽普通JSON限额、5m边界误含相等、生产读取缺失快照、上传误用业务clock。第一版query变异落到panic日志，访问日志测试未失败；原件单列保留，改为真正访问日志语句后命中失败，不把第一次存活说成拦截。
+- 最终生成输入3967文件不变，91生成物的SHA256/行数在`task-6-generated.json`；最终生成无Problem重名警告。扩大race回归通过（bootstrap58.229秒），完整asset HTTP套件及错误目录闭合通过，server lint 0 issues，`make test-web`18/18任务通过。命令/输入/日志见`task-6-verification.json`。仍未运行本Phase完整七项和远端产品检查点。
+- 首次读取校验失败因测试额外store在空PEM配置下另生成密钥；同一测试PEM后通过，未改签名逻辑。HTTP单测起初断言全局缓存头，已将该断言归到真实应用调用；快照SQL大小写断言也按实际语义修正。原失败/编译尝试均保留。
+- 局部裁定：未来T7/T8错误随其首次消费者登记，以保持精确目录而不虚报可返回错误；HTTP拒绝前置顺序明示沿用M2路径绑定→认证→bodyshape→字段，不另建资产认证链。代价和理由在台账，未修改宿主可见性/角色/归档顺序。raw仍为P1最终`/static/local/`。
+- 上传字节已真实落盘，普通内容URL当前用显式storage fixture核验签名；完成实物后的GET字节与完整hash仍是T7责任，不能据此关闭F1。A1–A12及输入handoff继续开放。

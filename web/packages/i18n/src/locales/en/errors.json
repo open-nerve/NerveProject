@@ -1,5 +1,10 @@
 {
   "errors": {
+    "asset_not_found": "The file does not exist, or you cannot access it.",
+    "asset_scope_changed": "The file or its location changed. Please try again.",
+    "asset_not_uploaded": "The file upload has not been completed.",
+    "asset_too_large": "The file exceeds the allowed size.",
+    "asset_type_unsupported": "Please choose a JPEG, PNG, WebP or GIF image.",
     "asset_invalid_signature": "The file link is invalid or has expired. Please request a new link.",
     "asset_invalid_upload": "The uploaded file does not match the upload request. Please select the file again.",
     "asset_object_not_found": "The file is no longer available.",

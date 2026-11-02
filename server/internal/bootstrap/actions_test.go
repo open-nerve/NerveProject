@@ -36,7 +36,9 @@ var actionlessModules = []string{
 	"instance",
 	// It decides the other modules' actions, and has none of its own.
 	"access",
-	// M5/P1 exposes signed byte transport only, with no business asset actions.
+	// Asset owns no role action: private preparations delegate current host
+	// authorization to workspace/project/issue facades, and lock the caller's
+	// credential before signing a capability. Raw transfers use their signatures.
 	"asset",
 }
 
