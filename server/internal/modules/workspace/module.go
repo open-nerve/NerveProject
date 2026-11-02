@@ -70,6 +70,7 @@ type DirectoryEntry = app.DirectoryEntry
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
+	AssetParents             AssetParents
 	Purger                   *app.Purger
 	WorkspaceRoles           WorkspaceRoles
 	WorkspaceDirectory       WorkspaceDirectory
@@ -88,7 +89,7 @@ func Provide(pool *pgxpool.Pool) Provided {
 			{Table: "workspace_members", Delete: store.PurgeWorkspaceMembers},
 			{Table: "workspaces", Delete: store.PurgeWorkspaces},
 		}),
-		WorkspaceRoles: store, WorkspaceDirectory: directory,
+		AssetParents: store, WorkspaceRoles: store, WorkspaceDirectory: directory,
 		WorkspaceMembers: directory, WorkspaceMemberDirectory: directory,
 	}
 }
@@ -130,6 +131,7 @@ type Deps struct {
 
 // Module is the wired workspace module.
 type Module struct {
+	assets      *app.AssetAccess
 	uc          httpadapter.UseCases
 	signup      *app.SignupInvitations
 	deactivator Deactivator
@@ -148,7 +150,7 @@ type SignupInvitations interface {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	deactivator := NewDeactivator(DeactivatorDeps{Pool: d.Pool, Clock: d.Clock, Projects: d.Projects})
-	return &Module{signup: app.NewSignupInvitations(store, d.InvitationMAC), deactivator: deactivator, uc: httpadapter.UseCases{
+	return &Module{assets: app.NewAssetAccess(d.Authorizer), signup: app.NewSignupInvitations(store, d.InvitationMAC), deactivator: deactivator, uc: httpadapter.UseCases{
 		ListWorkspaces: app.NewListWorkspaces(store),
 		CreateWorkspace: app.NewCreateWorkspace(app.CreateWorkspaceDeps{
 			Accounts: d.Accounts, Workspaces: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger, Enabled: d.CreationEnabled,

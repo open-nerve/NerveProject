@@ -12,6 +12,8 @@ var (
 	ErrAssetTypeUnsupported = errors.New("unsupported asset type")
 	ErrInvalidMetadata      = errors.New("invalid asset storage metadata")
 	ErrAssetContentInvalid  = errors.New("invalid asset content")
+	ErrAssetNotFound        = errors.New("asset not found")
+	ErrAssetScopeChanged    = errors.New("asset host scope changed")
 )
 
 type NewAsset struct {

@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T2已完成，接续T3。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T3已完成，接续T4。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -39,10 +39,10 @@
 详细位置见spec§2.1；新增文件命名按本计划。每层自己的值由bootstrap显式转换。下列共享数据指asset自身domain/app类型，不给其他模块增加asset import。
 
 - domain.Asset：spec表字段的具名业务值；domain.NewAsset/Scope/Purpose/StorageMetadata，ContentProof{SHA256 string; Width,Height *int}。
-- app.AssetReader.Get(ctx,id)(domain.Asset,bool,error)；app.AssetLocker.LockMany(ctx,ids)([]domain.Asset,error)；app.AssetCreator.Insert(ctx,AssetWrite)(domain.Asset,error)；app.MetadataWriter.Update(ctx,MetadataWrite)(domain.Asset,error)。MetadataWrite含ID/ExpectedRevision/新metadata/可选uploaded与原始Stamp，SQL校验revision受影响行。
-- app.Stamp{At time.Time; By *uuid.UUID}；app.AssetWrite{Asset domain.Asset; Stamp Stamp}；app.DeletionStamp同Stamp；app.ParentKey{Kind string; ID uuid.UUID}。用途/父链/大小等immutable字段只有后续owner绑定协议能改，P2通用metadata写不开放它们。
+- app.AssetReader.Get(ctx,id)(domain.Asset,bool,error)；app.AssetLocker.LockAssets(ctx,ids)([]domain.Asset,error)；app.AssetCreator.Insert(ctx,AssetWrite)(domain.Asset,error)；app.MetadataWriter.Update(ctx,MetadataWrite)(domain.Asset,error)。MetadataWrite含ID/ExpectedRevision/新metadata/可选uploaded与原始Stamp，SQL校验revision受影响行。
+- app.Stamp{At time.Time; By *uuid.UUID}；app.AssetWrite{Asset domain.Asset; Stamp Stamp}；app.DeletionStamp同Stamp；app.ParentKey{Kind domain.ScopeKind; ID uuid.UUID}。用途/父链/大小等immutable字段只有后续owner绑定协议能改，P2通用metadata写不开放它们。
 - app.ContentValidator.Validate(ctx,io.Reader,size int64,contentType string,imageRequired bool)(domain.ContentProof,error)。取消/超限error保留分类；完整hash，图片仅头。
-- app.Access.Within(ctx,actor,[]HostRequest,[]uuid.UUID,func(context.Context,[]Host,[]domain.Asset)error)error 是asset包内方法；各owner只实现Inspect/Check和小锁端口。内部回调不得导出为模块间接口。
+- app.Access.Within(ctx,actor,[]HostRequest,[]uuid.UUID,func(context.Context,AccessHeld)error)error 是asset包内方法；AccessHeld含Hosts/Assets/最终锁后时刻At，各owner只实现Inspect/Check和小锁端口。内部回调不得导出为模块间接口。
 - app.ParentDeletionReader.Deletions(ctx,[]Host)(map[ParentKey]DeletionStamp,error)；自有Rows的按scope、回收、purge分页由T5定义固定查询，不拼外部表名。
 - owner app各自PurgeCursor{Table string; After uuid.UUID}、PurgeProgress{Cursor;Scanned,Deleted,Blocked int;Done bool}；Purger.Page(ctx,cutoff,batch,cursor)(PurgeProgress,error)。bootstrap消费方同形值经具名转换，不让owner import bootstrap/platform app类型。
 - app.SweepCursor{Version int;Phase string;After uuid.UUID;Token string;Cutoff time.Time}；SweepResult{Cursor;Scanned,Deleted,Blocked int;Complete bool}；Cleanup.Execute(ctx,cursor)(SweepResult,error)。River adapter保存≤16KiB output；错误也带已安全提交游标。
@@ -79,11 +79,11 @@
 
 **Interfaces：** 精确实现access§2全部方法；owner定义自己的输入输出，bootstrap转换；ParentDeletionReader分组所需owner墓碑批量查询也在本Task，返回原At/By，不缺失猜删除。
 
-- [ ] Step 1：TestAssetHostAccessMatrix用每用途/角色；TestAssetAccessOrdering记录precheck→gate→tx→credential→sortedW/P/D/A→Check及退出。评论管理员不能edit、能按原规则delete；guestHiddenFrom先403；草稿作者私有/归档允许/删除拒绝；两个scope次序与变更复查。
-- [ ] Step 2：运行 `go -C server test ./internal/modules/asset/app ./internal/modules/issue/app ./internal/modules/project/app ./internal/modules/workspace/app -run 'Asset|CommentWrite|Draft' -count=1`；未实现断言红留原件。
-- [ ] Step 3：复用原decide/commentCheck/DraftLocks，不复制权限；添加排序单语句W(S)/D(U)，P(N)复用IssueProjects；新权限门面不取另一套gate/tx。统一bootstrap的同一write gate，所有错误原样或具名not-found转换。
-- [ ] Step 4：单元矩阵绿及自有postgres真实锁查询/archtest；变异绕过owner、倒序锁、多new一个gate、失去guest谓词，分别用能区分的层测。真正HTTP交错在T11补齐，不把单元记录当PG证明。
-- [ ] Step 5：提交并更新锁图实际符号。bootstrap最末asset业务构造依赖接续T5/T6，不后注入。
+- [x] Step 1：TestAssetHostAccessRealMatrix用每用途/角色；TestAssetAccessOrdering记录precheck→gate→tx→credential→sortedW/P/D→Check→sortedA及退出。评论管理员不能edit、能按原规则delete；guestHiddenFrom的404先于403；草稿作者私有/归档允许/删除拒绝；两个scope次序与变更复查。
+- [x] Step 2：运行 `go -C server test ./internal/modules/asset/app ./internal/modules/issue/app ./internal/modules/project/app ./internal/modules/workspace/app -run 'Asset|CommentWrite|Draft' -count=1`；未实现断言红留原件。
+- [x] Step 3：复用原decide/commentCheck/DraftLocks，不复制权限；添加排序单语句W(S)/D(U)，P(N)复用IssueProjects；新权限门面不取另一套gate/tx。统一bootstrap的同一write gate，所有错误原样或具名not-found转换。
+- [x] Step 4：单元矩阵绿及自有postgres真实锁查询/archtest；变异绕过owner、倒序锁、多new一个gate、失去guest谓词，分别用能区分的层测。真正HTTP交错在T11补齐，不把单元记录当PG证明。
+- [x] Step 5：提交并更新锁图实际符号。bootstrap最末asset业务构造依赖接续T5/T6，不后注入。
 
 ## Task 4（T4）：父清理前进与可持续任务游标
 

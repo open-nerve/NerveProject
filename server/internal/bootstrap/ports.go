@@ -287,3 +287,7 @@ func (p issueProjects) UndeletedProjectIDs(ctx context.Context) ([]uuid.UUID, er
 func (p issueProjects) DeletedAt(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]time.Time, error) {
 	return p.projects.DeletedIssueProjects(ctx, ids)
 }
+
+func (p issueProjects) AssetProjectArchived(ctx context.Context, id uuid.UUID) (bool, bool, error) {
+	return p.projects.AssetProjectArchived(ctx, id)
+}

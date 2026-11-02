@@ -45,6 +45,7 @@ type ProjectLocks interface { LockMany(context.Context, []uuid.UUID) ([]uuid.UUI
 type DraftLocks interface { LockMany(context.Context, []uuid.UUID) ([]uuid.UUID, error) }
 type CallerLock interface { LockCaller(context.Context, shared.Actor, time.Time) error }
 type WriteGate interface { Enter(context.Context, ...uuid.UUID) (func(), error) }
+type AssetLocker interface { LockAssets(context.Context, []uuid.UUID) ([]domain.Asset, error) }
 ```
 
 `Inspect` 只读，回答完整父链并执行身份/角色/作者预检，不取得连接之外的长寿命资源。`Check` 在调用者已取得父锁后重新执行同一权限判定，核对全部父 ID 与预读 Host 相同，然后检查写归档限制；它不另开事务、不进写门、不取 W/P/asset 锁。返回不同范围为 scope_changed，已失去可见性仍优先 404。方法参数不能由 HTTP 原样赋成“已授权”标记。
@@ -53,9 +54,13 @@ owner 外观在各自 module_assets.go 暴露 `AssetAccess()`；issue/app/asset_
 
 workspace.Provide 增加 `ShareAssetWorkspaces(ctx, ids)`，固定 sqlc 语句 `ORDER BY id FOR SHARE`；project 复用 `IssueProjects.LockIssueProjects`（N 锁），不新造第二套项目门；issue.Provide 增加 `LockAssetDrafts(ctx, ids)`（排序 U 锁，包含已删行以供锁下判定），每次一条查询。输入去重、UUID 升序；端口报告实际取得的 ID，缺项由 owner 重验产生同一 404。所有方法使用 ctx 现有事务。
 
+issue 消费的小接口 `AssetProjectReader.AssetProjectArchived(ctx, id)` 在已经取得项目锁后只读归档事实，不再取得项目锁。project 自有 SQL 返回归档状态和是否存在，bootstrap 逐值转接。父墓碑查询由各 owner 的 `AssetParents` 提供，返回实际 `DeletedAt/DeletedByID`；bootstrap 的 `assetParentReader` 分组、去重、升序读取，缺失或重复事实明确失败，不猜测删除。
+
 ## 3. 一条资产编排路径
 
 asset/app/access.go 内 `Access.Within(ctx, actor, requests, assetIDs, fn)` 是本模块内部方法；fn 不跨模块，asset 自己完成事务内写。其他模块只交小接口，不接收任意事务闭包。
+
+实际回调参数为 `AccessHeld{Hosts, Assets, At}`，`At` 在最终资产锁之后读取；credential 校验时刻另由 `CredentialClock` 提供。申请者、删除和锁集合检查由 Access 负责，用途、绑定、完整父链及 revision 的操作特定复查在同一回调内完成。T3 提供此编排与 owner 门面，T5–T8 完成实际用例消费。
 
 1. 资产预读（若指名资产），检查申请者/删除；按语义顺序 Inspect（复制源先于目标），完整回答 404/403。收集全部 W/P/D/asset ID，去重排序。
 2. 在无连接、无锁时一次进入全部项目写门。bootstrap 把**同一实例**同时传 issue 与 asset；不得各 new 一把只保护自己的 gate。

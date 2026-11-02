@@ -1,6 +1,6 @@
 # M5 / P2 阶段评审记录
 
-> 实施中：T1–T2完成，T3–T14待执行；没有进行整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
+> 实施中：T1–T3完成，T4–T14待执行；没有进行整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
 
 ## 1. 方式
 
@@ -30,11 +30,11 @@ T1确认必须的完整Go依赖传递链，补齐spec/plan；T1无ETag输入，�
 
 ## 6. 后续责任
 
-T3开始宿主授权与锁外观。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
+T4开始父清理前进与持久任务游标。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
 
 ## 7. 已知限制
 
-当前仅基础纯规则/校验、本地有限清单/临时回收与配置；尚无资产业务路由、file_assets或新清理worker。不能根据T1–T2通过声称F1/F3/F13/F14/F15已满足。
+当前已有基础纯规则/校验、本地有限清单/临时回收、宿主授权与锁编排；尚无资产业务路由、file_assets或新清理worker。不能根据T1–T3通过声称F1/F3/F13/F14/F15已满足。
 
 ## 8. T2本地清单、临时目录与配置
 
@@ -43,3 +43,13 @@ T3开始宿主授权与锁外观。P4/P5绑定、P3 S3、P6/P7页面以及P1遗�
 - 未知目录、符号链接、损坏metadata、对象内未知文件均失败且不删除；每页只读取本页metadata，非快照，后页损坏到该页失败。临时清理仅合法UUID目录中data/meta.json的已知布局，错误会携带此前已完成的游标和删除数。
 - 五项生命周期配置范围、默认、溢出、未知键与日志遮盖通过；test profile继承安全默认，期限故事用显式覆盖。已有P1签名/传输与全部asset/config/configs/archtest race通过。lint首轮仅导入分组错误，修正后0 issues，原失败保留。
 - 局部裁定为本页metadata读取、profile默认、对象内部未知布局及业务clock变异层级；结论、理由和代价见台账。
+
+## 9. T3宿主授权、锁协议与父删除事实
+
+- Access 的真实性质红/绿、三个 owner 门面的红/绿、转接的红/绿各留原件；真实 PostgreSQL 的锁/父事实测试与156项角色矩阵通过。矩阵使用 API 建立宿主，实际调用各 owner 的现有权限判断，不把尚未上线的资产 HTTP 路由说成已测。
+- 实际调用次序为 Inspect → 同一项目门 → Tx → credential 时钟与 CallerLock → 排序 W(S)/P(N)/D(U) → Check → 资产 U → 审计时钟 → 包内回调。错误、取消和 panic 释放资源；源目标的语义顺序独立于物理锁排序。
+- PostgreSQL 测试绑定请求 PID、SQL 与 blocker，反向 ID 输入证明先持低 ID 再等高 ID；W 锁与 SHARE 兼容、D 锁与 KEY SHARE 冲突。父事实读取不额外锁父行，原时间与删除人逐值保留，创建者不同于删除者。
+- `task-3-mutations.json` 六项均命中行为失败：绕过 owner、W 逆序、D 逆序、另建项目门、失去 HiddenFrom、误用审计时钟做 credential 校验。每次恢复原文件并核 SHA256。
+- 局部裁定：issue 以 `AssetProjectReader` 读取已持锁项目的归档状态，避免再次锁项目；错误接线会破坏拒绝次序，真实查询及矩阵约束它。T3 提取统一 `projectWrites` 并验证资产转接使用同一实例；实际业务模块在 T5 一次构造，HTTP 交错在 T11 证明，不以转接单测替代最终接线。
+- plan 原有回调示意与锁次序笔误已按 spec 和实际符号同步：Check 在父锁后、资产锁前；`AccessHeld` 携带最终锁后的时刻；`ParentKey.Kind` 使用具名 ScopeKind。业务用例仍须完成用途、绑定、父链和 revision 复查。
+- `task-3-race.log`：asset/issue/project/workspace 全包、bootstrap 与 archtest 的串行 race 回归通过，bootstrap 653.318秒；源码快照核验未变。lint 首轮发现三个适配器未被使用，真实锁/矩阵改为经过这些适配器后，`task-3-lint-final.log` 为0 issues。真实 P 锁转接、错误原样传递与最终聚焦 race 通过（bootstrap 45.388秒）；没有放宽 lint 或架构守卫。阶段验收仍不勾选。
