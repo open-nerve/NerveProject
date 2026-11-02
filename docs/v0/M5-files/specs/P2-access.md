@@ -1,6 +1,6 @@
 # M5 / P2：宿主权限与锁序
 
-> P2 预检子合同；与主 spec、protected-purge、recovery 一起评审。这里定义新增接口，不声称已有实现。局部签名和锁粒度由主控裁定，既有角色规则及 HiddenFrom 不变。
+> P2 权限子合同；与主 spec、protected-purge、recovery 一起评审。接口与接线已由T3/T5–T8实现，T11完成真实HTTP/PID交错与五遍race，见[阶段review §17](../reviews/P2-assets-review.md#17-t11真实交错资源与回滚)。阶段终审/集成仍独立验收，既有角色规则及HiddenFrom不变。
 
 ## 1. 准备范围与授权矩阵
 

@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T10本地验收完成，完整七项通过，推进T11。首次产品检查点远端CI独立记录，不用本地绿替代。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T11本地验收完成，推进T12最终门禁与证据汇总。首次产品检查点远端CI独立记录，不用本地绿替代。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -178,11 +178,11 @@ T10完整门禁补齐：六个API加入既有权限矩阵及目标目录负例�
 
 **Interfaces：** 不增加生产测试回调或假service；观察实际query PID/blocker，存储接口注入受控阻塞/错误但完整程序事务真实。
 
-- [ ] Step 1：测试credential reset→新grant401；workspace/project撤权两方向；issue/comment删除/归档；draft改项目/发布；source失效和target改范围；两个项目正反UUID与重复同项目；source404不进gate；最终检查仍在锁下。
-- [ ] Step 2：TestAssetStorageDoesNotHoldResources：Inspect/Open/Seal分别卡住，另一个请求能取同账号/项目/资产锁并拿到连接/门；取消所有reader/资源释放，最终parent/asset变化让迟到提交拒绝。TestAssetScopeDeletionRollback验证事务event/metadata/job统一回滚。
-- [ ] Step 3：运行 `go -C server test -race ./internal/bootstrap -run 'Asset.*(Interleav|Resource|Rollback|Lock)' -count=5 -timeout=15m`，必要分组仍串行，正常写零40P01。物理purge允许重试与普通写分列。
-- [ ] Step 4：反例去caller首锁、错分gate、移final重验到锁外、asset后追project，必须有真实PG/程序性质红。任何新架构级环路先提交再上报，局部不足直接根因修。
-- [ ] Step 5：提交，按准确最终锁图更新spec事实，不把计划当已运行证据。
+- [x] Step 1：测试credential reset→新grant401；workspace/project撤权两方向；issue/comment删除/归档；draft改项目/发布；source失效和target改范围；两个项目正反UUID与重复同项目；source404不进gate；最终检查仍在锁下。
+- [x] Step 2：TestAssetStorageDoesNotHoldResources：Inspect/Open/Seal分别卡住，另一个请求能取同账号/项目/资产锁并拿到连接/门；取消所有reader/资源释放，最终parent/asset变化让迟到提交拒绝。TestAssetScopeDeletionRollback验证事务event/metadata/job统一回滚。
+- [x] Step 3：运行 `go -C server test -race ./internal/bootstrap -run 'Asset.*(Interleav|Resource|Rollback|Lock)' -count=5 -timeout=15m`，必要分组仍串行，正常写零40P01。物理purge允许重试与普通写分列。
+- [x] Step 4：反例去caller首锁、错分gate、移final重验到锁外、asset后追project，必须有真实PG/程序性质红。任何新架构级环路先提交再上报，局部不足直接根因修。
+- [x] Step 5：提交，按准确最终锁图更新spec事实，不把计划当已运行证据。
 
 ## Task 12（T12）：性质变异、七项门禁与文档证据
 

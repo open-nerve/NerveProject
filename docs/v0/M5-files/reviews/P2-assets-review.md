@@ -1,6 +1,6 @@
 # M5 / P2 阶段评审记录
 
-> 实施中：T1–T9完成，T10故事已完成，首次完整七项及检查点待核，T11–T14未完成；没有进行整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
+> 实施中：T1–T11完成，T10完整本地七项通过，检查点79d183da的CI41545110572仍待最终核验；T12–T14未完成，没有整分支终审、没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
 
 ## 1. 方式
 
@@ -30,11 +30,11 @@ T1确认必须的完整Go依赖传递链，补齐spec/plan；T1无ETag输入，�
 
 ## 6. 后续责任
 
-T10已补齐API故事，首次完整七项检查点待核，接续T11交错验收。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
+T10已补齐API故事和首次完整本地七项，T11真实交错/资源/回滚及五遍race完成，接续T12最终门禁和T13整审。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
 
 ## 7. 已知限制
 
-当前已有六个业务操作、真实实物链、受保护清理、重启恢复及F1/F3/F13/F14/F15的API故事。完整七项、T11交错验收和T13终审仍未完成；不据聚焦故事勾选整阶段标准，P2不提供绑定或页面附件能力。
+当前已有六个业务操作、真实实物链、受保护清理、重启恢复、F1/F3/F13/F14/F15的API故事及T11交错验收。阶段最终门禁和T13终审仍未完成；P2不提供绑定或页面附件能力。
 
 ## 8. T2本地清单、临时目录与配置
 
@@ -141,3 +141,14 @@ T10已补齐API故事，首次完整七项检查点待核，接续T11交错验�
 - 第二轮固定于23168a6e/tree 9c65fdb3：gen-check、Go lint及完整Go通过（531.43秒）；lint-web在关键词检查处失败，后三项未执行。旧plane-user-assets规则把名称相同的Nerve生成用途误当旧协议。局部裁定为识别旧地址/旧弹窗/旧EFileAssetType访问与手写枚举声明，仍扫描整个web，不豁免生成文件、不增加到期例外。内置样本区分生成类型和普通新协议值；在生成文件实际注入六种旧形式均被拒绝，恢复原字节SHA后检查通过（task-10-keywords-{red,green}.log及receipt）。代价是纯业务用途名称不再构成违规，符合M5已批准的生成枚举合同；旧协议识别与模块架构守卫不变。
 
 - T10最终本地七项收据：前三项为23168a6e的gen-check/Go lint/完整Go；仅关键词规则和评审文字改变，task-10-seven-carry.json核服务端/工具模块/契约/生成物逐字节一致。后四项在8bf79770/tree62ce4454执行：lint-web 54/54、knip零问题、test-web 18/18、E2E 341/341（2.4分钟）。task-10-seven-web-integrity.json核4514个跟踪输入全程无变动。原始失败、各轮命令/准确输入/日志/报告完整保留；检查点远端CI另记，不推定已通过。
+
+## 17. T11真实交错、资源与回滚
+
+- `assets_lock_order_test.go`以真实请求PID、事务身份、SQL、blocker及逐行锁强度核U账户N→W(S)→P(N)→D(U)→asset(U)，内容签发全程零DML；复制覆盖低→高、高→低、重复同项目。`assets_shared_gate_test.go`以完整程序的双向竞争证明issue/asset共享同一门，超额503/Retry-After:1；不可见源在占满门时仍先404且没有复制行。
+- `assets_membership_interleaving_test.go`覆盖W/P撤权先、签发先四种顺序，明确新签发404及旧能力短期有效。`assets_credentials_interleaving_test.go`以实际reset-password用例和账号首锁证明密码重置先则新签发401、签发先则本次200且后续401；没有伪造认证服务。
+- `assets_late_host_interleaving_test.go`覆盖issue/comment删除与归档、project删除与归档、workspace删除、draft删除/发布/双向换项目、复制源撤权及目标草稿换项目。实际Seal成功后改变宿主，再恢复请求，全部拒绝发布并保留候选及实物。初次两项归档夹具尚未终态，API正确拒绝；夹具先通过API完成工作项后2.520秒通过。该失败不是产品缺陷。
+- `TestAssetStorageDoesNotHoldResources`逐Inspect/Open读取/Seal阶段暂停，真实app池可立即拿到同账号/W/P/资产NOWAIT行锁，另一个同账号请求可签发、工作项可写；被占连接归零。每阶段再覆盖客户端取消，已打开reader全部关闭、连接归还；另一路先删准备件时迟到确认404，候选始终持久可恢复。仅扩展既有测试fixture的真实请求观察和配置入口，未添加生产测试回调。
+- `TestAssetScopeDeletionRollback`覆盖issue/comment/draft/project/workspace真实HTTP删除，在COMMIT的deferred trigger里先确认同步资产标记或原事务任务，再注入失败。非事务sequence证明真的到达该点；父、成员、资产全部行和scope任务逐值不变，原文件仍可读。原T5的订阅者失败与InsertTx可见性测试继续保留。
+- 首次credential/resource运行遇Ryuk端口未建立后容器消失，产品测试尚未开始；原件task-11-resources-first.log保留。只读Docker核验可用后正常重跑，不操作已有容器或Docker配置。
+- 四项生产行为变异均被真实PG/程序拦截：去账户首锁、错分项目门、把Host.Check移到锁外、asset在project之前。每次原字节恢复SHA一致；原件task-11-mutations.json及各日志/变异/备份。无编译红充数。
+- 最终命令为`go -C server test -p 1 -json -race ./internal/bootstrap -run 'Asset.*(Interleav|Resource|Rollback|Lock)' -count=5 -timeout=15m`：220.83秒退出0，10组各5遍，包含子测试共240个pass节点，无失败/skip/竞态/40P01；4,521输入SHA全程未变，见task-11-race-{inputs,result}.json与完整jsonl。Task结束只复核这份原始证据与源码哈希，不重复另一轮五遍测试。

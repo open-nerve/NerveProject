@@ -14,15 +14,21 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
 func newAssetCompleteWorld(t *testing.T, alter func(*assetComponents)) (issueWorld, *local.Store) {
 	t.Helper()
+	return newAssetCompleteWorldWith(t, func(*config.Config) {}, alter)
+}
+
+func newAssetCompleteWorldWith(t *testing.T, configure func(*config.Config), alter func(*assetComponents)) (issueWorld, *local.Store) {
+	t.Helper()
 	dbURL := pgtest.NewDatabase(t)
 	cfg := testConfig(t, dbURL, false)
+	configure(&cfg)
+	requests := &requestQueries{}
 	var store *local.Store
 	factory := func(files config.FilesConfig, keys *identity.Keys, logger *slog.Logger) (assetComponents, error) {
 		components, err := newAssets(files, keys, logger)
@@ -32,12 +38,12 @@ func newAssetCompleteWorld(t *testing.T, alter func(*assetComponents)) (issueWor
 		}
 		return components, err
 	}
-	a, err := newAppWithFactories(t.Context(), cfg, slog.New(slog.DiscardHandler), migrations.FS(), testWebUI, appFactories{pool: postgres.NewPool, assets: factory})
+	a, err := newAppWithFactories(t.Context(), cfg, slog.New(slog.DiscardHandler), migrations.FS(), testWebUI, appFactories{pool: requests.pool, assets: factory})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(a.close)
-	w := prepareIssueWorld(t, issueWorld{base: runBuiltApp(t, a), pool: openPool(t, dbURL), contract: apitest.Load(t), tokens: map[string]string{}, ids: map[string]uuid.UUID{}})
+	w := prepareIssueWorld(t, issueWorld{requests: requests, base: runBuiltApp(t, a), pool: openPool(t, dbURL), contract: apitest.Load(t), tokens: map[string]string{}, ids: map[string]uuid.UUID{}})
 	return w, store
 }
 
