@@ -20,9 +20,9 @@ api
 assets
 healthz
 readyz
+static
 
 [reserved]
 admin
 docs
 help
-static

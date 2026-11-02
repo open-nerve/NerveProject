@@ -196,12 +196,6 @@ type WriteGateConfig struct {
 	MaxQueue   int           `koanf:"max_queue"`
 }
 
-// FilesConfig configures uploads. The instance API reports it to clients;
-// uploads arrive, and honour it, in M5 (M2 design 5.3).
-type FilesConfig struct {
-	SizeLimit int64 `koanf:"size_limit"` // bytes
-}
-
 // LogConfig configures the process logger.
 type LogConfig struct {
 	Level  string `koanf:"level"`  // debug, info, warn or error
@@ -284,9 +278,7 @@ func (c Config) LogValue() slog.Value {
 			slog.Duration("write_lock_timeout", c.Issue.WriteLockTimeout),
 			slog.Duration("auto_archive_interval", c.Issue.AutoArchiveInterval),
 		),
-		slog.Group("files",
-			slog.Int64("size_limit", c.Files.SizeLimit),
-		),
+		slog.Any("files", c.Files),
 		slog.Group("log",
 			slog.String("level", c.Log.Level),
 			slog.String("format", c.Log.Format),

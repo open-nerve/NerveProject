@@ -107,9 +107,7 @@ func (c Config) validate() error {
 	if c.Jobs.PeriodicWorkers < 1 {
 		fail("jobs.periodic_workers", "must be at least 1, got %d", c.Jobs.PeriodicWorkers)
 	}
-	if c.Files.SizeLimit < 1 {
-		fail("files.size_limit", "must be at least 1, got %d", c.Files.SizeLimit)
-	}
+	c.Files.validate(fail)
 	var level slog.Level
 	if err := level.UnmarshalText([]byte(c.Log.Level)); err != nil {
 		fail("log.level", "must be one of debug, info, warn, error, got %q", c.Log.Level)
@@ -224,11 +222,15 @@ func (r RateLimitConfig) validate(fail func(key, format string, args ...any)) {
 		{"register_ip", r.RegisterIP},
 		{"password_user", r.PasswordUser},
 	} {
-		if b.bucket.PerMinute < 1 {
-			fail("ratelimit."+b.name+".per_minute", "must be at least 1, got %d", b.bucket.PerMinute)
-		}
-		if b.bucket.Burst < 1 {
-			fail("ratelimit."+b.name+".burst", "must be at least 1, got %d", b.bucket.Burst)
-		}
+		b.bucket.validate("ratelimit."+b.name, fail)
+	}
+}
+
+func (b BucketConfig) validate(key string, fail func(key, format string, args ...any)) {
+	if b.PerMinute < 1 {
+		fail(key+".per_minute", "must be at least 1, got %d", b.PerMinute)
+	}
+	if b.Burst < 1 {
+		fail(key+".burst", "must be at least 1, got %d", b.Burst)
 	}
 }

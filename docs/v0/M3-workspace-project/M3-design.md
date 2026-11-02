@@ -433,13 +433,13 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
   - 建好之后不能改：页面上它是只读的（`workspace-details.tsx:250-270`），Plane 的 `PATCH` 却接受它。登记差异。
 - **名称**：1–80 个字符，至少一个字母或数字（Unicode），不含网址（`serializers/workspace.py:48-59`）。
 - **保留名单 = 本站用到的顶层路径段，加上一组声明的预留段**：
-  - 用到的：应用的顶层静态路由段（`web/apps/web/app/routes/core.ts`）、`web/apps/web/public/` 的顶层目录、服务端自己的顶层路径（`api`、`assets`、`healthz`、`readyz`）。决策点 2 删掉 `/invitations` 之后是 10 个：`create-workspace`、`onboarding`、`settings`、`sign-up`、`workspace-invitations`、`icons`、`api`、`assets`、`healthz`、`readyz`。
-  - 预留的：`admin`、`docs`、`help`、`static`。以后最可能加的顶层页面（管理、接口文档、帮助、静态文件）先占住名字，免得加路由时已经有同名的工作区。
-  - M1-P4 交接要求"正好是应用的顶层路由段"。服务端的四个也要算上：名为 `api` 的工作区，它的页面 `/api/projects` 会落到接口的路由上。
+  - 用到的：应用的顶层静态路由段（`web/apps/web/app/routes/core.ts`）、`web/apps/web/public/` 的顶层目录、服务端自己的顶层路径（`api`、`assets`、`healthz`、`readyz`、`static`，M5/P1 启用原预留文件根）。决策点 2 删掉 `/invitations` 之后原为 10 个，M5/P1 分类转移后为 11 个：`create-workspace`、`onboarding`、`settings`、`sign-up`、`workspace-invitations`、`icons`、`api`、`assets`、`healthz`、`readyz`、`static`。
+  - 预留的：`admin`、`docs`、`help`。原为文件预留的 `static` 由 M5/P1 启用并转入服务端，保留名字总集合仍为 14 个；其余未来顶层页面继续预留，免得新增路由时已有同名工作区。
+  - M1-P4 交接要求"正好是应用的顶层路由段"。服务端自己的名字也要算上：名为 `api` 的工作区，它的页面 `/api/projects` 会落到接口的路由上。
   - Plane 的产品词（`one`、`business`、`pro`、`license`、`initiatives`、`workflow`、`story`、`disco`、`drive`、`channels` 等，M1-P3 交接）**全部去掉**：它们不是 Nerve 用到的路径，也不是预留段。`sign-in`、`signin`、`login`、`register`、`profile` 也不保留：它们不是路由，名为 `login` 的工作区就在 `/login`（M1-P4 交接说明这些地址本来就匹配 `/:workspaceSlug`）。
 - **同一份来源**：名单只有一份，`server/internal/modules/workspace/domain/reserved_slugs.txt`（`embed`），分"应用""服务端""预留"三段。
   - 前端不再有副本：删除 `RESTRICTED_URLS`；创建表单问 `GET /api/v0/workspace-slugs/{slug}`，它回答"可用、已被占用、保留"。
-  - web 的 vitest 读这个文件，核对"应用"一段等于 `routes/core.ts` 的顶层静态路由段加上 `public/` 的顶层目录；`bootstrap` 的 Go 测试核对"服务端"一段等于组合根在前端页面之外注册的顶层路径；"预留"一段恰好是上面声明的四个，与另两段不重复。任何一边加了路由而名单没跟上，测试失败。
+  - web 的 vitest 读这个文件，核对"应用"一段等于 `routes/core.ts` 的顶层静态路由段加上 `public/` 的顶层目录；`bootstrap` 的 Go 测试核对"服务端"一段等于组合根在前端页面之外注册的顶层路径；"预留"一段恰好是上面声明的三个（M5/P1 已启用 static），与另两段不重复。任何一边加了路由而名单没跟上，测试失败。
 - **以后加顶层路由时**：
   - 优先放在已保留的段之下（例如 `/settings/…`），或者用一个预留段（把它从"预留"移到"应用"或"服务端"一段）。
   - 两者都不行时，加路由的那次改动同时把新段加进名单，并加一条启动检查：已有同名的未删除工作区时记 ERROR，写明这个工作区的页面被新路由遮住；发布说明告诉管理员把数据迁到新建的工作区（slug 不能改）。

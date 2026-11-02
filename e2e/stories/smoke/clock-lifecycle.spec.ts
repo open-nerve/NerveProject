@@ -27,13 +27,23 @@ base("clock world switches processes on its own database and advances business t
   let first: Nerve | undefined;
   let world: Awaited<ReturnType<typeof createClockWorld>> | undefined;
   try {
-    controlNerve = await startNerve(control.url, info.outputPath("control.log"));
+    const controlRoot = info.outputPath("control-custom.files");
+    controlNerve = await startNerve(control.url, info.outputPath("control.log"), {
+      NERVE_FILES__LOCAL__ROOT: controlRoot,
+    });
+    expect(controlNerve.storageRoot).toBe(controlRoot);
     const beforeSpawn = new Date();
     world = await createClockWorld({
       databaseName: clockName,
       logFile: (generation) => info.outputPath(`clock-${generation}.log`),
     });
     first = world.current.nerve;
+    const storageRoot = info.outputPath("clock-0.files");
+    expect(first.storageRoot).toBe(storageRoot);
+    expect(first.storageRoot).not.toBe(controlNerve.storageRoot);
+    expect((await stat(`${storageRoot}/objects`)).isDirectory()).toBe(true);
+    expect((await stat(`${controlNerve.storageRoot}/objects`)).isDirectory()).toBe(true);
+    await expect(stat(info.outputPath("control.files"))).rejects.toMatchObject({ code: "ENOENT" });
     expect(world.current.startedAt.getTime()).toBeGreaterThanOrEqual(beforeSpawn.getTime());
     expect(world.current.startedAt.getTime()).toBeLessThanOrEqual(Date.now());
     const firstEmail = `before-${databaseName(info, "user")}@example.com`;
@@ -52,6 +62,8 @@ base("clock world switches processes on its own database and advances business t
     const second = await world.advance("24h");
     expect(first.exitCode).toBe(0);
     expect(second.nerve.exitCode).toBeNull();
+    expect(second.nerve.storageRoot).toBe(storageRoot);
+    await expect(stat(info.outputPath("clock-1.files"))).rejects.toMatchObject({ code: "ENOENT" });
     expect(second.startedAt.getTime()).toBeGreaterThanOrEqual(beforeAdvance.getTime());
     expect(second.startedAt.getTime()).toBeLessThanOrEqual(Date.now());
     const secondEmail = `after-${databaseName(info, "user")}@example.com`;

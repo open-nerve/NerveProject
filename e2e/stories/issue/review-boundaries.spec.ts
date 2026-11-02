@@ -209,6 +209,9 @@ test("C12 (review): mobile layout, display and grouping refusals are reported on
     await expect(page.getByText("Your role does not allow this.", { exact: true })).toHaveCount(1);
     await c12Evidence(page, "B07", `review-mobile-refusal-${index}`);
     await page.keyboard.press("Escape");
+    // Menu selection restores focus on a later frame. Wait for that close
+    // postcondition before handing focus to the toast viewport with F6.
+    await expect(page.getByRole("button", { name: index === 0 ? "Layout" : "Display", exact: true })).toBeFocused();
     await page.keyboard.press("F6");
     await page
       .getByRole("region", { name: "Notifications", exact: true })

@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"path"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -24,8 +26,9 @@ type Check struct {
 // routes with the contract (M2 design 3.6). It satisfies the ServeMux
 // interface of the generated code (HandleFunc and ServeHTTP).
 type Router struct {
-	mux      *http.ServeMux
-	patterns []string
+	mux             *http.ServeMux
+	patterns        []string
+	noPathRedirects [][]string
 }
 
 // NewRouter returns a router holding the platform routes:
@@ -87,7 +90,53 @@ func (r *Router) Handle(pattern string, h http.Handler) {
 
 // ServeHTTP dispatches the request to the handler of the matching pattern.
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if r.rejectsPathRedirect(req) {
+		w.Header().Set("Cache-Control", "no-store")
+		WriteProblem(w, Problem{Status: http.StatusNotFound, Code: CodeNotFound, Title: http.StatusText(http.StatusNotFound)})
+		return
+	}
 	r.mux.ServeHTTP(w, req)
+}
+
+// RejectPathRedirects rejects ServeMux's dot/repeated-slash normalization within
+// or through this path tree, including paths that leave it again. Register before
+// serving. Signed paths must not redirect their query parameters to another
+// endpoint; other trees keep normal routing.
+func (r *Router) RejectPathRedirects(prefix string) {
+	if prefix == "/" || !strings.HasPrefix(prefix, "/") || path.Clean(prefix) != prefix {
+		panic("path redirect policy requires a canonical non-root prefix")
+	}
+	r.noPathRedirects = append(r.noPathRedirects, strings.Split(prefix[1:], "/"))
+}
+
+func (r *Router) rejectsPathRedirect(req *http.Request) bool {
+	escaped := req.URL.EscapedPath()
+	clean := path.Clean(escaped)
+	if escaped == clean || escaped == clean+"/" {
+		return false
+	}
+	// Checking only the original and final paths misses a traversal that enters
+	// the protected tree and then climbs out. Decode as URL.Path already does,
+	// and inspect each intermediate prefix without rebuilding whole paths.
+	var stack []string
+	for segment := range strings.SplitSeq(req.URL.Path, "/") {
+		switch segment {
+		case "", ".":
+			continue
+		case "..":
+			if len(stack) > 0 {
+				stack = stack[:len(stack)-1]
+			}
+		default:
+			stack = append(stack, segment)
+			for _, prefix := range r.noPathRedirects {
+				if slices.Equal(stack, prefix) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // Patterns returns every pattern registered so far, in registration order.

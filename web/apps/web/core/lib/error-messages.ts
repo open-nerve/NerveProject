@@ -9,11 +9,20 @@ import { SessionUnavailableError } from "@/lib/auth/token-manager";
 
 /**
  * The message of every problem code an operation lists in x-problem-codes of api/dist/openapi.yaml, which a
- * test keeps equal to the keys (M2 design 3.11, 7.3; M3 design 12 constraint 4: a phase that declares a code adds
+ * test keeps equal to the keys), plus the owned raw-transfer codes in api/storage-local.json
+ * (M2 design 3.11, 7.3; M3 design 12 constraint 4: a phase that declares a code adds
  * its message here, in the errors namespace of both languages). Any other code, such as the unauthorized that an
  * operation needing a bearer token can also answer, gets errors.unknown from errorMessageKey.
  */
 export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
+  "asset.invalid_signature": "errors.asset_invalid_signature",
+  "asset.invalid_upload": "errors.asset_invalid_upload",
+  "asset.object_not_found": "errors.asset_object_not_found",
+  "asset.object_exists": "errors.asset_object_exists",
+  "asset.object_changed": "errors.asset_object_changed",
+  "asset.invalid_range": "errors.asset_invalid_range",
+  "asset.precondition_failed": "errors.asset_precondition_failed",
+  "asset.transfer_timeout": "errors.asset_transfer_timeout",
   "issue.draft_not_found": "errors.draft_not_found",
   "issue.draft_changed": "errors.draft_changed",
   bad_request: "errors.bad_request",

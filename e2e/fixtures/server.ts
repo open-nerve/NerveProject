@@ -27,6 +27,8 @@ export const nerveFixtureTimeoutMs = readyTimeoutMs + stopTimeoutMs + 10_000;
 /** A nerve serve process of this run. */
 export interface Nerve {
   readonly baseURL: string;
+  /** This process's explicit storage root; a clock world reuses it on restart. */
+  readonly storageRoot: string;
   /** Exit status of this exact child process; null while it is running. */
   readonly exitCode: number | null;
   /** Sends SIGTERM and waits for nerve to exit with code 0. */
@@ -72,6 +74,7 @@ export async function startNerve(
 ): Promise<Nerve> {
   mkdirSync(path.dirname(logFile), { recursive: true });
   const addrFile = logFile.replace(/\.log$/, "") + ".addr";
+  const storageRoot = env.NERVE_FILES__LOCAL__ROOT ?? path.resolve(logFile.replace(/\.log$/, "") + ".files");
   rmSync(addrFile, { force: true });
   const log = openSync(logFile, "w");
   const child = spawn(binary, ["serve"], {
@@ -79,6 +82,7 @@ export async function startNerve(
       ...nerveEnv(databaseUrl),
       NERVE_SERVER__ADDR: "127.0.0.1:0",
       NERVE_SERVER__ADDR_FILE: addrFile,
+      NERVE_FILES__LOCAL__ROOT: storageRoot,
       ...env,
     },
     stdio: ["ignore", log, log],
@@ -94,6 +98,7 @@ export async function startNerve(
     const baseURL = await waitUntilReady(child, addrFile, Date.now() + readyTimeoutMs, () => spawnError);
     return {
       baseURL,
+      storageRoot,
       get exitCode() {
         return child.exitCode;
       },

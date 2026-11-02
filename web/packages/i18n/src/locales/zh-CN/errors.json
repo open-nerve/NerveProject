@@ -1,5 +1,13 @@
 {
   "errors": {
+    "asset_invalid_signature": "文件链接无效或已过期，请重新获取链接。",
+    "asset_invalid_upload": "上传的文件与申请不符，请重新选择文件。",
+    "asset_object_not_found": "文件已不可用。",
+    "asset_object_exists": "这次上传已保存，如需发送另一个文件，请重新申请上传。",
+    "asset_object_changed": "操作期间文件已变化，请重试。",
+    "asset_invalid_range": "请求的文件片段不可用，请重新下载文件。",
+    "asset_precondition_failed": "文件已不符合本次请求条件，请刷新后重试。",
+    "asset_transfer_timeout": "文件传输超时，请检查网络后重试。",
     "draft_not_found": "草稿不存在或你无权访问。",
     "draft_changed": "草稿的项目已更改，请重试。",
     "bad_request": "请求无法识别，请检查填写的内容后重试。",

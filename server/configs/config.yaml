@@ -118,8 +118,20 @@ issue:
   write_lock_timeout: 5s
 
 files:
-  # 单个上传文件的大小上限（字节，默认 5 MiB）。实例配置接口报告它；上传在 M5 加入时照它执行
+  # 单文件 1–104857600 字节的上限（最大 100 MiB、默认 5 MiB），实例配置接口报告它
   size_limit: 5242880
+  driver: local
+  local:
+    # 相对路径以进程工作目录为准。日志只报告是否配置，不输出路径
+    root: ./data/files
+  # 单次传输总预算 = grace + ceil(实际大小 / 最低速率) 秒；默认最大文件为 55 秒
+  min_transfer_bytes_per_second: 131072
+  transfer_grace: 15s
+  transfer_idle_timeout: 30s
+  max_transfer_duration: 15m
+  # 无等待队列，满额 503；独立于 JSON API 的按 IP 速率桶
+  max_concurrent_transfers: 16
+  transfer_rate: {per_minute: 60, burst: 20}
 
 log:
   level: info    # debug | info | warn | error

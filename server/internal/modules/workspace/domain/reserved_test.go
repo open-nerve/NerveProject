@@ -7,7 +7,7 @@ import (
 )
 
 // The list parses into three sections that do not overlap, every name is
-// spelled as a slug, and the held names are exactly the four of M3 design
+// spelled as a slug, and the held names are exactly the remaining three of M3 design
 // 3.10 (9.1). Which names the app and the server sections hold is checked
 // against the routes: the server's by bootstrap, the app's by the web app.
 func TestTheReservedListIsWellFormed(t *testing.T) {
@@ -30,7 +30,7 @@ func TestTheReservedListIsWellFormed(t *testing.T) {
 			t.Errorf("CheckSlug(%q) = %q, want reserved", slug, CheckSlug(slug))
 		}
 	}
-	if want := []string{"admin", "docs", "help", "static"}; !slices.Equal(r.Reserved, want) {
+	if want := []string{"admin", "docs", "help"}; !slices.Equal(r.Reserved, want) {
 		t.Errorf("section [reserved] = %q, want %q", r.Reserved, want)
 	}
 }
@@ -74,5 +74,16 @@ func TestReservedReturnsACopy(t *testing.T) {
 	}
 	if got := Reserved().All(); !slices.Equal(got, want) || CheckSlug("not-reserved") != "" {
 		t.Errorf("changing Reserved()'s result changed the list: %q, want %q", got, want)
+	}
+}
+
+// Promoting the previously reserved file root changes only its category. A
+// newly reserved name would evict a previously legal workspace's pages.
+func TestFileNamespacePreservesReservedNames(t *testing.T) {
+	got := Reserved().All()
+	slices.Sort(got)
+	want := []string{"admin", "api", "assets", "create-workspace", "docs", "healthz", "help", "icons", "onboarding", "readyz", "settings", "sign-up", "static", "workspace-invitations"}
+	if !slices.Equal(got, want) || CheckSlug("storage") != "" || CheckSlug("static") != SlugReserved {
+		t.Fatalf("reserved names=%v; storage=%q static=%q", got, CheckSlug("storage"), CheckSlug("static"))
 	}
 }

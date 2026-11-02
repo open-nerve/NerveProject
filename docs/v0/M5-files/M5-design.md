@@ -1,8 +1,8 @@
 # M5：文件
 
-> 状态：设计与 P1 预检通过，尚未实施；见[预检记录](../../reviews/re-31-M5设计与P1预检.md)。
+> 状态：设计与 P1 预检通过，P1 实施中；见[预检记录](../../reviews/re-31-M5设计与P1预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
-> 执行分支：`codex/m5-design`。2026-11-02 负责人授权按既有节奏连续推进；常规设计、预检、实现、deep-review、`--no-ff` 集成、CI 和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
+> 设计基线分支 `codex/m5-design` 已合入并归档；当前实施分支为 `codex/m5-p1`。2026-11-02 负责人授权按既有节奏连续推进；常规设计、预检、实现、deep-review、`--no-ff` 集成、CI 和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
 ## 1. 目标、范围与输入
 
@@ -12,7 +12,9 @@ M5 使头像、个人封面、工作区图标、项目封面、工作项附件�
 
 前置依据是[总体设计 §6.7](../v0-design.md#67-后台任务与文件存储)、[执行方法](../claude_to_gpt/02-method.md)、[硬规则](../claude_to_gpt/03-rules-and-pitfalls.md)。全部输入交接及逐条落点见 §13；原文保留，不把过时的代码数量当成当前事实。
 
-### 1.1 当前事实
+### 1.1 设计起点事实
+
+以下为 M5 设计起点快照。P1 已实现 asset 本地存储与 raw 传输，当前整审/CI/集成状态见 [P1 review](reviews/P1-local-storage-review.md)；file_assets 与业务入口仍由后续阶段承担。
 
 - 尚无 `asset` 后端模块和 `file_assets` 迁移。用户、工作区、项目的 URL 字段存在但没有真实文件引用。
 - `FileService` / `FileUploadService` 仍调用旧 Plane 路由和 multipart POST。当前编辑器资产 store、编辑器配置、旧评论创建和 inbox 创建处仍有消费者；实现时重新扫描，不沿用旧交接的实例数量。
@@ -127,9 +129,15 @@ asset 表合入的同一阶段更新真实删除 fixture、目录/外键守卫�
 
 复用 `identity.Keys.MAC(purpose)` 已提供的用途隔离能力，bootstrap 为上传/读取分别派生 `asset-upload` / `asset-read` 的 MAC，asset 只接收 Tag/Verify 小接口，不 import identity，也不接触原始密钥。生产继续要求既有持久 signing key；同一密钥重启仍能验证，dev/test 使用既有临时密钥时重启使旧 URL 失效。轮换签名密钥同步使这些 URL 失效，不新增另一套密钥文件和发现逻辑。
 
-原始传输端点 `PUT /storage/local/{key}`、`GET/HEAD /storage/local/{key}` 在普通 JSON API 之外，仍使用 request ID、安全头、日志与有限并发/速率限制；不能以这一例外跳过整个程序路由清单核对。每个请求用 ResponseController 设置读写期限，预算由声明大小、配置最低传输速度和固定余量计算，设置明确最大值；超额体由 MaxBytesReader 拒绝，空闲/总期限到达结束连接。其他 API 默认的 1 MiB/15 秒和连接全局默认保持不变。
+原始传输端点 `PUT /static/local/{key}`、`GET/HEAD /static/local/{key}` 在普通 JSON API 之外，仍使用 request ID、安全头、日志与有限并发/速率限制；不能以这一例外跳过整个程序路由清单核对。每个请求用 ResponseController 设置读写期限，预算由声明大小、配置最低传输速度和固定余量计算，设置明确最大值；超额体由 MaxBytesReader 拒绝，空闲/总期限到达结束连接。其他 API 默认的 1 MiB/15 秒和连接全局默认保持不变。
+
+传输空闲以活跃方向的实际字节进度判断：上传读侧、下载写侧；GET/HEAD 用于检测断连的后台读只设总期限，不能因没有新请求数据打断健康下载。期限使用真实系统单调时钟，取消时实际中断 socket，进度续期不能覆盖取消。`size_limit` 限制新上传；旧对象读取按可信大小计算预算，并受显式最长传输时限约束。
 
 读取有正确 Content-Type、Content-Length、Content-Disposition 和 nosniff。普通附件一律 attachment；inline 仅限服务确认的 JPEG/PNG/WebP/GIF。支持标准 HEAD、单段 Range/If-Range 与过期检查，拒绝不支持的多范围；每次先验证授权签名再处理条件缓存请求。含签名 query 的完整地址不记日志，错误不泄露磁盘路径。
+
+`/static` 路径树明确拒绝 ServeMux 的 `..`/重复斜杠重定向，避免签名 query 被带到其他端点；未知路径返回 404 no-store Problem。匹配具体端点后的无效签名仍为统一 403。平台提供按具名路径树声明的路由策略，逐段识别规范化中途进入再离开的路径，普通 API/页面路径保持原规则。raw 路由与 asset 专用错误码登记在 `api/storage-local.json`，全程序路由、源码错误码及中英文消息按精确目录验证，不进入业务 OpenAPI 的 bearer/publicOperations 合同。
+
+`/static` 是 M3 已预留的文件根：static 从 reserved 转入 server，保留名字总集合不变，storage 工作区不迁移。构建/public 不占该树，`/assets` 继续专属构建资源；Vite 的具名开发传输插件原样流式转发 `/static`，拥有取消/关闭和安全错误出口，不让默认代理日志记录签名 query。Go 继续负责验签与预算；具体合同见 P1 spec §2.7。
 
 ### 5.4 s3 与兼容性
 
@@ -286,14 +294,14 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | 阶段 | 状态 | spec / plan / review |
 |---|---|---|
 | 设计与 P1 预检 | 已完成 | [预检记录](../../reviews/re-31-M5设计与P1预检.md) |
-| P1 | 未开始；预检已通过 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) |
+| P1 | 实施、整审及局部修复复审完成；最终分支/main CI 与集成待完成 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) / [阶段记录](reviews/P1-local-storage-review.md) / [整审](../../reviews/re-33-M5P1整体审核.md) |
 | P2–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
-当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，待设计预检验证一致性。
+当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
 设计审查已修正的衔接：复用已有用途 MAC；保持 M4 的安全 URL 清洗合同；业务 JSON 仍 no-store；签名/传输使用运行时钟；外部操作记录放入有界 storage_metadata，不增加业务表。
 
-仍须在对应 spec 预检确定而不能在实现里猜：P1 预算/MAC/Range 的精确常数；P2 完整状态表、锁图、清理宽限和 owner 端口；P3 SDK/测试服务版本及真实兼容性；P5 评论分页和精确事件/动态合同。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
+P1 的预算/MAC/Range 精确常数已写入通过预检的 spec。仍须在后续对应 spec 预检确定而不能在实现里猜：P2 完整状态表、锁图、清理宽限和 owner 端口；P3 SDK/测试服务版本及真实兼容性；P5 评论分页和精确事件/动态合同。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
 
 ## 16. 协议核验来源
 

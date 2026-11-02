@@ -1,5 +1,5 @@
 {
-  "phase": "M4/closeout",
+  "phase": "M5/P1",
   "rules": [
     {
       "id": "deploy-files",
@@ -2693,6 +2693,14 @@
     }
   ],
   "exceptions": [
+    {
+      "rule": "billing",
+      "path": "web/apps/web/transfer-proxy.ts",
+      "match": "upgrade",
+      "count": 1,
+      "reason": "本地文件开发代理剔除 HTTP hop-by-hop 协议头；此处是标准头名，不是付费升级功能。精确限定文件、字面值与一次命中，M9 收尾复核；删除代理时一并删除例外",
+      "until": "M9"
+    },
     {
       "rule": "analytics",
       "path": "web/apps/web/core/services/cycle.service.ts",

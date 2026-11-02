@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -91,7 +92,7 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 		Jobs:      config.JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 5 * time.Second},
 		Workspace: config.WorkspaceConfig{CreationEnabled: true},
 		Issue:     testIssueConfig,
-		Files:     config.FilesConfig{SizeLimit: 5242880},
+		Files:     testFilesConfig(t),
 		Log:       config.LogConfig{Level: "error", Format: "text"},
 	}
 }
@@ -129,6 +130,12 @@ func startAppLogging(t *testing.T, cfg config.Config, migrations fs.FS, logger *
 
 func runBuiltApp(t *testing.T, a *app) string {
 	t.Helper()
+	base, _ := runBuiltAppWithStop(t, a)
+	return base
+}
+
+func runBuiltAppWithStop(t *testing.T, a *app) (string, func()) {
+	t.Helper()
 	cfg := a.cfg
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -137,12 +144,16 @@ func runBuiltApp(t *testing.T, a *app) string {
 		done <- a.run(ctx)
 	}()
 	// Cleanups run last-in first-out: run stops before buildApp's close.
-	t.Cleanup(func() {
-		cancel()
-		if err := <-done; err != nil {
-			t.Errorf("run() = %v, want nil after cancel", err)
-		}
-	})
+	var stopOnce sync.Once
+	stop := func() {
+		stopOnce.Do(func() {
+			cancel()
+			if err := <-done; err != nil {
+				t.Errorf("run() = %v, want nil after cancel", err)
+			}
+		})
+	}
+	t.Cleanup(stop)
 
 	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
 		select {
@@ -158,12 +169,12 @@ func runBuiltApp(t *testing.T, a *app) string {
 		if resp, err := client.Get(base + "/healthz"); err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
-				return base
+				return base, stop
 			}
 		}
 	}
 	t.Fatal("server did not become healthy")
-	return ""
+	return "", stop
 }
 
 func getReadyz(t *testing.T, base string) (int, httpserver.Problem) {

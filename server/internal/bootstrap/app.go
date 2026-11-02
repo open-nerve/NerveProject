@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"os"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -45,12 +46,14 @@ const poolCloseTimeout = 5 * time.Second
 
 // app is a fully wired nerve server.
 type app struct {
-	cfg      config.Config
-	logger   *slog.Logger
-	pool     *pgxpool.Pool
-	migrator *postgres.Migrator
-	jobs     *jobs.Runner
-	router   *httpserver.Router
+	cfg        config.Config
+	logger     *slog.Logger
+	pool       *pgxpool.Pool
+	migrator   *postgres.Migrator
+	jobs       *jobs.Runner
+	router     *httpserver.Router
+	assetClose func() error
+	closeOnce  sync.Once
 	// poolCloseTimeout is the package's, but for tests.
 	poolCloseTimeout time.Duration
 	// publicOperations are the routes that need no token: the union of what
@@ -66,6 +69,17 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 
 // newAppWithPoolFactory preserves one composition and the app's pool ownership.
 func newAppWithPoolFactory(ctx context.Context, cfg config.Config, logger *slog.Logger, migrationFiles, webFiles fs.FS, factory func(context.Context, config.DatabaseConfig) (*pgxpool.Pool, error)) (*app, error) {
+	return newAppWithFactories(ctx, cfg, logger, migrationFiles, webFiles, appFactories{pool: factory, assets: newAssets})
+}
+
+// Each factory transfers one explicit resource to the app. This keeps the same
+// composition and cleanup path for normal startup and later constructor errors.
+type appFactories struct {
+	pool   func(context.Context, config.DatabaseConfig) (*pgxpool.Pool, error)
+	assets func(config.FilesConfig, *identity.Keys, *slog.Logger) (assetComponents, error)
+}
+
+func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Logger, migrationFiles, webFiles fs.FS, factories appFactories) (*app, error) {
 	signingKey, err := readSigningKey(cfg.Auth.JWT.PrivateKeyFile)
 	if err != nil {
 		return nil, err
@@ -80,7 +94,7 @@ func newAppWithPoolFactory(ctx context.Context, cfg config.Config, logger *slog.
 	if err != nil {
 		return nil, err
 	}
-	pool, err := factory(ctx, cfg.Database)
+	pool, err := factories.pool(ctx, cfg.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +110,12 @@ func newAppWithPoolFactory(ctx context.Context, cfg config.Config, logger *slog.
 		return nil, err
 	}
 	a := &app{cfg: cfg, logger: logger, pool: pool, migrator: migrator, poolCloseTimeout: poolCloseTimeout}
+	assets, err := factories.assets(cfg.Files, keys, logger)
+	a.assetClose = assets.close
+	if err != nil {
+		a.close()
+		return nil, err
+	}
 	outboundClient, err := newOutbound(cfg, buildinfo.Get().Version)
 	if err != nil {
 		a.close()
@@ -233,6 +253,7 @@ func newAppWithPoolFactory(ctx context.Context, cfg config.Config, logger *slog.
 	ws.Register(a.router, api)
 	proj.Register(a.router, api)
 	issues.Register(a.router, api)
+	assets.module.Register(a.router, api, bucket(limiter, "file_transfer", cfg.Files.TransferRate))
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
 	a.router.Handle("/", webui.Handler(webFiles))
@@ -307,7 +328,7 @@ func loopback(addr string) bool {
 // runs the jobs and serves HTTP on server.addr until ctx is done. It stops
 // in the order of M2 design 3.15: HTTP first (see httpserver.Server.Serve),
 // so no request is left to enqueue work, then the jobs; close then releases
-// the migrator and the pool.
+// storage, the migrator and the pool.
 func (a *app) run(ctx context.Context) error {
 	warnIfExposed(ctx, a.logger, a.cfg)
 	if a.cfg.Database.AutoMigrate {
@@ -325,22 +346,29 @@ func (a *app) run(ctx context.Context) error {
 	return errors.Join(served, a.jobs.Stop(ctx))
 }
 
-// close releases the database resources: the migrator, then the pool, whose
+// close releases storage, the migrator, then the pool, whose
 // wait for connections still in use is bounded. Call it after run has
 // returned.
 func (a *app) close() {
-	if err := a.migrator.Close(); err != nil {
-		a.logger.Warn("close migrator", slog.Any("error", err))
-	}
-	closed := make(chan struct{})
-	go func() {
-		a.pool.Close()
-		close(closed)
-	}()
-	select {
-	case <-closed:
-		a.logger.Info("database pool closed")
-	case <-time.After(a.poolCloseTimeout):
-		a.logger.Warn("database pool not closed: connections still in use", slog.Duration("waited", a.poolCloseTimeout))
-	}
+	a.closeOnce.Do(func() {
+		if a.assetClose != nil {
+			if err := a.assetClose(); err != nil {
+				a.logger.Warn("close file storage", slog.Any("error", err))
+			}
+		}
+		if err := a.migrator.Close(); err != nil {
+			a.logger.Warn("close migrator", slog.Any("error", err))
+		}
+		closed := make(chan struct{})
+		go func() {
+			a.pool.Close()
+			close(closed)
+		}()
+		select {
+		case <-closed:
+			a.logger.Info("database pool closed")
+		case <-time.After(a.poolCloseTimeout):
+			a.logger.Warn("database pool not closed: connections still in use", slog.Duration("waited", a.poolCloseTimeout))
+		}
+	})
 }
