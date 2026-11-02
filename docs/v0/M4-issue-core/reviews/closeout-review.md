@@ -1,8 +1,8 @@
 # M4 / closeout 评审记录
 
-状态：实施与终审完成、集成待办。最终准确候选SHA与三个分支CI作业由外置final-delivery.json事后签结；不合并。D18、最终main绑定及完成标记保持待集成。
+状态：验收内容已完成并合入main，准确main CI全绿；本记录补齐M4完成标记，最终记录提交的CI和归档清理由[集成收据](closeout-integration.md)签结。
 
-分支 `codex/m4-closeout`，基线 `01e40e113e11365a4eeacc2794973de2751dde61`。本轮只执行到集成包；没有合并、没有改 main、没有把 M4 标成全部完成。依据 [spec](../specs/closeout.md)、[plan](../plans/closeout.md)，原始运行证据保留在 `.superpowers/sdd/M4-closeout/`，技能进度保留在 `.superpowers/sdd/closeout/`。
+分支 `codex/m4-closeout`，基线 `01e40e113e11365a4eeacc2794973de2751dde61`。前述分支交付时只执行到集成包；负责人随后授权T14，当前集成事实见第9节。依据 [spec](../specs/closeout.md)、[plan](../plans/closeout.md)，原始运行证据保留在 `.superpowers/sdd/M4-closeout/`，技能进度保留在 `.superpowers/sdd/closeout/`。
 
 ## 1. 评审方式
 
@@ -78,9 +78,9 @@ Go全测等价执行`go -C server test -p=1 -json -count=1 ./...`与`go -C serve
 | P14 | 16 / 16 | [9800, 16550] | 6720 / 2072 | 3 / 35 | 1234 / 25 |
 | P15 | 16 / 16 | [8750, 16650] | 5870 / 1296 | 0 / 0 | 1198 / 22 |
 | P16 | 11 / 11 | [4620, 9550] | 2443 / 2075 | 0 / 12 | 3211 / 64 |
-| closeout | 14 / 14 | [3850, 7800] | 6106 / 869 | 6 / 3 | 3678 / 43 |
+| closeout | 14 / 14 | [3850, 7800] | 6106 / 869 | 6 / 3 | 3783 / 65 |
 
-收尾全局预算为手写新增/修改约3500–6500行，逐Task区间之和为3850–7800（含文档且是粗估，口径不同）。实际多出的回归和根因修复逐项见R01–R40，删除单列；没有以删行抵销测试/修复的工作量，也没有把文档加入当产品增长。精确范围、每文件增删和plan原始标题在`t13-phase-metrics.json`。
+收尾全局预算为手写新增/修改约3500–6500行，逐Task区间之和为3850–7800（含文档且是粗估，口径不同）。实际多出的回归和根因修复逐项见R01–R40，删除单列；没有以删行抵销测试/修复的工作量，也没有把文档加入当产品增长。精确范围、每文件增删和plan原始标题在`t13-phase-metrics.json`。closeout行已计入T14完成记录的文档；本次统计在record证据根，原分支统计在实施证据根保留，路径映射见第9节。
 
 ## 6. 移交事项
 
@@ -177,3 +177,9 @@ Go全测等价执行`go -C server test -p=1 -json -count=1 ./...`与`go -C serve
 - Final: Ruling: R39的同轮释放响应不能保证实际接受先后，最终反例改由真实MobX详情接受观察器立即释放旧目录，另保留等待详情完成的对照 — 原假设会把目录先接受、详情后接受的不同合同混入；原失败和首个尝试仍留存 — 若只按传输调用顺序推断接受顺序，会写出不能定位根因的并发测试。
 
 - Final: Ruling: R40按故事真实页面就绪修正，第二次重入前等待编号详情和列表实际挂载；不改导航产品、公共helper、期限或守卫 — CI trace显示两次合成history事件仅隔31.085ms、未证实前入口退役；本机CPU8倍同条件5/5失败，补就绪条件后5/5通过 — 若仅看URL当已提交页面，会误判未发生的新读取；此证据不外推为所有超快系统Back/Forward路径验证。临时CPU注入已从正式故事移除，最终三引擎会验证正式版本。
+
+## 9. 授权集成与最终完成记录（2026-11-02）
+
+验收内容已以`--no-ff`合入main `83c83a9447ddd6282d8c1d52ab680d5ae67c7e10`；[main CI 41389469695](https://github.com/open-nerve/NerveProject/actions/runs/41389469695) attempt 1的server/web/e2e全部success。
+
+完成标记、十八条证据、C12等价、四份后续交接及归档来源映射见[最终集成记录](closeout-integration.md)。本次文档提交补齐完成标记；它的准确分支CI、第二次main合并/CI及归档清理事实由主目录`.superpowers/sdd/M4-closeout-integration-20261102/final-integration.json`事后签结，不在提交中预报自身CI。

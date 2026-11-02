@@ -1,6 +1,6 @@
 # M4 / closeout：最终验收与交接收尾
 
-状态：实施与终审完成、集成待办。最终准确候选SHA与三个分支CI作业由外置final-delivery.json事后签结；不合并。D18、最终main绑定及完成标记保持待集成。 分支codex/m4-closeout，基线01e40e113e11365a4eeacc2794973de2751dde61；证据见[验收台账](../reviews/closeout-acceptance.md)与[阶段review](../reviews/closeout-review.md)。
+状态：验收内容已完成并合入main，准确main CI全绿；本记录补齐M4完成标记，最终记录提交的CI和归档清理由[集成收据](../reviews/closeout-integration.md)签结。
 
 ## 1. 目标
 
@@ -120,15 +120,15 @@ LAN HTTP 复制覆盖原十二入口和 `useCopyLink` / `useCopyText` 真实路�
 | D17 | 规模估计与实际对照 | T1/T13 | 分阶段与本收尾计划/实改文件和行数、差异原因 |
 | D18 | 总体设计9.4为已完成 | T14（集成后） | 完成标记提交、最终mainSHA/三作业success、归档清理收据 |
 
-- [x] 上述十八项各自附分支证据或明确的集成待办；无隐含跳过、未解释失败或悬空转交，D18及最终main绑定仍未完成。
-- [ ] 全M4与closeout整审及局部复审完成；发现按根因闭环。
-- [ ] 最终集成与归档后，M4总完成条件全部成立。
+- [x] 上述十八项已逐条附验收证据；首次main CI与C12等价绑定通过，D18完成标记在本记录提交落实。最终记录main与归档清理按T14外置签结。
+- [x] 全M4与closeout整审及局部复审完成；发现按根因闭环。
+- 最终集成与归档后的总完成条件，由[最终集成记录](../reviews/closeout-integration.md)指定的外置收据逐项签结；必须包含第二次准确main CI及清理后复验，不用本提交预报未来结果。
 
 ## 5. 不在范围内及后续归属
 
 不实现M5附件、M6迭代模块、M7协作/视图自身接口、M8发布/性能新架构；不恢复Plane旧列表引擎，不扩大项目API提供next_work_item_sequence，不改变P10b权限owner。图片/完整标签目录/最后getTabIndex与projectMemberIds读者按原归属转交。
 
-预检阶段仅产出 spec、plan、预检报告与 P16 集成接续文档；该历史边界不代表本次实施结果。本次执行 T1–T13 和 T14 Step 1，最终集成步骤留待负责人安排。
+预检阶段仅产出 spec、plan、预检报告与 P16 集成接续文档；该历史边界不代表本次实施结果。T1–T13和T14 Step1已完成；负责人于2026-11-02授权T14余下集成、完成标记与归档清理，实际记录见[最终集成](../reviews/closeout-integration.md)。
 
 ## 6. 风险
 

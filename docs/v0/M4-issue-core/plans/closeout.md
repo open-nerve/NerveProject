@@ -1,6 +1,6 @@
 # M4 / closeout 执行计划
 
-> 预检已通过，2026-11-01 获准使用 `superpowers:executing-plans` 从 T1 执行，依据 [spec](../specs/closeout.md)；每一步凭实际证据勾选。工作树 `<repo>/.codex/worktress/codex/m4-closeout`，基线 `01e40e113e11365a4eeacc2794973de2751dde61`。本轮完成后 deep-review、保留分支，先不合并。
+> 预检已通过，2026-11-01 获准使用 `superpowers:executing-plans` 从 T1 执行，依据 [spec](../specs/closeout.md)；每一步凭实际证据勾选。工作树 `<repo>/.codex/worktress/codex/m4-closeout`，基线 `01e40e113e11365a4eeacc2794973de2751dde61`。历史实施交付要求为deep-review后先不合并；2026-11-02负责人已授权T14两次集成及最终归档清理。当前实际证据见[最终集成记录](../reviews/closeout-integration.md)。
 
 **目标：** 完成 C12、设计 §14 十八条及最终交接，以准确 main CI 和归档收据关闭 M4。
 
@@ -197,7 +197,7 @@ NERVE_PURGE_SCALE=1 NERVE_PURGE_SCALE_EVIDENCE="$M4_CLOSEOUT_EVIDENCE/perf/purge
 - [x] Step 1：固定最终产品候选，核所有C12格/性能/变异/各门禁与当前输入一致；新产品变化才重跑受影响检查，再串行F收口。数实际全部用例与skip原因，保存输入/输出manifest。
 - [x] Step 2：deep-review closeout基线至最终候选完整文件，主控三视角按任务间集成复审；至少15有效反证与-race证据可核，修复后同范围复审。全M4报告与此报告是两个范围，不互相冒充。
 - [x] Step 3：十八D逐条给命令/raw/路径/局限/后置集成项；各Phase估计与实际、新增/删除/生成/文档分开，写D17。更新spec验收和plan已执行步骤，但D18/最终main绑定仍待集成，M4§14复合项不提前全勾、总体9.4继续进行中。
-- [ ] Step 4：提交终稿并push准确HEAD，等三个分支CI作业success；核本地/远端相同40位SHA，最终外置final-delivery.json记run/attempt/jobs。阶段状态“实施与终审完成、集成待办”，保留分支/worktree，通知负责人，不自动合并。
+- [x] Step 4：提交终稿并push准确HEAD，等三个分支CI作业success；核本地/远端相同40位SHA，最终外置final-delivery.json记run/attempt/jobs。阶段状态“实施与终审完成、集成待办”，保留分支/worktree，通知负责人，不自动合并。
 
 T13终审修复检查点：F1/R39仍在已批准A的ProjectStore事实协调范围；12红→相关725绿。F2为本Task要求的当前接续状态同步，F3补实际M5具名风险/验收/双向索引。CI新增R40仅修正热ID故事真实页面就绪；CPU8倍5红→5绿。新产品build10三引擎各完整167、Web3392、默认E2E336及七门禁/证据绑定均已通过；不重派第二次独立审查。
 
@@ -208,8 +208,8 @@ Step 4准确SHA/CI是提交后的事实，Git内不提前勾选自身未来CI；
 **Files：** M4-design.md§14/§15、v0-design.md§9.4、closeout-review、04-next-steps；ignored最终集成目录和两个证据根归档manifest。
 **Interfaces：** 两个mainCI事实：验收内容合并M1成功→文档完成标记候选C→最终main合并M2成功。最后收据外置，CI不写回Git形成自引用。
 
-- [ ] Step 1：准备分支名/基线/最终SHA、spec/plan/两个整审/交接索引、完整F和分支CI、无未解项、归档清单；确认root main未动。**这里完成可评审的集成包并等待负责人未来授权。**
-- [ ] Step 2（获准后）：fetch，核主干漂移/祖先/clean、精确候选CI；按`--no-ff`合入验收分支，系统git推main，核双parent/tree与准确main CI。真实失败在新隔离分支修复；W11重跑仍败按用户约定停报。CI未绿不执行最后状态标记或清理。
+- [x] Step 1：准备分支名/基线/最终SHA、spec/plan/两个整审/交接索引、完整F和分支CI、无未解项、归档清单；确认root main未动。**这里完成可评审的集成包并等待负责人未来授权。**
+- [x] Step 2（获准后）：fetch，核主干漂移/祖先/clean、精确候选CI；按`--no-ff`合入验收分支，系统git推main，核双parent/tree与准确main CI。真实失败在新隔离分支修复；W11重跑仍败按用户约定停报。CI未绿不执行最后状态标记或清理。
 - [ ] Step 3（同次收尾集成授权内）：从已绿main新建`codex/m4-closeout-record`及约定路径worktree，只写事实：M4§14逐项勾并附证据，§15/头部及总体9.4标已完成，补C12等价到main/四交接与审查链接。无产品修改，静态深审/链接/18条coverage通过，提交推送并核分支CI；`--no-ff`合入main，再核最终main三作业全绿。若期间产品改动，退回相应验收，不能靠文档提交遮住。
 - [ ] Step 4：最终外置收据绑定两个mainSHA/CI、completion提交及tree等价。归档closeout实施根、主目录准备根、record分支证据和浏览器/性能全部raw；源/目标逐hash/byte/mode/成员清单比对，unknown=0。确认origin/main包含两分支且remote-only=0，再删远端分支、正常worktree remove、branch -d；不force。归档后复验，root main clean且与origin/最终CI同SHA，才宣告M4全部完成。
 
@@ -218,3 +218,5 @@ Step 4准确SHA/CI是提交后的事实，Git内不提前勾选自身未来CI；
 预检时上述步骤全部未执行；静态预检只核每D对应Task、每C12组归属、数据/计时边界、源码帮手与后续交接。当前实施所需环境、真实结果和 phase/status 变更由 T1 以后逐项记录，不能引用预检作为运行成功的证据。
 
 预检方法与发现见 [closeout-preflight](../reviews/closeout-preflight.md)；原始盘点在主目录 `.superpowers/sdd/M4-closeout-preparation-20261101/`。实施证据与进度见 [验收台账](../reviews/closeout-acceptance.md)。
+
+提交时点记录：T14 Step1/2已完成，验收main为`83c83a9447ddd6282d8c1d52ab680d5ae67c7e10`，准确[CI 41389469695](https://github.com/open-nerve/NerveProject/actions/runs/41389469695)全绿。Step3的文档修改由本提交完成；其提交后CI、第二次合并及Step4归档清理仍须真实执行，最终结果由外置`final-integration.json`和延续台账签结。此处保留提交时点勾选，不为补自身CI或清理状态产生递归提交。

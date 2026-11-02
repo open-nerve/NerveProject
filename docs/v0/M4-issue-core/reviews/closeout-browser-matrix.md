@@ -1,8 +1,8 @@
 # M4 / C12 最终浏览器矩阵
 
-状态：T5–T7历史验收和T13最终分支C12已通过；main等价绑定仍待获准集成。真实看图与自动断言分开记录。
+状态：T13最终C12三引擎各完整167项通过，已与准确验收main绑定；完成标记提交的最终main等价由[集成记录](closeout-integration.md)指定的外置收据核准。真实看图与自动断言继续分开记录。
 
-每格的细分动作、角色、入口、返回值/持久化、截图/trace/网络控制台、引擎版本及源码/bin SHA 收在 `.superpowers/sdd/M4-closeout/browser/`；控制者实际看图后写观察。任意失败或未看截图的格保持待验。最终 main 等价绑定在 T14 获准合并后补。
+每格的细分动作、角色、入口、返回值/持久化、截图/trace/网络控制台、引擎版本及源码/bin SHA 收在 `.superpowers/sdd/M4-closeout/browser/`；控制者实际看图后写观察。任意失败或未看截图的格保持待验。首次main已按完整tree等价绑定，完成标记后仅文档变化的最终main另核。
 
 | 组 | 页面/入口 | 身份/故事 | 动作合同来源 | Owner | Chromium | Firefox | WebKit |
 |---|---|---|---|---|---|---|---|
@@ -114,3 +114,7 @@ WebKit在Docker socket丢失时的中断保留为 `t6-docker-interruption.json`�
 
 
 R39发布前事实协调及R40热ID故事真实路由就绪均随build10全量复验。R39另有12红→725相关绿；R40旧产品CPU8倍5红→5绿，正式版不保留限速注入。
+
+## 最终main绑定（2026-11-02）
+
+验收内容已以`--no-ff`合入main `83c83a9447ddd6282d8c1d52ab680d5ae67c7e10`；[main CI 41389469695](https://github.com/open-nerve/NerveProject/actions/runs/41389469695) attempt 1的server/web/e2e全部success。候选与验收main的完整tree均为`f099ca57dc7b4e45ae6343bf38e7022f53787a14`；完整产品/测试与实际C12输入不变。构建标识与二进制字节的边界、第二次main验证见[集成记录](closeout-integration.md)。
