@@ -51,6 +51,8 @@ local 外观固定为 `New(Config, Deps) (*Store, error)`；`Config{Root string;
 
 http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现的精简读/写/验签接口、预算配置、运行时钟与 HTTP 错误写入器。`Register(*httpserver.Router, func(http.Handler) http.Handler)` 注册精确 raw 集合，包装器由 bootstrap 从 API 的 `TransferMiddleware(httpserver.Limiter)` 取得。不把整套 API 或业务 Authorizer 注入存储。
 
+HTTP 的 `TransferReader.OpenTransfer(ctx, key) (ObjectInfo, io.ReadSeekCloser, error)` 只服务本地传输，由同一次打开取得元数据/句柄；app.ObjectReader 保持流式。标准库 ServeContent 负责条件读取，adapter 限制为单段 Range、格式化 disposition、将读取前错误转为 no-store Problem，并在正文不足时中止连接。
+
 ## Task 1（T1）：值、配置和消费方合同（A1）
 
 **Files：** A/domain/storage.go、storage_test.go；A/app/storage_ports.go；C/files.go、files_test.go、config.go、validate.go；server/configs/config.yaml；tools/keywords.json。
@@ -94,22 +96,22 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 **Interfaces：** Seal(ctx, source, destination, expectedETag)；source 可 u/o，destination 必须新的 o。共同合同不承诺 staging 可重写，不依赖 local ETag 必为 SHA256 来约束未来 S3 ETag。
 
 - [x] Step 1：`TestLocalSealKeepsPublishedBytes`：source ETag 错/缺失不产生目标；测试中将 data 改成同长度不同字节但保留旧 meta，Seal 也必须拒绝；两个不同随机候选并发字节一致，旧 u key 重放不能改变任一 o；o key 不能用 UploadGrant 签发。
-- [x] Step 2（store 子合同）：`TestStorageContract` 已验证缺失、Delete/Open/ctx/句柄结束和 opaque ETag；T3 的故障测试区分 I/O 与缺失。真实 HTTP PUT→Seal→GET/HEAD 完整链移至 T5，仍待完成，不能据此勾 A2。
+- [x] Step 2（store 子合同）：`TestStorageContract` 已验证缺失、Delete/Open/ctx/句柄结束和 opaque ETag；T3 的故障测试区分 I/O 与缺失。真实 HTTP PUT→Seal→GET/HEAD 完整链已在 T5 补齐，A2 仍须阶段最终门禁和审查。
 - [x] Step 3：确认新增失败后实现，复制期间不关闭调用方的其他对象、不在读取旧 ETag 之后重新打开可能已换掉的文件。目标已存在为冲突，不覆盖；未知结果的重试由 P2 的候选状态负责。
 - [x] Step 4：`go test -race -count=1 ./internal/modules/asset/...`；变异跳过复制后 ETag 核对/允许签发 o 上传，合同均失败，恢复后绿；公开 HTTP 的对应变异留 T5。
 - [x] Step 5：两轮复核后提交 `feat(M5/P1): 实现条件封存及存储共享合同`。
 
 ## Task 5（T5）：真实 raw HTTP 上传与读取（A3/A6/A9）
 
-**Files：** A/adapter/http/transfer.go、upload.go、read.go、transfer_test.go、read_test.go；A/module.go；H/routes.go 只按实际需要加入明确 storage fallback。
+**Files：** A/adapter/http/transfer.go、upload.go、read.go 与传输/读取/故障测试；A/adapter/local/transfer.go、reader.go、sign.go、upload.go 的消费合同校正；A/app/storage_contract_test.go。storage fallback 由 Transfer.Register 显式注册，未修改平台 router；A/module.go 与 bootstrap 接线在 T7 一并完成。
 
 **Interfaces：** NewTransfer/Transfer.Register；使用 T2 验签、T3 存储、T4 合同。补齐 T4 延后到本 Task 的真实 HTTP 合同，不以 store 调用替代浏览器协议。
 
-- [ ] Step 1：`TestLocalHTTPUploadContract`：正确 PUT 204，缺/错 length、短体/超额、类型不符、重复 key 按 spec 拒绝。无效签名请求不存在和存在 key 响应一致，不能通过错误内容推断存在性。
-- [ ] Step 2：`TestLocalHTTPReadContract`：GET/HEAD 精确 body/header，前/后/越界 Range、If-Range、304；多段 416，过期 token 带 If-None-Match 仍 403；中文/引号文件名正确编码，CRLF 拒绝，active MIME 不能 inline。
-- [ ] Step 3：跑真实 httptest.Server 的聚焦测试确认红，再实现；原始 endpoint 不读取 bearer/cookie，不返回内部 metadata/key，错误无路径，写出字节之后失败中止连接。
-- [ ] Step 4：合同、模块及 `go test -count=1 ./internal/platform/httpserver` 绿；变异验签晚于条件读取、反射 filename header、放开读取 u key 应失败，恢复。
-- [ ] Step 5：两轮复核后提交 `feat(M5/P1): 接入受签名保护的文件传输端点`。
+- [x] Step 1：`TestLocalHTTPUploadContract`：正确 PUT 204，缺/错 length、短体/超额、类型不符、重复 key 按 spec 拒绝。无效签名请求不存在和存在 key 响应一致，不能通过错误内容推断存在性。
+- [x] Step 2：`TestLocalHTTPReadContract`：GET/HEAD 精确 body/header，前/后/越界 Range、If-Range、304；多段 416，过期 token 带 If-None-Match 仍 403；中文/引号文件名正确编码，CRLF 拒绝，active MIME 不能 inline。
+- [x] Step 3：跑真实 httptest.Server 的聚焦测试确认红，再实现；原始 endpoint 不读取 bearer/cookie，不返回内部 metadata/key，错误无路径，写出字节之后失败中止连接。
+- [x] Step 4：合同、模块及 `go test -count=1 ./internal/platform/httpserver` 绿；变异验签晚于条件读取、反射 filename header、放开读取 u key 均由断言拦住，已恢复。
+- [x] Step 5：两轮复核后提交 `feat(M5/P1): 接入受签名保护的文件传输端点`。
 
 ## Task 6（T6）：真实 socket 预算、限流与释放（A5/A7）
 

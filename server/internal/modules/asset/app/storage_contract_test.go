@@ -3,16 +3,23 @@ package app_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 	"uuid"
 
+	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/http"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/local"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/storagetest"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 )
 
 // This is a test consumer, not a production-wide Storage interface. Its opaque
@@ -37,11 +44,67 @@ func TestStorageContract(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	// T5 replaces this transport with actual HTTP PUT against the registered handler.
-	runStorageContract(t, s, s.Put, now)
+	logger := slog.New(slog.DiscardHandler)
+	transfer, err := httpadapter.NewTransfer(httpadapter.Deps{UploadVerifier: s, ReadVerifier: s, Uploader: s, Reader: s, RuntimeNow: func() time.Time { return now }, Files: config.FilesConfig{SizeLimit: 5242880}, Errors: httpserver.NewAPIErrors(logger)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	router := httpserver.NewRouter(logger)
+	transfer.Register(router, func(h http.Handler) http.Handler { return h })
+	server := httptest.NewServer(router)
+	t.Cleanup(server.Close)
+	put := func(ctx context.Context, grant domain.UploadGrant, body io.Reader) error {
+		signed, err := s.SignUpload(ctx, grant)
+		if err != nil {
+			return err
+		}
+		request, err := http.NewRequestWithContext(ctx, "PUT", server.URL+signed.URL, body)
+		if err != nil {
+			return err
+		}
+		request.ContentLength = grant.Size
+		for key, value := range signed.Headers {
+			request.Header.Set(key, value)
+		}
+		response, err := server.Client().Do(request)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = response.Body.Close() }()
+		if response.StatusCode != 204 {
+			return fmt.Errorf("HTTP upload returned %d", response.StatusCode)
+		}
+		return nil
+	}
+	checkHTTPRead := func(info domain.ObjectInfo) {
+		for _, method := range []string{"GET", "HEAD"} {
+			signed, err := s.SignRead(t.Context(), domain.ReadGrant{Key: info.Key, Method: method, Name: "hello.txt", ContentType: info.ContentType, ExpiresAt: now.Add(time.Minute)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			request, err := http.NewRequestWithContext(t.Context(), method, server.URL+signed.URL, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			response, err := server.Client().Do(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			data, err := io.ReadAll(response.Body)
+			closeErr := response.Body.Close()
+			want := "hello"
+			if method == "HEAD" {
+				want = ""
+			}
+			if err != nil || closeErr != nil || response.StatusCode != 200 || string(data) != want || response.ContentLength != 5 || response.Header.Get("ETag") != info.ETag {
+				t.Fatalf("HTTP %s = %d %q %v / %v", method, response.StatusCode, data, err, closeErr)
+			}
+		}
+	}
+	runStorageContract(t, s, put, checkHTTPRead, now)
 }
 
-func runStorageContract(t *testing.T, objects contractObjects, put func(context.Context, domain.UploadGrant, io.Reader) error, now time.Time) {
+func runStorageContract(t *testing.T, objects contractObjects, put func(context.Context, domain.UploadGrant, io.Reader) error, checkHTTPRead func(domain.ObjectInfo), now time.Time) {
 	t.Helper()
 	key := func(kind byte) domain.ObjectKey {
 		k, err := domain.NewObjectKey(kind, uuid.New(), uuid.New())
@@ -81,6 +144,7 @@ func runStorageContract(t *testing.T, objects contractObjects, put func(context.
 	if err := objects.Delete(t.Context(), staging); err != nil {
 		t.Fatal(err)
 	}
+	checkHTTPRead(sealed)
 	if _, err := objects.Open(t.Context(), candidate, "wrong-version"); !errors.Is(err, domain.ErrObjectChanged) {
 		t.Fatalf("wrong version read = %v", err)
 	}

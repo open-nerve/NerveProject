@@ -50,3 +50,17 @@ func (r *objectReader) closeFile() error {
 	return r.err
 }
 func (r *objectReader) Close() error { r.stopRead(); r.stopLife(); r.cancel(); return r.closeFile() }
+
+func (r *objectReader) Seek(offset int64, whence int) (int64, error) {
+	if err := r.ctx.Err(); err != nil {
+		return 0, err
+	}
+	if r.store.closed.Load() {
+		return 0, fs.ErrClosed
+	}
+	position, err := r.file.Seek(offset, whence)
+	if canceled := r.ctx.Err(); canceled != nil {
+		return position, canceled
+	}
+	return position, storageError("seek object", err)
+}

@@ -53,7 +53,9 @@ func (s *Store) VerifyUpload(key, rawQuery, method string) (domain.UploadGrant, 
 		return domain.UploadGrant{}, domain.ErrInvalidSignature
 	}
 	g := domain.UploadGrant{Key: p.Key, Size: p.Size, ContentType: p.ContentType, ExpiresAt: time.Unix(p.ExpiresAt, 0).UTC()}
-	if domain.ValidateUpload(g, s.cfg.SizeLimit, s.deps.RuntimeNow()) != nil {
+	// Authentication validates the format's hard bound. The HTTP consumer and
+	// Put enforce today's upload limit separately, including grants issued earlier.
+	if domain.ValidateUpload(g, domain.MaxObjectSize, s.deps.RuntimeNow()) != nil {
 		return domain.UploadGrant{}, domain.ErrInvalidSignature
 	}
 	return g, nil

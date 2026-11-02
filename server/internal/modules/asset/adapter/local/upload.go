@@ -97,6 +97,11 @@ func (r contextReader) Read(p []byte) (int, error) {
 		return 0, err
 	}
 	n, err := r.reader.Read(p)
+	// net/http may cancel the request at the same moment it reports a truncated
+	// body. Keep the concrete read failure instead of disguising it as cancellation.
+	if err != nil && err != io.EOF {
+		return n, err
+	}
 	if canceled := r.ctx.Err(); canceled != nil {
 		return n, canceled
 	}

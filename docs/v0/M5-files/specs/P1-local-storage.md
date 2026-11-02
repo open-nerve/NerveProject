@@ -68,6 +68,8 @@ type MAC interface { Tag([]byte) [16]byte; Verify([]byte, [16]byte) bool }
 
 `Open` 的第三参和 `Seal` 的第四参是预期 ETag；失配返回具名 `ErrObjectChanged`，缺失 `ErrObjectNotFound`，目标已存在 `ErrObjectExists`，其他 I/O 错误保留为后端故障但不泄露路径。调用者必须关闭 Open 的 reader；其 ctx 取消后读取结束。清单/对账接口在 P2 由真实清理消费者定义，本段不制造闲置万能 Storage 接口。
 
+本地 HTTP 消费者另外声明 `OpenTransfer(context.Context, ObjectKey) (ObjectInfo, io.ReadSeekCloser, error)`，从同一次打开取得元数据和可定位句柄，以支持标准条件读取和单段 Range；该能力不加入 app 的流式 ObjectReader，未来 S3 也无需实现本地定位。句柄遵守相同的取消、Close 和独占所有权合同。
+
 ### 2.3 签名
 
 - bootstrap 通过已加载的 `identity.Keys.MAC` 派生 `asset-upload`、`asset-read`，asset 只持有 app.MAC；不重复读密钥、不加密钥文件、不将 identity import 到 asset。
@@ -83,6 +85,7 @@ type MAC interface { Tag([]byte) [16]byte; Verify([]byte, [16]byte) bool }
 
 - 验证签名前不查询对象是否存在。签名/路径/用途/时效错误统一 403 `asset.invalid_signature`，响应不回显 URL/key。有效签名对应对象缺失才是 404 `asset.object_not_found`。
 - PUT 要求已声明的非负 Content-Length 等于签名 size；没有或不等为 400 `asset.invalid_upload`，超过 files.size_limit 为 413 `payload_too_large`；实际读出超额体同样拒绝，少字节不得发布。Content-Type 必须匹配签名的规范化 media type，不允许客户端另附 charset 等参数。
+- 验签按全局 100 MiB 格式边界检查，当前 size_limit 由传输层和 Put 单独执行；降低配置上限后，旧签名的超限请求仍明确返回 413。短体同时触发请求取消时保留实际读取错误，返回 400；读取后端故障不能误归为上传错误。
 - 成功 PUT 为 204；重复 key 为 409 `asset.object_exists`。原始存储 HTTP 与普通 JSON API 的鉴权模型不同，不能把它加入 API 的 publicOperations 以绕过 bearer 守卫。
 - 读取为 200/206，HEAD 无 body；ETag、Last-Modified、Content-Length、Content-Type、nosniff、Content-Disposition 完整。任意附件 attachment，inline 只接受 JPEG/PNG/WebP/GIF 类型；真正图片字节的业务验证在 P2 确认阶段做。
 - 支持单段 Range、If-Range、If-None-Match；无效/多段 Range 为 416。条件读取也先验证签名，过期签名不能得到 304。缓存 private，max-age 不超过剩余有效期，错误 no-store；JSON API 继续 no-store。

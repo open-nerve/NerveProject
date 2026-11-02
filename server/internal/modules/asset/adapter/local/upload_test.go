@@ -51,6 +51,27 @@ type failingReader struct{ err error }
 
 func (r failingReader) Read([]byte) (int, error) { return 0, r.err }
 
+type cancelingShortReader struct{ cancel context.CancelFunc }
+
+func (r cancelingShortReader) Read(p []byte) (int, error) {
+	r.cancel()
+	return copy(p, "ab"), io.ErrUnexpectedEOF
+}
+
+func TestLocalUploadRetainsReadFailureDuringCancellation(t *testing.T) {
+	s := newStorageTestStore(t, t.TempDir())
+	g := uploadGrant(t, s, 3)
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	if err := s.Put(ctx, g, cancelingShortReader{cancel}); !errors.Is(err, io.ErrUnexpectedEOF) {
+		t.Fatalf("short body with simultaneous cancellation = %v", err)
+	}
+	if _, err := s.Inspect(t.Context(), g.Key); !errors.Is(err, domain.ErrObjectNotFound) {
+		t.Fatalf("short body published: %v", err)
+	}
+	noTemporaryFiles(t, s.cfg.Root)
+}
+
 func TestLocalUploadPublishesOnlyCompleteObjects(t *testing.T) {
 	t.Run("in progress then complete", func(t *testing.T) {
 		s := newStorageTestStore(t, t.TempDir())
