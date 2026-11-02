@@ -111,6 +111,7 @@ func TestBuiltInProfiles(t *testing.T) {
 					AutoArchiveInterval:  map[string]time.Duration{"test": 2 * time.Second, "dev": 24 * time.Hour, "prod": 24 * time.Hour}[tt.env],
 				},
 				Files: config.FilesConfig{
+					UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second,
 					SizeLimit: 5 << 20, Driver: "local", Local: config.LocalFilesConfig{Root: "./data/files"},
 					MinTransferBytesPerSecond: 128 << 10, TransferGrace: 15 * time.Second,
 					TransferIdleTimeout: 30 * time.Second, MaxTransferDuration: 15 * time.Minute,

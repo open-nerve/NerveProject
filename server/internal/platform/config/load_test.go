@@ -74,6 +74,11 @@ issue:
     max_queue: 64
   write_lock_timeout: 5s
 files:
+  upload_ttl: 15m
+  operation_timeout: 10s
+  cleanup_interval: 1h
+  cleanup_batch: 100
+  cleanup_budget: 10s
   size_limit: 5242880
   driver: local
   local:
@@ -187,7 +192,8 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			WriteLockTimeout:    5 * time.Second,
 			AutoArchiveInterval: 24 * time.Hour,
 		},
-		Files: FilesConfig{SizeLimit: 1024, Driver: "local", Local: LocalFilesConfig{Root: "./data/files"}, // size: environment
+		Files: FilesConfig{
+			UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second, SizeLimit: 1024, Driver: "local", Local: LocalFilesConfig{Root: "./data/files"}, // size: environment
 			MinTransferBytesPerSecond: 131072, TransferGrace: 15 * time.Second, TransferIdleTimeout: 30 * time.Second,
 			MaxTransferDuration: 15 * time.Minute, MaxConcurrentTransfers: 16, TransferRate: BucketConfig{PerMinute: 60, Burst: 20}},
 		Log: LogConfig{Level: "debug", Format: "text"},

@@ -34,6 +34,7 @@ func defaultAssetConfig(t *testing.T, dbURL string) config.Config {
 func testFilesConfig(t *testing.T) config.FilesConfig {
 	t.Helper()
 	return config.FilesConfig{
+		UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second,
 		SizeLimit: 5 << 20, Driver: "local", Local: config.LocalFilesConfig{Root: t.TempDir()},
 		MinTransferBytesPerSecond: 128 << 10, TransferGrace: 15 * time.Second,
 		TransferIdleTimeout: 30 * time.Second, MaxTransferDuration: 15 * time.Minute,

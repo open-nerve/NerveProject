@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1已完成，接续T2。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T2已完成，接续T3。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -67,11 +67,11 @@
 
 **Interfaces：** 消费P1 Store.operation/os.Root；产出ObjectLister.List(ctx,token,limit)(ObjectPage,error)、TemporaryCleaner.SweepTemporary(ctx,before,limit,token)(next,removed,error)；files新增参数按recovery§2。
 
-- [ ] Step 1：TestLocalInventoryPages用乱序key、三页、10,000个有效最小对象；TestTemporaryCleanupIsolation用旧tmp/新tmp/未知项/符号链接/另一个root；TestFileLifecycleConfig覆盖每个边界、整数溢出、未知键和日志。
-- [ ] Step 2：运行 `go -C server test ./internal/modules/asset/adapter/local ./internal/platform/config -run 'Inventory|Temporary|FileLifecycle' -count=1`，记录红。
-- [ ] Step 3：实现ReadDir(256)+有限堆limit+1，校验token、ctx和不越根；临时目录仅生成UUID布局。对坏项明确失败且不删，不能“空清单成功”。配置默认15m/10s/1h/100/10s，含上界与遮盖。
-- [ ] Step 4：运行聚焦及asset/local/config全包；记录10,000目录页耗时和资源上界，取消测试有有限上界。变异取消根限制、忽略ctx、全量积累、把业务clock作年龄分别由适当层拦截；不能用探针声称任意规模。
-- [ ] Step 5：提交；本段仍无新业务API/表，既有P1传输合同通过。
+- [x] Step 1：TestLocalInventoryPages用乱序key、三页、10,000个有效最小对象；TestTemporaryCleanupIsolation用旧tmp/新tmp/未知项/符号链接/另一个root；TestFileLifecycleConfig覆盖每个边界、整数溢出、未知键和日志。
+- [x] Step 2：运行 `go -C server test ./internal/modules/asset/adapter/local ./internal/platform/config -run 'Inventory|Temporary|FileLifecycle' -count=1`，记录红。
+- [x] Step 3：实现ReadDir(256)+有限堆limit+1，校验token、ctx和不越根；临时目录仅生成UUID布局。对坏项明确失败且不删，不能“空清单成功”。配置默认15m/10s/1h/100/10s，含上界与遮盖。
+- [x] Step 4：运行聚焦及asset/local/config全包；记录10,000目录页耗时和资源上界，取消测试有有限上界。变异取消根限制、忽略ctx、全量积累与全量枚举已拦截；业务clock作年龄由T9真实调用层拦截，T2只证明物理年龄与调用方cutoff；不能用探针声称任意规模。
+- [x] Step 5：提交；本段仍无新业务API/表，既有P1传输合同通过。
 
 ## Task 3（T3）：owner权限门面与一次排序锁协议
 

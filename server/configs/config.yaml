@@ -118,6 +118,12 @@ issue:
   write_lock_timeout: 5s
 
 files:
+  # 运行时期限，不使用业务时间偏移。测试覆盖可显式缩短，默认不变
+  upload_ttl: 15m           # 10s–15m，仅控制新上传授权
+  operation_timeout: 10s    # 1s–10s，整个确认/复制外部 I/O 段
+  cleanup_interval: 1h      # 1m–24h
+  cleanup_batch: 100        # 1–1000
+  cleanup_budget: 10s       # 1s–30s，每个操作仍受剩余预算约束
   # 单文件 1–104857600 字节的上限（最大 100 MiB、默认 5 MiB），实例配置接口报告它
   size_limit: 5242880
   driver: local

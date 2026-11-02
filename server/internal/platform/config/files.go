@@ -10,6 +10,11 @@ import (
 // FilesConfig bounds raw transfers separately from ordinary JSON requests.
 // SizeLimit is also reported by the instance API.
 type FilesConfig struct {
+	UploadTTL                 time.Duration    `koanf:"upload_ttl"`
+	OperationTimeout          time.Duration    `koanf:"operation_timeout"`
+	CleanupInterval           time.Duration    `koanf:"cleanup_interval"`
+	CleanupBatch              int              `koanf:"cleanup_batch"`
+	CleanupBudget             time.Duration    `koanf:"cleanup_budget"`
 	SizeLimit                 int64            `koanf:"size_limit"`
 	Driver                    string           `koanf:"driver"`
 	Local                     LocalFilesConfig `koanf:"local"`
@@ -59,6 +64,22 @@ func fileTransferBudget(size, rate int64, grace time.Duration) (time.Duration, e
 }
 
 func (c FilesConfig) validate(fail func(key, format string, args ...any)) {
+	for _, bound := range []struct {
+		key                 string
+		value, lower, upper time.Duration
+	}{
+		{"upload_ttl", c.UploadTTL, 10 * time.Second, 15 * time.Minute},
+		{"operation_timeout", c.OperationTimeout, time.Second, 10 * time.Second},
+		{"cleanup_interval", c.CleanupInterval, time.Minute, 24 * time.Hour},
+		{"cleanup_budget", c.CleanupBudget, time.Second, 30 * time.Second},
+	} {
+		if bound.value < bound.lower || bound.value > bound.upper {
+			fail("files."+bound.key, "must be from %s to %s, got %s", bound.lower, bound.upper, bound.value)
+		}
+	}
+	if c.CleanupBatch < 1 || c.CleanupBatch > 1000 {
+		fail("files.cleanup_batch", "must be from 1 to 1000, got %d", c.CleanupBatch)
+	}
 	if c.SizeLimit < 1 || c.SizeLimit > maxFileSize {
 		fail("files.size_limit", "must be from 1 to 104857600, got %d", c.SizeLimit)
 	}
@@ -95,6 +116,8 @@ func (c LocalFilesConfig) LogValue() slog.Value {
 
 func (c FilesConfig) LogValue() slog.Value {
 	return slog.GroupValue(
+		slog.Duration("upload_ttl", c.UploadTTL), slog.Duration("operation_timeout", c.OperationTimeout),
+		slog.Duration("cleanup_interval", c.CleanupInterval), slog.Int("cleanup_batch", c.CleanupBatch), slog.Duration("cleanup_budget", c.CleanupBudget),
 		slog.Int64("size_limit", c.SizeLimit), slog.String("driver", c.Driver), slog.Any("local", c.Local),
 		slog.Int64("min_transfer_bytes_per_second", c.MinTransferBytesPerSecond),
 		slog.Duration("transfer_grace", c.TransferGrace), slog.Duration("transfer_idle_timeout", c.TransferIdleTimeout),

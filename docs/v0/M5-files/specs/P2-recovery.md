@@ -87,7 +87,7 @@ type ObjectLister interface { List(context.Context, string, int) (ObjectPage,err
 type TemporaryCleaner interface { SweepTemporary(context.Context,time.Time,int,string) (next string,removed int,err error) }
 ```
 
-List token 为 adapter 自有、不透明、版本化的分页位置，非法 token 返回错误。local 只扫描自身 objects 下合法随机 key 的目录；`ReadDir(256)` 流式枚举，保留 after 之后最小的 limit+1 项的有限堆，内存 O(batch)，按 key 排序返回。每次枚举/读取均检查 ctx，目录/metadata 损坏、非法项或符号链接明确报错并不删除它，不扫描根外路径。不把孤立目录当正常 ObjectInfo 返回。
+List token 为 adapter 自有、不透明、版本化的分页位置，非法 token 返回错误。local 只扫描自身 objects 下合法随机 key 的目录；`ReadDir(256)` 流式枚举，保留 after 之后最小的 limit+1 项的有限堆，内存 O(batch)，按 key 排序返回。每次枚举/读取均检查 ctx；全扫描校验目录名/类型，metadata及内部布局只读本页返回项，不提供快照；后页的损坏到该页明确失败。目录/metadata 损坏、非法项或符号链接明确报错并不删除它，不扫描根外路径。不把孤立目录当正常 ObjectInfo 返回。
 
 此 local 平坦布局需要 O(N) 扫描/页；deadline 限制单次工作时间而不是宣称任意 N 都能完成。P2 实测 10,000 个目录和≥3 页的有限内存、取消、结果覆盖；M8 记录目标部署规模的全轮成本。若真实目标规模导致单页持续超时，必须再设计索引/分片，不能无限延长期限或静默越过页面。P1 现存磁盘布局不在本段暗中迁移。
 
