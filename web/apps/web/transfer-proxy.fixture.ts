@@ -9,7 +9,7 @@ import { onTestFinished } from "vitest";
 import { emojibase } from "./emojibase";
 import { localTransfer } from "./local-transfer";
 
-export async function listen(server: Server): Promise<string> {
+async function listen(server: Server): Promise<string> {
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", () => {

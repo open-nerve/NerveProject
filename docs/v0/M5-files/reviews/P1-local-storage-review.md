@@ -67,3 +67,5 @@ P2 承接准备件、确认/封存候选、业务权限和清理，并把 asset 
 - 夹具校正：macOS 临时目录先取 realpath，避免 Vite 构建根的符号路径差；Vite 把 port=0 当默认值，改用官方 middleware mode 配真实随机端口，避免并行端口竞争。开发服务器的 missing.js 断言明确 JavaScript Accept，生产缺失 chunk 的 404 由 Go 完整程序测试独立验证。未修改这些既有行为。
 
 - 完整七门禁首次运行于 `b051df25258de313f6dcfac7387055c93fa7630a`：gen/gen-check 与 lint-go 通过，make test 用时 347.277s，仅 `TestBuiltInProfiles` 和 `TestEveryModuleDeclaresItsActionsOrHasNone` 失败。前者补齐 spec 中的具体默认值，后者按既有枚举机制登记 P1 没有业务动作的 asset；守卫谓词、精确全路由与角色规则不改。聚焦配置/动作/反例测试转绿，完整门禁在修复后重新执行。
+
+- `f6cde552`：gen/gen-check、lint-go、make test 全绿（346.872s）。lint-web 的关键词检查把标准 HTTP `upgrade` 头当作付费功能；按现有精确例外机制登记一次命中与 M9 复核，不修改规则。单独 knip 揪出 fixture 内部 `listen` 的多余导出，已收回，不加忽略。后续门禁从 lint-web 继续，服务端与生成输入保持原字节，结果按输入哈希关联到最终提交。
