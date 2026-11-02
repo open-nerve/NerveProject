@@ -1,7 +1,7 @@
 # M5 / P1 本地存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，尚未实施；见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。负责人已授权按既有节奏连续推进，常规预检通过后继续，不另设确认门。
+> 状态：预检通过，实施中；见[预检记录](../../../reviews/re-31-M5设计与P1预检.md)。负责人已授权按既有节奏连续推进，常规预检通过后继续，不另设确认门。
 
 **Goal：** 建立可真实传输、检查、封存和读取的 local 存储能力，给 P2 资产用例提供经过验证的小接口。
 
@@ -13,7 +13,7 @@
 
 ## Global Constraints
 
-- 主目录永远 main；实施用 `codex/m5-p1` worktree。文档准备分支为 `codex/m5-design`，实施基线取其 noff 合入后准确且 CI 通过的 main SHA，T1 前写入 state/review。
+- 主目录永远 main；实施用 `codex/m5-p1` worktree。文档准备分支为 `codex/m5-design`，实施基线为文档 noff 合入后的 main `fb3e788b7be33467018385c9a67d515e51b79dad`。其树与已全绿的设计分支相同；main CI 等待期间可做本地 Task 和聚焦验证提交；P1 首次产品检查点推送前须确认该 main CI 全绿并归档设计分支。
 - plane/refer 只读且不运行其中的 Git；不动已有容器/Docker、不全局安装、不取凭据、不 stash/clean/reset --hard；系统 `/usr/bin/git` 推送，中文详细提交。
 - 每 Task 聚焦测试和 spec/质量复核；产品检查点先七项完整本地门禁再推；阶段 deep-review、修复复审、分支 CI、noff、main CI、归档清理依序进行。
 - T1 实现提交将 keyword phase 从 M4/closeout 改 M5/P1；当前无 until=M5 的例外，但实施时重新验证。不能仅延期例外，不修改已有架构守卫来迎合实现。
@@ -45,25 +45,25 @@
 | B/assets.go、app.go、asset_transfer_test.go | MAC/配置/限流接线与正常/失败/关闭清理 |
 | e2e/fixtures/server.ts、clock.ts | 进程/world 的独占文件目录与重启复用 |
 
-domain 构造函数固定为 `ParseObjectKey(string) (ObjectKey, error)`、`NewObjectKey(kind byte, assetID uuid.UUID) (ObjectKey, error)`、`ValidateUpload(UploadGrant, int64, time.Time) error`、`ValidateRead(ReadGrant, time.Time) error`。ObjectKey 的 Kind/AssetID 通过方法读出，不向调用方暴露正则细节。
+domain 构造函数固定为 `ParseObjectKey(string) (ObjectKey, error)`、`NewObjectKey(kind byte, assetID, objectID uuid.UUID) (ObjectKey, error)`、`ValidateUpload(UploadGrant, int64, time.Time) error`、`ValidateRead(ReadGrant, time.Time) error`。两个 UUID 均由调用方显式提供，构造函数不取随机数；ObjectKey 的 Kind/AssetID/ObjectID 通过方法读出，不向调用方暴露正则细节。
 
 local 外观固定为 `New(Config, Deps) (*Store, error)`；`Config{Root string; SizeLimit int64}`；`Deps{UploadMAC, ReadMAC app.MAC; RuntimeNow func() time.Time}`。Store 实现 spec 的六个小接口和 `Close() error`，另提供传输消费者自己的 `Put(ctx, grant, io.Reader) error`；只能由已验签 handler 或测试内调用，内部仍核 key/type/长度/ctx。签名解析用 `VerifyUpload(key string, rawQuery string, method string) (domain.UploadGrant, error)` 和对应 VerifyRead。错误使用具名值与 errors.Is，不用字符串包含判断。
 
 http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现的精简读/写/验签接口、预算配置、运行时钟与 HTTP 错误写入器。`Register(*httpserver.Router, func(http.Handler) http.Handler)` 注册精确 raw 集合，包装器由 bootstrap 从 API 的 `TransferMiddleware(httpserver.Limiter)` 取得。不把整套 API 或业务 Authorizer 注入存储。
 
-## T1：值、配置和消费方合同（A1）
+## Task 1（T1）：值、配置和消费方合同（A1）
 
 **Files：** A/domain/storage.go、storage_test.go；A/app/storage_ports.go；C/files.go、files_test.go、config.go、validate.go；server/configs/config.yaml；tools/keywords.json。
 
 **Interfaces：** 产生 spec §2.2 的所有值/六个存储接口、MAC 和本计划的 domain 构造函数；配置按 spec §2.5 逐值落实。
 
-- [ ] Step 1：写 `TestObjectKeyAndGrantBounds`：空/nil/大写/编码斜杠/非法 kind、size=0/104857601、过期边界、GET/HEAD 区分、控制字符文件名；合法 key 往返保持两个 UUID。
-- [ ] Step 2：写 `TestFilesConfigurationBudgets`：默认 5 MiB/131072/15s 得 55s；负数、小数、超大整数、driver=s3、空 root、最大文件预算超过 max_duration、零并发、非法 rate 全部拒绝。用现有配置加载/日志帮手核未知 key 和 root 遮盖。
-- [ ] Step 3：跑 `go test -count=1 ./internal/modules/asset/domain ./internal/platform/config`，记录新增性质红；实现值和配置，不改全局 server 默认。
-- [ ] Step 4：同命令绿，`go test -count=1 ./internal/archtest`；定向移除一个上限/phase 值保护的负例应失败，恢复后复测。更新 keyword phase，并实际跑 `node tools/keywords.mjs`。
-- [ ] Step 5：spec/质量复核并提交 `feat(M5/P1): 定义存储值与逐请求传输配置`，正文记录无业务 API/迁移、固定预算和验证结果。
+- [x] Step 1：写 `TestObjectKeyAndGrantBounds`：空/nil/大写/编码斜杠/非法 kind、size=0/104857601、过期边界、GET/HEAD 区分、控制字符文件名；合法 key 往返保持两个 UUID。
+- [x] Step 2：写 `TestFilesConfigurationBudgets`：默认 5 MiB/131072/15s 得 55s；负数、小数、超大整数、driver=s3、空 root、最大文件预算超过 max_duration、零并发、非法 rate 全部拒绝。用现有配置加载/日志帮手核未知 key 和 root 遮盖。
+- [x] Step 3：跑 `go test -count=1 ./internal/modules/asset/domain ./internal/platform/config`，记录新增性质红；实现值和配置，不改全局 server 默认。
+- [x] Step 4：同命令绿，`go test -count=1 ./internal/archtest`；定向移除一个上限/phase 值保护的负例应失败，恢复后复测。更新 keyword phase，并实际跑 `node tools/keywords.mjs`。
+- [x] Step 5：spec/质量复核并提交 `feat(M5/P1): 定义存储值与逐请求传输配置`，正文记录无业务 API/迁移、固定预算和验证结果。
 
-## T2：用途隔离签名（A3）
+## Task 2（T2）：用途隔离签名（A3）
 
 **Files：** A/adapter/local/sign.go、token.go、sign_test.go；A/adapter/local/store.go 的构造参数；B/assets.go 的 MAC 构造帮手。
 
@@ -75,7 +75,7 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 - [ ] Step 4：`go test -count=1 ./internal/modules/asset/... ./internal/bootstrap -run 'TestSignedTransfer|TestAssetMAC'` 绿；删除 method/purpose/expiry 校验的定向变异分别被杀，恢复复测。
 - [ ] Step 5：两轮复核后提交 `feat(M5/P1): 加入用途隔离的本地上传与读取签名`。
 
-## T3：磁盘对象与完整上传（A2/A4）
+## Task 3（T3）：磁盘对象与完整上传（A2/A4）
 
 **Files：** A/adapter/local/store.go、object.go、upload_test.go、object_test.go。
 
@@ -87,7 +87,7 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 - [ ] Step 4：`go test -race -count=1 ./internal/modules/asset/adapter/local` 绿；变异提前发布/忽略 reader 错/允许 key 逃逸必须失败，恢复；检查多个实例共享同配置 root 时不复用临时目录名。
 - [ ] Step 5：两轮复核后提交 `feat(M5/P1): 实现受根目录约束的完整文件上传`。
 
-## T4：条件封存与共享存储合同（A2/A4）
+## Task 4（T4）：条件封存与共享存储合同（A2/A4）
 
 **Files：** A/adapter/local/seal.go、seal_test.go；A/app/storage_contract_test.go；必要的测试帮助放 A 下测试包，不建无生产读者的通用库。
 
@@ -99,7 +99,7 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 - [ ] Step 4：`go test -race -count=1 ./internal/modules/asset/...`；变异移除 ETag 比较/让公开 PUT 接受 o，预期合同失败，恢复后绿。
 - [ ] Step 5：两轮复核后提交 `feat(M5/P1): 实现条件封存及存储共享合同`。
 
-## T5：真实 raw HTTP 上传与读取（A3/A6/A9）
+## Task 5（T5）：真实 raw HTTP 上传与读取（A3/A6/A9）
 
 **Files：** A/adapter/http/transfer.go、upload.go、read.go、transfer_test.go、read_test.go；A/module.go；H/routes.go 只按实际需要加入明确 storage fallback。
 
@@ -111,7 +111,7 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 - [ ] Step 4：合同、模块及 `go test -count=1 ./internal/platform/httpserver` 绿；变异验签晚于条件读取、反射 filename header、放开读取 u key 应失败，恢复。
 - [ ] Step 5：两轮复核后提交 `feat(M5/P1): 接入受签名保护的文件传输端点`。
 
-## T6：真实 socket 预算、限流与释放（A5/A7）
+## Task 6（T6）：真实 socket 预算、限流与释放（A5/A7）
 
 **Files：** H/transfer.go、transfer_test.go；A/adapter/http/budget.go、budget_test.go；C/files.go 必要的同职责校正。
 
@@ -123,7 +123,7 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 - [ ] Step 4：`go test -race -count=1 ./internal/platform/httpserver ./internal/modules/asset/...`；移除 Unwrap/名额释放/某期限的变异应被限定测试杀死，恢复原实现与原守卫。
 - [ ] Step 5：两轮复核后提交 `feat(M5/P1): 约束文件传输的期限与并发资源`。
 
-## T7：应用接线与测试存储隔离（A8）
+## Task 7（T7）：应用接线与测试存储隔离（A8）
 
 **Files：** B/assets.go、app.go、app_test.go、asset_lifecycle_test.go；A/module.go；e2e/fixtures/server.ts、clock.ts；.gitignore；README.md。
 
@@ -135,7 +135,7 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 - [ ] Step 4：`go test -count=1 ./internal/bootstrap -run 'TestAssetLifetime|TestAssetMAC|TestApp'` 与既有 clock-lifecycle 页面/夹具测试；无默认目录污染，根 main 不受修改。
 - [ ] Step 5：两轮复核后提交 `feat(M5/P1): 接线文件模块并隔离各测试世界的存储`。
 
-## T8：整程序合同与失败边界（A1/A9）
+## Task 8（T8）：整程序合同与失败边界（A1/A9）
 
 **Files：** B/asset_transfer_test.go、contract_test.go；H 的现有 body/deadline/security 测试；docs/v0/M5-files/reviews/P1-local-storage-review.md。
 
@@ -147,16 +147,16 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 - [ ] Step 4：`go test -count=1 ./internal/bootstrap -run 'TestRawStorage|TestStorageDoesNot|TestAPIRoutes|TestPublicOperations|TestOperationsThatNeed'` 和架构包；精确路由/隔离失败负例归档。
 - [ ] Step 5：两轮复核后提交 `test(M5/P1): 验证文件端点与原 API 合同同时成立`。
 
-## T9：实际慢流、七项门禁与检查点
+## Task 9（T9）：实际慢流、七项门禁与检查点
 
-**Files：** B/asset_transfer_slow_test.go；本 worktree `.superpowers/sdd/M5-P1` 的日志、manifest、结果汇总；review。
+**Files：** B/asset_transfer_slow_test.go；本 worktree `.superpowers/sdd/P1-local-storage` 的日志、manifest、结果汇总；review。
 
 - [ ] Step 1：实际默认 server read=30s/API=15s 下上传 >1 MiB，按进度调节持续 >30s 且小于本次计算预算；成功 204、seal/GET 字节一致。用有界条件/节流器制造慢流，不用 sleep 同步竞争。
 - [ ] Step 2：聚焦 race/变异后恢复全部代码，检查 git diff 和工作树；依顺序完成 `make gen && make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`。容器重套件只串行。
 - [ ] Step 3：记录命令、退出码、准确 tested diff/HEAD、原件路径/hash/bytes；失败先定根因，环境重跑独立记。仅已知 W11 用既定处理，不专项扩范围。
 - [ ] Step 4：提交完整检查点后使用系统 git 推送；按准确 HEAD 查询 branch CI，不以别的提交绿灯代替。
 
-## T10：deep-review、修复与复审
+## Task 10（T10）：deep-review、修复与复审
 
 **Files：** 本阶段全部变更与其真实调用/测试；下一编号 docs/reviews/re-NN-M5P1整体审核.md；P1 review。
 
@@ -165,7 +165,7 @@ http 外观 `NewTransfer(Deps) (*Transfer, error)`；Deps 包含 store 所实现
 - [ ] Step 3：修复有产品变化则重跑受影响及完整七项后推最终 HEAD，确认最终分支 CI；补 P1 review 七节：范围、逐条验收、测试、审查问题、plan 差异、交接、集成状态。
 - [ ] Step 4：A1–A9 据实勾选，A10 的 main/归档部分留待 T11，不把“实施与整审完成”写成“已合入”。
 
-## T11：noff、main CI、归档与下一段
+## Task 11（T11）：noff、main CI、归档与下一段
 
 - [ ] Step 1：核无未知修改、目标 main 与已验收基线关系，按当前授权使用 --no-ff 合并 P1，正常系统 git 推送 main。
 - [ ] Step 2：等准确 main SHA 的三个 CI 作业全绿；失败按日志根因处理，W11 重跑仍失败停下报告。分支绿不能替代 main。

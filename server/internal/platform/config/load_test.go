@@ -75,6 +75,15 @@ issue:
   write_lock_timeout: 5s
 files:
   size_limit: 5242880
+  driver: local
+  local:
+    root: ./data/files
+  min_transfer_bytes_per_second: 131072
+  transfer_grace: 15s
+  transfer_idle_timeout: 30s
+  max_transfer_duration: 15m
+  max_concurrent_transfers: 16
+  transfer_rate: {per_minute: 60, burst: 20}
 log:
   level: info
   format: json
@@ -178,8 +187,10 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			WriteLockTimeout:    5 * time.Second,
 			AutoArchiveInterval: 24 * time.Hour,
 		},
-		Files: FilesConfig{SizeLimit: 1024}, // environment
-		Log:   LogConfig{Level: "debug", Format: "text"},
+		Files: FilesConfig{SizeLimit: 1024, Driver: "local", Local: LocalFilesConfig{Root: "./data/files"}, // size: environment
+			MinTransferBytesPerSecond: 131072, TransferGrace: 15 * time.Second, TransferIdleTimeout: 30 * time.Second,
+			MaxTransferDuration: 15 * time.Minute, MaxConcurrentTransfers: 16, TransferRate: BucketConfig{PerMinute: 60, Burst: 20}},
+		Log: LogConfig{Level: "debug", Format: "text"},
 	}
 	if !reflect.DeepEqual(cfg, want) {
 		t.Errorf("Load() =\n%+v\nwant\n%+v", cfg, want)

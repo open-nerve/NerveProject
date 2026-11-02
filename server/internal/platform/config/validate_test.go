@@ -56,8 +56,10 @@ func validConfig() Config {
 		Cleanup: CleanupConfig{PurgeAfter: 1440 * time.Hour, PurgeInterval: 24 * time.Hour, PurgeBatch: 1000},
 		Issue: IssueConfig{TrimVersionsInterval: 24 * time.Hour, DeleteBatch: 1000, DeleteBudget: 45 * time.Second, AutoArchiveInterval: 24 * time.Hour, WriteGate: WriteGateConfig{PerProject: 9, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
 			WriteLockTimeout: 3 * time.Second},
-		Files: FilesConfig{SizeLimit: 7340032},
-		Log:   LogConfig{Level: "info", Format: "json"},
+		Files: FilesConfig{SizeLimit: 7340032, Driver: "local", Local: LocalFilesConfig{Root: "/private/config-test-files"},
+			MinTransferBytesPerSecond: 262144, TransferGrace: 16 * time.Second, TransferIdleTimeout: 21 * time.Second,
+			MaxTransferDuration: 10 * time.Minute, MaxConcurrentTransfers: 9, TransferRate: BucketConfig{PerMinute: 61, Burst: 21}},
+		Log: LogConfig{Level: "info", Format: "json"},
 	}
 }
 
@@ -129,7 +131,16 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"jobs.shutdown_timeout: must be positive, got 0s",
 		"jobs.default_workers: must be at least 1, got 0",
 		"jobs.periodic_workers: must be at least 1, got 0",
-		"files.size_limit: must be at least 1, got 0",
+		"files.size_limit: must be from 1 to 104857600, got 0",
+		"files.driver: must be local",
+		"files.local.root: must be a nonempty directory path",
+		"files.min_transfer_bytes_per_second: must be from 1024 to 1073741824, got 0",
+		"files.transfer_grace: must be positive and at most 1m, got 0s",
+		"files.transfer_idle_timeout: must be positive and at most 1m, got 0s",
+		"files.max_transfer_duration: must be positive and at most 1h, got 0s",
+		"files.max_concurrent_transfers: must be from 1 to 256, got 0",
+		"files.transfer_rate.per_minute: must be at least 1, got 0",
+		"files.transfer_rate.burst: must be at least 1, got 0",
 		`log.level: must be one of debug, info, warn, error, got "verbose"`,
 		`log.format: must be text or json, got "xml"`,
 	}
@@ -232,7 +243,7 @@ func TestValidateCrossKeyRules(t *testing.T) {
 		{
 			name:   "negative file size limit",
 			change: func(c *Config) { c.Files.SizeLimit = -1 },
-			want:   "files.size_limit: must be at least 1, got -1",
+			want:   "files.size_limit: must be from 1 to 104857600, got -1",
 		},
 		{
 			name:   "IPv6 prefix longer than an address",

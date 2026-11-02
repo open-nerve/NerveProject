@@ -61,6 +61,15 @@ func TestLogValueMasksDatabaseURL(t *testing.T) {
 		"config.issue.write_lock_timeout=3s",
 		"config.issue.auto_archive_interval=24h0m0s",
 		"config.files.size_limit=7340032",
+		"config.files.driver=local",
+		"config.files.local.root_set=true",
+		"config.files.min_transfer_bytes_per_second=262144",
+		"config.files.transfer_grace=16s",
+		"config.files.transfer_idle_timeout=21s",
+		"config.files.max_transfer_duration=10m0s",
+		"config.files.max_concurrent_transfers=9",
+		"config.files.transfer_rate.per_minute=61",
+		"config.files.transfer_rate.burst=21",
 		"config.log.format=json",
 	} {
 		if !strings.Contains(out, want) {
