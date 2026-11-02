@@ -55,10 +55,10 @@ type StorageMetadata struct {
 ## 3. complete / duplicate 的状态转换
 
 1. 按 access 子合同预检/锁下授权，pending → 增加独立 candidate(o-key, active, LeaseUntil=runtimeNow+30s, SafeAfter=lease+30s)；数据库 commit 后放开所有资源。
-2. 在一个≤10s 的外部段里 Inspect 源，精确核大小/规范 MIME，Open(expectedETag) 流式校验摘要与图片头；Seal(expectedETag) 到候选；Inspect + Open 候选再次验证实际大小、摘要、格式。封存前后 SHA256 必须相同，ETag 只当不透明版本，不当 MD5。
+2. 在一个≤10s 的外部段里 Inspect 源，精确核大小/规范 MIME，Open(expectedETag) 流式校验摘要与图片头；Seal(expectedETag) 到候选；Inspect + Open 候选再次验证实际大小、摘要、格式。封存前后 SHA256 必须相同，ETag 只当不透明版本，不当 MD5。复制还在 Seal 前核完整源摘要与已发布 SHA256 相同；大小/MIME始终以资产声明字段为准，不改信恢复记录中的重复值。
 3. 最终提交重新取账户/父/资产锁并复验权限；scope 未变、候选仍 active 且 lease 未过期、资产仍 pending，才将它移到 final、置 is_uploaded。移除该候选条目，不复制引用；其他候选保留至安全期回收，staging 也保留至 SafeAfter。
 4. complete 竞争者若见已有 final：重新授权后返回已有 DTO，不能改写 final/审计。自己的败选候选仍被回收。若在外部阶段报错，也先在短授权事务重读一次已发布结果：只有另一请求确已成功时才可返回同一 DTO；否则原缺失/变化/无效内容/存储错误如实返回。
-5. duplicate 最终还核源 final key/摘要及源权限；失败目标保持 pending，不暴露候选。每次 duplicate 是新资产，不提供跨请求幂等键；响应丢失后的重复可能生成额外准备件，7 天规则负责回收。
+5. duplicate 最终还核源 final key/摘要/不透明版本及源权限；失败目标保持 pending，不暴露候选。每次 duplicate 是新资产，不提供跨请求幂等键；响应丢失后的重复可能生成额外准备件，7 天规则负责回收。
 
 整个外部段共用一次 deadline，两个 Open 的读取者由 app 关闭，读取或 Close 失败都不发布；请求取消沿用平台取消语义，独立 I/O 预算超时及未分类后端故障为 503 asset.storage_unavailable（Retry-After:1），不暴露磁盘路径/签名 URL。候选增补只改 metadata/revision；成功发布才更新资产业务审计。
 

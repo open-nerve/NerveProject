@@ -46,6 +46,8 @@ func New(d Deps) (*Module, error) {
 	cleanup := app.NewCleanup(app.CleanupDeps{Rows: d.Ports.store, Locks: d.Ports.store, Writer: d.Ports.store, Parents: d.Parents, Objects: d.Objects, Tx: d.JobTx, Clock: d.Access.Clock, RuntimeNow: d.Transfer.RuntimeNow, Batch: files.CleanupBatch, Budget: files.CleanupBudget, OperationTimeout: files.OperationTimeout})
 	deletion := app.NewDeleteScope(app.DeleteScopeDeps{Rows: d.Ports.store, Locks: d.Ports.store, Writer: d.Ports.store, Tx: d.JobTx, Batch: files.CleanupBatch, Budget: files.CleanupBudget})
 	uc := httpadapter.UseCases{
+		Duplicate:      app.NewDuplicate(app.DuplicateDeps{Rows: d.Ports.store, Creator: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.Transfer.RuntimeNow}),
+		Delete:         app.NewDelete(app.DeleteDeps{Rows: d.Ports.store, Writer: d.Ports.store, Access: access}),
 		Complete:       app.NewComplete(app.CompleteDeps{Rows: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.Transfer.RuntimeNow}),
 		Prepare:        app.NewPrepare(app.PrepareDeps{Access: access, Rows: d.Ports.store, Signer: d.UploadSigner, Budget: files, SizeLimit: files.SizeLimit, UploadTTL: files.UploadTTL, RuntimeNow: d.Transfer.RuntimeNow}),
 		Get:            app.NewGet(app.GetDeps{Rows: d.Ports.store, Hosts: d.Access.Hosts, ReadTx: d.ReadTx}),

@@ -74,7 +74,7 @@ duplicate 可跨用途，但目标重新执行大小/图片验证；非图片附
 | 404 asset.not_found | 资产不存在/已删、准备件非申请者、宿主不存在/不可见；逐值相同 |
 | 403 forbidden / 403 issue.not_author | 已可见但角色/评论作者不能写；代码核定于 issue/domain/errors.go |
 | 409 asset.not_uploaded | content/duplicate 源尚未完成 |
-| 409 asset.object_missing | 数据库准备件仍有效、staging 实物不存在（不是存储连接失败） |
+| 409 asset.object_missing | 数据库资产仍有效、complete 的 staging 或 duplicate 的源 final 实物不存在（不是存储连接失败） |
 | 409 asset.object_changed | ETag/字节在验证或封存间变化 |
 | 409 asset.scope_changed | 预读后父范围/候选代次变化或候选 lease 已过 |
 | 409 asset.bound | 通用删除不允许删除已绑定图片/字段引用 |
@@ -140,7 +140,7 @@ P1保留的C12菜单/F6焦点Minor未修，后续UI三浏览器验收继续跟�
 1. NO ACTION保护正确性不等于回收必然成功；存储持续失败会保留父行，需要错误计数与可恢复游标。
 2. 既有单页purge改造是已批准A的工程范围，所有owner旧回归、真实目录和任务重启必须联合验证，不把接口编译通过当并发证明。
 3. 图片仅受限头部验证；local清单O(N)/页；URL是短期bearer，已发出地址不保证即时撤回。这些限制不可在最终描述省略。
-4. P2完整spec的builder check及plan自检已通过，T1–T7已完成，含首表、四个业务操作、已知对象恢复和受保护父清理；复制/删除准备件、完整对象对账及阶段联合验收尚待T8–T14；按连续授权推进。只有新的重大风险/关键分歧才提交上报，不能把文档预检当实现验证。
+4. P2完整spec的builder check及plan自检已通过，T1–T8已完成，含首表、六个业务操作、已知对象恢复和受保护父清理；完整对象对账及阶段联合验收尚待T9–T14；按连续授权推进。只有新的重大风险/关键分歧才提交上报，不能把文档预检当实现验证。
 
 ## 附录A：预检探针
 

@@ -24,7 +24,15 @@ type CompleteUseCase interface {
 type ResolveContentUseCase interface {
 	Execute(context.Context, uuid.UUID) (domain.SignedRequest, error)
 }
+type DuplicateUseCase interface {
+	Execute(context.Context, uuid.UUID, domain.DuplicateAsset) (domain.Asset, error)
+}
+type DeleteUseCase interface {
+	Execute(context.Context, uuid.UUID) error
+}
 type UseCases struct {
+	Duplicate      DuplicateUseCase
+	Delete         DeleteUseCase
 	Prepare        PrepareUseCase
 	Get            GetUseCase
 	Complete       CompleteUseCase

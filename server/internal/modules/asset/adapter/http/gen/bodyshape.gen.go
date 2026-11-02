@@ -19,10 +19,13 @@ func BodyShapes() *bodyshape.Table {
 			/* 6 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 7 */ {Types: bodyshape.Integer, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 8 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{}},
+			/* 9 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"name": 10, "purpose": 3, "scope": 4}, Required: []string{"purpose", "scope"}},
+			/* 10 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
 		},
 		Roots: map[string]int{
-			"POST /api/v0/assets":               0,
-			"POST /api/v0/assets/{id}/complete": 8,
+			"POST /api/v0/assets":                0,
+			"POST /api/v0/assets/{id}/complete":  8,
+			"POST /api/v0/assets/{id}/duplicate": 9,
 		},
 	}
 }

@@ -40,7 +40,11 @@ export interface paths {
         get: operations["getAsset"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a private unbound preparation
+         * @description Rechecks its applicant and current host write permission, then records a tombstone without deleting objects synchronously or forgetting recovery records. Repeated deletion answers asset.not_found. Bound assets cannot be removed through this endpoint.
+         */
+        delete: operations["deleteAsset"];
         options?: never;
         head?: never;
         patch?: never;
@@ -62,6 +66,28 @@ export interface paths {
          * @description Commits an independent candidate before inspecting, validating and sealing the uploaded bytes without database resources. Rechecks current host write permission and the candidate lease before publishing. Repeated authorized confirmation returns the existing result without changing its audit data. Failed or losing candidates remain recoverable; a storage failure does not mean the object is absent. asset.busy and asset.storage_unavailable include Retry-After of one second.
          */
         post: operations["completeAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/assets/{id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy verified content to a new private preparation
+         * @description Authorizes the source for reading before the destination for preparation. Commits a new pending target and an independent candidate, then validates and seals real bytes without database resources. Rechecks both scopes and source identity before publishing. A failed copy remains recoverable. Every request creates a distinct target; repeating after a lost response can create an extra preparation, reclaimed by the ordinary expiry rule.
+         */
+        post: operations["duplicateAsset"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1709,6 +1735,11 @@ export interface components {
             asset: components["schemas"]["Asset"];
             upload: components["schemas"]["Upload"];
         };
+        DuplicateAsset: {
+            purpose: components["schemas"]["AssetPurpose"];
+            scope: components["schemas"]["AssetScope"];
+            name?: string;
+        };
         Content: {
             url: string;
             /** Format: date-time */
@@ -2973,6 +3004,7 @@ export type Problem = components['schemas']['Problem'];
 export type Asset = components['schemas']['Asset'];
 export type Upload = components['schemas']['Upload'];
 export type PreparedAsset = components['schemas']['PreparedAsset'];
+export type DuplicateAsset = components['schemas']['DuplicateAsset'];
 export type Content = components['schemas']['Content'];
 export type RegisterInvitation = components['schemas']['RegisterInvitation'];
 export type RegisterRequest = components['schemas']['RegisterRequest'];
@@ -3156,6 +3188,27 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    deleteAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preparation deleted; objects remain subject to their safe retention periods. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     completeAsset: {
         parameters: {
             query?: never;
@@ -3173,6 +3226,33 @@ export interface operations {
         responses: {
             /** @description The uniquely published asset. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Asset"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    duplicateAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuplicateAsset"];
+            };
+        };
+        responses: {
+            /** @description A new uploaded, unbound asset with its own immutable object. */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

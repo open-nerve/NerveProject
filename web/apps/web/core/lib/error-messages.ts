@@ -19,6 +19,7 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "asset.scope_changed": "errors.asset_scope_changed",
   "asset.object_missing": "errors.asset_object_missing",
   "asset.content_invalid": "errors.asset_content_invalid",
+  "asset.bound": "errors.asset_bound",
   "asset.busy": "errors.asset_busy",
   "asset.storage_unavailable": "errors.asset_storage_unavailable",
   "asset.not_uploaded": "errors.asset_not_uploaded",

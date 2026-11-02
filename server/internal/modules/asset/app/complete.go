@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"slices"
 	"time"
 	"uuid"
 
@@ -71,7 +70,9 @@ func (u *Complete) Execute(ctx context.Context, id uuid.UUID) (domain.Asset, err
 		externalErr = domain.ErrAssetScopeChanged
 	} else {
 		external, cancel := context.WithTimeout(ctx, u.d.OperationTimeout)
-		verified, externalErr = sealContent(external, u.d.Storage, reserved.Metadata.Staging.Key, candidate.Key, reserved.Size, reserved.ContentType, reserved.Purpose.ImageRequired(), u.d.SizeLimit)
+		source := *reserved.Metadata.Staging
+		source.Size, source.ContentType = reserved.Size, reserved.ContentType
+		verified, externalErr = sealContent(external, u.d.Storage, source, candidate.Key, reserved.Purpose.ImageRequired(), u.d.SizeLimit)
 		cancel()
 		externalErr = publicationError(ctx, externalErr)
 	}
@@ -94,17 +95,9 @@ func (u *Complete) finish(ctx context.Context, actor shared.Actor, before domain
 		if externalErr != nil {
 			return externalErr
 		}
-		index := slices.IndexFunc(row.Metadata.Candidates, func(c domain.Candidate) bool { return c.Key == candidate.Key })
-		if index < 0 || row.Metadata.Candidates[index].Phase != domain.ObjectActive || !row.Metadata.Candidates[index].LeaseUntil.Equal(candidate.LeaseUntil) || !u.d.RuntimeNow().Before(candidate.LeaseUntil) {
-			return domain.ErrAssetScopeChanged
+		if err := publishCandidate(&row, candidate, verified, u.d.RuntimeNow(), held.At, actor.UserID); err != nil {
+			return err
 		}
-		final := row.Metadata.Candidates[index].ObjectRecord
-		final.ETag, final.SHA256 = verified.info.ETag, verified.proof.SHA256
-		row.Metadata.Final = &final
-		row.Metadata.Candidates = slices.Delete(row.Metadata.Candidates, index, index+1)
-		row.Uploaded = true
-		row.Width, row.Height = verified.proof.Width, verified.proof.Height
-		row.UpdatedAt, row.UpdatedByID = held.At, &actor.UserID
 		var err error
 		result, err = u.d.Writer.SaveAsset(ctx, row)
 		return err

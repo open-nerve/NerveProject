@@ -168,6 +168,13 @@ type Content struct {
 	URL       string    `json:"url"`
 }
 
+// DuplicateAsset defines model for DuplicateAsset.
+type DuplicateAsset struct {
+	Name    *string      `json:"name,omitempty"`
+	Purpose AssetPurpose `json:"purpose"`
+	Scope   AssetScope   `json:"scope"`
+}
+
 // NewAsset defines model for NewAsset.
 type NewAsset struct {
 	// ContentType Canonical MIME without parameters. Image purposes accept only image/jpeg, image/png, image/webp and image/gif.
@@ -214,11 +221,17 @@ type CreateAssetJSONRequestBody = NewAsset
 // CompleteAssetJSONRequestBody defines body for CompleteAsset for application/json ContentType.
 type CompleteAssetJSONRequestBody = CompleteAssetJSONBody
 
+// DuplicateAssetJSONRequestBody defines body for DuplicateAsset for application/json ContentType.
+type DuplicateAssetJSONRequestBody = DuplicateAsset
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// CreateAsset Prepare a private upload
 	// (POST /api/v0/assets)
 	CreateAsset(w http.ResponseWriter, r *http.Request)
+	// DeleteAsset Delete a private unbound preparation
+	// (DELETE /api/v0/assets/{id})
+	DeleteAsset(w http.ResponseWriter, r *http.Request, id AssetID)
 	// GetAsset Read private asset metadata
 	// (GET /api/v0/assets/{id})
 	GetAsset(w http.ResponseWriter, r *http.Request, id AssetID)
@@ -228,6 +241,9 @@ type ServerInterface interface {
 	// ResolveAssetContent Sign a read of completed content
 	// (GET /api/v0/assets/{id}/content)
 	ResolveAssetContent(w http.ResponseWriter, r *http.Request, id AssetID)
+	// DuplicateAsset Copy verified content to a new private preparation
+	// (POST /api/v0/assets/{id}/duplicate)
+	DuplicateAsset(w http.ResponseWriter, r *http.Request, id AssetID)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -244,6 +260,32 @@ func (siw *ServerInterfaceWrapper) CreateAsset(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateAsset(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAsset operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAsset(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id AssetID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAsset(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -322,6 +364,32 @@ func (siw *ServerInterfaceWrapper) ResolveAssetContent(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResolveAssetContent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DuplicateAsset operation middleware
+func (siw *ServerInterfaceWrapper) DuplicateAsset(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id AssetID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DuplicateAsset(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -452,8 +520,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/assets", wrapper.CreateAsset)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/assets/{id}", wrapper.DeleteAsset)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/assets/{id}", wrapper.GetAsset)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/assets/{id}/complete", wrapper.CompleteAsset)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/assets/{id}/duplicate", wrapper.DuplicateAsset)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/assets/{id}/content", wrapper.ResolveAssetContent)
 
 	return m
@@ -498,6 +568,46 @@ type CreateAssetdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response CreateAssetdefaultApplicationProblemPlusJSONResponse) VisitCreateAssetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAssetRequestObject struct {
+	ID AssetID `json:"id"`
+}
+
+type DeleteAssetResponseObject interface {
+	VisitDeleteAssetResponse(w http.ResponseWriter) error
+}
+
+type DeleteAsset204Response struct {
+}
+
+func (response DeleteAsset204Response) VisitDeleteAssetResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAssetdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteAssetdefaultApplicationProblemPlusJSONResponse) VisitDeleteAssetResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -654,11 +764,61 @@ func (response ResolveAssetContentdefaultApplicationProblemPlusJSONResponse) Vis
 	return err
 }
 
+type DuplicateAssetRequestObject struct {
+	ID   AssetID `json:"id"`
+	Body *DuplicateAssetJSONRequestBody
+}
+
+type DuplicateAssetResponseObject interface {
+	VisitDuplicateAssetResponse(w http.ResponseWriter) error
+}
+
+type DuplicateAsset201JSONResponse Asset
+
+func (response DuplicateAsset201JSONResponse) VisitDuplicateAssetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateAssetdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DuplicateAssetdefaultApplicationProblemPlusJSONResponse) VisitDuplicateAssetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// CreateAsset Prepare a private upload
 	// (POST /api/v0/assets)
 	CreateAsset(ctx context.Context, request CreateAssetRequestObject) (CreateAssetResponseObject, error)
+	// DeleteAsset Delete a private unbound preparation
+	// (DELETE /api/v0/assets/{id})
+	DeleteAsset(ctx context.Context, request DeleteAssetRequestObject) (DeleteAssetResponseObject, error)
 	// GetAsset Read private asset metadata
 	// (GET /api/v0/assets/{id})
 	GetAsset(ctx context.Context, request GetAssetRequestObject) (GetAssetResponseObject, error)
@@ -668,6 +828,9 @@ type StrictServerInterface interface {
 	// ResolveAssetContent Sign a read of completed content
 	// (GET /api/v0/assets/{id}/content)
 	ResolveAssetContent(ctx context.Context, request ResolveAssetContentRequestObject) (ResolveAssetContentResponseObject, error)
+	// DuplicateAsset Copy verified content to a new private preparation
+	// (POST /api/v0/assets/{id}/duplicate)
+	DuplicateAsset(ctx context.Context, request DuplicateAssetRequestObject) (DuplicateAssetResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -733,6 +896,32 @@ func (sh *strictHandler) CreateAsset(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateAssetResponseObject); ok {
 		if err := validResponse.VisitCreateAssetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAsset operation middleware
+func (sh *strictHandler) DeleteAsset(w http.ResponseWriter, r *http.Request, id AssetID) {
+	var request DeleteAssetRequestObject
+
+	request.ID = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAsset(ctx, request.(DeleteAssetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAsset")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAssetResponseObject); ok {
+		if err := validResponse.VisitDeleteAssetResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -818,6 +1007,39 @@ func (sh *strictHandler) ResolveAssetContent(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ResolveAssetContentResponseObject); ok {
 		if err := validResponse.VisitResolveAssetContentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DuplicateAsset operation middleware
+func (sh *strictHandler) DuplicateAsset(w http.ResponseWriter, r *http.Request, id AssetID) {
+	var request DuplicateAssetRequestObject
+
+	request.ID = id
+
+	var body DuplicateAssetJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DuplicateAsset(ctx, request.(DuplicateAssetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DuplicateAsset")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DuplicateAssetResponseObject); ok {
+		if err := validResponse.VisitDuplicateAssetResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

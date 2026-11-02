@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T7已完成，接续T8。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T8已完成，接续T9。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -140,11 +140,11 @@
 
 **Interfaces：** Duplicate.Execute(ctx,sourceID,domain.DuplicateAsset)(domain.Asset,error)，Delete.Execute(ctx,id)error。目标Metadata Origin=copy，无staging；消费同一Access与存储操作。
 
-- [ ] Step 1：TestAssetDuplicateAuthorizationAndBytes：两账号、源404目标可写/源可读目标403、跨workspace及正反projectID、相同文件名不同字节、附件转图片验证失败、成功target与source key不同；TestAssetDeletePrepared：重复404/原戳、不删除bound、删除与complete两方向。
-- [ ] Step 2：聚焦 `go -C server test ./internal/modules/asset/... ./internal/bootstrap -run 'AssetDuplicate|AssetDeletePrepared' -count=1` 红。
-- [ ] Step 3：先源后目标预检，两段一次排序多范围；目标candidate先commit、外部copy后重验两端；失败新目标由恢复规则接管。删除准备件不做同步对象I/O、不清metadata，已绑定返回asset.bound；真正绑定暂不开放。
-- [ ] Step 4：绿及六API完整契约/错误目录；变异仅验目标、反转拒绝顺序、删后迟到发布、复用sourcekey而非独立对象，组合数据可杀。不能声称重试duplicate完全幂等，额外准备件边界写证据。
-- [ ] Step 5：提交；六API无桩齐备。
+- [x] Step 1：TestAssetDuplicateAuthorizationAndBytes：两账号、源404目标可写/源可读目标403、跨workspace及正反projectID、相同文件名不同字节、附件转图片验证失败、成功target与source key不同；TestAssetDeletePrepared：重复404/原戳、不删除bound、删除与complete两方向。
+- [x] Step 2：聚焦 `go -C server test ./internal/modules/asset/... ./internal/bootstrap -run 'AssetDuplicate|AssetDeletePrepared' -count=1` 红。
+- [x] Step 3：先源后目标预检，两段一次排序多范围；目标candidate先commit、外部copy后重验两端；失败新目标由恢复规则接管。删除准备件不做同步对象I/O、不清metadata，已绑定返回asset.bound；真正绑定暂不开放。
+- [x] Step 4：绿及六API完整契约/错误目录；变异仅验目标、反转拒绝顺序、删后迟到发布、复用sourcekey而非独立对象，组合数据可杀。不能声称重试duplicate完全幂等，额外准备件边界写证据。
+- [x] Step 5：提交；六API无桩齐备。
 
 ## Task 9（T9）：孤立对象、迟到结果与真实River恢复
 

@@ -52,6 +52,22 @@ paths:
                 $ref: '#/components/schemas/Asset'
         default:
           $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteAsset
+      tags: [asset]
+      summary: Delete a private unbound preparation
+      description: >-
+        Rechecks its applicant and current host write permission, then records a
+        tombstone without deleting objects synchronously or forgetting recovery
+        records. Repeated deletion answers asset.not_found. Bound assets cannot
+        be removed through this endpoint.
+      security: [{bearer: []}]
+      x-problem-codes: [forbidden, issue.not_author, project.archived, issue.archived, asset.not_found, asset.scope_changed, asset.bound, server_busy]
+      responses:
+        '204':
+          description: Preparation deleted; objects remain subject to their safe retention periods.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/assets/{id}/complete:
     parameters:
       - $ref: '#/components/parameters/AssetID'
@@ -80,6 +96,37 @@ paths:
       responses:
         '200':
           description: The uniquely published asset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/assets/{id}/duplicate:
+    parameters:
+      - $ref: '#/components/parameters/AssetID'
+    post:
+      operationId: duplicateAsset
+      tags: [asset]
+      summary: Copy verified content to a new private preparation
+      description: >-
+        Authorizes the source for reading before the destination for preparation.
+        Commits a new pending target and an independent candidate, then validates
+        and seals real bytes without database resources. Rechecks both scopes and
+        source identity before publishing. A failed copy remains recoverable.
+        Every request creates a distinct target; repeating after a lost response
+        can create an extra preparation, reclaimed by the ordinary expiry rule.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, forbidden, issue.not_author, project.archived, issue.archived, asset.not_found, asset.scope_changed, asset.not_uploaded, asset.too_large, asset.type_unsupported, asset.object_missing, asset.object_changed, asset.content_invalid, asset.storage_unavailable, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DuplicateAsset'
+      responses:
+        '201':
+          description: A new uploaded, unbound asset with its own immutable object.
           content:
             application/json:
               schema:

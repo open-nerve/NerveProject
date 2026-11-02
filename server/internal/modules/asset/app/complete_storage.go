@@ -14,16 +14,19 @@ type verifiedObject struct {
 
 // Both complete streams belong to the same deadline. No database, gate or
 // transaction is available to this operation; every opened reader is closed.
-func sealContent(ctx context.Context, ports SealingDeps, source, destination domain.ObjectKey, size int64, contentType string, imageRequired bool, limit int64) (verifiedObject, error) {
-	original, err := inspectContent(ctx, ports, source, size, contentType, imageRequired, limit)
+func sealContent(ctx context.Context, ports SealingDeps, source domain.ObjectRecord, destination domain.ObjectKey, imageRequired bool, limit int64) (verifiedObject, error) {
+	original, err := inspectContent(ctx, ports, source.Key, source.Size, source.ContentType, imageRequired, limit)
 	if err != nil {
 		return verifiedObject{}, err
 	}
-	sealed, err := ports.Sealer.Seal(ctx, source, destination, original.info.ETag)
+	if source.ETag != "" && source.ETag != original.info.ETag || source.SHA256 != "" && source.SHA256 != original.proof.SHA256 {
+		return verifiedObject{}, domain.ErrObjectChanged
+	}
+	sealed, err := ports.Sealer.Seal(ctx, source.Key, destination, original.info.ETag)
 	if err != nil {
 		return verifiedObject{}, err
 	}
-	target, err := inspectContent(ctx, ports, destination, size, contentType, imageRequired, limit)
+	target, err := inspectContent(ctx, ports, destination, source.Size, source.ContentType, imageRequired, limit)
 	if err != nil {
 		return verifiedObject{}, err
 	}
