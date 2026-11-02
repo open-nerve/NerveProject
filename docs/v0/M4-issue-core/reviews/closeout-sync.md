@@ -1,12 +1,12 @@
 # M4 收尾文档同步逐项核对
 
-2026-11-02；T11 文档/静态检查点。当前产品 `5bd935d8`；最终门禁、C12影响格和集成签结另由T13/T14完成。
+2026-11-02；T11静态检查点与T14最终状态同步。原T11产品`5bd935d8`为历史来源，当前准确验收main及完成标记见[集成记录](closeout-integration.md)。
 
 ## 1. 方法与边界
 
 以T1冻结的M4§3.23原44行、§4.17原45行为键。目标完整段落已阅读并与当前实现、表/索引和测试行为核对；脚本只绑定手工结论与原文/hash，不用关键字命中代替审核。原行全文、SHA、目标文件SHA及差异行/测试SHA在 `t11-sync-mapping.json`；M2/M3目标完整段落在 `t11-target-sections.json`，其余全文阅读见 `source-read-ledger.json`。
 
-43项同步核对完成，SYNC44保留集成待办；45项差异有当前行和行为证据。这里只证明文档一致，不把历史阶段通过当作最新产品全量验收。T2/T3服务端回归和并发原件见[合同复核](closeout-server-contracts.md)，T8/T9规模证据见[验收台账](closeout-acceptance.md)。
+44项同步核对完成，SYNC44由T14完成标记落实；45项差异有当前行和行为证据。这里只证明文档一致，不把历史阶段通过当作最新产品全量验收。T2/T3服务端回归和并发原件见[合同复核](closeout-server-contracts.md)，T8/T9规模证据见[验收台账](closeout-acceptance.md)。
 
 ## 2. 44条同步
 
@@ -55,7 +55,7 @@
 | SYNC41 · P10b / 总体设计 / 7.7 | [7.7](../../v0-design.md) | canonical单实体/updated_at；Reconciled.fetchPart/paged-groups；IssueRootStore统一范围失效，R06源事实修正；**已核对** | [P10b-web-list-data-review](P10b-web-list-data-review.md) |
 | SYNC42 · P10a–P16 / 前端改动清单 / 3.1、3.2 | [3.1、3.2](../../frontend-changes.md) | P10a–P16已集成；M6/M7领域页面未接通与列表撤下仍明示，不冒充可用；**已核对** | [P16-web-cleanup-review](P16-web-cleanup-review.md) |
 | SYNC43 · P12 / README / "前端"一节 | [前端](../../../../README.md) | 四布局/原生搜索及详情协作草稿、附件关闭和后续页面边界；**已核对** | [P12-web-list-pages-review](P12-web-list-pages-review.md) |
-| SYNC44 · 收尾 / 总体设计 / 9.4 | [9.4](../../v0-design.md) | 保持进行中；只在T14获准集成且main CI通过后改已完成；**待T14集成** | [closeout-acceptance](closeout-acceptance.md) |
+| SYNC44 · 收尾 / 总体设计 / 9.4 | [9.4](../../v0-design.md) | 准确验收main CI已通过；本记录提交将总体9.4标已完成；**已核对** | [closeout-acceptance](closeout-acceptance.md) |
 
 ## 3. 45条行为差异
 

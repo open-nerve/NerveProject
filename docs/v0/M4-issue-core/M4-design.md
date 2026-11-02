@@ -4,7 +4,7 @@
 |---|---|
 | 里程碑 | M4 工作项核心（`docs/v0/M4-issue-core`） |
 | 日期 | 2026-10-16 |
-| 状态 | 第三稿，已按聚焦复核修订（17.3）。第 10 节的八个决策点都已由负责人裁定（2026-10-17，全部按建议：1 选 B，2 至 7 选 A，8 选 B）；第 11 节的十一个架构问题都已由负责人批准（2026-10-17）；裁定记在 17.4。P1 在实施之前由控制者按决策点 2 的预先批准拆成 P1a、P1b（2026-10-17，第 12 节） |
+| 状态 | **已完成（2026-11-02）**；验收main CI及最终集成回执见[收官记录](reviews/closeout-integration.md)。历史设计：第三稿，已按聚焦复核修订（17.3）。第 10 节的八个决策点都已由负责人裁定（2026-10-17，全部按建议：1 选 B，2 至 7 选 A，8 选 B）；第 11 节的十一个架构问题都已由负责人批准（2026-10-17）；裁定记在 17.4。P1 在实施之前由控制者按决策点 2 的预先批准拆成 P1a、P1b（2026-10-17，第 12 节） |
 | 上级文档 | [v0 总体设计](../v0-design.md) 1.1、3、4.2、5、6、7.7、8.2、9；[差异清单](../plane-diff.md)；[前端改动清单](../frontend-changes.md)；[M2 设计](../M2-auth/M2-design.md)、[M3 设计](../M3-workspace-project/M3-design.md)（它们定下的平台约定和加锁约定约束 M4，本文照做，不重新裁定；要修订的写在第 11 节） |
 | 前置交接 | `handoffs/` 中的 8 份：M3-closeout（9 节）、M2-closeout（13 节）、M1-closeout、M1-P2、M1-P3、M1-P4、M1-P5、M0-P4。逐条落到 Phase，见第 13 节 |
 | 设计评审 | 第一稿（`b2ca1de6`）经独立评审（2026-10-16）：Ready with fixes，Critical 0、Important 8、Minor 26，评审另在 `postgres:18.6` 上做了 S1、S4、S5 和 S2 的一部分；第二稿按控制者对每条发现的裁定修订，逐条的落实在 17.1。第二稿（`e8256b58`）经对抗性评审（2026-10-16）：Ready with fixes, but not ready for the owner as written，Critical 0、Important 7、Minor 22，评审另做了 SP1–SP3（0.3）；第三稿按控制者的裁定修订，逐条的落实在 17.2。第三稿（`b33bfd9c`）经聚焦复核（2026-10-16）：Ready with fixes，Critical 0、Important 2、Minor 9，17.2 的 30 行中 25 行完整、5 行部分，复核另做了 SP4（0.3）；第三稿按控制者的裁定再修订，逐条的落实在 17.3 |
@@ -2564,28 +2564,31 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 ---
 
 ## 14. 完成标准
-- [ ] 第 2 节的 22 个故事（页面版本、接口版本，含"断言的增长"一列的全部断言）和冒烟故事 S1、S2 在持续集成中通过。
-- [ ] 权限矩阵的全部格子（含创建者、访客的两种、在项目里只是访客的工作区管理员、已不是成员的身份、不是成员的工作区管理员）、访客规则一致的测试（含子工作项数、动态的过滤、关注）、3.5 的 26 个交错测试在真实数据库上通过；看不到项目、不能写的写和加关联指向看不到的项目都不取锁；交错 20 经真实的连接池和写闸门，闸门满时 503 `server_busy`。
-- [ ] 每个模块的 `apitest.Main` 两个方向核对通过（`issue` 模块和 `project` 新的 `project.state_in_use`）；`access/domain` 的判定表、规则表与各模块操作名的完整性测试通过；每个操作在矩阵里有一行。
-- [ ] 列表：每个排序码两个方向的翻页、每个分组码和子分组、每个筛选参数、带 `group_key` 的"加载更多"的集成测试通过；`api/testdata/issue-order.json` 由 Go 和 vitest 各读一次，结果相同；改过的游标只在调用者看得到的数据里换起点（8.6）；10 万个工作项的耗时在 3.16 的实测之内，连接的参数读回为预期的值；`paged-groups.ts` 的 vitest 表（含对抗性评审 I2 的九个反例）通过。
-- [ ] 事件和任务（P6的只投递/登记/自动归档/固定时钟已验证，P7的原事务生产订阅、真实crawl及`registrationRows`已验证，P9版本保留与删除调度已完成，准确证据见[P9 review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)；[P6 review](reviews/P6-issue-events-review.md)）：经只投递的客户端，提交留任务、回滚不留的集成测试；定时任务的种类、声明会投递的种类漏登记 worker 的两种变异让测试失败；`registrationRows` 核对 `river_job`；自动归档、版本的保留推进固定时钟；`platform/jobs` 的测试没有固定的余量。
-- [x] P7子项：`platform/outbound` 的独立IANA完整性/每网段首尾、本机地址、全部DNS候选、固定IP及每跳重检测试通过；I10 API的169.254.169.254为blocked，零危险dial由Go测试证明。证据见P7行为矩阵；不替代页面版本/最终分支CI。
-- [ ] 清理的目录测试（每张有 `deleted_at` 的表有清理者，外键是 `CASCADE` 或 `SET NULL`）和 I21 通过；删除项目、工作区的任务的窗口测试、交错 24、25 通过，M3 的删除故事在限时轮询之下通过。
-- [ ] 持续集成的全部门禁通过（含架构测试、`TestSQLCSchemaScope`、grants 的两个测试、`apitest` 的写法规则、命令行的组合测试、关键词守卫、oxlint 上限、knip、`make gen-check`）。
-- [x] 第 10 节的八个决策点有负责人的裁定，本文按裁定修改；第 11 节的十一个架构问题已由负责人批准。（2026-10-17：八个决策点都按建议裁定，每个决策点之后写着裁定，正文各节按它们写定；11.1–11.11 各标"负责人已批准，2026-10-17"；本文开头的状态一行和 17.4 同样写明。）
-- [ ] 13.1 的每一项已关闭（或以写明的转交关闭）并写进相应 Phase 的 review，8 份交接 `status: closed`；13.2 的交接已写好，M2 交接第 1 节原样在 M5 的交接里，M1-P3、M1-P5 的收集箱一项连同细节在 M7 的交接里。
-- [ ] 3.23 的每一行已在对应的 Phase 同步；差异清单按 4.17 逐行核对过；前端改动清单有 M4 的一节；README 按 8.8 更新。
-- [ ] 浏览器核对 C1–C12 写进各 Phase 的 review（C12 在收尾）。
-- [ ] `domains.mjs --rows M4` 没有输出（或剩下的每一行写明是误报或测试自己读的）；`eslint(no-shadow)` 全仓为 0 并升为错误；oxlint 各包等于调低的上限。
-- [ ] M4 能到达的页面挂载时没有旧接口请求，也没有调用者无权读的请求（故事的 `watchPage`，S2 的 `REQUESTS` 在四个角色下）；`copy-hook` 没有 M4 的例外；`git grep` 不再找到 M4 的 13 处模块级 service 实例。
-- [ ] M4 页面的组件在 `await` 之后的跳转、提示先核对会话；每个修改的 hook 的 vitest 有"换账户之后兑现"的一行；C11 通过。
-- [ ] 性能的数字写进收尾的 review：1 万、2 万、10 万个工作项的列表第一页（不分组、分组、子分组），搜索（含中文、两个字的查询），在规模目标上删除项目和工作区（2 万个工作项的项目、五个这样的项目的工作区：请求和任务各自的耗时），一次清理；交给 M8。
-- [ ] 规模估计与实际的对比写进收尾的 review。
-- [ ] 总体设计 9.4 中 M4 的状态改为"已完成"。
+- [x] 第 2 节的 22 个故事（页面版本、接口版本，含"断言的增长"一列的全部断言）和冒烟故事 S1、S2 在持续集成中通过。 最终证据：[D01](reviews/closeout-acceptance.md#D01)。
+- [x] 权限矩阵的全部格子（含创建者、访客的两种、在项目里只是访客的工作区管理员、已不是成员的身份、不是成员的工作区管理员）、访客规则一致的测试（含子工作项数、动态的过滤、关注）、3.5 的 26 个交错测试在真实数据库上通过；看不到项目、不能写的写和加关联指向看不到的项目都不取锁；交错 20 经真实的连接池和写闸门，闸门满时 503 `server_busy`。 最终证据：[D02](reviews/closeout-acceptance.md#D02)。
+- [x] 每个模块的 `apitest.Main` 两个方向核对通过（`issue` 模块和 `project` 新的 `project.state_in_use`）；`access/domain` 的判定表、规则表与各模块操作名的完整性测试通过；每个操作在矩阵里有一行。 最终证据：[D03](reviews/closeout-acceptance.md#D03)。
+- [x] 列表：每个排序码两个方向的翻页、每个分组码和子分组、每个筛选参数、带 `group_key` 的"加载更多"的集成测试通过；`api/testdata/issue-order.json` 由 Go 和 vitest 各读一次，结果相同；改过的游标只在调用者看得到的数据里换起点（8.6）；10 万个工作项的耗时在 3.16 的实测之内，连接的参数读回为预期的值；`paged-groups.ts` 的 vitest 表（含对抗性评审 I2 的九个反例）通过。 最终证据：[D04](reviews/closeout-acceptance.md#D04)。
+- [x] 事件和任务（P6的只投递/登记/自动归档/固定时钟已验证，P7的原事务生产订阅、真实crawl及`registrationRows`已验证，P9版本保留与删除调度已完成，准确证据见[P9 review §14](reviews/P9-purge-review.md#14-授权合并main-ci-与归档清理2026-10-28)；[P6 review](reviews/P6-issue-events-review.md)）：经只投递的客户端，提交留任务、回滚不留的集成测试；定时任务的种类、声明会投递的种类漏登记 worker 的两种变异让测试失败；`registrationRows` 核对 `river_job`；自动归档、版本的保留推进固定时钟；`platform/jobs` 的测试没有固定的余量。 最终证据：[D05](reviews/closeout-acceptance.md#D05)。
+- [x] P7子项：`platform/outbound` 的独立IANA完整性/每网段首尾、本机地址、全部DNS候选、固定IP及每跳重检测试通过；I10 API的169.254.169.254为blocked，零危险dial由Go测试证明。证据见P7行为矩阵；不替代页面版本/最终分支CI。 最终证据：[D06](reviews/closeout-acceptance.md#D06)。
+- [x] 清理的目录测试（每张有 `deleted_at` 的表有清理者，外键是 `CASCADE` 或 `SET NULL`）和 I21 通过；删除项目、工作区的任务的窗口测试、交错 24、25 通过，M3 的删除故事在限时轮询之下通过。 最终证据：[D07](reviews/closeout-acceptance.md#D07)。
+- [x] 持续集成的全部门禁通过（含架构测试、`TestSQLCSchemaScope`、grants 的两个测试、`apitest` 的写法规则、命令行的组合测试、关键词守卫、oxlint 上限、knip、`make gen-check`）。 最终证据：[D08](reviews/closeout-acceptance.md#D08)。
+- [x] 第 10 节的八个决策点有负责人的裁定，本文按裁定修改；第 11 节的十一个架构问题已由负责人批准。（2026-10-17：八个决策点都按建议裁定，每个决策点之后写着裁定，正文各节按它们写定；11.1–11.11 各标"负责人已批准，2026-10-17"；本文开头的状态一行和 17.4 同样写明。） 最终证据：[D09](reviews/closeout-acceptance.md#D09)。
+- [x] 13.1 的每一项已关闭（或以写明的转交关闭）并写进相应 Phase 的 review，8 份交接 `status: closed`；13.2 的交接已写好，M2 交接第 1 节原样在 M5 的交接里，M1-P3、M1-P5 的收集箱一项连同细节在 M7 的交接里。 最终证据：[D10](reviews/closeout-acceptance.md#D10)。
+- [x] 3.23 的每一行已在对应的 Phase 同步；差异清单按 4.17 逐行核对过；前端改动清单有 M4 的一节；README 按 8.8 更新。 最终证据：[D11](reviews/closeout-acceptance.md#D11)。
+- [x] 浏览器核对 C1–C12 写进各 Phase 的 review（C12 在收尾）。 最终证据：[D12](reviews/closeout-acceptance.md#D12)。
+- [x] `domains.mjs --rows M4` 没有输出（或剩下的每一行写明是误报或测试自己读的）；`eslint(no-shadow)` 全仓为 0 并升为错误；oxlint 各包等于调低的上限。 最终证据：[D13](reviews/closeout-acceptance.md#D13)。
+- [x] M4 能到达的页面挂载时没有旧接口请求，也没有调用者无权读的请求（故事的 `watchPage`，S2 的 `REQUESTS` 在四个角色下）；`copy-hook` 没有 M4 的例外；`git grep` 不再找到 M4 的 13 处模块级 service 实例。 最终证据：[D14](reviews/closeout-acceptance.md#D14)。
+- [x] M4 页面的组件在 `await` 之后的跳转、提示先核对会话；每个修改的 hook 的 vitest 有"换账户之后兑现"的一行；C11 通过。 最终证据：[D15](reviews/closeout-acceptance.md#D15)。
+- [x] 性能的数字写进收尾的 review：1 万、2 万、10 万个工作项的列表第一页（不分组、分组、子分组），搜索（含中文、两个字的查询），在规模目标上删除项目和工作区（2 万个工作项的项目、五个这样的项目的工作区：请求和任务各自的耗时），一次清理；交给 M8。 最终证据：[D16](reviews/closeout-acceptance.md#D16)。
+- [x] 规模估计与实际的对比写进收尾的 review。 最终证据：[D17](reviews/closeout-acceptance.md#D17)。
+- [x] 总体设计 9.4 中 M4 的状态改为"已完成"。 最终证据：[D18](reviews/closeout-acceptance.md#D18)。
 
-P7另有已验证子证据：四operation公开码双向守卫、三写权限/审计/回滚、真实事务投递、交错19与runtime角色，以及§3.23的P7文档同步。P9子项已由本期review核验；上面包含全部页面/故事和M4收尾的复合项仍保持未勾。
+P7/P9历史子证据保持原范围；以上十八项现由最终收尾验收及准确main CI逐项关闭。完成标记的第二次main CI和归档清理回执见[最终集成记录](reviews/closeout-integration.md)。
 
 ## 15. Phase 进度表
+
+各Phase行保留当时的验收与集成快照；当前M4总状态以收尾行和最终集成记录为准。
+
 | Phase | 内容 | 状态 |
 |---|---|---|
 | 设计 | 本文（第三稿，按对抗性评审和聚焦复核修订） | 第一稿经独立评审（2026-10-16，17.1），第二稿按控制者的裁定逐条落实；第二稿经对抗性评审（2026-10-16，17.2），第三稿照控制者的裁定逐条落实；第三稿经聚焦复核（2026-10-16，17.3），再照裁定修订；第 10 节的八个决策点已由负责人裁定、第 11 节的十一个架构问题已由负责人批准（2026-10-17，全部按建议，17.4）；验证 S1、S4、S5、SP1–SP4 已做，S2 做了一部分，S3 在 P4（0.3） |
@@ -2607,7 +2610,7 @@ P7另有已验证子证据：四operation公开码双向守卫、三写权限/�
 | P14 `web-issue-detail` | 详情、创建弹窗、父子、关联、链接（16） | **已完成**：原分支 ec5f38b5 与集成测试修复 9a86211a 均 --no-ff 合入 main 7a81ea18；[main CI 41205272945](https://github.com/open-nerve/NerveProject/actions/runs/41205272945) attempt 1 三任务成功，两个分支/worktree 已归档复验并清理。见 [review §15–16](reviews/P14-web-issue-detail-review.md#16-授权集成main-ci-与归档清理2026-10-31) |
 | P15 `web-collaboration-drafts-search` | 时间线、评论、表情、描述历史、草稿、搜索、命令面板（16） | **已完成**：原分支 de9a36fc 与集成测试修复 bcee63cd 均以 --no-ff 合入 main 313728cb；[main CI 41268545437](https://github.com/open-nerve/NerveProject/actions/runs/41268545437) 三任务全绿。共 5,294 份证据、726,126,759 字节归档逐哈希核验，两个本地/远端分支及 worktree 已正常清理，清理后复验通过。 [review §13](reviews/P15-web-collaboration-drafts-search-review.md#13-授权集成main-ci-与归档清理2026-11-01) |
 | P16 `web-cleanup` | 死成员、`no-shadow` 与守卫的终态（11） | **已完成**：[spec](specs/P16-web-cleanup.md)、[plan](plans/P16-web-cleanup.md)、[review §23](reviews/P16-web-cleanup-review.md#23-授权合并main-ci-与归档清理2026-11-01)、[整体审核](../../reviews/re-27-M4P16整体审核.md)。最终582694d9经授权no-ff合入main 01e40e11，[CI 41290496985](https://github.com/open-nerve/NerveProject/actions/runs/41290496985)三作业全绿、E2E284/284；2,432证据文件归档核验，分支/worktree正常清理。M4收尾实施见下一行 |
-| 收尾 `closeout` | 交接、同步核对、最终C12、规模性能、全部完成标准（14） | **实施与终审完成、集成待办**：[spec](specs/closeout.md)、[plan](plans/closeout.md)、[阶段review](reviews/closeout-review.md)、[验收台账](reviews/closeout-acceptance.md)。分支codex/m4-closeout，基线main 01e40e113e11365a4eeacc2794973de2751dde61；R01–R40闭环，新build10三引擎各完整167项及七门禁通过。准确候选SHA/分支CI由外置final-delivery.json核准；先不合并，§14/总体9.4最终标记待集成 |
+| 收尾 `closeout` | 交接、同步核对、最终C12、规模性能、全部完成标准（14） | **已完成**：[spec](specs/closeout.md)、[plan](plans/closeout.md)、[阶段review](reviews/closeout-review.md)、[验收台账](reviews/closeout-acceptance.md)、[最终集成记录](reviews/closeout-integration.md)。R01–R40闭环，C12三引擎各167项和七门禁通过；验收main `83c83a9447ddd6282d8c1d52ab680d5ae67c7e10` 的[CI 41389469695](https://github.com/open-nerve/NerveProject/actions/runs/41389469695)三作业成功。完成标记最终CI与归档清理由外置收据签结 |
 
 ## 16. 风险
 | 风险 | 影响 | 应对 |

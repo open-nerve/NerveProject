@@ -1,6 +1,6 @@
 # 04 下一步与遗留
 
-当前接续见[第32节](#32-m4-收尾最终审查后的修复与验收)：实施与终审完成，精确候选CI由外置收据核准；Docker已恢复；先不合并。
+当前接续见[第33节](#m4-final-closeout)：M4验收内容已合入main且CI全绿，完成标记已落实；最终main CI、归档与清理以外置集成收据为准。此前章节保留历史时点。
 
 ## 1. 已知的问题
 ### 1.1 持续集成上 W11 页面故事偶发失败（不阻塞主线）
@@ -320,3 +320,13 @@ T1–T12和T13本地验收完成；一次fresh-context整分支deep-review与准
 新build10七项本地门禁通过，Web3392、默认E2E336、C12三引擎各完整167；没有以旧并集冒充新整轮。原始失败、303张代表图的实际观察/精确继承及完整输入清单保留。最终准确候选SHA、CI run/attempt/jobs和验证hash从worktree证据根final-delivery.json读取，这是提交后的事实签结；不要以历史检查点代替。
 
 分支codex/m4-closeout、基线main 01e40e113e11365a4eeacc2794973de2751dde61，主目录main未动。T14只准备集成包；负责人本轮明确先别合并，D18、M4§14/总体9.4完成标记、最终main CI、实际归档和清理等待下一步。八输入closed、M5–M8四输出open表示未来责任，未把接收工作误标已实现。Docker已恢复，本节没有待负责人处理的环境阻塞。
+
+<a id="m4-final-closeout"></a>
+
+## 33. M4 最终收官
+
+验收内容已以`--no-ff`合入main `83c83a9447ddd6282d8c1d52ab680d5ae67c7e10`；[main CI 41389469695](https://github.com/open-nerve/NerveProject/actions/runs/41389469695) attempt 1的server/web/e2e全部success。
+
+M4设计第14节十八条、头部/进度表与总体9.4已补完成标记；C12、全期审查、8份closed输入及M5–M8四份open输出的完整证据见[最终集成记录](../M4-issue-core/reviews/closeout-integration.md)。本次文档提交补齐完成标记；它的准确分支CI、第二次main合并/CI及归档清理事实由主目录`.superpowers/sdd/M4-closeout-integration-20261102/final-integration.json`事后签结，不在提交中预报自身CI。
+
+原始证据归档根为主目录`.superpowers/sdd/M4-closeout-integration-20261102/`，历史worktree路径按集成记录映射。后续里程碑由负责人另行安排，本次不启动M5。
