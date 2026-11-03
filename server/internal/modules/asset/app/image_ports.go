@@ -37,3 +37,16 @@ type ImageBindingWrite struct {
 type ImageBindingWriter interface {
 	BindImage(context.Context, ImageBindingWrite) (domain.Asset, error)
 }
+
+type ImageReference struct {
+	AssetID                        uuid.UUID
+	Purpose                        domain.Purpose
+	UserID, WorkspaceID, ProjectID uuid.UUID
+}
+type ImageURL struct {
+	URL       string
+	ExpiresAt time.Time
+}
+type ImageReader interface {
+	ReadBoundImages(context.Context, []ImageReference) (map[uuid.UUID]ImageURL, error)
+}

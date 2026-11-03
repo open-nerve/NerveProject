@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T2实现与聚焦回归完成，T3待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T3接续，重大新风险先提交后上报。
+> 预检通过，T1–T3实现与聚焦回归完成，T4待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T4接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -68,10 +68,10 @@
 
 **Interfaces:** 实现ImageReference/ImageURL/ReadBoundImages；NewImageReader只依赖已Provide存储、ReadSigner、RuntimeNow。
 
-- [ ] Step 1：TestReadBoundImages：四用途/各宿主准确、准备/已删/未uploaded/错误scope不签；数据库/解码/Signer错误原样；同UUID不一致reference整体error且sign次数0；1000/1001+重复引用有序分块、不N+1、不改审计。
-- [ ] Step 2：具名RED后实现一次收齐ID、全部按序锁后验证/签名；过期规则直接共用P2，不能Sign前后改URL。
-- [ ] Step 3：`cd server && go test ./internal/modules/asset/app -run '^Test(ReadBoundImages|ResolveContent)' -count=1`；Expected所有具名通过；假Signer只证明编排，真实local/S3在T11。去掉bound校验、scope比对、同ID冲突拒绝各有行为变异。
-- [ ] Step 4：affected race/lint，提交 `feat(M5/P4): 为已授权业务引用批量签发图片地址`。
+- [x] Step 1：TestReadBoundImages：四用途/各宿主准确、准备/已删/未uploaded/错误scope不签；数据库/解码/Signer错误原样；同UUID不一致reference整体error且sign次数0；1000/1001+重复引用有序分块、不N+1、不改审计。
+- [x] Step 2：具名RED后实现一次收齐ID、全部按序锁后验证/签名；过期规则直接共用P2，不能Sign前后改URL。
+- [x] Step 3：`cd server && go test ./internal/modules/asset/app -run '^Test(ReadBoundImages|AssetContent)' -count=1`；Expected所有具名通过；假Signer只证明编排，真实local/S3在T11。去掉bound校验、scope比对、同ID冲突拒绝各有行为变异。
+- [x] Step 4：affected race/lint，提交 `feat(M5/P4): 为已授权业务引用批量签发图片地址`。
 
 ## Task 4（T4）：反向引用清理与目录证明
 

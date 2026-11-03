@@ -1,6 +1,6 @@
 # M5 / P4：图片绑定和读取编排
 
-> P4主spec的必要子合同，预检通过、T2绑定已实现，T3读取及owner接线待后续任务。仅用于profile/workspace/project图片；不改P2通用准备件API，不提前实现P5。
+> P4主spec的必要子合同，预检通过、T2绑定与T3读取已实现，owner接线待后续任务。仅用于profile/workspace/project图片；不改P2通用准备件API，不提前实现P5。
 
 ## 1. 资产侧的精确接口
 
