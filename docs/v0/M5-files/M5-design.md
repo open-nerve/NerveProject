@@ -1,8 +1,8 @@
 # M5：文件
 
-> 状态：P1–P4已完成集成和归档。P4已完成：noff main 0f93100a，CI 41641099230 三job全绿，2301份原始文件归档核验并正常清理分支/worktree；P5 T1–T13完成，检查点e60aa333的CI 41712958828三项全绿；一次整审唯一Minor已修正复核。最终CI两次触及整包预算，完整诊断后局部调整测试编排预算，新提交CI及集成归档仍待验证。见[P4阶段记录](reviews/P4-profile-images-review.md#22-t15最终集成归档与p5预检)和[P5阶段记录](reviews/P5-issue-assets-review.md)。
+> 状态：P1–P4已完成集成归档；P5 T1–T14完成，最终分支6d14c965的CI 41728335065三项全绿，E2E 364/364。已noff集成为main c59cedf3，CI 41733981570及归档清理待核。P6只准备预检文档，PC1公开项目非成员读取失效的跨模块范围待负责人裁定，未实施。见[P5阶段记录](reviews/P5-issue-assets-review.md)和[P6预检](../../reviews/re-42-M5P6预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
-> 设计、P1–P4分支均已合入并归档；当前工作分支codex/m5-p5。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
+> 设计、P1–P4分支均已合入并归档；P5已noff合入main并等待独立CI；当前文档工作分支codex/m5-p6。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
 ## 1. 目标、范围与输入
 
@@ -213,11 +213,11 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 
 资产新增/删除工作项附件时产生具名事件 `asset.attachment_added` / `asset.attachment_deleted`，共享事件 envelope 的 Entity 指向 asset、Project/Workspace/Actor/OccurredAt 真实，Changes 带关联 issue ID；同一事务投递或拒绝。是否展示工作项动态由 P5 按 M4 的动作规则固定：每次真实增删各一条，重复 complete/delete 无额外行。项目批量清理不制造逐个用户动作动态。通知/Webhook 收到精确事件责任交接，不先实现通知。
 
-**P5落实（T1–T12及本地七项已验证，准确CI和整审待执行）：** 评论附件走独立分页端点，创建最多100个attachment_ids；计数由asset在相同读取快照提供完整非零目录给issue SQL排序，普通页批量计返回ID，不跨模块JOIN、不保存冗余计数。草稿迁移保留已有bound，当前正文所用描述才新增绑定；从未引用的准备图片继续私有、可删和原7天清理，不能因发布自动公开。P5落实API/生成类型/比较器和现有store消费，P6/P7按§12挂页面；详见[P5主spec](specs/P5-issue-assets.md)、[绑定合同](specs/P5-content-binding.md)、[读取合同](specs/P5-attachment-reads.md)。
+**P5落实（T1–T14、本地七项、整审及准确最终分支CI已验证；main集成验收仍待T15）：** 评论附件走独立分页端点，创建最多100个attachment_ids；计数由asset在相同读取快照提供完整非零目录给issue SQL排序，普通页批量计返回ID，不跨模块JOIN、不保存冗余计数。草稿迁移保留已有bound，当前正文所用描述才新增绑定；从未引用的准备图片继续私有、可删和原7天清理，不能因发布自动公开。P5落实API/生成类型/比较器和现有store消费，P6/P7按§12挂页面；详见[P5主spec](specs/P5-issue-assets.md)、[绑定合同](specs/P5-content-binding.md)、[读取合同](specs/P5-attachment-reads.md)。
 
 ## 9. 前端与视觉
 
-FileService 改为当前会话 API client 的消费者；不在模块顶层 new 带会话实例。原始 PUT 使用不带业务认证的独立传输器，支持 AbortSignal、进度、超时和可区分的拒绝；取消不能吞错后继续 complete。store 以 session/loginId + workspace/project/issue/draft/comment scope 管理，复用 IssueRootStore 的权限失效入口，不另造平行权限缓存。
+P6 新 AssetService 作为当前会话 API client 的消费者；旧 FileService 随 P7 最后编辑器/评论调用者迁移一并删除；不在模块顶层 new 带会话实例。原始 PUT 使用不带业务认证的独立传输器，支持 AbortSignal、准备/上传/确认阶段进度、超时和可区分的拒绝；独立 fetch 不提供字节进度，不能编造百分比；取消不能吞错后继续 complete。store 以 session/loginId + workspace/project/issue/draft/comment scope 管理，复用 IssueRootStore 的权限失效入口，不另造平行权限缓存。
 
 保持现有路由 key，上传进度/弹窗在所属子树内；unmount 取消请求和 debounce，代次不符的进度、成功、失败均不能更新新宿主。SWR key 含 loginId，缓存 URL 包含到期时间，撤权清掉已解析地址。请求中按钮与关闭行为、拒绝保留、成功关闭、返回焦点和读屏通知按 M3 规则。
 
@@ -225,7 +225,7 @@ FileService 改为当前会话 API client 的消费者；不在模块顶层 new 
 
 附件图标替换 figma/pdf/csv/excel 第三方标志，使用现有图标或自制中性 SVG 并登记来源。不改 shared 动效/弹窗框架；如果发现新的跨模块基础库缺陷，按风险纪律处理。
 
-删除整个 `web/packages/services` 及包依赖；仍供 M6/M7 旧 APIService 使用的 URL 规范化连测试搬到 web 内，保持那些未实施功能的现状。死成员扫描重新运行，逐项核实真实消费者；不依据历史 48 个数量做机械删除。修改文件 oxlint 为零，并完成至少一个尚未清零规则的全仓清零，不能重复领取 M4 已清的 no-shadow。
+P7 最后旧文件消费者迁移时删除整个 `web/packages/services` 及包依赖；P6 不导入旧上传 helper，避免为提前删包而跨入编辑器实现；仍供 M6/M7 旧 APIService 使用的 URL 规范化连测试搬到 web 内，保持那些未实施功能的现状。死成员扫描重新运行，逐项核实真实消费者；不依据历史 48 个数量做机械删除。修改文件 oxlint 为零，并完成至少一个尚未清零规则的全仓清零，不能重复领取 M4 已清的 no-shadow。
 
 公开旧 `copyMarkdownToClipboard` 不能直接复用；新消费者走已受控复制通道。若需要修复旧入口，成功/false/异常/无事件/卸载/换编辑器的监听释放与反馈一起测试，否则保持无消费者并把风险具名交接。
 
@@ -262,8 +262,8 @@ local/S3 共享适配器合同及最少浏览器场景；Chromium/Firefox/WebKit
 | P3 | s3 适配器、真实兼容服务合同、CORS/CSP、配置和部署样例 | F4；长度/类型签名、条件封存、失败/重试、相同字节和孤立对象对账；local 回归 |
 | P4 | 用户/工作区/项目真实引用字段、稳定预设封面 ID、一次创建绑定、资料 URL；organization_size 收紧 | F5–F7 API；所属迁移/事务回滚、旧引用回收、成员头像、非法/过期准备件 |
 | P5 | 工作项/评论/草稿引用、附件计数/排序、草稿迁移、图片清洗与内容标识、事件 | F8–F15 API+DB；并发双发布、历史/撤销图片、完整删除图与事务事件；架构守卫不放宽 |
-| P6 | 新上传传输器与会话 store、用户/工作区/项目页面和预设封面、删除旧 services 包 | F5–F7/F16/F17 页面；真实上传、失败恢复、键盘/读屏、跨会话及跨路由迟到结果 |
-| P7 | 工作项/评论附件、草稿与编辑器图片页面、列表计数/排序/显示、旧文件消费者清理 | F8–F12/F16/F17 页面；伪造剪贴板、取消/过期/重试、撤权、Back/Forward、旧复制入口条件 |
+| P6 | 新上传传输器与会话 store、用户/工作区/项目页面和预设封面 | F5–F7/F16/F17 页面；真实上传、失败恢复、键盘/读屏、跨会话及跨路由迟到结果 |
+| P7 | 工作项/评论附件、草稿与编辑器图片页面、列表计数/排序/显示、旧文件消费者及 services 包删除 | F8–F12/F16/F17 页面；伪造剪贴板、取消/过期/重试、撤权、Back/Forward、旧复制入口条件 |
 | P8 | 文件全链路容量/清理演练、所有交接复核、死成员和 warning 收敛、默认部署演示与三浏览器验收 | F1–F18 最终矩阵、精确数据证据、deep-review、M6–M8 交接及收尾材料 |
 | closeout | 首次 noff 合收尾并等 main 绿，再补完成勾选/总体 9.4，经第二次 noff/main 绿，最终归档清理 | §14 每条证据、全部输入关闭、精确两轮 main CI 与归档清单 |
 
@@ -321,14 +321,15 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P2 | 已完成：noff main2d1bcf0c，CI41556463795全绿，2191文件归档核验并清理 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [整审](../../reviews/re-35-M5P2整体审核.md) / [阶段记录](reviews/P2-assets-review.md) / [裁定](reviews/P2-purge-contract-decision.md) |
 | P3 | 已完成：noff main5807a0d6，CI41591764345全绿，2251文件归档核验并清理 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
 | P4 | 已完成：noff main0f93100a，CI41641099230全绿，2301文件归档核验并清理 | [spec](specs/P4-profile-images.md) / [plan](plans/P4-profile-images.md) / [整审](../../reviews/re-39-M5P4整体审核.md) / [阶段记录](reviews/P4-profile-images-review.md) |
-| P5 | T1–T13与一次整审修正已完成，检查点CI全绿；最终提交CI/集成归档待T14/T15 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [整审](../../reviews/re-41-M5P5整体审核.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
-| P6–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
+| P5 | T1–T14完成，最终分支CI全绿；已noff合入c59cedf3，main CI/归档待T15 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [整审](../../reviews/re-41-M5P5整体审核.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
+| P6 | 文档预检待决PC1，未实施 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [预检](../../reviews/re-42-M5P6预检.md) / [决策](reviews/P6-public-project-lifetime-decision.md) |
+| P7–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
 设计审查已修正的衔接：复用已有用途 MAC；保持 M4 的安全 URL 清洗合同；业务 JSON 仍 no-store；签名/传输使用运行时钟；外部操作记录放入有界 storage_metadata，不增加业务表。
 
-P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5三份spec已通过预检；T1–T12已证明内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量，T13本地七门禁及准确检查点CI已闭环，一次整审唯一Minor已修正复核；最终提交CI与集成归档待T14/T15。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
+P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5三份spec已通过预检；T1–T12已证明内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量，T13本地七门禁及准确检查点CI已闭环，一次整审唯一Minor已修正复核；最终提交6d14c965的CI已全绿；已noff合入c59cedf3，main CI与归档仍待T15。P6预检发现共享项目失效范围不足，PC1材料已版本化，未裁定前不实施。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
 
 ## 16. 协议核验来源
 

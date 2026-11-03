@@ -66,7 +66,7 @@ issue 的同步 subscriber 在原事务写一条 attachment 动态并 MarkChange
 - [x] A5 所有 Issue 出口真实附件计数，三类列表/两方向/跨页/分组/成员关系和游标精度；1000/1001及10000计数目录冷库容量证据。证据：[阶段记录§12、§15、§19](../reviews/P5-issue-assets-review.md#20-t13验收与交接核对)。
 - [x] A6 事件/动态精确一次、rollback零行、父删除与60天清理/失败恢复/邻域，目录守卫保持严格。证据：[阶段记录§10、§18–19](../reviews/P5-issue-assets-review.md#20-t13验收与交接核对)。
 - [x] A7 F8–F15的API/DB/字节边界及至少15个定向行为变异通过；本任务容器及时核验回收，原有容器保留。T9–T12聚焦故事、删除图与变异，加T13完整364故事复验及原20容器/新增遗留0，证据：[阶段记录§16–20](../reviews/P5-issue-assets-review.md#20-t13验收与交接核对)。
-- [ ] A8 最终本地七门禁、一次fresh deep-review与主控修复复核、准确最终HEAD三job CI全绿。
+- [x] A8 最终本地七门禁、一次fresh deep-review与主控修复复核、准确最终HEAD三job CI全绿。证据：[阶段记录§21.2](../reviews/P5-issue-assets-review.md#212-最终预算复验与分支门禁闭环)。
 - [ ] A9 --no-ff准确main CI全绿、全部原件归档hash/bytes/mode/membership/unknown=0并正常清理，P6预检准备完成。
 
 ## 4. 交接与代价

@@ -302,3 +302,15 @@ T13检查点 `e60aa333b57018be482f4ce7da12e7f9298aea1a` 已由系统Git推送，
 Go AST 及实际二进制核实，bootstrap 顶层测试由 P1 的 462、P4 的 553 增至当前 605；P1 已在同类累计10m截断后显式设15m/server20m（`854dd183`）。当前检查点远端实测776.395秒，后两轮在接近用例序列尾部达到900秒，证据支持完整套件增长后的运行预算不足，没有固定用例持续卡住的证据。主控裁定把整包预算调整为20m、server作业25m；全部单项断言、锁等待、HTTP及存储业务期限保持。此为局部测试编排校正，既不引入共享可变契约缓存，也不拆分产品模块。代价是真正整包挂起的最晚中断增加5分钟；这不是性能改善的声称。
 
 `task-14-budget-delta.json` 固定 Makefile/CI 两份文件的前后字节和 SHA；原 M1 单测试差异仍单独校验。`verify-task-14-local.py` 仅准这三份精确非文档差异，原七门禁只复用未受影响部分；新配置必须重新完整执行 `GOFLAGS=-p=1 make test`（server/tools 均 `-count=1 -timeout=20m`），并验收准确新提交的完整远端 CI。原失败、采样、跳过项、收据与来源输入均随 T15 归档。此段尚不声称新配置本地或远端已通过。
+
+### 21.2 最终预算复验与分支门禁闭环
+
+提交 `6d14c965fa63d1414aaf4a3480a21f7d3d76431f` 的完整本地 `GOFLAGS=-p=1 make test` 为 exit0、990.628秒，61个实际测试包、21个无测试包，server/tools均-count=1、20m整包预算、无结果缓存；bootstrap 648.442秒。4434输入前后不变。原局部M1和两预算文件按前后字节精确核验，其余完整门禁按§20/§21的受影响范围复用，不重复声称缓存项已重跑。
+
+[最终分支CI 41728335065](https://github.com/open-nerve/NerveProject/actions/runs/41728335065) attempt1三作业及必需步骤全绿；server bootstrap770.858秒，web静态54/54、测试18/18、构建11/11任务通过；E2E364/364、16.7m，无重试，W11页面通过。新runner此轮耗时低于旧15m限制，不将此结果说成预算改动提升性能。`task-14-ci-final.json`固定准确run/jobs及三份完整日志hash/bytes；严格本地和CI核验后task-done14通过，A8关闭。
+
+## 22. T15集成与后续准备（进行中）
+
+在根main和P5工作树均干净、origin身份及祖先核验后，按连续授权以--no-ff合入 `c59cedf337c5c5654bef2f0cbb33407ff04ced26`，双父为 `0f93100a05304d26b074790633b5659285813156` 与最终分支 `6d14c965fa63d1414aaf4a3480a21f7d3d76431f`；合并树与分支树均为 `0e8dd3f07fc2476fe4f39b5e41d6749f548605bf`。系统Git自动推送成功，[main CI 41733981570](https://github.com/open-nerve/NerveProject/actions/runs/41733981570)已启动，尚待最终状态。
+
+与准确main同树建立codex/m5-p6，仅版本化预检文档及复制探针证据；没有安装依赖或实施P6。一次fresh builder发现PC1，经实际store复现后准备A/B上报。P5 main CI/归档独立继续；A9和T15剩余步骤未提前勾选，P6预检也未声称通过。原20容器仍逐ID保留，本次测试新增遗留0。

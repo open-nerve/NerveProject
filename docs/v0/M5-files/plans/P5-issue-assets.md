@@ -165,11 +165,11 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 - [x] Step 1：固定main基线到候选HEAD，deep-review按逻辑/集成/测试，整份手写文件及caller清单，生成物核源。
 - [x] Step 2：一次fresh reviewer携spec/plan/Review Focus原文及全部Ruling；主控按实际影响分级，报告入docs/reviews下一编号。
 - [x] Step 3：Important/Critical一次局部修复与真实RED/GREEN、影响门禁及主控复核；Minor具名去向（M1按03硬规则本次等价修正，无伪RED）；重大风险先提交后上报，不派重复同范围审者。
-- [ ] Step 4：裁定/代价/未读范围逐条落盘；最终CI两次整包超时经完整采样后，局部调整Go整包20m/server作业25m，完整本地make test及准确新HEAD CI重新验收。最终commit/push与准确最终HEAD CI全绿，才关闭A8。
+- [x] Step 4：裁定/代价/未读范围逐条落盘；最终CI两次整包超时经完整采样后，局部调整Go整包20m/server作业25m，完整本地make test及准确新HEAD CI重新验收。最终commit/push与准确最终HEAD CI全绿，才关闭A8。
 
 ## Task 15（T15）：集成归档及P6预检
 
-- [ ] Step 1：核干净W/main、祖先和准确green HEAD，连续授权下--no-ff合入main、双父/树一致、system git push。
+- [x] Step 1：核干净W/main、祖先和准确green HEAD，连续授权下--no-ff合入main、双父/树一致、system git push。
 - [ ] Step 2：准确main CI全绿，归档全部ignored台账/失败/raw/浏览器/审者/变异，hash/bytes/mode/membership/unknown=0；rev-list origin/main..branch=0后正常清远端、本地与worktree，归档再核。
 - [ ] Step 3：下一独立codex/m5-p6 worktree回填阶段和A9；准备P6上传传输器/会话store/资料页面spec/plan与一次builder check，M5整体完成和handoff仍未勾。
 
