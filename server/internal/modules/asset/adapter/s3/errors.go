@@ -37,12 +37,18 @@ func (s *Store) objectError(ctx context.Context, operation string, err error) er
 	if !errors.As(err, &response) {
 		return storageError(operation, err)
 	}
+	// An HTTP status also wraps SDK body read/XML failures. Only a completely
+	// decoded API error is a business result; in particular an invalid 404
+	// must not acknowledge deletion and lose the object's recovery record.
+	var api interface{ ErrorCode() string }
+	if !errors.As(err, &api) {
+		return storageError(operation, err)
+	}
 	switch response.HTTPStatusCode() {
 	case 409, 412:
 		return domain.ErrObjectChanged
 	case 404:
-		var api interface{ ErrorCode() string }
-		if errors.As(err, &api) && api.ErrorCode() == "NoSuchBucket" {
+		if api.ErrorCode() == "NoSuchBucket" {
 			return storageError(operation, err)
 		}
 		// HEAD has no error body; some compatible services also use NoSuchKey

@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1/P2已完成集成和归档。P2 noff main2d1bcf0c的CI41556463795全绿；P3 spec/plan预检通过，T1–T7存储装配、浏览器传输与部署已完成，见[re-36](../../reviews/re-36-M5P3预检.md)。
+> 状态：P1/P2已完成集成和归档。P2 noff main2d1bcf0c的CI41556463795全绿；P3 spec/plan预检通过，T1–T8已完成，见[re-36](../../reviews/re-36-M5P3预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 > 设计、P1、P2分支均已合入并归档；当前工作分支codex/m5-p3。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
@@ -153,7 +153,7 @@ SDK首次实际消费时再改server模块锁；测试专用server/tools/s3fixtu
 
 S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，因此配置提前拒绝字面量，可使用解析到IPv6的DNS，不改变服务端监听能力。只支持从未启用版本控制的普通私有桶，不支持Enabled/Suspended/Object Lock/Express/access point；启动在operation_timeout总期限内只读HeadBucket/GetBucketVersioning，未知或拒绝即失败，不写生产探针。部署保持模式、prefix独占且无外部删除活文件规则；否则普通Delete可能仅留下delete marker而失去旧字节恢复依据。版本化协议和跨后端迁移未实现，不能直接改配置当迁移或自动fallback。
 
-真实合同要求长度/类型绑定的SigV4 PUT、HEAD/GET/DELETE、源CopySourceIfMatch加目的IfNoneMatch=*的原子COPY及有限有序ListObjectsV2；不退无条件复制。官方HTTPPresignerV4扩展点仅在正式签名前按真实signingTime计算精确期限，随后由官方Signer签名；不伪造时钟或改签后host。错误/200内嵌错误、迟到实物、双时钟和分页恢复沿P2协议，不能把请求取消当服务端已停止。
+真实合同要求长度/类型绑定的SigV4 PUT、HEAD/GET/DELETE、源CopySourceIfMatch加目的IfNoneMatch=*的原子COPY及有限有序ListObjectsV2；不退无条件复制。官方HTTPPresignerV4扩展点仅在正式签名前按真实signingTime计算精确期限，随后由官方Signer签名；不伪造时钟或改签后host。错误/200内嵌错误、迟到实物、双时钟和分页恢复沿P2协议，不能把请求取消当服务端已停止。 协议正文在SDK解析前有界（普通64KiB，清单64KiB+limit×16KiB），成功Open仍流式；错误读取/解析失败保持后端故障，不凭HTTP状态确认缺对象或冲突。
 
 官方EndpointResolverV2计算实际bucket origin，独立transport只准该origin、无环境代理/redirect、系统TLS、SDK RetryMaxAttempts=1；不改credential-free link-preview outbound客户端。bootstrap选择驱动与资源所有权，asset app小端口和domain纯净；S3不注册local raw handler，/static保留树与完整路由守卫仍按两driver验证。
 
@@ -304,7 +304,7 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | 设计与 P1 预检 | 已完成 | [预检记录](../../reviews/re-31-M5设计与P1预检.md) |
 | P1 | 已完成：noff main 85dc4087，CI 41471671630 全绿，792 文件归档核验并清理 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) / [阶段记录](reviews/P1-local-storage-review.md) / [整审](../../reviews/re-33-M5P1整体审核.md) |
 | P2 | 已完成：noff main2d1bcf0c，CI41556463795全绿，2191文件归档核验并清理 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [整审](../../reviews/re-35-M5P2整体审核.md) / [阶段记录](reviews/P2-assets-review.md) / [裁定](reviews/P2-purge-contract-decision.md) |
-| P3 | T1–T7已完成，T8待开始；预检通过 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
+| P3 | T1–T8已完成，T9待开始；预检通过 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
 | P4–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。

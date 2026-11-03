@@ -6,6 +6,11 @@ import (
 )
 
 type metadataBudgetKey struct{}
+type objectBodyKey struct{}
+
+// Ordinary protocol replies are small XML. Inventory has its own page-sized
+// budget, and only a successful explicit object read may stream file bytes.
+const protocolMetadataLimit int64 = 64 << 10
 
 // Limit metadata allocation inside SDK XML parsing, without buffering the
 // response. The byte after the budget is only a sentinel; overflow is not EOF.

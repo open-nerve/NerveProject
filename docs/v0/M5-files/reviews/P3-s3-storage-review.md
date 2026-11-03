@@ -1,6 +1,6 @@
 # M5 / P3 阶段评审记录
 
-> spec/plan预检通过，T1–T7存储装配、浏览器传输与部署已完成，T8待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
+> spec/plan预检通过，T1–T8已完成，T9全量门禁待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
 
 ## 1. 评审方式
 
@@ -8,7 +8,7 @@
 
 ## 2. 验收标准逐条核对
 
-[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A1–A6已由T1–T7证据关闭，A7–A10仍开放；实际证据见§8–§14。预检固定SDK/真实服务协议和版本化桶反例只为可行性证据，不提前打勾；准确原件和范围见re-36。
+[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A1–A8已由T1–T8证据关闭，A9/A10仍开放；实际证据见§8–§15。预检固定SDK/真实服务协议和版本化桶反例只为可行性证据，不提前打勾；准确原件和范围见re-36。
 
 ## 3. 执行中的决定
 
@@ -28,7 +28,7 @@ P2已完成并归档；P3接续S3/CORS/CSP/真实合同，M0超时handoff只记�
 
 ## 7. 已知限制
 
-首期只支持明确endpoint/静态凭据/never-versioned普通私有桶及实例独占prefix；无multipart/版本回收/自动后端迁移。已经开始的S3请求可能晚到，靠P2记录与对账恢复；精确提供方的Go探针不代表全部厂商或浏览器已验收。永久测试/容量、三浏览器和精确最终branch/main CI仍待实施。
+首期只支持明确endpoint/静态凭据/never-versioned普通私有桶及实例独占prefix；无multipart/版本回收/自动后端迁移。已经开始的S3请求可能晚到，靠P2记录与对账恢复；精确提供方的Go探针不代表全部厂商或浏览器已验收。真实固定提供方合同、容量和三浏览器已验收；精确最终branch/main CI及阶段整审仍待实施。
 
 ## 8. T1配置与秘密读取
 
@@ -115,3 +115,13 @@ P2已完成并归档；P3接续S3/CORS/CSP/真实合同，M0超时handoff只记�
 - Node生命周期具名3项覆盖正常并发close、Nerve启动失败和child启动中关闭；实际检查loopback端口、容器NotFound、HTTP停止、DB连接关闭、临时秘密删除、关闭后拒绝操作及重复回收。错误聚合保留原错误与清理错误；针对oxlint不识别AggregateError第三个cause参数，仅保留一行说明性抑制，没有放宽架构/关键词或lint上限。
 - 最终三浏览器3/3（47.7s），Node生命周期3/3（30.3s）。完整config/webui/archtest race、helper race及bootstrap具名S3生命周期/原local生命周期race通过；每次测试的非文档输入hash/集合稳定。前端54检查/knip通过，server/tools lint均0。全部task-7-*原件留T11归档；T9才跑完整七项并首次产品推送。
 - deploy/s3提供配置、最低IAM、精确CORS、never-versioned限制、迁移前提和故障排查；AWS HeadBucket需桶级ListBucket，样例诚实说明名称列表权限，名称隔离需独立桶。真实提供方只证明固定SeaweedFS4.52，AWS云及其他品牌未验收。M2交接仅记录CSP部分兑现，绑定/UI/services/River CLI仍开放。
+
+## 15. T8容量、资源故障与协议边界
+
+- 同一真实私有桶完成1B、5MiB、100MiB的签名PUT→HEAD→流式SHA→双条件COPY→最终SHA→DELETE。生成流与独立Python字面摘要对照，没有整文件ReadAll；100MiB的配置传输预算26m50s，测试本身上限2m，未扩大生产operation_timeout。5MiB在发送首块后真实暂停16秒，上传16.052s成功，证明不受普通JSON API的15秒限制。
+- 最终race容量记录：1B上传3.692ms、往返17.000ms；5MiB往返16.087s；100MiB上传473.723ms、往返1.015s、211.09MiB/s。100MiB前Go堆1,500,464B、峰值1,872,880B、增量372,416B，Sys峰值15,468,808B。环境darwin/arm64、Go1.27.1、18逻辑CPU、DockerDesktop29.7.2/7931MB、固定SeaweedFS4.52与2GiB自有tmpfs；指标仅此Go进程、非提供方RSS，不承诺公网吞吐。
+- 单连接真实socket测试覆盖调用者取消、1秒操作超时和Store.Close：活reader及时报对应context错误，服务端观察断连；已排队请求取消不发HEAD，正常等待者随后可用，新读取返回abc；关闭后拒绝新操作，活跃及idle socket归零。T6的实际PG连接、行锁与gate释放在本Task聚焦恢复组再验。
+- 新负例复现启动、COPY和错误正文无统一上限。局部修正在S3独占transport施加普通64KiB XML界限，清单保留64KiB+limit×16KiB；HEAD的Content-Length仍表示对象大小，只有显式Open成功GET豁免。固定长度和chunked的96KiB未知节点均拒绝，不改变全局HTTP/业务接口/清理合同。代价是提供方的超大冗余诊断响应按后端故障处理。
+- 首次补限流仍有chunked404失败。固定SDK源码表明io.Copy已返回DeserializationError，适配器却只看外层HTTP状态：增加“已完整解析API错误”的前提后才映射404/409/412。9个真实截断XML的Open/Seal/Delete反例先RED0.602s，防止DELETE把未知结果确认成功；HEAD正常空错误体仍沿SDK状态错误/同预算核桶规则。资源组raceGREEN2.747s，最终容量/资源/业务恢复race为S3 33.667s、bootstrap23.781s，4228非文档输入hash/集合前后不变。
+- T1–T7的21项性质变异逐一核实际断言日志与当时正常源码hash；T8再加整文件缓冲、取消普通XML上限、把错误当文件流、跳过解析后分类4项，共25项。整文件缓冲变异的100MiB堆增量252,060,872B，实际命中50MiB门槛。初次在未全绿基线上运行的变异、一次导致nil panic的分类变异均保留且不计数；最终只统计具体断言失败，恢复hash与独立正常输入核对。原件task-8-mutation-audit.json及task-8-final-mutation-*。
+- 四组各五轮race全部通过：s3 193.506s、postgres92.530s、bootstrap119.748s；完整路由/401/原raw与S3生命周期race22.374s，架构race6.083s，生成一致、server/tools lint零问题、关键词无命中、自有容器清单为空。所有最终收据为同一4228非文档输入。A7/A8关闭；T9完整七项、T10阶段整审和精确分支/main CI仍开放。

@@ -31,7 +31,8 @@ func (s *Store) Open(ctx context.Context, key domain.ObjectKey, expectedETag str
 		done()
 		return nil, domain.ErrObjectChanged
 	}
-	out, err := s.client.GetObject(op, &awss3.GetObjectInput{Bucket: aws.String(s.cfg.Bucket), Key: aws.String(s.cfg.Prefix + string(key)), IfMatch: &expectedETag})
+	readContext := context.WithValue(op, objectBodyKey{}, true)
+	out, err := s.client.GetObject(readContext, &awss3.GetObjectInput{Bucket: aws.String(s.cfg.Bucket), Key: aws.String(s.cfg.Prefix + string(key)), IfMatch: &expectedETag})
 	if err != nil {
 		converted := s.objectError(op, "get object", err)
 		done()

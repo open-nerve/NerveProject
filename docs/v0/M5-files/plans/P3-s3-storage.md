@@ -1,7 +1,7 @@
 # M5 / P3 S3 存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T7已完成，T8待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
+> 预检通过，T1–T8已完成，T9待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
 
 **Goal：** 为既有资产用例接入真实 S3 私有存储，完成 F4、部署配置和 local 回归。
 
@@ -126,15 +126,15 @@
 
 ## Task 8（T8）：容量、故障和守卫闭环
 
-**Files：** 新s3/capacity_test.go、fault_test.go，补前述bootstrap/fixture资源测试；阶段review证据索引。仅实际需要时局部修正实现。
+**Files：** 新s3/capacity_test.go、fault_test.go；局部修正metadata_body.go、transport.go、read.go、errors.go，普通协议正文限流及错误解析后分类；补前述bootstrap/fixture资源测试、阶段review证据索引。
 
 **Interfaces：** 只使用已有接口和fixture；不提供绕过预算/签名的生产测试开关。
 
-- [ ] Step 1：TestS3Capacity1B5MiB100MiB/TestS3Resources：流生成/增量hash，100MiB不能在Go进程整体ReadAll；记录基线/峰值内存、吞吐、实际环境。慢流在operation_timeout或caller取消后及时结束，等待者/reader/idle连接/DB/gate可再次使用。
-- [ ] Step 2：`cd server && go test ./internal/modules/asset/adapter/s3 ./internal/bootstrap -run 'Test(S3Capacity1B5MiB100MiB|S3Resources|AssetS3Recovery)$' -count=1`；若新增性质先RED后实现GREEN，不用调大范围掩盖失败；100MiB需配置原传输最大预算覆盖。
-- [ ] Step 3：确认T1–T7至少15性质变异已实红（双秘密源、秘密日志、签名长度/类型、期限、源条件、目的条件、prefix、缺桶错误分类、versioning、redirect、reader、恢复cursor、CSP、时钟），原hash全恢复；缺项补有杀伤力测试，不计编译红。
-- [ ] Step 4：`cd server && go test -race -p 1 -count=5 ./internal/modules/asset/adapter/s3 ./internal/modules/asset/adapter/postgres ./internal/bootstrap -run 'TestS3(ObjectFailures|LateObjects|Recovery)$|TestAssetS3Recovery$'`记录所选每组5轮且无死锁/竞争；架构/生成/完整路由守卫通过。失败含环境中断也保留原件，所有测试容器已正常清理。
-- [ ] Step 5：更新A1–A8证据、边界和代价，提交`test(M5/P3): 验证容量边界和存储故障恢复`。
+- [x] Step 1：TestS3Capacity1B5MiB100MiB/TestS3Resources：流生成/增量hash，100MiB不能在Go进程整体ReadAll；记录基线/峰值内存、吞吐、实际环境。慢流在operation_timeout或caller取消后及时结束，等待者/reader/idle连接/DB/gate可再次使用。
+- [x] Step 2：`cd server && go test ./internal/modules/asset/adapter/s3 ./internal/bootstrap -run 'Test(S3Capacity1B5MiB100MiB|S3Resources|AssetS3Recovery)$' -count=1`；若新增性质先RED后实现GREEN，不用调大范围掩盖失败；100MiB需配置原传输最大预算覆盖。
+- [x] Step 3：确认T1–T7至少15性质变异已实红（双秘密源、秘密日志、签名长度/类型、期限、源条件、目的条件、prefix、缺桶错误分类、versioning、redirect、reader、恢复cursor、CSP、时钟），原hash全恢复；缺项补有杀伤力测试，不计编译红。
+- [x] Step 4：`cd server && go test -race -p 1 -count=5 ./internal/modules/asset/adapter/s3 ./internal/modules/asset/adapter/postgres ./internal/bootstrap -run 'TestS3(ObjectFailures|LateObjects|Recovery)$|TestAssetS3Recovery$'`记录所选每组5轮且无死锁/竞争；架构/生成/完整路由守卫通过。失败含环境中断也保留原件，所有测试容器已正常清理。
+- [x] Step 5：更新A1–A8证据、边界和代价，提交`test(M5/P3): 验证容量边界和存储故障恢复`。
 
 ## Task 9（T9）：全量门禁和首次产品检查点
 

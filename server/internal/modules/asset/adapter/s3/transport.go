@@ -34,13 +34,22 @@ func (t originTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return response, err
 	}
-	if limit, ok := req.Context().Value(metadataBudgetKey{}).(int64); ok {
-		if response.ContentLength > limit {
-			_ = response.Body.Close()
-			return nil, errors.New("S3 metadata response exceeds limit")
-		}
-		response.Body = &metadataBody{ReadCloser: response.Body, left: limit}
+	// HEAD advertises the object's byte size, but has no response body.
+	if req.Method == http.MethodHead {
+		return response, nil
 	}
+	if object, _ := req.Context().Value(objectBodyKey{}).(bool); object && response.StatusCode >= 200 && response.StatusCode < 300 {
+		return response, nil
+	}
+	limit, ok := req.Context().Value(metadataBudgetKey{}).(int64)
+	if !ok {
+		limit = protocolMetadataLimit
+	}
+	if response.ContentLength > limit {
+		_ = response.Body.Close()
+		return nil, errors.New("S3 metadata response exceeds limit")
+	}
+	response.Body = &metadataBody{ReadCloser: response.Body, left: limit}
 	return response, nil
 }
 

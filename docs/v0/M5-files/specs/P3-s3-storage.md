@@ -1,6 +1,6 @@
 # M5 / P3 S3 存储合同
 
-> 预检通过，T1–T7存储装配、浏览器传输与部署已完成，T8待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
+> 预检通过，T1–T8已完成，T9全量门禁待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
 
 ## 1. 目的、范围和方案
 
@@ -61,7 +61,7 @@ Delete 缺失幂等成功，其他失败必须保留；只操作本 prefix 的�
 
 ## 5. 清单、晚到数据和恢复
 
-ListObjectsV2 每次只访问独占 prefix，limit 1..1000；结果必须严格升序、无重复、每个 key 都能从确切 prefix 还原为合法 u/o key，大小/时间/ETag有效。Next 是不解释的 provider ContinuationToken，最长8192字节；空表示耗尽。截断但无 Next、Next不前进、超页、越界 key、异常布局一律明确失败，不全桶扫描、不无界缓存。清单响应XML在SDK解析前限制为64KiB + limit×16KiB（含未知节点及chunked正文），超出明确失败，不把同一限制用于文件GET流。P2 的 token+ObjectAfter 负责页内进度，页不是快照。
+ListObjectsV2 每次只访问独占 prefix，limit 1..1000；结果必须严格升序、无重复、每个 key 都能从确切 prefix 还原为合法 u/o key，大小/时间/ETag有效。Next 是不解释的 provider ContinuationToken，最长8192字节；空表示耗尽。截断但无 Next、Next不前进、超页、越界 key、异常布局一律明确失败，不全桶扫描、不无界缓存。清单响应XML在SDK解析前限制为64KiB + limit×16KiB（含未知节点及chunked正文）；其他协议正文（启动、COPY、错误等）上限64KiB。超出明确失败；HEAD没有正文，其Content-Length仍为对象大小；仅显式Open的成功GET流不受元数据正文限制。SDK解析失败不能仅凭HTTP404/409/412转成业务缺失/冲突，必须先得到完整解析的API错误；真实HEAD空正文仍由SDK生成状态错误，并沿同预算核桶规则。P2 的 token+ObjectAfter 负责页内进度，页不是快照。
 
 S3 没有 local tmp：TemporaryCleaner 校验 context、非零 cutoff、limit1..1000、token必须为空，然后返回耗尽（next空/removed0）。app 不能按driver新增分支。driver/prefix变更不保证旧cursor或旧资产迁移，部署不热换数据归属。
 
@@ -95,8 +95,8 @@ F4 在真正应用 origin 和浏览器 fetch/File/Blob 中完成 prepare→raw P
 - [x] A4 有限prefix清单、opaque cursor、页内/进程恢复、后到实物回收、邻域保护、双时钟和无tmp合同通过。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§12，真实S3/PG与新OS进程River续跑。
 - [x] A5 S3完整Nerve API/PG/实物闭环、权限撤销/锁外I/O/零DML和原local回归；路由目录两driver准确。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§13，真实S3/PG/API、故障恢复及受影响race。
 - [x] A6 精确CORS/CSP及三浏览器F4通过，实际File长度/类型绑定、匿名/错误origin/未准许CSP均受测；无新附件UI。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§14，三浏览器、独立字节/SHA、CSP实际变异与IPv6反例、资源失败回收。
-- [ ] A7 1B/默认5MiB/最大100MiB流式容量、真实慢流/取消、连接/资源回收有记录；不以本机吞吐承诺任意公网性能。
-- [ ] A8 至少15个独立性质变异命中具体断言而非编译失败/0 tests，记录还原hash；并发封存/迟到/恢复交错跑race五轮，无死锁/数据竞争；原始失败、重试和测试输入完整保留。
+- [x] A7 1B/默认5MiB/最大100MiB流式容量、真实慢流/取消、连接/资源回收有记录；不以本机吞吐承诺任意公网性能。 证据：[阶段记录](../reviews/P3-s3-storage-review.md)§15，容量/资源race、25项变异、四组各五轮及守卫原件。
+- [x] A8 至少15个独立性质变异命中具体断言而非编译失败/0 tests，记录还原hash；并发封存/迟到/恢复交错跑race五轮，无死锁/数据竞争；原始失败、重试和测试输入完整保留。 证据：[阶段记录](../reviews/P3-s3-storage-review.md)§15，容量/资源race、25项变异、四组各五轮及守卫原件。
 - [ ] A9 七项本地门禁、生成和本阶段独立受影响回归通过；完整三视角deep-review/一次新上下文整分支审查及修复闭环，精确branch CI通过。
 - [ ] A10 noff main精确CI全绿、完整证据归档校验/常规清理，P4 spec/plan预检；不提前勾选整个M5或关闭绑定/UI交接。
 
