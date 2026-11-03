@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -23,6 +24,30 @@ func newTransport() *http.Transport {
 type originTransport struct {
 	origin string
 	next   http.RoundTripper
+}
+
+// Configuration has already validated the endpoint. Canonicalize its authority
+// BEFORE resolution/signing so SDK, browser and CSP use the same origin. Never
+// normalize an already signed URL or loosen the outgoing Host/origin guard.
+func canonicalEndpoint(raw string) (string, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", errors.New("invalid S3 endpoint")
+	}
+	port := u.Port()
+	if port != "" {
+		n, err := strconv.Atoi(port)
+		if err != nil || n < 1 || n > 65535 {
+			return "", errors.New("invalid S3 endpoint port")
+		}
+		port = strconv.Itoa(n)
+	}
+	host := strings.ToLower(u.Hostname())
+	defaultPort := (u.Scheme == "http" && port == "80") || (u.Scheme == "https" && port == "443")
+	if port != "" && !defaultPort {
+		host = net.JoinHostPort(host, port)
+	}
+	return u.Scheme + "://" + host, nil
 }
 
 func (t originTransport) RoundTrip(req *http.Request) (*http.Response, error) {

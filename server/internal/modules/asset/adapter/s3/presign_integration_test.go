@@ -69,6 +69,7 @@ func TestS3SignedRequests(t *testing.T) {
 	service := s3test.New(t)
 	bucket := service.NewBucket(t)
 	s := realStore(t, bucket)
+	t.Run("canonical endpoint authenticates browser authority", func(t *testing.T) { canonicalEndpointTransfer(t, bucket) })
 	upload, err := s.SignUpload(t.Context(), domain.UploadGrant{Key: objectKey(t, 'u'), Size: 3, ContentType: "text/plain", ExpiresAt: time.Now().Add(time.Minute)})
 	if err != nil {
 		t.Fatal(err)

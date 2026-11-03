@@ -35,7 +35,7 @@
 
 直接秘密值通过 `NERVE_FILES__S3__...` 注入；YAML 只允许空默认值或 `_file` 路径，非空内联秘密拒绝。文件仅在 S3 组合时读取，允许内容上限外最多一个LF/CRLF；实际读取最多上限+3字节（额外1字节用于判超限），最多移除末尾一个 LF 或 CRLF；空文件、超限、目录和读取失败均报配置键及类别，不带值/路径。值与文件同时声明始终拒绝（包括未启用S3时），不能按优先级默默忽略。local 不要求 S3 完整配置、不读取 S3 文件；活动 S3 配置错误不得 fallback 到 local。所有凭据/文件路径 LogValue 只输出是否已设置，SDK/HTTP 错误也不能泄露签名 query、Authorization、secret 或 token。
 
-官方 `EndpointResolverV2` 按配置计算实际 bucket endpoint；出站 HTTP 守卫与 CSP 共用其规范化 origin。路径/host 在签名之后不修改。独立 HTTP Transport 使用系统 TLS、`Proxy=nil`、拒绝所有重定向，限制请求到该唯一 origin；SDK `RetryMaxAttempts=1`。每次操作继承 caller context，并受 operation_timeout 限制；不得沿用 credential-free link preview 的 outbound.Get。Close 释放自有空闲连接。
+配置验证后、SDK解析/签名前，将endpoint主机名转小写、端口转规范十进制并省略HTTP80/HTTPS443。拒绝浏览器会改释为IPv4或拒绝的非标准数字主机（短IPv4、八/十六进制及数字末标签的伪DNS），标准四段IPv4仍接受。官方 `EndpointResolverV2` 再计算实际 bucket endpoint；出站 HTTP 守卫与 CSP 共用其规范化 origin。路径/host 在签名之后不修改，也不放宽精确Host守卫。独立 HTTP Transport 使用系统 TLS、`Proxy=nil`、拒绝所有重定向，限制请求到该唯一 origin；SDK `RetryMaxAttempts=1`。每次操作继承 caller context，并受 operation_timeout 限制；不得沿用 credential-free link preview 的 outbound.Get。Close 释放自有空闲连接。
 
 启动在一个 operation_timeout 总期限内读取 HeadBucket 和 GetBucketVersioning，只接受版本状态为空（从未启用），Enabled/Suspended/未知/权限不足均拒绝。生产启动不创建桶、不改 CORS、不写探针对象；只读启动检查不宣称证明所有厂商的条件复制。运行账号需读桶状态权限；部署保持桶模式、桶私有和 prefix 独占，不用外部生命周期策略删 Nerve 活对象。支持性需通过下述真实合同，不能只凭“S3 compatible”字样。
 

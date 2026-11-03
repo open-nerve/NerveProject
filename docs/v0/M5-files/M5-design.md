@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1/P2已完成集成和归档。P2 noff main2d1bcf0c的CI41556463795全绿；P3 spec/plan预检通过，T1–T8已完成，见[re-36](../../reviews/re-36-M5P3预检.md)。
+> 状态：P1/P2已完成集成和归档。P2 noff main2d1bcf0c的CI41556463795全绿；P3 spec/plan预检通过，T1–T8已完成，T9本地七项通过、远端检查点与整审待完成，见[re-36](../../reviews/re-36-M5P3预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 > 设计、P1、P2分支均已合入并归档；当前工作分支codex/m5-p3。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
@@ -155,7 +155,7 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 
 真实合同要求长度/类型绑定的SigV4 PUT、HEAD/GET/DELETE、源CopySourceIfMatch加目的IfNoneMatch=*的原子COPY及有限有序ListObjectsV2；不退无条件复制。官方HTTPPresignerV4扩展点仅在正式签名前按真实signingTime计算精确期限，随后由官方Signer签名；不伪造时钟或改签后host。错误/200内嵌错误、迟到实物、双时钟和分页恢复沿P2协议，不能把请求取消当服务端已停止。 协议正文在SDK解析前有界（普通64KiB，清单64KiB+limit×16KiB），成功Open仍流式；错误读取/解析失败保持后端故障，不凭HTTP状态确认缺对象或冲突。
 
-官方EndpointResolverV2计算实际bucket origin，独立transport只准该origin、无环境代理/redirect、系统TLS、SDK RetryMaxAttempts=1；不改credential-free link-preview outbound客户端。bootstrap选择驱动与资源所有权，asset app小端口和domain纯净；S3不注册local raw handler，/static保留树与完整路由守卫仍按两driver验证。
+验证后先统一端点主机名大小写/十进制端口并省略默认端口，拒绝浏览器另释的非标准数字主机，再由官方EndpointResolverV2计算实际bucket origin；不改签后URL，独立transport只准该origin、无环境代理/redirect、系统TLS、SDK RetryMaxAttempts=1；不改credential-free link-preview outbound客户端。bootstrap选择驱动与资源所有权，asset app小端口和domain纯净；S3不注册local raw handler，/static保留树与完整路由守卫仍按两driver验证。
 
 浏览器CORS只允许实例frontend origin、PUT/GET/HEAD、Content-Type和明确暴露头；CSP只加实际存储origin到img-src/connect-src，不用通配。F4必须真实三浏览器File/Blob验证长度、类型、跨origin/匿名/CSP及实物，不以Go HTTP替代。详细配置上限、秘密文件规则、部署约束、测试/容量和代价见[P3 spec](specs/P3-s3-storage.md)与[plan](plans/P3-s3-storage.md)。
 

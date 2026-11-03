@@ -1,6 +1,6 @@
 # M5 / P3 阶段评审记录
 
-> spec/plan预检通过，T1–T8已完成，T9全量门禁待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
+> spec/plan预检通过，T1–T8已完成，T9七项本地门禁通过，首次产品检查点待远端CI。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
 
 ## 1. 评审方式
 
@@ -12,7 +12,7 @@
 
 ## 3. 执行中的决定
 
-预检局部裁定为官方SDK/同版测试helper、never-versioned桶、精确origin/静态凭据、真实签名秒适配、S3读no-store及可选local raw接线；每项原因和代价见spec/re-36。T1局部裁定见§8：同一配置规则验证环境/文件值，未启用驱动也拒绝明确冲突，YAML源限制在合并覆盖前执行。T5将XML流量边界置于SDK解析前，数据库/River恢复测试复用PG夹具及独立进程，理由/代价见§12。
+预检局部裁定为官方SDK/同版测试helper、never-versioned桶、精确origin/静态凭据、真实签名秒适配、S3读no-store及可选local raw接线；每项原因和代价见spec/re-36。T1局部裁定见§8：同一配置规则验证环境/文件值，未启用驱动也拒绝明确冲突，YAML源限制在合并覆盖前执行。T5将XML流量边界置于SDK解析前，数据库/River恢复测试复用PG夹具及独立进程，理由/代价见§12。T8的协议响应上限与错误分类见§15；T9在签名前统一SDK/浏览器端点来源，保留精确origin守卫，原因及部署代价见§16。
 
 ## 4. 整分支评审的发现与处理
 
@@ -125,3 +125,12 @@ P2已完成并归档；P3接续S3/CORS/CSP/真实合同，M0超时handoff只记�
 - 首次补限流仍有chunked404失败。固定SDK源码表明io.Copy已返回DeserializationError，适配器却只看外层HTTP状态：增加“已完整解析API错误”的前提后才映射404/409/412。9个真实截断XML的Open/Seal/Delete反例先RED0.602s，防止DELETE把未知结果确认成功；HEAD正常空错误体仍沿SDK状态错误/同预算核桶规则。资源组raceGREEN2.747s，最终容量/资源/业务恢复race为S3 33.667s、bootstrap23.781s，4228非文档输入hash/集合前后不变。
 - T1–T7的21项性质变异逐一核实际断言日志与当时正常源码hash；T8再加整文件缓冲、取消普通XML上限、把错误当文件流、跳过解析后分类4项，共25项。整文件缓冲变异的100MiB堆增量252,060,872B，实际命中50MiB门槛。初次在未全绿基线上运行的变异、一次导致nil panic的分类变异均保留且不计数；最终只统计具体断言失败，恢复hash与独立正常输入核对。原件task-8-mutation-audit.json及task-8-final-mutation-*。
 - 四组各五轮race全部通过：s3 193.506s、postgres92.530s、bootstrap119.748s；完整路由/401/原raw与S3生命周期race22.374s，架构race6.083s，生成一致、server/tools lint零问题、关键词无命中、自有容器清单为空。所有最终收据为同一4228非文档输入。A7/A8关闭；T9完整七项、T10阶段整审和精确分支/main CI仍开放。
+
+## 16. T9全量门禁与输入核对（进行中）
+
+- T8提交为2d289899。首次全量Go命令为了统计用例数使用全局GOFLAGS=-json，意外传给架构测试内部go list，触发“go list -f cannot be used with -json”；这不是产品守卫失效。仅中断本次Go/test进程，108.200s、退出码2和全部日志/输入保留，自有测试会话容器已由其回收。以后不注入该全局参数，以正常make test和实际包结果记录。
+- Review Focus1发现标准端点写法尚有缺口：SDK签名器省略默认端口后，原Host/URL精确比较拒绝启动；大小写主机及前导零端口仍进签名，而浏览器会改写。独立wire探针与真实提供方用例均实红；新增永久TestS3EndpointCanonicalOrigin覆盖HTTP80/HTTPS443、大小写、前导零及非默认端口，真实TestS3SignedRequests子例核最终URL和PUT/HEAD/DELETE。
+- 局部修正只在配置和适配器：先按原规则验证，然后在SDK解析/签名前规范主机名/端口；不修改签后地址、不放宽origin或Host守卫。TestS3EndpointBrowserHost另以8个反例拒绝被浏览器另释为IPv4或拒绝的数字主机，6个普通DNS/标准IPv4正例保留。Node原生URL解析证据存task-9-browser-url-origins.log；代价是部署需用标准IPv4或正常DNS，不接受短地址、八/十六进制或数字末标签的伪DNS。
+- 初次overlay探针的大小写用例受到旧测试dial helper的大小写判断干扰，改为只连独占测试listener后重跑，前后原件均保留；永久用例再在真实提供方实红14.479s，修复后config race1.613s、S3 race15.541s通过。正常全量Go旧代码运行在390.823s主动中断，不能计入通过；新代码的全部七项另以task-9-green-*收据重新执行。第一次lint仅两处De Morgan建议，改为具名布尔值，未放宽检查。
+- server与tools各新增同一12个批准SDK模块，所有旧模块版本不变；pnpm-lock仅3行testcontainers importer，无其他升级。83个改动Go/TS文件均≤400行，实际依赖/规模表存task-9-module-audit.json、task-9-source-size.json。T7三浏览器证据仍独立保留，默认E2E不能替代它。
+- 七项本地门禁全部通过：生成3.101s、Go lint31.120s、全量Go775.772s、web lint2.850s、knip2.146s、web test0.359s、build+E2E147.214s（345项、Playwright报告2.4m）。前端lint 54项中38缓存，test 18项均命中共享本地Turbo缓存；关键词76规则/14例外、1312翻译键检查另实际运行。Go由make的-count=1执行，未输出子用例计数，不以包数量冒充用例数。全部7份4230个非文档输入逐项等于当前源码；准确包数/缓存及哈希收据见task-9-seven-audit.json与task-9-green-*。本轮自有S3容器清单为空，原始E2E报告已独立复制；远端精确检查点CI及T10整审仍待完成。

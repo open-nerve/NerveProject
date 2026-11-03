@@ -36,7 +36,7 @@ type S3FilesConfig struct {
 
 func (c S3FilesConfig) validate(fail func(string, string, ...any)) {
 	if !validS3Endpoint(c.Endpoint) {
-		fail("files.s3.endpoint", "must be an explicit HTTP(S) DNS or IPv4 origin without credentials, path, query or fragment")
+		fail("files.s3.endpoint", "must be an explicit HTTP(S) browser-compatible DNS or canonical IPv4 origin without credentials, path, query or fragment")
 	}
 	if len(c.Region) < 1 || len(c.Region) > 64 || !asciiToken(c.Region, "-") {
 		fail("files.s3.region", "must contain 1 to 64 ASCII letters, digits or hyphens")
@@ -117,7 +117,17 @@ func validS3Endpoint(raw string) bool {
 		// resolve to IPv6; reject only a literal before constructing storage.
 		return ip.Is4()
 	}
-	return validDNSName(strings.ToLower(strings.TrimSuffix(host, ".")))
+	name := strings.ToLower(strings.TrimSuffix(host, "."))
+	if !validDNSName(name) {
+		return false
+	}
+	// Browser special URLs treat a numeric final label as IPv4, including
+	// shortened, octal and hexadecimal forms. Go DNS/URL parsing does not.
+	// A canonical IPv4 literal was handled above; reject ambiguous DNS forms
+	// instead of signing one authority and sending credentials to another.
+	last := name[strings.LastIndexByte(name, '.')+1:]
+	hexLabel := strings.HasPrefix(last, "0x") && strings.Trim(last[2:], "0123456789abcdef") == ""
+	return strings.Trim(last, "0123456789") != "" && !hexLabel
 }
 
 func validDNSName(name string) bool {

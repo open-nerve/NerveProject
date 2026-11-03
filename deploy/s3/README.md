@@ -39,6 +39,8 @@ Prefix 必填、实例独占、1–128 字节，使用字母、数字、`_`、`-
 
 ## 浏览器来源
 
+端点在签名前统一主机名大小写和端口写法，省略 HTTP 80 / HTTPS 443；不会改写已签名 URL。IPv4 使用标准四段十进制写法。拒绝 `127.1`、八进制/十六进制地址及数字结尾的伪 DNS，因为浏览器会将它们解释为另一地址或直接拒绝。
+
 [cors.example.json](cors.example.json) 仅允许 `https://nerve.example.com` 的 PUT/GET/HEAD 和 Content-Type，暴露 ETag、Content-Length、Content-Type、Content-Disposition。换成实际前端 origin（协议、主机、端口），不要加入路径、`*` 或凭据允许。CORS 是桶管理设置，由部署方一次配置；Nerve 启动不会改它。
 
 页面 CSP 只在 img-src/connect-src 增加存储的确切 origin；脚本来源、内联脚本 hash、其他指令和 API 安全头不变。上传时按 API 返回的 method、URL 和 headers 传 File/Blob，由浏览器自动发送 Content-Length，不能手设该头；改长度、类型或签名返回 403。

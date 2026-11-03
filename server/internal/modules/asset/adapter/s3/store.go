@@ -39,6 +39,12 @@ func newStore(ctx context.Context, cfg Config, deps Deps, transport *http.Transp
 		transport.CloseIdleConnections()
 		return nil, err
 	}
+	endpoint, err := canonicalEndpoint(cfg.Endpoint)
+	if err != nil {
+		transport.CloseIdleConnections()
+		return nil, err
+	}
+	cfg.Endpoint = endpoint
 	if deps.RuntimeNow == nil {
 		transport.CloseIdleConnections()
 		return nil, errors.New("S3 storage lacks runtime clock")

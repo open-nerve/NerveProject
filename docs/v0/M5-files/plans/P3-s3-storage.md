@@ -138,10 +138,10 @@
 
 ## Task 9（T9）：全量门禁和首次产品检查点
 
-**Files：** spec/plan/阶段review、必要输入handoff及M5进度；不改未到期消费者。
+**Files：** spec/plan/阶段review、必要输入handoff及M5进度；Review Focus1局部根因修正store.go/transport.go/config/files_s3.go，新增endpoint_origin_test.go/endpoint_host_test.go并扩展真实签名用例、部署说明；不改未到期消费者。
 
-- [ ] Step 1：串行`make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`；保存输入hash/命令/退出码/实际test数及缓存情况，失败根因修正后只重验需重验部分，最终证据对应同一代码树。
-- [ ] Step 2：核生成一致/工作树/依赖实际导入、规模与临时资源、五个Review Focus均有证据；对CSP/三浏览器另附T7不能以默认E2E代替。
+- [x] Step 1：串行`make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`；保存输入hash/命令/退出码/实际test数及缓存情况，失败根因修正后只重验需重验部分，最终证据对应同一代码树。
+- [x] Step 2：核生成一致/工作树/依赖实际导入、规模与临时资源、五个Review Focus均有证据；对CSP/三浏览器另附T7不能以默认E2E代替。
 - [ ] Step 3：中文提交并系统git push；连接GitHub核准确SHA的server/web/e2e，失败主动取日志根因处理；已知W11仅按既有规则，记录20m job预算中实际新增成本，不盲调时限/无限重跑。
 - [ ] Step 4：补阶段review七节及边界/原件索引，转整审；不能以这次检查点CI替代最后HEAD。
 
