@@ -1,6 +1,6 @@
 # M5 / P2 阶段评审记录
 
-> 实施中：T1–T12本地验收完成，最终七项通过；T10检查点79d183da的CI41545110572三个job全绿。T13整分支审查进行中，T14未开始，没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
+> T1–T12完成；T13整审和I1修复复核完成，修复候选cb47940c的完整七项通过（341 E2E、4523输入未变）。T12检查点60411a30的CI41549309269三个job全绿。最终文档分支CI收据随后补齐；T14未开始，没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
 
 ## 1. 方式
 
@@ -8,7 +8,7 @@
 
 ## 2. 验收进度
 
-A1–A12均保持未完成。T1提供用途/范围/父组合、metadata≤3候选/16KiB及受限图片校验；它不提供API、数据库或完整恢复链，不能据此勾选阶段标准。
+A1–A11的实现和本地验收已完整对应§18证据索引，最终复核以cb47940c的完整七项及I1反例为准。A12的准确最终分支/main CI、noff及归档清理仍待完成，不用候选检查点绿色替代集成。
 
 ## 3. T1已完成的验证与裁定
 
@@ -22,19 +22,19 @@ A1–A12均保持未完成。T1提供用途/范围/父组合、metadata≤3候�
 
 ## 4. 整分支审查
 
-T13进行中。一次新鲜整分支审查以85dc4087..b2c90cdb为范围，主控继续逻辑、集成、测试三个视角复核。当前确认I1非默认保留期不一致，已完成真实性质红绿及受影响race；最终整审结论、修复后完整门禁和准确CI仍待完成。
+一次新鲜整分支审查以85dc4087..b2c90cdb为固定范围，主控按逻辑、集成、测试三个视角复核。唯一Important I1是非默认保留期接线不一致，已完成实际RED→GREEN、受影响race及修复后完整七项；0 Critical、0新增Minor。完整范围、逐条裁定和未验证边界见[re-35](../../../reviews/re-35-M5P2整体审核.md)，原独立报告不改写为审过后续修复。最终文档分支CI仍单独核验。
 
 ## 5. 与plan差异
 
-T1确认必须的完整Go依赖传递链，补齐spec/plan；T1无ETag输入，原“ETag当摘要”变异具体化为漏算尾部字节，真正ETag版本与SHA不同职责在T7封存组合验证。每条局部裁定及代价另见台账。
+主要局部调整为T1必要Go依赖链、T4有限purge分页与真实扫描数、T10闭合Upload.headers列表/完整权限目录/原生用途关键词识别、T13既有保留期单一配置接线。均保留原守卫与真实反例；T1无ETag输入的变异具体化为漏算尾部，T7再证明ETag版本与SHA职责。每条裁定、理由和错误代价见台账及re-35，不把历史编译/夹具失败计为行为RED。
 
 ## 6. 后续责任
 
-T10已补齐API故事和首次完整本地七项，T11真实交错/资源/回滚及五遍race完成，接续T12最终门禁和T13整审。P4/P5绑定、P3 S3、P6/P7页面以及P1遗留C12 Minor都未完成；输入handoff保持open。
+接续准确最终分支CI、T14 main集成与归档；P3 S3、P4/P5绑定、P6/P7页面、P8规模/故障演练以及P1遗留C12 Minor仍由对应阶段完成。七份输入handoff已逐一追加P2处理结果，保持open。
 
 ## 7. 已知限制
 
-当前已有六个业务操作、真实实物链、受保护清理、重启恢复、F1/F3/F13/F14/F15的API故事及T11交错验收。阶段最终门禁和T13终审仍未完成；P2不提供绑定或页面附件能力。
+P2交付六个业务操作和私有未绑定准备件、真实实物链、受保护清理、重启恢复及F1/F3/F13/F14/F15 API故事，不提供绑定或页面附件能力。本地目录每页O(N)，仅记录10,000对象成本；头部验证不是全像素/内容安全扫描；存储长期故障会有意保留父墓碑，不能承诺任意规模回收SLA。后续具体责任见re-35，未冒称已验收S3或任意断电语义。
 
 ## 8. T2本地清单、临时目录与配置
 
@@ -153,9 +153,9 @@ T10已补齐API故事和首次完整本地七项，T11真实交错/资源/回滚
 - 四项生产行为变异均被真实PG/程序拦截：去账户首锁、错分项目门、把Host.Check移到锁外、asset在project之前。每次原字节恢复SHA一致；原件task-11-mutations.json及各日志/变异/备份。无编译红充数。
 - 最终命令为`go -C server test -p 1 -json -race ./internal/bootstrap -run 'Asset.*(Interleav|Resource|Rollback|Lock)' -count=5 -timeout=15m`：220.83秒退出0，10组各5遍，包含子测试共240个pass节点，无失败/skip/竞态/40P01；4,521输入SHA全程未变，见task-11-race-{inputs,result}.json与完整jsonl。Task结束只复核这份原始证据与源码哈希，不重复另一轮五遍测试。
 
-## 18. T12阶段证据索引（整审与最终CI待完成）
+## 18. 阶段验收证据索引
 
-以下为已运行证据的汇总，不提前勾选spec。最终七项、整审和精确CI另附收据。
+以下为A1–A11已运行证据的汇总；T13修复后的完整七项和整审补充于§19/re-35，A12精确分支/main CI与归档另附收据。
 
 | 标准 | 永久测试 / 故事 | 原始证据 |
 |---|---|---|
@@ -166,7 +166,7 @@ T10已补齐API故事和首次完整本地七项，T11真实交错/资源/回滚
 | A5 | TestAssetStorageDoesNotHoldResources、TestAssetSealFailureRecovery、TestAssetCompleteStorageFailures | T7候选/lease/流取消；T11三阶段资源与迟到拒绝 |
 | A6 | TestAssetDuplicateAuthorizationAndBytes、TestAssetDuplicateRevalidatesImagePurpose、TestAssetDuplicateRechecksSourceAndTarget | T8五变异、T10 F3/F13、T11复制源撤权与目标范围改变 |
 | A7 | TestAssetDeletionFollowsIssueTree、TestAssetParentJobsUseOriginalTransaction、TestAssetScopeDeletionRollback；F14/I15/I17/I21/P4/W3 | T5同步/原事务/原AtBy、T10目录全边/真实实物、T11五种COMMIT故障 |
-| A8 | TestAssetCleanupRetentionAndRuntime、TestAssetCleanupClocksAndLateObjects、TestAssetCleanupStrictBusinessBoundaries、TestAssetCleanupLateBytesAfterAcknowledgement；F15 | T5/T9双时钟、迟到对象、已确认清理回放；T10真实进程重启 |
+| A8 | TestAssetCleanupRetentionAndRuntime、TestAssetCleanupClocksAndLateObjects、TestAssetCleanupStrictBusinessBoundaries、TestAssetCleanupLateBytesAfterAcknowledgement、TestAssetConfiguredRetentionWired/Boundary；F15 | T5/T9双时钟、迟到对象、已确认清理回放；T10真实进程重启；T13非默认保留期/严格边界RED→GREEN |
 | A9 | TestAssetProtectedCatalogRejectsMissingAncestorsAndConstraints、TestAssetProtectedParentsProgressAndConverge、TestAssetProtectedParentDoesNotBlockWiredPurge | T4–T5直接/传递祖先、精确23503、扫描/删除分离、恢复收敛及接线反例 |
 | A10 | TestLocalInventoryPages、TestAssetCleanupBudgetResumesInsidePage、TestAssetSweepRestarts | T2真实10,000对象/10页与窗口容量；T9真实River snooze/restart与固定cutoff |
 | A11 | TestContentValidation、TestContentDimensionsAndHeaderBudget、TestContentFullStreamHash、TestContentCancellationAtEOF、TestAssetCompleteOneDeadlineAndCancellation | T1四格式/头限制/全流hash及依赖；T7/T11读者与资源释放 |
@@ -190,3 +190,9 @@ T10已补齐API故事和首次完整本地七项，T11真实交错/资源/回滚
 - 根因修复沿用既有单一配置：bootstrap将同一`Cleanup.PurgeAfter`传入asset构造及CleanupDeps，final按持久游标的业务时刻减该时长、严格Before认领。未新设files保留期、未改变配置范围、SQL、外键或owner权限/清理端口。设计/spec/plan先同步“60天为默认值”。这属于已批准联合清理范围内的局部接线修正；代价是调用者必须显式提供正时长，缺失时拒绝构造/执行，不能偷偷回退到默认。
 - `TestAssetConfiguredRetentionWired`真实上传/确认/删除、资产cleanup及父purge同时验证非默认值；只在存储夹具中调整墓碑年龄和已空闲对象SafeAfter，不冒称证明签名实际到期。`TestAssetConfiguredRetentionBoundary`证明对象与SQL行采用一致严格边界。两组绿：PG1.998秒、bootstrap7.403秒。
 - 受影响的asset清理/保留期/删除/父行/游标与bootstrap使用`-p 1 -race -count=1`串行通过，PG6.557秒、bootstrap29.397秒；原件`task-13-retention-race.log`。修复后的完整七项和准确远端CI另行补录。
+
+### 修复后的最终本地门禁
+
+cb47940c / tree 0d2451246a5f69d1c3bdc0cafbe5d6b032e1dc1c：gen-check3.12秒、lint-go15.32秒、全量Go559.91秒、lint-web54/54（38缓存）2.85秒、knip2.02秒、test-web18/18（18缓存）0.25秒、build+E2E341/341通过144.53秒。七项退出码均0，4523个输入哈希运行前后相同；原件task-13-seven-results/inputs/integrity.json及各日志/Playwright报告，生成物另列task-13-generated.json。
+
+T12准确60411a30的CI41549309269已三job全绿：web125632592445、server125632593000、e2e125636583608。原件task-12-checkpoint-runs.json和task-12-checkpoint-jobs-final.json；它没有包括I1修复，不充当最终分支通过。

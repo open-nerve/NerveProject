@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过，见[re-34](../../../reviews/re-34-M5P2预检.md)，T1–T12本地验收完成，推进T13整分支审查。首次产品检查点远端CI独立记录，不用本地绿替代。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：T1–T12完成，T13整审和I1修复复核完成，修复后完整七项通过；待最终分支CI与T14集成归档。见[re-35](../../../reviews/re-35-M5P2整体审核.md)；预检见[re-34](../../../reviews/re-34-M5P2预检.md)。准确远端CI独立记录，不用本地绿替代。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -197,8 +197,8 @@ T10完整门禁补齐：六个API加入既有权限矩阵及目标目录负例�
 
 **Files：** docs/reviews下下一编号的M5P2整体审核、阶段review、实际发现对应文件。
 
-- [ ] Step 1：按deep-review完整读取基线85dc4087至最终候选，三视角顺序核逻辑、集成、测试；包括全部purge caller、父目录、shared gate/账户首锁、暂停后对象、权限矩阵和生成协议。
-- [ ] Step 2：按executing-plans/requesting-code-review要求安排一次新鲜完整分支审查；按范围给资料，不重复发相同未改动范围。主控裁定后局部问题修复/必要回归/复审，原始失败不删；重大新分歧先提交上报。
+- [x] Step 1：按deep-review读取基线85dc4087至最终候选，手写实现/测试全文、生成物按源契约和生成守卫核验，准确覆盖见re-35；三视角顺序核逻辑、集成、测试，包括全部purge caller、父目录、shared gate/账户首锁、暂停后对象、权限矩阵和生成协议。
+- [x] Step 2：按executing-plans/requesting-code-review要求安排一次新鲜完整分支审查；按范围给资料，不重复发相同未改动范围。主控裁定后局部问题修复/必要回归/复审，原始失败不删；重大新分歧先提交上报。
 - [ ] Step 3：有新产品改动重验受影响与必要完整门禁；最终准确branch CI全绿。I1非默认保留期按M4既有cleanup.purge_after单一配置修正final回收接线，真实local/River复现90d/1d及固定业务时钟严格边界；不新增配置或改变父清理协议。阶段review补全七节，A1–A11据实勾选，A12 main/归档部分待T14。
 - [ ] Step 4：提交最终文档并核其准确CI；不把文档前产品CI写成最后HEAD通过。
 
