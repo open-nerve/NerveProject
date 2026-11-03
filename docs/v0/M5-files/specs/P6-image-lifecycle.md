@@ -24,7 +24,7 @@ class UploadFailure extends Error { readonly kind: UploadFailureKind; readonly s
 function putAsset(file: File, grant: PreparedAsset["upload"], signal: AbortSignal): Promise<void>;
 ```
 
-不构造新的 API problem；无 Authorization/Cookie/Referer，headers 仅复制当前合同支持的 Content-Type。非 2xx 只保留 status 和稳定分类，错误对象/日志不含完整 URL、签名 query、响应 XML 或私有文件名。父取消与 15 分钟 timeout 首个终态决定错误分类，finally 释放，任何一次 resolve/reject 后不再更新状态。
+不构造新的 API problem；无 Authorization/Cookie/Referer，headers 仅复制当前合同支持的一个 Content-Type。直接接受 local 的根相对 URL 与 S3 的绝对 HTTP(S) URL；URL 只校验，不重新序列化签名 query，拒绝协议相对/路径相对地址、其他 scheme、userinfo、fragment、控制字符及重复/额外头。非 2xx 只保留 status 和稳定分类，错误对象/日志不含完整 URL、签名 query、响应 XML 或私有文件名。父取消与 15 分钟 timeout 首个终态决定错误分类，finally 释放，任何一次 resolve/reject 后不再更新状态。
 
 ## 2. 上传资源
 

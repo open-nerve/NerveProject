@@ -33,14 +33,14 @@
 
 接口只在 P6-image-lifecycle.md 声明，Task 不抄实现体。新服务 asset.service.ts；lib/asset-upload.ts；store/asset/{root.store,upload-session,scope-lifetime,profile-images}.ts；hooks/use-profile-image.ts；components/assets/{image-picker,image-upload-modal,profile-image}.tsx。正式实现时同目录新增对应 .test.ts(x)。UserStore 局部改用 Reconciled，不改变公共原语；RootStore 注入唯一会话 API。
 
-既有显示消费者以正式预检保存的完整 rg 清单逐项映射：个人设置/引导/用户菜单/侧栏、工作区菜单/设置/选择器、项目创建/设置/卡片、成员表/下拉/作者/历史/评论/资料页及其复用头像。M6/M7 尚未接通页面只换通用呈现来源，不新增它们的 API 或功能。
+既有显示消费者以正式预检保存的完整 rg 清单、49 项来源映射和 7 处透传调用链逐项迁移：个人设置/引导/用户菜单/侧栏、工作区菜单/设置/选择器、项目创建/设置/卡片、成员表/下拉/作者/历史/评论/资料页及其复用头像。M6/M7 尚未接通页面只换通用呈现来源，不新增它们的 API 或功能。
 
 ## Task 1（T1）：JSON 资产服务与独立 File PUT
 
 **Files:** 新 core/services/asset.service.ts/.test.ts、core/lib/asset-upload.ts/.test.ts；tools/keywords.json；P6 review。
 **Interfaces:** 产出 AssetService.prepare/complete 和 putAsset，直接消费生成 NewAsset/PreparedAsset/Asset；失败分类见子合同。
 
-- [ ] Step 1：服务测试实际记录 URL/body/signal 与 problem 原值；传输测试覆盖同源/跨源、headers/原 File、2xx/403/500、网络、过期/非法 grant、父取消/超时竞争、redirect 拒绝。不能在 jsdom 声称已验证浏览器 Cookie，真实证据在 T11/T12。
+- [ ] Step 1：服务测试实际记录 URL/body/signal 与 problem 原值；传输测试覆盖local根相对地址与S3绝对地址、同源/跨源、签名query原值、重复/额外headers与原File、2xx/403/500、网络、过期/非法 grant、父取消/超时竞争、redirect 拒绝。不能在 jsdom 声称已验证浏览器 Cookie，真实证据在 T11/T12。
 - [ ] Step 2：`pnpm --filter web exec vitest run core/services/asset.service.test.ts core/lib/asset-upload.test.ts` 记录行为 RED 后最小实现；phase=M5/P6。
 - [ ] Step 3：相同命令 GREEN，取消后无挂监听/计时器，错误不包含签名 query；受影响 types/lint/格式，提交 `feat(M5/P6): 接入独立文件直传与资产确认`。
 
@@ -122,7 +122,7 @@
 **Interfaces:** 成员source必须明确workspaceUUID/memberUUID；public邀请沿现有link key与expires_at，不需资产UUID或登录。
 
 - [ ] Step 1：成员/自身/guest与inactive原语义、两个workspace同member旧全局缓存、私有project撤权/恢复、公开邀请过期/失效/更换、多个avatar同来源合并、旧onError不能刷新新图；确保没有新增未实现M6/M7请求。
-- [ ] Step 2：按完整清单逐个迁移到T3显示入口，测试当前可达caller与旧props适配，直接裸URL命中须逐行归零或具名登记确为非资料外部资源，不增加关键词豁免。
+- [ ] Step 2：按完整清单逐个迁移到T3显示入口，测试当前可达caller与旧props适配；历史作者沿root/dropdown传工作区UUID，编辑器mention保留捕获范围，进度统计使用成员ID而非投影裸URL。SwitcherLabel删除无调用者的logo_url分支并核两处图标caller；直接裸URL命中须逐行归零或具名登记确为非资料外部资源，不增加关键词豁免。
 - [ ] Step 3：`pnpm --filter web exec vitest run core/components/dropdowns/member core/components/workspace core/components/project core/components/profile core/components/comments core/components/core/description-versions core/hooks/use-invitation-preview.test.ts core/hooks/work-item-filters`及全types/knip；提交 `feat(M5/P6): 统一有权成员头像与邀请图标的到期展示`。
 
 ## Task 11（T11）：F5–F7 真实页面与双存储

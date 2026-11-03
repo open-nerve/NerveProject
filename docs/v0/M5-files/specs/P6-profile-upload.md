@@ -24,7 +24,7 @@ AssetService(ApiClient) 直接消费 NewAsset / PreparedAsset / Asset，prepare�
 
 选择图片允许 JPEG/PNG/WebP/GIF；File.type 为空或不在集合时明确拒绝，不能靠文件扩展名猜测可信 MIME。size 必须为正且不超过当前 InstanceInfo.file_size_limit，超限不截断/拆分。名称、实际解码和服务端限制仍由后端最后裁决。输入错误与服务端 problem 均显示稳定中文/英文文案，不回显签名地址或原始服务端 XML。
 
-raw PUT 使用服务端 upload.method/url/headers 原值（只接受 PUT、合法 HTTP(S)、允许的 Content-Type 头，不加 Authorization/Cookie/Content-Length）。File 直接作为 body，禁止 FormData、multipart、自造查询参数和透明重定向。HTTP 非 2xx 为失败，网络拒绝、超时、用户取消和生命周期失效可区分。上限 15 分钟主动取消，父 AbortSignal 立即取消；定时器、监听、响应体读完或取消均释放。上传授权 expires_at 在发起前检查，不能把它当作已开始传输的截止点。服务端的独立传输预算仍生效。
+raw PUT 使用服务端 upload.method/url/headers 原值：只接受 PUT；URL 支持当前 local 返回的根相对路径（按当前页面 origin 解析）和 S3 返回的绝对 HTTP(S) 地址，拒绝协议相对地址、路径相对地址、其他 scheme、userinfo、fragment 或控制字符，不改写签名 query。headers 只接受当前合同的一个 Content-Type，拒绝重复或额外头，不加 Authorization/Cookie/Content-Length。File 直接作为 body，禁止 FormData、multipart、自造查询参数和透明重定向。HTTP 非 2xx 为失败，网络拒绝、超时、用户取消和生命周期失效可区分。上限 15 分钟主动取消，父 AbortSignal 立即取消；定时器、监听、响应体读完或取消均释放。上传授权 expires_at 在发起前检查，不能把它当作已开始传输的截止点。服务端的独立传输预算仍生效。
 
 UploadSession 状态至少含 idle、selected、preparing、uploading、confirming、ready、failed、cancelled、disposed；busy 只有前三个请求阶段。ready 保存真实 Asset（state=uploaded）和选择文件的预览，不由客户端假造。双击开始只有一条 prepare/PUT/complete 链；每个 await 之后及回调之前检查所属生命周期。取消或 unmount 后不能继续 complete、owner bind、toast、关新弹窗或覆盖新进度。
 
