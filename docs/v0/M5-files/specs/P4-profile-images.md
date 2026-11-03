@@ -1,6 +1,6 @@
 # M5 / P4：资料图片、业务引用与原子绑定
 
-> 预检通过，T1–T11实现与聚焦回归完成，T12清理恢复、容量及性质变异已验证，最终回归进行中。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3精确main CI41591764345全绿、归档清理后核验通过。一次fresh builder check无重要未决项，主控plan自检及生成/lint/迁移/架构基线通过，见[re-38](../../../reviews/re-38-M5P4预检.md)。
+> 预检通过，T1–T12实现及聚焦/联合验收完成，T13本地七项已通过，远端CI待核。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3精确main CI41591764345全绿、归档清理后核验通过。一次fresh builder check无重要未决项，主控plan自检及生成/lint/迁移/架构基线通过，见[re-38](../../../reviews/re-38-M5P4预检.md)。
 > 输入：M5-design §3/§4/§6/§7/§12 P4，M2/M3/M1-closeout交接；P2-access/recovery/protected-purge合同。负责人授权连续M5，局部取舍自行裁定；重大新风险先提交后上报。
 
 ## 1. 目标、范围与方案
@@ -91,13 +91,13 @@ F5用户头像/封面、F6工作区图标/成员头像、F7项目创建/替换/�
 
 ## 8. 完成标准
 
-- [ ] A1：三owner迁移、索引/互斥CHECK、sqlc归属和Plane差异精确；空库Up/Down及已有P3数据升级通过，不宣称带绑定业务数据的降级无损。
-- [ ] A2：profile两字段批量校验/锁序、替换/移除/同ID幂等、过期和跨范围拒绝，故障原子回滚。
-- [ ] A3：workspace logo与organization_size生成枚举、管理员写/成员读/guest邮箱遮盖保持。
-- [ ] A4：project自定义/预设/清除互斥、new_project一次创建绑定，附属行与候选全部同事务。
-- [ ] A5：所有返回User/Workspace/Project/MemberUser的操作和既有邀请预览均有真实URL+期限合同；授权、签发、零业务DML与批量行为验证。
-- [ ] A6：反向引用清理/父NO ACTION/有界游标/异常前进/删除审计/真实目录守卫及反例全闭环。
-- [ ] A7：F5–F7 API/local实物、真实S3主路径/回滚及必要HTTP/PG并发五轮、≥15性质变异和1000引用证据。
+- [x] A1：三owner迁移、索引/互斥CHECK、sqlc归属和Plane差异精确；空库Up/Down及已有P3数据升级通过，不宣称带绑定业务数据的降级无损。 证据：T1真实迁移/纯规则/存量升级与目录，见[阶段记录§8](../reviews/P4-profile-images-review.md#8-t1所属字段纯规则与sqlc)。
+- [x] A2：profile两字段批量校验/锁序、替换/移除/同ID幂等、过期和跨范围拒绝，故障原子回滚。 证据：T2/T5/T10真实原子绑定、四类故障及权限交错，见[阶段记录§9](../reviews/P4-profile-images-review.md#9-t2原子图片绑定)、[§12](../reviews/P4-profile-images-review.md#12-t5用户资料的原子图片与真实读取)、[§17](../reviews/P4-profile-images-review.md#17-t10真实授权与锁交错)。
+- [x] A3：workspace logo与organization_size生成枚举、管理员写/成员读/guest邮箱遮盖保持。 证据：T6/T7 API、生成枚举与guest遮盖，见[阶段记录§13–14](../reviews/P4-profile-images-review.md#13-t6工作区图标与目录读取)。
+- [x] A4：project自定义/预设/清除互斥、new_project一次创建绑定，附属行与候选全部同事务。 证据：T8/T10一次POST及实际回滚，T12提前commit变异检出，见[阶段记录§15](../reviews/P4-profile-images-review.md#15-t8项目封面与一次创建)、[§19](../reviews/P4-profile-images-review.md#19-t12保留期真实进程恢复和冷统计容量)。
+- [x] A5：所有返回User/Workspace/Project/MemberUser的操作和既有邀请预览均有真实URL+期限合同；授权、签发、零业务DML与批量行为验证。 证据：T5–T11完整DTO、真正local/S3文件及锁/审计验证，T12冷统计批量和取消，见[阶段记录§16–19](../reviews/P4-profile-images-review.md#16-t9全部项目响应的封面授权)。
+- [x] A6：反向引用清理/父NO ACTION/有界游标/异常前进/删除审计/真实目录守卫及反例全闭环。 证据：T4目录/锁序及9变异、T12四引用保留期和真实新进程，见[阶段记录§11](../reviews/P4-profile-images-review.md#11-t4反向引用清理目录及测试资源回收)、[§19](../reviews/P4-profile-images-review.md#19-t12保留期真实进程恢复和冷统计容量)。
+- [x] A7：F5–F7 API/local实物、真实S3主路径/回滚及必要HTTP/PG并发五轮、≥15性质变异和1000引用证据。 证据：T10九项各五轮、T11 F5–F7及双驱动、T12四项各五轮/31变异/1000–1001图片，见[阶段记录§17–19](../reviews/P4-profile-images-review.md#17-t10真实授权与锁交错)。
 - [ ] A8：完整七项、deep-review/一次fresh整审及修复复核、准确最后分支CI成功，失败原件保留。
 - [ ] A9：授权noff、精确main CI全绿、归档hash/bytes/mode/membership/unknown=0、正常分支/worktree清理；下一段P5 spec/plan预检完成。
 
@@ -105,4 +105,4 @@ F5用户头像/封面、F6工作区图标/成员头像、F7项目创建/替换/�
 
 P5完成issue/comment/draft绑定/计数/事件/迁移，P6/P7页面、静态素材、缓存/失效、编辑器，P8规模/故障和交接收敛。M2/M3/M1 handoff保持open，记录P4 API结果；不把M5整体标完成。P3-M1测试夹具启动和清理同时失败时丢原cause、P1焦点Minor仍具名交P8，本段不借机修共享UI；2026-11-03依负责人“测试用完清理容器”的指示，对实际复现的pgtest启动失败遗留作局部修复，见阶段记录§11；P3-M1的S3双故障仍归P8。
 
-主控裁定与代价：使用锁内CPU签发使已撤权请求不能新签发，代价是图片读短暂持有账户/父/资产锁；整集合接口保留现状，按有限块处理资产而不截断数据，后续容量仍需测。预设只返回稳定ID，页面素材P6前仍显示已有默认图。既有邀请预览沿M3的有效MAC链接能力只读它自己的logo，不能泛化到workspace或其他asset；撤销先提交即拒绝新签发，已发URL仍受最长65分钟bearer边界。
+主控裁定与代价：使用锁内CPU签发使已撤权请求不能新签发，代价是图片读短暂持有账户/父/资产锁；整集合接口保留现状，按有限块处理资产而不截断数据，T12已实测1000/1001引用，最终race611/560ms、14/15条SQL；更大整集合仍有持锁成本。预设只返回稳定ID，页面素材P6前仍显示已有默认图。既有邀请预览沿M3的有效MAC链接能力只读它自己的logo，不能泛化到workspace或其他asset；撤销先提交即拒绝新签发，已发URL仍受最长65分钟bearer边界。

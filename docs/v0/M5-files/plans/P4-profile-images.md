@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T11实现与聚焦回归完成，T12清理恢复、容量及性质变异已验证，最终回归进行中。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T12接续，重大新风险先提交后上报。
+> 预检通过，T1–T12实现及验收完成，T13本地七项已通过，远端CI待核。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T13接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -170,12 +170,12 @@
 - [x] Step 1：TestImageReferenceRetention/TestImagePurgeProcess/TestImageReadCapacity：四类61/59天、empty/nonempty/活邻域、全部四引用及父链；页提交/页失败后真实新进程继续，cutoff/after不漂移；至少1000/1001图引用，记录SQL次数、耗时与取消后资源。
 - [x] Step 2：`cd server && go test ./internal/bootstrap -run '^Test(ImageReferenceRetention|ImagePurgeProcess|ImageReadCapacity)$' -count=1 -v`；Expected每个具名GREEN、数据收敛且活邻域不变；精确存储失败保留资产/父行。
 - [x] Step 3：累计至少15个行为变异并逐一恢复hash：申请者、scope、bound、uploaded、7d、old/new排序、账户首锁、目标账号逆序锁、owner授权、同UUID混合引用、创建事务、忽略签名失败、反向FK/漏列、盲清当前ref、删0结束页。只计具体断言RED，编译/启动失败及0 tests剔除并保留原件。
-- [ ] Step 4：受变异影响的最终测试全部GREEN、关键数据库交错五轮race、gen-check/lint；提交 `test(M5/P4): 证明引用清理恢复和批量图片边界`。
+- [x] Step 4：受变异影响的最终测试全部GREEN、关键数据库交错五轮race、gen-check/lint；提交 `test(M5/P4): 证明引用清理恢复和批量图片边界`。
 
 ## Task 13（T13）：完整门禁与产品检查点
 
-- [ ] Step 1：逐项核A1–A7及handoff处理结果，所有文档逐句对照实际证据；新字段/错误生成物与消费者齐全，关键词phase=M5/P4且无到期例外续期。
-- [ ] Step 2：串行 `make gen-check`、`make lint-go`、`GOFLAGS=-p=1 make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`；Expected全0、无未解释skip/缓存混算，记录每项输入hash/输出/时间。保留失败后按根因修复，变动后复验受影响门禁。
+- [x] Step 1：逐项核A1–A7及handoff处理结果，所有文档逐句对照实际证据；新字段/错误生成物与消费者齐全，关键词phase=M5/P4且无到期例外续期。
+- [x] Step 2：串行 `make gen-check`、`make lint-go`、`GOFLAGS=-p=1 make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`；Expected全0、无未解释skip/缓存混算，记录每项输入hash/输出/时间。保留失败后按根因修复，变动后复验受影响门禁。
 - [ ] Step 3：提交中文产品检查点，系统git push；核对准确HEAD的server/web/e2e三job全绿，日志通过连接GitHub自行读取。已知W11正常重跑一次；再次失败停报，不能取消测试或改断言绕过。
 - [ ] Step 4：阶段review记录本地/远端各自证据，不提前称集成完成。
 

@@ -472,8 +472,8 @@ no-shadow全仓清零并升error；死成员按原脚本逐行追生产、测试
 本期未改数据库、服务端协议、权限水位/确认写所有者或M6/M7页面归属。关键词旧八类工作项URL、否定筛选与M4复制例外均清空；其余10条复制例外仍按M6/M7/M8到期，不声称整个应用没有旧领域接口。证据见[P16 review](M4-issue-core/reviews/P16-web-cleanup-review.md)；S2、三引擎影响回归及 deep-review 已通过；最终 `582694d9` 合入 main `01e40e11`，准确 main CI `41290496985` 三作业全绿，证据归档和分支/worktree清理完成。M4 closeout正在实施，最终总体完成标记仍待获准集成。
 
 
-## 八、M5/P4 资料图片引用（2026-11-03，T1）
+## 八、M5/P4 资料图片引用（2026-11-03，T1–T12）
 
 只读对照Plane db/models/user.py:69/78、workspace.py:124、project.py:102：四个图片外键nullable、删除SET_NULL，并保留旧URL回退。Nerve保留所属nullable UUID字段，以即时NO ACTION和每列索引阻止资产被误删；由owner显式条件解除失效引用，清理和精确目录证明在P4/T4完成，不靠SET_NULL或关闭约束绕过。user/workspace/project各自的00035–00037迁移和sqlc scope负责本表，无跨模块SQL。
 
-项目预设保存稳定cover-01..29，与上传UUID互斥，不保存构建URL或运行时签名；省略保留、null清对应侧、选择非空一侧清另一侧。T1字段/纯规则/仓储回归完成，实际绑定和授权URL在P4后续Task，29张素材及页面在P6；此记录不宣称尚未实施部分已上线。
+项目预设保存稳定cover-01..29，与上传UUID互斥，不保存构建URL或运行时签名；省略保留、null清对应侧、选择非空一侧清另一侧。T1–T12字段、原子绑定、所有owner响应中的授权URL、实际双驱动字节、保留期和进程恢复均已验收；项目只POST一次，不用前端补PATCH。29张素材及页面仍在P6，整阶段门禁/整审/集成另由T13–T15核验。

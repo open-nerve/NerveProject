@@ -19,7 +19,7 @@ const acme: InvitationPreview = {
   workspace_name: "Acme",
   workspace_slug: "acme",
   workspace_logo_url: null,
-    workspace_logo_url_expires_at: null,
+  workspace_logo_url_expires_at: null,
 };
 const link = { invitationId: "i-1", token: "nrv_inv_x" };
 const shown = { data: acme, error: undefined };
