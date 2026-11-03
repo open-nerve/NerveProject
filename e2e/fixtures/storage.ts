@@ -37,9 +37,9 @@ export function sendFile(upload: Upload, bytes: Uint8Array): Promise<Response> {
   });
 }
 
-export async function uploadFile(upload: Upload, bytes: Uint8Array): Promise<void> {
+export async function uploadFile(upload: Upload, bytes: Uint8Array, status: 200 | 204 = 204): Promise<void> {
   const response = await sendFile(upload, bytes);
-  expect(response.status, await response.text()).toBe(204);
+  expect(response.status, await response.text()).toBe(status);
 }
 
 export async function completeFile(api: Api, token: string, id: string): Promise<Asset> {
@@ -89,7 +89,8 @@ export async function storedFile(
   scope: Asset["scope"],
   bytes: Buffer = Buffer.from("real attachment bytes"),
   contentType = "text/plain",
-  name = "fixture.txt"
+  name = "fixture.txt",
+  uploadStatus: 200 | 204 = 204
 ): Promise<Asset> {
   const prepared = await prepareFile(api, token, {
     purpose,
@@ -98,10 +99,14 @@ export async function storedFile(
     size: bytes.length,
     content_type: contentType,
   });
-  await uploadFile(prepared.upload, bytes);
+  await uploadFile(prepared.upload, bytes, uploadStatus);
   const asset = await completeFile(api, token, prepared.asset.id);
   expect(asset.state).toBe("uploaded");
-  expect(asset.is_bound).toBe(false);
+  expect(asset.is_bound).toBe(
+    (purpose === "ISSUE_ATTACHMENT" && scope.kind === "issue") ||
+      (purpose === "COMMENT_ATTACHMENT" && scope.kind === "comment") ||
+      (purpose === "DRAFT_ISSUE_ATTACHMENT" && scope.kind === "draft")
+  );
   expect(await readFile(api, token, asset.id)).toEqual(bytes);
   return asset;
 }

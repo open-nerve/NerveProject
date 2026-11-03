@@ -8,6 +8,20 @@ import type { Database } from "../db";
 
 type StoredRow = { id: string; [column: string]: unknown };
 
+/** Read-only snapshots retain full precision and all recovery/audit columns. */
+export async function assetRows(db: Database, ids: string[]): Promise<StoredRow[]> {
+  const rows = await db.query<{ row: StoredRow }>(
+    "SELECT to_jsonb(a) AS row FROM file_assets a WHERE id=ANY($1::uuid[]) ORDER BY id",
+    [ids]
+  );
+  expect(rows).toHaveLength(ids.length);
+  return rows.map(({ row }) => row);
+}
+
+export function imageHTML(...ids: string[]): string {
+  return `<p>Body</p>${ids.map((id) => `<image-component src="${id}"></image-component>`).join("")}`;
+}
+
 /** An old unbound preparation expires even while its host is live; its final keeps the new 60d tombstone. */
 export async function expectExpiredPreparations(db: Database, before: StoredRow[], root: string, startedAt: Date) {
   expect(before.length).toBeGreaterThan(0);

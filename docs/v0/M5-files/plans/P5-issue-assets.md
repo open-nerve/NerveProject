@@ -115,13 +115,13 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 
 ## Task 9（T9）：F8–F12真实API及双存储
 
-**Files:** e2e/stories/asset/f8-issue-attachments.spec.ts、f9-comment-assets.spec.ts、f10-draft-assets.spec.ts、f11-content-copy.spec.ts、f12-image-identity.spec.ts；复用fixtures/storage；bootstrap资产双driver测试。
+**Files:** e2e/stories/files/f8-issue-attachments.spec.ts、f9-comment-assets.spec.ts、f10-draft-assets.spec.ts、f11-content-copy.spec.ts、f12-image-identity.spec.ts；复用fixtures/storage、file-world、s3-world；bootstrap资产双driver测试。
 **Interfaces:** 只消费已实现公开API；SQL断言/故障显式区分正向准备；真实File字节与最终身份、非上传者读取、source不可见404。
 
-- [ ] Step 1：先列故事成功及区分失败的持久化断言，再运行当前测试找真实缺口；不为新增故事伪造产品RED。
-- [ ] Step 2：local与已固定SeaweedFS逐用途上传/确认/绑定/下载字节、复制源/目标反向拒绝、同大小不同字节、评论失败重试、草稿发布返回计数；rawURL期限/inline/attachment合同不变。
-- [ ] Step 3：`make build`后`cd e2e && pnpm exec playwright test stories/asset/f{8,9,10,11,12}-*.spec.ts --project=chromium`与具名Go双driver测试串行；Expected故事/所有cells实际命中通过；保留完整report/trace。
-- [ ] Step 4：记录实物和新测试容器归属/退出清理，提交 `test(M5/P5): 证明工作项评论草稿的真实文件链路`。
+- [x] Step 1：先列故事成功及区分失败的持久化断言，再运行当前测试找真实缺口；不为新增故事伪造产品RED。
+- [x] Step 2：local与已固定SeaweedFS逐用途上传/确认/绑定/下载字节、复制源/目标反向拒绝、同大小不同字节、评论失败重试、草稿发布返回计数；rawURL期限/inline/attachment合同不变。
+- [x] Step 3：`make build build-s3-fixture`后`cd e2e && pnpm exec playwright test stories/files/f{8,9,10,11,12}-*.spec.ts --project=chromium --workers=1`与`go test -race -p 1 ./internal/bootstrap -run '^TestContentStorageContract$' -count=1`串行；Expected五个故事各local/S3一遍、Go六用途各双driver实际命中通过；保留完整report/trace。
+- [x] Step 4：记录实物和新测试容器归属/退出清理，提交 `test(M5/P5): 证明工作项评论草稿的真实文件链路`。
 
 ## Task 10（T10）：权限与真实并发交错
 

@@ -9,6 +9,7 @@ import (
 	"image/color"
 	"image/png"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -34,7 +35,15 @@ func readAssetHTTP(t *testing.T, w issueWorld, actor string, id uuid.UUID) (*htt
 		URL string `json:"url"`
 	}
 	decodeAnswer(t, assetAPICall(t, w, actor, "GET", "/api/v0/assets/"+id.String()+"/content", "", 200), &content)
-	res, data := send(t, newRequest(t, "GET", w.base+content.URL, "", nil))
+	base, err := url.Parse(w.base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	address, err := base.Parse(content.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, data := send(t, newRequest(t, "GET", address.String(), "", nil))
 	if res.StatusCode != 200 {
 		t.Fatalf("signed GET = %d %s", res.StatusCode, data)
 	}

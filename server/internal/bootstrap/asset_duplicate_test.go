@@ -15,8 +15,14 @@ import (
 
 func uploadedAssetHTTP(t *testing.T, w issueWorld, actor, purpose, scope, name, contentType string, data []byte) preparedAssetAnswer {
 	t.Helper()
+	return uploadedAssetHTTPAt(t, w, w.base, 204, actor, purpose, scope, name, contentType, data)
+}
+
+// Only the raw transfer's base and documented success status vary by driver.
+func uploadedAssetHTTPAt(t *testing.T, w issueWorld, base string, status int, actor, purpose, scope, name, contentType string, data []byte) preparedAssetAnswer {
+	t.Helper()
 	prepared := prepareAssetHTTP(t, w, actor, purpose, scope, name, contentType, len(data))
-	putAssetHTTP(t, w, prepared, data, 204)
+	assetRequest(t, base, prepared.uploadRequest(), string(data), status)
 	decodeAnswer(t, assetAPICall(t, w, actor, "POST", completeAssetPath(prepared.Asset.ID), `{}`, 200), &prepared.Asset)
 	return prepared
 }
