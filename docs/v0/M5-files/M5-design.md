@@ -1,8 +1,8 @@
 # M5：文件
 
-> 状态：P1 已完成集成和归档；P2 实现、整审及I1修复后的本地七项通过，待最终分支CI与T14集成归档，见[整审记录](../../reviews/re-35-M5P2整体审核.md)。
+> 状态：P1/P2已完成集成和归档。P2 noff main2d1bcf0c的CI41556463795全绿；P3 spec/plan预检通过，尚未实施，见[re-36](../../reviews/re-36-M5P3预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
-> 设计基线分支 `codex/m5-design` 已合入并归档；P1 已合入并归档，当前工作分支为 `codex/m5-p2`，P2从已通过预检进入实施。2026-11-02 负责人授权按既有节奏连续推进；常规设计、预检、实现、deep-review、`--no-ff` 集成、CI 和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
+> 设计、P1、P2分支均已合入并归档；当前工作分支codex/m5-p3。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
 ## 1. 目标、范围与输入
 
@@ -79,7 +79,7 @@ M5 使头像、个人封面、工作区图标、项目封面、工作项附件�
 
 数据库和 HTML 保存 UUID，不保存签名 URL。浏览器读取时通过已认证的业务 API 得到短期 URL；返回 `expires_at`。到期时重新授权后解析，运行时替换 URL 不触发业务内容保存。
 
-按总体设计，读 URL 是短期 bearer capability：**已签发的 S3 URL 在到期前可能继续有效**，权限撤回阻止新签发，页面立即清空旧范围。不能把 M4 的页面/请求失效写成 S3 存储能即时收回已发出的 URL。读 URL 不放入日志、动态或持久化 HTML；业务 JSON 仍遵守既有 no-store，原始文件响应采用 private 且不超过 URL 有效期的缓存；页面不把能力 URL 分享为永久链接。需要即时收回每次字节读取将改变既定 S3 直读架构，出现这种新要求须上报。
+按总体设计，读 URL 是短期 bearer capability：**已签发的 S3 URL 在到期前可能继续有效**，权限撤回阻止新签发，页面立即清空旧范围。不能把 M4 的页面/请求失效写成 S3 存储能即时收回已发出的 URL。读 URL 不放入日志、动态或持久化 HTML；业务 JSON 仍遵守既有 no-store，原始文件响应采用 private 且不超过 URL 有效期的缓存（local按读取时刻计算剩余max-age；S3为private,no-store，避免签发时固化的max-age在晚取件时越过期限）；页面不把能力 URL 分享为永久链接。需要即时收回每次字节读取将改变既定 S3 直读架构，出现这种新要求须上报。
 
 读 URL 的到期时间取下一个 UTC 整点，最短不足 5 分钟时取再下一个整点，因此最长 65 分钟；签名时间使用当前时间，不伪造 SDK 时钟。页面按 `expires_at` 复用结果，不能仅凭取整宣称每次 S3 签名字符串相同。上传授权默认 15 分钟，不按小时取整。
 
@@ -145,15 +145,19 @@ asset 表合入的同一阶段更新真实删除 fixture、目录/外键守卫�
 
 ### 5.4 s3 与兼容性
 
-采用 AWS SDK for Go v2 的 `aws`、`credentials`、`service/s3`（含其必须的间接依赖）；不手写 SigV4，不引入默认凭据发现链。仅从 Nerve 已验证配置注入显式凭据、region、bucket、endpoint、path-style 及专属 prefix。秘密依既有配置规则经环境或 *_file，启动日志遮盖。
+采用 AWS SDK for Go v2：root/aws v1.47.5、credentials v1.20.13、service/s3 v1.114.6及其9个必须间接模块（[P3 spec §2](specs/P3-s3-storage.md#2-结构依赖和资源所有权)列全）。不手写SigV4、不引入aws/config/默认凭据发现链。只从Nerve已验证的files.s3配置注入显式凭据、region、bucket、endpoint、path_style和专属prefix；秘密通过环境或*_file，日志及错误遮盖。
 
-P3 预检锁定精确 SDK 版本与测试镜像摘要，才修改 go.mod/锁文件。除此之外目前没有新增运行时依赖授权名单；图片验证需要的 Go 官方 `golang.org/x/image/webp` 在 P2 首次使用前的 spec 中点名并锁版本，不能提前安装。前端继续用现有工具，不增加上传框架。
+P3真实服务固定[SeaweedFS4.52](https://github.com/seaweedfs/seaweedfs/releases/tag/4.52)，镜像`chrislusf/seaweedfs@sha256:57877e32bb90073b37dc109b438ba66e84fd5ed9ced5f5c04f56444ef243ce59`；源/各平台摘要及7组协议探针见P3 spec/re-36。不代表其他品牌或AWS云已实测。生产默认仍local，不增加默认对象服务容器；只在测试自建/清理随机凭据、桶、数据与端口，已有Docker/容器不动。
 
-对象存储必须支持带长度/类型约束的 SigV4 PUT、HEAD、GET、DELETE、带源 ETag 条件的 CopyObject 和有限分页 ListObjectsV2；条件不满足拒绝，不能退为无条件复制。使用官方 SDK 的 BaseEndpoint/UsePathStyle，不在签名完成后改 host。不同服务支持差异以真实探针为准；不把“协议兼容”写成所有品牌均已实测。
+SDK首次实际消费时再改server模块锁；测试专用server/tools/s3fixture可消费同三SDK版本及必要间接模块，提供Node测试桶/CORS/实物断言，不注册到nerve CLI、不引入JS SDK。既有testcontainers-go v0.44.0及Node testcontainers12.1.0仅按实际消费转直接依赖，不升级。除此以外无新增依赖授权。P2的官方x/image/webp v0.47.0继续保持；前端不增加上传框架。
 
-真实 S3 兼容契约在专属于本次测试的临时服务上运行，使用生成的测试凭据与桶，串行清理自身资源。默认开发与生产均不要求增加对象存储容器。已有 Docker/容器绝不改动。测试服务选型/镜像在 P3 预检完成，不把不支持条件复制的假服务作为通过依据。
+只支持从未启用版本控制的普通私有桶，不支持Enabled/Suspended/Object Lock/Express/access point；启动在operation_timeout总期限内只读HeadBucket/GetBucketVersioning，未知或拒绝即失败，不写生产探针。部署保持模式、prefix独占且无外部删除活文件规则；否则普通Delete可能仅留下delete marker而失去旧字节恢复依据。版本化协议和跨后端迁移未实现，不能直接改配置当迁移或自动fallback。
 
-浏览器 CORS 仅允许实例配置的前端 origin、PUT/GET/HEAD 和所需请求头，配置指引给出准确列表；应用 CSP 只增加显式存储 origin 的 img-src/connect-src，不用通配符。出站存储客户端仅访问配置端点，不接受业务请求中的 endpoint/key。
+真实合同要求长度/类型绑定的SigV4 PUT、HEAD/GET/DELETE、源CopySourceIfMatch加目的IfNoneMatch=*的原子COPY及有限有序ListObjectsV2；不退无条件复制。官方HTTPPresignerV4扩展点仅在正式签名前按真实signingTime计算精确期限，随后由官方Signer签名；不伪造时钟或改签后host。错误/200内嵌错误、迟到实物、双时钟和分页恢复沿P2协议，不能把请求取消当服务端已停止。
+
+官方EndpointResolverV2计算实际bucket origin，独立transport只准该origin、无环境代理/redirect、系统TLS、SDK RetryMaxAttempts=1；不改credential-free link-preview outbound客户端。bootstrap选择驱动与资源所有权，asset app小端口和domain纯净；S3不注册local raw handler，/static保留树与完整路由守卫仍按两driver验证。
+
+浏览器CORS只允许实例frontend origin、PUT/GET/HEAD、Content-Type和明确暴露头；CSP只加实际存储origin到img-src/connect-src，不用通配。F4必须真实三浏览器File/Blob验证长度、类型、跨origin/匿名/CSP及实物，不以Go HTTP替代。详细配置上限、秘密文件规则、部署约束、测试/容量和代价见[P3 spec](specs/P3-s3-storage.md)与[plan](plans/P3-s3-storage.md)。
 
 ## 6. API 与错误
 
@@ -299,14 +303,15 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 |---|---|---|
 | 设计与 P1 预检 | 已完成 | [预检记录](../../reviews/re-31-M5设计与P1预检.md) |
 | P1 | 已完成：noff main 85dc4087，CI 41471671630 全绿，792 文件归档核验并清理 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) / [阶段记录](reviews/P1-local-storage-review.md) / [整审](../../reviews/re-33-M5P1整体审核.md) |
-| P2 | 实现、整审和I1修复后本地七项通过；待准确最终CI、集成归档 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [整审](../../reviews/re-35-M5P2整体审核.md) / [阶段记录](reviews/P2-assets-review.md) / [裁定](reviews/P2-purge-contract-decision.md) |
-| P3–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
+| P2 | 已完成：noff main2d1bcf0c，CI41556463795全绿，2191文件归档核验并清理 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [整审](../../reviews/re-35-M5P2整体审核.md) / [阶段记录](reviews/P2-assets-review.md) / [裁定](reviews/P2-purge-contract-decision.md) |
+| P3 | spec/plan预检通过，T1尚未开始 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
+| P4–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
 设计审查已修正的衔接：复用已有用途 MAC；保持 M4 的安全 URL 清洗合同；业务 JSON 仍 no-store；签名/传输使用运行时钟；外部操作记录放入有界 storage_metadata，不增加业务表。
 
-P1 的预算/MAC/Range 精确常数已写入通过预检的 spec。仍须在后续对应 spec 预检确定而不能在实现里猜：P2 完整状态表、锁图、清理宽限和 owner 端口；P3 SDK/测试服务版本及真实兼容性；P5 评论分页和精确事件/动态合同。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
+P1 的预算/MAC/Range 精确常数已写入通过预检的 spec。仍须在后续对应 spec 预检确定而不能在实现里猜：P2 完整状态表、锁图、清理宽限和 owner 端口；P3已锁SDK/测试服务版本及预检协议，真实Nerve/浏览器/恢复仍待实施；P5 评论分页和精确事件/动态合同。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
 
 ## 16. 协议核验来源
 

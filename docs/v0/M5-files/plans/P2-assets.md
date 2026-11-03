@@ -1,7 +1,7 @@
 # M5 / P2 资产用例与生命周期实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：T1–T12完成，T13整审和I1修复复核完成，修复后完整七项通过；待最终分支CI与T14集成归档。见[re-35](../../../reviews/re-35-M5P2整体审核.md)；预检见[re-34](../../../reviews/re-34-M5P2预检.md)。准确远端CI独立记录，不用本地绿替代。负责人已连续授权 M5 常规推进与集成；新的重大风险/分歧先提交再上报。
+> 状态：T1–T14已完成。最终分支2f8a0d4e与noff main2d1bcf0c各自准确CI全绿，2191文件证据归档核验并常规清理；P3 spec/plan预检已完成。见[阶段review §20](../reviews/P2-assets-review.md#20-t14集成归档与p3接续)、[整审](../../../reviews/re-35-M5P2整体审核.md)和[P3预检](../../../reviews/re-36-M5P3预检.md)。负责人连续授权有效；新的重大风险/分歧仍先提交再上报。
 
 **Goal：** 在 P1 local 实物合同上提供10种用途的私有准备件、六个业务操作和不丢恢复记录的删除/清理。
 
@@ -199,15 +199,15 @@ T10完整门禁补齐：六个API加入既有权限矩阵及目标目录负例�
 
 - [x] Step 1：按deep-review读取基线85dc4087至最终候选，手写实现/测试全文、生成物按源契约和生成守卫核验，准确覆盖见re-35；三视角顺序核逻辑、集成、测试，包括全部purge caller、父目录、shared gate/账户首锁、暂停后对象、权限矩阵和生成协议。
 - [x] Step 2：按executing-plans/requesting-code-review要求安排一次新鲜完整分支审查；按范围给资料，不重复发相同未改动范围。主控裁定后局部问题修复/必要回归/复审，原始失败不删；重大新分歧先提交上报。
-- [ ] Step 3：有新产品改动重验受影响与必要完整门禁；最终准确branch CI全绿。I1非默认保留期按M4既有cleanup.purge_after单一配置修正final回收接线，真实local/River复现90d/1d及固定业务时钟严格边界；不新增配置或改变父清理协议。阶段review补全七节，A1–A11据实勾选，A12 main/归档部分待T14。
-- [ ] Step 4：提交最终文档并核其准确CI；不把文档前产品CI写成最后HEAD通过。
+- [x] Step 3：有新产品改动重验受影响与必要完整门禁；最终准确branch CI全绿。I1非默认保留期按M4既有cleanup.purge_after单一配置修正final回收接线，真实local/River复现90d/1d及固定业务时钟严格边界；不新增配置或改变父清理协议。阶段review补全七节，A1–A11据实勾选，A12 main/归档部分待T14。
+- [x] Step 4：提交最终文档并核其准确CI；不把文档前产品CI写成最后HEAD通过。
 
 ## Task 14（T14）：已授权集成、main CI和下一阶段
 
-- [ ] Step 1：核分支干净、准确main与基线关系及全绿HEAD；`--no-ff`合并main，详细中文说明，系统git正常推送。
-- [ ] Step 2：准确main SHA的server/web/e2e全绿；失败按根因，已知W11重跑仍不过停报。分支绿绝不替代main。
-- [ ] Step 3：主目录ignored归档完整raw/审查/变异/失败/Playwright产物，manifest核SHA256/bytes/mode/membership，未知0；核远端全合并后常规删除local/remote分支和worktree，清理后再验归档。
-- [ ] Step 4：P2标完成、A12收据、M5进度更新；P3 S3 spec/plan/镜像版本与预检先行，普通推进遵从连续授权，重大新发现例外。M5总体完成项保持未勾选。
+- [x] Step 1：核分支干净、准确main与基线关系及全绿HEAD；`--no-ff`合并main，详细中文说明，系统git正常推送。
+- [x] Step 2：准确main SHA的server/web/e2e全绿；失败按根因，已知W11重跑仍不过停报。分支绿绝不替代main。
+- [x] Step 3：主目录ignored归档完整raw/审查/变异/失败/Playwright产物，manifest核SHA256/bytes/mode/membership，未知0；核远端全合并后常规删除local/remote分支和worktree，清理后再验归档。
+- [x] Step 4：P2标完成、A12收据、M5进度更新；P3 S3 spec/plan/镜像版本与预检先行，普通推进遵从连续授权，重大新发现例外。M5总体完成项保持未勾选。
 
 ## 预检与覆盖索引
 
