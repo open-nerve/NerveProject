@@ -69,4 +69,4 @@ pnpm exec playwright test --config=playwright.m5-s3.config.ts
 
 专用配置串行验证 Chromium、Firefox、WebKit，默认 CI 包含 Chromium F4。Go 单元/集成测试使用同版 SDK 与固定真实服务；Go helper 只为本测试的 loopback 服务、随机桶和前缀工作，JSON 输入输出最多 1 MiB、每命令 10 秒、实物读取只返回流式 SHA/大小/头。它不是 nerve 的部署管理命令，不操作生产桶。
 
-预检和实施出现过卷容量不足、秘密文件归属、旧 CSP 阻断上传及测试夹具错误，原失败、修正和复验全部保留；实际证据及尚待完成的容量、整审、CI 验收见 [P3 阶段记录](../../docs/v0/M5-files/reviews/P3-s3-storage-review.md)。不能把本页作为整个 P3 已收官的声明。
+预检和实施出现过卷容量不足、秘密文件归属、旧 CSP 阻断上传及测试夹具错误，原失败、修正和复验全部保留。1B、5MiB、100MiB流式容量及真实16秒慢流已验证；这是固定本地环境的数据，不承诺公网吞吐。容量、整审、精确CI及集成归档的当前证据见 [P3 阶段记录](../../docs/v0/M5-files/reviews/P3-s3-storage-review.md)。

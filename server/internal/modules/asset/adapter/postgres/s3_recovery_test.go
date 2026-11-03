@@ -176,7 +176,8 @@ func s3LateCandidate(t *testing.T, b *s3test.Bucket) {
 
 func s3LostDeleteResponse(t *testing.T, b *s3test.Bucket) {
 	w := newAssetWorld(t)
-	w.now = time.Now().UTC()
+	// Preserve a sub-microsecond fraction to exercise PostgreSQL timestamp precision.
+	w.now = time.Now().UTC().Truncate(time.Microsecond).Add(789 * time.Nanosecond)
 	proxy := s3test.NewFaultProxy(t, b)
 	cfg := s3RecoveryConfig(b)
 	cfg.Endpoint = proxy.URL
@@ -185,7 +186,9 @@ func s3LostDeleteResponse(t *testing.T, b *s3test.Bucket) {
 	key := s3Key(t, 'o', a.ID)
 	putS3Recovery(t, b, key, a.ContentType)
 	a.Metadata.Candidates = []domain.Candidate{{ObjectRecord: domain.ObjectRecord{Key: key, Phase: domain.ObjectActive, Size: 3, ContentType: a.ContentType, SafeAfter: w.now.Add(-time.Minute)}, LeaseUntil: w.now.Add(-2 * time.Minute)}}
-	if _, err := w.store.CreateAsset(t.Context(), a); err != nil {
+	// Recovery must preserve the persisted audit, whose precision is microseconds.
+	a, err := w.store.CreateAsset(t.Context(), a)
+	if err != nil {
 		t.Fatal(err)
 	}
 	held := proxy.HoldNext(t, "DELETE", "/"+b.Name+"/recovery/"+string(key), s3test.BeforeResponse)
@@ -224,6 +227,6 @@ func s3LostDeleteResponse(t *testing.T, b *s3test.Bucket) {
 	}
 	got, err = w.store.FindAsset(t.Context(), a.ID)
 	if err != nil || len(got.Metadata.Candidates) != 0 || got.DeletedAt != nil || !got.UpdatedAt.Equal(a.UpdatedAt) {
-		t.Fatalf("retry lost audit: %+v %v", got, err)
+		t.Fatalf("retry lost audit (want updated_at %v): %+v %v", a.UpdatedAt, got, err)
 	}
 }

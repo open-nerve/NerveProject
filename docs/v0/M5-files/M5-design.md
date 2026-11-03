@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1/P2已完成集成和归档。P2 noff main2d1bcf0c的CI41556463795全绿；P3 spec/plan预检通过，T1–T8已完成，T9本地七项通过、远端检查点与整审待完成，见[re-36](../../reviews/re-36-M5P3预检.md)。
+> 状态：P1/P2已完成集成和归档。P2 noff main2d1bcf0c的CI41556463795全绿；P3 spec/plan预检通过，T1–T8已完成，T9原本地七项通过、远端失败已局部复现修复，T10整审修复后本地七项/三浏览器通过，准确最后分支CI与集成待办，见[re-36](../../reviews/re-36-M5P3预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 > 设计、P1、P2分支均已合入并归档；当前工作分支codex/m5-p3。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
@@ -256,6 +256,8 @@ local/S3 共享适配器合同及最少浏览器场景；Chromium/Firefox/WebKit
 | P8 | 文件全链路容量/清理演练、所有交接复核、死成员和 warning 收敛、默认部署演示与三浏览器验收 | F1–F18 最终矩阵、精确数据证据、deep-review、M6–M8 交接及收尾材料 |
 | closeout | 首次 noff 合收尾并等 main 绿，再补完成勾选/总体 9.4，经第二次 noff/main 绿，最终归档清理 | §14 每条证据、全部输入关闭、精确两轮 main CI 与归档清单 |
 
+P8测试设施故障演练同时承接P3-M1：S3测试夹具启动与清理同时失败时应保留两个错误及原cause，当前只传播清理错误；这是诊断Minor，见[re-37](../../reviews/re-37-M5P3整体审核.md#3-minor与未发现项)，未声称已修。
+
 P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分支不提前改 phase。以后到期文件必须替换/删除，不能仅推迟日期。
 
 ## 13. 输入交接与后续交接
@@ -304,14 +306,14 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | 设计与 P1 预检 | 已完成 | [预检记录](../../reviews/re-31-M5设计与P1预检.md) |
 | P1 | 已完成：noff main 85dc4087，CI 41471671630 全绿，792 文件归档核验并清理 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) / [阶段记录](reviews/P1-local-storage-review.md) / [整审](../../reviews/re-33-M5P1整体审核.md) |
 | P2 | 已完成：noff main2d1bcf0c，CI41556463795全绿，2191文件归档核验并清理 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [整审](../../reviews/re-35-M5P2整体审核.md) / [阶段记录](reviews/P2-assets-review.md) / [裁定](reviews/P2-purge-contract-decision.md) |
-| P3 | T1–T8已完成，T9待开始；预检通过 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
+| P3 | 实施与整审修复、本地七项/三浏览器完成；准确最后分支CI与集成待办 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
 | P4–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
 设计审查已修正的衔接：复用已有用途 MAC；保持 M4 的安全 URL 清洗合同；业务 JSON 仍 no-store；签名/传输使用运行时钟；外部操作记录放入有界 storage_metadata，不增加业务表。
 
-P1 的预算/MAC/Range 精确常数已写入通过预检的 spec。仍须在后续对应 spec 预检确定而不能在实现里猜：P2 完整状态表、锁图、清理宽限和 owner 端口；P3已锁SDK/测试服务版本及预检协议，真实Nerve/浏览器/恢复仍待实施；P5 评论分页和精确事件/动态合同。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
+P1 的预算/MAC/Range 精确常数已写入通过预检的 spec。仍须在后续对应 spec 预检确定而不能在实现里猜：P2 完整状态表、锁图、清理宽限和 owner 端口；P3已锁SDK/测试服务版本并完成真实Nerve/浏览器/恢复，精确最终CI与集成归档另验；P5 评论分页和精确事件/动态合同。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
 
 ## 16. 协议核验来源
 

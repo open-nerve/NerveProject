@@ -1,7 +1,7 @@
 # M5 / P3 S3 存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T8已完成，T9待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
+> 预检通过，T1–T8已完成，T9原检查点远端失败已复现并局部修复，T10整审修复后完整七项/三浏览器通过，准确最后分支CI待核，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
 
 **Goal：** 为既有资产用例接入真实 S3 私有存储，完成 F4、部署配置和 local 回归。
 
@@ -143,16 +143,18 @@
 - [x] Step 1：串行`make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`；保存输入hash/命令/退出码/实际test数及缓存情况，失败根因修正后只重验需重验部分，最终证据对应同一代码树。
 - [x] Step 2：核生成一致/工作树/依赖实际导入、规模与临时资源、五个Review Focus均有证据；对CSP/三浏览器另附T7不能以默认E2E代替。
 - [ ] Step 3：中文提交并系统git push；连接GitHub核准确SHA的server/web/e2e，失败主动取日志根因处理；已知W11仅按既有规则，记录20m job预算中实际新增成本，不盲调时限/无限重跑。
-- [ ] Step 4：补阶段review七节及边界/原件索引，转整审；不能以这次检查点CI替代最后HEAD。
+- [x] Step 4：补阶段review七节及边界/原件索引，转整审；不能以这次检查点CI替代最后HEAD。
+
+原检查点6fc79a59的CI41584967958服务端因测试纳秒/微秒预期错误失败；原件保留，T10修复后最终候选同时闭环T9 Step3/4，不能把原检查点写成通过。
 
 ## Task 10（T10）：deep-review、一次独立整审与修复
 
 **Files：** docs/reviews下一编号M5P3整体审核、阶段review及真实发现文件。
 
-- [ ] Step 1：deep-review逻辑/集成/测试三视角顺序完整读基线至候选；手写实现与测试逐项记录覆盖，依赖/生成物按源和锁验证，明示未读范围。
-- [ ] Step 2：按executing-plans/requesting-code-review要求一次fresh整分支审查，主控逐项裁定；局部Important/Critical做真实RED/GREEN修复并主控复审，Major新分歧提交后上报；不反复派同范围独立复审。
+- [x] Step 1：deep-review逻辑/集成/测试三视角顺序完整读基线至候选；手写实现与测试逐项记录覆盖，依赖/生成物按源和锁验证，明示未读范围。
+- [x] Step 2：按executing-plans/requesting-code-review要求一次fresh整分支审查，主控逐项裁定；局部Important/Critical做真实RED/GREEN修复并主控复审，Major新分歧提交后上报；不反复派同范围独立复审。
 - [ ] Step 3：新产品变化完成必要受影响/全量门禁；逐条A1–A9证据，最终文档提交push，精确最后HEAD CI全绿。不能仅以代码前一提交绿声称最后HEAD绿。
-- [ ] Step 4：记录所有裁定、代价、Minor具名去向和准确范围；不提前勾选A10/M5总体完成。
+- [x] Step 4：记录所有裁定、代价、Minor具名去向和准确范围；不提前勾选A10/M5总体完成。
 
 ## Task 11（T11）：集成归档及下一阶段
 

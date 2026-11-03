@@ -57,6 +57,12 @@ export async function createS3World(info: TestInfo, env: Record<string, string> 
     await createDatabase(name, templateDatabase);
     db = openDatabase(name);
     directory = await mkdtemp(path.join(tmpdir(), "nerve-s3-e2e-"));
+    // Keep only ownership identifiers, never credentials, so failed-startup
+    // checks can inspect this world's resources while other worlds run.
+    await writeFile(
+      info.outputPath("s3-resources.json"),
+      JSON.stringify({ containerName: storage.name, secretsDirectory: directory }) + "\n"
+    );
     const accessFile = path.join(directory, "access"),
       secretFile = path.join(directory, "secret");
     await writeFile(accessFile, bucket.connection.access_key_id, { mode: 0o600 });

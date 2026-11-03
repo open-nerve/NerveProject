@@ -1,14 +1,14 @@
 # M5 / P3 阶段评审记录
 
-> spec/plan预检通过，T1–T8已完成，T9七项本地门禁通过，首次产品检查点待远端CI。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
+> T1–T8完成；T9原本地七项通过，检查点6fc79a59的CI服务端暴露测试时间精度错误。T10一次整审和两项局部修复完成红绿/主控复审，修复后完整七项及三浏览器均通过；准确最后分支/main CI与归档待核。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[整审re-37](../../../reviews/re-37-M5P3整体审核.md)。
 
 ## 1. 评审方式
 
-预检已进行一次fresh builder check和主控plan自查。实施按executing-plans逐Task/TDD/聚焦验证；T9完整七项，T10 deep-review三视角与一次独立整分支审查、局部修复后复核。后者尚未开始。
+预检已进行一次fresh builder check和主控plan自查。实施按executing-plans逐Task/TDD/聚焦验证；T9完整七项，T10按deep-review顺序核逻辑、集成、测试，并以2d1bcf0c..6fc79a59安排一次fresh整分支审查。主控真实复现和修复后复核，不重复派同范围独立复审；完整范围、限制及裁定见re-37。
 
 ## 2. 验收标准逐条核对
 
-[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A1–A8已由T1–T8证据关闭，A9/A10仍开放；实际证据见§8–§15。预检固定SDK/真实服务协议和版本化桶反例只为可行性证据，不提前打勾；准确原件和范围见re-36。
+[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A1–A8已由T1–T8证据关闭；A9本地门禁和审查已通过，等待准确最终分支CI，A10等待main/归档及P4预检。证据矩阵见§18，不用预检探针代替真实Nerve、浏览器和恢复验收。
 
 ## 3. 执行中的决定
 
@@ -16,19 +16,19 @@
 
 ## 4. 整分支评审的发现与处理
 
-尚未进行产品整分支deep-review，不把builder check的nothing important left当产品“零问题”。
+独立原审1 Important、1 Minor、0 Critical。I1为失败启动测试使用全局资源快照导致并行误报；主控3失败/6通过实红后改为确切资源归属，9/9通过。远端另发现I2恢复断言将插入前纳秒与PG微秒混比，主控注入789ns复现后改用实际持久记录，五轮race通过。P3-M1启动与清理双失败丢原cause为诊断Minor，具名交M5/P8，未声称已修。详见re-37和§17，最终完整套件通过、CI独立核验，见§17。
 
 ## 5. 最终实现与plan差异
 
-T1按职责新增files_s3_yaml.go，秘密文件读入后复用config.ValidateCredentials与同一上限常量；同步原配置默认值/驱动测试。T6按预检拆分单一组合根、可选raw处理器与共享保留树；私有runtimeNow作为显式业务时钟来源，原测试覆盖同步迁移。阶段仍在实施，无最终实现差异结论，未留待裁定项。
+实现仍沿通过预检的小端口和唯一组合根。按职责新增YAML源校验、签名前期限适配及协议正文边界文件；私有runtimeNow从可选raw依赖中分离，SDK/HTTP不进入domain/app。真实浏览器证明IPv6字面量CSP不支持后提前拒绝字面量；T9统一签名前端点规范。I1/I2仅修测试，生产审计/回收和架构守卫未变。所有局部裁定、代价及排程调整见re-37附录；没有未解决架构分歧。
 
 ## 6. 移交事项
 
-P2已完成并归档；P3接续S3/CORS/CSP/真实合同，M0超时handoff只记录本阶段实际兑现部分。绑定/资料/附件计数和事件仍P4/P5，页面P6/P7，规模/交接收敛P8；不提前关闭输入handoff和未来CLI条款。
+P2已完成并归档；P3交付S3/CORS/CSP/真实合同和容量边界。绑定/资料/附件计数和事件仍P4/P5，页面P6/P7，规模/交接收敛P8；P8同时承担P3-M1双失败诊断反例，P1既有焦点Minor仍保留。输入handoff和未来CLI条款继续开放。
 
 ## 7. 已知限制
 
-首期只支持明确endpoint/静态凭据/never-versioned普通私有桶及实例独占prefix；无multipart/版本回收/自动后端迁移。已经开始的S3请求可能晚到，靠P2记录与对账恢复；精确提供方的Go探针不代表全部厂商或浏览器已验收。真实固定提供方合同、容量和三浏览器已验收；精确最终branch/main CI及阶段整审仍待实施。
+首期只支持明确endpoint/静态凭据/never-versioned普通私有桶及实例独占prefix；无multipart/版本回收/自动后端迁移。已经开始的S3请求可能晚到，靠P2记录与对账恢复；已发读URL到期前仍可能有效。真实固定提供方合同、容量和三浏览器已验收，不代表AWS云/其他厂商或任意公网性能。阶段整审和两项聚焦修复已执行；精确最终branch/main CI与归档仍独立核验。
 
 ## 8. T1配置与秘密读取
 
@@ -112,7 +112,7 @@ P2已完成并归档；P3接续S3/CORS/CSP/真实合同，M0超时handoff只记�
 - 新发现：IPv6字面量URL在无CSP时三个浏览器均读到ipv6-proof，增加精确字面量CSP后均TypeError并报CSP；原受控探针保留task-7-ipv6-controlled-probe.log。config与Options拒绝字面量的用例先RED0.754/1.104s，随后修正；DNS可解析到IPv6，服务端监听不变。代价是IPv6端点需DNS名称，不用放宽CSP伪装支持。设计/spec/部署限制同步。
 - Go helper在独立tools模块消费与server完全同版3SDK+9必要间接；只接受loopback和自生成桶/prefix，动作create-bucket/cors/inspect/delete，输入输出各≤1MiB、命令10s，最多100MiB流式SHA，不输出完整文件/凭据/签名。实际未结束输入管道曾超时不退出，新增管道RED1.565s，context关闭自有I/O后GREEN0.636s；假协议测试覆盖精确CORS、数据摘要、超限、redirect和取消，真实协议由F4/世界启动探针验证。
 - Node显式使用既有testcontainers12.1.0，无JS SDK。一次非frozen安装意外重解lru-cache和peer图，恢复原图仅增加3行importer，frozen install通过。服务由隔离Node24子进程拥有，父进程90s启动期限、先join再按随机name+label兜底回收；30s关闭预算、命令取消/并发close共享同一promise，世界200s夹具预算。secret文件0600、每世界独立桶/CORS/DB、实际baseURL后设CORS，已有Docker/容器未改动。Makefile测试helper单独构建，生产build不链接它。
-- Node生命周期具名3项覆盖正常并发close、Nerve启动失败和child启动中关闭；实际检查loopback端口、容器NotFound、HTTP停止、DB连接关闭、临时秘密删除、关闭后拒绝操作及重复回收。错误聚合保留原错误与清理错误；针对oxlint不识别AggregateError第三个cause参数，仅保留一行说明性抑制，没有放宽架构/关键词或lint上限。
+- Node生命周期具名3项覆盖正常并发close、Nerve启动失败和child启动中关闭；实际检查loopback端口、容器NotFound、HTTP停止、DB连接关闭、临时秘密删除、关闭后拒绝操作及重复回收。世界级catch聚合原错误与清理错误；底层startS3双失败的原cause缺口由T10登记P3-M1，不把该聚合外推为全部层级。针对oxlint不识别AggregateError第三个cause参数，仅保留一行说明性抑制，没有放宽架构/关键词或lint上限。
 - 最终三浏览器3/3（47.7s），Node生命周期3/3（30.3s）。完整config/webui/archtest race、helper race及bootstrap具名S3生命周期/原local生命周期race通过；每次测试的非文档输入hash/集合稳定。前端54检查/knip通过，server/tools lint均0。全部task-7-*原件留T11归档；T9才跑完整七项并首次产品推送。
 - deploy/s3提供配置、最低IAM、精确CORS、never-versioned限制、迁移前提和故障排查；AWS HeadBucket需桶级ListBucket，样例诚实说明名称列表权限，名称隔离需独立桶。真实提供方只证明固定SeaweedFS4.52，AWS云及其他品牌未验收。M2交接仅记录CSP部分兑现，绑定/UI/services/River CLI仍开放。
 
@@ -126,11 +126,37 @@ P2已完成并归档；P3接续S3/CORS/CSP/真实合同，M0超时handoff只记�
 - T1–T7的21项性质变异逐一核实际断言日志与当时正常源码hash；T8再加整文件缓冲、取消普通XML上限、把错误当文件流、跳过解析后分类4项，共25项。整文件缓冲变异的100MiB堆增量252,060,872B，实际命中50MiB门槛。初次在未全绿基线上运行的变异、一次导致nil panic的分类变异均保留且不计数；最终只统计具体断言失败，恢复hash与独立正常输入核对。原件task-8-mutation-audit.json及task-8-final-mutation-*。
 - 四组各五轮race全部通过：s3 193.506s、postgres92.530s、bootstrap119.748s；完整路由/401/原raw与S3生命周期race22.374s，架构race6.083s，生成一致、server/tools lint零问题、关键词无命中、自有容器清单为空。所有最终收据为同一4228非文档输入。A7/A8关闭；T9完整七项、T10阶段整审和精确分支/main CI仍开放。
 
-## 16. T9全量门禁与输入核对（进行中）
+## 16. T9原检查点全量门禁与远端失败
 
 - T8提交为2d289899。首次全量Go命令为了统计用例数使用全局GOFLAGS=-json，意外传给架构测试内部go list，触发“go list -f cannot be used with -json”；这不是产品守卫失效。仅中断本次Go/test进程，108.200s、退出码2和全部日志/输入保留，自有测试会话容器已由其回收。以后不注入该全局参数，以正常make test和实际包结果记录。
 - Review Focus1发现标准端点写法尚有缺口：SDK签名器省略默认端口后，原Host/URL精确比较拒绝启动；大小写主机及前导零端口仍进签名，而浏览器会改写。独立wire探针与真实提供方用例均实红；新增永久TestS3EndpointCanonicalOrigin覆盖HTTP80/HTTPS443、大小写、前导零及非默认端口，真实TestS3SignedRequests子例核最终URL和PUT/HEAD/DELETE。
 - 局部修正只在配置和适配器：先按原规则验证，然后在SDK解析/签名前规范主机名/端口；不修改签后地址、不放宽origin或Host守卫。TestS3EndpointBrowserHost另以8个反例拒绝被浏览器另释为IPv4或拒绝的数字主机，6个普通DNS/标准IPv4正例保留。Node原生URL解析证据存task-9-browser-url-origins.log；代价是部署需用标准IPv4或正常DNS，不接受短地址、八/十六进制或数字末标签的伪DNS。
 - 初次overlay探针的大小写用例受到旧测试dial helper的大小写判断干扰，改为只连独占测试listener后重跑，前后原件均保留；永久用例再在真实提供方实红14.479s，修复后config race1.613s、S3 race15.541s通过。正常全量Go旧代码运行在390.823s主动中断，不能计入通过；新代码的全部七项另以task-9-green-*收据重新执行。第一次lint仅两处De Morgan建议，改为具名布尔值，未放宽检查。
 - server与tools各新增同一12个批准SDK模块，所有旧模块版本不变；pnpm-lock仅3行testcontainers importer，无其他升级。83个改动Go/TS文件均≤400行，实际依赖/规模表存task-9-module-audit.json、task-9-source-size.json。T7三浏览器证据仍独立保留，默认E2E不能替代它。
-- 七项本地门禁全部通过：生成3.101s、Go lint31.120s、全量Go775.772s、web lint2.850s、knip2.146s、web test0.359s、build+E2E147.214s（345项、Playwright报告2.4m）。前端lint 54项中38缓存，test 18项均命中共享本地Turbo缓存；关键词76规则/14例外、1312翻译键检查另实际运行。Go由make的-count=1执行，未输出子用例计数，不以包数量冒充用例数。全部7份4230个非文档输入逐项等于当前源码；准确包数/缓存及哈希收据见task-9-seven-audit.json与task-9-green-*。本轮自有S3容器清单为空，原始E2E报告已独立复制；远端精确检查点CI及T10整审仍待完成。
+- 七项本地门禁全部通过：生成3.101s、Go lint31.120s、全量Go775.772s、web lint2.850s、knip2.146s、web test0.359s、build+E2E147.214s（345项、Playwright报告2.4m）。前端lint 54项中38缓存，test 18项均命中共享本地Turbo缓存；关键词76规则/14例外、1312翻译键检查另实际运行。Go由make的-count=1执行，未输出子用例计数，不以包数量冒充用例数。全部7份4230个非文档输入逐项等于6fc79a59源码；准确包数/缓存及哈希收据见task-9-seven-audit.json与task-9-green-*。本轮自有S3容器清单为空，原始E2E报告已独立复制；后续远端失败和修复独立记在下文。
+
+以上为原6fc79a59检查点的实测事实，后续远端情况如下：准确[CI41584967958](https://github.com/open-nerve/NerveProject/actions/runs/41584967958)的web成功，server因I2测试精度失败，E2E skipped。Go实际61测试包/21无测试包/0缓存的本地通过不能替代它；修复后原收据也不能冒充新树完整通过。远端raw run/jobs/完整server日志分别保留task-9-checkpoint-*，没有以重跑掩盖该错误。T9后续门禁与T10最终候选共同闭环。
+
+## 17. T10整审修复与主控复核
+
+- I1原全局快照实际并行探针3失败/6通过；新专属资源记录缺失断言先RED16.490s，再9/9 GREEN（31.6s）。夹具在启动Nerve前记录实际随机容器名和秘密目录，失败故事只查本用例资源；不存秘密、不改生产或并发预算。原件task-10-fixture-parallel-probe/ownership-record-red/fixture-parallel-green及各完整浏览器报告均保留。
+- I2远端失败在本地用789ns输入确定性重现（15.624s）；修复保留CreateAsset的数据库RETURNING记录，以该持久审计作严格Equal基线，未放宽时间容差。具名race五轮全过（71.119s）；原件task-10-recovery-audit-red/green，五轮不是五个不同性质变异。
+- 修复后实际Chromium、Firefox、WebKit F4均通过（3/3、46.7s），每引擎核真实File字节/长度/类型、跨来源、匿名拒绝及SHA；task-10-three-browsers原件与4230输入稳定收据保存。新树完整七项已通过，见下条；最终CI尚未提前通过。
+- 独立审者没有审后续修复，后者由主控全文复核三个变更测试/夹具文件、确定失败机制和运行反例。Minor P3-M1仅限测试诊断，依据确定控制流而非实际双故障执行；M5/P8具名承接，不做隐性关闭。
+
+- 修复后最终七项：gen3.311s、Go lint2.172s、全量Go776.227s、web lint4.214s、knip2.062s、web test0.375s、build+E2E146.067s（345/345、2.4m）。Go61测试包/21无测试包/0缓存；web lint54项/36缓存、test18项/18缓存，关键词76规则/14例外与1312翻译键另实际运行。全部七项和新三浏览器的4230个非文档输入完全相同，前后hash与成员集合未变；task-10-final-audit.json、task-10-green-*及各完整报告为原件。自有S3容器只读清单为空。此收据覆盖最后候选的实际代码，准确branch CI仍待推送后核验。
+
+## 18. A1–A10证据矩阵
+
+| 标准 | 证据 |
+|---|---|
+| A1 配置/秘密/只读启动/依赖 | §8/§9/§13；T1配置源和有界文件、T2真实桶模式/HTTP/TLS/redirect与架构负例，T9模块图 |
+| A2 共享实物合同/签名/reader | §10/§11；两Factory、真实绑定和精确期限、实际socket取消，T9端点来源补验 |
+| A3 封存/错误/提交失败 | §11/§13/§15；双条件竞争、200内嵌错误、截断错误体、DB提交失败保留candidate |
+| A4 清单/进程恢复/双时钟 | §12；实际limit1和token/ObjectAfter、独立OS进程River、runtime24h边界、邻域与迟到实物，§17修复审计断言 |
+| A5 完整接线/权限/local | §13；API/PG/S3字节、撤权/删除交错、零DML、锁/连接/gate释放、两driver路由及原local回归 |
+| A6 浏览器 | §14及§17；T7三引擎/CSP性质变异、I1后3/3新复验 |
+| A7 容量/资源 | §15；1B/5MiB/100MiB流式hash、真实16秒慢流、单连接取消/复用与堆指标；§17专属资源9/9 |
+| A8 变异/race | §15；25个真实断言变异、四组各五轮race、失败/恢复hash保留；I2另五轮race |
+| A9 七项/整审/准确branch CI | §16原树本地通过及远端失败分别记；§17修复，re-37完整范围；最后HEAD CI待独立收据 |
+| A10 main/归档/P4 | T11待实施；原件保留到归档校验，M5总体及后续handoff不提前关闭 |

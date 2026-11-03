@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { execFile } from "node:child_process";
-import { access, readdir } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { access, readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 
 import { expect, test } from "@playwright/test";
@@ -45,13 +44,19 @@ test("S3 fixture: concurrent close removes its container, process, secrets and d
 // oxlint-disable-next-line no-empty-pattern -- Playwright requires destructured fixture arguments.
 test("S3 fixture: failed Nerve startup releases the service and temporary secrets", async ({}, info) => {
   test.setTimeout(200_000);
-  const before = await ownedNames();
-  const secrets = (await readdir(tmpdir())).filter((name) => name.startsWith("nerve-s3-e2e-")).toSorted();
   await expect(createS3World(info, { NERVE_FILES__OPERATION_TIMEOUT: "0s" })).rejects.toThrow(
     "nerve did not become ready"
   );
-  expect(await ownedNames()).toEqual(before);
-  expect((await readdir(tmpdir())).filter((name) => name.startsWith("nerve-s3-e2e-")).toSorted()).toEqual(secrets);
+  // The failed world records its actual resources before starting Nerve. Other
+  // worlds may create or release their resources while this one is closing.
+  const resources = JSON.parse(await readFile(info.outputPath("s3-resources.json"), "utf8")) as {
+    containerName: string;
+    secretsDirectory: string;
+  };
+  expect(resources.containerName).toMatch(/^nerve-s3-e2e-[0-9a-f]{32}$/);
+  expect(resources.secretsDirectory).toContain("nerve-s3-e2e-");
+  await absent(resources.containerName);
+  await expect(access(resources.secretsDirectory)).rejects.toMatchObject({ code: "ENOENT" });
 });
 
 test("S3 fixture: close during child startup joins it before final owned cleanup", async () => {
@@ -72,12 +77,4 @@ async function absent(name: string) {
   await expect(promisify(execFile)("docker", ["inspect", name], { timeout: 5000 })).rejects.toMatchObject({
     stderr: expect.stringMatching(/no such (object|container):/i),
   });
-}
-async function ownedNames(): Promise<string[]> {
-  const { stdout } = await promisify(execFile)(
-    "docker",
-    ["ps", "-a", "--filter", "name=nerve-s3-e2e-", "--format", "{{.Names}}"],
-    { timeout: 5000 }
-  );
-  return stdout.trim().split("\n").filter(Boolean).toSorted();
 }
