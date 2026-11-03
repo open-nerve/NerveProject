@@ -14,6 +14,7 @@ type PublishDraftDeps struct {
 	Decoder  IssueCreatePayloadDecoder
 	Creation *IssueCreation
 	Drafts   DraftWriter
+	Transfer DraftAssetTransfer
 }
 type PublishDraft struct{ d PublishDraftDeps }
 
@@ -39,14 +40,31 @@ func (u *PublishDraft) Execute(ctx context.Context, id uuid.UUID) (domain.Issue,
 		if err != nil {
 			return err
 		}
-		row, at, err := u.d.Creation.createLocked(ctx, actor.UserID, *h.Draft.ProjectID, h.Issue, in)
+		prepared, err := u.d.Creation.prepareLocked(ctx, actor.UserID, *h.Draft.ProjectID, h.Issue, in)
 		if err != nil {
+			return err
+		}
+		q := DraftAssetRequest{ActorID: actor.UserID, WorkspaceID: h.Draft.WorkspaceID, DraftID: id,
+			OldProjectID: h.Draft.ProjectID, NewProjectID: h.Draft.ProjectID, ImageIDs: prepared.content.Identity.AssetImageIDs(), Publish: true}
+		at, err := u.d.Transfer.LockDraftAssets(ctx, q)
+		if err != nil {
+			return err
+		}
+		row, err := u.d.Creation.writePreparedAt(ctx, prepared, at)
+		if err != nil {
+			return err
+		}
+		if err := u.d.Transfer.MoveDraftAssets(ctx, q, row.ID, at); err != nil {
 			return err
 		}
 		if err = u.d.Drafts.DeleteDraft(ctx, DraftDeletion{ID: id, By: actor.UserID, At: at}); err != nil {
 			return err
 		}
-		created = row
+		items := []domain.Issue{row}
+		if err := projectAttachments(ctx, u.d.Creation.d.Attachments, items); err != nil {
+			return err
+		}
+		created = items[0]
 		return nil
 	})
 	if err != nil {

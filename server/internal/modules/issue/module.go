@@ -116,14 +116,15 @@ type (
 
 // Deps are what bootstrap gives the module (M4 design 6.6, step 6).
 type Deps struct {
-	AttachmentCounter app.AttachmentCounter
-	ContentBindings   app.ContentBinding
-	AttachmentReader  app.AttachmentReader
-	DraftAssets       app.DraftAssets
-	Outbound          *outbound.Client
-	Logger            *slog.Logger
-	Events            shared.EventPublisher
-	Pool              *pgxpool.Pool
+	AttachmentCounter  app.AttachmentCounter
+	ContentBindings    app.ContentBinding
+	AttachmentReader   app.AttachmentReader
+	DraftAssetTransfer app.DraftAssetTransfer
+	DraftAssets        app.DraftAssets
+	Outbound           *outbound.Client
+	Logger             *slog.Logger
+	Events             shared.EventPublisher
+	Pool               *pgxpool.Pool
 	// Tx are the transactions of the module's writes, each of which waits
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
@@ -195,11 +196,11 @@ func New(d Deps) *Module {
 			GetCommentAttachments:   app.NewGetAttachments("comment", attachments),
 			GetDraftAttachments:     app.NewGetAttachments("draft", attachments),
 			SearchIssues:            app.NewSearchIssues(app.SearchIssuesDeps{ReadTx: d.ReadTx, Authorizer: d.Authorizer, Workspaces: d.Workspaces, Projects: d.Projects, Identifiers: d.Projects, Issues: store, Locks: locks, Rows: store}),
-			PublishDraft:            app.NewPublishDraft(app.PublishDraftDeps{Locks: draftLocks, Decoder: httpadapter.IssueCreatePayloadDecoder{}, Creation: creation, Drafts: store}),
+			PublishDraft:            app.NewPublishDraft(app.PublishDraftDeps{Locks: draftLocks, Decoder: httpadapter.IssueCreatePayloadDecoder{}, Creation: creation, Drafts: store, Transfer: d.DraftAssetTransfer}),
 			ListDrafts:              app.NewListDrafts(app.ListDraftsDeps{ReadTx: d.ReadTx, Locks: draftLocks, Workspaces: d.Workspaces, Projects: d.Projects, Drafts: store}),
 			GetDraft:                app.NewGetDraft(app.GetDraftDeps{ReadTx: d.ReadTx, Locks: draftLocks}),
-			CreateDraft:             app.NewCreateDraft(app.CreateDraftDeps{Locks: draftLocks, Workspaces: d.Workspaces, Drafts: store, Clock: d.Clock}),
-			UpdateDraft:             app.NewUpdateDraft(app.UpdateDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
+			CreateDraft:             app.NewCreateDraft(app.CreateDraftDeps{Locks: draftLocks, Workspaces: d.Workspaces, Drafts: store, Clock: d.Clock, Sanitizer: sanitizer, Transfer: d.DraftAssetTransfer}),
+			UpdateDraft:             app.NewUpdateDraft(app.UpdateDraftDeps{Locks: draftLocks, Drafts: store, Sanitizer: sanitizer, Transfer: d.DraftAssetTransfer}),
 			DeleteDraft:             app.NewDeleteDraft(app.DeleteDraftDeps{Locks: draftLocks, Drafts: store, Assets: d.DraftAssets, Clock: d.Clock}),
 			UpdateIssueLink:         app.NewUpdateIssueLink(app.UpdateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
 			DeleteIssueLink:         app.NewDeleteIssueLink(app.DeleteIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),

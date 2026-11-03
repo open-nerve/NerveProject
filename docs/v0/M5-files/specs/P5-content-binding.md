@@ -62,6 +62,8 @@ IssueCreation保持唯一创建逻辑。把createLocked内部拆为私有prepare
 
 普通CreateIssue继续薄组合prepare→必要资产校验→Clock/At→write；新issue没有事前scope，不能引用别处的图片UUID。草稿Publish用同一准备值，验证其图片在草稿资产集合内，LockDraftAssets后得到At，再write、Move、DeleteDraft；不得先createLocked读时钟后才锁资产。创建返回值在资产迁移后再补真实附件计数，不能提前返回0。
 
+asset 的 DraftAssetDeps 与外观显式接收已有 EventPublisher；Move 完成全部资产写后，按 UUID 顺序为迁入的普通工作项附件发布 added，包含原来已绑定的草稿附件。同一个 At/By，不扩张 issue 消费端口、不另开事务。issue.created 保持唯一创建核心内的原位置；附件事件看到的是完整迁移后的集合。
+
 发布任何点（Issue/描述版本INSERT、任一资产UPDATE、draft软删、event subscriber、COMMIT）失败：工作项/序号/文件scope与用途/绑定/审计/动态/事件/river_job全回滚，物理字节未搬动。双发布同D(U)仅一胜者；失败后原draft可重试。先软删的资产或宿主不因重试复活。
 
 ## 4. 已绑定读取与删除

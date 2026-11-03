@@ -88,6 +88,12 @@ func TestAssetLateHostInterleaving(t *testing.T) {
 			response := sendInBackground(req)
 			attempt := awaitAssetSeal(t, attempts, response)
 			defer attempt.resume(nil)
+			if change == "draft publish" {
+				// Publication now refuses all pending assets. Explicit removal
+				// makes this draft publishable while the old I/O is still late.
+				w.send(t, actor, method, path, body, 409)
+				assetAPICall(t, w, actor, "DELETE", "/api/v0/assets/"+attempt.key.AssetID().String(), "", 204)
+			}
 			w.send(t, actor, method, path, body, changeStatus)
 			attempt.resume(nil)
 			got := receiveWithin(t, response, 5*time.Second, "publication after host change")

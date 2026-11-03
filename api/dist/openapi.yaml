@@ -1806,6 +1806,7 @@ paths:
         - forbidden
         - validation_failed
         - server_busy
+        - asset.not_found
       requestBody:
         required: true
         content:
@@ -1856,6 +1857,8 @@ paths:
         - validation_failed
         - issue.draft_changed
         - server_busy
+        - asset.not_found
+        - asset.not_uploaded
       requestBody:
         required: true
         content:
@@ -1908,6 +1911,7 @@ paths:
         - project.archived
         - server_busy
         - asset.not_found
+        - asset.not_uploaded
       responses:
         '201':
           description: Success

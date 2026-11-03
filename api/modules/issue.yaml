@@ -184,7 +184,7 @@ paths:
       summary: Save an unfinished issue draft
       description: Saves structure without create validation; workspace admins and members may save their own drafts.
       security: [{bearer: []}]
-      x-problem-codes: [workspace.not_found, forbidden, validation_failed, server_busy]
+      x-problem-codes: [workspace.not_found, forbidden, validation_failed, server_busy, asset.not_found]
       requestBody:
         required: true
         content:
@@ -220,7 +220,7 @@ paths:
       tags: [issue]
       summary: Replace fields of your issue draft
       security: [{bearer: []}]
-      x-problem-codes: [issue.draft_not_found, forbidden, validation_failed, issue.draft_changed, server_busy]
+      x-problem-codes: [issue.draft_not_found, forbidden, validation_failed, issue.draft_changed, server_busy, asset.not_found, asset.not_uploaded]
       requestBody:
         required: true
         content:
@@ -254,7 +254,7 @@ paths:
       summary: Publish your stored issue draft
       description: Accepts no request body. Creates from the locked stored payload and soft-deletes the draft atomically.
       security: [{bearer: []}]
-      x-problem-codes: [issue.draft_not_found, project.not_found, forbidden, validation_failed, issue.draft_changed, project.archived, server_busy, asset.not_found]
+      x-problem-codes: [issue.draft_not_found, project.not_found, forbidden, validation_failed, issue.draft_changed, project.archived, server_busy, asset.not_found, asset.not_uploaded]
       responses:
         '201':
           description: Success

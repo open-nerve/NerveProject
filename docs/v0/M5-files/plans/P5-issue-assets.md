@@ -98,10 +98,10 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 **Files:** issue/app/draft_writes.go/publish_draft.go/create_core.go、draft_assets端口接线；bootstrap/draft_assets_test.go/draft_assets_races_test.go；既有draft API fixture与测试。
 **Interfaces:** 消费T2 DraftAssetTransfer和T5唯一创建核心；保存使用DraftAssetRequest.ImageIDs合并全scope锁；发布最终reply在Move后Count，草稿项目可null。
 
-- [ ] Step 1：TestDraftAssets / TestDraftAssetPublish：保留partial JSON及非法类型待发布拒绝；改旧/新/null项目迁移全部pending/uploaded；双发布仅一Issue；pending阻止、已成功final带回收candidate不阻止；描述历史及附件迁移scope/purpose/At/By准确；从未引用的描述迁移后bound=null、其他成员404、申请者可删、原7天年龄保持。
-- [ ] Step 2：`cd server && go test -p 1 ./internal/modules/issue/app ./internal/bootstrap -run 'Test(DraftAssets|DraftAssetPublish|PublishDraft)' -count=1`记录RED后实现，Lock后唯一At，Issue/Move/Draft软删/事件同事务。
-- [ ] Step 3：GREEN；序号/Issue/版本/第二资产UPDATE/draft/event/COMMIT故障图整体原样，回滚后重试一次；两项目UUID方向及全集合1001，source晚到不误绑。
-- [ ] Step 4：完整draft/创建核心/旧M4交错回归与gen/lint，提交 `feat(M5/P5): 原子迁移草稿文件并保持唯一发布`。
+- [x] Step 1：TestDraftAssets / TestDraftAssetPublish：保留partial JSON、结构错误保存400及非法业务值待发布拒绝；改旧/新/null项目迁移全部pending/uploaded；双发布仅一Issue；pending阻止、已成功final带回收candidate不阻止；描述历史及附件迁移scope/purpose/At/By准确；从未引用的描述迁移后bound=null、其他成员404、申请者可删、原7天年龄保持。
+- [x] Step 2：`cd server && go test -p 1 ./internal/modules/issue/app ./internal/bootstrap -run 'Test(DraftAssets|DraftAssetPublish|PublishDraft)' -count=1`记录RED后实现，Lock后唯一At，Issue/Move/Draft软删/事件同事务。
+- [x] Step 3：GREEN；序号/Issue/版本/第二资产UPDATE/draft/event/COMMIT故障图整体原样，回滚后重试一次；两项目UUID方向及全集合1001，source晚到不误绑。
+- [x] Step 4：完整draft/创建核心/旧M4交错回归与gen/lint，提交 `feat(M5/P5): 原子迁移草稿文件并保持唯一发布`。
 
 ## Task 8（T8）：附件全局排序与精确游标
 

@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 	"uuid"
@@ -102,15 +103,24 @@ func TestAssetDraftPublicationDoesNotDeleteAssets(t *testing.T) {
 	w := newIssueWorld(t)
 	waitForCompletedKinds(t, w.pool, map[string]int{"asset.cleanup": 1}, &lockedBuffer{})
 	draft := createDraftHTTP(t, w, "bob", fmt.Sprintf(`{"project_id":%q,"payload":{"name":"published"}}`, w.web))
-	attached := assetRowForHost(t, w, assetdomain.ScopeDraft, draft.ID, uuid.Nil())
-	w.send(t, "bob", http.MethodPost, publishPath(draft.ID), "", http.StatusCreated)
+	attached := uploadedAssetHTTP(t, w, "bob", "DRAFT_ISSUE_ATTACHMENT", attachmentScope("draft", draft.ID), "published.txt", "text/plain", []byte("published bytes"))
+	before, err := assetpg.New(w.pool).FindAsset(t.Context(), attached.Asset.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var published storedIssue
+	decodeAnswer(t, w.send(t, "bob", http.MethodPost, publishPath(draft.ID), "", http.StatusCreated), &published)
 	var consumed bool
 	if err := w.pool.QueryRow(t.Context(), "SELECT deleted_at IS NOT NULL FROM draft_issues WHERE id=$1", draft.ID).Scan(&consumed); err != nil || !consumed {
 		t.Fatalf("draft consumed=%t %v", consumed, err)
 	}
-	got, err := assetpg.New(w.pool).FindAsset(t.Context(), attached.ID)
-	if err != nil || got.DeletedAt != nil || got.StorageRevision != 0 {
-		t.Fatalf("publish deleted its asset: %+v %v", got, err)
+	got, err := assetpg.New(w.pool).FindAsset(t.Context(), attached.Asset.ID)
+	if err != nil || got.DeletedAt != nil || got.StorageRevision != before.StorageRevision+1 || got.Placement.DraftID != uuid.Nil() || got.Placement.IssueID != published.ID || got.Purpose != assetdomain.IssueAttachment || !reflect.DeepEqual(got.Metadata, before.Metadata) || !reflect.DeepEqual(got.BoundAt, before.BoundAt) {
+		t.Fatalf("publish deleted or failed to migrate its asset: %+v %v", got, err)
+	}
+	_, actual := readAssetHTTP(t, w, "alice", got.ID)
+	if string(actual) != "published bytes" {
+		t.Fatal("publication lost physical bytes")
 	}
 }
 

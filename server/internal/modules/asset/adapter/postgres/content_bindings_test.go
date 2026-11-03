@@ -14,13 +14,14 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 func (w assetWorld) contentBinder() *app.ContentBinder {
 	return app.NewContentBindings(app.ContentBindingDeps{Locks: w.store, Writer: w.store, Clock: cleanupClock(w.now.Add(time.Second))})
 }
 func (w assetWorld) draftMover() *app.DraftAssetMover {
-	return app.NewDraftAssetTransfer(app.DraftAssetDeps{Locks: w.store, Reader: w.store, Writer: w.store, Clock: cleanupClock(w.now.Add(time.Second))})
+	return app.NewDraftAssetTransfer(app.DraftAssetDeps{Events: discardDraftEvents{}, Locks: w.store, Reader: w.store, Writer: w.store, Clock: cleanupClock(w.now.Add(time.Second))})
 }
 func (w assetWorld) contentRequest() app.ContentBindRequest {
 	return app.ContentBindRequest{ActorID: w.user, Host: app.ContentHost{WorkspaceID: w.workspace, ProjectID: w.project, IssueID: w.issue}}
@@ -169,3 +170,7 @@ func TestContentBindingsAtomic(t *testing.T) {
 		}
 	}
 }
+
+type discardDraftEvents struct{}
+
+func (discardDraftEvents) Publish(context.Context, shared.Event) error { return nil }

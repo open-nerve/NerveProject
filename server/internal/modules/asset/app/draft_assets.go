@@ -7,6 +7,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 type DraftAssetDeps struct {
@@ -14,6 +15,7 @@ type DraftAssetDeps struct {
 	Reader DraftAssetReader
 	Writer DraftAssetWriter
 	Clock  Clock
+	Events shared.EventPublisher
 }
 type DraftAssetMover struct{ d DraftAssetDeps }
 
@@ -33,15 +35,25 @@ func (u *DraftAssetMover) MoveDraftAssets(ctx context.Context, q DraftAssetReque
 		return err
 	}
 	images := assetIDSet(q.ImageIDs)
+	moved := make([]domain.Asset, 0, len(rows))
 	for _, row := range rows {
 		bind := row.BoundAt == nil && (images[row.ID] || (q.Publish && row.Purpose == domain.DraftIssueAttachment))
 		if !q.Publish && row.Placement.ProjectID == contentProjectID(q.NewProjectID) && !bind {
 			continue
 		}
-		if _, err := u.d.Writer.MoveDraftAsset(ctx, DraftAssetWrite{
+		updated, err := u.d.Writer.MoveDraftAsset(ctx, DraftAssetWrite{
 			AssetID: row.ID, IssueID: issueID, By: q.ActorID, ProjectID: q.NewProjectID,
 			Bind: bind, Revision: row.StorageRevision, At: at,
-		}); err != nil {
+		})
+		if err != nil {
+			return err
+		}
+		moved = append(moved, updated)
+	}
+	// Subscribers see the complete migrated set, under the caller's transaction
+	// and parent locks. Existing draft bindings still become new issue attachments.
+	for _, row := range moved {
+		if err := publishAttachmentChange(ctx, u.d.Events, row, q.ActorID, at, true); err != nil {
 			return err
 		}
 	}

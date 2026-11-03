@@ -1,6 +1,9 @@
 package asset
 
-import "github.com/open-nerve/NerveProject/server/internal/modules/asset/app"
+import (
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset/app"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+)
 
 type ContentHost = app.ContentHost
 type ContentBindRequest = app.ContentBindRequest
@@ -13,6 +16,6 @@ type DraftAssetTransfer = app.DraftAssetTransfer
 func NewContentBindings(p Provided, clock app.Clock) ContentBinding {
 	return app.NewContentBindings(app.ContentBindingDeps{Locks: p.store, Writer: p.store, Clock: clock})
 }
-func NewDraftAssetTransfer(p Provided, clock app.Clock) DraftAssetTransfer {
-	return app.NewDraftAssetTransfer(app.DraftAssetDeps{Locks: p.store, Reader: p.store, Writer: p.store, Clock: clock})
+func NewDraftAssetTransfer(p Provided, clock app.Clock, events shared.EventPublisher) DraftAssetTransfer {
+	return app.NewDraftAssetTransfer(app.DraftAssetDeps{Locks: p.store, Reader: p.store, Writer: p.store, Clock: clock, Events: events})
 }

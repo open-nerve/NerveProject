@@ -3,8 +3,10 @@ package app_test
 import (
 	"context"
 	"slices"
+	"time"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/content"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 )
@@ -138,10 +140,10 @@ func (w *draftWorld) locks() app.DraftLocks {
 	return app.NewDraftLocks(app.NewLocks(w.p, nil, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}, noIssueAttachments{}), w.w, w.p, w.s)
 }
 func (w *draftWorld) update() *app.UpdateDraft {
-	return app.NewUpdateDraft(app.UpdateDraftDeps{Locks: w.locks(), Drafts: w.s, Clock: clockAt{at: clockNow, log: w.log}})
+	return app.NewUpdateDraft(app.UpdateDraftDeps{Locks: w.locks(), Drafts: w.s, Sanitizer: content.NewSanitizer(), Transfer: assetlessDraft{clockAt{at: clockNow, log: w.log}}})
 }
 func (w *draftWorld) create() *app.CreateDraft {
-	return app.NewCreateDraft(app.CreateDraftDeps{Locks: w.locks(), Workspaces: w.w, Drafts: w.s, Clock: clockAt{at: clockNow, log: w.log}})
+	return app.NewCreateDraft(app.CreateDraftDeps{Locks: w.locks(), Workspaces: w.w, Drafts: w.s, Sanitizer: content.NewSanitizer(), Transfer: assetlessDraft{clockAt{at: clockNow, log: w.log}}, Clock: clockAt{at: clockNow, log: w.log}})
 }
 func (w *draftWorld) delete() *app.DeleteDraft {
 	return app.NewDeleteDraft(app.DeleteDraftDeps{Locks: w.locks(), Drafts: w.s, Assets: w.s, Clock: clockAt{at: clockNow, log: w.log}})
@@ -150,4 +152,15 @@ func (w *draftWorld) delete() *app.DeleteDraft {
 func (s *draftStore) DeleteDraftAssets(ctx context.Context, d app.DraftDeletion) error {
 	s.assetsDeleted = d
 	return s.log.add(ctx, "DeleteDraftAssets")
+}
+
+// These old authorization fixtures own no assets. Real asset sets are exercised
+// by the API and dedicated transfer probes.
+type assetlessDraft struct{ clock clockAt }
+
+func (a assetlessDraft) LockDraftAssets(context.Context, app.DraftAssetRequest) (time.Time, error) {
+	return a.clock.Now(), nil
+}
+func (assetlessDraft) MoveDraftAssets(context.Context, app.DraftAssetRequest, uuid.UUID, time.Time) error {
+	return nil
 }

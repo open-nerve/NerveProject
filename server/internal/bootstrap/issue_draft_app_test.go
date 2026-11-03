@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
+	content "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/content"
 	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
@@ -31,8 +32,9 @@ func TestDraftAppPersonalProjectsWithRealAuthorization(t *testing.T) {
 	tx := postgres.NewTxManager(r.server, time.Second)
 	readTx := postgres.NewTxManager(r.server, time.Second, postgres.ReadOnlySnapshot())
 	locks := issueapp.NewDraftLocks(issueapp.NewLocks(p, store, authorizerOn(r.server), nil, tx, attachmentCounterOn(r.server)), ws, p, store)
-	create := issueapp.NewCreateDraft(issueapp.CreateDraftDeps{Locks: locks, Workspaces: ws, Drafts: store, Clock: clock.System{}})
-	update := issueapp.NewUpdateDraft(issueapp.UpdateDraftDeps{Locks: locks, Drafts: store, Clock: clock.System{}})
+	transfer := issueDraftAssetTransfer{assets: asset.NewDraftAssetTransfer(asset.Provide(r.server), clock.System{}, discardIssueEvents{})}
+	create := issueapp.NewCreateDraft(issueapp.CreateDraftDeps{Locks: locks, Workspaces: ws, Drafts: store, Sanitizer: content.NewSanitizer(), Transfer: transfer, Clock: clock.System{}})
+	update := issueapp.NewUpdateDraft(issueapp.UpdateDraftDeps{Locks: locks, Drafts: store, Sanitizer: content.NewSanitizer(), Transfer: transfer})
 	get := issueapp.NewGetDraft(issueapp.GetDraftDeps{Locks: locks, ReadTx: readTx})
 	list := issueapp.NewListDrafts(issueapp.ListDraftsDeps{Locks: locks, ReadTx: readTx, Workspaces: ws, Projects: p, Drafts: store})
 	ctx := shared.WithActor(context.Background(), shared.Actor{UserID: w.ids["walt"]})

@@ -8,6 +8,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 type draftAssetRows struct {
@@ -97,9 +98,13 @@ func draftAssetFixture(t *testing.T) (*DraftAssetMover, *draftAssetRows, DraftAs
 		}
 		f.rows[id] = a
 	}
-	u := NewDraftAssetTransfer(DraftAssetDeps{Locks: f, Reader: f, Writer: f, Clock: imageClockFunc(func() time.Time {
+	u := NewDraftAssetTransfer(DraftAssetDeps{Events: discardDraftEvents{}, Locks: f, Reader: f, Writer: f, Clock: imageClockFunc(func() time.Time {
 		f.clockLocks = append(f.clockLocks, len(f.locks))
 		return at
 	})})
 	return u, f, q, at
 }
+
+type discardDraftEvents struct{}
+
+func (discardDraftEvents) Publish(context.Context, shared.Event) error { return nil }
