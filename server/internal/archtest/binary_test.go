@@ -18,6 +18,7 @@ func bannedFromBinary() []string {
 		"github.com/testcontainers/",
 		"github.com/google/uuid",
 		"github.com/docker/",
+		modulePath + "/internal/platform/s3test",
 	}
 }
 
@@ -90,5 +91,16 @@ func TestBannedImports(t *testing.T) {
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("bannedImports() =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+func TestBinaryRejectsS3TestHelpers(t *testing.T) {
+	for _, path := range []string{m("internal/platform/s3test"), m("internal/platform/s3test/subpackage")} {
+		if !isBannedFromBinary(m("internal/bootstrap"), path) {
+			t.Errorf("test helper can reach binary: %s", path)
+		}
+	}
+	if isBannedFromBinary(m("internal/modules/asset/adapter/s3"), "github.com/aws/aws-sdk-go-v2/service/s3") {
+		t.Error("ordinary S3 SDK forbidden")
 	}
 }

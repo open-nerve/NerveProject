@@ -72,15 +72,10 @@ func NewTransfer(deps Deps) (*Transfer, error) {
 }
 
 func (t *Transfer) Register(router *httpserver.Router, middleware func(http.Handler) http.Handler) {
-	router.RejectPathRedirects(localprotocol.Root)
+	RegisterStorageNamespace(router, middleware)
 	router.Handle("PUT "+localprotocol.ObjectPrefix+"{key}", middleware(http.HandlerFunc(t.upload)))
 	router.Handle("GET "+localprotocol.ObjectPrefix+"{key}", middleware(http.HandlerFunc(t.read)))
 	router.Handle("HEAD "+localprotocol.ObjectPrefix+"{key}", middleware(http.HandlerFunc(t.read)))
-	for _, pattern := range []string{localprotocol.Root, localprotocol.Root + "/"} {
-		router.Handle(pattern, middleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			transferProblem(w, http.StatusNotFound, httpserver.CodeNotFound)
-		})))
-	}
 }
 
 func transferProblem(w http.ResponseWriter, status int, code string) {

@@ -20,15 +20,22 @@ import (
 )
 
 func TestAssetLifetimeFollowsApp(t *testing.T) {
+	assetLifetimeFollowsApp(t, func(*config.Config) {})
+}
+
+func assetLifetimeFollowsApp(t *testing.T, configure func(*config.Config)) {
+	t.Helper()
 	dbURL := pgtest.NewDatabase(t)
-	for _, failLater := range []bool{false, true} {
+	for _, failure := range []string{"", "module", "webui"} {
+		failLater := failure != ""
 		name := "normal shutdown and repeated close"
 		if failLater {
-			name = "later module construction failure"
+			name = "later " + failure + " construction failure"
 		}
 		t.Run(name, func(t *testing.T) {
 			cfg := testConfig(t, dbURL, false)
-			if failLater {
+			configure(&cfg)
+			if failure == "module" {
 				cfg.Auth.SessionCleanupInterval = 0
 			}
 			var logs lockedBuffer
@@ -42,10 +49,13 @@ func TestAssetLifetimeFollowsApp(t *testing.T) {
 					pool, err = postgres.NewPool(ctx, db)
 					return pool, err
 				},
-				assets: func(files config.FilesConfig, keys *identity.Keys, log *slog.Logger) (assetComponents, error) {
-					components, err := newAssets(files, keys, log)
+				assets: func(ctx context.Context, files config.FilesConfig, keys *identity.Keys, log *slog.Logger) (assetComponents, error) {
+					components, err := newAssets(ctx, files, keys, log)
 					if err != nil {
 						return components, err
+					}
+					if failure == "webui" {
+						components.origin = "*"
 					}
 					closeStorage := components.close
 					components.close = func() error {

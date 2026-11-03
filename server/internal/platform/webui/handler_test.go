@@ -47,13 +47,13 @@ func wantResponse(t *testing.T, rec *httptest.ResponseRecorder, target string, s
 }
 
 func TestServesIndexAtRoot(t *testing.T) {
-	rec := serve(Handler(built), http.MethodGet, "/")
+	rec := serve(localHandler(t, built), http.MethodGet, "/")
 
 	wantResponse(t, rec, "/", http.StatusOK, "text/html; charset=utf-8", "no-cache", indexHTML)
 }
 
 func TestPagePathsFallBackToIndex(t *testing.T) {
-	h := Handler(built)
+	h := localHandler(t, built)
 	for _, target := range []string{
 		"/sign-up",
 		"/acme/projects/0199f1c2-7a1b-7c3d-8e4f-5a6b7c8d9e0f/issues",
@@ -68,7 +68,7 @@ func TestPagePathsFallBackToIndex(t *testing.T) {
 }
 
 func TestServesFilesWithCachePolicy(t *testing.T) {
-	h := Handler(built)
+	h := localHandler(t, built)
 	tests := []struct {
 		target, contentType, cacheControl, body string
 	}{
@@ -87,7 +87,7 @@ func TestServesFilesWithCachePolicy(t *testing.T) {
 // A missing hashed file (for example a chunk of an older build) must fail as
 // a missing file: answering index.html would hand HTML to a script loader.
 func TestMissingAssetsAre404(t *testing.T) {
-	h := Handler(built)
+	h := localHandler(t, built)
 	for _, target := range []string{"/assets/entry.client-old.js", "/assets/", "/assets", "/assets/.hidden"} {
 		rec := serve(h, http.MethodGet, target)
 		if rec.Code != http.StatusNotFound || strings.Contains(rec.Body.String(), indexHTML) {
@@ -97,7 +97,7 @@ func TestMissingAssetsAre404(t *testing.T) {
 }
 
 func TestIndexHTMLRedirectsToRoot(t *testing.T) {
-	rec := serve(Handler(built), http.MethodGet, "/index.html")
+	rec := serve(localHandler(t, built), http.MethodGet, "/index.html")
 
 	if location := rec.Result().Header.Get("Location"); rec.Code != http.StatusMovedPermanently || location != "./" {
 		t.Errorf("GET /index.html = %d Location %q, want 301 to ./", rec.Code, location)
@@ -105,7 +105,7 @@ func TestIndexHTMLRedirectsToRoot(t *testing.T) {
 }
 
 func TestHeadHasHeadersButNoBody(t *testing.T) {
-	h := Handler(built)
+	h := localHandler(t, built)
 	for _, target := range []string{"/", "/acme/projects", "/assets/entry.client-a1.js"} {
 		rec := serve(h, http.MethodHead, target)
 		length := rec.Result().Header.Get("Content-Length")
@@ -118,7 +118,7 @@ func TestHeadHasHeadersButNoBody(t *testing.T) {
 
 func TestOnlyGetAndHeadAreAllowed(t *testing.T) {
 	for _, files := range []fs.FS{built, fstest.MapFS{}} {
-		h := Handler(files)
+		h := localHandler(t, files)
 		for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions} {
 			rec := serve(h, method, "/assets/entry.client-a1.js")
 			if allow := rec.Result().Header.Get("Allow"); rec.Code != http.StatusMethodNotAllowed || allow != "GET, HEAD" {
@@ -131,8 +131,17 @@ func TestOnlyGetAndHeadAreAllowed(t *testing.T) {
 // Without index.html (dist/ holds only .gitkeep) every page explains how to
 // get the frontend.
 func TestUnbuiltFrontendExplainsItself(t *testing.T) {
-	h := Handler(fstest.MapFS{".gitkeep": {}})
+	h := localHandler(t, fstest.MapFS{".gitkeep": {}})
 	for _, target := range []string{"/", "/acme/projects", "/assets/entry.client-a1.js"} {
 		wantResponse(t, serve(h, http.MethodGet, target), target, http.StatusNotFound, "text/plain; charset=utf-8", "no-cache", notBuiltMessage+"\n")
 	}
+}
+
+func localHandler(t *testing.T, files fs.FS) http.Handler {
+	t.Helper()
+	h, err := Handler(files, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return h
 }

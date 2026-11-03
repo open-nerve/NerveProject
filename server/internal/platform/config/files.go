@@ -18,6 +18,7 @@ type FilesConfig struct {
 	SizeLimit                 int64            `koanf:"size_limit"`
 	Driver                    string           `koanf:"driver"`
 	Local                     LocalFilesConfig `koanf:"local"`
+	S3                        S3FilesConfig    `koanf:"s3"`
 	MinTransferBytesPerSecond int64            `koanf:"min_transfer_bytes_per_second"`
 	TransferGrace             time.Duration    `koanf:"transfer_grace"`
 	TransferIdleTimeout       time.Duration    `koanf:"transfer_idle_timeout"`
@@ -83,11 +84,16 @@ func (c FilesConfig) validate(fail func(key, format string, args ...any)) {
 	if c.SizeLimit < 1 || c.SizeLimit > maxFileSize {
 		fail("files.size_limit", "must be from 1 to 104857600, got %d", c.SizeLimit)
 	}
-	if c.Driver != "local" {
-		fail("files.driver", "must be local")
-	}
-	if strings.TrimSpace(c.Local.Root) == "" || strings.ContainsRune(c.Local.Root, 0) {
-		fail("files.local.root", "must be a nonempty directory path")
+	switch c.Driver {
+	case "local":
+		if strings.TrimSpace(c.Local.Root) == "" || strings.ContainsRune(c.Local.Root, 0) {
+			fail("files.local.root", "must be a nonempty directory path")
+		}
+		c.S3.validateCredentials(false, fail)
+	case "s3":
+		c.S3.validate(fail)
+	default:
+		fail("files.driver", "must be local or s3")
 	}
 	if c.MinTransferBytesPerSecond < 1024 || c.MinTransferBytesPerSecond > 1<<30 {
 		fail("files.min_transfer_bytes_per_second", "must be from 1024 to 1073741824, got %d", c.MinTransferBytesPerSecond)
@@ -118,7 +124,7 @@ func (c FilesConfig) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.Duration("upload_ttl", c.UploadTTL), slog.Duration("operation_timeout", c.OperationTimeout),
 		slog.Duration("cleanup_interval", c.CleanupInterval), slog.Int("cleanup_batch", c.CleanupBatch), slog.Duration("cleanup_budget", c.CleanupBudget),
-		slog.Int64("size_limit", c.SizeLimit), slog.String("driver", c.Driver), slog.Any("local", c.Local),
+		slog.Int64("size_limit", c.SizeLimit), slog.String("driver", c.Driver), slog.Any("local", c.Local), slog.Any("s3", c.S3),
 		slog.Int64("min_transfer_bytes_per_second", c.MinTransferBytesPerSecond),
 		slog.Duration("transfer_grace", c.TransferGrace), slog.Duration("transfer_idle_timeout", c.TransferIdleTimeout),
 		slog.Duration("max_transfer_duration", c.MaxTransferDuration), slog.Int("max_concurrent_transfers", c.MaxConcurrentTransfers),

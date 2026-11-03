@@ -1,6 +1,6 @@
 # M5 / P2 阶段评审记录
 
-> T1–T12完成；T13整审和I1修复复核完成，修复候选cb47940c的完整七项通过（341 E2E、4523输入未变）。T12检查点60411a30的CI41549309269三个job全绿。最终文档分支CI收据随后补齐；T14未开始，没有合并。基线main85dc4087，预检提交72a3e58b，见[re-34](../../../reviews/re-34-M5P2预检.md)。原件在本工作树 `.superpowers/sdd/P2-assets`。
+> P2已完成。T1–T14、整审及I1修复后完整七项通过；最终分支2f8a0d4e的CI41553048281、noff main2d1bcf0c的CI41556463795三job全绿，main 341 E2E（14.3m），证据归档校验和分支/worktree清理完成。P3预检见[re-36](../../../reviews/re-36-M5P3预检.md)。本页旧工作树证据路径均对应§20归档payload/p2中的原件；不改写历史失败。
 
 ## 1. 方式
 
@@ -8,7 +8,7 @@
 
 ## 2. 验收进度
 
-A1–A11的实现和本地验收已完整对应§18证据索引，最终复核以cb47940c的完整七项及I1反例为准。A12的准确最终分支/main CI、noff及归档清理仍待完成，不用候选检查点绿色替代集成。
+A1–A11的实现和本地验收已完整对应§18证据索引，最终复核以cb47940c的完整七项及I1反例为准。A12的准确最终分支/main CI、noff及归档清理已完成，收据见§20；不用候选检查点绿色替代集成。
 
 ## 3. T1已完成的验证与裁定
 
@@ -22,7 +22,7 @@ A1–A11的实现和本地验收已完整对应§18证据索引，最终复核�
 
 ## 4. 整分支审查
 
-一次新鲜整分支审查以85dc4087..b2c90cdb为固定范围，主控按逻辑、集成、测试三个视角复核。唯一Important I1是非默认保留期接线不一致，已完成实际RED→GREEN、受影响race及修复后完整七项；0 Critical、0新增Minor。完整范围、逐条裁定和未验证边界见[re-35](../../../reviews/re-35-M5P2整体审核.md)，原独立报告不改写为审过后续修复。最终文档分支CI仍单独核验。
+一次新鲜整分支审查以85dc4087..b2c90cdb为固定范围，主控按逻辑、集成、测试三个视角复核。唯一Important I1是非默认保留期接线不一致，已完成实际RED→GREEN、受影响race及修复后完整七项；0 Critical、0新增Minor。完整范围、逐条裁定和未验证边界见[re-35](../../../reviews/re-35-M5P2整体审核.md)，原独立报告不改写为审过后续修复。最终文档分支CI已按准确2f8a0d4e单独核验，见§20。
 
 ## 5. 与plan差异
 
@@ -30,7 +30,7 @@ A1–A11的实现和本地验收已完整对应§18证据索引，最终复核�
 
 ## 6. 后续责任
 
-接续准确最终分支CI、T14 main集成与归档；P3 S3、P4/P5绑定、P6/P7页面、P8规模/故障演练以及P1遗留C12 Minor仍由对应阶段完成。七份输入handoff已逐一追加P2处理结果，保持open。
+P2集成归档已关闭，接续通过预检的P3 S3；P4/P5绑定、P6/P7页面、P8规模/故障演练以及P1遗留C12 Minor仍由对应阶段完成。七份输入handoff已逐一追加P2处理结果，保持open。
 
 ## 7. 已知限制
 
@@ -196,3 +196,12 @@ P2交付六个业务操作和私有未绑定准备件、真实实物链、受保
 cb47940c / tree 0d2451246a5f69d1c3bdc0cafbe5d6b032e1dc1c：gen-check3.12秒、lint-go15.32秒、全量Go559.91秒、lint-web54/54（38缓存）2.85秒、knip2.02秒、test-web18/18（18缓存）0.25秒、build+E2E341/341通过144.53秒。七项退出码均0，4523个输入哈希运行前后相同；原件task-13-seven-results/inputs/integrity.json及各日志/Playwright报告，生成物另列task-13-generated.json。
 
 T12准确60411a30的CI41549309269已三job全绿：web125632592445、server125632593000、e2e125636583608。原件task-12-checkpoint-runs.json和task-12-checkpoint-jobs-final.json；它没有包括I1修复，不充当最终分支通过。
+
+## 20. T14集成归档与P3接续
+
+- 最终分支 `2f8a0d4e5ebb07a0774b8cbd7d53b549f72a55af` 的[CI41553048281](https://github.com/open-nerve/NerveProject/actions/runs/41553048281)三job成功，341 E2E（15.6m/2workers）；独立原审范围与I1主控复审不变。
+- `--no-ff` main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c` 的父提交为85dc4087、2f8a0d4e，合并tree与分支完全相同，系统git正常推送。[准确main CI41556463795](https://github.com/open-nerve/NerveProject/actions/runs/41556463795)server/web/e2e三job全部成功；341 E2E（14.3m/2workers），未靠重跑通过。
+- 归档 `/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P2-integration-20261103`：2191文件、41616039字节、3150项清单；SHA256/bytes/mode/membership在清理前后均通过，ignored文件分类未知0。完整raw、首次失败、60变异、独立审查、I1红绿/race/七项、两轮最终CI及Playwright报告在payload/p2与payload/e2e-test-results；manifest.json、integration.json和verify_archive.py给出收据。
+- 首次归档器误以为默认e2e/playwright-report存在；实际完整套件已将PLAYWRIGHT_HTML_REPORT定向task-13-seven-report。未删任何源原件，失败副本保留attempt-1-payload；归档器改为核实际报告并记录默认路径缺席后通过，不把该记账错误算产品失败或省略原件。
+- 远端分支已全被origin/main包含后正常删除；本地codex/m5-p2和worktree正常移除，无force，主目录仍main。P3在同一全绿main新建codex/m5-p3，spec/plan与一次独立builder check、主控自检及真实协议探针已完成，见re-36；P3产品尚未实施。
+- T14/A12关闭。M5总体完成项和七份输入handoff保持open；后续绑定/UI/规模与P1焦点Minor仍按阶段负责。归档payload冻结，清理后的集成/P3接续收据在外层integration.json及主目录P2 continuation台账，不能修改冻结原件来伪装旧阶段已知后事。

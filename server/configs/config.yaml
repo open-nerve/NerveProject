@@ -130,6 +130,20 @@ files:
   local:
     # 相对路径以进程工作目录为准。日志只报告是否配置，不输出路径
     root: ./data/files
+  s3:
+    # 仅 driver=s3 使用；生产桶/CORS由部署者准备，prefix须为实例独占。
+    endpoint: ""
+    region: ""
+    bucket: ""
+    prefix: ""
+    path_style: true
+    # 直接秘密只通过同名 NERVE_FILES__S3__* 环境变量；也可指定秘密文件，二选一。
+    access_key_id: ""
+    access_key_id_file: ""
+    secret_access_key: ""
+    secret_access_key_file: ""
+    session_token: ""
+    session_token_file: ""
   # 单次传输总预算 = grace + ceil(实际大小 / 最低速率) 秒；默认最大文件为 55 秒
   min_transfer_bytes_per_second: 131072
   transfer_grace: 15s

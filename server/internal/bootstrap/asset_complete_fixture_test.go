@@ -30,10 +30,10 @@ func newAssetCompleteWorldWith(t *testing.T, configure func(*config.Config), alt
 	configure(&cfg)
 	requests := &requestQueries{}
 	var store *local.Store
-	factory := func(files config.FilesConfig, keys *identity.Keys, logger *slog.Logger) (assetComponents, error) {
-		components, err := newAssets(files, keys, logger)
+	factory := func(ctx context.Context, files config.FilesConfig, keys *identity.Keys, logger *slog.Logger) (assetComponents, error) {
+		components, err := newAssets(ctx, files, keys, logger)
 		if err == nil {
-			store = components.store
+			store = components.store.(*local.Store)
 			alter(&components)
 		}
 		return components, err

@@ -27,7 +27,7 @@ const scriptedPolicy = "default-src 'self'; " +
 	"object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 
 func TestPolicyAllowsEachInlineScriptByItsHash(t *testing.T) {
-	if got := contentSecurityPolicy([]byte(scriptedIndex)); got != scriptedPolicy {
+	if got := contentSecurityPolicy([]byte(scriptedIndex), ""); got != scriptedPolicy {
 		t.Errorf("policy =\n%s\nwant\n%s", got, scriptedPolicy)
 	}
 }
@@ -36,7 +36,7 @@ func TestPolicyOfAPageWithoutInlineScriptsAllowsOnlyNervesScripts(t *testing.T) 
 	want := "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; " +
 		"font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; " +
 		"frame-ancestors 'none'"
-	if got := contentSecurityPolicy([]byte(indexHTML)); got != want {
+	if got := contentSecurityPolicy([]byte(indexHTML), ""); got != want {
 		t.Errorf("policy =\n%s\nwant\n%s", got, want)
 	}
 }
@@ -50,7 +50,7 @@ func TestOnlyPagesCarryThePolicy(t *testing.T) {
 		"site.webmanifest.json":     {Data: []byte(`{"name":"Nerve"}`)},
 		"assets/entry.client-a1.js": {Data: []byte("export {};")},
 	}
-	h := Handler(scripted)
+	h := localHandler(t, scripted)
 	for _, tt := range []struct{ method, target, want string }{
 		{http.MethodGet, "/", scriptedPolicy},
 		{http.MethodGet, "/sign-up?next_path=%2F", scriptedPolicy},
@@ -65,7 +65,7 @@ func TestOnlyPagesCarryThePolicy(t *testing.T) {
 		}
 	}
 
-	unbuilt := serve(Handler(fstest.MapFS{".gitkeep": {}}), http.MethodGet, "/")
+	unbuilt := serve(localHandler(t, fstest.MapFS{".gitkeep": {}}), http.MethodGet, "/")
 	if got := unbuilt.Result().Header.Get("Content-Security-Policy"); got != "" {
 		t.Errorf("unbuilt GET / (%d): Content-Security-Policy = %q, want none", unbuilt.Code, got)
 	}

@@ -10,10 +10,12 @@ import (
 
 func TestLogValueMasksDatabaseURL(t *testing.T) {
 	var buf bytes.Buffer
-	slog.New(slog.NewTextHandler(&buf, nil)).Info("configuration loaded", "config", validConfig())
+	cfg := validConfig()
+	cfg.Database.URL = "postgres://nerve:database-secret-sentinel@localhost/nerve"
+	slog.New(slog.NewTextHandler(&buf, nil)).Info("configuration loaded", "config", cfg)
 
 	out := buf.String()
-	if strings.Contains(out, "secret") {
+	if strings.Contains(out, "database-secret-sentinel") {
 		t.Errorf("log output leaks the password: %s", out)
 	}
 	for _, want := range []string{

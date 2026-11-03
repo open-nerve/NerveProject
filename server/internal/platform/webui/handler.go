@@ -33,12 +33,15 @@ const (
 // Hidden files (any name part starting with "."), such as dist/.gitkeep, are
 // never served. Without index.html every request answers 404 with a hint.
 // Mount it on the pattern "/" so that /api/ and the probes keep their routes.
-func Handler(files fs.FS) http.Handler {
+func Handler(files fs.FS, options Options) (http.Handler, error) {
+	if err := options.validate(); err != nil {
+		return nil, err
+	}
 	index, err := fs.ReadFile(files, indexFile)
 	if err != nil {
-		return &handler{files: files}
+		return &handler{files: files}, nil
 	}
-	return &handler{files: files, built: true, csp: contentSecurityPolicy(index)}
+	return &handler{files: files, built: true, csp: contentSecurityPolicy(index, options.StorageOrigin)}, nil
 }
 
 type handler struct {
