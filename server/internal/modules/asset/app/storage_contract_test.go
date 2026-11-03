@@ -32,6 +32,11 @@ type contractObjects interface {
 }
 
 func TestStorageContract(t *testing.T) {
+	t.Run("LocalFactory", runLocalStorageContract)
+	t.Run("S3Factory", runS3StorageContract)
+}
+
+func runLocalStorageContract(t *testing.T) {
 	now := time.Now()
 	s, err := local.New(local.Config{Root: t.TempDir(), SizeLimit: 5242880}, local.Deps{
 		UploadMAC: storagetest.MAC("contract-upload"), ReadMAC: storagetest.MAC("contract-read"), RuntimeNow: func() time.Time { return now },
@@ -141,6 +146,21 @@ func runStorageContract(t *testing.T, objects contractObjects, put func(context.
 	sealed, err := objects.Seal(t.Context(), staging, candidate, info.ETag)
 	if err != nil || sealed.Key != candidate || sealed.Size != 5 || sealed.ContentType != "text/plain" || sealed.ETag == "" {
 		t.Fatalf("sealed info = %+v, %v", sealed, err)
+	}
+	other := key('u')
+	if err := put(t.Context(), domain.UploadGrant{Key: other, Size: 5, ContentType: "text/plain", ExpiresAt: now.Add(time.Minute)}, strings.NewReader("other")); err != nil {
+		t.Fatal(err)
+	}
+	otherInfo, err := objects.Inspect(t.Context(), other)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := objects.Seal(t.Context(), other, candidate, otherInfo.ETag); !errors.Is(err, domain.ErrObjectChanged) && !errors.Is(err, domain.ErrObjectExists) {
+		t.Fatalf("existing final was replaceable: %v", err)
+	}
+	unchanged, err := objects.Inspect(t.Context(), candidate)
+	if err != nil || unchanged.ETag != sealed.ETag || unchanged.Size != 5 {
+		t.Fatalf("same-size source replaced final metadata: %+v %v", unchanged, err)
 	}
 	if err := objects.Delete(t.Context(), staging); err != nil {
 		t.Fatal(err)

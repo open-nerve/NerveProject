@@ -1,7 +1,7 @@
 # M5 / P3 S3 存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T3已完成，T4待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
+> 预检通过，T1–T4已完成，T5待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
 
 **Goal：** 为既有资产用例接入真实 S3 私有存储，完成 F4、部署配置和 local 回归。
 
@@ -78,15 +78,15 @@
 
 ## Task 4（T4）：实物读写与同一共享合同
 
-**Files：** 新s3/inspect.go、read.go、seal.go、delete.go及各_test；修改app/storage_contract_test.go，新增app/storage_s3_contract_test.go复用runStorageContract，保持原local测试。
+**Files：** 新s3/inspect.go、read.go、seal.go、delete.go；测试按object_real_test.go/object_wire_test.go/read_fault_test.go拆分；更新errors.go及独占transport响应头上限；修改app/storage_contract_test.go，新增app/storage_s3_contract_test.go复用runStorageContract，保持原local测试。
 
 **Interfaces：** Inspect/Open/Seal/Delete；Open读者拥有ctx取消函数直到Close，不能defer在Open返回前取消；内部元数据/错误转换用于T5。
 
-- [ ] Step 1：TestStorageContract/S3Factory与TestS3ObjectFailures：真实缺对象/缺桶、403/500/timeout、坏metadata、旧ETag、EOF后cancel；源A/目标B同大小不同hash、目的并发已有、源改变均不覆盖final。用受控服务响应注入200内嵌COPY错误，断言没有成功结果。
-- [ ] Step 2：`cd server && go test ./internal/modules/asset/adapter/s3 ./internal/modules/asset/app -run 'Test(Storage.*Contract|S3ObjectFailures)$' -count=1`先RED。
-- [ ] Step 3：实现SDK实际HEAD/GetObject IfMatch/CopyObject双条件/Delete；HEAD无内容404用同一剩余期限HeadBucket区分桶；Seal不合法/空etag不发无条件请求；copy后HEAD目标。
-- [ ] Step 4：同命令GREEN；取消读者关闭连接而非只测ctx字段；移除源条件、目的条件、reader取消/Close及把缺桶当缺对象各1性质变异；完整受影响race及lint。
-- [ ] Step 5：提交`feat(M5/P3): 实现条件封存和流式读取的共享实物合同`。
+- [x] Step 1：TestStorageContract/S3Factory与TestS3ObjectFailures：真实缺对象/缺桶、403/500/timeout、坏metadata、旧ETag、EOF后cancel；源A/目标B同大小不同hash、目的并发已有、源改变均不覆盖final。用受控服务响应注入200内嵌COPY错误，断言没有成功结果。
+- [x] Step 2：`cd server && go test ./internal/modules/asset/adapter/s3 ./internal/modules/asset/app -run 'Test(Storage.*Contract|S3ObjectFailures)$' -count=1`先RED。
+- [x] Step 3：实现SDK实际HEAD/GetObject IfMatch/CopyObject双条件/Delete；HEAD无内容404用同一剩余期限HeadBucket区分桶；Seal不合法/空etag不发无条件请求；copy后HEAD目标。
+- [x] Step 4：同命令GREEN；取消读者关闭连接而非只测ctx字段；移除源条件、目的条件、reader取消/Close及把缺桶当缺对象各1性质变异；完整受影响race及lint。
+- [x] Step 5：提交`feat(M5/P3): 实现条件封存和流式读取的共享实物合同`。
 
 ## Task 5（T5）：有界清单、晚到文件和恢复
 

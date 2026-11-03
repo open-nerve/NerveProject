@@ -1,6 +1,6 @@
 # M5 / P3 阶段评审记录
 
-> spec/plan预检通过，T1–T3配置、客户端与预签已完成，T4待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
+> spec/plan预检通过，T1–T4配置、客户端、预签与实物合同已完成，T5待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
 
 ## 1. 评审方式
 
@@ -8,7 +8,7 @@
 
 ## 2. 验收标准逐条核对
 
-[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A1–A10尚未逐条关闭；T1/T2证据见§8/§9，A1还需T6的活动驱动装配核对。预检固定SDK/真实服务协议和版本化桶反例只为可行性证据，不提前打勾；准确原件和范围见re-36。
+[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A2已由T3/T4证据关闭，其余尚未逐条关闭；T1–T4证据见§8–§11，A1还需T6的活动驱动装配核对。预检固定SDK/真实服务协议和版本化桶反例只为可行性证据，不提前打勾；准确原件和范围见re-36。
 
 ## 3. 执行中的决定
 
@@ -62,3 +62,15 @@ P2已完成并归档；P3接续S3/CORS/CSP/真实合同，M0超时handoff只记�
 - 3个性质变异真实命中：移除长度签名后错误大小PUT变成200；移除类型签名后错误类型PUT变成200；改相对时长舍入后精确到期断言失败。源hash均恢复，累计10个。完整记录为task-3-mutations.json及对应日志，未以单纯检查源文本证明保护。
 - 原始行为RED14.904s、首轮具名GREEN20.151s；完整受影响race为S3 35.547s、local7.071s、domain1.634s。首次lint只发现V4导入需显式别名，两处按goimports修正，server/tools最终均0 issues；格式修正后的具名GREEN20.368s，4187个非文档输入哈希/成员集合前后不变，见task-3-final-formatted-receipt.json/inputs。格式前race原件仍保留于task-3-final-green.*，没有把它声称为格式后重新跑过。
 - 无新增依赖、schema或公开DTO；阶段验收A2还需T4共享实物合同，T9七项和T10 deep-review仍待后续完成。
+
+
+## 11. T4共享实物合同与异常处理
+
+- LocalFactory/S3Factory运行同一个runStorageContract，新增同大小不同内容源不能替换已有final的断言；正确封存后删除staging不影响最终字节，GET/HEAD与ETag仍一致。S3实现既有Inspect/Open/Seal/Delete端口，无生产大接口、owner或清理协议变化。
+- COPY同时发送CopySourceIfMatch和目的IfNoneMatch=*，不做HEAD后无条件覆盖；真实旧源ETag失败、已存在的异内容final保留，8组同时写同一新目标均只成功一个，最终字节属于胜者。空/通配符/列表/弱ETag不得变成无条件操作；opaque标签保持完整引号，不把ETag当内容摘要。共享合同保留local既有ErrObjectExists及S3 ErrObjectChanged的冲突类别，两者在既有app均映射对象变化。
+- 真实删桶后Inspect/Open/Seal/Delete全部返回后端故障，不冒充缺对象；含糊404在同一剩余预算内核实HeadBucket。403/500即使携带NoSuchKey代码也不得映射缺失。SDK正确识别200响应中的COPY Error，不重试或发布成功，也不回显SDK错误原文。
+- 返回reader持有操作context，只有Close/取消/超时结束读取；实际慢流读到首3字节后，取消和Close都观察到服务端连接结束，超时保留DeadlineExceeded。先EOF再取消仍返回Canceled，Close可重复。GetObject携带IfMatch并核对返回ETag，拒绝提供方忽略条件的响应。
+- 元数据大小/类型/时间/强ETag逐项负例通过。新增33KiB无关响应头反例先RED（0.586s），随后在独占transport设32KiB解析前上限并GREEN（0.574s）；规范化对象元数据仍16KiB上限。没有放宽全局HTTP预算或架构守卫。
+- 行为RED为S3 14.899s/app14.163s；首轮具名GREEN21.809s/14.282s。5个实际性质变异移除源条件、目的条件、EOF后的取消检查、Close释放和删桶防线，全部命中具体断言且hash恢复；累计15个，但A8的后续恢复交错与5轮race仍待T5/T8，不提前关闭。
+- 最终完整受影响race通过：S3 57.713s、app15.287s、local6.727s、archtest5.200s；4195个非文档输入哈希与成员集合不变，见task-4-final-green-receipt.json/inputs。server/tools lint均0 issues；本轮自有S3容器全部回收，只读清单为空。全部原始日志/变异存于task-4-*，等待T11归档。
+- 本Task关闭A2。A3的DB提交故障和完整业务接线仍T6；清单/迟到对象、浏览器、容量、整审和阶段CI未提前标完成。

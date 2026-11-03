@@ -1,6 +1,6 @@
 # M5 / P3 S3 存储合同
 
-> 预检通过，T1–T3配置、客户端与预签已完成，T4待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
+> 预检通过，T1–T4配置、客户端、预签与共享实物合同已完成，T5待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
 
 ## 1. 目的、范围和方案
 
@@ -51,7 +51,7 @@ GET/HEAD 使用各自 SDK Presign 操作，只签 o-key；绑定方法、key、p
 
 ### 4.2 检查、流读取、复制、删除
 
-HEAD 返回实际 key/Size/ContentType/ETag/LastModified；ETag 是不透明版本，保留引号，不当 SHA。结构缺失、负值、无效时间/类型/ETag或超过既有元数据上界均明确失败。只有对象404/NoSuchKey映射 ErrObjectNotFound；403、5xx、TLS/DNS/超时不能伪装为缺失。bucket 不存在是后端故障；HEAD只有无内容404、无法分辨对象/桶缺失时，在同一操作剩余期限内用HeadBucket确认桶存在后才映射缺对象，不能把运行中删桶当清理成功。SDK 200 内嵌 COPY 错误不能当成功。
+HEAD 返回实际 key/Size/ContentType/ETag/LastModified；ETag 是单个强HTTP不透明版本，保留完整引号，不当SHA；拒绝通配符、列表、弱标签和控制字符，不能把预期版本比较放宽为任意对象匹配。结构缺失、负值、无效时间/类型/ETag或超过既有16KiB元数据上界均明确失败；独占S3 transport在SDK解析前限制响应头总量32KiB，给协议头保留余量，不改变全局HTTP服务器预算。只有对象404/NoSuchKey映射 ErrObjectNotFound；403、5xx、TLS/DNS/超时不能伪装为缺失。bucket 不存在是后端故障；HEAD无内容404及兼容提供方含糊的NoSuchKey均在同一操作剩余期限内用HeadBucket确认桶存在后才映射缺对象，不能把运行中删桶当清理成功。SDK 200 内嵌 COPY 错误不能当成功。
 
 Open 用 GetObject IfMatch 读取预期版本，返回流而非 ReadAll；取消后（包括先 EOF 再取消）返回 context 错误，Close 释放连接，不能在返回 reader 前取消其 operation context。完整字节数和 SHA 仍由 app 流式验证。
 
@@ -90,7 +90,7 @@ F4 在真正应用 origin 和浏览器 fetch/File/Blob 中完成 prepare→raw P
 ## 8. 完成标准
 
 - [ ] A1 配置/活动驱动、秘密来源/文件上限/日志遮盖、只读启动和单版本限制有真实负例；依赖锁定和纯层/导入守卫不放宽。
-- [ ] A2 local/S3同一实物合同均通过；签名方法/大小/类型/期限/篡改、GET/HEAD和取消后的reader有独立断言。
+- [x] A2 local/S3同一实物合同均通过；签名方法/大小/类型/期限/篡改、GET/HEAD和取消后的reader有独立断言。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§10/§11，T4最终race的两Factory共享合同及S3签名/实物用例。
 - [ ] A3 源/目的双条件COPY、同大小异内容/并发目的/源改变、200内嵌错误和错误分类证明final不可变，DB提交故障不丢candidate。
 - [ ] A4 有限prefix清单、opaque cursor、页内/进程恢复、后到实物回收、邻域保护、双时钟和无tmp合同通过。
 - [ ] A5 S3完整Nerve API/PG/实物闭环、权限撤销/锁外I/O/零DML和原local回归；路由目录两driver准确。

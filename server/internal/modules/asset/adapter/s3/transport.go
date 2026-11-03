@@ -14,6 +14,9 @@ func newTransport() *http.Transport {
 		Proxy: nil, DialContext: (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
 		ForceAttemptHTTP2: true, MaxIdleConns: 32, MaxIdleConnsPerHost: 16, IdleConnTimeout: 90 * time.Second,
 		TLSHandshakeTimeout: 10 * time.Second, ExpectContinueTimeout: time.Second,
+		// Bound the wire envelope before SDK parsing; the normalized object
+		// metadata itself is limited to 16 KiB by objectInfo.
+		MaxResponseHeaderBytes: 32 << 10,
 	}
 }
 
