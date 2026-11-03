@@ -72,6 +72,7 @@ type DirectoryEntry = app.DirectoryEntry
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
+	ImageReferences          ImageReferences
 	AssetParents             AssetParents
 	Purger                   *app.Purger
 	WorkspaceRoles           WorkspaceRoles
@@ -85,6 +86,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 	directory := postgresadapter.NewDirectory(pool)
 	store := postgresadapter.NewPurgeStore(pool, protected)
 	return Provided{
+		ImageReferences: ImageReferences{rows: store},
 		Purger: app.NewPurger([]app.PurgeStep{
 			{Table: "workspace_user_properties", Delete: store.PurgeWorkspaceUserProperties},
 			{Table: "workspace_member_invites", Delete: store.PurgeWorkspaceMemberInvites},
@@ -111,12 +113,15 @@ const InvitationMACPurpose = "workspace-invitation"
 
 // Deps are what bootstrap gives the module (M3 design 6.6, step 5).
 type Deps struct {
-	Events     shared.EventPublisher
-	Pool       *pgxpool.Pool
-	Tx         shared.TxManager
-	Clock      app.Clock
-	Logger     *slog.Logger
-	Authorizer shared.Authorizer
+	MemberAvatars app.MemberAvatarReader
+	Images        app.ImageReader
+	ImageBindings app.ImageBindings
+	Events        shared.EventPublisher
+	Pool          *pgxpool.Pool
+	Tx            shared.TxManager
+	Clock         app.Clock
+	Logger        *slog.Logger
+	Authorizer    shared.Authorizer
 	// Accounts is identity's Accounts, converted (bootstrap/ports.go).
 	Accounts app.Accounts
 	// Profiles is identity's PublicProfiles, converted (bootstrap/ports.go).
@@ -153,16 +158,16 @@ func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	deactivator := NewDeactivator(DeactivatorDeps{Pool: d.Pool, Clock: d.Clock, Projects: d.Projects})
 	return &Module{assets: app.NewAssetAccess(d.Authorizer), signup: app.NewSignupInvitations(store, d.InvitationMAC), deactivator: deactivator, uc: httpadapter.UseCases{
-		ListWorkspaces: app.NewListWorkspaces(store),
+		ListWorkspaces: app.NewListWorkspaces(app.ListWorkspacesDeps{Workspaces: store, Caller: d.CallerLock, Images: d.Images, Tx: d.Tx, Clock: d.Clock}),
 		CreateWorkspace: app.NewCreateWorkspace(app.CreateWorkspaceDeps{
 			Accounts: d.Accounts, Workspaces: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger, Enabled: d.CreationEnabled,
 		}),
-		GetWorkspace:      app.NewGetWorkspace(store, d.Authorizer),
-		UpdateWorkspace:   app.NewUpdateWorkspace(store, d.Authorizer, d.Tx, d.Clock),
+		GetWorkspace:      app.NewGetWorkspace(app.GetWorkspaceDeps{Workspaces: store, Auth: d.Authorizer, Caller: d.CallerLock, Images: d.Images, Tx: d.Tx, Clock: d.Clock}),
+		UpdateWorkspace:   app.NewUpdateWorkspace(app.UpdateWorkspaceDeps{Workspaces: store, Auth: d.Authorizer, Caller: d.CallerLock, Images: d.Images, Bindings: d.ImageBindings, Tx: d.Tx, Clock: d.Clock}),
 		DeleteWorkspace:   app.NewDeleteWorkspace(store, d.Projects, d.Authorizer, d.Tx, d.Clock, d.Events, d.Logger),
 		Leave:             app.NewLeaveWorkspace(store, d.Profiles, d.Projects, d.Authorizer, d.Tx, d.Clock),
-		ListMembers:       app.NewListWorkspaceMembers(store, d.Profiles, d.Authorizer),
-		UpdateMember:      app.NewUpdateWorkspaceMember(store, d.Projects, d.Profiles, d.Authorizer, d.Tx, d.Clock),
+		ListMembers:       app.NewListWorkspaceMembers(app.ListMembersDeps{Members: store, Profiles: d.Profiles, Auth: d.Authorizer, Caller: d.CallerLock, Images: d.MemberAvatars, Tx: d.Tx, Clock: d.Clock}),
+		UpdateMember:      app.NewUpdateWorkspaceMember(app.UpdateMemberDeps{Members: store, Projects: d.Projects, Profiles: d.Profiles, Auth: d.Authorizer, Caller: d.CallerLock, Images: d.MemberAvatars, Tx: d.Tx, Clock: d.Clock}),
 		RemoveMember:      app.NewRemoveWorkspaceMember(store, d.Profiles, d.Projects, d.Authorizer, d.Tx, d.Clock),
 		CheckSlug:         app.NewCheckSlug(store),
 		GetPreferences:    app.NewGetWorkspacePreferences(store, d.Authorizer),
@@ -171,10 +176,10 @@ func New(d Deps) *Module {
 		CreateInvitations: app.NewCreateWorkspaceInvitations(app.CreateInvitationsDeps{
 			Caller: d.CallerLock, Invitations: store, Profiles: d.Profiles, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
 		}),
-		GetInvitation:    app.NewGetWorkspaceInvitation(store, d.InvitationMAC),
+		GetInvitation:    app.NewGetWorkspaceInvitation(app.GetInvitationDeps{Invitations: store, Images: d.Images, Tx: d.Tx, MAC: d.InvitationMAC}),
 		UpdateInvitation: app.NewUpdateWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock, d.InvitationMAC),
 		DeleteInvitation: app.NewDeleteWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock),
-		AcceptInvitation: app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{
+		AcceptInvitation: app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Caller: d.CallerLock, Images: d.Images,
 			Accounts: d.Accounts, Invitations: store, Projects: d.Projects, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
 		}),
 		DeclineInvitation: app.NewDeclineWorkspaceInvitation(d.Accounts, store, d.Tx, d.Clock, d.InvitationMAC),

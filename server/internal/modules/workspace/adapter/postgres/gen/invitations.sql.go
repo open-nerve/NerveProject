@@ -168,13 +168,15 @@ func (q *Queries) InvitationByID(ctx context.Context, id uuid.UUID) (WorkspaceMe
 }
 
 const invitationPreview = `-- name: InvitationPreview :one
-SELECT i.id, i.role, i.responded_at, w.name AS workspace_name, w.slug AS workspace_slug
+SELECT i.workspace_id, w.logo_asset_id, i.id, i.role, i.responded_at, w.name AS workspace_name, w.slug AS workspace_slug
 FROM workspace_member_invites i
 JOIN workspaces w ON w.id = i.workspace_id
-WHERE i.id = $1 AND i.deleted_at IS NULL AND w.deleted_at IS NULL
+WHERE i.id = $1 AND i.deleted_at IS NULL AND NOT i.accepted AND w.deleted_at IS NULL
 `
 
 type InvitationPreviewRow struct {
+	WorkspaceID   uuid.UUID
+	LogoAssetID   *uuid.UUID
 	ID            uuid.UUID
 	Role          int16
 	RespondedAt   *time.Time
@@ -187,6 +189,8 @@ func (q *Queries) InvitationPreview(ctx context.Context, id uuid.UUID) (Invitati
 	row := q.db.QueryRow(ctx, invitationPreview, id)
 	var i InvitationPreviewRow
 	err := row.Scan(
+		&i.WorkspaceID,
+		&i.LogoAssetID,
 		&i.ID,
 		&i.Role,
 		&i.RespondedAt,
@@ -300,6 +304,40 @@ func (q *Queries) LockWorkspaceInvitations(ctx context.Context, workspaceID uuid
 		return nil, err
 	}
 	return items, nil
+}
+
+const shareInvitationPreview = `-- name: ShareInvitationPreview :one
+SELECT i.workspace_id, w.logo_asset_id, i.id, i.role, i.responded_at, w.name AS workspace_name, w.slug AS workspace_slug
+FROM workspace_member_invites i
+JOIN workspaces w ON w.id = i.workspace_id
+WHERE i.id = $1 AND i.deleted_at IS NULL AND NOT i.accepted AND w.deleted_at IS NULL
+FOR SHARE OF i
+`
+
+type ShareInvitationPreviewRow struct {
+	WorkspaceID   uuid.UUID
+	LogoAssetID   *uuid.UUID
+	ID            uuid.UUID
+	Role          int16
+	RespondedAt   *time.Time
+	WorkspaceName string
+	WorkspaceSlug string
+}
+
+// The caller already holds the workspace share lock; only the invitation is locked here.
+func (q *Queries) ShareInvitationPreview(ctx context.Context, id uuid.UUID) (ShareInvitationPreviewRow, error) {
+	row := q.db.QueryRow(ctx, shareInvitationPreview, id)
+	var i ShareInvitationPreviewRow
+	err := row.Scan(
+		&i.WorkspaceID,
+		&i.LogoAssetID,
+		&i.ID,
+		&i.Role,
+		&i.RespondedAt,
+		&i.WorkspaceName,
+		&i.WorkspaceSlug,
+	)
+	return i, err
 }
 
 const updateInvitationRole = `-- name: UpdateInvitationRole :one

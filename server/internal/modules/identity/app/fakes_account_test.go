@@ -29,6 +29,7 @@ type fakeAccount struct {
 	user           domain.User
 	profile        domain.Profile
 	err            error
+	userReads      []uuid.UUID
 	userUpdates    []userUpdate
 	profileReads   []uuid.UUID
 	profileUpdates []profileUpdate
@@ -66,4 +67,12 @@ func (f *fakeAccount) UpdateProfile(_ context.Context, userID uuid.UUID, p domai
 		return domain.Profile{}, err
 	}
 	return f.profile, nil
+}
+
+func (f *fakeAccount) GetUser(_ context.Context, id uuid.UUID) (domain.User, error) {
+	f.userReads = append(f.userReads, id)
+	if err := f.find(id); err != nil {
+		return domain.User{}, err
+	}
+	return f.user, nil
 }

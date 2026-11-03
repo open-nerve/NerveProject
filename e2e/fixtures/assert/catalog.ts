@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 
 import type { Database } from "../db";
+import { imageReferenceOIDs } from "./image-references";
 
 // The tables a deletion writes and the foreign keys under them, read from the database's catalog (M3 design 3.6; M4
 // design 3.6), so that a table or a key a later phase adds is read too.
@@ -52,8 +53,9 @@ interface ForeignKey {
  * key of more columns or a target other than id fails here, named, for its rows would be found another way.
  */
 export async function keysBelow(db: Database, table: string): Promise<ForeignKey[]> {
-  const all = await db.query<ForeignKey & { columns: number; targetColumns: number }>(
-    `SELECT c.conrelid::regclass::text AS child, a.attname::text AS column, c.confrelid::regclass::text AS parent,
+  const imageReferences = await imageReferenceOIDs(db);
+  const all = await db.query<ForeignKey & { oid: string; columns: number; targetColumns: number }>(
+    `SELECT c.oid::text AS oid, c.conrelid::regclass::text AS child, a.attname::text AS column, c.confrelid::regclass::text AS parent,
             b.attname::text AS target, cardinality(c.conkey) AS columns, cardinality(c.confkey) AS "targetColumns"
        FROM pg_constraint c JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
        JOIN pg_attribute b ON b.attrelid = c.confrelid AND b.attnum = c.confkey[1]
@@ -63,7 +65,9 @@ export async function keysBelow(db: Database, table: string): Promise<ForeignKey
   const tables = [table];
   const keys: ForeignKey[] = [];
   for (let i = 0; i < tables.length; i++) {
-    for (const { columns, targetColumns, ...key } of all.filter((k) => k.parent === tables[i])) {
+    for (const { oid: _oid, columns, targetColumns, ...key } of all.filter(
+      (k) => k.parent === tables[i] && !imageReferences.has(k.oid)
+    )) {
       expect(columns, `the columns of ${key.child}.${key.column}, a key to ${key.parent}`).toBe(1);
       expect(targetColumns, `the target columns of ${key.child}.${key.column}`).toBe(1);
       expect(key.target, `the target of ${key.child}.${key.column}, a key to ${key.parent}`).toBe("id");

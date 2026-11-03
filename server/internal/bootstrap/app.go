@@ -139,6 +139,9 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	workspacePorts := workspace.Provide(pool, protected)
 	projectPorts := project.Provide(pool, protected)
 	issuePorts := issue.Provide(pool, protected)
+	imageBindings := asset.NewImageBindings(assetPorts, businessClock)
+	imageReader := asset.NewImageReader(assetPorts, assets.store, assets.runtimeNow)
+	assetPurger := asset.NewPurger(assetPorts, assetImageReferences{identityPorts.ImageReferences, workspacePorts.ImageReferences, projectPorts.ImageReferences}, tx)
 	authorizer := access.New(access.Deps{
 		WorkspaceRoles: workspacePorts.WorkspaceRoles,
 		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
@@ -170,6 +173,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
+		Caller: identityPorts.CredentialLock, ImageGate: projectImageGate{gate: projectWrites},
+		ImageBindings: projectImageBindings{bindings: imageBindings}, Images: projectImageReader{images: imageReader},
 		Events: events,
 		Pool:   pool, Tx: tx, Clock: businessClock, Authorizer: authorizer,
 		Workspaces:   projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
@@ -178,6 +183,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		ListSettings: projectListSettings{settings: issuePorts.ListSettings},
 	})
 	ws := workspace.New(workspace.Deps{
+		ImageBindings: workspaceImageBindings{bindings: imageBindings}, Images: workspaceImageReader{images: imageReader}, MemberAvatars: memberAvatarReader{images: imageReader},
 		Events: events,
 		Pool:   pool, Tx: tx, Clock: businessClock, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
@@ -188,6 +194,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		CreationEnabled: cfg.Workspace.CreationEnabled,
 	})
 	ident, err := identity.New(identity.Deps{
+		ImageBindings:   profileImageBindings{bindings: imageBindings},
+		Images:          profileImageReader{images: imageReader},
 		Pool:            pool,
 		Tx:              tx,
 		Clock:           businessClock,
@@ -223,7 +231,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPorts.Purger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
+	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
 	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), files.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
 	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), asset.EnqueuedKinds()))
 	if err != nil {

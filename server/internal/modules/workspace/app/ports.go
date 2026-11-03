@@ -67,11 +67,12 @@ type MemberRow struct {
 // PublicProfile is an account's public profile as MemberProfiles reads it:
 // identity's value, converted in bootstrap/ports.go (M3 design 6.5).
 type PublicProfile struct {
-	ID          uuid.UUID
-	Email       string
-	FirstName   string
-	LastName    string
-	DisplayName string
+	AvatarAssetID *uuid.UUID
+	ID            uuid.UUID
+	Email         string
+	FirstName     string
+	LastName      string
+	DisplayName   string
 }
 
 // MemberProfiles reads the public profile of each account of ids that

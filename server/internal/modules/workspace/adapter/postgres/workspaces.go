@@ -28,7 +28,8 @@ func (s *Store) CreateWorkspace(ctx context.Context, w app.WorkspaceRow) (domain
 		return domain.Workspace{}, fmt.Errorf("create workspace: %w", err)
 	}
 	return domain.Workspace{
-		ID: row.ID, Name: row.Name, Slug: row.Slug, OrganizationSize: row.OrganizationSize, Timezone: row.Timezone,
+		LogoAssetID: row.LogoAssetID,
+		ID:          row.ID, Name: row.Name, Slug: row.Slug, OrganizationSize: row.OrganizationSize, Timezone: row.Timezone,
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}, nil
 }
@@ -55,7 +56,8 @@ func (s *Store) ListWorkspaces(ctx context.Context, userID uuid.UUID) ([]domain.
 	out := make([]domain.Workspace, len(rows))
 	for i, r := range rows {
 		out[i] = domain.Workspace{
-			ID: r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
+			LogoAssetID: r.LogoAssetID,
+			ID:          r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
 			Role: shared.Role(r.Role), TotalMembers: int(r.TotalMembers), CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 		}
 	}
@@ -70,7 +72,8 @@ func (s *Store) WorkspaceBySlug(ctx context.Context, slug string) (domain.Worksp
 		return domain.Workspace{}, notFound(err)
 	}
 	return domain.Workspace{
-		ID: r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
+		LogoAssetID: r.LogoAssetID,
+		ID:          r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
 		TotalMembers: int(r.TotalMembers), CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 	}, nil
 }
@@ -83,14 +86,15 @@ func (s *Store) UpdateWorkspace(ctx context.Context, id uuid.UUID, p domain.Work
 	r, err := s.queries(ctx).UpdateWorkspace(ctx, gen.UpdateWorkspaceParams{
 		SetName: p.Name != nil, Name: deref(p.Name),
 		SetOrganizationSize: p.OrganizationSize != nil, OrganizationSize: deref(p.OrganizationSize),
-		SetTimezone: p.Timezone != nil, Timezone: deref(p.Timezone),
+		SetTimezone: p.Timezone != nil, Timezone: deref(p.Timezone), SetLogo: p.SetLogo, LogoAssetID: p.LogoAssetID,
 		UpdatedBy: &by, Now: now, ID: id,
 	})
 	if err != nil {
 		return domain.Workspace{}, fmt.Errorf("update workspace: %w", err)
 	}
 	return domain.Workspace{
-		ID: r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
+		LogoAssetID: r.LogoAssetID,
+		ID:          r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
 		TotalMembers: int(r.TotalMembers), CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 	}, nil
 }

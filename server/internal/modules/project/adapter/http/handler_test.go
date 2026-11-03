@@ -112,6 +112,7 @@ func (f *fakeCreate) Execute(ctx context.Context, slug string, in domain.NewProj
 }
 
 type fakeGet struct {
+	err      error
 	calls    []string // "caller id"
 	projects map[string]domain.Project
 }
@@ -119,6 +120,9 @@ type fakeGet struct {
 // Execute answers the project the caller's key names, project.not_found
 // for any other.
 func (f *fakeGet) Execute(ctx context.Context, id uuid.UUID) (domain.Project, error) {
+	if f.err != nil {
+		return domain.Project{}, f.err
+	}
 	key := caller(ctx) + " " + id.String()
 	f.calls = append(f.calls, key)
 	p, ok := f.projects[key]

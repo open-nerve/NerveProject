@@ -12,7 +12,7 @@ import { settle, track, until } from "@/lib/auth/fake-time";
 import { fetchedWhileChangeIsOut, inTurn, sent } from "@/store/fake-queue";
 import { fakeRoot } from "@/store/fake-root";
 import { ProjectMemberStore } from "@/store/member/project/project-member.store";
-import { userOf } from "@/store/member/fake-users";
+import { accountOf, userOf } from "@/store/member/fake-users";
 import {
   loadArchivedProjects,
   loadProject,
@@ -56,8 +56,7 @@ async function memberStore() {
   );
   const user = new UserStore(fakeRoot({ router }), api);
   runInAction(() => {
-    const account = { email: "ann@example.com", user_timezone: "UTC", cover_image_url: null };
-    user.data = { ...userOf("ann"), ...account, created_at: "2026-09-01T09:00:00Z" };
+    user.data = { ...accountOf("ann"), created_at: "2026-09-01T09:00:00Z" };
   });
   const users = Object.fromEntries(["ann", "bob", "cat", "dee"].map((name) => [`u-${name}`, userOf(name)]));
   const store = new ProjectMemberStore({ memberMap: users }, fakeRoot({ router, user, projectRoot }), api);

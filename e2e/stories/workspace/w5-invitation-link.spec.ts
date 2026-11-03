@@ -75,6 +75,7 @@ test("W5 (API): the link shows the workspace and the role without the address; t
     workspace_name: "Acme",
     workspace_slug: slug,
     workspace_logo_url: null,
+    workspace_logo_url_expires_at: null,
   });
   expect(JSON.stringify(shown.data)).not.toContain(carolEmail);
   expect((await view(toErin.id, toErin.token)).data).toEqual({
@@ -84,6 +85,7 @@ test("W5 (API): the link shows the workspace and the role without the address; t
     workspace_name: "Other",
     workspace_slug: other,
     workspace_logo_url: null,
+    workspace_logo_url_expires_at: null,
   });
   expect((await view(toCarol.id, toCarol.token, bearer(dave))).data).toEqual(shown.data);
   expect((await view(toCarol.id)).response.status).toBe(400);

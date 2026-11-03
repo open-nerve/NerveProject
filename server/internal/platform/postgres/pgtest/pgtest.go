@@ -12,6 +12,7 @@ package pgtest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -102,12 +104,35 @@ func (c *cluster) url(database string) string {
 }
 
 func startCluster() (*cluster, error) {
+	return startClusterWith()
+}
+
+func startClusterWith(options ...testcontainers.ContainerCustomizer) (_ *cluster, startupErr error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	container, err := tcpostgres.Run(ctx, image,
+	options = append([]testcontainers.ContainerCustomizer{
 		tcpostgres.WithDatabase("postgres"),
 		tcpostgres.BasicWaitStrategies(),
-	)
+	}, options...)
+	container, err := tcpostgres.Run(ctx, image, options...)
+	var admin *pgxpool.Pool
+	defer func() {
+		if startupErr == nil {
+			return
+		}
+		if admin != nil {
+			admin.Close()
+		}
+		if container != nil {
+			// Startup may have exhausted ctx. Cleanup owns a fresh bounded
+			// context, and a failed cleanup must not hide the original cause.
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cleanupCancel()
+			if err := container.Terminate(cleanupCtx); err != nil {
+				startupErr = errors.Join(startupErr, fmt.Errorf("remove failed test container: %w", err))
+			}
+		}
+	}()
 	if err != nil {
 		return nil, fmt.Errorf("start %s container (is Docker running?): %w", image, err)
 	}
@@ -119,7 +144,7 @@ func startCluster() (*cluster, error) {
 	if err != nil {
 		return nil, fmt.Errorf("container address: %w", err)
 	}
-	admin, err := postgres.NewPool(ctx, config.DatabaseConfig{URL: raw, MaxConns: 4})
+	admin, err = postgres.NewPool(ctx, config.DatabaseConfig{URL: raw, MaxConns: 4})
 	if err != nil {
 		return nil, err
 	}

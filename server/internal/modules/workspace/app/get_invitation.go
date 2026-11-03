@@ -5,34 +5,68 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// GetWorkspaceInvitation shows an invitation to whoever holds its link: the
-// public GET /api/v0/workspace-invitations/{invitation_id}?token=….
+// InvitationImagePreviewer keeps the exact invitation valid under the parent
+// lock. Writers may share the workspace, so the invitation itself needs a lock.
+type InvitationImagePreviewer interface {
+	InvitationPreviewer
+	ShareWorkspace(context.Context, uuid.UUID) error
+	ShareInvitationPreview(context.Context, uuid.UUID) (domain.InvitationPreview, error)
+}
+type GetInvitationDeps struct {
+	Invitations InvitationImagePreviewer
+	Images      ImageReader
+	Tx          shared.TxManager
+	MAC         InvitationMAC
+}
+
+// GetWorkspaceInvitation grants only the existing MAC link's fixed preview.
 type GetWorkspaceInvitation struct {
-	invitations InvitationPreviewer
-	tokens      invitationTokens
+	d      GetInvitationDeps
+	tokens invitationTokens
 }
 
-// NewGetWorkspaceInvitation returns the use case.
-func NewGetWorkspaceInvitation(invitations InvitationPreviewer, mac InvitationMAC) *GetWorkspaceInvitation {
-	return &GetWorkspaceInvitation{invitations: invitations, tokens: invitationTokens{mac: mac}}
+func NewGetWorkspaceInvitation(d GetInvitationDeps) *GetWorkspaceInvitation {
+	return &GetWorkspaceInvitation{d: d, tokens: invitationTokens{mac: d.MAC}}
 }
 
-// Execute checks the token, then reads. A token that is not the
-// invitation's, and an invitation that does not exist, is deleted or
-// accepted, or whose workspace is deleted, are the same
-// workspace.invitation_not_found (M3 design 3.8, 8.2). A wrong token reads
-// nothing: the token is the invitation id's MAC, which needs no row, so the
-// answer to it cannot depend on whether the invitation exists. Nothing
-// depends on the caller: the operation is public.
 func (u *GetWorkspaceInvitation) Execute(ctx context.Context, id uuid.UUID, token string) (domain.InvitationPreview, error) {
 	if !u.tokens.valid(id, token) {
 		return domain.InvitationPreview{}, domain.ErrInvitationNotFound
 	}
-	p, err := u.invitations.InvitationPreview(ctx, id)
+	candidate, err := u.d.Invitations.InvitationPreview(ctx, id)
 	if err != nil {
 		return domain.InvitationPreview{}, invitationNotFound(err)
 	}
-	return p, nil
+	var out domain.InvitationPreview
+	err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		if err := u.d.Invitations.ShareWorkspace(ctx, candidate.WorkspaceID); err != nil {
+			return invitationNotFound(err)
+		}
+		current, err := u.d.Invitations.ShareInvitationPreview(ctx, id)
+		if err != nil {
+			return invitationNotFound(err)
+		}
+		if current.WorkspaceID != candidate.WorkspaceID {
+			return domain.ErrInvitationNotFound
+		}
+		images, err := u.d.Images.ReadWorkspaceImages(ctx, []WorkspaceImageReference{{WorkspaceID: current.WorkspaceID, LogoAssetID: current.LogoAssetID}})
+		if err != nil {
+			return err
+		}
+		current.Logo = nil
+		if current.LogoAssetID != nil {
+			if image, ok := images[*current.LogoAssetID]; ok {
+				current.Logo = &image
+			}
+		}
+		out = current
+		return nil
+	})
+	if err != nil {
+		return domain.InvitationPreview{}, err
+	}
+	return out, nil
 }

@@ -23,7 +23,7 @@ func newJoin() (*app.JoinProject, *writeFixture) {
 		dave: {WorkspaceRole: shared.RoleMember}, carol: {WorkspaceRole: shared.RoleGuest, ProjectRole: shared.RoleGuest}} {
 		f.auth.grants[grantKey{user, acme.ID}] = g
 	}
-	return app.NewJoinProject(f.locks(), f.store, f.tx, clockAt{clockNow, f.log}), f
+	return app.NewJoinProject(app.JoinProjectDeps{Projects: f.store, Locks: f.locks(), Tx: f.tx, Clock: clockAt{clockNow, f.log}, Caller: imageCaller{f.log}, Images: noProjectImages{}}), f
 }
 
 // beforeJoin are the calls of user's joining project before it writes:
@@ -31,7 +31,7 @@ func newJoin() (*app.JoinProject, *writeFixture) {
 // membership FOR SHARE, the project's lock, the decision, his membership
 // of the project.
 func beforeJoin(user, project uuid.UUID) []string {
-	return append(lockedTo(project), fmt.Sprintf("ShareMembers %s [%s]", acme.ID, user), "LockProject "+project.String(),
+	return append(withImageCaller(user, lockedTo(project)), fmt.Sprintf("ShareMembers %s [%s]", acme.ID, user), "LockProject "+project.String(),
 		fmt.Sprintf("Authorize %s %s on %s/%s", user, domain.ActionJoin, acme.ID, project), fmt.Sprintf("Memberships %s [%s]", project, user))
 }
 
@@ -114,12 +114,12 @@ func TestJoinProjectRefuses(t *testing.T) {
 		calls []string
 	}{
 		{"no caller", context.Background(), webID, nil, shared.Unauthenticated(), nil},
-		{"no project", as(hank), uuid.Nil(), nil, domain.ErrNotFound, noProject},
-		{"not seen", as(erin), webID, nil, domain.ErrNotFound, beforeJoin(erin, webID)[:6]},
-		{"a workspace guest, the project's member", as(carol), webID, nil, shared.Forbidden(), beforeJoin(carol, webID)[:6]},
+		{"no project", as(hank), uuid.Nil(), nil, domain.ErrNotFound, withImageCaller(hank, noProject)},
+		{"not seen", as(erin), webID, nil, domain.ErrNotFound, beforeJoin(erin, webID)[:8]},
+		{"a workspace guest, the project's member", as(carol), webID, nil, shared.Forbidden(), beforeJoin(carol, webID)[:8]},
 		{"a workspace role above the three", as(erin), webID, func(f *writeFixture) {
 			f.auth.grants[grantKey{erin, acme.ID}] = shared.Grant{WorkspaceRole: 25}
-		}, shared.Forbidden(), beforeJoin(erin, webID)[:6]},
+		}, shared.Forbidden(), beforeJoin(erin, webID)[:8]},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -186,7 +186,7 @@ func TestJoinProjectReturnsEachFailure(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f := newJoin()
 			tt.fail(f)
-			want := all(f, tt.user)[:tt.calls]
+			want := all(f, tt.user)[:tt.calls+2]
 			got, err := uc.Execute(as(tt.user), webID)
 			if !errors.Is(err, errDisk) || got.ID != uuid.Nil() || !slices.Equal(f.log.calls, want) {
 				t.Errorf("Execute() = %+v, %v, calls %q; want %v after %q", got, err, f.log.calls, errDisk, want)

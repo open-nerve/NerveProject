@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"math"
+	"slices"
 	"time"
 	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 type PurgeCursor struct {
@@ -17,10 +20,16 @@ type PurgeProgress struct {
 	Scanned, Deleted, Blocked int
 	Done                      bool
 }
-type Purger struct{ rows PurgeRows }
+type PurgeDeps struct {
+	Candidates AssetPurgeCandidates
+	Deleter    AssetPurgeDeleter
+	References ImageReferenceDetacher
+	Tx         shared.TxManager
+}
+type Purger struct{ d PurgeDeps }
 
-func NewPurger(rows PurgeRows) *Purger { return &Purger{rows: rows} }
-func (p *Purger) Tables() []string     { return []string{"file_assets"} }
+func NewPurger(d PurgeDeps) *Purger { return &Purger{d: d} }
+func (p *Purger) Tables() []string  { return []string{"file_assets"} }
 func (p *Purger) Page(ctx context.Context, cutoff time.Time, batch int, cursor PurgeCursor) (PurgeProgress, error) {
 	result := PurgeProgress{Cursor: cursor}
 	if batch < 1 || batch > math.MaxInt32 {
@@ -31,19 +40,54 @@ func (p *Purger) Page(ctx context.Context, cutoff time.Time, batch int, cursor P
 	}
 	if cursor.Table == "" && cursor.After == uuid.Nil() {
 		cursor.Table = "file_assets"
-		result.Cursor = cursor
 	}
 	if cursor.Table != "file_assets" {
 		return result, errors.New("unknown asset purge table")
 	}
-	page, err := p.rows.PurgeAssets(ctx, cutoff, cursor.After, batch)
-	if page.Scanned < 0 || page.Scanned > batch || page.Deleted < 0 || page.Deleted > page.Scanned ||
-		(page.Scanned == 0 && page.After != cursor.After) || (page.Scanned > 0 && page.After.Compare(cursor.After) <= 0) {
-		return result, errors.New("invalid asset purge progress")
+	limit := min(batch, 1000)
+	ids, err := p.d.Candidates.PurgeAssetCandidates(ctx, cutoff, cursor.After, limit)
+	if err != nil {
+		return result, err
 	}
-	result.Cursor.After = page.After
-	result.Scanned = page.Scanned
-	result.Deleted = page.Deleted
-	result.Done = err == nil && page.Scanned == 0
-	return result, err
+	if len(ids) > limit {
+		return result, errors.New("invalid asset purge candidates")
+	}
+	previous := cursor.After
+	for _, id := range ids {
+		if id.Compare(previous) <= 0 {
+			return result, errors.New("unordered asset purge candidates")
+		}
+		previous = id
+	}
+	if len(ids) == 0 {
+		result.Cursor = cursor
+		result.Done = true
+		return result, nil
+	}
+	var deleted []uuid.UUID
+	err = p.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		if err := p.d.References.DetachAssetReferences(ctx, ids); err != nil {
+			return err
+		}
+		var err error
+		deleted, err = p.d.Deleter.DeletePurgeAssets(ctx, cutoff, ids)
+		if err != nil {
+			return err
+		}
+		seen := make(map[uuid.UUID]bool, len(deleted))
+		for _, id := range deleted {
+			if _, ok := slices.BinarySearchFunc(ids, id, uuid.UUID.Compare); !ok || seen[id] {
+				return errors.New("invalid asset purge result")
+			}
+			seen[id] = true
+		}
+		return nil
+	})
+	if err != nil {
+		return result, err
+	}
+	result.Cursor = PurgeCursor{Table: cursor.Table, After: ids[len(ids)-1]}
+	result.Scanned = len(ids)
+	result.Deleted = len(deleted)
+	return result, nil
 }

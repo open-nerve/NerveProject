@@ -289,17 +289,22 @@ type Theme string
 
 // User defines model for User.
 type User struct {
-	// AvatarURL Null until uploads arrive (M5).
-	AvatarURL nullable.Nullable[string] `json:"avatar_url"`
+	AvatarAssetID nullable.Nullable[uuid.UUID] `json:"avatar_asset_id"`
 
-	// CoverImageURL Null until uploads arrive (M5).
-	CoverImageURL nullable.Nullable[string] `json:"cover_image_url"`
-	CreatedAt     time.Time                 `json:"created_at"`
-	DisplayName   string                    `json:"display_name"`
-	Email         string                    `json:"email"`
-	FirstName     string                    `json:"first_name"`
-	ID            uuid.UUID                 `json:"id"`
-	LastName      string                    `json:"last_name"`
+	// AvatarURL Short-lived authorized image URL, or null if no live bound image exists.
+	AvatarURL          nullable.Nullable[string]    `json:"avatar_url"`
+	AvatarURLExpiresAt nullable.Nullable[time.Time] `json:"avatar_url_expires_at"`
+	CoverImageAssetID  nullable.Nullable[uuid.UUID] `json:"cover_image_asset_id"`
+
+	// CoverImageURL Short-lived authorized image URL, or null if no live bound image exists.
+	CoverImageURL          nullable.Nullable[string]    `json:"cover_image_url"`
+	CoverImageURLExpiresAt nullable.Nullable[time.Time] `json:"cover_image_url_expires_at"`
+	CreatedAt              time.Time                    `json:"created_at"`
+	DisplayName            string                       `json:"display_name"`
+	Email                  string                       `json:"email"`
+	FirstName              string                       `json:"first_name"`
+	ID                     uuid.UUID                    `json:"id"`
+	LastName               string                       `json:"last_name"`
 
 	// UserTimezone An IANA time zone name.
 	UserTimezone string `json:"user_timezone"`
@@ -307,6 +312,12 @@ type User struct {
 
 // UserUpdate defines model for UserUpdate.
 type UserUpdate struct {
+	// AvatarAssetID Omit to keep; null to remove; a completed own USER_AVATAR preparation to replace.
+	AvatarAssetID nullable.Nullable[uuid.UUID] `json:"avatar_asset_id,omitempty"`
+
+	// CoverImageAssetID Omit to keep; null to remove; a completed own USER_COVER preparation to replace.
+	CoverImageAssetID nullable.Nullable[uuid.UUID] `json:"cover_image_asset_id,omitempty"`
+
 	// DisplayName 1–255 characters.
 	DisplayName *string `json:"display_name,omitempty"`
 
@@ -376,7 +387,7 @@ type ServerInterface interface {
 	// GetMe Read the caller's account
 	// (GET /api/v0/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
-	// UpdateMe Change the caller's names and time zone
+	// UpdateMe Change the caller's names, time zone and profile images
 	// (PATCH /api/v0/me)
 	UpdateMe(w http.ResponseWriter, r *http.Request)
 	// ListAPITokens List the caller's personal access tokens
@@ -1372,7 +1383,7 @@ type StrictServerInterface interface {
 	// GetMe Read the caller's account
 	// (GET /api/v0/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
-	// UpdateMe Change the caller's names and time zone
+	// UpdateMe Change the caller's names, time zone and profile images
 	// (PATCH /api/v0/me)
 	UpdateMe(ctx context.Context, request UpdateMeRequestObject) (UpdateMeResponseObject, error)
 	// ListAPITokens List the caller's personal access tokens

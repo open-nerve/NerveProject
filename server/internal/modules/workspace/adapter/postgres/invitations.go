@@ -68,7 +68,7 @@ func (s *Store) InvitationPreview(ctx context.Context, id uuid.UUID) (domain.Inv
 	if err != nil {
 		return domain.InvitationPreview{}, notFound(err)
 	}
-	return domain.InvitationPreview{ID: r.ID, Role: shared.Role(r.Role), Declined: r.RespondedAt != nil, WorkspaceName: r.WorkspaceName,
+	return domain.InvitationPreview{WorkspaceID: r.WorkspaceID, LogoAssetID: r.LogoAssetID, ID: r.ID, Role: shared.Role(r.Role), Declined: r.RespondedAt != nil, WorkspaceName: r.WorkspaceName,
 		WorkspaceSlug: r.WorkspaceSlug}, nil
 }
 

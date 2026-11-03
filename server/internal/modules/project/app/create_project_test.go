@@ -47,7 +47,7 @@ func newCreate() (*app.CreateProject, *createFixture) {
 		}, errs: map[grantKey]error{{carol, acme.ID}: shared.Forbidden()}},
 	}
 	return app.NewCreateProject(app.CreateProjectDeps{Workspaces: f.workspaces, Members: f.members, Projects: f.projects, Auth: f.auth, Tx: f.tx,
-		Clock: clockAt{clockNow, log}}), f
+		Clock: clockAt{clockNow, log}, Caller: imageCaller{log}, Bindings: noProjectImages{clockAt{clockNow, log}}, Images: noProjectImages{}}), f
 }
 
 func ptr[T any](v T) *T { return &v }
@@ -60,8 +60,8 @@ func created(id uuid.UUID, w app.Workspace, user uuid.UUID, lead *uuid.UUID, row
 	if lead != nil && *lead != user {
 		admins = append(admins, *lead)
 	}
-	calls := []string{"Now", "Begin", "ShareWorkspaceBySlug " + slugOf(w),
-		fmt.Sprintf("Authorize %s project.create on %s/%s", user, w.ID, uuid.UUID{}), fmt.Sprintf("ShareMembers %s %v", w.ID, admins),
+	calls := []string{"WorkspaceBySlug " + slugOf(w) + " outside tx", fmt.Sprintf("Authorize %s project.create on %s/%s outside tx", user, w.ID, uuid.UUID{}), "Begin", "Now", "LockCaller " + user.String(), "ShareWorkspaceBySlug " + slugOf(w),
+		fmt.Sprintf("Authorize %s project.create on %s/%s", user, w.ID, uuid.UUID{}), fmt.Sprintf("ShareMembers %s %v", w.ID, admins), "Now",
 		"CreateProject " + id.String() + " in " + w.ID.String() + " " + row + " by " + user.String() + " at " + at}
 	for _, a := range admins {
 		calls = append(calls, fmt.Sprintf("CreateMember %s in %s/%s as 20 by %s at %s", a, w.ID, id, user, at),
@@ -174,7 +174,7 @@ func TestCreateProjectRefuses(t *testing.T) {
 		return domain.NewProject{Name: "Web", Identifier: "WEB", LeadID: &lead}
 	}
 	decided := func(user uuid.UUID, w app.Workspace, slug string) []string {
-		return []string{"Now", "Begin", "ShareWorkspaceBySlug " + slug, fmt.Sprintf("Authorize %s project.create on %s/%s", user, w.ID, uuid.UUID{})}
+		return []string{"WorkspaceBySlug " + slug + " outside tx", fmt.Sprintf("Authorize %s project.create on %s/%s outside tx", user, w.ID, uuid.UUID{}), "Begin", "Now", "LockCaller " + user.String(), "ShareWorkspaceBySlug " + slug, fmt.Sprintf("Authorize %s project.create on %s/%s", user, w.ID, uuid.UUID{})}
 	}
 	tests := []struct {
 		name  string
@@ -187,12 +187,12 @@ func TestCreateProjectRefuses(t *testing.T) {
 		{"an invalid identifier", alice, "acme", domain.NewProject{Name: "Web", Identifier: "WEB-2"},
 			shared.Invalid(shared.FieldError{Field: "identifier", Code: "invalid_format"}), nil},
 		{"no workspace", alice, "gone", domain.NewProject{Name: "Web", Identifier: "WEB"}, domain.ErrWorkspaceNotFound,
-			[]string{"Now", "Begin", "ShareWorkspaceBySlug gone"}},
+			[]string{"WorkspaceBySlug gone outside tx"}},
 		{"a workspace he is not in", dave, "acme", domain.NewProject{Name: "Web", Identifier: "WEB"}, domain.ErrWorkspaceNotFound,
-			decided(dave, acme, "acme")},
-		{"a guest", carol, "acme", domain.NewProject{Name: "Web", Identifier: "WEB"}, shared.Forbidden(), decided(carol, acme, "acme")},
-		{"a guest naming a non-member lead", carol, "acme", leadIs(dave), shared.Forbidden(), decided(carol, acme, "acme")},
-		{"an outsider naming a lead", dave, "acme", leadIs(bob), domain.ErrWorkspaceNotFound, decided(dave, acme, "acme")},
+			decided(dave, acme, "acme")[:2]},
+		{"a guest", carol, "acme", domain.NewProject{Name: "Web", Identifier: "WEB"}, shared.Forbidden(), decided(carol, acme, "acme")[:2]},
+		{"a guest naming a non-member lead", carol, "acme", leadIs(dave), shared.Forbidden(), decided(carol, acme, "acme")[:2]},
+		{"an outsider naming a lead", dave, "acme", leadIs(bob), domain.ErrWorkspaceNotFound, decided(dave, acme, "acme")[:2]},
 		{"a guest as the lead", alice, "acme", leadIs(carol), domain.LeadNotAllowed(),
 			append(decided(alice, acme, "acme"), fmt.Sprintf("ShareMembers %s %v", acme.ID, []uuid.UUID{alice, carol}))},
 		{"no active member as the lead", alice, "acme", leadIs(dave), domain.LeadNotAllowed(),

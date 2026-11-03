@@ -41,8 +41,8 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 34 {
-		t.Fatalf("Up() = %d migrations, %v; want 34", len(up), err)
+	if err != nil || len(up) != 37 {
+		t.Fatalf("Up() = %d migrations, %v; want 37", len(up), err)
 	}
 	wantSchema := []struct {
 		query string
@@ -81,7 +81,7 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 		t.Fatal(err)
 	}
 	// Roll back the later migrations before checking migration 29.
-	for version := int64(34); version >= 29; version-- {
+	for version := int64(37); version >= 29; version-- {
 		down, err := m.Down(ctx)
 		if err != nil || down == nil || down.Version != version {
 			t.Fatalf("Down version %d = %+v, %v", version, down, err)
@@ -103,8 +103,8 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 34 {
-		t.Errorf("Up() again = %d migrations, %v; want 34", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 37 {
+		t.Errorf("Up() again = %d migrations, %v; want 37", len(again), err)
 	}
 	checkSchema("Up again")
 	assertTrigramIndex(t, pool)

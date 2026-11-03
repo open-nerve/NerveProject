@@ -211,7 +211,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Change the caller's names and time zone
+         * Change the caller's names, time zone and profile images
          * @description Changes the fields sent and leaves the others. The e-mail address cannot change here: the server's administrator changes it with `nerve users set-email`, which signs every session out.
          */
         patch: operations["updateMe"];
@@ -413,8 +413,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Change a workspace's name, organization size or time zone
-         * @description For the workspace's admins. The fields given change and the others stay; the values follow createWorkspace's rules (validation_failed), checked before the workspace is looked at. The slug never changes: a body with slug is refused (bad_request). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The role is decided after the workspace row is locked, so a caller demoted meanwhile is refused.
+         * Change a workspace's name, organization size, time zone or logo
+         * @description For the workspace's admins. The fields given change and the others stay; the values follow createWorkspace's rules (validation_failed), checked before the workspace is looked at. The slug never changes: a body with slug is refused (bad_request). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The role is decided after the workspace row is locked, so a caller demoted meanwhile is refused. Logo replacement binds the caller's completed preparation atomically; omission retains the current logo and null clears it.
          */
         patch: operations["updateWorkspace"];
         trace?: never;
@@ -1808,14 +1808,32 @@ export interface components {
             display_name: string;
             /** @description An IANA time zone name. */
             user_timezone: string;
-            /** @description Null until uploads arrive (M5). */
+            /** Format: uuid */
+            avatar_asset_id: string | null;
+            /** Format: uuid */
+            cover_image_asset_id: string | null;
+            /** @description Short-lived authorized image URL, or null if no live bound image exists. */
             avatar_url: string | null;
-            /** @description Null until uploads arrive (M5). */
+            /** Format: date-time */
+            avatar_url_expires_at: string | null;
+            /** @description Short-lived authorized image URL, or null if no live bound image exists. */
             cover_image_url: string | null;
+            /** Format: date-time */
+            cover_image_url_expires_at: string | null;
             /** Format: date-time */
             created_at: string;
         };
         UserUpdate: {
+            /**
+             * Format: uuid
+             * @description Omit to keep; null to remove; a completed own USER_AVATAR preparation to replace.
+             */
+            avatar_asset_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Omit to keep; null to remove; a completed own USER_COVER preparation to replace.
+             */
+            cover_image_asset_id?: string | null;
             /** @description At most 255 characters, without a web address. */
             first_name?: string;
             /** @description At most 255 characters, without a web address. */
@@ -1986,6 +2004,11 @@ export interface components {
             data: components["schemas"]["Timezone"][];
         };
         /**
+         * @description The size of the organization, as the web app's form offers it.
+         * @enum {string}
+         */
+        OrganizationSize: "Just myself" | "2-10" | "11-50" | "51-200" | "201-500" | "500+";
+        /**
          * @description A member's role in a workspace, 5 guest, 15 member, 20 admin.
          * @enum {integer}
          */
@@ -1997,11 +2020,15 @@ export interface components {
             /** @description Lower case; it never changes. */
             slug: string;
             /** @description One of OrganizationSize's values; null when none was given. */
-            organization_size: string | null;
+            organization_size: components["schemas"]["OrganizationSize"] | null;
             /** @description An IANA time zone name. */
             timezone: string;
-            /** @description Null until uploads arrive (M5). */
+            /** Format: uuid */
+            logo_asset_id: string | null;
+            /** @description A signed URL for the current valid logo; null if unavailable. */
             logo_url: string | null;
+            /** Format: date-time */
+            logo_url_expires_at: string | null;
             role: components["schemas"]["WorkspaceRole"];
             /** @description The number of active members. */
             total_members: number;
@@ -2013,11 +2040,6 @@ export interface components {
         WorkspaceList: {
             data: components["schemas"]["Workspace"][];
         };
-        /**
-         * @description The size of the organization, as the web app's form offers it.
-         * @enum {string}
-         */
-        OrganizationSize: "Just myself" | "2-10" | "11-50" | "51-200" | "201-500" | "500+";
         WorkspaceCreate: {
             /** @description 1–80 characters, with a letter or a digit, without a web address. */
             name: string;
@@ -2029,6 +2051,11 @@ export interface components {
         };
         /** @description Changes the fields it names; a field left out keeps its value. organization_size cannot be set to null. */
         WorkspaceUpdate: {
+            /**
+             * Format: uuid
+             * @description A completed logo preparation owned by the caller; null clears the current logo.
+             */
+            logo_asset_id?: string | null;
             /** @description 1–80 characters, with a letter or a digit, without a web address. */
             name?: string;
             organization_size?: components["schemas"]["OrganizationSize"];
@@ -2042,8 +2069,10 @@ export interface components {
             display_name: string;
             first_name: string;
             last_name: string;
-            /** @description Null until uploads arrive (M5). */
+            /** @description A signed URL for the member's current valid avatar; null if unavailable. */
             avatar_url: string | null;
+            /** Format: date-time */
+            avatar_url_expires_at: string | null;
             /** @description The member's address for a caller who is an admin or a member; null for a guest. */
             email: string | null;
         };
@@ -2118,8 +2147,10 @@ export interface components {
             declined: boolean;
             workspace_name: string;
             workspace_slug: string;
-            /** @description Null until uploads arrive (M5). */
+            /** @description A signed URL for this invitation's fixed workspace logo; null if unavailable. */
             workspace_logo_url: string | null;
+            /** Format: date-time */
+            workspace_logo_url_expires_at: string | null;
         };
         WorkspaceInvitationUpdate: {
             role: components["schemas"]["WorkspaceRole"];
@@ -2220,8 +2251,14 @@ export interface components {
             logo_props: components["schemas"]["LogoProps"];
             /** @description An IANA time zone name. */
             timezone: string;
-            /** @description Null until uploads arrive (M5). */
+            /** Format: uuid */
+            cover_image_asset_id: string | null;
+            /** @description Stable cover-01 through cover-29; the frontend resolves its bundled image. */
+            cover_builtin_id: string | null;
+            /** @description Signed uploaded cover URL; null for a built-in cover or unavailable asset. */
             cover_image_url: string | null;
+            /** Format: date-time */
+            cover_image_url_expires_at: string | null;
             /** @description The caller's role in the project; null when he is not an active member. */
             member_role: components["schemas"]["ProjectRole"] | null;
             /** @description The project's place in the caller's sidebar, lowest first; null when it has none there: the caller is not an active member of the project, or has no display settings in it. */
@@ -2237,6 +2274,13 @@ export interface components {
             data: components["schemas"]["Project"][];
         };
         ProjectCreate: {
+            /**
+             * Format: uuid
+             * @description Completed preparation to bind atomically; null for no uploaded cover.
+             */
+            cover_image_asset_id?: string | null;
+            /** @description Stable cover-01 through cover-29; mutually exclusive with a non-null uploaded cover. */
+            cover_builtin_id?: string | null;
             /** @description 1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! - */
             name: string;
             /** @description 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased. */
@@ -2255,8 +2299,15 @@ export interface components {
         IdentifierAvailability: {
             available: boolean;
         };
-        /** @description Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them. */
+        /** @description Changes the fields it names; a field left out keeps its value. Only project_lead_id, default_assignee_id and the cover fields can be null. A non-null cover source clears the other; omitted fields keep their value. */
         ProjectUpdate: {
+            /**
+             * Format: uuid
+             * @description Completed preparation to bind atomically; null for no uploaded cover.
+             */
+            cover_image_asset_id?: string | null;
+            /** @description Stable cover-01 through cover-29; mutually exclusive with a non-null uploaded cover. */
+            cover_builtin_id?: string | null;
             /** @description 1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! - */
             name?: string;
             /** @description 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased. */
@@ -3034,10 +3085,10 @@ export type ApiTokenCreated = components['schemas']['ApiTokenCreated'];
 export type InstanceInfo = components['schemas']['InstanceInfo'];
 export type Timezone = components['schemas']['Timezone'];
 export type TimezoneList = components['schemas']['TimezoneList'];
+export type OrganizationSize = components['schemas']['OrganizationSize'];
 export type WorkspaceRole = components['schemas']['WorkspaceRole'];
 export type Workspace = components['schemas']['Workspace'];
 export type WorkspaceList = components['schemas']['WorkspaceList'];
-export type OrganizationSize = components['schemas']['OrganizationSize'];
 export type WorkspaceCreate = components['schemas']['WorkspaceCreate'];
 export type WorkspaceUpdate = components['schemas']['WorkspaceUpdate'];
 export type MemberUser = components['schemas']['MemberUser'];

@@ -71,9 +71,9 @@ func TestUpdateMe(t *testing.T) {
 		name, body, patch string
 	}{
 		{"every field", `{"first_name":"Ann","last_name":"Lee","display_name":"annie","user_timezone":"Asia/Shanghai"}`,
-			`{"FirstName":"Ann","LastName":"Lee","DisplayName":"annie","Timezone":"Asia/Shanghai"}`},
+			`{"SetAvatar":false,"AvatarAssetID":null,"SetCoverImage":false,"CoverImageAssetID":null,"FirstName":"Ann","LastName":"Lee","DisplayName":"annie","Timezone":"Asia/Shanghai"}`},
 		{"a name and the time zone", `{"first_name":"Ann","user_timezone":"Asia/Shanghai"}`,
-			`{"FirstName":"Ann","LastName":null,"DisplayName":null,"Timezone":"Asia/Shanghai"}`},
+			`{"SetAvatar":false,"AvatarAssetID":null,"SetCoverImage":false,"CoverImageAssetID":null,"FirstName":"Ann","LastName":null,"DisplayName":null,"Timezone":"Asia/Shanghai"}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -85,7 +85,7 @@ func TestUpdateMe(t *testing.T) {
 
 			res, body := do(t, newServer(t, fakes{updateMe: update}), req)
 
-			want := `{"avatar_url":null,"cover_image_url":null,"created_at":"2026-09-25T10:00:00.123456Z","display_name":"alice",` +
+			want := `{"avatar_asset_id":null,"avatar_url":null,"avatar_url_expires_at":null,"cover_image_asset_id":null,"cover_image_url":null,"cover_image_url_expires_at":null,"created_at":"2026-09-25T10:00:00.123456Z","display_name":"alice",` +
 				`"email":"alice@corp.com","first_name":"Ann","id":"` + userID.String() + `","last_name":"Lee","user_timezone":"Asia/Shanghai"}` + "\n"
 			if res.StatusCode != http.StatusOK || body != want {
 				t.Errorf("PATCH /me = %d %s, want 200 %s", res.StatusCode, body, want)
@@ -124,6 +124,29 @@ func TestUpdateMeProblems(t *testing.T) {
 			}
 			if ran := update.calls == 1; ran != tt.ran {
 				t.Errorf("use case ran: %v, want %v", ran, tt.ran)
+			}
+		})
+	}
+}
+
+// These errors cross the image port unchanged. The identity HTTP adapter
+// depends only on shared errors, not on the asset module's domain package.
+func TestUpdateMeImageProblems(t *testing.T) {
+	for _, tc := range []struct {
+		code   string
+		kind   shared.Kind
+		status int
+	}{
+		{"asset.not_found", shared.KindNotFound, 404},
+		{"asset.not_uploaded", shared.KindConflict, 409},
+		{"asset.bound", shared.KindConflict, 409},
+		{"asset.scope_changed", shared.KindConflict, 409},
+	} {
+		t.Run(tc.code, func(t *testing.T) {
+			err := shared.NewError(tc.kind, tc.code, "image port refusal")
+			res, body := do(t, newServer(t, fakes{updateMe: &fakeUpdateMe{err: err}}), patchJSON("/api/v0/me", `{}`))
+			if res.StatusCode != tc.status || !strings.Contains(body, `"code":"`+tc.code+`"`) {
+				t.Fatalf("image error changed: %d %s", res.StatusCode, body)
 			}
 		})
 	}

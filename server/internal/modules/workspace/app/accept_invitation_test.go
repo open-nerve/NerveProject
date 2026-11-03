@@ -44,7 +44,7 @@ func responding(inv ...domain.Invitation) *invitationsFixture {
 }
 
 func (f *invitationsFixture) accept() *app.AcceptWorkspaceInvitation {
-	return app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Accounts: f.accounts, Invitations: f.invitations, Projects: f.projects,
+	return app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Caller: &fakeCallerLock{log: f.log}, Images: noWorkspaceImages{}, Accounts: f.accounts, Invitations: f.invitations, Projects: f.projects,
 		Tx: f.tx, Clock: clockAt{at: clockNow}, MAC: f.mac})
 }
 
@@ -106,7 +106,7 @@ func TestAcceptWorkspaceInvitation(t *testing.T) {
 		if err != nil || got != want {
 			t.Errorf("%s: Execute() = %+v, %v; want %+v", tt.name, got, err, want)
 		}
-		wantCalls := slices.Concat(respondedCalls(tt.user, tt.inv, "LockWorkspace"), []string{"MemberOf " + tt.w.ID.String() + " " + tt.user.ID.String()},
+		wantCalls := slices.Concat(acceptedCalls(tt.user, tt.inv, "LockWorkspace"), []string{"MemberOf " + tt.w.ID.String() + " " + tt.user.ID.String()},
 			tt.writes, []string{fmt.Sprintf("AcceptInvitation %s by %s at %s", tt.inv.ID, tt.user.ID, at), "WorkspaceByID " + tt.w.ID.String()})
 		if !slices.Equal(f.log.calls, wantCalls) || f.tx.calls != 1 {
 			t.Errorf("%s: calls = %q in %d transactions, want %q in one", tt.name, f.log.calls, f.tx.calls, wantCalls)
@@ -244,6 +244,9 @@ func TestAcceptWorkspaceInvitationRefusals(t *testing.T) {
 		if len(tt.calls) == 1 {
 			wantTx = 0
 		}
+		if wantTx == 1 {
+			tt.calls = slices.Insert(slices.Clone(tt.calls), 1, callerImageCall(tt.user))
+		}
 		if !slices.Equal(f.log.calls, tt.calls) || f.tx.calls != wantTx {
 			t.Errorf("%s: calls = %q in %d transactions, want %q in %d", tt.name, f.log.calls, f.tx.calls, tt.calls, wantTx)
 		}
@@ -253,4 +256,8 @@ func TestAcceptWorkspaceInvitationRefusals(t *testing.T) {
 		len(f.log.calls) != 0 {
 		t.Errorf("Execute() without an actor = %v, calls %q; want 401 unauthorized and nothing", err, f.log.calls)
 	}
+}
+
+func acceptedCalls(user app.AccountState, inv domain.Invitation, lockName string) []string {
+	return slices.Insert(respondedCalls(user, inv, lockName), 1, callerImageCall(user))
 }

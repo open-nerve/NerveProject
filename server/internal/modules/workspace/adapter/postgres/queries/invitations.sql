@@ -23,10 +23,18 @@ WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
 
 -- name: InvitationPreview :one
 -- getWorkspaceInvitation: what the link shows, never the address (M3 design 3.8). One module's tables, so one JOIN.
-SELECT i.id, i.role, i.responded_at, w.name AS workspace_name, w.slug AS workspace_slug
+SELECT i.workspace_id, w.logo_asset_id, i.id, i.role, i.responded_at, w.name AS workspace_name, w.slug AS workspace_slug
 FROM workspace_member_invites i
 JOIN workspaces w ON w.id = i.workspace_id
-WHERE i.id = sqlc.arg(id) AND i.deleted_at IS NULL AND w.deleted_at IS NULL;
+WHERE i.id = sqlc.arg(id) AND i.deleted_at IS NULL AND NOT i.accepted AND w.deleted_at IS NULL;
+
+-- name: ShareInvitationPreview :one
+-- The caller already holds the workspace share lock; only the invitation is locked here.
+SELECT i.workspace_id, w.logo_asset_id, i.id, i.role, i.responded_at, w.name AS workspace_name, w.slug AS workspace_slug
+FROM workspace_member_invites i
+JOIN workspaces w ON w.id = i.workspace_id
+WHERE i.id = sqlc.arg(id) AND i.deleted_at IS NULL AND NOT i.accepted AND w.deleted_at IS NULL
+FOR SHARE OF i;
 
 -- name: LockInvitation :one
 -- Then, under the workspace's lock, the invitation row FOR UPDATE, read again: a response, a change or a deletion that

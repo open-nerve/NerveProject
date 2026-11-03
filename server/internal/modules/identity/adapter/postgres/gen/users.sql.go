@@ -127,19 +127,21 @@ func (q *Queries) GetPasswordAccount(ctx context.Context, id uuid.UUID) (GetPass
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, first_name, last_name, display_name, user_timezone, created_at
+SELECT id, email, first_name, last_name, display_name, user_timezone, created_at, avatar_asset_id, cover_image_asset_id
 FROM users
 WHERE id = $1
 `
 
 type GetUserRow struct {
-	ID           uuid.UUID
-	Email        string
-	FirstName    string
-	LastName     string
-	DisplayName  string
-	UserTimezone string
-	CreatedAt    time.Time
+	ID                uuid.UUID
+	Email             string
+	FirstName         string
+	LastName          string
+	DisplayName       string
+	UserTimezone      string
+	CreatedAt         time.Time
+	AvatarAssetID     *uuid.UUID
+	CoverImageAssetID *uuid.UUID
 }
 
 func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error) {
@@ -153,6 +155,8 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error)
 		&i.DisplayName,
 		&i.UserTimezone,
 		&i.CreatedAt,
+		&i.AvatarAssetID,
+		&i.CoverImageAssetID,
 	)
 	return i, err
 }
@@ -200,18 +204,19 @@ func (q *Queries) LockUserForCredentials(ctx context.Context, id uuid.UUID) (Loc
 }
 
 const publicProfiles = `-- name: PublicProfiles :many
-SELECT id, email, first_name, last_name, display_name
+SELECT id, email, first_name, last_name, display_name, avatar_asset_id
 FROM users
 WHERE id = ANY ($1::uuid[])
 ORDER BY id
 `
 
 type PublicProfilesRow struct {
-	ID          uuid.UUID
-	Email       string
-	FirstName   string
-	LastName    string
-	DisplayName string
+	ID            uuid.UUID
+	Email         string
+	FirstName     string
+	LastName      string
+	DisplayName   string
+	AvatarAssetID *uuid.UUID
 }
 
 // MemberProfiles (M3 design 6.5): the public profile of each account of ids, deactivated ones too, by id. No lock: a
@@ -231,6 +236,7 @@ func (q *Queries) PublicProfiles(ctx context.Context, ids []uuid.UUID) ([]Public
 			&i.FirstName,
 			&i.LastName,
 			&i.DisplayName,
+			&i.AvatarAssetID,
 		); err != nil {
 			return nil, err
 		}
@@ -310,32 +316,40 @@ SET updated_at    = $1,
     first_name    = CASE WHEN $2::boolean THEN $3::text ELSE first_name END,
     last_name     = CASE WHEN $4::boolean THEN $5::text ELSE last_name END,
     display_name  = CASE WHEN $6::boolean THEN $7::text ELSE display_name END,
-    user_timezone = CASE WHEN $8::boolean THEN $9::text ELSE user_timezone END
-WHERE id = $10
-RETURNING id, email, first_name, last_name, display_name, user_timezone, created_at
+    user_timezone = CASE WHEN $8::boolean THEN $9::text ELSE user_timezone END,
+    avatar_asset_id = CASE WHEN $10::boolean THEN $11::uuid ELSE avatar_asset_id END,
+    cover_image_asset_id = CASE WHEN $12::boolean THEN $13::uuid ELSE cover_image_asset_id END
+WHERE id = $14
+RETURNING id, email, first_name, last_name, display_name, user_timezone, created_at, avatar_asset_id, cover_image_asset_id
 `
 
 type UpdateUserParams struct {
-	Now             time.Time
-	SetFirstName    bool
-	FirstName       string
-	SetLastName     bool
-	LastName        string
-	SetDisplayName  bool
-	DisplayName     string
-	SetUserTimezone bool
-	UserTimezone    string
-	ID              uuid.UUID
+	Now               time.Time
+	SetFirstName      bool
+	FirstName         string
+	SetLastName       bool
+	LastName          string
+	SetDisplayName    bool
+	DisplayName       string
+	SetUserTimezone   bool
+	UserTimezone      string
+	SetAvatar         bool
+	AvatarAssetID     *uuid.UUID
+	SetCoverImage     bool
+	CoverImageAssetID *uuid.UUID
+	ID                uuid.UUID
 }
 
 type UpdateUserRow struct {
-	ID           uuid.UUID
-	Email        string
-	FirstName    string
-	LastName     string
-	DisplayName  string
-	UserTimezone string
-	CreatedAt    time.Time
+	ID                uuid.UUID
+	Email             string
+	FirstName         string
+	LastName          string
+	DisplayName       string
+	UserTimezone      string
+	CreatedAt         time.Time
+	AvatarAssetID     *uuid.UUID
+	CoverImageAssetID *uuid.UUID
 }
 
 // PATCH /me: only the fields that are set change (M2 design 3.14); the rest keep what a concurrent write left.
@@ -350,6 +364,10 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		arg.DisplayName,
 		arg.SetUserTimezone,
 		arg.UserTimezone,
+		arg.SetAvatar,
+		arg.AvatarAssetID,
+		arg.SetCoverImage,
+		arg.CoverImageAssetID,
 		arg.ID,
 	)
 	var i UpdateUserRow
@@ -361,6 +379,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		&i.DisplayName,
 		&i.UserTimezone,
 		&i.CreatedAt,
+		&i.AvatarAssetID,
+		&i.CoverImageAssetID,
 	)
 	return i, err
 }

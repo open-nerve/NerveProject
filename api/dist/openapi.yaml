@@ -334,12 +334,16 @@ paths:
       operationId: updateMe
       tags:
         - identity
-      summary: Change the caller's names and time zone
+      summary: Change the caller's names, time zone and profile images
       description: 'Changes the fields sent and leaves the others. The e-mail address cannot change here: the server''s administrator changes it with `nerve users set-email`, which signs every session out.'
       security:
         - bearer: []
       x-problem-codes:
         - validation_failed
+        - asset.not_found
+        - asset.not_uploaded
+        - asset.bound
+        - asset.scope_changed
       requestBody:
         required: true
         content:
@@ -618,14 +622,18 @@ paths:
       operationId: updateWorkspace
       tags:
         - workspace
-      summary: Change a workspace's name, organization size or time zone
-      description: 'For the workspace''s admins. The fields given change and the others stay; the values follow createWorkspace''s rules (validation_failed), checked before the workspace is looked at. The slug never changes: a body with slug is refused (bad_request). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The role is decided after the workspace row is locked, so a caller demoted meanwhile is refused.'
+      summary: Change a workspace's name, organization size, time zone or logo
+      description: 'For the workspace''s admins. The fields given change and the others stay; the values follow createWorkspace''s rules (validation_failed), checked before the workspace is looked at. The slug never changes: a body with slug is refused (bad_request). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The role is decided after the workspace row is locked, so a caller demoted meanwhile is refused. Logo replacement binds the caller''s completed preparation atomically; omission retains the current logo and null clears it.'
       security:
         - bearer: []
       x-problem-codes:
         - validation_failed
         - workspace.not_found
         - forbidden
+        - asset.not_found
+        - asset.not_uploaded
+        - asset.bound
+        - asset.scope_changed
       requestBody:
         required: true
         content:
@@ -1014,6 +1022,7 @@ paths:
         - bearer: []
       x-problem-codes:
         - workspace.not_found
+        - server_busy
       parameters:
         - name: archived
           in: query
@@ -1044,6 +1053,10 @@ paths:
         - forbidden
         - project.identifier_taken
         - project.name_taken
+        - asset.not_found
+        - asset.not_uploaded
+        - asset.bound
+        - asset.scope_changed
       requestBody:
         required: true
         content:
@@ -1101,6 +1114,7 @@ paths:
         - bearer: []
       x-problem-codes:
         - project.not_found
+        - server_busy
       responses:
         '200':
           description: The project, as the caller sees it.
@@ -1125,6 +1139,11 @@ paths:
         - project.archived
         - project.identifier_taken
         - project.name_taken
+        - asset.not_found
+        - asset.not_uploaded
+        - asset.bound
+        - asset.scope_changed
+        - server_busy
       requestBody:
         required: true
         content:
@@ -3240,8 +3259,12 @@ components:
         - last_name
         - display_name
         - user_timezone
+        - avatar_asset_id
+        - cover_image_asset_id
         - avatar_url
+        - avatar_url_expires_at
         - cover_image_url
+        - cover_image_url_expires_at
         - created_at
       properties:
         id:
@@ -3259,16 +3282,36 @@ components:
         user_timezone:
           description: An IANA time zone name.
           type: string
+        avatar_asset_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        cover_image_asset_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
         avatar_url:
-          description: Null until uploads arrive (M5).
+          description: Short-lived authorized image URL, or null if no live bound image exists.
           type:
             - string
             - 'null'
+        avatar_url_expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         cover_image_url:
-          description: Null until uploads arrive (M5).
+          description: Short-lived authorized image URL, or null if no live bound image exists.
           type:
             - string
             - 'null'
+        cover_image_url_expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         created_at:
           type: string
           format: date-time
@@ -3276,6 +3319,18 @@ components:
       type: object
       additionalProperties: false
       properties:
+        avatar_asset_id:
+          description: Omit to keep; null to remove; a completed own USER_AVATAR preparation to replace.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        cover_image_asset_id:
+          description: Omit to keep; null to remove; a completed own USER_COVER preparation to replace.
+          type:
+            - string
+            - 'null'
+          format: uuid
         first_name:
           description: At most 255 characters, without a web address.
           type: string
@@ -3592,6 +3647,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Timezone'
+    OrganizationSize:
+      description: The size of the organization, as the web app's form offers it.
+      type: string
+      enum:
+        - Just myself
+        - 2-10
+        - 11-50
+        - 51-200
+        - 201-500
+        - 500+
     WorkspaceRole:
       description: A member's role in a workspace, 5 guest, 15 member, 20 admin.
       type: integer
@@ -3608,7 +3673,9 @@ components:
         - slug
         - organization_size
         - timezone
+        - logo_asset_id
         - logo_url
+        - logo_url_expires_at
         - role
         - total_members
         - created_at
@@ -3624,17 +3691,27 @@ components:
           type: string
         organization_size:
           description: One of OrganizationSize's values; null when none was given.
-          type:
-            - string
-            - 'null'
+          oneOf:
+            - $ref: '#/components/schemas/OrganizationSize'
+            - type: 'null'
         timezone:
           description: An IANA time zone name.
           type: string
-        logo_url:
-          description: Null until uploads arrive (M5).
+        logo_asset_id:
           type:
             - string
             - 'null'
+          format: uuid
+        logo_url:
+          description: A signed URL for the current valid logo; null if unavailable.
+          type:
+            - string
+            - 'null'
+        logo_url_expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         role:
           $ref: '#/components/schemas/WorkspaceRole'
         total_members:
@@ -3656,16 +3733,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Workspace'
-    OrganizationSize:
-      description: The size of the organization, as the web app's form offers it.
-      type: string
-      enum:
-        - Just myself
-        - 2-10
-        - 11-50
-        - 51-200
-        - 201-500
-        - 500+
     WorkspaceCreate:
       type: object
       additionalProperties: false
@@ -3689,6 +3756,12 @@ components:
       type: object
       additionalProperties: false
       properties:
+        logo_asset_id:
+          description: A completed logo preparation owned by the caller; null clears the current logo.
+          type:
+            - string
+            - 'null'
+          format: uuid
         name:
           description: 1–80 characters, with a letter or a digit, without a web address.
           type: string
@@ -3707,6 +3780,7 @@ components:
         - first_name
         - last_name
         - avatar_url
+        - avatar_url_expires_at
         - email
       properties:
         id:
@@ -3719,10 +3793,15 @@ components:
         last_name:
           type: string
         avatar_url:
-          description: Null until uploads arrive (M5).
+          description: A signed URL for the member's current valid avatar; null if unavailable.
           type:
             - string
             - 'null'
+        avatar_url_expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         email:
           description: The member's address for a caller who is an admin or a member; null for a guest.
           type:
@@ -3866,6 +3945,7 @@ components:
         - workspace_name
         - workspace_slug
         - workspace_logo_url
+        - workspace_logo_url_expires_at
       properties:
         id:
           type: string
@@ -3880,10 +3960,15 @@ components:
         workspace_slug:
           type: string
         workspace_logo_url:
-          description: Null until uploads arrive (M5).
+          description: A signed URL for this invitation's fixed workspace logo; null if unavailable.
           type:
             - string
             - 'null'
+        workspace_logo_url_expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
     WorkspaceInvitationUpdate:
       type: object
       additionalProperties: false
@@ -4016,7 +4101,10 @@ components:
         - archived_at
         - logo_props
         - timezone
+        - cover_image_asset_id
+        - cover_builtin_id
         - cover_image_url
+        - cover_image_url_expires_at
         - member_role
         - sort_order
         - member_ids
@@ -4078,11 +4166,26 @@ components:
         timezone:
           description: An IANA time zone name.
           type: string
-        cover_image_url:
-          description: Null until uploads arrive (M5).
+        cover_image_asset_id:
           type:
             - string
             - 'null'
+          format: uuid
+        cover_builtin_id:
+          description: Stable cover-01 through cover-29; the frontend resolves its bundled image.
+          type:
+            - string
+            - 'null'
+        cover_image_url:
+          description: Signed uploaded cover URL; null for a built-in cover or unavailable asset.
+          type:
+            - string
+            - 'null'
+        cover_image_url_expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         member_role:
           description: The caller's role in the project; null when he is not an active member.
           oneOf:
@@ -4122,6 +4225,17 @@ components:
         - name
         - identifier
       properties:
+        cover_image_asset_id:
+          description: Completed preparation to bind atomically; null for no uploaded cover.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        cover_builtin_id:
+          description: Stable cover-01 through cover-29; mutually exclusive with a non-null uploaded cover.
+          type:
+            - string
+            - 'null'
         name:
           description: '1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | '' < > . ( ) % ! -'
           type: string
@@ -4150,10 +4264,21 @@ components:
         available:
           type: boolean
     ProjectUpdate:
-      description: Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them.
+      description: Changes the fields it names; a field left out keeps its value. Only project_lead_id, default_assignee_id and the cover fields can be null. A non-null cover source clears the other; omitted fields keep their value.
       type: object
       additionalProperties: false
       properties:
+        cover_image_asset_id:
+          description: Completed preparation to bind atomically; null for no uploaded cover.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        cover_builtin_id:
+          description: Stable cover-01 through cover-29; mutually exclusive with a non-null uploaded cover.
+          type:
+            - string
+            - 'null'
         name:
           description: '1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | '' < > . ( ) % ! -'
           type: string

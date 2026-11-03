@@ -10,6 +10,7 @@ import (
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 type PurgeCursor = app.PurgeCursor
@@ -18,14 +19,17 @@ type DraftAssets interface {
 	DeleteDraftAssets(context.Context, uuid.UUID, time.Time, uuid.UUID) error
 }
 type Provided struct {
-	Purger      *app.Purger
 	DraftAssets DraftAssets
 	store       *postgresadapter.Store
 }
 
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
-	return Provided{Purger: app.NewPurger(store), DraftAssets: draftAssets{store}, store: store}
+	return Provided{DraftAssets: draftAssets{store}, store: store}
+}
+
+func NewPurger(p Provided, references app.ImageReferenceDetacher, tx shared.TxManager) *app.Purger {
+	return app.NewPurger(app.PurgeDeps{Candidates: p.store, Deleter: p.store, References: references, Tx: tx})
 }
 
 type draftAssets struct{ rows app.ScopeDeletions }

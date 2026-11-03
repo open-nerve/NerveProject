@@ -17,6 +17,7 @@ export function userOf(name: string): MemberUser {
     first_name: name,
     last_name: "Doe",
     avatar_url: null,
+    avatar_url_expires_at: null,
     email: `${name}@example.com`,
   };
 }
@@ -27,6 +28,10 @@ export function accountOf(name: string): User {
     ...userOf(name),
     email: `${name}@example.com`,
     user_timezone: "UTC",
+    avatar_asset_id: null,
+    cover_image_asset_id: null,
+    avatar_url_expires_at: null,
+    cover_image_url_expires_at: null,
     cover_image_url: null,
     created_at: "2026-10-30T00:00:00Z",
   };

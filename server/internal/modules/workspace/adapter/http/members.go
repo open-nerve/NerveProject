@@ -56,6 +56,7 @@ func member(m domain.Member) gen.WorkspaceMember {
 	if m.User.Email != nil {
 		email = nullable.NewNullableWithValue(*m.User.Email)
 	}
+	avatar, expires := imageReply(m.User.Avatar)
 	return gen.WorkspaceMember{
 		ID:          m.ID,
 		WorkspaceID: m.WorkspaceID,
@@ -67,8 +68,8 @@ func member(m domain.Member) gen.WorkspaceMember {
 			DisplayName: m.User.DisplayName,
 			FirstName:   m.User.FirstName,
 			LastName:    m.User.LastName,
-			AvatarURL:   nullable.NewNullNullable[string](), // M5
-			Email:       email,
+			AvatarURL:   avatar, AvatarURLExpiresAt: expires,
+			Email: email,
 		},
 	}
 }

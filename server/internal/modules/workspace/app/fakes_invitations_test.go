@@ -148,6 +148,9 @@ func (f *fakeInvitations) invitation(id uuid.UUID) (domain.Invitation, error) {
 // name and slug; app.ErrNotFound when it holds neither.
 func (f *fakeInvitations) InvitationPreview(ctx context.Context, id uuid.UUID) (domain.InvitationPreview, error) {
 	f.log.add(ctx, "InvitationPreview %s", id)
+	return f.preview(id)
+}
+func (f *fakeInvitations) preview(id uuid.UUID) (domain.InvitationPreview, error) {
 	inv, err := f.invitation(id)
 	if err != nil {
 		return domain.InvitationPreview{}, err
@@ -156,7 +159,7 @@ func (f *fakeInvitations) InvitationPreview(ctx context.Context, id uuid.UUID) (
 	if i < 0 {
 		return domain.InvitationPreview{}, app.ErrNotFound
 	}
-	return domain.InvitationPreview{ID: inv.ID, Role: inv.Role, Declined: inv.Responded(), WorkspaceName: f.workspaces[i].Name,
+	return domain.InvitationPreview{WorkspaceID: inv.WorkspaceID, LogoAssetID: f.workspaces[i].LogoAssetID, ID: inv.ID, Role: inv.Role, Declined: inv.Responded(), WorkspaceName: f.workspaces[i].Name,
 		WorkspaceSlug: f.workspaces[i].Slug}, nil
 }
 
@@ -229,4 +232,9 @@ func (f *fakeInvitations) CreateInvitations(ctx context.Context, rows []app.Invi
 	}
 	f.invitations = append(f.invitations, out...)
 	return out, nil
+}
+
+func (f *fakeInvitations) ShareInvitationPreview(ctx context.Context, id uuid.UUID) (domain.InvitationPreview, error) {
+	f.log.add(ctx, "ShareInvitationPreview %s", id)
+	return f.preview(id)
 }

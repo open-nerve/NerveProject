@@ -2,6 +2,8 @@ package httpadapter
 
 import (
 	"context"
+	"time"
+	"uuid"
 
 	"github.com/oapi-codegen/nullable"
 
@@ -21,7 +23,10 @@ func (h handler) GetMe(ctx context.Context, _ gen.GetMeRequestObject) (gen.GetMe
 
 // UpdateMe serves PATCH /api/v0/me.
 func (h handler) UpdateMe(ctx context.Context, req gen.UpdateMeRequestObject) (gen.UpdateMeResponseObject, error) {
+	avatarSet, avatar := imageIDPatch(req.Body.AvatarAssetID)
+	coverSet, cover := imageIDPatch(req.Body.CoverImageAssetID)
 	u, err := h.uc.UpdateMe.Execute(ctx, domain.UserPatch{
+		SetAvatar: avatarSet, AvatarAssetID: avatar, SetCoverImage: coverSet, CoverImageAssetID: cover,
 		FirstName:   req.Body.FirstName,
 		LastName:    req.Body.LastName,
 		DisplayName: req.Body.DisplayName,
@@ -56,17 +61,41 @@ func (h handler) DeactivateMe(ctx context.Context, _ gen.DeactivateMeRequestObje
 
 // user is u as the API shows it.
 func user(u domain.User) gen.User {
+	avatar, avatarExpires := imageReply(u.Avatar)
+	cover, coverExpires := imageReply(u.CoverImage)
 	return gen.User{
-		ID:           u.ID,
-		Email:        u.Email,
-		FirstName:    u.FirstName,
-		LastName:     u.LastName,
-		DisplayName:  u.DisplayName,
-		UserTimezone: u.Timezone,
-		// Required and null until M5. The zero Nullable is "unspecified" and
-		// would marshal as "": set null explicitly.
-		AvatarURL:     nullable.NewNullNullable[string](),
-		CoverImageURL: nullable.NewNullNullable[string](),
-		CreatedAt:     u.CreatedAt,
+		ID:                u.ID,
+		Email:             u.Email,
+		FirstName:         u.FirstName,
+		LastName:          u.LastName,
+		DisplayName:       u.DisplayName,
+		UserTimezone:      u.Timezone,
+		AvatarAssetID:     nullableImageID(u.AvatarAssetID),
+		CoverImageAssetID: nullableImageID(u.CoverImageAssetID),
+		AvatarURL:         avatar, AvatarURLExpiresAt: avatarExpires,
+		CoverImageURL: cover, CoverImageURLExpiresAt: coverExpires,
+		CreatedAt: u.CreatedAt,
 	}
+}
+
+func imageIDPatch(v nullable.Nullable[uuid.UUID]) (bool, *uuid.UUID) {
+	if !v.IsSpecified() {
+		return false, nil
+	}
+	if id, err := v.Get(); err == nil {
+		return true, &id
+	}
+	return true, nil
+}
+func nullableImageID(id *uuid.UUID) nullable.Nullable[uuid.UUID] {
+	if id == nil {
+		return nullable.NewNullNullable[uuid.UUID]()
+	}
+	return nullable.NewNullableWithValue(*id)
+}
+func imageReply(image *domain.ImageURL) (nullable.Nullable[string], nullable.Nullable[time.Time]) {
+	if image == nil {
+		return nullable.NewNullNullable[string](), nullable.NewNullNullable[time.Time]()
+	}
+	return nullable.NewNullableWithValue(image.URL), nullable.NewNullableWithValue(image.ExpiresAt)
 }

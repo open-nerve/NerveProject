@@ -4,7 +4,7 @@ INSERT INTO users (id, email, password, display_name, created_at, updated_at)
 VALUES (sqlc.arg(id), sqlc.arg(email), sqlc.arg(password), sqlc.arg(display_name), sqlc.arg(now), sqlc.arg(now));
 
 -- name: GetUser :one
-SELECT id, email, first_name, last_name, display_name, user_timezone, created_at
+SELECT id, email, first_name, last_name, display_name, user_timezone, created_at, avatar_asset_id, cover_image_asset_id
 FROM users
 WHERE id = sqlc.arg(id);
 
@@ -39,9 +39,11 @@ SET updated_at    = sqlc.arg(now),
     first_name    = CASE WHEN sqlc.arg(set_first_name)::boolean THEN sqlc.arg(first_name)::text ELSE first_name END,
     last_name     = CASE WHEN sqlc.arg(set_last_name)::boolean THEN sqlc.arg(last_name)::text ELSE last_name END,
     display_name  = CASE WHEN sqlc.arg(set_display_name)::boolean THEN sqlc.arg(display_name)::text ELSE display_name END,
-    user_timezone = CASE WHEN sqlc.arg(set_user_timezone)::boolean THEN sqlc.arg(user_timezone)::text ELSE user_timezone END
+    user_timezone = CASE WHEN sqlc.arg(set_user_timezone)::boolean THEN sqlc.arg(user_timezone)::text ELSE user_timezone END,
+    avatar_asset_id = CASE WHEN sqlc.arg(set_avatar)::boolean THEN sqlc.narg(avatar_asset_id)::uuid ELSE avatar_asset_id END,
+    cover_image_asset_id = CASE WHEN sqlc.arg(set_cover_image)::boolean THEN sqlc.narg(cover_image_asset_id)::uuid ELSE cover_image_asset_id END
 WHERE id = sqlc.arg(id)
-RETURNING id, email, first_name, last_name, display_name, user_timezone, created_at;
+RETURNING id, email, first_name, last_name, display_name, user_timezone, created_at, avatar_asset_id, cover_image_asset_id;
 
 -- name: DeactivateUser :exec
 UPDATE users
@@ -93,7 +95,7 @@ FOR SHARE;
 -- name: PublicProfiles :many
 -- MemberProfiles (M3 design 6.5): the public profile of each account of ids, deactivated ones too, by id. No lock: a
 -- transaction that holds a workspace's lock reads an address this way (3.6 convention 1).
-SELECT id, email, first_name, last_name, display_name
+SELECT id, email, first_name, last_name, display_name, avatar_asset_id
 FROM users
 WHERE id = ANY (sqlc.arg(ids)::uuid[])
 ORDER BY id;

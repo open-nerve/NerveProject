@@ -17,6 +17,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -40,7 +41,7 @@ type gatedAuthorizer struct {
 
 func (a gatedAuthorizer) Authorize(ctx context.Context, actor shared.Actor, action shared.Action, t shared.Target) (shared.Grant, error) {
 	grant, err := a.Authorizer.Authorize(ctx, actor, action, t)
-	if err == nil && action == a.action {
+	if _, inTx := postgres.Tx(ctx); err == nil && action == a.action && inTx {
 		if err := a.gate.wait(ctx); err != nil {
 			return shared.Grant{}, err
 		}
@@ -185,6 +186,8 @@ func bobAdministersWeb(t *testing.T) (r growthRace, ops uuid.UUID) {
 // Web beside the archive and wait only at its UPDATE, which upgrades a lock
 // it shares: PostgreSQL takes no tuple lock for that wait, so the probe of
 // a wait on projects times out, and the test fails there, not at a 40P01.
+// Different callers isolate the project lock from the approved account-first
+// boundary; a shared account would now serialize earlier on users.
 func TestTwoWritesOnAProjectSerialize(t *testing.T) {
 	contract := apitest.Load(t)
 	r, _ := bobAdministersWeb(t)
@@ -201,7 +204,7 @@ func TestTwoWritesOnAProjectSerialize(t *testing.T) {
 		archiveReq, archiveRec = gated.send(http.MethodPost, web+"/archive", r.bob, "")
 		return nil
 	}, func() error {
-		updateReq, updateRec = route.send(http.MethodPatch, web, r.bob, `{"name":"Site"}`)
+		updateReq, updateRec = route.send(http.MethodPatch, web, r.alice, `{"name":"Site"}`)
 		return nil
 	})
 	if err := errors.Join(archived, updated); err != nil {

@@ -10,6 +10,7 @@ import { ApiError } from "@/lib/api-error";
 import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
 import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
+import { accountOf } from "@/store/member/fake-users";
 import { memberStore, membershipOf } from "@/store/member/workspace/fake-members";
 import type { WorkspaceMemberStore } from "@/store/member/workspace/workspace-member.store";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -86,6 +87,7 @@ describe("WorkspaceMemberStore, the members", () => {
     expect(store.getWorkspaceMemberIds("acme")).toEqual(["u-ann", "u-bob", "u-cat", "u-Dee"]);
     runInAction(() => {
       user.data = {
+        ...accountOf("bob"),
         ...bob.member,
         email: "bob@example.com",
         user_timezone: "UTC",

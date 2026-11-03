@@ -56,14 +56,16 @@ type Profile struct {
 }
 
 type User struct {
-	ID           uuid.UUID
-	Email        string
-	Password     string
-	FirstName    string
-	LastName     string
-	DisplayName  string
-	UserTimezone string
-	IsActive     bool
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID                uuid.UUID
+	Email             string
+	Password          string
+	FirstName         string
+	LastName          string
+	DisplayName       string
+	UserTimezone      string
+	IsActive          bool
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	AvatarAssetID     *uuid.UUID
+	CoverImageAssetID *uuid.UUID
 }

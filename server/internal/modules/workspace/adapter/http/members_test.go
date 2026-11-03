@@ -28,10 +28,10 @@ var (
 
 const (
 	aliceMemberJSON = `{"created_at":"2026-09-29T10:00:00.123456Z","id":"0199a2b4-0000-7000-8000-0000000000a1","is_active":true,` +
-		`"member":{"avatar_url":null,"display_name":"al","email":"alice@corp.com","first_name":"Alice",` +
+		`"member":{"avatar_url":null,"avatar_url_expires_at":null,"display_name":"al","email":"alice@corp.com","first_name":"Alice",` +
 		`"id":"0199a2b4-0000-7000-8000-000000000001","last_name":"Liddell"},"role":20,"workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
 	bobMemberJSON = `{"created_at":"2026-09-29T10:00:00.123456Z","id":"0199a2b4-0000-7000-8000-0000000000b1","is_active":false,` +
-		`"member":{"avatar_url":null,"display_name":"bob","email":null,"first_name":"","id":"0199a2b4-0000-7000-8000-000000000002",` +
+		`"member":{"avatar_url":null,"avatar_url_expires_at":null,"display_name":"bob","email":null,"first_name":"","id":"0199a2b4-0000-7000-8000-000000000002",` +
 		`"last_name":""},"role":5,"workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
 )
 

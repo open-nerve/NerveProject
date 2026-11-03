@@ -14,6 +14,10 @@ import (
 // each has a flag: set, it changes to the id, or to none when the id is
 // nil.
 type ProjectPatch struct {
+	SetCoverImage        bool
+	CoverImageAssetID    *uuid.UUID
+	SetCoverBuiltin      bool
+	CoverBuiltinID       *string
 	Name                 *string
 	Description          *string
 	Identifier           *string
@@ -63,13 +67,22 @@ func CheckProjectPatch(p ProjectPatch) (ProjectPatch, error) {
 			Message: fmt.Sprintf("must be between 0 and %d", MaxArchiveIn)})
 	}
 	found = append(found, checkTimezone(p.Timezone))
+	var cover *uuid.UUID
+	var builtin *string
+	if p.SetCoverImage {
+		cover = p.CoverImageAssetID
+	}
+	if p.SetCoverBuiltin {
+		builtin = p.CoverBuiltinID
+	}
+	found = append(found, checkCover(cover, builtin)...)
 	if p.LogoProps != nil {
 		found = append(found, checkLogoProps(*p.LogoProps)...)
 	}
 	if err := invalid(found...); err != nil {
 		return ProjectPatch{}, err
 	}
-	return p, nil
+	return normalizeCoverPatch(p), nil
 }
 
 // assignableRoles are the project roles of the members a project's lead and

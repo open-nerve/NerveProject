@@ -12,37 +12,73 @@ import (
 	"uuid"
 )
 
-const purgeAssets = `-- name: PurgeAssets :one
-WITH candidates AS MATERIALIZED (
- SELECT candidate.id FROM file_assets AS candidate
- WHERE candidate.id>$1 AND candidate.deleted_at<$2
-   AND candidate.storage_metadata->'staging'='null'::jsonb AND candidate.storage_metadata->'final'='null'::jsonb AND candidate.storage_metadata->'candidates'='[]'::jsonb
- ORDER BY candidate.id LIMIT $3
-), deleted AS (
- DELETE FROM file_assets AS target WHERE target.id IN (SELECT candidates.id FROM candidates) AND target.deleted_at<$2
-   AND target.storage_metadata->'staging'='null'::jsonb AND target.storage_metadata->'final'='null'::jsonb AND target.storage_metadata->'candidates'='[]'::jsonb
- RETURNING target.id
+const deletePurgeAssets = `-- name: DeletePurgeAssets :many
+WITH locked AS MATERIALIZED (
+ SELECT id FROM file_assets
+ WHERE id = ANY($2::uuid[]) AND deleted_at < $1
+  AND storage_metadata->'staging'='null'::jsonb AND storage_metadata->'final'='null'::jsonb AND storage_metadata->'candidates'='[]'::jsonb
+ ORDER BY id FOR UPDATE
 )
-SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
-       (SELECT count(*)::integer FROM deleted) AS deleted,
-       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1),$1::uuid)::uuid AS after_id
+DELETE FROM file_assets AS target
+WHERE target.id IN (SELECT id FROM locked) AND target.deleted_at < $1
+ AND target.storage_metadata->'staging'='null'::jsonb AND target.storage_metadata->'final'='null'::jsonb AND target.storage_metadata->'candidates'='[]'::jsonb
+RETURNING target.id
 `
 
-type PurgeAssetsParams struct {
+type DeletePurgeAssetsParams struct {
+	Cutoff   *time.Time
+	AssetIds []uuid.UUID
+}
+
+func (q *Queries) DeletePurgeAssets(ctx context.Context, arg DeletePurgeAssetsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deletePurgeAssets, arg.Cutoff, arg.AssetIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const purgeAssetCandidates = `-- name: PurgeAssetCandidates :many
+SELECT id FROM file_assets
+WHERE id > $1 AND deleted_at < $2
+ AND storage_metadata->'staging'='null'::jsonb AND storage_metadata->'final'='null'::jsonb AND storage_metadata->'candidates'='[]'::jsonb
+ORDER BY id LIMIT $3
+`
+
+type PurgeAssetCandidatesParams struct {
 	AfterID    uuid.UUID
 	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-type PurgeAssetsRow struct {
-	Scanned int32
-	Deleted int32
-	AfterID uuid.UUID
-}
-
-func (q *Queries) PurgeAssets(ctx context.Context, arg PurgeAssetsParams) (PurgeAssetsRow, error) {
-	row := q.db.QueryRow(ctx, purgeAssets, arg.AfterID, arg.Cutoff, arg.BatchLimit)
-	var i PurgeAssetsRow
-	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
-	return i, err
+func (q *Queries) PurgeAssetCandidates(ctx context.Context, arg PurgeAssetCandidatesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, purgeAssetCandidates, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

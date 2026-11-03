@@ -178,7 +178,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"workspaces_slug_check c",
 		"workspaces_slug_key iuw",
 		"workspaces_updated_by_id_fkey f n",
-	}, projectNames, issueNames, assetNames)
+	}, projectNames, issueNames, assetNames, profileImageNames)
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
 		t.Errorf("constraints and indexes =\n%q\nwant\n%q", got, want)

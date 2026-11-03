@@ -37,7 +37,7 @@ func TestAssetConfiguredRetentionBoundary(t *testing.T) {
 				if (err != nil && !errors.Is(err, domain.ErrObjectNotFound)) || errors.Is(err, domain.ErrObjectNotFound) != removed {
 					t.Fatalf("final removed=%t want=%t: %v", errors.Is(err, domain.ErrObjectNotFound), removed, err)
 				}
-				page, err := w.store.PurgeAssets(t.Context(), w.now.Add(-retention), uuid.Nil(), 2)
+				page, err := w.store.purgeUnreferencedTestAssets(t.Context(), w.now.Add(-retention), uuid.Nil(), 2)
 				if err != nil || (page.Deleted == 1) != removed {
 					t.Fatalf("row cutoff differs from object cutoff: %+v %v", page, err)
 				}

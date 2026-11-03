@@ -8,26 +8,40 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// GetMe reads the caller's account: GET /api/v0/me.
-type GetMe struct {
-	users UserReader
+type GetMeDeps struct {
+	Users  UserReader
+	Images ImageReader
+	Lock   CredentialLock
+	Tx     shared.TxManager
+	Clock  Clock
 }
 
-// NewGetMe returns the use case.
-func NewGetMe(users UserReader) *GetMe {
-	return &GetMe{users: users}
-}
+// GetMe signs profile images under the caller's credential/account lock.
+type GetMe struct{ d GetMeDeps }
 
-// Execute returns the account of the request's actor.
+func NewGetMe(d GetMeDeps) *GetMe { return &GetMe{d: d} }
 func (g *GetMe) Execute(ctx context.Context) (domain.User, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return domain.User{}, err
 	}
-	u, err := g.users.GetUser(ctx, actor.UserID)
-	if errors.Is(err, ErrNotFound) {
-		// Authentication found the account a moment ago; it is gone now.
-		return domain.User{}, shared.Unauthenticated()
+	var out domain.User
+	err = g.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		if _, err := g.d.Lock.Lock(ctx, actor, g.d.Clock.Now()); err != nil {
+			return err
+		}
+		u, err := g.d.Users.GetUser(ctx, actor.UserID)
+		if errors.Is(err, ErrNotFound) {
+			return shared.Unauthenticated()
+		}
+		if err != nil {
+			return err
+		}
+		out, err = withProfileImages(ctx, g.d.Images, u)
+		return err
+	})
+	if err != nil {
+		return domain.User{}, err
 	}
-	return u, err
+	return out, nil
 }

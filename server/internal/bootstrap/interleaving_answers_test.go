@@ -108,7 +108,7 @@ func (r answerRace) projects() workspaceapp.ProjectCascade {
 
 // accept is bob's acceptance of his invitation, over invitations.
 func (r answerRace) accept(ctx context.Context, invitations workspaceapp.InvitationAccepter) error {
-	_, err := workspaceapp.NewAcceptWorkspaceInvitation(workspaceapp.AcceptInvitationDeps{
+	_, err := workspaceapp.NewAcceptWorkspaceInvitation(workspaceapp.AcceptInvitationDeps{Caller: imageFixtureCaller{pool: r.pool}, Images: imageFixtureReader{},
 		Accounts: r.accounts(), Invitations: invitations, Projects: r.projects(), Tx: r.tx(), Clock: clocktest.At(time.Now()), MAC: r.mac,
 	}).Execute(shared.WithActor(ctx, shared.Actor{UserID: r.bob}), r.invitation.id, r.invitation.token)
 	return err

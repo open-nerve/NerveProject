@@ -9,16 +9,15 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// createProject only inserts, so it reads the clock once, before its
-// transaction and its locks (P3's ruling (c)): no row it reads under them
-// has a time its rows must follow. Every row it writes has that one time.
-func TestCreatingAProjectReadsTheClockBeforeItsTransaction(t *testing.T) {
+// P4 checks credential time after BEGIN, then obtains one binding time
+// after the owner/candidate locks. Every project row uses that final time.
+func TestCreatingAProjectUsesBindingTimeAfterItsLocks(t *testing.T) {
 	uc, f := newCreate()
 	if _, err := uc.Execute(as(alice), "acme", domain.NewProject{Name: "Web", Identifier: "WEB", LeadID: &bob}); err != nil {
 		t.Fatal(err)
 	}
-	if len(f.log.calls) < 2 || f.log.calls[0] != "Now" || f.log.calls[1] != "Begin" || slices.Contains(f.log.calls[1:], "Now") {
-		t.Errorf("calls %q; want the clock read once, first, before the transaction", f.log.calls)
+	if len(f.log.calls) < 9 || f.log.calls[2] != "Begin" || f.log.calls[3] != "Now" || f.log.calls[4] != "LockCaller "+alice.String() || f.log.calls[8] != "Now" || slices.Contains(f.log.calls[9:], "Now") {
+		t.Errorf("calls %q; want credential time first, then one binding time after owner locks", f.log.calls)
 	}
 	for _, r := range f.projects.members {
 		if r.Now != clockNow {

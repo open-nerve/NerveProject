@@ -13,7 +13,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// Each write on an existing workspace reads the clock once, in its
+// Each write reads its business audit clock once, in its
 // transaction, after its lock and its decision, just before it writes
 // (P2 spec 2.6): a write
 // that queued behind another on the lock never stamps an earlier time than
@@ -26,6 +26,8 @@ import (
 // workspace's lock and the membership's read; the deactivation's
 // memberships, after every workspace's lock, the check of the only admin
 // and the lock of the invitations it deletes.
+// Image-bearing writes additionally read the credential expiry clock before
+// CallerLock; their audit time still comes after all image locks.
 // The clock logs its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	at := clockNow.Format(time.RFC3339Nano)
@@ -37,10 +39,10 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	}{
 		{"updateWorkspace", func() ([]string, error) {
 			_, f := newUpdate()
-			_, err := app.NewUpdateWorkspace(f.workspaces, f.auth, f.tx, clockAt{clockNow, f.log}).
+			_, err := updateWorkspace(f.workspaces, f.auth, f.tx, clockAt{clockNow, f.log}).
 				Execute(as(alice), "acme", domain.WorkspacePatch{Name: ptr("Renamed")})
 			return f.log.calls, err
-		}, append(lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionUpdate), "Now",
+		}, append(slices.Concat([]string{"Now", callerImageCall(alice)}, lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionUpdate)), "WorkspaceBySlug acme", "Now",
 			"UpdateWorkspace "+acme.ID.String()+` name="Renamed" size=<nil> timezone=<nil> by `+alice.ID.String()+" at "+at)},
 		{"updateWorkspacePreferences", func() ([]string, error) {
 			f := newPrefs()
@@ -58,10 +60,10 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			cascadeCalls(alice, acme))},
 		{"updateWorkspaceMember", func() ([]string, error) {
 			f := newMembers()
-			_, err := app.NewUpdateWorkspaceMember(f.workspaces, f.projects, f.profiles, f.auth, &fakeTx{}, clockAt{clockNow, f.log}).
+			_, err := updateWorkspaceMember(f.workspaces, f.projects, f.profiles, f.auth, &fakeTx{}, clockAt{clockNow, f.log}, f.log).
 				Execute(as(alice), bobInAcme.ID, shared.RoleGuest)
 			return f.log.calls, err
-		}, append(lockedMemberCalls(alice, bobInAcme), "Now",
+		}, append(slices.Concat([]string{"Now", callerImageCall(alice)}, lockedMemberCalls(alice, bobInAcme)), "Now",
 			fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, shared.RoleGuest, alice.ID, at),
 			fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, bob.ID, alice.ID, at),
 			fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID}))},
@@ -102,20 +104,20 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			fmt.Sprintf("DeleteInvitation %s by %s at %s", daveToAcme.ID, alice.ID, at))},
 		{"acceptWorkspaceInvitation", func() ([]string, error) {
 			f := responding(frankToAcme)
-			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Accounts: f.accounts, Invitations: f.invitations,
+			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Caller: &fakeCallerLock{log: f.log}, Images: noWorkspaceImages{}, Accounts: f.accounts, Invitations: f.invitations,
 				Projects: f.projects, Tx: f.tx, Clock: clockAt{clockNow, f.log}, MAC: f.mac}).
 				Execute(as(frank), frankToAcme.ID, tokenOf(f.mac, frankToAcme.ID))
 			return f.log.calls, err
-		}, append(respondedCalls(frank, frankToAcme, "LockWorkspace"), "Now", "MemberOf "+acme.ID.String()+" "+frank.ID.String(),
+		}, append(slices.Insert(acceptedCalls(frank, frankToAcme, "LockWorkspace"), 1, "Now"), "Now", "MemberOf "+acme.ID.String()+" "+frank.ID.String(),
 			fmt.Sprintf("CreateMember %s in %s as %d by %s at %s", frank.ID, acme.ID, shared.RoleMember, frank.ID, at),
 			fmt.Sprintf("AcceptInvitation %s by %s at %s", frankToAcme.ID, frank.ID, at), "WorkspaceByID "+acme.ID.String())},
 		{"acceptWorkspaceInvitation, restoring a guest", func() ([]string, error) {
 			f := responding(erinToAcme)
-			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Accounts: f.accounts, Invitations: f.invitations,
+			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Caller: &fakeCallerLock{log: f.log}, Images: noWorkspaceImages{}, Accounts: f.accounts, Invitations: f.invitations,
 				Projects: f.projects, Tx: f.tx, Clock: clockAt{clockNow, f.log}, MAC: f.mac}).
 				Execute(as(erin), erinToAcme.ID, tokenOf(f.mac, erinToAcme.ID))
 			return f.log.calls, err
-		}, append(respondedCalls(erin, erinToAcme, "LockWorkspace"), "Now", "MemberOf "+acme.ID.String()+" "+erin.ID.String(),
+		}, append(slices.Insert(acceptedCalls(erin, erinToAcme, "LockWorkspace"), 1, "Now"), "Now", "MemberOf "+acme.ID.String()+" "+erin.ID.String(),
 			fmt.Sprintf("RestoreMember %s as %d by %s at %s", erinInAcme.ID, shared.RoleGuest, erin.ID, at),
 			fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, erin.ID, erin.ID, at),
 			fmt.Sprintf("AcceptInvitation %s by %s at %s", erinToAcme.ID, erin.ID, at), "WorkspaceByID "+acme.ID.String())},

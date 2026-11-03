@@ -3,6 +3,7 @@ package app_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"testing"
 	"uuid"
@@ -24,14 +25,19 @@ func TestListWorkspacesIsTheCallersList(t *testing.T) {
 	log := &callLog{}
 	aliceList := []domain.Workspace{acme, beta}
 	store := &fakeWorkspaces{log: log, lists: map[uuid.UUID][]domain.Workspace{alice.ID: aliceList, bob.ID: {beta}}}
-	uc := app.NewListWorkspaces(store)
+	uc := listWorkspaces(store)
 	for user, want := range map[app.AccountState][]domain.Workspace{alice: aliceList, bob: {beta}, carol: nil} {
 		log.calls = nil
 		got, err := uc.Execute(as(user))
 		if err != nil || !slices.Equal(got, want) {
 			t.Errorf("%s: Execute() = %v, %v; want %v", user.Email, got, err, want)
 		}
-		if want := []string{"ListWorkspaces " + user.ID.String() + " outside tx"}; !slices.Equal(log.calls, want) {
+		ids := make([]uuid.UUID, len(want))
+		for i, w := range want {
+			ids[i] = w.ID
+		}
+		slices.SortFunc(ids, uuid.UUID.Compare)
+		if want := []string{"ListWorkspaces " + user.ID.String() + " outside tx", callerImageCall(user), fmt.Sprintf("ShareImageWorkspaces %v", ids), "ListWorkspaces " + user.ID.String()}; !slices.Equal(log.calls, want) {
 			t.Errorf("%s: calls = %q, want %q", user.Email, log.calls, want)
 		}
 	}
@@ -47,7 +53,7 @@ func TestListWorkspacesIsTheCallersList(t *testing.T) {
 }
 
 // GetWorkspace reads the workspace, then asks the Authorizer for
-// workspace.read on it, for the caller, without a transaction: the answer
+// workspace.read before and after taking the account/workspace locks: the answer
 // carries the caller's role from the grant. Two callers, two workspaces.
 func TestGetWorkspaceDecidesOnTheWorkspaceFound(t *testing.T) {
 	log := &callLog{}
@@ -57,7 +63,7 @@ func TestGetWorkspaceDecidesOnTheWorkspaceFound(t *testing.T) {
 		{alice.ID, beta.ID}: {WorkspaceRole: shared.RoleAdmin},
 		{bob.ID, beta.ID}:   {WorkspaceRole: shared.RoleMember},
 	}}
-	uc := app.NewGetWorkspace(store, auth)
+	uc := getWorkspace(store, auth)
 	tests := []struct {
 		user app.AccountState
 		w    domain.Workspace
@@ -78,6 +84,8 @@ func TestGetWorkspaceDecidesOnTheWorkspaceFound(t *testing.T) {
 		wantCalls := []string{
 			"WorkspaceBySlug " + tt.w.Slug + " outside tx",
 			"Authorize " + tt.user.ID.String() + " workspace.read on " + tt.w.ID.String() + "/" + uuid.Nil().String() + " outside tx",
+			callerImageCall(tt.user), fmt.Sprintf("ShareImageWorkspaces %v", []uuid.UUID{tt.w.ID}), "WorkspaceBySlug " + tt.w.Slug,
+			"Authorize " + tt.user.ID.String() + " workspace.read on " + tt.w.ID.String() + "/" + uuid.Nil().String(),
 		}
 		if !slices.Equal(log.calls, wantCalls) {
 			t.Errorf("%s, %s: calls = %q, want %q", tt.user.Email, tt.w.Slug, log.calls, wantCalls)
@@ -97,7 +105,7 @@ func TestGetWorkspaceNotFound(t *testing.T) {
 		{bob.ID, beta.ID}:   shared.Forbidden(),
 		{carol.ID, beta.ID}: failure,
 	}}
-	uc := app.NewGetWorkspace(store, auth)
+	uc := getWorkspace(store, auth)
 	tests := []struct {
 		name  string
 		user  app.AccountState
@@ -126,7 +134,7 @@ func TestGetWorkspaceNotFound(t *testing.T) {
 // refuses on its own, whoever calls it.
 func TestGetWorkspaceWithoutACaller(t *testing.T) {
 	log := &callLog{}
-	uc := app.NewGetWorkspace(&fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme}}, &fakeAuthorizer{log: log})
+	uc := getWorkspace(&fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme}}, &fakeAuthorizer{log: log})
 	if _, err := uc.Execute(context.Background(), "acme"); !errors.Is(err, shared.Unauthenticated()) || len(log.calls) != 0 {
 		t.Errorf("Execute() without an actor = %v, calls %q; want 401 unauthorized and no call", err, log.calls)
 	}

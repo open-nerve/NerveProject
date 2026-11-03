@@ -212,8 +212,8 @@ func TestInvitationPreview(t *testing.T) {
 	exec(t, pool, "UPDATE workspaces SET deleted_at = $1 WHERE id = $2", now, gone.ID)
 
 	for _, want := range []domain.InvitationPreview{
-		{ID: pending.ID, Role: shared.RoleMember, WorkspaceName: "Acme", WorkspaceSlug: "acme"},
-		{ID: declined.ID, Role: shared.RoleGuest, Declined: true, WorkspaceName: "Beta", WorkspaceSlug: "beta"},
+		{WorkspaceID: acme.ID, ID: pending.ID, Role: shared.RoleMember, WorkspaceName: "Acme", WorkspaceSlug: "acme"},
+		{WorkspaceID: beta.ID, ID: declined.ID, Role: shared.RoleGuest, Declined: true, WorkspaceName: "Beta", WorkspaceSlug: "beta"},
 	} {
 		if got, err := s.InvitationPreview(context.Background(), want.ID); err != nil || got != want {
 			t.Errorf("InvitationPreview(%s) = %+v, %v; want %+v", want.ID, got, err, want)

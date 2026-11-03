@@ -3,22 +3,25 @@ package postgresadapter
 import (
 	"context"
 	"errors"
-	"math"
 	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/postgres/gen"
-	"github.com/open-nerve/NerveProject/server/internal/modules/asset/app"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 )
 
-func (s *Store) PurgeAssets(ctx context.Context, cutoff time.Time, after uuid.UUID, limit int) (app.PurgePage, error) {
-	page := app.PurgePage{After: after}
-	if limit < 1 || limit > math.MaxInt32 {
-		return page, errors.New("invalid asset purge batch")
+func (s *Store) PurgeAssetCandidates(ctx context.Context, cutoff time.Time, after uuid.UUID, limit int) ([]uuid.UUID, error) {
+	if limit < 1 || limit > 1000 {
+		return nil, errors.New("invalid asset purge batch")
 	}
-	row, err := gen.New(s.pool).PurgeAssets(ctx, gen.PurgeAssetsParams{Cutoff: &cutoff, AfterID: after, BatchLimit: int32(limit)})
-	if err != nil {
-		return page, err
+	return gen.New(s.pool).PurgeAssetCandidates(ctx, gen.PurgeAssetCandidatesParams{Cutoff: &cutoff, AfterID: after, BatchLimit: int32(limit)})
+}
+func (s *Store) DeletePurgeAssets(ctx context.Context, cutoff time.Time, ids []uuid.UUID) ([]uuid.UUID, error) {
+	if _, ok := postgres.Tx(ctx); !ok {
+		return nil, errors.New("asset purge requires a transaction")
 	}
-	return app.PurgePage{Scanned: int(row.Scanned), Deleted: int(row.Deleted), After: row.AfterID}, nil
+	if len(ids) > 1000 {
+		return nil, errors.New("invalid asset purge batch")
+	}
+	return s.queries(ctx).DeletePurgeAssets(ctx, gen.DeletePurgeAssetsParams{Cutoff: &cutoff, AssetIds: ids})
 }

@@ -3,7 +3,6 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"maps"
 	"net/http"
 	"testing"
 	"time"
@@ -19,7 +18,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
-	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -30,8 +28,8 @@ import (
 // invitation to acme, a workspace he is not in, against his deactivation,
 // `nerve users deactivate` as bootstrap wires it (deactivating), each in
 // its own transaction on a real database. Both lock bob's account row
-// first (3.6 convention 6), the acceptance FOR SHARE and the deactivation
-// FOR NO KEY UPDATE, so the deactivation's enumeration of his workspaces
+// first (3.6 convention 6, P4 credential recheck), the acceptance and the deactivation
+// both FOR NO KEY UPDATE, so the deactivation's enumeration of his workspaces
 // comes after any acceptance that committed first. Every wait has a
 // deadline.
 
@@ -117,14 +115,13 @@ func (r s1Race) standing(t *testing.T) string {
 // it runs on any goroutine.
 func changeRole(ctx context.Context, pool *pgxpool.Pool, by, id uuid.UUID, role shared.Role, members workspaceapp.MemberUpdater,
 	cascade workspaceapp.ProjectCascade) error {
-	_, err := workspaceapp.NewUpdateWorkspaceMember(members, cascade, workspaceProfiles{profiles: identity.Provide(pool).PublicProfiles},
-		authorizerOn(pool), postgres.NewTxManager(pool, 2*time.Second), clock.System{}).
+	_, err := workspaceapp.NewUpdateWorkspaceMember(workspaceapp.UpdateMemberDeps{Members: members, Projects: cascade, Profiles: workspaceProfiles{profiles: identity.Provide(pool).PublicProfiles}, Auth: authorizerOn(pool), Tx: postgres.NewTxManager(pool, 2*time.Second), Clock: clock.System{}, Caller: imageFixtureCaller{pool: pool}, Images: imageFixtureReader{}}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: by}), id, role)
 	return err
 }
 
 // Interleaving 7 (a), (d) and (e):
-//   - (a) the acceptance first holds bob's account row FOR SHARE, and acme's
+//   - (a) the acceptance first holds bob's account row FOR NO KEY UPDATE, and acme's
 //     FOR NO KEY UPDATE, at its gate; the deactivation waits for his
 //     account's row. Once the acceptance has committed, the deactivation
 //     stops at a gate of its own, holding his account row, before its
@@ -192,50 +189,30 @@ func TestAcceptingAndDeactivating(t *testing.T) {
 	}
 }
 
-// Interleaving 7 (b) and (c), S1's steps 5 and 6: the acceptance first
-// holds bob's account row at its gate; the deactivation waits for it, then,
-// once the acceptance has committed, stops at its own gate holding his
-// account row, before its memberships' step. bob, acme's admin now, begins
-// another write of acme, which holds acme's row at its gate: (b) his change
-// of alice's role to member, holding acme FOR NO KEY UPDATE before its
-// write; (c) his joining Web, holding acme FOR SHARE and his membership of
-// it (3.6 convention 2, option E); before it, the test stamps his
-// membership of acme, which the acceptance wrote, as last written by alice.
-// The deactivation goes on and waits for acme's row: nothing else waits
-// then, and neither side writes a row of workspaces, so only that wait
-// satisfies the probe. The tables are read while both stand at their
-// gates, neither having committed a write. Once bob's write commits:
-//   - (b) bob is acme's only active admin, alice its member:
-//     workspace.sole_admin, and no row of any table changes from what they
-//     were then but alice's membership, which the change wrote;
-//   - (c) the deactivation finds his membership of Web, made after its lock
-//     of his account, and ends it at the moment it ends his membership of
-//     acme: only the moment shows the deactivation's write there, his
-//     joining having written it as his; acme and Web keep alice, their
-//     admin, her memberships active.
+// Interleaving 7 (b)/(c): after accepting, bob tries an image-bearing member
+// update or project join while deactivation holds his account. Both first wait
+// on users, then answer 401 without reaching any workspace/member write. Alice
+// remains admin and no new project membership can escape deactivation.
 func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
-		write func(r s1Race, t *testing.T, ctx context.Context, g *gate) <-chan error
-		err   error
-		want  string
+		write func(s1Race, *testing.T, context.Context, *gate) <-chan error
 	}{
 		{"(b) he makes alice a member", func(r s1Race, t *testing.T, ctx context.Context, g *gate) <-chan error {
-			cascade := cascadeOn(r.pool)
 			return run(func() error {
-				return changeRole(ctx, r.pool, r.bob, r.aliceIn, shared.RoleMember, gatedMembers{workspacepg.New(r.pool), g}, cascade)
+				return changeRole(ctx, r.pool, r.bob, r.aliceIn, shared.RoleMember, gatedMembers{workspacepg.New(r.pool), g}, cascadeOn(r.pool))
 			})
-		}, workspacedomain.ErrSoleAdmin, "bob active; acme 20 active; invitation accepted deleted by bob; alice acme 15 active, Web 20 active"},
+		}},
 		{"(c) he joins Web", func(r s1Race, t *testing.T, ctx context.Context, g *gate) <-chan error {
 			route := newProjectRoute(t, r.pool, authorizerOn(r.pool), gatedShares{workspace.Provide(r.pool, nil).WorkspaceMembers, g})
 			return run(func() error {
-				if _, rec := route.send(http.MethodPost, "/api/v0/projects/"+r.web.String()+"/join", r.bob, ""); rec.Code != http.StatusOK {
-					return fmt.Errorf("bob's joining Web = %d %s", rec.Code, rec.Body)
+				_, rec := route.send(http.MethodPost, "/api/v0/projects/"+r.web.String()+"/join", r.bob, "")
+				if rec.Code == http.StatusUnauthorized && problemCode(t, rec.Body.Bytes()) == "unauthorized" {
+					return shared.Unauthenticated()
 				}
-				return nil
+				return fmt.Errorf("bob's joining Web = %d %s", rec.Code, rec.Body)
 			})
-		}, nil, "bob deactivated; acme 20 ended by bob; Web 20 ended with acme; invitation accepted deleted by bob; alice acme 20 active, " +
-			"Web 20 active"},
+		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			r := newS1Race(t, false)
@@ -249,45 +226,27 @@ func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 			pgtest.WaitForLockWaitOn(t, r.pool, "users", 5*time.Second)
 			close(admitted.open)
 			if err := result(t, ctx, accepted, "the acceptance"); err != nil {
-				t.Fatalf("the acceptance = %v, want it done", err)
+				t.Fatal(err)
 			}
 			held(t, ctx, stopped, deactivated, "the deactivation")
 			r.bobsLastWrittenByAlice(t)
 			written := tt.write(r, t, ctx, writing)
-			held(t, ctx, writing, written, "bob's write")
-			// Every table but River's and workspace_members, and every
-			// membership but alice's, which bob's change writes, as row_to_json
-			// writes it, in id order.
-			notMemberships := func(table string) bool { return riversOwn(table) || table == "public.workspace_members" }
-			membershipsButAlices := func() string {
-				t.Helper()
-				var s string
-				if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(row_to_json(m)::text, E'\n' ORDER BY m.id), '')
-					FROM workspace_members m WHERE m.id <> $1`, r.aliceIn).Scan(&s); err != nil {
-					t.Fatal(err)
-				}
-				return s
-			}
-			before, memberships := tableRows(t, r.pool, notMemberships), membershipsButAlices()
+			pgtest.WaitForLockWaitOn(t, r.pool, "users", 5*time.Second)
 			close(stopped.open)
-			pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
-			close(writing.open)
-
-			if err := result(t, ctx, written, "bob's write"); err != nil {
-				t.Fatalf("bob's write = %v, want it done", err)
+			if err := result(t, ctx, deactivated, "the deactivation"); err != nil {
+				t.Fatal(err)
 			}
-			if err := result(t, ctx, deactivated, "the deactivation"); !sameOutcome(err, tt.err) {
-				t.Errorf("the deactivation = %v, want %v", err, tt.err)
+			if err := result(t, ctx, written, "bob's image-bearing write"); !sameOutcome(err, shared.Unauthenticated()) {
+				t.Fatalf("write after deactivation = %v, want 401", err)
 			}
-			if after := tableRows(t, r.pool, notMemberships); tt.err != nil && !maps.Equal(after, before) {
-				t.Errorf("the tables after the refused deactivation changed:\n%v\nwant them as they were at the gates:\n%v", after, before)
+			select {
+			case <-writing.held:
+				t.Fatal("deactivated caller reached the workspace write")
+			default:
 			}
-			if after := membershipsButAlices(); tt.err != nil && after != memberships {
-				t.Errorf("the memberships but alice's after the refused deactivation:\n%s\nwant them as they were at the gates:\n%s", after,
-					memberships)
-			}
-			if got := r.standing(t); got != tt.want {
-				t.Errorf("after all: %s; want %s", got, tt.want)
+			want := "bob deactivated; acme 20 ended by bob; invitation accepted deleted by bob; alice acme 20 active, Web 20 active"
+			if got := r.standing(t); got != want {
+				t.Fatalf("after deactivation and refusal: %s; want %s", got, want)
 			}
 		})
 	}

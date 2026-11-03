@@ -291,7 +291,7 @@ func TestGetMe(t *testing.T) {
 
 	res, body := do(t, newServer(t, fakes{}), req)
 
-	want := `{"avatar_url":null,"cover_image_url":null,"created_at":"2026-09-25T10:00:00.123456Z","display_name":"alice",` +
+	want := `{"avatar_asset_id":null,"avatar_url":null,"avatar_url_expires_at":null,"cover_image_asset_id":null,"cover_image_url":null,"cover_image_url_expires_at":null,"created_at":"2026-09-25T10:00:00.123456Z","display_name":"alice",` +
 		`"email":"alice@corp.com","first_name":"","id":"` + userID.String() + `","last_name":"","user_timezone":"UTC"}` + "\n"
 	if res.StatusCode != http.StatusOK || body != want {
 		t.Errorf("GET /me = %d %s, want 200 %s", res.StatusCode, body, want)

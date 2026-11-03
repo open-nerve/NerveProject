@@ -42,6 +42,9 @@ func rowOf(parent string) string { return strings.TrimSuffix(parent, "s") }
 // are found by that key.
 func keysTo(t testing.TB, pool *pgxpool.Pool, parent string) []foreignKey {
 	t.Helper()
+	// Only the four fully proved reverse image references are non-ownership
+	// edges. Exact OIDs prevent a same-name FK on another table being ignored.
+	referenceOIDs := validatedImageReferenceConstraints(t, pool)
 	keys := []foreignKey{{parent, parent, "id"}}
 	for _, key := range foreignKeysTo(t, pool, parent) {
 		keys = append(keys, key.foreignKey)
@@ -51,13 +54,13 @@ func keysTo(t testing.TB, pool *pgxpool.Pool, parent string) []foreignKey {
 	}
 	rows, err := pool.Query(context.Background(), `
 		WITH RECURSIVE under (tab, via) AS (
-			SELECT conrelid, confrelid FROM pg_constraint WHERE contype = 'f' AND confrelid = $1::text::regclass
+			SELECT conrelid, confrelid FROM pg_constraint WHERE contype = 'f' AND confrelid = $1::text::regclass AND NOT(oid=ANY($2::oid[]))
 			UNION
-			SELECT c.conrelid, c.confrelid FROM pg_constraint c JOIN under u ON c.confrelid = u.tab WHERE c.contype = 'f')
+			SELECT c.conrelid, c.confrelid FROM pg_constraint c JOIN under u ON c.confrelid = u.tab WHERE c.contype = 'f' AND NOT(c.oid=ANY($2::oid[])))
 		SELECT tab::regclass::text || ' (through ' || string_agg(DISTINCT via::regclass::text, ', ' ORDER BY via::regclass::text) || ')'
 		FROM under
 		WHERE NOT EXISTS (SELECT 1 FROM pg_constraint w WHERE w.contype = 'f' AND w.conrelid = under.tab AND w.confrelid = $1::text::regclass)
-		GROUP BY tab ORDER BY 1`, parent)
+		GROUP BY tab ORDER BY 1`, parent, referenceOIDs)
 	if err != nil {
 		t.Fatal(err)
 	}

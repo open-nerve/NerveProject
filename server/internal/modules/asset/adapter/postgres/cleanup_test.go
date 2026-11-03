@@ -128,7 +128,7 @@ func TestAssetPurgePreservesObjects(t *testing.T) {
 	if _, err := storage.Inspect(t.Context(), record.Key); err != nil {
 		t.Fatal("failed delete lost object", err)
 	}
-	page, err := w.store.PurgeAssets(t.Context(), w.now.Add(-60*24*time.Hour), uuid.Nil(), 100)
+	page, err := w.store.purgeUnreferencedTestAssets(t.Context(), w.now.Add(-60*24*time.Hour), uuid.Nil(), 100)
 	if err != nil || page.Deleted != 0 {
 		t.Fatalf("purged recovery record=%+v %v", page, err)
 	}
@@ -148,7 +148,7 @@ func TestAssetPurgePreservesObjects(t *testing.T) {
 	if _, err := storage.Inspect(t.Context(), record.Key); !errors.Is(err, domain.ErrObjectNotFound) {
 		t.Fatalf("file still present: %v", err)
 	}
-	page, err = w.store.PurgeAssets(t.Context(), w.now.Add(-60*24*time.Hour), uuid.Nil(), 100)
+	page, err = w.store.purgeUnreferencedTestAssets(t.Context(), w.now.Add(-60*24*time.Hour), uuid.Nil(), 100)
 	if err != nil || page.Deleted != 1 {
 		t.Fatalf("empty tombstone not purged=%+v %v", page, err)
 	}

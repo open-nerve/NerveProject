@@ -31,7 +31,7 @@ func TestUpdateMe(t *testing.T) {
 	account := aliceAccount()
 	patch := domain.UserPatch{FirstName: ptr("Ann"), Timezone: ptr("Asia/Shanghai")}
 
-	got, err := app.NewUpdateMe(account, clocktest.At(now)).Execute(shared.WithActor(context.Background(), tokenActor), patch)
+	got, err := updateMe(account).Execute(shared.WithActor(context.Background(), tokenActor), patch)
 
 	if err != nil || got != account.user {
 		t.Errorf("Execute() = %+v, %v; want %+v", got, err, account.user)
@@ -80,7 +80,7 @@ func TestAccountPatchesAreChecked(t *testing.T) {
 		fields []string
 	}{
 		{"UpdateMe", func(f *fakeAccount) error {
-			_, err := app.NewUpdateMe(f, clocktest.At(now)).Execute(ctx, domain.UserPatch{DisplayName: ptr(""), Timezone: ptr("Mars/Olympus")})
+			_, err := updateMe(f).Execute(ctx, domain.UserPatch{DisplayName: ptr(""), Timezone: ptr("Mars/Olympus")})
 			return err
 		}, []string{"display_name", "user_timezone"}},
 		{"UpdateProfile", func(f *fakeAccount) error {
@@ -123,7 +123,7 @@ func TestAccountUseCasesErrors(t *testing.T) {
 		run  func(context.Context, *fakeAccount) error
 	}{
 		{"UpdateMe", func(ctx context.Context, f *fakeAccount) error {
-			_, err := app.NewUpdateMe(f, clocktest.At(now)).Execute(ctx, domain.UserPatch{})
+			_, err := updateMe(f).Execute(ctx, domain.UserPatch{})
 			return err
 		}},
 		{"GetProfile", func(ctx context.Context, f *fakeAccount) error {
@@ -155,7 +155,7 @@ func TestAccountUseCasesErrors(t *testing.T) {
 				if err := uc.run(tt.ctx, account); !errors.Is(err, tt.want) {
 					t.Errorf("Execute() = %v, want %v", err, tt.want)
 				}
-				if calls := len(account.userUpdates) + len(account.profileReads) + len(account.profileUpdates); (calls == 1) != tt.asked {
+				if calls := len(account.userReads) + len(account.userUpdates) + len(account.profileReads) + len(account.profileUpdates); (calls == 1) != tt.asked {
 					t.Errorf("the store was asked %d times, want asked: %v", calls, tt.asked)
 				}
 			})

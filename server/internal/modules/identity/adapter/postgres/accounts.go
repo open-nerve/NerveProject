@@ -36,7 +36,7 @@ func (s *Store) PublicProfiles(ctx context.Context, ids []uuid.UUID) ([]app.Publ
 	}
 	out := make([]app.PublicProfile, len(rows))
 	for i, r := range rows {
-		out[i] = app.PublicProfile{ID: r.ID, Email: r.Email, FirstName: r.FirstName, LastName: r.LastName, DisplayName: r.DisplayName}
+		out[i] = app.PublicProfile{AvatarAssetID: r.AvatarAssetID, ID: r.ID, Email: r.Email, FirstName: r.FirstName, LastName: r.LastName, DisplayName: r.DisplayName}
 	}
 	return out, nil
 }

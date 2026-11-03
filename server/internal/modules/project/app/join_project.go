@@ -10,17 +10,18 @@ import (
 
 // JoinProject makes the caller a member of a project he sees: POST
 // /api/v0/projects/{project_id}/join (M3 design 3.5).
-type JoinProject struct {
-	locks    Locks
-	projects MemberJoiner
-	tx       shared.TxManager
-	clock    Clock
+type JoinProjectDeps struct {
+	Locks    Locks
+	Projects MemberJoiner
+	Caller   CallerLock
+	Images   ImageReader
+	Tx       shared.TxManager
+	Clock    Clock
 }
 
-// NewJoinProject returns the use case.
-func NewJoinProject(locks Locks, projects MemberJoiner, tx shared.TxManager, clock Clock) *JoinProject {
-	return &JoinProject{locks: locks, projects: projects, tx: tx, clock: clock}
-}
+type JoinProject struct{ d JoinProjectDeps }
+
+func NewJoinProject(d JoinProjectDeps) *JoinProject { return &JoinProject{d: d} }
 
 // Execute, in one transaction, in the order of M3 design 3.6: the
 // project's locks (Locks: its workspace FOR SHARE; the caller's membership
@@ -41,15 +42,18 @@ func (u *JoinProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project
 		return domain.Project{}, err
 	}
 	var joined domain.Project
-	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		h, err := u.locks.lockAndDecide(ctx, actor, write{project: id, action: domain.ActionJoin, targets: []uuid.UUID{actor.UserID}})
+	err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		if err := u.d.Caller.LockCaller(ctx, actor, u.d.Clock.Now()); err != nil {
+			return err
+		}
+		h, err := u.d.Locks.lockAndDecide(ctx, actor, write{project: id, action: domain.ActionJoin, targets: []uuid.UUID{actor.UserID}})
 		if err != nil {
 			return err
 		}
 		if !domain.CanJoin(h.grant.WorkspaceRole) {
 			return shared.Forbidden()
 		}
-		memberships, err := u.projects.Memberships(ctx, id, []uuid.UUID{actor.UserID})
+		memberships, err := u.d.Projects.Memberships(ctx, id, []uuid.UUID{actor.UserID})
 		if err != nil {
 			return err
 		}
@@ -61,12 +65,20 @@ func (u *JoinProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project
 			}
 			if err := (growth{workspaceID: h.project.WorkspaceID, projectID: id, user: actor.UserID, ended: ended,
 				role: domain.JoinRole(was, h.grant.WorkspaceRole), sortOrder: domain.DefaultSortOrder, by: actor.UserID,
-				now: u.clock.Now()}).apply(ctx, u.projects); err != nil {
+				now: u.d.Clock.Now()}).apply(ctx, u.d.Projects); err != nil {
 				return err
 			}
 		}
-		joined, err = answer(ctx, u.projects, id, actor.UserID)
-		return err
+		joined, err = answer(ctx, u.d.Projects, id, actor.UserID)
+		if err != nil {
+			return err
+		}
+		images, err := withProjectImages(ctx, u.d.Images, []domain.Project{joined})
+		if err != nil {
+			return err
+		}
+		joined = images[0]
+		return nil
 	})
 	if err != nil {
 		return domain.Project{}, err

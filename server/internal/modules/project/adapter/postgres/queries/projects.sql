@@ -2,10 +2,10 @@
 -- createProject (M3 design 3.6): the audit columns come from the use case's clock (M2 design 3.13); the columns the
 -- insert does not name take their defaults.
 INSERT INTO projects (id, workspace_id, name, description, identifier, network, project_lead_id, logo_props, timezone,
-                      created_by_id, updated_by_id, created_at, updated_at)
+                      created_by_id, updated_by_id, created_at, updated_at, cover_image_asset_id, cover_builtin_id)
 VALUES (sqlc.arg(id), sqlc.arg(workspace_id), sqlc.arg(name), sqlc.arg(description), sqlc.arg(identifier), sqlc.arg(network),
         sqlc.narg(project_lead_id), sqlc.arg(logo_props), sqlc.arg(timezone), sqlc.arg(created_by), sqlc.arg(created_by),
-        sqlc.arg(now), sqlc.arg(now));
+        sqlc.arg(now), sqlc.arg(now), sqlc.narg(cover_image_asset_id), sqlc.narg(cover_builtin_id));
 
 -- name: IdentifierTaken :one
 -- checkProjectIdentifier: whether an undeleted project of the workspace has the identifier.
@@ -18,7 +18,7 @@ SELECT EXISTS (SELECT 1 FROM projects
 -- became members (3.12).
 SELECT p.id, p.workspace_id, p.name, p.description, p.identifier, p.network, p.project_lead_id, p.default_assignee_id,
        p.cycle_view, p.module_view, p.issue_views_view, p.intake_view, p.guest_view_all_features, p.archive_in,
-       p.archived_at, p.logo_props, p.timezone, p.created_at, p.updated_at, m.role AS member_role, u.sort_order,
+       p.archived_at, p.logo_props, p.cover_image_asset_id, p.cover_builtin_id, p.timezone, p.created_at, p.updated_at, m.role AS member_role, u.sort_order,
        ARRAY(SELECT a.member_id FROM project_members a
              WHERE a.project_id = p.id AND a.is_active AND a.deleted_at IS NULL
              ORDER BY a.created_at, a.id)::uuid[] AS member_ids
@@ -34,9 +34,12 @@ WHERE p.id = sqlc.arg(id) AND p.deleted_at IS NULL;
 -- the others, each as GetProject reads it (the same columns, so the rows convert); sees_all and sees_public are the
 -- user's workspace role's domain.Visibility. By the project's place in the user's sidebar, the projects without a
 -- place in it last, then by name, which is unique among the workspace's undeleted projects.
+-- Anchor the preference lookup to this project; the membership existence guard
+-- preserves null preferences for nonmembers and prevents a membership/preference
+-- join from being rescanned for every project when fresh-table estimates are low.
 SELECT p.id, p.workspace_id, p.name, p.description, p.identifier, p.network, p.project_lead_id, p.default_assignee_id,
        p.cycle_view, p.module_view, p.issue_views_view, p.intake_view, p.guest_view_all_features, p.archive_in,
-       p.archived_at, p.logo_props, p.timezone, p.created_at, p.updated_at, m.role AS member_role, u.sort_order,
+       p.archived_at, p.logo_props, p.cover_image_asset_id, p.cover_builtin_id, p.timezone, p.created_at, p.updated_at, m.role AS member_role, u.sort_order,
        ARRAY(SELECT a.member_id FROM project_members a
              WHERE a.project_id = p.id AND a.is_active AND a.deleted_at IS NULL
              ORDER BY a.created_at, a.id)::uuid[] AS member_ids
@@ -44,7 +47,7 @@ FROM projects p
 LEFT JOIN project_members m
        ON m.project_id = p.id AND m.member_id = sqlc.arg(user_id) AND m.is_active AND m.deleted_at IS NULL
 LEFT JOIN project_user_properties u
-       ON u.project_id = m.project_id AND u.user_id = m.member_id AND u.deleted_at IS NULL
+       ON u.project_id = p.id AND u.user_id = sqlc.arg(user_id) AND m.id IS NOT NULL AND u.deleted_at IS NULL
 WHERE p.workspace_id = sqlc.arg(workspace_id) AND p.deleted_at IS NULL
   AND (p.archived_at IS NOT NULL) = sqlc.arg(archived)::boolean
   AND (sqlc.arg(sees_all)::boolean OR m.id IS NOT NULL OR (sqlc.arg(sees_public)::boolean AND p.network = 2))
@@ -86,6 +89,8 @@ SET name                    = coalesce(sqlc.narg(name)::text, p.name),
     archive_in              = coalesce(sqlc.narg(archive_in)::integer, p.archive_in),
     logo_props              = coalesce(sqlc.narg(logo_props)::jsonb, p.logo_props),
     timezone                = coalesce(sqlc.narg(timezone)::text, p.timezone),
+    cover_image_asset_id    = CASE WHEN sqlc.arg(set_cover_image)::boolean THEN sqlc.narg(cover_image_asset_id)::uuid ELSE p.cover_image_asset_id END,
+    cover_builtin_id        = CASE WHEN sqlc.arg(set_cover_builtin)::boolean THEN sqlc.narg(cover_builtin_id)::text ELSE p.cover_builtin_id END,
     updated_by_id           = sqlc.arg(updated_by)::uuid,
     updated_at              = sqlc.arg(now)
 WHERE p.id = sqlc.arg(id);

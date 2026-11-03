@@ -55,7 +55,7 @@ func newMembers() *membersFixture {
 			{bob.ID, acme.ID}:   {WorkspaceRole: shared.RoleMember},
 			{bob.ID, beta.ID}:   {WorkspaceRole: shared.RoleGuest},
 		}}}
-	f.uc = app.NewListWorkspaceMembers(f.workspaces, f.profiles, f.auth)
+	f.uc = app.NewListWorkspaceMembers(app.ListMembersDeps{Members: f.workspaces, Profiles: f.profiles, Auth: f.auth, Caller: &fakeCallerLock{log: f.log}, Images: noWorkspaceImages{}, Tx: &fakeTx{}, Clock: clockAt{at: clockNow}})
 	return f
 }
 
@@ -82,7 +82,7 @@ func sameMembers(a, b []domain.Member) bool {
 
 // The list is the workspace's memberships in the store's order, the ended
 // one too, each with its member's profile, a deactivated account's too; the
-// profiles are read once, for the listed members, without a transaction.
+// profiles are read once in the image transaction, without target account locks.
 // An admin and a member see every address, a guest none, his own neither.
 func TestListWorkspaceMembersShowsAddressesByRole(t *testing.T) {
 	acmeIDs := fmt.Sprint([]uuid.UUID{alice.ID, bob.ID, carol.ID})
@@ -104,10 +104,10 @@ func TestListWorkspaceMembersShowsAddressesByRole(t *testing.T) {
 			t.Errorf("%s: Execute() = %+v, %v; want %+v", tt.name, got, err, tt.want)
 		}
 		want := []string{
-			"WorkspaceBySlug " + tt.w.Slug + " outside tx",
-			"Authorize " + tt.user.ID.String() + " workspace_member.list on " + tt.w.ID.String() + "/" + uuid.Nil().String() + " outside tx",
-			"ListMembers " + tt.w.ID.String() + " outside tx",
-			"PublicProfiles " + tt.ids + " outside tx",
+			"WorkspaceBySlug " + tt.w.Slug + " outside tx", callerImageCall(tt.user), fmt.Sprintf("ShareImageWorkspaces %v", []uuid.UUID{tt.w.ID}),
+			"Authorize " + tt.user.ID.String() + " workspace_member.list on " + tt.w.ID.String() + "/" + uuid.Nil().String(),
+			"ListMembers " + tt.w.ID.String(),
+			"PublicProfiles " + tt.ids,
 		}
 		if !slices.Equal(f.log.calls, want) {
 			t.Errorf("%s: calls = %q, want %q", tt.name, f.log.calls, want)
@@ -144,6 +144,9 @@ func TestListWorkspaceMembersRefusals(t *testing.T) {
 		}
 		if got, err := f.uc.Execute(as(tt.user), tt.slug); !errors.Is(err, tt.want) || got != nil {
 			t.Errorf("%s: Execute() = %+v, %v; want no list and %v", tt.name, got, err, tt.want)
+		}
+		if tt.calls > 1 {
+			tt.calls += 2
 		}
 		if len(f.log.calls) != tt.calls {
 			t.Errorf("%s: calls = %q, want %d", tt.name, f.log.calls, tt.calls)

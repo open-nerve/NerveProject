@@ -14,6 +14,9 @@ import (
 // Project is a project as a caller sees it (M3 design 5.2): its columns,
 // and the caller's view of it.
 type Project struct {
+	CoverImage           *ImageURL
+	CoverImageAssetID    *uuid.UUID
+	CoverBuiltinID       *string
 	ID                   uuid.UUID
 	WorkspaceID          uuid.UUID
 	Name                 string
@@ -57,13 +60,15 @@ const (
 // 5.1). A nil Network asks for a public project, the column's default; a
 // nil Timezone asks for the workspace's (3.19).
 type NewProject struct {
-	Name        string
-	Identifier  string
-	Description string
-	Network     *Network
-	LeadID      *uuid.UUID
-	LogoProps   LogoProps
-	Timezone    *string
+	CoverImageAssetID *uuid.UUID
+	CoverBuiltinID    *string
+	Name              string
+	Identifier        string
+	Description       string
+	Network           *Network
+	LeadID            *uuid.UUID
+	LogoProps         LogoProps
+	Timezone          *string
 }
 
 // The lengths of projects.name, varchar(255), and of an identifier, in
@@ -117,6 +122,7 @@ func CheckNewProject(p NewProject) (NewProject, error) {
 	}
 	found := []*shared.FieldError{checkName(p.Name), checkIdentifier(p.Identifier), checkText("description", p.Description),
 		checkNetwork(*p.Network), checkTimezone(p.Timezone)}
+	found = append(found, checkCover(p.CoverImageAssetID, p.CoverBuiltinID)...)
 	if err := invalid(append(found, checkLogoProps(p.LogoProps)...)...); err != nil {
 		return NewProject{}, err
 	}

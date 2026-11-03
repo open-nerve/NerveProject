@@ -18,9 +18,9 @@ import (
 func newArchive(archive bool) (*app.ArchiveProject, *writeFixture) {
 	f := newWrites()
 	if archive {
-		return app.NewArchiveProject(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}), f
+		return app.NewArchiveProject(app.ArchiveProjectDeps{Projects: f.store, Locks: f.locks(), Tx: f.tx, Clock: clockAt{clockNow, f.log}, Caller: imageCaller{f.log}, Images: noProjectImages{}}), f
 	}
-	return app.NewUnarchiveProject(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}), f
+	return app.NewUnarchiveProject(app.ArchiveProjectDeps{Projects: f.store, Locks: f.locks(), Tx: f.tx, Clock: clockAt{clockNow, f.log}, Caller: imageCaller{f.log}, Images: noProjectImages{}}), f
 }
 
 // archived are the calls of bob's archive of project, or unarchive: the
@@ -30,7 +30,7 @@ func archived(project uuid.UUID, archive bool) []string {
 	if archive {
 		action = domain.ActionArchive
 	}
-	return append(lockedDecision(bob, project, action), "Now",
+	return append(withImageCaller(bob, lockedDecision(bob, project, action)), "Now",
 		fmt.Sprintf("SetArchived %s %v by %s at %s", project, archive, bob, clockNow.Format(timeFormat)),
 		fmt.Sprintf("GetProject %s for %s", project, bob))
 }
@@ -85,9 +85,9 @@ func TestArchiveProjectRefuses(t *testing.T) {
 			calls   []string
 		}{
 			{"no caller", context.Background(), webID, shared.Unauthenticated(), nil},
-			{"no project", as(bob), uuid.Nil(), domain.ErrNotFound, noProject},
-			{"not seen", as(erin), webID, domain.ErrNotFound, lockedDecision(erin, webID, action)},
-			{"a project member", as(alice), webID, shared.Forbidden(), lockedDecision(alice, webID, action)},
+			{"no project", as(bob), uuid.Nil(), domain.ErrNotFound, withImageCaller(bob, noProject)},
+			{"not seen", as(erin), webID, domain.ErrNotFound, withImageCaller(erin, lockedDecision(erin, webID, action))},
+			{"a project member", as(alice), webID, shared.Forbidden(), withImageCaller(alice, lockedDecision(alice, webID, action))},
 		}
 		for _, tt := range tests {
 			t.Run(fmt.Sprintf("%s %s", action, tt.name), func(t *testing.T) {
@@ -126,8 +126,8 @@ func TestArchiveProjectReturnsEachFailure(t *testing.T) {
 				uc, f := newArchive(archive)
 				tt.fail(f)
 				got, err := uc.Execute(as(bob), webID)
-				if !errors.Is(err, failure) || got.ID != (uuid.UUID{}) || !slices.Equal(f.log.calls, all[:tt.calls]) {
-					t.Errorf("Execute() = %+v, %v, calls %q; want %v after %q", got, err, f.log.calls, failure, all[:tt.calls])
+				if !errors.Is(err, failure) || got.ID != (uuid.UUID{}) || !slices.Equal(f.log.calls, all[:tt.calls+2]) {
+					t.Errorf("Execute() = %+v, %v, calls %q; want %v after %q", got, err, f.log.calls, failure, all[:tt.calls+2])
 				}
 			})
 		}

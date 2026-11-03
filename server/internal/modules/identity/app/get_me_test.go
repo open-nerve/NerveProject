@@ -13,7 +13,7 @@ import (
 func TestGetMe(t *testing.T) {
 	want := domain.User{ID: userID, Email: "alice@corp.com", DisplayName: "alice", Timezone: "UTC", CreatedAt: now}
 	store := &fakeStore{getUser: want}
-	uc := app.NewGetMe(store)
+	uc := getMe(store)
 	ctx := shared.WithActor(context.Background(), shared.Actor{UserID: userID, SessionID: sessionID})
 
 	got, err := uc.Execute(ctx)
@@ -38,7 +38,7 @@ func TestGetMeIsUnauthenticated(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := app.NewGetMe(tt.store).Execute(tt.ctx)
+			_, err := getMe(tt.store).Execute(tt.ctx)
 			if !errors.Is(err, shared.Unauthenticated()) {
 				t.Errorf("Execute() = %v, want 401 unauthorized", err)
 			}
