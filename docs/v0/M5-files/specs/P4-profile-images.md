@@ -1,6 +1,6 @@
 # M5 / P4：资料图片、业务引用与原子绑定
 
-> 预检通过，T1–T12实现及聚焦/联合验收完成，T13七项与准确产品CI已全绿，T14整审通过、最终文档CI待核。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3精确main CI41591764345全绿、归档清理后核验通过。一次fresh builder check无重要未决项，主控plan自检及生成/lint/迁移/架构基线通过，见[re-38](../../../reviews/re-38-M5P4预检.md)。
+> P4已完成：noff main 0f93100a，CI 41641099230 三job全绿，2301份原始文件归档核验并正常清理分支/worktree；P5预检已完成。 原基线main5807a0d6；准确集成和归档证据见阶段记录§22。
 > 输入：M5-design §3/§4/§6/§7/§12 P4，M2/M3/M1-closeout交接；P2-access/recovery/protected-purge合同。负责人授权连续M5，局部取舍自行裁定；重大新风险先提交后上报。
 
 ## 1. 目标、范围与方案
@@ -98,8 +98,8 @@ F5用户头像/封面、F6工作区图标/成员头像、F7项目创建/替换/�
 - [x] A5：所有返回User/Workspace/Project/MemberUser的操作和既有邀请预览均有真实URL+期限合同；授权、签发、零业务DML与批量行为验证。 证据：T5–T11完整DTO、真正local/S3文件及锁/审计验证，T12冷统计批量和取消，见[阶段记录§16–19](../reviews/P4-profile-images-review.md#16-t9全部项目响应的封面授权)。
 - [x] A6：反向引用清理/父NO ACTION/有界游标/异常前进/删除审计/真实目录守卫及反例全闭环。 证据：T4目录/锁序及9变异、T12四引用保留期和真实新进程，见[阶段记录§11](../reviews/P4-profile-images-review.md#11-t4反向引用清理目录及测试资源回收)、[§19](../reviews/P4-profile-images-review.md#19-t12保留期真实进程恢复和冷统计容量)。
 - [x] A7：F5–F7 API/local实物、真实S3主路径/回滚及必要HTTP/PG并发五轮、≥15性质变异和1000引用证据。 证据：T10九项各五轮、T11 F5–F7及双驱动、T12四项各五轮/31变异/1000–1001图片，见[阶段记录§17–19](../reviews/P4-profile-images-review.md#17-t10真实授权与锁交错)。
-- [ ] A8：完整七项、deep-review/一次fresh整审及修复复核、准确最后分支CI成功，失败原件保留。
-- [ ] A9：授权noff、精确main CI全绿、归档hash/bytes/mode/membership/unknown=0、正常分支/worktree清理；下一段P5 spec/plan预检完成。
+- [x] A8：完整七项、deep-review/一次fresh整审及修复复核、准确最后分支CI成功，失败原件保留。证据：[阶段记录§20–22](../reviews/P4-profile-images-review.md#20-t13完整门禁与检查点)、[整审](../../../reviews/re-39-M5P4整体审核.md)。
+- [x] A9：授权noff、精确main CI全绿、归档hash/bytes/mode/membership/unknown=0、正常分支/worktree清理；下一段P5 spec/plan预检完成。证据：[阶段记录§22](../reviews/P4-profile-images-review.md#22-t15最终集成归档与p5预检)、[P5预检](../../../reviews/re-40-M5P5预检.md)。
 
 ## 9. 不在本段与局部取舍
 

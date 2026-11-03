@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T12实现及验收完成，T13七项与准确产品CI已全绿，T14整审通过、最终文档CI待核。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T13接续，重大新风险先提交后上报。
+> P4已完成：noff main 0f93100a，CI 41641099230 三job全绿，2301份原始文件归档核验并正常清理分支/worktree；P5预检已完成。 原基线main5807a0d6；全部Task事实见阶段记录§22。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -184,13 +184,13 @@
 - [x] Step 1：固定基线main5807a0d6到最终候选；按deep-review顺序核逻辑、集成、测试，完整手写文件和caller链有清单，生成物核源/锁。存docs/reviews下一编号M5P4整体审核。
 - [x] Step 2：executing-plans要求的一次fresh整分支review，交spec/plan、Review Focus原文、Ruling台账；按实际用户影响重新分级。
 - [x] Step 3：Important/Critical一次局部修复，真实RED/GREEN、受影响/必要全量门禁和主控复核，不反复派同范围review；Minor具名去向，重大新风险提交后上报。
-- [ ] Step 4：所有裁定/代价和未读范围写报告；提交最终文档与修复、推送并核精确最后HEAD CI；A8只有此时可关闭，A9继续等待。
+- [x] Step 4：所有裁定/代价和未读范围写报告；提交最终文档与修复、推送并核精确最后HEAD CI；A8只有此时可关闭，A9继续等待。
 
 ## Task 15（T15）：集成、归档与P5预检
 
-- [ ] Step 1：核准确green HEAD、干净worktree、main祖先关系；按连续授权系统git --no-ff合入main，检查两父与树一致，再正常push。
-- [ ] Step 2：准确main SHA CI全绿；归档全部ignored台账/raw/失败/浏览器/审者/变异材料，hash/bytes/mode/membership/unknown=0；正常删除远端分支（rev-list为0）、worktree和本地分支，清理后再核归档。
-- [ ] Step 3：回填阶段完成、A9与下一段P5工作项/评论/草稿绑定及附件的spec/plan预检；输入handoff仍open，M5整体完成项保持未勾选。
+- [x] Step 1：核准确green HEAD、干净worktree、main祖先关系；按连续授权系统git --no-ff合入main，检查两父与树一致，再正常push。
+- [x] Step 2：准确main SHA CI全绿；归档全部ignored台账/raw/失败/浏览器/审者/变异材料，hash/bytes/mode/membership/unknown=0；正常删除远端分支（rev-list为0）、worktree和本地分支，清理后再核归档。
+- [x] Step 3：回填阶段完成、A9与下一段P5工作项/评论/草稿绑定及附件的spec/plan预检；输入handoff仍open，M5整体完成项保持未勾选。
 
 ## 预检自查
 

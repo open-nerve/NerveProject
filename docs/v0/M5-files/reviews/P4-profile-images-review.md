@@ -1,6 +1,6 @@
 # M5 / P4 阶段评审记录
 
-> 预检通过，T1–T12实现和验收完成，T13七项与准确产品CI已全绿，T14整审通过、最终文档CI待核。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
+> P4已完成：noff main 0f93100a，CI 41641099230 三job全绿，2301份原始文件归档核验并正常清理分支/worktree；P5预检已完成。 原基线main5807a0d6；准确集成和归档证据见阶段记录§22。
 
 ## 1. 评审方式
 
@@ -8,7 +8,7 @@
 
 ## 2. 完成标准
 
-T13逐项核对主spec A1–A7及T1–T12实际证据后已勾选；A8仍等待完整七项、整审和准确最终分支CI，A9仍等待集成、main CI、归档清理和P5预检。
+A1–A9均已按实际证据完成；T13/T14的完整门禁和整审、T15精确main CI与归档/P5预检分别记录，见§20–§22。
 
 ## 3. 规划裁定与代价
 
@@ -194,6 +194,19 @@ Go以GOFLAGS=-p=1串行容器包、-count=1且非-short执行：61个实际测�
 
 范围5807a0d6..319d4aa2，14提交。一次fresh审查全文读209份手写源/测试及12份文档，另读23份相关caller；5份历史文档只读变动与精确上下文，20生成物核完整diff及生成源，未声称逐行重读全部生成正文。主控重核246路径和全部审阅SHA，无漂移；三份spec、33项当时Ruling、31项变异和最终门禁输入逐项核对。完整报告为[re-39](../../../reviews/re-39-M5P4整体审核.md)。
 
-无Critical/Important需修复；主控维护Minor P4-M1（WorkspacePatch.Logo无消费者）具名留P8，无用户可见影响。原P1焦点和P3-M1双故障cause继续P8，不重复算作本次发现或已修复。准确最后分支与main CI仍按T13/T14/T15分别关闭；当前尚未合并。
+无Critical/Important需修复；主控维护Minor P4-M1（WorkspacePatch.Logo无消费者）具名留P8，无用户可见影响。原P1焦点和P3-M1双故障cause继续P8，不重复算作本次发现或已修复。准确最后分支与main CI仍按T13/T14/T15分别关闭；该审查时尚未合并；最终集成见§22。
 
-最终审查文档为产品候选之后的纯文档提交；所有4329项非文档输入保持一致。本地通过结果按逐文件hash复用，最后文档HEAD的远端CI仍完整执行。阶段checkbox与最终SHA/归档事实随T15/P5预检回填，当前不提前称main完成。
+最终审查文档为产品候选之后的纯文档提交；所有4329项非文档输入保持一致。本地通过结果按逐文件hash复用，最后文档HEAD的远端CI仍完整执行。阶段checkbox与最终SHA/归档事实随T15/P5预检回填，该审查提交不提前称main完成；后续实证见§22。
+
+
+## 22. T15最终集成、归档与P5预检
+
+最终文档候选`7c9dcb1df63b622132617367592a74d9a11fc844`的[CI41636681396](https://github.com/open-nerve/NerveProject/actions/runs/41636681396)首轮server/web/e2e全绿，354例通过14.4m。按连续授权--no-ff合入`0f93100a05304d26b074790633b5659285813156`，父提交为`5807a0d6e369c486e98e4cb00389d8b309322221`与`7c9dcb1df63b622132617367592a74d9a11fc844`，树`9129c570fc1714e904570e4fd4ec9e612bd6f7f8`与green候选严格一致。[准确main CI 41641099230](https://github.com/open-nerve/NerveProject/actions/runs/41641099230)首轮全绿，354例通过16.8m；原件task-14/15-ci-run/jobs.json与三job日志分别保存。
+
+全部ignored证据归档至`/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P4-integration-20261103`：3412个条目、2301个文件、150693334字节，hash/bytes/mode/symlink/membership逐项相同，unknown=0；依赖/构建缓存明确为可重建，package .turbo原始任务日志保留。失败报告、31变异、一次fresh整审、P5预检原件均在payload。清理前后运行verify_archive.py通过；origin/main..origin/codex/m5-p4=0后正常删除远端、本地分支及worktree，无force/stash/clean。原阶段`.superpowers/sdd/P4-profile-images`的所有相对证据现对应`/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P4-integration-20261103/payload/superpowers/sdd/P4-profile-images`。
+
+最后本地容器快照仍为原20个精确ID；日志可确认归属的本轮容器均已回收，未修改原开发/业务容器。完整日志未提供每个容器ID时不冒称逐个数量已知。
+
+下一段[主spec](../specs/P5-issue-assets.md)、[plan](../plans/P5-issue-assets.md)、[re-40预检](../../../reviews/re-40-M5P5预检.md)已准备；一次builder check的H1按原准备件隐私边界修正。P5尚未实施，M5整体完成项和输入handoff仍保持open。原P4-M1与P3-M1继续P8。
+
+集成编排的局部决定：等待准确main CI时先在相同已验证tree建立P5隔离worktree及安装锁定工具，未实施产品；原生工具不能指定负责人要求的worktress路径，故用系统git。代价是若CI需改产品就必须同步P5基线；本次main首轮通过，无此变更。正式P5预检回填发生于P4归档清理之后。
