@@ -20,15 +20,18 @@ func deletionWindowCases() []deletionWindowCase {
 		{"searchIssues", "GET", "/api/v0/workspaces/{slug}/issue-search", ""},
 		{"listDrafts", "GET", "/api/v0/workspaces/{slug}/drafts", ""},
 		{"getDraft", "GET", "/api/v0/drafts/{draft_id}", ""},
+		{"getDraftAttachments", "GET", "/api/v0/drafts/{draft_id}/attachments", ""},
 		{"listMemberIssues", "GET", "/api/v0/workspaces/{slug}/members/{user_id}/issues", ""},
 		{"listIssues", "GET", "/api/v0/projects/{project_id}/issues", ""},
 		{"getIssue", "GET", "/api/v0/issues/{issue_id}", ""},
+		{"getIssueAttachments", "GET", "/api/v0/issues/{issue_id}/attachments", ""},
 		{"listSubIssues", "GET", "/api/v0/issues/{issue_id}/sub-issues", ""},
 		{"listIssueRelations", "GET", "/api/v0/issues/{issue_id}/relations", ""},
 		{"getIssueByIdentifier", "GET", "/api/v0/workspaces/{slug}/issues/{identifier}", ""},
 		{"listIssueReactions", "GET", "/api/v0/issues/{issue_id}/reactions", ""},
 		{"listIssueLinks", "GET", "/api/v0/issues/{issue_id}/links", ""},
 		{"listIssueComments", "GET", "/api/v0/issues/{issue_id}/comments", ""},
+		{"getCommentAttachments", "GET", "/api/v0/issue-comments/{comment_id}/attachments", ""},
 		{"listIssueActivities", "GET", "/api/v0/issues/{issue_id}/activities", ""},
 		{"listDescriptionVersions", "GET", "/api/v0/issues/{issue_id}/description-versions", ""},
 		{"getDescriptionVersion", "GET", "/api/v0/issue-description-versions/{version_id}", ""},
@@ -82,7 +85,7 @@ func TestDeletionWindowCoversEveryIssueOperation(t *testing.T) {
 	}
 	slices.Sort(actual)
 	slices.Sort(want)
-	if len(reads) != 15 || len(writes) != 22 || !slices.Equal(actual, want) {
+	if len(reads) != 18 || len(writes) != 22 || !slices.Equal(actual, want) {
 		t.Fatalf("window reads=%d writes=%d operations=%q; contract=%q", len(reads), len(writes), actual, want)
 	}
 	checkIssueWriteDirectories(t, contract)

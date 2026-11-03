@@ -155,8 +155,8 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 
 ## Task 13（T13）：完整七门禁与产品检查点
 
-- [ ] Step 1：逐项A1–A7和输入handoff处理结果、Plane差异、类型/文案/phase与到期豁免核验，文档逐句对照实际证据。
-- [ ] Step 2：串行`make gen-check`、`make lint-go`、`GOFLAGS=-p=1 make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`，各exit0；缓存/skip/基础设施失败分别记录，不隐藏原失败。
+- [x] Step 1：逐项A1–A7和输入handoff处理结果、Plane差异、类型/文案/phase与到期豁免核验，文档逐句对照实际证据。（A7在Step 2完整故事复验后勾选。）
+- [x] Step 2：串行`make gen-check`、`make lint-go`、`GOFLAGS=-p=1 make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`，各exit0；缓存/skip/基础设施失败分别记录，不隐藏原失败。（make e2e含两构建；F14单文件精确差异及受影响复验见review §20。）
 - [ ] Step 3：详细中文检查点commit/system git push；准确HEAD server/web/e2e全绿。W11按已知规则重跑一次，仍失败停报。
 - [ ] Step 4：记录本地/远端分开事实，不提前声明阶段main完成。
 
