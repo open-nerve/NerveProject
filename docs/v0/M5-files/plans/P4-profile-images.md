@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T5实现与聚焦回归完成，T6待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T6接续，重大新风险先提交后上报。
+> 预检通过，T1–T6实现与聚焦回归完成，T7待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T7接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -101,10 +101,10 @@
 
 **Interfaces:** 所属LogoImageChange端口映射T2，ReadWorkspaceImages映射T3；CallerLock显式第一把。ListWorkspaces保持完整集合，候选W升序锁/锁下重读，仅输出本次已锁且仍活成员的集合。
 
-- [ ] Step 1：TestWorkspaceImages：管理员B替换A已绑定logo成功/不能绑A准备件；member/guest写403、非成员404；Get/List/Update URL与期限一致、Create无logo真实null；目录预读后撤权/新加入不残留或追锁。
-- [ ] Step 2：RED后实现logo字段与读取事务；OrganizationSize回答oneOf生成枚举或null，six有效/非法值拒绝、现有请求不改；保持名称/id排序和邮箱/角色规则。
-- [ ] Step 3：`make gen`；`cd server && go test -p 1 ./internal/modules/workspace/... ./internal/bootstrap -run '^Test(WorkspaceImages|CreateWorkspace|UpdateWorkspace|GetWorkspace|ListWorkspaces|Contract)' -count=1`；Expected具名GREEN。生成TS消费者用新类型，lint-go/gen-check。
-- [ ] Step 4：提交 `feat(M5/P4): 接通工作区图标并收紧组织规模响应类型`。
+- [x] Step 1：TestWorkspaceImages：管理员B替换A已绑定logo成功/不能绑A准备件；member/guest写403、非成员404；Get/List/Update URL与期限一致、Create无logo真实null；目录预读后撤权/新加入不残留或追锁。
+- [x] Step 2：RED后实现logo字段与读取事务；OrganizationSize回答oneOf生成枚举或null，six有效/非法值拒绝、现有请求不改；保持名称/id排序和邮箱/角色规则。
+- [x] Step 3：`make gen`；`cd server && go test -p 1 ./internal/modules/workspace/... ./internal/bootstrap -run '^Test(WorkspaceImages|CreateWorkspace|UpdateWorkspace|GetWorkspace|ListWorkspaces|PublicOperations|APIRoutes|OperationsThatNeed|BodiesThat|TheAnswerToABroken|ParametersThat|EveryProblem)' -count=1`；Expected具名GREEN。生成TS消费者用新类型，lint-go/gen-check。
+- [x] Step 4：提交 `feat(M5/P4): 接通工作区图标并收紧组织规模响应类型`。
 
 ## Task 7（T7）：成员头像与既有邀请预览
 

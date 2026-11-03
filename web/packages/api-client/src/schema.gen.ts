@@ -413,8 +413,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Change a workspace's name, organization size or time zone
-         * @description For the workspace's admins. The fields given change and the others stay; the values follow createWorkspace's rules (validation_failed), checked before the workspace is looked at. The slug never changes: a body with slug is refused (bad_request). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The role is decided after the workspace row is locked, so a caller demoted meanwhile is refused.
+         * Change a workspace's name, organization size, time zone or logo
+         * @description For the workspace's admins. The fields given change and the others stay; the values follow createWorkspace's rules (validation_failed), checked before the workspace is looked at. The slug never changes: a body with slug is refused (bad_request). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The role is decided after the workspace row is locked, so a caller demoted meanwhile is refused. Logo replacement binds the caller's completed preparation atomically; omission retains the current logo and null clears it.
          */
         patch: operations["updateWorkspace"];
         trace?: never;
@@ -2004,6 +2004,11 @@ export interface components {
             data: components["schemas"]["Timezone"][];
         };
         /**
+         * @description The size of the organization, as the web app's form offers it.
+         * @enum {string}
+         */
+        OrganizationSize: "Just myself" | "2-10" | "11-50" | "51-200" | "201-500" | "500+";
+        /**
          * @description A member's role in a workspace, 5 guest, 15 member, 20 admin.
          * @enum {integer}
          */
@@ -2015,11 +2020,15 @@ export interface components {
             /** @description Lower case; it never changes. */
             slug: string;
             /** @description One of OrganizationSize's values; null when none was given. */
-            organization_size: string | null;
+            organization_size: components["schemas"]["OrganizationSize"] | null;
             /** @description An IANA time zone name. */
             timezone: string;
-            /** @description Null until uploads arrive (M5). */
+            /** Format: uuid */
+            logo_asset_id: string | null;
+            /** @description A signed URL for the current valid logo; null if unavailable. */
             logo_url: string | null;
+            /** Format: date-time */
+            logo_url_expires_at: string | null;
             role: components["schemas"]["WorkspaceRole"];
             /** @description The number of active members. */
             total_members: number;
@@ -2031,11 +2040,6 @@ export interface components {
         WorkspaceList: {
             data: components["schemas"]["Workspace"][];
         };
-        /**
-         * @description The size of the organization, as the web app's form offers it.
-         * @enum {string}
-         */
-        OrganizationSize: "Just myself" | "2-10" | "11-50" | "51-200" | "201-500" | "500+";
         WorkspaceCreate: {
             /** @description 1–80 characters, with a letter or a digit, without a web address. */
             name: string;
@@ -2047,6 +2051,11 @@ export interface components {
         };
         /** @description Changes the fields it names; a field left out keeps its value. organization_size cannot be set to null. */
         WorkspaceUpdate: {
+            /**
+             * Format: uuid
+             * @description A completed logo preparation owned by the caller; null clears the current logo.
+             */
+            logo_asset_id?: string | null;
             /** @description 1–80 characters, with a letter or a digit, without a web address. */
             name?: string;
             organization_size?: components["schemas"]["OrganizationSize"];
@@ -3052,10 +3061,10 @@ export type ApiTokenCreated = components['schemas']['ApiTokenCreated'];
 export type InstanceInfo = components['schemas']['InstanceInfo'];
 export type Timezone = components['schemas']['Timezone'];
 export type TimezoneList = components['schemas']['TimezoneList'];
+export type OrganizationSize = components['schemas']['OrganizationSize'];
 export type WorkspaceRole = components['schemas']['WorkspaceRole'];
 export type Workspace = components['schemas']['Workspace'];
 export type WorkspaceList = components['schemas']['WorkspaceList'];
-export type OrganizationSize = components['schemas']['OrganizationSize'];
 export type WorkspaceCreate = components['schemas']['WorkspaceCreate'];
 export type WorkspaceUpdate = components['schemas']['WorkspaceUpdate'];
 export type MemberUser = components['schemas']['MemberUser'];

@@ -175,15 +175,17 @@ type SlugAvailabilityReason string
 
 // Workspace defines model for Workspace.
 type Workspace struct {
-	CreatedAt time.Time `json:"created_at"`
-	ID        uuid.UUID `json:"id"`
+	CreatedAt   time.Time                    `json:"created_at"`
+	ID          uuid.UUID                    `json:"id"`
+	LogoAssetID nullable.Nullable[uuid.UUID] `json:"logo_asset_id"`
 
-	// LogoURL Null until uploads arrive (M5).
-	LogoURL nullable.Nullable[string] `json:"logo_url"`
-	Name    string                    `json:"name"`
+	// LogoURL A signed URL for the current valid logo; null if unavailable.
+	LogoURL          nullable.Nullable[string]    `json:"logo_url"`
+	LogoURLExpiresAt nullable.Nullable[time.Time] `json:"logo_url_expires_at"`
+	Name             string                       `json:"name"`
 
 	// OrganizationSize One of OrganizationSize's values; null when none was given.
-	OrganizationSize nullable.Nullable[string] `json:"organization_size"`
+	OrganizationSize nullable.Nullable[OrganizationSize] `json:"organization_size"`
 
 	// Role A member's role in a workspace, 5 guest, 15 member, 20 admin.
 	Role WorkspaceRole `json:"role"`
@@ -314,6 +316,9 @@ type WorkspaceRole int
 
 // WorkspaceUpdate Changes the fields it names; a field left out keeps its value. organization_size cannot be set to null.
 type WorkspaceUpdate struct {
+	// LogoAssetID A completed logo preparation owned by the caller; null clears the current logo.
+	LogoAssetID nullable.Nullable[uuid.UUID] `json:"logo_asset_id,omitempty"`
+
 	// Name 1–80 characters, with a letter or a digit, without a web address.
 	Name *string `json:"name,omitempty"`
 
@@ -407,7 +412,7 @@ type ServerInterface interface {
 	// GetWorkspace Read a workspace
 	// (GET /api/v0/workspaces/{slug})
 	GetWorkspace(w http.ResponseWriter, r *http.Request, slug Slug)
-	// UpdateWorkspace Change a workspace's name, organization size or time zone
+	// UpdateWorkspace Change a workspace's name, organization size, time zone or logo
 	// (PATCH /api/v0/workspaces/{slug})
 	UpdateWorkspace(w http.ResponseWriter, r *http.Request, slug Slug)
 	// ListWorkspaceInvitations List a workspace's invitations
@@ -1967,7 +1972,7 @@ type StrictServerInterface interface {
 	// GetWorkspace Read a workspace
 	// (GET /api/v0/workspaces/{slug})
 	GetWorkspace(ctx context.Context, request GetWorkspaceRequestObject) (GetWorkspaceResponseObject, error)
-	// UpdateWorkspace Change a workspace's name, organization size or time zone
+	// UpdateWorkspace Change a workspace's name, organization size, time zone or logo
 	// (PATCH /api/v0/workspaces/{slug})
 	UpdateWorkspace(ctx context.Context, request UpdateWorkspaceRequestObject) (UpdateWorkspaceResponseObject, error)
 	// ListWorkspaceInvitations List a workspace's invitations

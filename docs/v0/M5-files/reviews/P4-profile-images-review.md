@@ -1,6 +1,6 @@
 # M5 / P4 阶段评审记录
 
-> 预检通过，T1–T5字段/绑定/读取/反向清理及用户API聚焦回归完成；T6待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
+> 预检通过，T1–T6字段/绑定/读取/清理及用户、工作区API聚焦回归完成；T7待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
 
 ## 1. 评审方式
 
@@ -20,7 +20,7 @@
 
 ## 4. 整分支发现与处理
 
-T1–T5已实施，整审及修复待T14。不能把builder check的无重要问题写成代码无缺陷。
+T1–T6已实施，整审及修复待T14。不能把builder check的无重要问题写成代码无缺陷。
 
 ## 5. 实现与plan差异
 
@@ -82,3 +82,14 @@ GetMe与UpdateMe使用明确消费依赖，自己账号/凭据先锁，锁下读
 最终4279个源输入逐hash稳定：完整identity及archtest带race66.301s；四个完整程序图片测试、七项路由/错误合同及三个既有PAT账户测试带race20.869s；受影响Web五文件64测试1.934s、完整web类型9.470s、Go lint1.934s均通过。生成物按Makefile在提交后再核gen-check。首次测试数据漏新字段、PublicProfile结构转换、HTTP新错误码覆盖和Web依赖未构建的失败均保留；没有把编译或准备失败当产品RED。旧HTTP精确快照与所有User测试数据已按新协议更新，无as any/新增依赖。
 
 阶段workspace保存task-5-api-red、task-5-final-identity/bootstrap/web/types/lint及receipts/inputs、task-5-gen-check；docker-task-5-reaped.json核从日志得到的22个自有容器全部消失，20个已有开发/业务容器保留。完整七项与分支CI仍留T13；本任务不声称整个P4、页面或S3图片故事完成。
+
+
+## 13. T6工作区图标与目录读取
+
+UpdateWorkspace以CallerLock为第一把锁，原W(N)/权限判定后读当前Logo，经T2统一绑定与T3响应签发。新管理员可替换前任已绑定图，不能挪用前任准备件；当前ID/省略不写资产，null解除。Get/List在候选预读后，以账号N、候选W(S)升序锁、活成员/权限重验、资产批量签发构成短事务；只返回已锁且仍可见集合，保留名称/id排序和整集合，不追新工作区。批量锁复用本模块已有精确SQL，通过新消费小端口调用，无跨模块查询。
+
+OrganizationSize响应改为原枚举或null，生成Go/TS类型直接使用；六值创建、未填null及非法/显式null请求拒绝均实际通过。API真实Logo上传、管理员更替、member/guest403、非成员与不存在同404、重复/替换/清除、Get/List/Update实际字节和签名秒精确验证。审计触发器证明Get/List不写业务行；签名失败令Logo、名称和候选绑定整体回滚，重试成功。app验证候选撤权、新加入、删除、slug复用、排序及全部新增读取错误/commit零返回；三个行为变异（去候选过滤、去升序、去slug身份复核）实际失败且SHA恢复。完整数据库交错仍归T10，未用替身冒充并发证据。
+
+行为RED4.268s，旧API拒绝Logo字段。首次范围键拼错、排序函数拼错与非法请求错误使用会校验请求的call均为夹具/编译失败，原件保留；后者改用已有只校验响应的发送入口，仍断言真实422/400。最终4287源输入hash稳定：完整workspace和archtest带race64.562s，完整程序用户/工作区图片与七项合同带race31.873s，受影响Web五文件57测试1.803s、完整web类型9.665s、Go lint1.516s均通过。Workspace测试工厂补必有null字段，无类型断言绕过。提交后gen-check另核。
+
+证据为阶段workspace的task-6-api-red-2、task-6-final-*、task-6-mutations.json/逐项日志、task-6-gen-check及receipts/inputs；docker-task-6-reaped.json核本任务12个自有容器全回收、20个既有容器保留。成员头像、接受邀请与公开预览仍待T7；全部七项、远端CI、终审和集成未提前关闭。

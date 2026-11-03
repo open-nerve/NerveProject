@@ -622,14 +622,18 @@ paths:
       operationId: updateWorkspace
       tags:
         - workspace
-      summary: Change a workspace's name, organization size or time zone
-      description: 'For the workspace''s admins. The fields given change and the others stay; the values follow createWorkspace''s rules (validation_failed), checked before the workspace is looked at. The slug never changes: a body with slug is refused (bad_request). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The role is decided after the workspace row is locked, so a caller demoted meanwhile is refused.'
+      summary: Change a workspace's name, organization size, time zone or logo
+      description: 'For the workspace''s admins. The fields given change and the others stay; the values follow createWorkspace''s rules (validation_failed), checked before the workspace is looked at. The slug never changes: a body with slug is refused (bad_request). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The role is decided after the workspace row is locked, so a caller demoted meanwhile is refused. Logo replacement binds the caller''s completed preparation atomically; omission retains the current logo and null clears it.'
       security:
         - bearer: []
       x-problem-codes:
         - validation_failed
         - workspace.not_found
         - forbidden
+        - asset.not_found
+        - asset.not_uploaded
+        - asset.bound
+        - asset.scope_changed
       requestBody:
         required: true
         content:
@@ -3632,6 +3636,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Timezone'
+    OrganizationSize:
+      description: The size of the organization, as the web app's form offers it.
+      type: string
+      enum:
+        - Just myself
+        - 2-10
+        - 11-50
+        - 51-200
+        - 201-500
+        - 500+
     WorkspaceRole:
       description: A member's role in a workspace, 5 guest, 15 member, 20 admin.
       type: integer
@@ -3648,7 +3662,9 @@ components:
         - slug
         - organization_size
         - timezone
+        - logo_asset_id
         - logo_url
+        - logo_url_expires_at
         - role
         - total_members
         - created_at
@@ -3664,17 +3680,27 @@ components:
           type: string
         organization_size:
           description: One of OrganizationSize's values; null when none was given.
-          type:
-            - string
-            - 'null'
+          oneOf:
+            - $ref: '#/components/schemas/OrganizationSize'
+            - type: 'null'
         timezone:
           description: An IANA time zone name.
           type: string
-        logo_url:
-          description: Null until uploads arrive (M5).
+        logo_asset_id:
           type:
             - string
             - 'null'
+          format: uuid
+        logo_url:
+          description: A signed URL for the current valid logo; null if unavailable.
+          type:
+            - string
+            - 'null'
+        logo_url_expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         role:
           $ref: '#/components/schemas/WorkspaceRole'
         total_members:
@@ -3696,16 +3722,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Workspace'
-    OrganizationSize:
-      description: The size of the organization, as the web app's form offers it.
-      type: string
-      enum:
-        - Just myself
-        - 2-10
-        - 11-50
-        - 51-200
-        - 201-500
-        - 500+
     WorkspaceCreate:
       type: object
       additionalProperties: false
@@ -3729,6 +3745,12 @@ components:
       type: object
       additionalProperties: false
       properties:
+        logo_asset_id:
+          description: A completed logo preparation owned by the caller; null clears the current logo.
+          type:
+            - string
+            - 'null'
+          format: uuid
         name:
           description: 1–80 characters, with a letter or a digit, without a web address.
           type: string

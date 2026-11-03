@@ -3,43 +3,84 @@ package app
 import (
 	"context"
 	"errors"
+	"slices"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// GetWorkspace reads a workspace by its slug: GET /api/v0/workspaces/{slug}.
-type GetWorkspace struct {
-	workspaces WorkspaceFinder
-	auth       shared.Authorizer
+type GetWorkspaceRows interface {
+	WorkspaceFinder
+	ImageWorkspaceSharer
 }
 
-// NewGetWorkspace returns the use case.
-func NewGetWorkspace(workspaces WorkspaceFinder, auth shared.Authorizer) *GetWorkspace {
-	return &GetWorkspace{workspaces: workspaces, auth: auth}
+type GetWorkspaceDeps struct {
+	Workspaces GetWorkspaceRows
+	Auth       shared.Authorizer
+	Caller     CallerLock
+	Images     ImageReader
+	Tx         shared.TxManager
+	Clock      Clock
 }
 
-// Execute returns the workspace with the caller's role. A read opens no
-// transaction and decides directly (M3 design 3.4). A workspace that does
-// not exist, is deleted, or that the caller cannot see is the same
-// workspace.not_found (M3 design 8.2).
+// GetWorkspace rechecks the visible candidate under account and workspace
+// locks before issuing its logo capability.
+type GetWorkspace struct{ d GetWorkspaceDeps }
+
+func NewGetWorkspace(d GetWorkspaceDeps) *GetWorkspace { return &GetWorkspace{d: d} }
+
 func (u *GetWorkspace) Execute(ctx context.Context, slug string) (domain.Workspace, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return domain.Workspace{}, err
 	}
-	w, err := u.workspaces.WorkspaceBySlug(ctx, slug)
-	switch {
-	case errors.Is(err, ErrNotFound):
-		return domain.Workspace{}, domain.ErrNotFound
-	case err != nil:
+	candidate, err := u.read(ctx, actor, slug)
+	if err != nil {
 		return domain.Workspace{}, err
 	}
-	grant, err := u.auth.Authorize(ctx, actor, domain.ActionRead, shared.Target{WorkspaceID: w.ID})
-	switch {
-	case errors.Is(err, shared.ErrNotVisible):
+	var out domain.Workspace
+	err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		if err := u.d.Caller.LockCaller(ctx, actor, u.d.Clock.Now()); err != nil {
+			return err
+		}
+		locked, err := u.d.Workspaces.ShareImageWorkspaces(ctx, []uuid.UUID{candidate.ID})
+		if err != nil {
+			return err
+		}
+		if !slices.Contains(locked, candidate.ID) {
+			return domain.ErrNotFound
+		}
+		w, err := u.read(ctx, actor, slug)
+		if err != nil {
+			return err
+		}
+		if w.ID != candidate.ID {
+			return domain.ErrNotFound
+		}
+		list, err := withWorkspaceImages(ctx, u.d.Images, []domain.Workspace{w})
+		if err != nil {
+			return err
+		}
+		out = list[0]
+		return nil
+	})
+	if err != nil {
+		return domain.Workspace{}, err
+	}
+	return out, nil
+}
+
+func (u *GetWorkspace) read(ctx context.Context, actor shared.Actor, slug string) (domain.Workspace, error) {
+	w, err := u.d.Workspaces.WorkspaceBySlug(ctx, slug)
+	if errors.Is(err, ErrNotFound) {
 		return domain.Workspace{}, domain.ErrNotFound
-	case err != nil:
+	}
+	if err != nil {
+		return domain.Workspace{}, err
+	}
+	grant, err := decide(ctx, u.d.Auth, actor, domain.ActionRead, w.ID, domain.ErrNotFound)
+	if err != nil {
 		return domain.Workspace{}, err
 	}
 	w.Role = grant.WorkspaceRole

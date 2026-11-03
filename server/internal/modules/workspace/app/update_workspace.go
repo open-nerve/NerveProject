@@ -7,26 +7,27 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// UpdateWorkspace changes a workspace's name, organization size or time
-// zone: PATCH /api/v0/workspaces/{slug}.
-type UpdateWorkspace struct {
-	workspaces WorkspaceUpdater
-	auth       shared.Authorizer
-	tx         shared.TxManager
-	clock      Clock
+type UpdateWorkspaceRows interface {
+	WorkspaceUpdater
+	WorkspaceFinder
 }
 
-// NewUpdateWorkspace returns the use case.
-func NewUpdateWorkspace(workspaces WorkspaceUpdater, auth shared.Authorizer, tx shared.TxManager, clock Clock) *UpdateWorkspace {
-	return &UpdateWorkspace{workspaces: workspaces, auth: auth, tx: tx, clock: clock}
+type UpdateWorkspaceDeps struct {
+	Workspaces UpdateWorkspaceRows
+	Auth       shared.Authorizer
+	Caller     CallerLock
+	Bindings   ImageBindings
+	Images     ImageReader
+	Tx         shared.TxManager
+	Clock      Clock
 }
 
-// Execute checks p, then in one transaction (M3 design 3.6): the workspace
-// row FOR NO KEY UPDATE, the decision on workspace.update, the change. The
-// answer carries the caller's role from the grant. A check of the values
-// alone comes first: it tells nothing about the workspace. The clock is read
-// under the lock, so a change that waited for another is not stamped
-// earlier than it.
+// UpdateWorkspace changes metadata and the logo in one transaction, with
+// account first, then workspace, then all current and next asset rows.
+type UpdateWorkspace struct{ d UpdateWorkspaceDeps }
+
+func NewUpdateWorkspace(d UpdateWorkspaceDeps) *UpdateWorkspace { return &UpdateWorkspace{d: d} }
+
 func (u *UpdateWorkspace) Execute(ctx context.Context, slug string, p domain.WorkspacePatch) (domain.Workspace, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -35,20 +36,44 @@ func (u *UpdateWorkspace) Execute(ctx context.Context, slug string, p domain.Wor
 	if err := domain.CheckWorkspacePatch(p); err != nil {
 		return domain.Workspace{}, err
 	}
-	var updated domain.Workspace
-	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		id, grant, err := lockAndDecide(ctx, u.workspaces.LockWorkspaceBySlug, u.auth, actor, slug, domain.ActionUpdate)
+	var out domain.Workspace
+	err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		if err := u.d.Caller.LockCaller(ctx, actor, u.d.Clock.Now()); err != nil {
+			return err
+		}
+		id, grant, err := lockAndDecide(ctx, u.d.Workspaces.LockWorkspaceBySlug, u.d.Auth, actor, slug, domain.ActionUpdate)
 		if err != nil {
 			return err
 		}
-		if updated, err = u.workspaces.UpdateWorkspace(ctx, id, p, actor.UserID, u.clock.Now()); err != nil {
+		current, err := u.d.Workspaces.WorkspaceBySlug(ctx, slug)
+		if err != nil {
+			return err
+		}
+		q := LogoImageChange{ActorID: actor.UserID, WorkspaceID: id, Current: current.LogoAssetID, Next: current.LogoAssetID}
+		if p.SetLogo {
+			q.Next = p.LogoAssetID
+		}
+		at, err := u.d.Bindings.LockImageBindings(ctx, q)
+		if err != nil {
+			return err
+		}
+		updated, err := u.d.Workspaces.UpdateWorkspace(ctx, id, p, actor.UserID, at)
+		if err != nil {
+			return err
+		}
+		if err := u.d.Bindings.ApplyImageBindings(ctx, q, at); err != nil {
 			return err
 		}
 		updated.Role = grant.WorkspaceRole
+		list, err := withWorkspaceImages(ctx, u.d.Images, []domain.Workspace{updated})
+		if err != nil {
+			return err
+		}
+		out = list[0]
 		return nil
 	})
 	if err != nil {
 		return domain.Workspace{}, err
 	}
-	return updated, nil
+	return out, nil
 }

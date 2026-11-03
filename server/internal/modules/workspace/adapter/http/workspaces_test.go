@@ -22,10 +22,10 @@ var (
 )
 
 const (
-	acmeJSON = `{"created_at":"2026-09-29T10:00:00.123456Z","id":"0199a2b4-0000-7000-8000-00000000000a","logo_url":null,` +
+	acmeJSON = `{"created_at":"2026-09-29T10:00:00.123456Z","id":"0199a2b4-0000-7000-8000-00000000000a","logo_asset_id":null,"logo_url":null,"logo_url_expires_at":null,` +
 		`"name":"Acme","organization_size":"2-10","role":20,"slug":"acme","timezone":"Asia/Shanghai","total_members":3,` +
 		`"updated_at":"2026-09-29T11:00:00.123456Z"}`
-	betaJSON = `{"created_at":"2026-09-29T10:00:00.123456Z","id":"0199a2b4-0000-7000-8000-00000000000b","logo_url":null,` +
+	betaJSON = `{"created_at":"2026-09-29T10:00:00.123456Z","id":"0199a2b4-0000-7000-8000-00000000000b","logo_asset_id":null,"logo_url":null,"logo_url_expires_at":null,` +
 		`"name":"Beta","organization_size":null,"role":5,"slug":"beta","timezone":"UTC","total_members":1,` +
 		`"updated_at":"2026-09-29T10:00:00.123456Z"}`
 )
@@ -175,7 +175,7 @@ func TestUpdateWorkspace(t *testing.T) {
 
 func samePatch(a, b domain.WorkspacePatch) bool {
 	same := func(x, y *string) bool { return (x == nil) == (y == nil) && (x == nil || *x == *y) }
-	return same(a.Name, b.Name) && same(a.OrganizationSize, b.OrganizationSize) && same(a.Timezone, b.Timezone)
+	return a.SetLogo == b.SetLogo && (a.LogoAssetID == nil) == (b.LogoAssetID == nil) && (a.LogoAssetID == nil || *a.LogoAssetID == *b.LogoAssetID) && same(a.Name, b.Name) && same(a.OrganizationSize, b.OrganizationSize) && same(a.Timezone, b.Timezone)
 }
 
 // The use case's refusals, as the contract declares them.
@@ -264,5 +264,24 @@ func TestCheckWorkspaceSlug(t *testing.T) {
 	}
 	if want := []string{"alice free", "alice acme", "alice settings", "alice my team"}; !slices.Equal(check.calls, want) {
 		t.Errorf("calls = %q, want %q", check.calls, want)
+	}
+}
+
+func TestUpdateWorkspaceImageProblems(t *testing.T) {
+	for _, tc := range []struct {
+		code   string
+		kind   shared.Kind
+		status int
+	}{
+		{"asset.not_found", shared.KindNotFound, 404}, {"asset.not_uploaded", shared.KindConflict, 409},
+		{"asset.bound", shared.KindConflict, 409}, {"asset.scope_changed", shared.KindConflict, 409},
+	} {
+		t.Run(tc.code, func(t *testing.T) {
+			h := newServer(t, fakes{update: &fakeUpdate{err: shared.NewError(tc.kind, tc.code, "Image refused.")}})
+			res, _ := do(t, h, request(http.MethodPatch, "/api/v0/workspaces/acme", "alice", `{}`))
+			if res.StatusCode != tc.status {
+				t.Fatalf("%s: %d", tc.code, res.StatusCode)
+			}
+		})
 	}
 }

@@ -2,6 +2,8 @@ package httpadapter
 
 import (
 	"context"
+	"time"
+	"uuid"
 
 	"github.com/oapi-codegen/nullable"
 
@@ -48,6 +50,7 @@ func (h handler) GetWorkspace(ctx context.Context, req gen.GetWorkspaceRequestOb
 // UpdateWorkspace serves PATCH /api/v0/workspaces/{slug}.
 func (h handler) UpdateWorkspace(ctx context.Context, req gen.UpdateWorkspaceRequestObject) (gen.UpdateWorkspaceResponseObject, error) {
 	p := domain.WorkspacePatch{Name: req.Body.Name, Timezone: req.Body.Timezone}
+	p.SetLogo, p.LogoAssetID = imageIDPatch(req.Body.LogoAssetID)
 	if size := req.Body.OrganizationSize; size != nil {
 		s := string(*size)
 		p.OrganizationSize = &s
@@ -82,22 +85,44 @@ func (h handler) CheckWorkspaceSlug(ctx context.Context, req gen.CheckWorkspaceS
 
 // workspace is w as the API shows it.
 func workspace(w domain.Workspace) gen.Workspace {
-	size := nullable.NewNullNullable[string]()
+	size := nullable.NewNullNullable[gen.OrganizationSize]()
 	if w.OrganizationSize != nil {
-		size = nullable.NewNullableWithValue(*w.OrganizationSize)
+		size = nullable.NewNullableWithValue(gen.OrganizationSize(*w.OrganizationSize))
 	}
+	logo, expires := imageReply(w.Logo)
 	return gen.Workspace{
 		ID:               w.ID,
 		Name:             w.Name,
 		Slug:             w.Slug,
 		OrganizationSize: size,
 		Timezone:         w.Timezone,
-		// Required and null until M5. The zero Nullable is "unspecified" and
-		// would marshal as "": set null explicitly.
-		LogoURL:      nullable.NewNullNullable[string](),
+		LogoAssetID:      nullableImageID(w.LogoAssetID),
+		LogoURL:          logo, LogoURLExpiresAt: expires,
 		Role:         gen.WorkspaceRole(w.Role),
 		TotalMembers: w.TotalMembers,
 		CreatedAt:    w.CreatedAt,
 		UpdatedAt:    w.UpdatedAt,
 	}
+}
+
+func imageIDPatch(v nullable.Nullable[uuid.UUID]) (bool, *uuid.UUID) {
+	if !v.IsSpecified() {
+		return false, nil
+	}
+	if id, err := v.Get(); err == nil {
+		return true, &id
+	}
+	return true, nil
+}
+func nullableImageID(id *uuid.UUID) nullable.Nullable[uuid.UUID] {
+	if id == nil {
+		return nullable.NewNullNullable[uuid.UUID]()
+	}
+	return nullable.NewNullableWithValue(*id)
+}
+func imageReply(image *domain.ImageURL) (nullable.Nullable[string], nullable.Nullable[time.Time]) {
+	if image == nil {
+		return nullable.NewNullNullable[string](), nullable.NewNullNullable[time.Time]()
+	}
+	return nullable.NewNullableWithValue(image.URL), nullable.NewNullableWithValue(image.ExpiresAt)
 }

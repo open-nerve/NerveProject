@@ -157,7 +157,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 | 工作项的计数：项目的 `intake_count`（M7）、`total_issues` 一类，工作区成员的 `draft_issue_count`（M4） | 3 | 不定义，删掉前端的读取，由产生它的 M 加回 |
 | `Project.is_favorite`（M7 的收藏） | 3 | 不定义。项目卡片上的收藏按钮、建项目之后"加入收藏"的一步（`core/components/projects/create/root.tsx:53`）、`project.store.ts` 的 `addProjectToFavorites`、`removeProjectFromFavorites` 和 `favoriteProjectIds` getter（`:228-245`，没有读者，成为死代码），以及 `favorite.store.ts:284-287` 移除收藏时把 `projectMap[…].is_favorite` 置为假的项目分支（`Project` 没有这个字段，不删就编译不过），在 P8b 删除，M7 随收藏的接口加回（13.2）。旧 `ProjectService` 中三个收藏方法本来就没有调用方，一并删除 |
 
-**M5/P4接续合同（预检通过，未实施）：** workspace logo、project自定义/预设封面和成员头像由owner现有权限返回短期URL/期限；项目一次POST原子绑定。全部同DTO出口和既有MAC邀请预览均纳入，OrganizationSize响应收紧为既有六值或null。读取账号第一把、W→P→asset，成员目标账号不倒序锁；公开预览仍仅固定workspace图标能力。新增四条反向FK均即时NO ACTION，由identity→workspace→project条件解除，再删除eligible资产，目录逐项证明且不豁免未知边。详见[M5/P4三份合同](../M5-files/specs/P4-profile-images.md)，M3原null规则是实施前状态，M5输入交接仍开放。
+**M5/P4接续合同（分任务实施中）：** workspace logo、project自定义/预设封面和成员头像由owner现有权限返回短期URL/期限；项目一次POST原子绑定。全部同DTO出口和既有MAC邀请预览均纳入，OrganizationSize响应收紧为既有六值或null。读取账号第一把、W→P→asset，成员目标账号不倒序锁；公开预览仍仅固定workspace图标能力。新增四条反向FK均即时NO ACTION，由identity→workspace→project条件解除，再删除eligible资产，目录逐项证明且不豁免未知边。详见[M5/P4三份合同](../M5-files/specs/P4-profile-images.md)，M3原null规则是实施前状态，M5输入交接仍开放。
 
 ### 3.3 模块划分与跨模块的协作
 - **三个模块**，照总体设计 6.2：
@@ -203,7 +203,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
     - **看得到**这个项目：工作区管理员；或项目的有效成员；或项目公开（`network = 2`）且工作区角色不低于成员。其余看不到：访客看不到自己没加入的项目，公开的也一样（Plane 的列表对访客同样隐藏，`views/project/base.py:198-222`）；成员看不到自己没加入的私密项目。
     - **能做**：是项目的有效成员，并且项目角色在允许的集合里，或者他是工作区管理员（总体设计 6.5："项目成员（角色不限），同时是工作区管理员"；Plane `permissions/base.py:19-88` 的 `allow_permission`）。看得到而不是项目成员 → 403（例如工作区管理员要先加入项目）。
   - 已删除的项目、已删除的工作区都看不到；已归档的项目看得到（3.19）。
-- **判定的时机**：写操作在事务里、**取得父行的锁之后**判定（3.6 约定二）；读操作不开事务，直接判定。
+- **判定的时机**：写操作在事务里、**取得父行的锁之后**判定（3.6 约定二）；普通读操作不开事务，直接判定；M5/P4图片签发读取例外，见3.2与6.7。
 - **规则表**（`access/domain/rules.go`）：每个操作名一行：级别和允许的角色。M3 的全部行就是 9.2 矩阵的行。表里没有的操作一律拒绝。`AllowCreator`（总体设计 6.5 的示例）没有 M3 的使用者，由 M4 随第一条用到它的规则加入（13.2）。
 - **相对的规则在用例里**：改自己的角色、移出自己、目标的角色更高、访客的上限、唯一管理员。它们要比较两个人，用 `Grant` 和用例读到的目标成员判断，码在 5.3。
 - **按可见性过滤的列表**（项目列表）：用例先对工作区级的操作判定，再按同一条可见性规则在 SQL 中过滤。一个集成测试对 9.2 的每种身份核对"列表的结果"等于"对每个项目逐个判定 `project.read` 的结果"，两处规则不会走散。工作区的状态列表不按可见性，只含调用者是有效成员的未归档项目的状态（Plane `views/workspace/state.py:20-26`），它等于"对每个项目判定 `state.list`"，同一个测试一并核对。
@@ -870,7 +870,7 @@ labels
 | `GET /api/v0/workspaces` | `listWorkspaces` | bearer | — | 200 `WorkspaceList` | — |
 | `POST /api/v0/workspaces` | `createWorkspace` | bearer | `WorkspaceCreate {name, slug, organization_size?, timezone?}` | 201 `Workspace` | 403 `workspace.creation_disabled`；422 V；409 `workspace.slug_taken` |
 | `GET /api/v0/workspaces/{slug}` | `getWorkspace` | bearer | — | 200 `Workspace` | 404 `workspace.not_found` |
-| `PATCH /api/v0/workspaces/{slug}` | `updateWorkspace` | bearer | `WorkspaceUpdate {name?, organization_size?, timezone?}` | 200 `Workspace` | 404；403 F；422 V |
+| `PATCH /api/v0/workspaces/{slug}` | `updateWorkspace` | bearer | `WorkspaceUpdate {name?, organization_size?, timezone?, logo_asset_id?}` | 200 `Workspace` | 404；403 F；422 V；资产404/409（M5/P4） |
 | `DELETE /api/v0/workspaces/{slug}` | `deleteWorkspace` | bearer | — | 204 | 404；403 F |
 | `GET /api/v0/workspace-slugs/{slug}` | `checkWorkspaceSlug` | bearer | — | 200 `SlugAvailability {available, reason?: taken \| reserved \| invalid}` | — |
 | `GET /api/v0/workspaces/{slug}/members` | `listWorkspaceMembers` | bearer | — | 200 `WorkspaceMemberList`（含已不是有效成员的，带 `is_active`） | 404 |
@@ -1168,7 +1168,7 @@ modules/access/
   - 判定每次都读（3.4），不缓存。
   - `Grant` 交回用例：需要比较两个人的用例（改项目成员的角色、移出）直接用它，不再查调用者的角色。
 - **列表**：`GET /workspaces/{slug}/projects` 先 `WorkspaceDirectory`（没有 → 404 `workspace.not_found`），再判定工作区级的 `project.list`（看不到 → 同一个 404），再由适配器的查询按 3.4 的可见性过滤（调用者的工作区角色从 `Grant` 取），`?archived` 决定只要未归档或只要已归档的。
-- **事务**：写操作一个事务，锁按 3.6；读操作不开事务，直接判定（M2 设计 6.4 的"单条语句的写入不开事务"同理，读取之间没有要一致的不变式）。
+- **事务**：写操作一个事务，锁按 3.6；读操作不开事务，直接判定（M2 设计 6.4 的"单条语句的写入不开事务"同理，读取之间没有要一致的不变式）。M5/P4已接通的Get/ListWorkspace为图片能力例外：先预读候选，事务内CallerLock账号N→候选workspace S升序→活成员/权限重验→asset锁与批量CPU签发；列表只返回已锁且仍可见的集合，期间新增留到下次。UpdateWorkspace先账号N再workspace N，锁下读取当前Logo，原子绑定与响应签名在提交前完成；CreateWorkspace无Logo范围，返回真实null。其余图片出口按P4计划逐项接入，不为不返回图片的读写全局改锁。
 
 ---
 

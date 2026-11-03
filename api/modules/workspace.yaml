@@ -82,7 +82,7 @@ paths:
     patch:
       operationId: updateWorkspace
       tags: [workspace]
-      summary: Change a workspace's name, organization size or time zone
+      summary: Change a workspace's name, organization size, time zone or logo
       description: >-
         For the workspace's admins. The fields given change and the others
         stay; the values follow createWorkspace's rules (validation_failed),
@@ -91,9 +91,10 @@ paths:
         exist, is deleted, or of which the caller is not an active member
         answers workspace.not_found; a member or a guest, forbidden. The role
         is decided after the workspace row is locked, so a caller demoted
-        meanwhile is refused.
+        meanwhile is refused. Logo replacement binds the caller's completed preparation
+        atomically; omission retains the current logo and null clears it.
       security: [{bearer: []}]
-      x-problem-codes: [validation_failed, workspace.not_found, forbidden]
+      x-problem-codes: [validation_failed, workspace.not_found, forbidden, asset.not_found, asset.not_uploaded, asset.bound, asset.scope_changed]
       requestBody:
         required: true
         content:
@@ -595,7 +596,7 @@ components:
     Workspace:
       type: object
       additionalProperties: false
-      required: [id, name, slug, organization_size, timezone, logo_url, role, total_members, created_at, updated_at]
+      required: [id, name, slug, organization_size, timezone, logo_asset_id, logo_url, logo_url_expires_at, role, total_members, created_at, updated_at]
       properties:
         id:
           type: string
@@ -607,13 +608,21 @@ components:
           type: string
         organization_size:
           description: One of OrganizationSize's values; null when none was given.
-          type: [string, 'null']
+          oneOf:
+            - $ref: '#/components/schemas/OrganizationSize'
+            - type: 'null'
         timezone:
           description: An IANA time zone name.
           type: string
-        logo_url:
-          description: Null until uploads arrive (M5).
+        logo_asset_id:
           type: [string, 'null']
+          format: uuid
+        logo_url:
+          description: A signed URL for the current valid logo; null if unavailable.
+          type: [string, 'null']
+        logo_url_expires_at:
+          type: [string, 'null']
+          format: date-time
         role:
           $ref: '#/components/schemas/WorkspaceRole'
         total_members:
@@ -716,6 +725,10 @@ components:
       type: object
       additionalProperties: false
       properties:
+        logo_asset_id:
+          description: A completed logo preparation owned by the caller; null clears the current logo.
+          type: [string, 'null']
+          format: uuid
         name:
           description: 1–80 characters, with a letter or a digit, without a web address.
           type: string

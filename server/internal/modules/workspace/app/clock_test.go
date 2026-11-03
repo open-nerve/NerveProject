@@ -13,7 +13,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// Each write on an existing workspace reads the clock once, in its
+// Each write reads its business audit clock once, in its
 // transaction, after its lock and its decision, just before it writes
 // (P2 spec 2.6): a write
 // that queued behind another on the lock never stamps an earlier time than
@@ -26,6 +26,8 @@ import (
 // workspace's lock and the membership's read; the deactivation's
 // memberships, after every workspace's lock, the check of the only admin
 // and the lock of the invitations it deletes.
+// Image-bearing writes additionally read the credential expiry clock before
+// CallerLock; their audit time still comes after all image locks.
 // The clock logs its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	at := clockNow.Format(time.RFC3339Nano)
@@ -37,10 +39,10 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	}{
 		{"updateWorkspace", func() ([]string, error) {
 			_, f := newUpdate()
-			_, err := app.NewUpdateWorkspace(f.workspaces, f.auth, f.tx, clockAt{clockNow, f.log}).
+			_, err := updateWorkspace(f.workspaces, f.auth, f.tx, clockAt{clockNow, f.log}).
 				Execute(as(alice), "acme", domain.WorkspacePatch{Name: ptr("Renamed")})
 			return f.log.calls, err
-		}, append(lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionUpdate), "Now",
+		}, append(slices.Concat([]string{"Now", callerImageCall(alice)}, lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionUpdate)), "WorkspaceBySlug acme", "Now",
 			"UpdateWorkspace "+acme.ID.String()+` name="Renamed" size=<nil> timezone=<nil> by `+alice.ID.String()+" at "+at)},
 		{"updateWorkspacePreferences", func() ([]string, error) {
 			f := newPrefs()

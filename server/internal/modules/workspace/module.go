@@ -113,12 +113,14 @@ const InvitationMACPurpose = "workspace-invitation"
 
 // Deps are what bootstrap gives the module (M3 design 6.6, step 5).
 type Deps struct {
-	Events     shared.EventPublisher
-	Pool       *pgxpool.Pool
-	Tx         shared.TxManager
-	Clock      app.Clock
-	Logger     *slog.Logger
-	Authorizer shared.Authorizer
+	Images        app.ImageReader
+	ImageBindings app.ImageBindings
+	Events        shared.EventPublisher
+	Pool          *pgxpool.Pool
+	Tx            shared.TxManager
+	Clock         app.Clock
+	Logger        *slog.Logger
+	Authorizer    shared.Authorizer
 	// Accounts is identity's Accounts, converted (bootstrap/ports.go).
 	Accounts app.Accounts
 	// Profiles is identity's PublicProfiles, converted (bootstrap/ports.go).
@@ -155,12 +157,12 @@ func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	deactivator := NewDeactivator(DeactivatorDeps{Pool: d.Pool, Clock: d.Clock, Projects: d.Projects})
 	return &Module{assets: app.NewAssetAccess(d.Authorizer), signup: app.NewSignupInvitations(store, d.InvitationMAC), deactivator: deactivator, uc: httpadapter.UseCases{
-		ListWorkspaces: app.NewListWorkspaces(store),
+		ListWorkspaces: app.NewListWorkspaces(app.ListWorkspacesDeps{Workspaces: store, Caller: d.CallerLock, Images: d.Images, Tx: d.Tx, Clock: d.Clock}),
 		CreateWorkspace: app.NewCreateWorkspace(app.CreateWorkspaceDeps{
 			Accounts: d.Accounts, Workspaces: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger, Enabled: d.CreationEnabled,
 		}),
-		GetWorkspace:      app.NewGetWorkspace(store, d.Authorizer),
-		UpdateWorkspace:   app.NewUpdateWorkspace(store, d.Authorizer, d.Tx, d.Clock),
+		GetWorkspace:      app.NewGetWorkspace(app.GetWorkspaceDeps{Workspaces: store, Auth: d.Authorizer, Caller: d.CallerLock, Images: d.Images, Tx: d.Tx, Clock: d.Clock}),
+		UpdateWorkspace:   app.NewUpdateWorkspace(app.UpdateWorkspaceDeps{Workspaces: store, Auth: d.Authorizer, Caller: d.CallerLock, Images: d.Images, Bindings: d.ImageBindings, Tx: d.Tx, Clock: d.Clock}),
 		DeleteWorkspace:   app.NewDeleteWorkspace(store, d.Projects, d.Authorizer, d.Tx, d.Clock, d.Events, d.Logger),
 		Leave:             app.NewLeaveWorkspace(store, d.Profiles, d.Projects, d.Authorizer, d.Tx, d.Clock),
 		ListMembers:       app.NewListWorkspaceMembers(store, d.Profiles, d.Authorizer),
