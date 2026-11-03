@@ -1,6 +1,6 @@
 # M5 / P4 阶段评审记录
 
-> 预检通过、尚未实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
+> 预检通过，T1字段/规则及聚焦回归完成；T2待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
 
 ## 1. 评审方式
 
@@ -24,7 +24,7 @@
 
 ## 5. 实现与plan差异
 
-尚无产品实现。执行中局部决定逐条写台账并回填本节；重大风险依原纪律先提交后上报。
+T1按计划实施。T2接口核对发现SaveAsset有意不写scope/bound_at，改为资产内部专用BindImage，保留恢复写的范围和Revision保护；不扩owner接口或放宽架构守卫。新增小端口的代价是多一个固定SQL路径，具名真实数据库反例必须覆盖。
 
 ## 6. 移交事项
 
@@ -33,3 +33,14 @@ F5–F7页面、29张预设素材及URL缓存属于P6；issue/comment/draft属�
 ## 7. 限制与证据
 
 P4预检原件为本worktree `.superpowers/sdd/P4-profile-images`，P3规划探针已入P3冻结归档；完整路径和命令/时间见re-38。当前未声称P4 API/数据库新字段、真实图片或后续页面已经上线。
+
+
+## 8. T1所属字段、纯规则与SQLC
+
+三owner迁移00035–00037加入四个nullable UUID和cover_builtin_id；即时非deferred NO ACTION、无条件索引、精确cover-01..29及互斥CHECK。纯domain补三态Set/可空值和封面选择规则，sqlc查询/行映射保留所有现有方法签名；project INSERT携带最终封面，仍未接公开绑定API。
+
+真实RED：旧库缺全部五列、合法cover-01失败；领域错误ID/双来源未拒绝、选择一侧未清另一侧；三个仓储遗漏读写字段。GREEN覆盖P3存量行升级不变/默认null、四FK实际23503、全部迁移Up/Down/Up、三态字段/列表/返回映射和同事务回滚。首轮全量迁移因第二次Up预期仍34失败，同步为37后通过，未放宽目录核对。
+
+最终八包无缓存全绿（34.114s）：migrations3.574s、archtest1.696s、identity/workspace/project domain0.233/0.177/0.170s、三个postgres包6.295/13.508/5.810s；具名新测试实际运行。Go lint server/tools均0 issues（28.890s）。make gen已生成且重生成输入不变；首次gen-check因生成文件尚未提交退出2，按Makefile原规则在提交后复核，不放宽守卫。原件task-1-schema-red/cover-red/fields-red/final-green及receipt/inputs、task-1-generation、task-1-gen-check、task-1-lint均在阶段workspace。
+
+P4整体A1–A9暂未关闭。反向清理/完整程序目录T4、公开API T5–T9及全部门禁T13仍待实施，T1不能当作阶段完整交付。

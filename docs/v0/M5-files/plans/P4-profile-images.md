@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，尚未实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T1开始，重大新风险先提交后上报。
+> 预检通过，T1实现与聚焦回归完成，T2待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T2接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -45,20 +45,20 @@
 
 **Interfaces:** 产出nullable asset IDs、Project.CoverBuiltinID、三态patch（Set标志+可空UUID/ID），ProjectRow新增最终cover字段；保留原公开use case签名的领域值，不先接签名。
 
-- [ ] Step 1：写TestProfileImageColumns/TestProjectCoverChoice/Table-driven patch：既有P3用户/工作区/项目升级新列null；有效cover-01/29、两个值同非null拒绝、cover-00/30/空串拒绝，省略/null/值各不同；FK真实23503、即时/索引/所有权元数据。
-- [ ] Step 2：运行具名RED，确认缺列/规则；仅编译缺字段不算行为红。
-- [ ] Step 3：添加三owner迁移、sqlc scope和查询/domain纯值；更新Plane差异；所有源变化经make gen。已有P3数据升级保持既有字段；空库Up/Down往返，不宣称带绑定数据降级无损。
-- [ ] Step 4：`cd server && go test -p 1 ./migrations ./internal/archtest ./internal/modules/identity/domain ./internal/modules/workspace/domain ./internal/modules/project/domain -count=1`；Expected全部通过且具名检查运行。反向清理全程序目录在T4闭环，不提前豁免。
-- [ ] Step 5：记录并提交 `feat(M5/P4): 增加所属模块的图片引用字段和封面规则`。
+- [x] Step 1：写TestProfileImageColumns/TestProjectCoverChoice/Table-driven patch：既有P3用户/工作区/项目升级新列null；有效cover-01/29、两个值同非null拒绝、cover-00/30/空串拒绝，省略/null/值各不同；FK真实23503、即时/索引/所有权元数据。
+- [x] Step 2：运行具名RED，确认缺列/规则；仅编译缺字段不算行为红。
+- [x] Step 3：添加三owner迁移、sqlc scope和查询/domain纯值；更新Plane差异；所有源变化经make gen。已有P3数据升级保持既有字段；空库Up/Down往返，不宣称带绑定数据降级无损。
+- [x] Step 4：`cd server && go test -p 1 ./migrations ./internal/archtest ./internal/modules/identity/domain ./internal/modules/workspace/domain ./internal/modules/project/domain -count=1`；Expected全部通过且具名检查运行。反向清理全程序目录在T4闭环，不提前豁免。
+- [x] Step 5：记录并提交 `feat(M5/P4): 增加所属模块的图片引用字段和封面规则`。
 
 ## Task 2（T2）：资产批量绑定协议
 
-**Files:** asset/app/image_bindings.go、image_binding_rules.go、对应测试；asset/adapter/postgres/image_bindings_test.go；asset/provide.go及新images.go根外观。
+**Files:** asset/app/image_bindings.go、image_binding_rules.go、image_ports.go及对应测试；asset/adapter/postgres/image_bindings.go、queries/images.sql及image_bindings_test.go；asset/provide.go及新images.go根外观。
 
-**Interfaces:** 消费T1字段规则和既有AssetLocker/AssetReader/MetadataWriter；实现access §1的ImageBindingRequest、LockImageBindings/ApplyImageBindings及NewImageBindings。
+**Interfaces:** 消费T1字段规则和既有AssetLocker/MetadataWriter，新增access §1的ImageBindingWriter/BindImage专用写；实现ImageBindingRequest、LockImageBindings/ApplyImageBindings及NewImageBindings。SaveAsset继续不改归属/绑定，未使用的AssetReader不注入。
 
 - [ ] Step 1：TestImageBindings检验两图逆序旧新ID一次排序锁、隐藏优先409、跨申请者/完整scope/过期404、用途422、未uploaded409、bound拒绝；7天exact允许/+1微秒拒绝；当前ID幂等、管理员更替移除旧件、旧删除审计保持。
-- [ ] Step 2：具名RED后实现共同校验器；Lock返回最终锁后Clock时刻，Apply重读相同集合且同At，准备件/旧件写仍SaveAsset；new_project变更仅在Apply设置scope和ProjectID，不回锁owner。
+- [ ] Step 2：具名RED后实现共同校验器；Lock返回最终锁后Clock时刻，Apply重读相同集合且同At，新件经BindImage、旧软删经SaveAsset；new_project变更仅在Apply调用的固定绑定SQL设置scope和ProjectID，不回锁owner。旧SaveAsset不扩写范围，BindImage无事务/Revision冲突/非图片或已绑定负例真实拒绝。
 - [ ] Step 3：`cd server && go test -p 1 ./internal/modules/asset/app ./internal/modules/asset/adapter/postgres -run '^TestImageBindings' -count=1`；Expected具名全GREEN。实际事务测试证明无事务LockAssets报错、Apply失败无部分绑定；变异去掉申请者/范围/7天/排序各应断言失败。
 - [ ] Step 4：受影响app race和lint-go；保存返回时刻/审计证据后提交 `feat(M5/P4): 实现同事务图片绑定和旧引用回收标记`。
 

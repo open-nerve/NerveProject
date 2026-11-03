@@ -36,7 +36,9 @@ type ImageReader interface {
 }
 ```
 
-ImageBindings的app实现接AssetLocker/AssetReader/MetadataWriter/Clock四个消费小端口；ImageReader接AssetLocker/ReadSigner/RuntimeNow。方法必须在调用者已有事务中运行。没有外部对象操作、Access.Within、gate.Enter、账号/owner回调，也不传递SQL/连接/任意闭包。各自构造文件按职责拆，小接口没有暴露完整Storage。
+ImageBindings的app实现接AssetLocker/MetadataWriter/ImageBindingWriter/Clock四个消费小端口；LockAssets已返回完整行，不再注入未消费的AssetReader。ImageReader接AssetLocker/ReadSigner/RuntimeNow。方法必须在调用者已有事务中运行。没有外部对象操作、Access.Within、gate.Enter、账号/owner回调，也不传递SQL/连接/任意闭包。各自构造文件按职责拆，小接口没有暴露完整Storage。
+
+T2代码核对修正：现有SaveAsset刻意不改申请者/scope/bound_at，继续只用于旧件软删/恢复metadata，不放宽它。新增资产内部 `ImageBindingWrite{AssetID,ProjectID,By uuid.UUID; Revision int64; At time.Time}` 与 `ImageBindingWriter.BindImage(context.Context, ImageBindingWrite) (domain.Asset,error)`。固定SQL只将未删、已上传、未绑定的四种图片按Revision设bound_at/审计并递增Revision；仅原new_project行变为project并填ProjectID，其他scope/父列和申请者不变。适配器拒绝无事务调用；未匹配返回原scope_changed。owner两方法及构造边界不变。
 
 LockImageBindings取全部CurrentID/NextID并集UUID升序，验证并返回**最后锁之后**的业务时刻。Apply使用同一完整请求和At、同一ctx事务，再在相同集合取锁并重验（已持锁不追新ID），应用真实变更；不是调用者指定任意bound/deleted状态的入口。校验流程共享一个内部纯规则实现，不能两份逻辑漂移。跨两次调用不允许结束事务/外部I/O。所有需要的旧引用在owner锁下先读到；无变化时不生成资产UPDATE。
 

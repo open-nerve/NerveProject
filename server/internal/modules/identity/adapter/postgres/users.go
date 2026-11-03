@@ -35,6 +35,7 @@ func (s *Store) GetUser(ctx context.Context, id uuid.UUID) (domain.User, error) 
 		return domain.User{}, notFound(err)
 	}
 	return domain.User{
+		AvatarAssetID: row.AvatarAssetID, CoverImageAssetID: row.CoverImageAssetID,
 		ID:          row.ID,
 		Email:       row.Email,
 		FirstName:   row.FirstName,
@@ -48,7 +49,7 @@ func (s *Store) GetUser(ctx context.Context, id uuid.UUID) (domain.User, error) 
 // UpdateUser applies p to account id at now, in one statement, and returns
 // the account; app.ErrNotFound when there is none.
 func (s *Store) UpdateUser(ctx context.Context, id uuid.UUID, p domain.UserPatch, now time.Time) (domain.User, error) {
-	arg := gen.UpdateUserParams{Now: now, ID: id}
+	arg := gen.UpdateUserParams{Now: now, ID: id, SetAvatar: p.SetAvatar, AvatarAssetID: p.AvatarAssetID, SetCoverImage: p.SetCoverImage, CoverImageAssetID: p.CoverImageAssetID}
 	arg.SetFirstName, arg.FirstName = set(p.FirstName)
 	arg.SetLastName, arg.LastName = set(p.LastName)
 	arg.SetDisplayName, arg.DisplayName = set(p.DisplayName)
@@ -58,6 +59,7 @@ func (s *Store) UpdateUser(ctx context.Context, id uuid.UUID, p domain.UserPatch
 		return domain.User{}, notFound(err)
 	}
 	return domain.User{
+		AvatarAssetID: row.AvatarAssetID, CoverImageAssetID: row.CoverImageAssetID,
 		ID:          row.ID,
 		Email:       row.Email,
 		FirstName:   row.FirstName,

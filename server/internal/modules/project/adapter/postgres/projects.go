@@ -26,6 +26,7 @@ func (s *Store) CreateProject(ctx context.Context, p app.ProjectRow) error {
 		return fmt.Errorf("create project: %w", err)
 	}
 	err = s.queries(ctx).CreateProject(ctx, gen.CreateProjectParams{
+		CoverImageAssetID: p.CoverImageAssetID, CoverBuiltinID: p.CoverBuiltinID,
 		ID: p.ID, WorkspaceID: p.WorkspaceID, Name: p.Name, Description: p.Description, Identifier: p.Identifier,
 		Network: int16(p.Network), ProjectLeadID: p.LeadID, LogoProps: logo, Timezone: p.Timezone, CreatedBy: &p.CreatedBy, Now: p.Now,
 	})
@@ -112,6 +113,7 @@ func projectOf(r gen.GetProjectRow) (domain.Project, error) {
 		return domain.Project{}, fmt.Errorf("read logo_props of project %s: %w", r.ID, err)
 	}
 	p := domain.Project{
+		CoverImageAssetID: r.CoverImageAssetID, CoverBuiltinID: r.CoverBuiltinID,
 		ID: r.ID, WorkspaceID: r.WorkspaceID, Name: r.Name, Description: r.Description, Identifier: r.Identifier,
 		Network: domain.Network(r.Network), LeadID: r.ProjectLeadID, DefaultAssigneeID: r.DefaultAssigneeID,
 		CycleView: r.CycleView, ModuleView: r.ModuleView, IssueViewsView: r.IssueViewsView, IntakeView: r.IntakeView,

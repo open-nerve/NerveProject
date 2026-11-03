@@ -49,6 +49,8 @@ type Project struct {
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	DeletedAt            *time.Time
+	CoverImageAssetID    *uuid.UUID
+	CoverBuiltinID       *string
 }
 
 type ProjectMember struct {

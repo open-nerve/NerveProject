@@ -67,7 +67,8 @@ func (s *Store) WorkspaceByID(ctx context.Context, id uuid.UUID) (domain.Workspa
 		return domain.Workspace{}, fmt.Errorf("read workspace: %w", err)
 	}
 	return domain.Workspace{
-		ID: r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
+		LogoAssetID: r.LogoAssetID,
+		ID:          r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
 		TotalMembers: int(r.TotalMembers), CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 	}, nil
 }

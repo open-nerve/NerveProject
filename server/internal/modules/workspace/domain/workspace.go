@@ -18,6 +18,7 @@ import (
 // Workspace is a workspace as a member sees it (M3 design 5.2): its columns,
 // the caller's role and the number of active members.
 type Workspace struct {
+	LogoAssetID      *uuid.UUID
 	ID               uuid.UUID
 	Name             string
 	Slug             string
@@ -42,6 +43,8 @@ type NewWorkspace struct {
 // field stays as it is. The slug is not in it: it never changes (M3 design
 // 3.10).
 type WorkspacePatch struct {
+	SetLogo          bool
+	LogoAssetID      *uuid.UUID
 	Name             *string
 	OrganizationSize *string
 	Timezone         *string

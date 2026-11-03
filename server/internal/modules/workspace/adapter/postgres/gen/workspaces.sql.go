@@ -16,7 +16,7 @@ const createWorkspace = `-- name: CreateWorkspace :one
 INSERT INTO workspaces (id, name, slug, organization_size, timezone, created_by_id, updated_by_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5,
         $6, $6, $7, $7)
-RETURNING id, name, slug, organization_size, timezone, created_at, updated_at
+RETURNING id, name, slug, organization_size, timezone, created_at, updated_at, logo_asset_id
 `
 
 type CreateWorkspaceParams struct {
@@ -37,6 +37,7 @@ type CreateWorkspaceRow struct {
 	Timezone         string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	LogoAssetID      *uuid.UUID
 }
 
 // The audit columns come from the use case's clock (M2 design 3.13); RETURNING gives the values as stored.
@@ -59,6 +60,7 @@ func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams
 		&i.Timezone,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LogoAssetID,
 	)
 	return i, err
 }
@@ -83,7 +85,7 @@ func (q *Queries) DeleteWorkspace(ctx context.Context, arg DeleteWorkspaceParams
 }
 
 const listWorkspaces = `-- name: ListWorkspaces :many
-SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at, m.role,
+SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at, w.logo_asset_id, m.role,
        (SELECT count(*) FROM workspace_members c
         WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members
 FROM workspaces w
@@ -100,6 +102,7 @@ type ListWorkspacesRow struct {
 	Timezone         string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	LogoAssetID      *uuid.UUID
 	Role             int16
 	TotalMembers     int64
 }
@@ -123,6 +126,7 @@ func (q *Queries) ListWorkspaces(ctx context.Context, userID uuid.UUID) ([]ListW
 			&i.Timezone,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LogoAssetID,
 			&i.Role,
 			&i.TotalMembers,
 		); err != nil {
@@ -220,10 +224,11 @@ SET name              = CASE WHEN $1::boolean THEN $2::text ELSE w.name END,
     organization_size = CASE WHEN $3::boolean THEN $4::text
                         ELSE w.organization_size END,
     timezone          = CASE WHEN $5::boolean THEN $6::text ELSE w.timezone END,
-    updated_by_id     = $7,
-    updated_at        = $8
-WHERE w.id = $9
-RETURNING w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+    logo_asset_id     = CASE WHEN $7::boolean THEN $8::uuid ELSE w.logo_asset_id END,
+    updated_by_id     = $9,
+    updated_at        = $10
+WHERE w.id = $11
+RETURNING w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at, w.logo_asset_id,
           (SELECT count(*) FROM workspace_members c
            WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members
 `
@@ -235,6 +240,8 @@ type UpdateWorkspaceParams struct {
 	OrganizationSize    string
 	SetTimezone         bool
 	Timezone            string
+	SetLogo             bool
+	LogoAssetID         *uuid.UUID
 	UpdatedBy           *uuid.UUID
 	Now                 time.Time
 	ID                  uuid.UUID
@@ -248,6 +255,7 @@ type UpdateWorkspaceRow struct {
 	Timezone         string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	LogoAssetID      *uuid.UUID
 	TotalMembers     int64
 }
 
@@ -261,6 +269,8 @@ func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams
 		arg.OrganizationSize,
 		arg.SetTimezone,
 		arg.Timezone,
+		arg.SetLogo,
+		arg.LogoAssetID,
 		arg.UpdatedBy,
 		arg.Now,
 		arg.ID,
@@ -274,13 +284,14 @@ func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams
 		&i.Timezone,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LogoAssetID,
 		&i.TotalMembers,
 	)
 	return i, err
 }
 
 const workspaceByID = `-- name: WorkspaceByID :one
-SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at, w.logo_asset_id,
        (SELECT count(*) FROM workspace_members c
         WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members
 FROM workspaces w
@@ -295,6 +306,7 @@ type WorkspaceByIDRow struct {
 	Timezone         string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	LogoAssetID      *uuid.UUID
 	TotalMembers     int64
 }
 
@@ -310,13 +322,14 @@ func (q *Queries) WorkspaceByID(ctx context.Context, id uuid.UUID) (WorkspaceByI
 		&i.Timezone,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LogoAssetID,
 		&i.TotalMembers,
 	)
 	return i, err
 }
 
 const workspaceBySlug = `-- name: WorkspaceBySlug :one
-SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at, w.logo_asset_id,
        (SELECT count(*) FROM workspace_members c
         WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members
 FROM workspaces w
@@ -331,6 +344,7 @@ type WorkspaceBySlugRow struct {
 	Timezone         string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	LogoAssetID      *uuid.UUID
 	TotalMembers     int64
 }
 
@@ -345,6 +359,7 @@ func (q *Queries) WorkspaceBySlug(ctx context.Context, slug string) (WorkspaceBy
 		&i.Timezone,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LogoAssetID,
 		&i.TotalMembers,
 	)
 	return i, err

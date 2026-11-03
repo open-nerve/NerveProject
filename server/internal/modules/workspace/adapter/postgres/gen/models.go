@@ -21,6 +21,7 @@ type Workspace struct {
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	DeletedAt        *time.Time
+	LogoAssetID      *uuid.UUID
 }
 
 type WorkspaceMember struct {

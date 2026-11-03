@@ -14,24 +14,26 @@ import (
 
 const createProject = `-- name: CreateProject :exec
 INSERT INTO projects (id, workspace_id, name, description, identifier, network, project_lead_id, logo_props, timezone,
-                      created_by_id, updated_by_id, created_at, updated_at)
+                      created_by_id, updated_by_id, created_at, updated_at, cover_image_asset_id, cover_builtin_id)
 VALUES ($1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10, $10,
-        $11, $11)
+        $11, $11, $12, $13)
 `
 
 type CreateProjectParams struct {
-	ID            uuid.UUID
-	WorkspaceID   uuid.UUID
-	Name          string
-	Description   string
-	Identifier    string
-	Network       int16
-	ProjectLeadID *uuid.UUID
-	LogoProps     []byte
-	Timezone      string
-	CreatedBy     *uuid.UUID
-	Now           time.Time
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	Name              string
+	Description       string
+	Identifier        string
+	Network           int16
+	ProjectLeadID     *uuid.UUID
+	LogoProps         []byte
+	Timezone          string
+	CreatedBy         *uuid.UUID
+	Now               time.Time
+	CoverImageAssetID *uuid.UUID
+	CoverBuiltinID    *string
 }
 
 // createProject (M3 design 3.6): the audit columns come from the use case's clock (M2 design 3.13); the columns the
@@ -49,6 +51,8 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) er
 		arg.Timezone,
 		arg.CreatedBy,
 		arg.Now,
+		arg.CoverImageAssetID,
+		arg.CoverBuiltinID,
 	)
 	return err
 }
@@ -56,7 +60,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) er
 const getProject = `-- name: GetProject :one
 SELECT p.id, p.workspace_id, p.name, p.description, p.identifier, p.network, p.project_lead_id, p.default_assignee_id,
        p.cycle_view, p.module_view, p.issue_views_view, p.intake_view, p.guest_view_all_features, p.archive_in,
-       p.archived_at, p.logo_props, p.timezone, p.created_at, p.updated_at, m.role AS member_role, u.sort_order,
+       p.archived_at, p.logo_props, p.cover_image_asset_id, p.cover_builtin_id, p.timezone, p.created_at, p.updated_at, m.role AS member_role, u.sort_order,
        ARRAY(SELECT a.member_id FROM project_members a
              WHERE a.project_id = p.id AND a.is_active AND a.deleted_at IS NULL
              ORDER BY a.created_at, a.id)::uuid[] AS member_ids
@@ -90,6 +94,8 @@ type GetProjectRow struct {
 	ArchiveIn            int32
 	ArchivedAt           *time.Time
 	LogoProps            []byte
+	CoverImageAssetID    *uuid.UUID
+	CoverBuiltinID       *string
 	Timezone             string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -121,6 +127,8 @@ func (q *Queries) GetProject(ctx context.Context, arg GetProjectParams) (GetProj
 		&i.ArchiveIn,
 		&i.ArchivedAt,
 		&i.LogoProps,
+		&i.CoverImageAssetID,
+		&i.CoverBuiltinID,
 		&i.Timezone,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -152,7 +160,7 @@ func (q *Queries) IdentifierTaken(ctx context.Context, arg IdentifierTakenParams
 const listProjects = `-- name: ListProjects :many
 SELECT p.id, p.workspace_id, p.name, p.description, p.identifier, p.network, p.project_lead_id, p.default_assignee_id,
        p.cycle_view, p.module_view, p.issue_views_view, p.intake_view, p.guest_view_all_features, p.archive_in,
-       p.archived_at, p.logo_props, p.timezone, p.created_at, p.updated_at, m.role AS member_role, u.sort_order,
+       p.archived_at, p.logo_props, p.cover_image_asset_id, p.cover_builtin_id, p.timezone, p.created_at, p.updated_at, m.role AS member_role, u.sort_order,
        ARRAY(SELECT a.member_id FROM project_members a
              WHERE a.project_id = p.id AND a.is_active AND a.deleted_at IS NULL
              ORDER BY a.created_at, a.id)::uuid[] AS member_ids
@@ -192,6 +200,8 @@ type ListProjectsRow struct {
 	ArchiveIn            int32
 	ArchivedAt           *time.Time
 	LogoProps            []byte
+	CoverImageAssetID    *uuid.UUID
+	CoverBuiltinID       *string
 	Timezone             string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -236,6 +246,8 @@ func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]L
 			&i.ArchiveIn,
 			&i.ArchivedAt,
 			&i.LogoProps,
+			&i.CoverImageAssetID,
+			&i.CoverBuiltinID,
 			&i.Timezone,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -357,9 +369,11 @@ SET name                    = coalesce($1::text, p.name),
     archive_in              = coalesce($14::integer, p.archive_in),
     logo_props              = coalesce($15::jsonb, p.logo_props),
     timezone                = coalesce($16::text, p.timezone),
-    updated_by_id           = $17::uuid,
-    updated_at              = $18
-WHERE p.id = $19
+    cover_image_asset_id    = CASE WHEN $17::boolean THEN $18::uuid ELSE p.cover_image_asset_id END,
+    cover_builtin_id        = CASE WHEN $19::boolean THEN $20::text ELSE p.cover_builtin_id END,
+    updated_by_id           = $21::uuid,
+    updated_at              = $22
+WHERE p.id = $23
 `
 
 type UpdateProjectParams struct {
@@ -379,6 +393,10 @@ type UpdateProjectParams struct {
 	ArchiveIn            *int32
 	LogoProps            []byte
 	Timezone             *string
+	SetCoverImage        bool
+	CoverImageAssetID    *uuid.UUID
+	SetCoverBuiltin      bool
+	CoverBuiltinID       *string
 	UpdatedBy            uuid.UUID
 	Now                  time.Time
 	ID                   uuid.UUID
@@ -404,6 +422,10 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) er
 		arg.ArchiveIn,
 		arg.LogoProps,
 		arg.Timezone,
+		arg.SetCoverImage,
+		arg.CoverImageAssetID,
+		arg.SetCoverBuiltin,
+		arg.CoverBuiltinID,
 		arg.UpdatedBy,
 		arg.Now,
 		arg.ID,

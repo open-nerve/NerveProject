@@ -251,17 +251,19 @@ type ProjectArchiver interface {
 // and the time of the use case's clock. Every column it does not name takes
 // its default.
 type ProjectRow struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	Name        string
-	Description string
-	Identifier  string
-	Network     domain.Network
-	LeadID      *uuid.UUID
-	LogoProps   domain.LogoProps
-	Timezone    string
-	CreatedBy   uuid.UUID
-	Now         time.Time
+	CoverImageAssetID *uuid.UUID
+	CoverBuiltinID    *string
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	Name              string
+	Description       string
+	Identifier        string
+	Network           domain.Network
+	LeadID            *uuid.UUID
+	LogoProps         domain.LogoProps
+	Timezone          string
+	CreatedBy         uuid.UUID
+	Now               time.Time
 }
 
 // MemberRow is a project membership to insert, active.

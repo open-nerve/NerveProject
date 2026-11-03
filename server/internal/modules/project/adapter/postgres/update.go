@@ -51,6 +51,7 @@ func (s *Store) ShareProject(ctx context.Context, id uuid.UUID) (p app.LockedPro
 // or domain.ErrNameTaken.
 func (s *Store) UpdateProject(ctx context.Context, id uuid.UUID, p domain.ProjectPatch, by uuid.UUID, now time.Time) error {
 	arg := gen.UpdateProjectParams{
+		SetCoverImage: p.SetCoverImage, CoverImageAssetID: p.CoverImageAssetID, SetCoverBuiltin: p.SetCoverBuiltin, CoverBuiltinID: p.CoverBuiltinID,
 		ID: id, Name: p.Name, Description: p.Description, Identifier: p.Identifier, SetLead: p.SetLead, ProjectLeadID: p.LeadID,
 		SetDefaultAssignee: p.SetDefaultAssignee, DefaultAssigneeID: p.DefaultAssigneeID, CycleView: p.CycleView, ModuleView: p.ModuleView,
 		IssueViewsView: p.IssueViewsView, IntakeView: p.IntakeView, GuestViewAllFeatures: p.GuestViewAllFeatures, Timezone: p.Timezone,

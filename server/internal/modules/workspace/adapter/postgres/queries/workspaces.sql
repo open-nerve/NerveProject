@@ -3,12 +3,12 @@
 INSERT INTO workspaces (id, name, slug, organization_size, timezone, created_by_id, updated_by_id, created_at, updated_at)
 VALUES (sqlc.arg(id), sqlc.arg(name), sqlc.arg(slug), sqlc.narg(organization_size), sqlc.arg(timezone),
         sqlc.arg(created_by), sqlc.arg(created_by), sqlc.arg(now), sqlc.arg(now))
-RETURNING id, name, slug, organization_size, timezone, created_at, updated_at;
+RETURNING id, name, slug, organization_size, timezone, created_at, updated_at, logo_asset_id;
 
 -- name: ListWorkspaces :many
 -- listWorkspaces (M3 design 3.12): the undeleted workspaces of which the user is an active member, by name,
 -- then id, with his role and the number of active members.
-SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at, m.role,
+SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at, w.logo_asset_id, m.role,
        (SELECT count(*) FROM workspace_members c
         WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members
 FROM workspaces w
@@ -17,7 +17,7 @@ WHERE m.member_id = sqlc.arg(user_id) AND m.is_active AND m.deleted_at IS NULL A
 ORDER BY w.name, w.id;
 
 -- name: WorkspaceBySlug :one
-SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at, w.logo_asset_id,
        (SELECT count(*) FROM workspace_members c
         WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members
 FROM workspaces w
@@ -25,7 +25,7 @@ WHERE w.slug = sqlc.arg(slug) AND w.deleted_at IS NULL;
 
 -- name: WorkspaceByID :one
 -- acceptWorkspaceInvitation's answer, read in its transaction after the membership changed.
-SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at, w.logo_asset_id,
        (SELECT count(*) FROM workspace_members c
         WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members
 FROM workspaces w
@@ -39,10 +39,11 @@ SET name              = CASE WHEN sqlc.arg(set_name)::boolean THEN sqlc.arg(name
     organization_size = CASE WHEN sqlc.arg(set_organization_size)::boolean THEN sqlc.arg(organization_size)::text
                         ELSE w.organization_size END,
     timezone          = CASE WHEN sqlc.arg(set_timezone)::boolean THEN sqlc.arg(timezone)::text ELSE w.timezone END,
+    logo_asset_id     = CASE WHEN sqlc.arg(set_logo)::boolean THEN sqlc.narg(logo_asset_id)::uuid ELSE w.logo_asset_id END,
     updated_by_id     = sqlc.arg(updated_by),
     updated_at        = sqlc.arg(now)
 WHERE w.id = sqlc.arg(id)
-RETURNING w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+RETURNING w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at, w.logo_asset_id,
           (SELECT count(*) FROM workspace_members c
            WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members;
 
