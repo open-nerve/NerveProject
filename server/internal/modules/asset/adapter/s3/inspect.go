@@ -36,7 +36,7 @@ func (s *Store) inspect(ctx context.Context, key domain.ObjectKey) (domain.Objec
 }
 
 func objectInfo(key domain.ObjectKey, size *int64, media, tag *string, modified *time.Time, metadata map[string]string) (domain.ObjectInfo, error) {
-	if size == nil || *size < 1 || *size > domain.MaxObjectSize || media == nil || !domain.ValidMediaType(*media) || tag == nil || !validETag(*tag) || modified == nil || modified.IsZero() {
+	if !validObjectMetadata(size, tag, modified) || media == nil || !domain.ValidMediaType(*media) {
 		return domain.ObjectInfo{}, errors.New("invalid S3 object metadata")
 	}
 	// The fixed scalar fields fit in 64 bytes; bound all variable fields,
@@ -49,6 +49,10 @@ func objectInfo(key domain.ObjectKey, size *int64, media, tag *string, modified 
 		return domain.ObjectInfo{}, errors.New("S3 object metadata exceeds limit")
 	}
 	return domain.ObjectInfo{Key: key, Size: *size, ContentType: *media, ETag: *tag, ModifiedAt: *modified}, nil
+}
+
+func validObjectMetadata(size *int64, tag *string, modified *time.Time) bool {
+	return size != nil && *size >= 1 && *size <= domain.MaxObjectSize && tag != nil && validETag(*tag) && modified != nil && !modified.IsZero()
 }
 
 // Require one strong opaque HTTP entity tag. A wildcard or a list would turn

@@ -30,7 +30,18 @@ func (t originTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil || origin != t.origin || (req.Host != "" && !strings.EqualFold(req.Host, req.URL.Host)) {
 		return nil, errors.New("S3 request destination is outside configured origin")
 	}
-	return t.next.RoundTrip(req)
+	response, err := t.next.RoundTrip(req)
+	if err != nil {
+		return response, err
+	}
+	if limit, ok := req.Context().Value(metadataBudgetKey{}).(int64); ok {
+		if response.ContentLength > limit {
+			_ = response.Body.Close()
+			return nil, errors.New("S3 metadata response exceeds limit")
+		}
+		response.Body = &metadataBody{ReadCloser: response.Body, left: limit}
+	}
+	return response, nil
 }
 
 func urlOrigin(u *url.URL) (string, error) {

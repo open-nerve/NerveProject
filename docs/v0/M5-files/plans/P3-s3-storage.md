@@ -1,7 +1,7 @@
 # M5 / P3 S3 存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T4已完成，T5待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
+> 预检通过，T1–T5已完成，T6待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
 
 **Goal：** 为既有资产用例接入真实 S3 私有存储，完成 F4、部署配置和 local 回归。
 
@@ -90,15 +90,15 @@
 
 ## Task 5（T5）：有界清单、晚到文件和恢复
 
-**Files：** 新s3/inventory.go、inventory_test.go、recovery_integration_test.go；必要app/storage_s3_recovery_test.go；测试代理拆fault_proxy_test.go。P2清理状态机不改。
+**Files：** 新s3/inventory.go、metadata_body.go、inventory_test.go、inventory_wire_test.go、recovery_integration_test.go；复用inspect元数据验证与transport响应上限；真实数据库恢复放postgres/s3_recovery_test.go与s3_recovery_process_test.go，受控代理在测试专用platform/s3test/fault_proxy.go。P2清理状态机不改。
 
 **Interfaces：** List(ctx,token,limit)、SweepTemporary(ctx,cutoff,limit,token)原签名，调用现有清理用例；原ObjectAfter仍由app拥有。
 
-- [ ] Step 1：TestS3Inventory/TestS3LateObjects：limit1真实多页、邻prefix不动、token中断恢复、空/重复/倒序/非法key/超限token失败；temporary空token耗尽，非法参数拒绝。受控延迟真实PUT/COPY在客户端退出后落地，candidate或unknown实物仍可恢复；业务快进不提前跨runtime24h。
-- [ ] Step 2：`cd server && go test ./internal/modules/asset/adapter/s3 ./internal/modules/asset/app -run 'TestS3(Inventory|LateObjects|Recovery)$' -count=1`记录RED，所有延迟有清晰时间/同步点而非盲sleep。
-- [ ] Step 3：实现严格finite ListObjectsV2、opaqueNext、元数据验证及S3无tmp适配；使用既有River/P2恢复装配，不新增provider游标状态表。
-- [ ] Step 4：GREEN并做prefix移除、Next不前进/页内恢复、runtime改business三类性质变异；真实重启后DB/桶实物均收敛，旧key不重用；race/lint/archtest。
-- [ ] Step 5：提交`feat(M5/P3): 接入有限对象清单和迟到文件恢复验证`。
+- [x] Step 1：TestS3Inventory/TestS3LateObjects：limit1真实多页、邻prefix不动、token中断恢复、空/重复/倒序/非法key/超限token失败；temporary空token耗尽，非法参数拒绝。受控延迟真实PUT/COPY在客户端退出后落地，candidate或unknown实物仍可恢复；业务快进不提前跨runtime24h。
+- [x] Step 2：`cd server && go test -p 1 ./internal/modules/asset/adapter/s3 ./internal/modules/asset/adapter/postgres -run 'TestS3(Inventory|LateObjects|Recovery)$' -count=1`记录清单行为RED；迟到/恢复为复用既有状态机的集成验证，其区分度由Step4真实变异证明。所有延迟有清晰时间/同步点而非盲sleep。
+- [x] Step 3：实现严格finite ListObjectsV2、opaqueNext、元数据验证及S3无tmp适配；清单XML在SDK解析前限制为64KiB + limit×16KiB（含未知节点/chunked正文），不限制下载流；使用既有River/P2恢复装配，不新增provider游标状态表。
+- [x] Step 4：GREEN并做prefix移除、Next不前进/页内恢复、runtime改business三类性质变异；真实重启后DB/桶实物均收敛，旧key不重用；race/lint/archtest。
+- [x] Step 5：提交`feat(M5/P3): 接入有限对象清单和迟到文件恢复验证`。
 
 ## Task 6（T6）：单一组合根与完整业务闭环
 
@@ -133,7 +133,7 @@
 - [ ] Step 1：TestS3Capacity1B5MiB100MiB/TestS3Resources：流生成/增量hash，100MiB不能在Go进程整体ReadAll；记录基线/峰值内存、吞吐、实际环境。慢流在operation_timeout或caller取消后及时结束，等待者/reader/idle连接/DB/gate可再次使用。
 - [ ] Step 2：`cd server && go test ./internal/modules/asset/adapter/s3 ./internal/bootstrap -run 'Test(S3Capacity1B5MiB100MiB|S3Resources|AssetS3Recovery)$' -count=1`；若新增性质先RED后实现GREEN，不用调大范围掩盖失败；100MiB需配置原传输最大预算覆盖。
 - [ ] Step 3：确认T1–T7至少15性质变异已实红（双秘密源、秘密日志、签名长度/类型、期限、源条件、目的条件、prefix、缺桶错误分类、versioning、redirect、reader、恢复cursor、CSP、时钟），原hash全恢复；缺项补有杀伤力测试，不计编译红。
-- [ ] Step 4：`cd server && go test -race -count=5 ./internal/modules/asset/adapter/s3 ./internal/modules/asset/app ./internal/bootstrap -run 'TestS3(ObjectFailures|LateObjects|Recovery)$|TestAssetS3Recovery$'`记录所选每组5轮且无死锁/竞争；架构/生成/完整路由守卫通过。失败含环境中断也保留原件，所有测试容器已正常清理。
+- [ ] Step 4：`cd server && go test -race -p 1 -count=5 ./internal/modules/asset/adapter/s3 ./internal/modules/asset/adapter/postgres ./internal/bootstrap -run 'TestS3(ObjectFailures|LateObjects|Recovery)$|TestAssetS3Recovery$'`记录所选每组5轮且无死锁/竞争；架构/生成/完整路由守卫通过。失败含环境中断也保留原件，所有测试容器已正常清理。
 - [ ] Step 5：更新A1–A8证据、边界和代价，提交`test(M5/P3): 验证容量边界和存储故障恢复`。
 
 ## Task 9（T9）：全量门禁和首次产品检查点

@@ -1,6 +1,6 @@
 # M5 / P3 S3 存储合同
 
-> 预检通过，T1–T4配置、客户端、预签与共享实物合同已完成，T5待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
+> 预检通过，T1–T5配置、客户端、预签、实物合同与有限恢复已完成，T6待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
 
 ## 1. 目的、范围和方案
 
@@ -61,7 +61,7 @@ Delete 缺失幂等成功，其他失败必须保留；只操作本 prefix 的�
 
 ## 5. 清单、晚到数据和恢复
 
-ListObjectsV2 每次只访问独占 prefix，limit 1..1000；结果必须严格升序、无重复、每个 key 都能从确切 prefix 还原为合法 u/o key，大小/时间/ETag有效。Next 是不解释的 provider ContinuationToken，最长8192字节；空表示耗尽。截断但无 Next、Next不前进、超页、越界 key、异常布局一律明确失败，不全桶扫描、不无界缓存。P2 的 token+ObjectAfter 负责页内进度，页不是快照。
+ListObjectsV2 每次只访问独占 prefix，limit 1..1000；结果必须严格升序、无重复、每个 key 都能从确切 prefix 还原为合法 u/o key，大小/时间/ETag有效。Next 是不解释的 provider ContinuationToken，最长8192字节；空表示耗尽。截断但无 Next、Next不前进、超页、越界 key、异常布局一律明确失败，不全桶扫描、不无界缓存。清单响应XML在SDK解析前限制为64KiB + limit×16KiB（含未知节点及chunked正文），超出明确失败，不把同一限制用于文件GET流。P2 的 token+ObjectAfter 负责页内进度，页不是快照。
 
 S3 没有 local tmp：TemporaryCleaner 校验 context、非零 cutoff、limit1..1000、token必须为空，然后返回耗尽（next空/removed0）。app 不能按driver新增分支。driver/prefix变更不保证旧cursor或旧资产迁移，部署不热换数据归属。
 
@@ -92,7 +92,7 @@ F4 在真正应用 origin 和浏览器 fetch/File/Blob 中完成 prepare→raw P
 - [ ] A1 配置/活动驱动、秘密来源/文件上限/日志遮盖、只读启动和单版本限制有真实负例；依赖锁定和纯层/导入守卫不放宽。
 - [x] A2 local/S3同一实物合同均通过；签名方法/大小/类型/期限/篡改、GET/HEAD和取消后的reader有独立断言。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§10/§11，T4最终race的两Factory共享合同及S3签名/实物用例。
 - [ ] A3 源/目的双条件COPY、同大小异内容/并发目的/源改变、200内嵌错误和错误分类证明final不可变，DB提交故障不丢candidate。
-- [ ] A4 有限prefix清单、opaque cursor、页内/进程恢复、后到实物回收、邻域保护、双时钟和无tmp合同通过。
+- [x] A4 有限prefix清单、opaque cursor、页内/进程恢复、后到实物回收、邻域保护、双时钟和无tmp合同通过。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§12，真实S3/PG与新OS进程River续跑。
 - [ ] A5 S3完整Nerve API/PG/实物闭环、权限撤销/锁外I/O/零DML和原local回归；路由目录两driver准确。
 - [ ] A6 精确CORS/CSP及三浏览器F4通过，实际File长度/类型绑定、匿名/错误origin/未准许CSP均受测；无新附件UI。
 - [ ] A7 1B/默认5MiB/最大100MiB流式容量、真实慢流/取消、连接/资源回收有记录；不以本机吞吐承诺任意公网性能。

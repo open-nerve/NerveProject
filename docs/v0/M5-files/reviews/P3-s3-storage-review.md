@@ -1,6 +1,6 @@
 # M5 / P3 阶段评审记录
 
-> spec/plan预检通过，T1–T4配置、客户端、预签与实物合同已完成，T5待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
+> spec/plan预检通过，T1–T5配置、客户端、预签、实物合同与有限恢复已完成，T6待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
 
 ## 1. 评审方式
 
@@ -8,11 +8,11 @@
 
 ## 2. 验收标准逐条核对
 
-[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A2已由T3/T4证据关闭，其余尚未逐条关闭；T1–T4证据见§8–§11，A1还需T6的活动驱动装配核对。预检固定SDK/真实服务协议和版本化桶反例只为可行性证据，不提前打勾；准确原件和范围见re-36。
+[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A2/A4已由T3–T5证据关闭，其余尚未逐条关闭；T1–T5证据见§8–§12，A1还需T6的活动驱动装配核对。预检固定SDK/真实服务协议和版本化桶反例只为可行性证据，不提前打勾；准确原件和范围见re-36。
 
 ## 3. 执行中的决定
 
-预检局部裁定为官方SDK/同版测试helper、never-versioned桶、精确origin/静态凭据、真实签名秒适配、S3读no-store及可选local raw接线；每项原因和代价见spec/re-36。T1局部裁定见§8：同一配置规则验证环境/文件值，未启用驱动也拒绝明确冲突，YAML源限制在合并覆盖前执行。
+预检局部裁定为官方SDK/同版测试helper、never-versioned桶、精确origin/静态凭据、真实签名秒适配、S3读no-store及可选local raw接线；每项原因和代价见spec/re-36。T1局部裁定见§8：同一配置规则验证环境/文件值，未启用驱动也拒绝明确冲突，YAML源限制在合并覆盖前执行。T5将XML流量边界置于SDK解析前，数据库/River恢复测试复用PG夹具及独立进程，理由/代价见§12。
 
 ## 4. 整分支评审的发现与处理
 
@@ -74,3 +74,16 @@ P2已完成并归档；P3接续S3/CORS/CSP/真实合同，M0超时handoff只记�
 - 行为RED为S3 14.899s/app14.163s；首轮具名GREEN21.809s/14.282s。5个实际性质变异移除源条件、目的条件、EOF后的取消检查、Close释放和删桶防线，全部命中具体断言且hash恢复；累计15个，但A8的后续恢复交错与5轮race仍待T5/T8，不提前关闭。
 - 最终完整受影响race通过：S3 57.713s、app15.287s、local6.727s、archtest5.200s；4195个非文档输入哈希与成员集合不变，见task-4-final-green-receipt.json/inputs。server/tools lint均0 issues；本轮自有S3容器全部回收，只读清单为空。全部原始日志/变异存于task-4-*，等待T11归档。
 - 本Task关闭A2。A3的DB提交故障和完整业务接线仍T6；清单/迟到对象、浏览器、容量、整审和阶段CI未提前标完成。
+
+
+## 12. T5有限清单、迟到实物与持久恢复
+
+- ListObjectsV2只访问独占prefix并设置MaxKeys；limit1真实跨页、关闭客户端和删除前页后继续原token。严格校验升序、无重复、u/o key、size/ETag/时间、截断/Next一致性、无CommonPrefixes和页上限；异常页明确失败。S3 TemporaryCleaner验证context/cutoff/limit/空token后耗尽，app没有新增driver分支。
+- 局部资源裁定：仅清单XML在SDK解析前设64KiB + limit×16KiB预算，兼容chunked正文，读到溢出哨兵即失败；用同一16KiB对象元数据上界及固定协议余量形成有限预算，不能只在SDK分配后检查对象数量。代价是返回过大冗余XML的提供方明确失败；下载正文不受此限制。去掉守卫后96KiB未知节点反例真实转为错误接受。
+- 测试专用FaultProxy只转发本夹具，保持已签Host/path/query；通过通道暂停一个指定请求或最后上传字节，后台请求独立限时15s，缓冲测试输入/响应各不超过1MiB，关闭时释放。真实PUT在客户端取消且URL到期后仍落地；真实COPY在客户端取消、目的删除后仍产生原字节。此证据不意味着到期可开始新上传。
+- PG清理先以业务+61天证明活候选runtime lease仍保留，再明确快进注入的清理runtime并确认缺对象/移除候选，最后放行实际COPY。迟到key不被DB重新发布，runtime24h相等不删、+1µs删除；已绑定live final字节始终保留。DELETE实际成功但响应被扣住，取消后reclaiming候选仍持久化；新Store重试幂等删除，审计不变。
+- River测试真实持久化非空provider token与页内ObjectAfter；停runner、关Store/连接池后，以当前Go测试二进制启动独立OS进程，重新连接同一自有DB/桶继续原job。原cutoff不变，原5个孤立对象收敛；扫描后落在游标之前的低key留给新周期发现，邻prefix的abc实物不变。子进程只收测试生成的stdin配置，不查外部凭据。
+- 测试位置裁定：有数据库/River行为的用例放asset/adapter/postgres测试包，直接复用既有PG夹具；受控代理放已受生产导入/二进制禁止规则约束的s3test。避免把PG/River依赖加进存储实现。代价是聚焦命令必须同时选择s3和postgres；原app/清理状态机代码完全未改。
+- 清单setup缺方法编译RED不计行为；真实行为RED14.610s→GREEN14.548s。迟到请求首轮18.436s通过，完整恢复第二轮17.593s通过；首次恢复失败来自测试SDK的bytes.Buffer不可seek，改用bytes.Reader，未改变生产逻辑，原件保留。
+- 5个独立性质变异分别去掉prefix、重复token拒绝、XML预算、把runtime年龄换成business、在页内中断时提前推进页token，全部命中具体断言并恢复原hash；累计20个，A8的5轮race仍在T8。最终受影响race通过：s3 88.265s、app 15.413s、postgres 24.385s、s3test 19.891s、archtest 5.152s；4203个非文档输入hash/成员集合不变。server/tools lint均0 issues，关键词76/14无命中，自有S3容器已回收。
+- 本Task关闭A4；全部原件在当前worktree .superpowers/sdd/P3-s3-storage/task-5-*，T11归档。业务装配、数据库提交故障、F4浏览器、容量与最终整审/阶段CI仍待后续Task，不提前关闭A1/A3/A5–A10。
