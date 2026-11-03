@@ -1,6 +1,6 @@
 # M5 / P3 阶段评审记录
 
-> T1–T8完成；T9原本地七项通过，检查点6fc79a59的CI服务端暴露测试时间精度错误。T10一次整审和两项局部修复完成红绿/主控复审，修复后完整七项及三浏览器均通过；准确最后分支/main CI与归档待核。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[整审re-37](../../../reviews/re-37-M5P3整体审核.md)。
+> P3已完成；最终分支06820e34与noff main5807a0d6的精确CI分别全绿，归档及清理后核验通过，P4预检完成。基线main2d1bcf0c；详见§19，以下逐Task记录保留历史时点。
 
 ## 1. 评审方式
 
@@ -8,7 +8,7 @@
 
 ## 2. 验收标准逐条核对
 
-[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A1–A8已由T1–T8证据关闭；A9本地门禁和审查已通过，等待准确最终分支CI，A10等待main/归档及P4预检。证据矩阵见§18，不用预检探针代替真实Nerve、浏览器和恢复验收。
+[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A1–A8已由T1–T8证据关闭；A9/A10由§19精确分支/main CI、归档清理及P4预检收据关闭。证据矩阵见§18，不用预检探针代替真实Nerve、浏览器和恢复验收。
 
 ## 3. 执行中的决定
 
@@ -158,5 +158,14 @@ P2已完成并归档；P3交付S3/CORS/CSP/真实合同和容量边界。绑定/
 | A6 浏览器 | §14及§17；T7三引擎/CSP性质变异、I1后3/3新复验 |
 | A7 容量/资源 | §15；1B/5MiB/100MiB流式hash、真实16秒慢流、单连接取消/复用与堆指标；§17专属资源9/9 |
 | A8 变异/race | §15；25个真实断言变异、四组各五轮race、失败/恢复hash保留；I2另五轮race |
-| A9 七项/整审/准确branch CI | §16原树本地通过及远端失败分别记；§17修复，re-37完整范围；最后HEAD CI待独立收据 |
-| A10 main/归档/P4 | T11待实施；原件保留到归档校验，M5总体及后续handoff不提前关闭 |
+| A9 七项/整审/准确branch CI | §16原树本地通过及远端失败分别记；§17修复，re-37完整范围；最终06820e34、CI41588478051全绿，见§19 |
+| A10 main/归档/P4 | T11完成；main5807a0d6、CI41591764345，2251文件归档核验、清理与P4预检，见§19 |
+
+## 19. 集成、归档与P4预检（2026-11-03）
+
+- 最终分支完整SHA为06820e34a0a9ac7b89e235b667aba151ae1fa7b4；[CI41588478051](https://github.com/open-nerve/NerveProject/actions/runs/41588478051) server/web/e2e全成功，E2E345项、16.4m。原6fc79a59失败仍保留，不改写成成功。
+- 按负责人连续授权，用noff合入main5807a0d6e369c486e98e4cb00389d8b309322221；两父为2d1bcf0c和06820e34，merge tree与最终分支相同（8605b724c28ba6cba74e69a2c4cef1b5f8a84d42）。系统git推送后，[main CI41591764345](https://github.com/open-nerve/NerveProject/actions/runs/41591764345)三作业全成功，E2E345项、13.9m，无重跑。
+- 完整原件归档根：`/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P3-integration-20261103`。原worktree的`.superpowers`→`payload/superpowers`，`e2e/test-results`→`payload/e2e-test-results`，`e2e/playwright-report`→`payload/e2e-playwright-report`。逐项hash/bytes/mode/membership核对：3572条目、2251文件、71988956字节、unknown=0；生成物/依赖缓存明确列为可重建，见manifest.json。
+- 归档前确认main..codex/m5-p3为0，工作树干净；正常删除远端分支、worktree和本地分支（无force）。清理后再次运行verify_archive.py通过，根目录仍main、origin/main同SHA；外部post-cleanup.json记录后续收据，不修改冻结payload。
+- T11的归档后接续台账在主目录`.superpowers/sdd/P3-s3-storage`，从冻结原件复制再追加，避免伪称归档前已经完成P4预检。P4以准确main5807a0d6建隔离worktree，三份spec、15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)通过；本次仅文档预检，未冒充实现。
+- A1–A10全部有证据，P3关闭。P3-M1测试双故障诊断与P1焦点Minor仍交P8；M5总体和输入handoff保持开放。完整27项执行裁定及代价见re-37附录。

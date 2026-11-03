@@ -157,6 +157,8 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 | 工作项的计数：项目的 `intake_count`（M7）、`total_issues` 一类，工作区成员的 `draft_issue_count`（M4） | 3 | 不定义，删掉前端的读取，由产生它的 M 加回 |
 | `Project.is_favorite`（M7 的收藏） | 3 | 不定义。项目卡片上的收藏按钮、建项目之后"加入收藏"的一步（`core/components/projects/create/root.tsx:53`）、`project.store.ts` 的 `addProjectToFavorites`、`removeProjectFromFavorites` 和 `favoriteProjectIds` getter（`:228-245`，没有读者，成为死代码），以及 `favorite.store.ts:284-287` 移除收藏时把 `projectMap[…].is_favorite` 置为假的项目分支（`Project` 没有这个字段，不删就编译不过），在 P8b 删除，M7 随收藏的接口加回（13.2）。旧 `ProjectService` 中三个收藏方法本来就没有调用方，一并删除 |
 
+**M5/P4接续合同（预检通过，未实施）：** workspace logo、project自定义/预设封面和成员头像由owner现有权限返回短期URL/期限；项目一次POST原子绑定。全部同DTO出口和既有MAC邀请预览均纳入，OrganizationSize响应收紧为既有六值或null。读取账号第一把、W→P→asset，成员目标账号不倒序锁；公开预览仍仅固定workspace图标能力。新增四条反向FK均即时NO ACTION，由identity→workspace→project条件解除，再删除eligible资产，目录逐项证明且不豁免未知边。详见[M5/P4三份合同](../M5-files/specs/P4-profile-images.md)，M3原null规则是实施前状态，M5输入交接仍开放。
+
 ### 3.3 模块划分与跨模块的协作
 - **三个模块**，照总体设计 6.2：
   - `workspace`：工作区、成员、邀请、工作区的个人显示设置。
