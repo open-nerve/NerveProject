@@ -62,7 +62,7 @@ paths:
         name nor the identifier may be another undeleted project's of the
         workspace (project.name_taken, project.identifier_taken).
       security: [{bearer: []}]
-      x-problem-codes: [validation_failed, workspace.not_found, forbidden, project.identifier_taken, project.name_taken]
+      x-problem-codes: [validation_failed, workspace.not_found, forbidden, project.identifier_taken, project.name_taken, asset.not_found, asset.not_uploaded, asset.bound, asset.scope_changed]
       requestBody:
         required: true
         content:
@@ -155,7 +155,7 @@ paths:
         sees but may not change, forbidden. The role is decided after the
         project row is locked, so a caller demoted meanwhile is refused.
       security: [{bearer: []}]
-      x-problem-codes: [validation_failed, project.not_found, forbidden, project.archived, project.identifier_taken, project.name_taken]
+      x-problem-codes: [validation_failed, project.not_found, forbidden, project.archived, project.identifier_taken, project.name_taken, asset.not_found, asset.not_uploaded, asset.bound, asset.scope_changed, server_busy]
       requestBody:
         required: true
         content:
@@ -926,7 +926,7 @@ components:
       type: object
       additionalProperties: false
       required: [id, workspace_id, name, description, identifier, network, project_lead_id, default_assignee_id, cycle_view, module_view,
-        issue_views_view, intake_view, guest_view_all_features, archive_in, archived_at, logo_props, timezone, cover_image_url, member_role,
+        issue_views_view, intake_view, guest_view_all_features, archive_in, archived_at, logo_props, timezone, cover_image_asset_id, cover_builtin_id, cover_image_url, cover_image_url_expires_at, member_role,
         sort_order, member_ids, created_at, updated_at]
       properties:
         id:
@@ -986,9 +986,18 @@ components:
         timezone:
           description: An IANA time zone name.
           type: string
-        cover_image_url:
-          description: Null until uploads arrive (M5).
+        cover_image_asset_id:
           type: [string, 'null']
+          format: uuid
+        cover_builtin_id:
+          description: Stable cover-01 through cover-29; the frontend resolves its bundled image.
+          type: [string, 'null']
+        cover_image_url:
+          description: Signed uploaded cover URL; null for a built-in cover or unavailable asset.
+          type: [string, 'null']
+        cover_image_url_expires_at:
+          type: [string, 'null']
+          format: date-time
         member_role:
           description: The caller's role in the project; null when he is not an active member.
           oneOf:
@@ -1033,6 +1042,13 @@ components:
       additionalProperties: false
       required: [name, identifier]
       properties:
+        cover_image_asset_id:
+          description: Completed preparation to bind atomically; null for no uploaded cover.
+          type: [string, 'null']
+          format: uuid
+        cover_builtin_id:
+          description: Stable cover-01 through cover-29; mutually exclusive with a non-null uploaded cover.
+          type: [string, 'null']
         name:
           description: >-
             1–255 characters, not blank, without any of
@@ -1057,11 +1073,18 @@ components:
     ProjectUpdate:
       description: >-
         Changes the fields it names; a field left out keeps its value. Only
-        project_lead_id and default_assignee_id can be null, which clears
-        them.
+        project_lead_id, default_assignee_id and the cover fields can be null.
+        A non-null cover source clears the other; omitted fields keep their value.
       type: object
       additionalProperties: false
       properties:
+        cover_image_asset_id:
+          description: Completed preparation to bind atomically; null for no uploaded cover.
+          type: [string, 'null']
+          format: uuid
+        cover_builtin_id:
+          description: Stable cover-01 through cover-29; mutually exclusive with a non-null uploaded cover.
+          type: [string, 'null']
         name:
           description: >-
             1–255 characters, not blank, without any of

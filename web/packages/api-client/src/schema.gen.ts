@@ -2251,8 +2251,14 @@ export interface components {
             logo_props: components["schemas"]["LogoProps"];
             /** @description An IANA time zone name. */
             timezone: string;
-            /** @description Null until uploads arrive (M5). */
+            /** Format: uuid */
+            cover_image_asset_id: string | null;
+            /** @description Stable cover-01 through cover-29; the frontend resolves its bundled image. */
+            cover_builtin_id: string | null;
+            /** @description Signed uploaded cover URL; null for a built-in cover or unavailable asset. */
             cover_image_url: string | null;
+            /** Format: date-time */
+            cover_image_url_expires_at: string | null;
             /** @description The caller's role in the project; null when he is not an active member. */
             member_role: components["schemas"]["ProjectRole"] | null;
             /** @description The project's place in the caller's sidebar, lowest first; null when it has none there: the caller is not an active member of the project, or has no display settings in it. */
@@ -2268,6 +2274,13 @@ export interface components {
             data: components["schemas"]["Project"][];
         };
         ProjectCreate: {
+            /**
+             * Format: uuid
+             * @description Completed preparation to bind atomically; null for no uploaded cover.
+             */
+            cover_image_asset_id?: string | null;
+            /** @description Stable cover-01 through cover-29; mutually exclusive with a non-null uploaded cover. */
+            cover_builtin_id?: string | null;
             /** @description 1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! - */
             name: string;
             /** @description 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased. */
@@ -2286,8 +2299,15 @@ export interface components {
         IdentifierAvailability: {
             available: boolean;
         };
-        /** @description Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them. */
+        /** @description Changes the fields it names; a field left out keeps its value. Only project_lead_id, default_assignee_id and the cover fields can be null. A non-null cover source clears the other; omitted fields keep their value. */
         ProjectUpdate: {
+            /**
+             * Format: uuid
+             * @description Completed preparation to bind atomically; null for no uploaded cover.
+             */
+            cover_image_asset_id?: string | null;
+            /** @description Stable cover-01 through cover-29; mutually exclusive with a non-null uploaded cover. */
+            cover_builtin_id?: string | null;
             /** @description 1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! - */
             name?: string;
             /** @description 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased. */

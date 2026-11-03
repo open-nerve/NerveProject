@@ -31,14 +31,14 @@ var (
 )
 
 const (
-	webJSON = `{"archive_in":3,"archived_at":"2026-10-01T10:00:00.123456Z","cover_image_url":null,"created_at":"2026-10-01T10:00:00.123456Z",` +
+	webJSON = `{"archive_in":3,"archived_at":"2026-10-01T10:00:00.123456Z","cover_builtin_id":null,"cover_image_asset_id":null,"cover_image_url":null,"cover_image_url_expires_at":null,"created_at":"2026-10-01T10:00:00.123456Z",` +
 		`"cycle_view":true,"default_assignee_id":"0199a2b4-0000-7000-8000-000000000001","description":"The app","guest_view_all_features":true,` +
 		`"id":"0199a2b4-0000-7000-8000-0000000000a1","identifier":"WEB","intake_view":true,"issue_views_view":true,` +
 		`"logo_props":{"emoji":{"url":"https://example.com/e.png","value":"128640"},"icon":{"background_color":"#000000","color":"#ffffff","name":"home"},"in_use":"icon"},` +
 		`"member_ids":["0199a2b4-0000-7000-8000-000000000001","0199a2b4-0000-7000-8000-000000000002"],"member_role":20,"module_view":true,` +
 		`"name":"Web","network":0,"project_lead_id":"0199a2b4-0000-7000-8000-000000000002","sort_order":-9900.5,"timezone":"Asia/Shanghai",` +
 		`"updated_at":"2026-10-01T11:00:00.123456Z","workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
-	bareJSON = `{"archive_in":0,"archived_at":null,"cover_image_url":null,"created_at":"2026-10-01T10:00:00.123456Z","cycle_view":false,` +
+	bareJSON = `{"archive_in":0,"archived_at":null,"cover_builtin_id":null,"cover_image_asset_id":null,"cover_image_url":null,"cover_image_url_expires_at":null,"created_at":"2026-10-01T10:00:00.123456Z","cycle_view":false,` +
 		`"default_assignee_id":null,"description":"","guest_view_all_features":false,"id":"0199a2b4-0000-7000-8000-0000000000a1",` +
 		`"identifier":"WEB","intake_view":false,"issue_views_view":false,"logo_props":{},"member_ids":[],"member_role":null,"module_view":false,` +
 		`"name":"Web","network":2,"project_lead_id":null,"sort_order":null,"timezone":"UTC","updated_at":"2026-10-01T10:00:00.123456Z",` +

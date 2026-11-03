@@ -173,6 +173,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
+		Caller: identityPorts.CredentialLock, ImageGate: projectImageGate{gate: projectWrites},
+		ImageBindings: projectImageBindings{bindings: imageBindings}, Images: projectImageReader{images: imageReader},
 		Events: events,
 		Pool:   pool, Tx: tx, Clock: businessClock, Authorizer: authorizer,
 		Workspaces:   projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},

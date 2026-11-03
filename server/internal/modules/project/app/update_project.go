@@ -10,17 +10,19 @@ import (
 
 // UpdateProject changes a project: PATCH /api/v0/projects/{project_id} (M3
 // design 3.19).
-type UpdateProject struct {
-	projects ProjectUpdater
-	locks    Locks
-	tx       shared.TxManager
-	clock    Clock
+type UpdateProjectDeps struct {
+	Projects ProjectUpdater
+	Locks    Locks
+	Gate     ImageGate
+	Caller   CallerLock
+	Bindings ImageBindings
+	Images   ImageReader
+	Tx       shared.TxManager
+	Clock    Clock
 }
+type UpdateProject struct{ d UpdateProjectDeps }
 
-// NewUpdateProject returns the use case.
-func NewUpdateProject(projects ProjectUpdater, locks Locks, tx shared.TxManager, clock Clock) *UpdateProject {
-	return &UpdateProject{projects: projects, locks: locks, tx: tx, clock: clock}
-}
+func NewUpdateProject(d UpdateProjectDeps) *UpdateProject { return &UpdateProject{d: d} }
 
 // Execute checks p (domain.CheckProjectPatch), then, in one transaction, in
 // the order of M3 design 3.6: the project's locks (Locks: its workspace FOR
@@ -40,9 +42,20 @@ func (u *UpdateProject) Execute(ctx context.Context, id uuid.UUID, p domain.Proj
 	if p, err = domain.CheckProjectPatch(p); err != nil {
 		return domain.Project{}, err
 	}
+	if err := findAndDecide(ctx, u.d.Locks.projects, u.d.Locks.auth, actor, id, domain.ActionUpdate); err != nil {
+		return domain.Project{}, err
+	}
+	leave, err := u.d.Gate.Enter(ctx, id)
+	if err != nil {
+		return domain.Project{}, err
+	}
+	defer leave()
 	var updated domain.Project
-	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		h, err := u.locks.lockAndDecide(ctx, actor, write{project: id, action: domain.ActionUpdate})
+	err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		if err := u.d.Caller.LockCaller(ctx, actor, u.d.Clock.Now()); err != nil {
+			return err
+		}
+		h, err := u.d.Locks.lockAndDecide(ctx, actor, write{project: id, action: domain.ActionUpdate})
 		switch {
 		case err != nil:
 			return err
@@ -52,11 +65,34 @@ func (u *UpdateProject) Execute(ctx context.Context, id uuid.UUID, p domain.Proj
 		if err := u.checkAssignees(ctx, id, p); err != nil {
 			return err
 		}
-		if err := u.projects.UpdateProject(ctx, id, p, actor.UserID, u.clock.Now()); err != nil {
+		current, err := answer(ctx, u.d.Projects, id, actor.UserID)
+		if err != nil {
 			return err
 		}
-		updated, err = answer(ctx, u.projects, id, actor.UserID)
-		return err
+		change := CoverImageChange{ActorID: actor.UserID, WorkspaceID: h.project.WorkspaceID, ProjectID: id, Current: current.CoverImageAssetID, Next: current.CoverImageAssetID}
+		if p.SetCoverImage {
+			change.Next = p.CoverImageAssetID
+		}
+		at, err := u.d.Bindings.LockImageBindings(ctx, change)
+		if err != nil {
+			return err
+		}
+		if err := u.d.Projects.UpdateProject(ctx, id, p, actor.UserID, at); err != nil {
+			return err
+		}
+		if err := u.d.Bindings.ApplyImageBindings(ctx, change, at); err != nil {
+			return err
+		}
+		updated, err = answer(ctx, u.d.Projects, id, actor.UserID)
+		if err != nil {
+			return err
+		}
+		images, err := withProjectImages(ctx, u.d.Images, []domain.Project{updated})
+		if err != nil {
+			return err
+		}
+		updated = images[0]
+		return nil
 	})
 	if err != nil {
 		return domain.Project{}, err
@@ -82,7 +118,7 @@ func (u *UpdateProject) checkAssignees(ctx context.Context, id uuid.UUID, p doma
 	if len(accounts) == 0 {
 		return nil
 	}
-	members, err := u.projects.Memberships(ctx, id, accounts)
+	members, err := u.d.Projects.Memberships(ctx, id, accounts)
 	if err != nil {
 		return err
 	}

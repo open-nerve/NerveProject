@@ -85,7 +85,7 @@ func newProjectRouteOn(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, au
 
 func newProjectRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, auth shared.Authorizer, members projectapp.WorkspaceMembers, events shared.EventPublisher) moduleRoute {
 	t.Helper()
-	return newRoute(t, project.New(project.Deps{Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
+	return newRoute(t, project.New(project.Deps{Caller: imageFixtureCaller{pool: pool}, ImageGate: fixtureProjectImageGate(), ImageBindings: projectFixtureImages{}, Images: projectFixtureImages{}, Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: workspace.Provide(pool, nil).WorkspaceDirectory}, Members: members,
 		Issues: issue.Provide(pool, nil).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool, nil).ListSettings}}).Register)
 }

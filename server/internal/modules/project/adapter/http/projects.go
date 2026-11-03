@@ -2,6 +2,7 @@ package httpadapter
 
 import (
 	"context"
+	"time"
 	"uuid"
 
 	"github.com/oapi-codegen/nullable"
@@ -28,6 +29,8 @@ func (h handler) ListProjects(ctx context.Context, req gen.ListProjectsRequestOb
 func (h handler) CreateProject(ctx context.Context, req gen.CreateProjectRequestObject) (gen.CreateProjectResponseObject, error) {
 	b := req.Body
 	in := domain.NewProject{Name: b.Name, Identifier: b.Identifier, LeadID: b.ProjectLeadID, Timezone: b.Timezone}
+	_, in.CoverImageAssetID = named(b.CoverImageAssetID)
+	_, in.CoverBuiltinID = named(b.CoverBuiltinID)
 	if b.Description != nil {
 		in.Description = *b.Description
 	}
@@ -70,6 +73,8 @@ func (h handler) UpdateProject(ctx context.Context, req gen.UpdateProjectRequest
 		logo := logoIn(*b.LogoProps)
 		in.LogoProps = &logo
 	}
+	in.SetCoverImage, in.CoverImageAssetID = named(b.CoverImageAssetID)
+	in.SetCoverBuiltin, in.CoverBuiltinID = named(b.CoverBuiltinID)
 	in.SetLead, in.LeadID = named(b.ProjectLeadID)
 	in.SetDefaultAssignee, in.DefaultAssigneeID = named(b.DefaultAssigneeID)
 	p, err := h.uc.UpdateProject.Execute(ctx, req.ProjectID, in)
@@ -115,7 +120,7 @@ func (h handler) DeleteProject(ctx context.Context, req gen.DeleteProjectRequest
 }
 
 // named reports whether the body names v, and its id: nil when it is null.
-func named(v nullable.Nullable[uuid.UUID]) (bool, *uuid.UUID) {
+func named[T any](v nullable.Nullable[T]) (bool, *T) {
 	switch {
 	case !v.IsSpecified():
 		return false, nil
@@ -138,6 +143,11 @@ func (h handler) CheckProjectIdentifier(ctx context.Context, req gen.CheckProjec
 
 // project is p as the API shows it.
 func project(p domain.Project) gen.Project {
+	var coverURL *string
+	var coverExpires *time.Time
+	if p.CoverImage != nil {
+		coverURL, coverExpires = &p.CoverImage.URL, &p.CoverImage.ExpiresAt
+	}
 	out := gen.Project{
 		ID:                   p.ID,
 		WorkspaceID:          p.WorkspaceID,
@@ -156,10 +166,10 @@ func project(p domain.Project) gen.Project {
 		ArchivedAt:           orNull(p.ArchivedAt),
 		LogoProps:            logoOut(p.LogoProps),
 		Timezone:             p.Timezone,
-		// Required and null until M5.
-		CoverImageURL: nullable.NewNullNullable[string](),
-		MemberRole:    nullable.NewNullNullable[gen.ProjectRole](),
-		SortOrder:     orNull(p.SortOrder),
+		CoverImageAssetID:    orNull(p.CoverImageAssetID), CoverBuiltinID: orNull(p.CoverBuiltinID),
+		CoverImageURL: orNull(coverURL), CoverImageURLExpiresAt: orNull(coverExpires),
+		MemberRole: nullable.NewNullNullable[gen.ProjectRole](),
+		SortOrder:  orNull(p.SortOrder),
 		// An array, never null: a project without members has [].
 		MemberIds: append([]uuid.UUID{}, p.MemberIDs...),
 		CreatedAt: p.CreatedAt,

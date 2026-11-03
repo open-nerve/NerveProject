@@ -18,6 +18,9 @@ type CreateProject struct {
 
 // CreateProjectDeps are the use case's ports.
 type CreateProjectDeps struct {
+	Caller     CallerLock
+	Bindings   ImageBindings
+	Images     ImageReader
 	Workspaces WorkspaceDirectory
 	Members    WorkspaceMembers
 	Projects   ProjectCreator
@@ -39,11 +42,10 @@ func NewCreateProject(d CreateProjectDeps) *CreateProject {
 // (422 project_lead_id not_allowed unless the lead is an active admin or
 // member); then the project, the creator's and the lead's memberships as
 // its admins, each one's display settings first in his sidebar
-// (SortOrderFirst), and the six default states. The project's time zone is
-// the one given, or the workspace's. The rows are new, so the clock is read
-// once, before the transaction: no row it reads under the locks has a time
-// the new rows must follow (P3's ruling (c), as createWorkspaceInvitations).
-// The answer is the project as stored, as the caller sees it.
+// (SortOrderFirst), and the six default states. Caller credential locking
+// precedes all owner locks. Cover candidates are locked before INSERT; every
+// new row and the asset binding use the returned last-lock time. Signing and
+// binding belong to this same transaction, so any failure rolls it all back.
 func (u *CreateProject) Execute(ctx context.Context, slug string, in domain.NewProject) (domain.Project, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -53,15 +55,21 @@ func (u *CreateProject) Execute(ctx context.Context, slug string, in domain.NewP
 	if err != nil {
 		return domain.Project{}, err
 	}
-	now := u.d.Clock.Now()
+	candidate, _, err := findWorkspaceAndDecide(ctx, u.d.Workspaces, u.d.Auth, actor, slug, domain.ActionCreate)
+	if err != nil {
+		return domain.Project{}, err
+	}
 	id := uuid.NewV7()
 	var created domain.Project
 	err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		if err := u.d.Caller.LockCaller(ctx, actor, u.d.Clock.Now()); err != nil {
+			return err
+		}
 		ws, found, err := u.d.Workspaces.ShareWorkspaceBySlug(ctx, slug)
 		switch {
 		case err != nil:
 			return err
-		case !found:
+		case !found, ws.ID != candidate.ID:
 			return domain.ErrWorkspaceNotFound
 		}
 		if _, err = decide(ctx, u.d.Auth, actor, domain.ActionCreate, ws.ID, uuid.UUID{}, domain.ErrWorkspaceNotFound); err != nil {
@@ -80,7 +88,15 @@ func (u *CreateProject) Execute(ctx context.Context, slug string, in domain.NewP
 				return domain.LeadNotAllowed()
 			}
 		}
-		if err := u.insert(ctx, u.row(id, ws, in, actor.UserID, now), admins); err != nil {
+		change := CoverImageChange{ActorID: actor.UserID, WorkspaceID: ws.ID, ProjectID: id, NewProject: true, Next: in.CoverImageAssetID}
+		at, err := u.d.Bindings.LockImageBindings(ctx, change)
+		if err != nil {
+			return err
+		}
+		if err := u.insert(ctx, u.row(id, ws, in, actor.UserID, at), admins); err != nil {
+			return err
+		}
+		if err := u.d.Bindings.ApplyImageBindings(ctx, change, at); err != nil {
 			return err
 		}
 		created, found, err = u.d.Projects.GetProject(ctx, id, actor.UserID)
@@ -90,6 +106,11 @@ func (u *CreateProject) Execute(ctx context.Context, slug string, in domain.NewP
 		case !found:
 			return fmt.Errorf("create project: project %s is not there after its insert", id)
 		}
+		images, err := withProjectImages(ctx, u.d.Images, []domain.Project{created})
+		if err != nil {
+			return err
+		}
+		created = images[0]
 		return nil
 	})
 	if err != nil {
@@ -105,7 +126,7 @@ func (u *CreateProject) row(id uuid.UUID, ws Workspace, in domain.NewProject, by
 	if in.Timezone != nil {
 		timezone = *in.Timezone
 	}
-	return ProjectRow{ID: id, WorkspaceID: ws.ID, Name: in.Name, Description: in.Description, Identifier: in.Identifier, Network: *in.Network,
+	return ProjectRow{CoverImageAssetID: in.CoverImageAssetID, CoverBuiltinID: in.CoverBuiltinID, ID: id, WorkspaceID: ws.ID, Name: in.Name, Description: in.Description, Identifier: in.Identifier, Network: *in.Network,
 		LeadID: in.LeadID, LogoProps: in.LogoProps, Timezone: timezone, CreatedBy: by, Now: now}
 }
 

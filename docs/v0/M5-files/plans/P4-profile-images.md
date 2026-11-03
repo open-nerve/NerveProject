@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T7实现与聚焦回归完成，T8待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T8接续，重大新风险先提交后上报。
+> 预检通过，T1–T8实现与聚焦回归完成，T9待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T9接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -123,10 +123,10 @@
 
 **Interfaces:** CoverImageChange消费T2；ProjectRow在INSERT携带最终AssetID或BuiltinID，Apply才迁移new_project准备件；现有账号/成员/项目锁和同实例gate按access §2。
 
-- [ ] Step 1：TestProjectCoverCreate/TestProjectCoverUpdate：cover-01/29稳定，互斥拒绝，省略/null/非null自动清另一侧；new_project scope与actor必须匹配；一次POST即绑定并有完整members/preferences/6 states。分别在states、Apply、Signer和commit注入失败，断言所有新业务行0、asset仍原scope/unbound/原审计。
-- [ ] Step 2：RED后实现Lock→At→INSERT最终cover→Apply→签发；Update读真实旧字段并全量收齐ID，权限/归档先于资产状态；不用前端二次PATCH或自动随机。
-- [ ] Step 3：`make gen`；`cd server && go test -p 1 ./internal/modules/project/... ./internal/bootstrap -run '^Test(ProjectCover|CreateProject|UpdateProject|Contract)' -count=1`；Expected全部具名GREEN，默认无图老路径保持。
-- [ ] Step 4：受影响race、生成TS fixture/consumer适配和lint；提交 `feat(M5/P4): 原子创建并更新项目的上传或预设封面`。
+- [x] Step 1：TestProjectCoverCreate/TestProjectCoverUpdate：cover-01/29稳定，互斥拒绝，省略/null/非null自动清另一侧；new_project scope与actor必须匹配；一次POST即绑定并有完整members/preferences/6 states。分别在states、Apply、Signer和commit注入失败，断言所有新业务行0、asset仍原scope/unbound/原审计。
+- [x] Step 2：RED后实现Lock→At→INSERT最终cover→Apply→签发；Update读真实旧字段并全量收齐ID，权限/归档先于资产状态；不用前端二次PATCH或自动随机。
+- [x] Step 3：`make gen`；`cd server && go test -p 1 ./internal/modules/project/... ./internal/bootstrap -run '^Test(ProjectCover|CreateProject|UpdateProject|Contract)' -count=1`；Expected全部具名GREEN，默认无图老路径保持。
+- [x] Step 4：受影响race、生成TS fixture/consumer适配和lint；提交 `feat(M5/P4): 原子创建并更新项目的上传或预设封面`。
 
 ## Task 9（T9）：项目所有响应中的授权图片
 

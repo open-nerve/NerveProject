@@ -222,9 +222,14 @@ type Project struct {
 	// ArchivedAt When the project was archived; null while it is not.
 	ArchivedAt nullable.Nullable[time.Time] `json:"archived_at"`
 
-	// CoverImageURL Null until uploads arrive (M5).
-	CoverImageURL nullable.Nullable[string] `json:"cover_image_url"`
-	CreatedAt     time.Time                 `json:"created_at"`
+	// CoverBuiltinID Stable cover-01 through cover-29; the frontend resolves its bundled image.
+	CoverBuiltinID    nullable.Nullable[string]    `json:"cover_builtin_id"`
+	CoverImageAssetID nullable.Nullable[uuid.UUID] `json:"cover_image_asset_id"`
+
+	// CoverImageURL Signed uploaded cover URL; null for a built-in cover or unavailable asset.
+	CoverImageURL          nullable.Nullable[string]    `json:"cover_image_url"`
+	CoverImageURLExpiresAt nullable.Nullable[time.Time] `json:"cover_image_url_expires_at"`
+	CreatedAt              time.Time                    `json:"created_at"`
 
 	// CycleView Whether the project shows cycles.
 	CycleView bool `json:"cycle_view"`
@@ -274,7 +279,12 @@ type Project struct {
 
 // ProjectCreate defines model for ProjectCreate.
 type ProjectCreate struct {
-	Description *string `json:"description,omitempty"`
+	// CoverBuiltinID Stable cover-01 through cover-29; mutually exclusive with a non-null uploaded cover.
+	CoverBuiltinID nullable.Nullable[string] `json:"cover_builtin_id,omitempty"`
+
+	// CoverImageAssetID Completed preparation to bind atomically; null for no uploaded cover.
+	CoverImageAssetID nullable.Nullable[uuid.UUID] `json:"cover_image_asset_id,omitempty"`
+	Description       *string                      `json:"description,omitempty"`
 
 	// Identifier 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased.
 	Identifier string `json:"identifier"`
@@ -434,11 +444,17 @@ type ProjectRole int
 // ProjectTab A tab of a project's header.
 type ProjectTab string
 
-// ProjectUpdate Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them.
+// ProjectUpdate Changes the fields it names; a field left out keeps its value. Only project_lead_id, default_assignee_id and the cover fields can be null. A non-null cover source clears the other; omitted fields keep their value.
 type ProjectUpdate struct {
 	// ArchiveIn Automatic archival threshold, 0–12 months of 30 days each; 0 disables it. Inactive completed or cancelled work items are archived by a periodic job after this threshold, using their last update time.
-	ArchiveIn *int  `json:"archive_in,omitempty"`
-	CycleView *bool `json:"cycle_view,omitempty"`
+	ArchiveIn *int `json:"archive_in,omitempty"`
+
+	// CoverBuiltinID Stable cover-01 through cover-29; mutually exclusive with a non-null uploaded cover.
+	CoverBuiltinID nullable.Nullable[string] `json:"cover_builtin_id,omitempty"`
+
+	// CoverImageAssetID Completed preparation to bind atomically; null for no uploaded cover.
+	CoverImageAssetID nullable.Nullable[uuid.UUID] `json:"cover_image_asset_id,omitempty"`
+	CycleView         *bool                        `json:"cycle_view,omitempty"`
 
 	// DefaultAssigneeID An active member of the project who is not its guest; null for none.
 	DefaultAssigneeID    nullable.Nullable[uuid.UUID] `json:"default_assignee_id,omitempty"`

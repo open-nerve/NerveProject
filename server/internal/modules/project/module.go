@@ -199,11 +199,15 @@ type ListDisplayFilters = app.ListDisplayFilters
 
 // Deps are what bootstrap gives the module (M3 design 6.6, step 4).
 type Deps struct {
-	Events     shared.EventPublisher
-	Pool       *pgxpool.Pool
-	Tx         shared.TxManager
-	Clock      app.Clock
-	Authorizer shared.Authorizer
+	Caller        app.CallerLock
+	ImageGate     app.ImageGate
+	ImageBindings app.ImageBindings
+	Images        app.ImageReader
+	Events        shared.EventPublisher
+	Pool          *pgxpool.Pool
+	Tx            shared.TxManager
+	Clock         app.Clock
+	Authorizer    shared.Authorizer
 	// Workspaces is workspace's WorkspaceDirectory, converted
 	// (bootstrap/ports.go).
 	Workspaces app.WorkspaceDirectory
@@ -230,12 +234,12 @@ func New(d Deps) *Module {
 	locks := app.NewLocks(store, d.Workspaces, d.Members, d.Authorizer)
 	return &Module{assets: app.NewAssetAccess(store, d.Authorizer), cascade: NewCascade(CascadeDeps{Pool: d.Pool}), uc: httpadapter.UseCases{
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
-			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
+			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Bindings: d.ImageBindings, Images: d.Images,
 		}),
 		ListProjects:        app.NewListProjects(d.Workspaces, store, d.Authorizer),
 		GetProject:          app.NewGetProject(store, d.Authorizer),
 		CheckIdentifier:     app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
-		UpdateProject:       app.NewUpdateProject(store, locks, d.Tx, d.Clock),
+		UpdateProject:       app.NewUpdateProject(app.UpdateProjectDeps{Projects: store, Locks: locks, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Gate: d.ImageGate, Bindings: d.ImageBindings, Images: d.Images}),
 		ArchiveProject:      app.NewArchiveProject(store, locks, d.Tx, d.Clock),
 		UnarchiveProject:    app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
 		DeleteProject:       app.NewDeleteProject(store, d.Events, locks, d.Tx, d.Clock),

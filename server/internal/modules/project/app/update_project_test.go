@@ -17,7 +17,7 @@ import (
 // newUpdate is UpdateProject over newWrites' fakes, its clock logged.
 func newUpdate() (*app.UpdateProject, *writeFixture) {
 	f := newWrites()
-	return app.NewUpdateProject(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}), f
+	return app.NewUpdateProject(app.UpdateProjectDeps{Projects: f.store, Locks: f.locks(), Tx: f.tx, Clock: clockAt{clockNow, f.log}, Caller: imageCaller{f.log}, Gate: imageGate{f.log}, Bindings: noProjectImages{clockAt{clockNow, f.log}}, Images: noProjectImages{}}), f
 }
 
 // updated are the calls of bob's update of web with p, which names the
@@ -26,12 +26,12 @@ func newUpdate() (*app.UpdateProject, *writeFixture) {
 // change, the answer.
 func updated(p domain.ProjectPatch, assignees ...uuid.UUID) []string {
 	patch, _ := json.Marshal(p)
-	calls := lockedDecision(bob, webID, domain.ActionUpdate)
+	calls := imageWriteCalls(bob, webID, lockedDecision(bob, webID, domain.ActionUpdate))
 	if len(assignees) > 0 {
 		calls = append(calls, fmt.Sprintf("Memberships %s %v", webID, assignees))
 	}
-	return append(calls, "Now", fmt.Sprintf("UpdateProject %s %s by %s at %s", webID, patch, bob, clockNow.Format(timeFormat)),
-		fmt.Sprintf("GetProject %s for %s", webID, bob))
+	return append(calls, fmt.Sprintf("GetProject %s for %s", webID, bob), "Now", fmt.Sprintf("UpdateProject %s %s by %s at %s", webID, patch, bob, clockNow.Format(timeFormat)),
+		fmt.Sprintf("GetProject %s for %s", webID, bob), fmt.Sprintf("Leave [%s]", webID))
 }
 
 // UpdateProject checks the patch, then, in one transaction and in the
@@ -140,9 +140,20 @@ func TestUpdateProjectRefuses(t *testing.T) {
 			}
 
 			got, err := uc.Execute(tt.ctx, tt.project, tt.in)
+			wantCalls := tt.calls
+			switch tt.name {
+			case "no project":
+				wantCalls = []string{"ProjectWorkspace " + tt.project.String() + " outside tx"}
+			case "not seen", "a project member":
+				wantCalls = []string{tt.calls[1] + " outside tx", tt.calls[len(tt.calls)-1] + " outside tx"}
+			default:
+				if len(wantCalls) > 0 {
+					wantCalls = append(imageWriteCalls(bob, tt.project, wantCalls), fmt.Sprintf("Leave [%s]", tt.project))
+				}
+			}
 
-			if !sameError(err, tt.want) || got.ID != (uuid.UUID{}) || !slices.Equal(f.log.calls, tt.calls) {
-				t.Errorf("Execute() = %+v, %v, calls %q; want %v, calls %q", got, err, f.log.calls, tt.want, tt.calls)
+			if !sameError(err, tt.want) || got.ID != (uuid.UUID{}) || !slices.Equal(f.log.calls, wantCalls) {
+				t.Errorf("Execute() = %+v, %v, calls %q; want %v, calls %q", got, err, f.log.calls, tt.want, wantCalls)
 			}
 		})
 	}
@@ -160,22 +171,26 @@ func TestUpdateProjectReturnsEachFailure(t *testing.T) {
 		fail  func(f *writeFixture)
 		calls int // how many of all's ran
 	}{
-		{"the project's workspace", func(f *writeFixture) { f.store.errs = map[string]error{"ProjectWorkspace": failure} }, 2},
-		{"the workspace's lock", func(f *writeFixture) { f.workspaces.err = failure }, 3},
-		{"the lock", func(f *writeFixture) { f.store.errs = map[string]error{"LockProject": failure} }, 4},
-		{"the decision", func(f *writeFixture) { f.auth.errs = map[grantKey]error{{bob, acme.ID}: failure} }, 5},
-		{"the memberships", func(f *writeFixture) { f.store.errs = map[string]error{"Memberships": failure} }, 6},
-		{"the change", func(f *writeFixture) { f.store.errs = map[string]error{"UpdateProject": failure} }, 8},
-		{"the answer", func(f *writeFixture) { f.store.errs = map[string]error{"GetProject": failure} }, 9},
-		{"the commit", func(f *writeFixture) { f.tx.commitErr = failure }, 9},
+		{"the project's workspace", func(f *writeFixture) { f.store.errs = map[string]error{"ProjectWorkspace": failure} }, 1},
+		{"the workspace's lock", func(f *writeFixture) { f.workspaces.err = failure }, 8},
+		{"the lock", func(f *writeFixture) { f.store.errs = map[string]error{"LockProject": failure} }, 9},
+		{"the decision", func(f *writeFixture) { f.auth.errs = map[grantKey]error{{bob, acme.ID}: failure} }, 2},
+		{"the memberships", func(f *writeFixture) { f.store.errs = map[string]error{"Memberships": failure} }, 11},
+		{"the change", func(f *writeFixture) { f.store.errs = map[string]error{"UpdateProject": failure} }, 14},
+		{"the answer", func(f *writeFixture) { f.store.errs = map[string]error{"GetProject": failure} }, 12},
+		{"the commit", func(f *writeFixture) { f.tx.commitErr = failure }, 15},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f := newUpdate()
 			tt.fail(f)
 			got, err := uc.Execute(as(bob), webID, in)
-			if !errors.Is(err, failure) || got.ID != (uuid.UUID{}) || !slices.Equal(f.log.calls, all[:tt.calls]) {
-				t.Errorf("Execute() = %+v, %v, calls %q; want %v after %q", got, err, f.log.calls, failure, all[:tt.calls])
+			wantCalls := slices.Clone(all[:tt.calls])
+			if tt.calls > 2 {
+				wantCalls = append(wantCalls, fmt.Sprintf("Leave [%s]", webID))
+			}
+			if !errors.Is(err, failure) || got.ID != (uuid.UUID{}) || !slices.Equal(f.log.calls, wantCalls) {
+				t.Errorf("Execute() = %+v, %v, calls %q; want %v after %q", got, err, f.log.calls, failure, wantCalls)
 			}
 		})
 	}
@@ -197,4 +212,10 @@ func TestUpdateProjectAnswersTheStoresConflicts(t *testing.T) {
 			t.Errorf("Execute() = %v, want %v", err, conflict)
 		}
 	}
+}
+
+// The original owner lock sequence follows an unlocked visibility precheck,
+// gate admission and the caller account lock; failures release admission too.
+func imageWriteCalls(user, id uuid.UUID, ownerCalls []string) []string {
+	return append([]string{"ProjectWorkspace " + id.String() + " outside tx", fmt.Sprintf("Authorize %s project.update on %s/%s outside tx", user, acme.ID, id), fmt.Sprintf("Enter [%s] outside tx", id), "Begin", "Now", "LockCaller " + user.String()}, ownerCalls[1:]...)
 }

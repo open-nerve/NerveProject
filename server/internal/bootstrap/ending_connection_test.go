@@ -38,7 +38,7 @@ func newWorkspaceRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) mo
 func newWorkspaceRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, events shared.EventPublisher) moduleRoute {
 	t.Helper()
 	auth, identityPorts, provided := authorizerOn(pool), identity.Provide(pool), workspace.Provide(pool, nil)
-	projects := project.New(project.Deps{Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
+	projects := project.New(project.Deps{Caller: imageFixtureCaller{pool: pool}, ImageGate: fixtureProjectImageGate(), ImageBindings: projectFixtureImages{}, Images: projectFixtureImages{}, Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: provided.WorkspaceDirectory}, Members: provided.WorkspaceMembers,
 		Issues: issue.Provide(pool, nil).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool, nil).ListSettings}})
 	return newRoute(t, workspace.New(workspace.Deps{CallerLock: imageFixtureCaller{pool: pool}, Images: imageFixtureReader{}, MemberAvatars: imageFixtureReader{}, Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Logger: slog.New(slog.DiscardHandler),

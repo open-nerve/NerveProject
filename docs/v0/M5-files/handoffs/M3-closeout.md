@@ -45,3 +45,8 @@ P2建立仅申请者可见的准备件与完整宿主授权，项目/工作区�
 ## 处理结果：M5/P4 T7（局部）
 
 成员列表/改角色已有真实头像URL和期限，接受邀请返回工作区真实Logo，公开邀请只签该链接的固定Logo；guest邮箱和停用资料规则保持，签名失败回滚及邀请失效交错有真实验证，见[P4阶段记录§14](../reviews/P4-profile-images-review.md#14-t7成员头像与邀请logo)。项目封面仍在T8/T9，页面与完整关闭条件仍在P6–P8，本交接保持open。
+
+
+## 处理结果：M5/P4 T8（局部）
+
+§1项目封面的Create/Update已接通上传资产和cover-01..29稳定预设，一次POST完成项目全图和准备件迁移；省略/null、管理员替换、实际文件及四种创建故障原子回滚已验证，见[P4阶段记录§15](../reviews/P4-profile-images-review.md#15-t8项目封面与一次创建)。Get/List/Archive/Unarchive/Join响应待T9，页面和最终验收仍在P6–P8，本交接保持open。

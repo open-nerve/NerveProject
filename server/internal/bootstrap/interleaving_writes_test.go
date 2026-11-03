@@ -17,6 +17,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -40,7 +41,7 @@ type gatedAuthorizer struct {
 
 func (a gatedAuthorizer) Authorize(ctx context.Context, actor shared.Actor, action shared.Action, t shared.Target) (shared.Grant, error) {
 	grant, err := a.Authorizer.Authorize(ctx, actor, action, t)
-	if err == nil && action == a.action {
+	if _, inTx := postgres.Tx(ctx); err == nil && action == a.action && inTx {
 		if err := a.gate.wait(ctx); err != nil {
 			return shared.Grant{}, err
 		}

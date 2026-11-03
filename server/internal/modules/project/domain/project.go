@@ -14,6 +14,7 @@ import (
 // Project is a project as a caller sees it (M3 design 5.2): its columns,
 // and the caller's view of it.
 type Project struct {
+	CoverImage           *ImageURL
 	CoverImageAssetID    *uuid.UUID
 	CoverBuiltinID       *string
 	ID                   uuid.UUID

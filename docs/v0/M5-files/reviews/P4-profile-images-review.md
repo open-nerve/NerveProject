@@ -1,6 +1,6 @@
 # M5 / P4 阶段评审记录
 
-> 预检通过，T1–T7字段/绑定/读取/清理及用户、工作区、成员与邀请API聚焦回归完成；T8待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
+> 预检通过，T1–T8字段/绑定/读取/清理及用户、工作区、成员、邀请与项目封面创建更新API聚焦回归完成；T9待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
 
 ## 1. 评审方式
 
@@ -20,7 +20,7 @@
 
 ## 4. 整分支发现与处理
 
-T1–T7已实施，整审及修复待T14。不能把builder check的无重要问题写成代码无缺陷。
+T1–T8已实施，整审及修复待T14。不能把builder check的无重要问题写成代码无缺陷。
 
 ## 5. 实现与plan差异
 
@@ -105,4 +105,15 @@ OrganizationSize响应改为原枚举或null，生成Go/TS类型直接使用；�
 
 行为RED4.421s；成员/邀请聚焦race27.181s；完整workspace+arch race66.985s；最终bootstrap成员/邀请/旧并发/个人及工作区图片/七项API合同race26.759s，完整arch补验7.399s；Web6文件64测试1.873s、全量types10.745s、最终lint16.313s。签名失败真实500且成员/项目成员/邀请/资产逐行快照不变，恢复签名后成功；忽略接受邀请签名错误的变异也被实际断言抓到。共两项变异hash恢复。
 
-原workspace/Web/types通过后只改bootstrap旧并发测试，产品输入不变；按输入范围复用对应结果，补跑bootstrap/arch/lint，核差异仅该测试文件（task-7-final-input-reuse.json）。不为无关测试注释/夹具重复全量容器运行。证据task-7-*、receipt/input、mutation与docker-task-7-reaped.json保留：本任务22个自有容器均已回收，20个既有容器保留。生成核验提交后执行；T8–T15、阶段终审与集成仍待完成。
+原workspace/Web/types通过后只改bootstrap旧并发测试，产品输入不变；按输入范围复用对应结果，补跑bootstrap/arch/lint，核差异仅该测试文件（task-7-final-input-reuse.json）。不为无关测试注释/夹具重复全量容器运行。证据task-7-*、receipt/input、mutation与docker-task-7-reaped.json保留：本任务22个自有容器均已回收，20个既有容器保留。提交后生成核验3.109s通过；T8–T15、阶段终审与集成当时仍待完成。
+
+
+## 15. T8项目封面与一次创建
+
+CreateProject在无锁权限预检后，以调用者账号、工作区和所需成员锁确定创建资格；最后一次资产锁后的同一At用于项目、成员、偏好、六个默认状态和绑定审计。INSERT一次携带最终上传引用或稳定builtin，随后迁移本人new_project准备件；签发与commit仍在同一事务。UpdateProject预检后进入issue/asset共用的同一项目gate，再取账号及原W/P锁；权限和归档先于候选资产检查，锁下当前引用参与完整old/new集合。只为返回图片的这两个入口接线，原label/state锁协议不变。
+
+真实API证明cover-01/29、省略/null/非null、互斥及非法builtin、原申请者准备件归属、其他管理员替换既有绑定、当前ID幂等和私有隐藏404。一次POST即产生完整2成员/2偏好/6状态并读回实际文件字节；states、Apply、签名和延迟commit四种故障均500且全部业务/资产快照不变，原准备件仍可重试。Update签名失败也整笔回滚。HTTP声明四项资产错误及update的server_busy，生成Go/TS与旧消费者真实null字段同步。
+
+行为RED4.567s；扩展聚焦race17.310s；完整project+arch race133.605s。旧gatedAuthorizer屏障在新增无锁预检误暂停并再次close，原失败保留；仅将夹具限定真实事务内暂停，保留原锁强度、PID/阻塞和角色结果断言。最终bootstrap新封面/旧项目锁交错/七项API合同race34.792s、完整arch7.425s、lint16.682s通过。Web5文件104测试2.183s及全量types11.515s通过；这两项与完整project只复用唯一bootstrap测试夹具变化之前的结果，逐路径hash差异记录在task-8-final-input-reuse.json，受影响bootstrap/arch/lint均重跑。
+
+证据task-8-*日志/receipt/input与docker-task-8-reaped.json保留，4303输入稳定；12个自有临时容器全回收、20个既有保留。生成核验在本任务提交后执行。T9其余项目响应及T10–T15联合验收、整审、集成尚未完成；A1–A9保持未整体关闭。
