@@ -1,7 +1,7 @@
 # M5 / P3 S3 存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T6已完成，T7待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
+> 预检通过，T1–T7已完成，T8待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
 
 **Goal：** 为既有资产用例接入真实 S3 私有存储，完成 F4、部署配置和 local 回归。
 
@@ -114,15 +114,15 @@
 
 ## Task 7（T7）：CSP、部署和真正浏览器 F4
 
-**Files：** 修改webui/handler.go、csp.go及测试、bootstrap/app.go；新增tools/s3fixture/{main,request,operations}.go及测试、e2e/fixtures/s3.ts、s3-world.ts、e2e/stories/files/f4-s3-storage.spec.ts、e2e/playwright.m5-s3.config.ts、deploy/s3/{README.md,cors.example.json,policy.example.json}；修改tools/go.mod/go.sum、e2e/package.json、pnpm-lock.yaml、Makefile。
+**Files：** 修改webui/handler.go、csp.go及测试，新增webui/options.go，修改bootstrap/app.go及生命周期测试、config/files_s3.go及边界测试；新增tools/s3fixture/{main,request,operations}.go及测试、e2e/fixtures/s3.ts、s3-process.ts、s3-container.ts、s3-world.ts与smoke/s3-lifecycle.spec.ts、e2e/stories/files/f4-s3-storage.spec.ts、e2e/playwright.m5-s3.config.ts、deploy/s3/{README.md,cors.example.json,policy.example.json}；修改tools/go.mod/go.sum、e2e/package.json、pnpm-lock.yaml、Makefile。
 
-**Interfaces：** webui Options/Handler如上；Node `startS3():Promise<S3Service>`、`createS3World(info:TestInfo):Promise<S3World>`，S3Service创建测试桶/CORS与close，World拥有Nerve/API/DB/桶/prefix和close。world fixture预算200000ms覆盖S3启动90s/停止30s、既有nerveFixtureTimeoutMs70s和10s余量，不以Playwright默认30s截断其自身回收。Gohelper只JSON stdin/stdout动作create-bucket/cors/inspect/delete测试数据，单次10s、1MiB输入输出；读实物只返回size/hash/headers，不能输出完整100MiB内容。
+**Interfaces：** webui Options/Handler如上；Node `startS3():Promise<S3Service>`、`createS3World(info:TestInfo):Promise<S3World>`，S3Service创建测试桶/CORS与close，World拥有Nerve/API/DB/桶/prefix和close。world fixture预算200000ms覆盖S3启动90s/停止30s、既有nerveFixtureTimeoutMs70s和10s余量，不以Playwright默认30s截断其自身回收。Gohelper只JSON stdin/stdout动作create-bucket/cors/inspect/delete测试数据，单次10s、1MiB输入输出；读实物只返回size/hash/headers，不能输出完整100MiB内容。Node使用独立测试子进程执行testcontainers，父进程限定启动并在join后按确切name+label兜底回收；业务content只有GET，浏览器验证GET200/改HEAD403，正向HEAD签名仍归T3。
 
-- [ ] Step 1：TestStorageCSP RED：local逐字原policy，S3仅img/connect增加唯一origin，非法source拒绝。F4先真实浏览器RED，记录File/Blob自动长度、错类型/大小403、download字节和CORS/CSP失败；上下文不继承API令牌到raw请求。
-- [ ] Step 2：实现Options校验与bootstrap实际origin接线；helper同版SDK，testcontainers12.1.0显式化；Makefile新增build-s3-fixture测试目标并作为e2e前置，不把测试helper塞进生产build；Nodefixture自有启动失败/close并发安全，实际baseURL后写本测试CORS；不动生产bucket。
-- [ ] Step 3：`cd server && go test ./internal/platform/webui ./internal/bootstrap -run 'Test(StorageCSP|AssetS3Lifecycle)$' -count=1`、`cd server/tools && go test ./s3fixture -count=1`、`make lint-web knip` GREEN；所有Handler调用者同步。
-- [ ] Step 4：`make build build-s3-fixture`后`cd e2e && pnpm exec playwright test --config=playwright.m5-s3.config.ts`三浏览器F4；默认CI主配置纳入Chromium F4，专用配置三浏览器补验；CSP通配变异实际浏览器访问第二origin才红。真实错误origin只能断言浏览器读取被CORS挡，不能断言URL能力失效。
-- [ ] Step 5：配置/最低IAM/never-versioned/错误排障/迁移前提/真实支持品牌和原始失败写入部署说明及handoff兑现部分；提交`feat(M5/P3): 完成 S3 浏览器传输和精确来源策略`。
+- [x] Step 1：TestStorageCSP RED：local逐字原policy，S3仅img/connect增加唯一origin，非法source拒绝。F4先真实浏览器RED，记录File/Blob自动长度、错类型/大小403、download字节和CORS/CSP失败；上下文不继承API令牌到raw请求。
+- [x] Step 2：实现Options校验与bootstrap实际origin接线；helper同版SDK，testcontainers12.1.0显式化；Makefile新增build-s3-fixture测试目标并作为e2e前置，不把测试helper塞进生产build；Nodefixture自有启动失败/close并发安全，实际baseURL后写本测试CORS；不动生产bucket。
+- [x] Step 3：`cd server && go test ./internal/platform/webui ./internal/bootstrap -run 'Test(StorageCSP|AssetS3Lifecycle)$' -count=1`、`cd server/tools && go test ./s3fixture -count=1`、`make lint-web knip` GREEN；所有Handler调用者同步。
+- [x] Step 4：`make build build-s3-fixture`后`cd e2e && pnpm exec playwright test --config=playwright.m5-s3.config.ts`三浏览器F4；默认CI主配置纳入Chromium F4，专用配置三浏览器补验；CSP通配变异实际浏览器访问第二origin才红。真实错误origin只能断言浏览器读取被CORS挡，不能断言URL能力失效。
+- [x] Step 5：配置/最低IAM/never-versioned/错误排障/迁移前提/真实支持品牌和原始失败写入部署说明及handoff兑现部分；提交`feat(M5/P3): 完成 S3 浏览器传输和精确来源策略`。
 
 ## Task 8（T8）：容量、故障和守卫闭环
 

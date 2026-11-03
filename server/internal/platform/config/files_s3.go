@@ -36,7 +36,7 @@ type S3FilesConfig struct {
 
 func (c S3FilesConfig) validate(fail func(string, string, ...any)) {
 	if !validS3Endpoint(c.Endpoint) {
-		fail("files.s3.endpoint", "must be an explicit HTTP(S) origin without credentials, path, query or fragment")
+		fail("files.s3.endpoint", "must be an explicit HTTP(S) DNS or IPv4 origin without credentials, path, query or fragment")
 	}
 	if len(c.Region) < 1 || len(c.Region) > 64 || !asciiToken(c.Region, "-") {
 		fail("files.s3.region", "must contain 1 to 64 ASCII letters, digits or hyphens")
@@ -113,7 +113,9 @@ func validS3Endpoint(raw string) bool {
 	}
 	host := u.Hostname()
 	if ip, err := netip.ParseAddr(host); err == nil {
-		return ip.Zone() == ""
+		// CSP host sources cannot express IPv6 literals. DNS names may still
+		// resolve to IPv6; reject only a literal before constructing storage.
+		return ip.Is4()
 	}
 	return validDNSName(strings.ToLower(strings.TrimSuffix(host, ".")))
 }

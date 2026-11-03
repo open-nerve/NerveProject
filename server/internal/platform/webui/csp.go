@@ -21,7 +21,11 @@ var (
 // scripts, each allowed by the SHA-256 of its text, so a rebuilt frontend
 // needs no change here. Styles may be inline (React's style attributes and
 // popper's positions); nothing else is allowed from anywhere but nerve.
-func contentSecurityPolicy(index []byte) string {
+func contentSecurityPolicy(index []byte, origin string) string {
+	storage := ""
+	if origin != "" {
+		storage = " " + origin
+	}
 	scripts := []string{"'self'"}
 	for _, m := range scriptElement.FindAllSubmatch(index, -1) {
 		if srcAttribute.Match(m[1]) {
@@ -37,9 +41,9 @@ func contentSecurityPolicy(index []byte) string {
 		"default-src 'self'",
 		"script-src " + strings.Join(scripts, " "),
 		"style-src 'self' 'unsafe-inline'",
-		"img-src 'self' data: blob:",
+		"img-src 'self' data: blob:" + storage,
 		"font-src 'self' data:",
-		"connect-src 'self'",
+		"connect-src 'self'" + storage,
 		"object-src 'none'",
 		"base-uri 'none'",
 		"form-action 'self'",

@@ -47,7 +47,7 @@ func TestFilesS3Config(t *testing.T) {
 		{"ENDPOINT", ""}, {"ENDPOINT", "ftp://example.com"}, {"ENDPOINT", "https://user:password@example.com"},
 		{"ENDPOINT", "https://example.com/path"}, {"ENDPOINT", "https://example.com?x=1"}, {"ENDPOINT", "https://example.com#fragment"},
 		{"ENDPOINT", "https://example.com:0"}, {"ENDPOINT", "https://example.com:65536"}, {"ENDPOINT", "https://example.com:"},
-		{"ENDPOINT", "https://example.com\n"}, {"ENDPOINT", "https://*.example.com"}, {"ENDPOINT", "https://"},
+		{"ENDPOINT", "https://example.com\n"}, {"ENDPOINT", "https://*.example.com"}, {"ENDPOINT", "https://"}, {"ENDPOINT", "http://[::1]:9000"}, {"ENDPOINT", "https://[2001:db8::1]"},
 		{"REGION", ""}, {"REGION", "bad region"}, {"REGION", strings.Repeat("r", 65)},
 		{"BUCKET", "ab"}, {"BUCKET", strings.Repeat("b", 64)}, {"BUCKET", "Upper"}, {"BUCKET", "a..b"},
 		{"BUCKET", "a.-b"}, {"BUCKET", "a-.b"}, {"BUCKET", "127.0.0.1"}, {"BUCKET", "-abc"}, {"BUCKET", "abc-"},
@@ -67,7 +67,7 @@ func TestFilesS3Config(t *testing.T) {
 		})
 	}
 	t.Run("allowed endpoints and maximum nonsecret lengths", func(t *testing.T) {
-		for _, endpoint := range []string{"https://s3.example.com", "http://127.0.0.1:9000/", "http://[::1]:9000", "https://example.com:443"} {
+		for _, endpoint := range []string{"https://s3.example.com", "http://127.0.0.1:9000/", "https://example.com:443"} {
 			_, err := loadS3Config("NERVE_FILES__S3__ENDPOINT="+endpoint, "NERVE_FILES__S3__REGION="+strings.Repeat("r", 64),
 				"NERVE_FILES__S3__BUCKET="+strings.Repeat("b", 63), "NERVE_FILES__S3__PREFIX="+strings.Repeat("a", 127)+"/")
 			if err != nil {

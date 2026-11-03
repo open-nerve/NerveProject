@@ -48,3 +48,8 @@ M2（账户认证）的接口里，头像、封面是可为 `null` 的地址，M
 ## 处理结果（M5/P2）
 
 P2已有资产表、生成AssetPurpose和真实业务/字节两段协议；按§1调整关键词的裸用途分支，旧地址/弹窗/旧枚举实际反例仍失败。§5的e2e/fixtures/storage.ts已用显式token、生成类型与独立无凭据raw传输实现。用户反向字段、头像封面UI、会话store、services删净及S3 CSP仍在P3–P7，本交接保持open。证据见[P2阶段评审](../reviews/P2-assets-review.md)，整审/集成结果仍单独核验。
+
+
+## 处理结果（M5/P3 T7）
+
+§2的S3 CSP来源已由webui.Options接收实际签名origin，仅img/connect精确扩展；local旧policy与其他安全头保持。三浏览器F4、CORS负例及实际通配变异证明边界；IPv6字面量因浏览器CSP不兼容在配置时拒绝，DNS可解析到IPv6。§5的独立S3世界与Go辅助程序补齐实物SHA、失败回收。证据见[P3阶段记录§14](../reviews/P3-s3-storage-review.md)。头像封面UI、反向引用、services删除和会话分代尚未到期，本交接保持open；大文件/慢流及阶段全量门禁也不由本Task提前代签。

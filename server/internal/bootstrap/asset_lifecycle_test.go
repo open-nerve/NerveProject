@@ -26,15 +26,16 @@ func TestAssetLifetimeFollowsApp(t *testing.T) {
 func assetLifetimeFollowsApp(t *testing.T, configure func(*config.Config)) {
 	t.Helper()
 	dbURL := pgtest.NewDatabase(t)
-	for _, failLater := range []bool{false, true} {
+	for _, failure := range []string{"", "module", "webui"} {
+		failLater := failure != ""
 		name := "normal shutdown and repeated close"
 		if failLater {
-			name = "later module construction failure"
+			name = "later " + failure + " construction failure"
 		}
 		t.Run(name, func(t *testing.T) {
 			cfg := testConfig(t, dbURL, false)
 			configure(&cfg)
-			if failLater {
+			if failure == "module" {
 				cfg.Auth.SessionCleanupInterval = 0
 			}
 			var logs lockedBuffer
@@ -52,6 +53,9 @@ func assetLifetimeFollowsApp(t *testing.T, configure func(*config.Config)) {
 					components, err := newAssets(ctx, files, keys, log)
 					if err != nil {
 						return components, err
+					}
+					if failure == "webui" {
+						components.origin = "*"
 					}
 					closeStorage := components.close
 					components.close = func() error {

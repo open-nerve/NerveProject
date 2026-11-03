@@ -272,7 +272,12 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	files.Register(a.router, api, bucket(limiter, "file_transfer", cfg.Files.TransferRate))
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
-	a.router.Handle("/", webui.Handler(webFiles))
+	webHandler, err := webui.Handler(webFiles, webui.Options{StorageOrigin: assets.origin})
+	if err != nil {
+		a.close()
+		return nil, err
+	}
+	a.router.Handle("/", webHandler)
 	return a, nil
 }
 

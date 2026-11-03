@@ -149,8 +149,12 @@ build-web: ## 构建前端，产物在 web/apps/web/build/client（需要 Node�
 	rm -rf $(WEB_CLIENT)
 	$(TURBO) run build --filter=web $(TURBO_QUIET)
 
+.PHONY: build-s3-fixture
+build-s3-fixture: ## 构建隔离 S3 端到端测试辅助程序（仅测试使用）
+	cd server/tools && go build -o ../../bin/nerve-s3-fixture ./s3fixture
+
 .PHONY: e2e
-e2e: build ## 构建 bin/nerve 并运行端到端测试（需要 Node、Go、Docker 和 Playwright 的浏览器，见 README）
+e2e: build build-s3-fixture ## 构建 bin/nerve 并运行端到端测试（需要 Node、Go、Docker 和 Playwright 的浏览器，见 README）
 	cd e2e && NERVE_VERSION=$(VERSION) pnpm exec playwright test
 
 .PHONY: plane-schema

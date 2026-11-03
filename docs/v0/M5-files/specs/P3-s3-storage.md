@@ -1,6 +1,6 @@
 # M5 / P3 S3 存储合同
 
-> 预检通过，T1–T6配置、存储合同、恢复与业务装配已完成，T7待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
+> 预检通过，T1–T7存储装配、浏览器传输与部署已完成，T8待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
 
 ## 1. 目的、范围和方案
 
@@ -25,7 +25,7 @@
 
 | 字段 | 合同 |
 |---|---|
-| endpoint | 必填 http/https origin；只接受空 path 或 `/`，拒绝 userinfo/query/fragment/控制字符、非法端口；不提供跳过 TLS 开关 |
+| endpoint | 必填主机为DNS或IPv4的http/https origin；IPv6字面量因浏览器CSP不兼容而拒绝（DNS可解析到IPv6），不放宽策略；只接受空 path 或 `/`，拒绝 userinfo/query/fragment/控制字符、非法端口；不提供跳过 TLS 开关 |
 | region | 必填，1..64 ASCII 字母/数字/连字符；不发现系统 region |
 | bucket | 必填，3..63 小写 DNS 普通桶名；首尾字母/数字，允许内部 `-` 和 `.`，无相邻点、无点连字符相邻、无 IPv4 字面量，拒绝 ARN 和 AWS 特殊桶/别名保留前后缀 |
 | prefix | 必填，实例独占；1..128 字节，ASCII 字母/数字/`_`/`-` 段以 `/` 分隔并以 `/` 结尾；无空段、dot、前导 `/`；不自动给所有实例同一个前缀 |
@@ -75,7 +75,7 @@ webui.Options 只接 StorageOrigin；Handler 验证后只对页面 img-src/conne
 
 生产部署样例包含精确 frontend origin，AllowedMethods PUT/GET/HEAD，AllowedHeaders Content-Type，ExposeHeaders ETag/Content-Length/Content-Type/Content-Disposition；不设置 `*` 或允许credentials。CORS是浏览器读取边界，签名URL本身是bearer capability；错误origin的浏览器应无法读取，不能谎称CORS能阻止拿到URL的非浏览器上传。桶仍私有，匿名URL拒绝。
 
-F4 在真正应用 origin 和浏览器 fetch/File/Blob 中完成 prepare→raw PUT→complete→content→GET/HEAD→duplicate→DELETE，实物 SHA/大小与DB结果核对。覆盖正确长度/类型、改长度/类型403、匿名拒绝、跨origin错误、签名错误、CSP阻断未列出的origin，三浏览器专门复验。仅 APIRequestContext 或Go HTTP通过不代表浏览器/CORS通过。此阶段不创建附件UI。
+F4 在真正应用 origin 和浏览器 fetch/File/Blob 中完成 prepare→raw PUT→complete→content→GET→duplicate→DELETE，实物 SHA/大小与DB结果核对。覆盖正确长度/类型、改长度/类型403、匿名拒绝、跨origin错误、签名错误、CSP阻断未列出的origin，三浏览器专门复验。业务content API只有GET能力，F4实际验证GET成功、改HEAD返回403；合法HEAD独立签名的正例由T3存储适配器真实协议覆盖，不新增业务API或测试helper签名动作。仅 APIRequestContext 或Go HTTP通过不代表浏览器/CORS通过。此阶段不创建附件UI。
 
 ## 7. 可重复测试服务和辅助程序
 
@@ -94,7 +94,7 @@ F4 在真正应用 origin 和浏览器 fetch/File/Blob 中完成 prepare→raw P
 - [x] A3 源/目的双条件COPY、同大小异内容/并发目的/源改变、200内嵌错误和错误分类证明final不可变，DB提交故障不丢candidate。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§13，真实S3/PG/API、故障恢复及受影响race。
 - [x] A4 有限prefix清单、opaque cursor、页内/进程恢复、后到实物回收、邻域保护、双时钟和无tmp合同通过。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§12，真实S3/PG与新OS进程River续跑。
 - [x] A5 S3完整Nerve API/PG/实物闭环、权限撤销/锁外I/O/零DML和原local回归；路由目录两driver准确。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§13，真实S3/PG/API、故障恢复及受影响race。
-- [ ] A6 精确CORS/CSP及三浏览器F4通过，实际File长度/类型绑定、匿名/错误origin/未准许CSP均受测；无新附件UI。
+- [x] A6 精确CORS/CSP及三浏览器F4通过，实际File长度/类型绑定、匿名/错误origin/未准许CSP均受测；无新附件UI。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§14，三浏览器、独立字节/SHA、CSP实际变异与IPv6反例、资源失败回收。
 - [ ] A7 1B/默认5MiB/最大100MiB流式容量、真实慢流/取消、连接/资源回收有记录；不以本机吞吐承诺任意公网性能。
 - [ ] A8 至少15个独立性质变异命中具体断言而非编译失败/0 tests，记录还原hash；并发封存/迟到/恢复交错跑race五轮，无死锁/数据竞争；原始失败、重试和测试输入完整保留。
 - [ ] A9 七项本地门禁、生成和本阶段独立受影响回归通过；完整三视角deep-review/一次新上下文整分支审查及修复闭环，精确branch CI通过。

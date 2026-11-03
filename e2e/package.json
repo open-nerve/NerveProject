@@ -13,6 +13,7 @@
     "test:m4-filters": "playwright test --config=playwright.m4-filters.config.ts",
     "test:m4-detail": "playwright test --config=playwright.m4-detail.config.ts",
     "test:m4-collaboration": "playwright test --config=playwright.m4-collaboration.config.ts",
+    "test:m5-s3": "playwright test --config=playwright.m5-s3.config.ts",
     "test:m4-cleanup": "playwright test --config=playwright.m4-cleanup.config.ts"
   },
   "devDependencies": {
@@ -22,6 +23,7 @@
     "@types/node": "catalog:",
     "@types/pg": "8.23.1",
     "pg": "8.23.0",
+    "testcontainers": "12.1.0",
     "typescript": "catalog:"
   }
 }

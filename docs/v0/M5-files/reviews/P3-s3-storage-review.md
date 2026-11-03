@@ -1,6 +1,6 @@
 # M5 / P3 阶段评审记录
 
-> spec/plan预检通过，T1–T6配置、存储合同、恢复与业务装配已完成，T7待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
+> spec/plan预检通过，T1–T7存储装配、浏览器传输与部署已完成，T8待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
 
 ## 1. 评审方式
 
@@ -8,7 +8,7 @@
 
 ## 2. 验收标准逐条核对
 
-[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A1–A5已由T1–T6证据关闭，A6–A10仍开放；实际证据见§8–§13。预检固定SDK/真实服务协议和版本化桶反例只为可行性证据，不提前打勾；准确原件和范围见re-36。
+[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A1–A6已由T1–T7证据关闭，A7–A10仍开放；实际证据见§8–§14。预检固定SDK/真实服务协议和版本化桶反例只为可行性证据，不提前打勾；准确原件和范围见re-36。
 
 ## 3. 执行中的决定
 
@@ -101,3 +101,17 @@ P2已完成并归档；P3接续S3/CORS/CSP/真实合同，M0超时handoff只记�
 - 首个具名RED15.717s为files.driver仍只允许local；扩展全组RED29.921s。中间一轮新增测试unused import导致编译失败，仅保留不计行为证明。首GREEN37.158s，补齐重启/生命周期/完整目录后GREEN42.816s。最终race：bootstrap 162.810s、http 6.883s、httpserver 2.831s、archtest 6.002s，4209个非文档输入hash与成员集合一致；server/tools lint0、关键词76/14无命中，自有S3容器回收。
 - 首轮受影响race曾复现原local超时测试仍通过transfer.Files覆盖业务预算，拆分后不再生效；新增实际reader deadline断言先RED7.239s，再将测试改从显式config.Files入口设置1s，生产预算与客户端时限均未放宽。旧失败及聚焦复验原件保留，最终受影响race在修正后重新运行。
 - 本Task关闭A1/A3/A5，原件task-6-*保留到T11整体归档；完整七项、CSP/CORS/三浏览器、容量、5轮race与deep-review及阶段CI仍待T7–T10。
+
+
+## 14. T7浏览器传输、来源策略与部署
+
+- webui.Handler显式Options，只接收存储适配器最终origin；格式校验拒绝通配、多来源、userinfo/path/query/fragment/非法端口。仅img-src/connect-src增加确切来源，local逐字旧policy、inline脚本hash、其他指令及非HTML/API错误策略不变。初始化失败沿原app.close顺序释放，local/S3共用的生命周期测试加入webui失败分支。
+- TestStorageCSP行为RED0.525s，真实Chromium旧CSP使第一笔File上传失败；trace确认connect-src self。原始失败归档task-7-f4-red-artifacts。补确切origin后初轮三浏览器3/3（48.2s）。首次回收检查因Docker返回小写no such object而误报，改为明确NotFound类别的大小写兼容；并无遗留容器。以后也不把其他inspect故障当缺失。
+- F4由真正Nerve页面origin执行fetch/File，浏览器自动长度，正确PUT200、改类型/大小403；匿名/签名篡改/改HEAD均403。GET下载字节、可见ETag/长度/类型/中文处置名正确；复制新实物key、完整SHA与PG及独立Gohelper流读一致，DELETE后业务读404。raw请求没有业务Authorization或Cookie。错误origin另开浏览器页，读取被CORS拒绝；同URL非浏览器仍读到原字节，明确CORS不撤销bearer能力。
+- 第二个测试HTTP origin真实可达且允许CORS；CSP阻止浏览器fetch，服务端零命中。把生产CSP改成通配后，真实浏览器读到第二来源，独立断言Expected true/Received false实红；task-7-csp-mutation.json记录原hash并已还原源码及正常二进制，累计独立性质变异21项（T8仍需核目录与五轮race）。
+- 新发现：IPv6字面量URL在无CSP时三个浏览器均读到ipv6-proof，增加精确字面量CSP后均TypeError并报CSP；原受控探针保留task-7-ipv6-controlled-probe.log。config与Options拒绝字面量的用例先RED0.754/1.104s，随后修正；DNS可解析到IPv6，服务端监听不变。代价是IPv6端点需DNS名称，不用放宽CSP伪装支持。设计/spec/部署限制同步。
+- Go helper在独立tools模块消费与server完全同版3SDK+9必要间接；只接受loopback和自生成桶/prefix，动作create-bucket/cors/inspect/delete，输入输出各≤1MiB、命令10s，最多100MiB流式SHA，不输出完整文件/凭据/签名。实际未结束输入管道曾超时不退出，新增管道RED1.565s，context关闭自有I/O后GREEN0.636s；假协议测试覆盖精确CORS、数据摘要、超限、redirect和取消，真实协议由F4/世界启动探针验证。
+- Node显式使用既有testcontainers12.1.0，无JS SDK。一次非frozen安装意外重解lru-cache和peer图，恢复原图仅增加3行importer，frozen install通过。服务由隔离Node24子进程拥有，父进程90s启动期限、先join再按随机name+label兜底回收；30s关闭预算、命令取消/并发close共享同一promise，世界200s夹具预算。secret文件0600、每世界独立桶/CORS/DB、实际baseURL后设CORS，已有Docker/容器未改动。Makefile测试helper单独构建，生产build不链接它。
+- Node生命周期具名3项覆盖正常并发close、Nerve启动失败和child启动中关闭；实际检查loopback端口、容器NotFound、HTTP停止、DB连接关闭、临时秘密删除、关闭后拒绝操作及重复回收。错误聚合保留原错误与清理错误；针对oxlint不识别AggregateError第三个cause参数，仅保留一行说明性抑制，没有放宽架构/关键词或lint上限。
+- 最终三浏览器3/3（47.7s），Node生命周期3/3（30.3s）。完整config/webui/archtest race、helper race及bootstrap具名S3生命周期/原local生命周期race通过；每次测试的非文档输入hash/集合稳定。前端54检查/knip通过，server/tools lint均0。全部task-7-*原件留T11归档；T9才跑完整七项并首次产品推送。
+- deploy/s3提供配置、最低IAM、精确CORS、never-versioned限制、迁移前提和故障排查；AWS HeadBucket需桶级ListBucket，样例诚实说明名称列表权限，名称隔离需独立桶。真实提供方只证明固定SeaweedFS4.52，AWS云及其他品牌未验收。M2交接仅记录CSP部分兑现，绑定/UI/services/River CLI仍开放。
