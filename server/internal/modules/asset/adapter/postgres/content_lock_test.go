@@ -2,15 +2,13 @@ package postgresadapter
 
 import (
 	"context"
-	"errors"
 	"slices"
 	"testing"
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
@@ -81,8 +79,7 @@ func TestContentBindingsOrderedDatabaseLocks(t *testing.T) {
 		}
 		_, err = probe.Exec(pgtest.Soon(t), "SELECT id FROM file_assets WHERE id=$1 FOR UPDATE NOWAIT", id)
 		_ = probe.Rollback(context.Background())
-		var pe *pgconn.PgError
-		if !errors.As(err, &pe) || pe.Code != "55P03" {
+		if !postgres.LockNotAvailable(err) {
 			t.Fatalf("asset was not held after LockContent: %v", err)
 		}
 	}

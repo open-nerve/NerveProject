@@ -157,14 +157,14 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 
 - [x] Step 1：逐项A1–A7和输入handoff处理结果、Plane差异、类型/文案/phase与到期豁免核验，文档逐句对照实际证据。（A7在Step 2完整故事复验后勾选。）
 - [x] Step 2：串行`make gen-check`、`make lint-go`、`GOFLAGS=-p=1 make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`，各exit0；缓存/skip/基础设施失败分别记录，不隐藏原失败。（make e2e含两构建；F14单文件精确差异及受影响复验见review §20。）
-- [ ] Step 3：详细中文检查点commit/system git push；准确HEAD server/web/e2e全绿。W11按已知规则重跑一次，仍失败停报。
-- [ ] Step 4：记录本地/远端分开事实，不提前声明阶段main完成。
+- [x] Step 3：详细中文检查点commit/system git push；准确HEAD server/web/e2e全绿。W11按已知规则重跑一次，仍失败停报。
+- [x] Step 4：记录本地/远端分开事实，不提前声明阶段main完成。
 
 ## Task 14（T14）：整分支deep-review
 
-- [ ] Step 1：固定main基线到候选HEAD，deep-review按逻辑/集成/测试，整份手写文件及caller清单，生成物核源。
-- [ ] Step 2：一次fresh reviewer携spec/plan/Review Focus原文及全部Ruling；主控按实际影响分级，报告入docs/reviews下一编号。
-- [ ] Step 3：Important/Critical一次局部修复与真实RED/GREEN、影响门禁及主控复核；Minor具名去向；重大风险先提交后上报，不派重复同范围审者。
+- [x] Step 1：固定main基线到候选HEAD，deep-review按逻辑/集成/测试，整份手写文件及caller清单，生成物核源。
+- [x] Step 2：一次fresh reviewer携spec/plan/Review Focus原文及全部Ruling；主控按实际影响分级，报告入docs/reviews下一编号。
+- [x] Step 3：Important/Critical一次局部修复与真实RED/GREEN、影响门禁及主控复核；Minor具名去向（M1按03硬规则本次等价修正，无伪RED）；重大风险先提交后上报，不派重复同范围审者。
 - [ ] Step 4：裁定/代价/未读范围逐条落盘，最终commit/push与准确最终HEAD CI全绿，才关闭A8。
 
 ## Task 15（T15）：集成归档及P6预检
