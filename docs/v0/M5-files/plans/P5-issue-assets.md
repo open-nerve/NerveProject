@@ -46,10 +46,10 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 **Files:** issue/app两份端口；asset/app/content_bindings.go/draft_assets.go及纯规则；postgres/content_bindings.go/queries/content.sql、asset/content.go/provide.go；bootstrap/asset_content.go仅值转换；对应app/PG测试。
 **Interfaces:** 消费T1规范图片投影；产出spec的ContentBinding、DraftAssetTransfer；保存scope使用专用SQL，SaveAsset不可变合同不扩写。
 
-- [ ] Step 1：TestContentBindings / TestDraftAssetTransfer覆盖申请者/用途/完整父链/已上传/已删/既绑定同宿主、1001完整集合、零UUID与末项坏零写、UUID倒序、无事务拒绝、两阶段At相等；草稿全量含pending改项目/发布拒pending。
-- [ ] Step 2：`cd server && go test -p 1 ./internal/modules/asset/app ./internal/modules/asset/adapter/postgres -run 'Test(ContentBindings|DraftAssetTransfer)' -count=1`取得行为RED；按子合同实现去重排序集合锁、最后读钟和专用绑定/迁移。
-- [ ] Step 3：相同命令GREEN、-race与架构/lint；故障第2个UPDATE整体回滚，SaveAsset仍不能改scope；去掉申请者/范围/全集合锁各有失败变异。
-- [ ] Step 4：gen及受影响检查后提交 `feat(M5/P5): 实现内容绑定与草稿资产迁移端口`。
+- [x] Step 1：TestContentBindings / TestDraftAssetTransfer覆盖申请者/用途/完整父链/已上传/已删/既绑定同宿主、1001完整集合、零UUID与末项坏零写、UUID倒序、无事务拒绝、两阶段At相等；草稿全量含pending改项目/发布拒pending。
+- [x] Step 2：`cd server && go test -p 1 ./internal/modules/asset/app ./internal/modules/asset/adapter/postgres -run 'Test(ContentBindings|DraftAssetTransfer)' -count=1`取得行为RED；按子合同实现去重排序集合锁、最后读钟和专用绑定/迁移。
+- [x] Step 3：相同命令GREEN、-race与架构/lint；故障第2个UPDATE整体回滚，SaveAsset仍不能改scope；去掉申请者/范围/全集合锁各有失败变异。
+- [x] Step 4：gen及受影响检查后提交 `feat(M5/P5): 实现内容绑定与草稿资产迁移端口`。
 
 ## Task 3（T3）：附件发布、读取权限与精确事件
 

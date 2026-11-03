@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1–P4已完成集成和归档。P4已完成：noff main 0f93100a，CI 41641099230 三job全绿，2301份原始文件归档核验并正常清理分支/worktree；P5预检已完成，T1有序图片身份通过；T2待实施。 见[P4阶段记录](reviews/P4-profile-images-review.md#22-t15最终集成归档与p5预检)和[P5预检](../../reviews/re-40-M5P5预检.md)。
+> 状态：P1–P4已完成集成和归档。P4已完成：noff main 0f93100a，CI 41641099230 三job全绿，2301份原始文件归档核验并正常清理分支/worktree；P5预检已完成，T1内容身份与T2完整集合绑定/迁移端口通过；T3待实施。 见[P4阶段记录](reviews/P4-profile-images-review.md#22-t15最终集成归档与p5预检)和[P5预检](../../reviews/re-40-M5P5预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 > 设计、P1–P4分支均已合入并归档；当前工作分支codex/m5-p5。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
@@ -195,7 +195,7 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 
 总序继承 M4：无连接进入写门 → workspace 稳定边界 → project（跨项目升序）→ issue/评论/草稿既有锁序 → asset（UUID 升序）。获取 asset 锁后不追逐另一个项目/宿主锁；观察到宿主变化返回冲突并重新发起。确认封存和复制的存储 I/O 在事务之外，最终提交必须重验父范围和权限。
 
-草稿发布复用当前 `W(S) → P(N) → D(U)`，然后创建工作项并锁资产迁移。迁移资产的 draft_id 清空、issue_id 填新 ID、用途由 draft 对应到 issue，时间/操作者与创建/软删草稿一致。竞争发布、改项目、上传完成、父删除都要实锁交错测试，不能靠固定 sleep。
+草稿发布复用当前 `W(S) → P(N) → D(U)`，先执行唯一创建核心的 prepare（相关校验、清洗和事务内序号分配，尚未写业务行），再收齐全部活资产及当前引用并按 UUID 顺序锁定；最后一把资产锁后读取唯一 At，再 write 工作项、迁移资产、软删草稿及发事件。迁移资产的 draft_id 清空、issue_id 填新 ID、用途由 draft 对应到 issue，时间/操作者与创建/软删草稿一致。竞争发布、改项目、上传完成、父删除都要实锁交错测试，不能靠固定 sleep。
 
 ## 8. 内容、历史与附件计数
 
@@ -317,7 +317,7 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P2 | 已完成：noff main2d1bcf0c，CI41556463795全绿，2191文件归档核验并清理 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [整审](../../reviews/re-35-M5P2整体审核.md) / [阶段记录](reviews/P2-assets-review.md) / [裁定](reviews/P2-purge-contract-decision.md) |
 | P3 | 已完成：noff main5807a0d6，CI41591764345全绿，2251文件归档核验并清理 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
 | P4 | 已完成：noff main0f93100a，CI41641099230全绿，2301文件归档核验并清理 | [spec](specs/P4-profile-images.md) / [plan](plans/P4-profile-images.md) / [整审](../../reviews/re-39-M5P4整体审核.md) / [阶段记录](reviews/P4-profile-images-review.md) |
-| P5 | T1有序图片身份已验证，T2待实施；一次builder check H1已修正 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
+| P5 | T1–T2已验证，T3待实施；一次builder check H1已修正 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
 | P6–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。

@@ -484,3 +484,5 @@ no-shadow全仓清零并升error；死成员按原脚本逐行追生产、测试
 只读对照Plane `apps/api/plane/utils/content_validator.py`的image-component/src允许集合与`app/views/issue/base.py`的迁移保存分支。Nerve继续保留既有安全URL和raw img清洗，在同一Sanitizer结果上投影image-component的有序src，缺src记空值、重复和位置保留。只改格式/合法block ID不改变身份；换图、换序、增删重复图片不能用skip_activity隐藏动态或版本。
 
 内部引用候选仅规范小写连字符UUID，不把远程源或URL中的UUID当成资产授权；raw img只保留既有HasImage含义。实际绑定/宿主权限与API审计证明留P5后续Task，页面非资产源占位和不发远程请求留P7，本条不宣称已启用图片上传界面。
+
+P5/T2新增具名内容绑定/草稿完整集合端口：owner持父锁后资产按全局UUID分页锁定，专用SQL修改归属/绑定，原SaveAsset不扩权；草稿发布迁移全部完成的活件，但未引用描述继续私有。此处为端口和数据库层证据，API联动/真实字节留后续Task，见[P5阶段记录](M5-files/reviews/P5-issue-assets-review.md#9-t2完整集合绑定与草稿迁移)。
