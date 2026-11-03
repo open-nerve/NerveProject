@@ -1,7 +1,7 @@
 # M5 / P3 S3 存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T5已完成，T6待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
+> 预检通过，T1–T6已完成，T7待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
 
 **Goal：** 为既有资产用例接入真实 S3 私有存储，完成 F4、部署配置和 local 回归。
 
@@ -36,7 +36,7 @@
 - 新`asset/adapter/s3/{store,config,transport,errors,presign,inspect,read,seal,delete,inventory}.go`，按职责拆；Config{Endpoint,Region,Bucket,Prefix,AccessKeyID,SecretAccessKey,SessionToken string; UsePathStyle bool; SizeLimit int64; OperationTimeout time.Duration}，Deps{RuntimeNow func()time.Time}；`New(context.Context,Config,Deps)(*Store,error)`、`Origin() string`、`Close() error`。
 - 方法完全沿用app签名：SignUpload(ctx,domain.UploadGrant)(domain.SignedRequest,error)、SignRead(ctx,domain.ReadGrant)(domain.SignedRequest,error)、Inspect(ctx,domain.ObjectKey)(domain.ObjectInfo,error)、Open(ctx,key,etag)(io.ReadCloser,error)、Seal(ctx,source,target,etag)(domain.ObjectInfo,error)、Delete(ctx,key)error、List(ctx,token string,limit int)(app.ObjectPage,error)、SweepTemporary(ctx,cutoff time.Time,limit int,token string)(next string,removed int,err error)。不向app提供大Storage接口。
 - 新测试专用`platform/s3test/{service,bucket}.go`：`New(t testing.TB)*Service`自有90s启动/30s回收；`Service.NewBucket(t testing.TB)*Bucket`返回Endpoint/Region/Name/AccessKeyID/SecretAccessKey，prefix由每世界生成；`Bucket.Client()*s3.Client`只用于测试实物断言。测试helper不是产品导入；真实数据面ready使用独立测试key后清理，不污染生产构造的只读约定。
-- bootstrap newAssets改为`newAssets(context.Context,config.FilesConfig,*identity.Keys,*slog.Logger)(assetComponents,error)`；factory与调用者同步。assetComponents内部store聚合现有小端口，transfer为`*assethttp.Deps`可空，origin string；close归原app所有。
+- bootstrap newAssets改为`newAssets(context.Context,config.FilesConfig,*identity.Keys,*slog.Logger)(assetComponents,error)`；factory与调用者同步。assetComponents内部store聚合现有小端口，transfer为`*assethttp.Deps`可空，origin string、runtimeNow func()time.Time；close归原app所有。
 - asset.Deps新增`Files config.FilesConfig`和`RuntimeNow func()time.Time`，Transfer改可空`*httpadapter.Deps`；New仅在非空时建raw handler，Register仅在其存在时注册；业务用例统一取Files/RuntimeNow。
 - webui `Options{StorageOrigin string}`、`Handler(fs.FS,Options)(http.Handler,error)`；`contentSecurityPolicy(index []byte,origin string) string`只接受已验证origin，调用者处理构造错误。
 
@@ -102,15 +102,15 @@
 
 ## Task 6（T6）：单一组合根与完整业务闭环
 
-**Files：** 修改bootstrap/assets.go、app.go、asset/module.go及现有factory测试；新增bootstrap/assets_s3.go、asset_s3_lifecycle_test.go、asset_s3_recovery_test.go；修改bootstrap/contract_test.go、asset_contract_test.go的明确driver目录。
+**Files：** 修改bootstrap/assets.go、app.go、asset/module.go及现有factory测试；新增bootstrap/assets_s3.go及asset_s3_fixture/lifecycle/recovery/lifetime_test.go；抽出asset/adapter/http/storage_namespace.go共用保留树；修改bootstrap/contract_test.go、asset_contract_test.go与asset_transfer_test.go的明确driver目录。
 
 **Interfaces：** 应用前述context版newAssets、assetStore聚合、Files/RuntimeNow/可选Transfer；既有owner/读写Tx/gate只注入一次。
 
-- [ ] Step 1：TestAssetS3Lifecycle/TestAssetS3Recovery：HTTP prepare→raw PUT→complete→metadata/content→实物GET→duplicate→delete→cleanup，实际PG及hash；S3构造不创建local目录/raw route；local完整旧路径。deferred DB提交错误时candidate和对象仍可对账；撤权/宿主删除/锁外阻塞与零DML断言继续有效。
-- [ ] Step 2：`cd server && go test ./internal/bootstrap -run 'TestAssetS3(Lifecycle|Recovery)$' -count=1`记录RED；完整route/public/Problem目录的两driver实际差异明确列出。
-- [ ] Step 3：只重组组合根和模块可选raw依赖，ctx传进构造；scope、业务事务、owner、SQL和River状态不变，启动失败及app.close沿原所有权释放。
-- [ ] Step 4：同命令GREEN，再原Asset prepare/read/complete/duplicate/deletion/cleanup/resources/contract及httpserver/archtest，race验证实际连接/gate释放；不新增放宽守卫。
-- [ ] Step 5：提交`feat(M5/P3): 以单一组合根接入 S3 资产生命周期`。
+- [x] Step 1：TestAssetS3Lifecycle/TestAssetS3Recovery：HTTP prepare→raw PUT→complete→metadata/content→实物GET→duplicate→delete→cleanup，实际PG及hash；S3构造不创建local目录/raw route；local完整旧路径。deferred DB提交错误时candidate和对象仍可对账；撤权/宿主删除/锁外阻塞与零DML断言继续有效。
+- [x] Step 2：`cd server && go test ./internal/bootstrap -run 'TestAssetS3(Lifecycle|Recovery)$' -count=1`记录RED；完整route/public/Problem目录的两driver实际差异明确列出。
+- [x] Step 3：只重组组合根和模块可选raw依赖，ctx传进构造；scope、业务事务、owner、SQL和River状态不变，启动失败及app.close沿原所有权释放。
+- [x] Step 4：同命令GREEN，再原Asset prepare/read/complete/duplicate/deletion/cleanup/resources/contract及httpserver/archtest，race验证实际连接/gate释放；不新增放宽守卫。
+- [x] Step 5：提交`feat(M5/P3): 以单一组合根接入 S3 资产生命周期`。
 
 ## Task 7（T7）：CSP、部署和真正浏览器 F4
 

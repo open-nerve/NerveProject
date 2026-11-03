@@ -57,7 +57,7 @@ CREATE CONSTRAINT TRIGGER reject_asset_publication AFTER UPDATE ON file_assets D
 		var offset atomic.Int64
 		attempts := make(chan *assetSealAttempt, 1)
 		w, store := newAssetCompleteWorld(t, func(c *assetComponents) {
-			c.transfer.RuntimeNow = func() time.Time { return time.Now().Add(time.Duration(offset.Load())) }
+			c.runtimeNow = func() time.Time { return time.Now().Add(time.Duration(offset.Load())) }
 			c.sealing.Sealer = controlledAssetSeal(c.store, attempts)
 		})
 		item := w.newWorkItem(t)

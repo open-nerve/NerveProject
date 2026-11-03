@@ -11,6 +11,7 @@ import (
 
 	assetpg "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 )
 
 type assetObservedReader struct {
@@ -37,10 +38,12 @@ func TestAssetCompleteStorageFailures(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var opened, closed atomic.Int64
-			w, _ := newAssetCompleteWorld(t, func(c *assetComponents) {
+			w, _ := newAssetCompleteWorldWith(t, func(c *config.Config) { c.Files.OperationTimeout = time.Second }, func(c *assetComponents) {
 				base := c.store
-				c.transfer.Files.OperationTimeout = time.Second
 				c.sealing.Reader = assetOpenFunc(func(ctx context.Context, key domain.ObjectKey, etag string) (io.ReadCloser, error) {
+					if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > time.Second {
+						t.Error("reader does not use the configured one-second operation budget")
+					}
 					if etag == "" {
 						t.Error("reader received no expected version")
 					}

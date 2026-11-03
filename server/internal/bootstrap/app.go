@@ -78,7 +78,7 @@ func newAppWithPoolFactory(ctx context.Context, cfg config.Config, logger *slog.
 // composition and cleanup path for normal startup and later constructor errors.
 type appFactories struct {
 	pool   func(context.Context, config.DatabaseConfig) (*pgxpool.Pool, error)
-	assets func(config.FilesConfig, *identity.Keys, *slog.Logger) (assetComponents, error)
+	assets func(context.Context, config.FilesConfig, *identity.Keys, *slog.Logger) (assetComponents, error)
 }
 
 func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Logger, migrationFiles, webFiles fs.FS, factories appFactories) (*app, error) {
@@ -112,7 +112,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		return nil, err
 	}
 	a := &app{cfg: cfg, logger: logger, pool: pool, migrator: migrator, poolCloseTimeout: poolCloseTimeout}
-	assets, err := factories.assets(cfg.Files, keys, logger)
+	assets, err := factories.assets(ctx, cfg.Files, keys, logger)
 	a.assetClose = assets.close
 	if err != nil {
 		a.close()
@@ -213,7 +213,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	files, err := asset.New(asset.Deps{Transfer: assets.transfer, Sealing: assets.sealing, Ports: assetPorts, Objects: assets.store, Inventory: assets.store, Temporary: assets.store, JobTx: tx,
+	files, err := asset.New(asset.Deps{Files: cfg.Files, RuntimeNow: assets.runtimeNow, Transfer: assets.transfer, Sealing: assets.sealing, Ports: assetPorts, Objects: assets.store, Inventory: assets.store, Temporary: assets.store, JobTx: tx,
 		PurgeAfter: cfg.Cleanup.PurgeAfter,
 		ReadTx:     postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()), UploadSigner: assets.store, ReadSigner: assets.store,
 		Parents: assetParentReader{workspaces: workspacePorts.AssetParents, projects: projectPorts.AssetParents, issues: issuePorts.AssetParents},

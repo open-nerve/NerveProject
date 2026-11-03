@@ -1,6 +1,6 @@
 # M5 / P3 S3 存储合同
 
-> 预检通过，T1–T5配置、客户端、预签、实物合同与有限恢复已完成，T6待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
+> 预检通过，T1–T6配置、存储合同、恢复与业务装配已完成，T7待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
 
 ## 1. 目的、范围和方案
 
@@ -13,7 +13,7 @@
 ## 2. 结构、依赖和资源所有权
 
 - `asset/adapter/s3` 拥有 SDK、SigV4 期限适配、HTTP、对象元数据和错误转换。Store 实现既有 `UploadSigner`、`ReadSigner`、`ObjectInspector/Reader/Sealer/Deleter/Lister`、`TemporaryCleaner`；app/domain 不增加 SDK、HTTP 或配置依赖。
-- bootstrap 只在自身内部聚合这些接口；各用例仍分别接收小端口。`asset.Deps` 显式接收 Files/RuntimeNow，local raw transfer 为可选的 HTTP 依赖，业务配置不再从 raw transfer 反取。S3 不构造本地 MAC、目录或 raw handler；asset 模块不判断驱动字符串。单一 gate、权限、River 和 DB 实例不变。
+- bootstrap 只在自身内部聚合这些接口；各用例仍分别接收小端口。`asset.Deps` 显式接收 Files/RuntimeNow，local raw transfer 为可选的 HTTP 依赖，业务配置不再从 raw transfer 反取。组合根私有assetComponents提供runtimeNow给业务构造，生产默认time.Now；原测试时钟覆盖也改走此显式入口，不再借本地HTTP传输依赖。S3 不构造本地 MAC、目录或 raw handler；asset 模块不判断驱动字符串。单一 gate、权限、River 和 DB 实例不变。
 - `New(ctx, Config, Deps) (*Store,error)` 有界只读初始化；`Close() error` 由组合根在 HTTP/jobs 停止后调用。构造中途失败释放自建 transport；不持有 DB 连接。取消/超时、关闭和错误日志均须可证明，不把 SDK 请求结束等同服务端已经停止。
 - 直接模块精确锁定：`github.com/aws/aws-sdk-go-v2 v1.47.5`、`.../credentials v1.20.13`、`.../service/s3 v1.114.6`。必要间接模块：`aws/protocol/eventstream v1.7.25`、`internal/configsources v1.5.8`、`internal/endpoints/v2 v2.8.8`、`internal/v4a v1.5.8`、`service/internal/accept-encoding v1.13.23`、`checksum v1.11.9`、`presigned-url v1.14.8`、`s3shared v1.20.8`、`github.com/aws/smithy-go v1.28.7`（省略前缀的条目均属 `github.com/aws/aws-sdk-go-v2/`）。不引入 aws/config 或 JS AWS SDK。
 - 直接构造与部署配置共用platform/config的纯S3格式验证；该依赖只在adapter边界，app/domain不导入config。现有测试依赖testcontainers-go v0.44.0、moby/api v1.55.0、containerd/errdefs v1.0.0因显式夹具、loopback端口类型和Docker实际NotFound验证转为直接声明，版本不变、未增加其他模块；s3test及子包明确禁止进入生产导入/二进制。
@@ -89,11 +89,11 @@ F4 在真正应用 origin 和浏览器 fetch/File/Blob 中完成 prepare→raw P
 
 ## 8. 完成标准
 
-- [ ] A1 配置/活动驱动、秘密来源/文件上限/日志遮盖、只读启动和单版本限制有真实负例；依赖锁定和纯层/导入守卫不放宽。
+- [x] A1 配置/活动驱动、秘密来源/文件上限/日志遮盖、只读启动和单版本限制有真实负例；依赖锁定和纯层/导入守卫不放宽。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§13，真实S3/PG/API、故障恢复及受影响race。
 - [x] A2 local/S3同一实物合同均通过；签名方法/大小/类型/期限/篡改、GET/HEAD和取消后的reader有独立断言。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§10/§11，T4最终race的两Factory共享合同及S3签名/实物用例。
-- [ ] A3 源/目的双条件COPY、同大小异内容/并发目的/源改变、200内嵌错误和错误分类证明final不可变，DB提交故障不丢candidate。
+- [x] A3 源/目的双条件COPY、同大小异内容/并发目的/源改变、200内嵌错误和错误分类证明final不可变，DB提交故障不丢candidate。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§13，真实S3/PG/API、故障恢复及受影响race。
 - [x] A4 有限prefix清单、opaque cursor、页内/进程恢复、后到实物回收、邻域保护、双时钟和无tmp合同通过。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§12，真实S3/PG与新OS进程River续跑。
-- [ ] A5 S3完整Nerve API/PG/实物闭环、权限撤销/锁外I/O/零DML和原local回归；路由目录两driver准确。
+- [x] A5 S3完整Nerve API/PG/实物闭环、权限撤销/锁外I/O/零DML和原local回归；路由目录两driver准确。证据：[阶段记录](../reviews/P3-s3-storage-review.md)§13，真实S3/PG/API、故障恢复及受影响race。
 - [ ] A6 精确CORS/CSP及三浏览器F4通过，实际File长度/类型绑定、匿名/错误origin/未准许CSP均受测；无新附件UI。
 - [ ] A7 1B/默认5MiB/最大100MiB流式容量、真实慢流/取消、连接/资源回收有记录；不以本机吞吐承诺任意公网性能。
 - [ ] A8 至少15个独立性质变异命中具体断言而非编译失败/0 tests，记录还原hash；并发封存/迟到/恢复交错跑race五轮，无死锁/数据竞争；原始失败、重试和测试输入完整保留。

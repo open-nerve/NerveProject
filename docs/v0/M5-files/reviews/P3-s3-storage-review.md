@@ -1,6 +1,6 @@
 # M5 / P3 阶段评审记录
 
-> spec/plan预检通过，T1–T5配置、客户端、预签、实物合同与有限恢复已完成，T6待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
+> spec/plan预检通过，T1–T6配置、存储合同、恢复与业务装配已完成，T7待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
 
 ## 1. 评审方式
 
@@ -8,7 +8,7 @@
 
 ## 2. 验收标准逐条核对
 
-[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A2/A4已由T3–T5证据关闭，其余尚未逐条关闭；T1–T5证据见§8–§12，A1还需T6的活动驱动装配核对。预检固定SDK/真实服务协议和版本化桶反例只为可行性证据，不提前打勾；准确原件和范围见re-36。
+[spec §8](../specs/P3-s3-storage.md#8-完成标准)的A1–A5已由T1–T6证据关闭，A6–A10仍开放；实际证据见§8–§13。预检固定SDK/真实服务协议和版本化桶反例只为可行性证据，不提前打勾；准确原件和范围见re-36。
 
 ## 3. 执行中的决定
 
@@ -20,7 +20,7 @@
 
 ## 5. 最终实现与plan差异
 
-T1按职责新增files_s3_yaml.go，秘密文件读入后复用config.ValidateCredentials与同一上限常量；同步原配置默认值/驱动测试。阶段仍在实施，无最终实现差异结论，未留待裁定项。
+T1按职责新增files_s3_yaml.go，秘密文件读入后复用config.ValidateCredentials与同一上限常量；同步原配置默认值/驱动测试。T6按预检拆分单一组合根、可选raw处理器与共享保留树；私有runtimeNow作为显式业务时钟来源，原测试覆盖同步迁移。阶段仍在实施，无最终实现差异结论，未留待裁定项。
 
 ## 6. 移交事项
 
@@ -87,3 +87,17 @@ P2已完成并归档；P3接续S3/CORS/CSP/真实合同，M0超时handoff只记�
 - 清单setup缺方法编译RED不计行为；真实行为RED14.610s→GREEN14.548s。迟到请求首轮18.436s通过，完整恢复第二轮17.593s通过；首次恢复失败来自测试SDK的bytes.Buffer不可seek，改用bytes.Reader，未改变生产逻辑，原件保留。
 - 5个独立性质变异分别去掉prefix、重复token拒绝、XML预算、把runtime年龄换成business、在页内中断时提前推进页token，全部命中具体断言并恢复原hash；累计20个，A8的5轮race仍在T8。最终受影响race通过：s3 88.265s、app 15.413s、postgres 24.385s、s3test 19.891s、archtest 5.152s；4203个非文档输入hash/成员集合不变。server/tools lint均0 issues，关键词76/14无命中，自有S3容器已回收。
 - 本Task关闭A4；全部原件在当前worktree .superpowers/sdd/P3-s3-storage/task-5-*，T11归档。业务装配、数据库提交故障、F4浏览器、容量与最终整审/阶段CI仍待后续Task，不提前关闭A1/A3/A5–A10。
+
+
+## 13. T6单一组合根与完整业务闭环
+
+- 驱动选择仅在bootstrap/newAssets；私有assetStore聚合现有消费方小端口，S3创建受限客户端而不读local MAC/目录。newAssets和factory均接收caller context，newS3Assets先验证格式再按T1边界读秘密文件，失败不fallback。asset.Deps显式Files/RuntimeNow与可选Transfer，domain/app没有SDK/config/HTTP新依赖。
+- 私有runtimeNow是业务构造的显式来源，生产仍time.Now；原late lease测试从c.transfer.RuntimeNow迁到c.runtimeNow。理由是S3没有local HTTP依赖，业务时钟不应反向依赖传输处理器；代价是未来测试若只改raw时钟，不会再意外改变业务时钟。没有新增生产快进或旁路配置。
+- local/S3复用同一保留树注册函数；S3仅保留/static及/static/的404，不注册PUT/GET/HEAD local对象路由。完整router目录按明确driver枚举，没有泛路径豁免；两种驱动调用同一API/public/401检查，原Problem headers/原raw错误目录与保留slug守卫保留。路径规范化穿越不redirect，合法storage工作区创建及项目/设置页面仍200。
+- 实际HTTP prepare→S3 PUT→complete→metadata/content→真实GET→duplicate→DELETE全链路核对PG最终key、完整SHA、ETag和原字节；重复确认不改行/审计。S3可以重放staging PUT，但final保持原字节。PG语句级触发器记录metadata/content反复读取为零DML，原S3响应no-store保持。
+- DEFERRABLE提交触发器使已封存后的最终DB事务失败：uploaded/final不发布，持久候选及桶对象仍在；撤除故障重试使用新key，旧候选不丢。完整应用关闭后重新启动，由生产RunOnStart River清理旧候选/staging、保留活final；另一闭环以业务+61天清理已删资产实物和引用。测试显式注入runtime+2h模拟lease结束，不声称真实等待了两小时，S3提供方时钟不变。
+- 真实封存后暂停返回，分别撤成员权限/删除工作项，最终锁内重验均404且保留候选实物。在暂停点核app pool零占用，用户/工作区/项目/资产行可FOR UPDATE NOWAIT，项目同一单槽gate可完成PATCH，证明外部I/O未持业务连接/锁/gate。原完整local权限、并发与删除系列同时回归。
+- 实际从测试生成的*_file读取S3凭据，nil local signing keys亦可成功；取消构造保留context.Canceled，缺失活动秘密文件明确失败且无local根目录。复用原app生命周期测试，正常关闭/重复close和后续模块构造失败都只关闭一次存储，且在HTTP/jobs停止后、PG池之前释放。
+- 首个具名RED15.717s为files.driver仍只允许local；扩展全组RED29.921s。中间一轮新增测试unused import导致编译失败，仅保留不计行为证明。首GREEN37.158s，补齐重启/生命周期/完整目录后GREEN42.816s。最终race：bootstrap 162.810s、http 6.883s、httpserver 2.831s、archtest 6.002s，4209个非文档输入hash与成员集合一致；server/tools lint0、关键词76/14无命中，自有S3容器回收。
+- 首轮受影响race曾复现原local超时测试仍通过transfer.Files覆盖业务预算，拆分后不再生效；新增实际reader deadline断言先RED7.239s，再将测试改从显式config.Files入口设置1s，生产预算与客户端时限均未放宽。旧失败及聚焦复验原件保留，最终受影响race在修正后重新运行。
+- 本Task关闭A1/A3/A5，原件task-6-*保留到T11整体归档；完整七项、CSP/CORS/三浏览器、容量、5轮race与deep-review及阶段CI仍待T7–T10。

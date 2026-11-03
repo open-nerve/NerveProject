@@ -11,11 +11,36 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
 
 type storageContract struct {
 	Routes []string `json:"routes"`
 	Codes  []string `json:"x-problem-codes"`
+}
+
+func assertStorageDriverRoutes(t *testing.T, a *app, driver string) {
+	t.Helper()
+	var storage []string
+	switch driver {
+	case "local":
+		storage = rawStorageContract(t).Routes
+	case "s3":
+		storage = []string{"/static", "/static/"}
+	default:
+		t.Fatalf("unknown storage contract driver %q", driver)
+	}
+	want := append([]string{"GET /healthz", "GET /readyz", "/api/", "/"}, storage...)
+	for _, op := range apitest.Load(t).Operations() {
+		want = append(want, op.Pattern())
+	}
+	slices.Sort(want)
+	got := a.router.Patterns()
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		t.Fatalf("%s whole router differs from exact API + platform + storage catalog:\ngot %q\nwant %q", driver, got, want)
+	}
 }
 
 func rawStorageContract(t *testing.T) storageContract {

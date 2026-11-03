@@ -3,28 +3,17 @@ package bootstrap
 import (
 	"io"
 	"net/http"
-	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
-	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
 
 func TestRawStorageRoutesAreExact(t *testing.T) {
 	a := buildApp(t, testConfig(t, unreachableDB, false), fstest.MapFS{})
-	want := append([]string{"GET /healthz", "GET /readyz", "/api/", "/"}, rawStorageContract(t).Routes...)
-	for _, op := range apitest.Load(t).Operations() {
-		want = append(want, op.Pattern())
-	}
 	// Compare the whole router: an alias outside /static is not an exemption.
-	slices.Sort(want)
-	got := a.router.Patterns()
-	slices.Sort(got)
-	if !slices.Equal(got, want) {
-		t.Fatalf("actual router differs from API + platform + raw contract:\ngot %q\nwant %q", got, want)
-	}
+	assertStorageDriverRoutes(t, a, "local")
 }
 
 func TestRawStorageUnsignedAndUnknownPaths(t *testing.T) {

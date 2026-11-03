@@ -24,9 +24,13 @@ import (
 // 1. The union of the modules' public operations is the contract's
 // security: [] operations.
 func TestPublicOperationsAreTheContractsPublicOperations(t *testing.T) {
-	contract := apitest.Load(t)
 	a := buildApp(t, testConfig(t, unreachableDB, false), fstest.MapFS{})
+	assertPublicOperations(t, a)
+}
 
+func assertPublicOperations(t *testing.T, a *app) {
+	t.Helper()
+	contract := apitest.Load(t)
 	var want []string
 	for _, op := range contract.Operations() {
 		if op.Public {
@@ -41,9 +45,13 @@ func TestPublicOperationsAreTheContractsPublicOperations(t *testing.T) {
 // 2. The routes registered under /api/v0 are the contract's operations: a
 // route the contract does not describe fails here.
 func TestAPIRoutesAreTheContractsOperations(t *testing.T) {
-	contract := apitest.Load(t)
 	a := buildApp(t, testConfig(t, unreachableDB, false), fstest.MapFS{})
+	assertAPIRoutes(t, a)
+}
 
+func assertAPIRoutes(t *testing.T, a *app) {
+	t.Helper()
+	contract := apitest.Load(t)
 	var got []string
 	for _, pattern := range a.router.Patterns() {
 		path := pattern
@@ -66,9 +74,13 @@ func TestAPIRoutesAreTheContractsOperations(t *testing.T) {
 
 // 3. Every operation that is not public answers 401 without a token.
 func TestOperationsThatNeedATokenAnswer401WithoutOne(t *testing.T) {
-	contract := apitest.Load(t)
 	base := startApp(t, testConfig(t, unreachableDB, false), fstest.MapFS{})
+	assertOperationsRequireToken(t, base)
+}
 
+func assertOperationsRequireToken(t *testing.T, base string) {
+	t.Helper()
+	contract := apitest.Load(t)
 	for _, op := range contract.Operations() {
 		if op.Public {
 			continue
