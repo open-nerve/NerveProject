@@ -1,6 +1,6 @@
 # M5 / P4 阶段评审记录
 
-> 预检通过，T1–T11字段/绑定/读取/清理及全部资料图片API聚焦回归完成；T12待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
+> 预检通过，T1–T11字段/绑定/读取/清理及全部资料图片API聚焦回归完成；T12清理恢复、冷统计容量、性质变异及最终回归已通过，生成核验待提交后。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
 
 ## 1. 评审方式
 
@@ -151,4 +151,17 @@ TestImageStorageContract将同一组业务请求跑在local和真实S3：四类�
 
 Playwright report/test-results复制保存在task-11-e2e，所有task-11日志、输入hash/receipt及容器ID保留；后续全量E2E不会覆盖本次原始证据。F5–F7仅关闭API部分，页面/素材/缓存仍在P6，完整P4门禁、清理恢复、整审与集成待T12–T15。
 
-完整架构race6.518s通过。Go和Playwright日志明确创建的11个自有容器均已回收，20个既有容器保留，见docker-task-11-reaped.json。生成核验在提交后执行。
+完整架构race6.518s通过。Go和Playwright日志明确创建的11个自有容器均已回收，20个既有容器保留，见docker-task-11-reaped.json。提交后生成核验3.135s通过。
+
+
+## 19. T12保留期、真实进程恢复和冷统计容量
+
+TestImageReferenceRetention先经真实注册/建工作区/建项目、prepare/PUT/complete及owner PATCH建立四类引用。16件同时覆盖61天empty、59天empty、61天nonempty和活件：精确让四个final key删除失败，保留资产恢复行、四个owner引用和工作区/项目父行，同时无关eligible页继续前进；恢复实际存储后解除→资产→父链收敛。每次物理清理batch1，活件/59天件的完整owner与资产JSON不变，解除不改owner审计；额外独立证明老父不能CASCADE年轻资产。空对象先实际删除字节才清metadata。用户没有保留旧引用的公开删除入口，因此用户墓碑+旧引用为具名持久化故障，年龄/安全戳也是时间夹具，不声称存在用户公开物理删除API。初次具名GREEN7.606s。
+
+TestImagePurgeProcess的两个场景分别在首个真实资产页提交后暂停、第二页真实DELETE触发器报错后退出OS进程。另一PID启动原River worker、用River JobRetry继续同一个job，读取原持久metadata：首个after不回退、不跳页，四引用和资产没有半笔；新进程业务时刻前移30天，仍沿原cutoff，59天和活邻域快照不变，最终父链清完。正常续跑与失败续跑7.182s通过。第一次夹具只接受retryable，但当前River对短重试使用available，导致17.597s失败；依据依赖源码改看持久errors和合法调度状态，生产实现不变，原失败保留。
+
+容量夹具通过API上传并绑定1000件，再增加到1001件。首次5秒超时定位到第一个ListProjects，尚未取资产锁或签名。pg_stat_activity显示CPU执行且无锁等待；诊断EXPLAIN ANALYZE也30秒未完。冷统计plan估计各表只有1行，把全成员/偏好组合反复对每project扫描；手工ANALYZE后的对照执行1.674ms。局部修复只改project所属SQL：偏好连接锚定p.id/current user，并保留m.id存在前提，非成员sort_order仍null；不改权限、排序、接口、架构守卫、依赖或请求期限。未经手工ANALYZE的真实GET随后通过：1000件14SQL/292ms，1001件15SQL/295ms，签名次数分别1000/1001，存储I/O为0，后一块锁未取得前签名为0，取消后连接/gate可重用。诊断失败和执行计划原件保留于task-12-capacity-*；最终race和完整项目回归另核。
+
+本任务新增uploaded、binding-bound、创建业务图后提前commit三项变异，均实际触发原用例的状态/原子性断言并精确恢复源SHA。累计31项变异逐份核原始日志，不计编译/启动失败或空匹配，覆盖全部15项要求：申请者、scope、bound、uploaded、7d、old/new排序、账户首锁、目标账号逆序锁、owner授权、同UUID混合引用、创建事务、忽略签名失败、反向FK/漏列、盲清当前ref、删0结束页。对应具体用例、日志与恢复hash集中在task-12-mutation-matrix.json；缺列另有T4 avatar-detach负例，不仅靠FK改SET NULL的目录测试。
+
+最终4327项源输入逐路径hash相同：完整asset app/postgres、project全部包、workspace app与arch带race通过172.781s；21项bootstrap具名验收及双驱动合同带race150.787s；四项清理/换进程交错各五轮race52.343s；成员/邀请签名失败回滚补核4.618s；Go lint16.278s零问题。最终容量带race为1000件14SQL/611ms、1001件15SQL/560ms，取消后再读558ms。25个日志可明确归属的测试容器全部回收，现存20个与T11保留集逐ID一致；无全局清理。生成核验按原Makefile在提交后执行。完整七项、准确CI与阶段整审仍由T13–T15关闭。

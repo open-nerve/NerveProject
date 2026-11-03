@@ -559,6 +559,7 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
   - 修改已归档的项目 409 `project.archived`（Plane 400，`:343-347`）；其余写入不因归档而拒绝（Plane 也不）。
   - 列表默认不含已归档的项目，`?archived=true` 只返回已归档的（总体设计 3.3）。Plane 的列表两者都返回，由前端过滤。
 - **项目资源带调用者的视角**：`member_role`（他的项目角色）、`sort_order`（他的侧边栏顺序），与 Plane 的列表相同（`views/project/base.py:147-183`）；另带 `member_ids`（有效成员的 id，卡片上的头像用）。
+  - M5/P4 T12修复冷统计下的列表连接退化：个人偏好SQL锚定当前project/user，仅有效成员行存在时参与连接，非成员仍返回null。不改变可见性或排序，不要求手工更新统计或限制原完整集合；千引用真实API验收见[M5/P4记录](../M5-files/reviews/P4-profile-images-review.md)。
 - **负责人、默认负责人**：
   - 创建：负责人是工作区的有效管理员或成员，他随之成为项目管理员（Plane `views/project/base.py:272-278`）；创建时不设默认负责人。
   - 修改：两者都必须是项目中不是访客的有效成员（Plane 设置页的选择范围，`core/components/project/member-select.tsx:32-42`），可以清空（`null`）。修改不会把谁加为成员。

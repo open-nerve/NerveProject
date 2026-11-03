@@ -168,7 +168,7 @@ FROM projects p
 LEFT JOIN project_members m
        ON m.project_id = p.id AND m.member_id = $1 AND m.is_active AND m.deleted_at IS NULL
 LEFT JOIN project_user_properties u
-       ON u.project_id = m.project_id AND u.user_id = m.member_id AND u.deleted_at IS NULL
+       ON u.project_id = p.id AND u.user_id = $1 AND m.id IS NOT NULL AND u.deleted_at IS NULL
 WHERE p.workspace_id = $2 AND p.deleted_at IS NULL
   AND (p.archived_at IS NOT NULL) = $3::boolean
   AND ($4::boolean OR m.id IS NOT NULL OR ($5::boolean AND p.network = 2))
@@ -214,6 +214,9 @@ type ListProjectsRow struct {
 // the others, each as GetProject reads it (the same columns, so the rows convert); sees_all and sees_public are the
 // user's workspace role's domain.Visibility. By the project's place in the user's sidebar, the projects without a
 // place in it last, then by name, which is unique among the workspace's undeleted projects.
+// Anchor the preference lookup to this project; the membership existence guard
+// preserves null preferences for nonmembers and prevents a membership/preference
+// join from being rescanned for every project when fresh-table estimates are low.
 func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]ListProjectsRow, error) {
 	rows, err := q.db.Query(ctx, listProjects,
 		arg.UserID,
