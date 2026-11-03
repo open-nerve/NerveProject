@@ -1,6 +1,6 @@
 # M5 / P3 阶段评审记录
 
-> spec/plan预检通过，T1配置/秘密读取与T2客户端/夹具已完成，T3待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
+> spec/plan预检通过，T1–T3配置、客户端与预签已完成，T4待开始。基线main2d1bcf0c（CI41556463795全绿）；当前codex/m5-p3，见[re-36](../../../reviews/re-36-M5P3预检.md)。本记录不宣称整个P3或阶段整审完成。
 
 ## 1. 评审方式
 
@@ -51,3 +51,14 @@ P2已完成并归档；P3接续S3/CORS/CSP/真实合同，M0超时handoff只记�
 - 测试helper生产导入和子包负例、二进制直接导入负例先实际RED再GREEN，没有豁免架构守卫。整体受影响race：S3适配器16.600s、s3test19.826s、config2.288s、archtest5.107s；server/tools lint均0 issues。
 - 4个性质变异分别放行版本化桶、跟随同源redirect、取消origin/Host守卫、暴露SDK原始错误，都命中具体行为断言，源hash完整恢复；加上T1累计7个。最终恢复后具名测试通过（15.747s/19.280s），4183个非文档输入哈希和成员集合前后不变，见task-2-final-green-receipt.json/inputs；未以编译失败或0 tests计数。
 - 原件位于当前worktree的.superpowers/sdd/P3-s3-storage/task-2-*，后续按T11整体归档。T2不宣称预签、对象协议、业务装配、F4或阶段整审已完成，T9前仍不推送未完整验收的产品检查点。
+
+
+## 10. T3精确预签与真实传输
+
+- 新增deadline.go与presign.go，保持既有UploadSigner/ReadSigner小端口。先验证domain期限上界，再向下取整并拒绝已过期的整秒；使用SDK传入的真实signingTime，在官方V4签名之前把Expires改为绝对秒差，不改签后URL、不伪造生产签名时钟。签名前/后与排队跨过期限均受context和期限检查。
+- 固定SDK默认方案再次实际观测到requested02:35:51Z、actual02:35:50Z（提前1秒）；精确适配为0秒偏差。永久测试另以独立字面时间覆盖亚秒、跨秒、最短整秒、上传15m/读取65m、越界和取消，不依赖恰巧落在秒边界的随机情况。
+- 真实服务验证3字节PUT：错误长度/类型403，正确200；签名包含content-length/content-type/host，公开头只有Content-Type，不伪造Body。改方法、key、query或期限403；实际HEAD大小/类型与真实字节一致。
+- GET/HEAD独立签名、UTF-8及引号文件名用标准Content-Disposition编码，普通附件attachment与合法图片inline均验证；返回类型覆盖、长度、空HEAD正文与GET SHA均有独立断言。临近过期GET仍为private,no-store，到期后新GET403；匿名读取和文件名换行注入被拒绝。F4浏览器/CORS仍属于T7，当前没有宣称浏览器验收完成。
+- 3个性质变异真实命中：移除长度签名后错误大小PUT变成200；移除类型签名后错误类型PUT变成200；改相对时长舍入后精确到期断言失败。源hash均恢复，累计10个。完整记录为task-3-mutations.json及对应日志，未以单纯检查源文本证明保护。
+- 原始行为RED14.904s、首轮具名GREEN20.151s；完整受影响race为S3 35.547s、local7.071s、domain1.634s。首次lint只发现V4导入需显式别名，两处按goimports修正，server/tools最终均0 issues；格式修正后的具名GREEN20.368s，4187个非文档输入哈希/成员集合前后不变，见task-3-final-formatted-receipt.json/inputs。格式前race原件仍保留于task-3-final-green.*，没有把它声称为格式后重新跑过。
+- 无新增依赖、schema或公开DTO；阶段验收A2还需T4共享实物合同，T9七项和T10 deep-review仍待后续完成。

@@ -1,7 +1,7 @@
 # M5 / P3 S3 存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1/T2已完成，T3待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
+> 预检通过，T1–T3已完成，T4待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
 
 **Goal：** 为既有资产用例接入真实 S3 私有存储，完成 F4、部署配置和 local 回归。
 
@@ -70,11 +70,11 @@
 
 **Interfaces：** SignUpload/SignRead返回existing SignedRequest；内部HTTPPresignerV4委托官方v4.Signer，签名前计算Expires秒，不篡改signingTime。
 
-- [ ] Step 1：TestS3PresignDeadline/TestS3SignedRequests真实PUT3B：wrong type/size=>403、正确=>200/204；SignedHeaders含length/type/host、公开Headers只有Content-Type；实际X-Amz-Date+Expires等于ExpiresAt。跨秒/极短/已到期/65m边界，改方法/key/query/期限全部拒绝。
-- [ ] Step 2：运行`cd server && go test ./internal/modules/asset/adapter/s3 -run 'TestS3(PresignDeadline|SignedRequests)$' -count=1`记录RED及默认SDK早1秒反例。
-- [ ] Step 3：实现签发、mime.FormatMediaType文件名、GET/HEAD响应覆盖类型/处置/`private, no-store`；检测context和排队后到期。
-- [ ] Step 4：同命令GREEN；近到期GET仍no-store，HEAD无body且长度实际一致，匿名拒绝；移除长度、类型签名和期限适配3个性质变异，按hash恢复；受影响race/lint。
-- [ ] Step 5：提交`feat(M5/P3): 提供绑定长度类型和绝对期限的 S3 预签请求`。
+- [x] Step 1：TestS3PresignDeadline/TestS3SignedRequests真实PUT3B：wrong type/size=>403、正确=>200/204；SignedHeaders含length/type/host、公开Headers只有Content-Type；实际X-Amz-Date+Expires等于ExpiresAt。跨秒/极短/已到期/65m边界，改方法/key/query/期限全部拒绝。
+- [x] Step 2：运行`cd server && go test ./internal/modules/asset/adapter/s3 -run 'TestS3(PresignDeadline|SignedRequests)$' -count=1`记录RED及默认SDK早1秒反例。
+- [x] Step 3：实现签发、mime.FormatMediaType文件名、GET/HEAD响应覆盖类型/处置/`private, no-store`；检测context和排队后到期。
+- [x] Step 4：同命令GREEN；近到期GET仍no-store，HEAD无body且长度实际一致，匿名拒绝；移除长度、类型签名和期限适配3个性质变异，按hash恢复；受影响race/lint。
+- [x] Step 5：提交`feat(M5/P3): 提供绑定长度类型和绝对期限的 S3 预签请求`。
 
 ## Task 4（T4）：实物读写与同一共享合同
 
