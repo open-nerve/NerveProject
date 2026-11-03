@@ -137,7 +137,7 @@ func checkCellPages(t *testing.T, s *postgresadapter.Store, in app.ListRead, wan
 	for _, state := range in.Directories.States {
 		catalog.states = append(catalog.states, app.StateRef{ID: state.ID, Name: state.Key, Group: state.Group})
 	}
-	listing := app.NewListing(app.ListingDeps{Rows: s, States: catalog, Labels: catalog, Assignees: s, Profiles: catalog, Issues: s})
+	listing := app.NewListing(app.ListingDeps{Rows: s, States: catalog, Labels: catalog, Assignees: s, Profiles: catalog, Issues: s, Attachments: catalog})
 	for n := 0; n <= len(want); n++ {
 		rows, err := s.Subgroups(context.Background(), in)
 		if err != nil {

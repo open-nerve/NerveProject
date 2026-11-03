@@ -1,48 +1,21 @@
 package bootstrap
 
 import (
-	"context"
 	"encoding/json"
-	"log/slog"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
-	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
-	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
 func TestIssueAttachmentProjectionSnapshot(t *testing.T) {
 	for _, kind := range []string{"detail", "identifier", "children"} {
 		t.Run(kind, func(t *testing.T) {
-			dbURL := pgtest.NewDatabase(t)
-			pool := openPool(t, dbURL)
-			cfg := testConfig(t, dbURL, false)
 			trace := &attachmentSnapshotTrace{gate: newGate(), pauseSQL: "AttachmentCounts"}
-			factory := func(ctx context.Context, c config.DatabaseConfig) (*pgxpool.Pool, error) {
-				source, err := postgres.NewPool(ctx, c)
-				if err != nil {
-					return nil, err
-				}
-				pc := source.Config()
-				source.Close()
-				pc.ConnConfig.Tracer = trace
-				return pgxpool.NewWithConfig(ctx, pc)
-			}
-			a, err := newAppWithPoolFactory(t.Context(), cfg, slog.New(slog.DiscardHandler), migrations.FS(), testWebUI, factory)
-			if err != nil {
-				t.Fatal(err)
-			}
-			t.Cleanup(a.close)
-			w := prepareIssueWorld(t, issueWorld{base: runBuiltApp(t, a), pool: pool, contract: apitest.Load(t), tokens: map[string]string{}, ids: map[string]uuid.UUID{}})
+			w := attachmentSnapshotWorld(t, trace)
 			parent := w.newWorkItem(t)
 			item := parent
 			path := "/api/v0/issues/" + parent.String()

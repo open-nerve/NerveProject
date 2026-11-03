@@ -161,7 +161,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	attachmentReads := asset.NewAttachmentReads(assetPorts)
 	issueAttachmentReads := issueAttachments{reader: attachmentReads, counter: attachmentReads, catalog: attachmentReads}
 	issues := issue.New(issue.Deps{
-		AttachmentReader: issueAttachmentReads, AttachmentCounter: issueAttachmentReads,
+		AttachmentReader: issueAttachmentReads, AttachmentCounter: issueAttachmentReads, AttachmentCatalog: issueAttachmentReads,
 		ContentBindings:    issueContentBindings{bindings: asset.NewContentBindings(assetPorts, businessClock)},
 		DraftAssetTransfer: issueDraftAssetTransfer{assets: asset.NewDraftAssetTransfer(assetPorts, businessClock, events)},
 		DraftAssets:        issueDraftAssets{assets: assetPorts.DraftAssets},

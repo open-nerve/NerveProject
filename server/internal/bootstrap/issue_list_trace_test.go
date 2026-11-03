@@ -93,6 +93,8 @@ func copyListArgs(args []any) ([]any, error) {
 			out[i] = slices.Clone(v)
 		case []string:
 			out[i] = slices.Clone(v)
+		case []int64:
+			out[i] = slices.Clone(v)
 		default:
 			return nil, fmt.Errorf("unsupported captured argument %d: %T", i, a)
 		}

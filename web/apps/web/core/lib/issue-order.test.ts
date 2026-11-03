@@ -128,6 +128,38 @@ test("safeIssueCountProducesExactSortKey", () => {
   expect(issueSortKey(issue, "-link_count", emptyCatalog)).toBe(2n);
 });
 
+test("attachment counts use exact integer ordering and directional UUID ties", () => {
+  const rows = [2, 0, 1, 2, Number.MAX_SAFE_INTEGER].map((count, index) => {
+    const issue = { ...issueOf(String(9 - index)), attachment_count: count };
+    return { id: issue.id, key: issueSortKey(issue, "attachment_count", emptyCatalog) };
+  });
+  expect(rows.map((row) => row.key)).toEqual([2n, 0n, 1n, 2n, 9007199254740991n]);
+  expect(rows.toSorted((a, b) => compareRows(a, b, "attachment_count")).map((row) => row.id)).toEqual([
+    "8",
+    "7",
+    "6",
+    "9",
+    "5",
+  ]);
+  expect(rows.toSorted((a, b) => compareRows(a, b, "-attachment_count")).map((row) => row.id)).toEqual([
+    "5",
+    "9",
+    "6",
+    "7",
+    "8",
+  ]);
+  for (const count of [Number.MAX_SAFE_INTEGER + 1, -1, 0.5, Infinity, NaN])
+    expect(() => issueSortKey({ ...issueOf("x"), attachment_count: count }, "attachment_count", emptyCatalog)).toThrow(
+      "Unsafe issue count"
+    );
+  expect(
+    compareRows({ id: "b", key: 9007199254740992n }, { id: "a", key: 9007199254740993n }, "attachment_count")
+  ).toBeLessThan(0);
+  expect(
+    compareRows({ id: "a", key: 9223372036854775807n }, { id: "b", key: 9007199254740993n }, "-attachment_count")
+  ).toBeLessThan(0);
+});
+
 test.each([Number.MAX_SAFE_INTEGER + 1, -1, 0.5, Infinity, NaN])("unsafeIssueCountIsRejected %s", (count) => {
   expect(() => issueSortKey({ ...issueOf("a"), sub_issues_count: count }, "sub_issues_count", emptyCatalog)).toThrow();
 });

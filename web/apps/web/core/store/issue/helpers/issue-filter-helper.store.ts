@@ -57,6 +57,8 @@ const displayOrders = new Set([
   "-start_date",
   "link_count",
   "-link_count",
+  "attachment_count",
+  "-attachment_count",
   "sub_issues_count",
   "-sub_issues_count",
 ]);

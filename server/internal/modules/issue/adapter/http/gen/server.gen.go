@@ -77,33 +77,37 @@ func (e IssueListGroupField) Valid() bool {
 
 // Defines values for IssueListOrder.
 const (
-	IssueListOrderAssigneeName        IssueListOrder = "assignee_name"
-	IssueListOrderCreatedAt           IssueListOrder = "created_at"
-	IssueListOrderLabelName           IssueListOrder = "label_name"
-	IssueListOrderLinkCount           IssueListOrder = "link_count"
-	IssueListOrderMinusAssigneeName   IssueListOrder = "-assignee_name"
-	IssueListOrderMinusCreatedAt      IssueListOrder = "-created_at"
-	IssueListOrderMinusLabelName      IssueListOrder = "-label_name"
-	IssueListOrderMinusLinkCount      IssueListOrder = "-link_count"
-	IssueListOrderMinusPriority       IssueListOrder = "-priority"
-	IssueListOrderMinusStartDate      IssueListOrder = "-start_date"
-	IssueListOrderMinusStateName      IssueListOrder = "-state_name"
-	IssueListOrderMinusSubIssuesCount IssueListOrder = "-sub_issues_count"
-	IssueListOrderMinusTargetDate     IssueListOrder = "-target_date"
-	IssueListOrderMinusUpdatedAt      IssueListOrder = "-updated_at"
-	IssueListOrderPriority            IssueListOrder = "priority"
-	IssueListOrderSortOrder           IssueListOrder = "sort_order"
-	IssueListOrderStartDate           IssueListOrder = "start_date"
-	IssueListOrderStateName           IssueListOrder = "state_name"
-	IssueListOrderSubIssuesCount      IssueListOrder = "sub_issues_count"
-	IssueListOrderTargetDate          IssueListOrder = "target_date"
-	IssueListOrderUpdatedAt           IssueListOrder = "updated_at"
+	IssueListOrderAssigneeName         IssueListOrder = "assignee_name"
+	IssueListOrderAttachmentCount      IssueListOrder = "attachment_count"
+	IssueListOrderCreatedAt            IssueListOrder = "created_at"
+	IssueListOrderLabelName            IssueListOrder = "label_name"
+	IssueListOrderLinkCount            IssueListOrder = "link_count"
+	IssueListOrderMinusAssigneeName    IssueListOrder = "-assignee_name"
+	IssueListOrderMinusAttachmentCount IssueListOrder = "-attachment_count"
+	IssueListOrderMinusCreatedAt       IssueListOrder = "-created_at"
+	IssueListOrderMinusLabelName       IssueListOrder = "-label_name"
+	IssueListOrderMinusLinkCount       IssueListOrder = "-link_count"
+	IssueListOrderMinusPriority        IssueListOrder = "-priority"
+	IssueListOrderMinusStartDate       IssueListOrder = "-start_date"
+	IssueListOrderMinusStateName       IssueListOrder = "-state_name"
+	IssueListOrderMinusSubIssuesCount  IssueListOrder = "-sub_issues_count"
+	IssueListOrderMinusTargetDate      IssueListOrder = "-target_date"
+	IssueListOrderMinusUpdatedAt       IssueListOrder = "-updated_at"
+	IssueListOrderPriority             IssueListOrder = "priority"
+	IssueListOrderSortOrder            IssueListOrder = "sort_order"
+	IssueListOrderStartDate            IssueListOrder = "start_date"
+	IssueListOrderStateName            IssueListOrder = "state_name"
+	IssueListOrderSubIssuesCount       IssueListOrder = "sub_issues_count"
+	IssueListOrderTargetDate           IssueListOrder = "target_date"
+	IssueListOrderUpdatedAt            IssueListOrder = "updated_at"
 )
 
 // Valid indicates whether the value is a known member of the IssueListOrder enum.
 func (e IssueListOrder) Valid() bool {
 	switch e {
 	case IssueListOrderAssigneeName:
+		return true
+	case IssueListOrderAttachmentCount:
 		return true
 	case IssueListOrderCreatedAt:
 		return true
@@ -112,6 +116,8 @@ func (e IssueListOrder) Valid() bool {
 	case IssueListOrderLinkCount:
 		return true
 	case IssueListOrderMinusAssigneeName:
+		return true
+	case IssueListOrderMinusAttachmentCount:
 		return true
 	case IssueListOrderMinusCreatedAt:
 		return true

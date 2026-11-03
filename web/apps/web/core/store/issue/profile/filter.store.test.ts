@@ -47,6 +47,26 @@ it("profileViewsKeepIndependentSettings across target users and accounts", async
   await other.fetchFilters("ws", "target");
   expect(other.getIssueFilters("target")?.richFilters).toEqual({});
 });
+
+it.each(["attachment_count", "-attachment_count"] as const)(
+  "retains stored attachment order %s in a fresh profile store",
+  async (order_by) => {
+    const first = (await profileTab()).app.issue.profileIssuesFilter;
+    await first.fetchFilters("ws", "target");
+    await first.updateFilters("ws", undefined, EIssueFilterType.DISPLAY_FILTERS, { order_by }, "target");
+    const tab = await profileTab();
+    await tab.app.issue.profileIssuesFilter.fetchFilters("ws", "target");
+    expect(tab.app.issue.profileIssuesFilter.getIssueFilters("target")?.displayFilters?.order_by).toBe(order_by);
+    const list = await requestedIssue(
+      tab.nerve,
+      () => tab.app.issue.profileIssues.fetchIssues("ws", "target", "init-loader", { limit: 20 }, "assigned"),
+      ["GET", "/api/v0/workspaces/ws/members/target/issues"]
+    );
+    expect(list.call.query.order_by).toBe(order_by);
+    list.call.answer(json(200, issuePageOf([])));
+    await list.promise;
+  }
+);
 it("cleans invalid stored fields while retaining a valid member project restriction", async () => {
   data.set(
     "issue_local_filters",

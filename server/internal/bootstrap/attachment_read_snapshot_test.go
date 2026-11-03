@@ -63,26 +63,8 @@ func (*attachmentSnapshotTrace) TraceQueryEnd(context.Context, *pgx.Conn, pgx.Tr
 func TestAttachmentListsUseOneSnapshot(t *testing.T) {
 	for _, kind := range []string{"issue", "comment", "draft"} {
 		t.Run(kind, func(t *testing.T) {
-			dbURL := pgtest.NewDatabase(t)
-			pool := openPool(t, dbURL)
-			cfg := testConfig(t, dbURL, false)
 			trace := &attachmentSnapshotTrace{gate: newGate()}
-			factory := func(ctx context.Context, c config.DatabaseConfig) (*pgxpool.Pool, error) {
-				source, err := postgres.NewPool(ctx, c)
-				if err != nil {
-					return nil, err
-				}
-				pc := source.Config()
-				source.Close()
-				pc.ConnConfig.Tracer = trace
-				return pgxpool.NewWithConfig(ctx, pc)
-			}
-			a, err := newAppWithPoolFactory(t.Context(), cfg, slog.New(slog.DiscardHandler), migrations.FS(), testWebUI, factory)
-			if err != nil {
-				t.Fatal(err)
-			}
-			t.Cleanup(a.close)
-			w := prepareIssueWorld(t, issueWorld{base: runBuiltApp(t, a), pool: pool, contract: apitest.Load(t), tokens: map[string]string{}, ids: map[string]uuid.UUID{}})
+			w := attachmentSnapshotWorld(t, trace)
 			item := w.newWorkItem(t)
 			id := item
 			host := "/api/v0/issues/" + id.String()
@@ -138,4 +120,27 @@ func TestAttachmentListsUseOneSnapshot(t *testing.T) {
 			attachmentListRead(t, w, "bob", host+"/attachments", 404)
 		})
 	}
+}
+
+func attachmentSnapshotWorld(t *testing.T, trace *attachmentSnapshotTrace) issueWorld {
+	t.Helper()
+	dbURL := pgtest.NewDatabase(t)
+	pool := openPool(t, dbURL)
+	cfg := testConfig(t, dbURL, false)
+	factory := func(ctx context.Context, c config.DatabaseConfig) (*pgxpool.Pool, error) {
+		source, err := postgres.NewPool(ctx, c)
+		if err != nil {
+			return nil, err
+		}
+		pc := source.Config()
+		source.Close()
+		pc.ConnConfig.Tracer = trace
+		return pgxpool.NewWithConfig(ctx, pc)
+	}
+	a, err := newAppWithPoolFactory(t.Context(), cfg, slog.New(slog.DiscardHandler), migrations.FS(), testWebUI, factory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(a.close)
+	return prepareIssueWorld(t, issueWorld{base: runBuiltApp(t, a), pool: pool, contract: apitest.Load(t), tokens: map[string]string{}, ids: map[string]uuid.UUID{}})
 }

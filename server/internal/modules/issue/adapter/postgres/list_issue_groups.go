@@ -40,6 +40,7 @@ func groupParameters(in app.ListRead) (gen.GroupIssuesParams, error) {
 	}
 	return gen.GroupIssuesParams{
 		GroupBy: string(q.GroupBy), GroupKey: q.GroupKey,
+		AttachmentIds: p.AttachmentIds, AttachmentCounts: p.AttachmentCounts,
 		ActorID: p.ActorID, Relation: p.Relation, RelationUserID: p.RelationUserID,
 		OrderKey: p.OrderKey, Descending: p.Descending, PageSize: p.PageSize,
 		HasCursor: p.HasCursor, CursorNull: p.CursorNull, CursorID: p.CursorID, CursorNum: p.CursorNum, CursorText: p.CursorText,

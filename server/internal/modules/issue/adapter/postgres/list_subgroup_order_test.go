@@ -25,6 +25,16 @@ func (subgroupCatalog) DisplayNames(context.Context, []uuid.UUID) (map[uuid.UUID
 	return nil, nil
 }
 
+// These fixtures create no assets. Return an explicit complete projection so
+// list tests retain the same required port contract as production composition.
+func (subgroupCatalog) CountIssueAttachments(_ context.Context, ids []uuid.UUID) ([]app.AttachmentCount, error) {
+	rows := make([]app.AttachmentCount, len(ids))
+	for n, id := range ids {
+		rows[n] = app.AttachmentCount{IssueID: id}
+	}
+	return rows, nil
+}
+
 func TestIssueSubgroupsLaneOrder(t *testing.T) {
 	s, pool := newStore(t)
 	a := newAccount(t, pool, "lane-order")
@@ -63,7 +73,7 @@ func TestIssueSubgroupsLaneOrder(t *testing.T) {
 		}
 		exec(t, pool, "UPDATE issues SET state_id=$2,priority=$3,target_date=$4,created_by_id=$5 WHERE id=$1", id, state, priorities[n], []any{"2026-01-01", "2026-01-02", "2026-01-03", "2026-01-04", nil}[n], creator)
 	}
-	listing := app.NewListing(app.ListingDeps{Rows: s, States: catalog, Labels: catalog, Assignees: s, Profiles: catalog, Issues: s})
+	listing := app.NewListing(app.ListingDeps{Rows: s, States: catalog, Labels: catalog, Assignees: s, Profiles: catalog, Issues: s, Attachments: catalog})
 	stateKeys, personKeys := make([]string, 5), make([]string, 0, 5)
 	for n, state := range states {
 		stateKeys[n] = state.String()

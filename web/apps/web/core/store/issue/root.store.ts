@@ -352,6 +352,7 @@ export class IssueRootStore {
       issue.archived_at,
       issue.sub_issues_count,
       issue.link_count,
+      issue.attachment_count,
     ]);
   }
   private async write(

@@ -2763,7 +2763,7 @@ export interface components {
          */
         IssueListGroupField: "state_id" | "state_group" | "priority" | "label_id" | "assignee_id" | "created_by_id" | "target_date" | "project_id";
         /** @enum {string} */
-        IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "sub_issues_count" | "-sub_issues_count" | "link_count" | "-link_count" | "sort_order";
+        IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "sub_issues_count" | "-sub_issues_count" | "link_count" | "-link_count" | "attachment_count" | "-attachment_count" | "sort_order";
         IssueListSubgroup: {
             key: string;
             /** Format: int64 */

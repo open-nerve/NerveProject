@@ -5145,6 +5145,8 @@ components:
         - -sub_issues_count
         - link_count
         - -link_count
+        - attachment_count
+        - -attachment_count
         - sort_order
     IssueListSubgroup:
       type: object

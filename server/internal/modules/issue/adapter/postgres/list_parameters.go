@@ -30,6 +30,7 @@ func listParameters(in app.ListRead) (gen.FlatIssuesParams, error) {
 		return gen.FlatIssuesParams{}, fmt.Errorf("invalid list query")
 	}
 	p := gen.FlatIssuesParams{
+		AttachmentIds: make([]uuid.UUID, 0, len(d.AttachmentCounts)), AttachmentCounts: make([]int64, 0, len(d.AttachmentCounts)),
 		ActorID: in.ActorID, Relation: q.Relation, RelationUserID: in.TargetMemberID,
 		OrderKey: strings.TrimPrefix(string(q.Order), "-"), Descending: strings.HasPrefix(string(q.Order), "-"),
 		PageSize: int32(q.Limit + 1), Archived: f.Archived, SubIssues: f.SubIssues,
@@ -42,6 +43,15 @@ func listParameters(in app.ListRead) (gen.FlatIssuesParams, error) {
 		StateIds: make([]uuid.UUID, 0, len(d.States)), StateGroups: make([]string, 0, len(d.States)), StateKeys: make([]string, 0, len(d.States)),
 		LabelIds: make([]uuid.UUID, 0, len(d.Labels)), LabelKeys: make([]string, 0, len(d.Labels)),
 		AssigneeIds: make([]uuid.UUID, 0, len(d.Assignees)), AssigneeKeys: make([]string, 0, len(d.Assignees)),
+	}
+	seenCounts := make(map[uuid.UUID]bool, len(d.AttachmentCounts))
+	for _, v := range d.AttachmentCounts {
+		if v.IssueID == (uuid.UUID{}) || v.Count <= 0 || seenCounts[v.IssueID] {
+			return p, fmt.Errorf("invalid attachment count directory")
+		}
+		seenCounts[v.IssueID] = true
+		p.AttachmentIds = append(p.AttachmentIds, v.IssueID)
+		p.AttachmentCounts = append(p.AttachmentCounts, v.Count)
 	}
 	for _, v := range d.Projects {
 		p.ProjectIds = append(p.ProjectIds, v.ID)

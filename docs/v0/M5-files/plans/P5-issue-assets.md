@@ -108,10 +108,10 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 **Files:** issue/app/listing.go/list_ports.go、domain/listvocab/list_cursor_key/list_order、postgres三套list SQL与适配器；API排序枚举/生成物；web/apps/web/core/lib/issue-order.ts、issue-filters.ts、store/issue/root.store.ts、helpers/issue-filter-helper.store.ts、project/filter.store.ts及对应测试；P7才挂UI。
 **Interfaces:** ListDirectories.AttachmentCounts []AttachmentCount；T4目录完整传参；普通页面计数沿T5；±attachment_count整数比较/UUID方向继承现有规则。
 
-- [ ] Step 1：TestListAttachmentCount：0/1/2/同数乱ID、最大bigint游标、1001目录尾最大值、guest隐藏、两方向三页、空页total、group/subgroup重叠cell、成员关系与archived/subissue组合。
-- [ ] Step 2：`cd server && go test -p 1 ./internal/modules/issue/domain ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(ListAttachmentCount|List.*Cursor)' -count=1`取得RED后实现filtered阶段目录join/精确key；只允许内存目录，无asset表SQL。
-- [ ] Step 3：GREEN；一次snapshot内新增/删除时count/order/cursor一致；目录失败/重复/负值显式失败，跨项目分页没有after错位；变异先page后sort、截断1000、float64、吞错误均失败。
-- [ ] Step 4：完整列表/设置/成员/架构与TS比较器回归（包括root.store变更指纹识别attachment_count、列表迟到回包不覆盖新计数）、gen/lint，提交 `feat(M5/P5): 支持真实附件计数排序和精确分页`。
+- [x] Step 1：TestListAttachmentCount：0/1/2/同数乱ID、最大bigint游标、1001目录尾最大值、guest隐藏、两方向三页、空页total、group/subgroup重叠cell、成员关系与archived/subissue组合。
+- [x] Step 2：`cd server && go test -p 1 ./internal/modules/issue/domain ./internal/modules/issue/adapter/postgres ./internal/bootstrap -run 'Test(ListAttachmentCount|List.*Cursor)' -count=1`取得RED后实现filtered阶段目录join/精确key；只允许内存目录，无asset表SQL。
+- [x] Step 3：GREEN；一次snapshot内新增/删除时count/order/cursor一致；目录失败/重复/负值显式失败，跨项目分页没有after错位；变异先page后sort、截断1000、float64、吞错误均失败。
+- [x] Step 4：完整列表/设置/成员/架构与TS比较器回归（包括root.store变更指纹识别attachment_count、列表迟到回包不覆盖新计数）、gen/lint，提交 `feat(M5/P5): 支持真实附件计数排序和精确分页`。
 
 ## Task 9（T9）：F8–F12真实API及双存储
 

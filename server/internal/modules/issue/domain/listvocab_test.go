@@ -11,6 +11,7 @@ func TestListVocabulary(t *testing.T) {
 			"start_date", "-start_date", "target_date", "-target_date", "priority", "-priority",
 			"state_name", "-state_name", "label_name", "-label_name", "assignee_name", "-assignee_name",
 			"sub_issues_count", "-sub_issues_count", "link_count", "-link_count",
+			"attachment_count", "-attachment_count",
 		} {
 			t.Run(string(order), func(t *testing.T) {
 				if !ListOrderAllowed(order) {

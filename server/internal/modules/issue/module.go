@@ -117,6 +117,7 @@ type (
 // Deps are what bootstrap gives the module (M4 design 6.6, step 6).
 type Deps struct {
 	AttachmentCounter  app.AttachmentCounter
+	AttachmentCatalog  app.AttachmentCountCatalog
 	ContentBindings    app.ContentBinding
 	AttachmentReader   app.AttachmentReader
 	DraftAssetTransfer app.DraftAssetTransfer
@@ -181,7 +182,7 @@ func New(d Deps) *Module {
 	assetAccess := app.NewAssetAccess(app.AssetAccessDeps{Locks: locks, Drafts: draftLocks, Comments: store, Projects: d.Projects})
 	attachments := app.GetAttachmentsDeps{Access: assetAccess, Rows: d.AttachmentReader, ReadTx: d.ReadTx}
 	sanitizer := content.NewSanitizer()
-	listing := app.NewListing(app.ListingDeps{Attachments: d.AttachmentCounter, Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
+	listing := app.NewListing(app.ListingDeps{Attachments: d.AttachmentCounter, AttachmentCatalog: d.AttachmentCatalog, Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
 	archive := app.ArchiveIssueDeps{Events: d.Events, Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	creation := app.NewIssueCreation(app.IssueCreationDeps{Events: d.Events,
 		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,

@@ -202,7 +202,7 @@ func checkListNumericExpression(t *testing.T, file string) {
 	t.Helper()
 	_, pool := newStore(t)
 	expression := numericExpression(t, file)
-	query := "SELECT pg_typeof(k)::text,k::text,k=$7::numeric FROM (SELECT " + expression + " AS k FROM (SELECT pg_catalog.float8send($2::float8) AS bits,$3::timestamptz AS created_at,$3::timestamptz AS updated_at,$4::bigint AS child_count,$5::bigint AS link_count,$6::date AS start_date,$6::date AS target_date,'urgent'::text AS priority) s) probe"
+	query := "SELECT pg_typeof(k)::text,k::text,k=$7::numeric FROM (SELECT " + expression + " AS k FROM (SELECT pg_catalog.float8send($2::float8) AS bits,$3::timestamptz AS created_at,$3::timestamptz AS updated_at,$4::bigint AS child_count,$5::bigint AS link_count,$5::bigint AS attachment_count,$6::date AS start_date,$6::date AS target_date,'urgent'::text AS priority) s) probe"
 	probe := func(order string, value float64, at time.Time, children, links int64, date, want string) {
 		t.Helper()
 		var kind, actual string
@@ -222,6 +222,7 @@ func checkListNumericExpression(t *testing.T, file string) {
 	for _, count := range []int64{0, 1, 9007199254740991, 9007199254740992, 9007199254740993, math.MaxInt64} {
 		probe("sub_issues_count", 0, now, count, 31, "1970-01-01", strconv.FormatInt(count, 10))
 		probe("link_count", 0, now, 47, count, "1970-01-01", strconv.FormatInt(count, 10))
+		probe("attachment_count", 0, now, 47, count, "1970-01-01", strconv.FormatInt(count, 10))
 	}
 	for _, micros := range []int64{-1, 0, 9007199254740991, 9007199254740992, 9007199254740993} {
 		for _, order := range []string{"created_at", "updated_at"} {

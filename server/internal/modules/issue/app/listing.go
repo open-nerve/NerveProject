@@ -45,13 +45,14 @@ type IssueListGroup struct {
 }
 
 type ListingDeps struct {
-	Attachments AttachmentCounter
-	Rows        ListRows
-	States      ListStateCatalog
-	Labels      ListLabelCatalog
-	Assignees   AssigneeDirectory
-	Profiles    PublicProfiles
-	Issues      IssueReader
+	Attachments       AttachmentCounter
+	AttachmentCatalog AttachmentCountCatalog
+	Rows              ListRows
+	States            ListStateCatalog
+	Labels            ListLabelCatalog
+	Assignees         AssigneeDirectory
+	Profiles          PublicProfiles
+	Issues            IssueReader
 }
 
 // Listing assembles a list inside the read snapshot provided by its caller.
@@ -85,6 +86,12 @@ func (l *Listing) Read(ctx context.Context, input ListingInput) (IssueListPage, 
 	directories, err := l.directories(ctx, input.Projects)
 	if err != nil {
 		return IssueListPage{}, err
+	}
+	if q.Order == "attachment_count" || q.Order == "-attachment_count" {
+		directories.AttachmentCounts, err = l.attachmentCounts(ctx, input.Projects)
+		if err != nil {
+			return IssueListPage{}, err
+		}
 	}
 	read := ListRead{ActorID: input.ActorID, TargetMemberID: input.TargetMemberID, Query: q, Directories: directories}
 	fetch := l.deps.Rows.Flat
