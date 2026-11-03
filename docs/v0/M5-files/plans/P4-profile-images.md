@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T12实现及验收完成，T13本地七项已通过，远端CI待核。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T13接续，重大新风险先提交后上报。
+> 预检通过，T1–T12实现及验收完成，T13七项与准确产品CI已全绿，T14整审通过、最终文档CI待核。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T13接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -176,14 +176,14 @@
 
 - [x] Step 1：逐项核A1–A7及handoff处理结果，所有文档逐句对照实际证据；新字段/错误生成物与消费者齐全，关键词phase=M5/P4且无到期例外续期。
 - [x] Step 2：串行 `make gen-check`、`make lint-go`、`GOFLAGS=-p=1 make test`、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`；Expected全0、无未解释skip/缓存混算，记录每项输入hash/输出/时间。保留失败后按根因修复，变动后复验受影响门禁。
-- [ ] Step 3：提交中文产品检查点，系统git push；核对准确HEAD的server/web/e2e三job全绿，日志通过连接GitHub自行读取。已知W11正常重跑一次；再次失败停报，不能取消测试或改断言绕过。
-- [ ] Step 4：阶段review记录本地/远端各自证据，不提前称集成完成。
+- [x] Step 3：提交中文产品检查点，系统git push；核对准确HEAD的server/web/e2e三job全绿，日志通过连接GitHub自行读取。已知W11正常重跑一次；再次失败停报，不能取消测试或改断言绕过。
+- [x] Step 4：阶段review记录本地/远端各自证据，不提前称集成完成。
 
 ## Task 14（T14）：整分支deep-review与修复
 
-- [ ] Step 1：固定基线main5807a0d6到最终候选；按deep-review顺序核逻辑、集成、测试，完整手写文件和caller链有清单，生成物核源/锁。存docs/reviews下一编号M5P4整体审核。
-- [ ] Step 2：executing-plans要求的一次fresh整分支review，交spec/plan、Review Focus原文、Ruling台账；按实际用户影响重新分级。
-- [ ] Step 3：Important/Critical一次局部修复，真实RED/GREEN、受影响/必要全量门禁和主控复核，不反复派同范围review；Minor具名去向，重大新风险提交后上报。
+- [x] Step 1：固定基线main5807a0d6到最终候选；按deep-review顺序核逻辑、集成、测试，完整手写文件和caller链有清单，生成物核源/锁。存docs/reviews下一编号M5P4整体审核。
+- [x] Step 2：executing-plans要求的一次fresh整分支review，交spec/plan、Review Focus原文、Ruling台账；按实际用户影响重新分级。
+- [x] Step 3：Important/Critical一次局部修复，真实RED/GREEN、受影响/必要全量门禁和主控复核，不反复派同范围review；Minor具名去向，重大新风险提交后上报。
 - [ ] Step 4：所有裁定/代价和未读范围写报告；提交最终文档与修复、推送并核精确最后HEAD CI；A8只有此时可关闭，A9继续等待。
 
 ## Task 15（T15）：集成、归档与P5预检
