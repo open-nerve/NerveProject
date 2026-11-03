@@ -1,6 +1,6 @@
 # M5 / P4 阶段评审记录
 
-> 预检通过，T1字段/规则及聚焦回归完成；T2待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
+> 预检通过，T1–T2字段/绑定及聚焦回归完成；T3待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
 
 ## 1. 评审方式
 
@@ -20,7 +20,7 @@
 
 ## 4. 整分支发现与处理
 
-尚未实施，整审及修复待T14。不能把builder check的无重要问题写成代码无缺陷。
+T1–T2已实施，整审及修复待T14。不能把builder check的无重要问题写成代码无缺陷。
 
 ## 5. 实现与plan差异
 
@@ -32,7 +32,7 @@ F5–F7页面、29张预设素材及URL缓存属于P6；issue/comment/draft属�
 
 ## 7. 限制与证据
 
-P4预检原件为本worktree `.superpowers/sdd/P4-profile-images`，P3规划探针已入P3冻结归档；完整路径和命令/时间见re-38。当前未声称P4 API/数据库新字段、真实图片或后续页面已经上线。
+P4预检原件为本worktree `.superpowers/sdd/P4-profile-images`，P3规划探针已入P3冻结归档；完整路径和命令/时间见re-38。当前字段与内部绑定已在分支实现，未声称P4公开API、真实图片或后续页面已经上线。
 
 
 ## 8. T1所属字段、纯规则与SQLC
@@ -44,3 +44,11 @@ P4预检原件为本worktree `.superpowers/sdd/P4-profile-images`，P3规划探�
 最终八包无缓存全绿（34.114s）：migrations3.574s、archtest1.696s、identity/workspace/project domain0.233/0.177/0.170s、三个postgres包6.295/13.508/5.810s；具名新测试实际运行。Go lint server/tools均0 issues（28.890s）。make gen已生成且重生成输入不变；首次gen-check因生成文件尚未提交退出2，按Makefile原规则在提交后复核，不放宽守卫。原件task-1-schema-red/cover-red/fields-red/final-green及receipt/inputs、task-1-generation、task-1-gen-check、task-1-lint均在阶段workspace。
 
 P4整体A1–A9暂未关闭。反向清理/完整程序目录T4、公开API T5–T9及全部门禁T13仍待实施，T1不能当作阶段完整交付。
+
+## 9. T2原子图片绑定
+
+新增小端口ImageBindings和专用BindImage SQL，owner持有事务和父锁时一次升序锁齐全部旧新资产，统一取得At，写所属引用后再Apply。新候选先全批隐藏判定，再用途/上传/绑定状态；当前引用幂等不写，管理员可替换旧申请者的已绑定图，旧软删审计保持。new_project仅在最终绑定SQL迁入已插入的项目，SaveAsset仍不改申请者/父引用/bound_at。
+
+应用行为RED 1.541s、真实PG RED 3.344s；SQLC nullable At首轮编译不符单独保留，不算行为证据。GREEN真实触发器在第二件绑定时失败，四件资产与用户两字段全部回滚；无事务调用拒绝、Revision/用途/状态拒绝、项目先插入再绑定、SaveAsset边界均验证。最终11项具名主测试、两包带race全通过（8.087s），完整asset/app race亦通过（16.907s，含既有local/S3合同）。lint静态布尔形式提示修正后server/tools均0 issues（17.024s），不改变规则。
+
+四项实际行为变异（申请者、完整范围、7天、升序锁）均被具名断言检出，每次精确SHA恢复，证据task-2-mutations.json及四份日志。最终4249个源输入hash稳定；生成物提交后按原gen-check复核。证据在阶段workspace的task-2-*，公开owner接线和真实内容仍归T5–T11。

@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1实现与聚焦回归完成，T2待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T2接续，重大新风险先提交后上报。
+> 预检通过，T1–T2实现与聚焦回归完成，T3待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T3接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -57,10 +57,10 @@
 
 **Interfaces:** 消费T1字段规则和既有AssetLocker/MetadataWriter，新增access §1的ImageBindingWriter/BindImage专用写；实现ImageBindingRequest、LockImageBindings/ApplyImageBindings及NewImageBindings。SaveAsset继续不改归属/绑定，未使用的AssetReader不注入。
 
-- [ ] Step 1：TestImageBindings检验两图逆序旧新ID一次排序锁、隐藏优先409、跨申请者/完整scope/过期404、用途422、未uploaded409、bound拒绝；7天exact允许/+1微秒拒绝；当前ID幂等、管理员更替移除旧件、旧删除审计保持。
-- [ ] Step 2：具名RED后实现共同校验器；Lock返回最终锁后Clock时刻，Apply重读相同集合且同At，新件经BindImage、旧软删经SaveAsset；new_project变更仅在Apply调用的固定绑定SQL设置scope和ProjectID，不回锁owner。旧SaveAsset不扩写范围，BindImage无事务/Revision冲突/非图片或已绑定负例真实拒绝。
-- [ ] Step 3：`cd server && go test -p 1 ./internal/modules/asset/app ./internal/modules/asset/adapter/postgres -run '^TestImageBindings' -count=1`；Expected具名全GREEN。实际事务测试证明无事务LockAssets报错、Apply失败无部分绑定；变异去掉申请者/范围/7天/排序各应断言失败。
-- [ ] Step 4：受影响app race和lint-go；保存返回时刻/审计证据后提交 `feat(M5/P4): 实现同事务图片绑定和旧引用回收标记`。
+- [x] Step 1：TestImageBindings检验两图逆序旧新ID一次排序锁、隐藏优先409、跨申请者/完整scope/过期404、用途422、未uploaded409、bound拒绝；7天exact允许/+1微秒拒绝；当前ID幂等、管理员更替移除旧件、旧删除审计保持。
+- [x] Step 2：具名RED后实现共同校验器；Lock返回最终锁后Clock时刻，Apply重读相同集合且同At，新件经BindImage、旧软删经SaveAsset；new_project变更仅在Apply调用的固定绑定SQL设置scope和ProjectID，不回锁owner。旧SaveAsset不扩写范围，BindImage无事务/Revision冲突/非图片或已绑定负例真实拒绝。
+- [x] Step 3：`cd server && go test -p 1 ./internal/modules/asset/app ./internal/modules/asset/adapter/postgres -run '^TestImageBindings' -count=1`；Expected具名全GREEN。实际事务测试证明无事务LockAssets报错、Apply失败无部分绑定；变异去掉申请者/范围/7天/排序各应断言失败。
+- [x] Step 4：受影响app race和lint-go；保存返回时刻/审计证据后提交 `feat(M5/P4): 实现同事务图片绑定和旧引用回收标记`。
 
 ## Task 3（T3）：资产批量图片签发
 
