@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T9实现与聚焦回归完成，T10待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T10接续，重大新风险先提交后上报。
+> 预检通过，T1–T10实现与聚焦回归完成，T11待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T11接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -145,10 +145,10 @@
 
 **Interfaces:** 消费T5–T9完整HTTP路由及P2既有prepared API；不通过测试SQL制造已绑定功能成功。
 
-- [ ] Step 1：TestImageCredentialRace/TestImageParentRace/TestMemberAvatarLockOrder/TestInvitationImageRace/TestProjectCoverCreateRace：各自设置两方向先后、反序UUID，观察实际等待锁；reset/deactivate、workspace撤权/删除、project私有化/归档/撤权、target profile替换/停用、invitation撤销/accepted/收件账户停用删邀请（含收件人尚非该工作区成员）、双创建抢同准备件。
-- [ ] Step 2：让对应性质缺失时实际RED，修复局部接线/断言根因；新增架构分歧先提交。owner隐藏/不存在的code/body/headers逐值比较，双图片隐藏优先不因输入排序改变；当前引用不受旧申请者限制。
-- [ ] Step 3：`cd server && go test ./internal/bootstrap -run '^Test(ImageCredentialRace|ImageParentRace|MemberAvatarLockOrder|InvitationImageRace|ProjectCoverCreateRace|ImageAuth)' -race -count=5 -v`；Expected所有具名每个五轮通过、无40P01、没有skip/0 tests；PID/连接/gate证据有实际输出。
-- [ ] Step 4：断言存储I/O计数0、取消后连接与gate可再用，读取审计不变；提交 `test(M5/P4): 覆盖图片授权撤销和原子绑定的真实交错`。
+- [x] Step 1：TestImageCredentialRace/TestImageParentRace/TestMemberAvatarLockOrder/TestInvitationImageRace/TestProjectCoverCreateRace：各自设置两方向先后、反序UUID，观察实际等待锁；reset/deactivate、workspace撤权/删除、project私有化/归档/撤权、target profile替换/停用、invitation撤销/accepted/收件账户停用删邀请（含收件人尚非该工作区成员）、双创建抢同准备件。
+- [x] Step 2：让对应性质缺失时实际RED，修复局部接线/断言根因；新增架构分歧先提交。owner隐藏/不存在的code/body/headers逐值比较，双图片隐藏优先不因输入排序改变；当前引用不受旧申请者限制。
+- [x] Step 3：`cd server && go test ./internal/bootstrap -run '^Test(ImageCredentialRace|ImageParentRace|MemberAvatarLockOrder|InvitationImageRace|ProjectCoverCreateRace|ImageAuth)' -race -count=5 -v`；Expected所有具名每个五轮通过、无40P01、没有skip/0 tests；PID/连接/gate证据有实际输出。
+- [x] Step 4：断言存储I/O计数0、取消后连接与gate可再用，读取审计不变；提交 `test(M5/P4): 覆盖图片授权撤销和原子绑定的真实交错`。
 
 ## Task 11（T11）：F5–F7 API与双存储实物
 
