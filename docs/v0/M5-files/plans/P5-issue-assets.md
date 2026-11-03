@@ -125,13 +125,13 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 
 ## Task 10（T10）：权限与真实并发交错
 
-**Files:** bootstrap/asset_content_permissions_test.go、asset_content_races_test.go、draft_assets_races_test.go；复用issueWorld/heldTx/serializeAt/pgtest.RowWaits。
+**Files:** bootstrap/asset_content_permissions_test.go、asset_content_races_test.go、draft_assets_races_test.go、asset_image_credentials_test.go；e2e/stories/files/f13-permissions.spec.ts；复用issueWorld/heldTx/serializeAt/pgtest.RowWaits及既有资产交错用例。
 **Interfaces:** 已有gate/pool、caller/W/P/D/A真实锁；无固定sleep、无生产专用测试hook。
 
-- [ ] Step 1：TestContentAssetPermissions / TestContentAssetRaces覆盖Review Focus1/2/3：普通/管理员/guest自身他人/管理员兼guest两种OwnOnly、私有/撤权/归档/删除；Prepare/Complete/Get/Content/Duplicate/Delete/HTML所有入口。
-- [ ] Step 2：双项目两UUID次序、两资产逆序、删除/归档/停用先后、草稿双发布/改项目/pending确认外部I/O中断；精确观察PID等待点、零写拒绝和取消后gate/pool复用。
-- [ ] Step 3：`cd server && go test -p 1 ./internal/bootstrap -run 'Test(ContentAssetPermissions|ContentAssetRaces|DraftAssetRaces)' -race -count=5`，Expected每具名测试五轮通过；去掉源权限/绑定隔离/取消释放/全集合顺序的变异分别失败。
-- [ ] Step 4：归档原始时序和矩阵，清理精确自建容器，提交 `test(M5/P5): 验证附件权限边界与迁移交错`。
+- [x] Step 1：TestContentAssetPermissions / TestContentAssetRaces覆盖Review Focus1/2/3：普通/管理员/guest自身他人/管理员兼guest两种OwnOnly、私有/撤权/归档/删除；Prepare/Complete/Get/Content/Duplicate/Delete/HTML所有入口。
+- [x] Step 2：双项目两UUID次序、两资产逆序、删除/归档/停用先后、草稿双发布/改项目/pending确认外部I/O中断；精确观察PID等待点、零写拒绝和取消后gate/pool复用。
+- [x] Step 3：`cd server && go test -race -p 1 ./internal/bootstrap -run '^Test(ContentAssetPermissions|ContentAssetRaces|DraftAssetRaces|AssetContentLockOrder|AssetCopyProjectLockOrder|AssetMembershipInterleaving|AssetLateHostInterleaving|AssetCredentialResetInterleaving|AssetSharedGateInterleaving|AssetCompleteRechecksHost|AssetDuplicateRechecksSourceAndTarget|AssetCompleteRaces|DraftAssetsLockBeforeMomentAndWrites|DraftAssetPublishTwiceWithFiles|DraftAssetPublishWithLateCandidate|ImageCredentialRace)$' -count=5 -v`，Expected全部16个具名测试各五轮通过；去掉源权限/绑定隔离/取消释放/全集合顺序的变异分别失败。复用既有时序实现并扩展观测，不为匹配旧正则复制用例。
+- [x] Step 4：归档原始时序和矩阵，清理精确自建容器，提交 `test(M5/P5): 验证附件权限边界与迁移交错`。
 
 ## Task 11（T11）：删除图、历史图片与恢复
 

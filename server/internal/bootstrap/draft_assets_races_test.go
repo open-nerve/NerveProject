@@ -156,3 +156,52 @@ func TestDraftAssetsMoveWhole1001(t *testing.T) {
 		t.Fatal("move omitted lower referenced image", err)
 	}
 }
+
+func TestDraftAssetRaces(t *testing.T) {
+	for _, publishFirst := range []bool{false, true} {
+		t.Run(fmt.Sprintf("publish versus delete publish first=%t", publishFirst), func(t *testing.T) {
+			w := newObservedIssueWorld(t)
+			d := createDraftHTTP(t, w, "alice", fmt.Sprintf(`{"project_id":%q,"payload":{"name":"One outcome"}}`, w.web))
+			file := draftAsset(t, w, d.ID, false)
+			barrier := holding(t, w.pool, "SELECT id FROM file_assets WHERE id=$1 FOR SHARE", file.Asset.ID)
+			defer requestRelease(t, barrier)
+			publish := newRequest(t, "POST", w.base+publishPath(d.ID), w.tokens["alice"], nil)
+			remove := newRequest(t, "DELETE", w.base+draftPath(d.ID), w.tokens["alice"], nil)
+			publishProbe, removeProbe := w.observe(publish), w.observe(remove)
+			firstReq, secondReq, firstProbe, secondProbe := remove, publish, removeProbe, publishProbe
+			if publishFirst {
+				firstReq, secondReq, firstProbe, secondProbe = publish, remove, publishProbe, removeProbe
+			}
+			first := sendInBackground(firstReq)
+			pid := requestBlocked(t, w.pool, firstProbe, barrier.Conn().PgConn().PID(), "file_assets")
+			second := sendInBackground(secondReq)
+			secondPID := requestBlocked(t, w.pool, secondProbe, pid, "projects")
+			t.Logf("draft first=%s pid=%d second=%s pid=%d", firstProbe.id, pid, secondProbe.id, secondPID)
+			requestRelease(t, barrier)
+			firstStatus := 204
+			if publishFirst {
+				firstStatus = 201
+			}
+			winner := imageRaceAnswer(t, w, firstReq, first, firstStatus)
+			imageRaceAnswer(t, w, secondReq, second, 404)
+			row, err := assetpg.New(w.pool).FindAsset(t.Context(), file.Asset.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			issues := queryIDs(t, w.pool, "SELECT id FROM issues WHERE project_id=$1", w.web)
+			if publishFirst {
+				var item storedIssue
+				decodeAnswer(t, string(winner.body), &item)
+				if len(issues) != 1 || issues[0] != item.ID || row.Placement.IssueID != item.ID || row.Placement.DraftID != uuid.Nil() || row.DeletedAt != nil || attachmentActivityCount(t, w, item.ID) != 1 {
+					t.Fatal("losing delete touched published graph", row, issues)
+				}
+				_, data := readAssetHTTP(t, w, "bob", file.Asset.ID)
+				if string(data) != "draft bytes" {
+					t.Fatal("publication lost bytes")
+				}
+			} else if len(issues) != 0 || row.Placement.DraftID != d.ID || row.DeletedAt == nil {
+				t.Fatal("losing publish created graph or revived file", row, issues)
+			}
+		})
+	}
+}

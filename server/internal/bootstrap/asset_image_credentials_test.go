@@ -1,11 +1,13 @@
 package bootstrap
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
 	"testing"
 	"time"
+	"uuid"
 
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
@@ -18,7 +20,7 @@ import (
 // Removing account/credential locking can sign with a revoked session. These
 // real HTTP requests authenticate before revocation commits, then must recheck.
 func TestImageCredentialRace(t *testing.T) {
-	for _, scope := range []string{"user", "workspace", "project"} {
+	for _, scope := range []string{"user", "workspace", "project", "issue"} {
 		for _, ending := range []string{"reset", "deactivate"} {
 			for _, endingFirst := range []bool{true, false} {
 				t.Run(fmt.Sprintf("%s %s first=%t", scope, ending, endingFirst), func(t *testing.T) {
@@ -32,7 +34,14 @@ func TestImageCredentialRace(t *testing.T) {
 					case "project":
 						path, purpose, placement, field = "/api/v0/projects/"+w.web.String(), "PROJECT_COVER", assetScopeBody("project", w.web), "cover_image"
 					}
-					image := bindRaceImage(t, w, "alice", purpose, placement, path, field)
+					var image uuid.UUID
+					if scope == "issue" {
+						item := w.newWorkItemBy(t, "alice", w.web, `{"name":"Credential bound file"}`)
+						image = uploadedAssetHTTP(t, w, "alice", "ISSUE_ATTACHMENT", assetScopeBody("issue", item), "file.png", "image/png", assetTestPNG(t)).Asset.ID
+						path = "/api/v0/assets/" + image.String() + "/content"
+					} else {
+						image = bindRaceImage(t, w, "alice", purpose, placement, path, field)
+					}
 					req := newRequest(t, "GET", w.base+path, w.tokens["alice"], nil)
 					probe := w.observe(req)
 					endTx, stopped := requestTx(w.pool), newGate()
@@ -77,7 +86,20 @@ func TestImageCredentialRace(t *testing.T) {
 					}
 					got := imageRaceAnswer(t, w, req, response, want)
 					if want == 200 {
-						checkImageReply(t, w, string(got.body), field, image, assetTestPNG(t))
+						if scope == "issue" {
+							// Use the already-issued capability, after revocation. A new
+							// signing request must fail, but its old expiry is unchanged.
+							var content struct {
+								URL string `json:"url"`
+							}
+							decodeAnswer(t, string(got.body), &content)
+							res, data := send(t, newRequest(t, "GET", w.base+content.URL, "", nil))
+							if res.StatusCode != 200 || !bytes.Equal(data, assetTestPNG(t)) {
+								t.Fatal("old capability lost its stated lifetime", res.StatusCode)
+							}
+						} else {
+							checkImageReply(t, w, string(got.body), field, image, assetTestPNG(t))
+						}
 					}
 					w.send(t, "alice", "GET", path, "", 401)
 					requestEventually(t, "credential race releases connections", func(context.Context) bool { return w.requests.appPool.Stat().AcquiredConns() == 0 })
