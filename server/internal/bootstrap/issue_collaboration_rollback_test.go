@@ -122,7 +122,7 @@ func TestCollaborationRollsBackPortFailures(t *testing.T) {
 					var err error
 					switch operation.name {
 					case "createIssueComment":
-						_, err = issueapp.NewCreateIssueComment(issueapp.CreateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}}).Execute(ctx, id, mentionHTML(w.ids["walt"]))
+						_, err = issueapp.NewCreateIssueComment(issueapp.CreateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}}).Execute(ctx, id, domain.NewComment{HTML: mentionHTML(w.ids["walt"])})
 					case "updateIssueComment":
 						_, err = issueapp.NewUpdateIssueComment(issueapp.UpdateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}}).Execute(ctx, comment.ID, mentionHTML(w.ids["walt"]))
 					case "deleteIssueComment":

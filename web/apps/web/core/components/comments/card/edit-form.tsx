@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueComment, IssueCommentCreate } from "@nerve/api-client";
+import type { IssueComment, IssueCommentUpdate } from "@nerve/api-client";
 
 import { useId, useRef, useState } from "react";
 import { observer } from "mobx-react";
@@ -62,7 +62,7 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
     clearErrors,
     watch,
     setValue,
-  } = useForm<IssueCommentCreate>({
+  } = useForm<IssueCommentUpdate>({
     defaultValues: { comment_html: comment?.comment_html },
     shouldFocusError: false,
   });
@@ -74,7 +74,7 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
   const isSubmitButtonDisabled = isSubmitting || !isEditorReadyToDiscard;
   const isDisabled = isSubmitting || isEmpty || isSubmitButtonDisabled;
 
-  const onEnter = async (formData: IssueCommentCreate) => {
+  const onEnter = async (formData: IssueCommentUpdate) => {
     const current = capture();
     if (
       !current() ||

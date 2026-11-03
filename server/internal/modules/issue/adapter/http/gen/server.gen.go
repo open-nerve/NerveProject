@@ -406,7 +406,9 @@ type IssueComment struct {
 
 // IssueCommentCreate defines model for IssueCommentCreate.
 type IssueCommentCreate struct {
-	CommentHTML string `json:"comment_html"`
+	// AttachmentIds Completed ordinary new_comment preparations of this caller and work item; omission is an empty list. IDs use lowercase hyphenated UUID spelling; other spellings answer 400 before the use case.
+	AttachmentIds *[]string `json:"attachment_ids,omitempty"`
+	CommentHTML   string    `json:"comment_html"`
 }
 
 // IssueCommentPage defines model for IssueCommentPage.
@@ -415,6 +417,11 @@ type IssueCommentPage struct {
 
 	// NextCursor The cursor of the next page; null on the last page.
 	NextCursor nullable.Nullable[externalRef0.NextCursor] `json:"next_cursor"`
+}
+
+// IssueCommentUpdate defines model for IssueCommentUpdate.
+type IssueCommentUpdate struct {
+	CommentHTML string `json:"comment_html"`
 }
 
 // IssueCreate defines model for IssueCreate.
@@ -906,7 +913,7 @@ type ListMemberIssuesParamsRelation string
 type UpdateDraftJSONRequestBody = DraftUpdate
 
 // UpdateIssueCommentJSONRequestBody defines body for UpdateIssueComment for application/json ContentType.
-type UpdateIssueCommentJSONRequestBody = IssueCommentCreate
+type UpdateIssueCommentJSONRequestBody = IssueCommentUpdate
 
 // AddCommentReactionJSONRequestBody defines body for AddCommentReaction for application/json ContentType.
 type AddCommentReactionJSONRequestBody = ReactionCreate

@@ -1365,7 +1365,7 @@ export interface paths {
         head?: never;
         /**
          * Edit a comment as its author
-         * @description Uses issue_comment.write for project admins, members and guests, then checks the comment author before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Only the comment author can edit, even for project admins. Project archiving refuses before issue archiving, and both refuse before unchanged sanitized HTML. Identical sanitized HTML writes nothing and preserves edited_at. Changed HTML sets edited_at and updated_at together, updates the work item and subscribes newly mentioned visible members without removing subscriptions. No activity is created. Busy projects answer 503 with Retry-After.
+         * @description Uses issue_comment.write for project admins, members and guests, then checks the comment author before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Only the comment author can edit, even for project admins. Project archiving refuses before issue archiving, and both refuse before unchanged sanitized HTML. Identical sanitized HTML preserves comment audit and edited_at, but still validates and binds any legacy unbound image references. Changed HTML sets edited_at and updated_at together, updates the work item and subscribes newly mentioned visible members without removing subscriptions. No activity is created. Images must be completed descriptions of this same comment; unbound preparations remain private to their applicant. Binding, the comment write and its event share one transaction and moment. This body only changes HTML; attachments use their independent endpoints. Busy projects answer 503 with Retry-After.
          */
         patch: operations["updateIssueComment"];
         trace?: never;
@@ -1605,7 +1605,7 @@ export interface paths {
         put?: never;
         /**
          * Create a comment on a visible work item
-         * @description For the project's admins, members and guests who can read the work item. Missing or hidden work items answer issue.not_found before forbidden. The project is locked first and the decision repeated. An archived project refuses with project.archived before an archived issue with issue.archived. Sanitized content must contain text, a mention or image; otherwise validation_failed on comment_html, required. At most 500000 Unicode characters before sanitization. The caller and active mentioned members who can read it automatically subscribe. Existing subscriptions keep their identity and timestamps. All new rows have one writer and moment; this creates no activity or issue_mentions. Busy projects answer 503 server_busy with Retry-After.
+         * @description For the project's admins, members and guests who can read the work item. Missing or hidden work items answer issue.not_found before forbidden. The project is locked first and the decision repeated. An archived project refuses with project.archived before an archived issue with issue.archived. Sanitized content must contain text, a mention or image; otherwise validation_failed on comment_html, required. At most 500000 Unicode characters before sanitization. The caller and active mentioned members who can read it automatically subscribe. Existing subscriptions keep their identity and timestamps. All new rows have one writer and moment; this creates no activity or issue_mentions. Current HTML images and attachment_ids must name completed new_comment preparations of this caller and work item, with description and attachment purposes respectively. The whole set is validated before writing; comment creation, binding and its event commit together. Unlisted preparations remain private and unbound. Attachments alone do not satisfy the nonempty-comment rule. Busy projects answer 503 server_busy with Retry-After.
          */
         post: operations["createIssueComment"];
         delete?: never;
@@ -2865,7 +2865,7 @@ export interface components {
             /** @description 1–100 work items of the project, each named once, to put under the work item. */
             sub_issue_ids: string[];
         };
-        IssueCommentCreate: {
+        IssueCommentUpdate: {
             comment_html: string;
         };
         CommentReaction: {
@@ -3005,6 +3005,11 @@ export interface components {
         IssueCommentPage: {
             data: components["schemas"]["IssueComment"][];
             next_cursor: components["schemas"]["NextCursor"];
+        };
+        IssueCommentCreate: {
+            comment_html: string;
+            /** @description Completed ordinary new_comment preparations of this caller and work item; omission is an empty list. IDs use lowercase hyphenated UUID spelling; other spellings answer 400 before the use case. */
+            attachment_ids?: string[];
         };
         /**
          * @description A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
@@ -3243,7 +3248,7 @@ export type IssueListPage = components['schemas']['IssueListPage'];
 export type IssueCreate = components['schemas']['IssueCreate'];
 export type IssueUpdate = components['schemas']['IssueUpdate'];
 export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
-export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
+export type IssueCommentUpdate = components['schemas']['IssueCommentUpdate'];
 export type CommentReaction = components['schemas']['CommentReaction'];
 export type IssueComment = components['schemas']['IssueComment'];
 export type ReactionCreate = components['schemas']['ReactionCreate'];
@@ -3261,6 +3266,7 @@ export type IssueLink = components['schemas']['IssueLink'];
 export type IssueLinkCollection = components['schemas']['IssueLinkCollection'];
 export type IssueLinkCreate = components['schemas']['IssueLinkCreate'];
 export type IssueCommentPage = components['schemas']['IssueCommentPage'];
+export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
 export type IssueRelationType = components['schemas']['IssueRelationType'];
 export type IssueRelation = components['schemas']['IssueRelation'];
 export type IssueRelationCollection = components['schemas']['IssueRelationCollection'];
@@ -5475,7 +5481,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["IssueCommentCreate"];
+                "application/json": components["schemas"]["IssueCommentUpdate"];
             };
         };
         responses: {

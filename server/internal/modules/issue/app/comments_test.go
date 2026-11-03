@@ -31,7 +31,7 @@ func TestCreateComment(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, w, f, id := newComment()
-			got, err := uc.Execute(as(alice), id, tt.html)
+			got, err := uc.Execute(as(alice), id, domain.NewComment{HTML: tt.html})
 			if tt.code != "" {
 				var se *shared.Error
 				if !errors.As(err, &se) || len(se.Fields) != 1 || se.Fields[0].Field != "comment_html" || se.Fields[0].Code != tt.code {
@@ -65,7 +65,7 @@ func TestCreateCommentSubscribesOnlyVisibleMembersAndWritesInOrder(t *testing.T)
 	for _, a := range []uuid.UUID{gus, carol, bob, bob, dave, out} {
 		html += `<mention-component entity_name="user_mention" entity_identifier="` + a.String() + `">Hi</mention-component>`
 	}
-	if _, err := uc.Execute(as(alice), id, html); err != nil {
+	if _, err := uc.Execute(as(alice), id, domain.NewComment{HTML: html}); err != nil {
 		t.Fatal(err)
 	}
 	if f.subscribed == nil {
@@ -85,7 +85,7 @@ func TestCreateCommentStopsAtFailingPort(t *testing.T) {
 		t.Run(port, func(t *testing.T) {
 			uc, w, _, id := newComment()
 			w.log.fail = port
-			_, err := uc.Execute(as(alice), id, `<mention-component entity_name="user_mention" entity_identifier="`+bob.String()+`">Bob</mention-component>`)
+			_, err := uc.Execute(as(alice), id, domain.NewComment{HTML: `<mention-component entity_name="user_mention" entity_identifier="` + bob.String() + `">Bob</mention-component>`})
 			wantStoppedAt(t, w, err, port)
 		})
 	}
@@ -164,7 +164,7 @@ func TestCreateCommentHiddenGuestNeverEntersGate(t *testing.T) {
 	w.auth.answers = []error{shared.Forbidden()}
 	locks := app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}, noIssueAttachments{})
 	uc := app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: discardEvents{}, Locks: locks, Comments: f, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clockAt{at: clockNow, log: w.log}})
-	_, err := uc.Execute(as(alice), id, "<p>Hidden</p>")
+	_, err := uc.Execute(as(alice), id, domain.NewComment{HTML: "<p>Hidden</p>"})
 	wantRefused(t, err, domain.ErrIssueNotFound)
 	if len(w.log.calls) != 2 || f.inserted != nil || f.subscribed != nil || f.marked != nil {
 		t.Fatal(w.log.calls)

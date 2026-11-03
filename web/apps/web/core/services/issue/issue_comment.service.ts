@@ -4,6 +4,7 @@ import type {
   CommentReaction,
   IssueComment,
   IssueCommentCreate,
+  IssueCommentUpdate,
   IssueCommentPage,
   operations,
   ReactionCreate,
@@ -25,7 +26,7 @@ export class IssueCommentService {
       await this.api.POST("/api/v0/issues/{issue_id}/comments", { params: { path: { issue_id: issueId } }, body })
     );
   }
-  async patchIssueComment(commentId: string, body: IssueCommentCreate): Promise<IssueComment> {
+  async patchIssueComment(commentId: string, body: IssueCommentUpdate): Promise<IssueComment> {
     return unwrap(
       await this.api.PATCH("/api/v0/issue-comments/{comment_id}", { params: { path: { comment_id: commentId } }, body })
     );

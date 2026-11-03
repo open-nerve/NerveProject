@@ -36,6 +36,28 @@ async function load(data: IssueComment[] = [row]) {
   sent.call.answer(json(200, { data, next_cursor: null }));
   await sent.promise;
 }
+it.each([{ ids: undefined }, { ids: [] }, { ids: ["asset-a", "asset-b"] }])(
+  "sends the selected creation preparations ($ids)",
+  async ({ ids }) => {
+    const body = { comment_html: "<p>Files</p>", ...(ids === undefined ? {} : { attachment_ids: ids }) };
+    const sent = await requestedIssue(tab.nerve, () => store().createComment("ws", "A", "x", body), ["POST", route]);
+    sent.call.answer(json(201, row));
+    await sent.promise;
+    expect(sent.call.body).toEqual(body);
+    expect(store().getCommentById("x", row.id)).toEqual(row);
+  }
+);
+it("edits only HTML even when a caller retains a creation payload", async () => {
+  await load();
+  const body = { comment_html: "<p>Edited</p>", attachment_ids: ["must-not-replace"] };
+  const sent = await requestedIssue(tab.nerve, () => store().updateComment("ws", "A", "x", row.id, body), [
+    "PATCH",
+    `/api/v0/issue-comments/${row.id}`,
+  ]);
+  sent.call.answer(json(200, row));
+  await sent.promise;
+  expect(sent.call.body).toEqual({ comment_html: body.comment_html });
+});
 it("atomically reads all pages and resumes from the last requested cursor", async () => {
   const sent = await requestedIssue(tab.nerve, read, ["GET", route]);
   sent.call.answer(json(200, { data: [row], next_cursor: "second" }));

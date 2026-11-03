@@ -52,7 +52,7 @@ func TestCommentEvents(t *testing.T) {
 				case "create":
 					c := app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: p, Locks: w.locks, Comments: f, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clock})
 					var got domain.Comment
-					got, err = c.Execute(as(alice), f.current.IssueID, html)
+					got, err = c.Execute(as(alice), f.current.IssueID, domain.NewComment{HTML: html})
 					id = got.ID
 					if fail && f.inserted != nil {
 						id = f.inserted.Comment.ID
@@ -209,7 +209,7 @@ func TestCommentEventsRefused(t *testing.T) {
 				var err error
 				switch operation {
 				case "create":
-					_, err = app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: p, Locks: w.locks, Comments: f, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clock}).Execute(as(alice), f.current.IssueID, "<p>After</p>")
+					_, err = app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: p, Locks: w.locks, Comments: f, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clock}).Execute(as(alice), f.current.IssueID, domain.NewComment{HTML: "<p>After</p>"})
 				case "update":
 					_, err = app.NewUpdateIssueComment(app.UpdateIssueCommentDeps{Events: p, Locks: w.locks, Comments: f, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clock}).Execute(as(alice), f.current.ID, "<p>After</p>")
 				case "delete":

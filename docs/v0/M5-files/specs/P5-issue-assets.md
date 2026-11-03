@@ -32,6 +32,8 @@ DELETE 普通活附件要求所属工作项更新权限、评论删除权限或�
 
 - `GET /api/v0/issues/{issue_id}/attachments`、`GET /api/v0/issue-comments/{comment_id}/attachments`、`GET /api/v0/drafts/{draft_id}/attachments`：200 `{data,next_cursor}`，只对应宿主的活、已上传、已绑定普通附件；默认50，最大100，UUID升序，游标绑定版本/宿主种类/ID/最后ID。元数据无内部key、无签名 URL；内容沿现有 `/assets/{asset_id}/content` 重新授权。
 - `IssueCommentCreate.attachment_ids` 可省略（等价空），非nullable、最多100、规范 UUID、uniqueItems=true；严格 bodyshape 区分结构400和语义422，错误位置稳定且不回显私有ID。PATCH 评论只修改 comment_html，后续附件通过 existing-comment 上传独立增删，避免隐藏的整体替换语义。
+
+  T6落实：该数组项在OpenAPI用小写连字符UUID的string pattern保留原拼写；bodyshape先拒绝null/非字符串，issue HTTP适配器在调用用例前解析并拒绝非规范拼写，沿既有400字段错误协议。数量/重复留domain返回422。不改其他UUID字段的标准库解码语义，不为此改动共享bodyshape或生成器；PATCH使用独立IssueCommentUpdate合同。
 - Issue 新增必需 int64 非负 `attachment_count`，所有返回 Issue 的入口同步真实填充；排序支持 attachment_count / -attachment_count，游标沿现有精确整数规则，禁止浮点转换；显示配置的合法键在 P7 页面开放时进入 UI，不先开放不可用控件。
 - 新错误沿既有资产码优先复用 asset.not_found / asset.not_uploaded / asset.scope_changed / asset.bound；若确需具名字段错误同任务补 OpenAPI x-problem-codes、中文英文文案、生成 Go/TS 和全程序负例。server_busy 仅 bootstrap 映射。
 

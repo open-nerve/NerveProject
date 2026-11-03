@@ -85,13 +85,13 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 
 ## Task 6（T6）：评论准备件与创建原子性
 
-**Files:** issue/app/comments.go/comment_writes.go及域输入；adapter/http/comments.go/comment_writes.go；api/modules/issue.yaml；bootstrap/comment_assets_test.go，现有评论测试/生成类型。
+**Files:** issue/app/comments.go/comment_writes.go及域输入；adapter/http/comments.go/comment_writes.go；api/modules/issue.yaml；bootstrap/comment_assets_test.go，现有评论测试/生成类型；web评论service/store/编辑表单的Update类型及创建输入传递，不挂P7上传控件。
 **Interfaces:** CreateIssueComment.Execute消费具名输入{HTML string,AttachmentIDs []uuid.UUID}；HTTP attachment_ids省略空、非null、最多100唯一。Update保持HTML参数，不引入整体替换attachments。
 
-- [ ] Step 1：TestCommentAssets：HTML两图+两个附件完整集合、申请者不同、同issue不同准备件、100/101、重复、最后一个坏、非空规则、重试前故障不消费件，现有comment追加附件权限。
-- [ ] Step 2：`cd server && go test -p 1 ./internal/modules/issue/app ./internal/modules/issue/adapter/http ./internal/bootstrap -run 'Test(CommentAssets|CreateIssueComment|UpdateIssueComment)' -count=1`取得RED；预分配ID、先LockContent，再同At INSERT/Bind，注入失败整体回滚。
-- [ ] Step 3：GREEN；评论删除立即禁止签发、原DELETE事件同At，独立附件页与react聚合不混用；不新增评论附件的issue attachment动作。
-- [ ] Step 4：旧评论/反应/契约回归、gen/lint，提交 `feat(M5/P5): 在评论事务内绑定上传准备件`。
+- [x] Step 1：TestCommentAssets：HTML两图+两个附件完整集合、申请者不同、同issue不同准备件、100/101、重复、最后一个坏、非空规则、重试前故障不消费件，现有comment追加附件权限。
+- [x] Step 2：`cd server && go test -p 1 ./internal/modules/issue/app ./internal/modules/issue/adapter/http ./internal/bootstrap -run 'Test(CommentAssets|CreateIssueComment|UpdateIssueComment)' -count=1`取得RED；预分配ID、先LockContent，再同At INSERT/Bind，注入失败整体回滚。
+- [x] Step 3：GREEN；评论删除立即禁止签发、原DELETE事件同At，独立附件页与react聚合不混用；不新增评论附件的issue attachment动作。
+- [x] Step 4：旧评论/反应/契约回归、gen/lint，提交 `feat(M5/P5): 在评论事务内绑定上传准备件`。
 
 ## Task 7（T7）：草稿保存、改项目与原子发布
 

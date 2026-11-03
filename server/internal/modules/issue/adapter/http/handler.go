@@ -71,7 +71,7 @@ type DeleteIssueRelationUseCase interface {
 
 // CreateIssueCommentUseCase creates a comment on the named issue.
 type CreateIssueCommentUseCase interface {
-	Execute(context.Context, uuid.UUID, string) (domain.Comment, error)
+	Execute(context.Context, uuid.UUID, domain.NewComment) (domain.Comment, error)
 }
 
 // ListIssueCommentsUseCase lists a page, retaining absent query values.

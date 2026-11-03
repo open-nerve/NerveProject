@@ -4,13 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueComment, IssueCommentCreate } from "@nerve/api-client";
+import type { IssueComment, IssueCommentCreate, IssueCommentUpdate } from "@nerve/api-client";
 import type { TFileSignedURLResponse } from "../../file";
 
 export type TCommentsOperations = {
   copyCommentLink: (commentId: string) => void;
   createComment: (data: IssueCommentCreate) => Promise<IssueComment>;
-  updateComment: (commentId: string, data: IssueCommentCreate) => Promise<IssueComment>;
+  updateComment: (commentId: string, data: IssueCommentUpdate) => Promise<IssueComment>;
   removeComment: (commentId: string) => Promise<void>;
   uploadCommentAsset: (blockId: string, file: File, commentId?: string) => Promise<TFileSignedURLResponse>;
   duplicateCommentAsset: (assetId: string, commentId?: string) => Promise<{ asset_id: string }>;

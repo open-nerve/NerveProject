@@ -24,6 +24,20 @@ type Comment struct {
 	Reactions                                    []CommentReaction
 }
 
+// NewComment names the content and completed preparations claimed on creation.
+// Attachment IDs contain ordinary files only; images come from sanitized HTML.
+type NewComment struct {
+	HTML          string
+	AttachmentIDs []uuid.UUID
+}
+
+func CheckNewComment(in NewComment) error {
+	if err := CheckCommentHTML(in.HTML); err != nil {
+		return err
+	}
+	return invalid(checkIDs("attachment_ids", in.AttachmentIDs, 100)...)
+}
+
 // CheckCommentHTML bounds the input before sanitization or any read.
 func CheckCommentHTML(html string) error {
 	if utf8.RuneCountInString(html) > 500000 {

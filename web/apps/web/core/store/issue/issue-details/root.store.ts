@@ -4,7 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueUpdate, IssueLinkCreate, IssueLinkPatch, IssueCommentCreate } from "@nerve/api-client";
+import type {
+  IssueUpdate,
+  IssueLinkCreate,
+  IssueLinkPatch,
+  IssueCommentCreate,
+  IssueCommentUpdate,
+} from "@nerve/api-client";
 import { action, makeObservable, observable } from "mobx";
 // types
 import type { TIssueRelationTypes, TWorkItemWidgets } from "@nerve/types";
@@ -214,7 +220,7 @@ export class IssueDetail implements IIssueDetail {
     projectId: string,
     issueId: string,
     commentId: string,
-    data: IssueCommentCreate
+    data: IssueCommentUpdate
   ) => this.comment.updateComment(workspaceSlug, projectId, issueId, commentId, data);
   removeComment = async (workspaceSlug: string, projectId: string, issueId: string, commentId: string) =>
     this.comment.removeComment(workspaceSlug, projectId, issueId, commentId);

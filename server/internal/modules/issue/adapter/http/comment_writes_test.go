@@ -32,7 +32,7 @@ func (f *fakeCommentDelete) Execute(ctx context.Context, id uuid.UUID) error {
 var commentWritePath = "/api/v0/issue-comments/" + bobComment.String()
 
 func TestCommentWritesHTTP(t *testing.T) {
-	f, d := &fakeCommentCreate{}, &fakeCommentDelete{}
+	f, d := &fakeCommentUpdate{}, &fakeCommentDelete{}
 	h := newServer(t, httpadapter.UseCases{UpdateIssueComment: f, DeleteIssueComment: d})
 	res, body := do(t, h, request(http.MethodPatch, commentWritePath, "alice", `{"comment_html":"<p>Updated</p>"}`))
 	if res.StatusCode != 200 || f.actor != aliceID || f.id != bobComment || f.html != "<p>Updated</p>" || !strings.Contains(body, `"reactions":[]`) || strings.Contains(body, "secret") {
@@ -44,7 +44,7 @@ func TestCommentWritesHTTP(t *testing.T) {
 	}
 }
 func TestCommentWritesHTTPBinding(t *testing.T) {
-	f, d := &fakeCommentCreate{}, &fakeCommentDelete{}
+	f, d := &fakeCommentUpdate{}, &fakeCommentDelete{}
 	h := newServer(t, httpadapter.UseCases{UpdateIssueComment: f, DeleteIssueComment: d})
 	for _, body := range []string{`{}`, `{"comment_html":null}`, `{"comment_html":4}`, `{"comment_html":"x","actor_id":"x"}`, `{"comment_html":"x","edited_at":null}`, `{"comment_html":"x","reactions":[]}`, `{"comment_html":"x","comment_json":{}}`} {
 		res, got := do(t, h, request(http.MethodPatch, commentWritePath, "alice", body))
@@ -77,7 +77,7 @@ func TestCommentWritesHTTPRefusals(t *testing.T) {
 			if method == http.MethodDelete && tt.status == 422 {
 				continue
 			}
-			f, d := &fakeCommentCreate{err: tt.err}, &fakeCommentDelete{err: tt.err}
+			f, d := &fakeCommentUpdate{err: tt.err}, &fakeCommentDelete{err: tt.err}
 			res, body := do(t, newServer(t, httpadapter.UseCases{UpdateIssueComment: f, DeleteIssueComment: d}), request(method, commentWritePath, "alice", `{"comment_html":"hi"}`))
 			if res.StatusCode != tt.status {
 				t.Fatal(tt.err, res.StatusCode, body)
@@ -91,7 +91,7 @@ func TestCommentWritesHTTPRefusals(t *testing.T) {
 
 func TestCommentPatchIncludesReactionsHTTP(t *testing.T) {
 	reactions := []domain.CommentReaction{{ID: aliceID, CommentID: bobComment, ActorID: aliceID, Reaction: "128077", CreatedAt: created}, {ID: webSixID, CommentID: bobComment, ActorID: webSixID, Reaction: "128078", CreatedAt: created}}
-	f := &fakeCommentCreate{reactions: reactions}
+	f := &fakeCommentUpdate{reactions: reactions}
 	h := newServer(t, httpadapter.UseCases{UpdateIssueComment: f})
 	for _, html := range []string{"<p>Same</p>", "<p>Changed</p>"} {
 		res, body := do(t, h, request(http.MethodPatch, commentWritePath, "alice", `{"comment_html":"`+html+`"}`))

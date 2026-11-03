@@ -17,19 +17,26 @@ func TestContentAssetRefusals(t *testing.T) {
 		status       int
 		ops          []string
 	}{
-		{"asset.not_found", "The asset does not exist, or you cannot see it.", shared.KindNotFound, 404, []string{"create", "update", "publish"}},
-		{"asset.not_uploaded", "The asset's content has not been completed.", shared.KindConflict, 409, []string{"update"}},
+		{"asset.not_found", "The asset does not exist, or you cannot see it.", shared.KindNotFound, 404, []string{"create", "update", "publish", "comment create", "comment update"}},
+		{"asset.not_uploaded", "The asset's content has not been completed.", shared.KindConflict, 409, []string{"update", "comment create", "comment update"}},
+		{"asset.bound", "This file is in use and cannot be deleted here.", shared.KindConflict, 409, []string{"comment create"}},
 	} {
 		for _, op := range tc.ops {
 			t.Run(op+"/"+tc.code, func(t *testing.T) {
 				refusal := shared.NewError(tc.kind, tc.code, tc.detail)
-				uc := httpadapter.UseCases{CreateIssue: &fakeCreate{err: refusal}, UpdateIssue: &fakeUpdate{err: refusal}, PublishDraft: &fakeGet{err: refusal}}
+				uc := httpadapter.UseCases{CreateIssue: &fakeCreate{err: refusal}, UpdateIssue: &fakeUpdate{err: refusal}, PublishDraft: &fakeGet{err: refusal}, CreateIssueComment: &fakeCommentCreate{err: refusal}, UpdateIssueComment: &fakeCommentUpdate{err: refusal}}
 				method, path, body := "POST", "/api/v0/projects/"+webID.String()+"/issues", `{"name":"Body"}`
 				if op == "update" {
 					method, path, body = "PATCH", "/api/v0/issues/"+webSeven.ID.String(), `{"description_html":"<p>Body</p>"}`
 				}
 				if op == "publish" {
 					path, body = "/api/v0/drafts/"+webID.String()+"/publish", ""
+				}
+				if op == "comment create" {
+					path, body = commentsPath, `{"comment_html":"<p>Files</p>"}`
+				}
+				if op == "comment update" {
+					method, path, body = "PATCH", commentWritePath, `{"comment_html":"<p>Files</p>"}`
 				}
 				res, got := do(t, newServer(t, uc), request(method, path, "alice", body))
 				title := "Not Found"
