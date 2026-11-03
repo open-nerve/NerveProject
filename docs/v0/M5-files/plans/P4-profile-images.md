@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T3实现与聚焦回归完成，T4待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T4接续，重大新风险先提交后上报。
+> 预检通过，T1–T4实现与聚焦回归完成，T5待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T5接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -79,10 +79,10 @@
 
 **Interfaces:** 精确采用purge子合同§2/§3，AssetPurgeCandidates/DeletePurgeAssets和ImageReferenceDetacher；去掉原不完整Provided.Purger，所有调用方改NewPurger一次构造。
 
-- [ ] Step 1：TestImageReferencePurge/TestImageReferenceCatalog真实PG：双向FK保护，四列逐一解除，identity→workspace→project→asset锁序，旧候选期间换图不误清，解除后失败回滚，batch1最小有key/中间eligible/最大59天，删0也推进。
-- [ ] Step 2：运行具名RED后实现固定owner SQL与有界asset页；相同事务、无对象I/O、失败cursor不前移。守卫精确集合、索引、非deferred及每owner步骤，不增加任意NO ACTION豁免。
-- [ ] Step 3：`cd server && go test -p 1 ./internal/modules/asset/app ./internal/modules/asset/adapter/postgres ./internal/bootstrap -run '^Test(ImageReference|AssetProtected|PurgeCatalog|AssetPurge)' -count=1`；Expected真实具名全GREEN；旧P2祖先/未知23503负例继续失败。
-- [ ] Step 4：移除一个解除列/步骤、改SET NULL、放宽metadata空、删0终止各做真实反例；affected race和gen-check/lint-go；提交 `feat(M5/P4): 接入所属引用解除并延伸物理清理守卫`。
+- [x] Step 1：TestImageReferencePurge/TestImageReferenceCatalog真实PG：双向FK保护，四列逐一解除，identity→workspace→project→asset锁序，旧候选期间换图不误清，解除后失败回滚，batch1最小有key/中间eligible/最大59天，删0也推进。
+- [x] Step 2：运行具名RED后实现固定owner SQL与有界asset页；相同事务、无对象I/O、失败cursor不前移。守卫精确集合、索引、非deferred及每owner步骤，不增加任意NO ACTION豁免。
+- [x] Step 3：`cd server && go test -p 1 ./internal/modules/asset/app ./internal/modules/asset/adapter/postgres ./internal/bootstrap -run '^Test(ImageReference|AssetProtected|PurgeCatalog|AssetPurge)' -count=1`；Expected真实具名全GREEN；旧P2祖先/未知23503负例继续失败。
+- [x] Step 4：移除一个解除列/步骤、改SET NULL、放宽metadata空、删0终止各做真实反例；affected race和gen-check/lint-go；提交 `feat(M5/P4): 接入所属引用解除并延伸物理清理守卫`。
 
 ## Task 5（T5）：用户资料端到端接线
 

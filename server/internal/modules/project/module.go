@@ -163,6 +163,7 @@ type (
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
+	ImageReferences         ImageReferences
 	AssetParents            AssetParents
 	Purger                  *app.Purger
 	ArchivePolicies         ArchivePolicies
@@ -175,6 +176,7 @@ type Provided struct {
 func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provided {
 	store := postgresadapter.NewPurgeStore(pool, protected)
 	return Provided{
+		ImageReferences: ImageReferences{rows: store},
 		Purger: app.NewPurger([]app.PurgeStep{
 			{Table: "project_user_properties", Delete: store.PurgeProjectUserProperties},
 			{Table: "project_members", Delete: store.PurgeProjectMembers},

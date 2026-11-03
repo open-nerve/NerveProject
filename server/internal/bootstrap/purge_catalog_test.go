@@ -74,7 +74,7 @@ func purgeTables(t *testing.T, pool *pgxpool.Pool) []string {
 }
 
 func providedPurgeTables(pool *pgxpool.Pool) []string {
-	tables := asset.Provide(pool).Purger.Tables()
+	tables := imageReferencePurger(pool).Tables()
 	tables = append(tables, issue.Provide(pool, protectedAssetReferences()).Purger.Tables()...)
 	tables = append(tables, project.Provide(pool, protectedAssetReferences()).Purger.Tables()...)
 	tables = append(tables, workspace.Provide(pool, protectedAssetReferences()).Purger.Tables()...)
@@ -97,6 +97,8 @@ func inspectedPurgeKeys(t *testing.T, pool *pgxpool.Pool, tables []string) map[f
 func purgeCatalogGaps(t *testing.T, pool *pgxpool.Pool, tables, provided []string, inspected map[foreignKey]string) []string {
 	t.Helper()
 	protected, gaps := assetProtectionGaps(t, pool, tables, asset.ProtectedParentReferences(), protectedPurgeSteps(pool))
+	images, imageGaps := imageReferenceCatalog(t, pool, providedImageReferences(pool).steps())
+	gaps = append(gaps, imageGaps...)
 	seen := map[string]int{}
 	for _, table := range provided {
 		seen[table]++
@@ -128,7 +130,7 @@ func purgeCatalogGaps(t *testing.T, pool *pgxpool.Pool, tables, provided []strin
 		} else if observed != action {
 			gaps = append(gaps, fmt.Sprintf("stale incoming action %s", k))
 		}
-		if action != "c" && action != "n" && !protected[k] {
+		if action != "c" && action != "n" && !protected[k] && !images.allowed[k] {
 			gaps = append(gaps, fmt.Sprintf("unsafe incoming %s -> %s: %s", k, k.parent, action))
 		}
 	}

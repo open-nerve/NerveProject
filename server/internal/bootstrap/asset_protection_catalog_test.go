@@ -17,6 +17,7 @@ import (
 )
 
 type protectionKey struct {
+	oid                           uint32
 	ref                           asset.ProtectedParentReference
 	action, parentColumn          string
 	columns, parentColumns        int
@@ -25,7 +26,7 @@ type protectionKey struct {
 
 func protectionKeys(t testing.TB, pool *pgxpool.Pool) []protectionKey {
 	t.Helper()
-	rows, err := pool.Query(context.Background(), `SELECT ns.nspname,child.relname,c.conname,a.attname,parent.relname,
+	rows, err := pool.Query(context.Background(), `SELECT c.oid,ns.nspname,child.relname,c.conname,a.attname,parent.relname,
  c.confdeltype::text,b.attname,cardinality(c.conkey),cardinality(c.confkey),c.condeferred,c.condeferrable,
  EXISTS(SELECT 1 FROM pg_index i WHERE i.indrelid=c.conrelid AND i.indisvalid AND i.indpred IS NULL AND i.indexprs IS NULL AND i.indkey[0]=c.conkey[1])
  FROM pg_constraint c JOIN pg_class child ON child.oid=c.conrelid JOIN pg_namespace ns ON ns.oid=child.relnamespace
@@ -40,7 +41,7 @@ func protectionKeys(t testing.TB, pool *pgxpool.Pool) []protectionKey {
 	var out []protectionKey
 	for rows.Next() {
 		var r protectionKey
-		if err := rows.Scan(&r.ref.Schema, &r.ref.Table, &r.ref.Constraint, &r.ref.Column, &r.ref.Parent, &r.action, &r.parentColumn, &r.columns, &r.parentColumns, &r.deferred, &r.deferrable, &r.indexed); err != nil {
+		if err := rows.Scan(&r.oid, &r.ref.Schema, &r.ref.Table, &r.ref.Constraint, &r.ref.Column, &r.ref.Parent, &r.action, &r.parentColumn, &r.columns, &r.parentColumns, &r.deferred, &r.deferrable, &r.indexed); err != nil {
 			t.Fatal(err)
 		}
 		out = append(out, r)

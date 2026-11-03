@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	assetpg "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/postgres"
 	assetdomain "github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
@@ -141,7 +140,7 @@ func TestAssetProtectedParentsProgressAndConverge(t *testing.T) {
 					}
 				}
 				// Recover through the asset-owned SQL after its own retention ends.
-				n, err := drainPurgeModule(forAssetPurge(asset.Provide(pool).Purger), t.Context(), now.Add(-58*24*time.Hour), 1)
+				n, err := drainPurgeModule(forAssetPurge(imageReferencePurger(pool)), t.Context(), now.Add(-58*24*time.Hour), 1)
 				if err != nil || n != 2 {
 					t.Fatalf("asset recovery=%d %v", n, err)
 				}

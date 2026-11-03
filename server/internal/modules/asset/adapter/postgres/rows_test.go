@@ -161,7 +161,7 @@ func TestAssetPurgePreservesMetadataAndBoundary(t *testing.T) {
 			if _, err := w.store.CreateAsset(t.Context(), a); err != nil {
 				t.Fatal(err)
 			}
-			page, err := w.store.PurgeAssets(t.Context(), cutoff, uuid.Nil(), 100)
+			page, err := w.store.purgeUnreferencedTestAssets(t.Context(), cutoff, uuid.Nil(), 100)
 			if err != nil || page.Deleted != row.want {
 				t.Fatalf("purge=%+v err=%v", page, err)
 			}

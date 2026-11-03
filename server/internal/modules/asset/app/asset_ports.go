@@ -29,10 +29,12 @@ type ScopeReader interface {
 type ScopeDeletions interface {
 	DeleteScopeRows(context.Context, domain.ScopeKind, uuid.UUID, DeletionStamp) error
 }
-type PurgePage struct {
-	Scanned, Deleted int
-	After            uuid.UUID
+type ImageReferenceDetacher interface {
+	DetachAssetReferences(context.Context, []uuid.UUID) error
 }
-type PurgeRows interface {
-	PurgeAssets(context.Context, time.Time, uuid.UUID, int) (PurgePage, error)
+type AssetPurgeCandidates interface {
+	PurgeAssetCandidates(context.Context, time.Time, uuid.UUID, int) ([]uuid.UUID, error)
+}
+type AssetPurgeDeleter interface {
+	DeletePurgeAssets(context.Context, time.Time, []uuid.UUID) ([]uuid.UUID, error)
 }

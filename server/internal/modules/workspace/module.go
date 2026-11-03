@@ -72,6 +72,7 @@ type DirectoryEntry = app.DirectoryEntry
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
+	ImageReferences          ImageReferences
 	AssetParents             AssetParents
 	Purger                   *app.Purger
 	WorkspaceRoles           WorkspaceRoles
@@ -85,6 +86,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 	directory := postgresadapter.NewDirectory(pool)
 	store := postgresadapter.NewPurgeStore(pool, protected)
 	return Provided{
+		ImageReferences: ImageReferences{rows: store},
 		Purger: app.NewPurger([]app.PurgeStep{
 			{Table: "workspace_user_properties", Delete: store.PurgeWorkspaceUserProperties},
 			{Table: "workspace_member_invites", Delete: store.PurgeWorkspaceMemberInvites},
