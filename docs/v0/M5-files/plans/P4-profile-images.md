@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T10实现与聚焦回归完成，T11待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T11接续，重大新风险先提交后上报。
+> 预检通过，T1–T11实现与聚焦回归完成，T12待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T12接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -156,10 +156,10 @@
 
 **Interfaces:** 所有前置经API，local与P3真实S3共用图片字节和断言；浏览器上传行为P3已证明，P4 API故事不冒充P6页面。
 
-- [ ] Step 1：F5验证双图/替换/移除/重新认证旧申请归属；F6验证管理员更替/非管理员拒绝/成员资料/邀请预览；F7验证一次POST最终引用、失败无project、稳定builtin和自定义互换。每条核实际文件SHA、DB引用与bound/scope/审计；拒绝前后都读DB证明没有旁路写。
-- [ ] Step 2：`make build`；`cd e2e && pnpm exec playwright test stories/files/f5-profile-images.spec.ts stories/files/f6-workspace-images.spec.ts stories/files/f7-project-covers.spec.ts --project=chromium`；Expected所有具名GREEN且真实raw字节断言运行。
-- [ ] Step 3：`cd server && go test ./internal/bootstrap -run '^TestImageStorageContract$' -count=1 -v`；Expectedlocal和真实S3两个子组的绑定/读取/拒绝/提交回滚均实际运行；PG/S3同一套件串行，不用fake Storage成功冒充。
-- [ ] Step 4：关键local→S3业务代码一致性与资源inventory核验，提交 `test(M5/P4): 验收个人和组织图片的真实文件故事`。
+- [x] Step 1：F5验证双图/替换/移除/重新认证旧申请归属；F6验证管理员更替/非管理员拒绝/成员资料/邀请预览；F7验证一次POST最终引用、失败无project、稳定builtin和自定义互换。每条核实际文件SHA、DB引用与bound/scope/审计；拒绝前后都读DB证明没有旁路写。
+- [x] Step 2：`make build`；`cd e2e && pnpm exec playwright test stories/files/f5-profile-images.spec.ts stories/files/f6-workspace-images.spec.ts stories/files/f7-project-covers.spec.ts --project=chromium`；Expected所有具名GREEN且真实raw字节断言运行。
+- [x] Step 3：`cd server && go test ./internal/bootstrap -run '^TestImageStorageContract$' -count=1 -v`；Expectedlocal和真实S3两个子组的绑定/读取/拒绝/提交回滚均实际运行；PG/S3同一套件串行，不用fake Storage成功冒充。
+- [x] Step 4：关键local→S3业务代码一致性与资源inventory核验，提交 `test(M5/P4): 验收个人和组织图片的真实文件故事`。
 
 ## Task 12（T12）：清理恢复、规模与性质变异
 
