@@ -8,37 +8,69 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// GetProject reads a project: GET /api/v0/projects/{project_id} (M3 design
-// 3.19).
-type GetProject struct {
-	projects ProjectReader
-	auth     shared.Authorizer
+type GetProjectDeps struct {
+	Projects ProjectReader
+	Auth     shared.Authorizer
+	Locks    ImageReadLocks
+	Gate     ImageGate
+	Images   ImageReader
+	Tx       shared.TxManager
 }
 
-// NewGetProject returns the use case.
-func NewGetProject(projects ProjectReader, auth shared.Authorizer) *GetProject {
-	return &GetProject{projects: projects, auth: auth}
-}
+// GetProject rechecks the visible candidate under account/workspace/project
+// locks before signing. The gate is acquired without a connection or row lock.
+type GetProject struct{ d GetProjectDeps }
 
-// Execute answers the undeleted project id, archived or not, as the caller
-// sees it, when he may read it. It reads the project first, which names its
-// workspace, then decides project.read on it; a project that is not there
-// and one the caller does not see answer the same domain.ErrNotFound (M3
-// design 8.2). A read opens no transaction (M3 design 6.7).
+func NewGetProject(d GetProjectDeps) *GetProject { return &GetProject{d: d} }
+
 func (u *GetProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return domain.Project{}, err
 	}
-	p, found, err := u.projects.GetProject(ctx, id, actor.UserID)
+	p, found, err := u.d.Projects.GetProject(ctx, id, actor.UserID)
 	switch {
 	case err != nil:
 		return domain.Project{}, err
 	case !found:
 		return domain.Project{}, domain.ErrNotFound
 	}
-	if _, err = decide(ctx, u.auth, actor, domain.ActionRead, p.WorkspaceID, p.ID, domain.ErrNotFound); err != nil {
+	if _, err = decide(ctx, u.d.Auth, actor, domain.ActionRead, p.WorkspaceID, p.ID, domain.ErrNotFound); err != nil {
 		return domain.Project{}, err
 	}
-	return p, nil
+	leave, err := u.d.Gate.Enter(ctx, id)
+	if err != nil {
+		return domain.Project{}, err
+	}
+	defer leave()
+	var out domain.Project
+	err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		locked, err := u.d.Locks.lock(ctx, actor, p.WorkspaceID, []uuid.UUID{id}, domain.ErrNotFound)
+		if err != nil {
+			return err
+		}
+		if locked[id] != p.WorkspaceID {
+			return domain.ErrNotFound
+		}
+		current, found, err := u.d.Projects.GetProject(ctx, id, actor.UserID)
+		if err != nil {
+			return err
+		}
+		if !found || current.WorkspaceID != p.WorkspaceID {
+			return domain.ErrNotFound
+		}
+		if _, err := decide(ctx, u.d.Auth, actor, domain.ActionRead, p.WorkspaceID, id, domain.ErrNotFound); err != nil {
+			return err
+		}
+		images, err := withProjectImages(ctx, u.d.Images, []domain.Project{current})
+		if err != nil {
+			return err
+		}
+		out = images[0]
+		return nil
+	})
+	if err != nil {
+		return domain.Project{}, err
+	}
+	return out, nil
 }

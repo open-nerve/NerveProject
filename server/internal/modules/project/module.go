@@ -232,22 +232,23 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(store, d.Workspaces, d.Members, d.Authorizer)
+	imageLocks := app.NewImageReadLocks(d.Caller, d.Workspaces, store, d.Clock)
 	return &Module{assets: app.NewAssetAccess(store, d.Authorizer), cascade: NewCascade(CascadeDeps{Pool: d.Pool}), uc: httpadapter.UseCases{
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Bindings: d.ImageBindings, Images: d.Images,
 		}),
-		ListProjects:        app.NewListProjects(d.Workspaces, store, d.Authorizer),
-		GetProject:          app.NewGetProject(store, d.Authorizer),
+		ListProjects:        app.NewListProjects(app.ListProjectsDeps{Workspaces: d.Workspaces, Projects: store, Auth: d.Authorizer, Locks: imageLocks, Gate: d.ImageGate, Images: d.Images, Tx: d.Tx}),
+		GetProject:          app.NewGetProject(app.GetProjectDeps{Projects: store, Auth: d.Authorizer, Locks: imageLocks, Gate: d.ImageGate, Images: d.Images, Tx: d.Tx}),
 		CheckIdentifier:     app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
 		UpdateProject:       app.NewUpdateProject(app.UpdateProjectDeps{Projects: store, Locks: locks, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Gate: d.ImageGate, Bindings: d.ImageBindings, Images: d.Images}),
-		ArchiveProject:      app.NewArchiveProject(store, locks, d.Tx, d.Clock),
-		UnarchiveProject:    app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
+		ArchiveProject:      app.NewArchiveProject(app.ArchiveProjectDeps{Projects: store, Locks: locks, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Images: d.Images}),
+		UnarchiveProject:    app.NewUnarchiveProject(app.ArchiveProjectDeps{Projects: store, Locks: locks, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Images: d.Images}),
 		DeleteProject:       app.NewDeleteProject(store, d.Events, locks, d.Tx, d.Clock),
 		GetPreferences:      app.NewGetProjectPreferences(store, d.Authorizer),
 		UpdatePreferences:   app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock, d.ListSettings),
 		ListMembers:         app.NewListProjectMembers(store, d.Authorizer),
 		AddMembers:          app.NewAddProjectMembers(app.AddMembersDeps{Locks: locks, Projects: store, Tx: d.Tx, Clock: d.Clock}),
-		JoinProject:         app.NewJoinProject(locks, store, d.Tx, d.Clock),
+		JoinProject:         app.NewJoinProject(app.JoinProjectDeps{Projects: store, Locks: locks, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Images: d.Images}),
 		UpdateMember:        app.NewUpdateProjectMember(locks, store, d.Tx, d.Clock),
 		RemoveMember:        app.NewRemoveProjectMember(locks, store, d.Tx, d.Clock),
 		LeaveProject:        app.NewLeaveProject(locks, store, d.Tx, d.Clock),

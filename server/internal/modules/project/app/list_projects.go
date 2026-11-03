@@ -7,33 +7,69 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// ListProjects lists a workspace's projects that the caller sees: GET
-// /api/v0/workspaces/{slug}/projects (M3 design 3.4, 3.12, 3.19).
-type ListProjects struct {
-	workspaces WorkspaceDirectory
-	projects   ProjectLister
-	auth       shared.Authorizer
+type ListProjectsDeps struct {
+	Workspaces WorkspaceDirectory
+	Projects   ProjectLister
+	Auth       shared.Authorizer
+	Locks      ImageReadLocks
+	Gate       ImageGate
+	Images     ImageReader
+	Tx         shared.TxManager
 }
 
-// NewListProjects returns the use case.
-func NewListProjects(workspaces WorkspaceDirectory, projects ProjectLister, auth shared.Authorizer) *ListProjects {
-	return &ListProjects{workspaces: workspaces, projects: projects, auth: auth}
-}
+// ListProjects keeps the original visibility and display order. Only candidates
+// locked by this request can be returned; newly visible rows wait for a later read.
+type ListProjects struct{ d ListProjectsDeps }
 
-// Execute finds the workspace slug, decides project.list in it, then lists
-// the projects that the caller's workspace role, as the decision read it,
-// sees (domain.VisibilityOf) besides those he is a member of: the archived
-// ones alone when archived is true, the others otherwise. A workspace not
-// there, or not visible to the caller, is domain.ErrWorkspaceNotFound. A
-// read opens no transaction (M3 design 6.7).
+func NewListProjects(d ListProjectsDeps) *ListProjects { return &ListProjects{d: d} }
+
 func (u *ListProjects) Execute(ctx context.Context, slug string, archived bool) ([]domain.Project, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return nil, err
 	}
-	ws, grant, err := findWorkspaceAndDecide(ctx, u.workspaces, u.auth, actor, slug, domain.ActionList)
+	ws, grant, err := findWorkspaceAndDecide(ctx, u.d.Workspaces, u.d.Auth, actor, slug, domain.ActionList)
 	if err != nil {
 		return nil, err
 	}
-	return u.projects.ListProjects(ctx, ws.ID, actor.UserID, domain.VisibilityOf(grant.WorkspaceRole), archived)
+	candidates, err := u.d.Projects.ListProjects(ctx, ws.ID, actor.UserID, domain.VisibilityOf(grant.WorkspaceRole), archived)
+	if err != nil {
+		return nil, err
+	}
+	ids := imageProjectIDs(candidates)
+	leave, err := u.d.Gate.Enter(ctx, ids...)
+	if err != nil {
+		return nil, err
+	}
+	defer leave()
+	var out []domain.Project
+	err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		locked, err := u.d.Locks.lock(ctx, actor, ws.ID, ids, domain.ErrWorkspaceNotFound)
+		if err != nil {
+			return err
+		}
+		currentWS, grant, err := findWorkspaceAndDecide(ctx, u.d.Workspaces, u.d.Auth, actor, slug, domain.ActionList)
+		if err != nil {
+			return err
+		}
+		if currentWS.ID != ws.ID {
+			return domain.ErrWorkspaceNotFound
+		}
+		current, err := u.d.Projects.ListProjects(ctx, ws.ID, actor.UserID, domain.VisibilityOf(grant.WorkspaceRole), archived)
+		if err != nil {
+			return err
+		}
+		var visible []domain.Project
+		for _, p := range current {
+			if p.WorkspaceID == ws.ID && locked[p.ID] == ws.ID {
+				visible = append(visible, p)
+			}
+		}
+		out, err = withProjectImages(ctx, u.d.Images, visible)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }

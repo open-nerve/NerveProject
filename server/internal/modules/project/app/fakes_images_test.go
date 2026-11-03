@@ -52,3 +52,8 @@ func (f imageGate) Enter(ctx context.Context, ids ...uuid.UUID) (func(), error) 
 	f.log.add(ctx, "Enter %v", ids)
 	return func() { f.log.calls = append(f.log.calls, fmt.Sprintf("Leave %v", ids)) }, nil
 }
+
+// Only image-returning writes add the account lock before the old sequence.
+func withImageCaller(user uuid.UUID, calls []string) []string {
+	return append([]string{"Begin", "Now", fmt.Sprintf("LockCaller %s", user)}, calls[1:]...)
+}

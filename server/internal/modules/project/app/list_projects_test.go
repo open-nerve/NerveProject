@@ -34,10 +34,11 @@ func (f *fakeLister) ListProjects(ctx context.Context, workspaceID, userID uuid.
 func newList() (*app.ListProjects, *fakeDirectory, *fakeLister, *fakeAuthorizer) {
 	log := &callLog{}
 	workspaces := &fakeDirectory{log: log, workspaces: map[string]app.Workspace{"acme": acme}}
-	projects := &fakeLister{log: log, list: []domain.Project{{Name: "Web"}}}
+	projects := &fakeLister{log: log, list: []domain.Project{{ID: webID, WorkspaceID: acme.ID, Name: "Web"}}}
 	auth := &fakeAuthorizer{log: log, grants: map[grantKey]shared.Grant{{alice, acme.ID}: {WorkspaceRole: shared.RoleMember},
 		{bob, acme.ID}: {WorkspaceRole: shared.RoleAdmin}, {carol, acme.ID}: {WorkspaceRole: shared.RoleGuest}}}
-	return app.NewListProjects(workspaces, projects, auth), workspaces, projects, auth
+	locks := app.NewImageReadLocks(imageCaller{log}, workspaces, projects, clockAt{clockNow, log})
+	return app.NewListProjects(app.ListProjectsDeps{Workspaces: workspaces, Projects: projects, Auth: auth, Locks: locks, Gate: imageGate{log}, Images: noProjectImages{}, Tx: &fakeTx{log: log}}), workspaces, projects, auth
 }
 
 // The use case finds the workspace without a lock, outside any
@@ -57,7 +58,11 @@ func TestListProjects(t *testing.T) {
 		got, err := uc.Execute(as(tt.user), "acme", tt.archived)
 		want := []string{"WorkspaceBySlug acme outside tx",
 			fmt.Sprintf("Authorize %s project.list on %s/%s outside tx", tt.user, acme.ID, uuid.UUID{}),
-			fmt.Sprintf("ListProjects %s for %s %+v archived %v outside tx", acme.ID, tt.user, tt.v, tt.archived)}
+			fmt.Sprintf("ListProjects %s for %s %+v archived %v outside tx", acme.ID, tt.user, tt.v, tt.archived),
+			fmt.Sprintf("Enter [%s] outside tx", webID), "Begin", "Now", fmt.Sprintf("LockCaller %s", tt.user),
+			"ShareWorkspaceByID " + acme.ID.String(), fmt.Sprintf("ShareImageProjects [%s]", webID), "WorkspaceBySlug acme",
+			fmt.Sprintf("Authorize %s project.list on %s/%s", tt.user, acme.ID, uuid.Nil()),
+			fmt.Sprintf("ListProjects %s for %s %+v archived %v", acme.ID, tt.user, tt.v, tt.archived), fmt.Sprintf("Leave [%s]", webID)}
 		if err != nil || len(got) != 1 || got[0].Name != "Web" || !slices.Equal(workspaces.log.calls, want) {
 			t.Errorf("Execute() as %s = %+v, %v, calls %q; want the list, calls %q", tt.user, got, err, workspaces.log.calls, want)
 		}
@@ -98,4 +103,15 @@ func TestListProjectsRefuses(t *testing.T) {
 				tt.calls)
 		}
 	}
+}
+
+func (f *fakeLister) ShareImageProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	f.log.add(ctx, "ShareImageProjects %v", ids)
+	out := make(map[uuid.UUID]uuid.UUID)
+	for _, p := range f.list {
+		if slices.Contains(ids, p.ID) {
+			out[p.ID] = p.WorkspaceID
+		}
+	}
+	return out, nil
 }

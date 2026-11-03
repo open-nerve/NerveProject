@@ -3,7 +3,6 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"maps"
 	"net/http"
 	"testing"
 	"time"
@@ -190,50 +189,30 @@ func TestAcceptingAndDeactivating(t *testing.T) {
 	}
 }
 
-// Interleaving 7 (b) and (c), S1's steps 5 and 6: the acceptance first
-// holds bob's account row at its gate; the deactivation waits for it, then,
-// once the acceptance has committed, stops at its own gate holding his
-// account row, before its memberships' step. bob, acme's admin now, begins
-// another write of acme: (b) P4's image-bearing member response first locks
-// his account, waits for deactivation, then refuses it with 401 without
-// reaching the workspace or changing alice; (c) his joining Web, holding
-// acme FOR SHARE and his membership of
-// it (3.6 convention 2, option E); before it, the test stamps his
-// membership of acme, which the acceptance wrote, as last written by alice.
-// In (c) the deactivation goes on and waits for acme's row: nothing else waits
-// then, and neither side writes a row of workspaces, so only that wait
-// satisfies the probe. The tables are read while both stand at their
-// gates, neither having committed a write. Once bob's write commits:
-//   - (b) deactivation commits, bob is inactive, alice remains the admin;
-//   - (c) the deactivation finds his membership of Web, made after its lock
-//     of his account, and ends it at the moment it ends his membership of
-//     acme: only the moment shows the deactivation's write there, his
-//     joining having written it as his; acme and Web keep alice, their
-//     admin, her memberships active.
+// Interleaving 7 (b)/(c): after accepting, bob tries an image-bearing member
+// update or project join while deactivation holds his account. Both first wait
+// on users, then answer 401 without reaching any workspace/member write. Alice
+// remains admin and no new project membership can escape deactivation.
 func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 	for _, tt := range []struct {
-		name         string
-		write        func(r s1Race, t *testing.T, ctx context.Context, g *gate) <-chan error
-		err          error
-		want         string
-		locksAccount bool
+		name  string
+		write func(s1Race, *testing.T, context.Context, *gate) <-chan error
 	}{
 		{"(b) he makes alice a member", func(r s1Race, t *testing.T, ctx context.Context, g *gate) <-chan error {
-			cascade := cascadeOn(r.pool)
 			return run(func() error {
-				return changeRole(ctx, r.pool, r.bob, r.aliceIn, shared.RoleMember, gatedMembers{workspacepg.New(r.pool), g}, cascade)
+				return changeRole(ctx, r.pool, r.bob, r.aliceIn, shared.RoleMember, gatedMembers{workspacepg.New(r.pool), g}, cascadeOn(r.pool))
 			})
-		}, nil, "bob deactivated; acme 20 ended by bob; invitation accepted deleted by bob; alice acme 20 active, Web 20 active", true},
+		}},
 		{"(c) he joins Web", func(r s1Race, t *testing.T, ctx context.Context, g *gate) <-chan error {
 			route := newProjectRoute(t, r.pool, authorizerOn(r.pool), gatedShares{workspace.Provide(r.pool, nil).WorkspaceMembers, g})
 			return run(func() error {
-				if _, rec := route.send(http.MethodPost, "/api/v0/projects/"+r.web.String()+"/join", r.bob, ""); rec.Code != http.StatusOK {
-					return fmt.Errorf("bob's joining Web = %d %s", rec.Code, rec.Body)
+				_, rec := route.send(http.MethodPost, "/api/v0/projects/"+r.web.String()+"/join", r.bob, "")
+				if rec.Code == http.StatusUnauthorized && problemCode(t, rec.Body.Bytes()) == "unauthorized" {
+					return shared.Unauthenticated()
 				}
-				return nil
+				return fmt.Errorf("bob's joining Web = %d %s", rec.Code, rec.Body)
 			})
-		}, nil, "bob deactivated; acme 20 ended by bob; Web 20 ended with acme; invitation accepted deleted by bob; alice acme 20 active, " +
-			"Web 20 active", false},
+		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			r := newS1Race(t, false)
@@ -247,64 +226,27 @@ func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 			pgtest.WaitForLockWaitOn(t, r.pool, "users", 5*time.Second)
 			close(admitted.open)
 			if err := result(t, ctx, accepted, "the acceptance"); err != nil {
-				t.Fatalf("the acceptance = %v, want it done", err)
+				t.Fatal(err)
 			}
 			held(t, ctx, stopped, deactivated, "the deactivation")
 			r.bobsLastWrittenByAlice(t)
 			written := tt.write(r, t, ctx, writing)
-			if tt.locksAccount {
-				pgtest.WaitForLockWaitOn(t, r.pool, "users", 5*time.Second)
-				close(stopped.open)
-				if err := result(t, ctx, deactivated, "the deactivation"); err != nil {
-					t.Fatal(err)
-				}
-				if err := result(t, ctx, written, "bob's image-bearing write"); !sameOutcome(err, shared.Unauthenticated()) {
-					t.Fatalf("write after deactivation = %v, want 401", err)
-				}
-				select {
-				case <-writing.held:
-					t.Fatal("deactivated caller reached the workspace write")
-				default:
-				}
-				if got := r.standing(t); got != tt.want {
-					t.Fatalf("after deactivation and refusal: %s; want %s", got, tt.want)
-				}
-				return
-			}
-			held(t, ctx, writing, written, "bob's write")
-			// Every table but River's and workspace_members, and every
-			// membership but alice's, which bob's change writes, as row_to_json
-			// writes it, in id order.
-			notMemberships := func(table string) bool { return riversOwn(table) || table == "public.workspace_members" }
-			membershipsButAlices := func() string {
-				t.Helper()
-				var s string
-				if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(row_to_json(m)::text, E'\n' ORDER BY m.id), '')
-					FROM workspace_members m WHERE m.id <> $1`, r.aliceIn).Scan(&s); err != nil {
-					t.Fatal(err)
-				}
-				return s
-			}
-			before, memberships := tableRows(t, r.pool, notMemberships), membershipsButAlices()
+			pgtest.WaitForLockWaitOn(t, r.pool, "users", 5*time.Second)
 			close(stopped.open)
-			pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
-			close(writing.open)
-
-			if err := result(t, ctx, written, "bob's write"); err != nil {
-				t.Fatalf("bob's write = %v, want it done", err)
+			if err := result(t, ctx, deactivated, "the deactivation"); err != nil {
+				t.Fatal(err)
 			}
-			if err := result(t, ctx, deactivated, "the deactivation"); !sameOutcome(err, tt.err) {
-				t.Errorf("the deactivation = %v, want %v", err, tt.err)
+			if err := result(t, ctx, written, "bob's image-bearing write"); !sameOutcome(err, shared.Unauthenticated()) {
+				t.Fatalf("write after deactivation = %v, want 401", err)
 			}
-			if after := tableRows(t, r.pool, notMemberships); tt.err != nil && !maps.Equal(after, before) {
-				t.Errorf("the tables after the refused deactivation changed:\n%v\nwant them as they were at the gates:\n%v", after, before)
+			select {
+			case <-writing.held:
+				t.Fatal("deactivated caller reached the workspace write")
+			default:
 			}
-			if after := membershipsButAlices(); tt.err != nil && after != memberships {
-				t.Errorf("the memberships but alice's after the refused deactivation:\n%s\nwant them as they were at the gates:\n%s", after,
-					memberships)
-			}
-			if got := r.standing(t); got != tt.want {
-				t.Errorf("after all: %s; want %s", got, tt.want)
+			want := "bob deactivated; acme 20 ended by bob; invitation accepted deleted by bob; alice acme 20 active, Web 20 active"
+			if got := r.standing(t); got != want {
+				t.Fatalf("after deactivation and refusal: %s; want %s", got, want)
 			}
 		})
 	}

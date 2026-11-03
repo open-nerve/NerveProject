@@ -33,19 +33,23 @@ func newGet() (*app.GetProject, *fakeReader, *fakeAuthorizer, domain.Project) {
 	web := domain.Project{ID: uuid.NewV7(), WorkspaceID: acme.ID, Name: "Web", MemberRole: ptr(shared.RoleAdmin)}
 	reader := &fakeReader{log: log, projects: map[uuid.UUID]domain.Project{web.ID: web}}
 	auth := &fakeAuthorizer{log: log, grants: map[grantKey]shared.Grant{{alice, acme.ID}: {WorkspaceRole: shared.RoleMember}}}
-	return app.NewGetProject(reader, auth), reader, auth, web
+	locks := app.NewImageReadLocks(imageCaller{log}, &fakeWorkspaces{log: log}, reader, clockAt{clockNow, log})
+	return app.NewGetProject(app.GetProjectDeps{Projects: reader, Auth: auth, Locks: locks, Gate: imageGate{log}, Tx: &fakeTx{log: log}, Images: noProjectImages{}}), reader, auth, web
 }
 
-// GetProject reads the project as the caller sees it, outside any
-// transaction, then decides project.read on it, in its workspace: the
-// answer is the project as read.
+// GetProject prechecks outside the gate, then rechecks the same project under
+// account/workspace/project share locks before answering its current facts.
 func TestGetProject(t *testing.T) {
 	uc, reader, _, web := newGet()
 
 	got, err := uc.Execute(as(alice), web.ID)
 
 	want := []string{fmt.Sprintf("GetProject %s for %s outside tx", web.ID, alice),
-		fmt.Sprintf("Authorize %s project.read on %s/%s outside tx", alice, acme.ID, web.ID)}
+		fmt.Sprintf("Authorize %s project.read on %s/%s outside tx", alice, acme.ID, web.ID),
+		fmt.Sprintf("Enter [%s] outside tx", web.ID), "Begin", "Now", fmt.Sprintf("LockCaller %s", alice),
+		"ShareWorkspaceByID " + acme.ID.String(), fmt.Sprintf("ShareImageProjects [%s]", web.ID),
+		fmt.Sprintf("GetProject %s for %s", web.ID, alice), fmt.Sprintf("Authorize %s project.read on %s/%s", alice, acme.ID, web.ID),
+		fmt.Sprintf("Leave [%s]", web.ID)}
 	if err != nil || got.ID != web.ID || got.MemberRole == nil || *got.MemberRole != shared.RoleAdmin || !slices.Equal(reader.log.calls, want) {
 		t.Errorf("Execute() = %+v, %v, calls %q; want the project as read, calls %q", got, err, reader.log.calls, want)
 	}
@@ -87,4 +91,15 @@ func TestGetProjectRefuses(t *testing.T) {
 			t.Errorf("%s: Execute() = %+v, %v, calls %q; want %v after %d calls", tt.name, got, err, reader.log.calls, tt.want, tt.calls)
 		}
 	}
+}
+
+func (f *fakeReader) ShareImageProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	f.log.add(ctx, "ShareImageProjects %v", ids)
+	out := make(map[uuid.UUID]uuid.UUID)
+	for _, id := range ids {
+		if p, ok := f.projects[id]; ok {
+			out[id] = p.WorkspaceID
+		}
+	}
+	return out, nil
 }

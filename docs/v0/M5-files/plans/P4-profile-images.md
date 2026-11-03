@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T8实现与聚焦回归完成，T9待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T9接续，重大新风险先提交后上报。
+> 预检通过，T1–T9实现与聚焦回归完成，T10待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T10接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -134,10 +134,10 @@
 
 **Interfaces:** 精确access §4；Get/List先预检候选，进同一gate后Tx Caller→W(S)→P(S)排序，重验/过滤；Archive/Unarchive/Join用原写锁返回同DTO的图，不改全模块Locks或label/state写行为。
 
-- [ ] Step 1：TestProjectImageReplies：Get/List/Create/Update/Archive/Unarchive/Join每个响应URL/expiry及字节真实；私有无权/guest/已归档/已删，目录期间新增/撤权的候选边界，响应顺序与原集合合同保持。
-- [ ] Step 2：RED后接集中只属于图像响应的编排，批量project share SQL；预检隐藏目标不进gate，不能边签发边追新项目；签发错误不把已确认写当成功返回。
-- [ ] Step 3：`cd server && go test -p 1 ./internal/modules/project/... ./internal/bootstrap -run '^Test(ProjectImageReplies|GetProject|ListProjects|ArchiveProject|JoinProject)' -count=1`；Expected具名GREEN；普通旧M3读写测试全跑并记录。
-- [ ] Step 4：gen-check/lint与受影响race；提交 `feat(M5/P4): 统一项目各响应入口的封面授权和签发`。
+- [x] Step 1：TestProjectImageReplies：Get/List/Create/Update/Archive/Unarchive/Join每个响应URL/expiry及字节真实；私有无权/guest/已归档/已删，目录期间新增/撤权的候选边界，响应顺序与原集合合同保持。
+- [x] Step 2：RED后接集中只属于图像响应的编排，批量project share SQL；预检隐藏目标不进gate，不能边签发边追新项目；签发错误不把已确认写当成功返回。
+- [x] Step 3：`cd server && go test -p 1 ./internal/modules/project/... ./internal/bootstrap -run '^Test(ProjectImageReplies|GetProject|ListProjects|ArchiveProject|JoinProject)' -count=1`；Expected具名GREEN；普通旧M3读写测试全跑并记录。
+- [x] Step 4：gen-check/lint与受影响race；提交 `feat(M5/P4): 统一项目各响应入口的封面授权和签发`。
 
 ## Task 10（T10）：权限、事务与真实锁交错
 

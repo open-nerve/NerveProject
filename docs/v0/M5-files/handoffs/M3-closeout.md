@@ -50,3 +50,8 @@ P2建立仅申请者可见的准备件与完整宿主授权，项目/工作区�
 ## 处理结果：M5/P4 T8（局部）
 
 §1项目封面的Create/Update已接通上传资产和cover-01..29稳定预设，一次POST完成项目全图和准备件迁移；省略/null、管理员替换、实际文件及四种创建故障原子回滚已验证，见[P4阶段记录§15](../reviews/P4-profile-images-review.md#15-t8项目封面与一次创建)。Get/List/Archive/Unarchive/Join响应待T9，页面和最终验收仍在P6–P8，本交接保持open。
+
+
+## 处理结果：M5/P4 T9（局部）
+
+§1剩余项目Get/List/Archive/Unarchive/Join已接通真实封面和期限，签名失败回滚、候选集合及原M3锁交错已验证，见[P4阶段记录§16](../reviews/P4-profile-images-review.md#16-t9全部项目响应的封面授权)。全部资料图片API已经接线；联合权限、双存储、清理规模、阶段整审仍在P4/T10–T15，页面与最终关闭仍在P6–P8，本交接保持open。

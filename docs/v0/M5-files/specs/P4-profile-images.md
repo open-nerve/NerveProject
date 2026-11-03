@@ -1,6 +1,6 @@
 # M5 / P4：资料图片、业务引用与原子绑定
 
-> 预检通过，T1–T8实现与聚焦回归完成，T9待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3精确main CI41591764345全绿、归档清理后核验通过。一次fresh builder check无重要未决项，主控plan自检及生成/lint/迁移/架构基线通过，见[re-38](../../../reviews/re-38-M5P4预检.md)。
+> 预检通过，T1–T9实现与聚焦回归完成，T10待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3精确main CI41591764345全绿、归档清理后核验通过。一次fresh builder check无重要未决项，主控plan自检及生成/lint/迁移/架构基线通过，见[re-38](../../../reviews/re-38-M5P4预检.md)。
 > 输入：M5-design §3/§4/§6/§7/§12 P4，M2/M3/M1-closeout交接；P2-access/recovery/protected-purge合同。负责人授权连续M5，局部取舍自行裁定；重大新风险先提交后上报。
 
 ## 1. 目标、范围与方案

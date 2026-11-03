@@ -11,23 +11,24 @@ import (
 // ArchiveProject archives a project, or unarchives it: POST
 // /api/v0/projects/{project_id}/archive and /unarchive (M3 design 3.4,
 // 3.19).
+type ArchiveProjectDeps struct {
+	Projects ProjectArchiver
+	Locks    Locks
+	Caller   CallerLock
+	Images   ImageReader
+	Tx       shared.TxManager
+	Clock    Clock
+}
+
 type ArchiveProject struct {
-	projects ProjectArchiver
-	locks    Locks
-	tx       shared.TxManager
-	clock    Clock
-	archive  bool
+	d       ArchiveProjectDeps
+	archive bool
 }
 
-// NewArchiveProject returns the use case that archives.
-func NewArchiveProject(projects ProjectArchiver, locks Locks, tx shared.TxManager, clock Clock) *ArchiveProject {
-	return &ArchiveProject{projects: projects, locks: locks, tx: tx, clock: clock, archive: true}
+func NewArchiveProject(d ArchiveProjectDeps) *ArchiveProject {
+	return &ArchiveProject{d: d, archive: true}
 }
-
-// NewUnarchiveProject returns the use case that unarchives.
-func NewUnarchiveProject(projects ProjectArchiver, locks Locks, tx shared.TxManager, clock Clock) *ArchiveProject {
-	return &ArchiveProject{projects: projects, locks: locks, tx: tx, clock: clock}
-}
+func NewUnarchiveProject(d ArchiveProjectDeps) *ArchiveProject { return &ArchiveProject{d: d} }
 
 // Execute, in one transaction (M3 design 3.6): the project's locks (Locks:
 // its workspace FOR SHARE, then the project FOR NO KEY UPDATE) and the
@@ -45,15 +46,26 @@ func (u *ArchiveProject) Execute(ctx context.Context, id uuid.UUID) (domain.Proj
 		action = domain.ActionArchive
 	}
 	var stored domain.Project
-	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		if _, err := u.locks.lockAndDecide(ctx, actor, write{project: id, action: action}); err != nil {
+	err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
+		if err := u.d.Caller.LockCaller(ctx, actor, u.d.Clock.Now()); err != nil {
 			return err
 		}
-		if err := u.projects.SetArchived(ctx, id, u.archive, actor.UserID, u.clock.Now()); err != nil {
+		if _, err := u.d.Locks.lockAndDecide(ctx, actor, write{project: id, action: action}); err != nil {
 			return err
 		}
-		stored, err = answer(ctx, u.projects, id, actor.UserID)
-		return err
+		if err := u.d.Projects.SetArchived(ctx, id, u.archive, actor.UserID, u.d.Clock.Now()); err != nil {
+			return err
+		}
+		stored, err = answer(ctx, u.d.Projects, id, actor.UserID)
+		if err != nil {
+			return err
+		}
+		images, err := withProjectImages(ctx, u.d.Images, []domain.Project{stored})
+		if err != nil {
+			return err
+		}
+		stored = images[0]
+		return nil
 	})
 	if err != nil {
 		return domain.Project{}, err

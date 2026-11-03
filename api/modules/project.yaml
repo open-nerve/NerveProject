@@ -23,7 +23,7 @@ paths:
         member answers workspace.not_found. The whole collection at once:
         collections are not paginated.
       security: [{bearer: []}]
-      x-problem-codes: [workspace.not_found]
+      x-problem-codes: [workspace.not_found, server_busy]
       parameters:
         - name: archived
           in: query
@@ -125,7 +125,7 @@ paths:
         not see answers project.not_found; so does one whose workspace he is
         not an active member of.
       security: [{bearer: []}]
-      x-problem-codes: [project.not_found]
+      x-problem-codes: [project.not_found, server_busy]
       responses:
         '200':
           description: The project, as the caller sees it.

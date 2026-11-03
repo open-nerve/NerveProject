@@ -186,6 +186,8 @@ func bobAdministersWeb(t *testing.T) (r growthRace, ops uuid.UUID) {
 // Web beside the archive and wait only at its UPDATE, which upgrades a lock
 // it shares: PostgreSQL takes no tuple lock for that wait, so the probe of
 // a wait on projects times out, and the test fails there, not at a 40P01.
+// Different callers isolate the project lock from the approved account-first
+// boundary; a shared account would now serialize earlier on users.
 func TestTwoWritesOnAProjectSerialize(t *testing.T) {
 	contract := apitest.Load(t)
 	r, _ := bobAdministersWeb(t)
@@ -202,7 +204,7 @@ func TestTwoWritesOnAProjectSerialize(t *testing.T) {
 		archiveReq, archiveRec = gated.send(http.MethodPost, web+"/archive", r.bob, "")
 		return nil
 	}, func() error {
-		updateReq, updateRec = route.send(http.MethodPatch, web, r.bob, `{"name":"Site"}`)
+		updateReq, updateRec = route.send(http.MethodPatch, web, r.alice, `{"name":"Site"}`)
 		return nil
 	})
 	if err := errors.Join(archived, updated); err != nil {

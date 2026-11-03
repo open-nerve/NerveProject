@@ -37,3 +37,14 @@ func TestProjectCoverImageProblems(t *testing.T) {
 		t.Fatal("gate refusal lost retry contract", res.StatusCode, res.Header)
 	}
 }
+
+func TestProjectImageReadBusy(t *testing.T) {
+	failure := shared.ServerBusy(time.Second)
+	h := newServer(t, fakes{get: &fakeGet{err: failure}, list: &fakeList{err: failure}})
+	for _, path := range []string{"/api/v0/projects/" + webID.String(), "/api/v0/workspaces/acme/projects"} {
+		res, _ := do(t, h, request(http.MethodGet, path, "alice", ""))
+		if res.StatusCode != 503 || res.Header.Get("Retry-After") != "1" {
+			t.Fatal("read gate lost retry contract", res.StatusCode, res.Header)
+		}
+	}
+}

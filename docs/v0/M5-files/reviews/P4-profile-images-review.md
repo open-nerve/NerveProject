@@ -1,6 +1,6 @@
 # M5 / P4 阶段评审记录
 
-> 预检通过，T1–T8字段/绑定/读取/清理及用户、工作区、成员、邀请与项目封面创建更新API聚焦回归完成；T9待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
+> 预检通过，T1–T9字段/绑定/读取/清理及全部资料图片API聚焦回归完成；T10待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
 
 ## 1. 评审方式
 
@@ -20,7 +20,7 @@
 
 ## 4. 整分支发现与处理
 
-T1–T8已实施，整审及修复待T14。不能把builder check的无重要问题写成代码无缺陷。
+T1–T9已实施，整审及修复待T14。不能把builder check的无重要问题写成代码无缺陷。
 
 ## 5. 实现与plan差异
 
@@ -116,4 +116,15 @@ CreateProject在无锁权限预检后，以调用者账号、工作区和所需�
 
 行为RED4.567s；扩展聚焦race17.310s；完整project+arch race133.605s。旧gatedAuthorizer屏障在新增无锁预检误暂停并再次close，原失败保留；仅将夹具限定真实事务内暂停，保留原锁强度、PID/阻塞和角色结果断言。最终bootstrap新封面/旧项目锁交错/七项API合同race34.792s、完整arch7.425s、lint16.682s通过。Web5文件104测试2.183s及全量types11.515s通过；这两项与完整project只复用唯一bootstrap测试夹具变化之前的结果，逐路径hash差异记录在task-8-final-input-reuse.json，受影响bootstrap/arch/lint均重跑。
 
-证据task-8-*日志/receipt/input与docker-task-8-reaped.json保留，4303输入稳定；12个自有临时容器全回收、20个既有保留。生成核验在本任务提交后执行。T9其余项目响应及T10–T15联合验收、整审、集成尚未完成；A1–A9保持未整体关闭。
+证据task-8-*日志/receipt/input与docker-task-8-reaped.json保留，4303输入稳定；12个自有临时容器全回收、20个既有保留。提交后生成核验3.105s通过。T9其余项目响应及T10–T15联合验收、整审、集成尚未完成；A1–A9保持未整体关闭。
+
+
+## 16. T9全部项目响应的封面授权
+
+Get/List先预读可见项目候选，无连接进入与issue/asset同实例gate；专用于图片读取的ImageReadLocks明确账号N→W(S)→候选P(S)升序，重读原权限/完整集合后批量签发。沿本模块ShareIssueProjects已有排序SQL，不另造查询或跨模块依赖。只返回候选内仍可见的项目，保留展示顺序和归档过滤，新增留到下次，slug改指另一工作区不能沿旧锁签发。Archive/Unarchive/Join只在原写流程前接CallerLock，最终项目签发在commit前；原label/state和其他不返回图片的动作不变。
+
+真实API覆盖Create/Update/Get/List/Archive/Unarchive/Join的实际文件字节和期限、私有无权与不存在同形、guest可见、归档过滤及已删排除。Get/List执行期间项目和资产statement级审计计数0、全图快照不变；Get/List/Archive/Unarchive/Join五项签名故障均500，写动作全图回滚。预检隐藏目标不进gate；候选增删/反序、slug身份、各端口原样失败、提交失败不给部分DTO、gate释放均有独立测试；取消候选过滤/锁排序/slug同一性/退gate四个实际行为变异被抓到并恢复hash。查询的server_busy及Retry-After:1在API和HTTP用例同步声明验证。
+
+原M3三项并发夹具实际失败：S1(c)加入及停用/加入四格不再能越过新的账号首锁先等W；同调用者archive/update也先在账号串行。保留原日志，前两者改验证真实users等待、停用后401且无越过W的写及成员结果，第三项改由两个已有管理员写同一项目，继续验证真实项目锁串行和archive后update409。原W/P强度、双向先后和角色/审计断言保留；误写错误码unauthenticated的夹具修正为现有unauthorized，原失败也保留，不当作产品缺陷。
+
+行为RED10.825s；真实响应/故障聚焦race17.228s；最终完整project+arch race133.472s、bootstrap相关旧M3锁交错/新图片/七项API合同race52.864s、全量lint16.614s通过，4307输入一致。证据task-9-*日志、receipt/input、4项mutation及docker-task-9-reaped.json；自有容器均回收，既有20个保留。生成核验在提交后运行。T10–T15、A1–A9整体关闭、阶段终审和集成仍待完成。

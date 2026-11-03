@@ -1022,6 +1022,7 @@ paths:
         - bearer: []
       x-problem-codes:
         - workspace.not_found
+        - server_busy
       parameters:
         - name: archived
           in: query
@@ -1113,6 +1114,7 @@ paths:
         - bearer: []
       x-problem-codes:
         - project.not_found
+        - server_busy
       responses:
         '200':
           description: The project, as the caller sees it.

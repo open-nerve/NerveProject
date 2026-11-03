@@ -64,6 +64,9 @@ func (r growthRace) lastWrittenByAlice(t *testing.T) {
 // then reads his membership ended: alice's adding is 422 at
 // members[0].member_id, his joining 404; his membership of acme is ended
 // as his, and an ended membership of Web stays as alice's removal left it.
+// M5/P4 joins now acquire the caller account first: join/deactivation wait
+// on users in both orders, and a deactivated join answers 401. Adding another
+// user retains the workspace wait and original 422.
 // In either order no transaction holds Web while the second side waits,
 // and no membership of alice's ends.
 func TestADeactivationAndTheProjectSidesGrowthSerialize(t *testing.T) {
@@ -99,7 +102,11 @@ func TestADeactivationAndTheProjectSidesGrowthSerialize(t *testing.T) {
 						grow := r.growth(t, add, nil)
 						grew = run(func() error { req, rec = grow(); return nil })
 					}
-					pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
+					waitingOn := "workspaces"
+					if !add {
+						waitingOn = "users"
+					}
+					pgtest.WaitForLockWaitOn(t, r.pool, waitingOn, 5*time.Second)
 					if !r.webFree(t) {
 						t.Error("Web is held while the second side waits for acme's row; want it locked after that row")
 					}
@@ -117,6 +124,9 @@ func TestADeactivationAndTheProjectSidesGrowthSerialize(t *testing.T) {
 					} else {
 						want = map[bool]string{false: "15 ended, Web none", true: "15 ended, Web 15 ended"}[ended]
 						grown = refusedAsNoMember(rec, add)
+						if !add {
+							grown = rec.Code == http.StatusUnauthorized && problemCode(t, rec.Body.Bytes()) == "unauthorized"
+						}
 					}
 					got, by, alices := r.standing(t), endersOf(t, r.pool, r.bob), endersOf(t, r.pool, r.alice)
 					if deactivation != nil || !grown || got != want || by != enders || alices != "none" {
