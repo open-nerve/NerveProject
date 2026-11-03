@@ -26,6 +26,22 @@ func insertContentPurgeJob(t *testing.T, client *river.Client[pgx.Tx]) int64 {
 // This uses the existing real child process/River page observer, with content
 // files created through APIs instead of profile reverse-reference fixtures.
 func TestContentAssetRetentionProcess(t *testing.T) {
+	for _, scenario := range []struct {
+		name                      string
+		expireFirst, pendingPurge bool
+	}{
+		{"initial_budget_exhausted=false", false, false},
+		{"initial_budget_exhausted=true", true, false},
+		{"pending_periodic_job", false, true},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			testContentAssetRetentionProcess(t, scenario.expireFirst, scenario.pendingPurge)
+		})
+	}
+}
+
+func testContentAssetRetentionProcess(t *testing.T, expireFirst, pendingPurge bool) {
+	t.Helper()
 	rw := newContentRetentionWorld(t)
 	w := rw.issueWorld
 	old := newContentProjectTree(t, w, "OLD")
@@ -50,8 +66,28 @@ func TestContentAssetRetentionProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	client := imagePurgeClient(t, w.pool)
+	var otherJob int64
+	if pendingPurge {
+		otherJob = insertContentPurgeJob(t, client)
+	}
 	job := insertContentPurgeJob(t, client)
-	firstPID := imagePurgeProcess(t, rw, "page_failed", job, rw.now)
+	t.Logf("observed purge job=%d preceding purge job=%d", job, otherJob)
+	firstPID := imagePurgeProcess(t, rw, "page_failed", job, rw.now, fmt.Sprintf("%s=%t", imageProcessExpireFirst, expireFirst))
+	if pendingPurge {
+		var snoozes int
+		var hasOutput bool
+		if err := w.pool.QueryRow(t.Context(), `SELECT coalesce((metadata->>'snoozes')::int,0),metadata ? 'output'
+ FROM river_job WHERE id=$1`, otherJob).Scan(&snoozes, &hasOutput); err != nil || snoozes < 1 || hasOutput {
+			t.Fatal("unrelated purge was not deferred without executing a page", snoozes, hasOutput, err)
+		}
+	}
+	if expireFirst {
+		var initialAttempts, uncommitted int
+		if err := w.pool.QueryRow(t.Context(), `SELECT count(*),count(*) FILTER (WHERE committed_after IS NULL)
+ FROM image_purge_calls WHERE process=$1 AND after_id=$2`, firstPID, uuid.Nil()).Scan(&initialAttempts, &uncommitted); err != nil || initialAttempts < 2 || uncommitted < 1 {
+			t.Fatal("initial budget did not expire before the first committed page", initialAttempts, uncommitted, err)
+		}
+	}
 	result, state := imagePurgeJob(t, w.pool, job)
 	cutoff := rw.now.Add(-60 * 24 * time.Hour)
 	if result.Complete || result.Cursor.After != first || result.Cursor.Module != "asset" || !result.Cursor.Cutoff.Equal(cutoff) {
