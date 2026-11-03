@@ -165,7 +165,7 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 - [x] Step 1：固定main基线到候选HEAD，deep-review按逻辑/集成/测试，整份手写文件及caller清单，生成物核源。
 - [x] Step 2：一次fresh reviewer携spec/plan/Review Focus原文及全部Ruling；主控按实际影响分级，报告入docs/reviews下一编号。
 - [x] Step 3：Important/Critical一次局部修复与真实RED/GREEN、影响门禁及主控复核；Minor具名去向（M1按03硬规则本次等价修正，无伪RED）；重大风险先提交后上报，不派重复同范围审者。
-- [ ] Step 4：裁定/代价/未读范围逐条落盘，最终commit/push与准确最终HEAD CI全绿，才关闭A8。
+- [ ] Step 4：裁定/代价/未读范围逐条落盘；最终CI两次整包超时经完整采样后，局部调整Go整包20m/server作业25m，完整本地make test及准确新HEAD CI重新验收。最终commit/push与准确最终HEAD CI全绿，才关闭A8。
 
 ## Task 15（T15）：集成归档及P6预检
 

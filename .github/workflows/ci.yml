@@ -19,8 +19,8 @@ jobs:
     # 同仓库分支的 PR 已由 push 事件在同一个提交上跑过；pull_request 事件只为 fork 的 PR 运行
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-24.04
-    # Go 整包预算 15m，另留生成、编译、lint 与工具模块的时间。
-    timeout-minutes: 20
+    # Go 整包预算 20m，另留生成、编译、lint 与工具模块的时间。
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7

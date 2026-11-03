@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1–P4已完成集成和归档。P4已完成：noff main 0f93100a，CI 41641099230 三job全绿，2301份原始文件归档核验并正常清理分支/worktree；P5 T1–T13完成，检查点e60aa333的CI 41712958828三项全绿；一次整审唯一Minor已修正复核，最终提交CI及集成归档待后续步骤。见[P4阶段记录](reviews/P4-profile-images-review.md#22-t15最终集成归档与p5预检)和[P5阶段记录](reviews/P5-issue-assets-review.md)。
+> 状态：P1–P4已完成集成和归档。P4已完成：noff main 0f93100a，CI 41641099230 三job全绿，2301份原始文件归档核验并正常清理分支/worktree；P5 T1–T13完成，检查点e60aa333的CI 41712958828三项全绿；一次整审唯一Minor已修正复核。最终CI两次触及整包预算，完整诊断后局部调整测试编排预算，新提交CI及集成归档仍待验证。见[P4阶段记录](reviews/P4-profile-images-review.md#22-t15最终集成归档与p5预检)和[P5阶段记录](reviews/P5-issue-assets-review.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 > 设计、P1–P4分支均已合入并归档；当前工作分支codex/m5-p5。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 

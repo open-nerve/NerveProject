@@ -292,3 +292,13 @@ T13检查点 `e60aa333b57018be482f4ce7da12e7f9298aea1a` 已由系统Git推送，
 审者五项未判断范围已逐条裁定：P6/P7控件、M8未来投递、实际AWS/IAM配置、超出本段测量的极端容量和JS安全整数以外的现实附件数，均不冒称本段交付；理由与代价详见re-41末节和 `task-14-root-rulings.md`。保存/换项目允许pending、发布拒绝pending的既定区别已明确。输入handoff与M5总体完成仍open；原有P1/P3/P4尾项继续由P8处理。本轮只读容器核验仍原20、新增遗留0。
 
 最终提交CI、noff/main CI和归档清理待后续步骤；A8/A9及T14最后一步不能提前打勾。准确最终SHA与集成事实由T15在下一P6工作树回填，避免为自身提交号循环生成状态提交。
+
+### 21.1 最终CI整包预算诊断与局部校正
+
+最终收尾提交 `3feb842074816cf9107b759af023d6d652000721` 的 [CI 41719144290](https://github.com/open-nerve/NerveProject/actions/runs/41719144290) attempt 1/2 均为 web 成功、server Test 失败、E2E 未运行。两次 bootstrap 都累计达到 900 秒；截断位置分别为只运行 8 秒的 `TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile` 和刚开始的 `TestAReactivationFindsWhatChangedMeanwhile`，当时子测试均为 0 秒。完整日志保留，不将未运行的 E2E 算通过，也未第三次重跑碰运气。
+
+同一源码原输入在本机完整 JSON/CPU 诊断为 635.169 秒，与 T13 本机 632.445 秒一致；605 个顶层入口与编译二进制完全相等，602 通过、3 个既有显式规模测试跳过（`TestIssueListScale`、`TestTheDeletionsAtTheScaleTarget`、`TestPurgeScale`）。含子测试共 5827 条 PASS、3 条 skip，无 fail。原失败矩阵单独复验 46 子测试亦通过。CPU 样本 151.90 秒中 `apitest.Load` 累计 13.80 秒；这些是本机样本，不能用一次堆栈或此比例断言远端唯一热点。原20容器逐ID保留，测试新增遗留0。
+
+Go AST 及实际二进制核实，bootstrap 顶层测试由 P1 的 462、P4 的 553 增至当前 605；P1 已在同类累计10m截断后显式设15m/server20m（`854dd183`）。当前检查点远端实测776.395秒，后两轮在接近用例序列尾部达到900秒，证据支持完整套件增长后的运行预算不足，没有固定用例持续卡住的证据。主控裁定把整包预算调整为20m、server作业25m；全部单项断言、锁等待、HTTP及存储业务期限保持。此为局部测试编排校正，既不引入共享可变契约缓存，也不拆分产品模块。代价是真正整包挂起的最晚中断增加5分钟；这不是性能改善的声称。
+
+`task-14-budget-delta.json` 固定 Makefile/CI 两份文件的前后字节和 SHA；原 M1 单测试差异仍单独校验。`verify-task-14-local.py` 仅准这三份精确非文档差异，原七门禁只复用未受影响部分；新配置必须重新完整执行 `GOFLAGS=-p=1 make test`（server/tools 均 `-count=1 -timeout=20m`），并验收准确新提交的完整远端 CI。原失败、采样、跳过项、收据与来源输入均随 T15 归档。此段尚不声称新配置本地或远端已通过。
