@@ -20,7 +20,8 @@ func TestFilesConfigurationBudgets(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := FilesConfig{SizeLimit: 5242880, Driver: "local", Local: LocalFilesConfig{Root: "./data/files"},
+		want := FilesConfig{
+			UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second, SizeLimit: 5242880, Driver: "local", Local: LocalFilesConfig{Root: "./data/files"},
 			MinTransferBytesPerSecond: 131072, TransferGrace: 15 * time.Second, TransferIdleTimeout: 30 * time.Second,
 			MaxTransferDuration: 15 * time.Minute, MaxConcurrentTransfers: 16, TransferRate: BucketConfig{PerMinute: 60, Burst: 20}}
 		if cfg.Files != want {

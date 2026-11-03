@@ -26,7 +26,19 @@ tags:
     description: Projects, their members, their states and their labels.
   - name: issue
     description: Work items.
+  - name: asset
+    description: Private file preparations and content capabilities.
 paths:
+  /api/v0/assets:
+    $ref: 'modules/asset.yaml#/paths/~1api~1v0~1assets'
+  /api/v0/assets/{id}:
+    $ref: 'modules/asset.yaml#/paths/~1api~1v0~1assets~1{id}'
+  /api/v0/assets/{id}/complete:
+    $ref: 'modules/asset.yaml#/paths/~1api~1v0~1assets~1{id}~1complete'
+  /api/v0/assets/{id}/duplicate:
+    $ref: 'modules/asset.yaml#/paths/~1api~1v0~1assets~1{id}~1duplicate'
+  /api/v0/assets/{id}/content:
+    $ref: 'modules/asset.yaml#/paths/~1api~1v0~1assets~1{id}~1content'
   /api/v0/auth/register:
     $ref: 'modules/identity.yaml#/paths/~1api~1v0~1auth~1register'
   /api/v0/auth/login:

@@ -14,6 +14,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
@@ -70,6 +72,7 @@ type DirectoryEntry = app.DirectoryEntry
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
+	AssetParents             AssetParents
 	Purger                   *app.Purger
 	WorkspaceRoles           WorkspaceRoles
 	WorkspaceDirectory       WorkspaceDirectory
@@ -78,17 +81,17 @@ type Provided struct {
 }
 
 // Provide builds workspace's adapters for the other modules.
-func Provide(pool *pgxpool.Pool) Provided {
+func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provided {
 	directory := postgresadapter.NewDirectory(pool)
-	store := postgresadapter.New(pool)
+	store := postgresadapter.NewPurgeStore(pool, protected)
 	return Provided{
 		Purger: app.NewPurger([]app.PurgeStep{
 			{Table: "workspace_user_properties", Delete: store.PurgeWorkspaceUserProperties},
 			{Table: "workspace_member_invites", Delete: store.PurgeWorkspaceMemberInvites},
 			{Table: "workspace_members", Delete: store.PurgeWorkspaceMembers},
-			{Table: "workspaces", Delete: store.PurgeWorkspaces},
+			{Table: "workspaces", Protected: true, Delete: store.PurgeWorkspaces},
 		}),
-		WorkspaceRoles: store, WorkspaceDirectory: directory,
+		AssetParents: store, WorkspaceRoles: store, WorkspaceDirectory: directory,
 		WorkspaceMembers: directory, WorkspaceMemberDirectory: directory,
 	}
 }
@@ -130,6 +133,7 @@ type Deps struct {
 
 // Module is the wired workspace module.
 type Module struct {
+	assets      *app.AssetAccess
 	uc          httpadapter.UseCases
 	signup      *app.SignupInvitations
 	deactivator Deactivator
@@ -148,7 +152,7 @@ type SignupInvitations interface {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	deactivator := NewDeactivator(DeactivatorDeps{Pool: d.Pool, Clock: d.Clock, Projects: d.Projects})
-	return &Module{signup: app.NewSignupInvitations(store, d.InvitationMAC), deactivator: deactivator, uc: httpadapter.UseCases{
+	return &Module{assets: app.NewAssetAccess(d.Authorizer), signup: app.NewSignupInvitations(store, d.InvitationMAC), deactivator: deactivator, uc: httpadapter.UseCases{
 		ListWorkspaces: app.NewListWorkspaces(store),
 		CreateWorkspace: app.NewCreateWorkspace(app.CreateWorkspaceDeps{
 			Accounts: d.Accounts, Workspaces: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger, Enabled: d.CreationEnabled,

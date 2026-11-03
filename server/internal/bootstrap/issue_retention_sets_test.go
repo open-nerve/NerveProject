@@ -8,6 +8,7 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
@@ -17,7 +18,7 @@ import (
 )
 
 func retentionPurge(w issueWorld, at time.Time) *purgeDeleted {
-	return newPurgeDeleted([]Purger{issue.Provide(w.pool).Purger, project.Provide(w.pool).Purger, workspace.Provide(w.pool).Purger, identity.Provide(w.pool).Purger}, clockAt(at), 60*24*time.Hour, 2)
+	return newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(asset.Provide(w.pool).Purger)}, {"issue", forIssuePurge(issue.Provide(w.pool, protectedAssetReferences()).Purger)}, {"project", forProjectPurge(project.Provide(w.pool, protectedAssetReferences()).Purger)}, {"workspace", forWorkspacePurge(workspace.Provide(w.pool, protectedAssetReferences()).Purger)}, {"identity", forIdentityPurge(identity.Provide(w.pool).Purger)}}, clockAt(at), time.Now, 60*24*time.Hour, 2, 10*time.Second)
 }
 
 // Each scenario publishes its complete fixture atomically. The live parent
@@ -94,7 +95,7 @@ func TestTrimAndPurgeUseDisjointVersionSets(t *testing.T) {
 					}
 				}
 				purge := func() {
-					if _, err := retentionPurge(w, at).Execute(pgtest.Soon(t)); err != nil {
+					if _, err := drainPurge(retentionPurge(w, at), pgtest.Soon(t)); err != nil {
 						t.Fatal(err)
 					}
 				}

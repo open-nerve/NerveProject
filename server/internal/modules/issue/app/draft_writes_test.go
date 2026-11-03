@@ -180,3 +180,21 @@ func TestDraftCRUDFailuresDoNotReturnDraftData(t *testing.T) {
 		})
 	}
 }
+
+func TestDraftAssetDeletionSharesStampAndTransaction(t *testing.T) {
+	for _, fail := range []bool{false, true} {
+		t.Run(line("asset failure", fail), func(t *testing.T) {
+			w := newDraftWorld()
+			if fail {
+				w.log.fail = "DeleteDraftAssets"
+			}
+			err := w.delete().Execute(as(alice), w.s.row.ID)
+			if (fail && !errors.Is(err, errDisk)) || (!fail && err != nil) {
+				t.Fatalf("asset deletion error=%v", err)
+			}
+			if w.s.assetsDeleted != w.s.deleted || w.s.assetsDeleted.ID != w.s.row.ID || !slices.Contains(w.log.calls, "DeleteDraftAssets") {
+				t.Fatalf("asset stamp=%+v draft stamp=%+v calls=%v", w.s.assetsDeleted, w.s.deleted, w.log.calls)
+			}
+		})
+	}
+}

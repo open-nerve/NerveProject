@@ -4,6 +4,7 @@ import { accountId } from "./auth";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "./comments";
 import { createDraft, createIssue, createIssueRelations } from "./issues";
 import { createIssueLink } from "./links";
+import { furnishIssueFiles, storedFile } from "./storage";
 
 // The rows a deletion story furnishes a workspace or a project with first, so that its deletion has a row of each
 // table to write (expectWorkspaceDeleted, expectProjectDeleted).
@@ -24,7 +25,11 @@ export async function furnishIssueRows(
   assigneeId: string,
   labelId: string
 ): Promise<void> {
-  await createDraft(api, token, workspaceSlug, { project_id: projectId, payload: { name: "Unfinished" } });
+  const draft = await createDraft(api, token, workspaceSlug, {
+    project_id: projectId,
+    payload: { name: "Unfinished" },
+  });
+  await storedFile(api, token, "DRAFT_ISSUE_ATTACHMENT", { kind: "draft", id: draft.id });
   const fix = await createIssue(api, token, projectId, {
     name: "Fix the login",
     description_html: `<mention-component entity_name="user_mention" entity_identifier="${assigneeId}"></mention-component>`,
@@ -33,6 +38,7 @@ export async function furnishIssueRows(
   });
   await createIssueLink(api, token, fix.id, { url: `http://169.254.169.254/furnish/${fix.id}` });
   const comment = await createIssueComment(api, token, fix.id, "<p>Ready to fix</p>");
+  await furnishIssueFiles(api, token, fix.id, comment.id);
   await createCommentReaction(api, token, comment.id);
   await createIssueReaction(api, token, fix.id);
   const test = await createIssue(api, token, projectId, { name: "Test the login" });
@@ -57,6 +63,7 @@ export async function furnishWorkspace(
   await changeWorkspacePreferences(api, adminToken, slug, { navigation_project_limit: 3 });
   const web = await createProject(api, adminToken, slug, { name: "Web", identifier: "WEB" });
   const bug = await createLabel(api, adminToken, web.id, { name: "Bug" });
-  await createDraft(api, adminToken, slug, { payload: { name: "Unassigned" } });
+  const draft = await createDraft(api, adminToken, slug, { payload: { name: "Unassigned" } });
+  await storedFile(api, adminToken, "DRAFT_ISSUE_ATTACHMENT", { kind: "draft", id: draft.id });
   await furnishIssueRows(api, adminToken, slug, web.id, await accountId(api, adminToken), bug.id);
 }

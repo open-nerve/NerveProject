@@ -1,5 +1,15 @@
 {
   "errors": {
+    "asset_not_found": "文件不存在，或你没有访问权限。",
+    "asset_scope_changed": "文件或所属位置已变化，请重试。",
+    "asset_object_missing": "源文件内容不可用，请确认源文件后重试。",
+    "asset_content_invalid": "文件与声明的大小、类型或图片要求不符。",
+    "asset_bound": "此文件仍在使用，无法在此删除。",
+    "asset_busy": "之前的文件操作仍在回收中，请稍后重试。",
+    "asset_storage_unavailable": "文件存储暂时不可用，请稍后重试。",
+    "asset_not_uploaded": "文件尚未完成上传。",
+    "asset_too_large": "文件超过允许的大小。",
+    "asset_type_unsupported": "请选择 JPEG、PNG、WebP 或 GIF 图片。",
     "asset_invalid_signature": "文件链接无效或已过期，请重新获取链接。",
     "asset_invalid_upload": "上传的文件与申请不符，请重新选择文件。",
     "asset_object_not_found": "文件已不可用。",

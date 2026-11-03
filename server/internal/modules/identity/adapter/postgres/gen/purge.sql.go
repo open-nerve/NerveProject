@@ -12,38 +12,34 @@ import (
 	"uuid"
 )
 
-const purgeAPITokens = `-- name: PurgeAPITokens :many
-DELETE FROM api_tokens
-WHERE id IN (
+const purgeAPITokens = `-- name: PurgeAPITokens :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM api_tokens AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM api_tokens AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeAPITokensParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeAPITokens(ctx context.Context, arg PurgeAPITokensParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeAPITokens, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeAPITokensRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
+}
+
+func (q *Queries) PurgeAPITokens(ctx context.Context, arg PurgeAPITokensParams) (PurgeAPITokensRow, error) {
+	row := q.db.QueryRow(ctx, purgeAPITokens, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeAPITokensRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
 }

@@ -98,7 +98,7 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 					auth = gatedAuthorizer{Authorizer: auth, action: w.action, gate: g}
 				}
 				probe := requestTx(r.pool)
-				route := newProjectRouteOn(t, r.pool, probe, auth, workspace.Provide(r.pool).WorkspaceMembers)
+				route := newProjectRouteOn(t, r.pool, probe, auth, workspace.Provide(r.pool, nil).WorkspaceMembers)
 				var req *http.Request
 				var rec *httptest.ResponseRecorder
 				write := func() error {
@@ -192,8 +192,8 @@ func TestTwoWritesOnAProjectSerialize(t *testing.T) {
 	defer cancel()
 	g := newGate()
 	gated := newProjectRoute(t, r.pool, gatedAuthorizer{Authorizer: r.authorizer(), action: projectdomain.ActionArchive, gate: g},
-		workspace.Provide(r.pool).WorkspaceMembers)
-	route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool).WorkspaceMembers)
+		workspace.Provide(r.pool, nil).WorkspaceMembers)
+	route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool, nil).WorkspaceMembers)
 	web := "/api/v0/projects/" + r.web.String()
 	var archiveReq, updateReq *http.Request
 	var archiveRec, updateRec *httptest.ResponseRecorder
@@ -228,8 +228,8 @@ func TestWritesOnTwoProjectsOfAWorkspaceDoNotWait(t *testing.T) {
 	defer cancel()
 	g := newGate()
 	gated := newProjectRoute(t, r.pool, gatedAuthorizer{Authorizer: r.authorizer(), action: projectdomain.ActionArchive, gate: g},
-		workspace.Provide(r.pool).WorkspaceMembers)
-	route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool).WorkspaceMembers)
+		workspace.Provide(r.pool, nil).WorkspaceMembers)
+	route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool, nil).WorkspaceMembers)
 	archived := run(func() error {
 		gated.send(http.MethodPost, "/api/v0/projects/"+r.web.String()+"/archive", r.bob, "")
 		return nil

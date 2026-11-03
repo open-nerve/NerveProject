@@ -21,3 +21,7 @@ M5 合并时：文件资源的接口没有 `PAGE_DESCRIPTION` 类型，表里没
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P2 评审记录](../../M1-frontend-trim/reviews/P2-trim-content-review.md)第 7 节。
+
+## 处理结果（M5/P2）
+
+P2首张file_assets表没有page_id或页面资源用途；十种用途直接来自OpenAPI生成，F1逐一经真实PUT/complete/GET。旧前端资源类型的最终删除仍归P6/P7，本交接保持open。证据见[P2阶段评审](../reviews/P2-assets-review.md)，整审/集成结果仍单独核验。

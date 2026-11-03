@@ -166,7 +166,7 @@ func labelMoves(name, parent string) labelWrite {
 // labelDeletes deletes the label name, and the labels under it with it.
 func labelDeletes(name string) labelWrite {
 	return labelWrite{"deletes " + name, func(ctx context.Context, w memberWorld, labels labelStore, ids map[string]uuid.UUID) error {
-		return projectapp.NewDeleteLabel(w.projectLocks(), labels, issue.Provide(w.pool).IssueCascade, w.tx(), clock.System{}).Execute(w.asBob(ctx),
+		return projectapp.NewDeleteLabel(w.projectLocks(), labels, issue.Provide(w.pool, nil).IssueCascade, w.tx(), clock.System{}).Execute(w.asBob(ctx),
 			ids[name])
 	}, func(labels map[string]string) {
 		for n, parent := range labels {

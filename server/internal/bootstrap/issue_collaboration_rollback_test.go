@@ -111,7 +111,7 @@ func TestCollaborationRollsBackPortFailures(t *testing.T) {
 				addCommentReaction(t, w, "bob", comment.ID, "128077")
 			}
 			store := issuepg.New(w.pool)
-			projects := issueProjects{projects: project.Provide(w.pool).IssueProjects}
+			projects := issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}
 			locks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second))
 			ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["bob"]})
 			for _, port := range operation.ports {

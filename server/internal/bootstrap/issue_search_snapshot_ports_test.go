@@ -41,7 +41,7 @@ func (s snapshotSearchStore) Search(ctx context.Context, in issueapp.SearchRead)
 	return listObserved(ctx, s.p, "rows", func() ([]domain.Issue, error) { return s.Store.Search(ctx, in) })
 }
 func snapshotSearchUseCase(w issueWorld, p *listSnapshotProbe) *issueapp.SearchIssues {
-	projects, workspaces := project.Provide(w.pool), workspace.Provide(w.pool)
+	projects, workspaces := project.Provide(w.pool, nil), workspace.Provide(w.pool, nil)
 	dirs := snapshotSearchProjects{snapshotListProjects{issueProjects{projects: projects.IssueProjects}, p}}
 	store := snapshotSearchStore{issuepg.New(w.pool), p}
 	auth := snapshotListAuth{authorizerOn(w.pool), p}

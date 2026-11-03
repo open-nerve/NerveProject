@@ -20,6 +20,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
@@ -96,6 +98,7 @@ type ProjectMembershipCounts interface {
 // write of a state, a label or a membership holds too, so they stay as
 // read until the write commits (M4 design 3.5).
 type IssueProjects interface {
+	AssetProjectArchived(context.Context, uuid.UUID) (bool, bool, error)
 	// DeletedIssueProjects reads real deletion times without locking; absent IDs are omitted.
 	DeletedIssueProjects(context.Context, []uuid.UUID) (map[uuid.UUID]time.Time, error)
 	// AllUndeletedIssueProjectIDs is the complete retention directory, in id order.
@@ -160,6 +163,7 @@ type (
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
+	AssetParents            AssetParents
 	Purger                  *app.Purger
 	ArchivePolicies         ArchivePolicies
 	ProjectAccess           ProjectAccess
@@ -168,17 +172,17 @@ type Provided struct {
 }
 
 // Provide builds project's adapters for the other modules.
-func Provide(pool *pgxpool.Pool) Provided {
-	store := postgresadapter.New(pool)
+func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provided {
+	store := postgresadapter.NewPurgeStore(pool, protected)
 	return Provided{
 		Purger: app.NewPurger([]app.PurgeStep{
 			{Table: "project_user_properties", Delete: store.PurgeProjectUserProperties},
 			{Table: "project_members", Delete: store.PurgeProjectMembers},
 			{Table: "labels", Delete: store.PurgeLabels},
-			{Table: "states", Delete: store.PurgeStates},
-			{Table: "projects", Delete: store.PurgeProjects},
+			{Table: "states", Protected: true, Delete: store.PurgeStates},
+			{Table: "projects", Protected: true, Delete: store.PurgeProjects},
 		}),
-		ArchivePolicies: store, ProjectAccess: store,
+		AssetParents: store, ArchivePolicies: store, ProjectAccess: store,
 		ProjectMembershipCounts: store, IssueProjects: store,
 	}
 }
@@ -211,6 +215,7 @@ type Deps struct {
 
 // Module is the wired project module.
 type Module struct {
+	assets  *app.AssetAccess
 	cascade Cascade
 	uc      httpadapter.UseCases
 }
@@ -221,7 +226,7 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(store, d.Workspaces, d.Members, d.Authorizer)
-	return &Module{cascade: NewCascade(CascadeDeps{Pool: d.Pool}), uc: httpadapter.UseCases{
+	return &Module{assets: app.NewAssetAccess(store, d.Authorizer), cascade: NewCascade(CascadeDeps{Pool: d.Pool}), uc: httpadapter.UseCases{
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
 		}),

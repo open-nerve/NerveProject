@@ -77,7 +77,7 @@ var leavings = []leaving{
 // projectLocks is project's Locks over its store, workspace's directory
 // and members' locks and the Authorizer, as project.New wires them.
 func (w memberWorld) projectLocks() projectapp.Locks {
-	provided := workspace.Provide(w.pool)
+	provided := workspace.Provide(w.pool, nil)
 	return projectapp.NewLocks(projectpg.New(w.pool), projectWorkspaces{directory: provided.WorkspaceDirectory}, provided.WorkspaceMembers,
 		authorizerOn(w.pool))
 }

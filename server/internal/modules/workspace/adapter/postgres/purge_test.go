@@ -39,20 +39,20 @@ func TestModulePurgeOrderAndCutoff(t *testing.T) {
 			}{{30, &older}, {10, &old}, {20, &cutoff}, {40, &recent}, {50, nil}} {
 				purgeRow(t, s, pool, table, purgeID(row.n), parent, nil, row.at)
 			}
-			deleteBatch := map[string]func(context.Context, app.PurgeBatch) ([]uuid.UUID, error){"workspace_user_properties": s.PurgeWorkspaceUserProperties, "workspace_member_invites": s.PurgeWorkspaceMemberInvites, "workspace_members": s.PurgeWorkspaceMembers, "workspaces": s.PurgeWorkspaces}[table]
+			deleteBatch := map[string]func(context.Context, app.PurgeBatch) (app.PurgePage, error){"workspace_user_properties": s.PurgeWorkspaceUserProperties, "workspace_member_invites": s.PurgeWorkspaceMemberInvites, "workspace_members": s.PurgeWorkspaceMembers, "workspaces": s.PurgeWorkspaces}[table]
 			first, err := deleteBatch(ctx, app.PurgeBatch{Cutoff: cutoff, Limit: 1})
-			if err != nil || !slices.Equal(first, []uuid.UUID{purgeID(10)}) {
+			if err != nil || first.Scanned != 1 || first.Deleted != 1 || first.After != purgeID(10) {
 				t.Fatalf("%s first batch=%v,%v; want lowest eligible id only", table, first, err)
 			}
 			skipped, err := deleteBatch(ctx, app.PurgeBatch{Cutoff: cutoff, After: purgeID(30), Limit: 1})
-			if err != nil || len(skipped) != 0 {
+			if err != nil || skipped.Scanned != 0 || skipped.Deleted != 0 || skipped.After != purgeID(30) {
 				t.Fatalf("%s after maximum=%v,%v; want empty", table, skipped, err)
 			}
-			purger := workspace.Provide(pool).Purger
+			purger := workspace.Provide(pool, nil).Purger
 			if !slices.Equal(purger.Tables(), []string{"workspace_user_properties", "workspace_member_invites", "workspace_members", "workspaces"}) {
 				t.Fatalf("directory=%v", purger.Tables())
 			}
-			count, err := purger.Purge(ctx, cutoff, 1)
+			count, err := purgeAll(purger, ctx, cutoff, 1)
 			if err != nil || count != 1 {
 				t.Fatalf("%s module direct count=%d,%v; want remaining one", table, count, err)
 			}
@@ -64,7 +64,7 @@ func TestModulePurgeOrderAndCutoff(t *testing.T) {
 				t.Fatalf("%s boundary/recent/live=%v; want 20,40,50", table, left)
 			}
 			for _, limit := range []int{0, 2147483648} {
-				invalid := map[string]func(context.Context, app.PurgeBatch) ([]uuid.UUID, error){"workspace_user_properties": postgresadapter.New(nil).PurgeWorkspaceUserProperties, "workspace_member_invites": postgresadapter.New(nil).PurgeWorkspaceMemberInvites, "workspace_members": postgresadapter.New(nil).PurgeWorkspaceMembers, "workspaces": postgresadapter.New(nil).PurgeWorkspaces}[table]
+				invalid := map[string]func(context.Context, app.PurgeBatch) (app.PurgePage, error){"workspace_user_properties": postgresadapter.New(nil).PurgeWorkspaceUserProperties, "workspace_member_invites": postgresadapter.New(nil).PurgeWorkspaceMemberInvites, "workspace_members": postgresadapter.New(nil).PurgeWorkspaceMembers, "workspaces": postgresadapter.New(nil).PurgeWorkspaces}[table]
 				if _, err := invalid(ctx, app.PurgeBatch{Cutoff: cutoff, Limit: limit}); err == nil {
 					t.Fatalf("%s accepted invalid batch %d", table, limit)
 				}
@@ -83,7 +83,10 @@ func TestModulePurgeOrderAndCutoff(t *testing.T) {
 			rollback := errors.New("outer rollback")
 			var deleted int
 			var purgeErr error
-			err = postgres.NewTxManager(pool, 2*time.Second).WithinTx(ctx, func(txctx context.Context) error { deleted, purgeErr = purger.Purge(txctx, cutoff, 1); return rollback })
+			err = postgres.NewTxManager(pool, 2*time.Second).WithinTx(ctx, func(txctx context.Context) error {
+				deleted, purgeErr = purgeAll(purger, txctx, cutoff, 1)
+				return rollback
+			})
 			var pe *pgconn.PgError
 			if !errors.Is(err, rollback) || deleted != 1 || !errors.As(purgeErr, &pe) || pe.Message != "purge fixture failure" {
 				t.Fatalf("%s independent batches=%d,%v outer=%v; want 1, original PG error, rollback", table, deleted, purgeErr, err)
@@ -106,7 +109,7 @@ func TestModulePurgeOrderAndCutoff(t *testing.T) {
 		purgeRow(t, s, pool, "workspace_user_properties", purgeID(91), root, nil, &old)
 		purgeRow(t, s, pool, "workspace_member_invites", purgeID(92), root, nil, &old)
 		purgeRow(t, s, pool, "workspace_members", purgeID(93), root, nil, &old)
-		count, err := workspace.Provide(pool).Purger.Purge(context.Background(), cutoff, 1)
+		count, err := purgeAll(workspace.Provide(pool, nil).Purger, context.Background(), cutoff, 1)
 		if err != nil || count != 4 {
 			t.Fatalf("child-before-parent direct count=%d,%v; want 4 (no CASCADE stealing eligible rows)", count, err)
 		}
@@ -120,7 +123,7 @@ func TestModulePurgeOrderAndCutoff(t *testing.T) {
 		purgeRow(t, s, pool, "workspace_user_properties", purgeID(91), root, nil, &recent)
 		purgeRow(t, s, pool, "workspace_member_invites", purgeID(92), root, nil, &recent)
 		purgeRow(t, s, pool, "workspace_members", purgeID(93), root, nil, &recent)
-		count, err := workspace.Provide(pool).Purger.Purge(context.Background(), cutoff, 1)
+		count, err := purgeAll(workspace.Provide(pool, nil).Purger, context.Background(), cutoff, 1)
 		if err != nil || count != 1 {
 			t.Fatalf("recent CASCADE direct count=%d,%v; want parent only", count, err)
 		}

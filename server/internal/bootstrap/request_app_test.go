@@ -151,7 +151,7 @@ func TestFullAppRequestProbe(t *testing.T) {
 // Run the real trim worker with the raw JobTx, while exposing only its own PID.
 func observedTrim(t *testing.T, pool *pgxpool.Pool, release func()) (*requestProbe, func()) {
 	t.Helper()
-	ports := project.Provide(pool)
+	ports := project.Provide(pool, nil)
 	probe := &requestProbe{TxManager: newIssueJobTx(pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig})}
 	uc := issueapp.NewTrimVersions(issueapp.TrimVersionsDeps{Projects: issueProjects{projects: ports.IssueProjects}, Gate: issueProjects{projects: ports.IssueProjects}, Rows: issuepostgres.New(pool), Tx: probe})
 	collect := requestBackground(t, func() error { return riveradapter.NewTrimVersionsWorker(uc).Work(context.Background(), nil) }, release)

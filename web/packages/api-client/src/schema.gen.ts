@@ -4,6 +4,118 @@
  */
 
 export interface paths {
+    "/api/v0/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prepare a private upload
+         * @description Creates an unbound asset owned by the caller after authorizing its current host. The upload capability is returned only after the record commits. Send its exact method and headers with the declared number of bytes.
+         */
+        post: operations["createAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/assets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read private asset metadata
+         * @description Reads the asset and its current host authorization in one read-only snapshot. A missing, deleted or invisible host and another applicant's asset all answer asset.not_found. No storage key or capability is returned.
+         */
+        get: operations["getAsset"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a private unbound preparation
+         * @description Rechecks its applicant and current host write permission, then records a tombstone without deleting objects synchronously or forgetting recovery records. Repeated deletion answers asset.not_found. Bound assets cannot be removed through this endpoint.
+         */
+        delete: operations["deleteAsset"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/assets/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify and publish immutable content
+         * @description Commits an independent candidate before inspecting, validating and sealing the uploaded bytes without database resources. Rechecks current host write permission and the candidate lease before publishing. Repeated authorized confirmation returns the existing result without changing its audit data. Failed or losing candidates remain recoverable; a storage failure does not mean the object is absent. asset.busy and asset.storage_unavailable include Retry-After of one second.
+         */
+        post: operations["completeAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/assets/{id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy verified content to a new private preparation
+         * @description Authorizes the source for reading before the destination for preparation. Commits a new pending target and an independent candidate, then validates and seals real bytes without database resources. Rechecks both scopes and source identity before publishing. A failed copy remains recoverable. Every request creates a distinct target; repeating after a lost response can create an extra preparation, reclaimed by the ordinary expiry rule.
+         */
+        post: operations["duplicateAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/assets/{id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Sign a read of completed content
+         * @description Rechecks the applicant's credential and current host authorization before signing an uploaded asset's immutable final object. Does not write database rows. Expiry is the next UTC whole hour, or the following hour when fewer than five minutes remain. Attachments always download; verified image purposes can display inline. A previously issued URL remains a bearer capability until its expiry even if permission is subsequently revoked.
+         */
+        get: operations["resolveAssetContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/auth/register": {
         parameters: {
             query?: never;
@@ -1542,24 +1654,29 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description The invitation a registration names, from its link (/workspace-invitations?invitation_id=…&token=…): while sign-up is off, it lets the address it was sent to register. */
-        RegisterInvitation: {
+        /** @enum {string} */
+        AssetPurpose: "USER_AVATAR" | "USER_COVER" | "WORKSPACE_LOGO" | "PROJECT_COVER" | "ISSUE_ATTACHMENT" | "ISSUE_DESCRIPTION" | "COMMENT_DESCRIPTION" | "COMMENT_ATTACHMENT" | "DRAFT_ISSUE_DESCRIPTION" | "DRAFT_ISSUE_ATTACHMENT";
+        AssetScope: {
+            /** @enum {string} */
+            kind: "user" | "workspace" | "project" | "new_project" | "issue" | "comment" | "new_comment" | "draft";
             /**
              * Format: uuid
-             * @description The link's invitation_id.
+             * @description Host UUID; required except for user, which forbids this field. new_project names a workspace; new_comment names an issue.
              */
-            id: string;
-            /** @description The link's token. */
-            token: string;
+            id?: string;
         };
-        RegisterRequest: {
+        NewAsset: {
+            purpose: components["schemas"]["AssetPurpose"];
+            scope: components["schemas"]["AssetScope"];
+            /** @description 1–255 Unicode characters, without path separators or control characters. */
+            name: string;
             /**
-             * Format: email
-             * @description The sign-in address; stored trimmed and in lower case.
+             * Format: int64
+             * @description Exact nonzero byte length; exceeding this instance's file_size_limit answers 413 asset.too_large.
              */
-            email: string;
-            password: string;
-            invitation?: components["schemas"]["RegisterInvitation"];
+            size: number;
+            /** @description Canonical MIME without parameters. Image purposes accept only image/jpeg, image/png, image/webp and image/gif. */
+            content_type: string;
         };
         /** @description One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared. */
         FieldError: {
@@ -1584,6 +1701,71 @@ export interface components {
             detail?: string;
             /** @description The invalid fields of the request. */
             errors?: components["schemas"]["FieldError"][];
+        };
+        Asset: {
+            /** Format: uuid */
+            id: string;
+            purpose: components["schemas"]["AssetPurpose"];
+            scope: components["schemas"]["AssetScope"];
+            name: string;
+            /** Format: int64 */
+            size: number;
+            content_type: string;
+            /** @enum {string} */
+            state: "pending" | "uploaded";
+            is_bound: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            width: number | null;
+            height: number | null;
+        };
+        UploadHeader: {
+            name: string;
+            value: string;
+        };
+        Upload: {
+            /** @enum {string} */
+            method: "PUT";
+            url: string;
+            /** @description Required transport headers, sorted by name with no duplicate names. Set each name/value on the upload request. */
+            headers: components["schemas"]["UploadHeader"][];
+            /** Format: date-time */
+            expires_at: string;
+        };
+        PreparedAsset: {
+            asset: components["schemas"]["Asset"];
+            upload: components["schemas"]["Upload"];
+        };
+        DuplicateAsset: {
+            purpose: components["schemas"]["AssetPurpose"];
+            scope: components["schemas"]["AssetScope"];
+            name?: string;
+        };
+        Content: {
+            url: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
+        /** @description The invitation a registration names, from its link (/workspace-invitations?invitation_id=…&token=…): while sign-up is off, it lets the address it was sent to register. */
+        RegisterInvitation: {
+            /**
+             * Format: uuid
+             * @description The link's invitation_id.
+             */
+            id: string;
+            /** @description The link's token. */
+            token: string;
+        };
+        RegisterRequest: {
+            /**
+             * Format: email
+             * @description The sign-in address; stored trimmed and in lower case.
+             */
+            email: string;
+            password: string;
+            invitation?: components["schemas"]["RegisterInvitation"];
         };
         /** @description A session's tokens. Send access_token as "Authorization: Bearer"; when it expires, exchange refresh_token for the next pair at POST /api/v0/auth/refresh. */
         AuthTokens: {
@@ -2788,6 +2970,7 @@ export interface components {
         };
     };
     parameters: {
+        AssetID: string;
         /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
         Limit: number;
         /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
@@ -2816,10 +2999,19 @@ export interface components {
     headers: never;
     pathItems: never;
 }
-export type RegisterInvitation = components['schemas']['RegisterInvitation'];
-export type RegisterRequest = components['schemas']['RegisterRequest'];
+export type AssetPurpose = components['schemas']['AssetPurpose'];
+export type AssetScope = components['schemas']['AssetScope'];
+export type NewAsset = components['schemas']['NewAsset'];
 export type FieldError = components['schemas']['FieldError'];
 export type Problem = components['schemas']['Problem'];
+export type Asset = components['schemas']['Asset'];
+export type UploadHeader = components['schemas']['UploadHeader'];
+export type Upload = components['schemas']['Upload'];
+export type PreparedAsset = components['schemas']['PreparedAsset'];
+export type DuplicateAsset = components['schemas']['DuplicateAsset'];
+export type Content = components['schemas']['Content'];
+export type RegisterInvitation = components['schemas']['RegisterInvitation'];
+export type RegisterRequest = components['schemas']['RegisterRequest'];
 export type AuthTokens = components['schemas']['AuthTokens'];
 export type LoginRequest = components['schemas']['LoginRequest'];
 export type RefreshRequest = components['schemas']['RefreshRequest'];
@@ -2937,6 +3129,7 @@ export type ProjectDisplayProperties = components['schemas']['ProjectDisplayProp
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
 export type ProjectPreferencesUpdate = components['schemas']['ProjectPreferencesUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
+export type ParameterAssetId = components['parameters']['AssetID'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
 export type ParameterSlug = components['parameters']['Slug'];
@@ -2951,6 +3144,152 @@ export type ParameterRelationId = components['parameters']['RelationID'];
 export type ParameterIssueIdentifier = components['parameters']['IssueIdentifier'];
 export type $defs = Record<string, never>;
 export interface operations {
+    createAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewAsset"];
+            };
+        };
+        responses: {
+            /** @description Private pending asset and a signed upload request. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreparedAsset"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Metadata visible to its applicant. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Asset"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preparation deleted; objects remain subject to their safe retention periods. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    completeAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description The uniquely published asset. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Asset"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    duplicateAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuplicateAsset"];
+            };
+        };
+        responses: {
+            /** @description A new uploaded, unbound asset with its own immutable object. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Asset"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    resolveAssetContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["AssetID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed GET URL with its actual expiry. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Content"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     register: {
         parameters: {
             query?: never;

@@ -1,3 +1,4 @@
+import { furnishIssueFiles } from "../../fixtures/storage";
 import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
@@ -29,6 +30,15 @@ import { expect, test } from "../../fixtures/test";
 import { issueListProject, expectListPageQuiet } from "../../fixtures/issue-list-page";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
 import { sentHeld } from "../../fixtures/settings-pages";
+
+/** Include complete asset rows in the old-branch, live-neighbour and author comparisons. */
+async function deletionRows(db: import("../../fixtures/db").Database, ids: string[]) {
+  const assets = await db.query<{ row: Record<string, unknown> }>(
+    "SELECT to_jsonb(a) AS row FROM file_assets a WHERE issue_id=ANY($1::uuid[]) ORDER BY id",
+    [ids]
+  );
+  return [...(await collaborationRows(db, ids)), { table: "file_assets", rows: assets.map(({ row }) => row) }];
+}
 
 test("I17 (page): the confirmation names the whole subtree including archived descendants; one held deletion stays open until confirmed, deletes every catalog row by the current admin, and preserves the old branch and unrelated item", async ({
   api,
@@ -75,14 +85,15 @@ test("I17 (page): the confirmation names the whole subtree including archived de
       });
       await completedLinkCrawl(db, link.id, link.url);
       const comment = await createIssueComment(api, writer.token, item.id, "<p>Keep author evidence</p>");
+      await furnishIssueFiles(api, writer.token, item.id, comment.id);
       await createCommentReaction(api, writer.token, comment.id);
       await createIssueReaction(api, writer.token, item.id);
     })
   );
   expect((await issueArchived(api, writer.token, grandchild.id)).status).toBe(200);
   expect(await issueDeleted(api, writer.token, old.id)).toEqual({ status: 204 });
-  const oldRows = await collaborationRows(db, [old.id]);
-  const neighborRows = await collaborationRows(db, [neighbor.id]);
+  const oldRows = await deletionRows(db, [old.id]);
+  const neighborRows = await deletionRows(db, [neighbor.id]);
   for (const table of [...oldRows, ...neighborRows]) expect(table.rows.length, table.table).toBeGreaterThan(0);
   const ops = await createProject(api, seed.member.token, seed.slug, { name: "Ops", identifier: "OPS" });
   const deploy = await createIssue(api, seed.member.token, ops.id, { name: "Deploy stays" });
@@ -119,14 +130,14 @@ test("I17 (page): the confirmation names the whole subtree including archived de
   await expect(page).toHaveURL(seed.path);
   await expect(page.getByText(neighbor.name, { exact: true })).toBeVisible();
   await c12Evidence(page, "B13", "delete-confirmed-list");
-  expect(await collaborationRows(db, [old.id])).toEqual(oldRows);
-  expect(await collaborationRows(db, [neighbor.id])).toEqual(neighborRows);
+  expect(await deletionRows(db, [old.id])).toEqual(oldRows);
+  expect(await deletionRows(db, [neighbor.id])).toEqual(neighborRows);
   expect(await Promise.all(live.map(({ id }) => issueRead(api, seed.member.token, id)))).toEqual(
     live.map(() => ({ status: 404, code: "issue.not_found" }))
   );
   expect(await listIssueRelations(api, seed.member.token, deploy.id)).toEqual([]);
   expect(await listIssueRelations(api, seed.member.token, ship.id)).toEqual([]);
-  const authors = await collaborationRows(
+  const authors = await deletionRows(
     db,
     live.map(({ id }) => id)
   );
@@ -207,9 +218,10 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
   expect(liveLinks.map((link) => link.created_by_id)).toEqual([bob.id, bob.id, bob.id]);
   await Promise.all(
     [plan, notes, mirrors].map((item) =>
-      createIssueComment(api, bob.token, item.id, "<p>Delete discussion</p>").then((comment) =>
-        Promise.all([ann, bob].map((who) => createCommentReaction(api, who.token, comment.id)))
-      )
+      createIssueComment(api, bob.token, item.id, "<p>Delete discussion</p>").then(async (comment) => {
+        await furnishIssueFiles(api, bob.token, item.id, comment.id);
+        return Promise.all([ann, bob].map((who) => createCommentReaction(api, who.token, comment.id)));
+      })
     )
   );
   await Promise.all(
@@ -231,14 +243,15 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
       // Freeze the complete row only after this exact seed's metadata job finishes.
       await completedLinkCrawl(db, link.id, link.url);
       const discussion = await createIssueComment(api, bob.token, item.id, "<p>Keep these stamps</p>");
+      await furnishIssueFiles(api, bob.token, item.id, discussion.id);
       await createCommentReaction(api, ann.token, discussion.id);
       await createIssueReaction(api, bob.token, item.id);
       await updateIssue(api, bob.token, item.id, { description_html: `<p>Second author</p>${description}` });
     })
   );
   expect(await issueDeleted(api, bob.token, old.id)).toEqual({ status: 204 });
-  const oldRows = await collaborationRows(db, [old.id]);
-  const neighborRows = await collaborationRows(db, [neighbor.id]);
+  const oldRows = await deletionRows(db, [old.id]);
+  const neighborRows = await deletionRows(db, [neighbor.id]);
   for (const table of oldRows) {
     expect(table.rows.length, `${table.table} has an already-deleted row`).toBeGreaterThan(0);
     expect(table.rows.every((row) => row.deleted_at !== null && row.updated_by_id === bob.id)).toBe(true);
@@ -289,8 +302,8 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
         with_root: true,
       }))
   );
-  expect(await collaborationRows(db, [old.id])).toEqual(oldRows);
-  expect(await collaborationRows(db, [neighbor.id])).toEqual(neighborRows);
+  expect(await deletionRows(db, [old.id])).toEqual(oldRows);
+  expect(await deletionRows(db, [neighbor.id])).toEqual(neighborRows);
   // None of the three is found again, and neither Deploy the site nor Ship it lists a relation.
   const gone = [plan, notes, mirrors];
   expect(await Promise.all(gone.map(({ id }) => issueRead(api, ann.token, id)))).toEqual(

@@ -34,6 +34,7 @@ func defaultAssetConfig(t *testing.T, dbURL string) config.Config {
 func testFilesConfig(t *testing.T) config.FilesConfig {
 	t.Helper()
 	return config.FilesConfig{
+		UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second,
 		SizeLimit: 5 << 20, Driver: "local", Local: config.LocalFilesConfig{Root: t.TempDir()},
 		MinTransferBytesPerSecond: 128 << 10, TransferGrace: 15 * time.Second,
 		TransferIdleTimeout: 30 * time.Second, MaxTransferDuration: 15 * time.Minute,
@@ -41,8 +42,8 @@ func testFilesConfig(t *testing.T) config.FilesConfig {
 	}
 }
 
-// The P1 facade has no business signing endpoint yet. This second handle uses
-// only the test's PEM/config and the real local ports to prepare signed requests.
+// Raw transport and storage-layer tests use this second handle with their
+// own PEM/config and real local ports; business stories use the asset API.
 func assetClientStore(t *testing.T, cfg config.Config) *local.Store {
 	t.Helper()
 	pem, err := readSigningKey(cfg.Auth.JWT.PrivateKeyFile)

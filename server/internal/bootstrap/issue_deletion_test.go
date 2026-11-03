@@ -76,6 +76,7 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 		decodeAnswer(t, answer, &created)
 		made[i] = created.ID
 		seedIssueLinks(t, pool, created.ID, account)
+		seedIssueAsset(t, pool, created.ID, account)
 		status, answer = call(t, contract, http.MethodPost, base+reactionsOf(created.ID), token, `{"reaction":"128077"}`)
 		if status != http.StatusCreated {
 			t.Fatal(status, answer)
@@ -124,6 +125,7 @@ func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	deleted, kept := w.newWorkItemBy(t, "bob", w.web, w.fullIssue()), w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
 	for _, parent := range []uuid.UUID{deleted, kept} {
 		seedIssueLinks(t, w.pool, parent, w.ids["bob"])
+		seedIssueAsset(t, w.pool, parent, w.ids["bob"])
 		for _, html := range []string{mentionHTML(w.ids["bob"]), "<p>Removed</p>", mentionHTML(w.ids["bob"])} {
 			w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+parent.String(), fmt.Sprintf(`{"description_html":%q}`, html), 200)
 		}

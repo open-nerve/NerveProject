@@ -18,6 +18,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
+	assetapp "github.com/open-nerve/NerveProject/server/internal/modules/asset/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
@@ -132,9 +134,11 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	// offers the others, built from the pool alone; then the modules, each
 	// with every port it needs, so no construction waits on another.
 	identityPorts := identity.Provide(pool)
-	workspacePorts := workspace.Provide(pool)
-	projectPorts := project.Provide(pool)
-	issuePorts := issue.Provide(pool)
+	assetPorts := asset.Provide(pool)
+	protected := protectedAssetReferences()
+	workspacePorts := workspace.Provide(pool, protected)
+	projectPorts := project.Provide(pool, protected)
+	issuePorts := issue.Provide(pool, protected)
 	authorizer := access.New(access.Deps{
 		WorkspaceRoles: workspacePorts.WorkspaceRoles,
 		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
@@ -144,19 +148,21 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	events, err := newDispatcher(eventTypes(), issue.Subscribers(issueInserter{client: inserter}))
+	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issueInserter{client: inserter}), asset.Subscribers(assetPorts, assetInserter{client: inserter})))
 	if err != nil {
 		a.close()
 		return nil, err
 	}
+	projectWrites := newWriteGate(cfg.Issue.WriteGate)
 	issueTx := newIssueJobTx(pool, cfg)
 	issues := issue.New(issue.Deps{
-		Outbound: outboundClient, Logger: logger,
+		DraftAssets: issueDraftAssets{assets: assetPorts.DraftAssets},
+		Outbound:    outboundClient, Logger: logger,
 		Events: events,
 		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
-		WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: businessClock, Authorizer: authorizer,
+		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:    issueMembers{members: workspacePorts.WorkspaceMemberDirectory},
@@ -207,9 +213,19 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	purge := newPurgeDeleted([]Purger{issuePorts.Purger, projectPorts.Purger, workspacePorts.Purger, identityPorts.Purger}, businessClock, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch)
-	definitions := append(append(ident.Jobs(), issues.Jobs()...), purgeJob(purge, cfg.Cleanup.PurgeInterval))
-	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, append(identity.EnqueuedKinds(), issue.EnqueuedKinds()...))
+	files, err := asset.New(asset.Deps{Transfer: assets.transfer, Sealing: assets.sealing, Ports: assetPorts, Objects: assets.store, Inventory: assets.store, Temporary: assets.store, JobTx: tx,
+		PurgeAfter: cfg.Cleanup.PurgeAfter,
+		ReadTx:     postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()), UploadSigner: assets.store, ReadSigner: assets.store,
+		Parents: assetParentReader{workspaces: workspacePorts.AssetParents, projects: projectPorts.AssetParents, issues: issuePorts.AssetParents},
+		Access:  assetapp.AccessDeps{Hosts: assetHostAccess{workspaces: ws.AssetAccess(), projects: proj.AssetAccess(), issues: issues.AssetAccess()}, Workspaces: assetWorkspaceLocks{parents: workspacePorts.AssetParents}, Projects: assetProjectLocks{projects: projectPorts.IssueProjects}, Drafts: assetDraftLocks{parents: issuePorts.AssetParents}, Caller: identityPorts.CredentialLock, Gate: forAssetWrites(projectWrites), Tx: busyTx{tx: issueTx}, CredentialClock: businessClock, Clock: businessClock},
+	})
+	if err != nil {
+		a.close()
+		return nil, err
+	}
+	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPorts.Purger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
+	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), files.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
+	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), asset.EnqueuedKinds()))
 	if err != nil {
 		a.close()
 		return nil, err
@@ -253,7 +269,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	ws.Register(a.router, api)
 	proj.Register(a.router, api)
 	issues.Register(a.router, api)
-	assets.module.Register(a.router, api, bucket(limiter, "file_transfer", cfg.Files.TransferRate))
+	files.Register(a.router, api, bucket(limiter, "file_transfer", cfg.Files.TransferRate))
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
 	a.router.Handle("/", webui.Handler(webFiles))

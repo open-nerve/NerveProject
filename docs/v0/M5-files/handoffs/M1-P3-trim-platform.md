@@ -27,3 +27,7 @@ M5 合并时：
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P3 评审记录](../../M1-frontend-trim/reviews/P3-trim-platform-review.md)第 7 节。
+
+## 处理结果（M5/P2）
+
+P2新增原生生成协议、六个业务操作及真实API文件故事；没有恢复Plane上传地址。现有前端服务、静态封面和资源枚举的替换/删净仍归P4/P6/P7，本交接保持open。证据见[P2阶段评审](../reviews/P2-assets-review.md)，整审/集成结果仍单独核验。

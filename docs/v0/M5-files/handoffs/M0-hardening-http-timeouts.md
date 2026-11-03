@@ -22,3 +22,7 @@ M0 加固之后，HTTP 服务在连接上的读写都有全局上限：
 - 请求体大小限制（`http.MaxBytesReader`）和上面的期限是两件事，都要做：前者限制多大，后者限制多久。超限错误映射为 413 的要求见 M2 的 [M0-P3-api-codegen-notes](../../M2-auth/handoffs/M0-P3-api-codegen-notes.md)。
 
 来源：[M0 对抗性评审](../../M0-foundation/reviews/M0-codex-adversarial-review.md) Critical 2 及其处理结果。
+
+## 处理结果（M5/P2）
+
+P1已通过raw路由逐请求期限与大小上限验证；P2六个业务JSON操作仍受普通1MiB/15s限制，不承载文件字节。T6保持大小/中间件目录与反例，T10真实PUT故事通过；S3和页面慢速上传仍在后续阶段，暂不关闭。证据见[P2阶段评审](../reviews/P2-assets-review.md)，整审/集成结果仍单独核验。

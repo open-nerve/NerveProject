@@ -227,7 +227,7 @@ func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 			})
 		}, workspacedomain.ErrSoleAdmin, "bob active; acme 20 active; invitation accepted deleted by bob; alice acme 15 active, Web 20 active"},
 		{"(c) he joins Web", func(r s1Race, t *testing.T, ctx context.Context, g *gate) <-chan error {
-			route := newProjectRoute(t, r.pool, authorizerOn(r.pool), gatedShares{workspace.Provide(r.pool).WorkspaceMembers, g})
+			route := newProjectRoute(t, r.pool, authorizerOn(r.pool), gatedShares{workspace.Provide(r.pool, nil).WorkspaceMembers, g})
 			return run(func() error {
 				if _, rec := route.send(http.MethodPost, "/api/v0/projects/"+r.web.String()+"/join", r.bob, ""); rec.Code != http.StatusOK {
 					return fmt.Errorf("bob's joining Web = %d %s", rec.Code, rec.Body)

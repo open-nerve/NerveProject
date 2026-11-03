@@ -10,6 +10,7 @@ import (
 	"time"
 	"uuid"
 
+	assetriver "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/river"
 	identityriver "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/river"
 	issueriver "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -127,7 +128,7 @@ func publishSnapshot(t *testing.T, w issueWorld) map[string]string {
 	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY id),'[]'::jsonb)::text FROM projects r").Scan(&projects); err != nil {
 		t.Fatal(err)
 	}
-	periodic := []string{identityriver.CleanupKind, issueriver.AutoArchiveKind, issueriver.TrimVersionsKind, (purgeArgs{}).Kind()}
+	periodic := []string{assetriver.CleanupKind, identityriver.CleanupKind, issueriver.AutoArchiveKind, issueriver.TrimVersionsKind, (purgeArgs{}).Kind()}
 	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(jsonb_agg(to_jsonb(j) ORDER BY id),'[]'::jsonb)::text
  FROM (SELECT id,kind,args,queue,max_attempts,priority,tags,created_at FROM river_job
  WHERE NOT coalesce(kind=ANY($1::text[]) AND queue='periodic' AND args='{}'::jsonb

@@ -177,7 +177,7 @@ func (s snapshotListRows) read(ctx context.Context, in issueapp.ListRead, fetch 
 }
 
 func snapshotListUseCases(w issueWorld, p *listSnapshotProbe) (*issueapp.ListIssues, *issueapp.ListMemberIssues) {
-	projects, workspaces := project.Provide(w.pool), workspace.Provide(w.pool)
+	projects, workspaces := project.Provide(w.pool, nil), workspace.Provide(w.pool, nil)
 	dirs := snapshotListProjects{issueProjects{projects: projects.IssueProjects}, p}
 	store := snapshotListRows{issuepg.New(w.pool), p}
 	auth := snapshotListAuth{authorizerOn(w.pool), p}

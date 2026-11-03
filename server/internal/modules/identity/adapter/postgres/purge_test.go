@@ -67,16 +67,16 @@ func TestAPITokenPurgeBatches(t *testing.T) {
 	live := purgeToken(t, s, pool, u.ID, "live", uuid.MustParse("0199a2b4-0000-7000-8000-000000000050"), nil)
 	before := accountRows(t, pool)
 	first, err := s.PurgeAPITokens(ctx, app.PurgeBatch{Cutoff: cutoff, Limit: 1})
-	if err != nil || !slices.Equal(first, []uuid.UUID{low}) {
+	if err != nil || first.Scanned != 1 || first.Deleted != 1 || first.After != low {
 		t.Fatalf("batch=1: %v,%v; want only lowest 61d token %s", first, err, low)
 	}
 	// A cursor after the remaining eligible token cannot delete it.
 	skipped, err := s.PurgeAPITokens(ctx, app.PurgeBatch{Cutoff: cutoff, After: high, Limit: 1})
-	if err != nil || len(skipped) != 0 {
+	if err != nil || skipped.Scanned != 0 || skipped.Deleted != 0 || skipped.After != high {
 		t.Fatalf("id cursor: %v,%v; want empty", skipped, err)
 	}
 	purger := identity.Provide(pool).Purger
-	deleted, err := purger.Purge(ctx, cutoff, 1)
+	deleted, err := purgeAll(purger, ctx, cutoff, 1)
 	if err != nil {
 		t.Fatalf("remaining purge=%d,%v", deleted, err)
 	}
@@ -98,8 +98,8 @@ func TestAPITokenPurgeBatches(t *testing.T) {
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if deleted+len(first) != 2 || !slices.Equal(left, []uuid.UUID{atCutoff, recentID, live}) || accountRows(t, pool) != before {
-		t.Fatalf("deleted=%d atCutoffExists=%v recentExists=%v liveExists=%v left=%v accountsUnchanged=%v; want 2,true,true,true and accounts unchanged", deleted+len(first), slices.Contains(left, atCutoff), slices.Contains(left, recentID), slices.Contains(left, live), left, accountRows(t, pool) == before)
+	if deleted+first.Deleted != 2 || !slices.Equal(left, []uuid.UUID{atCutoff, recentID, live}) || accountRows(t, pool) != before {
+		t.Fatalf("deleted=%d atCutoffExists=%v recentExists=%v liveExists=%v left=%v accountsUnchanged=%v; want 2,true,true,true and accounts unchanged", deleted+first.Deleted, slices.Contains(left, atCutoff), slices.Contains(left, recentID), slices.Contains(left, live), left, accountRows(t, pool) == before)
 	}
 	for _, limit := range []int{0, 2147483648} {
 		if _, err := postgresadapter.New(nil).PurgeAPITokens(ctx, app.PurgeBatch{Cutoff: cutoff, Limit: limit}); err == nil {
@@ -135,7 +135,7 @@ func TestPurgeDoesNotJoinCallerTransaction(t *testing.T) {
 	var deleted int
 	var purgeErr error
 	err = postgres.NewTxManager(pool, 2*time.Second).WithinTx(ctx, func(txctx context.Context) error {
-		deleted, purgeErr = identity.Provide(pool).Purger.Purge(txctx, cutoff, 1)
+		deleted, purgeErr = purgeAll(identity.Provide(pool).Purger, txctx, cutoff, 1)
 		return rollback
 	})
 	var pe *pgconn.PgError

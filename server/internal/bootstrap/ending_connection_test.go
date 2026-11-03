@@ -37,10 +37,10 @@ func newWorkspaceRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) mo
 
 func newWorkspaceRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, events shared.EventPublisher) moduleRoute {
 	t.Helper()
-	auth, identityPorts, provided := authorizerOn(pool), identity.Provide(pool), workspace.Provide(pool)
+	auth, identityPorts, provided := authorizerOn(pool), identity.Provide(pool), workspace.Provide(pool, nil)
 	projects := project.New(project.Deps{Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: provided.WorkspaceDirectory}, Members: provided.WorkspaceMembers,
-		Issues: issue.Provide(pool).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool).ListSettings}})
+		Issues: issue.Provide(pool, nil).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool, nil).ListSettings}})
 	return newRoute(t, workspace.New(workspace.Deps{Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Logger: slog.New(slog.DiscardHandler),
 		Authorizer: auth, Accounts: workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles: workspaceProfiles{profiles: identityPorts.PublicProfiles}, Projects: projects.Cascade()}).Register)

@@ -40,7 +40,7 @@ func TestListingHistoricalAssignees(t *testing.T) {
 	// A single connection is held by the snapshot. Escaping ctx in any catalog,
 	// Flat/Groups, parent read, or empty-page total query must hit the deadline.
 	one := poolOfOne(t, w.pool.Config().ConnString())
-	projects := issueProjects{projects: project.Provide(one).IssueProjects}
+	projects := issueProjects{projects: project.Provide(one, nil).IssueProjects}
 	store := issuepostgres.New(one)
 	listing := issueapp.NewListing(issueapp.ListingDeps{Rows: store, States: projects, Labels: projects, Assignees: store, Profiles: issueProfiles{profiles: identity.Provide(one).PublicProfiles}, Issues: store})
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

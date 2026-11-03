@@ -49,8 +49,8 @@ func TestTheAuthorizerSeesNoProjectOfAnotherWorkspace(t *testing.T) {
 		t.Fatal(err)
 	}
 	authorizer := access.New(access.Deps{
-		WorkspaceRoles: workspace.Provide(pool).WorkspaceRoles,
-		ProjectAccess:  accessProjects{projects: project.Provide(pool).ProjectAccess},
+		WorkspaceRoles: workspace.Provide(pool, nil).WorkspaceRoles,
+		ProjectAccess:  accessProjects{projects: project.Provide(pool, nil).ProjectAccess},
 	})
 	actor, read := shared.Actor{UserID: accountID(t, contract, base, alice)}, shared.Action("project.read")
 

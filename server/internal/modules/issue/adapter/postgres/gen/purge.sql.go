@@ -12,60 +12,145 @@ import (
 	"uuid"
 )
 
-const purgeCommentReactions = `-- name: PurgeCommentReactions :many
-DELETE FROM comment_reactions
-WHERE id IN (
-    SELECT candidate.id FROM comment_reactions AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
-    ORDER BY candidate.id LIMIT $3
-)
+const deletePurgeDraftIssues = `-- name: DeletePurgeDraftIssues :many
+DELETE FROM draft_issues
+WHERE deleted_at < $1 AND id = ANY($2::uuid[])
 RETURNING id
+`
+
+type DeletePurgeDraftIssuesParams struct {
+	Cutoff *time.Time
+	Ids    []uuid.UUID
+}
+
+func (q *Queries) DeletePurgeDraftIssues(ctx context.Context, arg DeletePurgeDraftIssuesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deletePurgeDraftIssues, arg.Cutoff, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deletePurgeIssueComments = `-- name: DeletePurgeIssueComments :many
+DELETE FROM issue_comments
+WHERE deleted_at < $1 AND id = ANY($2::uuid[])
+RETURNING id
+`
+
+type DeletePurgeIssueCommentsParams struct {
+	Cutoff *time.Time
+	Ids    []uuid.UUID
+}
+
+func (q *Queries) DeletePurgeIssueComments(ctx context.Context, arg DeletePurgeIssueCommentsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deletePurgeIssueComments, arg.Cutoff, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deletePurgeIssues = `-- name: DeletePurgeIssues :many
+DELETE FROM issues
+WHERE deleted_at < $1 AND id = ANY($2::uuid[])
+RETURNING id
+`
+
+type DeletePurgeIssuesParams struct {
+	Cutoff *time.Time
+	Ids    []uuid.UUID
+}
+
+func (q *Queries) DeletePurgeIssues(ctx context.Context, arg DeletePurgeIssuesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deletePurgeIssues, arg.Cutoff, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const purgeCommentReactions = `-- name: PurgeCommentReactions :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM comment_reactions AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM comment_reactions AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeCommentReactionsParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeCommentReactions(ctx context.Context, arg PurgeCommentReactionsParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeCommentReactions, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeCommentReactionsRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeDraftIssues = `-- name: PurgeDraftIssues :many
-DELETE FROM draft_issues
-WHERE id IN (
-    SELECT candidate.id FROM draft_issues AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
-    ORDER BY candidate.id LIMIT $3
-)
-RETURNING id
+func (q *Queries) PurgeCommentReactions(ctx context.Context, arg PurgeCommentReactionsParams) (PurgeCommentReactionsRow, error) {
+	row := q.db.QueryRow(ctx, purgeCommentReactions, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeCommentReactionsRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeDraftIssuesCandidates = `-- name: PurgeDraftIssuesCandidates :many
+SELECT id FROM draft_issues
+WHERE deleted_at < $1 AND id > $2
+ORDER BY id LIMIT $3
 `
 
-type PurgeDraftIssuesParams struct {
+type PurgeDraftIssuesCandidatesParams struct {
 	Cutoff     *time.Time
 	AfterID    uuid.UUID
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeDraftIssues(ctx context.Context, arg PurgeDraftIssuesParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeDraftIssues, arg.Cutoff, arg.AfterID, arg.BatchLimit)
+func (q *Queries) PurgeDraftIssuesCandidates(ctx context.Context, arg PurgeDraftIssuesCandidatesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, purgeDraftIssuesCandidates, arg.Cutoff, arg.AfterID, arg.BatchLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -84,96 +169,84 @@ func (q *Queries) PurgeDraftIssues(ctx context.Context, arg PurgeDraftIssuesPara
 	return items, nil
 }
 
-const purgeIssueActivities = `-- name: PurgeIssueActivities :many
-DELETE FROM issue_activities
-WHERE id IN (
+const purgeIssueActivities = `-- name: PurgeIssueActivities :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_activities AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM issue_activities AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeIssueActivitiesParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeIssueActivities(ctx context.Context, arg PurgeIssueActivitiesParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeIssueActivities, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeIssueActivitiesRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeIssueAssignees = `-- name: PurgeIssueAssignees :many
-DELETE FROM issue_assignees
-WHERE id IN (
+func (q *Queries) PurgeIssueActivities(ctx context.Context, arg PurgeIssueActivitiesParams) (PurgeIssueActivitiesRow, error) {
+	row := q.db.QueryRow(ctx, purgeIssueActivities, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeIssueActivitiesRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeIssueAssignees = `-- name: PurgeIssueAssignees :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_assignees AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM issue_assignees AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeIssueAssigneesParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeIssueAssignees(ctx context.Context, arg PurgeIssueAssigneesParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeIssueAssignees, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeIssueAssigneesRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeIssueComments = `-- name: PurgeIssueComments :many
-DELETE FROM issue_comments
-WHERE id IN (
-    SELECT candidate.id FROM issue_comments AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
-    ORDER BY candidate.id LIMIT $3
-)
-RETURNING id
+func (q *Queries) PurgeIssueAssignees(ctx context.Context, arg PurgeIssueAssigneesParams) (PurgeIssueAssigneesRow, error) {
+	row := q.db.QueryRow(ctx, purgeIssueAssignees, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeIssueAssigneesRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeIssueCommentsCandidates = `-- name: PurgeIssueCommentsCandidates :many
+SELECT id FROM issue_comments
+WHERE deleted_at < $1 AND id > $2
+ORDER BY id LIMIT $3
 `
 
-type PurgeIssueCommentsParams struct {
+type PurgeIssueCommentsCandidatesParams struct {
 	Cutoff     *time.Time
 	AfterID    uuid.UUID
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeIssueComments(ctx context.Context, arg PurgeIssueCommentsParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeIssueComments, arg.Cutoff, arg.AfterID, arg.BatchLimit)
+func (q *Queries) PurgeIssueCommentsCandidates(ctx context.Context, arg PurgeIssueCommentsCandidatesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, purgeIssueCommentsCandidates, arg.Cutoff, arg.AfterID, arg.BatchLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -192,276 +265,244 @@ func (q *Queries) PurgeIssueComments(ctx context.Context, arg PurgeIssueComments
 	return items, nil
 }
 
-const purgeIssueDescriptionVersions = `-- name: PurgeIssueDescriptionVersions :many
-DELETE FROM issue_description_versions
-WHERE id IN (
+const purgeIssueDescriptionVersions = `-- name: PurgeIssueDescriptionVersions :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_description_versions AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM issue_description_versions AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeIssueDescriptionVersionsParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeIssueDescriptionVersions(ctx context.Context, arg PurgeIssueDescriptionVersionsParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeIssueDescriptionVersions, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeIssueDescriptionVersionsRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeIssueLabels = `-- name: PurgeIssueLabels :many
-DELETE FROM issue_labels
-WHERE id IN (
+func (q *Queries) PurgeIssueDescriptionVersions(ctx context.Context, arg PurgeIssueDescriptionVersionsParams) (PurgeIssueDescriptionVersionsRow, error) {
+	row := q.db.QueryRow(ctx, purgeIssueDescriptionVersions, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeIssueDescriptionVersionsRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeIssueLabels = `-- name: PurgeIssueLabels :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_labels AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM issue_labels AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeIssueLabelsParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeIssueLabels(ctx context.Context, arg PurgeIssueLabelsParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeIssueLabels, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeIssueLabelsRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeIssueLinks = `-- name: PurgeIssueLinks :many
-DELETE FROM issue_links
-WHERE id IN (
+func (q *Queries) PurgeIssueLabels(ctx context.Context, arg PurgeIssueLabelsParams) (PurgeIssueLabelsRow, error) {
+	row := q.db.QueryRow(ctx, purgeIssueLabels, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeIssueLabelsRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeIssueLinks = `-- name: PurgeIssueLinks :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_links AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM issue_links AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeIssueLinksParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeIssueLinks(ctx context.Context, arg PurgeIssueLinksParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeIssueLinks, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeIssueLinksRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeIssueMentions = `-- name: PurgeIssueMentions :many
-DELETE FROM issue_mentions
-WHERE id IN (
+func (q *Queries) PurgeIssueLinks(ctx context.Context, arg PurgeIssueLinksParams) (PurgeIssueLinksRow, error) {
+	row := q.db.QueryRow(ctx, purgeIssueLinks, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeIssueLinksRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeIssueMentions = `-- name: PurgeIssueMentions :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_mentions AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM issue_mentions AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeIssueMentionsParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeIssueMentions(ctx context.Context, arg PurgeIssueMentionsParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeIssueMentions, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeIssueMentionsRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeIssueReactions = `-- name: PurgeIssueReactions :many
-DELETE FROM issue_reactions
-WHERE id IN (
+func (q *Queries) PurgeIssueMentions(ctx context.Context, arg PurgeIssueMentionsParams) (PurgeIssueMentionsRow, error) {
+	row := q.db.QueryRow(ctx, purgeIssueMentions, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeIssueMentionsRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeIssueReactions = `-- name: PurgeIssueReactions :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_reactions AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM issue_reactions AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeIssueReactionsParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeIssueReactions(ctx context.Context, arg PurgeIssueReactionsParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeIssueReactions, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeIssueReactionsRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeIssueRelations = `-- name: PurgeIssueRelations :many
-DELETE FROM issue_relations
-WHERE id IN (
+func (q *Queries) PurgeIssueReactions(ctx context.Context, arg PurgeIssueReactionsParams) (PurgeIssueReactionsRow, error) {
+	row := q.db.QueryRow(ctx, purgeIssueReactions, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeIssueReactionsRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeIssueRelations = `-- name: PurgeIssueRelations :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_relations AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM issue_relations AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeIssueRelationsParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeIssueRelations(ctx context.Context, arg PurgeIssueRelationsParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeIssueRelations, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeIssueRelationsRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeIssueSubscribers = `-- name: PurgeIssueSubscribers :many
-DELETE FROM issue_subscribers
-WHERE id IN (
+func (q *Queries) PurgeIssueRelations(ctx context.Context, arg PurgeIssueRelationsParams) (PurgeIssueRelationsRow, error) {
+	row := q.db.QueryRow(ctx, purgeIssueRelations, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeIssueRelationsRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeIssueSubscribers = `-- name: PurgeIssueSubscribers :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_subscribers AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
     ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM issue_subscribers AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
 `
 
 type PurgeIssueSubscribersParams struct {
-	Cutoff     *time.Time
 	AfterID    uuid.UUID
+	Cutoff     *time.Time
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeIssueSubscribers(ctx context.Context, arg PurgeIssueSubscribersParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeIssueSubscribers, arg.Cutoff, arg.AfterID, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type PurgeIssueSubscribersRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
 }
 
-const purgeIssues = `-- name: PurgeIssues :many
-DELETE FROM issues
-WHERE id IN (
-    SELECT candidate.id FROM issues AS candidate
-    WHERE candidate.deleted_at < $1 AND candidate.id > $2
-    ORDER BY candidate.id LIMIT $3
-)
-RETURNING id
+func (q *Queries) PurgeIssueSubscribers(ctx context.Context, arg PurgeIssueSubscribersParams) (PurgeIssueSubscribersRow, error) {
+	row := q.db.QueryRow(ctx, purgeIssueSubscribers, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeIssueSubscribersRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeIssuesCandidates = `-- name: PurgeIssuesCandidates :many
+SELECT id FROM issues
+WHERE deleted_at < $1 AND id > $2
+ORDER BY id LIMIT $3
 `
 
-type PurgeIssuesParams struct {
+type PurgeIssuesCandidatesParams struct {
 	Cutoff     *time.Time
 	AfterID    uuid.UUID
 	BatchLimit int32
 }
 
-func (q *Queries) PurgeIssues(ctx context.Context, arg PurgeIssuesParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, purgeIssues, arg.Cutoff, arg.AfterID, arg.BatchLimit)
+func (q *Queries) PurgeIssuesCandidates(ctx context.Context, arg PurgeIssuesCandidatesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, purgeIssuesCandidates, arg.Cutoff, arg.AfterID, arg.BatchLimit)
 	if err != nil {
 		return nil, err
 	}

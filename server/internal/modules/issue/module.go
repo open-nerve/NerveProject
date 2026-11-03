@@ -16,6 +16,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/content"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/crawler"
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http"
@@ -51,28 +53,29 @@ type ListSettings interface {
 
 // Provided are the adapters bootstrap builds before wiring consuming modules.
 type Provided struct {
+	AssetParents AssetParents
 	IssueCascade Cascade
 	ListSettings ListSettings
 	Purger       *app.Purger
 }
 
 // Provide builds issue's adapters for the other modules.
-func Provide(pool *pgxpool.Pool) Provided {
-	store := postgresadapter.New(pool)
-	return Provided{Purger: app.NewPurger([]app.PurgeStep{
+func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provided {
+	store := postgresadapter.NewPurgeStore(pool, protected)
+	return Provided{AssetParents: store, Purger: app.NewPurger([]app.PurgeStep{
 		{Table: "comment_reactions", Delete: store.PurgeCommentReactions},
 		{Table: "issue_reactions", Delete: store.PurgeIssueReactions},
 		{Table: "issue_mentions", Delete: store.PurgeIssueMentions},
 		{Table: "issue_description_versions", Delete: store.PurgeIssueDescriptionVersions},
 		{Table: "issue_activities", Delete: store.PurgeIssueActivities},
-		{Table: "issue_comments", Delete: store.PurgeIssueComments},
+		{Table: "issue_comments", Protected: true, Delete: store.PurgeIssueComments},
 		{Table: "issue_links", Delete: store.PurgeIssueLinks},
 		{Table: "issue_relations", Delete: store.PurgeIssueRelations},
 		{Table: "issue_assignees", Delete: store.PurgeIssueAssignees},
 		{Table: "issue_labels", Delete: store.PurgeIssueLabels},
 		{Table: "issue_subscribers", Delete: store.PurgeIssueSubscribers},
-		{Table: "draft_issues", Delete: store.PurgeDraftIssues},
-		{Table: "issues", Delete: store.PurgeIssues},
+		{Table: "draft_issues", Protected: true, Delete: store.PurgeDraftIssues},
+		{Table: "issues", Protected: true, Delete: store.PurgeIssues},
 	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}}
 }
 
@@ -83,6 +86,7 @@ func Provide(pool *pgxpool.Pool) Provided {
 // catalogs.
 // project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
 type ProjectPorts interface {
+	app.AssetProjectReader
 	app.RetentionProjects
 	app.ProjectGate
 	app.DraftProjects
@@ -111,10 +115,11 @@ type (
 
 // Deps are what bootstrap gives the module (M4 design 6.6, step 6).
 type Deps struct {
-	Outbound *outbound.Client
-	Logger   *slog.Logger
-	Events   shared.EventPublisher
-	Pool     *pgxpool.Pool
+	DraftAssets app.DraftAssets
+	Outbound    *outbound.Client
+	Logger      *slog.Logger
+	Events      shared.EventPublisher
+	Pool        *pgxpool.Pool
 	// Tx are the transactions of the module's writes, each of which waits
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
@@ -150,6 +155,7 @@ type Deps struct {
 
 // Module is the wired issue module.
 type Module struct {
+	assets               *app.AssetAccess
 	deleteRows           *app.DeleteRows
 	deleteBudget         time.Duration
 	logger               *slog.Logger
@@ -175,7 +181,7 @@ func New(d Deps) *Module {
 		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
 	})
 	return &Module{
-		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
+		assets: app.NewAssetAccess(app.AssetAccessDeps{Locks: locks, Drafts: draftLocks, Comments: store, Projects: d.Projects}), deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
 		trimVersions: app.NewTrimVersions(app.TrimVersionsDeps{Projects: d.Projects, Gate: d.Projects, Rows: store, Tx: d.JobTx}), trimVersionsInterval: d.TrimVersionsInterval,
 		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: crawler.New(d.Outbound, d.Logger), Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval,
 		uc: httpadapter.UseCases{
@@ -185,7 +191,7 @@ func New(d Deps) *Module {
 			GetDraft:                app.NewGetDraft(app.GetDraftDeps{ReadTx: d.ReadTx, Locks: draftLocks}),
 			CreateDraft:             app.NewCreateDraft(app.CreateDraftDeps{Locks: draftLocks, Workspaces: d.Workspaces, Drafts: store, Clock: d.Clock}),
 			UpdateDraft:             app.NewUpdateDraft(app.UpdateDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
-			DeleteDraft:             app.NewDeleteDraft(app.DeleteDraftDeps{Locks: draftLocks, Drafts: store, Clock: d.Clock}),
+			DeleteDraft:             app.NewDeleteDraft(app.DeleteDraftDeps{Locks: draftLocks, Drafts: store, Assets: d.DraftAssets, Clock: d.Clock}),
 			UpdateIssueLink:         app.NewUpdateIssueLink(app.UpdateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
 			DeleteIssueLink:         app.NewDeleteIssueLink(app.DeleteIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),
 			CreateIssueLink:         app.NewCreateIssueLink(app.CreateIssueLinkDeps{Locks: locks, Links: store, Clock: d.Clock, Events: d.Events}),

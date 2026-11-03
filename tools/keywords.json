@@ -1,5 +1,5 @@
 {
-  "phase": "M5/P1",
+  "phase": "M5/P2",
   "rules": [
     {
       "id": "deploy-files",
@@ -1812,13 +1812,13 @@
     {
       "id": "plane-user-assets",
       "phase": "M2/P4",
-      "why": "Plane 的用户资源上传：/api/assets/v2/user-assets/ 的上传、确认和删除，/api/users/file-assets/ 的旧删除，头像弹窗 UserImageUploadModal，EFileAssetType 的 USER_AVATAR、USER_COVER。P4 删掉头像、封面的上传控件之后它们没有入口，一并删除；M5 用 nerve 自己的上传协议重新加入上传，不用 Plane 的地址（M2 设计 3.2）",
+      "why": "Plane 的用户资源上传：禁止旧 user-assets/file-assets 地址、UserImageUploadModal、旧 EFileAssetType 用户用途及手写 USER_AVATAR/USER_COVER 枚举声明。M5/P2 已由 OpenAPI 生成 Nerve 的 AssetPurpose；相同业务用途的生成类型和普通请求值合法，不能把名称本身当旧协议。全 web 扫描范围不变（M2 设计 3.2、M5 设计 3.2）",
       "files": {
         "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
         "flags": ""
       },
       "content": {
-        "source": "/api/assets/v2/user-assets/|/api/users/file-assets/|UserImageUploadModal|\\bUSER_(?:AVATAR|COVER)\\b",
+        "source": "/api/assets/v2/user-assets/|/api/users/file-assets/|UserImageUploadModal|\\bEFileAssetType\\s*(?:\\.\\s*USER_(?:AVATAR|COVER)\\b|\\[\\s*[\"']USER_(?:AVATAR|COVER)[\"']\\s*\\])|\\bUSER_(?:AVATAR|COVER)\\s*=",
         "flags": ""
       },
       "samples": {
@@ -1827,12 +1827,15 @@
           "    return this.delete(`/api/users/file-assets/${assetKey}/`)",
           "import { UserImageUploadModal } from \"@/components/core/modals/user-image-upload-modal\";",
           "        entityType: EFileAssetType.USER_COVER,",
+          "        entityType: EFileAssetType['USER_AVATAR'],",
           "  USER_AVATAR = \"USER_AVATAR\","
         ],
         "miss": [
           "    return this.delete(`/api/workspaces/file-assets/${workspaceId}/${assetKey}/`)",
           "    const uploadResult = await fileService.uploadWorkspaceAsset(",
-          "  PROJECT_COVER = \"PROJECT_COVER\","
+          "  PROJECT_COVER = \"PROJECT_COVER\",",
+          "AssetPurpose: \"USER_AVATAR\" | \"USER_COVER\";",
+          "{ purpose: \"USER_AVATAR\", size: file.size }"
         ],
         "files": {
           "hit": ["web/apps/web/core/services/file.service.ts", "web/packages/types/src/enums.ts"],

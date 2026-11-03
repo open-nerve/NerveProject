@@ -1,116 +1,149 @@
--- name: PurgeCommentReactions :many
-DELETE FROM comment_reactions
-WHERE id IN (
+-- name: PurgeCommentReactions :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM comment_reactions AS candidate
     WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
     ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
+), deleted AS (
+    DELETE FROM comment_reactions AS target WHERE target.deleted_at < sqlc.arg(cutoff) AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id;
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), sqlc.arg(after_id)::uuid)::uuid AS after_id;
 
--- name: PurgeIssueReactions :many
-DELETE FROM issue_reactions
-WHERE id IN (
+-- name: PurgeIssueReactions :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_reactions AS candidate
     WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
     ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
+), deleted AS (
+    DELETE FROM issue_reactions AS target WHERE target.deleted_at < sqlc.arg(cutoff) AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id;
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), sqlc.arg(after_id)::uuid)::uuid AS after_id;
 
--- name: PurgeIssueMentions :many
-DELETE FROM issue_mentions
-WHERE id IN (
+-- name: PurgeIssueMentions :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_mentions AS candidate
     WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
     ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
+), deleted AS (
+    DELETE FROM issue_mentions AS target WHERE target.deleted_at < sqlc.arg(cutoff) AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id;
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), sqlc.arg(after_id)::uuid)::uuid AS after_id;
 
--- name: PurgeIssueDescriptionVersions :many
-DELETE FROM issue_description_versions
-WHERE id IN (
+-- name: PurgeIssueDescriptionVersions :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_description_versions AS candidate
     WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
     ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
+), deleted AS (
+    DELETE FROM issue_description_versions AS target WHERE target.deleted_at < sqlc.arg(cutoff) AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id;
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), sqlc.arg(after_id)::uuid)::uuid AS after_id;
 
--- name: PurgeIssueActivities :many
-DELETE FROM issue_activities
-WHERE id IN (
+-- name: PurgeIssueActivities :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_activities AS candidate
     WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
     ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
+), deleted AS (
+    DELETE FROM issue_activities AS target WHERE target.deleted_at < sqlc.arg(cutoff) AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id;
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), sqlc.arg(after_id)::uuid)::uuid AS after_id;
 
--- name: PurgeIssueComments :many
+-- name: PurgeIssueCommentsCandidates :many
+SELECT id FROM issue_comments
+WHERE deleted_at < sqlc.arg(cutoff) AND id > sqlc.arg(after_id)
+ORDER BY id LIMIT sqlc.arg(batch_limit);
+
+-- name: DeletePurgeIssueComments :many
 DELETE FROM issue_comments
-WHERE id IN (
-    SELECT candidate.id FROM issue_comments AS candidate
-    WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
-    ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
-)
+WHERE deleted_at < sqlc.arg(cutoff) AND id = ANY(sqlc.arg(ids)::uuid[])
 RETURNING id;
 
--- name: PurgeIssueLinks :many
-DELETE FROM issue_links
-WHERE id IN (
+-- name: PurgeIssueLinks :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_links AS candidate
     WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
     ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
+), deleted AS (
+    DELETE FROM issue_links AS target WHERE target.deleted_at < sqlc.arg(cutoff) AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id;
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), sqlc.arg(after_id)::uuid)::uuid AS after_id;
 
--- name: PurgeIssueRelations :many
-DELETE FROM issue_relations
-WHERE id IN (
+-- name: PurgeIssueRelations :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_relations AS candidate
     WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
     ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
+), deleted AS (
+    DELETE FROM issue_relations AS target WHERE target.deleted_at < sqlc.arg(cutoff) AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id;
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), sqlc.arg(after_id)::uuid)::uuid AS after_id;
 
--- name: PurgeIssueAssignees :many
-DELETE FROM issue_assignees
-WHERE id IN (
+-- name: PurgeIssueAssignees :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_assignees AS candidate
     WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
     ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
+), deleted AS (
+    DELETE FROM issue_assignees AS target WHERE target.deleted_at < sqlc.arg(cutoff) AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id;
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), sqlc.arg(after_id)::uuid)::uuid AS after_id;
 
--- name: PurgeIssueLabels :many
-DELETE FROM issue_labels
-WHERE id IN (
+-- name: PurgeIssueLabels :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_labels AS candidate
     WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
     ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
+), deleted AS (
+    DELETE FROM issue_labels AS target WHERE target.deleted_at < sqlc.arg(cutoff) AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id;
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), sqlc.arg(after_id)::uuid)::uuid AS after_id;
 
--- name: PurgeIssueSubscribers :many
-DELETE FROM issue_subscribers
-WHERE id IN (
+-- name: PurgeIssueSubscribers :one
+WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_subscribers AS candidate
     WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
     ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
+), deleted AS (
+    DELETE FROM issue_subscribers AS target WHERE target.deleted_at < sqlc.arg(cutoff) AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
 )
-RETURNING id;
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), sqlc.arg(after_id)::uuid)::uuid AS after_id;
 
--- name: PurgeDraftIssues :many
+-- name: PurgeDraftIssuesCandidates :many
+SELECT id FROM draft_issues
+WHERE deleted_at < sqlc.arg(cutoff) AND id > sqlc.arg(after_id)
+ORDER BY id LIMIT sqlc.arg(batch_limit);
+
+-- name: DeletePurgeDraftIssues :many
 DELETE FROM draft_issues
-WHERE id IN (
-    SELECT candidate.id FROM draft_issues AS candidate
-    WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
-    ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
-)
+WHERE deleted_at < sqlc.arg(cutoff) AND id = ANY(sqlc.arg(ids)::uuid[])
 RETURNING id;
 
--- name: PurgeIssues :many
+-- name: PurgeIssuesCandidates :many
+SELECT id FROM issues
+WHERE deleted_at < sqlc.arg(cutoff) AND id > sqlc.arg(after_id)
+ORDER BY id LIMIT sqlc.arg(batch_limit);
+
+-- name: DeletePurgeIssues :many
 DELETE FROM issues
-WHERE id IN (
-    SELECT candidate.id FROM issues AS candidate
-    WHERE candidate.deleted_at < sqlc.arg(cutoff) AND candidate.id > sqlc.arg(after_id)
-    ORDER BY candidate.id LIMIT sqlc.arg(batch_limit)
-)
+WHERE deleted_at < sqlc.arg(cutoff) AND id = ANY(sqlc.arg(ids)::uuid[])
 RETURNING id;

@@ -100,10 +100,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 });
 
 /** Clock stories own their database, process generations and failure artifacts. */
-export const clockTest = base.extend<{ clockWorld: ClockWorld }>({
+export const clockTest = base.extend<{ clockEnv: Record<string, string>; clockWorld: ClockWorld }>({
+  clockEnv: [{}, { option: true }],
   clockWorld: [
-    // oxlint-disable-next-line no-empty-pattern -- Playwright reads fixture dependencies from this pattern
-    async ({}, use, testInfo) => {
+    async ({ clockEnv }, use, testInfo) => {
       const hash = createHash("sha256")
         .update(`${testInfo.testId}:${testInfo.repeatEachIndex}:${testInfo.retry}`)
         .digest("hex")
@@ -117,6 +117,7 @@ export const clockTest = base.extend<{ clockWorld: ClockWorld }>({
       try {
         world = await createClockWorld({
           databaseName,
+          env: clockEnv,
           logFile: (number) => {
             generation = number + 1;
             return logFile(number);

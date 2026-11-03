@@ -108,13 +108,13 @@ func newDeletionLifecycle(t *testing.T, configure func(*config.Config), runtimeN
 	a := buildAppLogging(t, cfg, migrations.FS(), logger)
 	tx := &deletionTransactions{TxManager: newIssueJobTx(a.pool, cfg)}
 	store := issuepg.New(a.pool)
-	uc := issueapp.NewDeleteRows(issueapp.DeleteRowsDeps{Rows: store, Relations: issueapp.NewRelationDeletions(store, issueProjects{projects: project.Provide(a.pool).IssueProjects}), Remaining: store, Tx: tx, RuntimeNow: runtimeNow, Batch: cfg.Issue.DeleteBatch, Budget: cfg.Issue.DeleteBudget})
+	uc := issueapp.NewDeleteRows(issueapp.DeleteRowsDeps{Rows: store, Relations: issueapp.NewRelationDeletions(store, issueProjects{projects: project.Provide(a.pool, nil).IssueProjects}), Remaining: store, Tx: tx, RuntimeNow: runtimeNow, Batch: cfg.Issue.DeleteBatch, Budget: cfg.Issue.DeleteBudget})
 	execution := &deletionExecution{DeleteRowsUseCase: uc}
-	definitions := []jobs.Job{issueriver.DeleteRowsJob(execution, cfg.Issue.DeleteBudget, logger)}
+	definitions := []jobs.Job{issueriver.DeleteRowsJob(execution, cfg.Issue.DeleteBudget, logger), assetDeletionJobForTest(a.pool, cfg)}
 	if extra != nil {
 		definitions = append(definitions, extra(a.pool)...)
 	}
-	runner, err := jobs.New(a.pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, []string{issueriver.DeleteRowsKind})
+	runner, err := jobs.New(a.pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, []string{issueriver.DeleteRowsKind, "asset.delete_scope"})
 	if err != nil {
 		t.Fatal(err)
 	}

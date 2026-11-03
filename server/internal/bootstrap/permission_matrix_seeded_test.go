@@ -135,6 +135,7 @@ func emailOf(c caller) string {
 // matrixAccounts, which prepareMatrix registers. t is the test that asks
 // for them (in).
 type seeded struct {
+	assets              map[string]uuid.UUID
 	drafts              map[string]uuid.UUID
 	t                   testing.TB
 	workspaces          map[string]uuid.UUID
@@ -160,11 +161,12 @@ type seeded struct {
 // matrixViolations, without a database, sees the keys and the targets the
 // cells will.
 func newSeeded() seeded {
-	s := seeded{drafts: map[string]uuid.UUID{}, workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
+	s := seeded{assets: map[string]uuid.UUID{}, drafts: map[string]uuid.UUID{}, workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
 		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, states: map[string]uuid.UUID{}, labels: map[string]uuid.UUID{},
 		issues: map[string]uuid.UUID{}, comments: map[string]uuid.UUID{}, links: map[string]uuid.UUID{}, descriptionVersions: map[string]uuid.UUID{}, relations: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
 	for _, c := range workspaceColumns {
 		s.drafts[workspaceOf(c)+"/"+string(c)] = uuid.NewV7()
+		s.assets[workspaceOf(c)+"/"+string(c)] = uuid.NewV7()
 	}
 	for _, m := range matrixMemberships {
 		if _, named := s.workspaces[m.slug]; !named {
@@ -368,7 +370,7 @@ func (p *fatalProbe) Fatalf(format string, args ...any) {
 // workspaceOfRow is the slug of the workspace the seeded row id is under,
 // false for an id no seeded row has.
 func (s seeded) workspaceOfRow(id uuid.UUID) (string, bool) {
-	for _, rows := range []map[string]uuid.UUID{s.memberships, s.invitations, s.drafts} {
+	for _, rows := range []map[string]uuid.UUID{s.memberships, s.invitations, s.drafts, s.assets} {
 		if key, ok := keyOfRow(rows, id); ok {
 			slug, _, _ := strings.Cut(key, "/")
 			return slug, true

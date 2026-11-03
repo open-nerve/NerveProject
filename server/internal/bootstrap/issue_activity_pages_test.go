@@ -184,7 +184,7 @@ func TestActivityPagesReadSnapshot(t *testing.T) {
 			t.Fatal("read escaped snapshot", ro, isolation, err)
 		}
 	}
-	projects := activitySnapshotProjects{issueProjects: issueProjects{projects: project.Provide(w.pool).IssueProjects}, inspect: inspect}
+	projects := activitySnapshotProjects{issueProjects: issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}, inspect: inspect}
 	wrapped := versionSnapshotStore{Store: store, inspect: inspect, afterIssue: func() {
 		if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE project_members SET is_active=false WHERE project_id=$1 AND member_id=$2", ops, w.ids["alice"]); err != nil {
 			t.Fatal(err)

@@ -1,3 +1,4 @@
+import { furnishIssueFiles } from "../../fixtures/storage";
 import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
@@ -113,6 +114,7 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   // Moved to Done, she archives it: archived at its moment, one row of its activity; archived again, nothing is
   // written, and the answer is the work item as it is.
   const comment = await createIssueComment(api, ann.token, id, "<p>Archive discussion</p>");
+  await furnishIssueFiles(api, ann.token, id, comment.id);
   await createCommentReaction(api, ann.token, comment.id);
   await createIssueReaction(api, ann.token, id);
   await updateIssue(api, ann.token, id, { state_id: done });
@@ -409,6 +411,7 @@ test("I15 (page): an admin deletes an archived item through its read-only detail
   await createIssueRelations(api, member.token, item.id, { relation_type: "blocking", issue_ids: [two.id] });
   await createIssueLink(api, member.token, item.id, { url: `http://169.254.169.254/i15-page/${item.id}` });
   const comment = await createIssueComment(api, member.token, item.id, "<p>Read-only discussion</p>");
+  await furnishIssueFiles(api, member.token, item.id, comment.id);
   await createCommentReaction(api, member.token, comment.id);
   await createIssueReaction(api, member.token, item.id);
   expect((await issueArchived(api, member.token, item.id)).status).toBe(200);

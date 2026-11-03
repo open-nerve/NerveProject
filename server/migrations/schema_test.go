@@ -95,7 +95,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		got = append(got, s)
 	}
 	// contype: p primary key, u unique, f foreign key (confdeltype c: ON
-	// DELETE CASCADE, n: ON DELETE SET NULL), c check, x exclusion. An index is i, then
+	// DELETE CASCADE, n: ON DELETE SET NULL, a: NO ACTION), c check, x exclusion. An index is i, then
 	// u when it is unique and w when it is partial (has a WHERE). The project
 	// module's tables are in projectNames (project_schema_test.go), the issue
 	// module's in issueNames (issue_schema_test.go).
@@ -178,7 +178,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"workspaces_slug_check c",
 		"workspaces_slug_key iuw",
 		"workspaces_updated_by_id_fkey f n",
-	}, projectNames, issueNames)
+	}, projectNames, issueNames, assetNames)
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
 		t.Errorf("constraints and indexes =\n%q\nwant\n%q", got, want)

@@ -246,7 +246,7 @@ func TestIssueDeletionEventsCascade(t *testing.T) {
 				t.Fatal("event observer did not see the positive control")
 			}
 			runner, err := jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout,
-				Logger: slog.New(slog.DiscardHandler), DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, module.Jobs(), issue.EnqueuedKinds())
+				Logger: slog.New(slog.DiscardHandler), DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, append(module.Jobs(), assetDeletionJobForTest(pool, cfg)), append(issue.EnqueuedKinds(), "asset.delete_scope"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -261,7 +261,7 @@ func TestIssueDeletionEventsCascade(t *testing.T) {
 				parent.answerWithin(t, w.contract, http.MethodDelete, "/api/v0/workspaces/acme", w.ids["alice"], "", 204)
 				waitWorkspaceDeletion(t, pool, w.acme)
 			} else {
-				parent := newProjectRouteWithPublisher(t, pool, tx, authorizerOn(pool), workspace.Provide(pool).WorkspaceMembers, events)
+				parent := newProjectRouteWithPublisher(t, pool, tx, authorizerOn(pool), workspace.Provide(pool, nil).WorkspaceMembers, events)
 				parent.answerWithin(t, w.contract, http.MethodDelete, "/api/v0/projects/"+w.web.String(), w.ids["alice"], "", 204)
 				waitProjectDeletion(t, pool, w.web)
 			}

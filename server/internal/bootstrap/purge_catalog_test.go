@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
@@ -73,10 +74,10 @@ func purgeTables(t *testing.T, pool *pgxpool.Pool) []string {
 }
 
 func providedPurgeTables(pool *pgxpool.Pool) []string {
-	var tables []string
-	tables = append(tables, issue.Provide(pool).Purger.Tables()...)
-	tables = append(tables, project.Provide(pool).Purger.Tables()...)
-	tables = append(tables, workspace.Provide(pool).Purger.Tables()...)
+	tables := asset.Provide(pool).Purger.Tables()
+	tables = append(tables, issue.Provide(pool, protectedAssetReferences()).Purger.Tables()...)
+	tables = append(tables, project.Provide(pool, protectedAssetReferences()).Purger.Tables()...)
+	tables = append(tables, workspace.Provide(pool, protectedAssetReferences()).Purger.Tables()...)
 	return append(tables, identity.Provide(pool).Purger.Tables()...)
 }
 
@@ -95,7 +96,7 @@ func inspectedPurgeKeys(t *testing.T, pool *pgxpool.Pool, tables []string) map[f
 // Non-purge tables are as binding as purge children.
 func purgeCatalogGaps(t *testing.T, pool *pgxpool.Pool, tables, provided []string, inspected map[foreignKey]string) []string {
 	t.Helper()
-	var gaps []string
+	protected, gaps := assetProtectionGaps(t, pool, tables, asset.ProtectedParentReferences(), protectedPurgeSteps(pool))
 	seen := map[string]int{}
 	for _, table := range provided {
 		seen[table]++
@@ -127,7 +128,7 @@ func purgeCatalogGaps(t *testing.T, pool *pgxpool.Pool, tables, provided []strin
 		} else if observed != action {
 			gaps = append(gaps, fmt.Sprintf("stale incoming action %s", k))
 		}
-		if action != "c" && action != "n" {
+		if action != "c" && action != "n" && !protected[k] {
 			gaps = append(gaps, fmt.Sprintf("unsafe incoming %s -> %s: %s", k, k.parent, action))
 		}
 	}
@@ -142,8 +143,8 @@ func purgeCatalogGaps(t *testing.T, pool *pgxpool.Pool, tables, provided []strin
 func TestPurgeCatalogCoversTablesAndIncomingKeys(t *testing.T) {
 	pool := openPool(t, pgtest.NewDatabase(t))
 	tables := purgeTables(t, pool)
-	if len(tables) != 23 {
-		t.Fatalf("deleted_at business tables=%d: %v; want 23", len(tables), tables)
+	if len(tables) != 24 {
+		t.Fatalf("deleted_at business tables=%d: %v; want 24", len(tables), tables)
 	}
 	// Check the unmodified business graph before adding the isolated non-purge probe.
 	keysTo(t, pool, "issues")

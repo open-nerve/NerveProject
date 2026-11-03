@@ -24,6 +24,7 @@ func TestProjectDeletionPublishesAndEnqueuesAtomically(t *testing.T) {
 		recorded[k.String()] = k.undeleted(t, pool, web)
 	}
 	holder := holdProjectDeletion(t, pool, web)
+	assetHolder := holdAssetScopeDeletion(t, pool, web)
 	var received []shared.Event
 	events := projectDeletionPublisher(t, pool, shared.EventSubscriber{Name: "observe project transaction", Types: []string{"project.deleted"}, Handle: func(ctx context.Context, e shared.Event) error {
 		received = append(received, e)
@@ -49,11 +50,11 @@ func TestProjectDeletionPublishesAndEnqueuesAtomically(t *testing.T) {
 		}
 		return nil
 	}})
-	route := newProjectRouteWithPublisher(t, pool, postgres.NewTxManager(pool, 2*time.Second), authorizerOn(pool), workspace.Provide(pool).WorkspaceMembers, events)
+	route := newProjectRouteWithPublisher(t, pool, postgres.NewTxManager(pool, 2*time.Second), authorizerOn(pool), workspace.Provide(pool, nil).WorkspaceMembers, events)
 	// A synchronous cascade cannot return 204 while the first issue batch is held.
 	route.answerWithin(t, contract, http.MethodDelete, "/api/v0/projects/"+web.String(), aliceID, "", 204)
 	for _, k := range keys {
-		if projectIssueTable(k.table) {
+		if parentAsyncTable(k.table) {
 			if got := k.rows(t, pool, web); got != before[k.String()] {
 				t.Fatalf("%s changed before worker release", k)
 			}
@@ -88,7 +89,8 @@ func TestProjectDeletionPublishesAndEnqueuesAtomically(t *testing.T) {
 	}
 	deletionWorkerBlocked(t, pool, holder, job, "draft_issues")
 	requestRelease(t, holder)
-	waitDeletionJob(t, pool, job, "completed")
+	requestRelease(t, assetHolder)
+	waitProjectDeletion(t, pool, web)
 	for _, k := range keys {
 		assertProjectDeletionStamp(t, pool, k, recorded[k.String()], web, aliceID)
 	}
@@ -126,7 +128,7 @@ func TestProjectDeletionPublicationFailuresRollback(t *testing.T) {
 				}
 				return errors.New("reject project subscriber")
 			}})
-			route := newProjectRouteWithPublisher(t, pool, postgres.NewTxManager(pool, 2*time.Second), authorizerOn(pool), workspace.Provide(pool).WorkspaceMembers, events)
+			route := newProjectRouteWithPublisher(t, pool, postgres.NewTxManager(pool, 2*time.Second), authorizerOn(pool), workspace.Provide(pool, nil).WorkspaceMembers, events)
 			actor, status := aliceID, 500
 			if failure == "unseen" {
 				actor, status = uuid.NewV7(), 404

@@ -27,7 +27,7 @@ import (
 )
 
 func autoArchiveOn(w issueWorld, c issueapp.Clock, events shared.EventPublisher) *issueapp.AutoArchive {
-	p := project.Provide(w.pool)
+	p := project.Provide(w.pool, nil)
 	return issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: issueProjects{projects: p.IssueProjects}, Issues: issuepostgres.New(w.pool), Tx: newIssueJobTx(w.pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), Clock: c, Events: events})
 }
 
@@ -202,7 +202,7 @@ func TestAutoArchiveJobLockTimeoutPreservesPostgresError(t *testing.T) {
 	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+w.web.String(), `{"archive_in":1}`, 200)
 	holder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR UPDATE", w.web)
 	defer release(t, holder)
-	p := project.Provide(w.pool)
+	p := project.Provide(w.pool, nil)
 	cfg := config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: config.IssueConfig{WriteLockTimeout: 300 * time.Millisecond}}
 	c := &eventCountingClock{base: clocktest.At(time.Now())}
 	probe := &requestProbe{TxManager: newIssueJobTx(w.pool, cfg)}

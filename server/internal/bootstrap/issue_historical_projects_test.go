@@ -57,7 +57,7 @@ func TestHistoricalProjectsComposition(t *testing.T) {
 		[]uuid.UUID{w.web, other}); err != nil {
 		t.Fatal(err)
 	}
-	var p issue.ProjectPorts = issueProjects{projects: project.Provide(w.pool).IssueProjects}
+	var p issue.ProjectPorts = issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}
 	got, err := p.Historical(context.Background(), w.acme, w.ids["wanda"])
 	want := []issue.VisibleProject{{ID: w.web, Role: shared.RoleGuest, OwnOnly: true}, {ID: other, Role: shared.RoleMember}}
 	if err != nil || !slices.Equal(got, want) {

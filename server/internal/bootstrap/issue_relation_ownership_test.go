@@ -101,7 +101,7 @@ func TestLiveIssueDeletionLeavesRelationToEarlierProject(t *testing.T) {
 				t.Fatal("live delete stole pending relation", got)
 			}
 			store := issuepg.New(w.pool)
-			projects := issueProjects{projects: project.Provide(w.pool).IssueProjects}
+			projects := issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}
 			err := postgres.NewTxManager(w.pool, 2*time.Second).WithinTx(pgtest.Soon(t), func(ctx context.Context) error {
 				progress, err := issueapp.NewRelationDeletions(store, projects).ForProject(ctx, issueapp.RowBatch{ProjectID: p, Limit: 2, At: at, By: w.ids["alice"]})
 				if err == nil && (progress.Candidates != 1 || progress.Written != 1 || progress.After != r) {

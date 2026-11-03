@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
@@ -25,8 +26,8 @@ func TestDraftAppPersonalProjectsWithRealAuthorization(t *testing.T) {
 	r := newSplitRoles(t)
 	w := newIssueWorldOn(t, r.serverURL, r.owner, func(*config.Config) {})
 	store := issuepg.New(r.server)
-	p := issueProjects{projects: project.Provide(r.server).IssueProjects}
-	ws := issueWorkspaces{directory: workspace.Provide(r.server).WorkspaceDirectory}
+	p := issueProjects{projects: project.Provide(r.server, nil).IssueProjects}
+	ws := issueWorkspaces{directory: workspace.Provide(r.server, nil).WorkspaceDirectory}
 	tx := postgres.NewTxManager(r.server, time.Second)
 	readTx := postgres.NewTxManager(r.server, time.Second, postgres.ReadOnlySnapshot())
 	locks := issueapp.NewDraftLocks(issueapp.NewLocks(p, store, authorizerOn(r.server), nil, tx), ws, p, store)
@@ -70,7 +71,7 @@ func TestDraftAppPersonalProjectsWithRealAuthorization(t *testing.T) {
 	if err != nil || cleared.ProjectID != nil {
 		t.Fatalf("clear=%+v err=%v", cleared, err)
 	}
-	if err := issueapp.NewDeleteDraft(issueapp.DeleteDraftDeps{Locks: locks, Drafts: store, Clock: clock.System{}}).Execute(ctx, second.ID); err != nil {
+	if err := issueapp.NewDeleteDraft(issueapp.DeleteDraftDeps{Locks: locks, Drafts: store, Assets: issueDraftAssets{assets: asset.Provide(r.server).DraftAssets}, Clock: clock.System{}}).Execute(ctx, second.ID); err != nil {
 		t.Fatalf("delete after loss of visibility=%v", err)
 	}
 	_, err = get.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: w.ids["wanda"]}), d.ID)
