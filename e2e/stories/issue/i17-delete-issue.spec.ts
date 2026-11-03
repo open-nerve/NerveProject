@@ -37,6 +37,8 @@ async function deletionRows(db: import("../../fixtures/db").Database, ids: strin
     "SELECT to_jsonb(a) AS row FROM file_assets a WHERE issue_id=ANY($1::uuid[]) ORDER BY id",
     [ids]
   );
+  expect(assets).toHaveLength(ids.length * 2);
+  for (const { row } of assets) expect(row).toMatchObject({ bound_at: expect.any(String), is_uploaded: true });
   return [...(await collaborationRows(db, ids)), { table: "file_assets", rows: assets.map(({ row }) => row) }];
 }
 

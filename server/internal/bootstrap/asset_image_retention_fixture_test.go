@@ -29,6 +29,7 @@ type imageRetentionWorld struct {
 	objects assetStore
 	stop    func()
 	dbURL   string
+	root    string
 	now     time.Time
 }
 
@@ -41,8 +42,9 @@ func newImageRetentionWorld(t *testing.T) imageRetentionWorld {
 		objects = out.store
 		return out, err
 	}
-	w, stop := startImageAPIWorld(t, testConfig(t, db, false), appFactories{pool: postgres.NewPool, assets: assets})
-	return imageRetentionWorld{w, objects, stop, db, time.Now().UTC().Truncate(time.Microsecond)}
+	cfg := testConfig(t, db, false)
+	w, stop := startImageAPIWorld(t, cfg, appFactories{pool: postgres.NewPool, assets: assets})
+	return imageRetentionWorld{issueWorld: w, objects: objects, stop: stop, dbURL: db, root: cfg.Files.Local.Root, now: time.Now().UTC().Truncate(time.Microsecond)}
 }
 
 // Every positive reference, including the full project graph, is made through
@@ -169,7 +171,7 @@ func (s imageDeleteFault) Delete(ctx context.Context, key assetdomain.ObjectKey)
 	return s.assetStore.Delete(ctx, key)
 }
 
-func cleanImageObjects(t *testing.T, w imageRetentionWorld, objects assetStore) int {
+func cleanImageObjects(t *testing.T, w imageRetentionWorld, objects assetStore, allowed ...error) int {
 	t.Helper()
 	rows := assetpg.New(w.pool)
 	parents := assetParentReader{workspaces: workspace.Provide(w.pool, protectedAssetReferences()).AssetParents, projects: project.Provide(w.pool, protectedAssetReferences()).AssetParents, issues: issue.Provide(w.pool, protectedAssetReferences()).AssetParents}
@@ -179,7 +181,11 @@ func cleanImageObjects(t *testing.T, w imageRetentionWorld, objects assetStore) 
 	failed := 0
 	for range 100 {
 		result, err := uc.Execute(t.Context(), cursor)
-		if err != nil && !errors.Is(err, errImageDelete) {
+		accepted := errors.Is(err, errImageDelete)
+		for _, expected := range allowed {
+			accepted = accepted || errors.Is(err, expected)
+		}
+		if err != nil && !accepted {
 			t.Fatal(err)
 		}
 		failed += result.Failed

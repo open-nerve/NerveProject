@@ -6,7 +6,7 @@ import { accountId, bearer, createPAT, emailFor, login, newAccount } from "../..
 import { keysBelow, projectTables, workspaceTables } from "../../fixtures/assert/catalog";
 import { expectIssueDeleted } from "../../fixtures/assert/issue";
 import { expectProjectDeleted } from "../../fixtures/assert/project";
-import { expectExpiredPreparations } from "../../fixtures/assert/storage";
+import { expectExpiredPreparations, expectRetainedBoundAssets } from "../../fixtures/assert/storage";
 import { expectWorkspaceDeleted } from "../../fixtures/assert/workspace";
 import { archiveWatermark, completedPeriodicJobs } from "../../fixtures/auto-archive";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "../../fixtures/comments";
@@ -14,7 +14,7 @@ import type { Database } from "../../fixtures/db";
 import { furnishIssueRows, furnishWorkspace } from "../../fixtures/furnish";
 import { createIssue, createIssueRelations, issueDeleted, issueRead } from "../../fixtures/issues";
 import { completedLinkCrawl, createIssueLink } from "../../fixtures/links";
-import { furnishIssueFiles, waitForFileSafety } from "../../fixtures/storage";
+import { filePixel, furnishIssueFiles, storedFile, waitForFileSafety } from "../../fixtures/storage";
 import { clockTest as test, expect } from "../../fixtures/test";
 
 test.use({ clockEnv: { NERVE_FILES__UPLOAD_TTL: "10s" } });
@@ -140,6 +140,16 @@ async function seed(api: Api, db: Database, info: TestInfo, admin: Account, memb
   const neighbor = await createProject(api, token, keeper.slug, { name: "Neighbor", identifier: "LIVE" });
   const neighborLabel = await createLabel(api, token, neighbor.id, { name: "Keep" });
   await furnishIssueRows(api, token, keeper.slug, neighbor.id, admin.id, neighborLabel.id);
+  const preparationHost = await createIssue(api, token, neighbor.id, { name: "Unreferenced image preparation" });
+  await storedFile(
+    api,
+    token,
+    "ISSUE_DESCRIPTION",
+    { kind: "issue", id: preparationHost.id },
+    filePixel,
+    "image/png",
+    "unused.png"
+  );
   const scopes = [
     await issueIDs(db, root.id),
     await parentIDs(db, "projects", doomed.id),
@@ -336,9 +346,15 @@ test("I21 (API): a fresh purge after +61d physically removes old FK chains and P
     db,
     oldNeighbors.filter(({ table }) => table !== "file_assets")
   );
+  const neighborAssets = oldNeighbors.filter(({ table }) => table === "file_assets").flatMap(({ rows }) => rows);
+  await expectRetainedBoundAssets(
+    db,
+    neighborAssets.filter((row) => row.bound_at !== null),
+    world.current.nerve.storageRoot
+  );
   await expectExpiredPreparations(
     db,
-    oldNeighbors.filter(({ table }) => table === "file_assets").flatMap(({ rows }) => rows),
+    neighborAssets.filter((row) => row.bound_at === null),
     world.current.nerve.storageRoot,
     world.current.startedAt
   );

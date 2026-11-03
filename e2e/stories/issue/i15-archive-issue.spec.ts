@@ -12,6 +12,7 @@ import {
 } from "../../fixtures/api";
 import {
   archivedRow,
+  attachmentCreatedRow,
   changed,
   createdFor,
   expectIssueArchival,
@@ -121,7 +122,11 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   const toDone = changed("state", "In Progress", "Done", "updated the state to", "Done", "In Progress");
   const archiving = await issueArchived(api, ann.token, id);
   expect(archiving).toMatchObject({ status: 200, issue: { id, archived_at: expect.any(String) } });
-  const archived = { archived: true, by: ann.email, activity: [...linked, toDone, archivedRow] };
+  const archived = {
+    archived: true,
+    by: ann.email,
+    activity: [...linked, attachmentCreatedRow(), toDone, archivedRow],
+  };
   await expectIssueArchival(db, id, archived);
   expect(await issueArchived(api, ann.token, id)).toEqual(archiving);
   await expectIssueArchival(db, id, archived);

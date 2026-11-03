@@ -11,6 +11,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/local"
+	"github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/storagetest"
+	assetdomain "github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 )
 
@@ -55,6 +58,17 @@ func runImagePurgeChild(t *testing.T, mode string) {
 	now, err := time.Parse(time.RFC3339Nano, os.Getenv("NERVE_TEST_IMAGE_PURGE_NOW"))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if root := os.Getenv("NERVE_TEST_CONTENT_CLEANUP_ROOT"); root != "" {
+		store, err := local.New(local.Config{Root: root, SizeLimit: assetdomain.MaxObjectSize}, local.Deps{UploadMAC: storagetest.MAC("upload"), ReadMAC: storagetest.MAC("read"), RuntimeNow: time.Now})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = store.Close() }()
+		w := imageRetentionWorld{issueWorld: issueWorld{pool: pool}, objects: store, now: now}
+		if failed := cleanImageObjects(t, w, store); failed != 0 {
+			t.Fatal("child physical cleanup failed", failed)
+		}
 	}
 	var elapsed atomic.Int64
 	runtimeNow := func() time.Time { return now.Add(time.Duration(elapsed.Load())) }

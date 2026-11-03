@@ -135,13 +135,13 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 
 ## Task 11（T11）：删除图、历史图片与恢复
 
-**Files:** bootstrap/asset_content_deletion_test.go/asset_content_retention_test.go；现有删除目录/asset purge fixtures；e2e/fixtures/assert/issue.ts与I15/I17/I21按新bound状态扩充。
+**Files:** bootstrap/asset_content_deletion_test.go、asset_content_retention_test.go、asset_content_retention_fixture_test.go、asset_content_purge_process_test.go；复用并扩展现有image retention/process夹具；e2e/fixtures/assert/issue.ts、assert/storage.ts及F15/I15/I17/I21按新bound状态扩充。
 **Interfaces:** 复用P2父保护、P4反向引用目录和有界purger；不加未知FK豁免；parent删除事件原At/By，不冒充用户attachment_deleted。
 
-- [ ] Step 1：TestContentAssetDeletion / TestContentAssetRetention：正文移图超过20版本仍活、直接DELETE bound图409，三附件/三描述/pending/准备件完整删除，多个邻域与混合created/deleted作者。
-- [ ] Step 2：真实对象删除故障→父NO ACTION阻挡且后续候选推进→下一进程恢复；61/59天cutoff、原审计、失败页cursor、迁移后旧draft清理不删新Issue字节；未引用描述按原7天年龄回收，已绑定历史图不能同批回收。
-- [ ] Step 3：`cd server && go test -p 1 ./internal/bootstrap -run 'Test(ContentAssetDeletion|ContentAssetRetention|AssetProtected|ImageReferenceCatalog)' -race -count=1`及I15/I17/I21聚焦故事；Expected图/字节/任务精确通过。
-- [ ] Step 4：失败与恢复报告完整保留、及时清理自建资源，提交 `test(M5/P5): 验证历史图片和迁移资产的删除恢复`。
+- [x] Step 1：TestContentAssetDeletion / TestContentAssetRetention：正文移图超过20版本仍活、直接DELETE bound图409，三附件/三描述/pending/准备件完整删除，多个邻域与混合created/deleted作者。
+- [x] Step 2：真实对象删除故障→父NO ACTION阻挡且后续候选推进→下一进程恢复；61/59天cutoff、原审计、失败页cursor、迁移后旧draft清理不删新Issue字节；未引用描述按原7天年龄回收，已绑定历史图不能同批回收。
+- [x] Step 3：`cd server && go test -race -p 1 ./internal/bootstrap -run '^Test(ContentAssetDeletion|ContentAssetRetention.*|AssetProtected.*|ImageReferenceCatalog.*|ImageReferenceRetention|ImagePurgeProcess|AssetDeletionFollows.*|AssetDraftPublicationDoesNotDeleteAssets|AssetParent.*|AssetConfiguredRetentionWired|AssetSweepRestarts)$' -count=1 -v`及F15/I15/I17/I21聚焦故事；Expected新内容图与复用的旧profile/父保护/恢复用例均实际命中通过，图/字节/任务精确核验。
+- [x] Step 4：失败与恢复报告完整保留、及时清理自建资源，提交 `test(M5/P5): 验证历史图片和迁移资产的删除恢复`。
 
 ## Task 12（T12）：容量和性质变异总账
 
